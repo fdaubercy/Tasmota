@@ -1,0 +1,30 @@
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/highcharts-more.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+<table style='width=100%'>
+	<div id="container" style='display:block;'></div>
+	<div>
+        <div id="popup-overlay">
+          <div class="popup-content">
+            <label class="popup-content">Quel type d'élément souhaitez-vous ajouter?</label>
+            <select id='select_elementAAjouter' class="popup-select" onChange="togglePopup();">
+				<option value=''></option>
+                <option value='bouton'>Bouton</option>
+                <option value='relai'>Relai</option>
+                <option value='capteur'>Capteur</option>
+                <option value='thermometre'>Capteur de température</option>
+				<option value='debitmetre'>Débitmètre</option>
+                <option value='autre'>Autre</option>
+			</select>
+          </div>
+        </div>
+		<button id='btn_paramModules' class='button bgrn btnPerso'>Retour aux paramètres</button>
+		<div style='display:none;' id="jsonData"></div>
+
+		<!-- Charge les boutons -->
+		<hr><div style='padding:0;' id='maj' name='maj'></div>
+		<p></p><form id='but2' style='display: block;' action='.' method='get'><button name=''>Menu principal</button></form><p></p>
+		<p></p><form id='but6' style='display: block;' action='mn' method='get'><button name=''>Consoles</button></form><p></p>
+		<p></p><form id='but0' style='display: block;' action='.' method='get' onsubmit='return confirm(&quot;Confirmer le redémarrage&quot;);'><button name='rst' class='button bred'>Redémarrage</button></form><p></p>
+	</div>
+</table>

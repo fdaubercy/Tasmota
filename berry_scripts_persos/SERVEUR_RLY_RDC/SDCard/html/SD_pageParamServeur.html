@@ -1,0 +1,127 @@
+<table style='width=100%'>
+    <!-- Début du formulaire -->
+    <form id='paramServeur' action='/modules' method='post'>
+        <fieldset>
+			<div style='display:block;' class='visible'>
+				<legend id="titreCaract"></legend>
+				<div><label>Activation :</label><select id='activation'></select></div>
+				<div><label>Nom :</label><input type='text' id='nom' value=''></div>
+				<div><label>Hostname :</label><input type='text' id='hostname' value=''></div>
+				<div><label>mDNS :</label><select id='mDNS'></select></div>
+			</div>
+        </fieldset>		
+		<div id="groupe_ip" style='display:none;'>
+			<fieldset style='display:none;' id="fieldset_ip">
+				<div style='display:block;' class='visible'>
+					<legend class="activable">
+						<div><b>Caractéristiques IP</b></div><span class="fleche" id='fleche_ip' onclick="afficheParagraphe('fleche_ip', 'ip')">▼</span>
+					</legend>
+					<div style='display:block;' id='ip' class='visible'>
+						<div><label>Adresse IP :</label><input type='text' id='ip_IPAddress' value=''></div>
+						<div><label>IP Gateway :</label><input type='text' id='ip_IPGateway' value=''></div>
+						<div><label>Sous-réseau :</label><input type='text' id='ip_Subnet' value=''></div> 
+						<div><label>DNS Serveur :</label><input type='text' id='ip_DNSServer' value=''></div>	
+					</div>
+				</div>
+			</fieldset>
+		</div>
+		<div id="groupe_wifi" style='display:none;'>
+			<fieldset style='display:none;' id="fieldset_wifi">
+				<div style='display:block;' class='visible'>
+					<legend class="activable">
+						<div><b>Caractéristiques du Wifi</b></div><span class="fleche" id='fleche_wifi' onclick="afficheParagraphe('fleche_wifi', 'wifi')">▼</span>
+					</legend>
+					<div style='display:block;' id='wifi' class='visible'>
+						<div><label>Power :</label><input type='text' id='wifi_power' value=''></div>
+						<div><label>Sélection du signal le plus fort :</label><select id='wifi_selectSignalFort'></select></div>
+						<div><label>Scanne les réseaux Wifi / 45min :</label><select id='wifi_reScanBy44'></select></div>	
+						<div><div>Réseau Wifi 1 :</div><input type='text' id='wifi_reseau1_nomReseauWifi' placeholder='Saisissez ou Choisissez votre réseau WiFi' value=''></div>
+						<div><label>Mot de passe Wifi :<input type='checkbox' onclick='sp("wifi_reseau1_mdpWifi")'></label>
+							<input type='password' id='wifi_reseau1_mdpWifi' placeholder='Entrez votre mot de passe WiFi' value=''> 
+						</div>
+						<div><div>Réseau Wifi 2:</div><input type='text' id='wifi_reseau2_nomReseauWifi' placeholder='Entrez un réseau WiFi de secours' value=''></div>
+						<div><label>Mot de passe Wifi 2:<input type='checkbox' onclick='sp("wifi_reseau2_mdpWifi")'></label>
+							<input type='password' id='wifi_reseau2_mdpWifi' placeholder='Entrez votre mot de passe WiFi' value=''>
+						</div>
+					</div>
+				</div>
+			</fieldset>
+		</div>
+		<div id="groupe_localisation" style='display:none;'>
+			<fieldset style='display:none;' id="fieldset_localisation">
+				<div style='display:block;' class='visible'>
+					<legend class="activable">
+						<div><b>Localisation</b></div><span class="fleche" id='fleche_localisation' onclick="afficheParagraphe('fleche_localisation', 'localisation')">▼</span>
+					</legend>
+					<div style='display:block;' id='localisation' class='visible'>
+						<div><label>Latitude :</label><input type='text' id='localisation_latitude' value=''></div>
+						<div><label>Longitude :</label><input type='text' id='localisation_longitude' value=''></div>
+					</div>
+				</div>
+			</fieldset>
+		</div>
+		<div id="groupe_mqtt" style='display:none;'>
+			<fieldset style='display:none;' id="fieldset_mqtt">
+				<div style='display:block;' class='visible'>
+					<legend class="activable">
+						<div><b>Serveur MQTT</b></div><span class="fleche" id='fleche_mqtt' onclick="afficheParagraphe('fleche_mqtt', 'mqtt')">▼</span>
+					</legend>
+					<div style='display:block;' id='mqtt' class='visible'>
+						<div><label>Activation :</label><select id='mqtt_activation'></select></div>
+						<div><label>Hôte :</label><input type='text' id='mqtt_hote' value=''></div>
+						<div><label>Port :</label><input type='text' id='mqtt_port' value=''></div>
+						<div><label>Client :</label><input type='text' id='mqtt_client' value=''></div>
+						<div><label>Utilisateur :</label><input type='text' id='mqtt_utilisateur' value=''></div>
+						<div>
+							<div><label>Mot de passe :<input type='checkbox' onclick='sp("mqtt_mdp")'></label>
+							<input type='password' id='mqtt_mdp' value=''></div>
+						</div>
+						<div><label>Topic :</label><input type='text' id='mqtt_topic' value=''></div>
+					</div>
+				</div>
+			</fieldset>
+		</div>
+		<div id="groupe_fuseauHoraire" style='display:none;'>
+			<fieldset style='display:none;' id="fieldset_fuseauHoraire">
+				<div style='display:block;' class='visible'>
+					<legend class="activable">
+						<div><b>Fuseau horaire</b></div><span class="fleche" id='fleche_fuseauHoraire' onclick="afficheParagraphe('fleche_fuseauHoraire', 'fuseauHoraire')">▼</span>
+					</legend>
+						<div style='display:block;' id='mqtt' class='visible'>
+						<div><label>Timezone :</label><input type='text' id='fuseauHoraire_timezone' value=''></div>
+						<fieldset>
+							<legend><b>Heure d'Hiver</b></legend>
+							<div><label>Heure de passage :</label><select id='fuseauHoraire_TimeStd_Hour'></select></div>
+							<div><label>Jour :</label><select id='fuseauHoraire_TimeStd_Day'></select></div>
+							<div><label>Mois :</label><select id='fuseauHoraire_TimeStd_Month'></select></div>
+							<div><label>N° Semaine du mois :</label><select id='fuseauHoraire_TimeStd_Week'></select></div>
+							<div><label>Hemisphere :</label><select id='fuseauHoraire_TimeStd_Hemisphere'></select></div>
+							<div><label>Offset (min) :</label><input type='text' id='fuseauHoraire_TimeStd_Offset' value=''></div>
+						</fieldset>
+						<fieldset>
+							<legend><b>Heure d'Eté</b></legend>
+							<div><label>Heure de passage :</label><select id='fuseauHoraire_TimeDst_Hour'></select></div>
+							<div><label>Jour :</label><select id='fuseauHoraire_TimeDst_Day'></select></div>
+							<div><label>Mois :</label><select id='fuseauHoraire_TimeDst_Month'></select></div>
+							<div><label>N° Semaine du mois :</label><select id='fuseauHoraire_TimeDst_Week'></select></div>
+							<div><label>Hemisphere :</label><select id='fuseauHoraire_TimeDst_Hemisphere'></select></div>
+							<div><label>Offset (min) :</label><input type='text' id='fuseauHoraire_TimeDst_Offset' value=''></div>
+						</fieldset>
+					</div>
+				</div>
+			</fieldset>
+		</div>			
+    </form>
+	<div style="max-width: 342px;">
+		<button id='btn_supprBerryFS' class='button bgrn btnPerso'>Suppression des scripts</button>
+		<button id='btn_resetESP32' class='button bgrn btnPerso'>Reset Serveur</button>
+		<button id='btn_paramServeur' class='button bgrn btnPerso'>Modifier les paramètres</button>
+		<div style='display:none;' id="jsonData"></div>
+
+		<!-- Charge les boutons -->
+		<hr><div style='padding:0;' id='maj' name='maj'></div>
+		<p></p><form id='but2' style='display: block;' action='.' method='get'><button name=''>Menu principal</button></form><p></p>
+		<p></p><form id='but6' style='display: block;' action='mn' method='get'><button name=''>Consoles</button></form><p></p>
+		<p></p><form id='but0 style='display: block;' action='.' method='get' onsubmit='return confirm(&quot;Confirmer le redémarrage&quot;);'><button name='rst' class='button bred'>Redémarrage</button></form><p></p>
+	</div>
+</table>

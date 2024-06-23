@@ -1,0 +1,46 @@
+<table style='width=100%'>
+    <!-- Début du formulaire -->
+	<!-- <form id='paramModules' action='/modules'> -->
+		<div style='display:none;' id="environnement">
+			<div style='display:none;' id="groupe_boutons">
+				<fieldset style='display:none;' id="fieldset_boutons">
+					<legend class="activable">
+						<div><b>Boutons</b></div><span class="fleche" id='fleche_boutons' onclick="afficheParagraphe('fleche_boutons', 'boutons')">▼</span>
+					</legend>
+					<div style='display:block;' id='boutons' class='visible'>
+						<button style='display:none;margin:7px 7px 0 7px;max-width:95%;' id='btn_modif_bouton1'	name='btn_modif_boutons' class='button bgrn' value='Bouton' num='0'>Etat du ---</button>
+					</div>
+				</fieldset>
+			</div>		
+			<div style='display:none;' id="groupe_capteurs">
+				<fieldset style='display:none;' id="fieldset_capteurs">
+					<legend class="activable">
+						<div><b>Capteurs</b></div><span class="fleche" id='fleche_capteurs' onclick="afficheParagraphe('fleche_capteurs', 'capteurs')">▼</span>
+					</legend>
+					<div style='display:block;' id='capteurs' class='visible'>
+						<button style='display:none;margin:7px 7px 0 7px;max-width:95%;' id='btn_modif_capteur1' name='btn_modif_capteurs' class='button bgrn' value='Inter' num='0'>Etat du ---</button>
+					</div>
+				</fieldset>
+			</div>		
+			<div style='display:none;' id="groupe_thermometres">
+				<fieldset style='display:none;' id="fieldset_thermometres">
+					<legend class="activable">
+						<div><b>Thermomètres</b></div><span class="fleche" id='fleche_thermometres' onclick="afficheParagraphe('fleche_thermometres', 'thermometres')">▼</span>
+					</legend>	
+					<div style='display:block;' id='thermometres' class='visible'>
+						<button style='display:none;margin:7px 7px 0 7px;max-width:95%;' id='btn_modif_thermometre1' name='btn_modif_thermometres' class='button bgrn' value='AM2301' num='0'>Valeur du ---</button>
+					</div>
+				</fieldset>
+			</div>
+		</div>
+	<!-- </form>	 -->				
+	<div style="max-width: 342px;">
+		<div style='display:none;' id="jsonData"></div>
+
+		<!-- Charge les boutons -->
+		<hr><div style='padding:0;' id='maj' name='maj'></div>
+		<p></p><form id='but2' style='display: block;' action='.' method='get'><button name=''>Menu principal</button></form><p></p>
+		<p></p><form id='but6' style='display: block;' action='mn' method='get'><button name=''>Consoles</button></form><p></p>
+		<p></p><form id='but0' style='display: block;' action='.' method='get' onSubmit='return confirm(&quot;Confirmer le redémarrage&quot;);'><button name='rst' class='button bred'>Redémarrage</button></form><p></p>
+	</div>
+</table>
