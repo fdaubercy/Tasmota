@@ -81,7 +81,7 @@
 			"template": {
 				"BASE": 1,
 				"GPIO": [
-					33, 1, 160, 1, 32, 6720, 1216, 0, 1, 1, 1, 160, 1, 1, 736, 672, 1, 640, 608, 704, 1, 226, 227, 228, 0, 0, 0, 0, 224, 225, 1, 1, 1, 1, 1, 1
+					1, 1, 1, 1, 1, 6720, 1, 1, 1, 1, 1, 1, 1, 1, 736, 672, 1, 1, 1, 704, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 				],
 				"NAME": "ESP32 Debitmetres PAC",
 				"FLAG": 0
@@ -425,7 +425,6 @@
 				"name": "Débits circuits de PAC",
 				"activation": "ON",
 				"reglage": "OFF",
-				"sensorPeriod": 300,
 				"environnement": {
 					"debitmetres": {
 						"unit": "l/min",

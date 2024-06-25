@@ -70,39 +70,25 @@ pacFonctions.reglageDebitmetre = def(cmd, idx, payload, payload_json)
 
         # Lance la commande REGLAGE (telePeriod 3s)
         tasmota.cmd(string.format("ReglageDebitmetre REGLAGE %s", string.toupper(parametre)))
-    # Permet d'envoyer par mqtt l'état des capteurs sur une période = 3s
+    # Permet d'envoyer par mqtt l'état des capteurs sur une période = 10s
     elif (string.toupper(fonction) == "REGLAGE")
         pac["reglage"] = string.toupper(parametre)
         if (string.toupper(parametre) == "ON")
-            pac["sensorPeriod"] = 3
-            controleGeneral.parametres["diverses"]["telePeriod"] = 3
+            controleGeneral.parametres["diverses"]["telePeriod"] = 10
         else
-            pac["sensorPeriod"] = 300
             controleGeneral.parametres["diverses"]["telePeriod"] = 300
         end
         persist.save()
 
-        var parametre2 = int(pac["sensorPeriod"])
-        if (int(parametre2) > 0 && int(parametre2) < 10)
-            tasmota.add_cron(string.format("*/%i * * * * *", int(parametre2)), webFonctions.envoiMQTT("tele/" + controleGeneral.parametres["serveur"]["mqtt"]["topic"] + "/SENSOR", controleGeneral.sensors, string.toupper(fonction)), "sensorPeriod")
-            tasmota.cmd("TelePeriod 300")
-        elif (int(parametre2) >= 10)
-            tasmota.remove_cron("sensorPeriod")
-            tasmota.cmd(string.format("TelePeriod %i", int(parametre2)))
-        end
+        parametre = (int(parametre) > 0 && int(parametre) < 10) ? 10 : parametre
+        tasmota.cmd(string.format("TelePeriod %i", int(parametre)))
     # Permet d'envoyer par mqtt l'état des capteurs sur une période < 10s (contrairement à la commande TelePeriod)
     elif (string.toupper(fonction) == "SENSORPERIOD")
-        pac["sensorPeriod"] = int(parametre)
         controleGeneral.parametres["diverses"]["telePeriod"] = int(parametre)
         persist.save()
 
-        if (int(parametre) > 0 && int(parametre) < 10)
-            tasmota.add_cron(string.format("*/%i * * * * *", int(parametre)), webFonctions.envoiMQTT("tele/" + controleGeneral.parametres["serveur"]["mqtt"]["topic"] + "/SENSOR", controleGeneral.sensors, string.toupper(fonction)), "sensorPeriod")
-            tasmota.cmd("TelePeriod 300")
-        elif (int(parametre) >= 10)
-            tasmota.remove_cron("sensorPeriod")
-            tasmota.cmd(string.format("TelePeriod %i", int(parametre)))
-        end
+        parametre = (int(parametre) > 0 && int(parametre) < 10) ? 10 : parametre
+        tasmota.cmd(string.format("TelePeriod %i", int(parametre)))
     # Modifie le type de relevé des données de débit (average=0 / raw=1)
     elif (string.toupper(fonction) == "SOURCE")
         if parametre != pac["environnement"]["debitmetres"]["source"] 
@@ -148,7 +134,6 @@ pacFonctions.reglageDebitmetre = def(cmd, idx, payload, payload_json)
     reponse_cmnd["ReglageDebitmetre"] = {}
     reponse_cmnd["ReglageDebitmetre"]["test"] = pac.find("test", "OFF")
     reponse_cmnd["ReglageDebitmetre"]["reglage"] = pac.find("reglage", "OFF")
-    reponse_cmnd["ReglageDebitmetre"]["sensorPeriod"] = pac.find("sensorPeriod", 300)
     reponse_cmnd["ReglageDebitmetre"]["source"] = pac.find("source", "average")
     reponse_cmnd["ReglageDebitmetre"]["unit"] = pac.find("unit", "L/h")
 

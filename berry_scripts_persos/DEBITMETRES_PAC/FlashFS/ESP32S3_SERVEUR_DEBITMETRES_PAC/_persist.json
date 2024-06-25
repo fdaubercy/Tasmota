@@ -30,50 +30,50 @@
 		},
 		"serveur": {
 			"activation": "ON",
-			"nom": "Débitmètres PAC 1",
-			"hostname": "DEBITMETRES-PAC-1",
+			"nom": "Serveur Débitmètres PAC",
+			"hostname": "SERVEUR-DEBITMETRES-PAC",
 			"mDNS": "ON",
 			"IP": {
-				"IPAddress": "10.99.0.2",
-				"IPGateway": "10.99.0.1",
+				"IPAddress": "192.168.0.43",
+				"IPGateway": "192.168.0.254",
 				"Subnet": "255.255.255.0",
-				"DNSServer": "0.0.0.0"
+				"DNSServer": "192.168.0.254"
 			},
 			"wifi": {
 				"power": 17,
 				"selectSignalFort": "OFF",
 				"reScanBy44": "ON",
 				"reseau1": {
-					"nomReseauWifi": "RANGE-EXTENDER-AP",
-					"mdpWifi": "Lune5676"
+					"nomReseauWifi": "MAISON",
+					"mdpWifi": "obdormisti-pervigile%.-ficiendus"
 				},
 				"reseau2": {
-					"nomReseauWifi": "",
-					"mdpWifi": ""
+					"nomReseauWifi": "Relai Wifi 2.4G KuWFi",
+					"mdpWifi": "obdormisti-pervigile%.-ficiendus"
 				}
 			},
 			"mqtt": {
 				"activation": "ON",
 				"hote": "192.168.0.5",
 				"port": 1883,
-				"client": "DEBITMETRES-PAC-1",
+				"client": "SERVEUR-DEBITMETRES-PAC",
 				"utilisateur": "fdaubercy",
 				"mdp": "Lune5676",
-				"topic": "pac/module1",
+				"topic": "pac/debitmetres",
 				"groupTopic1": "tasmotas/pac",
 				"groupTopic2": "",
 				"groupTopic3": ""
 			},
 			"rangeExtender": {
 				"activation": "ON",
-				"idModuleRangeExpender": 1,
+				"idModuleRangeExpender": 0,
 				"AP": {
-					"etat": "OFF",
-					"routeNAPT": "OFF",
-					"SSID": "",
-					"mdp": "",
-					"IPAddress": "",
-					"Subnet": ""
+					"etat": "ON",
+					"routeNAPT": "ON",
+					"SSID": "RANGE-EXTENDER-AP",
+					"mdp": "Lune5676",
+					"IPAddress": "10.99.0.1",
+					"Subnet": "255.255.255.0"
 				}
 			}
 		},
@@ -81,7 +81,7 @@
 			"template": {
 				"BASE": 1,
 				"GPIO": [
-					1, 1, 1, 1, 1, 1, 1, 1, 8993, 1, 8992, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1376, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 				],
 				"NAME": "ESP32 Debitmetres PAC",
 				"FLAG": 0
@@ -430,23 +430,63 @@
 						"unit": "l/min",
 						"source": "average",
 						"debitmetre1": {
-							"activation": "ON",
+							"activation": "OFF",
 							"nom": "Débit Entrée - Cuisine",
 							"facteurCorrection": 1.000,
 							"id": 1,
-							"pin": 14,
+							"pin": -1,
 							"type": 287744,
-							"virtuel": "OFF",
+							"virtuel": "ON",
 							"value": 0
 						},
 						"debitmetre2": {
-							"activation": "ON",
+							"activation": "OFF",
 							"nom": "Débit Salon - SàM",
 							"facteurCorrection": 1.000,
 							"id": 2,
-							"pin": 12,
-							"type": 287745,
-							"virtuel": "OFF",
+							"pin": -1,
+							"type": 287744,
+							"virtuel": "ON",
+							"value": 0
+						},
+						"debitmetre3": {
+							"activation": "OFF",
+							"nom": "Débit Salle de Bain",
+							"facteurCorrection": 1.000,
+							"id": 3,
+							"pin": -1,
+							"type": 287744,
+							"virtuel": "ON",
+							"value": 0
+						},
+						"debitmetre4": {
+							"activation": "OFF",
+							"nom": "Débit Chambre parentale",
+							"facteurCorrection": 1.000,
+							"id": 4,
+							"pin": -1,
+							"type": 287744,
+							"virtuel": "ON",
+							"value": 0
+						},
+						"debitmetre5": {
+							"activation": "OFF",
+							"nom": "Débit Chambre Axel",
+							"facteurCorrection": 1.000,
+							"id": 5,
+							"pin": -1,
+							"type": 287744,
+							"virtuel": "ON",
+							"value": 0
+						},
+						"debitmetre6": {
+							"activation": "OFF",
+							"nom": "Débit Chambre Camille",
+							"facteurCorrection": 1.000,
+							"id": 6,
+							"pin": -1,
+							"type": 287744,
+							"virtuel": "ON",
 							"value": 0
 						}
 					}
@@ -476,24 +516,28 @@
 				"environnement": {
 					"pinsSD": {
 						"pinsSD1": {
+							"activation": "ON",
 							"name": "SPI_Clk",
 							"pin": 18,
 							"id": 1,
 							"type": 23552
 						},
 						"pinsSD2": {
+							"activation": "ON",
 							"name": "SPI_MISO",
 							"pin": 19,
 							"id": 1,
 							"type": 21504
 						},
 						"pinsSD3": {
+							"activation": "ON",
 							"name": "SPI_MOSI",
 							"pin": 23,
 							"id": 1,
 							"type": 22528
 						},
 						"pinsSD4": {
+							"activation": "ON",
 							"pin": 5,
 							"id": 1,
 							"type": 215040

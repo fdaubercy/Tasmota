@@ -82,18 +82,6 @@ class CONTROLE_PAC : Driver
 			end
 		end
 
-        # Paramètre la sensorPeriod si activé pour ce module
-        var periode = int(controleGeneral.parametres["diverses"]["telePeriod"])
-		controleGeneral.parametres["modules"]["PAC"]["sensorPeriod"] = periode
-
-        if (int(periode) > 0 && int(periode) < 10)
-            tasmota.add_cron(string.format("*/%i * * * * *", int(periode)), / -> webFonctions.envoiMQTT("tele/" + controleGeneral.parametres["serveur"]["mqtt"]["topic"] + "/SENSOR", controleGeneral.sensors, ""), "sensorPeriod")
-            tasmota.cmd("TelePeriod 300", boolMute)
-        elif (int(periode) >= 10)
-            tasmota.remove_cron("sensorPeriod")
-            tasmota.cmd(string.format("TelePeriod %i", int(periode)), boolMute)
-        end
-
         # Paramétrage Sensor96 après l'enregistrement du modèle par 'controleGlobal.be'
         if controleGeneral.nbIO.find("nbDebitmetresActives", 0) > 0 && controleGeneral.nbIO.find("nbDebitmetresReels", 0) > 0
             # response = {"Sensor96":{"Factor":[1.000,1.000],"Source":"average","Unit":"l/min"}}
@@ -148,7 +136,12 @@ class CONTROLE_PAC : Driver
                 jsonSensor["Débit"]["AmountUnit"] = dev.find("AmountUnit", "L")
                 jsonSensor["Débit"]["Unit"] = dev["unit"]
 
-                # Les valeurs 'Rate', 'AmountToday' & 'DurationToday' sont ajoutés par la fonction : rangeExtenderFonctions.recupereCapteursConnectes()
+                # Pour une esclaves RangeExtender:
+                #   Les valeurs 'Rate', 'AmountToday' & 'DurationToday' sont ajoutés par la fonction 'rangeExtenderFonctions.recupereCapteursConnectes()'
+                
+
+                # Pour une maitre RangeExtender: 
+                #   Les valeurs 'Rate', 'AmountToday' & 'DurationToday' sont ajoutés par la fonction 'rangeExtenderFonctions.recupereCapteursConnectes()'
 
                 tasmota.response_append(", \"Débit\": " + json.dump(jsonSensor["Débit"]))
             end

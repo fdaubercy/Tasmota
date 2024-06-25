@@ -175,15 +175,6 @@ webFonctions.envoiMQTT = def(topic, payload, fonction)
 
 	if (payload == nil) payload = {} end
 
-	# Pour les commandes réduisant la telePeriod < 10
-	if (fonction == "REGLAGE" || fonction == "SENSORPERIOD" || fonction == "TEST") && controleGeneral.parametres["diverses"]["telePeriod"] < 10
-		# Uniquement les modules esclaves RangeExtender
-		if controleGeneral.parametres["serveur"]["rangeExtender"].find("idModuleRangeExpender", 99) == 0
-			# Recrée le json un peu comme la fonction 'rangeExtenderFonctions.recupereCapteursConnectes'
-			#payload = creeJsonSensor()		
-		end
-	end
-
 	# Si la fonction == "" => le payload n'est pas modifié
 	var strPayload = (type(payload) == "instance" ? json.dump(payload) : payload)
 
