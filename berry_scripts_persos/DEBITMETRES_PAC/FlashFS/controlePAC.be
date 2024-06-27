@@ -1,3 +1,11 @@
+#-
+ - Pensez à commenter ceci (fonction 'CmndTeleperiod' dans le fichier support_command.ino):
+    ----------------------
+    /*if ((Settings->tele_period > 0) && (Settings->tele_period < 10)) {
+      Settings->tele_period = 10;   // Do not allow periods < 10 seconds
+    }*/
+    ----------------------
+-#
 var controlePAC
 
 class CONTROLE_PAC : Driver

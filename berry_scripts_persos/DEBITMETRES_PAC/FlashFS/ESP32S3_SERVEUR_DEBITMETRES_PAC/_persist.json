@@ -504,9 +504,9 @@
 						},
 						"led1": {
 							"activation": "ON",
-							"pin": -1,
+							"pin": 38,
 							"id": 1,
-							"type": 9216
+							"type": 44032
 						}
 					}
 				}
