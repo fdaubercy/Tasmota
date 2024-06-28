@@ -241,5 +241,71 @@ globalFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, 
     end
 end
 
+globalFonctions.modifEtatRelai = def(moduleCapteur, idRelai, typeOrdre, etat, boolCapteurs, boolTimer, delaiAvantCommande)
+	import string
+
+	# Test
+	log ("MODIF_ETAT_RELAI: -------------------- global modifEtatRelai -------------------", LOG_LEVEL_DEBUG)
+	log ("MODIF_ETAT_RELAI: moduleCapteur=" + str(moduleCapteur), LOG_LEVEL_DEBUG)						
+	log ("MODIF_ETAT_RELAI: idRelai=" + str(idRelai), LOG_LEVEL_DEBUG)								
+	log ("MODIF_ETAT_RELAI: typeOrdre=" + str(typeOrdre), LOG_LEVEL_DEBUG)								
+	log ("MODIF_ETAT_RELAI: etat=" + str(etat), LOG_LEVEL_DEBUG)									
+	log ("MODIF_ETAT_RELAI: boolCapteurs=" + str(boolCapteurs), LOG_LEVEL_DEBUG)		
+	log ("MODIF_ETAT_RELAI: boolTimer=" + str(boolTimer), LOG_LEVEL_DEBUG)									
+	log ("MODIF_ETAT_RELAI: delaiAvantCommande=" + str(delaiAvantCommande), LOG_LEVEL_DEBUG)				
+
+	# Modifie l'ordre envoyé au relai en fonction du type de capteur ou bouton
+	if (typeOrdre == "Switch" && (etat == "TOGGLE" || etat == "SINGLE"))
+		if tasmota.get_power()[idRelai - 1] == true
+			etat = "OFF"
+		else etat = "ON"
+		end
+	elif (typeOrdre == "ON" && etat == "OFF")
+		return
+	elif (typeOrdre == "OFF" && etat == "ON")
+		return
+	end
+	
+	# Si le relai est déjà dans l'état visé
+	if (etat == "") return end
+	if (tasmota.get_power()[idRelai - 1] == true && etat == "ON") return end
+	if (tasmota.get_power()[idRelai - 1] == false && etat == "OFF") return end
+
+	# Paramètres par défaut si absent
+	if boolCapteurs == nil boolCapteurs = false end
+	if boolTimer == nil boolTimer = true end
+	if delaiAvantCommande == nil delaiAvantCommande = 0 end
+
+	log ("MODIF_ETAT_RELAI: -------------------- global modifEtatRelai 2 -------------------", LOG_LEVEL_DEBUG)							
+	log ("MODIF_ETAT_RELAI: typeOrdre=" + str(typeOrdre), LOG_LEVEL_DEBUG)								
+	log ("MODIF_ETAT_RELAI: etat=" + str(etat), LOG_LEVEL_DEBUG)									
+	log ("MODIF_ETAT_RELAI: boolCapteurs=" + str(boolCapteurs), LOG_LEVEL_DEBUG)		
+	log ("MODIF_ETAT_RELAI: boolTimer=" + str(boolTimer), LOG_LEVEL_DEBUG)									
+	log ("MODIF_ETAT_RELAI: delaiAvantCommande=" + str(delaiAvantCommande), LOG_LEVEL_DEBUG)
+
+	# Lance l'ordre
+	if delaiAvantCommande != 0
+		tasmota.remove_timer(string.format("timer_commande%i", idRelai))
+		tasmota.set_timer(delaiAvantCommande * 1000, /-> tasmota.cmd("Power" + str(idRelai) + " " + etat, boolMute), string.format("timer_commande%i", idRelai))
+		log (string.format("MODIF_ETAT_RELAI: Relai %i %s après délai de %is!", idRelai, etat, delaiAvantCommande), LOG_LEVEL_DEBUG)
+	else
+		tasmota.cmd("Power" + str(idRelai) + " " + etat, boolMute)
+		log (string.format("MODIF_ETAT_RELAI: Relai %i %s !", idRelai, etat), LOG_LEVEL_DEBUG)
+	end
+
+	# Désactive les capteurs associés à son fonctionnement
+	if boolCapteurs
+		var capteurs = controleGeneral.parametres["modules"][moduleCapteur]["environnement"].find("capteurs", false)
+		
+		if capteurs
+			# Désactive temporairement les capteurs si Relai ON / Réactive les capteurs si Relai OFF
+			log ("MODIF_ETAT_RELAI: " + (etat == "ON" ? "Desactivation" : "Reactivation") + " des capteurs !", LOG_LEVEL_DEBUG)
+			for cleCapteurs: capteurs.keys()
+				capteurs[cleCapteurs]["activation"] = (etat == "ON" ? "OFF" : "ON")
+			end	
+		end
+	end
+end
+
 # Retourne le module lors de l'importation
 return globalFonctions

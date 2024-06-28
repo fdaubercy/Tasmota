@@ -74,21 +74,13 @@ pacFonctions.reglageDebitmetre = def(cmd, idx, payload, payload_json)
     elif (string.toupper(fonction) == "REGLAGE")
         pac["reglage"] = string.toupper(parametre)
         if (string.toupper(parametre) == "ON")
-            controleGeneral.parametres["diverses"]["telePeriod"] = 10
+            controleGeneral.parametres["diverses"]["telePeriod"] = 3
         else
             controleGeneral.parametres["diverses"]["telePeriod"] = 300
         end
         persist.save()
 
-        parametre = (int(parametre) > 0 && int(parametre) < 10) ? 10 : parametre
-        tasmota.cmd(string.format("TelePeriod %i", int(parametre)))
-    # Permet d'envoyer par mqtt l'état des capteurs sur une période < 10s (contrairement à la commande TelePeriod)
-    elif (string.toupper(fonction) == "SENSORPERIOD")
-        controleGeneral.parametres["diverses"]["telePeriod"] = int(parametre)
-        persist.save()
-
-        parametre = (int(parametre) > 0 && int(parametre) < 10) ? 10 : parametre
-        tasmota.cmd(string.format("TelePeriod %i", int(parametre)))
+        tasmota.cmd(string.format("TelePeriod %i", int(controleGeneral.parametres["diverses"]["telePeriod"])))
     # Modifie le type de relevé des données de débit (average=0 / raw=1)
     elif (string.toupper(fonction) == "SOURCE")
         if parametre != pac["environnement"]["debitmetres"]["source"] 
@@ -116,12 +108,7 @@ pacFonctions.reglageDebitmetre = def(cmd, idx, payload, payload_json)
     end
 
     # pour le maitre: Envoi de la commande par MQTT sur le groupTopic1 vers les autres modules esclaves
-    if (string.toupper(fonction) == "REGLAGE" || string.toupper(fonction) == "SENSORPERIOD" || string.toupper(fonction) == "SOURCE" || 
-            string.toupper(fonction) == "UNIT" || string.toupper(fonction) == "CORRECTION"  || string.toupper(fonction) == "TEST")
-        # if (string.toupper(fonction) == "REGLAGE" || string.toupper(fonction) == "SENSORPERIOD")
-        #     fonction = "SENSORPERIOD"
-        # end
-
+    if (string.toupper(fonction) == "REGLAGE" || string.toupper(fonction) == "SOURCE" || string.toupper(fonction) == "UNIT" || string.toupper(fonction) == "CORRECTION"  || string.toupper(fonction) == "TEST")
         if (controleGeneral.parametres["serveur"]["rangeExtender"].find("idModuleRangeExpender", 99) == 0)
             for cle: controleRangeExtender.modulesConnectes.keys()
                 webFonctions.envoiMQTT("cmnd/" + controleRangeExtender.modulesConnectes[cle]["topicModule"] + "/ReglageDebitmetre", str(fonction) + " " + str(parametre), "")

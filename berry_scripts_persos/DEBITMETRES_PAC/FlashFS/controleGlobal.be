@@ -182,7 +182,77 @@ class CONTROLE_GENERAL : Driver
 
 
 
+	#- Se déclenche sur modification d'état d'un relai par l'interface webUI ou commande Power -#
+	def set_power_handler(cmd, idx)
+        import string
+        import mqtt
+		import globalFonctions
 
+		var etat = ""
+		var i = 0
+		
+		print("----------------------- SetPowerHandler ----------------------")
+		log("CONTROLE_GENERAL: Lecture automatisee de l'etat des relais", LOG_LEVEL_DEBUG)
+		for nb: 0 .. self.nbIO["nbRelaisActives"]
+			if 1 & (idx >> (nb)) == 1
+				etat = "ON"
+			else etat = "OFF"
+			end
+			
+			# Parcours tous les modules paramétrés
+			if self.parametres["modules"].find("activation", "OFF") == "ON"
+				for cle: self.parametres["modules"].keys()
+					if type(self.parametres["modules"][cle]) != "instance"
+						continue
+					end
+
+					# Pour chaque module activé
+					if self.parametres["modules"][cle].find("activation", "OFF") == "ON"
+						# Mise à jour des relais
+						var relais = self.parametres["modules"][cle]["environnement"]["relais"]
+
+						for cleRLY: relais.keys()
+							if relais[cleRLY]["etat"] != etat && relais[cleRLY]["id"] == nb + 1
+								log((string.format("GESTION_RELAIS: Lecture etat bit %i -> relai %i = %s", 7 - nb, nb + 1, etat)), LOG_LEVEL_DEBUG)
+								
+								# Ajoute des détails de déclenchement en json
+								relais[cleRLY]["etat"] = etat
+								if etat == "ON"
+									if tasmota.rtc()["local"] > relais[cleRLY]["timestamp"]["ON"]
+										relais[cleRLY]["timestamp"]["delai"] = tasmota.rtc()["local"] - relais[cleRLY]["timestamp"]["ON"]
+									end
+									
+									if cle == "pompeVideCave"
+										relais[cleRLY]["timestamp"]["nbCyclesJour"] += 1
+									end
+								end
+								relais[cleRLY]["timestamp"][etat] = tasmota.rtc()["local"]
+								
+								# Vérifie si il y a un timer paramétrer ou à annuler
+								if etat == "ON" && relais[cleRLY]["id"] == nb + 1 && relais[cleRLY]["timer"] != 0
+									log (string.format("GESTION_RELAIS: Lancement du timer pour le relai %i: %is !", nb + 1, relais[cleRLY]["timer"]), LOG_LEVEL_INFO)
+									tasmota.set_timer(relais[cleRLY]["timer"] * 1000, /-> globalFonctions.modifEtatRelai(cle, nb + 1, "Switch", "TOGGLE", false, false, 0), string.format("timer_relai%i", nb + 1))								
+                                elif etat == "OFF" && relais[cleRLY]["id"] == nb + 1 && relais[cleRLY]["timer"] != 0
+									log (string.format("GESTION_RELAIS: Supprime le timer pour le relai %i !", nb + 1), LOG_LEVEL_INFO)
+									tasmota.remove_timer(string.format("timer_relai%i", nb + 1))								
+								end
+								
+								# Vérifie si il doit y avoir emission d'un message MQTT
+								var tabTopics = relais[cleRLY]["publishMQTT"]
+								for nbMQTT: 0 .. tabTopics["topic"].size() - 1
+									var topic = tabTopics["topic"][nbMQTT]
+									if string.find(topic, "cmnd") > -1
+										log (string.format("GESTION_RELAIS: Publie sur le réseau mqtt pour le relai %i !", nb + 1), LOG_LEVEL_INFO)
+										mqtt.publish(topic, etat)								
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end	
 end
 
 # Active le Driver de controle global des modules

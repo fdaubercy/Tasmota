@@ -53,7 +53,7 @@ configGlobal.configGlobalByJson = def(json)
 	var template = json["modele"]["template"]
 		template["NAME"] = json["modele"]["template"]["NAME"]
 	var gpioPinUtilises = []
-    var ordreGPIO = ["GPIO0", "GPIO1", "GPIO2", "GPIO3", "GPIO4", "GPIO5", "GPIO9", "GPIO10", "GPIO12", "GPIO13", "GPIO14", "GPIO15", "GPIO16", "GPIO17", "GPIO18", "GPIO19", "GPIO20", "GPIO21", "GPIO22", "GPIO23", "GPIO24", "GPIO25", "GPIO26", "GPIO27", "GPIO6", "GPIO7", "GPIO8", "GPIO11", "GPIO32", "GPIO33", "GPIO34", "GPIO35", "GPIO36", "GPIO37", "GPIO38", "GPIO39"]	
+    var ordreGPIO = ["GPIO0", "GPIO1", "GPIO2", "GPIO3", "GPIO4", "GPIO5", "GPIO9", "GPIO10", "GPIO12", "GPIO13", "GPIO14", "GPIO15", "GPIO16", "GPIO17", "GPIO18", "GPIO19", "GPIO20", "GPIO21", "GPIO22", "GPIO23", "GPIO24", "GPIO25", "GPIO26", "GPIO27", "GPIO6", "GPIO7", "GPIO8", "GPIO11", "GPIO32", "GPIO33", "GPIO34", "GPIO35", "GPIO36", "GPIO37", "GPIO38", "GPIO39", "GPIO40", "GPIO41", "GPIO42", "GPIO43", "GPIO44", "GPIO45", "GPIO46", "GPIO47", "GPIO48"]	
 	
 	# Exemples de commandes :
 	# template -> resultat = {"NAME":"ESP32 Relay x8","GPIO":[0,0,161,0,32,0,0,0,230,231,229,162,0,0,0,0,0,0,0,0,0,226,227,228,0,0,0,0,224,225,0,0,0,0,0,0],"FLAG":0,"BASE":1}

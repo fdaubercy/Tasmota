@@ -144,12 +144,7 @@ class CONTROLE_PAC : Driver
                 jsonSensor["Débit"]["AmountUnit"] = dev.find("AmountUnit", "L")
                 jsonSensor["Débit"]["Unit"] = dev["unit"]
 
-                # Pour une esclaves RangeExtender:
-                #   Les valeurs 'Rate', 'AmountToday' & 'DurationToday' sont ajoutés par la fonction 'rangeExtenderFonctions.recupereCapteursConnectes()'
-                
-
-                # Pour une maitre RangeExtender: 
-                #   Les valeurs 'Rate', 'AmountToday' & 'DurationToday' sont ajoutés par la fonction 'rangeExtenderFonctions.recupereCapteursConnectes()'
+                # Les valeurs 'Rate', 'AmountToday' & 'DurationToday' sont ajoutés par la fonction 'rangeExtenderFonctions.recupereCapteursConnectes()'
 
                 tasmota.response_append(", \"Débit\": " + json.dump(jsonSensor["Débit"]))
             end

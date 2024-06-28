@@ -29,6 +29,7 @@ if (persist.find("parametres", false))
     gestionFileFolder.loadBerryFile("/controleGlobal.be")
     gestionFileFolder.loadBerryFile("/controleRangeExtender.be", persist.find("parametres")["serveur"]["rangeExtender"].find("activation", "OFF"))
     gestionFileFolder.loadBerryFile("/controlePAC.be", persist.find("parametres")["modules"]["PAC"].find("activation", "OFF"))
+    gestionFileFolder.loadBerryFile("/controleWeb.be", persist.find("parametres")["serveur"].find("activation", "OFF"))
 
     # A la fin du processus
     progLoaded = true
