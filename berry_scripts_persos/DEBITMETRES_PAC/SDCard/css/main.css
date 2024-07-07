@@ -1,0 +1,120 @@
+<style>
+    div, fieldset, input, select {
+        border-radius:0.4rem;
+        margin:0px; 
+        padding:0px;
+        font-size:18px;
+    }
+    fieldset {
+        /*max-width: 340px;*/
+        padding-bottom:5px;
+        margin-top:5px;
+    }
+    input, select {
+        height:32px;
+        font-size:15px;
+        text-wrap: wrap;
+		padding-left: 5px;
+    }
+    label {
+        font-size:16px;
+    }
+    input[type=checkbox] {
+        height:15px;
+        margin-left:5px;
+        vertical-align:-2px;
+
+    }
+    .bred {
+		background: #b35454;
+	}
+	.bred: hover {
+		background: #7f3333;
+	}
+	.bgrn {
+		background: #47c266;
+	}
+	.bgrn: hover {
+		background: #328948; /*#5aaf6f;*/
+	}
+	.btnPerso {
+		margin-top:7px;
+	}
+    .titre {
+        font-weight: bold;
+        text-decoration: underline;       
+    }
+    .activable {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-start;
+    }
+    .fleche{
+        margin-left: 10px;
+        margin-top: 2px;
+    }
+    .relaisLie {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+        margin: 5px 0 5px 0;
+        max-width: 332px;
+    }
+    .num {
+        font-size: 0.7em;
+    }
+    .labelRelaisLie {
+        width: 230px;
+        text-align: right;
+        margin-top: 5px;
+    }
+	.visible {
+		margin: 4px;
+	}
+	#popup-overlay{
+	  position: absolute;
+	  max-width: 332px;
+	  height: 100px;
+	  display: none;
+	  transform: translate(0%, 51%);
+	}
+	#popup-overlay.open{
+	  display: flex !important;
+	  -webkit-transition-duration: 4s;
+	  transition-duration: 4s;
+	}
+	#popup-overlay .popup-content::after {
+			  content: "";
+			  position: absolute;
+			  top: -7%;
+			  left: 20%;
+			  margin-left: -5px;
+			  border-width: 5px;
+			  border-style: solid;
+			  border-color: transparent transparent #555 transparent;
+	}
+	.popup-content {
+	  /*max-width: 700px;*/
+	  display: flex;
+	  font-size: 14px;
+	  flex-direction: column;
+	  align-items: center;
+	  justify-content: center;
+	  padding: 8px;
+	  box-sizing: border-box;
+	  background: #495E57;
+	  /*position: absolute;
+	  top: 50%;
+	  left: 50%;
+	  transform: translate(-50%, -50%);*/
+	  opacity: 0.9;
+	}
+	.popup-select {
+		font-size: 14px;
+	}
+	*:disabled {
+		background-color: dimgrey;
+		opacity: 1;
+		color: #252525;
+	}
+</style>

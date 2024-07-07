@@ -1,0 +1,308 @@
+{
+	"parametres": {
+		"diverses": {
+			"typeESP": "ESP32S3",
+			"logs": 4,
+			"telePeriod": 300,
+			"eviteResetBTN": "ON",
+			"localisation": {
+				"latitude": "50.410931",
+				"longitude": "3.085796"
+			},
+			"fuseauHoraire": {
+				"timezone": 99,
+				"TimeStd": {
+					"Week": 0,
+					"Month": 10,
+					"Offset": 60,
+					"Day": 1,
+					"Hemisphere": 0,
+					"Hour": 3
+				},
+				"TimeDst": {
+					"Hemisphere": 0,
+					"Week": 0,
+					"Month": 3,
+					"Day": 1,
+					"Hour": 2,
+					"Offset": 120
+				}
+			}
+		},
+		"serveur": {
+			"activation": "ON",
+			"nom": "Serveur Débitmètres PAC",
+			"hostname": "SERVEUR-DEBITMETRES-PAC",
+			"mDNS": "ON",
+			"IP": {
+				"IPAddress": "192.168.0.43",
+				"IPGateway": "192.168.0.254",
+				"Subnet": "255.255.255.0",
+				"DNSServer": "192.168.0.254"
+			},
+			"wifi": {
+				"power": 17,
+				"selectSignalFort": "OFF",
+				"reScanBy44": "ON",
+				"reseau1": {
+					"nomReseauWifi": "MAISON",
+					"mdpWifi": "obdormisti-pervigile%.-ficiendus"
+				},
+				"reseau2": {
+					"nomReseauWifi": "Relai Wifi 2.4G KuWFi",
+					"mdpWifi": "obdormisti-pervigile%.-ficiendus"
+				}
+			},
+			"mqtt": {
+				"activation": "ON",
+				"hote": "192.168.0.5",
+				"port": 1883,
+				"client": "SERVEUR-DEBITMETRES-PAC",
+				"utilisateur": "fdaubercy",
+				"mdp": "Lune5676",
+				"topic": "pac/debitmetres",
+				"groupTopic1": "tasmotas/pac",
+				"groupTopic2": "",
+				"groupTopic3": ""
+			},
+			"rangeExtender": {
+				"activation": "ON",
+				"idModuleRangeExpender": 0,
+				"AP": {
+					"etat": "ON",
+					"routeNAPT": "ON",
+					"SSID": "RANGE-EXTENDER-AP",
+					"mdp": "Lune5676",
+					"IPAddress": "10.99.0.1",
+					"Subnet": "255.255.255.0"
+				}
+			},
+			"serveurFTP": {
+				"activation": "ON",
+				"utilisateur": "fdaubercy",
+				"mdp": "Lune5676"
+			}
+		},
+		"template": {
+			"BASE": 1,
+			"GPIO": [
+					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+			], 
+			"NAME": "ESP32S3 Debitmetres PAC",
+			"FLAG": 0
+		},
+		"modules": {
+			"activation": "ON",
+			"PAC": {
+				"name": "Débits circuits de PAC",
+				"activation": "ON",
+				"reglage": "OFF",
+				"environnement": {
+					"debitmetres": {
+						"unit": "l/min",
+						"source": "average",
+						"amountUnit": "L",
+						"debitmetre1": {
+							"activation": "OFF",
+							"nom": "Débit Entrée - Cuisine",
+							"facteurCorrection": 1.000,
+							"id": 1,
+							"pin": -1,
+							"type": 8992,
+							"virtuel": "ON",
+							"value": 0
+						},
+						"debitmetre2": {
+							"activation": "OFF",
+							"nom": "Débit Salon - SàM",
+							"facteurCorrection": 1.000,
+							"id": 2,
+							"pin": -1,
+							"type": 8992,
+							"virtuel": "ON",
+							"value": 0
+						},
+						"debitmetre3": {
+							"activation": "OFF",
+							"nom": "Débit Salle de Bain",
+							"facteurCorrection": 1.000,
+							"id": 3,
+							"pin": -1,
+							"type": 8992,
+							"virtuel": "ON",
+							"value": 0
+						},
+						"debitmetre4": {
+							"activation": "OFF",
+							"nom": "Débit Chambre parentale",
+							"facteurCorrection": 1.000,
+							"id": 4,
+							"pin": -1,
+							"type": 8992,
+							"virtuel": "ON",
+							"value": 0
+						},
+						"debitmetre5": {
+							"activation": "OFF",
+							"nom": "Débit Chambre Axel",
+							"facteurCorrection": 1.000,
+							"id": 5,
+							"pin": -1,
+							"type": 8992,
+							"virtuel": "ON",
+							"value": 0
+						},
+						"debitmetre6": {
+							"activation": "OFF",
+							"nom": "Débit Chambre Camille",
+							"facteurCorrection": 1.000,
+							"id": 6,
+							"pin": -1,
+							"type": 8992,
+							"virtuel": "ON",
+							"value": 0
+						}
+					}
+				}
+			},
+			"leds": {
+				"activation": "ON",
+				"name": "Leds",
+				"ledPower": "ON",
+				"ledState": 8,
+				"environnement": {
+					"leds": {
+						"ledLink": {
+							"activation": "ON",
+							"pin": 39,
+							"type": 544
+						},
+						"led1": {
+							"activation": "ON",
+							"pin": 38,
+							"id": 1,
+							"type": 288
+						}
+					},
+					"ws2812s": {
+						"ws28121": {
+							"activation": "ON",
+							"pin": 48,
+							"id": 1,
+							"type": 1376
+						}
+					}
+				}
+			},
+			"SD": {
+				"activation": "OFF",
+				"name": "Carte SD",
+				"environnement": {
+					"pinsSDs": {
+						"pinsSD1": {
+							"activation": "ON",
+							"nom": "SPI_Clk",
+							"pin": 18,
+							"id": 1,
+							"type": 736
+						},
+						"pinsSD2": {
+							"activation": "ON",
+							"nom": "SPI_MISO",
+							"pin": 19,
+							"id": 1,
+							"type": 672
+						},
+						"pinsSD3": {
+							"activation": "ON",
+							"nom": "SPI_MOSI",
+							"pin": 23,
+							"id": 1,
+							"type": 704
+						},
+						"pinsSD4": {
+							"activation": "ON",
+							"nom": "SDCard CS",
+							"pin": 5,
+							"id": 1,
+							"type": 6720
+						}
+					}
+				}
+			},
+			"ecran": {
+				"activation": "OFF",
+				"name": "Ecran ILI9488",
+				"environnement": {
+					"pinsEcrans": {
+						"pinsEcran1": {
+							"activation": "OFF",
+							"nom": "Option A",
+							"pin": -1,
+							"id": 3,
+							"type": 6208
+						},	
+						"pinsEcran2": {
+							"activation": "OFF",
+							"nom": "ILI9488 CS",
+							"pin": -1,
+							"id": 1,
+							"type": 6432
+						},
+						"pinsEcran3": {
+							"activation": "OFF",
+							"nom": "SPI Clk",
+							"pin": -1,
+							"id": 1,
+							"type": 736
+						},
+						"pinsEcran4": {
+							"activation": "OFF",
+							"nom": "SPI MISO",
+							"pin": -1,
+							"id": 1,
+							"type": 672
+						},	
+						"pinsEcran5": {
+							"activation": "OFF",
+							"nom": "SPI MOSI",
+							"pin": -1,
+							"id": 1,
+							"type": 864
+						},
+						"pinsEcran6": {
+							"activation": "OFF",
+							"nom": "SPI DC",
+							"pin": -1,
+							"id": 1,
+							"type": 800
+						},
+						"pinsEcran7": {
+							"activation": "OFF",
+							"nom": "XPT2046 CS",
+							"pin": -1,
+							"id": 1,
+							"type": 7264
+						}			
+					},
+					"relais": {
+						"relai1": {
+							"activation": "OFF",
+							"nom": "Rétro Ecl",
+							"pin": -1,
+							"id": 1,
+							"type": 992
+						},	
+						"relai2": {
+							"activation": "OFF",
+							"nom": "Display Rst",
+							"pin": -1,
+							"id": 1,
+							"type": 1024
+						}
+					}
+				}
+			}
+		}
+	}
+}

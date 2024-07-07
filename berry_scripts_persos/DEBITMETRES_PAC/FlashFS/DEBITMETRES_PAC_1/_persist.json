@@ -1,0 +1,195 @@
+{
+	"parametres": {
+		"diverses": {
+			"typeESP": "ESP32",
+			"logs": 4,
+			"telePeriod": 300,
+			"eviteResetBTN": "ON",
+			"localisation": {
+				"latitude": "50.410931",
+				"longitude": "3.085796"
+			},
+			"fuseauHoraire": {
+				"timezone": 99,
+				"TimeStd": {
+					"Week": 0,
+					"Month": 10,
+					"Offset": 60,
+					"Day": 1,
+					"Hemisphere": 0,
+					"Hour": 3
+				},
+				"TimeDst": {
+					"Hemisphere": 0,
+					"Week": 0,
+					"Month": 3,
+					"Day": 1,
+					"Hour": 2,
+					"Offset": 120
+				}
+			}
+		},
+		"serveur": {
+			"activation": "ON",
+			"nom": "Débitmètres PAC 1",
+			"hostname": "DEBITMETRES-PAC-1",
+			"mDNS": "ON",
+			"IP": {
+				"IPAddress": "10.99.0.2",
+				"IPGateway": "10.99.0.1",
+				"Subnet": "255.255.255.0",
+				"DNSServer": "0.0.0.0"
+			},
+			"wifi": {
+				"power": 17,
+				"selectSignalFort": "OFF",
+				"reScanBy44": "ON",
+				"reseau1": {
+					"nomReseauWifi": "RANGE-EXTENDER-AP",
+					"mdpWifi": "Lune5676"
+				},
+				"reseau2": {
+					"nomReseauWifi": "",
+					"mdpWifi": ""
+				}
+			},
+			"mqtt": {
+				"activation": "ON",
+				"hote": "192.168.0.5",
+				"port": 1883,
+				"client": "DEBITMETRES-PAC-1",
+				"utilisateur": "fdaubercy",
+				"mdp": "Lune5676",
+				"topic": "pac/module1",
+				"groupTopic1": "tasmotas/pac",
+				"groupTopic2": "",
+				"groupTopic3": ""
+			},
+			"rangeExtender": {
+				"activation": "ON",
+				"idModuleRangeExpender": 1,
+				"AP": {
+					"etat": "OFF",
+					"routeNAPT": "OFF",
+					"SSID": "",
+					"mdp": "",
+					"IPAddress": "",
+					"Subnet": ""
+				}
+			},
+			"serveurFTP": {
+				"activation": "OFF",
+				"utilisateur": "fdaubercy",
+				"mdp": "Lune5676"
+			}
+		},
+		"template": {
+			"BASE": 1,
+			"GPIO": [
+				1, 1, 1, 1, 1, 1, 1, 1, 8993, 1, 8992, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+			],
+			"NAME": "ESP32 Debitmetres PAC",
+			"FLAG": 0
+		},
+		"modules": {
+			"activation": "ON",
+			"PAC": {
+				"name": "Débits circuits de PAC",
+				"activation": "ON",
+				"reglage": "OFF",
+				"environnement": {
+					"debitmetres": {
+						"unit": "l/min",
+						"source": "average",
+						"amountUnit": "L",
+						"debitmetre1": {
+							"activation": "ON",
+							"nom": "Débit Entrée - Cuisine",
+							"facteurCorrection": 1.000,
+							"id": 1,
+							"pin": 14,
+							"type": 8992,
+							"virtuel": "OFF",
+							"value": 0
+						},
+						"debitmetre2": {
+							"activation": "ON",
+							"nom": "Débit Salon - SàM",
+							"facteurCorrection": 1.000,
+							"id": 2,
+							"pin": 13,
+							"type": 8992,
+							"virtuel": "OFF",
+							"value": 0
+						}
+					}
+				}
+			},
+			"leds": {
+				"activation": "ON",
+				"name": "Leds",
+				"ledPower": "ON",
+				"ledState": 8,
+				"environnement": {
+					"leds": {
+						"ledLink": {
+							"activation": "ON",
+							"pin": 39,
+							"type": 544
+						},
+						"led1": {
+							"activation": "ON",
+							"pin": 26,
+							"id": 1,
+							"type": 288
+						}
+					},
+					"ws2812s": {
+						"ws28121": {
+							"activation": "OFF",
+							"pin": -1,
+							"id": 1,
+							"type": 1376
+						}
+					}
+				}
+			},
+			"SD": {
+				"activation": "OFF",
+				"name": "Carte SD",
+				"environnement": {
+					"pinsSDs": {
+						"pinsSD1": {
+							"activation": "OFF",
+							"nom": "SPI_Clk",
+							"pin": 18,
+							"id": 1,
+							"type": 736
+						},
+						"pinsSD2": {
+							"activation": "OFF",
+							"nom": "SPI_MISO",
+							"pin": 19,
+							"id": 1,
+							"type": 672
+						},
+						"pinsSD3": {
+							"activation": "OFF",
+							"nom": "SPI_MOSI",
+							"pin": 23,
+							"id": 1,
+							"type": 704
+						},
+						"pinsSD4": {
+							"activation": "OFF",
+							"nom": "SDCard CS",
+							"pin": 5,
+							"id": 1,
+							"type": 6720
+						}
+					}
+				}
+			}
+		}
+	}
+}

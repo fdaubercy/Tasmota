@@ -1,0 +1,324 @@
+<table style='width:100%'>
+    <!-- Début du formulaire -->
+    <form id='paramModules' action='/modules' method='post'>
+        <fieldset>
+			<div style='display:block;' id='titre' class='visible'>
+				<legend id="titreCaract"></legend>
+				<div><label>Activation :</label><select id='activation'></select></div>
+				<div><label>Nom :</label><input type='text' id='name' value=''></div>
+			</div>
+        </fieldset>
+		<div style='display:none;' id="environnement">
+			<div style='display:none;' id="groupe_boutons">
+				<fieldset style='display:none;' id="fieldset_bouton1" name="fieldset_boutons">
+					<legend class="activable">
+						<div><b>Bouton 1</b></div><span class="fleche" id='fleche_bouton1' onclick="afficheParagraphe('fleche_bouton1', 'bouton1')">▼</span>
+					</legend>
+					<div style='display:block;' id='bouton1' class='visible'>
+						<div>
+							<label>Suppression :</label>
+							<input type="checkbox" id="bouton1_suppression" name="bouton1_suppression" value="1">
+						</div>
+						<div><label>Activation :</label><select id='bouton1_activation' onChange='desactiveFieldset(this);'></select></div>
+						<div><label>ID :</label><input type='text' id='bouton1_id' value=''></div>
+						<div><label>Pin :</label><input type='text' id='bouton1_pin' value=''></div>
+						<div><label>Type :</label><select id='bouton1_type'></select></div>
+						<div><label>SwitchMode :</label><select id='bouton1_SwitchMode'></select></div>
+						<div><label>Etat :</label><input type='text' id='bouton1_etat' value=''></div>
+						<div>Relais Liés :</div>
+						<div class="relaisLie">
+							<div class="num">1</div>
+							<div class="num">2</div>
+							<div class="num">3</div>
+							<div class="num">4</div>
+							<div class="num">5</div>
+							<div class="num">6</div>
+							<div class="num">7</div>
+							<div class="num">8</div>
+						</div>
+						<div class="relaisLie">
+							<input type="checkbox" id="bouton1_relaisLie_1" name="bouton1_relaisLie" value="1">
+							<input type="checkbox" id="bouton1_relaisLie_2" name="bouton1_relaisLie" value="2">
+							<input type="checkbox" id="bouton1_relaisLie_3" name="bouton1_relaisLie" value="3">
+							<input type="checkbox" id="bouton1_relaisLie_4" name="bouton1_relaisLie" value="4">
+							<input type="checkbox" id="bouton1_relaisLie_5" name="bouton1_relaisLie" value="5">
+							<input type="checkbox" id="bouton1_relaisLie_6" name="bouton1_relaisLie" value="6">
+							<input type="checkbox" id="bouton1_relaisLie_7" name="bouton1_relaisLie" value="7">
+							<input type="checkbox" id="bouton1_relaisLie_8" name="bouton1_relaisLie" value="8">
+						</div>
+						<div class="relaisLie"><label class="labelRelaisLie">Délai :</label><input type='text' id='bouton1_relaisLie_delai' value=''></div>
+						<div style="font-size: 16px;margin-left: 10px;">Type d'action :</div>
+						<div class="relaisLie">
+							<input type="checkbox" id="bouton1_relaisLie_type_ON" name="bouton1_relaisLie_type" value="ON"/><label class="num">ON</label>
+							<input type="checkbox" id="bouton1_relaisLie_type_OFF" name="bouton1_relaisLie_type" value="OFF"/><label class="num">OFF</label>
+							<input type="checkbox" id="bouton1_relaisLie_type_ON-OFF" name="bouton1_relaisLie_type" value="ON/OFF"/><label class="num">ON/OFF</label>
+							<input type="checkbox" id="bouton1_relaisLie_type_Switch" name="bouton1_relaisLie_type" value="Switch"/><label class="num">Switch</label>
+						</div>
+					</div>
+				</fieldset>
+			</div>
+			<div style='display:none;' id="groupe_relais">
+				<fieldset style='display:none;' id="fieldset_relai1" name="fieldset_relais">
+					<legend class="activable">
+						<div><b>Relai 1</b></div><span class="fleche" id='fleche_relai1' onclick="afficheParagraphe('fleche_relai1', 'relai1')">▼</span>
+					</legend>
+					<div style='display:block;' id='relai1' class='visible'>
+						<div>
+							<label>Suppression :</label>
+							<input type="checkbox" id="relai1_suppression" name="relai1_suppression" value="1">
+						</div>
+						<div><label>Activation :</label><select id='relai1_activation' onChange='desactiveFieldset(this);'></select></div>
+						<div><label>Nom :</label><input type='text' id='relai1_nom' value=''></div>
+						<div><label>ID :</label><input type='text' id='relai1_id' value=''></div>
+						<div><label>Pin :</label><input type='text' id='relai1_pin' value=''></div>
+						<div><label>Type :</label><select id='relai1_type'></select></div>
+						<div><label>Etat :</label><input type='text' id='relai1_etat' value=''></div>
+						<div><label>Timer :</label><input type='text' id='relai1_timer' value=''></div>
+						<div><label>Topic :</label><input type='text' id='relai1_topic' value=''></div>
+					</div>
+				</fieldset>
+			</div>
+			<div style='display:none;' id="groupe_capteurs">
+				<fieldset style='display:none;' id="fieldset_capteur1" name="fieldset_capteurs">
+					<legend class="activable">
+						<div><b>Capteur 1</b></div><span class="fleche" id='fleche_capteur1' onclick="afficheParagraphe('fleche_capteur1', 'capteur1')">▼</span>
+					</legend>
+					<div style='display:block;' id='capteur1' class='visible'>
+						<div>
+							<label>Suppression :</label>
+							<input type="checkbox" id="capteur1_suppression" name="capteur1_suppression" value="1">
+						</div>
+						<div><label>Activation :</label><select id='capteur1_activation' onChange='desactiveFieldset(this);'></select></div>
+						<div><label>Nom :</label><input type='text' id='capteur1_nom' value=''></div>
+						<div><label>ID :</label><input type='text' id='capteur1_id' value=''></div>
+						<div><label>Pin :</label><input type='text' id='capteur1_pin' value=''></div>
+						<div><label>Type :</label><select id='capteur1_type'></select></div>
+						<div><label>SwitchMode :</label><select id='capteur1_SwitchMode'></select></div>
+						<div><label>Etat :</label><input type='text' id='capteur1_etat' value=''></div>
+
+						<div>Relais Liés :</div>
+						<div class="relaisLie">
+							<div class="num">1</div>
+							<div class="num">2</div>
+							<div class="num">3</div>
+							<div class="num">4</div>
+							<div class="num">5</div>
+							<div class="num">6</div>
+							<div class="num">7</div>
+							<div class="num">8</div>
+						</div>
+						<div class="relaisLie">
+							<input type="checkbox" id="capteur1_relaisLie1" name="capteur1_relaisLie" value="1">
+							<input type="checkbox" id="capteur1_relaisLie2" name="capteur1_relaisLie" value="2">
+							<input type="checkbox" id="capteur1_relaisLie3" name="capteur1_relaisLie" value="3">
+							<input type="checkbox" id="capteur1_relaisLie4" name="capteur1_relaisLie" value="4">
+							<input type="checkbox" id="capteur1_relaisLie5" name="capteur1_relaisLie" value="5">
+							<input type="checkbox" id="capteur1_relaisLie6" name="capteur1_relaisLie" value="6">
+							<input type="checkbox" id="capteur1_relaisLie7" name="capteur1_relaisLie" value="7">
+							<input type="checkbox" id="capteur1_relaisLie8" name="capteur1_relaisLie" value="8">
+						</div>
+						<div class="relaisLie"><label class="labelRelaisLie">Délai :</label><input type='text' id='capteur1_relaisLie_delai' value=''></div>
+						<div style="font-size: 16px;margin-left: 10px;">Type d'action :</div>
+						<div class="relaisLie">
+							<input type="checkbox" id="capteur1_relaisLie_type_ON" name="capteur1_relaisLie_type" value="ON"/><label class="num">ON</label>
+							<input type="checkbox" id="capteur1_relaisLie_type_OFF" name="capteur1_relaisLie_type" value="OFF"/><label class="num">OFF</label>
+							<input type="checkbox" id="capteur1_relaisLie_type_ON-OFF" name="capteur1_relaisLie_type" value="ON/OFF"/><label class="num">ON/OFF</label>
+							<input type="checkbox" id="capteur1_relaisLie_type_Switch" name="capteur1_relaisLie_type" value="Switch"/><label class="num">Switch</label>
+						</div>
+					</div>
+				</fieldset>	
+			</div>
+			<div style='display:none;' id="groupe_thermometres">
+				<fieldset style='display:none;' id="fieldset_thermometre1" name="fieldset_thermometres">
+					<legend class="activable">
+						<div><b>Thermomètre 1</b></div><span class="fleche" id='fleche_thermometre1' onclick="afficheParagraphe('fleche_thermometre1', 'thermometre1')">▼</span>
+					</legend>	
+					<div style='display:block;' id='thermometre1' class='visible'>
+						<div>
+							<label>Suppression :</label>
+							<input type="checkbox" id="thermometre1_suppression" name="thermometre1_suppression" value="1">
+						</div>
+						<div><label>Activation :</label><select id='thermometre1_activation' onChange='desactiveFieldset(this);'></select></div>
+						<div><label>ID :</label><input type='text' id='thermometre1_id' value=''></div>
+						<div><label>Pin :</label><input type='text' id='thermometre1_pin' value=''></div>
+						<div><label>Type :</label><select id='thermometre1_type'></select></div>
+						<div><label>Valeur :</label><input type='text' id='thermometre1_value' value=''></div>
+
+						<div>Relais Liés :</div>
+						<div class="relaisLie">
+							<div class="num">1</div>
+							<div class="num">2</div>
+							<div class="num">3</div>
+							<div class="num">4</div>
+							<div class="num">5</div>
+							<div class="num">6</div>
+							<div class="num">7</div>
+							<div class="num">8</div>
+						</div>
+						<div class="relaisLie">
+							<input type="checkbox" id="thermometre1_relaisLie1" name="thermometre1_relaisLie" value="1">
+							<input type="checkbox" id="thermometre1_relaisLie2" name="thermometre1_relaisLie" value="2">
+							<input type="checkbox" id="thermometre1_relaisLie3" name="thermometre1_relaisLie" value="3">
+							<input type="checkbox" id="thermometre1_relaisLie4" name="thermometre1_relaisLie" value="4">
+							<input type="checkbox" id="thermometre1_relaisLie5" name="thermometre1_relaisLie" value="5">
+							<input type="checkbox" id="thermometre1_relaisLie6" name="thermometre1_relaisLie" value="6">
+							<input type="checkbox" id="thermometre1_relaisLie7" name="thermometre1_relaisLie" value="7">
+							<input type="checkbox" id="thermometre1_relaisLie8" name="thermometre1_relaisLie" value="8">
+						</div>
+						<div class="relaisLie"><label class="labelRelaisLie">Limite basse :</label><input type='text' id='thermometre1_relaisLie_limite1' value=''></div>
+						<div class="relaisLie"><label class="labelRelaisLie">Limite haute :</label><input type='text' id='thermometre1_relaisLie_limite2' value=''></div>
+						<div class="relaisLie"><label class="labelRelaisLie">Délai :</label><input type='text' id='thermometre1_relaisLie_delai' value=''></div>					
+						<div style="font-size: 16px;margin-left: 10px;">Type d'action :</div>
+						<div class="relaisLie">
+							<input type="checkbox" id="thermometre1_relaisLie_type_ON" name="thermometre1_relaisLie_type" value="ON"/><label class="num">ON</label>
+							<input type="checkbox" id="thermometre1_relaisLie_type_OFF" name="thermometre1_relaisLie_type" value="OFF"/><label class="num">OFF</label>
+							<input type="checkbox" id="thermometre1_relaisLie_type_ON-OFF" name="thermometre1_relaisLie_type" value="ON/OFF"/><label class="num">ON/OFF</label>
+							<input type="checkbox" id="thermometre1_relaisLie_type_Switch" name="thermometre1_relaisLie_type" value="Switch"/><label class="num">Switch</label>
+						</div>
+					</div>
+				</fieldset>
+			</div>
+			<div style='display:none;' id="groupe_debitmetres">
+				<fieldset style='display:none;' id="fieldset_debitmetre1" name="fieldset_debitmetres">
+					<legend class="activable">
+						<div><b>Débitmètre 1</b></div><span class="fleche" id='fleche_debitmetre1' onclick="afficheParagraphe('fleche_debitmetre1', 'debitmetre1')">▼</span>
+					</legend>	
+					<div style='display:block;' id='debitmetre1' class='visible'>
+						<div>
+							<label>Suppression :</label>
+							<input type="checkbox" id="debitmetre1_suppression" name="debitmetre1_suppression" value="1">
+						</div>
+						<div><label>Activation :</label><select id='debitmetre1_activation' onChange='desactiveFieldset(this);'></select></div>
+						<div><label>Nom :</label><input type='text' id='debitmetre1_nom' value=''></div>
+						<div><label>ID :</label><input type='text' id='debitmetre1_id' value=''></div>
+						<div><label>Pin :</label><input type='text' id='debitmetre1_pin' value=''></div>
+						<div><label>Type :</label><select id='debitmetre1_type'></select></div>
+						<div><label>Virtuel :</label><select id='debitmetre1_virtuel'></select></div>
+						<div><label>Facteur de correction :</label><input type='text' id='debitmetre1_facteurCorrection' value=''></div>
+							<!-- 							 
+							 * - displayed flow rate = 254.39 l/min (D)
+							 * - current <correction-factor> = 1.0  (c)
+							 * - real flow rate      =  83.42 l/min (M)
+							 *
+							 * new <correction-factor> = M / (c * D) = 83.42 / (1 * 254.39) = 0.328
+							-->						
+						<div style="margin-left:60px;width=50%;"><label>Débit affiché :</label><input type='text' id='debitmetre1_debitAffiche' value=''></div>
+						<div style="margin-left:60px;width=50%;"><label>Débit réel :</label><input type='text' id='debitmetre1_debitReel' value=''></div>
+						<div><label>Valeur :</label><input type='text' id='debitmetre1_value' value=''></div>
+					</div>
+				</fieldset>
+			</div>
+			<div style='display:none;' id="groupe_leds">
+				<fieldset style='display:none;' id="fieldset_ledLink" name="fieldset_leds">
+					<legend class="activable">
+						<div><b>ledLink</b></div><span class="fleche" id='fleche_ledLink' onclick="afficheParagraphe('fleche_ledLink', 'ledLink')">▼</span>
+					</legend>				
+					<div style='display:block;' id='ledLink' class='visible'>
+						<div>
+							<label>Suppression :</label>
+							<input type="checkbox" id="ledLink_suppression" name="ledLink_suppression" value="1">
+						</div>			
+						<div><label>Activation :</label><select id='ledLink_activation' onChange='desactiveFieldset(this);'></select></div>
+						<div><label>ID :</label><input type='text' id='ledLink_id' value=''></div>
+						<div><label>Pin :</label><input type='text' id='ledLink_pin' value=''></div>
+						<div><label>Type :</label><select id='ledLink_type'></select></div>
+					</div>
+				</fieldset>
+				<fieldset style='display:none;' id="fieldset_led1" name="fieldset_leds">
+					<legend class="activable">
+						<div><b>LED 1</b></div><span class="fleche" id='fleche_led1' onclick="afficheParagraphe('fleche_led1', 'led1')">▼</span>
+					</legend>				
+					<div style='display:block;' id='led1' class='visible'>
+						<div>
+							<label>Suppression :</label>
+							<input type="checkbox" id="led1_suppression" name="led1_suppression" value="1">
+						</div>			
+						<div><label>Activation :</label><select id='led1_activation' onChange='desactiveFieldset(this);'></select></div>
+						<div><label>ID :</label><input type='text' id='led1_id' value=''></div>
+						<div><label>Pin :</label><input type='text' id='led1_pin' value=''></div>
+						<div><label>Type :</label><select id='led1_type'></select></div>
+					</div>
+				</fieldset>
+			</div>
+			<div style='display:none;' id="groupe_ws2812s">
+				<fieldset style='display:none;' id="fieldset_ws28121" name="fieldset_ws2812s">
+					<legend class="activable">
+						<div><b>WS2812 1</b></div><span class="fleche" id='fleche_ws28121' onclick="afficheParagraphe('fleche_ws28121', 'ws28121')">▼</span>
+					</legend>				
+					<div style='display:block;' id='ws28121' class='visible'>
+						<div>
+							<label>Suppression :</label>
+							<input type="checkbox" id="ws28121_suppression" name="ws28121_suppression" value="1">
+						</div>			
+						<div><label>Activation :</label><select id='ws28121_activation' onChange='desactiveFieldset(this);'></select></div>
+						<div><label>ID :</label><input type='text' id='ws28121_id' value=''></div>
+						<div><label>Pin :</label><input type='text' id='ws28121_pin' value=''></div>
+						<div><label>Type :</label><select id='ws28121_type'></select></div>
+					</div>
+				</fieldset>
+			</div>
+			<div style='display:none;' id="groupe_pinsSDs">
+				<fieldset style='display:none;' id="fieldset_pinsSD1" name="fieldset_pinsSDs">
+					<legend class="activable">
+						<div><b>Connexion 1</b></div><span class="fleche" id='fleche_pinsSD1' onclick="afficheParagraphe('fleche_pinsSD1', 'pinsSD1')">▼</span>
+					</legend>				
+					<div style='display:block;' id='pinsSD1' class='visible'>
+						<div>
+							<label>Suppression :</label>
+							<input type="checkbox" id="pinsSD1_suppression" name="pinsSD1_suppression" value="1">
+						</div>			
+						<div><label>Activation :</label><select id='pinsSD1_activation' onChange='desactiveFieldset(this);'></select></div>
+						<div><label>Nom :</label><input type='text' id='pinsSD1_nom' value=''></div>
+						<div><label>ID :</label><input type='text' id='pinsSD1_id' value=''></div>
+						<div><label>Pin :</label><input type='text' id='pinsSD1_pin' value=''></div>
+						<div><label>Type :</label><select id='pinsSD1_type'></select></div>
+					</div>
+				</fieldset>
+			</div>
+			<div style='display:none;' id="groupe_pinsEcrans">
+				<fieldset style='display:none;' id="fieldset_pinsEcran1" name="fieldset_pinsEcrans">
+					<legend class="activable">
+						<div><b>Connexion 1</b></div><span class="fleche" id='fleche_pinsEcran1' onclick="afficheParagraphe('fleche_pinsEcran1', 'pinsEcran1')">▼</span>
+					</legend>				
+					<div style='display:block;' id='pinsEcran1' class='visible'>
+						<div>
+							<label>Suppression :</label>
+							<input type="checkbox" id="pinsSD1_suppression" name="pinsEcran1_suppression" value="1">
+						</div>			
+						<div><label>Activation :</label><select id='pinsEcran1_activation' onChange='desactiveFieldset(this);'></select></div>
+						<div><label>Nom :</label><input type='text' id='pinsEcran1_nom' value=''></div>
+						<div><label>ID :</label><input type='text' id='pinsEcran1_id' value=''></div>
+						<div><label>Pin :</label><input type='text' id='pinsEcran1_pin' value=''></div>
+						<div><label>Type :</label><select id='pinsEcran1_type'></select></div>
+					</div>
+				</fieldset>
+			</div>
+		</div>
+	</form>
+	<div>
+        <div id="popup-overlay">
+          <div class="popup-content">
+            <label class="popup-content">Quel type d'élément souhaitez-vous ajouter?</label>
+            <select id='select_elementAAjouter' class="popup-select" onChange="togglePopup();">
+				<option value=''></option>
+                <option value='bouton'>Bouton</option>
+                <option value='relai'>Relai</option>
+                <option value='capteur'>Capteur</option>
+                <option value='thermometre'>Capteur de température</option>
+				<option value='debitmetre'>Débitmètre</option>
+				<option value='led'>LED</option>
+                <option value='autre'>Autre</option>
+			</select>
+          </div>
+        </div>
+		<button id='btn_ajouter_element' class='button bgrn btnPerso'>Ajouter un élément d'environnement</button>
+		<button id='btn_paramModules' class='button bgrn btnPerso'>Modifier les paramètres</button>
+		<div style='display:none;' id="jsonData"></div>
+
+		<!-- Charge les boutons -->
+		<hr><div style='padding:0;' id='maj' name='maj'></div>
+		<p></p><form id='but2' style='display: block;' action='.' method='get'><button name=''>Menu principal</button></form><p></p>
+		<p></p><form id='but6' style='display: block;' action='mn' method='get'><button name=''>Consoles</button></form><p></p>
+		<p></p><form id='but0' style='display: block;' action='.' method='get' onsubmit='return confirm(&quot;Confirmer le redémarrage&quot;);'><button name='rst' class='button bred'>Redémarrage</button></form><p></p>
+	</div>
+</table>

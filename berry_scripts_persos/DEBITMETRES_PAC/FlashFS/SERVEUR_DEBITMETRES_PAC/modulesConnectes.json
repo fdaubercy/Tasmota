@@ -1,0 +1,11 @@
+{
+    "1":{
+        "Mac":"08:3A:F2:67:DC:30",
+        "Gateway":"10.99.0.1",
+        "topicModule":"pac/module1",
+        "IPAddress":"10.99.0.2",
+        "nom":"Débitmètres PAC 1",
+        "routagePort":8080,
+        "idModule":1
+    }
+}
