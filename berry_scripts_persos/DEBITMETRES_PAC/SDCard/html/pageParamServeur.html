@@ -1,0 +1,140 @@
+<table style='width:100%'>
+    <!-- Début du formulaire -->
+    <form id='paramServeur' action='/modules' method='post'>
+        <fieldset>
+			<div style='display:block;' class='visible'>
+				<legend id="titreCaract"></legend>
+				<div><label>Activation :</label><select id='activation'></select></div>
+				<div><label>Nom :</label><input type='text' id='nom' value=''></div>
+				<div><label>Hostname :</label><input type='text' id='hostname' value=''></div>
+				<div><label>mDNS :</label><select id='mDNS'></select></div>
+			</div>
+        </fieldset>		
+		<div id="groupe_IP" style='display:none;'>
+			<fieldset style='display:none;' id="fieldset_IP">
+				<div style='display:block;' class='visible'>
+					<legend class="activable">
+						<div><b>Caractéristiques IP</b></div><span class="fleche" id='fleche_IP' onclick="afficheParagraphe('fleche_IP', 'IP')">▼</span>
+					</legend>
+					<div style='display:block;' id='ip' class='visible'>
+						<div><label>Adresse IP :</label><input type='text' id='IP_IPAddress' value=''></div>
+						<div><label>IP Gateway :</label><input type='text' id='IP_IPGateway' value=''></div>
+						<div><label>Sous-réseau :</label><input type='text' id='IP_Subnet' value=''></div> 
+						<div><label>DNS Serveur :</label><input type='text' id='IP_DNSServer' value=''></div>	
+					</div>
+				</div>
+			</fieldset>
+		</div>
+		<div id="groupe_wifi" style='display:none;'>
+			<fieldset style='display:none;' id="fieldset_wifi">
+				<div style='display:block;' class='visible'>
+					<legend class="activable">
+						<div><b>Caractéristiques du Wifi</b></div><span class="fleche" id='fleche_wifi' onclick="afficheParagraphe('fleche_wifi', 'wifi')">▼</span>
+					</legend>
+					<div style='display:block;' id='wifi' class='visible'>
+						<div><label>Power :</label><input type='text' id='wifi_power' value=''></div>
+						<div><label>Sélection du signal le plus fort :</label><select id='wifi_selectSignalFort'></select></div>
+						<div><label>Scanne les réseaux Wifi / 45min :</label><select id='wifi_reScanBy44'></select></div>	
+						<div><div>Réseau Wifi 1 :</div><input type='text' id='wifi_reseau1_nomReseauWifi' placeholder='Saisissez ou Choisissez votre réseau WiFi' value=''></div>
+						<div><label>Mot de passe Wifi :<input type='checkbox' onclick='sp("wifi_reseau1_mdpWifi")'></label>
+							<input type='password' id='wifi_reseau1_mdpWifi' placeholder='Entrez votre mot de passe WiFi' value=''> 
+						</div>
+						<div><div>Réseau Wifi 2:</div><input type='text' id='wifi_reseau2_nomReseauWifi' placeholder='Entrez un réseau WiFi de secours' value=''></div>
+						<div><label>Mot de passe Wifi 2:<input type='checkbox' onclick='sp("wifi_reseau2_mdpWifi")'></label>
+							<input type='password' id='wifi_reseau2_mdpWifi' placeholder='Entrez votre mot de passe WiFi' value=''>
+						</div>
+					</div>
+				</div>
+			</fieldset>
+		</div>
+		<div id="groupe_mqtt" style='display:none;'>
+			<fieldset style='display:none;' id="fieldset_mqtt">
+				<div style='display:block;' class='visible'>
+					<legend class="activable">
+						<div><b>Serveur MQTT</b></div><span class="fleche" id='fleche_mqtt' onclick="afficheParagraphe('fleche_mqtt', 'mqtt')">▼</span>
+					</legend>
+					<div style='display:block;' id='mqtt' class='visible'>
+						<div><label>Activation :</label><select id='mqtt_activation'></select></div>
+						<div><label>Hôte :</label><input type='text' id='mqtt_hote' value=''></div>
+						<div><label>Port :</label><input type='text' id='mqtt_port' value=''></div>
+						<div><label>Client :</label><input type='text' id='mqtt_client' value=''></div>
+						<div><label>Utilisateur :</label><input type='text' id='mqtt_utilisateur' value=''></div>
+						<div>
+							<div><label>Mot de passe :<input type='checkbox' onclick='sp("mqtt_mdp")'></label>
+							<input type='password' id='mqtt_mdp' value=''></div>
+						</div>
+						<div><label>Topic :</label><input type='text' id='mqtt_topic' value=''></div>
+						<div><label>GroupTopic1 :</label><input type='text' id='mqtt_groupTopic1' value=''></div>
+						<div><label>GroupTopic2 :</label><input type='text' id='mqtt_groupTopic2' value=''></div>
+						<div><label>GroupTopic3 :</label><input type='text' id='mqtt_groupTopic3' value=''></div>
+					</div>
+				</div>
+			</fieldset>
+		</div>
+		<div id="groupe_serveurFTP" style='display:none;'>
+			<fieldset style='display:none;' id="fieldset_serveurFTP">
+				<div style='display:block;' class='visible'>
+					<legend class="activable">
+						<div><b>Serveur FTP</b></div><span class="fleche" id='fleche_serveurFTP' onclick="afficheParagraphe('fleche_serveurFTP', 'serveurFTP')">▼</span>
+					</legend>
+					<div style='display:block;' id='serveurFTP' class='visible'>
+						<div><label>Activation :</label><select id='serveurFTP_activation'></select></div>
+						<div><label>Utilisateur :</label><input type='text' id='serveurFTP_utilisateur' value=''></div>
+						<div>
+							<div><label>Mot de passe :<input type='checkbox' onclick='sp("serveurFTP_mdp")'></label>
+							<input type='password' id='serveurFTP_mdp' value=''></div>
+						</div>					
+					</div>
+				</div>
+			</fieldset>
+		</div>
+		<div id="groupe_rangeExtender" style='display:none;'>
+			<fieldset style='display:none;' id="fieldset_rangeExtender">
+				<div style='display:block;' class='visible'>
+					<legend class="activable">
+						<div><b>Point d'accès Range Extender</b></div><span class="fleche" id='fleche_rangeExtender' onclick="afficheParagraphe('fleche_rangeExtender', 'rangeExtender')">▼</span>
+					</legend>
+					<div style='display:block;' id='rangeExtender' class='visible'>
+						<div><label>ID RangeExtender :</label><input type='text' id='rangeExtender_idModuleRangeExpender' value=''></div>
+						<div><label>Activation Point d'accès :</label><select id='rangeExtender_etat'></select></div>
+						<div><label>Routage NAPT :</label><select id='rangeExtender_routeNAPT'></select></div>
+						<div><label>SSID RangeExtender :</label><input type='text' id='rangeExtender_SSID' value=''></div>
+						<div><label>Mot de passe RangeExtender :</label><input type='text' id='rangeExtender_mdp' value=''></div>
+						<div><label>IP Point d'accès :</label><input type='text' id='rangeExtender_IPAddress' value=''></div>
+						<div><label>Masque Sous-réseau Point d'accès :</label><input type='text' id='rangeExtender_Subnet' value=''></div>
+					</div>
+				</div>
+			</fieldset>
+		</div>
+		<div id="groupe_moduleRangeExtenders" style='display:none;'>
+			<fieldset style='display:none;' id="fieldset_moduleRangeExtender1" name="fieldset_moduleRangeExtenders">
+				<div style='display:block;' class='visible'>
+					<legend class="activable">
+						<div><b>Module Range Extender 1</b></div><span class="fleche" id='fleche_moduleRangeExtender1' onclick="afficheParagraphe('fleche_moduleRangeExtender1', 'moduleRangeExtender1')">▼</span>
+					</legend>
+					<div style='display:block;' id='moduleRangeExtender1' class='visible'>
+						<div><label>ID :</label><input type='text' id='moduleRangeExtender1_idModule' value='' disabled="true"></div>
+						<div><label>Nom :</label><input type='text' id='moduleRangeExtender1_nom' value='' disabled="true"></div>
+						<div><label>Topic :</label><input type='text' id='moduleRangeExtender1_topicModule' value='' disabled="true"></div>
+						<div><label>Adresse MAC :</label><input type='text' id='moduleRangeExtender1_Mac' value='' disabled="true"></div>
+						<div><label>Adresse IP :</label><input type='text' id='moduleRangeExtender1_IPAddress' value='' disabled="true"></div>
+						<div><label>Passerelle :</label><input type='text' id='moduleRangeExtender1_Gateway' value='' disabled="true"></div>
+						<div><label>Port :</label><input type='text' id='moduleRangeExtender1_routagePort' value='' disabled="true"></div>
+					</div>
+				</div>
+			</fieldset>
+		</div>			
+    </form>
+	<div>
+		<button id='btn_supprBerryFS' class='button bgrn btnPerso'>Suppression des scripts</button>
+		<button id='btn_resetESP32' class='button bgrn btnPerso'>Reset Serveur</button>
+		<button id='btn_paramServeur' class='button bgrn btnPerso'>Modifier les paramètres</button>
+		<div style='display:none;' id="jsonData"></div>
+
+		<!-- Charge les boutons -->
+		<hr><div style='padding:0;' id='maj' name='maj'></div>
+		<p></p><form id='but2' style='display: block;' action='.' method='get'><button name=''>Menu principal</button></form><p></p>
+		<p></p><form id='but6' style='display: block;' action='mn' method='get'><button name=''>Consoles</button></form><p></p>
+		<p></p><form id='but0 style='display: block;' action='.' method='get' onsubmit='return confirm(&quot;Confirmer le redémarrage&quot;);'><button name='rst' class='button bred'>Redémarrage</button></form><p></p>
+	</div>
+</table>

@@ -1,0 +1,84 @@
+<table style='width=100%'>
+    <!-- Début du formulaire -->
+    <form id='paramDiverses' action='/modules' method='post'>
+        <input type='hidden' id='commande' value='modifParamDiverses'>
+        <fieldset>
+            <legend><b>Caractéristiques diverses</b></legend>
+			<div style='display:block;' id='general' class='visible'>
+				<div><label>Type ESP :</label><input type='text' id='typeESP' value=''></div>
+				<div><label>TelePeriode :</label><input type='text' id='telePeriod' value=''></div>
+				<div><label>Logs :</label><select id='logs'></select></div>
+				<div><label>Eviter le reset sur appui long :</label><select id='eviteResetBTN'></select></div>	
+				<!-- <div><label>LedPower :</label><select id='ledPower'></select></div> -->
+				<!-- <div><label>LedState :</label><select id='ledState'></select></div>	 -->
+			</div>	
+        </fieldset>
+		<div id="groupe_localisation" style='display:none;'>
+			<fieldset style='display:none;' id="fieldset_localisation">
+				<div style='display:block;' class='visible'>
+					<legend class="activable">
+						<div><b>Localisation</b></div><span class="fleche" id='fleche_localisation' onclick="afficheParagraphe('fleche_localisation', 'localisation')">▼</span>
+					</legend>
+					<div style='display:block;' id='localisation' class='visible'>
+						<div><label>Latitude :</label><input type='text' id='localisation_latitude' value=''></div>
+						<div><label>Longitude :</label><input type='text' id='localisation_longitude' value=''></div>
+					</div>
+				</div>
+			</fieldset>
+		</div>
+		<div id="groupe_fuseauHoraire" style='display:none;'>
+			<fieldset style='display:none;' id="fieldset_fuseauHoraire">
+				<div style='display:block;' class='visible'>
+					<legend class="activable">
+						<div><b>Fuseau horaire</b></div><span class="fleche" id='fleche_fuseauHoraire' onclick="afficheParagraphe('fleche_fuseauHoraire', 'fuseauHoraire')">▼</span>
+					</legend>
+						<div style='display:block;' id='mqtt' class='visible'>
+						<div><label>Timezone :</label><input type='text' id='fuseauHoraire_timezone' value=''></div>
+						<fieldset>
+							<legend><b>Heure d'Hiver</b></legend>
+							<div><label>Heure de passage :</label><select id='fuseauHoraire_TimeStd_Hour'></select></div>
+							<div><label>Jour :</label><select id='fuseauHoraire_TimeStd_Day'></select></div>
+							<div><label>Mois :</label><select id='fuseauHoraire_TimeStd_Month'></select></div>
+							<div><label>N° Semaine du mois :</label><select id='fuseauHoraire_TimeStd_Week'></select></div>
+							<div><label>Hemisphere :</label><select id='fuseauHoraire_TimeStd_Hemisphere'></select></div>
+							<div><label>Offset (min) :</label><input type='text' id='fuseauHoraire_TimeStd_Offset' value=''></div>
+						</fieldset>
+						<fieldset>
+							<legend><b>Heure d'Eté</b></legend>
+							<div><label>Heure de passage :</label><select id='fuseauHoraire_TimeDst_Hour'></select></div>
+							<div><label>Jour :</label><select id='fuseauHoraire_TimeDst_Day'></select></div>
+							<div><label>Mois :</label><select id='fuseauHoraire_TimeDst_Month'></select></div>
+							<div><label>N° Semaine du mois :</label><select id='fuseauHoraire_TimeDst_Week'></select></div>
+							<div><label>Hemisphere :</label><select id='fuseauHoraire_TimeDst_Hemisphere'></select></div>
+							<div><label>Offset (min) :</label><input type='text' id='fuseauHoraire_TimeDst_Offset' value=''></div>
+						</fieldset>
+					</div>
+				</div>
+			</fieldset>
+		</div>
+    </form>
+	<div style="">
+        <div id="popup-overlay">
+          <div class="popup-content">
+            <label class="popup-content">Quel type d'élément souhaitez-vous ajouter?</label>
+            <select id='select_elementAAjouter' class="popup-select" onChange="togglePopup();">
+				<option value=''></option>
+                <option value='bouton'>Bouton</option>
+                <option value='relai'>Relai</option>
+                <option value='capteur'>Capteur</option>
+                <option value='thermometre'>Capteur de température</option>
+				<option value='debitmetre'>Débitmètre</option>
+                <option value='autre'>Autre</option>
+			</select>
+          </div>
+        </div>
+		<button id='btn_paramDiverses' class='button bgrn btnPerso'>Modifier les paramètres</button>
+		<div style='display:none;' id="jsonData"></div>
+
+		<!-- Charge les boutons -->
+		<hr><div style='padding:0;' id='maj' name='maj'></div>
+		<p></p><form id='but2' style='display: block;' action='.' method='get'><button name=''>Menu principal</button></form><p></p>
+		<p></p><form id='but6' style='display: block;' action='mn' method='get'><button name=''>Consoles</button></form><p></p>
+		<p></p><form id='but0 style='display: block;' action='.' method='get' onsubmit='return confirm(&quot;Confirmer le redémarrage&quot;);'><button name='rst' class='button bred'>Redémarrage</button></form><p></p>
+	</div>
+</table>
