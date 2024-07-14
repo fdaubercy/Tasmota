@@ -12,8 +12,6 @@
 # boolCapteurs=true -> si il faut désactiver les capteurs qui gèrent son déclenchement
 # boolTimer=true -> si il faut activer le timer
 # delaiAvantCommande -> délai avant commande du relai
-var controleGeneral
-
 class CONTROLE_GENERAL : Driver
 	# Variables
 	var sensors

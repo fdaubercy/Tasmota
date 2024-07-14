@@ -1,8 +1,11 @@
 <script src="https://code.highcharts.com/highcharts.js"></script>
 <script src="https://code.highcharts.com/highcharts-more.js"></script>
 <script src="https://code.highcharts.com/modules/exporting.js"></script>
-<table style='width=100%'>
-	<div id="container" style='display:block;'></div>
+<script src="https://code.highcharts.com/modules/export-data.js"></script>
+<script src="https://code.highcharts.com/modules/accessibility.js"></script>
+
+<table style='width:100%'>
+	<div id="container" style='display:block;margin-top:7px;'></div>
 	<div>
         <div id="popup-overlay">
           <div class="popup-content">
@@ -25,6 +28,6 @@
 		<hr><div style='padding:0;' id='maj' name='maj'></div>
 		<p></p><form id='but2' style='display: block;' action='.' method='get'><button name=''>Menu principal</button></form><p></p>
 		<p></p><form id='but6' style='display: block;' action='mn' method='get'><button name=''>Consoles</button></form><p></p>
-		<p></p><form id='but0' style='display: block;' action='.' method='get' onsubmit='return confirm(&quot;Confirmer le redémarrage&quot;);'><button name='rst' class='button bred'>Redémarrage</button></form><p></p>
+		<p></p><form id='but0' style='display: block;' action='.' method='get' onsubmit='return confirm("&quot;Confirmer le redémarrage&quot;");'><button name='rst' class='button bred'>Redémarrage</button></form><p></p>
 	</div>
 </table>

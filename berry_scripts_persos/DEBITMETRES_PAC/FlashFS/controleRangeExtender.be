@@ -1,5 +1,3 @@
-var controleRangeExtender
-
 class CONTROLE_RANGE_EXTENDER : Driver
     # Variables
     var rangeExtender

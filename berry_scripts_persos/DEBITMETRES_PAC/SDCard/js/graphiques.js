@@ -1,4 +1,18 @@
 <script type='application/javascript'>
+	// Variables pour la mise à jour du graphique
+	let categories = new Array();
+	let tabSeries = new Array();
+	let unite = "";
+	let graphique;
+	
+	/* Génère un débit aléatoire */ 
+	function getRandomIntInclusive(min, max) {
+		min = Math.ceil(min);
+		max = Math.floor(max);
+		return Math.floor(Math.random() * (max - min + 1) + min);
+	}
+
+	
 	/* 
 	Manipule le DOM pour créer les éléments au titre
 	*/
@@ -14,74 +28,8 @@
 	
 	}
 	
-    /* Crée élements 'option' des balises 'select' */
-	function paramFormulaire(jsonData, url) {
-		var tabElements = [];
-		
-		// Enregistre le json dans balise html
-		eb("jsonData").innerHTML = jsonData;
-        eb('categorie').value = recupereParamURL('categorie', url);
-		
-        var json = JSON.parse(jsonData)[eb('module').value];
-        var jsonDetail;
-		
-		// Parcours les éléments du module existants dans l'environnement du module (categorie)
-		// Si environnement existant & catégorie existe (exemple: boutons)
-		if (json != undefined && json.environnement[eb('categorie').value] != undefined && json.activation == "ON") {
-			// On parcours les elements de la catégorie (exemple: boutons) pour compter leur nombre
-			for (var key in json.environnement[eb('categorie').value]) {
-				jsonDetail = json.environnement[eb('categorie').value][key];
-					
-				// On ne crée pas de nouvel élement si 'key' n'est pas un objet
-				if (typeof(jsonDetail) != "object") {continue;}
-					
-				// Ajoute les clés au tableau 'tabElements'
-				tabElements.push(key);
-			}
-			
-			// Puis trie le tableau crée selon les clés
-			tabElements.sort();
-		}
-		
-		// Parcours les éléments du module existants dans l'environnement du module (categorie)
-		// Si environnement existant
-		if (json.environnement != undefined) {
-			// On affiche la 'div container'
-			qs('#container').style.display = "block";
-
-			// Si la catégorie existe (exemple: boutons)
-			if (json.environnement[eb('categorie').value] != undefined) {
-				// On affiche la 'div d'environnement' (exemple: id=groupe_boutons)
-				if (qs("#groupe_" + eb('categorie').value)) {
-					qs("#groupe_" + eb('categorie').value).style.display = "block";
-				}
-			
-				// On parcours les elements de la catégorie (exemple: boutons)
-				// Création de cette partie si n'existe pas dans l'html
-				for (var key in tabElements) {
-					
-					
-				}	
-			} else {
-				// On regirige vers la 1ere categorie existante
-				for (var key in json.environnement) {
-					if (typeof(json.environnement[key]) == "object") {
-						window.location.assign(window.location.pathname + "?module=" + eb("module").value + "&categorie=" + key);
-						break;
-					}
-				}
-			}
-		} else {
-			// On cache la 'div d'environnement' (exemple: id=environnement) & On sort de la fonction
-			if (qs("#environnement")) {
-				qs("#environnement").style.display = "none";
-				return;
-			}
-		}
-	}
-	
 	// Récupère l'état des valeurs des débitmètres
-	let dataset, graphique;
+	let dataset;
 	let debitmetres = {};
 	
 	// Ajoute une liste déroulante au titre
@@ -114,6 +62,7 @@
 				
 	/* Affichage du graphiquie par défaut */
 	graphique = Highcharts.chart('container', {
+		series: [],
 		colors: ['#C6A90D', '#C0C0C0', '#CD7F32', '#6CC349', '#3B37A8', '#7E3692'],
 		chart: {
 			backgroundColor: '#dddddd',
@@ -130,7 +79,7 @@
 		},
 		tooltip: {
 			outside: true,
-			pointFormat: '{series.name}:<b>{point.y}</b><br/>',
+			pointFormat: 'Débit: <b>{point.y}</b><br/>',	/*'{series.name}: <b>{point.y}</b><br/>',*/
 			valueSuffix: ' ',
 		},
 		pane: {
@@ -172,44 +121,126 @@
 				groupPadding: 0.15
 			}
 		},
-		series: [
-					{
-						name: 'Entrée-Cuisine',
-						data: [25, 0],
-						borderRadius: '30%',
-						dataLabels: {
-							borderWidth: 0,
-							style: {
-								fontSize: '3em'
-							},
-							verticalAlign: 'bottom'
-						}
-					},
-					{
-						name: 'Salon',
-						data: [0, 32],
-						borderRadius: '30%',
-						dataLabels: {
-							borderWidth: 0,
-							style: {
-								fontSize: '3em'
-							},
-							verticalAlign: 'bottom'
-						}
-					}
-		],
 		animation: {
             duration: 500
         }
 	});
 	
-	/* Génère un débit aléatoire */ 
-	function getRandomIntInclusive(min, max) {
-		min = Math.ceil(min);
-		max = Math.floor(max);
-		return Math.floor(Math.random() * (max - min + 1) + min);
-	}
+    /* Crée élements 'option' des balises 'select' */
+	function paramFormulaire(jsonData, url) {
+		var tabElements = new Array();
+		
+		// Enregistre le json dans balise html
+		eb("jsonData").innerHTML = jsonData;
+        eb('categorie').value = recupereParamURL('categorie', url);
+		
+		// Complete les modes de fonctionnement
+		eb('mode_fonction').value = (JSON.parse(jsonData)[eb('module').value]["reglage"] == "ON" ? "REGLAGE" : "NORMAL");
+		
+		console.log(JSON.parse(jsonData));
+		
+        var json = JSON.parse(jsonData)[eb('module').value];
+        var jsonDetail;
+		
+		// Parcours les éléments du module existants dans l'environnement du module (categorie)
+		// Si environnement existant & catégorie existe (exemple: boutons)
+		if (json != undefined && json.environnement[eb('categorie').value] != undefined && json.activation == "ON") {
+			// On parcours les elements de la catégorie (exemple: boutons) pour compter leur nombre
+			for (var key in json.environnement[eb('categorie').value]) {
+				jsonDetail = json.environnement[eb('categorie').value][key];
+					
+				// On ne crée pas de nouvel élement si 'key' n'est pas un objet
+				if (typeof(jsonDetail) != "object") {continue;}
+					
+				// Ajoute les clés au tableau 'tabElements'
+				tabElements.push(key);
+			}
+			
+			// Puis trie le tableau crée selon les clés
+			tabElements.sort();
+		}
+		
+		// Définit les séries de données du graphique
+		unite = json.environnement[eb('categorie').value]["unit"];
+		tabSeries = [];
+		
+		for (var key in tabElements) {
+			categories.push(json.environnement[eb('categorie').value][tabElements[key]]["nom"].split("Débit ")[1]);
+			
+			var i = json.environnement[eb('categorie').value][tabElements[key]]["id"] - 1;
+			tabSeries[i] = {};
+			tabSeries[i]["name"] = json.environnement[eb('categorie').value][tabElements[key]]["nom"].split("Débit")[1];
+			
+			tabSeries[i]["data"] = [];
+			tabSeries[i]["data"].length = tabElements.length;
+			for (let j = 0; j < tabElements.length; j++) {
+				tabSeries[i]["data"][j] = 0;
+				if (j == i) {
+					//tabSeries[i]["data"][j] = json.environnement[eb('categorie').value][tabElements[key]]["value"];
+					tabSeries[i]["data"][j] = getRandomIntInclusive(0, 150);
+				}
+			}
+		}
+		
+		// Mets à jour le graphique
+		graphique.update(
+			{
+				title: {
+					text: 'Débits de PAC'
+				},
+				tooltip: {
+					outside: true,
+					pointFormat: 'Débit: <b>{point.y}</b><br/>',	/*'{series.name}: <b>{point.y}</b><br/>',*/
+					valueSuffix: ' ' + unite,
+				},
+				xAxis: {
+					categories: categories,			/* Titre de chaque ligne du graphique*/
+					accessibility: {description: 'Débits'}
+				},
+				series: tabSeries
+			},
+			true,
+			true,
+			true
+		);
+		
+		// Parcours les éléments du module existants dans l'environnement du module (categorie)
+		// Si environnement existant
+		if (json.environnement != undefined) {
+			// On affiche la 'div container'
+			qs('#container').style.display = "block";
 
+			// Si la catégorie existe (exemple: boutons)
+			if (json.environnement[eb('categorie').value] != undefined) {
+				// On affiche la 'div d'environnement' (exemple: id=groupe_boutons)
+				if (qs("#groupe_" + eb('categorie').value)) {
+					qs("#groupe_" + eb('categorie').value).style.display = "block";
+				}
+			
+				// On parcours les elements de la catégorie (exemple: boutons)
+				// Création de cette partie si n'existe pas dans l'html
+				for (var key in tabElements) {
+					
+					
+				}	
+			} else {
+				// On regirige vers la 1ere categorie existante
+				for (var key in json.environnement) {
+					if (typeof(json.environnement[key]) == "object") {
+						window.location.assign(window.location.pathname + "?module=" + eb("module").value + "&categorie=" + key);
+						break;
+					}
+				}
+			}
+		} else {
+			// On cache la 'div d'environnement' (exemple: id=environnement) & On sort de la fonction
+			if (qs("#environnement")) {
+				qs("#environnement").style.display = "none";
+				return;
+			}
+		}
+	}
+	
 	/* Mets à jour régulièrement les données du graphique */
 	setInterval(() => {
 		(async () => {
@@ -218,53 +249,36 @@
 			}
 			
 			debitmetres = await fetch(
-				'/json' + window.location.search + '&commande=jsonSensors'
+				'/jsonGraphiques' + window.location.search + '&commande=jsonSensors'
 			).then(response => response.json());
+			console.log("debitmetres=");
 			console.log(debitmetres);
 			
-			let categories = new Array();
 			let tabDebitmetres = new Array();
-			let tabSeries = new Array();
-			let unite = "";
-			let i = 0;
 			
-			// On trie le tableau json
-			unite = debitmetres.sensors["unit"];
-			for (var key in debitmetres.sensors) {
-				if (debitmetres.sensors[key].nom != undefined && ((debitmetres.sensors[key].activation == "ON" && eb('test_graphique').value == "OFF") || eb('test_graphique').value == "ON")) {
-					// On ne crée pas de nouvel élement si 'key' n'est pas un objet
-					if (typeof(debitmetres.sensors[key]) != "object") {continue;}
-					
-					// Ajoute les clés au tableau 'tabElements'
-					tabDebitmetres.push(debitmetres.sensors[key]);
-				}
-			}
-			// Puis trie le tableau crée selon les clés
-			tabDebitmetres.sort();
+			// On parcoure le tableau json
+			unite = debitmetres.sensors["Débit"]["Unit"];			
 			
-			// Définit les séries de données
-			for (var key in tabDebitmetres) {
-				categories.push(tabDebitmetres[key].nom.split("Débit")[1]);
-				
+			tabSeries = [];
+			for (var key in debitmetres.sensors["idDebitmetres"]) {
+				var i = debitmetres.sensors["idDebitmetres"][key] - 1;
+
 				tabSeries[i] = {};
-				tabSeries[i]["name"] = tabDebitmetres[key].nom.split("Débit")[1];
+				tabSeries[i]["name"] = debitmetres.sensors["nameDebitmetres"][i].split("Débit")[1];
 				
 				tabSeries[i]["data"] = [];
-				for (let j = 0; j < tabDebitmetres.length; j++) {
-					if (i == j) {
-						// Si test graphique
-						if (eb('test_graphique').value == "ON") {
-							tabSeries[i]["data"][j] = getRandomIntInclusive(0, 150);
-						} else {
-							tabSeries[i]["data"][j] = tabDebitmetres[key].value;
-						}
-					} else {
-						tabSeries[i]["data"][j] = 0;
+				tabSeries[i]["data"].length = debitmetres.sensors["idDebitmetres"].length;
+				for (let j = 0; j < debitmetres.sensors["idDebitmetres"].length; j++) {
+					tabSeries[i]["data"][j] = 0;
+					if (j == i) {
+						tabSeries[i]["data"][j] = debitmetres.sensors["Débit"]["Rate"][i];
+						
+						// Si test du graphique html activé
+						if (eb('test_graphique').value == "ON") {tabSeries[i]["data"][j] = getRandomIntInclusive(0, 150);}
 					}
 				}
-				
-				i ++;
 			}
+			
 			console.log("tabSeries=");
 			console.log(tabSeries);
 
@@ -276,7 +290,7 @@
 					},
 					tooltip: {
 						outside: true,
-						pointFormat: '{series.name}:<b>{point.y}</b><br/>',
+						pointFormat: 'Débit: <b>{point.y}</b><br/>',	/*'{series.name}: <b>{point.y}</b><br/>',*/
 						valueSuffix: ' ' + unite,
 					},
 					xAxis: {
