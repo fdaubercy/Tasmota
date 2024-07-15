@@ -124,6 +124,8 @@ The latter links can be used for OTA upgrades too like ``OtaUrl https://ota.tasm
 - Support for QMP6988 temperature and pressure sensor
 - Support for Sonoff WTS01 temperature sensor using SerialBridge in ``SSerialMode 3``
 - Support for Sonoff POWCT Ring [#21131](https://github.com/arendst/Tasmota/issues/21131)
+- Skip MQTT response if command is prefixed with underscore [#21740](https://github.com/arendst/Tasmota/issues/21740)
+- Skip MQTT response if commands are executed prefixed with ``Backlog2`` (no delay) or ``Backlog3`` [#21740](https://github.com/arendst/Tasmota/issues/21740)
 - Extend command ``SetOption147 1`` to disable publish of IRReceived MQTT messages [#21574](https://github.com/arendst/Tasmota/issues/21574)
 - NeoPool data validation and communication statistics default enabled for ESP32 only [#21721](https://github.com/arendst/Tasmota/issues/21721)
 - ESP32 support for power and energy limit checks, like ``MaxEnergy2`` per phase [#21695](https://github.com/arendst/Tasmota/issues/21695)
@@ -136,6 +138,7 @@ The latter links can be used for OTA upgrades too like ``OtaUrl https://ota.tasm
 - Berry `FUNC_ANY_KEY` event calling `any_key()` [#21708](https://github.com/arendst/Tasmota/issues/21708)
 - Berry `FUNC_BUTTON_MULTI_PRESSED` event and make `FUNC_BUTTON_PRESSED` called only on state changes and once per second [#21711](https://github.com/arendst/Tasmota/issues/21711)
 - Berry `int64` added `low32()` and `high32()` methods, used in Matter [#21728](https://github.com/arendst/Tasmota/issues/21728)
+- Berry cam module and img class [#21743](https://github.com/arendst/Tasmota/issues/21743)
 - HASPmota rounds to nearest int values passed as 'real' [#21599](https://github.com/arendst/Tasmota/issues/21599)
 - Matter support for Air Quality sensors [#21559](https://github.com/arendst/Tasmota/issues/21559)
 - Matter support for bridged Air Quality [#21597](https://github.com/arendst/Tasmota/issues/21597)
@@ -148,7 +151,7 @@ The latter links can be used for OTA upgrades too like ``OtaUrl https://ota.tasm
 ### Changed
 - ESP8266 platform update from 2024.01.01 to 2024.06.00 [#21668](https://github.com/arendst/Tasmota/issues/21668)
 - ESP8266 Framework (Arduino Core) from v2.7.6 to v2.7.7 [#21668](https://github.com/arendst/Tasmota/issues/21668)
-- ESP32 platform update from 2024.05.13 to 2024.06.11 [#21694](https://github.com/arendst/Tasmota/issues/21694)
+- ESP32 platform update from 2024.05.13 to 2024.07.11 [#21765](https://github.com/arendst/Tasmota/issues/21765)
 - ESP32 Framework (Arduino Core) from v3.0.0 to v3.0.2 [#21694](https://github.com/arendst/Tasmota/issues/21694)
 - Optional MQTT_TELE_RETAIN to Energy Margins message replaced by ``SensorRetain``
 - Display timing splash screen with display modes 1 to 5
@@ -171,6 +174,7 @@ The latter links can be used for OTA upgrades too like ``OtaUrl https://ota.tasm
 - Shutter MQTT on inverted shutter [#21663](https://github.com/arendst/Tasmota/issues/21663)
 - Scripter TCP server [#21660](https://github.com/arendst/Tasmota/issues/21660)
 - ESP32 allow use of UART0 with enabled USB_CDC_CONSOLE [#21496](https://github.com/arendst/Tasmota/issues/21496)
+- ESP32 I2S fixes [#21770](https://github.com/arendst/Tasmota/issues/21770)
 - Berry `input()` returns empty string and does not crash [#21565](https://github.com/arendst/Tasmota/issues/21565)
 - Berry `bytes.resize()` for large sizes [#21716](https://github.com/arendst/Tasmota/issues/21716)
 - Matter interverted attributes 0xFFF9 and 0xFFFB [#21636](https://github.com/arendst/Tasmota/issues/21636)
