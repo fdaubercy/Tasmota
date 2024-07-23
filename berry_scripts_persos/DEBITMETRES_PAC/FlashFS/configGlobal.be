@@ -255,7 +255,7 @@ configGlobal.configGlobalByJson = def(json)
 								gpioPinUtilises.push("GPIO" + str(pin))	
 								
 								# Repérer la place du GPIO dans le modèle
-								log ("ordreGPIO.size()=" + str(ordreGPIO.size()), LOG_LEVEL_DEBUG_PLUS)
+								# log ("ordreGPIO.size()=" + str(ordreGPIO.size()), LOG_LEVEL_DEBUG_PLUS)
 								for i: 0 .. ordreGPIO.size() - 1
 									if ordreGPIO[i] == "GPIO" + str(pin)
 										pos = i

@@ -216,10 +216,10 @@ gestionFileFolder.compileModule = def(chemin, paramDeleteBe)
     end
 
     # Compile le fichier "*.be" en "*.bec"
-    print(chemin + " exist=" + str(path.exists(chemin + ".be")))
+    # print(chemin + " exist=" + str(path.exists(chemin + ".be")))
     if path.exists(chemin + ".be")  
         # Si echec de compilation ==> on sort de la fonction sans charger le fichier
-        print(chemin + "compile="+str(tasmota.compile(chemin + ".be")))
+        # print(chemin + "compile="+str(tasmota.compile(chemin + ".be")))
         if tasmota.compile(chemin + ".be")
             # Supprime le fichier ".be"
             path.remove(chemin + ".be")
