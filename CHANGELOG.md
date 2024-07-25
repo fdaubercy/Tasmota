@@ -3,7 +3,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - Development
 
-## [14.1.0.3]
+## [14.1.0.4]
+### Added
+- Support for Sonoff iFan04-H using template (#16402)
+- Matter improve internal `inspect`for superclasses (#21824)
+- Matter support for split lights (`SetOption68 1` and `SetOption37 128`) (#21834)
+
+### Breaking Changed
+
+### Changed
+
+### Fixed
+- Berry `light.get` for separate RGB/CT (#21818)
+- Berry fix `bytes` setters and getters with negative offsets
+
+### Removed
+- Berry internal: remove class from closure to simplify code
+
+## [14.1.0.3] 20240722
 ### Added
 - ESP32 support for power and energy limit checks, like ``MaxEnergy2`` per phase (#21695)
 - Berry `tasmota.rtc("config_time")` (#21698)
@@ -18,21 +35,20 @@ All notable changes to this project will be documented in this file.
 - Berry cam module and img class (#21743)
 - Skip MQTT response if command is prefixed with underscore (#21740)
 - Skip MQTT response if commands are executed prefixed with ``Backlog2`` (no delay) or ``Backlog3`` (#21740)
-
-### Breaking Changed
+- Support for Wooliis Hall Effect Coulometer or Battery capacity monitor (#21732)
 
 ### Changed
 - ESP32 support for energy margin checks, like ``MaxPower2`` per phase (#21695)
 - ESP32 TM1621 number overflow from "9999" to "12E3" (#21131)
 - ESP32 platform update from 2024.06.11 to 2024.07.10 (#21745)
 - ESP32 platform update from 2024.07.10 to 2024.07.11 (#21765)
+- Berry simplified `module persist` (#21812)
 
 ### Fixed
 - Berry `bytes.resize()` for large sizes (#21716)
 - On universal display remove default backlight power if a single PWM channel is used for backlight. Regression from 14.0.0.1 (#21726)
 - ESP32 I2S fixes (#21770)
-
-### Removed
+- ESP32 Resistive Touch xpt for 2 spi busses (#21814)
 
 ## [14.1.0.2] 20240627
 ### Added

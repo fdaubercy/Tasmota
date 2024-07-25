@@ -30,6 +30,7 @@
 
 #include "tasmota_options.h"
 
+
 extern int Cache_WriteBack_Addr(uint32_t addr, uint32_t size);
 
 
@@ -2020,11 +2021,15 @@ bool uDisplay::utouch_Init(char **name) {
       attachInterrupt(ut_irq, ut_touch_irq, FALLING);
     }
 
+extern SPIClass *Init_SPI_Bus(uint32 bus);
+
     if (ut_spi_nr == spi_nr) {
+      // same as display
       ut_spi = uspi;
     } else {
-      // not yet
-      ut_spi = nullptr;
+#ifdef ESP32
+      ut_spi = Init_SPI_Bus(ut_spi_nr);
+#endif
     }
     return ut_execute(ut_init_code);
   }
@@ -2191,6 +2196,7 @@ void uDisplay::pushColorsMono(uint16_t *data, uint16_t len, bool rgb16_swap) {
   uint16_t rgb16_to_mono_mask = rgb16_swap ? RGB16_SWAP_TO_MONO : RGB16_TO_MONO;
 
   for (uint32_t y = seta_yp1; y < seta_yp2; y++) {
+    seta_yp1++;
     for (uint32_t x = seta_xp1; x < seta_xp2; x++) {
       uint16_t color = *data++;
       if (bpp == 1) color = (color & rgb16_to_mono_mask) ? 1 : 0;
@@ -2213,7 +2219,7 @@ void uDisplay::pushColors(uint16_t *data, uint16_t len, boolean not_swapped) {
 
   //Serial.printf("push %x - %d - %d - %d\n", (uint32_t)data, len, not_swapped, lvgl_param.data);
 
-  // Isolating _UDPS_RGB to increase code sharing
+  // Isolating _UDSP_RGB to increase code sharing
   //
   // LVGL documentation suggest to call the following:
   //    lv_draw_sw_rgb565_swap() to invert bytes
@@ -2229,6 +2235,8 @@ void uDisplay::pushColors(uint16_t *data, uint16_t len, boolean not_swapped) {
     // check that bytes count matches the size of area, and remove from inner loop
     if ((seta_yp2 - seta_yp1) * (seta_xp2 - seta_xp2) > len) { return; }
 
+    uint16_t lenc = len;
+
     if (cur_rot > 0) {
       for (uint32_t y = seta_yp1; y < seta_yp2; y++) {
         seta_yp1++;
@@ -2236,8 +2244,8 @@ void uDisplay::pushColors(uint16_t *data, uint16_t len, boolean not_swapped) {
           uint16_t color = *data++;
           if (!not_swapped) { color = color << 8 | color >> 8; }
           drawPixel_RGB(x, y, color);
-          len--;
-          if (!len) return;         // failsafe - exist if len (pixel number) is exhausted
+          lenc--;
+          if (!lenc) return;         // failsafe - exist if len (pixel number) is exhausted
         }
       }
     } else {
@@ -2250,6 +2258,8 @@ void uDisplay::pushColors(uint16_t *data, uint16_t len, boolean not_swapped) {
             uint16_t color = *data++;
             *fb_xy = color;
             fb_xy++;
+            lenc--;
+            if (!lenc) break;         // failsafe - exist if len (pixel number) is exhausted
           }
         } else {
           for (uint32_t x = seta_xp1; x < seta_xp2; x++) {
@@ -2257,14 +2267,19 @@ void uDisplay::pushColors(uint16_t *data, uint16_t len, boolean not_swapped) {
             color = color << 8 | color >> 8;
             *fb_xy = color;
             fb_xy++;
+            lenc--;
+            if (!lenc) break;         // failsafe - exist if len (pixel number) is exhausted
           }
         }
+        uint16_t * flush_ptr = rgb_fb + (int32_t)seta_yp1 * _width + seta_xp1;
+        esp_cache_msync(flush_ptr, (seta_xp2 - seta_xp1) * 2, 0);
         fb_y += _width;
+        seta_yp1++;
+        if (!lenc) break; 
       }
       // using esp_cache_msync() to flush the PSRAM cache and ensure that all data is actually written to PSRAM
       // from https://github.com/espressif/esp-idf/blob/636ff35b52f10e1a804a3760a5bd94e68f4b1b71/components/esp_lcd/rgb/esp_lcd_panel_rgb.c#L159
-      uint16_t * flush_ptr = rgb_fb + (int32_t)seta_yp1 * _width;
-      esp_cache_msync(flush_ptr, (seta_yp2 - seta_yp1) * _width * 2, 0);
+
     }
 #endif
     return;
