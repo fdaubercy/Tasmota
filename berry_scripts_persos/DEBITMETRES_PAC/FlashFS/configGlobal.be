@@ -247,15 +247,21 @@ configGlobal.configGlobalByJson = def(json)
 							#typeApp = int((env[cleDevices][cleDev]["type"] >> 5) & 0xFFE0) + id - 1
 
 							id = int(env[cleDevices][cleDev].find("id", 1))
+							pin = env[cleDevices][cleDev]["pin"]
+
 							typeApp = int(env[cleDevices][cleDev]["type"]) + id - 1
-							pin = env[cleDevices][cleDev]["pin"]	
+							# Pour les WS2812
+							if cleDevices == "ws2812s"
+								typeApp = int(env[cleDevices][cleDev]["type"]) + int(env[cleDevices][cleDev]["channel"]) - 1
+							else typeApp = int(env[cleDevices][cleDev]["type"]) + id - 1
+							end
 
 							if pin != -1 && typeApp != ""	
 								# Ajoute au tableau des pins utilisés
 								gpioPinUtilises.push("GPIO" + str(pin))	
 								
 								# Repérer la place du GPIO dans le modèle
-								log ("ordreGPIO.size()=" + str(ordreGPIO.size()), LOG_LEVEL_DEBUG_PLUS)
+								# log ("ordreGPIO.size()=" + str(ordreGPIO.size()), LOG_LEVEL_DEBUG_PLUS)
 								for i: 0 .. ordreGPIO.size() - 1
 									if ordreGPIO[i] == "GPIO" + str(pin)
 										pos = i
@@ -271,8 +277,8 @@ configGlobal.configGlobalByJson = def(json)
 								end		
 							end
 
-							# Paramètre le nom des relais
-							if cleDevices == "relais"
+							# Paramètre le nom des relais et WS2812
+							if cleDevices == "relais" || cleDevices == "ws2812s"
 								if env[cleDevices][cleDev]["nom"] != ""
 									if tasmota.cmd("WebButton" + str(id), boolMute)["WebButton" + str(id)] != env[cleDevices][cleDev]["nom"]
 										log (string.format("CONFIG_GLOBAL: Modifie sur WebUI le nom du Relai %i = %s !", id, env[cleDevices][cleDev]["nom"]), LOG_LEVEL_DEBUG)

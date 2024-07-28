@@ -86,7 +86,7 @@
 		"template": {
 			"BASE": 1,
 			"GPIO": [
-				1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+				1, 1, 1, 1, 640, 608, 1, 1, 1, 1, 1, 1, 1, 8993, 8992, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 288, 544, 1, 1, 1, 1, 1, 1, 1, 1, 1376
 			],
 			"NAME": "ESP32S3 Debitmetres PAC",
 			"FLAG": 0
@@ -139,15 +139,15 @@
 						},
 						"led1": {
 							"activation": "ON",
-							"pin": 26,
+							"pin": 38,
 							"id": 1,
 							"type": 288
 						}
 					},
 					"ws2812s": {
 						"ws28121": {
-							"activation": "OFF",
-							"pin": -1,
+							"activation": "ON",
+							"pin": 48,
 							"id": 1,
 							"type": 1376
 						}
@@ -186,6 +186,28 @@
 							"pin": 5,
 							"id": 1,
 							"type": 6720
+						}
+					}
+				}
+			},
+			"I2C": {
+				"activation": "ON",
+				"name": "Bus I2C",
+				"environnement": {
+					"pinsI2Cs": {
+						"pinsI2C1": {
+							"activation": "ON",
+							"nom": "I2C SDa",
+							"pin": 4,
+							"id": 1,
+							"type": 640
+						},
+						"pinsI2C2": {
+							"activation": "ON",
+							"nom": "I2C SCl",
+							"pin": 5,
+							"id": 1,
+							"type": 608
 						}
 					}
 				}

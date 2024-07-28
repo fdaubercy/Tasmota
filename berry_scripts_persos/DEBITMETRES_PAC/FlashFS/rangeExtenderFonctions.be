@@ -62,23 +62,43 @@ rangeExtenderFonctions.reglageRangeExtender = def(cmd, idx, payload, payload_jso
     reponse_cmnd["idModule"] = serveur["rangeExtender"].find("idModuleRangeExpender", 99)
     reponse_cmnd["topicModule"] = str(serveur["mqtt"].find("topic", ""))
 
-        # Retourne les données de paramétrage du routage NAPT
+    # Retourne les données de paramétrage du routage NAPT
     # Uniquement si c'est le point d'accès (d'id=0)
     if string.toupper(fonction) == "ROUTAGENAPT" && serveur["rangeExtender"].find("idModuleRangeExpender", 99) == 0
         parametre = json.load(parametre)
 
-        # Enregistre ou Mets à jour en variable les modules RangeExtender connectés dans un tableau
-        controleRangeExtender.modulesConnectes[str(parametre["idModule"])] = parametre
-        controleGeneral.parametres["serveur"]["rangeExtender"]["modulesConnectes"] = controleRangeExtender.modulesConnectes
-        if (gestionFileFolder.readFile("/modulesConnectes.json") != json.dump(controleRangeExtender.modulesConnectes))
-            gestionFileFolder.writeFile("/modulesConnectes.json", json.dump(controleRangeExtender.modulesConnectes))
+        # Si c'est un message d'un module RangeExtender & routageNAPT==false
+        if parametre["idModule"] > 0 && !parametre.find("routageNAPT", false)
+            # Enregistre ou Mets à jour en variable les modules RangeExtender connectés dans un tableau
+            controleRangeExtender.modulesConnectes[str(parametre["idModule"])] = parametre
+            controleGeneral.parametres["serveur"]["rangeExtender"]["modulesConnectes"] = controleRangeExtender.modulesConnectes
+            if (gestionFileFolder.readFile("/modulesConnectes.json") != json.dump(controleRangeExtender.modulesConnectes))
+                gestionFileFolder.writeFile("/modulesConnectes.json", json.dump(controleRangeExtender.modulesConnectes))
+            end
+
+            # Enregistre les abonnements MQTT pour capter les emisions des données des capteurs du module 
+            # Réalilse le routage
+            rangeExtenderFonctions.routageAndMqttRangeExtender(controleRangeExtender.modulesConnectes)
+
+            reponse_cmnd["routageNAPT"] = "OK"
+
+            # Le Point d'accès renvoi aux modules connectés ses paramètres
+            webFonctions.envoiMQTT(string.format("cmnd/%s/ReglageRangeExtender", groupTopic), "routageNAPT " + json.dump(reponse_cmnd), "")
         end
+    # Gère la réponse à la commande envoyée
+    # Uniquement les modules connectés (d'id>0)
+    elif string.toupper(fonction) == "ROUTAGENAPT" && serveur["rangeExtender"].find("idModuleRangeExpender", 0) > 0
+        parametre = json.load(parametre)
 
-        # Enregistre les abonnements MQTT pour capter les emisions des données des capteurs du module 
-        # Réalilse le routage
-        rangeExtenderFonctions.routageAndMqttRangeExtender(controleRangeExtender.modulesConnectes)
+        # Si c'est un message du maitre RangeExtender & routageNAPT=OK
+        if parametre["idModule"] == 0 && parametre["routageNAPT"] == "OK"
+            # Le module connecté enregistre le topic du maitre en json persist
+            controleGeneral.parametres["serveur"]["rangeExtender"]["AP"]["topic"] = parametre["topicModule"]
 
-        reponse_cmnd["routageNAPT"] = "OK"
+            # Enregistre en json
+            persist.parametres = controleGeneral.parametres	
+            persist.save()
+        end
     end
 
     # Lance la commande paramétrage du routage NAPT sur le point d'accès vers ce module

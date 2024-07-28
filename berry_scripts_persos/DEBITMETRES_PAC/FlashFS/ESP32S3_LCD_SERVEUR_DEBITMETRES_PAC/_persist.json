@@ -1,7 +1,7 @@
 {
 	"parametres": {
 		"diverses": {
-			"typeESP": "ESP32",
+			"typeESP": "ESP32S3",
 			"logs": 4,
 			"telePeriod": 300,
 			"eviteResetBTN": "ON",
@@ -31,11 +31,11 @@
 		},
 		"serveur": {
 			"activation": "ON",
-			"nom": "Débitmètres PAC 1",
-			"hostname": "DEBITMETRES-PAC-1",
+			"nom": "Ecran LCD",
+			"hostname": "ILI9488-PAC",
 			"mDNS": "ON",
 			"IP": {
-				"IPAddress": "10.99.0.2",
+				"IPAddress": "10.99.0.3",
 				"IPGateway": "10.99.0.1",
 				"Subnet": "255.255.255.0",
 				"DNSServer": "0.0.0.0"
@@ -57,17 +57,17 @@
 				"activation": "ON",
 				"hote": "192.168.0.5",
 				"port": 1883,
-				"client": "DEBITMETRES-PAC-1",
+				"client": "ILI9488-PAC",
 				"utilisateur": "fdaubercy",
 				"mdp": "Lune5676",
-				"topic": "pac/module1",
+				"topic": "pac/ili8499",
 				"groupTopic1": "tasmotas/pac",
 				"groupTopic2": "",
 				"groupTopic3": ""
 			},
 			"rangeExtender": {
 				"activation": "ON",
-				"idModuleRangeExpender": 1,
+				"idModuleRangeExpender": 2,
 				"AP": {
 					"etat": "OFF",
 					"routeNAPT": "OFF",
@@ -86,45 +86,13 @@
 		"template": {
 			"BASE": 1,
 			"GPIO": [
-				1, 1, 1, 1, 1, 1, 1, 1, 8993, 1, 8992, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-			],
-			"NAME": "ESP32 Debitmetres PAC",
+				6210,1,1,11008,992,1,1024,800,1,7264,768,704,736,672,1,1,1,1,1,1,1,1,1,1,1,1,1,288,544,1,1,1,1,1,1,1,1,1376
+			], 
+			"NAME": "ESP32S3 ILI8499",
 			"FLAG": 0
 		},
 		"modules": {
 			"activation": "ON",
-			"PAC": {
-				"name": "Débits circuits de PAC",
-				"activation": "ON",
-				"reglage": "OFF",
-				"environnement": {
-					"debitmetres": {
-						"unit": "l/min",
-						"source": "average",
-						"amountUnit": "L",
-						"debitmetre1": {
-							"activation": "ON",
-							"nom": "Débit Entrée - Cuisine",
-							"facteurCorrection": 1.000,
-							"id": 1,
-							"pin": 14,
-							"type": 8992,
-							"virtuel": "OFF",
-							"value": 0
-						},
-						"debitmetre2": {
-							"activation": "ON",
-							"nom": "Débit Salon - SàM",
-							"facteurCorrection": 1.000,
-							"id": 2,
-							"pin": 13,
-							"type": 8992,
-							"virtuel": "OFF",
-							"value": 0
-						}
-					}
-				}
-			},
 			"leds": {
 				"activation": "ON",
 				"name": "Leds",
@@ -138,54 +106,104 @@
 							"type": 544
 						},
 						"led1": {
-							"activation": "ON",
-							"pin": 26,
+							"activation": "OFF",
+							"pin": 38,
 							"id": 1,
 							"type": 288
 						}
 					},
 					"ws2812s": {
 						"ws28121": {
-							"activation": "OFF",
-							"pin": -1,
-							"id": 1,
+							"activation": "ON",
+							"nom": "WS2812",
+							"pin": 48,
+							"id": 2,
+							"channel": 1,
 							"type": 1376
 						}
 					}
 				}
 			},
-			"SD": {
-				"activation": "OFF",
-				"name": "Carte SD",
+			"ecran": {
+				"activation": "ON",
+				"name": "Ecran ILI9488",
 				"environnement": {
-					"pinsSDs": {
-						"pinsSD1": {
-							"activation": "OFF",
-							"nom": "SPI_Clk",
-							"pin": 18,
+					"pinsEcrans": {
+						"pinsEcran1": {
+							"activation": "ON",
+							"nom": "Option A",
+							"pin": 0,
+							"id": 3,
+							"type": 6208
+						},	
+						"pinsEcran2": {
+							"activation": "ON",
+							"nom": "SPI CS",
+							"pin": 10,
+							"id": 1,
+							"type": 768
+						},
+						"pinsEcran3": {
+							"activation": "ON",
+							"nom": "SPI Clk",
+							"pin": 12,
 							"id": 1,
 							"type": 736
 						},
-						"pinsSD2": {
-							"activation": "OFF",
-							"nom": "SPI_MISO",
-							"pin": 19,
+						"pinsEcran4": {
+							"activation": "ON",
+							"nom": "SPI MISO",
+							"pin": 13,
 							"id": 1,
 							"type": 672
-						},
-						"pinsSD3": {
-							"activation": "OFF",
-							"nom": "SPI_MOSI",
-							"pin": 23,
+						},	
+						"pinsEcran5": {
+							"activation": "ON",
+							"nom": "SPI MOSI",
+							"pin": 11,
 							"id": 1,
 							"type": 704
 						},
-						"pinsSD4": {
-							"activation": "OFF",
-							"nom": "SDCard CS",
-							"pin": 5,
+						"pinsEcran6": {
+							"activation": "ON",
+							"nom": "SPI DC",
+							"pin": 7,
 							"id": 1,
-							"type": 6720
+							"type": 800
+						},
+						"pinsEcran7": {
+							"activation": "ON",
+							"nom": "XPT2046 CS",
+							"pin": 9,
+							"id": 1,
+							"type": 7264
+						},
+						"pinsEcran8": {
+							"activation": "ON",
+							"nom": "TS IRQ",
+							"pin": 3,
+							"id": 1,
+							"type": 11008
+						}			
+					},
+					"relais": {
+						"relai1": {
+							"activation": "ON",
+							"nom": "Rétro Ecl",
+							"pin": 4,
+							"id": 1,
+							"type": 224,
+							"etat": "OFF",
+							"timer": 0,
+							"publishMQTT": {
+								"topic": [""]
+							},
+							"timestamp": {
+								"ON": 0,
+								"OFF": 0, 
+								"delai": 0,
+								"nbCyclesJour": 0
+							}
 						}
 					}
 				}

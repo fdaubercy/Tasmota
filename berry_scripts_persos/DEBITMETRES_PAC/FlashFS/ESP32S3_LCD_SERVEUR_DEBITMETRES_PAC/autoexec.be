@@ -26,9 +26,9 @@ if (persist.find("parametres", false))
     gestionFileFolder.compileModule("/configGlobal")
     gestionFileFolder.compileModule("/gestionFileFolder")
     gestionFileFolder.compileModule("/globalFonctions")
-    gestionFileFolder.compileModule("/pacFonctions", persist.find("parametres")["modules"]["PAC"].find("activation", "OFF"))
     gestionFileFolder.compileModule("/rangeExtenderFonctions", persist.find("parametres")["serveur"]["rangeExtender"].find("activation", "OFF"))
     gestionFileFolder.compileModule("/webFonctions", persist.find("parametres")["serveur"].find("activation", "OFF"))
+    gestionFileFolder.compileModule("/displayFonctions", persist.find("parametres")["modules"].find("ecran", {}).find("activation", "OFF"))
 
     # Charge les fonctions accessoires UDP & WebSocket
     gestionFileFolder.loadBerryFile("/controleUDP", persist.find("parametres")["serveur"].find("etat", {}).find("etat", "OFF"))
@@ -37,7 +37,7 @@ if (persist.find("parametres", false))
     # Charge le Driver de controle global des modules & gestionWeb
     gestionFileFolder.loadBerryFile("/controleGlobal")
     gestionFileFolder.loadBerryFile("/controleRangeExtender", persist.find("parametres")["serveur"]["rangeExtender"].find("activation", "OFF"))
-    gestionFileFolder.loadBerryFile("/controlePAC", persist.find("parametres")["modules"]["PAC"].find("activation", "OFF"))
+    gestionFileFolder.loadBerryFile("/controleDisplay", persist.find("parametres")["modules"].find("ecran", {}).find("activation", "OFF"))
     gestionFileFolder.loadBerryFile("/controleWeb", persist.find("parametres")["serveur"].find("activation", "OFF"))
 
     # A la fin du processus

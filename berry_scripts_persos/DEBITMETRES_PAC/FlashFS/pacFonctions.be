@@ -200,15 +200,7 @@ pacFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cle
         except .. as variable, message
             # C'est un tableau
             if (variable == "type_error")  
-                if string.find(cleBouton, "debitmetre") == 0
-                    print(msg["Débit"])
-                    print(int(string.split(cleBouton, "debitmetre")[1]) - 1)
-                    value = (value[int(string.split(cleBouton, "debitmetre")[1]) - 1] == nil ? 0 : value[int(string.split(cleBouton, "debitmetre")[1]) - 1])
-                    print(str(value))
-                    # value = value[int(string.split(cleBouton, "debitmetre")[1]) - 1]
-                    # value = (value == nil ? 0 : value)
-                    # print("value=" + str(int(string.split(cleBouton, "debitmetre")[1]) - 1))
-                end
+            elif (variable == "index_error")  
             end
         end
 	end
@@ -228,8 +220,8 @@ pacFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cle
 					controleGeneral.parametres["modules"][moduleCapteur]["environnement"]["debitmetres"]["amountUnit"] = msg["AmountUnit"]
 
 					# Enregistre en json
-					persist.parametres = controleGeneral.parametres	
-					persist.save()
+					# persist.parametres = controleGeneral.parametres	
+					# persist.save()
 				end
 			end
 		end

@@ -20,11 +20,6 @@ class CONTROLE_WEB
     var sensors
 
     def init()
-        import json
-
-        # Lance le driver de CONTROLE_GENERAL
-        #super(self).init()
-
         self.formSelection = ""
         self.categorieSelection = ""
     end
@@ -196,6 +191,7 @@ class CONTROLE_WEB
                                 "<option value='' selected></option>" + 
                             "</select>" + 
                         "</div>"
+
                 tempFile = string.replace(tempFile, "##SELECT_OPTION_CATEGORIES##", buffer)
                 webserver.content_send(tempFile)
 

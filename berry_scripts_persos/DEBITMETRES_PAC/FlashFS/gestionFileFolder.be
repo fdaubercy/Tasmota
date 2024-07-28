@@ -33,12 +33,12 @@ gestionFileFolder.listeEtRepartitLesFichiers = def()
                 var temp = file.read()
                 file.close()
 
+                # Et supprime le fichier d'origine
+                path.remove(nameFile)
+
                 var fileDest = open(filePath, 'w')
                 fileDest.write(temp)
                 fileDest.close()
-
-                # Et supprime le fichier d'origine
-                path.remove(nameFile)
             end
         end
     # Crée le dossier 'sd'
@@ -178,22 +178,58 @@ gestionFileFolder.loadBerryFile = def(chemin, paramDeleteBe)
     # Si paramDeleteBe=="OFF": Suppression ".be" et pas de chargement
     if (paramDeleteBe == "" || paramDeleteBe == nil)  paramDeleteBe = "ON"    end
     if paramDeleteBe == "OFF"
-        path.remove(chemin)
+        path.remove(chemin + ".be")
+        log (string.format("LOAD_BERRY_FILE: Supprime le fichier '%s' !", chemin + ".be"), LOG_LEVEL_DEBUG)
         return
     end
-    
-    # Charge le fichier Berry et construit le fichier ".bec"
-    if load(chemin)
-        # Supprime le fichier ".be"
-        path.remove(chemin)
 
-        log (string.format("AUTO_EXE: Charge le fichier '%s' !", chemin), LOG_LEVEL_DEBUG)
+    # Compile le fichier "*.be" en "*.bec"
+    if path.exists(chemin + ".be")  
+        # Si echec de compilation ==> on sort de la fonction sans charger le fichier
+        if tasmota.compile(chemin + ".be")
+            # Supprime le fichier ".be"
+            path.remove(chemin + ".be")
+            log (string.format("LOAD_BERRY_FILE: Supprime après compilation le fichier '%s' !", chemin), LOG_LEVEL_DEBUG)
+        else
+            log (string.format("LOAD_BERRY_FILE: Echec de compilation du fichier '%s' !", chemin), LOG_LEVEL_ERREUR)
+            return
+        end
     end
+    
+    # Charge le fichier Berry "*.be" ou "*.bec"
+    log (string.format("LOAD_BERRY_FILE: Charge le fichier '%s' !", chemin), LOG_LEVEL_DEBUG)
+    load(chemin)
 end
 
-# Execute la focntion au démarrage
-log ("AUTO_EXE: Vérifie les fichiers à transférer sur la carte SD !", LOG_LEVEL_DEBUG)
-gestionFileFolder.listeEtRepartitLesFichiers()
+# Charge un fichier ".be" & le supprime si le chargement est OK
+gestionFileFolder.compileModule = def(chemin, paramDeleteBe)
+    import path
+    import string
+
+    # Si le fichier n'est pas nécessaire
+    # Si paramDeleteBe=="OFF": Suppression ".be" et pas de chargement
+    if (paramDeleteBe == "" || paramDeleteBe == nil)  paramDeleteBe = "ON"    end
+    if paramDeleteBe == "OFF"
+        path.remove(chemin + ".be")
+        log (string.format("LOAD_BERRY_FILE: Supprime le fichier '%s' !", chemin + ".be"), LOG_LEVEL_DEBUG)
+        return
+    end
+
+    # Compile le fichier "*.be" en "*.bec"
+    # print(chemin + " exist=" + str(path.exists(chemin + ".be")))
+    if path.exists(chemin + ".be")  
+        # Si echec de compilation ==> on sort de la fonction sans charger le fichier
+        # print(chemin + "compile="+str(tasmota.compile(chemin + ".be")))
+        if tasmota.compile(chemin + ".be")
+            # Supprime le fichier ".be"
+            path.remove(chemin + ".be")
+            log (string.format("LOAD_BERRY_FILE: Supprime après compilation le fichier '%s' !", chemin), LOG_LEVEL_DEBUG)
+        else
+            log (string.format("LOAD_BERRY_FILE: Echec de compilation du fichier '%s' !", chemin), LOG_LEVEL_ERREUR)
+            return
+        end
+    end
+end
 
 # Retourne le module lors de l'importation
 return gestionFileFolder
