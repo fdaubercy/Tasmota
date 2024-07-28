@@ -25,6 +25,7 @@
 \*********************************************************************************************/
 
 #define XSNS_02                       2
+#define XNRG_33                       33
 
 #ifdef ESP32
 #include "esp32-hal-adc.h"
@@ -35,6 +36,7 @@
 #define ANALOG_RANGE                  1023             // 4095 = 12, 2047 = 11, 1023 = 10
 #define ANALOG_PERCENT                10               // backward compatible div10 range
 #endif  // ESP8266
+
 #ifdef ESP32
 #undef ANALOG_RESOLUTION
 #define ANALOG_RESOLUTION             12               // 12 = 4095, 11 = 2047, 10 = 1023
@@ -162,6 +164,7 @@ struct {
 } Adcs;
 
 struct {
+  float *mq_samples;
   float temperature = 0;
   float current = 0;
   float energy = 0;
@@ -169,12 +172,11 @@ struct {
   uint32_t param2 = 0;
   int param3 = 0;
   int param4 = 0;
+  int indexOfPointer = -1;
   uint32_t previous_millis = 0;
   uint16_t last_value = 0;
   uint8_t type = 0;
   uint8_t pin = 0;
-  float mq_samples[ANALOG_MQ_SAMPLES];
-  int indexOfPointer = -1;
 } Adc[MAX_ADCS];
 
 bool adcAttachPin(uint8_t pin) {
@@ -241,9 +243,21 @@ void AdcInitParams(uint8_t idx) {
     }
     else if (ADC_MQ == Adc[idx].type) {
       Adc[idx].param1 = ANALOG_MQ_TYPE;  // Could be MQ-002, MQ-004, MQ-131 ....
-      Adc[idx].param2 = (int)(ANALOG_MQ_A * ANALOG_MQ_DECIMAL_MULTIPLIER);                       // Exponential regression
-      Adc[idx].param3 = (int)(ANALOG_MQ_B * ANALOG_MQ_DECIMAL_MULTIPLIER);                      // Exponential regression
-      Adc[idx].param4 = (int)(ANALOG_MQ_RatioMQCleanAir * ANALOG_MQ_DECIMAL_MULTIPLIER);                      // Exponential regression
+      Adc[idx].param2 = (int)(ANALOG_MQ_A * ANALOG_MQ_DECIMAL_MULTIPLIER);                // Exponential regression
+      Adc[idx].param3 = (int)(ANALOG_MQ_B * ANALOG_MQ_DECIMAL_MULTIPLIER);                // Exponential regression
+      Adc[idx].param4 = (int)(ANALOG_MQ_RatioMQCleanAir * ANALOG_MQ_DECIMAL_MULTIPLIER);  // Exponential regression
+    }
+    else if (ADC_VOLTAGE == Adc[idx].type) {
+      Adc[idx].param1 = 0;
+      Adc[idx].param2 = ANALOG_RANGE;
+      Adc[idx].param3 = 0;
+      Adc[idx].param4 = ANALOG_V33 * 10000;
+    }
+    else if (ADC_CURRENT == Adc[idx].type) {
+      Adc[idx].param1 = 0;
+      Adc[idx].param2 = ANALOG_RANGE;
+      Adc[idx].param3 = 0;
+      Adc[idx].param4 = ANALOG_V33 * 10000;
     }
   }
   if ((Adcs.type != Adc[idx].type) || (0 == Adc[idx].param1) || (Adc[idx].param1 > ANALOG_RANGE)) {
@@ -260,8 +274,11 @@ void AdcAttach(uint32_t pin, uint8_t type) {
   if (Adcs.present == MAX_ADCS) { return; }
   Adc[Adcs.present].pin = pin;
   if (adcAttachPin(Adc[Adcs.present].pin)) {
+    if (ADC_MQ == type) {
+      Adc[Adcs.present].mq_samples = (float*)calloc(sizeof(float), ANALOG_MQ_SAMPLES);  // Need calloc to reset registers to 0
+      if (nullptr == Adc[Adcs.present].mq_samples) { return; }
+    }
     Adc[Adcs.present].type = type;
-//    analogSetPinAttenuation(Adc[Adcs.present].pin, ADC_11db);  // Default
     Adcs.present++;
   }
 }
@@ -293,6 +310,12 @@ void AdcInit(void) {
     if (PinUsed(GPIO_ADC_MQ, i)) {
       AdcAttach(Pin(GPIO_ADC_MQ, i), ADC_MQ);
     }
+    if (PinUsed(GPIO_ADC_VOLTAGE, i)) {
+      AdcAttach(Pin(GPIO_ADC_VOLTAGE, i), ADC_VOLTAGE);
+    }
+    if (PinUsed(GPIO_ADC_CURRENT, i)) {
+      AdcAttach(Pin(GPIO_ADC_CURRENT, i), ADC_CURRENT);
+    }
   }
   for (uint32_t i = 0; i < MAX_KEYS; i++) {
     if (PinUsed(GPIO_ADC_BUTTON, i)) {
@@ -305,10 +328,8 @@ void AdcInit(void) {
 
   if (Adcs.present) {
 #ifdef ESP32
-#if CONFIG_IDF_TARGET_ESP32
-    analogSetWidth(ANALOG_RESOLUTION);  // Default 12 bits (0 - 4095)
-#endif  // CONFIG_IDF_TARGET_ESP32
-    analogSetAttenuation(ADC_11db);     // Default 11db
+    analogReadResolution(ANALOG_RESOLUTION);  // Default 12 bits (0 - 4095)
+    analogSetAttenuation(ADC_11db);           // Default 11db
 #endif
     for (uint32_t idx = 0; idx < Adcs.present; idx++) {
       AdcGetSettings(idx);
@@ -538,6 +559,8 @@ void AdcGetCurrentPower(uint8_t idx, uint8_t factor) {
 }
 
 void AdcEverySecond(void) {
+  uint32_t voltage_index = 0;
+  uint32_t current_index = 0;
   for (uint32_t idx = 0; idx < Adcs.present; idx++) {
     if (ADC_TEMP == Adc[idx].type) {
       int adc = AdcRead(Adc[idx].pin, 2);
@@ -570,7 +593,27 @@ void AdcEverySecond(void) {
       AddSampleMq(idx);
       AdcGetMq(idx);
     }
+#ifdef USE_ENERGY_SENSOR
+    else if (ADC_VOLTAGE == Adc[idx].type) {
+      Energy->voltage_available = true;
+      Energy->voltage[voltage_index++] = AdcGetRange(idx) / 10000;
+    }
+    else if (ADC_CURRENT == Adc[idx].type) {
+      Energy->current_available = true;
+      Energy->current[current_index++] = AdcGetRange(idx) / 10000;
+    }
+#endif  // USE_ENERGY_SENSOR
   }
+#ifdef USE_ENERGY_SENSOR
+  if (voltage_index && current_index) {
+    for (uint32_t phase = 0; phase < current_index; phase++) {
+      uint32_t voltage_phase = (voltage_index == current_index) ? phase : 0;
+      Energy->active_power[phase] = Energy->voltage[voltage_phase] * Energy->current[phase];
+      Energy->kWhtoday_delta[phase] += (uint32_t)(Energy->active_power[phase] * 1) / 36;
+    }
+    EnergyUpdateToday();
+  }
+#endif  // USE_ENERGY_SENSOR
 }
 
 void AdcShowContinuation(bool *jsonflg) {
@@ -767,14 +810,18 @@ void CmndAdcParam(void) {
         AdcGetSettings(idx);
         if (ArgC() > 3) {  // Process parameter entry
           char argument[XdrvMailbox.data_len];
-          // AdcParam 2, 32000, 10000, 3350        ADC_TEMP Shelly mode
-          // AdcParam 2, 32000, 10000, 3350, 1     ADC_TEMP Alternate mode
+          // AdcParam 2, 32000, 10000, 3350          ADC_TEMP Shelly mode
+          // AdcParam 2, 32000, 10000, 3350, 1       ADC_TEMP Alternate mode
           // AdcParam 3, 10000, 12518931, -1.405
           // AdcParam 4, 128, 0, 0
           // AdcParam 5, 128, 0, 0
-          // AdcParam 6, 0, ANALOG_RANGE, 0, 100
+          // AdcParam 6, 0, ANALOG_RANGE, 0, 100     ADC_RANGE
           // AdcParam 7, 0, 2146, 0.23
           // AdcParam 8, 1000, 0, 0
+          // AdcParam 9,                             ADC_PH
+          // AdcParam 10,                            ADC_MQ
+          // AdcParam 11, 0, ANALOG_RANGE, 0, 33000  ADC_VOLTAGE
+          // AdcParam 12, 0, ANALOG_RANGE, 0, 33000  ADC_CURRENT
           Adc[idx].type = XdrvMailbox.payload;
           Adc[idx].param1 = strtol(ArgV(argument, 2), nullptr, 10);
           Adc[idx].param2 = strtol(ArgV(argument, 3), nullptr, 10);
@@ -887,7 +934,36 @@ void CmndAdcParam(void) {
 }
 
 /*********************************************************************************************\
- * Interface
+ * Energy Interface
+\*********************************************************************************************/
+
+#ifdef USE_ENERGY_SENSOR
+bool Xnrg33(uint32_t function) {
+  bool result = false;
+
+  if (FUNC_PRE_INIT == function) {
+    uint32_t voltage_count = 0;
+    uint32_t current_count = 0;
+    for (uint32_t idx = 0; idx < Adcs.present; idx++) {
+      if (ADC_VOLTAGE == Adc[idx].type) { voltage_count++; }
+      if (ADC_CURRENT == Adc[idx].type) { current_count++; }
+    }
+    if (voltage_count || current_count) {
+      Energy->type_dc = true;
+      Energy->phase_count = (voltage_count > current_count) ? voltage_count : current_count;
+      Energy->current_available = false;
+      Energy->voltage_available = false;
+      Energy->voltage_common = (1 == voltage_count);
+      Energy->use_overtemp = true;   // Use global temperature for overtemp detection
+      TasmotaGlobal.energy_driver = XNRG_33;
+    }
+  }
+  return result;
+}
+#endif  // USE_ENERGY_SENSOR
+
+/*********************************************************************************************\
+ * Sensor Interface
 \*********************************************************************************************/
 
 bool Xsns02(uint32_t function) {

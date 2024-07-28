@@ -8,17 +8,21 @@ All notable changes to this project will be documented in this file.
 - Support for Sonoff iFan04-H using template (#16402)
 - Matter improve internal `inspect`for superclasses (#21824)
 - Matter support for split lights (`SetOption68 1` and `SetOption37 128`) (#21834)
+- Berry `webserver_async` (#21836)
+- NeoPool command `NPSetOption<x>` to enabled/disable data validation/connection statistics (#21850)
 
 ### Breaking Changed
 
 ### Changed
+- Berry consolidated constants for solidified classes reduces Flash size (#2185)
 
 ### Fixed
 - Berry `light.get` for separate RGB/CT (#21818)
-- Berry fix `bytes` setters and getters with negative offsets
+- Berry `bytes` setters and getters with negative offsets (#21835)
+- Berry `file.write()` raises an exception on failure (ex: disk full) (#21849)
 
 ### Removed
-- Berry internal: remove class from closure to simplify code
+- Berry internal: remove class from closure to simplify code (#21839)
 
 ## [14.1.0.3] 20240722
 ### Added
