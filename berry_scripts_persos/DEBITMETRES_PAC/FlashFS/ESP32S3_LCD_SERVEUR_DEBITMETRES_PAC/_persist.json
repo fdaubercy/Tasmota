@@ -127,6 +127,7 @@
 			"ecran": {
 				"activation": "ON",
 				"name": "Ecran ILI9488",
+				"timerEcran": 180,
 				"environnement": {
 					"pinsEcrans": {
 						"pinsEcran1": {

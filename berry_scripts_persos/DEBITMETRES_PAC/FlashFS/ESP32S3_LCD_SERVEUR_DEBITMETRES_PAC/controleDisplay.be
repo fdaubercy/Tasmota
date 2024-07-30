@@ -49,7 +49,7 @@ class CONTROLE_DISPLAY : Driver
     import string
 
     # Eteind l'ecran si inactivite > 120s
-    if (lv.disp().get_inactive_time() > 120000)
+    if (lv.display().get_inactive_time() > (controleGeneral.parametres["modules"]["ecran"].find("timerEcran", 120) * 1000))
       if (self.etatLedLCD == "ON")  
         tasmota.cmd(string.format("Power%i OFF", self.numLedLCD), boolMute) 
         self.etatLedLCD = "OFF"
@@ -71,21 +71,21 @@ tasmota.add_driver(controleDisplay)
 lv.start()
 tasmota.cmd("DisplayDimmer 100", boolMute)
 
-# var scr1 = lv.obj_create(None, None);
+var scr1 = lv.obj(0)
 # var scr2  = lv.obj_create(None, None);
-# lv.scr_load(scr1);
+lv.scr_load(scr1);
 
-hres = lv.get_hor_res()       # 320px
-vres = lv.get_ver_res()       # 240px
+hres = lv.get_hor_res()       # 480px
+vres = lv.get_ver_res()       # 320px
 
-scr = lv.scr_act()            # Objet screen par défaut
+var scr = lv.scr_act()            # Objet screen par défaut
 f20 = lv.montserrat_font(20)  # police Montserrat 20
 f28 = lv.montserrat_font(28)  # police Montserrat 28
 
 #- Background with a gradient from black #000000 (bottom) to dark blue #0000A0 (top) -#
-scr.set_style_bg_color(lv.color(0x000000), lv.PART_MAIN | lv.STATE_DEFAULT)
-scr.set_style_bg_grad_color(lv.color(0x000000), lv.PART_MAIN | lv.STATE_DEFAULT)
-scr.set_style_bg_grad_dir(lv.GRAD_DIR_VER, lv.PART_MAIN | lv.STATE_DEFAULT)
+scr1.set_style_bg_color(lv.color(0x000000), lv.PART_MAIN | lv.STATE_DEFAULT)
+scr1.set_style_bg_grad_color(lv.color(0x000000), lv.PART_MAIN | lv.STATE_DEFAULT)
+scr1.set_style_bg_grad_dir(lv.GRAD_DIR_VER, lv.PART_MAIN | lv.STATE_DEFAULT)
 
 #- Ligne de données en haut de page -#
 stat_line = lv.label(scr)
@@ -103,20 +103,6 @@ stat_line.refr_pos()
 #- Affiche les indicateurs d'heure et de wifi -#
 wifi_icon = lv_wifi_arcs_icon(stat_line)
 clock_icon = lv_clock_icon(stat_line)
-
-#- fonctions de Callback pour les boutons, reagi à EVENT_CLICKED -#
-def btn_clicked_cb(obj, event)
-  #lv_obj_t * btn = lv_event_get_target(event);
-
-  # var btn = "Unknown"
-  # if   obj == prev_btn  btn = "Prev"
-  # elif obj == next_btn  btn = "Next"
-  # elif obj == home_btn  btn = "Home"
-  # end
-  # print(btn, "Bouton cliqué !")
-  # tasmota.cmd("buzzer 1")
-  # tasmota.publish("tele/tasmota232/SENSOR/Buttom",btn)
-end
 
 #- Crée le style pour les boutons -#
 btn_style = lv.style()
@@ -137,8 +123,6 @@ prev_label = lv.label(prev_btn)                   # Label du bouton
 prev_label.set_text("<")
 prev_label.center()
 
-prev_btn.add_event_cb(btn_clicked_cb, lv.EVENT_CLICKED, 0)
-
 #- Crée le bouton central -#
 home_btn = lv.btn(scr)
 home_btn.set_pos((hres / 2) - (80 / 2), vres - 60)
@@ -147,8 +131,6 @@ home_btn.add_style(btn_style, lv.PART_MAIN | lv.STATE_DEFAULT)
 home_label = lv.label(home_btn)
 home_label.set_text(lv.SYMBOL_OK)                 # Icone 'Home'
 home_label.center()
-
-home_btn.add_event_cb(btn_clicked_cb, lv.EVENT_CLICKED, 0)
 
 #- Crée le bouton de droite -#
 next_btn = lv.btn(scr)
@@ -160,16 +142,40 @@ next_label = lv.label(next_btn)
 next_label.set_text(">")
 next_label.center()
 
+#- fonctions de Callback pour les boutons, reagi à EVENT_CLICKED -#
+def btn_clicked_cb(obj, event)
+  var btn = "Unknown"
+  if   obj == prev_btn  btn = "Prev"
+  elif obj == next_btn  btn = "Next"
+  elif obj == home_btn  btn = "Home"
+  end
+  print(btn, "button pressed")
+end
+
+prev_btn.add_event_cb(btn_clicked_cb, lv.EVENT_CLICKED, 0)
+home_btn.add_event_cb(btn_clicked_cb, lv.EVENT_CLICKED, 0)
 next_btn.add_event_cb(btn_clicked_cb, lv.EVENT_CLICKED, 0)
 
+# Crée le Slider au centre
 label = lv.label(scr)
+slider = lv.slider(scr)
+slider.set_pos(20, 350) 
+slider.set_height(10)
+slider.set_width(300)
+
+# Create a label below the slider
+label.set_text("0%")
+label.set_style_text_font(f20, lv.PART_MAIN | lv.STATE_DEFAULT)
+label.set_style_text_color(lv.color(0xFFFFFF), lv.PART_MAIN | lv.STATE_DEFAULT)
+label.align_to(slider, lv.ALIGN_OUT_TOP_MID, 0, -10)               # Align below the slider
+
 #- fonctions de Callback pour slider -#
 def slider_event_cb(obj, event)
   var slider = "Unknown"
   var value = "999"
 
   if obj == slider  
-		  slider = "SLIDER"
+		  slider = "Slider"
   end
 
   value = obj.get_value()
@@ -181,42 +187,27 @@ def slider_event_cb(obj, event)
   tasmota.publish("tele/ESP32-2432S028/SENSOR/Slider", str(value))
 end
 
-# Crée le Slider au centre
-slider = lv.slider(scr)
-slider.set_pos(20, vres - 120) 
-slider.set_height(10)
-slider.set_width(300)
 slider.add_event_cb(slider_event_cb, lv.EVENT_VALUE_CHANGED, None)
 
-# Create a label below the slider
-
-label.set_text("0%")
-label.set_style_text_font(f20, lv.PART_MAIN | lv.STATE_DEFAULT)
-label.set_style_text_color(lv.color(0xFFFFFF), lv.PART_MAIN | lv.STATE_DEFAULT)
-label.align_to(slider, lv.ALIGN_OUT_TOP_MID, 0, -10)               # Align below the slider
-
-ddlist = lv.dropdown(scr)
-def dropdown_changed_cb(obj, event)
-    var option = 0
-    var mode = ['Auto', 'Boost', 'On', 'Off', 'Adv', 'Day' ]
-
-    var code = event.get_code()
-    if code == lv.EVENT_VALUE_CHANGED
-      option = obj.get_selected()
-      # ddlist.set_selected(option)
-      # obj.set_text(mode[option])
-      # ddlist.set_selected_highlight(true)
-      print("Dropdown set:", mode[option])
-   
-      tasmota.publish("tele/ESP32-2432S028/SENSOR/Dropdown", mode[option])
-    end
-end
-
-var modes = ['Auto', 'Boost', 'On', 'Off', 'Adv', 'Day' ]
+var modes = ['Auto', 'Boost', 'On', 'Off', 'Adv', 'Day']
 var modes_str = modes.concat('\n')
 
+ddlist = lv.dropdown(scr)
 ddlist.set_options(modes_str)
 ddlist.set_pos(20, 60)
 ddlist.set_selected(2)
 ddlist.set_selected_highlight(true)
+
+def dropdown_changed_cb(obj, event)
+  var option = 0
+
+  var code = event.get_code()
+  if code == lv.EVENT_VALUE_CHANGED
+    option = obj.get_selected()
+    print("Dropdown set:", modes[option])
+ 
+    tasmota.publish("tele/ESP32-2432S028/SENSOR/Dropdown", modes[option])
+  end
+end
+
 ddlist.add_event_cb(dropdown_changed_cb, lv.EVENT_ALL, None)
