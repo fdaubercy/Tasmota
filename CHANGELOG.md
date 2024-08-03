@@ -12,19 +12,30 @@ All notable changes to this project will be documented in this file.
 - NeoPool command `NPSetOption<x>` to enabled/disable data validation/connection statistics (#21850)
 - Analog GPIO ``ADC Input`` with ``AdcParam<x> 1,<start_range>,<end_range>,<margin>,1`` provide direct light control 
 - Analog GPIO ``ADC Voltage`` with ``AdcParam<x> 11,<start_range>,<end_range>,<lowest_voltage>,<highest_voltage>`` provide energy monitoring with dc voltage 
-- Analog GPIO ``ADC Current`` with ``AdcParam<x> 12,<start_range>,<end_range>,<lowest_current>,<highest_current>`` provide energy monitoring with dc voltage 
+- Analog GPIO ``ADC Current`` with ``AdcParam<x> 12,<start_range>,<end_range>,<lowest_current>,<highest_current>`` provide energy monitoring with dc voltage
+- Berry new type "addr" to ctypes mapping (#21883)
+- Berry `file.savecode()` (#21884)
+- Berry `solidify.nocompact()` and reduce size of Matter UI (#21885)
+- Berry `zigbee.find()` (#21889)
+- Berry `zigbee.started()` (#21895)
+- Command ``AdcGpio<gpio> <parameters>`` to better support ADC configuration
 
 ### Breaking Changed
+- Berry `energy` module support for 8 phases and move to pseudo-arrays (#21887)
 
 ### Changed
 - Berry consolidated constants for solidified classes reduces Flash size (#2185)
 - Berry updated precompiled Windows binary (#21858)
 - Matter improve encoding of attributes to reduce flash size (#21864)
+- ESP32 platform update from 2024.07.11 to 2024.08.10 (#21893)
+- ESP32 Framework (Arduino Core) from v3.0.2 to v3.0.4 (#21893)
+- Refactored Analog driver to better support multiple channels
 
 ### Fixed
 - Berry `light.get` for separate RGB/CT (#21818)
 - Berry `bytes` setters and getters with negative offsets (#21835)
 - Berry `file.write()` raises an exception on failure (ex: disk full) (#21849)
+- Filesystem SD MMC free space display (#21869)
 
 ### Removed
 - Berry internal: remove class from closure to simplify code (#21839)
