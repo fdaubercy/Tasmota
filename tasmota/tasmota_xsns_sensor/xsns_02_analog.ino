@@ -71,7 +71,10 @@
 \*********************************************************************************************/
 
 #define XSNS_02                       2
+#if defined(ESP32) && defined(USE_ENERGY_SENSOR)
+// Only ESP32 and up support more than one ADC channel enabling energy driver
 #define XNRG_33                       33
+#endif  // ESP32 and USE_ENERGY_SENSOR
 
 #ifdef ESP32
 #include "esp32-hal-adc.h"
@@ -88,6 +91,8 @@
 #undef ANALOG_RANGE
 #define ANALOG_RANGE                  4095             // 4095 = 12, 2047 = 11, 1023 = 10
 #endif  // ESP32
+
+#define ANALOG_MARGIN                 5                // backward compatible div10 range
 
 #define TO_CELSIUS(x) ((x) - 273.15f)
 #define TO_KELVIN(x) ((x) + 273.15f)
@@ -108,7 +113,7 @@
 #define ANALOG_NTC_RESISTANCE         10000            // NTC Resistance
 #define ANALOG_NTC_B_COEFFICIENT      3350             // NTC Beta Coefficient
 
-// LDR parameters
+// LDR parameters (example as used on Ulanzi)
 // 3V3 --- LDR ---v--- ANALOG_LDR_BRIDGE_RESISTANCE --- Gnd
 //                |
 //               ADC0
@@ -321,6 +326,10 @@ bool AdcGetSettings(uint32_t channel) {
       if ((adc_type > 0) && (adc_type < GPIO_ADC_INPUT)) {  // Former ADC_END
         adc_type = Adc[channel].type;           // Migrate adc_type from 1..12 to UserSelectablePins index
       }
+      if (GPIO_ADC_INPUT == adc_type) {
+        Adc[channel].param[2] = ANALOG_MARGIN;  // Margin / Tolerance
+        Adc[channel].param[3] = 0;              // Default mode (0) or Direct mode (1) using Dimmer or Channel command
+      }
       if ((GPIO_ADC_TEMP == adc_type) && (Adc[channel].param[2] > 1000000)) {
         Adc[channel].param[2] /= 10000;         // Fix legacy value from 33500000 to 3350
       }
@@ -340,7 +349,7 @@ void AdcInitParams(uint32_t channel) {
     case GPIO_ADC_INPUT:
 //      Adc[channel].param[0] = 0;
       Adc[channel].param[1] = ANALOG_RANGE;
-      Adc[channel].param[2] = 3;                       // Margin / Tolerance
+      Adc[channel].param[2] = ANALOG_MARGIN;             // Margin / Tolerance
 //      Adc[channel].param[3] = 0;                       // Default mode (0) or Direct mode (1) using Dimmer or Channel command
       break;
     case GPIO_ADC_TEMP:
@@ -419,17 +428,17 @@ void AdcInit(void) {
       case GPIO_ADC_MQ:
         Adc[Adcs.present].mq_samples = (float*)calloc(sizeof(float), ANALOG_MQ_SAMPLES);  // Need calloc to reset registers to 0
         if (nullptr == Adc[Adcs.present].mq_samples) { continue; }
-      case GPIO_ADC_CURRENT:
-      case GPIO_ADC_VOLTAGE:
-      case GPIO_ADC_PH:
-      case GPIO_ADC_JOY:
-      case GPIO_ADC_CT_POWER:
-      case GPIO_ADC_RANGE:
-      case GPIO_ADC_BUTTON_INV:
-      case GPIO_ADC_BUTTON:
-      case GPIO_ADC_LIGHT:
-      case GPIO_ADC_TEMP:
       case GPIO_ADC_INPUT:
+      case GPIO_ADC_TEMP:
+      case GPIO_ADC_LIGHT:
+      case GPIO_ADC_BUTTON:
+      case GPIO_ADC_BUTTON_INV:
+      case GPIO_ADC_RANGE:
+      case GPIO_ADC_CT_POWER:
+      case GPIO_ADC_JOY:
+      case GPIO_ADC_PH:
+      case GPIO_ADC_VOLTAGE:
+      case GPIO_ADC_CURRENT:
         Adc[Adcs.present].indexOfPointer = -1;  // Used to skip first update of GPIO_ADC_INPUT after restart
         Adc[Adcs.present].pin = pin;
         Adc[Adcs.present].type = adc_type;
@@ -535,7 +544,7 @@ void AdcEvery250ms(void) {
           continue;                                                    // Do not use potentiometer state on restart
         }
 #ifdef USE_LIGHT
-        if (0 == param3) {                                // Default (0) or Direct mode (1)
+        if (0 == param3) {                                             // Default (0) or Direct mode (1)
 #endif  // USE_LIGHT
           Response_P(PSTR("{\"ANALOG\":{\"A%ddiv10\":%d}}"), type_index + offset, new_value);
           XdrvRulesProcess(0);
@@ -549,7 +558,7 @@ void AdcEvery250ms(void) {
             if (dimmer_count > 1) {
               dimmer_option = (0 == type_index) ? 1 : 2;               // Change RGB (1) or W(W) (2) dimmer
             } else {
-              dimmer_option = (3 == param3) ? 3 : 0;      // Change both RGB and W(W) Dimmers (0) with no fading (3)
+              dimmer_option = (3 == param3) ? 3 : 0;                   // Change both RGB and W(W) Dimmers (0) with no fading (3)
             }
             snprintf_P(command, sizeof(command), PSTR(D_CMND_DIMMER "%d %d"), dimmer_option, new_value);
           }
@@ -781,7 +790,7 @@ void AdcShow(bool json) {
   for (uint32_t channel = 0; channel < Adcs.present; channel++) {
     uint32_t type_index = Adc[channel].index;
 #ifdef ESP32
-    snprintf_P(adc_name, sizeof(adc_name), PSTR("Analog%d"), type_index +1);
+    snprintf_P(adc_name, sizeof(adc_name), PSTR("ADC%d"), type_index +1);
     snprintf_P(adc_channel, sizeof(adc_channel), PSTR("%d"), type_index +1);
     offset = 1;
 #endif
@@ -911,10 +920,10 @@ void AdcShow(bool json) {
         if (json) {
           AdcShowContinuation(&jsonflg);
           ResponseAppend_P(PSTR("\"pH%s\":%s"), adc_channel, ph_chr);
-  #ifdef USE_WEBSERVER
+#ifdef USE_WEBSERVER
         } else {
           WSContentSend_PD(HTTP_SNS_PH, "", ph_chr);
-  #endif // USE_WEBSERVER
+#endif // USE_WEBSERVER
         }
         break;
       }
@@ -930,13 +939,48 @@ void AdcShow(bool json) {
         if (json) {
           AdcShowContinuation(&jsonflg);
           ResponseAppend_P(PSTR("\"MQ%d_%d\":%s"), Adc[channel].param[0], type_index + offset, mq_chr);
-  #ifdef USE_WEBSERVER
+#ifdef USE_WEBSERVER
         } else {
           WSContentSend_PD(HTTP_SNS_MQ, mqnumber_chr, mq_chr);
-  #endif // USE_WEBSERVER
+#endif // USE_WEBSERVER
         }
         break;
       }
+      case GPIO_ADC_VOLTAGE: 
+#if defined(ESP32) && defined(USE_ENERGY_SENSOR)
+        if (TasmotaGlobal.energy_driver != XNRG_33)
+#endif  // ESP32 and USE_ENERGY_SENSOR
+        {
+          float value = AdcGetRange(channel) / 10000;   // Volt
+          if (value < 0.0f) { value = 0.0f; }           // Disregard negative values
+          if (json) {
+            AdcShowContinuation(&jsonflg);
+            ResponseAppend_P(PSTR("\"" D_JSON_VOLTAGE "%s\":%*_f"), adc_channel, Settings->flag2.voltage_resolution, &value);
+#ifdef USE_WEBSERVER
+          } else {
+//            WSContentSend_Voltage(adc_name, value);
+            WSContentSend_PD(HTTP_SNS_F_VOLTAGE, adc_name, Settings->flag2.voltage_resolution, &value);
+#endif // USE_WEBSERVER
+          }
+        }
+        break;
+      case GPIO_ADC_CURRENT: 
+#if defined(ESP32) && defined(USE_ENERGY_SENSOR)
+        if (TasmotaGlobal.energy_driver != XNRG_33)
+#endif  // ESP32 and USE_ENERGY_SENSOR
+        {
+          float value = AdcGetRange(channel) / 10000;   // Ampere
+          if (value < 0.0f) { value = 0.0f; }           // Disregard negative values
+          if (json) {
+            AdcShowContinuation(&jsonflg);
+            ResponseAppend_P(PSTR("\"" D_JSON_CURRENT "%s\":%*_f"), adc_channel, Settings->flag2.current_resolution, &value);
+#ifdef USE_WEBSERVER
+          } else {
+            WSContentSend_PD(HTTP_SNS_F_CURRENT, adc_name, Settings->flag2.current_resolution, &value);
+#endif // USE_WEBSERVER
+          }
+        }
+        break;
     }
   }
   if (jsonflg) {
@@ -1117,7 +1161,7 @@ void CmndAdcParam(void) {
  * Energy Interface
 \*********************************************************************************************/
 
-#ifdef USE_ENERGY_SENSOR
+#if defined(ESP32) && defined(USE_ENERGY_SENSOR)
 void AdcEnergyEverySecond(void) {
   uint32_t voltage_count = 0;
   uint32_t current_count = 0;
@@ -1165,7 +1209,7 @@ bool Xnrg33(uint32_t function) {
           if (GPIO_ADC_VOLTAGE == adc_type) { voltage_count++; }
           if (GPIO_ADC_CURRENT == adc_type) { current_count++; }
         }
-        if (voltage_count || current_count) {
+        if (voltage_count && current_count) {
           Energy->type_dc = true;
           Energy->voltage_common = (1 == voltage_count);
           Energy->phase_count = (voltage_count > current_count) ? voltage_count : current_count;
@@ -1179,7 +1223,7 @@ bool Xnrg33(uint32_t function) {
   }
   return result;
 }
-#endif  // USE_ENERGY_SENSOR
+#endif  // ESP32 and USE_ENERGY_SENSOR
 
 /*********************************************************************************************\
  * Sensor Interface

@@ -84,27 +84,21 @@ class Matter_Device
     self.events = matter.EventHandler(self)
     self.ui = matter.UI(self)
 
-    if tasmota.wifi()['up'] || tasmota.eth()['up']
-      self.start()
-    end
-    if !tasmota.wifi()['up']
-      tasmota.add_rule("Wifi#Connected", def ()
-          self.start()
-          tasmota.remove_rule("Wifi#Connected", "matter_start")
-        end, "matter_start")
-    end
-    if !tasmota.eth()['up']
-      tasmota.add_rule("Eth#Connected", def ()
-          self.start()
-          tasmota.remove_rule("Eth#Connected", "matter_start")
-        end, "matter_start")
-    end
-
     self.commissioning.init_basic_commissioning()
     tasmota.add_driver(self)
 
     self.register_commands()
   end
+
+  #############################################################
+  # Check if the network just started
+  def check_network()
+    if self.started  return end      # abort if already started
+    if tasmota.wifi()['up'] || tasmota.eth()['up']
+      self.start()
+    end
+  end
+
 
   #############################################################
   # Start Matter device server when the first network is coming up
@@ -255,6 +249,7 @@ class Matter_Device
   # dispatch every 50ms
   # ticks
   def every_50ms()
+    self.check_network()
     self.tick += 1
     self.message_handler.every_50ms()
   end
@@ -531,7 +526,7 @@ class Matter_Device
       self.ipv4only = bool(j.find("ipv4only", false))
       self.disable_bridge_mode = bool(j.find("disable_bridge_mode", false))
       self.next_ep = j.find("nextep", self.next_ep)
-      self.plugins_config = j.find("config")
+      self.plugins_config = j.find("config", {})
       self.debug = bool(j.find("debug"))    # bool converts nil to false
       if self.plugins_config != nil
         log(f"MTR: Load_config = {self.plugins_config}", 3)
