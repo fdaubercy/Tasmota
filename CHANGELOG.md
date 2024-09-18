@@ -15,6 +15,8 @@ All notable changes to this project will be documented in this file.
 ### Breaking Changed
 
 ### Changed
+- Refactored I2C drivers HTU21, BH1750 and HYT
+- Add command entered to command error and command unknown message
 
 ### Fixed
 - Shutter missing HOLD on shutterbutton (#22108)
@@ -23,6 +25,8 @@ All notable changes to this project will be documented in this file.
 - Zigbee flashing CC2562P with latest firmware (#22117)
 - SML trx pin error (#22119)
 - Shutter remaining issues on shutterinvert (#22120)
+- Berry I2C to prepare M5Stack I2C STM32 based devices (#22143)
+- Autoconf prevent 'init.bat' from stopping on empty lines 
 
 ### Removed
 

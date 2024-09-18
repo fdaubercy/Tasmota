@@ -144,8 +144,10 @@ The latter links can be used for OTA upgrades too like ``OtaUrl https://ota.tasm
 - ESP32 platform update from 2024.08.10 to 2024.08.11 [#22021](https://github.com/arendst/Tasmota/issues/22021)
 - ESP32 LVGL library from v9.1.0 to v9.2.0 [#22031](https://github.com/arendst/Tasmota/issues/22031)
 - GPIOViewer from v1.5.5 to v1.5.6
+- Add command entered to command error and command unknown message
 - Energy BL09xx command ``CurrentSet`` input changed from Ampere to milliAmpere
 - Energy force Apparent Power equals Active Power when (Calculated) Apparent Power is less than Active Power [#20653](https://github.com/arendst/Tasmota/issues/20653)
+- Refactored I2C drivers HTU21, BH1750 and HYT
 
 ### Fixed
 - Crash when calling TasmotaSerial destructor when initialized with incorrect arguments [#22036](https://github.com/arendst/Tasmota/issues/22036)
@@ -162,6 +164,7 @@ The latter links can be used for OTA upgrades too like ``OtaUrl https://ota.tasm
 - Zigbee flashing CC2562P with latest firmware [#22117](https://github.com/arendst/Tasmota/issues/22117)
 - Berry avoid `readbytes()` from crashing when file is too large [#22057](https://github.com/arendst/Tasmota/issues/22057)
 - Berry energy missing attributes [#22116](https://github.com/arendst/Tasmota/issues/22116)
+- Berry I2C to prepare M5Stack I2C STM32 based devices [#22143](https://github.com/arendst/Tasmota/issues/22143)
 - LVGL Added OpenHASP icons to font `montserrat-28` [#22048](https://github.com/arendst/Tasmota/issues/22048)
 - Matter fixed UI bug when no endpoints configured [#22008](https://github.com/arendst/Tasmota/issues/22008)
 - Matter fix when Rules are disabled [#22016](https://github.com/arendst/Tasmota/issues/22016)
