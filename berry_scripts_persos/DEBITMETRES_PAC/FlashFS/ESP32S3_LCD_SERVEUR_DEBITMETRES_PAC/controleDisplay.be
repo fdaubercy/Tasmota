@@ -27,6 +27,14 @@
     * LVGL Touchscreen with 3 Relays:                   https://tasmota.github.io/docs/Berry-Cookbook/#full-example
     * Site LVGL:                                        https://lvgl.io/
     * Outils LVGL (Images & Police Converter):          https://lvgl.io/tools/imageconverter
+
+  - Outils PNG:
+    * couper une image en 3 parties -> IMage Splitter : https://splitter.imageonline.co/fr/#google_vignette
+    * retirer le fond d'une image: https://www.remove.bg/fr/upload
+    * transformer jpeg en png: https://jpg2png.com/
+    * diminuer le poids d'une image: https://imagecompressor.com/fr/ OU https://www.img2go.com/fr/compresser-image
+    * changer la couleur: https://batchtools.pro/fr/changecolors/replace
+
 -#
 var controleDisplay
 
@@ -59,6 +67,29 @@ class CONTROLE_DISPLAY : Driver
     self.scr = lv.scr_act()            # Objet screen par défaut
     self.f20 = lv.montserrat_font(20)  # police Montserrat 20
     self.f28 = lv.montserrat_font(28)  # police Montserrat 28
+
+    var btn_style = lv.style()
+    btn_style.set_radius(20)                        # radius of rounded corners
+    btn_style.set_bg_opa(lv.OPA_COVER)              # 100% background opacity
+    if self.f20 != nil btn_style.set_text_font(self.f20) end  # set font to Montserrat 20
+    #btn_style.set_bg_color(lv.color(0x1fa3ec))      # background color #1FA3EC (Tasmota Blue)
+    btn_style.set_border_color(lv.color(0x0000FF))  # border color #0000FF
+    btn_style.set_text_color(lv.color(0xFFFFFF))    # text color white #FFFFFF
+
+    var btn1 = lv.imagebutton(self.scr)
+    btn1.add_style(btn_style, lv.PART_MAIN | lv.STATE_DEFAULT) 
+    btn1.set_pos(30, 30)
+    btn1.set_size(100, 100)
+    btn1.set_src(lv.IMAGEBUTTON_STATE_RELEASED, "A:/btn_parametres1.png", "A:/btn_parametres2.png", "A:/btn_parametres3.png")
+    btn1.set_state(lv.IMAGEBUTTON_STATE_RELEASED)
+
+    var btn2 = lv.imagebutton(self.scr)
+    btn2.add_style(btn_style, lv.PART_MAIN | lv.STATE_DEFAULT) 
+    btn2.set_pos(160, 30)
+    btn2.set_size(100, 100)
+    btn2.set_src(lv.IMAGEBUTTON_STATE_RELEASED, "A:/btn_graphique1.png", "A:/btn_graphique2.png", "A:/btn_graphique3.png")
+    btn2.set_state(lv.IMAGEBUTTON_STATE_RELEASED)
+    btn2.set_zoom(4)
 
     # Charge l'écran de paramétrage
     # self.scr1 = lv.obj(0)
@@ -103,8 +134,8 @@ controleDisplay = CONTROLE_DISPLAY()
 tasmota.add_driver(controleDisplay)
 
 import gestionFileFolder
-gestionFileFolder.loadBerryFile("/lv", persist.find("parametres")["modules"].find("ecran", {}).find("activation", "OFF"))
-
+#gestionFileFolder.loadBerryFile("/lv", persist.find("parametres")["modules"].find("ecran", {}).find("activation", "OFF"))
+#load("/test_btn_image.be")
 
 # def prog_origin()
 

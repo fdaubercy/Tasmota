@@ -112,12 +112,12 @@ end
 
 #- fonctions de Callback pour les boutons, reagi à EVENT_CLICKED -#
 displayFonctions.btn_clicked_cb = def(obj, event)
-    var btn = "Unknown"
-    if   obj == prev_btn  btn = "Prev"
-    elif obj == next_btn  btn = "Next"
-    elif obj == home_btn  btn = "Home"
-    end
-    print(btn, "button pressed")
+    # var btn = "Unknown"
+    # if   obj == prev_btn  btn = "Prev"
+    # elif obj == next_btn  btn = "Next"
+    # elif obj == home_btn  btn = "Home"
+    # end
+    # print(btn, "button pressed")
 end
 
 # Retourne le module lors de l'importation
