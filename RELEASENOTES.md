@@ -114,9 +114,12 @@ The latter links can be used for OTA upgrades too like ``OtaUrl https://ota.tasm
 
 [Complete list](BUILDS.md) of available feature and sensors.
 
-## Changelog v14.4.1.1
+## Changelog v14.4.1.2
 ### Added
 - Command ``SetOption163 1`` to disable display of Device name in GUI header
+- Support for PCF85063 RTC [#22727](https://github.com/arendst/Tasmota/issues/22727)
+- Support for Senseair S88 CO2 sensor [#22733](https://github.com/arendst/Tasmota/issues/22733)
+- Support for ESP32 Two-Wire Automotive Interface (TWAI) or Controller Area Network (CAN) busses
 - Berry `animate.crenel` primitive [#22673](https://github.com/arendst/Tasmota/issues/22673)
 - Berry scroll to Leds_matrix [#22693](https://github.com/arendst/Tasmota/issues/22693)
 - Berry add unicode encoding to string parsing [#22713](https://github.com/arendst/Tasmota/issues/22713)
@@ -135,6 +138,7 @@ The latter links can be used for OTA upgrades too like ``OtaUrl https://ota.tasm
 - HASPmota support for `tabview` [#22707](https://github.com/arendst/Tasmota/issues/22707)
 
 ### Fixed
+- Shutter discovery message regression from v14.4.1 [#22730](https://github.com/arendst/Tasmota/issues/22730)
 - Webcam compilation with `define USE_WEBCAM` but without `define ENABLE_RTSPSERVER` [#22686](https://github.com/arendst/Tasmota/issues/22686)
 - Berry Zigbee fix wrong attributes [#22684](https://github.com/arendst/Tasmota/issues/22684)
 - Berry walrus operator [#22685](https://github.com/arendst/Tasmota/issues/22685)

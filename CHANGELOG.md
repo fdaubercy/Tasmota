@@ -3,7 +3,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - Development
 
-## [14.4.1.1] 
+## [14.4.1.2] 
+### Added
+- Support for ESP32 Two-Wire Automotive Interface (TWAI) or Controller Area Network (CAN) busses
+- Support for Senseair S88 CO2 sensor (#22733)
+- TasmotaLED change dynamically the number of pixels
+- Expand `Pixels` with reverse, height and alternate
+
+### Breaking Changed
+
+### Changed
+
+### Fixed
+- Shutter discovery message regression from v14.4.1 (#22730)
+
+### Removed
+
+
+## [14.4.1.1] 20241231
 ### Added
 - Command ``SetOption163 1`` to disable display of Device name in GUI header
 - Berry `animate.crenel` primitive (#22673)
@@ -13,8 +30,7 @@ All notable changes to this project will be documented in this file.
 - Berry add unicode encoding to string parsing (#22713)
 - Berry `tasmota.int(v, min, max)` function (#22723)
 - Berry driver for M5Stack 8encoder (#22724)
-
-### Breaking Changed
+- Support for PCF85063 RTC (#22727)
 
 ### Changed
 - ESP32 disable PSRAM check (and on restart some relay toggles) with `#define DISABLE_PSRAMCHECK true` (#21266)
@@ -30,9 +46,6 @@ All notable changes to this project will be documented in this file.
 - Webcam compilation with `define USE_WEBCAM` but without `define ENABLE_RTSPSERVER` (#22686)
 - LVGL updated `Antiburn.tapp` (#22699)
 - Matter Air Quality sensor (#22708)
-
-### Removed
-
 
 ## [Released]
 
