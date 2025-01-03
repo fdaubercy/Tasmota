@@ -1,0 +1,422 @@
+{
+	"parametres": {
+		"diverses": {
+			"typeESP": "ESP32S3",
+			"logs": 4,
+			"telePeriod": 300,
+			"eviteResetBTN": "ON",
+			"localisation": {
+				"latitude": "50.410931",
+				"longitude": "3.085796"
+			},
+			"fuseauHoraire": {
+				"timezone": 99,
+				"TimeStd": {
+					"Week": 0,
+					"Month": 10,
+					"Offset": 60,
+					"Day": 1,
+					"Hemisphere": 0,
+					"Hour": 3
+				},
+				"TimeDst": {
+					"Hemisphere": 0,
+					"Week": 0,
+					"Month": 3,
+					"Day": 1,
+					"Hour": 2,
+					"Offset": 120
+				}
+			}
+		},
+		"serveur": {
+			"activation": "ON",
+			"nom": "Capteur Niveau Cuve",
+			"hostname": "MAITRE-CAPTEUR-CUVE-EAU",
+			"mDNS": "ON",
+			"IP": {
+				"IPAddress": "192.168.0.43",
+				"IPGateway": "192.168.0.254",
+				"Subnet": "255.255.255.0",
+				"DNSServer": "192.168.0.254"
+			},
+			"wifi": {
+				"power": 17,
+				"selectSignalFort": "OFF",
+				"reScanBy44": "ON",
+				"reseau1": {
+					"nomReseauWifi": "MAISON",
+					"mdpWifi": "obdormisti-pervigile%.-ficiendus"
+				},
+				"reseau2": {
+					"nomReseauWifi": "Relai Wifi 2.4G KuWFi",
+					"mdpWifi": "obdormisti-pervigile%.-ficiendus"
+				}
+			},
+			"mqtt": {
+				"activation": "ON",
+				"hote": "192.168.0.5",
+				"port": 1883,
+				"client": "MAITRE-CAPTEUR-CUVE-EAU",
+				"utilisateur": "fdaubercy",
+				"mdp": "Lune5676",
+				"topic": "cuve/niveau",
+				"groupTopic1": "tasmotas/cuve",
+				"groupTopic2": "",
+				"groupTopic3": ""
+			},
+			"rangeExtender": {
+				"activation": "OFF",
+				"idModuleRangeExpender": 0,
+				"AP": {
+					"etat": "OFF",
+					"routeNAPT": "ON",
+					"SSID": "MAITRE-CAPTEUR-CUVE-EAU-AP",
+					"mdp": "Lune5676",
+					"IPAddress": "10.99.0.1",
+					"Subnet": "255.255.255.0"
+				}
+			},
+			"serveurFTP": {
+				"activation": "ON",
+				"utilisateur": "fdaubercy",
+				"mdp": "Lune5676"
+			}
+		},
+		"template": {
+			"BASE": 1,
+			"GPIO": [
+				1,1,1,1,1,1,1,1,608,640,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1376
+			], 
+			"NAME": "ESP32S3 Maitre Capteur Cuve RS485",
+			"FLAG": 0
+		},
+		"modules": {
+			"activation": "ON",
+			"cuve": {
+				"name": "Capteurs de Cuve d'Eau",
+				"activation": "ON",
+				"reglage": "OFF",
+				"environnement": {
+					"boutons": {
+						"bouton1": {
+							"activation": "OFF",
+							"id": 1,
+							"pin": -1,
+							"type": 1024,
+							"typeAction": "ON/OFF",
+							"virtuel": "OFF",
+							"etat": "OFF",
+							"relaisLie": {
+								"modules": ["pompeVideCave"],
+								"ids": [1],
+								"delaiSiON": [0],
+								"delaiSiOFF": [0],
+								"etatSiON": ["TOGGLE"],
+								"etatSiOFF": [""]
+							}
+						},
+						"bouton2": {
+							"activation": "OFF",
+							"id": 2,
+							"pin": -1,
+							"type": 1025,
+							"virtuel": "OFF",
+							"typeAction": "ON/OFF",
+							"etat": "OFF",
+							"relaisLie": {
+								"modules": ["pompeVideCave"],
+								"ids": [1],
+								"delaiSiON": [0],
+								"delaiSiOFF": [0],
+								"etatSiON": ["TOGGLE"],
+								"etatSiOFF": [""]
+							}
+						}
+					},
+					"relais": {
+						"relai1": {
+							"activation": "OFF",
+							"nom": "relai 1",
+							"pin": -1,
+							"id": 1,
+							"type": 992,
+							"virtuel": "OFF",
+							"value": 0,
+							"timer": 120,
+							"publishMQTT": {
+								"topic": [""]
+							},
+							"timestamp": {
+								"ON": 0,
+								"OFF": 0, 
+								"delai": 0
+							}
+						},	
+						"relai2": {
+							"activation": "OFF",
+							"nom": "relai 2",
+							"pin": -1,
+							"id": 1,
+							"type": 1024,
+							"virtuel": "OFF",
+							"value": 0,
+							"timer": 120,
+							"publishMQTT": {
+								"topic": [""]
+							},
+							"timestamp": {
+								"ON": 0,
+								"OFF": 0, 
+								"delai": 0
+							}
+						}
+					},
+					"ADS1115": {
+						"activation": "ON",
+						"name": "Module ADS1115",
+						"adresseI2C": "0x48",
+						"I2CDriver": 13,
+						"affichageWebSensor": "OFF",
+						"Ana1": {
+							"activation": "ON",
+							"affichageWebSensor": "OFF",
+							"nom": "Etalon",
+							"id": 0,
+							"pin": -1,
+							"type": -1,
+							"virtuel": "OFF",
+							"value": 0
+						},
+						"Ana2": {
+							"activation": "OFF",
+							"affichageWebSensor": "OFF",
+							"nom": "Analogique 3",
+							"id": 2,
+							"pin": -1,
+							"type": -1,
+							"virtuel": "OFF",
+							"value": 0
+						},
+						"Ana3": {
+							"activation": "OFF",
+							"affichageWebSensor": "OFF",
+							"nom": "Analogique 3",
+							"id": 3,
+							"pin": -1,
+							"type": -1,
+							"virtuel": "OFF",
+							"value": 0
+						},
+						"Ana4": {
+							"activation": "ON",
+							"affichageWebSensor": "ON",
+							"nom": "Capteur de Niveau de Cuve",
+							"id": 4,
+							"pin": -1,
+							"type": -1,
+							"virtuel": "OFF",
+							"value": 0
+						}
+					}
+				}
+			},
+			"leds": {
+				"activation": "ON",
+				"name": "Leds",
+				"ledPower": "ON",
+				"ledState": 8,
+				"environnement": {
+					"leds": {
+						"ledLink": {
+							"activation": "ON",
+							"pin": 39,
+							"type": 544
+						},
+						"led1": {
+							"activation": "ON",
+							"pin": 38,
+							"id": 1,
+							"type": 288
+						}
+					},
+					"ws2812s": {
+						"ws28121": {
+							"activation": "ON",
+							"nom": "o1",
+							"pin": 48,
+							"id": 1,
+							"channel": 1,
+							"type": 1376
+						}
+					}
+				}
+			},
+			"SD": {
+				"activation": "OFF",
+				"name": "Carte SD",
+				"environnement": {
+					"pinsSDs": {
+						"pinsSD1": {
+							"activation": "OFF",
+							"nom": "SPI_Clk",
+							"pin": 18,
+							"id": 1,
+							"type": 736
+						},
+						"pinsSD2": {
+							"activation": "OFF",
+							"nom": "SPI_MISO",
+							"pin": 19,
+							"id": 1,
+							"type": 672
+						},
+						"pinsSD3": {
+							"activation": "OFF",
+							"nom": "SPI_MOSI",
+							"pin": 23,
+							"id": 1,
+							"type": 704
+						},
+						"pinsSD4": {
+							"activation": "OFF",
+							"nom": "SDCard CS",
+							"pin": 5,
+							"id": 1,
+							"type": 6720
+						}
+					}
+				}
+			},
+			"ecran": {
+				"activation": "OFF",
+				"name": "Ecran ILI9488",
+				"environnement": {
+					"pinsEcrans": {
+						"pinsEcran1": {
+							"activation": "OFF",
+							"nom": "Option A",
+							"pin": 0,
+							"id": 3,
+							"type": 6208
+						},	
+						"pinsEcran2": {
+							"activation": "OFF",
+							"nom": "SPI CS",
+							"pin": 10,
+							"id": 1,
+							"type": 768
+						},
+						"pinsEcran3": {
+							"activation": "OFF",
+							"nom": "SPI Clk",
+							"pin": 12,
+							"id": 1,
+							"type": 736
+						},
+						"pinsEcran4": {
+							"activation": "OFF",
+							"nom": "SPI MISO",
+							"pin": 13,
+							"id": 1,
+							"type": 672
+						},	
+						"pinsEcran5": {
+							"activation": "OFF",
+							"nom": "SPI MOSI",
+							"pin": 11,
+							"id": 1,
+							"type": 704
+						},
+						"pinsEcran6": {
+							"activation": "OFF",
+							"nom": "SPI DC",
+							"pin": 7,
+							"id": 1,
+							"type": 800
+						},
+						"pinsEcran7": {
+							"activation": "OFF",
+							"nom": "XPT2046 CS",
+							"pin": 9,
+							"id": 1,
+							"type": 7264
+						},
+						"pinsEcran8": {
+							"activation": "OFF",
+							"nom": "TS IRQ",
+							"pin": 3,
+							"id": 1,
+							"type": 11008
+						}			
+					},
+					"relais": {
+						"relai1": {
+							"activation": "OFF",
+							"nom": "Rétro Ecl",
+							"pin": 4,
+							"id": 1,
+							"type": 992
+						},	
+						"relai2": {
+							"activation": "OFF",
+							"nom": "Display Rst",
+							"pin": 6,
+							"id": 1,
+							"type": 1024
+						}
+					}
+				}
+			},
+			"I2C": {
+				"activation": "ON",
+				"name": "Bus I2C",
+				"environnement": {
+					"pinsI2Cs": {
+						"pinsI2C1": {
+							"activation": "ON",
+							"nom": "I2C SDa",
+							"pin": 9,
+							"id": 1,
+							"type": 640
+						},
+						"pinsI2C2": {
+							"activation": "ON",
+							"nom": "I2C SCl",
+							"pin": 8,
+							"id": 1,
+							"type": 608
+						}
+					}
+				}
+			},
+			"RS485": {
+				"activation": "ON",
+				"name": "Bus RS485",
+				"idModule": 0,
+				"debit": 9600,
+				"mode": "SERIAL_8N1",
+				"environnement": {
+					"pinsRS485s": {
+						"RX": {
+							"activation": "ON",
+							"nom": "RX_RS485",
+							"pin": 4,
+							"id": 1,
+							"type": 0,
+							"virtuel": "ON"
+						},
+						"TX": {
+							"activation": "ON",
+							"nom": "TX_RS485",
+							"pin": 5,
+							"id": 1,
+							"type": 0,
+							"virtuel": "ON"
+						}
+					}
+				}
+			}
+		}
+	}
+}

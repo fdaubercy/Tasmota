@@ -223,6 +223,7 @@ void AdsEvery250ms(void) {
   for (uint32_t t = 0; t < ads1115_count; t++) {
     // collect first wich addresses have changed. We can save on rule processing this way
     uint32_t changed = 0;
+
     for (uint32_t i = 0; i < ads1115_channels; i++) {
       value = Ads1115GetConversion(t, i);
 
@@ -257,26 +258,28 @@ void Ads1115Show(bool json) {
   int16_t values[4];
 
   for (uint32_t t = 0; t < ads1115_count; t++) {
-//    AddLog(LOG_LEVEL_INFO, "Logging ADS1115 %02x", Ads1115[t].address);
+    //AddLog(LOG_LEVEL_INFO, "Logging ADS1115 %02x", Ads1115[t].address);
+
     for (uint32_t i = 0; i < ads1115_channels; i++) {
       values[i] = Ads1115GetConversion(t, i);
-//      AddLog(LOG_LEVEL_INFO, "Logging ADS1115 %02x (%i) = %i", Ads1115[t].address, i, values[i] );
+      //AddLog(LOG_LEVEL_INFO, "Logging ADS1115 %02x (%i) = %i", Ads1115[t].address, i, values[i] );
     }
 
     char label[16];
+    const float r[6] = { 0.1875, 0.125, 0.0625, 0.03125, 0.015625, 0.0078125 };
     Ads1115Label(label, sizeof(label), t);
     if (json) {
       ResponseAppend_P(PSTR(",\"%s\":{"), label);
       for (uint32_t i = 0; i < ads1115_channels; i++) {
         ResponseAppend_P(PSTR("%s\"A%d\":%d"), (0 == i) ? "" : ",", i, values[i]);
+        //ResponseAppend_P(PSTR("%s\"A%d\":%.2f"), (0 == i) ? "" : ",", i, (values[i] * r[ads1115_range>>9]) / 1000);    // Affichage json en V
       }
       ResponseJsonEnd();
     }
 #ifdef USE_WEBSERVER
     else {
-      for (uint32_t i = 0; i < ads1115_channels; i++) {
-        WSContentSend_PD(HTTP_SNS_ANALOG, label, i, values[i]);
-      }
+      for (uint32_t i = 0; i < ads1115_channels; i++) {WSContentSend_PD(HTTP_SNS_ANALOG, label, i, values[i]);}
+      //WSContentSend_PD("{s}Capteur de Niveau {m}%.3fV{e}", (values[3] * r[ads1115_range>>9]) / 1000);                   // Affichage html en V
     }
 #endif  // USE_WEBSERVER
   }
