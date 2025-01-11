@@ -60,7 +60,7 @@
 				"client": "SLAVE-CAPTEUR-CUVE-EAU",
 				"utilisateur": "fdaubercy",
 				"mdp": "Lune5676",
-				"topic": "cuve/niveau",
+				"topic": "cuve/niveau/esclave",
 				"groupTopic1": "tasmotas/cuve",
 				"groupTopic2": "",
 				"groupTopic3": ""
@@ -134,6 +134,36 @@
 							}
 						}
 					},
+					"interrupteurs": {
+						"interrupteur1": {
+							"activation": "OFF",
+							"nom": "Interrupteur 1",
+							"id": -1,
+							"pin": -1,
+							"type": 160,
+							"SwitchMode": 1,
+							"etat": "OFF",
+							"relaisLie": {
+								"ids": [],
+								"delai": 0,
+								"type": "ON/OFF"
+							}
+						},
+						"interrupteur2": {
+							"activation": "OFF",
+							"nom": "Interrupteur 2",
+							"id": -1,
+							"pin": -1,
+							"type": 1024,
+							"SwitchMode": 1,
+							"etat": "OFF",
+							"relaisLie": {
+								"ids": [],
+								"delai": 0,
+								"type": "ON/OFF"
+							}
+						}
+					},
 					"relais": {
 						"relai1": {
 							"activation": "OFF",
@@ -169,6 +199,83 @@
 								"ON": 0,
 								"OFF": 0, 
 								"delai": 0
+							}
+						}
+					},
+					"ADS1115": {
+						"activation": "OFF",
+						"name": "Module ADS1115",
+						"adresseI2C": "0x48",
+						"I2CDriver": 13,
+						"affichageWebSensor": "OFF",
+						"Ana1": {
+							"activation": "ON",
+							"affichageWebSensor": "OFF",
+							"nom": "Etalon",
+							"id": 0,
+							"pin": -1,
+							"type": -1,
+							"virtuel": "OFF",
+							"value": 0
+						},
+						"Ana2": {
+							"activation": "OFF",
+							"affichageWebSensor": "OFF",
+							"nom": "Analogique 3",
+							"id": 2,
+							"pin": -1,
+							"type": -1,
+							"virtuel": "OFF",
+							"value": 0
+						},
+						"Ana3": {
+							"activation": "OFF",
+							"affichageWebSensor": "OFF",
+							"nom": "Analogique 3",
+							"id": 3,
+							"pin": -1,
+							"type": -1,
+							"virtuel": "OFF",
+							"value": 0
+						},
+						"Ana4": {
+							"activation": "OFF",
+							"affichageWebSensor": "ON",
+							"nom": "Capteur de Niveau de Cuve",
+							"id": 4,
+							"pin": -1,
+							"type": -1,
+							"virtuel": "OFF",
+							"value": 0
+						}
+					},
+					"capteurs": {
+						"capteur1": {
+							"activation": "OFF",
+							"nom": "Capteur 1",
+							"id": -1,
+							"pin": -1,
+							"type": 160,
+							"SwitchMode": 1,
+							"etat": "OFF",
+							"relaisLie": {
+								"ids": [],
+								"delai": 0,
+								"type": "ON/OFF"
+							}
+						},
+						"capteur2": {
+							"activation": "OFF",
+							"nom": "Capteur 1",
+							"id": -1,
+							"pin": -1,
+							"type": 1024,
+							"SwitchMode": 1,
+							"etat": "OFF",
+							"relaisLie": {
+								"ids": [],
+								"delai": 0,
+								"type": "ON/OFF"
 							}
 						}
 					}
@@ -347,7 +454,7 @@
 				"activation": "ON",
 				"name": "Bus RS485",
 				"idModule": 1,
-				"debit": 9600,
+				"debit": 57600,
 				"mode": "SERIAL_8N1",
 				"environnement": {
 					"pinsRS485s": {

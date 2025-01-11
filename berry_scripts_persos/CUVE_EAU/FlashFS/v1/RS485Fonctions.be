@@ -1,7 +1,19 @@
 # Définition du module
 var RS485Fonctions = module("/RS485Fonctions")
 
-var serialRS485
+RS485Fonctions.init = def (m)
+    # inner class
+    class my_RS485Fonctions
+        var serialRS485
+
+        def init()
+            self.serialRS485 = 0
+        end
+    end
+
+    # return a single instance for this class
+    return my_RS485Fonctions()
+end
 
 RS485Fonctions.ReglageRS485 = def(cmd, idx, payload, payload_json)
     import string
@@ -64,10 +76,9 @@ RS485Fonctions.changementEtatDemarrage = def(value, trigger, msg)
 	elif (trigger == "System")
         if msg[trigger].find("Init", 0)
             # Paramétrage port RS485 : gpio_rx:4 gpio_tx:5 
-            serialRS485 = serial(controleGeneral.parametres["modules"]["RS485"]["environnement"]["pinsRS485s"]["RX"]["pin"], 
-                                        controleGeneral.parametres["modules"]["RS485"]["environnement"]["pinsRS485s"]["RX"]["pin"], 
-                                        controleGeneral.parametres["modules"]["RS485"]["debit"], serial.SERIAL_8N1)
-            return serialRS485
+            RS485Fonctions.serialRS485 = serial(controleGeneral.parametres["modules"]["RS485"]["environnement"]["pinsRS485s"]["RX"]["pin"]
+                                                , controleGeneral.parametres["modules"]["RS485"]["environnement"]["pinsRS485s"]["RX"]["pin"]
+                                                , controleGeneral.parametres["modules"]["RS485"]["debit"], serial.SERIAL_8N1)
         elif msg[trigger].find("Boot", 0)
         end
 	# Se déclenche après la connexion MQTT (si activé)
@@ -116,8 +127,22 @@ RS485Fonctions.envoiMsgRS485 = def(msg)
     msg = "\r" + msg + ";" + str(calculCRC) + "\n"
 
     # Envoi le message sur le port RS485
-    if (serialRS485 != nil) serialRS485.write(bytes().fromstring(msg))  end
-    log ("ENVOI_RS485: Message RS485 envoyé =" + re.match("(.*?)\r(.*?)\n", msg)[2], LOG_LEVEL_DEBUG_PLUS)
+    if (serialRS485 != nil) 
+        RS485Fonctions.serialRS485.write(bytes().fromstring(msg))
+        if re.match("(.*?)\r(.*?)\n", msg) == nil
+            log ("ENVOI_RS485: Le message RS485 ne sera pas envoyé car il ne possède pas de caractères de débt & de fin de ligne !", LOG_LEVEL_DEBUG_PLUS)
+        else log ("ENVOI_RS485: Message RS485 envoyé = " + re.match("(.*?)\r(.*?)\n", msg)[2], LOG_LEVEL_DEBUG_PLUS)
+        end
+    end
+end
+
+# Fonction de lecture de messages sur le port RS485
+RS485Fonctions.lireMsgRS485 = def()
+    # Recoit message sur le port RS485
+    if (RS485Fonctions.serialRS485 != nil) 
+        var msg = RS485Fonctions.serialRS485.read()
+        print ("msg recu : " + msg.asstring())
+    end
 end
 
 # Retourne le module lors de l'importation

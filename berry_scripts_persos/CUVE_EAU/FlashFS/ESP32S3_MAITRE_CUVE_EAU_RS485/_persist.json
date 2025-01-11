@@ -81,12 +81,15 @@
 				"activation": "ON",
 				"utilisateur": "fdaubercy",
 				"mdp": "Lune5676"
+			},
+			"udp": {
+				"activation": "OFF"
 			}
 		},
 		"template": {
 			"BASE": 1,
 			"GPIO": [
-				1,1,1,1,1,1,1,1,608,640,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1376
+				1,1,1,1,0,0,1,1,608,640,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,288,544,1,1,1,1,1,1,1,1,1376
 			], 
 			"NAME": "ESP32S3 Maitre Capteur Cuve RS485",
 			"FLAG": 0
@@ -100,20 +103,17 @@
 				"environnement": {
 					"boutons": {
 						"bouton1": {
-							"activation": "OFF",
+							"activation": "ON",
+							"nom": "Pompe Cave",
 							"id": 1,
-							"pin": -1,
-							"type": 1024,
-							"typeAction": "ON/OFF",
-							"virtuel": "OFF",
+							"pin": 15,
+							"type": 32,
+							"SwitchMode": 2,
 							"etat": "OFF",
 							"relaisLie": {
-								"modules": ["pompeVideCave"],
-								"ids": [1],
-								"delaiSiON": [0],
-								"delaiSiOFF": [0],
-								"etatSiON": ["TOGGLE"],
-								"etatSiOFF": [""]
+								"ids": [],
+								"delai": 0,
+								"type": "Switch"
 							}
 						},
 						"bouton2": {
@@ -131,6 +131,36 @@
 								"delaiSiOFF": [0],
 								"etatSiON": ["TOGGLE"],
 								"etatSiOFF": [""]
+							}
+						}
+					},
+					"interrupteurs": {
+						"interrupteur1": {
+							"activation": "OFF",
+							"nom": "Interrupteur 1",
+							"id": -1,
+							"pin": -1,
+							"type": 160,
+							"SwitchMode": 1,
+							"etat": "OFF",
+							"relaisLie": {
+								"ids": [],
+								"delai": 0,
+								"type": "ON/OFF"
+							}
+						},
+						"interrupteur2": {
+							"activation": "OFF",
+							"nom": "Interrupteur 2",
+							"id": -1,
+							"pin": -1,
+							"type": 1024,
+							"SwitchMode": 1,
+							"etat": "OFF",
+							"relaisLie": {
+								"ids": [],
+								"delai": 0,
+								"type": "ON/OFF"
 							}
 						}
 					},
@@ -217,6 +247,36 @@
 							"type": -1,
 							"virtuel": "OFF",
 							"value": 0
+						}
+					},
+					"capteurs": {
+						"capteur1": {
+							"activation": "ON",
+							"nom": "Capteur Niveau Bas",
+							"id": 1,
+							"pin": 16,
+							"type": 160,
+							"SwitchMode": 1,
+							"etat": "OFF",
+							"relaisLie": {
+								"ids": [],
+								"delai": 0,
+								"type": "ON/OFF"
+							}
+						},
+						"capteur2": {
+							"activation": "OFF",
+							"nom": "Capteur Niveau Haut",
+							"id": -1,
+							"pin": -1,
+							"type": 1024,
+							"SwitchMode": 1,
+							"etat": "OFF",
+							"relaisLie": {
+								"ids": [],
+								"delai": 0,
+								"type": "ON/OFF"
+							}
 						}
 					}
 				}
@@ -394,7 +454,7 @@
 				"activation": "ON",
 				"name": "Bus RS485",
 				"idModule": 0,
-				"debit": 9600,
+				"debit": 57600,
 				"mode": "SERIAL_8N1",
 				"environnement": {
 					"pinsRS485s": {

@@ -26,17 +26,17 @@ if (persist.find("parametres", false))
     gestionFileFolder.compileModule("/configGlobal")
     gestionFileFolder.compileModule("/gestionFileFolder")
     gestionFileFolder.compileModule("/globalFonctions")
-    gestionFileFolder.compileModule("/RS485Fonctions", persist.find("parametres")["modules"]["RS485"].find("activation", "OFF"))
+    #gestionFileFolder.compileModule("/RS485Fonctions", persist.find("parametres")["modules"]["RS485"].find("activation", "OFF"))
     gestionFileFolder.compileModule("/cuveFonctions", persist.find("parametres")["modules"].find("cuve", {}).find("activation", "OFF"))
 
     # Charge les fonctions accessoires UDP & WebSocket
-    gestionFileFolder.loadBerryFile("/controleUDP", persist.find("parametres")["serveur"].find("etat", {}).find("etat", "OFF"))
+    gestionFileFolder.loadBerryFile("/controleUDP", persist.find("parametres")["serveur"].find("udp", {}).find("activation", "OFF"))
 
     # Gère le script BERRY global à lancer
     # Charge le Driver de controle global des modules & gestionWeb
-    gestionFileFolder.loadBerryFile("/controleGlobal")
-    gestionFileFolder.loadBerryFile("/controleRS485", persist.find("parametres")["modules"]["RS485"].find("activation", "OFF"))
-    gestionFileFolder.loadBerryFile("/controleCuve", persist.find("parametres")["modules"].find("cuve", {}).find("activation", "OFF"))
+    # gestionFileFolder.loadBerryFile("/controleGlobal")
+    # gestionFileFolder.loadBerryFile("/controleRS485", persist.find("parametres")["modules"]["RS485"].find("activation", "OFF"))
+    # gestionFileFolder.loadBerryFile("/controleCuve", persist.find("parametres")["modules"].find("cuve", {}).find("activation", "OFF"))
 
     # A la fin du processus
     progLoaded = true

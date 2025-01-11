@@ -65,7 +65,7 @@ class CAPTEURS_CUVE : Driver
         # tasmota.cmd("WebSensor12 0", boolMute)
 
         # Paramétrage port RS485 : gpio_rx:4 gpio_tx:5
-        self.ser = serial(4, 5, 9600, serial.SERIAL_8N1)
+        self.ser = serial(4, 5, 57600, serial.SERIAL_8N1)
     end
 
     def every_second()
@@ -82,21 +82,22 @@ class CAPTEURS_CUVE : Driver
         self.msg = "\r" + self.msg + ";" + str(calculCRC) + "\n"
 
         # Envoi le message sur le port RS485
-        self.ser.write(bytes().fromstring(self.msg))
-        print("Message RS485 envoyé = " + self.msg)
+        # self.ser.write(bytes().fromstring(self.msg))
+        # print("Message RS485 envoyé = " + self.msg)
 
         # Recoit message sur le port RS485
         self.msg = self.ser.read()
         
         # teste la presence des caractères de début et de fin
-        if (string.find(self.msg.asstring(), "\r") | string.find(self.msg.asstring(), "\n")) > -1
+        #if (string.find(self.msg.asstring(), "\r") | string.find(self.msg.asstring(), "\n")) > -1
             # Extrait le texte entre '\r' & '\n'
-            if re.match("\r(.*?)\n", self.msg.asstring()) != nil
-                self.msg = re.match("(.*?)\r(.*?)\n", self.msg.asstring())[2]
+            # if re.match("\r(.*?)\n", self.msg.asstring()) != nil
+                #self.msg = re.match("(.*?)\r(.*?)\n", self.msg.asstring())[2]
+                self.msg = self.msg.asstring()
                 print("Message RS485 reçu = " + self.msg)
-            else print("Message RS485 reçu érroné ! ")
-            end
-        end
+            # else print("Message RS485 reçu érroné ! ")
+            # end
+        #end
     end
 
     def web_sensor()

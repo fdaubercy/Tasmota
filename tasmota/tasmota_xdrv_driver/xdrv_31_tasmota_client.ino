@@ -243,11 +243,15 @@ uint8_t TasmotaClient_receiveData(char* buffer, int size) {
   return index;
 }
 
+// Fonction de base d'envoi des données
 uint8_t TasmotaClient_sendBytes(uint8_t* bytes, int count) {
-//  AddLog(LOG_LEVEL_DEBUG, PSTR("TCL: SendBytes %*_H"), count, (uint8_t*)&bytes);
+  AddLog(LOG_LEVEL_DEBUG, PSTR("TasmotaClient: SendBytes %*_H"), count, (uint8_t*)&bytes);
 
+  // Envoi les données
   TasmotaClient_Serial->write(bytes, count);
   TasmotaClient_waitForSerialData(2, TASMOTA_CLIENT_TIMEOUT);
+
+  // Attend les 2 octets de réponse du client
   uint8_t sync = TasmotaClient_Serial->read();
   uint8_t ok = TasmotaClient_Serial->read();
   if ((sync == 0x14) && (ok == 0x10)) {
@@ -256,9 +260,10 @@ uint8_t TasmotaClient_sendBytes(uint8_t* bytes, int count) {
   return 0;
 }
 
+// Fonction d'envoi d'une commande vers le client
 uint8_t TasmotaClient_execCmd(uint8_t cmd) {
-  uint8_t bytes[] = { cmd, CONST_STK_CRC_EOP };
-  return TasmotaClient_sendBytes(bytes, 2);
+  uint8_t bytes[] = { cmd, CONST_STK_CRC_EOP };       // 0x20
+  return TasmotaClient_sendBytes(bytes, 2);           // La commande est sur 2 octets
 }
 
 uint8_t TasmotaClient_execParam(uint8_t cmd, uint8_t* params, int count) {
@@ -355,7 +360,7 @@ uint32_t TasmotaClient_Flash(uint8_t* data, size_t size) {
             for (uint32_t i = 0; i < sizeof(SHParse.FlashPage); i++) {
               TasmotaClient_Serial->write(SHParse.FlashPage[i]);
             }
-            TasmotaClient_Serial->write(CONST_STK_CRC_EOP);
+            TasmotaClient_Serial->write(CONST_STK_CRC_EOP);       // 0x20
 
             TasmotaClient_waitForSerialData(2, TASMOTA_CLIENT_TIMEOUT);
             TasmotaClient_Serial->read();

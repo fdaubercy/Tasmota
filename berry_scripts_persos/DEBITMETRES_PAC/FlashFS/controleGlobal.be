@@ -91,10 +91,7 @@ class CONTROLE_GENERAL : Driver
                     end
 
 					var capteurs = env.find("capteurs", false)	
-					if env.find("interrupteurs", false)
-						capteurs.insert("interrupteurs", env["interrupteurs"])
-					end	
-
+					if env.find("interrupteurs", false)	capteurs.insert("interrupteurs", env["interrupteurs"])	end	
 					if capteurs
 						for cleCapteurs: capteurs.keys()
 							if type(capteurs[cleCapteurs]) != "instance"
