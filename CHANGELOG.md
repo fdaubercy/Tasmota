@@ -3,22 +3,38 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - Development
 
-## [14.4.1.2] 
+## [14.4.1.3] 
 ### Added
-- Support for ESP32 Two-Wire Automotive Interface (TWAI) or Controller Area Network (CAN) busses
-- Support for Senseair S88 CO2 sensor (#22733)
-- TasmotaLED change dynamically the number of pixels
-- Expand `Pixels` with reverse, height and alternate
+- Command `FileLog 0..4` to enable logging to filesystem
+- I2S Opus stream and file support for opus/aac (#22795)
 
 ### Breaking Changed
 
 ### Changed
+- ESP32 Platform from 2024.12.30 to 2025.01.30, Framework (Arduino Core) from v3.1.0.241206 to v3.1.1.250109 and IDF to 5.3.2 (#22792)
 
 ### Fixed
-- Shutter discovery message regression from v14.4.1 (#22730)
 
 ### Removed
 
+
+## [14.4.1.2] 20250110
+### Added
+- Support for ESP32 Two-Wire Automotive Interface (TWAI) or Controller Area Network (CAN) busses
+- Support for Senseair S88 CO2 sensor (#22733)
+- ESP32 TasmotaLED change dynamically the number of pixels (#22754)
+- ESP32 expand `Pixels` with reverse, height and alternate (#22755)
+- Berry add light_pixels values to `tasmota.settings` (#22762)
+- Berry add `bytes().appendhex()` (#22767)
+- I2S AAC support for web radio (#22787)
+- Berry WS2812 real-time Leds panel as app (#22788)
+
+### Changed
+- GPIOViewer from v1.5.8 to v1.5.9 (No functional change)
+- `Pixels` has backwards compatible arguments fixing #22755 (#22791)
+
+### Fixed
+- Shutter discovery message regression from v14.4.1 (#22730)
 
 ## [14.4.1.1] 20241231
 ### Added

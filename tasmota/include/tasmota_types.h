@@ -241,10 +241,7 @@ typedef union {
 typedef union {
   uint32_t data;                           // Allow bit manipulation
   struct {
-    uint32_t spare00 : 1;                  // bit 0
-    uint32_t spare01 : 1;                  // bit 1
-    uint32_t spare02 : 1;                  // bit 2
-    uint32_t spare03 : 1;                  // bit 3
+    uint32_t log_file_idx : 4;             // bit 0.3   (v14.4.1.2) - FileLog log rotate index
     uint32_t spare04 : 1;                  // bit 4
     uint32_t spare05 : 1;                  // bit 5
     uint32_t spare06 : 1;                  // bit 6
@@ -696,9 +693,7 @@ typedef struct {
   uint16_t      influxdb_period;           // 538 520
   uint16_t      rf_duplicate_time;         // 53A 522
   uint8_t       global_sensor_index[3];    // 53C 4C5
-
-  uint8_t       free_53F[1];               // 53F
-
+  uint8_t       filelog_level;             // 53F
   uint16_t      tcp_baudrate;              // 540 
   uint16_t      button_debounce;           // 542
   uint32_t      ipv4_address[5];           // 544
@@ -789,7 +784,7 @@ typedef struct {
 
   uint8_t       free_eb0[20];              // EB0  20 bytes
 
-  uint16_t      light_pixels_height : 15;  // EC4  Pixels height minus 1, default 0 (0 means 1 line)
+  uint16_t      light_pixels_height_1 : 15;// EC4  Pixels height minus 1, default 0 (0 means 1 line)
   uint16_t      light_pixels_alternate : 1;// EC4  Indicates alternate lines in Pixels Matrix
   uint8_t       shift595_device_count;     // EC6
   uint8_t       sta_config;                // EC7
