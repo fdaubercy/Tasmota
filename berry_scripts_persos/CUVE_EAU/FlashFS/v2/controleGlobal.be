@@ -45,9 +45,9 @@ class CONTROLE_GENERAL : Driver
 	    if (configGlobal.configGlobalByJson())  self.parametres = persist.find("parametres")    end
 
         # Ajoute les règles lancés selon l'étape de démarrage de la device tasmota
-        #tasmota.add_rule("System", def(value, trigger, msg) self.changementEtatDemarrage(value, trigger, msg) end)	
+        tasmota.add_rule("System", def(value, trigger, msg) globalFonctions.changementEtatDemarrage(value, trigger, msg) end)	
         tasmota.add_rule("Wifi", def(value, trigger, msg) globalFonctions.changementEtatDemarrage(value, trigger, msg) end)
-        #tasmota.add_rule("Mqtt", def(value, trigger, msg) self.changementEtatDemarrage(value, trigger, msg) end)
+        tasmota.add_rule("Mqtt", def(value, trigger, msg) globalFonctions.changementEtatDemarrage(value, trigger, msg) end)
 
         # Parcours tous les modules paramétrés
 		# - Ajoute les règles sur changement d'état des capteurs si ils sont activés : fonction=changementEtatCapteur

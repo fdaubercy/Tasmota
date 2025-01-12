@@ -36,16 +36,19 @@ RS485Fonctions.ReglageRS485 = def(cmd, idx, payload, payload_json)
 end
 
 # Règles sur changement d'état lors du démarrage de Tasmota
-RS485Fonctions.changementEtatDemarrage = def(value, trigger, msg)
+RS485Fonctions.changementEtatDemarrage = def(value, trigger, msg, idRS485, jsonRS485)
     import string
     import mqtt
+    import json
+    import gestionFileFolder
 
 	# Test
 	log ("RS485_CHGT_ETAT_DEMARRAGE: -------------------- RS485 changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG)
 	log ("RS485_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
 	log ("RS485_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
 	log ("RS485_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}
-
+    log ("RS485_CHGT_ETAT_DEMARRAGE: idRS485=" + str(idRS485), LOG_LEVEL_DEBUG_PLUS)		    # idRS485 = ID du module RS485
+    log ("RS485_CHGT_ETAT_DEMARRAGE: jsonRS485=" + str(jsonRS485), LOG_LEVEL_DEBUG_PLUS)		# Représente le Driver qui lance cette fonction
 	if (type(value) == "instance")
 		for cle: value.keys()
 			value = value[cle]
@@ -70,6 +73,14 @@ RS485Fonctions.changementEtatDemarrage = def(value, trigger, msg)
             #         tasmota.cmd("ReglageRS485", boolMute)
             #     end
             # end
+        elif msg[trigger].find("Save", 0)
+            # Si c'est un maitre RS485
+            if idRS485 == 0
+                # Enregistre les caractéristiques des modules esclaves RS485 nconnectés en json 'RS485.json'
+                if (gestionFileFolder.readFile("/jsonRS485.json") != json.dump(jsonRS485))
+                    gestionFileFolder.writeFile("/jsonRS485.json", json.dump(jsonRS485))
+                end
+            end
         end
 	# Se déclenche après la connexion MQTT (si activé)
     elif (trigger == "Mqtt")
@@ -104,6 +115,11 @@ RS485Fonctions.envoiMsgRS485 = def(objSerial, ordre, delimiteurs, msg)
     import crc
     import re
 
+    var CMND = ["", "CMND_FUNC_JSON", "CMND_PUBLISH_TELE", "CMND_FUNC_EVERY_SECOND", "CMND_FUNC_EVERY_100_MSECOND", "CMND_EXECUTE_CMND"]
+    CMND.insert(17, "RESPONSE_FUNC_JSON")
+    CMND.insert(18, "RESPONSE_PUBLISH_TELE")
+    # log ("ENVOI_RS485: Envoi d'un message RS485 de type '" + CMND[ordre] + "'", LOG_LEVEL_DEBUG) 
+
     # Calcul & Ajout du CRC au message, puis ajoute les caractères de début et de fin de ligne
     var calculCRC = crc.crc8(0xFF, bytes().fromstring(str(ordre)) + delimiteurs["MARQUEUR_SEPARATEUR"] + bytes().fromstring(msg))
     msg = delimiteurs["MARQUEUR_START"] + str(ordre) + delimiteurs["MARQUEUR_SEPARATEUR"] + msg + delimiteurs["MARQUEUR_SEPARATEUR"] + str(calculCRC) + delimiteurs["MARQUEUR_END"]
@@ -113,8 +129,9 @@ RS485Fonctions.envoiMsgRS485 = def(objSerial, ordre, delimiteurs, msg)
         # Supprime les marqueurs de début et de fin de ligne
         if re.match("(.*?)" + delimiteurs["MARQUEUR_START"] + "(.*?)" + delimiteurs["MARQUEUR_END"], msg) == nil
             log ("ENVOI_RS485: Le message RS485 ne sera pas envoyé car il ne possède pas de caractères de débt & de fin de ligne !", LOG_LEVEL_ERREUR)
-        else    log ("ENVOI_RS485: Trame RS485 envoyée = " + re.match("(.*?)" + delimiteurs["MARQUEUR_START"] + "(.*?)" + delimiteurs["MARQUEUR_END"], msg)[2], LOG_LEVEL_DEBUG_PLUS)
-                objSerial.write(bytes().fromstring(msg))
+        else   
+            log ("ENVOI_RS485: Trame RS485 envoyée = " + re.match("(.*?)" + delimiteurs["MARQUEUR_START"] + "(.*?)" + delimiteurs["MARQUEUR_END"], msg)[2], LOG_LEVEL_DEBUG_PLUS)
+            objSerial.write(bytes().fromstring(msg))
         end
     end
 end

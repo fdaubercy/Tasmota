@@ -51,6 +51,8 @@ class CONTROLE_RS485 : Driver
     var serialRS485
     var buffer
     var sensorsRS485
+    var jsonRS485
+    var delimiteurs
 
     # *************************************************
     # * TasmotaClient Command definitions
@@ -101,6 +103,8 @@ class CONTROLE_RS485 : Driver
 
         self.buffer = ""
         self.sensorsRS485 = ""
+        self.jsonRS485 = {}
+        self.delimiteurs = {"MARQUEUR_START": self.MARQUEUR_START, "MARQUEUR_SEPARATEUR": self.MARQUEUR_SEPARATEUR, "MARQUEUR_END": self.MARQUEUR_END}
 
         log ("CONTROLE_RS485: Enregistre les taches CRON !", LOG_LEVEL_DEBUG)
         # Déclenche une action tous les jours à minuit
@@ -111,10 +115,11 @@ class CONTROLE_RS485 : Driver
             - Message log sur connexion wifi
             - Gestion des enregistrements en mqtt si c'est un esclave RangeExtender (idDevice > 0 & idDevice != -1) pour enregistrer ses capteurs comme virtuels auprès du maitre
             - Gestion des enregistrements en RS485 si c'est un esclave RS485 (idDevice > 0 & idDevice != -1) pour enregistrer ses capteurs comme virtuels auprès du maitre
-            tasmota.add_rule("System", def(value, trigger, msg) RS485Fonctions.changementEtatDemarrage(value, trigger, msg) end)	
-            tasmota.add_rule("Wifi", def(value, trigger, msg) cuveFonctions.changementEtatDemarrage(value, trigger, msg) end)
-            tasmota.add_rule("Mqtt", def(value, trigger, msg) cuveFonctions.changementEtatDemarrage(value, trigger, msg) end)  
         -#
+        tasmota.add_rule("Wifi", def(value, trigger, msg) RS485Fonctions.changementEtatDemarrage(value, trigger, msg) end)
+        tasmota.add_rule("Mqtt", def(value, trigger, msg) RS485Fonctions.changementEtatDemarrage(value, trigger, msg) end)  
+        tasmota.add_rule("System", def(value, trigger, msg) RS485Fonctions.changementEtatDemarrage(value, trigger, msg, parametres["modules"]["RS485"]["idModule"], self.jsonRS485) end)	
+        
 
         # Paramétrage port RS485 : gpio_rx:4 gpio_tx:5
         self.serialRS485 = serial(4, 5, parametres["modules"]["RS485"]["debit"], serial.SERIAL_8N1)
@@ -129,24 +134,35 @@ class CONTROLE_RS485 : Driver
             - Reset compteur des cycles & timestamp: ex(relai de pompe de cave au démarrage) 
         -#
 
+        # Mets à jour la liste des modules maitres, esclaves et devices de chacun à partir d'un fichier json 'RS485.json'
+        var RS485 = persist.find("parametres")["modules"].find("RS485", false)
+        if (RS485)
+            var cleModule = (RS485["idModule"] == 0 ? "maitre" : "esclave" + str(RS485["idModule"]))
+
+            self.jsonRS485.insert(cleModule, {})
+            self.jsonRS485[cleModule].insert("id", RS485["idModule"])
+            self.jsonRS485[cleModule].insert("topic", persist.find("parametres")["serveur"]["mqtt"]["topic"])
+        end
+
+        # Demande aux modules esclaves leurs parametres
+        if RS485["idModule"] == 0 && persist.find("parametres")["modules"].find("activation", "OFF") == "ON" && RS485.find("activation", "OFF") == "ON"
+            var payload = "cuve/niveau/esclave" + self.MARQUEUR_SEPARATEUR + ""
+            RS485Fonctions.envoiMsgRS485(self.serialRS485, self.CMND_FUNC_JSON, self.delimiteurs, payload)
+        end
+
 		# Ajoute les commandes personnalisées si le module est activé
-        var RS485 = controleGeneral.parametres["modules"]["RS485"]
-		if controleGeneral.parametres["modules"].find("activation", "OFF") == "ON" && RS485.find("activation", "OFF") == "ON"
+		if persist.find("parametres")["modules"].find("activation", "OFF") == "ON" && RS485.find("activation", "OFF") == "ON"
 			if RS485["environnement"].find("pinsRS485s", false)
 				# Ajoute les commandes personnalisées
 				tasmota.add_cmd('ReglageRS485', RS485Fonctions.ReglageRS485)					
 			end
 		end
 
-        # Pour la passerelle mqtt <-> RS485
-        # mqtt.subscribe(string.format("+/%s/+", tasmota.cmd("Topic", boolMute)["Topic"]), passerelleMqttRs485)
-
         # Pour test
-        if RS485["idModule"] == 0 && persist.find("parametres")["modules"].find("activation", "OFF") == "ON" && RS485.find("activation", "OFF") == "ON"
-            var payload = "cuve/niveau/esclave" + self.MARQUEUR_SEPARATEUR + "POWER1 ON"
-            var delimiteurs = {"MARQUEUR_START": self.MARQUEUR_START, "MARQUEUR_SEPARATEUR": self.MARQUEUR_SEPARATEUR, "MARQUEUR_END": self.MARQUEUR_END}
-            tasmota.add_cron("*/10 * * * * *", /-> RS485Fonctions.envoiMsgRS485(self.serialRS485, self.CMND_EXECUTE_CMND, delimiteurs, payload), "publish_cmnd_quickly")
-        end
+        # if RS485["idModule"] == 0 && persist.find("parametres")["modules"].find("activation", "OFF") == "ON" && RS485.find("activation", "OFF") == "ON"
+        #     var payload = "cuve/niveau/esclave" + self.MARQUEUR_SEPARATEUR + "POWER ON"
+        #     tasmota.add_cron("*/10 * * * * *", /-> RS485Fonctions.envoiMsgRS485(self.serialRS485, self.CMND_EXECUTE_CMND, self.delimiteurs, payload), "publish_cmnd_quickly")
+        # end
     end
 
     # Réceptionne chaque trame dans un buffer
@@ -163,8 +179,7 @@ class CONTROLE_RS485 : Driver
         var payload = ""
 
         # Récupère les messages sur le port RS485 (respecte l'API Tasmota)
-        var delimiteurs = {"MARQUEUR_START": self.MARQUEUR_START, "MARQUEUR_SEPARATEUR": self.MARQUEUR_SEPARATEUR, "MARQUEUR_END": self.MARQUEUR_END}
-        self.buffer = RS485Fonctions.lireMsgRS485(self.serialRS485, delimiteurs)
+        self.buffer = RS485Fonctions.lireMsgRS485(self.serialRS485, self.delimiteurs)
 
         # On traite le message   
         if (self.buffer)   
@@ -176,9 +191,15 @@ class CONTROLE_RS485 : Driver
 
             # Puis on dispatche selon la réponse reçue vers la fonction associée (Uniquement pour le maitre RS485)
             if persist.find("parametres")["modules"]["RS485"]["idModule"] == 0
-                # Renvoi les données recues vers une variable qui sera traitée par la fonction 'json_append'
+                # Traite les paramètres RS485 envoyés par les esclaves
                 if commande == self.RESPONSE_FUNC_JSON
-
+                    data = json.load(data)
+                    for cle: data.keys()
+                        if (self.jsonRS485.find(cle, false)) 
+                            self.jsonRS485[cle] = data[cle]
+                        else self.jsonRS485.insert(cle, data[cle])  
+                        end
+                    end
                 # Renvoi les données recues vers une fonction qui traitera traitera les données json recus pour mettre à jour une device
                 elif commande == self.RESPONSE_PUBLISH_TELE
                     if data != "{}"
@@ -188,9 +209,13 @@ class CONTROLE_RS485 : Driver
                 end
             end
 
-            # Puis on dispatche selon la commande reçue vers la fonction associée (Uniquement pour l'esclave RS485 && Si le topic est celui de l'esclave)
-            if (persist.find("parametres")["modules"]["RS485"]["idModule"] > 0) && (persist.find("parametres")["serveur"]["mqtt"]["topic"] == topic)
+            # Puis on dispatche selon la commande reçue vers la fonction associée (Uniquement pour l'esclave RS485)
+            if (persist.find("parametres")["modules"]["RS485"]["idModule"] > 0)
+                # Demande à l'esclave ses paramètres RS485 (Pour tous les esclaves à la fois)
                 if commande == self.CMND_FUNC_JSON
+                    payload = string.format("tele/%s/SENSOR", persist.find("parametres")["serveur"]["mqtt"]["topic"]) + self.MARQUEUR_SEPARATEUR + 
+                                                    json.dump(self.jsonRS485)
+                    RS485Fonctions.envoiMsgRS485(self.serialRS485, self.RESPONSE_FUNC_JSON, self.delimiteurs, payload)
 
                 # Demande à l'esclave la réalisation de commande / 1 seconde
                 elif commande == self.CMND_FUNC_EVERY_SECOND
@@ -204,10 +229,8 @@ class CONTROLE_RS485 : Driver
                 # Demande à l'esclave la réalisation d'une commande relai par la fonction berry: tasmota.cmd())
                 # Pour éxecution d'une commande tasmota OU d'une commande personnalisée
                 elif commande == self.CMND_EXECUTE_CMND
-                    # payload = "cmnd/testing/POWER10 " + self.MARQUEUR_SEPARATEUR + "TEST"
-                    # RS485Fonctions.envoiMsgRS485(self.serialRS485, self.CMND_EXECUTE_CMND, delimiteurs, payload)
-
-                    tasmota.cmd(data)
+                    # Si le topic est celui de l'esclave concerné
+                    if (persist.find("parametres")["serveur"]["mqtt"]["topic"] == topic)    tasmota.cmd(data)   end
                 end
             end            
         end
@@ -231,8 +254,7 @@ class CONTROLE_RS485 : Driver
                                         (json.load(tasmota.read_sensors()) == nil ? "{}" : tasmota.read_sensors())
 
         if RS485["idModule"] > 0 && persist.find("parametres")["modules"].find("activation", "OFF") == "ON" && RS485.find("activation", "OFF") == "ON"
-            var delimiteurs = {"MARQUEUR_START": self.MARQUEUR_START, "MARQUEUR_SEPARATEUR": self.MARQUEUR_SEPARATEUR, "MARQUEUR_END": self.MARQUEUR_END}
-            RS485Fonctions.envoiMsgRS485(self.serialRS485, self.RESPONSE_PUBLISH_TELE, delimiteurs, payload)
+            RS485Fonctions.envoiMsgRS485(self.serialRS485, self.RESPONSE_PUBLISH_TELE, self.delimiteurs, payload)
         end
     end
 
