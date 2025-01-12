@@ -11,40 +11,6 @@
 -#
 var controleRS485
 
-# S'occupe de renvoyer les trames MQTT recues
-# def passerelleMqttRs485(topic, idx, payload_s, payload_b)
-#     import re
-#     import persist
-#     import RS485Fonctions
-
-#     var resultats = []
-
-#     # Test   
-#     log ("RS485_MQTT_DATA: -------------------- RS485 mqtt_data -------------------", LOG_LEVEL_DEBUG_PLUS)
-#     log ("RS485_MQTT_DATA: topic=" + str(topic), LOG_LEVEL_DEBUG_PLUS)
-#     log ("RS485_MQTT_DATA: idx=" + str(idx), LOG_LEVEL_DEBUG_PLUS)
-#     log ("RS485_MQTT_DATA: payload_s=" + str(payload_s), LOG_LEVEL_DEBUG_PLUS)
-#     log ("RS485_MQTT_DATA: payload_b=" + str(payload_b), LOG_LEVEL_DEBUG_PLUS)
-#     print()
-
-#     # Teste si c'est un topic pour lequel on est abonné
-#     resultats = re.search('/([a-zA-Z/]+)/', topic)
-#     #print("resultats=" + str(resultats[1]))
-
-#     if (resultats[1] != "")
-#         # print("resultats=" + resultats.totring())
-#         #print(resultats[1] + "_" + persist.find("parametres")["serveur"]["mqtt"]["topic"])
-
-#         # Uniquement les auxquels le module est abonné
-#         if (resultats[1] == persist.find("parametres")["serveur"]["mqtt"]["topic"])   #tasmota.cmd("Topic", boolMute)["Topic"])
-#             RS485Fonctions.envoiMsgRS485(controleRS485.serialRS485, str(1) + controleRS485.CMND_SEPARATEUR + topic + controleRS485.CMND_SEPARATEUR + payload_s)
-#         end
-#     end
-
-#     # 'True' empêche la  gestion du payload comme une commandepar tasmota
-#     return true
-# end
-
 class CONTROLE_RS485 : Driver
     # Variables
     var msg

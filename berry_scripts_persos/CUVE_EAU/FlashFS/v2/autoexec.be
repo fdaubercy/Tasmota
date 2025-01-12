@@ -51,6 +51,7 @@ def chargeFichiers()
         # Charge le Driver de controle global des modules & gestionWeb
         gestionFileFolder.loadBerryFile("/controleGlobal")
         gestionFileFolder.loadBerryFile("/controleRS485", persist.find("parametres")["modules"]["RS485"].find("activation", "OFF"))
+        gestionFileFolder.loadBerryFile("/controleCuve", persist.find("parametres")["modules"]["cuve"].find("activation", "OFF"))
         
 
     else log ("AUTO_EXE: Attention, le fichier de paramétrage est absent !", LOG_LEVEL_ERREUR)

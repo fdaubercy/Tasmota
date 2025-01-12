@@ -210,42 +210,38 @@
 						"affichageWebSensor": "OFF",
 						"Ana1": {
 							"activation": "ON",
-							"affichageWebSensor": "OFF",
 							"nom": "Etalon",
 							"id": 0,
 							"pin": -1,
 							"type": -1,
-							"virtuel": "OFF",
+							"virtuel": "ON",
 							"value": 0
 						},
 						"Ana2": {
 							"activation": "OFF",
-							"affichageWebSensor": "OFF",
 							"nom": "Analogique 3",
 							"id": 2,
 							"pin": -1,
 							"type": -1,
-							"virtuel": "OFF",
+							"virtuel": "ON",
 							"value": 0
 						},
 						"Ana3": {
 							"activation": "OFF",
-							"affichageWebSensor": "OFF",
 							"nom": "Analogique 3",
 							"id": 3,
 							"pin": -1,
 							"type": -1,
-							"virtuel": "OFF",
+							"virtuel": "ON",
 							"value": 0
 						},
 						"Ana4": {
 							"activation": "ON",
-							"affichageWebSensor": "ON",
 							"nom": "Capteur de Niveau de Cuve",
 							"id": 4,
 							"pin": -1,
 							"type": -1,
-							"virtuel": "OFF",
+							"virtuel": "ON",
 							"value": 0
 						}
 					},
