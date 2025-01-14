@@ -5,13 +5,15 @@ All notable changes to this project will be documented in this file.
 
 ## [14.4.1.3] 
 ### Added
-- Command `FileLog 0..4` to enable logging to filesystem
+- Command `FileLog 0..4` to enable logging to filesystem using up to 16 rotating log files of 100kB (`#define FILE_LOG_SIZE 100`)
 - I2S Opus stream and file support for opus/aac (#22795)
+- I2S command I2sLoop (#22807)
 
 ### Breaking Changed
 
 ### Changed
 - ESP32 Platform from 2024.12.30 to 2025.01.30, Framework (Arduino Core) from v3.1.0.241206 to v3.1.1.250109 and IDF to 5.3.2 (#22792)
+- Allow negative values for AdcParam/AdcGpio INPUT, TEMP and RANGE parameters (#22809)
 
 ### Fixed
 
