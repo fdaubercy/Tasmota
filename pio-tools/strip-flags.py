@@ -4,7 +4,7 @@ link_flags = env['LINKFLAGS']
 build_flags = " ".join(env['BUILD_FLAGS'])
 
 if "FIRMWARE_SAFEBOOT" in build_flags:
-  # Crash Recorder is not included in safeboot firmware -> remove Linker wrap
+  # Le Crash Recorder n'est pas inclus dans le firmware safeboot -> supprimer le wrap de l'éditeur de liens
   try:
     link_flags.pop(link_flags.index("-Wl,--wrap=panicHandler"))
   except:

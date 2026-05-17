@@ -1,12 +1,13 @@
 #!/usr/bin/python
 #
-# espupload by Theo Arends - 20170103
+# espupload par Theo Arends - 20170103
 #
-# Uploads binary file to OTA server
+# Téléverse un fichier binaire vers le serveur OTA
 #
-# Execute: espupload -i <Host_IP_address> -p <Host_port> -f <sketch.bin>
+# Exécution : espupload -i <Adresse_IP_hôte> -p <Port_hôte> -f <sketch.bin>
+# Exemple : pio-tools\espupload_legacy -i 192.168.4.1:80 -p 80 -u /u2?fsz -f build_output\firmware\tasmota32p4-wifi6.bin
 #
-# Needs pycurl
+# Nécessite pycurl
 #   - pip install pycurl
 
 import sys
@@ -15,16 +16,18 @@ import optparse
 import logging
 import pycurl
 
-HOST_ADDR = "domus1"
+HOST_ADDR = "192.168.0.43"
 HOST_PORT = 80
-HOST_URL = "/api/upload-arduino.php"
+# HOST_URL = "/api/upload-arduino.php"
+HOST_URL = "/u2?fsz"
 
 def upload(hostAddr, hostPort, hostUrl, filename):
+  print("-------------------> Utilise espupload_legacy.py pour upload OTA")
   url = 'http://%s:%d%s' % (hostAddr, hostPort, hostUrl)
   c = pycurl.Curl()
   c.setopt(c.URL, url)
-  # The "Expect:" is there to suppress "Expect: 100-continue" behaviour that is
-  # the default in libcurl when posting large bodies (and fails on lighttpd).
+  # L'"Expect:" est là pour supprimer le comportement "Expect: 100-continue" qui est
+  # le comportement par défaut de libcurl lors de l'envoi de corps volumineux (et qui échoue sur lighttpd).
   c.setopt(c.HTTPHEADER, ["Expect:"])
   c.setopt(c.HTTPPOST, [('file', (c.FORM_FILE, filename, )), ])
   c.perform()
@@ -33,27 +36,27 @@ def upload(hostAddr, hostPort, hostUrl, filename):
 def parser():
   parser = optparse.OptionParser(
     usage = "%prog [options]",
-    description = "Upload image to over the air Host server for the esp8266 module with OTA support."
+    description = "Téléverse une image vers le serveur hôte Over The Air pour le module esp8266 avec support OTA."
   )
 
-  # destination ip, port and url
+  # ip, port et url de destination
   group = optparse.OptionGroup(parser, "Destination")
   group.add_option("-i", "--host_ip",
     dest = "host_ip",
     action = "store",
-    help = "Host IP Address. Default: " + HOST_ADDR,
+    help = "Adresse IP de l'hôte. Défaut : " + HOST_ADDR,
     default = HOST_ADDR
   )
   group.add_option("-p", "--host_port",
     dest = "host_port",
     type = "int",
-    help = "Host server ota Port. Default: " + str(HOST_PORT),
+    help = "Port OTA du serveur hôte. Défaut : " + str(HOST_PORT),
     default = HOST_PORT
   )
   group.add_option("-u", "--host_url",
     dest = "host_url",
     action = "store",
-    help = "Host Url with / at beginning. Default: '" + HOST_URL + "'",
+    help = "URL de l'hôte commençant par /. Défaut : '" + HOST_URL + "'",
     default = HOST_URL
   )
   parser.add_option_group(group)
@@ -62,17 +65,17 @@ def parser():
   group = optparse.OptionGroup(parser, "Image")
   group.add_option("-f", "--file",
     dest = "image",
-    help = "Image file.",
+    help = "Fichier image.",
     metavar="FILE",
     default = None
   )
   parser.add_option_group(group)
 
-  # output group
+  # groupe de sortie
   group = optparse.OptionGroup(parser, "Output")
   group.add_option("-d", "--debug",
     dest = "debug",
-    help = "Show debug output. And override loglevel with debug.",
+    help = "Afficher la sortie de débogage. Et remplacer le niveau de log par debug.",
     action = "store_true",
     default = False
   )
@@ -84,28 +87,28 @@ def parser():
 # end parser
 
 def main(args):
-  # get options
+  # récupération des options
   options = parser()
 
-  # adapt log level
+  # adaptation du niveau de log
   loglevel = logging.WARNING
   if (options.debug):
     loglevel = logging.DEBUG
   # end if
 
-  # logging
+  # journalisation
   logging.basicConfig(level = loglevel, format = '%(asctime)-8s [%(levelname)s]: %(message)s', datefmt = '%H:%M:%S')
 
   logging.debug("Options: %s", str(options))
 
   if (not options.host_ip or not options.image):
-    logging.critical("Not enough arguments.")
+    logging.critical("Arguments insuffisants.")
 
     return 1
   # end if
 
   if not os.path.exists(options.image):
-    logging.critical('Sorry: the file %s does not exist', options.image)
+    logging.critical("Désolé : le fichier %s n'existe pas", options.image)
 
     return 1
   # end if

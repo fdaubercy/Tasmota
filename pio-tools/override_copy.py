@@ -6,8 +6,8 @@ import pathlib
 import shutil
 from colorama import Fore, Back, Style
 
-# Ensure the variants directory is correctly formatted based on the OS
-# This is necessary to avoid issues with path handling in different environments
+# S'assurer que le répertoire des variantes est correctement formaté selon l'OS
+# Nécessaire pour éviter des problèmes de gestion des chemins dans différents environnements
 variants_dir = env.BoardConfig().get("build.variants_dir", "")
 if variants_dir:
     if os.name == "nt":
@@ -19,28 +19,28 @@ if variants_dir:
 
 project_dir = os.path.normpath(env["PROJECT_DIR"])
 if " " in project_dir:
-    print(Fore.RED + "*** Whitespace(s) in project path, unexpected issues/errors can happen ***")
+    print(Fore.RED + "*** Espace(s) dans le chemin du projet, des problèmes/erreurs inattendus peuvent survenir ***")
 
-# copy tasmota/user_config_override_sample.h to tasmota/user_config_override.h
+# copier tasmota/user_config_override_sample.h vers tasmota/user_config_override.h
 uc_override = pathlib.Path(os.path.normpath("tasmota/user_config_override.h"))
 uc_override_sample = pathlib.Path(os.path.normpath("tasmota/user_config_override_sample.h"))
 if uc_override.is_file():
-    print(Fore.GREEN + "*** use provided user_config_override.h as planned ***")
+    print(Fore.GREEN + "*** utilise le user_config_override.h fourni comme prévu ***")
 else:
     shutil.copy(str(uc_override_sample), str(uc_override))
 
-# copy platformio_override_sample.ini to platformio_override.ini
+# copier platformio_override_sample.ini vers platformio_override.ini
 pio_override = pathlib.Path(os.path.normpath("platformio_override.ini"))
 pio_override_sample = pathlib.Path(os.path.normpath("platformio_override_sample.ini"))
 if pio_override.is_file():
-    print(Fore.GREEN + "*** use provided platformio_override.ini as planned ***")
+    print(Fore.GREEN + "*** utilise le platformio_override.ini fourni comme prévu ***")
 else:
     shutil.copy(str(pio_override_sample), str(pio_override))
 
-# copy platformio_tasmota_cenv_sample.ini to platformio_tasmota_cenv.ini
+# copier platformio_tasmota_cenv_sample.ini vers platformio_tasmota_cenv.ini
 pio_cenv = pathlib.Path(os.path.normpath("platformio_tasmota_cenv.ini"))
 pio_cenv_sample = pathlib.Path(os.path.normpath("platformio_tasmota_cenv_sample.ini"))
 if pio_cenv.is_file():
-    print(Fore.GREEN + "*** use provided platformio_tasmota_cenv.ini as planned ***")
+    print(Fore.GREEN + "*** utilise le platformio_tasmota_cenv.ini fourni comme prévu ***")
 else:
     shutil.copy(str(pio_cenv_sample), str(pio_cenv))

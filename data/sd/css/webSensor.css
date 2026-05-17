@@ -1,0 +1,33 @@
+<style>
+    div, fieldset, input, select {
+        padding:3px;
+    }
+    fieldset{
+        border-radius:0.3rem;
+        margin-bottom: 5px;
+    }
+    .parametre{
+        border-radius:0.3rem;
+        padding:1px;
+        display:flex;
+        flex-direction:row;
+    }
+    .titreSwitch{
+        width:40%;
+        text-align:right;
+        padding-top:9px;
+    }
+    .btnSwitch{
+        width:20%;
+        height:35px;
+        font-size:0.9rem;
+        font-weight:bold;
+        background-color:#1fa3ec63;
+    }
+    .bdis{
+        background:#888;
+    }
+    .bdis:hover{
+        background:#888;
+    }
+</style>

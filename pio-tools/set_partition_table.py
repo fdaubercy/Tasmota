@@ -1,9 +1,9 @@
 #
-# The scipt sets the missing "LDSCRIPT_PATH" when using the command `pio run -t nobuild`
-# Adopted from https://github.com/platformio/platform-espressif32/issues/861#issuecomment-1241871437
-# Possible now to upload the firmware or the filesystem with (when builded already!):
+# Ce script définit le "LDSCRIPT_PATH" manquant lors de l'utilisation de la commande `pio run -t nobuild`
+# Adapté depuis https://github.com/platformio/platform-espressif32/issues/861#issuecomment-1241871437
+# Il est maintenant possible de téléverser le firmware ou le système de fichiers avec (si déjà compilé !) :
 #
-# `pio run -t nobuild -t upload` and `pio run -t nobuild -t uploadfs`
+# `pio run -t nobuild -t upload` et `pio run -t nobuild -t uploadfs`
 #
 
 Import("env")
@@ -46,7 +46,7 @@ if "nobuild" in COMMAND_LINE_TARGETS:
 #        print("Set LDSCRIPT_PATH to: ", os.path.join(framework_dir,"tools","sdk","ld",board_config.get("build.arduino.ldscript")))
 
 #
-# For ESP32 sets the missing "PARTITIONS_TABLE_CSV" when using the command `pio run -t nobuild`
+# Pour ESP32, définit le "PARTITIONS_TABLE_CSV" manquant lors de l'utilisation de la commande `pio run -t nobuild`
 #
     else:
         env.Replace(

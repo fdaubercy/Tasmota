@@ -3,16 +3,16 @@
 
 # Thanks @staars for safeboot and auto resizing LittleFS code and enhancements
 
-# Combines separate bin files with their respective offsets into a single file
-# This single file must then be flashed to an ESP32 node with 0 offset.
+# Combine des fichiers bin séparés avec leurs décalages respectifs en un seul fichier
+# Ce fichier unique doit ensuite être flashé sur un nœud ESP32 au décalage 0.
 #
-# Original implementation: Bartłomiej Zimoń (@uzi18)
+# Implémentation originale : Bartłomiej Zimoń (@uzi18)
 #
-# Special thanks to @Jason2866 for helping debug flashing to >4MB flash
-# Thanks @jesserockz (esphome) for adapting to use esptool.py with merge_bin
+# Remerciements spéciaux à @Jason2866 pour l'aide au débogage du flashage >4MB
+# Merci à @jesserockz (esphome) pour l'adaptation à l'utilisation de esptool.py avec merge_bin
 #
-# Typical layout of the generated file:
-#    Offset | File
+# Disposition typique du fichier généré :
+#    Décalage | Fichier
 # -  0x1000 | ~\.platformio\packages\framework-arduinoespressif32\tools\sdk\esp32\bin\bootloader_dout_40m.bin
 # -  0x8000 | ~\Tasmota\.pio\build\<env name>\partitions.bin
 # -  0xe000 | ~\.platformio\packages\framework-arduinoespressif32\tools\partitions\boot_app0.bin
@@ -45,7 +45,7 @@ mcu_build_variant = env.BoardConfig().get("build.variant", "").lower()
 flag_custom_sdkconfig = config.has_option("env:"+env["PIOENV"], "custom_sdkconfig")
 flag_board_sdkconfig = env.BoardConfig().get("espidf.custom_sdkconfig", "")
 
-# Copy safeboots firmwares in place when running in Github
+# Copie les firmwares safeboot en place lors de l'exécution dans Github
 github_actions = os.getenv('GITHUB_ACTIONS')
 
 FRAMEWORK_DIR = platform.get_package_dir("framework-arduinoespressif32")
@@ -55,7 +55,7 @@ if github_actions and os.path.exists(os.path.normpath(os.path.join(".", "firmwar
     if variants_dir:
         shutil.copytree(os.path.normpath(os.path.join(".", "firmware", "firmware")), os.path.normpath(variants_dir), dirs_exist_ok=True)
 
-# Copy pins_arduino.h to variants folder
+# Copie pins_arduino.h dans le dossier des variantes
 if variants_dir:
     mcu_build_variant_path = os.path.normpath(join(FRAMEWORK_DIR, "variants", mcu_build_variant, "pins_arduino.h"))
     custom_variant_build = os.path.normpath(join(env.subst("$PROJECT_DIR"), variants_dir , mcu_build_variant, "pins_arduino.h"))
@@ -72,6 +72,7 @@ def normalize_paths(cmd):
             cmd[i] = os.path.normpath(arg)
     return cmd
 
+# Détecte la taille du flash ESP32 et met à jour la configuration de la carte si nécessaire
 def esp32_detect_flashsize():
     uploader = env.subst("$UPLOADER")
     if not "upload" in COMMAND_LINE_TARGETS:
@@ -84,9 +85,9 @@ def esp32_detect_flashsize():
         try:
             output = subprocess.run(esptool_cmd, capture_output=True).stdout.splitlines()
             for l in output:
-                if l.decode().startswith("Detected flash size: "):
+                if l.decode().startswith("Taille de la mémoire flash détectée: "):
                     size = (l.decode().split(": ")[1])
-                    print("Did get flash size:", size)
+                    print("Taille du flash obtenue :", size)
                     stored_flash_size_mb = env.BoardConfig().get("upload.flash_size")
                     stored_flash_size = int(stored_flash_size_mb.split("MB")[0]) * 0x100000
                     detected_flash_size = int(size.split("MB")[0]) * 0x100000
@@ -95,11 +96,12 @@ def esp32_detect_flashsize():
                         return size, True
             return "4MB",False
         except subprocess.CalledProcessError as exc:
-            print(Fore.YELLOW + "Did get chip info failed with " + str(exc))
+            print(Fore.YELLOW + "Les informations sur le processeur ont échoué. " + str(exc))
             return "4MB",False
 
 flash_size_from_esp, flash_size_was_overridden = esp32_detect_flashsize()
 
+# Modifier le fichier partitions.bin pour mettre à jour la taille de la partition spiffs
 def patch_partitions_bin(size_string):
     partition_bin_path = os.path.normpath(join(env.subst("$BUILD_DIR"), "partitions.bin"))
     with open(partition_bin_path, 'r+b') as file:
@@ -116,29 +118,33 @@ def patch_partitions_bin(size_string):
         partition_data = bytes(bin_list) + result.digest()
         file.seek(0)
         file.write(partition_data)
-        print("New partition hash:",result.digest().hex())
+        print("Nouveau hachage de partition:",result.digest().hex())
 
+# Crée le nom du fichier en fonction de la puce
 def esp32_create_chip_string(chip):
     tasmota_platform_org = env.subst("$BUILD_DIR").split(os.path.sep)[-1]
     tasmota_platform = tasmota_platform_org.split('-')[0]
     if "tasmota" + chip[3:] not in tasmota_platform: # check + fix for a valid name like 'tasmota' + '32c3'
         tasmota_platform = "tasmota" + chip[3:]
         if "-DUSE_USB_CDC_CONSOLE" not in env.BoardConfig().get("build.extra_flags"):
-            print(Fore.YELLOW + "Unexpected naming convention in this build environment:" + Fore.RED, tasmota_platform_org)
-            print(Fore.YELLOW + "Expected build environment name like " + Fore.GREEN + "'tasmota" + chip[3:] + "-whatever-you-want'")
-            print(Fore.YELLOW + "Please correct your actual build environment, to avoid undefined behavior in build process!!")
+            print(Fore.YELLOW + "Convention d'appellation inattendue dans cet environnement de compilation :" + Fore.RED, tasmota_platform_org)
+            print(Fore.YELLOW + "Nom attendu de l'environnement de compilation, par exemple : " + Fore.GREEN + "'tasmota" + chip[3:] + "-ce-que-vous-voulez'")
+            print(Fore.YELLOW + "Veuillez corriger votre environnement de compilation actuel afin d'éviter tout comportement indéfini lors du processus de compilation !!")
     return tasmota_platform
 
+# Créer le système de fichiers après la compilation du firmware ESP32
 def esp32_build_filesystem(fs_size):
     files = env.GetProjectOption("custom_files_upload").splitlines()
     num_entries = len([f for f in files if f.strip()])
     filesystem_dir = os.path.normpath(join(env.subst("$BUILD_DIR"), "littlefs_data"))
     if not os.path.exists(filesystem_dir):
         os.makedirs(filesystem_dir)
+        # print("-------------------" + env.subst("$BUILD_DIR") + "-------------------")
     if num_entries > 1:
         print()
-        print(Fore.GREEN + "Will create filesystem with the following file(s):")
+        print(Fore.GREEN + "Nous allons créer le système de fichiers avec les fichiers suivants: ")
         print()
+        
     for file in files:
         # Remove leading and trailing whitespace, ignore empty lines
         file = file.strip()
@@ -146,6 +152,7 @@ def esp32_build_filesystem(fs_size):
             continue
 
         if "no_files" in file:
+            print(Fore.RED + "Pas de fichiers dans le dossier '" + file + "' !")
             continue
         # Remote URL
         if file.startswith(("http://", "https://")):
@@ -154,29 +161,30 @@ def esp32_build_filesystem(fs_size):
                 target = os.path.normpath(join(filesystem_dir, file.split(os.path.sep)[-1]))
                 if len(file.split(" ")) > 1:
                     target = os.path.normpath(join(filesystem_dir, file.split(" ")[1]))
-                    print("Renaming",(file.split(os.path.sep)[-1]).split(" ")[0],"to",file.split(" ")[1])
+                    print("Renomme",(file.split(os.path.sep)[-1]).split(" ")[0],"en",file.split(" ")[1])
                 else:
                     print(file.split(os.path.sep)[-1])
                 open(target, "wb").write(response.content)
             else:
-                print(Fore.RED + "Failed to download: ",file)
+                print(Fore.RED + "Echec du download: ",file)
             continue
         # Local path (relative to PROJECT_DIR or absolute)
         file = file if os.path.isabs(file) else os.path.normpath(join(env.subst("$PROJECT_DIR"), file))
         if os.path.isdir(file):
-            print(f"{file}/ (directory)")
+            print(f"{file}/ (répertoire)")
             shutil.copytree(file, filesystem_dir, dirs_exist_ok=True)
         else:
             print(file)
             shutil.copy(file, filesystem_dir)
+            
     if not os.listdir(filesystem_dir):
-        #print("No files added -> will NOT create littlefs.bin and NOT overwrite fs partition!")
+        print(Fore.RED + "Pas de fichiers ajoutés -> Nous ne créerons pas 'littlefs.bin' & n'écraserons pas le fs de partition!")
         return False
     
-    # Use littlefs-python
+    # Utilise littlefs-python
     output_file = join(env.subst("$BUILD_DIR"), "littlefs.bin")
 
-    # Parse fs_size (can be hex string like "0x2f0000")
+    # Analyser fs_size (peut être une chaîne hexadécimale comme "0x2f0000")
     if isinstance(fs_size, str):
         if fs_size.startswith("0x"):
             fs_size_bytes = int(fs_size, 16)
@@ -185,11 +193,11 @@ def esp32_build_filesystem(fs_size):
     else:
         fs_size_bytes = int(fs_size)
     
-    # LittleFS parameters for ESP32
+    # Paramètres LittleFS pour ESP32
     block_size = 4096
     block_count = fs_size_bytes // block_size
-    
-    # Create LittleFS instance with disk version 2.0 for Tasmota
+
+    # Créer une instance LittleFS avec la version disque 2.0 pour Tasmota
     fs = LittleFS(
         block_size=block_size,
         block_count=block_count,
@@ -197,51 +205,51 @@ def esp32_build_filesystem(fs_size):
         mount=True
     )
     
-    # Add all files from filesystem_dir
+    # Ajouter tous les fichiers depuis filesystem_dir
     source_path = Path(filesystem_dir)
     for item in source_path.rglob("*"):
         rel_path = item.relative_to(source_path)
         if item.is_dir():
             fs.makedirs(rel_path.as_posix(), exist_ok=True)
         else:
-            # Ensure parent directories exist
+            # S'assurer que les répertoires parents existent
             if rel_path.parent != Path("."):
                 fs.makedirs(rel_path.parent.as_posix(), exist_ok=True)
-            # Copy file
+            # Copier le fichier
             with fs.open(rel_path.as_posix(), "wb") as dest:
                 dest.write(item.read_bytes())
     
-    # Write filesystem image
+    # Écrire l'image du système de fichiers
     with open(output_file, "wb") as f:
         f.write(fs.context.buffer)
-    
+
     print()
-    print(Fore.GREEN + f"LittleFS image created: {output_file}")
+    print(Fore.GREEN + f"Image LittleFS créée : {output_file}")
     return True
 
 def esp32_fetch_safeboot_bin(tasmota_platform):
     safeboot_fw_url = "http://ota.tasmota.com/tasmota32/release/" + tasmota_platform + "-safeboot.bin"
     safeboot_fw_name = os.path.normpath(join(variants_dir, tasmota_platform + "-safeboot.bin"))
     if(exists(safeboot_fw_name)):
-        print(Fore.GREEN + "Safeboot binary already in place")
+        print(Fore.GREEN + "Le fichier binaire safeboot existe déjà dans le répertoire des variantes !")
         return True
     print()
-    print(Fore.GREEN + "Will download safeboot binary from URL:")
+    print(Fore.GREEN + "Téléchargement du fichier binaire safeboot depuis l'URL :")
     print(Fore.BLUE + safeboot_fw_url)
     try:
         response = requests.get(safeboot_fw_url)
         open(safeboot_fw_name, "wb").write(response.content)
-        print(Fore.GREEN + "Safeboot binary written to variants path:")
+        print(Fore.GREEN + "Binaire Safeboot écrit dans le chemin des variantes :")
         print(Fore.BLUE + safeboot_fw_name)
         return True
     except:
-        print(Fore.RED + "Download of safeboot binary failed. Please check your Internet connection.")
-        print(Fore.RED + "Creation of " + tasmota_platform + "-factory.bin not possible")
-        print(Fore.YELLOW + "Without Internet " + Fore.GREEN + tasmota_platform + "-safeboot.bin" + Fore.YELLOW + " needs to be compiled before " + Fore.GREEN + tasmota_platform)
+        print(Fore.RED + "Le téléchargement du fichier binaire safeboot a échoué. Veuillez vérifier votre connexion Internet.")
+        print(Fore.RED + "Creation de " + tasmota_platform + "-factory.bin impossible !")
+        print(Fore.YELLOW + "Sans Internet " + Fore.GREEN + tasmota_platform + "-safeboot.bin" + Fore.YELLOW + " doit être compilé avant " + Fore.GREEN + tasmota_platform)
         return False
 
 def esp32_copy_new_safeboot_bin(tasmota_platform,new_local_safeboot_fw):
-    print("Copy new local safeboot firmware to variants dir -> using it for further flashing operations")
+    print("Copie du nouveau firmware safeboot local dans le répertoire des variantes -> utilisé pour les opérations de flashage ultérieures")
     safeboot_fw_name = os.path.normpath(join(variants_dir, tasmota_platform + "-safeboot.bin"))
     if os.path.exists(variants_dir):
         try:
@@ -250,7 +258,8 @@ def esp32_copy_new_safeboot_bin(tasmota_platform,new_local_safeboot_fw):
         except:
             return False
 
-
+# Lit et affiche les partitions depuis le fichier CSV
+# Construit le binaire combiné pour le flashage en série
 def esp32_create_combined_bin(source, target, env):
     #print("Generating combined binary for serial flashing")
     # The offset from begin of the file where the app0 partition starts
@@ -261,7 +270,7 @@ def esp32_create_combined_bin(source, target, env):
 
     with open(env.BoardConfig().get("build.partitions")) as csv_file:
         print()
-        print("Read partitions from ",env.BoardConfig().get("build.partitions"))
+        print("Lit les partitions depuis ",env.BoardConfig().get("build.partitions"))
         print("--------------------------------------------------------------------")
         csv_reader = csv.reader(csv_file, delimiter=',')
         line_count = 0
@@ -279,9 +288,9 @@ def esp32_create_combined_bin(source, target, env):
                 elif(row[0] == 'spiffs'):
                     partition_size = row[4]
                     if flash_size_was_overridden:
-                        print(f"Will override fixed FS partition size from {env.BoardConfig().get('build.partitions')}: {partition_size} ...")
+                        print(f"Remplacera la taille fixe de la partition FS à partir de {env.BoardConfig().get('build.partitions')}: {partition_size} ...")
                         partition_size =  hex(int(flash_size_from_esp.split("MB")[0]) * 0x100000 - int(row[3],base=16))
-                        print(f"... with computed maximum size from connected {env.get('BOARD_MCU')}: {partition_size}")
+                        print(f"... avec une taille maximale calculée à partir des connexions {env.get('BOARD_MCU')}: {partition_size}")
                         patch_partitions_bin(partition_size)
                     if esp32_build_filesystem(partition_size):
                         fs_offset = int(row[3],base=16)
@@ -298,7 +307,7 @@ def esp32_create_combined_bin(source, target, env):
     else:
         s_flag = esp32_fetch_safeboot_bin(tasmota_platform)
 
-    if s_flag:  # check if safeboot firmware is existing
+    if s_flag:  # vérifier si le firmware safeboot existe
         flash_size = env.BoardConfig().get("upload.flash_size", "4MB")
         flash_mode = env["__get_board_flash_mode"](env)
         flash_freq = env["__get_board_f_flash"](env)
@@ -316,9 +325,9 @@ def esp32_create_combined_bin(source, target, env):
             "--flash-size",
             flash_size,
         ]
-        # Platformio estimates the flash space used to store the firmware.
-        # The estimation is inaccurate. Get the exact firmware flash usage
-        # from the size tool (same value as PlatformIO's "Flash:" line)
+        # Platformio estime l'espace flash utilisé pour stocker le firmware.
+        # Cette estimation est inexacte. Obtenir l'utilisation exacte du flash du firmware
+        # depuis l'outil size (même valeur que la ligne "Flash:" de PlatformIO)
         max_size = env.BoardConfig().get("upload.maximum_size", 1)
         elf_file = os.path.normpath(env.subst("$BUILD_DIR/${PROGNAME}.elf"))
         fw_size = 0
@@ -330,24 +339,23 @@ def esp32_create_combined_bin(source, target, env):
             if m:
                 fw_size += int(m.group(1))
         if (fw_size > max_size):
-            print(Fore.RED + "firmware binary too large: %d > %d" % (fw_size, max_size))
-            exit(1)
+            raise Exception(Fore.RED + "Fichier firmware trop lourd: %d > %d" % (fw_size, max_size))
 
         print()
-        print("    Offset   | File")
+        print("    Décalage | Fichier")
         for section in sections:
             sect_adr, sect_file = section.split(" ", 1)
             print(f" -  {sect_adr.ljust(8)} | {sect_file}")
             cmd += [sect_adr, sect_file]
 
-        # "main" firmware to app0 - mandatory, except we just built a new safeboot bin locally
+        # firmware "principal" vers app0 - obligatoire, sauf si on vient de compiler un nouveau safeboot localement
         if ("safeboot" not in firmware_name):
             print(f" -  {hex(app_offset).ljust(8)} | {firmware_name}")
             cmd += [hex(app_offset), firmware_name]
 
         else:
             print()
-            print(Fore.GREEN + "Upload new safeboot binary only")
+            print(Fore.GREEN + "Téléversez uniquement le nouveau binaire safeboot")
 
         upload_protocol = env.subst("$UPLOAD_PROTOCOL")
         if(upload_protocol == "esptool") and (fs_offset != -1):
@@ -372,7 +380,7 @@ def esp32_create_combined_bin(source, target, env):
                 ],
                 UPLOADCMD='"$OBJCOPY" $UPLOADERFLAGS ' + " ".join(normalize_paths(cmd[7:]))
                 )
-                print(Fore.GREEN + "Will use custom upload command for flashing operation to add file system defined for this build target.")
+                print(Fore.GREEN + "Utilisera une commande de téléchargement personnalisée pour l'opération de flashage afin d'ajouter le système de fichiers défini pour cette cible de compilation.")
                 print()
 
         if("safeboot" not in firmware_name):
@@ -380,7 +388,7 @@ def esp32_create_combined_bin(source, target, env):
             # print('Command Line: %s' % cmdline)
             result = subprocess.run(cmdline, text=True, check=False, stdout=subprocess.DEVNULL)
             if result.returncode != 0:
-                print(Fore.RED + f"esptool create firmware failed with exit code: {result.returncode}")
+                print(Fore.RED + f"La création du firmware par esptool a échoué avec le code de sortie: {result.returncode}")
 
 silent_action = env.Action(esp32_create_combined_bin)
 silent_action.strfunction = lambda target, source, env: '' # hack to silence scons command output

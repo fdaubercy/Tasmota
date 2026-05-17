@@ -1,0 +1,58 @@
+{
+	"analogiques": {
+		"actives": {
+			"nb": 3
+		},
+		"reels": {
+			"nb": 0
+		}
+	},
+	"boutons": {
+		"actives": {
+			"nb": 1
+		},
+		"reels": {
+			"nb": 1
+		}
+	},
+	"thermometres": {
+		"actives": {
+			"nb": 2
+		},
+		"reels": {
+			"nb": 2
+		}
+	},
+	"relais": {
+		"actives": {
+			"nb": 1
+		},
+		"reels": {
+			"nb": 1
+		}
+	},
+	"switchs": {
+		"actives": {
+			"nb": 1
+		},
+		"reels": {
+			"nb": 1
+		}
+	},
+	"WS2812": {
+		"actives": {
+			"nb": 1
+		},
+		"reels": {
+			"nb": 1
+		}
+	},
+	"compteurs": {
+		"actives": {
+			"nb": 0
+		},
+		"reels": {
+			"nb": 0
+		}
+	}
+}

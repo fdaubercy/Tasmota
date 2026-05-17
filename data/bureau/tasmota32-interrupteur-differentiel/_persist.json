@@ -1,0 +1,746 @@
+{
+	"diverses": {
+		"cmdMute": true,
+		"typeESP": "ESP32",
+		"logs": {
+			"level": 4,
+			"nbLogsFiles" : 0
+		},
+		"telePeriod": 300,
+		"heureReboot": "01:00",
+		"eviteResetBTN": "ON",
+		"affichageTempESP32": "ON",
+		"affichageNomModele": "OFF",
+		"localisation": {
+			"latitude": "50.410931",
+			"longitude": "3.085796"
+		},
+		"fuseauHoraire": {
+			"typeReglageHeure": "NTP",
+			"timezone": 99,
+			"TimeStd": {
+				"Week": 0,
+				"Month": 10,
+				"Offset": 60,
+				"Day": 1,
+				"Hemisphere": 0,
+				"Hour": 3
+			},
+			"TimeDst": {
+				"Hemisphere": 0,
+				"Week": 0,
+				"Month": 3,
+				"Day": 1,
+				"Hour": 2,
+				"Offset": 120
+			}
+		}
+	},
+	"serveur": {
+		"activation": "ON",
+		"nom": "Disjoncteur Différentiel PC Bureau",
+		"hostname": "DISJONCTEUR-DIFFERENTIEL-BUREAU",
+		"mDNS": "ON",
+		"adressMAC": "",
+		"debug": "ON",
+		"IP": {
+			"IPAddress": "192.168.0.49",
+			"IPGateway": "192.168.0.254",
+			"Subnet": "255.255.255.0",
+			"DNSServer": "192.168.0.254"
+		},
+		"wifi": {
+			"power": 17,
+			"selectSignalFort": "OFF",
+			"reScanBy44": "ON",
+			"timerRebootSansWifi": 300,
+			"reseau1": {
+				"nomReseauWifi": "MAISON",
+				"mdpWifi": "obdormisti-pervigile%.-ficiendus"
+			},
+			"reseau2": {
+				"nomReseauWifi": "MAISON_5GHz",
+				"mdpWifi": "obdormisti-pervigile%.-ficiendus"
+			}
+		},
+		"mqtt": {
+			"activation": "ON",
+			"hote": "192.168.0.5",
+			"port": 1883,
+			"client": "DISJONCTEUR-DIFFERENTIEL-BUREAU",
+			"utilisateur": "fdaubercy",
+			"mdp": "Lune5676",
+			"topic": "bureau/pc",
+			"groupTopic1": "tasmotas/bureau",
+			"groupTopic2": "",
+			"groupTopic3": ""
+		},
+		"rangeExtender": {
+			"activation": "OFF",
+			"id": 0,
+			"debug": "ON",
+			"AP": {
+				"IPAddress": "192.168.4.1",
+				"Subnet": "255.255.255.0",
+				"routeNAPT": "OFF",
+				"SSID": "BUREAU-GATEWAY",
+				"mdp": "Lune5676"
+			}
+		},
+		"serveurFTP": {
+			"activation": "ON",
+			"utilisateur": "fdaubercy",
+			"mdp": "Lune5676"
+		},
+		"udp": {
+			"activation": "ON",
+			"id": 0,
+			"debug": "ON",
+			"telePeriod": 300,
+			"port": 2000
+		}
+	},
+	"template": {
+		"BASE": 1,
+		"GPIO": [32,1,9312,1,1,320,1,1,9313,8160,3200,544,1,1,1,1,0,1,1,1,0,0,1,1,0,0,0,0,1,1,4736,1,1,0,0,1],
+		"NAME": "Int Diff Nous D3T",
+		"FLAG": 0
+	},
+	"modules": {
+		"activation": "ON",
+		"differentiel": {
+			"name": "Gestion de l'interrupteur différentiel",
+			"activation": "ON",
+			"reglage": "OFF",
+			"debug": "ON",
+			"logs": {
+				"nbLogsFiles": 15,
+				"fileLogName": "/logs/differentiel.log",
+				"fileLogSize_Ko": 10000
+			},
+			"environnement": {
+				"boutons": {
+					"bouton1": {
+						"activation": "ON",
+						"nom": "Bouton 1",
+						"id": 1,
+						"pin": 0,
+						"type": 32,
+						"virtuel": "OFF",
+						"SwitchMode": 0,
+						"typeAction": "ON/OFF",
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "Switch",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [
+								"TOGGLE"
+							],
+							"etatSiOFF": [
+								""
+							]
+						}
+					},
+					"bouton2": {
+						"activation": "OFF",
+						"nom": "Bouton 2",
+						"id": 2,
+						"pin": -1,
+						"type": 32,
+						"virtuel": "OFF",
+						"SwitchMode": 2,
+						"typeAction": "ON/OFF",
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "Switch",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [
+								"TOGGLE"
+							],
+							"etatSiOFF": [
+								""
+							]
+						}
+					}
+				},
+				"interrupteurs": {
+					"interrupteur1": {
+						"activation": "OFF",
+						"nom": "Interrupteur 1",
+						"id": -1,
+						"pin": -1,
+						"type": 160,
+						"virtuel": "OFF",
+						"SwitchMode": 1,
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [
+								"TOGGLE"
+							],
+							"etatSiOFF": [
+								""
+							]
+						}
+					},
+					"interrupteur2": {
+						"activation": "OFF",
+						"nom": "Interrupteur 2",
+						"id": -1,
+						"pin": -1,
+						"type": 160,
+						"virtuel": "OFF",
+						"SwitchMode": 1,
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [
+								"TOGGLE"
+							],
+							"etatSiOFF": [
+								""
+							]
+						}
+					}
+				},
+				"relais": {
+					"relai1": {
+						"activation": "ON",
+						"nom": "Relais 1",
+						"pin": 2,
+						"id": 1,
+						"type": 9312,
+						"channel": 0,
+						"nbLeds": 131,
+						"virtuel": "OFF",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 1
+					},
+					"relai2": {
+						"activation": "ON",
+						"nom": "Relai 2",
+						"pin": 12,
+						"id": 2,
+						"type": 9312,
+						"virtuel": "OFF",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 1
+					}
+				},
+				"analogiques": {
+					"activation": "OFF",
+					"name": "Capteurs de Niveau de Cuve",
+					"valeurMin": 0,
+					"valeurMax": 0,
+					"analogique1": {
+						"activation": "OFF",
+						"nom": "Niveau de Cuve",
+						"id": 1,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "ModBus_TasmotaSlaveModBus1",
+						"value": 0,
+						"limites": [5, 100],
+						"dimensions": {
+							"hauteur": 110,
+							"longueur": 340,
+							"largeur": 180
+						},
+						"conversion_mV_cm": 31,
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [],
+							"etatSiOFF": []
+						},
+						"publishMQTT": {
+							"topic": []
+						},
+						"idModBus": 1
+					},
+					"analogique2": {
+						"activation": "OFF",
+						"nom": "Analogique 2",
+						"id": 2,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "I2C_ADS1115",
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [],
+							"etatSiOFF": []
+						},
+						"publishMQTT": {
+							"topic": []
+						}
+					},
+					"analogique3": {
+						"activation": "OFF",
+						"nom": "Analogique 3",
+						"id": 3,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "I2C_ADS1115",
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [],
+							"etatSiOFF": []
+						},
+						"publishMQTT": {
+							"topic": []
+						}
+					},
+					"analogique4": {
+						"activation": "OFF",
+						"nom": "Analogique 4",
+						"id": 4,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "I2C_ADS1115",
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [],
+							"etatSiOFF": []
+						},
+						"publishMQTT": {
+							"topic": []
+						}
+					}
+				},
+				"capteurs": {
+					"capteur1": {
+						"activation": "ON",
+						"nom": "Consommation Electrique",
+						"id": 1,
+						"pin": 13,
+						"type": 8160,
+						"virtuel": "OFF",
+						"SwitchMode": 1,
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [],
+							"etatSiOFF": [
+								"TOGGLE"
+							]
+						}
+					},
+					"capteur2": {
+						"activation": "ON",
+						"nom": "Capteur 2",
+						"id": 2,
+						"pin": 16,
+						"type": 160,
+						"virtuel": "OFF",
+						"SwitchMode": 1,
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [],
+							"etatSiOFF": [
+								"TOGGLE"
+							]
+						}
+					}
+				},
+				"compteurs": {
+					"affichageWebSensor": "OFF",
+					"compteur1": {
+						"activation": "OFF",
+						"nom": "Compteur 1",
+						"id": 1,
+						"pin": 40,
+						"type": 352,
+						"virtuel": "OFF",
+						"SwitchMode": 1,
+						"value": 0,
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [],
+							"etatSiOFF": [
+								"TOGGLE"
+							]
+						}
+					}
+				},
+				"thermometres": {
+					"affichageWebSensor": "OFF",
+					"thermometre1": {
+						"activation": "ON",
+						"nom": "ADC Temp.",
+						"type": 4736,
+						"virtuel": "OFF",
+						"pin": 34,
+						"id": 1,
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [
+								"ON"
+							],
+							"etatSiOFF": [
+								"OFF"
+							]
+						},
+						"idModBus": 1
+					}
+				}
+			}
+		}
+	},
+	"drivers": {
+		"leds": {
+			"activation": "ON",
+			"name": "Leds",
+			"ledPower": "ON",
+			"ledState": 8,
+			"environnement": {
+				"leds": {
+					"ledLink": {
+						"activation": "ON",
+						"pin": 15,
+						"type": 544
+					},
+					"led1": {
+						"activation": "ON",
+						"pin": 5,
+						"id": 1,
+						"type": 320
+					}
+				}
+			}
+		},
+		"SD": {
+			"activation": "OFF",
+			"name": "Carte SD",
+			"environnement": {
+				"pinsSDs": {
+					"pinsSD1": {
+						"activation": "OFF",
+						"nom": "SPI_Clk",
+						"pin": 18,
+						"id": 1,
+						"type": 736
+					},
+					"pinsSD2": {
+						"activation": "OFF",
+						"nom": "SPI_MISO",
+						"pin": 19,
+						"id": 1,
+						"type": 672
+					},
+					"pinsSD3": {
+						"activation": "OFF",
+						"nom": "SPI_MOSI",
+						"pin": 23,
+						"id": 1,
+						"type": 704
+					},
+					"pinsSD4": {
+						"activation": "OFF",
+						"nom": "SDCard CS",
+						"pin": 5,
+						"id": 1,
+						"type": 6720
+					}
+				}
+			}
+		},
+		"ecran": {
+			"activation": "OFF",
+			"name": "Ecran ILI9488",
+			"environnement": {
+				"pinsEcrans": {
+					"pinsEcran1": {
+						"activation": "OFF",
+						"nom": "Option A",
+						"pin": 0,
+						"id": 3,
+						"type": 6208
+					},
+					"pinsEcran2": {
+						"activation": "OFF",
+						"nom": "SPI CS",
+						"pin": 10,
+						"id": 1,
+						"type": 768
+					},
+					"pinsEcran3": {
+						"activation": "OFF",
+						"nom": "SPI Clk",
+						"pin": 12,
+						"id": 1,
+						"type": 736
+					},
+					"pinsEcran4": {
+						"activation": "OFF",
+						"nom": "SPI MISO",
+						"pin": 13,
+						"id": 1,
+						"type": 672
+					},
+					"pinsEcran5": {
+						"activation": "OFF",
+						"nom": "SPI MOSI",
+						"pin": 11,
+						"id": 1,
+						"type": 704
+					},
+					"pinsEcran6": {
+						"activation": "OFF",
+						"nom": "SPI DC",
+						"pin": 7,
+						"id": 1,
+						"type": 800
+					},
+					"pinsEcran7": {
+						"activation": "OFF",
+						"nom": "XPT2046 CS",
+						"pin": 9,
+						"id": 1,
+						"type": 7264
+					},
+					"pinsEcran8": {
+						"activation": "OFF",
+						"nom": "TS IRQ",
+						"pin": 3,
+						"id": 1,
+						"type": 11008
+					}
+				},
+				"relais": {
+					"relai1": {
+						"activation": "OFF",
+						"nom": "Rétro Ecl",
+						"pin": 4,
+						"id": 1,
+						"type": 992
+					},
+					"relai2": {
+						"activation": "OFF",
+						"nom": "Display Rst",
+						"pin": 6,
+						"id": 1,
+						"type": 1024
+					}
+				}
+			}
+		},
+		"I2C": {
+			"activation": "OFF",
+			"name": "Bus I2C",
+			"environnement": {
+				"pinsI2Cs": {
+					"pinsI2C1": {
+						"activation": "ON",
+						"nom": "I2C SDa",
+						"pin": 9,
+						"id": 1,
+						"type": 640
+					},
+					"pinsI2C2": {
+						"activation": "ON",
+						"nom": "I2C SCl",
+						"pin": 8,
+						"id": 1,
+						"type": 608
+					}
+				},
+				"ADS1115": {
+					"activation": "OFF",
+					"name": "Module ADS1115",
+					"adresseI2C": "0x48",
+					"I2CDriver": 13,
+					"affichageWebSensor": "OFF"
+				},
+				"MCP23017": {
+					"activation": "OFF",
+					"name": "MCP23017 A=Ri1-8, B=Ri9-16",
+					"adresseI2C": "0x20",
+					"I2CDriver": 22
+				},
+				"DS3231": {
+					"activation": "OFF",
+					"name": "Real Time Clock",
+					"adresseI2C": "0x68",
+					"I2CDriver": 26
+				}
+			}
+		},
+		"ModBus": {
+			"activation": "ON",
+			"name": "ModBus RS485",
+			"id": 0,
+			"debit": 19200,
+			"mode": "8N1",
+			"timeoutReponse": 1000,
+			"debug": "ON",
+			"environnement": {
+				"pinsModBus": {
+					"RX": {
+						"activation": "OFF",
+						"nom": "Série Rx",
+						"pin": -1,
+						"id": 1,
+						"type": 1,
+						"virtuel": "OFF"
+					},
+					"TX": {
+						"activation": "ON",
+						"nom": "Série Tx",
+						"pin": 14,
+						"id": 1,
+						"type": 1,
+						"virtuel": "OFF"
+					}
+				},
+				"Conn16channel": {
+					"activation": "OFF",
+					"debug": "ON",
+					"name": "Connecteur RS485 16 sorties",
+					"id": "0x01"
+				},
+				"TasmotaSlaveModBus1": {
+					"activation": "OFF",
+					"debug": "ON",
+					"name": "Capteurs Cuve ModBus",
+					"id": "0x02"
+				}
+			}
+		},
+		"KNX": {
+			"activation": "OFF",
+			"amelioration": "ON",
+			"name": "Bus KNX",
+			"debug": "ON",
+			"environnement": {}
+		},
+		"LoRaWan": {
+			"activation": "OFF",
+			"name": "Connexion LoRaWan 868MHz",
+			"id": 0,
+			"debug": "ON",
+			"environnement": {}
+		}
+	}
+}

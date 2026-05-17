@@ -11,7 +11,7 @@ def FindInoNodes(env):
 
 env.AddMethod(FindInoNodes)
 
-# Pass flashmode at build time to macro
+# Passer le mode flash à la compilation vers la macro
 memory_type = env.BoardConfig().get("build.arduino.memory_type", "").upper()
 flash_mode = env.BoardConfig().get("build.flash_mode", "dio").upper()
 if "OPI_" in memory_type:

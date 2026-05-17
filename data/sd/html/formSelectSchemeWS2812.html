@@ -1,0 +1,21 @@
+<form id='selectScheme' name='selectScheme'>
+    <label for='scheme' style='font-size:14px;'>Animations LEDs:</label>
+    <select id='scheme' name='scheme' onChange="httpRequest('/json?commande=scheme ' + document.forms.selectScheme.scheme.value, 'GET', false)"
+            style='border-radius:0.4rem;margin:0px;padding:0px;font-size:14px;height:26px;text-wrap: wrap;padding-left: 5px;'>
+        <option value='0'>Une seule couleur</option>
+        <option value='1'>Séquence de réveil</option>
+        <option value='2'>Cycle ascendant</option>
+        <option value='3'>Cycle descendant</option>
+        <option value='4'>Cycle aléatoie</option>
+        <option value='5'>Mode Horloge</option>
+        <option value='6'>Mode Bougies</option>
+        <option value='7'>Mode RVB</option>
+        <option value='8'>Guirlande Noël</option>
+        <option value='9'>Mode Hanoukka</option>
+        <option value='10'>Mode Kwanzaa</option>
+        <option value='11'>Mode Arc-En-Ciel</option>
+        <option value='12'>Mode Feu</option>
+        <option value='13'>Mode Escalier</option>
+        <option value='14'>Controle par script</option>
+    </select>
+</form>

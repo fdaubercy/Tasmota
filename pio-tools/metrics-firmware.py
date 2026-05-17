@@ -16,8 +16,8 @@ def firm_metrics(source, target, env):
                         used_bytes = int(address, 16) - 0x40100000
                         remaining_bytes = 0x8000 - used_bytes
                         percentage = round(used_bytes / 0x8000 * 100,1)
-                        print("Used static IRAM:",used_bytes,"bytes (",remaining_bytes,"remain,",percentage,"% used)")
+                        print("IRAM statique utilisée :",used_bytes,"octets (",remaining_bytes,"restants,",percentage,"% utilisé)")
 
 silent_action = env.Action(firm_metrics)
-silent_action.strfunction = lambda target, source, env: '' # hack to silence scons command output
+silent_action.strfunction = lambda target, source, env: '' # astuce pour taire la sortie de commande scons
 env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", silent_action)

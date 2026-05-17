@@ -1,0 +1,1402 @@
+{
+	"diverses": {
+		"cmdMute": true,
+		"typeESP": "ESP32P4",
+		"logs": {
+			"level": 4,
+			"nbLogsFiles" : 0
+		},
+		"telePeriod": 300,
+		"heureReboot": "00:00",
+		"eviteResetBTN": "ON",
+		"affichageTempESP32": "ON",
+		"affichageNomModele": "OFF",
+		"localisation": {
+			"latitude": "50.410931",
+			"longitude": "3.085796"
+		},
+		"fuseauHoraire": {
+			"typeReglageHeure": "RTC",
+			"timezone": 99,
+			"TimeStd": {
+				"Week": 0,
+				"Month": 10,
+				"Offset": 60,
+				"Day": 1,
+				"Hemisphere": 0,
+				"Hour": 3
+			},
+			"TimeDst": {
+				"Hemisphere": 0,
+				"Week": 0,
+				"Month": 3,
+				"Day": 1,
+				"Hour": 2,
+				"Offset": 120
+			}
+		}
+	},
+	"serveur": {
+		"activation": "ON",
+		"nom": "Serveur de Garage",
+		"hostname": "SERVEUR-GARAGE",
+		"mDNS": "ON",
+		"adressMAC": "",
+		"debug": "ON",
+		"IP": {
+			"IPAddress": "192.168.0.43",
+			"IPGateway": "192.168.0.254",
+			"Subnet": "255.255.255.0",
+			"DNSServer": "192.168.0.254"
+		},
+		"wifi": {
+			"power": 0,
+			"selectSignalFort": "OFF",
+			"reScanBy44": "ON",
+			"timerRebootSansWifi": 300,
+			"reseau1": {
+				"nomReseauWifi": "MAISON",
+				"mdpWifi": "obdormisti-pervigile%.-ficiendus"
+			},
+			"reseau2": {
+				"nomReseauWifi": "iPhone de Frederic",
+				"mdpWifi": "Lune5676"
+			}
+		},
+		"mqtt": {
+			"activation": "ON",
+			"hote": "192.168.0.5",
+			"port": 1883,
+			"client": "SERVEUR-GARAGE",
+			"utilisateur": "fdaubercy",
+			"mdp": "Lune5676",
+			"topic": "garage",
+			"groupTopic1": "tasmotas/garage",
+			"groupTopic2": "",
+			"groupTopic3": ""
+		},
+		"rangeExtender": {
+			"activation": "ON",
+			"id": 0,
+			"debug": "ON",
+			"telePeriod": 300,
+			"AP": {
+				"IPAddress": "192.168.4.1",
+				"Subnet": "255.255.255.0",
+				"routeNAPT": "ON",
+				"SSID": "SERVEUR-GARAGE-GATEWAY",
+				"mdp": "Lune5676"
+			}
+		},
+		"serveurFTP": {
+			"activation": "ON",
+			"utilisateur": "fdaubercy",
+			"mdp": "Lune5676"
+		},
+		"udp": {
+			"activation": "ON",
+			"id": 0,
+			"debug": "ON",
+			"port": 2000
+		}, 
+		"tcp": {
+			"activation": "ON",
+			"id": 0,
+			"debug": "ON"
+		}, 
+        "discovery": {
+            "activation": "ON",
+            "debug": "ON"
+        }
+	},
+	"template": {
+		"BASE": 1,
+		"GPIO": [1,1,1,1,9440,9408,1,640,608,7776,7840,7872,7808,9376,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,5568,1,1,1,1,1,1,1,8864,8896,8928,8960,8832,8800,6720,1,1,1,1,1,5536,5600,1,1],
+		"NAME": "ESP32P4 Serveur Garage Modbus",
+		"FLAG": 0,
+        "CMND":"ethtype 1|ethaddress -1"
+	},
+	"modules": {
+		"activation": "ON",
+		"garage": {
+			"name": "Gestion des appareils de garage",
+			"activation": "ON",
+			"reglage": "OFF",
+			"debug": "ON",
+			"logs": {
+				"nbLogsFiles": 15,
+				"fileLogName": "/logs/garage.log",
+				"fileLogSize_Ko": 10000
+			},
+			"environnement": {
+				"boutons": {
+					"bouton1": {
+						"activation": "ON",
+						"nom": "Bouton 1",
+						"id": 1,
+						"pin": 4,
+						"type": 32,
+						"virtuel": "OFF",
+						"SwitchMode": 2,
+						"typeAction": "ON/OFF",
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "Switch",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [
+								"TOGGLE"
+							],
+							"etatSiOFF": [
+								""
+							]
+						}
+					},
+					"bouton2": {
+						"activation": "OFF",
+						"nom": "Bouton 2",
+						"id": 2,
+						"pin": -1,
+						"type": 32,
+						"virtuel": "OFF",
+						"SwitchMode": 2,
+						"typeAction": "ON/OFF",
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "Switch",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [
+								"TOGGLE"
+							],
+							"etatSiOFF": [
+								""
+							]
+						}
+					}
+				},
+				"interrupteurs": {
+					"interrupteur1": {
+						"activation": "ON",
+						"nom": "Capteur Fermeture Rideau Garage",
+						"id": 1,
+						"pin": -1,
+						"type": 160,
+						"virtuel": "ModBus_TasmotaSlaveModBus2",
+						"SwitchMode": 2,
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [
+								"TOGGLE"
+							],
+							"etatSiOFF": [
+								""
+							]
+						},
+						"idModBus": 1
+					},
+					"interrupteur2": {
+						"activation": "ON",
+						"nom": "Capteur Ouverture Rideau Garage",
+						"id": 2,
+						"pin": -1,
+						"type": 160,
+						"virtuel": "ModBus_TasmotaSlaveModBus2",
+						"SwitchMode": 2,
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [
+								"TOGGLE"
+							],
+							"etatSiOFF": [
+								""
+							]
+						},
+						"idModBus": 2
+					}
+				},
+				"relais": {
+					"relai1": {
+						"activation": "ON",
+						"nom": "LEDs Cuve",
+						"pin": -1,
+						"id": 1,
+						"type": 1376,
+						"channel": 0,
+						"nbLeds": 131,
+						"virtuel": "ModBus_TasmotaSlaveModBus1",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 1
+					},
+					"relai2": {
+						"activation": "ON",
+						"nom": "Grande Porte Garage",
+						"pin": -1,
+						"id": 2,
+						"type": 256,
+						"virtuel": "ModBus_TasmotaSlaveModBus2",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 1
+					},
+					"relai3": {
+						"activation": "ON",
+						"nom": "Relai 2",
+						"pin": -1,
+						"id": 3,
+						"type": 256,
+						"virtuel": "ModBus_TasmotaSlaveModBus2",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 2
+					},
+					"relai4": {
+						"activation": "ON",
+						"nom": "Relai 3",
+						"pin": -1,
+						"id": 4,
+						"type": 256,
+						"virtuel": "ModBus_Conn16channel1",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 1
+					},
+					"relai5": {
+						"activation": "ON",
+						"nom": "Relai 4",
+						"pin": -1,
+						"id": 5,
+						"type": 256,
+						"virtuel": "ModBus_Conn16channel1",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 2
+					},
+					"relai6": {
+						"activation": "ON",
+						"nom": "Relai 5",
+						"pin": -1,
+						"id": 6,
+						"type": 256,
+						"virtuel": "ModBus_Conn16channel1",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 3
+					},
+					"relai7": {
+						"activation": "ON",
+						"nom": "Relai 6",
+						"pin": -1,
+						"id": 7,
+						"type": 256,
+						"virtuel": "ModBus_Conn16channel1",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 4
+					},
+					"relai8": {
+						"activation": "ON",
+						"nom": "Relai 7",
+						"pin": -1,
+						"id": 8,
+						"type": 256,
+						"virtuel": "ModBus_Conn16channel1",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 5
+					},
+					"relai9": {
+						"activation": "ON",
+						"nom": "Relai 8",
+						"pin": -1,
+						"id": 9,
+						"type": 256,
+						"virtuel": "ModBus_Conn16channel1",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 6
+					},
+					"relai10": {
+						"activation": "ON",
+						"nom": "Relai 9",
+						"pin": -1,
+						"id": 10,
+						"type": 256,
+						"virtuel": "ModBus_Conn16channel1",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 7
+					},
+					"relai11": {
+						"activation": "ON",
+						"nom": "Relai 10",
+						"pin": -1,
+						"id": 11,
+						"type": 256,
+						"virtuel": "ModBus_Conn16channel1",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 8
+					},
+					"relai12": {
+						"activation": "ON",
+						"nom": "Relai 11",
+						"pin": -1,
+						"id": 12,
+						"type": 256,
+						"virtuel": "ModBus_Conn16channel1",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 9
+					},
+					"relai13": {
+						"activation": "ON",
+						"nom": "Relai 12",
+						"pin": -1,
+						"id": 13,
+						"type": 256,
+						"virtuel": "ModBus_Conn16channel1",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 10
+					},
+					"relai14": {
+						"activation": "ON",
+						"nom": "Relai 13",
+						"pin": -1,
+						"id": 14,
+						"type": 256,
+						"virtuel": "ModBus_Conn16channel1",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 11
+					},
+					"relai15": {
+						"activation": "ON",
+						"nom": "Relai 14",
+						"pin": -1,
+						"id": 15,
+						"type": 256,
+						"virtuel": "ModBus_Conn16channel1",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 12
+					},
+					"relai16": {
+						"activation": "ON",
+						"nom": "Relai 15",
+						"pin": -1,
+						"id": 16,
+						"type": 256,
+						"virtuel": "ModBus_Conn16channel1",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 13
+					},
+					"relai17": {
+						"activation": "ON",
+						"nom": "Relai 16",
+						"pin": -1,
+						"id": 17,
+						"type": 256,
+						"virtuel": "ModBus_Conn16channel1",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 14
+					},
+					"relai18": {
+						"activation": "ON",
+						"nom": "Relai 17",
+						"pin": -1,
+						"id": 18,
+						"type": 256,
+						"virtuel": "ModBus_Conn16channel1",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 15
+					},
+					"relai19": {
+						"activation": "ON",
+						"nom": "Relai 18",
+						"pin": -1,
+						"id": 19,
+						"type": 256,
+						"virtuel": "ModBus_Conn16channel1",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 16
+					}
+				},
+				"analogiques": {
+					"activation": "ON",
+					"name": "Capteurs de Niveau de Cuve",
+					"valeurMin": 0,
+					"valeurMax": 0,
+					"analogique1": {
+						"activation": "ON",
+						"nom": "Niveau de Cuve",
+						"id": 1,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "ModBus_TasmotaSlaveModBus1",
+						"value": 0,
+						"limites": [5, 100],
+						"dimensions": {
+							"hauteur": 110,
+							"longueur": 340,
+							"largeur": 180
+						},
+						"conversion_mV_cm": 31,
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [],
+							"etatSiOFF": []
+						},
+						"publishMQTT": {
+							"topic": []
+						},
+						"idModBus": 1
+					},
+					"analogique2": {
+						"activation": "OFF",
+						"nom": "Analogique 2",
+						"id": 2,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "I2C_ADS1115",
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [],
+							"etatSiOFF": []
+						},
+						"publishMQTT": {
+							"topic": []
+						}
+					},
+					"analogique3": {
+						"activation": "OFF",
+						"nom": "Analogique 3",
+						"id": 3,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "I2C_ADS1115",
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [],
+							"etatSiOFF": []
+						},
+						"publishMQTT": {
+							"topic": []
+						}
+					},
+					"analogique4": {
+						"activation": "OFF",
+						"nom": "Analogique 4",
+						"id": 4,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "I2C_ADS1115",
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [],
+							"etatSiOFF": []
+						},
+						"publishMQTT": {
+							"topic": []
+						}
+					}
+				},
+				"capteurs": {
+					"capteur1": {
+						"activation": "OFF",
+						"nom": "Capteur 1",
+						"id": 1,
+						"pin": -1,
+						"type": 160,
+						"virtuel": "OFF",
+						"SwitchMode": 1,
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [],
+							"etatSiOFF": [
+								"TOGGLE"
+							]
+						}
+					},
+					"capteur2": {
+						"activation": "OFF",
+						"nom": "Capteur 2",
+						"id": 2,
+						"pin": 16,
+						"type": 160,
+						"virtuel": "OFF",
+						"SwitchMode": 1,
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [],
+							"etatSiOFF": [
+								"TOGGLE"
+							]
+						}
+					}
+				},
+				"compteurs": {
+					"affichageWebSensor": "OFF",
+					"compteur1": {
+						"activation": "ON",
+						"nom": "Consommation Electrique garage",
+						"id": 1,
+						"pin": 20,
+						"type": 352,
+						"virtuel": "OFF",
+						"SwitchMode": 1,
+						"value": 0,
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [],
+							"etatSiOFF": [
+								"TOGGLE"
+							]
+						}
+					}
+				},
+				"thermometres": {
+					"affichageWebSensor": "OFF",
+					"thermometre1": {
+						"activation": "ON",
+						"nom": "T° Eau de Cuve",
+						"serialNumber": "C1041600F6FBFF28",
+						"type": 1312,
+						"virtuel": "ModBus_TasmotaSlaveModBus1",
+						"pin": -1,
+						"id": 1,
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [
+								"ON"
+							],
+							"etatSiOFF": [
+								"OFF"
+							]
+						},
+						"idModBus": 1
+					},
+					"thermometre2": {
+						"activation": "OFF",
+						"nom": "T° de Garage",
+						"type": 1216,
+						"virtuel": "OFF",
+						"pin": -1,
+						"id": 2,
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF",
+							"delaiSiON": [
+								0
+							],
+							"delaiSiOFF": [
+								0
+							],
+							"etatSiON": [
+								"ON"
+							],
+							"etatSiOFF": [
+								"OFF"
+							]
+						}
+					}
+				}
+            }
+		}
+	},
+	"drivers": {
+		"leds": {
+			"activation": "ON",
+			"name": "Leds",
+			"ledPower": "ON",
+			"ledState": 8,
+			"environnement": {
+				"leds": {
+					"ledLink": {
+						"activation": "ON",
+						"pin": -1,
+						"type": 544
+					},
+					"led1": {
+						"activation": "ON",
+						"pin": -1,
+						"id": 1,
+						"type": 288
+					}
+				}
+			}
+		},
+		"SD": {
+			"activation": "ON",
+			"name": "Carte SD",
+			"environnement": {
+				"pinsSDs": {
+					"pinsSD1": {
+						"activation": "OFF",
+						"nom": "SPI_Clk",
+						"pin": 18,
+						"id": 1,
+						"type": 736
+					},
+					"pinsSD2": {
+						"activation": "OFF",
+						"nom": "SPI_MISO",
+						"pin": 19,
+						"id": 1,
+						"type": 672
+					},
+					"pinsSD3": {
+						"activation": "OFF",
+						"nom": "SPI_MOSI",
+						"pin": 23,
+						"id": 1,
+						"type": 704
+					},
+					"pinsSD4": {
+						"activation": "ON",
+						"nom": "CarteSD CS",
+						"pin": 45,
+						"id": 1,
+						"type": 6720
+					}
+				}
+			}
+		},
+		"ecran": {
+			"activation": "OFF",
+			"name": "Ecran ILI9488",
+			"environnement": {
+				"pinsEcrans": {
+					"pinsEcran1": {
+						"activation": "OFF",
+						"nom": "Option A",
+						"pin": 0,
+						"id": 3,
+						"type": 6208
+					},
+					"pinsEcran2": {
+						"activation": "OFF",
+						"nom": "SPI CS",
+						"pin": 10,
+						"id": 1,
+						"type": 768
+					},
+					"pinsEcran3": {
+						"activation": "OFF",
+						"nom": "SPI Clk",
+						"pin": 12,
+						"id": 1,
+						"type": 736
+					},
+					"pinsEcran4": {
+						"activation": "OFF",
+						"nom": "SPI MISO",
+						"pin": 13,
+						"id": 1,
+						"type": 672
+					},
+					"pinsEcran5": {
+						"activation": "OFF",
+						"nom": "SPI MOSI",
+						"pin": 11,
+						"id": 1,
+						"type": 704
+					},
+					"pinsEcran6": {
+						"activation": "OFF",
+						"nom": "SPI DC",
+						"pin": 7,
+						"id": 1,
+						"type": 800
+					},
+					"pinsEcran7": {
+						"activation": "OFF",
+						"nom": "XPT2046 CS",
+						"pin": 9,
+						"id": 1,
+						"type": 7264
+					},
+					"pinsEcran8": {
+						"activation": "OFF",
+						"nom": "TS IRQ",
+						"pin": 3,
+						"id": 1,
+						"type": 11008
+					}
+				},
+				"relais": {
+					"relai1": {
+						"activation": "OFF",
+						"nom": "Rétro Ecl",
+						"pin": 4,
+						"id": 1,
+						"type": 992
+					},
+					"relai2": {
+						"activation": "OFF",
+						"nom": "Display Rst",
+						"pin": 6,
+						"id": 1,
+						"type": 1024
+					}
+				}
+			}
+		},
+		"I2C": {
+			"activation": "ON",
+			"name": "Bus I2C",
+			"environnement": {
+				"pinsI2Cs": {
+					"pinsI2C1": {
+						"activation": "ON",
+						"nom": "I2C SDa",
+						"pin": 7,
+						"id": 1,
+						"type": 640
+					},
+					"pinsI2C2": {
+						"activation": "ON",
+						"nom": "I2C SCl",
+						"pin": 8,
+						"id": 1,
+						"type": 608
+					}
+				},
+				"ADS1115": {
+					"activation": "OFF",
+					"name": "Module ADS1115",
+					"adresseI2C": "0x48",
+					"I2CDriver": 13,
+					"affichageWebSensor": "OFF"
+				},
+				"MCP23017": {
+					"activation": "OFF",
+					"name": "MCP23017 A=Ri1-8, B=Ri9-16",
+					"adresseI2C": "0x20",
+					"I2CDriver": 22
+				},
+				"DS3231": {
+					"activation": "ON",
+					"name": "Real Time Clock",
+					"adresseI2C": "0x68",
+					"I2CDriver": 26
+				}
+			}
+		},
+		"I2S": {
+			"activation": "ON",
+			"name": "Bus I2S",
+			"environnement": {
+				"pinsI2Ss": {
+					"pinsI2S1": {
+						"activation": "ON",
+						"nom": "I2S DOut",
+						"pin": 9,
+						"id": 1,
+						"type": 7776
+					},
+					"pinsI2S2": {
+						"activation": "ON",
+						"nom": "I2S WS",
+						"pin": 10,
+						"id": 1,
+						"type": 7840
+					},
+					"pinsI2S3": {
+						"activation": "ON",
+						"nom": "I2S DIn",
+						"pin": 11,
+						"id": 1,
+						"type": 7872
+					},
+					"pinsI2S4": {
+						"activation": "ON",
+						"nom": "I2S BClk",
+						"pin": 12,
+						"id": 1,
+						"type": 7808
+					},
+					"pinsI2S5": {
+						"activation": "ON",
+						"nom": "I2S MClk",
+						"pin": 13,
+						"id": 1,
+						"type": 9376
+					},
+					"pinsI2S6": {
+						"activation": "ON",
+						"nom": "Activation PA",
+						"pin": 53,
+						"id": 1,
+						"type": 3840
+					}
+				},
+                "ES8311": {
+                    "activation": "ON",
+                    "name": "Codec Audio ES8311",
+                    "debug": "ON"
+                }
+            }
+        },
+		"Ethernet": {
+			"activation": "ON",
+			"name": "Bus Ethernet",
+			"environnement": {
+				"pinsEthernets": {
+					"pinsEthernet1": {
+						"activation": "ON",
+						"nom": "ETH MDC",
+						"pin": 31,
+						"id": 1,
+						"type": 5568
+					},
+					"pinsEthernet2": {
+						"activation": "ON",
+						"nom": "ETH Pwr",
+						"pin": 51,
+						"id": 1,
+						"type": 5536
+					},
+					"pinsEthernet3": {
+						"activation": "ON",
+						"nom": "ETH MDIO",
+						"pin": 52,
+						"id": 1,
+						"type": 5600
+					}
+				}
+            }
+        },
+		"HostedESPC6": {
+			"activation": "ON",
+			"name": "Connexions avec ESP32C6",
+			"environnement": {
+				"pinsHosteds": {
+					"pinsHosted1": {
+						"activation": "ON",
+						"nom": "SDIO D0",
+						"pin": 39,
+						"id": 1,
+						"type": 8864
+					},
+					"pinsHosted2": {
+						"activation": "ON",
+						"nom": "SDIO D1",
+						"pin": 40,
+						"id": 1,
+						"type": 8896
+					},
+					"pinsHosted3": {
+						"activation": "ON",
+						"nom": "SDIO D2",
+						"pin": 41,
+						"id": 1,
+						"type": 8928
+					},
+					"pinsHosted4": {
+						"activation": "ON",
+						"nom": "SDIO D3",
+						"pin": 42,
+						"id": 1,
+						"type": 8960
+					},
+					"pinsHosted5": {
+						"activation": "ON",
+						"nom": "SDIO Clk",
+						"pin": 43,
+						"id": 1,
+						"type": 8832
+					},
+					"pinsHosted6": {
+						"activation": "ON",
+						"nom": "SDIO Cmd",
+						"pin": 44,
+						"id": 1,
+						"type": 8800
+					}
+				}
+			}
+		},
+		"ModBus": {
+			"activation": "ON",
+			"name": "ModBus RS485",
+			"id": 0,
+			"debit": 19200,
+			"mode": "8N1",
+			"timeoutReponse": 5000,
+			"debug": "ON",
+            "activationReponseCMD": "ON",
+            "typeComm": {
+                "Serial": "ON",
+                "UDP": "OFF",
+                "MQTT": "OFF",
+                "TCP": "ON"
+            },
+			"environnement": {
+				"pinsModBus": {
+					"RX": {
+						"activation": "ON",
+						"nom": "ModBr Rx",
+						"pin": 4,
+						"id": 1,
+						"type": 9440,
+						"virtuel": "OFF"
+					},
+					"TX": {
+						"activation": "ON",
+						"nom": "ModBr Tx",
+						"pin": 5,
+						"id": 1,
+						"type": 9408,
+						"virtuel": "OFF"
+					}
+				},
+				"Conn16channels": {
+					"debug": "ON",
+					"Conn16channel1": {
+						"activation": "ON",
+						"name": "Connecteur RS485 16 sorties",
+						"id": 1
+					}
+				},
+				"TasmotaSlaveModBus": {
+					"debug": "ON",
+					"TasmotaSlaveModBus1": {
+						"activation": "ON",
+						"name": "Capteurs Cuve ModBus",
+						"id": 2
+					},
+					"TasmotaSlaveModBus2": {
+						"activation": "ON",
+						"name": "Rideau Garage ModBus",
+						"id": 3
+					}
+				}
+			}
+		},
+		"KNX": {
+			"activation": "OFF",
+			"amelioration": "ON",
+			"name": "Bus KNX",
+			"debug": "ON",
+			"environnement": {}
+		},
+		"LoRaWan": {
+			"activation": "ON",
+			"name": "Connexion LoRaWan 868MHz",
+			"id": 0,
+			"debug": "ON",
+			"environnement": {
+                "pinsLoRaWans": {
+                    "pinsLoRaWan1": {
+						"activation": "ON",
+						"nom": "SPI MISO",
+						"pin": -1,
+						"id": 1,
+						"type": 672,
+						"virtuel": "OFF"
+                    },
+                    "pinsLoRaWan2": {
+						"activation": "ON",
+						"nom": "SPI Clk",
+						"pin": -1,
+						"id": 1,
+						"type": 736,
+						"virtuel": "OFF"
+                    },
+                    "pinsLoRaWan3": {
+						"activation": "ON",
+						"nom": "SPI MOSI",
+						"pin": -1,
+						"id": 1,
+						"type": 704,
+						"virtuel": "OFF"
+                    },
+                    "pinsLoRaWan4": {
+						"activation": "ON",
+						"nom": "LoRa CS",
+						"pin": -1,
+						"id": 1,
+						"type": 10656,
+						"virtuel": "OFF"
+                    },
+                    "pinsLoRaWan5": {
+						"activation": "ON",
+						"nom": "LoRa Rst",
+						"pin": -1,
+						"id": 1,
+						"type": 10688,
+						"virtuel": "OFF"
+                    },
+                    "pinsLoRaWan6": {
+						"activation": "ON",
+						"nom": "LoRa DIO1",
+						"pin": -1,
+						"id": 1,
+						"type": 10784,
+						"virtuel": "OFF"
+                    },
+                    "pinsLoRaWan7": {
+						"activation": "ON",
+						"nom": "LoRa Busy",
+						"pin": -1,
+						"id": 1,
+						"type": 10720,
+						"virtuel": "OFF"
+                    }
+                }
+            }
+		},
+		"voletRoulants": {
+			"activation": "ON",
+			"name": "Driver Volet Roulant",
+			"mode": 3,
+			"debug": "ON",
+			"environnement": {
+				"VRs": {
+					"VR1": {
+						"activation": "ON",
+						"nom": "Volet Roulant Garage",
+						"id": 1,
+						"etat": "STOPPED",
+						"position": 0,
+						"relais1": 2,
+                        "boutons": {
+                            "bouton1": {
+						        "activation": "ON",
+                                "id": 1,
+                                "function": "toggle",
+                                "mqtt": "OFF"
+                            },
+                            "bouton2": {
+						        "activation": "OFF",
+                                "id": -1,
+                                "function": "up",
+                                "mqtt": "OFF"
+                            },
+                            "bouton3": {
+						        "activation": "OFF",
+                                "id": -1,
+                                "function": "down",
+                                "mqtt": "OFF"
+                            },
+                            "bouton4": {
+						        "activation": "OFF",
+                                "id": -1,
+                                "function": "updown",
+                                "mqtt": "OFF"
+                            }
+                        },
+						"capteursPosition": {
+							"activation": "ON",
+							"capteurOuvert": "Switch1",
+							"capteurFerme": "Switch2"
+						},
+                        "activationSiOuvert": {
+                            "activation": "ON", 
+                            "tabRelais": [],
+                            "tabEtatRelais": []  
+                        },
+                        "activationSiFerme": {
+                            "activation": "ON", 
+                            "tabRelais": [],
+                            "tabEtatRelais": []  
+                        },
+						"tempsMontee": 15,
+						"tempsDescente": 15,
+						"led_temoin": {
+							"activation": "OFF",
+							"nom": "LED état Trappe",
+							"pin": 39,
+							"intervalle": 500
+						}
+					}
+				}
+			}
+		}
+	}
+}

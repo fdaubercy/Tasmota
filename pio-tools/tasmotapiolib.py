@@ -1,24 +1,24 @@
-"""Supporting library for pio-tools scripts
+"""Bibliothèque de support pour les scripts pio-tools
 
-This also provides functions to allow overrides of some settings, see the available
-overides below.
+Fournit également des fonctions pour remplacer certains paramètres, voir les
+remplacements disponibles ci-dessous.
 
-Overrides can be set using environment variables or .ini file settings for controlling
-build output file locations and formats.
+Les remplacements peuvent être définis via des variables d'environnement ou des
+paramètres .ini pour contrôler les emplacements et formats des fichiers de sortie.
 
-To set a value using an environment variable, prefix the value with "TASMOTA_" and
-ensure the entire value is UPPER CASE, for example in bash, it would be:
+Pour définir une valeur via une variable d'environnement, préfixez la valeur avec "TASMOTA_"
+et assurez-vous que la valeur entière est en MAJUSCULES, par exemple en bash :
 
       export TASMOTA_DISABLE_MAP_GZ=1
 
-To set a value in your .ini file, such as in platformio_override.ini, create a
-[tasmota] section, and put the key ensuring it is all lower case, for example:
+Pour définir une valeur dans votre fichier .ini, comme dans platformio_override.ini,
+créez une section [tasmota] et placez la clé en minuscules, par exemple :
 
 [tasmota]
 disable_map_gz = 1
 map_dir = /tmp/map_files/
 
-Values in .ini files override environment variables
+Les valeurs des fichiers .ini remplacent les variables d'environnement
 
 """
 import sys
@@ -26,57 +26,57 @@ import zlib
 import pathlib
 import os
 
-# === AVAILABLE OVERRIDES ===
-# if set to 1, will not gzip bin files at all
+# === REMPLACEMENTS DISPONIBLES ===
+# si défini à 1, ne compresse pas du tout les fichiers bin en gzip
 DISABLE_BIN_GZ = "disable_bin_gz"
-# if set to 1, will gzip esp32 bin files
+# si défini à 1, compresse les fichiers bin esp32 en gzip
 ENABLE_ESP32_GZ = "enable_esp32_gz"
-# if set, an alternative ptah to put generated .bin files, relative to project directory
+# si défini, chemin alternatif pour les fichiers .bin générés, relatif au répertoire du projet
 BIN_DIR = "bin_dir"
-# if set to 1, will not gzip generated .map files
+# si défini à 1, ne compresse pas les fichiers .map générés en gzip
 DISABLE_MAP_GZ = "disable_map_gz"
-# if set, an alternative path to put generated .map files, relative to project directory
+# si défini, chemin alternatif pour les fichiers .map générés, relatif au répertoire du projet
 MAP_DIR = "map_dir"
 
-# === END AVAILABLE OVERRIDES ===
+# === FIN DES REMPLACEMENTS DISPONIBLES ===
 
 
-# This is the default output directory
+# Répertoire de sortie par défaut
 OUTPUT_DIR = pathlib.Path("build_output")
 
 def get_variant(env) -> str:
-    """Get the current build variant."""
+    """Obtient la variante de compilation actuelle."""
     return env["PIOENV"]
 
 
 def get_final_bin_path(env) -> pathlib.Path:
-    """Path to the final destination for the .bin
+    """Chemin vers la destination finale du fichier .bin
 
-    If the parent directory does not exist, it will be created"""
+    Si le répertoire parent n'existe pas, il sera créé"""
     firmware_dir = get_override_path(BIN_DIR, env)
     firmware_dir.mkdir(parents=True, exist_ok=True)
     return firmware_dir / "{}.bin".format(get_variant(env))
 
 
 def get_final_map_path(env) -> pathlib.Path:
-    """Path to the final destination for the .map file
+    """Chemin vers la destination finale du fichier .map
 
-    If the parent directory does not exist, it will be created"""
+    Si le répertoire parent n'existe pas, il sera créé"""
     map_dir = get_override_path(MAP_DIR, env)
     map_dir.mkdir(parents=True, exist_ok=True)
     return map_dir / "{}.map".format(get_variant(env))
 
 
 def get_source_map_path(env) -> pathlib.Path:
-    """Path to the built .map file.
+    """Chemin vers le fichier .map compilé.
 
-    Tests potential locations, returning the first match.
-    Raises FileNotFoundError if no match found"""
+    Teste les emplacements potentiels, retourne le premier trouvé.
+    Lève FileNotFoundError si aucun emplacement ne correspond"""
     fwmap_path = pathlib.Path("firmware.map")
     if fwmap_path.is_file():
         return fwmap_path
 
-    # firmware maybe in project build directory
+    # le firmware est peut-être dans le répertoire de build du projet
     # PIO env variables see: https://github.com/platformio/platformio-core/blob/develop/platformio/builder/main.py#L108:L128
     proj_build_dir = pathlib.Path(env["PROJECT_BUILD_DIR"])
     proj_dir = pathlib.Path(env["PROJECT_DIR"])
@@ -94,20 +94,20 @@ def get_source_map_path(env) -> pathlib.Path:
 
 
 def get_tasmota_override_option(name: str, env):
-    """Gets a set override option from a .ini or env variable, None if no match"""
+    """Obtient une option de remplacement depuis un fichier .ini ou une variable d'env, None si aucune correspondance"""
     config = env.GetProjectConfig()
     override = config.get("tasmota", name.lower(), None)
     if override is not None:
         return override
-    # Return env if available
+    # Retourner la variable d'environnement si disponible
     return os.environ.get("TASMOTA_" + name.upper())
 
 
 def get_override_path(pathtype: str, env) -> pathlib.Path:
     """
-    Returns a path to a givens override path if set, otherwise OUTPUT_DIR is used
+    Retourne un chemin vers le chemin de remplacement donné s'il est défini, sinon OUTPUT_DIR est utilisé.
 
-    pathtype must be either MAP_DIR or BIN_DIR.
+    pathtype doit être MAP_DIR ou BIN_DIR.
     """
     override = get_tasmota_override_option(pathtype, env)
     if override:
@@ -120,51 +120,46 @@ def get_override_path(pathtype: str, env) -> pathlib.Path:
 
 
 def is_env_set(name: str, env):
-    """True if the enviornment variable <name> is set to `1`"""
+    """Vrai si la variable d'environnement <name> est définie à `1`"""
     val = get_tasmota_override_option(name, env)
     if val:
         val = val.strip()
         return val == "1"
     return False
 
-
 # ---------------------------------------------------------------------------
-# Target detection helper
+# Détection de la cible
 #
-# The Berry generator scripts (dump-defines.py, gen-berry-defines.py,
-# gen-berry-structures.py) are wired in as `extra_scripts` and therefore
-# execute during PlatformIO's SCons script-loading phase for *every*
-# invocation - including targets that do not actually compile firmware
-# (upload, erase, monitor, ...).
+# Les scripts Berry (dump-defines.py, gen-berry-defines.py,
+# gen-berry-structures.py) s'exécutent pour *chaque* invocation PlatformIO,
+# y compris pour des cibles qui ne compilent pas (upload, erase, monitor...).
 #
-# `is_non_build_target(env)` returns True when the user only asked for one
-# of those non-compiling targets, so the Berry pipeline can short-circuit
-# and avoid regenerating .be / .h artifacts.
+# `is_non_build_target(env)` retourne True quand seules ces cibles non-compil.
+# sont demandées, pour court-circuiter le pipeline Berry.
 # ---------------------------------------------------------------------------
 
-# Targets for which Berry artifact regeneration should be skipped.
 NON_BUILD_TARGETS = frozenset({
-    # filesystem-only uploads (do not compile firmware)
+    # téléversements filesystem uniquement (sans compilation firmware)
     "uploadfs", "uploadfsota",
-    # filesystem build/download
+    # construction/téléchargement filesystem
     "buildfs", "downloadfs", "download_fs",
-    # erase variants
+    # variantes d'effacement
     "erase", "erase_flash", "eraseflash",
-    # info-only / no-op
+    # info uniquement / sans opération
     "monitor", "nobuild", "envdump", "exec",
     "size", "sizedata", "metrics", "idedata", "compiledb",
-    # cleanups
+    # nettoyages
     "clean", "fullclean", "cleanall",
-    # custom Tasmota targets (see pio-tools/custom_target.py)
+    # cibles Tasmota personnalisées (voir pio-tools/custom_target.py)
     "reset_target", "factory_flash", "external_crashreport",
 })
 
 def is_non_build_target(env=None):
-    """Return True if the current PlatformIO invocation only requests
-    non-compiling targets (upload, erase, monitor, ...).
+    """Retourne True si l'invocation PlatformIO ne demande que des cibles
+    non-compilantes (upload, erase, monitor, ...).
 
-    Returns False for the default build (no -t given) and for any
-    invocation that mixes a build-relevant target.
+    Retourne False pour la compilation par défaut et pour toute invocation
+    qui mélange une cible liée à la compilation.
     """
     try:
         from SCons.Script import COMMAND_LINE_TARGETS
@@ -172,32 +167,31 @@ def is_non_build_target(env=None):
         COMMAND_LINE_TARGETS = []
 
     if COMMAND_LINE_TARGETS:
-        # SCons targets available - use them directly.
         return all(t in NON_BUILD_TARGETS for t in COMMAND_LINE_TARGETS)
 
-    # COMMAND_LINE_TARGETS is empty (e.g. VS Code / PlatformIO IDE environment).
-    # Fall back to inspecting sys.argv for known non-build target keywords.
+    # COMMAND_LINE_TARGETS est vide (ex. VS Code / PlatformIO IDE).
+    # Inspecter sys.argv pour les mots-clés de cibles non-build.
     argv_lower = [str(a).lower() for a in sys.argv]
     if any(t == arg for t in NON_BUILD_TARGETS for arg in argv_lower):
         return True
 
-    return False  # default build
+    return False  # compilation par défaut
 
 
 def _compress_with_gzip(data, level=9):
     import zlib
     if   level < 0: level = 0
     elif level > 9: level = 9
-    # gzip header without timestamp
+    # en-tête gzip sans horodatage
     zobj = zlib.compressobj(level=level, wbits=16 + zlib.MAX_WBITS)
     return zobj.compress(data) + zobj.flush()
 
 try:
     import zopfli
 
-    # two python modules call themselves `zopfli`, which one is this?
+    # deux modules Python s'appellent `zopfli`, lequel est-ce ?
     if hasattr(zopfli, 'ZopfliCompressor'):
-        # we seem to have zopflipy
+        # il semble qu'on ait zopflipy
         from zopfli import ZopfliCompressor, ZOPFLI_FORMAT_GZIP
         def _compress_with_zopfli(data, iterations=15, maxsplit=15, **kw):
             zobj = ZopfliCompressor(
@@ -209,7 +203,7 @@ try:
             return zobj.compress(data) + zobj.flush()
 
     else:
-        # we seem to have pyzopfli
+        # il semble qu'on ait pyzopfli
         import zopfli.gzip
         def _compress_with_zopfli(data, iterations=15, maxsplit=15, **kw):
             return zopfli.gzip.compress(
@@ -219,7 +213,7 @@ try:
                 **kw,
             )
 
-    # values based on limited manual testing
+    # valeurs basées sur des tests manuels limités
     def _level_to_params(level):
         if   level == 10: return (15, 15)
         elif level == 11: return (15, 20)
@@ -236,9 +230,9 @@ try:
 
     def compress(data, level=None, *, iterations=None, maxsplit=None, **kw):
         if level is not None and (iterations is not None or maxsplit is not None):
-            raise ValueError("The `level` argument can't be used with `iterations` and/or `maxsplit`!")
+            raise ValueError("L'argument `level` ne peut pas être utilisé avec `iterations` et/ou `maxsplit` !")
 
-        # set parameters based on level or to defaults
+        # définir les paramètres selon le niveau ou par défaut
         if iterations is None and maxsplit is None:
             if level is None: level = 10
             elif level < 10: return _compress_with_gzip(data, level)

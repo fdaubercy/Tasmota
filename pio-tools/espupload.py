@@ -18,16 +18,17 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-Provides:
-  Uploads binary file to OTA server.
-  Usually initiated from http-uploader.py
+Fournit :
+  Téléverse un fichier binaire vers le serveur OTA.
+  Généralement initié depuis http-uploader.py
 
-Requirements:
+Prérequis :
   - Python
   - pip install requests
 
-Usage:
-  ./espupload -u <Host_IP_address>:<Host_port>/<Host_path> -f <sketch.bin>
+Utilisation :
+  ./espupload -u <Adresse_IP_hôte>:<Port_hôte>/<Chemin_hôte> -f <sketch.bin>
+  ex: pio-tools\espupload.py -u 192.168.4.1:80/u2?fsz= -f build_output\firmware\tasmota32p4-wifi6.bin
 """
 
 import sys
@@ -36,11 +37,13 @@ import shutil
 import argparse
 import requests
 
-# Default URL overwritten by [env] and/or [env:tasmota32_base] upload_port
+# URL par défaut écrasée par [env] et/ou [env:tasmota32_base] upload_port
 HOST_URL = "otaserver/ota/upload-tasmota.php"
 
 def main(args):
-#  print(sys.argv[0:])
+  # print(sys.argv[0:])
+  print("-------------------> Utilise espupload.py pour upload OTA")
+
 
   # get arguments
   parser = argparse.ArgumentParser(
@@ -52,25 +55,25 @@ def main(args):
   args = parser.parse_args()
 
   if (not args.host_url or not args.image):
-    print("Not enough arguments.")
+    print("Arguments insuffisants.")
     return 1
   # end if
 
   if not os.path.exists(args.image):
-    print('Sorry: the file {} does not exist'.format(args.image))
+    print('Désolé : le fichier {} n\'existe pas'.format(args.image))
     return 2
   # end if
 
   if args.image.find("firmware.bin") != -1:
-    # Legacy support for $SOURCE
-    # copy firmware.bin to tasmota.bin or tasmota32.bin
+    # Support ancien pour $SOURCE
+    # copie firmware.bin vers tasmota.bin ou tasmota32.bin
     # C:\tmp\.pioenvs\tasmota-theo\firmware.bin
     tname = os.path.normpath(os.path.dirname(args.image))
     # C:\tmp\.pioenvs\tasmota-theo\tasmota-theo.bin
     upload_file = tname + os.sep + os.path.basename(tname) + '.bin'
     shutil.copy2(args.image, upload_file)
   else:
-    # Support for bin_file and bin_gz_file
+    # Support pour bin_file et bin_gz_file
     upload_file = args.image
   # end if
 

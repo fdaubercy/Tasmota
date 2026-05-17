@@ -1,0 +1,144 @@
+name: Build_custom
+
+on:
+  workflow_dispatch:           # déclenchement manuel depuis GitHub Actions
+  schedule:
+    - cron: '0 2 * * *'       # tous les soirs à 2h UTC
+
+concurrency:
+  group: custom-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  # --- Safeboot (obligatoire avant les images ESP32) ---
+  safeboot-images:
+    runs-on: ubuntu-latest
+    continue-on-error: true    # un échec safeboot ne bloque pas les jobs suivants
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          - tasmota32-safeboot
+          - tasmota32s3-safeboot
+          - tasmota32p4-safeboot
+          - tasmota32p4r3-safeboot
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+          enable-cache: false
+      - name: Install dependencies
+        run: |
+          uv pip install --system pioarduino
+          cp ./platformio_override_sample.ini ./platformio_override.ini
+      - name: Run PlatformIO
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONUTF8: '1'
+        run: platformio run -e ${{ matrix.variant }}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ${{ matrix.variant }}
+          path: ./build_output
+
+  # --- Environnements Tasmota de base (ESP32 S3 / P4) ---
+  base-images:
+    needs: safeboot-images
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false         # tente tous les variants même si l'un échoue
+      matrix:
+        variant:
+          - tasmota32
+          - tasmota32s3
+          - tasmota32p4
+          - tasmota32p4r3
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+          enable-cache: false
+      - name: Install dependencies
+        run: |
+          uv pip install --system pioarduino
+          cp ./platformio_override_sample.ini ./platformio_override.ini
+      - name: Download safeboot firmwares
+        continue-on-error: true   # pas bloquant si les artefacts safeboot sont absents
+        uses: actions/download-artifact@v8
+        with:
+          pattern: tasmota32*-safeboot
+          merge-multiple: true
+          path: ./firmware/firmware
+      - name: Run PlatformIO
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONUTF8: '1'
+        run: platformio run -e ${{ matrix.variant }}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ${{ matrix.variant }}
+          path: ./build_output
+          retention-days: 30
+
+  # --- Environnements personnalisés (platformio_tasmota_cenv.ini) ---
+  custom-images:
+    needs: safeboot-images
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false         # tente tous les variants même si l'un échoue
+      matrix:
+        variant:
+          - tasmota32s3-base-N16R8
+          - tasmota32p4-base-wifi6
+          - tasmota32p4-base-devkit
+          - tasmota32p4r3-base-devkit
+          - tasmota32-cave-serveur-rly
+          - tasmota32-rdc-vr-porte
+          - tasmota32-bureau-interrupteur-differentiel
+          - tasmota32s3-etage2-grenier
+          - tasmota32p4-garage-serveur-modbus
+          - tasmota32s3-garage-serveur-modbus
+          - tasmota32s3-garage-capteurs-cuve-modbus
+          - tasmota32s3-garage-rideau-garage-modbus
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+          enable-cache: false
+      - name: Install dependencies
+        run: |
+          uv pip install --system pioarduino
+          cp ./platformio_override_sample.ini ./platformio_override.ini
+      - name: Download safeboot firmwares
+        continue-on-error: true   # pas bloquant si les artefacts safeboot sont absents
+        uses: actions/download-artifact@v8
+        with:
+          pattern: tasmota32*-safeboot
+          merge-multiple: true
+          path: ./firmware/firmware
+      - name: Run PlatformIO
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONUTF8: '1'
+        run: platformio run -e ${{ matrix.variant }}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ${{ matrix.variant }}
+          path: ./build_output
+          retention-days: 30
