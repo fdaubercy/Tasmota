@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 - ESP8266 wrap printf and replace with stubs reducing flash size by 6k (#24714)
 - LVGL splash screen uses default Montserrat-14 instead of Montserrat-20 on small screens (#24735)
 - Move autoconf repository to `ota.tasmota.com` (#24754)
+- Increase security by inverting state of `define DISABLE_REFERER_CHK`, command `SetOption128` controlling HTTP access which is now default off
 
 ### Fixed
 - NeoPool possible overflow/div-zero errors and Hydrolysis module detection (#24724)
@@ -28,6 +29,7 @@ All notable changes to this project will be documented in this file.
 ### Removed
 - `USE_UNIVERSAL_TOUCH` no more forced when `USE_UNIVERSAL_DISPLAY` is enabled (#24743)
 - Disable `-DUSE_SHA_ROM` flag due to TLS issues (#24744)
+- Re-enable `-DUSE_SHA_ROM` flag for IDF v5.5.4 = current version and up (#24757)
 
 ## [15.4.0.1] 20260507
 ### Added
