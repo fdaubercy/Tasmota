@@ -37,6 +37,8 @@ BIN_DIR = "bin_dir"
 DISABLE_MAP_GZ = "disable_map_gz"
 # si défini, chemin alternatif pour les fichiers .map générés, relatif au répertoire du projet
 MAP_DIR = "map_dir"
+# if set to 1, copies output .bin/.bin.gz with build timestamp appended to the filename
+APPEND_TIMESTAMP = "append_timestamp"
 
 # === FIN DES REMPLACEMENTS DISPONIBLES ===
 
