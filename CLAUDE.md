@@ -16,6 +16,20 @@ Ordre de commit sur ce depot : `git add` puis `git commit`. Rien d'autre.
 
 Si une carte de connaissances est creee un jour ici, revoir cette regle.
 
+## Exception assumee a la regle des 500 lignes
+
+`outils_docs/scripts_python/synchronise_fork_tasmota.py` fait **527 lignes**, et
+c'est **voulu** (decide le 2026-07-15). Ne pas le decouper pour satisfaire le
+compteur.
+
+Decomposition reelle : 333 lignes de code, 57 d'en-tete docstring (qui **est** la
+sortie de `--help`), 99 vides, 38 de commentaires. La plus grosse fonction fait
+79 lignes. L'esprit de la regle — un fichier qui n'en fait pas trop — est respecte ;
+seul le total brut deborde, de 27 lignes de documentation.
+
+Extraire un module d'utilitaires partages avec `synchronise_upstream_tasmota.py`
+reste possible **le jour ou un troisieme script apparaitra**, pas avant.
+
 ## Commits
 
 - Messages **sans accents** (precedent d'encodage casse).
