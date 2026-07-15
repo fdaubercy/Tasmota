@@ -12,6 +12,13 @@
 
 <hr></hr>
 
+> [!TIP]
+>## Documentation technique de ce dossier :
+>####    - [SOLIDIFICATION_BERRY.md](SOLIDIFICATION_BERRY.md) : la solidification Berry — comment ça marche, comment **vérifier** qu'elle a eu lieu, les paramètres, et 11 pièges documentés.
+>####       * À retenir : elle est **active par défaut** à chaque build ; les modules de `data/fs/` ne sont **jamais** solidifiés ; la ligne `Berry solidification: …` d'un build **ne prouve rien** (§5).
+
+<hr></hr>
+
 ## Les devices Tasmota développées :
 
 ```
