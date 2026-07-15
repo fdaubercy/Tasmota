@@ -4,9 +4,33 @@ Date : 2026-07-15
 Env de test : `tasmota32s3-etage2-grenier`
 Methode : solidifieur lance **a la main**, sans build complet (voir « Ecart de methode »).
 
-> **Verdict en une ligne : phase 2 = GO.** Les deux formes du framework sont
-> solidifiables. Mais la phase 2 telle que la spec l'imaginait n'a plus lieu d'etre :
-> le parametre a ecrire **existe deja en amont** (`custom_berry_solidify`).
+> **Verdict en une ligne : phase 2 = GO, mais au prix d'une modification de nos 15
+> modules.** Le parametre a ecrire **existe deja en amont** (`custom_berry_solidify`) ;
+> en revanche notre convention `module("/x")` **doit perdre son slash**.
+
+> ## ⚠️ CORRECTION du 2026-07-15, apres coup
+>
+> **Une premiere version de ce verdict affirmait que nos `xxxFonctions.be` etaient
+> « solidifiables tels quels ». C'est FAUX, et l'erreur merite d'etre expliquee.**
+>
+> Elle venait d'avoir conclu sur la seule existence du `.h` genere, **sans jamais le
+> compiler**. Or le nom de module `/modbusFonctions` produit du C invalide :
+>
+> ```
+> $ xtensa-esp-elf-gcc -E test_macro.c
+> be_native_module_autoconf;              <- amont, nom nu : OK
+> be_native_module_/modbusFonctions;      <- nous :
+> error: pasting "be_native_module_" and "/" does not give a valid preprocessing token
+> ```
+>
+> `berry.h:376` (`#define be_native_module(name) be_native_module_##name`) et
+> `be_constobj.h:272-277` (`static const bmodule m_lib##_c_name`) collent le nom du
+> module dans un identifiant C. Un `/` ne peut pas en faire partie.
+>
+> C'est le **piege 10 un cran au-dessus** : un `.h` genere ne prouve pas un `.h`
+> valide, exactement comme une ligne `Berry solidification:` ne prouve pas une
+> solidification. La lecon vaut d'etre retenue : **ne jamais valider un artefact de
+> compilation sans le compiler**.
 
 ---
 
@@ -52,10 +76,28 @@ Le raisonnement de la spec — « un `var` au niveau fichier est local au chunk 
 donc invisible depuis `global` » — est faux : en Berry, un `var` au niveau fichier
 **est** global. Le resolveur (`solidify_all_python.be:78-90`) le trouve.
 
-**Consequence : la convention maison `var xxxFonctions = module("/xxxFonctions")` est
-solidifiable telle quelle. Aucune adaptation de forme n'est necessaire.**
+**Consequence, corrigee :** la **forme** (`var x = module(...)` au niveau fichier) est
+bien solidifiable — le resolveur trouve le `var`, et c'est ce que Q1 demandait. Mais le
+**nom** `/xxxFonctions` ne l'est pas : il finit dans un identifiant C, ou le `/` est
+illegal (voir la correction en tete). Il faut donc **retirer le slash** :
 
-Variante classe testee : non — inutile, l'hypothese etait deja refutee.
+```berry
+var modbusFonctions = module("modbusFonctions")   # et non module("/modbusFonctions")
+```
+
+Cela concerne **15 de nos 30 modules** (un seul est deja sans slash).
+
+**Le slash est-il utile aujourd'hui ?** Non : nos modules font `import modbusFonctions`
+(sans slash) et `import` charge le **fichier** du LittleFS ; le nom passe a `module()`
+n'est que cosmetique. Une fois solidifie, en revanche, `import modbusFonctions` cherche
+dans la table native **par nom** — et `/modbusFonctions` n'y repondrait pas. Le slash
+gene donc deux fois : compilation C **et** resolution de l'import.
+
+⏳ **A verifier avant de toucher aux 15 modules** : que le retrait du slash n'a aucun
+effet sur l'appareil (`gestionFileFolder.compileModule()` recoit des chemins avec slash,
+ce qui est un usage distinct).
+
+Variante classe testee : non — inutile, l'hypothese de Q1 etait deja refutee.
 
 ### Mais un obstacle reel, sans rapport avec Q1
 
@@ -158,8 +200,26 @@ la divergence avec arendst sur ce fichier est retombee a zero.
 
 | Type | Solidifiable ? | Condition |
 |---|---|---|
-| `xxxFonctions.be` (singleton `module()`) | **OUI, tel quel** | aucune |
-| `controleXxx.be` (`class : Driver`) | **OUI** | deplacer la garde d'activation hors du niveau fichier |
+| `xxxFonctions.be` (singleton `module()`) | **OUI** | **retirer le slash** : `module("x")` et non `module("/x")` — 15 modules concernes ; + la directive `#@ solidify:` |
+| `controleXxx.be` (`class : Driver`) | **OUI** | deplacer la garde d'activation hors du niveau fichier ; + la directive `#@ solidify:` |
+
+**Trois prerequis, dont aucun n'etait dans la spec :**
+
+1. `custom_berry_solidify = data/fs/<module>.be` dans l'env (prouve : le pre-script
+   trouve le fichier local et le copie).
+2. **La directive `#@ solidify:<nom>` en tete du module.** Aucun de nos 30 modules n'en
+   portait. Sans elle, le `.h` sort **vide** (379 octets) avec `rc = 0` et zero message :
+   le piege le plus couteux de la chaine.
+3. **Les 9 globaux de notre framework** stubbes dans `solidify_all_python.be` :
+   `drivers, serveur, diverses, modules, boolMute, LOG_LEVEL_ERREUR, LOG_LEVEL_DEBUG,
+   LOG_LEVEL_DEBUG_PLUS` + `serial` (global Tasmota, lacune amont de plus).
+   Trouves automatiquement en 30 s par iteration sur le solidifieur manuel, au lieu de
+   9 builds de 40 minutes.
+
+**Preuve chiffree** (`modbusFonctions.be`, directive ajoutee, 9 globaux stubbes) :
+source 79 178 octets -> `solidified_modbusFonctions.h` de **243 223 octets**,
+**15 fonctions** solidifiees, 1 `be_local_module`. Le module se solidifie donc
+integralement — **mais ce `.h` ne compilera pas tant que le slash est la.**
 
 Candidat n°1 inchange : `modbusFonctions.be` (79 Ko) — c'est un `xxxFonctions.be`,
 donc solidifiable sans retouche.
@@ -183,7 +243,7 @@ cela serait reinvente, ou ecrase au prochain build.
 
 | Question | Hypothese de la spec | Realite observee |
 |---|---|---|
-| Q1 | NON | **OUI** — un `var` au niveau fichier est global ; forme maison solidifiable telle quelle |
+| Q1 | NON | **OUI pour la forme** — un `var` au niveau fichier est global, le resolveur le trouve. **Mais le NOM `/x` produit du C invalide** : il faut retirer le slash (15 modules) |
 | Q2 | OUI, ca casse | **OUI** — confirme, et cause isolee : c'est le code de niveau fichier, pas la classe |
 | Q3 | OUI | **Non teste** — la question etait mal posee : le rattachement est automatique, pas manuel |
 | Methode | deposer un `.be` + `pio run` | **Impossible** — un pre-script vide `embedded/` a chaque build |

@@ -1,5 +1,13 @@
 # Pour l'aide au protocole ModBus: voir le fichier 'ModBus.help'
 
+# Rend ce module solidifiable (ajouté le 2026-07-15).
+# Pour Berry, ce n'est qu'un commentaire : aucun effet sur l'appareil, le fichier
+# reste utilisable tel quel sur le LittleFS.
+# C'est le solidifieur du PC qui la lit (solidify_all_python.be, regex ligne ~52).
+# Sans elle, un `custom_berry_solidify` sur ce fichier produit un .h VIDE (379 octets)
+# sans la moindre erreur — le piège le plus coûteux de toute la chaîne.
+#@ solidify:modbusFonctions
+
 # Définition du module
 var modbusFonctions = module("/modbusFonctions")
 

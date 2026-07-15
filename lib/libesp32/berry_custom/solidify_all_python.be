@@ -19,11 +19,31 @@ import "../../../tasmota/tasmota_defines_for_berry.be" as tasmota_defines
 # berry_tasmota, berry_matter, berry_animation et lv_haspmota le stubbent deja :
 # son absence ici est une incoherence amont, et elle frappe justement le creneau
 # prevu pour le code utilisateur — celui qui logue.
+#
+# NOTE (fork) : les trois dernieres lignes de la liste ci-dessous (serial / drivers...
+# / LOG_LEVEL...) sont NOS globaux,
+# ajoutes le 2026-07-15. Ils sont declares au niveau fichier par autoexec.be
+# (l.9-21), alimentes par _persist.json, et references librement par nos modules.
+# Le solidifieur tourne sur le PC : il ne les connait pas, et refuse a la
+# COMPILATION tout fichier qui les mentionne (`syntax_error: 'drivers' undeclared`).
+#
+# Les stubber a nil ne fausse rien : le bytecode solidifie resout les globaux PAR NOM
+# a l'execution (ils apparaissent en be_kv_str dans le .h). Sur l'ESP32, autoexec.be
+# les a deja affectes pour de vrai. Le stub ne sert qu'a satisfaire le compilateur PC.
+#
+# `serial` est un global Tasmota, pas un des notres : son absence est une lacune amont
+# de plus, comme celles de `log` et de `Driver`.
+#
+# Cette divergence-ci, contrairement a celles de log/Driver, n'a PAS vocation a
+# remonter en PR : ces noms n'appartiennent qu'a notre framework.
 var globs = "path,ctypes_bytes_dyn,tasmota,ccronexpr,gpio,light,webclient,load,MD5,lv,light_state,udp,tcpclientasync,log,"
             "lv_clock,lv_clock_icon,lv_signal_arcs,lv_signal_bars,lv_wifi_arcs_icon,lv_wifi_arcs,"
             "lv_wifi_bars_icon,lv_wifi_bars,"
             "_lvgl,"
-            "int64"
+            "int64,"
+            "serial,"
+            "drivers,serveur,diverses,modules,boolMute,"
+            "LOG_LEVEL_ERREUR,LOG_LEVEL_INFO,LOG_LEVEL_DEBUG,LOG_LEVEL_DEBUG_PLUS,logSerial,logWeb"
 
 for g:string2.split(globs, ",")
   global.(g) = nil
