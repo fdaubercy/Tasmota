@@ -50,6 +50,44 @@
             * 4: Adresse de registre invalide
             * 5: Valeur de donnée invalide
             * 6: Longuer de trame invalide
+
+    Fonctionnement global du module de contrôle ModBus TCP:
+        - Berry tcpFonctions.be
+            * Initialisé par: Événement System#Boot
+            * Trame: Format custom "ModbusTCP " + trame
+            * Connexions max: géré par vous
+            * Intégration: Règle ModbusReceivedTCP manuelle
+            * Fermeture: System#Save → serveur.close()
+
+
+    Séquence complète des communications ModBusTCP
+        Esclave (id > 0)                          Maitre (id == 0)
+        System#Boot                               System#Boot
+        → tcpserver(8888)                         → tcpclientasync()
+        → attend hasclient()                      → client.connect("192.168.x.x", 8888)
+            ↑                                           ↓
+            └──────── connexion TCP établie ────────────┘
+                            ↕
+                modbusFonctions.envoiMsgModbusTCP()
+                → client.write("ModbusTCP " + trame)
+                            ↕
+                lireTCP("Serveur") → connexionAsync.readbytes()
+                → modbusFonctions.lireMsgModbus("ModbusReceivedTCP", msg)
+                → tasmota.add_rule('ModbusReceivedTCP') déclenché
+
+    Structure d'une trame Modbus TCP:
+        * Une trame Modbus TCP = MBAP Header (7 octets) + PDU Modbus (variable)
+
+        ┌───────────┬──────────┬──────────┬──────────┬──────────────────┐
+        │Transaction│ Protocol │  Length  │  UnitID  │  PDU (Function   │
+        │   ID (2)  │  ID (2)  │   (2)    │   (1)    │  Code + Data)    │
+        └───────────┴──────────┴──────────┴──────────┴──────────────────┘
+        Champ	            Taille	        Rôle
+        Transaction ID	    2 octets	    Identifie la requête (permet d'associer réponse à demande)
+        Protocol ID	        2 octets	    Toujours 0x0000 pour Modbus
+        Length	            2 octets	    Nombre d'octets suivants (UnitID + PDU)
+        Unit ID	            1 octet	        Remplace l'adresse esclave RTU (1-247)
+        PDU	                variable	    Function Code + données (identique à RTU, sans CRC)
 -#
 
 var controleModbus

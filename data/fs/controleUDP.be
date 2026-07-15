@@ -40,6 +40,21 @@ API des messages UDP
             . Les esclaves (id > 0) envoient leurs paramètres par UDP MultiCast au Maitre (fonction 'ReglageUDP forceEnvoiParams ON') / TelePeriod: OK
 
         * les commandes utilisées respectent l'API Tasmota ou des commandes personnelles
+
+    - controleUDP.be — Le pilote (driver)
+        * C'est le point d'entrée qui instancie et enregistre les connexions UDP auprès de Tasmota.
+        * Rôle : Créer deux instances de la classe CONTROLE_UDP (UniCast + MultiCast) et les enregistrer comme drivers Tasmota, uniquement si serveur["udp"]["activation"] == "ON".
+
+        * Ce que fait la classe CONTROLE_UDP :
+            . init(typeComm, ip, port) — Ouvre un socket UDP (UniCast sur port 2000, MultiCast sur 224.3.0.1:4000), enregistre les paramètres dans le module udpFonctions, 
+            ajoute la règle System pour gérer les événements de démarrage, et enregistre la commande ReglageUDP (UniCast seulement).
+
+            . every_100ms() — Appelé toutes les 100ms par Tasmota. Lit les paquets UDP entrants (UniCast ou MultiCast) et, si un message valide est reçu, l'interprète comme une commande Tasmota (cmnd/stat/tele) et l'exécute via tasmota.cmd().
+
+            . Architecture réseau :
+                Esclaves (id > 0) → répondent en UniCast au maître
+                Maître (id == 0) → commande les esclaves en MultiCast
+                Le maître est aussi un RangeExtender Wi-Fi (AP secondaire sur 192.168.4.x)
 -#
 
 var controleUDP_unicast

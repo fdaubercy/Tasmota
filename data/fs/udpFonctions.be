@@ -1,3 +1,35 @@
+#-
+    - C'est un module partagé (singleton via module()) qui contient toute la logique métier UDP.
+    - Variables globales du module :
+        * udpReception[0/1] — sockets UDP ouverts (0=UniCast, 1=MultiCast)
+        * port[0/1], ip[0/1], typeComm[0/1] — paramètres des deux canaux
+
+    - Fonctions principales :
+        Fonction	                    Rôle
+        log()	                        Log conditionnel selon le flag debug de la config
+        reglageUDP()	                Commande Tasmota ReglageUDP — dispatche vers les sous-fonctions selon le mot-clé reçu
+        changementEtatDemarrage()	    Gère les événements système (System#Boot, Wifi#Connected, System#Save) : ouvre/ferme les sockets, déclenche l'envoi des paramètres
+        envoiUDP()	                    Envoie un message UDP (UniCast vers une IP, ou MultiCast selon le rôle maître/esclave)
+        lireUDP()	                    Lit un paquet UDP entrant, détecte si c'est une trame ModBus ou une commande TasmotaClient, et route vers le bon handler
+        resetClientsConnectes()	        Marque tous les esclaves comme "Offline" dans /json/discovery.json (appelé au démarrage du maître)
+
+    - Sous-commandes de ReglageUDP :
+        Sous-commande	                Qui	            Effet
+        logActivation ON/OFF	        tous	        Active/désactive les logs UDP
+        envoiUniCast <ip> <msg>	        tous	        Envoie un message en unicast (test)
+        envoiMultiCast <msg>	        tous	        Envoie un message en multicast
+        forceEnvoiParams ON	            esclave	        Envoie ses paramètres (discovery.json) au maître via MultiCast, puis replanifie via telePeriod
+        ImAlive <json>	                maître	        Reçoit les paramètres d'un esclave, met à jour /json/discovery.json, et lui envoie l'heure + son IP en retour
+        Timestamp <ts>	                esclave	        Met à jour l'horloge interne avec le timestamp reçu
+        ipMaitre <ip>	                esclave	        Enregistre l'IP du maître en persistance
+
+    - Flux de démarrage :
+        * System#Boot → ouverture des sockets UDP
+        * Esclave → envoie forceEnvoiParams ON → publie ses infos en MultiCast
+        * Maître → reçoit ImAlive → répond avec l'heure et son IP
+        * System#Save → fermeture des sockets
+-#
+
 var udpFonctions = module("/udpFonctions")
 
 udpFonctions.DEBUG = nil
