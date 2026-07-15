@@ -1,0 +1,28 @@
+[
+  {
+    "id": "mem-MEMORY-m-moire-du-projet-tasmota-0",
+    "key": "m-moire-du-projet-tasmota",
+    "content": "- [Scripts sauvegarde/restauration Tasmota](project_sauvegarde_scripts.md) — état final des deux scripts dans outils_docs/scripts_python/, toutes améliorations implémentées (mai 2026)",
+    "summary": "Mémoire du projet Tasmota",
+    "namespace": "core",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "C:\\Users\\fdaub\\.claude\\projects\\c--Users-fdaub-Documents-Github-Tasmota\\memory\\MEMORY.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1782683016168
+  },
+  {
+    "id": "mem-project_sauvegarde_scripts-----0",
+    "key": "-",
+    "content": "name: Scripts sauvegarde/restauration Tasmota\ndescription: État final des deux scripts de sauvegarde perso Tasmota dans outils_docs/scripts_python/\ntype: project\noriginSessionId: 1ac54dba-fc16-4197-8e2c-85f2a0838daf\n---\nLes deux scripts sont dans `outils_docs/scripts_python/` et ont été réécrits plusieurs fois au cours de la session.\n\n**Version finale (session mai 2026)** — toutes les améliorations sont implémentées.\n\n### genere_sauvegarde_tasmota.py\n- Auto-détection A/M/D via `git diff upstream",
+    "summary": "---",
+    "namespace": "project_sauvegarde_scripts",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "C:\\Users\\fdaub\\.claude\\projects\\c--Users-fdaub-Documents-Github-Tasmota\\memory\\project_sauvegarde_scripts.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1782683016171
+  }
+]

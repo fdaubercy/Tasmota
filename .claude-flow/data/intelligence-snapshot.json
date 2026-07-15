@@ -1,0 +1,152 @@
+[
+  {
+    "timestamp": 1782683086298,
+    "nodes": 2,
+    "edges": 0,
+    "pageRankSum": 1,
+    "confidences": [
+      0.5,
+      0.5
+    ],
+    "accessCounts": [
+      0,
+      0
+    ],
+    "topPatterns": [
+      {
+        "id": "mem-MEMORY-m-moire-du-projet-tasmota-0",
+        "summary": "Mémoire du projet Tasmota",
+        "confidence": 0.5,
+        "pageRank": 0.5,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_sauvegarde_scripts-----0",
+        "summary": "---",
+        "confidence": 0.5,
+        "pageRank": 0.5,
+        "accessCount": 0
+      }
+    ]
+  },
+  {
+    "timestamp": 1782683459064,
+    "nodes": 2,
+    "edges": 0,
+    "pageRankSum": 1,
+    "confidences": [
+      0.5,
+      0.5
+    ],
+    "accessCounts": [
+      0,
+      0
+    ],
+    "topPatterns": [
+      {
+        "id": "mem-MEMORY-m-moire-du-projet-tasmota-0",
+        "summary": "Mémoire du projet Tasmota",
+        "confidence": 0.5,
+        "pageRank": 0.5,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_sauvegarde_scripts-----0",
+        "summary": "---",
+        "confidence": 0.5,
+        "pageRank": 0.5,
+        "accessCount": 0
+      }
+    ]
+  },
+  {
+    "timestamp": 1782683760084,
+    "nodes": 2,
+    "edges": 0,
+    "pageRankSum": 1,
+    "confidences": [
+      0.5,
+      0.5
+    ],
+    "accessCounts": [
+      0,
+      0
+    ],
+    "topPatterns": [
+      {
+        "id": "mem-MEMORY-m-moire-du-projet-tasmota-0",
+        "summary": "Mémoire du projet Tasmota",
+        "confidence": 0.5,
+        "pageRank": 0.5,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_sauvegarde_scripts-----0",
+        "summary": "---",
+        "confidence": 0.5,
+        "pageRank": 0.5,
+        "accessCount": 0
+      }
+    ]
+  },
+  {
+    "timestamp": 1782683762252,
+    "nodes": 2,
+    "edges": 0,
+    "pageRankSum": 1,
+    "confidences": [
+      0.5,
+      0.5
+    ],
+    "accessCounts": [
+      0,
+      0
+    ],
+    "topPatterns": [
+      {
+        "id": "mem-MEMORY-m-moire-du-projet-tasmota-0",
+        "summary": "Mémoire du projet Tasmota",
+        "confidence": 0.5,
+        "pageRank": 0.5,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_sauvegarde_scripts-----0",
+        "summary": "---",
+        "confidence": 0.5,
+        "pageRank": 0.5,
+        "accessCount": 0
+      }
+    ]
+  },
+  {
+    "timestamp": 1782683762855,
+    "nodes": 2,
+    "edges": 0,
+    "pageRankSum": 1,
+    "confidences": [
+      0.5,
+      0.5
+    ],
+    "accessCounts": [
+      0,
+      0
+    ],
+    "topPatterns": [
+      {
+        "id": "mem-MEMORY-m-moire-du-projet-tasmota-0",
+        "summary": "Mémoire du projet Tasmota",
+        "confidence": 0.5,
+        "pageRank": 0.5,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_sauvegarde_scripts-----0",
+        "summary": "---",
+        "confidence": 0.5,
+        "pageRank": 0.5,
+        "accessCount": 0
+      }
+    ]
+  }
+]

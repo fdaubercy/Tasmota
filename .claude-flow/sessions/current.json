@@ -1,0 +1,13 @@
+{
+  "id": "session-1784118441391",
+  "startedAt": "2026-07-15T12:27:21.391Z",
+  "cwd": "c:\\Users\\fdaub\\Documents\\Github\\Tasmota",
+  "context": {},
+  "metrics": {
+    "edits": 33,
+    "commands": 0,
+    "tasks": 0,
+    "errors": 0
+  },
+  "restoredAt": "2026-07-15T12:27:35.930Z"
+}

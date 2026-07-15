@@ -1,0 +1,15 @@
+{
+  "id": "session-1782683016082",
+  "startedAt": "2026-06-28T21:43:36.083Z",
+  "cwd": "c:\\Users\\fdaub\\Documents\\Github\\Tasmota",
+  "context": {},
+  "metrics": {
+    "edits": 0,
+    "commands": 0,
+    "tasks": 0,
+    "errors": 0
+  },
+  "restoredAt": "2026-06-28T21:43:37.350Z",
+  "endedAt": "2026-06-28T21:44:46.322Z",
+  "duration": 70243
+}

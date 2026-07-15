@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "updatedAt": 1784118441410,
+  "nodeCount": 2,
+  "nodes": {
+    "mem-MEMORY-m-moire-du-projet-tasmota-0": {
+      "id": "mem-MEMORY-m-moire-du-projet-tasmota-0",
+      "category": "core",
+      "confidence": 0.5,
+      "accessCount": 0,
+      "createdAt": 1782683016168
+    },
+    "mem-project_sauvegarde_scripts-----0": {
+      "id": "mem-project_sauvegarde_scripts-----0",
+      "category": "project_sauvegarde_scripts",
+      "confidence": 0.5,
+      "accessCount": 0,
+      "createdAt": 1782683016171
+    }
+  },
+  "edges": [],
+  "pageRanks": {
+    "mem-MEMORY-m-moire-du-projet-tasmota-0": 0.5,
+    "mem-project_sauvegarde_scripts-----0": 0.5
+  }
+}
