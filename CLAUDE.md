@@ -32,9 +32,14 @@ reste possible **le jour ou un troisieme script apparaitra**, pas avant.
 
 ## Commits
 
+- Messages **en francais** — titre et corps. Regle explicite du 2026-07-15. Le depot amont
+  est anglophone : ce fork ne l'est pas, et ses commits ne remontent pas chez arendst.
+  Seuls les prefixes conventionnels (`feat:`, `fix:`, `docs:`, `chore:`) restent en anglais :
+  ce sont des etiquettes lues par les outils, pas de la prose.
 - Messages **sans accents** (precedent d'encodage casse).
 - **Pas** de trailer `Co-Authored-By`.
 - **Ne jamais pousser** sans demande explicite : le push n'est pas auto-autorise sur ce depot.
+- Ne **jamais** commiter le travail en cours de l'utilisateur sans demande explicite.
 
 ## Fichiers a ne jamais toucher sans accord
 
