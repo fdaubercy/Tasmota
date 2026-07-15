@@ -14,7 +14,12 @@ sys.path().push('src/embedded')   # allow to import from src/embedded
 import "../../../tasmota/tasmota_defines_for_berry.be" as tasmota_defines
 
 # globals that need to exist to make compilation succeed
-var globs = "path,ctypes_bytes_dyn,tasmota,ccronexpr,gpio,light,webclient,load,MD5,lv,light_state,udp,tcpclientasync,"
+# NOTE (fork) : `log` ajoute le 2026-07-15. Sans lui, tout fichier appelant log()
+# meurt en `syntax_error: 'log' undeclared` AVANT meme le resolveur `#@ solidify:`.
+# berry_tasmota, berry_matter, berry_animation et lv_haspmota le stubbent deja :
+# son absence ici est une incoherence amont, et elle frappe justement le creneau
+# prevu pour le code utilisateur — celui qui logue.
+var globs = "path,ctypes_bytes_dyn,tasmota,ccronexpr,gpio,light,webclient,load,MD5,lv,light_state,udp,tcpclientasync,log,"
             "lv_clock,lv_clock_icon,lv_signal_arcs,lv_signal_bars,lv_wifi_arcs_icon,lv_wifi_arcs,"
             "lv_wifi_bars_icon,lv_wifi_bars,"
             "_lvgl,"
