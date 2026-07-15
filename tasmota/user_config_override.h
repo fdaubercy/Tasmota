@@ -48,7 +48,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
     //  #warning *** ------------------- Le fichier 'user_config_override.ini' est appele ------------------- ***
     #if defined(CFG_HOLDER) && (CFG_HOLDER == 4617)
         #undef CFG_HOLDER
-		#define CFG_HOLDER 		1326			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
+		#define CFG_HOLDER 		1337			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
 
         // #pragma message(*** ------------------- Les paramètres flash seront remplacés ! ------------------- ***)
     #else
@@ -608,7 +608,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
                 #ifdef USE_BERRY_DEBUG
                     #undef USE_BERRY_DEBUG
                 #endif
-                //#define USE_BERRY_DEBUG                        // Compile Berry bytecode with line number information, makes exceptions easier to debug. Adds +8% of memory consumption for compiled code
+                #define USE_BERRY_DEBUG                        // Compile Berry bytecode with line number information, makes exceptions easier to debug. Adds +8% of memory consumption for compiled code
                 #ifdef UBE_BERRY_DEBUG_GC
                     #undef UBE_BERRY_DEBUG_GC
                 #endif
@@ -2622,6 +2622,56 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
                 #undef USER_BACKLOG
             #endif
             #define USER_BACKLOG      "Backlog Hostname SERVEUR-GARAGE"
+        #elif defined(FIRMWARE_ESP8266_POMPE_PISCINE)
+            //    Information page or in INFO MQTT messages
+            #ifdef CODE_IMAGE_STR
+                #undef CODE_IMAGE_STR
+            #endif
+            #define CODE_IMAGE_STR      "Pompe de Piscine"
+        
+            // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------
+            // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino
+            // #define FILE_LOG_SIZE       100
+            // #define FILE_LOG_COUNT      10                        // Enable with command `FileLog 1..4` or `FileLog 11..14`
+            // #define FILE_LOG_NAME       "/logs/fileLog %02d.txt"
+
+            // -- Project -------------------------------------
+            #ifdef PROJECT
+                #undef PROJECT
+            #endif
+            #define PROJECT             "POMPE-PISCINE"         	 // PROJECT is used as the default topic delimiter
+
+            // #ifdef USER_TEMPLATE
+            //     #undef USER_TEMPLATE
+            // #endif
+
+            // #if defined(ESP32P4_BASE_DEVKIT)
+            //     #define USER_TEMPLATE 		"{\"NAME\":\"ESP32P4 Serveur Garage Modbus\",\"GPIO\":[1,1,1,1,9440,9408,1,640,608,7776,7840,7872,7808,9376,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,5568,1,1,1,1,1,1,1,8864,8896,8928,8960,8832,8800,6720,1,1,1,1,1,5536,5600,1,1],\"FLAG\":0,\"BASE\":1,\"CMND\":\"ethtype 1|ethaddress -1\"}"
+            // #elif defined(ESP32P4_BASE_WIFI6)
+            //     #define USER_TEMPLATE 		"{\"NAME\":\"ESP32P4 Serveur Garage Modbus\",\"GPIO\":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
+            // #endif
+            // #define USER_TEMPLATE 		"{\"NAME\":\"ESP32P4 Serveur Garage Modbus\",\"GPIO\":[1,1,1,1,9440,9408,1,1,608,640,1,1,1,1,8864,8896,8928,8960,8832,8800,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,352,1,1,1,1,1,1,1,1,1,1,1,1,1,8736],\"FLAG\":0,\"BASE\":1}"
+
+            // --- Configuration du Module Sonoff S26 ---
+            // Définit le profil matériel par défaut (Sonoff S2x utilise le template de base Sonoff S20 ou un template dédié)            
+            #ifdef MODULE
+                #undef MODULE
+            #endif
+            #define MODULE  1                               // 1 correspond à l'ID du module SONOFF_S20
+
+            // -- Wi-Fi ---------------------------------------
+            #ifdef WIFI_IP_ADDRESS
+                #undef WIFI_IP_ADDRESS
+            #endif
+            #define WIFI_IP_ADDRESS         "192.168.0.40"               // [IpAddress1] Set to 0.0.0.0 for using DHCP or enter a static IP address
+
+            // --- Options recommandées pour préserver l'espace de stockage (1MB Flash) ---
+            #define USE_MQTT_TLS         // Désactivé par défaut, laissez-le ainsi pour gagner de la place
+
+            #ifdef USE_WEBSERVER
+                #undef USE_WEBSERVER
+            #endif
+            #define USE_WEBSERVER        // Optionnel : Conserver le serveur web pour l'interface de gestion
         #endif
     #endif  // USER_CONFIG_OVERRIDE_SECTION3
 
