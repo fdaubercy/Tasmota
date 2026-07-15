@@ -9,7 +9,16 @@
 #@ solidify:modbusFonctions
 
 # Définition du module
-var modbusFonctions = module("/modbusFonctions")
+# Le slash a été retiré le 2026-07-15 : `module("/modbusFonctions")` produisait un
+# NOM de module invalide en C. Le solidifieur colle ce nom dans un identifiant via
+# l'opérateur ## (berry.h:376, be_constobj.h:272), or un '/' n'y est pas légal :
+#   error: pasting "be_native_module_" and "/" does not give a valid preprocessing token
+# Sans effet sur l'appareil : `import modbusFonctions` (16 usages) charge le FICHIER
+# du LittleFS et ne regarde pas ce nom. Une fois solidifié, en revanche, l'import
+# cherche dans la table native PAR NOM — et c'est ce nom-ci qui doit y répondre.
+# À ne pas confondre avec gestionFileFolder.compileModule("/modbusFonctions"),
+# qui reçoit un CHEMIN et garde son slash.
+var modbusFonctions = module("modbusFonctions")
 
 modbusFonctions.DEBUG = nil
 modbusFonctions.serialModBus = nil
