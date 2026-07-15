@@ -29,6 +29,19 @@ for g:string2.split(globs, ",")
   global.(g) = nil
 end
 
+# NOTE (fork) : ajoute le 2026-07-15, calque sur berry_tasmota.
+# Les classes ne peuvent PAS etre stubbees a nil comme les globals ci-dessus :
+# `class X : Driver` exige que Driver soit une vraie classe, sinon le compilateur
+# refuse avec `syntax_error: 'Driver' undeclared`. On en fabrique donc une vide.
+# Sans ca, AUCUN controleXxx.be (tous des `class ... : Driver`) n'est solidifiable.
+# berry_tasmota fait exactement pareil pour I2C_Driver ; berry_custom, le creneau
+# utilisateur, n'avait aucun glob_classes du tout.
+var glob_classes = "Driver"
+
+for g:string2.split(glob_classes, ",")
+  compile(f"class {g} end")()
+end
+
 var prefix_dir = "src/embedded/"
 var prefix_out = "src/solidify/"
 
