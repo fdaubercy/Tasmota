@@ -1,34 +1,14 @@
-# Petit script pratique pour solidifier des fichiers Berry externes en fichiers embarqués
+# Little convenience script to solidify external berry files as embedded
 
 Import("env")
 
 import os
-import sys
 from genericpath import exists
 from os.path import join
 import subprocess
 from colorama import Fore, Back, Style
 import requests
 import re
-
-IS_WINDOWS = sys.platform.startswith("win")
-
-def ensureBerry():
-    BERRY_GEN_DIR = join(env.subst("$PROJECT_DIR"), "lib", "libesp32","berry")
-    os.chdir(BERRY_GEN_DIR)
-    BERRY_EXECUTABLE = join(BERRY_GEN_DIR,"berry")
-    if IS_WINDOWS:
-        berry_executable = join(BERRY_GEN_DIR,"berry.exe")
-    else:
-        if os.path.exists(BERRY_EXECUTABLE) == False:
-            print("Will compile Berry executable")
-            make_cmd = "make"
-            subprocess.call(make_cmd, shell=False)
-    
-    if os.path.exists(BERRY_EXECUTABLE):
-        return BERRY_EXECUTABLE
-    else:
-        return Null
 
 def cleanFolder():
     with open(HEADER_FILE_PATH, 'w') as file:
@@ -57,7 +37,7 @@ def addEntryToModtab(source):
     result =  re.findall(pattern,code)
     if len(result) > 0:
         class_name = result[0].replace("'","").replace('"','').replace(")","")
-        print(class_name+" est un module")
+        print(class_name+" is a module")
         is_module = True
     else: # just a class
         pattern = (r'(?<=#@ solidify:).*')
@@ -65,8 +45,8 @@ def addEntryToModtab(source):
         if len(result) > 0:
             class_name = result[0].split(",")[0]
         if class_name == None:
-            print("Nom de classe introuvable - '#@ solidify:' est-il utilisé dans le fichier Berry ??")
-            print(Fore.RED + "Abandon du processus de compilation !!")
+            print("Could not find class name - is '#@ solidify:' used in Berry file??")
+            print(Fore.RED + "Aborting build process!!")
             quit()
     MODTAB_PATH = join(env.subst("$PROJECT_DIR"), "lib", "libesp32","berry","default","be_modtab.c")
     with open(HEADER_FILE_PATH, 'r') as file:
@@ -97,7 +77,7 @@ def addEntryToModtab(source):
 
  
 def addHeaderFile(name):
-    print("Va solidifier ",name)
+    print("Will solidify ",name)
     name = name.split(".")[0]
     data = f"""
 /********************************************************************
@@ -127,15 +107,19 @@ def prepareBerryFiles(files):
             effective_name = alias or url_basename
             response = requests.get(url)
             if response.ok:
-                target = join(embedded_dir,file.split(os.path.sep)[-1])
-                if len(file.split(" ")) > 1:
-                    target = join(embedded_dir,file.split(" ")[1])
-                    print("Renaming",(file.split(os.path.sep)[-1]).split(" ")[0],"to",file.split(" ")[1])
-                open(target, "wb").write(response.content)
-                addHeaderFile(file.split(os.path.sep)[-1])
+                if alias: print("Renaming", url_basename, "to", alias)
+                with open(join(embedded_dir, effective_name), "wb") as f:
+                    f.write(response.content)
+                addHeaderFile(effective_name)
                 addEntryToModtab(response.content)
             else:
-                print(Fore.RED + "Failed to download: ",file)
+                print(Fore.RED + "Failed to download: ", file)
+            continue
+
+        # Local path (relative to PROJECT_DIR or absolute)
+        src_path = file if os.path.isabs(file) else join(env.subst("$PROJECT_DIR"), file)
+        if not os.path.isfile(src_path):
+            print(Fore.RED + "File not found: ", src_path)
             continue
         with open(src_path, 'rb') as f:
             source = f.read()
@@ -165,7 +149,37 @@ else:
             open(defines_file, 'w').close()
 
         if prepareBerryFiles(files.splitlines()):
-            solidify_command = BERRY_EXECUTABLE
-            solidify_flags = " -s -g solidify_all.be"
+            BERRY_GEN_DIR = join(env.subst("$PROJECT_DIR"), "lib", "libesp32", "berry")
+            solidify_env = os.environ.copy()
+            existing_pp = solidify_env.get("PYTHONPATH", "")
+            solidify_env["PYTHONPATH"] = (
+                BERRY_GEN_DIR + (os.pathsep + existing_pp if existing_pp else "")
+            )
+            solidify_env["PYTHONUTF8"] = "1"
             print("Start solidification for 'berry_custom':")
-            subprocess.call(solidify_command + solidify_flags, shell=True)
+            proc = subprocess.Popen(
+                (env["PYTHONEXE"], "-m", "berry_port", "-s", "-g", "solidify_all_python.be"),
+                shell=False,
+                env=solidify_env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+            other_lines = []
+            for raw in proc.stdout:
+                line = raw.rstrip("\r\n")
+                stripped = line.strip()
+                if stripped.startswith("Parsing:"):
+                    continue
+                if stripped.startswith("Skipping:"):
+                    continue
+                if stripped.startswith("# Output directory"):
+                    continue
+                other_lines.append(line)
+            rc = proc.wait()
+            for line in other_lines:
+                if line:
+                    print(line)
+            if rc != 0:
+                print(Fore.RED + f"ERROR: solidification failed (rc={rc})")
+                env.Exit(rc)
