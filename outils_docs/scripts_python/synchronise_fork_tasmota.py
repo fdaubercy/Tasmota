@@ -24,7 +24,7 @@ DESCRIPTION
     1. Diagnostic (lecture seule)  : combien de commits d'avance / de retard.
     2. Synchro DISTANTE du fork    : API merge-upstream (le bouton « Sync fork »).
     3. Les nouveautes              : resume dans le terminal + trace dans
-                                     outils_docs/historique_synchro_fork.md.
+                                     outils_docs/HISTORIQUE_SYNCHRO_FORK.md.
     4. Synchro LOCALE              : fetch + merge + push (le bouton de VS Code).
 
 STRATEGIE : MERGE, PAS REBASE
@@ -95,8 +95,12 @@ REPO = find_git_root()
 # controle d'arbre sale de l'etape 4. Comme il est suivi par git, il faut
 # l'exclure de ce controle (cf. arbre_sale()) — sinon le script se bloquerait
 # lui-meme a chaque execution, sur une salissure qu'il vient de causer.
-HISTORIQUE = REPO / "outils_docs" / "historique_synchro_fork.md"
-HISTORIQUE_REL = "outils_docs/historique_synchro_fork.md"
+# La CASSE de ce nom doit correspondre exactement a celle du disque : arbre_sale()
+# compare la chaine renvoyee par `git status --porcelain` a HISTORIQUE_REL. Windows
+# ouvrirait le fichier quelle que soit la casse, mais la comparaison, elle, echouerait
+# en silence — et le script se bloquerait sur le journal qu'il vient d'ecrire.
+HISTORIQUE = REPO / "outils_docs" / "HISTORIQUE_SYNCHRO_FORK.md"
+HISTORIQUE_REL = "outils_docs/HISTORIQUE_SYNCHRO_FORK.md"
 
 EN_TETE_HISTORIQUE = """# Historique des synchronisations du fork
 
