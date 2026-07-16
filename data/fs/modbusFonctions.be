@@ -110,7 +110,7 @@ modbusFonctions.MBR_MAX_REGISTERS = 64
 
 # trame["nbValeurs"] = Nombre de valeurs à lire / écrire
 
-modbusFonctions.log = def(msg, levelDebug)
+def modbusFonctions_log(msg, levelDebug)
     if (modbusFonctions.DEBUG == nil)
         modbusFonctions.DEBUG = drivers["ModBus"].find("debug", "OFF")
     end
@@ -119,9 +119,10 @@ modbusFonctions.log = def(msg, levelDebug)
         log(msg, levelDebug)
     end
 end
+modbusFonctions.log = modbusFonctions_log
 
 # Règle les paramètres des la connexion ModBus Série: Débit, TimeOut
-modbusFonctions.configModbusByJson = def() 
+def modbusFonctions_configModbusByJson()
     import json
     import string
     import configGlobal
@@ -159,6 +160,7 @@ modbusFonctions.configModbusByJson = def()
         end
     end
 end
+modbusFonctions.configModbusByJson = modbusFonctions_configModbusByJson
 
 #- exemples: 
     ReglageModbus logActivation OFF
@@ -172,7 +174,7 @@ end
 
     ReglageModbus ImAlive ON
 -#
-modbusFonctions.reglageModbus = def(cmd, idx, payload, payload_json)
+def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
     import string
     import json
     import persist
@@ -304,9 +306,10 @@ modbusFonctions.reglageModbus = def(cmd, idx, payload, payload_json)
     reponse_cmnd += string.format("logActivated=%s", modbusFonctions.DEBUG)
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
+modbusFonctions.reglageModbus = modbusFonctions_reglageModbus
 
 # Règles sur changement d'état lors du démarrage de Tasmota
-modbusFonctions.changementEtatDemarrage = def(value, trigger, msg)
+def modbusFonctions_changementEtatDemarrage(value, trigger, msg)
     import string
     import mqtt
     import json
@@ -384,9 +387,10 @@ modbusFonctions.changementEtatDemarrage = def(value, trigger, msg)
         end
     end
 end
+modbusFonctions.changementEtatDemarrage = modbusFonctions_changementEtatDemarrage
 
 # Fonction d'envoi de messages ModBus sur les différentes voies: Série RS485 / TCP / UDP
-modbusFonctions.envoiMsgModbus = def(paramMSG, typeMsg, id)
+def modbusFonctions_envoiMsgModbus(paramMSG, typeMsg, id)
     import json
     import string
 
@@ -421,8 +425,9 @@ modbusFonctions.envoiMsgModbus = def(paramMSG, typeMsg, id)
     if(drivers["ModBus"]["typeComm"].find("TCP", "OFF") == "ON")    modbusFonctions.envoiMsgModbusTCP(modbusFonctions.prepareTrame(paramMSG, typeMsg), typeMsg)     end
     if(drivers["ModBus"]["typeComm"].find("UDP", "OFF") == "ON")    modbusFonctions.envoiMsgModbusUDP(modbusFonctions.prepareTrame(paramMSG, typeMsg), typeMsg)     end
 end
+modbusFonctions.envoiMsgModbus = modbusFonctions_envoiMsgModbus
 
-modbusFonctions.envoiMsgModbusSerial = def(paramMSG, typeMsg)
+def modbusFonctions_envoiMsgModbusSerial(paramMSG, typeMsg)
     import string
     import json
     import diversFonctions
@@ -503,13 +508,14 @@ modbusFonctions.envoiMsgModbusSerial = def(paramMSG, typeMsg)
         modbusFonctions.serialModBus.write(reponse)
     end
 end
+modbusFonctions.envoiMsgModbusSerial = modbusFonctions_envoiMsgModbusSerial
 
 #- Fonction d'envoi de la commande ModBus et des réponse ModBus
     par communication UDP si le paramétre est "True" dans _persist.json
     lancé après une commande 'ModBusSend' (si maitre: id == 0) OU une commande 'modbusFonctions.serialModBus.write' (si esclave: id > 0)
     depuis la fonction 'modbusFonctions.envoiMsgModbus(paramMSG, typeMsg)'
 -#
-modbusFonctions.envoiMsgModbusUDP = def(Trame, typeMsg)
+def modbusFonctions_envoiMsgModbusUDP(Trame, typeMsg)
     import udpFonctions
     import json
     import gestionFileFolder
@@ -559,6 +565,7 @@ modbusFonctions.envoiMsgModbusUDP = def(Trame, typeMsg)
         udpFonctions.envoiUDP("MultiCast", "", "ModbusUDP " + Trame.tostring())
     end
 end
+modbusFonctions.envoiMsgModbusUDP = modbusFonctions_envoiMsgModbusUDP
 
 #- Fonction d'envoi de la commande ModBus et des réponse ModBus
     par communication TCP si le paramétre est "True" dans _persist.json
@@ -569,7 +576,7 @@ end
         Client = modbusFonctions.clients[id]        # Si esclave ModBus (id > 0) => Client TCP (Maitre ModBus)
         Client = tcpFonctions.connexionAsync        # Si esclave ModBus (id == 0) => Serveur TCP (Esclave ModBus)
 -#
-modbusFonctions.envoiMsgModbusTCP = def(Client, Trame, typeMsg)
+def modbusFonctions_envoiMsgModbusTCP(Client, Trame, typeMsg)
 # modbusFonctions.envoiMsgModbusTCP = def(Trame, typeMsg)
     import json
     import string
@@ -598,11 +605,12 @@ modbusFonctions.envoiMsgModbusTCP = def(Client, Trame, typeMsg)
         end
     end
 end
+modbusFonctions.envoiMsgModbusTCP = modbusFonctions_envoiMsgModbusTCP
 
 # Fonction de lecture de messages ModBus sur le port RS485 (Uniquement pour les esclaves: id > 0)
 # Imite le rôle de la fonction native modbus Tasmota
 # Puis publie le message MQTT 'ModbusReceived' sur le Topic ==> Déclenchera la règle 'tasmota.add_rule('ModbusReceived')' -> vers la fonction controleModbus.recupereReponseModBus()
-modbusFonctions.lireMsgModbus = def(typeTitre, msg)
+def modbusFonctions_lireMsgModbus(typeTitre, msg)
     import string
     import json
 
@@ -690,10 +698,11 @@ modbusFonctions.lireMsgModbus = def(typeTitre, msg)
                                             ), serveur["mqtt"]["topic"])
     end
 end
+modbusFonctions.lireMsgModbus = modbusFonctions_lireMsgModbus
 
 # Fonction chargée d'éxécuter la commande ModBus
 # Prépare la réponse pour l'envoyer au maitre
-modbusFonctions.executeCmdModbus = def(paramMSG)
+def modbusFonctions_executeCmdModbus(paramMSG)
     import string
 
     # Initialise le tableau des valeurs
@@ -916,6 +925,7 @@ modbusFonctions.executeCmdModbus = def(paramMSG)
         end
     end
 end
+modbusFonctions.executeCmdModbus = modbusFonctions_executeCmdModbus
 
 #- Fonction chargée de parser les caractéristiques du message ModBus
     S'appuie sur la fonction 'void ModbusBridgeHandle(void)' de 'xdrv_63_modbus_bridge.ino'
@@ -923,7 +933,7 @@ end
     @typeTitre = "ModbusReceived"
     paramMSG[typeTitre]["Erreur"] permet au traitement de savoir si le message est valide ou non
 -#
-modbusFonctions.decrypteMSG = def (paramMSG, typeTitre)
+def modbusFonctions_decrypteMSG(paramMSG, typeTitre)
     import string
     import crc
     import json
@@ -1046,6 +1056,7 @@ modbusFonctions.decrypteMSG = def (paramMSG, typeTitre)
 
     modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Values = %s", str(paramMSG[typeTitre]["Values"])), LOG_LEVEL_DEBUG_PLUS)
 end
+modbusFonctions.decrypteMSG = modbusFonctions_decrypteMSG
 
 #- Prépare la Trame ModBus à partir des paramètres du message json  à envoyer
     S'appuie sur la fonction 'void CmndModbusBridgeSend(char *json_in)' de 'xdrv_63_modbus_bridge.ino'
@@ -1054,7 +1065,7 @@ end
     @paramMSG = json représentant le message ModBus à envoyer
     @typeMsg = "Commande" (valeur par défaut) ou "Reponse"
 -#
-modbusFonctions.prepareTrame = def(paramMSG, typeMsg)
+def modbusFonctions_prepareTrame(paramMSG, typeMsg)
     import json
     import string
 
@@ -1294,9 +1305,10 @@ modbusFonctions.prepareTrame = def(paramMSG, typeMsg)
 
     return Trame
 end
+modbusFonctions.prepareTrame = modbusFonctions_prepareTrame
 
 # Fonction chargée de relancer une fonction après un timer
-modbusFonctions.relanceEnvoiMsgModbus = def(paramMSG, typeMsg)
+def modbusFonctions_relanceEnvoiMsgModbus(paramMSG, typeMsg)
     # Probleme 'set_timer()' avec l'ESP32-P4
     if (diverses["typeESP"] == "ESP32P4")
         tasmota.add_cron(f"*/{drivers['ModBus'].find('timeoutReponse', 1000) / 1000:i} * * * * *", 
@@ -1307,10 +1319,11 @@ modbusFonctions.relanceEnvoiMsgModbus = def(paramMSG, typeMsg)
     else tasmota.set_timer(drivers["ModBus"].find("timeoutReponse", 1000), / -> modbusFonctions.envoiMsgModbusSerial(paramMSG, typeMsg), "envoiMsgModbus_" + str(paramMSG["StartAddress"]))
     end
 end
+modbusFonctions.relanceEnvoiMsgModbus = modbusFonctions_relanceEnvoiMsgModbus
 
 # Fonction chargée de réinitialiser le Flag d'avertissement de connexion ModBus en cours
 # après un délai de timeout défini par 'drivers['ModBus']['timeoutReponse']'
-modbusFonctions.reinitialiseFlagModBus = def(paramMSG)
+def modbusFonctions_reinitialiseFlagModBus(paramMSG)
     tasmota.set_timer(drivers["ModBus"].find("timeoutReponse", 1000), 
                                             def()
                                                 if (modbusFonctions.attenteReponse)
@@ -1319,8 +1332,9 @@ modbusFonctions.reinitialiseFlagModBus = def(paramMSG)
                                                 end
                                             end, "resetFlagTimeout_" + str(paramMSG["StartAddress"]))
 end
+modbusFonctions.reinitialiseFlagModBus = modbusFonctions_reinitialiseFlagModBus
 
-modbusFonctions.crc16modbus = def(buf)
+def modbusFonctions_crc16modbus(buf)
     var crc = 0x0000FFFF
     var polynomial = 0x0000A001
 
@@ -1341,6 +1355,7 @@ modbusFonctions.crc16modbus = def(buf)
     crc = (crc >> 8) + ((crc & 0x00FF) << 8)
     return crc
 end
+modbusFonctions.crc16modbus = modbusFonctions_crc16modbus
 
 # Retourne le module lors de l'importation
 return modbusFonctions
