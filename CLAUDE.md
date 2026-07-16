@@ -30,6 +30,54 @@ seul le total brut deborde, de 27 lignes de documentation.
 Extraire un module d'utilitaires partages avec `synchronise_upstream_tasmota.py`
 reste possible **le jour ou un troisieme script apparaitra**, pas avant.
 
+## A FAIRE SUR CHAQUE POSTE — reglages VS Code (hors depot)
+
+**Ces reglages ne sont PAS versionnes** : ils vivent dans le profil VS Code de la
+machine. Sur un nouveau clone, ils sont donc **absents**, et le symptome revient.
+
+### Le symptome, si on les oublie
+
+Build qui echoue **par intermittence** sur :
+
+```
+PermissionError: [Errno 13] Permission denied: '...\tasmota\tasmota.ino.cpp'
+```
+
+### La cause (mesuree le 2026-07-15, pas supposee)
+
+Ce n'est **ni** Windows Defender **ni** un build concurrent. C'est
+`cpptools-srv2.exe -i TagParser`, l'indexeur de l'extension C/C++ de VS Code :
+PlatformIO ecrit `tasmota.ino.cpp` (7,6 Mo), le relit, puis le **rouvre en ecriture**
+quelques millisecondes plus tard (`pioino.py:104-110`) — l'indexeur s'en saisit
+entre-temps. Nomme par le Restart Manager de Windows sur 23 echecs sur 23 ;
+reproduit a 92 % dans le depot, 0 % hors depot.
+
+### Le correctif
+
+Dans les reglages du **profil VS Code actif** (et non `User\settings.json` : avec un
+profil, ce fichier n'est plus celui qui s'applique). Trouver le profil actif via
+`window.newWindowProfile` et `globalStorage\storage.json` (cle `userDataProfiles`) —
+p. ex. `%APPDATA%\Code\User\profiles\<id>\settings.json` :
+
+```json
+"C_Cpp.files.exclude": {
+    "**/.vscode": true,
+    "**/.vs": true,
+    "**/*.ino.cpp": true
+},
+"C_Cpp.exclusionPolicy": "checkFilesAndFolders",
+```
+
+**Les deux lignes sont indispensables.** Seul, `C_Cpp.files.exclude` **n'a aucun effet** :
+par defaut (`checkFolders`) l'extension n'evalue ses exclusions qu'au niveau des
+dossiers et « individual files are not checked ». Mesure a l'appui : 8 ouvertures sur 8
+malgre l'exclusion, puis 0 sur 10 une fois `exclusionPolicy` pose.
+
+**Ne PAS le mettre dans `.vscode/settings.json`** : ce fichier est suivi par git **et**
+existe en amont — toute modification entrerait en conflit a chaque synchronisation du fork.
+
+Prise en compte a chaud, sans redemarrer VS Code.
+
 ## Commits
 
 - Messages **en francais** — titre et corps. Regle explicite du 2026-07-15. Le depot amont

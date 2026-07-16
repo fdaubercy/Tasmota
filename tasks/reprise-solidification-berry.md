@@ -150,6 +150,17 @@ PYTHONPATH=../berry PYTHONUTF8=1 python -m berry_port -s -g solidify_all_python.
 
 ---
 
+## Sur un AUTRE poste (nouveau clone)
+
+Tout est versionné **sauf une chose** : les réglages VS Code
+(`C_Cpp.files.exclude` + `C_Cpp.exclusionPolicy`), qui vivent dans le profil de la
+machine. Sans eux, le `PermissionError` intermittent sur `tasmota.ino.cpp` revient.
+**Le mode d'emploi complet est dans `CLAUDE.md`, section « À FAIRE SUR CHAQUE POSTE ».**
+
+Les deux outils Python n'ont **aucun chemin en dur** : racine du dépôt, PlatformIO et
+toolchain xtensa sont tous déduits. Ils marchent sur n'importe quel poste, sous
+réserve qu'un build y soit déjà passé une fois (pour que la toolchain soit là).
+
 ## État du dépôt
 
 - **8 commits locaux non poussés.** Le fork est à jour avec arendst (0 de retard).
