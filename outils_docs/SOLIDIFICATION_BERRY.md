@@ -147,10 +147,17 @@ for g:string2.split(globs, ",")
 end
 ```
 
-⏳ **Conséquence attendue (Q2, en cours de vérification)** : tout appel `tasmota.*` **au niveau
-fichier** casse la solidification. Ça vise directement nos `controleXxx.be`, dont la garde
-d'activation en pied appelle `tasmota.add_driver()`. Le corps des fonctions, lui, n'est pas exécuté —
-seul le niveau fichier compte.
+✅ **CONFIRMÉ (Q2, tranché le 2026-07-15)** : tout appel `tasmota.*` **au niveau fichier** casse
+la solidification. Ça vise directement nos `controleXxx.be`, dont la garde d'activation en pied
+appelle `tasmota.add_driver()`.
+
+Preuve : `controleTest.be` **avec** son bloc de pied → `type_error: 'nil' value is not callable`,
+rc=1, aucune sortie. **Sans** le bloc → `solidified_controleTest.h` de 7503 octets, avec les
+4 méthodes solidifiées.
+
+**Le corps des fonctions n'est jamais exécuté, seulement compilé** : `init()` contient pourtant
+`tasmota.add_cmd(...)` et se solidifie sans broncher. Seul le **niveau fichier** s'exécute.
+→ La garde d'activation doit sortir du niveau fichier ; la classe, elle, n'a pas à bouger.
 
 ### Piège 3 — La directive résout depuis `global`
 
@@ -163,9 +170,13 @@ for subname : string2.split(object_name, '.')
 L'objet visé par `#@ solidify:` doit être **global**. Chez arendst, `class Driver` déclarée au niveau
 fichier est bien globale.
 
-⏳ **Notre convention `var xxxFonctions = module("/xxxFonctions")` déclare un `var` local au fichier**
-— probablement pas atteignable (Q1, en cours de vérification). Si confirmé, la forme des
-`xxxFonctions.be` devra être adaptée pour être solidifiable.
+✅ **RÉFUTÉ (Q1, tranché le 2026-07-15).** On supposait qu'un `var` au niveau fichier était local
+au chunk, donc invisible depuis `global`. **C'est faux** : en Berry, un `var` au niveau fichier
+**est** global, et le résolveur le trouve. `var xxxFonctions = module(...)` est bien atteignable.
+
+⚠️ **Mais le NOM, lui, doit perdre son slash.** `module("/xxxFonctions")` produit un identifiant C
+invalide (`error: pasting "be_native_module_" and "/"`, cf. le verdict). Ce n'est pas le résolveur
+qui bloquait, c'est le nom. Distinction qui a coûté un build de 2h16.
 
 ### Piège 4 — Le `.be` qui reste sur le LittleFS coûte du BOOT, pas de la RAM
 

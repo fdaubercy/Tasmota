@@ -93,9 +93,14 @@ n'est que cosmetique. Une fois solidifie, en revanche, `import modbusFonctions` 
 dans la table native **par nom** — et `/modbusFonctions` n'y repondrait pas. Le slash
 gene donc deux fois : compilation C **et** resolution de l'import.
 
-⏳ **A verifier avant de toucher aux 15 modules** : que le retrait du slash n'a aucun
-effet sur l'appareil (`gestionFileFolder.compileModule()` recoit des chemins avec slash,
-ce qui est un usage distinct).
+✅ **VERIFIE le 2026-07-16 : le retrait du slash est sans effet sur l'appareil.**
+`load_package()` (`be_module.c:213-227`) construit un chemin de **fichier** a partir du nom
+d'`import` (`import modbusFonctions` → cherche `modbusFonctions.be`). Le nom passe a
+`module("...")` ne sert **qu'a** la table native. Un appareil qui charge depuis le LittleFS ne
+le regarde jamais.
+
+Ne pas confondre avec `gestionFileFolder.compileModule("/modbusFonctions")`, qui recoit un
+**chemin** sur le FS et garde son slash : usage distinct, non concerne.
 
 Variante classe testee : non — inutile, l'hypothese de Q1 etait deja refutee.
 
