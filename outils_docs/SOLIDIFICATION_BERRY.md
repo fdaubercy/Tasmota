@@ -395,8 +395,8 @@ else return true          # <-- fichier absent : ne fait RIEN
 end
 ```
 
-**Aucune ligne de Berry a modifier, aucun `autoexec.be` a retoucher.** Une seule declaration
-commande toute la chaine :
+**Rien a modifier dans le code Berry : ni dans `autoexec.be`, ni ailleurs.** Une seule
+declaration commande toute la chaine :
 
 ```ini
 custom_berry_solidify   =   data/fs/modbusFonctions.be
@@ -414,6 +414,32 @@ Verifie sur un vrai `pio run -t buildfs` : `modbusFonctions.be` saute, `udpFonct
 Plus de boucle courte « editer le `.be` → televerser → `BrRestart` » pour lui : toute
 modification impose un rebuild + reflash. C'est le prix de la solidification (§3), et c'est
 pourquoi on ne solidifie qu'un module **fige**.
+
+### `autoexec.be` reste indispensable — la solidification ne le remplace pas
+
+A ne pas confondre avec « il n'y a rien a y modifier ». Un module solidifie **depend** de
+l'`autoexec.be` pour trois choses :
+
+1. **Les globaux qu'il resout a l'execution.** Le bytecode solidifie ne fige PAS les valeurs :
+   il resout les globaux **par nom** (ils apparaissent en `be_kv_str(drivers)`,
+   `be_kv_str(tasmota)`... dans le `.h`). Or ce sont les lignes 17-21 de l'`autoexec.be` qui
+   les affectent depuis `_persist.json` :
+
+   ```berry
+   serveur  = persist.serveur
+   drivers  = persist.drivers
+   ```
+
+   Sans elles, `modbusFonctions.log()` chercherait `drivers["ModBus"]` et trouverait `nil`.
+   **La solidification deplace le CODE en flash, pas ses DEPENDANCES.**
+
+2. **Le chargement des 29 autres modules**, via `compileModule` et `loadBerryFile`.
+3. **L'enregistrement des drivers** (`loadBerryFile("/controleModbus", ...)`), qui font vivre
+   le module.
+
+La seule ligne concernee — `compileModule("/monModule", ...)` — **reste et ne fait plus rien**
+(fichier absent → `else return true`, l.378). La laisser est meme preferable : le meme
+`autoexec.be` sert alors les appareils solidifies **et** les autres.
 
 ## 7. Ce qui n'est PAS solidifié — et ne le sera jamais tout seul
 
