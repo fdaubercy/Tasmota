@@ -103,15 +103,26 @@ Le stub des 9 globaux, lui, nous est propre et reste chez nous.
 
 ## Méthode : ne plus jamais lancer un build à l'aveugle
 
-Un build fait **2h16**. La chaîne complète se rejoue en **quelques secondes** :
+Un build fait **2h16**. La chaîne complète se rejoue en **une dizaine de secondes** :
 
 ```
-python <scratchpad>/chaine_complete.py     # solidification -> coc -> compilation
+python outils_docs/scripts_python/solidifie_et_compile_berry.py
 ```
 
-Elle enchaîne les 3 étapes de `gen-berry-structures.py` et **compile** le `.h` avec le vrai
-`xtensa-esp-elf-gcc`. Les 3 verdicts rendus avant elle étaient **faux**, tous pour la même
-raison : conclure sur l'**existence** d'un `.h` sans le compiler.
+Elle enchaîne les 3 étapes de `gen-berry-structures.py` — solidification, `coc`, puis
+**compilation** du `.h` avec le vrai `xtensa-esp-elf-gcc`. Les 3 verdicts rendus avant elle
+étaient **faux**, tous pour la même raison : conclure sur l'**existence** d'un `.h` sans le
+compiler. **Toujours la passer avant de lancer un build.**
+
+Pour convertir un autre module (les 12 restants) :
+
+```
+python outils_docs/scripts_python/nomme_fonctions_berry.py data/fs/<module>.be
+python outils_docs/scripts_python/nomme_fonctions_berry.py data/fs/<module>.be --ecrire
+```
+
+Sans `--ecrire` : simulation seule. Les deux scripts portent des chemins absolus vers ce
+poste — à adapter si le dépôt bouge.
 
 Solidifier à la main (court-circuite le pré-script qui vide `embedded/`) :
 
