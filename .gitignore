@@ -36,6 +36,11 @@ build_output/*
 firmware.map
 firmware.asm
 tasmota/tasmota.ino.cpp
+# Fichiers de sonde de outils_docs/scripts_python/corrige_reglages_vscode.py --verifier.
+# Ils DOIVENT etre dans l'espace de travail pour que l'indexeur C/C++ les voie : c'est
+# le principe du test. L'un d'eux est donc encore tenu par l'indexeur a la fin du run
+# et survit parfois — d'ou cette regle. Le run suivant les balaie au demarrage.
+tasmota/zzz_verif_*
 #platformio_override.ini
 #platformio_tasmota_cenv.ini
 platformio_tasmota_user_env.ini

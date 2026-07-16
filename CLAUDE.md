@@ -32,6 +32,18 @@ reste possible **le jour ou un troisieme script apparaitra**, pas avant.
 
 ## A FAIRE SUR CHAQUE POSTE — reglages VS Code (hors depot)
 
+```
+python outils_docs/scripts_python/corrige_reglages_vscode.py --verifier
+```
+
+Une fois par poste, apres un clone. Le script trouve le profil VS Code actif, pose
+les reglages, et **prouve qu'ils agissent** (temoin/cible sur l'indexeur). Il est
+idempotent, sauvegarde avant d'ecrire, et refuse de fusionner a l'aveugle dans un
+`C_Cpp.files.exclude` existant.
+
+Le reste de cette section explique **pourquoi**, si le script echoue ou si on veut
+comprendre.
+
 **Ces reglages ne sont PAS versionnes** : ils vivent dans le profil VS Code de la
 machine. Sur un nouveau clone, ils sont donc **absents**, et le symptome revient.
 
