@@ -26,11 +26,18 @@ ne charge plus rien (`autoexec.be:29`).
 Puis console Berry du grenier (`http://192.168.0.44/` → Berry Scripting Console) :
 
 ```berry
+import introspect
+import modbusFonctions
+introspect.solidified(modbusFonctions)       # true = vient bien de la FLASH  <-- LA preuve
+modbusFonctions.crc16modbus(bytes("0103"))   # une vraie fonction, vraiment appelee
+
 import path
 path.listdir("/")                            # modbusFonctions.be ne doit PAS y etre
-import modbusFonctions                       # doit repondre depuis la flash
-modbusFonctions.crc16modbus(bytes("0103"))   # une vraie fonction, vraiment appelee
 ```
+
+`introspect.solidified()` (`be_introspectlib.c:140`) retourne `gc_isconst(...)` : vrai si
+l'objet est const, donc en flash. C'est la seule vérification qui **demande** l'origine à la VM
+au lieu de la déduire de l'absence du fichier.
 
 - **`import` répond** → **Q3 = OUI**, phase 1 close, la voie est ouverte.
 - **`module_not_found`** → Q3 = NON, et tout le reste est caduc.

@@ -308,7 +308,19 @@ Par ordre de force de preuve. Les niveaux 1 et 2 sont les seuls qui comptent au 
 | 1 | `solidified_*.h` présents, horodatés de ce build | `lib/libesp32/<module>/src/solidify/` | Des sorties ont été écrites. Utiliser `ls -a` (piège 6). |
 | 2 | `output_files` non vide | `.pio/build/<env>/berry_solidify_cache/<module>.json` | Le build a **enregistré** ces sorties. |
 | 3 | Symboles `be_class_X` / `be_module_X` | `nm` sur le `.elf` | Le code est **réellement dans le firmware**. |
-| 4 | `import x` réussit alors que `path.listdir("/")` ne montre pas le fichier | console Berry de l'appareil | Preuve de bout en bout : c'est la version solidifiée qui sert. |
+| 4 | `import x` réussit alors que `path.listdir("/")` ne montre pas le fichier | console Berry de l'appareil | Preuve de bout en bout — mais indirecte : elle deduit l'origine de l'absence du fichier. |
+| **5** | **`introspect.solidified(x)` → `true`** | console Berry de l'appareil | **La meilleure.** Ne deduit rien : demande a la VM **d'ou vient** l'objet. |
+
+**Le niveau 5 est le seul qui reponde directement.** `introspect.solidified(v)`
+(`be_introspectlib.c:140`) retourne `gc_isconst(...)` : vrai si l'objet est **const, donc en
+flash** et hors du ramasse-miettes. Le niveau 4, lui, raisonne par elimination — « le fichier
+n'est pas la, donc ca vient de la flash » — ce qui reste une deduction.
+
+```berry
+import introspect
+import modbusFonctions
+introspect.solidified(modbusFonctions)   # true = vient bien de la flash
+```
 
 Niveaux 1 et 2 :
 
@@ -414,6 +426,46 @@ Verifie sur un vrai `pio run -t buildfs` : `modbusFonctions.be` saute, `udpFonct
 Plus de boucle courte « editer le `.be` → televerser → `BrRestart` » pour lui : toute
 modification impose un rebuild + reflash. C'est le prix de la solidification (§3), et c'est
 pourquoi on ne solidifie qu'un module **fige**.
+
+### Supprimer les `.be`/`.bec` deja solidifies d'un appareil — evalue le 2026-07-16
+
+**Verdict : ne rien ecrire.** L'evaluation, pour ne pas la refaire dans six mois.
+
+**Le probleme n'existe que par transition.** L'image `littlefs.bin` ne contient plus les
+modules solidifies (voir ci-dessus). Un appareil garde un ancien fichier **uniquement** s'il a
+ete flashe en **firmware seul** (`-t upload`), qui ne touche pas au FS. Un `uploadfs`, ou un
+flash du `factory.bin` (qui contient le littlefs a `0x3b0000`, `post_esp32.py:21`), remplace
+tout le FS et le probleme disparait. **Aucun script.**
+
+**Et meme sans rien faire, le residu ne coute rien.** `compileModule` a supprime le `.be` des
+le premier boot (l.371) : il ne reste qu'un `.bec`, que plus personne ne lit — `compileModule`
+sort par son `else return true` (fichier absent) et `import` prend le natif. C'est de la flash
+dormante : ni RAM, ni temps de boot.
+
+**Cote script de compilation : impossible.** Un build ne touche pas le FS d'un ESP32, il ne
+produit que des images. Tout ce qu'il peut faire est deja fait.
+
+**Cote Berry : possible, mais le remede serait pire que le mal.** La primitive existe —
+`introspect.solidified()` — mais pour tester un module il faut l'**obtenir**, et
+`introspect.module()` appelle `be_module_load_nocache()`, la fonction du piege 4 :
+
+```c
+res = load_native(vm, path);
+if (res == BE_IO_ERROR)
+    res = load_package(vm, path);   /* <-- charge le FICHIER */
+```
+
+Tester un module **non** solidifie le **charge donc depuis le FS**. Un `autoexec.be` qui
+passerait nos 30 modules en revue pour faire le menage paierait exactement la RAM et le temps
+de boot qu'on cherche a economiser.
+
+Le contournement (renommer le `.bec`, tenter l'`import`, supprimer si ca passe, restaurer
+sinon) fonctionne, mais manipule des fichiers par essai-erreur au demarrage d'un module en
+production — pour quelques dizaines de Ko sur une partition remplie a 5 %. Mauvais rapport
+benefice/risque.
+
+**Ou `introspect.solidified()` vaut vraiment le coup** : comme **verification**, pas comme
+nettoyage. C'est le niveau 5 du §5.
 
 ### `autoexec.be` reste indispensable — la solidification ne le remplace pas
 
