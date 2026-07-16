@@ -152,24 +152,17 @@ PYTHONPATH=../berry PYTHONUTF8=1 python -m berry_port -s -g solidify_all_python.
 
 ## Sur un AUTRE poste (nouveau clone)
 
-Une seule commande, une fois par poste :
+**Voir `CLAUDE.md`, section « MONTER UN NOUVEAU POSTE ».** En résumé :
 
-```
-python outils_docs/scripts_python/corrige_reglages_vscode.py --verifier
-```
+1. **VS Code** → Settings Sync, en **cochant `Profiles`** (sans quoi les réglages `C_Cpp`
+   qui corrigent le `PermissionError` n'arrivent jamais : ils vivent dans le profil actif,
+   pas dans le profil par défaut).
+2. **PlatformIO** → rien à faire. Les 16,6 Go se réinstallent au premier `pio run`.
+3. **Le filet** → `python outils_docs/scripts_python/corrige_reglages_vscode.py --verifier`
+   si le `PermissionError` intermittent sur `tasmota.ino.cpp` réapparaît.
 
-C'est la seule chose que git ne peut pas transporter : les réglages VS Code
-(`C_Cpp.files.exclude` + `C_Cpp.exclusionPolicy`) vivent dans le profil de la machine.
-Sans eux, le `PermissionError` intermittent sur `tasmota.ino.cpp` revient — et avec lui
-les heures passées à le diagnostiquer.
-
-Le script trouve le profil actif (piège : avec un profil, `User\settings.json` n'est
-**plus** le fichier appliqué), pose les deux réglages, et **prouve qu'ils agissent**.
-Le « pourquoi » est dans `CLAUDE.md`, section « À FAIRE SUR CHAQUE POSTE ».
-
-Les deux outils Python n'ont **aucun chemin en dur** : racine du dépôt, PlatformIO et
-toolchain xtensa sont tous déduits. Ils marchent sur n'importe quel poste, sous
-réserve qu'un build y soit déjà passé une fois (pour que la toolchain soit là).
+Le reste est dans le dépôt. Les outils Python n'ont **aucun chemin en dur** : racine du
+dépôt, PlatformIO et toolchain xtensa sont tous déduits.
 
 ## État du dépôt
 

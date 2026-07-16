@@ -30,22 +30,59 @@ seul le total brut deborde, de 27 lignes de documentation.
 Extraire un module d'utilitaires partages avec `synchronise_upstream_tasmota.py`
 reste possible **le jour ou un troisieme script apparaitra**, pas avant.
 
-## A FAIRE SUR CHAQUE POSTE — reglages VS Code (hors depot)
+## MONTER UN NOUVEAU POSTE
+
+Trois choses, dans cet ordre. Rien d'autre n'est necessaire.
+
+### 1. VS Code — Settings Sync (la voie native)
+
+VS Code synchronise lui-meme reglages, extensions, snippets **et profils** entre
+machines, via le compte GitHub. En continu, pas en photo : c'est ce qui evite que les
+deux postes divergent dans trois mois. Aucun script a maintenir.
+
+Sur **chaque** poste : `Ctrl+Shift+P` -> **`Settings Sync: Turn On...`** -> **cocher
+`Profiles`** -> Sign in (GitHub).
+
+> ⚠️ **Cocher `Profiles` n'est pas optionnel.** Par defaut, Settings Sync ne
+> synchronise que le profil par defaut. Or nos reglages `C_Cpp` — ceux qui corrigent
+> le `PermissionError` (§ suivant) — vivent dans le profil **actif** (« Frederic »).
+> Sans `Profiles` coche, ils n'arriveront jamais sur l'autre poste, et le symptome
+> reviendra sans qu'on comprenne pourquoi.
+
+Ce qui est synchronise : ~40 Ko de config + la liste des 58 extensions. Les 247 Mo de
+`%APPDATA%\Code\User` sont majoritairement de l'etat machine (positions de fenetres,
+caches, historique) : ni synchronise, ni souhaitable.
+
+### 2. PlatformIO — rien a faire
+
+`~/.platformio` pese **16,6 Go** (246 000 fichiers), mais **il n'y a rien a copier** :
+ce ne sont que des paquets et toolchains telecharges, verifies par empreinte. Aucun
+fichier ecrit par nous. Le premier `pio run` les reinstalle seul — plus vite qu'une
+copie, et sans risque d'etat incoherent.
+
+Nos vrais reglages PlatformIO (`platformio_override.ini`, `platformio_tasmota_cenv.ini`)
+sont **dans le depot**, donc deja la apres le clone.
+
+### 3. Le filet — verifier que les reglages C/C++ agissent vraiment
 
 ```
 python outils_docs/scripts_python/corrige_reglages_vscode.py --verifier
 ```
 
-Une fois par poste, apres un clone. Le script trouve le profil VS Code actif, pose
-les reglages, et **prouve qu'ils agissent** (temoin/cible sur l'indexeur). Il est
-idempotent, sauvegarde avant d'ecrire, et refuse de fusionner a l'aveugle dans un
-`C_Cpp.files.exclude` existant.
+Settings Sync **apporte** les reglages mais ne dit jamais **pourquoi** ils existent, et
+n'alertera pas si `exclusionPolicy` saute. Ce script, lui, diagnostique (`--etat`),
+applique si besoin, et **prouve** que l'exclusion agit (temoin/cible sur l'indexeur).
 
-Le reste de cette section explique **pourquoi**, si le script echoue ou si on veut
-comprendre.
+Il est idempotent, sauvegarde avant d'ecrire, et refuse de fusionner a l'aveugle dans un
+`C_Cpp.files.exclude` existant. A lancer si le symptome ci-dessous reapparait.
+
+---
+
+## Le PermissionError sur tasmota.ino.cpp — pourquoi ces reglages existent
 
 **Ces reglages ne sont PAS versionnes** : ils vivent dans le profil VS Code de la
-machine. Sur un nouveau clone, ils sont donc **absents**, et le symptome revient.
+machine. Sans Settings Sync (ou sans `Profiles` coche), ils sont **absents** d'un
+nouveau poste, et le symptome revient.
 
 ### Le symptome, si on les oublie
 
