@@ -167,14 +167,47 @@ fichier est bien globale.
 — probablement pas atteignable (Q1, en cours de vérification). Si confirmé, la forme des
 `xxxFonctions.be` devra être adaptée pour être solidifiable.
 
-### Piège 4 — Un fichier solidifié ne doit PLUS partir sur le LittleFS
+### Piège 4 — Le `.be` qui reste sur le LittleFS coûte du BOOT, pas de la RAM
 
-**Condition de correction, pas optimisation.** Un fichier à la fois solidifié et présent sur le FS
-serait recompilé et rechargé par `autoexec.be` : on paie la RAM qu'on croyait économiser, **en
-silence**. C'est le pire des deux mondes, et rien ne le signale.
+> ⚠️ **Corrigé le 2026-07-16.** Une version antérieure de ce piège affirmait qu'un module à
+> la fois solidifié et présent sur le FS faisait « payer la RAM qu'on croyait économiser, en
+> silence ». **C'est faux**, et l'erreur venait d'une supposition jamais vérifiée dans le code.
 
-Corollaire : `autoexec.be` devra sauter le `compileModule()` d'un module solidifié, puisqu'`import` le
-trouvera nativement.
+**Ce que fait réellement `import`** (`lib/libesp32/berry/src/be_module.c:282-288`) :
+
+```c
+int be_module_load_nocache(bvm *vm, bstring *path, bbool nocache)
+{
+    int res = BE_OK;
+    if (!load_cached(vm, path)) {          /* 1. deja charge ?        */
+        res = load_native(vm, path);       /* 2. module NATIF         */
+        if (res == BE_IO_ERROR)
+            res = load_package(vm, path);  /* 3. fichier sur le FS    */
+```
+
+**Le natif gagne.** Le fichier n'est cherché que si aucun module natif ne répond. Un `.be`
+qui traîne à côté d'un module solidifié n'est donc **jamais chargé** : aucune RAM en double.
+
+**Le coût résiduel est réel, mais ailleurs.** `autoexec.be` appelle
+`gestionFileFolder.compileModule("/monModule", <activation>)`, qui compile le `.be` en `.bec`
+via `tasmota.compile()` — indépendamment de tout `import`. Sur un appareil où le module est
+solidifié, c'est **du temps de boot et des écritures flash pour rien**.
+
+**Donc : sauter le `compileModule()` d'un module solidifié est une OPTIMISATION, pas une
+condition de correction.** Le firmware fonctionne correctement dans les deux cas.
+
+⏳ Non mesuré : ce que coûte exactement `tasmota.compile()` (il écrit le `.bec` ; reste à
+établir s'il charge quoi que ce soit en RAM au passage).
+
+### Piège 4 bis — Le nom passé à `module()` ne sert PAS à trouver le fichier
+
+Corollaire du mécanisme ci-dessus, et il rassure. `load_package()` construit un chemin de
+**fichier** à partir du nom d'`import` (`import monModule` → cherche `monModule.be`). Le nom
+passé à `module("...")` dans le fichier n'intervient **que** pour la table native.
+
+Consequence pratique : retirer le slash d'un `module("/monModule")` — obligatoire pour
+solidifier, cf. §1 du verdict — **n'a aucun effet** sur les appareils qui chargent depuis le
+LittleFS. Le même fichier sert les deux mondes.
 
 ### Piège 5 — `src/.gitignore` ignore `embedded/*` et `solidify/*`
 
@@ -304,6 +337,55 @@ Niveau 3 (Windows, après l'édition de liens) :
 **Il n'y a aucun paramètre à activer pour que la solidification tourne** : elle est active par défaut
 à chaque build, sur les six dossiers de `SOLIDIFY_DIRS`. La question n'est jamais « est-elle
 activée ? » mais « a-t-elle quelque chose à solidifier ? ».
+
+## 6 bis. Solidifier pour CERTAINS firmwares seulement
+
+Question posée le 2026-07-16 : *comment garder les scripts sur le FS pour certains modules,
+et solidifier pour d'autres ?*
+
+**Réponse : c'est déjà le cas, et ça se règle tout seul.** Trois faits s'emboîtent.
+
+**1. `custom_berry_solidify` est une option PAR ENVIRONNEMENT.**
+
+```ini
+[env:tasmota32s3-etage2-grenier]           ; solidifie
+custom_berry_solidify   =   data/fs/modbusFonctions.be
+
+[env:tasmota32p4-garage-serveur-modbus]    ; reste en fs
+; rien a ajouter
+```
+
+**2. `import` prefere le natif au fichier** (piege 4). Le firmware qui embarque le module
+solidifie utilise la version en flash ; celui qui ne l'embarque pas retombe sur le `.be` du
+LittleFS. **Le mecanisme se selectionne lui-meme.**
+
+**3. Le nom de `module()` ne sert pas a trouver le fichier** (piege 4 bis). La forme adaptee
+pour la solidification reste donc parfaitement utilisable en mode FS.
+
+**Conclusion : meme source, meme LittleFS, meme `autoexec.be`.** Un seul fichier `.be` sert
+les deux mondes ; c'est l'env qui tranche, firmware par firmware.
+
+### Ce qui monte sur le LittleFS de chaque appareil
+
+À savoir, parce que c'est contre-intuitif : **tous les appareils portent TOUS les modules**.
+
+`pre_utilitaires_platformio.py` (`copy_fs_image`, l.469) copie, **au moment de l'upload
+seulement** (`buildfs`/`uploadfs`/`upload`/`erase_upload`), le contenu de `data/fs/` **à plat**
+dans le `data_dir` de l'appareil, construit `littlefs.bin` avec, puis `remove_backup_data()`
+(l.532) efface les copies — `Global.liste_fichiers_exclus` etant la liste des fichiers
+d'origine à conserver.
+
+`Global.dossiers_a_copier = ["fs", "json", "sd"]` (l.69) est **en dur** : aucune selection par
+env a ce niveau. D'ou un `littlefs.bin` de ~11 Mo partout.
+
+C'est donc l'`autoexec.be` de chaque appareil qui decide ce qui est **charge**, via
+`compileModule("/monModule", <activation lue dans _persist.json>)`.
+
+### Le seul geste utile sur un appareil solidifie
+
+Sauter son `compileModule()` dans l'`autoexec.be` de cet appareil : le module etant natif,
+le compiler en `.bec` ne sert a rien. **Optimisation de boot, pas condition de correction**
+(piege 4) — le firmware marche meme si on l'oublie.
 
 ## 7. Ce qui n'est PAS solidifié — et ne le sera jamais tout seul
 

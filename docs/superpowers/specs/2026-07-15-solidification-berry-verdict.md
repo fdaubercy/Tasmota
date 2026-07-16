@@ -228,10 +228,19 @@ donc solidifiable sans retouche.
 
 1. Declarer `custom_berry_solidify` dans l'env concerne. Rien a coder.
 2. Verifier Q3 sur appareil : `import x` sans le fichier sur le FS.
-3. Traiter le piege 4 (doc `outils_docs/SOLIDIFICATION_BERRY.md`) : un module solidifie
-   ne doit **plus** partir sur le LittleFS, sinon `autoexec.be` le recompile et on paie
-   la RAM qu'on croyait economiser, en silence.
+3. ~~Traiter le piege 4 : un module solidifie ne doit plus partir sur le LittleFS,
+   sinon on paie la RAM en silence.~~ **CORRIGE le 2026-07-16 : c'etait faux.**
+   `be_module.c:285-288` essaie `load_native()` AVANT `load_package()` : le module natif
+   gagne, le `.be` restant n'est **jamais charge**, aucune RAM en double. Le seul cout
+   residuel est le `compileModule()` de l'`autoexec.be`, qui compile un `.bec` inutile —
+   du temps de boot et des ecritures flash. **Optimisation, pas condition de correction.**
+   Cf. pieges 4 et 4 bis de `outils_docs/SOLIDIFICATION_BERRY.md`.
 4. Mesurer le gain reel (`tasmota.gc()` avant/apres), sans quoi tout ceci reste theorique.
+
+**Corollaire, etabli le 2026-07-16 :** solidifier POUR CERTAINS FIRMWARES SEULEMENT ne
+demande aucun travail. `custom_berry_solidify` est une option par environnement, `import`
+prefere le natif, et le nom de `module()` ne sert pas a resoudre le fichier. Meme source,
+meme LittleFS : c'est l'env qui tranche. Cf. §6 bis de `outils_docs/SOLIDIFICATION_BERRY.md`.
 
 **Ce que la phase 2 ne doit PAS faire** : ecrire `USE_SOLIDIFY_BERRY`, ecrire
 `copy_berry_solidify()`, editer `modules.h` ou `be_custom_module.c` a la main. Tout
