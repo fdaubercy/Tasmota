@@ -466,6 +466,34 @@ def list_files_recursive(folder):
 
     return files_list
 
+def modules_solidifies():
+    """Noms de fichiers déclarés dans `custom_berry_solidify` pour CET environnement.
+
+    Ces modules-là sont compilés DANS le firmware (structures C en flash). Les envoyer
+    aussi sur le LittleFS ne sert à rien :
+      - `import` sert le module natif et ignore le fichier
+        (lib/libesp32/berry/src/be_module.c:285-288 : load_native avant load_package) ;
+      - mais `gestionFileFolder.compileModule()` compilerait quand même le .be en .bec
+        au démarrage — du temps de boot et des écritures flash pour rien.
+
+    En ne copiant pas le fichier, `compileModule` devient un no-op silencieux
+    (data/fs/gestionFileFolder.be:378 : `else return true` si le .be est absent).
+    Aucune ligne de Berry à modifier, aucune double comptabilité : la déclaration
+    `custom_berry_solidify` de l'env commande tout.
+
+    L'option est absente de la plupart des envs : GetProjectOption lève alors, d'où le
+    try/except — c'est ce que fait aussi pio-tools/solidify-from-url.py:154.
+    """
+    try:
+        brut = env.GetProjectOption("custom_berry_solidify")
+    except Exception:
+        return set()            # env sans solidification : le cas courant
+    if not brut:
+        return set()
+    lignes = brut.splitlines() if isinstance(brut, str) else list(brut)
+    return {os.path.basename(l.strip()) for l in lignes if l.strip()}
+
+
 def copy_fs_image(source, target, env):
     # print(Fore.BLUE + ">>>>>>>>>>>>>>>>> copy_fs_image")
     # Ne faire la suite que si la target est compris dans ce tableau
@@ -500,11 +528,18 @@ def copy_fs_image(source, target, env):
                 if os.path.isdir(source_dir_path) and item in Global.ignore_dirs :
                     print(Fore.GREEN + f"✔ Dossier ignoré (mais fichiers copiés à la racine) : {source_dir_path}")
 
+                    # Modules déjà dans le firmware : inutile de les envoyer aussi sur le FS
+                    solidifies = modules_solidifies()
+
                     # Copier uniquement les fichiers directement dans ce dossier
                     for subitem in os.listdir(source_dir_path):
                         sub_src = os.path.join(source_dir_path, subitem)
 
                         if os.path.isfile(sub_src):
+                            if subitem in solidifies:
+                                print(Fore.CYAN + f"  → Solidifié dans le firmware, non copié sur le LittleFS : {subitem}")
+                                continue
+
                             flat_dst = os.path.join(dest_root, subitem)
                             print(Fore.GREEN + f"  → Copie du fichier temporaire ignoré : {sub_src} → {flat_dst}")
 

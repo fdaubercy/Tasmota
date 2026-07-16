@@ -381,11 +381,39 @@ env a ce niveau. D'ou un `littlefs.bin` de ~11 Mo partout.
 C'est donc l'`autoexec.be` de chaque appareil qui decide ce qui est **charge**, via
 `compileModule("/monModule", <activation lue dans _persist.json>)`.
 
-### Le seul geste utile sur un appareil solidifie
+### Eviter la compilation au boot : rien a faire (depuis le 2026-07-16)
 
-Sauter son `compileModule()` dans l'`autoexec.be` de cet appareil : le module etant natif,
-le compiler en `.bec` ne sert a rien. **Optimisation de boot, pas condition de correction**
-(piege 4) — le firmware marche meme si on l'oublie.
+`copy_fs_image()` (`pre_utilitaires_platformio.py`) lit desormais `custom_berry_solidify`
+de l'env courant et **ne copie pas** ces fichiers sur le LittleFS. Comme le `.be` est absent,
+`gestionFileFolder.compileModule()` devient un no-op silencieux :
+
+```berry
+# gestionFileFolder.be:360-379
+if path.exists(chemin + ".be")
+    ...compile...
+else return true          # <-- fichier absent : ne fait RIEN
+end
+```
+
+**Aucune ligne de Berry a modifier, aucun `autoexec.be` a retoucher.** Une seule declaration
+commande toute la chaine :
+
+```ini
+custom_berry_solidify   =   data/fs/modbusFonctions.be
+```
+
+1. le module entre dans le firmware (pre-script)
+2. son `.be` ne monte pas sur le LittleFS (`copy_fs_image`)
+3. `compileModule` ne fait rien (fichier absent)
+4. `import` trouve le natif (`be_module.c:286`)
+
+Verifie sur un vrai `pio run -t buildfs` : `modbusFonctions.be` saute, `udpFonctions.be`
+(non solidifie) est copie, l'image se construit.
+
+⚠️ **Consequence a connaitre** : le module n'est plus **du tout** sur le FS de cet appareil.
+Plus de boucle courte « editer le `.be` → televerser → `BrRestart` » pour lui : toute
+modification impose un rebuild + reflash. C'est le prix de la solidification (§3), et c'est
+pourquoi on ne solidifie qu'un module **fige**.
 
 ## 7. Ce qui n'est PAS solidifié — et ne le sera jamais tout seul
 
