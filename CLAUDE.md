@@ -2,6 +2,28 @@
 
 > Ces regles ne valent QUE pour ce depot. Elles completent `~/.claude/CLAUDE.md`
 > et, en cas de contradiction, elles priment ici.
+>
+> **Ce fichier est auto-suffisant.** Il ne suppose PAS que le `~/.claude/CLAUDE.md`
+> global soit present : sur un autre poste, il ne le sera pas. Tout ce qui est
+> necessaire pour travailler correctement sur ce depot est ici ou pointe d'ici.
+
+## AU DEMARRAGE DE CHAQUE SESSION — a lire avant toute action
+
+Une session demarre **froide** : elle ne se souvient d'aucun echange precedent. Tout ce
+qui survit est ecrit dans ces fichiers. Les lire N'EST PAS optionnel — c'est ce qui
+remplace la memoire.
+
+1. **`tasks/lessons.md`** — le journal des erreurs deja commises et des regles qui en
+   decoulent. **A lire en entier avant de toucher au code.** Chaque entree est une erreur
+   passee a ne pas refaire (5 pieges de verification y sont consignes, tous payes comptant).
+2. **`tasks/reprise-solidification-berry.md`** — l'etat du chantier en cours (solidification
+   Berry), la prochaine action, et les questions encore ouvertes.
+3. **`outils_docs/SOLIDIFICATION_BERRY.md`** — le mecanisme complet + 11 pieges, a lire
+   des que le sujet Berry/solidification arrive.
+
+**Apres chaque correction de l'utilisateur**, ajouter immediatement une entree a
+`tasks/lessons.md` au format `[YYYY-MM-DD] | ce qui s'est mal passe | regle a suivre`.
+Append uniquement, ne jamais supprimer une entree.
 
 ## Pre-commit : PAS de graphify
 
@@ -158,4 +180,20 @@ Prise en compte a chaud, sans redemarrer VS Code.
 
 ## Journal des lecons
 
-`tasks/lessons.md` — a lire en debut de session, a completer apres chaque correction.
+`tasks/lessons.md` — voir la section « AU DEMARRAGE DE CHAQUE SESSION » en tete de ce
+fichier. A lire en entier avant de toucher au code, a completer apres chaque correction.
+
+## Carte des documents de ce depot
+
+Pour ne pas chercher : ce qui a ete produit et ou.
+
+- `CLAUDE.md` (ce fichier) — regles du depot, montage d'un nouveau poste, PermissionError.
+- `tasks/lessons.md` — journal des erreurs et regles.
+- `tasks/reprise-solidification-berry.md` — etat du chantier solidification, prochaine action.
+- `outils_docs/SOLIDIFICATION_BERRY.md` — mecanisme, verification (§5), parametres, 11 pieges.
+- `docs/superpowers/specs/2026-07-15-solidification-berry-verdict.md` — verdict Q1/Q2/Q3.
+- `outils_docs/scripts_python/` :
+  - `synchronise_fork_tasmota.py` — synchro du fork (merge, jamais de force-push).
+  - `solidifie_et_compile_berry.py` — verifie qu'un module est solidifiable en ~10 s (compile le .h).
+  - `nomme_fonctions_berry.py` — convertit les fonctions anonymes d'un module.
+  - `corrige_reglages_vscode.py` — pose et prouve les reglages VS Code (PermissionError).
