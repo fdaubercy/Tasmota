@@ -9,15 +9,25 @@
 #@ solidify:modbusFonctions
 
 # Définition du module
-# Le slash a été retiré le 2026-07-15 : `module("/modbusFonctions")` produisait un
-# NOM de module invalide en C. Le solidifieur colle ce nom dans un identifiant via
-# l'opérateur ## (berry.h:376, be_constobj.h:272), or un '/' n'y est pas légal :
-#   error: pasting "be_native_module_" and "/" does not give a valid preprocessing token
+#
+# NE JAMAIS écrire d'appel à module suivi d'une parenthèse et d'un guillemet dans un
+# commentaire de ce fichier. addEntryToModtab() (solidify-from-url.py:56) cherche ce
+# motif par une regex sur le fichier ENTIER, commentaires compris, et retient la
+# PREMIÈRE occurrence pour en faire un identifiant C. Un exemple en commentaire est
+# donc lu comme la vraie déclaration. Constaté le 2026-07-16 : un commentaire citant
+# l'ancienne forme a régénéré un modules.h invalide, et cassé le build.
+#
+# Le nom ci-dessous n'a plus son slash initial (retiré le 2026-07-15) : ce nom finit
+# collé dans un identifiant C par l'opérateur ## (berry.h:376, be_constobj.h:272), où
+# un caractère '/' est illégal — le préprocesseur refuse de coller be_native_module_
+# avec lui.
+#
 # Sans effet sur l'appareil : `import modbusFonctions` (16 usages) charge le FICHIER
 # du LittleFS et ne regarde pas ce nom. Une fois solidifié, en revanche, l'import
-# cherche dans la table native PAR NOM — et c'est ce nom-ci qui doit y répondre.
-# À ne pas confondre avec gestionFileFolder.compileModule("/modbusFonctions"),
-# qui reçoit un CHEMIN et garde son slash.
+# cherchera dans la table native PAR NOM — et c'est ce nom-ci qui devra y répondre.
+#
+# À ne pas confondre avec le CHEMIN passé à gestionFileFolder.compileModule(), qui
+# garde son slash : c'est un fichier sur le LittleFS, pas un nom de module.
 var modbusFonctions = module("modbusFonctions")
 
 modbusFonctions.DEBUG = nil
