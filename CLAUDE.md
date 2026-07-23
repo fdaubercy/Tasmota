@@ -16,10 +16,15 @@ remplace la memoire.
 1. **`tasks/lessons.md`** — le journal des erreurs deja commises et des regles qui en
    decoulent. **A lire en entier avant de toucher au code.** Chaque entree est une erreur
    passee a ne pas refaire (5 pieges de verification y sont consignes, tous payes comptant).
-2. **`tasks/reprise-solidification-berry.md`** — l'etat du chantier en cours (solidification
-   Berry), la prochaine action, et les questions encore ouvertes.
-3. **`outils_docs/SOLIDIFICATION_BERRY.md`** — le mecanisme complet + 11 pieges, a lire
+2. **`tasks/reprise-chantier-modbus-grenier.md`** — le chantier en cours (carte 16 relais
+   + esclaves ModBus au grenier) : prochaine action, decisions deja tranchees, plan en
+   phases. **Branche `chantier-modbus-grenier`.**
+3. **`tasks/reprise-solidification-berry.md`** — l'autre chantier (solidification Berry),
+   sa prochaine action et ses questions ouvertes.
+4. **`outils_docs/SOLIDIFICATION_BERRY.md`** — le mecanisme complet + 11 pieges, a lire
    des que le sujet Berry/solidification arrive.
+5. **`outils_docs/PROTOCOLE_MODBUS.md`** — a lire des que le sujet ModBus arrive : carte
+   des registres de la carte 16 relais (§8) et architecture de synchronisation (§9).
 
 **Apres chaque correction de l'utilisateur**, ajouter immediatement une entree a
 `tasks/lessons.md` au format `[YYYY-MM-DD] | ce qui s'est mal passe | regle a suivre`.
@@ -190,9 +195,14 @@ Pour ne pas chercher : ce qui a ete produit et ou.
 - `CLAUDE.md` (ce fichier) — regles du depot, montage d'un nouveau poste, PermissionError.
 - `tasks/lessons.md` — journal des erreurs et regles.
 - `tasks/reprise-solidification-berry.md` — etat du chantier solidification, prochaine action.
+- `tasks/reprise-chantier-modbus-grenier.md` — etat du chantier ModBus du grenier (carte 16
+  relais + esclaves), decisions tranchees, plan en phases. Branche `chantier-modbus-grenier`.
 - `outils_docs/SOLIDIFICATION_BERRY.md` — mecanisme, verification (§5), parametres, 11 pieges.
 - `outils_docs/PROTOCOLE_MODBUS.md` — ModBus RTU/TCP standard, implementation maison (3 transports
-  Serie/UDP/TCP), extension esclave->maitre, failles du mecanisme d'envoi, design de queue FIFO.
+  Serie/UDP/TCP), extension esclave->maitre, failles du mecanisme d'envoi, design de queue FIFO,
+  carte des registres de la carte 16 relais (§8), architecture de synchronisation (§9).
+- `outils_docs/Electronique/Connecteur ModBus/` — docs constructeur de la carte 16 relais
+  (`... commamd.docx` = jeu de commandes, `... Manual.docx` = caracteristiques).
 - `docs/superpowers/specs/2026-07-15-solidification-berry-verdict.md` — verdict Q1/Q2/Q3.
 - `outils_docs/scripts_python/` :
   - `synchronise_fork_tasmota.py` — synchro du fork (merge, jamais de force-push).

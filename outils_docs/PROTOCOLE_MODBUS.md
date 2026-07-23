@@ -219,5 +219,196 @@ l'execution (flash + console).**
 2. Activer le **rejet strict** dans `apparieReponse` (jeter une reponse non appariee) une fois
    le comportement observe sur banc.
 3. Formaliser l'extension esclave→maître (heartbeat via `0x11`, cas serie RS485).
+   → **Tranche le 2026-07-24**, voir §9.
 4. Interop : garder le dialecte texte maison, ou ajouter un vrai mode ModBus TCP standard
    (MBAP) pour du materiel tiers.
+   → **Tranche le 2026-07-24 : dialecte maison conserve, pas de MBAP.** Le push
+   esclave→maitre n'existe PAS en ModBus standard : le MBAP n'apporterait que
+   l'interoperabilite avec du materiel tiers, besoin absent du parc. Le `Transaction Id`
+   est sans objet tant qu'on reste a un-seul-en-vol.
+
+---
+
+## 8. La carte 16 relais RS485 — carte des registres (2026-07-24)
+
+Source : `outils_docs/Electronique/Connecteur ModBus/16 Channel Multifunction RS485
+Module commamd.docx` et `... Manual.docx`. **Verifie dans la doc constructeur, pas deduit.**
+
+Usine : **9600 bauds, 8N1, adresse 0x01**. Deux jeux de commandes reconnus automatiquement
+(AT en ASCII, ModBus RTU en HEX) — on n'utilise que le ModBus.
+
+### Ecriture — fonction 0x06
+
+`[id][06][adresse 2o][ordre 1o][temporisation 1o][CRC 2o]`
+
+- **adresse** = numero de canal, `0x0001`..`0x0010` (`0x0000` = tous)
+- **ordre** : `01` Open · `02` Close · `03` Toggle · `04` Latch · `05` Momentary ·
+  `06` Delay · `07` Open all · `08` Close all
+- **temporisation** : 0-255 s, uniquement pour l'ordre Delay
+
+Exemple : canal 1 Open → `01 06 00 01 01 00 D9 9A`.
+C'est exactement ce que construit `modBus_Conn16channels.be` (`Values: [valueModBus, 0]`,
+`type: "uint8"`, `Count: 1`).
+
+### Relecture d'etat — fonction 0x03 (LE point cle)
+
+**La carte sait relire l'etat de ses 16 sorties en une seule trame** — c'est ce qui rend
+l'« etat constate » (§9) atteignable pour elle.
+
+```
+Requete  : 01 03 00 01 00 10 15 C6        -> 16 registres depuis 0x0001
+Reponse  : 01 03 20 <32 octets> <CRC>     -> un registre 16 bits par canal
+                                             0x0001 = open, 0x0000 = close
+```
+
+39 octets de reponse, une seule entree dans la file. Sur le maitre serie, ca fonctionne
+**sans toucher a `prepareTrame`** : `pompeQueue` passe par `tasmota.cmd("ModBusSend …")`,
+c'est Tasmota en C++ qui batit la trame.
+
+```
+ModBusSend {"deviceaddress":1,"functioncode":3,"startaddress":1,"type":"uint16","count":16}
+```
+
+### Registres de configuration
+
+| Fonction | Registre | Valeurs |
+|---|---|---|
+| Debit | `0x00FE` | 0:1200 · 1:2400 · 2:4800 · 3:9600 · 4:19200 · 5:retour usine |
+| Adresse esclave | `0x00FF` | 1..247 |
+| Lire l'adresse (diffusion) | `FF 03 00 FF 00 01 A1 E4` | repond l'id courant |
+
+Passer a 19200 : `01 06 00 FE 00 04` + CRC.
+
+### Six pieges de cette carte
+
+1. **« Open » veut dire niveau BAS.** Glossaire : `Open : control port output low level`.
+   Avec des relais inverses (`type: 256`), un registre lu a `0x0001` (open) correspond a
+   un relai **ON**. Table d'inversion a centraliser **une seule fois** (index inverse, §9).
+2. **Le cavalier M0 inverse la polarite** : M0 deconnecte = sortie basse (defaut), M0
+   connecte = sortie haute. Il change donc la table ci-dessus. **Noter sa position au
+   montage** — sinon la relecture sera coherente et fausse.
+3. **Le changement de debit ne prend effet qu'apres coupure d'alimentation.**
+   Si rien ne change apres la commande, ce n'est pas un echec.
+4. **Le changement d'adresse exige un bus mono-equipement.** Adresser la carte AVANT de
+   cabler les esclaves Tasmota.
+5. **Une commande invalide ne renvoie RIEN** (« instruction is invalid, no return »).
+   Symptome cote file : timeout x3 puis abandon logge. Silence != carte absente.
+6. **C'est un module de controle 5 V (10-15 mA), pas une platine relais.** Il pilote une
+   platine 5-24 V separee. A verifier sur l'annonce avant commande.
+
+### Cablage RS485 (rappel)
+
+Transceiver **3,3 V** cote ESP32-S3 (MAX3485 / SP3485 / SN65HVD75 — **pas** un MAX485 5 V).
+Cable : Belden 3106A (1 paire 22 AWG + fil de masse, 120 Ω) ou **Cat6 F/UTP 23 AWG rigide**
+(100 Ω ; l'ecart d'impedance est sans effet a 19200 bauds sur quelques dizaines de metres).
+
+En Cat6 : **A et B sur les deux fils d'une MEME paire** (bleue, broches 4-5) ; masse sur la
+paire marron, les deux fils relies. Terminaison 120 Ω aux deux extremites, ecran a la terre
+d'**un seul cote**. **Ne jamais faire passer le 12 V des bobines dans ce cable.**
+
+---
+
+## 9. Synchronisation maitre/esclave — architecture retenue (2026-07-24)
+
+**Objectif reformule.** « 100 % synchronise a tout instant » est impossible sur un reseau
+a pertes. Ce qui est atteignable, et suffisant :
+
+> **Convergence bornee** — la copie du maitre egale celle de l'esclave au bout de T
+> secondes maximum, **toujours**, quelles que soient les pertes.
+> **Jamais faux en silence** — dans le doute, le maitre affiche « inconnu », jamais une
+> vieille valeur presentee comme fraiche.
+
+### Deux plans, jamais melanges
+
+| | Plan **commande** | Plan **telemetrie** |
+|---|---|---|
+| Sens | maitre → esclave | esclave → maitre |
+| Transport | RS485 serie | UDP |
+| File FIFO | **oui**, un seul en vol | **jamais** |
+| Accuse | obligatoire (`termineEnVol`) | **aucun** |
+| Perte | retry borne puis erreur | toleree, la suivante arrive |
+
+La file ne serialise qu'un seul medium : le RS485. Un datagramme UDP n'y touche pas — donc
+un push **ne peut structurellement pas encombrer la file**, a condition que la reception
+soit separee (voir « le blocage » ci-dessous).
+
+⚠️ **Ne PAS ajouter d'accuse sur la telemetrie.** C'est le reflexe naturel face a « 100 % »,
+et c'est le piege : il recreerait la serialisation qu'on cherchait a eviter.
+
+### Le mecanisme : l'instantane complet
+
+**Un push ne dit jamais « le relai 3 a change ». Il dit « voici l'etat des 16 relais ».**
+
+- Un message **differentiel** exige d'etre delivre : perdu, l'ecart est permanent.
+- Un **instantane** est idempotent : perdu ou duplique, le suivant porte la verite entiere.
+
+16 etats tiennent dans 2 octets. L'instantane ne coute rien de plus et supprime tout besoin
+de fiabilite de transport. C'est ce qui rend la convergence **demontrable** plutot
+qu'esperee.
+
+### Trois complements obligatoires
+
+1. **Compteur de version `seq`** contre le desordre : UDP peut reordonner, et un instantane
+   ancien arrivant apres un recent reecrirait une valeur perimee. L'esclave incremente
+   `seq` a chaque changement ; **le maitre rejette tout instantane de `seq` <= au dernier
+   recu**. Bonus : un `seq` qui repart de zero signale un redemarrage d'esclave.
+2. **Etat commande != etat constate.** L'accuse du plan commande confirme que la trame est
+   passee, **pas que le relai a bouge**. La boucle ne se ferme qu'a la confirmation par
+   l'instantane. Si `commande != constate` au-dela de T : renvoi, puis alarme.
+3. **Reconciliation au demarrage.** Au boot, le maitre interroge chaque esclave (requete
+   ponctuelle, plan commande) ; l'esclave, a la reconnexion, pousse spontanement. Les deux
+   sont necessaires : l'un couvre le reboot du maitre, l'autre celui de l'esclave.
+
+**Chien de garde** : pas d'instantane d'un esclave depuis plus de 3xT → cet esclave passe
+en **« etat inconnu »**. C'est la clause « jamais faux en silence ».
+
+### Le blocage actuel — verifie
+
+Les trois chemins de reception acquittent **indistinctement** :
+`controleModbus.be:261` (UDP), `controleModbus.be:181` (TCP, route vers
+`recupereReponseModBus`), `modBus_Conn16channels.be:200`, `modBus_TasmotaSlaveModBus.be:405`
+— tous appellent `modbusFonctions.termineEnVol(true)`.
+
+**Consequence si on active le push tel quel** : un capteur qui pousse en UDP **acquitte la
+commande serie en vol**. Le timeout se desarme, le message suivant part alors que la
+reponse precedente est en transit → collision. C'est la faille n°3 du §5, ressuscitee par
+une autre porte.
+
+**Correctif — les deux crans, pas un :**
+1. **Code fonction dedie** pour la trame non sollicitee (emplacement naturel :
+   `0x11 ISALIVE_ESCLAVE`, reserve et jamais cable, `modbusFonctions.be:59`). Le handler le
+   voit **avant** tout le reste et route vers un chemin qui ne touche jamais `enVol`.
+   ⚠️ `prepareTrame:1211` rejette tout `FunctionCode > 0x06` sauf 0x0F et 0x10 : ce code
+   doit y etre mis en **liste blanche**.
+2. **Rejet strict dans `apparieReponse`** (`:524-527`) : la fonction detecte deja
+   l'anomalie et se contente de la logguer. Si `DeviceAddress`/`FunctionCode` ne
+   correspondent pas a `enVol`, ce n'est **pas** une reponse → ne pas acquitter.
+
+Le 1 exprime l'intention, le 2 est le filet. Les deux, parce qu'un acquittement errone est
+silencieux.
+
+### Rythmes et budget
+
+| Donnee | Source | T | Pourquoi |
+|---|---|---|---|
+| 16 relais (carte RS485) | **polling maitre 0x03** | 30 s | La carte ne peut rien pousser |
+| Relais / positions (esclaves Tasmota) | push instantane | 30 s | Convergence garantie sous 30 s |
+| Capteurs analogiques | push instantane | 5 min | Convergence lente acceptable |
+| Changement d'etat | push immediat | ~instant | **Latence uniquement**, pas la garantie |
+
+Budget mesure : 2 esclaves x 4 valeurs groupees en une trame = **2 datagrammes / 30 s**,
+~23 octets chacun, soit ~45 octets/minute. Plus une lecture 0x03 de 39 octets toutes les
+30 s dans la file (0,03 trame/s). **Negligeable** — le debit n'est pas le sujet.
+
+**Le risque, ce sont les rafales**, pas la moyenne. Trois garde-fous :
+1. le push periodique est la **source de verite**, l'evenementiel n'est qu'une optimisation
+   de latence → une trame evenementielle perdue se repare seule au battement suivant ;
+2. **plancher de periode** par valeur (~1 s) avec fusion : une rafale de 200 changements
+   devient 1 trame ;
+3. **hysteresis** sur les valeurs analogiques (delta minimal avant push).
+
+**Un seul timer**, pas un par valeur : un tick unique (5 s) balaie une table plate et pousse
+ce qui est du. Meme schema que l'index inverse. Et **decaler les esclaves entre eux**
+(offset = id x quelques secondes) pour eviter que le handler mono-thread du maitre ne recoive
+tout au meme instant.
+
