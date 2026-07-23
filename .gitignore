@@ -68,3 +68,6 @@ venv
 
 ## Qemu test folder
 tasmota-qemu
+
+## Cache de session claude-flow (aucune valeur documentaire, reecrit a chaque session)
+.claude-flow/
