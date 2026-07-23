@@ -284,15 +284,34 @@ def verifie(racine: Path, tours: int = 6) -> int:
         print(f"{JAUNE}[!] {dossier} introuvable : verification impossible.{RAZ}")
         return 2
 
-    # Nettoyage des residus d'un run precedent. Il faut le faire ICI, au demarrage :
+    # Purge robuste des residus d'un run precedent. Il faut le faire ICI, au demarrage :
     # a la fin d'un run, l'indexeur TIENT encore le temoin (c'est le phenomene meme
     # qu'on mesure) et la suppression echoue. Le temps qu'on revienne, il a lache.
-    # Ces noms sont gitignores (`tasmota/zzz_verif_*`) : un residu ne salit rien.
-    for vieux in dossier.glob("zzz_verif_*"):
+    #
+    # ATTENTION (2026-07-16) : contrairement a ce qui etait suppose, un residu N'EST PAS
+    # inoffensif. Ces fichiers sont dans tasmota/, et PlatformIO COMPILE tout .cpp du
+    # dossier (gitignore ou non). Un temoin de 9 Mo de `static void Foo()` casse alors le
+    # build en `redefinition of 'void Foo()'` (vu sur zzz_verif_temoin.cpp). D'ou :
+    # retry sur verrou, puis, en dernier recours, neutralisation du contenu (TU vide)
+    # pour qu'un residu qui survivrait au verrou ne casse jamais la compilation.
+    def purge_robuste(p: Path, tentatives: int = 20, delai: float = 0.5) -> bool:
+        for _ in range(tentatives):
+            if not p.exists():
+                return True
+            try:
+                p.unlink()
+                return True
+            except OSError:
+                time.sleep(delai)
         try:
-            vieux.unlink()
+            p.write_text("// residu neutralise par corrige_reglages_vscode.py\n",
+                         encoding="utf-8")
         except OSError:
             pass
+        return not p.exists()
+
+    for vieux in dossier.glob("zzz_verif_*"):
+        purge_robuste(vieux)
 
     temoin = dossier / "zzz_verif_temoin.cpp"
     cible = dossier / "zzz_verif_cible.ino.cpp"
@@ -328,18 +347,12 @@ def verifie(racine: Path, tours: int = 6) -> int:
             print(f"    tour {t} | temoin: {'OUVERT' if dt else '-':<7}"
                   f" | cible: {'OUVERT' if dc else '-'}")
     finally:
-        # On tente, sans s'acharner : l'indexeur tient encore le temoin, c'est
-        # justement ce qu'on vient de mesurer. Le residu est gitignore, et le
-        # prochain run le balaiera au demarrage.
+        # Purge robuste : retry sur verrou (l'indexeur tient encore le temoin, c'est
+        # justement ce qu'on vient de mesurer), puis neutralisation du contenu si le
+        # verrou tient bon. Un residu ne doit JAMAIS casser le build pio (qui compile
+        # tout .cpp de tasmota/) -- lecon du 2026-07-16.
         for p in (temoin, cible, tmp):
-            for _ in range(6):
-                if not p.exists():
-                    break
-                try:
-                    p.unlink()
-                    break
-                except OSError:
-                    time.sleep(0.5)
+            purge_robuste(p)
 
     print(f"\n  temoin ouvert : {vu_temoin}/{tours}   cible ouverte : {vu_cible}/{tours}")
     if vu_temoin == 0:

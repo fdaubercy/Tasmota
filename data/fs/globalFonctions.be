@@ -1,8 +1,9 @@
 # Définition du module
-var globalFonctions = module("/globalFonctions")
+#@ solidify:globalFonctions
+var globalFonctions = module("globalFonctions")
 
 # Règles sur changement d'état lors du démarrage de Tasmota
-globalFonctions.changementEtatDemarrage = def(value, trigger, msg)
+def globalFonctions_changementEtatDemarrage(value, trigger, msg)
     import string
     import mqtt
     import persist
@@ -118,13 +119,14 @@ globalFonctions.changementEtatDemarrage = def(value, trigger, msg)
         end
     end
 end
+globalFonctions.changementEtatDemarrage = globalFonctions_changementEtatDemarrage
 
 # Règles sur changement d'état des capteurs
 # Si relaisLie != []
 # Déclenche les relais liés aux capteurs
 # Publie sur le réseau mqtt si paramétré
 # Envoi une réponse automatique sur ModBus UDP ou TCP si esclave ModBus
-globalFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cleBouton)
+def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cleBouton)
     import string
 	import mqtt
 	import json
@@ -389,9 +391,10 @@ globalFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, 
 	# Enregistre les nouvelles valeurs de capteurs en json
 	persist.modules = modules	
 end
+globalFonctions.changementEtatCapteur = globalFonctions_changementEtatCapteur
 
 # Règle sur changement d'état du Dimmer et HSBColor des leds WS2812
-globalFonctions.changementEtatWS2812 = def(value, trigger, msg, moduleLED, cleLED)
+def globalFonctions_changementEtatWS2812(value, trigger, msg, moduleLED, cleLED)
     import string
 	import json
     import persist
@@ -442,10 +445,11 @@ globalFonctions.changementEtatWS2812 = def(value, trigger, msg, moduleLED, cleLE
 	# Enregistre les nouvelles valeurs de capteurs en json
 	persist.modules = modules
 end
+globalFonctions.changementEtatWS2812 = globalFonctions_changementEtatWS2812
 
 # Permet la modification de l'état des relais selon l'état de certains capteurs, boutons, ou interrupteurs
 # Est déclenché à partir de la fonction: 'globalFonctions.changementEtatCapteur'
-globalFonctions.modifEtatRelai = def(moduleCapteur, idRelai, typeOrdre, etat, boolCapteurs, boolTimer, delaiAvantCommande)
+def globalFonctions_modifEtatRelai(moduleCapteur, idRelai, typeOrdre, etat, boolCapteurs, boolTimer, delaiAvantCommande)
 	import string
 
 	# Test
@@ -512,12 +516,13 @@ globalFonctions.modifEtatRelai = def(moduleCapteur, idRelai, typeOrdre, etat, bo
 		end
 	end
 end
+globalFonctions.modifEtatRelai = globalFonctions_modifEtatRelai
 
 # exemples: 
 # ReglageGlobal afficheMemoire
 # ReglageGlobal nbLogsFiles 14
 # ReglageGlobal logLevel 4
-globalFonctions.reglageGlobal = def(cmd, idx, payload, payload_json)
+def globalFonctions_reglageGlobal(cmd, idx, payload, payload_json)
     import string
     import json
     import mqtt
@@ -577,6 +582,7 @@ globalFonctions.reglageGlobal = def(cmd, idx, payload, payload_json)
     reponse_cmnd = "ReglageGlobal: Affiche les statistiques de la mémoire"
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
+globalFonctions.reglageGlobal = globalFonctions_reglageGlobal
 
 # Retourne le module lors de l'importation
 return globalFonctions

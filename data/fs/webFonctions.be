@@ -1,9 +1,10 @@
 # Définition du module
-var webFonctions = module("/webFonctions")
+#@ solidify:webFonctions
+var webFonctions = module("webFonctions")
 
 webFonctions.DEBUG = nil
 
-webFonctions.log = def(msg, levelDebug)
+def webFonctions_log(msg, levelDebug)
 	if (webFonctions.DEBUG == nil)
         webFonctions.DEBUG = serveur.find("debug", "OFF")
     end
@@ -12,10 +13,11 @@ webFonctions.log = def(msg, levelDebug)
         log(msg, levelDebug)
     end
 end
+webFonctions.log = webFonctions_log
 
 # exemples: 
 # ReglageWeb logActivation OFF
-webFonctions.reglageWeb = def(cmd, idx, payload, payload_json)
+def webFonctions_reglageWeb(cmd, idx, payload, payload_json)
     import string
     import json
 
@@ -56,9 +58,10 @@ webFonctions.reglageWeb = def(cmd, idx, payload, payload_json)
     reponse_cmnd = string.format("ReglageWeb: logActivated=%s", webFonctions.DEBUG)
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
+webFonctions.reglageWeb = webFonctions_reglageWeb
 
 # Règles sur changement d'état lors du démarrage de Tasmota
-webFonctions.changementEtatDemarrage = def(value, trigger, msg)
+def webFonctions_changementEtatDemarrage(value, trigger, msg)
     import string
     import mqtt
 
@@ -141,10 +144,11 @@ webFonctions.changementEtatDemarrage = def(value, trigger, msg)
         end
     end
 end
+webFonctions.changementEtatDemarrage = webFonctions_changementEtatDemarrage
 
 # Classe TCP Client
 # Retourne la réponse du serveur
-webFonctions.clientWeb = def(url, typeRequest, data, etatConnexion)
+def webFonctions_clientWeb(url, typeRequest, data, etatConnexion)
     import json
 
 	var webClient
@@ -207,10 +211,11 @@ webFonctions.clientWeb = def(url, typeRequest, data, etatConnexion)
 	webClient.close()
 	
 	return reception
-end	
+end
+webFonctions.clientWeb = webFonctions_clientWeb
 
 # Affiche une page pour initier un webSocket
-webFonctions.htmlWebSocket = def()
+def webFonctions_htmlWebSocket()
     import webserver
 
 	webserver.content_start("WebSocket Test")
@@ -255,6 +260,7 @@ webFonctions.htmlWebSocket = def()
 	webserver.content_send(html)
 	webserver.content_stop()
 end
+webFonctions.htmlWebSocket = webFonctions_htmlWebSocket
 
 #- 
     # Classe qui gère la connexion en tant que serveur TCP Async
@@ -311,7 +317,7 @@ end
 -#
 
 # Modifie les paramètres en json
-webFonctions.traiteCommandeHTTP = def(typeModule, categorie, commande)
+def webFonctions_traiteCommandeHTTP(typeModule, categorie, commande)
     import string
 
     var resultat = ""
@@ -393,6 +399,7 @@ webFonctions.traiteCommandeHTTP = def(typeModule, categorie, commande)
     # # Renvoi la réponse à la page web
     # return "OK"
 end
+webFonctions.traiteCommandeHTTP = webFonctions_traiteCommandeHTTP
 
 # Retourne le module lors de l'importation
 return webFonctions

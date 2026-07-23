@@ -1,9 +1,10 @@
 # Définition du module
-var gestionFileFolder = module("/gestionFileFolder")
+#@ solidify:gestionFileFolder
+var gestionFileFolder = module("gestionFileFolder")
 
 # Liste les fichiers présent dans le système de fichier et réparti les fichiers dont le nom est précédé de "SD_"
 # dans la carte SD
-gestionFileFolder.listeEtRepartitLesFichiers = def()
+def gestionFileFolder_listeEtRepartitLesFichiers()
     import path
     import string
     
@@ -108,11 +109,12 @@ gestionFileFolder.listeEtRepartitLesFichiers = def()
     else path.mkdir("/.extensions")
     end
 end
+gestionFileFolder.listeEtRepartitLesFichiers = gestionFileFolder_listeEtRepartitLesFichiers
 
 # Compte le nombre de fichiers comprenant 'nomFichier' sans l'extension
 # Retourne 0: aucun fichier trouvé
 # Retourne > 0: indice max des fichiers trouvés 
-gestionFileFolder.compteIndiceMaxFileLogs = def(fileChemin)
+def gestionFileFolder_compteIndiceMaxFileLogs(fileChemin)
     import path
     import string
     import re
@@ -138,8 +140,9 @@ gestionFileFolder.compteIndiceMaxFileLogs = def(fileChemin)
 
     return indiceMax
 end
+gestionFileFolder.compteIndiceMaxFileLogs = gestionFileFolder_compteIndiceMaxFileLogs
 
-gestionFileFolder.readFile = def(chemin)
+def gestionFileFolder_readFile(chemin)
     import path
 
     var txt = ""
@@ -161,8 +164,9 @@ gestionFileFolder.readFile = def(chemin)
 
     return txt
 end
+gestionFileFolder.readFile = gestionFileFolder_readFile
 
-gestionFileFolder.writeFile = def(chemin, data)
+def gestionFileFolder_writeFile(chemin, data)
     # Ouvre le fichier
     var file = open(chemin, 'w')
 
@@ -173,9 +177,10 @@ gestionFileFolder.writeFile = def(chemin, data)
     file.close()
     file.flush()
 end
+gestionFileFolder.writeFile = gestionFileFolder_writeFile
 
 # Lit un fichier html ligne par ligne et les envoie par 'webserver.content_send()'
-gestionFileFolder.readFileByLineAndContentSend = def(chemin)
+def gestionFileFolder_readFileByLineAndContentSend(chemin)
     import webserver
 
     var file = open(chemin, 'r')
@@ -192,11 +197,12 @@ gestionFileFolder.readFileByLineAndContentSend = def(chemin)
 
     file.close()
 end
+gestionFileFolder.readFileByLineAndContentSend = gestionFileFolder_readFileByLineAndContentSend
 
 # Lit un fichier html ligne par ligne et les envoie par 'webserver.content_send()'
 # Remplace les #mots# par des variables
 # Pour les pages html webSensor
-gestionFileFolder.readFileByLineReplaceAndWebSend = def(chemin, variablesARemplacer, typeSend)
+def gestionFileFolder_readFileByLineReplaceAndWebSend(chemin, variablesARemplacer, typeSend)
     import re
     import string
     import webserver
@@ -227,10 +233,11 @@ gestionFileFolder.readFileByLineReplaceAndWebSend = def(chemin, variablesARempla
     
     file.close()
 end
+gestionFileFolder.readFileByLineReplaceAndWebSend = gestionFileFolder_readFileByLineReplaceAndWebSend
 
 # Supprime les fichiers hors ".bec"
 # pour gagner de la place
-gestionFileFolder.supprimeBerryFile = def()
+def gestionFileFolder_supprimeBerryFile()
     import path
     import string
 
@@ -264,10 +271,11 @@ gestionFileFolder.supprimeBerryFile = def()
         end
     end
 end
+gestionFileFolder.supprimeBerryFile = gestionFileFolder_supprimeBerryFile
 
 # Supprime tous les fichiers hors "settings" & "_persist.json" en méoire flash et mémoire SD
 # pour gagner de la place
-gestionFileFolder.supprBerryFS = def(folder)
+def gestionFileFolder_supprBerryFS(folder)
     import path
     import string
 
@@ -300,9 +308,10 @@ gestionFileFolder.supprBerryFS = def(folder)
         end
     end
 end
+gestionFileFolder.supprBerryFS = gestionFileFolder_supprBerryFS
 
 # Charge un fichier ".be" le supprime si le chargement est OK & que le fichier *.bec est généré
-gestionFileFolder.loadBerryFile = def(chemin, paramDeleteBe, compileBe)
+def gestionFileFolder_loadBerryFile(chemin, paramDeleteBe, compileBe)
     import path
     import string
 
@@ -341,9 +350,10 @@ gestionFileFolder.loadBerryFile = def(chemin, paramDeleteBe, compileBe)
         load(chemin)
     # end
 end
+gestionFileFolder.loadBerryFile = gestionFileFolder_loadBerryFile
 
 # Charge un fichier ".be" & le supprime si le chargement est OK & que le fichier *.bec est généré
-gestionFileFolder.compileModule = def(chemin, paramDeleteBe)
+def gestionFileFolder_compileModule(chemin, paramDeleteBe)
     import path
     import string
 
@@ -378,10 +388,11 @@ gestionFileFolder.compileModule = def(chemin, paramDeleteBe)
     else return true
     end
 end
+gestionFileFolder.compileModule = gestionFileFolder_compileModule
 
 # Gère l'enregistrement des logs dans un fichier
 # Si le fichier existe, on l'ouvre et on ajoute les données à la fin
-gestionFileFolder.enregistreLogs = def(fileChemin, modulo, data)
+def gestionFileFolder_enregistreLogs(fileChemin, modulo, data)
     import json
     import string
     import path
@@ -449,6 +460,7 @@ gestionFileFolder.enregistreLogs = def(fileChemin, modulo, data)
     file.close()
     file.flush()
 end
+gestionFileFolder.enregistreLogs = gestionFileFolder_enregistreLogs
 
 # Retourne le module lors de l'importation
 return gestionFileFolder

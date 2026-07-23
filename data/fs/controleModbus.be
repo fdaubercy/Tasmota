@@ -257,8 +257,8 @@ class CONTROLE_MODBUS : Driver
         # Récupère la réponse à une requête ModBus UDP
         self.reponseModBus = value
         if (self.reponseModBus != nil)
-            # Initialise le flag d'attente de réponse
-            modbusFonctions.attenteReponse = false
+            # Acquitte le message en vol (reponse recue) -> pompe le suivant
+            modbusFonctions.termineEnVol(true)
 
             # Pré-traitement de la trame reçue
             self.reponseModBus["FunctionName"] = tabFonctionsName[self.reponseModBus["FunctionCode"]]
@@ -280,8 +280,8 @@ class CONTROLE_MODBUS : Driver
                     if (self.reponseModBus["DeviceAddress"] == drivers["ModBus"]["id"])
                         modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_UDP: Traitement du message en cours ...", LOG_LEVEL_DEBUG_PLUS)
 
-                        # Réinitialise le flag d'attente de réponse
-                        modbusFonctions.attenteReponse = false
+                        # Acquitte le message en vol (reponse recue)
+                        modbusFonctions.termineEnVol(true)
 
                         modbusFonctions.executeCmdModbus(self.reponseModBus)
                     else modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_UDP: Message ModBus reçu destiné à un autre esclave ...", LOG_LEVEL_DEBUG_PLUS)

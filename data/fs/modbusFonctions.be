@@ -36,8 +36,16 @@ modbusFonctions.timeout_ReponseModBus_ms = 4000
 modbusFonctions.attenteReponse = false
 modbusFonctions.clients = [nil, nil, nil, nil, nil, nil]     # 5 connexions TCP possibles au max pour les 5 esclaves ModBus (id = 1 à 5)
 
+# --- File d'attente FIFO du maitre ModBus (un seul message en vol a la fois) ---
+# Remplace l'ancien couple (booleen attenteReponse + renvoi par timer nomme par
+# StartAddress, qui ecrasait/perdait des messages sur collision de nom).
+# Voir outils_docs/PROTOCOLE_MODBUS.md sections 5-6.
+modbusFonctions.queue = []            # messages en attente : [{paramMSG, typeMsg, tentatives}, ...]
+modbusFonctions.enVol = nil           # message envoye en attente de reponse (nil = canal RS485 libre)
+modbusFonctions.MAX_TENTATIVES = 3    # renvois max avant abandon (jamais de blocage ni de perte muette)
+
 # # *************************************************
-# # * ModBus Commandes 
+# # * ModBus Commandes
 # # *************************************************
 modbusFonctions.UNDEFINED = 0x00
 modbusFonctions.LECTURE_COILS = 0x01
@@ -390,6 +398,136 @@ end
 modbusFonctions.changementEtatDemarrage = modbusFonctions_changementEtatDemarrage
 
 # Fonction d'envoi de messages ModBus sur les différentes voies: Série RS485 / TCP / UDP
+# ============================================================================
+# File d'attente FIFO du maitre ModBus (RS485). Point d'entree : enfileMsg().
+# Un seul message en vol ; le suivant part a la reception (termineEnVol) ou au
+# timeout (surTimeout). Corrige : perte par collision de nom de timer, absence
+# d'ordre FIFO, flag leve par timeout pendant qu'une reponse arrive.
+# ============================================================================
+
+# Enfile un message a envoyer, puis tente de pomper la file.
+def modbusFonctions_enfileMsg(paramMSG, typeMsg)
+    modbusFonctions.queue.push({"paramMSG": paramMSG, "typeMsg": typeMsg, "tentatives": 0})
+    modbusFonctions.pompeQueue()
+end
+modbusFonctions.enfileMsg = modbusFonctions_enfileMsg
+
+# Envoie la tete de file si le canal est libre (un seul message en vol).
+def modbusFonctions_pompeQueue()
+    import json
+
+    # La file ne concerne que le maitre (id == 0) : lui seul serialise le bus RS485.
+    if (drivers["ModBus"].find("id", 99) != 0)  return end
+    if (modbusFonctions.enVol != nil)           return end       # un message attend deja sa reponse
+    if (size(modbusFonctions.queue) == 0)       return end       # rien a envoyer
+
+    var item = modbusFonctions.queue[0]
+    modbusFonctions.queue.remove(0)
+    modbusFonctions.enVol = item
+    modbusFonctions.attenteReponse = true                        # compat : miroir de (enVol != nil)
+
+    var reponse = tasmota.cmd("ModBusSend " + json.dump(item["paramMSG"]), boolMute)
+
+    # Echec d'envoi : on relache, on remet en tete (retry borne) avec un petit backoff.
+    if (reponse.find("ModbusSend", "") == "Failed")
+        modbusFonctions.log("POMPE_QUEUE: ModBusSend=Echec -> renvoi programme", LOG_LEVEL_DEBUG_PLUS)
+        modbusFonctions.enVol = nil
+        modbusFonctions.attenteReponse = false
+        item["tentatives"] += 1
+        if (item["tentatives"] < modbusFonctions.MAX_TENTATIVES)
+            modbusFonctions.queue.insert(0, item)
+            modbusFonctions.armeTimer(200, / -> modbusFonctions.pompeQueue(), "modbus_repompe")
+        else
+            modbusFonctions.log("POMPE_QUEUE: abandon d'un message apres " + str(modbusFonctions.MAX_TENTATIVES) + " tentatives d'envoi", LOG_LEVEL_ERREUR)
+            modbusFonctions.pompeQueue()
+        end
+        return
+    # Commande malformee : inutile de reessayer, on la jette et on avance.
+    elif (reponse.find("Command", "") == "Error")
+        modbusFonctions.log(f"POMPE_QUEUE: commande ModBus invalide, jetee : {json.dump(item['paramMSG']):s}", LOG_LEVEL_ERREUR)
+        modbusFonctions.enVol = nil
+        modbusFonctions.attenteReponse = false
+        modbusFonctions.pompeQueue()
+        return
+    end
+
+    # Envoye : on arme UN timer de timeout (nom UNIQUE, plus de collision par StartAddress).
+    modbusFonctions.log("POMPE_QUEUE: ModBusSend envoye, attente de la reponse", LOG_LEVEL_DEBUG_PLUS)
+    modbusFonctions.armeTimer(drivers["ModBus"].find("timeoutReponse", 1000), / -> modbusFonctions.surTimeout(), "modbus_timeout")
+end
+modbusFonctions.pompeQueue = modbusFonctions_pompeQueue
+
+# Acquitte le message en vol. Appele par les handlers recupereReponse* (ok=true) ou
+# par surTimeout (ok=false). Retire/renvoie le message puis pompe le suivant.
+def modbusFonctions_termineEnVol(ok)
+    modbusFonctions.desarmeTimer("modbus_timeout")
+    var item = modbusFonctions.enVol
+    modbusFonctions.enVol = nil
+    modbusFonctions.attenteReponse = false
+    if (!ok && item != nil)
+        item["tentatives"] += 1
+        if (item["tentatives"] < modbusFonctions.MAX_TENTATIVES)
+            modbusFonctions.queue.insert(0, item)               # pas de reponse -> renvoi en tete
+        else
+            modbusFonctions.log("TERMINE_EN_VOL: abandon d'un message sans reponse apres " + str(modbusFonctions.MAX_TENTATIVES) + " tentatives", LOG_LEVEL_ERREUR)
+        end
+    end
+    modbusFonctions.pompeQueue()
+end
+modbusFonctions.termineEnVol = modbusFonctions_termineEnVol
+
+# Le timer de timeout a expire sans reponse -> renvoi borne du message en vol.
+def modbusFonctions_surTimeout()
+    modbusFonctions.log("SUR_TIMEOUT: pas de reponse dans le delai imparti", LOG_LEVEL_DEBUG)
+    modbusFonctions.termineEnVol(false)
+end
+modbusFonctions.surTimeout = modbusFonctions_surTimeout
+
+# --- Timer P4-safe : set_timer() est problematique sur ESP32-P4 (le maitre de garage).
+# On y emule un one-shot via add_cron (granularite 1 s). Ailleurs : set_timer normal. ---
+def modbusFonctions_armeTimer(delai_ms, fonction, nom)
+    if (diverses.find("typeESP", "") == "ESP32P4")
+        var sec = int(delai_ms / 1000)
+        if (sec < 1)  sec = 1  end
+        tasmota.add_cron(f"*/{sec:i} * * * * *",
+                         def()
+                             tasmota.remove_cron(nom)          # one-shot : se retire avant d'agir
+                             fonction()
+                         end, nom)
+    else
+        tasmota.set_timer(delai_ms, fonction, nom)
+    end
+end
+modbusFonctions.armeTimer = modbusFonctions_armeTimer
+
+def modbusFonctions_desarmeTimer(nom)
+    if (diverses.find("typeESP", "") == "ESP32P4")
+        tasmota.remove_cron(nom)
+    else
+        tasmota.remove_timer(nom)
+    end
+end
+modbusFonctions.desarmeTimer = modbusFonctions_desarmeTimer
+
+# Appariement reponse<->requete. Une trame de LECTURE ModBus RTU ne porte PAS la
+# StartAddress/Count/type : sans la requete en vol, le maitre ne sait pas a quel
+# registre la donnee appartient. On injecte donc ces champs depuis enVol.
+# Sur un esclave (enVol == nil) : ne fait rien. Signale (sans jeter) une reponse
+# hors-sequence -> rejet strict activable plus tard si besoin.
+def modbusFonctions_apparieReponse(reponse)
+    if (modbusFonctions.enVol == nil)   return end
+    if (type(reponse) != "instance")    return end
+    var req = modbusFonctions.enVol["paramMSG"]
+    reponse["StartAddress"] = req.find("StartAddress", reponse.find("StartAddress", 0))
+    reponse["Count"]        = req.find("Count", reponse.find("Count", 0))
+    if (req.find("type") != nil)   reponse["type"] = req["type"]   end
+    if (reponse.find("DeviceAddress", -1) != req.find("DeviceAddress", -1) ||
+        reponse.find("FunctionCode",  -2) != req.find("FunctionCode",  -1))
+        modbusFonctions.log("APPARIE_REPONSE: reponse hors-sequence (ne correspond pas a la requete en vol)", LOG_LEVEL_DEBUG)
+    end
+end
+modbusFonctions.apparieReponse = modbusFonctions_apparieReponse
+
 def modbusFonctions_envoiMsgModbus(paramMSG, typeMsg, id)
     import json
     import string
@@ -438,48 +576,13 @@ def modbusFonctions_envoiMsgModbusSerial(paramMSG, typeMsg)
     if (drivers["ModBus"].find("id", 99) == 0)
         # Teste le Flag d'attente de réponse avant d'envoyer = Une commande en cours attend déjà une réponse
         # Si 'faux': Le canal ModBus est libre: la commande peut être envoyée
-        if (!modbusFonctions.attenteReponse) 
-            # Flag qui marque l'attente d'une réponse pour le maitre (id = 0): Evite de lancer des ordres en même temps
-            modbusFonctions.log("ENVOI_MSG_MODBUS: -------------------- envoiMsgModbusSerial -------------------", LOG_LEVEL_DEBUG)
-            reponse = tasmota.cmd("ModBusSend " + json.dump(paramMSG), boolMute)
-
-            # Déclenche un timer pour réinitialiser le flag d'attente de réponse
-            modbusFonctions.attenteReponse = true
-            modbusFonctions.reinitialiseFlagModBus(paramMSG)
-
-            # Teste la réussite de la commande si le canal ModBus était libre
-            # Echec de la commande 'ModBusSend()' => Relance la fonction d'envoi dans 500ms & sort de la fonction en cours
-            if (reponse.find("ModbusSend", "") == "Failed")
-                modbusFonctions.relanceEnvoiMsgModbus(paramMSG, typeMsg)
-                modbusFonctions.log("ENVOI_MSG_MODBUS: Envoi du message ModBus = Echec", LOG_LEVEL_DEBUG_PLUS)
-                modbusFonctions.log(f"ENVOI_MSG_MODBUS: Echec de la commande ModBus {json.dump(paramMSG):s} => sera renvoyée plus tard !", LOG_LEVEL_DEBUG_PLUS)
-
-                modbusFonctions.attenteReponse = false
-            # Erreur de la commande 'ModBusSend()' => Relance la fonction d'envoi dans 500ms & sort de la fonction en cours
-            elif (reponse.find("Command", "") == "Error")
-                # modbusFonctions.relanceEnvoiMsgModbus(paramMSG, typeMsg)
-                modbusFonctions.log("ENVOI_MSG_MODBUS: Envoi du message ModBus = Erreur", LOG_LEVEL_DEBUG_PLUS)
-                modbusFonctions.log(f"ENVOI_MSG_MODBUS: Erreur de la commande ModBus {json.dump(paramMSG):s} => Vérifier le paramétrage de la commande ModBus !", LOG_LEVEL_DEBUG_PLUS)
-
-                modbusFonctions.attenteReponse = false
-            # Commande réussie
-            else (reponse.find("ModbusSend", "") == "Done") 
-                modbusFonctions.log("ENVOI_MSG_MODBUS: Commande ModBus envoyée -> " + "ModBusSend " + json.dump(paramMSG), LOG_LEVEL_DEBUG_PLUS)
-
-                reponse = modbusFonctions.prepareTrame(paramMSG, typeMsg)
-                modbusFonctions.log(string.format("ENVOI_MSG_MODBUS: Message ModBus envoyé = 0x%s", reponse.tohex()), LOG_LEVEL_DEBUG_PLUS)
-                modbusFonctions.log("ENVOI_MSG_MODBUS: Envoi du message ModBus = OK", LOG_LEVEL_DEBUG_PLUS)
-            end
-
-            # Sort de la fonction après envoi du message par la commande 'ModBusSend()'
-            return               
-        # Si 'vrai': Une commande précédente attend déjà une reponse => Relance la fonction d'envoi dans 500ms & sort de la fonction en cours
-        elif (modbusFonctions.attenteReponse)
-            tasmota.set_timer(drivers["ModBus"].find("timeoutReponse", 1000), / -> modbusFonctions.envoiMsgModbusSerial(paramMSG, typeMsg), "envoiMsgEnCours_" + str(paramMSG["StartAddress"]))
-            modbusFonctions.log("ENVOI_MSG_MODBUS: Commande ModBus en cours ........ la commande '" + json.dump(paramMSG) + "' sera renvoyée plus tard !", LOG_LEVEL_DEBUG)
-
-            return 
-        end
+        # Maitre (id = 0) : on ENFILE le message. La file (enfileMsg -> pompeQueue ->
+        # termineEnVol/surTimeout) envoie la tete quand le canal RS485 est libre, un
+        # seul en vol, dans l'ordre FIFO, avec timeout unique et retry borne.
+        # Remplace l'ancien booleen attenteReponse + renvoi par timer nomme par
+        # StartAddress (qui perdait des messages). Voir outils_docs/PROTOCOLE_MODBUS.md.
+        modbusFonctions.enfileMsg(paramMSG, typeMsg)
+        return
     #- Si Esclave ModBus (id > 0)
         Fonction 0x02 ==> Lecture des entrées discrètes (Read Discrete Inputs) : ex=Récupérer l'état de boutons, capteurs, contacts, interrupteurs.
         ex: Réponse à -> 
@@ -655,10 +758,10 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
                                                     paramMSG[typeTitre]["Values"].tostring(), paramMSG[typeTitre]["Erreur"] 
                                                 ), serveur["mqtt"]["topic"])
             
-            # Initialise le buffer & le Flag d'attente de réponse après ordre
+            # Initialise le buffer & acquitte le message en vol (reponse recue)
             var buffer = modbusFonctions.serialModBus.read()
 
-            modbusFonctions.attenteReponse = false
+            modbusFonctions.termineEnVol(true)
             modbusFonctions.serialModBus.flush()
         end
     # Recoit message sur le port TCP
@@ -1307,32 +1410,10 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
 end
 modbusFonctions.prepareTrame = modbusFonctions_prepareTrame
 
-# Fonction chargée de relancer une fonction après un timer
-def modbusFonctions_relanceEnvoiMsgModbus(paramMSG, typeMsg)
-    # Probleme 'set_timer()' avec l'ESP32-P4
-    if (diverses["typeESP"] == "ESP32P4")
-        tasmota.add_cron(f"*/{drivers['ModBus'].find('timeoutReponse', 1000) / 1000:i} * * * * *", 
-                                            def()
-                                                tasmota.remove_cron("envoiMsgModbus_" + str(paramMSG["StartAddress"]))
-                                                modbusFonctions.envoiMsgModbusSerial(paramMSG, typeMsg)
-                                            end, "envoiMsgModbus_" + str(paramMSG["StartAddress"]))
-    else tasmota.set_timer(drivers["ModBus"].find("timeoutReponse", 1000), / -> modbusFonctions.envoiMsgModbusSerial(paramMSG, typeMsg), "envoiMsgModbus_" + str(paramMSG["StartAddress"]))
-    end
-end
-modbusFonctions.relanceEnvoiMsgModbus = modbusFonctions_relanceEnvoiMsgModbus
-
-# Fonction chargée de réinitialiser le Flag d'avertissement de connexion ModBus en cours
-# après un délai de timeout défini par 'drivers['ModBus']['timeoutReponse']'
-def modbusFonctions_reinitialiseFlagModBus(paramMSG)
-    tasmota.set_timer(drivers["ModBus"].find("timeoutReponse", 1000), 
-                                            def()
-                                                if (modbusFonctions.attenteReponse)
-                                                    modbusFonctions.attenteReponse = false
-                                                    modbusFonctions.log("ENVOI_MSG_MODBUS: Réinitialisation du Flag 'attenteReponse=false'", LOG_LEVEL_DEBUG_PLUS)
-                                                end
-                                            end, "resetFlagTimeout_" + str(paramMSG["StartAddress"]))
-end
-modbusFonctions.reinitialiseFlagModBus = modbusFonctions_reinitialiseFlagModBus
+# NOTE (2026-07-16) : relanceEnvoiMsgModbus et reinitialiseFlagModBus ont ete
+# SUPPRIMEES (remplacees par la file d'attente : pompeQueue/termineEnVol/surTimeout).
+# Leur contournement ESP32-P4 (add_cron au lieu de set_timer) est repris par
+# modbusFonctions.armeTimer(). Voir outils_docs/PROTOCOLE_MODBUS.md.
 
 def modbusFonctions_crc16modbus(buf)
     var crc = 0x0000FFFF

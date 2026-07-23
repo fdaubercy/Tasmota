@@ -43,6 +43,12 @@ var globs = "path,ctypes_bytes_dyn,tasmota,ccronexpr,gpio,light,webclient,load,M
             "int64,"
             "serial,"
             "drivers,serveur,diverses,modules,boolMute,"
+            # NOTE (fork) : ajoutes le 2026-07-16 pour la solidification des modules du
+            # framework (grenier). Instances de drivers globales (posees par les
+            # controleXxx.be via affectation de niveau fichier) et `webserver`, tous
+            # references par nom dans des corps de fonction de globalFonctions/webFonctions.
+            # Stub a nil : resolus par nom a l'execution sur l'ESP32, comme les autres.
+            "controleGeneral,controleWeb,controleLedTemoin,webserver,"
             "LOG_LEVEL_ERREUR,LOG_LEVEL_INFO,LOG_LEVEL_DEBUG,LOG_LEVEL_DEBUG_PLUS,logSerial,logWeb"
 
 for g:string2.split(globs, ",")

@@ -1,12 +1,13 @@
 # Définition du module
-var configGlobal = module("/configGlobal")
+#@ solidify:configGlobal
+var configGlobal = module("configGlobal")
 
 # Fonction chargé de tester un paramètre enregistré avec celui présent en json
 # paramTasmota: Commande envoyé à tasmota pour récupérer la donnée : ex=SetOption56
 # paramJson: la donnée json sélectionnée: ex=data["selectSignalFort"]
 # typeData: type de donnée à comparer: ex=real / int / str
 # @Retourne true=changement du paramètre
-configGlobal.testeParam = def(paramTasmota, paramJson, typeData)
+def configGlobal_testeParam(paramTasmota, paramJson, typeData)
 	import string
 	import persist
 
@@ -36,10 +37,11 @@ configGlobal.testeParam = def(paramTasmota, paramJson, typeData)
 	else return false
 	end
 end
+configGlobal.testeParam = configGlobal_testeParam
 
 # Paramétrage par tasmota.cmd à partir des paramètres enregistrés en json
 # @json = _persist.json comprenant l'ensemble des paramètres
-configGlobal.configGlobalByJson = def(nbIOActivesJSON)
+def configGlobal_configGlobalByJson(nbIOActivesJSON)
 	import string
     import globalFonctions
 	import diversFonctions
@@ -289,6 +291,7 @@ configGlobal.configGlobalByJson = def(nbIOActivesJSON)
 
     return enregistrePersistant
 end
+configGlobal.configGlobalByJson = configGlobal_configGlobalByJson
 
 # Retourne le module lors de l'importation
 return configGlobal

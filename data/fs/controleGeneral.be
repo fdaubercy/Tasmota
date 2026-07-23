@@ -19,6 +19,15 @@
         * reglage par réception de l'heure par le maitre en UDP: diverses["fuseauHoraire"]["typeReglageHeure"] = "UDP"
 -#
 
+# Rendu solidifiable (2026-07-16) : la classe est portee par un module import-able
+# 'controleGeneral', seul moyen pour que la version en FLASH remplace le fichier du
+# LittleFS (import tente load_native avant load_package). Charge par 'import' + init()
+# depuis autoexec, plus par loadBerryFile (qui, lui, recompile la classe en RAM).
+# IMPORTANT : garder l'import+init() AVANT le chargement de i2c_ads1115 (qui lit
+# controleGeneral.nbIOActivesJSON au niveau fichier).
+#@ solidify:controleGeneral
+var controleGeneral = module("controleGeneral")
+
 class CONTROLE_GENERAL : Driver
     # Variables
 	var sensors
@@ -417,6 +426,17 @@ class CONTROLE_GENERAL : Driver
     end
 end
 
-# Active le Driver de controle global des modules
-controleGeneral = CONTROLE_GENERAL()
-tasmota.add_driver(controleGeneral)
+# Publie la classe dans le module (solidification + import).
+controleGeneral.CONTROLE_GENERAL = CONTROLE_GENERAL
+
+# init() : instancie le Driver de controle global des modules, l'enregistre et publie
+# l'instance dans global.controleGeneral. Remplace le code de niveau fichier ; appele
+# depuis autoexec apres 'import'. La construction ne lit pas global.controleGeneral
+# (comme l'ancien code) : la cron qui le reference ne s'execute que plus tard.
+def controleGeneral_init()
+    var inst = controleGeneral.CONTROLE_GENERAL()
+    global.controleGeneral = inst
+    tasmota.add_driver(inst)
+    return inst
+end
+controleGeneral.init = controleGeneral_init

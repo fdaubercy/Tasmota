@@ -151,13 +151,17 @@ class MODBUS_CONN_16CHANNEL : Driver
         end
         self.log(f"MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: Type de msg Modbus = {TypeMsg:s}", LOG_LEVEL_DEBUG_PLUS)
 
+        # Complete la reponse de lecture avec StartAddress/Count/type de la requete en
+        # vol (la trame RTU ne les porte pas) -> le maitre sait a quel registre repondre.
+        modbusFonctions.apparieReponse(msg)
+
         # Certaines fonctions ne retournent aucune données
         msg["FunctionName"] = modbusFonctions.tabFonctionsName[msg["FunctionCode"]]
         self.log(string.format("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: FunctionCode = 0x%02X ('%s')", msg["FunctionCode"], msg["FunctionName"]), LOG_LEVEL_DEBUG_PLUS)
 
         if (msg["FunctionName"] == "ECRITURE_REGISTRES_HOLDER")
-            # Initialise le buffer & le Flag d'attente de réponse après ordre
-            modbusFonctions.attenteReponse = false
+            # Acquitte le message en vol (reponse recue) -> pompe le suivant
+            modbusFonctions.termineEnVol(true)
 
             return
         end
@@ -192,8 +196,8 @@ class MODBUS_CONN_16CHANNEL : Driver
         # Ajoute la donnée reçue en json
         # self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: dataJson=" + json.dump(self.dataJson), LOG_LEVEL_DEBUG_PLUS)
 
-        # Initialise le buffer & le Flag d'attente de réponse après ordre
-        modbusFonctions.attenteReponse = false
+        # Acquitte le message en vol (reponse recue)
+        modbusFonctions.termineEnVol(true)
     end
 
     # Règles sur changement d'état lors du démarrage de Tasmota

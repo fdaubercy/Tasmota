@@ -1,7 +1,8 @@
 # Définition du module
-var diversFonctions = module("/diversFonctions")
+#@ solidify:diversFonctions
+var diversFonctions = module("diversFonctions")
 
-diversFonctions.afficheDateTime = def(sepHoraire, boolAfficheSec, sepDateHeure)
+def diversFonctions_afficheDateTime(sepHoraire, boolAfficheSec, sepDateHeure)
     import string
 
 	var time_dump = tasmota.time_dump(tasmota.rtc()["local"])
@@ -28,9 +29,10 @@ diversFonctions.afficheDateTime = def(sepHoraire, boolAfficheSec, sepDateHeure)
 		
 	return date
 end
+diversFonctions.afficheDateTime = diversFonctions_afficheDateTime
 
 # Génère un débit aléatoire
-diversFonctions.getRandomInt = def(min, max)
+def diversFonctions_getRandomInt(min, max)
 	import math
 	import crypto
 
@@ -49,12 +51,13 @@ diversFonctions.getRandomInt = def(min, max)
 
 	return int(x1);
 end
+diversFonctions.getRandomInt = diversFonctions_getRandomInt
 
 # Récupère les template enregistré dans la device Tasmota
 # Récupère les componentes
 # @template = tableau json enregistré dans _persist.json
 # @ Retourne true si l'enregistrement en json doit être effectué
-diversFonctions.recupereTemplate = def(template)
+def diversFonctions_recupereTemplate(template)
     import persist
 	import gestionFileFolder
 	import json
@@ -104,9 +107,10 @@ diversFonctions.recupereTemplate = def(template)
 
     return enregistrePersistant
 end
+diversFonctions.recupereTemplate = diversFonctions_recupereTemplate
 
 # Affiche les statistiques de mémoire
-diversFonctions.statMemory = def()
+def diversFonctions_statMemory()
 	import string 
 
 	var stat = tasmota.memory()
@@ -118,9 +122,10 @@ diversFonctions.statMemory = def()
 	end	
 	log(string.format("STAT_MEMORY: Espace Heap libre = %d", stat["heap_free"]), LOG_LEVEL_DEBUG)	
 end
+diversFonctions.statMemory = diversFonctions_statMemory
 
 # Se charge de joindre 2 json en un tableau
-diversFonctions.joinJsonTab = def(*json)
+def diversFonctions_joinJsonTab(*json)
 	var json_result = []
         
     for i: 0 .. size(json) - 1
@@ -131,9 +136,10 @@ diversFonctions.joinJsonTab = def(*json)
 
 	return json_result
 end
+diversFonctions.joinJsonTab = diversFonctions_joinJsonTab
 
 # Convertit et imprime un nombre en représentation binaire
-diversFonctions.printBinaire = def(nombre)
+def diversFonctions_printBinaire(nombre)
 	var binary_string = ''
 	
 	while (nombre > 0)
@@ -145,6 +151,7 @@ diversFonctions.printBinaire = def(nombre)
 	binary_string = "0b" + binary_string
 	return binary_string
 end
+diversFonctions.printBinaire = diversFonctions_printBinaire
 
 # Retourne le module lors de l'importation
 return diversFonctions

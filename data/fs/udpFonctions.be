@@ -288,7 +288,7 @@ udpFonctions.changementEtatDemarrage = def(value, trigger, msg, typeComm)
             if (serveur["udp"]["id"] > 0)
                 udpFonctions.log(string.format("UDP_CHGT_ETAT_DEMARRAGE: L'esclave n°%i envoie ses paramètres au maitre !", serveur["udp"]["id"]), LOG_LEVEL_DEBUG)
                 # udpFonctions.resetClientsConnectes()
-                tasmota.cmd("ReglageUDP forceEnvoiParams ON")
+                tasmota.cmd("ReglageUDP forceEnvoiParams ON", boolMute)
             else 
                 tasmota.set_timer(diverses["telePeriod"] * 1000, def()  udpFonctions.resetClientsConnectes()     end, "resetEsclaves")
             end

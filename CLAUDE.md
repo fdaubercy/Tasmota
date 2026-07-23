@@ -191,6 +191,8 @@ Pour ne pas chercher : ce qui a ete produit et ou.
 - `tasks/lessons.md` — journal des erreurs et regles.
 - `tasks/reprise-solidification-berry.md` — etat du chantier solidification, prochaine action.
 - `outils_docs/SOLIDIFICATION_BERRY.md` — mecanisme, verification (§5), parametres, 11 pieges.
+- `outils_docs/PROTOCOLE_MODBUS.md` — ModBus RTU/TCP standard, implementation maison (3 transports
+  Serie/UDP/TCP), extension esclave->maitre, failles du mecanisme d'envoi, design de queue FIFO.
 - `docs/superpowers/specs/2026-07-15-solidification-berry-verdict.md` — verdict Q1/Q2/Q3.
 - `outils_docs/scripts_python/` :
   - `synchronise_fork_tasmota.py` — synchro du fork (merge, jamais de force-push).

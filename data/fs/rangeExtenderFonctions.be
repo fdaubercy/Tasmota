@@ -240,10 +240,13 @@ rangeExtenderFonctions.afficheBoutonsModulesEsclaves = def()
     if serveur["rangeExtender"].find("id", 99) == 0
         rangeExtenderFonctions.log("RANGE_EXTENDER: Affichage du bouton !", LOG_LEVEL_DEBUG)
 
-        rgxClients = tasmota.cmd("RgxClients")["RgxClients"]
+        # Convention : cmd avec boolMute + acces JSON garde (une cmd peut renvoyer nil
+        # ou un dict sans la cle) pour ne pas planter sur .size().
+        var _reponseRgx = tasmota.cmd("RgxClients", boolMute)
+        rgxClients = _reponseRgx ? _reponseRgx.find("RgxClients") : nil
 
         # Si au moins 1 client est connecté
-        if (rgxClients.size() > 0)
+        if (rgxClients != nil && rgxClients.size() > 0)
             # webserver.content_send("<hr>")
             for mac: rgxClients.keys()
                 for cle: paramDiscovery.keys()

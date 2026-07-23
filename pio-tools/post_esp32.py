@@ -177,6 +177,30 @@ def esp32_build_filesystem(fs_size):
             print(file)
             shutil.copy(file, filesystem_dir)
             
+    # OPT-IN : exclure du filesystem les .be deja solidifies. Leur bytecode est en flash
+    # (partition app) et 'import' les resout via load_native -> inutile de les embarquer sur
+    # le FS. Gain : espace filesystem (PAS de la RAM : la RAM est deja economisee par la
+    # solidification elle-meme). N'agit que sur l'image de staging, pas sur le depot.
+    #
+    # DESACTIVE par defaut. A activer via l'env :  custom_files_exclude_solidified = ON
+    # UNIQUEMENT apres avoir valide la solidification a l'execution : sans le .be sur le FS,
+    # 'import' n'a plus de repli (.bec) si le module natif n'etait pas trouve.
+    try:
+        exclure_solidifies = env.GetProjectOption("custom_files_exclude_solidified").strip().upper() == "ON"
+    except Exception:
+        exclure_solidifies = False
+    if exclure_solidifies:
+        try:
+            solidifies = env.GetProjectOption("custom_berry_solidify").splitlines()
+        except Exception:
+            solidifies = []
+        for s in solidifies:
+            s = s.strip()
+            cible = os.path.join(filesystem_dir, os.path.basename(s))
+            if s and os.path.isfile(cible):
+                os.remove(cible)
+                print(Fore.YELLOW + "Exclu du filesystem (deja solidifie) : " + os.path.basename(s))
+
     if not os.listdir(filesystem_dir):
         print(Fore.RED + "Pas de fichiers ajoutés -> Nous ne créerons pas 'littlefs.bin' & n'écraserons pas le fs de partition!")
         return False

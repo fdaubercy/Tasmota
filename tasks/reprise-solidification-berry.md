@@ -5,46 +5,62 @@
 
 ## En une phrase
 
-La solidification **fonctionne de bout en bout** : `modbusFonctions` (15 fonctions) est
-solidifié et présent dans le firmware du grenier. **Il reste à flasher et à mesurer** —
-c'est la seule chose qui n'a pas été faite.
+La solidification est **généralisée à 10 modules du framework** sur le grenier
+(`configDevices/Global/Modules`, `diversFonctions`, `gestionFileFolder`,
+`globalFonctions`, `webFonctions` + les 3 drivers `controleGeneral/Web/LedTemoin`
+refactorés en modules import-ables). **Tout compile au vrai xtensa-gcc, seul ou en lot.**
+`modbusFonctions` est **retiré** de la liste (le grenier ne l'utilise pas).
+**Il reste à flasher, valider l'import à l'exécution (Q3) et mesurer la RAM.**
 
 ---
 
 ## LA PROCHAINE ACTION
 
-Flasher le grenier et valider Q3. Le firmware est **déjà construit** (`firmware.bin`,
-3,08 Mo, 2026-07-16 06:58) et contient les 34 symboles du module.
+**Rebuild + flash du grenier**, puis valider Q3 et mesurer la RAM. Le firmware n'est
+**plus** celui du 06:58 (qui ne portait que `modbusFonctions`) — il faut reconstruire
+avec les 10 modules :
 
 ```
+pio run -e tasmota32s3-etage2-grenier            # ~2h16
 pio run -e tasmota32s3-etage2-grenier -t upload
 ```
 
 ⚠️ **Jamais `erase_upload`** : il effacerait `_persist.json`, et sans lui `autoexec.be`
 ne charge plus rien (`autoexec.be:29`).
 
+**AVANT le build**, rejouer la chaine rapide sur chaque module (10 s/fichier) —
+ne jamais lancer 2h16 a l'aveugle :
+
+```
+python outils_docs/scripts_python/solidifie_et_compile_berry.py data/fs/<module>.be
+```
+
 Puis console Berry du grenier (`http://192.168.0.44/` → Berry Scripting Console) :
 
 ```berry
 import introspect
-import modbusFonctions
-introspect.solidified(modbusFonctions)       # true = vient bien de la FLASH  <-- LA preuve
-modbusFonctions.crc16modbus(bytes("0103"))   # une vraie fonction, vraiment appelee
-
+import configModules
+introspect.solidified(configModules)          # true = vient bien de la FLASH  <-- LA preuve
+import controleWeb
+introspect.solidified(controleWeb)            # idem pour un driver refactore
+# Verifier les drivers actifs : page web du grenier, LED temoin, controle general.
 import path
-path.listdir("/")                            # modbusFonctions.be ne doit PAS y etre
+path.listdir("/")                             # les .be solidifies peuvent rester (import gagne)
 ```
 
 `introspect.solidified()` (`be_introspectlib.c:140`) retourne `gc_isconst(...)` : vrai si
 l'objet est const, donc en flash. C'est la seule vérification qui **demande** l'origine à la VM
 au lieu de la déduire de l'absence du fichier.
 
-- **`import` répond** → **Q3 = OUI**, phase 1 close, la voie est ouverte.
+- **`import` répond + `solidified()==true`** → **Q3 = OUI**, la voie est prouvee.
 - **`module_not_found`** → Q3 = NON, et tout le reste est caduc.
 
-**Ne pas espérer de gain RAM ici** : le grenier n'utilise pas ModBus, le module n'était
-pas sur son LittleFS. `tasmota.gc()` y montrera zéro — vrai, mais sans valeur. Le grenier
-valide le **mécanisme**, pas le chiffre.
+**Le gain RAM se mesure ICI** (contrairement a `modbusFonctions`, non utilise sur le
+grenier) : ces 10 modules ETAIENT sur le LittleFS du grenier et charges en RAM. Relever
+`tasmota.memory("heap_free")` (octets) et un `tasmota.gc()` **avant** (firmware actuel) et
+**apres** flash. Attention drivers : verifier que la page web, la LED temoin et le controle
+general fonctionnent toujours — le refactor `loadBerryFile`->`import`+`init()` n'a ete
+prouve qu'a la COMPILATION, pas a l'execution.
 
 ---
 
@@ -55,14 +71,19 @@ valide le **mécanisme**, pas le chiffre.
 | Q1 — `var x = module(...)` solidifiable ? | **OUI pour la forme**, mais le **nom** ne doit pas porter de slash | préprocesseur xtensa |
 | Q2 — `tasmota.add_driver()` au niveau fichier casse ? | **OUI** — cause isolée : c'est le code de **niveau fichier**, pas la classe | avec pied : rc=1 / sans pied : `.h` de 7503 o, 4 méthodes |
 | Q3 — `import` sans fichier sur le FS ? | **NON TESTÉ** | ← la prochaine action |
+| Q4 — un driver `loadBerryFile` beneficie-t-il de la solidification ? | **NON tel quel** — `loadBerryFile`->`load()` ignore la table native ; il faut le refactorer en module import-able | `gestionFileFolder.be:305` (load) vs `:346` (compileModule) |
 
-**Les 5 prérequis, tous en place et vérifiés :**
+**Les 5 prérequis par module** (établis sur `modbusFonctions`, appliqués aux 10 du grenier) :
 
-1. `custom_berry_solidify = data/fs/modbusFonctions.be` (`platformio_tasmota_cenv.ini:267`)
-2. Directive `#@ solidify:modbusFonctions` en tête du module
-3. Nom de module **sans slash** — `module("modbusFonctions")`
-4. **15 fonctions nommées**, 0 anonyme
-5. **9 globaux du framework stubbés** dans `berry_custom/solidify_all_python.be`
+1. Le fichier listé dans `custom_berry_solidify` (`platformio_tasmota_cenv.ini`) — désormais
+   les **10 modules du grenier**, `modbusFonctions` **retiré** de la liste.
+2. Directive `#@ solidify:<nom>` en tête (le `<nom>` = module import-able, ou classe→module
+   pour un driver).
+3. Nom de module **sans slash** — `module("<nom>")`.
+4. **0 fonction anonyme** (`nomme_fonctions_berry.py` ; les lambdas inline `/->…` sont
+   auto-nommées par le solidifieur, sans collision — vérifié sur `controleWeb`/`webFonctions`).
+5. **Globaux du framework stubbés** dans `berry_custom/solidify_all_python.be` — +4 le
+   2026-07-16 (`controleGeneral,controleWeb,controleLedTemoin,webserver`).
 
 ---
 
@@ -82,11 +103,56 @@ Chacun a coûté cher. Ne pas les réintroduire.
 
 ---
 
+## La généralisation aux 10 modules du grenier (2026-07-16)
+
+Fait, et vérifié à la compilation (chaque `.h` compile au xtensa-gcc, seul **et** en lot
+de 10 sans collision `_anonymous_` ni global non déclaré). Deux familles, deux recettes :
+
+**1) Les 7 modules import-ables** (`configDevices/Global/Modules`, `diversFonctions`,
+`gestionFileFolder`, `globalFonctions`, `webFonctions`) — recette `modbusFonctions` telle
+quelle : `nomme_fonctions_berry.py --ecrire`, slash retiré (`module("x")`), directive
+`#@ solidify:x`. **Aucun changement d'autoexec** : ils sont charges par `compileModule`
+puis `import`, et `import` tente `load_native` (FLASH) avant `load_package` (le `.bec`).
+
+**2) Les 3 drivers** (`controleGeneral`, `controleWeb`, `controleLedTemoin`) — refactor,
+car charges par `loadBerryFile`->`load()` qui **ignore la table native** (Q4). Patron :
+
+```berry
+#@ solidify:controleXxx
+var controleXxx = module("controleXxx")
+class CONTROLE_XXX [: Driver] ... end            # inchangee
+controleXxx.CONTROLE_XXX = CONTROLE_XXX          # classe publiee dans le module
+def controleXxx_init()                           # remplace le code de niveau fichier
+    var inst = controleXxx.CONTROLE_XXX()
+    global.controleXxx = inst                    # les consommateurs lisent ce global
+    tasmota.add_driver(inst)
+    # + controleWeb : inst.web_add_handler()
+    # + controleLedTemoin : if !inst.config_ok inst = nil end (avant le global)
+    return inst
+end
+controleXxx.init = controleXxx_init
+```
+
+Et dans `autoexec.be` du grenier : `loadBerryFile("/controleXxx", ...)` remplace par
+`import controleXxx as _ctrl` + `_ctrl.init()`. **Pieges du refactor driver :**
+- Le code de niveau fichier (instanciation + `add_driver`) planterait le solidifieur PC
+  (`tasmota` stub a nil) : il **doit** passer dans `init()`, jamais rester au niveau fichier.
+- Nom du module = nom de l'instance global : pas de collision (bare `controleXxx` = global
+  var = l'instance ; `import controleXxx` = table native = le module). Importer avec `as`
+  pour ne pas ecraser le placeholder `var controleGeneral = {}` de l'autoexec.
+- Ordre : garder `controleGeneral` import+init **avant** `i2c_ads1115` (qui lit
+  `controleGeneral.nbIOActivesJSON` au niveau fichier).
+- 4 globaux ajoutes au stub `solidify_all_python.be` : `controleGeneral,controleWeb,`
+  `controleLedTemoin,webserver`.
+
+**NON PROUVE a l'execution** : tout ceci ne vaut qu'a la compilation. La resolution
+`import`->FLASH et le bon fonctionnement des drivers apres refactor = Q3, a valider au flash.
+
 ## Décisions ouvertes
 
-**a) Généraliser aux 12 autres modules ?** 83 fonctions à nommer
-(`gestionFileFolder` 11, `udpFonctions` 7, `discoveryFonctions` 6, …). **À ne décider
-qu'après la mesure sur le garage.**
+**a) Généraliser aux autres modules (`udpFonctions` 7, `discoveryFonctions` 6, …) ?**
+Le patron est desormais rode (modules import-ables **et** drivers). **À ne décider
+qu'après la mesure RAM sur le grenier puis le garage.**
 
 **b) Le coût des globaux ajoutés — NON MESURÉ.** Les noms intermédiaires
 (`modbusFonctions_log`, …) deviennent des globaux Berry. Gratuit pour un module

@@ -12,7 +12,12 @@
     - Ajouter le fichier '/jsoncomponentes.json' dans le dossier de votre serveur 
 -#
 
-var controleWeb
+# Rendu solidifiable (2026-07-16) : la classe est portee par un module import-able
+# 'controleWeb', seul moyen pour que la version en FLASH remplace le fichier du LittleFS
+# (import tente load_native avant load_package). Charge par 'import' + init() depuis
+# autoexec, plus par loadBerryFile (qui, lui, recompile la classe en RAM).
+#@ solidify:controleWeb
+var controleWeb = module("controleWeb")
 
 class CONTROLE_WEB
     # Variables
@@ -373,7 +378,17 @@ class CONTROLE_WEB
 	end
 end
 
-# Active le Driver d'affichage des pages web
-controleWeb = CONTROLE_WEB()
-tasmota.add_driver(controleWeb)	
-controleWeb.web_add_handler()
+# Publie la classe dans le module (solidification + import).
+controleWeb.CONTROLE_WEB = CONTROLE_WEB
+
+# init() : instancie le Driver d'affichage des pages web, l'enregistre, ajoute ses
+# handlers HTTP et publie l'instance dans global.controleWeb. Remplace le code de
+# niveau fichier ; appele depuis autoexec apres 'import'.
+def controleWeb_init()
+    var inst = controleWeb.CONTROLE_WEB()
+    global.controleWeb = inst
+    tasmota.add_driver(inst)
+    inst.web_add_handler()
+    return inst
+end
+controleWeb.init = controleWeb_init

@@ -6,6 +6,13 @@
 #   global.controleLedTemoin.arrete()
 #   global.controleLedTemoin.stop() ; global.controleLedTemoin = nil
 
+# Rendu solidifiable (2026-07-16) : la classe est portee par un module import-able
+# 'controleLedTemoin', seul moyen pour que la version en FLASH remplace le fichier du
+# LittleFS (import tente load_native avant load_package). Charge par 'import' + init()
+# depuis autoexec, plus par loadBerryFile (qui, lui, recompile en RAM).
+#@ solidify:controleLedTemoin
+var controleLedTemoin = module("controleLedTemoin")
+
 class CONTROLE_LED_TEMOIN
     # Variables d'instance
     var pin          # Numéro du GPIO physique
@@ -157,7 +164,18 @@ class CONTROLE_LED_TEMOIN
     end
 end
 
-global.controleLedTemoin = CONTROLE_LED_TEMOIN()
-if !global.controleLedTemoin.config_ok
-    global.controleLedTemoin = nil
+# Publie la classe dans le module (pour la solidification et l'import).
+controleLedTemoin.CONTROLE_LED_TEMOIN = CONTROLE_LED_TEMOIN
+
+# init() : instancie le driver et publie l'instance dans global.controleLedTemoin.
+# Remplace le code de niveau fichier ; appele depuis autoexec apres 'import'.
+# add_driver(self) est fait dans CONTROLE_LED_TEMOIN.init() quand config_ok.
+def controleLedTemoin_init()
+    var inst = controleLedTemoin.CONTROLE_LED_TEMOIN()
+    if !inst.config_ok
+        inst = nil
+    end
+    global.controleLedTemoin = inst
+    return inst
 end
+controleLedTemoin.init = controleLedTemoin_init

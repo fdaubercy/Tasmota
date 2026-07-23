@@ -1,5 +1,6 @@
 # Définition du module
-var configDevices = module("/configDevices")
+#@ solidify:configDevices
+var configDevices = module("configDevices")
 
 # Parcours tous les modules activés paramétrés
 # Paramètre les règles pour chaque type de device: add_rule -> changementEtatCapteur
@@ -7,7 +8,7 @@ var configDevices = module("/configDevices")
 # Enregistre les paramètres dans le fichier '/json/nbIO.json'
 # Paramètre l'affichage ou non de la valeur du capteur sur webUI
 # Active ou non le Driver Tasmota dédié
-configDevices.configDevicesByRules = def(modules, nbIOActivesJSON)
+def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
     import gestionFileFolder
     # import introspect
     import string
@@ -449,6 +450,7 @@ configDevices.configDevicesByRules = def(modules, nbIOActivesJSON)
 		end
     end
 end
+configDevices.configDevicesByRules = configDevices_configDevicesByRules
 
 # Retourne le module lors de l'importation
 return configDevices

@@ -1,9 +1,12 @@
-# Définition du module
-var configModules = module("/configModules")
+# Definition du module
+# Rend ce module solidifiable (voir outils_docs/SOLIDIFICATION_BERRY.md).
+# Nom sans slash : il finit colle dans un identifiant C par ## (un '/' y est illegal).
+#@ solidify:configModules
+var configModules = module("configModules")
 
 # Parcours soit les 'modules', soit les 'drivers' paramétrés dans le json
 # @typologie = paragraphe parcouru dans le json -> "modules" ou "drivers"
-configModules.configDevicesByJon = def(typologie, gpioPinUtilises, ordreGPIO, template, nbIOActivesJSON)
+def configModules_configDevicesByJon(typologie, gpioPinUtilises, ordreGPIO, template, nbIOActivesJSON)
 	import string
 
 	var typeApp
@@ -174,6 +177,7 @@ configModules.configDevicesByJon = def(typologie, gpioPinUtilises, ordreGPIO, te
 
     return enregistrePersistant
 end
+configModules.configDevicesByJon = configModules_configDevicesByJon
 
 # Retourne le module lors de l'importation
 return configModules
