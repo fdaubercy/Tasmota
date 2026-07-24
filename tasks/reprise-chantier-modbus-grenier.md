@@ -88,11 +88,15 @@ existants continuent de fonctionner, la scission est invisible aux appelants.
 
 ## Le plan en phases
 
+> ⚠️ **Le plan ci-dessous a été écrit pour le GRENIER.** Depuis le 2026-07-24, le travail
+> porte sur les **3 modules garage** (P4 maître, cuve, rideau). Plusieurs conclusions ne
+> s'y transposent pas — voir « Ce qui change sur le garage » plus bas.
+
 | Phase | Quoi | Qui |
 |---|---|---|
-| **0** | Valider la file FIFO + sondage 0x03 — série seul, **code inchangé** | Utilisateur (flash) |
-| **1** | Code mort (~75 l.) + branches vides 0x01/0x03/0x0F de `prepareTrame` | Claude |
-| **1 bis** | Rejet strict `apparieReponse` + code fonction télémétrie en liste blanche | Claude |
+| **0** | Valider la file FIFO + sondage 0x03 — série seul, **code inchangé** | Utilisateur (flash) — *sans objet sur le garage, dont le bus tourne déjà* |
+| **1** | Code mort (~75 l.) + branches vides 0x01/0x03/0x0F de `prepareTrame` | ✅ **fait le 2026-07-24** (commits `c34cc558a` → `73adea014`) |
+| **1 bis** | Rejet strict `apparieReponse` + code fonction télémétrie en liste blanche | Claude — **prochaine action** |
 | **2** | Index inverse `{adresse: {registre: cible}}` + table d'inversion Open/Close | Claude |
 | **3** | Scission par rôle | Claude |
 | **4** | Instantanés : `seq`, commandé/constaté, chien de garde, réconciliation au boot | Claude |
@@ -105,7 +109,29 @@ Un commit par phase → chaque phase est un point de retour indépendant.
 
 ---
 
-## Le code mort identifié (phase 1)
+## Ce qui change sur le garage (établi le 2026-07-24, preuves à l'appui)
+
+- **`typeComm.TCP = ON`** sur le **maître P4** et sur la **cuve** (`OFF` sur le rideau).
+  Donc `prepareTrame` **est** sur leur chemin d'exécution — la conclusion « la phase 1
+  n'est pas bloquante », vraie pour un maître série pur, **ne s'y transpose pas**.
+- **Le transport TCP n'avait jamais pu émettre** : `envoiMsgModbusTCP` déclarait 3
+  paramètres pour 2 passés par ses 5 appelants. Berry n'impose pas l'arité
+  (`be_vm.c:1403-1405`), le décalage se propageait en silence jusqu'à un
+  `Trame.get()` sur une string. Corrigé (`c34cc558a`).
+- **Le TCP est désormais réservé au sens esclave → maître.** Série et TCP n'étaient pas
+  exclusifs : une fois l'arité corrigée, chaque commande serait partie **deux fois**, et
+  chaque ordre vers la carte 16 relais (sans IP) aurait produit une erreur. Corrigé
+  (`366d5d530`). L'**UDP porte le même défaut**, laissé en l'état car `OFF` partout.
+- **Phase 3 (scission) : la frontière ne tient pas sur le garage.** `lireMsgModbus` est
+  classée « esclave » dans le découpage, mais le **maître** l'utilise aussi par la voie
+  TCP (`tcpFonctions.be:199`, appel non gardé par le rôle). L'appliquer telle quelle
+  reviendrait à la reconcevoir. Gain réel : ~120 l. sur les esclaves, faible sur le P4,
+  contre 730 l. annoncées pour le grenier. **À rediscuter avant de lancer la phase 3.**
+- **Défaut annexe repéré, non corrigé** : dans la création des clients TCP
+  (`modbusFonctions.be:286-292`), `clients[id]` est créé **avant** que `id` ne soit lu
+  dans le JSON — le tableau se peuple avec un décalage d'une itération.
+
+## Le code mort identifié (phase 1) — ✅ traité le 2026-07-24
 
 - **`attenteReponse` n'est lu par personne** : écrit en `modbusFonctions.be:36, 427, 435,
   449, 466` et `controleModbus.be:117` — **aucune lecture**. Variable morte.
