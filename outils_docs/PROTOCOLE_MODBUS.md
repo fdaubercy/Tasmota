@@ -279,6 +279,12 @@ ModBusSend {"deviceaddress":1,"functioncode":3,"startaddress":1,"type":"uint16",
 
 Passer a 19200 : `01 06 00 FE 00 04` + CRC.
 
+> **Reglage MANUEL, hors firmware (note du 2026-07-24).** Le debit de la carte 16 relais
+> est configure **a la main par l'utilisateur AVANT son integration au bus** (usine 9600 ->
+> 19200), un seul module connecte. Le firmware Tasmota **ne l'automatise pas** : ne pas
+> chercher a faire regler le debit par le driver. Rappel : effectif seulement apres coupure
+> d'alimentation (voir piege 3 ci-dessous).
+
 ### Six pieges de cette carte
 
 1. **« Open » veut dire niveau BAS.** Glossaire : `Open : control port output low level`.

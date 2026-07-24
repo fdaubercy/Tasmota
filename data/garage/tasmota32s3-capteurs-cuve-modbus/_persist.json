@@ -266,7 +266,7 @@
 				"compteurs": {
 					"affichageWebSensor": "OFF",
 					"compteur1": {
-						"activation": "ON",
+						"activation": "OFF",
 						"nom": "Compteur 1",
 						"id": 1,
 						"pin": 4,

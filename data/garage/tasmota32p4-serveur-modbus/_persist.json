@@ -134,7 +134,7 @@
 						"activation": "ON",
 						"nom": "Bouton 1",
 						"id": 1,
-						"pin": 4,
+						"pin": 21,
 						"type": 32,
 						"virtuel": "OFF",
 						"SwitchMode": 2,
