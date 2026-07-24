@@ -1341,13 +1341,36 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
 
     # Post-traitement en fonction de functionCode
     # Fonction 0x01 ==> Lire les coils (bits) : ex=Etat des relais -> Chaque coil est un bit (0 ou 1) représentant une sortie numérique (variable binaire)
-    if (paramMSG["FunctionName"] == "LECTURE_ENTREES_DISCRETES")
-
     # Fonction 0x02 ==> Lecture des entrées discrètes (Read Discrete Inputs) : ex=Récupérer l'état de boutons, capteurs, contacts, interrupteurs.
-    elif (paramMSG["FunctionName"] == "LECTURE_ENTREES_DISCRETES")
+    # Meme format de trame pour les deux (bitMode) :
+    #   Commande : StartAddress (2 octets) + quantite de BITS (2 octets)
+    #   Reponse  : nombre d'OCTETS de donnees (1 octet) + donnees
+    # C'est la quantite de bits (nbValeurs) qui part sur le bus, pas un nombre de registres,
+    # et le compte de la reponse est nbOctets = (nbValeurs + 7) / 8, calcule en :1235.
+    if (paramMSG["FunctionName"] == "LECTURE_COILS" || paramMSG["FunctionName"] == "LECTURE_ENTREES_DISCRETES")
+        if (typeMsg == "Commande")
+            Trame.add(paramMSG["StartAddress"], -2)     # Sur 2 octets
+            Trame.add(modbusFonctions.nbValeurs, -2)
+        else
+            Trame.add(modbusFonctions.nbOctets, -1)
+
+            # Ajoute à la trame, les données à écrire
+            Trame += writeData
+        end
 
     # Fonction 0x03 ==> Lecture des registres de maintien de 16 bits (Holding Registers)    ex=Récupérer une valeur entrée analogique, relai, etat d'une led WS2812B (la couleur, la saturation, la luminosite)
+    # Format identique a 0x04 en ModBus RTU : les deux lisent des registres de 16 bits et ne
+    # different que par la zone visee (holding / input). Meme trame, donc meme traitement.
     elif (paramMSG["FunctionName"] == "LECTURE_REGISTRES_HOLDER")
+        if (typeMsg == "Commande")
+            Trame.add(paramMSG["StartAddress"], -2)     # Sur 2 octets
+            Trame.add(modbusFonctions.nbRegistres, -2)
+        else
+            Trame.add(modbusFonctions.nbRegistres, -1)
+
+            # Ajoute à la trame, les données à écrire
+            Trame += writeData
+        end
 
     # Fonction 0x04 ==> "Lecture des entrées analogiques & températures (Input Registers)"     ex=Récupérer une valeur analogique, température, humidité, compteurs etc.
     elif (paramMSG["FunctionName"] == "LECTURE_REGISTRES_ENTREES")
