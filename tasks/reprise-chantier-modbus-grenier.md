@@ -140,6 +140,18 @@ esclave. Le sondage 0x03 fonctionne donc **dès aujourd'hui**, sans modification
 4. Période exacte de télémétrie par valeur (30 s pour les états, 5 min pour l'analogique
    retenu comme défaut).
 
+## À traiter AVANT la phase 2
+
+- **Commentaire périmé du bloc grenier dans `platformio_tasmota_cenv.ini`** (~l. 270) :
+  « `modbusFonctions` retiré de la liste (le grenier ne l'utilise pas) ». C'est encore
+  vrai **aujourd'hui** — `drivers.ModBus.activation` est à `OFF` dans le persist grenier —
+  mais ça devient **faux dès que le verrou n°2 de la phase 0 est levé**. Le corriger à ce
+  moment-là, et décider alors si `data/fs/modbusFonctions.be` entre aussi dans le
+  `custom_berry_solidify` du grenier (il y a été volontairement **écarté** le 2026-07-24 :
+  le chantier va réécrire ce module en phases 1-4, et un module solidifié n'est plus sur
+  le LittleFS — donc plus de boucle courte `éditer → téléverser → BrRestart`).
+  Les 3 environnements **garage** l'ont, eux, depuis le 2026-07-24.
+
 ---
 
 ## Git
