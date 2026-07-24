@@ -60,16 +60,13 @@ franchie), donc le cron de sondage s'armera.
    de 730 à ~120 lignes, et `modbusFonctions.be` étant maintenant solidifié, le découper
    obligerait à revoir les listes `custom_berry_solidify` et à re-vérifier chaque morceau.
 4. **Défauts repérés, non corrigés** (hors périmètre, volontairement laissés) :
-   - **`modbusFonctions.be:1370` — `prepareTrame` double la quantité des trames de
-     LECTURE.** Le bloc d'allocation du tampon d'écriture fait `nbRegistres *= 2` sur une
-     variable partagée, que les branchements 0x03/0x04 réutilisent comme quantité : une
-     lecture de 16 registres émet `0x0020` (=32) au lieu de `0x0010`. **Trouvé par le banc
-     `banc_test_modbus`** (voir plus bas). **Non bloquant pour le sondage du garage** (il
-     part en série, où Tasmota C++ bâtit la trame ; `prepareTrame` ne sert qu'à TCP/UDP).
-     Mais **la télémétrie analogique (`0x04|0x80`) passe, elle, par `prepareTrame` en TCP**
-     — à surveiller dans les logs. Correctif probable : utiliser `nbValeurs` (non doublé)
-     dans les branchements de lecture ; à faire dans une passe dédiée, avec le banc étendu
-     comme témoin (le `# nbRegistres /= 2` commenté du 0x04 est le fossile du même piège).
+   - ✅ **CORRIGÉ le 2026-07-24 (`prepareTrame`, quantité de lecture doublée).** Le bloc
+     d'allocation du tampon d'écriture faisait `nbRegistres *= 2` même pour une trame sans
+     données, et les branchements 0x03/0x04 réutilisaient la variable comme quantité (16 →
+     32). Corrigé par une garde `writeDataSize > 0` : une commande de lecture (`Values=[]`)
+     saute le bloc, les écritures/réponses (données présentes) sont inchangées. Trouvé,
+     corrigé et verrouillé par `banc_test_modbus` (TDD : le test échouait avant, passe
+     après ; la trame de sondage vaut désormais le vecteur exact de la doc, CRC compris).
    - `modbusFonctions.be:286-292` — `clients[id]` est créé **avant** que `id` ne soit lu
      dans le JSON : le tableau se peuple avec un décalage d'une itération.
    - `modbusFonctions.be:608` — l'**UDP** porte le même défaut de symétrie que le TCP

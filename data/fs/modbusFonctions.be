@@ -1362,7 +1362,14 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
     # int32 / uint32 => testés avec la fonction 0x04 | 0x10
     # float (même nb d'octets que uint32) => testés avec la fonction 0x04 | 0x06
 
-    if (paramMSG["Erreur"] == modbusFonctions.tabErreur["noerror"] && type(paramMSG["Values"]) == "instance")
+    # writeDataSize > 0 : ne PAS entrer ici pour une trame SANS donnees a ecrire (2026-07-24).
+    # Ce bloc dimensionne le tampon d'ECRITURE et, ce faisant, fait `nbRegistres *= 2`
+    # (registres -> octets) sur une variable partagee. Les branchements de LECTURE
+    # (0x03/0x04, commande) reutilisent nbRegistres comme QUANTITE de registres : sans cette
+    # garde, une lecture de 16 registres emettait 0x0020 (=32) au lieu de 0x0010. Une commande
+    # de lecture a Values=[] (writeDataSize == 0) et saute donc ce bloc ; les ecritures et les
+    # reponses (writeDataSize > 0) le traversent inchange. Trouve par banc_test_modbus.
+    if (paramMSG["Erreur"] == modbusFonctions.tabErreur["noerror"] && type(paramMSG["Values"]) == "instance" && writeDataSize > 0)
         if (modbusFonctions.nbRegistres > 40)
             paramMSG["Erreur"] = modbusFonctions.tabErreur["tomanydata"]
         else
@@ -1442,7 +1449,8 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
 
     # Fonction 0x04 ==> "Lecture des entrées analogiques & températures (Input Registers)"     ex=Récupérer une valeur analogique, température, humidité, compteurs etc.
     elif (paramMSG["FunctionName"] == "LECTURE_REGISTRES_ENTREES")
-        # modbusFonctions.nbRegistres /= 2
+        # (l'ancien `nbRegistres /= 2` correctif est devenu inutile : la garde writeDataSize > 0
+        #  du bloc d'allocation empeche desormais le doublement pour une commande de lecture.)
 
         # Ajoute le nombre de registres demandés
         if (typeMsg == "Commande")

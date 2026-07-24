@@ -91,18 +91,26 @@ verifie("crc FF 03 00 FF 00 01  -> 0xA1E4", 0xA1E4, modbusFonctions.crc16modbus(
 
 print("")
 print("=== 2. prepareTrame : commande de sondage 0x03 (16 registres) ===")
-# Attendu APRES correction (doc) : 01 03 00 01 00 10 15 C6  (quantite = 0x0010 = 16).
-# BUG CONNU : prepareTrame emet 0x0020 (=32). Cause : le bloc d'allocation du tampon
-# d'ecriture fait `nbRegistres *= 2` (modbusFonctions.be:1370) sur une variable
-# partagee, que les branchements de LECTURE (0x03/0x04) reutilisent ensuite comme
-# quantite. Non bloquant pour le sondage du garage (il part en SERIE, ou Tasmota C++
-# batit la trame ; prepareTrame ne sert qu'a TCP/UDP). A corriger dans une passe dediee.
+# Attendu (doc PROTOCOLE_MODBUS.md section 8) : 01 03 00 01 00 10 15 C6
+#   -> quantite = 0x0010 = 16 registres.
+# Corrige le 2026-07-24 : le bloc d'allocation du tampon d'ecriture ne double plus
+# nbRegistres pour une trame SANS donnees (writeDataSize == 0), donc une LECTURE
+# garde son vrai compte de registres. Cf. modbusFonctions.be, garde `writeDataSize > 0`.
+# .tohex() renvoie des MAJUSCULES ; les attendus le sont donc aussi. La trame
+# complete (CRC compris) est exactement le vecteur de la doc : 01 03 00 01 00 10 15 C6.
 var sonde = {"DeviceAddress":1, "FunctionCode":3, "StartAddress":1,
              "type":"uint16", "Count":16, "Values":[]}
-bug_connu("trame sondage 0x03 (quantite doublee)",
-          "010300010010" + "15c6",
-          modbusFonctions.prepareTrame(sonde, "Commande").tohex(),
-          "modbusFonctions.be:1370 nbRegistres*=2")
+verifie("trame sondage 0x03 complete (doc)",
+        "010300010010" + "15C6",
+        modbusFonctions.prepareTrame(sonde, "Commande").tohex())
+
+# Temoin : une 2e lecture 0x04 de 4 registres doit donner la quantite 0x0004, pas 0x0008.
+# On ne compare que les 6 premiers octets (adr, fct, adresse, quantite) - CRC ignore.
+var sonde4 = {"DeviceAddress":2, "FunctionCode":4, "StartAddress":1,
+              "type":"uint16", "Count":4, "Values":[]}
+var t4 = modbusFonctions.prepareTrame(sonde4, "Commande").tohex()
+verifie("trame lecture 0x04 (quantite 0x0004, 6 premiers octets)",
+        "020400010004", t4[0..11])
 
 print("")
 print("=== 3. apparieReponse : decision de la phase 1 bis ===")
