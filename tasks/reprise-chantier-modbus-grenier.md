@@ -99,7 +99,7 @@ existants continuent de fonctionner, la scission est invisible aux appelants.
 | **1 bis** | Rejet strict `apparieReponse` + code fonction télémétrie en liste blanche | ✅ **fait le 2026-07-24** (`9e828fc7a`) |
 | **2** | Index inverse `{adresse: {registre: cible}}` + table d'inversion Open/Close | ✅ **fait le 2026-07-24** (`90647b94d`) — carte 16 relais seulement, voir ci-dessous |
 | **3** | Scission par rôle | Claude |
-| **4** | Instantanés : `seq`, commandé/constaté, chien de garde, réconciliation au boot | Claude |
+| **4** | Instantanés : `seq`, commandé/constaté, chien de garde, réconciliation au boot | 🔶 **partielle, 2026-07-24** (`297dc4257`) — tout sauf `seq`, voir ci-dessous |
 
 **L'ordre n'est pas négociable sur deux points** : la phase 0 précède tout (sinon plus de
 témoin) ; la 1 bis précède l'activation du push (sinon on injecte une course dans un
@@ -130,6 +130,20 @@ Un commit par phase → chaque phase est un point de retour indépendant.
 - **Défaut annexe repéré, non corrigé** : dans la création des clients TCP
   (`modbusFonctions.be:286-292`), `clients[id]` est créé **avant** que `id` ne soit lu
   dans le JSON — le tableau se peuple avec un décalage d'une itération.
+
+## Ce qui reste de la phase 4 : le compteur `seq`
+
+Le `seq` protège les **instantanés poussés par les esclaves** contre le désordre UDP.
+Or ce push **n'existe pas** : la télémétrie actuelle (`globalFonctions.be:190/232/276/371`)
+est **différentielle** — elle dit « ce capteur a changé », pas « voici l'état complet ».
+
+Écrire le rejet `seq <= dernier reçu` côté maître serait donc du code mort. Le préalable
+est de **convertir la télémétrie en instantané** (§9 : *« un push ne dit jamais le relai 3
+a changé ; il dit voici l'état des 16 relais »*) — un chantier à part entière, à décider
+plutôt qu'à glisser dans une phase.
+
+Le reste de la phase 4 est en place pour la carte 16 relais : sondage périodique (T = 30 s),
+réconciliation au boot (+15 s), séparation `etat` / `etatConstate`, chien de garde à 3×T.
 
 ## Le code mort identifié (phase 1) — ✅ traité le 2026-07-24
 
