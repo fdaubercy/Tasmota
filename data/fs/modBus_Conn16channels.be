@@ -50,6 +50,63 @@ class MODBUS_CONN_16CHANNEL : Driver
     var nbIOActivesJSON
     var DEBUG
     var indexRegistres        # {idModBus: [cleModule, cleEnv, cleDevice]} - voir construitIndexRegistres()
+    var dernierSondageA       # horodatage (s) de la derniere reponse 0x03 exploitee
+    var etatsInconnus         # true quand le chien de garde a expire (3 x T sans reponse)
+
+    #- SONDAGE PERIODIQUE, CHIEN DE GARDE, RECONCILIATION (phase 4, 2026-07-24)
+
+        La carte 16 relais ne peut RIEN pousser : elle ne parle que si on l'interroge
+        (PROTOCOLE_MODBUS.md section 9, tableau des rythmes). C'est donc un polling maitre
+        0x03 qui fournit l'etat constate, avec T = 30 s.
+
+        Sans cet emetteur, tout le traitement de relecture ecrit en phase 2 restait du code
+        mort : rien n'emettait jamais la requete.
+
+        La periode est lue dans le persist du groupe Conn16channels ('periodeSondage',
+        defaut 30 s) via .find() : aucune clef nouvelle n'est exigee du persist existant.
+    -#
+    def periodeSondage()
+        return int(drivers["ModBus"]["environnement"]["Conn16channels"].find("periodeSondage", 30))
+    end
+
+    # Emet la requete de relecture des 16 voies. Une seule trame, une seule entree en file.
+    def sondeEtats(nameConn16channel)
+        import modbusFonctions
+
+        var conn = drivers["ModBus"]["environnement"]["Conn16channels"].find(nameConn16channel, nil)
+        if (conn == nil || conn.find("activation", "OFF") != "ON")    return    end
+
+        # ModBusSend {"deviceaddress":1,"functioncode":3,"startaddress":1,"type":"uint16","count":16}
+        modbusFonctions.envoiMsgModbus({
+                                            "DeviceAddress": conn.find("id", 1),
+                                            "FunctionCode": modbusFonctions.LECTURE_REGISTRES_HOLDER,
+                                            "StartAddress": 1,
+                                            "type": "uint16",
+                                            "Count": 16,
+                                            "Values": []
+                                        }, "Commande", conn.find("id", 1))
+    end
+
+    #- Chien de garde - la clause "jamais faux en silence" de la section 9.
+        Passe les etats CONSTATES a "inconnu" au-dela de 3 x T sans reponse. On ne touche
+        pas a l'etat commande : c'est la connaissance de la realite qui est perdue, pas
+        l'intention. Mieux vaut afficher "inconnu" qu'une vieille valeur presentee comme
+        fraiche.
+    -#
+    def verifieChienDeGarde()
+        import string
+
+        if (self.dernierSondageA == nil || self.etatsInconnus)    return    end
+        if (tasmota.rtc()["local"] - self.dernierSondageA <= 3 * self.periodeSondage())    return    end
+
+        self.etatsInconnus = true
+        self.log(string.format("MODBUS_CONN_16CH_CHIEN_DE_GARDE: aucune reponse depuis plus de %i s -> etats constates passes a 'inconnu'", 3 * self.periodeSondage()), LOG_LEVEL_ERREUR)
+
+        for idModBus: self.indexRegistres.keys()
+            var cible = self.indexRegistres[idModBus]
+            modules[cible[0]]["environnement"][cible[1]][cible[2]]["etatConstate"] = "inconnu"
+        end
+    end
 
     # true si le cablage inverse la sortie pour ce type de relais (M0 pris en compte)
     def sortieInversee(typeRelais)
@@ -119,6 +176,8 @@ class MODBUS_CONN_16CHANNEL : Driver
         self.DEBUG = nil
         self.nbIOActivesJSON = nil
         self.indexRegistres = {}
+        self.dernierSondageA = nil      # nil = aucun sondage abouti -> le chien de garde ne mord pas encore
+        self.etatsInconnus = false
 
         # Enregistre ou Mets à jour en variable les capteurs activés dans un tableaus
         self.nbIOActivesJSON = json.load(gestionFileFolder.readFile("/json/nbIOActives.json"))
@@ -137,6 +196,24 @@ class MODBUS_CONN_16CHANNEL : Driver
                 # Gestion des messages recus par ModbusReceived
                 if (drivers["ModBus"]["typeComm"].find("Serial", "OFF") == "ON")
                     tasmota.add_rule(string.format("ModbusReceived#DeviceAddress==%i", drivers["ModBus"]["environnement"]["Conn16channels"][cle]["id"]), def(value, trigger, msg) self.recupereReponseModBus(value, trigger, msg)    end, "conn16channelsModBus_Received")
+
+                    #- SONDAGE PERIODIQUE + CHIEN DE GARDE (phase 4)
+                        La carte ne pousse rien : ce cron est la seule source de l'etat
+                        constate. 'cle' est capture par la closure, un cron par carte.
+                    -#
+                    var nomCarte = cle
+                    tasmota.add_cron(string.format("*/%i * * * * *", self.periodeSondage()),
+                                     def() self.sondeEtats(nomCarte) self.verifieChienDeGarde() end,
+                                     "conn16channels_sondage_" + nomCarte)
+
+                    #- RECONCILIATION AU DEMARRAGE (phase 4)
+                        Au boot, la copie du maitre ne vaut rien tant qu'elle n'a pas ete
+                        confrontee au materiel : les relais ont pu bouger pendant qu'il
+                        etait eteint. On sonde donc une fois, sans attendre le 1er cron.
+                        Differe de 15 s : le bus et les esclaves doivent etre prets, et le
+                        chargement des autres drivers ne doit pas etre ralenti.
+                    -#
+                    tasmota.set_timer(15000, def() self.sondeEtats(nomCarte) end, "conn16channels_boot_" + nomCarte)
                 end
             end
         end
@@ -301,14 +378,25 @@ class MODBUS_CONN_16CHANNEL : Driver
                         var device = modules[cible[0]]["environnement"][cible[1]][cible[2]]
                         var etatConstate = self.etatPourRegistre(device.find("type", 256), valeurs[rang])
 
+                        # DEUX PLANS, JAMAIS CONFONDUS (phase 4) :
+                        #   device["etat"]         = etat COMMANDE - ce que le framework a
+                        #                            demande. Lu par le reste du systeme
+                        #                            (Power, interface web) : on n'y touche PAS.
+                        #   device["etatConstate"] = ce que la carte rapporte reellement.
+                        # Ecraser "etat" avec le constate (ce que faisait la premiere version
+                        # de la phase 2) detruisait la seule reference permettant de detecter
+                        # une divergence - et rendait la reconciliation impossible.
+                        device["etatConstate"] = etatConstate
+                        device["constateA"]    = tasmota.rtc()["local"]
+
                         if (device.find("etat", "OFF") != etatConstate)
-                            self.log(string.format("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: ECART voie %i (relai n°%i) : commande=%s, constate=%s -> etat mis a jour, AUCUNE commande emise (reconciliation = phase 4)",
+                            self.log(string.format("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: ECART voie %i (relai n°%i) : commande=%s, constate=%s",
                                                     idModBus, device.find("id", 0), device.find("etat", "OFF"), etatConstate), LOG_LEVEL_INFO)
                         end
-
-                        device["etat"]  = etatConstate
-                        device["value"] = (etatConstate == "ON" ? 1 : 0)
                     end
+
+                    self.dernierSondageA = tasmota.rtc()["local"]
+                    self.etatsInconnus   = false
                 end
             end
         end

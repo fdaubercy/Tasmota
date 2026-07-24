@@ -258,8 +258,14 @@ class CONTROLE_MODBUS : Driver
         # Récupère la réponse à une requête ModBus UDP
         self.reponseModBus = value
         if (self.reponseModBus != nil)
-            # Acquitte le message en vol (reponse recue) -> pompe le suivant
-            modbusFonctions.termineEnVol(true)
+            # NE PAS acquitter ici (corrige le 2026-07-24, phase 4).
+            # Cette ligne portait un termineEnVol(true) inconditionnel, execute avant meme
+            # de savoir ce qu'est la trame. C'est le blocage decrit en section 9 de
+            # PROTOCOLE_MODBUS.md : un capteur qui pousse en UDP acquittait la commande
+            # SERIE en vol, desarmait son timeout, et le message suivant partait alors que
+            # la reponse precedente etait encore en transit -> collision.
+            # L'acquittement se fait desormais plus bas, cote maitre, et seulement si
+            # apparieReponse confirme que la trame repond bien a la requete en vol.
 
             # Pré-traitement de la trame reçue
             self.reponseModBus["FunctionName"] = tabFonctionsName[self.reponseModBus["FunctionCode"]]
@@ -272,6 +278,13 @@ class CONTROLE_MODBUS : Driver
 
             # Si maitre ModBus (id==0)
             if (drivers["ModBus"]["id"] == 0)
+                # Seul le maitre tient la file : lui seul peut acquitter, et seulement si
+                # la trame repond vraiment a sa requete en vol. apparieReponse ecarte les
+                # trames hors-sequence ET les instantanes spontanes des esclaves (drapeau
+                # "Automatique"), qui ne repondent a aucune requete.
+                if (modbusFonctions.apparieReponse(self.reponseModBus))
+                    modbusFonctions.termineEnVol(true)
+                end
 
             # Si esclave ModBus (id>0)
             elif (drivers["ModBus"]["id"] > 0)
@@ -281,8 +294,10 @@ class CONTROLE_MODBUS : Driver
                     if (self.reponseModBus["DeviceAddress"] == drivers["ModBus"]["id"])
                         modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_UDP: Traitement du message en cours ...", LOG_LEVEL_DEBUG_PLUS)
 
-                        # Acquitte le message en vol (reponse recue)
-                        modbusFonctions.termineEnVol(true)
+                        # PAS d'acquittement ici (corrige le 2026-07-24, phase 4) : ce qui
+                        # arrive est une COMMANDE entrante du maitre, pas la reponse a une
+                        # requete de cet esclave. L'acquitter faisait retomber a zero un
+                        # 'enVol' qui ne concernait pas cette trame.
 
                         modbusFonctions.executeCmdModbus(self.reponseModBus)
                     else modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_UDP: Message ModBus reçu destiné à un autre esclave ...", LOG_LEVEL_DEBUG_PLUS)
