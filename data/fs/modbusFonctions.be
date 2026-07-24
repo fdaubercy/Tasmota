@@ -33,7 +33,6 @@ var modbusFonctions = module("modbusFonctions")
 modbusFonctions.DEBUG = nil
 modbusFonctions.serialModBus = nil
 modbusFonctions.timeout_ReponseModBus_ms = 4000
-modbusFonctions.attenteReponse = false
 modbusFonctions.clients = [nil, nil, nil, nil, nil, nil]     # 5 connexions TCP possibles au max pour les 5 esclaves ModBus (id = 1 à 5)
 
 # --- File d'attente FIFO du maitre ModBus (un seul message en vol a la fois) ---
@@ -78,6 +77,29 @@ modbusFonctions.tabFonctionsName = [
                                         "ECRITURE_REGISTRES_HOLDER",    # 0x10
                                         "ISALIVE_ESCLAVE"               # 0x11
                                     ]
+
+# # *************************************************
+# # * Libelles de log des commandes envoyees
+# # *************************************************
+# Remplacent une cascade de if/elif qui ne choisissait qu'un texte de log (2026-07-24).
+# Le libelle porte son propre verbe : "Demande ..." pour une lecture, "Commande ..." pour
+# une ecriture - les messages emis restent identiques a ceux d'avant.
+modbusFonctions.tabLibelleCommande = {
+                            0x02: "Demande l'état de l'interrupteur",       # LECTURE_ENTREES_DISCRETES
+                            0x06: "Commande le relai",                     # ECRITURE_REGISTRE_UNIQUE
+                            0x10: "Commande les LEDS WS2812"               # ECRITURE_REGISTRES_HOLDER
+                        }
+
+# Pour 0x04 (LECTURE_REGISTRES_ENTREES), le libelle depend du registre vise.
+# La clef est le 'type' d'IO Tasmota, retrouve par StartAddress - id + 1 : l'adresse ModBus
+# d'un device vaut type + (id - 1), voir l'exemple documente plus bas dans ce fichier
+# ("StartAddress = type + (id-1)", section lireMsgModbus).
+modbusFonctions.tabLibelleRegistre = {
+                            4704: "Demande de valeur de l'entrée analogique",
+                             352: "Demande de valeur du compteur",
+                            1312: "Demande de valeur du thermomètre",
+                            1216: "Demande de valeur du thermomètre"
+                        }
 
 # # *************************************************
 # # * ModBus Types de Données 
@@ -424,7 +446,6 @@ def modbusFonctions_pompeQueue()
     var item = modbusFonctions.queue[0]
     modbusFonctions.queue.remove(0)
     modbusFonctions.enVol = item
-    modbusFonctions.attenteReponse = true                        # compat : miroir de (enVol != nil)
 
     var reponse = tasmota.cmd("ModBusSend " + json.dump(item["paramMSG"]), boolMute)
 
@@ -432,7 +453,6 @@ def modbusFonctions_pompeQueue()
     if (reponse.find("ModbusSend", "") == "Failed")
         modbusFonctions.log("POMPE_QUEUE: ModBusSend=Echec -> renvoi programme", LOG_LEVEL_DEBUG_PLUS)
         modbusFonctions.enVol = nil
-        modbusFonctions.attenteReponse = false
         item["tentatives"] += 1
         if (item["tentatives"] < modbusFonctions.MAX_TENTATIVES)
             modbusFonctions.queue.insert(0, item)
@@ -446,7 +466,6 @@ def modbusFonctions_pompeQueue()
     elif (reponse.find("Command", "") == "Error")
         modbusFonctions.log(f"POMPE_QUEUE: commande ModBus invalide, jetee : {json.dump(item['paramMSG']):s}", LOG_LEVEL_ERREUR)
         modbusFonctions.enVol = nil
-        modbusFonctions.attenteReponse = false
         modbusFonctions.pompeQueue()
         return
     end
@@ -463,7 +482,6 @@ def modbusFonctions_termineEnVol(ok)
     modbusFonctions.desarmeTimer("modbus_timeout")
     var item = modbusFonctions.enVol
     modbusFonctions.enVol = nil
-    modbusFonctions.attenteReponse = false
     if (!ok && item != nil)
         item["tentatives"] += 1
         if (item["tentatives"] < modbusFonctions.MAX_TENTATIVES)
@@ -536,22 +554,17 @@ def modbusFonctions_envoiMsgModbus(paramMSG, typeMsg, id)
     if (typeMsg == nil)    typeMsg = "Commande"     end
 
     # Décrit le type de commande ModBus envoyée pour le log
-    if (paramMSG["FunctionCode"] == modbusFonctions.LECTURE_ENTREES_DISCRETES)  # 0x02
-        if (typeMsg == "Commande")  modbusFonctions.log(string.format("ENVOI_MSG_MODBUS: Demande l'état de l'interrupteur d'ID=%i !", id), LOG_LEVEL_DEBUG)     end 
-    elif (paramMSG["FunctionCode"] == modbusFonctions.LECTURE_REGISTRES_ENTREES)  # 0x04
-        if (typeMsg == "Commande")  
-            if (paramMSG["StartAddress"] - id + 1 == 4704)
-                modbusFonctions.log(string.format("ENVOI_MSG_MODBUS: Demande de valeur de l'entrée analogique d'ID=%i !", id), LOG_LEVEL_DEBUG) 
-            elif (paramMSG["StartAddress"] - id + 1 == 352)
-                modbusFonctions.log(string.format("ENVOI_MSG_MODBUS: Demande de valeur du compteur d'ID=%i !", id), LOG_LEVEL_DEBUG) 
-            elif ((paramMSG["StartAddress"] - id + 1 == 1312) || (paramMSG["StartAddress"] - id + 1 == 1216))
-                modbusFonctions.log(string.format("ENVOI_MSG_MODBUS: Demande de valeur du thermomètre d'ID=%i !", id), LOG_LEVEL_DEBUG)
-            end 
+    if (typeMsg == "Commande")
+        var libelle
+
+        # 0x04 se distingue par le registre vise, les autres par leur seul FunctionCode
+        if (paramMSG["FunctionCode"] == modbusFonctions.LECTURE_REGISTRES_ENTREES)  # 0x04
+            libelle = modbusFonctions.tabLibelleRegistre.find(paramMSG["StartAddress"] - id + 1, nil)
+        else
+            libelle = modbusFonctions.tabLibelleCommande.find(paramMSG["FunctionCode"], nil)
         end
-    elif (paramMSG["FunctionCode"] == modbusFonctions.ECRITURE_REGISTRE_UNIQUE)  # 0x06
-        if (typeMsg == "Commande")      modbusFonctions.log(string.format("ENVOI_MSG_MODBUS: Commande le relai d'ID=%i !", id), LOG_LEVEL_DEBUG)    end
-    elif (paramMSG["FunctionCode"] == modbusFonctions.ECRITURE_REGISTRES_HOLDER)  # 0x10
-        if (typeMsg == "Commande")      modbusFonctions.log(string.format("ENVOI_MSG_MODBUS: Commande les LEDS WS2812 d'ID=%i !", id), LOG_LEVEL_DEBUG)     end
+
+        if (libelle != nil)     modbusFonctions.log(string.format("ENVOI_MSG_MODBUS: %s d'ID=%i !", libelle, id), LOG_LEVEL_DEBUG)      end
     end
 
     # Envoi la trame par port série
@@ -560,7 +573,15 @@ def modbusFonctions_envoiMsgModbus(paramMSG, typeMsg, id)
     end
 
     # Envoi la trame par TCP & UDP
-    if(drivers["ModBus"]["typeComm"].find("TCP", "OFF") == "ON")    modbusFonctions.envoiMsgModbusTCP(modbusFonctions.prepareTrame(paramMSG, typeMsg), typeMsg)     end
+    # Le TCP est RESERVE au sens esclave -> maitre (typeMsg == "Reponse") : telemetrie et
+    # reponses, ce pour quoi il a ete concu (cf. les 4 appels de globalFonctions.be, tous
+    # des retours automatiques de capteurs). Une commande maitre -> esclave part deja par
+    # le serie ci-dessus : l'emettre AUSSI en TCP la ferait executer deux fois par un
+    # esclave qui ecoute les deux, et n'a aucun sens vers la carte 16 relais - peripherique
+    # RS485 sans IP, donc absente de modbusFonctions.clients.
+    if(typeMsg == "Reponse" && drivers["ModBus"]["typeComm"].find("TCP", "OFF") == "ON")    modbusFonctions.envoiMsgModbusTCP(modbusFonctions.prepareTrame(paramMSG, typeMsg), typeMsg)     end
+    # NOTE : l'UDP porte exactement le meme defaut de symetrie, mais typeComm.UDP est a OFF
+    # sur les 3 modules garage - laisse en l'etat, a trancher le jour ou l'UDP sera active.
     if(drivers["ModBus"]["typeComm"].find("UDP", "OFF") == "ON")    modbusFonctions.envoiMsgModbusUDP(modbusFonctions.prepareTrame(paramMSG, typeMsg), typeMsg)     end
 end
 modbusFonctions.envoiMsgModbus = modbusFonctions_envoiMsgModbus
