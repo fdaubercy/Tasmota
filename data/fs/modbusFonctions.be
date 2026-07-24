@@ -532,17 +532,41 @@ modbusFonctions.desarmeTimer = modbusFonctions_desarmeTimer
 # registre la donnee appartient. On injecte donc ces champs depuis enVol.
 # Sur un esclave (enVol == nil) : ne fait rien. Signale (sans jeter) une reponse
 # hors-sequence -> rejet strict activable plus tard si besoin.
+# Retourne true si 'reponse' est bien la reponse a la requete en vol, false sinon.
+# REJET STRICT (2026-07-24) : l'ancienne version injectait StartAddress/Count/type de la
+# requete AVANT de tester la correspondance, puis se contentait de logger. Une trame
+# hors-sequence etait donc maquillee en reponse valide, et l'appelant enchainait sur
+# termineEnVol(true) - acquittant une requete qui n'avait jamais eu sa reponse.
+# On teste d'abord, on n'injecte qu'apres, et l'appelant doit tenir compte du retour.
 def modbusFonctions_apparieReponse(reponse)
-    if (modbusFonctions.enVol == nil)   return end
-    if (type(reponse) != "instance")    return end
+    import string
+
+    if (modbusFonctions.enVol == nil)   return false end
+    if (type(reponse) != "instance")    return false end
     var req = modbusFonctions.enVol["paramMSG"]
+
+    # Une telemetrie spontanee de l'esclave n'est la reponse de personne : elle arrive
+    # quand elle veut et porterait le meme FunctionCode qu'une requete en vol une fois le
+    # bit 0x80 masque par decrypteMSG. L'acquitter volerait sa reponse a la vraie requete.
+    if (reponse.find("Automatique", false))
+        modbusFonctions.log("APPARIE_REPONSE: trame automatique (telemetrie) -> n'acquitte pas la requete en vol", LOG_LEVEL_DEBUG)
+        return false
+    end
+
+    if (reponse.find("DeviceAddress", -1) != req.find("DeviceAddress", -1) ||
+        reponse.find("FunctionCode",  -2) != req.find("FunctionCode",  -1))
+        modbusFonctions.log(string.format("APPARIE_REPONSE: reponse hors-sequence rejetee (recu adr=%s fct=%s, attendu adr=%s fct=%s)",
+                                            str(reponse.find("DeviceAddress", -1)), str(reponse.find("FunctionCode", -2)),
+                                            str(req.find("DeviceAddress", -1)),     str(req.find("FunctionCode", -1))), LOG_LEVEL_DEBUG)
+        return false
+    end
+
+    # Correspondance etablie : la trame RTU ne porte ni StartAddress ni Count, on les
+    # complete depuis la requete pour que le maitre sache a quel registre elle repond.
     reponse["StartAddress"] = req.find("StartAddress", reponse.find("StartAddress", 0))
     reponse["Count"]        = req.find("Count", reponse.find("Count", 0))
     if (req.find("type") != nil)   reponse["type"] = req["type"]   end
-    if (reponse.find("DeviceAddress", -1) != req.find("DeviceAddress", -1) ||
-        reponse.find("FunctionCode",  -2) != req.find("FunctionCode",  -1))
-        modbusFonctions.log("APPARIE_REPONSE: reponse hors-sequence (ne correspond pas a la requete en vol)", LOG_LEVEL_DEBUG)
-    end
+    return true
 end
 modbusFonctions.apparieReponse = modbusFonctions_apparieReponse
 
@@ -1119,11 +1143,17 @@ def modbusFonctions_decrypteMSG(paramMSG, typeTitre)
     # Détermine quelle est la fonction demandée pour définir la taille de la trame attendue
     # Détermine si le message ModBus TCP est une réponse automatique d'esclave ou une réponse à une commande du Maitre
     paramMSG[typeTitre]["FunctionCode"] = paramMSG[typeTitre]["Trame"].get(1, -1)
+
+    # Le drapeau doit SURVIVRE au masquage : une fois le bit 0x80 efface, une telemetrie
+    # spontanee 0x82 devient indiscernable d'une reponse a une requete 0x02 en vol, et
+    # acquitterait cette requete a tort (apparieReponse s'appuie dessus).
+    paramMSG[typeTitre]["Automatique"] = false
     if (paramMSG[typeTitre]["FunctionCode"] & 0x80 == 0x80)
         # Transformation pour récupérer la fonction réelle
         paramMSG[typeTitre]["FunctionCode"] &= 0x7F
+        paramMSG[typeTitre]["Automatique"] = true
         modbusFonctions.log("DECRYPTE_MSG_MODBUS: Type de msg Modbus = Automatique", LOG_LEVEL_DEBUG_PLUS)
-    else 
+    else
         modbusFonctions.log("DECRYPTE_MSG_MODBUS: Type de msg Modbus = Réponse à un ordre", LOG_LEVEL_DEBUG_PLUS)
     end
 
@@ -1222,7 +1252,21 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
     # if (paramMSG["Endian"] == nil)    paramMSG["Endian"] = "lsb"     end
 
     modbusFonctions.log("PREPARE_TRAME_MODBUS: ------------------ prepareTrame ------------------", LOG_LEVEL_DEBUG_PLUS)
-    paramMSG["FunctionName"] = modbusFonctions.tabFonctionsName[paramMSG["FunctionCode"]]
+
+    # Le bit 0x80 marque une TELEMETRIE spontanee esclave -> maitre (dialecte maison, voir
+    # globalFonctions.be:190/232/276/371). Le nom de fonction et les regles de format se
+    # lisent sur le code de BASE ; la trame emise garde le bit (:Trame.add ci-dessous),
+    # c'est lui qui dit au maitre "ceci n'est pas la reponse a ta requete".
+    # Sans ce masquage, tabFonctionsName[0x82] sortait des bornes (18 entrees) et levait
+    # une exception : aucune telemetrie ne pouvait etre emise.
+    var codeBase = paramMSG["FunctionCode"] & 0x7F
+    paramMSG["Automatique"] = (codeBase != paramMSG["FunctionCode"])
+
+    if (codeBase >= size(modbusFonctions.tabFonctionsName))
+        paramMSG["FunctionName"] = "UNDEFINED"
+    else
+        paramMSG["FunctionName"] = modbusFonctions.tabFonctionsName[codeBase]
+    end
     paramMSG["Erreur"] = 0
 
     # Reconstruction de la trame à envoyer
@@ -1240,13 +1284,16 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
         bitMode = true
     end
 
-    # Induit une erreur si DeviceAddress == 0x00 | FunctionCode > 0x06 && FunctionCode != 0x0F && FunctionCode != 0x10
+    # Induit une erreur si DeviceAddress == 0x00, ou si le code fonction n'est pas en liste
+    # blanche. Le test porte sur codeBase : un code de telemetrie (bit 0x80) est autorise
+    # exactement quand son code de base l'est - sinon 0x82 (= 0x02 | 0x80) etait rejete en
+    # wrongfunctioncode, et la telemetrie ne partait jamais.
     if (paramMSG.find("DeviceAddress", 0x00) == 0)
         paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongdeviceaddress"]        # Erreur = 2
-    elif (paramMSG["FunctionCode"] > modbusFonctions.ECRITURE_REGISTRE_UNIQUE && paramMSG["FunctionCode"] != modbusFonctions.ECRITURE_COILS && paramMSG["FunctionCode"] != modbusFonctions.ECRITURE_REGISTRES_HOLDER)
+    elif (codeBase > modbusFonctions.ECRITURE_REGISTRE_UNIQUE && codeBase != modbusFonctions.ECRITURE_COILS && codeBase != modbusFonctions.ECRITURE_REGISTRES_HOLDER && codeBase != modbusFonctions.ISALIVE_ESCLAVE)
         paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongfunctioncode"]         # Erreur = 3
     else
-        if (paramMSG["FunctionName"] == "UNDEFINED")    paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongfunctioncode"]     end     # Erreur = 3     
+        if (paramMSG["FunctionName"] == "UNDEFINED")    paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongfunctioncode"]     end     # Erreur = 3
     end
 
     # Par défaut : type == "int8"

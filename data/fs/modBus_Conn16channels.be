@@ -153,7 +153,13 @@ class MODBUS_CONN_16CHANNEL : Driver
 
         # Complete la reponse de lecture avec StartAddress/Count/type de la requete en
         # vol (la trame RTU ne les porte pas) -> le maitre sait a quel registre repondre.
-        modbusFonctions.apparieReponse(msg)
+        # REJET STRICT (2026-07-24) : une trame hors-sequence ne doit ni etre completee
+        # depuis la requete en vol, ni l'acquitter - sinon elle lui volerait sa reponse,
+        # et la vraie requete serait perdue au lieu d'etre renvoyee par le timeout.
+        # Une TELEMETRIE spontanee, elle, porte deja son propre StartAddress (lu dans la
+        # trame par decrypteMSG) : on la traite normalement, mais elle n'acquitte rien.
+        var estReponseEnVol = modbusFonctions.apparieReponse(msg)
+        if (!estReponseEnVol && !msg.find("Automatique", false))    return    end
 
         # Certaines fonctions ne retournent aucune données
         msg["FunctionName"] = modbusFonctions.tabFonctionsName[msg["FunctionCode"]]
@@ -161,7 +167,7 @@ class MODBUS_CONN_16CHANNEL : Driver
 
         if (msg["FunctionName"] == "ECRITURE_REGISTRES_HOLDER")
             # Acquitte le message en vol (reponse recue) -> pompe le suivant
-            modbusFonctions.termineEnVol(true)
+            if (estReponseEnVol)    modbusFonctions.termineEnVol(true)    end
 
             return
         end
@@ -179,7 +185,7 @@ class MODBUS_CONN_16CHANNEL : Driver
         # self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: dataJson=" + json.dump(self.dataJson), LOG_LEVEL_DEBUG_PLUS)
 
         # Acquitte le message en vol (reponse recue)
-        modbusFonctions.termineEnVol(true)
+        if (estReponseEnVol)    modbusFonctions.termineEnVol(true)    end
     end
 
     # Règles sur changement d'état lors du démarrage de Tasmota
