@@ -26,16 +26,28 @@ Continuer à coder avant d'observer rendrait tout échec indécidable (règle 7 
 **Rebuild complet obligatoire** des 3 environnements garage : `modbusFonctions.be` est
 désormais solidifié, il ne monte plus sur le LittleFS — un simple `uploadfs` ne suffit pas.
 
-Puis, avec `ReglageGlobal logLevel 4` :
+Puis, avec `ReglageGlobal logLevel 4`. **Grille actionnable — chaînes de log exactes,
+extraites du code le 2026-07-24 :**
 
-| À vérifier | Ce qu'on doit voir |
-|---|---|
-| Pas de régression | Les relais du garage répondent comme avant |
-| Doublon TCP disparu | Une commande → **un** envoi série, plus de tentative TCP vers la carte 16 |
-| Appariement pas trop strict | Aucun `reponse hors-sequence rejetee` en marche normale |
-| Télémétrie intacte | Les capteurs cuve/rideau remontent, sans déclencher `termineEnVol` |
-| Sondage 0x03 abouti | Les 16 états reportés dans `etatConstate` toutes les 30 s |
-| **Cavalier M0** | Si les 16 états reviennent **tous inversés** → M0 est connecté : poser `"cavalierM0": "connecte"` dans `drivers.ModBus.environnement.Conn16channels` du persist. C'est la question ouverte n°1, et ce sondage est le seul moyen de la trancher. |
+| À vérifier | Quand | Chaîne de log à chercher (ou absence attendue) |
+|---|---|---|
+| Sondage 0x03 aboutit | auto : +15 s au boot, puis /30 s | ✅ doit apparaître : `MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: Type de msg Modbus` |
+| **Cavalier M0** (question n°1) | à la 1ʳᵉ réponse | `ECART voie %i (relai n°%i) : commande=…, constate=…` — **16 écarts d'un coup → M0 connecté**, poser `"cavalierM0":"connecte"` dans `drivers.ModBus.environnement.Conn16channels` du persist |
+| Appariement pas trop strict | marche normale | ❌ ne doit **PAS** apparaître : `APPARIE_REPONSE: reponse hors-sequence rejetee` |
+| Télémétrie préservée | à chaque push capteur | `APPARIE_REPONSE: trame automatique (telemetrie)` = normal ; les capteurs remontent quand même |
+| Doublon TCP disparu | à chaque commande relais | ❌ ne doit **plus** apparaître vers la carte 16 : `ENVOI_MSG_MODBUS_TCP: Aucun client TCP` |
+| Chien de garde (test : débrancher le RS485 ~90 s) | après 3×30 s | `MODBUS_CONN_16CH_CHIEN_DE_GARDE: … etats constates passes a 'inconnu'` |
+
+⚠️ **L'émission** du sondage 0x03 est **silencieuse** (le code 0x03 n'a pas de libellé dans
+la table de log de `envoiMsgModbus`). Ne pas chercher « j'envoie 0x03 » : c'est la
+**réponse** (`MODBUS_RECUPERE_REPONSE_CONN16CHANNEL`) qui prouve l'aller-retour.
+
+Test manuel immédiat, sans attendre les 30 s :
+`ModBusSend {"deviceaddress":1,"functioncode":3,"startaddress":1,"type":"uint16","count":16}`
+
+Vérifié le 2026-07-24 : le driver de la carte se **chargera** bien sur le P4
+(`ModBus.activation=ON`, `Conn16channel1=ON`, 16 relais virtuels → garde `nbIOActives`
+franchie), donc le cron de sondage s'armera.
 
 ## CE QUI RESTE À FAIRE, PAR ORDRE
 
@@ -192,19 +204,61 @@ Un commit par phase → chaque phase est un point de retour indépendant.
   (`modbusFonctions.be:286-292`), `clients[id]` est créé **avant** que `id` ne soit lu
   dans le JSON — le tableau se peuple avec un décalage d'une itération.
 
-## Ce qui reste de la phase 4 : le compteur `seq`
-
-Le `seq` protège les **instantanés poussés par les esclaves** contre le désordre UDP.
-Or ce push **n'existe pas** : la télémétrie actuelle (`globalFonctions.be:190/232/276/371`)
-est **différentielle** — elle dit « ce capteur a changé », pas « voici l'état complet ».
-
-Écrire le rejet `seq <= dernier reçu` côté maître serait donc du code mort. Le préalable
-est de **convertir la télémétrie en instantané** (§9 : *« un push ne dit jamais le relai 3
-a changé ; il dit voici l'état des 16 relais »*) — un chantier à part entière, à décider
-plutôt qu'à glisser dans une phase.
+## Ce qui reste de la phase 4 : le compteur `seq` — CADRAGE (2026-07-24)
 
 Le reste de la phase 4 est en place pour la carte 16 relais : sondage périodique (T = 30 s),
 réconciliation au boot (+15 s), séparation `etat` / `etatConstate`, chien de garde à 3×T.
+Seul `seq` manque. Ce cadrage sert à le **décider**, pas à le coder à l'aveugle.
+
+### Ce que fait `seq`, et ce qu'il présuppose
+
+`seq` est un compteur monotone qui protège un flux d'**instantanés** contre le **désordre
+et la perte UDP** : l'esclave l'incrémente à chaque changement, le maître **rejette tout
+instantané de `seq <= au dernier reçu`**. Un `seq` retombé à 0 signale un reboot d'esclave.
+
+Il ne vaut donc quelque chose que si **deux préalables** sont réunis. Aucun ne l'est
+aujourd'hui — d'où « à décider », pas « à enchaîner ».
+
+**Préalable 1 — le transport doit être UDP.** `seq` protège du réordonnancement. Or la
+télémétrie actuelle part en **TCP** : les 4 sites (`globalFonctions.be:200/242/286/381`)
+sont tous gardés par `if typeComm.TCP == "ON"`, et `typeComm.UDP = OFF` sur les 3 garage.
+**Sur TCP, l'ordre et la livraison sont garantis — `seq` ne protège de rien.** Le §9
+recommande justement de basculer la télémétrie en UDP (pour qu'un push ne puisse jamais
+encombrer la file série), et c'est *cette bascule* qui crée le besoin de `seq`.
+
+**Préalable 2 — le push doit être un instantané, pas un différentiel.** Aujourd'hui chaque
+site émet **un datagramme par device qui change** : `Count=1`, une valeur, `StartAddress =
+type + id - 1`. Codes `0x02|0x80` (entrées discrètes : boutons/interrupteurs/capteurs,
+sites 190/232/276) et `0x04|0x80` (analogique, site 371). C'est un **différentiel** : « ce
+device a changé ». Un `seq` par snapshot ne s'applique pas à des différentiels — rejeter un
+différentiel « en retard » perdrait une transition définitivement.
+
+### Le vrai chantier (dont `seq` n'est que le 3ᵉ tiers)
+
+1. **Regrouper** les N devices d'une catégorie en **une** trame instantané (`Values` =
+   tableau de N états), au lieu d'un datagramme par device. Un snapshot par catégorie
+   (relais/positions ; analogique), aux rythmes du §9 (30 s / 5 min).
+2. **Basculer** ces envois de TCP vers UDP (activer `typeComm.UDP`, garder le serveur/récep-
+   tion UDP séparé pour ne pas toucher `enVol` — le §9 « blocage » est déjà corrigé côté
+   réception en `297dc4257`).
+3. **`seq`** : un champ dans la trame maison (à placer, p. ex. en tête de `Values`) ;
+   `decrypteMSG` l'extrait ; une table `dernierSeq[DeviceAddress]` côté maître ; rejet si
+   `seq <= dernierSeq`. `decrypteMSG` porte déjà le drapeau `Automatique` (`:1150-1155`),
+   point d'ancrage naturel.
+
+### Coût et rupture
+
+~100-150 lignes, réparties sur `globalFonctions.be` (restructurer les 4 sites en
+constructeurs de snapshot), `decrypteMSG` (extraire `seq`) et un nouveau contrôle de rejet
+côté maître. **C'est un changement de format de trame** : maître et esclaves doivent être
+reflashés **ensemble** — pas de déploiement partiel possible sur le bus.
+
+### La question à trancher AVANT de coder
+
+`seq` n'a de sens qu'avec la bascule télémétrie → UDP. **Cette bascule est-elle voulue ?**
+Sur TCP, ordonné et fiable, le dispositif actuel converge déjà. Le §9 préfère l'UDP pour
+protéger la file série — mais c'est un arbitrage (fiabilité TCP vs découplage UDP), pas une
+évidence. Tant qu'il n'est pas tranché, écrire `seq` serait du code mort.
 
 ## Le code mort identifié (phase 1) — ✅ traité le 2026-07-24
 
