@@ -1403,7 +1403,27 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
         Trame.add(paramMSG["StartAddress"], -2)     # Sur 2 octets
         Trame += writeData
     # Fonction 0x0F ==> "Écriture multiple de Coils"        ex=Utilisé pour changer simultanément plusieurs sorties (Write Multiple Coils)
+    #   Commande : StartAddress (2 octets) + quantite de BITS (2) + nb d'OCTETS (1) + donnees
+    #   Reponse  : StartAddress (2 octets) + quantite de BITS (2), sans donnees (echo standard)
+    # 'Values' porte les coils DEJA empaquetes (1 octet = 8 sorties), conformement au controle
+    # de capacite deja pose en :1275-1285 ('hex' = 8 bits par valeur, 'int16' = 16, etc.).
     elif (paramMSG["FunctionName"] == "ECRITURE_COILS")
+        Trame.add(paramMSG["StartAddress"], -2)     # Sur 2 octets
+        Trame.add(modbusFonctions.nbValeurs, -2)
+
+        if (typeMsg == "Commande")
+            # writeData est dimensionne pour des REGISTRES (2 octets par valeur, :1302-1303) :
+            # en mode bit, seuls les nbOctets premiers octets portent les coils.
+            if (size(writeData) < modbusFonctions.nbOctets)
+                paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongnbValeurs"]
+            else
+                # Ajoute le nombre d'octets
+                Trame.add(modbusFonctions.nbOctets, -1)
+
+                # Ajoute à la trame, les données à écrire
+                Trame += writeData[0 .. modbusFonctions.nbOctets - 1]
+            end
+        end
 
     # Fonction 0x10 ==> "Écriture de plusieurs registres (Write Multiple Registers)"     ex= commande d'une LED WS2812B (la couleur, la saturation, la luminosite)
     elif (paramMSG["FunctionName"] == "ECRITURE_REGISTRES_HOLDER")
