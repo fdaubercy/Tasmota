@@ -1,14 +1,62 @@
 # Reprise — Chantier ModBus du grenier (carte 16 relais + esclaves Tasmota)
 
-> État au 2026-07-24, fin de session. À lire en entier avant de reprendre.
->
-> **Fait depuis** (commit `fix: aligne la solidification…`) : audit ModBus clos (collisions
-> GPIO 4 levées, débit carte 16 documenté), formulation `erase_upload` corrigée dans les
-> 4 docs + la skill, et les 3 modules garage alignés sur le motif de solidification du
-> grenier (`import`+`init()` au lieu de `loadBerryFile` pour les 3 `controleXxx`).
-> **La prochaine action reste inchangée : la phase 0 ci-dessous.**
+> État au **2026-07-24, fin de session**. À lire en entier avant de reprendre.
 > Document de reprise : le mettre à jour, ne pas en créer un second.
 > Complément technique : `outils_docs/PROTOCOLE_MODBUS.md` §8 et §9.
+
+---
+
+# ⇒ SI TU REPRENDS À FROID, LIS CES 30 LIGNES D'ABORD
+
+**Le titre de ce document dit « grenier ». Le travail porte sur les 3 modules GARAGE.**
+Ne pas repartir sur le grenier : c'est l'erreur commise le 2026-07-24 (332 lignes écrites
+au mauvais endroit, annulées — voir `tasks/lessons.md`). Les 3 cibles sont
+`tasmota32p4-garage-serveur-modbus`, `tasmota32s3-garage-capteurs-cuve-modbus`,
+`tasmota32s3-garage-rideau-garage-modbus`.
+
+## LA PROCHAINE ACTION — flasher et observer
+
+**14 commits sont posés sur `chantier-modbus-grenier` (de `6a79ce3f4` à `367fedc94`),
+aucun poussé, et AUCUN n'a jamais été exercé sur un bus réel.** Trois changent un
+comportement observable, et un cron va désormais émettre une trame toutes les 30 s.
+
+Continuer à coder avant d'observer rendrait tout échec indécidable (règle 7 de
+`lessons.md`, tombée 2× le 2026-07-15 : toujours un témoin).
+
+**Rebuild complet obligatoire** des 3 environnements garage : `modbusFonctions.be` est
+désormais solidifié, il ne monte plus sur le LittleFS — un simple `uploadfs` ne suffit pas.
+
+Puis, avec `ReglageGlobal logLevel 4` :
+
+| À vérifier | Ce qu'on doit voir |
+|---|---|
+| Pas de régression | Les relais du garage répondent comme avant |
+| Doublon TCP disparu | Une commande → **un** envoi série, plus de tentative TCP vers la carte 16 |
+| Appariement pas trop strict | Aucun `reponse hors-sequence rejetee` en marche normale |
+| Télémétrie intacte | Les capteurs cuve/rideau remontent, sans déclencher `termineEnVol` |
+| Sondage 0x03 abouti | Les 16 états reportés dans `etatConstate` toutes les 30 s |
+| **Cavalier M0** | Si les 16 états reviennent **tous inversés** → M0 est connecté : poser `"cavalierM0": "connecte"` dans `drivers.ModBus.environnement.Conn16channels` du persist. C'est la question ouverte n°1, et ce sondage est le seul moyen de la trancher. |
+
+## CE QUI RESTE À FAIRE, PAR ORDRE
+
+1. **Flasher + observer** (ci-dessus) — utilisateur.
+2. **`seq` / instantanés** — bloqué par une décision : la télémétrie est *différentielle*,
+   il faut la convertir en *instantané* avant que `seq` ait un sens. Voir « Ce qui reste de
+   la phase 4 » plus bas.
+3. **Phase 3 (scission)** — à rediscuter, **ne pas lancer telle quelle** : sa frontière ne
+   tient pas sur le garage (`lireMsgModbus` n'est pas purement esclave), son gain y tombe
+   de 730 à ~120 lignes, et `modbusFonctions.be` étant maintenant solidifié, le découper
+   obligerait à revoir les listes `custom_berry_solidify` et à re-vérifier chaque morceau.
+4. **Défauts repérés, non corrigés** (hors périmètre, volontairement laissés) :
+   - `modbusFonctions.be:286-292` — `clients[id]` est créé **avant** que `id` ne soit lu
+     dans le JSON : le tableau se peuple avec un décalage d'une itération.
+   - `modbusFonctions.be:608` — l'**UDP** porte le même défaut de symétrie que le TCP
+     (corrigé, lui). Laissé car `typeComm.UDP = OFF` sur les 3 garage.
+   - `modbusFonctions.be:1380` — `# TODO` du type `"bit"` dans l'empaquetage de `prepareTrame`.
+   - Commentaire du bloc **grenier** dans `platformio_tasmota_cenv.ini` : voir la note
+     « À traiter quand le ModBus du grenier sera activé » — sa condition n'est PAS remplie.
+
+---
 
 ## En une phrase
 
@@ -17,9 +65,22 @@ et **deux esclaves Tasmota** (cuve id 2, rideau id 3) sur le même bus. Le maté
 l'architecture sont **tranchés** ; le code n'a **pas encore été touché**. La file FIFO
 du maître, écrite le 2026-07-16, **n'a jamais été flashée** — c'est le verrou n°1.
 
+> **Mise à jour du 2026-07-24** : le paragraphe ci-dessus décrit le **grenier**, resté
+> intact. Le travail a basculé sur les **3 modules garage**, dont le code ModBus a lui
+> beaucoup bougé (14 commits, ~460 lignes). Voir l'encadré en tête de document.
+
 ---
 
-## LA PROCHAINE ACTION
+## Phase 0 du GRENIER — en sommeil, à ne pas confondre avec la prochaine action
+
+> ⚠️ **Cette section ne s'applique PAS au travail en cours.** Elle décrit la mise en
+> service du **grenier**, gelée depuis le 2026-07-24 : le chantier porte sur les 3 modules
+> garage, dont le bus tourne déjà (la phase 0 y est sans objet). Conservée telle quelle
+> pour le jour où le grenier sera monté — les cinq verrous restent exacts et vérifiés.
+>
+> Un **sixième verrou** a été découvert le 2026-07-24 et n'est pas dans la liste :
+> `bouton1` du grenier occupe **GPIO 4**, que le RX ModBus doit prendre. Décision prise :
+> le déplacer sur **GPIO 21** (recâblage physique), comme cela a été fait sur le maître P4.
 
 **Phase 0 : valider la file FIFO sur banc, code strictement inchangé.**
 
