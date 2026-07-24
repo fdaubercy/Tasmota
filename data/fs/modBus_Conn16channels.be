@@ -166,32 +166,14 @@ class MODBUS_CONN_16CHANNEL : Driver
             return
         end
 
-        # Parcours les devices virtuels ModBus
-        for cleModule: modules.keys()
-            tasmota.yield()
-
-            if (type(modules[cleModule]) != "instance")   continue      end
-
-            var env = modules[cleModule]["environnement"]
-            if (env)
-                for cleEnv: env.keys()
-                    if type(env[cleEnv]) != "instance"   continue    end
-
-                    for cleDevice: env[cleEnv].keys()
-                        if type(env[cleEnv][cleDevice]) != "instance"   continue    end
-                        tasmota.yield()
-
-
-
-
-                        
-                    end
-                end
-            end
-
-            # Modifie en json persist
-            modules[cleModule]["environnement"] = env
-        end
+        # TODO (phase 2 du chantier ModBus) : reporter ici l'etat lu sur les relais virtuels.
+        # Un triple parcours de 'modules' a corps VIDE occupait cette place : il balayait
+        # tous les devices de tous les modules a CHAQUE reponse ModBus, avec deux
+        # tasmota.yield() par tour, pour ne rien faire - sa seule ecriture
+        # (modules[cle]["environnement"] = env) reaffectait la meme reference, sans
+        # persist.save(). Retire le 2026-07-24.
+        # Le remplacant prevu n'est pas ce balayage mais l'index inverse
+        # {adresse: {registre: cible}} de la phase 2, qui atteint la cible directement.
 
         # Ajoute la donnée reçue en json
         # self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: dataJson=" + json.dump(self.dataJson), LOG_LEVEL_DEBUG_PLUS)

@@ -33,13 +33,15 @@
         - Port UDP: la réponse est interceptée par la règle -> tasmota.add_rule('ModbusReceivedUDP') -> vers la fonction controleModbus.recupereReponseModBusUDP()
             * lecture des données recues sur port série par le fonction 'udpFonctions.lireUDP(typeComm, paramMSG)'
 
-    Un Flag 'modbusFonctions.attenteReponse': permet de savoir si une trame est recue après un ordre
-        - 'modbusFonctions.attenteReponse' == false (Pas de réponse en attente):
+    L'etat "un message est en vol" se lit sur 'modbusFonctions.enVol' (nil = rien en vol) :
+        - enVol == nil  (Pas de réponse en attente):
             * quand le Driver est initialisée
-            * quand une réponse est reçue et reconnue par la fonction 'modbusFonctions.lireMsgModbus()'
-        - 'modbusFonctions.attenteReponse' == true (Réponse en attente):
-            * quand le maitre a envoyé une commande: début de la commande 'modbusFonctions.envoiMsgModbus(paramMSG, typeMsg)'
-            * après un délai de TimeOut défini par 'drivers['ModBus']['timeoutReponse']'
+            * quand une réponse est reçue et reconnue ('modbusFonctions.termineEnVol()')
+            * apres un TimeOut defini par 'drivers['ModBus']['timeoutReponse']'
+        - enVol != nil  (Réponse en attente):
+            * des que 'modbusFonctions.pompeQueue()' a depile et envoye un message
+        L'ancien booleen 'attenteReponse' doublait cette information sans jamais etre relu :
+        il a ete retire le 2026-07-24 (voir la file FIFO, modbusFonctions.be section "File d'attente").
 
     Le calcul des erreurs de communication ModBus:
         - codeErreur (paramMSG[typeTitre]["Erreur"]):
@@ -114,7 +116,6 @@ class CONTROLE_MODBUS : Driver
         self.reponseModBus = nil
 
         modbusFonctions.timeout_ReponseModBus_ms = self.timeout_ReponseModBus_ms
-        modbusFonctions.attenteReponse = false
 
         # Règle la communication ModBus si activée (Si Eslave ModBus)
         modbusFonctions.log("CONTROLE_MODBUS: Enregistre les taches CRON !", LOG_LEVEL_DEBUG)
