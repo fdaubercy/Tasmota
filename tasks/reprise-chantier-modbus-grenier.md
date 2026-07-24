@@ -97,7 +97,7 @@ existants continuent de fonctionner, la scission est invisible aux appelants.
 | **0** | Valider la file FIFO + sondage 0x03 — série seul, **code inchangé** | Utilisateur (flash) — *sans objet sur le garage, dont le bus tourne déjà* |
 | **1** | Code mort (~75 l.) + branches vides 0x01/0x03/0x0F de `prepareTrame` | ✅ **fait le 2026-07-24** (commits `c34cc558a` → `73adea014`) |
 | **1 bis** | Rejet strict `apparieReponse` + code fonction télémétrie en liste blanche | ✅ **fait le 2026-07-24** (`9e828fc7a`) |
-| **2** | Index inverse `{adresse: {registre: cible}}` + table d'inversion Open/Close | Claude |
+| **2** | Index inverse `{adresse: {registre: cible}}` + table d'inversion Open/Close | ✅ **fait le 2026-07-24** (`90647b94d`) — carte 16 relais seulement, voir ci-dessous |
 | **3** | Scission par rôle | Claude |
 | **4** | Instantanés : `seq`, commandé/constaté, chien de garde, réconciliation au boot | Claude |
 
@@ -166,7 +166,7 @@ esclave. Le sondage 0x03 fonctionne donc **dès aujourd'hui**, sans modification
 4. Période exacte de télémétrie par valeur (30 s pour les états, 5 min pour l'analogique
    retenu comme défaut).
 
-## À traiter AVANT la phase 2
+## À traiter quand le ModBus du grenier sera activé
 
 - **Commentaire périmé du bloc grenier dans `platformio_tasmota_cenv.ini`** (~l. 270) :
   « `modbusFonctions` retiré de la liste (le grenier ne l'utilise pas) ». C'est encore
@@ -177,6 +177,12 @@ esclave. Le sondage 0x03 fonctionne donc **dès aujourd'hui**, sans modification
   le chantier va réécrire ce module en phases 1-4, et un module solidifié n'est plus sur
   le LittleFS — donc plus de boucle courte `éditer → téléverser → BrRestart`).
   Les 3 environnements **garage** l'ont, eux, depuis le 2026-07-24.
+
+  > **Note du 2026-07-24** : cette remarque était initialement classée « avant la phase 2 ».
+  > La phase 2 est faite, mais **sa condition n'est toujours pas remplie** — le ModBus du
+  > grenier reste à `OFF`, donc le commentaire demeure exact. Elle est requalifiée : ce qui
+  > la déclenche n'est pas une phase du plan, c'est l'activation effective du ModBus sur le
+  > grenier. Ne pas la traiter mécaniquement avant.
 
 ---
 
