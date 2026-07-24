@@ -21,12 +21,95 @@
                 tasmota.cmd("ModBusSend {\"deviceaddress\": 1, \"functioncode\": 3, \"startaddress\": 0xFE, \"type\":\"uint16\", \"count\":1}")
 -#
 
+#- TABLE D'INVERSION Open/Close - centralisee ici, et ici SEULEMENT (phase 2, 2026-07-24)
+
+    La carte ne parle pas en etats de relais mais en NIVEAUX DE SORTIE. Son glossaire :
+        "Open"  = control port output LOW  level  (0V)
+        "Close" = control port output HIGH level  (+5V)
+
+    Le sens depend donc du relais cable derriere, designe par son 'type' Tasmota :
+        type 224 "Relais"    (direct)  -> ON = sortie HAUTE = Close
+        type 256 "Relais_i"  (inverse) -> ON = sortie BASSE = Open      <- les 16 voies du garage
+
+    PIEGE : les deux sens n'encodent pas "Close" de la meme facon.
+        Ecriture (0x06) : ordre     Open = 0x01, Close = 0x02
+        Lecture  (0x03) : registre  open = 0x0001, close = 0x0000
+    "Open" vaut 1 des deux cotes, "Close" vaut 2 en ecriture et 0 en lecture. D'ou deux
+    fonctions distinctes plutot qu'une seule table - c'est exactement l'erreur que la
+    centralisation doit rendre impossible.
+
+    Cavalier M0 (piege 2 de PROTOCOLE_MODBUS.md section 8) : connecte, il inverse la
+    polarite des sorties et donc TOUTE cette table. Lu dans le persist du groupe
+    Conn16channels, defaut "deconnecte" (reglage d'usine). S'il est deplace sans que ce
+    reglage suive, la relecture sera coherente et FAUSSE.
+-#
 var modBus_Conn16channels
 
 class MODBUS_CONN_16CHANNEL : Driver
     # Variables
     var nbIOActivesJSON
     var DEBUG
+    var indexRegistres        # {idModBus: [cleModule, cleEnv, cleDevice]} - voir construitIndexRegistres()
+
+    # true si le cablage inverse la sortie pour ce type de relais (M0 pris en compte)
+    def sortieInversee(typeRelais)
+        var m0Connecte = (drivers["ModBus"]["environnement"]["Conn16channels"].find("cavalierM0", "deconnecte") == "connecte")
+        return (typeRelais == 256) != m0Connecte        # XOR : M0 inverse la table
+    end
+
+    # Etat "ON"/"OFF" -> ordre a envoyer en 0x06 (Open = 0x01, Close = 0x02)
+    def ordrePourEtat(typeRelais, etat)
+        if (self.sortieInversee(typeRelais))    return (etat == "ON" ? 0x01 : 0x02)    end
+        return (etat == "ON" ? 0x02 : 0x01)
+    end
+
+    # Registre relu en 0x03 (open = 0x0001, close = 0x0000) -> etat "ON"/"OFF"
+    def etatPourRegistre(typeRelais, registre)
+        var estOpen = (registre != 0)
+        if (self.sortieInversee(typeRelais))    return (estOpen ? "ON" : "OFF")    end
+        return (estOpen ? "OFF" : "ON")
+    end
+
+    #- INDEX INVERSE {idModBus: [cleModule, cleEnv, cleDevice]} (phase 2, 2026-07-24)
+
+        Remplace un balayage complet de 'modules' par voie relue. Une reponse 0x03 porte
+        les 16 voies d'un coup : sans index, il faudrait 16 balayages imbriques a chaque
+        sondage. L'index se construit une fois et repond en un acces.
+
+        Il est reconstruit a chaque appel, et non mis en cache entre les sondages : la
+        configuration bouge (commandes ReglageXxx, ajout d'un relai virtuel), et un index
+        perime designerait la MAUVAISE cible - c'est-a-dire commanderait le mauvais relai.
+        Un index faux est pire qu'un balayage lent ; le cout reste d'un parcours par
+        sondage, contre seize auparavant.
+    -#
+    def construitIndexRegistres(nameConn16channel)
+        var index = {}
+
+        for cleModule: modules.keys()
+            tasmota.yield()
+            if (type(modules[cleModule]) != "instance")   continue      end
+
+            var env = modules[cleModule].find("environnement", nil)
+            if (env == nil)   continue    end
+
+            for cleEnv: env.keys()
+                if (type(env[cleEnv]) != "instance")   continue    end
+
+                for cleDevice: env[cleEnv].keys()
+                    if (type(env[cleEnv][cleDevice]) != "instance")   continue    end
+
+                    var device = env[cleEnv][cleDevice]
+                    if (device.find("activation", "OFF") != "ON")                       continue    end
+                    if (device.find("virtuel", "OFF") != "ModBus_" + nameConn16channel)  continue    end
+                    if (device.find("idModBus", false) == false)                        continue    end
+
+                    index[device["idModBus"]] = [cleModule, cleEnv, cleDevice]
+                end
+            end
+        end
+
+        return index
+    end
 
     def init()
         import json
@@ -35,6 +118,7 @@ class MODBUS_CONN_16CHANNEL : Driver
 
         self.DEBUG = nil
         self.nbIOActivesJSON = nil
+        self.indexRegistres = {}
 
         # Enregistre ou Mets à jour en variable les capteurs activés dans un tableaus
         self.nbIOActivesJSON = json.load(gestionFileFolder.readFile("/json/nbIOActives.json"))
@@ -172,14 +256,62 @@ class MODBUS_CONN_16CHANNEL : Driver
             return
         end
 
-        # TODO (phase 2 du chantier ModBus) : reporter ici l'etat lu sur les relais virtuels.
-        # Un triple parcours de 'modules' a corps VIDE occupait cette place : il balayait
-        # tous les devices de tous les modules a CHAQUE reponse ModBus, avec deux
-        # tasmota.yield() par tour, pour ne rien faire - sa seule ecriture
-        # (modules[cle]["environnement"] = env) reaffectait la meme reference, sans
-        # persist.save(). Retire le 2026-07-24.
-        # Le remplacant prevu n'est pas ce balayage mais l'index inverse
-        # {adresse: {registre: cible}} de la phase 2, qui atteint la cible directement.
+        #- RELECTURE D'ETAT (0x03) - phase 2, 2026-07-24
+
+            La carte renvoie ses 16 voies en une seule trame : un registre 16 bits par
+            canal, 0x0001 = open, 0x0000 = close (PROTOCOLE_MODBUS.md section 8).
+            On reporte ici l'etat CONSTATE sur les relais virtuels, via l'index inverse.
+
+            On ne commande RIEN. Un ecart entre l'etat commande et l'etat constate est
+            journalise, pas corrige : emettre un Power depuis la reponse a un sondage
+            creerait une boucle de retroaction (Power -> envoi ModBus -> reponse ->
+            Power...). La reconciliation commande/constate est la phase 4, avec son
+            chien de garde et son numero de sequence.
+        -#
+        if (msg["FunctionName"] == "LECTURE_REGISTRES_HOLDER")
+            var valeurs = msg.find("Values", nil)
+
+            if (type(valeurs) != "instance" || size(valeurs) == 0)
+                self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: reponse 0x03 sans valeurs exploitables", LOG_LEVEL_ERREUR)
+            else
+                # Retrouve le Conn16channel emetteur a partir de son adresse ModBus
+                var nameConn16channel = nil
+                for cle: drivers["ModBus"]["environnement"]["Conn16channels"].keys()
+                    if (type(drivers["ModBus"]["environnement"]["Conn16channels"][cle]) != "instance")   continue    end
+                    if (drivers["ModBus"]["environnement"]["Conn16channels"][cle].find("id", -1) == msg.find("DeviceAddress", -2))
+                        nameConn16channel = cle
+                        break
+                    end
+                end
+
+                if (nameConn16channel == nil)
+                    self.log(string.format("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: aucun Conn16channel d'adresse %s", str(msg.find("DeviceAddress", -2))), LOG_LEVEL_ERREUR)
+                else
+                    self.indexRegistres = self.construitIndexRegistres(nameConn16channel)
+
+                    # Le 1er registre lu correspond au canal StartAddress (1 par defaut)
+                    var canalDepart = msg.find("StartAddress", 1)
+
+                    for rang: 0 .. size(valeurs) - 1
+                        tasmota.yield()
+                        var idModBus = canalDepart + rang
+                        var cible = self.indexRegistres.find(idModBus, nil)
+                        if (cible == nil)   continue    end
+
+                        var device = modules[cible[0]]["environnement"][cible[1]][cible[2]]
+                        var etatConstate = self.etatPourRegistre(device.find("type", 256), valeurs[rang])
+
+                        if (device.find("etat", "OFF") != etatConstate)
+                            self.log(string.format("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: ECART voie %i (relai n°%i) : commande=%s, constate=%s -> etat mis a jour, AUCUNE commande emise (reconciliation = phase 4)",
+                                                    idModBus, device.find("id", 0), device.find("etat", "OFF"), etatConstate), LOG_LEVEL_INFO)
+                        end
+
+                        device["etat"]  = etatConstate
+                        device["value"] = (etatConstate == "ON" ? 1 : 0)
+                    end
+                end
+            end
+        end
 
         # Ajoute la donnée reçue en json
         # self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: dataJson=" + json.dump(self.dataJson), LOG_LEVEL_DEBUG_PLUS)
@@ -252,11 +384,9 @@ class MODBUS_CONN_16CHANNEL : Driver
 
                                                 # Componentes   -> type=224: "Relais",
                                                 #               -> type=256: "Relais_i"
-                                                if (devices[cleDev]["type"] == 224)
-                                                    valueModBus = (devices[cleDev]["etat"] == "ON" ? 0x02 : 0x01)
-                                                elif (devices[cleDev]["type"] == 256)
-                                                    valueModBus = (devices[cleDev]["etat"] == "ON" ? 0x01 : 0x02)
-                                                end
+                                                # Passe par la table d'inversion centralisee (en-tete du fichier) :
+                                                # c'est la MEME regle que la relecture 0x03, elle ne peut plus diverger.
+                                                valueModBus = self.ordrePourEtat(devices[cleDev]["type"], devices[cleDev]["etat"])
 
                                                 # Execute la commande 'Power' si différent
                                                 if (tabEtatRelais[devices[cleDev]["id"] - 1] == devices[cleDev]["etat"])        continue    end
