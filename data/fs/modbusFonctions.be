@@ -675,12 +675,14 @@ modbusFonctions.envoiMsgModbusUDP = modbusFonctions_envoiMsgModbusUDP
     lancé après une commande 'ModBusSend' (si maitre: id == 0) OU une commande 'modbusFonctions.serialModBus.write' (si esclave: id > 0)
     depuis la fonction 'modbusFonctions.envoiMsgModbus(paramMSG, typeMsg)'
 
-    @ Client: Instance du client TCP OU du serveur TCP, qui envoient la trame
-        Client = modbusFonctions.clients[id]        # Si esclave ModBus (id > 0) => Client TCP (Maitre ModBus)
-        Client = tcpFonctions.connexionAsync        # Si esclave ModBus (id == 0) => Serveur TCP (Esclave ModBus)
+    @ Client: l'instance qui porte la connexion. Elle n'est PAS passée en argument :
+        la fonction la deduit du role, car aucun appelant ne l'a sous la main.
+        Maitre  (drivers.ModBus.id == 0) -> modbusFonctions.clients[id du destinataire]
+                                            (client TCP asynchrone, cree en :288)
+        Esclave (drivers.ModBus.id  > 0) -> tcpFonctions.connexionAsync
+                                            (connexion acceptee par son serveur, tcpFonctions.be:153)
 -#
-def modbusFonctions_envoiMsgModbusTCP(Client, Trame, typeMsg)
-# modbusFonctions.envoiMsgModbusTCP = def(Trame, typeMsg)
+def modbusFonctions_envoiMsgModbusTCP(Trame, typeMsg)
     import json
     import string
 
@@ -689,17 +691,29 @@ def modbusFonctions_envoiMsgModbusTCP(Client, Trame, typeMsg)
 
     # l'id du destinataire est le 1er octet de la trame ModBus
     var id = Trame.get(0, -1)
+    var Client
 
     # Si maitre ModBus (id == 0) ==> Se connecte en tant que client TCP à l'esclave ModBus
     if (drivers["ModBus"].find("id", 99) == 0)
+        # Le maitre tient un client TCP par esclave, indexe par l'id du destinataire
+        if (id < 1 || id >= size(modbusFonctions.clients))
+            modbusFonctions.log(string.format("ENVOI_MSG_MODBUS_TCP: Aucun client TCP pour l'esclave d'ID=%i !", id), LOG_LEVEL_ERREUR)
+            return
+        end
+        Client = modbusFonctions.clients[id]
+
         # Récupère les informations pour savoir si le port est disponible pour envoyer des infos ou ordre
-        if (Client.connected() && Client.listening())
+        if (Client != nil && Client.connected() && Client.listening())
             modbusFonctions.log(string.format("ENVOI_MSG_MODBUS_TCP: Message ModBus TCP envoyé: %s %s", "ModbusTCP", Trame.tohex()), LOG_LEVEL_DEBUG_PLUS)
             Client.write(bytes().fromstring("ModbusTCP ") + Trame)
+        else modbusFonctions.log(string.format("ENVOI_MSG_MODBUS_TCP: Connexion TCP avec l'esclave d'ID=%i non-etablie !", id), LOG_LEVEL_ERREUR)
         end
 
     # Si esclave ModBus (id > 0) ==> Envoi la trame ModBus reçue par le serveur TCP
     elif (drivers["ModBus"].find("id", 0) > 0)
+        import tcpFonctions
+        Client = tcpFonctions.connexionAsync
+
         # Si le Maitre ModBus (seul client ModBusTCP) a déjà ouvert la connexion
         if (Client != nil)
             modbusFonctions.log(string.format("ENVOI_MSG_MODBUS_TCP: Message ModBus TCP envoyé: %s %s", "ModbusTCP", Trame.tohex()), LOG_LEVEL_DEBUG_PLUS)
