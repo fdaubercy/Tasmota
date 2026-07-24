@@ -1,6 +1,12 @@
 # Reprise — Chantier ModBus du grenier (carte 16 relais + esclaves Tasmota)
 
 > État au 2026-07-24, fin de session. À lire en entier avant de reprendre.
+>
+> **Fait depuis** (commit `fix: aligne la solidification…`) : audit ModBus clos (collisions
+> GPIO 4 levées, débit carte 16 documenté), formulation `erase_upload` corrigée dans les
+> 4 docs + la skill, et les 3 modules garage alignés sur le motif de solidification du
+> grenier (`import`+`init()` au lieu de `loadBerryFile` pour les 3 `controleXxx`).
+> **La prochaine action reste inchangée : la phase 0 ci-dessous.**
 > Document de reprise : le mettre à jour, ne pas en créer un second.
 > Complément technique : `outils_docs/PROTOCOLE_MODBUS.md` §8 et §9.
 
@@ -142,6 +148,15 @@ esclave. Le sondage 0x03 fonctionne donc **dès aujourd'hui**, sans modification
 - Point de retour : tag **`avant-chantier-modbus`** (commit `ce115398f`).
 - `development` reste la branche du parc en service (garage, cuve, rideau) pendant tout
   le chantier. Retour sur `development` seulement quand le banc est vert.
-- ⚠️ **Un retour en arrière git ne défait pas le matériel.** Les `.be` vivent sur le
-  LittleFS : il faut **re-téléverser** les fichiers. **Jamais `erase_upload`** — il
-  effacerait `_persist.json` et tous les modules deviendraient muets.
+- ⚠️ **Un retour en arrière git ne défait pas le matériel.** Les `.be` et le
+  `_persist.json` vivent sur le LittleFS ; pour propager un changement du dépôt vers la
+  puce, il faut **re-téléverser** le système de fichiers.
+- ⚠️ **`erase_upload` ne « perd » pas le persist — il le remplace par celui du dépôt.**
+  Le build joint `littlefs.bin` (qui embarque le `_persist.json` du dossier device) au
+  flash lors d'un upload esptool (`pio-tools/post_esp32.py:385-392`), et `copy_fs_image`
+  construit ce FS pour les cibles `buildfs`/`uploadfs`/`upload`/`erase_upload`
+  (`pre_utilitaires_platformio.py:500`). Le vrai risque n'est donc **pas** un effacement
+  sec mais un **dépôt en retard sur l'état vivant** : réglages faits en direct via
+  l'interface web et non reportés, ou rollback git ramenant un `_persist.json` plus
+  ancien — flasher les écraserait. **Règle : s'assurer que le `_persist.json` du dépôt
+  est à jour avant de flasher.**

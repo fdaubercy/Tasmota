@@ -356,8 +356,11 @@ Attendu : exactement 3 lignes ` M`, identiques à `etat-git.txt`. Rien d'autre.
   phase 2 est abandonnée.**
 
 ⚠️ **Cette tâche flashe un appareil réel** (grenier, COM32). Demander confirmation à l'utilisateur
-avant l'étape 3. Ne pas utiliser `erase_upload` : il effacerait `_persist.json`, ce qui suffit à
-empêcher tout le framework de se charger (`autoexec.be:31`).
+avant l'étape 3. Note : `erase_upload` ne « perd » pas le persist — il le **remplace** par celui
+du dépôt (`littlefs.bin` joint au flash, `pio-tools/post_esp32.py:385-392` ; FS construit pour
+`buildfs`/`uploadfs`/`upload`/`erase_upload`, `pre_utilitaires_platformio.py:500`). Le risque est
+un dépôt en retard sur l'état vivant, pas un effacement sec — s'assurer que le `_persist.json` du
+dépôt est à jour avant de flasher.
 
 - [ ] **Étape 1 : Lire le .h généré et relever le symbole exporté**
 

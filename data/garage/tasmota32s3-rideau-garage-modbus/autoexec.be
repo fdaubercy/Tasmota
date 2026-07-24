@@ -44,13 +44,20 @@ if (persist._p != nil && persist._p.size() != 0)
     gestionFileFolder.compileModule("/discoveryFonctions", serveur["discovery"].find("activation", "OFF"))
 
     # Charge les Drivers nécessaires au fonctionnement diu module Tasmota
-    gestionFileFolder.loadBerryFile("/controleGeneral", "ON", "ON")
-    gestionFileFolder.loadBerryFile("/controleLedTemoin", "ON", "ON")
+    # controleGeneral/LedTemoin/Web sont SOLIDIFIES : charges par 'import' (version en
+    # FLASH via load_native) + init(), au lieu de loadBerryFile (qui recompile en RAM).
+    # init() publie l'instance dans global.controleXxx et fait add_driver, comme avant.
+    # Garder controleGeneral AVANT i2c_ads1115 (lit controleGeneral.nbIOActivesJSON).
+    import controleGeneral as _ctrl
+    _ctrl.init()
+    import controleLedTemoin as _ctrl
+    _ctrl.init()
     gestionFileFolder.loadBerryFile("/i2c_ads1115", drivers["I2C"]["environnement"]["ADS1115"].find("activation", "OFF"), "ON")
     gestionFileFolder.loadBerryFile("/i2c_mcp23017", drivers["I2C"]["environnement"]["MCP23017"].find("activation", "OFF"), "ON")
     gestionFileFolder.loadBerryFile("/modBus_Conn16channels", drivers["ModBus"]["environnement"]["Conn16channels"].find("activation", "ON"), "ON")
     gestionFileFolder.loadBerryFile("/modBus_TasmotaSlaveModBus", drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"].find("activation", "ON"), "ON")
-    gestionFileFolder.loadBerryFile("/controleWeb", serveur.find("activation", "OFF"), "ON")
+    import controleWeb as _ctrl
+    _ctrl.init()
     gestionFileFolder.loadBerryFile("/controleUDP", serveur["udp"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/controleTCP", serveur["tcp"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/controleModbus", drivers["ModBus"].find("activation", "OFF"), "ON")

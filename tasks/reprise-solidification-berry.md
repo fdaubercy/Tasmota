@@ -25,8 +25,11 @@ pio run -e tasmota32s3-etage2-grenier            # ~2h16
 pio run -e tasmota32s3-etage2-grenier -t upload
 ```
 
-⚠️ **Jamais `erase_upload`** : il effacerait `_persist.json`, et sans lui `autoexec.be`
-ne charge plus rien (`autoexec.be:29`).
+⚠️ **`erase_upload` ne « perd » pas le persist — il le remplace par celui du dépôt**
+(`littlefs.bin` joint au flash, `pio-tools/post_esp32.py:385-392` ; FS construit pour
+`buildfs`/`uploadfs`/`upload`/`erase_upload`, `pre_utilitaires_platformio.py:500`). Le risque
+est un dépôt en retard sur l'état vivant, pas un effacement sec — s'assurer que le
+`_persist.json` du dépôt est à jour avant de flasher.
 
 **AVANT le build**, rejouer la chaine rapide sur chaque module (10 s/fichier) —
 ne jamais lancer 2h16 a l'aveugle :
