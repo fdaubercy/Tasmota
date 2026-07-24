@@ -96,7 +96,7 @@ existants continuent de fonctionner, la scission est invisible aux appelants.
 |---|---|---|
 | **0** | Valider la file FIFO + sondage 0x03 — série seul, **code inchangé** | Utilisateur (flash) — *sans objet sur le garage, dont le bus tourne déjà* |
 | **1** | Code mort (~75 l.) + branches vides 0x01/0x03/0x0F de `prepareTrame` | ✅ **fait le 2026-07-24** (commits `c34cc558a` → `73adea014`) |
-| **1 bis** | Rejet strict `apparieReponse` + code fonction télémétrie en liste blanche | Claude — **prochaine action** |
+| **1 bis** | Rejet strict `apparieReponse` + code fonction télémétrie en liste blanche | ✅ **fait le 2026-07-24** (`9e828fc7a`) |
 | **2** | Index inverse `{adresse: {registre: cible}}` + table d'inversion Open/Close | Claude |
 | **3** | Scission par rôle | Claude |
 | **4** | Instantanés : `seq`, commandé/constaté, chien de garde, réconciliation au boot | Claude |
