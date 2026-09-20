@@ -48,7 +48,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
     //  #warning *** ------------------- Le fichier 'user_config_override.ini' est appele ------------------- ***
     #if defined(CFG_HOLDER) && (CFG_HOLDER == 4617)
         #undef CFG_HOLDER
-		#define CFG_HOLDER 		1354			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
+		#define CFG_HOLDER 		1358			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
 
         // #pragma message(*** ------------------- Les paramètres flash seront remplacés ! ------------------- ***)
     #else
@@ -683,33 +683,66 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
         #if defined(FIRMWARE_ESP32_CAVE_SERVEUR_RLY)
             // -- CODE_IMAGE_STR is the name shown between brackets on the 
             //    Information page or in INFO MQTT messages
-            #undef CODE_IMAGE_STR
-            #define CODE_IMAGE_STR "serveur-rly-cave"
+            #ifdef CODE_IMAGE_STR
+                #undef CODE_IMAGE_STR
+            #endif
+            #define CODE_IMAGE_STR      "Serveur 8 Relais"
+
+            // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------
+            // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino
+            // #define FILE_LOG_SIZE       100
+            // #define FILE_LOG_COUNT      10                        // Enable with command `FileLog 1..4` or `FileLog 11..14`
+            // #define FILE_LOG_NAME       "/logs/fileLog %02d.txt"
         
             // -- Project -------------------------------------
             #undef PROJECT
                 #define PROJECT           "SERVEUR-RLY-CAVE"         	 // PROJECT is used as the default topic delimiter
-            //#define USER_TEMPLATE "{\"NAME\":\"ESP32 Relay x8\",\"GPIO\":[33,1,160,1,32,1,1,1,1,1,1,161,1,1,34,1,1,1,1216,288,1,226,227,228,1,1,1,1,224,225,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
-            //#define USER_TEMPLATE "{\"NAME\":\"ESP32 Relay x8\",\"GPIO\":[33, 1, 160, 1, 32, 6720, 0, 0, 1, 1, 1, 161, 0, 0, 736, 672, 1, 34, 1216, 704, 1, 226, 227, 228, 0, 0, 0, 0, 224, 225, 1, 1, 1, 1, 1, 1],\"FLAG\":0,\"BASE\":1}"
+            #define USER_TEMPLATE "{\"NAME\":\"ESP32 Relay x8\",\"GPIO\":[33,1,160,1,32,1,1,1,1,1,1,161,1,1,34,1,1,1,1216,288,1,226,227,228,1,1,1,1,224,225,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
+
+            #ifdef MODULE
+                #undef MODULE
+            #endif
+            #define MODULE USER_MODULE                       // Set template enabled by default
+
             // -- Wi-Fi ---------------------------------------
-            #undef WIFI_IP_ADDRESS
-            #define WIFI_IP_ADDRESS "192.168.0.48" // [IpAddress1] Set to 0.0.0.0 for using DHCP or enter a static IP address
+            #ifdef WIFI_IP_ADDRESS
+                #undef WIFI_IP_ADDRESS
+            #endif
+            #define WIFI_IP_ADDRESS         "192.168.0.48"               // [IpAddress1] Set to 0.0.0.0 for using DHCP or enter a static IP address
+
+            // -- Setup your own RANGE EXTENDER settings  -----
+            // Les autres paramètres du RangeExtender sont gérés par la partie 'Post-process compile options' en fin de fichier
+            // Backlog RgxSSID rangeextender ; RgxPassword securepassword ; RgxAddress 192.168.123.1 ; RgxSubnet 255.255.255.0; RgxState 1 ; RgxNAPT 1
+            // RgxPort tcp, 8080, 192.168.4.1, 80
+            #define USE_WIFI_RANGE_EXTENDER
+            #ifdef USE_WIFI_RANGE_EXTENDER
+                #define WIFI_RGX_SSID           "SERVEUR-RLY-CAVE-GATEWAY"
+                #define WIFI_RGX_PASSWORD       "Lune5676"
+            #endif
         
             // -- Setup your own Wifi settings  ---------------
             // You might even pass some parameters from the command line ----------------------------
             // Ie:  export PLATFORMIO_BUILD_FLAGS='-DUSE_CONFIG_OVERRIDE -DMY_IP="192.168.1.99" -DMY_GW="192.168.1.1" -DMY_DNS="192.168.1.1"'
-        
-            // -- Setup your own MQTT settings  ---------------
-            #undef MQTT_CLIENT_ID
-            #define MQTT_CLIENT_ID "SERVEUR-RLY-CAVE" // [MqttClient] Also fall back topic using last 6 characters of MAC address or use "DVES_%12X" for complete MAC address
-            #undef MQTT_TOPIC
-            #define MQTT_TOPIC "cave/serveur-rly-cave" // [Topic] unique MQTT device topic including (part of) device MAC address
-            #undef MQTT_GRPTOPIC
-            #define MQTT_GRPTOPIC "tasmotas/cave" // [GroupTopic] MQTT Group topic
-            #undef FRIENDLY_NAME
-            #define FRIENDLY_NAME "Serveur Relais Cave" // [FriendlyName] Friendlyname up to 32 characters used by webpages and Alexa
-            #undef EMULATION
-            #define EMULATION EMUL_NONE // [Emulation] Select Belkin WeMo (single relay/light) or Hue Bridge emulation (multi relay/light) (EMUL_NONE, EMUL_WEMO or EMUL_HUE)
+            #ifdef MQTT_CLIENT_ID
+                #undef MQTT_CLIENT_ID
+            #endif
+            #define MQTT_CLIENT_ID          "SERVEUR-RLY-CAVE" // [MqttClient] Also fall back topic using last 6 characters of MAC address or use "DVES_%12X" for complete MAC address
+            #ifdef MQTT_TOPIC
+                #undef MQTT_TOPIC
+            #endif
+            #define MQTT_TOPIC              "cave/serveur-rly-cave" // [Topic] unique MQTT device topic including (part of) device MAC address
+            #ifdef MQTT_GRPTOPIC
+                #undef MQTT_GRPTOPIC
+            #endif
+                #define MQTT_GRPTOPIC       "tasmotas/cave" // [GroupTopic] MQTT Group topic
+            #ifdef FRIENDLY_NAME
+                #undef FRIENDLY_NAME
+            #endif
+            #define FRIENDLY_NAME           "Serveur Relais Cave" // [FriendlyName] Friendlyname up to 32 characters used by webpages and Alexa
+            #ifdef EMULATION
+                #undef EMULATION
+            #endif
+            #define EMULATION               EMUL_NONE // [Emulation] Select Belkin WeMo (single relay/light) or Hue Bridge emulation (multi relay/light) (EMUL_NONE, EMUL_WEMO or EMUL_HUE)
         
             // -- Optional modules ----------------------------
             #undef USE_SHUTTER // Add Shutter support for up to 4 shutter with different motortypes (+11k code)
@@ -729,12 +762,28 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
         
             // -- One wire sensors ----------------------------
             #undef USE_HDMI_CEC // Add support for HDMI CEC bus (+7k code, 1456 bytes IRAM)
+
+            // -- Rules or Script  ----------------------------
+            // Select none or only one of the below defines USE_RULES or USE_SCRIPT
+            #define USE_RULES                                                       // Add support for rules (+8k code)
+            #ifdef USE_RULES
+                #define SUPPORT_MQTT_EVENT                                          // Support trigger event with MQTT subscriptions (+1k8 code)
+                #define USE_EXPRESSION                                              // Add support for expression evaluation in rules (+1k7 code)
+                    #define SUPPORT_IF_STATEMENT                                    // Add support for IF statement in rules (+2k7)
+                //#define USER_RULE1 "ON System#Boot DO Sensor12 S0 ENDON"          // Add rule1 data saved at initial firmware load or when command reset is executed
+                //#define USER_RULE2 "<Any rule2 data>"                             // Add rule2 data saved at initial firmware load or when command reset is executed
+                // USER_RULE3 "<Any rule3 data>"                                    // Add rule3 data saved at initial firmware load or when command reset is executed
+                #define USE_VIEW_RULE_MEMS_AND_VARS                                 // Enable viewing of rule memories and variables in the web UI (+0k7 code)
+            #endif
         
             // -- Rules or Script  ----------------------------
             #ifdef USER_BACKLOG
                 #undef USER_BACKLOG
             #endif
             #define USER_BACKLOG      "Backlog Module 0; Hostname SERVEUR-RLY-CAVE"
+
+            // -- Utilisation des WebSockets ------------------------------
+            #define USE_WSSERVER
         
             // -- SPI sensors ---------------------------------
             #define USE_SPI                                  // Hardware SPI using GPIO12(MISO), GPIO13(MOSI) and GPIO14(CLK) in addition to two user selectable GPIOs(CS and DC)

@@ -16,15 +16,22 @@ remplace la memoire.
 1. **`tasks/lessons.md`** — le journal des erreurs deja commises et des regles qui en
    decoulent. **A lire en entier avant de toucher au code.** Chaque entree est une erreur
    passee a ne pas refaire (5 pieges de verification y sont consignes, tous payes comptant).
-2. **`tasks/reprise-chantier-modbus-grenier.md`** — le chantier en cours (carte 16 relais
-   + esclaves ModBus au grenier) : prochaine action, decisions deja tranchees, plan en
-   phases. **Branche `chantier-modbus-grenier`.**
+2. **`tasks/reprise-chantier-modbus-grenier.md`** — le chantier en cours. ⚠️ **Son nom dit
+   « grenier », mais les cibles sont les 3 modules GARAGE** (maitre P4, cuve, rideau)
+   depuis le 2026-07-24 ; le grenier est en sommeil. Repartir sur le grenier est une
+   erreur deja commise, consignee dans `lessons.md`. **Lire son encadre de tete « SI TU
+   REPRENDS A FROID »** : il porte la prochaine action et la liste de ce qui reste.
+   **Branche `chantier-modbus-grenier`**, jamais poussee.
 3. **`tasks/reprise-solidification-berry.md`** — l'autre chantier (solidification Berry),
    sa prochaine action et ses questions ouvertes.
 4. **`outils_docs/SOLIDIFICATION_BERRY.md`** — le mecanisme complet + 11 pieges, a lire
    des que le sujet Berry/solidification arrive.
 5. **`outils_docs/PROTOCOLE_MODBUS.md`** — a lire des que le sujet ModBus arrive : carte
    des registres de la carte 16 relais (§8) et architecture de synchronisation (§9).
+
+Si le demarrage affiche une ligne `fork : N commit(s) de retard sur upstream/development`,
+c'est le hook de detection : voir la section « Synchro du fork » plus bas. **Ne pas lancer
+la synchro de sa propre initiative**, et surtout pas dans une branche de chantier.
 
 **Apres chaque correction de l'utilisateur**, ajouter immediatement une entree a
 `tasks/lessons.md` au format `[YYYY-MM-DD] | ce qui s'est mal passe | regle a suivre`.
@@ -42,6 +49,50 @@ serait un chantier sans rapport avec le travail mene.
 Ordre de commit sur ce depot : `git add` puis `git commit`. Rien d'autre.
 
 Si une carte de connaissances est creee un jour ici, revoir cette regle.
+
+## Synchro du fork : un hook qui DETECTE, une synchro qui reste manuelle
+
+Depuis le 2026-07-24, un hook `SessionStart` signale au demarrage si le fork a pris
+du retard sur `arendst/Tasmota`. Il **detecte, il ne synchronise pas**.
+
+- `.claude/hooks/verifie_synchro_fork.sh` — fetch cible d'`upstream/development`
+  **bride a une fois par 24 h**, calcul du retard, une ligne a l'ecran. Silence
+  total si le fork est a jour. Ne touche **jamais** a l'arbre de travail et sort
+  toujours en 0 : hors ligne, VPN ou amont indisponible, la session demarre
+  normalement.
+- `.claude/settings.json` — declare le hook. **`.claude/` est suivi par git** pour
+  que le dispositif voyage entre postes ; seuls `.claude/settings.local.json`
+  (permissions locales) et `.claude/.derniere-verif-synchro` (horodatage) sont
+  dans le `.gitignore`.
+
+Le retard est mesure sur la branche `development`, **pas sur `HEAD`** : on travaille
+presque toujours sur une branche de chantier.
+
+### Pourquoi le hook ne lance PAS la synchro
+
+Le lancement automatique de `synchronise_fork_tasmota.py` a ete envisage puis
+**rejete** (decide le 2026-07-24). Ne pas le reintroduire :
+
+- un hook a un **timeout** ; un merge tue en plein vol laisse un `MERGE_HEAD` et un
+  index a moitie ecrit — exactement l'etat conflictuel que le dispositif est cense
+  eviter, et cree sans que personne ne regarde l'ecran ;
+- le script est ecrit **pour un humain devant un terminal** : il demande confirmation
+  avant de pousser (`input()`, ligne 434). Dans un hook, l'entree standard n'est pas
+  un terminal -> `EOFError` **apres** le merge ;
+- contre les conflits, la vraie prevention est la **frequence** — petits paquets, sur
+  `development` propre, **avant** d'ouvrir un chantier — pas l'automatisme.
+
+### Que faire quand le hook signale du retard
+
+Basculer sur `development` avec un arbre propre, puis lancer la synchro a la main,
+sortie sous les yeux ; lire le rapport et confirmer (ou non) le push :
+
+```
+python outils_docs/scripts_python/synchronise_fork_tasmota.py
+```
+
+`--dry-run` pour un diagnostic seul, qui ne modifie rien. **Ne jamais merger l'amont
+dans une branche de chantier** : le hook le rappelle en affichant la branche courante.
 
 ## Exception assumee a la regle des 500 lignes
 
@@ -192,11 +243,15 @@ fichier. A lire en entier avant de toucher au code, a completer apres chaque cor
 
 Pour ne pas chercher : ce qui a ete produit et ou.
 
-- `CLAUDE.md` (ce fichier) — regles du depot, montage d'un nouveau poste, PermissionError.
+- `CLAUDE.md` (ce fichier) — regles du depot, synchro du fork, montage d'un nouveau poste,
+  PermissionError.
+- `.claude/hooks/verifie_synchro_fork.sh` — hook `SessionStart` : signale le retard du fork
+  sur l'amont (detecteur seul, ne synchronise pas). Declare dans `.claude/settings.json`.
 - `tasks/lessons.md` — journal des erreurs et regles.
 - `tasks/reprise-solidification-berry.md` — etat du chantier solidification, prochaine action.
-- `tasks/reprise-chantier-modbus-grenier.md` — etat du chantier ModBus du grenier (carte 16
-  relais + esclaves), decisions tranchees, plan en phases. Branche `chantier-modbus-grenier`.
+- `tasks/reprise-chantier-modbus-grenier.md` — etat du chantier ModBus (carte 16 relais +
+  esclaves), decisions tranchees, plan en phases. ⚠️ Nom trompeur : **cibles = les 3 modules
+  garage**, le grenier est en sommeil. Branche `chantier-modbus-grenier`.
 - `outils_docs/SOLIDIFICATION_BERRY.md` — mecanisme, verification (§5), parametres, 11 pieges.
 - `outils_docs/PROTOCOLE_MODBUS.md` — ModBus RTU/TCP standard, implementation maison (3 transports
   Serie/UDP/TCP), extension esclave->maitre, failles du mecanisme d'envoi, design de queue FIFO,

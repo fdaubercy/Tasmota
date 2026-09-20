@@ -71,3 +71,8 @@ tasmota-qemu
 
 ## Cache de session claude-flow (aucune valeur documentaire, reecrit a chaque session)
 .claude-flow/
+
+## Claude Code : .claude/ EST suivi (hooks + reglages partages entre postes).
+## Seuls l'etat machine et les reglages locaux restent hors du depot.
+.claude/settings.local.json
+.claude/.derniere-verif-synchro

@@ -1,0 +1,767 @@
+{
+	"parametres": {
+		"diverses": {
+			"ledPower": "ON",
+			"logs": 3,
+			"leds": {
+				"ledLink": {
+					"pin": 39,
+					"activation": "OFF",
+					"type": 17408
+				},
+				"led1": {
+					"pin": 23,
+					"activation": "ON",
+					"id": 1,
+					"type": 9216
+				}
+			},
+			"ledState": 7,
+			"eviteResetBTN": "ON"
+		},
+		"modele": {
+			"componentes": {
+				"8928": "SDIO D2",
+				"4512": "LE-01MR Tx",
+				"896": "SSPI SClk",
+				"9568": "ADE7953 CS",
+				"5984": "AS608 Tx",
+				"7680": "Bouton_d",
+				"1824": "SerBr Rx",
+				"7264": "XPT2046 CS",
+				"5920": "WE517 Tx",
+				"1728": "SDS0X1 Tx",
+				"7936": "I2S BClk In",
+				"2208": "HX711 Dat",
+				"8544": "ADC MQ",
+				"1856": "SR04 Tri/Tx",
+				"6016": "AS608 Rx",
+				"5344": "OpenTherm TX",
+				"7296": "CSE7761 Tx",
+				"7136": "TM1637 DIO",
+				"3104": "CSE7766 Rx",
+				"8768": "MS01",
+				"2336": "MGC3130 Xfr",
+				"6816": "ADC pH",
+				"256": "Relais_i",
+				"1984": "SDM630 Tx",
+				"96": "Bouton_i",
+				"5440": "BL0940 Rx",
+				"6432": "ILI9488 CS",
+				"1184": "DHT11",
+				"8320": "74x595 RClk",
+				"2080": "TM1638 DIO",
+				"3200": "SÃ©rie Tx",
+				"10016": "ME007 Tri",
+				"6784": "Rotary B_n",
+				"5952": "WE517 Rx",
+				"5824": "DYP Rx",
+				"3648": "iBeacon Tx",
+				"224": "Relais",
+				"6496": "EPaper42 CS",
+				"5024": "CAM_SIOD",
+				"3296": "Rotary B",
+				"5664": "TInfo En",
+				"5248": "CAM_HSD",
+				"9728": "Dingtian Clk",
+				"7616": "EPD Data",
+				"5088": "CAM_Data",
+				"2688": "HLW8012 CF",
+				"5792": "ZigBee Rst",
+				"4032": "SM2135 Clk",
+				"5536": "ETH Pwr",
+				"8832": "SDIO Clk",
+				"3456": "ADE7953 IRq",
+				"6656": "SSD1331 CS",
+				"8000": "MCP2515 CS",
+				"5280": "CAM_PSRCS",
+				"8032": "HRG15 Tx",
+				"9536": "NrgMbus Rx",
+				"7040": "SDM72 Tx",
+				"3136": "ALux IrRcv",
+				"576": "LedLink_i",
+				"7968": "Interrupt",
+				"2272": "Tuya Tx",
+				"9856": "Dingtian RCk",
+				"8992": "DÃ©bit",
+				"704": "SPI MOSI",
+				"2144": "MP3 Player",
+				"8800": "SDIO Cmd",
+				"10240": "MCP23xxx Int",
+				"5184": "CAM_PClk",
+				"5760": "iEM3000 Rx",
+				"6624": "ST7789 DC",
+				"8704": "ADE7880 IRq",
+				"6880": "BS814 Dat",
+				"928": "SSPI CS",
+				"800": "SPI DC",
+				"5120": "CAM_VSync",
+				"7104": "TM1637 Clk",
+				"7808": "I2S BClk",
+				"5376": "AnÃ©momÃ¨tre",
+				"9440": "ModBr Rx",
+				"3680": "iBeacon Rx",
+				"3808": "A4988 MS1",
+				"64": "Bouton_n",
+				"8256": "Heartbeat_i",
+				"2240": "TX2x",
+				"7360": "VL53LXX XShut",
+				"2048": "TM1638 Clk",
+				"4832": "ADC Bouton_i",
+				"4544": "CC1101 GDO0",
+				"3936": "DDS238-2 Rx",
+				"3168": "ALux IrSel",
+				"4704": "ADC EntrÃ©e",
+				"9888": "LD2410 Tx",
+				"4480": "LE-01MR Rx",
+				"512": "Buzzer_i",
+				"10080": "TuyaMCUBr Tx",
+				"1152": "RF Rx",
+				"128": "Bouton_in",
+				"8064": "HRG15 Rx",
+				"10112": "TuyaMCUBr Rx",
+				"7904": "I2S WS In",
+				"4096": "Hibernation",
+				"4608": "HRXL Rx",
+				"7712": "Bouton_id",
+				"6112": "RC522 Rst",
+				"5600": "ETH MDIO",
+				"992": "RÃ©troÃ‰cl",
+				"1408": "MHZ Tx",
+				"6176": "P9813 Dat",
+				"1312": "DS18x20",
+				"7072": "SDM72 Rx",
+				"1664": "PMS5003 Tx",
+				"352": "Compteur",
+				"2624": "HLWBL Sel_i",
+				"10272": "MCP23Sxx CS",
+				"5888": "MiEl HVAC Rx",
+				"4800": "ADC Bouton",
+				"2784": "MCP39F5 Rx",
+				"8288": "74x595 SRClk",
+				"2944": "SM16716 Dat",
+				"8448": "Option E",
+				"1600": "SAir Tx",
+				"8864": "SDIO D0",
+				"9696": "BP1658CJ Dat",
+				"7584": "Effet Hall",
+				"8224": "Heartbeat",
+				"10368": "GM861 Tx",
+				"8672": "BL6523 Rx",
+				"6464": "EPaper29 CS",
+				"9792": "Dingtian Q7",
+				"2880": "PN532 Rx",
+				"8128": "BL0939 Rx",
+				"2528": "MX31855 Clk",
+				"8416": "SolaxX1 RTS",
+				"192": "Inter_n",
+				"9952": "ModBr Tx Ena",
+				"7328": "CSE7761 Rx",
+				"4992": "CAM_XClk",
+				"6400": "ILI9341 DC",
+				"7488": "TFmini+ Tx",
+				"6336": "NRF24 DC",
+				"6304": "NRF24 CS",
+				"8608": "CM110x Rx",
+				"4928": "CAM_PwDn",
+				"3328": "ADC Manette",
+				"4864": "ADC Distance",
+				"10432": "Dingtian OE",
+				"864": "SSPI MOSI",
+				"1120": "RF Tx",
+				"9280": "TM1621 Dat",
+				"5504": "TCP Rx",
+				"4256": "Esclave RST_i",
+				"7456": "MAX7219 CS",
+				"4416": "HM10 Rx",
+				"1504": "PZEM004 Rx",
+				"3008": "MY92x1 DI",
+				"3840": "Sortie Hi",
+				"1280": "DHT11_o",
+				"6912": "Wiegand D0",
+				"5152": "CAM_HRef",
+				"3904": "DDS238-2 Tx",
+				"6720": "CarteSD CS",
+				"4352": "GPS Rx",
+				"9504": "NrgMbus Tx",
+				"5216": "CAM_PSClk",
+				"3552": "ZigBee Tx",
+				"2176": "HX711 SCk",
+				"5408": "Bouton_tc",
+				"9216": "TM1621 Wr",
+				"7840": "I2S WS",
+				"5856": "MiEl HVAC Tx",
+				"416": "PWM",
+				"2752": "MCP39F5 Tx",
+				"6560": "RA8876 CS",
+				"3264": "Rotary A",
+				"1952": "SDMx20 Rx",
+				"9472": "ADE7953 Rst",
+				"10496": "HC8 Rx",
+				"2912": "SM16716 Clk",
+				"9984": "NrgMbus Tx Ena",
+				"8192": "HM330X Set",
+				"160": "Inter",
+				"2112": "TM1638 Stb",
+				"6976": "NeoPool Tx",
+				"6240": "FTC532",
+				"9312": "Relais_b",
+				"3744": "A4988 Stp",
+				"4160": "Esclave Tx",
+				"4448": "HM10 Tx",
+				"2400": "Capteur RF",
+				"2848": "PN532 Tx",
+				"3712": "A4988 Dir",
+				"10048": "ME007 Rx",
+				"9632": "Dali TX",
+				"6848": "BS814 Clk",
+				"672": "SPI MISO",
+				"10176": "BioPDU PZEM016 Rx",
+				"5312": "OpenTherm RX",
+				"4000": "DDSU666 Rx",
+				"1440": "MHZ Rx",
+				"288": "LED",
+				"6752": "Rotary A_n",
+				"1632": "SAir Rx",
+				"9376": "I2S MClk",
+				"3872": "Sortie Lo",
+				"3488": "SolaxX1 Tx",
+				"7744": "Inter_d",
+				"4384": "GPS Tx",
+				"5696": "LMT01 Impulsion",
+				"10528": "I2S DAC",
+				"3040": "MY92x1 DCkI",
+				"544": "LedLink",
+				"5472": "TCP Tx",
+				"2656": "HLWBL CF1",
+				"736": "SPI Clk",
+				"7200": "DLP Rx",
+				"1344": "DS18x20_o",
+				"9120": "SM2335 Dat",
+				"3520": "SolaxX1 Rx",
+				"9248": "TM1621 Rd",
+				"6944": "Wiegand D1",
+				"832": "SSPI MISO",
+				"5056": "CAM_SIOC",
+				"3392": "HRE Clk",
+				"640": "I2C SDa",
+				"1536": "PZEM016 Rx",
+				"3424": "HRE Dat",
+				"7424": "MAX7219 Din",
+				"3584": "ZigBee Rx",
+				"3360": "MX31865 CS",
+				"4288": "HPMA Rx",
+				"2496": "MX31855 CS",
+				"10144": "BioPDU PZEM0XX Tx",
+				"1792": "SerBr Tx",
+				"8640": "BL6523 Tx",
+				"320": "LED_i",
+				"2368": "MGC3130 Rst",
+				"7552": "ZC Pulse",
+				"7168": "DLP Tx",
+				"10304": "PCF8574 Int",
+				"2592": "HLWBL Sel",
+				"9408": "ModBr Tx",
+				"3968": "DDSU666 Tx",
+				"3232": "SÃ©rie Rx",
+				"5568": "ETH MDC",
+				"9024": "BP5758D Clk",
+				"6080": "SHD Rst",
+				"7648": "Input",
+				"1568": "PZEM017 Rx",
+				"4672": "AS3935",
+				"0": "Aucun",
+				"2464": "AZ Rx",
+				"4736": "ADC Temp.",
+				"6272": "RC522 CS",
+				"3072": "CSE7766 Tx",
+				"2016": "SDM630 Rx",
+				"4224": "Esclave RST",
+				"2304": "Tuya Rx",
+				"9056": "BP5758D Dat",
+				"9824": "Dingtian PL",
+				"608": "I2C SCl",
+				"7008": "NeoPool Rx",
+				"8352": "74x595 OE",
+				"4960": "CAM_Reset",
+				"1472": "PZEM0XX Tx",
+				"6528": "SSD1351 CS",
+				"6048": "SHD Boot0",
+				"960": "SSPI DC",
+				"1696": "PMS5003 Rx",
+				"1024": "Display Rst",
+				"9184": "TM1621 CS",
+				"8160": "BL0942 Rx",
+				"1920": "SDMx20 Tx",
+				"2432": "AZ Tx",
+				"2720": "BL0937 CF",
+				"8384": "74x595 Ser",
+				"2976": "SM16716 Pwr",
+				"10208": "BioPDU Bit",
+				"8512": "SDM230 Rx",
+				"9664": "BP1658CJ Clk",
+				"7232": "SSD1351 DC",
+				"384": "Compteur_n",
+				"1056": "IR Tx",
+				"32": "Bouton",
+				"7392": "MAX7219 Clk",
+				"10464": "HDMI CEC",
+				"5632": "TInfo Rx",
+				"4640": "MOODL Tx",
+				"1216": "AM2301",
+				"2560": "MX31855 DO",
+				"9760": "Dingtian SDI",
+				"1376": "WS2812",
+				"9344": "Relais_bi",
+				"3776": "A4988 Ena",
+				"448": "PWM_i",
+				"8960": "SDIO D3",
+				"4192": "Esclave Rx",
+				"3616": "RDM6300 Rx",
+				"6592": "ST7789 CS",
+				"6144": "P9813 Clk",
+				"6208": "Option A",
+				"4320": "HPMA Tx",
+				"480": "Buzzer",
+				"1088": "IR Rx",
+				"8096": "Vindriktning",
+				"1248": "SI7021",
+				"6688": "SSD1331 DC",
+				"768": "SPI CS",
+				"8480": "SDM230 Tx",
+				"8736": "Reset",
+				"10336": "LoxO2 RX",
+				"2816": "MCP39F5 Rst",
+				"1888": "SR04 Ech/Rx",
+				"9152": "MP3 Busy",
+				"1760": "SDS0X1 Rx",
+				"6368": "ILI9341 CS",
+				"4064": "SM2135 Dat",
+				"4768": "ADC LumiÃ¨re",
+				"7520": "TFmini+ Rx",
+				"7776": "I2S DOut",
+				"9088": "SM2335 Clk",
+				"9600": "Dali RX",
+				"5728": "iEM3000 Tx",
+				"8896": "SDIO D1",
+				"7872": "I2S DIn",
+				"4896": "ADC CT Power",
+				"4576": "CC1101 GDO2",
+				"4128": "EXS Enable",
+				"9920": "LD2410 Rx",
+				"10400": "GM861 Rx",
+				"8576": "CM110x Tx"
+			},
+			"template": {
+				"BASE": 1,
+				"NAME": "ESP32 Relay x8",
+				"GPIO": [
+					33,
+					1,
+					160,
+					1,
+					32,
+					1,
+					1,
+					1,
+					1,
+					1,
+					1,
+					161,
+					1,
+					1,
+					34,
+					1,
+					1,
+					1,
+					1216,
+					288,
+					1,
+					226,
+					227,
+					228,
+					1,
+					1,
+					1,
+					1,
+					224,
+					225,
+					1,
+					1,
+					1,
+					1,
+					1,
+					1
+				],
+				"FLAG": 0
+			}
+		},
+		"modules": {
+			"Thermo-Hygrometre": {
+				"activation": "ON",
+				"name": "Thermomètre Cave",
+				"environnement": {
+					"thermometres": {
+						"thermometre1": {
+							"pin": 22,
+							"value": 67.4,
+							"id": 1,
+							"type": 38912,
+							"relaisLie": {
+								"limites": [
+									50,
+									75
+								],
+								"ids": [
+									2
+								],
+								"etatSiOFF": [
+									"OFF"
+								],
+								"etatSiON": [
+									"ON"
+								],
+								"delaiSiOFF": [
+									0
+								],
+								"modules": [
+									"Thermo-Hygrometre"
+								],
+								"delaiSiON": [
+									0
+								]
+							},
+							"activation": "ON"
+						}
+					},
+					"relais": {
+						"relai1": {
+							"pin": 33,
+							"etat": "OFF",
+							"timer": 120,
+							"type": 7169,
+							"nom": "Ventilation Cave",
+							"id": 2,
+							"timestamp": {
+								"ON": 143,
+								"OFF": 1777548455,
+								"delai": 123
+							},
+							"publishMQTT": {
+								"topic": [
+									""
+								]
+							},
+							"activation": "ON"
+						}
+					}
+				}
+			},
+			"activation": "ON",
+			"autres": {
+				"activation": "ON",
+				"name": "Autres",
+				"environnement": {
+					"boutons": {
+						"bouton1": {
+							"id": 3,
+							"etat": {
+								"Action": "SINGLE"
+							},
+							"relaisLie": {
+								"modules": [
+									"autres"
+								],
+								"ids": [
+									3
+								],
+								"etatSiON": [
+									"TOGGLE"
+								],
+								"delaiSiON": [
+									0
+								],
+								"etatSiOFF": [
+									""
+								],
+								"delaiSiOFF": [
+									0
+								]
+							},
+							"pin": 18,
+							"type": 1026,
+							"activation": "ON",
+							"typeAction": "ON/OFF"
+						}
+					},
+					"relais": {
+						"relai2": {
+							"pin": 26,
+							"etat": "ON",
+							"timer": 0,
+							"type": 7171,
+							"nom": "Pompe Cuve",
+							"id": 4,
+							"timestamp": {
+								"ON": 1789149658,
+								"OFF": 0,
+								"delai": 4
+							},
+							"publishMQTT": {
+								"topic": [
+									""
+								]
+							},
+							"activation": "ON"
+						},
+						"relai1": {
+							"pin": 25,
+							"etat": "OFF",
+							"timer": 0,
+							"type": 7170,
+							"nom": "LED Machines",
+							"id": 3,
+							"timestamp": {
+								"ON": 1789776107,
+								"OFF": 1789776135,
+								"delai": 16390
+							},
+							"publishMQTT": {
+								"topic": [
+									"cmnd/cave/lumiere/POWER1"
+								]
+							},
+							"activation": "ON"
+						},
+						"relai3": {
+							"pin": 27,
+							"etat": "ON",
+							"timer": 0,
+							"type": 7172,
+							"nom": "Lavage",
+							"id": 5,
+							"timestamp": {
+								"ON": 1789149658,
+								"OFF": 0,
+								"delai": 4
+							},
+							"publishMQTT": {
+								"topic": [
+									""
+								]
+							},
+							"activation": "ON"
+						}
+					}
+				}
+			},
+			"pompeVideCave": {
+				"activation": "ON",
+				"name": "Pompe Vide-cave",
+				"environnement": {
+					"boutons": {
+						"bouton2": {
+							"id": 2,
+							"etat": {
+								"Action": "SINGLE"
+							},
+							"relaisLie": {
+								"modules": [
+									"pompeVideCave"
+								],
+								"ids": [
+									1
+								],
+								"etatSiON": [
+									"TOGGLE"
+								],
+								"delaiSiON": [
+									0
+								],
+								"etatSiOFF": [
+									""
+								],
+								"delaiSiOFF": [
+									0
+								]
+							},
+							"pin": 0,
+							"type": 1025,
+							"activation": "ON",
+							"typeAction": "ON/OFF"
+						},
+						"bouton1": {
+							"id": 1,
+							"etat": {
+								"Action": "SINGLE"
+							},
+							"relaisLie": {
+								"modules": [
+									"pompeVideCave"
+								],
+								"ids": [
+									1
+								],
+								"etatSiON": [
+									"TOGGLE"
+								],
+								"delaiSiON": [
+									0
+								],
+								"etatSiOFF": [
+									""
+								],
+								"delaiSiOFF": [
+									0
+								]
+							},
+							"pin": 4,
+							"type": 1024,
+							"activation": "ON",
+							"typeAction": "ON/OFF"
+						}
+					},
+					"relais": {
+						"relai1": {
+							"pin": 32,
+							"etat": "OFF",
+							"timer": 120,
+							"type": 7168,
+							"nom": "Pompe Cave",
+							"id": 1,
+							"timestamp": {
+								"ON": 1789733031,
+								"delai": 0,
+								"nbCyclesJour": 0,
+								"OFF": 1789733151
+							},
+							"publishMQTT": {
+								"topic": [
+									""
+								]
+							},
+							"activation": "ON"
+						}
+					},
+					"capteursPosition": {
+						"capteurNiveauBas": {
+							"id": 1,
+							"etat": "OFF",
+							"relaisLie": {
+								"modules": [
+									"pompeVideCave"
+								],
+								"ids": [
+									1
+								],
+								"etatSiON": [
+									""
+								],
+								"delaiSiON": [
+									0
+								],
+								"etatSiOFF": [
+									"OFF"
+								],
+								"delaiSiOFF": [
+									9
+								]
+							},
+							"type": 5120,
+							"pin": 2,
+							"activation": "ON"
+						},
+						"capteurNiveauHaut": {
+							"id": 2,
+							"etat": "OFF",
+							"relaisLie": {
+								"modules": [
+									"pompeVideCave"
+								],
+								"ids": [
+									1
+								],
+								"etatSiON": [
+									"ON"
+								],
+								"delaiSiON": [
+									0
+								],
+								"etatSiOFF": [
+									""
+								],
+								"delaiSiOFF": [
+									0
+								]
+							},
+							"type": 5121,
+							"pin": 15,
+							"activation": "ON"
+						}
+					}
+				}
+			}
+		},
+		"serveur": {
+			"hostname": "SERVEUR-RLY-CAVE",
+			"IP": {
+				"IPAddress": "192.168.0.48",
+				"Subnet": "255.255.255.0",
+				"IPGateway": "192.168.0.254",
+				"DNSServer": "192.168.0.254"
+			},
+			"nom": "Serveur Relais Cave",
+			"wifi": {
+				"power": 17,
+				"reseau1": {
+					"nomReseauWifi": "Relai Wifi Cave",
+					"mdpWifi": "obdormisti-pervigile%.-ficiendus"
+				},
+				"selectSignalFort": "OFF",
+				"reScanBy44": "ON",
+				"reseau2": {
+					"nomReseauWifi": "MAISON",
+					"mdpWifi": "obdormisti-pervigile%.-ficiendus"
+				}
+			},
+			"web": {
+				"activation": "ON",
+				"url_serveur": "http://192.168.0.2/tasmota",
+				"url_sauvegarde_json": "http://192.168.0.2:1880/tasmota/enregistreJSON.html"
+			},
+			"mDNS": "ON",
+			"mqtt": {
+				"utilisateur": "fdaubercy",
+				"client": "SERVEUR-RLY-CAVE",
+				"hote": "192.168.0.5",
+				"mdp": "Lune5676",
+				"activation": "ON",
+				"port": 1883,
+				"topic": "cave/serveur-rly-cave"
+			},
+			"fuseauHoraire": {
+				"TimeStd": {
+					"Week": 0,
+					"Month": 10,
+					"Offset": 60,
+					"Day": 1,
+					"Hemisphere": 0,
+					"Hour": 3
+				},
+				"timezone": 99,
+				"TimeDst": {
+					"Week": 0,
+					"Month": 3,
+					"Offset": 120,
+					"Day": 1,
+					"Hemisphere": 0,
+					"Hour": 2
+				}
+			},
+			"localisation": {
+				"longitude": "3.085796",
+				"latitude": "50.410931"
+			}
+		}
+	}
+}

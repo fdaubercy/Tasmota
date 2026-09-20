@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/verifie_synchro_fork.sh\"",
+            "timeout": 60000
+          }
+        ]
+      }
+    ]
+  }
+}
