@@ -328,6 +328,16 @@ esclave. Le sondage 0x03 fonctionne donc **dès aujourd'hui**, sans modification
 - Point de retour : tag **`avant-chantier-modbus`** (commit `ce115398f`).
 - `development` reste la branche du parc en service (garage, cuve, rideau) pendant tout
   le chantier. Retour sur `development` seulement quand le banc est vert.
+- ⚠️ **DÉROGATION du 2026-09-20 : `development` a été avancé (fast-forward) sur le HEAD du
+  chantier (`d464c53db`) AVANT le banc vert, à la demande explicite de l'utilisateur.**
+  La règle ci-dessus n'est donc plus respectée : `development` porte désormais le code
+  ModBus garage **jamais exercé sur bus réel**. Conséquences à garder en tête :
+  - La prochaine action (**flasher + observer**, en tête de ce document) reste entière —
+    la fusion n'a rien validé, elle a seulement propagé le code.
+  - `development` n'est plus la « dernière version bonne connue » du parc. Point de retour
+    intact : `git branch -f development a9700ff91` (état d'avant fusion), tag
+    `avant-chantier-modbus` (`ce115398f`) et branche `chantier-modbus-grenier` conservés.
+  - Fusion **non poussée** : `development` est à 22 commits d'avance sur `origin/development`.
 - ⚠️ **Un retour en arrière git ne défait pas le matériel.** Les `.be` et le
   `_persist.json` vivent sur le LittleFS ; pour propager un changement du dépôt vers la
   puce, il faut **re-téléverser** le système de fichiers.
