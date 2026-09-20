@@ -337,7 +337,14 @@ esclave. Le sondage 0x03 fonctionne donc **dès aujourd'hui**, sans modification
   - `development` n'est plus la « dernière version bonne connue » du parc. Point de retour
     intact : `git branch -f development a9700ff91` (état d'avant fusion), tag
     `avant-chantier-modbus` (`ce115398f`) et branche `chantier-modbus-grenier` conservés.
-  - Fusion **non poussée** : `development` est à 22 commits d'avance sur `origin/development`.
+  - **Synchro du fork finalisée le 2026-09-20** : les 142 commits d'upstream ont été mergés
+    dans `development` (merge propre, sans conflit) et `development` a été **poussé sur
+    `origin`** (HEAD `ea80274d7`). Le ModBus garage non éprouvé sur bus est donc désormais
+    **publié** sur le fork. `chantier-modbus-grenier` (resté à `d464c53db`) est maintenant
+    **en retard** sur `development` — le travail vit sur `development`.
+  - Artefacts de build (`tasmota_defines_for_berry.{be,h}`, `user_config_override.h`,
+    `modules.h`, `platformio_override.ini`) écartés avant le merge : régénérés au prochain
+    build (rebuild complet obligatoire de toute façon pour flasher+observer).
 - ⚠️ **Un retour en arrière git ne défait pas le matériel.** Les `.be` et le
   `_persist.json` vivent sur le LittleFS ; pour propager un changement du dépôt vers la
   puce, il faut **re-téléverser** le système de fichiers.
