@@ -71,7 +71,7 @@ Latest released binaries can be downloaded from
 - http://ota.tasmota.com/tasmota/release
 
 Historical binaries can be downloaded from
-- http://ota.tasmota.com/tasmota/release-15.5.0
+- http://ota.tasmota.com/tasmota/release-15.6.0
 
 The latter links can be used for OTA upgrades too like ``OtaUrl http://ota.tasmota.com/tasmota/release/tasmota.bin.gz``
 
@@ -102,7 +102,7 @@ Latest released binaries can be downloaded from
 - https://ota.tasmota.com/tasmota32/release
 
 Historical binaries can be downloaded from
-- https://ota.tasmota.com/tasmota32/release-15.5.0
+- https://ota.tasmota.com/tasmota32/release-15.6.0
 
 The latter links can be used for OTA upgrades too like ``OtaUrl https://ota.tasmota.com/tasmota32/release/tasmota32.bin``
 
@@ -112,17 +112,27 @@ The latter links can be used for OTA upgrades too like ``OtaUrl https://ota.tasm
 
 [Complete list](BUILDS.md) of available feature and sensors.
 
-## Changelog v15.5.0.1
+## Changelog v15.6.0.1
 ### Added
-- Berry `bytes` methods `setbits`/`getbits` transposed to native and support for big endian [#24857](https://github.com/arendst/Tasmota/issues/24857)
+- Support for GUI tooltip on touch media like phones and tablets
+- Support for TFA Dostmann Marbella 868MHz pool thermometer using a CC1101 [#24959](https://github.com/arendst/Tasmota/issues/24959)
+- MiEL HVAC climate control panel on the web UI main page (mode, target temperature, fan, vanes, air direction) with live state [#24984](https://github.com/arendst/Tasmota/issues/24984)
+- NeoPool AuxMode [#24998](https://github.com/arendst/Tasmota/issues/24998)
+- MiEL HVAC Modbus RTU slave on a second RS485 port exposing all states and functions for PLC use with `#define USE_MIEL_HVAC_MODBUS_SLAVE` [#24982](https://github.com/arendst/Tasmota/issues/24982)
+- Berry virtual button support
+- Berry `sortedmap` support for `json.dump` [#24999](https://github.com/arendst/Tasmota/issues/24999)
 
 ### Breaking Changed
 
 ### Changed
-- MiElHVAC auto-enable i-See widevane when setting AirDirection [#24860](https://github.com/arendst/Tasmota/issues/24860)
+- BLE MI32 display icons instead of data lines. disable by removing `#define USE_SENSOR_ICON`
+- BLE EQ3-TRV code refactoring [#24978](https://github.com/arendst/Tasmota/issues/24978)
 
 ### Fixed
-- Default button/switch actions on builds without rules regression from v15.4.0.2 [#24871](https://github.com/arendst/Tasmota/issues/24871)
-- BLE EQ3 float output in mqtt messages regression from v15.4.0.2 [#24869](https://github.com/arendst/Tasmota/issues/24869)
+- Restore default hostname `%s` functionality using topic name only, regression from v15.4.0.2 [#24731](https://github.com/arendst/Tasmota/issues/24731)
+- MiEL HVAC Modbus length-based framing, queue writes, FC03 sensor mirror [#24993](https://github.com/arendst/Tasmota/issues/24993)
+- Zigbee deferred timer use after free, and the truncated backtrace that hid it [#24979](https://github.com/arendst/Tasmota/issues/24979)
+- Berry rare register allocation bug [#25010](https://github.com/arendst/Tasmota/issues/25010)
+- Matter autoconfiguration after configuration reset [#24997](https://github.com/arendst/Tasmota/issues/24997)
 
 ### Removed

@@ -476,7 +476,7 @@ void setup(void) {
 
   if (RtcSettingsLoad(0)) {
     uint32_t baudrate = (RtcSettings.baudrate / 300) * 300;  // Make it a valid baudrate
-    if (baudrate) { TasmotaGlobal.baudrate = baudrate; }
+    if (baudrate) { SetTasmotaGlobalBaudrate(baudrate); }
   }
 
   // Init settings and logging preparing for AddLog use
@@ -617,6 +617,9 @@ void setup(void) {
 #ifndef USE_EMULATION_HUE
   if (EMUL_HUE == Settings->flag2.emulation) { Settings->flag2.emulation = 0; }
 #endif  // USE_EMULATION_HUE
+#ifndef USE_EMULATION_SHELLY
+  if (EMUL_SHELLY == Settings->flag2.emulation) { Settings->flag2.emulation = 0; }
+#endif  // USE_EMULATION_SHELLY
 #endif  // USE_EMULATION
 
 //  AddLog(LOG_LEVEL_INFO, PSTR("DBG: TasmotaGlobal size %d, data %100_H"), sizeof(TasmotaGlobal), (uint8_t*)&TasmotaGlobal);
@@ -681,8 +684,12 @@ void setup(void) {
     SettingsUpdateText(SET_HOSTNAME, WIFI_HOSTNAME);
     const char* first_spec = strchr(SettingsText(SET_HOSTNAME), '%');
     const char* second_spec = strchr(first_spec + 1, '%');
-    if (first_spec && second_spec) {
+    bool use_topic_only = (first_spec && !second_spec && ('s' == *(first_spec +1)));  // #24731 Backward compatibility to undocumented single specifier "%s"
+    if (use_topic_only || (first_spec && second_spec)) {
       // Two (or more) specifiers: expands first as mqtt topic and second as chip ID
+      // In C, the extra argument is safely ignored by the compiler and runtime.
+      // The function reads the format string, sees one specifier, grabs the first matching argument from the stack,
+      // and prints it. The second argument is simply left untouched in memory.
       snprintf_P(TasmotaGlobal.hostname, sizeof(TasmotaGlobal.hostname)-1, SettingsText(SET_HOSTNAME), TasmotaGlobal.mqtt_topic, ESP_getChipId() & 0x1FFF);
     } else {
       // One specifier: use Format() which handles %NX = last N MAC hex chars, %Nd = short chip ID dec, %d = full chip ID dec
@@ -747,10 +754,6 @@ void BacklogLoop(void) {
       do {
         char* cmd = *backlog.head();
         backlog.removeHead();
-/*
-        // This adds 32 bytes
-        char* cmd = *backlog.removeHead();
-*/
         if (!strncasecmp_P(cmd, PSTR(D_CMND_NODELAY), strlen(D_CMND_NODELAY))) {
           free(cmd);
           nodelay = true;
