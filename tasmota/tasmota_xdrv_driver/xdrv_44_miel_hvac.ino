@@ -19,7 +19,83 @@
 
 #ifdef USE_MIEL_HVAC
 /*********************************************************************************************\
- * Mitsubishi Electric HVAC serial interface
+ * Mitsubishi Electric HVAC (CN105) serial interface
+ *
+ * Speaks the Mitsubishi "IT protocol" on the indoor unit's CN105 connector and exposes it
+ * through the console (HVACSet* commands), MQTT (SENSOR / HVACSettings) and a web control
+ * panel on the main page.  Protocol reference:
+ * https://muart-group.github.io/developer/it-protocol/
+ * Compile with USE_MIEL_HVAC; GPIOs "MiEl HVAC Rx" / "MiEl HVAC Tx".
+ *
+ * The web panel's Off button replaces the generic Tasmota power toggle, which is hidden
+ * together with its ON/OFF state row; the POWER command and its MQTT / Home Assistant
+ * state sync are unchanged.
+ * --- Web control panel (USE_WEBSERVER) ---------------------------------------------------
+ * Full climate panel on the main page: mode (Auto/Heat/Cool/Dry/Fan/Off), target
+ * temperature, fan speed, vertical + horizontal vane, air direction and the remote lock
+ * (prohibit).  Which controls appear is gated by the 0x7B 0xC9 Base Capabilities, and the
+ * panel is refreshed in place on every web_refresh poll so it also follows changes made
+ * from the IR remote / MQTT / console.
+ *
+ * A control change is written to sc_settings straight away, before the unit confirms with
+ * the next 0x62 0x02, so the panel, the Modbus registers and SENSOR show the intent
+ * instead of the stale pre-change state for ~1s, and HVACSettings / SENSOR are published
+ * at that point; the unit's next report wins (and republishes) if it rejects the change.
+ *
+ * --- Modbus RTU slave (USE_MIEL_HVAC_MODBUS_SLAVE, ESP32) ---------------------------------
+ * Optional second RS485 port that mirrors every driver state as read registers and maps
+ * every driver function to write registers / coils, so the unit can be driven from a PLC
+ * alongside the console / MQTT.  Off by default.
+ *
+ *   GPIOs      "MiEl HVAC MB Rx" / "MiEl HVAC MB Tx", and optionally "MiEl HVAC MB Tx En"
+ *              (RS485 DE/RE - omit for auto-direction transceivers)
+ *   Commands   HVACModbus 0|1, HVACModbusAddress 1..247, HVACModbusBaudrate 1200..115200,
+ *              HVACModbusConfig 8N1|8E1|8O1|8N2|8E2|8O2   (persisted, applied live)
+ *   Web        a "Modbus RTU" button on the Configuration menu opens a page for the enable
+ *              flag and the three parameters above (saved via the commands, applied live -
+ *              no reboot).  A "Modbus" status sticker shows while the slave runs
+ *   Function   0x01/0x02 read coils / discrete inputs, 0x03/0x04 read holding / input
+ *   codes      registers, 0x05/0x0F/0x06/0x10 write coils / registers; CRC-16 checked,
+ *              broadcast (address 0) accepted for writes
+ *   Framing    requests are framed by their expected length rather than the T3.5 gap, the
+ *              RX stream resyncs byte-by-byte on a mismatch, replies wait the RTU
+ *              turnaround silence and are dropped once the master has already re-polled -
+ *              keeps a shared bus and rates above 9600 baud reliable
+ *
+ *   Addresses below are the raw 0-based protocol offset used on the wire, with the
+ *   5-digit Modicon / PLC address in ().
+ *
+ *   Input registers (FC04, 3xxxx), 16-bit, read-only live state:
+ *     0x0000..0x0006 (30001..30007)  link / capability / feature flags
+ *     0x0010..0x001a (30017..30027)  settings: power, mode, temp x10, fan, vane, widevane,
+ *                                    prohibit, air direction, purifier, night mode, econocool
+ *     0x0020..0x002a (30033..30043)  room / outdoor / set temperature x10, power W, energy,
+ *                                    run time, compressor, remote temperature, clear time
+ *     0x0030..0x003a (30049..30059)  timers and operation stage
+ *     0x0040..0x0048 (30065..30073)  decoded capabilities and per-mode temperature limits
+ *     0x0050..0x0053 (30081..30084)  diagnostics: requests, CRC errors, exceptions, RX overruns
+ *     0x0054..0x0055 (30085..30086)  error state: BCD code (8000 = no error), two-char code
+ *
+ *   Holding registers (FC03 / FC06 / FC10, 4xxxx), 16-bit:
+ *     0x0000..0x000e (40001..40015)  writable control - power, mode, temp x10, fan, vane,
+ *                                    widevane, prohibit, air direction, purifier, night mode,
+ *                                    econocool, HA mode, remote temp (0x7fff clears),
+ *                                    remote-temp clear time, raw 0x42 byte; reads return
+ *                                    the last written value
+ *     0x000f..0x0017 (40016..40024)  read-only mirror of selected input registers, for
+ *                                    FC03-only masters
+ *     0x0018..0x0019 (40025..40026)  error state mirror (same as 0x0054..0x0055)
+ *
+ *   Coils (FC01 / FC05 / FC0F, 0xxxx):
+ *     0 (00001) power, 1 (00002) purifier, 2 (00003) night mode, 3 (00004) econocool,
+ *     4 (00005) clear remote-temp override (write 0)
+ *   Discrete inputs (FC02, 1xxxx):
+ *     0 (10001) connected, 1 (10002) capabilities valid, 2 (10003) compressor running,
+ *     3 (10004) i-See sensor, 4 (10005) energy metering, 5 (10006) remote temp active,
+ *     6 (10007) defrost
+ *
+ *   Writes reuse the miel_hvac_apply_* setters (same capability gating as the console
+ *   commands) and are queued when the HVAC link is not up yet rather than rejected.
 \*********************************************************************************************/
 
 #define XDRV_44 44
@@ -51,6 +127,10 @@
 #define D_CMND_MIEL_HVAC_REMOTETEMP               "HVACRemoteTemp"
 #define D_CMND_MIEL_HVAC_REMOTETEMP_CLEAR_TIME "HVACRemoteTempClearTime"
 #define D_CMND_MIEL_HVAC_SEND_COMMAND             "HVACSendCommand"
+#define D_CMND_MIEL_HVAC_MODBUS                   "HVACModbus"
+#define D_CMND_MIEL_HVAC_MODBUS_ADDRESS           "HVACModbusAddress"
+#define D_CMND_MIEL_HVAC_MODBUS_BAUDRATE          "HVACModbusBaudrate"
+#define D_CMND_MIEL_HVAC_MODBUS_CONFIG            "HVACModbusConfig"
 
 #include <TasmotaSerial.h>
 
@@ -158,6 +238,21 @@ struct miel_hvac_data_roomtemp
 	uint8_t operationtime2;  /* least-significant byte */
 };
 
+/*
+ * Response to request 0x04 (Get Error State).
+ * https://muart-group.github.io/developer/it-protocol/0x62-get-response/0x04-get-error-state
+ *   bytes 4-5  error code, big-endian.  0x8000 = no error, 0x6999 = bad
+ *              communication with the indoor unit, other codes per the spec.
+ *   byte  6    packed two-character code; 0x00 decodes to "A0" (no error)
+ */
+struct miel_hvac_data_error
+{
+	uint8_t _pad1[3];
+	uint8_t code;
+	uint8_t code1;
+	uint8_t shortcode;
+};
+
 struct miel_hvac_data_timers
 {
 	uint8_t _pad1[2];
@@ -246,6 +341,7 @@ struct miel_hvac_data
 	uint8_t type;
 #define MIEL_HVAC_DATA_T_SETTINGS    0x02
 #define MIEL_HVAC_DATA_T_ROOMTEMP    0x03
+#define MIEL_HVAC_DATA_T_ERROR       0x04
 #define MIEL_HVAC_DATA_T_TIMERS      0x05
 #define MIEL_HVAC_DATA_T_STATUS      0x06
 #define MIEL_HVAC_DATA_T_STAGE       0x09
@@ -255,6 +351,7 @@ struct miel_hvac_data
 	{
 		struct miel_hvac_data_settings     settings;
 		struct miel_hvac_data_roomtemp     roomtemp;
+		struct miel_hvac_data_error        error;
 		struct miel_hvac_data_timers       timers;
 		struct miel_hvac_data_status       status;
 		struct miel_hvac_data_stage        stage;
@@ -281,6 +378,9 @@ CTASSERT(offsetof(struct miel_hvac_data, data.roomtemp.settemp)        == 7);
 CTASSERT(offsetof(struct miel_hvac_data, data.roomtemp.operationtime)  == 11);
 CTASSERT(offsetof(struct miel_hvac_data, data.roomtemp.operationtime1) == 12);
 CTASSERT(offsetof(struct miel_hvac_data, data.roomtemp.operationtime2) == 13);
+
+CTASSERT(offsetof(struct miel_hvac_data, data.error.code)      == 4);
+CTASSERT(offsetof(struct miel_hvac_data, data.error.shortcode) == 6);
 
 CTASSERT(offsetof(struct miel_hvac_data, data.timers.mode)               == 3);
 CTASSERT(offsetof(struct miel_hvac_data, data.timers.onminutes)           == 4);
@@ -316,6 +416,7 @@ struct miel_hvac_msg_request
 	uint8_t type;
 #define MIEL_HVAC_REQUEST_SETTINGS    0x02
 #define MIEL_HVAC_REQUEST_ROOMTEMP    0x03
+#define MIEL_HVAC_REQUEST_ERROR       0x04
 #define MIEL_HVAC_REQUEST_TIMERS      0x05
 #define MIEL_HVAC_REQUEST_STATUS      0x06
 #define MIEL_HVAC_REQUEST_STAGE       0x09
@@ -339,14 +440,21 @@ struct miel_hvac_msg_update_settings
 #define MIEL_HVAC_SETTINGS_F_TEMP          (1 << 10)
 #define MIEL_HVAC_SETTINGS_F_FAN           (1 << 11)
 #define MIEL_HVAC_SETTINGS_F_VANE          (1 << 12)
-#define MIEL_HVAC_SETTINGS_F_PROHIBIT      (1 << 13)
+/*
+ * Prohibit / remote lock: update flag is 0x0040 on the wire (i.e. bit 14
+ * of the host-order uint16 before htons()), and the lock byte sits at
+ * payload offset 11 — not the offset the GET response uses (8).
+ * Docs: muart-group.github.io/.../0x41-set-request/0x01-set-settings
+ */
+#define MIEL_HVAC_SETTINGS_F_PROHIBIT      (1 << 14)
 	uint8_t power;
 	uint8_t mode;
 	uint8_t temp;
 	uint8_t fan;
 	uint8_t vane;
+	uint8_t _pad1[3];
 	uint8_t prohibit;
-	uint8_t _pad1[4];
+	uint8_t _pad2[1];
 	uint8_t widevane;
 	uint8_t temp05;
 	uint8_t airdirection;
@@ -360,7 +468,7 @@ CTASSERT(offsetof(struct miel_hvac_msg_update_settings, mode)         == MIEL_HV
 CTASSERT(offsetof(struct miel_hvac_msg_update_settings, temp)         == MIEL_HVAC_OFFS(10));
 CTASSERT(offsetof(struct miel_hvac_msg_update_settings, fan)          == MIEL_HVAC_OFFS(11));
 CTASSERT(offsetof(struct miel_hvac_msg_update_settings, vane)         == MIEL_HVAC_OFFS(12));
-CTASSERT(offsetof(struct miel_hvac_msg_update_settings, prohibit)     == MIEL_HVAC_OFFS(13));
+CTASSERT(offsetof(struct miel_hvac_msg_update_settings, prohibit)     == MIEL_HVAC_OFFS(16));
 CTASSERT(offsetof(struct miel_hvac_msg_update_settings, widevane)     == MIEL_HVAC_OFFS(18));
 CTASSERT(offsetof(struct miel_hvac_msg_update_settings, temp05)       == MIEL_HVAC_OFFS(19));
 CTASSERT(offsetof(struct miel_hvac_msg_update_settings, airdirection) == MIEL_HVAC_OFFS(20));
@@ -457,6 +565,7 @@ static const struct miel_hvac_map miel_hvac_mode_map[] = {
 	{MIEL_HVAC_SETTINGS_MODE_DRY,       "dry"},
 	{MIEL_HVAC_SETTINGS_MODE_COOL,      "cool"},
 	{MIEL_HVAC_SETTINGS_MODE_FAN,       "fan"},
+	{MIEL_HVAC_SETTINGS_MODE_FAN,       "fan_only"},  /* Home Assistant alias for "fan" */
 	{MIEL_HVAC_SETTINGS_MODE_AUTO,      "auto"},
 	{MIEL_HVAC_SETTINGS_MODE_HEAT_ISEE, "heat_isee"},
 	{MIEL_HVAC_SETTINGS_MODE_DRY_ISEE,  "dry_isee"},
@@ -570,6 +679,19 @@ static const struct miel_hvac_map miel_hvac_stage_mode_map[] = {
 	{MIEL_HVAC_STAGE_MODE_AUTO_LEADER, "auto_leader"},
 };
 
+/*
+ * Result of the miel_hvac_apply_* typed setters shared by the console commands
+ * and the Modbus RTU slave.  Plain uint8_t is used as the return type (not this
+ * enum) so the Arduino auto-generated function prototypes need not see it.
+ */
+enum miel_hvac_apply_result
+{
+	MIEL_HVAC_APPLY_OK = 0,
+	MIEL_HVAC_APPLY_BAD_VALUE,   /* value outside the protocol's domain */
+	MIEL_HVAC_APPLY_BAD_ADDR,    /* no such setting */
+	MIEL_HVAC_APPLY_UNSUPPORTED, /* rejected by unit capabilities */
+};
+
 enum miel_hvac_parser_state
 {
 	MIEL_HVAC_P_START,
@@ -648,10 +770,50 @@ struct miel_hvac_capabilities
 	uint8_t  temp_auto_max;        /* byte 15 */
 };
 
+#if defined(USE_MIEL_HVAC_MODBUS_SLAVE) && defined(ESP32)
+/*
+ * Modbus RTU slave state.  A second RS485 serial port that exposes every
+ * driver state as read registers and every driver function as write
+ * registers/coils, so the unit can be driven directly from a PLC.
+ */
+#define MIEL_HVAC_MB_BUFLEN           260
+#define MIEL_HVAC_MB_DEFAULT_ADDRESS  1
+#define MIEL_HVAC_MB_DEFAULT_BAUDRATE 9600
+#define MIEL_HVAC_MB_MIN_BAUDRATE     1200
+#define MIEL_HVAC_MB_MAX_BAUDRATE     115200
+
+/* Modbus exception codes */
+#define MIEL_HVAC_MB_EXC_FUNCTION     0x01
+#define MIEL_HVAC_MB_EXC_ADDRESS      0x02
+#define MIEL_HVAC_MB_EXC_VALUE        0x03
+#define MIEL_HVAC_MB_EXC_FAILURE      0x04
+
+struct miel_hvac_mb_softc
+{
+	TasmotaSerial *sc_serial;
+	int8_t   sc_txen_pin;
+	uint8_t  sc_address;
+	uint8_t  sc_sconfig;
+	uint32_t sc_baudrate;
+	uint32_t sc_t35_us;      /* 3.5-char inter-frame gap, microseconds */
+	uint32_t sc_last_us;     /* micros() of last received byte */
+	uint16_t sc_len;
+	bool     sc_no_reply;    /* suppress the response for a stale request */
+	uint8_t  sc_buf[MIEL_HVAC_MB_BUFLEN];
+	uint32_t sc_requests;
+	uint32_t sc_crc_errors;
+	uint32_t sc_exceptions;
+	uint32_t sc_overruns;
+};
+#endif  /* USE_MIEL_HVAC_MODBUS_SLAVE && ESP32 */
+
 struct miel_hvac_softc
 {
 	TasmotaSerial *sc_serial;
 	struct miel_hvac_parser sc_parser;
+#if defined(USE_MIEL_HVAC_MODBUS_SLAVE) && defined(ESP32)
+	struct miel_hvac_mb_softc *sc_mb;
+#endif
 
 	unsigned int sc_device;
 	unsigned int sc_tick;
@@ -672,6 +834,7 @@ struct miel_hvac_softc
 	struct miel_hvac_data sc_status;
 	struct miel_hvac_data sc_stage;
 	struct miel_hvac_data sc_options; /* 0x42 Options */
+	struct miel_hvac_data sc_error;   /* 0x04 Error State */
 
 	struct miel_hvac_capabilities sc_caps; /* 0x7B 0xC9 Base Capabilities */
 
@@ -1156,11 +1319,28 @@ miel_hvac_cmnd_setfanspeed(void)
 	ResponseCmndChar_P(e->name);
 }
 
+/* Translate a miel_hvac_apply_* result into the console cmnd response. */
+static void
+miel_hvac_cmnd_apply_response(uint8_t result, const char *name)
+{
+	switch (result)
+	{
+	case MIEL_HVAC_APPLY_OK:
+		ResponseCmndChar_P(name);
+		break;
+	case MIEL_HVAC_APPLY_UNSUPPORTED:
+		miel_hvac_respond_not_supported();
+		break;
+	default:
+		miel_hvac_respond_unsupported();
+		break;
+	}
+}
+
 static void
 miel_hvac_cmnd_setmode(void)
 {
 	struct miel_hvac_softc *sc = miel_hvac_sc;
-	struct miel_hvac_msg_update_settings *update = &sc->sc_settings_update;
 	const struct miel_hvac_map *e;
 
 	if (XdrvMailbox.data_len == 0)
@@ -1174,39 +1354,13 @@ miel_hvac_cmnd_setmode(void)
 		return;
 	}
 
-	/* heat_isee/dry_isee/cool_isee share the same capability bit as
-	 * heat/dry/cool — mask out the ISEE bit before checking. */
-	if (sc->sc_caps.sc_caps_valid)
-	{
-		uint8_t mode = e->byte & MIEL_HVAC_SETTINGS_MODE_MASK;
-		if (mode == MIEL_HVAC_SETTINGS_MODE_HEAT && !sc->sc_caps.cap_mode_heat)
-		{
-			miel_hvac_respond_not_supported();
-			return;
-		}
-		if (mode == MIEL_HVAC_SETTINGS_MODE_DRY && !sc->sc_caps.cap_mode_dry)
-		{
-			miel_hvac_respond_not_supported();
-			return;
-		}
-		if (mode == MIEL_HVAC_SETTINGS_MODE_FAN && !sc->sc_caps.cap_mode_fan)
-		{
-			miel_hvac_respond_not_supported();
-			return;
-		}
-	}
-
-	update->flags |= htons(MIEL_HVAC_SETTINGS_F_MODE);
-	update->mode = e->byte;
-
-	ResponseCmndChar_P(e->name);
+	miel_hvac_cmnd_apply_response(miel_hvac_apply_mode(sc, e->byte), e->name);
 }
 
 static void
 miel_hvac_cmnd_sethamode(void)
 {
 	struct miel_hvac_softc *sc = miel_hvac_sc;
-	struct miel_hvac_msg_update_settings *update = &sc->sc_settings_update;
 	const struct miel_hvac_map *e;
 
 	if (XdrvMailbox.data_len == 0)
@@ -1214,8 +1368,7 @@ miel_hvac_cmnd_sethamode(void)
 
 	if (strcasecmp(XdrvMailbox.data, "off") == 0)
 	{
-		update->flags |= htons(MIEL_HVAC_SETTINGS_F_POWER);
-		update->power = MIEL_HVAC_SETTINGS_POWER_OFF;
+		miel_hvac_apply_hamode(sc, 0);
 		ResponseCmndChar_P(PSTR("off"));
 		return;
 	}
@@ -1232,32 +1385,7 @@ miel_hvac_cmnd_sethamode(void)
 		return;
 	}
 
-	if (sc->sc_caps.sc_caps_valid)
-	{
-		uint8_t mode = e->byte & MIEL_HVAC_SETTINGS_MODE_MASK;
-		if (mode == MIEL_HVAC_SETTINGS_MODE_HEAT && !sc->sc_caps.cap_mode_heat)
-		{
-			miel_hvac_respond_not_supported();
-			return;
-		}
-		if (mode == MIEL_HVAC_SETTINGS_MODE_DRY && !sc->sc_caps.cap_mode_dry)
-		{
-			miel_hvac_respond_not_supported();
-			return;
-		}
-		if (mode == MIEL_HVAC_SETTINGS_MODE_FAN && !sc->sc_caps.cap_mode_fan)
-		{
-			miel_hvac_respond_not_supported();
-			return;
-		}
-	}
-
-	update->flags |= htons(MIEL_HVAC_SETTINGS_F_POWER)
-	              |  htons(MIEL_HVAC_SETTINGS_F_MODE);
-	update->power = MIEL_HVAC_SETTINGS_POWER_ON;
-	update->mode  = e->byte;
-
-	ResponseCmndChar_P(e->name);
+	miel_hvac_cmnd_apply_response(miel_hvac_apply_hamode(sc, e->byte), e->name);
 }
 
 static void
@@ -2005,6 +2133,9 @@ miel_hvac_input_data(struct miel_hvac_softc *sc,
 			sc->sc_temp_type = true;
 		miel_hvac_input_sensor(sc, &sc->sc_roomtemp, d);
 		break;
+	case MIEL_HVAC_DATA_T_ERROR:
+		miel_hvac_input_sensor(sc, &sc->sc_error, d);
+		break;
 	case MIEL_HVAC_DATA_T_TIMERS:
 		miel_hvac_input_sensor(sc, &sc->sc_timers, d);
 		break;
@@ -2050,6 +2181,1350 @@ miel_hvac_input_updated(struct miel_hvac_softc *sc,
 {
 	miel_hvac_log_bytes(sc, "updated", buf, len);
 }
+
+/*
+ * Typed setters shared by the console commands and (when enabled) the Modbus
+ * RTU slave.  Each queues the matching wire update in the same
+ * sc_settings_update / sc_runstate_update / sc_remotetemp_update structures the
+ * console handlers use and returns the outcome so each front end can render its
+ * own response.  The capability gating mirrors the checks in the miel_hvac_cmnd_*
+ * handlers below; keep the two in sync.
+ */
+
+static uint8_t
+miel_hvac_apply_power(struct miel_hvac_softc *sc, bool on)
+{
+	struct miel_hvac_msg_update_settings *update = &sc->sc_settings_update;
+
+	update->flags |= htons(MIEL_HVAC_SETTINGS_F_POWER);
+	update->power = on ? MIEL_HVAC_SETTINGS_POWER_ON : MIEL_HVAC_SETTINGS_POWER_OFF;
+
+	return (MIEL_HVAC_APPLY_OK);
+}
+
+static uint8_t
+miel_hvac_apply_mode(struct miel_hvac_softc *sc, uint8_t mode_raw)
+{
+	struct miel_hvac_msg_update_settings *update = &sc->sc_settings_update;
+	uint8_t mode = mode_raw & MIEL_HVAC_SETTINGS_MODE_MASK;
+
+	if (miel_hvac_map_byval(mode_raw,
+	    miel_hvac_mode_map, nitems(miel_hvac_mode_map)) == NULL)
+		return (MIEL_HVAC_APPLY_BAD_VALUE);
+
+	/* heat_isee/dry_isee/cool_isee are reported by the unit only (i-See
+	 * sensor active) and cannot be commanded on any interface. */
+	if (mode_raw >= MIEL_HVAC_SETTINGS_MODE_HEAT_ISEE)
+		return (MIEL_HVAC_APPLY_BAD_VALUE);
+
+	if (sc->sc_caps.sc_caps_valid)
+	{
+		if (mode == MIEL_HVAC_SETTINGS_MODE_HEAT && !sc->sc_caps.cap_mode_heat)
+			return (MIEL_HVAC_APPLY_UNSUPPORTED);
+		if (mode == MIEL_HVAC_SETTINGS_MODE_DRY && !sc->sc_caps.cap_mode_dry)
+			return (MIEL_HVAC_APPLY_UNSUPPORTED);
+		if (mode == MIEL_HVAC_SETTINGS_MODE_FAN && !sc->sc_caps.cap_mode_fan)
+			return (MIEL_HVAC_APPLY_UNSUPPORTED);
+	}
+
+	update->flags |= htons(MIEL_HVAC_SETTINGS_F_MODE);
+	update->mode = mode_raw;
+
+	return (MIEL_HVAC_APPLY_OK);
+}
+
+static uint8_t
+miel_hvac_apply_hamode(struct miel_hvac_softc *sc, uint8_t mode_raw)
+{
+	struct miel_hvac_msg_update_settings *update = &sc->sc_settings_update;
+
+	if (mode_raw == 0)
+	{
+		update->flags |= htons(MIEL_HVAC_SETTINGS_F_POWER);
+		update->power = MIEL_HVAC_SETTINGS_POWER_OFF;
+		return (MIEL_HVAC_APPLY_OK);
+	}
+
+	if (miel_hvac_map_byval(mode_raw,
+	    miel_hvac_mode_map, nitems(miel_hvac_mode_map)) == NULL)
+		return (MIEL_HVAC_APPLY_BAD_VALUE);
+
+	/* *_isee mode variants are report-only, see miel_hvac_apply_mode(). */
+	if (mode_raw >= MIEL_HVAC_SETTINGS_MODE_HEAT_ISEE)
+		return (MIEL_HVAC_APPLY_BAD_VALUE);
+
+	if (sc->sc_caps.sc_caps_valid)
+	{
+		uint8_t mode = mode_raw & MIEL_HVAC_SETTINGS_MODE_MASK;
+		if (mode == MIEL_HVAC_SETTINGS_MODE_HEAT && !sc->sc_caps.cap_mode_heat)
+			return (MIEL_HVAC_APPLY_UNSUPPORTED);
+		if (mode == MIEL_HVAC_SETTINGS_MODE_DRY && !sc->sc_caps.cap_mode_dry)
+			return (MIEL_HVAC_APPLY_UNSUPPORTED);
+		if (mode == MIEL_HVAC_SETTINGS_MODE_FAN && !sc->sc_caps.cap_mode_fan)
+			return (MIEL_HVAC_APPLY_UNSUPPORTED);
+	}
+
+	update->flags |= htons(MIEL_HVAC_SETTINGS_F_POWER)
+	              |  htons(MIEL_HVAC_SETTINGS_F_MODE);
+	update->power = MIEL_HVAC_SETTINGS_POWER_ON;
+	update->mode = mode_raw;
+
+	return (MIEL_HVAC_APPLY_OK);
+}
+
+static uint8_t
+miel_hvac_apply_temp(struct miel_hvac_softc *sc, float degc)
+{
+	struct miel_hvac_msg_update_settings *update = &sc->sc_settings_update;
+
+	if (degc < MIEL_HVAC_SETTINGS_TEMP_MIN || degc > MIEL_HVAC_SETTINGS_TEMP_MAX)
+		return (MIEL_HVAC_APPLY_BAD_VALUE);
+
+	if (sc->sc_caps.sc_caps_valid && sc->sc_caps.cap_temp_ranges)
+	{
+		const struct miel_hvac_capabilities *caps = &sc->sc_caps;
+		const struct miel_hvac_data_settings *set =
+			&sc->sc_settings.data.settings;
+		uint8_t mode = set->mode & MIEL_HVAC_SETTINGS_MODE_MASK;
+		float cap_min, cap_max;
+
+		if (mode == MIEL_HVAC_SETTINGS_MODE_HEAT)
+		{
+			cap_min = (caps->temp_heat_min - 128) / 2.0f;
+			cap_max = (caps->temp_heat_max - 128) / 2.0f;
+		}
+		else if (mode == MIEL_HVAC_SETTINGS_MODE_AUTO)
+		{
+			cap_min = (caps->temp_auto_min - 128) / 2.0f;
+			cap_max = (caps->temp_auto_max - 128) / 2.0f;
+		}
+		else
+		{
+			cap_min = (caps->temp_cool_min - 128) / 2.0f;
+			cap_max = (caps->temp_cool_max - 128) / 2.0f;
+		}
+
+		if (degc < cap_min || degc > cap_max)
+			return (MIEL_HVAC_APPLY_UNSUPPORTED);
+	}
+
+	update->flags |= htons(MIEL_HVAC_SETTINGS_F_TEMP);
+	if (!sc->sc_temp_type)
+	{
+		update->temp   = miel_hvac_deg2temp(sc->sc_temp_type, degc);
+		update->temp05 = 0;
+	}
+	else
+	{
+		update->temp   = 0;
+		update->temp05 = miel_hvac_deg2temp(sc->sc_temp_type, degc);
+	}
+
+	return (MIEL_HVAC_APPLY_OK);
+}
+
+static uint8_t
+miel_hvac_apply_fan(struct miel_hvac_softc *sc, uint8_t fan_raw)
+{
+	struct miel_hvac_msg_update_settings *update = &sc->sc_settings_update;
+
+	if (miel_hvac_map_byval(fan_raw,
+	    miel_hvac_fan_map, nitems(miel_hvac_fan_map)) == NULL)
+		return (MIEL_HVAC_APPLY_BAD_VALUE);
+
+	if (sc->sc_caps.sc_caps_valid)
+	{
+		uint8_t fan_count = miel_hvac_get_fan_count(sc);
+		if (fan_raw == MIEL_HVAC_SETTINGS_FAN_AUTO && !sc->sc_caps.cap_fan_auto)
+			return (MIEL_HVAC_APPLY_UNSUPPORTED);
+		if (fan_count > 0)
+		{
+			if (fan_raw == MIEL_HVAC_SETTINGS_FAN_QUIET && fan_count < 5)
+				return (MIEL_HVAC_APPLY_UNSUPPORTED);
+			if (fan_raw == MIEL_HVAC_SETTINGS_FAN_4 && fan_count < 4)
+				return (MIEL_HVAC_APPLY_UNSUPPORTED);
+		}
+	}
+
+	update->flags |= htons(MIEL_HVAC_SETTINGS_F_FAN);
+	update->fan = fan_raw;
+
+	return (MIEL_HVAC_APPLY_OK);
+}
+
+static uint8_t
+miel_hvac_apply_vane(struct miel_hvac_softc *sc, uint8_t vane_raw)
+{
+	struct miel_hvac_msg_update_settings *update = &sc->sc_settings_update;
+
+	if (miel_hvac_map_byval(vane_raw,
+	    miel_hvac_vane_map, nitems(miel_hvac_vane_map)) == NULL)
+		return (MIEL_HVAC_APPLY_BAD_VALUE);
+
+	update->flags |= htons(MIEL_HVAC_SETTINGS_F_VANE);
+	update->vane = vane_raw;
+
+	return (MIEL_HVAC_APPLY_OK);
+}
+
+static uint8_t
+miel_hvac_apply_prohibit(struct miel_hvac_softc *sc, uint8_t proh_raw)
+{
+	struct miel_hvac_msg_update_settings *update = &sc->sc_settings_update;
+
+	if (miel_hvac_map_byval(proh_raw,
+	    miel_hvac_prohibit_map, nitems(miel_hvac_prohibit_map)) == NULL)
+		return (MIEL_HVAC_APPLY_BAD_VALUE);
+
+	update->flags |= htons(MIEL_HVAC_SETTINGS_F_PROHIBIT);
+	update->prohibit = proh_raw;
+
+	return (MIEL_HVAC_APPLY_OK);
+}
+
+static uint8_t
+miel_hvac_apply_widevane(struct miel_hvac_softc *sc, uint8_t wv_raw)
+{
+	struct miel_hvac_msg_update_settings *update = &sc->sc_settings_update;
+
+	if (miel_hvac_map_byval(wv_raw,
+	    miel_hvac_widevane_map, nitems(miel_hvac_widevane_map)) == NULL)
+		return (MIEL_HVAC_APPLY_BAD_VALUE);
+
+	update->flags |= htons(MIEL_HVAC_SETTINGS_F_WIDEVANE);
+	update->widevane = wv_raw;
+
+	return (MIEL_HVAC_APPLY_OK);
+}
+
+/* HVACSendCommand: raw widevane byte pass-through, no validation. */
+static uint8_t
+miel_hvac_apply_command_raw(struct miel_hvac_softc *sc, uint8_t byte)
+{
+	struct miel_hvac_msg_update_settings *update = &sc->sc_settings_update;
+
+	update->flags |= htons(MIEL_HVAC_SETTINGS_F_WIDEVANE);
+	update->widevane = byte;
+
+	return (MIEL_HVAC_APPLY_OK);
+}
+
+static uint8_t
+miel_hvac_apply_airdirection(struct miel_hvac_softc *sc, uint8_t dir)
+{
+	struct miel_hvac_msg_update_settings *update = &sc->sc_settings_update;
+
+	if (miel_hvac_map_byval(dir,
+	    miel_hvac_airdirection_map, nitems(miel_hvac_airdirection_map)) == NULL)
+		return (MIEL_HVAC_APPLY_BAD_VALUE);
+
+	if (sc->sc_caps.sc_caps_valid
+	    && (!sc->sc_caps.cap_vane_v || !sc->sc_has_isee))
+		return (MIEL_HVAC_APPLY_UNSUPPORTED);
+
+	switch (dir)
+	{
+	case MIEL_HVAC_SETTINGS_AIRDIRECTION_INDIRECT:
+	case MIEL_HVAC_SETTINGS_AIRDIRECTION_DIRECT:
+	case MIEL_HVAC_SETTINGS_AIRDIRECTION_EVEN:
+	{
+		struct miel_hvac_msg_update_runstate *rs = &sc->sc_runstate_update;
+
+		update->flags   |= htons(MIEL_HVAC_SETTINGS_F_WIDEVANE);
+		update->widevane = MIEL_HVAC_SETTINGS_WIDEVANE_ISEE;
+
+		rs->eight        = 0x08;
+		rs->flags       |= htons(MIEL_HVAC_RUNSTATE_F_AIRDIRECTION);
+		rs->airdirection = dir;
+		break;
+	}
+	case MIEL_HVAC_SETTINGS_AIRDIRECTION_OFF:
+		update->flags   |= htons(MIEL_HVAC_SETTINGS_F_WIDEVANE);
+		update->widevane = 0x8c;
+		break;
+	}
+
+	return (MIEL_HVAC_APPLY_OK);
+}
+
+static uint8_t
+miel_hvac_apply_runstate(struct miel_hvac_softc *sc, uint16_t flag,
+	uint8_t *field, bool on)
+{
+	struct miel_hvac_msg_update_runstate *update = &sc->sc_runstate_update;
+
+	if (sc->sc_caps.sc_caps_valid && !sc->sc_caps.cap_run_state)
+		return (MIEL_HVAC_APPLY_UNSUPPORTED);
+
+	update->eight = 0x08;
+	update->flags |= htons(flag);
+	*field = on ? 0x01 : 0x00;
+
+	return (MIEL_HVAC_APPLY_OK);
+}
+
+static inline uint8_t
+miel_hvac_apply_purifier(struct miel_hvac_softc *sc, bool on)
+{
+	return (miel_hvac_apply_runstate(sc, MIEL_HVAC_RUNSTATE_F_PURIFIER,
+	    &sc->sc_runstate_update.purifier, on));
+}
+
+static inline uint8_t
+miel_hvac_apply_nightmode(struct miel_hvac_softc *sc, bool on)
+{
+	return (miel_hvac_apply_runstate(sc, MIEL_HVAC_RUNSTATE_F_NIGHTMODE,
+	    &sc->sc_runstate_update.nightmode, on));
+}
+
+static inline uint8_t
+miel_hvac_apply_econocool(struct miel_hvac_softc *sc, bool on)
+{
+	return (miel_hvac_apply_runstate(sc, MIEL_HVAC_RUNSTATE_F_ECONOCOOL,
+	    &sc->sc_runstate_update.econocool, on));
+}
+
+/* temp_half is the remote temperature in 0.5 degC units. */
+static uint8_t
+miel_hvac_apply_remotetemp(struct miel_hvac_softc *sc, int temp_half, bool clear)
+{
+	struct miel_hvac_msg_update_remotetemp *update = &sc->sc_remotetemp_update;
+	uint8_t control;
+
+	if (clear)
+	{
+		control = MIEL_HVAC_REMOTETEMP_CLR;
+		sc->sc_remotetemp_half   = 0;
+		sc->sc_remotetemp_active = false;
+	}
+	else
+	{
+		int min_half = MIEL_HVAC_REMOTETEMP_MIN * 2;
+		int max_half = MIEL_HVAC_REMOTETEMP_MAX * 2;
+
+		if (temp_half < min_half)
+			temp_half = min_half;
+		else if (temp_half > max_half)
+			temp_half = max_half;
+
+		sc->sc_remotetemp_half           = temp_half;
+		control                          = MIEL_HVAC_REMOTETEMP_SET;
+		sc->sc_remotetemp_active         = true;
+		sc->sc_remotetemp_last_call_time = millis();
+	}
+
+	memset(update, 0, sizeof(*update));
+	update->seven    = 0x7;
+	update->control  = control;
+	update->temp_old = miel_hvac_remotetemp2old(sc->sc_remotetemp_half);
+	update->temp     = miel_hvac_remotetemp2new(sc->sc_remotetemp_half);
+
+	return (MIEL_HVAC_APPLY_OK);
+}
+
+static uint8_t
+miel_hvac_apply_remotetemp_clear_time(struct miel_hvac_softc *sc,
+	unsigned long clear_time)
+{
+	if (clear_time < 1000 || clear_time > 600000)
+		return (MIEL_HVAC_APPLY_BAD_VALUE);
+
+	sc->sc_remotetemp_auto_clear_time = clear_time;
+
+	return (MIEL_HVAC_APPLY_OK);
+}
+
+#if defined(USE_MIEL_HVAC_MODBUS_SLAVE) && defined(ESP32)
+/*********************************************************************************************\
+ * Modbus RTU slave
+ *
+ * A second RS485 serial port that lets a PLC read every driver state and drive every
+ * driver function.  Function codes 0x01-0x06, 0x0F and 0x10 are supported.
+ *
+ * Input registers (FC04) and holding-register reads (FC03) expose live state; holding
+ * register / coil writes (FC06/0x10/0x05/0x0F) are translated into the miel_hvac_apply_*
+ * setters above.  See the register map in the documentation.
+\*********************************************************************************************/
+
+static uint16_t
+miel_hvac_mb_crc(const uint8_t *buf, size_t len)
+{
+	uint16_t crc = 0xffff;
+	size_t i;
+	uint8_t j;
+
+	for (i = 0; i < len; i++)
+	{
+		crc ^= buf[i];
+		for (j = 0; j < 8; j++)
+			crc = (crc & 1) ? ((crc >> 1) ^ 0xa001) : (crc >> 1);
+	}
+
+	return (crc);
+}
+
+static uint32_t
+miel_hvac_mb_t35_us(uint32_t baud)
+{
+	if (baud == 0)
+		return (2000);
+	if (baud > 19200)
+		return (1750);
+	/* 3.5 chars * 11 bits/char * 1e6 us / baud */
+	return (38500000UL / baud);
+}
+
+static int16_t
+miel_hvac_mb_x10(float v)
+{
+	v *= 10.0f;
+	return ((int16_t)(v + (v >= 0 ? 0.5f : -0.5f)));
+}
+
+/*
+ * Mitsubishi error codes are packed BCD - e.g. wire 0x8000 -> 8000 (no error),
+ * 0x6999 -> 6999 (bad indoor-unit comms).  Decode so a Modbus register holds the
+ * printed code rather than the raw 0x.. value.
+ */
+static uint16_t
+miel_hvac_mb_bcd16(uint16_t v)
+{
+	return ((v >> 12 & 0xf) * 1000 + (v >> 8 & 0xf) * 100
+	     +  (v >>  4 & 0xf) * 10   + (v      & 0xf));
+}
+
+static void
+miel_hvac_mb_reply(struct miel_hvac_mb_softc *mb, uint8_t *buf, uint16_t len)
+{
+	uint16_t crc;
+	uint32_t since, quiet;
+
+	if (mb->sc_no_reply)
+		return;   /* master already re-polled - a late answer would derail it */
+
+	crc = miel_hvac_mb_crc(buf, len);
+	buf[len++] = (uint8_t)crc;
+	buf[len++] = (uint8_t)(crc >> 8);
+
+	/*
+	 * Modbus RTU turnaround: keep quiet for ~3.5 char times after the last
+	 * received byte so the master (and an auto-direction transceiver) has
+	 * switched from transmit to receive before the response starts.
+	 */
+	since = micros() - mb->sc_last_us;
+	quiet = mb->sc_t35_us > 3500 ? 3500 : mb->sc_t35_us;
+	if (since < quiet)
+		delayMicroseconds(quiet - since);
+
+	if (mb->sc_txen_pin >= 0)
+	{
+		digitalWrite(mb->sc_txen_pin, HIGH);
+		mb->sc_serial->write(buf, len);
+		mb->sc_serial->flush();   /* hold DE until the frame has left the UART */
+		digitalWrite(mb->sc_txen_pin, LOW);
+	}
+	else
+	{
+		/*
+		 * Auto-direction transceiver: just queue the frame.  flush() is
+		 * avoided here because on ESP32 it also discards the RX buffer,
+		 * which would drop the next request on a busy bus.
+		 */
+		mb->sc_serial->write(buf, len);
+	}
+}
+
+static void
+miel_hvac_mb_exception(struct miel_hvac_mb_softc *mb, uint8_t fc, uint8_t code)
+{
+	uint8_t r[5];   /* 3-byte pdu + 2-byte crc appended by miel_hvac_mb_reply */
+
+	r[0] = mb->sc_address;
+	r[1] = fc | 0x80;
+	r[2] = code;
+
+	mb->sc_exceptions++;
+	miel_hvac_mb_reply(mb, r, 3);
+}
+
+static uint8_t
+miel_hvac_mb_exc_for(uint8_t r)
+{
+	switch (r)
+	{
+	case MIEL_HVAC_APPLY_OK:       return (0);
+	case MIEL_HVAC_APPLY_BAD_ADDR: return (MIEL_HVAC_MB_EXC_ADDRESS);
+	default:                       return (MIEL_HVAC_MB_EXC_VALUE);
+	}
+}
+
+/*
+ * Read-only state map (FC04 input registers, PLC 3xxxx; also reachable via the FC03
+ * holding mirror).  addr is the raw 0-based offset; see the register map at the head
+ * of this file for the addresses and their PLC equivalents.
+ */
+static uint16_t
+miel_hvac_mb_reg_input(struct miel_hvac_softc *sc, uint16_t addr, bool *ok)
+{
+	const struct miel_hvac_data_settings *set = &sc->sc_settings.data.settings;
+	const struct miel_hvac_data_roomtemp *rt = &sc->sc_roomtemp.data.roomtemp;
+	const struct miel_hvac_data_timers *tm = &sc->sc_timers.data.timers;
+	const struct miel_hvac_data_status *st = &sc->sc_status.data.status;
+	const struct miel_hvac_data_stage *sg = &sc->sc_stage.data.stage;
+	const struct miel_hvac_data_options *op = &sc->sc_options.data.options;
+	const struct miel_hvac_capabilities *caps = &sc->sc_caps;
+	bool has_set = (sc->sc_settings.type != 0);
+	bool has_rt  = (sc->sc_roomtemp.type != 0);
+	bool has_tm  = (sc->sc_timers.type != 0);
+	bool has_st  = (sc->sc_status.type != 0);
+	bool has_sg  = (sc->sc_stage.type != 0);
+	bool has_op  = (sc->sc_options.type != 0);
+
+	*ok = true;
+
+	switch (addr)
+	{
+	case 0x0000: return (1);
+	case 0x0001: return (sc->sc_connected ? 1 : 0);
+	case 0x0002: return (caps->sc_caps_valid ? 1 : 0);
+	case 0x0003: return (sc->sc_has_isee ? 1 : 0);
+	case 0x0004: return (sc->sc_has_energy ? 1 : 0);
+	case 0x0005: return (sc->sc_temp_type ? 1 : 0);
+	case 0x0006: return (sc->sc_remotetemp_active ? 1 : 0);
+
+	case 0x0010: return (has_set ? (set->power ? 1 : 0) : 0);
+	case 0x0011: return (has_set ? (set->mode & MIEL_HVAC_SETTINGS_MODE_MASK) : 0);
+	case 0x0012:
+		if (!has_set) return (0);
+		return ((uint16_t)miel_hvac_mb_x10(miel_hvac_temp2deg(sc->sc_temp_type,
+		    set->temp05 != 0 ? set->temp05 : set->temp)));
+	case 0x0013: return (has_set ? set->fan : 0);
+	case 0x0014: return (has_set ? set->vane : 0);
+	case 0x0015:
+		/* report the wide-vane position only; the unit mixes the i-See
+		 * sensor bit (0x80) into this byte. 0x80 = i-See direction mode. */
+		if (!has_set)
+			return (0);
+		if (set->widevane == 0x80 || set->widevane == 0x28 || set->widevane == 0xaa)
+			return (0x80);
+		return (set->widevane & MIEL_HVAC_SETTINGS_WIDEVANE_MASK);
+	case 0x0016: return (has_set ? set->prohibit : 0);
+	case 0x0017: return (has_set ? set->airdirection : 0);
+	case 0x0018: return (has_op ? (op->purifier ? 1 : 0) : 0);
+	case 0x0019: return (has_op ? (op->nightmode ? 1 : 0) : 0);
+	case 0x001a: return (has_op ? (op->econocool ? 1 : 0) : 0);
+
+	case 0x0020:
+		if (!has_rt) return (0);
+		return ((uint16_t)miel_hvac_mb_x10(miel_hvac_roomtemp2deg(sc->sc_temp_type,
+		    rt->temp05 != 0 ? rt->temp05 : rt->temp)));
+	case 0x0021:
+		if (!has_rt || rt->outdoortemp <= 1) return (0x8000);
+		return ((uint16_t)miel_hvac_mb_x10(miel_hvac_outdoortemp2deg(rt->outdoortemp)));
+	case 0x0022:
+		if (!has_rt) return (0);
+		return ((uint16_t)miel_hvac_mb_x10(miel_hvac_temp2deg(sc->sc_temp_type,
+		    rt->settemp)));
+	case 0x0023: return (has_st ? (st->compressor ? 1 : 0) : 0);
+	case 0x0024: return (has_st ? st->compressorfrequency : 0);
+	case 0x0025:
+		if (!has_st) return (0);
+		return (((uint16_t)st->operationpower << 8) | st->operationpower1);
+	case 0x0026:
+		if (!has_st) return (0);
+		return (((uint16_t)st->operationenergy << 8) | st->operationenergy1);
+	case 0x0027:
+		if (!has_rt) return (0);
+		return ((uint16_t)((((uint32_t)rt->operationtime << 16)
+		    | ((uint32_t)rt->operationtime1 << 8)
+		    | rt->operationtime2) >> 16));
+	case 0x0028:
+		if (!has_rt) return (0);
+		return ((uint16_t)((((uint32_t)rt->operationtime << 16)
+		    | ((uint32_t)rt->operationtime1 << 8)
+		    | rt->operationtime2) & 0xffff));
+	case 0x0029: return ((uint16_t)(int16_t)(sc->sc_remotetemp_half * 5));
+	case 0x002a: return ((uint16_t)(sc->sc_remotetemp_auto_clear_time / 1000));
+
+	case 0x0030: return (has_tm ? tm->mode : 0);
+	case 0x0031: return (has_tm ? (uint16_t)tm->onminutes * 10 : 0);
+	case 0x0032: return (has_tm ? (uint16_t)tm->offminutes * 10 : 0);
+	case 0x0033: return (has_tm ? (uint16_t)tm->onminutesremaining * 10 : 0);
+	case 0x0034: return (has_tm ? (uint16_t)tm->offminutesremaining * 10 : 0);
+
+	case 0x0038: return (has_sg ? sg->operation : 0);
+	case 0x0039: return (has_sg ? sg->fan : 0);
+	case 0x003a: return (has_sg ? sg->mode : 0);
+
+	case 0x0040: return (caps->sc_caps_valid ? 1 : 0);
+	case 0x0041:
+		if (!caps->sc_caps_valid) return (0);
+		return ((caps->cap_mode_heat    ? (1 << 0) : 0)
+		     |  (caps->cap_mode_dry     ? (1 << 1) : 0)
+		     |  (caps->cap_mode_fan     ? (1 << 2) : 0)
+		     |  (caps->cap_vane_v       ? (1 << 3) : 0)
+		     |  (caps->cap_vane_swing   ? (1 << 4) : 0)
+		     |  (caps->cap_fan_auto     ? (1 << 5) : 0)
+		     |  (caps->cap_outdoor_temp ? (1 << 6) : 0)
+		     |  (caps->cap_run_state    ? (1 << 7) : 0)
+		     |  (caps->cap_ext_temp     ? (1 << 8) : 0)
+		     |  (caps->cap_installer    ? (1 << 9) : 0));
+	case 0x0042: return (miel_hvac_get_fan_count(sc));
+	case 0x0043: return (caps->cap_temp_ranges ? (uint16_t)miel_hvac_mb_x10((caps->temp_cool_min - 128) / 2.0f) : 0);
+	case 0x0044: return (caps->cap_temp_ranges ? (uint16_t)miel_hvac_mb_x10((caps->temp_cool_max - 128) / 2.0f) : 0);
+	case 0x0045: return (caps->cap_temp_ranges ? (uint16_t)miel_hvac_mb_x10((caps->temp_heat_min - 128) / 2.0f) : 0);
+	case 0x0046: return (caps->cap_temp_ranges ? (uint16_t)miel_hvac_mb_x10((caps->temp_heat_max - 128) / 2.0f) : 0);
+	case 0x0047: return (caps->cap_temp_ranges ? (uint16_t)miel_hvac_mb_x10((caps->temp_auto_min - 128) / 2.0f) : 0);
+	case 0x0048: return (caps->cap_temp_ranges ? (uint16_t)miel_hvac_mb_x10((caps->temp_auto_max - 128) / 2.0f) : 0);
+
+	case 0x0050: return ((uint16_t)sc->sc_mb->sc_requests);
+	case 0x0051: return ((uint16_t)sc->sc_mb->sc_crc_errors);
+	case 0x0052: return ((uint16_t)sc->sc_mb->sc_exceptions);
+	case 0x0053: return ((uint16_t)sc->sc_mb->sc_overruns);
+
+	/* 0x04 Get Error State - 0x0054..0x0055 (PLC 30085..30086).
+	 * BCD-decoded spec codes: 8000 = no error, 6999 = bad indoor-unit comms. */
+	case 0x0054:
+		return (miel_hvac_mb_bcd16(sc->sc_error.type != 0
+		    ? (((uint16_t)sc->sc_error.data.error.code << 8)
+		       | sc->sc_error.data.error.code1)
+		    : 0x8000));
+	case 0x0055:
+		return (sc->sc_error.type != 0
+		    ? sc->sc_error.data.error.shortcode : 0);
+	}
+
+	if (addr <= 0x00ff)
+		return (0);
+
+	*ok = false;
+	return (0);
+}
+
+/*
+ * FC03 holding-register reads.  Raw 0-based offset (PLC 4xxxx):
+ *   0x0000..0x000e (40001..40015)  read-back of the writable control registers
+ *   0x000f..0x0017 (40016..40024)  mirror of selected read-only sensor values, so a
+ *                                  master that only speaks FC03 can still reach them
+ *   0x0018..0x0019 (40025..40026)  error state mirror (input regs 0x0054..0x0055)
+ */
+#define MIEL_HVAC_MB_HOLD_MIRROR_BASE 0x000f
+static uint16_t
+miel_hvac_mb_reg_holding(struct miel_hvac_softc *sc, uint16_t addr, bool *ok)
+{
+	static const uint16_t control_of[] = {
+		0x0010, 0x0011, 0x0012, 0x0013, 0x0014, 0x0015, 0x0016, 0x0017,
+		0x0018, 0x0019, 0x001a, 0x0011, 0x0029, 0x002a,
+	};
+	static const uint16_t mirror_of[] = {
+		0x0020,   /* 0x000f (40016) room temperature C x10 */
+		0x0023,   /* 0x0010 (40017) compressor 0/1 */
+		0x0025,   /* 0x0011 (40018) instantaneous power W */
+		0x0038,   /* 0x0012 (40019) stage operation */
+		0x0039,   /* 0x0013 (40020) stage fan */
+		0x003a,   /* 0x0014 (40021) stage mode */
+		0x0050,   /* 0x0015 (40022) diagnostics: requests received */
+		0x0051,   /* 0x0016 (40023) diagnostics: CRC errors */
+		0x0001,   /* 0x0017 (40024) connected to unit 0/1 */
+		0x0054,   /* 0x0018 (40025) error BCD code (8000 = no error) */
+		0x0055,   /* 0x0019 (40026) error packed two-char code */
+	};
+
+	*ok = true;
+
+	if (addr < nitems(control_of))
+		return (miel_hvac_mb_reg_input(sc, control_of[addr], ok));
+	if (addr == 0x000e)
+		return (0);
+	if (addr >= MIEL_HVAC_MB_HOLD_MIRROR_BASE
+	    && addr < MIEL_HVAC_MB_HOLD_MIRROR_BASE + nitems(mirror_of))
+		return (miel_hvac_mb_reg_input(sc,
+		    mirror_of[addr - MIEL_HVAC_MB_HOLD_MIRROR_BASE], ok));
+
+	*ok = false;
+	return (0);
+}
+
+/*
+ * Writable control registers (FC06 / FC10 holding, PLC 40001..40015).  addr is the
+ * raw 0-based offset; see the register map at the head of this file.
+ */
+static uint8_t
+miel_hvac_mb_write_reg(struct miel_hvac_softc *sc, uint16_t addr, uint16_t val)
+{
+	switch (addr)
+	{
+	case 0x0000: return (miel_hvac_apply_power(sc, val != 0));
+	case 0x0001: return (miel_hvac_apply_mode(sc, val & 0xff));
+	case 0x0002: return (miel_hvac_apply_temp(sc, (int16_t)val / 10.0f));
+	case 0x0003: return (miel_hvac_apply_fan(sc, val & 0xff));
+	case 0x0004: return (miel_hvac_apply_vane(sc, val & 0xff));
+	case 0x0005: return (miel_hvac_apply_widevane(sc, val & 0xff));
+	case 0x0006: return (miel_hvac_apply_prohibit(sc, val & 0xff));
+	case 0x0007: return (miel_hvac_apply_airdirection(sc, val & 0xff));
+	case 0x0008: return (miel_hvac_apply_purifier(sc, val != 0));
+	case 0x0009: return (miel_hvac_apply_nightmode(sc, val != 0));
+	case 0x000a: return (miel_hvac_apply_econocool(sc, val != 0));
+	case 0x000b: return (miel_hvac_apply_hamode(sc, val & 0xff));
+	case 0x000c:
+		if (val == 0x7fff)
+			return (miel_hvac_apply_remotetemp(sc, 0, true));
+		/* val is degC x10; convert to 0.5 degC units (x10 -> x2 = /5) */
+		return (miel_hvac_apply_remotetemp(sc,
+		    ((int16_t)val * 2 + ((int16_t)val >= 0 ? 5 : -5)) / 10, false));
+	case 0x000d:
+		return (miel_hvac_apply_remotetemp_clear_time(sc,
+		    (unsigned long)val * 1000UL));
+	case 0x000e: return (miel_hvac_apply_command_raw(sc, val & 0xff));
+	}
+
+	return (MIEL_HVAC_APPLY_BAD_ADDR);
+}
+
+static bool
+miel_hvac_mb_read_bit(struct miel_hvac_softc *sc, uint8_t fc, uint16_t addr, bool *ok)
+{
+	const struct miel_hvac_data_settings *set = &sc->sc_settings.data.settings;
+	const struct miel_hvac_data_status *st = &sc->sc_status.data.status;
+	const struct miel_hvac_data_stage *sg = &sc->sc_stage.data.stage;
+	const struct miel_hvac_data_options *op = &sc->sc_options.data.options;
+
+	*ok = true;
+
+	if (fc == 0x02)   /* discrete inputs, PLC 1xxxx (bit 0 = 10001) */
+	{
+		switch (addr)
+		{
+		case 0: return (sc->sc_connected);
+		case 1: return (sc->sc_caps.sc_caps_valid);
+		case 2: return (sc->sc_status.type != 0 && st->compressor);
+		case 3: return (sc->sc_has_isee);
+		case 4: return (sc->sc_has_energy);
+		case 5: return (sc->sc_remotetemp_active);
+		case 6: return (sc->sc_stage.type != 0
+		    && sg->operation == MIEL_HVAC_STAGE_OPERATION_DEFROST);
+		}
+	}
+	else              /* coils, PLC 0xxxx (bit 0 = 00001) */
+	{
+		switch (addr)
+		{
+		case 0: return (sc->sc_settings.type != 0 && set->power);
+		case 1: return (sc->sc_options.type != 0 && op->purifier);
+		case 2: return (sc->sc_options.type != 0 && op->nightmode);
+		case 3: return (sc->sc_options.type != 0 && op->econocool);
+		case 4: return (sc->sc_remotetemp_active);
+		}
+	}
+
+	*ok = false;
+	return (false);
+}
+
+static uint8_t
+miel_hvac_mb_write_coil(struct miel_hvac_softc *sc, uint16_t addr, bool on)
+{
+	switch (addr)
+	{
+	case 0: return (miel_hvac_apply_power(sc, on));
+	case 1: return (miel_hvac_apply_purifier(sc, on));
+	case 2: return (miel_hvac_apply_nightmode(sc, on));
+	case 3: return (miel_hvac_apply_econocool(sc, on));
+	case 4:
+		/* coil 4: write 0 clears the remote-temp override, 1 is a no-op ack */
+		return (on ? MIEL_HVAC_APPLY_OK
+		           : miel_hvac_apply_remotetemp(sc, 0, true));
+	}
+
+	return (MIEL_HVAC_APPLY_BAD_ADDR);
+}
+
+static void
+miel_hvac_mb_do_read_regs(struct miel_hvac_softc *sc, uint8_t fc)
+{
+	struct miel_hvac_mb_softc *mb = sc->sc_mb;
+	uint16_t start = ((uint16_t)mb->sc_buf[2] << 8) | mb->sc_buf[3];
+	uint16_t count = ((uint16_t)mb->sc_buf[4] << 8) | mb->sc_buf[5];
+	uint8_t r[MIEL_HVAC_MB_BUFLEN];
+	uint16_t i;
+
+	if (mb->sc_len < 6)
+		return;
+	if (count < 1 || count > 125)
+	{
+		miel_hvac_mb_exception(mb, fc, MIEL_HVAC_MB_EXC_VALUE);
+		return;
+	}
+
+	r[0] = mb->sc_address;
+	r[1] = fc;
+	r[2] = count * 2;
+	for (i = 0; i < count; i++)
+	{
+		bool ok = true;
+		uint16_t v = (fc == 0x03)
+			? miel_hvac_mb_reg_holding(sc, start + i, &ok)
+			: miel_hvac_mb_reg_input(sc, start + i, &ok);
+		if (!ok)
+		{
+			miel_hvac_mb_exception(mb, fc, MIEL_HVAC_MB_EXC_ADDRESS);
+			return;
+		}
+		r[3 + i * 2]     = (uint8_t)(v >> 8);
+		r[3 + i * 2 + 1] = (uint8_t)v;
+	}
+
+	miel_hvac_mb_reply(mb, r, 3 + count * 2);
+}
+
+static void
+miel_hvac_mb_do_read_bits(struct miel_hvac_softc *sc, uint8_t fc)
+{
+	struct miel_hvac_mb_softc *mb = sc->sc_mb;
+	uint16_t start = ((uint16_t)mb->sc_buf[2] << 8) | mb->sc_buf[3];
+	uint16_t count = ((uint16_t)mb->sc_buf[4] << 8) | mb->sc_buf[5];
+	uint8_t r[MIEL_HVAC_MB_BUFLEN];
+	uint16_t nbytes, i;
+
+	if (mb->sc_len < 6)
+		return;
+	if (count < 1 || count > 2000)
+	{
+		miel_hvac_mb_exception(mb, fc, MIEL_HVAC_MB_EXC_VALUE);
+		return;
+	}
+
+	nbytes = (count + 7) / 8;
+	r[0] = mb->sc_address;
+	r[1] = fc;
+	r[2] = nbytes;
+	memset(&r[3], 0, nbytes);
+	for (i = 0; i < count; i++)
+	{
+		bool ok = true;
+		if (miel_hvac_mb_read_bit(sc, fc, start + i, &ok))
+			r[3 + (i / 8)] |= (1 << (i % 8));
+		if (!ok)
+		{
+			miel_hvac_mb_exception(mb, fc, MIEL_HVAC_MB_EXC_ADDRESS);
+			return;
+		}
+	}
+
+	miel_hvac_mb_reply(mb, r, 3 + nbytes);
+}
+
+static void
+miel_hvac_mb_do_write_single_reg(struct miel_hvac_softc *sc, bool broadcast)
+{
+	struct miel_hvac_mb_softc *mb = sc->sc_mb;
+	uint16_t addr = ((uint16_t)mb->sc_buf[2] << 8) | mb->sc_buf[3];
+	uint16_t val  = ((uint16_t)mb->sc_buf[4] << 8) | mb->sc_buf[5];
+	uint8_t res;
+
+	if (mb->sc_len < 6)
+		return;
+
+	res = miel_hvac_mb_write_reg(sc, addr, val);
+	if (broadcast)
+		return;
+	if (res != MIEL_HVAC_APPLY_OK)
+	{
+		miel_hvac_mb_exception(mb, 0x06, miel_hvac_mb_exc_for(res));
+		return;
+	}
+	miel_hvac_mb_reply(mb, mb->sc_buf, 6);   /* echo request */
+}
+
+static void
+miel_hvac_mb_do_write_multi_reg(struct miel_hvac_softc *sc, bool broadcast)
+{
+	struct miel_hvac_mb_softc *mb = sc->sc_mb;
+	uint16_t start = ((uint16_t)mb->sc_buf[2] << 8) | mb->sc_buf[3];
+	uint16_t count = ((uint16_t)mb->sc_buf[4] << 8) | mb->sc_buf[5];
+	uint8_t bc = mb->sc_buf[6];
+	uint8_t r[8];   /* 6-byte pdu + 2-byte crc */
+	uint16_t i;
+
+	if (mb->sc_len < 7 || mb->sc_len < 7 + bc)
+		return;
+	if (count < 1 || count > 123 || bc != count * 2)
+	{
+		if (!broadcast)
+			miel_hvac_mb_exception(mb, 0x10, MIEL_HVAC_MB_EXC_VALUE);
+		return;
+	}
+
+	for (i = 0; i < count; i++)
+	{
+		uint16_t val = ((uint16_t)mb->sc_buf[7 + i * 2] << 8)
+		             | mb->sc_buf[7 + i * 2 + 1];
+		uint8_t res =
+			miel_hvac_mb_write_reg(sc, start + i, val);
+		if (res != MIEL_HVAC_APPLY_OK)
+		{
+			if (!broadcast)
+				miel_hvac_mb_exception(mb, 0x10, miel_hvac_mb_exc_for(res));
+			return;
+		}
+	}
+
+	if (broadcast)
+		return;
+	memcpy(r, mb->sc_buf, 6);
+	miel_hvac_mb_reply(mb, r, 6);
+}
+
+static void
+miel_hvac_mb_do_write_single_coil(struct miel_hvac_softc *sc, bool broadcast)
+{
+	struct miel_hvac_mb_softc *mb = sc->sc_mb;
+	uint16_t addr = ((uint16_t)mb->sc_buf[2] << 8) | mb->sc_buf[3];
+	uint16_t val  = ((uint16_t)mb->sc_buf[4] << 8) | mb->sc_buf[5];
+	uint8_t res;
+
+	if (mb->sc_len < 6)
+		return;
+	if (val != 0xff00 && val != 0x0000)
+	{
+		if (!broadcast)
+			miel_hvac_mb_exception(mb, 0x05, MIEL_HVAC_MB_EXC_VALUE);
+		return;
+	}
+
+	res = miel_hvac_mb_write_coil(sc, addr, val == 0xff00);
+	if (broadcast)
+		return;
+	if (res != MIEL_HVAC_APPLY_OK)
+	{
+		miel_hvac_mb_exception(mb, 0x05, miel_hvac_mb_exc_for(res));
+		return;
+	}
+	miel_hvac_mb_reply(mb, mb->sc_buf, 6);   /* echo request */
+}
+
+static void
+miel_hvac_mb_do_write_multi_coil(struct miel_hvac_softc *sc, bool broadcast)
+{
+	struct miel_hvac_mb_softc *mb = sc->sc_mb;
+	uint16_t start = ((uint16_t)mb->sc_buf[2] << 8) | mb->sc_buf[3];
+	uint16_t count = ((uint16_t)mb->sc_buf[4] << 8) | mb->sc_buf[5];
+	uint8_t bc = mb->sc_buf[6];
+	uint8_t r[8];   /* 6-byte pdu + 2-byte crc */
+	uint16_t i;
+
+	if (mb->sc_len < 7 || mb->sc_len < 7 + bc)
+		return;
+	if (count < 1 || count > 0x07b0 || bc != (count + 7) / 8)
+	{
+		if (!broadcast)
+			miel_hvac_mb_exception(mb, 0x0f, MIEL_HVAC_MB_EXC_VALUE);
+		return;
+	}
+
+	for (i = 0; i < count; i++)
+	{
+		bool on = (mb->sc_buf[7 + (i / 8)] >> (i % 8)) & 1;
+		uint8_t res =
+			miel_hvac_mb_write_coil(sc, start + i, on);
+		if (res != MIEL_HVAC_APPLY_OK)
+		{
+			if (!broadcast)
+				miel_hvac_mb_exception(mb, 0x0f, miel_hvac_mb_exc_for(res));
+			return;
+		}
+	}
+
+	if (broadcast)
+		return;
+	memcpy(r, mb->sc_buf, 6);
+	miel_hvac_mb_reply(mb, r, 6);
+}
+
+/*
+ * Total length (including the 2-byte CRC) of the RTU request whose leading
+ * bytes are in buf, or 0 if it cannot be determined yet / the function code is
+ * unknown.  Used to frame incoming requests by length rather than by relying on
+ * the T3.5 inter-frame gap, which a cooperatively-scheduled FUNC_LOOP poll is
+ * too coarse to measure reliably above 9600 baud.
+ */
+static uint16_t
+miel_hvac_mb_framelen(const uint8_t *buf, uint16_t len)
+{
+	if (len < 2)
+		return (0);
+
+	switch (buf[1])
+	{
+	case 0x01: case 0x02: case 0x03: case 0x04:
+	case 0x05: case 0x06:
+		return (8);
+	case 0x0f: case 0x10:
+		if (len < 7)
+			return (0);
+		return (7 + buf[6] + 2);
+	default:
+		return (0);
+	}
+}
+
+/* Dispatch one CRC-validated request; sc_buf holds the PDU without the CRC. */
+static void
+miel_hvac_mb_handle(struct miel_hvac_softc *sc)
+{
+	struct miel_hvac_mb_softc *mb = sc->sc_mb;
+	uint8_t fc = mb->sc_buf[1];
+	bool broadcast = (mb->sc_buf[0] == 0);
+
+	mb->sc_requests++;
+
+	switch (fc)
+	{
+	case 0x01:
+	case 0x02:
+		if (!broadcast)
+			miel_hvac_mb_do_read_bits(sc, fc);
+		break;
+	case 0x03:
+	case 0x04:
+		if (!broadcast)
+			miel_hvac_mb_do_read_regs(sc, fc);
+		break;
+	/*
+	 * Writes are accepted whether or not the unit is connected yet - the
+	 * update is queued and sent once the link is up, matching the HVACSet*
+	 * console commands.
+	 */
+	case 0x05:
+		miel_hvac_mb_do_write_single_coil(sc, broadcast);
+		break;
+	case 0x06:
+		miel_hvac_mb_do_write_single_reg(sc, broadcast);
+		break;
+	case 0x0f:
+		miel_hvac_mb_do_write_multi_coil(sc, broadcast);
+		break;
+	case 0x10:
+		miel_hvac_mb_do_write_multi_reg(sc, broadcast);
+		break;
+	default:
+		if (!broadcast)
+			miel_hvac_mb_exception(mb, fc, MIEL_HVAC_MB_EXC_FUNCTION);
+		break;
+	}
+}
+
+/*
+ * Try to consume one request from the front of sc_buf.  Returns the number of
+ * leading bytes dealt with (0 = wait for more data).  On a framing/CRC mismatch
+ * a single byte is dropped so a genuine frame starting later in the buffer can
+ * still be recovered without waiting for the bus to fall idle - important on a
+ * shared bus where our slave also sees every other device's traffic.
+ */
+static uint16_t
+miel_hvac_mb_consume(struct miel_hvac_softc *sc)
+{
+	struct miel_hvac_mb_softc *mb = sc->sc_mb;
+	uint16_t need, crc;
+
+	if (mb->sc_len < 4)
+		return (0);
+
+	need = miel_hvac_mb_framelen(mb->sc_buf, mb->sc_len);
+	if (need == 0)
+	{
+		/* FC 0x0f / 0x10 byte-count field not received yet -> wait */
+		if ((mb->sc_buf[1] == 0x0f || mb->sc_buf[1] == 0x10) && mb->sc_len < 7)
+			return (0);
+		return (1);   /* unknown function code -> slide to resync */
+	}
+	if (mb->sc_len < need)
+		return (0);   /* rest of the frame is still on the wire */
+	if (need > MIEL_HVAC_MB_BUFLEN)
+		return (1);   /* absurd length -> resync */
+
+	crc = ((uint16_t)mb->sc_buf[need - 1] << 8) | mb->sc_buf[need - 2];
+	if (miel_hvac_mb_crc(mb->sc_buf, need - 2) != crc)
+	{
+		if (mb->sc_buf[0] == mb->sc_address)
+			mb->sc_crc_errors++;   /* count only frames that claim to be ours */
+		return (1);
+	}
+
+	if (mb->sc_buf[0] == mb->sc_address || mb->sc_buf[0] == 0)
+	{
+		uint16_t total = mb->sc_len;
+
+		/*
+		 * If another request is already buffered behind this one, the master
+		 * has timed out and re-polled: apply this (stale) request but do not
+		 * put a late response on the bus - it would land on the master's next
+		 * transaction and make that one fail too.
+		 */
+		mb->sc_no_reply = (total > need
+		    && (mb->sc_buf[need] == mb->sc_address || mb->sc_buf[need] == 0));
+
+		mb->sc_len = need - 2;       /* handlers see the PDU without the CRC */
+		miel_hvac_mb_handle(sc);
+		mb->sc_len = total;
+		mb->sc_no_reply = false;
+	}
+	/* else: a valid frame for another slave - consumed silently */
+
+	return (need);
+}
+
+static void
+miel_hvac_mb_loop(struct miel_hvac_softc *sc)
+{
+	struct miel_hvac_mb_softc *mb = sc->sc_mb;
+	TasmotaSerial *serial = mb->sc_serial;
+	int avail;
+
+	while ((avail = serial->available()) > 0)
+	{
+		uint16_t room = MIEL_HVAC_MB_BUFLEN - mb->sc_len;
+		size_t want, n;
+
+		if (room == 0)
+		{
+			mb->sc_overruns++;
+			mb->sc_len = 0;   /* buffer full of unparseable data -> resync */
+			room = MIEL_HVAC_MB_BUFLEN;
+		}
+		want = ((size_t)avail < room) ? (size_t)avail : room;
+		n = serial->read(&mb->sc_buf[mb->sc_len], want);
+		if (n == 0)
+			break;
+		mb->sc_len += n;
+		mb->sc_last_us = micros();   /* needed by the turnaround wait in reply */
+
+		for (;;)
+		{
+			uint16_t used = miel_hvac_mb_consume(sc);
+			uint16_t rem;
+
+			if (used == 0)
+				break;
+			rem = mb->sc_len > used ? mb->sc_len - used : 0;
+			if (rem)
+				memmove(mb->sc_buf, &mb->sc_buf[used], rem);
+			mb->sc_len = rem;
+		}
+	}
+
+	/* drop a stale sub-minimal fragment once the bus has gone idle */
+	if (mb->sc_len > 0 && mb->sc_len < 4)
+	{
+		uint32_t gap = mb->sc_t35_us > 4000 ? mb->sc_t35_us : 4000;
+		if ((micros() - mb->sc_last_us) > gap)
+			mb->sc_len = 0;
+	}
+}
+
+static void
+miel_hvac_mb_apply_config(struct miel_hvac_softc *sc)
+{
+	struct miel_hvac_mb_softc *mb = sc->sc_mb;
+
+	if (mb == NULL)
+		return;
+
+	mb->sc_address  = Settings->miel_hvac_mb_address;
+	mb->sc_sconfig  = Settings->miel_hvac_mb_sconfig;
+	mb->sc_baudrate = (uint32_t)Settings->miel_hvac_mb_baudrate * 300;
+	mb->sc_t35_us   = miel_hvac_mb_t35_us(mb->sc_baudrate);
+	mb->sc_len      = 0;
+	mb->sc_serial->begin(mb->sc_baudrate, ConvertSerialConfig(mb->sc_sconfig));
+	mb->sc_last_us  = micros();
+}
+
+static void
+miel_hvac_mb_settings_clamp(void)
+{
+	uint32_t baud;
+
+	if (Settings->miel_hvac_mb_address < 1 || Settings->miel_hvac_mb_address > 247)
+		Settings->miel_hvac_mb_address = MIEL_HVAC_MB_DEFAULT_ADDRESS;
+
+	baud = (uint32_t)Settings->miel_hvac_mb_baudrate * 300;
+	if (baud < MIEL_HVAC_MB_MIN_BAUDRATE || baud > MIEL_HVAC_MB_MAX_BAUDRATE)
+		Settings->miel_hvac_mb_baudrate = MIEL_HVAC_MB_DEFAULT_BAUDRATE / 300;
+
+	/* Modbus RTU is always 8 data bits; anything else (incl. a zeroed field) -> 8N1 */
+	if ((Settings->miel_hvac_mb_sconfig & 0x03) != 0x03
+	    || Settings->miel_hvac_mb_sconfig > TS_SERIAL_8O2)
+		Settings->miel_hvac_mb_sconfig = TS_SERIAL_8N1;
+}
+
+static void
+miel_hvac_mb_init(struct miel_hvac_softc *sc)
+{
+	struct miel_hvac_mb_softc *mb;
+
+	if (sc->sc_mb != NULL)
+		return;
+	if (!Settings->sbflag1.miel_hvac_mb_enable)
+		return;
+	if (!PinUsed(GPIO_MIEL_HVAC_MB_RX) || !PinUsed(GPIO_MIEL_HVAC_MB_TX))
+		return;
+
+	mb = (struct miel_hvac_mb_softc *)calloc(1, sizeof(*mb));
+	if (mb == NULL)
+	{
+		AddLog(LOG_LEVEL_ERROR, PSTR(MIEL_HVAC_LOGNAME
+			": modbus: unable to allocate state"));
+		return;
+	}
+
+	miel_hvac_mb_settings_clamp();
+
+	mb->sc_address  = Settings->miel_hvac_mb_address;
+	mb->sc_sconfig  = Settings->miel_hvac_mb_sconfig;
+	mb->sc_baudrate = (uint32_t)Settings->miel_hvac_mb_baudrate * 300;
+	mb->sc_t35_us   = miel_hvac_mb_t35_us(mb->sc_baudrate);
+	mb->sc_txen_pin = PinUsed(GPIO_MIEL_HVAC_MB_TXEN) ? Pin(GPIO_MIEL_HVAC_MB_TXEN) : -1;
+
+	/* Large RX buffer: on a shared bus we also see every other slave's
+	 * traffic and FUNC_LOOP can be milliseconds late. */
+	mb->sc_serial = new TasmotaSerial(Pin(GPIO_MIEL_HVAC_MB_RX),
+	    Pin(GPIO_MIEL_HVAC_MB_TX), 2, 0, 1024);
+	if (!mb->sc_serial->begin(mb->sc_baudrate,
+	    ConvertSerialConfig(mb->sc_sconfig)))
+	{
+		AddLog(LOG_LEVEL_ERROR, PSTR(MIEL_HVAC_LOGNAME
+			": modbus: unable to begin serial (baudrate %u)"), mb->sc_baudrate);
+		delete mb->sc_serial;
+		free(mb);
+		return;
+	}
+
+	if (mb->sc_txen_pin >= 0)
+	{
+		pinMode(mb->sc_txen_pin, OUTPUT);
+		digitalWrite(mb->sc_txen_pin, LOW);
+	}
+	mb->sc_last_us = micros();
+	sc->sc_mb = mb;
+
+	AddLog(LOG_LEVEL_INFO, PSTR(MIEL_HVAC_LOGNAME
+		": modbus RTU slave: address %u, %u baud, UART%d"),
+		mb->sc_address, mb->sc_baudrate, mb->sc_serial->getUart());
+}
+
+static void
+miel_hvac_mb_deinit(struct miel_hvac_softc *sc)
+{
+	if (sc->sc_mb == NULL)
+		return;
+
+	delete sc->sc_mb->sc_serial;
+	free(sc->sc_mb);
+	sc->sc_mb = nullptr;
+}
+
+/* console commands */
+
+static void
+miel_hvac_cmnd_modbus(void)
+{
+	struct miel_hvac_softc *sc = miel_hvac_sc;
+
+	if (XdrvMailbox.data_len > 0)
+	{
+		bool on = (strtol(XdrvMailbox.data, nullptr, 10) != 0);
+		Settings->sbflag1.miel_hvac_mb_enable = on;
+		if (on)
+			miel_hvac_mb_init(sc);
+		else
+			miel_hvac_mb_deinit(sc);
+	}
+
+	ResponseCmndStateText(Settings->sbflag1.miel_hvac_mb_enable);
+}
+
+static void
+miel_hvac_cmnd_modbus_address(void)
+{
+	struct miel_hvac_softc *sc = miel_hvac_sc;
+
+	if (XdrvMailbox.data_len > 0)
+	{
+		long v = strtol(XdrvMailbox.data, nullptr, 10);
+		if (v < 1 || v > 247)
+		{
+			miel_hvac_respond_unsupported();
+			return;
+		}
+		Settings->miel_hvac_mb_address = (uint8_t)v;
+		if (sc->sc_mb != NULL)
+			sc->sc_mb->sc_address = (uint8_t)v;
+	}
+
+	ResponseCmndNumber(Settings->miel_hvac_mb_address);
+}
+
+static void
+miel_hvac_cmnd_modbus_baudrate(void)
+{
+	struct miel_hvac_softc *sc = miel_hvac_sc;
+
+	if (XdrvMailbox.data_len > 0)
+	{
+		uint32_t baud = strtoul(XdrvMailbox.data, nullptr, 10);
+		if (baud < MIEL_HVAC_MB_MIN_BAUDRATE || baud > MIEL_HVAC_MB_MAX_BAUDRATE)
+		{
+			miel_hvac_respond_unsupported();
+			return;
+		}
+		Settings->miel_hvac_mb_baudrate = baud / 300;
+		miel_hvac_mb_apply_config(sc);
+	}
+
+	ResponseCmndNumber((uint32_t)Settings->miel_hvac_mb_baudrate * 300);
+}
+
+static void
+miel_hvac_cmnd_modbus_config(void)
+{
+	struct miel_hvac_softc *sc = miel_hvac_sc;
+
+	if (XdrvMailbox.data_len > 0)
+	{
+		int8_t cfg = ParseSerialConfig(XdrvMailbox.data);
+		if (cfg < 0 || (cfg & 0x03) != 0x03 || cfg > TS_SERIAL_8O2)
+		{
+			miel_hvac_respond_unsupported();
+			return;
+		}
+		Settings->miel_hvac_mb_sconfig = (uint8_t)cfg;
+		miel_hvac_mb_apply_config(sc);
+	}
+
+	ResponseCmndChar(GetSerialConfig(Settings->miel_hvac_mb_sconfig).c_str());
+}
+
+static void
+miel_hvac_mb_sensor(struct miel_hvac_softc *sc)
+{
+	struct miel_hvac_mb_softc *mb = sc->sc_mb;
+
+	ResponseAppend_P(PSTR(",\"Modbus\":{\"Enable\":\"%s\",\"Address\":%u,"
+		"\"Baudrate\":%u,\"Config\":\"%s\""),
+		Settings->sbflag1.miel_hvac_mb_enable ? "on" : "off",
+		Settings->miel_hvac_mb_address,
+		(uint32_t)Settings->miel_hvac_mb_baudrate * 300,
+		GetSerialConfig(Settings->miel_hvac_mb_sconfig).c_str());
+	if (mb != NULL)
+	{
+		ResponseAppend_P(PSTR(",\"Requests\":%u,\"CrcErrors\":%u,"
+			"\"Exceptions\":%u,\"Overruns\":%u"),
+			mb->sc_requests, mb->sc_crc_errors,
+			mb->sc_exceptions, mb->sc_overruns);
+	}
+	ResponseAppend_P(PSTR("}"));
+}
+#endif  /* USE_MIEL_HVAC_MODBUS_SLAVE && ESP32 */
 
 /* FUNC handlers */
 
@@ -2100,6 +3575,13 @@ miel_hvac_pre_init(void)
 	UpdateDevicesPresent(1);
 
 	miel_hvac_sc = sc;
+
+#if defined(USE_MIEL_HVAC_MODBUS_SLAVE) && defined(ESP32)
+	/* Normalise the persisted config even when the slave is disabled, so the
+	 * SENSOR block and the HVACModbus* queries never report the zeroed field. */
+	miel_hvac_mb_settings_clamp();
+	miel_hvac_mb_init(sc);
+#endif
 }
 
 static void
@@ -2112,6 +3594,22 @@ miel_hvac_loop(struct miel_hvac_softc *sc)
 		yield();
 		sc->sc_parser.p_state = miel_hvac_parse(sc, serial->read());
 	}
+}
+
+/*
+ * Decode the packed two-character error code from 0x62 0x04 byte 6.
+ * Upper 3 bits -> a letter, lower 5 bits -> an alphanumeric.  0x00 -> "A0".
+ * https://muart-group.github.io/developer/it-protocol/0x62-get-response/0x04-get-error-state
+ */
+static void
+miel_hvac_error_shortcode(uint8_t c, char *out)
+{
+	static const char upper[] = "AbEFJLPU";
+	static const char lower[] = "0123456789ABCDEFOHJLPU";
+
+	out[0] = upper[(c & 0xe0) >> 5];
+	out[1] = ((c & 0x1f) < sizeof(lower) - 1) ? lower[c & 0x1f] : '?';
+	out[2] = '\0';
 }
 
 static void
@@ -2178,6 +3676,24 @@ miel_hvac_sensor(struct miel_hvac_softc *sc)
 		ResponseAppend_P(PSTR(",\"RoomTempHex\":\"%s\""),
 			ToHex_P((uint8_t *)&sc->sc_roomtemp,
 				sizeof(sc->sc_roomtemp), hex, sizeof(hex)));
+	}
+
+	/* Error state (0x04).  Spec error codes: 8000 = no error,
+	 * 6999 = bad communication with the indoor unit, etc. */
+	if (sc->sc_error.type != 0)
+	{
+		const struct miel_hvac_data_error *er = &sc->sc_error.data.error;
+		uint16_t ec = ((uint16_t)er->code << 8) | er->code1;
+		char shortcode[3];
+		char hex[(sizeof(sc->sc_error) + 1) * 2];
+
+		miel_hvac_error_shortcode(er->shortcode, shortcode);
+
+		ResponseAppend_P(PSTR(",\"ErrorState\":\"%s\",\"ErrorCode\":\"%04X\",\"ErrorShort\":\"%s\""),
+			(ec != 0x8000) ? "on" : "off", ec, shortcode);
+		ResponseAppend_P(PSTR(",\"ErrorHex\":\"%s\""),
+			ToHex_P((uint8_t *)&sc->sc_error,
+				sizeof(sc->sc_error), hex, sizeof(hex)));
 	}
 
 	/* Timers */
@@ -2338,6 +3854,10 @@ miel_hvac_sensor(struct miel_hvac_softc *sc)
 			ToHex_P(caps->sc_caps_raw, 16, hex_caps, sizeof(hex_caps)));
 	}
 
+#if defined(USE_MIEL_HVAC_MODBUS_SLAVE) && defined(ESP32)
+	miel_hvac_mb_sensor(sc);
+#endif
+
 	ResponseAppend_P(PSTR("}"));
 
 	/* ENERGY sub-object: Power (W) and Total (kWh).
@@ -2364,32 +3884,771 @@ miel_hvac_sensor(struct miel_hvac_softc *sc)
 
 #ifdef USE_WEBSERVER
 /*
- * Web UI sensor display — shows instantaneous Power (W) and cumulative
- * Total energy (kWh) rows on the Tasmota main page, matching how other
- * energy drivers render their values.
+ * Current mode as a control-panel keyword ("off" when powered down; i-See
+ * mode variants folded onto their base mode).
+ */
+static const char *
+miel_hvac_web_curmode(const struct miel_hvac_data_settings *set)
+{
+	if (!set->power)
+		return ("off");
+
+	switch (set->mode & MIEL_HVAC_SETTINGS_MODE_MASK)
+	{
+	case MIEL_HVAC_SETTINGS_MODE_HEAT:
+	case MIEL_HVAC_SETTINGS_MODE_HEAT_ISEE:
+		return ("heat");
+	case MIEL_HVAC_SETTINGS_MODE_COOL:
+	case MIEL_HVAC_SETTINGS_MODE_COOL_ISEE:
+		return ("cool");
+	case MIEL_HVAC_SETTINGS_MODE_DRY:
+	case MIEL_HVAC_SETTINGS_MODE_DRY_ISEE:
+		return ("dry");
+	case MIEL_HVAC_SETTINGS_MODE_FAN:
+		return ("fan");
+	case MIEL_HVAC_SETTINGS_MODE_AUTO:
+		return ("auto");
+	}
+	return ("");
+}
+
+/* Apply the locale decimal separator to a plain number string in place. */
+static void
+miel_hvac_dsep(char *s)
+{
+	if (D_DECIMAL_SEPARATOR[0] == '.')
+		return;
+	for (; *s != '\0'; s++)
+	{
+		if (*s == '.')
+			*s = D_DECIMAL_SEPARATOR[0];
+	}
+}
+
+/*
+ * Emit one state row.  js=false renders the initial <tr> into the panel
+ * card (miel_hvac_web_panel); js=true emits a JS statement that refreshes
+ * that same row's <td> in place, driven from FUNC_WEB_SENSOR so the values
+ * update without a page reload.
+ */
+static void
+miel_hvac_web_ro(bool js, const char *id, const char *label, const char *value)
+{
+	char v[48];
+	size_t i;
+
+	/* protocol keywords use '_' between words; show them with spaces */
+	for (i = 0; i + 1 < sizeof(v) && value[i] != '\0'; i++)
+		v[i] = (value[i] == '_') ? ' ' : value[i];
+	v[i] = '\0';
+
+	if (js)
+		WSContentSend_P(PSTR("(e=eb('%s'))&&(e.innerHTML='%s');"), id, v);
+	else
+		WSContentSend_P(PSTR("<tr><th>%s</th><td id='%s'>%s</td></tr>"),
+			label, id, v);
+}
+
+/*
+ * Read-only state table shown inside the control-panel card, below the
+ * controls (matching the design proposal).  Called once with js=false to
+ * lay it out, then every Settings->web_refresh ms with js=true to refresh
+ * the values live.
+ */
+static void
+miel_hvac_web_readout(struct miel_hvac_softc *sc, bool js)
+{
+	const struct miel_hvac_data_settings *set = &sc->sc_settings.data.settings;
+	uint8_t traw = (set->temp05 != 0) ? set->temp05 : set->temp;
+	const char *name;
+	const char *vh;
+	char vhbuf[8];
+	char val[48];
+	char buf[33];
+
+	if (!js)
+		WSContentSend_P(PSTR("<div class='hp-ro-w'><table class='hp-ro'>"));
+
+	if (sc->sc_roomtemp.type != 0)
+	{
+		const struct miel_hvac_data_roomtemp *rt =
+			&sc->sc_roomtemp.data.roomtemp;
+		float t = (rt->temp05 != 0)
+			? miel_hvac_roomtemp2deg(sc->sc_temp_type, rt->temp05)
+			: miel_hvac_roomtemp2deg(sc->sc_temp_type, rt->temp);
+
+		dtostrfd(ConvertTemp(t),
+			Settings->flag2.temperature_resolution, buf);
+		miel_hvac_dsep(buf);
+		snprintf_P(val, sizeof(val), PSTR("%s " D_UNIT_DEGREE "%c"), buf, TempUnit());
+		miel_hvac_web_ro(js, "hvro_room", "Room Temp", val);
+	}
+
+	dtostrfd(ConvertTemp(miel_hvac_temp2deg(sc->sc_temp_type, traw)),
+		Settings->flag2.temperature_resolution, buf);
+	miel_hvac_dsep(buf);
+	snprintf_P(val, sizeof(val), PSTR("%s " D_UNIT_DEGREE "%c"), buf, TempUnit());
+	miel_hvac_web_ro(js, "hvro_set", "Set Temp", val);
+
+	name = set->power
+		? miel_hvac_map_byval(set->mode & MIEL_HVAC_SETTINGS_MODE_MASK,
+			miel_hvac_mode_map, nitems(miel_hvac_mode_map))
+		: "off";
+	miel_hvac_web_ro(js, "hvro_mode", "Mode", name != NULL ? name : "-");
+
+	name = miel_hvac_map_byval(set->fan,
+		miel_hvac_fan_map, nitems(miel_hvac_fan_map));
+	miel_hvac_web_ro(js, "hvro_fan", "Fan", name != NULL ? name : "-");
+
+	name = miel_hvac_map_byval(set->vane,
+		miel_hvac_vane_map, nitems(miel_hvac_vane_map));
+	if (name == NULL)
+		name = "auto";
+
+	bool wv_isee = (set->widevane == 0x80 || set->widevane == 0x28
+	             || set->widevane == 0xaa);
+
+	if (wv_isee)
+		vh = "isee";
+	else
+	{
+		vh = miel_hvac_map_byval(set->widevane & MIEL_HVAC_SETTINGS_WIDEVANE_MASK,
+			miel_hvac_widevane_map, nitems(miel_hvac_widevane_map));
+		if (vh == NULL)
+		{
+			snprintf_P(vhbuf, sizeof(vhbuf), PSTR("0x%02x"), set->widevane);
+			vh = vhbuf;
+		}
+	}
+	snprintf_P(val, sizeof(val), PSTR("%s / %s"), name, vh);
+	miel_hvac_web_ro(js, "hvro_vane", "Vane V / H", val);
+
+	/* Air Direction — separate i-See function; "off" unless wide vane is
+	 * in i-See mode.  Shown only when the unit supports it. */
+	if (!sc->sc_caps.sc_caps_valid
+	    || (sc->sc_caps.cap_vane_v && sc->sc_has_isee))
+	{
+		const char *ad = wv_isee
+			? miel_hvac_map_byval(set->airdirection,
+				miel_hvac_airdirection_map, nitems(miel_hvac_airdirection_map))
+			: "off";
+		miel_hvac_web_ro(js, "hvro_dir", "Air Direction",
+			ad != NULL ? ad : "off");
+	}
+
+	name = miel_hvac_map_byval(set->prohibit,
+		miel_hvac_prohibit_map, nitems(miel_hvac_prohibit_map));
+	miel_hvac_web_ro(js, "hvro_prohibit", "Prohibit",
+		name != NULL ? name : "off");
+
+	if (sc->sc_stage.type != 0)
+	{
+		name = miel_hvac_map_byval(sc->sc_stage.data.stage.operation,
+			miel_hvac_stage_operation_map,
+			nitems(miel_hvac_stage_operation_map));
+		miel_hvac_web_ro(js, "hvro_oper", "Operation",
+			name != NULL ? name : "-");
+	}
+
+	if (sc->sc_status.type != 0)
+	{
+		const struct miel_hvac_data_status *st = &sc->sc_status.data.status;
+
+		snprintf_P(val, sizeof(val), PSTR("%u Hz"), st->compressorfrequency);
+		miel_hvac_web_ro(js, "hvro_comp", "Compressor", val);
+
+		if (sc->sc_has_energy)
+		{
+			uint16_t p = ((uint16_t)st->operationpower << 8) |
+				(uint16_t)st->operationpower1;
+			dtostrfd((float)p, 0, buf);
+			miel_hvac_dsep(buf);
+			snprintf_P(val, sizeof(val), PSTR("%s " D_UNIT_WATT), buf);
+			miel_hvac_web_ro(js, "hvro_pow", "Power Usage", val);
+
+			uint16_t e = ((uint16_t)st->operationenergy << 8) |
+				(uint16_t)st->operationenergy1;
+			dtostrfd((float)e / 10.0f, 1, buf);
+			miel_hvac_dsep(buf);
+			snprintf_P(val, sizeof(val), PSTR("%s " D_UNIT_KILOWATTHOUR), buf);
+			miel_hvac_web_ro(js, "hvro_egy", "Energy Total", val);
+		}
+	}
+
+	if (js)
+	{
+		/*
+		 * Keep the interactive controls in sync with the unit — but not
+		 * while a change is still queued (sc_settings is only made to
+		 * reflect it once the packet goes out), and never yank a control
+		 * the user is currently interacting with.
+		 */
+		if (!miel_hvac_update_settings_pending(sc)
+		    && !miel_hvac_update_runstate_pending(sc))
+		{
+			const char *fn = miel_hvac_map_byval(set->fan,
+				miel_hvac_fan_map, nitems(miel_hvac_fan_map));
+			const char *vn = miel_hvac_map_byval(set->vane,
+				miel_hvac_vane_map, nitems(miel_hvac_vane_map));
+			const char *wn = wv_isee ? NULL
+				: miel_hvac_map_byval(set->widevane & MIEL_HVAC_SETTINGS_WIDEVANE_MASK,
+					miel_hvac_widevane_map, nitems(miel_hvac_widevane_map));
+			const char *ad = wv_isee
+				? miel_hvac_map_byval(set->airdirection,
+					miel_hvac_airdirection_map, nitems(miel_hvac_airdirection_map))
+				: "off";
+			const char *pr = miel_hvac_map_byval(set->prohibit,
+				miel_hvac_prohibit_map, nitems(miel_hvac_prohibit_map));
+
+			WSContentSend_P(PSTR(
+				"function S(i,v){var s=eb(i);"
+				"if(s&&v&&s!==document.activeElement)s.value=v;}"
+				"var b=document.querySelectorAll('#hvacp .hp-seg .hp-b'),i;"
+				"for(i=0;i<b.length;i++){"
+				"b[i].className=(b[i].dataset.m=='%s')?'hp-b':'hp-b off';}"),
+				miel_hvac_web_curmode(set));
+			if (fn != NULL)
+				WSContentSend_P(PSTR("S('hvf','%s');"), fn);
+			if (vn != NULL)
+				WSContentSend_P(PSTR("S('hvv','%s');"), vn);
+			if (wn != NULL)
+				WSContentSend_P(PSTR("S('hvh','%s');"), wn);
+			if (ad != NULL)
+				WSContentSend_P(PSTR("S('hvd','%s');"), ad);
+			if (pr != NULL)
+				WSContentSend_P(PSTR("S('hvpr','%s');"), pr);
+
+			/* target temperature: reuse the panel's own hvts() setter */
+			char tstr[12];
+			dtostrfd(miel_hvac_temp2deg(sc->sc_temp_type, traw), 1, tstr);
+			WSContentSend_P(PSTR("if(eb('hvtr')&&eb('hvtr')!==document.activeElement)"
+				"hvts(%s);"), tstr);
+		}
+	}
+	else
+		WSContentSend_P(PSTR("</table></div>"));
+}
+
+/*
+ * FUNC_WEB_SENSOR — refresh the panel's read-only rows in place.  Uses the
+ * same <img onerror> exec trick as other Tasmota drivers so the values
+ * update on every root-page poll without redrawing the interactive panel.
  */
 static void
 miel_hvac_web_sensor(struct miel_hvac_softc *sc)
 {
-	if (sc->sc_status.type == 0 || !sc->sc_has_energy)
+	if (sc->sc_settings.type == 0)
 		return;
 
-	const struct miel_hvac_data_status *status =
-		&sc->sc_status.data.status;
-	char buf[33];
-
-	uint16_t combined_power =
-		((uint16_t)status->operationpower << 8) |
-		 (uint16_t)status->operationpower1;
-	dtostrfd((float)combined_power, 0, buf);
-	WSContentSend_PD(PSTR("{s}" D_POWERUSAGE "{m}%s " D_UNIT_WATT "{e}"), buf);
-
-	uint16_t combined_energy =
-		((uint16_t)status->operationenergy << 8) |
-		 (uint16_t)status->operationenergy1;
-	dtostrfd((float)combined_energy / 10.0f, 1, buf);
-	WSContentSend_PD(PSTR("{s}" D_ENERGY_TOTAL "{m}%s " D_UNIT_KILOWATTHOUR "{e}"), buf);
+	WSContentSend_P(PSTR("</table>"));
+	WSContentSend_P(HTTP_MSG_EXEC_JAVASCRIPT);
+	WSContentSend_P(PSTR("var e;"));
+	miel_hvac_web_readout(sc, true);
+	WSContentSend_P(PSTR("\">{t}"));
+	WSContentSeparator(3);
 }
+
+/*
+ * Interactive HVAC control panel on the Tasmota main page.
+ *
+ * Rendered once per full page load from FUNC_WEB_ADD_MAIN_BUTTON (it is
+ * not part of the la() refresh region, so it keeps focus/selection while
+ * the sensor rows above update).  Each control optimistically updates its
+ * own appearance and calls la('&<key>=<value>'); the browser issues
+ * GET /?m=1&<key>=<value> and miel_hvac_web_getarg() (FUNC_WEB_GET_ARG)
+ * turns that into the matching HVACSet* console command.
+ *
+ * Which controls/options render is gated by the 0x7B 0xC9 Base
+ * Capabilities response (sc_caps); when capabilities are not yet known
+ * everything is shown and the unit rejects anything it cannot do.
+ */
+#define MIEL_HVAC_WEBARG_MODE   "hvm"
+#define MIEL_HVAC_WEBARG_TEMP   "hvt"
+#define MIEL_HVAC_WEBARG_FAN    "hvf"
+#define MIEL_HVAC_WEBARG_VANEV  "hvv"
+#define MIEL_HVAC_WEBARG_VANEH  "hvh"
+#define MIEL_HVAC_WEBARG_AIRDIR "hvd"
+#define MIEL_HVAC_WEBARG_PROHIBIT "hvpr"
+#define MIEL_HVAC_WEBARG_PURIFY "hvp"
+#define MIEL_HVAC_WEBARG_NIGHT  "hvn"
+#define MIEL_HVAC_WEBARG_ECONO  "hve"
+
+/*
+ * Scoped stylesheet reproducing the design proposal exactly (dark palette,
+ * type scale, spacing).  Everything is namespaced under #hvacp so it never
+ * touches the rest of the Tasmota page.  The webfonts load when the device
+ * has internet; the fallback stack keeps the same metrics otherwise.
+ */
+static const char miel_hvac_web_style[] PROGMEM =
+	"<link rel='stylesheet' href='https://fonts.googleapis.com/css2?"
+	"family=Barlow:wght@400;500;600&amp;"
+	"family=Barlow+Semi+Condensed:wght@600;700&amp;display=swap'>"
+	"<style>"
+	"#hvacp{margin-top:10px;text-align:left;color:#e7eaec;font-size:14px;line-height:1.4;"
+		"font-family:'Barlow','Segoe UI',system-ui,-apple-system,sans-serif}"
+	"#hvacp *{box-sizing:border-box}"
+	"#hvacp,#hvacp div,#hvacp input,#hvacp table,#hvacp td,#hvacp th{padding:0;margin:0}"
+	"#hvacp .hp-panel{background:#262a2d;border:1px solid #4a5054;border-radius:8px;padding:12px;"
+		"box-shadow:0 1px 2px rgba(0,0,0,.4),0 10px 34px rgba(0,0,0,.45)}"
+	"#hvacp .hp-field{margin-bottom:12px}"
+	"#hvacp .hp-field:last-child{margin-bottom:0}"
+	"#hvacp .hp-label{font-family:'Barlow Semi Condensed','Barlow',system-ui,sans-serif;"
+		"text-transform:uppercase;letter-spacing:.06em;font-size:11px;font-weight:600;"
+		"color:#9aa1a7;margin-bottom:5px}"
+	"#hvacp .hp-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}"
+	"#hvacp .hp-b{font-family:'Barlow Semi Condensed','Barlow',system-ui,sans-serif;font-weight:600;"
+		"font-size:13px;line-height:1.3;color:#08151d;background:#1fa3ec;border:0;border-radius:6px;"
+		"padding:8px 4px;width:100%%;cursor:pointer;transition:filter .12s ease}"
+	"#hvacp .hp-b:hover{filter:brightness(1.06)}"
+	"#hvacp .hp-b.off{background:#565c61;color:#e7eaec}"
+	"#hvacp .hp-b:focus-visible,#hvacp .hp-sel:focus-visible{outline:2px solid #1fa3ec;outline-offset:1px}"
+	"#hvacp .hp-seg .hp-b{display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.15}"
+	"#hvacp .hp-ico{font-size:15px;line-height:1}"
+	"#hvacp .hp-temp{display:flex;align-items:center;gap:10px}"
+	"#hvacp .hp-temp .hp-b{width:40px;height:40px;font-size:20px;flex:none;padding:0}"
+	"#hvacp .hp-val{font-family:'Barlow Semi Condensed','Barlow',system-ui,sans-serif;font-weight:700;"
+		"font-size:26px;flex:1;text-align:center;font-variant-numeric:tabular-nums}"
+	"#hvacp .hp-val small{font-size:14px;font-weight:600;color:#9aa1a7}"
+	"#hvacp .hp-sel{width:100%%;font-family:'Barlow','Segoe UI',system-ui,sans-serif;font-size:14px;"
+		"color:#e7eaec;background:#1f2325;border:1px solid #4a5054;border-radius:6px;padding:8px 9px;"
+		"cursor:pointer}"
+	"#hvacp input[type=range]{width:100%%;accent-color:#1fa3ec;margin-top:8px;display:block}"
+	"#hvacp .hp-toggles{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}"
+	"#hvacp .hp-toggles .hp-b{font-size:12px}"
+	"#hvacp .hp-ro-w{padding-top:10px;border-top:1px solid #4a5054}"
+	"#hvacp .hp-ro{width:100%%;border-collapse:collapse;font-size:13px}"
+	"#hvacp .hp-ro th{text-align:left;font-weight:500;color:#9aa1a7;padding:3px 0}"
+	"#hvacp .hp-ro td{text-align:right;font-variant-numeric:tabular-nums;padding:3px 0;white-space:nowrap}"
+	"</style>";
+
+static const char miel_hvac_web_script[] PROGMEM =
+	"<script>"
+	"function hvm(b,v){"
+		"var q=b.parentNode.getElementsByTagName('button');"
+		"for(var i=0;i<q.length;i++){q[i].className='hp-b off';}"
+		"b.className='hp-b';"
+		"la('&" MIEL_HVAC_WEBARG_MODE "='+v);"
+	"}"
+	"function hvo(b,k){"
+		"var o=(b.dataset.on=='1')?0:1;"
+		"b.dataset.on=o;"
+		"b.className=o?'hp-b':'hp-b off';"
+		"la('&'+k+'='+(o?'on':'off'));"
+	"}"
+	"function hvts(t){"
+		"t=Math.round(t/hvcs)*hvcs;"
+		"if(t<hvcl){t=hvcl;}if(t>hvch){t=hvch;}"
+		"hvct=t;"
+		"eb('hvtv').innerHTML=t.toFixed(1)+'<small>&deg;C</small>';"
+		"eb('hvtr').value=t;"
+	"}"
+	"function hvtb(d){hvts(hvct+d);la('&" MIEL_HVAC_WEBARG_TEMP "='+hvct.toFixed(1));}"
+	"function hvsl(v){hvts(v*1);la('&" MIEL_HVAC_WEBARG_TEMP "='+hvct.toFixed(1));}"
+	"</script>";
+
+static void
+miel_hvac_web_label(const char *label)
+{
+	WSContentSend_P(PSTR("<div class='hp-label'>%s</div>"), label);
+}
+
+static void
+miel_hvac_web_modebtn(const char *v, const char *icon, const char *label,
+    const char *curm)
+{
+	WSContentSend_P(PSTR("<button class='hp-b%s' data-m='%s' onclick=\"hvm(this,'%s')\">"
+		"<span class='hp-ico'>%s</span>%s</button>"),
+		(strcmp(v, curm) == 0) ? "" : " off", v, v, icon, label);
+}
+
+static void
+miel_hvac_web_optbtn(const char *key, const char *label, bool on)
+{
+	WSContentSend_P(PSTR("<button class='hp-b%s' data-on='%d' "
+		"onclick=\"hvo(this,'%s')\">%s</button>"),
+		on ? "" : " off", on ? 1 : 0, key, label);
+}
+
+/*
+ * Friendly display text for a protocol keyword.  The <option> value stays
+ * the machine name so the emitted HVACSet* command is unchanged.
+ */
+static const char *
+miel_hvac_web_optlabel(const char *name)
+{
+	static const struct {
+		const char *k;
+		const char *v;
+	} lbl[] = {
+		{ "auto",         "Auto"          },
+		{ "quiet",        "Quiet"         },
+		{ "up",           "Up"            },
+		{ "up_middle",    "Up-Middle"     },
+		{ "center",       "Center"        },
+		{ "down_middle",  "Down-Middle"   },
+		{ "down",         "Down"          },
+		{ "swing",        "Swing"         },
+		{ "left",         "Left"          },
+		{ "left_middle",  "Left-Middle"   },
+		{ "right",        "Right"         },
+		{ "right_middle", "Right-Middle"  },
+		{ "left_center",  "Left-Center"   },
+		{ "right_center", "Right-Center"  },
+		{ "split",        "Split"         },
+		{ "even",         "Even"          },
+		{ "indirect",     "Indirect"      },
+		{ "direct",       "Direct"        },
+		{ "off",          "Off"           },
+		{ "power",        "Power"         },
+		{ "mode",         "Mode"          },
+		{ "mode_power",   "Mode-Power"    },
+		{ "temp",         "Temp"          },
+		{ "temp_power",   "Temp-Power"    },
+		{ "temp_mode",    "Temp-Mode"     },
+		{ "all",          "All"           },
+	};
+	static char buf[24];
+	size_t i;
+
+	for (i = 0; i < nitems(lbl); i++)
+	{
+		if (strcmp(name, lbl[i].k) == 0)
+			return (lbl[i].v);
+	}
+
+	/* fallback: protocol keyword with '_' shown as spaces */
+	for (i = 0; i + 1 < sizeof(buf) && name[i] != '\0'; i++)
+		buf[i] = (name[i] == '_') ? ' ' : name[i];
+	buf[i] = '\0';
+	return (buf);
+}
+
+static void
+miel_hvac_web_select(const char *label, const char *id, const char *key,
+    const struct miel_hvac_map *m, size_t n, uint8_t cur,
+    const uint8_t *skip, size_t nskip)
+{
+	size_t i, j;
+
+	WSContentSend_P(PSTR("<div class='hp-field'>"));
+	miel_hvac_web_label(label);
+	WSContentSend_P(PSTR("<select class='hp-sel' id='%s' onchange=\"la('&%s='+this.value)\">"),
+		id, key);
+
+	for (i = 0; i < n; i++)
+	{
+		bool skipit = false;
+		for (j = 0; j < nskip; j++)
+		{
+			if (skip[j] == m[i].byte)
+			{
+				skipit = true;
+				break;
+			}
+		}
+		if (skipit)
+			continue;
+
+		WSContentSend_P(PSTR("<option value='%s'%s>%s</option>"),
+			m[i].name, (m[i].byte == cur) ? " selected" : "",
+			miel_hvac_web_optlabel(m[i].name));
+	}
+
+	WSContentSend_P(PSTR("</select></div>"));
+}
+
+static void
+miel_hvac_web_panel(struct miel_hvac_softc *sc)
+{
+	/*
+	 * The Mode segment (with its Off button) replaces the generic power
+	 * toggle, so hide that button and its ON/OFF state row.  When the HVAC
+	 * is the only device the whole button table and the state row go; with
+	 * other relays present only this device's button cell is hidden.  The
+	 * POWER command and its MQTT state sync stay in place for rules and
+	 * Home Assistant.
+	 */
+	if (TasmotaGlobal.devices_present == 1)
+		WSContentSend_P(PSTR("<style>"
+			"table:has(#o1){display:none}"
+			"#l1>table:last-of-type{display:none}"
+			"</style>"));
+	else
+		WSContentSend_P(PSTR("<style>td:has(>#o%u){display:none}</style>"),
+			sc->sc_device + 1);
+
+	if (sc->sc_settings.type == 0)
+		return;
+
+	const struct miel_hvac_data_settings *set = &sc->sc_settings.data.settings;
+	const struct miel_hvac_capabilities *caps = &sc->sc_caps;
+	bool cv = caps->sc_caps_valid;
+	bool m_heat = !cv || caps->cap_mode_heat;
+	bool m_dry  = !cv || caps->cap_mode_dry;
+	bool m_fan  = !cv || caps->cap_mode_fan;
+	const char *curm = miel_hvac_web_curmode(set);
+	uint8_t traw = (set->temp05 != 0) ? set->temp05 : set->temp;
+	float curtemp = miel_hvac_temp2deg(sc->sc_temp_type, traw);
+	int tlo = 16, thi = 31;
+	char tbuf[16];
+
+	if (cv && caps->cap_temp_ranges)
+	{
+		uint8_t mm = set->mode & MIEL_HVAC_SETTINGS_MODE_MASK;
+		if (mm == MIEL_HVAC_SETTINGS_MODE_HEAT)
+		{
+			tlo = (caps->temp_heat_min - 128) / 2;
+			thi = (caps->temp_heat_max - 128) / 2;
+		}
+		else if (mm == MIEL_HVAC_SETTINGS_MODE_AUTO)
+		{
+			tlo = (caps->temp_auto_min - 128) / 2;
+			thi = (caps->temp_auto_max - 128) / 2;
+		}
+		else
+		{
+			tlo = (caps->temp_cool_min - 128) / 2;
+			thi = (caps->temp_cool_max - 128) / 2;
+		}
+	}
+	dtostrfd(curtemp, 1, tbuf);
+
+	WSContentSend_P(miel_hvac_web_style);
+	WSContentSend_P(PSTR("<div id='hvacp'><div class='hp-panel'>"));
+
+	/* per-page JS state, then the shared helpers */
+	WSContentSend_P(PSTR("<script>var hvct=%s,hvcs=%s,hvcl=%d,hvch=%d;</script>"),
+		tbuf, sc->sc_temp_type ? "0.5" : "1", tlo, thi);
+	WSContentSend_P(miel_hvac_web_script);
+
+	/* Mode */
+	miel_hvac_web_label("Mode");
+	WSContentSend_P(PSTR("<div class='hp-seg'>"));
+	miel_hvac_web_modebtn("auto", "A", "Auto", curm);
+	if (m_heat)
+		miel_hvac_web_modebtn("heat", "\xe2\x98\x80", "Heat", curm);
+	miel_hvac_web_modebtn("cool", "\xe2\x9d\x84", "Cool", curm);
+	if (m_dry)
+		miel_hvac_web_modebtn("dry", "\xf0\x9f\x92\xa7", "Dry", curm);
+	if (m_fan)
+		miel_hvac_web_modebtn("fan", "\xe2\x9c\xb1", "Fan", curm);
+	miel_hvac_web_modebtn("off", "\xe2\x8f\xbb", "Off", curm);
+	WSContentSend_P(PSTR("</div>"));
+
+	/* Target temperature */
+	WSContentSend_P(PSTR("<div class='hp-field'>"));
+	miel_hvac_web_label("Target temperature");
+	WSContentSend_P(PSTR("<div class='hp-temp'>"
+		"<button class='hp-b' onclick='hvtb(-hvcs)'>&minus;</button>"
+		"<div class='hp-val' id='hvtv'>%s<small>&deg;C</small></div>"
+		"<button class='hp-b' onclick='hvtb(hvcs)'>+</button></div>"
+		"<input type='range' id='hvtr' min='%d' max='%d' step='%s' value='%s' "
+		"onchange='hvsl(this.value)'></div>"),
+		tbuf, tlo, thi, sc->sc_temp_type ? "0.5" : "1", tbuf);
+
+	/* Fan speed */
+	{
+		uint8_t fskip[3];
+		size_t nf = 0;
+		uint8_t fc = miel_hvac_get_fan_count(sc);
+
+		if (cv && !caps->cap_fan_auto)
+			fskip[nf++] = MIEL_HVAC_SETTINGS_FAN_AUTO;
+		if (fc != 0 && fc < 5)
+			fskip[nf++] = MIEL_HVAC_SETTINGS_FAN_QUIET;
+		if (fc != 0 && fc < 4)
+			fskip[nf++] = MIEL_HVAC_SETTINGS_FAN_4;
+
+		miel_hvac_web_select("Fan speed", "hvf", MIEL_HVAC_WEBARG_FAN,
+			miel_hvac_fan_map, nitems(miel_hvac_fan_map),
+			set->fan, fskip, nf);
+	}
+
+	/* Vane vertical — only when the unit has a controllable vertical vane */
+	if (!cv || caps->cap_vane_v)
+	{
+		uint8_t vskip[1];
+		size_t nv = 0;
+
+		if (cv && !caps->cap_vane_swing)
+			vskip[nv++] = MIEL_HVAC_SETTINGS_VANE_SWING;
+
+		miel_hvac_web_select("Vane vertical", "hvv", MIEL_HVAC_WEBARG_VANEV,
+			miel_hvac_vane_map, nitems(miel_hvac_vane_map),
+			set->vane, vskip, nv);
+	}
+
+	/* Vane horizontal / wide vane */
+	{
+		static const uint8_t hskip[] = { MIEL_HVAC_SETTINGS_WIDEVANE_ISEE };
+
+		miel_hvac_web_select("Vane horizontal", "hvh", MIEL_HVAC_WEBARG_VANEH,
+			miel_hvac_widevane_map, nitems(miel_hvac_widevane_map),
+			set->widevane & MIEL_HVAC_SETTINGS_WIDEVANE_MASK,
+			hskip, nitems(hskip));
+	}
+
+	/* Air direction (i-See) — separate function; needs a vertical vane and
+	 * an observed i-See sensor.  Direction is only meaningful while the wide
+	 * vane is in i-See mode; otherwise the control reads "off". */
+	if (!cv || (caps->cap_vane_v && sc->sc_has_isee))
+	{
+		bool wv_isee = (set->widevane == 0x80 || set->widevane == 0x28
+		             || set->widevane == 0xaa);
+		uint8_t adcur = wv_isee
+			? set->airdirection
+			: MIEL_HVAC_SETTINGS_AIRDIRECTION_OFF;
+
+		miel_hvac_web_select("Air direction", "hvd", MIEL_HVAC_WEBARG_AIRDIR,
+			miel_hvac_airdirection_map, nitems(miel_hvac_airdirection_map),
+			adcur, NULL, 0);
+	}
+
+	/* Prohibit — lock out RC changes (power / mode / temperature) */
+	miel_hvac_web_select("Prohibit", "hvpr", MIEL_HVAC_WEBARG_PROHIBIT,
+		miel_hvac_prohibit_map, nitems(miel_hvac_prohibit_map),
+		set->prohibit, NULL, 0);
+
+	/* Purifier / Night mode / EconoCool (0x08 Set Run State) */
+	if (!cv || caps->cap_run_state)
+	{
+		const struct miel_hvac_data_options *opt = &sc->sc_options.data.options;
+		bool have = (sc->sc_options.type != 0);
+
+		WSContentSend_P(PSTR("<div class='hp-field'>"));
+		miel_hvac_web_label("Options");
+		WSContentSend_P(PSTR("<div class='hp-toggles'>"));
+		miel_hvac_web_optbtn(MIEL_HVAC_WEBARG_PURIFY, "Purifier",
+			have && opt->purifier == MIEL_HVAC_OPTIONS_PURIFIER_ON);
+		miel_hvac_web_optbtn(MIEL_HVAC_WEBARG_NIGHT, "Night",
+			have && opt->nightmode == MIEL_HVAC_OPTIONS_NIGHTMODE_ON);
+		miel_hvac_web_optbtn(MIEL_HVAC_WEBARG_ECONO, "EconoCool",
+			have && opt->econocool == MIEL_HVAC_OPTIONS_ECONOCOOL_ON);
+		WSContentSend_P(PSTR("</div></div>"));
+	}
+
+	miel_hvac_web_readout(sc, false);
+	WSContentSend_P(PSTR("</div></div>"));	/* close .hp-panel, #hvacp */
+}
+
+/*
+ * FUNC_WEB_GET_ARG — turn a control-panel GET argument into the matching
+ * HVACSet* console command.  Mode uses HVACSetHAMode so a mode button also
+ * powers the unit on and "Off" powers it down.
+ */
+static void
+miel_hvac_web_getarg(void)
+{
+	char tmp[24];
+	char cmnd[48];
+
+#define MIEL_HVAC_WEB_GETARG(_k, _c) do {                              \
+		WebGetArg(PSTR(_k), tmp, sizeof(tmp));                         \
+		if (strlen(tmp))                                               \
+		{                                                             \
+			snprintf_P(cmnd, sizeof(cmnd), PSTR(_c " %s"), tmp);       \
+			ExecuteWebCommand(cmnd);                                   \
+		}                                                             \
+	} while (0)
+
+	MIEL_HVAC_WEB_GETARG(MIEL_HVAC_WEBARG_MODE,   D_CMND_MIEL_HVAC_SETHAMODE);
+	MIEL_HVAC_WEB_GETARG(MIEL_HVAC_WEBARG_TEMP,   D_CMND_MIEL_HVAC_SETTEMP);
+	MIEL_HVAC_WEB_GETARG(MIEL_HVAC_WEBARG_FAN,    D_CMND_MIEL_HVAC_SETFANSPEED);
+	MIEL_HVAC_WEB_GETARG(MIEL_HVAC_WEBARG_VANEV,  D_CMND_MIEL_HVAC_SETSWINGV);
+	MIEL_HVAC_WEB_GETARG(MIEL_HVAC_WEBARG_VANEH,  D_CMND_MIEL_HVAC_SETSWINGH);
+	MIEL_HVAC_WEB_GETARG(MIEL_HVAC_WEBARG_AIRDIR, D_CMND_MIEL_HVAC_SETAIRDIRECTION);
+	MIEL_HVAC_WEB_GETARG(MIEL_HVAC_WEBARG_PROHIBIT, D_CMND_MIEL_HVAC_SETPROHIBIT);
+	MIEL_HVAC_WEB_GETARG(MIEL_HVAC_WEBARG_PURIFY, D_CMND_MIEL_HVAC_SETPURIFY);
+	MIEL_HVAC_WEB_GETARG(MIEL_HVAC_WEBARG_NIGHT,  D_CMND_MIEL_HVAC_SETNIGHTMODE);
+	MIEL_HVAC_WEB_GETARG(MIEL_HVAC_WEBARG_ECONO,  D_CMND_MIEL_HVAC_SETECONOCOOL);
+
+#undef MIEL_HVAC_WEB_GETARG
+}
+
+#if defined(USE_MIEL_HVAC_MODBUS_SLAVE) && defined(ESP32)
+/*
+ * Modbus RTU slave configuration page, reached from a "Modbus RTU" button on
+ * the Configuration menu (the same place as "MQTT").  The enable flag and the
+ * three parameters are saved through the HVACModbus* console commands, which
+ * apply live - no reboot.  While the slave is running a "Modbus" sticker is
+ * shown on the main-page status line.
+ */
+#define MIEL_HVAC_WEB_MB_PAGE  "hvac_mb"
+
+static const char miel_hvac_web_mb_form[] PROGMEM =
+	"<p><label><input id='mbe' type='checkbox'%s><b>Enable Modbus RTU</b></label></p>"
+	"<p><b>" D_ADDRESS "</b> (1)<br><input id='mba' placeholder='1' value='%d'></p>"
+	"<p><b>Baudrate</b><br><select id='mbr'>%s</select></p>"
+	"<p><b>Config</b><br><select id='mbc'>%s</select></p>";
+
+static void
+miel_hvac_web_mb_config(void)
+{
+	static const uint32_t bauds[] =
+	    { 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200 };
+	static const char cfgs[][4] =
+	    { "8N1", "8E1", "8O1", "8N2", "8E2", "8O2" };
+	String opts_baud;
+	String opts_cfg;
+	String cur_cfg;
+	uint32_t cur_baud;
+	unsigned int i;
+
+	if (!HttpCheckPriviledgedAccess())
+		return;
+
+	if (Webserver->hasArg(F("save")))
+	{
+		String cmnd = F(D_CMND_BACKLOG "0 ");
+		cmnd += F(D_CMND_MIEL_HVAC_MODBUS " ");
+		cmnd += Webserver->hasArg(F("mbe")) ? F("1") : F("0");
+		cmnd += AddWebCommand(PSTR(D_CMND_MIEL_HVAC_MODBUS_ADDRESS),
+		    PSTR("mba"), PSTR("1"));
+		cmnd += AddWebCommand(PSTR(D_CMND_MIEL_HVAC_MODBUS_BAUDRATE),
+		    PSTR("mbr"), PSTR("9600"));
+		cmnd += AddWebCommand(PSTR(D_CMND_MIEL_HVAC_MODBUS_CONFIG),
+		    PSTR("mbc"), PSTR("8N1"));
+		ExecuteWebCommand((char *)cmnd.c_str());
+		HandleConfiguration();		/* applied live, back to the menu */
+		return;
+	}
+
+	miel_hvac_mb_settings_clamp();
+	cur_baud = (uint32_t)Settings->miel_hvac_mb_baudrate * 300;
+	cur_cfg = GetSerialConfig(Settings->miel_hvac_mb_sconfig);
+
+	for (i = 0; i < nitems(bauds); i++)
+	{
+		char o[32];
+		snprintf_P(o, sizeof(o), PSTR("<option%s>%u</option>"),
+		    (bauds[i] == cur_baud) ? " selected" : "", bauds[i]);
+		opts_baud += o;
+	}
+	for (i = 0; i < nitems(cfgs); i++)
+	{
+		char o[36];
+		snprintf_P(o, sizeof(o), PSTR("<option%s>%s</option>"),
+		    cur_cfg.equals(cfgs[i]) ? " selected" : "", cfgs[i]);
+		opts_cfg += o;
+	}
+
+	WSContentStart_P(PSTR("Modbus RTU"));
+	WSContentSendStyle();
+	WSContentSend_P(HTTP_FIELDSET_LEGEND, PSTR("Modbus RTU"));
+	WSContentSend_P(HTTP_FORM_GET_ACTION, PSTR(MIEL_HVAC_WEB_MB_PAGE));
+	WSContentSend_P(miel_hvac_web_mb_form,
+	    Settings->sbflag1.miel_hvac_mb_enable ? PSTR(" checked") : PSTR(""),
+	    Settings->miel_hvac_mb_address,
+	    opts_baud.c_str(), opts_cfg.c_str());
+	if (!PinUsed(GPIO_MIEL_HVAC_MB_RX) || !PinUsed(GPIO_MIEL_HVAC_MB_TX))
+		WSContentSend_P(PSTR("<p style='width:320px;max-width:100%%'>"
+		    "&#9888; The \"MiEl HVAC MB Rx\" and \"MiEl HVAC MB Tx\" GPIOs "
+		    "are not assigned, so the slave cannot start.</p>"));
+	WSContentSend_P(HTTP_FORM_END);
+	WSContentSpaceButton(BUTTON_CONFIGURATION);
+	WSContentStop();
+}
+#endif  /* USE_MIEL_HVAC_MODBUS_SLAVE && ESP32 */
 #endif  /* USE_WEBSERVER */
 
 /*
@@ -2441,11 +4700,14 @@ miel_hvac_tick(struct miel_hvac_softc *sc)
 		MIEL_HVAC_REQUEST_STATUS,
 		MIEL_HVAC_REQUEST_SETTINGS,
 		MIEL_HVAC_REQUEST_ROOMTEMP,
+		/* 0x04 Get Error State. Non-supporting units timeout via p_tmo. */
+		MIEL_HVAC_REQUEST_ERROR,
 		MIEL_HVAC_REQUEST_SETTINGS,
 		MIEL_HVAC_REQUEST_TIMERS,
 		MIEL_HVAC_REQUEST_SETTINGS,
 		/* MUZ-GA80VA does not respond to STAGE */
 		MIEL_HVAC_REQUEST_STAGE,
+		MIEL_HVAC_REQUEST_SETTINGS,
 		/* 0x42: Purifier, NightMode, EconoCool state. Sent with len=1
 		 * (short request form). Non-supporting units timeout via p_tmo. */
 		MIEL_HVAC_REQUEST_OPTIONS,
@@ -2480,8 +4742,58 @@ miel_hvac_tick(struct miel_hvac_softc *sc)
 	if (miel_hvac_update_settings_pending(sc))
 	{
 		struct miel_hvac_msg_update_settings *update = &sc->sc_settings_update;
+		uint16_t f = update->flags;
 
 		miel_hvac_send_update_settings(sc, update);
+
+		/*
+		 * Optimistic local apply: reflect what was just sent in
+		 * sc_settings so every reader (web panel sync, Modbus registers,
+		 * SENSOR) shows the intent right away instead of the pre-change
+		 * state for the ~1s until the unit confirms with the next 0x62
+		 * 0x02.  If the unit rejects the change its report wins on the
+		 * next read.  The update and settings structs share field names.
+		 */
+		if (sc->sc_settings.type != 0)
+		{
+			struct miel_hvac_data_settings *set =
+				&sc->sc_settings.data.settings;
+
+			if (f & htons(MIEL_HVAC_SETTINGS_F_POWER))
+				set->power = update->power;
+			if (f & htons(MIEL_HVAC_SETTINGS_F_MODE))
+				set->mode = update->mode;
+			if (f & htons(MIEL_HVAC_SETTINGS_F_TEMP))
+			{
+				set->temp = update->temp;
+				set->temp05 = update->temp05;
+			}
+			if (f & htons(MIEL_HVAC_SETTINGS_F_FAN))
+				set->fan = update->fan;
+			if (f & htons(MIEL_HVAC_SETTINGS_F_VANE))
+				set->vane = update->vane;
+			if (f & htons(MIEL_HVAC_SETTINGS_F_PROHIBIT))
+				set->prohibit = update->prohibit;
+			if (f & htons(MIEL_HVAC_SETTINGS_F_WIDEVANE))
+				set->widevane = update->widevane;
+			if (f & htons(MIEL_HVAC_SETTINGS_F_AIRDIRECTION))
+				set->airdirection = update->airdirection;
+
+			/*
+			 * Publish the new state now.  The confirming 0x62 0x02
+			 * normally equals the optimistically applied sc_settings,
+			 * so miel_hvac_input_settings()'s memcmp() would not fire
+			 * and HVACSettings / SENSOR would not go out until the
+			 * next TelePeriod.  If the unit rejects or changes the
+			 * request its report still differs and republishes.
+			 */
+			if (sc->sc_settings_set)
+			{
+				miel_hvac_publish_settings(sc);
+				MqttPublishSensor();
+			}
+		}
+
 		miel_hvac_init_update_settings(update);
 
 		/* refresh settings on next tick */
@@ -2572,6 +4884,12 @@ static const char miel_hvac_cmnd_names[] PROGMEM =
 	"|" D_CMND_MIEL_HVAC_REMOTETEMP
 	"|" D_CMND_MIEL_HVAC_REMOTETEMP_CLEAR_TIME
 	"|" D_CMND_MIEL_HVAC_SEND_COMMAND
+#if defined(USE_MIEL_HVAC_MODBUS_SLAVE) && defined(ESP32)
+	"|" D_CMND_MIEL_HVAC_MODBUS
+	"|" D_CMND_MIEL_HVAC_MODBUS_ADDRESS
+	"|" D_CMND_MIEL_HVAC_MODBUS_BAUDRATE
+	"|" D_CMND_MIEL_HVAC_MODBUS_CONFIG
+#endif
 #ifdef MIEL_HVAC_DEBUG
 	"|HVACRequest"
 #endif
@@ -2592,6 +4910,12 @@ static void (*const miel_hvac_cmnds[])(void) PROGMEM = {
 	&miel_hvac_cmnd_remotetemp,
 	&miel_hvac_cmnd_remotetemp_auto_clear_time,
 	&miel_hvac_cmnd_send_command,
+#if defined(USE_MIEL_HVAC_MODBUS_SLAVE) && defined(ESP32)
+	&miel_hvac_cmnd_modbus,
+	&miel_hvac_cmnd_modbus_address,
+	&miel_hvac_cmnd_modbus_baudrate,
+	&miel_hvac_cmnd_modbus_config,
+#endif
 #ifdef MIEL_HVAC_DEBUG
 	&miel_hvac_cmnd_request,
 #endif
@@ -2612,6 +4936,10 @@ bool Xdrv44(uint32_t function)
 	{
 	case FUNC_LOOP:
 		miel_hvac_loop(sc);
+#if defined(USE_MIEL_HVAC_MODBUS_SLAVE) && defined(ESP32)
+		if (sc->sc_mb != nullptr)
+			miel_hvac_mb_loop(sc);
+#endif
 		break;
 	case FUNC_SET_DEVICE_POWER:
 		return miel_hvac_cmnd_setpower(sc);
@@ -2642,6 +4970,27 @@ bool Xdrv44(uint32_t function)
 	case FUNC_WEB_SENSOR:
 		miel_hvac_web_sensor(sc);
 		break;
+	case FUNC_WEB_ADD_MAIN_BUTTON:
+		miel_hvac_web_panel(sc);
+		break;
+	case FUNC_WEB_GET_ARG:
+		miel_hvac_web_getarg();
+		break;
+#if defined(USE_MIEL_HVAC_MODBUS_SLAVE) && defined(ESP32)
+	case FUNC_WEB_ADD_BUTTON:
+		WSContentSend_P(HTTP_FORM_BUTTON, PSTR(MIEL_HVAC_WEB_MB_PAGE),
+		    PSTR("Modbus RTU"));
+		break;
+	case FUNC_WEB_ADD_HANDLER:
+		WebServer_on(PSTR("/" MIEL_HVAC_WEB_MB_PAGE), miel_hvac_web_mb_config);
+		break;
+#ifdef USE_WEB_STATUS_LINE
+	case FUNC_WEB_STATUS_RIGHT:
+		if (sc->sc_mb != nullptr)
+			WSContentStatusSticker(PSTR("Modbus"));
+		break;
+#endif
+#endif
 #endif
 	case FUNC_AFTER_TELEPERIOD:
 		if (sc->sc_settings_set)

@@ -3,13 +3,72 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - Development
 
-## [15.5.0.1]
+## [15.6.0.1]
+### Added
+- Support for GUI tooltip on touch media like phones and tablets
+- ESP32 MiEL HVAC Modbus RTU slave on a second RS485 port exposing all states and functions for PLC use with `#define USE_MIEL_HVAC_MODBUS_SLAVE` (#24982)
+- MiEL HVAC climate control panel on the web UI main page (mode, target temperature, fan, vanes, air direction) with live state (#24984)
+- Support for TFA Dostmann Marbella 868MHz pool thermometer using a CC1101 (#24959)
+- Berry virtual button support
+- NeoPool AuxMode (#24998)
+- Berry `sortedmap` support for `json.dump` (#24999)
+
+### Breaking Changed
+
+
+### Changed
+- BLE EQ3-TRV code refactoring (#24978)
+- BLE MI32 display icons instead of data lines. disable by removing `#define USE_SENSOR_ICON`
+- MiEL HVAC accepts `fan_only` as an alias for fan mode in `HVACSetMode` / `HVACSetHAMode` (Home Assistant) (#24992)
+
+### Fixed
+- MiEL HVAC Modbus and CC1101 GPIO names shown as `MbsRelay ...` due to a duplicate entry in the GPIO name table (#24992)
+- MiEL HVAC Modbus length-based framing, queue writes, FC03 sensor mirror (#24993)
+- Zigbee deferred timer use after free, and the truncated backtrace that hid it (#24979)
+- Matter: fix autoconfiguration after configuration reset (#24997)
+- Berry rare register allocation bug (#25010)
+- Restore default hostname `%s` functionality using topic name only, regression from v15.4.0.2 (#24731)
+
+### Removed
+
+
+
+## [Released]
+
+## [15.6.0] 20260825
+- Release Sylvie
+
+## [15.5.0.2] 20260825
+### Added
+- Support for baudrate 74880 replacing 74700 (#24924)
+- Support for WiZ compatible IoTorero ESP-Now Remote Control additional buttons P5 to P7
+- Support for BLE BTHome in binary `tasmota32-bluetooth.bin` (#20763)
+- Berry extend `sortedmap` constructor (#24955)
+- Shelly Pro 2PM emulation for ESP32 (`Emulation 3`, disabled by default) (#24952)
+
+### Changed
+- Library `PubSubClient` renamed to `TasmotaPubSub`, hardening fixes and comprehensive non-regression tests (#24916)
+- Berry `json.dump()` works with subclasses of `map` and `list` (#24954)
+- Berry/MI32 improved dashboard and widget handling (#24972)
+- Keep the first panic in the ESP32 crash recorder (#24976)
+
+### Fixed
+- Can sniffer functionality (#18287)
+- Reset BLE scan flag on new operation (#24925)
+- Minor fixes in `LList` (#24927)
+- TLS fix public key fingerprint for ECDSA certificates (#24928)
+- HASPmota better support for `textarea` (#24946)
+- NeoPool issue with localized JSON keys (#24962)
+- NeoPool delocalize all JSON outputs (#24965)
+
+## [15.5.0.1] 20260725
 ### Added
 - Berry `bytes` methods `setbits`/`getbits` transposed to native and support for big endian (#24857)
 - HASPmota ability to set default screen background on `p0b0` object (#24874)
 - Matter virtual IR HVAC thermostat support (#24821)
-
-### Breaking Changed
+- HASPmota and LVGL `stripes` widget (#24907)
+- MagicSwitch configurable masking window fixing problems with multiple false triggering (#24888)
+- TLS support for EC P-384 curve in server certificate (#24909)
 
 ### Changed
 - MiElHVAC auto-enable i-See widevane when setting AirDirection (#24860)
@@ -17,10 +76,8 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - BLE EQ3 float output in mqtt messages regression from v15.4.0.2 (#24869)
 - Default button/switch actions on builds without rules regression from v15.4.0.2 (#24871)
-
-### Removed
-
-## [Released]
+- PZEM/Modbus energy monitor Exception crash-loop on ESP8266 regression from v15.5.0 (#24883)
+- Udisp SPI for mono color display (#24899)
 
 ## [15.5.0] 20260621
 - Release Sylvan

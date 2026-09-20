@@ -221,6 +221,7 @@ const char HTTP_SCRIPT_INFO_END[] PROGMEM =
   #include "./html_compressed/HTTP_HEAD_STYLE2.h"
   #include "./html_compressed/HTTP_HEAD_STYLE3.h"
   #include "./html_compressed/HTTP_HEAD_STYLE_WIFI.h"
+  #include "./html_compressed/HTTP_HEAD_STYLE_TOOLTIP.h"
 #else
   #include "./html_uncompressed/HTTP_HEAD_LAST_SCRIPT.h"
   #include "./html_uncompressed/HTTP_HEAD_LAST_SCRIPT32.h"
@@ -229,9 +230,10 @@ const char HTTP_SCRIPT_INFO_END[] PROGMEM =
   #include "./html_uncompressed/HTTP_HEAD_STYLE2.h"
   #include "./html_uncompressed/HTTP_HEAD_STYLE3.h"
   #include "./html_uncompressed/HTTP_HEAD_STYLE_WIFI.h"
+  #include "./html_uncompressed/HTTP_HEAD_STYLE_TOOLTIP.h"
 #endif
 
-#if defined(USE_ZIGBEE) || defined(USE_LORAWAN_BRIDGE)
+#if defined(USE_ZIGBEE) || defined(USE_LORAWAN_BRIDGE) || defined(USE_MI_ESP32)
 // Styles used for Zigbee and LoRaWan Web UI
 // Battery icon from https://css.gg/battery
 //
@@ -467,7 +469,7 @@ const char kContentTypes[] PROGMEM = "text/html|text/plain|text/xml|text/event-s
 const char kLoggingOptions[] PROGMEM = D_SERIAL_LOG_LEVEL "|" D_WEB_LOG_LEVEL "|" D_MQTT_LOG_LEVEL "|" D_SYS_LOG_LEVEL;
 const char kLoggingLevels[] PROGMEM = D_NONE "|" D_ERROR "|" D_INFO "|" D_DEBUG "|" D_MORE_DEBUG;
 
-const char kEmulationOptions[] PROGMEM = D_NONE "|" D_BELKIN_WEMO "|" D_HUE_BRIDGE;
+const char kEmulationOptions[] PROGMEM = D_NONE "|" D_BELKIN_WEMO "|" D_HUE_BRIDGE "|" D_SHELLY;
 
 const char kUploadErrors[] PROGMEM =
 //  D_UPLOAD_ERR_1 "|" D_UPLOAD_ERR_2 "|" D_UPLOAD_ERR_3 "|" D_UPLOAD_ERR_4 "|" D_UPLOAD_ERR_5 "|" D_UPLOAD_ERR_6 "|" D_UPLOAD_ERR_7 "|" D_UPLOAD_ERR_8 "|" D_UPLOAD_ERR_9;
@@ -1023,10 +1025,14 @@ void WSContentSendStyle_P(const char* formatP, ...) {
   WSContentSendRaw_P(HTTP_HEAD_STYLE1);
   WSContentSendRaw_P(HTTP_HEAD_STYLE2);
 
+#if defined(ESP32) || defined(USE_WEB_STATUS_LINE_WIFI)
+  WSContentSendRaw_P(HTTP_HEAD_STYLE_TOOLTIP);
+#endif
+
 #ifdef USE_WEB_STATUS_LINE_WIFI
   WSContentSendRaw_P(HTTP_HEAD_STYLE_WIFI);
 #endif
-#if defined(USE_ZIGBEE) || defined(USE_LORAWAN_BRIDGE)
+#if defined(USE_ZIGBEE) || defined(USE_LORAWAN_BRIDGE) || defined(USE_MI_ESP32)
   WSContentSendRaw_P(HTTP_HEAD_STYLE_ZIGBEE);
 #endif // USE_ZIGBEE
   if (formatP != nullptr) {
@@ -2003,9 +2009,10 @@ bool HandleRootStatusRefresh(void) {
 #ifdef USE_WEB_STATUS_LINE_WIFI
   if (Settings->flag4.network_wifi) {
     int32_t rssi = WiFi.RSSI();
-    WSContentSend_P(PSTR("<div class='wifi' title='%s: " D_RSSI " %d%% (%d dBm)'><div class='arc a3%s'></div><div class='arc a2%s'></div><div class='arc a1%s'></div><div class='arc a0'></div></div>"),
-                          SettingsTextEscaped(SET_STASSID1 + Settings->sta_active).c_str(),                      
+    WSContentSend_P(PSTR("<div class='wifi' title='" D_SSID ": %s\n" D_RSSI ": %d%% (%d dBm)\n" D_AP ": %s'><div class='arc a3%s'></div><div class='arc a2%s'></div><div class='arc a1%s'></div><div class='arc a0'></div></div>"),
+                          SettingsTextEscaped(SET_STASSID1 + Settings->sta_active).c_str(),
                           WifiGetRssiAsQuality(rssi), rssi,
+                          WiFi.BSSIDstr().c_str(),
                           rssi < -55 ? " o30" : "",
                           rssi < -70 ? " o30" : "",
                           rssi < -85 ? " o30" : "");
@@ -2631,10 +2638,10 @@ void HandleWifiConfiguration(void) {
                   uint8_t rssi_as_quality = WifiGetRssiAsQuality(rssi);
                   uint8_t num_bars = changeUIntScale(rssi_as_quality, 0, 100, 0, 4);
 
-                  WSContentSend_P(PSTR("<div title='%d%% (%d dBm)'>"), rssi_as_quality, rssi);
+                  WSContentSend_P(PSTR("<div>"));
                   if (limitScannedNetworks) {
                     // Print SSID and item
-                    WSContentSend_P(PSTR("<a href='#p' onclick='c(this)'>%s</a><span class='q'><div class='si'>"), HtmlEscape(ssid_copy).c_str());
+                    WSContentSend_P(PSTR("<a href='#p' onclick='c(this)'>%s</a><span title='%d%% (%d dBm)' class='q'><div class='si'>"), HtmlEscape(ssid_copy).c_str(), rssi_as_quality, rssi);
                     ssid_showed++;
                     skipduplicated = true; // For the simplified page, just show 1 SSID if there are many Networks with the same
 #ifdef USE_HIGHLIGHT_CONNECTED_AP
@@ -2642,8 +2649,9 @@ void HandleWifiConfiguration(void) {
 #endif
                   } else {
                     // Print item
-                    WSContentSend_P(PSTR("%s<span class='q'>(%d) <div class='si'>"),
+                    WSContentSend_P(PSTR("%s<span title='%d%% (%d dBm)' class='q'>(%d) <div class='si'>"),
                       WiFi.BSSIDstr(indices[j]).c_str(),
+                      rssi_as_quality, rssi,
                       WiFi.channel(indices[j]));
 #ifdef USE_HIGHLIGHT_CONNECTED_AP
                     HighlightAP = WiFi.BSSIDstr(indices[j]) == WiFi.BSSIDstr();
@@ -2899,7 +2907,7 @@ void HandleOtherConfiguration(void) {
   }
 
 #ifdef USE_EMULATION
-#if defined(USE_EMULATION_WEMO) || defined(USE_EMULATION_HUE)
+#if defined(USE_EMULATION_WEMO) || defined(USE_EMULATION_HUE) || defined(USE_EMULATION_SHELLY)
   WSContentSend_P(PSTR("<p></p>"));  // Keep close to Friendlynames so do not use <br>
   WSContentSend_P(HTTP_FIELDSET_LEGEND, PSTR(D_EMULATION));
   WSContentSend_P(PSTR("<p>"));      // Keep close to Friendlynames so do not use <br>
@@ -2910,16 +2918,19 @@ void HandleOtherConfiguration(void) {
 #ifndef USE_EMULATION_HUE
     if (i == EMUL_HUE) { i++; }
 #endif
+#ifndef USE_EMULATION_SHELLY
+    if (i == EMUL_SHELLY) { i++; }
+#endif
     if (i < EMUL_MAX) {
       WSContentSend_P(PSTR("<label><input id='r%d' name='b2' type='radio' value='%d'%s><b>%s</b> %s</label><br>"),  // Different id only used for labels
         i, i,
         (i == Settings->flag2.emulation) ? PSTR(" checked") : "",
         GetTextIndexed(stemp, sizeof(stemp), i, kEmulationOptions),
-        (i == EMUL_NONE) ? "" : (i == EMUL_WEMO) ? PSTR(D_SINGLE_DEVICE) : PSTR(D_MULTI_DEVICE));
+        (i == EMUL_NONE) ? "" : (i == EMUL_HUE) ? PSTR(D_MULTI_DEVICE) : PSTR(D_SINGLE_DEVICE));
     }
   }
   WSContentSend_P(PSTR("</p></fieldset>"));
-#endif  // USE_EMULATION_WEMO || USE_EMULATION_HUE
+#endif  // USE_EMULATION_WEMO || USE_EMULATION_HUE || USE_EMULATION_SHELLY
 #endif  // USE_EMULATION
 
   WSContentSend_P(HTTP_FORM_END);
@@ -2955,9 +2966,9 @@ bool OtherSaveSettings(void) {
   }
 
 #ifdef USE_EMULATION
-#if defined(USE_EMULATION_WEMO) || defined(USE_EMULATION_HUE)
+#if defined(USE_EMULATION_WEMO) || defined(USE_EMULATION_HUE) || defined(USE_EMULATION_SHELLY)
   cmnd += AddWebCommand(PSTR(D_CMND_EMULATION), PSTR("b2"), PSTR("0"));
-#endif  // USE_EMULATION_WEMO || USE_EMULATION_HUE
+#endif  // USE_EMULATION_WEMO || USE_EMULATION_HUE || USE_EMULATION_SHELLY
 #endif  // USE_EMULATION
 
   if (tmpl.length() && (tmpl.length() < MQTT_MAX_PACKET_SIZE)) {
@@ -4322,16 +4333,21 @@ void CmndWebTime(void) {
 /*-------------------------------------------------------------------------------------------*/
 
 void CmndEmulation(void) {
-#if defined(USE_EMULATION_WEMO) || defined(USE_EMULATION_HUE)
-#if defined(USE_EMULATION_WEMO) && defined(USE_EMULATION_HUE)
+#if defined(USE_EMULATION_WEMO) || defined(USE_EMULATION_HUE) || defined(USE_EMULATION_SHELLY)
+#if defined(USE_EMULATION_WEMO) && defined(USE_EMULATION_HUE) && defined(USE_EMULATION_SHELLY)
   if ((XdrvMailbox.payload >= EMUL_NONE) && (XdrvMailbox.payload < EMUL_MAX)) {
 #else
-#ifndef USE_EMULATION_WEMO
-  if ((EMUL_NONE == XdrvMailbox.payload) || (EMUL_HUE == XdrvMailbox.payload)) {
+  if ((EMUL_NONE == XdrvMailbox.payload)
+#ifdef USE_EMULATION_WEMO
+      || (EMUL_WEMO == XdrvMailbox.payload)
 #endif
-#ifndef USE_EMULATION_HUE
-  if ((EMUL_NONE == XdrvMailbox.payload) || (EMUL_WEMO == XdrvMailbox.payload)) {
+#ifdef USE_EMULATION_HUE
+      || (EMUL_HUE == XdrvMailbox.payload)
 #endif
+#ifdef USE_EMULATION_SHELLY
+      || (EMUL_SHELLY == XdrvMailbox.payload)
+#endif
+     ) {
 #endif
     Settings->flag2.emulation = XdrvMailbox.payload;
     TasmotaGlobal.restart_flag = 2;
