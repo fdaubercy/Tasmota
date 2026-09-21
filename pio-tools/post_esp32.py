@@ -201,6 +201,20 @@ def esp32_build_filesystem(fs_size):
                 os.remove(cible)
                 print(Fore.YELLOW + "Exclu du filesystem (deja solidifie) : " + os.path.basename(s))
 
+    # Liste noire explicite : .be non solidifies que l'utilisateur ne veut pas embarquer.
+    # TOUJOURS appliquee (choix explicite), sans garde opt-in, comme dans copy_fs_image
+    # (pre_utilitaires_platformio.py:modules_exclus).
+    try:
+        exclus = env.GetProjectOption("custom_files_exclude").splitlines()
+    except Exception:
+        exclus = []
+    for s in exclus:
+        s = s.strip()
+        cible = os.path.join(filesystem_dir, os.path.basename(s))
+        if s and os.path.isfile(cible):
+            os.remove(cible)
+            print(Fore.YELLOW + "Exclu du filesystem (liste noire custom_files_exclude) : " + os.path.basename(s))
+
     if not os.listdir(filesystem_dir):
         print(Fore.RED + "Pas de fichiers ajoutés -> Nous ne créerons pas 'littlefs.bin' & n'écraserons pas le fs de partition!")
         return False

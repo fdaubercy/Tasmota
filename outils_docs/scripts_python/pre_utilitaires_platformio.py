@@ -466,6 +466,22 @@ def list_files_recursive(folder):
 
     return files_list
 
+def _noms_fichiers_option(nom_option):
+    """Noms de base (sans chemin) des fichiers listés dans une option d'env multi-lignes.
+
+    Option absente : GetProjectOption lève, on renvoie set() — c'est le cas courant, et
+    c'est ce que fait aussi pio-tools/solidify-from-url.py:154.
+    """
+    try:
+        brut = env.GetProjectOption(nom_option)
+    except Exception:
+        return set()
+    if not brut:
+        return set()
+    lignes = brut.splitlines() if isinstance(brut, str) else list(brut)
+    return {os.path.basename(l.strip()) for l in lignes if l.strip()}
+
+
 def modules_solidifies():
     """Noms de fichiers déclarés dans `custom_berry_solidify` pour CET environnement.
 
@@ -480,18 +496,19 @@ def modules_solidifies():
     (data/fs/gestionFileFolder.be:378 : `else return true` si le .be est absent).
     Aucune ligne de Berry à modifier, aucune double comptabilité : la déclaration
     `custom_berry_solidify` de l'env commande tout.
-
-    L'option est absente de la plupart des envs : GetProjectOption lève alors, d'où le
-    try/except — c'est ce que fait aussi pio-tools/solidify-from-url.py:154.
     """
-    try:
-        brut = env.GetProjectOption("custom_berry_solidify")
-    except Exception:
-        return set()            # env sans solidification : le cas courant
-    if not brut:
-        return set()
-    lignes = brut.splitlines() if isinstance(brut, str) else list(brut)
-    return {os.path.basename(l.strip()) for l in lignes if l.strip()}
+    return _noms_fichiers_option("custom_berry_solidify")
+
+
+def modules_exclus():
+    """Liste noire explicite : fichiers listés dans `custom_files_exclude`.
+
+    Complément de `custom_berry_solidify` : ces .be NE sont PAS solidifiés mais l'utilisateur
+    choisit malgré tout de ne pas les embarquer sur le LittleFS (bibliothèque data/fs/ trop
+    large pour la partition, module en sommeil, etc.). Contrairement à l'exclusion des
+    solidifiés, c'est un choix explicite : il s'applique TOUJOURS, sans garde opt-in.
+    """
+    return _noms_fichiers_option("custom_files_exclude")
 
 
 def copy_fs_image(source, target, env):
@@ -528,8 +545,11 @@ def copy_fs_image(source, target, env):
                 if os.path.isdir(source_dir_path) and item in Global.ignore_dirs :
                     print(Fore.GREEN + f"✔ Dossier ignoré (mais fichiers copiés à la racine) : {source_dir_path}")
 
-                    # Modules déjà dans le firmware : inutile de les envoyer aussi sur le FS
+                    # Modules déjà dans le firmware : inutile de les envoyer aussi sur le FS.
+                    # + liste noire explicite (custom_files_exclude) : .be non solidifiés
+                    #   que l'utilisateur choisit malgré tout de ne pas embarquer.
                     solidifies = modules_solidifies()
+                    exclus = modules_exclus()
 
                     # Copier uniquement les fichiers directement dans ce dossier
                     for subitem in os.listdir(source_dir_path):
@@ -538,6 +558,9 @@ def copy_fs_image(source, target, env):
                         if os.path.isfile(sub_src):
                             if subitem in solidifies:
                                 print(Fore.CYAN + f"  → Solidifié dans le firmware, non copié sur le LittleFS : {subitem}")
+                                continue
+                            if subitem in exclus:
+                                print(Fore.CYAN + f"  → Liste noire (custom_files_exclude), non copié sur le LittleFS : {subitem}")
                                 continue
 
                             flat_dst = os.path.join(dest_root, subitem)
