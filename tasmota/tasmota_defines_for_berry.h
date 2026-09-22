@@ -213,6 +213,7 @@
 #define D_SENSOR_SM2335_DAT "SM2335 Dat"
 #define SEND_RC6 true
 #define D_NEOPOOL_RELAY_AUX "Aux"
+#define D_MANUAL "Manual"
 #define USE_VEML6070_RSET 270000
 #define D_CCT "CCT"
 #define D_DOMOTICZ_POWER_ENERGY "Puissance,Énergie"
@@ -451,6 +452,7 @@
 #define D_SENSOR_DYP_RX "DYP Rx"
 #define WIFI_DEFAULT_HOSTNAME "%s-%04d"
 #define D_JSON_REMAINING "Remaining"
+#define BE_LV_WIDGET_STRIPES 
 #define D_SENSOR_ME007_TRIG "ME007 Tri"
 #define D_SENSOR_WE517_TX "WE517 Tx"
 #define D_SENSOR_I2S_WS_IN "I2S BClk In"
@@ -620,6 +622,7 @@
 #define D_JSON_BUSY "Busy"
 #define D_FP_FLASHERR "Erreur d'écriture en Flash"
 #define SDC_HIDE_INVISIBLES 
+#define D_SENSOR_MIEL_HVAC_MB_TX "MiEl HVAC MB Tx"
 #define D_SENSOR_CM11_RX "CM110x Rx"
 #define SUB_PREFIX "cmnd"
 #define D_CMND_SUNRISE "Sunrise"
@@ -796,6 +799,7 @@
 #define D_DECIMAL_SEPARATOR ","
 #define KEY_DISABLE_MULTIPRESS false
 #define D_SENSOR_C8_CO2_5K_TX "C8-CO2-5K Tx"
+#define D_SENSOR_MCP2515_CS "MCP2515 CS"
 #define APP_LEDSTATE LED_POWER
 #define D_PROGRAM_FLASH_SIZE "Taille Flash Programme"
 #define memcpy_P memcpy
@@ -876,6 +880,7 @@
 #define D_CMND_RFLOW "Low"
 #define SHELLY_FW_UPGRADE 
 #define D_PASSWORD "Mot de passe"
+#define D_SENSOR_MIEL_HVAC_MB_TXEN "MiEl HVAC MB DE"
 #define D_CMND_ADCGPIO "Gpio"
 #define D_CMND_SHIFT595_DEVICE_COUNT "Shift595DeviceCount"
 #define D_SENSOR_HRG15_RX "HRG15 Rx"
@@ -1039,6 +1044,7 @@
 #define __INT_FAST32_MAX__ 0x7fffffff
 #define D_GPIO_SHIFT595_OE "74x595 OE"
 #define KEY_HOLD_TIME 40
+#define D_HOLIDAY "Holiday"
 #define D_UNIT_DEGREE "°"
 #define __DBL_HAS_INFINITY__ 1
 #define D_SENSOR_ETH_PHY_MDIO "ETH MDIO"
@@ -1536,6 +1542,7 @@
 #define PCF8574_INVERT_PORTS false
 #define D_SAT_FIX_TIME "Time only fix"
 #define D_CMND_SSERIALMODE "SSerialMode"
+#define D_SHELLY "Shelly"
 #define D_HTML_LANGUAGE "fr"
 #define D_NEOPOOL_TYPE "Type"
 #define USE_ELECTRIQ_MOODL 
@@ -1568,7 +1575,7 @@
 #define D_SENSOR_BIOPDU_PZEM0XX_TX "BioPDU PZEM0XX Tx"
 #define USE_SDM120 
 #define FM24CXX_BLOCK_SIZE 256
-#define CFG_HOLDER 1357
+#define CFG_HOLDER 1361
 #define D_MODULE "Module"
 #define D_SENSOR_WS2812 "WS2812"
 #define D_SO_MQTTTLS "MqttTLS"
@@ -1670,6 +1677,7 @@
 #define RGB_REMAP_GBRW 30
 #define D_NEOPOOL_STATUS_OFF "OFF"
 #define D_ZIGBEE_RESET_1_OR_2 "Réinitialiser 1 ou 2"
+#define D_SENSOR_MIEL_HVAC_MB_RX "MiEl HVAC MB Rx"
 #define D_SENSOR_I2C_SCL "I2C SCl"
 #define USE_ADE7953 
 #define D_SENSOR_AS608_TX "AS608 Tx"
@@ -1774,7 +1782,7 @@
 #define __GNUC_WIDE_EXECUTION_CHARSET_NAME "UTF-16LE"
 #define APP_PULSETIME 0
 #define D_CURRENT_TARIFF "Tarif en cours"
-#define D_KNX_PHYSICAL_ADDRESS_NOTE "(Doit être unique sur le réseau KNX)"
+#define D_LOW "Low"
 #define D_SENSOR_ADC_BUTTON "ADC Bouton"
 #define __INT8_TYPE__ signed char
 #define D_RESTART_REASON "Raison du redémarrage"
@@ -1998,6 +2006,7 @@
 #define HOME_ASSISTANT_LWT_TOPIC "homeassistant/status"
 #define __FLT_MAX_10_EXP__ 38
 #define USER_FTP "fdaubercy"
+#define D_AUTOMATIC "Automatic"
 #define USE_ALPINEJS 
 #define D_NEOPOOL_MACH_UVSCENIC "UVScenic"
 #define MQTT_SOCKET_TIMEOUT 4
@@ -2315,7 +2324,7 @@
 #define D_SCRIPT_UPLOAD "Envoi"
 #define D_CMND_WEBQUERY "WebQuery"
 #define D_GPIO "GPIO"
-#define D_SENSOR_ADE7880_IRQ "ADE7880 IRq"
+#define D_KNX_PHYSICAL_ADDRESS_NOTE "(Doit être unique sur le réseau KNX)"
 #define __FLT32_DECIMAL_DIG__ 9
 #define USE_BME68X 
 #define D_JSON_ACTIVE_POWERUSAGE "ActivePower"
@@ -2646,6 +2655,7 @@
 #define D_SO_ZIGBEE_NAMETOPIC "NameTopic"
 #define D_JSON_VERSION "Version"
 #define D_EXPORT "Export"
+#define D_NA "N/A"
 #define __FLT64_HAS_DENORM__ 1
 #define D_CMND_ZIGBEE_MAP "Map"
 #define D_JSON_REFERENCETEMPERATURE "ReferenceTemperature"
@@ -2883,7 +2893,7 @@
 #define D_CONTRACT "Type de contrat"
 #define D_SO_ZIGBEE_ENDPOINTTOPIC "EndpointTopic"
 #define USE_MP3_PLAYER 
-#define D_SENSOR_MCP2515_CS "MCP2515 CS"
+#define D_SENSOR_ADE7880_IRQ "ADE7880 IRq"
 #define BE_LV_WIDGET_ARCLABEL 
 #define D_JSON_RESTARTREASON "RestartReason"
 #define __XCHAL_HAVE_ABS 1
