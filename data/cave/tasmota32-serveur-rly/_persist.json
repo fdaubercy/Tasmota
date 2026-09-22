@@ -180,6 +180,7 @@
 							"modules": ["pompeVideCave"],
 							"ids": [1],
 							"type": "Switch",
+							"delai": 0,
 							"delaiSiON": [
 								0
 							],
@@ -208,6 +209,7 @@
 							"modules": ["pompeVideCave"],
 							"ids": [1],
 							"type": "Switch",
+							"delai": 0,
 							"delaiSiON": [
 								0
 							],
@@ -320,7 +322,8 @@
 						"relaisLie": {
 							"modules": ["pompeVideCave"],
 							"ids": [1],
-							"type": "ON/OFF",
+							"type": "OFF",
+							"delai": 0,
 							"delaiSiON": [
 								0
 							],
@@ -345,17 +348,18 @@
 						"relaisLie": {
 							"modules": ["pompeVideCave"],
 							"ids": [1],
-							"type": "ON/OFF",
+							"type": "ON",
+							"delai": 0,
 							"delaiSiON": [
-								"ON"
+								0
 							],
 							"delaiSiOFF": [
 								0
 							],
-							"etatSiON": [],
-							"etatSiOFF": [
-								0
-							]
+							"etatSiON": [
+								"ON"
+							],
+							"etatSiOFF": []
 						}
 					}
 				},
@@ -620,6 +624,7 @@
 							"modules": ["Thermo-Hygrometre"],
 							"ids": [2],
 							"type": "ON/OFF",
+							"delai": 0,
 							"delaiSiON": [
 								0
 							],
@@ -664,6 +669,7 @@
 							"modules": ["autres"],
 							"ids": [3],
 							"type": "Switch",
+							"delai": 0,
 							"delaiSiON": [
 								0
 							],
