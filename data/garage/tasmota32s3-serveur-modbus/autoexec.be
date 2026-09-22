@@ -3,7 +3,7 @@ import persist
 import partition_wizard        # Importe la librairie Partition_Wizard
 
 # Recense toutes les variables globales
-var controleGeneral
+var controleGeneral = {}
 
 # Déclaration des variables de LOG
 LOG_LEVEL_ERREUR = 1
@@ -26,7 +26,7 @@ import gestionFileFolder
 gestionFileFolder.listeEtRepartitLesFichiers()
 
 # Vérifie si le persist.json est présent et paramétré
-if (persist._p != nil || persist._p != {})
+if (persist._p != nil && persist._p.size() != 0)
     # Compile autoexec.be & les modules
     gestionFileFolder.compileModule("/configGlobal", "ON")
     gestionFileFolder.compileModule("/configDevices", "ON")
@@ -49,13 +49,26 @@ if (persist._p != nil || persist._p != {})
     gestionFileFolder.compileModule("/partition_wizard", "ON")
 
     # Charge les Drivers nécessaires au fonctionnement diu module Tasmota
-    gestionFileFolder.loadBerryFile("/controleGeneral", "ON", "ON")
-    gestionFileFolder.loadBerryFile("/controleLedTemoin", "ON", "ON")
+    # controleGeneral/LedTemoin/Web sont SOLIDIFIES : charges par 'import' (version en
+    # FLASH via load_native) + init(), au lieu de loadBerryFile (qui recompile en RAM).
+    # init() publie l'instance dans global.controleXxx et fait add_driver, comme avant.
+    # Garder controleGeneral AVANT i2c_ads1115 (lit controleGeneral.nbIOActivesJSON).
+    do
+        import controleGeneral as _ctrl
+        _ctrl.init()
+    end
+    do
+        import controleLedTemoin as _ctrl
+        _ctrl.init()
+    end
     gestionFileFolder.loadBerryFile("/i2c_ads1115", drivers["I2C"]["environnement"]["ADS1115"].find("activation", "OFF"), "ON")
     gestionFileFolder.loadBerryFile("/i2c_mcp23017", drivers["I2C"]["environnement"]["MCP23017"].find("activation", "OFF"), "ON")
     gestionFileFolder.loadBerryFile("/modBus_Conn16channel", drivers["ModBus"]["environnement"]["Conn16channel"].find("activation", "OFF"), "ON")
     gestionFileFolder.loadBerryFile("/modBus_TasmotaSlaveModBus", drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"].find("activation", "ON"), "ON")
-    gestionFileFolder.loadBerryFile("/controleWeb", serveur.find("activation", "OFF"), "ON")
+    do
+        import controleWeb as _ctrl
+        _ctrl.init()
+    end
     gestionFileFolder.loadBerryFile("/controleUDP", serveur["udp"].find("activation", "OFF"), "ON")
     gestionFileFolder.loadBerryFile("/controleTCP", serveur["tcp"].find("activation", "OFF"), "ON")
     gestionFileFolder.loadBerryFile("/controleModbus", drivers["ModBus"].find("activation", "OFF"), "ON")

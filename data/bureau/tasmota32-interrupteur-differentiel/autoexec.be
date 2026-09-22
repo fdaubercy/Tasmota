@@ -26,7 +26,7 @@ import gestionFileFolder
 gestionFileFolder.listeEtRepartitLesFichiers()
 
 # Vérifie si le persist.json est présent et paramétré
-if (persist._p != nil || persist._p != {})
+if (persist._p != nil && persist._p.size() != 0)
     # Compile autoexec.be & les modules
     gestionFileFolder.compileModule("/autoexec", "ON")
     gestionFileFolder.compileModule("/configGlobal", "ON")
