@@ -256,6 +256,10 @@ Pour ne pas chercher : ce qui a ete produit et ou.
 - `outils_docs/PROTOCOLE_MODBUS.md` — ModBus RTU/TCP standard, implementation maison (3 transports
   Serie/UDP/TCP), extension esclave->maitre, failles du mecanisme d'envoi, design de queue FIFO,
   carte des registres de la carte 16 relais (§8), architecture de synchronisation (§9).
+- `outils_docs/ANALYSE_BERRY_MODBUS_DISCOVERY.md` — fonctionnement des programmes ModBus
+  Berry (3 transports, carte 16 relais, ESP32<->ESP32, push esclave->maitre) + audit de la
+  table `/json/discovery.json` : formes ecrites/lues, 3 defauts bloquants la resolution
+  d'IP en UDP, et tableau des elements restant a parametrer (importance/priorite/difficulte).
 - `outils_docs/Electronique/Connecteur ModBus/` — docs constructeur de la carte 16 relais
   (`... commamd.docx` = jeu de commandes, `... Manual.docx` = caracteristiques).
 - `docs/superpowers/specs/2026-07-15-solidification-berry-verdict.md` — verdict Q1/Q2/Q3.
