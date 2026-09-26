@@ -55,6 +55,7 @@ from os.path import isfile, join
 from enum import Enum
 from colorama import Back, Fore, Style, deinit, init
 import atexit
+from SCons.Script import GetBuildFailures
 
 # Initialise colorama
 # init(autoreset=True)
@@ -586,6 +587,10 @@ def copy_fs_image(source, target, env):
 
         except Exception as e:
             print(Fore.RED + f"✗ Erreur lors de la copie: {e}")
+            # Relancer : avaler l'erreur laisserait construire ET flasher un LittleFS incomplet,
+            # sans autre signe que cette ligne noyée dans le log. L'échec fait tomber la cible
+            # SCons ; le nettoyage reste assuré par atexit (remove_backup_data).
+            raise
 
 def remove_backup_data(source, target, env):
     # Ne faire la suite que si la target est compris dans ce tableau
@@ -623,9 +628,17 @@ def remove_backup_data(source, target, env):
                         print(Fore.GREEN + f"✔ Suppression dossier temporaire : {root}")
                         shutil.rmtree(root, ignore_errors=True)
 
-            # Marque le succès du script
-            Global.build_success = True
-            print(Fore.GREEN + "✔ Build/upload réussi")
+            print(Fore.GREEN + "✔ Fichiers temporaires nettoyés")
+
+            # Appelée par atexit, donc AUSSI après un échec : le statut réel se lit dans SCons,
+            # pas dans le simple fait d'arriver ici (sinon « réussi » juste avant [FAILED]).
+            echecs = GetBuildFailures()
+            Global.build_success = not echecs
+            if echecs:
+                for e in echecs:
+                    print(Fore.RED + f"✗ Build/upload en ÉCHEC : {e.node} -> {e.errstr}")
+            else:
+                print(Fore.GREEN + "✔ Build/upload réussi")
 
         except Exception as e:
             print(Fore.RED + f"✗ Erreur lors de la suppression: {e}")
