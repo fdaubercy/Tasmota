@@ -65,7 +65,7 @@ from SCons.Script import GetBuildFailures
 # ============================================================
 class Global:
     environnement = env.subst('$PIOENV')
-    liste_fichiers_exclus = [],                     # Fichiers déjà présents avant la copie des fichiers temporaires
+    liste_fichiers_exclus = None                    # Fichiers déjà présents avant la copie ; None = copy_fs_image n'a pas tourné
     ignore_dirs = ["fs"],                           # Dossier pour lequel les fichiers sont copiés à la racine
     dossiers_a_copier = ["fs", "json", "sd"],       # Dossiers globaux à copie temporairement avant upload
     build_success = False
@@ -600,48 +600,56 @@ def remove_backup_data(source, target, env):
     is_optimized_targets = any(target in argv_string for target in optimized_targets)
     if is_optimized_targets:
         try:
-            # Normaliser les chemins (séparateurs, .., etc.) des fichiers à conserver
-            keep_set = {os.path.normpath(p) for p in Global.liste_fichiers_exclus}
-
-            dest_dir = transform_name(Global.environnement)
-            for root, dirs, files in os.walk(dest_dir, topdown=False):
-                root_rel = os.path.relpath(root, dest_dir)
-
-                # === 1. Suppression des fichiers ===
-                for f in files:
-                    file_rel = os.path.normpath(os.path.join(root_rel, f)) if root_rel != "." else f
-                    if file_rel not in keep_set:
-                        full_path = os.path.join(root, f)
-                        print(Fore.GREEN + f"✔ Suppression du fichier temporaire : {full_path}")
-                        os.remove(full_path)
-
-                # === 2. Suppression des dossiers vides ===
-                # On supprime un dossier s’il n’est pas nécessaire pour un élément dans keep_list
-                if root_rel != ".":
-                    # Vérifier si un chemin gardé se trouve dans ce dossier
-                    needs_folder = any(
-                        k.startswith(root_rel + os.sep) or k == root_rel
-                        for k in keep_set
-                    )
-
-                    if not needs_folder:
-                        print(Fore.GREEN + f"✔ Suppression dossier temporaire : {root}")
-                        shutil.rmtree(root, ignore_errors=True)
-
-            print(Fore.GREEN + "✔ Fichiers temporaires nettoyés")
-
-            # Appelée par atexit, donc AUSSI après un échec : le statut réel se lit dans SCons,
-            # pas dans le simple fait d'arriver ici (sinon « réussi » juste avant [FAILED]).
-            echecs = GetBuildFailures()
-            Global.build_success = not echecs
-            if echecs:
-                for e in echecs:
-                    print(Fore.RED + f"✗ Build/upload en ÉCHEC : {e.node} -> {e.errstr}")
+            if Global.liste_fichiers_exclus is None:
+                # copy_fs_image n'a pas tourné (firmware.bin déjà à jour -> pas de PreAction) :
+                # aucune copie temporaire à retirer. Surtout NE RIEN supprimer : sans inventaire
+                # préalable, tout le dossier du module (_persist.json, autoexec.be…) passerait
+                # pour temporaire.
+                print(Fore.CYAN + "ℹ Aucune copie temporaire effectuée : rien à nettoyer")
             else:
-                print(Fore.GREEN + "✔ Build/upload réussi")
+                # Normaliser les chemins (séparateurs, .., etc.) des fichiers à conserver
+                keep_set = {os.path.normpath(p) for p in Global.liste_fichiers_exclus}
+
+                dest_dir = transform_name(Global.environnement)
+                for root, dirs, files in os.walk(dest_dir, topdown=False):
+                    root_rel = os.path.relpath(root, dest_dir)
+
+                    # === 1. Suppression des fichiers ===
+                    for f in files:
+                        file_rel = os.path.normpath(os.path.join(root_rel, f)) if root_rel != "." else f
+                        if file_rel not in keep_set:
+                            full_path = os.path.join(root, f)
+                            print(Fore.GREEN + f"✔ Suppression du fichier temporaire : {full_path}")
+                            os.remove(full_path)
+
+                    # === 2. Suppression des dossiers vides ===
+                    # On supprime un dossier s’il n’est pas nécessaire pour un élément dans keep_list
+                    if root_rel != ".":
+                        # Vérifier si un chemin gardé se trouve dans ce dossier
+                        needs_folder = any(
+                            k.startswith(root_rel + os.sep) or k == root_rel
+                            for k in keep_set
+                        )
+
+                        if not needs_folder:
+                            print(Fore.GREEN + f"✔ Suppression dossier temporaire : {root}")
+                            shutil.rmtree(root, ignore_errors=True)
+
+                print(Fore.GREEN + "✔ Fichiers temporaires nettoyés")
 
         except Exception as e:
             print(Fore.RED + f"✗ Erreur lors de la suppression: {e}")
+
+        # Appelée par atexit, donc AUSSI après un échec : le statut réel se lit dans SCons,
+        # pas dans le simple fait d'arriver ici (sinon « réussi » juste avant [FAILED]).
+        echecs = GetBuildFailures()
+        Global.build_success = not echecs
+        if echecs:
+            for e in echecs:
+                print(Fore.RED + f"✗ Build/upload en ÉCHEC : {e.node} -> {e.errstr}")
+        else:
+            print(Fore.GREEN + "✔ Build/upload réussi")
+
 
 # Change la valeur de data_dir dans platformio_tasmota_cenv.ini (Remplacée par 'adapteParametresPlatformio_override()')
 # change_data_dir_in_platformio_ini(path_tasmota_cenv="platformio_tasmota_cenv.ini", new_data_dir=f"{Global.environnement.replace('tasmota','data-tasmota')}", boolModifDataDir=True)
