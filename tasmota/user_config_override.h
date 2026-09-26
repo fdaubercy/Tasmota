@@ -48,7 +48,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
     //  #warning *** ------------------- Le fichier 'user_config_override.ini' est appele ------------------- ***
     #if defined(CFG_HOLDER) && (CFG_HOLDER == 4617)
         #undef CFG_HOLDER
-		#define CFG_HOLDER 		1361			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
+		#define CFG_HOLDER 		1372			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
 
         // #pragma message(*** ------------------- Les paramètres flash seront remplacés ! ------------------- ***)
     #else
@@ -708,7 +708,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #ifdef WIFI_IP_ADDRESS
                 #undef WIFI_IP_ADDRESS
             #endif
-            #define WIFI_IP_ADDRESS         "192.168.0.48"               // [IpAddress1] Set to 0.0.0.0 for using DHCP or enter a static IP address
+            #define WIFI_IP_ADDRESS         "192.168.0.243"               // [IpAddress1] Set to 0.0.0.0 for using DHCP or enter a static IP address
 
             // -- Setup your own RANGE EXTENDER settings  -----
             // Les autres paramètres du RangeExtender sont gérés par la partie 'Post-process compile options' en fin de fichier
