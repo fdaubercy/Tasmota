@@ -54,12 +54,18 @@ if (persist._p != nil && persist._p.size() != 0)
     # FLASH via load_native) + init(), au lieu de loadBerryFile (qui recompile en RAM).
     # init() publie l'instance dans global.controleXxx et fait add_driver, comme avant.
     # Garder controleGeneral AVANT i2c_ads1115 (lit controleGeneral.nbIOActivesJSON).
+    # Chaque init() solidifie retrouve SON module par le nom GLOBAL (GETNGBL), car le code de
+    # niveau fichier du module ne s'execute pas une fois solidifie. Sans la ligne global.xxx,
+    # ce nom vaut la map {} declaree plus haut (ou nil) -> attribute_error au demarrage.
+    # init() remplace ensuite cette globale par l'instance du driver.
     do
         import controleGeneral as _ctrl
+        global.controleGeneral = _ctrl
         _ctrl.init()
     end
     do
         import controleLedTemoin as _ctrl
+        global.controleLedTemoin = _ctrl
         _ctrl.init()
     end
     gestionFileFolder.loadBerryFile("/i2c_ads1115", drivers["I2C"]["environnement"]["ADS1115"].find("activation", "OFF"), "ON")
@@ -68,6 +74,7 @@ if (persist._p != nil && persist._p.size() != 0)
     gestionFileFolder.loadBerryFile("/modBus_TasmotaSlaveModBus", drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"].find("activation", "ON"), "ON")
     do
         import controleWeb as _ctrl
+        global.controleWeb = _ctrl
         _ctrl.init()
     end
     gestionFileFolder.loadBerryFile("/controleUDP", serveur["udp"].find("activation", "OFF"), "ON")
