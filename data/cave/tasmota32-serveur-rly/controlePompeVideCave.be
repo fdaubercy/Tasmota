@@ -101,6 +101,46 @@ class CONTROLE_POMPE_VIDE_CAVE : Driver
 
         tasmota.web_send(msg)
     end
+
+    # Etat complet de la pompe, pour la commande 'EtatPompe' (lue par Node-RED -> Telegram)
+    def etat()
+        var pompe = modules["pompeVideCave"]
+        var relai = pompe["environnement"]["relais"]["relai1"]
+        var horodatage = relai["timestamp"]
+        var maintenant = tasmota.rtc()["local"]
+        var sensors = controleGeneral.lectureSensors()
+
+        var reste = 0
+        if (relai.find("etat", "OFF") == "ON" && relai.find("timer", 0) != 0 && horodatage.find("ON", 0) != 0)
+            reste = horodatage["ON"] + relai["timer"] - maintenant
+            if (reste < 0)    reste = 0    end
+        end
+
+        var niveaux = {}
+        var capteurs = pompe["environnement"]["capteurs"]
+        for cleCapteur: capteurs.keys()
+            if (type(capteurs[cleCapteur]) != "instance" || capteurs[cleCapteur].find("activation", "OFF") != "ON")    continue    end
+            niveaux[capteurs[cleCapteur].find("nom", cleCapteur)] = sensors.find("Switch" + str(capteurs[cleCapteur]["id"]), "?")
+        end
+
+        return {
+            "Pompe": relai.find("etat", "OFF"),
+            "ArretSecuriteDans": reste,
+            "Relance": controleGeneral.relances.find("pompeVideCave_" + str(relai["id"]), 0),
+            "MaxRelances": relai.find("relance", {}).find("maxRelances", 3),
+            "Niveaux": niveaux,
+            "DerniereMiseEnRoute": affiche_heure(horodatage.find("ON", 0)),
+            "CyclesJour": (horodatage.find("jourCycles", -1) == maintenant / 86400 ? horodatage.find("nbCyclesJour", 0) : 0),
+            "Alerte": relai.find("alerte", "")
+        }
+    end
+
+    # Efface l'alerte et le compteur de relances (commande 'AcquittePompe')
+    def acquitte()
+        var relai = modules["pompeVideCave"]["environnement"]["relais"]["relai1"]
+        controleGeneral.acquitteRelance("pompeVideCave", relai)
+        relai["alerte"] = ""
+    end
 end
 
 # Active le Driver uniquement si le module 'pompeVideCave' est active
@@ -111,4 +151,17 @@ if (modules["pompeVideCave"].find("activation", "OFF") == "ON")
     import global
     global.controlePompeVideCave = CONTROLE_POMPE_VIDE_CAVE()
     tasmota.add_driver(global.controlePompeVideCave)
+
+    # Commandes Tasmota (console, HTTP, MQTT cmnd/<topic>/...) : reponse sur stat/<topic>/RESULT
+    #   EtatPompe      -> {"EtatPompe": {"Pompe": "ON", "Niveaux": {...}, "Alerte": "", ...}}
+    #   AcquittePompe  -> efface l'alerte et le compteur de relances, puis renvoie l'etat
+    tasmota.add_cmd("EtatPompe", def(cmd, idx, payload, payload_json)
+        import json
+        tasmota.resp_cmnd(json.dump({"EtatPompe": global.controlePompeVideCave.etat()}))
+    end)
+    tasmota.add_cmd("AcquittePompe", def(cmd, idx, payload, payload_json)
+        import json
+        global.controlePompeVideCave.acquitte()
+        tasmota.resp_cmnd(json.dump({"AcquittePompe": "OK", "EtatPompe": global.controlePompeVideCave.etat()}))
+    end)
 end

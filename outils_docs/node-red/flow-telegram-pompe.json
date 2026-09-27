@@ -1,0 +1,329 @@
+[
+  {
+    "id": "tg_pompe_tab",
+    "type": "tab",
+    "label": "Telegram - Pompe vide-cave",
+    "disabled": false,
+    "info": "Notifications Telegram de la pompe vide-cave (carte SERVEUR-RLY-CAVE).\n\nA REGLER A L'IMPORT :\n1. Noeud de configuration du bot 'MaisonBot' : coller le TOKEN donne par @BotFather\n   (champ Token). Il n'est jamais ecrit dans ce fichier.\n2. Noeud de configuration MQTT 'Mosquitto local' : identifiant et mot de passe\n   Mosquitto (onglet Security). Si un broker existe deja dans Node-RED, le choisir\n   dans les noeuds MQTT et supprimer celui-ci.\n3. Module requis : node-red-contrib-telegrambot. Le Pi tourne en Node 16 : la palette\n   installe la derniere version (Node >= 22) et ECHOUE (EBADENGINE). Installer en SSH\n   la derniere version compatible Node 16 :\n     cd ~/.node-red && npm install --save node-red-contrib-telegrambot@17.4.11\n     sudo systemctl restart nodered\n\nVariables de l'onglet (Proprietes de l'onglet > Environment) :\n- CHAT_ID    : seul chat autorise a recevoir et a commander.\n- TOPIC_CAVE : topic Tasmota de la carte (sans prefixe cmnd/stat/tele).\n\nCommandes : /etat, /acquitter, /pompe on, /pompe off.\nCote carte : commandes Berry EtatPompe et AcquittePompe (controlePompeVideCave.be).",
+    "env": [
+      {
+        "name": "CHAT_ID",
+        "value": "6178496573",
+        "type": "str"
+      },
+      {
+        "name": "TOPIC_CAVE",
+        "value": "cave/serveur-rly-cave-v2",
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "id": "tg_pompe_note",
+    "type": "comment",
+    "z": "tg_pompe_tab",
+    "name": "A REGLER : token du bot + identifiants MQTT (voir info de l'onglet)",
+    "info": "Notifications Telegram de la pompe vide-cave (carte SERVEUR-RLY-CAVE).\n\nA REGLER A L'IMPORT :\n1. Noeud de configuration du bot 'MaisonBot' : coller le TOKEN donne par @BotFather\n   (champ Token). Il n'est jamais ecrit dans ce fichier.\n2. Noeud de configuration MQTT 'Mosquitto local' : identifiant et mot de passe\n   Mosquitto (onglet Security). Si un broker existe deja dans Node-RED, le choisir\n   dans les noeuds MQTT et supprimer celui-ci.\n3. Module requis : node-red-contrib-telegrambot. Le Pi tourne en Node 16 : la palette\n   installe la derniere version (Node >= 22) et ECHOUE (EBADENGINE). Installer en SSH\n   la derniere version compatible Node 16 :\n     cd ~/.node-red && npm install --save node-red-contrib-telegrambot@17.4.11\n     sudo systemctl restart nodered\n\nVariables de l'onglet (Proprietes de l'onglet > Environment) :\n- CHAT_ID    : seul chat autorise a recevoir et a commander.\n- TOPIC_CAVE : topic Tasmota de la carte (sans prefixe cmnd/stat/tele).\n\nCommandes : /etat, /acquitter, /pompe on, /pompe off.\nCote carte : commandes Berry EtatPompe et AcquittePompe (controlePompeVideCave.be).",
+    "x": 330,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "tg_pompe_in_alerte",
+    "type": "mqtt in",
+    "z": "tg_pompe_tab",
+    "name": "Alerte pompe",
+    "topic": "tele/cave/serveur-rly-cave-v2/ALERTE_POMPE",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "tg_pompe_broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 150,
+    "y": 100,
+    "wires": [
+      [
+        "tg_pompe_fmt_alerte"
+      ]
+    ]
+  },
+  {
+    "id": "tg_pompe_fmt_alerte",
+    "type": "function",
+    "z": "tg_pompe_tab",
+    "name": "Formate l'alerte",
+    "func": "// Alerte publiee par la carte cave (controleGeneral.publieAlerteRelance)\n// {\"Module\",\"Relai\",\"Evenement\":\"relance\"|\"defaut\",\"Relance\",\"MaxRelances\",\"Message\"}\nconst a = msg.payload || {};\nlet texte;\nif (a.Evenement === 'defaut') {\n    texte = '\\u{1F6A8} *POMPE VIDE-CAVE EN DEFAUT*\\n' + (a.Message || '') +\n            '\\n\\nEnvoie /etat pour verifier, /acquitter une fois le probleme regle.';\n} else if (a.Evenement === 'relance') {\n    texte = '\\u26A0\\uFE0F Pompe vide-cave : relance ' + a.Relance + '/' + a.MaxRelances +\n            '\\n' + (a.Message || '');\n} else {\n    texte = '\\u2139\\uFE0F Pompe vide-cave : ' + JSON.stringify(a);\n}\nmsg.payload = { chatId: env.get('CHAT_ID'), type: 'message', content: texte,\n                options: { parse_mode: 'Markdown' } };\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 100,
+    "wires": [
+      [
+        "tg_pompe_send"
+      ]
+    ]
+  },
+  {
+    "id": "tg_pompe_cmd_etat",
+    "type": "telegram command",
+    "z": "tg_pompe_tab",
+    "name": "/etat",
+    "command": "/etat",
+    "description": "",
+    "registercommand": true,
+    "language": "",
+    "scope": "default",
+    "bot": "tg_pompe_bot",
+    "strict": false,
+    "hasresponse": false,
+    "useregex": false,
+    "removeregexcommand": false,
+    "outputs": 1,
+    "x": 130,
+    "y": 180,
+    "wires": [
+      [
+        "tg_pompe_fn_etat"
+      ]
+    ]
+  },
+  {
+    "id": "tg_pompe_fn_etat",
+    "type": "function",
+    "z": "tg_pompe_tab",
+    "name": "Demande l'etat",
+    "func": "// Refuse toute commande qui ne vient pas du chat autorise (en plus du filtre du bot)\nconst autorise = String(env.get('CHAT_ID'));\nconst chat = String((msg.originalMessage && msg.originalMessage.chat && msg.originalMessage.chat.id) || msg.payload.chatId);\nif (chat !== autorise) {\n    node.warn('Commande refusee depuis le chat ' + chat);\n    return null;\n}\nflow.set('reponseAttendue', Date.now());\nmsg.topic = 'cmnd/' + env.get('TOPIC_CAVE') + '/EtatPompe';\nmsg.payload = '';\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 180,
+    "wires": [
+      [
+        "tg_pompe_out"
+      ]
+    ]
+  },
+  {
+    "id": "tg_pompe_cmd_acq",
+    "type": "telegram command",
+    "z": "tg_pompe_tab",
+    "name": "/acquitter",
+    "command": "/acquitter",
+    "description": "",
+    "registercommand": true,
+    "language": "",
+    "scope": "default",
+    "bot": "tg_pompe_bot",
+    "strict": false,
+    "hasresponse": false,
+    "useregex": false,
+    "removeregexcommand": false,
+    "outputs": 1,
+    "x": 140,
+    "y": 240,
+    "wires": [
+      [
+        "tg_pompe_fn_acq"
+      ]
+    ]
+  },
+  {
+    "id": "tg_pompe_fn_acq",
+    "type": "function",
+    "z": "tg_pompe_tab",
+    "name": "Acquitte l'alerte",
+    "func": "// Refuse toute commande qui ne vient pas du chat autorise (en plus du filtre du bot)\nconst autorise = String(env.get('CHAT_ID'));\nconst chat = String((msg.originalMessage && msg.originalMessage.chat && msg.originalMessage.chat.id) || msg.payload.chatId);\nif (chat !== autorise) {\n    node.warn('Commande refusee depuis le chat ' + chat);\n    return null;\n}\nflow.set('reponseAttendue', Date.now());\nmsg.topic = 'cmnd/' + env.get('TOPIC_CAVE') + '/AcquittePompe';\nmsg.payload = '';\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 240,
+    "wires": [
+      [
+        "tg_pompe_out"
+      ]
+    ]
+  },
+  {
+    "id": "tg_pompe_cmd_pompe",
+    "type": "telegram command",
+    "z": "tg_pompe_tab",
+    "name": "/pompe",
+    "command": "/pompe",
+    "description": "",
+    "registercommand": true,
+    "language": "",
+    "scope": "default",
+    "bot": "tg_pompe_bot",
+    "strict": false,
+    "hasresponse": false,
+    "useregex": false,
+    "removeregexcommand": false,
+    "outputs": 1,
+    "x": 130,
+    "y": 300,
+    "wires": [
+      [
+        "tg_pompe_fn_pompe"
+      ]
+    ]
+  },
+  {
+    "id": "tg_pompe_fn_pompe",
+    "type": "function",
+    "z": "tg_pompe_tab",
+    "name": "Pompe on/off",
+    "func": "// Refuse toute commande qui ne vient pas du chat autorise (en plus du filtre du bot)\nconst autorise = String(env.get('CHAT_ID'));\nconst chat = String((msg.originalMessage && msg.originalMessage.chat && msg.originalMessage.chat.id) || msg.payload.chatId);\nif (chat !== autorise) {\n    node.warn('Commande refusee depuis le chat ' + chat);\n    return null;\n}\n// '/pompe on' ou '/pompe off' (le noeud commande peut laisser ou retirer '/pompe')\nconst texte = String(msg.payload.content || '').replace(/^\\/pompe(@\\S+)?/i, '').trim().toUpperCase();\nif (texte !== 'ON' && texte !== 'OFF') {\n    return [null, { payload: { chatId: env.get('CHAT_ID'), type: 'message',\n                               content: 'Usage : /pompe on  ou  /pompe off' } }];\n}\nflow.set('reponseAttendue', Date.now());\nreturn [{ topic: 'cmnd/' + env.get('TOPIC_CAVE') + '/POWER1', payload: texte }, null];\n",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 300,
+    "wires": [
+      [
+        "tg_pompe_out"
+      ],
+      [
+        "tg_pompe_send"
+      ]
+    ]
+  },
+  {
+    "id": "tg_pompe_out",
+    "type": "mqtt out",
+    "z": "tg_pompe_tab",
+    "name": "Commande carte cave",
+    "topic": "",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "tg_pompe_broker",
+    "x": 660,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "tg_pompe_in_result",
+    "type": "mqtt in",
+    "z": "tg_pompe_tab",
+    "name": "Reponse carte cave",
+    "topic": "stat/cave/serveur-rly-cave-v2/RESULT",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "tg_pompe_broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 160,
+    "y": 380,
+    "wires": [
+      [
+        "tg_pompe_fmt_rep"
+      ]
+    ]
+  },
+  {
+    "id": "tg_pompe_fmt_rep",
+    "type": "function",
+    "z": "tg_pompe_tab",
+    "name": "Formate la reponse",
+    "func": "// Reponses de la carte (stat/<topic>/RESULT). Transmises seulement si une commande\n// Telegram vient d'etre envoyee (< 15 s) : sinon chaque changement de relais serait notifie.\nconst attente = flow.get('reponseAttendue') || 0;\nif (Date.now() - attente > 15000) return null;\n\nconst r = msg.payload || {};\nlet texte = null;\nconst e = r.EtatPompe;\nif (e) {\n    const niveaux = Object.keys(e.Niveaux || {}).map(n => '  - ' + n + ' : ' + e.Niveaux[n]).join('\\n');\n    texte = (r.AcquittePompe ? '\\u2705 Alerte acquittee\\n\\n' : '') +\n            '*Pompe vide-cave* : ' + e.Pompe +\n            (e.Pompe === 'ON' && e.ArretSecuriteDans ? ' (arret de securite dans ' + e.ArretSecuriteDans + ' s)' : '') +\n            (e.Relance ? '\\nRelance en cours : ' + e.Relance + '/' + e.MaxRelances : '') +\n            '\\nNiveaux :\\n' + niveaux +\n            '\\nDerniere mise en route : ' + e.DerniereMiseEnRoute +\n            '\\nCycles du jour : ' + e.CyclesJour +\n            (e.Alerte ? '\\n\\n\\u{1F6A8} ' + e.Alerte : '');\n} else if (r.POWER1) {\n    texte = 'Pompe vide-cave : ' + r.POWER1 +\n            (r.POWER1 === 'ON' ? ' (arret de securite automatique apres la minuterie)' : '');\n}\nif (!texte) return null;\nflow.set('reponseAttendue', 0);\nmsg.payload = { chatId: env.get('CHAT_ID'), type: 'message', content: texte,\n                options: { parse_mode: 'Markdown' } };\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 380,
+    "wires": [
+      [
+        "tg_pompe_send"
+      ]
+    ]
+  },
+  {
+    "id": "tg_pompe_send",
+    "type": "telegram sender",
+    "z": "tg_pompe_tab",
+    "name": "Envoi Telegram",
+    "bot": "tg_pompe_bot",
+    "haserroroutput": false,
+    "outputs": 1,
+    "x": 690,
+    "y": 100,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "tg_pompe_bot",
+    "type": "telegram bot",
+    "botname": "MaisonBot",
+    "usernames": "",
+    "chatids": "6178496573",
+    "baseapiurl": "",
+    "testenvironment": false,
+    "updatemode": "polling",
+    "pollinterval": "300",
+    "usesocks": false,
+    "sockshost": "",
+    "socksprotocol": "socks5",
+    "socksport": "6667",
+    "socksusername": "anonymous",
+    "sockspassword": "",
+    "bothost": "",
+    "botpath": "",
+    "localbotport": "8443",
+    "publicbotport": "8443",
+    "privatekey": "",
+    "certificate": "",
+    "useselfsignedcertificate": false,
+    "sslterminated": false,
+    "verboselogging": false
+  },
+  {
+    "id": "tg_pompe_broker",
+    "type": "mqtt-broker",
+    "name": "Mosquitto local",
+    "broker": "localhost",
+    "port": "1883",
+    "clientid": "",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthPayload": "",
+    "closeTopic": "",
+    "closeQos": "0",
+    "closePayload": "",
+    "willTopic": "",
+    "willQos": "0",
+    "willPayload": ""
+  }
+]
