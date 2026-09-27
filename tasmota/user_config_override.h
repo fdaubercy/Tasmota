@@ -48,7 +48,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
     //  #warning *** ------------------- Le fichier 'user_config_override.ini' est appele ------------------- ***
     #if defined(CFG_HOLDER) && (CFG_HOLDER == 4617)
         #undef CFG_HOLDER
-		#define CFG_HOLDER 		1403			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
+		#define CFG_HOLDER 		1404			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
 
         // #pragma message(*** ------------------- Les paramètres flash seront remplacés ! ------------------- ***)
     #else
@@ -751,10 +751,13 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             // Tasmota relance le FTP d'office a chaque connexion reseau des qu'il a ete active une
             // fois (xdrv_50_filesystem.ino, FUNC_NETWORK_UP). Coherent avec
             // serveurFTP.activation = "OFF" dans le _persist.json de la cave.
-            // TEST 2026-09-27 : FTP reactive pour mesurer si les ~16 Ko liberes cote Berry suffisent.
-            // #ifdef USE_FTP
-            //     #undef USE_FTP
-            // #endif
+            // Test du 2026-09-27 concluant : le FTP plante toujours la carte ESP32 (UfsFtp 2 -> crash).
+            // Il reste en revanche actif sur l'ESP32-S3 N16R8 (PSRAM 8 Mo, tas ~200 Ko) : viable.
+            #if !defined(FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY)
+                #ifdef USE_FTP
+                    #undef USE_FTP
+                #endif
+            #endif
 
             // -- Wi-Fi ---------------------------------------
             #ifdef WIFI_IP_ADDRESS
