@@ -710,9 +710,20 @@ def afficher_version_tasmota():
 afficher_version_tasmota()
 
 # ============================================================
+# 🔌 CIBLE « PONT SERIE » (pioarduino > Project Tasks > <env> > Custom)
+# Lancer le pont n'est PAS un build : ne pas incrementer CFG_HOLDER ni reecrire
+# platformio_override.ini (bloc suivant) quand c'est cette cible qui est demandee.
+# ============================================================
+from SCons.Script import COMMAND_LINE_TARGETS
+sys.path.insert(0, join(env.subst("$PROJECT_DIR"), "outils_docs", "scripts_python"))
+import cible_pont_serie
+cible_pont_serie.enregistre(env)
+lancement_pont_serie = cible_pont_serie.NOM_CIBLE in COMMAND_LINE_TARGETS
+
+# ============================================================
 # ✨ FONCTIONS ACTIVES UNIQUEMENT HORS SAFEBOOT ...
 # ============================================================
-if not is_safeboot:
+if not is_safeboot and not lancement_pont_serie:
     adapteParametresPlatformio_override()
 
     if ("32p4" in Global.environnement) and (any("UPDATE_IDF55_PLATFORM" in f for f in env.get("BUILD_FLAGS", []))):
