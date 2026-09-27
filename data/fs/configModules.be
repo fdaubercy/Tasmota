@@ -170,14 +170,9 @@ def configModules_configDevicesByJon(typologie, gpioPinUtilises, ordreGPIO, temp
 									log(string.format("CONFIG_GLOBAL: Parametrage du mode du capteur ou interrupteur %i = SwitchMode %i!", id, env[cleDevices][cleDev]["SwitchMode"]), LOG_LEVEL_DEBUG)
 									tasmota.cmd(string.format("Backlog SwitchMode%i %i;", id, env[cleDevices][cleDev]["SwitchMode"]), boolMute)
 								end	
-							# Paramètre le mode du bouton : SwitchMode
-							elif cleDevices == "boutons"
-								reponseCMD = tasmota.cmd(string.format("SwitchMode%i", id), boolMute)[string.format("SwitchMode%i", id)]
-								if reponseCMD != env[cleDevices][cleDev]["SwitchMode"]
-									# Quand le circuit est fermé, Tasmota enverra OFF
-									log(string.format("CONFIG_GLOBAL: Parametrage du mode du bouton %i = SwitchMode %i!", id, env[cleDevices][cleDev]["SwitchMode"]), LOG_LEVEL_DEBUG)
-									tasmota.cmd(string.format("Backlog SwitchMode%i %i;", id, env[cleDevices][cleDev]["SwitchMode"]), boolMute)
-								end	
+							# Boutons (GPIO Button, type 32) : PAS de SwitchMode. SwitchMode<id> vise le Switch<id>,
+							# donc le capteur ou l'interrupteur de meme numero : l'ecrire ici ecrasait leur mode.
+							# Le detachement des boutons est gere par SetOption73 (configDevices).
 							# Paramètre le nom d'alias des DS18B20
 							elif cleDevices == "thermometres"
 								if (env[cleDevices][cleDev]["type"] == 1312)

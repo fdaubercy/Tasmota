@@ -365,8 +365,10 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 
 	tasmota.yield()
 
-	# Détache ou attache les boutons et switchs si activés >= 1
-	if nbIOActivesJSON["switchs"]["actives"].find("nb", 0) > 0
+	# Détache ou attache les switchs (interrupteurs ET capteurs : tous deux des GPIO Switch) si activés >= 1
+	# Sans detachement, Tasmota couple SwitchN -> PowerN et n'emet pas de SwitchN#Action : les regles
+	# relaisLie des capteurs ne s'executeraient jamais (cas de la pompe vide-cave).
+	if (nbIOActivesJSON["switchs"]["actives"].find("nb", 0) + nbIOActivesJSON["capteurs"]["actives"].find("nb", 0)) > 0
 		if tasmota.cmd("SetOption114", boolMute)["SetOption114"] != "ON"
 			log("CONFIG_DEVICES: Detache tous les switchs !", LOG_LEVEL_DEBUG)
 			tasmota.cmd("SetOption114 ON", boolMute)		

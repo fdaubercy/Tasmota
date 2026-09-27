@@ -229,9 +229,16 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
 
     tasmota.yield()
 
-	if (type(value) == "instance" && value.size() == 1)
-		for cle: value.keys()
-			value = value[cle]
+	# Extrait la valeur scalaire d'un evenement, ex: {"Action": "ON"} -> "ON", sur TOUS les niveaux
+	# d'imbrication (avant : un seul niveau deroule, et 'value' reaffectee pendant le parcours de ses
+	# cles). Une map a plusieurs cles (ex. mesures ADS1115 A0..A3) est volontairement laissee intacte.
+	while isinstance(value, map)
+		if value.contains("Action")
+			value = value["Action"]
+		elif value.size() == 1
+			value = value[value.keys()()]		# unique cle
+		else
+			break
 		end
 	end
 

@@ -265,13 +265,22 @@
 						"value": 0,
 						"etat": "OFF",
 						"timer": 120,
+						"relance": {
+							"capteur": "capteur2",
+							"pause": 10,
+							"maxRelances": 3,
+							"topicAlerte": "tele/cave/serveur-rly-cave-v2/ALERTE_POMPE"
+						},
+						"alerte": "",
 						"publishMQTT": {
 							"topic": []
 						},
 						"timestamp": {
 							"ON": 0,
 							"OFF": 0,
-							"delai": 0
+							"delai": 0,
+							"nbCyclesJour": 0,
+							"jourCycles": -1
 						},
 						"idModBus": -1
 					}

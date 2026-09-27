@@ -43,6 +43,7 @@ class CONTROLE_GENERAL : Driver
 	var mqttConnected
     var booted
 	var flagTimestampInitialized
+	var relances					# Relances de securite en cours, par relai : {"<module>_<id>": nb}
 
 	# Se lance chaque jour à minuit
 	def heureReboot()
@@ -81,6 +82,7 @@ class CONTROLE_GENERAL : Driver
         self.booted = false
         self.flagINIT = 0
 		self.flagTimestampInitialized = false
+		self.relances = {}
 
 		# Les sensors sont lus A LA DEMANDE par lectureSensors() (plus a l'init ni chaque seconde)
 		self.sensors = {}
@@ -137,7 +139,140 @@ class CONTROLE_GENERAL : Driver
 
         # Marqueur de fin d'initialisation du module principal
         self.flagINIT = 1
+
+		# Aligne l'etat des capteurs sur la realite une fois les SwitchMode appliques et relus
+		# par Tasmota (quelques cycles de la boucle principale) : 5 s de marge.
+		if (self.nbIOActivesJSON["capteurs"]["reels"].find("nb", 0) > 0)
+			tasmota.set_timer(5000, /-> self.resynchroniseCapteurs(), "resynchroniseCapteurs")
+		end
     end
+
+	#- Relance de securite d'un relai a timer (ex. pompe vide-cave), parametree dans le persist :
+	       "relance": {"capteur": "capteur2", "pause": 10, "maxRelances": 3, "topicAlerte": "..."}
+	   A la fin du timer, le relai est coupe. Si le capteur 'capteur' (niveau haut) est encore ON,
+	   le relai est relance apres 'pause' s, au plus 'maxRelances' fois de suite. Au-dela : arret,
+	   alerte (log, MQTT sur 'topicAlerte', page web via relai["alerte"]) -> probable defaut du capteur.
+	   Compteur et alerte sont remis a zero des qu'un arret survient avec le niveau haut retombe.
+	-#
+	def finTimerRelai(cle, relai)
+		import string
+		import globalFonctions
+
+		var id = relai["id"]
+		log(string.format("GESTION_RELAIS: Fin du timer du relai n°%i -> arret de securite", id), LOG_LEVEL_INFO)
+		globalFonctions.modifEtatRelai(cle, id, "Switch", "TOGGLE", false, false, 0)
+
+		var reglage = relai.find("relance", false)
+		if (!reglage)	return	end
+
+		var cleCompteur = cle + "_" + str(id)
+		if (!self.niveauHautActif(cle, reglage))
+			self.acquitteRelance(cle, relai)
+			return
+		end
+
+		var nb = self.relances.find(cleCompteur, 0)
+		var maxRelances = reglage.find("maxRelances", 3)
+		var nomCapteur = self.nomCapteurRelance(cle, reglage)
+
+		if (nb < maxRelances)
+			nb += 1
+			self.relances[cleCompteur] = nb
+			var message = string.format("Niveau haut '%s' toujours actif apres l'arret de securite : relance %i/%i dans %is", nomCapteur, nb, maxRelances, reglage.find("pause", 10))
+			log("GESTION_RELAIS: " + message, LOG_LEVEL_INFO)
+			self.publieAlerteRelance(cle, relai, "relance", message, nb, maxRelances)
+			tasmota.set_timer(reglage.find("pause", 10) * 1000, /-> self.relanceRelai(cle, relai), string.format("relance_relai%i", id))
+		else
+			var message = string.format("Niveau haut '%s' toujours actif apres %i relances : probable defaut du capteur (ou pompe inefficace). Pompe arretee.", nomCapteur, maxRelances)
+			relai["alerte"] = message
+			self.relances.remove(cleCompteur)
+			log("GESTION_RELAIS_ERREUR: " + message, LOG_LEVEL_ERREUR)
+			self.publieAlerteRelance(cle, relai, "defaut", message, nb, maxRelances)
+		end
+	end
+
+	# Relance effective apres la pause, si le niveau haut est TOUJOURS actif et le relai toujours coupe
+	def relanceRelai(cle, relai)
+		import string
+		import globalFonctions
+
+		if (!self.niveauHautActif(cle, relai["relance"]))
+			log(string.format("GESTION_RELAIS: Niveau haut retombe pendant la pause : pas de relance du relai n°%i", relai["id"]), LOG_LEVEL_INFO)
+			self.acquitteRelance(cle, relai)
+			return
+		end
+		if (relai.find("etat", "OFF") == "ON")	return	end
+
+		log(string.format("GESTION_RELAIS: Relance du relai n°%i", relai["id"]), LOG_LEVEL_INFO)
+		globalFonctions.modifEtatRelai(cle, relai["id"], "ON", "ON", false, false, 0)
+	end
+
+	# Remise a zero du compteur de relances et de l'alerte (cycle termine normalement)
+	def acquitteRelance(cle, relai)
+		self.relances.remove(cle + "_" + str(relai["id"]))
+		if (relai.find("alerte", "") != "")
+			log("GESTION_RELAIS: Alerte du relai n°" + str(relai["id"]) + " acquittee (niveau haut retombe)", LOG_LEVEL_INFO)
+			relai["alerte"] = ""
+		end
+	end
+
+	# Etat du capteur de niveau haut de la relance : lecture reelle (sensors), a defaut l'etat memorise
+	def niveauHautActif(cle, reglage)
+		var capteur = modules.find(cle, {}).find("environnement", {}).find("capteurs", {}).find(reglage.find("capteur", ""), false)
+		if (!capteur)	return false	end
+		return self.lectureSensors().find("Switch" + str(capteur["id"]), capteur.find("etat", "OFF")) == "ON"
+	end
+
+	def nomCapteurRelance(cle, reglage)
+		var capteur = modules.find(cle, {}).find("environnement", {}).find("capteurs", {}).find(reglage.find("capteur", ""), {})
+		return capteur.find("nom", reglage.find("capteur", "?"))
+	end
+
+	def publieAlerteRelance(cle, relai, evenement, message, nb, maxRelances)
+		import mqtt
+		import json
+
+		var topic = relai["relance"].find("topicAlerte", "")
+		if (topic == "" || !mqtt.connected())	return	end
+		mqtt.publish(topic, json.dump({"Module": cle, "Relai": relai["id"], "Evenement": evenement,
+		                               "Relance": nb, "MaxRelances": maxRelances, "Message": message}))
+	end
+
+	# Au demarrage, l'etat 'etat' des capteurs dans le persist peut ne plus correspondre a la
+	# realite (redemarrage, persist redeploye). Or changementEtatCapteur ignore un evenement
+	# egal a l'etat memorise : un vrai niveau haut pourrait alors passer inapercu.
+	# -> l'etat memorise est invalide, puis l'etat REEL est rejoue une fois comme un evenement
+	#    'SwitchN#Action' : la logique relaisLie s'applique a l'etat courant
+	#    (ex. niveau haut deja ON au demarrage -> la pompe demarre).
+	def resynchroniseCapteurs()
+		import string
+
+		var sensors = self.lectureSensors()
+		for cleModule: modules.keys()
+			var moduleCapteurs = modules[cleModule]
+			if (type(moduleCapteurs) != "instance" || moduleCapteurs.find("activation", "OFF") != "ON")	continue	end
+			var capteurs = moduleCapteurs.find("environnement", {}).find("capteurs", false)
+			if (!capteurs)	continue	end
+
+			for cleCapteur: capteurs.keys()
+				var capteur = capteurs[cleCapteur]
+				if (type(capteur) != "instance")	continue	end
+				# Capteurs REELS seulement : un virtuel n'a pas de SwitchN dans les sensors
+				if (capteur.find("activation", "OFF") != "ON" || capteur.find("virtuel", "OFF") != "OFF" || capteur.find("pin", -1) == -1)	continue	end
+
+				var cle = "Switch" + str(capteur["id"])
+				var etatReel = sensors.find(cle)
+				if (etatReel == nil)
+					log(string.format("CONTROLE_GENERAL_ERREUR: Etat de '%s' (%s) introuvable dans les sensors : non resynchronise", capteur.find("nom", cleCapteur), cle), LOG_LEVEL_ERREUR)
+					continue
+				end
+
+				log(string.format("CONTROLE_GENERAL: Resynchronise '%s' (%s) : memorise=%s / reel=%s", capteur.find("nom", cleCapteur), cle, str(capteur.find("etat")), etatReel), LOG_LEVEL_INFO)
+				capteur["etat"] = ""
+				tasmota.publish_rule(string.format("{\"%s\": {\"Action\": \"%s\"}}", cle, etatReel))
+			end
+		end
+	end
 
 	# Lit les sensors A LA DEMANDE, avec un cache d'1 s.
 	# read_sensors() reconstruit toute la telemetrie SENSOR (MqttShowSensor, qui appelle aussi le
@@ -311,16 +446,34 @@ class CONTROLE_GENERAL : Driver
 												relais[cleRLY]["timestamp"]["delai"] = tasmota.rtc()["local"] - relais[cleRLY]["timestamp"]["ON"]
 											end
 											
-											# if cle == "pompeVideCave"
-											# 	relais[cleRLY]["timestamp"]["nbCyclesJour"] += 1
-											# end
+											# Comptage des mises en route du jour : seulement pour les relais dont le
+											# persist porte la cle 'nbCyclesJour' (ex. pompe vide-cave), pour ne pas
+											# alourdir tous les relais. Remise a zero au changement de jour (heure locale).
+											var horodatage = relais[cleRLY]["timestamp"]
+											if (horodatage.contains("nbCyclesJour"))
+												var jour = tasmota.rtc()["local"] / 86400
+												if (horodatage.find("jourCycles", -1) != jour)
+													horodatage["jourCycles"] = jour
+													horodatage["nbCyclesJour"] = 0
+												end
+												horodatage["nbCyclesJour"] = horodatage["nbCyclesJour"] + 1
+											end
 										end
 										relais[cleRLY]["timestamp"][etat] = tasmota.rtc()["local"]
+
+										# Relance de securite : un arret alors que le niveau haut est retombe est un
+										# cycle normal -> compteur de relances et alerte remis a zero.
+										if (etat == "OFF" && relais[cleRLY].find("relance", false))
+											if (!self.niveauHautActif(cle, relais[cleRLY]["relance"]))
+												self.acquitteRelance(cle, relais[cleRLY])
+											end
+										end
 
 										# Vérifie si il y a un timer paramétrer ou à annuler
 										if (etat == "ON" && relais[cleRLY]["id"] == nb + 1 && relais[cleRLY]["timer"] != 0)
 											log(string.format("GESTION_RELAIS: Lancement du timer pour le relai n°%i: %is !", nb + 1, relais[cleRLY]["timer"]), LOG_LEVEL_INFO)
-											tasmota.set_timer(relais[cleRLY]["timer"] * 1000, /-> globalFonctions.modifEtatRelai(cle, nb + 1, "Switch", "TOGGLE", false, false, 0), string.format("timer_relai%i", nb + 1))								
+											var relaiTimer = relais[cleRLY]
+											tasmota.set_timer(relais[cleRLY]["timer"] * 1000, /-> self.finTimerRelai(cle, relaiTimer), string.format("timer_relai%i", nb + 1))
 										elif etat == "OFF" && relais[cleRLY]["id"] == nb + 1 && relais[cleRLY]["timer"] != 0
 											log(string.format("GESTION_RELAIS: Supprime le timer pour le relai n°%i !", nb + 1), LOG_LEVEL_INFO)
 											tasmota.remove_timer(string.format("timer_relai%i", nb + 1))								
