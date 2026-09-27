@@ -91,9 +91,15 @@ extern "C" {
   int32_t l_publish_rule(struct bvm *vm) {
     int32_t top = be_top(vm); // Get the number of arguments
     if (top >= 2 && be_isstring(vm, 2)) {  // 1 mandatory string argument
-      const char * payload = be_tostring(vm, 2);
+      // Private copy: once the stack is cleared nothing references the Berry string anymore, and
+      // the rule below runs Berry again -> a GC may free it while the rule engine reads it.
+      char * payload = strdup(be_tostring(vm, 2));
       be_pop(vm, top);    // clear the stack before calling, because of re-entrant call to Berry in a Rule
-      bool handled = XdrvRulesProcess(0, payload);
+      bool handled = false;
+      if (payload) {
+        handled = XdrvRulesProcess(0, payload);
+        free(payload);
+      }
       be_pushbool(vm, handled);
       be_return(vm); // Return
     }

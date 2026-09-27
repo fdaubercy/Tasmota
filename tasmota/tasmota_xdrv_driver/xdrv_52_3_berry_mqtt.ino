@@ -89,11 +89,18 @@ extern "C" {
       // adjust start
       payload = payload + payload_start;
 
+      // 'payload' points inside the Berry string. Once the stack is cleared, nothing references
+      // it anymore: the rules below run Berry again, the new frames reuse those stack slots and a
+      // GC may free the string -> use after free ("BRY: ERROR, bad json" with garbage at the end).
+      // Keep a private copy of string payloads for the rule engine.
+      char * payload_rules = is_binary ? nullptr : strdup(payload);
+
       be_pop(vm, be_top(vm));   // clear stack to avoid any indirect warning message in subsequent calls to Berry
 
       MqttPublishPayload(topic, payload, is_binary ? len : 0 /*if string don't send length*/, retain, loglevel);
-      if (!is_binary) {
-        XdrvRulesProcess(0, payload);  // Process rules on berry publish
+      if (payload_rules) {
+        XdrvRulesProcess(0, payload_rules);  // Process rules on berry publish
+        free(payload_rules);
       }
 
       be_return_nil(vm); // Return
