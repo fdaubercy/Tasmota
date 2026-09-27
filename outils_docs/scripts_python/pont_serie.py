@@ -3,8 +3,14 @@
 Principe : ce script ouvre un port serie et sert son flux sur 127.0.0.1:<tcp>, a la fois :
   - en TCP brut : extension VS Code « Serial Monitor » (mode TCP), PuTTY (Raw), ncat... ;
   - en HTTP, SUR LE MEME PORT : http://127.0.0.1:<tcp> dans un navigateur (pont_serie_web.py :
-    logs en direct, filtre, envoi de commandes). Une requete HTTP est reconnue a ses premiers octets.
+    logs en direct, filtre, envoi de commandes, choix du port et de la vitesse, bouton
+    Demarrer/Arreter du port serie). Une requete HTTP est reconnue a ses premiers octets.
 Ce que tapent les clients repart vers la carte. Plusieurs clients peuvent etre connectes a la fois.
+
+Le serveur reste en marche quand le port serie est ferme : « Arreter » sur la page LIBERE le
+port (pour un flash) sans couper la page ; « Demarrer » le rouvre, eventuellement sur un autre
+port ou a une autre vitesse. Si le port ne peut pas etre ouvert au lancement, le pont demarre
+port ferme, a ouvrir depuis la page.
 
 Couleurs : les lignes sont colorees avec les regles Tasmota de monitor/filter_couleurs_tasmota.py
 (niveau de log, module Berry emetteur). Sur un autre flux, --sans-couleurs ; si le fichier de
@@ -12,16 +18,16 @@ regles est absent, le pont passe seul en mode sans couleurs.
 
 Usage (Python de PlatformIO, qui fournit pyserial) :
     %USERPROFILE%\\.platformio\\penv\\Scripts\\python.exe outils_docs/scripts_python/pont_serie.py
-    options : --port auto|COM11|loop://  --vitesse 115200  --tcp 7000  --journal fichier.log
+    options : --port auto|COM11|loop://|aucun  --vitesse 115200  --tcp 7000  --journal fichier.log
               --sans-couleurs  --lister (affiche les ports serie et sort)
-    --port auto (defaut) : prend le SEUL port USB present ; s'il y en a plusieurs, les liste et sort.
+    --port auto (defaut) : prend le SEUL port USB present ; sinon demarre port ferme.
     Deux cartes en meme temps : deux ponts, avec deux --tcp differents (7000, 7001...).
 
 Depuis VS Code : pioarduino > Project Tasks > <env> > Custom > « Pont serie (TCP/HTTP 127.0.0.1) »
 (cible_pont_serie.py : port et debit lus dans monitor_port / monitor_speed de l'env).
-Arret : Ctrl+C dans le terminal de la tache (ou la corbeille).
+Arret du pont : Ctrl+C dans le terminal de la tache (ou la corbeille).
 
-Le port serie n'accepte qu'un programme : ARRETER CE PONT AVANT UN FLASH.
+Le port serie n'accepte qu'un programme : FERMER LE PORT (bouton Arreter) AVANT UN FLASH.
 Le port est ouvert sans basculer DTR/RTS : pas de reset de l'ESP32 a l'ouverture.
 """
 
@@ -41,6 +47,8 @@ import pont_serie_web  # noqa: E402  (module voisin : page et routes HTTP)
 
 RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DEBUTS_HTTP = (b"GET ", b"POST", b"HEAD")
+VITESSES = [9600, 19200, 38400, 57600, 74880, 115200, 230400, 250000, 460800, 500000,
+            921600, 1000000, 1500000, 2000000]   # 74880 : messages du ROM de demarrage ESP8266/ESP32
 
 
 class SansCouleurs:
@@ -62,43 +70,117 @@ def charge_coloriseur(sans_couleurs):
     return module.Coloriseur()
 
 
-def ports_usb():
+def liste_ports():
+    """Ports serie presents : [{'port', 'description', 'usb'}], USB d'abord."""
     from serial.tools import list_ports
-    return [p for p in sorted(list_ports.comports(), key=lambda p: p.device) if p.vid is not None]
+    ports = sorted(list_ports.comports(), key=lambda p: (p.vid is None, p.device))
+    return [{"port": p.device, "description": p.description, "usb": p.vid is not None} for p in ports]
 
 
 def choisit_port(demande):
-    """'auto' -> le seul port USB present ; sinon le port demande tel quel."""
+    """'auto' -> le seul port USB present, sinon None (pont demarre port FERME, a choisir sur la page)."""
     if demande.lower() != "auto":
         return demande
-    ports = ports_usb()
-    if len(ports) == 1:
-        print(f"port auto : {ports[0].device} ({ports[0].description})")
-        return ports[0].device
-    if not ports:
-        sys.exit("Aucun port serie USB detecte : carte branchee ? (sinon --port COMx)")
-    liste = "\n".join(f"  {p.device:8} {p.description}" for p in ports)
-    sys.exit(f"Plusieurs ports USB : preciser --port.\n{liste}")
-
-
-def ouvre_port(url, vitesse):
-    port = serial.serial_for_url(url, do_not_open=True, baudrate=vitesse, timeout=0.2)
-    port.dtr, port.rts = False, False   # ne pas resetter l'ESP32
-    port.open()
-    return port
+    usb = [p for p in liste_ports() if p["usb"]]
+    if len(usb) == 1:
+        print(f"port auto : {usb[0]['port']} ({usb[0]['description']})")
+        return usb[0]["port"]
+    detail = "aucun port USB detecte" if not usb else "plusieurs ports USB (" + ", ".join(p["port"] for p in usb) + ")"
+    print(f"port auto : {detail} -> port serie FERME, a choisir sur la page web")
+    return None
 
 
 class Pont:
-    def __init__(self, port, coloriseur, journal, port_tcp):
-        self.port = port
+    def __init__(self, coloriseur, journal, port_tcp, vitesse):
+        self.serie = None                                   # objet pyserial ; None = port ferme
+        self.nom_port = None
+        self.vitesse = vitesse
+        self.verrou_serie = threading.Lock()                # ouverture / fermeture / ecriture
         self.coloriseur = coloriseur
         self.journal = journal
         self.port_tcp = port_tcp
         self.clients = []                                   # clients TCP bruts (Serial Monitor...)
         self.clients_web = []                               # navigateurs (flux SSE)
-        self.historique = collections.deque(maxlen=500)     # derniers morceaux colores, pour un nouveau navigateur
+        self.historique = collections.deque(maxlen=500)     # derniers morceaux, pour un nouveau navigateur
         self.verrou = threading.Lock()
 
+    # ------------------------------------------------------------------ port serie
+    def ouvre(self, nom_port, vitesse):
+        """Ouvre (ou rouvre) le port serie. Renvoie (ok, message)."""
+        with self.verrou_serie:
+            self._ferme_sans_verrou()
+            try:
+                serie = serial.serial_for_url(nom_port, do_not_open=True, baudrate=int(vitesse), timeout=0.2)
+                serie.dtr, serie.rts = False, False   # ne pas resetter l'ESP32
+                serie.open()
+            except (serial.SerialException, ValueError, OSError) as erreur:
+                ok, message = False, f"impossible d'ouvrir {nom_port} : {erreur} (moniteur ou flash en cours ?)"
+            else:
+                self.serie, self.nom_port, self.vitesse = serie, nom_port, int(vitesse)
+                ok, message = True, f"port {nom_port} ouvert a {vitesse} bauds"
+        print(message)
+        self.annonce(message)
+        return ok, message
+
+    def _ferme_sans_verrou(self):
+        if self.serie is not None:
+            serie, self.serie = self.serie, None
+            try:
+                serie.close()
+            except (serial.SerialException, OSError):
+                pass
+
+    def ferme(self):
+        with self.verrou_serie:
+            ouvert = self.serie is not None
+            self._ferme_sans_verrou()
+        message = f"port {self.nom_port} ferme : libre pour un flash" if ouvert else "port deja ferme"
+        print(message)
+        self.annonce(message)
+        return True, message
+
+    def ecrit(self, octets):
+        """Commande -> carte. False si le port est ferme."""
+        with self.verrou_serie:
+            if self.serie is None:
+                return False
+            try:
+                self.serie.write(octets)
+                return True
+            except (serial.SerialException, OSError):
+                return False
+
+    def etat(self):
+        return {"ouvert": self.serie is not None, "port": self.nom_port, "vitesse": self.vitesse,
+                "vitesses": VITESSES, "ports": liste_ports(), "tcp": self.port_tcp}
+
+    def lit_serie(self):
+        while True:
+            serie = self.serie
+            if serie is None:
+                time.sleep(0.2)
+                continue
+            try:
+                brut = serie.read(4096)
+            except (serial.SerialException, OSError, TypeError, AttributeError):
+                # Port ferme depuis la page pendant la lecture, ou carte debranchee
+                if self.serie is serie:
+                    with self.verrou_serie:
+                        self._ferme_sans_verrou()
+                    self.annonce(f"port {self.nom_port} perdu (carte debranchee ?) : port ferme")
+                time.sleep(0.2)
+                continue
+            if not brut:
+                continue
+            texte = brut.decode("utf-8", "replace")
+            if self.journal:
+                self.journal.write(texte)
+                self.journal.flush()
+            colore = self.coloriseur.morceau(texte)
+            if colore:
+                self.diffuse(colore)
+
+    # ------------------------------------------------------------------ diffusion
     @staticmethod
     def _envoie(liste, octets):
         for client in list(liste):
@@ -116,8 +198,17 @@ class Pont:
             if self.clients_web:
                 self._envoie(self.clients_web, pont_serie_web.evenement_sse(colore))
 
-    def inscrit_web(self, client):
+    def annonce(self, message):
+        """Message du pont (hors flux de la carte) + nouvel etat pousse a toutes les pages ouvertes."""
+        self.diffuse(f"\x1b[1m\x1b[96m[pont] {message}\x1b[0m\n")
+        etat = pont_serie_web.evenement_etat(self.etat())
         with self.verrou:
+            self._envoie(self.clients_web, etat)
+
+    def inscrit_web(self, client):
+        etat = pont_serie_web.evenement_etat(self.etat())
+        with self.verrou:
+            client.sendall(etat)
             if self.historique:
                 client.sendall(pont_serie_web.evenement_sse("".join(self.historique)))
             self.clients_web.append(client)
@@ -127,19 +218,7 @@ class Pont:
             if client in self.clients_web:
                 self.clients_web.remove(client)
 
-    def lit_serie(self):
-        while True:
-            brut = self.port.read(4096)
-            if not brut:
-                continue
-            texte = brut.decode("utf-8", "replace")
-            if self.journal:
-                self.journal.write(texte)
-                self.journal.flush()
-            colore = self.coloriseur.morceau(texte)
-            if colore:
-                self.diffuse(colore)
-
+    # ------------------------------------------------------------------ clients
     @staticmethod
     def _est_http(client):
         """Un navigateur parle en premier ("GET ..."), un client TCP brut attend : 0,3 s pour trancher."""
@@ -167,7 +246,7 @@ class Pont:
                 donnees = client.recv(1024)
                 if not donnees:
                     break
-                self.port.write(donnees)   # commandes tapees -> carte
+                self.ecrit(donnees)   # commandes tapees -> carte (ignorees si port ferme)
         except OSError:
             pass
         with self.verrou:
@@ -179,7 +258,7 @@ class Pont:
 
 def main():
     options = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    options.add_argument("--port", default="auto", help="port serie : auto (seul port USB), COM11, /dev/ttyUSB0, loop://...")
+    options.add_argument("--port", default="auto", help="port serie : auto (seul port USB), COM11, /dev/ttyUSB0, loop://, aucun")
     options.add_argument("--vitesse", type=int, default=115200)
     options.add_argument("--tcp", type=int, default=7000, help="port TCP local (TCP brut ET HTTP)")
     options.add_argument("--journal", help="copie brute (sans couleurs) du flux dans ce fichier")
@@ -188,12 +267,10 @@ def main():
     args = options.parse_args()
 
     if args.lister:
-        from serial.tools import list_ports
-        for p in sorted(list_ports.comports(), key=lambda p: p.device):
-            print(f"{p.device:8} {'USB ' if p.vid is not None else '    '} {p.description}")
+        for p in liste_ports():
+            print(f"{p['port']:8} {'USB ' if p['usb'] else '    '} {p['description']}")
         return
 
-    nom_port = choisit_port(args.port)
     coloriseur = charge_coloriseur(args.sans_couleurs)
 
     # Le port TCP d'abord : si un autre pont l'occupe, on sort SANS avoir pris le port serie.
@@ -208,16 +285,16 @@ def main():
         sys.exit(f"Port TCP {args.tcp} deja utilise ({erreur}) : un autre pont tourne ? (sinon --tcp 7001)")
     serveur.listen()
 
-    try:
-        port = ouvre_port(nom_port, args.vitesse)
-    except serial.SerialException as erreur:
-        serveur.close()
-        sys.exit(f"Impossible d'ouvrir {nom_port} : {erreur}\n(un moniteur serie ou un flash l'utilise deja ?)")
     journal = open(args.journal, "a", encoding="utf-8") if args.journal else None
-    pont = Pont(port, coloriseur, journal, args.tcp)
+    pont = Pont(coloriseur, journal, args.tcp, args.vitesse)
+    # Port serie ouvert si possible ; sinon le pont demarre quand meme, port FERME, a ouvrir
+    # depuis la page web (bouton Demarrer, choix du port et de la vitesse).
+    nom_port = None if args.port.lower() == "aucun" else choisit_port(args.port)
+    if nom_port:
+        pont.ouvre(nom_port, args.vitesse)
     threading.Thread(target=pont.lit_serie, daemon=True).start()
 
-    print(f"Pont {nom_port} ({args.vitesse} bauds) -> 127.0.0.1:{args.tcp}  (Ctrl+C pour arreter)")
+    print(f"Pont -> 127.0.0.1:{args.tcp}  (Ctrl+C pour arreter)")
     print(f"  navigateur : http://127.0.0.1:{args.tcp}   |   Serial Monitor : mode TCP, 127.0.0.1, port {args.tcp}")
     serveur.settimeout(0.5)   # Windows : un accept() bloquant ne laisse jamais passer Ctrl+C
     try:
@@ -232,7 +309,8 @@ def main():
         print("\narret du pont, port serie libere")
     finally:
         serveur.close()
-        port.close()
+        with pont.verrou_serie:
+            pont._ferme_sans_verrou()
         time.sleep(0.1)
 
 

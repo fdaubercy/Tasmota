@@ -1,6 +1,12 @@
 """Cible PlatformIO « Pont serie » : visible dans pioarduino > Project Tasks > <env> > Custom.
 
-Enregistree par pre_utilitaires_platformio.py (extra_scripts des bases ESP32). Lance
+Deux facons de l'enregistrer :
+  - ESP32 : importee par pre_utilitaires_platformio.py (extra_scripts des bases ESP32) ;
+  - autre env (ex. ESP8266 tasmota-pompe-piscine) : ce fichier en extra_script direct,
+        extra_scripts = ${env.extra_scripts}
+                        pre:outils_docs/scripts_python/cible_pont_serie.py
+    (ne PAS mettre les deux sur un meme env : la cible serait declaree deux fois).
+Lance
 outils_docs/scripts_python/pont_serie.py avec les parametres DE L'ENVIRONNEMENT choisi :
     port    : monitor_port, sinon upload_port (s'il designe un port serie), sinon "auto"
     debit   : monitor_speed (defaut 115200)
@@ -8,7 +14,8 @@ outils_docs/scripts_python/pont_serie.py avec les parametres DE L'ENVIRONNEMENT 
     journal : %TEMP%/pont_serie_<env>.log
 
 En ligne de commande : pio run -e <env> -t pont_serie
-Arret : Ctrl+C dans le terminal de la tache (ou la corbeille). L'ARRETER AVANT UN FLASH.
+Avant un flash : bouton « Arreter » de la page (libere le port, la page reste ouverte).
+Arret du pont : Ctrl+C dans le terminal de la tache (ou la corbeille).
 """
 
 import os
@@ -60,6 +67,16 @@ def enregistre(env):
         actions=[lance_pont],
         title="Pont serie (TCP/HTTP 127.0.0.1)",
         description="Logs colores du port de l'env (monitor_port, monitor_speed) sur http://127.0.0.1:7000 "
-                    "et Serial Monitor (TCP). Ctrl+C pour arreter ; l'arreter avant un flash.",
+                    "et Serial Monitor (TCP). Port, vitesse et marche/arret reglables sur la page.",
         always_build=True,
     )
+
+
+# Execute comme extra_script (SConscript) : 'Import' est fourni par SCons -> enregistre la cible.
+# Importe comme module par pre_utilitaires_platformio.py : 'Import' n'existe pas -> rien ici.
+try:
+    Import("env")  # type: ignore[name-defined]  # noqa: F821
+except NameError:
+    pass
+else:
+    enregistre(env)  # type: ignore[name-defined]  # noqa: F821

@@ -711,19 +711,24 @@ afficher_version_tasmota()
 
 # ============================================================
 # 🔌 CIBLE « PONT SERIE » (pioarduino > Project Tasks > <env> > Custom)
-# Lancer le pont n'est PAS un build : ne pas incrementer CFG_HOLDER ni reecrire
-# platformio_override.ini (bloc suivant) quand c'est cette cible qui est demandee.
 # ============================================================
 from SCons.Script import COMMAND_LINE_TARGETS
 sys.path.insert(0, join(env.subst("$PROJECT_DIR"), "outils_docs", "scripts_python"))
 import cible_pont_serie
 cible_pont_serie.enregistre(env)
-lancement_pont_serie = cible_pont_serie.NOM_CIBLE in COMMAND_LINE_TARGETS
+
+# Cibles qui ne sont PAS des builds : ne pas incrementer CFG_HOLDER, ne pas reecrire
+# platformio_override.ini ni copier d'image FS (bloc suivant).
+#   - pont_serie : lancement du pont serie ;
+#   - __idedata  : rafraichissement IntelliSense / Project Tasks par pioarduino
+#                  ('pio project init'), lance tout seul par VS Code.
+CIBLES_HORS_BUILD = (cible_pont_serie.NOM_CIBLE, "__idedata")
+hors_build = any(cible in COMMAND_LINE_TARGETS for cible in CIBLES_HORS_BUILD)
 
 # ============================================================
 # ✨ FONCTIONS ACTIVES UNIQUEMENT HORS SAFEBOOT ...
 # ============================================================
-if not is_safeboot and not lancement_pont_serie:
+if not is_safeboot and not hors_build:
     adapteParametresPlatformio_override()
 
     if ("32p4" in Global.environnement) and (any("UPDATE_IDF55_PLATFORM" in f for f in env.get("BUILD_FLAGS", []))):
