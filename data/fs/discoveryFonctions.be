@@ -1,23 +1,39 @@
-var discoveryFonctions = module("/discoveryFonctions")
+#@ solidify:discoveryFonctions
+var discoveryFonctions = module("discoveryFonctions")
 
-discoveryFonctions.DEBUG = nil
+# Etat modifiable du module, dans une GLOBALE (solidification 2026-09-27). Un module
+# solidifie est constant (en flash) : y ecrire leve "'module' value has no writable
+# attribute", et ses listes sont figees. La map est creee au premier appel avec les
+# valeurs de depart qu'avaient les anciens attributs du module.
+def discoveryFonctions_etat()
+    import global
+    if (global._etatDiscoveryFonctions == nil)
+        global._etatDiscoveryFonctions = {
+            "DEBUG": nil              # 'ON'/'OFF', lu une fois depuis serveur['discovery']['debug']
+        }
+    end
+    return global._etatDiscoveryFonctions
+end
+discoveryFonctions.etat = discoveryFonctions_etat
 
-discoveryFonctions.log = def(msg, levelDebug)
+
+def discoveryFonctions_log(msg, levelDebug)
     import persist
 
-    if (discoveryFonctions.DEBUG == nil)
-        discoveryFonctions.DEBUG = serveur["discovery"].find("debug", "OFF")
+    if (discoveryFonctions.etat()["DEBUG"] == nil)
+        discoveryFonctions.etat()["DEBUG"] = serveur["discovery"].find("debug", "OFF")
     end
 
-    if (discoveryFonctions.DEBUG == "ON")
+    if (discoveryFonctions.etat()["DEBUG"] == "ON")
         log(msg, levelDebug)
     end
 end
+discoveryFonctions.log = discoveryFonctions_log
 
 #- exemples: 
     ReglageDiscovery logActivation OFF
 -#
-discoveryFonctions.reglageDiscovery = def(cmd, idx, payload, payload_json)
+def discoveryFonctions_reglageDiscovery(cmd, idx, payload, payload_json)
     import string
     import json
     import persist
@@ -49,7 +65,7 @@ discoveryFonctions.reglageDiscovery = def(cmd, idx, payload, payload_json)
         try
             # Adapte le paramètre
             parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-            discoveryFonctions.DEBUG = parametres[0]
+            discoveryFonctions.etat()["DEBUG"] = parametres[0]
 
             # Sauvegarde le paramètre
             serveur["discovery"]["debug"] = parametres[0]
@@ -61,16 +77,18 @@ discoveryFonctions.reglageDiscovery = def(cmd, idx, payload, payload_json)
 
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd += string.format("logActivated=%s", discoveryFonctions.DEBUG)
+    reponse_cmnd += string.format("logActivated=%s", discoveryFonctions.etat()["DEBUG"])
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
+discoveryFonctions.reglageDiscovery = discoveryFonctions_reglageDiscovery
 
 # Règles sur changement d'état lors du démarrage de Tasmota
-discoveryFonctions.changementEtatDemarrage = def(value, trigger, msg)
+def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
     import persist
     import string
     import json
     import mqtt
+    import gestionFileFolder
 
     # Test
     discoveryFonctions.log("DISCOVERY_CHGT_ETAT_DEMARRAGE: -------------------- Discovery changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG)
@@ -266,10 +284,11 @@ discoveryFonctions.changementEtatDemarrage = def(value, trigger, msg)
         end
     end
 end
+discoveryFonctions.changementEtatDemarrage = discoveryFonctions_changementEtatDemarrage
 
 # récupère les données MQTT reçues
 # pour les messages liés à la découverte des modules Tasmota sur le réseau local
-discoveryFonctions.mqtt_discovery = def(topic, idx, data, databytes)
+def discoveryFonctions_mqtt_discovery(topic, idx, data, databytes)
     import gestionFileFolder
     import json
     import string
@@ -363,11 +382,12 @@ discoveryFonctions.mqtt_discovery = def(topic, idx, data, databytes)
         discoveryFonctions.log(string.format("DISCOVERY_MQTT_DATA: %s --> %s", error, message), LOG_LEVEL_ERREUR)
     end
 end
+discoveryFonctions.mqtt_discovery = discoveryFonctions_mqtt_discovery
 
 
 # récupère les données MQTT reçues
 # pour les messages LWT sur le réseau local
-discoveryFonctions.mqtt_lwt = def(topic, idx, data, databytes)
+def discoveryFonctions_mqtt_lwt(topic, idx, data, databytes)
     import json
     import string
     import mqtt
@@ -434,9 +454,10 @@ discoveryFonctions.mqtt_lwt = def(topic, idx, data, databytes)
         discoveryFonctions.log(string.format("DISCOVERY_MQTT_LWT: %s --> %s", error, message), LOG_LEVEL_ERREUR)
     end
 end
+discoveryFonctions.mqtt_lwt = discoveryFonctions_mqtt_lwt
 
 # Gestion de l'affichage de la page des modules découverts
-discoveryFonctions.affichePageDiscovery = def()
+def discoveryFonctions_affichePageDiscovery()
     import webserver
     import gestionFileFolder
     import json
@@ -560,6 +581,7 @@ discoveryFonctions.affichePageDiscovery = def()
         discoveryFonctions.log(string.format("AFFICHE_DISCOVERY: %s --> %s", error, message), LOG_LEVEL_ERREUR)
     end
 end
+discoveryFonctions.affichePageDiscovery = discoveryFonctions_affichePageDiscovery
 
 # Retourne le module lors de l'importation
 return discoveryFonctions

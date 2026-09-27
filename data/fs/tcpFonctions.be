@@ -1,27 +1,44 @@
-var tcpFonctions = module("/tcpFonctions")
+#@ solidify:tcpFonctions
+var tcpFonctions = module("tcpFonctions")
 
-tcpFonctions.DEBUG = nil
-tcpFonctions.port = 0
-tcpFonctions.serveur = nil
-tcpFonctions.client = nil
-tcpFonctions.connexionAsync = nil
-tcpFonctions.msgTCP = nil
+# Etat modifiable du module, dans une GLOBALE (solidification 2026-09-27). Un module
+# solidifie est constant (en flash) : y ecrire leve "'module' value has no writable
+# attribute", et ses listes sont figees. La map est creee au premier appel avec les
+# valeurs de depart qu'avaient les anciens attributs du module.
+def tcpFonctions_etat()
+    import global
+    if (global._etatTcpFonctions == nil)
+        global._etatTcpFonctions = {
+            "DEBUG": nil,              # 'ON'/'OFF', lu une fois depuis serveur['tcp']['debug']
+            "port": 0,                 # port TCP du serveur
+            "serveur": nil,            # objet tcpserver (esclave)
+            "client": nil,             # objet tcpclientasync (maitre)
+            "connexionAsync": nil,     # connexion acceptee par le serveur
+            "msgTCP": nil             # dernier message TCP lu
+        }
+    end
+    return global._etatTcpFonctions
+end
+tcpFonctions.etat = tcpFonctions_etat
 
-tcpFonctions.log = def(msg, levelDebug)
-    if (tcpFonctions.DEBUG == nil)
-        tcpFonctions.DEBUG = serveur["tcp"].find("debug", "OFF")
+
+def tcpFonctions_log(msg, levelDebug)
+    if (tcpFonctions.etat()["DEBUG"] == nil)
+        tcpFonctions.etat()["DEBUG"] = serveur["tcp"].find("debug", "OFF")
     end
 
-    if (tcpFonctions.DEBUG == "ON")
+    if (tcpFonctions.etat()["DEBUG"] == "ON")
         log(msg, levelDebug)
     end
 end
+tcpFonctions.log = tcpFonctions_log
 
 # exemples: 
 # ReglageTCP logActivation OFF
-tcpFonctions.reglageTCP = def(cmd, idx, payload, payload_json)
+def tcpFonctions_reglageTCP(cmd, idx, payload, payload_json)
     import string
     import json
+    import persist
 
     var fonction = false
     var parametres = []
@@ -51,7 +68,7 @@ tcpFonctions.reglageTCP = def(cmd, idx, payload, payload_json)
     if string.toupper(fonction) == string.toupper("logActivation")
         try
             parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-            tcpFonctions.DEBUG = parametres[0]
+            tcpFonctions.etat()["DEBUG"] = parametres[0]
 
             serveur["tcp"]["debug"] = parametres[0]
             persist.serveur["tcp"]["debug"] = parametres[0]
@@ -62,11 +79,12 @@ tcpFonctions.reglageTCP = def(cmd, idx, payload, payload_json)
 
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd["ReglageTCP"]["logActivated"] = str(tcpFonctions.DEBUG)
+    reponse_cmnd["ReglageTCP"]["logActivated"] = str(tcpFonctions.etat()["DEBUG"])
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
+tcpFonctions.reglageTCP = tcpFonctions_reglageTCP
 
-tcpFonctions.changementEtatDemarrage = def(value, trigger, msg)
+def tcpFonctions_changementEtatDemarrage(value, trigger, msg)
     import string
     import mqtt
     import tcpFonctions
@@ -100,12 +118,12 @@ tcpFonctions.changementEtatDemarrage = def(value, trigger, msg)
             try
                 # Ce sont les esclaves qui servent de serveur TCP
                 if (serveur["tcp"]["id"] > 0)
-                    tcpFonctions.log(f"TCP_CHGT_ETAT_DEMARRAGE: Initialisation du serveur TCP sur le port :{tcpFonctions.port:i}", LOG_LEVEL_DEBUG)
-                    tcpFonctions.serveur = tcpserver(tcpFonctions.port)
+                    tcpFonctions.log(f"TCP_CHGT_ETAT_DEMARRAGE: Initialisation du serveur TCP sur le port :{tcpFonctions.etat()['port']:i}", LOG_LEVEL_DEBUG)
+                    tcpFonctions.etat()["serveur"] = tcpserver(tcpFonctions.etat()["port"])
                 # Le maitre ouvre une connexion TCP avec chacun des esclaves (serveurs TCP)
                 elif (serveur["tcp"]["id"] == 0)
                     # Crée les instances du client TCP
-                    tcpFonctions.client = tcpclientasync()
+                    tcpFonctions.etat()["client"] = tcpclientasync()
                 end
             except .. as error, message
                 tcpFonctions.log(string.format("TCP_CHGT_ETAT_DEMARRAGE_ERREUR: %s --> %s", error, message), LOG_LEVEL_ERREUR)
@@ -113,7 +131,7 @@ tcpFonctions.changementEtatDemarrage = def(value, trigger, msg)
         elif msg[trigger].find("Save", 0)
             if (serveur["tcp"]["id"] > 0)
                 tcpFonctions.log("TCP_CHGT_ETAT_DEMARRAGE: Fermeture connexion TCP", LOG_LEVEL_DEBUG_PLUS)
-                tcpFonctions.serveur.close()
+                tcpFonctions.etat()["serveur"].close()
             end
         end
 	# Se déclenche après la connexion MQTT (si activé)
@@ -132,11 +150,12 @@ tcpFonctions.changementEtatDemarrage = def(value, trigger, msg)
         end
     end
 end
+tcpFonctions.changementEtatDemarrage = tcpFonctions_changementEtatDemarrage
 
 # Cette fonction gère la lecture de messages TCP ASync
 # Puis publie le message MQTT 'ModbusReceivedTCP' sur le Topic ==> Déclenchera la règle 'tasmota.add_rule('ModbusReceivedTCP')' -> vers la fonction controleModbus.recupereReponseModBusUDP()
 # @type typeClient: Le type de connexion TCP (Serveur ou Client)
-tcpFonctions.lireTCP = def(typeClient)
+def tcpFonctions_lireTCP(typeClient)
     import string
     import json
 
@@ -148,23 +167,23 @@ tcpFonctions.lireTCP = def(typeClient)
     # Lecture du message par le serveur TCP
     if (typeClient == "Serveur")
         # Vérifie si un nouveau client se connecte
-        if (tcpFonctions.serveur.hasclient())
+        if (tcpFonctions.etat()["serveur"].hasclient())
             # Accepte la connexion asynchrone
-            tcpFonctions.connexionAsync = tcpFonctions.serveur.acceptasync()
-            tcpFonctions.log(f"LIRE_TCP: Connexion Asynchrone TCP acceptée avec le nouveau client '{tcpFonctions.connexionAsync.info()['remote_addr']:s}' !", LOG_LEVEL_DEBUG)
+            tcpFonctions.etat()["connexionAsync"] = tcpFonctions.etat()["serveur"].acceptasync()
+            tcpFonctions.log(f"LIRE_TCP: Connexion Asynchrone TCP acceptée avec le nouveau client '{tcpFonctions.etat()['connexionAsync'].info()['remote_addr']:s}' !", LOG_LEVEL_DEBUG)
         end
 
-        if (tcpFonctions.connexionAsync != nil)
-            # tcpFonctions.connexionAsync.info = {'available': false, 'remote_addr': '192.168.4.1', 'listening': true, 'remote_port': 56132, 'local_addr': '192.168.4.4', 'connected': true, 'local_port': 8888, 'fd': 58}
-            if (tcpFonctions.connexionAsync.connected())
+        if (tcpFonctions.etat()["connexionAsync"] != nil)
+            # tcpFonctions.etat()["connexionAsync"].info = {'available': false, 'remote_addr': '192.168.4.1', 'listening': true, 'remote_port': 56132, 'local_addr': '192.168.4.4', 'connected': true, 'local_port': 8888, 'fd': 58}
+            if (tcpFonctions.etat()["connexionAsync"].connected())
                 # Réception du message
-                var nb_data = tcpFonctions.connexionAsync.available()
+                var nb_data = tcpFonctions.etat()["connexionAsync"].available()
                 if (nb_data > 0)
                     tcpFonctions.log(f"LIRE_TCP: ------------------------ TCP lire {typeClient:s} ----------------------", LOG_LEVEL_DEBUG_PLUS)
                     tcpFonctions.log(f"LIRE_TCP: Nb Données recues par le {typeClient:s}: {nb_data:i}", LOG_LEVEL_DEBUG_PLUS)
 
-                    msg.insert("Trame", tcpFonctions.connexionAsync.readbytes())
-                    msg.insert("Info", tcpFonctions.connexionAsync.info())
+                    msg.insert("Trame", tcpFonctions.etat()["connexionAsync"].readbytes())
+                    msg.insert("Info", tcpFonctions.etat()["connexionAsync"].info())
 
                     tcpFonctions.log(string.format(f"LIRE_TCP: Données brutes recues par {typeClient:s}: %s", msg["Trame"].tohex()), LOG_LEVEL_DEBUG_PLUS)
 
@@ -174,11 +193,11 @@ tcpFonctions.lireTCP = def(typeClient)
         end
     # Lecture du message par le client TCP
     elif (typeClient == "Client")
-        if (tcpFonctions.client.available() > 0)
+        if (tcpFonctions.etat()["client"].available() > 0)
             tcpFonctions.log(f"LIRE_TCP: ------------------------ TCP lire {typeClient:s} ----------------------", LOG_LEVEL_DEBUG_PLUS)
 
-            msg.insert("Trame", tcpFonctions.client.readbytes())
-            msg.insert("Info", tcpFonctions.client.info())
+            msg.insert("Trame", tcpFonctions.etat()["client"].readbytes())
+            msg.insert("Info", tcpFonctions.etat()["client"].info())
 
             tcpFonctions.log(string.format(f"LIRE_TCP: Données brutes recues par {typeClient:s}: %s", msg["Trame"].tohex()), LOG_LEVEL_DEBUG_PLUS)
 
@@ -222,15 +241,16 @@ tcpFonctions.lireTCP = def(typeClient)
 
         # Le module répond
         # tcpFonctions.remote_port = self.connexionAsync.info()["remote_port"]
-        # tcpFonctions.connexionAsync.write("J'AI BIEN ENTENDU TA DEMANDE !")
+        # tcpFonctions.etat()["connexionAsync"].write("J'AI BIEN ENTENDU TA DEMANDE !")
     -#
     end
 end
+tcpFonctions.lireTCP = tcpFonctions_lireTCP
 
 # Cette fonction gère l'envoi de messages TCP ASync
 # @type typeClient: Le type de connexion TCP (Serveur ou Client)
 # @IP_Dest: L'adresse IP du destinataire (uniquement pour le client TCP)
-tcpFonctions.envoiMsgTCP = def(typeClient, IP_Dest, message)
+def tcpFonctions_envoiMsgTCP(typeClient, IP_Dest, message)
     import json
     import string
 
@@ -239,18 +259,19 @@ tcpFonctions.envoiMsgTCP = def(typeClient, IP_Dest, message)
 
     # # Envoi du message par le serveur TCP
     # if (typeClient == "Serveur")
-    #     if (tcpFonctions.connexionAsync != nil)
-    #         if (tcpFonctions.connexionAsync.connected())
-    #             tcpFonctions.connexionAsync.write(message)
+    #     if (tcpFonctions.etat()["connexionAsync"] != nil)
+    #         if (tcpFonctions.etat()["connexionAsync"].connected())
+    #             tcpFonctions.etat()["connexionAsync"].write(message)
     #         end
     #     end
     # # Envoi du message par le client TCP
     # elif (typeClient == "Client")
-    #     if (tcpFonctions.client != nil)
-    #         tcpFonctions.client.write(message)
+    #     if (tcpFonctions.etat()["client"] != nil)
+    #         tcpFonctions.etat()["client"].write(message)
     #     end
     # end
 end
+tcpFonctions.envoiMsgTCP = tcpFonctions_envoiMsgTCP
 
 # Retourne le module lors de l'importation
 return tcpFonctions

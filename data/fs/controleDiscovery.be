@@ -24,6 +24,16 @@
         * ex : port 18123 -> vers le port 8080 & le module Tasmota esclave RangeExtender N°1 dont le maitre à l'adresse IP locale 192.168.0.43
 -#
 
+# Nom GLOBAL 'discoveryFonctions' (solidification 2026-09-27) : les fonctions du module, en flash,
+# s'appellent entre elles par ce nom. Le .be le creait en s'executant ; un module natif
+# ne le cree pas -> 'attribute_error: discoveryFonctions undeclared'. Un simple 'import' de niveau
+# fichier ne suffit PAS : ce fichier tourne en .bec, compile par tasmota.compile avec
+# islocal=true (tasmota_class.be:480), donc ses variables de niveau fichier sont locales.
+# D'ou l'affectation explicite dans le module 'global'.
+import global
+import discoveryFonctions
+global.discoveryFonctions = discoveryFonctions
+
 var controleDiscovery
 
 class CONTROLE_DISCOVERY : Driver
@@ -33,7 +43,7 @@ class CONTROLE_DISCOVERY : Driver
         import mqtt
         import discoveryFonctions
 
-        discoveryFonctions.DEBUG = nil
+        discoveryFonctions.etat()["DEBUG"] = nil
 
         discoveryFonctions.log("CONTROLE_DISCOVERY: Initialisation du driver de contrôle des modules Tasmota sur le réseau local", LOG_LEVEL_INFO)
         discoveryFonctions.log("CONTROLE_DISCOVERY: Enregistre les taches CRON !", LOG_LEVEL_DEBUG)

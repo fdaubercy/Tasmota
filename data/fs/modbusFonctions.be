@@ -275,13 +275,13 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
     # Envoi de messages TCP pour test
     elif (string.toupper(fonction) == string.toupper("envoiMessagTCP"))
         modbusFonctions.log(string.format("REGLAGE_MODBUS: Ouverture connexion UDP sur le port %i: %s", 
-                                            tcpFonctions.port, tcpFonctions.client.connect(parametres[0], tcpFonctions.port) ? "OK" : "Echec"), LOG_LEVEL_DEBUG_PLUS)
+                                            tcpFonctions.etat()["port"], tcpFonctions.etat()["client"].connect(parametres[0], tcpFonctions.etat()["port"]) ? "OK" : "Echec"), LOG_LEVEL_DEBUG_PLUS)
 
         # Si le client est connecté & socket disponible
-        if (tcpFonctions.client.listening() && tcpFonctions.client.connected())
+        if (tcpFonctions.etat()["client"].listening() && tcpFonctions.etat()["client"].connected())
             tasmota.delay(250)
             modbusFonctions.log(string.format("REGLAGE_MODBUS: Données ModBus TCP envoyées à %s >>> %s", parametres[0], parametres[1]), LOG_LEVEL_DEBUG)
-            tcpFonctions.client.write(parametres[1])
+            tcpFonctions.etat()["client"].write(parametres[1])
         end
     # Régle BaudRate de la liaison ModBus ModBus
     elif (string.toupper(fonction) == string.toupper("BaudrateModbus"))
@@ -340,7 +340,7 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
                         if (!modbusFonctions.etat()["clients"][id].connected())
                             # Connecte le client au serveur TCP
                             tcpFonctions.log(string.format("REGLAGE_MODBUS: Ouverture connexion TCP [%s] sur le port %i: %s", 
-                                                                        IP, tcpFonctions.port, modbusFonctions.etat()["clients"][id].connect(IP, tcpFonctions.port) ? "OK" : "Echec"), LOG_LEVEL_DEBUG_PLUS)
+                                                                        IP, tcpFonctions.etat()["port"], modbusFonctions.etat()["clients"][id].connect(IP, tcpFonctions.etat()["port"]) ? "OK" : "Echec"), LOG_LEVEL_DEBUG_PLUS)
 
                             tasmota.delay(250)
                         else tcpFonctions.log(string.format("Le client ModBus TCP est déjà connecté à l'esclave ModBus %i [%s]", id, IP), LOG_LEVEL_DEBUG_PLUS)
@@ -779,7 +779,7 @@ def modbusFonctions_envoiMsgModbusTCP(Trame, typeMsg)
     # Si esclave ModBus (id > 0) ==> Envoi la trame ModBus reçue par le serveur TCP
     elif (drivers["ModBus"].find("id", 0) > 0)
         import tcpFonctions
-        Client = tcpFonctions.connexionAsync
+        Client = tcpFonctions.etat()["connexionAsync"]
 
         # Si le Maitre ModBus (seul client ModBusTCP) a déjà ouvert la connexion
         if (Client != nil)

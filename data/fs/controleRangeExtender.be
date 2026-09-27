@@ -18,6 +18,16 @@
             . Les esclaves (id > 0) se connectent d'abord sur le reseau Wifi du Maitre RangeExtender (AP 2) pour synchroniser leur horloge
 -#
 
+# Nom GLOBAL 'rangeExtenderFonctions' (solidification 2026-09-27) : les fonctions du module, en flash,
+# s'appellent entre elles par ce nom. Le .be le creait en s'executant ; un module natif
+# ne le cree pas -> 'attribute_error: rangeExtenderFonctions undeclared'. Un simple 'import' de niveau
+# fichier ne suffit PAS : ce fichier tourne en .bec, compile par tasmota.compile avec
+# islocal=true (tasmota_class.be:480), donc ses variables de niveau fichier sont locales.
+# D'ou l'affectation explicite dans le module 'global'.
+import global
+import rangeExtenderFonctions
+global.rangeExtenderFonctions = rangeExtenderFonctions
+
 var controleRangeExtender
 
 # Driver permettant de gérer les connexions des modules connectés au Range Extender

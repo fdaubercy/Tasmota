@@ -57,6 +57,16 @@ API des messages UDP
                 Le maître est aussi un RangeExtender Wi-Fi (AP secondaire sur 192.168.4.x)
 -#
 
+# Nom GLOBAL 'udpFonctions' (solidification 2026-09-27) : les fonctions du module, en flash,
+# s'appellent entre elles par ce nom. Le .be le creait en s'executant ; un module natif
+# ne le cree pas -> 'attribute_error: udpFonctions undeclared'. Un simple 'import' de niveau
+# fichier ne suffit PAS : ce fichier tourne en .bec, compile par tasmota.compile avec
+# islocal=true (tasmota_class.be:480), donc ses variables de niveau fichier sont locales.
+# D'ou l'affectation explicite dans le module 'global'.
+import global
+import udpFonctions
+global.udpFonctions = udpFonctions
+
 var controleUDP_unicast
 var controleUDP_multicast
 
@@ -79,10 +89,10 @@ class CONTROLE_UDP
         self.parametres = serveur["udp"]
 
         # Définit les variables du module udpFonctions
-        udpFonctions.udpReception[(string.toupper(self.typeComm) == string.toupper("UniCast") ? 0 : 1)] = self.udpReception
-        udpFonctions.port[(string.toupper(self.typeComm) == string.toupper("UniCast") ? 0 : 1)] = self.port
-        udpFonctions.typeComm[(string.toupper(self.typeComm) == string.toupper("UniCast") ? 0 : 1)] = self.typeComm
-        udpFonctions.ip[(string.toupper(self.typeComm) == string.toupper("UniCast") ? 0 : 1)] = ip
+        udpFonctions.etat()["udpReception"][(string.toupper(self.typeComm) == string.toupper("UniCast") ? 0 : 1)] = self.udpReception
+        udpFonctions.etat()["port"][(string.toupper(self.typeComm) == string.toupper("UniCast") ? 0 : 1)] = self.port
+        udpFonctions.etat()["typeComm"][(string.toupper(self.typeComm) == string.toupper("UniCast") ? 0 : 1)] = self.typeComm
+        udpFonctions.etat()["ip"][(string.toupper(self.typeComm) == string.toupper("UniCast") ? 0 : 1)] = ip
 
         udpFonctions.log("CONTROLE_UDP: Enregistre les taches CRON !", LOG_LEVEL_DEBUG)
         # Déclenche une action tous les jours à minuit

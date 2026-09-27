@@ -8,18 +8,28 @@
     import tcpFonctions
 
     # Crée l'instance du client
-    tcpFonctions.client = tcpclientasync()
+    tcpFonctions.etat()["client"] = tcpclientasync()
 
     # Connecte le client au serveur TCP
-    tcpFonctions.client.connect("192.168.4.5", 8888)
+    tcpFonctions.etat()["client"].connect("192.168.4.5", 8888)
 
     tasmota.delay(250)
 
     # Récupère les informations pour savoir si le port est disponible pour envoyer des infos ou ordre
-    print(tcpFonctions.client.info())
-    tcpFonctions.client.write("BONJOUR, CA GAZ. COMMENT VAS TU ??")
-    tcpFonctions.client.write(bytes("1122334455").tostring())
+    print(tcpFonctions.etat()["client"].info())
+    tcpFonctions.etat()["client"].write("BONJOUR, CA GAZ. COMMENT VAS TU ??")
+    tcpFonctions.etat()["client"].write(bytes("1122334455").tostring())
 -#
+
+# Nom GLOBAL 'tcpFonctions' (solidification 2026-09-27) : les fonctions du module, en flash,
+# s'appellent entre elles par ce nom. Le .be le creait en s'executant ; un module natif
+# ne le cree pas -> 'attribute_error: tcpFonctions undeclared'. Un simple 'import' de niveau
+# fichier ne suffit PAS : ce fichier tourne en .bec, compile par tasmota.compile avec
+# islocal=true (tasmota_class.be:480), donc ses variables de niveau fichier sont locales.
+# D'ou l'affectation explicite dans le module 'global'.
+import global
+import tcpFonctions
+global.tcpFonctions = tcpFonctions
 
 var controleTCP
 
@@ -40,7 +50,7 @@ class CONTROLE_TCP
         self.port = port
 
         # Définit les variables du module udpFonctions
-        tcpFonctions.port = self.port
+        tcpFonctions.etat()["port"] = self.port
 
         tcpFonctions.log("TCP_SERVER: Enregistre les taches CRON !", LOG_LEVEL_DEBUG)
 		# Déclenche une action tous les jours à minuit
@@ -82,20 +92,20 @@ class CONTROLE_TCP
 
         # Ce sont les esclaves qui servent de serveur TCP
         if (serveur["tcp"]["id"] > 0)
-            if (tcpFonctions.serveur == nil)    return  end
+            if (tcpFonctions.etat()["serveur"] == nil)    return  end
 
             # Traitement du message
-            tcpFonctions.msgTCP = tcpFonctions.lireTCP("Serveur")
+            tcpFonctions.etat()["msgTCP"] = tcpFonctions.lireTCP("Serveur")
 
             tasmota.yield()
         end
 
         # Pour les clients TCP
         if (serveur["tcp"]["id"] == 0)
-            if (tcpFonctions.client == nil)    return  end
+            if (tcpFonctions.etat()["client"] == nil)    return  end
 
             # Traitement du message
-            tcpFonctions.msgTCP = tcpFonctions.lireTCP("Client")
+            tcpFonctions.etat()["msgTCP"] = tcpFonctions.lireTCP("Client")
 
             tasmota.yield()
         end

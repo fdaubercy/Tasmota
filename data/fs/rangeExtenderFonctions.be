@@ -1,22 +1,38 @@
 # Définition du module
-var rangeExtenderFonctions = module("/rangeExtenderFonctions")
+#@ solidify:rangeExtenderFonctions
+var rangeExtenderFonctions = module("rangeExtenderFonctions")
 
-rangeExtenderFonctions.DEBUG = nil
+# Etat modifiable du module, dans une GLOBALE (solidification 2026-09-27). Un module
+# solidifie est constant (en flash) : y ecrire leve "'module' value has no writable
+# attribute", et ses listes sont figees. La map est creee au premier appel avec les
+# valeurs de depart qu'avaient les anciens attributs du module.
+def rangeExtenderFonctions_etat()
+    import global
+    if (global._etatRangeExtenderFonctions == nil)
+        global._etatRangeExtenderFonctions = {
+            "DEBUG": nil              # 'ON'/'OFF', lu une fois depuis serveur['rangeExtender']['debug']
+        }
+    end
+    return global._etatRangeExtenderFonctions
+end
+rangeExtenderFonctions.etat = rangeExtenderFonctions_etat
 
-rangeExtenderFonctions.log = def(msg, levelDebug)
-    if (rangeExtenderFonctions.DEBUG == nil)
-        rangeExtenderFonctions.DEBUG = serveur["rangeExtender"].find("debug", "OFF")
+
+def rangeExtenderFonctions_log(msg, levelDebug)
+    if (rangeExtenderFonctions.etat()["DEBUG"] == nil)
+        rangeExtenderFonctions.etat()["DEBUG"] = serveur["rangeExtender"].find("debug", "OFF")
     end
 
-    if (rangeExtenderFonctions.DEBUG == "ON")
+    if (rangeExtenderFonctions.etat()["DEBUG"] == "ON")
         log(msg, levelDebug)
     end
 end
+rangeExtenderFonctions.log = rangeExtenderFonctions_log
 
 # Réalilse le routage
 # Active RgxNAPT: RoutageRangeExtender
 # RgxPort tcp, 8080, 192.168.4.2, 80
-rangeExtenderFonctions.routageRangeExtender = def(cmd, idx, payload, payload_json)
+def rangeExtenderFonctions_routageRangeExtender(cmd, idx, payload, payload_json)
 	import string
     import json
     import gestionFileFolder
@@ -73,10 +89,11 @@ rangeExtenderFonctions.routageRangeExtender = def(cmd, idx, payload, payload_jso
     reponse_cmnd["RoutageRangeExtender"]["status"] = "Succès"
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
+rangeExtenderFonctions.routageRangeExtender = rangeExtenderFonctions_routageRangeExtender
 
 # exemples: 
 # ReglageRangeExtender logActivation OFF
-rangeExtenderFonctions.reglageRangeExtender = def(cmd, idx, payload, payload_json)
+def rangeExtenderFonctions_reglageRangeExtender(cmd, idx, payload, payload_json)
     import string
     import json
     import gestionFileFolder
@@ -112,7 +129,7 @@ rangeExtenderFonctions.reglageRangeExtender = def(cmd, idx, payload, payload_jso
         try
             # Adapte le paramètre
             parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-            rangeExtenderFonctions.DEBUG = parametres[0]
+            rangeExtenderFonctions.etat()["DEBUG"] = parametres[0]
 
             # Sauvegarde le paramètre
             serveur["rangeExtender"]["debug"] = parametres[0]
@@ -123,11 +140,12 @@ rangeExtenderFonctions.reglageRangeExtender = def(cmd, idx, payload, payload_jso
 
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd["ReglageRangeExtender"]["logActivated"] = str(rangeExtenderFonctions.DEBUG)
+    reponse_cmnd["ReglageRangeExtender"]["logActivated"] = str(rangeExtenderFonctions.etat()["DEBUG"])
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
+rangeExtenderFonctions.reglageRangeExtender = rangeExtenderFonctions_reglageRangeExtender
 
-rangeExtenderFonctions.configExtenderByJson = def()
+def rangeExtenderFonctions_configExtenderByJson()
     import persist
     import configGlobal
     import string
@@ -162,9 +180,10 @@ rangeExtenderFonctions.configExtenderByJson = def()
         end
     end
 end
+rangeExtenderFonctions.configExtenderByJson = rangeExtenderFonctions_configExtenderByJson
 
 # Règles sur changement d'état lors du démarrage de Tasmota
-rangeExtenderFonctions.changementEtatDemarrage = def(value, trigger, msg)
+def rangeExtenderFonctions_changementEtatDemarrage(value, trigger, msg)
     import persist
     import string
     import json
@@ -218,10 +237,11 @@ rangeExtenderFonctions.changementEtatDemarrage = def(value, trigger, msg)
         end
     end
 end
+rangeExtenderFonctions.changementEtatDemarrage = rangeExtenderFonctions_changementEtatDemarrage
 
 # Se charge d'afficher le bouton de lien vers lapage webUI des clients Ranextender connectés
 # Fonction inutilisée
-rangeExtenderFonctions.afficheBoutonsModulesEsclaves = def()
+def rangeExtenderFonctions_afficheBoutonsModulesEsclaves()
     import webserver
     import string
     import gestionFileFolder
@@ -277,6 +297,7 @@ rangeExtenderFonctions.afficheBoutonsModulesEsclaves = def()
         end
     end
 end
+rangeExtenderFonctions.afficheBoutonsModulesEsclaves = rangeExtenderFonctions_afficheBoutonsModulesEsclaves
 
 # Retourne le module lors de l'importation
 return rangeExtenderFonctions

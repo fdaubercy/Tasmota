@@ -30,13 +30,28 @@
         * System#Save → fermeture des sockets
 -#
 
-var udpFonctions = module("/udpFonctions")
+#@ solidify:udpFonctions
+var udpFonctions = module("udpFonctions")
 
-udpFonctions.DEBUG = nil
-udpFonctions.udpReception = [nil, nil]
-udpFonctions.port = [0, 0]
-udpFonctions.typeComm = ["", ""]
-udpFonctions.ip = ["", ""]
+# Etat modifiable du module, dans une GLOBALE (solidification 2026-09-27). Un module
+# solidifie est constant (en flash) : y ecrire leve "'module' value has no writable
+# attribute", et ses listes sont figees. La map est creee au premier appel avec les
+# valeurs de depart qu'avaient les anciens attributs du module.
+def udpFonctions_etat()
+    import global
+    if (global._etatUdpFonctions == nil)
+        global._etatUdpFonctions = {
+            "DEBUG": nil,              # 'ON'/'OFF', lu une fois depuis serveur['udp']['debug']
+            "udpReception": [nil, nil], # objets udp de reception [UniCast, MultiCast]
+            "port": [0, 0],            # ports [UniCast, MultiCast]
+            "typeComm": ["", ""],      # types de communication [UniCast, MultiCast]
+            "ip": ["", ""]            # adresses [UniCast, MultiCast]
+        }
+    end
+    return global._etatUdpFonctions
+end
+udpFonctions.etat = udpFonctions_etat
+
 
 # # *************************************************
 # # * ModBus Commandes 
@@ -49,15 +64,16 @@ udpFonctions.ip = ["", ""]
 # CMND_PUBLISH_TELE
 # CMND_EXECUTE_CMND
 
-udpFonctions.log = def(msg, levelDebug)
-    if (udpFonctions.DEBUG == nil)
-        udpFonctions.DEBUG = serveur["udp"].find("debug", "OFF")
+def udpFonctions_log(msg, levelDebug)
+    if (udpFonctions.etat()["DEBUG"] == nil)
+        udpFonctions.etat()["DEBUG"] = serveur["udp"].find("debug", "OFF")
     end
 
-    if (udpFonctions.DEBUG == "ON")
+    if (udpFonctions.etat()["DEBUG"] == "ON")
         log(msg, levelDebug)
     end
 end
+udpFonctions.log = udpFonctions_log
 
 # exemples: 
 # ReglageUDP logActivation OFF
@@ -65,7 +81,7 @@ end
 # ReglageUDP envoiMultiCast Salut Ca gaz ! OU ReglageUDP envoiMultiCast 192.168.4.3 Salut Ca gaz !
 # ReglageUDP forceEnvoiParams ON
 # ReglageUDP Timestamp 1766072035
-udpFonctions.reglageUDP = def(cmd, idx, payload, payload_json)
+def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
     import string
     import json
     import mqtt
@@ -101,7 +117,7 @@ udpFonctions.reglageUDP = def(cmd, idx, payload, payload_json)
     if string.toupper(fonction) == string.toupper("logActivation")
         try
             parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-            udpFonctions.DEBUG = parametres[0]
+            udpFonctions.etat()["DEBUG"] = parametres[0]
 
             serveur["udp"]["debug"] = parametres[0]
             persist.serveur["udp"]["debug"] = parametres[0]
@@ -226,12 +242,13 @@ udpFonctions.reglageUDP = def(cmd, idx, payload, payload_json)
 
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd["ReglageUDP"]["logActivated"] = str(udpFonctions.DEBUG)
+    reponse_cmnd["ReglageUDP"]["logActivated"] = str(udpFonctions.etat()["DEBUG"])
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
+udpFonctions.reglageUDP = udpFonctions_reglageUDP
 
 # Règles sur changement d'état lors du démarrage de Tasmota
-udpFonctions.changementEtatDemarrage = def(value, trigger, msg, typeComm)
+def udpFonctions_changementEtatDemarrage(value, trigger, msg, typeComm)
     import string
     import mqtt
     import json
@@ -274,10 +291,10 @@ udpFonctions.changementEtatDemarrage = def(value, trigger, msg, typeComm)
         elif msg[trigger].find("Boot", 0)
             if (string.toupper(typeComm) == string.toupper("UniCast"))
                 udpFonctions.log(string.format("UDP_CHGT_ETAT_DEMARRAGE: Ouverture connexion UniCast sur le port %i: %s", 
-                                                udpFonctions.port[0], udpFonctions.udpReception[0].begin(udpFonctions.ip[0], udpFonctions.port[0]) ? "OK" : "Echec"), LOG_LEVEL_DEBUG_PLUS)
+                                                udpFonctions.etat()["port"][0], udpFonctions.etat()["udpReception"][0].begin(udpFonctions.etat()["ip"][0], udpFonctions.etat()["port"][0]) ? "OK" : "Echec"), LOG_LEVEL_DEBUG_PLUS)
             elif (string.toupper(typeComm) == string.toupper("MultiCast"))								
                 udpFonctions.log(string.format("UDP_CHGT_ETAT_DEMARRAGE: Ouverture connexion MultiCast sur le port %i: %s", 
-                                                udpFonctions.port[1], udpFonctions.udpReception[1].begin_multicast(udpFonctions.ip[1], udpFonctions.port[1]) ? "OK" : "Echec"), LOG_LEVEL_DEBUG_PLUS)
+                                                udpFonctions.etat()["port"][1], udpFonctions.etat()["udpReception"][1].begin_multicast(udpFonctions.etat()["ip"][1], udpFonctions.etat()["port"][1]) ? "OK" : "Echec"), LOG_LEVEL_DEBUG_PLUS)
             end
 
             # Evite de répéter l'opération 2 fois
@@ -294,8 +311,8 @@ udpFonctions.changementEtatDemarrage = def(value, trigger, msg, typeComm)
             end
         elif msg[trigger].find("Save", 0)
             udpFonctions.log("UDP_CHGT_ETAT_DEMARRAGE: Fermeture connexion MultiCast & UniCast", LOG_LEVEL_DEBUG_PLUS)
-            udpFonctions.udpReception[0].close()
-            udpFonctions.udpReception[1].close()
+            udpFonctions.etat()["udpReception"][0].close()
+            udpFonctions.etat()["udpReception"][1].close()
         end
 	# Se déclenche après la connexion MQTT (si activé)
     elif (trigger == "Mqtt")
@@ -313,9 +330,10 @@ udpFonctions.changementEtatDemarrage = def(value, trigger, msg, typeComm)
         end
     end
 end
+udpFonctions.changementEtatDemarrage = udpFonctions_changementEtatDemarrage
 
 # Cette fonction gère l'envoi de messages UDP en unicast et multicast
-udpFonctions.envoiUDP = def(typeComm, ipDestinataire, message)
+def udpFonctions_envoiUDP(typeComm, ipDestinataire, message)
 	import string
 	
 	var udpEmission = udp()
@@ -325,7 +343,7 @@ udpFonctions.envoiUDP = def(typeComm, ipDestinataire, message)
 	
 	# Ouvre la connexion UniCast sortante ou MultiCast sortante pour les maitres RangeExtender
 	if (string.toupper(typeComm) == string.toupper("UniCast"))
-		udpEmission.begin("", udpFonctions.port[0])      # envoi sur toutes les interfaces, port identifié
+		udpEmission.begin("", udpFonctions.etat()["port"][0])      # envoi sur toutes les interfaces, port identifié
     end
 
 	# Ouvre la connexion MultiCast sortante pour le maitre RangeExtender
@@ -334,20 +352,20 @@ udpFonctions.envoiUDP = def(typeComm, ipDestinataire, message)
             udpEmission.begin(ipDestinataire, 0)      # envoi sur toutes les interfaces, port aléatoire
         # Ouvre la connexion MultiCast sortante pour les autres
         elif (string.toupper(typeComm) == string.toupper("MultiCast") && serveur["udp"]["id"] > 0)
-            udpEmission.begin_multicast("224.3.0.1", udpFonctions.port[1])
+            udpEmission.begin_multicast("224.3.0.1", udpFonctions.etat()["port"][1])
         end
     end
 	
 	# Envoi la commande
 	# en UniCast
 	if (string.toupper(typeComm) == string.toupper("UniCast"))
-		resultatEnvoi = udpEmission.send(ipDestinataire, udpFonctions.port[0], bytes().fromstring(message)) ? "OK" : "Echec"
+		resultatEnvoi = udpEmission.send(ipDestinataire, udpFonctions.etat()["port"][0], bytes().fromstring(message)) ? "OK" : "Echec"
     end
 
 	# en MultiCast sortante pour le maitre RangeExtender
     if (serveur["rangeExtender"].find("activation", "OFF") == "ON")
         if (string.toupper(typeComm) == string.toupper("MultiCast") && serveur["udp"]["id"] == 0)
-            resultatEnvoi = udpEmission.send("224.3.0.1", udpFonctions.port[1], bytes().fromstring(message)) ? "OK" : "Echec"
+            resultatEnvoi = udpEmission.send("224.3.0.1", udpFonctions.etat()["port"][1], bytes().fromstring(message)) ? "OK" : "Echec"
         # en MultiCast pour les autres
         elif (string.toupper(typeComm) == string.toupper("MultiCast") && serveur["udp"]["id"] > 0)
             resultatEnvoi = udpEmission.send_multicast(bytes().fromstring(message)) ? "OK" : "Echec"
@@ -360,14 +378,15 @@ udpFonctions.envoiUDP = def(typeComm, ipDestinataire, message)
 	# Ferme la connexion
 	udpEmission.close()
 end
+udpFonctions.envoiUDP = udpFonctions_envoiUDP
 
 # Cette fonction gère la lecture de messages UDP en unicast et multicast
 # Puis publie le message MQTT 'ModbusReceivedUDP' sur le Topic ==> Déclenchera la règle 'tasmota.add_rule('ModbusReceivedUDP')' -> vers la fonction controleModbus.recupereReponseModBusUDP()
-udpFonctions.lireUDP = def(typeComm, paramMSG)
+def udpFonctions_lireUDP(typeComm, paramMSG)
     import string
     import json
 
-    var msg = (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.udpReception[0].read() : udpFonctions.udpReception[1].read()
+    var msg = (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.etat()["udpReception"][0].read() : udpFonctions.etat()["udpReception"][1].read()
     tasmota.yield()
 
     # Récupère les messages sur le port UDP (respecte l'API Tasmota)
@@ -375,8 +394,8 @@ udpFonctions.lireUDP = def(typeComm, paramMSG)
         # Réception du message
         udpFonctions.log("LIRE_UDP: ------------------------ UDP lire ----------------------", LOG_LEVEL_DEBUG)
         udpFonctions.log(string.format("LIRE_UDP: Données UDP %s reçues de '%s' sur le port %i", typeComm, 
-                                                (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.udpReception[0].remote_ip : udpFonctions.udpReception[1].remote_ip,
-                                                (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.udpReception[0].remote_port : udpFonctions.udpReception[1].remote_port),
+                                                (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.etat()["udpReception"][0].remote_ip : udpFonctions.etat()["udpReception"][1].remote_ip,
+                                                (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.etat()["udpReception"][0].remote_port : udpFonctions.etat()["udpReception"][1].remote_port),
                                                 LOG_LEVEL_DEBUG)
         udpFonctions.log("LIRE_UDP: msg = " + str(msg.asstring()), LOG_LEVEL_DEBUG)
 
@@ -462,20 +481,21 @@ udpFonctions.lireUDP = def(typeComm, paramMSG)
         tasmota.yield()
 
         # Initialise le buffer
-        msg = (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.udpReception[0].read() : udpFonctions.udpReception[1].read()
+        msg = (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.etat()["udpReception"][0].read() : udpFonctions.etat()["udpReception"][1].read()
     end
 
     return false
 end
+udpFonctions.lireUDP = udpFonctions_lireUDP
 
 # Fonction qui gère l'envoi de commande TasmotaClient par UDP sous format string
 # CMD = commande répondant au fonctionnenemt de l'API Tasmota
 # Type de trame: <CMD>
-udpFonctions.sendTasmotaClientUDP = def(typeComm, destinationIP, commande)
+def udpFonctions_sendTasmotaClientUDP(typeComm, destinationIP, commande)
     import string
 
     typeComm = ((typeComm == "" || typeComm == nil) ? "MultiCast" : typeComm)
-    var port = (string.toupper(typeComm) == string.toupper("uniCast")) ? udpFonctions.port : udpFonctions.port * 2
+    var port = (string.toupper(typeComm) == string.toupper("uniCast")) ? udpFonctions.etat()["port"] : udpFonctions.etat()["port"] * 2
 
     # Test   
     udpFonctions.log("ENVOI_TASMOTA_CLIENT_UDP: --------------- sendTasmotaClientUDP --------------", LOG_LEVEL_DEBUG_PLUS)
@@ -492,11 +512,12 @@ udpFonctions.sendTasmotaClientUDP = def(typeComm, destinationIP, commande)
     end
 -#
 end
+udpFonctions.sendTasmotaClientUDP = udpFonctions_sendTasmotaClientUDP
 
 # Réinitialise les esclaves enregistrés / 300s
 # Enregistrés dans '/json/discovery.json' en paramètrant le paramètre "lwt": "Offline"
 # Cela permet de détecter si un module habituel est déconnecté
-udpFonctions.resetClientsConnectes = def()
+def udpFonctions_resetClientsConnectes()
     import gestionFileFolder
     import string
     import json
@@ -521,6 +542,7 @@ udpFonctions.resetClientsConnectes = def()
     # Décharge le json
     paramDiscovery = {}
 end
+udpFonctions.resetClientsConnectes = udpFonctions_resetClientsConnectes
 
 # Retourne le module lors de l'importation
 return udpFonctions

@@ -42,6 +42,10 @@ var globs = "path,ctypes_bytes_dyn,tasmota,ccronexpr,gpio,light,webclient,load,M
             "_lvgl,"
             "int64,"
             "serial,"
+            # NOTE (fork) : ajoute le 2026-09-27 pour solidifier tcpFonctions. Classe native
+            # du firmware (comme udp/tcpclientasync, deja listees ici), absente de la
+            # liste amont de berry_custom alors que berry_tasmota la declare.
+            "tcpserver,"
             "drivers,serveur,diverses,modules,boolMute,"
             # NOTE (fork) : ajoutes le 2026-07-16 pour la solidification des modules du
             # framework (grenier). Instances de drivers globales (posees par les
