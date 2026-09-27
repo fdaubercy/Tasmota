@@ -81,7 +81,10 @@ def main(args):
 
   url = 'http://%s' % (args.host_url)
   files = {'file': open(upload_file, 'rb')}
-  req = requests.post(url, files=files)
+  # Tasmota (SetOption128 0, defaut) refuse une requete HTTP sans Referer de sa propre adresse :
+  # "HTP: Referer '' denied". On se presente comme venant de sa page web.
+  referer = 'http://%s/' % (args.host_url.split('/')[0].split(':')[0])
+  req = requests.post(url, files=files, headers={'Referer': referer})
   print(req.text)
 # end main
 

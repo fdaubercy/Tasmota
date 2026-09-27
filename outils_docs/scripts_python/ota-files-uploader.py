@@ -1,7 +1,7 @@
 # Script PlatformIO extra_script (post)
 # Lit WIFI_IP_ADDRESS depuis tasmota/user_config_override.h pour le firmware courant,
 # configure UPLOAD_PORT automatiquement, configure UPLOADCMD pour upload HTTP (après post_esp32.py),
-# puis téléverse les fichiers Berry via /ufsd après redémarrage OTA.
+# puis téléverse les fichiers listés dans 'custom_ota_files' via /ufsu après redémarrage OTA.
 # Ignoré en mode série (aucune IP trouvée dans user_config_override.h ou WIFI_IP_ADDRESS = 0.0.0.0).
 #
 # Utilisation dans platformio_tasmota_cenv.ini (doit être listé APRÈS les scripts de tasmota32_base) :
@@ -61,9 +61,10 @@ def _lire_ip_override(project_dir: str, firmware_define: str) -> str | None:
         s = line.strip()
 
         if not in_section:
-            # Accepter #if defined(...) ou #elif defined(...)
-            if re.match(
-                rf"#\s*(?:el)?if\s+defined\s*\(\s*{re.escape(firmware_define)}\s*\)",
+            # Accepter #if / #elif, avec le define n'importe ou dans la condition :
+            # '#elif defined(A) || defined(B)' (une section partagee par deux cartes, ex. la cave)
+            if re.match(r"#\s*(?:el)?if\b", s) and re.search(
+                rf"defined\s*\(\s*{re.escape(firmware_define)}\s*\)",
                 s,
             ):
                 in_section = True
@@ -118,6 +119,12 @@ def _configurer_upload_ota(env) -> str | None:
 # Téléversement des fichiers Berry après OTA
 # ---------------------------------------------------------------------------
 
+def _entetes(ip: str) -> dict:
+    """Tasmota (SetOption128 0, defaut) refuse une requete HTTP d'API sans Referer de sa propre
+    adresse ("HTP: Referer '' denied") : on se presente comme venant de sa page web."""
+    return {"Referer": f"http://{ip}/"}
+
+
 def _attendre_module(ip: str, timeout: int = 90) -> bool:
     """Attend que le module soit de nouveau disponible après redémarrage OTA."""
     url = f"http://{ip}/cm?cmnd=Status"
@@ -126,7 +133,7 @@ def _attendre_module(ip: str, timeout: int = 90) -> bool:
     fin = time.time() + timeout
     while time.time() < fin:
         try:
-            r = requests.get(url, timeout=3)
+            r = requests.get(url, timeout=3, headers=_entetes(ip))
             if r.status_code == 200:
                 print(Fore.GREEN + f"  Module {ip} de nouveau disponible.")
                 return True
@@ -138,21 +145,30 @@ def _attendre_module(ip: str, timeout: int = 90) -> bool:
 
 
 def _televerser_fichier(ip: str, chemin_local: str, nom_distant: str) -> bool:
-    """Envoie un fichier unique vers http://<ip>/ufsd via POST multipart."""
-    url = f"http://{ip}/ufsd"
+    """Envoie un fichier unique vers la RACINE du systeme de fichiers de la carte.
+
+    L'envoi se fait par POST sur /ufsu (xdrv_50_filesystem.ino:1996). Avant, le script postait
+    sur /ufsd, qui ne fait qu'afficher la liste des fichiers : HTTP 200, mais rien n'etait ecrit.
+    Tasmota ecrit dans le dossier courant de sa page de fichiers (ufs_path) : un GET /ufsd
+    le remet a '/' (UfsDirectory). La reponse est toujours HTTP 200 : le resultat reel se lit
+    dans la page (Echoue / Failed).
+    """
     try:
+        requests.get(f"http://{ip}/ufsd", timeout=10, headers=_entetes(ip))
         with open(chemin_local, "rb") as f:
             r = requests.post(
-                url,
-                files={"FS1": (nom_distant, f, "application/octet-stream")},
-                timeout=20,
+                f"http://{ip}/ufsu",
+                files={"ufsu": (nom_distant, f, "application/octet-stream")},
+                timeout=30,
+                headers=_entetes(ip),
             )
-        if r.status_code == 200:
+        page = r.text
+        if r.status_code == 200 and "Échoué" not in page and "Failed" not in page and "denied" not in page:
             taille = Path(chemin_local).stat().st_size
             print(Fore.GREEN + f"    ✓ {nom_distant}  ({taille} octets)")
             return True
         else:
-            print(Fore.RED + f"    ✗ {nom_distant}  — HTTP {r.status_code}")
+            print(Fore.RED + f"    ✗ {nom_distant}  — HTTP {r.status_code}, envoi refuse ou en echec")
             return False
     except Exception as exc:
         print(Fore.RED + f"    ✗ {nom_distant}  — {exc}")
@@ -176,10 +192,15 @@ def upload_fichiers_berry(source, target, env):
     if not ip:
         return  # mode série, rien à faire
 
+    # Liste EXPLICITE des fichiers a envoyer apres l'OTA (option 'custom_ota_files').
+    # Ne PAS reprendre 'custom_files_upload' : elle decrit l'image LittleFS complete (tout data/fs,
+    # sous-dossiers sd/, json/...) ; envoyee fichier par fichier, elle ignorait custom_files_exclude
+    # et les modules solidifies, aplatissait les sous-dossiers a la racine et pouvait saturer le FS.
+    # Un dossier liste n'envoie que ses fichiers de premier niveau.
     try:
-        option = env.GetProjectOption("custom_files_upload")
+        option = env.GetProjectOption("custom_ota_files")
     except Exception:
-        print(Fore.YELLOW + "ota-files-uploader : aucune entrée custom_files_upload, rien à téléverser.")
+        print(Fore.YELLOW + "ota-files-uploader : aucune entrée custom_ota_files, aucun fichier envoyé après l'OTA.")
         return
 
     # Filtrer les entrées valides (ignorer no_files, URLs HTTP, lignes vides)
@@ -205,7 +226,7 @@ def upload_fichiers_berry(source, target, env):
         chemin = Path(entree) if os.path.isabs(entree) else projet_dir / entree
 
         if chemin.is_dir():
-            fichiers = sorted(f for f in chemin.rglob("*") if f.is_file())
+            fichiers = sorted(f for f in chemin.iterdir() if f.is_file())
             if not fichiers:
                 print(Fore.YELLOW + f"    - {entree} : dossier vide, ignoré")
                 continue
