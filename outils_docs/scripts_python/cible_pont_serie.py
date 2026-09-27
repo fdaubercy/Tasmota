@@ -38,7 +38,7 @@ def enregistre(env):
         debit = str(env.GetProjectOption("monitor_speed", "115200") or "115200")
         tcp = str(env.GetProjectOption("custom_pont_tcp", "7000") or "7000")
         journal = os.path.join(tempfile.gettempdir(), f"pont_serie_{nom_env}.log")
-        commande = [env.subst("$PYTHONEXE"), script, "--port", port, "--vitesse", debit,
+        commande = [env.subst("$PYTHONEXE"), "-u", script, "--port", port, "--vitesse", debit,
                     "--tcp", tcp, "--journal", journal]
         print(f"[{nom_env}] pont serie : port={port} debit={debit} -> http://127.0.0.1:{tcp}  (journal : {journal})")
         environnement = dict(os.environ, PYTHONUTF8="1")
@@ -46,6 +46,13 @@ def enregistre(env):
             return subprocess.call(commande, env=environnement)
         except KeyboardInterrupt:
             return 0
+
+    # Cible demandee : lancer le pont TOUT DE SUITE, depuis ce script pre, puis quitter.
+    # Sinon PlatformIO prepare d'abord le build (conversion de tasmota.ino, recherche des 138
+    # bibliotheques) : plus de 5 minutes avant que le pont ne demarre.
+    from SCons.Script import COMMAND_LINE_TARGETS
+    if NOM_CIBLE in COMMAND_LINE_TARGETS:
+        env.Exit(lance_pont())
 
     env.AddCustomTarget(
         name=NOM_CIBLE,
