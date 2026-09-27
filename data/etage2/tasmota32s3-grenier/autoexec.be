@@ -76,7 +76,7 @@ if (persist._p != nil && persist._p.size() != 0)
     do
         import controleLedTemoin as _ctrl
     end
-    gestionFileFolder.loadBerryFile("/i2c_ads1115", drivers["I2C"]["environnement"].find("ADS1115", {"activation": "OFF"}).find("activation", "OFF"), "ON")
+    # gestionFileFolder.loadBerryFile("/i2c_ads1115", drivers["I2C"]["environnement"].find("ADS1115", {"activation": "OFF"}).find("activation", "OFF"), "ON")   # exclu du FS (ModBus/I2C OFF sur le grenier, 2026-09-27)
     # gestionFileFolder.loadBerryFile("/i2c_mcp23017", drivers["I2C"]["environnement"].find("MCP23017", {"activation": "OFF"}).find("activation", "OFF"), "ON")   # exclu du FS (ModBus/I2C OFF sur le grenier, 2026-09-27)
     # gestionFileFolder.loadBerryFile("/modBus_Conn16channels", drivers["ModBus"]["environnement"].find("Conn16channels", {"activation": "OFF"}).find("activation", "ON"), "ON")   # exclu du FS (ModBus/I2C OFF sur le grenier, 2026-09-27)
     # gestionFileFolder.loadBerryFile("/modBus_TasmotaSlaveModBus", drivers["ModBus"]["environnement"].find("TasmotaSlaveModBus", {"activation": "OFF"}).find("activation", "ON"), "ON")   # exclu du FS (ModBus/I2C OFF sur le grenier, 2026-09-27)

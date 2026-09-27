@@ -79,7 +79,7 @@ if (persist._p != nil && persist._p.size() != 0)
     do
         import controleLedTemoin as _ctrl
     end
-    gestionFileFolder.loadBerryFile("/i2c_ads1115", drivers["I2C"]["environnement"].find("ADS1115", {"activation": "OFF"}).find("activation", "OFF"), "ON")
+    do import i2c_ads1115 as _ctrl end   # solidifie : init() porte la garde d'activation
     do import i2c_mcp23017 as _ctrl end   # solidifie : init() porte la garde d'activation
     do import modBus_Conn16channels as _ctrl end   # solidifie : init() porte la garde d'activation
     do import modBus_TasmotaSlaveModBus as _ctrl end   # solidifie : init() porte la garde d'activation
