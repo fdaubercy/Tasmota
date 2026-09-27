@@ -168,10 +168,13 @@ end
 controleLedTemoin.CONTROLE_LED_TEMOIN = CONTROLE_LED_TEMOIN
 
 # init() : instancie le driver et publie l'instance dans global.controleLedTemoin.
-# Remplace le code de niveau fichier ; appele depuis autoexec apres 'import'.
+# Remplace le code de niveau fichier.
+# APPELEE AUTOMATIQUEMENT par 'import controleLedTemoin' (be_module.c:285-296, module_init) :
+# Berry passe le module en parametre 'm' et renvoie le resultat (l'instance, ou nil) a la
+# place du module. Ne PAS la rappeler depuis autoexec, ni lire le module par son nom global.
 # add_driver(self) est fait dans CONTROLE_LED_TEMOIN.init() quand config_ok.
-def controleLedTemoin_init()
-    var inst = controleLedTemoin.CONTROLE_LED_TEMOIN()
+def controleLedTemoin_init(m)
+    var inst = m.CONTROLE_LED_TEMOIN()
     if !inst.config_ok
         inst = nil
     end

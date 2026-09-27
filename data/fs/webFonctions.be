@@ -2,14 +2,16 @@
 #@ solidify:webFonctions
 var webFonctions = module("webFonctions")
 
-webFonctions.DEBUG = nil
-
+# Etat de debug : dans une GLOBALE, pas dans le module. Un module solidifie est constant
+# (en flash) : ecrire webFonctions.DEBUG a l'execution leve "'module' value has no writable
+# attribute 'DEBUG'". nil = pas encore lu depuis serveur["debug"].
 def webFonctions_log(msg, levelDebug)
-	if (webFonctions.DEBUG == nil)
-        webFonctions.DEBUG = serveur.find("debug", "OFF")
+    import global
+	if (global.webFonctions_DEBUG == nil)
+        global.webFonctions_DEBUG = serveur.find("debug", "OFF")
     end
 
-    if (webFonctions.DEBUG == "ON")
+    if (global.webFonctions_DEBUG == "ON")
         log(msg, levelDebug)
     end
 end
@@ -18,6 +20,7 @@ webFonctions.log = webFonctions_log
 # exemples: 
 # ReglageWeb logActivation OFF
 def webFonctions_reglageWeb(cmd, idx, payload, payload_json)
+    import global
     import string
     import json
 
@@ -47,15 +50,15 @@ def webFonctions_reglageWeb(cmd, idx, payload, payload_json)
     if string.toupper(fonction) == "LOGACTIVATION"
         # Adapte le paramètre
         parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-        webFonctions.DEBUG = parametres[0]
+        global.webFonctions_DEBUG = parametres[0]
 
         # Sauvegarde le paramètre
-        serveur["rangeExtender"]["debug"] = webFonctions.DEBUG
+        serveur["rangeExtender"]["debug"] = global.webFonctions_DEBUG
     end
 
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd = string.format("ReglageWeb: logActivated=%s", webFonctions.DEBUG)
+    reponse_cmnd = string.format("ReglageWeb: logActivated=%s", global.webFonctions_DEBUG)
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
 webFonctions.reglageWeb = webFonctions_reglageWeb

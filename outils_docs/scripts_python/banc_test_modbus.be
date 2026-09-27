@@ -114,16 +114,16 @@ verifie("trame lecture 0x04 (quantite 0x0004, 6 premiers octets)",
 
 print("")
 print("=== 3. apparieReponse : decision de la phase 1 bis ===")
-modbusFonctions.enVol = {"paramMSG": {"DeviceAddress":1, "FunctionCode":3, "StartAddress":1, "Count":16, "type":"uint16"}}
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress":1, "FunctionCode":3, "StartAddress":1, "Count":16, "type":"uint16"}}
 verifie("reponse conforme -> true", true,
         modbusFonctions.apparieReponse({"DeviceAddress":1, "FunctionCode":3, "Values":[0]}))
-modbusFonctions.enVol = {"paramMSG": {"DeviceAddress":1, "FunctionCode":3, "StartAddress":1, "Count":16, "type":"uint16"}}
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress":1, "FunctionCode":3, "StartAddress":1, "Count":16, "type":"uint16"}}
 verifie("hors-sequence (fct 6 != 3) -> false", false,
         modbusFonctions.apparieReponse({"DeviceAddress":1, "FunctionCode":6, "Values":[0]}))
-modbusFonctions.enVol = {"paramMSG": {"DeviceAddress":1, "FunctionCode":3, "StartAddress":1, "Count":16, "type":"uint16"}}
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress":1, "FunctionCode":3, "StartAddress":1, "Count":16, "type":"uint16"}}
 verifie("telemetrie (Automatique=true) -> false", false,
         modbusFonctions.apparieReponse({"DeviceAddress":1, "FunctionCode":3, "Automatique":true, "Values":[0]}))
-modbusFonctions.enVol = nil
+modbusFonctions.etat()["enVol"] = nil
 verifie("rien en vol -> false", false,
         modbusFonctions.apparieReponse({"DeviceAddress":1, "FunctionCode":3, "Values":[0]}))
 

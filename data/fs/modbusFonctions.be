@@ -30,17 +30,39 @@
 # garde son slash : c'est un fichier sur le LittleFS, pas un nom de module.
 var modbusFonctions = module("modbusFonctions")
 
-modbusFonctions.DEBUG = nil
-modbusFonctions.serialModBus = nil
+# ETAT MUTABLE DU MODULE : dans une GLOBALE, pas dans le module. Un module solidifie est
+# constant (en flash) : y ecrire a l'execution leve "'module' value has no writable
+# attribute", et ses listes sont figees (queue.push impossible). La map est creee au
+# premier appel avec les valeurs de depart qu'avaient les anciens attributs de module.
+def modbusFonctions_etat()
+    import global
+    if (global._etatModbusFonctions == nil)
+        global._etatModbusFonctions = {
+            "DEBUG": nil,               # 'ON'/'OFF', lu une fois depuis drivers['ModBus']['debug']
+            "serialModBus": nil,        # objet serial du bus RS485 (esclave)
+            "enVol": nil,               # message envoye en attente de reponse (nil = canal RS485 libre)
+            "queue": [],                # messages en attente : [{paramMSG, typeMsg, tentatives}, ...]
+            "clients": [nil, nil, nil, nil, nil, nil],   # 5 connexions TCP max (esclaves id 1 a 5)
+            "nbRegistres": 0,           # Nombre de bits ou registres a lire / ecrire
+            "nbOctets": 0,              # Nombre d'octets a lire / ecrire
+            "nbValeurs": 0              # Nombre de valeurs a lire / ecrire
+        }
+    end
+    return global._etatModbusFonctions
+end
+modbusFonctions.etat = modbusFonctions_etat
+
+# (etat deplace dans modbusFonctions.etat()) modbusFonctions.DEBUG = nil
+# (etat deplace dans modbusFonctions.etat()) modbusFonctions.serialModBus = nil
 modbusFonctions.timeout_ReponseModBus_ms = 4000
-modbusFonctions.clients = [nil, nil, nil, nil, nil, nil]     # 5 connexions TCP possibles au max pour les 5 esclaves ModBus (id = 1 à 5)
+# (etat deplace dans modbusFonctions.etat()) modbusFonctions.clients = [nil, nil, nil, nil, nil, nil]     # 5 connexions TCP possibles au max pour les 5 esclaves ModBus (id = 1 à 5)
 
 # --- File d'attente FIFO du maitre ModBus (un seul message en vol a la fois) ---
 # Remplace l'ancien couple (booleen attenteReponse + renvoi par timer nomme par
 # StartAddress, qui ecrasait/perdait des messages sur collision de nom).
 # Voir outils_docs/PROTOCOLE_MODBUS.md sections 5-6.
-modbusFonctions.queue = []            # messages en attente : [{paramMSG, typeMsg, tentatives}, ...]
-modbusFonctions.enVol = nil           # message envoye en attente de reponse (nil = canal RS485 libre)
+# (etat deplace dans modbusFonctions.etat()) modbusFonctions.queue = []            # messages en attente : [{paramMSG, typeMsg, tentatives}, ...]
+# (etat deplace dans modbusFonctions.etat()) modbusFonctions.enVol = nil           # message envoye en attente de reponse (nil = canal RS485 libre)
 modbusFonctions.MAX_TENTATIVES = 3    # renvois max avant abandon (jamais de blocage ni de perte muette)
 
 # # *************************************************
@@ -131,9 +153,9 @@ modbusFonctions.tabErreur = {
                                 "crcerror": 9
 }
 
-modbusFonctions.nbRegistres = 0             # Nombre de bits ou registres à lire / écrire
-modbusFonctions.nbOctets = 0                # Nombre d'octets à lire / écrire
-modbusFonctions.nbValeurs = 0               # Nombre de valeurs à lire / écrire
+# (etat deplace dans modbusFonctions.etat()) modbusFonctions.nbRegistres = 0             # Nombre de bits ou registres à lire / écrire
+# (etat deplace dans modbusFonctions.etat()) modbusFonctions.nbOctets = 0                # Nombre d'octets à lire / écrire
+# (etat deplace dans modbusFonctions.etat()) modbusFonctions.nbValeurs = 0               # Nombre de valeurs à lire / écrire
 modbusFonctions.raw = false
 
 modbusFonctions.MBR_MAX_REGISTERS = 64
@@ -141,11 +163,11 @@ modbusFonctions.MBR_MAX_REGISTERS = 64
 # trame["nbValeurs"] = Nombre de valeurs à lire / écrire
 
 def modbusFonctions_log(msg, levelDebug)
-    if (modbusFonctions.DEBUG == nil)
-        modbusFonctions.DEBUG = drivers["ModBus"].find("debug", "OFF")
+    if (modbusFonctions.etat()["DEBUG"] == nil)
+        modbusFonctions.etat()["DEBUG"] = drivers["ModBus"].find("debug", "OFF")
     end
 
-    if (modbusFonctions.DEBUG == "ON")
+    if (modbusFonctions.etat()["DEBUG"] == "ON")
         log(msg, levelDebug)
     end
 end
@@ -184,7 +206,7 @@ def modbusFonctions_configModbusByJson()
         # Règle la communication ModBus si activée (Si Eslave ModBus id > 0)
         elif (modbusJSON.find("id", 0) > 0)
             # Paramétrage port RS485 : gpio_rx:4 gpio_tx:5
-            modbusFonctions.serialModBus = serial(modbusJSON["environnement"]["pinsModBus"]["RX"]["pin"], 
+            modbusFonctions.etat()["serialModBus"] = serial(modbusJSON["environnement"]["pinsModBus"]["RX"]["pin"], 
                                                     modbusJSON["environnement"]["pinsModBus"]["TX"]["pin"], 
                                                     modbusJSON["debit"], introspect.get(serial, string.format("SERIAL_%s", modbusJSON["mode"])))
         end
@@ -238,7 +260,7 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
         try
             # Adapte le paramètre
             parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-            modbusFonctions.DEBUG = parametres[0]
+            modbusFonctions.etat()["DEBUG"] = parametres[0]
 
             # Sauvegarde le paramètre
             drivers["ModBus"]["debug"] = parametres[0]
@@ -307,7 +329,7 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
             # Si maitre ModBus (id == 0) ==> Se connecte en tant que client TCP à l'esclave ModBus
             for item: jsonData.keys()
                 # Crée l'instance du client
-                if (modbusFonctions.clients[id] == nil)     modbusFonctions.clients[id] = tcpclientasync()      end
+                if (modbusFonctions.etat()["clients"][id] == nil)     modbusFonctions.etat()["clients"][id] = tcpclientasync()      end
 
                 for cle : jsonData[item].keys()
                     if (cle == "maitre")
@@ -315,10 +337,10 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
                         IP = jsonData[item][cle]["ModBus"]["TCP"].find("IPAddress", "")
 
                         # Vérifie la connexion TCP
-                        if (!modbusFonctions.clients[id].connected())
+                        if (!modbusFonctions.etat()["clients"][id].connected())
                             # Connecte le client au serveur TCP
                             tcpFonctions.log(string.format("REGLAGE_MODBUS: Ouverture connexion TCP [%s] sur le port %i: %s", 
-                                                                        IP, tcpFonctions.port, modbusFonctions.clients[id].connect(IP, tcpFonctions.port) ? "OK" : "Echec"), LOG_LEVEL_DEBUG_PLUS)
+                                                                        IP, tcpFonctions.port, modbusFonctions.etat()["clients"][id].connect(IP, tcpFonctions.port) ? "OK" : "Echec"), LOG_LEVEL_DEBUG_PLUS)
 
                             tasmota.delay(250)
                         else tcpFonctions.log(string.format("Le client ModBus TCP est déjà connecté à l'esclave ModBus %i [%s]", id, IP), LOG_LEVEL_DEBUG_PLUS)
@@ -333,7 +355,7 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
 
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd += string.format("logActivated=%s", modbusFonctions.DEBUG)
+    reponse_cmnd += string.format("logActivated=%s", modbusFonctions.etat()["DEBUG"])
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
 modbusFonctions.reglageModbus = modbusFonctions_reglageModbus
@@ -429,7 +451,7 @@ modbusFonctions.changementEtatDemarrage = modbusFonctions_changementEtatDemarrag
 
 # Enfile un message a envoyer, puis tente de pomper la file.
 def modbusFonctions_enfileMsg(paramMSG, typeMsg)
-    modbusFonctions.queue.push({"paramMSG": paramMSG, "typeMsg": typeMsg, "tentatives": 0})
+    modbusFonctions.etat()["queue"].push({"paramMSG": paramMSG, "typeMsg": typeMsg, "tentatives": 0})
     modbusFonctions.pompeQueue()
 end
 modbusFonctions.enfileMsg = modbusFonctions_enfileMsg
@@ -440,22 +462,22 @@ def modbusFonctions_pompeQueue()
 
     # La file ne concerne que le maitre (id == 0) : lui seul serialise le bus RS485.
     if (drivers["ModBus"].find("id", 99) != 0)  return end
-    if (modbusFonctions.enVol != nil)           return end       # un message attend deja sa reponse
-    if (size(modbusFonctions.queue) == 0)       return end       # rien a envoyer
+    if (modbusFonctions.etat()["enVol"] != nil)           return end       # un message attend deja sa reponse
+    if (size(modbusFonctions.etat()["queue"]) == 0)       return end       # rien a envoyer
 
-    var item = modbusFonctions.queue[0]
-    modbusFonctions.queue.remove(0)
-    modbusFonctions.enVol = item
+    var item = modbusFonctions.etat()["queue"][0]
+    modbusFonctions.etat()["queue"].remove(0)
+    modbusFonctions.etat()["enVol"] = item
 
     var reponse = tasmota.cmd("ModBusSend " + json.dump(item["paramMSG"]), boolMute)
 
     # Echec d'envoi : on relache, on remet en tete (retry borne) avec un petit backoff.
     if (reponse.find("ModbusSend", "") == "Failed")
         modbusFonctions.log("POMPE_QUEUE: ModBusSend=Echec -> renvoi programme", LOG_LEVEL_DEBUG_PLUS)
-        modbusFonctions.enVol = nil
+        modbusFonctions.etat()["enVol"] = nil
         item["tentatives"] += 1
         if (item["tentatives"] < modbusFonctions.MAX_TENTATIVES)
-            modbusFonctions.queue.insert(0, item)
+            modbusFonctions.etat()["queue"].insert(0, item)
             modbusFonctions.armeTimer(200, / -> modbusFonctions.pompeQueue(), "modbus_repompe")
         else
             modbusFonctions.log("POMPE_QUEUE: abandon d'un message apres " + str(modbusFonctions.MAX_TENTATIVES) + " tentatives d'envoi", LOG_LEVEL_ERREUR)
@@ -465,7 +487,7 @@ def modbusFonctions_pompeQueue()
     # Commande malformee : inutile de reessayer, on la jette et on avance.
     elif (reponse.find("Command", "") == "Error")
         modbusFonctions.log(f"POMPE_QUEUE: commande ModBus invalide, jetee : {json.dump(item['paramMSG']):s}", LOG_LEVEL_ERREUR)
-        modbusFonctions.enVol = nil
+        modbusFonctions.etat()["enVol"] = nil
         modbusFonctions.pompeQueue()
         return
     end
@@ -480,12 +502,12 @@ modbusFonctions.pompeQueue = modbusFonctions_pompeQueue
 # par surTimeout (ok=false). Retire/renvoie le message puis pompe le suivant.
 def modbusFonctions_termineEnVol(ok)
     modbusFonctions.desarmeTimer("modbus_timeout")
-    var item = modbusFonctions.enVol
-    modbusFonctions.enVol = nil
+    var item = modbusFonctions.etat()["enVol"]
+    modbusFonctions.etat()["enVol"] = nil
     if (!ok && item != nil)
         item["tentatives"] += 1
         if (item["tentatives"] < modbusFonctions.MAX_TENTATIVES)
-            modbusFonctions.queue.insert(0, item)               # pas de reponse -> renvoi en tete
+            modbusFonctions.etat()["queue"].insert(0, item)               # pas de reponse -> renvoi en tete
         else
             modbusFonctions.log("TERMINE_EN_VOL: abandon d'un message sans reponse apres " + str(modbusFonctions.MAX_TENTATIVES) + " tentatives", LOG_LEVEL_ERREUR)
         end
@@ -541,9 +563,9 @@ modbusFonctions.desarmeTimer = modbusFonctions_desarmeTimer
 def modbusFonctions_apparieReponse(reponse)
     import string
 
-    if (modbusFonctions.enVol == nil)   return false end
+    if (modbusFonctions.etat()["enVol"] == nil)   return false end
     if (type(reponse) != "instance")    return false end
-    var req = modbusFonctions.enVol["paramMSG"]
+    var req = modbusFonctions.etat()["enVol"]["paramMSG"]
 
     # Une telemetrie spontanee de l'esclave n'est la reponse de personne : elle arrive
     # quand elle veut et porterait le meme FunctionCode qu'une requete en vol une fois le
@@ -653,7 +675,7 @@ def modbusFonctions_envoiMsgModbusSerial(paramMSG, typeMsg)
         # Envoi la trame
         reponse = modbusFonctions.prepareTrame(paramMSG, typeMsg)
         modbusFonctions.log(string.format("ENVOI_MSG_MODBUS: Message ModBus envoyé = 0x%s", reponse.tohex()), LOG_LEVEL_DEBUG_PLUS)
-        modbusFonctions.serialModBus.write(reponse)
+        modbusFonctions.etat()["serialModBus"].write(reponse)
     end
 end
 modbusFonctions.envoiMsgModbusSerial = modbusFonctions_envoiMsgModbusSerial
@@ -741,11 +763,11 @@ def modbusFonctions_envoiMsgModbusTCP(Trame, typeMsg)
     # Si maitre ModBus (id == 0) ==> Se connecte en tant que client TCP à l'esclave ModBus
     if (drivers["ModBus"].find("id", 99) == 0)
         # Le maitre tient un client TCP par esclave, indexe par l'id du destinataire
-        if (id < 1 || id >= size(modbusFonctions.clients))
+        if (id < 1 || id >= size(modbusFonctions.etat()["clients"]))
             modbusFonctions.log(string.format("ENVOI_MSG_MODBUS_TCP: Aucun client TCP pour l'esclave d'ID=%i !", id), LOG_LEVEL_ERREUR)
             return
         end
-        Client = modbusFonctions.clients[id]
+        Client = modbusFonctions.etat()["clients"][id]
 
         # Récupère les informations pour savoir si le port est disponible pour envoyer des infos ou ordre
         if (Client != nil && Client.connected() && Client.listening())
@@ -782,7 +804,7 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
 
     # Recoit message sur le port RS485
     if (typeTitre == "ModbusReceived")
-        if (modbusFonctions.serialModBus != nil && modbusFonctions.serialModBus.available()) 
+        if (modbusFonctions.etat()["serialModBus"] != nil && modbusFonctions.etat()["serialModBus"].available()) 
             #- Exemple de json à construire à la réception d'une trame
                 @ Count = Nombre d'octets de données reçus ou retournés dans la réponse
                 @ Length = Longueur de la tame entière avec le CRC
@@ -790,7 +812,7 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
                 @ Erreur = Erreur de réception (0=OK, 1=Adresse esclave incorrecte, 9=CRC incorrecte)
             -#
             paramMSG = {typeTitre: {"Trame": "", "DeviceAddress": 0, "FunctionCode": 0, "FunctionName": "", "StartAddress": 0, "Length": 0, "Count": 0, "Values": [], "CRC": 0, "Erreur": 0}}
-            paramMSG[typeTitre]["Trame"] = modbusFonctions.serialModBus.read() 
+            paramMSG[typeTitre]["Trame"] = modbusFonctions.etat()["serialModBus"].read() 
 
             # Réception du message
             modbusFonctions.log("RECEPTION_MSG_MODBUS: -------------------- lireMsgModbus -------------------", LOG_LEVEL_DEBUG_PLUS)
@@ -818,10 +840,10 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
                                                 ), serveur["mqtt"]["topic"])
             
             # Initialise le buffer & acquitte le message en vol (reponse recue)
-            var buffer = modbusFonctions.serialModBus.read()
+            var buffer = modbusFonctions.etat()["serialModBus"].read()
 
             modbusFonctions.termineEnVol(true)
-            modbusFonctions.serialModBus.flush()
+            modbusFonctions.etat()["serialModBus"].flush()
         end
     # Recoit message sur le port TCP
     elif (typeTitre == "ModbusReceivedTCP")
@@ -1275,7 +1297,7 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
 
     # Calcule le nombre d'octets de données à envoyer/pour réponse en fonction du type de donnée
     # Minimum, un valeur envoyée est aux format int8 (pour les coils) / int16 (pour les registres)
-    modbusFonctions.nbValeurs = paramMSG.find("Count", 1)
+    modbusFonctions.etat()["nbValeurs"] = paramMSG.find("Count", 1)
 
     # Si functionCode = 0x01 |0x02 | 0x0F:
     # Count != Nb de registres
@@ -1300,32 +1322,32 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
     paramMSG["type"] = paramMSG.find("type", "int8")   
 
     # Calcule le nombre d'octets à lire / écrire (modbusFonctions.nbOctets)
-    if (bitMode)    modbusFonctions.nbOctets = (modbusFonctions.nbValeurs + 7) / 8     end
+    if (bitMode)    modbusFonctions.etat()["nbOctets"] = (modbusFonctions.etat()["nbValeurs"] + 7) / 8     end
 
     # Calcule le nombre de registres à lire / écrire (modbusFonctions.nbRegistres)
     if (paramMSG.find("type", "") == "int8" || paramMSG.find("type", "") == "uint8")
-        modbusFonctions.nbRegistres = (bitMode ? modbusFonctions.nbValeurs : ((modbusFonctions.nbValeurs - 1) / 2) + 1)
+        modbusFonctions.etat()["nbRegistres"] = (bitMode ? modbusFonctions.etat()["nbValeurs"] : ((modbusFonctions.etat()["nbValeurs"] - 1) / 2) + 1)
     elif (paramMSG.find("type", "") == "int16" || paramMSG.find("type", "") == "uint16" || paramMSG.find("type", "") == "")
         if (paramMSG.find("type", "") == "uint16")   paramMSG["type"] = "uint16"     end
-        modbusFonctions.nbRegistres = modbusFonctions.nbValeurs
+        modbusFonctions.etat()["nbRegistres"] = modbusFonctions.etat()["nbValeurs"]
     elif (paramMSG.find("type", "") == "int32" || paramMSG.find("type", "") == "uint32" || paramMSG.find("type", "") == "float")
-        modbusFonctions.nbRegistres = (bitMode ? modbusFonctions.nbValeurs : 2 * modbusFonctions.nbValeurs)
+        modbusFonctions.etat()["nbRegistres"] = (bitMode ? modbusFonctions.etat()["nbValeurs"] : 2 * modbusFonctions.etat()["nbValeurs"])
     elif (paramMSG.find("type", "") == "raw")
-        modbusFonctions.nbRegistres = (bitMode ? modbusFonctions.nbValeurs : ((modbusFonctions.nbValeurs - 1) / 2) + 1)
+        modbusFonctions.etat()["nbRegistres"] = (bitMode ? modbusFonctions.etat()["nbValeurs"] : ((modbusFonctions.etat()["nbValeurs"] - 1) / 2) + 1)
     elif (paramMSG.find("type", "") == "hex")
-        modbusFonctions.nbRegistres = (bitMode ? modbusFonctions.nbValeurs : ((modbusFonctions.nbValeurs - 1) / 2) + 1)
+        modbusFonctions.etat()["nbRegistres"] = (bitMode ? modbusFonctions.etat()["nbValeurs"] : ((modbusFonctions.etat()["nbValeurs"] - 1) / 2) + 1)
     elif (paramMSG.find("type", "") == "bit")
-        modbusFonctions.nbRegistres = (bitMode ? modbusFonctions.nbValeurs : ((modbusFonctions.nbValeurs - 1) / 16) + 1)
+        modbusFonctions.etat()["nbRegistres"] = (bitMode ? modbusFonctions.etat()["nbValeurs"] : ((modbusFonctions.etat()["nbValeurs"] - 1) / 16) + 1)
     else
         paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongtype"]
     end
 
     # Previent l'overflow du buffer 
-    if ((!bitMode) && (modbusFonctions.nbRegistres > modbusFonctions.MBR_MAX_REGISTERS))
+    if ((!bitMode) && (modbusFonctions.etat()["nbRegistres"] > modbusFonctions.MBR_MAX_REGISTERS))
         paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongnbValeurs"]
     end
 
-    if ((bitMode) && (modbusFonctions.nbRegistres > modbusFonctions.MBR_MAX_REGISTERS * 8))
+    if ((bitMode) && (modbusFonctions.etat()["nbRegistres"] > modbusFonctions.MBR_MAX_REGISTERS * 8))
         paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongnbValeurs"]
     end
 
@@ -1336,7 +1358,7 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
     # Détecte si le nombre de données demandées est valide
     # functionCode = 0x05
     if(paramMSG["FunctionName"] == "ECRITURE_COIL_UNIQUE")
-        if (modbusFonctions.nbValeurs != 1)     paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongnbValeurs"]     end
+        if (modbusFonctions.etat()["nbValeurs"] != 1)     paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongnbValeurs"]     end
     # functionCode = 0x06
     elif(paramMSG["FunctionName"] == "ECRITURE_REGISTRE_UNIQUE")
     # functionCode = 0x0F
@@ -1350,10 +1372,10 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
         elif(paramMSG["type"] == "int32")
             writeDataSize2 = writeDataSize * 32
         end
-        if (modbusFonctions.nbValeurs > writeDataSize2)  paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongnbValeurs"]     end
+        if (modbusFonctions.etat()["nbValeurs"] > writeDataSize2)  paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongnbValeurs"]     end
     # functionCode = 0x10
     elif(paramMSG["FunctionName"] == "ECRITURE_REGISTRES_HOLDER")
-        if (modbusFonctions.nbValeurs > writeDataSize)     paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongnbValeurs"]     end
+        if (modbusFonctions.etat()["nbValeurs"] > writeDataSize)     paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongnbValeurs"]     end
     end
 
     # Copie les données à écrire si spécifiées
@@ -1370,12 +1392,12 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
     # de lecture a Values=[] (writeDataSize == 0) et saute donc ce bloc ; les ecritures et les
     # reponses (writeDataSize > 0) le traversent inchange. Trouve par banc_test_modbus.
     if (paramMSG["Erreur"] == modbusFonctions.tabErreur["noerror"] && type(paramMSG["Values"]) == "instance" && writeDataSize > 0)
-        if (modbusFonctions.nbRegistres > 40)
+        if (modbusFonctions.etat()["nbRegistres"] > 40)
             paramMSG["Erreur"] = modbusFonctions.tabErreur["tomanydata"]
         else
             # Alloue N octets à l'ensemble des données à inscrire
-            modbusFonctions.nbRegistres *= 2
-            writeData = bytes(-modbusFonctions.nbRegistres)
+            modbusFonctions.etat()["nbRegistres"] *= 2
+            writeData = bytes(-modbusFonctions.etat()["nbRegistres"])
 
             # Parcours les valeurs
             for nb: 0 .. writeDataSize - 1
@@ -1390,7 +1412,7 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
                 elif (paramMSG["type"] == "int8" || paramMSG["type"] == "uint8")
                     writeData[nb] = paramMSG["Values"][nb]
                     writeData[nb + 1] = paramMSG["Values"][nb + 1]
-                    if (modbusFonctions.nbRegistres != writeDataSize / 2)    paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongnbValeurs"]    end
+                    if (modbusFonctions.etat()["nbRegistres"] != writeDataSize / 2)    paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongnbValeurs"]    end
                 elif (paramMSG["type"] == "int16" || paramMSG["type"] == "uint16")
                     writeData[nb * 2] = paramMSG["Values"][nb] >> 8
                     writeData[(nb * 2) + 1] = paramMSG["Values"][nb]
@@ -1425,9 +1447,9 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
     if (paramMSG["FunctionName"] == "LECTURE_COILS" || paramMSG["FunctionName"] == "LECTURE_ENTREES_DISCRETES")
         if (typeMsg == "Commande")
             Trame.add(paramMSG["StartAddress"], -2)     # Sur 2 octets
-            Trame.add(modbusFonctions.nbValeurs, -2)
+            Trame.add(modbusFonctions.etat()["nbValeurs"], -2)
         else
-            Trame.add(modbusFonctions.nbOctets, -1)
+            Trame.add(modbusFonctions.etat()["nbOctets"], -1)
 
             # Ajoute à la trame, les données à écrire
             Trame += writeData
@@ -1439,9 +1461,9 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
     elif (paramMSG["FunctionName"] == "LECTURE_REGISTRES_HOLDER")
         if (typeMsg == "Commande")
             Trame.add(paramMSG["StartAddress"], -2)     # Sur 2 octets
-            Trame.add(modbusFonctions.nbRegistres, -2)
+            Trame.add(modbusFonctions.etat()["nbRegistres"], -2)
         else
-            Trame.add(modbusFonctions.nbRegistres, -1)
+            Trame.add(modbusFonctions.etat()["nbRegistres"], -1)
 
             # Ajoute à la trame, les données à écrire
             Trame += writeData
@@ -1455,9 +1477,9 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
         # Ajoute le nombre de registres demandés
         if (typeMsg == "Commande")
             Trame.add(paramMSG["StartAddress"], -2)     # Sur 2 octets
-            Trame.add(modbusFonctions.nbRegistres, -2)
+            Trame.add(modbusFonctions.etat()["nbRegistres"], -2)
         else 
-            Trame.add(modbusFonctions.nbRegistres, -1)
+            Trame.add(modbusFonctions.etat()["nbRegistres"], -1)
 
             # Ajoute à la trame, les données à écrire
             Trame += writeData
@@ -1465,7 +1487,7 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
     # Fonction 0x05 ==> "Écriture d’une sortie digitale unique (Coil)"   ex=Activer 1 relai
     # Lors de l'écriture sur un seul Coil ou un seul Registre, le nombre de registres est toujours égal à 1. Nous empêchons également l'écriture de données hors plage.
     elif (paramMSG["FunctionName"] == "ECRITURE_COIL_UNIQUE")
-        modbusFonctions.nbRegistres = 1
+        modbusFonctions.etat()["nbRegistres"] = 1
 
         # Ajoute à la trame, les données à écrire
         Trame.add(paramMSG["StartAddress"], -2)     # Sur 2 octets
@@ -1473,7 +1495,7 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
     # Fonction 0x06 ==> "Écriture dans un registre (Write Single Register)"     ex=Relai temporisé
     # Lors de l'écriture sur un seul Coil ou un seul Registre, le nombre de registres est toujours égal à 1. Nous empêchons également l'écriture de données hors plage.
     elif (paramMSG["FunctionName"] == "ECRITURE_REGISTRE_UNIQUE")
-        modbusFonctions.nbRegistres = 1
+        modbusFonctions.etat()["nbRegistres"] = 1
 
         # Ajoute à la trame, les données à écrire
         Trame.add(paramMSG["StartAddress"], -2)     # Sur 2 octets
@@ -1485,31 +1507,31 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
     # de capacite deja pose en :1275-1285 ('hex' = 8 bits par valeur, 'int16' = 16, etc.).
     elif (paramMSG["FunctionName"] == "ECRITURE_COILS")
         Trame.add(paramMSG["StartAddress"], -2)     # Sur 2 octets
-        Trame.add(modbusFonctions.nbValeurs, -2)
+        Trame.add(modbusFonctions.etat()["nbValeurs"], -2)
 
         if (typeMsg == "Commande")
             # writeData est dimensionne pour des REGISTRES (2 octets par valeur, :1302-1303) :
             # en mode bit, seuls les nbOctets premiers octets portent les coils.
-            if (size(writeData) < modbusFonctions.nbOctets)
+            if (size(writeData) < modbusFonctions.etat()["nbOctets"])
                 paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongnbValeurs"]
             else
                 # Ajoute le nombre d'octets
-                Trame.add(modbusFonctions.nbOctets, -1)
+                Trame.add(modbusFonctions.etat()["nbOctets"], -1)
 
                 # Ajoute à la trame, les données à écrire
-                Trame += writeData[0 .. modbusFonctions.nbOctets - 1]
+                Trame += writeData[0 .. modbusFonctions.etat()["nbOctets"] - 1]
             end
         end
 
     # Fonction 0x10 ==> "Écriture de plusieurs registres (Write Multiple Registers)"     ex= commande d'une LED WS2812B (la couleur, la saturation, la luminosite)
     elif (paramMSG["FunctionName"] == "ECRITURE_REGISTRES_HOLDER")
         # Ajoute le nombre de registres demandés
-        Trame.add(modbusFonctions.nbValeurs, -2)
+        Trame.add(modbusFonctions.etat()["nbValeurs"], -2)
 
         if (typeMsg == "Commande")
             # Ajoute le nombre d'octets
             Trame.add(paramMSG["StartAddress"], -2)     # Sur 2 octets
-            Trame.add(modbusFonctions.nbRegistres, -1)
+            Trame.add(modbusFonctions.etat()["nbRegistres"], -1)
 
             # Ajoute à la trame, les données à écrire
             Trame += writeData
@@ -1530,9 +1552,9 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
     modbusFonctions.log(string.format("PREPARE_TRAME_MODBUS: StartAddress = 0x%04X", paramMSG.find("StartAddress", 0)), LOG_LEVEL_DEBUG_PLUS)
     modbusFonctions.log(string.format("PREPARE_TRAME_MODBUS: Type de données = %s", paramMSG.find("type", "")), LOG_LEVEL_DEBUG_PLUS)
     modbusFonctions.log(string.format("PREPARE_TRAME_MODBUS: BitMode = %s", str(bitMode)), LOG_LEVEL_DEBUG_PLUS)
-    modbusFonctions.log(string.format("PREPARE_TRAME_MODBUS: NbValeurs (Nombre de valeurs à lire / écrire) = %i", modbusFonctions.nbValeurs), LOG_LEVEL_DEBUG_PLUS)
-    modbusFonctions.log(string.format("PREPARE_TRAME_MODBUS: NbRegistres (Nombre de bits ou registres à lire / écrire) = %i", modbusFonctions.nbRegistres), LOG_LEVEL_DEBUG_PLUS)
-    modbusFonctions.log(string.format("PREPARE_TRAME_MODBUS: NbOctets (Nombre d'octets à lire / écrire) = %i", modbusFonctions.nbOctets), LOG_LEVEL_DEBUG_PLUS)
+    modbusFonctions.log(string.format("PREPARE_TRAME_MODBUS: NbValeurs (Nombre de valeurs à lire / écrire) = %i", modbusFonctions.etat()["nbValeurs"]), LOG_LEVEL_DEBUG_PLUS)
+    modbusFonctions.log(string.format("PREPARE_TRAME_MODBUS: NbRegistres (Nombre de bits ou registres à lire / écrire) = %i", modbusFonctions.etat()["nbRegistres"]), LOG_LEVEL_DEBUG_PLUS)
+    modbusFonctions.log(string.format("PREPARE_TRAME_MODBUS: NbOctets (Nombre d'octets à lire / écrire) = %i", modbusFonctions.etat()["nbOctets"]), LOG_LEVEL_DEBUG_PLUS)
     modbusFonctions.log(string.format("PREPARE_TRAME_MODBUS: Values = %s", str(paramMSG.find("Values", 0))), LOG_LEVEL_DEBUG_PLUS)
     modbusFonctions.log(string.format("PREPARE_TRAME_MODBUS: WriteData = %s", writeData.tohex()), LOG_LEVEL_DEBUG_PLUS)
     modbusFonctions.log(string.format("PREPARE_TRAME_MODBUS: CRC calculé = 0x%04X", crcCalcule), LOG_LEVEL_DEBUG_PLUS)
