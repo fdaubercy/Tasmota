@@ -176,3 +176,25 @@ Les commits marques ● ont un titre qui mentionne Berry / ESP32-S3 / nos sujets
 -   `aa73fd62a` Add static hashCheck variable to LwDecoPSLI5 class (#25033)
 -   `e03a1b39b` Add static variable hashCheck to LwDecoLHT65 class (#25034)
 -   `1180a5b99` Change default behaviour to hashCeck = disabled (#25037)
+
+## 2026-09-27 22:27 — 15 commit(s) recupere(s) d'upstream
+
+`arendst/Tasmota:development` → `fdaubercy/Tasmota:development` (merge_type : merge)
+
+**4 commit(s) ● a lire de pres.**
+
+- ● `f151ad814` Fix Matter commissioning mDNS announcements (#25069)
+-   `830cb206c` Doc detailed (#25071)
+-   `a8d91f4ac` MQTT tolerate delayed PINGRESP (#25067)
+-   `4bdce61d9` RC522: throttle idle polling and add self-healing watchdog (#25052)
+-   `a3394ba0a` Shutter: Split EnableEndStopTime into OpenEndStopTime and CloseEndStopTime (#25020)
+-   `e0ee732ba` Bump version v15.6.0.2
+-   `300b3bfb9` Platform 2026.09.50 Tasmota Arduino Core 3.3.12 based on IDF 5.5.5 (#25072)
+- ● `a622f395d` fix: be_matter_module.c:280:19: error: #if with no expression (#25075)
+-   `cadd9a561` Update change logs
+-   `b0c8e4f53` DALI-2 push button bindings to control gear targets (DaliBind) (#25073)
+- ● `c683ec3bc` Matter: add Electrical Power Measurement cluster to On/Off Plug-in Unit (#24922)
+-   `40ed9e48e` Update change logs
+- ● `35bf395e5` Update security policy
+-   `7cd71e06e` [MI32-BLE] Add age of battery reading to battery icon (#25074)
+-   `4ee20e1a0` feat(ir): accept raw IR data as JSON, with a channel (#25062)
