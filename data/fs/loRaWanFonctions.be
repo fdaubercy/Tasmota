@@ -1,25 +1,42 @@
 # Définition du module
-var loRaWanFonctions = module("/loRaWanFonctions")
+#@ solidify:loRaWanFonctions
+var loRaWanFonctions = module("loRaWanFonctions")
 
-loRaWanFonctions.DEBUG = nil
+# Etat modifiable du module, dans une GLOBALE (solidification 2026-09-27). Un module
+# solidifie est constant (en flash) : y ecrire leve "'module' value has no writable
+# attribute", et ses listes sont figees. La map est creee au premier appel avec les
+# valeurs de depart qu'avaient les anciens attributs du module.
+def loRaWanFonctions_etat()
+    import global
+    if (global._etatLoRaWanFonctions == nil)
+        global._etatLoRaWanFonctions = {
+            "DEBUG": nil              # 'ON'/'OFF', lu une fois depuis drivers['LoRaWan']['debug']
+        }
+    end
+    return global._etatLoRaWanFonctions
+end
+loRaWanFonctions.etat = loRaWanFonctions_etat
 
-loRaWanFonctions.log = def(msg, levelDebug)
 
-    if (loRaWanFonctions.DEBUG == nil)
-        loRaWanFonctions.DEBUG = drivers["ModBus"].find("debug", "OFF")
+def loRaWanFonctions_log(msg, levelDebug)
+
+    if (loRaWanFonctions.etat()["DEBUG"] == nil)
+        loRaWanFonctions.etat()["DEBUG"] = drivers["LoRaWan"].find("debug", "OFF")
     end
 
-    if (loRaWanFonctions.DEBUG == "ON")
+    if (loRaWanFonctions.etat()["DEBUG"] == "ON")
         log(msg, levelDebug)
     end
 end
+loRaWanFonctions.log = loRaWanFonctions_log
 
 #- exemples: 
     reglageLoRaWan logActivation OFF
 -#
-loRaWanFonctions.reglageLoRaWan = def(cmd, idx, payload, payload_json)
+def loRaWanFonctions_reglageLoRaWan(cmd, idx, payload, payload_json)
     import string
     import json
+    import persist
 
     var fonction = false
     var parametres = false
@@ -48,13 +65,14 @@ loRaWanFonctions.reglageLoRaWan = def(cmd, idx, payload, payload_json)
         try
             # Adapte le paramètre
             parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-            loRaWanFonctions.DEBUG = parametres[0]
+            loRaWanFonctions.etat()["DEBUG"] = parametres[0]
 
             # Sauvegarde le paramètre
             drivers["LoRaWan"]["debug"] = parametres[0]
 
-            # Sauvegarde le paramètre
-            modules["LoRaWan"]["debug"] = parametres[0]
+            # Sauvegarde le paramètre (corrige le 2026-09-27 : ecrivait dans modules["LoRaWan"],
+            # absent -> exception avalee, persist.save() jamais atteint)
+            persist.drivers["LoRaWan"]["debug"] = parametres[0]
             persist.save()
         except .. as e, m
             # print('Erreur: ', e, " -> ", m)
@@ -63,18 +81,20 @@ loRaWanFonctions.reglageLoRaWan = def(cmd, idx, payload, payload_json)
 
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd += string.format("logActivated=%s", loRaWanFonctions.DEBUG)
+    reponse_cmnd += string.format("logActivated=%s", loRaWanFonctions.etat()["DEBUG"])
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
+loRaWanFonctions.reglageLoRaWan = loRaWanFonctions_reglageLoRaWan
 
 # Configuration de la mise en place du réseau LoRaWan
 # En fonction des paramètres de configuration enregistrés en JSON
-loRaWanFonctions.configLoRaWanByJson = def()
+def loRaWanFonctions_configLoRaWanByJson()
 
 end
+loRaWanFonctions.configLoRaWanByJson = loRaWanFonctions_configLoRaWanByJson
 
 # Règles sur changement d'état lors du démarrage de Tasmota
-loRaWanFonctions.changementEtatDemarrage = def(value, trigger, msg)
+def loRaWanFonctions_changementEtatDemarrage(value, trigger, msg)
     import string
     import mqtt
     import json
@@ -123,6 +143,7 @@ loRaWanFonctions.changementEtatDemarrage = def(value, trigger, msg)
         end
     end
 end
+loRaWanFonctions.changementEtatDemarrage = loRaWanFonctions_changementEtatDemarrage
 
 # Retourne le module lors de l'importation
 return loRaWanFonctions

@@ -90,8 +90,8 @@ if (persist._p != nil && persist._p.size() != 0)
     do import controleTCP as _ctrl end   # solidifie : init() porte la garde d'activation
     do import controleModbus as _ctrl end   # solidifie : init() porte la garde d'activation
     do import controleRangeExtender as _ctrl end   # solidifie : init() porte la garde d'activation
-    gestionFileFolder.loadBerryFile("/controleLoRaWan", drivers["LoRaWan"].find("activation", "OFF"), "ON")
-    gestionFileFolder.loadBerryFile("/controleVoletRoulants", drivers.find("voletRoulants", {}).find("activation", "OFF"), "ON")
+    do import controleLoRaWan as _ctrl end   # solidifie : init() porte la garde d'activation
+    do import controleVoletRoulants as _ctrl end   # solidifie : init() porte la garde d'activation
     do import controleDiscovery as _ctrl end   # solidifie : init() porte la garde d'activation
     gestionFileFolder.loadBerryFile("/controleGarage", modules.find("garage", {}).find("activation", "OFF"), "ON")
 else log ("AUTO_EXE: Attention, le fichier de paramétrage est absent !", LOG_LEVEL_ERREUR)

@@ -13,7 +13,12 @@
         * Le relai2 se réactivera 5splus tard pour permettre une nouvelle commande.
 -#
 
-var controleVRoulant
+# Rendu solidifiable (2026-09-27), sur le modele de controleGeneral : la classe est portee
+# par le module import-able 'controleVoletRoulants'. autoexec le charge par 'import' (version en FLASH
+# via load_native), plus par loadBerryFile (qui recompilait la classe en RAM).
+# 'import' appelle AUTOMATIQUEMENT controleVoletRoulants_init(m), en pied de fichier.
+#@ solidify:controleVoletRoulants
+var controleVoletRoulants = module("controleVoletRoulants")
 
 class CONTROLE_VR : Driver
 	# Variables
@@ -87,23 +92,39 @@ class CONTROLE_VR : Driver
 end
 
 # Active le Driver de controle global des modules
-if (drivers["voletRoulants"].find("activation", "OFF") == "ON")
-    for cle: drivers["voletRoulants"]["environnement"]["VRs"].keys()
-        import string
+# Publie la classe dans le module (solidification + import).
+controleVoletRoulants.CONTROLE_VR = CONTROLE_VR
 
-        if type(drivers["voletRoulants"]["environnement"]["VRs"][cle]) != "instance"   continue    end
+# init() : APPELEE AUTOMATIQUEMENT par 'import controleVoletRoulants' (be_module.c:285-296, module_init).
+# Ne PAS la rappeler depuis autoexec. Reprend le code d'activation de niveau fichier d'avant.
+# Publie aussi le nom GLOBAL 'vrFonctions' : les fonctions de ce module solidifie
+# s'appellent entre elles par ce nom, qu'un module natif ne cree pas lui-meme.
+def controleVoletRoulants_init(m)
+    import global
 
-        try
-            if (drivers["voletRoulants"]["environnement"]["VRs"][cle].find("activation", "OFF") == "ON")
-                controleVRoulant = CONTROLE_VR()
-                tasmota.add_driver(controleVRoulant)
+    import vrFonctions
+    global.vrFonctions = vrFonctions
 
-                log("CONTROLE_VR: Driver activé !", LOG_LEVEL_DEBUG)
+    if (drivers["voletRoulants"].find("activation", "OFF") == "ON")
+        for cle: drivers["voletRoulants"]["environnement"]["VRs"].keys()
+            import string
 
-                break
+            if type(drivers["voletRoulants"]["environnement"]["VRs"][cle]) != "instance"   continue    end
+
+            try
+                if (drivers["voletRoulants"]["environnement"]["VRs"][cle].find("activation", "OFF") == "ON")
+                    global.controleVRoulant = m.CONTROLE_VR()
+                    tasmota.add_driver(global.controleVRoulant)
+
+                    log("CONTROLE_VR: Driver activé !", LOG_LEVEL_DEBUG)
+
+                    break
+                end
+            except .. as error, message
+                log(string.format("CONTROLE_VR_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
             end
-        except .. as error, message
-            log(string.format("CONTROLE_VR_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
         end
     end
+    return m
 end
+controleVoletRoulants.init = controleVoletRoulants_init

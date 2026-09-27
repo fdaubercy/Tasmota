@@ -1,7 +1,12 @@
 # Driver ES8311 Audio Codec
 # Fonctionne avec ESP32P4-DEV-KIT
 # PA-POWER pin : GPIO 53
-var controleES8311
+# Rendu solidifiable (2026-09-27), sur le modele de controleGeneral : la classe est portee
+# par le module import-able 'controleES8311'. autoexec le charge par 'import' (version en FLASH
+# via load_native), plus par loadBerryFile (qui recompilait la classe en RAM).
+# 'import' appelle AUTOMATIQUEMENT controleES8311_init(m), en pied de fichier.
+#@ solidify:controleES8311
+var controleES8311 = module("controleES8311")
 
 class ES8311 : Driver
     # Variables
@@ -364,12 +369,24 @@ class ES8311 : Driver
 end
 
 # Avtivation du driver ES8311
-if (drivers["I2S"].find("activation", "OFF") == "ON" && drivers["I2S"]["environnement"]["ES8311"].find("activation", "OFF") == "ON")
-    tasmota.log("Activation du driver ES8311", LOG_LEVEL_INFO)
+# Publie la classe dans le module (solidification + import).
+controleES8311.ES8311 = ES8311
 
-    controleES8311  = ES8311(53)
-    controleES8311.set_volume(100)
-    controleES8311.set_mic_gain(0x04)  # Set microphone gain to (6*4 =) 24dB
+# init() : APPELEE AUTOMATIQUEMENT par 'import controleES8311' (be_module.c:285-296, module_init).
+# Ne PAS la rappeler depuis autoexec. Reprend le code d'activation de niveau fichier d'avant.
+# Comme avant : l'instance n'est PAS enregistree comme driver (pas d'add_driver).
+def controleES8311_init(m)
+    import global
 
-    tasmota.cmd('I2SConfig {"Tx":{"SampleRate":48000,"SlotMask":1,"APLL":0,"SlotConfig":2},"Rx":{"SampleRate":32000,"Channels":1, "Mode":0}}')
+    if (drivers["I2S"].find("activation", "OFF") == "ON" && drivers["I2S"]["environnement"]["ES8311"].find("activation", "OFF") == "ON")
+        tasmota.log("Activation du driver ES8311", LOG_LEVEL_INFO)
+
+        global.controleES8311 = m.ES8311(53)
+        global.controleES8311.set_volume(100)
+        global.controleES8311.set_mic_gain(0x04)  # Set microphone gain to (6*4 =) 24dB
+
+        tasmota.cmd('I2SConfig {"Tx":{"SampleRate":48000,"SlotMask":1,"APLL":0,"SlotConfig":2},"Rx":{"SampleRate":32000,"Channels":1, "Mode":0}}')
+    end
+    return m
 end
+controleES8311.init = controleES8311_init

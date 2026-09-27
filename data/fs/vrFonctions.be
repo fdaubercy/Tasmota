@@ -1,22 +1,38 @@
 # Définition du module
-var vrFonctions = module("/vrFonctions")
+#@ solidify:vrFonctions
+var vrFonctions = module("vrFonctions")
 
-vrFonctions.DEBUG = nil
+# Etat modifiable du module, dans une GLOBALE (solidification 2026-09-27). Un module
+# solidifie est constant (en flash) : y ecrire leve "'module' value has no writable
+# attribute", et ses listes sont figees. La map est creee au premier appel avec les
+# valeurs de depart qu'avaient les anciens attributs du module.
+def vrFonctions_etat()
+    import global
+    if (global._etatVrFonctions == nil)
+        global._etatVrFonctions = {
+            "DEBUG": nil              # 'ON'/'OFF', lu une fois depuis drivers['voletRoulants']['debug']
+        }
+    end
+    return global._etatVrFonctions
+end
+vrFonctions.etat = vrFonctions_etat
 
-vrFonctions.log = def(msg, levelDebug)
-    if (vrFonctions.DEBUG == nil)
-        vrFonctions.DEBUG = drivers["voletRoulants"].find("debug", "OFF")
+
+def vrFonctions_log(msg, levelDebug)
+    if (vrFonctions.etat()["DEBUG"] == nil)
+        vrFonctions.etat()["DEBUG"] = drivers["voletRoulants"].find("debug", "OFF")
     end
 
-    if (vrFonctions.DEBUG == "ON")
+    if (vrFonctions.etat()["DEBUG"] == "ON")
         log(msg, levelDebug)
     end
 end
+vrFonctions.log = vrFonctions_log
 
 #- exemples: 
     ReglageVolets logActivation OFF
 -#
-vrFonctions.reglageVolets = def(cmd, idx, payload, payload_json)
+def vrFonctions_reglageVolets(cmd, idx, payload, payload_json)
     import string
     import json
     import persist
@@ -48,7 +64,7 @@ vrFonctions.reglageVolets = def(cmd, idx, payload, payload_json)
         try
             # Adapte le paramètre
             parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-            vrFonctions.DEBUG = parametres[0]
+            vrFonctions.etat()["DEBUG"] = parametres[0]
 
             # Sauvegarde le paramètre
             drivers["voletRoulants"]["debug"] = parametres[0]
@@ -60,11 +76,12 @@ vrFonctions.reglageVolets = def(cmd, idx, payload, payload_json)
 
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd += string.format("logActivated=%s", vrFonctions.DEBUG)
+    reponse_cmnd += string.format("logActivated=%s", vrFonctions.etat()["DEBUG"])
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
+vrFonctions.reglageVolets = vrFonctions_reglageVolets
 
-vrFonctions.configVRByJson = def()
+def vrFonctions_configVRByJson()
     import string
     import configGlobal
 
@@ -142,9 +159,10 @@ vrFonctions.configVRByJson = def()
         end              
     end
 end
+vrFonctions.configVRByJson = vrFonctions_configVRByJson
 
 # Règles sur changement d'état lors du démarrage de Tasmota
-vrFonctions.changementEtatDemarrage = def(value, trigger, msg)
+def vrFonctions_changementEtatDemarrage(value, trigger, msg)
     import string
     import mqtt
     import json
@@ -193,9 +211,10 @@ vrFonctions.changementEtatDemarrage = def(value, trigger, msg)
         end
     end
 end
+vrFonctions.changementEtatDemarrage = vrFonctions_changementEtatDemarrage
 
 # Règles sur changement d'état des capteurs
-vrFonctions.changementEtatCapteur = def(value, trigger, msg, numRideau, etatRideau)
+def vrFonctions_changementEtatCapteur(value, trigger, msg, numRideau, etatRideau)
     import string
     import json
     import persist
@@ -233,9 +252,10 @@ vrFonctions.changementEtatCapteur = def(value, trigger, msg, numRideau, etatRide
 	# Enregistre les nouvelles valeurs de capteurs en json
 	# persist.modules = modules
 end
+vrFonctions.changementEtatCapteur = vrFonctions_changementEtatCapteur
 
 # Règles sur changement d'état des capteurs
-vrFonctions.changementDirection = def(value, trigger, msg, numRideau)
+def vrFonctions_changementDirection(value, trigger, msg, numRideau)
     import string
     import json
 
@@ -310,6 +330,7 @@ vrFonctions.changementDirection = def(value, trigger, msg, numRideau)
         end
     end
 end
+vrFonctions.changementDirection = vrFonctions_changementDirection
 
 # Retourne le module lors de l'importation
 return vrFonctions

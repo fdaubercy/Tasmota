@@ -28,7 +28,12 @@
     - LoRaWanName<x> <string> : définir un nom convivial pour l'appareil ou le nœud.
 -#
 
-var controleLoRaWan
+# Rendu solidifiable (2026-09-27), sur le modele de controleGeneral : la classe est portee
+# par le module import-able 'controleLoRaWan'. autoexec le charge par 'import' (version en FLASH
+# via load_native), plus par loadBerryFile (qui recompilait la classe en RAM).
+# 'import' appelle AUTOMATIQUEMENT controleLoRaWan_init(m), en pied de fichier.
+#@ solidify:controleLoRaWan
+var controleLoRaWan = module("controleLoRaWan")
 
 class CONTROLE_LORAWAN : Driver
     # Variables
@@ -67,6 +72,25 @@ class CONTROLE_LORAWAN : Driver
     end
 end 
 
-# Active le Driver de controle global des modules
-controleLoRaWan = CONTROLE_LORAWAN()
-tasmota.add_driver(controleLoRaWan)
+# Publie la classe dans le module (solidification + import).
+controleLoRaWan.CONTROLE_LORAWAN = CONTROLE_LORAWAN
+
+# init() : APPELEE AUTOMATIQUEMENT par 'import controleLoRaWan' (be_module.c:285-296, module_init).
+# Ne PAS la rappeler depuis autoexec. Reprend le code d'activation de niveau fichier d'avant.
+# Publie aussi le nom GLOBAL 'loRaWanFonctions' : les fonctions de ce module solidifie
+# s'appellent entre elles par ce nom, qu'un module natif ne cree pas lui-meme.
+def controleLoRaWan_init(m)
+    import global
+
+    import loRaWanFonctions
+    global.loRaWanFonctions = loRaWanFonctions
+
+    # Garde d'activation ajoutee le 2026-09-27 : le driver etait cree meme avec LoRaWan OFF.
+    if (drivers.find("LoRaWan", {}).find("activation", "OFF") == "ON")
+        var inst = m.CONTROLE_LORAWAN()
+        global.controleLoRaWan = inst
+        tasmota.add_driver(inst)
+    end
+    return m
+end
+controleLoRaWan.init = controleLoRaWan_init
