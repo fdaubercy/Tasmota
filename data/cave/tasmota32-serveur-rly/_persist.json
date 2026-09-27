@@ -617,7 +617,7 @@
 				"thermometres": {
 					"affichageWebSensor": "ON",
 					"thermometre1": {
-						"activation": "ON",
+						"activation": "OFF",
 						"nom": "Thermomètre Cave",
 						"serialNumber": "",
 						"type": 1216,

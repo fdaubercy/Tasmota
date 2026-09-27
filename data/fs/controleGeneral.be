@@ -140,12 +140,46 @@ class CONTROLE_GENERAL : Driver
         # Marqueur de fin d'initialisation du module principal
         self.flagINIT = 1
 
-		# Aligne l'etat des capteurs sur la realite une fois les SwitchMode appliques et relus
-		# par Tasmota (quelques cycles de la boucle principale) : 5 s de marge.
-		if (self.nbIOActivesJSON["capteurs"]["reels"].find("nb", 0) > 0)
-			tasmota.set_timer(5000, /-> self.resynchroniseCapteurs(), "resynchroniseCapteurs")
-		end
+		# 5 s apres l'init (etat des relais restaure par Tasmota, SwitchMode appliques et relus) :
+		#  1. arme la minuterie des relais deja ON au demarrage,
+		#  2. aligne l'etat des capteurs sur la realite.
+		tasmota.set_timer(5000, def ()
+			self.armeTimersRelaisDemarrage()
+			if (self.nbIOActivesJSON["capteurs"]["reels"].find("nb", 0) > 0)
+				self.resynchroniseCapteurs()
+			end
+		end, "demarrageDiffere")
     end
+
+	# Un relai a minuterie deja ON au demarrage (PowerOnState restaure l'etat d'avant le
+	# redemarrage, avant le chargement de Berry) ne passe jamais par set_power_handler :
+	# sa minuterie n'etait donc jamais lancee -> ex. pompe vide-cave tournant sans limite.
+	def armeTimersRelaisDemarrage()
+		import string
+		import diversFonctions
+
+		var etats = tasmota.get_power()
+		var tableau = diversFonctions.joinJsonTab(modules, drivers)
+		for i: 0 .. tableau.size() - 1
+			if (tableau[i].find("activation", "OFF") != "ON")	continue	end
+			for cle: tableau[i].keys()
+				if (type(tableau[i][cle]) != "instance" || tableau[i][cle].find("activation", "OFF") != "ON")	continue	end
+				var relais = tableau[i][cle].find("environnement", {}).find("relais", false)
+				if (!relais)	continue	end
+
+				for cleRLY: relais.keys()
+					var relai = relais[cleRLY]
+					if (type(relai) != "instance" || relai.find("activation", "OFF") != "ON" || relai.find("timer", 0) == 0)	continue	end
+					var id = relai.find("id", 0)
+					if (id < 1 || id > etats.size() || !etats[id - 1])	continue	end
+
+					relai["etat"] = "ON"
+					log(string.format("GESTION_RELAIS: Relai n°%i deja ON au demarrage -> lancement du timer de %is !", id, relai["timer"]), LOG_LEVEL_INFO)
+					tasmota.set_timer(relai["timer"] * 1000, /-> self.finTimerRelai(cle, relai), string.format("timer_relai%i", id))
+				end
+			end
+		end
+	end
 
 	#- Relance de securite d'un relai a timer (ex. pompe vide-cave), parametree dans le persist :
 	       "relance": {"capteur": "capteur2", "pause": 10, "maxRelances": 3, "topicAlerte": "..."}
@@ -219,7 +253,8 @@ class CONTROLE_GENERAL : Driver
 	# Etat du capteur de niveau haut de la relance : lecture reelle (sensors), a defaut l'etat memorise
 	def niveauHautActif(cle, reglage)
 		var capteur = modules.find(cle, {}).find("environnement", {}).find("capteurs", {}).find(reglage.find("capteur", ""), false)
-		if (!capteur)	return false	end
+		# Capteur absent ou desactive (ex. non branche) : jamais de relance sur sa lecture
+		if (!capteur || capteur.find("activation", "OFF") != "ON")	return false	end
 		return self.lectureSensors().find("Switch" + str(capteur["id"]), capteur.find("etat", "OFF")) == "ON"
 	end
 
