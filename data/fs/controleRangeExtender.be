@@ -18,17 +18,12 @@
             . Les esclaves (id > 0) se connectent d'abord sur le reseau Wifi du Maitre RangeExtender (AP 2) pour synchroniser leur horloge
 -#
 
-# Nom GLOBAL 'rangeExtenderFonctions' (solidification 2026-09-27) : les fonctions du module, en flash,
-# s'appellent entre elles par ce nom. Le .be le creait en s'executant ; un module natif
-# ne le cree pas -> 'attribute_error: rangeExtenderFonctions undeclared'. Un simple 'import' de niveau
-# fichier ne suffit PAS : ce fichier tourne en .bec, compile par tasmota.compile avec
-# islocal=true (tasmota_class.be:480), donc ses variables de niveau fichier sont locales.
-# D'ou l'affectation explicite dans le module 'global'.
-import global
-import rangeExtenderFonctions
-global.rangeExtenderFonctions = rangeExtenderFonctions
-
-var controleRangeExtender
+# Rendu solidifiable (2026-09-27), sur le modele de controleGeneral : la classe est portee
+# par le module import-able 'controleRangeExtender'. autoexec le charge par 'import' (version en FLASH
+# via load_native), plus par loadBerryFile (qui recompilait la classe en RAM).
+# 'import' appelle AUTOMATIQUEMENT controleRangeExtender_init(m), en pied de fichier.
+#@ solidify:controleRangeExtender
+var controleRangeExtender = module("controleRangeExtender")
 
 # Driver permettant de gérer les connexions des modules connectés au Range Extender
 class CONTROLE_RANGE_EXTENDER : Driver
@@ -145,6 +140,24 @@ class CONTROLE_RANGE_EXTENDER : Driver
 -#
 end
 
-# Active le Driver de controle global des modules
-controleRangeExtender = CONTROLE_RANGE_EXTENDER()
-tasmota.add_driver(controleRangeExtender) 
+# Publie la classe dans le module (solidification + import).
+controleRangeExtender.CONTROLE_RANGE_EXTENDER = CONTROLE_RANGE_EXTENDER
+
+# init() : APPELEE AUTOMATIQUEMENT par 'import controleRangeExtender' (be_module.c:285-296, module_init).
+# Ne PAS la rappeler depuis autoexec. Porte la garde d'activation (seule vraie
+# desactivation) et remplace le code de niveau fichier d'avant.
+# Publie aussi le nom GLOBAL 'rangeExtenderFonctions' : les fonctions de ce module solidifie
+# s'appellent entre elles par ce nom, qu'un module natif ne cree pas lui-meme.
+def controleRangeExtender_init(m)
+    import global
+    import rangeExtenderFonctions
+    global.rangeExtenderFonctions = rangeExtenderFonctions
+
+    if (serveur["rangeExtender"].find("activation", "OFF") == "ON")
+        var inst = m.CONTROLE_RANGE_EXTENDER()
+        global.controleRangeExtender = inst
+        tasmota.add_driver(inst)
+    end
+    return m
+end
+controleRangeExtender.init = controleRangeExtender_init

@@ -81,13 +81,13 @@ if (persist._p != nil && persist._p.size() != 0)
     do
         import controleWeb as _ctrl
     end
-    gestionFileFolder.loadBerryFile("/controleUDP", serveur["udp"].find("activation", "OFF"), "ON")
+    do import controleUDP as _ctrl end   # solidifie : init() porte la garde d'activation
     # gestionFileFolder.loadBerryFile("/controleTCP", serveur["tcp"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/controleModbus", drivers["ModBus"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/controleRangeExtender", serveur["rangeExtender"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/controleLoRaWan", drivers["LoRaWan"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/controleVoletRoulants", drivers.find("voletRoulants", {}).find("activation", "OFF"), "ON")
-    gestionFileFolder.loadBerryFile("/controleDiscovery", serveur["discovery"].find("activation", "OFF"), "ON")
+    do import controleDiscovery as _ctrl end   # solidifie : init() porte la garde d'activation
 
     # Compile autoexec.be
     # gestionFileFolder.compileModule("/autoexec", "ON")

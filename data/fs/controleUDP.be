@@ -57,18 +57,12 @@ API des messages UDP
                 Le maître est aussi un RangeExtender Wi-Fi (AP secondaire sur 192.168.4.x)
 -#
 
-# Nom GLOBAL 'udpFonctions' (solidification 2026-09-27) : les fonctions du module, en flash,
-# s'appellent entre elles par ce nom. Le .be le creait en s'executant ; un module natif
-# ne le cree pas -> 'attribute_error: udpFonctions undeclared'. Un simple 'import' de niveau
-# fichier ne suffit PAS : ce fichier tourne en .bec, compile par tasmota.compile avec
-# islocal=true (tasmota_class.be:480), donc ses variables de niveau fichier sont locales.
-# D'ou l'affectation explicite dans le module 'global'.
-import global
-import udpFonctions
-global.udpFonctions = udpFonctions
-
-var controleUDP_unicast
-var controleUDP_multicast
+# Rendu solidifiable (2026-09-27), sur le modele de controleGeneral : la classe est portee
+# par le module import-able 'controleUDP'. autoexec le charge par 'import' (version en FLASH
+# via load_native), plus par loadBerryFile (qui recompilait la classe en RAM).
+# 'import' appelle AUTOMATIQUEMENT controleUDP_init(m), en pied de fichier.
+#@ solidify:controleUDP
+var controleUDP = module("controleUDP")
 
 # Driver de gestion des connexions UDP lancées par les modules connectés au Range Extender
 class CONTROLE_UDP
@@ -173,13 +167,28 @@ class CONTROLE_UDP
     end
 end
 
-if (serveur["udp"].find("activation", "OFF") == "ON")
-    controleUDP_unicast = CONTROLE_UDP("UniCast", "", 2000)
-    tasmota.add_driver(controleUDP_unicast)
+# Publie la classe dans le module (solidification + import).
+controleUDP.CONTROLE_UDP = CONTROLE_UDP
 
-    controleUDP_multicast = CONTROLE_UDP("MultiCast", "224.3.0.1", 4000)
-    tasmota.add_driver(controleUDP_multicast)
+# init() : APPELEE AUTOMATIQUEMENT par 'import controleUDP' (be_module.c:285-296, module_init).
+# Ne PAS la rappeler depuis autoexec. Porte la garde d'activation (seule vraie
+# desactivation) et remplace le code de niveau fichier d'avant.
+# Publie aussi le nom GLOBAL 'udpFonctions' : les fonctions de ce module solidifie
+# s'appellent entre elles par ce nom, qu'un module natif ne cree pas lui-meme.
+def controleUDP_init(m)
+    import global
+    import udpFonctions
+    global.udpFonctions = udpFonctions
+
+    if (serveur["udp"].find("activation", "OFF") == "ON")
+        global.controleUDP_unicast = m.CONTROLE_UDP("UniCast", "", 2000)
+        tasmota.add_driver(global.controleUDP_unicast)
+        global.controleUDP_multicast = m.CONTROLE_UDP("MultiCast", "224.3.0.1", 4000)
+        tasmota.add_driver(global.controleUDP_multicast)
+    end
+    return m
 end
+controleUDP.init = controleUDP_init
 
 #-
     # UDP Envoi Esclave -> Maitre

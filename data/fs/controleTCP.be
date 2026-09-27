@@ -21,17 +21,12 @@
     tcpFonctions.etat()["client"].write(bytes("1122334455").tostring())
 -#
 
-# Nom GLOBAL 'tcpFonctions' (solidification 2026-09-27) : les fonctions du module, en flash,
-# s'appellent entre elles par ce nom. Le .be le creait en s'executant ; un module natif
-# ne le cree pas -> 'attribute_error: tcpFonctions undeclared'. Un simple 'import' de niveau
-# fichier ne suffit PAS : ce fichier tourne en .bec, compile par tasmota.compile avec
-# islocal=true (tasmota_class.be:480), donc ses variables de niveau fichier sont locales.
-# D'ou l'affectation explicite dans le module 'global'.
-import global
-import tcpFonctions
-global.tcpFonctions = tcpFonctions
-
-var controleTCP
+# Rendu solidifiable (2026-09-27), sur le modele de controleGeneral : la classe est portee
+# par le module import-able 'controleTCP'. autoexec le charge par 'import' (version en FLASH
+# via load_native), plus par loadBerryFile (qui recompilait la classe en RAM).
+# 'import' appelle AUTOMATIQUEMENT controleTCP_init(m), en pied de fichier.
+#@ solidify:controleTCP
+var controleTCP = module("controleTCP")
 
 # Driver de gestion des connexions TCP lancées par les modules connectés entre eux
 # Classe qui gère la connexion en tant que serveur TCP Async
@@ -112,8 +107,24 @@ class CONTROLE_TCP
     end
 end
 
-# Active le Driver du serveur TCP Async
-if (serveur["tcp"].find("activation", "OFF") == "ON")
-    controleTCP = CONTROLE_TCP(502)
-    tasmota.add_driver(controleTCP)
+# Publie la classe dans le module (solidification + import).
+controleTCP.CONTROLE_TCP = CONTROLE_TCP
+
+# init() : APPELEE AUTOMATIQUEMENT par 'import controleTCP' (be_module.c:285-296, module_init).
+# Ne PAS la rappeler depuis autoexec. Porte la garde d'activation (seule vraie
+# desactivation) et remplace le code de niveau fichier d'avant.
+# Publie aussi le nom GLOBAL 'tcpFonctions' : les fonctions de ce module solidifie
+# s'appellent entre elles par ce nom, qu'un module natif ne cree pas lui-meme.
+def controleTCP_init(m)
+    import global
+    import tcpFonctions
+    global.tcpFonctions = tcpFonctions
+
+    if (serveur["tcp"].find("activation", "OFF") == "ON")
+        var inst = m.CONTROLE_TCP(502)
+        global.controleTCP = inst
+        tasmota.add_driver(inst)
+    end
+    return m
 end
+controleTCP.init = controleTCP_init

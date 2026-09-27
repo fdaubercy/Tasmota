@@ -88,13 +88,13 @@ if (persist._p != nil && persist._p.size() != 0)
     do
         import controleWeb as _ctrl
     end
-    if serveur["udp"].find("activation", "OFF") == "ON"    gestionFileFolder.loadBerryFile("/controleUDP", serveur["udp"].find("activation", "OFF"), "ON")    end
-    if serveur["tcp"].find("activation", "OFF") == "ON"    gestionFileFolder.loadBerryFile("/controleTCP", serveur["tcp"].find("activation", "OFF"), "ON")    end
+    if serveur["udp"].find("activation", "OFF") == "ON"    import controleUDP as _ctrl    end
+    if serveur["tcp"].find("activation", "OFF") == "ON"    import controleTCP as _ctrl    end
     # gestionFileFolder.loadBerryFile("/controleModbus", drivers["ModBus"].find("activation", "OFF"), "ON")
-    if serveur["rangeExtender"].find("activation", "OFF") == "ON"    gestionFileFolder.loadBerryFile("/controleRangeExtender", serveur["rangeExtender"].find("activation", "OFF"), "ON")    end
+    if serveur["rangeExtender"].find("activation", "OFF") == "ON"    import controleRangeExtender as _ctrl    end
     # gestionFileFolder.loadBerryFile("/controleLoRaWan", drivers["LoRaWan"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/controleVoletRoulants", drivers.find("voletRoulants", {}).find("activation", "OFF"), "ON")
-    if serveur["discovery"].find("activation", "OFF") == "ON"    gestionFileFolder.loadBerryFile("/controleDiscovery", serveur["discovery"].find("activation", "OFF"), "ON")    end
+    if serveur["discovery"].find("activation", "OFF") == "ON"    import controleDiscovery as _ctrl    end
     gestionFileFolder.loadBerryFile("/controlePompeVideCave", modules["pompeVideCave"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/controleGrenier", modules.find("grenier", {}).find("activation", "OFF"), "ON")
 

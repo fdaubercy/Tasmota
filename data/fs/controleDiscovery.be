@@ -24,17 +24,12 @@
         * ex : port 18123 -> vers le port 8080 & le module Tasmota esclave RangeExtender N°1 dont le maitre à l'adresse IP locale 192.168.0.43
 -#
 
-# Nom GLOBAL 'discoveryFonctions' (solidification 2026-09-27) : les fonctions du module, en flash,
-# s'appellent entre elles par ce nom. Le .be le creait en s'executant ; un module natif
-# ne le cree pas -> 'attribute_error: discoveryFonctions undeclared'. Un simple 'import' de niveau
-# fichier ne suffit PAS : ce fichier tourne en .bec, compile par tasmota.compile avec
-# islocal=true (tasmota_class.be:480), donc ses variables de niveau fichier sont locales.
-# D'ou l'affectation explicite dans le module 'global'.
-import global
-import discoveryFonctions
-global.discoveryFonctions = discoveryFonctions
-
-var controleDiscovery
+# Rendu solidifiable (2026-09-27), sur le modele de controleGeneral : la classe est portee
+# par le module import-able 'controleDiscovery'. autoexec le charge par 'import' (version en FLASH
+# via load_native), plus par loadBerryFile (qui recompilait la classe en RAM).
+# 'import' appelle AUTOMATIQUEMENT controleDiscovery_init(m), en pied de fichier.
+#@ solidify:controleDiscovery
+var controleDiscovery = module("controleDiscovery")
 
 class CONTROLE_DISCOVERY : Driver
     # Variables
@@ -92,9 +87,25 @@ class CONTROLE_DISCOVERY : Driver
     end
 end
 
-# Active le Driver de controle global des modules
-if (serveur["discovery"].find("activation", "OFF") == "ON")
-    controleDiscovery = CONTROLE_DISCOVERY()
-    tasmota.add_driver(controleDiscovery)
-    controleDiscovery.web_add_handler()
+# Publie la classe dans le module (solidification + import).
+controleDiscovery.CONTROLE_DISCOVERY = CONTROLE_DISCOVERY
+
+# init() : APPELEE AUTOMATIQUEMENT par 'import controleDiscovery' (be_module.c:285-296, module_init).
+# Ne PAS la rappeler depuis autoexec. Porte la garde d'activation (seule vraie
+# desactivation) et remplace le code de niveau fichier d'avant.
+# Publie aussi le nom GLOBAL 'discoveryFonctions' : les fonctions de ce module solidifie
+# s'appellent entre elles par ce nom, qu'un module natif ne cree pas lui-meme.
+def controleDiscovery_init(m)
+    import global
+    import discoveryFonctions
+    global.discoveryFonctions = discoveryFonctions
+
+    if (serveur["discovery"].find("activation", "OFF") == "ON")
+        var inst = m.CONTROLE_DISCOVERY()
+        global.controleDiscovery = inst
+        tasmota.add_driver(inst)
+        inst.web_add_handler()
+    end
+    return m
 end
+controleDiscovery.init = controleDiscovery_init
