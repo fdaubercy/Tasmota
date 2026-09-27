@@ -70,7 +70,8 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 								# Si les connexions I2C sont activées dans le firmware et les ports I2C configurés
 								if (result.contains("I2CScan"))
 									# Module MCP23017 connecté
-									if (string.find(result["I2CScan"], str(drivers["I2C"]["environnement"]["MCP23017"]["adresseI2C"])) > -1)
+									var adresseI2C = drivers["I2C"]["environnement"].find("MCP23017", {}).find("adresseI2C")		# absent si le driver I2C est en veille
+									if (adresseI2C != nil && string.find(result["I2CScan"], str(adresseI2C)) > -1)
 										nbIOActivesJSON["relais"]["actives"]["nb"] = nbIOActivesJSON["relais"]["actives"].find("nb", 0) + 1
 										if (relais[cleRLY]["type"] == 1376)
 											nbIOActivesJSON["WS2812"]["actives"]["nb"] = nbIOActivesJSON["WS2812"]["actives"].find("nb", 0) + 1	
@@ -89,7 +90,7 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 									if (relais[cleRLY]["type"] == 1376)
 										nbIOActivesJSON["WS2812"]["actives"]["nb"] = nbIOActivesJSON["WS2812"]["actives"].find("nb", 0) + 1	
 									end
-								else log(string.format("CONFIG_DEV_BY_RULES: Le controle du ModBus et l'esclave ModBus %i ne sont pas activés !", drivers["ModBus"]["environnement"]["Conn16channels"][string.split(relais[cleRLY]["virtuel"], "_")[1]]["id"]), LOG_LEVEL_DEBUG_PLUS)
+								else log(string.format("CONFIG_DEV_BY_RULES: Le controle du ModBus et l'esclave ModBus %s ne sont pas activés !", string.split(relais[cleRLY]["virtuel"], "_")[1]), LOG_LEVEL_DEBUG_PLUS)
 								end									
 							elif (string.find(relais[cleRLY]["virtuel"], "ModBus_TasmotaSlaveModBus") > - 1)
 								# Module ModBus activé
@@ -98,7 +99,7 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 									if (relais[cleRLY]["type"] == 1376)
 										nbIOActivesJSON["WS2812"]["actives"]["nb"] = nbIOActivesJSON["WS2812"]["actives"].find("nb", 0) + 1	
 									end
-								else log(string.format("CONFIG_DEV_BY_RULES: Le controle du ModBus et l'esclave ModBus %i ne sont pas activés !", drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"][string.split(relais[cleRLY]["virtuel"], "_")[1]]["id"]), LOG_LEVEL_DEBUG_PLUS)
+								else log(string.format("CONFIG_DEV_BY_RULES: Le controle du ModBus et l'esclave ModBus %s ne sont pas activés !", string.split(relais[cleRLY]["virtuel"], "_")[1]), LOG_LEVEL_DEBUG_PLUS)
 								end
 							end
 						end
@@ -205,7 +206,8 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 								# Si les connexions I2C sont activées dans le firmware et les ports I2C configurés
 								if (result.contains("I2CScan"))
 									# Module ADS1115 connecté
-									if (string.find(result["I2CScan"], str(drivers["I2C"]["environnement"]["ADS1115"]["adresseI2C"])) > -1)
+									var adresseI2C = drivers["I2C"]["environnement"].find("ADS1115", {}).find("adresseI2C")		# absent si le driver I2C est en veille
+									if (adresseI2C != nil && string.find(result["I2CScan"], str(adresseI2C)) > -1)
 										nbIOActivesJSON["analogiques"]["actives"]["nb"] = nbIOActivesJSON["analogiques"]["actives"].find("nb", 0) + 1
 									else 
 										log(string.format("CONFIG_DEV_BY_RULES: L'ADS1115 n'est pas connecté: L'entrée analogique %i ne sera pas comptabilisée !", analogiques[cleAnalogiques]["id"]), LOG_LEVEL_DEBUG_PLUS)

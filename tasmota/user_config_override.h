@@ -48,7 +48,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
     //  #warning *** ------------------- Le fichier 'user_config_override.ini' est appele ------------------- ***
     #if defined(CFG_HOLDER) && (CFG_HOLDER == 4617)
         #undef CFG_HOLDER
-		#define CFG_HOLDER 		1377			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
+		#define CFG_HOLDER 		1393			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
 
         // #pragma message(*** ------------------- Les paramètres flash seront remplacés ! ------------------- ***)
     #else
@@ -364,6 +364,21 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #undef MQTT_SWITCHES
         #endif
         #define MQTT_SWITCHES             true                // [SetOption114] Detach switches from relays and send MQTT messages instead
+
+        // -- LED de statut (2026-09-27) ------------------
+        // Clignote a chaque message MQTT recu ET publie (LedState 6 = LED_MQTT), et en cas de perte
+        // Wi-Fi (1 s) ou MQTT (2 s) tant que SetOption31 = 0 (APP_ENABLE_LEDLINK false, defaut amont).
+        // CFG_HOLDER change a chaque build : ces valeurs reviennent a chaque flash, avant que Berry
+        // n'applique drivers.leds du _persist.json (ledState 6, ledPower OFF) -> les garder identiques.
+        // S'il y a un GPIO 'LedLink', c'est LUI qui clignote ; sinon Led1 (support_tasmota.ino SetLedLink).
+        #ifdef APP_LEDSTATE
+            #undef APP_LEDSTATE
+        #endif
+        #define APP_LEDSTATE              LED_MQTT            // [LedState] 6 = clignote sur tout message MQTT
+        #ifdef APP_ENABLE_LEDLINK
+            #undef APP_ENABLE_LEDLINK
+        #endif
+        #define APP_ENABLE_LEDLINK        false               // [SetOption31] 0 = clignote si Wi-Fi ou MQTT perdu
     #endif  // USER_CONFIG_OVERRIDE_SECTION1
 
     /*********************************************************************************************\
@@ -704,6 +719,31 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #endif
             #define MODULE USER_MODULE                       // Set template enabled by default
 
+            // -- Berry : framework d'animation LED retire (2026-09-27) ----------
+            // Aucune LED adressable sur la cave ("0 WS2812 activés" au boot). Defini pour TOUS les
+            // modules dans la partie commune (USE_BERRY_ANIMATION[_DSL], plus haut) et charge d'office
+            // par le code d'init amont (xdrv_52_7_berry_embedded.ino : import animation/animation_dsl)
+            // -> ~94k + ~98k de flash pour rien (flash de la cave a 92,6 %), + un peu de RAM Berry.
+            // Retrait a la COMPILATION : un test des LED dans l'init amont entrerait en conflit a
+            // chaque synchronisation du fork.
+            #ifdef USE_BERRY_ANIMATION_DSL
+                #undef USE_BERRY_ANIMATION_DSL
+            #endif
+            #ifdef USE_BERRY_ANIMATION
+                #undef USE_BERRY_ANIMATION
+            #endif
+
+            // -- Serveur FTP retire (2026-09-27) -------------
+            // Defini pour tous les modules dans la partie commune (USE_FTP, plus haut). Sur cette
+            // carte sans PSRAM, 'new FtpServer' au demarrage provoquait des abort() (tas < 25 Ko), et
+            // Tasmota relance le FTP d'office a chaque connexion reseau des qu'il a ete active une
+            // fois (xdrv_50_filesystem.ino, FUNC_NETWORK_UP). Coherent avec
+            // serveurFTP.activation = "OFF" dans le _persist.json de la cave.
+            // TEST 2026-09-27 : FTP reactive pour mesurer si les ~16 Ko liberes cote Berry suffisent.
+            // #ifdef USE_FTP
+            //     #undef USE_FTP
+            // #endif
+
             // -- Wi-Fi ---------------------------------------
             #ifdef WIFI_IP_ADDRESS
                 #undef WIFI_IP_ADDRESS
@@ -726,11 +766,14 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #ifdef MQTT_CLIENT_ID
                 #undef MQTT_CLIENT_ID
             #endif
-            #define MQTT_CLIENT_ID          "SERVEUR-RLY-CAVE" // [MqttClient] Also fall back topic using last 6 characters of MAC address or use "DVES_%12X" for complete MAC address
+            // V2 (2026-09-27) : identiques a mqtt.client/topic du _persist.json de la cave. CFG_HOLDER
+            // change a chaque build -> ces valeurs reviennent a chaque flash ; differentes du persist,
+            // Berry les corrigeait par 'Topic', qui REDEMARRE Tasmota. A garder synchronises.
+            #define MQTT_CLIENT_ID          "SERVEUR-RLY-CAVE-V2" // [MqttClient] Also fall back topic using last 6 characters of MAC address or use "DVES_%12X" for complete MAC address
             #ifdef MQTT_TOPIC
                 #undef MQTT_TOPIC
             #endif
-            #define MQTT_TOPIC              "cave/serveur-rly-cave" // [Topic] unique MQTT device topic including (part of) device MAC address
+            #define MQTT_TOPIC              "cave/serveur-rly-cave-v2" // [Topic] unique MQTT device topic including (part of) device MAC address
             #ifdef MQTT_GRPTOPIC
                 #undef MQTT_GRPTOPIC
             #endif

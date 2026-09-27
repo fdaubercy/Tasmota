@@ -142,14 +142,16 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 	end
 
 	if (data["mqtt"]["activation"] == "ON")
-		# Hote & Port & Client
-		if configGlobal.testeParam("MqttHost", data["mqtt"]["hote"], "") || configGlobal.testeParam("MqttPort", data["mqtt"]["port"], "") && configGlobal.testeParam("MqttClient", data["mqtt"]["client"], "")
-			log("CONTROLE_GENERAL: Regle l'IP, le port MQTT et le client !", LOG_LEVEL_DEBUG)
-		end
-				
-		# Utilisateur & Mot de passe & Topic
-		if configGlobal.testeParam("MqttUser", data["mqtt"]["utilisateur"], "str") || configGlobal.testeParam("Topic", data["mqtt"]["topic"], "str")
-			log("CONTROLE_GENERAL: Regle l'utilisateur, le mot de passe et le topic pour MQTT !", LOG_LEVEL_DEBUG)
+		# Hote & Port & Client & Utilisateur & Topic
+		# Chaque parametre est teste (et applique) SEPAREMENT : l'ancienne forme
+		# 'A || B && C' court-circuitait -> MqttClient n'etait JAMAIS applique si hote et port
+		# etaient inchanges, et Topic jamais si MqttUser avait change. Or apres un
+		# CFG_HOLDER incremente (chaque build), Tasmota reprend le client compile par defaut.
+		# 'Topic' est applique en DERNIER : cette commande redemarre Tasmota.
+		for param: [["MqttHost", "hote"], ["MqttPort", "port"], ["MqttClient", "client"], ["MqttUser", "utilisateur"], ["Topic", "topic"]]
+			if configGlobal.testeParam(param[0], data["mqtt"].find(param[1], ""), "str")
+				log("CONTROLE_GENERAL: Regle le parametre MQTT '" + param[0] + "' !", LOG_LEVEL_DEBUG)
+			end
 		end
 
 		# Gère les abonnements aux topics de groupe

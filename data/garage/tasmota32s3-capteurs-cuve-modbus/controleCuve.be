@@ -210,12 +210,12 @@ class CAPTEURS_CUVE : Driver
 
                     # Récupère la valeur des thermomètres dans le json sensors
                     # DS18B20
-                    if (thermoJson["type"] == 1312 && introspect.get(controleGeneral, "sensors").find("DS18B20", false))
+                    if (thermoJson["type"] == 1312 && controleGeneral.lectureSensors().find("DS18B20", false))
                         variablesRemplacement = {}
                         variablesRemplacement.insert("drivers2->nom", "Surveillance T°")
 
                         var serialNumber = thermoJson["serialNumber"]
-                        temperature = real(introspect.get(controleGeneral, "sensors")["DS18B20"]["Temperature"])
+                        temperature = real(controleGeneral.lectureSensors()["DS18B20"]["Temperature"])
                         temperature = int(temperature * 10) / 10.0
 
                         # Ajoute à la page web
@@ -230,10 +230,10 @@ class CAPTEURS_CUVE : Driver
                         variablesRemplacement = {}
                         variablesRemplacement.insert("drivers2->nom", "Surveillance T° & Humidité")
 
-                        temperature = real(introspect.get(controleGeneral, "sensors")["AM2301"]["Temperature"])
+                        temperature = real(controleGeneral.lectureSensors()["AM2301"]["Temperature"])
                         temperature = int(temperature * 10) / 10.0
 
-                        humidity = real(introspect.get(controleGeneral, "sensors")["AM2301"]["Humidity"])
+                        humidity = real(controleGeneral.lectureSensors()["AM2301"]["Humidity"])
                         humidity = int(humidity * 10) / 10.0
 
                         # Ajoute à la page web
@@ -279,8 +279,8 @@ class CAPTEURS_CUVE : Driver
         cuveFonctions.log("ENREGISTRE_LOGS_CUVE: Enregistrement des données de cuve en logs !", LOG_LEVEL_DEBUG_PLUS)
 
         var temperatureCuve = 0.00
-        if (introspect.get(controleGeneral, "sensors").find("DS18B20", false))
-            temperatureCuve = real(introspect.get(controleGeneral, "sensors")["DS18B20"]["Temperature"])
+        if (controleGeneral.lectureSensors().find("DS18B20", false))
+            temperatureCuve = real(controleGeneral.lectureSensors()["DS18B20"]["Temperature"])
             temperatureCuve = int(temperatureCuve * 10) / 10.0
         end
 
@@ -289,7 +289,7 @@ class CAPTEURS_CUVE : Driver
         # Ecrit les données
         var data = "{\"date\":\"" + tasmota.time_str(tasmota.rtc("local")) + 
                         "\",\"niveauCuve\":" + json.dump(cuveFonctions.sensorsCuve["niveauCuve"]) + 
-                        (introspect.get(controleGeneral, "sensors").find("DS18B20", false) ? ",\"temperatureCuve\":" + str(temperatureCuve) : "") + "}"
+                        (controleGeneral.lectureSensors().find("DS18B20", false) ? ",\"temperatureCuve\":" + str(temperatureCuve) : "") + "}"
 
         gestionFileFolder.enregistreLogs(fileChemin, self, data)
     end

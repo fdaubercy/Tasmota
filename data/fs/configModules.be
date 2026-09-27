@@ -34,15 +34,34 @@ def configModules_configDevicesByJon(typologie, gpioPinUtilises, ordreGPIO, temp
 				# Parcours les capteurs spécifques des modules
 
 				# Active ou non la LED de status et définie son niveau
+				# 'ledPower' ON  : LED allumee en continu (LedPower 1 pose le bit 8 de ledstate, qui BLOQUE
+				#                 LedState et tout clignotement, meme sur perte Wi-Fi/MQTT).
+				# 'ledPower' OFF : la LED suit 'ledState' (0..7), ex: 6 = clignote sur tout message MQTT.
+				# 'clignoteSiDeconnexion' (defaut ON) : SetOption31 0 -> clignote si Wi-Fi (1 s) ou MQTT (2 s) perdu.
+				# Chaque commande n'est envoyee que si l'etat relu differe (pas d'ecriture de Settings a chaque boot).
 				if cleType == "leds"
 					var ledPower = types[cleType].find("ledPower", "OFF")
+					var ledState = int(types[cleType].find("ledState", 6))
+					var so31 = (types[cleType].find("clignoteSiDeconnexion", "ON") == "ON" ? "OFF" : "ON")
 
-					if tasmota.cmd("LedPower", boolMute)["LedPower1"] != ledPower
-						log(string.format("CONTROLE_GENERAL: %s ledPower !", (ledPower=="ON" ? "Active" : "Desactive")), LOG_LEVEL_DEBUG)
-						tasmota.cmd(string.format("Backlog LedPower %i; SetOption31 %s;", (ledPower=="ON" ? 1 : 0), (ledPower=="ON" ? "OFF" : "ON")), boolMute)
-					end	
-					if types[cleType].find("ledState", 0) != 8
-						tasmota.cmd(string.format("LedState %i", types[cleType]["ledState"]), boolMute)
+					if (ledPower == "ON")
+						if (tasmota.cmd("LedPower", boolMute).find("LedPower1") != "ON")
+							log("CONTROLE_GENERAL: Active ledPower (LED allumee en continu) !", LOG_LEVEL_DEBUG)
+							tasmota.cmd("LedPower 1", boolMute)
+						end
+					elif (ledState >= 0 && ledState <= 7)
+						# 'LedState x' remplace tout ledstate, bit 8 (LedPower) compris
+						if (tasmota.cmd("LedState", boolMute).find("LedState") != ledState)
+							log(string.format("CONTROLE_GENERAL: Regle LedState %i !", ledState), LOG_LEVEL_DEBUG)
+							tasmota.cmd(string.format("LedState %i", ledState), boolMute)
+						end
+					else
+						log(string.format("CONTROLE_GENERAL_ERREUR: ledState %i invalide (0..7) !", ledState), LOG_LEVEL_ERREUR)
+					end
+
+					if (tasmota.cmd("SetOption31", boolMute).find("SetOption31") != so31)
+						log("CONTROLE_GENERAL: Regle SetOption31 " + so31 + " (clignotement sur deconnexion) !", LOG_LEVEL_DEBUG)
+						tasmota.cmd("SetOption31 " + so31, boolMute)
 					end
 				end
 

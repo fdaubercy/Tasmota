@@ -572,7 +572,7 @@
 					}
 					if (eb('categorie').value == "boutons" || eb('categorie').value == "capteurs" || eb('categorie').value == "thermometres") {
 						qsAll('input[name="' + key + '_relaisLie"]').forEach((checkbox) => {
-							if (jsonDetail.relaisLie.ids.includes(parseInt(checkbox.value))) {
+							if ((jsonDetail.relaisLie.ids || []).includes(parseInt(checkbox.value))) {
 								checkbox.checked = true;
 							}
 						});
@@ -594,13 +594,15 @@
 					}
 					if (eb('categorie').value == "relais") {						
 						eb(key + '_timer').value = jsonDetail.timer + "s";
-						eb(key + '_topic').value = jsonDetail.publishMQTT.topic;	
+						eb(key + '_topic').value = (jsonDetail.publishMQTT.topic || "");	
 					} 
 					if (eb('categorie').value == "thermometres" || eb('categorie').value == "debitmetres") {
 						eb(key + '_value').value = jsonDetail.value;
 						if (eb('categorie').value == "thermometres") {
-							eb(key + '_relaisLie_limite1').value = jsonDetail.relaisLie.limites[0] + "°C";
-							eb(key + '_relaisLie_limite2').value = jsonDetail.relaisLie.limites[1] + "°C";
+							// 'limites' est au niveau de l'element (thermometre1.limites), pas dans relaisLie : c'est la que globalFonctions la lit
+							var limites = (jsonDetail.limites || []);
+							eb(key + '_relaisLie_limite1').value = (limites[0] == undefined ? "" : limites[0] + "°C");
+							eb(key + '_relaisLie_limite2').value = (limites[1] == undefined ? "" : limites[1] + "°C");
 						}
 					}
 				}
@@ -699,7 +701,7 @@
 			jsonDetail.type = (eb(enteteID + "_type").value & 0xffe0) + jsonDetail.id - 1;
 			if (eb('module').value == "leds" && eb('categorie').value == "leds") {
 				json.ledPower = eb('ledPower').value;
-				json.ledState = parseInt(eb('ledPower').value);
+				json.ledState = parseInt(eb('ledState').value);
 			}
 			
 			// Modifie le json pour les champs spécifiques à un ou  plusieurs type d'éléments
@@ -745,8 +747,9 @@
 			if (eb('categorie').value == "thermometres" || eb('categorie').value == "debitmetre") {
 				jsonDetail.value = eb(enteteID + "_value").value;
 				if (eb('categorie').value == "thermometres") {
-					jsonDetail.relaisLie.limites[0] = (eb(enteteID + "_relaisLie_limite1").value.split("°C")[0] == "" ? 0 : parseInt(eb(enteteID + "_relaisLie_limite1").value.split("°C")[0]));
-					jsonDetail.relaisLie.limites[1] = (eb(enteteID + "_relaisLie_limite2").value.split("°C")[0] == "" ? 0 : parseInt(eb(enteteID + "_relaisLie_limite2").value.split("°C")[0]));
+					jsonDetail.limites = (jsonDetail.limites || []);	// au niveau de l'element (lu par globalFonctions), recree si elague
+					jsonDetail.limites[0] = (eb(enteteID + "_relaisLie_limite1").value.split("°C")[0] == "" ? 0 : parseInt(eb(enteteID + "_relaisLie_limite1").value.split("°C")[0]));
+					jsonDetail.limites[1] = (eb(enteteID + "_relaisLie_limite2").value.split("°C")[0] == "" ? 0 : parseInt(eb(enteteID + "_relaisLie_limite2").value.split("°C")[0]));
 				}
 			}
 			

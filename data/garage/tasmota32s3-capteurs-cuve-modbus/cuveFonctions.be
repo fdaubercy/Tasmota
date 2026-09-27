@@ -238,7 +238,7 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
     # Si msg="" & value=""
     if (msg == "" || value == "")
         msg = {}
-        msg.insert("ADS1115", controleGeneral.sensors[trigger])
+        msg.insert("ADS1115", controleGeneral.lectureSensors()[trigger])
     end
     
     # Gère les actions sur modification d'état des capteur analogiques virtuels

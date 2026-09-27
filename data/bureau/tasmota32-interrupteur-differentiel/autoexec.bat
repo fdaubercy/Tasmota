@@ -43,7 +43,7 @@ Backlog IPAddress1 192.168.0.49; IPAddress2 192.168.0.254; IPAddress3 255.255.25
 ;Backlog MqttHost 192.168.0.5; MqttPort 1883; MqttClient DISJONCTEUR-DIFFERENTIEL-BUREAU; MqttUser fdaubercy; MqttPassword Lune5676; Topic bureau/pc; GroupTopic1 tasmotas/bureau;
 
 ; Active ou non la LED de status et définie son niveau :
-Backlog LedPower OFF; SetOption31 OFF; LedState 1;
+Backlog LedPower OFF; SetOption31 OFF; LedState 6;
 
 ; Paramètre le niveau des logs (Niveau=LOG_LEVEL_DEBUG) :
 Backlog SerialLog 3; WebLog 3;

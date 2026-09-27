@@ -329,8 +329,9 @@
 		"leds": {
 			"activation": "ON",
 			"name": "Leds",
-			"ledPower": "ON",
-			"ledState": 8,
+			"ledPower": "OFF",
+			"ledState": 6,
+			"clignoteSiDeconnexion": "ON",
 			"environnement": {
 				"leds": {
 					"ledLink": {

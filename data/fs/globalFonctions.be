@@ -2,6 +2,25 @@
 #@ solidify:globalFonctions
 var globalFonctions = module("globalFonctions")
 
+# Delai avant demarrage du serveur FTP apres connexion Wi-Fi.
+# Demarrer le FTP tout de suite faisait planter le module (abort() dans 'new FtpServer',
+# ~5 Ko) : la regle Wifi tombe pendant le pic memoire du boot (compilation des .be en .bec).
+# En regime etabli le tas libre est ~76 Ko, largement suffisant.
+globalFonctions.DELAI_DEMARRAGE_FTP_MS = 50000
+
+# Demarre le serveur FTP (mode 2) s'il n'est pas deja actif. Appelee par la minuterie
+# 'demarrageFTP' armee dans changementEtatDemarrage.
+def globalFonctions_demarreFTP()
+	# Firmware compile sans USE_FTP (ex. la cave) : 'UFSFTP' est une commande inconnue -> pas de cle 'UfsFTP'
+	var etatFTP = tasmota.cmd("UFSFTP", boolMute)
+	if !isinstance(etatFTP, map) || !etatFTP.contains("UfsFTP")
+		log("GLOBAL_FTP: Serveur FTP absent de ce firmware (USE_FTP) !", LOG_LEVEL_DEBUG)
+		return
+	end
+	if (int(etatFTP["UfsFTP"]) == 0)	tasmota.cmd("UFSFTP 2", boolMute)	end
+end
+globalFonctions.demarreFTP = globalFonctions_demarreFTP
+
 # Règles sur changement d'état lors du démarrage de Tasmota
 def globalFonctions_changementEtatDemarrage(value, trigger, msg)
     import string
@@ -16,25 +35,34 @@ def globalFonctions_changementEtatDemarrage(value, trigger, msg)
 	log("GLOBAL_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
 	log("GLOBAL_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}
 
-	if (type(value)) == "instance"
-		for cle: value.keys()
-			value = value[cle]
-		end
-	end
+	# Pas de "deballage" de 'value' ici (inutilise dans cette fonction) : l'ancienne boucle
+	# 'for cle: value.keys() value = value[cle] end' reindexait la valeur precedente des qu'il
+	# y avait plus d'une cle -> "string indices must be integers" (ex. bloc 'Wifi' de STATE).
 
 	# Lorsque la connexion Wi-Fi est change
+	# La regle "Wifi" recoit AUSSI tout JSON portant une cle 'Wifi' (telemetrie STATE, Status 11,
+	# reponse a 'State'...) : seuls {"WIFI":{"Connected"|"Disconnected":..}} et {"Wifi":"ON"|"OFF"}
+	# sont traites, le reste est ignore au lieu de lever une erreur de cle.
 	if (trigger == "Wifi")
-        if msg["WIFI"].find("Connected", 0)
+		var etatWifi = msg.find("WIFI")
+		if !isinstance(etatWifi, map)	etatWifi = {}	end
+
+        if etatWifi.find("Connected", 0)
 			introspect.set(controleGeneral, "connected", true)
 
 			# Règle les paramètres du serveur FTP
 			if serveur.find("serveurFTP", false)
 				if serveur["serveurFTP"]["activation"] == "ON"
-					if (int(tasmota.cmd("UFSFTP", boolMute)["UfsFTP"]) == 0)	tasmota.cmd("UFSFTP 2", boolMute)	end
-				else tasmota.cmd("UFSFTP 0", boolMute)
+					# Demarrage DIFFERE (voir DELAI_DEMARRAGE_FTP_MS) ; timer nomme -> une reconnexion
+					# Wi-Fi reprogramme au lieu d'empiler plusieurs demarrages.
+					tasmota.remove_timer("demarrageFTP")
+					tasmota.set_timer(globalFonctions.DELAI_DEMARRAGE_FTP_MS, globalFonctions.demarreFTP, "demarrageFTP")
+				else
+					tasmota.remove_timer("demarrageFTP")
+					tasmota.cmd("UFSFTP 0", boolMute)
 				end
 			end
-        elif msg["WIFI"].find("Disconnected", 0)
+        elif etatWifi.find("Disconnected", 0)
             introspect.set(controleGeneral, "connected", false)
         elif (msg.find("Wifi") == "OFF" || msg.find("Wifi") == "ON")
 			introspect.set(controleGeneral, "connected", (msg["Wifi"] == "OFF" ? false : true))
@@ -48,15 +76,20 @@ def globalFonctions_changementEtatDemarrage(value, trigger, msg)
         elif msg[trigger].find("Boot", 0)
             introspect.set(controleGeneral, "booted", true)
 
-			# Récupère son adresse MAC si inconnue en json
-			if (!serveur.find("adressMAC", false))
-				serveur.insert("adressMAC", tasmota.cmd("Status 5", boolMute)["StatusNET"]["Mac"])
+			# Récupère son adresse MAC si inconnue en json (ou si elle a changé)
+			# Un seul 'Status 5', et son resultat est verifie avant d'etre indexe : sous faible
+			# memoire la reponse peut etre tronquee, et tasmota.cmd() renvoie alors la CHAINE brute
+			# (exec_rules, JSON invalide) -> "string indices must be integers" au boot.
+			var statusNET = tasmota.cmd("Status 5", boolMute)
+			var adresseMAC = (isinstance(statusNET, map) && isinstance(statusNET.find("StatusNET"), map)) ? statusNET["StatusNET"].find("Mac") : nil
+			if (adresseMAC == nil)
+				log("GLOBAL_CHGT_ETAT_DEMARRAGE: Adresse MAC illisible (reponse 'Status 5' invalide) !", LOG_LEVEL_ERREUR)
+			elif (!serveur.find("adressMAC", false))
+				serveur.insert("adressMAC", adresseMAC)
 				log("GLOBAL_CHGT_ETAT_DEMARRAGE: Récupère l'adresse MAC du module !", LOG_LEVEL_DEBUG)
-			else
-				if (serveur["adressMAC"] != tasmota.cmd("Status 5", boolMute)["StatusNET"]["Mac"])
-					serveur["adressMAC"] = tasmota.cmd("Status 5", boolMute)["StatusNET"]["Mac"]
-					log("CONTROLE_GENERAL: Modifie l'adresse MAC du module !", LOG_LEVEL_DEBUG)
-				end
+			elif (serveur["adressMAC"] != adresseMAC)
+				serveur["adressMAC"] = adresseMAC
+				log("GLOBAL_CHGT_ETAT_DEMARRAGE: Modifie l'adresse MAC du module !", LOG_LEVEL_DEBUG)
 			end
 		elif msg[trigger].find("Save", 0)
 			try
@@ -152,9 +185,17 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 	log("GLOBAL_GESTION_CAPTEURS: moduleCapteur=" + str(moduleCapteur), LOG_LEVEL_DEBUG_PLUS)			# moduleCapteur=pompeVideCave
 	log("GLOBAL_GESTION_CAPTEURS: cleBouton=" + str(cleBouton), LOG_LEVEL_DEBUG_PLUS)					# cleBouton=bouton1
 
-	if (type(value)) == "instance"
-		for cle: value.keys()
-			value = value[cle]
+	# Extrait la valeur scalaire d'un evenement, ex: {"Action": "ON"} -> "ON" (eventuellement imbrique).
+	# Avant : 'for cle: value.keys() value = value[cle] end' reaffectait 'value' PENDANT le parcours
+	# de ses cles -> des la 2e cle, indexation de la valeur extraite (erreur), et un seul niveau deroule.
+	while isinstance(value, map)
+		if value.contains("Action")
+			value = value["Action"]
+		elif value.size() == 1
+			value = value[value.keys()()]		# unique cle
+		else
+			log("GLOBAL_GESTION_CAPTEURS_ERREUR: Valeur ambigue pour '" + str(trigger) + "' : " + str(value), LOG_LEVEL_ERREUR)
+			return
 		end
 	end
 
@@ -175,7 +216,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 					# Cherche les relais liés
 					var relaisLie = device["relaisLie"]
 					var typeOrdre = relaisLie["type"]
-					for nb: 0 .. relaisLie["ids"].size() - 1
+					for nb: 0 .. relaisLie.find("ids", []).size() - 1
 						globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie["delai"])
 					end
 
@@ -217,7 +258,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 					# Cherche les relais liés
 					var relaisLie = device["relaisLie"]
 					var typeOrdre = relaisLie["type"]
-					for nb: 0 .. relaisLie["ids"].size() - 1
+					for nb: 0 .. relaisLie.find("ids", []).size() - 1
 						globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie["delai"])
 					end
 
@@ -261,7 +302,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
                     # Cherche les relais liés
                     var relaisLie = device["relaisLie"]
                     var typeOrdre = relaisLie["type"]
-                    for nb: 0 .. relaisLie["ids"].size() - 1
+                    for nb: 0 .. relaisLie.find("ids", []).size() - 1
                         globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie["delai"])
                     end
 
@@ -308,7 +349,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
                     end
 
                     # Compare la température & l'humidité avec les limites
-                    var limites = device["limites"]
+                    var limites = device.find("limites", [])
                     if (limites.size() > 0)
                         if int(value) >= int(limites[1])
                             log(string.format("GESTION_CAPTEURS: Humidite superieure a %i%% !", limites[1]), LOG_LEVEL_DEBUG)
@@ -322,7 +363,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
                     # Cherche les relais liés
                     var relaisLie = device["relaisLie"]
                     var typeOrdre = relaisLie["type"]
-                    for nb: 0 .. relaisLie["ids"].size() - 1
+                    for nb: 0 .. relaisLie.find("ids", []).size() - 1
                         globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, true, relaisLie["delai"])
                     end	
 				end
@@ -342,7 +383,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
                     # Cherche les relais liés
                     var relaisLie = device["relaisLie"]
                     var typeOrdre = relaisLie["type"]
-                    for nb: 0 .. relaisLie["ids"].size() - 1
+                    for nb: 0 .. relaisLie.find("ids", []).size() - 1
                         globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie["delai"])
                     end
                 end
@@ -362,7 +403,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
                     # Cherche les relais liés
                     var relaisLie = device["relaisLie"]
                     var typeOrdre = relaisLie["type"]
-                    for nb: 0 .. relaisLie["ids"].size() - 1
+                    for nb: 0 .. relaisLie.find("ids", []).size() - 1
                         globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie["delai"])
                     end		
                     

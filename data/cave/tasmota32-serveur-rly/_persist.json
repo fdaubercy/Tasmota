@@ -44,7 +44,7 @@
 		"adressMAC": "",
 		"debug": "ON",
 		"IP": {
-			"IPAddress": "192.168.0.48",
+			"IPAddress": "192.168.0.243",
 			"IPGateway": "192.168.0.254",
 			"Subnet": "255.255.255.0",
 			"DNSServer": "192.168.0.254"
@@ -67,16 +67,16 @@
 			"activation": "ON",
 			"hote": "192.168.0.5",
 			"port": 1883,
-			"client": "SERVEUR-RLY-CAVE",
+			"client": "SERVEUR-RLY-CAVE-V2",
 			"utilisateur": "fdaubercy",
 			"mdp": "Lune5676",
-			"topic": "cave/serveur-rly-cave",
+			"topic": "cave/serveur-rly-cave-v2",
 			"groupTopic1": "tasmotas/cave",
 			"groupTopic2": "",
 			"groupTopic3": ""
 		},
 		"rangeExtender": {
-			"activation": "ON",
+			"activation": "OFF",
 			"id": 0,
 			"debug": "ON",
 			"ipMaitre": "",
@@ -89,7 +89,7 @@
 			}
 		},
 		"serveurFTP": {
-			"activation": "ON",
+			"activation": "OFF",
 			"utilisateur": "fdaubercy",
 			"mdp": "Lune5676"
 		},
@@ -105,7 +105,7 @@
 			"debug": "ON"
 		},
 		"discovery": {
-			"activation": "ON",
+			"activation": "OFF",
 			"debug": "ON"
 		}
 	},
@@ -903,8 +903,9 @@
 		"leds": {
 			"activation": "ON",
 			"name": "Leds",
-			"ledPower": "ON",
-			"ledState": 8,
+			"ledPower": "OFF",
+			"ledState": 6,
+			"clignoteSiDeconnexion": "ON",
 			"environnement": {
 				"leds": {
 					"ledLink": {

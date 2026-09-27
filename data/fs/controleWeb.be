@@ -49,6 +49,7 @@ class CONTROLE_WEB
         import webserver
         import json
         import persist
+        import diversFonctions
 
 		var jsonRequete = {}
 		var typeModule = (webserver.has_arg('module') ? webserver.arg('module') : '')
@@ -82,12 +83,23 @@ class CONTROLE_WEB
         if (typeModule != "")
             if (typeModule == "serveur" || typeModule == "diverses")
                 jsonRequete.insert(typeModule, persist._p[typeModule])
+            elif (!persist.modules.contains(typeModule) && persist.drivers.contains(typeModule))
+                # Driver : environnement reinjecte depuis /json/driversInactifs.json s'il y est en veille
+                jsonRequete.insert(typeModule, diversFonctions.driverComplet(typeModule))
             else
                 jsonRequete.insert(typeModule, persist.modules[typeModule])
             end
         else
             for item: persist._p.keys()
-                jsonRequete.insert(item, persist._p[item])
+                if (item == "drivers")
+                    # Environnement des drivers en veille reinjecte (copie : la RAM du persist n'est pas touchee)
+                    var veille = diversFonctions.litVeille()
+                    var tous = {}
+                    for nom: persist.drivers.keys()     tous[nom] = diversFonctions.driverComplet(nom, veille)     end
+                    jsonRequete.insert(item, tous)
+                else
+                    jsonRequete.insert(item, persist._p[item])
+                end
             end
         end
         webserver.content_response(json.dump(jsonRequete))
@@ -383,9 +395,12 @@ controleWeb.CONTROLE_WEB = CONTROLE_WEB
 
 # init() : instancie le Driver d'affichage des pages web, l'enregistre, ajoute ses
 # handlers HTTP et publie l'instance dans global.controleWeb. Remplace le code de
-# niveau fichier ; appele depuis autoexec apres 'import'.
-def controleWeb_init()
-    var inst = controleWeb.CONTROLE_WEB()
+# niveau fichier.
+# APPELEE AUTOMATIQUEMENT par 'import controleWeb' (be_module.c:285-296, module_init) :
+# Berry passe le module en parametre 'm' et renvoie le resultat a la place du module.
+# Ne PAS la rappeler depuis autoexec, ni lire le module par son nom global.
+def controleWeb_init(m)
+    var inst = m.CONTROLE_WEB()
     global.controleWeb = inst
     tasmota.add_driver(inst)
     inst.web_add_handler()

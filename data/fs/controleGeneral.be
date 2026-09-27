@@ -31,6 +31,8 @@ var controleGeneral = module("controleGeneral")
 class CONTROLE_GENERAL : Driver
     # Variables
 	var sensors
+	var sensorsEcheance				# Fin de validite du cache de 'sensors' (tasmota.millis)
+	var lectureSensorsEnCours		# Garde de reentrance de lectureSensors()
 	var sensors_valeurAnterieure
 	var enregistrePersistant
     var nbIOActivesJSON
@@ -80,8 +82,10 @@ class CONTROLE_GENERAL : Driver
         self.flagINIT = 0
 		self.flagTimestampInitialized = false
 
-		# Récupère les sensors
-		self.sensors = json.load(tasmota.read_sensors())
+		# Les sensors sont lus A LA DEMANDE par lectureSensors() (plus a l'init ni chaque seconde)
+		self.sensors = {}
+		self.sensorsEcheance = 0
+		self.lectureSensorsEnCours = false
 
         log("CONTROLE_GENERAL: Enregistre les taches CRON !", LOG_LEVEL_DEBUG)
 		# Défini la tache cron pour le reboot sans wifi
@@ -135,50 +139,65 @@ class CONTROLE_GENERAL : Driver
         self.flagINIT = 1
     end
 
-	# Ajoute les capteurs non gérés automatiquement vers la machine de gestion des règles (Si le MQTT n'est pas connecté)
-    def every_second()
+	# Lit les sensors A LA DEMANDE, avec un cache d'1 s.
+	# read_sensors() reconstruit toute la telemetrie SENSOR (MqttShowSensor, qui appelle aussi le
+	# json_append() de CHAQUE driver Berry) : le faire chaque seconde jetait 150 a 290 objets/s.
+	# Garde de reentrance : un json_append() qui appellerait lectureSensors() recoit la copie en cours.
+	def lectureSensors()
 		import json
+
+		if (self.lectureSensorsEnCours || !tasmota.time_reached(self.sensorsEcheance))
+			return self.sensors
+		end
+
+		self.lectureSensorsEnCours = true
+		var lu
+		try
+			lu = json.load(tasmota.read_sensors())
+		except .. as e, m
+			log("CONTROLE_GENERAL_ERREUR: Lecture des sensors impossible : " + str(m), LOG_LEVEL_ERREUR)
+		end
+		self.lectureSensorsEnCours = false
+
+		if isinstance(lu, map)	self.sensors = lu	end
+		self.sensorsEcheance = tasmota.millis(1000)
+		return self.sensors
+	end
+
+	# Ajoute les changements d'etat des Switchs (interrupteurs & capteurs) et Boutons REELS
+	# a la machine de gestion des regles, uniquement si le MQTT n'est pas connecte
+    def every_second()
 		import string
+
+		# Cas normal (MQTT connecte) : rien a detecter -> AUCUNE lecture des sensors.
+		# La reference est oubliee pour repartir d'un etat frais a la prochaine coupure
+		# (sinon un etat vieux de plusieurs heures declencherait de faux evenements).
+		if (self.flagINIT != 1 || (serveur["mqtt"]["activation"] == "ON" && self.mqttConnected))
+			self.sensors_valeurAnterieure = nil
+			return
+		end
+
+		# Tasmota numerote interrupteurs ET capteurs comme 'SwitchN' : les deux comptent
+		var nbSwitchs = self.nbIOActivesJSON["switchs"]["reels"].find("nb", 0) + self.nbIOActivesJSON["capteurs"]["reels"].find("nb", 0)
+		var nbBoutons = self.nbIOActivesJSON["boutons"]["reels"].find("nb", 0)
+		if (nbSwitchs + nbBoutons == 0)		return		end
 
 		tasmota.yield()
 
-		# Mets à jours la json self.parametres / 1s
-		self.sensors = json.load(tasmota.read_sensors())
-		self.sensors_valeurAnterieure = (self.sensors_valeurAnterieure == nil ? self.sensors : self.sensors_valeurAnterieure)
+		var sensors = self.lectureSensors()
+		var anterieur = self.sensors_valeurAnterieure
+		self.sensors_valeurAnterieure = sensors
+		if (anterieur == nil || anterieur == sensors)	return	end		# 1re lecture ou cache non renouvele
 
-		# Ajoute les capteurs non gérés automatiquement vers la machine de gestion des règles (Si le MQTT n'est pas connecté)
-		# Uniquement pour les capteurs réels
-		if (serveur["mqtt"]["activation"] != "ON" || !self.mqttConnected)
-			if(self.nbIOActivesJSON["switchs"]["reels"].find("nb", 0) > 0)
-				for nb: 1 .. self.nbIOActivesJSON["switchs"]["reels"]["nb"]
-					if (self.sensors.find("Switch" + str(nb), false))
-						if (self.sensors_valeurAnterieure.find("Switch" + str(nb), false))
-							if (self.sensors["Switch" + str(nb)] != self.sensors_valeurAnterieure["Switch" + str(nb)])
-								tasmota.publish_rule(string.format("{\"Switch%i\": {\"Action\": \"%s\"}}", nb, self.sensors["Switch" + str(nb)]))
-							end
-						end
-					end
+		# Switchs PUIS boutons (avant : 'elif' -> les boutons n'etaient jamais surveilles s'il y avait des switchs)
+		for groupe: [["Switch", nbSwitchs], ["Button", nbBoutons]]
+			for nb: 1 .. groupe[1]
+				var cle = groupe[0] + str(nb)
+				var etat = sensors.find(cle)
+				if (etat != nil && anterieur.find(cle) != nil && etat != anterieur[cle])
+					tasmota.publish_rule(string.format("{\"%s\": {\"Action\": \"%s\"}}", cle, etat))
 				end
-			elif(self.nbIOActivesJSON["boutons"]["reels"].find("nb", 0) > 0)
-				for nb: 1 .. self.nbIOActivesJSON["boutons"]["reels"]["nb"]
-					if (self.sensors.find("Button" + str(nb), false))
-						if (self.sensors_valeurAnterieure.find("Button" + str(nb), false))
-							if (self.sensors["Button" + str(nb)] != self.sensors_valeurAnterieure["Button" + str(nb)])
-								tasmota.publish_rule(string.format("{\"Button%i\": {\"Action\": \"%s\"}}", nb, self.sensors["Button" + str(nb)]))
-							end
-						end
-					end
-				end
-			elif(self.nbIOActivesJSON["analogiques"]["reels"].find("nb", 0) > 0)
-
-			elif(self.nbIOActivesJSON["thermometres"]["reels"].find("nb", 0) > 0)
-
-			elif(self.nbIOActivesJSON["compteurs"]["reels"].find("nb", 0) > 0)
-
 			end
-
-			# Mets à jours les valeurs antérieures des sensors
-			self.sensors_valeurAnterieure = self.sensors
 		end
     end
 
@@ -311,7 +330,7 @@ class CONTROLE_GENERAL : Driver
 										if (mqtt.connected())
 											var tabTopics = relais[cleRLY].find("publishMQTT", false)
 											if (tabTopics != false)
-												for nbMQTT: 0 .. tabTopics["topic"].size() - 1
+												for nbMQTT: 0 .. tabTopics.find("topic", []).size() - 1
 													var topic = tabTopics["topic"][nbMQTT]
 													if string.find(topic, "cmnd") > -1
 														log(string.format("GESTION_RELAIS: Publie sur le réseau mqtt pour le relai n°%i !", nb + 1), LOG_LEVEL_INFO)
@@ -430,11 +449,14 @@ end
 controleGeneral.CONTROLE_GENERAL = CONTROLE_GENERAL
 
 # init() : instancie le Driver de controle global des modules, l'enregistre et publie
-# l'instance dans global.controleGeneral. Remplace le code de niveau fichier ; appele
-# depuis autoexec apres 'import'. La construction ne lit pas global.controleGeneral
-# (comme l'ancien code) : la cron qui le reference ne s'execute que plus tard.
-def controleGeneral_init()
-    var inst = controleGeneral.CONTROLE_GENERAL()
+# l'instance dans global.controleGeneral. Remplace le code de niveau fichier.
+# APPELEE AUTOMATIQUEMENT par 'import controleGeneral' (be_module.c:285-296, module_init) :
+# Berry passe le module en parametre 'm' et renvoie le resultat a la place du module.
+# Ne PAS la rappeler depuis autoexec, et ne PAS lire le module par son nom global : une fois
+# solidifie, ce nom n'est jamais affecte (il valait la map {} de l'autoexec -> attribute_error).
+# La construction ne lit pas global.controleGeneral : la cron qui le reference s'execute plus tard.
+def controleGeneral_init(m)
+    var inst = m.CONTROLE_GENERAL()
     global.controleGeneral = inst
     tasmota.add_driver(inst)
     return inst

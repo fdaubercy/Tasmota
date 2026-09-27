@@ -54,13 +54,14 @@ class CONTROLE_POMPE_VIDE_CAVE : Driver
                             "<div>" + str(int(relai["timestamp"].find("delai", 0) / 60)) + "min</div>" +
                         "</div>"
 
+        var sensors = controleGeneral.lectureSensors()      # Lecture a la demande (cache 1 s)
         for cleCapteur: capteurs.keys()
             if (type(capteurs[cleCapteur]) != "instance")    continue    end
             if (capteurs[cleCapteur].find("activation", "OFF") != "ON")    continue    end
 
             msg += "<div class='parametre'>" +
                         "<div class='titreSwitch'>" + capteurs[cleCapteur].find("nom", cleCapteur) + " :</div>" +
-                        "<button class='btnSwitch'>" + controleGeneral.sensors.find("Switch" + str(capteurs[cleCapteur]["id"]), "?") + "</button>" +
+                        "<button class='btnSwitch'>" + sensors.find("Switch" + str(capteurs[cleCapteur]["id"]), "?") + "</button>" +
                     "</div>"
         end
 
@@ -71,7 +72,11 @@ class CONTROLE_POMPE_VIDE_CAVE : Driver
 end
 
 # Active le Driver uniquement si le module 'pompeVideCave' est active
+# 'global.' explicite : l'affectation d'un nom non declare dans un bloc 'if' est refusee en
+# mode strict ("strict: no global ..."), et loadBerryFile compile ce fichier en contexte LOCAL
+# (tasmota.compile) ou meme le niveau fichier ne cree plus de globale.
 if (modules["pompeVideCave"].find("activation", "OFF") == "ON")
-    controlePompeVideCave = CONTROLE_POMPE_VIDE_CAVE()
-    tasmota.add_driver(controlePompeVideCave)
+    import global
+    global.controlePompeVideCave = CONTROLE_POMPE_VIDE_CAVE()
+    tasmota.add_driver(global.controlePompeVideCave)
 end

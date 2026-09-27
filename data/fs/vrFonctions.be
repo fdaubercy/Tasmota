@@ -272,7 +272,7 @@ vrFonctions.changementDirection = def(value, trigger, msg, numRideau)
     if (value == 1)
         if (activationSiOuvert != false)
             if (activationSiOuvert["activation"] == "ON")   
-                for i: 0 .. activationSiOuvert["tabRelais"].size() - 1
+                for i: 0 .. activationSiOuvert.find("tabRelais", []).size() - 1
                     tasmota.cmd(string.format("Power%i %s", activationSiOuvert["tabRelais"][i], activationSiOuvert["tabEtatRelais"][i]), boolMute)
                     vrFonctions.log(string.format("VR_CHANGEMENT_DIRECTION: %s le relai %i à l'ouverture du volet %i !", (activationSiOuvert["tabEtatRelais"][i] == 1 ? "Active" : "Désactive"), activationSiOuvert["tabRelais"][i], numRideau), LOG_LEVEL_DEBUG)
                 end
@@ -281,7 +281,7 @@ vrFonctions.changementDirection = def(value, trigger, msg, numRideau)
 
         if (activationSiFerme != false)
             if (activationSiFerme["activation"] == "ON")
-                for i: 0 .. activationSiFerme["tabRelais"].size() - 1
+                for i: 0 .. activationSiFerme.find("tabRelais", []).size() - 1
                     tasmota.cmd(string.format("Power%i %i", activationSiFerme["tabRelais"][i], 1 - activationSiFerme["tabEtatRelais"][i]), boolMute)
                     vrFonctions.log(string.format("VR_CHANGEMENT_DIRECTION: %s le relai %i à l'ouverture du volet %i !", (1 - activationSiFerme["tabEtatRelais"][i] == 1 ? "Active" : "Désactive"), activationSiFerme["tabRelais"][i], numRideau), LOG_LEVEL_DEBUG)
                 end
@@ -293,7 +293,7 @@ vrFonctions.changementDirection = def(value, trigger, msg, numRideau)
     if (value == -1)
         if (activationSiFerme != false)
             if (activationSiFerme["activation"] == "ON")
-                for i: 0 ..activationSiFerme["tabRelais"].size() - 1
+                for i: 0 .. activationSiFerme.find("tabRelais", []).size() - 1
                     tasmota.cmd(string.format("Power%i %i", activationSiFerme["tabRelais"][i], activationSiFerme["tabEtatRelais"][i]), boolMute)
                     vrFonctions.log(string.format("VR_CHANGEMENT_DIRECTION: %s le relai %i à la fermeture du volet %i !", (activationSiFerme["tabEtatRelais"][i] == 1 ? "Active" : "Désactive"), activationSiFerme["tabRelais"][i], numRideau), LOG_LEVEL_DEBUG)
                 end
@@ -302,7 +302,7 @@ vrFonctions.changementDirection = def(value, trigger, msg, numRideau)
 
         if (activationSiOuvert != false)
             if (activationSiOuvert["activation"] == "ON")   
-                for i: 0 .. activationSiOuvert["tabRelais"].size() - 1
+                for i: 0 .. activationSiOuvert.find("tabRelais", []).size() - 1
                     tasmota.cmd(string.format("Power%i %s", activationSiOuvert["tabRelais"][i],  1 - activationSiOuvert["tabEtatRelais"][i]), boolMute)
                     vrFonctions.log(string.format("VR_CHANGEMENT_DIRECTION: %s le relai %i à la fermeture du volet %i !", (1 - activationSiOuvert["tabEtatRelais"][i] == 1 ? "Active" : "Désactive"), activationSiOuvert["tabRelais"][i], numRideau), LOG_LEVEL_DEBUG)
                 end

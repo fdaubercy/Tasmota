@@ -23,6 +23,7 @@
 #define __LDBL_MANT_DIG__ 53
 #define __XCHAL_HAVE_FP 1
 #define D_AS3935_NOMESS "en écoute..."
+#define MQTT_ACK_TIMEOUT MQTT_SOCKET_TIMEOUT
 #define __cpp_nontype_template_parameter_auto 201606L
 #define USE_SR04 
 #define D_JSON_DNSSERVER "DNSServer"
@@ -35,6 +36,7 @@
 #define D_SCAN_DONE "Scan terminé"
 #define COLOR_BUTTON_SAVE "#47c266"
 #define __UINT_LEAST16_MAX__ 0xffff
+#define D_SAT_FIX_NO_FIX "None"
 #define D_CMND_SETSENSOR "SetSensor"
 #define USE_PWM_DIMMER 
 #define __ATOMIC_ACQUIRE 2
@@ -712,6 +714,7 @@
 #define D_SENSOR_CC1101_GDO0 "CC1101 GDO0"
 #define D_GPIO_TM1621_CS "TM1621 CS"
 #define D_BLE_DEVICES "Devices Seen"
+#define MQTT_INFLIGHT_COPY_BUDGET 2048
 #define __XCHAL_HAVE_MUL16 1
 #define D_WEB_LOG_LEVEL "Niveau de journalisation web"
 #define __STDC_EMBED_EMPTY__ 2
@@ -800,7 +803,7 @@
 #define KEY_DISABLE_MULTIPRESS false
 #define D_SENSOR_C8_CO2_5K_TX "C8-CO2-5K Tx"
 #define D_SENSOR_MCP2515_CS "MCP2515 CS"
-#define APP_LEDSTATE LED_POWER
+#define APP_LEDSTATE LED_MQTT
 #define D_PROGRAM_FLASH_SIZE "Taille Flash Programme"
 #define memcpy_P memcpy
 #define D_CMND_PUBLISH "Publish"
@@ -850,6 +853,7 @@
 #define FRIENDLY_NAME "Serveur Relais Cave"
 #define D_UNIT_CELSIUS "C"
 #define D_JSON_IR_DATA "Data"
+#define MQTT_MAX_INFLIGHT 4
 #define D_DOMOTICZ_IDX "Idx"
 #define D_GPIO_WEBCAM_HSD "CAM_HSD"
 #define D_JSON_IRHVAC_CONFIG_KEY "ConfigKey"
@@ -924,7 +928,6 @@
 #define D_SENSOR_FTC532 "FTC532"
 #define D_RECEIVED_TOPIC "Topic reçu"
 #define D_THERMOSTAT_VALVE_POSITION "Valve Position"
-#define USE_BERRY_ANIMATION 
 #define D_ACTIVATE "Activer"
 #define USE_PZEM_AC 
 #define D_TELEMETRY_PERIOD "Période télémétrie"
@@ -968,7 +971,7 @@
 #define D_CMND_UPGRADE "Upgrade"
 #define D_CMND_ZIGBEE_FORGET "Forget"
 #define USE_ZIGBEE_AUTOBIND_LIFT 1.0
-#define MQTT_TOPIC "cave/serveur-rly-cave"
+#define MQTT_TOPIC "cave/serveur-rly-cave-v2"
 #define SUPPORT_IF_STATEMENT 
 #define D_FP_UPLOADFEATUREFAIL "Erreur de transfert"
 #define WEB_SERVER 2
@@ -1511,6 +1514,7 @@
 #define D_SUCCESSFUL_WIFI_CONNECTION "Connexion WiFi réussie"
 #define DEVICE_GROUPS_ADDRESS 239,255,250,250
 #define D_LOG_HTTP "HTP: "
+#define MQTT_MAX_PENDING_SUBSCRIPTIONS 12
 #define D_SPEED_ACCURACY "Speed Accuracy"
 #define D_CMND_SHUTTER_DOWN "Down"
 #define D_SENSOR_XPT2046_CS "XPT2046 CS"
@@ -1575,7 +1579,7 @@
 #define D_SENSOR_BIOPDU_PZEM0XX_TX "BioPDU PZEM0XX Tx"
 #define USE_SDM120 
 #define FM24CXX_BLOCK_SIZE 256
-#define CFG_HOLDER 1361
+#define CFG_HOLDER 1393
 #define D_MODULE "Module"
 #define D_SENSOR_WS2812 "WS2812"
 #define D_SO_MQTTTLS "MqttTLS"
@@ -1646,6 +1650,7 @@
 #define D_SENSOR_NRG_SEL "HLWBL Sel"
 #define USE_VL53L0X 
 #define COLOR_FORM "#4f4f4f"
+#define MQTT_MAX_TOPIC_ALIASES 0
 #define USE_DS18x20 
 #define USE_IBEACON 
 #define __XCHAL_HAVE_DFP_RSQRT 0
@@ -1807,7 +1812,6 @@
 #define D_LQI "LQI"
 #define D_CONFIGURE_TEMPLATE "Configuration du modèle"
 #define D_SENSOR_LOX_O2_RX "LoxO2 RX"
-#define USE_BERRY_ANIMATION_DSL 
 #define D_SO_ZIGBEE_DEVICETOPIC "DeviceTopic"
 #define __XSHAL_ABI 0
 #define D_JSON_LIGHT "Light"
@@ -2021,6 +2025,7 @@
 #define BUZZER_ENABLE false
 #define USE_BERRY_CRYPTO_SPAKE2P_MATTER 
 #define __CHAR_UNSIGNED__ 1
+#define MQTT_PERSISTENT_SESSION_EXPIRY_INTERVAL 0xFFFFFFFFUL
 #define D_JSON_EC "EC"
 #define D_LOADED_FROM_FLASH_AT "Chargé de la flash à"
 #define D_LOG_HRE "HRE: "
@@ -2090,7 +2095,7 @@
 #define __SIG_ATOMIC_WIDTH__ 32
 #define BE_LV_WIDGET_TABVIEW 
 #define USE_MQTT_TLS 
-#define WEB_USERNAME "admin"
+#define MQTT_PACKET_TIMEOUT MQTT_SOCKET_TIMEOUT
 #define D_SENSOR_LED_LINK "LedLink"
 #define USE_TELEGRAM 
 #define __INT_LEAST64_TYPE__ long long int
@@ -2186,7 +2191,7 @@
 #define D_TO "à"
 #define D_AS3935_CAL_OK "calibration établie à :"
 #define D_SENSOR_LE01MR_RX "LE-01MR Rx"
-#define WIFI_IP_ADDRESS "192.168.0.48"
+#define WIFI_IP_ADDRESS "192.168.0.243"
 #define D_SENSOR_DS18X20 "DS18x20"
 #define __FLT32_MIN_10_EXP__ (-37)
 #define D_FP_PASSVERIFY "Mot-de-passe vérifié"
@@ -2281,6 +2286,7 @@
 #define D_UNIT_MILIGRAMS_PER_LITER "mg/L"
 #define HUMIDITY_RESOLUTION 1
 #define D_CMND_TIME "Time"
+#define WEB_USERNAME "admin"
 #define STA_PASS1 "obdormisti-pervigile%.-ficiendus"
 #define D_MINUTE_SECOND_SEPARATOR ":"
 #define D_CMND_MQTTLOG "MqttLog"
@@ -2393,7 +2399,7 @@
 #define D_FREE_MEMORY "Mémoire libre"
 #define D_DISTANCE "Distance"
 #define D_COLOR_RED "Rouge"
-#define MQTT_CLIENT_ID "SERVEUR-RLY-CAVE"
+#define MQTT_CLIENT_ID "SERVEUR-RLY-CAVE-V2"
 #define D_SENSOR_GM861_TX "GM861 Tx"
 #define D_VERSION "Version"
 #define THERMOSTAT_TIME_MAX_OUTPUT_INCONSIST 3
@@ -3058,7 +3064,7 @@
 #define D_JSON_BLINK "Blink"
 #define D_GX_AXIS "Gyro Axe-X"
 #define D_JSON_ILLUMINANCE "Illuminance"
-#define D_SAT_FIX_NO_FIX "None"
+#define MQTT_MAX_INBOUND_INFLIGHT 8
 #define D_SENSOR_BP5758D_CLK "BP5758D Clk"
 #define D_UNIT_INCH_MERCURY "inHg"
 #define __SIZEOF_LONG_LONG__ 8
