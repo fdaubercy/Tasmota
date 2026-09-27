@@ -48,7 +48,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
     //  #warning *** ------------------- Le fichier 'user_config_override.ini' est appele ------------------- ***
     #if defined(CFG_HOLDER) && (CFG_HOLDER == 4617)
         #undef CFG_HOLDER
-		#define CFG_HOLDER 		1393			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
+		#define CFG_HOLDER 		1403			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
 
         // #pragma message(*** ------------------- Les paramètres flash seront remplacés ! ------------------- ***)
     #else
@@ -694,8 +694,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
         // ESP32-S3:    38 GPIO -> [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1]
         // ESP32-P4:    55 GPIO -> [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 
-        // -- Options for firmware tasmota32-cave-serveur-rly ------
-        #if defined(FIRMWARE_ESP32_CAVE_SERVEUR_RLY)
+        // -- Options for firmware tasmota32-cave-serveur-rly ET tasmota32s3-cave-serveur-rly ------
+        // Une seule section pour les deux cartes de la cave : l'ESP32 actuel et son remplacant
+        // ESP32-S3 N16R8 ont la MEME identite (IP, topic, client MQTT). Seul le template differe.
+        #if defined(FIRMWARE_ESP32_CAVE_SERVEUR_RLY) || defined(FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY)
             // -- CODE_IMAGE_STR is the name shown between brackets on the 
             //    Information page or in INFO MQTT messages
             #ifdef CODE_IMAGE_STR
@@ -712,7 +714,17 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             // -- Project -------------------------------------
             #undef PROJECT
                 #define PROJECT           "SERVEUR-RLY-CAVE"         	 // PROJECT is used as the default topic delimiter
-            #define USER_TEMPLATE "{\"NAME\":\"ESP32 Relay x8\",\"GPIO\":[33,1,160,1,32,1,1,1,1,1,1,161,1,1,34,1,1,1,1216,288,1,226,227,228,1,1,1,1,224,225,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
+            #if defined(FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY)
+                // ESP32-S3 N16R8 + module 8 relais en GPIO directs (38 positions : GPIO0-21 puis 33-48 ;
+                // 33-37 = PSRAM octale -> 0). Meme brochage logique que la carte ESP32 :
+                //   Button2 GPIO0, Switch1 GPIO2 (niveau bas), Button1 GPIO4, Relay1-3 GPIO5-7,
+                //   Switch2 GPIO15 (niveau haut), Relay4-5 GPIO16-17, Button3 GPIO18, Led1 GPIO21.
+                // Pas de DHT (GPIO22 n'existe pas sur S3 ; desactive dans le persist de toute facon).
+                // Les 'pin' du _persist.json doivent correspondre (voir [env:tasmota32s3-cave-serveur-rly]).
+                #define USER_TEMPLATE "{\"NAME\":\"ESP32S3 Relay x8 Cave\",\"GPIO\":[33,1,160,1,32,224,225,226,1,1,1,1,1,1,1,161,227,228,34,1,1,288,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
+            #else
+                #define USER_TEMPLATE "{\"NAME\":\"ESP32 Relay x8\",\"GPIO\":[33,1,160,1,32,1,1,1,1,1,1,161,1,1,34,1,1,1,1216,288,1,226,227,228,1,1,1,1,224,225,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
+            #endif
 
             #ifdef MODULE
                 #undef MODULE
