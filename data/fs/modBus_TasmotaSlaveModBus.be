@@ -7,7 +7,12 @@
     - Crée des règles ou commandes similaires à celles de Tasmota pour les devices virtuelles
 -#
 
-var modBus_TasmotaSlaveModBus
+# Rendu solidifiable (2026-09-27), sur le modele de controleGeneral : la classe est portee
+# par le module import-able 'modBus_TasmotaSlaveModBus'. autoexec le charge par 'import' (version en FLASH
+# via load_native), plus par loadBerryFile (qui recompilait la classe en RAM).
+# 'import' appelle AUTOMATIQUEMENT modBus_TasmotaSlaveModBus_init(m), en pied de fichier.
+#@ solidify:modBus_TasmotaSlaveModBus
+var modBus_TasmotaSlaveModBus = module("modBus_TasmotaSlaveModBus")
 
 class MODBUS_TASMOTA_SLAVE : Driver
     # Variables
@@ -828,25 +833,37 @@ class MODBUS_TASMOTA_SLAVE : Driver
 end
 
 # Active le Driver de controle global des modules virtuelles ModBus
-if (drivers["ModBus"].find("activation", "OFF") == "ON")
-    if (drivers["ModBus"]["environnement"].find("TasmotaSlaveModBus", false) != false)
-        for cle: drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"].keys()
-            import string
+# Publie la classe dans le module (solidification + import).
+modBus_TasmotaSlaveModBus.MODBUS_TASMOTA_SLAVE = MODBUS_TASMOTA_SLAVE
 
-            if type(drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"][cle]) != "instance"   continue    end
+# init() : APPELEE AUTOMATIQUEMENT par 'import modBus_TasmotaSlaveModBus' (be_module.c:285-296, module_init).
+# Ne PAS la rappeler depuis autoexec. Reprend a l'identique le code d'activation de niveau
+# fichier d'avant (gardes comprises) ; l'instance est publiee dans global.modBus_TasmotaSlaveModBus.
+def modBus_TasmotaSlaveModBus_init(m)
+    import global
 
-            try
-                if (drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"][cle].find("activation", "OFF") == "ON")
-                    modBus_TasmotaSlaveModBus = MODBUS_TASMOTA_SLAVE()
-                    tasmota.add_driver(modBus_TasmotaSlaveModBus)
+    if (drivers["ModBus"].find("activation", "OFF") == "ON")
+        if (drivers["ModBus"]["environnement"].find("TasmotaSlaveModBus", false) != false)
+            for cle: drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"].keys()
+                import string
 
-                    log("MODBUS_TASMOTA_SLAVE: Driver activé !", LOG_LEVEL_DEBUG)
+                if type(drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"][cle]) != "instance"   continue    end
 
-                    break
+                try
+                    if (drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"][cle].find("activation", "OFF") == "ON")
+                        global.modBus_TasmotaSlaveModBus = m.MODBUS_TASMOTA_SLAVE()
+                        tasmota.add_driver(global.modBus_TasmotaSlaveModBus)
+
+                        log("MODBUS_TASMOTA_SLAVE: Driver activé !", LOG_LEVEL_DEBUG)
+
+                        break
+                    end
+                except .. as error, message
+                    log(string.format("MODBUS_TASMOTA_SLAVE_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
                 end
-            except .. as error, message
-                log(string.format("MODBUS_TASMOTA_SLAVE_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
             end
         end
     end
+    return m
 end
+modBus_TasmotaSlaveModBus.init = modBus_TasmotaSlaveModBus_init

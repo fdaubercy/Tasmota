@@ -43,7 +43,12 @@
     Conn16channels, defaut "deconnecte" (reglage d'usine). S'il est deplace sans que ce
     reglage suive, la relecture sera coherente et FAUSSE.
 -#
-var modBus_Conn16channels
+# Rendu solidifiable (2026-09-27), sur le modele de controleGeneral : la classe est portee
+# par le module import-able 'modBus_Conn16channels'. autoexec le charge par 'import' (version en FLASH
+# via load_native), plus par loadBerryFile (qui recompilait la classe en RAM).
+# 'import' appelle AUTOMATIQUEMENT modBus_Conn16channels_init(m), en pied de fichier.
+#@ solidify:modBus_Conn16channels
+var modBus_Conn16channels = module("modBus_Conn16channels")
 
 class MODBUS_CONN_16CHANNEL : Driver
     # Variables
@@ -527,25 +532,37 @@ class MODBUS_CONN_16CHANNEL : Driver
 end
 
 # Active le Driver de controle global des modules
-if (controleGeneral.nbIOActivesJSON["relais"]["actives"]["nb"] > controleGeneral.nbIOActivesJSON["relais"]["reels"]["nb"])
-    if (drivers["ModBus"].find("activation", "OFF") == "ON")
-        for cle: drivers["ModBus"]["environnement"]["Conn16channels"].keys()
-            import string
+# Publie la classe dans le module (solidification + import).
+modBus_Conn16channels.MODBUS_CONN_16CHANNEL = MODBUS_CONN_16CHANNEL
 
-            if type(drivers["ModBus"]["environnement"]["Conn16channels"][cle]) != "instance"   continue    end
+# init() : APPELEE AUTOMATIQUEMENT par 'import modBus_Conn16channels' (be_module.c:285-296, module_init).
+# Ne PAS la rappeler depuis autoexec. Reprend a l'identique le code d'activation de niveau
+# fichier d'avant (gardes comprises) ; l'instance est publiee dans global.modBus_Conn16channels.
+def modBus_Conn16channels_init(m)
+    import global
 
-            try
-                if (drivers["ModBus"]["environnement"]["Conn16channels"][cle].find("activation", "OFF") == "ON")
-                    modBus_Conn16channels = MODBUS_CONN_16CHANNEL()
-                    tasmota.add_driver(modBus_Conn16channels)
+    if (controleGeneral.nbIOActivesJSON["relais"]["actives"]["nb"] > controleGeneral.nbIOActivesJSON["relais"]["reels"]["nb"])
+        if (drivers["ModBus"].find("activation", "OFF") == "ON")
+            for cle: drivers["ModBus"]["environnement"]["Conn16channels"].keys()
+                import string
 
-                    log("MODBUS_CONN_16CHANNEL: Driver activé !", LOG_LEVEL_DEBUG)
+                if type(drivers["ModBus"]["environnement"]["Conn16channels"][cle]) != "instance"   continue    end
 
-                    break
+                try
+                    if (drivers["ModBus"]["environnement"]["Conn16channels"][cle].find("activation", "OFF") == "ON")
+                        global.modBus_Conn16channels = m.MODBUS_CONN_16CHANNEL()
+                        tasmota.add_driver(global.modBus_Conn16channels)
+
+                        log("MODBUS_CONN_16CHANNEL: Driver activé !", LOG_LEVEL_DEBUG)
+
+                        break
+                    end
+                except .. as error, message
+                    log(string.format("MODBUS_CONN_16CHANNEL_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
                 end
-            except .. as error, message
-                log(string.format("MODBUS_CONN_16CHANNEL_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
             end
         end
     end
+    return m
 end
+modBus_Conn16channels.init = modBus_Conn16channels_init

@@ -1,6 +1,11 @@
 #- NOTES Sur le module I2C MCP23017 à 16 sorties numériques
 -#
-var i2c_mcp23017
+# Rendu solidifiable (2026-09-27), sur le modele de controleGeneral : la classe est portee
+# par le module import-able 'i2c_mcp23017'. autoexec le charge par 'import' (version en FLASH
+# via load_native), plus par loadBerryFile (qui recompilait la classe en RAM).
+# 'import' appelle AUTOMATIQUEMENT i2c_mcp23017_init(m), en pied de fichier.
+#@ solidify:i2c_mcp23017
+var i2c_mcp23017 = module("i2c_mcp23017")
 
 class I2C_MCP23017 : Driver
     # Variables
@@ -92,17 +97,29 @@ class I2C_MCP23017 : Driver
 end
 
 # Active le Driver de controle global des modules
-if (controleGeneral.nbIOActivesJSON["relais"]["actives"]["nb"] > controleGeneral.nbIOActivesJSON["relais"]["reels"]["nb"])
-    if (drivers["I2C"].find("activation", "OFF") == "ON")
-        try
-            if (drivers["I2C"]["environnement"]["MCP23017"].find("activation", "OFF") == "ON")
-                i2c_mcp23017 = I2C_MCP23017(drivers["I2C"]["environnement"]["MCP23017"]["adresseI2C"])
-                tasmota.add_driver(i2c_mcp23017)
-                log("I2C_MCP23017: Driver I2C_MCP23017 activé !", LOG_LEVEL_DEBUG)
+# Publie la classe dans le module (solidification + import).
+i2c_mcp23017.I2C_MCP23017 = I2C_MCP23017
+
+# init() : APPELEE AUTOMATIQUEMENT par 'import i2c_mcp23017' (be_module.c:285-296, module_init).
+# Ne PAS la rappeler depuis autoexec. Reprend a l'identique le code d'activation de niveau
+# fichier d'avant (gardes comprises) ; l'instance est publiee dans global.i2c_mcp23017.
+def i2c_mcp23017_init(m)
+    import global
+
+    if (controleGeneral.nbIOActivesJSON["relais"]["actives"]["nb"] > controleGeneral.nbIOActivesJSON["relais"]["reels"]["nb"])
+        if (drivers["I2C"].find("activation", "OFF") == "ON")
+            try
+                if (drivers["I2C"]["environnement"]["MCP23017"].find("activation", "OFF") == "ON")
+                    global.i2c_mcp23017 = m.I2C_MCP23017(drivers["I2C"]["environnement"]["MCP23017"]["adresseI2C"])
+                    tasmota.add_driver(global.i2c_mcp23017)
+                    log("I2C_MCP23017: Driver I2C_MCP23017 activé !", LOG_LEVEL_DEBUG)
+                end
+            except .. as error, message
+                import string
+                log(string.format("I2C_MCP23017_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
             end
-        except .. as error, message
-            import string
-            log(string.format("I2C_MCP23017_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
         end
     end
+    return m
 end
+i2c_mcp23017.init = i2c_mcp23017_init

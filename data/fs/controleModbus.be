@@ -92,7 +92,12 @@
         PDU	                variable	    Function Code + données (identique à RTU, sans CRC)
 -#
 
-var controleModbus
+# Rendu solidifiable (2026-09-27), sur le modele de controleGeneral : la classe est portee
+# par le module import-able 'controleModbus'. autoexec le charge par 'import' (version en FLASH
+# via load_native), plus par loadBerryFile (qui recompilait la classe en RAM).
+# 'import' appelle AUTOMATIQUEMENT controleModbus_init(m), en pied de fichier.
+#@ solidify:controleModbus
+var controleModbus = module("controleModbus")
 
 class CONTROLE_MODBUS : Driver
     # Variables
@@ -333,7 +338,19 @@ end
 
 # Active le Driver de controle global des modules
 # Uniquement si esclave ModBus
-if (drivers["ModBus"].find("activation", "OFF") == "ON")
-    controleModbus = CONTROLE_MODBUS()
-    tasmota.add_driver(controleModbus)
+# Publie la classe dans le module (solidification + import).
+controleModbus.CONTROLE_MODBUS = CONTROLE_MODBUS
+
+# init() : APPELEE AUTOMATIQUEMENT par 'import controleModbus' (be_module.c:285-296, module_init).
+# Ne PAS la rappeler depuis autoexec. Reprend a l'identique le code d'activation de niveau
+# fichier d'avant (gardes comprises) ; l'instance est publiee dans global.controleModbus.
+def controleModbus_init(m)
+    import global
+
+    if (drivers["ModBus"].find("activation", "OFF") == "ON")
+        global.controleModbus = m.CONTROLE_MODBUS()
+        tasmota.add_driver(global.controleModbus)
+    end
+    return m
 end
+controleModbus.init = controleModbus_init

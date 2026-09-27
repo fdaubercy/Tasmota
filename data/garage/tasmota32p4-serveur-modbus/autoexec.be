@@ -81,15 +81,15 @@ if (persist._p != nil && persist._p.size() != 0)
         import controleLedTemoin as _ctrl
     end
     gestionFileFolder.loadBerryFile("/i2c_ads1115", drivers["I2C"]["environnement"].find("ADS1115", {"activation": "OFF"}).find("activation", "OFF"), "ON")
-    gestionFileFolder.loadBerryFile("/i2c_mcp23017", drivers["I2C"]["environnement"].find("MCP23017", {"activation": "OFF"}).find("activation", "OFF"), "ON")
-    gestionFileFolder.loadBerryFile("/modBus_Conn16channels", drivers["ModBus"]["environnement"].find("Conn16channels", {"activation": "OFF"}).find("activation", "ON"), "ON")
-    gestionFileFolder.loadBerryFile("/modBus_TasmotaSlaveModBus", drivers["ModBus"]["environnement"].find("TasmotaSlaveModBus", {"activation": "OFF"}).find("activation", "ON"), "ON")
+    do import i2c_mcp23017 as _ctrl end   # solidifie : init() porte la garde d'activation
+    do import modBus_Conn16channels as _ctrl end   # solidifie : init() porte la garde d'activation
+    do import modBus_TasmotaSlaveModBus as _ctrl end   # solidifie : init() porte la garde d'activation
     do
         import controleWeb as _ctrl
     end
     do import controleUDP as _ctrl end   # solidifie : init() porte la garde d'activation
     # gestionFileFolder.loadBerryFile("/controleTCP", serveur["tcp"].find("activation", "OFF"), "ON")
-    # gestionFileFolder.loadBerryFile("/controleModbus", drivers["ModBus"].find("activation", "OFF"), "ON")
+    do import controleModbus as _ctrl end   # solidifie : init() porte la garde d'activation
     # gestionFileFolder.loadBerryFile("/controleRangeExtender", serveur["rangeExtender"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/controleLoRaWan", drivers["LoRaWan"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/controleVoletRoulants", drivers.find("voletRoulants", {}).find("activation", "OFF"), "ON")
