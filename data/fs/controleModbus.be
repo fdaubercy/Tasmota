@@ -120,7 +120,10 @@ class CONTROLE_MODBUS : Driver
         self.timeout_ReponseModBus_ms = drivers["ModBus"].find("timeoutReponse", 1000)      # Délai max avant de déclarer un timeout
         self.reponseModBus = nil
 
-        modbusFonctions.timeout_ReponseModBus_ms = self.timeout_ReponseModBus_ms
+        # (2026-09-29) Plus d'ecriture 'modbusFonctions.timeout_ReponseModBus_ms = ...' :
+        # modbusFonctions est SOLIDIFIE, sa table est constante -> attribute_error, init()
+        # s'arretait avant configModbusByJson (port RS485 jamais ouvert). La valeur n'etait
+        # relue par personne : la file lit drivers["ModBus"]["timeoutReponse"].
 
         # Règle la communication ModBus si activée (Si Eslave ModBus)
         modbusFonctions.log("CONTROLE_MODBUS: Enregistre les taches CRON !", LOG_LEVEL_DEBUG)
