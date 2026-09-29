@@ -328,13 +328,20 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
 
             # Si maitre ModBus (id == 0) ==> Se connecte en tant que client TCP à l'esclave ModBus
             for item: jsonData.keys()
-                # Crée l'instance du client
-                if (modbusFonctions.etat()["clients"][id] == nil)     modbusFonctions.etat()["clients"][id] = tcpclientasync()      end
-
                 for cle : jsonData[item].keys()
                     if (cle == "maitre")
                         id = jsonData[item][cle]["ModBus"].find("id", 0)
                         IP = jsonData[item][cle]["ModBus"]["TCP"].find("IPAddress", "")
+
+                        # Crée l'instance du client APRES avoir lu l'id de l'esclave (corrige le
+                        # 2026-09-29) : elle etait creee en tete de boucle avec l'id de
+                        # l'iteration PRECEDENTE (0 au 1er tour) -> clients[id] restait nil et
+                        # '.connected()' levait une exception. Tableau : esclaves id 1 a 5.
+                        if (id < 1 || id >= size(modbusFonctions.etat()["clients"]))
+                            tcpFonctions.log(string.format("REGLAGE_MODBUS: id d'esclave ModBus %i hors limites (1 a %i) !", id, size(modbusFonctions.etat()["clients"]) - 1), LOG_LEVEL_ERREUR)
+                            break
+                        end
+                        if (modbusFonctions.etat()["clients"][id] == nil)     modbusFonctions.etat()["clients"][id] = tcpclientasync()      end
 
                         # Vérifie la connexion TCP
                         if (!modbusFonctions.etat()["clients"][id].connected())

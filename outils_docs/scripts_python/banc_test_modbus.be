@@ -234,8 +234,15 @@ modbusFonctions.etat()["clients"] = [nil, nil, nil, nil, nil, nil]
 var r = essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "ImAlive ON", nil)
                       var c = modbusFonctions.etat()["clients"]
                       return (c[2] != nil ? c[2].ip : "nil") + " / clients[0]=" + (c[0] == nil ? "nil" : "cree") end)
-bug_connu("ImAlive esclave id 2 : IP du client[2] / client[0]", "192.168.4.2 / clients[0]=nil", r,
-          "point 2 : clients[id] cree avant la lecture de id, modbusFonctions.be:332")
+verifie("ImAlive esclave id 2 : IP du client[2] / client[0]", "192.168.4.2 / clients[0]=nil", r)
+# Borne : un id hors du tableau (1 a 5) est journalise et ignore, sans exception.
+gestionFileFolder.contenu = '{"AABBCC": {"x": {"maitre": {"ModBus": {"id": 9, "TCP": {"IPAddress": "192.168.4.9"}}}}}}'
+modbusFonctions.etat()["clients"] = [nil, nil, nil, nil, nil, nil]
+r = essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "ImAlive ON", nil)
+                  var n = 0
+                  for c : modbusFonctions.etat()["clients"]   if c != nil  n += 1  end   end
+                  return "clients crees=" + str(n) end)
+verifie("ImAlive esclave id 9 (hors 1-5) : ignore sans exception", "clients crees=0", r)
 drivers = sauveDrivers
 serveur = sauveServeur
 modbusFonctions.etat()["clients"] = [nil, nil, nil, nil, nil, nil]
