@@ -62,7 +62,9 @@
   ne basculait** — corrigé ; `45d432257` relais d'esclaves commandé/constaté (lecture 0x01,
   log ECART, l'écho 0x06 n'écrase plus l'état commandé) ; `9e6331cf8` chien de garde par
   esclave (> 3 × 30 s sans contact → `etatConstate = "inconnu"`) ; `4532f12ec` `seq` sur le
-  push. Banc : **76 PASS**, témoins négatifs sur l'ancien code. Jamais sur bus réel ; **rebuild
+  push ; `b5f23f7e5` **la cuve et le rideau ne chargeaient pas `controleModbus`** (commenté dans
+  l'autoexec, exclu du LittleFS depuis `04dbda1a7`) : port série jamais ouvert, esclaves sourds
+  au RS485 — seul le push UDP passait ; désormais solidifié et importé. Banc : **76 PASS**, témoins négatifs sur l'ancien code. Jamais sur bus réel ; **rebuild
   complet des 3 garage obligatoire**.
 - **À ajouter à la grille d'observation** (compléments) :
   | À vérifier | Chaîne de log |
