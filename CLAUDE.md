@@ -260,6 +260,8 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   Berry (3 transports, carte 16 relais, ESP32<->ESP32, push esclave->maitre) + audit de la
   table `/json/discovery.json` : formes ecrites/lues, 3 defauts bloquants la resolution
   d'IP en UDP, et tableau des elements restant a parametrer (importance/priorite/difficulte).
+- `outils_docs/AUDIT_MODBUS_2026-09-29.md` — audit complet ModBus garage (B1 corrige, secrets
+  en clair sur depot public, defauts G1-G8 actifs, L1-L13 latents, ameliorations par priorite).
 - `outils_docs/Electronique/Connecteur ModBus/` — docs constructeur de la carte 16 relais
   (`... commamd.docx` = jeu de commandes, `... Manual.docx` = caracteristiques).
 - `docs/superpowers/specs/2026-07-15-solidification-berry-verdict.md` — verdict Q1/Q2/Q3.
