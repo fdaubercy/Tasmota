@@ -626,6 +626,33 @@ verifie("rearmement du meme nom depuis le rappel", "['a', 'b']", str(appels))
 diverses = sauveDiverses
 
 print("")
+print("=== 17. G5 : une reponse est acquittee meme si son traitement plante ===")
+sauveDrivers = drivers
+drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial":"ON"},
+           "environnement": {"TasmotaSlaveModBus": {"debug": "OFF",
+               "TasmotaSlaveModBus1": {"activation": "ON", "id": 2, "name": "cuve"}}}}}
+modules = {"garage": {"activation": "ON", "environnement": {"thermometres": {
+    # appareil incomplet (pas d'idModBus) place AVANT le bon dans la meme famille
+    "thermometre0": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus1", "type": 1312, "id": 9},
+    # DS18B20 sans 'serialNumber'
+    "thermometre1": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus1", "type": 1312, "idModBus": 1, "id": 1, "value": 0.0}}}}}
+maitre = MaitreStub()
+journal = []
+modbusFonctions.etat()["queue"] = []
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 2, "FunctionCode": 4, "StartAddress": 1312, "Count": 1, "type": "float"}}
+essaie(def () recoit(2, "ModbusReceived", {"DeviceAddress": 2, "FunctionCode": 4, "Values": [21.5]}) end)
+verifie("reponse acquittee malgre appareils incomplets", nil, modbusFonctions.etat()["enVol"])
+verifie("valeur tout de meme appliquee (serialNumber absent)", "21.5", str(modules["garage"]["environnement"]["thermometres"]["thermometre1"]["value"]))
+# Exception forcee au coeur du traitement (Values vide) : journalisee, et acquittee quand meme
+journal = []
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 2, "FunctionCode": 4, "StartAddress": 1312, "Count": 1, "type": "float"}}
+essaie(def () recoit(2, "ModbusReceived", {"DeviceAddress": 2, "FunctionCode": 4, "Values": []}) end)
+verifie("exception en traitement : acquittee et journalisee", "nil/true", str(modbusFonctions.etat()["enVol"]) + "/" + str(journalise("MODBUS_TASMOTA_SLAVE_ERREUR")))
+modbusFonctions.etat()["enVol"] = nil
+modules = sauveModules
+drivers = sauveDrivers
+
+print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
       total, total - echecs - bugs_connus, bugs_connus, echecs))
 print(echecs == 0 ? "BANC_MODBUS: OK" : "BANC_MODBUS: ECHEC")

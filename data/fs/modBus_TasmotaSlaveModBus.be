@@ -387,7 +387,8 @@ class MODBUS_TASMOTA_SLAVE : Driver
                 nameTasmotaSlaveModBus = cle
             end
         end
-        var dataJson = self.dataJson["TasmotaSlaveModBus"][nameTasmotaSlaveModBus]
+        # .find : un id inconnu (esclave renomme a chaud...) ne doit pas lever avant l'acquittement
+        var dataJson = self.dataJson["TasmotaSlaveModBus"].find(nameTasmotaSlaveModBus, {})
 
         # Détermine l'item à analyser dans le message ModBus recu
         var TypeMsg = ""
@@ -432,221 +433,227 @@ class MODBUS_TASMOTA_SLAVE : Driver
             return
         end
 
-        # Parcours les devices virtuels ModBus
-        for cleModule: modules.keys()
-            tasmota.yield()
+        # Traitement protege (2026-09-29, audit G5) : une donnee absente d'un appareil (cle
+        # manquante, idModBus nil...) levait une exception AVANT l'acquittement ci-dessous ->
+        # requete jamais acquittee, 3 renvois x timeout, et regles suivantes coupees.
+        try
+            # Parcours les devices virtuels ModBus
+            for cleModule: modules.keys()
+                tasmota.yield()
 
-            if (type(modules[cleModule]) != "instance")   continue      end
+                if (type(modules[cleModule]) != "instance")   continue      end
 
-            var env = modules[cleModule]["environnement"]
-            if (env)
-                for cleEnv: env.keys()
-                    if type(env[cleEnv]) != "instance"   continue    end
+                var env = modules[cleModule].find("environnement")
+                if (env)
+                    for cleEnv: env.keys()
+                        if type(env[cleEnv]) != "instance"   continue    end
 
-                    for cleDevice: env[cleEnv].keys()
-                        if type(env[cleEnv][cleDevice]) != "instance"   continue    end
-                        tasmota.yield()
+                        for cleDevice: env[cleEnv].keys()
+                            if type(env[cleEnv][cleDevice]) != "instance"   continue    end
+                            tasmota.yield()
 
-                        # Si la device est activée (réels + virtuels)
-                        if (env[cleEnv][cleDevice].find("activation", "OFF") == "ON" && env[cleEnv][cleDevice].find("virtuel", "OFF") != "OFF")
-                            if (env[cleEnv][cleDevice]["virtuel"] == "ModBus_" + nameTasmotaSlaveModBus)
-                                if (env[cleEnv][cleDevice]["type"] + env[cleEnv][cleDevice]["idModBus"] - 1 == msg["StartAddress"])
-                                    # Push 0x10 : registres bruts -> valeurs, selon le type du capteur
-                                    # (2 registres par float/uint32, 1 par etat), une seule fois.
-                                    if (push)
-                                        var t = env[cleEnv][cleDevice]["type"]
-                                        msg["Values"] = modbusFonctions.motsVersValeurs(msg["Values"],
-                                                            (t == 1312 || t == 1216) ? "float" : ((t == 352 || t == 4704) ? "uint32" : "uint16"))
-                                        push = false
-                                    end
+                            # Si la device est activée (réels + virtuels)
+                            if (env[cleEnv][cleDevice].find("activation", "OFF") == "ON" && env[cleEnv][cleDevice].find("virtuel", "OFF") != "OFF")
+                                if (env[cleEnv][cleDevice]["virtuel"] == "ModBus_" + nameTasmotaSlaveModBus)
+                                    if (env[cleEnv][cleDevice].find("idModBus") != nil && env[cleEnv][cleDevice].find("type") != nil &&
+                                        env[cleEnv][cleDevice]["type"] + env[cleEnv][cleDevice]["idModBus"] - 1 == msg["StartAddress"])
+                                        # Push 0x10 : registres bruts -> valeurs, selon le type du capteur
+                                        # (2 registres par float/uint32, 1 par etat), une seule fois.
+                                        if (push)
+                                            var t = env[cleEnv][cleDevice]["type"]
+                                            msg["Values"] = modbusFonctions.motsVersValeurs(msg["Values"],
+                                                                (t == 1312 || t == 1216) ? "float" : ((t == 352 || t == 4704) ? "uint32" : "uint16"))
+                                            push = false
+                                        end
 
-                                    # Valeur fraiche : leve l'etat 'inconnu' pose par le chien de garde.
-                                    # (Un relai, lui, ne se constate que par une lecture 0x01, plus bas.)
-                                    if (cleEnv != "relais")
-                                        env[cleEnv][cleDevice]["etatConstate"] = "valide"
-                                        env[cleEnv][cleDevice]["constateA"] = tasmota.rtc()["local"]
-                                    end
+                                        # Valeur fraiche : leve l'etat 'inconnu' pose par le chien de garde.
+                                        # (Un relai, lui, ne se constate que par une lecture 0x01, plus bas.)
+                                        if (cleEnv != "relais")
+                                            env[cleEnv][cleDevice]["etatConstate"] = "valide"
+                                            env[cleEnv][cleDevice]["constateA"] = tasmota.rtc()["local"]
+                                        end
 
-                                    # Ajoute la valeur dataJson["TasmotaSlaveModBus"] en fonction du numéro d'esclave
-                                    # ex: {"TasmotaSlaveModBus": {"TasmotaSlaveModBus1": {"relais": {}}}}
-                                    var valeur = 0.00
+                                        # Ajoute la valeur dataJson["TasmotaSlaveModBus"] en fonction du numéro d'esclave
+                                        # ex: {"TasmotaSlaveModBus": {"TasmotaSlaveModBus1": {"relais": {}}}}
+                                        var valeur = 0.00
                                     
-                                    # Corrige la valeur affichée en json Teleperiod
-                                    if (cleEnv == "analogiques")
-                                        if (!dataJson.find("ANALOG", false))
-                                            try dataJson.insert("ANALOG", {})  
-                                            except .. as error, message 
-                                                self.log(string.format("TRAITEMENT_MSG_TASMOTA_SLAVE_MODBUS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
-                                            end
-                                        end
-
-                                        valeur = int(msg["Values"][0])
-                                        self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Réception de la nouvelle valeur de l'entrée analogique n°%i: %i", env[cleEnv][cleDevice]["id"], valeur), LOG_LEVEL_DEBUG)
-
-                                        if (env[cleEnv][cleDevice]["value"] != valeur)
-                                            env[cleEnv][cleDevice]["value"] = valeur
-
-                                            if (!dataJson["ANALOG"].insert("A" + str(env[cleEnv][cleDevice]["id"]), valeur))
-                                                dataJson["ANALOG"]["A" + str(env[cleEnv][cleDevice]["id"])] = valeur
-                                            end 
-                                        end
-                                    elif (cleEnv == "compteurs")
-                                        if (!dataJson.find("COUNTER", false))
-                                            try dataJson.insert("COUNTER", {})  
-                                            except .. as error, message 
-                                                self.log(string.format("TRAITEMENT_MSG_TASMOTA_SLAVE_MODBUS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
-                                            end
-                                        end
-
-                                        valeur = int(msg["Values"][0])
-                                        self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Réception de la nouvelle valeur du compteur n°%i: %i", env[cleEnv][cleDevice]["id"], valeur), LOG_LEVEL_DEBUG)
-
-                                        if (env[cleEnv][cleDevice]["value"] != valeur)
-                                            env[cleEnv][cleDevice]["value"] = valeur
-
-                                            if (!dataJson["COUNTER"].insert("C" + str(env[cleEnv][cleDevice]["id"]), valeur))
-                                                dataJson["COUNTER"]["C" + str(env[cleEnv][cleDevice]["id"])] = valeur
-                                            end 
-                                        end
-
-                                    elif (cleEnv == "thermometres")
-                                        if (!dataJson.find("Temperatures", false))
-                                            try dataJson.insert("Temperatures", {})  
-                                            except .. as error, message 
-                                                self.log(string.format("TRAITEMENT_MSG_TASMOTA_SLAVE_MODBUS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
-                                            end
-                                        end
-
-                                        valeur = real(msg["Values"][0])
-                                        self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Réception de la nouvelle valeur du thermomètre n°%i: %.2f°C", env[cleEnv][cleDevice]["id"], valeur), LOG_LEVEL_DEBUG)
-
-                                        # DHT22 (AM2302)
-                                        if (env[cleEnv][cleDevice]["type"] == 1216)
-                                            if (env[cleEnv][cleDevice]["value"] != valeur)  # Température 
-                                                env[cleEnv][cleDevice]["value"] = valeur
-
-                                                if (!dataJson["Temperatures"].find("AM2301", false))
-                                                    try dataJson["Temperatures"].insert("AM2301", {})  
-                                                    except .. as error, message 
-                                                        self.log(string.format("TRAITEMENT_MSG_TASMOTA_SLAVE_MODBUS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
-                                                    end
+                                        # Corrige la valeur affichée en json Teleperiod
+                                        if (cleEnv == "analogiques")
+                                            if (!dataJson.find("ANALOG", false))
+                                                try dataJson.insert("ANALOG", {})  
+                                                except .. as error, message 
+                                                    self.log(string.format("TRAITEMENT_MSG_TASMOTA_SLAVE_MODBUS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
                                                 end
-                                                if (!dataJson["Temperatures"]["AM2301"].insert("Temperature", valeur))
-                                                    dataJson["Temperatures"]["AM2301"]["Temperature"] = valeur
-                                                end 
                                             end
 
-                                            valeur = real(msg["Values"][1])
-                                            self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Réception de la nouvelle valeur de l'hygromètre n°%i: %.1fRH", env[cleEnv][cleDevice]["id"], valeur), LOG_LEVEL_DEBUG)
-                                            
-                                            if (env[cleEnv][cleDevice]["Humidity"] != valeur)   #Humidity
-                                                env[cleEnv][cleDevice]["Humidity"] = valeur
+                                            valeur = int(msg["Values"][0])
+                                            self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Réception de la nouvelle valeur de l'entrée analogique n°%i: %i", env[cleEnv][cleDevice]["id"], valeur), LOG_LEVEL_DEBUG)
 
-                                                if (!dataJson["Temperatures"].find("AM2301", false))
-                                                    try dataJson["Temperatures"].insert("AM2301", {})  
-                                                    except .. as error, message 
-                                                        self.log(string.format("TRAITEMENT_MSG_TASMOTA_SLAVE_MODBUS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
-                                                    end
-                                                end
-
-                                                if (!dataJson["Temperatures"]["AM2301"].insert("Humidity", valeur))
-                                                    dataJson["Temperatures"]["AM2301"]["Humidity"] = valeur
-                                                end 
-                                            end
-                                        # DS18B20
-                                        elif (env[cleEnv][cleDevice]["type"] == 1312)  
                                             if (env[cleEnv][cleDevice]["value"] != valeur)
                                                 env[cleEnv][cleDevice]["value"] = valeur
 
-                                                if (!dataJson["Temperatures"].find("DS18B20-" + str(env[cleEnv][cleDevice]["id"]), false))
-                                                    try dataJson["Temperatures"].insert("DS18B20-" + str(env[cleEnv][cleDevice]["id"]), {})  
-                                                    except .. as error, message 
-                                                        self.log(string.format("TRAITEMENT_MSG_TASMOTA_SLAVE_MODBUS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
+                                                if (!dataJson["ANALOG"].insert("A" + str(env[cleEnv][cleDevice]["id"]), valeur))
+                                                    dataJson["ANALOG"]["A" + str(env[cleEnv][cleDevice]["id"])] = valeur
+                                                end 
+                                            end
+                                        elif (cleEnv == "compteurs")
+                                            if (!dataJson.find("COUNTER", false))
+                                                try dataJson.insert("COUNTER", {})  
+                                                except .. as error, message 
+                                                    self.log(string.format("TRAITEMENT_MSG_TASMOTA_SLAVE_MODBUS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
+                                                end
+                                            end
+
+                                            valeur = int(msg["Values"][0])
+                                            self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Réception de la nouvelle valeur du compteur n°%i: %i", env[cleEnv][cleDevice]["id"], valeur), LOG_LEVEL_DEBUG)
+
+                                            if (env[cleEnv][cleDevice]["value"] != valeur)
+                                                env[cleEnv][cleDevice]["value"] = valeur
+
+                                                if (!dataJson["COUNTER"].insert("C" + str(env[cleEnv][cleDevice]["id"]), valeur))
+                                                    dataJson["COUNTER"]["C" + str(env[cleEnv][cleDevice]["id"])] = valeur
+                                                end 
+                                            end
+
+                                        elif (cleEnv == "thermometres")
+                                            if (!dataJson.find("Temperatures", false))
+                                                try dataJson.insert("Temperatures", {})  
+                                                except .. as error, message 
+                                                    self.log(string.format("TRAITEMENT_MSG_TASMOTA_SLAVE_MODBUS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
+                                                end
+                                            end
+
+                                            valeur = real(msg["Values"][0])
+                                            self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Réception de la nouvelle valeur du thermomètre n°%i: %.2f°C", env[cleEnv][cleDevice]["id"], valeur), LOG_LEVEL_DEBUG)
+
+                                            # DHT22 (AM2302)
+                                            if (env[cleEnv][cleDevice]["type"] == 1216)
+                                                if (env[cleEnv][cleDevice]["value"] != valeur)  # Température 
+                                                    env[cleEnv][cleDevice]["value"] = valeur
+
+                                                    if (!dataJson["Temperatures"].find("AM2301", false))
+                                                        try dataJson["Temperatures"].insert("AM2301", {})  
+                                                        except .. as error, message 
+                                                            self.log(string.format("TRAITEMENT_MSG_TASMOTA_SLAVE_MODBUS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
+                                                        end
+                                                    end
+                                                    if (!dataJson["Temperatures"]["AM2301"].insert("Temperature", valeur))
+                                                        dataJson["Temperatures"]["AM2301"]["Temperature"] = valeur
                                                     end 
                                                 end
 
-                                                if (!dataJson["Temperatures"]["DS18B20-" + str(env[cleEnv][cleDevice]["id"])].insert("Id", env[cleEnv][cleDevice]["serialNumber"]))
-                                                    dataJson["Temperatures"]["DS18B20-" + str(env[cleEnv][cleDevice]["id"])]["Id"] = env[cleEnv][cleDevice]["serialNumber"]
+                                                valeur = real(msg["Values"][1])
+                                                self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Réception de la nouvelle valeur de l'hygromètre n°%i: %.1fRH", env[cleEnv][cleDevice]["id"], valeur), LOG_LEVEL_DEBUG)
+                                            
+                                                if (env[cleEnv][cleDevice]["Humidity"] != valeur)   #Humidity
+                                                    env[cleEnv][cleDevice]["Humidity"] = valeur
+
+                                                    if (!dataJson["Temperatures"].find("AM2301", false))
+                                                        try dataJson["Temperatures"].insert("AM2301", {})  
+                                                        except .. as error, message 
+                                                            self.log(string.format("TRAITEMENT_MSG_TASMOTA_SLAVE_MODBUS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
+                                                        end
+                                                    end
+
+                                                    if (!dataJson["Temperatures"]["AM2301"].insert("Humidity", valeur))
+                                                        dataJson["Temperatures"]["AM2301"]["Humidity"] = valeur
+                                                    end 
+                                                end
+                                            # DS18B20
+                                            elif (env[cleEnv][cleDevice]["type"] == 1312)  
+                                                if (env[cleEnv][cleDevice]["value"] != valeur)
+                                                    env[cleEnv][cleDevice]["value"] = valeur
+
+                                                    if (!dataJson["Temperatures"].find("DS18B20-" + str(env[cleEnv][cleDevice]["id"]), false))
+                                                        try dataJson["Temperatures"].insert("DS18B20-" + str(env[cleEnv][cleDevice]["id"]), {})  
+                                                        except .. as error, message 
+                                                            self.log(string.format("TRAITEMENT_MSG_TASMOTA_SLAVE_MODBUS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
+                                                        end 
+                                                    end
+
+                                                    if (!dataJson["Temperatures"]["DS18B20-" + str(env[cleEnv][cleDevice]["id"])].insert("Id", env[cleEnv][cleDevice].find("serialNumber", "")))
+                                                        dataJson["Temperatures"]["DS18B20-" + str(env[cleEnv][cleDevice]["id"])]["Id"] = env[cleEnv][cleDevice].find("serialNumber", "")
+                                                    end 
+                                                    if (!dataJson["Temperatures"]["DS18B20-" + str(env[cleEnv][cleDevice]["id"])].insert("Temperature", valeur))
+                                                        dataJson["Temperatures"]["DS18B20-" + str(env[cleEnv][cleDevice]["id"])]["Temperature"] = valeur
+                                                    end 
+                                                end
+                                            end
+                                        elif (cleEnv == "interrupteurs")
+                                            if (!dataJson.find("Switchs", false))
+                                                try dataJson.insert("Switchs", {})  
+                                                except .. as error, message 
+                                                    self.log(string.format("TRAITEMENT_MSG_TASMOTA_SLAVE_MODBUS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
+                                                end
+                                            end
+
+                                            # Etat lu sur le BIT 0 (2026-09-29) : la reponse serie a une lecture
+                                            # 0x02 porte le bit empaquete (0x01), le push 0x10 le mot 0x00FF ;
+                                            # l'ancienne comparaison a 0xFF lisait OFF la reponse standard.
+                                            var actif = (int(msg["Values"][0]) & 0x01) == 0x01
+                                            if (env[cleEnv][cleDevice].find("SwitchMode", 1) == 1)
+                                                valeur = (actif ? "ON" : "OFF")
+                                            elif (env[cleEnv][cleDevice].find("SwitchMode", 1) == 2)
+                                                valeur = (actif ? "OFF" : "ON")
+                                            end
+
+                                            self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Réception de l'état de l'interrupteur n°%i: %s", env[cleEnv][cleDevice]["id"], valeur), LOG_LEVEL_DEBUG)
+
+                                            if (env[cleEnv][cleDevice]["etat"] != valeur)
+                                                env[cleEnv][cleDevice]["etat"] = valeur
+
+                                                if (!dataJson["Switchs"].insert("S" + str(env[cleEnv][cleDevice]["id"]), valeur))
+                                                    dataJson["Switchs"]["S" + str(env[cleEnv][cleDevice]["id"])] = valeur
                                                 end 
-                                                if (!dataJson["Temperatures"]["DS18B20-" + str(env[cleEnv][cleDevice]["id"])].insert("Temperature", valeur))
-                                                    dataJson["Temperatures"]["DS18B20-" + str(env[cleEnv][cleDevice]["id"])]["Temperature"] = valeur
+                                            end
+                                        elif (cleEnv == "boutons")
+                                            if (!dataJson.find("Buttons", false))
+                                                try dataJson.insert("Buttons", {})  
+                                                except .. as error, message 
+                                                    self.log(string.format("TRAITEMENT_MSG_TASMOTA_SLAVE_MODBUS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
+                                                end
+                                            end
+
+                                            # Etat lu sur le BIT 0 (2026-09-29) : la reponse serie a une lecture
+                                            # 0x02 porte le bit empaquete (0x01), le push 0x10 le mot 0x00FF ;
+                                            # l'ancienne comparaison a 0xFF lisait OFF la reponse standard.
+                                            var actif = (int(msg["Values"][0]) & 0x01) == 0x01
+                                            if (env[cleEnv][cleDevice].find("SwitchMode", 1) == 1)
+                                                valeur = (actif ? "ON" : "OFF")
+                                            elif (env[cleEnv][cleDevice].find("SwitchMode", 1) == 2)
+                                                valeur = (actif ? "OFF" : "ON")
+                                            end
+
+                                            self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Réception de l'état du bouton n°%i: %s", env[cleEnv][cleDevice]["id"], valeur), LOG_LEVEL_DEBUG)
+
+                                            if (env[cleEnv][cleDevice]["etat"] != valeur)
+                                                env[cleEnv][cleDevice]["etat"] = valeur
+
+                                                if (!dataJson["Buttons"].insert("B" + str(env[cleEnv][cleDevice]["id"]), valeur))
+                                                    dataJson["Buttons"]["B" + str(env[cleEnv][cleDevice]["id"])] = valeur
                                                 end 
                                             end
-                                        end
-                                    elif (cleEnv == "interrupteurs")
-                                        if (!dataJson.find("Switchs", false))
-                                            try dataJson.insert("Switchs", {})  
-                                            except .. as error, message 
-                                                self.log(string.format("TRAITEMENT_MSG_TASMOTA_SLAVE_MODBUS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
-                                            end
-                                        end
+                                        elif (cleEnv == "relais")
+                                            # Commande / constate (2026-09-29), sur le modele de la carte 16
+                                            # relais : seule une LECTURE 0x01 dit l'etat reel du relai. Il est
+                                            # range dans 'etatConstate', compare a 'etat' (l'etat COMMANDE),
+                                            # et un ecart est journalise, jamais corrige. L'echo d'une commande
+                                            # 0x06 ne fait qu'accuser reception : il reecrivait 'etat' a OFF
+                                            # (il porte 0x01/0x02, jamais 0xFF).
+                                            if (msg["FunctionName"] == "LECTURE_COILS")
+                                                var device = env[cleEnv][cleDevice]
+                                                # Relais_i (256) : logique inversee, ON commande = relai physique au repos
+                                                var bit = (int(msg["Values"][0]) & 0x01) == 0x01
+                                                valeur = ((bit != (device["type"] == 256)) ? "ON" : "OFF")
+                                                self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Etat constate du relai n°%i: %s", device["id"], valeur), LOG_LEVEL_DEBUG)
 
-                                        # Etat lu sur le BIT 0 (2026-09-29) : la reponse serie a une lecture
-                                        # 0x02 porte le bit empaquete (0x01), le push 0x10 le mot 0x00FF ;
-                                        # l'ancienne comparaison a 0xFF lisait OFF la reponse standard.
-                                        var actif = (int(msg["Values"][0]) & 0x01) == 0x01
-                                        if (env[cleEnv][cleDevice].find("SwitchMode", 1) == 1)
-                                            valeur = (actif ? "ON" : "OFF")
-                                        elif (env[cleEnv][cleDevice].find("SwitchMode", 1) == 2)
-                                            valeur = (actif ? "OFF" : "ON")
-                                        end
-
-                                        self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Réception de l'état de l'interrupteur n°%i: %s", env[cleEnv][cleDevice]["id"], valeur), LOG_LEVEL_DEBUG)
-
-                                        if (env[cleEnv][cleDevice]["etat"] != valeur)
-                                            env[cleEnv][cleDevice]["etat"] = valeur
-
-                                            if (!dataJson["Switchs"].insert("S" + str(env[cleEnv][cleDevice]["id"]), valeur))
-                                                dataJson["Switchs"]["S" + str(env[cleEnv][cleDevice]["id"])] = valeur
-                                            end 
-                                        end
-                                    elif (cleEnv == "boutons")
-                                        if (!dataJson.find("Buttons", false))
-                                            try dataJson.insert("Buttons", {})  
-                                            except .. as error, message 
-                                                self.log(string.format("TRAITEMENT_MSG_TASMOTA_SLAVE_MODBUS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
-                                            end
-                                        end
-
-                                        # Etat lu sur le BIT 0 (2026-09-29) : la reponse serie a une lecture
-                                        # 0x02 porte le bit empaquete (0x01), le push 0x10 le mot 0x00FF ;
-                                        # l'ancienne comparaison a 0xFF lisait OFF la reponse standard.
-                                        var actif = (int(msg["Values"][0]) & 0x01) == 0x01
-                                        if (env[cleEnv][cleDevice].find("SwitchMode", 1) == 1)
-                                            valeur = (actif ? "ON" : "OFF")
-                                        elif (env[cleEnv][cleDevice].find("SwitchMode", 1) == 2)
-                                            valeur = (actif ? "OFF" : "ON")
-                                        end
-
-                                        self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Réception de l'état du bouton n°%i: %s", env[cleEnv][cleDevice]["id"], valeur), LOG_LEVEL_DEBUG)
-
-                                        if (env[cleEnv][cleDevice]["etat"] != valeur)
-                                            env[cleEnv][cleDevice]["etat"] = valeur
-
-                                            if (!dataJson["Buttons"].insert("B" + str(env[cleEnv][cleDevice]["id"]), valeur))
-                                                dataJson["Buttons"]["B" + str(env[cleEnv][cleDevice]["id"])] = valeur
-                                            end 
-                                        end
-                                    elif (cleEnv == "relais")
-                                        # Commande / constate (2026-09-29), sur le modele de la carte 16
-                                        # relais : seule une LECTURE 0x01 dit l'etat reel du relai. Il est
-                                        # range dans 'etatConstate', compare a 'etat' (l'etat COMMANDE),
-                                        # et un ecart est journalise, jamais corrige. L'echo d'une commande
-                                        # 0x06 ne fait qu'accuser reception : il reecrivait 'etat' a OFF
-                                        # (il porte 0x01/0x02, jamais 0xFF).
-                                        if (msg["FunctionName"] == "LECTURE_COILS")
-                                            var device = env[cleEnv][cleDevice]
-                                            # Relais_i (256) : logique inversee, ON commande = relai physique au repos
-                                            var bit = (int(msg["Values"][0]) & 0x01) == 0x01
-                                            valeur = ((bit != (device["type"] == 256)) ? "ON" : "OFF")
-                                            self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Etat constate du relai n°%i: %s", device["id"], valeur), LOG_LEVEL_DEBUG)
-
-                                            device["etatConstate"] = valeur
-                                            device["constateA"] = tasmota.rtc()["local"]
-                                            dataJson["POWER" + str(device["id"])] = valeur
-                                            if (device.find("etat", "OFF") != valeur)
-                                                log(string.format("MODBUS_TASMOTA_SLAVE_ECART: relai n°%i (%s) : commande=%s, constate=%s",
-                                                                  device["id"], nameTasmotaSlaveModBus, device.find("etat", "OFF"), valeur), LOG_LEVEL_ERREUR)
+                                                device["etatConstate"] = valeur
+                                                device["constateA"] = tasmota.rtc()["local"]
+                                                dataJson["POWER" + str(device["id"])] = valeur
+                                                if (device.find("etat", "OFF") != valeur)
+                                                    log(string.format("MODBUS_TASMOTA_SLAVE_ECART: relai n°%i (%s) : commande=%s, constate=%s",
+                                                                      device["id"], nameTasmotaSlaveModBus, device.find("etat", "OFF"), valeur), LOG_LEVEL_ERREUR)
+                                                end
                                             end
                                         end
                                     end
@@ -655,10 +662,13 @@ class MODBUS_TASMOTA_SLAVE : Driver
                         end
                     end
                 end
-            end
 
-            # Modifie en json persist
-            modules[cleModule]["environnement"] = env
+                # Modifie en json persist
+                if (env)    modules[cleModule]["environnement"] = env    end
+            end
+        except .. as erreur, message
+            log(string.format("MODBUS_TASMOTA_SLAVE_ERREUR: traitement de la reponse de %s (0x%02X, registre %s) : %s -> %s",
+                              nameTasmotaSlaveModBus, msg.find("FunctionCode", 0), str(msg.find("StartAddress")), erreur, message), LOG_LEVEL_ERREUR)
         end
 
         # Ajoute la donnée reçue en json
