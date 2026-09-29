@@ -267,6 +267,33 @@ verifie("logActivation ON : debug du persist / save()",
 drivers = sauveDrivers
 
 print("")
+print("=== 8. Ecriture 0x10 standard : emission, decodage, reconversion ===")
+# Format standard : [id][10][adresse 2][quantite de REGISTRES 2][nb octets 1][donnees][CRC]
+var w160 = {"DeviceAddress":3, "FunctionCode":0x10, "StartAddress":160, "type":"uint16", "Count":1, "Values":[0xFF]}
+verifie("0x10 interrupteur 160 = 0x00FF (1 registre)", trameAvecCrc("031000A000010200FF"),
+        essaie(def () return modbusFonctions.prepareTrame(w160, "Commande").tohex() end))
+var w1312 = {"DeviceAddress":2, "FunctionCode":0x10, "StartAddress":1312, "type":"float", "Count":1, "Values":[21.5]}
+var t1312 = modbusFonctions.prepareTrame(w1312, "Commande")
+verifie("0x10 thermometre 1312 = 21.5 (2 registres)", trameAvecCrc("021005200002" + "04" + "41AC0000"), t1312.tohex())
+var w352 = {"DeviceAddress":2, "FunctionCode":0x10, "StartAddress":352, "type":"uint32", "Count":1, "Values":[123456]}
+var t352 = modbusFonctions.prepareTrame(w352, "Commande")
+verifie("0x10 compteur 352 = 123456 (2 registres)", trameAvecCrc("021001600002" + "04" + "0001E240"), t352.tohex())
+# Reponse = echo adresse + quantite, sans donnees
+verifie("0x10 reponse (echo standard)", trameAvecCrc("021005200002"),
+        essaie(def () return modbusFonctions.prepareTrame(w1312, "Reponse").tohex() end))
+# Le maitre relit la trame : decrypteMSG (format standard) puis motsVersValeurs
+d = decode(t1312)
+verifie("decode 0x10 float : Erreur / StartAddress / mots", "0/1312/[16812, 0]",
+        str(d["Erreur"]) + "/" + str(d["StartAddress"]) + "/" + str(d["Values"]))
+verifie("motsVersValeurs float -> 21.5", "21.5", str(modbusFonctions.motsVersValeurs(d["Values"], "float")[0]))
+d = decode(t352)
+verifie("decode 0x10 uint32 -> 123456", "0/352/123456",
+        str(d["Erreur"]) + "/" + str(d["StartAddress"]) + "/" + str(modbusFonctions.motsVersValeurs(d["Values"], "uint32")[0]))
+d = decode(modbusFonctions.prepareTrame(w160, "Commande"))
+verifie("decode 0x10 interrupteur -> mot 0x00FF", "0/160/255",
+        str(d["Erreur"]) + "/" + str(d["StartAddress"]) + "/" + str(modbusFonctions.motsVersValeurs(d["Values"], "uint16")[0]))
+
+print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
       total, total - echecs - bugs_connus, bugs_connus, echecs))
 print(echecs == 0 ? "BANC_MODBUS: OK" : "BANC_MODBUS: ECHEC")

@@ -1398,6 +1398,9 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
     # garde, une lecture de 16 registres emettait 0x0020 (=32) au lieu de 0x0010. Une commande
     # de lecture a Values=[] (writeDataSize == 0) et saute donc ce bloc ; les ecritures et les
     # reponses (writeDataSize > 0) le traversent inchange. Trouve par banc_test_modbus.
+    # qteRegistres garde la QUANTITE de registres de 16 bits AVANT le passage en octets
+    # ci-dessous : c'est elle que porte l'en-tete d'une trame 0x10 (2026-09-29).
+    var qteRegistres = modbusFonctions.etat()["nbRegistres"]
     if (paramMSG["Erreur"] == modbusFonctions.tabErreur["noerror"] && type(paramMSG["Values"]) == "instance" && writeDataSize > 0)
         if (modbusFonctions.etat()["nbRegistres"] > 40)
             paramMSG["Erreur"] = modbusFonctions.tabErreur["tomanydata"]
@@ -1544,16 +1547,17 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
         end
 
     # Fonction 0x10 ==> "Écriture de plusieurs registres (Write Multiple Registers)"     ex= commande d'une LED WS2812B (la couleur, la saturation, la luminosite)
+    # Format STANDARD (corrige le 2026-09-29, auparavant quantite AVANT l'adresse, en nombre
+    # de VALEURS, et reponse sans adresse -> illisible par decrypteMSG qui lit le standard) :
+    #   Commande : StartAddress (2) + quantite de REGISTRES (2) + nb d'OCTETS (1) + donnees
+    #   Reponse  : StartAddress (2) + quantite de REGISTRES (2), sans donnees (echo standard)
+    # Un float ou un uint32 = 2 registres ; un uint16 = 1 registre.
     elif (paramMSG["FunctionName"] == "ECRITURE_REGISTRES_HOLDER")
-        # Ajoute le nombre de registres demandés
-        Trame.add(modbusFonctions.etat()["nbValeurs"], -2)
+        Trame.add(paramMSG["StartAddress"], -2)     # Sur 2 octets
+        Trame.add(qteRegistres, -2)
 
         if (typeMsg == "Commande")
-            # Ajoute le nombre d'octets
-            Trame.add(paramMSG["StartAddress"], -2)     # Sur 2 octets
-            Trame.add(modbusFonctions.etat()["nbRegistres"], -1)
-
-            # Ajoute à la trame, les données à écrire
+            Trame.add(size(writeData), -1)          # nombre d'octets de donnees
             Trame += writeData
         end
     end
@@ -1612,6 +1616,33 @@ def modbusFonctions_crc16modbus(buf)
     return crc
 end
 modbusFonctions.crc16modbus = modbusFonctions_crc16modbus
+
+# Reconstruit des valeurs a partir de REGISTRES de 16 bits recus (ex. une ecriture 0x10
+# decodee par decrypteMSG, dont 'Values' porte les mots bruts). Big-endian, comme a
+# l'emission (prepareTrame). 2 registres par float/int32/uint32, 1 par (u)int16.
+# @mots : liste d'entiers 16 bits ; @typeValeur : "float", "uint32", "int32", sinon mot brut.
+def modbusFonctions_motsVersValeurs(mots, typeValeur)
+    var valeurs = []
+    if (typeValeur == "float" || typeValeur == "uint32" || typeValeur == "int32")
+        var nb = 0
+        while (nb + 1 < size(mots))
+            var b = bytes()
+            b.add(mots[nb], -2)
+            b.add(mots[nb + 1], -2)
+            if (typeValeur == "float")
+                b.reverse(0, 4)                     # getfloat lit en petit-boutien
+                valeurs.push(b.getfloat(0))
+            else
+                valeurs.push(b.get(0, -4))          # entier 32 bits big-endian
+            end
+            nb += 2
+        end
+    else
+        for m : mots    valeurs.push(m)    end
+    end
+    return valeurs
+end
+modbusFonctions.motsVersValeurs = modbusFonctions_motsVersValeurs
 
 # Retourne le module lors de l'importation
 return modbusFonctions
