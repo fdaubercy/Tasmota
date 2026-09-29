@@ -1213,7 +1213,7 @@
             "activationReponseCMD": "ON",
             "typeComm": {
                 "Serial": "ON",
-                "UDP": "OFF",
+                "UDP": "ON",
                 "MQTT": "OFF",
                 "TCP": "ON"
             },
