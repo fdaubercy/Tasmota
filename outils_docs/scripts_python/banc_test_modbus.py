@@ -2,9 +2,10 @@ r"""Enveloppe du banc de test Berry ModBus (banc_test_modbus.be).
 
 UTILISATION
 -----------
-    python outils_docs/scripts_python/banc_test_modbus.py
+    python outils_docs/scripts_python/banc_test_modbus.py [dossier_sources]
 
-Depuis n'importe quel dossier : la racine du depot et l'interpreteur berry
+dossier_sources (defaut data/fs, relatif a la racine) : pour eprouver un
+correctif sur une copie sans toucher a data/fs. Depuis n'importe quel dossier : la racine du depot et l'interpreteur berry
 natif sont deduits. Code de sortie 0 si le banc est vert, 1 sinon (echec
 inattendu, ou banc introuvable) -> utilisable comme garde avant un flash.
 
@@ -58,8 +59,9 @@ def main() -> int:
     if not banc.is_file():
         sys.exit(f"ERREUR : {banc.name} introuvable a cote de ce script.")
 
-    # cwd = racine : le banc lit data/fs/modbusFonctions.be par chemin relatif.
-    r = subprocess.run([str(berry), str(banc)], cwd=str(racine),
+    # cwd = racine : le banc lit data/fs/*.be et ses bouchons par chemin relatif.
+    # Argument optionnel transmis tel quel : dossier des sources (defaut data/fs).
+    r = subprocess.run([str(berry), str(banc)] + sys.argv[1:], cwd=str(racine),
                        capture_output=True, text=True)
     sortie = (r.stdout or "") + (r.stderr or "")
     print(sortie, end="" if sortie.endswith("\n") else "\n")
