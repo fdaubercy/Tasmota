@@ -45,7 +45,9 @@ def modbusFonctions_etat()
             "clients": [nil, nil, nil, nil, nil, nil],   # 5 connexions TCP max (esclaves id 1 a 5)
             "nbRegistres": 0,           # Nombre de bits ou registres a lire / ecrire
             "nbOctets": 0,              # Nombre d'octets a lire / ecrire
-            "nbValeurs": 0              # Nombre de valeurs a lire / ecrire
+            "nbValeurs": 0,             # Nombre de valeurs a lire / ecrire
+            "seqPush": 0,               # esclave : numero d'ordre du dernier push emis (pousseEtat)
+            "derniersSeq": {}           # maitre : id esclave -> dernier numero d'ordre de push accepte
         }
     end
     return global._etatModbusFonctions
@@ -886,6 +888,9 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
             return
         end
         if (msg.find("Automatique", false))    paramMSG[typeTitre]["Automatique"] = true    end
+        # Numero d'ordre du push (2026-09-29) : un push en double ou en retard sur un plus recent
+        # du meme esclave est ecarte ici, avant publication, pour ne pas ecraser un etat plus neuf.
+        if (msg.find("Automatique", false) && !modbusFonctions.accepteSeq(paramMSG[typeTitre]["DeviceAddress"], msg.find("Seq")))    return    end
 
         tasmota.yield()
 
@@ -1712,12 +1717,50 @@ def modbusFonctions_pousseEtat(StartAddress, typeValeur, valeurs)
         return nil
     end
 
+    # Numero d'ordre (2026-09-29) : 1 au premier push apres demarrage, puis +1 a chaque push.
+    # L'UDP peut dupliquer ou inverser deux datagrammes : le maitre ecarte tout push dont le
+    # numero n'est pas plus grand que le dernier accepte (modbusFonctions.accepteSeq).
+    var seq = modbusFonctions.etat().find("seqPush", 0) + 1
+    modbusFonctions.etat()["seqPush"] = seq
+
     import udpFonctions
-    modbusFonctions.log(string.format("POUSSE_ETAT: registre %i = %s -> maitre (UDP) : %s", StartAddress, str(valeurs), trame.tohex()), LOG_LEVEL_DEBUG)
-    udpFonctions.envoiUDP("MultiCast", "", "ModbusPushUDP " + trame.tohex())
+    modbusFonctions.log(string.format("POUSSE_ETAT: registre %i = %s -> maitre (UDP, seq %i) : %s", StartAddress, str(valeurs), seq, trame.tohex()), LOG_LEVEL_DEBUG)
+    udpFonctions.envoiUDP("MultiCast", "", string.format("ModbusPushUDP %i %s", seq, trame.tohex()))
     return trame
 end
 modbusFonctions.pousseEtat = modbusFonctions_pousseEtat
+
+# Filtre des pushes par numero d'ordre, cote maitre (2026-09-29). Retourne true si le push
+# 'seq' de l'esclave 'id' est a traiter :
+#   - seq absent (esclave d'avant le numero d'ordre) : accepte, sans filtrage ;
+#   - premier push connu de cet esclave, ou seq plus grand que le dernier : accepte ;
+#   - seq == 1 apres un seq plus grand, ou recul de plus de FENETRE_SEQ : l'esclave a
+#     REDEMARRE (son compteur repart a 1) -> accepte, et le compteur repart de la ;
+#   - sinon (doublon, ou datagramme arrive apres un plus recent) : ecarte.
+# La fenetre evite qu'un redemarrage dont le push n°1 serait perdu bloque l'esclave
+# jusqu'a ce que son compteur depasse l'ancien : un desordre UDP ne recule que de peu.
+modbusFonctions.FENETRE_SEQ = 16
+def modbusFonctions_accepteSeq(id, seq)
+    import string
+
+    if (seq == nil)    return true    end
+    seq = int(seq)
+    var derniers = modbusFonctions.etat()["derniersSeq"]
+    var dernier = derniers.find(id)
+
+    if (dernier == nil || seq > dernier)
+        derniers[id] = seq
+        return true
+    end
+    if ((seq == 1 && dernier > 1) || dernier - seq > modbusFonctions.FENETRE_SEQ)
+        modbusFonctions.log(string.format("ACCEPTE_SEQ: esclave d'ID=%i redemarre (seq %i apres %i)", id, seq, dernier), LOG_LEVEL_INFO)
+        derniers[id] = seq
+        return true
+    end
+    modbusFonctions.log(string.format("ACCEPTE_SEQ: push ecarte de l'esclave d'ID=%i (seq %i, dernier accepte %i)", id, seq, dernier), LOG_LEVEL_DEBUG)
+    return false
+end
+modbusFonctions.accepteSeq = modbusFonctions_accepteSeq
 
 # Retourne le module lors de l'importation
 return modbusFonctions

@@ -421,8 +421,19 @@ def udpFonctions_lireUDP(typeComm, paramMSG)
             try
                 import modbusFonctions
                 var ip = (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.etat()["udpReception"][0].remote_ip : udpFonctions.etat()["udpReception"][1].remote_ip
+                # Push : "ModbusPushUDP <seq> <trame hexa>" (numero d'ordre, 2026-09-29) ; un esclave
+                # d'avant le numero d'ordre envoie "ModbusPushUDP <trame hexa>" -> seq absent (nil).
+                var hex = enveloppe[1]
+                var seq = nil
+                if (estPush)
+                    var morceaux = string.split(enveloppe[1], " ", 1)
+                    if (size(morceaux) == 2)
+                        seq = int(morceaux[0])
+                        hex = morceaux[1]
+                    end
+                end
                 # La regle 'ModbusReceivedUDP' (controleModbus.be, modBus_TasmotaSlaveModBus.be) prend le relais
-                modbusFonctions.lireMsgModbus("ModbusReceivedUDP", {"Trame": bytes(enveloppe[1]), "Info": {"remote_ip": ip}, "Automatique": estPush})
+                modbusFonctions.lireMsgModbus("ModbusReceivedUDP", {"Trame": bytes(hex), "Info": {"remote_ip": ip}, "Automatique": estPush, "Seq": seq})
             except .. as error, message
                 udpFonctions.log(string.format("LIRE_UDP_ERREUR: trame ModBus illisible '%s' : %s --> %s", paramMSG["msgString"], error, message), LOG_LEVEL_ERREUR)
             end

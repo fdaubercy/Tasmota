@@ -313,8 +313,9 @@ sauveServeur = serveur
 drivers = {"ModBus": {"activation": "ON", "id": 3, "typeComm": {"Serial":"ON", "TCP":"OFF", "UDP":"ON"}, "environnement": {}}}
 serveur = {"udp": {"activation": "ON"}, "tcp": {"activation": "OFF"}}
 udpStub.envois = []
+modbusFonctions.etat()["seqPush"] = 0
 modbusFonctions.pousseEtat(160, "uint16", [0xFF])
-verifie("push interrupteur : datagramme emis", "MultiCast||ModbusPushUDP " + trameAvecCrc("031000A000010200FF"),
+verifie("push interrupteur : datagramme emis (seq 1)", "MultiCast||ModbusPushUDP 1 " + trameAvecCrc("031000A000010200FF"),
         size(udpStub.envois) == 1 ? udpStub.envois[0][0] + "|" + udpStub.envois[0][1] + "|" + udpStub.envois[0][2] : str(udpStub.envois))
 # Temoins : rien ne doit partir si l'UDP ModBus est coupe, ni depuis le maitre.
 udpStub.envois = []
@@ -544,6 +545,51 @@ verifie("temoin trame hors-sequence : pas de contact note", 0, maitre.derniersCo
 modbusFonctions.etat()["enVol"] = nil
 modules = sauveModules
 drivers = sauveDrivers
+
+print("")
+print("=== 15. Numero d'ordre seq du push (UDP) ===")
+sauveDrivers = drivers
+sauveServeur = serveur
+drivers = {"ModBus": {"activation": "ON", "id": 3, "typeComm": {"Serial":"ON", "TCP":"OFF", "UDP":"ON"}, "environnement": {}}}
+serveur = {"udp": {"activation": "ON"}, "tcp": {"activation": "OFF"}, "mqtt": {"topic": "garage"}}
+udpStub.envois = []
+modbusFonctions.etat()["seqPush"] = 0
+modbusFonctions.pousseEtat(160, "uint16", [0xFF])
+modbusFonctions.pousseEtat(160, "uint16", [0])
+verifie("esclave : seq 1 puis 2", "1/2", string.split(udpStub.envois[0][2], " ")[1] + "/" + string.split(udpStub.envois[1][2], " ")[1])
+udpStub.envois = []
+drivers["ModBus"]["typeComm"]["UDP"] = "OFF"
+modbusFonctions.pousseEtat(160, "uint16", [0xFF])
+verifie("temoin : un push non emis ne consomme pas de seq", 2, modbusFonctions.etat()["seqPush"])
+# Filtre cote maitre
+modbusFonctions.etat()["derniersSeq"] = {}
+var a = modbusFonctions.accepteSeq
+verifie("1er push connu (seq 5) : accepte", true, a(3, 5))
+verifie("seq 6 : accepte", true, a(3, 6))
+verifie("doublon seq 6 : ecarte", false, a(3, 6))
+verifie("retard seq 4 (apres 6) : ecarte", false, a(3, 4))
+verifie("seq 1 apres 6 : redemarrage, accepte", true, a(3, 1))
+verifie("puis seq 2 : accepte", true, a(3, 2))
+verifie("temoin : doublon du seq 1 initial ecarte", false, a(2, 1) && a(2, 1))
+modbusFonctions.etat()["derniersSeq"] = {3: 57}
+verifie("redemarrage dont le seq 1 est perdu (seq 2 apres 57) : accepte", true, a(3, 2))
+verifie("temoin : autre esclave independant", true, a(4, 1))
+verifie("seq absent (ancien esclave) : accepte", true, a(3, nil))
+# lireMsgModbus : un push ecarte n'est pas publie
+drivers["ModBus"]["id"] = 0
+modbusFonctions.etat()["derniersSeq"] = {}
+var trame160 = bytes(trameAvecCrc("031000A000010200FF"))
+tasmota.publie = nil
+modbusFonctions.lireMsgModbus("ModbusReceivedUDP", {"Trame": trame160.copy(), "Info": {}, "Automatique": true, "Seq": 8})
+verifie("lireMsgModbus push seq 8 : publie", true, tasmota.publie != nil)
+tasmota.publie = nil
+modbusFonctions.lireMsgModbus("ModbusReceivedUDP", {"Trame": trame160.copy(), "Info": {}, "Automatique": true, "Seq": 7})
+verifie("lireMsgModbus push seq 7 en retard : non publie", nil, tasmota.publie)
+tasmota.publie = nil
+modbusFonctions.lireMsgModbus("ModbusReceivedUDP", {"Trame": trame160.copy(), "Info": {}, "Seq": 7})
+verifie("temoin : trame non push (sans Automatique) jamais filtree", true, tasmota.publie != nil)
+drivers = sauveDrivers
+serveur = sauveServeur
 
 print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
