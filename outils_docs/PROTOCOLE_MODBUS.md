@@ -418,3 +418,40 @@ ce qui est du. Meme schema que l'index inverse. Et **decaler les esclaves entre 
 (offset = id x quelques secondes) pour eviter que le handler mono-thread du maitre ne recoive
 tout au meme instant.
 
+### Mise en oeuvre retenue (2026-09-29) — options A + B
+
+**A — releve periodique par le maitre = source de verite.** `releveEsclaves()`
+(`modBus_TasmotaSlaveModBus.be`), cron `releve_TasmotaSlaveModBus` toutes les 30 s, maitre
+seul. Une demande de lecture **par appareil virtuel** `ModBus_TasmotaSlaveModBus<n>`, au
+protocole existant (`StartAddress = type + idModBus - 1`) : 0x02 (interrupteurs, capteurs,
+boutons), 0x04 uint32 (analogiques, compteurs), 0x04 float (thermometres, 2 valeurs pour un
+DHT22). Transport **RS485**, via la file du maitre. L'instantane « un bloc = tout l'etat » n'a
+pas ete retenu : relire chaque appareil a chaque cycle donne la meme convergence (chaque
+valeur est entierement relue) sans nouvelle carte de registres.
+
+**B — push d'evenement de l'esclave = accelerateur.** `modbusFonctions.pousseEtat()`, appele
+par `globalFonctions` sur changement d'interrupteur, bouton, capteur ou compteur (les
+thermometres et analogiques ne poussent pas : trop variables, le releve A suffit).
+
+```
+UDP multicast : "ModbusPushUDP " + trame en hexa
+trame        : [id esclave][0x10][registre 2][nb registres 2][nb octets 1][donnees][CRC]
+exemple      : 03 10 00A0 0001 02 00FF E7D0     (rideau, interrupteur 1 = ON)
+```
+
+- **PDU standard** (Write Multiple Registers) : elle porte le registre, donc le maitre sait quel
+  capteur a change. Le bit `0x80` (= exception en ModBus) n'est plus utilise pour le push.
+- **L'enveloppe `ModbusPushUDP`** marque la trame non sollicitee : seul le maitre la traite
+  (`udpFonctions.lireUDP`), comme `Automatique` ; elle **n'acquitte jamais** la requete en vol.
+- `DeviceAddress` = **l'id de l'esclave emetteur** (et non la cible) : c'est ce qui route la
+  trame vers la regle `ModbusReceivedUDP#DeviceAddress==<id>` du bon esclave.
+- Ni accuse ni file : une perte est reparee par le releve A suivant (< 30 s).
+- Avec le serie actif, **l'UDP ne porte que ce push** (`envoiMsgModbus`) : commandes et
+  reponses restent sur le RS485, sinon doublons (double execution, acquittement errone).
+- Etat d'un interrupteur lu sur le **bit 0** : `0x01` en reponse serie standard, `0x00FF` en push.
+
+**Non fait (reste du §9)** : `seq` (inutile tant que le push n'est qu'un accelerateur et que la
+verite vient du releve apparie par la file), chien de garde « etat inconnu » des esclaves
+Tasmota (fait pour la carte 16 relais seulement), reconciliation commande/constate des relais
+d'esclaves. Verifie au banc (`banc_test_modbus.be`, sections 8 a 11) ; **pas encore sur bus reel**.
+

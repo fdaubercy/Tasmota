@@ -39,6 +39,27 @@
   témoin négatif.
 - `compileModule` sur un module solidifié dont le `.be` est exclu du FS est **inoffensif**
   (`gestionFileFolder.be:388` : fichier absent → `return true`, rien d'autre).
+- **Synchronisation esclaves → maître : options A + B mises en place le 2026-09-29**
+  (détail : `outils_docs/PROTOCOLE_MODBUS.md` §9, « Mise en oeuvre retenue »). Commits
+  `5ce683ec4` (0x10 standard), `852aac0c5` (push B émission), `1556d6b37` (réception),
+  `e776309a2` (relevé A), `66c75a320` (`typeComm.UDP = ON`). Avant eux, 3 correctifs
+  `4e49352aa`, `1d1cf336f`, `700b3510d`. Banc : **36 PASS, 0 bug connu**. Jamais sur bus réel.
+  **Les firmwares compilés le 2026-09-29 au matin ne contiennent RIEN de tout cela :
+  rebuild complet des 3 garage obligatoire** (tout est solidifié).
+- **À ajouter à la grille d'observation** (log niveau 4) :
+  | À vérifier | Chaîne de log |
+  |---|---|
+  | Relevé A armé (maître) | `Releve des esclaves arme (toutes les 30 s)` |
+  | Relevé A actif | `MODBUS_TASMOTA_SLAVE_RELEVE: 2 demande(s)` (config actuelle : thermomètre cuve + interrupteurs rideau) |
+  | Push B émis (esclave, sur changement d'interrupteur) | `POUSSE_ETAT: registre 160 = [255] -> maitre (UDP)` |
+  | Push B reçu et appliqué (maître) | `Réception de l'état de l'interrupteur n°1: ON` sans requête en vol |
+  | Push B n'acquitte rien | `APPARIE_REPONSE: trame automatique (telemetrie)` — n'apparaît que si une requête était en vol à l'arrivée du push |
+  Les logs `RELEVE` et `POUSSE_ETAT` exigent le `debug` à `ON` (TasmotaSlaveModBus côté maître, ModBus côté esclave).
+- **Reste, côté synchro** : chien de garde « état inconnu » des esclaves Tasmota, `seq`,
+  réconciliation commande/constaté des relais d'esclaves ; le transport **TCP** reste cassé
+  (serveur esclave non démarré, sockets `clients[id]` jamais lus) mais n'est plus sur le chemin
+  du push. Avec `typeComm.TCP = ON` (P4, cuve), chaque réponse d'esclave tente aussi un envoi
+  TCP et journalise `Connexion TCP avec le maitre non-initiée` : bruit sans effet.
 
 ---
 

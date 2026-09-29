@@ -117,6 +117,11 @@ Ce qui reste à paramétrer, constaté dans le code :
 
 ## 1.8 Push spontané esclave → maître — état réel
 
+> ⚠️ **Dépassé le 2026-09-29.** Ce constat décrit l'ancien push `0x82`/`0x84` en TCP, jamais
+> décodable par le maître. Il est remplacé par les options **A** (relevé périodique en RS485)
+> et **B** (écriture `0x10` standard en UDP multicast) : voir `PROTOCOLE_MODBUS.md` §9,
+> « Mise en oeuvre retenue ».
+
 **Commencé et partiellement fonctionnel.** Chemin **événementiel** : sur changement d'état
 d'un switch/interrupteur/bouton, `globalFonctions.be` bâtit une trame `0x02 | 0x80` et la
 pousse (`globalFonctions.be:190, 232, 276, 371`) :
