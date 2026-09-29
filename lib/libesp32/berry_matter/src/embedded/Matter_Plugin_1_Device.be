@@ -216,15 +216,17 @@ class Matter_Plugin_Device : Matter_Plugin
     # ====================================================================================================
     if   cluster == 0x0003              # ========== Identify 1.2 p.16 ==========
       if   attribute == 0x0000          #  ---------- IdentifyTime / u2 ----------
-        return tlv_solo.set(0x05 #-TLV.U2-#, 0)      # no identification in progress
+        return tlv_solo.set(0x06 #-TLV.U4-#, 0)      # no identification in progress
       elif attribute == 0x0001          #  ---------- IdentifyType / enum8 ----------
-        return tlv_solo.set(0x04 #-TLV.U1-#, 0)      # IdentifyType = 0x00 None
+        return tlv_solo.set(0x06 #-TLV.U4-#, 0)      # IdentifyType = 0x00 None
       end
 
     # ====================================================================================================
     elif cluster == 0x0004              # ========== Groups 1.3 p.21 ==========
-      if   attribute == 0x0000          #  ----------  ----------
-        return nil                      # TODO
+      if   attribute == 0x0000          #  ---------- NameSupport ----------
+        return tlv_solo.set(0x06 #-TLV.U4-#, self.device.GROUP_TRANSPORT_READY ? 0x80 : 0)
+      elif attribute == 0xFFFC          # ---------- FeatureMap ----------
+        return tlv_solo.set(0x06 #-TLV.U4-#, self.device.GROUP_TRANSPORT_READY ? 1 : 0)
       end
 
     # ====================================================================================================
@@ -240,14 +242,14 @@ class Matter_Plugin_Device : Matter_Plugin
         var types = self.TYPES
         for dt: types.keys()
           var d1 = dtl.add_struct()
-          d1.add_TLV(0, 0x05 #-TLV.U2-#, dt)     # DeviceType
-          d1.add_TLV(1, 0x05 #-TLV.U2-#, types[dt])      # Revision
+          d1.add_TLV(0, 0x06 #-TLV.U4-#, dt)     # DeviceType
+          d1.add_TLV(1, 0x06 #-TLV.U4-#, types[dt])      # Revision
         end
         # if fabric is not Alexa
         if (self.NON_BRIDGE_VENDOR.find(session.get_admin_vendor()) == nil) && (!self.device.disable_bridge_mode)
           var d1 = dtl.add_struct()
-          d1.add_TLV(0, 0x05 #-TLV.U2-#, 0x0013)     # DeviceType
-          d1.add_TLV(1, 0x05 #-TLV.U2-#, 1)      # Revision
+          d1.add_TLV(0, 0x06 #-TLV.U4-#, 0x0013)     # DeviceType
+          d1.add_TLV(1, 0x06 #-TLV.U4-#, 1)      # Revision
         end
         return dtl
       end
@@ -326,7 +328,7 @@ class Matter_Plugin_Device : Matter_Plugin
         # ID=1
         #  0=Certificate (octstr)
         var iqr = TLV.Matter_TLV_struct()
-        iqr.add_TLV(0, 0x05 #-TLV.U2-#, 0)       # Timeout
+        iqr.add_TLV(0, 0x06 #-TLV.U4-#, 0)       # Timeout
         ctx.command = 0x00              # IdentifyQueryResponse
         return iqr
       elif command == 0x0040            # ---------- TriggerEffect ----------
@@ -335,8 +337,123 @@ class Matter_Plugin_Device : Matter_Plugin
       end
     # ====================================================================================================
     elif cluster == 0x0004              # ========== Groups 1.3 p.21 ==========
-      # TODO
-      return true
+      # Persist membership management only when encrypted multicast reception
+      # is available. Until then commands fail closed instead of advertising a
+      # group configuration whose messages would be silently discarded.
+      var fabric = session.get_fabric()
+      if fabric == nil
+        ctx.status = 0x7E #-matter.UNSUPPORTED_ACCESS-#
+        return nil
+      end
+
+      if command == 0x0000              # ---------- AddGroup ----------
+        var group_id = val.findsubval(0)
+        var group_name = val.findsubval(1, "")
+        var status = 0
+        if group_id == nil
+          ctx.status = 0x85 #-matter.INVALID_COMMAND-#
+          return nil
+        elif !self.device.GROUP_TRANSPORT_READY
+          status = 0x01 #-matter.FAILURE-#
+        elif type(group_name) != 'string' || size(group_name) > 16
+          status = 0x87 #-matter.CONSTRAINT_ERROR-#
+        elif group_id == nil || group_id < 1 || group_id > 0xFEFF
+          status = 0x87 #-matter.CONSTRAINT_ERROR-#
+        elif fabric.find_group(group_id) == nil && size(fabric.get_group_table()) >= 4
+          status = 0x89 #-matter.RESOURCE_EXHAUSTED-#
+        else
+          fabric.add_group_endpoint(group_id, self.endpoint, group_name)
+        end
+        var response = TLV.Matter_TLV_struct()
+        response.add_TLV(0, 0x06 #-TLV.U4-#, status)
+        response.add_TLV(1, 0x06 #-TLV.U4-#, group_id)
+        ctx.command = 0x0000             # AddGroupResponse
+        return response
+
+      elif command == 0x0001            # ---------- ViewGroup ----------
+        var group_id = val.findsubval(0)
+        if group_id == nil
+          ctx.status = 0x85 #-matter.INVALID_COMMAND-#
+          return nil
+        end
+        var group = fabric.find_group(group_id)
+        var member = self.device.GROUP_TRANSPORT_READY &&
+                     group != nil && group.find("endpoints", []).find(self.endpoint) != nil
+        var response = TLV.Matter_TLV_struct()
+        response.add_TLV(0, 0x06 #-TLV.U4-#,
+                         group_id == 0 ? 0x87 #-matter.CONSTRAINT_ERROR-# :
+                         member ? 0 : 0x8B #-matter.NOT_FOUND-#)
+        response.add_TLV(1, 0x06 #-TLV.U4-#, group_id)
+        response.add_TLV(2, 0x0C #-TLV.UTF1-#, member ? group.find("name", "") : "")
+        ctx.command = 0x0001             # ViewGroupResponse
+        return response
+
+      elif command == 0x0002            # ---------- GetGroupMembership ----------
+        var requested = val.findsub(0)
+        var response = TLV.Matter_TLV_struct()
+        response.add_TLV(0, 0x06 #-TLV.U4-#,
+                         self.device.GROUP_TRANSPORT_READY ? 4 - size(fabric.get_group_table()) : 0)
+        var groups = response.add_array(1)
+        if self.device.GROUP_TRANSPORT_READY
+          for group : fabric.get_group_table()
+            if group.find("endpoints", []).find(self.endpoint) == nil
+              continue
+            end
+            var include = requested == nil || size(requested.val) == 0
+            if !include
+              for requested_id : requested.val
+                if requested_id.val == group.find("group_id")
+                  include = true
+                  break
+                end
+              end
+            end
+            if include
+              groups.add_TLV(nil, 0x06 #-TLV.U4-#, group.find("group_id"))
+            end
+          end
+        end
+        ctx.command = 0x0002             # GetGroupMembershipResponse
+        return response
+
+      elif command == 0x0003            # ---------- RemoveGroup ----------
+        var group_id = val.findsubval(0)
+        if group_id == nil
+          ctx.status = 0x85 #-matter.INVALID_COMMAND-#
+          return nil
+        end
+        var removed = group_id != 0 && fabric.remove_group_endpoint(group_id, self.endpoint)
+        var response = TLV.Matter_TLV_struct()
+        response.add_TLV(0, 0x06 #-TLV.U4-#,
+                         group_id == 0 ? 0x87 #-matter.CONSTRAINT_ERROR-# :
+                         removed ? 0 : 0x8B #-matter.NOT_FOUND-#)
+        response.add_TLV(1, 0x06 #-TLV.U4-#, group_id)
+        ctx.command = 0x0003             # RemoveGroupResponse
+        return response
+
+      elif command == 0x0004            # ---------- RemoveAllGroups ----------
+        fabric.remove_all_groups_for_endpoint(self.endpoint)
+        return true
+
+      elif command == 0x0005            # ---------- AddGroupIfIdentifying ----------
+        var group_id = val.findsubval(0)
+        if group_id == nil
+          ctx.status = 0x85 #-matter.INVALID_COMMAND-#
+          return nil
+        elif group_id == 0
+          ctx.status = 0x87 #-matter.CONSTRAINT_ERROR-#
+          return nil
+        end
+        var group_name = val.findsubval(1, "")
+        if type(group_name) != 'string' || size(group_name) > 16
+          ctx.status = 0x87 #-matter.CONSTRAINT_ERROR-#
+          return nil
+        end
+        # IdentifyTime is always zero in the base device implementation, so
+        # the mandatory command succeeds without changing group membership.
+        # This remains valid while multicast group transport is disabled.
+        return true
+      end
 
     # ====================================================================================================
     elif cluster == 0x0005              # ========== Scenes 1.4 p.30 ==========
