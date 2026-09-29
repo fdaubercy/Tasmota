@@ -261,10 +261,9 @@ drivers = {"ModBus": {"environnement": {"TasmotaSlaveModBus": {"debug": "OFF",
            "TasmotaSlaveModBus1": {"activation": "ON", "id": 2, "name": "cuve"}}}}}
 var nbSave = persist.nb_save
 essaie(def () modBus_TasmotaSlaveModBus.MODBUS_TASMOTA_SLAVE.reglageSlaveModBus(SelfStub(), "ReglageSlaveModBus", 1, "logActivation ON", nil) end)
-bug_connu("logActivation ON : debug du persist / save()",
-          "ON / save=1",
-          drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"]["debug"] + " / save=" + str(persist.nb_save - nbSave),
-          "point 3 : chemin TasmotaSlaveModBus x3, modBus_TasmotaSlaveModBus.be:133")
+verifie("logActivation ON : debug du persist / save()",
+        "ON / save=1",
+        drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"]["debug"] + " / save=" + str(persist.nb_save - nbSave))
 drivers = sauveDrivers
 
 print("")

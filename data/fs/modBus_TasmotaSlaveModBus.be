@@ -129,8 +129,10 @@ class MODBUS_TASMOTA_SLAVE : Driver
                 parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
                 self.DEBUG = parametres[0]
 
-                # Sauvegarde le paramètre
-                drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"]["TasmotaSlaveModBus"]["TasmotaSlaveModBus" + str(idx)]["debug"] = parametres[0]
+                # Sauvegarde le paramètre au niveau du DRIVER, la ou log() le relit (corrige le
+                # 2026-09-29) : l'ancien chemin repetait 'TasmotaSlaveModBus' 3 fois, levait une
+                # exception avalee par le try -> rien n'etait jamais sauvegarde.
+                drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"]["debug"] = parametres[0]
                 persist.save()
             except .. as e, m
                 # print('Erreur: ', e, " -> ", m)
