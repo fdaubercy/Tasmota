@@ -633,9 +633,15 @@ def modbusFonctions_envoiMsgModbus(paramMSG, typeMsg, id)
     # esclave qui ecoute les deux, et n'a aucun sens vers la carte 16 relais - peripherique
     # RS485 sans IP, donc absente de modbusFonctions.clients.
     if(typeMsg == "Reponse" && drivers["ModBus"]["typeComm"].find("TCP", "OFF") == "ON")    modbusFonctions.envoiMsgModbusTCP(modbusFonctions.prepareTrame(paramMSG, typeMsg), typeMsg)     end
-    # NOTE : l'UDP porte exactement le meme defaut de symetrie, mais typeComm.UDP est a OFF
-    # sur les 3 modules garage - laisse en l'etat, a trancher le jour ou l'UDP sera active.
-    if(drivers["ModBus"]["typeComm"].find("UDP", "OFF") == "ON")    modbusFonctions.envoiMsgModbusUDP(modbusFonctions.prepareTrame(paramMSG, typeMsg), typeMsg)     end
+    # UDP (tranche le 2026-09-29, typeComm.UDP passe a ON sur le garage) : quand le serie est
+    # actif, l'UDP est RESERVE au push esclave -> maitre (modbusFonctions.pousseEtat), qui ne
+    # passe pas par ici. Emettre aussi commandes et reponses en UDP les ferait arriver en
+    # double : une commande serait executee deux fois, et une reponse UDP retardee pourrait
+    # acquitter la requete SUIVANTE du meme esclave (meme adresse, meme code fonction).
+    # L'UDP ne porte donc commandes et reponses que si le serie est coupe (repli).
+    if(drivers["ModBus"]["typeComm"].find("UDP", "OFF") == "ON" && drivers["ModBus"]["typeComm"].find("Serial", "OFF") != "ON")
+        modbusFonctions.envoiMsgModbusUDP(modbusFonctions.prepareTrame(paramMSG, typeMsg), typeMsg)
+    end
 end
 modbusFonctions.envoiMsgModbus = modbusFonctions_envoiMsgModbus
 
@@ -732,14 +738,16 @@ def modbusFonctions_envoiMsgModbusUDP(Trame, typeMsg)
         end
     end
 
+    # La trame part en HEXA (corrige le 2026-09-29) : Trame.tostring() donnait "bytes('...')",
+    # que la reception (udpFonctions.lireUDP) ne savait pas relire.
     # Si maitre ModBus (id == 0) => envoi par UDP MultiCast
     if (drivers["ModBus"].find("id", 99) == 0)
-        # udpFonctions.envoiUDP("UniCast", IP_ModBus, "ModbusUDP " + Trame.tostring())
-        udpFonctions.envoiUDP("MultiCast", "192.168.4.1", "ModbusUDP " + Trame.tostring())
+        # udpFonctions.envoiUDP("UniCast", IP_ModBus, "ModbusUDP " + Trame.tohex())
+        udpFonctions.envoiUDP("MultiCast", "192.168.4.1", "ModbusUDP " + Trame.tohex())
     # Si esclave ModBus (id > 0) => envoi par UDP UniCast
     elif (drivers["ModBus"].find("id", 0) > 0)
         # udpFonctions.envoiUDP("UniCast", "192.168.0.43", "ModbusUDP " + json.dump(Trame))
-        udpFonctions.envoiUDP("MultiCast", "", "ModbusUDP " + Trame.tostring())
+        udpFonctions.envoiUDP("MultiCast", "", "ModbusUDP " + Trame.tohex())
     end
 end
 modbusFonctions.envoiMsgModbusUDP = modbusFonctions_envoiMsgModbusUDP
@@ -1643,6 +1651,36 @@ def modbusFonctions_motsVersValeurs(mots, typeValeur)
     return valeurs
 end
 modbusFonctions.motsVersValeurs = modbusFonctions_motsVersValeurs
+
+# Push spontane ESCLAVE -> MAITRE (option B, 2026-09-29), sur changement d'etat.
+# La PDU est une ECRITURE 0x10 standard : elle porte l'adresse du registre (type + id - 1),
+# donc le maitre sait quel capteur a change - ce qu'une reponse 0x02/0x04 ne dit pas.
+# Emise en UDP multicast dans l'enveloppe "ModbusPushUDP <trame hexa>" : c'est l'enveloppe,
+# pas un bit detourne de la PDU, qui dit au maitre "ceci ne repond a aucune requete".
+# Ni accuse, ni file (plan telemetrie, PROTOCOLE_MODBUS.md section 9) : une trame perdue
+# est reparee par le releve periodique du maitre (option A), qui reste la source de verite.
+# @StartAddress : type + id - 1 du capteur ; @typeValeur : "uint16", "float", "uint32" ;
+# @valeurs : liste. Retourne la trame emise, ou nil si rien n'est parti.
+def modbusFonctions_pousseEtat(StartAddress, typeValeur, valeurs)
+    import string
+
+    if (drivers["ModBus"].find("activation", "OFF") != "ON" || drivers["ModBus"].find("id", 0) <= 0)    return nil    end
+    if (drivers["ModBus"]["typeComm"].find("UDP", "OFF") != "ON" || serveur["udp"].find("activation", "OFF") != "ON")    return nil    end
+
+    var paramMSG = {"DeviceAddress": drivers["ModBus"]["id"], "FunctionCode": modbusFonctions.ECRITURE_REGISTRES_HOLDER,
+                    "StartAddress": StartAddress, "type": typeValeur, "Count": size(valeurs), "Values": valeurs}
+    var trame = modbusFonctions.prepareTrame(paramMSG, "Commande")
+    if (paramMSG["Erreur"] != modbusFonctions.tabErreur["noerror"])
+        modbusFonctions.log(string.format("POUSSE_ETAT: trame 0x10 invalide pour le registre %i (erreur %i), non emise", StartAddress, paramMSG["Erreur"]), LOG_LEVEL_ERREUR)
+        return nil
+    end
+
+    import udpFonctions
+    modbusFonctions.log(string.format("POUSSE_ETAT: registre %i = %s -> maitre (UDP) : %s", StartAddress, str(valeurs), trame.tohex()), LOG_LEVEL_DEBUG)
+    udpFonctions.envoiUDP("MultiCast", "", "ModbusPushUDP " + trame.tohex())
+    return trame
+end
+modbusFonctions.pousseEtat = modbusFonctions_pousseEtat
 
 # Retourne le module lors de l'importation
 return modbusFonctions

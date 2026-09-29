@@ -167,15 +167,6 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
     import re
 
 	var device
-    var trameModBus = 	{
-                            "DeviceAddress": drivers["ModBus"]["id"],
-                            "FunctionCode": 0, 
-                            "FunctionName": "",
-                            "StartAddress": 0, 
-                            "type": "", 
-                            "Count": 0, 
-                            "Values": []
-                        }
 
 	# Test
 	log("GLOBAL_GESTION_CAPTEURS: -------------------- global changementEtatCapteur -------------------", LOG_LEVEL_DEBUG_PLUS)
@@ -228,20 +219,11 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
                             value = (device["etat"] == "ON" ? 0x00 : 0xFF)
                         end
 
-                        trameModBus["FunctionCode"] = 0x02 | 0x80           # Transformation retour automatique de valeur d'un capteur au maitre
-                        trameModBus["FunctionName"] = "LECTURE_ENTREES_DISCRETES"
-                        trameModBus["StartAddress"] = device["type"] + device["id"] - 1
-                        trameModBus["type"] = "uint8"
-                        trameModBus["Count"] = 1
-                        trameModBus["Values"].push(value)
-
-                        # Envoi automatique vers le Maitre sur changement de valeur par ModBus TCP Uniquement
+                        # Push 0x10 vers le maitre en UDP (option B) : voir modbusFonctions.pousseEtat
                         tasmota.yield()
                         log(string.format("GLOBAL_GESTION_CAPTEURS: Informe le maitre ModBus du changement de valeur de '%s' (GPIO %i) = %s", device["nom"], device["pin"], device["etat"]), LOG_LEVEL_DEBUG_PLUS)
-                        if(drivers["ModBus"]["typeComm"].find("TCP", "OFF") == "ON") 
-                            import modbusFonctions   
-                            modbusFonctions.envoiMsgModbusTCP(modbusFonctions.prepareTrame(trameModBus, "Reponse"), "Reponse")     
-                        end
+                        import modbusFonctions
+                        modbusFonctions.pousseEtat(device["type"] + device["id"] - 1, "uint16", [value])
                     end
 				end
 			end
@@ -270,20 +252,11 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
                             value = (device["etat"] == "ON" ? 0x00 : 0xFF)
                         end
 
-                        trameModBus["FunctionCode"] = 0x02 | 0x80           # Transformation retour automatique de valeur d'un capteur au maitre
-                        trameModBus["FunctionName"] = "LECTURE_ENTREES_DISCRETES"
-                        trameModBus["StartAddress"] = device["type"] + device["id"] - 1
-                        trameModBus["type"] = "uint8"
-                        trameModBus["Count"] = 1
-                        trameModBus["Values"].push(value)
-
-                        # Envoi automatique vers le Maitre sur changement de valeur par ModBus TCP Uniquement
+                        # Push 0x10 vers le maitre en UDP (option B) : voir modbusFonctions.pousseEtat
                         tasmota.yield()
                         log(string.format("GLOBAL_GESTION_CAPTEURS: Informe le maitre ModBus du changement de valeur de '%s' (GPIO %i) = %s", device["nom"], device["pin"], device["etat"]), LOG_LEVEL_DEBUG_PLUS)
-                        if(drivers["ModBus"]["typeComm"].find("TCP", "OFF") == "ON") 
-                            import modbusFonctions   
-                            modbusFonctions.envoiMsgModbusTCP(modbusFonctions.prepareTrame(trameModBus, "Reponse"), "Reponse")     
-                        end
+                        import modbusFonctions
+                        modbusFonctions.pousseEtat(device["type"] + device["id"] - 1, "uint16", [value])
                     end
 				end
 			end
@@ -314,20 +287,11 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
                             value = (device["etat"] == "ON" ? 0x00 : 0xFF)
                         end
 
-                        trameModBus["FunctionCode"] = 0x02 | 0x80           # Transformation retour automatique de valeur d'un capteur au maitre
-                        trameModBus["FunctionName"] = "LECTURE_ENTREES_DISCRETES"
-                        trameModBus["StartAddress"] = device["type"] + device["id"] - 1
-                        trameModBus["type"] = "uint8"
-                        trameModBus["Count"] = 1
-                        trameModBus["Values"].push(value)
-
-                        # Envoi automatique vers le Maitre sur changement de valeur par ModBus TCP Uniquement
+                        # Push 0x10 vers le maitre en UDP (option B) : voir modbusFonctions.pousseEtat
                         tasmota.yield()
                         log(string.format("GLOBAL_GESTION_CAPTEURS: Informe le maitre ModBus du changement de valeur de '%s' (GPIO %i) = %s", device["nom"], device["pin"], device["etat"]), LOG_LEVEL_DEBUG_PLUS)
-                        if(drivers["ModBus"]["typeComm"].find("TCP", "OFF") == "ON") 
-                            import modbusFonctions   
-                            modbusFonctions.envoiMsgModbusTCP(modbusFonctions.prepareTrame(trameModBus, "Reponse"), "Reponse")     
-                        end
+                        import modbusFonctions
+                        modbusFonctions.pousseEtat(device["type"] + device["id"] - 1, "uint16", [value])
                     end
 				end
 			end
@@ -409,20 +373,11 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
                     
                     # Envoi son état au Maitre ModBus si le module est un esclave ModBus (id > 0)
                     if (drivers["ModBus"].find("activation", "OFF") == "ON" && drivers["ModBus"].find("id", 0) > 0)
-                        trameModBus["FunctionCode"] = 0x04 | 0x80           # Transformation retour automatique de valeur d'un capteur au maitre
-                        trameModBus["FunctionName"] = "LECTURE_REGISTRES_ENTREES"
-                        trameModBus["StartAddress"] = device["type"] + device["id"] - 1
-                        trameModBus["type"] = "uint32"
-                        trameModBus["Count"] = 1
-                        trameModBus["Values"].push(int(value))
-
-                        # Envoi automatique vers le Maitre sur changement de valeur par ModBus TCP Uniquement
+                        # Push 0x10 vers le maitre en UDP (option B) : voir modbusFonctions.pousseEtat
                         tasmota.yield()
                         log(string.format("GLOBAL_GESTION_CAPTEURS: Informe le maitre ModBus du changement de valeur de '%s' (GPIO %i) = %s", device["nom"], device["pin"], device["etat"]), LOG_LEVEL_DEBUG_PLUS)
-                        if(drivers["ModBus"]["typeComm"].find("TCP", "OFF") == "ON") 
-                            import modbusFonctions   
-                            modbusFonctions.envoiMsgModbusTCP(modbusFonctions.prepareTrame(trameModBus, "Reponse"), "Reponse")     
-                        end
+                        import modbusFonctions
+                        modbusFonctions.pousseEtat(device["type"] + device["id"] - 1, "uint32", [int(value)])
                     end
                 end
 			end

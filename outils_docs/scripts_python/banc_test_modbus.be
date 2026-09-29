@@ -294,6 +294,27 @@ verifie("decode 0x10 interrupteur -> mot 0x00FF", "0/160/255",
         str(d["Erreur"]) + "/" + str(d["StartAddress"]) + "/" + str(modbusFonctions.motsVersValeurs(d["Values"], "uint16")[0]))
 
 print("")
+print("=== 9. pousseEtat : push esclave -> maitre (option B, UDP) ===")
+import udpFonctions as udpStub
+sauveDrivers = drivers
+sauveServeur = serveur
+drivers = {"ModBus": {"activation": "ON", "id": 3, "typeComm": {"Serial":"ON", "TCP":"OFF", "UDP":"ON"}, "environnement": {}}}
+serveur = {"udp": {"activation": "ON"}, "tcp": {"activation": "OFF"}}
+udpStub.envois = []
+modbusFonctions.pousseEtat(160, "uint16", [0xFF])
+verifie("push interrupteur : datagramme emis", "MultiCast||ModbusPushUDP " + trameAvecCrc("031000A000010200FF"),
+        size(udpStub.envois) == 1 ? udpStub.envois[0][0] + "|" + udpStub.envois[0][1] + "|" + udpStub.envois[0][2] : str(udpStub.envois))
+# Temoins : rien ne doit partir si l'UDP ModBus est coupe, ni depuis le maitre.
+udpStub.envois = []
+drivers["ModBus"]["typeComm"]["UDP"] = "OFF"
+verifie("temoin typeComm.UDP OFF : rien emis", "nil / 0", str(modbusFonctions.pousseEtat(160, "uint16", [0xFF])) + " / " + str(size(udpStub.envois)))
+drivers["ModBus"]["typeComm"]["UDP"] = "ON"
+drivers["ModBus"]["id"] = 0
+verifie("temoin maitre (id 0) : rien emis", "nil / 0", str(modbusFonctions.pousseEtat(160, "uint16", [0xFF])) + " / " + str(size(udpStub.envois)))
+drivers = sauveDrivers
+serveur = sauveServeur
+
+print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
       total, total - echecs - bugs_connus, bugs_connus, echecs))
 print(echecs == 0 ? "BANC_MODBUS: OK" : "BANC_MODBUS: ECHEC")
