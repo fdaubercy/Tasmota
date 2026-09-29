@@ -851,8 +851,85 @@ class MODBUS_TASMOTA_SLAVE : Driver
                         modbusFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: %s --> %s", error, message), LOG_LEVEL_ERREUR)
                     end
                 end
+
+                # Option A (2026-09-29) : releve periodique des appareils virtuels, par le maitre
+                # seul. add_cron et non set_timer : set_timer est peu fiable sur ESP32-P4 (cf.
+                # modbusFonctions.armeTimer). Premier releve a la prochaine demi-minute.
+                if (drivers["ModBus"].find("id", 99) == 0)
+                    tasmota.remove_cron("releve_TasmotaSlaveModBus")
+                    tasmota.add_cron("*/30 * * * * *", /-> self.releveEsclaves(), "releve_TasmotaSlaveModBus")
+                    self.log("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: Releve des esclaves arme (toutes les 30 s)", LOG_LEVEL_INFO)
+                end
             end
         end
+    end
+
+    # Demande de LECTURE d'un appareil virtuel, au protocole maison : un appareil par requete,
+    # StartAddress = type + idModBus - 1 (cf. modbusFonctions.executeCmdModbus cote esclave).
+    # Retourne la trame, ou nil si la famille d'appareil ne se lit pas.
+    def demandeLecture(device, famille, idEsclave)
+        var trame = {"DeviceAddress": idEsclave, "FunctionCode": 0, "StartAddress": device["type"] + device["idModBus"] - 1,
+                     "type": "", "Count": 1, "Values": 0}
+
+        if (famille == "interrupteurs" || famille == "capteurs" || famille == "boutons")
+            trame["FunctionCode"] = 0x02
+            trame["type"] = "uint8"
+        elif (famille == "analogiques" || famille == "compteurs")
+            trame["FunctionCode"] = 0x04
+            trame["type"] = "uint32"
+        elif (famille == "thermometres")
+            trame["FunctionCode"] = 0x04
+            trame["type"] = "float"
+            if (device["type"] == 1216)    trame["Count"] = 2    end     # DHT22 : T + humidite
+        else
+            return nil
+        end
+        return trame
+    end
+
+    # Option A (2026-09-29) : SOURCE DE VERITE de l'etat des esclaves. Chaque appareil virtuel
+    # 'ModBus_TasmotaSlaveModBus<n>' est relu par une requete de la file du maitre (serie) :
+    # une reponse perdue, ou un push UDP (option B) manque, sont repares au releve suivant.
+    # La reponse est traitee par recupereReponseModBus, comme toute reponse a une requete.
+    # Retourne le nombre de demandes placees dans la file.
+    def releveEsclaves()
+        import string
+        import modbusFonctions
+
+        var nb = 0
+        var esclaves = drivers["ModBus"]["environnement"].find("TasmotaSlaveModBus", {})
+
+        for cleModule: modules.keys()
+            if (type(modules[cleModule]) != "instance")    continue    end
+            var env = modules[cleModule].find("environnement")
+            if (type(env) != "instance")    continue    end
+
+            for famille: env.keys()
+                if (type(env[famille]) != "instance")    continue    end
+
+                for cleDevice: env[famille].keys()
+                    var device = env[famille][cleDevice]
+                    if (type(device) != "instance")    continue    end
+                    if (device.find("activation", "OFF") != "ON" || device.find("idModBus") == nil)    continue    end
+
+                    # ex: virtuel = "ModBus_TasmotaSlaveModBus2" -> esclave "TasmotaSlaveModBus2"
+                    var virtuel = str(device.find("virtuel", "OFF"))
+                    if (string.find(virtuel, "ModBus_TasmotaSlaveModBus") != 0)    continue    end
+                    var esclave = esclaves.find(string.split(virtuel, "_")[1])
+                    if (type(esclave) != "instance" || esclave.find("activation", "OFF") != "ON")    continue    end
+
+                    var trame = self.demandeLecture(device, famille, int(esclave["id"]))
+                    if (trame != nil)
+                        modbusFonctions.envoiMsgModbus(trame, "Commande", trame["StartAddress"])
+                        nb += 1
+                    end
+                    tasmota.yield()
+                end
+            end
+        end
+
+        self.log(string.format("MODBUS_TASMOTA_SLAVE_RELEVE: %i demande(s) de lecture placee(s) dans la file", nb), LOG_LEVEL_DEBUG)
+        return nb
     end
 end
 

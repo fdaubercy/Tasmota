@@ -381,6 +381,41 @@ drivers = sauveDrivers
 serveur = sauveServeur
 
 print("")
+print("=== 11. releveEsclaves : releve periodique du maitre (option A) ===")
+# Sous-classe qui court-circuite init() (dependances firmware) mais garde les vraies methodes.
+class MaitreReleve : modBus_TasmotaSlaveModBus.MODBUS_TASMOTA_SLAVE
+  def init() self.dataJson = {} end
+  def log(m, l) end
+end
+sauveDrivers = drivers
+drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial":"ON"},
+           "environnement": {"TasmotaSlaveModBus": {"debug": "OFF",
+               "TasmotaSlaveModBus1": {"activation": "ON", "id": 2, "name": "cuve"},
+               "TasmotaSlaveModBus2": {"activation": "ON", "id": 3, "name": "rideau"}}}}}
+modules = appareils()
+# un appareil non virtuel (ignore) et un relai virtuel (ne se releve pas)
+modules["garage"]["environnement"]["interrupteurs"]["interrupteur9"] = {"activation": "ON", "virtuel": "OFF", "type": 160, "id": 9}
+modules["garage"]["environnement"]["relais"] = {"relai2": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus2", "type": 256, "idModBus": 1, "id": 2}}
+var envoyes = []
+var vraiEnvoi = modbusFonctions.envoiMsgModbus
+modbusFonctions.envoiMsgModbus = def (t, typeMsg, id) envoyes.push(string.format("%i/%i/%i/%s/%i", t["DeviceAddress"], t["FunctionCode"], t["StartAddress"], t["type"], t["Count"])) end
+# L'ordre de parcours d'une map n'est pas garanti : on compare par presence.
+def resume(l)
+  return str(size(l)) + " : cuve=" + str(l.find("2/4/1312/float/1") != nil) + " rideau=" + str(l.find("3/2/160/uint8/1") != nil)
+end
+var m = MaitreReleve()
+m.releveEsclaves()
+verifie("releve : 2 demandes (thermometre cuve 0x04, interrupteur rideau 0x02)", "2 : cuve=true rideau=true", resume(envoyes))
+# Temoin : esclave desactive -> aucune demande pour lui
+drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"]["TasmotaSlaveModBus2"]["activation"] = "OFF"
+envoyes = []
+m.releveEsclaves()
+verifie("temoin esclave rideau desactive : seule la cuve est relevee", "1 : cuve=true rideau=false", resume(envoyes))
+modbusFonctions.envoiMsgModbus = vraiEnvoi
+modules = sauveModules
+drivers = sauveDrivers
+
+print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
       total, total - echecs - bugs_connus, bugs_connus, echecs))
 print(echecs == 0 ? "BANC_MODBUS: OK" : "BANC_MODBUS: ECHEC")
