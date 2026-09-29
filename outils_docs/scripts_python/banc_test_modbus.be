@@ -346,11 +346,13 @@ verifie("lireMsgModbus UDP : adresse/registre/valeur/Automatique", "3/160/[255]/
         str(pub.find("DeviceAddress")) + "/" + str(pub.find("StartAddress")) + "/" + str(pub.find("Values")) + "/" + str(pub.find("Automatique")))
 
 # Handler du maitre, appele comme la regle 'ModbusReceived...#DeviceAddress==<id>'
-class MaitreStub
-  var dataJson, DEBUG
-  def init() self.dataJson = {"TasmotaSlaveModBus": {"TasmotaSlaveModBus1": {}, "TasmotaSlaveModBus2": {}}} end
+# Sous-classe du vrai driver : init() court-circuite (dependances firmware), vraies methodes.
+class MaitreStub : modBus_TasmotaSlaveModBus.MODBUS_TASMOTA_SLAVE
+  def init() self.dataJson = {"TasmotaSlaveModBus": {"TasmotaSlaveModBus1": {}, "TasmotaSlaveModBus2": {}}}
+             self.derniersContacts = {} self.esclavesMuets = {} end
   def log(m, l) end
 end
+var maitre = MaitreStub()
 def appareils()
   return {"garage": {"activation": "ON", "environnement": {
     "interrupteurs": {"interrupteur1": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus2", "type": 160, "idModBus": 1, "id": 1, "etat": "OFF", "SwitchMode": 1}},
@@ -359,7 +361,7 @@ end
 def recoit(adresse, voie, contenu)
   var m = {}
   m[voie] = contenu
-  modBus_TasmotaSlaveModBus.MODBUS_TASMOTA_SLAVE.recupereReponseModBus(MaitreStub(), adresse, voie + "#DeviceAddress==" + str(adresse), m)
+  maitre.recupereReponseModBus(adresse, voie + "#DeviceAddress==" + str(adresse), m)
 end
 var inter = def () return modules["garage"]["environnement"]["interrupteurs"]["interrupteur1"]["etat"] end
 # (a) push UDP d'un interrupteur du rideau -> etat ON, sans rien acquitter
@@ -496,6 +498,49 @@ modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 3, "FunctionCod
 recoit(3, "ModbusReceived", {"DeviceAddress": 3, "FunctionCode": 6, "Values": [1, 0]})
 verifie("echo 0x06 : etat commande ON conserve", "ON", relai("relai2")["etat"])
 verifie("echo 0x06 : requete acquittee", nil, modbusFonctions.etat()["enVol"])
+modbusFonctions.etat()["enVol"] = nil
+modules = sauveModules
+drivers = sauveDrivers
+
+print("")
+print("=== 14. Chien de garde : esclave muet -> etats constates 'inconnu' ===")
+sauveDrivers = drivers
+drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial":"ON"},
+           "environnement": {"TasmotaSlaveModBus": {"debug": "OFF",
+               "TasmotaSlaveModBus1": {"activation": "ON", "id": 2, "name": "cuve"},
+               "TasmotaSlaveModBus2": {"activation": "ON", "id": 3, "name": "rideau"}}}}}
+modules = appareils()
+modules["garage"]["environnement"]["relais"] = {"relai2": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus2", "type": 256, "idModBus": 1, "id": 2, "etat": "ON", "etatConstate": "ON"}}
+maitre = MaitreStub()
+var env = def (f, c) return modules["garage"]["environnement"][f][c] end
+tasmota.horloge = 0
+verifie("1er passage : decompte amorce, personne de muet", 0, maitre.verifieChienDeGarde())
+tasmota.horloge = 60
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 2, "FunctionCode": 4, "StartAddress": 1312, "Count": 1, "type": "float"}}
+recoit(2, "ModbusReceived", {"DeviceAddress": 2, "FunctionCode": 4, "Values": [21.5]})     # la cuve repond a t=60
+tasmota.horloge = 90
+verifie("temoin t=90 (= 3 periodes) : personne de muet", 0, maitre.verifieChienDeGarde())
+journal = []
+tasmota.horloge = 91
+verifie("t=91 : rideau muet -> ses 2 appareils 'inconnu'", 2, maitre.verifieChienDeGarde())
+verifie("relai rideau : constate inconnu, commande ON intact", "inconnu/ON", env("relais", "relai2")["etatConstate"] + "/" + env("relais", "relai2")["etat"])
+verifie("interrupteur rideau : constate inconnu", "inconnu", env("interrupteurs", "interrupteur1").find("etatConstate"))
+verifie("temoin thermometre cuve (a repondu) : valide", "valide", env("thermometres", "thermometre1").find("etatConstate"))
+verifie("erreur journalisee pour le rideau", true, journalise("TasmotaSlaveModBus2 (ID=3) muet"))
+tasmota.horloge = 300
+verifie("temoin : un esclave deja muet n'est pas re-signale", 0, maitre.verifieChienDeGarde() - 1)   # la cuve, elle, devient muette
+# Retour du rideau : reponse appariee -> plus muet, l'appareil retrouve son constat
+journal = []
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 3, "FunctionCode": 2, "StartAddress": 160, "Count": 1, "type": "uint8"}}
+recoit(3, "ModbusReceived", {"DeviceAddress": 3, "FunctionCode": 2, "Values": [1]})
+verifie("retour du rideau : plus muet, retour journalise", "false/true", str(maitre.esclavesMuets.find(3, false)) + "/" + str(journalise("ID=3 repond de nouveau")))
+verifie("retour : interrupteur valide et ON", "valide/ON", env("interrupteurs", "interrupteur1")["etatConstate"] + "/" + env("interrupteurs", "interrupteur1")["etat"])
+# Temoin : une trame hors-sequence (rejetee) n'est pas un contact
+maitre = MaitreStub()
+maitre.derniersContacts[3] = 0
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 2, "FunctionCode": 4, "StartAddress": 1312, "Count": 1, "type": "float"}}
+recoit(3, "ModbusReceived", {"DeviceAddress": 3, "FunctionCode": 2, "Values": [1]})
+verifie("temoin trame hors-sequence : pas de contact note", 0, maitre.derniersContacts[3])
 modbusFonctions.etat()["enVol"] = nil
 modules = sauveModules
 drivers = sauveDrivers

@@ -19,6 +19,8 @@ class MODBUS_TASMOTA_SLAVE : Driver
     var nbIOActivesJSON
     var dataJson
     var DEBUG
+    var derniersContacts                # chien de garde : id esclave -> heure du dernier contact
+    var esclavesMuets                   # chien de garde : id esclave -> true tant qu'il est muet
 
     def init()
         import json
@@ -27,6 +29,8 @@ class MODBUS_TASMOTA_SLAVE : Driver
 
         self.DEBUG = nil
         self.nbIOActivesJSON = nil
+        self.derniersContacts = {}
+        self.esclavesMuets = {}
         # self.idModule = idModule
         self.dataJson = {"TasmotaSlaveModBus": {}}
 
@@ -409,6 +413,9 @@ class MODBUS_TASMOTA_SLAVE : Driver
         var estReponseEnVol = modbusFonctions.apparieReponse(msg)
         if (!estReponseEnVol && !msg.find("Automatique", false))    return    end
 
+        # Chien de garde : une reponse appariee ou un push = l'esclave est vivant
+        self.noteContact(int(value))
+
         # Certaines fonctions ne retournent aucune données
         msg["FunctionName"] = modbusFonctions.tabFonctionsName[msg["FunctionCode"]]
         self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: FunctionCode = 0x%02X ('%s')", msg["FunctionCode"], msg["FunctionName"]), LOG_LEVEL_DEBUG_PLUS)
@@ -451,6 +458,13 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                         msg["Values"] = modbusFonctions.motsVersValeurs(msg["Values"],
                                                             (t == 1312 || t == 1216) ? "float" : ((t == 352 || t == 4704) ? "uint32" : "uint16"))
                                         push = false
+                                    end
+
+                                    # Valeur fraiche : leve l'etat 'inconnu' pose par le chien de garde.
+                                    # (Un relai, lui, ne se constate que par une lecture 0x01, plus bas.)
+                                    if (cleEnv != "relais")
+                                        env[cleEnv][cleDevice]["etatConstate"] = "valide"
+                                        env[cleEnv][cleDevice]["constateA"] = tasmota.rtc()["local"]
                                     end
 
                                     # Ajoute la valeur dataJson["TasmotaSlaveModBus"] en fonction du numéro d'esclave
@@ -864,8 +878,8 @@ class MODBUS_TASMOTA_SLAVE : Driver
                 # modbusFonctions.armeTimer). Premier releve a la prochaine demi-minute.
                 if (drivers["ModBus"].find("id", 99) == 0)
                     tasmota.remove_cron("releve_TasmotaSlaveModBus")
-                    tasmota.add_cron("*/30 * * * * *", /-> self.releveEsclaves(), "releve_TasmotaSlaveModBus")
-                    self.log("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: Releve des esclaves arme (toutes les 30 s)", LOG_LEVEL_INFO)
+                    tasmota.add_cron(string.format("*/%i * * * * *", self.periodeReleve()), def() self.releveEsclaves() self.verifieChienDeGarde() end, "releve_TasmotaSlaveModBus")
+                    self.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: Releve des esclaves + chien de garde armes (toutes les %i s)", self.periodeReleve()), LOG_LEVEL_INFO)
                 end
             end
         end
@@ -941,6 +955,83 @@ class MODBUS_TASMOTA_SLAVE : Driver
         end
 
         self.log(string.format("MODBUS_TASMOTA_SLAVE_RELEVE: %i demande(s) de lecture placee(s) dans la file", nb), LOG_LEVEL_DEBUG)
+        return nb
+    end
+
+    # Periode du releve des esclaves, en secondes (cron). Le chien de garde declare muet un
+    # esclave sans contact depuis plus de 3 periodes (3 releves manques).
+    def periodeReleve() return 30 end
+
+    # Chien de garde (2026-09-29) : un esclave est vivant tant qu'il repond a une requete
+    # (appariee) ou qu'il pousse un etat. Appele par recupereReponseModBus.
+    def noteContact(idEsclave)
+        import string
+
+        if (self.derniersContacts == nil)    self.derniersContacts = {}    end
+        if (self.esclavesMuets == nil)    self.esclavesMuets = {}    end
+        self.derniersContacts[idEsclave] = tasmota.rtc()["local"]
+        if (self.esclavesMuets.find(idEsclave, false))
+            self.esclavesMuets.remove(idEsclave)
+            log(string.format("MODBUS_TASMOTA_SLAVE_CHIEN_DE_GARDE: l'esclave d'ID=%i repond de nouveau", idEsclave), LOG_LEVEL_INFO)
+        end
+    end
+
+    # Chien de garde (2026-09-29), sur le modele de la carte 16 relais : un esclave actif sans
+    # contact depuis plus de 3 periodes de releve est declare MUET, une seule fois, et les
+    # etats constates de ses appareils virtuels passent a 'inconnu'. L'etat COMMANDE ('etat')
+    # n'est pas touche. Le retour a la normale se fait au contact suivant (noteContact), et
+    # chaque appareil retrouve son constat a sa prochaine valeur recue.
+    # Retourne le nombre d'appareils passes a 'inconnu'.
+    def verifieChienDeGarde()
+        import string
+
+        if (self.derniersContacts == nil)    self.derniersContacts = {}    end
+        if (self.esclavesMuets == nil)    self.esclavesMuets = {}    end
+        var maintenant = tasmota.rtc()["local"]
+        var esclaves = drivers["ModBus"]["environnement"].find("TasmotaSlaveModBus", {})
+        var nb = 0
+
+        for cle: esclaves.keys()
+            var esclave = esclaves[cle]
+            if (type(esclave) != "instance" || esclave.find("activation", "OFF") != "ON")    continue    end
+            var id = int(esclave["id"])
+            var dernier = self.derniersContacts.find(id)
+
+            # Premier passage : le decompte part de maintenant (pas d'esclave muet au boot)
+            if (dernier == nil)
+                self.derniersContacts[id] = maintenant
+                continue
+            end
+            if (self.esclavesMuets.find(id, false) || maintenant - dernier <= 3 * self.periodeReleve())    continue    end
+
+            self.esclavesMuets[id] = true
+            log(string.format("MODBUS_TASMOTA_SLAVE_CHIEN_DE_GARDE: esclave %s (ID=%i) muet depuis %i s -> etats constates passes a 'inconnu'",
+                              cle, id, maintenant - dernier), LOG_LEVEL_ERREUR)
+            nb += self.passeInconnu("ModBus_" + cle)
+        end
+        return nb
+    end
+
+    # Passe a 'inconnu' l'etat constate de tous les appareils portes par le virtuel donne
+    # (ex: "ModBus_TasmotaSlaveModBus2"). Retourne le nombre d'appareils touches.
+    def passeInconnu(virtuel)
+        var nb = 0
+        for cleModule: modules.keys()
+            if (type(modules[cleModule]) != "instance")    continue    end
+            var env = modules[cleModule].find("environnement")
+            if (type(env) != "instance")    continue    end
+
+            for famille: env.keys()
+                if (type(env[famille]) != "instance")    continue    end
+                for cleDevice: env[famille].keys()
+                    var device = env[famille][cleDevice]
+                    if (type(device) == "instance" && device.find("virtuel") == virtuel)
+                        device["etatConstate"] = "inconnu"
+                        nb += 1
+                    end
+                end
+            end
+        end
         return nb
     end
 end
