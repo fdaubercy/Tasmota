@@ -198,3 +198,17 @@ Les commits marques ● ont un titre qui mentionne Berry / ESP32-S3 / nos sujets
 - ● `35bf395e5` Update security policy
 -   `7cd71e06e` [MI32-BLE] Add age of battery reading to battery icon (#25074)
 -   `4ee20e1a0` feat(ir): accept raw IR data as JSON, with a channel (#25062)
+
+## 2026-09-29 03:14 — 4 commit(s) recupere(s) d'upstream
+
+`arendst/Tasmota:development` → `fdaubercy/Tasmota:development` (merge_type : merge)
+
+> Entree ajoutee a la main : le fork distant etait deja synchronise (merge `90db7808c`),
+> le depot local a ete avance par `git merge --ff-only origin/development`, sans le script.
+
+**3 commit(s) ● a lire de pres.**
+
+-   `1972dab6d` IR accept raw data in JSON (#25077)
+- ● `f93502ca5` Matter update specs to 1.6.1 (to be used by AI) (#25083)
+- ● `be0c2e2b6` Clarify solidification for AI (#25085)
+- ● `c4327653d` feat(matter): Phase 1 - Update Root Node for Matter 1.6.0 (#25078)

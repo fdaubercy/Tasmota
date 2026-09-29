@@ -1387,7 +1387,6 @@
 #define D_SENSOR_FLOWRATEMETER "Débit"
 #define D_JSON_RANGE "Range"
 #define __SIZEOF_POINTER__ 4
-#define D_CMND_SHUTTER_ENABLEENDSTOPTIME "EnableEndStopTime"
 #define THERMOSTAT_TIME_MANUAL_TO_AUTO 60
 #define D_SENSOR_SSPI_CS "SSPI CS"
 #define D_JSON_FREEMEMORY "Free"
@@ -1499,6 +1498,7 @@
 #define D_JSON_LEARNED_SENT "Learned sent"
 #define LANGUAGE_LCID 1036
 #define D_POWERUSAGE_ACTIVE_TOTAL "Active Power Total"
+#define D_JSON_IR_FREQUENCY "Frequency"
 #define __FLT_DIG__ 6
 #define D_VID6608_F "VID6608 F"
 #define __NO_INLINE__ 1
@@ -1564,6 +1564,7 @@
 #define D_TEMPLATE_WRONG_ARCH "Reset to correct chip type"
 #define D_JSON_EXPORT_ACTIVE_TOTAL "ExportActiveTotal"
 #define D_HUE_API "Hue API"
+#define D_CMND_SHUTTER_CLOSEENDSTOPTIME "CloseEndStopTime"
 #define D_SENSOR_GPS_RX "GPS Rx"
 #define DS18X20_PULL_UP false
 #define D_JSON_IP6_LOCAL "IP6Local"
@@ -1579,7 +1580,7 @@
 #define D_SENSOR_BIOPDU_PZEM0XX_TX "BioPDU PZEM0XX Tx"
 #define USE_SDM120 
 #define FM24CXX_BLOCK_SIZE 256
-#define CFG_HOLDER 1404
+#define CFG_HOLDER 1405
 #define D_MODULE "Module"
 #define D_SENSOR_WS2812 "WS2812"
 #define D_SO_MQTTTLS "MqttTLS"
@@ -2271,6 +2272,7 @@
 #define D_MX "Induction X-Axis"
 #define D_SENSOR_CSE7766_TX "CSE7766 Tx"
 #define __SIG_ATOMIC_MIN__ (-__SIG_ATOMIC_MAX__ - 1)
+#define D_CMND_SHUTTER_OPENENDSTOPTIME "OpenEndStopTime"
 #define __XCHAL_ICACHE_SIZE 0
 #define D_CMND_WEIGHT_RESOLUTION "WeightRes"
 #define D_FP_BADLOCATION "Erreur d'indexation"
@@ -2893,6 +2895,7 @@
 #define D_SOLAX_MODE_2 "En marche"
 #define D_SOLAX_MODE_3 "Défault"
 #define D_SOLAX_MODE_5 "MàJ logicielle"
+#define MQTT_MAX_PING_OUTSTANDING 2
 #define D_STATUS6_MQTT "MQT"
 #define __INTMAX_TYPE__ long long int
 #define D_POWERUSAGE_ACTIVE "Puiss active"
