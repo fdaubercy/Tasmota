@@ -322,6 +322,9 @@ class CONTROLE_MODBUS : Driver
         import string
         import modbusFonctions  
 
+        # Echeances des timers ModBus sur ESP32-P4 (armeTimer, audit G1) : delai reel, en millis()
+        modbusFonctions.verifieEcheances()
+
         # Uniquement si communication ModBus Serial activée
         if (drivers["ModBus"]["typeComm"].find("Serial", "OFF") == "ON")
             # Uniquement les esclaves ModBus (si esclave :id > 0)

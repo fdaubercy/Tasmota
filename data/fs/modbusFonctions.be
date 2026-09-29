@@ -46,6 +46,7 @@ def modbusFonctions_etat()
             "nbRegistres": 0,           # Nombre de bits ou registres a lire / ecrire
             "nbOctets": 0,              # Nombre d'octets a lire / ecrire
             "nbValeurs": 0,             # Nombre de valeurs a lire / ecrire
+            "echeances": {},            # ESP32-P4 : nom -> {"t": echeance millis, "f": fonction} (armeTimer)
             "seqPush": 0,               # esclave : numero d'ordre du dernier push emis (pousseEtat)
             "derniersSeq": {}           # maitre : id esclave -> dernier numero d'ordre de push accepte
         }
@@ -533,25 +534,43 @@ end
 modbusFonctions.surTimeout = modbusFonctions_surTimeout
 
 # --- Timer P4-safe : set_timer() est problematique sur ESP32-P4 (le maitre de garage).
-# On y emule un one-shot via add_cron (granularite 1 s). Ailleurs : set_timer normal. ---
+# Corrige le 2026-09-29 (audit G1) : l'emulation par add_cron("*/N ...") partait au prochain
+# MULTIPLE de N secondes, soit un delai reel quelconque dans ]0 ; N] s (renvoi premature ->
+# reponse attribuee au mauvais appareil), et ne tournait pas tant que l'horloge n'etait pas
+# reglee (NTP). On memorise desormais une ECHEANCE en millis() (monotone), testee toutes les
+# 100 ms par verifieEcheances (appelee par controleModbus.every_100ms). Ailleurs : set_timer. ---
 def modbusFonctions_armeTimer(delai_ms, fonction, nom)
     if (diverses.find("typeESP", "") == "ESP32P4")
-        var sec = int(delai_ms / 1000)
-        if (sec < 1)  sec = 1  end
-        tasmota.add_cron(f"*/{sec:i} * * * * *",
-                         def()
-                             tasmota.remove_cron(nom)          # one-shot : se retire avant d'agir
-                             fonction()
-                         end, nom)
+        modbusFonctions.etat()["echeances"][nom] = {"t": tasmota.millis(delai_ms), "f": fonction}
     else
         tasmota.set_timer(delai_ms, fonction, nom)
     end
 end
 modbusFonctions.armeTimer = modbusFonctions_armeTimer
 
+# Declenche les echeances atteintes (ESP32-P4). Chaque echeance est retiree AVANT l'appel de
+# sa fonction, qui peut en rearmer une du meme nom (surTimeout -> pompeQueue -> armeTimer).
+def modbusFonctions_verifieEcheances()
+    var echeances = modbusFonctions.etat()["echeances"]
+    if (size(echeances) == 0)    return    end
+
+    var dues = []
+    for nom: echeances.keys()
+        if (tasmota.time_reached(echeances[nom]["t"]))    dues.push(nom)    end
+    end
+    for nom: dues
+        var e = echeances.find(nom)
+        if (e != nil)
+            echeances.remove(nom)
+            e["f"]()
+        end
+    end
+end
+modbusFonctions.verifieEcheances = modbusFonctions_verifieEcheances
+
 def modbusFonctions_desarmeTimer(nom)
     if (diverses.find("typeESP", "") == "ESP32P4")
-        tasmota.remove_cron(nom)
+        modbusFonctions.etat()["echeances"].remove(nom)
     else
         tasmota.remove_timer(nom)
     end

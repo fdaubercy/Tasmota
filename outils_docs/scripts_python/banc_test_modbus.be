@@ -43,13 +43,15 @@ class TasmotaStub
   var cmds                             # commandes passees a tasmota.cmd (verifiees par le banc)
   var horloge                          # heure locale renvoyee par rtc(), pilotee par le banc
   var power                            # etats des relais renvoyes par get_power()
-  def init() self.cmds = [] self.horloge = 0 self.power = [] end
+  var ms                               # millis() pilote par le banc (armeTimer P4)
+  def init() self.cmds = [] self.horloge = 0 self.power = [] self.ms = 0 end
+  def time_reached(t) return self.ms >= t end
   def publish_result(s, topic) self.publie = s end
   def yield() end
   def rtc() return {"local": self.horloge} end
   def get_power() return self.power end
   def cmd(c, m) self.cmds.push(c) return "" end
-  def millis() return 0 end
+  def millis(d) return self.ms + (d == nil ? 0 : d) end
   def delay(ms) end
   def set_timer(a, b, c) end
   def remove_timer(nom) end
@@ -590,6 +592,38 @@ modbusFonctions.lireMsgModbus("ModbusReceivedUDP", {"Trame": trame160.copy(), "I
 verifie("temoin : trame non push (sans Automatique) jamais filtree", true, tasmota.publie != nil)
 drivers = sauveDrivers
 serveur = sauveServeur
+
+print("")
+print("=== 16. G1 : timer P4 = echeance reelle en millis(), pas un cron ===")
+var sauveDiverses = diverses
+diverses = {"typeESP": "ESP32P4"}
+var appels = []
+tasmota.ms = 1000
+modbusFonctions.armeTimer(5000, def () appels.push(tasmota.ms) end, "test_g1")
+tasmota.ms = 5999
+essaie(def () modbusFonctions.verifieEcheances() end)
+verifie("temoin t+4999 ms : pas encore declenche", 0, size(appels))
+tasmota.ms = 6000
+essaie(def () modbusFonctions.verifieEcheances() end)
+verifie("t+5000 ms : declenche exactement une fois", "[6000]", str(appels))
+essaie(def () modbusFonctions.verifieEcheances() end)
+verifie("temoin : one-shot, pas de second declenchement", 1, size(appels))
+# Desarmement
+modbusFonctions.armeTimer(100, def () appels.push(-1) end, "test_g1b")
+modbusFonctions.desarmeTimer("test_g1b")
+tasmota.ms = 99999
+essaie(def () modbusFonctions.verifieEcheances() end)
+verifie("desarme avant echeance : jamais declenche", 1, size(appels))
+# Rearmement depuis la fonction appelee (surTimeout -> pompeQueue -> armeTimer)
+appels = []
+tasmota.ms = 0
+modbusFonctions.armeTimer(10, def () appels.push("a") modbusFonctions.armeTimer(10, def () appels.push("b") end, "test_g1") end, "test_g1")
+tasmota.ms = 10
+essaie(def () modbusFonctions.verifieEcheances() end)
+tasmota.ms = 20
+essaie(def () modbusFonctions.verifieEcheances() end)
+verifie("rearmement du meme nom depuis le rappel", "['a', 'b']", str(appels))
+diverses = sauveDiverses
 
 print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
