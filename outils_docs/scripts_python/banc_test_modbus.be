@@ -33,10 +33,15 @@ var LOG_LEVEL_INFO = 2
 def log(m, l) end                      # no-op : on ne teste pas les logs
 class TasmotaStub
   var publie                           # dernier JSON passe a publish_result (verifie par le banc)
+  var cmds                             # commandes passees a tasmota.cmd (verifiees par le banc)
+  var horloge                          # heure locale renvoyee par rtc(), pilotee par le banc
+  var power                            # etats des relais renvoyes par get_power()
+  def init() self.cmds = [] self.horloge = 0 self.power = [] end
   def publish_result(s, topic) self.publie = s end
   def yield() end
-  def rtc() return {"local": 0} end
-  def cmd(c, m) return "" end
+  def rtc() return {"local": self.horloge} end
+  def get_power() return self.power end
+  def cmd(c, m) self.cmds.push(c) return "" end
   def millis() return 0 end
   def delay(ms) end
   def set_timer(a, b, c) end
@@ -413,6 +418,24 @@ m.releveEsclaves()
 verifie("temoin esclave rideau desactive : seule la cuve est relevee", "1 : cuve=true rideau=false", resume(envoyes))
 modbusFonctions.envoiMsgModbus = vraiEnvoi
 modules = sauveModules
+drivers = sauveDrivers
+
+print("")
+print("=== 12. Esclave : commande 0x06 d'un relai -> Power<id>, pas Power<StartAddress> ===")
+verifie("idRelai : 224/225 (Relais) -> 1/2", "1/2", essaie(def () return str(modbusFonctions.idRelai(224)) + "/" + str(modbusFonctions.idRelai(225)) end))
+verifie("idRelai : 256/257 (Relais_i) -> 1/2", "1/2", essaie(def () return str(modbusFonctions.idRelai(256)) + "/" + str(modbusFonctions.idRelai(257)) end))
+verifie("temoin idRelai : adressage direct 3 -> 3", 3, essaie(def () return modbusFonctions.idRelai(3) end))
+sauveDrivers = drivers
+drivers = {"ModBus": {"activation": "ON", "id": 3, "activationReponseCMD": "OFF", "typeComm": {"Serial":"ON"}, "environnement": {}}}
+tasmota.cmds = []
+# Commande du maitre pour relai2 (type 256, idModBus 1), etat ON -> valeur 0x01
+modbusFonctions.executeCmdModbus({"DeviceAddress": 3, "FunctionCode": 6, "FunctionName": "ECRITURE_REGISTRE_UNIQUE",
+                                  "StartAddress": 256, "Count": 2, "Values": [0x01, 0]})
+verifie("esclave 0x06 StartAddress 256 valeur 0x01 -> Power1 OFF", "['Power1 OFF']", str(tasmota.cmds))
+tasmota.cmds = []
+modbusFonctions.executeCmdModbus({"DeviceAddress": 3, "FunctionCode": 6, "FunctionName": "ECRITURE_REGISTRE_UNIQUE",
+                                  "StartAddress": 225, "Count": 2, "Values": [0x02, 0]})
+verifie("esclave 0x06 StartAddress 225 valeur 0x02 -> Power2 ON", "['Power2 ON']", str(tasmota.cmds))
 drivers = sauveDrivers
 
 print("")

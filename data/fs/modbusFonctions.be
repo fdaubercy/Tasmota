@@ -905,6 +905,19 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
 end
 modbusFonctions.lireMsgModbus = modbusFonctions_lireMsgModbus
 
+# Numero de relai (index Power) vise par une commande du maitre (2026-09-29).
+# Le maitre adresse un relai d'esclave par StartAddress = type + idModBus - 1, avec
+# type = 224 ("Relais") ou 256 ("Relais_i", logique inversee cote maitre) : l'esclave
+# executait 'Power<StartAddress>' (Power224, Power256...) et aucun relai ne basculait.
+# Hors de ces deux plages, StartAddress est pris tel quel (adressage direct historique).
+def modbusFonctions_idRelai(StartAddress)
+    var sa = int(StartAddress)
+    if (sa >= 224 && sa < 256)    return sa - 223    end
+    if (sa >= 256 && sa < 288)    return sa - 255    end
+    return sa
+end
+modbusFonctions.idRelai = modbusFonctions_idRelai
+
 # Fonction chargée d'éxécuter la commande ModBus
 # Prépare la réponse pour l'envoyer au maitre
 def modbusFonctions_executeCmdModbus(paramMSG)
@@ -1034,7 +1047,7 @@ def modbusFonctions_executeCmdModbus(paramMSG)
         modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: value = 0x%02X", paramMSG["Values"][0]), LOG_LEVEL_DEBUG_PLUS)
 
         # Execute la commande
-        tasmota.cmd(string.format("Power%i %s", paramMSG["StartAddress"], (paramMSG["Values"][0] == 0xFF ? "ON" : "OFF")))
+        tasmota.cmd(string.format("Power%i %s", modbusFonctions.idRelai(paramMSG["StartAddress"]), (paramMSG["Values"][0] == 0xFF ? "ON" : "OFF")))
 
         # Renvoi exactement la même trame s'il accepte la commande
         modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Commande le Relai %i: %s (%s)", paramMSG["StartAddress"], str(paramMSG["Values"]), (paramMSG["Values"][0] == 0xFF ? "ON" : "OFF")), LOG_LEVEL_DEBUG_PLUS)
@@ -1053,10 +1066,11 @@ def modbusFonctions_executeCmdModbus(paramMSG)
         modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: delai = 0x%02X", delai), LOG_LEVEL_DEBUG_PLUS)
 
         # Execute la commande
-        tasmota.cmd(string.format("Power%i %s", paramMSG["StartAddress"], (commande == 0x02 ? "ON" : "OFF")))
+        var idRelai = modbusFonctions.idRelai(paramMSG["StartAddress"])
+        tasmota.cmd(string.format("Power%i %s", idRelai, (commande == 0x02 ? "ON" : "OFF")))
         # Inverse la commande si le timer est supérieur à 0
         if (delai > 0)
-            tasmota.set_timer(delai * 1000, def()   tasmota.cmd(string.format("Power%i %s", paramMSG["StartAddress"], (commande == 0x02 ? "OFF" : "ON")))  end)
+            tasmota.set_timer(delai * 1000, def()   tasmota.cmd(string.format("Power%i %s", idRelai, (commande == 0x02 ? "OFF" : "ON")))  end)
         end
 
         # Renvoi exactement la même trame s'il accepte la commande
