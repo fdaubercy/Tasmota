@@ -179,15 +179,13 @@ end
 # Push d'un interrupteur tel que globalFonctions.be:224-243 le construit.
 var push02 = {"DeviceAddress":2, "FunctionCode":0x02 | 0x80, "FunctionName":"LECTURE_ENTREES_DISCRETES",
               "StartAddress":160, "type":"uint8", "Count":1, "Values":[0xFF]}
-bug_connu("push interrupteur 0x82 : 1 bit a 1", trameAvecCrc("02820101"),
-          essaie(def () return modbusFonctions.prepareTrame(push02, "Reponse").tohex() end),
-          "point 1 : Values[nb + 1] hors bornes pour 1 valeur, modbusFonctions.be:1414")
+verifie("push interrupteur 0x82 : 1 bit a 1", trameAvecCrc("02820101"),
+        essaie(def () return modbusFonctions.prepareTrame(push02, "Reponse").tohex() end))
 # Reponse d'un esclave a une lecture 0x02 de 3 entrees : ON, OFF, ON -> 0b101 = 0x05.
 var rep02 = {"DeviceAddress":2, "FunctionCode":0x02, "StartAddress":160,
              "type":"uint8", "Count":3, "Values":[0xFF, 0x00, 0xFF]}
-bug_connu("reponse 0x02 : 3 bits ON/OFF/ON -> 0x05", trameAvecCrc("02020105"),
-          essaie(def () return modbusFonctions.prepareTrame(rep02, "Reponse").tohex() end),
-          "point 1 : pas d'empaquetage en bits, tampon de 2 octets par valeur")
+verifie("reponse 0x02 : 3 bits ON/OFF/ON -> 0x05", trameAvecCrc("02020105"),
+        essaie(def () return modbusFonctions.prepareTrame(rep02, "Reponse").tohex() end))
 # Push analogique (globalFonctions.be:412) : non-regression, la trame est deja
 # bien formee au format reponse (nb octets 04 + float big-endian).
 var push04 = {"DeviceAddress":2, "FunctionCode":0x04 | 0x80, "FunctionName":"LECTURE_REGISTRES_ENTREES",

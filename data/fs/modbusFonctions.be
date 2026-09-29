@@ -1396,8 +1396,10 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
             paramMSG["Erreur"] = modbusFonctions.tabErreur["tomanydata"]
         else
             # Alloue N octets à l'ensemble des données à inscrire
+            # En mode bit (0x01/0x02/0x0F), les donnees sont des BITS empaquetes : le tampon
+            # fait nbOctets = (nbValeurs + 7) / 8 octets, pas 2 octets par valeur.
             modbusFonctions.etat()["nbRegistres"] *= 2
-            writeData = bytes(-modbusFonctions.etat()["nbRegistres"])
+            writeData = bytes(-(bitMode ? modbusFonctions.etat()["nbOctets"] : modbusFonctions.etat()["nbRegistres"]))
 
             # Parcours les valeurs
             for nb: 0 .. writeDataSize - 1
@@ -1410,9 +1412,20 @@ def modbusFonctions_prepareTrame(paramMSG, typeMsg)
                 elif (paramMSG["type"] == "hex")
                 elif (paramMSG["type"] == "raw")
                 elif (paramMSG["type"] == "int8" || paramMSG["type"] == "uint8")
-                    writeData[nb] = paramMSG["Values"][nb]
-                    writeData[nb + 1] = paramMSG["Values"][nb + 1]
-                    if (modbusFonctions.etat()["nbRegistres"] != writeDataSize / 2)    paramMSG["Erreur"] = modbusFonctions.tabErreur["wrongnbValeurs"]    end
+                    # Corrige le 2026-09-29 : l'ancienne version ecrivait Values[nb] ET
+                    # Values[nb + 1] a chaque tour -> index_error pour une valeur unique
+                    # (push d'un interrupteur, reponse a une lecture 0x02). Un controle
+                    # errone interrompait la boucle des le 1er tour, ce qui masquait le
+                    # defaut pour 2 valeurs (reponse 0x06 : correcte par accident).
+                    if (bitMode)
+                        # Une valeur (0xFF/0x00) = un BIT, bit de poids faible d'abord :
+                        # format standard, decode par le maitre serie (ModBusSend).
+                        if (paramMSG["Values"][nb])
+                            writeData[nb / 8] = writeData[nb / 8] | (1 << (nb % 8))
+                        end
+                    else
+                        writeData[nb] = paramMSG["Values"][nb]      # un octet par valeur
+                    end
                 elif (paramMSG["type"] == "int16" || paramMSG["type"] == "uint16")
                     writeData[nb * 2] = paramMSG["Values"][nb] >> 8
                     writeData[(nb * 2) + 1] = paramMSG["Values"][nb]
