@@ -1215,7 +1215,7 @@
                 "Serial": "ON",
                 "UDP": "ON",
                 "MQTT": "OFF",
-                "TCP": "ON"
+                "TCP": "OFF"
             },
 			"environnement": {
 				"pinsModBus": {
