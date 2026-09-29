@@ -450,8 +450,34 @@ exemple      : 03 10 00A0 0001 02 00FF E7D0     (rideau, interrupteur 1 = ON)
   reponses restent sur le RS485, sinon doublons (double execution, acquittement errone).
 - Etat d'un interrupteur lu sur le **bit 0** : `0x01` en reponse serie standard, `0x00FF` en push.
 
-**Non fait (reste du §9)** : `seq` (inutile tant que le push n'est qu'un accelerateur et que la
-verite vient du releve apparie par la file), chien de garde « etat inconnu » des esclaves
-Tasmota (fait pour la carte 16 relais seulement), reconciliation commande/constate des relais
-d'esclaves. Verifie au banc (`banc_test_modbus.be`, sections 8 a 11) ; **pas encore sur bus reel**.
+**Complements (2026-09-29, apres A + B)** — le reste du §9 est fait :
+
+- **Numero d'ordre `seq`** (`4532f12ec`). Enveloppe devenue
+  `"ModbusPushUDP <seq> <trame hexa>"` ; `seq` = 1 au premier push apres demarrage, +1 par
+  push emis. Le maitre (`modbusFonctions.accepteSeq`, appele par `lireMsgModbus` avant
+  publication) ecarte doublons et datagrammes arrives apres un plus recent. `seq == 1` apres
+  un plus grand, ou recul de plus de `FENETRE_SEQ` (16) = **redemarrage de l'esclave**, accepte.
+  L'ancien format sans `seq` reste lu, sans filtrage. Seuls les pushes sont filtres.
+- **Chien de garde par esclave** (`9e6331cf8`), calque sur la carte 16 relais. Contact =
+  reponse appariee ou push accepte (`noteContact`). Au cron du releve, un esclave actif sans
+  contact depuis **plus de 3 x 30 s** est declare muet une seule fois
+  (`MODBUS_TASMOTA_SLAVE_CHIEN_DE_GARDE: ... muet`) : `etatConstate = "inconnu"` sur ses
+  appareils virtuels, `etat` (commande) intact. Retour journalise au contact suivant ; chaque
+  appareil retrouve son constat a sa prochaine valeur (`"valide"` pour un capteur, ON/OFF pour
+  un relai).
+- **Relais d'esclaves : commande / constate** (`45d432257`). L'esclave repond a la lecture
+  **0x01** (bit 0 = Power ON) ; le releve A lit en 0x01 les relais virtuels 224/256 (pas les
+  WS2812 1376). `etatConstate` + `constateA`, ecart journalise
+  (`MODBUS_TASMOTA_SLAVE_ECART: relai n°... commande=..., constate=...`), jamais corrige.
+  Relais_i (256) : logique inversee (ON commande = relai physique au repos).
+- Deux defauts trouves en chemin, corriges : l'esclave executait `Power<StartAddress>`
+  (Power256...) au lieu de `Power<id>` — **aucun relai d'esclave ne pouvait basculer**
+  (`8c42ad056`, `modbusFonctions.idRelai`) ; l'echo d'une commande 0x06 remettait l'etat
+  commande du relai a OFF (`45d432257`).
+- `typeComm.TCP = OFF` sur le P4 et la cuve (`e2ee294a9`) : transport TCP casse (le maitre lit
+  un autre client que ceux qu'il connecte, `ImAlive` ne dit pas quel esclave se signale,
+  aucune reconnexion) et hors de tout chemin utile.
+
+Verifie au banc (`banc_test_modbus.be`, sections 8 a 15 : 76 PASS, temoins sur l'ancien code) ;
+**pas encore sur bus reel**.
 

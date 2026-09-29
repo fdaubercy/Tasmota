@@ -55,11 +55,24 @@
   | Push B reçu et appliqué (maître) | `Réception de l'état de l'interrupteur n°1: ON` sans requête en vol |
   | Push B n'acquitte rien | `APPARIE_REPONSE: trame automatique (telemetrie)` — n'apparaît que si une requête était en vol à l'arrivée du push |
   Les logs `RELEVE` et `POUSSE_ETAT` exigent le `debug` à `ON` (TasmotaSlaveModBus côté maître, ModBus côté esclave).
-- **Reste, côté synchro** : chien de garde « état inconnu » des esclaves Tasmota, `seq`,
-  réconciliation commande/constaté des relais d'esclaves ; le transport **TCP** reste cassé
-  (serveur esclave non démarré, sockets `clients[id]` jamais lus) mais n'est plus sur le chemin
-  du push. Avec `typeComm.TCP = ON` (P4, cuve), chaque réponse d'esclave tente aussi un envoi
-  TCP et journalise `Connexion TCP avec le maitre non-initiée` : bruit sans effet.
+- **✅ Fait le 2026-09-29 (après A + B), le reste de la synchro** — détail dans
+  `PROTOCOLE_MODBUS.md` §9 « Compléments » :
+  `e2ee294a9` `typeComm.TCP = OFF` sur P4 et cuve (TCP cassé, hors chemin utile) ;
+  `8c42ad056` l'esclave exécutait `Power<StartAddress>` (Power256) : **aucun relai d'esclave
+  ne basculait** — corrigé ; `45d432257` relais d'esclaves commandé/constaté (lecture 0x01,
+  log ECART, l'écho 0x06 n'écrase plus l'état commandé) ; `9e6331cf8` chien de garde par
+  esclave (> 3 × 30 s sans contact → `etatConstate = "inconnu"`) ; `4532f12ec` `seq` sur le
+  push. Banc : **76 PASS**, témoins négatifs sur l'ancien code. Jamais sur bus réel ; **rebuild
+  complet des 3 garage obligatoire**.
+- **À ajouter à la grille d'observation** (compléments) :
+  | À vérifier | Chaîne de log |
+  |---|---|
+  | Relais rideau relus (maître) | `MODBUS_TASMOTA_SLAVE_RELEVE: 6 demande(s)` (cuve : thermomètre + analogique ; rideau : 2 interrupteurs + 2 relais ; WS2812 non relues) |
+  | Commande relai exécutée (esclave rideau) | le relai **bascule physiquement** ; log `EXECUTE_CMD_MODBUS: Commande le 1` |
+  | Constat relai (maître) | `Etat constate du relai n°2: ON` ; **aucun** `MODBUS_TASMOTA_SLAVE_ECART` en régime établi |
+  | Chien de garde | débrancher le rideau → `CHIEN_DE_GARDE: esclave TasmotaSlaveModBus2 (ID=3) muet` sous ~90-120 s ; rebrancher → `repond de nouveau` |
+  | `seq` | `POUSSE_ETAT: ... (UDP, seq 1)` au 1er push après boot ; `ACCEPTE_SEQ: ... redemarre` côté maître après reboot d'un esclave |
+  Les chaînes `CHIEN_DE_GARDE` et `ECART` passent par `log()` direct : visibles même `debug` OFF.
 
 ---
 
