@@ -49,8 +49,12 @@
 
 - `fdaubercy/Tasmota` est **public**. Les 9 `_persist.json` suivis contiennent en clair :
   mots de passe Wi-Fi (2 réseaux), MQTT, FTP, point d'accès du range extender.
-- Présent depuis `04dbda1a7` (réorganisation du dépôt) ; les pushes du 2026-09-29 n'ont rien
-  exposé de nouveau.
+- **Aussi dans les sources du firmware** (constaté le même jour) : `tasmota/user_config_override.h`
+  définit `STA_PASS1`, `STA_PASS2`, `WIFI_AP_PASSPHRASE`, `MQTT_PASS` en clair, et le build les
+  recopie dans `tasmota/tasmota_defines_for_berry.h/.be` (suivis par git). Tout commit de ces
+  fichiers les republie — les exclure ne suffit pas, ils sont déjà dans l'historique public.
+- Présent depuis `04dbda1a7` (2026-05-17, réorganisation du dépôt) ; les commits du 2026-09-29
+  n'ont rien exposé de nouveau (lignes seulement réordonnées par le build).
 - À faire : **changer ces mots de passe**, puis sortir les secrets des fichiers suivis.
   Réécrire l'historique = décision irréversible, à prendre explicitement.
 
