@@ -32,14 +32,18 @@ var LOG_LEVEL_ERREUR = 1
 var LOG_LEVEL_INFO = 2
 def log(m, l) end                      # no-op : on ne teste pas les logs
 class TasmotaStub
+  var publie                           # dernier JSON passe a publish_result (verifie par le banc)
+  def publish_result(s, topic) self.publie = s end
   def yield() end
   def rtc() return {"local": 0} end
   def cmd(c, m) return "" end
   def millis() return 0 end
   def delay(ms) end
   def set_timer(a, b, c) end
+  def remove_timer(nom) end
   def add_rule(a, b, c) end
   def add_cron(a, b, c) end
+  def remove_cron(nom) end
   def resp_cmnd(x) end
 end
 class Driver end                       # classe de base des drivers Tasmota
@@ -206,14 +210,10 @@ var cmd02 = modbusFonctions.prepareTrame({"DeviceAddress":2, "FunctionCode":2, "
                                           "type":"uint8", "Count":1, "Values":[]}, "Commande")
 var d = decode(cmd02)
 verifie("temoin commande 0x02 : Erreur / StartAddress", "0/160", str(d["Erreur"]) + "/" + str(d["StartAddress"]))
-# Le push est emis au format REPONSE, que decrypteMSG lit au format COMMANDE :
-# longueur imposee de 8 octets et StartAddress lu dans les octets 2-3. Une reponse
-# ne porte d'ailleurs pas le registre : le maitre ne peut pas savoir quel capteur
-# a change. Defaut de FORMAT, a trancher (voir PROTOCOLE_MODBUS.md section 9).
-d = decode(modbusFonctions.prepareTrame(push04, "Reponse"))
-bug_connu("push 0x84 decode par le maitre : Erreur / StartAddress", "0/1312",
-          str(d["Erreur"]) + "/" + str(d["StartAddress"]),
-          "format du push : decision en attente (releve 0x04 ou ecriture 0x10)")
+# Ancien defaut de FORMAT, resolu le 2026-09-29 par conception (options A + B) :
+# le push etait emis au format REPONSE 0x82/0x84, sans le registre, et rejete par
+# decrypteMSG. L'esclave n'emet plus ce format : il pousse une ECRITURE 0x10, qui
+# porte son registre (sections 8 a 10).
 
 print("")
 print("=== 6. reglageModbus ImAlive : un client TCP par esclave ===")
@@ -311,6 +311,72 @@ verifie("temoin typeComm.UDP OFF : rien emis", "nil / 0", str(modbusFonctions.po
 drivers["ModBus"]["typeComm"]["UDP"] = "ON"
 drivers["ModBus"]["id"] = 0
 verifie("temoin maitre (id 0) : rien emis", "nil / 0", str(modbusFonctions.pousseEtat(160, "uint16", [0xFF])) + " / " + str(size(udpStub.envois)))
+drivers = sauveDrivers
+serveur = sauveServeur
+
+print("")
+print("=== 10. Reception cote maitre : lireMsgModbus UDP + handler TasmotaSlaveModBus ===")
+import json
+sauveDrivers = drivers
+sauveServeur = serveur
+var sauveModules = modules
+serveur = {"udp": {"activation": "ON"}, "tcp": {"activation": "OFF"}, "mqtt": {"topic": "garage"}}
+drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial":"ON", "TCP":"OFF", "UDP":"ON"},
+           "environnement": {"TasmotaSlaveModBus": {"debug": "OFF",
+               "TasmotaSlaveModBus1": {"activation": "ON", "id": 2, "name": "cuve"},
+               "TasmotaSlaveModBus2": {"activation": "ON", "id": 3, "name": "rideau"}}}}}
+# lireMsgModbus : la trame UDP d'un push est decodee et republiee AVEC son marqueur.
+modbusFonctions.lireMsgModbus("ModbusReceivedUDP", {"Trame": bytes("031000A000010200FF" + string.format("%04X", modbusFonctions.crc16modbus(bytes("031000A000010200FF")))),
+                                                    "Info": {}, "Automatique": true})
+var pub = json.load(str(tasmota.publie))
+pub = pub != nil ? pub["ModbusReceivedUDP"] : {}
+verifie("lireMsgModbus UDP : adresse/registre/valeur/Automatique", "3/160/[255]/true",
+        str(pub.find("DeviceAddress")) + "/" + str(pub.find("StartAddress")) + "/" + str(pub.find("Values")) + "/" + str(pub.find("Automatique")))
+
+# Handler du maitre, appele comme la regle 'ModbusReceived...#DeviceAddress==<id>'
+class MaitreStub
+  var dataJson, DEBUG
+  def init() self.dataJson = {"TasmotaSlaveModBus": {"TasmotaSlaveModBus1": {}, "TasmotaSlaveModBus2": {}}} end
+  def log(m, l) end
+end
+def appareils()
+  return {"garage": {"activation": "ON", "environnement": {
+    "interrupteurs": {"interrupteur1": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus2", "type": 160, "idModBus": 1, "id": 1, "etat": "OFF", "SwitchMode": 1}},
+    "thermometres":  {"thermometre1":  {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus1", "type": 1312, "idModBus": 1, "id": 1, "value": 0.0, "serialNumber": "x"}}}}}
+end
+def recoit(adresse, voie, contenu)
+  var m = {}
+  m[voie] = contenu
+  modBus_TasmotaSlaveModBus.MODBUS_TASMOTA_SLAVE.recupereReponseModBus(MaitreStub(), adresse, voie + "#DeviceAddress==" + str(adresse), m)
+end
+var inter = def () return modules["garage"]["environnement"]["interrupteurs"]["interrupteur1"]["etat"] end
+# (a) push UDP d'un interrupteur du rideau -> etat ON, sans rien acquitter
+modules = appareils()
+modbusFonctions.etat()["enVol"] = nil
+recoit(3, "ModbusReceivedUDP", {"DeviceAddress": 3, "FunctionCode": 0x10, "FunctionName": "ECRITURE_REGISTRES_HOLDER",
+                                "StartAddress": 160, "Count": 1, "Values": [255], "Automatique": true})
+verifie("push 0x10 interrupteur rideau -> etat maitre", "ON", inter())
+# (b) push UDP du thermometre de la cuve : 2 registres -> 21.5
+recoit(2, "ModbusReceivedUDP", {"DeviceAddress": 2, "FunctionCode": 0x10, "FunctionName": "ECRITURE_REGISTRES_HOLDER",
+                                "StartAddress": 1312, "Count": 2, "Values": [16812, 0], "Automatique": true})
+verifie("push 0x10 thermometre cuve -> valeur maitre", "21.5",
+        str(modules["garage"]["environnement"]["thermometres"]["thermometre1"]["value"]))
+# (c) releve serie (option A) : reponse 0x02 standard = bit empaquete 0x01 -> ON ; 0x00 -> OFF
+modules = appareils()
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 3, "FunctionCode": 2, "StartAddress": 160, "Count": 1, "type": "uint8"}}
+recoit(3, "ModbusReceived", {"DeviceAddress": 3, "FunctionCode": 2, "Values": [1]})
+verifie("reponse serie 0x02 bit 0x01 -> ON", "ON", inter())
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 3, "FunctionCode": 2, "StartAddress": 160, "Count": 1, "type": "uint8"}}
+recoit(3, "ModbusReceived", {"DeviceAddress": 3, "FunctionCode": 2, "Values": [0]})
+verifie("temoin reponse serie 0x02 bit 0x00 -> OFF", "OFF", inter())
+# (d) temoin : une 0x10 NON marquee (reponse a une commande WS2812) ne touche aucun etat
+modules = appareils()
+modbusFonctions.etat()["enVol"] = nil
+recoit(3, "ModbusReceivedUDP", {"DeviceAddress": 3, "FunctionCode": 0x10, "FunctionName": "ECRITURE_REGISTRES_HOLDER",
+                                "StartAddress": 160, "Count": 1, "Values": [255]})
+verifie("temoin 0x10 non sollicitee sans marqueur : etat inchange", "OFF", inter())
+modbusFonctions.etat()["enVol"] = nil
+modules = sauveModules
 drivers = sauveDrivers
 serveur = sauveServeur
 

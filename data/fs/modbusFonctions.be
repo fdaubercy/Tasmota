@@ -860,8 +860,10 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
             modbusFonctions.termineEnVol(true)
             modbusFonctions.etat()["serialModBus"].flush()
         end
-    # Recoit message sur le port TCP
-    elif (typeTitre == "ModbusReceivedTCP")
+    # Recoit message sur le port TCP, ou UDP (2026-09-29 : meme trame binaire, relue par
+    # udpFonctions.lireUDP). msg["Automatique"] = true marque un push d'esclave (enveloppe
+    # "ModbusPushUDP") : il est republie pour que le maitre ne l'acquitte pas.
+    elif (typeTitre == "ModbusReceivedTCP" || typeTitre == "ModbusReceivedUDP")
         #- Exemple de json à construire à la réception d'une trame
             @ Count = Nombre d'octets de données reçus ou retournés dans la réponse
             @ Length = Longueur de la tame entière avec le CRC
@@ -883,17 +885,21 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
             modbusFonctions.log("RECEPTION_MSG_MODBUS: Message ModBus reçu avec erreur", LOG_LEVEL_DEBUG_PLUS)
             return
         end
+        if (msg.find("Automatique", false))    paramMSG[typeTitre]["Automatique"] = true    end
 
         tasmota.yield()
 
         # Prépare le json à publier sur le topic MQTT
-        tasmota.publish_result(string.format("{\"%s\": {\"Trame\": \"%s%02X\", \"Info\": %s, \"DeviceAddress\": %i, \"FunctionCode\": %i, \"FunctionName\": \"%s\", \"StartAddress\": %i, \"Length\": %i, \"Count\": %i, \"Values\": %s, \"Erreur\": %i}}", 
+        # "Automatique" est publie (2026-09-29) : sans lui, les regles recevaient un push
+        # sans son marqueur et apparieReponse pouvait l'acquitter comme une reponse.
+        tasmota.publish_result(string.format("{\"%s\": {\"Trame\": \"%s%02X\", \"Info\": %s, \"DeviceAddress\": %i, \"FunctionCode\": %i, \"FunctionName\": \"%s\", \"StartAddress\": %i, \"Length\": %i, \"Count\": %i, \"Values\": %s, \"Erreur\": %i, \"Automatique\": %s}}",
                                                 typeTitre,
                                                 paramMSG[typeTitre]["Trame"].tohex(), paramMSG[typeTitre]["CRC"], json.dump(paramMSG[typeTitre]["Info"]),
                                                 paramMSG[typeTitre]["DeviceAddress"], paramMSG[typeTitre]["FunctionCode"],
                                                 paramMSG[typeTitre]["FunctionName"], paramMSG[typeTitre]["StartAddress"],
                                                 paramMSG[typeTitre]["Length"], paramMSG[typeTitre]["Count"],  
-                                                paramMSG[typeTitre]["Values"].tostring(), paramMSG[typeTitre]["Erreur"] 
+                                                paramMSG[typeTitre]["Values"].tostring(), paramMSG[typeTitre]["Erreur"],
+                                                paramMSG[typeTitre].find("Automatique", false) ? "true" : "false"
                                             ), serveur["mqtt"]["topic"])
     end
 end

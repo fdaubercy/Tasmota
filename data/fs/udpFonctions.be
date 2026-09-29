@@ -406,41 +406,26 @@ def udpFonctions_lireUDP(typeComm, paramMSG)
         paramMSG["msgString"] = msg.asstring()
 
         # On détermine le type de message
-        # Cas particulier des réception de trames UDP ModBus -> Traitement des commandes ModBus UDP
-        if (string.find(paramMSG["msgString"], "ModbusUDP") > - 1)
-            var tabFonctionsName = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
-                tabFonctionsName.insert(1, "LECTURE_COILS")
-                tabFonctionsName.insert(2, "LECTURE_ENTREES_DISCRETES")
-                tabFonctionsName.insert(3, "LECTURE_REGISTRES_HOLDER")
-                tabFonctionsName.insert(4, "LECTURE_REGISTRES_ENTREES")
-                tabFonctionsName.insert(5, "ECRITURE_COIL_UNIQUE")
-                tabFonctionsName.insert(6, "ECRITURE_REGISTRE_UNIQUE")
-                tabFonctionsName.insert(0x0F, "ECRITURE_COILS")
-                tabFonctionsName.insert(0x10, "ECRITURE_REGISTRES_HOLDER")
-                tabFonctionsName.insert(0x11, "ISALIVE_ESCLAVE")
+        # Trames ModBus en UDP (reecrit le 2026-09-29) : "<enveloppe> <trame en hexa>". La trame
+        # binaire est decodee par modbusFonctions.lireMsgModbus -> decrypteMSG, comme en TCP, puis
+        # publiee en 'ModbusReceivedUDP'. L'ancienne version attendait du JSON apres l'enveloppe,
+        # alors que l'emission envoyait une trame binaire : aucune trame n'etait lisible.
+        #   "ModbusPushUDP" : push d'etat d'un esclave (option B) -> seul le MAITRE le traite ;
+        #                     marque Automatique : il n'acquitte aucune requete.
+        #   "ModbusUDP"     : commande/reponse (repli quand le serie est coupe).
+        var enveloppe = string.split(paramMSG["msgString"], " ", 1)
+        if (enveloppe[0] == "ModbusPushUDP" || enveloppe[0] == "ModbusUDP")
+            var estPush = (enveloppe[0] == "ModbusPushUDP")
+            if (estPush && drivers["ModBus"].find("id", 99) != 0)    return true    end
 
-            var tmp = json.load(string.split(paramMSG["msgString"], " ", 1)[1])
-
-            # Détermine si le message ModBus UDP est une réponse automatique d'esclave ou une réponse à une commande du Maitre
-            if (tmp["FunctionCode"] & 0x80 == 0x80)
-                # Transformation pour récupérer la fonction réelle
-                tmp["FunctionCode"] &= 0x7F
-                tmp["TypeMsg"] = "Automatique"
-                udpFonctions.log("LIRE_UDP: Type de msg Modbus = Automatique", LOG_LEVEL_DEBUG)
-            else 
-                tmp["TypeMsg"] = "Réponse Ordre"
-                udpFonctions.log("LIRE_UDP: Type de msg Modbus = Réponse à un ordre", LOG_LEVEL_DEBUG)
+            try
+                import modbusFonctions
+                var ip = (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.etat()["udpReception"][0].remote_ip : udpFonctions.etat()["udpReception"][1].remote_ip
+                # La regle 'ModbusReceivedUDP' (controleModbus.be, modBus_TasmotaSlaveModBus.be) prend le relais
+                modbusFonctions.lireMsgModbus("ModbusReceivedUDP", {"Trame": bytes(enveloppe[1]), "Info": {"remote_ip": ip}, "Automatique": estPush})
+            except .. as error, message
+                udpFonctions.log(string.format("LIRE_UDP_ERREUR: trame ModBus illisible '%s' : %s --> %s", paramMSG["msgString"], error, message), LOG_LEVEL_ERREUR)
             end
-            tmp["FunctionName"] = tabFonctionsName[tmp["FunctionCode"]]
-
-            udpFonctions.log(string.format("LIRE_UDP: DeviceAddress = 0x%02X", int(tmp["DeviceAddress"])), LOG_LEVEL_DEBUG_PLUS)
-            udpFonctions.log(string.format("LIRE_UDP: StartAddress = 0x%04X", tmp["StartAddress"]), LOG_LEVEL_DEBUG_PLUS)
-            udpFonctions.log(string.format("LIRE_UDP: FunctionCode = 0x%02X ('%s')", tmp["FunctionCode"], tmp["FunctionName"]), LOG_LEVEL_DEBUG_PLUS)
-            udpFonctions.log(string.format("LIRE_UDP: Count = %i", str(tmp["Count"])), LOG_LEVEL_DEBUG_PLUS)
-            udpFonctions.log(string.format("LIRE_UDP: Values = %s", str(tmp["Values"])), LOG_LEVEL_DEBUG_PLUS)
-
-            # La commande sera traitée par la règle 'ModbusReceivedUDP' dans 'controleModbus.be'
-            tasmota.publish_result("{\"ModbusReceivedUDP\": " + json.dump(tmp) + "}", serveur["mqtt"]["topic"])
 
             return true
         # Cas général des trames UDP TasmotaClient -> Traitement des commandes TasmotaClient UDP

@@ -413,7 +413,12 @@ class MODBUS_TASMOTA_SLAVE : Driver
         msg["FunctionName"] = modbusFonctions.tabFonctionsName[msg["FunctionCode"]]
         self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: FunctionCode = 0x%02X ('%s')", msg["FunctionCode"], msg["FunctionName"]), LOG_LEVEL_DEBUG_PLUS)
 
-        if (msg["FunctionName"] == "ECRITURE_REGISTRES_HOLDER")
+        # Une ECRITURE 0x10 non sollicitee (Automatique) = push d'etat de l'esclave (option B,
+        # 2026-09-29) : ses 'Values' sont des registres bruts, convertis plus bas selon le type
+        # du capteur vise. Toute autre 0x10 = reponse a une commande du maitre (LEDs WS2812) :
+        # on l'acquitte et on sort.
+        var push = (msg["FunctionName"] == "ECRITURE_REGISTRES_HOLDER" && msg.find("Automatique", false))
+        if (msg["FunctionName"] == "ECRITURE_REGISTRES_HOLDER" && !push)
             # Acquitte le message en vol (reponse recue) -> pompe le suivant
             if (estReponseEnVol)    modbusFonctions.termineEnVol(true)    end
 
@@ -439,6 +444,15 @@ class MODBUS_TASMOTA_SLAVE : Driver
                         if (env[cleEnv][cleDevice].find("activation", "OFF") == "ON" && env[cleEnv][cleDevice].find("virtuel", "OFF") != "OFF")
                             if (env[cleEnv][cleDevice]["virtuel"] == "ModBus_" + nameTasmotaSlaveModBus)
                                 if (env[cleEnv][cleDevice]["type"] + env[cleEnv][cleDevice]["idModBus"] - 1 == msg["StartAddress"])
+                                    # Push 0x10 : registres bruts -> valeurs, selon le type du capteur
+                                    # (2 registres par float/uint32, 1 par etat), une seule fois.
+                                    if (push)
+                                        var t = env[cleEnv][cleDevice]["type"]
+                                        msg["Values"] = modbusFonctions.motsVersValeurs(msg["Values"],
+                                                            (t == 1312 || t == 1216) ? "float" : ((t == 352 || t == 4704) ? "uint32" : "uint16"))
+                                        push = false
+                                    end
+
                                     # Ajoute la valeur dataJson["TasmotaSlaveModBus"] en fonction du numéro d'esclave
                                     # ex: {"TasmotaSlaveModBus": {"TasmotaSlaveModBus1": {"relais": {}}}}
                                     var valeur = 0.00
@@ -553,10 +567,14 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                             end
                                         end
 
+                                        # Etat lu sur le BIT 0 (2026-09-29) : la reponse serie a une lecture
+                                        # 0x02 porte le bit empaquete (0x01), le push 0x10 le mot 0x00FF ;
+                                        # l'ancienne comparaison a 0xFF lisait OFF la reponse standard.
+                                        var actif = (int(msg["Values"][0]) & 0x01) == 0x01
                                         if (env[cleEnv][cleDevice].find("SwitchMode", 1) == 1)
-                                            valeur = (msg["Values"][0] == 0xFF ? "ON" : "OFF")
+                                            valeur = (actif ? "ON" : "OFF")
                                         elif (env[cleEnv][cleDevice].find("SwitchMode", 1) == 2)
-                                            valeur = (msg["Values"][0] == 0xFF ? "OFF" : "ON")
+                                            valeur = (actif ? "OFF" : "ON")
                                         end
 
                                         self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Réception de l'état de l'interrupteur n°%i: %s", env[cleEnv][cleDevice]["id"], valeur), LOG_LEVEL_DEBUG)
@@ -576,10 +594,14 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                             end
                                         end
 
+                                        # Etat lu sur le BIT 0 (2026-09-29) : la reponse serie a une lecture
+                                        # 0x02 porte le bit empaquete (0x01), le push 0x10 le mot 0x00FF ;
+                                        # l'ancienne comparaison a 0xFF lisait OFF la reponse standard.
+                                        var actif = (int(msg["Values"][0]) & 0x01) == 0x01
                                         if (env[cleEnv][cleDevice].find("SwitchMode", 1) == 1)
-                                            valeur = (msg["Values"][0] == 0xFF ? "ON" : "OFF")
+                                            valeur = (actif ? "ON" : "OFF")
                                         elif (env[cleEnv][cleDevice].find("SwitchMode", 1) == 2)
-                                            valeur = (msg["Values"][0] == 0xFF ? "OFF" : "ON")
+                                            valeur = (actif ? "OFF" : "ON")
                                         end
 
                                         self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Réception de l'état du bouton n°%i: %s", env[cleEnv][cleDevice]["id"], valeur), LOG_LEVEL_DEBUG)
