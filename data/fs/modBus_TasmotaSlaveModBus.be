@@ -614,19 +614,26 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                             end 
                                         end
                                     elif (cleEnv == "relais")
-                                        if (!dataJson.find("POWER" + str(env[cleEnv][cleDevice]["id"]), false))
-                                            try dataJson.insert("POWER" + str(env[cleEnv][cleDevice]["id"]), "OFF")  
-                                            except .. as error, message 
-                                                self.log(string.format("TRAITEMENT_MSG_TASMOTA_SLAVE_MODBUS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
+                                        # Commande / constate (2026-09-29), sur le modele de la carte 16
+                                        # relais : seule une LECTURE 0x01 dit l'etat reel du relai. Il est
+                                        # range dans 'etatConstate', compare a 'etat' (l'etat COMMANDE),
+                                        # et un ecart est journalise, jamais corrige. L'echo d'une commande
+                                        # 0x06 ne fait qu'accuser reception : il reecrivait 'etat' a OFF
+                                        # (il porte 0x01/0x02, jamais 0xFF).
+                                        if (msg["FunctionName"] == "LECTURE_COILS")
+                                            var device = env[cleEnv][cleDevice]
+                                            # Relais_i (256) : logique inversee, ON commande = relai physique au repos
+                                            var bit = (int(msg["Values"][0]) & 0x01) == 0x01
+                                            valeur = ((bit != (device["type"] == 256)) ? "ON" : "OFF")
+                                            self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Etat constate du relai n°%i: %s", device["id"], valeur), LOG_LEVEL_DEBUG)
+
+                                            device["etatConstate"] = valeur
+                                            device["constateA"] = tasmota.rtc()["local"]
+                                            dataJson["POWER" + str(device["id"])] = valeur
+                                            if (device.find("etat", "OFF") != valeur)
+                                                log(string.format("MODBUS_TASMOTA_SLAVE_ECART: relai n°%i (%s) : commande=%s, constate=%s",
+                                                                  device["id"], nameTasmotaSlaveModBus, device.find("etat", "OFF"), valeur), LOG_LEVEL_ERREUR)
                                             end
-                                        end
-
-                                        valeur = (msg["Values"][0] == 0xFF ? "ON" : "OFF")
-                                        self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Réception de l'état du relai n°%i: %s", env[cleEnv][cleDevice]["id"], valeur), LOG_LEVEL_DEBUG)
-
-                                        if (env[cleEnv][cleDevice]["etat"] != valeur)
-                                            env[cleEnv][cleDevice]["etat"] = valeur
-                                            dataJson["POWER" + str(env[cleEnv][cleDevice]["id"])] = valeur
                                         end
                                     end
                                 end
@@ -873,6 +880,11 @@ class MODBUS_TASMOTA_SLAVE : Driver
 
         if (famille == "interrupteurs" || famille == "capteurs" || famille == "boutons")
             trame["FunctionCode"] = 0x02
+            trame["type"] = "uint8"
+        # Relais (224 Relais, 256 Relais_i) : lecture 0x01 de l'etat reel, compare a l'etat
+        # commande par recupereReponseModBus. Les LEDs WS2812 (1376) ne se relisent pas.
+        elif (famille == "relais" && (device["type"] == 224 || device["type"] == 256))
+            trame["FunctionCode"] = 0x01
             trame["type"] = "uint8"
         elif (famille == "analogiques" || famille == "compteurs")
             trame["FunctionCode"] = 0x04

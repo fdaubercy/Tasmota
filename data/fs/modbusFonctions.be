@@ -1041,6 +1041,23 @@ def modbusFonctions_executeCmdModbus(paramMSG)
                 end
             end
         end
+    # Fonction 0x01 ==> Lecture des coils (2026-09-29) : etat REEL d'un relai, releve par le
+    # maitre pour le comparer a l'etat qu'il a commande. Reponse sur un bit : 1 = Power ON.
+    # StartAddress = type + idModBus - 1, ramene a l'index Power par idRelai.
+    elif (paramMSG["FunctionName"] == "LECTURE_COILS")
+        var idRelai = modbusFonctions.idRelai(paramMSG["StartAddress"])
+        var power = tasmota.get_power()
+        if (idRelai < 1 || idRelai > size(power))
+            modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: lecture 0x01 d'un relai inexistant (StartAddress %i -> Power%i)", paramMSG["StartAddress"], idRelai), LOG_LEVEL_ERREUR)
+            return false
+        end
+
+        paramMSG["type"] = "uint8"
+        paramMSG["Values"].push(power[idRelai - 1] ? 1 : 0)
+        modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Etat du relai %i : %s", idRelai, power[idRelai - 1] ? "ON" : "OFF"), LOG_LEVEL_DEBUG_PLUS)
+
+        tasmota.yield()
+        modbusFonctions.envoiMsgModbus(paramMSG, "Reponse", paramMSG["StartAddress"])
     # Fonction 0x05 ==> "Écriture d’une sortie digitale unique (Coil)"   ex=Activer 1 relai
     # ex: Réponse à -> ModBusSend {"DeviceAddress": 1, "FunctionCode": 5, "StartAddress": 1, "type":"bit", "Count":1, "Values":[0]}
     elif (paramMSG["FunctionName"] == "ECRITURE_COIL_UNIQUE")
@@ -1222,7 +1239,7 @@ def modbusFonctions_decrypteMSG(paramMSG, typeTitre)
 
     # Récupère les valeurs reçues en fonction de la fonction
     # FunctionCode = 0x02 (Lecture de l'état d'interrupteurs/capteurs)| 0x03 | 0x04 (Lecture T°/Hum./Compteurs/Entrées analogiques)
-    if (paramMSG[typeTitre]["FunctionName"] == "LECTURE_ENTREES_DISCRETES" || paramMSG[typeTitre]["FunctionName"] == "LECTURE_REGISTRES_HOLDER" || paramMSG[typeTitre]["FunctionName"] == "LECTURE_REGISTRES_ENTREES")
+    if (paramMSG[typeTitre]["FunctionName"] == "LECTURE_COILS" || paramMSG[typeTitre]["FunctionName"] == "LECTURE_ENTREES_DISCRETES" || paramMSG[typeTitre]["FunctionName"] == "LECTURE_REGISTRES_HOLDER" || paramMSG[typeTitre]["FunctionName"] == "LECTURE_REGISTRES_ENTREES")
         # Détermine le nombre d'octets de données attendus
         paramMSG[typeTitre]["Count"] = paramMSG[typeTitre]["Trame"].get(4, -2)
         modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Count (Nb. octets demandés) = %i", paramMSG[typeTitre]["Count"]), LOG_LEVEL_DEBUG_PLUS)

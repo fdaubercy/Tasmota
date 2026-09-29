@@ -30,7 +30,14 @@ var LOG_LEVEL_DEBUG = 3
 var LOG_LEVEL_DEBUG_PLUS = 4
 var LOG_LEVEL_ERREUR = 1
 var LOG_LEVEL_INFO = 2
-def log(m, l) end                      # no-op : on ne teste pas les logs
+var journal = []                       # messages passes a log() (quelques tests les lisent)
+def log(m, l) journal.push(str(m)) end
+# Vrai si un message du journal contient 'motif'
+def journalise(motif)
+  import string
+  for l : journal    if string.find(l, motif) >= 0    return true    end    end
+  return false
+end
 class TasmotaStub
   var publie                           # dernier JSON passe a publish_result (verifie par le banc)
   var cmds                             # commandes passees a tasmota.cmd (verifiees par le banc)
@@ -398,24 +405,26 @@ drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial":"ON"},
                "TasmotaSlaveModBus1": {"activation": "ON", "id": 2, "name": "cuve"},
                "TasmotaSlaveModBus2": {"activation": "ON", "id": 3, "name": "rideau"}}}}}
 modules = appareils()
-# un appareil non virtuel (ignore) et un relai virtuel (ne se releve pas)
+# un appareil non virtuel (ignore), un relai virtuel (lecture 0x01) et des LEDs WS2812 (non relues)
 modules["garage"]["environnement"]["interrupteurs"]["interrupteur9"] = {"activation": "ON", "virtuel": "OFF", "type": 160, "id": 9}
-modules["garage"]["environnement"]["relais"] = {"relai2": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus2", "type": 256, "idModBus": 1, "id": 2}}
+modules["garage"]["environnement"]["relais"] = {"relai2": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus2", "type": 256, "idModBus": 1, "id": 2},
+                                                "relai1": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus1", "type": 1376, "idModBus": 1, "id": 1}}
 var envoyes = []
 var vraiEnvoi = modbusFonctions.envoiMsgModbus
 modbusFonctions.envoiMsgModbus = def (t, typeMsg, id) envoyes.push(string.format("%i/%i/%i/%s/%i", t["DeviceAddress"], t["FunctionCode"], t["StartAddress"], t["type"], t["Count"])) end
 # L'ordre de parcours d'une map n'est pas garanti : on compare par presence.
 def resume(l)
   return str(size(l)) + " : cuve=" + str(l.find("2/4/1312/float/1") != nil) + " rideau=" + str(l.find("3/2/160/uint8/1") != nil)
+         + " relai=" + str(l.find("3/1/256/uint8/1") != nil)
 end
 var m = MaitreReleve()
 m.releveEsclaves()
-verifie("releve : 2 demandes (thermometre cuve 0x04, interrupteur rideau 0x02)", "2 : cuve=true rideau=true", resume(envoyes))
+verifie("releve : 3 demandes (thermo 0x04, inter 0x02, relai 0x01)", "3 : cuve=true rideau=true relai=true", resume(envoyes))
 # Temoin : esclave desactive -> aucune demande pour lui
 drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"]["TasmotaSlaveModBus2"]["activation"] = "OFF"
 envoyes = []
 m.releveEsclaves()
-verifie("temoin esclave rideau desactive : seule la cuve est relevee", "1 : cuve=true rideau=false", resume(envoyes))
+verifie("temoin esclave rideau desactive : seule la cuve est relevee", "1 : cuve=true rideau=false relai=false", resume(envoyes))
 modbusFonctions.envoiMsgModbus = vraiEnvoi
 modules = sauveModules
 drivers = sauveDrivers
@@ -436,6 +445,59 @@ tasmota.cmds = []
 modbusFonctions.executeCmdModbus({"DeviceAddress": 3, "FunctionCode": 6, "FunctionName": "ECRITURE_REGISTRE_UNIQUE",
                                   "StartAddress": 225, "Count": 2, "Values": [0x02, 0]})
 verifie("esclave 0x06 StartAddress 225 valeur 0x02 -> Power2 ON", "['Power2 ON']", str(tasmota.cmds))
+drivers = sauveDrivers
+
+print("")
+print("=== 13. Relais d'esclave : lecture 0x01, etat constate vs commande ===")
+# (a) esclave : reponse 0x01 = etat reel du relai (bit 0 = Power ON)
+sauveDrivers = drivers
+drivers = {"ModBus": {"activation": "ON", "id": 3, "activationReponseCMD": "ON", "typeComm": {"Serial":"ON"}, "environnement": {}}}
+var envoyesEsclave = []
+vraiEnvoi = modbusFonctions.envoiMsgModbus
+modbusFonctions.envoiMsgModbus = def (t, typeMsg, id) envoyesEsclave.push(modbusFonctions.prepareTrame(t, typeMsg).tohex()) end
+tasmota.power = [true, false]
+var lit = def (sa) return {"DeviceAddress": 3, "FunctionCode": 1, "FunctionName": "LECTURE_COILS", "StartAddress": sa, "Count": 1, "Values": []} end
+modbusFonctions.executeCmdModbus(lit(256))
+modbusFonctions.executeCmdModbus(lit(257))
+verifie("esclave 0x01 relai 1 ON / relai 2 OFF", str([trameAvecCrc("03010101"), trameAvecCrc("03010100")]), str(envoyesEsclave))
+envoyesEsclave = []
+verifie("temoin esclave 0x01 relai inexistant : rien", "false / 0", str(modbusFonctions.executeCmdModbus(lit(260))) + " / " + str(size(envoyesEsclave)))
+modbusFonctions.envoiMsgModbus = vraiEnvoi
+# La requete 0x01 du maitre est lisible par l'esclave (decrypteMSG : Count, longueur)
+d = decode(modbusFonctions.prepareTrame({"DeviceAddress":3, "FunctionCode":1, "StartAddress":256, "type":"uint8", "Count":1, "Values":0}, "Commande"))
+verifie("decode requete 0x01 : Erreur / StartAddress / Count", "0/256/1", str(d["Erreur"]) + "/" + str(d["StartAddress"]) + "/" + str(d["Count"]))
+drivers = sauveDrivers
+
+# (b) maitre : etat constate, commande intact, ecart journalise
+sauveDrivers = drivers
+drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial":"ON"},
+           "environnement": {"TasmotaSlaveModBus": {"debug": "OFF",
+               "TasmotaSlaveModBus2": {"activation": "ON", "id": 3, "name": "rideau"}}}}}
+modules = {"garage": {"activation": "ON", "environnement": {"relais": {
+    "relai2": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus2", "type": 256, "idModBus": 1, "id": 2, "etat": "ON"},
+    "relai3": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus2", "type": 224, "idModBus": 2, "id": 3, "etat": "OFF"}}}}}
+var relai = def (c) return modules["garage"]["environnement"]["relais"][c] end
+var lecture = def (sa, bit)
+  modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 3, "FunctionCode": 1, "StartAddress": sa, "Count": 1, "type": "uint8"}}
+  recoit(3, "ModbusReceived", {"DeviceAddress": 3, "FunctionCode": 1, "Values": [bit]})
+end
+tasmota.horloge = 1000
+journal = []
+lecture(256, 0)          # Relais_i commande ON : relai physique au repos -> constate ON
+verifie("relai 256 bit 0 -> constate ON, etat ON, horodate", "ON/ON/1000",
+        str(relai("relai2").find("etatConstate")) + "/" + relai("relai2")["etat"] + "/" + str(relai("relai2").find("constateA")))
+verifie("temoin : pas d'ecart journalise", false, journalise("ECART"))
+lecture(225, 1)          # Relais (224) commande OFF, constate ON -> ecart
+verifie("relai 224 bit 1 -> constate ON, etat reste OFF", "ON/OFF",
+        str(relai("relai3").find("etatConstate")) + "/" + relai("relai3")["etat"])
+verifie("ecart commande OFF / constate ON journalise", true, journalise("commande=OFF, constate=ON"))
+# (c) l'echo d'une commande 0x06 ne reecrit plus l'etat commande
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 3, "FunctionCode": 6, "StartAddress": 256, "Count": 1, "type": "uint8"}}
+recoit(3, "ModbusReceived", {"DeviceAddress": 3, "FunctionCode": 6, "Values": [1, 0]})
+verifie("echo 0x06 : etat commande ON conserve", "ON", relai("relai2")["etat"])
+verifie("echo 0x06 : requete acquittee", nil, modbusFonctions.etat()["enVol"])
+modbusFonctions.etat()["enVol"] = nil
+modules = sauveModules
 drivers = sauveDrivers
 
 print("")
