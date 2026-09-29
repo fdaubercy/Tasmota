@@ -1029,7 +1029,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
         return nb
     end
 
-    # Passe a 'inconnu' l'etat constate de tous les appareils portes par le virtuel donne
+    # Passe a 'inconnu' l'etat constate des appareils RELUS portes par le virtuel donne
     # (ex: "ModBus_TasmotaSlaveModBus2"). Retourne le nombre d'appareils touches.
     def passeInconnu(virtuel)
         var nb = 0
@@ -1042,7 +1042,9 @@ class MODBUS_TASMOTA_SLAVE : Driver
                 if (type(env[famille]) != "instance")    continue    end
                 for cleDevice: env[famille].keys()
                     var device = env[famille][cleDevice]
-                    if (type(device) == "instance" && device.find("virtuel") == virtuel)
+                    # Seuls les appareils que le releve RELIT passent a 'inconnu' (audit G7) : les
+                    # autres (LEDs WS2812 1376...) n'en sortiraient jamais, faute de lecture.
+                    if (type(device) == "instance" && device.find("virtuel") == virtuel && self.demandeLecture(device, famille, 0) != nil)
                         device["etatConstate"] = "inconnu"
                         nb += 1
                     end

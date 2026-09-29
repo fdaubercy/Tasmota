@@ -706,6 +706,24 @@ modules = sauveModules
 drivers = sauveDrivers
 
 print("")
+print("=== 19. G7 : les appareils jamais relus ne passent pas a 'inconnu' ===")
+sauveDrivers = drivers
+drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial":"ON"},
+           "environnement": {"TasmotaSlaveModBus": {"debug": "OFF",
+               "TasmotaSlaveModBus1": {"activation": "ON", "id": 2, "name": "cuve"}}}}}
+modules = appareils()
+modules["garage"]["environnement"]["relais"] = {"relai1": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus1", "type": 1376, "idModBus": 1, "id": 1}}
+maitre = MaitreStub()
+tasmota.horloge = 0
+maitre.verifieChienDeGarde()
+tasmota.horloge = 1000
+verifie("cuve muette : seul le thermometre (relu) est marque", 1, maitre.verifieChienDeGarde())
+verifie("WS2812 (jamais relue) : pas 'inconnu'", nil, modules["garage"]["environnement"]["relais"]["relai1"].find("etatConstate"))
+verifie("temoin thermometre cuve : 'inconnu'", "inconnu", modules["garage"]["environnement"]["thermometres"]["thermometre1"].find("etatConstate"))
+modules = sauveModules
+drivers = sauveDrivers
+
+print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
       total, total - echecs - bugs_connus, bugs_connus, echecs))
 print(echecs == 0 ? "BANC_MODBUS: OK" : "BANC_MODBUS: ECHEC")
