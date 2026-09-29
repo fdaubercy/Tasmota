@@ -86,7 +86,7 @@ if (persist._p != nil && persist._p.size() != 0)
     end
     if serveur["udp"].find("activation", "OFF") == "ON"    import controleUDP as _ctrl    end
     # gestionFileFolder.loadBerryFile("/controleTCP", serveur["tcp"].find("activation", "OFF"), "ON")
-    # gestionFileFolder.loadBerryFile("/controleModbus", drivers["ModBus"].find("activation", "OFF"), "ON")
+    do import controleModbus as _ctrl end   # solidifie : init() porte la garde d'activation (ouvre le port serie RS485)
     # gestionFileFolder.loadBerryFile("/controleRangeExtender", serveur["rangeExtender"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/controleLoRaWan", drivers["LoRaWan"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/controleVoletRoulants", drivers.find("voletRoulants", {}).find("activation", "OFF"), "ON")
