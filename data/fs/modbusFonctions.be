@@ -47,6 +47,7 @@ def modbusFonctions_etat()
             "nbOctets": 0,              # Nombre d'octets a lire / ecrire
             "nbValeurs": 0,             # Nombre de valeurs a lire / ecrire
             "echeances": {},            # ESP32-P4 : nom -> {"t": echeance millis, "f": fonction} (armeTimer)
+            "tamponSerie": bytes(),     # esclave : octets RS485 recus, pas encore decoupes en trames (audit G2)
             "seqPush": 0,               # esclave : numero d'ordre du dernier push emis (pousseEtat)
             "derniersSeq": {}           # maitre : id esclave -> dernier numero d'ordre de push accepte
         }
@@ -895,28 +896,44 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
     tasmota.yield()
 
     # Recoit message sur le port RS485
+    # Decoupage en trames (2026-09-29, audit G2) : le tampon lu toutes les 100 ms etait traite
+    # comme UNE trame, puis vide (read + flush). Sur un bus partage (carte 16 relais, cuve,
+    # rideau), [reponse d'un autre noeud][requete pour cet esclave] donnait une erreur CRC et
+    # la requete etait perdue (timeout cote maitre). Les octets s'accumulent desormais dans
+    # tamponSerie, extraitTrames en sort chaque trame RTU valide, et un silence de 100 ms (aucun
+    # octet nouveau) clot les trames incompletes.
     if (typeTitre == "ModbusReceived")
-        if (modbusFonctions.etat()["serialModBus"] != nil && modbusFonctions.etat()["serialModBus"].available()) 
+        var serie = modbusFonctions.etat()["serialModBus"]
+        if (serie == nil)    return    end
+
+        var nouveaux = serie.available() > 0 ? serie.read() : bytes()
+        var tampon = modbusFonctions.etat()["tamponSerie"] + nouveaux
+        if (size(tampon) == 0)    return    end
+        if (size(tampon) > 512)    tampon = tampon[size(tampon) - 256 .. size(tampon) - 1]    end     # bus bruite : borne la RAM
+
+        var decoupe = modbusFonctions.extraitTrames(tampon, size(nouveaux) == 0)
+        modbusFonctions.etat()["tamponSerie"] = decoupe[1]
+
+        for trame: decoupe[0]
             #- Exemple de json à construire à la réception d'une trame
                 @ Count = Nombre d'octets de données reçus ou retournés dans la réponse
                 @ Length = Longueur de la tame entière avec le CRC
                 @ Values = valeur ou tableau de valeur
                 @ Erreur = Erreur de réception (0=OK, 1=Adresse esclave incorrecte, 9=CRC incorrecte)
             -#
-            paramMSG = {typeTitre: {"Trame": "", "DeviceAddress": 0, "FunctionCode": 0, "FunctionName": "", "StartAddress": 0, "Length": 0, "Count": 0, "Values": [], "CRC": 0, "Erreur": 0}}
-            paramMSG[typeTitre]["Trame"] = modbusFonctions.etat()["serialModBus"].read() 
+            paramMSG = {typeTitre: {"Trame": trame, "DeviceAddress": 0, "FunctionCode": 0, "FunctionName": "", "StartAddress": 0, "Length": 0, "Count": 0, "Values": [], "CRC": 0, "Erreur": 0}}
 
             # Réception du message
             modbusFonctions.log("RECEPTION_MSG_MODBUS: -------------------- lireMsgModbus -------------------", LOG_LEVEL_DEBUG_PLUS)
-            modbusFonctions.log(string.format("RECEPTION_MSG_MODBUS: Message ModBus reçu = 0x%s", paramMSG[typeTitre]["Trame"].tohex()), LOG_LEVEL_DEBUG_PLUS)
-            
+            modbusFonctions.log(string.format("RECEPTION_MSG_MODBUS: Message ModBus reçu = 0x%s", trame.tohex()), LOG_LEVEL_DEBUG_PLUS)
+
             tasmota.yield()
 
-            # Parse la trame
+            # Parse la trame (une trame adressee a un autre noeud sort ici en Erreur 1)
             modbusFonctions.decrypteMSG(paramMSG, typeTitre)
             if (paramMSG[typeTitre]["Erreur"] != modbusFonctions.tabErreur["noerror"])
                 modbusFonctions.log("RECEPTION_MSG_MODBUS: Message ModBus reçu avec erreur", LOG_LEVEL_DEBUG_PLUS)
-                return
+                continue
             end
 
             tasmota.yield()
@@ -930,12 +947,6 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
                                                     paramMSG[typeTitre]["Length"], paramMSG[typeTitre]["Count"],  
                                                     paramMSG[typeTitre]["Values"].tostring(), paramMSG[typeTitre]["Erreur"] 
                                                 ), serveur["mqtt"]["topic"])
-            
-            # Initialise le buffer & acquitte le message en vol (reponse recue)
-            var buffer = modbusFonctions.etat()["serialModBus"].read()
-
-            modbusFonctions.termineEnVol(true)
-            modbusFonctions.etat()["serialModBus"].flush()
         end
     # Recoit message sur le port TCP, ou UDP (2026-09-29 : meme trame binaire, relue par
     # udpFonctions.lireUDP). msg["Automatique"] = true marque un push d'esclave (enveloppe
@@ -1741,6 +1752,62 @@ def modbusFonctions_crc16modbus(buf)
     return crc
 end
 modbusFonctions.crc16modbus = modbusFonctions_crc16modbus
+
+# Decoupe un tampon RS485 en trames RTU (2026-09-29, audit G2). Un esclave voit passer sur le
+# bus les requetes ET les reponses des autres noeuds : chaque longueur plausible pour le code
+# fonction (requete, reponse, exception) est essayee, et la trame n'est retenue que si son CRC
+# est juste. Un octet qui ne commence aucune trame valide est saute (resynchronisation).
+# @tampon : bytes ; @silence : true si aucun octet n'est arrive depuis le dernier appel (fin
+# de trame RTU) -> une trame encore incomplete est alors abandonnee au lieu d'etre attendue.
+# Retourne [liste des trames (bytes, CRC compris), octets restants a garder].
+def modbusFonctions_extraitTrames(tampon, silence)
+    var trames = []
+    var pos = 0
+    var n = size(tampon)
+
+    while (n - pos >= 4)
+        var fc = tampon.get(pos + 1, 1)
+        var besoin = 2                      # octets requis pour connaitre toutes les longueurs candidates
+        var candidates = []
+        if ((fc & 0x80) != 0)
+            candidates = [5]                                            # exception
+        elif (fc >= 0x01 && fc <= 0x04)
+            besoin = 3
+            candidates = [8]                                            # requete
+            if (n - pos >= 3)    candidates.push(5 + tampon.get(pos + 2, 1))    end     # reponse
+        elif (fc == 0x05 || fc == 0x06)
+            candidates = [8]                                            # requete = reponse (echo)
+        elif (fc == 0x0F || fc == 0x10)
+            besoin = 7
+            candidates = [8]                                            # reponse
+            if (n - pos >= 7)    candidates.push(9 + tampon.get(pos + 6, 1))    end     # requete
+        end
+
+        var longueur = 0
+        var incomplete = (n - pos < besoin)
+        for l: candidates
+            if (pos + l > n)
+                incomplete = true
+            elif (longueur == 0 && modbusFonctions.crc16modbus(tampon[pos .. pos + l - 3]) == tampon.get(pos + l - 2, -2))
+                longueur = l
+            end
+        end
+
+        if (longueur > 0)
+            trames.push(tampon[pos .. pos + longueur - 1])
+            pos += longueur
+        elif (incomplete && !silence)
+            break                           # la suite de la trame n'est pas encore arrivee
+        else
+            pos += 1                        # octet parasite ou trame tronquee : on se resynchronise
+        end
+    end
+
+    # Fin de trame (silence) : les derniers octets (< 4) ne formeront plus rien
+    if (silence && n - pos < 4)    pos = n    end
+    return [trames, pos < n ? tampon[pos .. n - 1] : bytes()]
+end
+modbusFonctions.extraitTrames = modbusFonctions_extraitTrames
 
 # Reconstruit des valeurs a partir de REGISTRES de 16 bits recus (ex. une ecriture 0x10
 # decodee par decrypteMSG, dont 'Values' porte les mots bruts). Big-endian, comme a

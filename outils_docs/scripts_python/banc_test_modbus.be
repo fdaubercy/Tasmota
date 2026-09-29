@@ -46,7 +46,8 @@ class TasmotaStub
   var ms                               # millis() pilote par le banc (armeTimer P4)
   def init() self.cmds = [] self.horloge = 0 self.power = [] self.ms = 0 end
   def time_reached(t) return self.ms >= t end
-  def publish_result(s, topic) self.publie = s end
+  var publies                          # tous les JSON publies (G2 : plusieurs trames par lecture)
+  def publish_result(s, topic) self.publie = s if self.publies != nil self.publies.push(s) end end
   def yield() end
   def rtc() return {"local": self.horloge} end
   def get_power() return self.power end
@@ -722,6 +723,61 @@ verifie("WS2812 (jamais relue) : pas 'inconnu'", nil, modules["garage"]["environ
 verifie("temoin thermometre cuve : 'inconnu'", "inconnu", modules["garage"]["environnement"]["thermometres"]["thermometre1"].find("etatConstate"))
 modules = sauveModules
 drivers = sauveDrivers
+
+print("")
+print("=== 20. G2 : decoupage des trames RS485 cote esclave ===")
+var req3 = trameAvecCrc("030200A00001")                   # maitre -> rideau : 0x02, registre 160
+var req2 = trameAvecCrc("020405200002")                   # maitre -> cuve : 0x04, registre 1312
+var rep16 = "010320"
+for i: 1 .. 32    rep16 += "00"    end
+rep16 = trameAvecCrc(rep16)                               # carte 16 relais -> maitre : 0x03, 16 registres
+var decoupe = def (hex, silence)
+  var r = modbusFonctions.extraitTrames(bytes(hex), silence)
+  var l = []
+  for t: r[0]    l.push(t.tohex())    end
+  return str(l) + " reste=" + r[1].tohex()
+end
+verifie("deux requetes collees -> 2 trames", str([req2, req3]) + " reste=", essaie(def () return decoupe(req2 + req3, false) end))
+verifie("reponse carte 16 + requete rideau -> 2 trames", str([rep16, req3]) + " reste=", essaie(def () return decoupe(rep16 + req3, false) end))
+verifie("octets parasites avant la trame : ignores", str([req3]) + " reste=", essaie(def () return decoupe("00FF" + req3, false) end))
+verifie("trame coupee : moitie gardee en attente", "[] reste=" + req3[0 .. 7], essaie(def () return decoupe(req3[0 .. 7], false) end))
+verifie("trame coupee puis completee -> 1 trame", str([req3]) + " reste=", essaie(def () return decoupe(req3[0 .. 7] + req3[8 ..], false) end))
+verifie("trame incomplete + silence : abandonnee", "[] reste=", essaie(def () return decoupe(req3[0 .. 7], true) end))
+verifie("temoin : CRC faux -> aucune trame", "[] reste=", essaie(def () return decoupe(req3[0 .. 11] + "0000", true) end))
+
+# Bout en bout : l'esclave rideau (id 3) recoit [reponse carte 16][requete pour lui] en une lecture
+class SerieStub
+  var donnees
+  def init(h) self.donnees = bytes(h) end
+  def available() return size(self.donnees) end
+  def read() var d = self.donnees self.donnees = bytes() return d end
+  def flush() end
+  def write(b) end
+end
+sauveDrivers = drivers
+sauveServeur = serveur
+drivers = {"ModBus": {"activation": "ON", "id": 3, "typeComm": {"Serial":"ON"}, "environnement": {}}}
+serveur = {"mqtt": {"topic": "rideau"}, "udp": {"activation": "OFF"}, "tcp": {"activation": "OFF"}}
+modbusFonctions.etat()["tamponSerie"] = bytes()
+modbusFonctions.etat()["serialModBus"] = SerieStub(rep16 + req3)
+tasmota.publies = []
+essaie(def () modbusFonctions.lireMsgModbus("ModbusReceived", nil) end)
+var pubs = tasmota.publies
+verifie("esclave : la requete qui lui est destinee est publiee", "1/3/160",
+        str(size(pubs)) + "/" + (size(pubs) > 0 ? str(json.load(pubs[0])["ModbusReceived"]["DeviceAddress"]) + "/" + str(json.load(pubs[0])["ModbusReceived"]["StartAddress"]) : "-"))
+# Trame arrivee en deux lectures successives
+modbusFonctions.etat()["tamponSerie"] = bytes()
+modbusFonctions.etat()["serialModBus"] = SerieStub(req3[0 .. 5])
+tasmota.publies = []
+essaie(def () modbusFonctions.lireMsgModbus("ModbusReceived", nil) end)
+modbusFonctions.etat()["serialModBus"].donnees = bytes(req3[6 ..])
+essaie(def () modbusFonctions.lireMsgModbus("ModbusReceived", nil) end)
+verifie("esclave : trame reconstituee sur deux lectures", 1, size(tasmota.publies))
+tasmota.publies = nil
+modbusFonctions.etat()["serialModBus"] = nil
+modbusFonctions.etat()["tamponSerie"] = bytes()
+drivers = sauveDrivers
+serveur = sauveServeur
 
 print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
