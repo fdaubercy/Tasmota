@@ -64,13 +64,13 @@
 
 | # | Défaut | Où | Preuve | Correctif proposé |
 |---|---|---|---|---|
-| G1 | **Timeout aléatoire sur le P4.** `armeTimer` y utilise `add_cron("*/5 …")`, déclenché au prochain multiple de 5 s : délai réel dans ]0 ; 5] s. Renvoi prématuré → la réponse tardive acquitte le renvoi, la suivante est orpheline et peut acquitter la requête suivante de même adresse et même code (le relevé enchaîne interrupteur1 puis 2, relai2 puis 3) → valeur écrite sur le mauvais appareil, faux ECART. Sans RTC valide (avant NTP), les crons ne tournent pas → une réponse perdue au boot bloque la file. | `modbusFonctions.be:537-549` | [V] mécanisme, [S] fréquence | Échéance `tasmota.millis() + délai` testée par un cron 1 s ou un `every_100ms` ; ne pas dépendre de l'horloge murale |
-| G2 | **Réception série sans découpage de trames.** Tout le tampon lu toutes les 100 ms est traité comme **une** trame. Bus partagé (carte 16, cuve, rideau) : [réponse d'un autre][requête pour soi] → erreur CRC/longueur, requête perdue, timeout 5 s. | `lireMsgModbus` l.824-863, `controleModbus.every_100ms` | [V] mécanisme, [S] fréquence | Tampon cumulatif ; extraction trame par trame selon la longueur attendue par code fonction + CRC glissant |
-| G3 | **File du maître sans plafond si un esclave se tait.** Le relevé ré-enfile toutes les 30 s les requêtes de l'esclave muet (rideau : 4 × jusqu'à 3 × 5 s = 60 s de bus par cycle de 30 s). Ni plafond ni dédoublonnage → RAM qui croît, commandes carte 16 retardées de minutes. | `releveEsclaves` | [V] calcul sur config réelle | Une seule sonde par cycle pour un esclave muet ; pas de doublon (adresse, code, registre) en file ; plafond |
+| G1 | ✅ **corrigé `f5c88f53c`** — **Timeout aléatoire sur le P4.** `armeTimer` y utilise `add_cron("*/5 …")`, déclenché au prochain multiple de 5 s : délai réel dans ]0 ; 5] s. Renvoi prématuré → la réponse tardive acquitte le renvoi, la suivante est orpheline et peut acquitter la requête suivante de même adresse et même code (le relevé enchaîne interrupteur1 puis 2, relai2 puis 3) → valeur écrite sur le mauvais appareil, faux ECART. Sans RTC valide (avant NTP), les crons ne tournent pas → une réponse perdue au boot bloque la file. | `modbusFonctions.be:537-549` | [V] mécanisme, [S] fréquence | Échéance `tasmota.millis() + délai` testée par un cron 1 s ou un `every_100ms` ; ne pas dépendre de l'horloge murale |
+| G2 | ✅ **corrigé `aa0df4054`** — **Réception série sans découpage de trames.** Tout le tampon lu toutes les 100 ms est traité comme **une** trame. Bus partagé (carte 16, cuve, rideau) : [réponse d'un autre][requête pour soi] → erreur CRC/longueur, requête perdue, timeout 5 s. | `lireMsgModbus` l.824-863, `controleModbus.every_100ms` | [V] mécanisme, [S] fréquence | Tampon cumulatif ; extraction trame par trame selon la longueur attendue par code fonction + CRC glissant |
+| G3 | ✅ **corrigé `269021b5a`** — **File du maître sans plafond si un esclave se tait.** Le relevé ré-enfile toutes les 30 s les requêtes de l'esclave muet (rideau : 4 × jusqu'à 3 × 5 s = 60 s de bus par cycle de 30 s). Ni plafond ni dédoublonnage → RAM qui croît, commandes carte 16 retardées de minutes. | `releveEsclaves` | [V] calcul sur config réelle | Une seule sonde par cycle pour un esclave muet ; pas de doublon (adresse, code, registre) en file ; plafond |
 | G4 | **Faux « muet ».** File engorgée (G3) → requêtes vers la cuve parties après plus de 90 s ; la cuve ne pousse rien (thermomètre, analogique) → « inconnu » à tort. | `verifieChienDeGarde` | [S] | Compter les abandons réels par esclave (`termineEnVol(false)`), ou mesurer depuis l'envoi effectif |
-| G5 | **Réponse jamais acquittée sur exception.** Accès directs (`["serialNumber"]`, `["Humidity"]`, `["value"]`, `["environnement"]`, `idModBus` absent) → exception → pas de `termineEnVol(true)` → 3 × 5 s perdus, règles suivantes du même événement coupées. | `recupereReponseModBus` l.436-668 | [V] | `try` autour du traitement, acquittement dans tous les chemins, `.find()` |
+| G5 | ✅ **corrigé `20714d0b0`** — **Réponse jamais acquittée sur exception.** Accès directs (`["serialNumber"]`, `["Humidity"]`, `["value"]`, `["environnement"]`, `idModBus` absent) → exception → pas de `termineEnVol(true)` → 3 × 5 s perdus, règles suivantes du même événement coupées. | `recupereReponseModBus` l.436-668 | [V] | `try` autour du traitement, acquittement dans tous les chemins, `.find()` |
 | G6 | **ECART bavards.** Lecture 0x01 enfilée avant une commande, relais temporisé ou piloté localement → ECART niveau ERREUR toutes les 30 s (la carte 16 journalise en INFO via `self.log`). | l.647-650 | [S] | Journaliser les transitions seulement, ou ignorer l'écart T s après une commande |
-| G7 | **WS2812 de la cuve « inconnu » pour toujours après une panne** : marquée par `passeInconnu`, jamais relue. | `passeInconnu` | [V] | L'exclure du chien de garde, ou la remettre « valide » au contact |
+| G7 | ✅ **corrigé `be8ee6a4b`** — **WS2812 de la cuve « inconnu » pour toujours après une panne** : marquée par `passeInconnu`, jamais relue. | `passeInconnu` | [V] | L'exclure du chien de garde, ou la remettre « valide » au contact |
 | G8 | **Push des compteurs inopérant.** Règle `Tele#COUNTER#C` qui ne correspond jamais à `C1` (clés exactes, `rule_matcher.be`) ; `device["etat"]` absent des compteurs → `key_error`. Sans impact : aucun compteur d'esclave actif. | `configDevices.be:332`, `globalFonctions.be:353` | [V] | Règle `COUNTER#C<id>`, `.find("etat")` |
 
 ---
@@ -115,11 +115,9 @@
 ## 5. Améliorations et évolutions proposées (par priorité)
 
 1. ~~B1~~ fait — **recompiler les 4 envs**.
-2. **Fiabilité du bus** (ensemble, avant mise en service) : G1 délai réel sur P4, G2 découpage
-   des trames, G3 file plafonnée/dédoublonnée + une sonde par esclave muet, G5 acquittement
-   garanti. Chacun testable au banc (scénarios « deux trames collées », « timeout prématuré »).
-3. **Supervision robuste** : chien de garde sur abandons réels et `millis()` (G4, L8), ECART sur
-   transitions (G6), WS2812 hors chien de garde (G7).
+2. ~~**Fiabilité du bus**~~ fait le 2026-09-29 : G1, G2, G3, G5 (+ G7). Voir « Suivi ».
+3. **Supervision robuste** (reste) : chien de garde sur abandons réels et `millis()` (G4, L8),
+   ECART sur transitions (G6).
 4. **Sécurité** (S1) : rotation des mots de passe, secrets hors des fichiers suivis (fichier local
    ignoré par git, fusionné au build ou poussé depuis un dossier hors dépôt).
 5. **Nettoyage** : soit supprimer le repli UDP et le TCP, soit les réparer (L1, L2, L13) ;
@@ -139,4 +137,19 @@
 
 | Date | Point | Statut | Commit |
 |---|---|---|---|
-| 2026-09-29 | B1 | ✅ corrigé | voir `git log -- data/fs/controleModbus.be` |
+| 2026-09-29 | B1 — écriture dans le module solidifié `modbusFonctions` | ✅ corrigé | `04d9bd865` |
+| 2026-09-29 | G1 — timeout P4 : échéance `tasmota.millis()` testée par `verifieEcheances` (appelée par `controleModbus.every_100ms`) au lieu d'un cron `*/5` | ✅ corrigé, banc §16 (5 tests, témoin 4 échecs) | `f5c88f53c` |
+| 2026-09-29 | G5 — traitement des réponses sous `try`, acquittement toujours atteint, `.find()` (serialNumber, environnement, idModBus, esclave inconnu) | ✅ corrigé, banc §17 (3 tests, témoin : requête restée en vol) | `20714d0b0` |
+| 2026-09-29 | G3 — file : lecture identique (en file ou en vol) non ré-enfilée, plafond `MAX_FILE = 32` (lecture écartée, écriture prioritaire), une sonde par cycle pour un esclave muet | ✅ corrigé, banc §18 (8 tests, témoin : file non bornée) | `269021b5a` |
+| 2026-09-29 | G7 — seuls les appareils relus (`demandeLecture` non nil) passent à « inconnu » | ✅ corrigé, banc §19 (3 tests, témoin : WS2812 marquée) | `be8ee6a4b` |
+| 2026-09-29 | G2 — `extraitTrames` : découpage du flux RS485 (longueurs requête/réponse/exception, CRC, resynchronisation, attente, silence 100 ms) ; tampon `tamponSerie` borné à 512 octets | ✅ corrigé, banc §20 (9 tests, témoin : 0 publication) | `aa0df4054` |
+
+**Banc après correctifs : 104/104.** Rien n'est encore testé sur bus réel : recompiler les 4 envs.
+Restent ouverts : S1 (secrets, décision utilisateur), G4, G6, G8, latents L1-L13.
+
+**À observer au premier flash** (log niveau 4) :
+- `ENFILE_MSG: lecture deja en file` : attendu seulement si un esclave est lent ou muet ;
+- `ENFILE_MSG: file pleine` : ne doit **jamais** apparaître en régime normal ;
+- `MODBUS_TASMOTA_SLAVE_ERREUR` : signale un appareil virtuel incomplet dans le persist (à corriger dans la config) ;
+- `SUR_TIMEOUT` sur le P4 : doit arriver ~5 s après l'envoi, plus au hasard ;
+- côté esclave, plus aucun `Message ModBus reçu avec erreur` en rafale quand la carte 16 relais est interrogée.
