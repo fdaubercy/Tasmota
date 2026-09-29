@@ -1,7 +1,58 @@
 # Reprise — Solidification Berry
 
-> État au 2026-07-16, fin de session. À lire en entier avant de reprendre.
+> État au **2026-09-29** (encadré ci-dessous) ; le reste du document date du 2026-07-16.
+> À lire en entier avant de reprendre.
 > Document de reprise : le mettre à jour, ne pas en créer un second.
+
+---
+
+# ⇒ MISE À JOUR DU 2026-09-29 — où on en est vraiment
+
+**Q3 = OUI, prouvé à l'exécution** sur la cave S3 (192.168.0.243, firmware du
+2026-09-27T21:37, 15 h 47 de fonctionnement, `BootCount 2`), par la console Tasmota :
+les 9 modules de fonctions présents en globale — `configGlobal`, `diversFonctions`,
+`gestionFileFolder`, `globalFonctions`, `webFonctions`, `udpFonctions`, `tcpFonctions`,
+`discoveryFonctions`, `rangeExtenderFonctions` — répondent **tous**
+`introspect.solidified(...) == true`. Les drivers `controleGeneral`, `controleWeb`,
+`controleTCP`, `controleDiscovery`, `controleRangeExtender` sont bien instanciés
+(instances : `solidified` n'a pas de sens pour elles). Deux « absents » sont **normaux** :
+`controleUDP` publie ses instances sous `controleUDP_unicast`/`_multicast`
+(`controleUDP.be:184-186`) ; `controleLedTemoin == nil` car le persist de la cave ne
+déclare aucun `led_temoin` (`controleLedTemoin.be:129`, « driver non chargé »).
+
+> Méthode de relevé (lecture seule, sans lire de gros fichier) : `curl -e http://IP/ -G
+> http://IP/cm --data-urlencode "cmnd=Br …"`. **Ne pas appeler `introspect.module(n)`** sur
+> un module non chargé : l'import déclencherait son `init()` (donc un `add_driver`). Lire
+> `global.(n)` après `global.contains(n)`.
+
+**Gain RAM : NON MESURABLE en avant/après sur la cave.** La carte S3 n'a jamais tourné
+sans solidification (l'ESP32 qu'elle remplace est une autre puce, sans PSRAM). Valeur de
+**référence après** relevée : `tasmota.gc()` = **55 866 octets** de tas Berry vivant,
+`heap_free` 212 Ko, `psram_free` 5 019 Ko, `frag` 19 %. Un vrai avant/après reste possible
+sur une carte garage **avant** de la reflasher (relever `tasmota.gc()` sur le firmware
+actuel, puis après flash) — c'est là qu'il faut le faire.
+
+**Généralisation (décision a) : faite en septembre.** Chaque fichier de `data/fs` (29) est,
+pour chaque env personnalisé, soit dans `custom_berry_solidify`, soit dans
+`custom_files_exclude` — aucun oublié (vérifié le 2026-09-29 sur cave ×2, grenier, P4,
+S3 garage, cuve, rideau).
+
+**Reste à solidifier — uniquement des fichiers propres à une carte, hors `data/fs`**, tous
+encore à l'ancienne forme (classe + `add_driver` au niveau fichier, ou `module("/x")` avec
+slash) :
+
+| Fichier | Carte | Chargé aujourd'hui ? | Intérêt |
+|---|---|---|---|
+| `controlePompeVideCave.be` (2 copies cave ESP32/S3) | cave | **oui** (`loadBerryFile`, autoexec:98) | **seul candidat utile** ; refactor driver→module requis |
+| `cuveFonctions.be` | cuve | oui si `modules.cuve` ON (`compileModule`, autoexec:63) | moyen ; slash à retirer |
+| `controleGrenier.be` | grenier | oui (`loadBerryFile`, autoexec:93) | grenier en sommeil |
+| `controleGarage.be` + `garageFonctions.be` | S3 garage (P4 : commentés) | S3 garage seulement | faible |
+| `controleCuve.be`, `controleRideau.be` | cuve, rideau | **non** (commentés / absents de l'autoexec) | nul tant que non chargés |
+
+Les envs `rdc-vr-porte`, `bureau-interrupteur-differentiel` et `pompe-piscine` n'ont
+**aucune** liste `custom_berry_solidify`.
+
+---
 
 ## En une phrase
 
@@ -14,7 +65,7 @@ refactorés en modules import-ables). **Tout compile au vrai xtensa-gcc, seul ou
 
 ---
 
-## LA PROCHAINE ACTION
+## LA PROCHAINE ACTION (du 2026-07-16 — dépassée, voir l'encadré du 2026-09-29)
 
 **Rebuild + flash du grenier**, puis valider Q3 et mesurer la RAM. Le firmware n'est
 **plus** celui du 06:58 (qui ne portait que `modbusFonctions`) — il faut reconstruire
@@ -73,7 +124,7 @@ prouve qu'a la COMPILATION, pas a l'execution.
 |---|---|---|
 | Q1 — `var x = module(...)` solidifiable ? | **OUI pour la forme**, mais le **nom** ne doit pas porter de slash | préprocesseur xtensa |
 | Q2 — `tasmota.add_driver()` au niveau fichier casse ? | **OUI** — cause isolée : c'est le code de **niveau fichier**, pas la classe | avec pied : rc=1 / sans pied : `.h` de 7503 o, 4 méthodes |
-| Q3 — `import` sans fichier sur le FS ? | **NON TESTÉ** | ← la prochaine action |
+| Q3 — `import` sans fichier sur le FS ? | **OUI** (2026-09-29) | cave S3 : 9 modules `introspect.solidified == true` à l'exécution |
 | Q4 — un driver `loadBerryFile` beneficie-t-il de la solidification ? | **NON tel quel** — `loadBerryFile`->`load()` ignore la table native ; il faut le refactorer en module import-able | `gestionFileFolder.be:305` (load) vs `:346` (compileModule) |
 
 **Les 5 prérequis par module** (établis sur `modbusFonctions`, appliqués aux 10 du grenier) :
@@ -242,7 +293,8 @@ dépôt, PlatformIO et toolchain xtensa sont tous déduits.
 
 ## État du dépôt
 
-- **8 commits locaux non poussés.** Le fork est à jour avec arendst (0 de retard).
+- (2026-09-29) Tout est poussé sur `origin/development` ; fork à jour avec arendst
+  (0 de retard). La mention « 8 commits locaux non poussés » du 2026-07-16 est périmée.
 - Modifiés en permanence par les builds, sans intérêt à committer :
   `tasmota/tasmota_defines_for_berry.{be,h}`, `tasmota/user_config_override.h`
   (CFG_HOLDER), `lib/libesp32/berry_custom/src/modules.h`, `.claude-flow/`.

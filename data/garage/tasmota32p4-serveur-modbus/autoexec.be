@@ -54,14 +54,17 @@ if (persist._p != nil && persist._p.size() != 0)
     gestionFileFolder.compileModule("/globalFonctions", "ON")
     gestionFileFolder.compileModule("/diversFonctions", "ON")
     gestionFileFolder.compileModule("/webFonctions", serveur.find("activation", "OFF"))
-    gestionFileFolder.compileModule("/udpFonctions", serveur["udp"].find("activation", "OFF"))
+    # Services reseau : compiles/charges SEULEMENT si actives. Ne pas compter sur le 2e argument
+    # de compileModule/loadBerryFile : il ne filtre PAS le chargement (garde commentee dans
+    # gestionFileFolder.be) -> un service a OFF se chargeait quand meme. Aligne sur la cave (2026-09-29).
+    if serveur["udp"].find("activation", "OFF") == "ON"    gestionFileFolder.compileModule("/udpFonctions", serveur["udp"].find("activation", "OFF"))    end
     # gestionFileFolder.compileModule("/tcpFonctions", serveur["tcp"].find("activation", "OFF"))
     # gestionFileFolder.compileModule("/rangeExtenderFonctions", serveur["rangeExtender"].find("activation", "OFF"))
     # gestionFileFolder.compileModule("/modbusFonctions", drivers["ModBus"].find("activation", "OFF"))
     # gestionFileFolder.compileModule("/loRaWanFonctions", drivers["LoRaWan"].find("activation", "OFF"))
     # gestionFileFolder.compileModule("/vrFonctions", drivers.find("voletRoulants", {}).find("activation", "OFF"))
     # gestionFileFolder.compileModule("/garageFonctions", modules.find("garage", {}).find("activation", "OFF"))
-    gestionFileFolder.compileModule("/discoveryFonctions", serveur["discovery"].find("activation", "OFF"))
+    if serveur["discovery"].find("activation", "OFF") == "ON"    gestionFileFolder.compileModule("/discoveryFonctions", serveur["discovery"].find("activation", "OFF"))    end
 
     # Compile les modules internes à Tasmota
     # gestionFileFolder.compileModule("/leds_panel", "ON")
@@ -87,17 +90,21 @@ if (persist._p != nil && persist._p.size() != 0)
     do
         import controleWeb as _ctrl
     end
-    do import controleUDP as _ctrl end   # solidifie : init() porte la garde d'activation
+    if serveur["udp"].find("activation", "OFF") == "ON"    import controleUDP as _ctrl    end
     # gestionFileFolder.loadBerryFile("/controleTCP", serveur["tcp"].find("activation", "OFF"), "ON")
     do import controleModbus as _ctrl end   # solidifie : init() porte la garde d'activation
     # gestionFileFolder.loadBerryFile("/controleRangeExtender", serveur["rangeExtender"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/controleLoRaWan", drivers["LoRaWan"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/controleVoletRoulants", drivers.find("voletRoulants", {}).find("activation", "OFF"), "ON")
-    do import controleDiscovery as _ctrl end   # solidifie : init() porte la garde d'activation
+    if serveur["discovery"].find("activation", "OFF") == "ON"    import controleDiscovery as _ctrl    end
     do import controleES8311 as _ctrl end   # solidifie : init() porte la garde d'activation
     # gestionFileFolder.loadBerryFile("/controleGarage", modules.find("garage", {}).find("activation", "OFF"), "ON")
 
-    # Compile autoexec.be
+    # NE PAS compiler autoexec.be en .bec : tasmota.compile() compile en contexte LOCAL
+    # (tasmota_class.be:480, upstream #23457). Le .bec tournerait alors sous le nom 'loader'
+    # et tous les import/var/affectations de niveau fichier ci-dessus deviendraient des
+    # LOCALES : 'configGlobal' undeclared, puis 'controleGeneral' undeclared dans les regles,
+    # des le DEUXIEME demarrage (le premier, en .be, fonctionne). Constate a la cave le 2026-09-26.
     # gestionFileFolder.compileModule("/autoexec", "ON")
 else log("AUTO_EXE: Attention, le fichier de paramétrage est absent !", LOG_LEVEL_ERREUR)
 end

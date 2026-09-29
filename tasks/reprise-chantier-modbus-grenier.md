@@ -1,8 +1,44 @@
 # Reprise — Chantier ModBus du grenier (carte 16 relais + esclaves Tasmota)
 
-> État au **2026-07-24, fin de session**. À lire en entier avant de reprendre.
+> État au **2026-09-29** (encadré ci-dessous) ; le reste du document date du 2026-07-24.
+> À lire en entier avant de reprendre.
 > Document de reprise : le mettre à jour, ne pas en créer un second.
 > Complément technique : `outils_docs/PROTOCOLE_MODBUS.md` §8 et §9.
+
+---
+
+# ⇒ MISE À JOUR DU 2026-09-29 — ce qui a changé depuis juillet
+
+- **La branche `chantier-modbus-grenier` est fusionnée dans `development` et publiée sur
+  `origin`** (vérifié : `d464c53db` est ancêtre de `origin/development`). Les mentions
+  « aucun poussé » plus bas sont périmées.
+- **`modbusFonctions.be` a encore bougé** (+174 lignes de diff depuis `d464c53db`), par le
+  travail de septembre sur la cave : solidification généralisée, correctifs des globales des
+  modules solidifiés (`f5efddf26`, `ecc73348f`). Les 3 garage n'ont **toujours jamais été
+  flashés** avec ce code.
+- **Build lancé par l'utilisateur le 2026-09-29** (`platformio_override.ini`) : P4 garage,
+  cuve, rideau et cave S3. La grille « flasher et observer » ci-dessous reste LA prochaine
+  action, à exécuter sur ce firmware.
+- **Globales au boot — vérifiées statiquement le 2026-09-29, pas encore sur carte garage.**
+  Audit des références par nom global dans chaque module solidifié, croisé avec l'autoexec de
+  chaque env (témoin négatif OK : retirer `configGlobal` fait bien apparaître le manque).
+  Résultat : **aucune globale manquante** sur P4, cuve, rideau, S3 garage, cave, grenier.
+  Fournies par l'autoexec (niveau fichier) : `configGlobal`, `diversFonctions`,
+  `gestionFileFolder`, `globalFonctions`, `webFonctions`, `modbusFonctions` ; par les `init()`
+  des drivers : `udpFonctions`/`tcpFonctions`/`discoveryFonctions`/`rangeExtenderFonctions`
+  (`controleXxx_init`), `controleGeneral`. **À confirmer au 1er boot** de chaque carte :
+  `Br global.contains("modbusFonctions")` etc. — aucun `undeclared` ne doit apparaître au log.
+- **✅ CORRIGÉ le 2026-09-29 — autoexec garage alignés sur la cave** (4 fichiers : P4,
+  cuve, rideau, S3 serveur). `compileModule` et `import controleXxx` des services réseau
+  **déjà actifs** passent sous `if serveur[…].find("activation", "OFF") == "ON"` ; ajout de
+  l'avertissement « ne jamais compiler autoexec en `.bec` ». **Aucun service ajouté** :
+  TCP et RangeExtender, commentés sur P4/cuve/rideau, le restent — bien que **tous les
+  persist garage les aient à `ON`** (décommenter les activerait : choix à faire
+  explicitement, pas par alignement). Comportement inchangé aujourd'hui (tout est `ON`) ;
+  la garde ne mord que si un service passe à `OFF`. Syntaxe vérifiée au `berry.exe` avec
+  témoin négatif.
+- `compileModule` sur un module solidifié dont le `.be` est exclu du FS est **inoffensif**
+  (`gestionFileFolder.be:388` : fichier absent → `return true`, rien d'autre).
 
 ---
 
@@ -17,7 +53,8 @@ au mauvais endroit, annulées — voir `tasks/lessons.md`). Les 3 cibles sont
 ## LA PROCHAINE ACTION — flasher et observer
 
 **14 commits sont posés sur `chantier-modbus-grenier` (de `6a79ce3f4` à `367fedc94`),
-aucun poussé, et AUCUN n'a jamais été exercé sur un bus réel.** Trois changent un
+fusionnés et publiés depuis (voir la mise à jour du 2026-09-29), et AUCUN n'a jamais été
+exercé sur un bus réel.** Trois changent un
 comportement observable, et un cron va désormais émettre une trame toutes les 30 s.
 
 Continuer à coder avant d'observer rendrait tout échec indécidable (règle 7 de
