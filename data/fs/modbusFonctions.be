@@ -67,6 +67,7 @@ modbusFonctions.timeout_ReponseModBus_ms = 4000
 # (etat deplace dans modbusFonctions.etat()) modbusFonctions.queue = []            # messages en attente : [{paramMSG, typeMsg, tentatives}, ...]
 # (etat deplace dans modbusFonctions.etat()) modbusFonctions.enVol = nil           # message envoye en attente de reponse (nil = canal RS485 libre)
 modbusFonctions.MAX_TENTATIVES = 3    # renvois max avant abandon (jamais de blocage ni de perte muette)
+modbusFonctions.MAX_FILE = 32         # messages en attente max (audit G3, 2026-09-29) : au-dela, les lectures cedent
 
 # # *************************************************
 # # * ModBus Commandes
@@ -459,10 +460,65 @@ modbusFonctions.changementEtatDemarrage = modbusFonctions_changementEtatDemarrag
 # d'ordre FIFO, flag leve par timeout pendant qu'une reponse arrive.
 # ============================================================================
 
-# Enfile un message a envoyer, puis tente de pomper la file.
+# Vrai pour une LECTURE (0x01 a 0x04) : rejouable sans effet, donc dedoublonnable.
+def modbusFonctions_estLecture(paramMSG)
+    var fc = int(paramMSG.find("FunctionCode", 0)) & 0x7F
+    return fc >= 0x01 && fc <= 0x04
+end
+modbusFonctions.estLecture = modbusFonctions_estLecture
+
+# Deux lectures identiques : meme esclave, meme code, meme registre, meme quantite.
+def modbusFonctions_memeLecture(a, b)
+    return a.find("DeviceAddress") == b.find("DeviceAddress") && a.find("FunctionCode") == b.find("FunctionCode") &&
+           a.find("StartAddress") == b.find("StartAddress") && a.find("Count", 1) == b.find("Count", 1)
+end
+modbusFonctions.memeLecture = modbusFonctions_memeLecture
+
+# Enfile un message a envoyer, puis tente de pomper la file. Retourne true s'il est enfile.
+# Borne (2026-09-29, audit G3) : un esclave muet coute jusqu'a MAX_TENTATIVES x timeout par
+# requete, et le releve re-enfilait tout toutes les 30 s -> file sans limite, RAM qui croit,
+# commandes retardees de minutes. Desormais :
+#   - une LECTURE identique a une lecture deja en file (ou en vol) n'est pas re-enfilee ;
+#   - file pleine (MAX_FILE) : une lecture est ecartee ; une ECRITURE (commande de relai...)
+#     passe toujours, en evincant la plus ancienne lecture en attente.
 def modbusFonctions_enfileMsg(paramMSG, typeMsg)
-    modbusFonctions.etat()["queue"].push({"paramMSG": paramMSG, "typeMsg": typeMsg, "tentatives": 0})
+    import string
+
+    var file = modbusFonctions.etat()["queue"]
+    var lecture = modbusFonctions.estLecture(paramMSG)
+
+    if (lecture)
+        var enVol = modbusFonctions.etat()["enVol"]
+        if (enVol != nil && modbusFonctions.memeLecture(enVol["paramMSG"], paramMSG))    return false    end
+        for item: file
+            if (modbusFonctions.memeLecture(item["paramMSG"], paramMSG))
+                modbusFonctions.log(string.format("ENFILE_MSG: lecture deja en file (esclave %s, registre %s), ignoree",
+                                                  str(paramMSG.find("DeviceAddress")), str(paramMSG.find("StartAddress"))), LOG_LEVEL_DEBUG_PLUS)
+                return false
+            end
+        end
+    end
+
+    if (size(file) >= modbusFonctions.MAX_FILE)
+        if (lecture)
+            modbusFonctions.log(string.format("ENFILE_MSG: file pleine (%i), lecture ecartee (esclave %s, registre %s)",
+                                              size(file), str(paramMSG.find("DeviceAddress")), str(paramMSG.find("StartAddress"))), LOG_LEVEL_ERREUR)
+            return false
+        end
+        var i = 0
+        while (i < size(file))
+            if (modbusFonctions.estLecture(file[i]["paramMSG"]))
+                file.remove(i)
+                modbusFonctions.log("ENFILE_MSG: file pleine, plus ancienne lecture evincee au profit d'une ecriture", LOG_LEVEL_ERREUR)
+                break
+            end
+            i += 1
+        end
+    end
+
+    file.push({"paramMSG": paramMSG, "typeMsg": typeMsg, "tentatives": 0})
     modbusFonctions.pompeQueue()
+    return true
 end
 modbusFonctions.enfileMsg = modbusFonctions_enfileMsg
 

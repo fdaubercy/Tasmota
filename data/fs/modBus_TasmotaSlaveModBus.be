@@ -934,6 +934,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
 
         var nb = 0
         var esclaves = drivers["ModBus"]["environnement"].find("TasmotaSlaveModBus", {})
+        var sondes = {}         # esclaves muets deja sondes pendant ce cycle (audit G3)
 
         for cleModule: modules.keys()
             if (type(modules[cleModule]) != "instance")    continue    end
@@ -955,6 +956,12 @@ class MODBUS_TASMOTA_SLAVE : Driver
                     if (type(esclave) != "instance" || esclave.find("activation", "OFF") != "ON")    continue    end
 
                     var trame = self.demandeLecture(device, famille, int(esclave["id"]))
+                    # Esclave declare muet (chien de garde) : UNE seule sonde par cycle, pas tous
+                    # ses appareils - chacun couterait MAX_TENTATIVES x timeout de bus (audit G3).
+                    if (trame != nil && self.esclavesMuets != nil && self.esclavesMuets.find(int(esclave["id"]), false))
+                        if (sondes.find(int(esclave["id"]), false))    continue    end
+                        sondes[int(esclave["id"])] = true
+                    end
                     if (trame != nil)
                         modbusFonctions.envoiMsgModbus(trame, "Commande", trame["StartAddress"])
                         nb += 1

@@ -653,6 +653,59 @@ modules = sauveModules
 drivers = sauveDrivers
 
 print("")
+print("=== 18. G3 : file du maitre dedoublonnee et plafonnee ===")
+sauveDrivers = drivers
+drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial":"ON"}, "environnement": {}}}
+# Un message en vol bloque la pompe : on observe la file seule
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 1, "FunctionCode": 6, "StartAddress": 1, "Count": 1}}
+modbusFonctions.etat()["queue"] = []
+var q = def () return modbusFonctions.etat()["queue"] end
+var lec = def (sa) return {"DeviceAddress": 3, "FunctionCode": 2, "StartAddress": sa, "Count": 1, "type": "uint8"} end
+var ecr = def (v) return {"DeviceAddress": 3, "FunctionCode": 6, "StartAddress": 256, "Count": 1, "Values": [v, 0]} end
+modbusFonctions.enfileMsg(lec(160), "Commande")
+verifie("lecture identique deja en file : ignoree", false, modbusFonctions.enfileMsg(lec(160), "Commande"))
+modbusFonctions.enfileMsg(lec(161), "Commande")
+verifie("temoin : lecture d'un autre registre enfilee", 2, size(q()))
+modbusFonctions.enfileMsg(ecr(1), "Commande")
+modbusFonctions.enfileMsg(ecr(2), "Commande")
+verifie("temoin : deux ecritures identiques gardees (ordre des commandes)", 4, size(q()))
+modbusFonctions.etat()["enVol"] = {"paramMSG": lec(170)}
+verifie("lecture identique a celle en vol : ignoree", false, modbusFonctions.enfileMsg(lec(170), "Commande"))
+# Plafond
+modbusFonctions.etat()["queue"] = []
+for i: 0 .. modbusFonctions.MAX_FILE - 1    modbusFonctions.enfileMsg(lec(1000 + i), "Commande")    end
+verifie("file pleine : lecture ecartee", "false/32", str(modbusFonctions.enfileMsg(lec(5000), "Commande")) + "/" + str(size(q())))
+verifie("file pleine : une ecriture passe en evincant la plus ancienne lecture",
+        "true/32/1001/6", str(modbusFonctions.enfileMsg(ecr(1), "Commande")) + "/" + str(size(q())) + "/" +
+        str(q()[0]["paramMSG"]["StartAddress"]) + "/" + str(q()[-1]["paramMSG"]["FunctionCode"]))
+modbusFonctions.etat()["queue"] = []
+modbusFonctions.etat()["enVol"] = nil
+drivers = sauveDrivers
+
+# Releve : un esclave muet n'est sonde qu'une fois par cycle
+sauveDrivers = drivers
+drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial":"ON"},
+           "environnement": {"TasmotaSlaveModBus": {"debug": "OFF",
+               "TasmotaSlaveModBus1": {"activation": "ON", "id": 2, "name": "cuve"},
+               "TasmotaSlaveModBus2": {"activation": "ON", "id": 3, "name": "rideau"}}}}}
+modules = appareils()
+modules["garage"]["environnement"]["interrupteurs"]["interrupteur2"] = {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus2", "type": 160, "idModBus": 2, "id": 2, "etat": "OFF"}
+modules["garage"]["environnement"]["relais"] = {"relai2": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus2", "type": 256, "idModBus": 1, "id": 2}}
+envoyes = []
+vraiEnvoi = modbusFonctions.envoiMsgModbus
+modbusFonctions.envoiMsgModbus = def (t, typeMsg, id) envoyes.push(t["DeviceAddress"]) end
+m = MaitreStub()
+m.releveEsclaves()
+verifie("temoin rideau sain : 3 demandes pour lui", 3, size(envoyes) - 1)
+envoyes = []
+m.esclavesMuets[3] = true
+m.releveEsclaves()
+verifie("rideau muet : une seule sonde, cuve inchangee", "1/1", str(envoyes.find(3) != nil ? size(envoyes) - 1 : -1) + "/" + str(size(envoyes) - 1))
+modbusFonctions.envoiMsgModbus = vraiEnvoi
+modules = sauveModules
+drivers = sauveDrivers
+
+print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
       total, total - echecs - bugs_connus, bugs_connus, echecs))
 print(echecs == 0 ? "BANC_MODBUS: OK" : "BANC_MODBUS: ECHEC")
