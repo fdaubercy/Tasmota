@@ -326,40 +326,32 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
 
         # Paramétrage Clients et Serveur ModBus TCP si activé
         if (drivers["ModBus"]["typeComm"].find("TCP", "OFF") == "ON" && serveur["tcp"].find("activation", "OFF") == "ON")
-            # Recherche l'IP de l'esclave ModBus dans la table des périphériques
-            var jsonData = json.load(gestionFileFolder.readFile("/json/discovery.json")).find(string.replace(serveur.find("adresseMAC", "000000000000"), ":", ""), {})
-            var IP = ""
-            var id = 0
+            # Un client TCP par esclave ModBus du groupe qui publie un serveur ModBus TCP.
+            # Corrige le 2026-09-30 : la boucle lisait la fiche du maitre LUI-MEME et cherchait
+            # une cle "maitre" un niveau trop bas -> avec la vraie table, aucun client n'etait cree.
+            for fiche: modbusFonctions.fichesModbus()
+                var id = fiche["ModBus"].find("id", 0)
+                var IP = isinstance(fiche["ModBus"].find("TCP", nil), map) ? str(fiche["ModBus"]["TCP"].find("IPAddress", "")) : ""
+                if (id == 0 || IP == "")    continue    end         # le maitre, ou un esclave sans ModBus TCP
 
-            # Si maitre ModBus (id == 0) ==> Se connecte en tant que client TCP à l'esclave ModBus
-            for item: jsonData.keys()
-                for cle : jsonData[item].keys()
-                    if (cle == "maitre")
-                        id = jsonData[item][cle]["ModBus"].find("id", 0)
-                        IP = jsonData[item][cle]["ModBus"]["TCP"].find("IPAddress", "")
+                # Crée l'instance du client APRES avoir lu l'id de l'esclave (corrige le
+                # 2026-09-29) : elle etait creee en tete de boucle avec l'id de
+                # l'iteration PRECEDENTE (0 au 1er tour) -> clients[id] restait nil et
+                # '.connected()' levait une exception. Tableau : esclaves id 1 a 5.
+                if (id < 1 || id >= size(modbusFonctions.etat()["clients"]))
+                    tcpFonctions.log(string.format("REGLAGE_MODBUS: id d'esclave ModBus %i hors limites (1 a %i) !", id, size(modbusFonctions.etat()["clients"]) - 1), LOG_LEVEL_ERREUR)
+                    continue
+                end
+                if (modbusFonctions.etat()["clients"][id] == nil)     modbusFonctions.etat()["clients"][id] = tcpclientasync()      end
 
-                        # Crée l'instance du client APRES avoir lu l'id de l'esclave (corrige le
-                        # 2026-09-29) : elle etait creee en tete de boucle avec l'id de
-                        # l'iteration PRECEDENTE (0 au 1er tour) -> clients[id] restait nil et
-                        # '.connected()' levait une exception. Tableau : esclaves id 1 a 5.
-                        if (id < 1 || id >= size(modbusFonctions.etat()["clients"]))
-                            tcpFonctions.log(string.format("REGLAGE_MODBUS: id d'esclave ModBus %i hors limites (1 a %i) !", id, size(modbusFonctions.etat()["clients"]) - 1), LOG_LEVEL_ERREUR)
-                            break
-                        end
-                        if (modbusFonctions.etat()["clients"][id] == nil)     modbusFonctions.etat()["clients"][id] = tcpclientasync()      end
+                # Vérifie la connexion TCP
+                if (!modbusFonctions.etat()["clients"][id].connected())
+                    # Connecte le client au serveur TCP
+                    tcpFonctions.log(string.format("REGLAGE_MODBUS: Ouverture connexion TCP [%s] sur le port %i: %s",
+                                                                IP, tcpFonctions.etat()["port"], modbusFonctions.etat()["clients"][id].connect(IP, tcpFonctions.etat()["port"]) ? "OK" : "Echec"), LOG_LEVEL_DEBUG_PLUS)
 
-                        # Vérifie la connexion TCP
-                        if (!modbusFonctions.etat()["clients"][id].connected())
-                            # Connecte le client au serveur TCP
-                            tcpFonctions.log(string.format("REGLAGE_MODBUS: Ouverture connexion TCP [%s] sur le port %i: %s", 
-                                                                        IP, tcpFonctions.etat()["port"], modbusFonctions.etat()["clients"][id].connect(IP, tcpFonctions.etat()["port"]) ? "OK" : "Echec"), LOG_LEVEL_DEBUG_PLUS)
-
-                            tasmota.delay(250)
-                        else tcpFonctions.log(string.format("Le client ModBus TCP est déjà connecté à l'esclave ModBus %i [%s]", id, IP), LOG_LEVEL_DEBUG_PLUS)
-                        end
-
-                        break
-                    end
+                    tasmota.delay(250)
+                else tcpFonctions.log(string.format("Le client ModBus TCP est déjà connecté à l'esclave ModBus %i [%s]", id, IP), LOG_LEVEL_DEBUG_PLUS)
                 end
             end
         end
@@ -771,6 +763,40 @@ def modbusFonctions_envoiMsgModbusSerial(paramMSG, typeMsg)
 end
 modbusFonctions.envoiMsgModbusSerial = modbusFonctions_envoiMsgModbusSerial
 
+# Fiches des AUTRES modules ModBus du meme groupe MQTT, lues dans /json/discovery.json.
+# Forme de la table, commune a toutes ses voies d'ecriture (discoveryFonctions.be, udpFonctions.be
+# ImAlive) : {MAC: {"maitre"|"esclaveN": fiche, "config": ..., "sensors": ..., "lwt": ...}}.
+# Retourne la liste des fiches (maps) qui portent un bloc 'ModBus' ; [] si la table est absente.
+# Groupe : une fiche publiee avant le 2026-09-30 n'a pas de 'groupTopic' -> elle est acceptee ;
+# un module sans groupTopic1 ne filtre pas.
+def modbusFonctions_fichesModbus()
+    import json
+    import string
+    import re
+    import gestionFileFolder
+
+    var fiches = []
+    var table = json.load(gestionFileFolder.readFile("/json/discovery.json"))     # fichier absent -> readFile rend false -> nil
+    if (!isinstance(table, map))    return fiches    end
+
+    var maMAC = string.replace(str(serveur.find("adresseMAC", "")), ":", "")
+    var monGroupe = serveur.find("mqtt", {}).find("groupTopic1", "")
+    var pattern = re.compile('^(maitre|esclave[0-9]+)$')
+
+    for mac: table.keys()
+        if (mac == maMAC || !isinstance(table[mac], map))    continue    end
+        for role: table[mac].keys()
+            var fiche = table[mac][role]
+            if (pattern.match(role) == nil || !isinstance(fiche, map))    continue    end
+            if (!isinstance(fiche.find("ModBus", nil), map))    continue    end
+            if (monGroupe != "" && fiche.find("groupTopic", monGroupe) != monGroupe)    continue    end
+            fiches.push(fiche)
+        end
+    end
+    return fiches
+end
+modbusFonctions.fichesModbus = modbusFonctions_fichesModbus
+
 #- Fonction d'envoi de la commande ModBus et des réponse ModBus
     par communication UDP si le paramétre est "True" dans _persist.json
     lancé après une commande 'ModBusSend' (si maitre: id == 0) OU une commande 'modbusFonctions.serialModBus.write' (si esclave: id > 0)
@@ -787,7 +813,8 @@ def modbusFonctions_envoiMsgModbusUDP(Trame, typeMsg)
     modbusFonctions.log("ENVOI_MSG_MODBUS_UDP: ------------------ envoiMsgModbusUDP ------------------", LOG_LEVEL_DEBUG)
 
     # Recherche l'IP de l'esclave ModBus dans la table des périphériques
-    var paramDiscovery = json.load(gestionFileFolder.readFile("/json/paramDiscovery.json")).find(string.replace(serveur.find("adresseMAC", "000000000000"), ":", ""), {})
+    # Corrige le 2026-09-30 : lisait '/json/paramDiscovery.json' (jamais ecrit -> exception) et
+    # sa propre fiche MAC seulement. L'IP trouvee sert a l'envoi UniCast (commente ci-dessous).
     var IP_ModBus = "192.168.4.2"
 
     # l'id du destinataire est le 1er octet de la trame ModBus
@@ -795,25 +822,13 @@ def modbusFonctions_envoiMsgModbusUDP(Trame, typeMsg)
 
     # Si maitre ModBus (id == 0)
     if (drivers["ModBus"].find("id", 99) == 0)
-        for item: paramDiscovery.keys()
-            var pattern = re.compile('^(maitre|esclave[0-9]+)$')
-            var result = {}
-
-            for cle : paramDiscovery[item].keys()
-                if pattern.match(cle)
-                    # result.insert(cle, jsonData[cle])
-
-                    if (paramDiscovery[item][cle].find("ModBus", false))
-                        if (paramDiscovery[item][cle]["ModBus"]["id"] == id)
-                            IP_ModBus = paramDiscovery[item][cle]["IPAddress"]
-                            break
-                        end
-                    end
-
-                    break
-                end
+        for fiche: modbusFonctions.fichesModbus()
+            if (fiche["ModBus"].find("id", -1) == id)
+                IP_ModBus = str(fiche.find("IPAddress", IP_ModBus))
+                break
             end
         end
+        modbusFonctions.log(string.format("ENVOI_MSG_MODBUS_UDP: IP de l'esclave d'ID=%i dans discovery.json : %s", id, IP_ModBus), LOG_LEVEL_DEBUG_PLUS)
     end
 
     # La trame part en HEXA (corrige le 2026-09-29) : Trame.tostring() donnait "bytes('...')",

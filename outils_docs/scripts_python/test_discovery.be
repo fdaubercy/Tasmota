@@ -1,0 +1,327 @@
+# Test Berry de la table de decouverte /json/discovery.json
+# -----------------------------------------------------------------------------
+# Charge les VRAIS udpFonctions.be, discoveryFonctions.be et rangeExtenderFonctions.be
+# sous des globaux bouchonnes, et verifie les lecteurs/ecrivains de la table :
+#   1-3. ImAlive (maitre) : fiche rangee sous sa MAC {MAC: {esclaveN: {...}}}, ancienne
+#        entree racine purgee, message sans MAC ignore.
+#   4.   Page /discovery : une entree sans bloc 'config', ou un ipMaitre vide, ne tronque plus la page.
+#   5.   RoutageRangeExtender : une fiche MAC sans 'lwt' ou sans bloc 'rangeExtender' ne leve plus.
+#   6.   Boutons RangeExtender : 'lwt'/'config'/'sensors' ne sont plus pris pour des fiches.
+#   7.   Bout en bout : l'esclave ecrit sa fiche, l'envoie en UDP (forceEnvoiParams) et en MQTT ;
+#        le maitre la range ; chaque champ lu par un script consommateur (CONTRAT) doit y etre.
+# Les lecteurs de modbusFonctions (clients TCP, IP UDP : fichesModbus) sont testes dans
+# banc_test_modbus.be section 6, sur la meme forme de table.
+#
+# Lancer DEPUIS LA RACINE DU DEPOT :
+#     lib/libesp32/berry/berry.exe outils_docs/scripts_python/test_discovery.be
+# Arguments optionnels : [dossier_sources] (defaut data/fs) [dossier_bouchons]
+# (defaut outils_docs/scripts_python/bouchons_berry). Temoin : lancer sur une copie de
+# l'ancien code (git show <rev>:data/fs/<f>.be) -> les tests des correctifs doivent echouer.
+# Derniere ligne : TEST_DISCOVERY: OK|ECHEC.
+#
+# Portee : logique de la table seulement. Ne teste NI l'emission UDP reelle, NI MQTT,
+# NI le rendu HTML. Ne remplace pas l'observation apres flash.
+
+import global
+import sys
+import string
+import json
+var SOURCES = size(global._argv) > 1 ? global._argv[1] : "data/fs"
+sys.path().push(size(global._argv) > 2 ? global._argv[2] : "outils_docs/scripts_python/bouchons_berry")
+
+# --- globaux fournis par le firmware sur l'appareil, bouchonnes ici ---
+var LOG_LEVEL_DEBUG = 3
+var LOG_LEVEL_DEBUG_PLUS = 4
+var LOG_LEVEL_ERREUR = 1
+var LOG_LEVEL_INFO = 2
+var journal = []
+def log(m, l) journal.push(str(m)) end
+class TasmotaStub
+  var cmds                             # commandes passees a tasmota.cmd
+  var rgxClients                       # reponse de RgxClients, pilotee par le test
+  var statusNet                        # reponse de Status 5, pilotee par le test (role joue)
+  def init()
+    self.cmds = []
+    self.rgxClients = {}
+    self.statusNet = {"IPAddress": "192.168.0.43", "Mac": "AA:AA:AA:AA:AA:00", "Hostname": "SERVEUR-GARAGE"}
+  end
+  def yield() end
+  def rtc() return {"utc": 1790000000, "local": 1790000000} end
+  def cmd(c, m)
+    self.cmds.push(c)
+    if c == "Status 5"      return {"StatusNET": self.statusNet}    end
+    if c == "RgxClients"    return {"RgxClients": self.rgxClients}    end
+    return {}
+  end
+  def resp_cmnd(x) end
+  def set_timer(a, b, c) end
+end
+var tasmota = TasmotaStub()
+var envois = []                        # datagrammes UDP qui seraient partis
+class udp
+  def begin(a, b) return true end
+  def begin_multicast(a, b) return true end
+  def send(ip, port, b) envois.push(b.asstring()) return true end
+  def send_multicast(b) envois.push(b.asstring()) return true end
+  def close() end
+end
+var boolMute = true
+var serveur = {"udp": {"id": 0, "debug": "ON", "activation": "ON"},
+               "rangeExtender": {"activation": "ON", "id": 0, "debug": "ON"},
+               "discovery": {"debug": "ON"},
+               "mqtt": {"topic": "garage", "groupTopic1": "tasmotas/garage"},
+               "hostname": "SERVEUR-GARAGE"}
+var drivers = {"ModBus": {"id": 0}}
+var diverses = {"telePeriod": 300}
+var udpFonctions = nil                 # (re)affectes par les fichiers charges
+var discoveryFonctions = nil
+var rangeExtenderFonctions = nil
+var configGlobal = nil
+
+# --- charge les vrais modules ---
+print(">>> sources testees :", SOURCES)
+def charge(nom)
+  var f = open(SOURCES + "/" + nom + ".be", "r")
+  var src = f.read()
+  f.close()
+  compile(src)()
+end
+charge("udpFonctions")
+charge("discoveryFonctions")
+charge("rangeExtenderFonctions")
+import gestionFileFolder
+import webserver
+import mqtt
+gestionFileFolder.contenu = false      # fichier absent -> false, comme le vrai readFile
+
+# --- mini-harnais d'assertions ---
+var total = 0
+var echecs = 0
+def verifie(nom, attendu, obtenu)
+  total += 1
+  var ok = (attendu == obtenu)
+  if !ok    echecs += 1    end
+  print(string.format("[%s] %-52s attendu=%s  obtenu=%s", ok ? "PASS" : "FAIL", nom, str(attendu), str(obtenu)))
+end
+# Appelle fn() : "OK", ou "EXCEPTION <type> <message>" si elle leve
+def essaie(fn)
+  try
+    fn()
+    return "OK"
+  except .. as e, m
+    return "EXCEPTION " + str(e) + " " + str(m)
+  end
+end
+def table() return json.load(gestionFileFolder.fichiers.find("/json/discovery.json", "null")) end
+def journalise(motif)
+  for l: journal    if string.find(l, motif) >= 0    return true    end    end
+  return false
+end
+
+var MAC_CUVE = "E8:06:90:11:22:33"
+var CLE_CUVE = "E80690112233"          # forme des cles de la table ET de RgxClients (xdrv_58:193)
+# Fiche d'esclave telle que discoveryFonctions.changementEtatDemarrage la construit
+def ficheCuve(avecMac)
+  var r = {"id": 2, "nom": "Capteurs de Cuve", "IPAddress": "192.168.4.2", "host": "CAPTEURS-CUVE.local",
+           "topic": "jardin/cuve", "typeReglageHeure": "UDP", "typeConnection": "RangeExtender",
+           "rangeExtender": {"activation": "ON", "id": 2, "routagePort": 8081, "ipMaitre": "192.168.0.43"},
+           "ModBus": {"activation": "ON", "id": 2, "UDP": {"activation": "ON", "IPAddress": "192.168.4.2"}}}
+  if avecMac    r["adresseMAC"] = MAC_CUVE    end
+  return {"esclave2": r}
+end
+# Bloc 'config' de la decouverte MQTT native de Tasmota (sous-ensemble utile)
+def configCuve() return {"dn": "Capteurs de Cuve", "ip": "192.168.4.2", "hn": "CAPTEURS-CUVE", "t": "jardin/cuve"} end
+# Payload tel que controleUDP le rejoue apres reception du message de l'esclave (forceEnvoiParams)
+def imAlive(fiche) return udpFonctions.reglageUDP("ReglageUDP", 0, "ImAlive " + json.dump(fiche), nil) end
+
+print("")
+print("=== 1. ImAlive, table absente ===")
+gestionFileFolder.fichiers = {}
+verifie("ImAlive ne leve pas", "OK", essaie(def () imAlive(ficheCuve(true)) end))
+var t = table()
+verifie("fiche rangee sous la MAC", true, t != nil && t.contains(CLE_CUVE) && isinstance(t[CLE_CUVE], map) && t[CLE_CUVE].contains("esclave2"))
+verifie("aucune entree racine 'esclave2'", false, t != nil && t.contains("esclave2"))
+verifie("esclave marque Online (vu en UDP)", "Online", (t != nil && t.contains(CLE_CUVE)) ? t[CLE_CUVE].find("lwt") : nil)
+verifie("heure + ipMaitre renvoyes (typeReglageHeure UDP)", 2, size(envois))
+
+print("")
+print("=== 2. ImAlive, table deja remplie par MQTT + ancienne entree racine ===")
+var init2 = {}
+init2[CLE_CUVE] = {"config": configCuve(), "lwt": "Online"}
+init2["esclave2"] = ficheCuve(true)["esclave2"]
+gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(init2)}
+verifie("ImAlive ne leve pas", "OK", essaie(def () imAlive(ficheCuve(true)) end))
+t = table()
+verifie("config MQTT preservee", "Capteurs de Cuve", t[CLE_CUVE].find("config", {}).find("dn"))
+verifie("lwt MQTT preserve", "Online", t[CLE_CUVE].find("lwt"))
+verifie("role ajoute a la fiche MAC", true, t[CLE_CUVE].contains("esclave2"))
+verifie("ancienne entree racine purgee", false, t.contains("esclave2"))
+
+print("")
+print("=== 3. ImAlive sans MAC : ignore, table intacte ===")
+var avant = gestionFileFolder.fichiers["/json/discovery.json"]
+journal = []
+verifie("ImAlive sans MAC ne leve pas", "OK", essaie(def () imAlive(ficheCuve(false)) end))
+verifie("table inchangee", true, avant == gestionFileFolder.fichiers["/json/discovery.json"])
+verifie("rejet journalise", true, journalise("sans adresse MAC"))
+
+print("")
+print("=== 4. Page /discovery avec entrees sans 'config' ===")
+var init4 = {}
+init4["esclave2"] = ficheCuve(true)["esclave2"]
+init4["AAAAAAAAAA01"] = {"config": {"dn": "Serveur", "ip": "192.168.0.43", "hn": "SERVEUR-GARAGE", "t": "garage"}, "lwt": "Online",
+                         "maitre": {"id": 0, "nom": "Serveur", "IPAddress": "192.168.0.43"}}
+init4["BBBBBBBBBB02"] = ficheCuve(true)
+gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(init4), "/sd/css/main.css": ""}
+webserver.envoye = []
+webserver.termine = false
+verifie("page ne leve pas", "OK", essaie(def () discoveryFonctions.affichePageDiscovery() end))
+verifie("page terminee (content_stop)", true, webserver.termine)
+var boutons = 0
+for s: webserver.envoye    if string.find(s, "<button class='button") >= 0    boutons += 1    end    end
+verifie("1 bouton (seule l'entree avec config)", 1, boutons)
+# Esclave RangeExtender qui n'a pas encore recu l'IP du maitre (ipMaitre vide)
+var ficheSansIpMaitre = ficheCuve(true)
+ficheSansIpMaitre["esclave2"]["rangeExtender"]["ipMaitre"] = ""
+ficheSansIpMaitre["config"] = configCuve()
+var init4b = {}
+init4b[CLE_CUVE] = ficheSansIpMaitre
+gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(init4b), "/sd/css/main.css": ""}
+webserver.envoye = []
+webserver.termine = false
+discoveryFonctions.affichePageDiscovery()
+verifie("page terminee malgre ipMaitre vide", true, webserver.termine)
+
+print("")
+print("=== 5. RoutageRangeExtender : fiche MAC sans lwt ===")
+var init5 = {}
+init5[CLE_CUVE] = ficheCuve(true)
+gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(init5)}
+tasmota.cmds = []
+verifie("routage ne leve pas (fiche sans lwt)", "OK", essaie(def () rangeExtenderFonctions.routageRangeExtender("RoutageRangeExtender", 2, "", nil) end))
+verifie("aucun routage sans lwt Online", 0, size(tasmota.cmds))
+init5[CLE_CUVE]["lwt"] = "Online"
+gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(init5)}
+tasmota.cmds = []
+essaie(def () rangeExtenderFonctions.routageRangeExtender("RoutageRangeExtender", 2, "", nil) end)
+# NB : list.find(x) cherche la VALEUR x, pas l'indice -> acces par [0]
+verifie("routage pose si lwt Online (non-regression)", "RgxPort tcp, 8081, 192.168.4.2, 80", size(tasmota.cmds) > 0 ? tasmota.cmds[0] : nil)
+# Module sans RangeExtender (pas de bloc 'rangeExtender') mais Online : pas de port de routage
+init5[CLE_CUVE]["esclave2"].remove("rangeExtender")
+gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(init5)}
+tasmota.cmds = []
+verifie("esclave sans bloc rangeExtender : sans exception", "OK", essaie(def () rangeExtenderFonctions.routageRangeExtender("RoutageRangeExtender", 2, "", nil) end))
+verifie("esclave sans bloc rangeExtender : pas de routage", 0, size(tasmota.cmds))
+
+print("")
+print("=== 6. Boutons RangeExtender : fiche MAC complete (config, sensors, lwt) ===")
+var init6 = ficheCuve(true)
+init6["config"] = configCuve()
+init6["sensors"] = {"sn": {"Time": "2026-09-30T12:00:00"}}
+init6["lwt"] = "Online"
+var table6 = {}
+table6[CLE_CUVE] = init6
+table6["AAAAAAAAAA01"] = {"maitre": {"id": 0, "nom": "Serveur", "IPAddress": "192.168.0.43"}, "lwt": "Online"}
+gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(table6)}
+tasmota.rgxClients = {}
+tasmota.rgxClients[CLE_CUVE] = {"IPAddress": "192.168.4.2", "RSSI": -60}
+tasmota.cmds = []
+webserver.envoye = []
+verifie("boutons ne levent pas (lwt chaine dans la fiche)", "OK", essaie(def () rangeExtenderFonctions.afficheBoutonsModulesEsclaves() end))
+verifie("1 bouton pour l'esclave connecte", 1, size(webserver.envoye))
+verifie("routage NAPT pose pour l'esclave", true, tasmota.cmds.find("RgxPort tcp, 8081, 192.168.4.2, 80") != nil)
+init6["lwt"] = "Offline"
+gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(table6)}
+webserver.envoye = []
+essaie(def () rangeExtenderFonctions.afficheBoutonsModulesEsclaves() end)
+verifie("aucun bouton si l'esclave est Offline", 0, size(webserver.envoye))
+gestionFileFolder.fichiers = {}
+verifie("table absente : ne leve pas", "OK", essaie(def () rangeExtenderFonctions.afficheBoutonsModulesEsclaves() end))
+
+print("")
+print("=== 7. Bout en bout : fiche ecrite par l'esclave -> UDP et MQTT -> table du maitre ===")
+# Contrat : chaque champ lu par un script consommateur doit arriver dans la table du maitre,
+# par les DEUX canaux (UDP ImAlive et decouverte MQTT retenue). Chemins relatifs a la fiche.
+var CONTRAT = {
+  "adresseMAC": "ImAlive (rangement sous la MAC), boutons RangeExtender (RgxClients)",
+  "nom": "ImAlive, routage et boutons RangeExtender",
+  "typeReglageHeure": "ImAlive (renvoi de l'heure et de ipMaitre)",
+  "IPAddress": "IP UDP (fichesModbus), routage NAPT",
+  "groupTopic": "fichesModbus (filtre par groupe)",
+  "ModBus/id": "fichesModbus (client TCP, IP UDP)",
+  "ModBus/TCP/IPAddress": "client TCP du maitre (ReglageModbus ImAlive)",
+  "ModBus/UDP/IPAddress": "voie UDP ModBus",
+  "rangeExtender/activation": "page /discovery",
+  "rangeExtender/id": "page /discovery",
+  "rangeExtender/routagePort": "routage NAPT, boutons, page",
+  "rangeExtender/ipMaitre": "page /discovery (port distant)"
+}
+def champ(fiche, chemin)
+  var v = fiche
+  for k : string.split(chemin, "/")
+    if !isinstance(v, map)    return nil    end
+    v = v.find(k, nil)
+  end
+  return v
+end
+def verifieContrat(canal, fiche)
+  var manquants = []
+  for chemin : CONTRAT.keys()    if champ(fiche, chemin) == nil    manquants.push(chemin)    end    end
+  verifie(canal + " : champs necessaires aux lecteurs", "[]", str(manquants))
+end
+
+# --- cote ESCLAVE (cuve : id 2, RangeExtender esclave, ModBus serie + UDP + TCP) ---
+serveur = {"adresseMAC": "", "nom": "Capteurs de Cuve", "IP": {"IPAddress": "0.0.0.0"}, "hostname": "CAPTEURS-CUVE",
+           "udp": {"id": 2, "activation": "ON", "debug": "ON"},
+           "rangeExtender": {"activation": "ON", "id": 2, "ipMaitre": "192.168.0.43", "debug": "ON"},
+           "mqtt": {"topic": "jardin/cuve", "groupTopic1": "tasmotas/garage"}, "discovery": {"debug": "ON"}}
+drivers = {"ModBus": {"activation": "ON", "id": 2, "debit": 19200, "mode": "8N1", "timeoutReponse": 5000,
+                      "typeComm": {"Serial": "ON", "UDP": "ON", "TCP": "ON", "MQTT": "OFF"}}}
+diverses = {"telePeriod": 300, "fuseauHoraire": {"typeReglageHeure": "UDP"}}
+tasmota.statusNet = {"IPAddress": "192.168.4.2", "Mac": MAC_CUVE, "Hostname": "CAPTEURS-CUVE"}
+gestionFileFolder.fichiers = {}
+verifie("esclave : ecriture de sa fiche (Wifi#Connected)", "OK",
+        essaie(def () discoveryFonctions.changementEtatDemarrage({"Connected": 1}, "Wifi", {"WIFI": {"Connected": 1}}) end))
+t = table()
+var ficheLocale = (t != nil) ? champ(t, CLE_CUVE + "/esclave2") : nil
+verifie("esclave : cle MAC au format RgxClients (12 hexa)", true, t != nil && t.contains(CLE_CUVE))
+verifieContrat("fiche locale", ficheLocale)
+verifie("groupTopic = groupTopic1 du persist", "tasmotas/garage", champ(ficheLocale, "groupTopic"))
+verifie("IPAddress = IP reelle (DHCP du point d'acces)", "192.168.4.2", champ(ficheLocale, "IPAddress"))
+
+# Canal UDP : forceEnvoiParams (methode d'envoi inchangee : multicast esclave)
+envois = []
+essaie(def () udpFonctions.reglageUDP("ReglageUDP", 0, "forceEnvoiParams ON", nil) end)
+verifie("esclave : 1 datagramme ImAlive emis", 1, size(envois))
+var msgUDP = size(envois) > 0 ? envois[0] : ""
+# controleUDP rejoue la commande qui suit le topic : "ReglageUDP ImAlive {...}"
+var posCmd = string.find(msgUDP, "ReglageUDP ")
+var payloadUDP = posCmd >= 0 ? msgUDP[posCmd + size("ReglageUDP ") ..] : ""
+
+# Canal MQTT : publication retenue sur tasmota/discovery/<MAC>/<role>
+mqtt.publies = []
+essaie(def () discoveryFonctions.changementEtatDemarrage({"Connected": 1}, "Mqtt", {"MQTT": {"Connected": 1}}) end)
+verifie("esclave : fiche publiee (retenue) en MQTT", "tasmota/discovery/" + CLE_CUVE + "/esclave2 retain=true",
+        size(mqtt.publies) > 0 ? mqtt.publies[0][0] + " retain=" + str(mqtt.publies[0][2]) : "rien")
+var pubMQTT = size(mqtt.publies) > 0 ? mqtt.publies[0] : ["", "null"]
+
+# --- cote MAITRE (P4 : id 0, RangeExtender maitre) : table vierge, reception par chaque canal ---
+serveur = {"adresseMAC": "AA:AA:AA:AA:AA:00", "nom": "Serveur de Garage", "IP": {"IPAddress": "192.168.0.43"}, "hostname": "SERVEUR-GARAGE",
+           "udp": {"id": 0, "activation": "ON", "debug": "ON"},
+           "rangeExtender": {"activation": "ON", "id": 0, "debug": "ON"},
+           "mqtt": {"topic": "garage", "groupTopic1": "tasmotas/garage"}, "discovery": {"debug": "ON"}}
+drivers = {"ModBus": {"id": 0}}
+tasmota.statusNet = {"IPAddress": "192.168.0.43", "Mac": "AA:AA:AA:AA:AA:00", "Hostname": "SERVEUR-GARAGE"}
+
+gestionFileFolder.fichiers = {}
+verifie("maitre : reception UDP ImAlive", "OK", essaie(def () udpFonctions.reglageUDP("ReglageUDP", 0, payloadUDP, nil) end))
+t = table()
+verifieContrat("recu par UDP", t != nil ? champ(t, CLE_CUVE + "/esclave2") : nil)
+
+gestionFileFolder.fichiers = {}
+verifie("maitre : reception MQTT discovery", true, essaie(def () discoveryFonctions.mqtt_discovery(pubMQTT[0], 0, pubMQTT[1], nil) end) == "OK")
+t = table()
+verifieContrat("recu par MQTT", t != nil ? champ(t, CLE_CUVE + "/esclave2") : nil)
+
+print("")
+print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))

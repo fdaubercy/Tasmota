@@ -144,6 +144,11 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
             jsonData[item].insert("adresseMAC", status["StatusNET"]["Mac"])
             jsonData[item].insert("host", status["StatusNET"]["Hostname"] + ".local")
             jsonData[item].insert("topic", serveur["mqtt"]["topic"])
+            # Groupe MQTT (2026-09-30) : la decouverte ecoute TOUT le broker (toutes les pieces).
+            # Les lecteurs qui cherchent un module par son id ModBus (modbusFonctions.fichesModbus)
+            # ne retiennent que les fiches de LEUR groupe, pour ne pas confondre deux esclaves
+            # de meme id installes dans deux pieces.
+            jsonData[item].insert("groupTopic", serveur["mqtt"].find("groupTopic1", ""))
             jsonData[item].insert("typeReglageHeure", diverses["fuseauHoraire"].find("typeReglageHeure", "NTP"))
 
             # Si c'est un module RangeExtender (maitre ou esclave)
@@ -511,6 +516,14 @@ def discoveryFonctions_affichePageDiscovery()
 
             discoveryFonctions.log("AFFICHE_DISCOVERY: Parcoure les modules Tasmota enregistrés sur le réseau local !", LOG_LEVEL_DEBUG_PLUS)
             for item: jsonDiscovery.keys()
+                # Une entree sans bloc 'config' (module jamais vu par la decouverte MQTT native,
+                # ou ancienne fiche ImAlive rangee a la racine) n'a ni nom ni IP a afficher :
+                # on la saute. L'acces direct levait une exception qui tronquait la page (2026-09-30).
+                if (!isinstance(jsonDiscovery[item], map) || !isinstance(jsonDiscovery[item].find("config", nil), map))
+                    discoveryFonctions.log(f"AFFICHE_DISCOVERY: - Entree '{item:s}' sans bloc 'config', ignoree", LOG_LEVEL_DEBUG_PLUS)
+                    continue
+                end
+
                 titre = jsonDiscovery[item]['config']['dn']
                 discoveryFonctions.log(f"AFFICHE_DISCOVERY: - Pour le module Tasmota '{titre:s}':", LOG_LEVEL_DEBUG_PLUS)
                 colorBTN = "bgrn"
@@ -539,7 +552,12 @@ def discoveryFonctions_affichePageDiscovery()
                                 discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * RangeExtender activé (id = {jsonDiscovery[item][role]["rangeExtender"].find("id", 0):i})', LOG_LEVEL_DEBUG_PLUS)
 
                                 portLocal = jsonDiscovery[item][role]["rangeExtender"].find("routagePort", 8080)
-                                portDistant = 10000 + int(string.split(jsonDiscovery[item][role]["rangeExtender"]["ipMaitre"], ".")[3]) + 8080 + jsonDiscovery[item][role]["rangeExtender"].find("id", 0) - 1        # portDistant = 10000 + last octet of local IP + 8080 + id - 1
+                                # ipMaitre est vide tant que l'esclave n'a pas recu 'ReglageUDP ipMaitre' du
+                                # maitre : l'indexation [3] levait alors une exception qui tronquait la page.
+                                var ipMaitre = str(jsonDiscovery[item][role]["rangeExtender"].find("ipMaitre", ""))
+                                if (size(string.split(ipMaitre, ".")) == 4)
+                                    portDistant = 10000 + int(string.split(ipMaitre, ".")[3]) + 8080 + jsonDiscovery[item][role]["rangeExtender"].find("id", 0) - 1        # portDistant = 10000 + last octet of local IP + 8080 + id - 1
+                                end
 
                                 if (typeURL == "local")
                                     IP = (jsonDiscovery[item][role]["rangeExtender"].find("ipMaitre", "") == "" ? jsonDiscovery[item][role]["rangeExtender"]["ipMaitre"] : jsonDiscovery[item][role]["rangeExtender"]["ipMaitre"])

@@ -231,8 +231,12 @@ verifie("temoin commande 0x02 : Erreur / StartAddress", "0/160", str(d["Erreur"]
 # porte son registre (sections 8 a 10).
 
 print("")
-print("=== 6. reglageModbus ImAlive : un client TCP par esclave ===")
-# Le maitre ouvre un client TCP par esclave trouve dans discovery.json.
+print("=== 6. discovery.json -> clients TCP (ImAlive) et IP UDP : vraie forme de la table ===")
+# Le maitre ouvre un client TCP par esclave de SON groupe qui publie un serveur ModBus TCP.
+# Table sous la forme que produisent ses ecrivains (discoveryFonctions, decouverte MQTT,
+# ImAlive UDP) : {MAC: {"maitre"|"esclaveN": fiche, "lwt", "config"}}. Jusqu'au 2026-09-30 ce
+# test utilisait une table a TROIS niveaux fabriquee pour le code : il etait vert alors qu'avec
+# la vraie table aucun client n'etait jamais cree.
 class ClientStub
   var ip, port
   def connected() return false end
@@ -240,24 +244,66 @@ class ClientStub
 end
 tcpclientasync = ClientStub
 import gestionFileFolder
-gestionFileFolder.contenu = '{"AABBCC": {"cuve": {"maitre": {"ModBus": {"id": 2, "TCP": {"IPAddress": "192.168.4.2"}}}}}}'
+var tableGarage = '{' +
+  '"AABBCC000000": {"lwt": "Online", "config": {"dn": "Serveur"}, "maitre": {"id": 0, "groupTopic": "tasmotas/garage", "IPAddress": "192.168.0.43", "ModBus": {"id": 0, "TCP": {"IPAddress": "192.168.0.43"}}}},' +
+  '"E80690112233": {"lwt": "Online", "config": {"dn": "Cuve"}, "esclave2": {"id": 2, "groupTopic": "tasmotas/garage", "IPAddress": "192.168.4.2", "ModBus": {"id": 2, "TCP": {"IPAddress": "192.168.4.2"}}}},' +
+  '"E80690445566": {"esclave3": {"id": 3, "groupTopic": "tasmotas/garage", "IPAddress": "192.168.4.3", "ModBus": {"id": 3, "UDP": {"IPAddress": "192.168.4.3"}}}},' +
+  '"CAFE00000002": {"esclave2": {"id": 2, "groupTopic": "tasmotas/cave", "IPAddress": "192.168.0.99", "ModBus": {"id": 2, "TCP": {"IPAddress": "192.168.0.99"}}}},' +
+  '"E80690778899": {"esclave4": {"id": 4, "IPAddress": "192.168.4.4", "ModBus": {"id": 4, "TCP": {"IPAddress": "192.168.4.4"}}}}' +
+  '}'
+gestionFileFolder.contenu = tableGarage
 var sauveDrivers = drivers
 var sauveServeur = serveur
 drivers = {"ModBus": {"typeComm": {"TCP":"ON"}, "environnement": {}, "id": 0}}
-serveur = {"tcp": {"activation":"ON"}, "udp": {"activation":"OFF"}, "adresseMAC": "AA:BB:CC"}
+serveur = {"tcp": {"activation":"ON"}, "udp": {"activation":"OFF"}, "adresseMAC": "AA:BB:CC:00:00:00",
+           "mqtt": {"groupTopic1": "tasmotas/garage"}}
 modbusFonctions.etat()["clients"] = [nil, nil, nil, nil, nil, nil]
 var r = essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "ImAlive ON", nil)
                       var c = modbusFonctions.etat()["clients"]
-                      return (c[2] != nil ? c[2].ip : "nil") + " / clients[0]=" + (c[0] == nil ? "nil" : "cree") end)
-verifie("ImAlive esclave id 2 : IP du client[2] / client[0]", "192.168.4.2 / clients[0]=nil", r)
+                      var ips = []
+                      for i : 0 .. 5    ips.push(c[i] != nil ? c[i].ip : "-")    end
+                      return ips.concat(" ") end)
+# clients[0] : pas de client vers le maitre (lui-meme) ; [2] cuve du GARAGE, pas celle de la cave ;
+# [3] sans ModBus TCP -> pas de client ; [4] fiche d'avant 'groupTopic' -> acceptee.
+verifie("ImAlive : clients TCP par id (0 a 5)", "- - 192.168.4.2 - 192.168.4.4 -", r)
 # Borne : un id hors du tableau (1 a 5) est journalise et ignore, sans exception.
-gestionFileFolder.contenu = '{"AABBCC": {"x": {"maitre": {"ModBus": {"id": 9, "TCP": {"IPAddress": "192.168.4.9"}}}}}}'
+gestionFileFolder.contenu = '{"E80690112233": {"esclave9": {"id": 9, "ModBus": {"id": 9, "TCP": {"IPAddress": "192.168.4.9"}}}}}'
 modbusFonctions.etat()["clients"] = [nil, nil, nil, nil, nil, nil]
 r = essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "ImAlive ON", nil)
                   var n = 0
                   for c : modbusFonctions.etat()["clients"]   if c != nil  n += 1  end   end
                   return "clients crees=" + str(n) end)
 verifie("ImAlive esclave id 9 (hors 1-5) : ignore sans exception", "clients crees=0", r)
+# Table absente (readFile rend false, comme le vrai module) : aucune exception, aucun client.
+gestionFileFolder.contenu = false
+modbusFonctions.etat()["clients"] = [nil, nil, nil, nil, nil, nil]
+verifie("ImAlive, discovery.json absent : sans exception", "clients crees=0",
+        essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "ImAlive ON", nil)
+                      var n = 0
+                      for c : modbusFonctions.etat()["clients"]   if c != nil  n += 1  end   end
+                      return "clients crees=" + str(n) end))
+# Recherche d'IP de l'envoi UDP (fichesModbus) : l'esclave d'id 2 du GARAGE.
+gestionFileFolder.contenu = tableGarage
+var ipsId2 = []
+for fiche : modbusFonctions.fichesModbus()    if fiche["ModBus"]["id"] == 2    ipsId2.push(fiche["IPAddress"])    end    end
+verifie("fichesModbus : id 2 = cuve du garage seule", "['192.168.4.2']", str(ipsId2))
+# Temoin : sans groupe local, pas de filtre -> la cave (meme id) reapparait.
+serveur["mqtt"]["groupTopic1"] = ""
+ipsId2 = []
+for fiche : modbusFonctions.fichesModbus()    if fiche["ModBus"]["id"] == 2    ipsId2.push(fiche["IPAddress"])    end    end
+verifie("temoin sans groupTopic1 : 2 fiches d'id 2", 2, size(ipsId2))
+serveur["mqtt"]["groupTopic1"] = "tasmotas/garage"
+# envoiMsgModbusUDP (repli quand le serie est coupe) : ne leve plus, et la METHODE d'envoi
+# est inchangee (maitre -> MultiCast via l'interface 192.168.4.1, reglee sur essais reels).
+import udpFonctions as udpStub6
+udpStub6.envois = []
+drivers = {"ModBus": {"typeComm": {"Serial":"OFF", "UDP":"ON", "TCP":"OFF"}, "environnement": {}, "id": 0}}
+serveur["udp"] = {"activation": "ON"}
+verifie("envoiMsgModbusUDP (maitre) : sans exception", "OK",
+        essaie(def () modbusFonctions.envoiMsgModbusUDP(bytes("0203000100011234"), "Commande") return "OK" end))
+verifie("envoiMsgModbusUDP : methode inchangee", "MultiCast|192.168.4.1",
+        size(udpStub6.envois) == 1 ? udpStub6.envois[0][0] + "|" + udpStub6.envois[0][1] : str(udpStub6.envois))
+gestionFileFolder.contenu = "{}"
 drivers = sauveDrivers
 serveur = sauveServeur
 modbusFonctions.etat()["clients"] = [nil, nil, nil, nil, nil, nil]

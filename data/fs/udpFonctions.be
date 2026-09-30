@@ -180,38 +180,60 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
     elif (string.toupper(fonction) == string.toupper("ImAlive") && serveur["udp"]["id"] == 0)
         # Les données avec des espaces sont coupées
         # Dans cette fonction on va les réunir
-        var tmp = json.load(parametres[0] + " " + parametres[1])
-        var paramDiscovery = json.load(gestionFileFolder.readFile("/json/discovery.json"))
+        var tmp = json.load(parametres.concat(" "))
         var device = ""
+        var mac = ""
 
-        # Mets à jour le tableau
-        if (paramDiscovery == nil)   paramDiscovery = {}      end
-        for item: tmp.keys()    device = item   end
-
-        if (paramDiscovery.insert(device, tmp[device]) == false)
-            paramDiscovery.setitem(device, tmp[device])
+        # Le message porte UNE fiche : {"esclaveN": {..., "adresseMAC": "AA:BB:..."}}
+        if (isinstance(tmp, map) && size(tmp) == 1)
+            for item: tmp.keys()    device = item   end
+            if (isinstance(tmp[device], map))
+                mac = string.replace(str(tmp[device].find("adresseMAC", "")), ":", "")
+            end
         end
 
-        # Puis enregistre le fichier
-        gestionFileFolder.writeFile("/json/discovery.json", json.dump(paramDiscovery))
-        
-        tasmota.yield()
-        udpFonctions.log("REGLAGE_UDP: Le maitre UDP a reçu les paramètres de l'esclave '" + tmp[device]["nom"] + "' !", LOG_LEVEL_DEBUG_PLUS)
+        if (mac == "")
+            udpFonctions.log("REGLAGE_UDP: ImAlive illisible ou sans adresse MAC, ignore : " + parametres.concat(" "), LOG_LEVEL_ERREUR)
+        else
+            var paramDiscovery = json.load(gestionFileFolder.readFile("/json/discovery.json"))
+            if (paramDiscovery == nil)   paramDiscovery = {}      end
 
-        if (paramDiscovery[device].find("typeReglageHeure", "NTP") == "UDP")
-            # Envoi la mise à jour de l'heure aux esclaves en MultiCast UDP
-            var message = string.format("tele/%s/%s %s %i", serveur["mqtt"]["groupTopic1"], "ReglageUDP", "Timestamp", int(tasmota.rtc()["utc"]))
-            udpFonctions.envoiUDP("MultiCast", "192.168.4.1", message)
+            # Range la fiche sous sa MAC : forme {MAC: {role: {...}}}, celle des 3 autres voies
+            # d'ecriture (discoveryFonctions.be). Corrige le 2026-09-30 : elle etait rangee a la
+            # RACINE sous son role ("esclave2"), ce qui cassait la page /discovery (acces direct
+            # a ['config']) et placait le 'lwt' de resetClientsConnectes dans la fiche du role.
+            if (!paramDiscovery.contains(mac) || !isinstance(paramDiscovery[mac], map))   paramDiscovery[mac] = {}   end
+            paramDiscovery[mac][device] = tmp[device]
 
-            # Envoi deson adresse IP aux esclaves en MultiCast UDP
-            message = string.format("tele/%s/%s %s %s", serveur["mqtt"]["groupTopic1"], "ReglageUDP", "ipMaitre", tasmota.cmd("Status 5", boolMute)["StatusNET"]["IPAddress"])
-            udpFonctions.envoiUDP("MultiCast", "192.168.4.1", message)
+            # Un ImAlive recu prouve que l'esclave est joignable en UDP : c'est le pendant de
+            # resetClientsConnectes (qui marque tout 'Offline'). Sans lui, un esclave RangeExtender
+            # qui n'atteint pas le broker n'avait jamais de 'lwt' et n'etait jamais route.
+            paramDiscovery[mac]["lwt"] = "Online"
 
-            udpFonctions.log("REGLAGE_UDP: Envoi de la mise à jour de l'heure UDP aux esclaves & son adresse IP !", LOG_LEVEL_DEBUG_PLUS)
+            # Purge l'entree racine laissee par l'ancienne version
+            if (paramDiscovery.contains(device))   paramDiscovery.remove(device)   end
+
+            # Puis enregistre le fichier
+            gestionFileFolder.writeFile("/json/discovery.json", json.dump(paramDiscovery))
+
+            tasmota.yield()
+            udpFonctions.log("REGLAGE_UDP: Le maitre UDP a reçu les paramètres de l'esclave '" + str(tmp[device].find("nom", device)) + "' !", LOG_LEVEL_DEBUG_PLUS)
+
+            if (tmp[device].find("typeReglageHeure", "NTP") == "UDP")
+                # Envoi la mise à jour de l'heure aux esclaves en MultiCast UDP
+                var message = string.format("tele/%s/%s %s %i", serveur["mqtt"]["groupTopic1"], "ReglageUDP", "Timestamp", int(tasmota.rtc()["utc"]))
+                udpFonctions.envoiUDP("MultiCast", "192.168.4.1", message)
+
+                # Envoi deson adresse IP aux esclaves en MultiCast UDP
+                message = string.format("tele/%s/%s %s %s", serveur["mqtt"]["groupTopic1"], "ReglageUDP", "ipMaitre", tasmota.cmd("Status 5", boolMute)["StatusNET"]["IPAddress"])
+                udpFonctions.envoiUDP("MultiCast", "192.168.4.1", message)
+
+                udpFonctions.log("REGLAGE_UDP: Envoi de la mise à jour de l'heure UDP aux esclaves & son adresse IP !", LOG_LEVEL_DEBUG_PLUS)
+            end
+
+            # Réponse série à la commande
+            reponse_cmnd["ReglageUDP"][str(tmp[device].find("nom", device))] = "Online"
         end
-
-        # Réponse série à la commande
-        reponse_cmnd["ReglageUDP"][tmp[device]["nom"]] = "Online"
 
     # L'esclave met à jour son horloge interne
     elif (string.toupper(fonction) == string.toupper("Timestamp") && serveur["udp"]["id"] > 0)

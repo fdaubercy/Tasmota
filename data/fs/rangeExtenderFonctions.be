@@ -73,7 +73,9 @@ def rangeExtenderFonctions_routageRangeExtender(cmd, idx, payload, payload_json)
                 # result.insert(cle, jsonDiscovery[cle])
                 # break
 
-                if (paramDiscovery[item]["lwt"] == "Online")
+                # .find : une fiche recue par ImAlive n'a pas de 'lwt' tant que la decouverte MQTT n'est pas passee.
+                # Seul un esclave RangeExtender (bloc 'rangeExtender' publie) a un port de routage.
+                if (paramDiscovery[item].find("lwt", "Offline") == "Online" && isinstance(paramDiscovery[item][cle].find("rangeExtender", nil), map))
                     # Réalilse le routage
                     rangeExtenderFonctions.log("ROUTAGE_RANGE_EXTENDER: Paramètre le routage NAPT du module " + paramDiscovery[item][cle]["nom"], LOG_LEVEL_DEBUG)
 
@@ -247,11 +249,15 @@ def rangeExtenderFonctions_afficheBoutonsModulesEsclaves()
     import gestionFileFolder
     import json
 
+    import re
+
     var rgxClients = {}
     var i = 1
+    var patternEsclave = re.compile('^esclave[0-9]+$')
 
-    # Lit le fichier json
+    # Lit le fichier json (absent ou vide -> table vide, au lieu d'un .keys() sur nil)
     var paramDiscovery = json.load(gestionFileFolder.readFile("/json/discovery.json"))
+    if (paramDiscovery == nil)    paramDiscovery = {}    end
 
     tasmota.yield()
 
@@ -272,19 +278,25 @@ def rangeExtenderFonctions_afficheBoutonsModulesEsclaves()
                 for cle: paramDiscovery.keys()
                     tasmota.yield()
 
-                    # Evite le maitre
+                    # Ne retient que les fiches d'esclaves (evite le maitre). Une fiche MAC porte aussi
+                    # 'config', 'sensors' (maps) et 'lwt' (chaine) : appeler .find sur 'lwt' levait
+                    # une exception qui interrompait l'affichage des boutons (corrige le 2026-09-30).
+                    if (!isinstance(paramDiscovery[cle], map))    continue    end
                     for item: paramDiscovery[cle].keys()
-                        if (paramDiscovery[cle][item] != nil && item != "maitre")
+                        if (patternEsclave.match(item) != nil && isinstance(paramDiscovery[cle][item], map))
                             var adresseMac = string.replace(paramDiscovery[cle][item].find("adresseMAC", ""), ":", "")
                             var etat = paramDiscovery[cle].find("lwt", "Offline")
 
                             if (adresseMac == mac && etat == "Online")
-                                var url = "http://" + serveur["hostname"] + ".local:" + str(paramDiscovery[cle][item]["rangeExtender"].find("routagePort", 8080))
-                                var titre = paramDiscovery[cle][item]["nom"]
+                                # .find : un module sans RangeExtender (pas de bloc) peut etre client du point d'acces
+                                var routagePort = paramDiscovery[cle][item].find("rangeExtender", {}).find("routagePort", 8080)
+                                var ipEsclave = str(paramDiscovery[cle][item].find("IPAddress", "192.168.4.1"))
+                                var url = "http://" + serveur["hostname"] + ".local:" + str(routagePort)
+                                var titre = str(paramDiscovery[cle][item].find("nom", item))
 
                                 # Active le routage NAPT si pas encore fait
-                                rangeExtenderFonctions.log(f'RANGE_EXTENDER: Active le routage NAPT vers le module {titre:s} sur le port {paramDiscovery[cle][item]["rangeExtender"].find("routagePort", 8080):d} !', LOG_LEVEL_DEBUG)
-                                tasmota.cmd(f'RgxPort tcp, {paramDiscovery[cle][item]["rangeExtender"].find("routagePort", 8080):d}, {paramDiscovery[cle][item].find("IPAddress", "192.168.4.1"):s}, 80', boolMute)
+                                rangeExtenderFonctions.log(f'RANGE_EXTENDER: Active le routage NAPT vers le module {titre:s} sur le port {routagePort:d} !', LOG_LEVEL_DEBUG)
+                                tasmota.cmd(f'RgxPort tcp, {routagePort:d}, {ipEsclave:s}, 80', boolMute)
 
                                 # Ouverture de la page dans un nouvel onglet
                                 var btn = "<p></p><button class=\"button bgrn\" id=\"btn_test\" onclick=\"setTimeout(() => {window&#46;open(\'" + url + "\');}, 1000);\">" + titre + "</button>"
