@@ -147,9 +147,70 @@
 **Banc après correctifs : 104/104.** Rien n'est encore testé sur bus réel : recompiler les 4 envs.
 Restent ouverts : S1 (secrets, décision utilisateur), G4, G6, G8, latents L1-L13.
 
-**À observer au premier flash** (log niveau 4) :
-- `ENFILE_MSG: lecture deja en file` : attendu seulement si un esclave est lent ou muet ;
-- `ENFILE_MSG: file pleine` : ne doit **jamais** apparaître en régime normal ;
-- `MODBUS_TASMOTA_SLAVE_ERREUR` : signale un appareil virtuel incomplet dans le persist (à corriger dans la config) ;
-- `SUR_TIMEOUT` sur le P4 : doit arriver ~5 s après l'envoi, plus au hasard ;
-- côté esclave, plus aucun `Message ModBus reçu avec erreur` en rafale quand la carte 16 relais est interrogée.
+**À observer au premier flash → grille complète : section 6 ci-dessous.**
+
+---
+
+## 6. Grille d'observation au premier flash (garage)
+
+> Grille **unique** : remplace celles du document de reprise (2026-07-24 et compléments du
+> 2026-09-29). Chaînes de log extraites du code au 2026-09-30.
+
+### 0. Préparation
+
+- Flasher **firmware + LittleFS** sur les 3 cartes (P4 maître, cuve id 2, rideau id 3) : tout
+  est solidifié, un `uploadfs` seul ne suffit pas.
+- Les 3 persist ont déjà `debug = ON` pour ModBus, TasmotaSlaveModBus et Conn16channels.
+- Sur chaque carte : `ReglageGlobal logLevel 4` (ou `Weblog 4`), puis ouvrir la console.
+
+### 1. Au démarrage (chaque carte)
+
+| À vérifier | Où | Attendu |
+|---|---|---|
+| B1 : `controleModbus` démarre | les 3 | ❌ **aucun** `attribute_error` ni `writable attribute` au log de boot ; `Br global.contains("controleModbus")` → `true` |
+| Port RS485 ouvert (esclaves) | cuve, rideau | `Br modbusFonctions.etat()["serialModBus"]` → une instance `serial`, **pas** `nil` (l'ouverture est silencieuse au log) |
+| Reste de l'autoexec chargé | les 3 | aucun `undeclared` ; `Br global.contains("controleDiscovery")` → `true` si discovery activé |
+| Relevé armé | P4 | `Releve des esclaves + chien de garde armes (toutes les 30 s)` |
+
+### 2. Régime normal (laisser tourner 5 min)
+
+| À vérifier | Où | Attendu |
+|---|---|---|
+| Relevé des esclaves | P4, toutes les 30 s | `MODBUS_TASMOTA_SLAVE_RELEVE: 6 demande(s)` (cuve : thermomètre + analogique ; rideau : 2 interrupteurs + 2 relais) |
+| Sondage carte 16 relais | P4, toutes les 30 s | `MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: Type de msg Modbus` |
+| Cavalier M0 (carte 16) | P4, 1ʳᵉ réponse | 16 `ECART voie …` d'un coup → M0 connecté : poser `"cavalierM0":"connecte"` dans `drivers.ModBus.environnement.Conn16channels` |
+| Constat des relais du rideau | P4 | `Etat constate du relai n°2: …` et `n°3` ; ❌ **aucun** `MODBUS_TASMOTA_SLAVE_ECART` si personne n'a touché aux relais |
+| **G2 + G1 : les esclaves répondent** | P4 | ❌ `SUR_TIMEOUT: pas de reponse dans le delai imparti` **rare ou absent** ; s'il apparaît, l'horodatage doit tomber **~5 s** après l'envoi (G1), plus au hasard |
+| Esclaves servent les requêtes | cuve, rideau | `EXECUTE_CMD_MODBUS: …` à chaque relevé. ⚠️ `Ce n'est pas un message pour ce module !` puis `Message ModBus reçu avec erreur` = **normal** : trames adressées aux autres nœuds du bus |
+| Appariement | P4 | ❌ ne doit **pas** apparaître : `APPARIE_REPONSE: reponse hors-sequence rejetee` |
+| G3 : file bornée | P4 | ❌ **jamais** `ENFILE_MSG: file pleine` ; `ENFILE_MSG: lecture deja en file` seulement si un esclave est lent/muet |
+| G5 : persist complet | P4 | ❌ aucun `MODBUS_TASMOTA_SLAVE_ERREUR` (sinon : appareil virtuel incomplet dans le persist, le message dit lequel) |
+
+### 3. Actions à faire
+
+| Action | Attendu |
+|---|---|
+| Commander un relais du rideau depuis le P4 (ex. `Power2 ON`) | rideau : `EXECUTE_CMD_MODBUS: Commande le 256: …` et **le relais bascule physiquement** ; P4 au relevé suivant : `Etat constate du relai n°2: ON`, **pas** d'ECART |
+| Basculer un interrupteur du rideau | rideau : `POUSSE_ETAT: registre 160 = [...] -> maitre (UDP, seq N)` ; P4 **dans la seconde** : `Réception de l'état de l'interrupteur n°1: …` (sans attendre le relevé) |
+| Redémarrer le rideau, puis basculer un interrupteur | rideau : `(UDP, seq 1)` ; P4 : `ACCEPTE_SEQ: esclave d'ID=3 redemarre (seq 1 apres N)` |
+
+### 4. Tests de panne
+
+| Action | Attendu |
+|---|---|
+| Débrancher le rideau (alim ou RS485) 2 min | P4 sous 90-120 s : `MODBUS_TASMOTA_SLAVE_CHIEN_DE_GARDE: esclave TasmotaSlaveModBus2 (ID=3) muet depuis … s` **une seule fois** ; puis `RELEVE: 3 demande(s)` (G3 : une seule sonde pour le rideau) ; ❌ jamais `file pleine` ; la carte 16 continue d'être sondée |
+| Rebrancher le rideau | P4 : `MODBUS_TASMOTA_SLAVE_CHIEN_DE_GARDE: l'esclave d'ID=3 repond de nouveau` ; relevé revenu à 6 |
+| Débrancher le RS485 de la carte 16 ~90 s | P4 : `MODBUS_CONN_16CH_CHIEN_DE_GARDE: … etats constates passes a 'inconnu'` |
+
+### 5. Découverte (`/json/discovery.json`) — correctifs du 2026-09-30
+
+| À vérifier | Où | Attendu |
+|---|---|---|
+| Point d'accès RangeExtender monté | P4 | `RgxState` → `ON`, `RgxSSId` → `SERVEUR-GARAGE-GATEWAY` (le multicast du maître part par `192.168.4.1`) |
+| Multicast émis | cuve, rideau | `ENVOI_MSG_UDP: Données MultiCast envoyées … >>>> OK` (log UDP, `debug` ON) |
+| `ImAlive` reçu et rangé | P4 | `REGLAGE_UDP: Le maitre UDP a reçu les paramètres de l'esclave 'Capteurs de Cuve'` ; ❌ jamais `ImAlive illisible ou sans adresse MAC` |
+| Forme de la table | P4 | télécharger `/json/discovery.json` : clés **MAC** (12 hexa) seulement, **aucune** clé `esclaveN` à la racine ; chaque fiche d'esclave porte `groupTopic` = `tasmotas/garage` |
+| Page `/discovery` | P4 | page **complète** (boutons Tools / Menu principal en bas) après le premier `ImAlive` |
+
+**Si un point échoue** : noter la ligne de la grille, copier ~30 lignes de log autour. C'est ce
+qui départage un défaut de code d'un défaut de câblage.

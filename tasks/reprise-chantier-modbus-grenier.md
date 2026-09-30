@@ -88,6 +88,10 @@ au mauvais endroit, annulées — voir `tasks/lessons.md`). Les 3 cibles sont
 
 ## LA PROCHAINE ACTION — flasher et observer
 
+> **2026-09-30 : la grille à suivre est désormais UNIQUE, dans
+> `outils_docs/AUDIT_MODBUS_2026-09-29.md` section 6** (préparation, boot, régime normal,
+> actions, pannes). Les grilles ci-dessous sont historiques.
+
 **14 commits sont posés sur `chantier-modbus-grenier` (de `6a79ce3f4` à `367fedc94`),
 fusionnés et publiés depuis (voir la mise à jour du 2026-09-29), et AUCUN n'a jamais été
 exercé sur un bus réel.** Trois changent un
