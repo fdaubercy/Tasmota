@@ -3,8 +3,10 @@
 Principe : ce script ouvre un port serie et sert son flux sur 127.0.0.1:<tcp>, a la fois :
   - en TCP brut : extension VS Code « Serial Monitor » (mode TCP), PuTTY (Raw), ncat... ;
   - en HTTP, SUR LE MEME PORT : http://127.0.0.1:<tcp> dans un navigateur (pont_serie_web.py :
-    logs en direct, filtre, envoi de commandes, choix du port et de la vitesse, bouton
-    Demarrer/Arreter du port serie). Une requete HTTP est reconnue a ses premiers octets.
+    logs en direct, filtre, choix du port et de la vitesse, bouton Demarrer/Arreter du port
+    serie ; envoi en Texte (fin de ligne au choix), Hex ou Binaire (CRC ModBus en option) et
+    reception affichee en Texte ou en Hex, sur le modele du moniteur serie de VS Code).
+    Une requete HTTP est reconnue a ses premiers octets.
 Ce que tapent les clients repart vers la carte. Plusieurs clients peuvent etre connectes a la fois.
 
 Le serveur reste en marche quand le port serie est ferme : « Arreter » sur la page LIBERE le
@@ -101,7 +103,8 @@ class Pont:
         self.port_tcp = port_tcp
         self.clients = []                                   # clients TCP bruts (Serial Monitor...)
         self.clients_web = []                               # navigateurs (flux SSE)
-        self.historique = collections.deque(maxlen=500)     # derniers morceaux, pour un nouveau navigateur
+        self.historique = collections.deque(maxlen=1500)    # derniers evenements SSE (texte, notes, octets),
+                                                            # rejoues a un nouveau navigateur
         self.verrou = threading.Lock()
 
     # ------------------------------------------------------------------ port serie
@@ -172,6 +175,7 @@ class Pont:
                 continue
             if not brut:
                 continue
+            self.diffuse_octets(brut)
             texte = brut.decode("utf-8", "replace")
             if self.journal:
                 self.journal.write(texte)
@@ -189,18 +193,26 @@ class Pont:
             except OSError:
                 liste.remove(client)
 
-    def diffuse(self, colore):
+    def diffuse(self, colore, note=False):
+        """Texte -> clients TCP bruts et pages. note=True : message du pont, visible dans les deux vues de la page."""
         # xterm.js veut CR+LF pour revenir en debut de ligne ; le navigateur recoit le texte tel quel
         brut = colore.replace("\r\n", "\n").replace("\n", "\r\n").encode("utf-8")
+        evenement = (pont_serie_web.evenement_note if note else pont_serie_web.evenement_sse)(colore)
         with self.verrou:
-            self.historique.append(colore)
+            self.historique.append(evenement)
             self._envoie(self.clients, brut)
-            if self.clients_web:
-                self._envoie(self.clients_web, pont_serie_web.evenement_sse(colore))
+            self._envoie(self.clients_web, evenement)
+
+    def diffuse_octets(self, octets):
+        """Octets bruts recus -> pages seulement (vue Reception = Hex) ; les clients TCP les ont deja en texte."""
+        evenement = pont_serie_web.evenement_octets(octets)
+        with self.verrou:
+            self.historique.append(evenement)
+            self._envoie(self.clients_web, evenement)
 
     def annonce(self, message):
         """Message du pont (hors flux de la carte) + nouvel etat pousse a toutes les pages ouvertes."""
-        self.diffuse(f"\x1b[1m\x1b[96m[pont] {message}\x1b[0m\n")
+        self.diffuse(f"\x1b[1m\x1b[96m[pont] {message}\x1b[0m\n", note=True)
         etat = pont_serie_web.evenement_etat(self.etat())
         with self.verrou:
             self._envoie(self.clients_web, etat)
@@ -210,7 +222,7 @@ class Pont:
         with self.verrou:
             client.sendall(etat)
             if self.historique:
-                client.sendall(pont_serie_web.evenement_sse("".join(self.historique)))
+                client.sendall(b"".join(self.historique))
             self.clients_web.append(client)
 
     def desinscrit_web(self, client):

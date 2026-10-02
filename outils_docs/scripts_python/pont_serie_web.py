@@ -2,11 +2,17 @@
 
 Le pont reconnait une requete HTTP a ses premiers octets ("GET ", "POST") et la confie ici :
     GET  /        page des logs colores + commandes du port serie (http://127.0.0.1:7000)
-    GET  /flux    flux en direct (Server-Sent Events) : etat du port, 500 derniers morceaux, puis la suite
+    GET  /flux    flux en direct (Server-Sent Events) : etat du port, historique, puis la suite.
+                  Evenements : message (texte colore), 'note' (messages du pont, echo des envois),
+                  'octets' (octets bruts recus, en hexa : vue Reception = Hex), 'etat'.
     GET  /etat    etat du port serie + ports presents (reliste les ports a chaque appel)
     POST /ouvrir  corps JSON {"port": "COM11", "vitesse": 115200} : ouvre (ou rouvre) le port serie
     POST /fermer  ferme le port serie (le libere pour un flash) ; le serveur et la page restent en marche
-    POST /cmd     corps = commande Tasmota, transmise a la carte (ex. "Status 4")
+    POST /cmd     corps = commande Tasmota, transmise a la carte (ex. "Status 4") suivie de \\n
+    POST /envoi   corps JSON, sur le modele du moniteur serie de VS Code :
+                  {"mode": "texte", "donnees": "Status 4", "finLigne": "aucune|LF|CR|CRLF"}
+                  {"mode": "hex", "donnees": "01 06 00 01 01 00", "crc": true}   (CRC16 ModBus ajoute)
+                  {"mode": "binaire", "donnees": "00000001 00000110", "crc": false}
 
 Securite : le pont n'ecoute que sur 127.0.0.1. Contre une page web malveillante qui viserait
 127.0.0.1:7000 depuis le navigateur, chaque POST exige l'en-tete 'X-Pont: 1' (un en-tete personnalise
@@ -14,6 +20,12 @@ declenche une requete CORS preliminaire, a laquelle on ne repond pas) et refuse 
 """
 
 import json
+import re
+import string
+import time
+
+FINS_LIGNE = {"aucune": b"", "LF": b"\n", "CR": b"\r", "CRLF": b"\r\n"}
+MAX_ENVOI = 1024        # octets par envoi
 
 PAGE = """<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><title>Pont serie</title>
@@ -42,7 +54,13 @@ PAGE = """<!doctype html>
  <span><span class="pastille" id="pastillePort"></span><span id="infoPort">port ferme</span></span>
 </div>
 <div class="barre">
- <input id="cmd" placeholder="Commande Tasmota (Entree pour envoyer), ex. Status 4" autocomplete="off">
+ <select id="modeEnvoi" title="format de la saisie envoyee"><option value="texte">Texte</option><option value="hex">Hex</option><option value="binaire">Binaire</option></select>
+ <input id="cmd" autocomplete="off" title="Entree pour envoyer ; fleches haut/bas : historique">
+ <select id="finLigne" title="fin de ligne ajoutee en mode Texte"><option value="aucune">Aucune</option><option value="LF" selected>LF</option><option value="CR">CR</option><option value="CRLF">CRLF</option></select>
+ <label id="blocCrc" title="ajoute les 2 octets du CRC16 ModBus a la fin"><input type="checkbox" id="crc"> CRC ModBus</label>
+</div>
+<div class="barre">
+ <label>Reception <select id="recep" title="affichage des octets recus"><option value="texte">Texte</option><option value="hex">Hex</option></select></label>
  <input id="filtre" placeholder="filtre (texte)" size="14">
  <label><input type="checkbox" id="suivre" checked> defilement auto</label>
  <button id="effacer">Effacer</button>
@@ -51,7 +69,13 @@ PAGE = """<!doctype html>
 <script>
 const $=id=>document.getElementById(id);
 const logs=$('logs'),suivre=$('suivre'),filtre=$('filtre'),selPort=$('port'),selVitesse=$('vitesse'),bascule=$('bascule'),cmd=$('cmd');
-let classes=[],reste='',etat={ouvert:false};
+const modeEnvoi=$('modeEnvoi'),finLigne=$('finLigne'),crc=$('crc'),recep=$('recep');
+let classes=[],reste='',etat={ouvert:false},tampon=[],historique=[],posHisto=0;
+const AIDES={texte:'Commande Tasmota (Entree pour envoyer), ex. Status 4',
+  hex:'Octets en hexadecimal (Entree pour envoyer), ex. 01 06 00 01 01 00',
+  binaire:'Octets en binaire (Entree pour envoyer), ex. 00000001 00000110'};
+function lit(cle,defaut){try{return localStorage.getItem('pont.'+cle)||defaut;}catch(e){return defaut;}}
+function ecrit(cle,valeur){try{localStorage.setItem('pont.'+cle,valeur);}catch(e){}}
 function echappe(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function enHtml(t){  // codes ANSI SGR -> <span class=...>
   let h='',i=0;const re=/\\x1b\\[([0-9;]*)m/g;let m;
@@ -68,6 +92,19 @@ function ajoute(texte){
   frag.innerHTML=h;logs.appendChild(frag);
   while(logs.childNodes.length>3000)logs.removeChild(logs.firstChild);
   if(suivre.checked)logs.scrollTop=logs.scrollHeight;}
+function enHex(o){  // octets recus -> lignes de 16 octets : heure, hexa, ASCII
+  const oct=o.hex.match(/../g)||[];let s='';
+  for(let i=0;i<oct.length;i+=16){const p=oct.slice(i,i+16);
+    const asc=p.map(x=>{const c=parseInt(x,16);return c>=32&&c<127?String.fromCharCode(c):'.';}).join('');
+    s+='\\x1b[90m'+o.t+'\\x1b[0m \\x1b[92mRX\\x1b[0m '+p.join(' ').toUpperCase().padEnd(47)+'  |'+asc+'|\\n';}
+  return s;}
+// k : 'm' texte de la carte, 'n' note du pont (toujours visible), 'o' octets bruts (vue Hex)
+function visible(k){return k==='n'||(k==='m')===(recep.value==='texte');}
+function affiche(k,d){ajoute(k==='o'?enHex(d):d);}
+function recoit(k,d){tampon.push([k,d]);if(tampon.length>6000)tampon.splice(0,1000);if(visible(k))affiche(k,d);}
+function redessine(){logs.innerHTML='';classes=[];reste='';for(const [k,d] of tampon)if(visible(k))affiche(k,d);}
+function majModeEnvoi(){const m=modeEnvoi.value;cmd.placeholder=AIDES[m];
+  finLigne.style.display=m==='texte'?'':'none';$('blocCrc').style.display=m==='texte'?'none':'';}
 function remplitPorts(e){
   const choisi=selPort.value||e.port;selPort.innerHTML='';
   const ports=e.ports.slice();
@@ -97,12 +134,25 @@ bascule.onclick=()=>{bascule.disabled=true;
 $('rafraichir').onclick=releve;
 selPort.addEventListener('focus',()=>{if(!etat.ouvert)releve();});
 selPort.addEventListener('change',()=>{bascule.disabled=!selPort.value;});
-cmd.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const v=cmd.value.trim();if(!v)return;
-  poste('/cmd',v).then(ok=>{if(ok)cmd.value='';});});
-$('effacer').onclick=()=>{logs.innerHTML='';};
+cmd.addEventListener('keydown',e=>{
+  if(e.key==='ArrowUp'||e.key==='ArrowDown'){if(!historique.length)return;e.preventDefault();
+    posHisto=Math.max(0,Math.min(historique.length,posHisto+(e.key==='ArrowUp'?-1:1)));
+    cmd.value=historique[posHisto]||'';return;}
+  if(e.key!=='Enter')return;const v=cmd.value;if(!v.trim())return;
+  const corps={mode:modeEnvoi.value,donnees:v,finLigne:finLigne.value,crc:crc.checked};
+  poste('/envoi',JSON.stringify(corps)).then(ok=>{if(!ok)return;
+    if(historique[historique.length-1]!==v)historique.push(v);if(historique.length>100)historique.shift();
+    posHisto=historique.length;cmd.value='';});});
+for(const [el,cle] of [[modeEnvoi,'mode'],[finLigne,'fin'],[recep,'recep']]){el.value=lit(cle,el.value);
+  el.addEventListener('change',()=>{ecrit(cle,el.value);if(el===recep)redessine();else majModeEnvoi();cmd.focus();});}
+crc.checked=lit('crc','0')==='1';crc.addEventListener('change',()=>ecrit('crc',crc.checked?'1':'0'));
+majModeEnvoi();
+$('effacer').onclick=()=>{logs.innerHTML='';tampon=[];classes=[];reste='';};
 function connecte(){const es=new EventSource('/flux');
   es.onopen=()=>{$('etatWeb').textContent='pont connecte';$('pastilleWeb').style.background='#23d18b';};
-  es.onmessage=e=>ajoute(JSON.parse(e.data));
+  es.onmessage=e=>recoit('m',JSON.parse(e.data));
+  es.addEventListener('note',e=>recoit('n',JSON.parse(e.data)));
+  es.addEventListener('octets',e=>recoit('o',JSON.parse(e.data)));
   es.addEventListener('etat',e=>appliqueEtat(JSON.parse(e.data)));
   es.onerror=()=>{$('etatWeb').textContent='pont injoignable';$('pastilleWeb').style.background='#f14c4c';};}
 connecte();
@@ -157,6 +207,84 @@ def evenement_etat(etat):
     return f"event: etat\ndata: {json.dumps(etat)}\n\n".encode("utf-8")
 
 
+def evenement_note(texte):
+    """Message du pont (etat du port, echo d'un envoi) : affiche quelle que soit la vue de reception."""
+    return f"event: note\ndata: {json.dumps(texte)}\n\n".encode("utf-8")
+
+
+def evenement_octets(octets):
+    """Octets bruts recus, horodates a la milliseconde -> evenement SSE 'octets' (vue Reception = Hex)."""
+    instant = time.time()
+    heure = time.strftime("%H:%M:%S", time.localtime(instant)) + f".{int(instant % 1 * 1000):03d}"
+    return f"event: octets\ndata: {json.dumps({'t': heure, 'hex': octets.hex()})}\n\n".encode("utf-8")
+
+
+# ---------------------------------------------------------------------- envoi (texte / hex / binaire)
+def crc_modbus(octets):
+    """CRC16 ModBus (polynome 0xA001, depart 0xFFFF), octet de poids faible en premier."""
+    crc = 0xFFFF
+    for octet in octets:
+        crc ^= octet
+        for _ in range(8):
+            crc = (crc >> 1) ^ 0xA001 if crc & 1 else crc >> 1
+    return bytes((crc & 0xFF, crc >> 8))
+
+
+def _jetons(texte):
+    return [jeton for jeton in re.split(r"[\s,;:]+", texte.strip()) if jeton]
+
+
+def octets_hex(texte):
+    """'01 06 0001', '0x01,0x06', '1 6' -> octets. Un jeton de plus de 2 chiffres doit en avoir un nombre pair."""
+    resultat = bytearray()
+    for jeton in _jetons(texte):
+        chiffres = jeton[2:] if jeton.lower().startswith("0x") else jeton
+        if not chiffres or any(c not in string.hexdigits for c in chiffres) or (len(chiffres) > 2 and len(chiffres) % 2):
+            raise ValueError(f"hexadecimal invalide : '{jeton}'")
+        resultat += bytes.fromhex(chiffres.zfill(2))
+    return bytes(resultat)
+
+
+def octets_binaires(texte):
+    """'00000001 00000110', '0b101' -> octets. Un jeton de plus de 8 bits doit en avoir un multiple de 8."""
+    resultat = bytearray()
+    for jeton in _jetons(texte):
+        bits = jeton[2:] if jeton.lower().startswith("0b") else jeton
+        if not bits or set(bits) - {"0", "1"} or (len(bits) > 8 and len(bits) % 8):
+            raise ValueError(f"binaire invalide : '{jeton}' (groupes de 8 bits au plus)")
+        resultat += bytes(int(bits[i:i + 8], 2) for i in range(0, len(bits), 8)) if len(bits) > 8 else bytes((int(bits, 2),))
+    return bytes(resultat)
+
+
+def prepare_envoi(demande):
+    """Corps JSON de /envoi -> (octets a ecrire, description pour l'echo). ValueError si la saisie est invalide."""
+    if not isinstance(demande, dict):
+        raise ValueError("corps JSON attendu")
+    mode, donnees = demande.get("mode", "texte"), str(demande.get("donnees", ""))
+    if mode == "texte":
+        nom_fin = demande.get("finLigne", "LF")
+        if nom_fin not in FINS_LIGNE:
+            raise ValueError(f"fin de ligne inconnue : {nom_fin}")
+        texte = donnees.replace("\r", " ").replace("\n", " ")
+        octets = texte.encode("utf-8") + FINS_LIGNE[nom_fin]
+        description = f"texte : {texte}" + (f" + {nom_fin}" if FINS_LIGNE[nom_fin] else "")
+    elif mode in ("hex", "binaire"):
+        octets = octets_hex(donnees) if mode == "hex" else octets_binaires(donnees)
+        if not octets:
+            raise ValueError("aucun octet a envoyer")
+        suite = ""
+        if demande.get("crc") is True:
+            somme = crc_modbus(octets)
+            octets += somme
+            suite = f", CRC ModBus {somme.hex(' ').upper()} ajoute"
+        description = f"{mode} : {octets.hex(' ').upper()} ({len(octets)} octets{suite})"
+    else:
+        raise ValueError(f"mode inconnu : {mode} (texte, hex ou binaire)")
+    if not octets or len(octets) > MAX_ENVOI:
+        raise ValueError(f"envoi vide ou trop long (1 a {MAX_ENVOI} octets)")
+    return octets, description
+
+
 def _autorise(entetes, port_tcp):
     """POST accepte seulement depuis la page du pont (en-tete X-Pont, meme origine)."""
     origine = entetes.get("origin", "")
@@ -185,7 +313,7 @@ def traite(pont, client, port_tcp):
         except OSError:
             pass
         pont.desinscrit_web(client)
-    elif methode == "POST" and chemin in ("/ouvrir", "/fermer", "/cmd"):
+    elif methode == "POST" and chemin in ("/ouvrir", "/fermer", "/cmd", "/envoi"):
         if not _autorise(entetes, port_tcp):
             _texte(client, "403 Forbidden", "refuse")
             return
@@ -202,6 +330,18 @@ def traite(pont, client, port_tcp):
                 return
             ok, message = pont.ouvre(port, vitesse)
             _texte(client, "200 OK" if ok else "409 Conflict", message)
+        elif chemin == "/envoi":
+            try:
+                octets, description = prepare_envoi(json.loads(corps.decode("utf-8") or "{}"))
+            except (ValueError, TypeError) as erreur:      # JSONDecodeError herite de ValueError
+                _texte(client, "400 Bad Request", str(erreur))
+                return
+            if not pont.ecrit(octets):
+                _texte(client, "409 Conflict", "port serie ferme : cliquer sur Demarrer")
+                return
+            print(f"envoi web -> carte : {description}")
+            pont.diffuse(f"\x1b[95m[envoi] {description}\x1b[0m\n", note=True)
+            _reponse(client, "204 No Content")
         else:
             commande = corps.decode("utf-8", "replace").strip().replace("\r", " ").replace("\n", " ")
             if commande and not pont.ecrit((commande + "\n").encode("utf-8")):
