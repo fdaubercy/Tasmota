@@ -230,6 +230,15 @@ Prise en compte a chaud, sans redemarrer VS Code.
   serie de builds experimentaux.
 - **Ne jamais lancer un build en parallele de celui de l'utilisateur** : deux `pio` ecrivant
   `tasmota/tasmota.ino.cpp` se plantent mutuellement.
+- **IntelliSense ne doit jamais se reconstruire pendant un build** (constate le 2026-10-01) :
+  `scons __idedata`, lance par l'extension PlatformIO/pioarduino quand `platformio_override.ini`
+  change, execute `pio-tools/solidify-from-url.py`, dont `cleanFolder()` efface les
+  `_temp_be_*.c` et reecrit `modules.h` de `lib/libesp32/berry_custom` pour l'env actif de
+  l'IDE. Symptome : `TypeError : unsupported operand type(s) for -: 'float' and 'NoneType'`
+  sur un `_temp_be_<module>_lib.c` ; pire, un build peut reussir avec la table de modules d'un
+  autre env. Parade : `"platformio-ide.autoRebuildAutocompleteIndex": false` dans le **profil
+  VS Code actif** (non versionne, voir « MONTER UN NOUVEAU POSTE »). Index a reconstruire a la
+  main, hors build.
 - Pour surveiller un build en redirigeant la sortie, poser `PYTHONIOENCODING=utf-8` :
   sinon Python passe en cp1252, le `✔` du script pre-build tue le thread de recopie de pio,
   et **toute** la sortie est perdue. Ne pas « corriger » le script de l'utilisateur pour ca.
@@ -260,6 +269,8 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   Berry (3 transports, carte 16 relais, ESP32<->ESP32, push esclave->maitre) + audit de la
   table `/json/discovery.json` : formes ecrites/lues, 3 defauts bloquants la resolution
   d'IP en UDP, et tableau des elements restant a parametrer (importance/priorite/difficulte).
+  §2.6 : cycle `forceEnvoiParams` -> `ImAlive` (presentation esclave -> maitre, usages de la
+  table cote maitre, piege de la carte reaffectee) ; resume en tete de `data/fs/udpFonctions.be`.
 - `outils_docs/AUDIT_MODBUS_2026-09-29.md` — audit complet ModBus garage (B1 corrige, secrets
   en clair sur depot public, defauts G1-G8 actifs, L1-L13 latents, ameliorations par priorite).
 - `outils_docs/Electronique/Connecteur ModBus/` — docs constructeur de la carte 16 relais
@@ -270,3 +281,13 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   - `solidifie_et_compile_berry.py` — verifie qu'un module est solidifiable en ~10 s (compile le .h).
   - `nomme_fonctions_berry.py` — convertit les fonctions anonymes d'un module.
   - `corrige_reglages_vscode.py` — pose et prouve les reglages VS Code (PermissionError).
+  - `sniffeur_mqtt.py` (+ `sniffeur_mqtt_web.py`, `client_mqtt.py`, `cible_sniffeur_mqtt.py`) —
+    sniffeur / publieur MQTT sur http://127.0.0.1:7100 : abonnements gerables un par un,
+    filtre d'affichage, publication (retenu ou non). Broker lu dans `user_config_override.h`.
+    Cible PlatformIO « Sniffeur MQTT » dans Custom, comme le pont serie. Les cartes publient
+    leurs logs sur `stat/<topic>/LOGGING` : suivi possible sans occuper les ports serie.
+  - `syslog_tasmota.py` (+ `syslog_tasmota_web.py`, `cible_syslog_tasmota.py`) — serveur syslog :
+    ecoute UDP 514, page http://127.0.0.1:7200 (filtre module / severite / texte), journal
+    `%TEMP%/syslog_tasmota.log`. Cible PlatformIO « Serveur syslog » dans Custom. Les modules
+    envoient a `SYS_LOG_HOST` (`user_config_override.h`) = **192.168.0.3, ce PC** (le NAS
+    192.168.0.2 est eteint) : IP a figer par un bail DHCP fixe sur la box.

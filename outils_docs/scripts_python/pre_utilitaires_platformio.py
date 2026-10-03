@@ -716,13 +716,18 @@ from SCons.Script import COMMAND_LINE_TARGETS
 sys.path.insert(0, join(env.subst("$PROJECT_DIR"), "outils_docs", "scripts_python"))
 import cible_pont_serie
 cible_pont_serie.enregistre(env)
+# 📜 CIBLE « SERVEUR SYSLOG » (meme menu Custom) : recoit les logs UDP des modules (SYS_LOG_HOST)
+import cible_syslog_tasmota
+cible_syslog_tasmota.enregistre(env)
 
 # Cibles qui ne sont PAS des builds : ne pas incrementer CFG_HOLDER, ne pas reecrire
 # platformio_override.ini ni copier d'image FS (bloc suivant).
-#   - pont_serie : lancement du pont serie ;
-#   - __idedata  : rafraichissement IntelliSense / Project Tasks par pioarduino
-#                  ('pio project init'), lance tout seul par VS Code.
-CIBLES_HORS_BUILD = (cible_pont_serie.NOM_CIBLE, "__idedata")
+#   - pont_serie     : lancement du pont serie ;
+#   - syslog_tasmota : lancement du serveur syslog ;
+#   - __idedata      : rafraichissement IntelliSense / Project Tasks par pioarduino
+#                      ('pio project init'), lance tout seul par VS Code.
+CIBLES_HORS_BUILD = (cible_pont_serie.NOM_CIBLE, cible_syslog_tasmota.NOM_CIBLE,
+                     "__idedata")
 hors_build = any(cible in COMMAND_LINE_TARGETS for cible in CIBLES_HORS_BUILD)
 
 # ============================================================

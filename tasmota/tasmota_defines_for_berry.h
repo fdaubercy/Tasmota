@@ -40,7 +40,7 @@
 #define D_CMND_SETSENSOR "SetSensor"
 #define __ATOMIC_ACQUIRE 2
 #define USE_IAQ 
-#define SYS_LOG_HOST "192.168.0.2"
+#define SYS_LOG_HOST "192.168.0.3"
 #define D_ITEM_WEIGHT "Poids de l'objet"
 #define D_SENSOR_HSDIO_D1 "HSDIO D1"
 #define D_CMND_ADCS "ADCs"
@@ -165,6 +165,7 @@
 #define __WCHAR_MAX__ 0xffff
 #define D_PRESSUREATSEALEVEL "PressionMer"
 #define D_SENSOR_RA8876_CS "RA8876 CS"
+#define FIRMWARE_ESP32S3_CAPTEURS_CUVE_MODBUS 1
 #define D_SENSOR_PZEM004_RX "PZEM004 Rx"
 #define D_TWILIGHT_ASTRONOMICAL "Astronomical"
 #define D_SENSOR_SDIO_D0 "SDIO D0"
@@ -470,7 +471,7 @@
 #define D_SENSOR_CC1101_CS "CC1101 CS"
 #define D_CMND_LEDPWM_OFF "LedPwmOff"
 #define D_JSON_IRHVAC_CELSIUS "Celsius"
-#define PROJECT "RIDEAU-GARAGE"
+#define PROJECT "CAPTEURS-CUVE"
 #define D_UTC_TIME "UTC"
 #define __UINT32_MAX__ 0xffffffffUL
 #define D_CHARGE "Charge"
@@ -577,6 +578,7 @@
 #define D_LOG_BERRY "BRY: "
 #define D_CLIENT "Client"
 #define __ATOMIC_SEQ_CST 5
+#define DS18x20_USE_ID_ALIAS 
 #define D_FP_ENROLL_PLACESAMEFINGER "Replacer le même doigt"
 #define MQTT_DISABLE_SSERIALRECEIVED 0
 #define D_SENSOR_BIOPDU_BIT "BioPDU Bit"
@@ -850,7 +852,7 @@
 #define FM24CXX_JSON_MAX_BYTES 4096
 #define D_CMND_UPLOAD "Upload"
 #define D_JSON_DOWNTIME "Downtime"
-#define FRIENDLY_NAME "Rideau de Garage"
+#define FRIENDLY_NAME "Capteurs de Cuve"
 #define D_UNIT_CELSIUS "C"
 #define D_JSON_IR_DATA "Data"
 #define MQTT_MAX_INFLIGHT 4
@@ -870,7 +872,7 @@
 #define D_CMND_WAKEUPDURATION "WakeUpDuration"
 #define D_MQTT_SERVICE_FOUND "Service MQTT trouvé sur"
 #define __FLT64_EPSILON__ 2.2204460492503131e-16F64
-#define USER_TEMPLATE "{\"NAME\":\"ESP32S3 Rideau Garage Modbus\",\"GPIO\":[1,1,1,1,3232,3200,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,544,288,1,224,225,1,1,1,1,1,1s],\"FLAG\":0,\"BASE\":1}"
+#define USER_TEMPLATE "{\"NAME\":\"ESP32S3 Capteur Cuve Modbus\",\"GPIO\":[1,1,1,1,3232,3200,1376,1,608,640,1,1,1,1,1,1,1,1,1312,1,1,1,0,0,0,0,0,544,288,1,1,1,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
 #define APP_INTERLOCK_MODE false
 #define USE_FTP 
 #define __INT16_MAX__ 0x7fff
@@ -970,7 +972,7 @@
 #define D_CMND_UPGRADE "Upgrade"
 #define D_CMND_ZIGBEE_FORGET "Forget"
 #define USE_ZIGBEE_AUTOBIND_LIFT 1.0
-#define MQTT_TOPIC "garage/rideau"
+#define MQTT_TOPIC "jardin/cuve"
 #define SUPPORT_IF_STATEMENT 
 #define D_FP_UPLOADFEATUREFAIL "Erreur de transfert"
 #define WEB_SERVER 2
@@ -1079,7 +1081,6 @@
 #define D_BLINK "Blink"
 #define USE_UFILESYS 
 #define D_ZIGBEE_GENERATE_KEY "création d'une clé réseau ZigBee aléatoire"
-#define USE_SHUTTER 
 #define __INTPTR_WIDTH__ 32
 #define LONGITUDE 3.0858052
 #define USE_DS1624 
@@ -1417,7 +1418,7 @@
 #define D_SENSOR_BL0940_RX "BL0940 Rx"
 #define D_JSON_SWITCH "Switch"
 #define D_CMND_RFSYNC "Sync"
-#define USER_BACKLOG "Backlog Hostname RIDEAU-GARAGE"
+#define USER_BACKLOG "Backlog Hostname CAPTEURS-CUVE"
 #define D_LOG_MQTT "MQT: "
 #define D_CMND_SAFEPOWER "SafePower"
 #define D_FP_IMAGEFAIL "Erreur d'acquisition"
@@ -1583,7 +1584,7 @@
 #define D_SENSOR_BIOPDU_PZEM0XX_TX "BioPDU PZEM0XX Tx"
 #define USE_SDM120 
 #define FM24CXX_BLOCK_SIZE 256
-#define CFG_HOLDER 1415
+#define CFG_HOLDER 1423
 #define D_MODULE "Module"
 #define D_SENSOR_WS2812 "WS2812"
 #define D_SO_MQTTTLS "MqttTLS"
@@ -1851,7 +1852,7 @@
 #define __LDBL_EPSILON__ 2.2204460492503131e-16L
 #define D_CMND_SYSLOG "SysLog"
 #define __UINTMAX_C(c) c ## ULL
-#define SHUTTER_SUPPORT true
+#define SHUTTER_SUPPORT false
 #define GV_USE_ESPINFO 
 #define D_PSR_MAX_MEMORY "Mémoire PS-RAM"
 #define D_JSON_ZIGBEE_EZSP_SENT "ZbEZSPSent"
@@ -1872,7 +1873,7 @@
 #define D_CMND_MQTTWIFITIMEOUT "MqttWifiTimeout"
 #define D_FREQUENCY "Fréquence"
 #define D_TOTAL_ACTIVE "Total Active"
-#define WIFI_RGX_SSID "RIDEAU-GARAGE-GATEWAY"
+#define WIFI_RGX_SSID "CAPTEURS-CUVE-GATEWAY"
 #define MAX31865_PTD_WIRES 2
 #define __FLT32X_MIN__ 2.2250738585072014e-308F32x
 #define __XCHAL_HAVE_DFP_SQRT 0
@@ -2405,7 +2406,7 @@
 #define D_FREE_MEMORY "Mémoire libre"
 #define D_DISTANCE "Distance"
 #define D_COLOR_RED "Rouge"
-#define MQTT_CLIENT_ID "RIDEAU-GARAGE"
+#define MQTT_CLIENT_ID "CAPTEURS-CUVE"
 #define D_SENSOR_GM861_TX "GM861 Tx"
 #define D_VERSION "Version"
 #define THERMOSTAT_TIME_MAX_OUTPUT_INCONSIST 3
@@ -2457,7 +2458,7 @@
 #define THERMOSTAT_TIME_MIN_ACTION 4
 #define D_SENSOR_LED "LED"
 #define __cpp_inheriting_constructors 201511L
-#define CODE_IMAGE_STR "Rideau de garage"
+#define CODE_IMAGE_STR "Capteurs de Cuve"
 #define D_RSLT_INFO "INFO"
 #define MQTT_RESULT_COMMAND false
 #define __INT_LEAST64_MAX__ 0x7fffffffffffffffLL
@@ -2615,7 +2616,6 @@
 #define D_SYSLOG_HOST "Hôte SysLog"
 #define D_SHT1X_FOUND "SHT1X trouvé"
 #define USE_ZIGBEE_AUTOBIND_TEMPERATURE 0.5
-#define FIRMWARE_ESP32S3_RIDEAU_GARAGE_MODBUS 1
 #define D_JSON_MQTT_TLS "MqttTLS"
 #define DNS_TIMEOUT 1000
 #define D_SIGNALSTRENGTH "Signal Strength"
