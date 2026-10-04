@@ -11,21 +11,24 @@
      2. console Berry :  tasmota.load("/test_liaison_modbus.be")
      3. apres les tests, supprimer le fichier depuis la meme page
 
-   Ce que fait l'outil 'mbt' :
-     - ecoute le bus et affiche chaque trame recue : octets en hexa, CRC OK/KO,
-       decodage des champs (adresse, fonction, registre, quantite, valeurs) ;
-     - emet une trame brute (CRC ajoute automatiquement s'il manque) ;
-     - cote esclave, peut repondre lui-meme aux requetes qui lui sont adressees
-       (echo pour 0x05/0x06, valeurs de test pour 0x01-0x04), sans le framework ;
-     - cote maitre, envoie par le pont Tasmota (ModbusSend) et affiche ModbusReceived.
+   'mbt' ecoute le bus et affiche chaque trame (hexa, CRC OK/KO, champs decodes), emet des
+   trames brutes (CRC ajoute s'il manque) ; cote esclave il peut repondre lui-meme (echo
+   0x05/0x06, valeurs de test 0x01-0x04) ; cote maitre il passe par le pont Tasmota.
+
+   ---- AUTOMATIQUE (2026-10-04) : rien a preparer a la main ---------------------------
+     AU CHARGEMENT  maitre  (id 0) : la file ModBus du framework est SUSPENDUE (son sondage
+                                     ne se mele plus au test) - firmware du 2026-10-04 et apres ;
+                    esclave (id>0) : port emprunte au framework + reponse automatique.
+     mbt.fin()      remet TOUT en etat : port rendu, regle du pont retiree, file relancee.
+     Securite       fin automatique au bout de 15 min (mbt.prolonge(30) : 30 min de plus).
+     Recharger le script termine proprement le test precedent.
+     Guide affiche au chargement (chargement, lancement, envoi d'une commande) : mbt.aide().
 
    ---- ESCLAVE (cuve id 2 / rideau id 3) -------------------------------------------
-     mbt.prendrePort()      emprunte le port serie ouvert par le framework : celui-ci
-                            ne lit plus rien pendant le test (ses envois passent encore)
-     mbt.auto(true)         repond aux requetes adressees a cet id (false = ecoute seule)
+     mbt.auto(false)        ecoute seule (true = repond aux requetes adressees a cet id)
      mbt.envoi("02 03 02 12 34")      emet une trame (CRC ajoute) -> visible cote maitre
                                       en mode brut seulement (le pont ignore le spontane)
-     mbt.rendrePort()       FIN DU TEST : rend le port au framework
+     (mbt.prendrePort() / mbt.rendrePort() : faits par le chargement et par mbt.fin())
 
    ---- MAITRE (P4 id 0) : 2 facons ---------------------------------------------------
    A) Par le pont Tasmota (chemin de production, n'abime rien) :
@@ -33,19 +36,17 @@
      mbt.pont('{"DeviceAddress":2,"FunctionCode":6,"StartAddress":1,"type":"uint8","Count":1,"Values":[1,0]}')
      -> affiche la TRAME ATTENDUE (recalculee en Berry : le pont C++ ne montre pas ses
         octets) puis, a reception, le ModbusReceived. Verite terrain : '<-- RECU' esclave.
-     mbt.finPont()          retire la regle d'affichage
    B) En brut (voir les octets exacts, y compris les envois spontanes 0x80|fc) :
      mbt.ouvrirPort()       /!\ prend les GPIO du pont ModBr : le pont ne peut plus
-                            EMETTRE jusqu'au redemarrage -> finir par 'Restart 1'
+                            EMETTRE jusqu'au redemarrage -> 'Restart 1' apres mbt.fin()
      mbt.envoi("02 03 00 01 00 02")   requete lecture 2 registres a l'esclave 2
-     mbt.fermerPort()
 
    ---- COMMUN -------------------------------------------------------------------------
-     mbt.etat()             parametres, port, compteurs
+     mbt.etat()             parametres, port, compteurs, file, fin automatique
      mbt.envoi("01 06 00 01 01 00 00 00", true)   emet SANS toucher au CRC (test CRC KO)
-     mbt.arret()            arrete l'ecoute (equivaut a rendrePort/fermerPort)
+     mbt.fin()              FIN DU TEST (a defaut : automatique apres 15 min)
 
-   Scenario conseille : esclave -> prendrePort() + auto(true) ; maitre -> pont(...).
+   Scenario conseille : charger sur l'esclave, puis sur le maitre -> mbt.pont(...).
    L'esclave affiche la requete exacte emise par le pont, le maitre la reponse decodee.
    Si le maitre voit "Error 11" (timeout) alors que l'esclave a affiche la requete
    avec CRC OK, la liaison maitre->esclave est bonne : chercher cote retour (TX esclave,
@@ -77,6 +78,8 @@ class MBT_TEST : Driver
     var repondre        # esclave : true = repond aux requetes adressees a self.id
     var nbRx, nbTx, nbKO
     var actif
+    var finA            # millis() de la fin automatique (nil = aucune)
+    var fileSuspendue   # maitre : true si mbt a suspendu la file du framework
 
     def init()
         self.tampon = bytes()
@@ -84,6 +87,7 @@ class MBT_TEST : Driver
         self.repondre = false
         self.portPropre = false
         self.actif = false
+        self.fileSuspendue = false
         self.nbRx = 0    self.nbTx = 0    self.nbKO = 0
         self.id = self.config()["id"]
     end
@@ -233,6 +237,11 @@ class MBT_TEST : Driver
 
     # ------------------------------------------------------------------ boucle d'ecoute
     def every_50ms()
+        if self.finA != nil && tasmota.time_reached(self.finA)     # pas de set_timer : fragile sur ESP32-P4
+            print("MBT: duree maximale atteinte -> fin automatique du test")
+            self.fin()
+            return
+        end
         if self.port == nil    return    end
         try
             if self.port.available() > 0
@@ -268,6 +277,104 @@ class MBT_TEST : Driver
     def demarre()
         if !self.actif    tasmota.add_driver(self)    self.actif = true    end
         self.etat()
+    end
+
+    # ------------------------------------------------------------------ debut / fin automatiques
+    # Maitre : suspend la file du framework (cle 'pause' lue par modbusFonctions.pompeQueue,
+    # firmware du 2026-10-04 et apres). Esclave : emprunte le port + reponse automatique.
+    def debut(minutes)
+        import global
+        if self.config()["id"] == 0
+            var e = global._etatModbusFonctions
+            if e == nil
+                print("MBT: pas de file ModBus active sur ce maitre : rien a suspendre")
+            elif self.pauseGeree()
+                e["pause"] = true
+                self.fileSuspendue = true
+                print("MBT: file ModBus du maitre SUSPENDUE pendant le test (relancee par mbt.fin())")
+            else
+                print("MBT: /!\\ firmware anterieur au 2026-10-04 : la file ne sait pas se suspendre, son sondage continue")
+            end
+        else
+            self.prendrePort()
+            if self.port != nil    self.auto(true)    end
+        end
+        self.prolonge(minutes == nil ? 15 : minutes)
+    end
+
+    def pauseGeree()
+        import introspect
+        try
+            import modbusFonctions
+            return introspect.get(modbusFonctions, "testeDebitConn16") != nil   # arrivee avec la pause
+        except .. as e, m
+            return false
+        end
+    end
+
+    def prolonge(minutes)
+        self.finA = tasmota.millis(int(minutes) * 60000)
+        if !self.actif    tasmota.add_driver(self)    self.actif = true    end
+        print("MBT: fin automatique du test dans " + str(minutes) + " min (mbt.fin() pour finir avant)")
+    end
+
+    # Remet tout en etat : port rendu ou ferme, regle du pont retiree, file du maitre relancee.
+    def fin()
+        import global
+        self.finA = nil
+        self.repondre = false
+        tasmota.remove_rule("ModbusReceived", "mbt_pont")
+        var portBrutMaitre = (self.port != nil && self.portPropre && self.config()["id"] == 0)
+        self.arret()
+        if self.actif    tasmota.remove_driver(self)    self.actif = false    end
+        if self.fileSuspendue
+            var e = global._etatModbusFonctions
+            if e != nil    e["pause"] = false    end
+            self.fileSuspendue = false
+            try
+                import modbusFonctions
+                modbusFonctions.pompeQueue()
+            except .. as er, m
+            end
+            print("MBT: file ModBus du maitre relancee")
+        end
+        if portBrutMaitre    print("MBT: /!\\ port brut ouvert sur le maitre : 'Restart 1' pour rendre l'emission au pont ModBr")    end
+        print("MBT: test termine, tout est rendu au framework")
+    end
+
+    # Guide affiche au chargement (et par mbt.aide()) : chargement, lancement, envoi d'une commande.
+    def aide()
+        import string
+        var c = self.config()
+        var maitre = (c["id"] == 0)
+        var adr = maitre ? "2" : str(c["id"])             # esclave vise dans les exemples
+        var adrHex = string.format("%02X", int(adr))
+        var l = [
+            "==================== TEST DE LIAISON MODBUS (mbt) ====================",
+            "1. CHARGER CE SCRIPT, sur le maitre ET sur l'esclave a tester :",
+            "   a. Outils > Gestion du systeme de fichiers > televerser test_liaison_modbus.be",
+            "   b. Outils > Console Berry : tasmota.load(\"/test_liaison_modbus.be\")",
+            "   (ne PAS coller le fichier dans la console : trop long, refuse sans message)",
+            "2. CETTE CARTE : " + (maitre ? "MAITRE (id 0), file ModBus du framework " + (self.fileSuspendue ? "suspendue" : "NON suspendue (voir plus haut)")
+                                         : "ESCLAVE id " + str(c["id"]) + (self.port != nil ? ", port emprunte, reponse automatique "
+                                           + (self.repondre ? "ON" : "OFF") : ", port NON emprunte (voir le message plus haut)")),
+            "3. LANCER LA COMMUNICATION :",
+            "   - esclave : rien a faire, il ecoute et repond (mbt.auto(false) = ecoute seule)",
+            "   - maitre  : envoyer une commande (point 4) ; l'esclave affiche '<-- RECU',",
+            "               le maitre '<-- PONT' (reponse) ; rien en retour = voir l'en-tete du script",
+            "4. ENVOYER UNE COMMANDE MODBUS, depuis le maitre :",
+            "   lire 2 registres de l'esclave " + adr + " :",
+            "     mbt.pont('{\"DeviceAddress\":" + adr + ",\"FunctionCode\":3,\"StartAddress\":1,\"type\":\"uint16\",\"Count\":2}')",
+            "   ecrire le registre 1 de l'esclave " + adr + " :",
+            "     mbt.pont('{\"DeviceAddress\":" + adr + ",\"FunctionCode\":6,\"StartAddress\":1,\"type\":\"uint8\",\"Count\":1,\"Values\":[1,0]}')",
+            "   lire les 16 relais de la carte 16 relais (adresse 1) :",
+            "     mbt.pont('{\"DeviceAddress\":1,\"FunctionCode\":3,\"StartAddress\":1,\"type\":\"uint16\",\"Count\":16}')",
+            "   trame brute, CRC ajoute : mbt.ouvrirPort() puis mbt.envoi(\"" + adrHex + " 03 00 01 00 02\")",
+            "     (sur le maitre : 'Restart 1' apres le test, le pont ModBr ne peut plus emettre)",
+            "5. FIN : mbt.fin() sur chaque carte (sinon automatique au bout de 15 min, mbt.prolonge(30))",
+            "   mbt.etat() : etat du test      mbt.aide() : ce guide",
+            "======================================================================"]
+        for x: l    print("MBT: " + x)    end
     end
 
     # ------------------------------------------------------------------ commandes
@@ -488,12 +595,19 @@ class MBT_TEST : Driver
         print(string.format("MBT: id %d | RX GPIO%d TX GPIO%d | %d bauds %s | port %s%s | reponse auto %s | recues %d (KO %d) emises %d",
               c["id"], c["rx"], c["tx"], c["debit"], c["mode"],
               self.port == nil ? "ferme" : (self.portOrigine != nil ? "emprunte au framework" : "ouvert par mbt"),
-              self.actif ? ", ecoute ON" : "", self.repondre ? "ON" : "OFF", self.nbRx, self.nbKO, self.nbTx))
+              self.port != nil ? ", ecoute ON" : "", self.repondre ? "ON" : "OFF", self.nbRx, self.nbKO, self.nbTx))
+        print(string.format("MBT: file du maitre %s | fin automatique %s", self.fileSuspendue ? "SUSPENDUE" : "non touchee",
+              self.finA == nil ? "aucune" : "dans " + str((self.finA - tasmota.millis()) / 60000) + " min"))
     end
 end
 
-# Un second collage remplace proprement le premier (ancien port rendu, ancien driver retire)
+# Recharger le script termine proprement le test precedent (port rendu, file relancee, driver retire)
 import global
-if global.mbt != nil    global.mbt.arret()    end
+import introspect
+if global.mbt != nil
+    if introspect.get(global.mbt, "fin") != nil    global.mbt.fin()    else    global.mbt.arret()    end
+end
 global.mbt = MBT_TEST()
-global.mbt.etat()
+global.mbt.debut()
+global.mbt.etat()                       # esclave : prendrePort l'a deja affiche, sans la fin automatique
+global.mbt.aide()
