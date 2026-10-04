@@ -64,7 +64,7 @@ class CAPTEURS_CUVE : Driver
         #tasmota.add_cron("0 0 0 * * *", /-> self.majMinuit(), "majMinuit")
 
         # Vérifie si des logs doivent être crées
-        if (modules["cuve"].find("logs", {}).find("nbLogsFiles", 0) != nil || modules["cuve"].find("logs", {}).find("nbLogsFiles", 0) > 0)
+        if (modules["cuve"].find("logs", {}).find("nbLogsFiles", 0) > 0)      # 0 = pas de fichiers de logs, pas de rotation
             var fileLog = string.format(modules["cuve"]["logs"]["fileLogName"], modules["cuve"]["logs"]["nbLogsFiles"])
 
             # Compte le nombre de fichiers de logs présents

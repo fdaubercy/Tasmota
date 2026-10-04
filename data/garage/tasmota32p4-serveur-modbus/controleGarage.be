@@ -27,7 +27,7 @@ class CONTROLE_GARAGE : Driver
         #tasmota.add_cron("0 0 0 * * *", /-> self.majMinuit(), "majMinuit")
 
         # Vérifie si des logs doivent être crées
-        if (modules["garage"].find("logs", {}).find("nbLogsFiles", 0) != nil || modules["garage"].find("logs", {}).find("nbLogsFiles", 0) > 0)
+        if (modules["garage"].find("logs", {}).find("nbLogsFiles", 0) > 0)      # 0 = pas de fichiers de logs, pas de rotation
             var fileLog = string.format(modules["garage"]["logs"]["fileLogName"], modules["garage"]["logs"]["nbLogsFiles"])
 
             # Compte le nombre de fichiers de logs présents
