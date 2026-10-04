@@ -99,6 +99,10 @@
 			"debug": "ON",
 			"telePeriod": 300,
 			"port": 2000
+		},
+		"discovery": {
+			"activation": "ON",
+			"debug": "OFF"
 		}
 	},
 	"template": {

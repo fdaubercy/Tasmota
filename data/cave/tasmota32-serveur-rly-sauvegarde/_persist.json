@@ -762,6 +762,10 @@
 			"localisation": {
 				"longitude": "3.085796",
 				"latitude": "50.410931"
+			},
+			"discovery": {
+				"activation": "ON",
+				"debug": "OFF"
 			}
 		}
 	}

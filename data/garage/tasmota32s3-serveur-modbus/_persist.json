@@ -107,7 +107,7 @@
 		}, 
         "discovery": {
             "activation": "ON",
-            "debug": "ON"
+            "debug": "OFF"
         }
 	},
 	"template": {
