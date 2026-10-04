@@ -48,7 +48,7 @@
 		"mDNS": "ON",
 		"apiHTTP": "OFF",
 		"adressMAC": "",
-		"debug": "ON",
+		"log": "debug",
 		"IP": {
 			"IPAddress": "192.168.0.47",
 			"IPGateway": "192.168.0.254",
@@ -84,7 +84,7 @@
 		"rangeExtender": {
 			"activation": "ON",
 			"id": 0,
-			"debug": "ON",
+			"log": "debug",
 			"ipMaitre": "",
 			"AP": {
 				"IPAddress": "192.168.4.1",
@@ -102,17 +102,17 @@
 		"udp": {
 			"activation": "OFF",
 			"id": 0,
-			"debug": "ON",
+			"log": "debug",
 			"port": 2000
 		},
 		"tcp": {
 			"activation": "OFF",
 			"id": 0,
-			"debug": "ON"
+			"log": "debug"
 		},
 		"discovery": {
 			"activation": "ON",
-			"debug": "OFF"
+			"log": "info"
 		}
 	},
 	"template": {
@@ -166,7 +166,7 @@
 			"name": "Gestion des appareils du 2eme étage",
 			"activation": "ON",
 			"reglage": "OFF",
-			"debug": "ON",
+			"log": "debug",
 			"logs": {
 				"nbLogsFiles": 15,
 				"fileLogName": "/logs/grenier.log",
@@ -835,7 +835,7 @@
 				"ES8311": {
 					"activation": "OFF",
 					"name": "Codec Audio ES8311",
-					"debug": "ON"
+					"log": "debug"
 				}
 			}
 		},
@@ -875,7 +875,7 @@
 			"debit": 19200,
 			"mode": "8N1",
 			"timeoutReponse": 4000,
-			"debug": "ON",
+			"log": "debug",
 			"activationReponseCMD": "ON",
 			"typeComm": {
 				"Serial": "OFF",
@@ -903,7 +903,7 @@
 					}
 				},
 				"Conn16channels": {
-					"debug": "ON",
+					"log": "debug",
 					"Conn16channel1": {
 						"activation": "OFF",
 						"name": "Connecteur RS485 16 sorties",
@@ -911,7 +911,7 @@
 					}
 				},
 				"TasmotaSlaveModBus": {
-					"debug": "ON",
+					"log": "debug",
 					"TasmotaSlaveModBus1": {
 						"activation": "OFF",
 						"name": "Capteurs Cuve ModBus",
@@ -929,21 +929,21 @@
 			"activation": "OFF",
 			"amelioration": "ON",
 			"name": "Bus KNX",
-			"debug": "ON",
+			"log": "debug",
 			"environnement": {}
 		},
 		"LoRaWan": {
 			"activation": "OFF",
 			"name": "Connexion LoRaWan 868MHz",
 			"id": 0,
-			"debug": "ON",
+			"log": "debug",
 			"environnement": {}
 		},
 		"voletRoulants": {
 			"activation": "ON",
 			"name": "Driver Trappe de Grenier 2eme",
 			"mode": 1,
-			"debug": "ON",
+			"log": "debug",
 			"environnement": {
 				"VRs": {
 					"VR1": {

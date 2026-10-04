@@ -76,17 +76,17 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 	data = serveur["wifi"]
 	# Recherche du signal le plus fort
 	if configGlobal.testeParam("SetOption56", data["selectSignalFort"], "")
-		log(string.format("CONTROLE_GENERAL: %s la recherche du signal wifi le plus fort !", (data["selectSignalFort"] == "ON" ? "Active" : "Désactive")), LOG_LEVEL_DEBUG)
+		logFonctions.log(string.format("CONTROLE_GENERAL: %s la recherche du signal wifi le plus fort !", (data["selectSignalFort"] == "ON" ? "Active" : "Désactive")), LOG_LEVEL_DEBUG)
 	end
 
 	# Règle la puissance du wifi et le mot de passe
 	if configGlobal.testeParam("WifiPower", data["power"], "int")
-		log("CONTROLE_GENERAL: Regle la puissance du Wifi !", LOG_LEVEL_DEBUG)		
+		logFonctions.log("CONTROLE_GENERAL: Regle la puissance du Wifi !", LOG_LEVEL_DEBUG)		
 	end
 
 	if tasmota.cmd("SSId1", boolMute)["SSId1"] != data["reseau1"]["nomReseauWifi"]
 		if data["reseau1"]["nomReseauWifi"] != "" && data["reseau1"]["mdpWifi"] != ""
-			log(string.format("CONTROLE_GENERAL: Regle le SSID & le mot de passe pour le reseau %s!", data["reseau1"]["nomReseauWifi"]), LOG_LEVEL_DEBUG)
+			logFonctions.log(string.format("CONTROLE_GENERAL: Regle le SSID & le mot de passe pour le reseau %s!", data["reseau1"]["nomReseauWifi"]), LOG_LEVEL_DEBUG)
 			tasmota.cmd(string.format("Backlog SSId1 %s; Password1 %s", 
 													data["reseau1"]["nomReseauWifi"], 
 													data["reseau1"]["mdpWifi"]), boolMute)
@@ -95,7 +95,7 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 
 	if tasmota.cmd("SSId2", boolMute)["SSId2"] != data["reseau2"]["nomReseauWifi"]
 		if data["reseau2"]["nomReseauWifi"] != "" && data["reseau2"]["mdpWifi"] != ""
-			log(string.format("CONTROLE_GENERAL: Regle le SSID & le mot de passe pour le reseau %s!", data["reseau2"]["nomReseauWifi"]), LOG_LEVEL_DEBUG)
+			logFonctions.log(string.format("CONTROLE_GENERAL: Regle le SSID & le mot de passe pour le reseau %s!", data["reseau2"]["nomReseauWifi"]), LOG_LEVEL_DEBUG)
 			tasmota.cmd(string.format("Backlog SSId2 %s; Password2 %s; AP 1", 
 													data["reseau2"]["nomReseauWifi"], 
 													data["reseau2"]["mdpWifi"]), boolMute)
@@ -105,17 +105,17 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 	# Règle le nom du serveur
 	data = serveur
 	if configGlobal.testeParam("DeviceName", data["nom"], "")
-		log("CONTROLE_GENERAL: Regle le nom du serveur !", LOG_LEVEL_DEBUG)		
+		logFonctions.log("CONTROLE_GENERAL: Regle le nom du serveur !", LOG_LEVEL_DEBUG)		
 	end
 	
 	# Règle le hostname
 	if configGlobal.testeParam("Hostname", data["hostname"], "")
-		log("CONTROLE_GENERAL: Regle le hostname !", LOG_LEVEL_DEBUG)
+		logFonctions.log("CONTROLE_GENERAL: Regle le hostname !", LOG_LEVEL_DEBUG)
 	end
 
 	# Paramétrage le mDNS
 	if configGlobal.testeParam("SetOption55", data["mDNS"], "")
-		log(string.format("CONTROLE_GENERAL: %s le mDNS !", (data["mDNS"] == "ON" ? "Active" : "Désactive")), LOG_LEVEL_DEBUG)
+		logFonctions.log(string.format("CONTROLE_GENERAL: %s le mDNS !", (data["mDNS"] == "ON" ? "Active" : "Désactive")), LOG_LEVEL_DEBUG)
 	end
 
 	# Paramètre l'API HTTP (SetOption128, case « HTTP API » de Configuration > Autre), ajouté le 2026-10-04.
@@ -128,22 +128,22 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 	#     envoyer des commandes au module -> un WebPassword est conseillé.
 	# Clé absente du persist : rien n'est modifié (testeParam ignore la valeur "").
 	if configGlobal.testeParam("SetOption128", data.find("apiHTTP", ""), "")
-		log(string.format("CONTROLE_GENERAL: %s l'API HTTP (SetOption128) : controle du Referer %s !",
+		logFonctions.log(string.format("CONTROLE_GENERAL: %s l'API HTTP (SetOption128) : controle du Referer %s !",
 							(data["apiHTTP"] == "ON" ? "Active" : "Désactive"), (data["apiHTTP"] == "ON" ? "supprime" : "retabli")), LOG_LEVEL_DEBUG)
 	end
 
 	# Règle les adresse IP / Masque de sous-reseau / Gateway / DNS Server
 	if configGlobal.testeParam("IPAddress1", data["IP"]["IPAddress"], "str") && data["IP"]["IPAddress"] != ""
-		log("CONTROLE_GENERAL: Regle l'adresse IP du module !", LOG_LEVEL_DEBUG)
+		logFonctions.log("CONTROLE_GENERAL: Regle l'adresse IP du module !", LOG_LEVEL_DEBUG)
 	end
 	if configGlobal.testeParam("IPAddress2", data["IP"]["IPGateway"], "str") && data["IP"]["IPGateway"] != ""
-		log("CONTROLE_GENERAL: Regle l'adresse IP de la passerelle !", LOG_LEVEL_DEBUG)
+		logFonctions.log("CONTROLE_GENERAL: Regle l'adresse IP de la passerelle !", LOG_LEVEL_DEBUG)
 	end
 	if configGlobal.testeParam("IPAddress3", data["IP"]["Subnet"], "str") && data["IP"]["Subnet"] != ""
-		log("CONTROLE_GENERAL: Regle le masque de sous-réseau !", LOG_LEVEL_DEBUG)
+		logFonctions.log("CONTROLE_GENERAL: Regle le masque de sous-réseau !", LOG_LEVEL_DEBUG)
 	end
 	if configGlobal.testeParam("IPAddress4", data["IP"]["DNSServer"], "str") && data["IP"]["DNSServer"] != ""
-		log("CONTROLE_GENERAL: Regle l'adresse IP du serveur DNS !", LOG_LEVEL_DEBUG)
+		logFonctions.log("CONTROLE_GENERAL: Regle l'adresse IP du serveur DNS !", LOG_LEVEL_DEBUG)
 	end
 
 	# Règle le CORS (Cross Origin Resource Sharing)
@@ -153,7 +153,7 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 	# Active MQTT
 	# Paramétrage supprimé pour permettre l'émission de messages MQTT même si le module est désactivé
 	if configGlobal.testeParam("SetOption3", data["mqtt"]["activation"], "")
-		log("CONTROLE_GENERAL: " + (tasmota.cmd("SetOption3", boolMute)["SetOption3"] == "ON" ? "Active" : "Désactive") + " les communications MQTT !", LOG_LEVEL_DEBUG)
+		logFonctions.log("CONTROLE_GENERAL: " + (tasmota.cmd("SetOption3", boolMute)["SetOption3"] == "ON" ? "Active" : "Désactive") + " les communications MQTT !", LOG_LEVEL_DEBUG)
 	end
 
 	if (data["mqtt"]["activation"] == "ON")
@@ -165,7 +165,7 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 		# 'Topic' est applique en DERNIER : cette commande redemarre Tasmota.
 		for param: [["MqttHost", "hote"], ["MqttPort", "port"], ["MqttClient", "client"], ["MqttUser", "utilisateur"], ["Topic", "topic"]]
 			if configGlobal.testeParam(param[0], data["mqtt"].find(param[1], ""), "str")
-				log("CONTROLE_GENERAL: Regle le parametre MQTT '" + param[0] + "' !", LOG_LEVEL_DEBUG)
+				logFonctions.log("CONTROLE_GENERAL: Regle le parametre MQTT '" + param[0] + "' !", LOG_LEVEL_DEBUG)
 			end
 		end
 
@@ -183,7 +183,7 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 	data = diverses
 
 	if configGlobal.testeParam("Latitude", data["localisation"]["latitude"], "real") || configGlobal.testeParam("Longitude", data["localisation"]["longitude"], "real")
-		log("CONTROLE_GENERAL: Regle la localisation !", LOG_LEVEL_DEBUG)
+		logFonctions.log("CONTROLE_GENERAL: Regle la localisation !", LOG_LEVEL_DEBUG)
 	end
 
 	# Active ou désactive le driver correspondant aux modules Real Time Clock (DS3231, DS1307, etc...)
@@ -198,10 +198,10 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 	end
 
 	if (configGlobal.testeParam("Timezone", data["fuseauHoraire"]["timezone"], "int"))
-		log("CONTROLE_GENERAL: Regle la timezone !", LOG_LEVEL_DEBUG)
+		logFonctions.log("CONTROLE_GENERAL: Regle la timezone !", LOG_LEVEL_DEBUG)
 	end
 
-	log("CONTROLE_GENERAL: Regle le fuseau horaire !", LOG_LEVEL_DEBUG)
+	logFonctions.log("CONTROLE_GENERAL: Regle le fuseau horaire !", LOG_LEVEL_DEBUG)
 	tasmota.cmd(string.format("TimeStd %i,%i,%i,%i,%i,%i", 
 											data["fuseauHoraire"]["TimeStd"]["Hemisphere"], data["fuseauHoraire"]["TimeStd"]["Week"], data["fuseauHoraire"]["TimeStd"]["Month"], data["fuseauHoraire"]["TimeStd"]["Day"], data["fuseauHoraire"]["TimeStd"]["Hour"], data["fuseauHoraire"]["TimeStd"]["Offset"]), 
 											boolMute)	
@@ -211,24 +211,24 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 
 	# Réglage de l'affichage de la Température interne de l'ESP32'
 	if configGlobal.testeParam("SetOption146", data.find("affichageTempESP32", "OFF"), "")
-		log(string.format("CONTROLE_GENERAL: Règle l'affichage de la température de l'ESP32' à %s !", data.find("affichageTempESP32", "OFF")), LOG_LEVEL_DEBUG)
+		logFonctions.log(string.format("CONTROLE_GENERAL: Règle l'affichage de la température de l'ESP32' à %s !", data.find("affichageTempESP32", "OFF")), LOG_LEVEL_DEBUG)
 	end
 
 	# Réglage de l'affichage du modèle sur le webUI
 	if configGlobal.testeParam("SetOption141", (data.find("affichageNomModele", "OFF") == "ON" ? "OFF" : "ON"), "")
-		log(string.format("CONTROLE_GENERAL: Règle l'affichage du nom de modèle' à %s !", (data.find("affichageNomModele", "OFF") == "ON" ? "OFF" : "ON")), LOG_LEVEL_DEBUG)
+		logFonctions.log(string.format("CONTROLE_GENERAL: Règle l'affichage du nom de modèle' à %s !", (data.find("affichageNomModele", "OFF") == "ON" ? "OFF" : "ON")), LOG_LEVEL_DEBUG)
 	end
 
 	# Réglage de la telePeriod
 	if configGlobal.testeParam("TelePeriod", data.find("telePeriod", 300), "int")
 		var periode = data.find("telePeriod", 300)
 
-		log(string.format("CONTROLE_GENERAL: Règle la telePeriod à %is !", periode), LOG_LEVEL_DEBUG)
+		logFonctions.log(string.format("CONTROLE_GENERAL: Règle la telePeriod à %is !", periode), LOG_LEVEL_DEBUG)
 	end
 
 	# Evite un reset sur appui long sur un bouton
 	if configGlobal.testeParam("SetOption1", data["eviteResetBTN"], "")
-		log("CONTROLE_GENERAL: Evite un reset sur appui long sur un bouton !", LOG_LEVEL_DEBUG)
+		logFonctions.log("CONTROLE_GENERAL: Evite un reset sur appui long sur un bouton !", LOG_LEVEL_DEBUG)
 		tasmota.cmd(string.format("SetOption1 %s", data["eviteResetBTN"]), boolMute)
 	end
 	
@@ -238,7 +238,7 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 
 	# Nb de fichiers de logs pour enregistrement dans plusieurs fichiers
 	if configGlobal.testeParam("FileLog", data["logs"].find("nbLogsFiles", 0), "int")
-		log("CONTROLE_GENERAL: " + (data["logs"].find("nbLogsFiles", 0) > 0 ? "Active" : "Désactive") + " l'enregistrement des logs " + (data["logs"].find("nbLogsFiles", 0) > 0 ? "dans maximum " + str(data["logs"].find("nbLogsFiles", 0)) + " fichiers" : "!"), LOG_LEVEL_DEBUG)
+		logFonctions.log("CONTROLE_GENERAL: " + (data["logs"].find("nbLogsFiles", 0) > 0 ? "Active" : "Désactive") + " l'enregistrement des logs " + (data["logs"].find("nbLogsFiles", 0) > 0 ? "dans maximum " + str(data["logs"].find("nbLogsFiles", 0)) + " fichiers" : "!"), LOG_LEVEL_DEBUG)
 		tasmota.cmd(string.format("FileLog %i", data["logs"].find("nbLogsFiles", 0)), boolMute)
 	end
 
@@ -251,7 +251,7 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
     diversFonctions.recupereTemplate(template)
 
 	# Efface le paramétrage des GPIOs inutilisés dans le modèle
-	log("CONTROLE_GLOBAL: gpioPinUtilises=" + str(gpioPinUtilises), LOG_LEVEL_DEBUG_PLUS)
+	logFonctions.log("CONTROLE_GLOBAL: gpioPinUtilises=" + str(gpioPinUtilises), LOG_LEVEL_DEBUG_PLUS)
 
 	for gpioTemp: template["GPIO"].keys()
 		var boolPinUtilise = false
@@ -267,7 +267,7 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 		if !boolPinUtilise
 			if template["GPIO"][gpioTemp] != 1 && template["GPIO"][gpioTemp] != 0
 				# enregistrePersistant = true
-				log("CONTROLE_GLOBAL: " + str(ordreGPIO[gpioTemp]) + " inutilise -> il sera reinitialise de " + str(template["GPIO"][gpioTemp]) + " a 1 !", LOG_LEVEL_DEBUG_PLUS)
+				logFonctions.log("CONTROLE_GLOBAL: " + str(ordreGPIO[gpioTemp]) + " inutilise -> il sera reinitialise de " + str(template["GPIO"][gpioTemp]) + " a 1 !", LOG_LEVEL_DEBUG_PLUS)
 				template["GPIO"][gpioTemp] = 1
 
                 enregistrePersistant = true
@@ -277,18 +277,18 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 
 	# Enregistre le pin du modèle dans persist.json
 	if enregistrePersistant
-        log("CONTROLE_GLOBAL: template=" + str(template), LOG_LEVEL_DEBUG_PLUS)
+        logFonctions.log("CONTROLE_GLOBAL: template=" + str(template), LOG_LEVEL_DEBUG_PLUS)
         template["NAME"] = persist.template["NAME"]
         persist.template = template
 
-		log("CONTROLE_GLOBAL: Modifie & Enregistre _persist.json !", LOG_LEVEL_DEBUG)
+		logFonctions.log("CONTROLE_GLOBAL: Modifie & Enregistre _persist.json !", LOG_LEVEL_DEBUG)
 		persist.save() 
 	end
 	
 	# Paramètre le nouveau modèle
 	reponseCMD = tasmota.cmd("Template", boolMute)
 	if reponseCMD["BASE"] != template["BASE"] || reponseCMD["NAME"] != template["NAME"] || reponseCMD["GPIO"] != template["GPIO"] || reponseCMD["FLAG"] != template["FLAG"]
-		log("CONTROLE_GLOBAL: Parametre le nouveau modele !", LOG_LEVEL_DEBUG)
+		logFonctions.log("CONTROLE_GLOBAL: Parametre le nouveau modele !", LOG_LEVEL_DEBUG)
 		tasmota.cmd(string.format("Template {\"BASE\": %i, \"GPIO\": %s, \"NAME\": \"%s\", \"FLAG\": %i}", template["BASE"], str(template["GPIO"]), template["NAME"], template["FLAG"]), boolMute)
 	end
 
@@ -296,7 +296,7 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 	reponseCMD = tasmota.cmd("Modules", boolMute)
 	for cle: reponseCMD["Modules"].keys()
 		if reponseCMD["Modules"][cle] == template["NAME"] && !tasmota.cmd("Module", boolMute)["Module"].find("0", false)
-			log(string.format("CONTROLE_GLOBAL: Active le module %s: %s !", cle, reponseCMD["Modules"][cle]), LOG_LEVEL_DEBUG)
+			logFonctions.log(string.format("CONTROLE_GLOBAL: Active le module %s: %s !", cle, reponseCMD["Modules"][cle]), LOG_LEVEL_DEBUG)
 			tasmota.cmd("Module " + str(cle), boolMute)
 		end
 	end

@@ -18,7 +18,7 @@ def configModules_configDevicesByJon(typologie, gpioPinUtilises, ordreGPIO, temp
 
 	var types = (typologie == "modules" ? modules : drivers)
 	if types.find("activation", "ON") == "ON"
-		log(string.format("CONTROLE_GENERAL: Paramètre les éléments non-spécifiques à certains %s !", typologie), LOG_LEVEL_DEBUG)
+		logFonctions.log(string.format("CONTROLE_GENERAL: Paramètre les éléments non-spécifiques à certains %s !", typologie), LOG_LEVEL_DEBUG)
 		for cleType: types.keys()
 			if (type(types[cleType]) != "instance")	continue 	end	
 			tasmota.yield()
@@ -46,21 +46,21 @@ def configModules_configDevicesByJon(typologie, gpioPinUtilises, ordreGPIO, temp
 
 					if (ledPower == "ON")
 						if (tasmota.cmd("LedPower", boolMute).find("LedPower1") != "ON")
-							log("CONTROLE_GENERAL: Active ledPower (LED allumee en continu) !", LOG_LEVEL_DEBUG)
+							logFonctions.log("CONTROLE_GENERAL: Active ledPower (LED allumee en continu) !", LOG_LEVEL_DEBUG)
 							tasmota.cmd("LedPower 1", boolMute)
 						end
 					elif (ledState >= 0 && ledState <= 7)
 						# 'LedState x' remplace tout ledstate, bit 8 (LedPower) compris
 						if (tasmota.cmd("LedState", boolMute).find("LedState") != ledState)
-							log(string.format("CONTROLE_GENERAL: Regle LedState %i !", ledState), LOG_LEVEL_DEBUG)
+							logFonctions.log(string.format("CONTROLE_GENERAL: Regle LedState %i !", ledState), LOG_LEVEL_DEBUG)
 							tasmota.cmd(string.format("LedState %i", ledState), boolMute)
 						end
 					else
-						log(string.format("CONTROLE_GENERAL_ERREUR: ledState %i invalide (0..7) !", ledState), LOG_LEVEL_ERREUR)
+						logFonctions.log(string.format("CONTROLE_GENERAL_ERREUR: ledState %i invalide (0..7) !", ledState), LOG_LEVEL_ERREUR)
 					end
 
 					if (tasmota.cmd("SetOption31", boolMute).find("SetOption31") != so31)
-						log("CONTROLE_GENERAL: Regle SetOption31 " + so31 + " (clignotement sur deconnexion) !", LOG_LEVEL_DEBUG)
+						logFonctions.log("CONTROLE_GENERAL: Regle SetOption31 " + so31 + " (clignotement sur deconnexion) !", LOG_LEVEL_DEBUG)
 						tasmota.cmd("SetOption31 " + so31, boolMute)
 					end
 				end
@@ -89,7 +89,7 @@ def configModules_configDevicesByJon(typologie, gpioPinUtilises, ordreGPIO, temp
 						elif (typologie == "modules")
 							continue
 						end
-					else log(string.format("CONFIG_GLOBAL: Parametre les %i %s du module %s !", j, cleDevices, cleType), LOG_LEVEL_DEBUG)
+					else logFonctions.log(string.format("CONFIG_GLOBAL: Parametre les %i %s du module %s !", j, cleDevices, cleType), LOG_LEVEL_DEBUG)
 					end
 
 					for cleDev: env[cleDevices].keys()
@@ -118,7 +118,7 @@ def configModules_configDevicesByJon(typologie, gpioPinUtilises, ordreGPIO, temp
 
 								reponseCMD = tasmota.cmd("Pixels", boolMute).find("Pixels", false)
 								if (reponseCMD && (int(reponseCMD) != env[cleDevices][cleDev]["nbLeds"]))
-									log(string.format("CONFIG_GLOBAL: Parametrage du nombre de LED du bandeau WS2812 = %i LEDs!", id, env[cleDevices][cleDev]["nbLeds"]), LOG_LEVEL_DEBUG)
+									logFonctions.log(string.format("CONFIG_GLOBAL: Parametrage du nombre de LED du bandeau WS2812 = %i LEDs!", id, env[cleDevices][cleDev]["nbLeds"]), LOG_LEVEL_DEBUG)
 									tasmota.cmd(string.format("Pixels %i", env[cleDevices][cleDev]["nbLeds"]), boolMute)
 								end
 							else	typeApp = int(env[cleDevices][cleDev]["type"]) + id - 1
@@ -143,7 +143,7 @@ def configModules_configDevicesByJon(typologie, gpioPinUtilises, ordreGPIO, temp
 								
 								if template["GPIO"][pos] != typeApp
 									template["GPIO"][pos] = typeApp
-									log(string.format("CONFIG_GLOBAL: Modifie en json le type de %s = %i !", cleDev, int(typeApp) + id - 1), LOG_LEVEL_DEBUG)
+									logFonctions.log(string.format("CONFIG_GLOBAL: Modifie en json le type de %s = %i !", cleDev, int(typeApp) + id - 1), LOG_LEVEL_DEBUG)
 									
 									enregistrePersistant = true
 								end		
@@ -156,7 +156,7 @@ def configModules_configDevicesByJon(typologie, gpioPinUtilises, ordreGPIO, temp
 									# print(">>>>>>>>>>>>>>>>>>" + typologie + " : Relai " + str(id) + " -> nom en json=" + env[cleDevices][cleDev]["nom"] + " / WebButton" + str(id) + "=" + tasmota.cmd(string.format("WebButton%i", id), boolMute)[string.format("WebButton%i", id)] + " / Différence=" + str(tasmota.cmd(string.format("WebButton%i", id), boolMute)[string.format("WebButton%i", id)] != env[cleDevices][cleDev]["nom"]))
 								
 									if tasmota.cmd(string.format("WebButton%i", id), boolMute)[string.format("WebButton%i", id)] != env[cleDevices][cleDev]["nom"]
-										log(string.format("CONFIG_GLOBAL: Modifie sur WebUI le nom " + 
+										logFonctions.log(string.format("CONFIG_GLOBAL: Modifie sur WebUI le nom " + 
 																	(env[cleDevices][cleDev]["type"] == 1376 ? "de la LED WS2812" : "du Relai") + " %i = %s !", 
 																	id, env[cleDevices][cleDev]["nom"]), LOG_LEVEL_DEBUG)
 										tasmota.cmd(string.format("WebButton%i %s", id, env[cleDevices][cleDev]["nom"]), boolMute)
@@ -167,7 +167,7 @@ def configModules_configDevicesByJon(typologie, gpioPinUtilises, ordreGPIO, temp
 								reponseCMD = tasmota.cmd(string.format("SwitchMode%i", id), boolMute)[string.format("SwitchMode%i", id)]
 								if int(reponseCMD) != env[cleDevices][cleDev]["SwitchMode"]
 									# Quand le circuit est fermé, Tasmota enverra ON
-									log(string.format("CONFIG_GLOBAL: Parametrage du mode du capteur ou interrupteur %i = SwitchMode %i!", id, env[cleDevices][cleDev]["SwitchMode"]), LOG_LEVEL_DEBUG)
+									logFonctions.log(string.format("CONFIG_GLOBAL: Parametrage du mode du capteur ou interrupteur %i = SwitchMode %i!", id, env[cleDevices][cleDev]["SwitchMode"]), LOG_LEVEL_DEBUG)
 									tasmota.cmd(string.format("Backlog SwitchMode%i %i;", id, env[cleDevices][cleDev]["SwitchMode"]), boolMute)
 								end	
 							# Boutons (GPIO Button, type 32) : PAS de SwitchMode. SwitchMode<id> vise le Switch<id>,
@@ -178,7 +178,7 @@ def configModules_configDevicesByJon(typologie, gpioPinUtilises, ordreGPIO, temp
 								if (env[cleDevices][cleDev]["type"] == 1312)
 									reponseCMD = tasmota.cmd(string.format("Ds18Alias %s, DS18B20-%i", env[cleDevices][cleDev]["serialNumber"], env[cleDevices][cleDev]["id"]), boolMute).find(string.format("DS18B20-%i", env[cleDevices][cleDev]["id"]), "")
 									if reponseCMD == env[cleDevices][cleDev]["serialNumber"]
-										log(string.format("CONFIG_GLOBAL: Parametrage de l'alias du DS18B20 n°%i = Ds18Alias %s, DS18B20-%i !", env[cleDevices][cleDev]["id"], env[cleDevices][cleDev]["serialNumber"], env[cleDevices][cleDev]["id"]), LOG_LEVEL_DEBUG)
+										logFonctions.log(string.format("CONFIG_GLOBAL: Parametrage de l'alias du DS18B20 n°%i = Ds18Alias %s, DS18B20-%i !", env[cleDevices][cleDev]["id"], env[cleDevices][cleDev]["serialNumber"], env[cleDevices][cleDev]["id"]), LOG_LEVEL_DEBUG)
 									end
 								end
 							end

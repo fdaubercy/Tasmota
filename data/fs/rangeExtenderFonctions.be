@@ -10,7 +10,6 @@ def rangeExtenderFonctions_etat()
     import global
     if (global._etatRangeExtenderFonctions == nil)
         global._etatRangeExtenderFonctions = {
-            "DEBUG": nil,             # 'ON'/'OFF', lu une fois depuis serveur['rangeExtender']['debug']
             "redirections": {}        # maitre : redirections NAPT deja posees, port -> IP (voir redirige)
         }
     end
@@ -20,13 +19,7 @@ rangeExtenderFonctions.etat = rangeExtenderFonctions_etat
 
 
 def rangeExtenderFonctions_log(msg, levelDebug)
-    if (rangeExtenderFonctions.etat()["DEBUG"] == nil)
-        rangeExtenderFonctions.etat()["DEBUG"] = serveur["rangeExtender"].find("debug", "OFF")
-    end
-
-    if (rangeExtenderFonctions.etat()["DEBUG"] == "ON")
-        log(msg, levelDebug)
-    end
+    logFonctions.log(msg, levelDebug, "rangeExtender")
 end
 rangeExtenderFonctions.log = rangeExtenderFonctions_log
 
@@ -56,8 +49,8 @@ def rangeExtenderFonctions_redirige(port, ip)
         rangeExtenderFonctions.log(string.format("RANGE_EXTENDER: redirection NAPT %i -> %s:80 posee", port, ip), LOG_LEVEL_DEBUG)
         return true
     end
-    log(string.format("RANGE_EXTENDER: redirection NAPT %i -> %s:80 REFUSEE (table de 10 redirections pleine ? redemarrer le maitre)",
-                      port, ip), LOG_LEVEL_ERREUR)
+    logFonctions.log(string.format("RANGE_EXTENDER: redirection NAPT %i -> %s:80 REFUSEE (table de 10 redirections pleine ? redemarrer le maitre)",
+                      port, ip), LOG_LEVEL_ERREUR, "rangeExtender")
     return false
 end
 rangeExtenderFonctions.redirige = rangeExtenderFonctions_redirige
@@ -147,22 +140,12 @@ rangeExtenderFonctions.routageRangeExtender = rangeExtenderFonctions_routageRang
 def rangeExtenderFonctions_aideReglageRangeExtender(sujet)
     import string
     if (sujet == nil)
-        return [
-            ["logActivation", "logActivation <ON|OFF|1|0>", "active/coupe les logs de debug du RangeExtender"]
-        ]
-    end
-    sujet = string.toupper(sujet)
-    if (sujet == "LOGACTIVATION")
-        return ["Parametre : ON ou 1 = logs de debug RangeExtender actifs ; OFF ou 0 = coupes.",
-                "Sauvegarde : serveur.rangeExtender.debug (persist.save).",
-                "Exemple : ReglageRangeExtender logActivation ON"]
+        return []     # aucune sous-commande (les logs se reglent avec ReglageLog)
     end
     return nil
 end
 rangeExtenderFonctions.aideReglageRangeExtender = rangeExtenderFonctions_aideReglageRangeExtender
 
-# exemples:
-# ReglageRangeExtender logActivation OFF
 def rangeExtenderFonctions_reglageRangeExtender(cmd, idx, payload, payload_json)
     import string
     import json
@@ -192,30 +175,15 @@ def rangeExtenderFonctions_reglageRangeExtender(cmd, idx, payload, payload_json)
     else fonction = payload
     end
 
-    log("REGLAGE_RANGE_EXTENDER: fonction=" + str(fonction), LOG_LEVEL_DEBUG_PLUS)
+    logFonctions.log("REGLAGE_RANGE_EXTENDER: fonction=" + str(fonction), LOG_LEVEL_DEBUG_PLUS, "rangeExtender")
     if (parametres != false)
-        if (parametres.size() > 0)	log("REGLAGE_RANGE_EXTENDER: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS)	end
-        if (parametres.size() > 1)	log("REGLAGE_RANGE_EXTENDER: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS)	end
-    end
-
-    # Activation ou désactivation des logs du RangeExtender -> ordre: logActivation
-    if string.toupper(fonction) == "LOGACTIVATION"
-        try
-            # Adapte le paramètre
-            parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-            rangeExtenderFonctions.etat()["DEBUG"] = parametres[0]
-
-            # Sauvegarde le paramètre
-            serveur["rangeExtender"]["debug"] = parametres[0]
-            persist.save()                  # serveur = persist.serveur : comme ReglageDiscovery
-        except .. as e, m
-            # print('Erreur: ', e, " -> ", m)
-        end
+        if (parametres.size() > 0)	logFonctions.log("REGLAGE_RANGE_EXTENDER: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS, "rangeExtender")	end
+        if (parametres.size() > 1)	logFonctions.log("REGLAGE_RANGE_EXTENDER: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS, "rangeExtender")	end
     end
 
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd["ReglageRangeExtender"]["logActivated"] = str(rangeExtenderFonctions.etat()["DEBUG"])
+    reponse_cmnd["ReglageRangeExtender"]["resultat"] = "OK"
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
 rangeExtenderFonctions.reglageRangeExtender = rangeExtenderFonctions_reglageRangeExtender

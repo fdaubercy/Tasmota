@@ -53,7 +53,6 @@ var modBus_Conn16channels = module("modBus_Conn16channels")
 class MODBUS_CONN_16CHANNEL : Driver
     # Variables
     var nbIOActivesJSON
-    var DEBUG
     var indexRegistres        # {idModBus: [cleModule, cleEnv, cleDevice]} - voir construitIndexRegistres()
     var dernierSondageA       # horodatage (s) de la derniere reponse 0x03 exploitee
     var etatsInconnus         # true quand le chien de garde a expire (3 x T sans reponse)
@@ -178,7 +177,6 @@ class MODBUS_CONN_16CHANNEL : Driver
         import gestionFileFolder
         import string
 
-        self.DEBUG = nil
         self.nbIOActivesJSON = nil
         self.indexRegistres = {}
         self.dernierSondageA = nil      # nil = aucun sondage abouti -> le chien de garde ne mord pas encore
@@ -228,16 +226,7 @@ class MODBUS_CONN_16CHANNEL : Driver
     end
 
     def log(msg, levelDebug)
-        import persist
-        import string
-    
-        if (self.DEBUG == nil)
-            self.DEBUG = drivers["ModBus"]["environnement"]["Conn16channels"].find("debug", "OFF")
-        end
-    
-        if (self.DEBUG == "ON")
-            log(msg, levelDebug)
-        end
+        logFonctions.log(msg, levelDebug, "conn16channels")
     end
 
     # Aide de la commande ReglageConn16Channel, appelee SEULEMENT par diversFonctions.traiteAide :
@@ -245,22 +234,11 @@ class MODBUS_CONN_16CHANNEL : Driver
     def aideReglageConn16Channel(sujet)
         import string
         if (sujet == nil)
-            return [
-                ["logActivation", "logActivation <ON|OFF|1|0>", "active/coupe les logs du module Conn16channels (sauve dans le persist)"]
-            ]
-        end
-        sujet = string.toupper(sujet)
-        if (sujet == "LOGACTIVATION")
-            return ["Parametre : ON ou 1 = logs actifs ; OFF ou 0 = coupes.",
-                    "Effet : sauve drivers.ModBus.environnement.Conn16channels.debug dans le persist.",
-                    "Exemple : ReglageConn16Channel logActivation ON"]
+            return []
         end
         return nil
     end
 
-    #- Exemples:
-        ReglageConn16Channel logActivation OFF   => Active ou désactive les logs du module
-    -#
     def reglageConn16Channel(cmd, idx, payload, payload_json)
         import string
         import json
@@ -288,28 +266,13 @@ class MODBUS_CONN_16CHANNEL : Driver
         else fonction = payload
         end
 
-        log("REGLAGE_MODBUS_CONN_16CH: fonction=" + str(fonction), LOG_LEVEL_DEBUG_PLUS)
-        if (parametres.size() > 0)	log("REGLAGE_MODBUS_CONN_16CH: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS)	end
-        if (parametres.size() > 1)	log("REGLAGE_MODBUS_CONN_16CH: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS)	end
-
-        # Activation ou désactivation des logs de gestion de la garage -> ordre: logActivation
-        if (string.toupper(fonction) == string.toupper("logActivation"))
-            try
-                # Adapte le paramètre
-                parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-                self.DEBUG = parametres[0]
-
-                # Sauvegarde le paramètre
-                drivers["ModBus"]["environnement"]["Conn16channels"]["debug"] = parametres[0]
-                persist.save()
-            except .. as e, m
-                # print('Erreur: ', e, " -> ", m)
-            end
-        end
+        logFonctions.log("REGLAGE_MODBUS_CONN_16CH: fonction=" + str(fonction), LOG_LEVEL_DEBUG_PLUS, "conn16channels")
+        if (parametres.size() > 0)	logFonctions.log("REGLAGE_MODBUS_CONN_16CH: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS, "conn16channels")	end
+        if (parametres.size() > 1)	logFonctions.log("REGLAGE_MODBUS_CONN_16CH: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS, "conn16channels")	end
 
         # Commande réussie
         # Réponse à la commande
-        reponse_cmnd = string.format("reglageConn16Channel: id=%i, logActivated=%s", idx, self.DEBUG)
+        reponse_cmnd = string.format("reglageConn16Channel: id=%i", idx)
         tasmota.resp_cmnd(json.dump(reponse_cmnd))
     end
 
@@ -575,12 +538,12 @@ def modBus_Conn16channels_init(m)
                         global.modBus_Conn16channels = m.MODBUS_CONN_16CHANNEL()
                         tasmota.add_driver(global.modBus_Conn16channels)
 
-                        log("MODBUS_CONN_16CHANNEL: Driver activé !", LOG_LEVEL_DEBUG)
+                        logFonctions.log("MODBUS_CONN_16CHANNEL: Driver activé !", LOG_LEVEL_DEBUG, "conn16channels")
 
                         break
                     end
                 except .. as error, message
-                    log(string.format("MODBUS_CONN_16CHANNEL_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
+                    logFonctions.log(string.format("MODBUS_CONN_16CHANNEL_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR, "conn16channels")
                 end
             end
         end

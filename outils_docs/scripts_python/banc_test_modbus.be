@@ -83,11 +83,17 @@ var introspect = nil
 var tcpclientasync = nil
 var modbusFonctions = nil              # sera (re)affecte par le fichier charge
 var modBus_TasmotaSlaveModBus = nil    # idem
+var logFonctions = nil                 # idem : la VRAIE fonction de log commune (seuil par cible)
 
 # --- charge les vrais modules ---
 print(">>> sources testees :", SOURCES)
-var f = open(SOURCES + "/modbusFonctions.be", "r")
+var f = open(SOURCES + "/logFonctions.be", "r")
 var src = f.read()
+f.close()
+compile(src)()
+print(">>> logFonctions charge :", logFonctions != nil ? "OK" : "ECHEC")
+f = open(SOURCES + "/modbusFonctions.be", "r")
+src = f.read()
 f.close()
 compile(src)()
 print(">>> modbusFonctions charge :", modbusFonctions != nil ? "OK" : "ECHEC")
@@ -312,26 +318,26 @@ serveur = sauveServeur
 modbusFonctions.etat()["clients"] = [nil, nil, nil, nil, nil, nil]
 
 print("")
-print("=== 7. reglageSlaveModBus logActivation : chemin du persist ===")
-# log() du driver LIT drivers.ModBus.environnement.TasmotaSlaveModBus.debug
-# (modBus_TasmotaSlaveModBus.be:86) : c'est la que la commande doit ECRIRE.
-class SelfStub
-  var DEBUG
-  def log(m, l) end
-  # Aide contextuelle (2026-10-04) : delegue a la VRAIE methode, pour que traiteAide
-  # reconnaisse 'logActivation' comme une sous-commande connue
-  def aideReglageSlaveModBus(s) return modBus_TasmotaSlaveModBus.MODBUS_TASMOTA_SLAVE.aideReglageSlaveModBus(self, s) end
-end
-import persist
+print("=== 7. log() du driver SlaveModBus : seuil de la cible slaveModbus ===")
+# Depuis le 2026-10-04, la methode log du driver delegue a logFonctions.log(msg, niveau,
+# "slaveModbus") ; le seuil est la cle "log" de drivers.ModBus.environnement.TasmotaSlaveModBus
+# (logFonctions.lieu). Contrat : les erreurs passent toujours, le reste suit le seuil.
 sauveDrivers = drivers
-drivers = {"ModBus": {"environnement": {"TasmotaSlaveModBus": {"debug": "OFF",
+drivers = {"ModBus": {"environnement": {"TasmotaSlaveModBus": {"log": "erreur",
            "TasmotaSlaveModBus1": {"activation": "ON", "id": 2, "name": "cuve"}}}}}
-var nbSave = persist.nb_save
-essaie(def () modBus_TasmotaSlaveModBus.MODBUS_TASMOTA_SLAVE.reglageSlaveModBus(SelfStub(), "ReglageSlaveModBus", 1, "logActivation ON", nil) end)
-verifie("logActivation ON : debug du persist / save()",
-        "ON / save=1",
-        drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"]["debug"] + " / save=" + str(persist.nb_save - nbSave))
+logFonctions.etat()["seuils"] = {}     # vide le cache des seuils : relecture du persist ci-dessus
+journal = []
+var slaveLog = modBus_TasmotaSlaveModBus.MODBUS_TASMOTA_SLAVE.log
+slaveLog(nil, "BANC_SLAVE: info sous seuil erreur", LOG_LEVEL_INFO)
+slaveLog(nil, "BANC_SLAVE: erreur sous seuil erreur", LOG_LEVEL_ERREUR)
+verifie("seuil erreur : info bloquee (temoin)", false, journalise("BANC_SLAVE: info"))
+verifie("seuil erreur : erreur emise", true, journalise("BANC_SLAVE: erreur"))
+drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"]["log"] = "detail"
+logFonctions.etat()["seuils"] = {}
+slaveLog(nil, "BANC_SLAVE: detail sous seuil detail", LOG_LEVEL_DEBUG_PLUS)
+verifie("seuil detail : detail emis", true, journalise("BANC_SLAVE: detail"))
 drivers = sauveDrivers
+logFonctions.etat()["seuils"] = {}
 
 print("")
 print("=== 8. Ecriture 0x10 standard : emission, decodage, reconversion ===")

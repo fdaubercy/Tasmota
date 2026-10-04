@@ -1,21 +1,12 @@
 # Définition du module
 var cuveFonctions = module("/cuveFonctions")
 
-cuveFonctions.DEBUG = nil
 cuveFonctions.sensorsCuve = {"valeursAnalogiques": {"valeurCapteurHauteur": 0}, "niveauCuve": {"hauteurEau": 0, "tauxRemplissage": 0, "volume": 0}}
 cuveFonctions.voltageMin = 0.00
 cuveFonctions.voltageMax = 0.00         # voltageMax admissible par l'ADS1115 selon la plage de mesure paramétrée
 
 cuveFonctions.log = def(msg, levelDebug)
-    import persist
-
-    if (cuveFonctions.DEBUG == nil)
-        cuveFonctions.DEBUG = modules["cuve"].find("debug", "OFF")
-    end
-
-    if (cuveFonctions.DEBUG == "ON")
-        log(msg, levelDebug)
-    end
+    logFonctions.log(msg, levelDebug, "cuve")
 end
 
 # Aide de la commande ReglageCuve, appelee SEULEMENT par diversFonctions.traiteAide :
@@ -24,7 +15,6 @@ cuveFonctions.aideReglageCuve = def(sujet)
     import string
     if (sujet == nil)
         return [
-            ["logActivation", "logActivation <ON|OFF>", "active ou desactive les logs du module cuve"],
             ["etalonnageCapteur", "etalonnageCapteur <ON|OFF>", "mesure rapprochee du niveau pendant 10 min"],
             ["hauteurCuve", "hauteurCuve <cm>", "regle la hauteur de la cuve"],
             ["largeurCuve", "largeurCuve <cm>", "regle la largeur de la cuve"],
@@ -32,12 +22,6 @@ cuveFonctions.aideReglageCuve = def(sujet)
         ]
     end
     sujet = string.toupper(sujet)
-    if (sujet == "LOGACTIVATION")
-        return ["Parametre : ON ou OFF (1 = ON, 0 = OFF).",
-                "Effet : active ou coupe les logs du module cuve, memorise dans modules cuve debug",
-                "        puis sauvegarde (persist.save). Parametre absent : ignore.",
-                "Exemple : ReglageCuve logActivation ON"]
-    end
     if (sujet == "ETALONNAGECAPTEUR")
         return ["Parametre : ON ou OFF (1 = ON, 0 = OFF).",
                 "Effet ON : remplace la tache cron de mesure 'majNiveauCuve' par une tache plus",
@@ -59,7 +43,6 @@ cuveFonctions.aideReglageCuve = def(sujet)
 end
 
 #- Exemples: 
-    ReglageCuve logActivation OFF   => Active ou désactive les logs du module
     ReglageCuve etalonnageCapteur ON       => Augmente la frequence de mesure pendant 10min (frequence=1mesure/10s)
     Backlog ReglageCuve hauteurCuve 110; ReglageCuve largeurCuve 180; ReglageCuve longueurCuve 340      => Force et enregistre les dimensions de la cuve
 -#
@@ -89,29 +72,16 @@ cuveFonctions.reglageCuve = def(cmd, idx, payload, payload_json)
     else fonction = payload
     end
 
-    log("REGLAGE_CUVE: fonction=" + str(fonction), LOG_LEVEL_DEBUG_PLUS)
-    if (parametres.size() > 0)	log("REGLAGE_CUVE: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS)	end
-    if (parametres.size() > 1)	log("REGLAGE_CUVE: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS)	end
+    logFonctions.log("REGLAGE_CUVE: fonction=" + str(fonction), LOG_LEVEL_DEBUG_PLUS, "cuve")
+    if (parametres.size() > 0)	logFonctions.log("REGLAGE_CUVE: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS, "cuve")	end
+    if (parametres.size() > 1)	logFonctions.log("REGLAGE_CUVE: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS, "cuve")	end
 
     if (!modules["cuve"].find("dimensions", false))
         modules["cuve"].insert("dimensions", {})
     end
 
-    # Activation ou désactivation des logs de gestion de la cuve -> ordre: logActivation
-    if string.toupper(fonction) == "LOGACTIVATION"
-        try
-            # Adapte le paramètre
-            parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-            cuveFonctions.DEBUG = parametres[0]
-
-            # Sauvegarde le paramètre
-            modules["cuve"]["debug"] = parametres[0]
-            persist.save()
-        except .. as e, m
-            # print('Erreur: ', e, " -> ", m)
-        end
     # Augmente la frequence de mesure pendant 10min (frequence=1mesure/10s)
-    elif string.toupper(fonction) == string.toupper("etalonnageCapteur")
+    if string.toupper(fonction) == string.toupper("etalonnageCapteur")
         try
             # Adapte le paramètre
             parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
@@ -166,8 +136,8 @@ cuveFonctions.reglageCuve = def(cmd, idx, payload, payload_json)
 
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd = string.format("ReglageCuve: logActivated=%s, reglage=%s, largeurCuve=%dcm, longueurCuve=%dcm, hauteurCuve=%dcm", 
-                                            cuveFonctions.DEBUG, modules["cuve"]["reglage"], modules["cuve"]["dimensions"].find("largeur", 100), 
+    reponse_cmnd = string.format("ReglageCuve: reglage=%s, largeurCuve=%dcm, longueurCuve=%dcm, hauteurCuve=%dcm",
+                                            modules["cuve"]["reglage"], modules["cuve"]["dimensions"].find("largeur", 100), 
                                             modules["cuve"]["dimensions"].find("longueur", 100), 
                                             modules["cuve"]["dimensions"].find("hauteur", 100))
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
@@ -223,11 +193,11 @@ cuveFonctions.reglageAna = def(cmd, idx, payload, payload_json)
     else fonction = payload
     end
 
-    log("REGLAGE_ANA: fonction=" + str(fonction), LOG_LEVEL_DEBUG_PLUS)
-    if (parametres.size() > 0)	log("REGLAGE_ANA: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS)	end
-    if (parametres.size() > 1)	log("REGLAGE_ANA: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS)	end
+    logFonctions.log("REGLAGE_ANA: fonction=" + str(fonction), LOG_LEVEL_DEBUG_PLUS, "cuve")
+    if (parametres.size() > 0)	logFonctions.log("REGLAGE_ANA: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS, "cuve")	end
+    if (parametres.size() > 1)	logFonctions.log("REGLAGE_ANA: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS, "cuve")	end
 
-    # Activation ou désactivation des logs du RangeExtender -> ordre: logActivation
+    # Reglage de la tension maximale admissible de l'ADS1115 -> ordre: voltageMax
     if string.toupper(fonction) == "VOLTAGEMAX"
         try
             modules["cuve"]["environnement"]["analogiques"]["voltageMax"] = real(parametres[0])

@@ -1,43 +1,18 @@
 # Définition du module
 var garageFonctions = module("/garageFonctions")
 
-garageFonctions.DEBUG = nil
-
 garageFonctions.log = def(msg, levelDebug)
-    import persist
-
-    if (garageFonctions.DEBUG == nil)
-        garageFonctions.DEBUG = modules["garage"].find("debug", "OFF")
-    end
-
-    if (garageFonctions.DEBUG == "ON")
-        log(msg, levelDebug)
-    end
+    logFonctions.log(msg, levelDebug, "garage")
 end
 
 # Aide de la commande ReglageGarage, appelee SEULEMENT par diversFonctions.traiteAide :
 # sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
 garageFonctions.aideReglageGarage = def(sujet)
-    import string
     if (sujet == nil)
-        return [
-            ["logActivation", "logActivation <ON|OFF>", "active ou desactive les logs du module garage"]
-        ]
-    end
-    sujet = string.toupper(sujet)
-    if (sujet == "LOGACTIVATION")
-        return ["Parametre : ON ou OFF (1 = ON, 0 = OFF).",
-                "Effet : active ou coupe les logs du module garage, memorise dans modules garage debug",
-                "        puis sauvegarde (persist.save). Parametre absent : ignore.",
-                "        La reponse indique l'etat courant (logActivated=...).",
-                "Exemple : ReglageGarage logActivation ON"]
+        return []
     end
     return nil
 end
-
-#- Exemples: 
-    ReglageGarage logActivation OFF   => Active ou désactive les logs du module
--#
 garageFonctions.reglageGarage = def(cmd, idx, payload, payload_json)
     import string
     import json
@@ -64,28 +39,13 @@ garageFonctions.reglageGarage = def(cmd, idx, payload, payload_json)
     else fonction = payload
     end
 
-    log ("REGLAGE_GARAGE: fonction=" + str(fonction), LOG_LEVEL_DEBUG_PLUS)
-    if (parametres.size() > 0)	log ("REGLAGE_GARAGE: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS)	end
-    if (parametres.size() > 1)	log ("REGLAGE_GARAGE: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS)	end
-
-    # Activation ou désactivation des logs de gestion de la garage -> ordre: logActivation
-    if string.toupper(fonction) == "LOGACTIVATION"
-        try
-            # Adapte le paramètre
-            parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-            garageFonctions.DEBUG = parametres[0]
-
-            # Sauvegarde le paramètre
-            modules["garage"]["debug"] = parametres[0]
-            persist.save()
-        except .. as e, m
-            # print('Erreur: ', e, " -> ", m)
-        end
-    end
+    logFonctions.log ("REGLAGE_GARAGE: fonction=" + str(fonction), LOG_LEVEL_DEBUG_PLUS, "garage")
+    if (parametres.size() > 0)	logFonctions.log ("REGLAGE_GARAGE: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS, "garage")	end
+    if (parametres.size() > 1)	logFonctions.log ("REGLAGE_GARAGE: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS, "garage")	end
 
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd = string.format("ReglageGarage: logActivated=%s", garageFonctions.DEBUG)
+    reponse_cmnd = "ReglageGarage: aucun reglage disponible"
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
 

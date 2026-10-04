@@ -44,7 +44,7 @@ logFonctions.MOTS = ["aucun", "erreur", "info", "debug", "detail"]
 logFonctions.SORTIES = {"serie": "SerialLog", "web": "WebLog", "mqtt": "MqttLog", "syslog": "SysLog"}
 # Cibles connues (une par bloc du persist qui porte une cle "log")
 logFonctions.CIBLES = ["general", "serveurWeb", "udp", "tcp", "rangeExtender", "discovery", "modbus",
-                       "conn16channels", "slaveModbus", "lorawan", "volets", "es8311"]
+                       "conn16channels", "slaveModbus", "lorawan", "volets", "es8311", "garage", "cuve"]
 
 # ETAT MUTABLE DU MODULE : dans une GLOBALE, pas dans le module (un module solidifie est
 # constant, en flash). Les seuils sont lus une fois depuis le persist, puis mis en cache.
@@ -79,6 +79,8 @@ def logFonctions_lieu(cible)
     elif c == "lorawan"             bloc = d.find("LoRaWan")
     elif c == "volets"              bloc = d.find("voletRoulants")
     elif c == "es8311"              bloc = d.find("I2S", {}).find("environnement", {}).find("ES8311")
+    elif c == "garage"              bloc = (modules != nil ? modules.find("garage") : nil)
+    elif c == "cuve"                bloc = (modules != nil ? modules.find("cuve") : nil)
     end
 
     if (type(bloc) != "instance" || bloc.size() == 0)    return nil    end
@@ -99,7 +101,8 @@ def logFonctions_seuil(cible)
         var lieu = logFonctions.lieu(cible)
         if (lieu != nil)
             var mot = lieu[0].find(lieu[1])
-            if (mot == nil)
+            # (pas de repli pour "general" : cette cible n'a jamais eu de cle "debug")
+            if (mot == nil && cible != "general")
                 var ancien = lieu[0].find("debug")
                 if (ancien == "ON")         mot = "debug"
                 elif (ancien == "OFF")      mot = "info"

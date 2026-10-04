@@ -105,10 +105,10 @@ class CAPTEURS_CUVE : Driver
                     if (drivers["I2C"]["environnement"]["ADS1115"].find("activation", "OFF") == "ON")
                         # Vérifie la plage de mesure paramétrée pour l'ADS1115
                         cuveFonctions.voltageMax = int(tasmota.cmd("Sensor12", boolMute)["ADS1115"]["Range"])
-                        log("INIT_ADS1115: Voltage Max.: " + str(cuveFonctions.voltageMax), LOG_LEVEL_DEBUG)
+                        logFonctions.log("INIT_ADS1115: Voltage Max.: " + str(cuveFonctions.voltageMax), LOG_LEVEL_DEBUG, "cuve")
 
                         # Mets à jour les valeurs des capteurs
-                        log("INIT_ADS1115: Enregistre les taches CRON !", LOG_LEVEL_DEBUG)
+                        logFonctions.log("INIT_ADS1115: Enregistre les taches CRON !", LOG_LEVEL_DEBUG, "cuve")
                         cuveFonctions.changementEtatCapteur("", "ADS1115", "", "cuve", "")
                         tasmota.add_cron("*/60 * * * * *", /-> cuveFonctions.changementEtatCapteur("", "ADS1115", "", "cuve", ""), "majNiveauCuve")
                     end
@@ -151,7 +151,7 @@ class CAPTEURS_CUVE : Driver
         # Pour les entrées analogiques
         variablesRemplacement = {}
         if (modules["cuve"]["environnement"].find("analogiques", false))    # && cuveFonctions.sensorsCuve.find("niveauCuve", false))
-            log("WEBSERVER_CUVE: Envoi a la page web de l'etat des capteurs !", LOG_LEVEL_DEBUG)
+            logFonctions.log("WEBSERVER_CUVE: Envoi a la page web de l'etat des capteurs !", LOG_LEVEL_DEBUG, "cuve")
 
             # Parcours les entrées analogiques
             variablesRemplacement.insert("drivers->nom", modules["cuve"]["environnement"]["analogiques"]["name"])
@@ -197,7 +197,7 @@ class CAPTEURS_CUVE : Driver
 
         # Pour les thermometres
         if (modules["cuve"]["environnement"].find("thermometres", false))
-            log("WEBSERVER_CUVE: Envoi a la page web de l'etat des thermometres !", LOG_LEVEL_DEBUG)
+            logFonctions.log("WEBSERVER_CUVE: Envoi a la page web de l'etat des thermometres !", LOG_LEVEL_DEBUG, "cuve")
 
             # Parcours les thermomètres
             for cle: modules["cuve"]["environnement"]["thermometres"].keys()

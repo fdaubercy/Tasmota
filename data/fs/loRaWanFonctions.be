@@ -9,9 +9,7 @@ var loRaWanFonctions = module("loRaWanFonctions")
 def loRaWanFonctions_etat()
     import global
     if (global._etatLoRaWanFonctions == nil)
-        global._etatLoRaWanFonctions = {
-            "DEBUG": nil              # 'ON'/'OFF', lu une fois depuis drivers['LoRaWan']['debug']
-        }
+        global._etatLoRaWanFonctions = {}
     end
     return global._etatLoRaWanFonctions
 end
@@ -19,14 +17,7 @@ loRaWanFonctions.etat = loRaWanFonctions_etat
 
 
 def loRaWanFonctions_log(msg, levelDebug)
-
-    if (loRaWanFonctions.etat()["DEBUG"] == nil)
-        loRaWanFonctions.etat()["DEBUG"] = drivers["LoRaWan"].find("debug", "OFF")
-    end
-
-    if (loRaWanFonctions.etat()["DEBUG"] == "ON")
-        log(msg, levelDebug)
-    end
+    logFonctions.log(msg, levelDebug, "lorawan")
 end
 loRaWanFonctions.log = loRaWanFonctions_log
 
@@ -35,26 +26,12 @@ loRaWanFonctions.log = loRaWanFonctions_log
 def loRaWanFonctions_aideReglageLoRaWan(sujet)
     import string
     if (sujet == nil)
-        return [
-            ["logActivation", "logActivation <ON|OFF>", "active ou desactive les logs du module LoRaWan"]
-        ]
-    end
-    sujet = string.toupper(sujet)
-    if (sujet == "LOGACTIVATION")
-        return ["Parametre : ON ou OFF (1 = ON, 0 = OFF).",
-                "Effet : active ou coupe les logs du module LoRaWan,",
-                "        memorise dans drivers LoRaWan debug (persist)",
-                "        puis sauvegarde (persist.save). Parametre absent : ignore.",
-                "        La reponse indique l'etat courant (logActivated=...).",
-                "Exemple : ReglageLoRaWan logActivation ON"]
+        return []
     end
     return nil
 end
 loRaWanFonctions.aideReglageLoRaWan = loRaWanFonctions_aideReglageLoRaWan
 
-#- exemples: 
-    reglageLoRaWan logActivation OFF
--#
 def loRaWanFonctions_reglageLoRaWan(cmd, idx, payload, payload_json)
     import string
     import json
@@ -85,28 +62,9 @@ def loRaWanFonctions_reglageLoRaWan(cmd, idx, payload, payload_json)
 	if (parametres.size() > 0)	loRaWanFonctions.log("REGLAGE_LORAWAN: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS)	end
 	if (parametres.size() > 1)	loRaWanFonctions.log("REGLAGE_LORAWAN: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS)	end
 
-    # Activation ou désactivation des logs de la liaison RS485 -> ordre: logActivation
-    if string.toupper(fonction) == "LOGACTIVATION"
-        try
-            # Adapte le paramètre
-            parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-            loRaWanFonctions.etat()["DEBUG"] = parametres[0]
-
-            # Sauvegarde le paramètre
-            drivers["LoRaWan"]["debug"] = parametres[0]
-
-            # Sauvegarde le paramètre (corrige le 2026-09-27 : ecrivait dans modules["LoRaWan"],
-            # absent -> exception avalee, persist.save() jamais atteint)
-            persist.drivers["LoRaWan"]["debug"] = parametres[0]
-            persist.save()
-        except .. as e, m
-            # print('Erreur: ', e, " -> ", m)
-        end
-    end
-
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd += string.format("logActivated=%s", loRaWanFonctions.etat()["DEBUG"])
+    reponse_cmnd += "aucun reglage disponible"
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
 loRaWanFonctions.reglageLoRaWan = loRaWanFonctions_reglageLoRaWan

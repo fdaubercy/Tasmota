@@ -18,7 +18,6 @@ class MODBUS_TASMOTA_SLAVE : Driver
     # Variables
     var nbIOActivesJSON
     var dataJson
-    var DEBUG
     var derniersContacts                # chien de garde : id esclave -> heure du dernier contact
     var esclavesMuets                   # chien de garde : id esclave -> true tant qu'il est muet
 
@@ -27,7 +26,6 @@ class MODBUS_TASMOTA_SLAVE : Driver
         import string
         import gestionFileFolder
 
-        self.DEBUG = nil
         self.nbIOActivesJSON = nil
         self.derniersContacts = {}
         self.esclavesMuets = {}
@@ -84,15 +82,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
     end
 
     def log(msg, levelDebug)
-        import persist
-    
-        if (self.DEBUG == nil)
-            self.DEBUG = drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"].find("debug", "OFF")
-        end
-    
-        if (self.DEBUG == "ON")
-            log(msg, levelDebug)
-        end
+        logFonctions.log(msg, levelDebug, "slaveModbus")
     end
 
     # Aide de la commande ReglageSlaveModBus, appelee SEULEMENT par diversFonctions.traiteAide :
@@ -101,16 +91,11 @@ class MODBUS_TASMOTA_SLAVE : Driver
         import string
         if (sujet == nil)
             return [
-                ["logActivation", "logActivation <ON|OFF|1|0>", "active/coupe les logs du module TasmotaSlaveModBus (sauve dans le persist)"],
                 ["id", "id <1..247>", "change l'adresse ModBus de l'esclave ReglageSlaveModBus<n> (sauve)"]
             ]
         end
         sujet = string.toupper(sujet)
-        if (sujet == "LOGACTIVATION")
-            return ["Parametre : ON ou 1 = logs actifs ; OFF ou 0 = coupes.",
-                    "Effet : sauve drivers.ModBus.environnement.TasmotaSlaveModBus.debug (persist).",
-                    "Exemple : ReglageSlaveModBus1 logActivation ON"]
-        elif (sujet == "ID")
+        if (sujet == "ID")
             return ["Parametre : <id> entre 1 et 247 (ex. 2 ou 0x02) ; hors bornes = erreur.",
                     "Le suffixe numerique de la commande (n) designe l'esclave TasmotaSlaveModBus<n>.",
                     "Effet : sauve le nouvel id dans le persist ; les regles ModbusReceived deja",
@@ -121,7 +106,6 @@ class MODBUS_TASMOTA_SLAVE : Driver
     end
 
     #- Exemples:
-        ReglageSlaveModBus1 logActivation OFF   => Active ou désactive les logs du module
         ReglageSlaveModBus1 id 0x02   => Change le l'adresse ModBus de l'esclave ModBus_TasmotaSlaveModBus1
     -#
     def reglageSlaveModBus(cmd, idx, payload, payload_json)
@@ -151,27 +135,12 @@ class MODBUS_TASMOTA_SLAVE : Driver
         else fonction = payload
         end
 
-        log("REGLAGE_MODBUS_TASMOTA_SLAVE: fonction=" + str(fonction), LOG_LEVEL_DEBUG_PLUS)
-        if (parametres.size() > 0)	log("REGLAGE_MODBUS_TASMOTA_SLAVE: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS)	end
-        if (parametres.size() > 1)	log("REGLAGE_MODBUS_TASMOTA_SLAVE: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS)	end
+        logFonctions.log("REGLAGE_MODBUS_TASMOTA_SLAVE: fonction=" + str(fonction), LOG_LEVEL_DEBUG_PLUS, "slaveModbus")
+        if (parametres.size() > 0)	logFonctions.log("REGLAGE_MODBUS_TASMOTA_SLAVE: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS, "slaveModbus")	end
+        if (parametres.size() > 1)	logFonctions.log("REGLAGE_MODBUS_TASMOTA_SLAVE: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS, "slaveModbus")	end
 
-        # Activation ou désactivation des logs de gestion de la garage -> ordre: logActivation
-        if (string.toupper(fonction) == string.toupper("logActivation"))
-            try
-                # Adapte le paramètre
-                parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-                self.DEBUG = parametres[0]
-
-                # Sauvegarde le paramètre au niveau du DRIVER, la ou log() le relit (corrige le
-                # 2026-09-29) : l'ancien chemin repetait 'TasmotaSlaveModBus' 3 fois, levait une
-                # exception avalee par le try -> rien n'etait jamais sauvegarde.
-                drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"]["debug"] = parametres[0]
-                persist.save()
-            except .. as e, m
-                # print('Erreur: ', e, " -> ", m)
-            end
         # Change le l'adresse ModBus de l'esclave ModBus_TasmotaSlaveModBus<x> -> ordre: id
-        elif (string.toupper(fonction) == string.toupper("id"))
+        if (string.toupper(fonction) == string.toupper("id"))
             try
                 # Adapte le paramètre
                 var nouvelleID = int(parametres[0])
@@ -193,7 +162,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
 
         # Commande réussie
         # Réponse à la commande
-        reponse_cmnd = string.format("reglageSlaveModBus: id=%i, logActivated=%s", idx, self.DEBUG)
+        reponse_cmnd = string.format("reglageSlaveModBus: id=%i", idx)
         tasmota.resp_cmnd(json.dump(reponse_cmnd))
     end
 
@@ -710,8 +679,8 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                                 device["constateA"] = tasmota.rtc()["local"]
                                                 dataJson["POWER" + str(device["id"])] = valeur
                                                 if (device.find("etat", "OFF") != valeur)
-                                                    log(string.format("MODBUS_TASMOTA_SLAVE_ECART: relai n°%i (%s) : commande=%s, constate=%s",
-                                                                      device["id"], nameTasmotaSlaveModBus, device.find("etat", "OFF"), valeur), LOG_LEVEL_ERREUR)
+                                                    logFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_ECART: relai n°%i (%s) : commande=%s, constate=%s",
+                                                                      device["id"], nameTasmotaSlaveModBus, device.find("etat", "OFF"), valeur), LOG_LEVEL_ERREUR, "slaveModbus")
                                                 end
                                             end
                                         end
@@ -726,8 +695,8 @@ class MODBUS_TASMOTA_SLAVE : Driver
                 if (env)    modules[cleModule]["environnement"] = env    end
             end
         except .. as erreur, message
-            log(string.format("MODBUS_TASMOTA_SLAVE_ERREUR: traitement de la reponse de %s (0x%02X, registre %s) : %s -> %s",
-                              nameTasmotaSlaveModBus, msg.find("FunctionCode", 0), str(msg.find("StartAddress")), erreur, message), LOG_LEVEL_ERREUR)
+            logFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_ERREUR: traitement de la reponse de %s (0x%02X, registre %s) : %s -> %s",
+                              nameTasmotaSlaveModBus, msg.find("FunctionCode", 0), str(msg.find("StartAddress")), erreur, message), LOG_LEVEL_ERREUR, "slaveModbus")
         end
 
         # Ajoute la donnée reçue en json
@@ -1048,7 +1017,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
         self.derniersContacts[idEsclave] = tasmota.rtc()["local"]
         if (self.esclavesMuets.find(idEsclave, false))
             self.esclavesMuets.remove(idEsclave)
-            log(string.format("MODBUS_TASMOTA_SLAVE_CHIEN_DE_GARDE: l'esclave d'ID=%i repond de nouveau", idEsclave), LOG_LEVEL_INFO)
+            logFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_CHIEN_DE_GARDE: l'esclave d'ID=%i repond de nouveau", idEsclave), LOG_LEVEL_INFO, "slaveModbus")
         end
     end
 
@@ -1081,8 +1050,8 @@ class MODBUS_TASMOTA_SLAVE : Driver
             if (self.esclavesMuets.find(id, false) || maintenant - dernier <= 3 * self.periodeReleve())    continue    end
 
             self.esclavesMuets[id] = true
-            log(string.format("MODBUS_TASMOTA_SLAVE_CHIEN_DE_GARDE: esclave %s (ID=%i) muet depuis %i s -> etats constates passes a 'inconnu'",
-                              cle, id, maintenant - dernier), LOG_LEVEL_ERREUR)
+            logFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_CHIEN_DE_GARDE: esclave %s (ID=%i) muet depuis %i s -> etats constates passes a 'inconnu'",
+                              cle, id, maintenant - dernier), LOG_LEVEL_ERREUR, "slaveModbus")
             nb += self.passeInconnu("ModBus_" + cle)
         end
         return nb
@@ -1136,12 +1105,12 @@ def modBus_TasmotaSlaveModBus_init(m)
                         global.modBus_TasmotaSlaveModBus = m.MODBUS_TASMOTA_SLAVE()
                         tasmota.add_driver(global.modBus_TasmotaSlaveModBus)
 
-                        log("MODBUS_TASMOTA_SLAVE: Driver activé !", LOG_LEVEL_DEBUG)
+                        logFonctions.log("MODBUS_TASMOTA_SLAVE: Driver activé !", LOG_LEVEL_DEBUG, "slaveModbus")
 
                         break
                     end
                 except .. as error, message
-                    log(string.format("MODBUS_TASMOTA_SLAVE_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
+                    logFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR, "slaveModbus")
                 end
             end
         end

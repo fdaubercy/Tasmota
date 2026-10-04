@@ -10,7 +10,6 @@ var controleES8311 = module("controleES8311")
 
 class ES8311 : Driver
     # Variables
-    var DEBUG
     var I2C
     var GPIO_PWR_PIN
     
@@ -42,15 +41,7 @@ class ES8311 : Driver
     end
 
     def log(msg, levelDebug)
-        import persist
-    
-        if (self.DEBUG == nil)
-            self.DEBUG = drivers["I2S"]["environnement"]["ES8311"].find("debug", "ON")
-        end
-    
-        if (self.DEBUG == "ON")
-            log(msg, levelDebug)
-        end
+        logFonctions.log(msg, levelDebug, "es8311")
     end
 
     def audio(cmd, idx, payload, raw)

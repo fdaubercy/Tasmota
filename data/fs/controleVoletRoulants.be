@@ -116,12 +116,12 @@ def controleVoletRoulants_init(m)
                     global.controleVRoulant = m.CONTROLE_VR()
                     tasmota.add_driver(global.controleVRoulant)
 
-                    log("CONTROLE_VR: Driver activé !", LOG_LEVEL_DEBUG)
+                    logFonctions.log("CONTROLE_VR: Driver activé !", LOG_LEVEL_DEBUG, "volets")
 
                     break
                 end
             except .. as error, message
-                log(string.format("CONTROLE_VR_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
+                logFonctions.log(string.format("CONTROLE_VR_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR, "volets")
             end
         end
     end

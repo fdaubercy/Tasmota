@@ -53,7 +53,11 @@ var globs = "path,ctypes_bytes_dyn,tasmota,ccronexpr,gpio,light,webclient,load,M
             # references par nom dans des corps de fonction de globalFonctions/webFonctions.
             # Stub a nil : resolus par nom a l'execution sur l'ESP32, comme les autres.
             "controleGeneral,controleWeb,controleLedTemoin,webserver,"
-            "LOG_LEVEL_ERREUR,LOG_LEVEL_INFO,LOG_LEVEL_DEBUG,LOG_LEVEL_DEBUG_PLUS,logSerial,logWeb"
+            "LOG_LEVEL_ERREUR,LOG_LEVEL_INFO,LOG_LEVEL_DEBUG,LOG_LEVEL_DEBUG_PLUS,logSerial,logWeb,"
+            # NOTE (fork) : ajoute le 2026-10-04. Fonction de log commune du framework
+            # (data/fs/logFonctions.be), appelee PAR NOM dans les corps de fonction de tous
+            # les modules ; sur l'ESP32, autoexec.be la cree par un import de niveau fichier.
+            "logFonctions"
 
 for g:string2.split(globs, ",")
   global.(g) = nil

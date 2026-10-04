@@ -38,7 +38,6 @@ def modbusFonctions_etat()
     import global
     if (global._etatModbusFonctions == nil)
         global._etatModbusFonctions = {
-            "DEBUG": nil,               # 'ON'/'OFF', lu une fois depuis drivers['ModBus']['debug']
             "serialModBus": nil,        # objet serial du bus RS485 (esclave)
             "enVol": nil,               # message envoye en attente de reponse (nil = canal RS485 libre)
             "pause": false,             # maitre : file suspendue (test de debit en cours, testeDebitConn16)
@@ -57,7 +56,6 @@ def modbusFonctions_etat()
 end
 modbusFonctions.etat = modbusFonctions_etat
 
-# (etat deplace dans modbusFonctions.etat()) modbusFonctions.DEBUG = nil
 # (etat deplace dans modbusFonctions.etat()) modbusFonctions.serialModBus = nil
 modbusFonctions.timeout_ReponseModBus_ms = 4000
 # (etat deplace dans modbusFonctions.etat()) modbusFonctions.clients = [nil, nil, nil, nil, nil, nil]     # 5 connexions TCP possibles au max pour les 5 esclaves ModBus (id = 1 à 5)
@@ -169,13 +167,7 @@ modbusFonctions.MBR_MAX_REGISTERS = 64
 # trame["nbValeurs"] = Nombre de valeurs à lire / écrire
 
 def modbusFonctions_log(msg, levelDebug)
-    if (modbusFonctions.etat()["DEBUG"] == nil)
-        modbusFonctions.etat()["DEBUG"] = drivers["ModBus"].find("debug", "OFF")
-    end
-
-    if (modbusFonctions.etat()["DEBUG"] == "ON")
-        log(msg, levelDebug)
-    end
+    logFonctions.log(msg, levelDebug, "modbus")
 end
 modbusFonctions.log = modbusFonctions_log
 
@@ -226,7 +218,6 @@ def modbusFonctions_aideReglageModbus(sujet)
     import string
     if (sujet == nil)
         return [
-            ["logActivation", "logActivation <ON|OFF|1|0>", "active/coupe les logs de debug ModBus (sauve dans le persist)"],
             ["envoiMessageUDP", "envoiMessageUDP <IP> <message>", "test : envoie le message en UDP unicast a l'IP"],
             ["envoiMessagTCP", "envoiMessagTCP <IP> <message>", "test : ouvre une connexion TCP et y ecrit le message"],
             ["BaudrateModbus", "BaudrateModbus <debit>", "regle le debit du bus (commande Tasmota ModbusBaudrate)"],
@@ -238,11 +229,7 @@ def modbusFonctions_aideReglageModbus(sujet)
         ]
     end
     sujet = string.toupper(sujet)
-    if (sujet == "LOGACTIVATION")
-        return ["Parametre : ON ou 1 = logs de debug ModBus actifs ; OFF ou 0 = coupes.",
-                "Effet : change l'etat en memoire et le sauve (persist drivers.ModBus.debug).",
-                "Exemple : ReglageModbus logActivation ON"]
-    elif (sujet == "ENVOIMESSAGEUDP")
+    if (sujet == "ENVOIMESSAGEUDP")
         return ["Parametres : <IP> <message> (le message peut contenir des espaces).",
                 "Effet : envoie le message en UDP unicast a <IP>, sur le port UDP du module",
                 "(udpFonctions.envoiUDP). Exige le service UDP actif (serveur.udp.activation ON),",
@@ -298,7 +285,6 @@ end
 modbusFonctions.aideReglageModbus = modbusFonctions_aideReglageModbus
 
 #- exemples:
-    ReglageModbus logActivation OFF
     ReglageModbus envoiMessageUDP 0x01 TEST
     ReglageModbus envoiMessageTCP 192.168.4.2 TEST
 
@@ -343,21 +329,8 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
 	if (parametres.size() > 0)	modbusFonctions.log("REGLAGE_MODBUS: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS)	end
 	if (parametres.size() > 1)	modbusFonctions.log("REGLAGE_MODBUS: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS)	end
 
-    # Activation ou désactivation des logs de la liaison RS485 -> ordre: logActivation
-    if (string.toupper(fonction) == string.toupper("logActivation"))
-        try
-            # Adapte le paramètre
-            parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-            modbusFonctions.etat()["DEBUG"] = parametres[0]
-
-            # Sauvegarde le paramètre
-            drivers["ModBus"]["debug"] = parametres[0]
-            persist.save()
-        except .. as e, m
-            # print('Erreur: ', e, " -> ", m)
-        end
     # Envoi de messages UDP pour test
-    elif (string.toupper(fonction) == string.toupper("envoiMessageUDP"))
+    if (string.toupper(fonction) == string.toupper("envoiMessageUDP"))
         # Pendant UDP de envoiMessagTCP (2026-10-04) : n'envoyait rien (envoi commente) et lisait
         # parametres[1], qui n'existe jamais (split en 2 : parametres = [<tout le reste>]).
         var reste = (parametres.size() > 0 ? parametres[0] : "")
@@ -462,7 +435,7 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
 
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd += string.format("logActivated=%s", modbusFonctions.etat()["DEBUG"])
+    reponse_cmnd += "OK"
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
 modbusFonctions.reglageModbus = modbusFonctions_reglageModbus
@@ -737,12 +710,12 @@ def modbusFonctions_testeDebitConn16(id, debit)
         tasmota.cmd(string.format("ModbusBaudrate %i", debitBus), boolMute)
         tasmota.remove_rule("ModbusReceived", "testeDebitConn16")
         etat["pause"] = false
-        log(string.format("TESTE_DEBIT_CONN16: fin du test, bus revenu a %i bauds, file relancee", debitBus), LOG_LEVEL_INFO)
+        logFonctions.log(string.format("TESTE_DEBIT_CONN16: fin du test, bus revenu a %i bauds, file relancee", debitBus), LOG_LEVEL_INFO, "modbus")
         modbusFonctions.pompeQueue()
     end
 
     tasmota.add_rule("ModbusReceived", def (value, trigger, msg) modbusFonctions.logReponseTestDebit(msg) end, "testeDebitConn16")
-    log(string.format("TESTE_DEBIT_CONN16: test de l'esclave %i a %i bauds (bus a %i bauds)", id, debit, debitBus), LOG_LEVEL_INFO)
+    logFonctions.log(string.format("TESTE_DEBIT_CONN16: test de l'esclave %i a %i bauds (bus a %i bauds)", id, debit, debitBus), LOG_LEVEL_INFO, "modbus")
 
     # 2 -> 5, chaque etape arme la suivante
     modbusFonctions.armeTimer(delai, def ()
@@ -770,12 +743,12 @@ def modbusFonctions_logReponseTestDebit(msg)
     var v = (isinstance(valeurs, list) && size(valeurs) > 0) ? valeurs[0] : nil
 
     if (r.find("StartAddress") == 0xFE)
-        log(string.format("TESTE_DEBIT_CONN16: esclave %s, registre debit = %s -> %s bauds", str(r.find("DeviceAddress")), str(v),
-                          str(modbusFonctions.CODES_DEBIT_CONN16.find(v, "inconnu"))), LOG_LEVEL_INFO)
+        logFonctions.log(string.format("TESTE_DEBIT_CONN16: esclave %s, registre debit = %s -> %s bauds", str(r.find("DeviceAddress")), str(v),
+                          str(modbusFonctions.CODES_DEBIT_CONN16.find(v, "inconnu"))), LOG_LEVEL_INFO, "modbus")
     elif (r.find("StartAddress") == 0xFF)
-        log(string.format("TESTE_DEBIT_CONN16: adresse de la carte (lue par diffusion) = %s", str(v)), LOG_LEVEL_INFO)
+        logFonctions.log(string.format("TESTE_DEBIT_CONN16: adresse de la carte (lue par diffusion) = %s", str(v)), LOG_LEVEL_INFO, "modbus")
     else
-        log("TESTE_DEBIT_CONN16: reponse = " + json.dump(r), LOG_LEVEL_INFO)
+        logFonctions.log("TESTE_DEBIT_CONN16: reponse = " + json.dump(r), LOG_LEVEL_INFO, "modbus")
     end
 end
 modbusFonctions.logReponseTestDebit = modbusFonctions_logReponseTestDebit
@@ -821,8 +794,8 @@ def modbusFonctions_reglageDebitConn16(parametres)
     var libelle = (code == 5) ? "retour usine (9600)" : str(modbusFonctions.CODES_DEBIT_CONN16[code]) + " bauds"
     modbusFonctions.enfileMsg({"DeviceAddress": id, "FunctionCode": modbusFonctions.ECRITURE_REGISTRE_UNIQUE,
                                "StartAddress": 0xFE, "type": "uint16", "Count": 1, "Values": [code]}, "Commande")
-    log(string.format("REGLAGE_DEBIT_CONN16: esclave %i, registre 0x00FE <- %i (%s) ; effectif apres coupure d'alimentation de la carte",
-                      id, code, libelle), LOG_LEVEL_INFO)
+    logFonctions.log(string.format("REGLAGE_DEBIT_CONN16: esclave %i, registre 0x00FE <- %i (%s) ; effectif apres coupure d'alimentation de la carte",
+                      id, code, libelle), LOG_LEVEL_INFO, "modbus")
     return string.format("debit de l'esclave %i -> %s (code %i) envoye", id, libelle, code)
 end
 modbusFonctions.reglageDebitConn16 = modbusFonctions_reglageDebitConn16

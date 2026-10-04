@@ -9,7 +9,6 @@ def tcpFonctions_etat()
     import global
     if (global._etatTcpFonctions == nil)
         global._etatTcpFonctions = {
-            "DEBUG": nil,              # 'ON'/'OFF', lu une fois depuis serveur['tcp']['debug']
             "port": 0,                 # port TCP du serveur
             "serveur": nil,            # objet tcpserver (esclave)
             "client": nil,             # objet tcpclientasync (maitre)
@@ -23,13 +22,7 @@ tcpFonctions.etat = tcpFonctions_etat
 
 
 def tcpFonctions_log(msg, levelDebug)
-    if (tcpFonctions.etat()["DEBUG"] == nil)
-        tcpFonctions.etat()["DEBUG"] = serveur["tcp"].find("debug", "OFF")
-    end
-
-    if (tcpFonctions.etat()["DEBUG"] == "ON")
-        log(msg, levelDebug)
-    end
+    logFonctions.log(msg, levelDebug, "tcp")
 end
 tcpFonctions.log = tcpFonctions_log
 
@@ -38,22 +31,12 @@ tcpFonctions.log = tcpFonctions_log
 def tcpFonctions_aideReglageTCP(sujet)
     import string
     if (sujet == nil)
-        return [
-            ["logActivation", "logActivation <ON|OFF|1|0>", "active/coupe les logs de debug TCP (memorise dans le persist)"]
-        ]
-    end
-    sujet = string.toupper(sujet)
-    if (sujet == "LOGACTIVATION")
-        return ["Parametre : ON ou 1 = logs de debug TCP actifs ; OFF ou 0 = coupes.",
-                "Memorise : serveur.tcp.debug (persist), ecrit au prochain persist.save.",
-                "Exemple : ReglageTCP logActivation ON"]
+        return []     # aucune sous-commande (les logs se reglent avec ReglageLog)
     end
     return nil
 end
 tcpFonctions.aideReglageTCP = tcpFonctions_aideReglageTCP
 
-# exemples:
-# ReglageTCP logActivation OFF
 def tcpFonctions_reglageTCP(cmd, idx, payload, payload_json)
     import string
     import json
@@ -82,26 +65,13 @@ def tcpFonctions_reglageTCP(cmd, idx, payload, payload_json)
 
     tcpFonctions.log("REGLAGE_TCP: fonction=" + str(fonction), LOG_LEVEL_DEBUG_PLUS)
     if (parametres != false)
-        if (parametres.size() > 0)	log("REGLAGE_TCP: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS)	end
-        if (parametres.size() > 1)	log("REGLAGE_TCP: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS)	end
-    end
-
-    # Activation ou désactivation des logs -> ordre: logActivation
-    if string.toupper(fonction) == string.toupper("logActivation")
-        try
-            parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-            tcpFonctions.etat()["DEBUG"] = parametres[0]
-
-            serveur["tcp"]["debug"] = parametres[0]
-            persist.serveur["tcp"]["debug"] = parametres[0]
-        except .. as error, message
-            tcpFonctions.log(string.format("REGLAGE_TCP_ERREUR: %s --> %s", error, message), LOG_LEVEL_ERREUR)
-        end
+        if (parametres.size() > 0)	logFonctions.log("REGLAGE_TCP: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS, "tcp")	end
+        if (parametres.size() > 1)	logFonctions.log("REGLAGE_TCP: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS, "tcp")	end
     end
 
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd["ReglageTCP"]["logActivated"] = str(tcpFonctions.etat()["DEBUG"])
+    reponse_cmnd["ReglageTCP"]["resultat"] = "OK"
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
 tcpFonctions.reglageTCP = tcpFonctions_reglageTCP

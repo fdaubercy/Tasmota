@@ -14,7 +14,7 @@ def globalFonctions_demarreFTP()
 	# Firmware compile sans USE_FTP (ex. la cave) : 'UFSFTP' est une commande inconnue -> pas de cle 'UfsFTP'
 	var etatFTP = tasmota.cmd("UFSFTP", boolMute)
 	if !isinstance(etatFTP, map) || !etatFTP.contains("UfsFTP")
-		log("GLOBAL_FTP: Serveur FTP absent de ce firmware (USE_FTP) !", LOG_LEVEL_DEBUG)
+		logFonctions.log("GLOBAL_FTP: Serveur FTP absent de ce firmware (USE_FTP) !", LOG_LEVEL_DEBUG)
 		return
 	end
 	if (int(etatFTP["UfsFTP"]) == 0)	tasmota.cmd("UFSFTP 2", boolMute)	end
@@ -30,10 +30,10 @@ def globalFonctions_changementEtatDemarrage(value, trigger, msg)
 	import introspect
 
 	# Test
-	log("GLOBAL_CHGT_ETAT_DEMARRAGE: -------------------- global changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG)
-	log("GLOBAL_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
-	log("GLOBAL_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
-	log("GLOBAL_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}
+	logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: -------------------- global changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG)
+	logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
+	logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
+	logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}
 
 	# Pas de "deballage" de 'value' ici (inutilise dans cette fonction) : l'ancienne boucle
 	# 'for cle: value.keys() value = value[cle] end' reindexait la valeur precedente des qu'il
@@ -66,7 +66,7 @@ def globalFonctions_changementEtatDemarrage(value, trigger, msg)
             introspect.set(controleGeneral, "connected", false)
         elif (msg.find("Wifi") == "OFF" || msg.find("Wifi") == "ON")
 			introspect.set(controleGeneral, "connected", (msg["Wifi"] == "OFF" ? false : true))
-            log("GLOBAL_CHGT_ETAT_DEMARRAGE: Wifi " + (msg["Wifi"] == "OFF" ? "désactivé" : "activé") + " !", LOG_LEVEL_DEBUG)
+            logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: Wifi " + (msg["Wifi"] == "OFF" ? "désactivé" : "activé") + " !", LOG_LEVEL_DEBUG)
         end
 	# Init: Se produit une fois après le redémarrage avant que le Wi-Fi et MQTT ne soient initialisés
     # Boot: Se déclenche après la connexion du Wi-Fi et de MQTT (si activé)
@@ -83,13 +83,13 @@ def globalFonctions_changementEtatDemarrage(value, trigger, msg)
 			var statusNET = tasmota.cmd("Status 5", boolMute)
 			var adresseMAC = (isinstance(statusNET, map) && isinstance(statusNET.find("StatusNET"), map)) ? statusNET["StatusNET"].find("Mac") : nil
 			if (adresseMAC == nil)
-				log("GLOBAL_CHGT_ETAT_DEMARRAGE: Adresse MAC illisible (reponse 'Status 5' invalide) !", LOG_LEVEL_ERREUR)
+				logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: Adresse MAC illisible (reponse 'Status 5' invalide) !", LOG_LEVEL_ERREUR)
 			elif (!serveur.find("adressMAC", false))
 				serveur.insert("adressMAC", adresseMAC)
-				log("GLOBAL_CHGT_ETAT_DEMARRAGE: Récupère l'adresse MAC du module !", LOG_LEVEL_DEBUG)
+				logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: Récupère l'adresse MAC du module !", LOG_LEVEL_DEBUG)
 			elif (serveur["adressMAC"] != adresseMAC)
 				serveur["adressMAC"] = adresseMAC
-				log("GLOBAL_CHGT_ETAT_DEMARRAGE: Modifie l'adresse MAC du module !", LOG_LEVEL_DEBUG)
+				logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: Modifie l'adresse MAC du module !", LOG_LEVEL_DEBUG)
 			end
 		elif msg[trigger].find("Save", 0)
 			try
@@ -99,7 +99,7 @@ def globalFonctions_changementEtatDemarrage(value, trigger, msg)
 				persist.drivers = drivers
 				persist.save() 
 			except .. as error, message
-				log(string.format("GLOBAL_CHGT_ETAT_DEMARRAGE_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
+				logFonctions.log(string.format("GLOBAL_CHGT_ETAT_DEMARRAGE_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
 			end
         end
 	# Se déclenche après la connexion MQTT (si activé)
@@ -120,7 +120,7 @@ def globalFonctions_changementEtatDemarrage(value, trigger, msg)
 				var TimeStd = tasmota.cmd("TimeStd", boolMute)["TimeStd"]
 				if (TimeStd["Hemisphere"] != diverses["fuseauHoraire"]["TimeStd"]["Hemisphere"] || TimeStd["Week"] != diverses["fuseauHoraire"]["TimeStd"]["Week"] || TimeStd["Month"] != diverses["fuseauHoraire"]["TimeStd"]["Month"] ||
 						TimeStd["Day"] != diverses["fuseauHoraire"]["TimeStd"]["Day"] || TimeStd["Hour"] != diverses["fuseauHoraire"]["TimeStd"]["Hour"] || TimeStd["Offset"] != diverses["fuseauHoraire"]["TimeStd"]["Offset"])
-						log("GLOBAL_CHGT_ETAT_DEMARRAGE: Regle la date de passage à l'heure d'hiver !", LOG_LEVEL_DEBUG)
+						logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: Regle la date de passage à l'heure d'hiver !", LOG_LEVEL_DEBUG)
 						tasmota.cmd(string.format("TimeStd %i,%i,%i,%i,%i,%i", 
 																diverses["fuseauHoraire"]["TimeStd"]["Hemisphere"], diverses["fuseauHoraire"]["TimeStd"]["Week"], diverses["fuseauHoraire"]["TimeStd"]["Month"], 
 																diverses["fuseauHoraire"]["TimeStd"]["Day"], diverses["fuseauHoraire"]["TimeStd"]["Hour"], diverses["fuseauHoraire"]["TimeStd"]["Offset"]), 
@@ -130,7 +130,7 @@ def globalFonctions_changementEtatDemarrage(value, trigger, msg)
 				var TimeDst = tasmota.cmd("TimeDst", boolMute)["TimeDst"]
 				if (TimeDst["Hemisphere"] != diverses["fuseauHoraire"]["TimeDst"]["Hemisphere"] || TimeDst["Week"] != diverses["fuseauHoraire"]["TimeDst"]["Week"] || TimeDst["Month"] != diverses["fuseauHoraire"]["TimeDst"]["Month"] ||
 						TimeDst["Day"] != diverses["fuseauHoraire"]["TimeDst"]["Day"] || TimeDst["Hour"] != diverses["fuseauHoraire"]["TimeDst"]["Hour"] || TimeDst["Offset"] != diverses["fuseauHoraire"]["TimeDst"]["Offset"])
-						log("GLOBAL_CHGT_ETAT_DEMARRAGE: Regle la date de passage à l'heure d'été !", LOG_LEVEL_DEBUG)
+						logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: Regle la date de passage à l'heure d'été !", LOG_LEVEL_DEBUG)
 						tasmota.cmd(string.format("TimeDst %i,%i,%i,%i,%i,%i", 
 																diverses["fuseauHoraire"]["TimeDst"]["Hemisphere"], diverses["fuseauHoraire"]["TimeDst"]["Week"], diverses["fuseauHoraire"]["TimeDst"]["Month"], 
 																diverses["fuseauHoraire"]["TimeDst"]["Day"], diverses["fuseauHoraire"]["TimeDst"]["Hour"], diverses["fuseauHoraire"]["TimeDst"]["Offset"]), 
@@ -169,12 +169,12 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 	var device
 
 	# Test
-	log("GLOBAL_GESTION_CAPTEURS: -------------------- global changementEtatCapteur -------------------", LOG_LEVEL_DEBUG_PLUS)
-	log("GLOBAL_GESTION_CAPTEURS: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)							# value=SINGLE
-	log("GLOBAL_GESTION_CAPTEURS: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)						# trigger=Button1
-	log("GLOBAL_GESTION_CAPTEURS: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)								# msg={'Button1': {'Action': SINGLE}}
-	log("GLOBAL_GESTION_CAPTEURS: moduleCapteur=" + str(moduleCapteur), LOG_LEVEL_DEBUG_PLUS)			# moduleCapteur=pompeVideCave
-	log("GLOBAL_GESTION_CAPTEURS: cleBouton=" + str(cleBouton), LOG_LEVEL_DEBUG_PLUS)					# cleBouton=bouton1
+	logFonctions.log("GLOBAL_GESTION_CAPTEURS: -------------------- global changementEtatCapteur -------------------", LOG_LEVEL_DEBUG_PLUS)
+	logFonctions.log("GLOBAL_GESTION_CAPTEURS: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)							# value=SINGLE
+	logFonctions.log("GLOBAL_GESTION_CAPTEURS: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)						# trigger=Button1
+	logFonctions.log("GLOBAL_GESTION_CAPTEURS: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)								# msg={'Button1': {'Action': SINGLE}}
+	logFonctions.log("GLOBAL_GESTION_CAPTEURS: moduleCapteur=" + str(moduleCapteur), LOG_LEVEL_DEBUG_PLUS)			# moduleCapteur=pompeVideCave
+	logFonctions.log("GLOBAL_GESTION_CAPTEURS: cleBouton=" + str(cleBouton), LOG_LEVEL_DEBUG_PLUS)					# cleBouton=bouton1
 
 	# Extrait la valeur scalaire d'un evenement, ex: {"Action": "ON"} -> "ON" (eventuellement imbrique).
 	# Avant : 'for cle: value.keys() value = value[cle] end' reaffectait 'value' PENDANT le parcours
@@ -185,7 +185,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 		elif value.size() == 1
 			value = value[value.keys()()]		# unique cle
 		else
-			log("GLOBAL_GESTION_CAPTEURS_ERREUR: Valeur ambigue pour '" + str(trigger) + "' : " + str(value), LOG_LEVEL_ERREUR)
+			logFonctions.log("GLOBAL_GESTION_CAPTEURS_ERREUR: Valeur ambigue pour '" + str(trigger) + "' : " + str(value), LOG_LEVEL_ERREUR)
 			return
 		end
 	end
@@ -221,7 +221,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 
                         # Push 0x10 vers le maitre en UDP (option B) : voir modbusFonctions.pousseEtat
                         tasmota.yield()
-                        log(string.format("GLOBAL_GESTION_CAPTEURS: Informe le maitre ModBus du changement de valeur de '%s' (GPIO %i) = %s", device["nom"], device["pin"], device["etat"]), LOG_LEVEL_DEBUG_PLUS)
+                        logFonctions.log(string.format("GLOBAL_GESTION_CAPTEURS: Informe le maitre ModBus du changement de valeur de '%s' (GPIO %i) = %s", device["nom"], device["pin"], device["etat"]), LOG_LEVEL_DEBUG_PLUS)
                         import modbusFonctions
                         modbusFonctions.pousseEtat(device["type"] + device["id"] - 1, "uint16", [value])
                     end
@@ -254,7 +254,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 
                         # Push 0x10 vers le maitre en UDP (option B) : voir modbusFonctions.pousseEtat
                         tasmota.yield()
-                        log(string.format("GLOBAL_GESTION_CAPTEURS: Informe le maitre ModBus du changement de valeur de '%s' (GPIO %i) = %s", device["nom"], device["pin"], device["etat"]), LOG_LEVEL_DEBUG_PLUS)
+                        logFonctions.log(string.format("GLOBAL_GESTION_CAPTEURS: Informe le maitre ModBus du changement de valeur de '%s' (GPIO %i) = %s", device["nom"], device["pin"], device["etat"]), LOG_LEVEL_DEBUG_PLUS)
                         import modbusFonctions
                         modbusFonctions.pousseEtat(device["type"] + device["id"] - 1, "uint16", [value])
                     end
@@ -289,7 +289,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 
                         # Push 0x10 vers le maitre en UDP (option B) : voir modbusFonctions.pousseEtat
                         tasmota.yield()
-                        log(string.format("GLOBAL_GESTION_CAPTEURS: Informe le maitre ModBus du changement de valeur de '%s' (GPIO %i) = %s", device["nom"], device["pin"], device["etat"]), LOG_LEVEL_DEBUG_PLUS)
+                        logFonctions.log(string.format("GLOBAL_GESTION_CAPTEURS: Informe le maitre ModBus du changement de valeur de '%s' (GPIO %i) = %s", device["nom"], device["pin"], device["etat"]), LOG_LEVEL_DEBUG_PLUS)
                         import modbusFonctions
                         modbusFonctions.pousseEtat(device["type"] + device["id"] - 1, "uint16", [value])
                     end
@@ -316,10 +316,10 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
                     var limites = device.find("limites", [])
                     if (limites.size() > 0)
                         if int(value) >= int(limites[1])
-                            log(string.format("GESTION_CAPTEURS: Humidite superieure a %i%% !", limites[1]), LOG_LEVEL_DEBUG)
+                            logFonctions.log(string.format("GESTION_CAPTEURS: Humidite superieure a %i%% !", limites[1]), LOG_LEVEL_DEBUG)
                             value = "ON"
                         else
-                            log(string.format("GESTION_CAPTEURS: Humidite inferieure a %i%% !", limites[1]), LOG_LEVEL_DEBUG)
+                            logFonctions.log(string.format("GESTION_CAPTEURS: Humidite inferieure a %i%% !", limites[1]), LOG_LEVEL_DEBUG)
                             value = "OFF"
                         end
                     end
@@ -375,7 +375,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
                     if (drivers["ModBus"].find("activation", "OFF") == "ON" && drivers["ModBus"].find("id", 0) > 0)
                         # Push 0x10 vers le maitre en UDP (option B) : voir modbusFonctions.pousseEtat
                         tasmota.yield()
-                        log(string.format("GLOBAL_GESTION_CAPTEURS: Informe le maitre ModBus du changement de valeur de '%s' (GPIO %i) = %s", device["nom"], device["pin"], device["etat"]), LOG_LEVEL_DEBUG_PLUS)
+                        logFonctions.log(string.format("GLOBAL_GESTION_CAPTEURS: Informe le maitre ModBus du changement de valeur de '%s' (GPIO %i) = %s", device["nom"], device["pin"], device["etat"]), LOG_LEVEL_DEBUG_PLUS)
                         import modbusFonctions
                         modbusFonctions.pousseEtat(device["type"] + device["id"] - 1, "uint32", [int(value)])
                     end
@@ -398,12 +398,12 @@ def globalFonctions_changementEtatWS2812(value, trigger, msg, moduleLED, cleLED)
 	var device
 
 	# Test
-	log("GLOBAL_GESTION_WS2812: -------------------- global changementEtatWS2812 -------------------", LOG_LEVEL_DEBUG)
-	log("GLOBAL_GESTION_WS2812: value=" + str(value), LOG_LEVEL_DEBUG)							# value=SINGLE
-	log("GLOBAL_GESTION_WS2812: trigger=" + str(trigger), LOG_LEVEL_DEBUG)						# trigger=Button1
-	log("GLOBAL_GESTION_WS2812: msg=" + str(msg), LOG_LEVEL_DEBUG)								# msg={'Button1': {'Action': SINGLE}}
-	log("GLOBAL_GESTION_WS2812: moduleLED=" + str(moduleLED), LOG_LEVEL_DEBUG)					# moduleCapteur=cuve
-	log("GLOBAL_GESTION_WS2812: cleLED=" + str(cleLED), LOG_LEVEL_DEBUG)						# cleLED=relai1
+	logFonctions.log("GLOBAL_GESTION_WS2812: -------------------- global changementEtatWS2812 -------------------", LOG_LEVEL_DEBUG)
+	logFonctions.log("GLOBAL_GESTION_WS2812: value=" + str(value), LOG_LEVEL_DEBUG)							# value=SINGLE
+	logFonctions.log("GLOBAL_GESTION_WS2812: trigger=" + str(trigger), LOG_LEVEL_DEBUG)						# trigger=Button1
+	logFonctions.log("GLOBAL_GESTION_WS2812: msg=" + str(msg), LOG_LEVEL_DEBUG)								# msg={'Button1': {'Action': SINGLE}}
+	logFonctions.log("GLOBAL_GESTION_WS2812: moduleLED=" + str(moduleLED), LOG_LEVEL_DEBUG)					# moduleCapteur=cuve
+	logFonctions.log("GLOBAL_GESTION_WS2812: cleLED=" + str(cleLED), LOG_LEVEL_DEBUG)						# cleLED=relai1
 
 	if (type(value)) == "instance"
 		for cle: value.keys()
@@ -449,14 +449,14 @@ def globalFonctions_modifEtatRelai(moduleCapteur, idRelai, typeOrdre, etat, bool
 	import string
 
 	# Test
-	log("MODIF_ETAT_RELAI: -------------------- global modifEtatRelai -------------------", LOG_LEVEL_DEBUG)
-	log("MODIF_ETAT_RELAI: moduleCapteur=" + str(moduleCapteur), LOG_LEVEL_DEBUG)						
-	log("MODIF_ETAT_RELAI: idRelai=" + str(idRelai), LOG_LEVEL_DEBUG)								
-	log("MODIF_ETAT_RELAI: typeOrdre=" + str(typeOrdre), LOG_LEVEL_DEBUG)								
-	log("MODIF_ETAT_RELAI: etat=" + str(etat), LOG_LEVEL_DEBUG)									
-	log("MODIF_ETAT_RELAI: boolCapteurs=" + str(boolCapteurs), LOG_LEVEL_DEBUG)		
-	log("MODIF_ETAT_RELAI: boolTimer=" + str(boolTimer), LOG_LEVEL_DEBUG)									
-	log("MODIF_ETAT_RELAI: delaiAvantCommande=" + str(delaiAvantCommande), LOG_LEVEL_DEBUG)
+	logFonctions.log("MODIF_ETAT_RELAI: -------------------- global modifEtatRelai -------------------", LOG_LEVEL_DEBUG)
+	logFonctions.log("MODIF_ETAT_RELAI: moduleCapteur=" + str(moduleCapteur), LOG_LEVEL_DEBUG)						
+	logFonctions.log("MODIF_ETAT_RELAI: idRelai=" + str(idRelai), LOG_LEVEL_DEBUG)								
+	logFonctions.log("MODIF_ETAT_RELAI: typeOrdre=" + str(typeOrdre), LOG_LEVEL_DEBUG)								
+	logFonctions.log("MODIF_ETAT_RELAI: etat=" + str(etat), LOG_LEVEL_DEBUG)									
+	logFonctions.log("MODIF_ETAT_RELAI: boolCapteurs=" + str(boolCapteurs), LOG_LEVEL_DEBUG)		
+	logFonctions.log("MODIF_ETAT_RELAI: boolTimer=" + str(boolTimer), LOG_LEVEL_DEBUG)									
+	logFonctions.log("MODIF_ETAT_RELAI: delaiAvantCommande=" + str(delaiAvantCommande), LOG_LEVEL_DEBUG)
 	
 	tasmota.yield()
 
@@ -482,21 +482,21 @@ def globalFonctions_modifEtatRelai(moduleCapteur, idRelai, typeOrdre, etat, bool
 	if boolTimer == nil boolTimer = true end
 	if delaiAvantCommande == nil delaiAvantCommande = 0 end
 
-	log("MODIF_ETAT_RELAI: -------------------- global modifEtatRelai 2 -------------------", LOG_LEVEL_DEBUG)							
-	log("MODIF_ETAT_RELAI: typeOrdre=" + str(typeOrdre), LOG_LEVEL_DEBUG)								
-	log("MODIF_ETAT_RELAI: etat=" + str(etat), LOG_LEVEL_DEBUG)									
-	log("MODIF_ETAT_RELAI: boolCapteurs=" + str(boolCapteurs), LOG_LEVEL_DEBUG)		
-	log("MODIF_ETAT_RELAI: boolTimer=" + str(boolTimer), LOG_LEVEL_DEBUG)									
-	log("MODIF_ETAT_RELAI: delaiAvantCommande=" + str(delaiAvantCommande), LOG_LEVEL_DEBUG)
+	logFonctions.log("MODIF_ETAT_RELAI: -------------------- global modifEtatRelai 2 -------------------", LOG_LEVEL_DEBUG)							
+	logFonctions.log("MODIF_ETAT_RELAI: typeOrdre=" + str(typeOrdre), LOG_LEVEL_DEBUG)								
+	logFonctions.log("MODIF_ETAT_RELAI: etat=" + str(etat), LOG_LEVEL_DEBUG)									
+	logFonctions.log("MODIF_ETAT_RELAI: boolCapteurs=" + str(boolCapteurs), LOG_LEVEL_DEBUG)		
+	logFonctions.log("MODIF_ETAT_RELAI: boolTimer=" + str(boolTimer), LOG_LEVEL_DEBUG)									
+	logFonctions.log("MODIF_ETAT_RELAI: delaiAvantCommande=" + str(delaiAvantCommande), LOG_LEVEL_DEBUG)
 
 	# Lance l'ordre
 	if delaiAvantCommande != 0
 		tasmota.remove_timer(string.format("timer_commande%i", idRelai))
 		tasmota.set_timer(delaiAvantCommande * 1000, /-> tasmota.cmd("Power" + str(idRelai) + " " + etat, boolMute), string.format("timer_commande%i", idRelai))
-		log(string.format("MODIF_ETAT_RELAI: Relai %i %s après délai de %is!", idRelai, etat, delaiAvantCommande), LOG_LEVEL_DEBUG)
+		logFonctions.log(string.format("MODIF_ETAT_RELAI: Relai %i %s après délai de %is!", idRelai, etat, delaiAvantCommande), LOG_LEVEL_DEBUG)
 	else
 		tasmota.cmd("Power" + str(idRelai) + " " + etat, boolMute)
-		log(string.format("MODIF_ETAT_RELAI: Relai %i %s !", idRelai, etat), LOG_LEVEL_DEBUG)
+		logFonctions.log(string.format("MODIF_ETAT_RELAI: Relai %i %s !", idRelai, etat), LOG_LEVEL_DEBUG)
 	end
 
 	# Désactive les capteurs associés à son fonctionnement
@@ -505,7 +505,7 @@ def globalFonctions_modifEtatRelai(moduleCapteur, idRelai, typeOrdre, etat, bool
 		
 		if capteurs
 			# Désactive temporairement les capteurs si Relai ON / Réactive les capteurs si Relai OFF
-			log("MODIF_ETAT_RELAI: " + (etat == "ON" ? "Desactivation" : "Reactivation") + " des capteurs !", LOG_LEVEL_DEBUG)
+			logFonctions.log("MODIF_ETAT_RELAI: " + (etat == "ON" ? "Desactivation" : "Reactivation") + " des capteurs !", LOG_LEVEL_DEBUG)
 			for cleCapteurs: capteurs.keys()
 				capteurs[cleCapteurs]["activation"] = (etat == "ON" ? "OFF" : "ON")
 			end	
@@ -568,11 +568,11 @@ def globalFonctions_reglageGlobal(cmd, idx, payload, payload_json)
     var reponse_cmnd = {}
     
     # Test   
-    log("REGLAGE_GLOBAL: -------------------- reglageGlobal -------------------", LOG_LEVEL_DEBUG_PLUS)
-    log("REGLAGE_GLOBAL: cmd=" + str(cmd), LOG_LEVEL_DEBUG_PLUS)
-    log("REGLAGE_GLOBAL: idx=" + str(idx), LOG_LEVEL_DEBUG_PLUS)
-    log("REGLAGE_GLOBAL: payload=" + str(payload), LOG_LEVEL_DEBUG_PLUS)
-    log("REGLAGE_GLOBAL: payload_json=" + str(payload_json), LOG_LEVEL_DEBUG_PLUS)
+    logFonctions.log("REGLAGE_GLOBAL: -------------------- reglageGlobal -------------------", LOG_LEVEL_DEBUG_PLUS)
+    logFonctions.log("REGLAGE_GLOBAL: cmd=" + str(cmd), LOG_LEVEL_DEBUG_PLUS)
+    logFonctions.log("REGLAGE_GLOBAL: idx=" + str(idx), LOG_LEVEL_DEBUG_PLUS)
+    logFonctions.log("REGLAGE_GLOBAL: payload=" + str(payload), LOG_LEVEL_DEBUG_PLUS)
+    logFonctions.log("REGLAGE_GLOBAL: payload_json=" + str(payload_json), LOG_LEVEL_DEBUG_PLUS)
 
     # Détermine la fonction appelée et ses paramètres
     if string.find(payload, " ") > - 1
@@ -581,16 +581,14 @@ def globalFonctions_reglageGlobal(cmd, idx, payload, payload_json)
     else fonction = payload
     end
 
-    log("REGLAGE_GLOBAL: fonction=" + str(fonction), LOG_LEVEL_DEBUG_PLUS)
+    logFonctions.log("REGLAGE_GLOBAL: fonction=" + str(fonction), LOG_LEVEL_DEBUG_PLUS)
 	if (parametres != false)
-		if (parametres.size() > 0)	log("REGLAGE_GLOBAL: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS)	end
-		if (parametres.size() > 1)	log("REGLAGE_GLOBAL: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS)	end
+		if (parametres.size() > 0)	logFonctions.log("REGLAGE_GLOBAL: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS)	end
+		if (parametres.size() > 1)	logFonctions.log("REGLAGE_GLOBAL: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS)	end
 	end
 
     if string.toupper(fonction) == "AFFICHEMEMOIRE"
-		import diversFonctions
-
-        diversFonctions.statMemory()
+        diversFonctions.statMemory()          # importe en tete de fonction (un 2e import = redefinition en strict)
 	elif string.toupper(fonction) == string.toupper("nbLogsFiles")
         try
             # Sauvegarde le paramètre

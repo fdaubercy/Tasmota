@@ -266,7 +266,7 @@ def gestionFileFolder_supprimeBerryFile()
         # Teste si le nom du fichier termine par '.be'
         if (string.find(nameFile, ".bec") == -1 && string.find(nameFile, ".json") == -1 && string.find(nameFile, "settings") == -1)
             # Et supprime le fichier d'origine
-            log(string.format("CONTROLE_GENERAL: Suppression du fichier '%s' effectuée !", nameFile), LOG_LEVEL_DEBUG)
+            logFonctions.log(string.format("CONTROLE_GENERAL: Suppression du fichier '%s' effectuée !", nameFile), LOG_LEVEL_DEBUG)
             path.remove(nameFile)
         end
     end
@@ -283,7 +283,7 @@ def gestionFileFolder_supprBerryFS(folder)
     var nameFile = ""
 
     # Supprime les fichiers sur mémoire SD "/sd" & la mémoire flash "/"
-    log(string.format("WEBSERVER: Demande de suppression des fichiers sur %s !", folder), LOG_LEVEL_DEBUG)
+    logFonctions.log(string.format("WEBSERVER: Demande de suppression des fichiers sur %s !", folder), LOG_LEVEL_DEBUG)
     if path.exists(folder)
         listFile = path.listdir(folder)
         for nb:0 .. listFile.size() - 1
@@ -293,7 +293,7 @@ def gestionFileFolder_supprBerryFS(folder)
             if (string.find(nameFile, "settings") == -1)
                 # Et supprime le fichier
                 path.remove(nameFile)
-                log(string.format("CONTROLE_GENERAL: Suppression du fichier '%s' effectuée !", nameFile), LOG_LEVEL_DEBUG)
+                logFonctions.log(string.format("CONTROLE_GENERAL: Suppression du fichier '%s' effectuée !", nameFile), LOG_LEVEL_DEBUG)
             end
 
             tasmota.yield()
@@ -303,7 +303,7 @@ def gestionFileFolder_supprBerryFS(folder)
 				gestionFileFolder.supprBerryFS(nameFile)
 
                 path.rmdir(nameFile)
-                log(string.format("CONTROLE_GENERAL: Suppression du dossier '%s' effectuée !", nameFile), LOG_LEVEL_DEBUG)
+                logFonctions.log(string.format("CONTROLE_GENERAL: Suppression du dossier '%s' effectuée !", nameFile), LOG_LEVEL_DEBUG)
             end
         end
     end
@@ -322,7 +322,7 @@ def gestionFileFolder_loadBerryFile(chemin, paramDeleteBe, compileBe)
     if (compileBe == "" || compileBe == nil)  compileBe = "OFF"    end
     if paramDeleteBe == "OFF" && path.exists(chemin + ".bec") 
         path.remove(chemin + ".be")
-        log(string.format("LOAD_BERRY_FILE: Supprime le fichier '%s' !", chemin + ".be"), LOG_LEVEL_DEBUG)
+        logFonctions.log(string.format("LOAD_BERRY_FILE: Supprime le fichier '%s' !", chemin + ".be"), LOG_LEVEL_DEBUG)
         # return
     end
 
@@ -334,19 +334,19 @@ def gestionFileFolder_loadBerryFile(chemin, paramDeleteBe, compileBe)
             if tasmota.compile(chemin + ".be")
                 # Supprime le fichier ".be"
                 path.remove(chemin + ".be")
-                log(string.format("LOAD_BERRY_FILE: Supprime après compilation le fichier '%s' !", chemin), LOG_LEVEL_DEBUG)
+                logFonctions.log(string.format("LOAD_BERRY_FILE: Supprime après compilation le fichier '%s' !", chemin), LOG_LEVEL_DEBUG)
             else
-                log(string.format("LOAD_BERRY_FILE: Echec de compilation du fichier '%s' !", chemin), LOG_LEVEL_ERREUR)
+                logFonctions.log(string.format("LOAD_BERRY_FILE: Echec de compilation du fichier '%s' !", chemin), LOG_LEVEL_ERREUR)
                 return
             end
         else
-            log(string.format("LOAD_BERRY_FILE: Utilisation du fichier '%s' sans compilation !", chemin), LOG_LEVEL_DEBUG)
+            logFonctions.log(string.format("LOAD_BERRY_FILE: Utilisation du fichier '%s' sans compilation !", chemin), LOG_LEVEL_DEBUG)
         end
     end
 
     # Charge le fichier Berry "*.be" ou "*.bec" Si le fichier est nécessaire au programme
     # if (paramDeleteBe == "OFF")
-        log(string.format("LOAD_BERRY_FILE: Charge le fichier '%s' !", chemin), LOG_LEVEL_DEBUG)
+        logFonctions.log(string.format("LOAD_BERRY_FILE: Charge le fichier '%s' !", chemin), LOG_LEVEL_DEBUG)
         load(chemin)
     # end
 end
@@ -361,7 +361,7 @@ def gestionFileFolder_compileModule(chemin, paramDeleteBe)
     if (paramDeleteBe == "" || paramDeleteBe == nil)  paramDeleteBe = "ON"    end
     if paramDeleteBe == "OFF" && path.exists(chemin + ".bec") 
         path.remove(chemin + ".be")
-        log(string.format("LOAD_BERRY_FILE: Supprime le fichier '%s' !", chemin + ".be"), LOG_LEVEL_DEBUG)
+        logFonctions.log(string.format("LOAD_BERRY_FILE: Supprime le fichier '%s' !", chemin + ".be"), LOG_LEVEL_DEBUG)
         return true
     end
 
@@ -371,7 +371,7 @@ def gestionFileFolder_compileModule(chemin, paramDeleteBe)
         # Supprime d'abord le fichier *.bec existant
         if path.exists(chemin + ".bec") 
             path.remove(chemin + ".bec")
-            log(string.format("LOAD_BERRY_FILE: Supprime avant compilation le fichier '%s' !", chemin + ".bec"), LOG_LEVEL_DEBUG)
+            logFonctions.log(string.format("LOAD_BERRY_FILE: Supprime avant compilation le fichier '%s' !", chemin + ".bec"), LOG_LEVEL_DEBUG)
         end
 
         # Si echec de compilation ==> on sort de la fonction sans charger le fichier
@@ -379,10 +379,10 @@ def gestionFileFolder_compileModule(chemin, paramDeleteBe)
         if tasmota.compile(chemin + ".be")
             # Supprime le fichier ".be"
             path.remove(chemin + ".be")
-            log(string.format("LOAD_BERRY_FILE: Supprime après compilation le fichier '%s' !", chemin), LOG_LEVEL_DEBUG)
+            logFonctions.log(string.format("LOAD_BERRY_FILE: Supprime après compilation le fichier '%s' !", chemin), LOG_LEVEL_DEBUG)
             return true
         else
-            log(string.format("LOAD_BERRY_FILE: Echec de compilation du fichier '%s' !", chemin), LOG_LEVEL_ERREUR)
+            logFonctions.log(string.format("LOAD_BERRY_FILE: Echec de compilation du fichier '%s' !", chemin), LOG_LEVEL_ERREUR)
             return false
         end
     else return true
@@ -430,7 +430,7 @@ def gestionFileFolder_enregistreLogs(fileChemin, modulo, data)
         file = open(filePath, 'r')
         sizeFile = file.size()
     except .. as error, message
-        log(string.format("ENREGISTRE_LOGS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
+        logFonctions.log(string.format("ENREGISTRE_LOGS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
     end
     
     tasmota.yield()
@@ -449,7 +449,7 @@ def gestionFileFolder_enregistreLogs(fileChemin, modulo, data)
         modulo.indiceLog += 1
 
         filePath = string.replace(fileChemin, ".", str(modulo.indiceLog) + ".")
-        log(string.format("ENREGISTRE_LOGS: Création du fichier de logs suivants: %s !", filePath), LOG_LEVEL_DEBUG_PLUS)
+        logFonctions.log(string.format("ENREGISTRE_LOGS: Création du fichier de logs suivants: %s !", filePath), LOG_LEVEL_DEBUG_PLUS)
         file = open(filePath, 'a+')
     end
 

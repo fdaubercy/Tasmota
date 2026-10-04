@@ -78,7 +78,7 @@ class I2C_MCP23017 : Driver
             
                             # Si cela a changé, on enregistre dans le fichier 'mcp23x.dat'
                             if (jsonData != gestionFileFolder.readFile("/mcp23x.dat"))
-                                log(string.format("INIT_I2C_MCP23017: Modèle MCP23017=%s", jsonData), LOG_LEVEL_INFO)
+                                logFonctions.log(string.format("INIT_I2C_MCP23017: Modèle MCP23017=%s", jsonData), LOG_LEVEL_INFO)
                                 gestionFileFolder.writeFile("/mcp23x.dat", jsonData)
             
                                 # redémarrage
@@ -88,7 +88,7 @@ class I2C_MCP23017 : Driver
                     end
                 elif (result.contains("Command"))
                     if (result["Command"] == "Error")
-                        log(string.format("INIT_I2C_MCP23017: Le bus I2C n'est pas activé dans le firmware ou les ports I2C ne sont pas configurés !"), LOG_LEVEL_ERREUR)
+                        logFonctions.log(string.format("INIT_I2C_MCP23017: Le bus I2C n'est pas activé dans le firmware ou les ports I2C ne sont pas configurés !"), LOG_LEVEL_ERREUR)
                     end
                 end
             end
@@ -112,11 +112,11 @@ def i2c_mcp23017_init(m)
                 if (drivers["I2C"]["environnement"]["MCP23017"].find("activation", "OFF") == "ON")
                     global.i2c_mcp23017 = m.I2C_MCP23017(drivers["I2C"]["environnement"]["MCP23017"]["adresseI2C"])
                     tasmota.add_driver(global.i2c_mcp23017)
-                    log("I2C_MCP23017: Driver I2C_MCP23017 activé !", LOG_LEVEL_DEBUG)
+                    logFonctions.log("I2C_MCP23017: Driver I2C_MCP23017 activé !", LOG_LEVEL_DEBUG)
                 end
             except .. as error, message
                 import string
-                log(string.format("I2C_MCP23017_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
+                logFonctions.log(string.format("I2C_MCP23017_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
             end
         end
     end

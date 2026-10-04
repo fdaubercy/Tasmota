@@ -9,9 +9,7 @@ var vrFonctions = module("vrFonctions")
 def vrFonctions_etat()
     import global
     if (global._etatVrFonctions == nil)
-        global._etatVrFonctions = {
-            "DEBUG": nil              # 'ON'/'OFF', lu une fois depuis drivers['voletRoulants']['debug']
-        }
+        global._etatVrFonctions = {}
     end
     return global._etatVrFonctions
 end
@@ -19,13 +17,7 @@ vrFonctions.etat = vrFonctions_etat
 
 
 def vrFonctions_log(msg, levelDebug)
-    if (vrFonctions.etat()["DEBUG"] == nil)
-        vrFonctions.etat()["DEBUG"] = drivers["voletRoulants"].find("debug", "OFF")
-    end
-
-    if (vrFonctions.etat()["DEBUG"] == "ON")
-        log(msg, levelDebug)
-    end
+    logFonctions.log(msg, levelDebug, "volets")
 end
 vrFonctions.log = vrFonctions_log
 
@@ -34,26 +26,12 @@ vrFonctions.log = vrFonctions_log
 def vrFonctions_aideReglageVolets(sujet)
     import string
     if (sujet == nil)
-        return [
-            ["logActivation", "logActivation <ON|OFF>", "active ou desactive les logs du module volets roulants"]
-        ]
-    end
-    sujet = string.toupper(sujet)
-    if (sujet == "LOGACTIVATION")
-        return ["Parametre : ON ou OFF (1 = ON, 0 = OFF).",
-                "Effet : active ou coupe les logs du module volets roulants,",
-                "        memorise dans drivers voletRoulants debug (persist)",
-                "        puis sauvegarde (persist.save). Parametre absent : ignore.",
-                "        La reponse indique l'etat courant (logActivated=...).",
-                "Exemple : ReglageVolets logActivation ON"]
+        return []
     end
     return nil
 end
 vrFonctions.aideReglageVolets = vrFonctions_aideReglageVolets
 
-#- exemples: 
-    ReglageVolets logActivation OFF
--#
 def vrFonctions_reglageVolets(cmd, idx, payload, payload_json)
     import string
     import json
@@ -84,24 +62,9 @@ def vrFonctions_reglageVolets(cmd, idx, payload, payload_json)
 	if (parametres.size() > 0)	vrFonctions.log("REGLAGE_VOLETS: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS)	end
 	if (parametres.size() > 1)	vrFonctions.log("REGLAGE_VOLETS: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS)	end
 
-    # Activation ou désactivation des logs de la liaison RS485 -> ordre: logActivation
-    if string.toupper(fonction) == "LOGACTIVATION"
-        try
-            # Adapte le paramètre
-            parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-            vrFonctions.etat()["DEBUG"] = parametres[0]
-
-            # Sauvegarde le paramètre
-            drivers["voletRoulants"]["debug"] = parametres[0]
-            persist.save()
-        except .. as e, m
-            # print('Erreur: ', e, " -> ", m)
-        end
-    end
-
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd += string.format("logActivated=%s", vrFonctions.etat()["DEBUG"])
+    reponse_cmnd += "aucun reglage disponible"
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
 vrFonctions.reglageVolets = vrFonctions_reglageVolets

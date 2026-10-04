@@ -6,7 +6,7 @@
 
     - Fonctions principales :
         Fonction	                    Rôle
-        log()	                        Log conditionnel selon le flag debug de la config
+        log()	                        Délègue à logFonctions.log (seuil de la cible "udp", réglé par ReglageLog)
         reglageUDP()	                Commande Tasmota ReglageUDP — dispatche vers les sous-fonctions selon le mot-clé reçu
         changementEtatDemarrage()	    Gère les événements système (System#Boot, Wifi#Connected, System#Save) : ouvre/ferme les sockets, déclenche l'envoi des paramètres
         envoiUDP()	                    Envoie un message UDP (UniCast vers une IP, ou MultiCast selon le rôle maître/esclave)
@@ -15,7 +15,6 @@
 
     - Sous-commandes de ReglageUDP :
         Sous-commande	                Qui	            Effet
-        logActivation ON/OFF	        tous	        Active/désactive les logs UDP
         envoiUniCast <ip> <msg>	        tous	        Envoie un message en unicast (test)
         envoiMultiCast <msg>	        tous	        Envoie un message en multicast
         forceEnvoiParams ON	            esclave	        Envoie SA fiche 'esclaveN' (discovery.json) au maître via MultiCast, puis replanifie via telePeriod
@@ -94,7 +93,6 @@ def udpFonctions_etat()
     import global
     if (global._etatUdpFonctions == nil)
         global._etatUdpFonctions = {
-            "DEBUG": nil,              # 'ON'/'OFF', lu une fois depuis serveur['udp']['debug']
             "udpReception": [nil, nil], # objets udp de reception [UniCast, MultiCast]
             "port": [0, 0],            # ports [UniCast, MultiCast]
             "typeComm": ["", ""],      # types de communication [UniCast, MultiCast]
@@ -118,13 +116,7 @@ udpFonctions.etat = udpFonctions_etat
 # CMND_EXECUTE_CMND
 
 def udpFonctions_log(msg, levelDebug)
-    if (udpFonctions.etat()["DEBUG"] == nil)
-        udpFonctions.etat()["DEBUG"] = serveur["udp"].find("debug", "OFF")
-    end
-
-    if (udpFonctions.etat()["DEBUG"] == "ON")
-        log(msg, levelDebug)
-    end
+    logFonctions.log(msg, levelDebug, "udp")
 end
 udpFonctions.log = udpFonctions_log
 
@@ -134,7 +126,6 @@ def udpFonctions_aideReglageUDP(sujet)
     import string
     if (sujet == nil)
         return [
-            ["logActivation", "logActivation <ON|OFF|1|0>", "active/coupe les logs de debug UDP (memorise dans le persist)"],
             ["envoiUniCast", "envoiUniCast <ip> <message>", "envoie un message UDP en unicast (test)"],
             ["envoiMultiCast", "envoiMultiCast <message>", "envoie un message UDP en multicast (test, RangeExtender)"],
             ["forceEnvoiParams", "forceEnvoiParams <ON|OFF|1|0>", "esclave : envoie sa fiche au maitre (interne, periodique)"],
@@ -144,11 +135,7 @@ def udpFonctions_aideReglageUDP(sujet)
         ]
     end
     sujet = string.toupper(sujet)
-    if (sujet == "LOGACTIVATION")
-        return ["Parametre : ON ou 1 = logs de debug UDP actifs ; OFF ou 0 = coupes.",
-                "Memorise : serveur.udp.debug (persist), ecrit au prochain persist.save.",
-                "Exemple : ReglageUDP logActivation ON"]
-    elif (sujet == "ENVOIUNICAST")
+    if (sujet == "ENVOIUNICAST")
         return ["Parametres : <ip> <message> (le message peut contenir des espaces).",
                 "Envoie le message en UDP unicast a l'IP, sur le port UDP de la carte.",
                 "Sert aux tests ; la reponse contient envoiMessage.",
@@ -187,7 +174,6 @@ end
 udpFonctions.aideReglageUDP = udpFonctions_aideReglageUDP
 
 # exemples:
-# ReglageUDP logActivation OFF
 # ReglageUDP envoiUniCast 192.168.0.43 Salut Ca gaz ! OU ReglageUDP envoiUniCast 192.168.4.3 Salut Ca gaz !
 # ReglageUDP envoiMultiCast Salut Ca gaz ! OU ReglageUDP envoiMultiCast 192.168.4.3 Salut Ca gaz !
 # ReglageUDP forceEnvoiParams ON
@@ -226,23 +212,12 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
 
     udpFonctions.log("REGLAGE_UDP: fonction=" + str(fonction), LOG_LEVEL_DEBUG_PLUS)
     if (parametres != false)
-        if (parametres.size() > 0)	log("REGLAGE_UDP: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS)	end
-        if (parametres.size() > 1)	log("REGLAGE_UDP: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS)	end
+        if (parametres.size() > 0)	logFonctions.log("REGLAGE_UDP: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS, "udp")	end
+        if (parametres.size() > 1)	logFonctions.log("REGLAGE_UDP: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS, "udp")	end
     end
 
-    # Activation ou désactivation des logs de la liaison RS485 -> ordre: logActivation
-    if string.toupper(fonction) == string.toupper("logActivation")
-        try
-            parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-            udpFonctions.etat()["DEBUG"] = parametres[0]
-
-            serveur["udp"]["debug"] = parametres[0]
-            persist.serveur["udp"]["debug"] = parametres[0]
-        except .. as e, m
-            # print('Erreur: ', e, " -> ", m)
-        end
     # Envoi de messages UDP UniCast sur l'IP principale du destinataire pour test
-    elif string.toupper(fonction) == string.toupper("envoiUniCast")
+    if string.toupper(fonction) == string.toupper("envoiUniCast")
         udpFonctions.envoiUDP("UniCast", parametres[0], parametres[1])	# UniCast (Maitre ou Esclaves RangeExtender)
         udpFonctions.log(string.format("ReglageUDP: Données UDP UniCast envoyées à %s >>> %s", parametres[0], parametres[1]), LOG_LEVEL_DEBUG)
 
@@ -391,7 +366,7 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
 
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd["ReglageUDP"]["logActivated"] = str(udpFonctions.etat()["DEBUG"])
+    if (reponse_cmnd["ReglageUDP"].size() == 0)    reponse_cmnd["ReglageUDP"]["resultat"] = "OK"    end
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
 udpFonctions.reglageUDP = udpFonctions_reglageUDP

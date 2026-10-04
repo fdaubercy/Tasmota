@@ -41,7 +41,8 @@ Un échec se logue en `erreur`, jamais en `debug`. Pas d'`info` dans un traiteme
 Un message n'est affiché que s'il passe les deux :
 
 1. **Le réglage de son module** (la *cible*) : `general`, `serveurWeb`, `udp`, `tcp`, `rangeExtender`,
-   `discovery`, `modbus`, `conn16channels`, `slaveModbus`, `lorawan`, `volets`, `es8311`.
+   `discovery`, `modbus`, `conn16channels`, `slaveModbus`, `lorawan`, `volets`, `es8311`,
+   `garage`, `cuve`.
    (`web` désigne la **sortie** console web ; le module des pages web est `serveurWeb`.)
 2. **Le réglage de la sortie** : `serie`, `web`, `mqtt` (topic `stat/<topic>/LOGGING`),
    `syslog` (le PC, `syslog_tasmota.py`). Ces réglages forment un **profil**.
@@ -164,40 +165,34 @@ moins une sortie. Un profil « normal » sobre allège donc vraiment la carte.
 > [!TIP]
 >## Voici les commandes Tasmota personnalisées activées:
 >####    - ReglageGlobal afficheMemoire: Affiche l'utilisation des mémoires ROM, RAM & Garbage collector du module
->####    - ReglageGlobal nbLogsFiles 14
->####    - ReglageGlobal logLevel 4<br>
+>####    - ReglageGlobal nbLogsFiles 14<br>
 >
->####    - ReglageWeb logActivation OFF: Active/Désactive les logs du Driver 'controleWeb'<br>
+>####    - ReglageLog : affiche le profil de logs actif, les sorties et le réglage de chaque module
+>####    - ReglageLog profil normal|debug : applique un profil aux sorties (série, web, mqtt, syslog)
+>####    - ReglageLog modbus debug : règle les logs d'un module (erreur, info, debug, detail)
+>####    - ReglageLog syslog aucun : règle une sortie du profil actif (aucun, erreur, info, debug, detail)<br>
+>####      (seule commande de réglage des logs : voir « Les logs Berry : charte et réglages » plus haut)
 >
->####    - ReglageUDP logActivation OFF: Active/Désactive les logs du Driver 'controleUDP'
 >####    - ReglageUDP envoiMessage 192.168.0.43 Salut Ca gaz !: Envoi un message par UDP
 >####    - ReglageUDP telePeriodClients 300: Règle la téléPériode de scan des esclaves UDP
 >####    - ReglageUDP forceEnvoiParams ON: Force l'envoi par un esclave UDP, des ses paramètres au maitre<br>
 >
->####    - ReglageRangeExtender logActivation OFF: Active/Désactive les logs du Driver 'controleRangeExtender'
 >####    - RoutageRangeExtender esclave1: Active RgxNAPT => équivalent: RgxPort tcp, 8080, 10.99.0.2, 80<br>
 >
->####    - ReglageCuve logActivation OFF: Active ou désactive les logs du Driver 'controleCuve'
 >####    - ReglageCuve etalonnageCapteur ON: Augmente la frequence de mesure pendant 10min (frequence=1mesure/10s)
 >####    - Backlog ReglageCuve hauteurCuve 110; ReglageCuve largeurCuve 180; ReglageCuve longueurCuve 340: Force et enregistre les dimensions de la cuve<br>
 >
->####    - ReglageModbus logActivation OFF
 >####    - ReglageModbus envoiMessageUDP 0x01 TEST<br>
 >####    - ReglageModbus BaudrateModbus 9600
 >####    - ReglageModbus RecupereBaudrateConn16channels 0x01
 >####    - ReglageModbus ReglageBaudrateConn16channels 0x01 19200
 >####    - ReglageModbus ActivationReponseCMD ON|OFF': (Des)active la réponse de l'esclave aux commandes ModBus
 >
->####    - ReglageSlaveModBus1 logActivation OFF   => Active ou désactive les logs du module
->####    - ReglageSlaveModBus1 id 0x02   => Change le l'adresse ModBus de l'esclave ModBus_TasmotaSlaveModBus1
->####    - ReglageConn16Channel logActivation OFF<br>
+>####    - ReglageSlaveModBus1 id 0x02   => Change le l'adresse ModBus de l'esclave ModBus_TasmotaSlaveModBus1<br>
 >
->####    - ReglageUDP logActivation OFF
 >####    - ReglageUDP envoiUniCast 192.168.0.43 Salut Ca gaz ! OU ReglageUDP envoiUniCast 192.168.4.3 Salut Ca gaz !
 >####    - ReglageUDP envoiMultiCast Salut Ca gaz ! OU ReglageUDP envoiMultiCast 192.168.4.3 Salut Ca gaz !
 >####    - ReglageUDP forceEnvoiParams ON
->
->####    - ReglageDiscovery logActivation OFF
 
 <hr></hr>
 

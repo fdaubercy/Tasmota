@@ -285,7 +285,7 @@ class CONTROLE_WEB
 			titreHTML = "Modif. Capteurs"
 			self.formSelection = webserver.arg("module")
 			
-			log(string.format("WEBSERVER: Affichage de la page de modification des capteurs du module '%s' !", self.formSelection), LOG_LEVEL_DEBUG)
+			logFonctions.log(string.format("WEBSERVER: Affichage de la page de modification des capteurs du module '%s' !", self.formSelection), LOG_LEVEL_DEBUG, "serveurWeb")
 
 			# Démarrage la page
 			webserver.content_start(titreHTML)

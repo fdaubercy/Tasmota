@@ -48,7 +48,7 @@
 		"mDNS": "ON",
 		"apiHTTP": "OFF",
 		"adressMAC": "",
-		"debug": "ON",
+		"log": "debug",
 		"IP": {
 			"IPAddress": "192.168.0.49",
 			"IPGateway": "192.168.0.254",
@@ -84,7 +84,7 @@
 		"rangeExtender": {
 			"activation": "OFF",
 			"id": 0,
-			"debug": "ON",
+			"log": "debug",
 			"AP": {
 				"IPAddress": "192.168.4.1",
 				"Subnet": "255.255.255.0",
@@ -101,13 +101,13 @@
 		"udp": {
 			"activation": "ON",
 			"id": 0,
-			"debug": "ON",
+			"log": "debug",
 			"telePeriod": 300,
 			"port": 2000
 		},
 		"discovery": {
 			"activation": "ON",
-			"debug": "OFF"
+			"log": "info"
 		}
 	},
 	"template": {
@@ -122,7 +122,7 @@
 			"name": "Gestion de l'interrupteur différentiel",
 			"activation": "ON",
 			"reglage": "OFF",
-			"debug": "ON",
+			"log": "debug",
 			"logs": {
 				"nbLogsFiles": 15,
 				"fileLogName": "/logs/differentiel.log",
@@ -705,7 +705,7 @@
 			"debit": 19200,
 			"mode": "8N1",
 			"timeoutReponse": 1000,
-			"debug": "ON",
+			"log": "debug",
 			"environnement": {
 				"pinsModBus": {
 					"RX": {
@@ -727,13 +727,13 @@
 				},
 				"Conn16channel": {
 					"activation": "OFF",
-					"debug": "ON",
+					"log": "debug",
 					"name": "Connecteur RS485 16 sorties",
 					"id": "0x01"
 				},
 				"TasmotaSlaveModBus1": {
 					"activation": "OFF",
-					"debug": "ON",
+					"log": "debug",
 					"name": "Capteurs Cuve ModBus",
 					"id": "0x02"
 				}
@@ -743,14 +743,14 @@
 			"activation": "OFF",
 			"amelioration": "ON",
 			"name": "Bus KNX",
-			"debug": "ON",
+			"log": "debug",
 			"environnement": {}
 		},
 		"LoRaWan": {
 			"activation": "OFF",
 			"name": "Connexion LoRaWan 868MHz",
 			"id": 0,
-			"debug": "ON",
+			"log": "debug",
 			"environnement": {}
 		}
 	}

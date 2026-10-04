@@ -106,7 +106,8 @@ Continuer à coder avant d'observer rendrait tout échec indécidable (règle 7 
 **Rebuild complet obligatoire** des 3 environnements garage : `modbusFonctions.be` est
 désormais solidifié, il ne monte plus sur le LittleFS — un simple `uploadfs` ne suffit pas.
 
-Puis, avec `ReglageGlobal logLevel 4`. **Grille actionnable — chaînes de log exactes,
+Puis, avec `ReglageLog profil debug` et `ReglageLog modbus detail` (ex-`ReglageGlobal logLevel 4`,
+supprime le 2026-10-04 : voir la charte des logs dans CLAUDE.md). **Grille actionnable — chaînes de log exactes,
 extraites du code le 2026-07-24 :**
 
 | À vérifier | Quand | Chaîne de log à chercher (ou absence attendue) |
@@ -202,7 +203,7 @@ Cinq verrous à lever avant le banc, **aucun n'est dans le Berry** :
 5. **Adresse esclave** : carte en id 1, esclaves Tasmota en 2 et 3. L'adressage de la
    carte exige **un seul module sur le bus** — le faire avant de câbler le reste.
 
-Ce que la phase 0 doit prouver, avec `ReglageGlobal logLevel 4` :
+Ce que la phase 0 doit prouver, avec `ReglageLog profil debug` et `ReglageLog modbus detail` :
 - les envois partent **dans l'ordre**, un seul en vol ;
 - `termineEnVol(true)` sur chaque réponse ;
 - un timeout provoqué (débrancher le RS485) → 3 tentatives → abandon loggé ;

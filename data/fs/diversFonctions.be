@@ -66,12 +66,12 @@ def diversFonctions_recupereTemplate(template)
     var enregistrePersistant = false
 
 	# Récupère le template (modele) : un seul appel a 'Template'
-	log("RECUP_TEMPLATE: Recupere le template du modele !", LOG_LEVEL_DEBUG)
+	logFonctions.log("RECUP_TEMPLATE: Recupere le template du modele !", LOG_LEVEL_DEBUG)
 	var templateActuel = tasmota.cmd("Template", boolMute)
 	if str(templateActuel) != str(template)
 		# Enregistre le pin du modèle dans persist.json
 		enregistrePersistant = true
-		log("RECUP_TEMPLATE: Enregistre 'Template' modifié en json !", LOG_LEVEL_DEBUG)
+		logFonctions.log("RECUP_TEMPLATE: Enregistre 'Template' modifié en json !", LOG_LEVEL_DEBUG)
 		persist.template = templateActuel
 		persist.save()
 	end
@@ -84,7 +84,7 @@ def diversFonctions_recupereTemplate(template)
 	var statusFWR = tasmota.cmd("Status 2", boolMute)
 	var build = (isinstance(statusFWR, map) && isinstance(statusFWR.find("StatusFWR"), map)) ? str(statusFWR["StatusFWR"].find("BuildDateTime", "")) : ""
 	if (build != "" && gestionFileFolder.readFile("/json/componentes.build") == build && path.exists("/json/componentes.json") && path.exists("/json/componentesInverse.json"))
-		log("RECUP_TEMPLATE: Firmware inchange, componentes deja a jour !", LOG_LEVEL_DEBUG)
+		logFonctions.log("RECUP_TEMPLATE: Firmware inchange, componentes deja a jour !", LOG_LEVEL_DEBUG)
 		return enregistrePersistant
 	end
 
@@ -92,7 +92,7 @@ def diversFonctions_recupereTemplate(template)
 	# d'un message ; tasmota.cmd() ne renvoie que la DERNIERE. Aujourd'hui : une seule page.
 	var reponseCMD = tasmota.cmd("GPIOs", boolMute)
 	if !isinstance(reponseCMD, map)
-		log("RECUP_TEMPLATE_ERREUR: Reponse 'GPIOs' invalide, componentes non regeneres !", LOG_LEVEL_ERREUR)
+		logFonctions.log("RECUP_TEMPLATE_ERREUR: Reponse 'GPIOs' invalide, componentes non regeneres !", LOG_LEVEL_ERREUR)
 		return enregistrePersistant
 	end
 	var componentes = {"componentes": {}}
@@ -105,7 +105,7 @@ def diversFonctions_recupereTemplate(template)
 	end
 	reponseCMD = nil
 
-	log("RECUP_TEMPLATE: Enregistre les componentes en json !", LOG_LEVEL_DEBUG)
+	logFonctions.log("RECUP_TEMPLATE: Enregistre les componentes en json !", LOG_LEVEL_DEBUG)
 	gestionFileFolder.writeFile("/json/componentes.json", json.dump(componentes))
 	componentes = nil
 	gestionFileFolder.writeFile("/json/componentesInverse.json", json.dump(componentesInverse))
@@ -164,7 +164,7 @@ def diversFonctions_hiberneDriversInactifs()
 	var fichier = "/json/driversInactifs.json"
 	var veille = diversFonctions.litVeille()
 	if (veille == nil)
-		log("VEILLE_DRIVERS_ERREUR: " + fichier + " illisible : aucune mise en veille !", LOG_LEVEL_ERREUR)
+		logFonctions.log("VEILLE_DRIVERS_ERREUR: " + fichier + " illisible : aucune mise en veille !", LOG_LEVEL_ERREUR)
 		return
 	end
 
@@ -174,7 +174,7 @@ def diversFonctions_hiberneDriversInactifs()
 		if (veille.contains(nom))
 			drivers[nom]["environnement"] = veille[nom]
 			nbReveilles += 1
-			log("VEILLE_DRIVERS: Reveille l'environnement du driver '" + nom + "' !", LOG_LEVEL_DEBUG)
+			logFonctions.log("VEILLE_DRIVERS: Reveille l'environnement du driver '" + nom + "' !", LOG_LEVEL_DEBUG)
 		end
 	end
 
@@ -189,7 +189,7 @@ def diversFonctions_hiberneDriversInactifs()
 		if ok	for nom: aEndormir	ok = ok && relu.contains(nom)	end		end
 		relu = nil
 		if !ok
-			log("VEILLE_DRIVERS_ERREUR: Ecriture de " + tmp + " non verifiee : aucune mise en veille !", LOG_LEVEL_ERREUR)
+			logFonctions.log("VEILLE_DRIVERS_ERREUR: Ecriture de " + tmp + " non verifiee : aucune mise en veille !", LOG_LEVEL_ERREUR)
 			path.remove(tmp)
 			aEndormir = []
 		else
@@ -197,7 +197,7 @@ def diversFonctions_hiberneDriversInactifs()
 			path.rename(tmp, fichier)
 			for nom: aEndormir
 				drivers[nom]["environnement"] = {}
-				log("VEILLE_DRIVERS: Met en veille l'environnement du driver '" + nom + "' !", LOG_LEVEL_DEBUG)
+				logFonctions.log("VEILLE_DRIVERS: Met en veille l'environnement du driver '" + nom + "' !", LOG_LEVEL_DEBUG)
 			end
 		end
 	end
@@ -252,12 +252,12 @@ def diversFonctions_statMemory()
 
 	var stat = tasmota.memory()
 
-	log("STAT_MEMORY: -------------------- divers statMemory -------------------", LOG_LEVEL_DEBUG)
-	log(string.format("STAT_MEMORY: Espace programme utilisé = %.1f%%", real(stat["program"] - stat["program_free"]) / real(stat["program"]) * 100.0), LOG_LEVEL_DEBUG)							# value=SINGLE
+	logFonctions.log("STAT_MEMORY: -------------------- divers statMemory -------------------", LOG_LEVEL_DEBUG)
+	logFonctions.log(string.format("STAT_MEMORY: Espace programme utilisé = %.1f%%", real(stat["program"] - stat["program_free"]) / real(stat["program"]) * 100.0), LOG_LEVEL_DEBUG)							# value=SINGLE
 	if (stat.find("psram", false) && stat.find("psram_free", false))
-		log(string.format("STAT_MEMORY: Espace PSRAM utilisé = %.1f%%", real(stat["psram"] - stat["psram_free"]) / real(stat["psram"]) * 100.0), LOG_LEVEL_DEBUG)
+		logFonctions.log(string.format("STAT_MEMORY: Espace PSRAM utilisé = %.1f%%", real(stat["psram"] - stat["psram_free"]) / real(stat["psram"]) * 100.0), LOG_LEVEL_DEBUG)
 	end	
-	log(string.format("STAT_MEMORY: Espace Heap libre = %d", stat["heap_free"]), LOG_LEVEL_DEBUG)	
+	logFonctions.log(string.format("STAT_MEMORY: Espace Heap libre = %d", stat["heap_free"]), LOG_LEVEL_DEBUG)	
 end
 diversFonctions.statMemory = diversFonctions_statMemory
 

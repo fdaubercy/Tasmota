@@ -9,9 +9,7 @@
                 http://RIDEAU-GARAGE.local
                 http://CAPTEURS-CUVE.local
 
-    - Les commande de réglages paramétrées sont :
-        * logActivation: Active ou désactive les logs du RangeExtender
-            EX: ReglageRangeExtender logActivation OFF
+    - Les logs du RangeExtender se règlent avec la commande centrale ReglageLog (cible "rangeExtender").
 
     - Principes de fonctionnement:
         * Dès la connection wifi établie: #Wifi#Connected

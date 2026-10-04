@@ -48,7 +48,7 @@
 		"mDNS": "ON",
 		"apiHTTP": "OFF",
 		"adressMAC": "",
-		"debug": "ON",
+		"log": "debug",
 		"IP": {
 			"IPAddress": "192.168.0.43",
 			"IPGateway": "192.168.0.254",
@@ -84,7 +84,7 @@
 		"rangeExtender": {
 			"activation": "ON",
 			"id": 0,
-			"debug": "ON",
+			"log": "debug",
             "ipMaitre": "192.168.0.43",
 			"AP": {
 				"IPAddress": "192.168.4.1",
@@ -102,17 +102,17 @@
 		"udp": {
 			"activation": "ON",
 			"id": 0,
-			"debug": "ON",
+			"log": "debug",
 			"port": 2000
 		}, 
 		"tcp": {
 			"activation": "ON",
 			"id": 0,
-			"debug": "ON"
+			"log": "debug"
 		}, 
         "discovery": {
             "activation": "ON",
-            "debug": "OFF"
+            "log": "info"
         }
 	},
 	"template": {
@@ -127,7 +127,7 @@
 			"name": "Gestion des appareils de garage",
 			"activation": "ON",
 			"reglage": "OFF",
-			"debug": "ON",
+			"log": "debug",
 			"logs": {
 				"nbLogsFiles": 15,
 				"fileLogName": "/logs/garage.log",
@@ -1082,7 +1082,7 @@
                 "ES8311": {
                     "activation": "ON",
                     "name": "Codec Audio ES8311",
-                    "debug": "ON"
+                    "log": "debug"
                 }
             }
         },
@@ -1122,7 +1122,7 @@
 			"debit": 19200,
 			"mode": "8N1",
 			"timeoutReponse": 5000,
-			"debug": "ON",
+			"log": "debug",
             "activationReponseCMD": "ON",
             "typeComm": {
                 "Serial": "ON",
@@ -1150,7 +1150,7 @@
 					}
 				},
 				"Conn16channels": {
-					"debug": "ON",
+					"log": "debug",
 					"Conn16channel1": {
 						"activation": "ON",
 						"name": "Connecteur RS485 16 sorties",
@@ -1158,7 +1158,7 @@
 					}
 				},
 				"TasmotaSlaveModBus": {
-					"debug": "ON",
+					"log": "debug",
 					"TasmotaSlaveModBus1": {
 						"activation": "ON",
 						"name": "Capteurs Cuve ModBus",
@@ -1176,21 +1176,21 @@
 			"activation": "OFF",
 			"amelioration": "ON",
 			"name": "Bus KNX",
-			"debug": "ON",
+			"log": "debug",
 			"environnement": {}
 		},
 		"LoRaWan": {
 			"activation": "ON",
 			"name": "Connexion LoRaWan 868MHz",
 			"id": 0,
-			"debug": "ON",
+			"log": "debug",
 			"environnement": {}
 		},
 		"voletRoulants": {
 			"activation": "OFF",
 			"name": "Driver Volet Roulant",
 			"mode": 3,
-			"debug": "ON",
+			"log": "debug",
 			"environnement": {
 				"VRs": {
 					"VR1": {

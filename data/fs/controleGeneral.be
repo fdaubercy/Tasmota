@@ -49,7 +49,7 @@ class CONTROLE_GENERAL : Driver
 	def heureReboot()
 		import string
 
-        log(string.format("CONTROLE_GENERAL: Reboot du module programmé à %s !", diverses["heureReboot"]), LOG_LEVEL_DEBUG)
+        logFonctions.log(string.format("CONTROLE_GENERAL: Reboot du module programmé à %s !", diverses["heureReboot"]), LOG_LEVEL_DEBUG)
 		tasmota.cmd("Restart 1", boolMute)
 	end
 
@@ -58,7 +58,7 @@ class CONTROLE_GENERAL : Driver
 
         # Teste le Flag de connexion wifi
 		if (!self.connected)
-            log(string.format("CONTROLE_GENERAL: Reboot du module par deconnexion Wifi !", diverses["heureReboot"]), LOG_LEVEL_DEBUG)
+            logFonctions.log(string.format("CONTROLE_GENERAL: Reboot du module par deconnexion Wifi !", diverses["heureReboot"]), LOG_LEVEL_DEBUG)
 			tasmota.cmd("Restart 1", boolMute)
 		end
 
@@ -90,7 +90,7 @@ class CONTROLE_GENERAL : Driver
 		self.sensorsEcheance = 0
 		self.lectureSensorsEnCours = false
 
-        log("CONTROLE_GENERAL: Enregistre les taches CRON !", LOG_LEVEL_DEBUG)
+        logFonctions.log("CONTROLE_GENERAL: Enregistre les taches CRON !", LOG_LEVEL_DEBUG)
 		# Défini la tache cron pour le reboot sans wifi
 		if (serveur["wifi"].find("timerRebootSansWifi", 0) != 0)
             # introspect.get(controleGeneral).heureReboot()
@@ -118,12 +118,12 @@ class CONTROLE_GENERAL : Driver
 		configDevices.configDevicesByRules(modules, self.nbIOActivesJSON)
 		configDevices.configDevicesByRules(drivers, self.nbIOActivesJSON)
 
-		log(string.format("CONTROLE_GENERAL: %i relais activés / %i WS2812 activés / %i switchs activés / %i capteurs activés / %i boutons activés / %i entrées analogiques activées / %i thermometres activés / %i compteurs activés !", 
+		logFonctions.log(string.format("CONTROLE_GENERAL: %i relais activés / %i WS2812 activés / %i switchs activés / %i capteurs activés / %i boutons activés / %i entrées analogiques activées / %i thermometres activés / %i compteurs activés !", 
 									self.nbIOActivesJSON["relais"]["actives"].find("nb", 0), self.nbIOActivesJSON["WS2812"]["actives"].find("nb", 0), 
                                     self.nbIOActivesJSON["switchs"]["actives"].find("nb", 0), self.nbIOActivesJSON["capteurs"]["actives"].find("nb", 0), 
 									self.nbIOActivesJSON["boutons"]["actives"].find("nb", 0), self.nbIOActivesJSON["analogiques"]["actives"].find("nb", 0), 
 									self.nbIOActivesJSON["thermometres"]["actives"].find("nb", 0), self.nbIOActivesJSON["compteurs"]["actives"].find("nb", 0)), LOG_LEVEL_DEBUG)
-		log(string.format("CONTROLE_GENERAL: %i relais réels / %i WS2812 réels / %i switchs réels / %i capteurs réels / %i boutons réels / %i entrées analogiques réelles / %i thermometres réels / %i compteurs réels !", 
+		logFonctions.log(string.format("CONTROLE_GENERAL: %i relais réels / %i WS2812 réels / %i switchs réels / %i capteurs réels / %i boutons réels / %i entrées analogiques réelles / %i thermometres réels / %i compteurs réels !", 
                                     self.nbIOActivesJSON["relais"]["reels"].find("nb", 0), self.nbIOActivesJSON["WS2812"]["reels"].find("nb", 0), 
                                     self.nbIOActivesJSON["switchs"]["reels"].find("nb", 0), self.nbIOActivesJSON["capteurs"]["reels"].find("nb", 0), 
 									self.nbIOActivesJSON["boutons"]["reels"].find("nb", 0), self.nbIOActivesJSON["analogiques"]["reels"].find("nb", 0), 
@@ -176,7 +176,7 @@ class CONTROLE_GENERAL : Driver
 					if (id < 1 || id > etats.size() || !etats[id - 1])	continue	end
 
 					relai["etat"] = "ON"
-					log(string.format("GESTION_RELAIS: Relai n°%i deja ON au demarrage -> lancement du timer de %is !", id, relai["timer"]), LOG_LEVEL_INFO)
+					logFonctions.log(string.format("GESTION_RELAIS: Relai n°%i deja ON au demarrage -> lancement du timer de %is !", id, relai["timer"]), LOG_LEVEL_INFO)
 					tasmota.set_timer(relai["timer"] * 1000, /-> self.finTimerRelai(cle, relai), string.format("timer_relai%i", id))
 				end
 			end
@@ -195,7 +195,7 @@ class CONTROLE_GENERAL : Driver
 		import globalFonctions
 
 		var id = relai["id"]
-		log(string.format("GESTION_RELAIS: Fin du timer du relai n°%i -> arret de securite", id), LOG_LEVEL_INFO)
+		logFonctions.log(string.format("GESTION_RELAIS: Fin du timer du relai n°%i -> arret de securite", id), LOG_LEVEL_INFO)
 		globalFonctions.modifEtatRelai(cle, id, "Switch", "TOGGLE", false, false, 0)
 
 		var reglage = relai.find("relance", false)
@@ -215,14 +215,14 @@ class CONTROLE_GENERAL : Driver
 			nb += 1
 			self.relances[cleCompteur] = nb
 			var message = string.format("Niveau haut '%s' toujours actif apres l'arret de securite : relance %i/%i dans %is", nomCapteur, nb, maxRelances, reglage.find("pause", 10))
-			log("GESTION_RELAIS: " + message, LOG_LEVEL_INFO)
+			logFonctions.log("GESTION_RELAIS: " + message, LOG_LEVEL_INFO)
 			self.publieAlerteRelance(cle, relai, "relance", message, nb, maxRelances)
 			tasmota.set_timer(reglage.find("pause", 10) * 1000, /-> self.relanceRelai(cle, relai), string.format("relance_relai%i", id))
 		else
 			var message = string.format("Niveau haut '%s' toujours actif apres %i relances : probable defaut du capteur (ou pompe inefficace). Pompe arretee.", nomCapteur, maxRelances)
 			relai["alerte"] = message
 			self.relances.remove(cleCompteur)
-			log("GESTION_RELAIS_ERREUR: " + message, LOG_LEVEL_ERREUR)
+			logFonctions.log("GESTION_RELAIS_ERREUR: " + message, LOG_LEVEL_ERREUR)
 			self.publieAlerteRelance(cle, relai, "defaut", message, nb, maxRelances)
 		end
 	end
@@ -233,13 +233,13 @@ class CONTROLE_GENERAL : Driver
 		import globalFonctions
 
 		if (!self.niveauHautActif(cle, relai["relance"]))
-			log(string.format("GESTION_RELAIS: Niveau haut retombe pendant la pause : pas de relance du relai n°%i", relai["id"]), LOG_LEVEL_INFO)
+			logFonctions.log(string.format("GESTION_RELAIS: Niveau haut retombe pendant la pause : pas de relance du relai n°%i", relai["id"]), LOG_LEVEL_INFO)
 			self.acquitteRelance(cle, relai)
 			return
 		end
 		if (relai.find("etat", "OFF") == "ON")	return	end
 
-		log(string.format("GESTION_RELAIS: Relance du relai n°%i", relai["id"]), LOG_LEVEL_INFO)
+		logFonctions.log(string.format("GESTION_RELAIS: Relance du relai n°%i", relai["id"]), LOG_LEVEL_INFO)
 		globalFonctions.modifEtatRelai(cle, relai["id"], "ON", "ON", false, false, 0)
 	end
 
@@ -247,7 +247,7 @@ class CONTROLE_GENERAL : Driver
 	def acquitteRelance(cle, relai)
 		self.relances.remove(cle + "_" + str(relai["id"]))
 		if (relai.find("alerte", "") != "")
-			log("GESTION_RELAIS: Alerte du relai n°" + str(relai["id"]) + " acquittee (niveau haut retombe)", LOG_LEVEL_INFO)
+			logFonctions.log("GESTION_RELAIS: Alerte du relai n°" + str(relai["id"]) + " acquittee (niveau haut retombe)", LOG_LEVEL_INFO)
 			relai["alerte"] = ""
 		end
 	end
@@ -300,11 +300,11 @@ class CONTROLE_GENERAL : Driver
 				var cle = "Switch" + str(capteur["id"])
 				var etatReel = sensors.find(cle)
 				if (etatReel == nil)
-					log(string.format("CONTROLE_GENERAL_ERREUR: Etat de '%s' (%s) introuvable dans les sensors : non resynchronise", capteur.find("nom", cleCapteur), cle), LOG_LEVEL_ERREUR)
+					logFonctions.log(string.format("CONTROLE_GENERAL_ERREUR: Etat de '%s' (%s) introuvable dans les sensors : non resynchronise", capteur.find("nom", cleCapteur), cle), LOG_LEVEL_ERREUR)
 					continue
 				end
 
-				log(string.format("CONTROLE_GENERAL: Resynchronise '%s' (%s) : memorise=%s / reel=%s", capteur.find("nom", cleCapteur), cle, str(capteur.find("etat")), etatReel), LOG_LEVEL_INFO)
+				logFonctions.log(string.format("CONTROLE_GENERAL: Resynchronise '%s' (%s) : memorise=%s / reel=%s", capteur.find("nom", cleCapteur), cle, str(capteur.find("etat")), etatReel), LOG_LEVEL_INFO)
 				capteur["etat"] = ""
 				tasmota.publish_rule(string.format("{\"%s\": {\"Action\": \"%s\"}}", cle, etatReel))
 			end
@@ -327,7 +327,7 @@ class CONTROLE_GENERAL : Driver
 		try
 			lu = json.load(tasmota.read_sensors())
 		except .. as e, m
-			log("CONTROLE_GENERAL_ERREUR: Lecture des sensors impossible : " + str(m), LOG_LEVEL_ERREUR)
+			logFonctions.log("CONTROLE_GENERAL_ERREUR: Lecture des sensors impossible : " + str(m), LOG_LEVEL_ERREUR)
 		end
 		self.lectureSensorsEnCours = false
 
@@ -441,11 +441,11 @@ class CONTROLE_GENERAL : Driver
 
 		tasmota.yield()
 		
-		log("GLOBAL_POWER_HANDLER: -------------------- global SetPowerHandler -------------------", LOG_LEVEL_DEBUG)
-		log("GLOBAL_POWER_HANDLER: Lecture automatisee de l'etat des relais", LOG_LEVEL_DEBUG)
-		log("GLOBAL_POWER_HANDLER: cmd=" + str(cmd), LOG_LEVEL_DEBUG)
-		log("GLOBAL_POWER_HANDLER: idx=" + str(idx), LOG_LEVEL_DEBUG)
-		log("GLOBAL_POWER_HANDLER: idx(binaire)=" + str(diversFonctions.printBinaire(idx)), LOG_LEVEL_DEBUG)
+		logFonctions.log("GLOBAL_POWER_HANDLER: -------------------- global SetPowerHandler -------------------", LOG_LEVEL_DEBUG)
+		logFonctions.log("GLOBAL_POWER_HANDLER: Lecture automatisee de l'etat des relais", LOG_LEVEL_DEBUG)
+		logFonctions.log("GLOBAL_POWER_HANDLER: cmd=" + str(cmd), LOG_LEVEL_DEBUG)
+		logFonctions.log("GLOBAL_POWER_HANDLER: idx=" + str(idx), LOG_LEVEL_DEBUG)
+		logFonctions.log("GLOBAL_POWER_HANDLER: idx(binaire)=" + str(diversFonctions.printBinaire(idx)), LOG_LEVEL_DEBUG)
 
 		for nb: 0 .. self.nbIOActivesJSON["relais"]["actives"]["nb"]
 			if 1 & (idx >> (nb)) == 1
@@ -473,13 +473,13 @@ class CONTROLE_GENERAL : Driver
 							if (relais)
 								for cleRLY: relais.keys()
 									if (relais[cleRLY].find("activation", "OFF") == "ON" && relais[cleRLY].find("etat", "OFF") != etat && relais[cleRLY]["id"] == nb + 1)
-										log((string.format("GESTION_RELAIS: Lecture de l'etat du bit %i -> " + (relais[cleRLY]["type"] == 1376 ? "led w2812" : "relai") + " n°%i = %s", nb, nb + 1, etat)), LOG_LEVEL_DEBUG)
+										logFonctions.log((string.format("GESTION_RELAIS: Lecture de l'etat du bit %i -> " + (relais[cleRLY]["type"] == 1376 ? "led w2812" : "relai") + " n°%i = %s", nb, nb + 1, etat)), LOG_LEVEL_DEBUG)
 										
 										# Ajoute des détails de déclenchement en json (timestamp et délai)
 										relais[cleRLY]["etat"] = etat
 										if etat == "ON"
 											if tasmota.rtc()["local"] > relais[cleRLY]["timestamp"]["ON"]
-                                                log((string.format("GESTION_RELAIS: Enregistre le timestamp de passage à 'ON' du Relai n°%i = %s", nb + 1, etat)), LOG_LEVEL_DEBUG)
+                                                logFonctions.log((string.format("GESTION_RELAIS: Enregistre le timestamp de passage à 'ON' du Relai n°%i = %s", nb + 1, etat)), LOG_LEVEL_DEBUG)
 												relais[cleRLY]["timestamp"]["delai"] = tasmota.rtc()["local"] - relais[cleRLY]["timestamp"]["ON"]
 											end
 											
@@ -508,11 +508,11 @@ class CONTROLE_GENERAL : Driver
 
 										# Vérifie si il y a un timer paramétrer ou à annuler
 										if (etat == "ON" && relais[cleRLY]["id"] == nb + 1 && relais[cleRLY]["timer"] != 0)
-											log(string.format("GESTION_RELAIS: Lancement du timer pour le relai n°%i: %is !", nb + 1, relais[cleRLY]["timer"]), LOG_LEVEL_INFO)
+											logFonctions.log(string.format("GESTION_RELAIS: Lancement du timer pour le relai n°%i: %is !", nb + 1, relais[cleRLY]["timer"]), LOG_LEVEL_INFO)
 											var relaiTimer = relais[cleRLY]
 											tasmota.set_timer(relais[cleRLY]["timer"] * 1000, /-> self.finTimerRelai(cle, relaiTimer), string.format("timer_relai%i", nb + 1))
 										elif etat == "OFF" && relais[cleRLY]["id"] == nb + 1 && relais[cleRLY]["timer"] != 0
-											log(string.format("GESTION_RELAIS: Supprime le timer pour le relai n°%i !", nb + 1), LOG_LEVEL_INFO)
+											logFonctions.log(string.format("GESTION_RELAIS: Supprime le timer pour le relai n°%i !", nb + 1), LOG_LEVEL_INFO)
 											tasmota.remove_timer(string.format("timer_relai%i", nb + 1))								
 										end
 
@@ -523,7 +523,7 @@ class CONTROLE_GENERAL : Driver
 												for nbMQTT: 0 .. tabTopics.find("topic", []).size() - 1
 													var topic = tabTopics["topic"][nbMQTT]
 													if string.find(topic, "cmnd") > -1
-														log(string.format("GESTION_RELAIS: Publie sur le réseau mqtt pour le relai n°%i !", nb + 1), LOG_LEVEL_INFO)
+														logFonctions.log(string.format("GESTION_RELAIS: Publie sur le réseau mqtt pour le relai n°%i !", nb + 1), LOG_LEVEL_INFO)
 														mqtt.publish(topic, etat)								
 													end
 												end
@@ -542,7 +542,7 @@ class CONTROLE_GENERAL : Driver
 
 											if (drivers[typeConnex]["activation"] == "ON" && drivers[typeConnex]["environnement"][groupeConnex][moduleConnex]["activation"] == "ON")
 												if (introspect.members("controleModbus") == nil)
-													log("GESTION_RELAIS: Attention le Driver 'controleModbus' n'est pas activé !", LOG_LEVEL_INFO)
+													logFonctions.log("GESTION_RELAIS: Attention le Driver 'controleModbus' n'est pas activé !", LOG_LEVEL_INFO)
 												end
 
 												if (relais[cleRLY].find("idModBus", false) != false)
@@ -567,7 +567,7 @@ class CONTROLE_GENERAL : Driver
 																		}
 
 													# Envoi l'ordre sur le réseau ModBus
-													log(string.format("GESTION_RELAIS: Publie sur le réseau ModBus pour le relai n°%i !", nb + 1), LOG_LEVEL_INFO)
+													logFonctions.log(string.format("GESTION_RELAIS: Publie sur le réseau ModBus pour le relai n°%i !", nb + 1), LOG_LEVEL_INFO)
 													
 													import modbusFonctions
 													modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["DeviceAddress"])
@@ -618,11 +618,11 @@ class CONTROLE_GENERAL : Driver
 		
 		tasmota.yield()
 		
-		log("GLOBAL_ANY_KEY: -------------------- global any_key -------------------", LOG_LEVEL_DEBUG)
-		log("GLOBAL_ANY_KEY: Lecture automatisee de l'etat des Boutons (BP) et Switchs (capteurs & interrupteurs)", LOG_LEVEL_DEBUG)
-		log("GLOBAL_ANY_KEY: cmd=" + str(cmd), LOG_LEVEL_DEBUG)
-		log("GLOBAL_ANY_KEY: idx=" + str(idx), LOG_LEVEL_DEBUG)
-		log(string.format("GLOBAL_ANY_KEY: idx = 0x%07X", idx), LOG_LEVEL_DEBUG)
+		logFonctions.log("GLOBAL_ANY_KEY: -------------------- global any_key -------------------", LOG_LEVEL_DEBUG)
+		logFonctions.log("GLOBAL_ANY_KEY: Lecture automatisee de l'etat des Boutons (BP) et Switchs (capteurs & interrupteurs)", LOG_LEVEL_DEBUG)
+		logFonctions.log("GLOBAL_ANY_KEY: cmd=" + str(cmd), LOG_LEVEL_DEBUG)
+		logFonctions.log("GLOBAL_ANY_KEY: idx=" + str(idx), LOG_LEVEL_DEBUG)
+		logFonctions.log(string.format("GLOBAL_ANY_KEY: idx = 0x%07X", idx), LOG_LEVEL_DEBUG)
 
         #- Détails de idx
             idx=33620226

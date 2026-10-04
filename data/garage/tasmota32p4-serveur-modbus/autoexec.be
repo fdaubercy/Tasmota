@@ -10,7 +10,7 @@ LOG_LEVEL_NONE = 0
 LOG_LEVEL_ERREUR = 1
 LOG_LEVEL_INFO = 2
 LOG_LEVEL_DEBUG = 3
-LOG_LEVEL_DEBUG_PLUS = 3            # = LOG_LEVEL_DEBUG : traces Berry visibles en SerialLog 3, sans les 'BRY: GC' du firmware (niveau 4)
+LOG_LEVEL_DEBUG_PLUS = 4            # niveau Berry "detail" : logFonctions.log() l'emet au niveau 3 du firmware (jamais 4, donc sans les BRY: GC)
 
 logSerial = LOG_LEVEL_INFO
 logWeb = LOG_LEVEL_INFO
@@ -35,7 +35,7 @@ if (diversFonctions.elagueListesVides(persist._p) > 0)     persist.save(true)   
 diversFonctions.hiberneDriversInactifs()
 
 # Execute la fonction au démarrage
-log("AUTO_EXE: Vérifie les fichiers à transférer sur la carte SD !", LOG_LEVEL_DEBUG)
+logFonctions.log("AUTO_EXE: Vérifie les fichiers à transférer sur la carte SD !", LOG_LEVEL_DEBUG)
 import gestionFileFolder
 gestionFileFolder.listeEtRepartitLesFichiers()
 
@@ -112,5 +112,5 @@ if (persist._p != nil && persist._p.size() != 0)
     # LOCALES : 'configGlobal' undeclared, puis 'controleGeneral' undeclared dans les regles,
     # des le DEUXIEME demarrage (le premier, en .be, fonctionne). Constate a la cave le 2026-09-26.
     # gestionFileFolder.compileModule("/autoexec", "ON")
-else log("AUTO_EXE: Attention, le fichier de paramétrage est absent !", LOG_LEVEL_ERREUR)
+else logFonctions.log("AUTO_EXE: Attention, le fichier de paramétrage est absent !", LOG_LEVEL_ERREUR)
 end

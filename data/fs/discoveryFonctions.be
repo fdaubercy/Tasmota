@@ -8,9 +8,7 @@ var discoveryFonctions = module("discoveryFonctions")
 def discoveryFonctions_etat()
     import global
     if (global._etatDiscoveryFonctions == nil)
-        global._etatDiscoveryFonctions = {
-            "DEBUG": nil              # 'ON'/'OFF', lu une fois depuis serveur['discovery']['debug']
-        }
+        global._etatDiscoveryFonctions = {}
     end
     return global._etatDiscoveryFonctions
 end
@@ -18,15 +16,7 @@ discoveryFonctions.etat = discoveryFonctions_etat
 
 
 def discoveryFonctions_log(msg, levelDebug)
-    import persist
-
-    if (discoveryFonctions.etat()["DEBUG"] == nil)
-        discoveryFonctions.etat()["DEBUG"] = serveur["discovery"].find("debug", "OFF")
-    end
-
-    if (discoveryFonctions.etat()["DEBUG"] == "ON")
-        log(msg, levelDebug)
-    end
+    logFonctions.log(msg, levelDebug, "discovery")
 end
 discoveryFonctions.log = discoveryFonctions_log
 
@@ -49,23 +39,12 @@ discoveryFonctions.roleLocal = discoveryFonctions_roleLocal
 def discoveryFonctions_aideReglageDiscovery(sujet)
     import string
     if (sujet == nil)
-        return [
-            ["logActivation", "logActivation <ON|OFF|1|0>", "active/coupe les logs de debug Discovery (sauve dans le persist)"]
-        ]
-    end
-    sujet = string.toupper(sujet)
-    if (sujet == "LOGACTIVATION")
-        return ["Parametre : ON ou 1 = logs de debug Discovery actifs ; OFF ou 0 = coupes.",
-                "Sauvegarde : serveur.discovery.debug dans _persist.json (persist.save immediat).",
-                "Exemple : ReglageDiscovery logActivation ON"]
+        return []     # aucune sous-commande (les logs se reglent avec ReglageLog)
     end
     return nil
 end
 discoveryFonctions.aideReglageDiscovery = discoveryFonctions_aideReglageDiscovery
 
-#- exemples:
-    ReglageDiscovery logActivation OFF
--#
 def discoveryFonctions_reglageDiscovery(cmd, idx, payload, payload_json)
     import string
     import json
@@ -96,24 +75,9 @@ def discoveryFonctions_reglageDiscovery(cmd, idx, payload, payload_json)
     if (parametres.size() > 0)	discoveryFonctions.log("REGLAGE_DISCOVERY: parametre1=" + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS)	end
     if (parametres.size() > 1)	discoveryFonctions.log("REGLAGE_DISCOVERY: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS)	end
 
-    # Activation ou désactivation des logs de la liaison RS485 -> ordre: logActivation
-    if (string.toupper(fonction) == string.toupper("logActivation"))
-        try
-            # Adapte le paramètre
-            parametres[0] = (parametres[0] == "1" ? "ON" : (parametres[0] == "0" ? "OFF" : parametres[0]))
-            discoveryFonctions.etat()["DEBUG"] = parametres[0]
-
-            # Sauvegarde le paramètre
-            serveur["discovery"]["debug"] = parametres[0]
-            persist.save()
-        except .. as e, m
-            # print('Erreur: ', e, " -> ", m)
-        end
-    end
-
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd += string.format("logActivated=%s", discoveryFonctions.etat()["DEBUG"])
+    reponse_cmnd += "OK"
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
 discoveryFonctions.reglageDiscovery = discoveryFonctions_reglageDiscovery
@@ -346,7 +310,7 @@ def discoveryFonctions_mqtt_discovery(topic, idx, data, databytes)
     var perimee = (string.toupper(item) == macLocale && typeData != discoveryFonctions.roleLocal() &&
                    re.compile('^(maitre|esclave[0-9]+|module[0-9]+)$').match(typeData) != nil)
     if (perimee && !effacement)
-        log("DISCOVERY_MQTT_DATA: Fiche '" + typeData + "' perimee sous notre MAC (role actuel '" + discoveryFonctions.roleLocal() + "') : effacement sur le broker", LOG_LEVEL_INFO)
+        logFonctions.log("DISCOVERY_MQTT_DATA: Fiche '" + typeData + "' perimee sous notre MAC (role actuel '" + discoveryFonctions.roleLocal() + "') : effacement sur le broker", LOG_LEVEL_INFO, "discovery")
         mqtt.publish(topic, "", true)
     end
 

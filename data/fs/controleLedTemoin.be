@@ -19,7 +19,6 @@ class CONTROLE_LED_TEMOIN
     var intervalle   # Durée ON/OFF en millisecondes
     var etat         # Etat courant de la LED (true = allumée)
     var actif        # Le clignotement est en cours
-    var DEBUG
 
     var config_ok    # true si la config a été trouvée dans persist
 
@@ -30,7 +29,6 @@ class CONTROLE_LED_TEMOIN
         self.intervalle = 500
         self.etat       = false
         self.actif      = false
-        self.DEBUG      = nil
         self.config_ok  = self._charge_config()
 
         if self.config_ok
@@ -43,17 +41,11 @@ class CONTROLE_LED_TEMOIN
     def stop()
         self.arrete()
         tasmota.remove_driver(self)
-        log("CONTROLE_LED_TEMOIN: Driver déchargé", LOG_LEVEL_INFO)
+        logFonctions.log("CONTROLE_LED_TEMOIN: Driver déchargé", LOG_LEVEL_INFO, "volets")
     end
 
     def log(msg, levelDebug)
-        if (self.DEBUG == nil)
-            self.DEBUG = drivers["voletRoulants"].find("debug", "OFF")
-        end
-
-        if (self.DEBUG == "ON")
-            log(msg, levelDebug)
-        end
+        logFonctions.log(msg, levelDebug, "volets")
     end
 
     #- Recherche récursivement un objet 'led_temoin' (activation ON) dans un objet JSON.
@@ -126,7 +118,7 @@ class CONTROLE_LED_TEMOIN
 
         var led_temoin = self._cherche_led_temoin()
         if !led_temoin
-            log("CONTROLE_LED_TEMOIN: Aucun 'led_temoin' actif trouvé dans persist, driver non chargé", LOG_LEVEL_INFO)
+            logFonctions.log("CONTROLE_LED_TEMOIN: Aucun 'led_temoin' actif trouvé dans persist, driver non chargé", LOG_LEVEL_INFO, "volets")
             return false
         end
 

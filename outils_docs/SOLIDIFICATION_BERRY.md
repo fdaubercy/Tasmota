@@ -522,7 +522,8 @@ qu'il soit solidifiable — ce que la phase 1 doit trancher (Q1/Q2, §4 pièges 
 ## 8. Méthode recommandée
 
 1. **Développer dans `data/fs/`.** Boucle courte, `.be` → téléverser → `BrRestart`.
-2. **Mesurer avant de solidifier.** `ReglageGlobal logLevel 4` donne gratuitement les lignes
+2. **Mesurer avant de solidifier.** `ReglageLog serie detail` (sortie série au niveau 4 du
+   firmware ; `ReglageGlobal logLevel` n'existe plus depuis le 2026-10-04) donne gratuitement les lignes
    `BRY: GC from X to Y bytes` (`xdrv_52_9_berry.ino:290-293`, aucun flag requis). `tasmota.gc()`
    avant/après une opération donne son coût réel.
 3. **Ne solidifier qu'un module figé**, et un seul à la fois.

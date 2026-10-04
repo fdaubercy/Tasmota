@@ -4,8 +4,6 @@
         * Elle est maintenue tout le temps
 
     - Les commande de réglages paramétrées sont :
-        * logActivation: Active ou désactive les logs de la liaison RS485
-            EX: ReglageUDP logActivation OFF
         * envoiUniCast: Envoi un message UDP à l'adresse IP passée en paramètre
         EX: ReglageUDP envoiUniCast 10.99.0.1 Salut Ca gaz !
 

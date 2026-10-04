@@ -95,6 +95,8 @@ var udpFonctions = nil                 # (re)affectes par les fichiers charges
 var discoveryFonctions = nil
 var rangeExtenderFonctions = nil
 var configGlobal = nil
+var logFonctions = nil                 # la VRAIE fonction de log commune (seuil par cible)
+var modules = {}                       # lu par logFonctions (cibles garage, cuve)
 
 # --- charge les vrais modules ---
 print(">>> sources testees :", SOURCES)
@@ -104,6 +106,7 @@ def charge(nom)
   f.close()
   compile(src)()
 end
+charge("logFonctions")
 charge("udpFonctions")
 charge("discoveryFonctions")
 charge("rangeExtenderFonctions")

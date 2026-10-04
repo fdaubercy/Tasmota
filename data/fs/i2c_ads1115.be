@@ -51,21 +51,21 @@ class I2C_ADS1115 : Driver
         end
 
         if (self.nbAnalogiquesADS1115 == 0)
-            log("I2C_ADS1115: Aucune entrée analogique activée sur l'ADS1115 !", LOG_LEVEL_DEBUG)
+            logFonctions.log("I2C_ADS1115: Aucune entrée analogique activée sur l'ADS1115 !", LOG_LEVEL_DEBUG)
             return
         end
 
         # Vérifie une seule fois que l'ADS1115 répond sur le bus I2C
         var result = tasmota.cmd("I2CScan", boolMute)
         if (result == nil || !result.contains("I2CScan"))
-            log("I2C_ADS1115: Le bus I2C n'est pas activé dans le firmware ou les ports I2C ne sont pas configurés !", LOG_LEVEL_ERREUR)
+            logFonctions.log("I2C_ADS1115: Le bus I2C n'est pas activé dans le firmware ou les ports I2C ne sont pas configurés !", LOG_LEVEL_ERREUR)
             return
         end
 
         # 'adresseI2C' vaut "0x48" dans le persist : string.format la convertit par int()
         var adresse = string.format("0x%02x", self.adresseI2C)
         if (string.find(result["I2CScan"], adresse) < 0)
-            log(string.format("I2C_ADS1115: Module absent du bus I2C à l'adresse %s !", adresse), LOG_LEVEL_ERREUR)
+            logFonctions.log(string.format("I2C_ADS1115: Module absent du bus I2C à l'adresse %s !", adresse), LOG_LEVEL_ERREUR)
             return
         end
 
@@ -81,7 +81,7 @@ class I2C_ADS1115 : Driver
             tasmota.cmd(string.format("WebSensor12 %s", ads1115.find("affichageWebSensor", "ON")), boolMute)
         end
 
-        log(string.format("I2C_ADS1115: %i entrée(s) analogique(s) sur le module %s !", self.nbAnalogiquesADS1115, adresse), LOG_LEVEL_DEBUG)
+        logFonctions.log(string.format("I2C_ADS1115: %i entrée(s) analogique(s) sur le module %s !", self.nbAnalogiquesADS1115, adresse), LOG_LEVEL_DEBUG)
     end
 end
 
@@ -103,11 +103,11 @@ def i2c_ads1115_init(m)
                 if (ads1115.find("activation", "OFF") == "ON")
                     global.i2c_ads1115 = m.I2C_ADS1115(ads1115.find("adresseI2C"))
                     tasmota.add_driver(global.i2c_ads1115)
-                    log("I2C_ADS1115: Driver I2C_ADS1115 activé !", LOG_LEVEL_DEBUG)
+                    logFonctions.log("I2C_ADS1115: Driver I2C_ADS1115 activé !", LOG_LEVEL_DEBUG)
                 end
             except .. as error, message
                 import string
-                log(string.format("I2C_ADS1115_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
+                logFonctions.log(string.format("I2C_ADS1115_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
             end
         end
     end

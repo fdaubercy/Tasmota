@@ -38,8 +38,6 @@ class CONTROLE_DISCOVERY : Driver
         import mqtt
         import discoveryFonctions
 
-        discoveryFonctions.etat()["DEBUG"] = nil
-
         discoveryFonctions.log("CONTROLE_DISCOVERY: Initialisation du driver de contrôle des modules Tasmota sur le réseau local", LOG_LEVEL_INFO)
         discoveryFonctions.log("CONTROLE_DISCOVERY: Enregistre les taches CRON !", LOG_LEVEL_DEBUG)
 

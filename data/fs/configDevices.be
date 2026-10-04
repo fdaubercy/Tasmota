@@ -76,11 +76,11 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 										if (relais[cleRLY]["type"] == 1376)
 											nbIOActivesJSON["WS2812"]["actives"]["nb"] = nbIOActivesJSON["WS2812"]["actives"].find("nb", 0) + 1	
 										end
-									else log(string.format("CONFIG_DEV_BY_RULES: Le MCP23017 n'est pas connecté: Le relai %i ne sera pas comptabilisé !", relais[cleRLY]["id"]), LOG_LEVEL_DEBUG_PLUS)
+									else logFonctions.log(string.format("CONFIG_DEV_BY_RULES: Le MCP23017 n'est pas connecté: Le relai %i ne sera pas comptabilisé !", relais[cleRLY]["id"]), LOG_LEVEL_DEBUG_PLUS)
 									end
 								elif (result.contains("Command"))
 									if (result["Command"] == "Error")
-										log(string.format("CONFIG_DEV_BY_RULES: Le bus I2C n'est pas activé dans le firmware ou les ports I2C ne sont pas configurés !"), LOG_LEVEL_ERREUR)
+										logFonctions.log(string.format("CONFIG_DEV_BY_RULES: Le bus I2C n'est pas activé dans le firmware ou les ports I2C ne sont pas configurés !"), LOG_LEVEL_ERREUR)
 									end
 								end
 							elif (string.find(relais[cleRLY]["virtuel"], "ModBus_Conn16channel") > - 1)
@@ -90,7 +90,7 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 									if (relais[cleRLY]["type"] == 1376)
 										nbIOActivesJSON["WS2812"]["actives"]["nb"] = nbIOActivesJSON["WS2812"]["actives"].find("nb", 0) + 1	
 									end
-								else log(string.format("CONFIG_DEV_BY_RULES: Le controle du ModBus et l'esclave ModBus %s ne sont pas activés !", string.split(relais[cleRLY]["virtuel"], "_")[1]), LOG_LEVEL_DEBUG_PLUS)
+								else logFonctions.log(string.format("CONFIG_DEV_BY_RULES: Le controle du ModBus et l'esclave ModBus %s ne sont pas activés !", string.split(relais[cleRLY]["virtuel"], "_")[1]), LOG_LEVEL_DEBUG_PLUS)
 								end									
 							elif (string.find(relais[cleRLY]["virtuel"], "ModBus_TasmotaSlaveModBus") > - 1)
 								# Module ModBus activé
@@ -99,7 +99,7 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 									if (relais[cleRLY]["type"] == 1376)
 										nbIOActivesJSON["WS2812"]["actives"]["nb"] = nbIOActivesJSON["WS2812"]["actives"].find("nb", 0) + 1	
 									end
-								else log(string.format("CONFIG_DEV_BY_RULES: Le controle du ModBus et l'esclave ModBus %s ne sont pas activés !", string.split(relais[cleRLY]["virtuel"], "_")[1]), LOG_LEVEL_DEBUG_PLUS)
+								else logFonctions.log(string.format("CONFIG_DEV_BY_RULES: Le controle du ModBus et l'esclave ModBus %s ne sont pas activés !", string.split(relais[cleRLY]["virtuel"], "_")[1]), LOG_LEVEL_DEBUG_PLUS)
 								end
 							end
 						end
@@ -210,18 +210,18 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 									if (adresseI2C != nil && string.find(result["I2CScan"], str(adresseI2C)) > -1)
 										nbIOActivesJSON["analogiques"]["actives"]["nb"] = nbIOActivesJSON["analogiques"]["actives"].find("nb", 0) + 1
 									else 
-										log(string.format("CONFIG_DEV_BY_RULES: L'ADS1115 n'est pas connecté: L'entrée analogique %i ne sera pas comptabilisée !", analogiques[cleAnalogiques]["id"]), LOG_LEVEL_DEBUG_PLUS)
+										logFonctions.log(string.format("CONFIG_DEV_BY_RULES: L'ADS1115 n'est pas connecté: L'entrée analogique %i ne sera pas comptabilisée !", analogiques[cleAnalogiques]["id"]), LOG_LEVEL_DEBUG_PLUS)
 									end
 								elif (result.contains("Command"))
 									if (result["Command"] == "Error")
-										log(string.format("CONFIG_DEV_BY_RULES: Le bus I2C n'est pas activé dans le firmware ou les ports I2C ne sont pas configurés !"), LOG_LEVEL_ERREUR)
+										logFonctions.log(string.format("CONFIG_DEV_BY_RULES: Le bus I2C n'est pas activé dans le firmware ou les ports I2C ne sont pas configurés !"), LOG_LEVEL_ERREUR)
 									end
 								end
 							elif (string.find(analogiques[cleAnalogiques]["virtuel"], "ModBus_TasmotaSlaveModBus") > - 1)
 								if (drivers["ModBus"].find("activation", "OFF") == "ON" && drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"][string.split(analogiques[cleAnalogiques]["virtuel"], "_")[1]].find("activation", "OFF") == "ON")
 									nbIOActivesJSON["analogiques"]["actives"]["nb"] = nbIOActivesJSON["analogiques"]["actives"].find("nb", 0) + 1
 								else 
-									log(string.format("CONFIG_DEV_BY_RULES: %s n'est pas activé: L'entrée analogique %i ne sera pas comptabilisée !", string.split(analogiques[cleAnalogiques]["virtuel"], "_")[1], analogiques[cleAnalogiques]["id"]), LOG_LEVEL_DEBUG_PLUS)
+									logFonctions.log(string.format("CONFIG_DEV_BY_RULES: %s n'est pas activé: L'entrée analogique %i ne sera pas comptabilisée !", string.split(analogiques[cleAnalogiques]["virtuel"], "_")[1], analogiques[cleAnalogiques]["id"]), LOG_LEVEL_DEBUG_PLUS)
 								end								
 							end
 						else 
@@ -358,7 +358,7 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
                 gestionFileFolder.writeFile("/nbIOActives.json", json.dump(nbIOActivesJSON))
                 gestionFileFolder.listeEtRepartitLesFichiers()
 
-                log(string.format("CONFIG_DEVICES_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
+                logFonctions.log(string.format("CONFIG_DEVICES_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
 			end
         end
     end
@@ -370,12 +370,12 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 	# relaisLie des capteurs ne s'executeraient jamais (cas de la pompe vide-cave).
 	if (nbIOActivesJSON["switchs"]["actives"].find("nb", 0) + nbIOActivesJSON["capteurs"]["actives"].find("nb", 0)) > 0
 		if tasmota.cmd("SetOption114", boolMute)["SetOption114"] != "ON"
-			log("CONFIG_DEVICES: Detache tous les switchs !", LOG_LEVEL_DEBUG)
+			logFonctions.log("CONFIG_DEVICES: Detache tous les switchs !", LOG_LEVEL_DEBUG)
 			tasmota.cmd("SetOption114 ON", boolMute)		
 		end
 	else
 		if tasmota.cmd("SetOption114", boolMute)["SetOption114"] != "OFF"
-			log("CONFIG_DEVICES: Attache tous les switchs !", LOG_LEVEL_DEBUG)
+			logFonctions.log("CONFIG_DEVICES: Attache tous les switchs !", LOG_LEVEL_DEBUG)
 			tasmota.cmd("SetOption114 OFF", boolMute)		
 		end	
 	end
@@ -385,12 +385,12 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 	# Détache ou attache les interrupteurs & capteurs si activés >= 1
 	if nbIOActivesJSON["boutons"]["actives"].find("nb", 0) > 0
 		if tasmota.cmd("SetOption73", boolMute)["SetOption73"] != "ON"
-			log("CONFIG_DEVICES: Detache tous les boutons !", LOG_LEVEL_DEBUG)
+			logFonctions.log("CONFIG_DEVICES: Detache tous les boutons !", LOG_LEVEL_DEBUG)
 			tasmota.cmd("SetOption73 ON", boolMute)		
 		end
 	else
 		if tasmota.cmd("SetOption73", boolMute)["SetOption73"] != "OFF"
-			log("CONFIG_DEVICES: Attache tous les boutons !", LOG_LEVEL_DEBUG)
+			logFonctions.log("CONFIG_DEVICES: Attache tous les boutons !", LOG_LEVEL_DEBUG)
 			tasmota.cmd("SetOption73 OFF", boolMute)		
 		end	
 	end
@@ -416,12 +416,12 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 							if (thermos[cleTH]["type"] == 1312)
 								# Vérifie si on doit interdire l'affichage des valeurs de thermometres sur la page html
 								tasmota.cmd(string.format("WebSensor5 %s", thermos.find("affichageWebSensor", "ON")), boolMute)
-								log(string.format("CONTROLE_GENERAL: Affichage sur WebUI des thermometres = %i !", modules[modul].find("affichageWebSensor", "ON")), LOG_LEVEL_DEBUG)
+								logFonctions.log(string.format("CONTROLE_GENERAL: Affichage sur WebUI des thermometres = %i !", modules[modul].find("affichageWebSensor", "ON")), LOG_LEVEL_DEBUG)
 							# DHT11 ou DHT22
 							elif (thermos[cleTH]["type"] == 1216)
 								# Vérifie si on doit interdire l'affichage des valeurs de thermometres sur la page html
 								tasmota.cmd(string.format("WebSensor6 %s", thermos.find("affichageWebSensor", "ON")), boolMute)
-								log(string.format("CONTROLE_GENERAL: Affichage sur WebUI des thermohygrometres = %i !", modules[modul].find("affichageWebSensor", "ON")), LOG_LEVEL_DEBUG)
+								logFonctions.log(string.format("CONTROLE_GENERAL: Affichage sur WebUI des thermohygrometres = %i !", modules[modul].find("affichageWebSensor", "ON")), LOG_LEVEL_DEBUG)
 							end
 						end
 					end
@@ -446,7 +446,7 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 						if (compteurs[cleCompt]["activation"] == "ON")
 							# Vérifie si on doit interdire l'affichage des valeurs de compteurs sur la page html
 							tasmota.cmd(string.format("WebSensor1 %s", compteurs.find("affichageWebSensor", "ON")), boolMute)
-							log(string.format("CONTROLE_GENERAL: Affichage sur WebUI des compteurs = %i !", modules[modul].find("affichageWebSensor", "ON")), LOG_LEVEL_DEBUG)
+							logFonctions.log(string.format("CONTROLE_GENERAL: Affichage sur WebUI des compteurs = %i !", modules[modul].find("affichageWebSensor", "ON")), LOG_LEVEL_DEBUG)
 						end
 					end
 				end
