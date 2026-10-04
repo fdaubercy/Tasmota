@@ -281,11 +281,15 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   - `solidifie_et_compile_berry.py` — verifie qu'un module est solidifiable en ~10 s (compile le .h).
   - `nomme_fonctions_berry.py` — convertit les fonctions anonymes d'un module.
   - `corrige_reglages_vscode.py` — pose et prouve les reglages VS Code (PermissionError).
-  - `sniffeur_mqtt.py` (+ `sniffeur_mqtt_web.py`, `client_mqtt.py`, `cible_sniffeur_mqtt.py`) —
-    sniffeur / publieur MQTT sur http://127.0.0.1:7100 : abonnements gerables un par un,
-    filtre d'affichage, publication (retenu ou non). Broker lu dans `user_config_override.h`.
-    Cible PlatformIO « Sniffeur MQTT » dans Custom, comme le pont serie. Les cartes publient
-    leurs logs sur `stat/<topic>/LOGGING` : suivi possible sans occuper les ports serie.
+  - `sniffeur_mqtt.py` (+ `sniffeur_mqtt_web.py`, `sniffeur_mqtt_panneaux.py`, `sniffeur_mqtt_config.py`,
+    `client_mqtt.py`, `cible_sniffeur_mqtt.py`) — sniffeur / publieur MQTT sur http://127.0.0.1:7100 :
+    plusieurs brokers parametrables (TLS possible) et selectionnables, abonnements gerables un par
+    un et memorises par broker, filtre d'affichage + favoris, differences avec le message precedent
+    du meme topic, export .txt/.json, publication (retenu ou non). Panneaux : audit discovery,
+    connexions LWT, logs par carte (`stat/<topic>/LOGGING`, sans occuper les ports serie), commande
+    Tasmota avec sa reponse, arborescence des topics. Broker par defaut lu dans
+    `user_config_override.h` ; les autres (mots de passe compris) dans
+    `%APPDATA%\sniffeur_mqtt\config.json`, HORS depot. Cible PlatformIO « Sniffeur MQTT » dans Custom.
   - `syslog_tasmota.py` (+ `syslog_tasmota_web.py`, `cible_syslog_tasmota.py`) — serveur syslog :
     ecoute UDP 514, page http://127.0.0.1:7200 (filtre module / severite / texte), journal
     `%TEMP%/syslog_tasmota.log`. Cible PlatformIO « Serveur syslog » dans Custom. Les modules

@@ -23,7 +23,15 @@ Usage (Python de PlatformIO, qui fournit pyserial) :
     options : --port auto|COM11|loop://|aucun  --vitesse 115200  --tcp 7000  --journal fichier.log
               --sans-couleurs  --lister (affiche les ports serie et sort)
     --port auto (defaut) : prend le SEUL port USB present ; sinon demarre port ferme.
-    Deux cartes en meme temps : deux ponts, avec deux --tcp differents (7000, 7001...).
+    Deux cartes en meme temps : bouton « + Terminal » de la page (ci-dessous), ou deux ponts
+    lances a la main avec deux --tcp differents (7000, 7001...).
+
+Terminal supplementaire : le bouton « + Terminal » lance un pont SECONDAIRE (meme script, option
+--enfant) sur le premier port TCP libre apres celui-ci, port serie ferme, et ouvre sa page dans un
+nouvel onglet. Chaque terminal a ses propres reglages (port, vitesse, modes d'envoi et de reception,
+memorises par le navigateur pour chaque port TCP) : de quoi suivre plusieurs ESP32 cote a cote.
+Ses messages console sont prefixes de son port TCP ; son journal eventuel est <journal>_<tcp>.log.
+Un pont secondaire s'arrete avec celui qui l'a lance (Ctrl+C ou fermeture du terminal).
 
 Depuis VS Code : pioarduino > Project Tasks > <env> > Custom > « Pont serie (TCP/HTTP 127.0.0.1) »
 (cible_pont_serie.py : port et debit lus dans monitor_port / monitor_speed de l'env).
@@ -38,9 +46,11 @@ import collections
 import importlib.util
 import os
 import socket
+import subprocess
 import sys
 import threading
 import time
+import urllib.request
 
 import serial
 
@@ -79,6 +89,48 @@ def liste_ports():
     return [{"port": p.device, "description": p.description, "usb": p.vid is not None} for p in ports]
 
 
+def socket_ecoute(port_tcp):
+    """Socket d'ecoute sur 127.0.0.1:port_tcp (local uniquement). OSError si le port est pris."""
+    serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):   # Windows : SO_REUSEADDR laisserait 2 ponts sur le meme port
+        serveur.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+    else:
+        serveur.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        serveur.bind(("127.0.0.1", port_tcp))   # local uniquement : jamais expose au reseau
+    except OSError:
+        serveur.close()
+        raise
+    return serveur
+
+
+def premier_port_libre(depart, essais=50):
+    """Premier port TCP libre a partir de depart, ou None."""
+    for port_tcp in range(depart, min(depart + essais, 65536)):
+        try:
+            socket_ecoute(port_tcp).close()
+        except OSError:
+            continue
+        return port_tcp
+    return None
+
+
+class Prefixe:
+    """Sortie console d'un pont secondaire : chaque ligne commence par son port TCP."""
+    def __init__(self, flux, prefixe):
+        self.flux, self.prefixe, self.debut = flux, prefixe, True
+
+    def write(self, texte):
+        for morceau in texte.splitlines(True):   # un seul write par ligne : moins de melange entre ponts
+            self.flux.write(self.prefixe + morceau if self.debut else morceau)
+            self.debut = morceau.endswith("\n")
+        self.flux.flush()
+        return len(texte)
+
+    def flush(self):
+        self.flux.flush()
+
+
 def choisit_port(demande):
     """'auto' -> le seul port USB present, sinon None (pont demarre port FERME, a choisir sur la page)."""
     if demande.lower() != "auto":
@@ -93,7 +145,7 @@ def choisit_port(demande):
 
 
 class Pont:
-    def __init__(self, coloriseur, journal, port_tcp, vitesse):
+    def __init__(self, coloriseur, journal, port_tcp, vitesse, options_enfant=()):
         self.serie = None                                   # objet pyserial ; None = port ferme
         self.nom_port = None
         self.vitesse = vitesse
@@ -106,6 +158,42 @@ class Pont:
         self.historique = collections.deque(maxlen=1500)    # derniers evenements SSE (texte, notes, octets),
                                                             # rejoues a un nouveau navigateur
         self.verrou = threading.Lock()
+        self.options_enfant = list(options_enfant)          # options transmises aux terminaux supplementaires
+        self.enfants = []                                   # processus des terminaux supplementaires
+
+    # ------------------------------------------------------------------ terminaux supplementaires
+    def lance_terminal(self):
+        """Lance un pont secondaire, port serie ferme, sur le premier port TCP libre. Renvoie (ok, port ou message)."""
+        port_tcp = premier_port_libre(self.port_tcp + 1)
+        if port_tcp is None:
+            return False, f"aucun port TCP libre apres {self.port_tcp}"
+        commande = [sys.executable, "-u", os.path.abspath(__file__), "--tcp", str(port_tcp),
+                    "--port", "aucun", "--enfant"] + self.options_enfant
+        if self.journal:
+            base, extension = os.path.splitext(self.journal.name)
+            commande += ["--journal", f"{base}_{port_tcp}{extension or '.log'}"]
+        # stdin = tube vers ce pont : a sa fermeture (arret de ce pont), le secondaire s'arrete aussi
+        enfant = subprocess.Popen(commande, stdin=subprocess.PIPE)
+        self.enfants = [e for e in self.enfants if e.poll() is None] + [enfant]
+        limite = time.time() + 10
+        while time.time() < limite:
+            if enfant.poll() is not None:
+                return False, f"le terminal :{port_tcp} s'est arrete au demarrage (code {enfant.returncode})"
+            try:   # pret quand sa page repond (requete HTTP : pas de faux client TCP dans sa console)
+                urllib.request.urlopen(f"http://127.0.0.1:{port_tcp}/etat", timeout=2).close()
+                break
+            except OSError:
+                time.sleep(0.1)
+        else:
+            enfant.kill()
+            return False, f"le terminal :{port_tcp} ne repond pas"
+        self.annonce(f"terminal supplementaire : http://127.0.0.1:{port_tcp}")
+        return True, port_tcp
+
+    def arrete_enfants(self):
+        for enfant in self.enfants:
+            if enfant.poll() is None:
+                enfant.terminate()
 
     # ------------------------------------------------------------------ port serie
     def ouvre(self, nom_port, vitesse):
@@ -276,6 +364,8 @@ def main():
     options.add_argument("--journal", help="copie brute (sans couleurs) du flux dans ce fichier")
     options.add_argument("--sans-couleurs", action="store_true", help="flux transmis tel quel (carte non Tasmota)")
     options.add_argument("--lister", action="store_true", help="affiche les ports serie et sort")
+    options.add_argument("--enfant", action="store_true",
+                         help="terminal supplementaire (lance par le bouton « + Terminal ») : s'arrete avec son parent")
     args = options.parse_args()
 
     if args.lister:
@@ -283,28 +373,28 @@ def main():
             print(f"{p['port']:8} {'USB ' if p['usb'] else '    '} {p['description']}")
         return
 
+    if args.enfant:
+        sys.stdout = Prefixe(sys.stdout, f"[:{args.tcp}] ")
     coloriseur = charge_coloriseur(args.sans_couleurs)
 
     # Le port TCP d'abord : si un autre pont l'occupe, on sort SANS avoir pris le port serie.
-    serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):   # Windows : SO_REUSEADDR laisserait 2 ponts sur le meme port
-        serveur.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
-    else:
-        serveur.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
-        serveur.bind(("127.0.0.1", args.tcp))   # local uniquement : jamais expose au reseau
+        serveur = socket_ecoute(args.tcp)
     except OSError as erreur:
         sys.exit(f"Port TCP {args.tcp} deja utilise ({erreur}) : un autre pont tourne ? (sinon --tcp 7001)")
     serveur.listen()
 
     journal = open(args.journal, "a", encoding="utf-8") if args.journal else None
-    pont = Pont(coloriseur, journal, args.tcp, args.vitesse)
+    options_enfant = ["--vitesse", str(args.vitesse)] + (["--sans-couleurs"] if args.sans_couleurs else [])
+    pont = Pont(coloriseur, journal, args.tcp, args.vitesse, options_enfant)
     # Port serie ouvert si possible ; sinon le pont demarre quand meme, port FERME, a ouvrir
     # depuis la page web (bouton Demarrer, choix du port et de la vitesse).
     nom_port = None if args.port.lower() == "aucun" else choisit_port(args.port)
     if nom_port:
         pont.ouvre(nom_port, args.vitesse)
     threading.Thread(target=pont.lit_serie, daemon=True).start()
+    if args.enfant:
+        threading.Thread(target=surveille_parent, args=(pont,), daemon=True).start()
 
     print(f"Pont -> 127.0.0.1:{args.tcp}  (Ctrl+C pour arreter)")
     print(f"  navigateur : http://127.0.0.1:{args.tcp}   |   Serial Monitor : mode TCP, 127.0.0.1, port {args.tcp}")
@@ -321,9 +411,24 @@ def main():
         print("\narret du pont, port serie libere")
     finally:
         serveur.close()
+        pont.arrete_enfants()
         with pont.verrou_serie:
             pont._ferme_sans_verrou()
         time.sleep(0.1)
+
+
+def surveille_parent(pont):
+    """Pont secondaire : stdin est un tube vers le pont parent ; sa fin (parent arrete) arrete ce pont."""
+    try:
+        while sys.stdin.buffer.read(1024):
+            pass
+    except (OSError, ValueError, AttributeError):
+        pass
+    print("pont parent arrete : arret de ce terminal, port serie libere")
+    pont.arrete_enfants()
+    with pont.verrou_serie:
+        pont._ferme_sans_verrou()
+    os._exit(0)
 
 
 if __name__ == "__main__":

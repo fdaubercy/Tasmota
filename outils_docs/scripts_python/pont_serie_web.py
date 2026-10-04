@@ -13,6 +13,9 @@ Le pont reconnait une requete HTTP a ses premiers octets ("GET ", "POST") et la 
                   {"mode": "texte", "donnees": "Status 4", "finLigne": "aucune|LF|CR|CRLF"}
                   {"mode": "hex", "donnees": "01 06 00 01 01 00", "crc": true}   (CRC16 ModBus ajoute)
                   {"mode": "binaire", "donnees": "00000001 00000110", "crc": false}
+    POST /terminal lance un terminal supplementaire (pont secondaire, port serie ferme) sur le premier
+                  port TCP libre ; reponse JSON {"url": "http://127.0.0.1:7001/"}, que la page ouvre
+                  dans un nouvel onglet (bouton « + Terminal »)
 
 Securite : le pont n'ecoute que sur 127.0.0.1. Contre une page web malveillante qui viserait
 127.0.0.1:7000 depuis le navigateur, chaque POST exige l'en-tete 'X-Pont: 1' (un en-tete personnalise
@@ -40,7 +43,7 @@ PAGE = """<!doctype html>
  button:disabled{opacity:.5;cursor:default}
  #bascule.ouvert{background:#a1260d} #bascule.ferme{background:#16825d}
  .pastille{display:inline-block;width:10px;height:10px;border-radius:50%;background:#808080;margin-right:4px}
- #infoPort{color:#9d9d9d}
+ #infoPort,#nomPont{color:#9d9d9d}
  .b{font-weight:bold}.d{opacity:.6}
  .c90{color:#808080}.c91{color:#f14c4c}.c92{color:#23d18b}.c93{color:#f5f543}.c94{color:#3b8eea}.c95{color:#d670d6}.c96{color:#29b8db}
  .c32{color:#0dbc79}.c33{color:#e5e510}.c34{color:#2472c8}.c35{color:#bc3fbc}.c36{color:#11a8cd}
@@ -52,6 +55,9 @@ PAGE = """<!doctype html>
  <label>Vitesse <select id="vitesse"></select></label>
  <button id="bascule" class="ferme">Demarrer</button>
  <span><span class="pastille" id="pastillePort"></span><span id="infoPort">port ferme</span></span>
+ <span style="flex:1"></span>
+ <span id="nomPont" title="port TCP de ce terminal (http://127.0.0.1:port)"></span>
+ <button id="nouveau" title="ouvre un terminal supplementaire, avec ses propres reglages (autre ESP32)">+ Terminal</button>
 </div>
 <div class="barre">
  <select id="modeEnvoi" title="format de la saisie envoyee"><option value="texte">Texte</option><option value="hex">Hex</option><option value="binaire">Binaire</option></select>
@@ -124,6 +130,7 @@ function appliqueEtat(e){
   bascule.disabled=!e.ouvert&&!selPort.value;
   $('pastillePort').style.background=e.ouvert?'#23d18b':'#808080';
   $('infoPort').textContent=e.ouvert?(e.port+' @ '+e.vitesse+' bauds'):'port ferme';
+  $('nomPont').textContent='terminal :'+e.tcp;
   document.title='Pont serie '+(e.ouvert?e.port:'(ferme)')+' (:'+e.tcp+')';}
 function poste(url,corps){return fetch(url,{method:'POST',headers:{'X-Pont':'1','Content-Type':'application/json'},body:corps===undefined?'':corps})
   .then(r=>r.text().then(t=>{if(!r.ok)ajoute('\\x1b[91m[page] '+(t||r.status)+'\\x1b[0m\\n');return r.ok;}));}
@@ -132,6 +139,15 @@ bascule.onclick=()=>{bascule.disabled=true;
   (etat.ouvert?poste('/fermer'):poste('/ouvrir',JSON.stringify({port:selPort.value,vitesse:parseInt(selVitesse.value)})))
   .finally(()=>releve());};
 $('rafraichir').onclick=releve;
+$('nouveau').onclick=()=>{  // onglet ouvert DANS le clic (sinon bloque comme popup), dirige une fois le pont pret
+  const w=window.open('','_blank');$('nouveau').disabled=true;
+  try{w.document.title='Pont serie';w.document.body.style.cssText='background:#1e1e1e;color:#d4d4d4;font:13px Consolas,monospace';
+    w.document.body.textContent='lancement du terminal...';}catch(e){}
+  fetch('/terminal',{method:'POST',headers:{'X-Pont':'1'}})
+  .then(r=>r.ok?r.json():r.text().then(t=>{throw new Error(t||r.status);}))
+  .then(d=>{if(w)w.location=d.url;else ajoute('\\x1b[93m[page] onglet bloque : ouvrir '+d.url+'\\x1b[0m\\n');})
+  .catch(e=>{if(w)w.close();ajoute('\\x1b[91m[page] '+e.message+'\\x1b[0m\\n');})
+  .finally(()=>{$('nouveau').disabled=false;});};
 selPort.addEventListener('focus',()=>{if(!etat.ouvert)releve();});
 selPort.addEventListener('change',()=>{bascule.disabled=!selPort.value;});
 cmd.addEventListener('keydown',e=>{
@@ -313,11 +329,18 @@ def traite(pont, client, port_tcp):
         except OSError:
             pass
         pont.desinscrit_web(client)
-    elif methode == "POST" and chemin in ("/ouvrir", "/fermer", "/cmd", "/envoi"):
+    elif methode == "POST" and chemin in ("/ouvrir", "/fermer", "/cmd", "/envoi", "/terminal"):
         if not _autorise(entetes, port_tcp):
             _texte(client, "403 Forbidden", "refuse")
             return
-        if chemin == "/fermer":
+        if chemin == "/terminal":
+            ok, resultat = pont.lance_terminal()
+            if ok:
+                _reponse(client, "200 OK", "application/json",
+                         json.dumps({"url": f"http://127.0.0.1:{resultat}/"}).encode("utf-8"))
+            else:
+                _texte(client, "503 Service Unavailable", resultat)
+        elif chemin == "/fermer":
             _texte(client, "200 OK", pont.ferme()[1])
         elif chemin == "/ouvrir":
             try:
