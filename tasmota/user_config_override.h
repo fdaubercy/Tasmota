@@ -48,7 +48,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
     //  #warning *** ------------------- Le fichier 'user_config_override.ini' est appele ------------------- ***
     #if defined(CFG_HOLDER) && (CFG_HOLDER == 4617)
         #undef CFG_HOLDER
-		#define CFG_HOLDER 		1423			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
+		#define CFG_HOLDER 		1424			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
 
         // #pragma message(*** ------------------- Les paramètres flash seront remplacés ! ------------------- ***)
     #else
@@ -694,6 +694,14 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
         // ESP32-S3:    38 GPIO -> [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1]
         // ESP32-P4:    55 GPIO -> [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 
+        // -- DISABLE_REFERER_CHK (2026-10-04), pose dans CHAQUE bloc firmware ci-dessous ------
+        //    = SetOption128 1 : pages web (/bc, /cs, /in, /cm...) servies sans controle du Referer, ce qui
+        //    rend un esclave Range Extender consultable a travers le maitre (http://<IP maitre>:<routagePort>).
+        //    Lu UNIQUEMENT a la reinitialisation des reglages (settings.ino SettingsDefaultSet2 : premier flash,
+        //    Reset 1, changement de CFG_HOLDER - increment_config_holder le change a chaque build) et ne peut
+        //    qu'ACTIVER (flag |= 1). Au demarrage, configGlobal applique ensuite serveur.apiHTTP du _persist.json,
+        //    qui PRIME : apiHTTP OFF remet SetOption128 0 malgre cette definition.
+
         // -- Options for firmware tasmota32-cave-serveur-rly ET tasmota32s3-cave-serveur-rly ------
         // Une seule section pour les deux cartes de la cave : l'ESP32 actuel et son remplacant
         // ESP32-S3 N16R8 ont la MEME identite (IP, topic, client MQTT). Seul le template differe.
@@ -704,6 +712,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
                 #undef CODE_IMAGE_STR
             #endif
             #define CODE_IMAGE_STR      "Serveur 8 Relais"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
 
             // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------
             // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino
@@ -862,6 +874,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
             #define CODE_IMAGE_STR "teleinfo-conso"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
         
             // -- Project -------------------------------------
             #undef PROJECT
@@ -922,6 +938,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
             #define CODE_IMAGE_STR "teleinfo-prod"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
         
             // -- Project -------------------------------------
             #undef PROJECT
@@ -982,6 +1002,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
             #define CODE_IMAGE_STR "vr-porte"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
         
             // -- Project -------------------------------------
             #undef PROJECT
@@ -1026,6 +1050,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
             #define CODE_IMAGE_STR "serveur-rly-rdc"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
         
             // -- Project -------------------------------------
             #undef PROJECT
@@ -1133,6 +1161,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
                 #define CODE_IMAGE_STR "serveur debitmetres pac"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
         
             // -- Project -------------------------------------
             #undef PROJECT
@@ -1249,6 +1281,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
                 #define CODE_IMAGE_STR "serveur debitmetres pac"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
         
             // -- Project -------------------------------------
             #undef PROJECT
@@ -1389,6 +1425,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
                 #define CODE_IMAGE_STR "ili9488 pac"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
         
             // -- Project -------------------------------------
             #undef PROJECT
@@ -1524,6 +1564,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
                 #define CODE_IMAGE_STR "debitmetres pac"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
         
             // -- Project -------------------------------------
             #undef PROJECT
@@ -1647,6 +1691,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
                 #define CODE_IMAGE_STR "Disjoncteur Différentiel PC Bureau"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
         
             // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------
             // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino
@@ -1783,6 +1831,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
                 #define CODE_IMAGE_STR "debitmetres pac"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
         
             // -- Project -------------------------------------
             #undef PROJECT
@@ -1935,6 +1987,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
                 #define CODE_IMAGE_STR "Serveur Grenier 2eme"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
         
             // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------
             // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino
@@ -2073,6 +2129,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
                 #define CODE_IMAGE_STR "Serveur de Garage"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
         
             // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------
             // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino
@@ -2219,6 +2279,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
                 #define CODE_IMAGE_STR "Capteurs de Cuve"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
         
             // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------
             // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino
@@ -2384,6 +2448,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
                 #define CODE_IMAGE_STR "Rideau de garage"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
         
             // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------
             // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino
@@ -2551,6 +2619,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
                 #undef CODE_IMAGE_STR
             #endif
             #define CODE_IMAGE_STR      "Serveur de Garage"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
         
             // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------
             // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino
@@ -2735,6 +2807,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
                 #undef CODE_IMAGE_STR
             #endif
             #define CODE_IMAGE_STR      "Pompe de Piscine"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
         
             // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------
             // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino

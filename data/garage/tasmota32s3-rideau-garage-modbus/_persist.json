@@ -3,7 +3,7 @@
 		"cmdMute": true,
 		"typeESP": "ESP32S3",
 		"logs": {
-			"level": 4,
+			"level": 3,
 			"nbLogsFiles" : 0
 		},
 		"telePeriod": 300,
@@ -41,6 +41,7 @@
 		"nom": "Rideau de garage",
 		"hostname": "RIDEAU-GARAGE",
 		"mDNS": "ON",
+		"apiHTTP": "ON",
 		"adressMAC": "",
 		"debug": "ON",
 		"IP": {

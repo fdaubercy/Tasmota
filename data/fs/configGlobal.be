@@ -117,6 +117,20 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 		log(string.format("CONTROLE_GENERAL: %s le mDNS !", (data["mDNS"] == "ON" ? "Active" : "Désactive")), LOG_LEVEL_DEBUG)
 	end
 
+	# Paramètre l'API HTTP (SetOption128, case « HTTP API » de Configuration > Autre), ajouté le 2026-10-04.
+	# OFF (défaut Tasmota) : toute page autre que l'accueil (/bc, /cs, /in, /cm...) n'est servie que si
+	#     le Referer commence par http://<hostname> ou http://<IP du module> ; sinon connexion fermée
+	#     sans réponse (log 'HTP: Referer ... denied').
+	# ON  : plus de contrôle du Referer. Indispensable sur un ESCLAVE Range Extender consulté à travers
+	#     le maître (http://<IP maître>:<routagePort>) : le Referer y porte l'adresse du maître, et seule
+	#     la page d'accueil s'affichait. Contrepartie : une page web tierce ouverte sur le PC peut
+	#     envoyer des commandes au module -> un WebPassword est conseillé.
+	# Clé absente du persist : rien n'est modifié (testeParam ignore la valeur "").
+	if configGlobal.testeParam("SetOption128", data.find("apiHTTP", ""), "")
+		log(string.format("CONTROLE_GENERAL: %s l'API HTTP (SetOption128) : controle du Referer %s !",
+							(data["apiHTTP"] == "ON" ? "Active" : "Désactive"), (data["apiHTTP"] == "ON" ? "supprime" : "retabli")), LOG_LEVEL_DEBUG)
+	end
+
 	# Règle les adresse IP / Masque de sous-reseau / Gateway / DNS Server
 	if configGlobal.testeParam("IPAddress1", data["IP"]["IPAddress"], "str") && data["IP"]["IPAddress"] != ""
 		log("CONTROLE_GENERAL: Regle l'adresse IP du module !", LOG_LEVEL_DEBUG)

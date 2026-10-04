@@ -730,6 +730,7 @@
 				"url_sauvegarde_json": "http://192.168.0.2:1880/tasmota/enregistreJSON.html"
 			},
 			"mDNS": "ON",
+			"apiHTTP": "OFF",
 			"mqtt": {
 				"utilisateur": "fdaubercy",
 				"client": "SERVEUR-RLY-CAVE",

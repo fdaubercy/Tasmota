@@ -9,7 +9,7 @@ var controleGeneral
 LOG_LEVEL_ERREUR = 1
 LOG_LEVEL_INFO = 2
 LOG_LEVEL_DEBUG = 3
-LOG_LEVEL_DEBUG_PLUS = 4
+LOG_LEVEL_DEBUG_PLUS = 3            # = LOG_LEVEL_DEBUG : traces Berry visibles en SerialLog 3, sans les 'BRY: GC' du firmware (niveau 4)
 
 var logSerial = LOG_LEVEL_INFO
 var logWeb = LOG_LEVEL_INFO

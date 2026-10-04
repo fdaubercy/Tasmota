@@ -3,7 +3,7 @@
 		"cmdMute": true,
 		"typeESP": "ESP32",
 		"logs": {
-			"level": 4,
+			"level": 3,
 			"nbLogsFiles" : 0
 		},
 		"telePeriod": 300,
@@ -41,6 +41,7 @@
 		"nom": "Disjoncteur Différentiel PC Bureau",
 		"hostname": "DISJONCTEUR-DIFFERENTIEL-BUREAU",
 		"mDNS": "ON",
+		"apiHTTP": "OFF",
 		"adressMAC": "",
 		"debug": "ON",
 		"IP": {

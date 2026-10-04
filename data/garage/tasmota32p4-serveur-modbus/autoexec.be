@@ -10,7 +10,7 @@ LOG_LEVEL_NONE = 0
 LOG_LEVEL_ERREUR = 1
 LOG_LEVEL_INFO = 2
 LOG_LEVEL_DEBUG = 3
-LOG_LEVEL_DEBUG_PLUS = 4
+LOG_LEVEL_DEBUG_PLUS = 3            # = LOG_LEVEL_DEBUG : traces Berry visibles en SerialLog 3, sans les 'BRY: GC' du firmware (niveau 4)
 
 logSerial = LOG_LEVEL_INFO
 logWeb = LOG_LEVEL_INFO

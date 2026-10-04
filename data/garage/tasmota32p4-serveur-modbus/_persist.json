@@ -3,7 +3,7 @@
 		"cmdMute": true,
 		"typeESP": "ESP32P4",
 		"logs": {
-			"level": 4,
+			"level": 3,
 			"nbLogsFiles" : 0
 		},
 		"telePeriod": 300,
@@ -41,6 +41,7 @@
 		"nom": "Serveur de Garage",
 		"hostname": "SERVEUR-GARAGE",
 		"mDNS": "ON",
+		"apiHTTP": "OFF",
 		"adressMAC": "",
 		"debug": "ON",
 		"IP": {
