@@ -284,6 +284,12 @@ Passer a 19200 : `01 06 00 FE 00 04` + CRC.
 > 19200), un seul module connecte. Le firmware Tasmota **ne l'automatise pas** : ne pas
 > chercher a faire regler le debit par le driver. Rappel : effectif seulement apres coupure
 > d'alimentation (voir piege 3 ci-dessous).
+>
+> **Verifier le debit d'une carte (2026-10-04)** : `ReglageModbus TesteDebitConn16channels <id> [debit]`
+> sur le maitre. Suspend la file, passe le bus au debit d'essai, lit `0x00FE` de l'esclave puis
+> l'adresse par diffusion (`0x00FF`), revient au debit du bus et relance la file ; reponses
+> journalisees en clair (`TESTE_DEBIT_CONN16:`). Ne PAS taper `ModbusBaudrate 9600 ModBusSend ...`
+> sur une seule ligne : sans `Backlog`, seul `ModbusBaudrate` s'execute.
 
 ### Six pieges de cette carte
 

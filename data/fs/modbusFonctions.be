@@ -41,6 +41,7 @@ def modbusFonctions_etat()
             "DEBUG": nil,               # 'ON'/'OFF', lu une fois depuis drivers['ModBus']['debug']
             "serialModBus": nil,        # objet serial du bus RS485 (esclave)
             "enVol": nil,               # message envoye en attente de reponse (nil = canal RS485 libre)
+            "pause": false,             # maitre : file suspendue (test de debit en cours, testeDebitConn16)
             "queue": [],                # messages en attente : [{paramMSG, typeMsg, tentatives}, ...]
             "clients": [nil, nil, nil, nil, nil, nil],   # 5 connexions TCP max (esclaves id 1 a 5)
             "nbRegistres": 0,           # Nombre de bits ou registres a lire / ecrire
@@ -227,6 +228,7 @@ modbusFonctions.configModbusByJson = modbusFonctions_configModbusByJson
     ReglageModbus BaudrateModbus 9600
     ReglageModbus RecupereBaudrateConn16channels 0x01
     ReglageModbus ReglageBaudrateConn16channels 0x01 19200
+    ReglageModbus TesteDebitConn16channels 1 9600      => lit le debit et l'adresse de la carte a 9600 bauds, puis revient au debit du bus
     ReglageModbus ActivationReponseCMD ON
 
     ReglageModbus ImAlive ON
@@ -296,20 +298,12 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
         tasmota.cmd(string.format("ModBusSend {\"deviceaddress\": %s, \"functioncode\": 3, \"startaddress\": 0xFE, \"type\":\"uint16\", \"count\":1}", str(parametres[0])))
     # Règle BaudRate de la liaison ModBus Série avec le Connecteur 16 channels
     elif (string.toupper(fonction) == string.toupper("ReglageBaudrateConn16channels"))
-        if (parametres[1] == "1200")
-            parametres[1] = "0"
-        elif (parametres[1] == "2400")
-            parametres[1] = "1"
-        elif (parametres[1] == "4800")
-            parametres[1] = "2"
-        elif (parametres[1] == "9600")
-            parametres[1] = "3"
-        elif (parametres[1] == "19200")
-            parametres[1] = "4"
-        else 
-            parametres[1] = "5"  # Défaut à 9600
-        end
-        tasmota.cmd(string.format("ModBusSend {\"deviceaddress\": %s, \"functioncode\": 6, \"startaddress\": 0xFE, \"type\":\"uint16\", \"count\":1, \"Values\":[%s]}", str(parametres[0]), str(parametres[1])))
+        reponse_cmnd += modbusFonctions.reglageDebitConn16(parametres) + ", "
+    # Teste le debit de la carte 16 relais sans casser la file du maitre (voir testeDebitConn16)
+    elif (string.toupper(fonction) == string.toupper("TesteDebitConn16channels"))
+        var args = string.split(parametres[0], " ")
+        var debit = size(args) > 1 ? int(args[1]) : nil
+        reponse_cmnd += modbusFonctions.testeDebitConn16(int(args[0]), debit) + ", "
     # (Des)active la réponse de l'esclave aux commandes ModBus
     elif (string.toupper(fonction) == string.toupper("ActivationReponseCMD"))
         # Adapte le paramètre
@@ -521,6 +515,7 @@ def modbusFonctions_pompeQueue()
 
     # La file ne concerne que le maitre (id == 0) : lui seul serialise le bus RS485.
     if (drivers["ModBus"].find("id", 99) != 0)  return end
+    if (modbusFonctions.etat().find("pause", false))     return end       # test de debit en cours : le bus est prete
     if (modbusFonctions.etat()["enVol"] != nil)           return end       # un message attend deja sa reponse
     if (size(modbusFonctions.etat()["queue"]) == 0)       return end       # rien a envoyer
 
@@ -581,6 +576,147 @@ def modbusFonctions_surTimeout()
     modbusFonctions.termineEnVol(false)
 end
 modbusFonctions.surTimeout = modbusFonctions_surTimeout
+
+#- TEST DU DEBIT DE LA CARTE 16 RELAIS (2026-10-04) : ReglageModbus TesteDebitConn16channels <id> [debit]
+
+    Remplace le test tape a la main en UNE ligne dans la console (constate le 2026-10-01) :
+        ModBusBaudrate 9600 ModBusSend {...0xFE...} ModBusSend {...diffusion 0xFF...}
+    Sans 'Backlog', Tasmota n'execute qu'UNE commande, ModbusBaudrate, avec tout le reste pour
+    argument : les deux ModBusSend ne partaient jamais. Et lances a part, ils seraient entres
+    en collision avec la file du maitre (sondage 30 s), qui continuait d'emettre au debit d'essai.
+
+    Deroulement, sequence par armeTimer (P4-safe), le bus etant prete au test :
+        1. file suspendue ('pause') ; le message en vol repart en tete a la reprise ;
+        2. ModbusBaudrate <debit> (defaut : debit du bus, drivers.ModBus.debit) ;
+        3. lecture du registre de debit 0x00FE de l'esclave <id> ;
+        4. lecture de l'adresse par diffusion (esclave 255, registre 0x00FF : UNE carte sur le bus) ;
+        5. retour au debit du bus, file relancee.
+    Les reponses (ModbusReceived) sont journalisees en clair, en LOG_LEVEL_INFO, quel que soit
+    'debug'. Chaque etape attend timeoutReponse + 500 ms : le pont Tasmota (ModbusSerialTimeout)
+    doit avoir rendu la main, sinon le ModBusSend suivant est mis de cote sans reponse.
+    Rappel PROTOCOLE_MODBUS.md section 8 : un nouveau debit n'est effectif qu'apres coupure
+    d'alimentation de la carte.
+-#
+modbusFonctions.CODES_DEBIT_CONN16 = {0: 1200, 1: 2400, 2: 4800, 3: 9600, 4: 19200}
+
+def modbusFonctions_testeDebitConn16(id, debit)
+    import string
+
+    var mb = drivers["ModBus"]
+    if (mb.find("id", 99) != 0 || mb["typeComm"].find("Serial", "OFF") != "ON")    return "test reserve au maitre ModBus serie"    end
+    if (modbusFonctions.etat().find("pause", false))                               return "test de debit deja en cours"            end
+
+    var etat = modbusFonctions.etat()
+    var debitBus = int(mb.find("debit", 19200))
+    if (debit == nil)    debit = debitBus    end
+    var attente = int(mb.find("timeoutReponse", 1000)) + 500
+
+    # 1. Suspend la file. Le pont attend peut-etre encore la reponse du message en vol.
+    etat["pause"] = true
+    modbusFonctions.desarmeTimer("modbus_timeout")
+    var delai = 200
+    if (etat["enVol"] != nil)
+        etat["queue"].insert(0, etat["enVol"])
+        etat["enVol"] = nil
+        delai = attente
+    end
+
+    var lit = def (adresse, registre)
+        tasmota.cmd(string.format("ModBusSend {\"deviceaddress\":%i,\"functioncode\":3,\"startaddress\":%i,\"type\":\"uint16\",\"count\":1}", adresse, registre), boolMute)
+    end
+    var fin = def ()
+        tasmota.cmd(string.format("ModbusBaudrate %i", debitBus), boolMute)
+        tasmota.remove_rule("ModbusReceived", "testeDebitConn16")
+        etat["pause"] = false
+        log(string.format("TESTE_DEBIT_CONN16: fin du test, bus revenu a %i bauds, file relancee", debitBus), LOG_LEVEL_INFO)
+        modbusFonctions.pompeQueue()
+    end
+
+    tasmota.add_rule("ModbusReceived", def (value, trigger, msg) modbusFonctions.logReponseTestDebit(msg) end, "testeDebitConn16")
+    log(string.format("TESTE_DEBIT_CONN16: test de l'esclave %i a %i bauds (bus a %i bauds)", id, debit, debitBus), LOG_LEVEL_INFO)
+
+    # 2 -> 5, chaque etape arme la suivante
+    modbusFonctions.armeTimer(delai, def ()
+        tasmota.cmd(string.format("ModbusBaudrate %i", debit), boolMute)
+        modbusFonctions.armeTimer(300, def ()
+            lit(id, 0xFE)
+            modbusFonctions.armeTimer(attente, def ()
+                lit(255, 0xFF)
+                modbusFonctions.armeTimer(attente, fin, "testeDebitConn16")
+            end, "testeDebitConn16")
+        end, "testeDebitConn16")
+    end, "testeDebitConn16")
+
+    return string.format("test du debit de l'esclave %i a %i bauds lance (%i s)", id, debit, (delai + 300 + 2 * attente) / 1000)
+end
+modbusFonctions.testeDebitConn16 = modbusFonctions_testeDebitConn16
+
+# Journalise une reponse recue pendant le test de debit (regle ModbusReceived temporaire).
+def modbusFonctions_logReponseTestDebit(msg)
+    import string
+    import json
+
+    var r = isinstance(msg, map) ? msg.find("ModbusReceived", {}) : {}
+    var valeurs = r.find("Values", [])
+    var v = (isinstance(valeurs, list) && size(valeurs) > 0) ? valeurs[0] : nil
+
+    if (r.find("StartAddress") == 0xFE)
+        log(string.format("TESTE_DEBIT_CONN16: esclave %s, registre debit = %s -> %s bauds", str(r.find("DeviceAddress")), str(v),
+                          str(modbusFonctions.CODES_DEBIT_CONN16.find(v, "inconnu"))), LOG_LEVEL_INFO)
+    elif (r.find("StartAddress") == 0xFF)
+        log(string.format("TESTE_DEBIT_CONN16: adresse de la carte (lue par diffusion) = %s", str(v)), LOG_LEVEL_INFO)
+    else
+        log("TESTE_DEBIT_CONN16: reponse = " + json.dump(r), LOG_LEVEL_INFO)
+    end
+end
+modbusFonctions.logReponseTestDebit = modbusFonctions_logReponseTestDebit
+
+#- REGLAGE DU DEBIT DE LA CARTE 16 RELAIS : ReglageModbus ReglageBaudrateConn16channels <id> <debit|usine>
+
+    Ecrit le code de debit dans le registre 0x00FE (fonction 0x06). Trame sur le bus, pour 19200 :
+        01 06 00 FE 00 04 E9 F9      (adresse 1, ecriture registre, registre 0x00FE, code 4, CRC)
+    Corrige le 2026-10-04, l'ancienne version :
+      - lisait parametres[1], qui n'existe pas (decoupage en 2 morceaux : fonction + reste) -> exception,
+        rien n'etait envoye ;
+      - envoyait le code 5 pour tout debit inconnu, commente "defaut a 9600" : 5 est le RETOUR USINE ;
+      - passait par ModBusSend direct, hors file : collision avec le sondage du maitre.
+    Desormais : debit refuse s'il n'est pas dans la table (le retour usine se demande par 'usine'),
+    ordre ENFILE comme les autres (un seul message en vol), journalise en clair.
+    Le nouveau debit n'est effectif qu'apres coupure d'alimentation de la carte, et le bus doit
+    ensuite passer au meme debit (BaudrateModbus) : reglage MANUEL, une seule carte sur le bus
+    (PROTOCOLE_MODBUS.md section 8). Verification : TesteDebitConn16channels <id> <nouveau debit>.
+-#
+def modbusFonctions_reglageDebitConn16(parametres)
+    import string
+
+    var usage = "usage : ReglageBaudrateConn16channels <id> <1200|2400|4800|9600|19200|usine>"
+    var args = (isinstance(parametres, list) && size(parametres) > 0) ? string.split(parametres[0], " ") : []
+    if (size(args) < 2)    return usage    end
+
+    var mb = drivers["ModBus"]
+    if (mb.find("id", 99) != 0 || mb["typeComm"].find("Serial", "OFF") != "ON")    return "reglage reserve au maitre ModBus serie"    end
+
+    var id = int(args[0])
+    if (id < 1 || id > 247)    return "adresse d'esclave refusee : " + args[0] + " (1 a 247)"    end
+
+    var code = nil
+    if (string.tolower(args[1]) == "usine")
+        code = 5
+    else
+        for c: modbusFonctions.CODES_DEBIT_CONN16.keys()
+            if (modbusFonctions.CODES_DEBIT_CONN16[c] == int(args[1]))    code = c    end
+        end
+    end
+    if (code == nil)    return "debit refuse : " + args[1] + " ; " + usage    end
+
+    var libelle = (code == 5) ? "retour usine (9600)" : str(modbusFonctions.CODES_DEBIT_CONN16[code]) + " bauds"
+    modbusFonctions.enfileMsg({"DeviceAddress": id, "FunctionCode": modbusFonctions.ECRITURE_REGISTRE_UNIQUE,
+                               "StartAddress": 0xFE, "type": "uint16", "Count": 1, "Values": [code]}, "Commande")
+    log(string.format("REGLAGE_DEBIT_CONN16: esclave %i, registre 0x00FE <- %i (%s) ; effectif apres coupure d'alimentation de la carte",
+                      id, code, libelle), LOG_LEVEL_INFO)
+    return string.format("debit de l'esclave %i -> %s (code %i) envoye", id, libelle, code)
+end
+modbusFonctions.reglageDebitConn16 = modbusFonctions_reglageDebitConn16
 
 # --- Timer P4-safe : set_timer() est problematique sur ESP32-P4 (le maitre de garage).
 # Corrige le 2026-09-29 (audit G1) : l'emulation par add_cron("*/N ...") partait au prochain

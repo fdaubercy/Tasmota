@@ -51,12 +51,15 @@ class TasmotaStub
   def yield() end
   def rtc() return {"local": self.horloge} end
   def get_power() return self.power end
-  def cmd(c, m) self.cmds.push(c) return "" end
+  var retourCmd                        # ce que renvoie cmd() (defaut "" ; une map pour pompeQueue)
+  var regles                           # [nom, id] des add_rule / remove_rule, si non nil
+  def cmd(c, m) self.cmds.push(c) return self.retourCmd == nil ? "" : self.retourCmd end
   def millis(d) return self.ms + (d == nil ? 0 : d) end
   def delay(ms) end
   def set_timer(a, b, c) end
   def remove_timer(nom) end
-  def add_rule(a, b, c) end
+  def add_rule(a, b, c) if self.regles != nil self.regles.push("+" + str(a) + "/" + str(c)) end end
+  def remove_rule(a, c) if self.regles != nil self.regles.push("-" + str(a) + "/" + str(c)) end end
   def add_cron(a, b, c) end
   def remove_cron(nom) end
   def resp_cmnd(x) end
@@ -824,6 +827,83 @@ modbusFonctions.etat()["serialModBus"] = nil
 modbusFonctions.etat()["tamponSerie"] = bytes()
 drivers = sauveDrivers
 serveur = sauveServeur
+
+print("")
+print("=== 21. Test de debit carte 16 : sequence, file suspendue puis relancee ===")
+sauveDrivers = drivers
+drivers = {"ModBus": {"typeComm": {"Serial":"ON"}, "environnement": {}, "id": 0, "activationReponseCMD": "ON",
+                      "debit": 19200, "timeoutReponse": 5000}}
+diverses = {"typeESP": "ESP32P4"}
+tasmota.ms = 0
+tasmota.cmds = []
+tasmota.regles = []
+tasmota.retourCmd = {}
+var etM = modbusFonctions.etat()
+etM["echeances"] = {}
+etM["queue"] = []
+etM["enVol"] = {"paramMSG": {"DeviceAddress": 2, "FunctionCode": 4, "StartAddress": 4704, "Count": 1, "type": "uint32", "Values": 0},
+                "typeMsg": "Commande", "tentatives": 0}
+var lance = essaie(def () return modbusFonctions.testeDebitConn16(1, 9600) end)
+verifie("lance : message en vol remis en tete, pause", "true/1/nil", str(etM["pause"]) + "/" + str(size(etM["queue"])) + "/" + str(etM["enVol"]))
+verifie("regle ModbusReceived temporaire posee", "+ModbusReceived/testeDebitConn16", size(tasmota.regles) > 0 ? tasmota.regles[0] : "-")
+verifie("second lancement refuse pendant le test", "test de debit deja en cours", essaie(def () return modbusFonctions.testeDebitConn16(1, 9600) end))
+essaie(def () modbusFonctions.pompeQueue() end)
+verifie("pause : la file n'emet rien", 0, size(tasmota.cmds))
+var avance = def (jusqua)
+  while tasmota.ms < jusqua    tasmota.ms += 100    modbusFonctions.verifieEcheances()    end
+end
+essaie(def () avance(5400) end)
+verifie("rien avant que le pont ait rendu la main (5,5 s)", 0, size(tasmota.cmds))
+essaie(def () avance(20000) end)
+var attendues = ["ModbusBaudrate 9600",
+                 "ModBusSend {\"deviceaddress\":1,\"functioncode\":3,\"startaddress\":254,\"type\":\"uint16\",\"count\":1}",
+                 "ModBusSend {\"deviceaddress\":255,\"functioncode\":3,\"startaddress\":255,\"type\":\"uint16\",\"count\":1}",
+                 "ModbusBaudrate 19200"]
+verifie("sequence : debit, 0xFE, diffusion 0xFF, retour", str(attendues), str(tasmota.cmds[0 .. 3]))
+verifie("fin : file relancee sur le message remis en tete", true,
+        size(tasmota.cmds) == 5 && string.find(tasmota.cmds[4], "ModBusSend") == 0 && string.find(tasmota.cmds[4], "4704") > 0)
+verifie("fin : pause levee, regle retiree", "false/-ModbusReceived/testeDebitConn16",
+        str(etM["pause"]) + "/" + tasmota.regles[size(tasmota.regles) - 1])
+journal = []
+essaie(def () modbusFonctions.logReponseTestDebit({"ModbusReceived": {"DeviceAddress": 1, "StartAddress": 254, "Count": 1, "Values": [4]}}) end)
+verifie("reponse 0xFE decodee : 4 -> 19200 bauds", true, journalise("registre debit = 4 -> 19200 bauds"))
+essaie(def () modbusFonctions.logReponseTestDebit({"ModbusReceived": {"DeviceAddress": 1, "StartAddress": 255, "Count": 1, "Values": [1]}}) end)
+verifie("reponse 0xFF decodee : adresse 1", true, journalise("lue par diffusion) = 1"))
+verifie("refuse sur un esclave", "test reserve au maitre ModBus serie",
+        essaie(def () drivers["ModBus"]["id"] = 2 return modbusFonctions.testeDebitConn16(1, 9600) end))
+print("")
+print("=== 22. ReglageBaudrateConn16channels : ordre enfile, debits refuses ===")
+drivers["ModBus"]["id"] = 0
+etM["enVol"] = nil
+etM["queue"] = []
+etM["pause"] = false
+tasmota.cmds = []
+journal = []
+essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "ReglageBaudrateConn16channels 0x01 19200", nil) end)
+var envoye = size(tasmota.cmds) > 0 ? tasmota.cmds[0] : "-"
+verifie("19200 : un ModBusSend 0x06 registre 254 code 4", true,
+        string.find(envoye, "ModBusSend ") == 0 && json.load(envoye[11 ..])["FunctionCode"] == 6 &&
+        json.load(envoye[11 ..])["StartAddress"] == 254 && str(json.load(envoye[11 ..])["Values"]) == "[4]" &&
+        json.load(envoye[11 ..])["DeviceAddress"] == 1)
+verifie("19200 : passe par la file (en vol)", true, etM["enVol"] != nil)
+verifie("19200 : journalise en clair", true, journalise("registre 0x00FE <- 4 (19200 bauds)"))
+var trame19200 = essaie(def () return modbusFonctions.prepareTrame(etM["enVol"]["paramMSG"], "Commande").tohex() end)
+verifie("trame bus 19200 = 010600FE0004E9F9", "010600FE0004E9F9", trame19200)
+verifie("debit inconnu 38400 : refuse (plus de retour usine)", true,
+        string.find(essaie(def () return modbusFonctions.reglageDebitConn16(["1 38400"]) end), "debit refuse") == 0)
+verifie("'usine' : code 5 explicite", "debit de l'esclave 1 -> retour usine (9600) (code 5) envoye",
+        essaie(def () return modbusFonctions.reglageDebitConn16(["1 usine"]) end))
+verifie("parametre manquant : usage", true,
+        string.find(essaie(def () return modbusFonctions.reglageDebitConn16(["1"]) end), "usage") == 0)
+verifie("adresse 0 refusee", true,
+        string.find(essaie(def () return modbusFonctions.reglageDebitConn16(["0 9600"]) end), "adresse") == 0)
+etM["enVol"] = nil
+etM["queue"] = []
+etM["echeances"] = {}
+tasmota.regles = nil
+tasmota.retourCmd = nil
+diverses = {}
+drivers = sauveDrivers
 
 print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
