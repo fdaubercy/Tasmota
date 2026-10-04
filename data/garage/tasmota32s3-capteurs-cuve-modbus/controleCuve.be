@@ -52,8 +52,8 @@ class CAPTEURS_CUVE : Driver
 
         # Flags pour les logs à enregistrer
         self.indiceLog = 0
-        self.nbLogsFilesMax = modules["cuve"]["logs"]["nbLogsFiles"]
-        self.fileLogSize_Ko = modules["cuve"]["logs"]["fileLogSize_Ko"]
+        self.nbLogsFilesMax = modules["cuve"].find("logs", {}).find("nbLogsFiles", 0)
+        self.fileLogSize_Ko = modules["cuve"].find("logs", {}).find("fileLogSize_Ko", 10000)
 
         var typeConnex
         var moduleConnex

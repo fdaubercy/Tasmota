@@ -19,8 +19,8 @@ class CONTROLE_GARAGE : Driver
 
         # Flags pour les logs à enregistrer
         self.indiceLog = 0
-        self.nbLogsFilesMax = modules["garage"]["logs"]["nbLogsFiles"]
-        self.fileLogSize_Ko = modules["garage"]["logs"]["fileLogSize_Ko"]
+        self.nbLogsFilesMax = modules["garage"].find("logs", {}).find("nbLogsFiles", 0)
+        self.fileLogSize_Ko = modules["garage"].find("logs", {}).find("fileLogSize_Ko", 10000)
 
         garageFonctions.log ("CONTROLE_GARAGE: Enregistre les taches CRON !", LOG_LEVEL_DEBUG)
         # Déclenche une action tous les jours à minuit
