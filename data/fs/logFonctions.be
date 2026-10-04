@@ -46,6 +46,18 @@ logFonctions.SORTIES = {"serie": "SerialLog", "web": "WebLog", "mqtt": "MqttLog"
 # Cibles connues (une par bloc du persist qui porte une cle "log")
 logFonctions.CIBLES = ["general", "serveurWeb", "udp", "tcp", "rangeExtender", "discovery", "modbus",
                        "conn16channels", "slaveModbus", "lorawan", "volets", "es8311", "garage", "cuve"]
+# Ce que couvre chaque cible (aide de ReglageLog)
+logFonctions.DESCRIPTIONS = {
+    "general": "modules communs (globalFonctions, configGlobal, controleGeneral, gestionFileFolder...)",
+    "serveurWeb": "pages web du module (webFonctions, controleWeb)",
+    "udp": "liaison UDP (udpFonctions)", "tcp": "liaison TCP (tcpFonctions)",
+    "rangeExtender": "Range Extender (rangeExtenderFonctions)", "discovery": "table discovery (discoveryFonctions)",
+    "modbus": "ModBus maitre/esclave (modbusFonctions, controleModbus)",
+    "conn16channels": "carte 16 relais ModBus (modBus_Conn16channels)",
+    "slaveModbus": "esclaves Tasmota ModBus (modBus_TasmotaSlaveModBus)",
+    "lorawan": "LoRaWan (loRaWanFonctions)", "volets": "volets roulants et LED temoin (vrFonctions, controleLedTemoin)",
+    "es8311": "codec audio ES8311 (controleES8311)", "garage": "module garage (garageFonctions)",
+    "cuve": "module cuve (cuveFonctions)"}
 
 # ETAT MUTABLE DU MODULE : dans une GLOBALE, pas dans le module (un module solidifie est
 # constant, en flash). Les seuils sont lus une fois depuis le persist, puis mis en cache.
@@ -279,6 +291,76 @@ def logFonctions_regle(quoi, mot)
 end
 logFonctions.regle = logFonctions_regle
 
+# Aide de la commande ReglageLog, appelee SEULEMENT par diversFonctions.traiteAide :
+# sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
+def logFonctions_aideReglageLog(sujet)
+    import string
+
+    var niveauxModule = "erreur|info|debug|detail"
+    var niveauxSortie = "aucun|erreur|info|debug|detail"
+
+    if (sujet == nil)
+        var liste = [
+            ["niveaux", "help niveaux", "rappel des 4 niveaux de logs (charte)"],
+            ["profil", "profil <nom>", "applique un profil aux sorties serie/web/mqtt/syslog et le memorise"],
+            ["tous", "tous <" + niveauxModule + ">", "regle d'un coup tous les modules presents sur la carte"]
+        ]
+        for sortie: logFonctions.SORTIES.keys()
+            liste.push([sortie, sortie + " <" + niveauxSortie + ">", "seuil de la sortie " + sortie + " dans le profil actif"])
+        end
+        for cible: logFonctions.CIBLES
+            liste.push([cible, cible + " <" + niveauxModule + ">", "seuil du module : " + logFonctions.DESCRIPTIONS.find(cible, cible)])
+        end
+        return liste
+    end
+
+    var s = string.tolower(sujet)
+    var logs = (diverses != nil ? diverses.find("logs", {}) : {})
+
+    if (s == "niveaux")
+        return ["erreur (1) : un echec qui demande d'agir. TOUJOURS affiche, quel que soit le reglage du module.",
+                "info   (2) : un evenement ou un changement d'etat, une ligne par evenement.",
+                "debug  (3) : le deroule d'un traitement (etapes, decisions, valeurs cles).",
+                "detail (4) : le brut (trames, JSON, parametres recus, en-tetes de fonction).",
+                "Un module regle sur un niveau affiche ce niveau et tous ceux au-dessus.",
+                "Deux filtres : le module (ReglageLog <module>) PUIS la sortie (profil actif).",
+                "Sorties seulement : 'aucun' coupe la sortie ; 'detail' y montre aussi les BRY: GC."]
+    end
+    if (s == "profil")
+        return ["Parametre : nom d'un profil de diverses.logs.profils (cette carte : " + logFonctions.enTexte(logs.find("profils", {}).keys()) + ").",
+                "Profil actif : " + str(logs.find("profil", "absent")) + ".",
+                "Effet : applique les seuils du profil aux sorties (SerialLog, WebLog, MqttLog, SysLog)",
+                "        et memorise le profil actif dans le persist de la carte.",
+                "Exemple : ReglageLog profil normal"]
+    end
+    if (s == "tous")
+        return ["Parametre : " + niveauxModule + ".",
+                "Effet : ecrit ce seuil pour chaque module configure sur la carte (cle 'log' de son bloc,",
+                "        diverses.logs.general pour general), persist de la carte enregistre.",
+                "        Les modules absents de la carte ne sont pas crees.",
+                "Exemple : ReglageLog tous detail"]
+    end
+    if (logFonctions.SORTIES.contains(s))
+        var n = logFonctions.niveauSortie(logFonctions.SORTIES[s])
+        return ["Parametre : " + niveauxSortie + " ('detail' = niveau 4 de Tasmota, BRY: GC compris).",
+                "Niveau actuel : " + (n != nil && n >= 0 && n <= 4 ? logFonctions.MOTS[n] : "?") + " (commande Tasmota " + logFonctions.SORTIES[s] + ").",
+                "Effet : modifie la sortie " + s + " DANS le profil actif (" + str(logs.find("profil", "absent")) + "),",
+                "        l'applique aussitot et enregistre le persist de la carte.",
+                "Exemple : ReglageLog " + s + " info"]
+    end
+    var cible = logFonctions.trouveCle(logFonctions.CIBLES, s)
+    if (cible != nil)
+        return ["Module : " + logFonctions.DESCRIPTIONS.find(cible, cible) + ".",
+                "Parametre : " + niveauxModule + " (les erreurs passent toujours).",
+                "Reglage actuel : " + (logFonctions.lieu(cible) != nil ? logFonctions.MOTS[logFonctions.seuil(cible)] : "module absent de cette carte") + ".",
+                "Effet : ecrit le seuil dans le persist de la carte. Un message n'apparait que si la",
+                "        sortie (profil actif) accepte aussi son niveau.",
+                "Exemple : ReglageLog " + cible + " detail"]
+    end
+    return nil
+end
+logFonctions.aideReglageLog = logFonctions_aideReglageLog
+
 # Commande ReglageLog. Exemples :
 # ReglageLog
 # ReglageLog profil normal
@@ -288,11 +370,16 @@ logFonctions.regle = logFonctions_regle
 def logFonctions_reglageLog(cmd, idx, payload, payload_json)
     import string
     import json
+    import diversFonctions
 
+    # Mots du payload, sans espaces superflus (traiteAide prend le 1er mot jusqu'au 1er espace)
     var mots = []
     for m: string.split(string.tolower(payload == nil ? "" : str(payload)), " ")
         if (m != "")    mots.push(m)    end
     end
+
+    # Aide en console : ReglageLog help | help <sujet> | sous-commande inconnue
+    if diversFonctions.traiteAide("ReglageLog", mots.concat(" "), logFonctions.aideReglageLog, true)    return    end
 
     var reponse = nil
     if (mots.size() == 0)       reponse = logFonctions.etatReglages()

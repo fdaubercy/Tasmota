@@ -54,6 +54,8 @@ Exemple : pour voir les trames ModBus dans la console, il faut `ReglageLog modbu
 
 ```
 ReglageLog                          affiche le profil actif, les sorties et le réglage de chaque module
+ReglageLog help                     liste les sous-commandes (aide affichée en console)
+ReglageLog help modbus              détail d'une sous-commande, avec le réglage actuel (help niveaux : la charte)
 ReglageLog profil debug             applique le profil « debug » (ou « normal ») aux sorties
 ReglageLog modbus debug             règle le module ModBus : erreur | info | debug | detail
 ReglageLog tous detail              règle d'un coup tous les modules présents sur la carte
@@ -169,6 +171,7 @@ moins une sortie. Un profil « normal » sobre allège donc vraiment la carte.
 >####    - ReglageGlobal nbLogsFiles 14<br>
 >
 >####    - ReglageLog : affiche le profil de logs actif, les sorties et le réglage de chaque module
+>####    - ReglageLog help | help <sous-commande> | help niveaux : aide en console
 >####    - ReglageLog profil normal|debug : applique un profil aux sorties (série, web, mqtt, syslog)
 >####    - ReglageLog modbus debug : règle les logs d'un module (erreur, info, debug, detail)
 >####    - ReglageLog tous detail : règle d'un coup les logs de tous les modules de la carte

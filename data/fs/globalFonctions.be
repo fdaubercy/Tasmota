@@ -521,8 +521,7 @@ def globalFonctions_aideReglageGlobal(sujet)
     if (sujet == nil)
         return [
             ["afficheMemoire", "afficheMemoire", "affiche l'etat de la memoire dans les logs"],
-            ["nbLogsFiles", "nbLogsFiles <n>", "regle le nombre de fichiers de logs (FileLog), sauvegarde"],
-            ["logLevel", "logLevel <0..4>", "regle le niveau de log serie et web (SerialLog/WebLog), sauvegarde"]
+            ["nbLogsFiles", "nbLogsFiles <n>", "regle le nombre de fichiers de logs (FileLog), sauvegarde"]
         ]
     end
     sujet = string.toupper(sujet)
@@ -537,13 +536,6 @@ def globalFonctions_aideReglageGlobal(sujet)
                 "Effet : applique 'FileLog <n>' puis memorise la valeur (diverses logs nbLogsFiles)",
                 "        et sauvegarde (persist.save). Parametre absent ou non entier : ignore.",
                 "Exemple : ReglageGlobal nbLogsFiles 14"]
-    end
-    if (sujet == "LOGLEVEL")
-        return ["Parametre : entier de 0 a 4 (niveaux de SerialLog et WebLog de Tasmota).",
-                "Effet : applique 'SerialLog <n>' et 'WebLog <n>' puis memorise le niveau",
-                "        (diverses logs level) et sauvegarde (persist.save).",
-                "        Parametre absent ou non entier : ignore.",
-                "Exemple : ReglageGlobal logLevel 3"]
     end
     return nil
 end
