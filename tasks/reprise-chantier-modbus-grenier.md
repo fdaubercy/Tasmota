@@ -405,7 +405,8 @@ esclave. Le sondage 0x03 fonctionne donc **dès aujourd'hui**, sans modification
 ## Git
 
 - Branche du chantier : **`chantier-modbus-grenier`**, créée depuis `development`.
-- Point de retour : tag **`avant-chantier-modbus`** (commit `ce115398f`).
+- Point de retour : commit **`ce115398f`** (ancetre de `development`). Le tag local
+  `avant-chantier-modbus` qui le designait a ete supprime le 2026-10-04.
 - `development` reste la branche du parc en service (garage, cuve, rideau) pendant tout
   le chantier. Retour sur `development` seulement quand le banc est vert.
 - ⚠️ **DÉROGATION du 2026-09-20 : `development` a été avancé (fast-forward) sur le HEAD du
