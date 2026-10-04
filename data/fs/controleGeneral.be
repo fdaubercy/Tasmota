@@ -74,7 +74,8 @@ class CONTROLE_GENERAL : Driver
 		import configDevices
 		import diversFonctions
         import introspect
-        
+		import logFonctions
+
 		self.enregistrePersistant = false
         self.nbIOActivesJSON = {}
 		self.connected = false
@@ -133,6 +134,7 @@ class CONTROLE_GENERAL : Driver
 
         # Ajoute les commandes personnalisées si le module est activé
 		tasmota.add_cmd('ReglageGlobal', globalFonctions.reglageGlobal)
+		tasmota.add_cmd('ReglageLog', logFonctions.reglageLog)     # seule commande de reglage des logs (charte : logFonctions.be)
 
 		# Stats d'utilisation des mémoires
 		diversFonctions.statMemory()

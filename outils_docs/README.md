@@ -40,8 +40,9 @@ Un échec se logue en `erreur`, jamais en `debug`. Pas d'`info` dans un traiteme
 
 Un message n'est affiché que s'il passe les deux :
 
-1. **Le réglage de son module** (la *cible*) : `general`, `web`, `udp`, `tcp`, `rangeExtender`,
+1. **Le réglage de son module** (la *cible*) : `general`, `serveurWeb`, `udp`, `tcp`, `rangeExtender`,
    `discovery`, `modbus`, `conn16channels`, `slaveModbus`, `lorawan`, `volets`, `es8311`.
+   (`web` désigne la **sortie** console web ; le module des pages web est `serveurWeb`.)
 2. **Le réglage de la sortie** : `serie`, `web`, `mqtt` (topic `stat/<topic>/LOGGING`),
    `syslog` (le PC, `syslog_tasmota.py`). Ces réglages forment un **profil**.
 

@@ -552,7 +552,7 @@ globalFonctions.aideReglageGlobal = globalFonctions_aideReglageGlobal
 # exemples: 
 # ReglageGlobal afficheMemoire
 # ReglageGlobal nbLogsFiles 14
-# ReglageGlobal logLevel 4
+# (les niveaux de logs se reglent par ReglageLog : voir logFonctions.be)
 def globalFonctions_reglageGlobal(cmd, idx, payload, payload_json)
     import string
     import json
@@ -599,16 +599,7 @@ def globalFonctions_reglageGlobal(cmd, idx, payload, payload_json)
             persist.save()
         except .. as e, m
             # print('Erreur: ', e, " -> ", m)
-        end		
-	elif string.toupper(fonction) == string.toupper("logLevel")
-        try
-            # Sauvegarde le paramètre
-			tasmota.cmd(string.format("Backlog SerialLog %i; WebLog %i;", int(parametres[0]), int(parametres[0])), boolMute)
-            diverses["logs"]["level"] = int(parametres[0])
-            persist.save()
-        except .. as e, m
-            # print('Erreur: ', e, " -> ", m)
-        end	
+        end
 	end
 
     # Commande réussie

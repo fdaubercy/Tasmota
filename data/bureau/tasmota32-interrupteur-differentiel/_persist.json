@@ -3,7 +3,12 @@
 		"cmdMute": true,
 		"typeESP": "ESP32",
 		"logs": {
-			"level": 3,
+			"profil": "debug",
+			"profils": {
+				"normal": {"serie": "info", "web": "info", "mqtt": "erreur", "syslog": "info"},
+				"debug": {"serie": "debug", "web": "debug", "mqtt": "debug", "syslog": "debug"}
+			},
+			"general": "debug",
 			"nbLogsFiles" : 0
 		},
 		"telePeriod": 300,

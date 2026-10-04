@@ -48,6 +48,7 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 	import configModules
     import persist
 	import json
+	import logFonctions
 
 	var reponseCMD
 	var enregistrePersistant = false
@@ -231,13 +232,8 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 		tasmota.cmd(string.format("SetOption1 %s", data["eviteResetBTN"]), boolMute)
 	end
 	
-	# Paramètre le niveau des logs
-	if configGlobal.testeParam("SerialLog", data["logs"]["level"], "int")
-		log("CONTROLE_GENERAL: Regle le niveau des logs série!", LOG_LEVEL_DEBUG)
-	end
-    if configGlobal.testeParam("WebLog", data["logs"]["level"], "int")
-        log("CONTROLE_GENERAL: Regle le niveau des logs Web!", LOG_LEVEL_DEBUG)
-    end
+	# Seuils des sorties de logs (serie, web, mqtt, syslog) : profil actif de diverses.logs
+	logFonctions.appliqueProfil()
 
 
 	# Nb de fichiers de logs pour enregistrement dans plusieurs fichiers

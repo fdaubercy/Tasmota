@@ -20,6 +20,11 @@ modules = persist.modules
 drivers = persist.drivers
 boolMute = diverses.find("cmdMute", false)
 
+# Fonction de log commune (charte : logFonctions.be). Importee AVANT tout le reste :
+# les modules charges ensuite loguent par logFonctions.log(). Import de niveau fichier :
+# cree la globale 'logFonctions' (module solidifie).
+import logFonctions
+
 # Allege le persist en RAM AVANT tout le reste :
 #   - listes vides de cles connues supprimees (leurs lecteurs utilisent .find(cle, [])) ;
 #   - environnement des drivers inactifs mis en veille dans /json/driversInactifs.json (rien n'est perdu).
@@ -52,6 +57,7 @@ if (persist._p != nil && persist._p.size() != 0)
     gestionFileFolder.compileModule("/gestionFileFolder", "ON")
     gestionFileFolder.compileModule("/globalFonctions", "ON")
     gestionFileFolder.compileModule("/diversFonctions", "ON")
+    gestionFileFolder.compileModule("/logFonctions", "ON")
     gestionFileFolder.compileModule("/webFonctions", serveur.find("activation", "OFF"))
     # Services reseau : compiles/charges SEULEMENT si actives. Ne pas compter sur le 2e argument
     # de compileModule/loadBerryFile : il ne filtre PAS le chargement (garde commentee dans
