@@ -33,12 +33,34 @@ def tcpFonctions_log(msg, levelDebug)
 end
 tcpFonctions.log = tcpFonctions_log
 
-# exemples: 
+# Aide de la commande ReglageTCP, appelee SEULEMENT par diversFonctions.traiteAide :
+# sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
+def tcpFonctions_aideReglageTCP(sujet)
+    import string
+    if (sujet == nil)
+        return [
+            ["logActivation", "logActivation <ON|OFF|1|0>", "active/coupe les logs de debug TCP (memorise dans le persist)"]
+        ]
+    end
+    sujet = string.toupper(sujet)
+    if (sujet == "LOGACTIVATION")
+        return ["Parametre : ON ou 1 = logs de debug TCP actifs ; OFF ou 0 = coupes.",
+                "Memorise : serveur.tcp.debug (persist), ecrit au prochain persist.save.",
+                "Exemple : ReglageTCP logActivation ON"]
+    end
+    return nil
+end
+tcpFonctions.aideReglageTCP = tcpFonctions_aideReglageTCP
+
+# exemples:
 # ReglageTCP logActivation OFF
 def tcpFonctions_reglageTCP(cmd, idx, payload, payload_json)
     import string
     import json
     import persist
+    import diversFonctions
+
+    if diversFonctions.traiteAide("ReglageTCP", payload, tcpFonctions.aideReglageTCP, true)    return    end
 
     var fonction = false
     var parametres = []

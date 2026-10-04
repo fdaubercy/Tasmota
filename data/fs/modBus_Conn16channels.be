@@ -240,13 +240,35 @@ class MODBUS_CONN_16CHANNEL : Driver
         end
     end
 
-    #- Exemples: 
+    # Aide de la commande ReglageConn16Channel, appelee SEULEMENT par diversFonctions.traiteAide :
+    # sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
+    def aideReglageConn16Channel(sujet)
+        import string
+        if (sujet == nil)
+            return [
+                ["logActivation", "logActivation <ON|OFF|1|0>", "active/coupe les logs du module Conn16channels (sauve dans le persist)"]
+            ]
+        end
+        sujet = string.toupper(sujet)
+        if (sujet == "LOGACTIVATION")
+            return ["Parametre : ON ou 1 = logs actifs ; OFF ou 0 = coupes.",
+                    "Effet : sauve drivers.ModBus.environnement.Conn16channels.debug dans le persist.",
+                    "Exemple : ReglageConn16Channel logActivation ON"]
+        end
+        return nil
+    end
+
+    #- Exemples:
         ReglageConn16Channel logActivation OFF   => Active ou désactive les logs du module
     -#
     def reglageConn16Channel(cmd, idx, payload, payload_json)
         import string
         import json
         import persist
+        import diversFonctions
+
+        # Aide en console : ReglageConn16Channel help | help <sous-commande> | sous-commande inconnue
+        if diversFonctions.traiteAide("ReglageConn16Channel", payload, / s -> self.aideReglageConn16Channel(s), true)    return    end
 
         var fonction = false
         var parametres = []

@@ -6,8 +6,8 @@
     - Les commande de réglages paramétrées sont :
         * logActivation: Active ou désactive les logs de la liaison RS485
             EX: ReglageUDP logActivation OFF
-        * envoiMessage: Envoi un message UDP à l'adresse IP passée en paramètre
-        EX: ReglageUDP envoiMessage 10.99.0.1 Salut Ca gaz !
+        * envoiUniCast: Envoi un message UDP à l'adresse IP passée en paramètre
+        EX: ReglageUDP envoiUniCast 10.99.0.1 Salut Ca gaz !
 
     - Dans le fichiers json :'json/discovery.json', il enregistre les paramètres des modules connectés:
         * id, nom, adressMAC, routagePort, routageIP, routageMaitreIP (cette dernière sera transmise après par le maitre)

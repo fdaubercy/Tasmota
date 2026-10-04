@@ -95,7 +95,32 @@ class MODBUS_TASMOTA_SLAVE : Driver
         end
     end
 
-    #- Exemples: 
+    # Aide de la commande ReglageSlaveModBus, appelee SEULEMENT par diversFonctions.traiteAide :
+    # sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
+    def aideReglageSlaveModBus(sujet)
+        import string
+        if (sujet == nil)
+            return [
+                ["logActivation", "logActivation <ON|OFF|1|0>", "active/coupe les logs du module TasmotaSlaveModBus (sauve dans le persist)"],
+                ["id", "id <1..247>", "change l'adresse ModBus de l'esclave ReglageSlaveModBus<n> (sauve)"]
+            ]
+        end
+        sujet = string.toupper(sujet)
+        if (sujet == "LOGACTIVATION")
+            return ["Parametre : ON ou 1 = logs actifs ; OFF ou 0 = coupes.",
+                    "Effet : sauve drivers.ModBus.environnement.TasmotaSlaveModBus.debug (persist).",
+                    "Exemple : ReglageSlaveModBus1 logActivation ON"]
+        elif (sujet == "ID")
+            return ["Parametre : <id> entre 1 et 247 (ex. 2 ou 0x02) ; hors bornes = erreur.",
+                    "Le suffixe numerique de la commande (n) designe l'esclave TasmotaSlaveModBus<n>.",
+                    "Effet : sauve le nouvel id dans le persist ; les regles ModbusReceived deja",
+                    "posees gardent l'ancien id : redemarrer pour une prise en compte complete.",
+                    "Exemple : ReglageSlaveModBus1 id 0x02"]
+        end
+        return nil
+    end
+
+    #- Exemples:
         ReglageSlaveModBus1 logActivation OFF   => Active ou désactive les logs du module
         ReglageSlaveModBus1 id 0x02   => Change le l'adresse ModBus de l'esclave ModBus_TasmotaSlaveModBus1
     -#
@@ -103,6 +128,10 @@ class MODBUS_TASMOTA_SLAVE : Driver
         import string
         import json
         import persist
+        import diversFonctions
+
+        # Aide en console : ReglageSlaveModBus help | help <sous-commande> | sous-commande inconnue
+        if diversFonctions.traiteAide("ReglageSlaveModBus", payload, / s -> self.aideReglageSlaveModBus(s), true)    return    end
 
         var fonction = false
         var parametres = []
@@ -168,12 +197,27 @@ class MODBUS_TASMOTA_SLAVE : Driver
         tasmota.resp_cmnd(json.dump(reponse_cmnd))
     end
 
+    # Aide de la commande HSBCOLOR, appelee SEULEMENT par diversFonctions.traiteAide.
+    # Commande a VALEUR : une seule entree de nom "", pas de detail.
+    def aideHSBColor(sujet)
+        if (sujet == nil)
+            return [
+                ["", "<teinte>   (HSBCOLOR1 teinte, HSBCOLOR2 saturation)", "regle la teinte (idx 1) ou la saturation (idx 2) des LEDS WS2812 ; HSBCOLOR3 sans effet"]
+            ]
+        end
+        return nil
+    end
+
     def HSBColor(cmd, idx, payload, payload_json)
         import string
         import json
         import persist
         import re
         import modbusFonctions
+        import diversFonctions
+
+        # Aide en console : HSBCOLOR help (commande a valeur : aucune sous-commande a verifier)
+        if diversFonctions.traiteAide("HSBCOLOR", payload, / s -> self.aideHSBColor(s), false)    return    end
     
         var fonction = false
         var parametres = []
@@ -266,12 +310,27 @@ class MODBUS_TASMOTA_SLAVE : Driver
         tasmota.resp_cmnd(reponse_cmnd)
     end
 
+    # Aide de la commande DIMMER, appelee SEULEMENT par diversFonctions.traiteAide.
+    # Commande a VALEUR : une seule entree de nom "", pas de detail.
+    def aideDimmer(sujet)
+        if (sujet == nil)
+            return [
+                ["", "<luminosite>   (DIMMER<id> luminosite)", "regle la luminosite de la LED WS2812 d'id <id> (0 = POWER1 OFF) et l'envoie a l'esclave"]
+            ]
+        end
+        return nil
+    end
+
     def Dimmer(cmd, idx, payload, payload_json)
         import string
         import json
         import persist
         import re
         import modbusFonctions
+        import diversFonctions
+
+        # Aide en console : DIMMER help (commande a valeur : aucune sous-commande a verifier)
+        if diversFonctions.traiteAide("DIMMER", payload, / s -> self.aideDimmer(s), false)    return    end
     
         var fonction = false
         var parametres = []

@@ -18,6 +18,46 @@ cuveFonctions.log = def(msg, levelDebug)
     end
 end
 
+# Aide de la commande ReglageCuve, appelee SEULEMENT par diversFonctions.traiteAide :
+# sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
+cuveFonctions.aideReglageCuve = def(sujet)
+    import string
+    if (sujet == nil)
+        return [
+            ["logActivation", "logActivation <ON|OFF>", "active ou desactive les logs du module cuve"],
+            ["etalonnageCapteur", "etalonnageCapteur <ON|OFF>", "mesure rapprochee du niveau pendant 10 min"],
+            ["hauteurCuve", "hauteurCuve <cm>", "regle la hauteur de la cuve"],
+            ["largeurCuve", "largeurCuve <cm>", "regle la largeur de la cuve"],
+            ["longueurCuve", "longueurCuve <cm>", "regle la longueur de la cuve"]
+        ]
+    end
+    sujet = string.toupper(sujet)
+    if (sujet == "LOGACTIVATION")
+        return ["Parametre : ON ou OFF (1 = ON, 0 = OFF).",
+                "Effet : active ou coupe les logs du module cuve, memorise dans modules cuve debug",
+                "        puis sauvegarde (persist.save). Parametre absent : ignore.",
+                "Exemple : ReglageCuve logActivation ON"]
+    end
+    if (sujet == "ETALONNAGECAPTEUR")
+        return ["Parametre : ON ou OFF (1 = ON, 0 = OFF).",
+                "Effet ON : remplace la tache cron de mesure 'majNiveauCuve' par une tache plus",
+                "        frequente (cron '*/5 * * * * *', soit toutes les 5 s), puis un timer de",
+                "        10 min remet la cadence normale ('*/60 * * * * *').",
+                "Effet OFF : remet tout de suite la cadence normale.",
+                "Sauvegarde : modules cuve reglage = ON|OFF (persist.save).",
+                "Exemple : ReglageCuve etalonnageCapteur ON"]
+    end
+    if (sujet == "HAUTEURCUVE" || sujet == "LARGEURCUVE" || sujet == "LONGUEURCUVE")
+        return ["Parametre : entier, dimension en cm (partie entiere retenue).",
+                "Effet : memorise modules cuve dimensions " + (sujet == "HAUTEURCUVE" ? "hauteur" : (sujet == "LARGEURCUVE" ? "largeur" : "longueur")) + ".",
+                "        et sauvegarde (persist.save). Parametre absent ou non entier : ignore.",
+                "        Les 3 dimensions servent au calcul du volume ; la reponse les rappelle.",
+                "Exemple : Backlog ReglageCuve hauteurCuve 110; ReglageCuve largeurCuve 180;",
+                "          ReglageCuve longueurCuve 340"]
+    end
+    return nil
+end
+
 #- Exemples: 
     ReglageCuve logActivation OFF   => Active ou désactive les logs du module
     ReglageCuve etalonnageCapteur ON       => Augmente la frequence de mesure pendant 10min (frequence=1mesure/10s)
@@ -27,6 +67,9 @@ cuveFonctions.reglageCuve = def(cmd, idx, payload, payload_json)
     import string
     import json
     import persist
+    import diversFonctions
+    if diversFonctions.traiteAide("ReglageCuve", payload, cuveFonctions.aideReglageCuve, true)    return    end
+
 
     var fonction = false
     var parametres = []
@@ -99,6 +142,7 @@ cuveFonctions.reglageCuve = def(cmd, idx, payload, payload_json)
     elif string.toupper(fonction) == "HAUTEURCUVE"
         try
             modules["cuve"]["dimensions"]["hauteur"] = int(parametres[0])
+            persist.save()                  # modules = persist.modules : la valeur survit au redemarrage
         except .. as e, m
             # print('Erreur: ', e, " -> ", m)
         end
@@ -106,6 +150,7 @@ cuveFonctions.reglageCuve = def(cmd, idx, payload, payload_json)
     elif string.toupper(fonction) == "LARGEURCUVE"
         try
             modules["cuve"]["dimensions"]["largeur"] = int(parametres[0])
+            persist.save()                  # modules = persist.modules : la valeur survit au redemarrage
         except .. as e, m
             # print('Erreur: ', e, " -> ", m)
         end
@@ -113,6 +158,7 @@ cuveFonctions.reglageCuve = def(cmd, idx, payload, payload_json)
     elif string.toupper(fonction) == "LONGUEURCUVE"
         try
             modules["cuve"]["dimensions"]["longueur"] = int(parametres[0])
+            persist.save()                  # modules = persist.modules : la valeur survit au redemarrage
         except .. as e, m
             # print('Erreur: ', e, " -> ", m)
         end
@@ -127,6 +173,25 @@ cuveFonctions.reglageCuve = def(cmd, idx, payload, payload_json)
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
 
+# Aide de la commande ReglageAna, appelee SEULEMENT par diversFonctions.traiteAide :
+# sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
+cuveFonctions.aideReglageAna = def(sujet)
+    import string
+    if (sujet == nil)
+        return [
+            ["voltageMax", "voltageMax <volts>", "regle la tension maximale admissible de l'ADS1115"]
+        ]
+    end
+    sujet = string.toupper(sujet)
+    if (sujet == "VOLTAGEMAX")
+        return ["Parametre : nombre reel, tension max en volts (ex. 3.3 ou 3.20).",
+                "Effet : memorise modules cuve environnement analogiques voltageMax.",
+                "        et sauvegarde (persist.save). Parametre absent ou non numerique : ignore.",
+                "Exemple : ReglageAna voltageMax 3.3"]
+    end
+    return nil
+end
+
 #- Exemples: 
     ReglageAna voltageMax 3.3
     ReglageAna voltageMax 3.20
@@ -135,6 +200,10 @@ cuveFonctions.reglageAna = def(cmd, idx, payload, payload_json)
     import string
     import json
     import webFonctions
+    import persist
+    import diversFonctions
+    if diversFonctions.traiteAide("ReglageAna", payload, cuveFonctions.aideReglageAna, true)    return    end
+
 
     var fonction = false
     var parametres = []
@@ -162,6 +231,7 @@ cuveFonctions.reglageAna = def(cmd, idx, payload, payload_json)
     if string.toupper(fonction) == "VOLTAGEMAX"
         try
             modules["cuve"]["environnement"]["analogiques"]["voltageMax"] = real(parametres[0])
+            persist.save()                  # modules = persist.modules : la valeur survit au redemarrage
         except .. as e, m
             # print('Erreur: ', e, " -> ", m)
         end
@@ -169,8 +239,10 @@ cuveFonctions.reglageAna = def(cmd, idx, payload, payload_json)
 
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd = string.format("reglageADS1115: valeur Min=%i, valeur Max=%i, voltage Max=%.2fV", 
-                                    modules["cuve"]["environnement"]["analogiques"].find("voltageMax", 6.144))
+    # 3 valeurs pour 3 formats (il n'en passait qu'une : string.format levait, aucune reponse)
+    var ana = modules["cuve"]["environnement"]["analogiques"]
+    reponse_cmnd = string.format("reglageADS1115: valeur Min=%i, valeur Max=%i, voltage Max=%.2fV",
+                                    ana.find("valeurMin", 0), ana.find("valeurMax", 0), ana.find("voltageMax", 6.144))
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
 

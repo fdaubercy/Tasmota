@@ -155,12 +155,31 @@ if (modules["pompeVideCave"].find("activation", "OFF") == "ON")
     # Commandes Tasmota (console, HTTP, MQTT cmnd/<topic>/...) : reponse sur stat/<topic>/RESULT
     #   EtatPompe      -> {"EtatPompe": {"Pompe": "ON", "Niveaux": {...}, "Alerte": "", ...}}
     #   AcquittePompe  -> efface l'alerte et le compteur de relances, puis renvoie l'etat
+    # Aide des commandes, appelee SEULEMENT par diversFonctions.traiteAide (commandes sans sous-commande) :
+    # sujet == nil -> [[nom, syntaxe, resume]] ; sujet non nil -> nil (pas de detail)
+    def aideEtatPompe(sujet)
+        if (sujet == nil)
+            return [["", "(sans argument)", "affiche l'etat de la pompe vide-cave, des niveaux et de l'alerte"]]
+        end
+        return nil
+    end
+    def aideAcquittePompe(sujet)
+        if (sujet == nil)
+            return [["", "(sans argument)", "efface l'alerte et le compteur de relances, puis affiche l'etat"]]
+        end
+        return nil
+    end
+
     tasmota.add_cmd("EtatPompe", def(cmd, idx, payload, payload_json)
         import json
+        import diversFonctions
+        if diversFonctions.traiteAide("EtatPompe", payload, aideEtatPompe, false)    return    end
         tasmota.resp_cmnd(json.dump({"EtatPompe": global.controlePompeVideCave.etat()}))
     end)
     tasmota.add_cmd("AcquittePompe", def(cmd, idx, payload, payload_json)
         import json
+        import diversFonctions
+        if diversFonctions.traiteAide("AcquittePompe", payload, aideAcquittePompe, false)    return    end
         global.controlePompeVideCave.acquitte()
         tasmota.resp_cmnd(json.dump({"AcquittePompe": "OK", "EtatPompe": global.controlePompeVideCave.etat()}))
     end)

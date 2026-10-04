@@ -30,6 +30,28 @@ def loRaWanFonctions_log(msg, levelDebug)
 end
 loRaWanFonctions.log = loRaWanFonctions_log
 
+# Aide de la commande ReglageLoRaWan, appelee SEULEMENT par diversFonctions.traiteAide :
+# sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
+def loRaWanFonctions_aideReglageLoRaWan(sujet)
+    import string
+    if (sujet == nil)
+        return [
+            ["logActivation", "logActivation <ON|OFF>", "active ou desactive les logs du module LoRaWan"]
+        ]
+    end
+    sujet = string.toupper(sujet)
+    if (sujet == "LOGACTIVATION")
+        return ["Parametre : ON ou OFF (1 = ON, 0 = OFF).",
+                "Effet : active ou coupe les logs du module LoRaWan,",
+                "        memorise dans drivers LoRaWan debug (persist)",
+                "        puis sauvegarde (persist.save). Parametre absent : ignore.",
+                "        La reponse indique l'etat courant (logActivated=...).",
+                "Exemple : ReglageLoRaWan logActivation ON"]
+    end
+    return nil
+end
+loRaWanFonctions.aideReglageLoRaWan = loRaWanFonctions_aideReglageLoRaWan
+
 #- exemples: 
     reglageLoRaWan logActivation OFF
 -#
@@ -37,9 +59,12 @@ def loRaWanFonctions_reglageLoRaWan(cmd, idx, payload, payload_json)
     import string
     import json
     import persist
+    import diversFonctions
+    if diversFonctions.traiteAide("ReglageLoRaWan", payload, loRaWanFonctions.aideReglageLoRaWan, true)    return    end
+
 
     var fonction = false
-    var parametres = false
+    var parametres = []                # liste vide (et non false) : parametres.size() plus bas
     var reponse_cmnd = "ReglageLoRaWan: "
     
     # Test   

@@ -62,6 +62,18 @@ def rangeExtenderFonctions_redirige(port, ip)
 end
 rangeExtenderFonctions.redirige = rangeExtenderFonctions_redirige
 
+# Aide de la commande RoutageRangeExtender (sans sous-commande), appelee par diversFonctions.traiteAide :
+# sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
+def rangeExtenderFonctions_aideRoutageRangeExtender(sujet)
+    if (sujet == nil)
+        return [
+            ["", "(sans argument)", "pose les redirections NAPT (RgxPort) vers les esclaves RangeExtender connus"]
+        ]
+    end
+    return nil
+end
+rangeExtenderFonctions.aideRoutageRangeExtender = rangeExtenderFonctions_aideRoutageRangeExtender
+
 # Réalilse le routage
 # Active RgxNAPT: RoutageRangeExtender
 # RgxPort tcp, 8080, 192.168.4.2, 80
@@ -71,6 +83,9 @@ def rangeExtenderFonctions_routageRangeExtender(cmd, idx, payload, payload_json)
     import gestionFileFolder
     import persist
     import re
+    import diversFonctions
+
+    if diversFonctions.traiteAide("RoutageRangeExtender", payload, rangeExtenderFonctions.aideRoutageRangeExtender, false)    return    end
 
     var jsonData = {}
     var reponse_cmnd = {"RoutageRangeExtender": {"commmande": "", "status": "Echec..."}}
@@ -127,12 +142,35 @@ def rangeExtenderFonctions_routageRangeExtender(cmd, idx, payload, payload_json)
 end
 rangeExtenderFonctions.routageRangeExtender = rangeExtenderFonctions_routageRangeExtender
 
-# exemples: 
+# Aide de la commande ReglageRangeExtender, appelee SEULEMENT par diversFonctions.traiteAide :
+# sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
+def rangeExtenderFonctions_aideReglageRangeExtender(sujet)
+    import string
+    if (sujet == nil)
+        return [
+            ["logActivation", "logActivation <ON|OFF|1|0>", "active/coupe les logs de debug du RangeExtender"]
+        ]
+    end
+    sujet = string.toupper(sujet)
+    if (sujet == "LOGACTIVATION")
+        return ["Parametre : ON ou 1 = logs de debug RangeExtender actifs ; OFF ou 0 = coupes.",
+                "Sauvegarde : serveur.rangeExtender.debug (persist.save).",
+                "Exemple : ReglageRangeExtender logActivation ON"]
+    end
+    return nil
+end
+rangeExtenderFonctions.aideReglageRangeExtender = rangeExtenderFonctions_aideReglageRangeExtender
+
+# exemples:
 # ReglageRangeExtender logActivation OFF
 def rangeExtenderFonctions_reglageRangeExtender(cmd, idx, payload, payload_json)
     import string
     import json
     import gestionFileFolder
+    import persist
+    import diversFonctions
+
+    if diversFonctions.traiteAide("ReglageRangeExtender", payload, rangeExtenderFonctions.aideReglageRangeExtender, true)    return    end
 
     var fonction = false
     var parametres = false
@@ -169,6 +207,7 @@ def rangeExtenderFonctions_reglageRangeExtender(cmd, idx, payload, payload_json)
 
             # Sauvegarde le paramètre
             serveur["rangeExtender"]["debug"] = parametres[0]
+            persist.save()                  # serveur = persist.serveur : comme ReglageDiscovery
         except .. as e, m
             # print('Erreur: ', e, " -> ", m)
         end

@@ -44,6 +44,25 @@ def discoveryFonctions_roleLocal()
 end
 discoveryFonctions.roleLocal = discoveryFonctions_roleLocal
 
+# Aide de la commande ReglageDiscovery, appelee SEULEMENT par diversFonctions.traiteAide :
+# sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
+def discoveryFonctions_aideReglageDiscovery(sujet)
+    import string
+    if (sujet == nil)
+        return [
+            ["logActivation", "logActivation <ON|OFF|1|0>", "active/coupe les logs de debug Discovery (sauve dans le persist)"]
+        ]
+    end
+    sujet = string.toupper(sujet)
+    if (sujet == "LOGACTIVATION")
+        return ["Parametre : ON ou 1 = logs de debug Discovery actifs ; OFF ou 0 = coupes.",
+                "Sauvegarde : serveur.discovery.debug dans _persist.json (persist.save immediat).",
+                "Exemple : ReglageDiscovery logActivation ON"]
+    end
+    return nil
+end
+discoveryFonctions.aideReglageDiscovery = discoveryFonctions_aideReglageDiscovery
+
 #- exemples:
     ReglageDiscovery logActivation OFF
 -#
@@ -51,9 +70,12 @@ def discoveryFonctions_reglageDiscovery(cmd, idx, payload, payload_json)
     import string
     import json
     import persist
+    import diversFonctions
+
+    if diversFonctions.traiteAide("ReglageDiscovery", payload, discoveryFonctions.aideReglageDiscovery, true)    return    end
 
     var fonction = false
-    var parametres = false
+    var parametres = []                # liste vide (et non false) : parametres.size() plus bas
     var reponse_cmnd = "ReglageDiscovery: "
     
     # Test   

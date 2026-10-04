@@ -128,7 +128,65 @@ def udpFonctions_log(msg, levelDebug)
 end
 udpFonctions.log = udpFonctions_log
 
-# exemples: 
+# Aide de la commande ReglageUDP, appelee SEULEMENT par diversFonctions.traiteAide :
+# sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
+def udpFonctions_aideReglageUDP(sujet)
+    import string
+    if (sujet == nil)
+        return [
+            ["logActivation", "logActivation <ON|OFF|1|0>", "active/coupe les logs de debug UDP (memorise dans le persist)"],
+            ["envoiUniCast", "envoiUniCast <ip> <message>", "envoie un message UDP en unicast (test)"],
+            ["envoiMultiCast", "envoiMultiCast <message>", "envoie un message UDP en multicast (test, RangeExtender)"],
+            ["forceEnvoiParams", "forceEnvoiParams <ON|OFF|1|0>", "esclave : envoie sa fiche au maitre (interne, periodique)"],
+            ["ImAlive", "ImAlive <json>", "maitre : recoit la fiche d'un esclave (interne, envoye par l'esclave)"],
+            ["Timestamp", "Timestamp <secondes>", "esclave : regle l'heure (interne, envoye par le maitre)"],
+            ["ipMaitre", "ipMaitre <ip>", "esclave : memorise l'IP du maitre (interne, envoye par le maitre)"]
+        ]
+    end
+    sujet = string.toupper(sujet)
+    if (sujet == "LOGACTIVATION")
+        return ["Parametre : ON ou 1 = logs de debug UDP actifs ; OFF ou 0 = coupes.",
+                "Memorise : serveur.udp.debug (persist), ecrit au prochain persist.save.",
+                "Exemple : ReglageUDP logActivation ON"]
+    elif (sujet == "ENVOIUNICAST")
+        return ["Parametres : <ip> <message> (le message peut contenir des espaces).",
+                "Envoie le message en UDP unicast a l'IP, sur le port UDP de la carte.",
+                "Sert aux tests ; la reponse contient envoiMessage.",
+                "Exemple : ReglageUDP envoiUniCast 192.168.0.43 Salut Ca gaz !"]
+    elif (sujet == "ENVOIMULTICAST")
+        return ["Parametre : <message> (un ou plusieurs mots ; absent -> erreur dans la reponse).",
+                "N'envoie quelque chose que si le RangeExtender est active (ON) :",
+                "esclave (id > 0) -> multicast 224.3.0.1 ; maitre (id = 0) -> via 192.168.4.1.",
+                "Sinon : aucun envoi. Sert aux tests.",
+                "Exemple : ReglageUDP envoiMultiCast Salut Ca gaz !"]
+    elif (sujet == "FORCEENVOIPARAMS")
+        return ["Parametre : ON ou 1 = envoie ; OFF ou 0 = n'envoie pas. Esclaves seulement (id > 0).",
+                "Envoie au maitre (multicast) SA fiche 'esclaveN' de /json/discovery.json",
+                "sous la forme 'ImAlive {json}', puis re-arme un timer de telePeriod secondes.",
+                "Surtout INTERNE : lance au demarrage et par son propre timer.",
+                "Exemple : ReglageUDP forceEnvoiParams ON"]
+    elif (sujet == "IMALIVE")
+        return ["Parametre : <json> = {\"esclaveN\": {... \"adresseMAC\": \"AA:BB:...\"}} (UNE fiche).",
+                "Maitre seulement (id = 0) : range la fiche dans /json/discovery.json, marque",
+                "l'esclave Online ; si typeReglageHeure = UDP, renvoie heure et IP du maitre.",
+                "INTERNE : envoye par les esclaves, pas fait pour etre tape a la main.",
+                "Un JSON sans adresse MAC est ignore."]
+    elif (sujet == "TIMESTAMP")
+        return ["Parametre : <secondes> = heure UTC (epoch Unix). Esclaves seulement (id > 0).",
+                "Regle l'horloge de la carte (commande Time).",
+                "INTERNE : envoye par le maitre apres un ImAlive (typeReglageHeure = UDP).",
+                "Exemple : ReglageUDP Timestamp 1766072035"]
+    elif (sujet == "IPMAITRE")
+        return ["Parametre : <ip> = adresse IP du maitre. Esclaves seulement (id > 0).",
+                "Memorise : serveur.rangeExtender.ipMaitre, avec persist.save immediat.",
+                "INTERNE : envoye par le maitre apres un ImAlive (typeReglageHeure = UDP).",
+                "Exemple : ReglageUDP ipMaitre 192.168.0.3"]
+    end
+    return nil
+end
+udpFonctions.aideReglageUDP = udpFonctions_aideReglageUDP
+
+# exemples:
 # ReglageUDP logActivation OFF
 # ReglageUDP envoiUniCast 192.168.0.43 Salut Ca gaz ! OU ReglageUDP envoiUniCast 192.168.4.3 Salut Ca gaz !
 # ReglageUDP envoiMultiCast Salut Ca gaz ! OU ReglageUDP envoiMultiCast 192.168.4.3 Salut Ca gaz !
@@ -140,6 +198,9 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
     import mqtt
     import persist
     import gestionFileFolder
+    import diversFonctions
+
+    if diversFonctions.traiteAide("ReglageUDP", payload, udpFonctions.aideReglageUDP, true)    return    end
 
     var fonction = false
     var parametres = []
@@ -188,17 +249,22 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
         reponse_cmnd["ReglageUDP"]["envoiMessage"] = str(parametres[1])
     # Envoi de messages UDP MultiCast pour test
     elif string.toupper(fonction) == string.toupper("envoiMultiCast")
+        # Message = tous les mots apres la sous-commande (2026-10-04 : parametres[0] + " " +
+        # parametres[1] levait une exception pour un message d'un seul mot)
+        var message = parametres.concat(" ")
+        if (message == "")
+            reponse_cmnd["ReglageUDP"]["erreur"] = "message absent : ReglageUDP envoiMultiCast <message>"
         # Esclave RangeExtender (id > 0)
-        if (serveur["rangeExtender"].find("activation", "OFF") == "ON" && serveur["udp"]["id"] > 0)
-            udpFonctions.envoiUDP("MultiCast", "", parametres[0] + " " + parametres[1])
-            udpFonctions.log(string.format("ReglageUDP: Données UDP MultiCast envoyées >>> %s", parametres[0] + " " + parametres[1]), LOG_LEVEL_DEBUG)
+        elif (serveur["rangeExtender"].find("activation", "OFF") == "ON" && serveur["udp"]["id"] > 0)
+            udpFonctions.envoiUDP("MultiCast", "", message)
+            udpFonctions.log(string.format("ReglageUDP: Données UDP MultiCast envoyées >>> %s", message), LOG_LEVEL_DEBUG)
         # Maitre RangeExtender (id == 0)
         elif (serveur["rangeExtender"].find("activation", "OFF") == "ON" && serveur["udp"]["id"] == 0)
-            udpFonctions.envoiUDP("MultiCast", "192.168.4.1", parametres[0] + " " + parametres[1])
-            udpFonctions.log(string.format("ReglageUDP: Données UDP MultiCast envoyées >>> %s", parametres[0] + " " + parametres[1]), LOG_LEVEL_DEBUG)
+            udpFonctions.envoiUDP("MultiCast", "192.168.4.1", message)
+            udpFonctions.log(string.format("ReglageUDP: Données UDP MultiCast envoyées >>> %s", message), LOG_LEVEL_DEBUG)
         end
         
-        reponse_cmnd["ReglageUDP"]["envoiMessage"] = str(parametres[1])
+        reponse_cmnd["ReglageUDP"]["envoiMessage"] = message
     # Force l'esclave à envoyer ses paramètres au maitre en UniCast UDP
     elif (string.toupper(fonction) == string.toupper("forceEnvoiParams") && serveur["udp"]["id"] > 0)
         try

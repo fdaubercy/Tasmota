@@ -15,6 +15,26 @@ garageFonctions.log = def(msg, levelDebug)
     end
 end
 
+# Aide de la commande ReglageGarage, appelee SEULEMENT par diversFonctions.traiteAide :
+# sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
+garageFonctions.aideReglageGarage = def(sujet)
+    import string
+    if (sujet == nil)
+        return [
+            ["logActivation", "logActivation <ON|OFF>", "active ou desactive les logs du module garage"]
+        ]
+    end
+    sujet = string.toupper(sujet)
+    if (sujet == "LOGACTIVATION")
+        return ["Parametre : ON ou OFF (1 = ON, 0 = OFF).",
+                "Effet : active ou coupe les logs du module garage, memorise dans modules garage debug",
+                "        puis sauvegarde (persist.save). Parametre absent : ignore.",
+                "        La reponse indique l'etat courant (logActivated=...).",
+                "Exemple : ReglageGarage logActivation ON"]
+    end
+    return nil
+end
+
 #- Exemples: 
     ReglageGarage logActivation OFF   => Active ou désactive les logs du module
 -#
@@ -22,6 +42,9 @@ garageFonctions.reglageGarage = def(cmd, idx, payload, payload_json)
     import string
     import json
     import persist
+    import diversFonctions
+    if diversFonctions.traiteAide("ReglageGarage", payload, garageFonctions.aideReglageGarage, true)    return    end
+
 
     var fonction = false
     var parametres = []

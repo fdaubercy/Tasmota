@@ -29,6 +29,28 @@ def vrFonctions_log(msg, levelDebug)
 end
 vrFonctions.log = vrFonctions_log
 
+# Aide de la commande ReglageVolets, appelee SEULEMENT par diversFonctions.traiteAide :
+# sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
+def vrFonctions_aideReglageVolets(sujet)
+    import string
+    if (sujet == nil)
+        return [
+            ["logActivation", "logActivation <ON|OFF>", "active ou desactive les logs du module volets roulants"]
+        ]
+    end
+    sujet = string.toupper(sujet)
+    if (sujet == "LOGACTIVATION")
+        return ["Parametre : ON ou OFF (1 = ON, 0 = OFF).",
+                "Effet : active ou coupe les logs du module volets roulants,",
+                "        memorise dans drivers voletRoulants debug (persist)",
+                "        puis sauvegarde (persist.save). Parametre absent : ignore.",
+                "        La reponse indique l'etat courant (logActivated=...).",
+                "Exemple : ReglageVolets logActivation ON"]
+    end
+    return nil
+end
+vrFonctions.aideReglageVolets = vrFonctions_aideReglageVolets
+
 #- exemples: 
     ReglageVolets logActivation OFF
 -#
@@ -36,9 +58,12 @@ def vrFonctions_reglageVolets(cmd, idx, payload, payload_json)
     import string
     import json
     import persist
+    import diversFonctions
+    if diversFonctions.traiteAide("ReglageVolets", payload, vrFonctions.aideReglageVolets, true)    return    end
+
 
     var fonction = false
-    var parametres = false
+    var parametres = []                # liste vide (et non false) : parametres.size() plus bas
     var reponse_cmnd = "reglageVolets: "
     
     # Test   

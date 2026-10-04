@@ -514,6 +514,41 @@ def globalFonctions_modifEtatRelai(moduleCapteur, idRelai, typeOrdre, etat, bool
 end
 globalFonctions.modifEtatRelai = globalFonctions_modifEtatRelai
 
+# Aide de la commande ReglageGlobal, appelee SEULEMENT par diversFonctions.traiteAide :
+# sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
+def globalFonctions_aideReglageGlobal(sujet)
+    import string
+    if (sujet == nil)
+        return [
+            ["afficheMemoire", "afficheMemoire", "affiche l'etat de la memoire dans les logs"],
+            ["nbLogsFiles", "nbLogsFiles <n>", "regle le nombre de fichiers de logs (FileLog), sauvegarde"],
+            ["logLevel", "logLevel <0..4>", "regle le niveau de log serie et web (SerialLog/WebLog), sauvegarde"]
+        ]
+    end
+    sujet = string.toupper(sujet)
+    if (sujet == "AFFICHEMEMOIRE")
+        return ["Parametre : aucun.",
+                "Effet : ecrit dans les logs (niveau debug) l'espace programme utilise, la PSRAM",
+                "        utilisee (si presente) et le heap libre. Rien n'est sauvegarde.",
+                "Exemple : ReglageGlobal afficheMemoire"]
+    end
+    if (sujet == "NBLOGSFILES")
+        return ["Parametre : entier, nombre de fichiers de logs (commande Tasmota FileLog).",
+                "Effet : applique 'FileLog <n>' puis memorise la valeur (diverses logs nbLogsFiles)",
+                "        et sauvegarde (persist.save). Parametre absent ou non entier : ignore.",
+                "Exemple : ReglageGlobal nbLogsFiles 14"]
+    end
+    if (sujet == "LOGLEVEL")
+        return ["Parametre : entier de 0 a 4 (niveaux de SerialLog et WebLog de Tasmota).",
+                "Effet : applique 'SerialLog <n>' et 'WebLog <n>' puis memorise le niveau",
+                "        (diverses logs level) et sauvegarde (persist.save).",
+                "        Parametre absent ou non entier : ignore.",
+                "Exemple : ReglageGlobal logLevel 3"]
+    end
+    return nil
+end
+globalFonctions.aideReglageGlobal = globalFonctions_aideReglageGlobal
+
 # exemples: 
 # ReglageGlobal afficheMemoire
 # ReglageGlobal nbLogsFiles 14
@@ -524,6 +559,9 @@ def globalFonctions_reglageGlobal(cmd, idx, payload, payload_json)
     import mqtt
     import gestionFileFolder
 	import persist
+    import diversFonctions
+    if diversFonctions.traiteAide("ReglageGlobal", payload, globalFonctions.aideReglageGlobal, true)    return    end
+
 
     var fonction = false
     var parametres = []

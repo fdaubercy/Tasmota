@@ -318,6 +318,9 @@ print("=== 7. reglageSlaveModBus logActivation : chemin du persist ===")
 class SelfStub
   var DEBUG
   def log(m, l) end
+  # Aide contextuelle (2026-10-04) : delegue a la VRAIE methode, pour que traiteAide
+  # reconnaisse 'logActivation' comme une sous-commande connue
+  def aideReglageSlaveModBus(s) return modBus_TasmotaSlaveModBus.MODBUS_TASMOTA_SLAVE.aideReglageSlaveModBus(self, s) end
 end
 import persist
 sauveDrivers = drivers

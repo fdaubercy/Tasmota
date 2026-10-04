@@ -220,7 +220,84 @@ def modbusFonctions_configModbusByJson()
 end
 modbusFonctions.configModbusByJson = modbusFonctions_configModbusByJson
 
-#- exemples: 
+# Aide de la commande ReglageModbus, appelee SEULEMENT par diversFonctions.traiteAide :
+# sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
+def modbusFonctions_aideReglageModbus(sujet)
+    import string
+    if (sujet == nil)
+        return [
+            ["logActivation", "logActivation <ON|OFF|1|0>", "active/coupe les logs de debug ModBus (sauve dans le persist)"],
+            ["envoiMessageUDP", "envoiMessageUDP <IP> <message>", "test : envoie le message en UDP unicast a l'IP"],
+            ["envoiMessagTCP", "envoiMessagTCP <IP> <message>", "test : ouvre une connexion TCP et y ecrit le message"],
+            ["BaudrateModbus", "BaudrateModbus <debit>", "regle le debit du bus (commande Tasmota ModbusBaudrate)"],
+            ["RecupereBaudrateConn16channels", "RecupereBaudrateConn16channels <id>", "lit le code de debit de la carte 16 relais"],
+            ["ReglageBaudrateConn16channels", "ReglageBaudrateConn16channels <id> <debit|usine>", "ecrit le debit de la carte 16 relais"],
+            ["TesteDebitConn16channels", "TesteDebitConn16channels <id> [debit]", "teste la carte 16 relais a un debit donne, puis revient au bus"],
+            ["ActivationReponseCMD", "ActivationReponseCMD <ON|OFF|1|0>", "(des)active la reponse de l'esclave aux commandes ModBus"],
+            ["ImAlive", "ImAlive <ON|OFF|1|0>", "INTERNE : force le maitre a connecter ses clients ModBus TCP"]
+        ]
+    end
+    sujet = string.toupper(sujet)
+    if (sujet == "LOGACTIVATION")
+        return ["Parametre : ON ou 1 = logs de debug ModBus actifs ; OFF ou 0 = coupes.",
+                "Effet : change l'etat en memoire et le sauve (persist drivers.ModBus.debug).",
+                "Exemple : ReglageModbus logActivation ON"]
+    elif (sujet == "ENVOIMESSAGEUDP")
+        return ["Parametres : <IP> <message> (le message peut contenir des espaces).",
+                "Effet : envoie le message en UDP unicast a <IP>, sur le port UDP du module",
+                "(udpFonctions.envoiUDP). Exige le service UDP actif (serveur.udp.activation ON),",
+                "sinon erreur dans la reponse. Rien n'est sauvegarde. Commande de test.",
+                "Exemple : ReglageModbus envoiMessageUDP 192.168.4.2 TEST"]
+    elif (sujet == "ENVOIMESSAGTCP")
+        return ["Nom exact : envoiMessagTCP (sans 'e' avant TCP, tel que teste dans le code).",
+                "Parametres : <IP> <message> (le message peut contenir des espaces).",
+                "Effet : connecte le client TCP du module a <IP> (port du serveur TCP du module),",
+                "attend 250 ms puis y ecrit <message>. Rien n'est sauvegarde. Commande de test.",
+                "Maitre seulement (tcp.id 0, service TCP actif) ; sinon erreur dans la reponse.",
+                "Exemple : ReglageModbus envoiMessagTCP 192.168.4.2 TEST"]
+    elif (sujet == "BAUDRATEMODBUS")
+        return ["Parametre : <debit> en bauds (ex. 9600, 19200).",
+                "Effet : execute la commande Tasmota ModbusBaudrate <debit>. Non sauvegarde ici :",
+                "le debit du persist (drivers.ModBus.debit) est reapplique au demarrage.",
+                "Exemple : ReglageModbus BaudrateModbus 9600"]
+    elif (sujet == "RECUPEREBAUDRATECONN16CHANNELS")
+        return ["Parametre : <id> = adresse ModBus de la carte 16 relais (ex. 0x01 ou 1).",
+                "Effet : envoie directement (hors file) une lecture du registre 0x00FE ;",
+                "la reponse arrive dans ModbusReceived (code de debit, voir ci-dessous).",
+                "Codes de debit : 0=1200, 1=2400, 2=4800, 3=9600, 4=19200 bauds.",
+                "Exemple : ReglageModbus RecupereBaudrateConn16channels 0x01"]
+    elif (sujet == "REGLAGEBAUDRATECONN16CHANNELS")
+        return ["Parametres : <id> <debit|usine> ; id de 1 a 247 ; debit = 1200, 2400, 4800, 9600, 19200 ;",
+                "'usine' = code 5, retour usine (9600). Tout autre debit est refuse.",
+                "Reserve au maitre ModBus serie. Ecrit le registre 0x00FE (fonction 0x06) via la file.",
+                "Le nouveau debit n'est effectif qu'apres coupure d'alimentation de la carte, puis",
+                "le bus doit passer au meme debit (BaudrateModbus). Reglage manuel, une seule carte.",
+                "Verification : TesteDebitConn16channels <id> <nouveau debit>.",
+                "Exemple : ReglageModbus ReglageBaudrateConn16channels 0x01 19200"]
+    elif (sujet == "TESTEDEBITCONN16CHANNELS")
+        return ["Parametres : <id> [debit] ; debit par defaut = debit du bus (drivers.ModBus.debit).",
+                "Reserve au maitre ModBus serie. Suspend la file, passe le bus au <debit>, lit le",
+                "registre de debit de l'esclave <id> puis l'adresse de la carte (diffusion 255,",
+                "une seule carte sur le bus), journalise en clair, puis remet le debit du bus.",
+                "Dure quelques secondes ; refuse si un test est deja en cours.",
+                "Exemple : ReglageModbus TesteDebitConn16channels 1 9600"]
+    elif (sujet == "ACTIVATIONREPONSECMD")
+        return ["Parametre : ON ou 1 = l'esclave repond aux commandes ModBus ; OFF ou 0 = muet.",
+                "Effet : sauve drivers.ModBus.activationReponseCMD dans le persist.",
+                "Exemple : ReglageModbus ActivationReponseCMD OFF"]
+    elif (sujet == "IMALIVE")
+        return ["INTERNE : envoyee par les esclaves ModBus au maitre (UDP/MQTT) au demarrage,",
+                "et par le maitre a lui-meme au boot ; rarement tapee a la main.",
+                "Parametre : ON ou 1 ; OFF ou 0 = ne fait rien. Sans effet hors maitre (id 0).",
+                "Effet : si ModBus TCP et serveur TCP sont actifs, cree/connecte un client TCP",
+                "par esclave (id 1 a 5) publiant une adresse IP dans la table discovery.",
+                "Exemple : ReglageModbus ImAlive ON"]
+    end
+    return nil
+end
+modbusFonctions.aideReglageModbus = modbusFonctions_aideReglageModbus
+
+#- exemples:
     ReglageModbus logActivation OFF
     ReglageModbus envoiMessageUDP 0x01 TEST
     ReglageModbus envoiMessageTCP 192.168.4.2 TEST
@@ -239,9 +316,13 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
     import persist
     import gestionFileFolder
     import tcpFonctions
+    import diversFonctions
+
+    # Aide en console : ReglageModbus help | help <sous-commande> | sous-commande inconnue
+    if diversFonctions.traiteAide("ReglageModbus", payload, modbusFonctions.aideReglageModbus, true)    return    end
 
     var fonction = false
-    var parametres = false
+    var parametres = []                # liste vide (et non false) : parametres.size() plus bas
     var reponse_cmnd = "ReglageModbus: "
     
     # Test   
@@ -277,18 +358,46 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
         end
     # Envoi de messages UDP pour test
     elif (string.toupper(fonction) == string.toupper("envoiMessageUDP"))
-        modbusFonctions.log(string.format("REGLAGE_MODBUS: Données ModBus UDP envoyées à %s >>> %s", parametres[0], parametres[1]), LOG_LEVEL_DEBUG)
-        # modbusFonctions.envoiMsgModbus = def(parametres[1])
+        # Pendant UDP de envoiMessagTCP (2026-10-04) : n'envoyait rien (envoi commente) et lisait
+        # parametres[1], qui n'existe jamais (split en 2 : parametres = [<tout le reste>]).
+        var reste = (parametres.size() > 0 ? parametres[0] : "")
+        var i = string.find(reste, " ")
+        if (i <= 0)
+            reponse_cmnd += "erreur=syntaxe : envoiMessageUDP <IP> <message>, "
+        elif (serveur.find("udp", {}).find("activation", "OFF") != "ON")
+            reponse_cmnd += "erreur=service UDP inactif (serveur.udp.activation), "
+        else
+            import udpFonctions
+            udpFonctions.envoiUDP("UniCast", reste[0 .. i - 1], reste[i + 1 ..])
+            modbusFonctions.log(string.format("REGLAGE_MODBUS: Données UDP envoyées à %s >>> %s", reste[0 .. i - 1], reste[i + 1 ..]), LOG_LEVEL_DEBUG)
+            reponse_cmnd += string.format("envoiUDP=%s, ", reste[0 .. i - 1])
+        end
     # Envoi de messages TCP pour test
     elif (string.toupper(fonction) == string.toupper("envoiMessagTCP"))
-        modbusFonctions.log(string.format("REGLAGE_MODBUS: Ouverture connexion UDP sur le port %i: %s", 
-                                            tcpFonctions.etat()["port"], tcpFonctions.etat()["client"].connect(parametres[0], tcpFonctions.etat()["port"]) ? "OK" : "Echec"), LOG_LEVEL_DEBUG_PLUS)
+        # 2026-10-04 : lisait parametres[1], qui n'existe jamais (split en 2 : parametres =
+        # [<tout le reste>]), et connectait a "<IP> <message>" -> exception a chaque appel.
+        var reste = (parametres.size() > 0 ? parametres[0] : "")
+        var i = string.find(reste, " ")
+        var client = tcpFonctions.etat()["client"]
+        if (i <= 0)
+            reponse_cmnd += "erreur=syntaxe : envoiMessagTCP <IP> <message>, "
+        elif (client == nil)
+            reponse_cmnd += "erreur=pas de client TCP (maitre seulement, service TCP actif), "
+        else
+            var ip = reste[0 .. i - 1]
+            var message = reste[i + 1 ..]
+            modbusFonctions.log(string.format("REGLAGE_MODBUS: Ouverture connexion TCP sur le port %i: %s",
+                                                tcpFonctions.etat()["port"], client.connect(ip, tcpFonctions.etat()["port"]) ? "OK" : "Echec"), LOG_LEVEL_DEBUG_PLUS)
 
-        # Si le client est connecté & socket disponible
-        if (tcpFonctions.etat()["client"].listening() && tcpFonctions.etat()["client"].connected())
-            tasmota.delay(250)
-            modbusFonctions.log(string.format("REGLAGE_MODBUS: Données ModBus TCP envoyées à %s >>> %s", parametres[0], parametres[1]), LOG_LEVEL_DEBUG)
-            tcpFonctions.etat()["client"].write(parametres[1])
+            # Si le client est connecté & socket disponible
+            if (client.listening() && client.connected())
+                tasmota.delay(250)
+                modbusFonctions.log(string.format("REGLAGE_MODBUS: Données ModBus TCP envoyées à %s >>> %s", ip, message), LOG_LEVEL_DEBUG)
+                client.write(message)
+                reponse_cmnd += string.format("envoiTCP=%s, ", ip)
+            else
+                reponse_cmnd += string.format("erreur=connexion TCP a %s impossible, ", ip)
+            end
         end
     # Régle BaudRate de la liaison ModBus ModBus
     elif (string.toupper(fonction) == string.toupper("BaudrateModbus"))
