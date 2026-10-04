@@ -6,6 +6,7 @@
 #        entree racine purgee, message sans MAC ignore.
 #   4.   Page /discovery : une entree sans bloc 'config', ou un ipMaitre vide, ne tronque plus la page.
 #   5.   RoutageRangeExtender : une fiche MAC sans 'lwt' ou sans bloc 'rangeExtender' ne leve plus.
+#   5 bis. redirige : RgxPort envoye une seule fois par port/IP (doublons de la table NAPT lwIP).
 #   6.   Boutons RangeExtender : 'lwt'/'config'/'sensors' ne sont plus pris pour des fiches.
 #   7.   Bout en bout : l'esclave ecrit sa fiche, l'envoie en UDP (forceEnvoiParams) et en MQTT ;
 #        le maitre la range ; chaque champ lu par un script consommateur (CONTRAT) doit y etre.
@@ -40,8 +41,10 @@ class TasmotaStub
   var cmds                             # commandes passees a tasmota.cmd
   var rgxClients                       # reponse de RgxClients, pilotee par le test
   var statusNet                        # reponse de Status 5, pilotee par le test (role joue)
+  var rgxRefus                         # true : RgxPort repond "ERROR" (table NAPT pleine)
   def init()
     self.cmds = []
+    self.rgxRefus = false
     self.rgxClients = {}
     self.statusNet = {"IPAddress": "192.168.0.43", "Mac": "AA:AA:AA:AA:AA:00", "Hostname": "SERVEUR-GARAGE"}
   end
@@ -51,6 +54,8 @@ class TasmotaStub
     self.cmds.push(c)
     if c == "Status 5"      return {"StatusNET": self.statusNet}    end
     if c == "RgxClients"    return {"RgxClients": self.rgxClients}    end
+    # RgxPort repond en texte, pas en JSON : tasmota.cmd renvoie alors la chaine telle quelle
+    if string.find(c, "RgxPort") == 0    return self.rgxRefus ? "ERROR" : "OK TCP 192.168.0.43:8081 -> 192.168.4.2:80"    end
     return {}
   end
   def resp_cmnd(x) end
@@ -215,6 +220,7 @@ verifie("routage ne leve pas (fiche sans lwt)", "OK", essaie(def () rangeExtende
 verifie("aucun routage sans lwt Online", 0, size(tasmota.cmds))
 init5[CLE_CUVE]["lwt"] = "Online"
 gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(init5)}
+rangeExtenderFonctions.etat()["redirections"] = {}   # deja posee par la page /discovery (section 4)
 tasmota.cmds = []
 essaie(def () rangeExtenderFonctions.routageRangeExtender("RoutageRangeExtender", 2, "", nil) end)
 # NB : list.find(x) cherche la VALEUR x, pas l'indice -> acces par [0]
@@ -225,6 +231,29 @@ gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(init5)}
 tasmota.cmds = []
 verifie("esclave sans bloc rangeExtender : sans exception", "OK", essaie(def () rangeExtenderFonctions.routageRangeExtender("RoutageRangeExtender", 2, "", nil) end))
 verifie("esclave sans bloc rangeExtender : pas de routage", 0, size(tasmota.cmds))
+
+print("")
+print("=== 5 bis. Redirection NAPT posee une seule fois (doublons lwIP) ===")
+rangeExtenderFonctions.etat()["redirections"] = {}
+tasmota.cmds = []
+verifie("1re redirection posee", true, rangeExtenderFonctions.redirige(8081, "192.168.4.2"))
+verifie("RgxPort envoye une fois", 1, size(tasmota.cmds))
+verifie("2e appel, meme IP : en place", true, rangeExtenderFonctions.redirige(8081, "192.168.4.2"))
+verifie("2e appel : pas de RgxPort (pas de doublon)", 1, size(tasmota.cmds))
+verifie("port en chaine : reconnu comme deja pose", true, rangeExtenderFonctions.redirige("8081", "192.168.4.2"))
+verifie("port en chaine : pas de RgxPort", 1, size(tasmota.cmds))
+verifie("IP changee : redirection reposee", true, rangeExtenderFonctions.redirige(8081, "192.168.4.3"))
+verifie("IP changee : RgxPort envoye", 2, size(tasmota.cmds))
+tasmota.rgxRefus = true
+journal = []
+verifie("table pleine : redirection refusee", false, rangeExtenderFonctions.redirige(8082, "192.168.4.4"))
+verifie("refus non memorise", nil, rangeExtenderFonctions.etat()["redirections"].find(8082))
+verifie("refus journalise", true, journalise("REFUSEE"))
+tasmota.rgxRefus = false
+tasmota.cmds = []
+verifie("apres un refus : nouvel essai au prochain affichage", true, rangeExtenderFonctions.redirige(8082, "192.168.4.4"))
+verifie("apres un refus : RgxPort renvoye", 1, size(tasmota.cmds))
+rangeExtenderFonctions.etat()["redirections"] = {}   # section 6 verifie un RgxPort neuf
 
 print("")
 print("=== 6. Boutons RangeExtender : fiche MAC complete (config, sensors, lwt) ===")

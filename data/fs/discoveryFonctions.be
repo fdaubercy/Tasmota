@@ -599,8 +599,11 @@ def discoveryFonctions_affichePageDiscovery()
 
                                 # Active le routage NAPT si pas encore fait (si id == 0, c'est le maître)
                                 if (serveur["rangeExtender"].find("id", 99) == 0)
+                                    import rangeExtenderFonctions
                                     discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * Active le routage NAPT vers le module {titre:s} ({jsonDiscovery[item][role]["IPAddress"]:s}) sur le port {portLocal:d} !', LOG_LEVEL_DEBUG)
-                                    tasmota.cmd(f'RgxPort tcp, {portLocal:d}, {jsonDiscovery[item][role]["IPAddress"]:s}, 80', boolMute)
+                                    # Par rangeExtenderFonctions.redirige (2026-10-04) : un RgxPort a chaque affichage
+                                    # de cette page creait un doublon dans la table NAPT de 10 cases du maitre
+                                    rangeExtenderFonctions.redirige(portLocal, jsonDiscovery[item][role]["IPAddress"])
                                 end
                             end
                         end

@@ -10,7 +10,8 @@ def rangeExtenderFonctions_etat()
     import global
     if (global._etatRangeExtenderFonctions == nil)
         global._etatRangeExtenderFonctions = {
-            "DEBUG": nil              # 'ON'/'OFF', lu une fois depuis serveur['rangeExtender']['debug']
+            "DEBUG": nil,             # 'ON'/'OFF', lu une fois depuis serveur['rangeExtender']['debug']
+            "redirections": {}        # maitre : redirections NAPT deja posees, port -> IP (voir redirige)
         }
     end
     return global._etatRangeExtenderFonctions
@@ -28,6 +29,38 @@ def rangeExtenderFonctions_log(msg, levelDebug)
     end
 end
 rangeExtenderFonctions.log = rangeExtenderFonctions_log
+
+# Pose la redirection NAPT <port du maitre> -> <ip>:80 (RgxPort) SAUF si elle est deja en place.
+# Pourquoi (2026-10-04) : ip_portmap_add (lwIP, ip4_napt.c:632) met a jour une redirection
+# existante SANS s'arreter, puis en cree un DOUBLON dans la premiere case libre. La table
+# compte 10 cases (NAPT_PORT, xdrv_58_range_extender.ino:62), allouees une fois au demarrage :
+# rappeler RgxPort a chaque affichage de la page d'accueil la remplissait (5 affichages avec
+# 2 esclaves) ; ensuite, plus AUCUN nouvel esclave ne pouvait etre redirige jusqu'au
+# redemarrage du maitre, sans message. Les redirections posees sont memorisees (port -> IP) ;
+# la table lwIP et cette memoire repartent toutes deux de zero au redemarrage.
+# Retourne true si la redirection est en place.
+def rangeExtenderFonctions_redirige(port, ip)
+    import string
+
+    var etat = rangeExtenderFonctions.etat()
+    if (etat.find("redirections") == nil)    etat["redirections"] = {}    end
+    var poses = etat["redirections"]
+    port = int(port)
+    ip = str(ip)
+    if (poses.find(port) == ip)    return true    end           # deja posee, meme IP : rien a faire
+
+    # RgxPort repond "OK TCP ..." si la redirection est posee, "ERROR" sinon (table pleine...)
+    var reponse = tasmota.cmd(string.format("RgxPort tcp, %i, %s, 80", port, ip), boolMute)
+    if (reponse != nil && string.find(str(reponse), "OK") >= 0)
+        poses[port] = ip
+        rangeExtenderFonctions.log(string.format("RANGE_EXTENDER: redirection NAPT %i -> %s:80 posee", port, ip), LOG_LEVEL_DEBUG)
+        return true
+    end
+    log(string.format("RANGE_EXTENDER: redirection NAPT %i -> %s:80 REFUSEE (table de 10 redirections pleine ? redemarrer le maitre)",
+                      port, ip), LOG_LEVEL_ERREUR)
+    return false
+end
+rangeExtenderFonctions.redirige = rangeExtenderFonctions_redirige
 
 # Réalilse le routage
 # Active RgxNAPT: RoutageRangeExtender
@@ -80,7 +113,8 @@ def rangeExtenderFonctions_routageRangeExtender(cmd, idx, payload, payload_json)
                     rangeExtenderFonctions.log("ROUTAGE_RANGE_EXTENDER: Paramètre le routage NAPT du module " + paramDiscovery[item][cle]["nom"], LOG_LEVEL_DEBUG)
 
                     reponse_cmnd["RoutageRangeExtender"]["commande"] = string.format("RgxPort tcp, %i, %s, 80", int(paramDiscovery[item][cle]["rangeExtender"]["routagePort"]),paramDiscovery[item][cle]["IPAddress"])
-                    tasmota.cmd(reponse_cmnd["RoutageRangeExtender"]["commande"], boolMute)         # ex: RgxPort tcp, 8080, 10.99.0.2, 80
+                    # Une seule fois par port et par IP : voir redirige (doublons de la table lwIP)
+                    rangeExtenderFonctions.redirige(paramDiscovery[item][cle]["rangeExtender"]["routagePort"], paramDiscovery[item][cle]["IPAddress"])
                 end
             end
         end
@@ -294,9 +328,9 @@ def rangeExtenderFonctions_afficheBoutonsModulesEsclaves()
                                 var url = "http://" + serveur["hostname"] + ".local:" + str(routagePort)
                                 var titre = str(paramDiscovery[cle][item].find("nom", item))
 
-                                # Active le routage NAPT si pas encore fait
-                                rangeExtenderFonctions.log(f'RANGE_EXTENDER: Active le routage NAPT vers le module {titre:s} sur le port {routagePort:d} !', LOG_LEVEL_DEBUG)
-                                tasmota.cmd(f'RgxPort tcp, {routagePort:d}, {ipEsclave:s}, 80', boolMute)
+                                # Active le routage NAPT si pas encore fait (redirige ne rappelle pas
+                                # RgxPort pour une redirection deja posee : sinon doublon a chaque affichage)
+                                rangeExtenderFonctions.redirige(routagePort, ipEsclave)
 
                                 # Ouverture de la page dans un nouvel onglet
                                 var btn = "<p></p><button class=\"button bgrn\" id=\"btn_test\" onclick=\"setTimeout(() => {window&#46;open(\'" + url + "\');}, 1000);\">" + titre + "</button>"
