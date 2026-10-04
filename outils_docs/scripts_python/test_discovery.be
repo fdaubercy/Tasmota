@@ -54,7 +54,20 @@ class TasmotaStub
     return {}
   end
   def resp_cmnd(x) end
-  def set_timer(a, b, c) end
+  # Timers en attente : memes regles que tasmota_class.be (set_timer EMPILE, remove_timer
+  # retire tous ceux de cet id)
+  var timers
+  def set_timer(a, b, c)    if self.timers == nil  self.timers = []  end    self.timers.push(c)    end
+  def remove_timer(id)
+    if self.timers == nil    return    end
+    var i = 0
+    while i < size(self.timers)    if self.timers[i] == id  self.timers.remove(i)  else  i += 1  end    end
+  end
+  def nbTimers(id)
+    var n = 0
+    for t: (self.timers == nil ? [] : self.timers)    if t == id  n += 1  end    end
+    return n
+  end
 end
 var tasmota = TasmotaStub()
 var envois = []                        # datagrammes UDP qui seraient partis
@@ -322,6 +335,110 @@ gestionFileFolder.fichiers = {}
 verifie("maitre : reception MQTT discovery", true, essaie(def () discoveryFonctions.mqtt_discovery(pubMQTT[0], 0, pubMQTT[1], nil) end) == "OK")
 t = table()
 verifieContrat("recu par MQTT", t != nil ? champ(t, CLE_CUVE + "/esclave2") : nil)
+
+print("")
+print("=== 8. Fiche perimee sous notre MAC (carte reaffectee maitre -> esclave2) ===")
+# Cas reel du 2026-10-03 : le broker retenait tasmota/discovery/<MAC>/maitre (ancienne
+# identite SERVEUR-RLY-CAVE) ; l'esclave la rangeait et l'annoncait au maitre par ImAlive.
+var ficheMaitrePerimee = {"id": 0, "nom": "Serveur Relais Cave", "typeReglageHeure": "NTP", "adresseMAC": MAC_CUVE}
+var topicPerime = "tasmota/discovery/" + CLE_CUVE + "/maitre"
+def tableAvecPerimee()
+  var t0 = {}
+  t0[CLE_CUVE] = {"maitre": ficheMaitrePerimee, "esclave2": ficheCuve(true)["esclave2"]}
+  gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(t0)}
+end
+
+# --- cote ESCLAVE : il recoit l'ancienne fiche retenue a sa reconnexion MQTT ---
+serveur = {"adresseMAC": MAC_CUVE, "nom": "Capteurs de Cuve", "IP": {"IPAddress": "192.168.4.2"}, "hostname": "CAPTEURS-CUVE",
+           "udp": {"id": 2, "activation": "ON", "debug": "ON"},
+           "rangeExtender": {"activation": "ON", "id": 2, "ipMaitre": "192.168.0.43", "debug": "ON"},
+           "mqtt": {"topic": "jardin/cuve", "groupTopic1": "tasmotas/garage"}, "discovery": {"debug": "ON"}}
+tableAvecPerimee()
+mqtt.publies = []
+verifie("esclave : reception de sa fiche perimee", "OK", essaie(def () discoveryFonctions.mqtt_discovery(topicPerime, 0, json.dump(ficheMaitrePerimee), nil) end))
+verifie("esclave : effacement retenu publie sur le broker", topicPerime + " '' retain=true",
+        size(mqtt.publies) == 1 ? mqtt.publies[0][0] + " '" + mqtt.publies[0][1] + "' retain=" + str(mqtt.publies[0][2]) : str(mqtt.publies))
+t = table()
+verifie("esclave : fiche perimee retiree de discovery.json", false, t[CLE_CUVE].contains("maitre"))
+verifie("esclave : sa fiche actuelle conservee", true, t[CLE_CUVE].contains("esclave2"))
+
+# Il recoit ensuite son propre message d'effacement (abonne a tasmota/discovery/+/#) : rien ne casse
+mqtt.publies = []
+verifie("esclave : reception de l'effacement", "OK", essaie(def () discoveryFonctions.mqtt_discovery(topicPerime, 0, "", nil) end))
+verifie("esclave : pas de nouvelle publication", 0, size(mqtt.publies))
+
+# Sa fiche ACTUELLE n'est jamais effacee
+mqtt.publies = []
+essaie(def () discoveryFonctions.mqtt_discovery("tasmota/discovery/" + CLE_CUVE + "/esclave2", 0, json.dump(ficheCuve(true)["esclave2"]), nil) end)
+verifie("esclave : fiche du role actuel non effacee", 0, size(mqtt.publies))
+verifie("esclave : fiche du role actuel toujours rangee", true, table()[CLE_CUVE].contains("esclave2"))
+
+# Le 'maitre' d'une AUTRE MAC n'est pas perime pour nous
+mqtt.publies = []
+essaie(def () discoveryFonctions.mqtt_discovery("tasmota/discovery/AAAAAAAAAA00/maitre", 0, json.dump({"id": 0, "nom": "Serveur de Garage"}), nil) end)
+verifie("esclave : maitre d'une autre MAC conserve", true, table().find("AAAAAAAAAA00", {}).contains("maitre"))
+verifie("esclave : ... et non efface sur le broker", 0, size(mqtt.publies))
+
+# ImAlive apres nettoyage : annonce la fiche esclave2, plus la fiche perimee
+tableAvecPerimee()
+essaie(def () discoveryFonctions.mqtt_discovery(topicPerime, 0, json.dump(ficheMaitrePerimee), nil) end)
+envois = []
+essaie(def () udpFonctions.reglageUDP("ReglageUDP", 0, "forceEnvoiParams ON", nil) end)
+var msgApres = size(envois) > 0 ? envois[0] : ""
+verifie("esclave : ImAlive porte esclave2 (plus maitre)", true,
+        string.find(msgApres, '"esclave2"') >= 0 && string.find(msgApres, '"maitre"') < 0)
+
+# --- cote MAITRE : il recoit l'effacement et purge sa copie ---
+serveur = {"adresseMAC": "AA:AA:AA:AA:AA:00", "nom": "Serveur de Garage", "IP": {"IPAddress": "192.168.0.43"}, "hostname": "SERVEUR-GARAGE",
+           "udp": {"id": 0, "activation": "ON", "debug": "ON"},
+           "rangeExtender": {"activation": "ON", "id": 0, "debug": "ON"},
+           "mqtt": {"topic": "garage", "groupTopic1": "tasmotas/garage"}, "discovery": {"debug": "ON"}}
+tableAvecPerimee()
+mqtt.publies = []
+verifie("maitre : reception de l'effacement", "OK", essaie(def () discoveryFonctions.mqtt_discovery(topicPerime, 0, "", nil) end))
+t = table()
+verifie("maitre : fiche perimee retiree de sa copie", false, t[CLE_CUVE].contains("maitre"))
+verifie("maitre : fiche esclave2 conservee", true, t[CLE_CUVE].contains("esclave2"))
+verifie("maitre : ne publie rien", 0, size(mqtt.publies))
+
+print("")
+print("=== 9. forceEnvoiParams : une seule chaine de timers ===")
+# Avant : timer sans id -> chaque appel manuel ajoutait une chaine d'envois periodiques.
+serveur = {"adresseMAC": MAC_CUVE, "nom": "Capteurs de Cuve", "IP": {"IPAddress": "192.168.4.2"}, "hostname": "CAPTEURS-CUVE",
+           "udp": {"id": 2, "activation": "ON", "debug": "ON"},
+           "rangeExtender": {"activation": "ON", "id": 2, "ipMaitre": "192.168.0.43", "debug": "ON"},
+           "mqtt": {"topic": "jardin/cuve", "groupTopic1": "tasmotas/garage"}, "discovery": {"debug": "ON"}}
+tasmota.timers = []
+for i: 1 .. 3
+  essaie(def () udpFonctions.reglageUDP("ReglageUDP", 0, "forceEnvoiParams ON", nil) end)
+end
+verifie("3 appels -> 1 seul timer en attente", 1, size(tasmota.timers))
+verifie("... et il porte l'id 'forceEnvoiParams'", 1, tasmota.nbTimers("forceEnvoiParams"))
+
+print("")
+print("=== 10. forceEnvoiParams : n'annonce que le role du persist ===")
+# Sans passer par MQTT (esclave qui n'atteint pas le broker) : la fiche perimee reste dans
+# la table locale. Elle est placee AVANT esclave2 pour que l'ancien code (1re cle) la prenne.
+var tPerimee = {}
+tPerimee[CLE_CUVE] = {"maitre": ficheMaitrePerimee, "esclave2": ficheCuve(true)["esclave2"]}
+gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(tPerimee)}
+envois = []
+essaie(def () udpFonctions.reglageUDP("ReglageUDP", 0, "forceEnvoiParams ON", nil) end)
+var imA = size(envois) > 0 ? envois[0] : ""
+var posJson = string.find(imA, "ImAlive ")
+var ficheEnvoyee = posJson >= 0 ? json.load(imA[posJson + size("ImAlive ") ..]) : nil
+verifie("table avec fiche perimee : 1 ImAlive", 1, size(envois))
+var rolesEnvoyes = []
+if ficheEnvoyee != nil    for k: ficheEnvoyee.keys()    rolesEnvoyes.push(k)    end    end
+verifie("... qui ne porte QUE esclave2", "['esclave2']", str(rolesEnvoyes))
+
+# Sa propre fiche absente : rien n'est envoye (avant : 'ImAlive {}', rejete par le maitre)
+var tSansFiche = {}
+tSansFiche[CLE_CUVE] = {"maitre": ficheMaitrePerimee}
+gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(tSansFiche)}
+envois = []
+essaie(def () udpFonctions.reglageUDP("ReglageUDP", 0, "forceEnvoiParams ON", nil) end)
+verifie("fiche esclave2 absente : aucun ImAlive", 0, size(envois))
 
 print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))

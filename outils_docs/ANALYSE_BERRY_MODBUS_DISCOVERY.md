@@ -317,6 +317,100 @@ chantier en cours n'ait franchi son verrou — `tasks/reprise-chantier-modbus-gr
 impose de **flasher et observer** les 3 modules garage avant d'écrire du nouveau code,
 sans quoi tout échec devient indécidable (règle 7 de `tasks/lessons.md`).
 
+## 2.6 Cycle `forceEnvoiParams` → `ImAlive` (état au 2026-10-03)
+
+> Résumé également porté en tête de `data/fs/udpFonctions.be`. Depuis le 2026-09-30, la voie D
+> (§2.1) écrit la forme canonique `{MAC: {role: …}}` : le défaut 3 ci-dessus est corrigé.
+
+**En une phrase** : toutes les `telePeriod` (300 s), un **esclave** (`serveur.udp.id > 0`) envoie
+par UDP sa « fiche d'identité » au **maître** (id 0) ; le maître la range dans
+`/json/discovery.json`, lui renvoie l'heure et son IP, puis s'en sert pour le routage NAPT, la
+page `/discovery` et ModBus.
+
+```
+ESCLAVE (ex. cuve, id 2)                                MAITRE (id 0)
+System#Boot ─► ReglageUDP forceEnvoiParams ON
+   1. lit SA fiche discovery.json[sa MAC]["esclave"+id]
+   2. "tele/<topic>/ReglageUDP ImAlive {"esclaveN":{...}}"
+   3. multicast 224.3.0.1:4000  ─────────────────────►  CONTROLE_UDP.every_100ms → lireUDP
+   4. ré-arme le timer "forceEnvoiParams"                 → tasmota.cmd("ReglageUDP ImAlive {...}")
+                                                          → discovery.json[MAC][role] = fiche ; [MAC]["lwt"] = "Online"
+   Time <ts>             ◄── multicast "Timestamp" ───  si la fiche reçue a typeReglageHeure == "UDP"
+   persist ipMaitre      ◄── multicast "ipMaitre"  ───  (topic tele/<groupTopic1>/ReglageUDP …)
+```
+
+### Côté esclave
+
+**Déclenchement** : `udpFonctions.changementEtatDemarrage` à `System#Boot` (si `id > 0`), puis un
+timer **nommé** `"forceEnvoiParams"`, ré-armé à chaque passage. `remove_timer` précède `set_timer`,
+car `set_timer` **empile** toujours (`tasmota_class.be:275`) : avant le 2026-10-03, chaque
+`ReglageUDP forceEnvoiParams ON` tapé à la main ajoutait une chaîne d'envois périodiques.
+
+**Collecte**, en deux temps :
+
+1. La fiche est **construite à la connexion Wi-Fi** par `discoveryFonctions.changementEtatDemarrage`,
+   depuis le `_persist.json` et `Status 5`, puis rangée sous `discovery.json[MAC]["esclaveN"]` :
+
+   | Champ | Origine |
+   |---|---|
+   | `id`, `nom`, `topic`, `groupTopic` | `serveur.udp.id`, `serveur.nom`, `serveur.mqtt` |
+   | `IPAddress`, `adresseMAC`, `host` | `Status 5` (IP réelle, MAC, hostname) |
+   | `typeReglageHeure` | `diverses.fuseauHoraire` |
+   | `rangeExtender{activation, id, routagePort, ipMaitre}` | `serveur.rangeExtender` (`routagePort = 8080 + id − 1`) |
+   | `ModBus{id, Serial{…}, TCP{IPAddress, port}, UDP{…}}` | `drivers.ModBus` |
+
+2. Au moment de l'envoi, `forceEnvoiParams` relit `discovery.json[sa MAC]` et n'envoie **que** la clé
+   `"esclave" + serveur.udp.id` — même règle que `discoveryFonctions.roleLocal()`. Fiche absente :
+   rien n'est envoyé (avant : `ImAlive {}`, rejeté par le maître).
+
+**Envoi** : `envoiUDP("MultiCast", …)` vers `224.3.0.1:4000`, message au format d'un topic MQTT :
+`tele/<topic>/ReglageUDP ImAlive <json>`.
+
+### Côté maître
+
+1. **Réception** : `CONTROLE_UDP.every_100ms()` (`controleUDP.be`) interroge les sockets.
+2. **Découpage** : `lireUDP` coupe au premier espace → préfixe `tele`, topic, commande
+   `ReglageUDP ImAlive {…}`. Le maître accepte **tous** les topics ; un esclave, seulement son
+   `topic` ou son `groupTopic1`.
+3. **Exécution** : `tasmota.cmd(commande)` — comme si `ReglageUDP ImAlive {…}` était tapé en console.
+4. **Branche `ImAlive`** de `reglageUDP` :
+   - recolle le JSON (coupé aux espaces par le découpage de la commande) ;
+   - exige **une seule** fiche portant une `adresseMAC`, sinon ignore ;
+   - écrit `discovery.json[MAC][rôle] = fiche` et `discovery.json[MAC]["lwt"] = "Online"`. Le rôle
+     annoncé **n'est pas confronté à l'`id`** ;
+   - si `typeReglageHeure == "UDP"` (les esclaves ; un maître est en `NTP` ou `RTC`) : répond en
+     multicast `Timestamp <utc>` (l'esclave fait `Time <ts>`) et `ipMaitre <IP>` (l'esclave
+     l'enregistre dans `serveur.rangeExtender.ipMaitre` et sauvegarde son persist).
+5. **Contrepoids** : `resetClientsConnectes`, une fois après `telePeriod` au démarrage du maître,
+   passe tout le monde à `Offline` ; les ImAlive (et le LWT MQTT) remettent `Online`.
+
+### Ce que le maître fait de la table
+
+| Fonction | Ce qu'elle lit dans la fiche | Ce qu'elle en fait |
+|---|---|---|
+| Boutons Range Extender (page d'accueil, `rangeExtenderFonctions`) | `adresseMAC` (croisée avec `RgxClients`), `lwt`, `rangeExtender.routagePort`, `IPAddress`, `nom` | pour chaque esclave client du point d'accès et `Online` : `RgxPort tcp, <routagePort>, <IP esclave>, 80` + bouton vers `http://<maître>.local:<routagePort>` |
+| Commande `RoutageRangeExtender` | mêmes champs, rôle `maitre` exclu | crée les mêmes `RgxPort` sans passer par la page |
+| Page `/discovery` (`discoveryFonctions.affichePageDiscovery`) | `rangeExtender.{activation, id, routagePort, ipMaitre}` | bouton gris des esclaves Range Extender, adresse et port calculés depuis `ipMaitre` |
+| `modbusFonctions.fichesModbus()` | fiches des **autres** MAC du même `groupTopic` portant un bloc `ModBus` | base des deux lignes suivantes |
+| ↳ ModBus UDP (`envoiMsgModbusUDP`) | `ModBus.id` (= 1er octet de la trame), `IPAddress` | IP de l'esclave destinataire |
+| ↳ ModBus TCP (`ReglageModbus ImAlive ON`) | `ModBus.id`, `ModBus.TCP.IPAddress` | un client TCP par esclave (id 1 à 5) |
+
+### Pièges connus
+
+- **Carte réaffectée (constaté le 2026-10-03)** : la carte `F0F5BD436BB0`, ex-`SERVEUR-RLY-CAVE`
+  (maître) devenue `CAPTEURS-CUVE` (esclave2), avait sur le broker une fiche `…/maitre` **retenue**.
+  Reçue à chaque reconnexion MQTT, elle était rangée dans son `discovery.json`, et l'ancien
+  `forceEnvoiParams` (première clé `maitre|esclaveN` trouvée) l'annonçait à la place
+  d'`esclave2`. Le maître la rangeait en `maitre` — ignorée par le routage, prise pour l'id
+  ModBus 0 — et, `typeReglageHeure` valant `NTP`, ne renvoyait ni heure ni IP.
+  Corrigé par : choix du rôle par l'id (`forceEnvoiParams`) et effacement des fiches périmées
+  (`discoveryFonctions.mqtt_discovery` : un rôle publié sous notre MAC qui n'est pas le nôtre est
+  effacé du broker par une publication vide retenue ; tout module qui reçoit une charge vide retire
+  l'entrée de sa table). Bancs : `outils_docs/scripts_python/test_discovery.be` §8 à §10.
+- **Fiche figée entre deux connexions Wi-Fi** : un `ipMaitre` reçu n'entre dans la fiche qu'à la
+  reconnexion Wi-Fi suivante ; d'ici là, ImAlive et MQTT annoncent l'ancienne valeur (vide au
+  premier démarrage).
+
 ---
 
 ## Références

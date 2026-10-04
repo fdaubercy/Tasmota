@@ -18,7 +18,7 @@
         logActivation ON/OFF	        tous	        Active/désactive les logs UDP
         envoiUniCast <ip> <msg>	        tous	        Envoie un message en unicast (test)
         envoiMultiCast <msg>	        tous	        Envoie un message en multicast
-        forceEnvoiParams ON	            esclave	        Envoie ses paramètres (discovery.json) au maître via MultiCast, puis replanifie via telePeriod
+        forceEnvoiParams ON	            esclave	        Envoie SA fiche 'esclaveN' (discovery.json) au maître via MultiCast, puis replanifie via telePeriod
         ImAlive <json>	                maître	        Reçoit les paramètres d'un esclave, met à jour /json/discovery.json, et lui envoie l'heure + son IP en retour
         Timestamp <ts>	                esclave	        Met à jour l'horloge interne avec le timestamp reçu
         ipMaitre <ip>	                esclave	        Enregistre l'IP du maître en persistance
@@ -28,6 +28,59 @@
         * Esclave → envoie forceEnvoiParams ON → publie ses infos en MultiCast
         * Maître → reçoit ImAlive → répond avec l'heure et son IP
         * System#Save → fermeture des sockets
+
+    - Cycle forceEnvoiParams → ImAlive (présentation esclave → maître), état au 2026-10-03
+      En une phrase : toutes les telePeriod (300 s), un ESCLAVE (serveur.udp.id > 0) envoie par UDP sa
+      « fiche d'identité » au MAITRE (id 0) ; le maître la range dans /json/discovery.json, lui renvoie
+      l'heure et son IP, puis s'en sert pour le routage NAPT, la page /discovery et ModBus.
+
+        ESCLAVE (ex. cuve, id 2)                                MAITRE (id 0)
+        System#Boot -> ReglageUDP forceEnvoiParams ON
+          1. lit SA fiche discovery.json[sa MAC]["esclave"+id]
+          2. "tele/<topic>/ReglageUDP ImAlive {"esclaveN":{...}}"
+          3. multicast 224.3.0.1:4000  -------------------->  CONTROLE_UDP.every_100ms -> lireUDP
+          4. re-arme le timer "forceEnvoiParams"                -> tasmota.cmd("ReglageUDP ImAlive {...}")
+                                                                -> discovery.json[MAC][role] = fiche ; [MAC]["lwt"] = "Online"
+          Time <ts>             <-- multicast "Timestamp" ---  si la fiche reçue a typeReglageHeure == "UDP"
+          persist ipMaitre      <-- multicast "ipMaitre"  ---  (topic tele/<groupTopic1>/ReglageUDP ...)
+
+      1. Côté esclave
+         * Déclenchement : changementEtatDemarrage (System#Boot, id > 0), puis timer NOMMÉ "forceEnvoiParams"
+           ré-armé à chaque passage (remove_timer avant set_timer : une seule chaîne d'envois, même après
+           des appels manuels — avant le 2026-10-03, chaque appel manuel en ajoutait une).
+         * Collecte : la fiche est CONSTRUITE à la connexion Wi-Fi par discoveryFonctions.changementEtatDemarrage
+           depuis le _persist.json (serveur, drivers.ModBus, diverses) + Status 5, et rangée sous
+           discovery.json[MAC]["esclaveN"]. Champs : id, nom, topic, groupTopic, IPAddress, adresseMAC, host,
+           typeReglageHeure, rangeExtender{activation, id, routagePort = 8080+id-1, ipMaitre},
+           ModBus{id, Serial{...}, TCP{IPAddress, port}, UDP{...}}.
+           forceEnvoiParams n'envoie QUE la clé "esclave" + serveur.udp.id (même règle que
+           discoveryFonctions.roleLocal) ; fiche absente -> rien n'est envoyé.
+         * Envoi : envoiUDP("MultiCast") -> 224.3.0.1:4000, message au format d'un topic MQTT.
+      2. Côté maître
+         * Réception : CONTROLE_UDP.every_100ms (controleUDP.be) -> lireUDP coupe au 1er espace
+           (préfixe / topic / commande). Le maître accepte tous les topics ; un esclave, seulement son
+           topic ou son groupTopic1. Puis tasmota.cmd(commande).
+         * ImAlive (reglageUDP) : recolle le JSON coupé aux espaces (dès le découpage, log compris) ; exige UNE fiche portant une
+           adresseMAC ; écrit discovery.json[MAC][role] et [MAC]["lwt"] = "Online". Le rôle annoncé
+           n'est PAS confronté à l'id. Si typeReglageHeure == "UDP" (les esclaves ; un maître est en
+           NTP ou RTC) : répond Timestamp + ipMaitre en multicast.
+         * Contrepoids : resetClientsConnectes, une fois après telePeriod au démarrage, met tout 'Offline'.
+      3. Ce que le maître fait de la table
+         * rangeExtenderFonctions : boutons de la page d'accueil (RgxClients x fiches esclaveN 'Online') et
+           commande RoutageRangeExtender -> 'RgxPort tcp, <routagePort>, <IP esclave>, 80'. Rôle 'maitre' ignoré.
+         * discoveryFonctions.affichePageDiscovery : boutons de /discovery, port calculé depuis ipMaitre.
+         * modbusFonctions.fichesModbus (fiches des AUTRES MAC du même groupTopic portant un bloc ModBus) :
+           IP de l'esclave pour l'envoi ModBus UDP (id = 1er octet de la trame) ; clients ModBus TCP
+           (ReglageModbus ImAlive ON).
+      Pièges connus
+         * Carte réaffectée (2026-10-03) : une fiche 'maitre' périmée, retenue sur le broker sous la MAC de
+           l'esclave, était annoncée à la place d'esclaveN. Le maître la rangeait en 'maitre' (ignorée par
+           le routage, prise pour l'id ModBus 0) et, typeReglageHeure valant 'NTP', ne renvoyait ni heure
+           ni IP. Corrigé par : choix du rôle par l'id (forceEnvoiParams) + effacement des fiches périmées
+           (discoveryFonctions.mqtt_discovery). Bancs : outils_docs/scripts_python/test_discovery.be §8-10.
+         * La fiche n'est reconstruite qu'à la connexion Wi-Fi : un ipMaitre reçu n'y entre qu'à la
+           reconnexion suivante (ImAlive et MQTT annoncent l'ancienne valeur d'ici là).
+      Détail et tableaux : outils_docs/ANALYSE_BERRY_MODBUS_DISCOVERY.md §2.6.
 -#
 
 #@ solidify:udpFonctions
@@ -87,7 +140,6 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
     import mqtt
     import persist
     import gestionFileFolder
-    import re
 
     var fonction = false
     var parametres = []
@@ -104,6 +156,10 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
     if string.find(payload, " ") > - 1
         parametres = string.split(payload , " ", 2)
         fonction = parametres.pop(0)
+        # ImAlive porte UN seul parametre, un JSON dont les valeurs contiennent des espaces
+        # ("Capteurs de Cuve") : recolle avant le log, sinon parametre1/parametre2 montraient
+        # un JSON coupe en deux (corrige le 2026-10-04 ; le traitement, lui, recollait deja).
+        if (string.toupper(fonction) == "IMALIVE")    parametres = [parametres.concat(" ")]    end
     else fonction = payload
     end
 
@@ -153,16 +209,17 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
 
                 # L'esclave renvoie au maitre ses paramètres par UDP MultiCast
                 var jsonData = json.load(gestionFileFolder.readFile("/json/discovery.json")).find(string.replace(serveur.find("adresseMAC", "000000000000"), ":", ""), {})
-                if (jsonData != {})
-                    var pattern = re.compile('^(maitre|esclave[0-9]+)$')
+                # N'envoie QUE la fiche de son role actuel (persist : serveur.udp.id), comme
+                # discoveryFonctions.roleLocal(). Corrige le 2026-10-03 : la 1re cle maitre|esclaveN
+                # trouvee partait, et une fiche 'maitre' perimee (carte reaffectee) a ete annoncee
+                # au maitre a la place de 'esclave2'. Fiche absente : rien n'est envoye (avant :
+                # 'ImAlive {}', rejete par le maitre).
+                var role = "esclave" + str(serveur["udp"]["id"])
+                if (!isinstance(jsonData.find(role), map))
+                    udpFonctions.log("REGLAGE_UDP: Fiche '" + role + "' absente de discovery.json : ImAlive non envoye !", LOG_LEVEL_DEBUG)
+                else
                     var result = {}
-
-                    for cle : jsonData.keys()
-                        if pattern.match(cle)
-                            result.insert(cle, jsonData[cle])
-                            break
-                        end
-                    end
+                    result[role] = jsonData[role]
 
                     var message = string.format("tele/%s/%s %s %s", serveur["mqtt"]["topic"], "ReglageUDP", "ImAlive", json.dump(result))
 
@@ -175,7 +232,11 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
             print('Erreur: ', e, " -> ", m)
         end
 
-        tasmota.set_timer(diverses["telePeriod"] * 1000, def()  tasmota.cmd("ReglageUDP forceEnvoiParams ON", boolMute)     end)
+        # Timer NOMME : set_timer empile toujours un nouveau timer (tasmota_class.be:275), donc
+        # chaque 'forceEnvoiParams ON' tape a la main ajoutait une chaine d'envois de plus.
+        # On retire l'eventuel timer en attente avant de re-armer : une seule chaine a la fois.
+        tasmota.remove_timer("forceEnvoiParams")
+        tasmota.set_timer(diverses["telePeriod"] * 1000, def()  tasmota.cmd("ReglageUDP forceEnvoiParams ON", boolMute)     end, "forceEnvoiParams")
     # Récupère les paramètres de chaque esclave sous format json
     elif (string.toupper(fonction) == string.toupper("ImAlive") && serveur["udp"]["id"] == 0)
         # Les données avec des espaces sont coupées

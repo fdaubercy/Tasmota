@@ -30,7 +30,21 @@ def discoveryFonctions_log(msg, levelDebug)
 end
 discoveryFonctions.log = discoveryFonctions_log
 
-#- exemples: 
+# Role de CE module dans la decouverte, tire du _persist.json (serveur['udp']['id']) :
+# 0 -> 'maitre', N > 0 -> 'esclaveN'. C'est la cle sous laquelle il range et publie sa fiche.
+def discoveryFonctions_roleLocal()
+    import string
+
+    var id = serveur["udp"].find("id", 99)
+    if (id > 0)         return "esclave" + str(id)
+    elif (id == 0)      return "maitre"
+    end
+    # Dernier nombre de l'adresse IP locale du module Tasmota
+    return "module" + string.split(serveur["IP"]["IPAddress"], ".")[-1]
+end
+discoveryFonctions.roleLocal = discoveryFonctions_roleLocal
+
+#- exemples:
     ReglageDiscovery logActivation OFF
 -#
 def discoveryFonctions_reglageDiscovery(cmd, idx, payload, payload_json)
@@ -121,15 +135,7 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
             var data = {}
             data.insert(string.replace(serveur.find("adresseMAC", "000000000000"), ":", ""), {})
 
-            var item = ""
-            if (serveur["udp"].find("id", 99) > 0)
-                item = "esclave" + str(serveur["udp"]["id"])
-            elif (serveur["udp"].find("id", 99) == 0) 
-                item = "maitre"
-            elif (serveur["udp"].find("id", 99) == 99)
-                # Dernier nombre de l'adresse IP locale du module Tasmota
-                item = "module" + str(serveur["IP"]["IPAddress"].split(".")[-1])
-            end
+            var item = discoveryFonctions.roleLocal()
 
             var jsonData = data[string.replace(serveur["adresseMAC"], ":", "")]
 
@@ -251,16 +257,7 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
     # Se déclenche après la connexion MQTT (si activé)
     elif (trigger == "Mqtt")
         if msg["MQTT"].find("Connected", 0)
-            var item = ""
-
-            if (serveur["udp"].find("id", 99) > 0)
-                item = "esclave" + str(serveur["udp"]["id"])
-            elif (serveur["udp"].find("id", 99) == 0) 
-                item = "maitre"
-            elif (serveur["udp"].find("id", 99) == 99)
-                # Dernier nombre de l'adresse IP locale du module Tasmota
-                item = "module" + str(serveur["IP"]["IPAddress"].split(".")[-1])
-            end
+            var item = discoveryFonctions.roleLocal()
 
             try
                 # Compare ce json aux données enregistrées dans '/json/discovery.json'
@@ -298,6 +295,7 @@ def discoveryFonctions_mqtt_discovery(topic, idx, data, databytes)
     import json
     import string
     import mqtt
+    import re
 
     # Test
     discoveryFonctions.log("DISCOVERY_MQTT_DATA: -------------------- Discovery mqtt_discovery -------------------", LOG_LEVEL_DEBUG_PLUS)
@@ -315,7 +313,38 @@ def discoveryFonctions_mqtt_discovery(topic, idx, data, databytes)
     var typeData = topicParts[string.count(topic, "/")]
     var item = topicParts[string.count(topic, "/") - 1]
     discoveryFonctions.log("DISCOVERY_MQTT_DATA: typeData=" + typeData, LOG_LEVEL_DEBUG_PLUS)
-    
+
+    # Fiche perimee : un role (maitre/esclaveN/moduleN) publie sous NOTRE MAC qui n'est pas
+    # notre role actuel. Cas reel (2026-10-03) : carte reaffectee de SERVEUR-RLY-CAVE (maitre)
+    # en CAPTEURS-CUVE (esclave2) ; le broker gardait l'ancienne fiche 'maitre' retenue,
+    # rangee a chaque reconnexion dans discovery.json puis annoncee au maitre par ImAlive.
+    # -> on efface le message retenu sur le broker (publication vide retenue).
+    var effacement = (data == nil || size(data) == 0)
+    var macLocale = string.toupper(string.replace(serveur.find("adresseMAC", ""), ":", ""))
+    var perimee = (string.toupper(item) == macLocale && typeData != discoveryFonctions.roleLocal() &&
+                   re.compile('^(maitre|esclave[0-9]+|module[0-9]+)$').match(typeData) != nil)
+    if (perimee && !effacement)
+        log("DISCOVERY_MQTT_DATA: Fiche '" + typeData + "' perimee sous notre MAC (role actuel '" + discoveryFonctions.roleLocal() + "') : effacement sur le broker", LOG_LEVEL_INFO)
+        mqtt.publish(topic, "", true)
+    end
+
+    # Fiche perimee ou message d'effacement (charge vide, recu par TOUS les modules) :
+    # retire l'entree de discovery.json au lieu d'y ranger nil
+    if (perimee || effacement)
+        try
+            var fichier = gestionFileFolder.readFile("/json/discovery.json")
+            var jsonEfface = (fichier != false && fichier != "") ? json.load(fichier) : nil
+            if (isinstance(jsonEfface, map) && isinstance(jsonEfface.find(item), map) && jsonEfface[item].contains(typeData))
+                jsonEfface[item].remove(typeData)
+                gestionFileFolder.writeFile("/json/discovery.json", json.dump(jsonEfface))
+                discoveryFonctions.log("DISCOVERY_MQTT_DATA: '" + typeData + "' de " + item + " retire de discovery.json", LOG_LEVEL_DEBUG_PLUS)
+            end
+        except .. as error, message
+            discoveryFonctions.log(string.format("DISCOVERY_MQTT_DATA: %s --> %s", error, message), LOG_LEVEL_ERREUR)
+        end
+        return true
+    end
+
     data = json.load(data)
 
     # Prépare le json
