@@ -21,7 +21,8 @@ remplace la memoire.
    depuis le 2026-07-24 ; le grenier est en sommeil. Repartir sur le grenier est une
    erreur deja commise, consignee dans `lessons.md`. **Lire son encadre de tete « SI TU
    REPRENDS A FROID »** : il porte la prochaine action et la liste de ce qui reste.
-   **Branche `chantier-modbus-grenier`**, jamais poussee.
+   Le travail se fait sur **`development`** : la branche `chantier-modbus-grenier`, fusionnee,
+   a ete supprimee le 2026-10-04.
 3. **`tasks/reprise-solidification-berry.md`** — l'autre chantier (solidification Berry),
    sa prochaine action et ses questions ouvertes.
 4. **`outils_docs/SOLIDIFICATION_BERRY.md`** — le mecanisme complet + 11 pieges, a lire
@@ -260,7 +261,8 @@ Pour ne pas chercher : ce qui a ete produit et ou.
 - `tasks/reprise-solidification-berry.md` — etat du chantier solidification, prochaine action.
 - `tasks/reprise-chantier-modbus-grenier.md` — etat du chantier ModBus (carte 16 relais +
   esclaves), decisions tranchees, plan en phases. ⚠️ Nom trompeur : **cibles = les 3 modules
-  garage**, le grenier est en sommeil. Branche `chantier-modbus-grenier`.
+  garage**, le grenier est en sommeil. Travail sur `development` (branche de chantier supprimee
+  le 2026-10-04).
 - `outils_docs/SOLIDIFICATION_BERRY.md` — mecanisme, verification (§5), parametres, 11 pieges.
 - `outils_docs/PROTOCOLE_MODBUS.md` — ModBus RTU/TCP standard, implementation maison (3 transports
   Serie/UDP/TCP), extension esclave->maitre, failles du mecanisme d'envoi, design de queue FIFO,

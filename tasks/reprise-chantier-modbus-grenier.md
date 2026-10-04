@@ -12,6 +12,9 @@
 - **La branche `chantier-modbus-grenier` est fusionnée dans `development` et publiée sur
   `origin`** (vérifié : `d464c53db` est ancêtre de `origin/development`). Les mentions
   « aucun poussé » plus bas sont périmées.
+- **2026-10-04 : branche `chantier-modbus-grenier` SUPPRIMÉE** (locale seulement, jamais
+  poussée, aucun commit absent de `development` ; elle pointait sur `1400cea57`). Le chantier
+  se poursuit sur `development`. Les mentions de la branche plus bas sont historiques.
 - **`modbusFonctions.be` a encore bougé** (+174 lignes de diff depuis `d464c53db`), par le
   travail de septembre sur la cave : solidification généralisée, correctifs des globales des
   modules solidifiés (`f5efddf26`, `ecc73348f`). Les 3 garage n'ont **toujours jamais été
