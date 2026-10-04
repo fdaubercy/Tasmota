@@ -450,7 +450,7 @@ def modbusFonctions_changementEtatDemarrage(value, trigger, msg)
     import udpFonctions
 
 	# Test
-	modbusFonctions.log("MODBUS_CHGT_ETAT_DEMARRAGE: -------------------- modBus changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG)
+	modbusFonctions.log("MODBUS_CHGT_ETAT_DEMARRAGE: -------------------- modBus changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG_PLUS)
 	modbusFonctions.log("MODBUS_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
 	modbusFonctions.log("MODBUS_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
 	modbusFonctions.log("MODBUS_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}
@@ -1028,7 +1028,7 @@ def modbusFonctions_envoiMsgModbusUDP(Trame, typeMsg)
     import string
 
     if (drivers["ModBus"]["typeComm"].find("UDP", "OFF") == "OFF" && serveur["udp"].find("activation", "OFF") == "OFF")    return      end
-    modbusFonctions.log("ENVOI_MSG_MODBUS_UDP: ------------------ envoiMsgModbusUDP ------------------", LOG_LEVEL_DEBUG)
+    modbusFonctions.log("ENVOI_MSG_MODBUS_UDP: ------------------ envoiMsgModbusUDP ------------------", LOG_LEVEL_DEBUG_PLUS)
 
     # Recherche l'IP de l'esclave ModBus dans la table des périphériques
     # Corrige le 2026-09-30 : lisait '/json/paramDiscovery.json' (jamais ecrit -> exception) et
@@ -1080,7 +1080,7 @@ def modbusFonctions_envoiMsgModbusTCP(Trame, typeMsg)
     import string
 
     if (drivers["ModBus"]["typeComm"].find("TCP", "OFF") == "OFF" && serveur["tcp"].find("activation", "OFF") == "OFF")    return      end
-    modbusFonctions.log("ENVOI_MSG_MODBUS_TCP: ------------------ envoiMsgModbusTCP ------------------", LOG_LEVEL_DEBUG)
+    modbusFonctions.log("ENVOI_MSG_MODBUS_TCP: ------------------ envoiMsgModbusTCP ------------------", LOG_LEVEL_DEBUG_PLUS)
 
     # l'id du destinataire est le 1er octet de la trame ModBus
     var id = Trame.get(0, -1)
@@ -1250,7 +1250,7 @@ def modbusFonctions_executeCmdModbus(paramMSG)
     # Initialise le tableau des valeurs
     tasmota.yield()
 
-    modbusFonctions.log("EXECUTE_CMD_MODBUS: -------------------- executeCmdModbus -------------------", LOG_LEVEL_DEBUG)
+    modbusFonctions.log("EXECUTE_CMD_MODBUS: -------------------- executeCmdModbus -------------------", LOG_LEVEL_DEBUG_PLUS)
     modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: DeviceAddress = 0x%02X", paramMSG["DeviceAddress"]), LOG_LEVEL_DEBUG_PLUS)
     modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: StartAddress = 0x%04X", paramMSG["StartAddress"]), LOG_LEVEL_DEBUG_PLUS)
     modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: FunctionCode = 0x%02X ('%s')", paramMSG["FunctionCode"], paramMSG["FunctionName"]), LOG_LEVEL_DEBUG_PLUS)

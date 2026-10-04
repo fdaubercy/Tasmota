@@ -252,7 +252,7 @@ def diversFonctions_statMemory()
 
 	var stat = tasmota.memory()
 
-	logFonctions.log("STAT_MEMORY: -------------------- divers statMemory -------------------", LOG_LEVEL_DEBUG)
+	logFonctions.log("STAT_MEMORY: -------------------- divers statMemory -------------------", LOG_LEVEL_DEBUG_PLUS)
 	logFonctions.log(string.format("STAT_MEMORY: Espace programme utilisé = %.1f%%", real(stat["program"] - stat["program_free"]) / real(stat["program"]) * 100.0), LOG_LEVEL_DEBUG)							# value=SINGLE
 	if (stat.find("psram", false) && stat.find("psram_free", false))
 		logFonctions.log(string.format("STAT_MEMORY: Espace PSRAM utilisé = %.1f%%", real(stat["psram"] - stat["psram_free"]) / real(stat["psram"]) * 100.0), LOG_LEVEL_DEBUG)

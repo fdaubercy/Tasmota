@@ -223,7 +223,7 @@ cuveFonctions.changementEtatDemarrage = def(value, trigger, msg)
     import json
 
 	# Test
-	cuveFonctions.log("CUVE_CHGT_ETAT_DEMARRAGE: -------------------- Cuve changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG)
+	cuveFonctions.log("CUVE_CHGT_ETAT_DEMARRAGE: -------------------- Cuve changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG_PLUS)
 	cuveFonctions.log("CUVE_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
 	cuveFonctions.log("CUVE_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
 	cuveFonctions.log("CUVE_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}
@@ -262,7 +262,7 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
 	import json
 
 	# Test
-	cuveFonctions.log("CUVE_GESTION_CAPTEURS: -------------------- Cuve changementEtatCapteur -------------------", LOG_LEVEL_DEBUG)
+	cuveFonctions.log("CUVE_GESTION_CAPTEURS: -------------------- Cuve changementEtatCapteur -------------------", LOG_LEVEL_DEBUG_PLUS)
 	cuveFonctions.log("CUVE_GESTION_CAPTEURS: value=" + str(value), LOG_LEVEL_DEBUG)							# value=SINGLE
 	cuveFonctions.log("CUVE_GESTION_CAPTEURS: trigger=" + str(trigger), LOG_LEVEL_DEBUG)						# trigger=Button1
 	cuveFonctions.log("CUVE_GESTION_CAPTEURS: msg=" + str(msg), LOG_LEVEL_DEBUG)								# msg={'Button1': {'Action': SINGLE}}

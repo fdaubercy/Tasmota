@@ -234,7 +234,7 @@ def rangeExtenderFonctions_changementEtatDemarrage(value, trigger, msg)
     var rangeExtender
 
 	# Test
-	rangeExtenderFonctions.log("RANGE_EXTENDER_CHGT_ETAT_DEMARRAGE: -------------------- RangeExtender changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG)
+	rangeExtenderFonctions.log("RANGE_EXTENDER_CHGT_ETAT_DEMARRAGE: -------------------- RangeExtender changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG_PLUS)
 	rangeExtenderFonctions.log("RANGE_EXTENDER_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
 	rangeExtenderFonctions.log("RANGE_EXTENDER_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
 	rangeExtenderFonctions.log("RANGE_EXTENDER_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}

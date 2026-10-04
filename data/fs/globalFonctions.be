@@ -30,7 +30,7 @@ def globalFonctions_changementEtatDemarrage(value, trigger, msg)
 	import introspect
 
 	# Test
-	logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: -------------------- global changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG)
+	logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: -------------------- global changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG_PLUS)
 	logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
 	logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
 	logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}
@@ -398,7 +398,7 @@ def globalFonctions_changementEtatWS2812(value, trigger, msg, moduleLED, cleLED)
 	var device
 
 	# Test
-	logFonctions.log("GLOBAL_GESTION_WS2812: -------------------- global changementEtatWS2812 -------------------", LOG_LEVEL_DEBUG)
+	logFonctions.log("GLOBAL_GESTION_WS2812: -------------------- global changementEtatWS2812 -------------------", LOG_LEVEL_DEBUG_PLUS)
 	logFonctions.log("GLOBAL_GESTION_WS2812: value=" + str(value), LOG_LEVEL_DEBUG)							# value=SINGLE
 	logFonctions.log("GLOBAL_GESTION_WS2812: trigger=" + str(trigger), LOG_LEVEL_DEBUG)						# trigger=Button1
 	logFonctions.log("GLOBAL_GESTION_WS2812: msg=" + str(msg), LOG_LEVEL_DEBUG)								# msg={'Button1': {'Action': SINGLE}}
@@ -449,7 +449,7 @@ def globalFonctions_modifEtatRelai(moduleCapteur, idRelai, typeOrdre, etat, bool
 	import string
 
 	# Test
-	logFonctions.log("MODIF_ETAT_RELAI: -------------------- global modifEtatRelai -------------------", LOG_LEVEL_DEBUG)
+	logFonctions.log("MODIF_ETAT_RELAI: -------------------- global modifEtatRelai -------------------", LOG_LEVEL_DEBUG_PLUS)
 	logFonctions.log("MODIF_ETAT_RELAI: moduleCapteur=" + str(moduleCapteur), LOG_LEVEL_DEBUG)						
 	logFonctions.log("MODIF_ETAT_RELAI: idRelai=" + str(idRelai), LOG_LEVEL_DEBUG)								
 	logFonctions.log("MODIF_ETAT_RELAI: typeOrdre=" + str(typeOrdre), LOG_LEVEL_DEBUG)								
@@ -482,7 +482,7 @@ def globalFonctions_modifEtatRelai(moduleCapteur, idRelai, typeOrdre, etat, bool
 	if boolTimer == nil boolTimer = true end
 	if delaiAvantCommande == nil delaiAvantCommande = 0 end
 
-	logFonctions.log("MODIF_ETAT_RELAI: -------------------- global modifEtatRelai 2 -------------------", LOG_LEVEL_DEBUG)							
+	logFonctions.log("MODIF_ETAT_RELAI: -------------------- global modifEtatRelai 2 -------------------", LOG_LEVEL_DEBUG_PLUS)							
 	logFonctions.log("MODIF_ETAT_RELAI: typeOrdre=" + str(typeOrdre), LOG_LEVEL_DEBUG)								
 	logFonctions.log("MODIF_ETAT_RELAI: etat=" + str(etat), LOG_LEVEL_DEBUG)									
 	logFonctions.log("MODIF_ETAT_RELAI: boolCapteurs=" + str(boolCapteurs), LOG_LEVEL_DEBUG)		

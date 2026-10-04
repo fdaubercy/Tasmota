@@ -56,7 +56,7 @@ garageFonctions.changementEtatDemarrage = def(value, trigger, msg)
     import json
 
 	# Test
-	garageFonctions.log("GARAGE_CHGT_ETAT_DEMARRAGE: -------------------- Garage changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG)
+	garageFonctions.log("GARAGE_CHGT_ETAT_DEMARRAGE: -------------------- Garage changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG_PLUS)
 	garageFonctions.log("GARAGE_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
 	garageFonctions.log("GARAGE_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
 	garageFonctions.log("GARAGE_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}

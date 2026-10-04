@@ -84,7 +84,7 @@ def tcpFonctions_changementEtatDemarrage(value, trigger, msg)
     import introspect
 
     # Test
-    tcpFonctions.log("TCP_CHGT_ETAT_DEMARRAGE: -------------------- TCP changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG)
+    tcpFonctions.log("TCP_CHGT_ETAT_DEMARRAGE: -------------------- TCP changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG_PLUS)
     tcpFonctions.log("TCP_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
     tcpFonctions.log("TCP_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
     tcpFonctions.log("TCP_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}
@@ -247,7 +247,7 @@ def tcpFonctions_envoiMsgTCP(typeClient, IP_Dest, message)
     import string
 
     if (serveur["tcp"].find("activation", "OFF") == "OFF")    return      end
-    tcpFonctions.log("ENVOI_MSG_TCP: ------------------ envoiMsgTCP ------------------", LOG_LEVEL_DEBUG)
+    tcpFonctions.log("ENVOI_MSG_TCP: ------------------ envoiMsgTCP ------------------", LOG_LEVEL_DEBUG_PLUS)
 
     # # Envoi du message par le serveur TCP
     # if (typeClient == "Serveur")

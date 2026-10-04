@@ -84,7 +84,7 @@ def loRaWanFonctions_changementEtatDemarrage(value, trigger, msg)
     import gestionFileFolder
 
 	# Test
-	loRaWanFonctions.log("LORAWAN_CHGT_ETAT_DEMARRAGE: -------------------- LoRaWan changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG)
+	loRaWanFonctions.log("LORAWAN_CHGT_ETAT_DEMARRAGE: -------------------- LoRaWan changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG_PLUS)
 	loRaWanFonctions.log("LORAWAN_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
 	loRaWanFonctions.log("LORAWAN_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
 	loRaWanFonctions.log("LORAWAN_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}

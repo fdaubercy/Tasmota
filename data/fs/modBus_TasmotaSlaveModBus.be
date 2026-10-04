@@ -401,7 +401,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
 
         var nameTasmotaSlaveModBus = ""
 
-        self.log("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: -------------------- TasmotaSlaveModBus recupereReponseModBus -------------------", LOG_LEVEL_DEBUG)
+        self.log("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: -------------------- TasmotaSlaveModBus recupereReponseModBus -------------------", LOG_LEVEL_DEBUG_PLUS)
         self.log("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: value = " + str(value), LOG_LEVEL_DEBUG_PLUS)
         self.log("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: trigger = " + str(trigger), LOG_LEVEL_DEBUG_PLUS)
         self.log("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: msg = " + str(msg), LOG_LEVEL_DEBUG_PLUS)
@@ -714,7 +714,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
         import modbusFonctions
 
         # Test
-        self.log("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: -------------------- SlaveModBus changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG)
+        self.log("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: -------------------- SlaveModBus changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG_PLUS)
         self.log("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
         self.log("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
         self.log("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}

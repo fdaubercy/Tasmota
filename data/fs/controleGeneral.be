@@ -441,7 +441,7 @@ class CONTROLE_GENERAL : Driver
 
 		tasmota.yield()
 		
-		logFonctions.log("GLOBAL_POWER_HANDLER: -------------------- global SetPowerHandler -------------------", LOG_LEVEL_DEBUG)
+		logFonctions.log("GLOBAL_POWER_HANDLER: -------------------- global SetPowerHandler -------------------", LOG_LEVEL_DEBUG_PLUS)
 		logFonctions.log("GLOBAL_POWER_HANDLER: Lecture automatisee de l'etat des relais", LOG_LEVEL_DEBUG)
 		logFonctions.log("GLOBAL_POWER_HANDLER: cmd=" + str(cmd), LOG_LEVEL_DEBUG)
 		logFonctions.log("GLOBAL_POWER_HANDLER: idx=" + str(idx), LOG_LEVEL_DEBUG)
@@ -618,7 +618,7 @@ class CONTROLE_GENERAL : Driver
 		
 		tasmota.yield()
 		
-		logFonctions.log("GLOBAL_ANY_KEY: -------------------- global any_key -------------------", LOG_LEVEL_DEBUG)
+		logFonctions.log("GLOBAL_ANY_KEY: -------------------- global any_key -------------------", LOG_LEVEL_DEBUG_PLUS)
 		logFonctions.log("GLOBAL_ANY_KEY: Lecture automatisee de l'etat des Boutons (BP) et Switchs (capteurs & interrupteurs)", LOG_LEVEL_DEBUG)
 		logFonctions.log("GLOBAL_ANY_KEY: cmd=" + str(cmd), LOG_LEVEL_DEBUG)
 		logFonctions.log("GLOBAL_ANY_KEY: idx=" + str(idx), LOG_LEVEL_DEBUG)

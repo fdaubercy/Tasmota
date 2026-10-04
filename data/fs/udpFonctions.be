@@ -381,7 +381,7 @@ def udpFonctions_changementEtatDemarrage(value, trigger, msg, typeComm)
     var status
 
 	# Test
-	udpFonctions.log("UDP_CHGT_ETAT_DEMARRAGE: -------------------- UDP changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG)
+	udpFonctions.log("UDP_CHGT_ETAT_DEMARRAGE: -------------------- UDP changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG_PLUS)
 	udpFonctions.log("UDP_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
 	udpFonctions.log("UDP_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
 	udpFonctions.log("UDP_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}
@@ -463,7 +463,7 @@ def udpFonctions_envoiUDP(typeComm, ipDestinataire, message)
 	var udpEmission = udp()
 	var resultatEnvoi
 
-    udpFonctions.log("ENVOI_MSG_UDP: ------------------------ UDP sendUDP ----------------------", LOG_LEVEL_DEBUG)
+    udpFonctions.log("ENVOI_MSG_UDP: ------------------------ UDP sendUDP ----------------------", LOG_LEVEL_DEBUG_PLUS)
 	
 	# Ouvre la connexion UniCast sortante ou MultiCast sortante pour les maitres RangeExtender
 	if (string.toupper(typeComm) == string.toupper("UniCast"))
@@ -516,7 +516,7 @@ def udpFonctions_lireUDP(typeComm, paramMSG)
     # Récupère les messages sur le port UDP (respecte l'API Tasmota)
     while msg != nil
         # Réception du message
-        udpFonctions.log("LIRE_UDP: ------------------------ UDP lire ----------------------", LOG_LEVEL_DEBUG)
+        udpFonctions.log("LIRE_UDP: ------------------------ UDP lire ----------------------", LOG_LEVEL_DEBUG_PLUS)
         udpFonctions.log(string.format("LIRE_UDP: Données UDP %s reçues de '%s' sur le port %i", typeComm, 
                                                 (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.etat()["udpReception"][0].remote_ip : udpFonctions.etat()["udpReception"][1].remote_ip,
                                                 (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.etat()["udpReception"][0].remote_port : udpFonctions.etat()["udpReception"][1].remote_port),

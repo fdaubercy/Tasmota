@@ -47,7 +47,7 @@ def webFonctions_changementEtatDemarrage(value, trigger, msg)
     import mqtt
 
 	# Test
-	webFonctions.log("WEBSERVER_CHGT_ETAT_DEMARRAGE: -------------------- webServer changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG)
+	webFonctions.log("WEBSERVER_CHGT_ETAT_DEMARRAGE: -------------------- webServer changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG_PLUS)
 	webFonctions.log("WEBSERVER_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
 	webFonctions.log("WEBSERVER_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
 	webFonctions.log("WEBSERVER_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}
@@ -304,7 +304,7 @@ def webFonctions_traiteCommandeHTTP(typeModule, categorie, commande)
     var resultat = ""
 
     # Test : Parcours les données POST recues
-	webFonctions.log("WEBSERVER_TRAITE_COMMANDE: -------------------- webServer traiteCommandeHTTP -------------------", LOG_LEVEL_DEBUG)
+	webFonctions.log("WEBSERVER_TRAITE_COMMANDE: -------------------- webServer traiteCommandeHTTP -------------------", LOG_LEVEL_DEBUG_PLUS)
     webFonctions.log("WEBSERVER_TRAITE_COMMANDE: typeModule=" + str(typeModule), LOG_LEVEL_DEBUG_PLUS)
     webFonctions.log("WEBSERVER_TRAITE_COMMANDE: categorie=" + str(categorie), LOG_LEVEL_DEBUG_PLUS)
     webFonctions.log("WEBSERVER_TRAITE_COMMANDE: commande=" + str(commande), LOG_LEVEL_DEBUG_PLUS)

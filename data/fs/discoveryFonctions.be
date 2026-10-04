@@ -91,7 +91,7 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
     import gestionFileFolder
 
     # Test
-    discoveryFonctions.log("DISCOVERY_CHGT_ETAT_DEMARRAGE: -------------------- Discovery changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG)
+    discoveryFonctions.log("DISCOVERY_CHGT_ETAT_DEMARRAGE: -------------------- Discovery changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG_PLUS)
     discoveryFonctions.log("DISCOVERY_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
     discoveryFonctions.log("DISCOVERY_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
     discoveryFonctions.log("DISCOVERY_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}

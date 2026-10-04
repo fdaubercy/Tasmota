@@ -157,7 +157,7 @@ def vrFonctions_changementEtatDemarrage(value, trigger, msg)
     import gestionFileFolder
 
 	# Test
-	vrFonctions.log("VOLETS_CHGT_ETAT_DEMARRAGE: -------------------- Volets changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG)
+	vrFonctions.log("VOLETS_CHGT_ETAT_DEMARRAGE: -------------------- Volets changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG_PLUS)
 	vrFonctions.log("VOLETS_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
 	vrFonctions.log("VOLETS_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
 	vrFonctions.log("VOLETS_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}
@@ -210,7 +210,7 @@ def vrFonctions_changementEtatCapteur(value, trigger, msg, numRideau, etatRideau
 	var device
 
 	# Test
-	vrFonctions.log("VR_GESTION_CAPTEURS: -------------------- Volets changementEtatCapteur -------------------", LOG_LEVEL_DEBUG)
+	vrFonctions.log("VR_GESTION_CAPTEURS: -------------------- Volets changementEtatCapteur -------------------", LOG_LEVEL_DEBUG_PLUS)
 	vrFonctions.log("VR_GESTION_CAPTEURS: value=" + str(value), LOG_LEVEL_DEBUG)							# value=SINGLE
 	vrFonctions.log("VR_GESTION_CAPTEURS: trigger=" + str(trigger), LOG_LEVEL_DEBUG)						# trigger=Button1
 	vrFonctions.log("VR_GESTION_CAPTEURS: msg=" + str(msg), LOG_LEVEL_DEBUG)								# msg={'Button1': {'Action': SINGLE}}
@@ -248,7 +248,7 @@ def vrFonctions_changementDirection(value, trigger, msg, numRideau)
     import json
 
 	# Test
-	vrFonctions.log("VR_CHANGEMENT_DIRECTION: -------------------- Volets changementDirection -------------------", LOG_LEVEL_DEBUG)
+	vrFonctions.log("VR_CHANGEMENT_DIRECTION: -------------------- Volets changementDirection -------------------", LOG_LEVEL_DEBUG_PLUS)
 	vrFonctions.log("VR_CHANGEMENT_DIRECTION: value=" + str(value), LOG_LEVEL_DEBUG)							# value=SINGLE
 	vrFonctions.log("VR_CHANGEMENT_DIRECTION: trigger=" + str(trigger), LOG_LEVEL_DEBUG)						# trigger=Button1
 	vrFonctions.log("VR_CHANGEMENT_DIRECTION: msg=" + str(msg), LOG_LEVEL_DEBUG)								# msg={'Button1': {'Action': SINGLE}}

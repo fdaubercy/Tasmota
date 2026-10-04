@@ -283,7 +283,8 @@ est dans `outils_docs/README.md`.
 Un message n'apparait sur une sortie que s'il passe **les deux** :
 
 1. **Le seuil de son module** (sa `cible`) : cle `"log"` du bloc du module dans `_persist.json`
-   (`diverses.logs.general` pour `general`). Regle par `ReglageLog <cible> <niveau>`.
+   (`diverses.logs.general` pour `general`). Regle par `ReglageLog <cible> <niveau>`, ou pour
+   toutes les cibles de la carte d'un coup par `ReglageLog tous <niveau>`.
 2. **Le seuil de la sortie** (`serie`, `web`, `mqtt`, `syslog`), donne par le **profil actif** :
    `diverses.logs.profil` et `diverses.logs.profils`. Regle par `ReglageLog profil <nom>`.
 

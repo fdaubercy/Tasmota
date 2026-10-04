@@ -283,7 +283,7 @@ class MODBUS_CONN_16CHANNEL : Driver
         import string
         import json
 
-        self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: -------------------- Conn16channels recupereReponseModBus -------------------", LOG_LEVEL_DEBUG)
+        self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: -------------------- Conn16channels recupereReponseModBus -------------------", LOG_LEVEL_DEBUG_PLUS)
         self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: value = " + str(value), LOG_LEVEL_DEBUG_PLUS)
         self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: trigger = " + str(trigger), LOG_LEVEL_DEBUG_PLUS)
         self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: msg = " + str(msg), LOG_LEVEL_DEBUG_PLUS)
@@ -406,7 +406,7 @@ class MODBUS_CONN_16CHANNEL : Driver
         import modbusFonctions
 
         # Test
-        self.log("MODBUS_CONN_16CH_CHGT_ETAT_DEMARRAGE: -------------------- Conn16Channel changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG)
+        self.log("MODBUS_CONN_16CH_CHGT_ETAT_DEMARRAGE: -------------------- Conn16Channel changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG_PLUS)
         self.log("MODBUS_CONN_16CH_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
         self.log("MODBUS_CONN_16CH_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
         self.log("MODBUS_CONN_16CH_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}

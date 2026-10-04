@@ -27,6 +27,7 @@
 #   1. le seuil du MODULE : cle "log" du bloc du module dans _persist.json
 #      (diverses.logs.general pour la cible "general")
 #         ReglageLog <cible> erreur|info|debug|detail
+#         ReglageLog tous erreur|info|debug|detail        (toutes les cibles de la carte)
 #   2. le seuil de chaque SORTIE (serie, web, mqtt, syslog), donne par le profil actif
 #      (diverses.logs.profil + diverses.logs.profils)
 #         ReglageLog profil <nom>
@@ -249,10 +250,24 @@ def logFonctions_regle(quoi, mot)
         return logFonctions.etatReglages()
     end
 
-    # 3. Seuil d'un module
+    # 3. Seuil de TOUS les modules configures sur cette carte (ReglageLog tous detail)
+    if (quoi == "tous")
+        if (!logFonctions.NIVEAUX_MODULE.contains(mot))    return "Erreur : niveau inconnu '" + mot + "' (erreur, info, debug, detail)"    end
+        for c: logFonctions.CIBLES
+            var l = logFonctions.lieu(c)
+            if (l != nil)
+                l[0][l[1]] = mot
+                logFonctions.etat()["seuils"][c] = logFonctions.NIVEAUX_MODULE[mot]
+            end
+        end
+        persist.dirty()    persist.save()
+        return logFonctions.etatReglages()
+    end
+
+    # 4. Seuil d'un module
     var cible = logFonctions.trouveCle(logFonctions.CIBLES, quoi)
     if (cible == nil)
-        return "Erreur : '" + quoi + "' n'est ni 'profil', ni une sortie (" + logFonctions.enTexte(logFonctions.SORTIES.keys()) + "), ni un module (" + logFonctions.enTexte(logFonctions.CIBLES) + ")"
+        return "Erreur : '" + quoi + "' n'est ni 'profil', ni 'tous', ni une sortie (" + logFonctions.enTexte(logFonctions.SORTIES.keys()) + "), ni un module (" + logFonctions.enTexte(logFonctions.CIBLES) + ")"
     end
     if (!logFonctions.NIVEAUX_MODULE.contains(mot))    return "Erreur : niveau inconnu '" + mot + "' (erreur, info, debug, detail)"    end
     var lieu = logFonctions.lieu(cible)
@@ -268,6 +283,7 @@ logFonctions.regle = logFonctions_regle
 # ReglageLog
 # ReglageLog profil normal
 # ReglageLog modbus detail
+# ReglageLog tous detail
 # ReglageLog syslog aucun
 def logFonctions_reglageLog(cmd, idx, payload, payload_json)
     import string
@@ -281,7 +297,7 @@ def logFonctions_reglageLog(cmd, idx, payload, payload_json)
     var reponse = nil
     if (mots.size() == 0)       reponse = logFonctions.etatReglages()
     elif (mots.size() == 2)     reponse = logFonctions.regle(mots[0], mots[1])
-    else                        reponse = "Usage : ReglageLog [profil <nom> | <sortie> <niveau> | <module> <niveau>]"
+    else                        reponse = "Usage : ReglageLog [profil <nom> | <sortie> <niveau> | <module> <niveau> | tous <niveau>]"
     end
 
     tasmota.resp_cmnd(json.dump({"ReglageLog": reponse}))
