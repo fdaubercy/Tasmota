@@ -80,7 +80,7 @@
 | # | Défaut | Où | Preuve |
 |---|---|---|---|
 | L1 | **Repli UDP/TCP (série coupé) inopérant** : `decrypteMSG` ne lit que des *requêtes* (exige 8 octets) → réponses 0x01-0x04 et écho 0x10 rejetés (Erreur 6) ; division par zéro possible (quantité 0, l.1282). | `modbusFonctions.be:1247-1297` | [V] |
-| L2 | `envoiMsgModbusUDP` lit `/json/paramDiscovery.json`, qu'aucun module n'écrit → `nil.find` → le repli UDP plante. IP calculée jamais utilisée. | `modbusFonctions.be:714` | [V] |
+| L2 | ✅ **corrigé `3959c98ba`** (lit désormais `discovery.json` via `fichesModbus`) — `envoiMsgModbusUDP` lisait `/json/paramDiscovery.json`, qu'aucun module n'écrit → `nil.find` → le repli UDP plante. IP calculée jamais utilisée. | `modbusFonctions.be:714` | [V] |
 | L3 | **Réponse 0x05 fausse** : `Count=2` → trame tronquée (`wrongnbValeurs` non testé à l'émission) ; `writeData[0] = 0xFF00` dans un octet → `00`. Personne n'envoie de 0x05. | l.1262, 1418, 1508 | [V] |
 | L4 | **`ReglageModbus` : 3 sous-commandes cassées.** `split(payload, " ", 1)` ne laisse qu'un paramètre → `parametres[1]` = `index_error` ; commande sans espace → `parametres = false` → plantage. | l.250-258 | [V] |
 | L5 | SwitchMode ni 1 ni 2 : push `"ON"` en uint16 → exception (esclave) ; état `0.0` (maître). Tout le garage est en SwitchMode 2. | `globalFonctions.be:212-284`, TasmotaSlave l.588-619 | [V] |
@@ -130,6 +130,8 @@
    - réalignement au démarrage : remettre l'esclave dans l'état commandé grâce à la lecture 0x01
      (aujourd'hui `continue` au boot si l'état local égale `etat`) ;
    - `ReglageSlaveModBus id` qui ré-enregistre les règles ou impose un redémarrage.
+7. **Maintenance de `modbusFonctions.be`** (1922 lignes, dont 1222 de code) : **refonte de
+   `prepareTrame` planifiée, section 7**. Pas de scission du fichier avant (voir 7.6).
 
 ---
 
@@ -143,6 +145,9 @@
 | 2026-09-29 | G3 — file : lecture identique (en file ou en vol) non ré-enfilée, plafond `MAX_FILE = 32` (lecture écartée, écriture prioritaire), une sonde par cycle pour un esclave muet | ✅ corrigé, banc §18 (8 tests, témoin : file non bornée) | `269021b5a` |
 | 2026-09-29 | G7 — seuls les appareils relus (`demandeLecture` non nil) passent à « inconnu » | ✅ corrigé, banc §19 (3 tests, témoin : WS2812 marquée) | `be8ee6a4b` |
 | 2026-09-29 | G2 — `extraitTrames` : découpage du flux RS485 (longueurs requête/réponse/exception, CRC, resynchronisation, attente, silence 100 ms) ; tampon `tamponSerie` borné à 512 octets | ✅ corrigé, banc §20 (9 tests, témoin : 0 publication) | `aa0df4054` |
+
+| 2026-09-30 | L2 — `envoiMsgModbusUDP` et `ReglageModbus ImAlive` lisent `discovery.json` via `modbusFonctions.fichesModbus` (partie ImAlive de L13 comprise) | ✅ corrigé (session parallèle) | `3959c98ba` |
+| 2026-09-30 | Refonte de `prepareTrame` : analyse et plan | 📋 planifié, section 7 | — |
 
 **Banc après correctifs : 104/104.** Rien n'est encore testé sur bus réel : recompiler les 4 envs.
 Restent ouverts : S1 (secrets, décision utilisateur), G4, G6, G8, latents L1-L13.
@@ -214,3 +219,112 @@ Restent ouverts : S1 (secrets, décision utilisateur), G4, G6, G8, latents L1-L1
 
 **Si un point échoue** : noter la ligne de la grille, copier ~30 lignes de log autour. C'est ce
 qui départage un défaut de code d'un défaut de câblage.
+
+---
+
+## 7. Évolution planifiée — refonte de `prepareTrame` (analyse du 2026-09-30)
+
+> **À lancer APRÈS le premier flash validé** (section 6), et **après** la décision sur le repli
+> UDP/TCP (L1, L2, L13) : s'il est supprimé, le périmètre se réduit encore.
+
+### 7.1 Usage réel (vérifié)
+
+Les commandes série du **maître ne passent pas** par `prepareTrame` : `pompeQueue` émet via
+`ModBusSend`, dont la trame est construite par le firmware C (`xdrv_63`).
+
+| Appelant | Sens | Codes / types réellement passés | Actif au garage |
+|---|---|---|---|
+| `envoiMsgModbusSerial` (esclave) | Réponse | 0x01/0x02 uint8 ; 0x04 float/uint32 ; 0x06 uint8 ; écho 0x10 uint16 | ✅ |
+| `pousseEtat` (esclave) | Commande | 0x10 uint16 / uint32 / float | ✅ |
+| `envoiMsgModbusUDP` | les deux | tous | ❌ repli UDP, inactif (Serial ON) |
+| `envoiMsgModbusTCP` | Réponse | tous | ❌ TCP OFF |
+
+Code **inutilisé** : commandes 0x01-0x05 et 0x0F (hors repli), types `bit`/`hex`/`raw` (présents
+seulement dans des commentaires), bit 0x80 de télémétrie (plus émis depuis le push 0x10),
+code 0x11 `ISALIVE` (autorisé, sans branche).
+
+### 7.2 Pourquoi elle est difficile à maintenir (l.1416-1740 au 2026-09-30)
+
+1. **Une variable change de sens en cours de route** : `nbRegistres` = registres, puis
+   `*= 2` = octets (l.1562) s'il y a des données. La commande 0x03/0x04 l'écrit comme quantité
+   de registres, la réponse comme nombre d'octets : juste seulement selon que le bloc s'est
+   exécuté ou non. Origine du bug « 16 registres émis 32 » (juillet) et de la garde
+   `writeDataSize > 0`.
+2. **État caché** : `nbValeurs` / `nbRegistres` / `nbOctets` sont dans `etat()` (global) alors
+   que **personne ne les lit ailleurs** (vérifié par grep) : ce sont des locales déguisées.
+3. **`Count` a trois sens** : valeurs, bits (mode bit), registres (requête décodée).
+   `executeCmdModbus` compense avant l'appel (`Count /= 2`, l.1088).
+4. **Trois axes dans un même flux** (7 codes × Commande/Réponse × 8 types), en 4 passes
+   successives : tailles (l.1486-1510), validation (l.1518-1537), encodage (l.1566-1603),
+   assemblage (l.1621-1714), chacune avec ses `if` sur code et type.
+5. **Erreurs non bloquantes** : `Erreur` posé mais trame quand même construite et renvoyée
+   (`envoiMsgModbusSerial` l'émet : L3). `bit`/`hex`/`raw` écrivent des zéros en silence (`# TODO`).
+6. **Effets de bord sur `paramMSG`** : `FunctionName`, `Automatique`, `Erreur`, `Length`, et
+   `type` forcé à `int8` par défaut.
+7. **13 `string.format` de log** évalués à chaque trame, même debug OFF.
+
+### 7.3 Architecture cible : 3 étages + une table des formats
+
+```
+prepareTrame(paramMSG, typeMsg)          <- meme signature : appelants et banc inchanges
+  1. valide(paramMSG, typeMsg)            -> code autorise, type connu, nb de valeurs coherent ;
+                                             erreur => Erreur pose ET retour nil
+  2. pdu = GABARITS[code][typeMsg](p)     -> 5 petites fonctions (une par forme de trame)
+  3. return trameRTU(adresse, code, pdu)  -> adresse + code + pdu + CRC
+```
+
+- **A. `encodeValeurs(valeurs, type, modeBit)`** : pure, pilotée par
+  `{uint8: 1, uint16: 2, uint32: 4, float: 4}` + empaquetage des bits. La taille EST la longueur
+  produite (plus de calcul séparé). Type inconnu → erreur explicite.
+- **B. Gabarits** — les 5 formes du ModBus RTU :
+
+  | Gabarit | Codes | Contenu |
+  |---|---|---|
+  | lecture, commande | 0x01-0x04 | adresse + quantité |
+  | lecture, réponse bits | 0x01, 0x02 | nb d'octets + bits |
+  | lecture, réponse registres | 0x03, 0x04 | nb d'octets + données |
+  | écriture simple (commande = réponse) | 0x05, 0x06 | adresse + valeur 2 octets |
+  | écriture multiple | 0x0F, 0x10 | commande : adresse + quantité + nb d'octets + données ; réponse : adresse + quantité |
+
+  Table `{code: {"Commande": f, "Reponse": f}}` à la place de la cascade de `if`.
+- **C. `trameRTU(adresse, code, pdu)`** : ~5 lignes.
+- **Source unique des formats** : la même table pilote ensuite `decrypteMSG` (L1 : ne décode
+  que les requêtes) et `extraitTrames` (longueurs par code). Aujourd'hui les formats RTU sont
+  écrits trois fois, de trois manières.
+- **Au passage** : compteurs en locales ; `Count` = nombre de valeurs, toujours (le gabarit en
+  déduit registres et octets, fin de la compensation dans `executeCmdModbus`) ; suppression
+  (ou refus explicite) de 0x80, `ISALIVE`, `hex`/`raw`/`bit` ; log en une ligne, formatée
+  seulement si debug ON.
+
+Taille visée : **~120-150 lignes** au lieu de 325, fonctions de moins de 30 lignes.
+
+### 7.4 Méthode (sans régression)
+
+1. **Figer le comportement actuel** : section de banc « caractérisation » qui produit la trame
+   hexadécimale de chaque combinaison utilisée (code × sens × type) ; cas faux connus (0x05, L3)
+   marqués `bug_connu`. Le banc en couvre déjà une partie (§4, §8, §12, §13).
+2. **Réécrire derrière la même signature** : même hexadécimal attendu, octet pour octet ; témoin
+   = banc rejoué sur l'ancien fichier.
+3. **Brancher `decrypteMSG` et `extraitTrames` sur la table**, dans un commit séparé.
+4. Solidification vérifiée à chaque étape (`solidifie_et_compile_berry.py`), un commit par étape.
+
+### 7.5 Ordre recommandé
+
+1. Premier flash validé (section 6).
+2. Décision sur le repli UDP/TCP → s'il est supprimé : ~250-300 lignes en moins, L1/L13 clos (L2 déjà corrigé).
+3. Refonte `prepareTrame` (7.3-7.4).
+4. Seulement ensuite, si le fichier reste trop gros : extraire **le codage des trames** dans un
+   module `modbusTrame.be` (CRC, `prepareTrame`, `decrypteMSG`, `extraitTrames`,
+   `motsVersValeurs` : fonctions pures, sans état), réexporté par `modbusFonctions` sous les
+   mêmes noms (les 16 fichiers appelants ne changent pas).
+
+### 7.6 Scission de `modbusFonctions.be` : pas maintenant
+
+- Sur l'appareil, sa taille est **sans effet sur la RAM** (solidifié : code et constantes en
+  flash ; son état tient dans `global._etatModbusFonctions`). En flash, le P4 garde ~700 Ko de
+  marge et le maître a besoin de tout le module.
+- La frontière maître / esclave **ne tient pas** (`lireMsgModbus` sert aux deux ; gain tombé de
+  730 à ~120 lignes, cf. « phase 3 » du document de reprise).
+- Coût réel : listes `custom_berry_solidify` des 4 envs, imports, banc, re-vérification de
+  chaque morceau solidifié (piège B1).
+- Seule frontière nette : le codage des trames (7.5, étape 4).
