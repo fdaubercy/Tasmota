@@ -109,6 +109,11 @@ seul le total brut deborde, de 27 lignes de documentation.
 Extraire un module d'utilitaires partages avec `synchronise_upstream_tasmota.py`
 reste possible **le jour ou un troisieme script apparaitra**, pas avant.
 
+`outils_docs/exemples de scripts BERRY/test_liaison_modbus.be` fait **613 lignes**, et
+c'est **voulu** (decide le 2026-10-04 : « laisse ce test comme il est »). Ne pas le
+decouper : c'est UN fichier a televerser sur chaque carte, qui se prepare et s'explique
+seul au chargement ; le scinder imposerait deux televersements par carte.
+
 ## MONTER UN NOUVEAU POSTE
 
 Trois choses, dans cet ordre. Rien d'autre n'est necessaire.
