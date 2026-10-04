@@ -104,7 +104,7 @@ cuveFonctions.reglageCuve = def(cmd, idx, payload, payload_json)
 
             # Enregistre le reglage
             modules["cuve"]["reglage"] = parametres[0]
-            persist.save()
+            persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
         except .. as e, m
             # print('Erreur: ', e, " -> ", m)
         end
@@ -112,7 +112,7 @@ cuveFonctions.reglageCuve = def(cmd, idx, payload, payload_json)
     elif string.toupper(fonction) == "HAUTEURCUVE"
         try
             modules["cuve"]["dimensions"]["hauteur"] = int(parametres[0])
-            persist.save()                  # modules = persist.modules : la valeur survit au redemarrage
+            persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
         except .. as e, m
             # print('Erreur: ', e, " -> ", m)
         end
@@ -120,7 +120,7 @@ cuveFonctions.reglageCuve = def(cmd, idx, payload, payload_json)
     elif string.toupper(fonction) == "LARGEURCUVE"
         try
             modules["cuve"]["dimensions"]["largeur"] = int(parametres[0])
-            persist.save()                  # modules = persist.modules : la valeur survit au redemarrage
+            persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
         except .. as e, m
             # print('Erreur: ', e, " -> ", m)
         end
@@ -128,7 +128,7 @@ cuveFonctions.reglageCuve = def(cmd, idx, payload, payload_json)
     elif string.toupper(fonction) == "LONGUEURCUVE"
         try
             modules["cuve"]["dimensions"]["longueur"] = int(parametres[0])
-            persist.save()                  # modules = persist.modules : la valeur survit au redemarrage
+            persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
         except .. as e, m
             # print('Erreur: ', e, " -> ", m)
         end
@@ -201,7 +201,7 @@ cuveFonctions.reglageAna = def(cmd, idx, payload, payload_json)
     if string.toupper(fonction) == "VOLTAGEMAX"
         try
             modules["cuve"]["environnement"]["analogiques"]["voltageMax"] = real(parametres[0])
-            persist.save()                  # modules = persist.modules : la valeur survit au redemarrage
+            persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
         except .. as e, m
             # print('Erreur: ', e, " -> ", m)
         end

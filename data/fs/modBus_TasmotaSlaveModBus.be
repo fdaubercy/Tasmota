@@ -154,7 +154,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
 
                 # Sauvegarde le paramètre
                 drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"]["TasmotaSlaveModBus" + str(idx)]["id"] = nouvelleID
-                persist.save()
+                persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
             except .. as e, m
                 # print('Erreur: ', e, " -> ", m)
             end

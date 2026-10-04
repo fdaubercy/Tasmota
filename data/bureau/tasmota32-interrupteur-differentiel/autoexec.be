@@ -11,9 +11,6 @@ LOG_LEVEL_INFO = 2
 LOG_LEVEL_DEBUG = 3
 LOG_LEVEL_DEBUG_PLUS = 4            # niveau Berry "detail" : logFonctions.log() l'emet au niveau 3 du firmware (jamais 4, donc sans les BRY: GC)
 
-var logSerial = LOG_LEVEL_INFO
-var logWeb = LOG_LEVEL_INFO
-
 serveur = persist.serveur
 diverses = persist.diverses
 modules = persist.modules

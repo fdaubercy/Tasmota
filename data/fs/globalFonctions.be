@@ -594,7 +594,7 @@ def globalFonctions_reglageGlobal(cmd, idx, payload, payload_json)
             # Sauvegarde le paramètre
 			tasmota.cmd(string.format("FileLog %i", int(parametres[0])), boolMute)
             diverses["logs"]["nbLogsFiles"] = int(parametres[0])
-            persist.save()
+            persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
         except .. as e, m
             # print('Erreur: ', e, " -> ", m)
         end

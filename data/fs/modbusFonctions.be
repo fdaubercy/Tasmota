@@ -393,7 +393,7 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
 
         # Sauvegarde le paramètre
         drivers["ModBus"]["activationReponseCMD"] = parametres[0]
-        persist.save()
+        persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
     # Force le Client ModBus TCP (Maitre ModBus: id == 0) à se connecter au serveur TCP de ce module (utile si le client ne s'est pas encore connecté ou a perdu la connexion)
     elif (string.toupper(fonction) == string.toupper("ImAlive") && drivers["ModBus"].find("id", 99) == 0)
         # Adapte le paramètre
