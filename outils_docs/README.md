@@ -19,6 +19,71 @@
 
 <hr></hr>
 
+## Les logs Berry : charte et réglages
+
+Le mécanisme vit dans `data/fs/logFonctions.be`, qui porte la même charte en tête.
+
+### Les 4 niveaux
+
+| Mot | Constante | Quand l'utiliser |
+|---|---|---|
+| `erreur` | `LOG_LEVEL_ERREUR` (1) | Un échec qui demande d'agir : exception, trame rejetée, abandon après N tentatives. **Toujours affiché**, quel que soit le réglage du module. |
+| `info` | `LOG_LEVEL_INFO` (2) | Un événement ou un changement d'état, une ligne par événement : relais commuté, esclave connecté, configuration appliquée. |
+| `debug` | `LOG_LEVEL_DEBUG` (3) | Le déroulé d'un traitement : étapes, décisions, valeurs clés. |
+| `detail` | `LOG_LEVEL_DEBUG_PLUS` (4) | Le brut : trames, JSON complets, paramètres reçus. Sort au niveau 3 de Tasmota, sans les `BRY: GC`. |
+
+Dans le code : toujours `logFonctions.log(msg, niveau [, cible])`, jamais `log()` directement.
+Un échec se logue en `erreur`, jamais en `debug`. Pas d'`info` dans un traitement répété
+(toutes les secondes, à chaque trame reçue).
+
+### Deux filtres successifs
+
+Un message n'est affiché que s'il passe les deux :
+
+1. **Le réglage de son module** (la *cible*) : `general`, `web`, `udp`, `tcp`, `rangeExtender`,
+   `discovery`, `modbus`, `conn16channels`, `slaveModbus`, `lorawan`, `volets`, `es8311`.
+2. **Le réglage de la sortie** : `serie`, `web`, `mqtt` (topic `stat/<topic>/LOGGING`),
+   `syslog` (le PC, `syslog_tasmota.py`). Ces réglages forment un **profil**.
+
+Exemple : pour voir les trames ModBus dans la console, il faut `ReglageLog modbus detail`
+**et** un profil dont la sortie `serie` est au moins à `debug`.
+
+### Les commandes
+
+```
+ReglageLog                          affiche le profil actif, les sorties et le réglage de chaque module
+ReglageLog profil debug             applique le profil « debug » (ou « normal ») aux sorties
+ReglageLog modbus debug             règle le module ModBus : erreur | info | debug | detail
+ReglageLog syslog info              règle une sortie du profil actif : aucun | erreur | info | debug | detail
+```
+
+Tout est enregistré dans `_persist.json`. Une sortie à `detail` affiche aussi les lignes
+`BRY: GC` de Tasmota : c'est l'outil pour mesurer la RAM.
+
+### Dans `_persist.json`
+
+```json
+"diverses": {
+    "logs": {
+        "profil": "normal",
+        "profils": {
+            "normal": {"serie": "info",  "web": "info",  "mqtt": "erreur", "syslog": "info"},
+            "debug":  {"serie": "debug", "web": "debug", "mqtt": "debug",  "syslog": "debug"}
+        },
+        "general": "info",
+        "nbLogsFiles": 0
+    }
+},
+"drivers": {
+    "ModBus": { "activation": "ON", "log": "debug", ... }
+}
+```
+
+La sortie la plus bavarde fixe le coût : Tasmota met en mémoire tout message accepté par au
+moins une sortie. Un profil « normal » sobre allège donc vraiment la carte.
+
+<hr></hr>
+
 ## Les devices Tasmota développées :
 
 ```

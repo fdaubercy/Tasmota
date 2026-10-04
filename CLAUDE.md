@@ -249,6 +249,51 @@ Prise en compte a chaud, sans redemarrer VS Code.
   sinon Python passe en cp1252, le `✔` du script pre-build tue le thread de recopie de pio,
   et **toute** la sortie est perdue. Ne pas « corriger » le script de l'utilisateur pour ca.
 
+## Logs Berry — la charte (decidee le 2026-10-04)
+
+A appliquer a **tout** log ecrit dans un `.be` de ce depot. Le mecanisme vit dans
+`data/fs/logFonctions.be` (qui porte la meme charte en tete) ; la reference utilisateur
+est dans `outils_docs/README.md`.
+
+### Les 4 niveaux : quand utiliser lequel
+
+| Mot (commandes, persist) | Constante | Pour quoi |
+|---|---|---|
+| `erreur` | `LOG_LEVEL_ERREUR` (1) | Un echec qui demande d'agir : exception, trame rejetee, abandon apres N tentatives, fichier absent. **Toujours emis**, quel que soit le seuil du module. |
+| `info` | `LOG_LEVEL_INFO` (2) | Un evenement metier ou un changement d'etat, **une ligne par evenement** : relais commute, esclave connecte, configuration appliquee. Ce qu'on lit en fonctionnement normal. |
+| `debug` | `LOG_LEVEL_DEBUG` (3) | Le deroule d'un traitement : etapes, decisions, valeurs cles. Pour suivre un module en mise au point. |
+| `detail` | `LOG_LEVEL_DEBUG_PLUS` (4) | Le brut : trames, JSON complets, parametres recus par une commande, iterations de boucle. Emis au niveau **3** du firmware, jamais 4 : pas de melange avec les `BRY: GC`. |
+
+### Les regles d'ecriture
+
+1. **Toujours `logFonctions.log(msg, niveau [, cible])`, jamais `log()` direct.** Un `log()` direct
+   contourne le seuil du module, et un `detail` sortirait au niveau 4 du firmware.
+   Sans `cible`, le message depend du seuil `general`.
+2. Prefixe `NOM_MAJ_SNAKE: Message en francais !`, suffixe `_ERREUR` dans les `except`.
+3. Un echec se logue en `erreur`, jamais en `debug` « pour ne pas encombrer » : les erreurs
+   sont la seule chose qu'on doit pouvoir retrouver une fois le debug eteint.
+4. Dans un callback frequent (`every_50ms`, `every_second`, reception reseau ou serie) :
+   pas d'`info`, seulement `debug` ou `detail`.
+5. Un message couteux a construire (`json.dump`, gros `format`) se garde par
+   `if logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, cible) ... end` : Berry construit la chaine
+   **avant** d'appeler `log()`, meme si elle est ensuite jetee.
+
+### Les deux filtres successifs
+
+Un message n'apparait sur une sortie que s'il passe **les deux** :
+
+1. **Le seuil de son module** (sa `cible`) : cle `"log"` du bloc du module dans `_persist.json`
+   (`diverses.logs.general` pour `general`). Regle par `ReglageLog <cible> <niveau>`.
+2. **Le seuil de la sortie** (`serie`, `web`, `mqtt`, `syslog`), donne par le **profil actif** :
+   `diverses.logs.profil` et `diverses.logs.profils`. Regle par `ReglageLog profil <nom>`.
+
+Exemple : voir le `detail` ModBus en console demande `ReglageLog modbus detail` **et** une
+sortie `serie` a `debug` au moins. Une sortie a `detail` (niveau 4 du firmware) affiche aussi
+les `BRY: GC` : c'est l'outil de mesure de la RAM.
+
+**`ReglageLog` est la seule commande qui regle les logs.** Les anciens parametres
+(`logActivation`, `ReglageGlobal logLevel`) sont supprimes : ne pas les reintroduire.
+
 ## Journal des lecons
 
 `tasks/lessons.md` — voir la section « AU DEMARRAGE DE CHAQUE SESSION » en tete de ce

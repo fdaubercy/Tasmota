@@ -1070,6 +1070,7 @@
 #define D_CMND_PRESSURE_RESOLUTION "PressRes"
 #define USE_DISPLAY_LVGL_ONLY 
 #define D_JSON_GROUPS "Groups"
+#define DISABLE_REFERER_CHK 
 #define D_CMND_GROUPTOPIC "GroupTopic"
 #define D_ENERGY "Energy"
 #define D_JSON_CHIPTEMPERATURE "ChipTemperature"
@@ -1584,7 +1585,7 @@
 #define D_SENSOR_BIOPDU_PZEM0XX_TX "BioPDU PZEM0XX Tx"
 #define USE_SDM120 
 #define FM24CXX_BLOCK_SIZE 256
-#define CFG_HOLDER 1424
+#define CFG_HOLDER 1426
 #define D_MODULE "Module"
 #define D_SENSOR_WS2812 "WS2812"
 #define D_SO_MQTTTLS "MqttTLS"
