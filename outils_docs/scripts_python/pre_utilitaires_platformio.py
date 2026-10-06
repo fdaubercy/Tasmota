@@ -722,16 +722,20 @@ cible_sniffeur_mqtt.enregistre(env)
 # 📜 CIBLE « SERVEUR SYSLOG » (meme menu Custom) : recoit les logs UDP des modules (SYS_LOG_HOST)
 import cible_syslog_tasmota
 cible_syslog_tasmota.enregistre(env)
+# 🔀 CIBLE « SNIFFEUR MODBUS » (meme menu Custom) : ecoute le bus RS485 par le convertisseur USB-RS485
+import cible_sniffeur_modbus
+cible_sniffeur_modbus.enregistre(env)
 
 # Cibles qui ne sont PAS des builds : ne pas incrementer CFG_HOLDER, ne pas reecrire
 # platformio_override.ini ni copier d'image FS (bloc suivant).
-#   - pont_serie     : lancement du pont serie ;
-#   - sniffeur_mqtt  : lancement du sniffeur MQTT ;
-#   - syslog_tasmota : lancement du serveur syslog ;
-#   - __idedata      : rafraichissement IntelliSense / Project Tasks par pioarduino
-#                      ('pio project init'), lance tout seul par VS Code.
+#   - pont_serie      : lancement du pont serie ;
+#   - sniffeur_mqtt   : lancement du sniffeur MQTT ;
+#   - syslog_tasmota  : lancement du serveur syslog ;
+#   - sniffeur_modbus : lancement du sniffeur ModBus ;
+#   - __idedata       : rafraichissement IntelliSense / Project Tasks par pioarduino
+#                       ('pio project init'), lance tout seul par VS Code.
 CIBLES_HORS_BUILD = (cible_pont_serie.NOM_CIBLE, cible_sniffeur_mqtt.NOM_CIBLE, cible_syslog_tasmota.NOM_CIBLE,
-                     "__idedata")
+                     cible_sniffeur_modbus.NOM_CIBLE, "__idedata")
 hors_build = any(cible in COMMAND_LINE_TARGETS for cible in CIBLES_HORS_BUILD)
 
 # ============================================================

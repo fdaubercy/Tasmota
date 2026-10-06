@@ -334,6 +334,14 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   - `solidifie_et_compile_berry.py` — verifie qu'un module est solidifiable en ~10 s (compile le .h).
   - `nomme_fonctions_berry.py` — convertit les fonctions anonymes d'un module.
   - `corrige_reglages_vscode.py` — pose et prouve les reglages VS Code (PermissionError).
+  - `test_rs485_pc.py` — test du bus ModBus depuis le PC par un convertisseur USB-RS485
+    (Waveshare CH343) : ecoute du bus, envoi brut, lecture/commande de la carte 16 relais,
+    recherche de son debit, emulation de la carte (pour tester le maitre P4 sans elle).
+  - `sniffeur_modbus.py` (+ `sniffeur_modbus_web.py`, `cible_sniffeur_modbus.py`) — meme convertisseur,
+    page http://127.0.0.1:7300 : trames du bus decodees en direct, appariement requete/reponse (latence,
+    sans reponse, exceptions par esclave), envoi et raccourcis carte 16 relais, emulation de la carte.
+    Logique ModBus partagee avec `test_rs485_pc.py`. Cible PlatformIO « Sniffeur ModBus » dans Custom
+    (port : `custom_sniffeur_modbus_port`, defaut auto = le seul CH343 present).
   - `sniffeur_mqtt.py` (+ `sniffeur_mqtt_web.py`, `sniffeur_mqtt_panneaux.py`, `sniffeur_mqtt_config.py`,
     `client_mqtt.py`, `cible_sniffeur_mqtt.py`) — sniffeur / publieur MQTT sur http://127.0.0.1:7100 :
     plusieurs brokers parametrables (TLS possible) et selectionnables, abonnements gerables un par
