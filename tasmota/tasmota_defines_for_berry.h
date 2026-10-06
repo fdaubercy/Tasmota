@@ -165,7 +165,6 @@
 #define __WCHAR_MAX__ 0xffff
 #define D_PRESSUREATSEALEVEL "PressionMer"
 #define D_SENSOR_RA8876_CS "RA8876 CS"
-#define FIRMWARE_ESP32S3_CAPTEURS_CUVE_MODBUS 1
 #define D_SENSOR_PZEM004_RX "PZEM004 Rx"
 #define D_TWILIGHT_ASTRONOMICAL "Astronomical"
 #define D_SENSOR_SDIO_D0 "SDIO D0"
@@ -173,8 +172,8 @@
 #define D_SENSOR_SDIO_D2 "SDIO D2"
 #define D_SENSOR_SDIO_D3 "SDIO D3"
 #define COLOR_TIMER_TAB_TEXT "#faffff"
-#define STA_SSID1 "SERVEUR-GARAGE-GATEWAY"
-#define STA_SSID2 "iPhone de Frederic"
+#define STA_SSID1 "MAISON"
+#define STA_SSID2 "Relai Wifi 2.4G KuWFi"
 #define D_SUBNET_MASK "Masque sous-réseau"
 #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
 #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
@@ -224,7 +223,7 @@
 #define D_CMND_PIP_QMOD "QMOD"
 #define D_SENSOR_BOILER_OT_TX "OpenTherm TX"
 #define D_SCRIPT_CHARS_LEFT "car. restant"
-#define WIFI_GATEWAY "192.168.4.1"
+#define WIFI_GATEWAY "192.168.0.254"
 #define D_SENSOR_LD2410_RX "LD2410 Rx"
 #define D_JSON_LINK_COUNT "LinkCount"
 #define __GCC_ATOMIC_CHAR32_T_LOCK_FREE 2
@@ -424,7 +423,7 @@
 #define D_ENTER_COMMAND "Saisir une commande"
 #define D_FLOWRATEMETER_NAME "Débit"
 #define USE_MGS 
-#define MQTT_GRPTOPIC "tasmotas/garage"
+#define MQTT_GRPTOPIC "tasmotas/cave"
 #define USE_SUNRISE 
 #define D_SENSOR_MIEL_HVAC_TX "MiEl HVAC Tx"
 #define WIFI_SENSITIVITY_54g -750
@@ -471,7 +470,7 @@
 #define D_SENSOR_CC1101_CS "CC1101 CS"
 #define D_CMND_LEDPWM_OFF "LedPwmOff"
 #define D_JSON_IRHVAC_CELSIUS "Celsius"
-#define PROJECT "CAPTEURS-CUVE"
+#define PROJECT "SERVEUR-RLY-CAVE"
 #define D_UTC_TIME "UTC"
 #define __UINT32_MAX__ 0xffffffffUL
 #define D_CHARGE "Charge"
@@ -502,7 +501,7 @@
 #define D_FAILED "Échoué"
 #define D_SENSOR_ZIGBEE_RST "ZigBee Rst"
 #define D_UNIT_KILOMETER_PER_HOUR "km/h"
-#define WIFI_CONFIG_TOOL WIFI_WAIT
+#define WIFI_CONFIG_TOOL WIFI_MANAGER
 #define D_JSON_SERIALRECEIVED "SerialReceived"
 #define D_CMND_PREFIX "Prefix"
 #define D_THERMOSTAT_RAMP_UP "Ramp up"
@@ -578,7 +577,6 @@
 #define D_LOG_BERRY "BRY: "
 #define D_CLIENT "Client"
 #define __ATOMIC_SEQ_CST 5
-#define DS18x20_USE_ID_ALIAS 
 #define D_FP_ENROLL_PLACESAMEFINGER "Replacer le même doigt"
 #define MQTT_DISABLE_SSERIALRECEIVED 0
 #define D_SENSOR_BIOPDU_BIT "BioPDU Bit"
@@ -806,7 +804,6 @@
 #define D_SENSOR_MCP2515_CS "MCP2515 CS"
 #define APP_LEDSTATE LED_MQTT
 #define D_PROGRAM_FLASH_SIZE "Taille Flash Programme"
-#define USE_MODBUS 
 #define memcpy_P memcpy
 #define D_CMND_PUBLISH "Publish"
 #define D_CMND_SHUTTER_CLOSETIME "CloseDuration"
@@ -852,7 +849,7 @@
 #define FM24CXX_JSON_MAX_BYTES 4096
 #define D_CMND_UPLOAD "Upload"
 #define D_JSON_DOWNTIME "Downtime"
-#define FRIENDLY_NAME "Capteurs de Cuve"
+#define FRIENDLY_NAME "Serveur Relais Cave"
 #define D_UNIT_CELSIUS "C"
 #define D_JSON_IR_DATA "Data"
 #define MQTT_MAX_INFLIGHT 4
@@ -872,7 +869,7 @@
 #define D_CMND_WAKEUPDURATION "WakeUpDuration"
 #define D_MQTT_SERVICE_FOUND "Service MQTT trouvé sur"
 #define __FLT64_EPSILON__ 2.2204460492503131e-16F64
-#define USER_TEMPLATE "{\"NAME\":\"ESP32S3 Capteur Cuve Modbus\",\"GPIO\":[1,1,1,1,3232,3200,1376,1,608,640,1,1,1,1,1,1,1,1,1312,1,1,1,0,0,0,0,0,544,288,1,1,1,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
+#define USER_TEMPLATE "{\"NAME\":\"ESP32S3 Relay x8 Cave\",\"GPIO\":[33,1,160,1,32,224,225,226,1,1,1,1,1,1,1,161,227,228,34,1,1,288,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
 #define APP_INTERLOCK_MODE false
 #define USE_FTP 
 #define __INT16_MAX__ 0x7fff
@@ -928,7 +925,6 @@
 #define D_SENSOR_FTC532 "FTC532"
 #define D_RECEIVED_TOPIC "Topic reçu"
 #define D_THERMOSTAT_VALVE_POSITION "Valve Position"
-#define USE_BERRY_ANIMATION 
 #define D_ACTIVATE "Activer"
 #define USE_PZEM_AC 
 #define D_TELEMETRY_PERIOD "Période télémétrie"
@@ -972,7 +968,7 @@
 #define D_CMND_UPGRADE "Upgrade"
 #define D_CMND_ZIGBEE_FORGET "Forget"
 #define USE_ZIGBEE_AUTOBIND_LIFT 1.0
-#define MQTT_TOPIC "jardin/cuve"
+#define MQTT_TOPIC "cave/serveur-rly-cave-v2"
 #define SUPPORT_IF_STATEMENT 
 #define D_FP_UPLOADFEATUREFAIL "Erreur de transfert"
 #define WEB_SERVER 2
@@ -1127,7 +1123,6 @@
 #define D_CONFIGURATION_SAVED "Configuration enregistrée"
 #define __cpp_ref_qualifiers 200710L
 #define WS2812_LEDS 30
-#define TASMOTAMODBUSDEBUG 
 #define __INT_LEAST32_MAX__ 0x7fffffffL
 #define D_CMND_PIP_QPIRI "QPIRI"
 #define D_CONSOLE "Console"
@@ -1323,6 +1318,7 @@
 #define D_SENSOR_CSE7766_RX "CSE7766 Rx"
 #define TUYA_TEMP_SET_RES 1
 #define D_RSLT_HASS_STATE "HASS_STATE"
+#define SDCARD_CS_PIN 5
 #define D_WATER_DEPTH "Profondeur de l’eau"
 #define D_CMND_SHUTTER_LOCK "Lock"
 #define USE_LVGL_OPENHASP 1
@@ -1419,7 +1415,7 @@
 #define D_SENSOR_BL0940_RX "BL0940 Rx"
 #define D_JSON_SWITCH "Switch"
 #define D_CMND_RFSYNC "Sync"
-#define USER_BACKLOG "Backlog Hostname CAPTEURS-CUVE"
+#define USER_BACKLOG "Backlog Module 0; Hostname SERVEUR-RLY-CAVE"
 #define D_LOG_MQTT "MQT: "
 #define D_CMND_SAFEPOWER "SafePower"
 #define D_FP_IMAGEFAIL "Erreur d'acquisition"
@@ -1585,7 +1581,7 @@
 #define D_SENSOR_BIOPDU_PZEM0XX_TX "BioPDU PZEM0XX Tx"
 #define USE_SDM120 
 #define FM24CXX_BLOCK_SIZE 256
-#define CFG_HOLDER 1436
+#define CFG_HOLDER 1437
 #define D_MODULE "Module"
 #define D_SENSOR_WS2812 "WS2812"
 #define D_SO_MQTTTLS "MqttTLS"
@@ -1795,6 +1791,7 @@
 #define D_SENSOR_ADC_BUTTON "ADC Bouton"
 #define __INT8_TYPE__ signed char
 #define D_RESTART_REASON "Raison du redémarrage"
+#define FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY 1
 #define USE_AS3935 
 #define USE_MCP23XXX_DRV 
 #define D_CMND_ADC "ADC"
@@ -1816,7 +1813,6 @@
 #define D_LQI "LQI"
 #define D_CONFIGURE_TEMPLATE "Configuration du modèle"
 #define D_SENSOR_LOX_O2_RX "LoxO2 RX"
-#define USE_BERRY_ANIMATION_DSL 
 #define D_SO_ZIGBEE_DEVICETOPIC "DeviceTopic"
 #define __XSHAL_ABI 0
 #define D_JSON_LIGHT "Light"
@@ -1874,7 +1870,7 @@
 #define D_CMND_MQTTWIFITIMEOUT "MqttWifiTimeout"
 #define D_FREQUENCY "Fréquence"
 #define D_TOTAL_ACTIVE "Total Active"
-#define WIFI_RGX_SSID "CAPTEURS-CUVE-GATEWAY"
+#define WIFI_RGX_SSID "SERVEUR-RLY-CAVE-GATEWAY"
 #define MAX31865_PTD_WIRES 2
 #define __FLT32X_MIN__ 2.2250738585072014e-308F32x
 #define __XCHAL_HAVE_DFP_SQRT 0
@@ -1984,7 +1980,7 @@
 #define D_HOSTED_MCU "Hosted MCU"
 #define D_SO_ALEXACTRANGE "AlexaCTRange"
 #define D_JSON_IRHVAC_VENDOR "Vendor"
-#define STA_PASS2 "Lune5676"
+#define STA_PASS2 "obdormisti-pervigile%.-ficiendus"
 #define BE_LV_WIDGET_SPINNER 
 #define D_CMND_HDMI_SEND "Send"
 #define USE_PN532_HSU 
@@ -2198,7 +2194,7 @@
 #define D_TO "à"
 #define D_AS3935_CAL_OK "calibration établie à :"
 #define D_SENSOR_LE01MR_RX "LE-01MR Rx"
-#define WIFI_IP_ADDRESS "0.0.0.0"
+#define WIFI_IP_ADDRESS "192.168.0.243"
 #define D_SENSOR_DS18X20 "DS18x20"
 #define __FLT32_MIN_10_EXP__ (-37)
 #define D_FP_PASSVERIFY "Mot-de-passe vérifié"
@@ -2292,11 +2288,10 @@
 #define D_PARTITION "Partition"
 #define BE_LV_WIDGET_OBJ 
 #define D_UNIT_MILIGRAMS_PER_LITER "mg/L"
-#define USE_LORA_SX126X_DEBUG 
 #define HUMIDITY_RESOLUTION 1
 #define D_CMND_TIME "Time"
 #define WEB_USERNAME "admin"
-#define STA_PASS1 "Lune5676"
+#define STA_PASS1 "obdormisti-pervigile%.-ficiendus"
 #define D_MINUTE_SECOND_SEPARATOR ":"
 #define D_CMND_MQTTLOG "MqttLog"
 #define __INTPTR_TYPE__ int
@@ -2305,7 +2300,6 @@
 #define __WCHAR_TYPE__ short unsigned int
 #define __XCHAL_HAVE_DEPBITS 0
 #define D_GPIO_SHIFT595_SER "74x595 Ser"
-#define USE_MODBUS_BRIDGE_TCP 
 #define __SIZEOF_FLOAT__ 4
 #define USE_DEVICE_GROUPS 
 #define ESP32 1
@@ -2407,7 +2401,7 @@
 #define D_FREE_MEMORY "Mémoire libre"
 #define D_DISTANCE "Distance"
 #define D_COLOR_RED "Rouge"
-#define MQTT_CLIENT_ID "CAPTEURS-CUVE"
+#define MQTT_CLIENT_ID "SERVEUR-RLY-CAVE-V2"
 #define D_SENSOR_GM861_TX "GM861 Tx"
 #define D_VERSION "Version"
 #define THERMOSTAT_TIME_MAX_OUTPUT_INCONSIST 3
@@ -2459,7 +2453,7 @@
 #define THERMOSTAT_TIME_MIN_ACTION 4
 #define D_SENSOR_LED "LED"
 #define __cpp_inheriting_constructors 201511L
-#define CODE_IMAGE_STR "Capteurs de Cuve"
+#define CODE_IMAGE_STR "Serveur 8 Relais"
 #define D_RSLT_INFO "INFO"
 #define MQTT_RESULT_COMMAND false
 #define __INT_LEAST64_MAX__ 0x7fffffffffffffffLL

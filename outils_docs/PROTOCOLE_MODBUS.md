@@ -290,6 +290,13 @@ Passer a 19200 : `01 06 00 FE 00 04` + CRC.
 > l'adresse par diffusion (`0x00FF`), revient au debit du bus et relance la file ; reponses
 > journalisees en clair (`TESTE_DEBIT_CONN16:`). Ne PAS taper `ModbusBaudrate 9600 ModBusSend ...`
 > sur une seule ligne : sans `Backlog`, seul `ModbusBaudrate` s'execute.
+>
+> **Aligner la carte sur le persist (2026-10-06)** : `ReglageModbus VerifieConn16channels [corrige]`
+> sur le maitre (`modbusFonctions.verifieConn16`). Lit `0x00FE` a l'ID du persist au debit du bus ;
+> sans reponse, balaie les 5 debits en lisant l'ID par diffusion. Compare a
+> `Conn16channels.<carte>.id` et `drivers.ModBus.debit` ; avec `corrige`, ecrit le debit puis l'ID.
+> Lancee aussi au boot (avec correction) si `verifieAuDemarrage: "ON"` dans le bloc de la carte.
+> Un debit ecrit demande toujours la coupure d'alimentation de la carte (piege 3).
 
 ### Six pieges de cette carte
 

@@ -229,6 +229,7 @@ def modbusFonctions_aideReglageModbus(sujet)
             ["RecupereBaudrateConn16channels", "RecupereBaudrateConn16channels <id>", "lit le code de debit de la carte 16 relais"],
             ["ReglageBaudrateConn16channels", "ReglageBaudrateConn16channels <id> <debit|usine>", "ecrit le debit de la carte 16 relais"],
             ["TesteDebitConn16channels", "TesteDebitConn16channels <id> [debit]", "teste la carte 16 relais a un debit donne, puis revient au bus"],
+            ["VerifieConn16channels", "VerifieConn16channels [corrige] [<carte>]", "retrouve l'ID et le debit de la carte 16 relais, compare au persist, corrige"],
             ["ActivationReponseCMD", "ActivationReponseCMD <ON|OFF|1|0>", "(des)active la reponse de l'esclave aux commandes ModBus"],
             ["ImAlive", "ImAlive <ON|OFF|1|0>", "INTERNE : force le maitre a connecter ses clients ModBus TCP"]
         ]
@@ -273,6 +274,16 @@ def modbusFonctions_aideReglageModbus(sujet)
                 "une seule carte sur le bus), journalise en clair, puis remet le debit du bus.",
                 "Dure quelques secondes ; refuse si un test est deja en cours.",
                 "Exemple : ReglageModbus TesteDebitConn16channels 1 9600"]
+    elif (sujet == "VERIFIECONN16CHANNELS")
+        return ["Parametres : [corrige] [<carte>] ; carte par defaut = la premiere Conn16channel active.",
+                "Reserve au maitre ModBus serie. Suspend la file, lit le registre de debit a l'ID du",
+                "persist ; sans reponse, balaie les debits (bus, puis 19200 -> 1200) en lisant l'ID par",
+                "diffusion (une seule carte active). Compare a Conn16channels.<carte>.id et a",
+                "drivers.ModBus.debit ; verdict dans le journal (VERIFIE_CONN16).",
+                "'corrige' : ecrit le debit (0x00FE) puis l'ID (0x00FF) qui different. Un nouveau debit",
+                "n'est effectif qu'apres coupure d'alimentation de la carte : relancer ensuite.",
+                "Au boot si Conn16channels.<carte>.verifieAuDemarrage = ON (avec correction).",
+                "Exemple : ReglageModbus VerifieConn16channels corrige"]
     elif (sujet == "ACTIVATIONREPONSECMD")
         return ["Parametre : ON ou 1 = l'esclave repond aux commandes ModBus ; OFF ou 0 = muet.",
                 "Effet : sauve drivers.ModBus.activationReponseCMD dans le persist.",
@@ -297,6 +308,8 @@ modbusFonctions.aideReglageModbus = modbusFonctions_aideReglageModbus
     ReglageModbus RecupereBaudrateConn16channels 0x01
     ReglageModbus ReglageBaudrateConn16channels 0x01 19200
     ReglageModbus TesteDebitConn16channels 1 9600      => lit le debit et l'adresse de la carte a 9600 bauds, puis revient au debit du bus
+    ReglageModbus VerifieConn16channels                => compare l'ID et le debit reels de la carte au persist
+    ReglageModbus VerifieConn16channels corrige        => idem, puis ecrit l'ID et le debit du persist dans la carte
     ReglageModbus ActivationReponseCMD ON
 
     ReglageModbus ImAlive ON
@@ -391,6 +404,16 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
         var args = string.split(parametres[0], " ")
         var debit = size(args) > 1 ? int(args[1]) : nil
         reponse_cmnd += modbusFonctions.testeDebitConn16(int(args[0]), debit) + ", "
+    # Verifie l'ID et le debit de la carte 16 relais contre le persist ; 'corrige' les ecrit (voir verifieConn16)
+    elif (string.toupper(fonction) == string.toupper("VerifieConn16channels"))
+        var corrige = false
+        var nomCarte = nil
+        for a: (parametres.size() > 0 ? string.split(parametres[0], " ") : [])
+            if (string.tolower(a) == "corrige")    corrige = true
+            elif (a != "")                         nomCarte = a
+            end
+        end
+        reponse_cmnd += modbusFonctions.verifieConn16(corrige, nomCarte) + ", "
     # (Des)active la réponse de l'esclave aux commandes ModBus
     elif (string.toupper(fonction) == string.toupper("ActivationReponseCMD"))
         # Adapte le paramètre
@@ -479,6 +502,21 @@ def modbusFonctions_changementEtatDemarrage(value, trigger, msg)
 	elif (trigger == "System")
         if msg[trigger].find("Init", 0)
         elif msg[trigger].find("Boot", 0)
+            # Maitre : verifie, et corrige, l'ID et le debit de la carte 16 relais si son bloc du
+            # persist porte verifieAuDemarrage = ON. Avant le 1er sondage (15 s, modBus_Conn16channels).
+            if (drivers["ModBus"].find("id", 99) == 0)
+                var groupe = drivers["ModBus"].find("environnement", {}).find("Conn16channels", {})
+                for cle: groupe.keys()
+                    var c = groupe[cle]
+                    if (type(c) != "instance" || c.find("activation", "OFF") != "ON" || c.find("verifieAuDemarrage", "OFF") != "ON")    continue    end
+                    var nomCarte = cle
+                    modbusFonctions.armeTimer(2000, def ()
+                        modbusFonctions.log("MODBUS_CHGT_ETAT_DEMARRAGE: " + modbusFonctions.verifieConn16(true, nomCarte), LOG_LEVEL_INFO)
+                    end, "verifieConn16_boot")
+                    break
+                end
+            end
+
             # Paramétrage Clients et Serveur ModBus TCP si activé
             if (drivers["ModBus"]["typeComm"].find("TCP", "OFF") == "ON" && serveur["tcp"].find("activation", "OFF") == "ON")
                 # Active les instances clients ModBus TCP (Si TCP activé & Maitre ModBus id = 0)
@@ -807,6 +845,219 @@ def modbusFonctions_reglageDebitConn16(parametres)
     return string.format("debit de l'esclave %i -> %s (code %i) envoye", id, libelle, code)
 end
 modbusFonctions.reglageDebitConn16 = modbusFonctions_reglageDebitConn16
+
+#- VERIFICATION ET MISE EN CONFORMITE DE LA CARTE 16 RELAIS (2026-10-06)
+    ReglageModbus VerifieConn16channels [corrige] [<carte>]      (et au boot, voir changementEtatDemarrage)
+
+    Retrouve l'ID et le debit REELS de la carte, les compare au persist du maitre et, avec
+    'corrige', ecrit ce qui differe. Valeurs attendues :
+        ID    = drivers.ModBus.environnement.Conn16channels.<carte>.id
+        debit = drivers.ModBus.debit (le debit du bus)
+    Deroulement, file suspendue comme pour testeDebitConn16 :
+        A. au debit du bus, lecture du registre de debit 0x00FE a l'ID attendu : une reponse
+           prouve l'ID et le debit d'un coup (cas normal, ~1 s) ;
+        B. sinon balayage : debit du bus puis 19200 -> 1200, lecture de l'ID par diffusion
+           (esclave 255, registre 0x00FF), arret a la premiere reponse, puis lecture de 0x00FE ;
+        C. verdict ; avec 'corrige' : ecrit le debit (0x00FE) PUIS l'ID (0x00FF), les deux a l'ID
+           ACTUEL de la carte, puis relit a l'ID attendu.
+    La diffusion est sure sur le bus du garage : les esclaves Tasmota rejettent l'adresse 255
+    (decrypteMSG), seule la carte repond. Elle est refusee si plusieurs Conn16channels sont actives.
+    Un nouveau debit n'est effectif qu'APRES COUPURE D'ALIMENTATION de la carte : la fonction le
+    signale, il faut ensuite relancer la verification. Si 0x00FE vaut deja le code attendu alors
+    que la carte repond a un autre debit, la coupure est seulement en attente : rien n'est reecrit.
+    Duree : ~1 s si conforme ; ~6 x (timeoutReponse + 500 ms) si la carte ne repond a aucun debit.
+-#
+def modbusFonctions_verifieConn16(corrige, nomCarte)
+    import string
+    import json
+
+    var mb = drivers["ModBus"]
+    if (mb.find("id", 99) != 0 || mb["typeComm"].find("Serial", "OFF") != "ON")    return "verification reservee au maitre ModBus serie"    end
+    var etat = modbusFonctions.etat()
+    if (etat.find("pause", false))                                                 return "test ou verification deja en cours"            end
+
+    # Carte visee : <carte>, sinon la premiere active. On compte les actives (diffusion = une seule).
+    var groupe = mb.find("environnement", {}).find("Conn16channels", {})
+    var nbActives = 0
+    for cle: groupe.keys()
+        if (type(groupe[cle]) != "instance" || groupe[cle].find("activation", "OFF") != "ON")    continue    end
+        nbActives += 1
+        if (nomCarte == nil)    nomCarte = cle    end
+    end
+    var carte = (nomCarte != nil) ? groupe.find(nomCarte) : nil
+    if (type(carte) != "instance")    return "aucune carte Conn16channels " + (nomCarte != nil ? "nommee " + nomCarte : "active")    end
+
+    var idAttendu = int(carte.find("id", 0))
+    var debitAttendu = int(mb.find("debit", 19200))
+    var codeAttendu = nil
+    for c: modbusFonctions.CODES_DEBIT_CONN16.keys()
+        if (modbusFonctions.CODES_DEBIT_CONN16[c] == debitAttendu)    codeAttendu = c    end
+    end
+    if (idAttendu < 1 || idAttendu > 247)    return string.format("ID du persist refuse : %i (1 a 247)", idAttendu)    end
+    if (codeAttendu == nil)                  return string.format("debit du persist non supporte par la carte : %i", debitAttendu)    end
+
+    # L'ID attendu ne doit etre porte par aucun autre appareil actif du bus (cuve, rideau...)
+    for nomGroupe: mb["environnement"].keys()
+        var g = mb["environnement"][nomGroupe]
+        if (type(g) != "instance" || nomGroupe == "pinsModBus")    continue    end
+        for cle: g.keys()
+            if (type(g[cle]) != "instance" || g[cle] == carte)    continue    end       # == : meme objet
+            if (g[cle].find("activation", "OFF") == "ON" && g[cle].find("id", -1) == idAttendu)
+                return string.format("ID %i deja porte par %s.%s : corriger le persist", idAttendu, nomGroupe, cle)
+            end
+        end
+    end
+
+    var debits = [debitAttendu]
+    for d: [19200, 9600, 4800, 2400, 1200]
+        if (d != debitAttendu)    debits.push(d)    end
+    end
+    var attente = int(mb.find("timeoutReponse", 1000)) + modbusFonctions.MARGE_TIMEOUT_MS
+    var nom = "verifieConn16"
+    var v = {"attendu": nil, "recu": false, "valeur": nil, "rang": 0, "idTrouve": nil, "debitTrouve": nil, "codeLu": nil}
+
+    # Emet une trame HORS FILE, puis appelle suite() a la reponse (v.recu = true) ou au timeout.
+    # Le timeout couvre le delai du pont Tasmota : aucune emission ne part pont occupe.
+    var envoie = def (adresse, fc, registre, valeur, suite)
+        v["recu"] = false
+        v["valeur"] = nil
+        v["attendu"] = {"fc": fc, "registre": registre, "suite": suite}
+        var trame = {"deviceaddress": adresse, "functioncode": fc, "startaddress": registre, "type": "uint16", "count": 1}
+        if (valeur != nil)    trame["values"] = [valeur]    end
+        tasmota.cmd("ModBusSend " + json.dump(trame), boolMute)
+        modbusFonctions.armeTimer(attente, def () v["attendu"] = nil  suite() end, nom)
+    end
+
+    # Regle ModbusReceived temporaire : ne retient que la reponse a la trame en cours.
+    var recoit = def (msg)
+        var a = v["attendu"]
+        var r = isinstance(msg, map) ? msg.find("ModbusReceived", {}) : {}
+        if (a == nil || r.find("FunctionCode") != a["fc"] || r.find("StartAddress") != a["registre"])    return    end
+        var valeurs = r.find("Values", [])
+        v["valeur"] = (isinstance(valeurs, list) && size(valeurs) > 0) ? int(valeurs[0]) : nil
+        v["recu"] = (v["valeur"] != nil)
+        v["attendu"] = nil
+        modbusFonctions.desarmeTimer(nom)
+        modbusFonctions.armeTimer(150, a["suite"], nom)       # pont libre : etape suivante sans attendre
+    end
+
+    var fin = def (verdict, niveau)
+        modbusFonctions.desarmeTimer(nom)
+        tasmota.cmd(string.format("ModbusBaudrate %i", debitAttendu), boolMute)
+        tasmota.remove_rule("ModbusReceived", nom)
+        etat["pause"] = false
+        logFonctions.log("VERIFIE_CONN16: " + verdict, niveau, "modbus")
+        modbusFonctions.pompeQueue()
+    end
+
+    # C. Verdict, puis corrections eventuelles (bus encore au debit ou la carte a repondu)
+    var conclut = def ()
+        var idOK = (v["idTrouve"] == idAttendu)
+        var debitOK = (v["debitTrouve"] == debitAttendu)
+        var ecritDebit = (v["codeLu"] == nil) ? !debitOK : (v["codeLu"] != codeAttendu)
+        var constat = string.format("carte %s : ID %i (persist %i), debit %i bauds (persist %i), registre de debit %s",
+                                    nomCarte, v["idTrouve"], idAttendu, v["debitTrouve"], debitAttendu, str(v["codeLu"]))
+        if (idOK && debitOK && !ecritDebit)
+            fin("conforme au persist, " + constat, LOG_LEVEL_INFO)
+            return
+        end
+        if (!corrige)
+            fin("NON conforme, " + constat + ((!ecritDebit && !debitOK) ? " ; debit deja enregistre, couper l'alimentation de la carte"
+                                                                          : " ; relancer avec 'corrige' pour regler la carte"), LOG_LEVEL_ERREUR)
+            return
+        end
+
+        var bilan = []
+        var termine = def ()
+            var aAgir = !debitOK            # un echec, ou une coupure a faire, se logue en erreur
+            for b: bilan
+                if (string.find(b, "ECHEC") >= 0 || string.find(b, "ne repond pas") >= 0)    aAgir = true    end
+            end
+            if (!debitOK)    bilan.push("COUPER L'ALIMENTATION de la carte (nouveau debit), puis relancer VerifieConn16channels")    end
+            fin("corrections, " + constat + " -> " + bilan.concat(" ; "), aAgir ? LOG_LEVEL_ERREUR : LOG_LEVEL_INFO)
+        end
+        var corrigeId = def ()
+            if (idOK)    termine()    return    end
+            envoie(v["idTrouve"], modbusFonctions.ECRITURE_REGISTRE_UNIQUE, 0xFF, idAttendu, def ()
+                var ecrit = v["recu"]
+                envoie(idAttendu, modbusFonctions.LECTURE_REGISTRES_HOLDER, 0xFE, nil, def ()
+                    if (v["recu"])     bilan.push(string.format("ID %i applique", idAttendu))
+                    elif (ecrit)       bilan.push(string.format("ID %i ecrit mais la carte ne repond pas encore a cette adresse", idAttendu))
+                    else               bilan.push(string.format("ECHEC de l'ecriture de l'ID %i", idAttendu))
+                    end
+                    termine()
+                end)
+            end)
+        end
+        if (ecritDebit)
+            envoie(v["idTrouve"], modbusFonctions.ECRITURE_REGISTRE_UNIQUE, 0xFE, codeAttendu, def ()
+                bilan.push(v["recu"] ? string.format("debit %i enregistre (code %i)", debitAttendu, codeAttendu)
+                                     : string.format("ECHEC de l'ecriture du debit %i", debitAttendu))
+                corrigeId()
+            end)
+        else
+            corrigeId()
+        end
+    end
+
+    # B. Balayage par diffusion, debit par debit
+    var balaie = nil
+    balaie = def ()
+        if (v["rang"] >= size(debits))
+            fin(string.format("carte %s muette a tous les debits %s : alimentation, cablage A/B, ou plusieurs cartes sur le bus ?", nomCarte, str(debits)), LOG_LEVEL_ERREUR)
+            return
+        end
+        var d = debits[v["rang"]]
+        v["rang"] += 1
+        tasmota.cmd(string.format("ModbusBaudrate %i", d), boolMute)
+        modbusFonctions.armeTimer(300, def ()
+            envoie(255, modbusFonctions.LECTURE_REGISTRES_HOLDER, 0xFF, nil, def ()
+                if (!v["recu"])    balaie()    return    end
+                v["idTrouve"] = v["valeur"]
+                v["debitTrouve"] = d
+                envoie(v["idTrouve"], modbusFonctions.LECTURE_REGISTRES_HOLDER, 0xFE, nil, def ()
+                    v["codeLu"] = v["recu"] ? v["valeur"] : nil
+                    conclut()
+                end)
+            end)
+        end, nom)
+    end
+
+    # A. Essai direct : ID attendu, au debit du bus
+    var essaiDirect = def ()
+        tasmota.cmd(string.format("ModbusBaudrate %i", debitAttendu), boolMute)
+        modbusFonctions.armeTimer(300, def ()
+            envoie(idAttendu, modbusFonctions.LECTURE_REGISTRES_HOLDER, 0xFE, nil, def ()
+                if (v["recu"])
+                    v["idTrouve"] = idAttendu
+                    v["debitTrouve"] = debitAttendu
+                    v["codeLu"] = v["valeur"]
+                    conclut()
+                elif (nbActives > 1)
+                    fin(string.format("carte %s muette a l'ID %i / %i bauds, et diffusion impossible : %i cartes Conn16channels actives", nomCarte, idAttendu, debitAttendu, nbActives), LOG_LEVEL_ERREUR)
+                else
+                    balaie()
+                end
+            end)
+        end, nom)
+    end
+
+    # Suspend la file. Le pont attend peut-etre encore la reponse du message en vol.
+    etat["pause"] = true
+    modbusFonctions.desarmeTimer("modbus_timeout")
+    var delai = 200
+    if (etat["enVol"] != nil)
+        etat["queue"].insert(0, etat["enVol"])
+        etat["enVol"] = nil
+        delai = attente
+    end
+    tasmota.add_rule("ModbusReceived", def (value, trigger, msg) recoit(msg) end, nom)
+    logFonctions.log(string.format("VERIFIE_CONN16: verification de la carte %s (persist : ID %i, %i bauds)%s", nomCarte, idAttendu, debitAttendu, corrige ? ", correction autorisee" : ""), LOG_LEVEL_INFO, "modbus")
+    modbusFonctions.armeTimer(delai, essaiDirect, nom)
+
+    return string.format("verification de la carte %s lancee%s, verdict dans le journal (VERIFIE_CONN16)", nomCarte, corrige ? " avec correction" : "")
+end
+modbusFonctions.verifieConn16 = modbusFonctions_verifieConn16
 
 # --- Timer P4-safe : set_timer() est problematique sur ESP32-P4 (le maitre de garage).
 # Corrige le 2026-09-29 (audit G1) : l'emulation par add_cron("*/N ...") partait au prochain

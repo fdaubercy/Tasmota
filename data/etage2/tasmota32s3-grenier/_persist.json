@@ -907,7 +907,8 @@
 					"Conn16channel1": {
 						"activation": "OFF",
 						"name": "Connecteur RS485 16 sorties",
-						"id": 1
+						"id": 1,
+						"verifieAuDemarrage": "OFF"
 					}
 				},
 				"TasmotaSlaveModBus": {

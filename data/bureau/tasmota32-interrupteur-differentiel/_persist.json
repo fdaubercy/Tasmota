@@ -729,7 +729,8 @@
 					"activation": "OFF",
 					"log": "detail",
 					"name": "Connecteur RS485 16 sorties",
-					"id": "0x01"
+					"id": "0x01",
+					"verifieAuDemarrage": "OFF"
 				},
 				"TasmotaSlaveModBus1": {
 					"activation": "OFF",

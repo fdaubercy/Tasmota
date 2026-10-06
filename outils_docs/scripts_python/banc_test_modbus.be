@@ -58,7 +58,8 @@ class TasmotaStub
   def delay(ms) end
   def set_timer(a, b, c) end
   def remove_timer(nom) end
-  def add_rule(a, b, c) if self.regles != nil self.regles.push("+" + str(a) + "/" + str(c)) end end
+  var rappels                          # id -> fonction des add_rule, si non nil (section 23 : simulateur de carte)
+  def add_rule(a, b, c) if self.regles != nil self.regles.push("+" + str(a) + "/" + str(c)) end if self.rappels != nil self.rappels[c] = b end end
   def remove_rule(a, c) if self.regles != nil self.regles.push("-" + str(a) + "/" + str(c)) end end
   def add_cron(a, b, c) end
   def remove_cron(nom) end
@@ -910,6 +911,123 @@ etM["enVol"] = nil
 etM["queue"] = []
 etM["echeances"] = {}
 tasmota.regles = nil
+tasmota.retourCmd = nil
+diverses = {}
+drivers = sauveDrivers
+
+print("")
+print("=== 23. VerifieConn16channels : ID et debit de la carte vs persist, correction ===")
+# Carte simulee : repond seulement au BON debit, a son ID ou a la diffusion 255 ; 0x00FE = code de
+# debit enregistre, 0x00FF = ID. Hypothese du simulateur : un ID ecrit est effectif tout de suite,
+# un debit ecrit seulement apres coupure (doc constructeur) -> 'debit' reste celui en service.
+var carteSim = {}
+def simuleCarte()
+  import string
+  import json
+  while carteSim["vu"] < size(tasmota.cmds)
+    var c = tasmota.cmds[carteSim["vu"]]
+    carteSim["vu"] += 1
+    if string.find(c, "ModbusBaudrate ") == 0    carteSim["bus"] = int(c[15 ..])    continue    end
+    if string.find(c, "ModBusSend ") != 0 || carteSim["bus"] != carteSim["debit"]    continue    end
+    var t = json.load(c[11 ..])
+    var adr = t["deviceaddress"]
+    if (adr != carteSim["id"] && adr != 255) || t.find("startaddress", 0) < 0xFE    continue    end
+    var fc = t["functioncode"]
+    var reg = t["startaddress"]
+    var val = nil
+    if fc == 3
+      val = (reg == 0xFF) ? carteSim["id"] : carteSim["code"]
+    elif fc == 6
+      val = t["values"][0]
+      carteSim["ecrits"].push(str(adr) + ":" + str(reg) + "=" + str(val))
+      if reg == 0xFF    carteSim["id"] = val    else    carteSim["code"] = val    end
+    end
+    tasmota.rappels["verifieConn16"](nil, nil, {"ModbusReceived": {"DeviceAddress": adr, "FunctionCode": fc, "StartAddress": reg, "Count": 1, "Values": [val]}})
+  end
+end
+# Prepare un scenario : persist (id, debit) et carte (id, debit en service, code enregistre)
+def scenario(idPersist, idCarte, debitCarte, codeCarte)
+  drivers = {"ModBus": {"typeComm": {"Serial":"ON"}, "id": 0, "activationReponseCMD": "ON", "debit": 19200, "timeoutReponse": 5000,
+                        "environnement": {"pinsModBus": {"RX": {"activation": "ON", "id": 1}},
+                                          "Conn16channels": {"log": "detail", "Conn16channel1": {"activation": "ON", "id": idPersist}},
+                                          "TasmotaSlaveModBus": {"TasmotaSlaveModBus1": {"activation": "ON", "id": 2}}}}}
+  carteSim = {"id": idCarte, "debit": debitCarte, "code": codeCarte, "bus": 19200, "vu": 0, "ecrits": []}
+  var e = modbusFonctions.etat()
+  e["echeances"] = {}  e["queue"] = []  e["enVol"] = nil  e["pause"] = false
+  tasmota.ms = 0  tasmota.cmds = []  tasmota.regles = []  tasmota.rappels = {}  tasmota.retourCmd = {}
+  journal = []
+end
+def deroule(jusqua)
+  while tasmota.ms < jusqua    tasmota.ms += 100    modbusFonctions.verifieEcheances()    simuleCarte()    end
+end
+diverses = {"typeESP": "ESP32P4"}
+var etV = modbusFonctions.etat()
+
+# a) conforme : une seule lecture, au debit du bus, a l'ID du persist
+scenario(1, 1, 19200, 4)
+verifie("conforme : lancement", true, string.find(essaie(def () return modbusFonctions.verifieConn16(false, nil) end), "lancee") > 0)
+verifie("conforme : file suspendue", true, etV["pause"])
+essaie(def () deroule(2000) end)
+verifie("conforme : verdict en moins de 2 s", true, journalise("VERIFIE_CONN16: conforme au persist"))
+verifie("conforme : pause levee, regle retiree", "false/-ModbusReceived/verifieConn16", str(etV["pause"]) + "/" + tasmota.regles[-1])
+verifie("conforme : aucune diffusion ni ecriture", 0, size(carteSim["ecrits"]) + (string.find(str(tasmota.cmds), "\"deviceaddress\":255") >= 0 ? 1 : 0))
+
+# b) non conforme, sans 'corrige' : trouve ID 5 a 9600 par balayage, n'ecrit rien
+scenario(1, 5, 9600, 3)
+essaie(def () modbusFonctions.verifieConn16(false, nil) end)
+essaie(def () deroule(60000) end)
+verifie("sans corrige : ecart constate", true, journalise("NON conforme, carte Conn16channel1 : ID 5 (persist 1), debit 9600 bauds (persist 19200)"))
+verifie("sans corrige : rien ecrit", 0, size(carteSim["ecrits"]))
+verifie("sans corrige : bus revenu a 19200", "ModbusBaudrate 19200", tasmota.cmds[-1])
+
+# c) avec 'corrige' : ecrit le debit PUIS l'ID, a l'ID actuel ; relit a l'ID attendu
+scenario(1, 5, 9600, 3)
+essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "VerifieConn16channels corrige", nil) end)
+essaie(def () deroule(60000) end)
+verifie("corrige : debit puis ID, a l'ID actuel 5", "['5:254=4', '5:255=1']", str(carteSim["ecrits"]))
+verifie("corrige : ID relu a la nouvelle adresse", true, journalise("ID 1 applique"))
+verifie("corrige : coupure d'alimentation demandee", true, journalise("COUPER L'ALIMENTATION"))
+verifie("corrige : pause levee", false, etV["pause"])
+
+# d) debit deja enregistre, coupure pas faite : rien n'est reecrit
+scenario(1, 1, 9600, 4)
+essaie(def () modbusFonctions.verifieConn16(true, nil) end)
+essaie(def () deroule(60000) end)
+verifie("coupure en attente : aucune ecriture", 0, size(carteSim["ecrits"]))
+verifie("coupure en attente : signalee", true, journalise("COUPER L'ALIMENTATION"))
+
+# e) debit en service = persist, mais un autre debit enregistre (piege au prochain boot) : corrige
+scenario(1, 1, 19200, 3)
+essaie(def () modbusFonctions.verifieConn16(true, nil) end)
+essaie(def () deroule(5000) end)
+verifie("code enregistre faux : reecrit 4, sans coupure", "['1:254=4']/false", str(carteSim["ecrits"]) + "/" + str(journalise("COUPER")))
+
+# f) carte muette a tous les debits : erreur, puis file relancee
+scenario(1, 1, 38400, 4)
+essaie(def () modbusFonctions.verifieConn16(true, nil) end)
+essaie(def () deroule(60000) end)
+verifie("muette : signalee apres le balayage", true, journalise("muette a tous les debits"))
+verifie("muette : 1 lecture directe + 5 diffusions", 6, size(string.split(str(tasmota.cmds), "ModBusSend")) - 1)
+verifie("muette : pause levee", false, etV["pause"])
+
+# g) refus : ID du persist deja porte par un esclave du bus ; second lancement pendant un test
+scenario(2, 2, 19200, 4)
+verifie("ID 2 du persist = esclave cuve : refuse", "ID 2 deja porte par TasmotaSlaveModBus.TasmotaSlaveModBus1 : corriger le persist",
+        essaie(def () return modbusFonctions.verifieConn16(true, nil) end))
+scenario(1, 1, 19200, 4)
+etV["pause"] = true
+verifie("refuse pendant un test en cours", "test ou verification deja en cours", essaie(def () return modbusFonctions.verifieConn16(true, nil) end))
+
+# h) deux cartes actives : pas de diffusion
+scenario(1, 7, 19200, 4)
+drivers["ModBus"]["environnement"]["Conn16channels"]["Conn16channel2"] = {"activation": "ON", "id": 9}
+essaie(def () modbusFonctions.verifieConn16(true, "Conn16channel1") end)
+essaie(def () deroule(20000) end)
+verifie("deux cartes : pas de diffusion", true, string.find(str(tasmota.cmds), "\"deviceaddress\":255") < 0 && journalise("diffusion impossible"))
+
+etV["echeances"] = {}  etV["queue"] = []  etV["enVol"] = nil  etV["pause"] = false
+tasmota.regles = nil
+tasmota.rappels = nil
 tasmota.retourCmd = nil
 diverses = {}
 drivers = sauveDrivers
