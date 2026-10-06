@@ -1033,6 +1033,35 @@ diverses = {}
 drivers = sauveDrivers
 
 print("")
+print("=== 24. Demarrage du maitre : verifieConn16 differee (persist reel du P4) ===")
+# Constate sur le P4 le 2026-10-06 : 'type_error string + map' au boot. Le minuteur etait cree
+# dans une boucle quittee par 'break', qui ne referme pas les variables capturees : il lisait
+# une variable declaree apres la boucle au lieu du nom de la carte. Rejoue le vrai chemin :
+# System#Boot (changementEtatDemarrage) puis l'echeance 'verifieConn16_boot'.
+import json
+var fP4 = open("data/garage/tasmota32p4-serveur-modbus/_persist.json", "r")
+var pP4 = json.load(fP4.read())
+fP4.close()
+sauveDrivers = drivers
+sauveServeur = serveur
+drivers = pP4["drivers"]
+serveur = pP4["serveur"]
+diverses = {"typeESP": "ESP32P4"}                     # armeTimer -> echeances (chemin P4)
+etV["echeances"] = {}  etV["queue"] = []  etV["enVol"] = nil  etV["pause"] = false
+essaie(def () modbusFonctions.changementEtatDemarrage({"Boot": 1}, "System", {"System": {"Boot": 1}}) end)
+var eBoot = etV["echeances"].find("verifieConn16_boot")
+verifie("boot : echeance verifieConn16_boot armee", true, eBoot != nil)
+verifie("boot : echeance executee sans exception", "OK",
+        eBoot == nil ? "absente" : essaie(def () eBoot["f"]() return "OK" end))
+verifie("boot : verification lancee (file suspendue)", true, etV["pause"])
+etV["echeances"] = {}  etV["queue"] = []  etV["enVol"] = nil  etV["pause"] = false
+tasmota.regles = nil
+tasmota.rappels = nil
+diverses = {}
+drivers = sauveDrivers
+serveur = sauveServeur
+
+print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
       total, total - echecs - bugs_connus, bugs_connus, echecs))
 print(echecs == 0 ? "BANC_MODBUS: OK" : "BANC_MODBUS: ECHEC")

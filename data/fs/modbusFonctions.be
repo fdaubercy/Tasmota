@@ -509,10 +509,10 @@ def modbusFonctions_changementEtatDemarrage(value, trigger, msg)
                 for cle: groupe.keys()
                     var c = groupe[cle]
                     if (type(c) != "instance" || c.find("activation", "OFF") != "ON" || c.find("verifieAuDemarrage", "OFF") != "ON")    continue    end
-                    var nomCarte = cle
-                    modbusFonctions.armeTimer(2000, def ()
-                        modbusFonctions.log("MODBUS_CHGT_ETAT_DEMARRAGE: " + modbusFonctions.verifieConn16(true, nomCarte), LOG_LEVEL_INFO)
-                    end, "verifieConn16_boot")
+                    # Fermeture creee HORS de la boucle (verifieConn16Differee) : 'break' ne referme pas
+                    # les variables capturees dans la boucle -> le minuteur lisait une variable declaree
+                    # plus loin (une map) au lieu du nom de la carte (type_error au boot, 2026-10-06)
+                    modbusFonctions.armeTimer(2000, modbusFonctions.verifieConn16Differee(cle), "verifieConn16_boot")
                     break
                 end
             end
@@ -1058,6 +1058,17 @@ def modbusFonctions_verifieConn16(corrige, nomCarte)
     return string.format("verification de la carte %s lancee%s, verdict dans le journal (VERIFIE_CONN16)", nomCarte, corrige ? " avec correction" : "")
 end
 modbusFonctions.verifieConn16 = modbusFonctions_verifieConn16
+
+# Retourne la fonction a passer au minuteur du demarrage pour verifier la carte <nomCarte>.
+# nomCarte est un PARAMETRE : sa capture est refermee au retour de cette fonction. Creee
+# directement dans une boucle quittee par 'break', la fermeture lisait le registre reutilise
+# par une variable declaree apres la boucle (piege du compilateur Berry, constate le 2026-10-06).
+def modbusFonctions_verifieConn16Differee(nomCarte)
+    return def ()
+        modbusFonctions.log("MODBUS_CHGT_ETAT_DEMARRAGE: " + modbusFonctions.verifieConn16(true, nomCarte), LOG_LEVEL_INFO)
+    end
+end
+modbusFonctions.verifieConn16Differee = modbusFonctions_verifieConn16Differee
 
 # --- Timer P4-safe : set_timer() est problematique sur ESP32-P4 (le maitre de garage).
 # Corrige le 2026-09-29 (audit G1) : l'emulation par add_cron("*/N ...") partait au prochain
