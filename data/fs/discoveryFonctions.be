@@ -34,6 +34,120 @@ def discoveryFonctions_roleLocal()
 end
 discoveryFonctions.roleLocal = discoveryFonctions_roleLocal
 
+# Egalite de CONTENU de deux valeurs JSON (maps et listes comparees recursivement).
+# En Berry, '==' entre deux maps compare les OBJETS : json.load(x) == json.load(x) vaut false.
+# Les tests "le met a jour si different" etaient donc toujours vrais : discovery.json etait
+# reecrit a CHAQUE message, d'ou une rafale d'ecritures flash a chaque connexion MQTT
+# (messages retenus du broker), constatee sur la cuve le 2026-10-05.
+def discoveryFonctions_memeValeur(a, b)
+    if (isinstance(a, map))
+        if (!isinstance(b, map) || a.size() != b.size())    return false    end
+        for cle: a.keys()
+            if (!b.contains(cle) || !discoveryFonctions.memeValeur(a[cle], b[cle]))    return false    end
+        end
+        return true
+    elif (isinstance(a, list))
+        if (!isinstance(b, list) || a.size() != b.size())    return false    end
+        var i = 0
+        while (i < a.size())
+            if (!discoveryFonctions.memeValeur(a[i], b[i]))    return false    end
+            i += 1
+        end
+        return true
+    end
+    return a == b
+end
+discoveryFonctions.memeValeur = discoveryFonctions_memeValeur
+
+# Charge /json/discovery.json en UNE lecture (l'ancien code le relisait 3 a 4 fois par message).
+# Rend {} si le fichier est absent, vide ou illisible.
+def discoveryFonctions_lisTable()
+    import gestionFileFolder
+    import json
+
+    var fichier = gestionFileFolder.readFile("/json/discovery.json")
+    if (fichier == false || fichier == nil || fichier == "")    return {}    end
+    var table = json.load(fichier)
+    return isinstance(table, map) ? table : {}
+end
+discoveryFonctions.lisTable = discoveryFonctions_lisTable
+
+# Fiches ANCIENNES : plusieurs MAC publient la MEME fiche (meme hostname 'hn' ET meme nom 'dn'
+# dans 'config') -- carte remplacee dont les messages retenus restent sur le broker. Constate
+# le 2026-10-05 : 3 MAC 'RIDEAU-GARAGE', 2 MAC 'SERVEUR-RLY-CAVE', qui se chassaient de la table
+# a chaque reconnexion (la derniere arrivee gagnait, pas la plus recente).
+# Critere : l'heure du dernier releve 'sensors' (sn.Time) de chaque MAC, gardee en RAM. Est
+# ancienne une MAC dont le releve est plus vieux que celui d'une autre MAC de meme fiche.
+# Heure inconnue ou horloge non reglee (1970) -> aucune decision pour cette MAC.
+# Effet : retiree de discovery.json ; le MAITRE efface en plus ses messages retenus sur le
+# broker (charge vide retenue), ce qui la retire aussi de la table des autres modules.
+# Appelee a la reception de chaque 'sensors' (pas de timer : set_timer est peu fiable sur P4).
+def discoveryFonctions_purgeAnciennes(item, payload)
+    import json
+    import string
+    import mqtt
+    import gestionFileFolder
+
+    var releve = json.load(payload)
+    var heure = isinstance(releve, map) && isinstance(releve.find("sn"), map) ? releve["sn"].find("Time") : nil
+    if (type(heure) != "string" || string.find(heure, "1970") == 0)    return    end
+
+    var heures = discoveryFonctions.etat().find("heuresSensors")
+    if (heures == nil)
+        heures = {}
+        discoveryFonctions.etat()["heuresSensors"] = heures
+    end
+    heures[item] = heure
+
+    var table = discoveryFonctions.lisTable()
+    var entree = table.find(item)
+    if (!isinstance(entree, map) || !isinstance(entree.find("config"), map))    return    end
+    var cfg = entree["config"]
+
+    # MACs de meme fiche dont l'heure de releve est connue
+    var groupe = [item]
+    for cle: table.keys()
+        var autre = table[cle]
+        if (cle != item && heures.contains(cle) && isinstance(autre, map) && isinstance(autre.find("config"), map))
+            if (autre["config"].find("hn") == cfg.find("hn") && autre["config"].find("dn") == cfg.find("dn"))
+                groupe.push(cle)
+            end
+        end
+    end
+    if (size(groupe) < 2)    return    end
+
+    var recente = item
+    for cle: groupe
+        if (heures[cle] > heures[recente])    recente = cle    end
+    end
+
+    var macLocale = string.toupper(string.replace(serveur.find("adresseMAC", ""), ":", ""))
+    var maitre = (discoveryFonctions.roleLocal() == "maitre")
+    var modifie = false
+    for cle: groupe
+        if (cle == recente || cle == macLocale || !(heures[cle] < heures[recente]))    continue    end
+
+        logFonctions.log(string.format("DISCOVERY_PURGE: MAC %s (releve du %s) : fiche '%s' ancienne, la plus recente est %s (releve du %s)%s",
+                                       cle, heures[cle], str(cfg.find("hn")), recente, heures[recente],
+                                       maitre ? " -> messages retenus effaces du broker" : ""), LOG_LEVEL_INFO, "discovery")
+        if (maitre)
+            var sujets = ["config", "sensors"]
+            for k: table[cle].keys()
+                if (k != "config" && k != "sensors" && k != "lwt")    sujets.push(k)    end      # fiches de role (maitre, esclaveN...)
+            end
+            for k: sujets
+                mqtt.publish("tasmota/discovery/" + cle + "/" + k, "", true)
+            end
+        end
+        table.remove(cle)
+        heures.remove(cle)
+        modifie = true
+    end
+
+    if (modifie)    gestionFileFolder.writeFile("/json/discovery.json", json.dump(table))    end
+end
+discoveryFonctions.purgeAnciennes = discoveryFonctions_purgeAnciennes
+
 # Aide de la commande ReglageDiscovery, appelee SEULEMENT par diversFonctions.traiteAide :
 # sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
 def discoveryFonctions_aideReglageDiscovery(sujet)
@@ -194,12 +308,7 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
 
             try
                 # Compare ce json aux données enregistrées dans '/json/discovery.json'
-                var jsonDiscovery = {}
-
-                # Si fichier 'discovery.json' existe et n'est pas vide, charge les données pour comparer avec le json à envoyer
-                if (gestionFileFolder.readFile("/json/discovery.json") != false && gestionFileFolder.readFile("/json/discovery.json") != "")
-                    jsonDiscovery = json.load(gestionFileFolder.readFile("/json/discovery.json"))
-                end
+                var jsonDiscovery = discoveryFonctions.lisTable()
 
                 tasmota.yield()
 
@@ -210,8 +319,8 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
                 else
                     # Si l'item existe déjà dans jsonDiscovery, on met à jour les données
                     if (jsonDiscovery[string.replace(serveur.find("adresseMAC", "000000000000"), ":", "")].find(item, false))
-                        # Si les 2 json sont différents
-                        if (jsonDiscovery[string.replace(serveur.find("adresseMAC", "000000000000"), ":", "")][item] != jsonData[item])
+                        # Si les 2 json sont différents (contenu, pas identite des maps)
+                        if (!discoveryFonctions.memeValeur(jsonDiscovery[string.replace(serveur.find("adresseMAC", "000000000000"), ":", "")][item], jsonData[item]))
                             jsonDiscovery[string.replace(serveur.find("adresseMAC", "000000000000"), ":", "")][item] = jsonData[item]
                             boolJsonModifie = true
                         end
@@ -331,71 +440,63 @@ def discoveryFonctions_mqtt_discovery(topic, idx, data, databytes)
         return true
     end
 
+    # 'sensors' (releves periodiques : heure, temperatures...) n'est lu par AUCUN script et
+    # change a chaque publication : le ranger reecrivait discovery.json a chaque message.
+    # Son heure de releve sert seulement a reperer les fiches anciennes (purgeAnciennes).
+    if (typeData == "sensors")
+        discoveryFonctions.log("DISCOVERY_MQTT_DATA: 'sensors' ignore (non range dans discovery.json)", LOG_LEVEL_DEBUG_PLUS)
+        try
+            discoveryFonctions.purgeAnciennes(item, data)
+        except .. as error, message
+            discoveryFonctions.log(string.format("DISCOVERY_PURGE_ERREUR: %s --> %s", error, message), LOG_LEVEL_ERREUR)
+        end
+        return true
+    end
+
     data = json.load(data)
+    if (data == nil)
+        logFonctions.log("DISCOVERY_MQTT_DATA: Charge JSON illisible sur " + str(topic) + ", ignoree", LOG_LEVEL_ERREUR, "discovery")
+        return true
+    end
 
-    # Prépare le json
-    var paramJSON = {}
-    var boolJsonModifie = false
-    var jsonDiscovery = {}
+    if (typeData == "config")   discoveryFonctions.log("DISCOVERY_MQTT_DATA: hostname=" + str(data.find('dn')), LOG_LEVEL_DEBUG_PLUS)     end
 
-    paramJSON.insert(item, {})
-    paramJSON[item].insert(typeData, data)
-
-    # Modifie le json
-    if (typeData == "config")   discoveryFonctions.log("DISCOVERY_MQTT_DATA: hostname=" + data['dn'], LOG_LEVEL_DEBUG_PLUS)     end
-
-    # Si c'est le json discovery pour le module en question
     try
-        # Si fichier '/json/discovery.json' existe et n'est pas vide, charge les données pour comparer avec le json à envoyer
-        # Ouvre le fichier enregistré pour la découverte des modules Tasmota sur le réseau local
-        if (gestionFileFolder.readFile("/json/discovery.json") != false && gestionFileFolder.readFile("/json/discovery.json") != "")
-            jsonDiscovery = json.load(gestionFileFolder.readFile("/json/discovery.json"))
+        # UNE lecture du fichier ; ecriture SEULEMENT si le contenu change (la plupart des
+        # messages retenus renvoyes a la connexion MQTT sont identiques a ce qui est range).
+        var jsonDiscovery = discoveryFonctions.lisTable()
+        var modifie = false
+
+        tasmota.yield()
+
+        if (!isinstance(jsonDiscovery.find(item), map))
+            jsonDiscovery[item] = {}
+            modifie = true
+        end
+        var entree = jsonDiscovery[item]
+        if (!discoveryFonctions.memeValeur(entree.find(typeData), data))
+            entree[typeData] = data
+            modifie = true
+        end
+
+        # 'lwt' pose a "Online" seulement s'il est ABSENT : sinon c'est le topic LWT qui decide.
+        # (Avant : forcer "Online" a chaque fiche retenue, puis le LWT retenu "Offline" juste
+        # apres -> deux ecritures par module hors ligne a chaque reconnexion, 2026-10-05.)
+        # Les doublons (autre MAC, meme fiche) ne sont plus retires ici -- ils se chassaient
+        # mutuellement : voir purgeAnciennes, qui garde la plus recente.
+        if (typeData == "config" && !entree.contains("lwt"))
+            entree["lwt"] = "Online"
+            modifie = true
         end
 
         tasmota.yield()
 
-        # Compare ce json aux données enregistrées dans 'discovery.json'
-        # Cherche l'adresse MAC dans le json enregistré
-        # Si adresse MAC présente
-        if (jsonDiscovery.find(item, false))
-            # Si typeData présente: la modifie
-            if (jsonDiscovery[item].find(typeData, false))
-                jsonDiscovery[item][typeData] = paramJSON[item][typeData]
-            # Si typeData absente: la crée
-            else    
-                jsonDiscovery[item].insert(typeData, paramJSON[item][typeData])
-            end
-        # Si adresse MAC absente l'insert
-        else 
-            jsonDiscovery.insert(item, paramJSON[item])
-        end
-
-        # Par défaut, on considère que le module est en ligne à la réception de son message de découverte MQTT
-        if (typeData == "config")   jsonDiscovery[item].insert("lwt", "Online")     end
-
-        # Recherche une device avec une autre adresse MAC portant le même hostname / devicename
-        if (typeData == "config")
-            for cle: jsonDiscovery.keys()
-                if (jsonDiscovery[cle].find("config", false))
-                    if (cle != item)
-                        if (jsonDiscovery[cle]["config"]["hn"] == paramJSON[item]["config"]["hn"] && jsonDiscovery[cle]["config"]["dn"] == paramJSON[item]["config"]["dn"])
-                            jsonDiscovery.remove(cle)
-                        end
-                    end
-                end
-            end
-        end
-
-        tasmota.yield()
-
-        # Le met à jour si différent
-        if (jsonDiscovery != json.load(gestionFileFolder.readFile("/json/discovery.json")))
+        if (modifie)
             gestionFileFolder.writeFile("/json/discovery.json", json.dump(jsonDiscovery))
+            discoveryFonctions.log("DISCOVERY_MQTT_DATA: discovery.json mis a jour ('" + typeData + "' de " + item + ")", LOG_LEVEL_DEBUG_PLUS)
+        else
+            discoveryFonctions.log("DISCOVERY_MQTT_DATA: '" + typeData + "' de " + item + " inchange, pas d'ecriture", LOG_LEVEL_DEBUG_PLUS)
         end
-
-        # Décharge le json
-        jsonDiscovery = {}
-        paramJSON = {}
 
         return true
     except .. as error, message
@@ -433,13 +534,8 @@ def discoveryFonctions_mqtt_lwt(topic, idx, data, databytes)
     if (m)  topicLWT = m[1]     end
 
     try
-        # Charge 'json/discovery.json'
-        var jsonDiscovery = {}
-
-        # Si fichier '/json/discovery.json' existe et n'est pas vide, charge les données pour comparer avec le json à envoyer
-        if (gestionFileFolder.readFile("/json/discovery.json") != false && gestionFileFolder.readFile("/json/discovery.json") != "")
-            jsonDiscovery = json.load(gestionFileFolder.readFile("/json/discovery.json"))
-        end
+        # Charge 'json/discovery.json' (une seule lecture)
+        var jsonDiscovery = discoveryFonctions.lisTable()
 
         tasmota.yield()
 

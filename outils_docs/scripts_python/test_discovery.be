@@ -10,6 +10,9 @@
 #   6.   Boutons RangeExtender : 'lwt'/'config'/'sensors' ne sont plus pris pour des fiches.
 #   7.   Bout en bout : l'esclave ecrit sa fiche, l'envoie en UDP (forceEnvoiParams) et en MQTT ;
 #        le maitre la range ; chaque champ lu par un script consommateur (CONTRAT) doit y etre.
+#   11.  mqtt_discovery : discovery.json ecrit seulement si le contenu change ; 'sensors' ignore.
+#   12.  lwt : la fiche retenue ne force plus "Online" (va-et-vient avec le LWT) ; purge des MAC
+#        anciennes publiant la meme fiche (heure du dernier 'sensors'), effacees du broker par le maitre.
 # Les lecteurs de modbusFonctions (clients TCP, IP UDP : fichesModbus) sont testes dans
 # banc_test_modbus.be section 6, sur la meme forme de table.
 #
@@ -471,6 +474,119 @@ gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(tSansFiche)}
 envois = []
 essaie(def () udpFonctions.reglageUDP("ReglageUDP", 0, "forceEnvoiParams ON", nil) end)
 verifie("fiche esclave2 absente : aucun ImAlive", 0, size(envois))
+
+print("")
+print("=== 11. mqtt_discovery : ecriture seulement si le contenu change ===")
+# Avant (constate sur la cuve le 2026-10-05) : 'jsonDiscovery != json.load(...)' compare des
+# OBJETS map, toujours differents -> discovery.json reecrit a CHAQUE message retenu recu a la
+# connexion MQTT, 'sensors' compris (heure et temperatures changent a chaque publication).
+import introspect
+var mv = introspect.get(discoveryFonctions, "memeValeur")      # nil sur l'ancien code (temoin)
+verifie("memeValeur : maps imbriquees egales", true, mv != nil && mv({"a": {"b": [1, {"c": "x"}]}}, {"a": {"b": [1, {"c": "x"}]}}))
+verifie("memeValeur : valeur differente", false, mv != nil && mv({"a": 1}, {"a": 2}))
+verifie("memeValeur : cle en plus", false, mv != nil && mv({"a": 1}, {"a": 1, "b": 2}))
+verifie("memeValeur : 1 et \"1\" differents", false, mv != nil && mv({"a": 1}, {"a": "1"}))
+
+var nbEcritures = 0
+var ecritOrigine = gestionFileFolder.writeFile
+gestionFileFolder.writeFile = def (chemin, data) nbEcritures += 1    ecritOrigine(chemin, data) end
+gestionFileFolder.fichiers = {}
+var topicCfg = "tasmota/discovery/AAAAAAAAAA01/config"
+var cfgPorte = {"ip": "192.168.0.45", "dn": "Porte de Cave", "hn": "PORTE-CAVE", "t": "cave/porte", "fn": ["Lumiere", nil]}
+essaie(def () discoveryFonctions.mqtt_discovery(topicCfg, 0, json.dump(cfgPorte), nil) end)
+verifie("1re fiche config : 1 ecriture", 1, nbEcritures)
+nbEcritures = 0
+essaie(def () discoveryFonctions.mqtt_discovery(topicCfg, 0, json.dump(cfgPorte), nil) end)
+verifie("meme fiche renvoyee (retenue) : 0 ecriture", 0, nbEcritures)
+cfgPorte["ip"] = "192.168.0.46"
+nbEcritures = 0
+essaie(def () discoveryFonctions.mqtt_discovery(topicCfg, 0, json.dump(cfgPorte), nil) end)
+verifie("fiche config modifiee : 1 ecriture", 1, nbEcritures)
+verifie("... nouvelle IP rangee", "192.168.0.46", table().find("AAAAAAAAAA01", {}).find("config", {}).find("ip"))
+nbEcritures = 0
+essaie(def () discoveryFonctions.mqtt_discovery(topicCfg, 0, "pas du json", nil) end)
+verifie("charge illisible : 0 ecriture, sans exception", 0, nbEcritures)
+nbEcritures = 0
+essaie(def () discoveryFonctions.mqtt_discovery("tasmota/discovery/AAAAAAAAAA01/sensors", 0, '{"sn":{"Time":"2026-10-05T10:00:00"},"ver":1}', nil) end)
+verifie("'sensors' : 0 ecriture", 0, nbEcritures)
+verifie("'sensors' : non range", false, table().find("AAAAAAAAAA01", {}).contains("sensors"))
+gestionFileFolder.writeFile = ecritOrigine
+
+print("")
+print("=== 12. Va-et-vient lwt et purge des MAC anciennes (meme fiche) ===")
+# Constate le 2026-10-05 : (a) chaque fiche 'config' retenue forcait lwt=Online, le LWT retenu
+# 'Offline' le remettait aussitot -> 2 ecritures par module hors ligne a chaque reconnexion ;
+# (b) 3 MAC 'RIDEAU-GARAGE' (cartes remplacees) se chassaient de la table a chaque reconnexion.
+serveur = {"adresseMAC": "58:8C:81:5B:56:40", "nom": "Serveur de Garage", "IP": {"IPAddress": "192.168.0.43"}, "hostname": "SERVEUR-GARAGE",
+           "udp": {"id": 0, "activation": "ON", "debug": "ON"},
+           "rangeExtender": {"activation": "ON", "id": 0, "debug": "ON"},
+           "mqtt": {"topic": "garage", "groupTopic1": "tasmotas/garage"}, "discovery": {"debug": "ON"}}
+gestionFileFolder.writeFile = def (chemin, data) nbEcritures += 1    ecritOrigine(chemin, data) end
+gestionFileFolder.fichiers = {}
+discoveryFonctions.etat()["heuresSensors"] = {}
+def disc(mac, type, charge) essaie(def () discoveryFonctions.mqtt_discovery("tasmota/discovery/" + mac + "/" + type, 0, charge, nil) end) end
+def cfgRideau() return json.dump({"ip": "192.168.4.3", "dn": "Rideau de garage", "hn": "RIDEAU-GARAGE", "t": "garage/rideau"}) end
+def releve(heure) return json.dump({"sn": {"Time": heure, "Switch1": "OFF"}, "ver": 1}) end
+
+# (a) va-et-vient lwt
+disc("CCCCCCCCCC01", "config", json.dump({"ip": "192.168.0.50", "dn": "Volet", "hn": "VR-PORTE", "t": "volet/entree"}))
+verifie("fiche neuve : lwt pose a Online", "Online", table().find("CCCCCCCCCC01", {}).find("lwt"))
+essaie(def () discoveryFonctions.mqtt_lwt("tele/volet/entree/LWT", 0, "Offline", nil) end)
+verifie("LWT retenu Offline applique", "Offline", table().find("CCCCCCCCCC01", {}).find("lwt"))
+nbEcritures = 0
+disc("CCCCCCCCCC01", "config", json.dump({"ip": "192.168.0.50", "dn": "Volet", "hn": "VR-PORTE", "t": "volet/entree"}))
+verifie("fiche retenue rejouee : 0 ecriture", 0, nbEcritures)
+verifie("... lwt reste Offline (le topic LWT decide)", "Offline", table().find("CCCCCCCCCC01", {}).find("lwt"))
+
+# (b) purge : 3 MAC, meme fiche ; le maitre efface les anciennes du broker
+disc("DDDDDDDDDD01", "config", cfgRideau())
+disc("DDDDDDDDDD02", "config", cfgRideau())
+disc("DDDDDDDDDD03", "config", cfgRideau())
+disc("DDDDDDDDDD03", "esclave3", json.dump({"id": 3, "nom": "Rideau de garage"}))
+verifie("3 fiches rideau toutes rangees (plus de chasse mutuelle)", 3,
+        (table().contains("DDDDDDDDDD01") ? 1 : 0) + (table().contains("DDDDDDDDDD02") ? 1 : 0) + (table().contains("DDDDDDDDDD03") ? 1 : 0))
+mqtt.publies = []
+disc("DDDDDDDDDD01", "sensors", releve("2025-12-23T14:40:53"))
+verifie("1er releve seul : aucune purge", true, table().contains("DDDDDDDDDD01"))
+disc("DDDDDDDDDD02", "sensors", releve("2026-03-11T13:25:38"))
+verifie("releve plus recent : la MAC ancienne quitte la table", false, table().contains("DDDDDDDDDD01"))
+verifie("... ses messages retenus effaces (config + sensors)", "tasmota/discovery/DDDDDDDDDD01/config '' true|tasmota/discovery/DDDDDDDDDD01/sensors '' true",
+        size(mqtt.publies) == 2 ? mqtt.publies[0][0] + " '" + mqtt.publies[0][1] + "' " + str(mqtt.publies[0][2]) + "|" + mqtt.publies[1][0] + " '" + mqtt.publies[1][1] + "' " + str(mqtt.publies[1][2]) : str(mqtt.publies))
+verifie("... purge journalisee", true, journalise("DISCOVERY_PURGE"))
+mqtt.publies = []
+disc("DDDDDDDDDD03", "sensors", releve("2026-05-22T03:04:26"))
+verifie("la plus recente reste", true, table().contains("DDDDDDDDDD03") && table()["DDDDDDDDDD03"].contains("esclave3"))
+verifie("la 2e ancienne quitte la table", false, table().contains("DDDDDDDDDD02"))
+verifie("... 2 effacements sur le broker", 2, size(mqtt.publies))
+mqtt.publies = []
+disc("DDDDDDDDDD01", "config", "")
+verifie("effacement recu en retour : sans exception ni publication", 0, size(mqtt.publies))
+
+# Heure non reglee (1970) : aucune decision
+disc("EEEEEEEEEE01", "config", json.dump({"dn": "Pompe", "hn": "POMPE", "t": "jardin/pompe"}))
+disc("EEEEEEEEEE02", "config", json.dump({"dn": "Pompe", "hn": "POMPE", "t": "jardin/pompe"}))
+disc("EEEEEEEEEE01", "sensors", releve("2026-10-01T10:00:00"))
+disc("EEEEEEEEEE02", "sensors", releve("1970-01-01T00:00:14"))
+verifie("heure 1970 : les 2 MAC conservees", true, table().contains("EEEEEEEEEE01") && table().contains("EEEEEEEEEE02"))
+
+# Ordre inverse : la plus recente arrive d'abord, l'ancienne ensuite -> l'ancienne part
+disc("FFFFFFFFFF01", "config", json.dump({"dn": "Cave", "hn": "SERVEUR-RLY-CAVE", "t": "cave/a"}))
+disc("FFFFFFFFFF02", "config", json.dump({"dn": "Cave", "hn": "SERVEUR-RLY-CAVE", "t": "cave/b"}))
+disc("FFFFFFFFFF01", "sensors", releve("2026-10-03T09:11:44"))
+disc("FFFFFFFFFF02", "sensors", releve("2026-09-27T15:21:39"))
+verifie("ordre inverse : l'ancienne (recue en 2e) part", false, table().contains("FFFFFFFFFF02"))
+verifie("ordre inverse : la recente reste", true, table().contains("FFFFFFFFFF01"))
+
+# Cote ESCLAVE : retrait local seulement, aucune publication sur le broker
+serveur["udp"]["id"] = 2
+mqtt.publies = []
+disc("GGGGGGGGGG01", "config", json.dump({"dn": "TV", "hn": "TV", "t": "salon/tv"}))
+disc("GGGGGGGGGG02", "config", json.dump({"dn": "TV", "hn": "TV", "t": "salon/tv"}))
+disc("GGGGGGGGGG01", "sensors", releve("2026-01-01T00:00:00"))
+disc("GGGGGGGGGG02", "sensors", releve("2026-10-05T00:00:00"))
+verifie("esclave : ancienne retiree de sa table", false, table().contains("GGGGGGGGGG01"))
+verifie("esclave : rien publie sur le broker", 0, size(mqtt.publies))
+gestionFileFolder.writeFile = ecritOrigine
 
 print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))

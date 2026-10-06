@@ -183,7 +183,9 @@ Le fichier de référence est **`/json/discovery.json`** (graine versionnée :
 {
   "<MAC sans ':'>": {
       "config":  { "dn": …, "ip": …, "hn": … },     // MQTT discovery natif Tasmota
-      "sensors": { … },                              // MQTT discovery natif Tasmota
+      // (plus de "sensors" depuis le 2026-10-05 : lu par aucun script, il changeait a chaque
+      //  publication et faisait reecrire le fichier a chaque message ; une ancienne table peut
+      //  encore en contenir, perime)
       "lwt": "Online" | "Offline",
       "maitre" | "esclaveN" | "moduleXX": {
           "id", "nom", "IPAddress", "adresseMAC", "host", "topic", "typeReglageHeure",
@@ -203,7 +205,7 @@ Le fichier de référence est **`/json/discovery.json`** (graine versionnée :
 
 | # | Voie d'écriture | Emplacement | Forme produite | Verdict |
 |---|---|---|---|---|
-| A | MQTT discovery natif (`config` / `sensors`) | `discoveryFonctions.be:300-355` | `{MAC: {config, sensors, lwt:"Online"}}` | ✅ canonique |
+| A | MQTT discovery natif (`config` ; `sensors` ignoré depuis le 2026-10-05) | `discoveryFonctions.mqtt_discovery` | `{MAC: {config, lwt}}` — écrit seulement si le contenu change ; `lwt:"Online"` posé seulement s'il est absent (le topic LWT décide ensuite) ; MAC anciennes de même fiche (`hn`+`dn`) purgées selon l'heure de leur dernier `sensors`, effacées du broker par le maître (`purgeAnciennes`, 2026-10-05) | ✅ canonique |
 | B | `Wifi#Connected` — rôles et blocs ModBus/RangeExtender | `discoveryFonctions.be:88-211` | `{MAC: {maitre\|esclaveN: {...}}}` | ✅ canonique |
 | C | Mise à jour `lwt` via topic LWT | `discoveryFonctions.be:396-428` | `{MAC: {lwt}}` | ✅ canonique |
 | D | **UDP `ImAlive` reçu par le maître** | `udpFonctions.be:167-180` | **`{esclaveN: {...}}` à la racine** | ❌ **hors forme** |
