@@ -68,6 +68,11 @@ modbusFonctions.timeout_ReponseModBus_ms = 4000
 # (etat deplace dans modbusFonctions.etat()) modbusFonctions.enVol = nil           # message envoye en attente de reponse (nil = canal RS485 libre)
 modbusFonctions.MAX_TENTATIVES = 3    # renvois max avant abandon (jamais de blocage ni de perte muette)
 modbusFonctions.MAX_FILE = 32         # messages en attente max (audit G3, 2026-09-29) : au-dela, les lectures cedent
+# Marge du timer Berry sur le delai du pont Tasmota (ModbusSerialTimeout = timeoutReponse).
+# A delai egal, le timer Berry expirait ~30 ms AVANT le pont (constate le 2026-10-05) : le
+# ModBusSend suivant arrivait pont occupe, etait mis de cote sans reponse ("Command Error",
+# lu comme "invalide, jetee") puis le suivant echouait ("Failed") -> file desynchronisee.
+modbusFonctions.MARGE_TIMEOUT_MS = 500
 
 # # *************************************************
 # # * ModBus Commandes
@@ -621,6 +626,8 @@ def modbusFonctions_pompeQueue()
         end
         return
     # Commande malformee : inutile de reessayer, on la jette et on avance.
+    # NB : le pont repond AUSSI "Command Error" quand il est encore occupe (commande mise de
+    # cote, envoyee plus tard) : d'ou la marge MARGE_TIMEOUT_MS sur le timer de timeout.
     elif (reponse.find("Command", "") == "Error")
         modbusFonctions.log(f"POMPE_QUEUE: commande ModBus invalide, jetee : {json.dump(item['paramMSG']):s}", LOG_LEVEL_ERREUR)
         modbusFonctions.etat()["enVol"] = nil
@@ -630,7 +637,8 @@ def modbusFonctions_pompeQueue()
 
     # Envoye : on arme UN timer de timeout (nom UNIQUE, plus de collision par StartAddress).
     modbusFonctions.log("POMPE_QUEUE: ModBusSend envoye, attente de la reponse", LOG_LEVEL_DEBUG_PLUS)
-    modbusFonctions.armeTimer(drivers["ModBus"].find("timeoutReponse", 1000), / -> modbusFonctions.surTimeout(), "modbus_timeout")
+    # Delai du pont + marge : le pont doit avoir rendu la main avant le message suivant.
+    modbusFonctions.armeTimer(int(drivers["ModBus"].find("timeoutReponse", 1000)) + modbusFonctions.MARGE_TIMEOUT_MS, / -> modbusFonctions.surTimeout(), "modbus_timeout")
 end
 modbusFonctions.pompeQueue = modbusFonctions_pompeQueue
 
@@ -691,7 +699,7 @@ def modbusFonctions_testeDebitConn16(id, debit)
     var etat = modbusFonctions.etat()
     var debitBus = int(mb.find("debit", 19200))
     if (debit == nil)    debit = debitBus    end
-    var attente = int(mb.find("timeoutReponse", 1000)) + 500
+    var attente = int(mb.find("timeoutReponse", 1000)) + modbusFonctions.MARGE_TIMEOUT_MS
 
     # 1. Suspend la file. Le pont attend peut-etre encore la reponse du message en vol.
     etat["pause"] = true
