@@ -151,7 +151,9 @@ def choisit_port(nom):
 def ouvre(args, debit=None):
     # serial_for_url : accepte aussi loop:// (essai du script sans materiel)
     port = serial.serial_for_url(choisit_port(args.port), debit or args.debit, bytesize=8,
-                                 parity=serial.PARITY_NONE, stopbits=1, timeout=0)
+                                 parity=serial.PARITY_NONE, stopbits=1, timeout=0, do_not_open=True)
+    port.dtr, port.rts = False, False       # comme pont_serie : un port d'ESP32 choisi par erreur ne le resette pas
+    port.open()
     port.reset_input_buffer()
     return port
 
@@ -181,8 +183,11 @@ def transaction(port, trame, args, t0):
     port.flush()
     affiche("-->", trame, t0)
     recues = lit_trames(port, args.attente, args.silence)
-    if recues and recues[0] == trame:
-        recues = recues[1:]           # convertisseur qui renvoie son propre envoi
+    # Echo local d'un convertisseur qui renvoie son propre envoi. Mais l'accuse d'une ecriture
+    # 0x05/0x06 EST la copie exacte de la requete : on ne retire alors la 1re copie que si une
+    # seconde suit (echo local + accuse) ; une copie seule est l'accuse de l'esclave.
+    if recues and recues[0] == trame and (trame[1] not in (5, 6) or recues[1:2] == [trame]):
+        recues = recues[1:]
     for r in recues:
         affiche("<--", r, t0)
     if not recues:

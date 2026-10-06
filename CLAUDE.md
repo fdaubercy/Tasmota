@@ -337,10 +337,23 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   - `test_rs485_pc.py` — test du bus ModBus depuis le PC par un convertisseur USB-RS485
     (Waveshare CH343) : ecoute du bus, envoi brut, lecture/commande de la carte 16 relais,
     recherche de son debit, emulation de la carte (pour tester le maitre P4 sans elle).
-  - `sniffeur_modbus.py` (+ `sniffeur_modbus_web.py`, `cible_sniffeur_modbus.py`) — meme convertisseur,
-    page http://127.0.0.1:7300 : trames du bus decodees en direct, appariement requete/reponse (latence,
-    sans reponse, exceptions par esclave), envoi et raccourcis carte 16 relais, emulation de la carte.
-    Logique ModBus partagee avec `test_rs485_pc.py`. Cible PlatformIO « Sniffeur ModBus » dans Custom
+  - `sniffeur_modbus.py` (+ `sniffeur_modbus_web.py`, `sniffeur_modbus_aide.py`, `decodeur_modbus.py`,
+    `cible_sniffeur_modbus.py`) — meme convertisseur, page http://127.0.0.1:7300 : trames du bus en direct,
+    appariement requete/reponse (latence, sans reponse, exceptions par esclave), envoi et raccourcis carte
+    16 relais, emulation de la carte. `decodeur_modbus.py` decode chaque trame selon la norme (champ par
+    champ, clic sur la trame) puis selon le dialecte de l'esclave vise : carte 16 relais (Conn16channels)
+    ou ESP32 (TasmotaSlaveModBus : registre = code GPIO Tasmota + idModBus - 1), d'apres le persist du
+    maitre P4. Onglet Aide : regles de formation des trames, registres de l'installation, decodeur manuel
+    (accepte une ligne `ModbusPushUDP <seq> <hexa>`). Modules : `sniffeur_modbus_http.py` (routes),
+    `surveillance_modbus.py` (ecart commande/releve d'un relais, collisions -> alertes dans le fil),
+    `emulation_modbus.py` (le PC repond a la place de la carte relais, de la cuve, du rideau ; valeurs
+    editables dans la page), `debit_modbus.py` (trouve puis corrige, sur confirmation, le debit et
+    l'adresse de la carte relais, comme `verifieConn16`), `ecoute_udp.py` (rejoint 224.3.0.1:4000 en
+    ecoute seule : push `ModbusPushUDP` des esclaves decodes et juges comme `accepteSeq` du maitre).
+    Echo local du convertisseur appris au 1er envoi (`--echo auto`) : un accuse 0x05/0x06 est la copie
+    exacte de la requete, il ne doit pas etre jete. Port ouvert sans DTR/RTS (pas de reset d'un ESP32).
+    Banc : `test_sniffeur_modbus.py` (code de sortie 0 = vert ; persist de test ; UDP sur un groupe et un
+    port de test en TTL 0 - ne JAMAIS emettre de faux push vers 224.3.0.1:4000, le vrai maitre le traiterait). Cible PlatformIO « Sniffeur ModBus » dans Custom
     (port : `custom_sniffeur_modbus_port`, defaut auto = le seul CH343 present).
   - `sniffeur_mqtt.py` (+ `sniffeur_mqtt_web.py`, `sniffeur_mqtt_panneaux.py`, `sniffeur_mqtt_config.py`,
     `client_mqtt.py`, `cible_sniffeur_mqtt.py`) — sniffeur / publieur MQTT sur http://127.0.0.1:7100 :

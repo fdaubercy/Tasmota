@@ -4,24 +4,37 @@ Materiel vise : Waveshare USB TO RS485 (CH343G + SP485EEN, direction automatique
 Bornes : A+ -> A du bus, B- -> B du bus, GND -> masse du bus.
 
 Ce que fait ce serveur :
-    - ecoute le bus SANS EMETTRE : chaque trame est decoupee (CRC), decodee (requete / reponse /
-      exception, registres, ordres de la carte 16 relais) et servie en direct sur la page ;
+    - ecoute le bus SANS EMETTRE : chaque trame est decoupee (CRC) et decodee (decodeur_modbus.py) :
+      la norme ModBus champ par champ, puis le sens metier selon l'esclave vise - carte 16 relais
+      (modBus_Conn16channels) ou ESP32 Tasmota (modBus_TasmotaSlaveModBus), d'apres le persist du maitre ;
     - apparie requetes et reponses : latence par esclave, requetes restees sans reponse
       (au-dela de --delai s), exceptions, trames CRC KO ;
-    - depuis la page : choix du port et du debit (Ouvrir / Fermer : Fermer LIBERE le port), envoi
-      d'une trame (CRC ajoute, rafale possible), raccourcis carte 16 relais (lire, commander un canal),
-      emulation de la carte 16 relais (pour tester le maitre P4 sans elle) ;
+    - surveille (surveillance_modbus.py) : ecart entre l'etat commande d'un relais et son releve,
+      collisions (deux maitres, reponse non sollicitee, rafale de CRC faux) -> alertes dans le fil ;
+    - depuis la page : port et debit (Fermer LIBERE le port), envoi de trames (CRC ajoute, rafale),
+      raccourcis carte 16 relais, recherche / correction de son debit et de son adresse
+      (debit_modbus.py), emulation des esclaves du persist avec valeurs editables (emulation_modbus.py) ;
+    - ecoute aussi le PUSH UDP des esclaves (ecoute_udp.py, multicast 224.3.0.1:4000, rien n'est emis) :
+      le plan telemetrie ne passe pas par le RS485 ; chaque push est decode et juge comme le maitre
+      (numero d'ordre : accepte, ecarte, push perdus, redemarrage) ;
+    - onglet Aide : regles de formation des trames, registres de l'installation, decodeur manuel,
+      procedure d'essai sur le bus reel ;
     - journal fichier optionnel (--journal).
-La logique ModBus (CRC, decoupage, decodage, carte emulee) est celle de test_rs485_pc.py.
+Routes HTTP : sniffeur_modbus_http.py ; page : sniffeur_modbus_web.py (+ sniffeur_modbus_aide.py).
 
-UN SEUL MAITRE SUR LE BUS : envoyer depuis la page fait du PC un maitre. Si le P4 sonde le bus en
-meme temps, les trames se percutent -> charger test_liaison_modbus.be sur le P4 (il suspend sa file)
-ou le debrancher. L'ecoute seule ne perturbe rien. L'emulation : debrancher la vraie carte relais.
+UN SEUL MAITRE SUR LE BUS : envoyer depuis la page (trames, recherche du debit) fait du PC un maitre.
+Si le P4 sonde le bus en meme temps, les trames se percutent -> charger test_liaison_modbus.be sur le
+P4 (il suspend sa file) ou le debrancher. L'emulation : debrancher l'esclave reel emule.
+
+ECHO LOCAL : certains convertisseurs renvoient ce qu'ils emettent. Une reponse 0x05/0x06 etant l'echo
+exact de la requete, on ne peut pas jeter « toute trame identique a l'envoi » : --echo auto (defaut)
+l'apprend au premier envoi d'une trame qui n'est pas 0x05/0x06 ; --echo oui | non pour l'imposer.
 
 Usage (Python de PlatformIO, qui fournit pyserial) :
     %USERPROFILE%\.platformio\penv\Scripts\python.exe outils_docs/scripts_python/sniffeur_modbus.py
-    options : --port auto|COM12|loop://|aucun  --debit 19200  --http 7300  --silence 0.02
-              --delai 1.0  --journal fichier.log  --historique 5000
+    options : --port auto|COM12|loop://|aucun  --debit 19200  --http 7300  --silence 0.02  --delai 1.0
+              --echo auto|oui|non  --journal fichier.log  --historique 5000  --persist <persist du maitre>
+              --udp oui|non  --udp-groupe 224.3.0.1  --udp-port 4000  --udp-interface <ip locale>
     --port auto (defaut) : le SEUL port CH343 present ; sinon demarre port ferme, a choisir sur la page.
 Depuis VS Code : pioarduino > Project Tasks > <env> > Custom > « Sniffeur ModBus (HTTP 127.0.0.1) »
 (cible_sniffeur_modbus.py). Arret : Ctrl+C dans le terminal de la tache (ou la corbeille).
@@ -35,18 +48,22 @@ import queue
 import sys
 import threading
 import time
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlsplit
+from http.server import ThreadingHTTPServer
 
 import serial
 from serial.tools import list_ports
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import sniffeur_modbus_web      # noqa: E402
-import test_rs485_pc as rs      # noqa: E402
+import debit_modbus                                         # noqa: E402
+import decodeur_modbus as dm                                # noqa: E402
+import ecoute_udp                                           # noqa: E402
+import emulation_modbus                                     # noqa: E402
+import test_rs485_pc as rs                                  # noqa: E402
+from sniffeur_modbus_http import VID_PID_CH343, fabrique_gestionnaire      # noqa: E402
+from surveillance_modbus import Surveillance               # noqa: E402
 
-VID_PID_CH343 = (0x1A86, 0x55D3)
-DELAI_ECHO = 0.5                # s : une trame identique a notre envoi, recue avant, est son echo
+DELAI_ECHO = 0.5                # s : fenetre ou une trame identique a notre envoi peut en etre l'echo
+SONDE_ECHO = 0.3                # s : sans echo dans ce delai, le convertisseur n'en produit pas
 
 
 def port_auto():
@@ -55,59 +72,43 @@ def port_auto():
     return ports[0] if len(ports) == 1 else None
 
 
-def nature(trame, attendue):
-    """'requete', 'reponse', 'exception', 'ko' ou '?'. attendue : requete sans reponse (ou None),
-    seule facon de distinguer une reponse 0x05/0x06 (echo de la requete) d'une nouvelle requete."""
-    if not rs.crc_ok(trame):
-        return "ko"
-    fc, d = trame[1], trame[2:-2]
-    if fc & 0x80:
-        return "exception"
-    meme = attendue is not None and attendue[:2] == trame[:2]
-    if fc in (1, 2, 3, 4):
-        if len(d) == 1 + d[0] and (meme or len(d) != 4):
-            return "reponse"
-        return "requete" if len(d) == 4 else "?"
-    if fc in (5, 6) and len(d) == 4:
-        return "reponse" if meme and attendue == trame else "requete"
-    if fc in (15, 16):
-        if len(d) == 4:
-            return "reponse"
-        return "requete" if len(d) >= 5 and len(d) == 5 + d[4] else "?"
-    return "?"
-
-
-class Journal:
-    def __init__(self, chemin):
-        self.fichier = open(chemin, "a", encoding="utf-8")
-
-    def ecrit(self, ligne):
-        self.fichier.write(ligne + "\n")
-        self.fichier.flush()
+def maintenant_texte():
+    return time.strftime("%H:%M:%S") + f".{int(time.time() * 1000) % 1000:03d}"
 
 
 class Sniffeur:
     def __init__(self, args):
         self.args = args
-        self.journal = Journal(args.journal) if args.journal else None
+        self.journal = open(args.journal, "a", encoding="utf-8") if args.journal else None
         self.verrou = threading.Lock()          # historique, statistiques, pages web
-        self.verrou_port = threading.Lock()     # ouverture / fermeture / ecriture du port
+        self.verrou_port = threading.Lock()     # ouverture / fermeture / ecriture / debit du port
         self.port = None
         self.nom_port, self.debit, self.erreur = "", args.debit, ""
         self.historique = collections.deque(maxlen=args.historique)
         self.clients_web = []
         self.stats = {}                         # {id: {id, requetes, reponses, sans_reponse, exceptions, lat, lat_max}}
-        self.nb, self.nb_ko, self.t_prec = 0, 0, None
+        self.nb, self.nb_ko, self.nb_alertes, self.t_prec = 0, 0, 0, None
         self.attendue = None                    # (trame, instant) de la requete en attente de reponse
         self.dernier_envoi, self.t_envoi = None, 0.0
-        self.emulation = None                   # rs.CarteRelaisEmulee ou None
+        self.echo_local = {"oui": True, "non": False}.get(args.echo)     # None = a apprendre
+        self.sonde_echo = None                  # (trame, instant) d'un envoi qui revelera l'echo
+        self.capture = None                     # (predicat, evenement, boite) d'une transaction en cours
+        self.tache, self.resultat_debit = None, None
+        self.derniers_seq, self.nb_push, self.udp_texte = {}, 0, "non ecoute"     # push UDP (ecoute_udp.py)
+        self.carte = dm.charge_carte(args.persist)      # qui est quoi, lu dans le persist du maitre
+        self.bus = dm.lit_bus(args.persist)
+        self.types = dm.charge_types_gpio()
+        self.emulation = emulation_modbus.Emulation(self.carte, args.debit)
+        self.surveillance = Surveillance(self.carte, args.delai)
         self.debut = time.strftime("%d/%m %H:%M:%S")
 
     # ------------------------------------------------------------------ diffusion vers les pages
     def etat(self):
         return {"port": self.nom_port, "debit": self.debit, "ouvert": self.port is not None,
-                "erreur": self.erreur, "emulation": self.emulation.id if self.emulation else None,
-                "nb": self.nb, "ko": self.nb_ko, "depuis": self.debut, "delai": self.args.delai}
+                "erreur": self.erreur, "emulation": sorted(self.emulation.actifs), "nb": self.nb, "ko": self.nb_ko,
+                "alertes": self.nb_alertes, "push": self.nb_push, "udp": self.udp_texte, "depuis": self.debut, "delai": self.args.delai, "tache": self.tache,
+                "echo": {None: "?", True: "oui", False: "non"}[self.echo_local],
+                "persist": os.path.relpath(self.args.persist, dm.RACINE), "esclaves": len(self.carte)}
 
     @staticmethod
     def _paquet(evenement, donnees):
@@ -121,21 +122,25 @@ class Sniffeur:
             for paquet in paquets:
                 file.put(paquet)
 
-    def diffuse_etat(self):
+    def evenement(self, nom, donnees):
         with self.verrou:
-            self._diffuse([self._paquet("etat", self.etat())])
+            self._diffuse([self._paquet(nom, donnees)])
+
+    def diffuse_etat(self):
+        self.evenement("etat", self.etat())
+
+    def diffuse_emulation(self):
+        self.evenement("emulation", self.emulation.etat())
 
     def message(self, texte):
         print(texte)
-        with self.verrou:
-            self._diffuse([self._paquet("message", {"texte": texte})])
+        self.evenement("message", {"texte": texte})
 
     def inscrit_web(self):
         file = queue.Queue()
         with self.verrou:
-            file.put(self._paquet("etat", self.etat()))
-            file.put(self._paquet("stats", list(self.stats.values())))
-            for paquet in self.historique:
+            for paquet in (self._paquet("etat", self.etat()), self._paquet("stats", list(self.stats.values())),
+                           self._paquet("emulation", self.emulation.etat()), *self.historique):
                 file.put(paquet)
             self.clients_web.append(file)
         return file
@@ -151,7 +156,9 @@ class Sniffeur:
         with self.verrou_port:
             try:
                 port = serial.serial_for_url(nom, debit, bytesize=8, parity=serial.PARITY_NONE,
-                                             stopbits=1, timeout=0)
+                                             stopbits=1, timeout=0, do_not_open=True)
+                port.dtr, port.rts = False, False   # comme pont_serie : un port d'ESP32 choisi par erreur ne le resette pas
+                port.open()
                 port.reset_input_buffer()
                 self.port, self.erreur = port, ""
             except (serial.SerialException, ValueError) as erreur:
@@ -175,6 +182,16 @@ class Sniffeur:
         if port is not None:
             self.diffuse_etat()
 
+    def change_debit(self, debit):
+        """Debit du port ouvert, a chaud (recherche du debit de la carte relais)."""
+        with self.verrou_port:
+            if self.port is None:
+                raise OSError("port serie ferme")
+            self.port.baudrate = debit
+            self.port.reset_input_buffer()
+            self.debit = debit
+        self.diffuse_etat()
+
     def envoie(self, trame, source="pc"):
         with self.verrou_port:
             if self.port is None:
@@ -182,7 +199,22 @@ class Sniffeur:
             self.port.write(trame)
             self.port.flush()
             self.dernier_envoi, self.t_envoi = bytes(trame), time.monotonic()
+            if self.echo_local is None and self.sonde_echo is None and len(trame) > 1 and trame[1] not in (5, 6):
+                self.sonde_echo = (bytes(trame), self.t_envoi)     # aucun esclave ne renvoie cette trame a l'identique
         self.traite(trame, source)
+
+    def transaction(self, trame, predicat, attente):
+        """Emet une trame et attend une trame du bus qui satisfait predicat ; la rend, ou None."""
+        evenement, boite = threading.Event(), {}
+        with self.verrou:
+            self.capture = (predicat, evenement, boite)
+        try:
+            self.envoie(trame)
+            evenement.wait(attente + self.args.silence + 0.1)
+            return boite.get("trame")
+        finally:
+            with self.verrou:
+                self.capture = None
 
     def rafale(self, trame, repete, intervalle):
         try:
@@ -193,48 +225,138 @@ class Sniffeur:
         except (OSError, serial.SerialException) as erreur:
             self.message(f"envoi interrompu : {erreur}")
 
+    # ------------------------------------------------------------------ carte relais : debit et adresse
+    def cible_conn16(self):
+        cartes = [e for e in self.carte.values() if e["driver"] == "conn16"]
+        if not cartes:
+            raise ValueError("aucune carte 16 relais dans le persist du maitre")
+        return {"debit": self.bus["debit"], "id": cartes[0]["id"]}
+
+    def lance_debit(self, action):
+        if action not in ("chercher", "corriger"):
+            raise ValueError("action chercher ou corriger")
+        if self.port is None:
+            raise OSError("port serie ferme : l'ouvrir d'abord")
+        if self.tache:
+            raise OSError(f"{self.tache} deja en cours")
+        if action == "corriger" and not (self.resultat_debit and self.resultat_debit["ecarts"]):
+            raise ValueError("rien a corriger : lancer d'abord la recherche")
+        cible = self.cible_conn16()
+        self.tache = action
+        threading.Thread(target=self._tache_debit, args=(action, cible), daemon=True).start()
+
+    def _tache_debit(self, action, cible):
+        try:
+            if action == "chercher":
+                self.resultat_debit = debit_modbus.cherche(self, cible)
+                self.evenement("debit", {"action": action, "resultat": self.resultat_debit, "cible": cible})
+            else:
+                faits = debit_modbus.corrige(self, self.resultat_debit, cible)
+                self.resultat_debit = None
+                self.evenement("debit", {"action": action, "faits": faits, "cible": cible})
+        except (OSError, serial.SerialException, ValueError) as erreur:
+            self.evenement("debit", {"action": action, "erreur": str(erreur), "cible": cible})
+        finally:
+            self.tache = None
+            self.diffuse_etat()
+
     # ------------------------------------------------------------------ trames
+    def _fiche(self, nature, texte, ident=None, sens="!!"):
+        return {"t": maintenant_texte(), "dt": None, "sens": sens, "hex": "", "crc": True, "nature": nature,
+                "id": ident, "fc": None, "lat": None, "texte": texte}
+
     def traite(self, trame, source):
-        """Classe, compte, journalise et diffuse une trame ; emulation : repond a une requete du bus."""
+        """Classe, compte, surveille, journalise et diffuse une trame ; emulation : repond au bus."""
         maintenant = time.monotonic()
         with self.verrou:
-            if source == "bus" and trame == self.dernier_envoi and maintenant - self.t_envoi < DELAI_ECHO:
-                self.dernier_envoi = None
-                return
-            nat = nature(trame, self.attendue[0] if self.attendue else None)
-            fiche = {"t": time.strftime("%H:%M:%S") + f".{int(time.time() * 1000) % 1000:03d}",
-                     "dt": None if self.t_prec is None else round((maintenant - self.t_prec) * 1000),
+            copie_envoi = False
+            if source == "bus":
+                if self.sonde_echo and trame == self.sonde_echo[0]:
+                    self.echo_local, self.sonde_echo, self.dernier_envoi = True, None, None
+                    self._diffuse([self._paquet("message", {"texte": "le convertisseur renvoie ses emissions : echo local filtre"})])
+                    return
+                if trame == self.dernier_envoi and maintenant - self.t_envoi < DELAI_ECHO:
+                    if self.echo_local:
+                        self.dernier_envoi = None       # echo du convertisseur
+                        return
+                    copie_envoi = True                  # accuse 0x05/0x06 d'un esclave : on le garde
+                if self.capture and self.capture[0](trame):
+                    self.capture[2]["trame"] = bytes(trame)
+                    self.capture[1].set()
+            requete = self.attendue[0] if self.attendue else None
+            nat = dm.nature(trame, requete)
+            dec = dm.decode(trame, requete, self.carte, self.types)
+            fiche = {"t": maintenant_texte(), "dt": None if self.t_prec is None else round((maintenant - self.t_prec) * 1000),
                      "sens": source, "hex": rs.hexa(trame), "crc": nat != "ko", "nature": nat,
                      "id": trame[0] if trame else None, "fc": trame[1] if len(trame) > 1 else None,
-                     "texte": rs.decrit(trame), "lat": None}
+                     "texte": dec["metier"] or dec["norme"], "norme": dec["norme"], "metier": dec["metier"],
+                     "champs": dec["champs"], "lat": None}
             self.t_prec = maintenant
             self.nb += 1
             if nat == "ko":
                 self.nb_ko += 1
             else:
-                s = self.stats.setdefault(trame[0], {"id": trame[0], "requetes": 0, "reponses": 0,
-                                                     "sans_reponse": 0, "exceptions": 0, "lat": None, "lat_max": 0})
+                s = self._stat(trame[0])
                 if nat == "requete":
                     self._sans_reponse()
                     s["requetes"] += 1
                     self.attendue = (bytes(trame), maintenant)
                 elif nat in ("reponse", "exception"):
                     s["reponses" if nat == "reponse" else "exceptions"] += 1
-                    if self.attendue and self.attendue[0][0] == trame[0]:
+                    if self.attendue and self.attendue[0][0] in (trame[0], 0xFF):
                         s["lat"] = fiche["lat"] = round((maintenant - self.attendue[1]) * 1000)
                         s["lat_max"] = max(s["lat_max"], s["lat"])
                         self.attendue = None
-            if self.journal:
-                self.journal.ecrit(f"{time.strftime('%Y-%m-%d')} {fiche['t']} {source:<4} {fiche['hex']:<40} "
-                                   f"{'CRC OK' if fiche['crc'] else 'CRC KO'} {fiche['texte']}")
-            paquet = self._paquet("trame", fiche)
-            self._diffuse([paquet, self._paquet("stats", list(self.stats.values()))], memorise=paquet)
-            reponse = self.emulation.reponse(trame) if source == "bus" and nat == "requete" and self.emulation else None
+            paquets = [self._paquet("trame", fiche)]
+            self._ecrit_journal(f"{source:<4} {fiche['hex']:<40} {'CRC OK' if fiche['crc'] else 'CRC KO'} "
+                                f"{fiche['norme']} | {fiche['metier']}")
+            self._diffuse(paquets, memorise=paquets[0])
+            for alerte in self.surveillance.observe(trame, nat, source, maintenant):
+                self.nb_alertes += alerte["niveau"] == "alerte"
+                f = self._fiche("alerte" if alerte["niveau"] == "alerte" else "info", alerte["texte"],
+                                trame[0] if trame else None)
+                self._ecrit_journal(f"!!   {alerte['texte']}")
+                p = self._paquet("trame", f)
+                self._diffuse([p], memorise=p)
+            # 'etat' aussi : la barre d'etat de la page compte trames, CRC KO et alertes en direct
+            self._diffuse([self._paquet("stats", list(self.stats.values())), self._paquet("etat", self.etat())])
+            reponse = (self.emulation.reponse(trame)
+                       if source == "bus" and nat == "requete" and not copie_envoi and self.emulation.actifs else None)
         if reponse:
             try:
                 self.envoie(reponse, "emul")
+                self.diffuse_emulation()
             except (OSError, serial.SerialException) as erreur:
                 self.message(f"emulation : reponse non envoyee ({erreur})")
+
+    def _stat(self, ident):
+        return self.stats.setdefault(ident, {"id": ident, "requetes": 0, "reponses": 0, "sans_reponse": 0, "exceptions": 0,
+                                             "lat": None, "lat_max": 0, "push": 0, "push_ecartes": 0})
+
+    def traite_udp(self, texte, ip):
+        """Un datagramme du groupe multicast (fil d'ecoute UDP) : push decode et juge, ou autre message."""
+        with self.verrou:
+            f, alertes, ident, accepte = ecoute_udp.fiche(texte, ip, self.carte, self.types, self.derniers_seq,
+                                                          maintenant_texte())
+            if ident is not None:
+                self.nb_push += 1
+                s = self._stat(ident)
+                s["push"] += 1
+                s["push_ecartes"] += not accepte
+            paquets = [self._paquet("trame", f)]
+            self._ecrit_journal(f"udp  {f['hex']:<40} {f['texte']}")
+            for alerte in alertes:
+                self.nb_alertes += alerte["niveau"] == "alerte"
+                paquets.append(self._paquet("trame", self._fiche("alerte" if alerte["niveau"] == "alerte" else "info",
+                                                                 alerte["texte"], ident)))
+            for p in paquets:
+                self._diffuse([p], memorise=p)
+            self._diffuse([self._paquet("stats", list(self.stats.values())), self._paquet("etat", self.etat())])
+
+    def _ecrit_journal(self, ligne):
+        if self.journal:
+            self.journal.write(f"{time.strftime('%Y-%m-%d')} {maintenant_texte()} {ligne}\n")
+            self.journal.flush()
 
     def _sans_reponse(self, maintenant=None):
         """SOUS self.verrou : la requete en attente n'aura pas de reponse (timeout ou requete suivante)."""
@@ -246,9 +368,7 @@ class Sniffeur:
         if s:
             s["sans_reponse"] += 1
         attente = round(((maintenant or time.monotonic()) - instant) * 1000)
-        fiche = {"t": time.strftime("%H:%M:%S"), "dt": None, "sens": "--", "hex": "", "crc": True,
-                 "nature": "timeout", "id": trame[0], "fc": trame[1], "lat": None,
-                 "texte": f"id {trame[0]} : PAS DE REPONSE ({attente} ms) a {rs.hexa(trame)}"}
+        fiche = self._fiche("timeout", f"id {trame[0]} : PAS DE REPONSE ({attente} ms) a {rs.hexa(trame)}", trame[0], "--")
         paquet = self._paquet("trame", fiche)
         self._diffuse([paquet, self._paquet("stats", list(self.stats.values()))], memorise=paquet)
 
@@ -257,6 +377,9 @@ class Sniffeur:
         with self.verrou:
             if self.attendue and maintenant - self.attendue[1] > self.args.delai:
                 self._sans_reponse(maintenant)
+            if self.sonde_echo and maintenant - self.sonde_echo[1] > SONDE_ECHO:
+                self.echo_local, self.sonde_echo = False, None
+                self._diffuse([self._paquet("etat", self.etat())])
 
     def boucle_lecture(self):
         tampon, dernier = bytearray(), 0.0
@@ -278,120 +401,21 @@ class Sniffeur:
                 continue
             if tampon and time.monotonic() - dernier >= self.args.silence:
                 for trame in rs.decoupe(bytes(tampon)):
-                    self.traite(trame, "bus")
+                    try:
+                        self.traite(trame, "bus")
+                    except Exception as erreur:     # une trame mal formee ne doit jamais arreter l'ecoute
+                        self.message(f"trame {rs.hexa(trame)} ignoree : {erreur!r}")
                 tampon.clear()
             self.verifie_attente()
             time.sleep(0.001)
 
     def raz(self):
         with self.verrou:
-            self.stats, self.nb, self.nb_ko, self.attendue = {}, 0, 0, None
+            self.stats, self.nb, self.nb_ko, self.nb_alertes, self.attendue = {}, 0, 0, 0, None
+            self.derniers_seq, self.nb_push = {}, 0
+            self.surveillance = Surveillance(self.carte, self.args.delai)
             self.historique.clear()
             self._diffuse([self._paquet("raz", {}), self._paquet("etat", self.etat()), self._paquet("stats", [])])
-
-
-def lit_demande(demande, sniffeur, chemin):
-    """Execute une demande POST (dict deja decode) ; ValueError si invalide."""
-    if chemin == "/port":
-        if demande.get("action") == "fermer":
-            sniffeur.ferme()
-            return
-        nom = str(demande.get("port", "")).strip()
-        debit = int(demande.get("debit", sniffeur.debit))
-        if not nom or not 300 <= debit <= 3000000:
-            raise ValueError("port vide ou debit hors bornes (300..3000000)")
-        sniffeur.ouvre(nom, debit)
-    elif chemin == "/envoi":
-        trame = rs.lit_hexa(str(demande.get("hex", "")))
-        if demande.get("crc", True):
-            trame = rs.avec_crc(trame)
-        repete, intervalle = int(demande.get("repete", 1)), float(demande.get("intervalle", 0.5))
-        if not 2 <= len(trame) <= 256 or not 1 <= repete <= 1000 or not 0.05 <= intervalle <= 60:
-            raise ValueError("trame 2..256 octets, repete 1..1000, intervalle 0.05..60 s")
-        if sniffeur.port is None:
-            raise OSError("port serie ferme : l'ouvrir d'abord")
-        threading.Thread(target=sniffeur.rafale, args=(trame, repete, intervalle), daemon=True).start()
-    elif chemin == "/emulation":
-        ident = int(demande.get("id", 1))
-        if not 1 <= ident <= 247:
-            raise ValueError("adresse 1..247")
-        sniffeur.emulation = rs.CarteRelaisEmulee(ident, sniffeur.debit) if demande.get("actif") else None
-        sniffeur.diffuse_etat()
-    elif chemin == "/raz":
-        sniffeur.raz()
-    else:
-        raise LookupError(chemin)
-
-
-def fabrique_gestionnaire(sniffeur):
-    class Gestionnaire(BaseHTTPRequestHandler):
-        protocol_version = "HTTP/1.1"
-
-        def log_message(self, *args):
-            pass
-
-        def _envoie(self, statut, corps=b"", type_contenu="text/plain; charset=utf-8"):
-            self.send_response(statut)
-            self.send_header("Content-Type", type_contenu)
-            self.send_header("Content-Length", str(len(corps)))
-            self.send_header("Cache-Control", "no-store")
-            self.end_headers()
-            self.wfile.write(corps)
-
-        def do_GET(self):
-            chemin = urlsplit(self.path).path
-            if chemin == "/":
-                self._envoie(200, sniffeur_modbus_web.PAGE.encode("utf-8"), "text/html; charset=utf-8")
-            elif chemin == "/ports":
-                ports = [{"port": p.device, "description": p.description,
-                          "ch343": (p.vid, p.pid) == VID_PID_CH343} for p in list_ports.comports()]
-                self._envoie(200, json.dumps(ports).encode("utf-8"), "application/json")
-            elif chemin == "/flux":
-                self.send_response(200)
-                self.send_header("Content-Type", "text/event-stream")
-                self.send_header("Cache-Control", "no-store")
-                self.end_headers()
-                file = sniffeur.inscrit_web()
-                try:
-                    while True:
-                        try:
-                            self.wfile.write(file.get(timeout=15))
-                        except queue.Empty:
-                            self.wfile.write(b": veille\n\n")     # detecte un onglet ferme
-                        self.wfile.flush()
-                except OSError:
-                    pass
-                finally:
-                    sniffeur.desinscrit_web(file)
-            else:
-                self._envoie(404, b"introuvable")
-
-        def do_POST(self):
-            # Une page tierce pourrait viser 127.0.0.1 et commander des relais : en-tete personnalise
-            # (impose un pre-vol CORS auquel ce serveur ne repond pas) + meme origine.
-            origine = self.headers.get("Origin", "")
-            if self.headers.get("X-Sniffeur") != "1" or (origine and origine not in (
-                    f"http://127.0.0.1:{sniffeur.args.http}", f"http://localhost:{sniffeur.args.http}")):
-                self._envoie(403, b"refuse")
-                return
-            try:
-                longueur = min(int(self.headers.get("Content-Length", "0") or 0), 64 * 1024)
-                demande = json.loads(self.rfile.read(longueur).decode("utf-8") or "{}")
-                if not isinstance(demande, dict):
-                    raise ValueError("corps JSON attendu")
-                lit_demande(demande, sniffeur, urlsplit(self.path).path)
-            except LookupError:
-                self._envoie(404, b"introuvable")
-                return
-            except (ValueError, TypeError) as erreur:
-                self._envoie(400, str(erreur).encode("utf-8"))
-                return
-            except (OSError, serial.SerialException) as erreur:
-                self._envoie(409, str(erreur).encode("utf-8"))
-                return
-            self._envoie(200, b"ok")
-
-    return Gestionnaire
 
 
 def main():
@@ -406,8 +430,17 @@ def main():
     options.add_argument("--http", type=int, default=7300, help="port de la page http://127.0.0.1:<http>")
     options.add_argument("--silence", type=float, default=0.02, help="silence (s) qui clot une trame")
     options.add_argument("--delai", type=float, default=1.0, help="au-dela (s), une requete est sans reponse")
+    options.add_argument("--echo", choices=("auto", "oui", "non"), default="auto",
+                         help="le convertisseur renvoie-t-il ses emissions ? (defaut : appris au 1er envoi)")
     options.add_argument("--journal", help="copie des trames dans ce fichier")
     options.add_argument("--historique", type=int, default=5000, help="trames rejouees a l'ouverture de la page")
+    options.add_argument("--udp", choices=("oui", "non"), default="oui", help="ecoute du push UDP des esclaves")
+    options.add_argument("--udp-groupe", dest="udp_groupe", default=ecoute_udp.GROUPE)
+    options.add_argument("--udp-port", dest="udp_port", type=int, default=ecoute_udp.PORT)
+    options.add_argument("--udp-interface", dest="udp_interface", default="0.0.0.0",
+                         help="IP locale de la carte reseau des modules (defaut : celle du systeme)")
+    options.add_argument("--persist", default=dm.PERSIST_MAITRE,
+                         help="_persist.json du maitre : adresses des esclaves et appareils (decodage metier)")
     args = options.parse_args()
     if not 0 < args.http < 65536 or args.historique < 0 or args.silence <= 0 or args.delai <= 0:
         sys.exit("parametre hors bornes")
@@ -429,6 +462,10 @@ def main():
     else:
         print("aucun port choisi (zero ou plusieurs CH343) -> a ouvrir depuis la page")
     threading.Thread(target=sniffeur.boucle_lecture, daemon=True).start()
+    if args.udp == "oui":
+        udp = ecoute_udp.EcouteUDP(sniffeur.traite_udp, args.udp_groupe, args.udp_port, args.udp_interface)
+        sniffeur.udp_texte = f"{args.udp_groupe}:{args.udp_port}" if udp.demarre() else udp.erreur
+        print(f"push UDP : {sniffeur.udp_texte}")
     try:
         http.serve_forever()
     except KeyboardInterrupt:
