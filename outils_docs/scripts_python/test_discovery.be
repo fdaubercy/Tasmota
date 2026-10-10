@@ -587,6 +587,41 @@ disc("GGGGGGGGGG02", "sensors", releve("2026-10-05T00:00:00"))
 verifie("esclave : ancienne retiree de sa table", false, table().contains("GGGGGGGGGG01"))
 verifie("esclave : rien publie sur le broker", 0, size(mqtt.publies))
 gestionFileFolder.writeFile = ecritOrigine
+serveur["udp"]["id"] = 0
+
+print("")
+print("=== 13. lireUDP : relais MQTT du push esclave (maitre seulement, texte brut) ===")
+# Le VRAI lireUDP sur un faux socket ; modbusFonctions est un faux qui note les appels (le bouchon
+# 'modbusFonctions' renvoie global.modbusFonctions). relaiePushMQTT lui-meme : banc_test_modbus.be §25.
+class SocketFaux
+  var msgs, remote_ip, remote_port
+  def init(m) self.msgs = m self.remote_ip = "192.168.4.2" self.remote_port = 4000 end
+  def read() return size(self.msgs) > 0 ? bytes().fromstring(self.msgs.pop(0)) : nil end
+end
+var appels = []
+var mbFaux = module("modbusFonctions")
+mbFaux.relaiePushMQTT = def (texte, ip) appels.push("relais:" + texte + "@" + str(ip)) end
+mbFaux.lireMsgModbus = def (regle, p) appels.push("lire:seq=" + str(p["Seq"])) end
+global.modbusFonctions = mbFaux
+var etatUDP = udpFonctions.etat()
+var sauveRecep = etatUDP["udpReception"]
+def recoit(texte)
+  appels = []
+  etatUDP["udpReception"] = [nil, SocketFaux([texte])]
+  return essaie(def () udpFonctions.lireUDP("MultiCast", {}) end)
+end
+drivers["ModBus"]["id"] = 0
+var PUSH = "ModbusPushUDP 12 031000A000010200FFE7D0"
+verifie("maitre : push traite sans exception", "OK", recoit(PUSH))
+verifie("maitre : relais du texte brut et de l'IP, puis lecture", "['relais:" + PUSH + "@192.168.4.2', 'lire:seq=12']", str(appels))
+recoit("ModbusUDP 01030001001015C6")
+verifie("temoin ModbusUDP (pas un push) : aucun relais", false, string.find(str(appels), "relais:") >= 0)
+drivers["ModBus"]["id"] = 2
+recoit(PUSH)
+verifie("temoin esclave (id 2) : push ignore, aucun relais", "[]", str(appels))
+drivers["ModBus"]["id"] = 0
+etatUDP["udpReception"] = sauveRecep
+global.modbusFonctions = nil
 
 print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))

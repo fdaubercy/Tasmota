@@ -555,6 +555,8 @@ def udpFonctions_lireUDP(typeComm, paramMSG)
                         seq = int(morceaux[0])
                         hex = morceaux[1]
                     end
+                    # Copie brute vers MQTT, filtre seq non applique (2026-10-10, garde dans la fonction)
+                    modbusFonctions.relaiePushMQTT(paramMSG["msgString"], ip)
                 end
                 # La regle 'ModbusReceivedUDP' (controleModbus.be, modBus_TasmotaSlaveModBus.be) prend le relais
                 modbusFonctions.lireMsgModbus("ModbusReceivedUDP", {"Trame": bytes(hex), "Info": {"remote_ip": ip}, "Automatique": estPush, "Seq": seq})

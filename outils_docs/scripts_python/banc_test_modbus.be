@@ -1062,6 +1062,56 @@ drivers = sauveDrivers
 serveur = sauveServeur
 
 print("")
+print("=== 25. relaiePushMQTT : copie MQTT des push esclaves, cote maitre (2026-10-10) ===")
+# Les esclaves sont derriere le NAPT du maitre : leur multicast n'atteint pas le reseau maison.
+# Le maitre republie le datagramme BRUT sur tele/<topic>/MODBUSPUSH, si relaisPushMQTT = ON.
+# Le branchement dans udpFonctions.lireUDP est teste par test_discovery.be section 13.
+import mqtt
+sauveDrivers = drivers
+sauveServeur = serveur
+drivers = {"ModBus": {"id": 0, "relaisPushMQTT": "ON", "typeComm": {"Serial": "ON"}}}
+serveur = {"mqtt": {"topic": "garage"}}
+var PUSH = "ModbusPushUDP 12 031000A000010200FFE7D0"
+mqtt.publies = []
+verifie("ON : topic publie", "tele/garage/MODBUSPUSH", essaie(def () return modbusFonctions.relaiePushMQTT(PUSH, "192.168.4.2") end))
+verifie("ON : contenu {ip, msg} non retenu", "[['tele/garage/MODBUSPUSH', '{\"ip\":\"192.168.4.2\",\"msg\":\"" + PUSH + "\"}', nil]]",
+        str(mqtt.publies))
+mqtt.publies = []
+drivers["ModBus"]["relaisPushMQTT"] = "OFF"
+verifie("temoin OFF : rien publie", "nil/0", str(modbusFonctions.relaiePushMQTT(PUSH, "192.168.4.2")) + "/" + str(size(mqtt.publies)))
+drivers["ModBus"].remove("relaisPushMQTT")
+verifie("temoin cle absente (defaut OFF) : rien publie", "nil/0", str(modbusFonctions.relaiePushMQTT(PUSH, "192.168.4.2")) + "/" + str(size(mqtt.publies)))
+drivers["ModBus"]["relaisPushMQTT"] = "ON"
+drivers["ModBus"]["id"] = 2
+verifie("temoin esclave (id 2) : rien publie", "nil/0", str(modbusFonctions.relaiePushMQTT(PUSH, "192.168.4.2")) + "/" + str(size(mqtt.publies)))
+drivers["ModBus"]["id"] = 0
+mqtt.connecte = false
+verifie("temoin broker coupe : rien publie", "nil/0", str(modbusFonctions.relaiePushMQTT(PUSH, "192.168.4.2")) + "/" + str(size(mqtt.publies)))
+mqtt.connecte = true
+serveur = {}
+verifie("temoin sans topic : rien publie, sans exception", "nil/0", str(essaie(def () return modbusFonctions.relaiePushMQTT(PUSH, "x") end)) + "/" + str(size(mqtt.publies)))
+serveur = {"mqtt": {"topic": "garage"}}
+var publishOrigine = mqtt.publish
+mqtt.publish = def (t, p, r) raise "io_error", "broker indisponible" end
+journal = []
+verifie("publication qui leve : nil, erreur journalisee", "nil/true", str(essaie(def () return modbusFonctions.relaiePushMQTT(PUSH, "192.168.4.2") end)) + "/" + str(journalise("RELAIE_PUSH_MQTT_ERREUR")))
+mqtt.publish = publishOrigine
+
+# ReglageModbus RelaisPushMQTT : ON/OFF/1/0 sauves, valeur invalide refusee, sans parametre = lecture
+import persist
+var nbSave = persist.nb_save
+essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "RelaisPushMQTT 0", nil) end)
+verifie("commande 0 -> OFF sauve", "OFF/1", drivers["ModBus"]["relaisPushMQTT"] + "/" + str(persist.nb_save - nbSave))
+essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "RelaisPushMQTT on", nil) end)
+verifie("commande on -> ON sauve", "ON/2", drivers["ModBus"]["relaisPushMQTT"] + "/" + str(persist.nb_save - nbSave))
+essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "RelaisPushMQTT peutetre", nil) end)
+verifie("temoin valeur invalide : inchange, rien sauve", "ON/2", drivers["ModBus"]["relaisPushMQTT"] + "/" + str(persist.nb_save - nbSave))
+essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "RelaisPushMQTT", nil) end)
+verifie("sans parametre : lecture seule", "ON/2", drivers["ModBus"]["relaisPushMQTT"] + "/" + str(persist.nb_save - nbSave))
+drivers = sauveDrivers
+serveur = sauveServeur
+
+print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
       total, total - echecs - bugs_connus, bugs_connus, echecs))
 print(echecs == 0 ? "BANC_MODBUS: OK" : "BANC_MODBUS: ECHEC")

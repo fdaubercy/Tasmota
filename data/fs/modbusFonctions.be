@@ -234,6 +234,7 @@ def modbusFonctions_aideReglageModbus(sujet)
             ["TesteDebitConn16channels", "TesteDebitConn16channels <id> [debit]", "teste la carte 16 relais a un debit donne, puis revient au bus"],
             ["VerifieConn16channels", "VerifieConn16channels [corrige] [<carte>]", "retrouve l'ID et le debit de la carte 16 relais, compare au persist, corrige"],
             ["ActivationReponseCMD", "ActivationReponseCMD <ON|OFF|1|0>", "(des)active la reponse de l'esclave aux commandes ModBus"],
+            ["RelaisPushMQTT", "RelaisPushMQTT [ON|OFF|1|0]", "maitre : recopie en MQTT les push UDP des esclaves (observation)"],
             ["ImAlive", "ImAlive <ON|OFF|1|0>", "INTERNE : force le maitre a connecter ses clients ModBus TCP"]
         ]
     end
@@ -291,6 +292,14 @@ def modbusFonctions_aideReglageModbus(sujet)
         return ["Parametre : ON ou 1 = l'esclave repond aux commandes ModBus ; OFF ou 0 = muet.",
                 "Effet : sauve drivers.ModBus.activationReponseCMD dans le persist.",
                 "Exemple : ReglageModbus ActivationReponseCMD OFF"]
+    elif (sujet == "RELAISPUSHMQTT")
+        return ["Parametre : ON ou 1 = active ; OFF ou 0 = desactive ; absent = affiche l'etat.",
+                "Effet : sauve drivers.ModBus.relaisPushMQTT (OFF par defaut). Maitre seulement (id 0).",
+                "Chaque push 'ModbusPushUDP' recu d'un esclave est republie tel quel, quel que soit",
+                "le verdict du filtre seq, sur tele/<topic>/MODBUSPUSH : {\"ip\": ..., \"msg\": ...}.",
+                "Sert a observer les push depuis le reseau maison (sniffeur ModBus, Node-RED) : les",
+                "esclaves sont derriere le point d'acces du maitre, leur multicast n'en sort pas.",
+                "Exemple : ReglageModbus RelaisPushMQTT ON"]
     elif (sujet == "IMALIVE")
         return ["INTERNE : envoyee par les esclaves ModBus au maitre (UDP/MQTT) au demarrage,",
                 "et par le maitre a lui-meme au boot ; rarement tapee a la main.",
@@ -425,6 +434,18 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
         # Sauvegarde le paramètre
         drivers["ModBus"]["activationReponseCMD"] = parametres[0]
         persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
+    # Maitre : (des)active la copie MQTT des push esclaves (voir relaiePushMQTT) ; sans parametre, lit l'etat
+    elif (string.toupper(fonction) == string.toupper("RelaisPushMQTT"))
+        var valeur = (parametres.size() > 0 ? string.toupper(parametres[0]) : "")
+        valeur = (valeur == "1" ? "ON" : (valeur == "0" ? "OFF" : valeur))
+        if (valeur == "ON" || valeur == "OFF")
+            drivers["ModBus"]["relaisPushMQTT"] = valeur
+            persist.save(true)
+        elif (valeur != "")
+            reponse_cmnd += "erreur=parametre ON, OFF, 1 ou 0, "
+        end
+        reponse_cmnd += string.format("relaisPushMQTT=%s, ", drivers["ModBus"].find("relaisPushMQTT", "OFF"))
+        if (drivers["ModBus"].find("id", 99) != 0)    reponse_cmnd += "sans effet hors maitre (id 0), "    end
     # Force le Client ModBus TCP (Maitre ModBus: id == 0) à se connecter au serveur TCP de ce module (utile si le client ne s'est pas encore connecté ou a perdu la connexion)
     elif (string.toupper(fonction) == string.toupper("ImAlive") && drivers["ModBus"].find("id", 99) == 0)
         # Adapte le paramètre
@@ -2480,6 +2501,36 @@ def modbusFonctions_pousseEtat(StartAddress, typeValeur, valeurs)
     return trame
 end
 modbusFonctions.pousseEtat = modbusFonctions_pousseEtat
+
+# Relais MQTT des push esclaves, cote MAITRE (2026-10-10). Les esclaves sont clients du point
+# d'acces du maitre (NAPT, 192.168.4.0/24) : leur multicast n'en sort pas, aucun outil du reseau
+# maison ne le voit. Le maitre republie donc chaque datagramme "ModbusPushUDP" recu, BRUT et quel
+# que soit le verdict d'accepteSeq (l'observateur juge lui-meme doublons et retards), sur
+# tele/<topic>/MODBUSPUSH : {"ip": "<emetteur>", "msg": "ModbusPushUDP <seq> <trame hexa>"}.
+# Observation seulement : rien ne s'abonne a ce topic sur les modules, la boucle du plan
+# telemetrie ne depend pas du broker. Garde : drivers.ModBus.relaisPushMQTT (OFF par defaut,
+# ReglageModbus RelaisPushMQTT). Retourne le topic publie, ou nil si rien n'est parti.
+def modbusFonctions_relaiePushMQTT(texte, ip)
+    import mqtt
+    import json
+    import string
+
+    if (drivers.find("ModBus", {}).find("relaisPushMQTT", "OFF") != "ON" || drivers["ModBus"].find("id", 99) != 0)    return nil    end
+    var topic = serveur.find("mqtt", {}).find("topic", "")
+    if (topic == "" || !mqtt.connected())    return nil    end
+
+    topic = string.format("tele/%s/MODBUSPUSH", topic)
+    # Un echec du relais ne doit jamais empecher le traitement du push par le maitre
+    try
+        mqtt.publish(topic, json.dump({"ip": str(ip), "msg": texte}))
+    except .. as error, message
+        modbusFonctions.log(string.format("RELAIE_PUSH_MQTT_ERREUR: publication sur %s impossible : %s --> %s", topic, error, message), LOG_LEVEL_ERREUR)
+        return nil
+    end
+    modbusFonctions.log(string.format("RELAIE_PUSH_MQTT: %s -> %s", texte, topic), LOG_LEVEL_DEBUG_PLUS)
+    return topic
+end
+modbusFonctions.relaiePushMQTT = modbusFonctions_relaiePushMQTT
 
 # Filtre des pushes par numero d'ordre, cote maitre (2026-09-29). Retourne true si le push
 # 'seq' de l'esclave 'id' est a traiter :

@@ -16,7 +16,9 @@ Ce que fait ce serveur :
       (debit_modbus.py), emulation des esclaves du persist avec valeurs editables (emulation_modbus.py) ;
     - ecoute aussi le PUSH UDP des esclaves (ecoute_udp.py, multicast 224.3.0.1:4000, rien n'est emis) :
       le plan telemetrie ne passe pas par le RS485 ; chaque push est decode et juge comme le maitre
-      (numero d'ordre : accepte, ecarte, push perdus, redemarrage) ;
+      (numero d'ordre : accepte, ecarte, push perdus, redemarrage) ; esclaves derriere le point d'acces
+      du maitre (NAPT) : leur multicast n'arrive pas ici -> push relayes par le maitre en MQTT
+      (ReglageModbus RelaisPushMQTT ON, ecoute_udp.EcouteRelaisMQTT, broker de user_config_override.h) ;
     - onglet Aide : regles de formation des trames, registres de l'installation, decodeur manuel,
       procedure d'essai sur le bus reel ;
     - journal fichier optionnel (--journal).
@@ -35,6 +37,7 @@ Usage (Python de PlatformIO, qui fournit pyserial) :
     options : --port auto|COM12|loop://|aucun  --debit 19200  --http 7300  --silence 0.02  --delai 1.0
               --echo auto|oui|non  --journal fichier.log  --historique 5000  --persist <persist du maitre>
               --udp oui|non  --udp-groupe 224.3.0.1  --udp-port 4000  --udp-interface <ip locale>
+              --mqtt oui|non  --mqtt-hote <broker>  --mqtt-port 1883  --mqtt-utilisateur  --mqtt-mdp
     --port auto (defaut) : le SEUL port CH343 present ; sinon demarre port ferme, a choisir sur la page.
 Depuis VS Code : pioarduino > Project Tasks > <env> > Custom > « Sniffeur ModBus (HTTP 127.0.0.1) »
 (cible_sniffeur_modbus.py). Arret : Ctrl+C dans le terminal de la tache (ou la corbeille).
@@ -95,6 +98,7 @@ class Sniffeur:
         self.capture = None                     # (predicat, evenement, boite) d'une transaction en cours
         self.tache, self.resultat_debit = None, None
         self.derniers_seq, self.nb_push, self.udp_texte = {}, 0, "non ecoute"     # push UDP (ecoute_udp.py)
+        self.derniers_seq_mqtt, self.relais = {}, None      # push relayes par le maitre (EcouteRelaisMQTT)
         self.carte = dm.charge_carte(args.persist)      # qui est quoi, lu dans le persist du maitre
         self.bus = dm.lit_bus(args.persist)
         self.types = dm.charge_types_gpio()
@@ -106,7 +110,8 @@ class Sniffeur:
     def etat(self):
         return {"port": self.nom_port, "debit": self.debit, "ouvert": self.port is not None,
                 "erreur": self.erreur, "emulation": sorted(self.emulation.actifs), "nb": self.nb, "ko": self.nb_ko,
-                "alertes": self.nb_alertes, "push": self.nb_push, "udp": self.udp_texte, "depuis": self.debut, "delai": self.args.delai, "tache": self.tache,
+                "alertes": self.nb_alertes, "push": self.nb_push, "udp": self.udp_texte,
+                "mqtt": self.relais.etat if self.relais else "non ecoute", "depuis": self.debut, "delai": self.args.delai, "tache": self.tache,
                 "echo": {None: "?", True: "oui", False: "non"}[self.echo_local],
                 "persist": os.path.relpath(self.args.persist, dm.RACINE), "esclaves": len(self.carte)}
 
@@ -333,18 +338,19 @@ class Sniffeur:
         return self.stats.setdefault(ident, {"id": ident, "requetes": 0, "reponses": 0, "sans_reponse": 0, "exceptions": 0,
                                              "lat": None, "lat_max": 0, "push": 0, "push_ecartes": 0})
 
-    def traite_udp(self, texte, ip):
-        """Un datagramme du groupe multicast (fil d'ecoute UDP) : push decode et juge, ou autre message."""
+    def traite_udp(self, texte, ip, via="udp"):
+        """Datagramme du groupe multicast, ou push relaye en MQTT (via "mqtt", sa propre table de seq)."""
         with self.verrou:
-            f, alertes, ident, accepte = ecoute_udp.fiche(texte, ip, self.carte, self.types, self.derniers_seq,
-                                                          maintenant_texte())
+            derniers = self.derniers_seq_mqtt if via == "mqtt" else self.derniers_seq
+            f, alertes, ident, accepte = ecoute_udp.fiche(texte, ip, self.carte, self.types, derniers,
+                                                          maintenant_texte(), via)
             if ident is not None:
                 self.nb_push += 1
                 s = self._stat(ident)
                 s["push"] += 1
                 s["push_ecartes"] += not accepte
             paquets = [self._paquet("trame", f)]
-            self._ecrit_journal(f"udp  {f['hex']:<40} {f['texte']}")
+            self._ecrit_journal(f"{via:<4} {f['hex']:<40} {f['texte']}")
             for alerte in alertes:
                 self.nb_alertes += alerte["niveau"] == "alerte"
                 paquets.append(self._paquet("trame", self._fiche("alerte" if alerte["niveau"] == "alerte" else "info",
@@ -412,7 +418,7 @@ class Sniffeur:
     def raz(self):
         with self.verrou:
             self.stats, self.nb, self.nb_ko, self.nb_alertes, self.attendue = {}, 0, 0, 0, None
-            self.derniers_seq, self.nb_push = {}, 0
+            self.derniers_seq, self.derniers_seq_mqtt, self.nb_push = {}, {}, 0
             self.surveillance = Surveillance(self.carte, self.args.delai)
             self.historique.clear()
             self._diffuse([self._paquet("raz", {}), self._paquet("etat", self.etat()), self._paquet("stats", [])])
@@ -439,6 +445,7 @@ def main():
     options.add_argument("--udp-port", dest="udp_port", type=int, default=ecoute_udp.PORT)
     options.add_argument("--udp-interface", dest="udp_interface", default="0.0.0.0",
                          help="IP locale de la carte reseau des modules (defaut : celle du systeme)")
+    ecoute_udp.options_relais(options)
     options.add_argument("--persist", default=dm.PERSIST_MAITRE,
                          help="_persist.json du maitre : adresses des esclaves et appareils (decodage metier)")
     args = options.parse_args()
@@ -466,6 +473,11 @@ def main():
         udp = ecoute_udp.EcouteUDP(sniffeur.traite_udp, args.udp_groupe, args.udp_port, args.udp_interface)
         sniffeur.udp_texte = f"{args.udp_groupe}:{args.udp_port}" if udp.demarre() else udp.erreur
         print(f"push UDP : {sniffeur.udp_texte}")
+    if args.mqtt == "oui":
+        sniffeur.relais = ecoute_udp.EcouteRelaisMQTT(sniffeur.traite_udp, args.mqtt_hote, args.mqtt_port,
+                                                      args.mqtt_utilisateur, args.mqtt_mdp, sniffeur.diffuse_etat)
+        sniffeur.relais.demarre()
+        print(f"push relayes en MQTT : {sniffeur.relais.etat}")
     try:
         http.serve_forever()
     except KeyboardInterrupt:

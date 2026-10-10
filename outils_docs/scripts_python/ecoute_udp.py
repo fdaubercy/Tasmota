@@ -11,14 +11,25 @@ comme le maitre (modbusFonctions.accepteSeq) :
     - sinon -> doublon ou datagramme en retard, ECARTE par le maitre.
 Les autres messages du groupe (ImAlive, Timestamp, ipMaitre...) sont comptes et montres a part.
 Pare-feu Windows : il doit laisser entrer l'UDP vers python.exe, sinon rien n'arrive.
+
+RELAIS MQTT DU MAITRE (EcouteRelaisMQTT) : les esclaves sont clients du point d'acces du maitre
+(NAPT, 192.168.4.0/24) ; leur multicast n'en sort pas et le PC, sur le Wi-Fi maison, ne le voit
+jamais. Avec ReglageModbus RelaisPushMQTT ON, le maitre republie chaque push recu, brut, sur
+tele/<topic>/MODBUSPUSH = {"ip": ..., "msg": "ModbusPushUDP <seq> <hexa>"} (modbusFonctions.
+relaiePushMQTT). Ce module s'y abonne (lecture seule, rien n'est publie) ; chaque push est juge
+comme les autres, avec sa propre table de numeros d'ordre (une copie UDP et une copie MQTT du meme
+push ne sont pas des doublons). Ne montre que ce que le MAITRE a recu.
 """
 
+import json
 import socket
 import struct
 import threading
+import time
 
 FENETRE_SEQ = 16            # comme modbusFonctions.FENETRE_SEQ
 GROUPE, PORT = "224.3.0.1", 4000
+TOPICS_RELAIS = ["tele/+/MODBUSPUSH", "tele/+/+/MODBUSPUSH"]     # un topic Tasmota peut contenir un '/'
 
 
 def juge_seq(derniers, ident, seq):
@@ -49,10 +60,13 @@ def analyse(texte):
         return seq, b""
 
 
-def fiche(texte, ip, carte, types, derniers, horodatage):
-    """Datagramme -> (fiche pour le fil de la page, alertes, id de l'esclave ou None, push accepte ?)."""
+def fiche(texte, ip, carte, types, derniers, horodatage, via="udp"):
+    """Datagramme -> (fiche pour le fil de la page, alertes, id de l'esclave ou None, push accepte ?).
+    via : "udp" (multicast entendu directement) ou "mqtt" (relais du maitre)."""
     import decodeur_modbus as dm
-    base = {"t": horodatage, "dt": None, "sens": "udp", "lat": None, "fc": None}
+    base = {"t": horodatage, "dt": None, "sens": via, "lat": None, "fc": None}
+    if via == "mqtt":
+        ip = f"{ip}, relaye par le maitre en MQTT"
     p = analyse(texte)
     if p is None:
         return dict(base, hex="", crc=True, nature="udp", id=None, texte=f"UDP de {ip} : {texte[:200]}"), [], None, None
@@ -109,3 +123,79 @@ class EcouteUDP:
         s, self.sock = self.sock, None
         if s:
             s.close()
+
+
+def lit_relais(payload):
+    """Charge de tele/<topic>/MODBUSPUSH -> (texte du push, ip de l'esclave), ou None si illisible."""
+    try:
+        d = json.loads(payload.decode("utf-8") if isinstance(payload, bytes) else payload)
+        return (d["msg"], str(d.get("ip", "?"))) if isinstance(d, dict) and isinstance(d.get("msg"), str) else None
+    except (ValueError, UnicodeDecodeError):
+        return None
+
+
+class EcouteRelaisMQTT:
+    """Abonnement aux push relayes par le maitre ; reconnexion automatique. 'etat' : texte pour la page."""
+
+    def __init__(self, recoit, hote, port=1883, utilisateur="", mot_de_passe="", change=None):
+        """recoit(texte, ip, "mqtt") pour chaque push ; change() a chaque changement d'etat."""
+        import client_mqtt
+        self.client_mqtt, self.recoit, self.change = client_mqtt, recoit, change or (lambda: None)
+        self.client = client_mqtt.ClientMQTT(hote, port, f"sniffeur-modbus-{socket.gethostname()}-{id(self) % 10000}",
+                                             utilisateur, mot_de_passe)
+        self.etat, self.actif = f"{hote}:{port} : connexion...", False
+
+    def demarre(self):
+        if not self.client.hote:
+            self.etat = "aucun broker (MQTT_HOST absent de user_config_override.h, ou --mqtt-hote)"
+            return False
+        self.actif = True
+        threading.Thread(target=self._boucle, daemon=True).start()
+        return True
+
+    def _note(self, etat):
+        if etat != self.etat:
+            self.etat = etat
+            print(f"relais MQTT : {etat}")
+            self.change()
+
+    def _boucle(self):
+        attente, c = 2, self.client
+        while self.actif:
+            try:
+                c.connecte()
+                c.abonne(TOPICS_RELAIS)
+                self._note(f"{c.hote}:{c.port} connecte, abonne a {TOPICS_RELAIS[0]}")
+                attente = 2
+                while self.actif:
+                    m = c.recoit()
+                    if m is not None and m.topic.endswith("/MODBUSPUSH"):
+                        relais = lit_relais(m.payload)
+                        if relais:
+                            try:
+                                self.recoit(relais[0], relais[1], "mqtt")
+                            except Exception as erreur:     # un message mal forme ne doit jamais arreter l'ecoute
+                                print(f"relais MQTT {m.topic} ignore : {erreur!r}")
+                    c.entretient()
+            except (OSError, self.client_mqtt.ErreurMQTT) as erreur:
+                c.ferme()
+                if self.actif:
+                    self._note(f"{c.hote}:{c.port} indisponible ({erreur or erreur.__class__.__name__}), nouvel essai")
+                    time.sleep(attente)
+                    attente = min(attente * 2, 30)
+
+    def arrete(self):
+        self.actif = False
+        self.client.ferme()
+
+
+def options_relais(options):
+    """Options --mqtt* du sniffeur ; broker par defaut = celui des modules (user_config_override.h)."""
+    from sniffeur_mqtt import lit_config_broker
+    b = lit_config_broker()
+    options.add_argument("--mqtt", choices=("oui", "non"), default="oui",
+                         help="ecoute des push relayes par le maitre (ReglageModbus RelaisPushMQTT ON)")
+    options.add_argument("--mqtt-hote", dest="mqtt_hote", default=b.get("MQTT_HOST", ""))
+    options.add_argument("--mqtt-port", dest="mqtt_port", type=int, default=int(b.get("MQTT_PORT", 1883)))
+    options.add_argument("--mqtt-utilisateur", dest="mqtt_utilisateur", default=b.get("MQTT_USER", ""))
+    options.add_argument("--mqtt-mdp", dest="mqtt_mdp", default=b.get("MQTT_PASS", ""))

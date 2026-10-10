@@ -37,6 +37,8 @@ MODBUS est un protocole de communication série largement utilisé dans l'indust
 
 ### Pour tester les commandes et les réponses ModBus
     - Désactiver la réponse des esclaves aux commandes Modbus: ReglageModbus ActivationReponseCMD OFF
+    - Voir les push des esclaves depuis le réseau maison (sniffeur ModBus, onglet fil, sens MQTT) : sur le maître,
+      ReglageModbus RelaisPushMQTT ON -> chaque push reçu est recopié sur tele/<topic>/MODBUSPUSH (OFF par défaut)
     - Exemple de script ModBus berry à utiliser dans le console BERRY du Maitre:
         import modbusFonctions
 

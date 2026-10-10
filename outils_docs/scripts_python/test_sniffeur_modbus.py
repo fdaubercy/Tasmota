@@ -15,6 +15,8 @@ CE QU'IL COUVRE
                         port de TEST avec TTL 0 : rien ne sort du PC, 224.3.0.1:4000 n'est jamais vise
                         (un faux push y serait traite par le vrai maitre) ;
     sniffeur_modbus     echo local appris, accuse 0x06 garde, emulation, push UDP ;
+    relais MQTT         push relayes par le maitre (EcouteRelaisMQTT) : faux broker sur 127.0.0.1, port
+                        aleatoire - le vrai broker n'est jamais contacte ; tables de seq UDP / MQTT separees ;
     test_rs485_pc       CRC (exemples de PROTOCOLE_MODBUS.md), decoupage, loop:// ;
     tout le decodage    20 000 trames aleatoires et leurs troncatures : aucune exception.
 Chaque groupe a ses TEMOINS, des cas qui doivent echouer (tasks/lessons.md, regle 7).
@@ -318,9 +320,68 @@ def test_udp():
     verifie(natures.count("push") == 2 and "udp" in natures, True, "UDP : push et autre message dans le fil")
 
 
+def publish_mqtt(topic, payload):
+    """Paquet PUBLISH QoS 0, tel qu'un broker le livre."""
+    import client_mqtt
+    corps = client_mqtt._chaine(topic) + payload.encode()
+    return b"\x30" + client_mqtt._longueur_restante(len(corps)) + corps
+
+
+def test_relais_mqtt():
+    """Push relayes par le maitre (modbusFonctions.relaiePushMQTT) : faux broker sur 127.0.0.1, port de TEST."""
+    push = "ModbusPushUDP 7 " + c("03 10 00 A0 00 01 02 00 FF").hex().upper()
+    relais = json.dumps({"ip": "192.168.4.2", "msg": push})
+    verifie(eu.lit_relais(relais.encode()), (push, "192.168.4.2"), "relais : charge lue")
+    verifie(eu.lit_relais(b"pas du json"), None, "TEMOIN : charge illisible -> None")
+    verifie(eu.lit_relais('{"ip": "x"}'), None, "TEMOIN : charge sans msg -> None")
+    # Tables de seq separees : la copie MQTT d'un push deja entendu en UDP n'est pas un doublon
+    sn = sniffeur(echo="oui")
+    sn.traite_udp(push, "192.168.4.2", "udp")
+    sn.traite_udp(push, "192.168.4.2", "mqtt")
+    verifie(sn.stats[3]["push_ecartes"], 0, "UDP puis MQTT du meme push : aucun ecarte")
+    sn.traite_udp(push, "192.168.4.2", "mqtt")
+    verifie(sn.stats[3]["push_ecartes"], 1, "TEMOIN : 2e copie MQTT -> doublon ecarte")
+    fiches = [json.loads(p.decode().split("data: ", 1)[1]) for p in sn.historique]
+    verifie([f["sens"] for f in fiches if f["nature"] == "push"], ["udp", "mqtt", "mqtt"], "sens udp / mqtt dans le fil")
+    verifie("relaye par le maitre" in fiches[1]["texte"] and "relaye" not in fiches[0]["texte"], True,
+            "texte : origine MQTT signalee, UDP non")
+    # Bout en bout : vraie boucle EcouteRelaisMQTT contre un faux broker local
+    serveur = socket.socket()
+    serveur.bind(("127.0.0.1", 0))
+    serveur.listen(1)
+    port, recu = serveur.getsockname()[1], {}
+
+    def broker():
+        conn, _ = serveur.accept()
+        conn.settimeout(3)
+        recu["connect"] = conn.recv(1024)
+        conn.sendall(b"\x20\x02\x00\x00")                      # CONNACK accepte
+        recu["subscribe"] = conn.recv(1024)
+        conn.sendall(b"\x90\x04" + recu["subscribe"][2:4] + b"\x00\x00")     # SUBACK
+        for topic, charge in (("tele/garage/MODBUSPUSH", relais), ("tele/garage/SENSOR", relais),
+                              ("tele/garage/MODBUSPUSH", "illisible"), ("tele/garage/MODBUSPUSH", relais)):
+            conn.sendall(publish_mqtt(topic, charge))
+        time.sleep(1.5)
+        conn.close()
+    threading.Thread(target=broker, daemon=True).start()
+    sn2 = sniffeur(echo="oui")
+    sn2.relais = eu.EcouteRelaisMQTT(sn2.traite_udp, "127.0.0.1", port, change=sn2.diffuse_etat)
+    verifie(sn2.relais.demarre(), True, "relais MQTT demarre")
+    fin = time.monotonic() + 3
+    while time.monotonic() < fin and sn2.nb_push < 2:
+        time.sleep(0.05)
+    sn2.relais.arrete()
+    serveur.close()
+    verifie(all(t.encode() in recu.get("subscribe", b"") for t in eu.TOPICS_RELAIS), True, "abonne aux 2 formes de topic")
+    verifie((sn2.nb_push, sn2.stats.get(3, {}).get("push_ecartes")), (2, 1),
+            "2 push relayes, le 2e ecarte ; SENSOR et charge illisible ignores")
+    verifie("connecte" in sn2.etat()["mqtt"] or "indisponible" in sn2.etat()["mqtt"], True, "etat MQTT dans la barre")
+    verifie(eu.EcouteRelaisMQTT(sn2.traite_udp, "").demarre(), False, "TEMOIN : sans broker, rien ne demarre")
+
+
 def main():
     for groupe in (test_crc_et_cli, test_decodeur, test_fuzz, test_surveillance, test_emulation,
-                   test_sniffeur_et_debit, test_udp):
+                   test_sniffeur_et_debit, test_udp, test_relais_mqtt):
         avant = len(RESULTATS["ko"])
         try:
             groupe()

@@ -534,3 +534,26 @@ exemple      : 03 10 00A0 0001 02 00FF E7D0     (rideau, interrupteur 1 = ON)
 Verifie au banc (`banc_test_modbus.be`, sections 8 a 15 : 76 PASS, temoins sur l'ancien code) ;
 **pas encore sur bus reel**.
 
+### Observer les push depuis le reseau maison — relais MQTT du maitre (2026-10-10)
+
+Constate le 2026-10-10 : le sniffeur (PC sur le Wi-Fi maison, 192.168.0.x) ne voyait **aucun**
+push. La cuve est cliente du point d'acces du maitre (`RgxClients` du P4 : `F0F5BD436BB0` en
+192.168.4.2) ; le NAPT lwIP ne relaie **pas** le multicast, qui reste dans 192.168.4.0/24. Ecoute
+du PC verifiee correcte (groupe rejoint sur l'interface Wi-Fi, pare-feu hors de cause).
+
+- **Maitre** : `modbusFonctions.relaiePushMQTT`, appele par `udpFonctions.lireUDP` sur chaque
+  `ModbusPushUDP` recu, republie le datagramme **brut**, quel que soit le verdict
+  d'`accepteSeq`, sur `tele/<topic>/MODBUSPUSH` = `{"ip": ..., "msg": "ModbusPushUDP <seq> <hexa>"}`,
+  non retenu. Garde : `drivers.ModBus.relaisPushMQTT` (**OFF** par defaut, cle presente dans tous
+  les persists ModBus), reglee par `ReglageModbus RelaisPushMQTT ON|OFF` ; maitre (id 0) seulement.
+  Un echec de publication est journalise et n'empeche jamais le traitement du push.
+- **Observation seulement** : aucun module ne s'abonne a ce topic ; le plan telemetrie ne depend
+  toujours pas du broker. Le relais montre ce que le **maitre** a recu : une perte entre l'esclave
+  et le maitre reste invisible (pour la voir : PC sur le point d'acces du maitre).
+- **Sniffeur** : `ecoute_udp.EcouteRelaisMQTT` s'abonne a `tele/+/MODBUSPUSH` et `tele/+/+/MODBUSPUSH`
+  (broker de `user_config_override.h`, `--mqtt non` pour couper). Table de numeros d'ordre
+  **separee** de celle de l'UDP : la copie MQTT d'un push deja entendu en UDP n'est pas un doublon.
+  Fil de la page : sens `MQTT`.
+- Bancs : `banc_test_modbus.be` §25, `test_discovery.be` §13 (branchement dans `lireUDP`),
+  `test_sniffeur_modbus.py` `test_relais_mqtt` (faux broker local). **Pas encore observe sur la carte.**
+

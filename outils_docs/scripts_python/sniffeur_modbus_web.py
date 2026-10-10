@@ -12,7 +12,7 @@ Routes (sniffeur_modbus.py) :
     GET  /carte    esclaves et appareils du persist du maitre      POST /decode {hex, requete, crc}
 Les POST exigent l'en-tete X-Sniffeur: 1 (protection contre une page tierce visant 127.0.0.1).
 Evenements SSE en plus : 'emulation' (esclaves emulables et leurs valeurs), 'debit' (resultat
-de la recherche / correction). Fiche 'trame' : {t, dt (ms depuis la precedente), sens (bus|pc|emul|--|!!),
+de la recherche / correction). Fiche 'trame' : {t, dt (ms depuis la precedente), sens (bus|pc|emul|udp|mqtt|--|!!),
 hex, crc, nature (requete|reponse|exception|ko|timeout|alerte|info|?), id, fc, texte, norme, metier, champs, lat (ms, reponse appariee)}.
 Onglet Aide : sniffeur_modbus_aide.AIDE, insere a la place de <!--AIDE-->. Un clic sur une trame du
 bus en montre le detail champ par champ ; un clic sur un exemple de l'aide le decode.
@@ -40,7 +40,7 @@ PAGE = r"""<!doctype html>
  .l{white-space:pre-wrap;word-break:break-all;padding:1px 0;border-bottom:1px solid #2a2a2a}
  .t{color:#808080} .dt{color:#6a6a6a;display:inline-block;width:70px;text-align:right}
  .s{display:inline-block;width:42px;text-align:center;border-radius:3px;margin:0 4px}
- .s-udp{background:#1f6f5c} .n-push .tx{color:#4ec9b0} .n-udp .tx{color:#9d9d9d}
+ .s-udp{background:#1f6f5c} .s-mqtt{background:#5c3d1f} .n-push .tx{color:#4ec9b0} .n-udp .tx{color:#9d9d9d}
  .s-bus{background:#264f78} .s-pc{background:#6a3d9a} .s-emul{background:#7a5c00} .s---{background:#5a1d1d}
  .hx{color:#ce9178} .ok{color:#6a9955} .ko{color:#f14c4c} .lat{color:#29b8db}
  .n-reponse .tx{color:#89d185} .n-ko .tx,.n-exception .tx,.n-timeout .tx{color:#f14c4c}
@@ -104,7 +104,7 @@ PAGE = r"""<!doctype html>
  <label><input type="checkbox" class="nat" value="reponse" checked> reponses</label>
  <label><input type="checkbox" class="nat" value="erreur" checked> erreurs</label>
  <label><input type="checkbox" class="nat" value="alerte" checked> alertes</label>
- <label title="push des esclaves (ModbusPushUDP) et autres messages du groupe multicast"><input type="checkbox" class="nat" value="udp" checked> UDP</label>
+ <label title="push des esclaves (ModbusPushUDP : multicast direct, ou MQTT = relaye par le maitre) et autres messages du groupe multicast"><input type="checkbox" class="nat" value="udp" checked> UDP</label>
  <input id="filtre" placeholder="filtre texte ou hexa">
  <button id="pause">Pause</button><button id="effacer">Effacer</button><button id="export">Exporter</button>
  <span class="gris" id="compte"></span>
@@ -207,7 +207,7 @@ const flux = new EventSource("/flux");
 flux.addEventListener("etat", e => {
   const s = JSON.parse(e.data);
   ouvert = s.ouvert; if (s.port) portActif = s.port;
-  $("etat").textContent = (s.ouvert ? `${s.port} a ${s.debit} bauds` : "port ferme") + ` - ${s.nb} trames, ${s.ko} CRC KO, ${s.alertes} alerte(s) - UDP ${s.udp} : ${s.push} push`
+  $("etat").textContent = (s.ouvert ? `${s.port} a ${s.debit} bauds` : "port ferme") + ` - ${s.nb} trames, ${s.ko} CRC KO, ${s.alertes} alerte(s) - UDP ${s.udp} : ${s.push} push - relais MQTT ${s.mqtt}`
     + ` - echo local ${s.echo}` + (s.emulation.length ? ` - EMULATION id ${s.emulation.join(", ")}` : "")
     + (s.tache ? ` - ${s.tache} en cours...` : "") + (s.erreur ? ` - ${s.erreur}` : "");
   $("chercherDebit").disabled = !!s.tache;

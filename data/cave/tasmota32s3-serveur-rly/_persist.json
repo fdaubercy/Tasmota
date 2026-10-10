@@ -1187,6 +1187,7 @@
 			"timeoutReponse": 4000,
 			"log": "detail",
 			"activationReponseCMD": "ON",
+			"relaisPushMQTT": "OFF",
 			"typeComm": {
 				"Serial": "OFF",
 				"UDP": "OFF",

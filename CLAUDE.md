@@ -362,7 +362,10 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     `emulation_modbus.py` (le PC repond a la place de la carte relais, de la cuve, du rideau ; valeurs
     editables dans la page), `debit_modbus.py` (trouve puis corrige, sur confirmation, le debit et
     l'adresse de la carte relais, comme `verifieConn16`), `ecoute_udp.py` (rejoint 224.3.0.1:4000 en
-    ecoute seule : push `ModbusPushUDP` des esclaves decodes et juges comme `accepteSeq` du maitre).
+    ecoute seule : push `ModbusPushUDP` des esclaves decodes et juges comme `accepteSeq` du maitre ;
+    s'abonne aussi a `tele/+/MODBUSPUSH`, ou le maitre recopie les push qu'il recoit si
+    `ReglageModbus RelaisPushMQTT ON` : les esclaves sont derriere son point d'acces NAPT, leur
+    multicast n'atteint jamais le PC sur le Wi-Fi maison).
     Echo local du convertisseur appris au 1er envoi (`--echo auto`) : un accuse 0x05/0x06 est la copie
     exacte de la requete, il ne doit pas etre jete. Port ouvert sans DTR/RTS (pas de reset d'un ESP32).
     Banc : `test_sniffeur_modbus.py` (code de sortie 0 = vert ; persist de test ; UDP sur un groupe et un

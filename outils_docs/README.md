@@ -192,6 +192,7 @@ moins une sortie. Un profil « normal » sobre allège donc vraiment la carte.
 >####    - ReglageModbus RecupereBaudrateConn16channels 0x01
 >####    - ReglageModbus ReglageBaudrateConn16channels 0x01 19200
 >####    - ReglageModbus ActivationReponseCMD ON|OFF': (Des)active la réponse de l'esclave aux commandes ModBus
+>####    - ReglageModbus RelaisPushMQTT ON|OFF : (maître) recopie les push UDP des esclaves sur tele/&lt;topic&gt;/MODBUSPUSH, pour les observer depuis le réseau maison (OFF par défaut)
 >
 >####    - ReglageSlaveModBus1 id 0x02   => Change le l'adresse ModBus de l'esclave ModBus_TasmotaSlaveModBus1<br>
 >
