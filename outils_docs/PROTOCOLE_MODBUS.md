@@ -202,7 +202,8 @@ l'execution (flash + console).**
 
 - **File** : `queue` / `enVol` + `enfileMsg` / `pompeQueue` / `termineEnVol` / `surTimeout`.
   Le maitre (`envoiMsgModbusSerial`, id==0) **enfile** au lieu de renvoyer par timer.
-  Un seul en vol, FIFO, timeout a nom unique, retry borne (`MAX_TENTATIVES=3`).
+  Un seul en vol, timeout a nom unique, retry borne (`MAX_TENTATIVES=3`). FIFO a l'origine ;
+  depuis le 2026-10-10, **priorite aux ecritures** et envoi differe (voir ci-dessous).
 - **Acquittement** : les handlers de reponse (`controleModbus`, `modBus_Conn16channels`,
   `modBus_TasmotaSlaveModBus`) appellent `termineEnVol(true)` a la reception.
 - **Appariement reponse<->requete** : `apparieReponse(msg)` injecte StartAddress/Count/type
@@ -226,6 +227,44 @@ l'execution (flash + console).**
    esclave→maitre n'existe PAS en ModBus standard : le MBAP n'apporterait que
    l'interoperabilite avec du materiel tiers, besoin absent du parc. Le `Transaction Id`
    est sans objet tant qu'on reste a un-seul-en-vol.
+
+### Evolutions du 2026-10-10 — mesurees sur le bus reel (maitre P4, cuve, rideau)
+
+Constat de depart : un clic sur un relai partait **~9 s** plus tard, et la cuve semblait
+repondre en « 6 s ». Trois causes, trois corrections dans `modbusFonctions.be` :
+
+1. **Reponses jetees par le pont Tasmota — l'envoi est desormais toujours differe.**
+   `ModbusBridgeHandle` (`xdrv_63_modbus_bridge.ino`) publie `ModbusReceived`, donc execute nos
+   regles, PUIS remet `modbusBridge.deviceAddress = 0` en sortant (l.652). Un `ModBusSend`
+   lance depuis la regle (`termineEnVol(true)` -> `pompeQueue`) voyait son adresse effacee :
+   sa reponse tombait en `nodataexpected`, rejetee **sans aucun log** parce que
+   `USE_MODBUS_BRIDGE_TCP` est compile (`return` muet). Mesure : **61 reponses jetees pour 161
+   decodees**, chacune payee d'un timeout (5 s) et d'un renvoi — les « 6 s » de la cuve, qui
+   repond en realite en 0,3 s. Signature dans le log du maitre : un `SUR_TIMEOUT` **sans**
+   `MBS: MBR Recv timed out` juste avant.
+   Correction : `pompeQueue` ne fait plus qu'armer `envoieTete` par `armeTimer(0, ...)`
+   (nom `modbus_envoi`) ; le `ModBusSend` part toujours apres la sortie du pont.
+2. **Priorite aux ecritures** (`placeEnFile`). Une ecriture (commande de relai...) passe
+   devant toutes les lectures en attente, dans l'ordre d'arrivee des ecritures entre elles.
+   Renvoi d'une ecriture : en tete. Renvoi d'une lecture : devant les autres lectures, jamais
+   devant une ecriture. Les regles `MAX_FILE` (une ecriture evince la plus ancienne lecture)
+   et de dedoublonnage des lectures sont inchangees.
+3. **Esclave muet, decide par la file** (`estMuet` / `noteAbandon` / `noteContactBus`,
+   `SEUIL_MUET = 2`). Un esclave muet coutait **3 x 5,5 s = 16,5 s de bus par message**.
+   - Declaration : 2 messages **de suite** abandonnes sans reponse (~33 s, au lieu des 90 a
+     120 s du chien de garde). Ses lectures en attente sont retirees de la file.
+   - Effet : **plus aucun renvoi**, lecture comme commande. Une commande part une seule fois :
+     si l'esclave est revenu, elle s'execute et sa reponse leve l'etat. Le releve des ESP32
+     n'envoie qu'une sonde par cycle a un muet (`releveEsclaves`).
+   - Duree : jusqu'au premier contact — reponse appariee (`termineEnVol(true)`) ou push
+     accepte (`TasmotaSlaveModBus.noteContact`).
+   - Logs : `ESCLAVE_MUET: ... declare muet` en `erreur` (une fois), `... repond de nouveau`
+     en `info`. Une commande perdue reste une `erreur` ; la sonde ratee d'un muet, `debug`.
+   - Le chien de garde des drivers (§9) garde son seul role : passer les etats constates a
+     `inconnu`.
+
+Non change, volontairement : `timeoutReponse` = 5000 ms (la carte repond en 2-4 ms, la cuve
+en 0,3-0,4 s ; a raccourcir une fois les corrections ci-dessus validees sur le bus).
 
 ---
 
@@ -343,7 +382,7 @@ a pertes. Ce qui est atteignable, et suffisant :
 |---|---|---|
 | Sens | maitre → esclave | esclave → maitre |
 | Transport | RS485 serie | UDP |
-| File FIFO | **oui**, un seul en vol | **jamais** |
+| File (ecritures d'abord, §7) | **oui**, un seul en vol | **jamais** |
 | Accuse | obligatoire (`termineEnVol`) | **aucun** |
 | Perte | retry borne puis erreur | toleree, la suivante arrive |
 
@@ -477,7 +516,8 @@ exemple      : 03 10 00A0 0001 02 00FF E7D0     (rideau, interrupteur 1 = ON)
   (`MODBUS_TASMOTA_SLAVE_CHIEN_DE_GARDE: ... muet`) : `etatConstate = "inconnu"` sur ses
   appareils virtuels, `etat` (commande) intact. Retour journalise au contact suivant ; chaque
   appareil retrouve son constat a sa prochaine valeur (`"valide"` pour un capteur, ON/OFF pour
-  un relai).
+  un relai). Depuis le 2026-10-10, l'etat **muet de la file** (2 abandons de suite, §7) est
+  distinct : il supprime les renvois ; le chien de garde, lui, ne fait que l'`inconnu`.
 - **Relais d'esclaves : commande / constate** (`45d432257`). L'esclave repond a la lecture
   **0x01** (bit 0 = Power ON) ; le releve A lit en 0x01 les relais virtuels 224/256 (pas les
   WS2812 1376). `etatConstate` + `constateA`, ecart journalise

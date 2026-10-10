@@ -984,9 +984,11 @@ class MODBUS_TASMOTA_SLAVE : Driver
                     if (type(esclave) != "instance" || esclave.find("activation", "OFF") != "ON")    continue    end
 
                     var trame = self.demandeLecture(device, famille, int(esclave["id"]))
-                    # Esclave declare muet (chien de garde) : UNE seule sonde par cycle, pas tous
-                    # ses appareils - chacun couterait MAX_TENTATIVES x timeout de bus (audit G3).
-                    if (trame != nil && self.esclavesMuets != nil && self.esclavesMuets.find(int(esclave["id"]), false))
+                    # Esclave declare muet (par la file : abandons de suite, ou par le chien de
+                    # garde) : UNE seule sonde par cycle, pas tous ses appareils (audit G3).
+                    var muet = modbusFonctions.estMuet(int(esclave["id"])) ||
+                               (self.esclavesMuets != nil && self.esclavesMuets.find(int(esclave["id"]), false))
+                    if (trame != nil && muet)
                         if (sondes.find(int(esclave["id"]), false))    continue    end
                         sondes[int(esclave["id"])] = true
                     end
@@ -1015,6 +1017,8 @@ class MODBUS_TASMOTA_SLAVE : Driver
         if (self.derniersContacts == nil)    self.derniersContacts = {}    end
         if (self.esclavesMuets == nil)    self.esclavesMuets = {}    end
         self.derniersContacts[idEsclave] = tasmota.rtc()["local"]
+        import modbusFonctions
+        modbusFonctions.noteContactBus(idEsclave)       # leve aussi l'etat muet de la file (push compris)
         if (self.esclavesMuets.find(idEsclave, false))
             self.esclavesMuets.remove(idEsclave)
             logFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_CHIEN_DE_GARDE: l'esclave d'ID=%i repond de nouveau", idEsclave), LOG_LEVEL_INFO, "slaveModbus")

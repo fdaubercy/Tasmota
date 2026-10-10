@@ -1621,7 +1621,7 @@ preproc.define('D_SENSOR_HDMI_CEC', "HDMI CEC")
 preproc.define('THERMOSTAT_CONTROLLER_OUTPUTS', 1)
 preproc.define('USE_SDM120')
 preproc.define('FM24CXX_BLOCK_SIZE', 256)
-preproc.define('CFG_HOLDER', 1446)
+preproc.define('CFG_HOLDER', 1450)
 preproc.define('D_MODULE', "Module")
     # ignored #define __FLT128_MAX_EXP__ 16384
 preproc.define('D_SO_MQTTTLS', "MqttTLS")

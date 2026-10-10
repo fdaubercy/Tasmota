@@ -49,7 +49,9 @@ def modbusFonctions_etat()
             "echeances": {},            # ESP32-P4 : nom -> {"t": echeance millis, "f": fonction} (armeTimer)
             "tamponSerie": bytes(),     # esclave : octets RS485 recus, pas encore decoupes en trames (audit G2)
             "seqPush": 0,               # esclave : numero d'ordre du dernier push emis (pousseEtat)
-            "derniersSeq": {}           # maitre : id esclave -> dernier numero d'ordre de push accepte
+            "derniersSeq": {},          # maitre : id esclave -> dernier numero d'ordre de push accepte
+            "muets": {},                # maitre : adresse -> true tant que l'esclave est muet (noteAbandon)
+            "abandonsSuite": {}         # maitre : adresse -> messages abandonnes de suite, sans reponse
         }
     end
     return global._etatModbusFonctions
@@ -68,6 +70,7 @@ modbusFonctions.timeout_ReponseModBus_ms = 4000
 # (etat deplace dans modbusFonctions.etat()) modbusFonctions.enVol = nil           # message envoye en attente de reponse (nil = canal RS485 libre)
 modbusFonctions.MAX_TENTATIVES = 3    # renvois max avant abandon (jamais de blocage ni de perte muette)
 modbusFonctions.MAX_FILE = 32         # messages en attente max (audit G3, 2026-09-29) : au-dela, les lectures cedent
+modbusFonctions.SEUIL_MUET = 2        # messages abandonnes de suite avant de declarer un esclave muet (2026-10-10)
 # Marge du timer Berry sur le delai du pont Tasmota (ModbusSerialTimeout = timeoutReponse).
 # A delai egal, le timer Berry expirait ~30 ms AVANT le pont (constate le 2026-10-05) : le
 # ModBusSend suivant arrivait pont occupe, etait mis de cote sans reponse ("Command Error",
@@ -628,14 +631,47 @@ def modbusFonctions_enfileMsg(paramMSG, typeMsg)
         end
     end
 
-    file.push({"paramMSG": paramMSG, "typeMsg": typeMsg, "tentatives": 0})
+    modbusFonctions.placeEnFile({"paramMSG": paramMSG, "typeMsg": typeMsg, "tentatives": 0}, false)
     modbusFonctions.pompeQueue()
     return true
 end
 modbusFonctions.enfileMsg = modbusFonctions_enfileMsg
 
-# Envoie la tete de file si le canal est libre (un seul message en vol).
+# Priorite aux commandes (2026-10-10) : une ECRITURE (commande de relai...) passe devant
+# toutes les lectures en attente, dans l'ordre d'arrivee des ecritures entre elles. Avant, la
+# file etait FIFO pure : un clic attendait derriere le releve (constate : 9 s de retard, plus
+# de 16 s par lecture d'un esclave muet). 'renvoi' = message deja tente (sans reponse) :
+# une ecriture repart en tete, une lecture repart devant les autres lectures, jamais devant
+# une ecriture.
+def modbusFonctions_placeEnFile(item, renvoi)
+    var file = modbusFonctions.etat()["queue"]
+    if (renvoi && !modbusFonctions.estLecture(item["paramMSG"]))
+        file.insert(0, item)
+        return
+    end
+    var rang = 0          # rang de la premiere lecture = fin des ecritures en attente
+    while (rang < size(file) && !modbusFonctions.estLecture(file[rang]["paramMSG"]))    rang += 1    end
+    if (modbusFonctions.estLecture(item["paramMSG"]) && !renvoi)
+        file.push(item)
+    else
+        file.insert(rang, item)
+    end
+end
+modbusFonctions.placeEnFile = modbusFonctions_placeEnFile
+
+# Demande l'envoi de la tete de file. L'envoi est TOUJOURS differe (2026-10-10) : appele
+# depuis la regle ModbusReceived (termineEnVol), un ModBusSend immediat s'execute DANS
+# ModbusBridgeHandle (xdrv_63), qui remet ensuite modbusBridge.deviceAddress a 0 en sortant.
+# La reponse a ce nouvel envoi etait alors jetee sans aucun log (USE_MODBUS_BRIDGE_TCP :
+# 'nodataexpected' -> return muet) : 61 reponses sur 222 perdues, chacune payee d'un timeout
+# et d'un renvoi (les 'pointes a 6 s' de la cuve, qui repond en fait en 0,3 s).
 def modbusFonctions_pompeQueue()
+    modbusFonctions.armeTimer(0, / -> modbusFonctions.envoieTete(), "modbus_envoi")
+end
+modbusFonctions.pompeQueue = modbusFonctions_pompeQueue
+
+# Envoie la tete de file si le canal est libre (un seul message en vol).
+def modbusFonctions_envoieTete()
     import json
 
     # La file ne concerne que le maitre (id == 0) : lui seul serialise le bus RS485.
@@ -656,7 +692,7 @@ def modbusFonctions_pompeQueue()
         modbusFonctions.etat()["enVol"] = nil
         item["tentatives"] += 1
         if (item["tentatives"] < modbusFonctions.MAX_TENTATIVES)
-            modbusFonctions.etat()["queue"].insert(0, item)
+            modbusFonctions.placeEnFile(item, true)
             modbusFonctions.armeTimer(200, / -> modbusFonctions.pompeQueue(), "modbus_repompe")
         else
             modbusFonctions.log("POMPE_QUEUE: abandon d'un message apres " + str(modbusFonctions.MAX_TENTATIVES) + " tentatives d'envoi", LOG_LEVEL_ERREUR)
@@ -678,25 +714,91 @@ def modbusFonctions_pompeQueue()
     # Delai du pont + marge : le pont doit avoir rendu la main avant le message suivant.
     modbusFonctions.armeTimer(int(drivers["ModBus"].find("timeoutReponse", 1000)) + modbusFonctions.MARGE_TIMEOUT_MS, / -> modbusFonctions.surTimeout(), "modbus_timeout")
 end
-modbusFonctions.pompeQueue = modbusFonctions_pompeQueue
+modbusFonctions.envoieTete = modbusFonctions_envoieTete
 
 # Acquitte le message en vol. Appele par les handlers recupereReponse* (ok=true) ou
 # par surTimeout (ok=false). Retire/renvoie le message puis pompe le suivant.
 def modbusFonctions_termineEnVol(ok)
+    import string
+
     modbusFonctions.desarmeTimer("modbus_timeout")
     var item = modbusFonctions.etat()["enVol"]
     modbusFonctions.etat()["enVol"] = nil
-    if (!ok && item != nil)
-        item["tentatives"] += 1
-        if (item["tentatives"] < modbusFonctions.MAX_TENTATIVES)
-            modbusFonctions.etat()["queue"].insert(0, item)               # pas de reponse -> renvoi en tete
+    if (item != nil)
+        var adresse = item["paramMSG"].find("DeviceAddress")
+        if (ok)
+            modbusFonctions.noteContactBus(adresse)
         else
-            modbusFonctions.log("TERMINE_EN_VOL: abandon d'un message sans reponse apres " + str(modbusFonctions.MAX_TENTATIVES) + " tentatives", LOG_LEVEL_ERREUR)
+            item["tentatives"] += 1
+            var muet = modbusFonctions.estMuet(adresse)
+            # Esclave muet : UNE seule tentative, lecture comme commande (2026-10-10)
+            if (!muet && item["tentatives"] < modbusFonctions.MAX_TENTATIVES)
+                modbusFonctions.placeEnFile(item, true)                   # pas de reponse -> renvoi (ecriture en tete)
+            else
+                # La sonde d'un esclave deja muet echoue a chaque releve : en debug seulement.
+                # Une COMMANDE perdue reste une erreur, muet ou non.
+                var niveau = (muet && modbusFonctions.estLecture(item["paramMSG"])) ? LOG_LEVEL_DEBUG : LOG_LEVEL_ERREUR
+                modbusFonctions.log(string.format("TERMINE_EN_VOL: abandon d'un message sans reponse apres %i tentative(s) (esclave %s%s)",
+                                                  item["tentatives"], str(adresse), muet ? ", muet" : ""), niveau)
+                modbusFonctions.noteAbandon(adresse)
+            end
         end
     end
     modbusFonctions.pompeQueue()
 end
 modbusFonctions.termineEnVol = modbusFonctions_termineEnVol
+
+#- ESCLAVE MUET (2026-10-10) - decide par la file elle-meme, qui connait l'adresse de chaque message.
+    Declaration : SEUIL_MUET messages de suite abandonnes sans reponse (2 -> ~33 s au timeout de
+        5 s, au lieu des 90 a 120 s du chien de garde). Ses lectures en attente sont retirees.
+    Effet : plus aucun renvoi, lecture comme commande (une commande part UNE fois : si l'esclave
+        est revenu, elle s'execute et sa reponse leve l'etat muet). Le releve des ESP32 n'en
+        envoie qu'une sonde par cycle (modBus_TasmotaSlaveModBus.releveEsclaves).
+    Duree : jusqu'au premier contact, reponse appariee (termineEnVol) ou push accepte
+        (TasmotaSlaveModBus.noteContact).
+    Le chien de garde des drivers garde son role : passer les etats constates a 'inconnu'.
+-#
+def modbusFonctions_estMuet(adresse)
+    return modbusFonctions.etat()["muets"].find(adresse, false)
+end
+modbusFonctions.estMuet = modbusFonctions_estMuet
+
+def modbusFonctions_noteContactBus(adresse)
+    import string
+    if (adresse == nil)    return    end
+    var etat = modbusFonctions.etat()
+    if (etat["abandonsSuite"].contains(adresse))    etat["abandonsSuite"].remove(adresse)    end
+    if (etat["muets"].find(adresse, false))
+        etat["muets"].remove(adresse)
+        modbusFonctions.log(string.format("ESCLAVE_MUET: l'esclave d'ID=%i repond de nouveau, renvois retablis", adresse), LOG_LEVEL_INFO)
+    end
+end
+modbusFonctions.noteContactBus = modbusFonctions_noteContactBus
+
+def modbusFonctions_noteAbandon(adresse)
+    import string
+    if (adresse == nil)    return    end
+    var etat = modbusFonctions.etat()
+    var nb = etat["abandonsSuite"].find(adresse, 0) + 1
+    etat["abandonsSuite"][adresse] = nb
+    if (etat["muets"].find(adresse, false) || nb < modbusFonctions.SEUIL_MUET)    return    end
+
+    etat["muets"][adresse] = true
+    var file = etat["queue"]
+    var retirees = 0
+    var i = 0
+    while (i < size(file))
+        if (file[i]["paramMSG"].find("DeviceAddress") == adresse && modbusFonctions.estLecture(file[i]["paramMSG"]))
+            file.remove(i)
+            retirees += 1
+        else
+            i += 1
+        end
+    end
+    modbusFonctions.log(string.format("ESCLAVE_MUET: esclave d'ID=%i declare muet apres %i messages abandonnes de suite : plus de renvoi, %i lecture(s) en attente retiree(s)",
+                                      adresse, nb, retirees), LOG_LEVEL_ERREUR)
+end
+modbusFonctions.noteAbandon = modbusFonctions_noteAbandon
 
 # Le timer de timeout a expire sans reponse -> renvoi borne du message en vol.
 def modbusFonctions_surTimeout()
@@ -1422,7 +1524,7 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
                 @ Count = Nombre d'octets de données reçus ou retournés dans la réponse
                 @ Length = Longueur de la tame entière avec le CRC
                 @ Values = valeur ou tableau de valeur
-                @ Erreur = Erreur de réception (0=OK, 1=Adresse esclave incorrecte, 9=CRC incorrecte)
+                @ Erreur = Erreur de réception (0=OK, 1=Adresse esclave incorrecte, 2=CRC incorrect, 6=Longueur invalide : table de controleModbus.be, distincte de tabErreur)
             -#
             paramMSG = {typeTitre: {"Trame": trame, "DeviceAddress": 0, "FunctionCode": 0, "FunctionName": "", "StartAddress": 0, "Length": 0, "Count": 0, "Values": [], "CRC": 0, "Erreur": 0}}
 
@@ -1433,7 +1535,10 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
             tasmota.yield()
 
             # Parse la trame (une trame adressee a un autre noeud sort ici en Erreur 1)
+            # Erreur 1 n'est pas une faute (2026-10-10) : sur un bus partage, chaque echange des
+            # autres noeuds passe ici. decrypteMSG l'a deja journalise ; on l'ignore sans bruit.
             modbusFonctions.decrypteMSG(paramMSG, typeTitre)
+            if (paramMSG[typeTitre]["Erreur"] == 1)    continue    end
             if (paramMSG[typeTitre]["Erreur"] != modbusFonctions.tabErreur["noerror"])
                 modbusFonctions.log("RECEPTION_MSG_MODBUS: Message ModBus reçu avec erreur", LOG_LEVEL_DEBUG_PLUS)
                 continue
@@ -1459,7 +1564,7 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
             @ Count = Nombre d'octets de données reçus ou retournés dans la réponse
             @ Length = Longueur de la tame entière avec le CRC
             @ Values = valeur ou tableau de valeur
-            @ Erreur = Erreur de réception (0=OK, 1=Adresse esclave incorrecte, 9=CRC incorrecte)
+            @ Erreur = Erreur de réception (0=OK, 1=Adresse esclave incorrecte, 2=CRC incorrect, 6=Longueur invalide : table de controleModbus.be, distincte de tabErreur)
         -#
         paramMSG = {typeTitre: {"Trame": "", "Info": {},"DeviceAddress": 0, "FunctionCode": 0, "FunctionName": "", "StartAddress": 0, "Length": 0, "Count": 0, "Values": [], "CRC": 0, "Erreur": 0}}
         paramMSG[typeTitre]["Trame"] = msg["Trame"] 
@@ -1472,6 +1577,7 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
         tasmota.yield()
         # Parse la trame
         modbusFonctions.decrypteMSG(paramMSG, typeTitre)
+        if (paramMSG[typeTitre]["Erreur"] == 1)    return    end     # pour un autre noeud : deja journalise
         if (paramMSG[typeTitre]["Erreur"] != 0)
             modbusFonctions.log("RECEPTION_MSG_MODBUS: Message ModBus reçu avec erreur", LOG_LEVEL_DEBUG_PLUS)
             return
