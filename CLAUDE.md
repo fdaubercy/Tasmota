@@ -248,6 +248,19 @@ Prise en compte a chaud, sans redemarrer VS Code.
 - Pour surveiller un build en redirigeant la sortie, poser `PYTHONIOENCODING=utf-8` :
   sinon Python passe en cp1252, le `✔` du script pre-build tue le thread de recopie de pio,
   et **toute** la sortie est perdue. Ne pas « corriger » le script de l'utilisateur pour ca.
+- **Aucune cible PlatformIO pendant un build, meme un outil** (constate le 2026-10-10) : les
+  cibles Custom « Sniffeur ModBus », « Sniffeur MQTT », « Serveur syslog » sont des `pio run`.
+  Avant toute chose, `pio run` compare l'empreinte du projet a `.pio/build/project.checksum`
+  et, si elle differe, **supprime tout `.pio/build`**, tous envs compris
+  (`platformio/run/helpers.py:35-41`). L'empreinte inclut la liste des `.c/.h` de `lib/`
+  (`project/helpers.py:157-175`), or le pre-build regenere les `_temp_be_*.c` de
+  `berry_custom` **selon l'env** : changer d'env change l'empreinte. Symptome : un
+  `erase_upload` P4 lance a 15:14, la cible sniffeur (env cave) a 15:37:31, `.pio/build`
+  vide a 15:37:39, puis `*** [.pio\build\<env>\libXXX] ... Le chemin d'acces specifie est
+  introuvable`. Le pre-build du sniffeur reecrit aussi `modules.h` en plein build (piege
+  IntelliSense ci-dessus). Parade : pendant un build, lancer ces outils **hors PlatformIO**,
+  directement par `python outils_docs/scripts_python/<outil>.py` (ex. `sniffeur_modbus.py
+  --port auto --debit 19200 --http 7300`).
 
 ## Logs Berry — la charte (decidee le 2026-10-04)
 
