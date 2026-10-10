@@ -269,22 +269,35 @@ def esp32_fetch_safeboot_bin(tasmota_platform):
     safeboot_fw_url = "http://ota.tasmota.com/tasmota32/release/" + tasmota_platform + "-safeboot.bin"
     safeboot_fw_name = os.path.normpath(join(variants_dir, tasmota_platform + "-safeboot.bin"))
     if(exists(safeboot_fw_name)):
-        print(Fore.GREEN + "Le fichier binaire safeboot existe déjà dans le répertoire des variantes !")
-        return True
+        try:
+            with open(safeboot_fw_name, "rb") as safeboot_file:
+                if safeboot_file.read(1) == b"\xE9":
+                    print(Fore.GREEN + "Le fichier binaire safeboot existe déjà dans le répertoire des variantes !")
+                    return True
+        except OSError:
+            pass
+        print(Fore.YELLOW + "Le fichier safeboot existant n'est pas une image firmware ESP valide : téléchargement d'un remplaçant")
     print()
     print(Fore.GREEN + "Téléchargement du fichier binaire safeboot depuis l'URL :")
     print(Fore.BLUE + safeboot_fw_url)
     try:
         response = requests.get(safeboot_fw_url)
-        open(safeboot_fw_name, "wb").write(response.content)
-        print(Fore.GREEN + "Binaire Safeboot écrit dans le chemin des variantes :")
-        print(Fore.BLUE + safeboot_fw_name)
-        return True
-    except:
-        print(Fore.RED + "Le téléchargement du fichier binaire safeboot a échoué. Veuillez vérifier votre connexion Internet.")
-        print(Fore.RED + "Creation de " + tasmota_platform + "-factory.bin impossible !")
-        print(Fore.YELLOW + "Sans Internet " + Fore.GREEN + tasmota_platform + "-safeboot.bin" + Fore.YELLOW + " doit être compilé avant " + Fore.GREEN + tasmota_platform)
-        return False
+        if not response.ok:
+            print(Fore.RED + "Le téléchargement du safeboot a échoué, statut HTTP", response.status_code)
+        elif not response.content.startswith(b"\xE9"):
+            print(Fore.RED + "Le fichier téléchargé n'est pas une image firmware ESP valide")
+        else:
+            with open(safeboot_fw_name, "wb") as safeboot_file:
+                safeboot_file.write(response.content)
+            print(Fore.GREEN + "Binaire Safeboot écrit dans le chemin des variantes :")
+            print(Fore.BLUE + safeboot_fw_name)
+            return True
+    except Exception:
+        pass
+    print(Fore.RED + "Le téléchargement du fichier binaire safeboot a échoué. Veuillez vérifier votre connexion Internet.")
+    print(Fore.RED + "Creation de " + tasmota_platform + "-factory.bin impossible !")
+    print(Fore.YELLOW + "Sans téléchargement depuis Internet " + Fore.GREEN + tasmota_platform + "-safeboot.bin" + Fore.YELLOW + " doit être compilé avant " + Fore.GREEN + tasmota_platform)
+    return False
 
 def esp32_copy_new_safeboot_bin(tasmota_platform,new_local_safeboot_fw):
     print("Copie du nouveau firmware safeboot local dans le répertoire des variantes -> utilisé pour les opérations de flashage ultérieures")
