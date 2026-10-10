@@ -62,6 +62,8 @@ class TasmotaStub
     return {}
   end
   def resp_cmnd(x) end
+  def add_rule(a, b, c) end              # controleRangeExtender (section 14)
+  def add_cmd(a, b) end
   # Timers en attente : memes regles que tasmota_class.be (set_timer EMPILE, remove_timer
   # retire tous ceux de cet id)
   var timers
@@ -78,6 +80,7 @@ class TasmotaStub
   end
 end
 var tasmota = TasmotaStub()
+class Driver end                       # classe de base des drivers Tasmota (section 14)
 var envois = []                        # datagrammes UDP qui seraient partis
 class udp
   def begin(a, b) return true end
@@ -622,6 +625,35 @@ verifie("temoin esclave (id 2) : push ignore, aucun relais", "[]", str(appels))
 drivers["ModBus"]["id"] = 0
 etatUDP["udpReception"] = sauveRecep
 global.modbusFonctions = nil
+
+print("")
+print("=== 14. controleRangeExtender.init : persist sauve AVANT le Restart (boucle de redemarrages) ===")
+# init() aligne les id RangeExtender/ModBus/UDP/TCP puis redemarre. Ces modifications imbriquees ne
+# marquent pas le persist modifie : sans save(true), le boot suivant relisait les anciennes valeurs,
+# corrigeait de nouveau et redemarrait sans fin. activation OFF : configExtenderByJson ne fait rien.
+var controleRangeExtender = nil
+var fRgx = open(SOURCES + "/controleRangeExtender.be", "r")
+compile(fRgx.read())()
+fRgx.close()
+import persist
+def initRgx(idRgx, idUdp)
+  tasmota.cmds = []
+  persist.nb_save = 0
+  serveur["rangeExtender"] = {"activation": "OFF", "id": idRgx}
+  serveur["udp"]["id"] = idUdp
+  serveur["tcp"] = {"activation": "ON", "id": idRgx}
+  drivers["ModBus"] = {"activation": "ON", "id": idRgx}
+  return essaie(def () controleRangeExtender.CONTROLE_RANGE_EXTENDER() end)
+end
+verifie("id UDP desaligne : init sans exception", "OK", initRgx(2, 0))
+verifie("id UDP desaligne : persist sauve puis Restart", "1/true", str(persist.nb_save) + "/" + str(tasmota.cmds.find("Restart 1") != nil))
+verifie("... id UDP aligne en memoire", 2, serveur["udp"]["id"])
+initRgx(2, 2)
+verifie("temoin ids alignes : ni sauvegarde ni Restart", "0/false", str(persist.nb_save) + "/" + str(tasmota.cmds.find("Restart 1") != nil))
+serveur["rangeExtender"] = {"activation": "ON", "id": 0, "debug": "ON"}
+serveur["udp"]["id"] = 0
+drivers["ModBus"] = {"id": 0}
+serveur.remove("tcp")
 
 print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))

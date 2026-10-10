@@ -96,7 +96,7 @@ if (persist._p != nil && persist._p.size() != 0)
     if serveur["udp"].find("activation", "OFF") == "ON"    import controleUDP as _ctrl    end
     # gestionFileFolder.loadBerryFile("/controleTCP", serveur["tcp"].find("activation", "OFF"), "ON")
     do import controleModbus as _ctrl end   # solidifie : init() porte la garde d'activation
-    # gestionFileFolder.loadBerryFile("/controleRangeExtender", serveur["rangeExtender"].find("activation", "OFF"), "ON")
+    if serveur["rangeExtender"].find("activation", "OFF") == "ON"    import controleRangeExtender as _ctrl    end
     # gestionFileFolder.loadBerryFile("/controleLoRaWan", drivers["LoRaWan"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/controleVoletRoulants", drivers.find("voletRoulants", {}).find("activation", "OFF"), "ON")
     if serveur["discovery"].find("activation", "OFF") == "ON"    import controleDiscovery as _ctrl    end

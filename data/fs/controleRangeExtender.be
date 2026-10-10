@@ -81,7 +81,16 @@ class CONTROLE_RANGE_EXTENDER : Driver
             end
         end
 
-        if (modifID)    tasmota.cmd("Restart 1",boolMute)   end
+        # Sauvegarde AVANT de redemarrer (2026-10-10) : les modifications ci-dessus sont imbriquees
+        # (serveur["udp"]["id"]...) et ne marquent pas le persist comme modifie ; persist.save()
+        # appele par Tasmota au redemarrage n'ecrivait donc rien -> au boot suivant, memes
+        # valeurs, meme correction, nouveau Restart : boucle de redemarrages.
+        if (modifID)
+            import persist
+            rangeExtenderFonctions.log("RANGE_EXTENDER: identifiants RangeExtender/ModBus/UDP/TCP alignes, persist sauve, redemarrage !", LOG_LEVEL_INFO)
+            persist.save(true)
+            tasmota.cmd("Restart 1",boolMute)
+        end
 
         # Parcours tous les modules paramétrés
 		# - Ajoute les règles sur changement d'état des capteurs si ils sont activés : fonction=changementEtatCapteur
