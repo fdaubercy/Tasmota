@@ -129,7 +129,9 @@ def charge_carte(chemin=PERSIST_MAITRE):
                 reg = a["idModBus"] if e["driver"] == "conn16" else a["type"] + a["idModBus"] - 1
                 e["appareils"][reg] = {"cle": cle, "nom": a.get("nom", cle), "famille": famille,
                                        "type": a["type"], "idModBus": a["idModBus"],
-                                       "switchMode": a.get("SwitchMode") or 1, "activation": a.get("activation", "OFF")}
+                                       "switchMode": a.get("SwitchMode") or 1, "activation": a.get("activation", "OFF"),
+                                       # POWERn du maitre = 'id' de la fiche relai (relaiN -> POWERN, WS2812 compris)
+                                       "power_maitre": a.get("id") if famille == "relais" else None}
     return esclaves
 
 
@@ -234,7 +236,7 @@ def _conn16(e, fc, nat, d, reg, regs):
         if reg == 0x00FF:
             return f"{accuse}changement d'adresse -> {d[3]} (un seul equipement sur le bus !)"
         ordre, a = d[2], e["appareils"].get(reg)
-        cible = "tous les canaux" if reg == 0 else f"canal {reg}" + (f" '{a['nom']}'" if a else "")
+        cible = "tous les canaux" if reg == 0 else f"canal {reg}" + (f" '{a['nom']}'" if a else "") + _maitre(a)
         texte = f"{accuse}carte relais, {cible} <- ordre {d[2]:02X} {ORDRES_CONN16.get(ordre, 'INVALIDE (la carte ne repond pas)')}"
         if ordre == 6:
             texte += f", tempo {d[3]} s"
@@ -253,7 +255,7 @@ def _conn16(e, fc, nat, d, reg, regs):
             canal = adr if adr is not None else k + 1
             a = e["appareils"].get(canal)
             etat = _etat_conn16(mot, a["type"] if a else 256, False)
-            c["metier"] = f"canal {canal} {'open (sortie basse)' if mot else 'close'}" + (f" -> '{a['nom']}' {etat}" if a else "")
+            c["metier"] = f"canal {canal} {'open (sortie basse)' if mot else 'close'}" + (f" -> '{a['nom']}' {etat}{_maitre(a)}" if a else "")
             if a and etat == "ON":
                 allumes.append(a["nom"])
         return f"etat des {len(regs)} sorties ; relais ON : {', '.join(allumes) or 'aucun'}"
@@ -271,15 +273,21 @@ def _id_relai(reg):
     return reg - 223 if 224 <= reg < 256 else reg - 255 if 256 <= reg < 288 else reg
 
 
+def _maitre(a):
+    """' (POWERn du maitre)' : PowerN du decodage est le numero du relai SUR L'ESCLAVE, pas sur le
+    maitre (garage : 'Relai 2' = Power2 du rideau = POWER3 du maitre, POWER1 etant la WS2812)."""
+    return f" (POWER{a['power_maitre']} du maitre)" if a and a.get("power_maitre") else ""
+
+
 def _esp32(e, fc, nat, d, reg, regs, types):
     if reg is None:
         return ""
     desc, base, a = _appareil(e, reg, types)
     if fc == 1:
         if nat == "requete":
-            return f"releve de l'etat reel du {desc} (Power{_id_relai(reg)})"
+            return f"releve de l'etat reel du {desc} : Power{_id_relai(reg)} de l'esclave{_maitre(a)}"
         bit = regs[0][1] if regs else 0
-        texte = f"Power{_id_relai(reg)} = {'ON' if bit else 'OFF'}"
+        texte = f"Power{_id_relai(reg)} = {'ON' if bit else 'OFF'}{_maitre(a)}"
         return texte + (f" -> etat constate {'ON' if bit != (base == 256) else 'OFF'} (Relais_i)" if base == 256 else "")
     if fc == 2:
         if nat == "requete":
@@ -300,10 +308,10 @@ def _esp32(e, fc, nat, d, reg, regs, types):
             return f"{desc} : {int.from_bytes(brut[:4], 'big')}"
         return f"{desc} : mots {[m for _, m, _ in regs]}"
     if fc == 5 and len(d) == 4:
-        return f"{'Accuse : ' if nat == 'reponse' else ''}Power{_id_relai(reg)} {'ON' if d[2] == 0xFF else 'OFF'}"
+        return f"{'Accuse : ' if nat == 'reponse' else ''}Power{_id_relai(reg)} {'ON' if d[2] == 0xFF else 'OFF'}{_maitre(a)}"
     if fc == 6 and len(d) == 4:
         power = {2: "ON", 1: "OFF"}.get(d[2], f"? (octet fort {d[2]:02X} : ni 01 ni 02)")
-        texte = f"{'Accuse : ' if nat == 'reponse' else ''}{desc} -> Power{_id_relai(reg)} {power}"
+        texte = f"{'Accuse : ' if nat == 'reponse' else ''}{desc} -> Power{_id_relai(reg)} {power}{_maitre(a)}"
         if d[3]:
             texte += f", inverse apres {d[3]} s"
         if base == 256 and d[2] in (1, 2):

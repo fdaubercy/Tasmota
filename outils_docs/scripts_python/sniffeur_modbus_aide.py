@@ -110,6 +110,7 @@ Le code GPIO est le rang dans <code>enum UserSelectablePins</code> × 32 (tasmot
 <tr><td>4704</td><td>GPIO_ADC_INPUT</td><td>entrée analogique</td><td>0x04, 2 registres, uint32</td><td>—</td></tr>
 </table>
 <p>Ici : cuve = adresse 2, rideau = adresse 3 (persist du maître). Le maître relit chaque appareil toutes les 30 s.</p>
+<p>PowerN = numéro du relai <b>sur l'esclave</b> (registre − code + 1). Le maître numérote autrement : POWERn = n-ième relai de son persist, WS2812 compris. Le décodeur ajoute « (POWERn du maître) » quand le persist le donne : « Relai 2 » = Power2 du rideau = POWER3 du maître.</p>
 {ex("03 06 01 00 02 00", "rideau, relai inversé n°1 (registre 256) : Power1 ON")}
 {ex("03 06 01 00 01 0A", "Power1 OFF, puis retour à ON au bout de 10 s")}
 {ex("03 01 01 00 00 01", "relève de l'état réel du relai")}

@@ -119,6 +119,9 @@ def test_decodeur():
     verifie("INVALIDE" in decode("01 06 00 01 09 00")["metier"], True, "carte : ordre invalide signale")
     verifie("19200" in decode("01 03 02 00 04", "01 03 00 FE 00 01")["metier"], True, "carte : debit relu")
     verifie("Power1 ON" in decode("03 06 01 00 02 00")["metier"], True, "ESP32 : 0x06 02 = Power ON")
+    b = bytes.fromhex("030601010100")
+    r = dm.decode(b + dm.crc16(b).to_bytes(2, "little"), carte=vraie)["metier"]
+    verifie("Power2 OFF (POWER3 du maitre)" in r, True, "ESP32 : Power de l'esclave + POWER du maitre (WS2812 comptee)")
     verifie("inverse apres 10 s" in decode("03 06 01 00 01 0A")["metier"], True, "ESP32 : delai d'inversion")
     verifie("OFF (SwitchMode 2)" in decode("03 02 01 01", "03 02 00 A0 00 01")["metier"], True, "ESP32 : SwitchMode 2")
     f = struct.pack(">f", 21.5).hex()
