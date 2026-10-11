@@ -348,6 +348,12 @@ class CONTROLE_WEB
         if (controleGeneral.nbIOActivesJSON["WS2812"]["actives"].find("nb", 0) > controleGeneral.nbIOActivesJSON["WS2812"]["reels"].find("nb", 0))
             webFonctions.log("WEBSERVER: Affichage des paramètres des leds virtuelles sur webUI !", LOG_LEVEL_DEBUG)
             gestionFileFolder.readFileByLineAndContentSend("/sd/html/ledVirtuel.html")
+
+            # Maitre RangeExtender : une section "Leds mirroring" par esclave a ruban, joint par son routagePort (2026-10-11)
+            if (serveur.find("rangeExtender", {}).find("activation", "OFF") == "ON" && serveur["rangeExtender"].find("id", 99) == 0)
+                import rangeExtenderFonctions
+                rangeExtenderFonctions.afficheMiroirLedsEsclaves()
+            end
         end
 
 		tasmota.yield()
@@ -362,6 +368,10 @@ class CONTROLE_WEB
                                     "document.getElementById('scheme').value = '" + str(int(tasmota.cmd("Scheme", boolMute)["Scheme"])) + "';"
                                 "</script>"
             webserver.content_send(javascript)
+
+            # Miroir du ruban de la carte, a la place du leds_panel amont (2026-10-11)
+            import ledsPanelFonctions
+            ledsPanelFonctions.afficheSectionLocale()
         end
     end
 
@@ -386,7 +396,11 @@ class CONTROLE_WEB
         webserver.on("/modules", / -> self.affichePageParametres(), webserver.HTTP_GET)	
 		webserver.on("/json", / -> self.envoiJson(), webserver.HTTP_ANY)	
         webserver.on("/capteurs", / -> self.etatCapteurs(), webserver.HTTP_GET)	
-        webserver.on("/wss", / -> webFonctions.htmlWebSocket(), webserver.HTTP_ANY)	
+        webserver.on("/wss", / -> webFonctions.htmlWebSocket(), webserver.HTTP_ANY)
+
+        # /leds et /leds_data : miroir du ruban WS2812, si la carte en porte un (2026-10-11)
+        import ledsPanelFonctions
+        ledsPanelFonctions.ajouteRoutes()
 	end
 end
 

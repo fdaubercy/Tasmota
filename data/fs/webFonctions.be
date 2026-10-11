@@ -71,51 +71,11 @@ def webFonctions_changementEtatDemarrage(value, trigger, msg)
 	elif (trigger == "System")
         if msg[trigger].find("Init", 0)
         elif msg[trigger].find("Boot", 0)
-            import gestionFileFolder
-
             # webFonctions.tcp = tcpserver(webFonctions.port)
             # webFonctions.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>TCP_SERVEUR: Connexion: OK", LOG_LEVEL_DEBUG)
 
-            # Parcours tous les modules à la recherche de leds WS2812
-            for cleModule: modules.keys()
-                tasmota.yield()
-        
-                if (type(modules[cleModule]) != "instance")   continue      end
-        
-                # Si le module est activé
-                if modules[cleModule].find("activation", "OFF") == "ON"
-                    var env = modules[cleModule]["environnement"]
-
-                    var relais = env.find("relais", false)
-                    if (relais)
-                        for cleRLY: relais.keys()
-                            if type(relais[cleRLY]) != "instance"   continue    end
-                            tasmota.yield()
-
-        			        # Si le relai est activé
-        			        if relais[cleRLY].find("activation", "OFF") == "ON" && ((relais[cleRLY].find("pin", -1) != -1  && relais[cleRLY].find("virtuel", "OFF") == "OFF") || relais[cleRLY].find("virtuel", "OFF") != "OFF")
-                                # Nb de relai réels (non-virtuels)
-                                if relais[cleRLY].find("activation", "OFF") == "ON" && relais[cleRLY].find("virtuel", "OFF") == "OFF"
-                                
-                                    # Relais de type "WS2812"
-                                    if (relais[cleRLY]["type"] == 1376)
-                                        if (relais[cleRLY]["nbLeds"] > 1)       
-                                            # gestionFileFolder.loadBerryFile("/leds_panel", "ON", "OFF")     
-
-                                            import introspect
-
-                                            var leds_panel = introspect.module('leds_panel', true)     # load module but don't cache
-                                            if (leds_panel != nil)
-                                                tasmota.add_driver(leds_panel, "leds_panel")
-                                            end
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
+            # Le miroir du ruban WS2812 (ex-leds_panel.bec charge ici) est servi par
+            # ledsPanelFonctions sur le port 80 : routes posees par controleWeb.web_add_handler (2026-10-11)
         elif msg[trigger].find("Save", 0)
         end
 	# Se déclenche après la connexion MQTT (si activé)

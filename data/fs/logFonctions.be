@@ -49,7 +49,7 @@ logFonctions.CIBLES = ["general", "serveurWeb", "udp", "tcp", "rangeExtender", "
 # Ce que couvre chaque cible (aide de ReglageLog)
 logFonctions.DESCRIPTIONS = {
     "general": "modules communs (globalFonctions, configGlobal, controleGeneral, gestionFileFolder...)",
-    "serveurWeb": "pages web du module (webFonctions, controleWeb)",
+    "serveurWeb": "pages web du module (webFonctions, controleWeb, ledsPanelFonctions)",
     "udp": "liaison UDP (udpFonctions)", "tcp": "liaison TCP (tcpFonctions)",
     "rangeExtender": "Range Extender (rangeExtenderFonctions)", "discovery": "table discovery (discoveryFonctions)",
     "modbus": "ModBus maitre/esclave (modbusFonctions, controleModbus)",

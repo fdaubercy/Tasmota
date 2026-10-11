@@ -53,6 +53,9 @@ var globs = "path,ctypes_bytes_dyn,tasmota,ccronexpr,gpio,light,webclient,load,M
             # references par nom dans des corps de fonction de globalFonctions/webFonctions.
             # Stub a nil : resolus par nom a l'execution sur l'ESP32, comme les autres.
             "controleGeneral,controleWeb,controleLedTemoin,webserver,"
+            # NOTE (fork) : ajoute le 2026-10-11. Classe native du ruban WS2812, instanciee
+            # par nom (`Leds()`) dans ledsPanelFonctions (miroir du ruban, port 80).
+            "Leds,"
             # (logSerial,logWeb retires le 2026-10-04 : declares dans les autoexec, lus nulle part)
             "LOG_LEVEL_ERREUR,LOG_LEVEL_INFO,LOG_LEVEL_DEBUG,LOG_LEVEL_DEBUG_PLUS,"
             # NOTE (fork) : ajoute le 2026-10-04. Fonction de log commune du framework

@@ -352,5 +352,78 @@ def rangeExtenderFonctions_afficheBoutonsModulesEsclaves()
 end
 rangeExtenderFonctions.afficheBoutonsModulesEsclaves = rangeExtenderFonctions_afficheBoutonsModulesEsclaves
 
+# Maitre RangeExtender : affiche sur SA page d'accueil une section "Leds mirroring" par esclave
+# ModBus equipe d'un ruban WS2812, pilote par un relai virtuel 'ModBus_TasmotaSlaveModBusN' (type 1376).
+# Pourquoi (2026-10-11) : un esclave est derriere le NAPT du maitre (192.168.4.x), injoignable
+# depuis le reseau maison. Sa page /leds (ledsPanelFonctions) est servie sur son port 80 avec des
+# URL relatives : elle passe par la redirection <maitre>:<routagePort> -> <esclave>:80 qui sert
+# deja sa page web, sans redirection supplementaire, quel que soit le nombre d'esclaves.
+# Un esclave hors RangeExtender (sans routagePort) est vise directement par son IP.
+# Une seule section par esclave, meme si plusieurs relais du maitre visent le meme ruban.
+# Hypothese : ruban sur 1 rangee (le maitre ne connait pas le PixelHeight de l'esclave).
+def rangeExtenderFonctions_afficheMiroirLedsEsclaves()
+    import webserver
+    import string
+    import ledsPanelFonctions
+
+    if (serveur.find("rangeExtender", {}).find("id", 99) != 0)    return    end
+    if (!isinstance(drivers.find("ModBus", nil), map) || drivers["ModBus"].find("activation", "OFF") != "ON")    return    end
+    var esclavesModbus = drivers["ModBus"].find("environnement", {}).find("TasmotaSlaveModBus", {})
+
+    # Adresse par laquelle le navigateur a joint le maitre (IP ou nom .local), sans le port
+    var hote = webserver.header("Host")
+    hote = (hote != nil ? string.split(hote, ":")[0] : tasmota.wifi().find("ip", ""))
+
+    var fiches = nil        # discovery.json lu une seule fois, et seulement si un ruban est a montrer
+    var affiches = {}       # id ModBus des esclaves deja affiches
+
+    for cleModule: modules.keys()
+        if (!isinstance(modules[cleModule], map) || modules[cleModule].find("activation", "OFF") != "ON")    continue    end
+        var relais = modules[cleModule].find("environnement", {}).find("relais", nil)
+        if (!isinstance(relais, map))    continue    end
+
+        for cleRLY: relais.keys()
+            tasmota.yield()
+            var relai = relais[cleRLY]
+            if (!isinstance(relai, map) || relai.find("activation", "OFF") != "ON")    continue    end
+            if (relai.find("type", 0) != 1376 || relai.find("nbLeds", 0) <= 1)    continue    end
+            var virtuel = str(relai.find("virtuel", "OFF"))
+            if (string.find(virtuel, "ModBus_TasmotaSlaveModBus") != 0)    continue    end
+            var esclave = esclavesModbus.find(string.split(virtuel, "_")[1], nil)
+            if (!isinstance(esclave, map) || esclave.find("activation", "OFF") != "ON")    continue    end
+            var id = int(esclave.find("id", 0))
+            if (id <= 0 || affiches.contains(id))    continue    end
+
+            # Fiche discovery de l'esclave (meme lecture que envoiMsgModbusUDP)
+            if (fiches == nil)
+                import modbusFonctions
+                fiches = modbusFonctions.fichesModbus()
+            end
+            var ficheEsclave = nil
+            for fiche: fiches
+                if (fiche["ModBus"].find("id", -1) == id)    ficheEsclave = fiche    break    end
+            end
+            var ip = (ficheEsclave != nil ? str(ficheEsclave.find("IPAddress", "")) : "")
+            if (ip == "")
+                rangeExtenderFonctions.log(string.format("RANGE_EXTENDER: miroir LEDs '%s' : IP de l'esclave ModBus %i absente de discovery.json !", str(relai.find("nom", cleRLY)), id), LOG_LEVEL_DEBUG)
+                continue
+            end
+
+            # Par la redirection du maitre si l'esclave est client de son point d'acces, sinon en direct
+            var url = "http://" + ip + "/leds"
+            var rangeExtender = ficheEsclave.find("rangeExtender", {})
+            var routagePort = isinstance(rangeExtender, map) ? rangeExtender.find("routagePort", nil) : nil
+            if (routagePort != nil)
+                if (!rangeExtenderFonctions.redirige(routagePort, ip))    continue    end
+                url = string.format("http://%s:%i/leds", hote, int(routagePort))
+            end
+
+            affiches[id] = true
+            ledsPanelFonctions.afficheSection(id, "Leds mirroring " + str(relai.find("nom", cleRLY)), url, int(relai["nbLeds"]), 1)
+        end
+    end
+end
+rangeExtenderFonctions.afficheMiroirLedsEsclaves = rangeExtenderFonctions_afficheMiroirLedsEsclaves
+
 # Retourne le module lors de l'importation
 return rangeExtenderFonctions
