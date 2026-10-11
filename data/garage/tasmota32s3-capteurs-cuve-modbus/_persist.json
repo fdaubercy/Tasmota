@@ -194,6 +194,7 @@
 						"pin": 6,
 						"id": 1,
 						"type": 1376,
+						"scheme": 0,
 						"channel": 0,
 						"nbLeds": 131,
 						"virtuel": "OFF",

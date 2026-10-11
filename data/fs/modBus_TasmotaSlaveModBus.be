@@ -77,7 +77,8 @@ class MODBUS_TASMOTA_SLAVE : Driver
         tasmota.add_cmd('ReglageSlaveModBus', def(cmd, idx, payload, payload_json)  self.reglageSlaveModBus(cmd, idx, payload, payload_json)  end)
 		if (self.nbIOActivesJSON["WS2812"]["actives"].find("nb", 0) > self.nbIOActivesJSON["WS2812"]["reels"].find("nb", 0))
 			tasmota.add_cmd('HSBCOLOR', def(cmd, idx, payload, payload_json)    self.HSBColor(cmd, idx, payload, payload_json)   end)
-			tasmota.add_cmd('DIMMER', def(cmd, idx, payload, payload_json)  self.Dimmer(cmd, idx, payload, payload_json)   end)				
+			tasmota.add_cmd('DIMMER', def(cmd, idx, payload, payload_json)  self.Dimmer(cmd, idx, payload, payload_json)   end)
+			tasmota.add_cmd('SCHEME', def(cmd, idx, payload, payload_json)  self.Scheme(cmd, idx, payload, payload_json)   end)
 		end   
     end
 
@@ -383,6 +384,71 @@ class MODBUS_TASMOTA_SLAVE : Driver
 
         reponse_cmnd = string.format("{\"POWER1\":\"%s\",\"Dimmer\":%i,\"HSBColor\":\"%i,%i,%i\"}", (luminosite == 0 ? "OFF" : "ON"), luminosite, couleur, saturation, luminosite)
         tasmota.resp_cmnd(reponse_cmnd)
+    end
+
+    # Aide de la commande SCHEME, appelee SEULEMENT par diversFonctions.traiteAide.
+    # Commande a VALEUR : une seule entree de nom "", pas de detail.
+    def aideScheme(sujet)
+        if (sujet == nil)
+            return [
+                ["", "<animation>   (0 a 14)", "regle l'animation des rubans WS2812 des esclaves ModBus (0 = une seule couleur) ; sans parametre : la valeur memorisee"]
+            ]
+        end
+        return nil
+    end
+
+    # Animation des rubans WS2812 virtuels (2026-10-11) : appelee par le menu "Animations LEDs" de
+    # la page du maitre (/json?commande=scheme N). Memorise l'animation dans le relai ("scheme") et
+    # l'envoie a l'esclave par une ecriture 0x06 au registre du ruban : [0x03, animation]
+    # (0x02/0x01 = ON/OFF ; modbusFonctions.executeCmdModbus l'execute par 'Scheme').
+    def Scheme(cmd, idx, payload, payload_json)
+        import string
+        import modbusFonctions
+        import diversFonctions
+
+        if diversFonctions.traiteAide("SCHEME", payload, / s -> self.aideScheme(s), false)    return    end
+
+        var animation = nil
+        if (payload != nil && payload != "")
+            animation = int(payload)
+            if (animation < 0 || animation > 14)
+                tasmota.resp_cmnd(string.format("{\"Scheme\":\"erreur : %s hors de 0..14\"}", str(payload)))
+                return
+            end
+        end
+
+        var memorisee = 0
+        for cle: modules.keys()
+            if (type(modules[cle]) != "instance" || modules[cle].find("activation", "OFF") != "ON")    continue    end
+            var relais = modules[cle].find("environnement", {}).find("relais")
+            if (type(relais) != "instance")    continue    end
+
+            for cleRLY: relais.keys()
+                tasmota.yield()
+                var relai = relais[cleRLY]
+                if (type(relai) != "instance" || relai.find("activation", "OFF") != "ON" || relai.find("type") != 1376)    continue    end
+                var virtuel = str(relai.find("virtuel", "OFF"))
+                if (string.find(virtuel, "ModBus_TasmotaSlaveModBus") != 0 || relai.find("idModBus") == nil)    continue    end
+                var esclave = drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"].find(string.split(virtuel, "_")[1])
+                if (type(esclave) != "instance")    continue    end
+
+                if (animation == nil)    memorisee = relai.find("scheme", 0)    continue    end
+
+                relai["scheme"] = animation
+                var trameModBus = {
+                                    "DeviceAddress": esclave["id"],
+                                    "FunctionCode": 6,
+                                    "StartAddress": relai["type"] + relai["idModBus"] - 1,
+                                    "type": "uint8",
+                                    "Count": 1,
+                                    "Values": [0x03, animation]
+                                  }
+                self.log(string.format("MODBUS_TASMOTA_SLAVE_SCHEME: Animation %i envoyee a l'esclave %i ('%s') !", animation, esclave["id"], str(relai.find("nom", cleRLY))), LOG_LEVEL_DEBUG)
+                modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["DeviceAddress"])
+            end
+        end
+
+        tasmota.resp_cmnd(string.format("{\"Scheme\":%i}", animation == nil ? memorisee : animation))
     end
 
     # Relecture d'un ruban WS2812 juste apres une ecriture 0x10 (2026-10-11). La reponse standard
@@ -712,7 +778,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                                     logFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_ECART: relai n°%i (%s) : commande=%s, constate=%s",
                                                                       device["id"], nameTasmotaSlaveModBus, device.find("etat", "OFF"), valeur), LOG_LEVEL_ERREUR, "slaveModbus")
                                                 end
-                                            # Ruban WS2812 (1376, 2026-10-11) : lecture 0x03 = [teinte, saturation, luminosite],
+                                            # Ruban WS2812 (1376, 2026-10-11) : lecture 0x03 = [teinte, saturation, luminosite, animation],
                                             # echelle HSBColor (modbusFonctions.etatRuban). L'esclave est maitre de son ruban
                                             # (la cuve le colore selon le niveau) : le maitre RECOPIE l'etat lu, y compris
                                             # 'etat', sans ecart a journaliser.
@@ -725,14 +791,17 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                                 if (size(vals) < 3)    raise "value_error", "reponse 0x03 du ruban incomplete : " + str(vals)    end
 
                                                 valeur = (int(vals[2]) > 0 ? "ON" : "OFF")
+                                                # Animation (4e registre, 2026-10-11) : absente d'une reponse d'esclave pas encore a jour -> inchangee
+                                                var animation = (size(vals) >= 4 ? int(vals[3]) : device.find("scheme", 0))
                                                 if (device.find("couleur") != int(vals[0]) || device.find("saturation") != int(vals[1]) ||
-                                                    device.find("value") != int(vals[2]) || device.find("etat") != valeur)
-                                                    self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Ruban WS2812 n°%i (%s) : teinte %i, saturation %i, luminosite %i (%s)",
-                                                                           device["id"], nameTasmotaSlaveModBus, int(vals[0]), int(vals[1]), int(vals[2]), valeur), LOG_LEVEL_DEBUG)
+                                                    device.find("value") != int(vals[2]) || device.find("etat") != valeur || device.find("scheme") != animation)
+                                                    self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Ruban WS2812 n°%i (%s) : teinte %i, saturation %i, luminosite %i (%s), animation %i",
+                                                                           device["id"], nameTasmotaSlaveModBus, int(vals[0]), int(vals[1]), int(vals[2]), valeur, animation), LOG_LEVEL_DEBUG)
                                                 end
                                                 device["couleur"] = int(vals[0])
                                                 device["saturation"] = int(vals[1])
                                                 device["value"] = int(vals[2])
+                                                device["scheme"] = animation
                                                 device["etat"] = valeur
                                                 device["etatConstate"] = valeur
                                                 device["constateA"] = tasmota.rtc()["local"]
@@ -984,12 +1053,12 @@ class MODBUS_TASMOTA_SLAVE : Driver
         elif (famille == "relais" && (device["type"] == 224 || device["type"] == 256))
             trame["FunctionCode"] = 0x01
             trame["type"] = "uint8"
-        # Ruban WS2812 (1376, 2026-10-11) : lecture 0x03 de 3 registres, l'etat REEL du ruban
-        # [teinte, saturation, luminosite] a l'echelle HSBColor (modbusFonctions.etatRuban).
+        # Ruban WS2812 (1376, 2026-10-11) : lecture 0x03 de 4 registres, l'etat REEL du ruban
+        # [teinte, saturation, luminosite, animation] a l'echelle HSBColor (modbusFonctions.etatRuban).
         elif (famille == "relais" && device["type"] == 1376)
             trame["FunctionCode"] = 0x03
             trame["type"] = "uint16"
-            trame["Count"] = 3
+            trame["Count"] = 4
         elif (famille == "analogiques" || famille == "compteurs")
             trame["FunctionCode"] = 0x04
             trame["type"] = "uint32"

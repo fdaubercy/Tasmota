@@ -256,6 +256,7 @@
 						"pin": -1,
 						"id": 1,
 						"type": 1376,
+						"scheme": 0,
 						"channel": 0,
 						"nbLeds": 131,
 						"virtuel": "ModBus_TasmotaSlaveModBus1",

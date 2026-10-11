@@ -23,26 +23,35 @@ var ledsPanelFonctions = module("ledsPanelFonctions")
    Plus de tcpserver ni de webserver_async permanents en RAM.
 -#
 
-# Cote d'une LED dans le canvas, en pixels internes ; le canvas est ensuite etire a 100 % de la
-# largeur du cadre, la hauteur suit dans la meme proportion (iframe en aspect-ratio).
-# Page /leds : la table gamma inverse est celle du leds_panel amont (le tampon est corrige gamma).
+# Mise en page (2026-10-11) : si chaque LED tient sur au moins M = 8 px, une seule ligne qui remplit
+# la largeur du cadre (LED carrees, hauteur proportionnelle) ; sinon - page etroite d'un module,
+# ~320 px pour 131 LED = 2,5 px par LED, invisible - autant de LED de 8 px par ligne que la largeur
+# le permet, sur plusieurs lignes, en ordre de lecture. Une matrice (PixelHeight > 1) garde sa forme.
+# Seule cette page connait la largeur reelle de l'iframe : elle envoie sa hauteur a la page parente
+# par postMessage (fonctionne aussi entre origines : page du maitre -> page d'un esclave), qui
+# ajuste la hauteur de l'iframe (afficheSection). K : cote d'une LED en pixels internes du canvas.
+# La table gamma inverse est celle du leds_panel amont (le tampon est corrige gamma).
 ledsPanelFonctions.PAGE =
     "<!DOCTYPE html><html><head><meta charset='utf-8'>"
     "<style>html,body{margin:0;padding:0;background:transparent;overflow:hidden;}"
     "canvas{display:block;width:100%;height:auto;image-rendering:pixelated;}</style>"
     "</head><body><canvas id='c' width='8' height='8'></canvas><script>"
-    "var c=document.getElementById('c'),x=c.getContext('2d'),K=8,"
+    "var c=document.getElementById('c'),x=c.getContext('2d'),K=8,M=8,D='',HT=-1,"
     "T=[[40,1],[80,3],[98,10],[124,26],[158,65],[190,112],[223,175],[255,255]];"
     "function g(v){var ps=0,pg=0;for(var i=0;i<T.length;i++){var s=T[i][0],m=T[i][1];"
       "if(v<=m)return Math.round(ps+(v-pg)*(s-ps)/(m-pg));ps=s;pg=m;}return 255;}"
-    "function d(t){var p=t.split(' '),w=+p[0],h=+p[1],al=+p[2],o=(+p[3])*2,hx=p[4]||'';"
+    "function d(t){if(t)D=t;var p=D.split(' '),w=+p[0],h=+p[1],al=+p[2],o=(+p[3])*2,hx=p[4]||'';"
       "if(!(w>0&&h>0))return;"
-      "if(c.width!=w*K||c.height!=h*K){c.width=w*K;c.height=h*K;}"
+      "var n=w*h,W=document.documentElement.clientWidth||n*M,co,ro;"
+      "if(h>1){co=w;ro=h;}else if(W/n>=M){co=n;ro=1;}else{co=Math.max(1,Math.floor(W/M));ro=Math.ceil(n/co);}"
+      "if(c.width!=co*K||c.height!=ro*K){c.width=co*K;c.height=ro*K;}"
+      "var H=Math.ceil(ro*W/co);if(H!=HT){HT=H;parent.postMessage({hauteurLeds:H},'*');}"
       "x.clearRect(0,0,c.width,c.height);"
-      "for(var r=0;r<h;r++)for(var i=0;i<w;i++){var n=(r*w+i)*o;if(n+6>hx.length)return;"
-        "var col=(al&&(r%2))?w-1-i:i;"
-        "x.fillStyle='rgb('+g(parseInt(hx.substr(n,2),16))+','+g(parseInt(hx.substr(n+2,2),16))+','+g(parseInt(hx.substr(n+4,2),16))+')';"
-        "x.fillRect(col*K+1,r*K+1,K-2,K-2);}}"
+      "for(var k=0;k<n;k++){var q=k*o;if(q+6>hx.length)break;var r=Math.floor(k/co),i=k%co;"
+        "if(h>1&&al&&(r%2))i=co-1-i;"
+        "x.fillStyle='rgb('+g(parseInt(hx.substr(q,2),16))+','+g(parseInt(hx.substr(q+2,2),16))+','+g(parseInt(hx.substr(q+4,2),16))+')';"
+        "x.fillRect(i*K+1,r*K+1,K-2,K-2);}}"
+    "window.addEventListener('resize',function(){HT=-1;d();});"
     "function p(){if(document.hidden){setTimeout(p,1000);return;}"
       "fetch('/leds_data',{cache:'no-store'}).then(function(r){return r.text();})"
       ".then(function(t){d(t);setTimeout(p,300);}).catch(function(){setTimeout(p,2000);});}"
@@ -125,7 +134,7 @@ ledsPanelFonctions.envoieDonnees = ledsPanelFonctions_envoieDonnees
 
 # Envoie une section "Leds mirroring" dans la page en cours : une case a cocher et une iframe
 # vers 'url' (la page /leds d'une carte). L'iframe garde le rapport largeur/hauteur du ruban
-# (aspect-ratio) : le ruban occupe toute la largeur du cadre, la hauteur suit.
+# (aspect-ratio) en attendant que la page /leds envoie sa hauteur reelle (postMessage).
 # suffixe : distingue les sections d'une meme page (une par carte).
 def ledsPanelFonctions_afficheSection(suffixe, titre, url, largeur, hauteur)
     import webserver
@@ -151,6 +160,10 @@ def ledsPanelFonctions_afficheSection(suffixe, titre, url, largeur, hauteur)
           "c.addEventListener('change',function(){"
             "f.src=c.checked?'%s':'about:blank';"
             "b.hidden=!c.checked;"
+          "});"
+          # hauteur envoyee par la page /leds (retour a la ligne sur une page etroite)
+          "window.addEventListener('message',function(e){"
+            "if(e.source===f.contentWindow&&e.data&&e.data.hauteurLeds>0)f.style.height=e.data.hauteurLeds+'px';"
           "});"
         "});</script>",
         suffixe, suffixe, suffixe, str(url)))

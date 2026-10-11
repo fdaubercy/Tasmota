@@ -349,6 +349,18 @@ class CONTROLE_WEB
             webFonctions.log("WEBSERVER: Affichage des paramètres des leds virtuelles sur webUI !", LOG_LEVEL_DEBUG)
             gestionFileFolder.readFileByLineAndContentSend("/sd/html/ledVirtuel.html")
 
+            # Menu "Animations LEDs" des rubans des esclaves (2026-10-11) : meme formulaire que sur
+            # l'esclave ; 'scheme N' est la commande SCHEME du maitre (modBus_TasmotaSlaveModBus),
+            # qui l'envoie a l'esclave par ModBus et renvoie l'animation memorisee sans parametre.
+            # main.js fournit httpRequest au formulaire (absent de la page du maitre).
+            gestionFileFolder.readFileByLineAndContentSend("/sd/js/main.js")
+            gestionFileFolder.readFileByLineAndContentSend("/sd/html/formSelectSchemeWS2812.html")
+            var reponseScheme = tasmota.cmd("Scheme", boolMute)
+            var animation = (isinstance(reponseScheme, map) ? int(reponseScheme.find("Scheme", 0)) : 0)
+            webserver.content_send("<script type='application/javascript'>" +
+                                       "document.getElementById('scheme').value = '" + str(animation) + "';"
+                                   "</script>")
+
             # Maitre RangeExtender : une section "Leds mirroring" par esclave a ruban, joint par son routagePort (2026-10-11)
             if (serveur.find("rangeExtender", {}).find("activation", "OFF") == "ON" && serveur["rangeExtender"].find("id", 99) == 0)
                 import rangeExtenderFonctions

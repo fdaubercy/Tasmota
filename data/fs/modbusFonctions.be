@@ -54,7 +54,7 @@ def modbusFonctions_etat()
             "abandonsSuite": {},        # maitre : adresse -> messages abandonnes de suite, sans reponse
             "mesures": {},              # esclave : registre (type + id - 1) -> millis de la derniere mesure (noteMesure)
             "sansMesure": {},           # esclave : registre -> true tant que le capteur est signale sans mesure
-            "rubansPousses": {}         # esclave : registre du ruban WS2812 -> dernier [h, s, b] pousse (surveilleRubans)
+            "rubansPousses": {}         # esclave : registre du ruban WS2812 -> dernier [h, s, b, animation] pousse (surveilleRubans)
         }
     end
     return global._etatModbusFonctions
@@ -1633,20 +1633,30 @@ modbusFonctions.lireMsgModbus = modbusFonctions_lireMsgModbus
 # Le maitre adresse un relai d'esclave par StartAddress = type + idModBus - 1, avec
 # type = 224 ("Relais") ou 256 ("Relais_i", logique inversee cote maitre) : l'esclave
 # executait 'Power<StartAddress>' (Power224, Power256...) et aucun relai ne basculait.
-# Hors de ces deux plages, StartAddress est pris tel quel (adressage direct historique).
+# Ruban WS2812 (2026-10-11) : type 1376, meme regle. Le bouton du relai virtuel du maitre envoie
+# un 0x06 au registre 1376 : l'esclave lancait 'Power1376' (commande inconnue), le ruban ne
+# basculait pas. Le ruban est le relai d'id 1 de la cuve (POWER1).
+# Hors de ces plages, StartAddress est pris tel quel (adressage direct historique).
 def modbusFonctions_idRelai(StartAddress)
     var sa = int(StartAddress)
     if (sa >= 224 && sa < 256)    return sa - 223    end
     if (sa >= 256 && sa < 288)    return sa - 255    end
+    if (sa >= 1376 && sa < 1408)    return sa - 1375    end
     return sa
 end
 modbusFonctions.idRelai = modbusFonctions_idRelai
 
 # Esclave : etat REEL du ruban WS2812 (relais de type 1376) de registre 'adresse' (type + id - 1),
-# lu sur le pilote light : [teinte 0-360, saturation 0-100, luminosite 0-100], echelle HSBColor ;
-# luminosite 0 si le ruban est eteint. nil si aucun ruban actif ne porte ce registre (2026-10-11).
+# lu sur le pilote light : [teinte 0-360, saturation 0-100, luminosite 0-100, animation 0-14],
+# echelle HSBColor ; luminosite 0 si le ruban est eteint. nil si aucun ruban actif ne porte ce
+# registre (2026-10-11). L'animation (Scheme) n'est pas dans tasmota.settings : elle est lue par
+# '_Scheme' - le '_' empeche Tasmota de publier la reponse en MQTT (support_command.ino:428),
+# indispensable ici, appele chaque seconde par surveilleRubans.
 def modbusFonctions_etatRuban(adresse)
     import light
+
+    var reponseScheme = tasmota.cmd("_Scheme", boolMute)
+    var animation = (isinstance(reponseScheme, map) ? int(reponseScheme.find("Scheme", 0)) : 0)
 
     for cle: modules.keys()
         var m = modules[cle]
@@ -1660,9 +1670,9 @@ def modbusFonctions_etatRuban(adresse)
             if (1376 + int(r.find("id", 1)) - 1 != int(adresse))    continue    end
 
             var etat = light.get(int(r.find("channel", 0)))
-            if (etat == nil)    return [0, 0, 0]    end
+            if (etat == nil)    return [0, 0, 0, animation]    end
             var bri = (etat.find("power", false) ? tasmota.scale_uint(etat.find("bri", 0), 0, 255, 0, 100) : 0)
-            return [int(etat.find("hue", 0)), tasmota.scale_uint(etat.find("sat", 0), 0, 255, 0, 100), bri]
+            return [int(etat.find("hue", 0)), tasmota.scale_uint(etat.find("sat", 0), 0, 255, 0, 100), bri, animation]
         end
     end
     return nil
@@ -1672,7 +1682,7 @@ modbusFonctions.etatRuban = modbusFonctions_etatRuban
 # Push du ruban WS2812 ESCLAVE -> MAITRE (2026-10-11), appele chaque seconde par controleModbus.
 # Le ruban change sans commande du maitre (la cuve le colore selon le niveau, par light.set, qui
 # ne declenche aucune regle) : on compare donc l'etat du pilote light au dernier etat pousse, et
-# on pousse [teinte, saturation, luminosite] s'il differe. Le clignotement d'erreur ecrit les
+# on pousse [teinte, saturation, luminosite, animation] s'il differe. Le clignotement d'erreur ecrit les
 # pixels sans toucher l'etat light : il n'est pas pousse. Un push perdu est repare par le
 # releve periodique du maitre (lecture 0x03 toutes les 30 s).
 def modbusFonctions_surveilleRubans()
@@ -1825,8 +1835,9 @@ def modbusFonctions_executeCmdModbus(paramMSG)
         end
     # Fonction 0x03 ==> Lecture des registres de maintien (2026-10-11) : etat REEL d'un ruban
     # WS2812 (type 1376), releve par le maitre au demarrage et a chaque releve periodique.
-    # Reponse sur 3 registres de 16 bits, a l'echelle de la commande HSBColor :
-    # [teinte 0-360, saturation 0-100, luminosite 0-100] ; luminosite 0 = ruban eteint.
+    # Reponse sur 4 registres de 16 bits, a l'echelle de la commande HSBColor :
+    # [teinte 0-360, saturation 0-100, luminosite 0-100, animation 0-14] ; luminosite 0 = ruban
+    # eteint. Un maitre qui n'en demande que 3 (avant l'animation, 2026-10-11) en recoit 3.
     elif (paramMSG["FunctionName"] == "LECTURE_REGISTRES_HOLDER")
         var hsb = modbusFonctions.etatRuban(paramMSG["StartAddress"])
         if (hsb == nil)
@@ -1834,11 +1845,12 @@ def modbusFonctions_executeCmdModbus(paramMSG)
             return false
         end
 
+        var nbRegistres = (int(paramMSG.find("Count", 3)) >= 4 ? 4 : 3)
         paramMSG["type"] = "uint16"
-        paramMSG["Count"] = 3
-        paramMSG["Values"] = hsb
-        modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Etat du ruban WS2812 (registre %i) : teinte %i, saturation %i, luminosite %i",
-                                          paramMSG["StartAddress"], hsb[0], hsb[1], hsb[2]), LOG_LEVEL_DEBUG_PLUS)
+        paramMSG["Count"] = nbRegistres
+        paramMSG["Values"] = hsb[0 .. nbRegistres - 1]
+        modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Etat du ruban WS2812 (registre %i) : teinte %i, saturation %i, luminosite %i, animation %i",
+                                          paramMSG["StartAddress"], hsb[0], hsb[1], hsb[2], hsb[3]), LOG_LEVEL_DEBUG_PLUS)
 
         tasmota.yield()
         modbusFonctions.envoiMsgModbus(paramMSG, "Reponse", paramMSG["StartAddress"])
@@ -1882,6 +1894,19 @@ def modbusFonctions_executeCmdModbus(paramMSG)
 
         modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: commande = 0x%02X", commande), LOG_LEVEL_DEBUG_PLUS)
         modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: delai = 0x%02X", delai), LOG_LEVEL_DEBUG_PLUS)
+
+        # Ruban WS2812 (registres 1376 a 1407), commande 0x03 = animation (2026-10-11) : le 2e octet
+        # porte le numero d'animation (commande Tasmota 'Scheme', 0 = une seule couleur), envoye par
+        # le menu "Animations LEDs" du maitre (modBus_TasmotaSlaveModBus.Scheme). Un seul registre :
+        # la couleur que l'esclave donne lui-meme a son ruban n'est pas reecrite.
+        var sa = int(paramMSG["StartAddress"])
+        if (commande == 0x03 && sa >= 1376 && sa < 1408)
+            var reponseScheme = tasmota.cmd(string.format("Scheme %i", delai), boolMute)
+            modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Animation %i du ruban (registre %i) -> %s", delai, sa, str(reponseScheme)), LOG_LEVEL_DEBUG)
+            tasmota.yield()
+            modbusFonctions.envoiMsgModbus(paramMSG, "Reponse", sa)
+            return
+        end
 
         # Execute la commande
         var idRelai = modbusFonctions.idRelai(paramMSG["StartAddress"])

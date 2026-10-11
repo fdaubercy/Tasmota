@@ -66,6 +66,7 @@ class TasmotaStub
   def resp_cmnd(x) end
   var reseauCoupe                       # true : is_network_up() rend false (demarrage avant le Wi-Fi)
   def is_network_up() return self.reseauCoupe != true end
+  def scale_uint(v, a, b, c, d) return int((v - a) * (d - c) / (b - a) + c) end
 end
 class Driver end                       # classe de base des drivers Tasmota
 var tasmota = TasmotaStub()
@@ -509,6 +510,7 @@ print("")
 print("=== 12. Esclave : commande 0x06 d'un relai -> Power<id>, pas Power<StartAddress> ===")
 verifie("idRelai : 224/225 (Relais) -> 1/2", "1/2", essaie(def () return str(modbusFonctions.idRelai(224)) + "/" + str(modbusFonctions.idRelai(225)) end))
 verifie("idRelai : 256/257 (Relais_i) -> 1/2", "1/2", essaie(def () return str(modbusFonctions.idRelai(256)) + "/" + str(modbusFonctions.idRelai(257)) end))
+verifie("idRelai : 1376/1377 (WS2812) -> 1/2", "1/2", essaie(def () return str(modbusFonctions.idRelai(1376)) + "/" + str(modbusFonctions.idRelai(1377)) end))
 verifie("temoin idRelai : adressage direct 3 -> 3", 3, essaie(def () return modbusFonctions.idRelai(3) end))
 sauveDrivers = drivers
 drivers = {"ModBus": {"activation": "ON", "id": 3, "activationReponseCMD": "OFF", "typeComm": {"Serial":"ON"}, "environnement": {}}}
@@ -1240,6 +1242,88 @@ modules = sauveModules
 drivers = sauveDrivers
 diverses = sauveDiverses
 
+print("")
+print("=== 27. Animation du ruban : menu du maitre -> 0x06 [0x03, n] -> 'Scheme n' sur l'esclave (2026-10-11) ===")
+sauveDrivers = drivers
+sauveModules = modules
+var trames = []
+modbusFonctions.envoiMsgModbus = def (t, typeMsg, id) trames.push(modbusFonctions.prepareTrame(t, typeMsg).tohex()) end
+# Esclave (id 2) : la commande 0x03 sur le registre du ruban lance 'Scheme', pas 'Power'
+drivers = {"ModBus": {"activation": "ON", "id": 2, "activationReponseCMD": "OFF", "typeComm": {"Serial":"ON"}, "environnement": {}}}
+tasmota.cmds = []
+modbusFonctions.executeCmdModbus({"DeviceAddress": 2, "FunctionCode": 6, "FunctionName": "ECRITURE_REGISTRE_UNIQUE",
+                                  "StartAddress": 1376, "Count": 2, "Values": [0x03, 5]})
+verifie("esclave 0x06 1376 [0x03, 5] -> Scheme 5, echo", "['Scheme 5'] / " + trameAvecCrc("020605600305"),
+        str(tasmota.cmds) + " / " + (size(trames) == 1 ? trames[0] : str(trames)))
+tasmota.cmds = []
+modbusFonctions.executeCmdModbus({"DeviceAddress": 2, "FunctionCode": 6, "FunctionName": "ECRITURE_REGISTRE_UNIQUE",
+                                  "StartAddress": 1376, "Count": 2, "Values": [0x02, 0]})
+verifie("esclave 0x06 1376 [0x02, 0] -> Power1 ON (idRelai)", "['Power1 ON']", str(tasmota.cmds))
+tasmota.cmds = []
+modbusFonctions.executeCmdModbus({"DeviceAddress": 2, "FunctionCode": 6, "FunctionName": "ECRITURE_REGISTRE_UNIQUE",
+                                  "StartAddress": 225, "Count": 2, "Values": [0x03, 5]})
+verifie("temoin 0x03 sur un relai (225) : pas d'animation", "['Power2 OFF']", str(tasmota.cmds))
+# Maitre : SCHEME n -> une ecriture 0x06 par ruban virtuel, rien pour un relai ordinaire
+drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial":"ON"},
+           "environnement": {"TasmotaSlaveModBus": {"TasmotaSlaveModBus1": {"activation": "ON", "id": 2}}}}}
+modules = {"garage": {"activation": "ON", "environnement": {"relais": {
+    "relai1": {"activation": "ON", "nom": "LEDs Cuve", "type": 1376, "virtuel": "ModBus_TasmotaSlaveModBus1", "idModBus": 1},
+    "relai2": {"activation": "ON", "nom": "Porte", "type": 224, "virtuel": "ModBus_TasmotaSlaveModBus1", "idModBus": 1}}}}}
+trames = []
+maitre.Scheme("SCHEME", 1, "7", nil)
+verifie("maitre SCHEME 7 -> 0x06 1376 [0x03, 7] vers l'esclave 2", trameAvecCrc("020605600307"), size(trames) == 1 ? trames[0] : str(trames))
+verifie("maitre : animation memorisee dans le relai", 7, modules["garage"]["environnement"]["relais"]["relai1"].find("scheme"))
+trames = []
+maitre.Scheme("SCHEME", 1, "", nil)
+verifie("maitre SCHEME sans parametre : rien envoye", 0, size(trames))
+maitre.Scheme("SCHEME", 1, "15", nil)
+verifie("temoin SCHEME 15 (hors 0..14) : rien envoye, memoire inchangee", "0 / 7", str(size(trames)) + " / " + str(modules["garage"]["environnement"]["relais"]["relai1"].find("scheme")))
+modbusFonctions.envoiMsgModbus = vraiEnvoi
+drivers = sauveDrivers
+modules = sauveModules
+print("")
+print("=== 28. Releve de l'animation du ruban : 0x03 sur 4 registres (2026-10-11) ===")
+sauveDrivers = drivers
+sauveModules = modules
+import light
+# Esclave : etatRuban = [teinte, saturation, luminosite, animation], animation lue par '_Scheme'
+drivers = {"ModBus": {"activation": "ON", "id": 2, "activationReponseCMD": "OFF", "typeComm": {"Serial":"ON"}, "environnement": {}}}
+modules = {"cuve": {"activation": "ON", "environnement": {"relais": {"relai1": {"activation": "ON", "type": 1376, "id": 1, "channel": 0}}}}}
+light.etat = {"power": true, "bri": 255, "hue": 120, "sat": 128}
+tasmota.retourCmd = {"Scheme": 4}
+tasmota.cmds = []
+verifie("esclave etatRuban -> [teinte, saturation, luminosite, animation]", "[120, 50, 100, 4]", str(modbusFonctions.etatRuban(1376)))
+verifie("animation lue par '_Scheme' (aucune publication MQTT)", "['_Scheme']", str(tasmota.cmds))
+var trames28 = []
+modbusFonctions.envoiMsgModbus = def (t, typeMsg, id) trames28.push(modbusFonctions.prepareTrame(t, typeMsg).tohex()) end
+modbusFonctions.executeCmdModbus({"DeviceAddress": 2, "FunctionCode": 3, "FunctionName": "LECTURE_REGISTRES_HOLDER", "StartAddress": 1376, "Count": 4, "Values": []})
+verifie("esclave 0x03 de 4 registres : animation en 4e valeur", trameAvecCrc("0203080078003200640004"), size(trames28) == 1 ? trames28[0] : str(trames28))
+trames28 = []
+modbusFonctions.executeCmdModbus({"DeviceAddress": 2, "FunctionCode": 3, "FunctionName": "LECTURE_REGISTRES_HOLDER", "StartAddress": 1376, "Count": 3, "Values": []})
+verifie("temoin maitre pas a jour (3 registres) : 3 valeurs", trameAvecCrc("020306007800320064"), size(trames28) == 1 ? trames28[0] : str(trames28))
+modbusFonctions.envoiMsgModbus = vraiEnvoi
+tasmota.retourCmd = nil
+light.etat = nil
+# Maitre : relecture sur 4 registres, animation recopiee dans 'scheme'
+drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial":"ON"},
+           "environnement": {"TasmotaSlaveModBus": {"debug": "OFF",
+               "TasmotaSlaveModBus1": {"activation": "ON", "id": 2, "name": "cuve"}}}}}
+modules = {"garage": {"activation": "ON", "environnement": {"relais": {
+    "relai1": {"activation": "ON", "nom": "LEDs Cuve", "type": 1376, "virtuel": "ModBus_TasmotaSlaveModBus1", "idModBus": 1, "id": 1, "scheme": 0}}}}}
+var ruban28 = modules["garage"]["environnement"]["relais"]["relai1"]
+var demande28 = maitre.demandeLecture(ruban28, "relais", 2)
+verifie("maitre : relecture du ruban sur 4 registres", "3/1376/4", demande28 == nil ? "nil" : str(demande28["FunctionCode"]) + "/" + str(demande28["StartAddress"]) + "/" + str(demande28["Count"]))
+var lit03 = def (v)
+  modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 2, "FunctionCode": 3, "StartAddress": 1376, "Count": size(v), "type": "uint16"}}
+  recoit(2, "ModbusReceived", {"DeviceAddress": 2, "FunctionCode": 3, "Values": v})
+end
+lit03([120, 50, 100, 7])
+verifie("maitre : reponse a 4 valeurs -> couleur, etat et animation recopies", "120/ON/7", str(ruban28.find("couleur")) + "/" + str(ruban28.find("etat")) + "/" + str(ruban28.find("scheme")))
+lit03([30, 60, 0])
+verifie("temoin reponse a 3 valeurs (esclave pas a jour) : animation inchangee", "30/OFF/7", str(ruban28.find("couleur")) + "/" + str(ruban28.find("etat")) + "/" + str(ruban28.find("scheme")))
+modbusFonctions.etat()["enVol"] = nil
+drivers = sauveDrivers
+modules = sauveModules
 print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
       total, total - echecs - bugs_connus, bugs_connus, echecs))
