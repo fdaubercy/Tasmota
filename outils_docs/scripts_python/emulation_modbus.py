@@ -9,7 +9,11 @@ Les esclaves emulables sont ceux du persist du maitre (decodeur_modbus.charge_ca
       0x04 thermometres (1312 : 1 float ; 1216 DHT22 : temperature + humidite), analogiques et
            compteurs (uint32) ; float et uint32 gros-boutiens, 2 registres par valeur
       0x05 FF00 = Power ON ; 0x06 octet fort 02 = Power ON, 01 = OFF, octet faible = delai (s) avant
-           inversion ; 0x10 LEDs WS2812 (1376) : teinte, saturation, luminosite. Echo de la requete.
+           inversion. Echo de la requete.
+      LEDs WS2812 (1376, modbusFonctions.etatRuban, 2026-10-11) : 0x03 -> [teinte, saturation,
+           luminosite (0 si eteint), animation], 3 registres si la requete en demande moins de 4 ;
+           0x06 octet fort 02/01 = Power ON/OFF, 03 = animation (octet faible, Scheme) ;
+           0x10 [teinte, saturation, luminosite (, animation)].
     Un registre inconnu ne recoit AUCUNE reponse (l'esclave reel journalise et se tait).
 Valeurs editables depuis la page (choix du 2026-10-06) ; les commandes recues les mettent a jour.
 Le SwitchMode utilise est celui de la copie du maitre : la page montre donc l'etat que le maitre lira.
@@ -33,7 +37,7 @@ class EsclaveEsp32Emule:
             if a["famille"] == "relais" and a["type"] in (224, 256):
                 v.update(power=False, inverse_a=None)
             elif a["type"] == 1376:
-                v.update(hsb=[0, 0, 0])
+                v.update(hsb=[0, 0, 100], allume=False, scheme=0)
             elif a["famille"] in ("interrupteurs", "boutons", "capteurs"):
                 v.update(etat="OFF")
             elif a["famille"] in DEFAUTS:
@@ -56,7 +60,8 @@ class EsclaveEsp32Emule:
             elif "etat" in a:
                 ligne.update(champ="etat", valeur=a["etat"], switchMode=a["switchMode"])
             elif "hsb" in a:
-                ligne.update(champ="hsb", valeur=a["hsb"])
+                ligne.update(champ="hsb", valeur=a["hsb"], allume="ON" if a["allume"] else "OFF",
+                             scheme=a["scheme"], animations=dm.ANIMATIONS)
             elif "valeur" in a:
                 ligne.update(champ="valeur", valeur=a["valeur"])
                 if a["type"] == 1216:
@@ -70,6 +75,10 @@ class EsclaveEsp32Emule:
             raise ValueError(f"registre {reg} : champ {champ!r} non modifiable")
         if champ == "power":
             a["power"], a["inverse_a"] = valeur == "ON", None
+        elif champ == "allume":
+            a["allume"] = valeur == "ON"
+        elif champ == "scheme":
+            a["scheme"] = int(valeur)
         elif champ == "etat":
             a["etat"] = "ON" if valeur == "ON" else "OFF"
         elif champ in ("valeur", "humidite"):
@@ -83,6 +92,8 @@ class EsclaveEsp32Emule:
         a = self.appareils.get(reg)
         if a is None:
             return None
+        if "hsb" in a:
+            return self._ruban(a, trame)
         if fc == 1 and "power" in a:
             return rs.avec_crc(bytes((self.id, 1, 1, 1 if self._power(a) else 0)))
         if fc == 2 and "etat" in a:
@@ -101,8 +112,26 @@ class EsclaveEsp32Emule:
             a["power"] = trame[4] == 2
             a["inverse_a"] = time.monotonic() + trame[5] if trame[5] else None
             return bytes(trame)
-        if fc == 16 and "hsb" in a and len(trame) >= 15:
-            a["hsb"] = [trame[7 + 2 * k] << 8 | trame[8 + 2 * k] for k in range(3)]
+        return None
+
+    def _ruban(self, a, trame):
+        """Ruban WS2812 : comme modbusFonctions.executeCmdModbus + etatRuban cote esclave."""
+        fc = trame[1]
+        if fc == 3:
+            nb = 4 if (trame[4] << 8 | trame[5]) >= 4 else 3
+            mots = [a["hsb"][0], a["hsb"][1], a["hsb"][2] if a["allume"] else 0, a["scheme"]][:nb]
+            return rs.avec_crc(bytes((self.id, 3, 2 * nb)) + b"".join(m.to_bytes(2, "big") for m in mots))
+        if fc == 6 and len(trame) == 8 and trame[4] in (1, 2, 3):
+            if trame[4] == 3:
+                a["scheme"] = trame[5]
+            else:
+                a["allume"] = trame[4] == 2
+            return bytes(trame)
+        if fc == 16 and len(trame) >= 15:
+            mots = [trame[7 + 2 * k] << 8 | trame[8 + 2 * k] for k in range(min(4, (len(trame) - 9) // 2))]
+            a["hsb"], a["allume"] = mots[:3], mots[2] > 0
+            if len(mots) >= 4:
+                a["scheme"] = mots[3]
             return rs.avec_crc(bytes(trame[:6]))
         return None
 

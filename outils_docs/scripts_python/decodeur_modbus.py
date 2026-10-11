@@ -42,6 +42,12 @@ LIBELLES = {32: "bouton", 160: "interrupteur", 192: "interrupteur", 224: "relai"
             256: "relai inverse (Relais_i)", 352: "compteur", 1216: "DHT22", 1312: "DS18B20",
             1376: "LEDs WS2812", 4704: "entree analogique"}
 FLOTTANTS, ENTIERS32 = (1216, 1312), (352, 4704)
+# Animations du ruban WS2812 (commande Scheme), noms de data/sd/html/formSelectSchemeWS2812.html.
+# Maitre -> esclave : 0x06 [03, n] ; releve 0x03 et push 0x10 : [teinte, saturation, luminosite, n].
+ANIMATIONS = {0: "Une seule couleur", 1: "Sequence de reveil", 2: "Cycle ascendant", 3: "Cycle descendant",
+              4: "Cycle aleatoire", 5: "Mode Horloge", 6: "Mode Bougies", 7: "Mode RVB", 8: "Guirlande Noel",
+              9: "Mode Hanoukka", 10: "Mode Kwanzaa", 11: "Mode Arc-En-Ciel", 12: "Mode Feu",
+              13: "Mode Escalier", 14: "Controle par script"}
 # Sentinelles 'pas de mesure' de l'esclave (modbusFonctions.estSansMesure, 2026-10-10) : NaN pour un float,
 # 0x7FFFFFFF pour un uint32. Capteur absent ou defaillant, PAS une mesure a 0.
 SENTINELLE_UINT32 = 0x7FFFFFFF
@@ -284,7 +290,21 @@ def _appareil(e, reg, types):
 
 
 def _id_relai(reg):
-    return reg - 223 if 224 <= reg < 256 else reg - 255 if 256 <= reg < 288 else reg
+    """Numero PowerN du relai sur l'esclave (modbusFonctions.idRelai) : la WS2812 est un relai."""
+    for base, decalage in ((224, 223), (256, 255), (1376, 1375)):
+        if base <= reg < base + 32:
+            return reg - decalage
+    return reg
+
+
+def _animation(n):
+    return f"animation {n} '{ANIMATIONS.get(n, 'inconnue')}' (Scheme {n})"
+
+
+def _hsb(mots):
+    """[teinte, saturation, luminosite (, animation)] du ruban -> texte."""
+    texte = f"couleur (teinte) {mots[0]}, saturation {mots[1]}, luminosite {mots[2]} (HSBColor)"
+    return texte + (f", {_animation(mots[3])}" if len(mots) >= 4 else "")
 
 
 def _maitre(a):
@@ -321,10 +341,21 @@ def _esp32(e, fc, nat, d, reg, regs, types):
         if base in ENTIERS32 and len(brut) >= 4:
             return f"{desc} : {_entier32(brut)}"
         return f"{desc} : mots {[m for _, m, _ in regs]}"
+    if fc == 3 and base == 1376:                        # releve du ruban (etatRuban)
+        if nat == "requete":
+            nb = d[2] << 8 | d[3]
+            return (f"releve de l'etat du {desc} : {nb} registre(s), teinte, saturation, luminosite"
+                    + (", animation" if nb >= 4 else " (sans l'animation : maitre pas a jour)") + _maitre(a))
+        mots = [m for _, m, _ in regs]
+        return (f"{desc} : " + (_hsb(mots) if len(mots) >= 3 else f"mots {mots}") + _maitre(a)
+                + (", animation non lue (3 registres demandes : maitre pas a jour)" if len(mots) == 3 else ""))
     if fc == 5 and len(d) == 4:
         return f"{'Accuse : ' if nat == 'reponse' else ''}Power{_id_relai(reg)} {'ON' if d[2] == 0xFF else 'OFF'}{_maitre(a)}"
+    if fc == 6 and len(d) == 4 and base == 1376 and d[2] == 3:    # animation du ruban (Scheme)
+        return f"{'Accuse : ' if nat == 'reponse' else ''}{desc} -> {_animation(d[3])}{_maitre(a)}"
     if fc == 6 and len(d) == 4:
-        power = {2: "ON", 1: "OFF"}.get(d[2], f"? (octet fort {d[2]:02X} : ni 01 ni 02)")
+        attendus = "ni 01 ni 02 ni 03" if base == 1376 else "ni 01 ni 02"
+        power = {2: "ON", 1: "OFF"}.get(d[2], f"? (octet fort {d[2]:02X} : {attendus})")
         texte = f"{'Accuse : ' if nat == 'reponse' else ''}{desc} -> Power{_id_relai(reg)} {power}{_maitre(a)}"
         if d[3]:
             texte += f", inverse apres {d[3]} s"
@@ -335,8 +366,10 @@ def _esp32(e, fc, nat, d, reg, regs, types):
         if nat == "reponse":
             return f"Accuse : {desc}"
         mots = [m for _, m, _ in regs]
-        if base == 1376 and len(mots) >= 3:
-            return f"{desc} : couleur (teinte) {mots[0]}, saturation {mots[1]}, luminosite {mots[2]} (HSBColor)"
+        if base == 1376 and len(mots) == 3:         # commande de couleur du maitre (bus RS485)
+            return f"commande de couleur du maitre : {desc} <- {_hsb(mots)}{_maitre(a)}"
+        if base == 1376 and len(mots) >= 4:         # push de l'esclave (surveilleRubans), animation comprise
+            return f"PUSH esclave -> maitre (enveloppe UDP 'ModbusPushUDP <seq> <hexa>') : {desc} = {_hsb(mots)}"
         brut = bytes(b for m in mots for b in (m >> 8, m & 0xFF))
         if base in FLOTTANTS and len(brut) >= 4:
             v = ", ".join(_flottant(struct.unpack('>f', brut[i:i + 4])[0]) for i in range(0, len(brut) - 3, 4))

@@ -106,7 +106,7 @@ Le code GPIO est le rang dans <code>enum UserSelectablePins</code> × 32 (tasmot
 <tr><td>352</td><td>GPIO_CNTR1</td><td>compteur</td><td>0x04, 2 registres, uint32 poids fort d'abord</td><td>—</td></tr>
 <tr><td>1216</td><td>GPIO_DHT22</td><td>DHT22</td><td>0x04, 4 registres = 2 float (température, humidité)</td><td>—</td></tr>
 <tr><td>1312</td><td>GPIO_DSB</td><td>DS18B20</td><td>0x04, 2 registres = 1 float IEEE 754 poids fort d'abord</td><td>—</td></tr>
-<tr><td>1376</td><td>GPIO_WS2812</td><td>LEDs WS2812</td><td>—</td><td>0x10, 3 registres : teinte, saturation, luminosité (HSBColor)</td></tr>
+<tr><td>1376</td><td>GPIO_WS2812</td><td>LEDs WS2812</td><td>0x03, 4 registres : teinte, saturation, luminosité (0 si éteint), animation (3 pour un maître pas à jour)</td><td>0x06 : octet fort 02 = Power ON, 01 = OFF, 03 = animation (octet faible = n° Scheme 0-14) ; push 0x10 : teinte, saturation, luminosité, animation</td></tr>
 <tr><td>4704</td><td>GPIO_ADC_INPUT</td><td>entrée analogique</td><td>0x04, 2 registres, uint32</td><td>—</td></tr>
 </table>
 <p>Ici : cuve = adresse 2, rideau = adresse 3 (persist du maître). Le maître relit chaque appareil toutes les 30 s.</p>
@@ -121,7 +121,10 @@ Le code GPIO est le rang dans <code>enum UserSelectablePins</code> × 32 (tasmot
 {ex("02 04 04 41 AC 00 00", "réponse : 21,5 °C", "02 04 05 20 00 02")}
 {ex("02 04 12 60 00 02", "entrée analogique n°1 (registre 4704)")}
 {ex("02 04 04 00 00 30 39", "réponse : 12345", "02 04 12 60 00 02")}
-{ex("02 10 05 60 00 03 06 00 78 00 64 00 32", "LEDs WS2812 n°1 : teinte 120, saturation 100, luminosité 50")}
+{ex("02 06 05 60 03 07", "LEDs WS2812 n°1 (registre 1376) : animation 7 « Mode RVB » (Scheme 7)")}
+{ex("02 03 05 60 00 04", "relève de l'état du ruban : teinte, saturation, luminosité, animation")}
+{ex("02 03 08 00 78 00 32 00 64 00 04", "réponse : teinte 120, saturation 50, luminosité 100, animation 4", "02 03 05 60 00 04")}
+{ex("02 10 05 60 00 04 08 00 78 00 64 00 32 00 00", "push du ruban : teinte 120, saturation 100, luminosité 50, animation 0")}
 <h3>Le push esclave → maître (UDP, jamais sur le RS485)</h3>
 <p>Sur un changement d'interrupteur, de bouton, de capteur ou de compteur, l'esclave envoie en UDP multicast
 <code>ModbusPushUDP &lt;seq&gt; &lt;trame en hexa&gt;</code>. La trame est une 0x10 standard dont l'adresse est

@@ -11,6 +11,9 @@ ECARTS (choix du 2026-10-06 : signales au 1er releve contraire). Meme logique qu
     n'est pas suivi. Releve = reponse 0x03 (registre a 1 = open = sortie basse) ;
   - esclave ESP32 : 0x06 (octet fort 02 = Power ON, 01 = OFF ; octet faible = delai avant inversion)
     et 0x05 (FF00 = ON). Releve = reponse 0x01 (bit 0 = Power) ;
+  - ruban WS2812 d'un esclave ESP32 (registres 1376-1407, 2026-10-11) : 0x06 02/01 = Power, 03 =
+    animation (octet faible). Releve = reponse 0x03 [teinte, saturation, luminosite, animation] :
+    luminosite > 0 = Power ON ; l'animation n'est comparee que si la reponse a 4 registres ;
   - a +-MARGE s d'une inversion programmee, pas de verdict ;
   - un ecart n'est signale qu'une fois ; le retour a la conformite l'est aussi.
 COLLISIONS / ANOMALIES :
@@ -21,6 +24,8 @@ COLLISIONS / ANOMALIES :
   - rafale de CRC faux (au moins 2 en FENETRE_KO s) : collision, parasite, debit ou A/B.
 """
 
+import decodeur_modbus as dm
+
 MARGE = 1.0             # s autour d'une inversion programmee (delai, Delay)
 FENETRE_KO = 2.0        # s : deux CRC faux dans cette fenetre = rafale
 
@@ -28,7 +33,7 @@ FENETRE_KO = 2.0        # s : deux CRC faux dans cette fenetre = rafale
 class Surveillance:
     def __init__(self, carte, delai):
         self.carte, self.delai = carte, delai
-        self.attendus = {}          # (id, registre) -> {"etat": 0|1, "inverse_a": instant|None}
+        self.attendus = {}          # (id, registre[, "scheme"]) -> {"etat": 0|1 ou animation, "inverse_a": instant|None}
         self.signales = set()       # (id, registre) dont l'ecart est deja signale
         self.en_cours = None        # {"trame", "t", "source", "repondue"} : derniere requete vue
         self.ko, self.t_alerte_ko = [], -1e9
@@ -76,6 +81,8 @@ class Surveillance:
         fc, reg = cmd[1], cmd[2] << 8 | cmd[3]
         if e["driver"] == "conn16" and fc == 6 and reg <= 16:
             self._applique_conn16(cmd[0], reg, cmd[4], cmd[5], t)
+        elif e["driver"] == "esp32" and fc == 6 and cmd[4] == 3 and 1376 <= reg < 1408:
+            self._fixe((cmd[0], reg, "scheme"), cmd[5], t)
         elif e["driver"] == "esp32" and fc == 6 and cmd[4] in (1, 2):
             self._fixe((cmd[0], reg), 1 if cmd[4] == 2 else 0, t, cmd[5])
         elif e["driver"] == "esp32" and fc == 5:
@@ -86,29 +93,31 @@ class Surveillance:
         a = e["appareils"].get(reg)
         if e["driver"] == "conn16":
             return f"carte relais, canal {reg}" + (f" '{a['nom']}'" if a else "")
-        return (f"'{a['nom']}'" if a else f"registre {reg}") + f" sur {e['nom']} (Power{reg - 223 if reg < 256 else reg - 255})"
+        return (f"'{a['nom']}'" if a else f"registre {reg}") + f" sur {e['nom']} (Power{dm._id_relai(reg)})"
 
-    def _sens(self, e, reg, etat):
+    def _sens(self, e, reg, etat, champ=None):
         """Etat brut releve -> libelle, avec l'etat du relai cote maitre (Relais_i : logique inverse)."""
+        if champ == "scheme":
+            return f"animation {etat} '{dm.ANIMATIONS.get(etat, 'inconnue')}'"
         a = e["appareils"].get(reg)
         inverse = (a["type"] == 256) if a else False
         if e["driver"] == "conn16":
             return f"{'open' if etat else 'close'} (relai {'ON' if etat == inverse else 'OFF'})" if a else ("open" if etat else "close")
         return f"Power {'ON' if etat else 'OFF'}" + (f" (etat maitre {'ON' if etat != inverse else 'OFF'})" if inverse else "")
 
-    def _compare(self, ident, reg, releve, t, alertes):
-        e, cle = self.carte[ident], (ident, reg)
+    def _compare(self, ident, reg, releve, t, alertes, champ=None):
+        e, cle = self.carte[ident], ((ident, reg) if champ is None else (ident, reg, champ))
         attendu = self._attendu(cle, t)
         if attendu is None:
             return
         if attendu != releve and cle not in self.signales:
             self.signales.add(cle)
             alertes.append({"type": "ecart", "niveau": "alerte",
-                            "texte": f"ECART {self._nom(e, reg)} : commande {self._sens(e, reg, attendu)}, releve {self._sens(e, reg, releve)}"})
+                            "texte": f"ECART {self._nom(e, reg)} : commande {self._sens(e, reg, attendu, champ)}, releve {self._sens(e, reg, releve, champ)}"})
         elif attendu == releve and cle in self.signales:
             self.signales.discard(cle)
             alertes.append({"type": "ecart", "niveau": "info",
-                            "texte": f"Retour conforme : {self._nom(e, reg)} = {self._sens(e, reg, releve)}"})
+                            "texte": f"Retour conforme : {self._nom(e, reg)} = {self._sens(e, reg, releve, champ)}"})
 
     def _releve(self, trame, requete, t, alertes):
         e = self.carte.get(trame[0])
@@ -118,6 +127,10 @@ class Surveillance:
         if e["driver"] == "conn16" and fc == 3 and depart <= 16:
             for k in range(trame[2] // 2):
                 self._compare(trame[0], depart + k, 1 if (trame[3 + 2 * k] << 8 | trame[4 + 2 * k]) else 0, t, alertes)
+        elif e["driver"] == "esp32" and fc == 3 and 1376 <= depart < 1408 and trame[2] >= 6 and len(trame) >= 5 + trame[2]:
+            self._compare(trame[0], depart, 1 if (trame[7] << 8 | trame[8]) else 0, t, alertes)
+            if trame[2] >= 8:
+                self._compare(trame[0], depart, trame[9] << 8 | trame[10], t, alertes, "scheme")
         elif e["driver"] == "esp32" and fc == 1 and trame[2] >= 1:
             self._compare(trame[0], depart, trame[3] & 1, t, alertes)
 

@@ -136,6 +136,24 @@ def test_decodeur():
     verifie("SANS MESURE" not in r and "0.00" in r, True, "TEMOIN : 0.00 reste une mesure")
     verifie("SANS MESURE" in decode("02 04 04 00 00 00 00", "02 04 12 60 00 02")["metier"], False, "TEMOIN : uint32 0 reste une mesure")
     verifie("HSBColor" in decode("02 10 05 60 00 03 06 00 78 00 64 00 32")["metier"], True, "ESP32 : WS2812")
+    # Ruban WS2812 (2026-10-11) : animation 0x06 [03, n], releve 0x03 a 4 registres, push a 4 valeurs
+    verifie([dm._id_relai(r) for r in (224, 256, 1376, 1377)], [1, 1, 1, 2], "idRelai : la WS2812 est Power1")
+    r = dm.decode(bytes.fromhex("020605600307C819"), None, CARTE, TYPES)    # trame du banc Berry (maitre)
+    verifie((r["nature"], "animation 7 'Mode RVB'" in r["metier"]), ("requete", True), "ruban : animation (trame du maitre)")
+    verifie("Accuse" in dm.decode(bytes.fromhex("020605600307C819"), bytes.fromhex("020605600307C819"), CARTE, TYPES)["metier"],
+            True, "ruban : echo de l'animation = accuse")
+    verifie("Power1 ON" in decode("02 06 05 60 02 00")["metier"], True, "TEMOIN : ruban 02 = Power ON")
+    r = decode("03 06 01 00 03 00")["metier"]
+    verifie(("ni 01 ni 02" in r, "animation" in r), (True, False), "TEMOIN : 03 sur un relai n'est pas une animation")
+    verifie("animation" in decode("02 03 05 60 00 04")["metier"], True, "ruban : releve a 4 registres")
+    verifie("maitre pas a jour" in decode("02 03 05 60 00 03")["metier"], True, "ruban : releve a 3 registres (ancien maitre)")
+    r = decode("02 03 08 00 78 00 32 00 64 00 04", "02 03 05 60 00 04")["metier"]
+    verifie(all(m in r for m in ("teinte) 120", "saturation 50", "luminosite 100", "'Cycle aleatoire'")), True, "ruban : reponse a 4 registres")
+    verifie("non lue" in decode("02 03 06 00 78 00 32 00 64", "02 03 05 60 00 03")["metier"], True, "ruban : reponse a 3 registres")
+    r = decode("02 10 05 60 00 03 06 00 78 00 64 00 32")["metier"]
+    verifie(("commande de couleur du maitre" in r, "PUSH" in r), (True, False), "TEMOIN : 0x10 a 3 valeurs = commande du maitre")
+    r = decode("02 10 05 60 00 04 08 00 78 00 64 00 32 00 00")["metier"]
+    verifie(("PUSH" in r, "'Une seule couleur'" in r), (True, True), "ruban : push a 4 valeurs")
     verifie("PUSH" in dm.decode(dm.lit_texte("ModbusPushUDP 5 0310 00A0 0001 02 00FF E7D0"), None, CARTE, TYPES)["metier"],
             True, "push UDP colle depuis un log")
     verifie(decode("03 83 02", "03 03 00 01 00 01")["nature"], "exception", "exception")
@@ -195,6 +213,16 @@ def test_surveillance():
     suite(sv, [("03 06 01 00 02 05", "bus", 0), ("03 06 01 00 02 05", "bus", .05)], 0)
     verifie(suite(sv, [("03 01 01 00 00 01", "bus", 0), ("03 01 01 01", "bus", .05)], 1), [], "ESP32 : ON avant le delai")
     verifie(len(suite(sv, [("03 01 01 00 00 01", "bus", 0), ("03 01 01 01", "bus", .05)], 8)), 1, "ESP32 : ON apres le delai -> ecart")
+    # Ruban WS2812 : animation et Power commandes, compares au releve 0x03
+    rub = lambda lum, anim: f"02 03 08 00 78 00 32 {lum >> 8:02X} {lum & 255:02X} 00 {anim:02X}"  # noqa: E731
+    sv = Surveillance(CARTE, 1.0)
+    suite(sv, [("02 06 05 60 03 07", "bus", 0), ("02 06 05 60 03 07", "bus", .05),
+               ("02 06 05 60 02 00", "bus", .1), ("02 06 05 60 02 00", "bus", .05)], 0)
+    verifie(suite(sv, [("02 03 05 60 00 04", "bus", 0), (rub(100, 7), "bus", .05)], 5), [], "TEMOIN : ruban conforme")
+    a = suite(sv, [("02 03 05 60 00 04", "bus", 0), (rub(100, 4), "bus", .05)], 35)
+    verifie(len(a) == 1 and "'Mode RVB'" in a[0]["texte"] and "'Cycle aleatoire'" in a[0]["texte"], True, "ruban : ecart d'animation")
+    a = suite(sv, [("02 03 05 60 00 04", "bus", 0), (rub(0, 4), "bus", .05)], 65)
+    verifie([x["texte"].startswith("ECART 'LEDs'") and "Power1" in x["texte"] for x in a], [True], "ruban : eteint malgre ON -> ecart")
     collision = lambda trames: [x["type"] for x in suite(Surveillance(CARTE, 1.0), trames, 0)]      # noqa: E731
     verifie(collision([("02 04 05 20 00 02", "bus", 0), (lit, "bus", .1)]), ["collision"], "deux requetes sans reponse")
     verifie(collision([("02 04 05 20 00 02", "pc", 0), ("02 04 05 20 00 02", "pc", .1)]), [], "TEMOIN : rafale du PC seul")
@@ -221,6 +249,18 @@ def test_emulation():
     verifie(emu.reponse(c("03 01 01 00 00 01")), c("03 01 01 00"), "inversion apres le delai de 1 s")
     verifie(emu.reponse(c("03 01 01 05 00 01")), None, "TEMOIN : registre inconnu -> silence")
     verifie(emu.reponse(c("FF 03 00 FF 00 01")), c("01 03 02 00 01"), "diffusion -> carte relais emulee")
+    # Ruban WS2812 de la cuve (id 2, registre 1376) : comme modbusFonctions.etatRuban
+    verifie(emu.reponse(c("02 06 05 60 03 07")), c("02 06 05 60 03 07"), "ruban : animation, echo")
+    verifie(emu.reponse(c("02 03 05 60 00 04")), c("02 03 08 00 00 00 00 00 00 00 07"), "ruban eteint : luminosite 0, animation 7")
+    verifie(emu.reponse(c("02 06 05 60 02 00")), c("02 06 05 60 02 00"), "ruban : Power ON, echo")
+    verifie(emu.reponse(c("02 03 05 60 00 04")), c("02 03 08 00 00 00 00 00 64 00 07"), "ruban allume : luminosite 100")
+    verifie(emu.reponse(c("02 03 05 60 00 03")), c("02 03 06 00 00 00 00 00 64"), "ruban : 3 registres pour un ancien maitre")
+    emu.modifie(2, 1376, "scheme", "4")
+    verifie(emu.reponse(c("02 03 05 60 00 04"))[9:11], bytes((0, 4)), "ruban : animation editable")
+    verifie(emu.reponse(c("02 06 05 60 05 00")), None, "TEMOIN : ruban, octet fort inconnu -> silence")
+    cuve = [e for e in emu.etat() if e["id"] == 2][0]
+    ligne = [a for a in cuve["appareils"] if a["registre"] == 1376][0]
+    verifie((ligne["champ"], ligne["allume"], ligne["scheme"]), ("hsb", "ON", 4), "ruban : etat pour la page")
     try:
         emu.modifie(3, 160, "valeur", 3)
         RESULTATS["ko"].append("TEMOIN : champ non modifiable accepte")

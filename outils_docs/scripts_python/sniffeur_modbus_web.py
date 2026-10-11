@@ -236,7 +236,12 @@ function editeur(e, a) {
   if (a.champ === "sortie") return `<select ${att}>${opts(["open", "close"], a.valeur)}</select>`;
   if (a.champ === "valeur") return `<input class="court" style="width:80px" type="number" step="any" value="${a.valeur}" ${att}>`
     + (a.humidite !== undefined ? ` humidite <input class="court" style="width:60px" type="number" step="any" value="${a.humidite}" data-id="${e.id}" data-reg="${a.registre}" data-champ="humidite">` : "");
-  if (a.champ === "hsb") return `<span class="gris">teinte ${a.valeur[0]}, saturation ${a.valeur[1]}, luminosite ${a.valeur[2]}</span>`;
+  if (a.champ === "hsb") {                             // ruban WS2812 : ce que relit le maitre (0x03, 4 registres)
+    const anim = Object.entries(a.animations).map(([n, nom]) => `<option value="${n}"${+n === a.scheme ? " selected" : ""}>${n} ${esc(nom)}</option>`).join("");
+    const att2 = c => `data-id="${e.id}" data-reg="${a.registre}" data-champ="${c}"`;
+    return `<select ${att2("allume")}>${opts(["ON", "OFF"], a.allume)}</select> <select ${att2("scheme")}>${anim}</select>`
+      + ` <span class="gris">teinte ${a.valeur[0]}, saturation ${a.valeur[1]}, luminosite ${a.valeur[2]}</span>`;
+  }
   return "-";
 }
 function dessineEmulation(force) {
@@ -333,7 +338,9 @@ function exemplesAppareil(e, a) {
     const on = a.type === 256 ? 1 : 2;                 // octet fort 02 = Power ON ; le maitre envoie ON = 01 pour un Relais_i
     return [exemple([id, 1, hi, lo, 0, 1]), `ON ${exemple([id, 6, hi, lo, on, 0])}<br>OFF ${exemple([id, 6, hi, lo, 3 - on, 0])}`];
   }
-  if (a.type === 1376) return ["-", exemple([id, 16, hi, lo, 0, 3, 6, 0, 120, 0, 100, 0, 50])];
+  if (a.type === 1376) return [exemple([id, 3, hi, lo, 0, 4]),           // [teinte, saturation, luminosite, animation]
+    `ON ${exemple([id, 6, hi, lo, 2, 0])}<br>OFF ${exemple([id, 6, hi, lo, 1, 0])}<br>animation 7 ${exemple([id, 6, hi, lo, 3, 7])}`
+    + `<br>push ${exemple([id, 16, hi, lo, 0, 4, 8, 0, 120, 0, 100, 0, 50, 0, 0])}`];
   if (["analogiques", "compteurs", "thermometres"].includes(a.famille)) return [exemple([id, 4, hi, lo, 0, a.type === 1216 ? 4 : 2]), "-"];
   return ["-", "-"];
 }
