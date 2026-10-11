@@ -64,6 +64,8 @@ class TasmotaStub
   def add_cron(a, b, c) end
   def remove_cron(nom) end
   def resp_cmnd(x) end
+  var reseauCoupe                       # true : is_network_up() rend false (demarrage avant le Wi-Fi)
+  def is_network_up() return self.reseauCoupe != true end
 end
 class Driver end                       # classe de base des drivers Tasmota
 var tasmota = TasmotaStub()
@@ -386,6 +388,15 @@ verifie("temoin typeComm.UDP OFF : rien emis", "nil / 0", str(modbusFonctions.po
 drivers["ModBus"]["typeComm"]["UDP"] = "ON"
 drivers["ModBus"]["id"] = 0
 verifie("temoin maitre (id 0) : rien emis", "nil / 0", str(modbusFonctions.pousseEtat(160, "uint16", [0xFF])) + " / " + str(size(udpStub.envois)))
+# Reseau pas encore monte (2026-10-11) : la socket UDP plantait la cuve au demarrage. Rien ne part,
+# le numero d'ordre n'avance pas, et pousseEtat rend nil (surveilleRubans reessaie a la seconde suivante).
+drivers["ModBus"]["id"] = 3
+modbusFonctions.etat()["seqPush"] = 0
+tasmota.reseauCoupe = true
+verifie("reseau coupe : rien emis, seq inchange", "nil / 0 / 0", str(modbusFonctions.pousseEtat(160, "uint16", [0xFF])) + " / " + str(size(udpStub.envois)) + " / " + str(modbusFonctions.etat()["seqPush"]))
+tasmota.reseauCoupe = nil
+var trameReseau = modbusFonctions.pousseEtat(160, "uint16", [0xFF])
+verifie("temoin reseau revenu : datagramme emis (seq 1)", "1 / 1", str(size(udpStub.envois)) + " / " + str(trameReseau != nil ? modbusFonctions.etat()["seqPush"] : -1))
 drivers = sauveDrivers
 serveur = sauveServeur
 

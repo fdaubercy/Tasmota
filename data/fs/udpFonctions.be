@@ -459,7 +459,16 @@ udpFonctions.changementEtatDemarrage = udpFonctions_changementEtatDemarrage
 # Cette fonction gère l'envoi de messages UDP en unicast et multicast
 def udpFonctions_envoiUDP(typeComm, ipDestinataire, message)
 	import string
-	
+
+	# Reseau pas encore monte (2026-10-11) : creer la socket avant que la pile TCP/IP soit prete
+	# plante l'ESP32 (LoadProhibited dans sys_mbox_post <- lwip_socket <- NetworkUdp::begin).
+	# Constate sur la cuve : push du ruban a 2,6 s, Wi-Fi a 4,1 s, 3 plantages puis demarrage
+	# de secours SANS Berry. On n'envoie rien : l'appelant reessaie ou le maitre relit.
+	if (!tasmota.is_network_up())
+		udpFonctions.log(string.format("ENVOI_MSG_UDP: Reseau non connecte, '%s' non envoye !", message), LOG_LEVEL_DEBUG)
+		return
+	end
+
 	var udpEmission = udp()
 	var resultatEnvoi
 

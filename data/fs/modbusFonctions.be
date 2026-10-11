@@ -2560,6 +2560,9 @@ def modbusFonctions_pousseEtat(StartAddress, typeValeur, valeurs)
 
     if (drivers["ModBus"].find("activation", "OFF") != "ON" || drivers["ModBus"].find("id", 0) <= 0)    return nil    end
     if (drivers["ModBus"]["typeComm"].find("UDP", "OFF") != "ON" || serveur["udp"].find("activation", "OFF") != "ON")    return nil    end
+    # Reseau pas encore monte (2026-10-11) : la socket UDP plantait l'ESP32 au demarrage (voir
+    # udpFonctions.envoiUDP). nil -> surveilleRubans reessaie a la seconde suivante.
+    if (!tasmota.is_network_up())    return nil    end
 
     var paramMSG = {"DeviceAddress": drivers["ModBus"]["id"], "FunctionCode": modbusFonctions.ECRITURE_REGISTRES_HOLDER,
                     "StartAddress": StartAddress, "type": typeValeur, "Count": size(valeurs), "Values": valeurs}
