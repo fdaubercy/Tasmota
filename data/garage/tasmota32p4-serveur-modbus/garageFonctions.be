@@ -5,6 +5,36 @@ garageFonctions.log = def(msg, levelDebug)
     logFonctions.log(msg, levelDebug, "garage")
 end
 
+# --- Encadre de la cuve : couleur du niveau et erreur de mesure (2026-10-11) ---
+# Meme rendu que la page de l'esclave cuve (cuveFonctions.teinteNiveau / couleurTeinte, recopiees :
+# cuveFonctions n'existe que sur l'esclave). La couleur est CALCULEE depuis le niveau, pas relue sur la
+# light du maitre (celle-ci ne reflete que les commandes envoyees au ruban de l'esclave).
+
+# Teinte (0 rouge, vide .. 119 vert, pleine) d'un taux de remplissage, borne a [0, 1]
+garageFonctions.teinteNiveau = def(taux)
+    taux = real(taux)
+    if (taux < 0)    taux = 0.0    end
+    if (taux > 1)    taux = 1.0    end
+    return int(119.00 * taux)
+end
+
+# Couleur 'RRGGBB' (pleine luminosite) d'une teinte 0..119 et d'une saturation 0..255
+garageFonctions.couleurTeinte = def(teinte, sat)
+    import string
+    var mini = 255 - int(sat)
+    var r = (teinte < 60 ? 255 : mini + (255 - mini) * (119 - teinte) / 59)
+    var g = (teinte < 60 ? mini + (255 - mini) * teinte / 60 : 255)
+    return string.format("%02X%02X%02X", int(r), int(g), mini)
+end
+
+# true si la derniere valeur d'un capteur d'esclave n'est pas une mesure : l'esclave a repondu la
+# sentinelle 'pas de mesure' ('defaillant') ou ne repond plus ('inconnu', chien de garde) ;
+# etats poses par modBus_TasmotaSlaveModBus.be
+garageFonctions.mesureEnErreur = def(device)
+    var etat = device.find("etatConstate")
+    return (etat == "defaillant" || etat == "inconnu")
+end
+
 # Aide de la commande ReglageGarage, appelee SEULEMENT par diversFonctions.traiteAide :
 # sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
 garageFonctions.aideReglageGarage = def(sujet)

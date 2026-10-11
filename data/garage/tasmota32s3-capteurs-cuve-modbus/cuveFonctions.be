@@ -9,6 +9,120 @@ cuveFonctions.log = def(msg, levelDebug)
     logFonctions.log(msg, levelDebug, "cuve")
 end
 
+# --- Couleur du niveau et erreur de mesure (2026-10-11) ---
+# Le ruban WS2812 et l'encadre web prennent la couleur du taux de remplissage : teinte 0 (rouge, vide)
+# a 119 (vert, pleine). En ERREUR DE MESURE, rouge clignotant. L'erreur suit la MEME regle que la
+# sentinelle 'pas de mesure' envoyee au maitre ModBus : modbusFonctions.mesureFraiche (aucune mesure
+# depuis 3 TelePeriod, 90 s au moins ; delai de grace apres le demarrage).
+# Le clignotement ecrit les pixels du ruban (classe Leds) et non light.set : light.set reecrit les
+# Settings a chaque appel, et 'rgb' 000000 couperait le ruban (Power off, xdrv_52_3_berry_light.ino:273).
+cuveFonctions.enErreur = false          # dernier etat d'erreur constate (pour ne traiter que les transitions)
+cuveFonctions.phaseClignote = false     # phase du clignotement : true = rouge, false = eteint
+cuveFonctions.ruban = nil               # strip natif du pilote light (Leds), cree a la premiere ecriture
+
+# Teinte (0..119) d'un taux de remplissage, borne a [0, 1]
+cuveFonctions.teinteNiveau = def(taux)
+    taux = real(taux)
+    if (taux < 0)    taux = 0.0    end
+    if (taux > 1)    taux = 1.0    end
+    return int(119.00 * taux)
+end
+
+# Couleur 'RRGGBB' (pleine luminosite) d'une teinte 0..119 et d'une saturation 0..255 :
+# la couleur du ruban, calculee sans lui (l'encadre se colore meme ruban eteint)
+cuveFonctions.couleurTeinte = def(teinte, sat)
+    import string
+    var mini = 255 - int(sat)
+    var r = (teinte < 60 ? 255 : mini + (255 - mini) * (119 - teinte) / 59)
+    var g = (teinte < 60 ? mini + (255 - mini) * teinte / 60 : 255)
+    return string.format("%02X%02X%02X", int(r), int(g), mini)
+end
+
+# Le capteur de hauteur d'eau (analogique1) d'ou vient le niveau, ou nil
+cuveFonctions.capteurNiveau = def()
+    var ana = modules["cuve"]["environnement"].find("analogiques", {}).find("analogique1")
+    if (ana == nil || ana.find("activation", "OFF") != "ON")    return nil    end
+    return ana
+end
+
+# true si le capteur de niveau est en erreur de mesure (regle de la sentinelle ModBus)
+cuveFonctions.niveauEnErreur = def()
+    import modbusFonctions
+    var ana = cuveFonctions.capteurNiveau()
+    if (ana == nil)    return false    end
+    return !modbusFonctions.mesureFraiche(int(ana["type"]) + int(ana["id"]) - 1)
+end
+
+# Le relais WS2812 du module (ruban), ou nil s'il n'est pas actif
+cuveFonctions.relaisRuban = def()
+    var ws2812 = modules["cuve"]["environnement"].find("relais", {}).find("relai1")
+    if (ws2812 == nil || ws2812.find("activation", "OFF") != "ON" || ws2812.find("type") != 1376)    return nil    end
+    return ws2812
+end
+
+# Ecrit une couleur (entier 0xRRGGBB) sur tout le ruban, a la luminosite du pilote light.
+# Ruban eteint : rien n'est ecrit (l'erreur ne rallume pas un ruban eteint volontairement).
+cuveFonctions.peintRuban = def(couleur)
+    var ws2812 = cuveFonctions.relaisRuban()
+    if (ws2812 == nil)    return    end
+    var etat = light.get(ws2812.find("channel", 0))
+    if (etat == nil || !etat.find("power", false))    return    end
+    try
+        if (cuveFonctions.ruban == nil)    cuveFonctions.ruban = Leds()    end
+        cuveFonctions.ruban.clear_to(couleur, etat.find("bri", 127))
+        cuveFonctions.ruban.show()
+    except .. as error, message
+        cuveFonctions.ruban = nil
+        cuveFonctions.log("PEINT_RUBAN_ERREUR: " + str(error) + " -> " + str(message), LOG_LEVEL_ERREUR)
+    end
+end
+
+# Appelee chaque seconde (controleCuve.every_second) : clignotement rouge tant que le capteur de niveau
+# est en erreur ; au retour d'une mesure, le ruban reprend la couleur du niveau (celle du pilote light,
+# que le clignotement avait recouverte sans la modifier).
+# LED RGB du dev-kit (module commun ledRGBFonctions) : ruban allume -> elle le recopie (couleur imposee) ;
+# ruban eteint ou absent -> voyant d'etat, ou l'erreur de niveau clignote en rouge (signaleErreur).
+cuveFonctions.majTemoinErreur = def()
+    var erreur = cuveFonctions.niveauEnErreur()
+
+    if (erreur != cuveFonctions.enErreur)
+        cuveFonctions.enErreur = erreur
+        if (erreur)
+            cuveFonctions.log("CUVE_ERREUR_MESURE: capteur de niveau sans mesure (absent ou defaillant) : ruban et encadre en rouge clignotant", LOG_LEVEL_ERREUR)
+        else
+            cuveFonctions.log("CUVE_ERREUR_MESURE: capteur de niveau de nouveau mesure : couleur du niveau retablie", LOG_LEVEL_INFO)
+            var ws2812 = cuveFonctions.relaisRuban()
+            var etat = (ws2812 != nil ? light.get(ws2812.find("channel", 0)) : nil)
+            if (etat != nil)    cuveFonctions.peintRuban(int("0x" + etat.find("rgb", "000000")))    end
+        end
+    end
+
+    # Etat du ruban
+    var ws2812 = cuveFonctions.relaisRuban()
+    var etat = (ws2812 != nil ? light.get(ws2812.find("channel", 0)) : nil)
+    var allume = (etat != nil && etat.find("power", false))
+    var couleur = (allume ? int("0x" + etat.find("rgb", "000000")) : nil)
+
+    if (erreur)
+        cuveFonctions.phaseClignote = !cuveFonctions.phaseClignote
+        couleur = (cuveFonctions.phaseClignote ? 0xFF0000 : 0x000000)
+        cuveFonctions.peintRuban(couleur)
+        if (!allume)    couleur = nil    end
+    end
+
+    cuveFonctions.majLedRGB(erreur, couleur, (etat != nil ? etat.find("bri", 127) : 127))
+end
+
+# Transmet a la LED RGB du dev-kit (si elle est activee) l'erreur de niveau et la couleur du ruban
+# (nil = ruban eteint ou absent : la LED redevient voyant d'etat)
+cuveFonctions.majLedRGB = def(erreur, couleur, bri)
+    var led = drivers.find("leds", {}).find("environnement", {}).find("leds", {}).find("ledRGB", {})
+    if (drivers.find("leds", {}).find("activation", "OFF") != "ON" || led.find("activation", "OFF") != "ON")    return    end
+    import ledRGBFonctions
+    ledRGBFonctions.signaleErreur("cuve", erreur)
+    ledRGBFonctions.imposeCouleur("cuve", couleur, bri)
+end
+
 # Aide de la commande ReglageCuve, appelee SEULEMENT par diversFonctions.traiteAide :
 # sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
 cuveFonctions.aideReglageCuve = def(sujet)
@@ -287,9 +401,16 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
     # Si msg="" & value=""
     if (msg == "" || value == "")
         msg = {}
-        msg.insert("ADS1115", controleGeneral.lectureSensors()[trigger])
+        msg.insert("ADS1115", controleGeneral.lectureSensors().find(trigger))
     end
-    
+
+    # ADS1115 absent des capteurs (I2C en defaut) : pas de mesure, donc pas de noteMesure ;
+    # l'erreur de mesure viendra de la fraicheur (niveauEnErreur), sans exception a chaque cron
+    if (!isinstance(msg, map) || !isinstance(msg.find("ADS1115"), map))
+        cuveFonctions.log("CUVE_GESTION_CAPTEURS: pas de mesure ADS1115 dans les capteurs", LOG_LEVEL_DEBUG)
+        return
+    end
+
     # Gère les actions sur modification d'état des capteur analogiques virtuels
     var analogiques = modules[moduleCapteur]["environnement"]["analogiques"]
 
@@ -306,6 +427,14 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
             nb += 1
 
             if (analogiques[cleAna].find("activation", "OFF") == "ON" && analogiques[cleAna].find("virtuel", "OFF") != "OFF")
+                # Mesure recue (meme inchangee) : fraicheur pour la sentinelle ModBus (2026-10-10).
+                # Teste la PRESENCE de la cle (contains) et non sa valeur : une lecture 0 est une mesure.
+                # noteMesure appele directement (et non noteMesureModbus, reserve a l'esclave ModBus) :
+                # l'erreur de mesure du ruban et de la page web (niveauEnErreur) en depend aussi (2026-10-11).
+                if (msg["ADS1115"].contains(string.format("A%d", analogiques[cleAna]["id"] - 1)))
+                    import modbusFonctions
+                    modbusFonctions.noteMesure(int(analogiques[cleAna]["type"]) + int(analogiques[cleAna]["id"]) - 1)
+                end
                 if (!msg["ADS1115"].find(string.format("A%d", analogiques[cleAna]["id"] - 1), false))    continue    end
                 if int(analogiques[cleAna]["value"]) != int(msg["ADS1115"][string.format("A%d", analogiques[cleAna]["id"] - 1)])
                     cuveFonctions.log(string.format("CUVE_GESTION_CAPTEURS: Mise à jour du capteur '%s' en json.", analogiques[cleAna]["nom"]), LOG_LEVEL_DEBUG)
@@ -343,12 +472,15 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
         cuveFonctions.sensorsCuve["niveauCuve"]["volume"] =  int(hauteur * largeur * longueur * pourcentageEau / 1000)    # en litres
 
         # Règle la couleur de la LED WS2812 témoin en fonction du taux de remplissage
-        var ws2812 = modules[moduleCapteur]["environnement"]["relais"]["relai1"]
-        if (ws2812.find("activation", "OFF") == "ON")
-            var channel = ws2812.find("channel", 1)
+        # (en erreur de mesure, majTemoinErreur fait clignoter le ruban en rouge par-dessus)
+        var ws2812 = cuveFonctions.relaisRuban()
+        if (ws2812 != nil)
+            var channel = ws2812.find("channel", 0)
             var etatWs2812 = light.get(channel)
 
-            light.set({"hue": int(119.00 * pourcentageEau), "bri": etatWs2812["bri"], "sat": etatWs2812["sat"]}, channel)
+            if (etatWs2812 != nil)
+                light.set({"hue": cuveFonctions.teinteNiveau(pourcentageEau), "bri": etatWs2812["bri"], "sat": etatWs2812["sat"]}, channel)
+            end
         end
 
         cuveFonctions.log(string.format("CUVE_GESTION_CAPTEURS: sensorsCuve=%s", cuveFonctions.sensorsCuve), LOG_LEVEL_INFO)

@@ -30,4 +30,11 @@
     .bdis:hover{
         background:#888;
     }
+    /* Capteur en erreur de mesure : bordure rouge clignotante (l'animation l'emporte sur le style en ligne) */
+    .erreurCapteur{
+        animation:clignoteErreur 1s step-end infinite;
+    }
+    @keyframes clignoteErreur{
+        50%{ border-color:transparent; }
+    }
 </style>

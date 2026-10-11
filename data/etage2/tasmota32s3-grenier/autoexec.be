@@ -95,6 +95,13 @@ if (persist._p != nil && persist._p.size() != 0)
     do import controleDiscovery as _ctrl end   # solidifie : init() porte la garde d'activation
     gestionFileFolder.loadBerryFile("/controleGrenier", modules.find("grenier", {}).find("activation", "OFF"), "ON")
 
+    # LED RGB du dev-kit (drivers.leds.environnement.leds.ledRGB, 2026-10-11) : compilee et chargee
+    # SEULEMENT si activee. Voyant d'etat ; un module peut y signaler une erreur ou y imposer une couleur.
+    if (drivers.find("leds", {}).find("activation", "OFF") == "ON" && drivers["leds"].find("environnement", {}).find("leds", {}).find("ledRGB", {}).find("activation", "OFF") == "ON")
+        gestionFileFolder.compileModule("/ledRGBFonctions", "ON")
+        gestionFileFolder.loadBerryFile("/controleLedRGB", "ON", "ON")
+    end
+
     # Compile autoexec.be
     # gestionFileFolder.compileModule("/autoexec", "ON")
 else logFonctions.log("AUTO_EXE: Attention, le fichier de paramétrage est absent !", LOG_LEVEL_ERREUR)

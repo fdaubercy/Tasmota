@@ -898,6 +898,7 @@
 		"leds": {
 			"activation": "ON",
 			"name": "Leds",
+			"log": "info",
 			"ledPower": "OFF",
 			"ledState": 6,
 			"clignoteSiDeconnexion": "ON",

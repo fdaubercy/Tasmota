@@ -128,7 +128,11 @@ class CAPTEURS_CUVE : Driver
         self.flagINIT = 1 
     end
 
+    # Ruban en rouge clignotant tant que le capteur de niveau est en erreur de mesure
     def every_second()
+        if (!self.flagINIT)    return    end
+        import cuveFonctions
+        cuveFonctions.majTemoinErreur()
     end
 
     # Affiche les capteurs du module cuve sur la page web
@@ -149,7 +153,11 @@ class CAPTEURS_CUVE : Driver
         gestionFileFolder.readFileByLineAndContentSend("/sd/css/webSensor.css", "", "web_send")
         
         # Pour les entrées analogiques
+        # En erreur de mesure (meme regle que la sentinelle ModBus), valeurs '-,--' : la derniere valeur
+        # connue (souvent 0) ne doit pas passer pour une mesure
         variablesRemplacement = {}
+        var erreurNiveau = cuveFonctions.niveauEnErreur()
+        var vide = "-,--"
         if (modules["cuve"]["environnement"].find("analogiques", false))    # && cuveFonctions.sensorsCuve.find("niveauCuve", false))
             logFonctions.log("WEBSERVER_CUVE: Envoi a la page web de l'etat des capteurs !", LOG_LEVEL_DEBUG, "cuve")
 
@@ -165,12 +173,12 @@ class CAPTEURS_CUVE : Driver
                         # Ajoute à la page web
                         if (anaJson["id"] == 1)
                             variablesRemplacement.insert("sensorsCuve->valeurCapteurHauteur->titre", anaJson["nom"])
-                            variablesRemplacement.insert("sensorsCuve->valeursAnalogiques->valeurCapteurHauteur", str(cuveFonctions.sensorsCuve["valeursAnalogiques"]["valeurCapteurHauteur"]) + "mV")
+                            variablesRemplacement.insert("sensorsCuve->valeursAnalogiques->valeurCapteurHauteur", (erreurNiveau ? vide : str(cuveFonctions.sensorsCuve["valeursAnalogiques"]["valeurCapteurHauteur"])) + "mV")
 
                             variablesRemplacement.insert("sensorsCuve->hauteurEau->titre", "Hauteur Eau: ")
-                            variablesRemplacement.insert("sensorsCuve->niveauCuve->hauteurEau", str(cuveFonctions.sensorsCuve["niveauCuve"]["hauteurEau"]) + "cm")
+                            variablesRemplacement.insert("sensorsCuve->niveauCuve->hauteurEau", (erreurNiveau ? vide : str(cuveFonctions.sensorsCuve["niveauCuve"]["hauteurEau"])) + "cm")
 
-                            cuveFonctions.log(string.format("CAPTEURS_CUVE: %s = %imV", anaJson["nom"], real(cuveFonctions.sensorsCuve["valeursAnalogiques"]["valeurCapteurHauteur"])), LOG_LEVEL_INFO)
+                            cuveFonctions.log(string.format("CAPTEURS_CUVE: %s = %imV", anaJson["nom"], real(cuveFonctions.sensorsCuve["valeursAnalogiques"]["valeurCapteurHauteur"])), LOG_LEVEL_DEBUG)
                         end
                     end
                 end
@@ -178,15 +186,21 @@ class CAPTEURS_CUVE : Driver
 
             # Calcul le pourcentage d'eau dans la cuve & le volume disponible
             variablesRemplacement.insert("sensorsCuve->tauxRemplissage->titre", "Taux de remplissage: ")
-            variablesRemplacement.insert("sensorsCuve->niveauCuve->tauxRemplissage", str(cuveFonctions.sensorsCuve["niveauCuve"]["tauxRemplissage"] * 100) + "%")
-            variablesRemplacement.insert("sensorsCuve->volume->titre", "Volume disponible: ")	
-            variablesRemplacement.insert("sensorsCuve->niveauCuve->volume", str(cuveFonctions.sensorsCuve["niveauCuve"]["volume"]) + "L")	
+            variablesRemplacement.insert("sensorsCuve->niveauCuve->tauxRemplissage", (erreurNiveau ? vide : str(cuveFonctions.sensorsCuve["niveauCuve"]["tauxRemplissage"] * 100)) + "%")
+            variablesRemplacement.insert("sensorsCuve->volume->titre", "Volume disponible: ")
+            variablesRemplacement.insert("sensorsCuve->niveauCuve->volume", (erreurNiveau ? vide : str(cuveFonctions.sensorsCuve["niveauCuve"]["volume"])) + "L")
 
-            # Change la couleur des bordures en fonction du niveau de remplissage
-            if (light.get(0)["rgb"] != "1A1A1A")
-                variablesRemplacement.insert("colorWs2812", light.get(0)["rgb"])
+            # Couleur des bordures : celle du niveau sur le ruban, CALCULEE (et non relue sur le ruban,
+            # pour qu'elle s'affiche aussi ruban eteint) ; rouge clignotant en erreur de mesure
+            if (erreurNiveau)
+                variablesRemplacement.insert("colorWs2812", "FF0000")
+                variablesRemplacement.insert("classeErreur", "erreurCapteur")
             else
-                variablesRemplacement.insert("colorWs2812", "eaeaea")
+                var ws2812 = cuveFonctions.relaisRuban()
+                var etat = (ws2812 != nil ? light.get(ws2812.find("channel", 0)) : nil)
+                var sat = (etat != nil ? etat.find("sat", 255) : 255)
+                variablesRemplacement.insert("colorWs2812", cuveFonctions.couleurTeinte(cuveFonctions.teinteNiveau(cuveFonctions.sensorsCuve["niveauCuve"]["tauxRemplissage"]), sat))
+                variablesRemplacement.insert("classeErreur", "")
             end
 
             # Modifie le code html à afficher et l'envoi
@@ -209,19 +223,23 @@ class CAPTEURS_CUVE : Driver
                     var humidity = 0.00
 
                     # Récupère la valeur des thermomètres dans le json sensors
-                    # DS18B20
-                    if (thermoJson["type"] == 1312 && controleGeneral.lectureSensors().find("DS18B20", false))
+                    # DS18B20 : sonde absente des capteurs -> '-,--' (et non plus encadre absent)
+                    if (thermoJson["type"] == 1312)
                         variablesRemplacement = {}
                         variablesRemplacement.insert("drivers2->nom", "Surveillance T°")
 
-                        var serialNumber = thermoJson["serialNumber"]
-                        temperature = real(controleGeneral.lectureSensors()["DS18B20"]["Temperature"])
-                        temperature = int(temperature * 10) / 10.0
+                        var sonde = self.lectureDS18B20(thermoJson)
+                        var texte = vide
+                        if (sonde != nil && sonde.find("Temperature") != nil)
+                            temperature = real(sonde["Temperature"])
+                            temperature = int(temperature * 10) / 10.0
+                            texte = str(temperature)
+                        end
 
                         # Ajoute à la page web
                         variablesRemplacement.insert("sensors->DS18B20->titre", thermoJson["nom"])
-                        variablesRemplacement.insert("sensors->DS18B20->Temperature", str(temperature) + "°C")	
-                        cuveFonctions.log(string.format("CAPTEURS_CUVE: %s = %.2f°C", thermoJson["nom"], temperature), LOG_LEVEL_INFO)
+                        variablesRemplacement.insert("sensors->DS18B20->Temperature", texte + "°C")
+                        cuveFonctions.log(string.format("CAPTEURS_CUVE: %s = %s°C", thermoJson["nom"], texte), LOG_LEVEL_DEBUG)
 
                         # Modifie le code html à afficher et l'envoi
                         gestionFileFolder.readFileByLineReplaceAndWebSend('/sd/html/webSensorDS18B20.html', variablesRemplacement, "web_send")
@@ -241,7 +259,7 @@ class CAPTEURS_CUVE : Driver
                         variablesRemplacement.insert("sensors->AM2301->titre2", string.replace(thermoJson["nom"], "T°", "Humidité"))
                         variablesRemplacement.insert("sensors->AM2301->Temperature", str(temperature) + "°C")		
                         variablesRemplacement.insert("sensors->AM2301->Humidity", str(humidity) + "%RH")	
-                        cuveFonctions.log(string.format("CAPTEURS_CUVE: %s = %.1f°C / %.1f%%RH", thermoJson["nom"], temperature, humidity), LOG_LEVEL_INFO)
+                        cuveFonctions.log(string.format("CAPTEURS_CUVE: %s = %.1f°C / %.1f%%RH", thermoJson["nom"], temperature, humidity), LOG_LEVEL_DEBUG)
 
                         # Modifie le code html à afficher et l'envoi
                         gestionFileFolder.readFileByLineReplaceAndWebSend('/sd/html/webSensorDHT22.html', variablesRemplacement, "web_send")
@@ -249,6 +267,15 @@ class CAPTEURS_CUVE : Driver
                 end
             end
         end
+    end
+
+    # Mesure d'une sonde DS18B20 dans les capteurs Tasmota, ou nil. Le framework lui donne l'alias
+    # 'DS18B20-<id>' (Ds18Alias, configModules.be) ; sans alias, une sonde seule s'appelle 'DS18B20'.
+    def lectureDS18B20(thermoJson)
+        var capteurs = controleGeneral.lectureSensors()
+        var sonde = capteurs.find("DS18B20-" + str(thermoJson.find("id", 1)))
+        if (sonde == nil)    sonde = capteurs.find("DS18B20")    end
+        return (isinstance(sonde, map) ? sonde : nil)
     end
 
     # Ajoute les données de cuve à la réponse JSON
@@ -279,9 +306,13 @@ class CAPTEURS_CUVE : Driver
         cuveFonctions.log("ENREGISTRE_LOGS_CUVE: Enregistrement des données de cuve en logs !", LOG_LEVEL_DEBUG_PLUS)
 
         var temperatureCuve = 0.00
-        if (controleGeneral.lectureSensors().find("DS18B20", false))
-            temperatureCuve = real(controleGeneral.lectureSensors()["DS18B20"]["Temperature"])
+        var thermo = modules["cuve"]["environnement"].find("thermometres", {}).find("thermometre1")
+        var sonde = (thermo != nil ? self.lectureDS18B20(thermo) : nil)
+        if (sonde != nil && sonde.find("Temperature") != nil)
+            temperatureCuve = real(sonde["Temperature"])
             temperatureCuve = int(temperatureCuve * 10) / 10.0
+        else
+            sonde = nil
         end
 
         tasmota.yield()
@@ -289,7 +320,7 @@ class CAPTEURS_CUVE : Driver
         # Ecrit les données
         var data = "{\"date\":\"" + tasmota.time_str(tasmota.rtc("local")) + 
                         "\",\"niveauCuve\":" + json.dump(cuveFonctions.sensorsCuve["niveauCuve"]) + 
-                        (controleGeneral.lectureSensors().find("DS18B20", false) ? ",\"temperatureCuve\":" + str(temperatureCuve) : "") + "}"
+                        (sonde != nil ? ",\"temperatureCuve\":" + str(temperatureCuve) : "") + "}"
 
         gestionFileFolder.enregistreLogs(fileChemin, self, data)
     end

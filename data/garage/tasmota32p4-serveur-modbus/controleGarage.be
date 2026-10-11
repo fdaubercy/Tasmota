@@ -104,19 +104,23 @@ class CONTROLE_GARAGE : Driver
                     if (string.find(anaJson["virtuel"], "ModBus_TasmotaSlaveModBus") > -1)
                         # Ajoute à la page web
                         if (anaJson["idModBus"] == 1)
+                            # Erreur de mesure (sentinelle de l'esclave ou esclave muet) : valeurs '-,--' et
+                            # bordure rouge clignotante, comme sur la page de l'esclave cuve
+                            var erreur = garageFonctions.mesureEnErreur(anaJson)
+                            var vide = "-,--"
                             variablesRemplacement.insert("sensorsCuve->valeurCapteurHauteur->titre", anaJson["nom"])
 
                             var value = tasmota.scale_int(int(anaJson["value"]), 0, 32767, 0, 6144)
-                            variablesRemplacement.insert("sensorsCuve->valeursAnalogiques->valeurCapteurHauteur", str(value) + "mV")
+                            variablesRemplacement.insert("sensorsCuve->valeursAnalogiques->valeurCapteurHauteur", (erreur ? vide : str(value)) + "mV")
 
                             # Convertit la valeur (en V) vers une valeur en cm
                             # Coefficient de conversion: 30mV/cm
                             variablesRemplacement.insert("sensorsCuve->hauteurEau->titre", "Hauteur Eau: ")
 
                             var hauteurEau = value / anaJson.find("conversion_mV_cm", 1.0)
-                            variablesRemplacement.insert("sensorsCuve->niveauCuve->hauteurEau", str(hauteurEau) + "cm")
+                            variablesRemplacement.insert("sensorsCuve->niveauCuve->hauteurEau", (erreur ? vide : str(hauteurEau)) + "cm")
 
-                            garageFonctions.log(string.format("WEBSERVER_GARAGE: %s = %imV", anaJson["nom"], real(value)), LOG_LEVEL_INFO)
+                            garageFonctions.log(string.format("WEBSERVER_GARAGE: %s = %imV", anaJson["nom"], real(value)), LOG_LEVEL_DEBUG)
 
                             # Calcul le pourcentage d'eau dans la cuve & le volume disponible
                             var hauteur = anaJson.find("dimensions", {}).find("hauteur", 100)    # en cm
@@ -126,19 +130,21 @@ class CONTROLE_GARAGE : Driver
                             var pourcentageEau = int(hauteurEau / real(hauteur) * 100) / 100.00 
 
                             variablesRemplacement.insert("sensorsCuve->tauxRemplissage->titre", "Taux de remplissage: ")
-                            variablesRemplacement.insert("sensorsCuve->niveauCuve->tauxRemplissage", str(pourcentageEau * 100) + "%")
+                            variablesRemplacement.insert("sensorsCuve->niveauCuve->tauxRemplissage", (erreur ? vide : str(pourcentageEau * 100)) + "%")
 
                             var volume =  int(hauteur * largeur * longueur * pourcentageEau / 1000)    # en litres
 
                             variablesRemplacement.insert("sensorsCuve->volume->titre", "Volume disponible: ")	
-                            variablesRemplacement.insert("sensorsCuve->niveauCuve->volume", str(volume) + "L")	
+                            variablesRemplacement.insert("sensorsCuve->niveauCuve->volume", (erreur ? vide : str(volume)) + "L")	
 
-                            # Change la couleur des bordures en fonction du niveau de remplissage
-                            # en récupérant les valurs de couleur RGB du ruban LED WS2812 en json
-                            if (light.get(0)["rgb"] != "1A1A1A")
-                                variablesRemplacement.insert("colorWs2812", light.get(0)["rgb"])
+                            # Couleur des bordures : celle du niveau sur le ruban de l'esclave, CALCULEE (affichee
+                            # meme ruban eteint) ; rouge clignotant (classe erreurCapteur) en erreur de mesure
+                            if (erreur)
+                                variablesRemplacement.insert("colorWs2812", "FF0000")
+                                variablesRemplacement.insert("classeErreur", "erreurCapteur")
                             else
-                                variablesRemplacement.insert("colorWs2812", "eaeaea")
+                                variablesRemplacement.insert("colorWs2812", garageFonctions.couleurTeinte(garageFonctions.teinteNiveau(pourcentageEau), 255))
+                                variablesRemplacement.insert("classeErreur", "")
                             end
                         end
                     end
@@ -175,10 +181,11 @@ class CONTROLE_GARAGE : Driver
                         temperature = real(thermoJson["value"])
                         temperature = int(temperature * 10) / 10.0
 
-                        # Ajoute à la page web
+                        # Ajoute à la page web ('-,--' si la valeur n'est pas une mesure)
+                        var texte = (garageFonctions.mesureEnErreur(thermoJson) ? "-,--" : str(temperature))
                         variablesRemplacement.insert("sensors->DS18B20->titre", thermoJson["nom"])
-                        variablesRemplacement.insert("sensors->DS18B20->Temperature", str(temperature) + "°C")	
-                        garageFonctions.log(string.format("CAPTEURS_GARAGE: %s = %.2f°C", thermoJson["nom"], temperature), LOG_LEVEL_INFO)
+                        variablesRemplacement.insert("sensors->DS18B20->Temperature", texte + "°C")	
+                        garageFonctions.log(string.format("CAPTEURS_GARAGE: %s = %s°C", thermoJson["nom"], texte), LOG_LEVEL_DEBUG)
 
                         # Modifie le code html à afficher et l'envoi
                         gestionFileFolder.readFileByLineReplaceAndWebSend('/sd/html/webSensorDS18B20.html', variablesRemplacement, "web_send")

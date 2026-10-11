@@ -918,6 +918,7 @@
 		"leds": {
 			"activation": "ON",
 			"name": "Leds",
+			"log": "info",
 			"ledPower": "OFF",
 			"ledState": 6,
 			"clignoteSiDeconnexion": "ON",
@@ -933,6 +934,13 @@
 						"pin": 21,
 						"id": 1,
 						"type": 288
+					},
+					"ledRGB": {
+						"activation": "OFF",
+						"pin": 48,
+						"id": 1,
+						"type": 1377,
+						"luminosite": 40
 					}
 				}
 			}

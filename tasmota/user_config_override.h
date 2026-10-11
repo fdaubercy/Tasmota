@@ -48,7 +48,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
     //  #warning *** ------------------- Le fichier 'user_config_override.ini' est appele ------------------- ***
     #if defined(CFG_HOLDER) && (CFG_HOLDER == 4617)
         #undef CFG_HOLDER
-		#define CFG_HOLDER 		1455			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
+		#define CFG_HOLDER 		1459			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
 
         // #pragma message(*** ------------------- Les paramètres flash seront remplacés ! ------------------- ***)
     #else
@@ -2402,6 +2402,11 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
                 #define USE_WS2812_HARDWARE  NEO_HW_WS2812     // Hardware type (NEO_HW_WS2812, NEO_HW_WS2812X, NEO_HW_WS2813, NEO_HW_SK6812, NEO_HW_LC8812, NEO_HW_APA106, NEO_HW_P9813)
                 #undef USE_WS2812_CTYPE
                 #define USE_WS2812_CTYPE     NEO_GRB           // Color type (NEO_RGB, NEO_GRB, NEO_BRG, NEO_RBG, NEO_RGBW, NEO_GRBW)
+                // 2e chaine WS2812 pilotee par Berry (Leds) : la LED RGB du dev-kit clone HW-678 (GPIO48,
+                // drivers.leds.ledRGB du persist). Le ruban occupe TOUTE la memoire RMT de l'ESP32-S3
+                // (192 symboles, TasmotaLEDPusherRMT.cpp) : sans le repli SPI, Leds() echoue
+                // ('LED interface not supported'). Constate le 2026-10-11.
+                #define TASMOTALED_HARDWARE_SPI 1
         
             // -- One wire sensors ----------------------------
             #undef USE_HDMI_CEC                              // Add support for HDMI CEC bus (+7k code, 1456 bytes IRAM)

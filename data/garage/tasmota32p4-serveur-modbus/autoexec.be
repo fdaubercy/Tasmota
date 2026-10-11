@@ -66,7 +66,7 @@ if (persist._p != nil && persist._p.size() != 0)
     # gestionFileFolder.compileModule("/modbusFonctions", drivers["ModBus"].find("activation", "OFF"))
     # gestionFileFolder.compileModule("/loRaWanFonctions", drivers["LoRaWan"].find("activation", "OFF"))
     # gestionFileFolder.compileModule("/vrFonctions", drivers.find("voletRoulants", {}).find("activation", "OFF"))
-    # gestionFileFolder.compileModule("/garageFonctions", modules.find("garage", {}).find("activation", "OFF"))
+    gestionFileFolder.compileModule("/garageFonctions", modules.find("garage", {}).find("activation", "OFF"))
     if serveur["discovery"].find("activation", "OFF") == "ON"    gestionFileFolder.compileModule("/discoveryFonctions", serveur["discovery"].find("activation", "OFF"))    end
 
     # Compile les modules internes à Tasmota
@@ -101,7 +101,8 @@ if (persist._p != nil && persist._p.size() != 0)
     # gestionFileFolder.loadBerryFile("/controleVoletRoulants", drivers.find("voletRoulants", {}).find("activation", "OFF"), "ON")
     if serveur["discovery"].find("activation", "OFF") == "ON"    import controleDiscovery as _ctrl    end
     do import controleES8311 as _ctrl end   # solidifie : init() porte la garde d'activation
-    # gestionFileFolder.loadBerryFile("/controleGarage", modules.find("garage", {}).find("activation", "OFF"), "ON")
+    # controleGarage n'est PAS solidifie : charge depuis le LittleFS (encadres cuve de la page web, ReglageGarage)
+    gestionFileFolder.loadBerryFile("/controleGarage", modules.find("garage", {}).find("activation", "OFF"), "ON")
 
     # NE PAS compiler autoexec.be en .bec : tasmota.compile() compile en contexte LOCAL
     # (tasmota_class.be:480, upstream #23457). Le .bec tournerait alors sous le nom 'loader'

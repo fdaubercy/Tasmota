@@ -45,7 +45,7 @@ logFonctions.MOTS = ["aucun", "erreur", "info", "debug", "detail"]
 logFonctions.SORTIES = {"serie": "SerialLog", "web": "WebLog", "mqtt": "MqttLog", "syslog": "SysLog"}
 # Cibles connues (une par bloc du persist qui porte une cle "log")
 logFonctions.CIBLES = ["general", "serveurWeb", "udp", "tcp", "rangeExtender", "discovery", "modbus",
-                       "conn16channels", "slaveModbus", "lorawan", "volets", "es8311", "garage", "cuve"]
+                       "conn16channels", "slaveModbus", "lorawan", "volets", "es8311", "garage", "cuve", "ledRGB"]
 # Ce que couvre chaque cible (aide de ReglageLog)
 logFonctions.DESCRIPTIONS = {
     "general": "modules communs (globalFonctions, configGlobal, controleGeneral, gestionFileFolder...)",
@@ -57,7 +57,7 @@ logFonctions.DESCRIPTIONS = {
     "slaveModbus": "esclaves Tasmota ModBus (modBus_TasmotaSlaveModBus)",
     "lorawan": "LoRaWan (loRaWanFonctions)", "volets": "volets roulants et LED temoin (vrFonctions, controleLedTemoin)",
     "es8311": "codec audio ES8311 (controleES8311)", "garage": "module garage (garageFonctions)",
-    "cuve": "module cuve (cuveFonctions)"}
+    "cuve": "module cuve (cuveFonctions)", "ledRGB": "LED RGB du dev-kit (ledRGBFonctions, controleLedRGB)"}
 
 # ETAT MUTABLE DU MODULE : dans une GLOBALE, pas dans le module (un module solidifie est
 # constant, en flash). Les seuils sont lus une fois depuis le persist, puis mis en cache.
@@ -94,6 +94,7 @@ def logFonctions_lieu(cible)
     elif c == "es8311"              bloc = d.find("I2S", {}).find("environnement", {}).find("ES8311")
     elif c == "garage"              bloc = (modules != nil ? modules.find("garage") : nil)
     elif c == "cuve"                bloc = (modules != nil ? modules.find("cuve") : nil)
+    elif c == "ledrgb"              bloc = d.find("leds")
     end
 
     if (type(bloc) != "instance" || bloc.size() == 0)    return nil    end

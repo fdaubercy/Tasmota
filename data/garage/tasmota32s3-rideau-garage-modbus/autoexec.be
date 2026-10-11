@@ -95,6 +95,13 @@ if (persist._p != nil && persist._p.size() != 0)
     # gestionFileFolder.loadBerryFile("/controleVoletRoulants", drivers.find("voletRoulants", {}).find("activation", "OFF"), "ON")
     if serveur["discovery"].find("activation", "OFF") == "ON"    import controleDiscovery as _ctrl    end
 
+    # LED RGB du dev-kit (drivers.leds.environnement.leds.ledRGB, 2026-10-11) : compilee et chargee
+    # SEULEMENT si activee. Voyant d'etat ; un module peut y signaler une erreur ou y imposer une couleur.
+    if (drivers.find("leds", {}).find("activation", "OFF") == "ON" && drivers["leds"].find("environnement", {}).find("leds", {}).find("ledRGB", {}).find("activation", "OFF") == "ON")
+        gestionFileFolder.compileModule("/ledRGBFonctions", "ON")
+        gestionFileFolder.loadBerryFile("/controleLedRGB", "ON", "ON")
+    end
+
     # NE PAS compiler autoexec.be en .bec : tasmota.compile() compile en contexte LOCAL
     # (tasmota_class.be:480, upstream #23457). Le .bec tournerait alors sous le nom 'loader'
     # et tous les import/var/affectations de niveau fichier ci-dessus deviendraient des
