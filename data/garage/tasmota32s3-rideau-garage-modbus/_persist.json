@@ -6,7 +6,7 @@
 			"profil": "debug",
 			"profils": {
 				"normal": {"serie": "info", "web": "info", "mqtt": "erreur", "syslog": "info"},
-				"debug": {"serie": "debug", "web": "debug", "mqtt": "debug", "syslog": "debug"}
+				"debug": {"serie": "debug", "web": "debug", "mqtt": "erreur", "syslog": "debug"}
 			},
 			"general": "detail",
 			"nbLogsFiles" : 0

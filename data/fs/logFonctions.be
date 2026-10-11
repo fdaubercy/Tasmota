@@ -151,16 +151,36 @@ def logFonctions_actif(niveau, cible)
 end
 logFonctions.actif = logFonctions_actif
 
-# Seuil actuel d'une sortie dans Tasmota (nil si illisible).
-# SerialLog et SysLog repondent "2 (Active 2)", WebLog et MqttLog un simple nombre.
-def logFonctions_niveauSortie(commande)
+# Seuils d'une sortie dans Tasmota : [regle, actif] (nil si illisible).
+# SerialLog et SysLog repondent {"SerialLog":{"2":{"Active":"2"}}} (i18n.h, S_JSON_COMMAND_NVALUE_ACTIVE_NVALUE) :
+# la cle est le seuil regle (Settings), "Active" le seuil en vigueur (Tasmota peut couper une sortie,
+# p. ex. le syslog si l'hote ne repond pas). WebLog et MqttLog repondent un simple nombre.
+# Corrige le 2026-10-11 : la reponse etait lue comme la chaine "2 (Active 2)" d'anciennes versions ;
+# str() de la map donnait "{'2': ...", donc 0, et ReglageLog affichait 'aucun' pour serie et syslog.
+def logFonctions_lectureSortie(commande)
     import string
 
     var reponse = tasmota.cmd(commande, boolMute)
     if (reponse == nil)    return nil    end
     var valeur = reponse.find(commande)
     if (valeur == nil)    return nil    end
-    return int(string.split(str(valeur), " ")[0])
+    if (isinstance(valeur, map))
+        for cle: valeur.keys()
+            var actif = valeur[cle]
+            return [int(cle), (isinstance(actif, map) ? int(actif.find("Active", cle)) : int(cle))]
+        end
+        return nil
+    end
+    var mots = string.split(str(valeur), " ")      # "2 (Active 2)" (anciennes versions) ou "2"
+    var regle = int(mots[0])
+    return [regle, (mots.size() >= 3 ? int(string.replace(mots[2], ")", "")) : regle)]
+end
+logFonctions.lectureSortie = logFonctions_lectureSortie
+
+# Seuil regle d'une sortie dans Tasmota (nil si illisible)
+def logFonctions_niveauSortie(commande)
+    var lu = logFonctions.lectureSortie(commande)
+    return (lu == nil ? nil : lu[0])
 end
 logFonctions.niveauSortie = logFonctions_niveauSortie
 
@@ -223,8 +243,14 @@ def logFonctions_etatReglages()
     var profils = []
 
     for sortie: logFonctions.SORTIES.keys()
-        var n = logFonctions.niveauSortie(logFonctions.SORTIES[sortie])
-        sorties[sortie] = (n != nil && n >= 0 && n <= 4 ? logFonctions.MOTS[n] : "?")
+        var lu = logFonctions.lectureSortie(logFonctions.SORTIES[sortie])
+        var texte = "?"
+        if (lu != nil && lu[0] >= 0 && lu[0] <= 4)
+            texte = logFonctions.MOTS[lu[0]]
+            # Seuil en vigueur different du seuil regle : Tasmota a coupe ou limite la sortie
+            if (lu[1] != lu[0] && lu[1] >= 0 && lu[1] <= 4)    texte += " (actif : " + logFonctions.MOTS[lu[1]] + ")"    end
+        end
+        sorties[sortie] = texte
     end
     for cible: logFonctions.CIBLES
         if (logFonctions.lieu(cible) != nil)    modules[cible] = logFonctions.MOTS[logFonctions.seuil(cible)]    end
