@@ -444,13 +444,19 @@ class CONTROLE_GENERAL : Driver
 		if (size(ids) == 0)	return	end
 
 		logFonctions.log(string.format("CONTROLE_GENERAL: Boutons de relais masques sur webUI : %s !", str(ids)), LOG_LEVEL_DEBUG)
-		# Cache la cellule du bouton, puis repartit la largeur entre les boutons restants de la
-		# rangee (Tasmota l'a calculee en comptant le relai masque) ; pas sur une rangee de lumiere.
-		webserver.content_send("<script>" + str(ids) + ".forEach(function(n){var b=eb('o'+n);if(!b)return;" +
-			"var d=b.parentNode,c=d.parentNode.children,v=[];d.style.display='none';" +
-			"for(var i=0;i<c.length;i++){if(c[i].style.display=='none')continue;" +
-			"if(!c[i].querySelector(\"button[id^='o']\"))return;v.push(c[i]);}" +
-			"v.forEach(function(x){x.style.width=(100/v.length)+'%';});});</script>")
+		# Cache la cellule du bouton, puis refait la grille de la table avec les seuls boutons
+		# visibles, par le calcul de Tasmota (8 colonnes max, xdrv_01_9_webserver.ino:1510-1514).
+		# Les largeurs se reglent par COLONNE, commune a toutes les rangees : recalculer une seule
+		# rangee ecrasait la derniere colonne (19 relais du P4). Les cellules sont DEPLACEES, pas
+		# recreees : ids 'o<n>' et onclick intacts. Une table de lumiere (curseurs) n'est pas touchee.
+		webserver.content_send("<script>(function(h){var s=[];h.forEach(function(n){var b=eb('o'+n);if(!b)return;" +
+			"var d=b.parentNode;d.style.display='none';if(s.indexOf(d.parentNode.parentNode)<0)s.push(d.parentNode.parentNode);});" +
+			"s.forEach(function(t){var c=t.querySelectorAll('td'),v=[],i,r;" +
+			"for(i=0;i<c.length;i++){if(!c[i].querySelector(\"button[id^='o']\"))return;if(c[i].style.display!='none')v.push(c[i]);}" +
+			"if(!v.length)return;var k=Math.ceil(v.length/Math.ceil(v.length/8)),w=Math.floor(100/k)+'%';" +
+			"while(t.firstChild)t.removeChild(t.firstChild);" +
+			"for(i=0;i<v.length;i++){if(i%k==0){r=document.createElement('tr');t.appendChild(r);}v[i].style.width=w;r.appendChild(v[i]);}" +
+			"for(i=0;i<c.length;i++)if(c[i].style.display=='none')r.appendChild(c[i]);});})(" + str(ids) + ");</script>")
 	end
 
 	#- Se déclenche sur modification d'état d'un relai par l'interface webUI ou commande Power
