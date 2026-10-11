@@ -806,6 +806,15 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                                 device["etatConstate"] = valeur
                                                 device["constateA"] = tasmota.rtc()["local"]
                                                 dataJson["POWER" + str(device["id"])] = valeur
+
+                                                # Bouton du maitre (POWERn = relai virtuel du ruban, 2026-10-12) : recopie l'etat de
+                                                # l'esclave, sinon un ruban allume sur l'esclave restait OFF dans la page du maitre.
+                                                # Pas de boucle : 'etat' est deja a jour, set_power_handler ne renvoie donc aucun 0x06.
+                                                var puissances = tasmota.get_power()
+                                                var rang = device["id"] - 1
+                                                if (rang >= 0 && rang < size(puissances) && puissances[rang] != (valeur == "ON"))
+                                                    tasmota.set_power(rang, valeur == "ON")
+                                                end
                                             end
                                         end
                                     end

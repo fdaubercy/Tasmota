@@ -51,6 +51,8 @@ class TasmotaStub
   def yield() end
   def rtc() return {"local": self.horloge} end
   def get_power() return self.power end
+  var setPower                         # [rang, etat] des set_power, si non nil (section 28 : bouton du maitre)
+  def set_power(i, v) if self.setPower != nil self.setPower.push(str(i) + ":" + str(v)) end self.power[i] = v return v end
   var retourCmd                        # ce que renvoie cmd() (defaut "" ; une map pour pompeQueue)
   var regles                           # [nom, id] des add_rule / remove_rule, si non nil
   def cmd(c, m) self.cmds.push(c) return self.retourCmd == nil ? "" : self.retourCmd end
@@ -1317,10 +1319,21 @@ var lit03 = def (v)
   modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 2, "FunctionCode": 3, "StartAddress": 1376, "Count": size(v), "type": "uint16"}}
   recoit(2, "ModbusReceived", {"DeviceAddress": 2, "FunctionCode": 3, "Values": v})
 end
+var sauvePower28 = tasmota.power
+tasmota.power = [false, false]
+tasmota.setPower = []
 lit03([120, 50, 100, 7])
 verifie("maitre : reponse a 4 valeurs -> couleur, etat et animation recopies", "120/ON/7", str(ruban28.find("couleur")) + "/" + str(ruban28.find("etat")) + "/" + str(ruban28.find("scheme")))
+# Bouton du maitre (2026-10-12) : ruban allume sur l'esclave -> POWER1 du maitre passe a ON
+verifie("maitre : ruban allume sur l'esclave -> POWER1 du maitre ON", "['0:true']", str(tasmota.setPower))
+tasmota.setPower = []
+lit03([120, 50, 100, 7])
+verifie("temoin : etat inchange -> aucun set_power", "[]", str(tasmota.setPower))
 lit03([30, 60, 0])
 verifie("temoin reponse a 3 valeurs (esclave pas a jour) : animation inchangee", "30/OFF/7", str(ruban28.find("couleur")) + "/" + str(ruban28.find("etat")) + "/" + str(ruban28.find("scheme")))
+verifie("maitre : ruban eteint sur l'esclave -> POWER1 du maitre OFF", "['0:false']", str(tasmota.setPower))
+tasmota.setPower = nil
+tasmota.power = sauvePower28
 modbusFonctions.etat()["enVol"] = nil
 drivers = sauveDrivers
 modules = sauveModules
