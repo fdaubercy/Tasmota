@@ -264,6 +264,7 @@
 					"relai1": {
 						"activation": "ON",
 						"nom": "Pompe Vide-Cave",
+						"afficheWeb": "ON",
 						"pin": 5,
 						"id": 1,
 						"type": 224,
@@ -514,6 +515,7 @@
 					"relai1": {
 						"activation": "ON",
 						"nom": "Ventilation Cave",
+						"afficheWeb": "ON",
 						"pin": 6,
 						"id": 2,
 						"type": 224,
@@ -733,6 +735,7 @@
 					"relai1": {
 						"activation": "ON",
 						"nom": "LED Machines",
+						"afficheWeb": "ON",
 						"pin": 7,
 						"id": 3,
 						"type": 224,
@@ -753,6 +756,7 @@
 					"relai2": {
 						"activation": "ON",
 						"nom": "Pompe Cuve",
+						"afficheWeb": "ON",
 						"pin": 16,
 						"id": 4,
 						"type": 224,
@@ -773,6 +777,7 @@
 					"relai3": {
 						"activation": "ON",
 						"nom": "Lavage",
+						"afficheWeb": "ON",
 						"pin": 17,
 						"id": 5,
 						"type": 224,

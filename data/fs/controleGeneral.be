@@ -417,7 +417,40 @@ class CONTROLE_GENERAL : Driver
     end
 
     #- Création de boutons dans le menu principal -#
+	# Masque le bouton des relais dont 'afficheWeb' vaut "OFF" : le relai existe toujours
+	# (Power<n>, MQTT, regles), seul son bouton disparait de la page d'accueil.
+	# Masque et non supprime : le rafraichissement de Tasmota execute eb('o<n>').style...
+	# pour TOUS les relais (xdrv_01_9_webserver.ino:1933) ; un element absent planterait ce script.
 	def web_add_main_button()
+		import webserver
+		import string
+
+		var ids = []
+		for cleModule: modules.keys()
+			var mod = modules[cleModule]
+			if (type(mod) != "instance" || mod.find("activation", "OFF") != "ON")	continue	end
+			tasmota.yield()
+
+			var relais = mod.find("environnement", {}).find("relais", {})
+			if (type(relais) != "instance")	continue	end
+			for cleRLY: relais.keys()
+				var relai = relais[cleRLY]
+				if (type(relai) != "instance")	continue	end
+				if (relai.find("activation", "OFF") == "ON" && relai.find("afficheWeb", "ON") == "OFF" && relai.find("id", 0) > 0)
+					ids.push(relai["id"])
+				end
+			end
+		end
+		if (size(ids) == 0)	return	end
+
+		logFonctions.log(string.format("CONTROLE_GENERAL: Boutons de relais masques sur webUI : %s !", str(ids)), LOG_LEVEL_DEBUG)
+		# Cache la cellule du bouton, puis repartit la largeur entre les boutons restants de la
+		# rangee (Tasmota l'a calculee en comptant le relai masque) ; pas sur une rangee de lumiere.
+		webserver.content_send("<script>" + str(ids) + ".forEach(function(n){var b=eb('o'+n);if(!b)return;" +
+			"var d=b.parentNode,c=d.parentNode.children,v=[];d.style.display='none';" +
+			"for(var i=0;i<c.length;i++){if(c[i].style.display=='none')continue;" +
+			"if(!c[i].querySelector(\"button[id^='o']\"))return;v.push(c[i]);}" +
+			"v.forEach(function(x){x.style.width=(100/v.length)+'%';});});</script>")
 	end
 
 	#- Se déclenche sur modification d'état d'un relai par l'interface webUI ou commande Power

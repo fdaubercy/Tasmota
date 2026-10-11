@@ -255,6 +255,7 @@
 					"relai1": {
 						"activation": "ON",
 						"nom": "LEDs Cuve",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 1,
 						"type": 1376,
@@ -277,6 +278,7 @@
 					"relai2": {
 						"activation": "ON",
 						"nom": "Grande Porte Garage",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 2,
 						"type": 256,
@@ -297,6 +299,7 @@
 					"relai3": {
 						"activation": "ON",
 						"nom": "Relai 2",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 3,
 						"type": 256,
@@ -317,6 +320,7 @@
 					"relai4": {
 						"activation": "ON",
 						"nom": "Relai 3",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 4,
 						"type": 256,
@@ -337,6 +341,7 @@
 					"relai5": {
 						"activation": "ON",
 						"nom": "Relai 4",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 5,
 						"type": 256,
@@ -357,6 +362,7 @@
 					"relai6": {
 						"activation": "ON",
 						"nom": "Relai 5",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 6,
 						"type": 256,
@@ -377,6 +383,7 @@
 					"relai7": {
 						"activation": "ON",
 						"nom": "Relai 6",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 7,
 						"type": 256,
@@ -397,6 +404,7 @@
 					"relai8": {
 						"activation": "ON",
 						"nom": "Relai 7",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 8,
 						"type": 256,
@@ -417,6 +425,7 @@
 					"relai9": {
 						"activation": "ON",
 						"nom": "Relai 8",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 9,
 						"type": 256,
@@ -437,6 +446,7 @@
 					"relai10": {
 						"activation": "ON",
 						"nom": "Relai 9",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 10,
 						"type": 256,
@@ -457,6 +467,7 @@
 					"relai11": {
 						"activation": "ON",
 						"nom": "Relai 10",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 11,
 						"type": 256,
@@ -477,6 +488,7 @@
 					"relai12": {
 						"activation": "ON",
 						"nom": "Relai 11",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 12,
 						"type": 256,
@@ -497,6 +509,7 @@
 					"relai13": {
 						"activation": "ON",
 						"nom": "Relai 12",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 13,
 						"type": 256,
@@ -517,6 +530,7 @@
 					"relai14": {
 						"activation": "ON",
 						"nom": "Relai 13",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 14,
 						"type": 256,
@@ -537,6 +551,7 @@
 					"relai15": {
 						"activation": "ON",
 						"nom": "Relai 14",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 15,
 						"type": 256,
@@ -557,6 +572,7 @@
 					"relai16": {
 						"activation": "ON",
 						"nom": "Relai 15",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 16,
 						"type": 256,
@@ -577,6 +593,7 @@
 					"relai17": {
 						"activation": "ON",
 						"nom": "Relai 16",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 17,
 						"type": 256,
@@ -597,6 +614,7 @@
 					"relai18": {
 						"activation": "ON",
 						"nom": "Relai 17",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 18,
 						"type": 256,
@@ -617,6 +635,7 @@
 					"relai19": {
 						"activation": "ON",
 						"nom": "Relai 18",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 19,
 						"type": 256,

@@ -190,6 +190,7 @@
 					"relai1": {
 						"activation": "ON",
 						"nom": "o1",
+						"afficheWeb": "ON",
 						"pin": 6,
 						"id": 1,
 						"type": 1376,

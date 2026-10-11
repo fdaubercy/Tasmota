@@ -220,6 +220,7 @@
 					"relai1": {
 						"activation": "ON",
 						"nom": "Grande Porte Garage",
+						"afficheWeb": "ON",
 						"pin": 41,
 						"id": 1,
 						"type": 224,
@@ -239,6 +240,7 @@
 					"relai2": {
 						"activation": "ON",
 						"nom": "Relai 2",
+						"afficheWeb": "OFF",
 						"pin": 42,
 						"id": 2,
 						"type": 224,

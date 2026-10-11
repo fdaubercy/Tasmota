@@ -247,6 +247,7 @@
 					"relai1": {
 						"activation": "ON",
 						"nom": "Relais 1",
+						"afficheWeb": "ON",
 						"pin": 2,
 						"id": 1,
 						"type": 9312,
@@ -269,6 +270,7 @@
 					"relai2": {
 						"activation": "ON",
 						"nom": "Relai 2",
+						"afficheWeb": "ON",
 						"pin": 12,
 						"id": 2,
 						"type": 9312,

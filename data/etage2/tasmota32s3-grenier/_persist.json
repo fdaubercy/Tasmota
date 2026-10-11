@@ -291,6 +291,7 @@
 					"relai1": {
 						"activation": "ON",
 						"nom": "Lumière Grenier 2eme",
+						"afficheWeb": "ON",
 						"pin": 40,
 						"id": 1,
 						"type": 224,
@@ -313,6 +314,7 @@
 					"relai2": {
 						"activation": "ON",
 						"nom": "Trappe de Grenier 2eme",
+						"afficheWeb": "ON",
 						"pin": 41,
 						"id": 2,
 						"type": 224,
@@ -333,6 +335,7 @@
 					"relai3": {
 						"activation": "ON",
 						"nom": "Relai 2",
+						"afficheWeb": "ON",
 						"pin": 42,
 						"id": 3,
 						"type": 224,
