@@ -88,7 +88,7 @@ def esp32_detect_flashsize():
         try:
             output = subprocess.run(esptool_cmd, capture_output=True).stdout.splitlines()
             for l in output:
-                if l.decode().startswith("Taille de la mémoire flash détectée: "):
+                if l.decode().startswith("Detected flash size: "):  # sortie d'esptool, en anglais : ne pas traduire
                     size = (l.decode().split(": ")[1])
                     print("Taille du flash obtenue :", size)
                     stored_flash_size_mb = env.BoardConfig().get("upload.flash_size")
