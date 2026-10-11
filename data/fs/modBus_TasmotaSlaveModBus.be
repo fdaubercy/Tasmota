@@ -227,15 +227,15 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                 # Modifie le paramètre déterminé par idx
                                 if (idx == 1)
                                     self.log("MODBUS_TASMOTA_SLAVE_HSB_COLOR: Modification de la couleur des LEDS = " + str(payload), LOG_LEVEL_DEBUG_PLUS)
-                                    couleur = payload
+                                    couleur = int(payload)
                                     modules[cle]["environnement"][capteurs][numCapteur]["couleur"] = int(payload)
                                 elif (idx == 2)
                                     self.log("MODBUS_TASMOTA_SLAVE_HSB_COLOR: Modification de la saturation des LEDS = " + str(payload), LOG_LEVEL_DEBUG_PLUS)
-                                    saturation = payload
+                                    saturation = int(payload)
                                     modules[cle]["environnement"][capteurs][numCapteur]["saturation"] = int(payload)
-                                elif (idx == 2)
+                                elif (idx == 3)     # etait 'idx == 2' (doublon) : HSBColor3 ignore jusqu'au 2026-10-11
                                     self.log("MODBUS_TASMOTA_SLAVE_HSB_COLOR: Modification de la luminosité des LEDS = " + str(payload), LOG_LEVEL_DEBUG_PLUS)
-                                    luminosite = payload
+                                    luminosite = int(payload)
                                     modules[cle]["environnement"][capteurs][numCapteur]["value"] = int(payload)
                                 end
     
@@ -261,7 +261,8 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                                 # Envoi de la commande ModBus
                                                 # tasmota.cmd("ModBusSend " + json.dump(trameModBus))#, boolMute)
                                                 modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"])
-                                            end 
+                                                self.relitRuban(modules[cle]["environnement"][capteurs][numCapteur], capteurs, trameModBus["DeviceAddress"])
+                                            end
                                         end
                                     end
                                 end
@@ -363,7 +364,8 @@ class MODBUS_TASMOTA_SLAVE : Driver
         
                                                 # Envoi de la commande ModBus
                                                 modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"])
-                                            end 
+                                                self.relitRuban(modules[cle]["environnement"][capteurs][numCapteur], capteurs, trameModBus["DeviceAddress"])
+                                            end
                                         end
                                     end
                                 end
@@ -381,6 +383,17 @@ class MODBUS_TASMOTA_SLAVE : Driver
 
         reponse_cmnd = string.format("{\"POWER1\":\"%s\",\"Dimmer\":%i,\"HSBColor\":\"%i,%i,%i\"}", (luminosite == 0 ? "OFF" : "ON"), luminosite, couleur, saturation, luminosite)
         tasmota.resp_cmnd(reponse_cmnd)
+    end
+
+    # Relecture d'un ruban WS2812 juste apres une ecriture 0x10 (2026-10-11). La reponse standard
+    # a une 0x10 ne porte aucune valeur, et le pont ModBus natif refuse la fonction 0x17
+    # (ecriture + lecture) : la lecture 0x03 part donc derriere l'ecriture, dans la meme file,
+    # et recupereReponseModBus recopie l'etat REELLEMENT applique par l'esclave.
+    def relitRuban(device, famille, idEsclave)
+        import modbusFonctions
+
+        var trame = self.demandeLecture(device, famille, idEsclave)
+        if (trame != nil)    modbusFonctions.envoiMsgModbus(trame, "Commande", trame["StartAddress"])    end
     end
 
     # Ajoute 'dataJson["TasmotaSlaveModBus"]' au json Teleperiod
@@ -699,6 +712,31 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                                     logFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_ECART: relai n°%i (%s) : commande=%s, constate=%s",
                                                                       device["id"], nameTasmotaSlaveModBus, device.find("etat", "OFF"), valeur), LOG_LEVEL_ERREUR, "slaveModbus")
                                                 end
+                                            # Ruban WS2812 (1376, 2026-10-11) : lecture 0x03 = [teinte, saturation, luminosite],
+                                            # echelle HSBColor (modbusFonctions.etatRuban). L'esclave est maitre de son ruban
+                                            # (la cuve le colore selon le niveau) : le maitre RECOPIE l'etat lu, y compris
+                                            # 'etat', sans ecart a journaliser.
+                                            # Meme traitement pour le PUSH 0x10 du ruban (modbusFonctions.surveilleRubans) :
+                                            # une 0x10 qui arrive ici est forcement un push, les autres sont sorties plus haut.
+                                            elif ((msg["FunctionName"] == "LECTURE_REGISTRES_HOLDER" || msg["FunctionName"] == "ECRITURE_REGISTRES_HOLDER") &&
+                                                  env[cleEnv][cleDevice]["type"] == 1376)
+                                                var device = env[cleEnv][cleDevice]
+                                                var vals = msg.find("Values", [])
+                                                if (size(vals) < 3)    raise "value_error", "reponse 0x03 du ruban incomplete : " + str(vals)    end
+
+                                                valeur = (int(vals[2]) > 0 ? "ON" : "OFF")
+                                                if (device.find("couleur") != int(vals[0]) || device.find("saturation") != int(vals[1]) ||
+                                                    device.find("value") != int(vals[2]) || device.find("etat") != valeur)
+                                                    self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Ruban WS2812 n°%i (%s) : teinte %i, saturation %i, luminosite %i (%s)",
+                                                                           device["id"], nameTasmotaSlaveModBus, int(vals[0]), int(vals[1]), int(vals[2]), valeur), LOG_LEVEL_DEBUG)
+                                                end
+                                                device["couleur"] = int(vals[0])
+                                                device["saturation"] = int(vals[1])
+                                                device["value"] = int(vals[2])
+                                                device["etat"] = valeur
+                                                device["etatConstate"] = valeur
+                                                device["constateA"] = tasmota.rtc()["local"]
+                                                dataJson["POWER" + str(device["id"])] = valeur
                                             end
                                         end
                                     end
@@ -781,10 +819,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                     if (devices[cleDev].find("activation", "OFF") == "ON" && devices[cleDev].find("virtuel", "OFF") != "OFF")
                                         if ((string.find(devices[cleDev]["virtuel"], "ModBus_TasmotaSlaveModBus") > - 1) && (devices[cleDev].find("idModBus", false) != false))
                                             var valueModBus
-                                            var couleur = -1
-                                            var saturation = -1
-                                            var luminosite = -1
-                                            
+
                                             if (cleDevices == "relais")
                                                 # Rappel de l'état des relais avant redémarrage
                                                 if (tabEtatRelais[devices[cleDev]["id"] - 1] == true)    
@@ -800,16 +835,9 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                                     valueModBus = (devices[cleDev]["etat"] == "ON" ? 0x01 : 0x02)
                                                 end
 
-                                                # Execute la commande 'Power' si différent
-                                                if (tabEtatRelais[devices[cleDev]["id"] - 1] == devices[cleDev]["etat"])        continue    end
-
-                                                # LEDS WS2812B
-                                                if (devices[cleDev]["type"] == 1376)
-                                                    # Récupère les paramètres de la couleur
-                                                    couleur = devices[cleDev].find("couleur", 0)
-                                                    saturation = devices[cleDev].find("saturation", 0)
-                                                    luminosite = devices[cleDev].find("value", 0)
-                                                end
+                                                # Execute la commande 'Power' si différent. Un ruban WS2812 (1376), lui, est
+                                                # toujours RELU (plus bas) : l'esclave est maitre de son ruban (2026-10-11).
+                                                if (devices[cleDev]["type"] != 1376 && tabEtatRelais[devices[cleDev]["id"] - 1] == devices[cleDev]["etat"])        continue    end
                                             end
 
                                             var typeConnex = string.split(devices[cleDev]["virtuel"], "_")[0]
@@ -832,15 +860,13 @@ class MODBUS_TASMOTA_SLAVE : Driver
 
                                                     # Envoi l'ordre sur le réseau ModBus
                                                     if (cleDevices == "relais")
-                                                        # LEDS WS2812B
+                                                        # LEDS WS2812B : DEMANDE de l'etat reel (0x03), et non plus renvoi de la couleur
+                                                        # memorisee (2026-10-11) : la cuve colore elle-meme son ruban (niveau, erreur),
+                                                        # le renvoi l'ecrasait a chaque demarrage du maitre.
                                                         if (devices[cleDev]["type"] == 1376)
-                                                            trameModBus["FunctionCode"] = 0x10
-                                                            trameModBus["StartAddress"] = devices[cleDev]["type"] + devices[cleDev]["idModBus"] - 1 
-                                                            trameModBus["type"] = "uint16"
-                                                            trameModBus["Count"] = 3
-                                                            trameModBus["Values"] = [couleur, saturation, luminosite]
+                                                            trameModBus = self.demandeLecture(devices[cleDev], cleDevices, trameModBus["DeviceAddress"])
 
-                                                            self.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: Commande sur le réseau ModBus pour les LEDS WS2812 n°%i !", devices[cleDev]["id"]), LOG_LEVEL_INFO)
+                                                            self.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: Demande l'etat du ruban WS2812 n°%i (teinte, saturation, luminosite) !", devices[cleDev]["id"]), LOG_LEVEL_INFO)
                                                         # Relais
                                                         else  
                                                             trameModBus["FunctionCode"] = 0x06
@@ -862,7 +888,10 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                                         trameModBus["Count"] = 1
                                                         trameModBus["Values"] = 0
 
-                                                        self.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: Lance sur le réseau ModBus, la demande d'état " + (cleDevices == "interrupteurs" ? "de l'interrupteur" : "du capteur")  + "n°%i !", devices[cleDev]["id"]), LOG_LEVEL_INFO) 
+                                                        # Aucune lecture au demarrage (envoi commente ci-dessous) : le releve periodique
+                                                        # (releveEsclaves, toutes les periodeReleve() s) s'en charge. Message corrige le 2026-10-11 :
+                                                        # il annoncait une demande jamais envoyee.
+                                                        self.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: " + (cleDevices == "interrupteurs" ? "Interrupteur" : (cleDevices == "boutons" ? "Bouton" : "Capteur")) + " n°%i : etat lu par le releve periodique (toutes les %i s), pas au demarrage", devices[cleDev]["id"], self.periodeReleve()), LOG_LEVEL_DEBUG)
 
                                                         # tasmota.add_cron("*/60 * * * * *",  /-> modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"]), "majInter_TasmotaSlaveModBus")
                                                         # modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"])
@@ -875,7 +904,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                                         trameModBus["Count"] = 1
                                                         trameModBus["Values"] = 0
 
-                                                        self.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: Lance sur le réseau ModBus, la demande de valeur de l'entrée analogique n°%i !", devices[cleDev]["id"]), LOG_LEVEL_INFO) 
+                                                        self.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: Entrée analogique n°%i : valeur lue par le releve periodique (toutes les %i s), pas au demarrage", devices[cleDev]["id"], self.periodeReleve()), LOG_LEVEL_DEBUG)
 
                                                         # tasmota.add_cron(string.format("*/%i * * * * *", teleperiod), /-> modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"]), "majAnalogiques_TasmotaSlaveModBus")
                                                         # modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"])
@@ -888,7 +917,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                                         trameModBus["Count"] = 1
                                                         trameModBus["Values"] = 0
 
-                                                        self.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: Lance sur le réseau ModBus, la demande de valeur du compteur n°%i !", devices[cleDev]["id"]), LOG_LEVEL_INFO) 
+                                                        self.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: Compteur n°%i : valeur lue par le releve periodique (toutes les %i s), pas au demarrage", devices[cleDev]["id"], self.periodeReleve()), LOG_LEVEL_DEBUG)
 
                                                         # tasmota.add_cron(string.format("*/%i * * * * *", teleperiod),  /-> modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"]), "majCompteurs_TasmotaSlaveModBus")
                                                         # modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"])
@@ -911,7 +940,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                                             trameModBus["Values"] = 0  
                                                         end
                                                             
-                                                        self.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: Lance sur le réseau ModBus, la demande de valeur du thermomètre n°%i !", devices[cleDev]["id"]), LOG_LEVEL_INFO) 
+                                                        self.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: Thermomètre n°%i : valeur lue par le releve periodique (toutes les %i s), pas au demarrage", devices[cleDev]["id"], self.periodeReleve()), LOG_LEVEL_DEBUG)
 
                                                         # tasmota.add_cron(string.format("*/%i * * * * *", teleperiod),  /-> modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"]), "majThermo_TasmotaSlaveModBus")
                                                         # modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"])
@@ -951,10 +980,16 @@ class MODBUS_TASMOTA_SLAVE : Driver
             trame["FunctionCode"] = 0x02
             trame["type"] = "uint8"
         # Relais (224 Relais, 256 Relais_i) : lecture 0x01 de l'etat reel, compare a l'etat
-        # commande par recupereReponseModBus. Les LEDs WS2812 (1376) ne se relisent pas.
+        # commande par recupereReponseModBus.
         elif (famille == "relais" && (device["type"] == 224 || device["type"] == 256))
             trame["FunctionCode"] = 0x01
             trame["type"] = "uint8"
+        # Ruban WS2812 (1376, 2026-10-11) : lecture 0x03 de 3 registres, l'etat REEL du ruban
+        # [teinte, saturation, luminosite] a l'echelle HSBColor (modbusFonctions.etatRuban).
+        elif (famille == "relais" && device["type"] == 1376)
+            trame["FunctionCode"] = 0x03
+            trame["type"] = "uint16"
+            trame["Count"] = 3
         elif (famille == "analogiques" || famille == "compteurs")
             trame["FunctionCode"] = 0x04
             trame["type"] = "uint32"

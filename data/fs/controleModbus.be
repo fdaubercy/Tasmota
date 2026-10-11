@@ -315,6 +315,13 @@ class CONTROLE_MODBUS : Driver
         end
     end
 
+    # Esclave : pousse au maitre tout changement d'etat de son ruban WS2812 (2026-10-11)
+    def every_second()
+        import modbusFonctions
+
+        if (drivers["ModBus"].find("id", 0) > 0)    modbusFonctions.surveilleRubans()    end
+    end
+
     # Réceptionne chaque trame dans un buffer
     # Renvoi vers la fonction 'modbusFonctions.lireMsgModbus()'
     def every_100ms()

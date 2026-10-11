@@ -176,6 +176,7 @@ class MODBUS_CONN_16CHANNEL : Driver
         import json
         import gestionFileFolder
         import string
+        import modbusFonctions
 
         self.nbIOActivesJSON = nil
         self.indexRegistres = {}
@@ -215,8 +216,11 @@ class MODBUS_CONN_16CHANNEL : Driver
                         etait eteint. On sonde donc une fois, sans attendre le 1er cron.
                         Differe de 15 s : le bus et les esclaves doivent etre prets, et le
                         chargement des autres drivers ne doit pas etre ralenti.
+                        armeTimer et non set_timer (2026-10-11) : set_timer est peu fiable sur
+                        ESP32-P4, la reconciliation pouvait ne jamais partir. armeTimer passe, sur
+                        P4, par une echeance en millis() relevee toutes les 100 ms par controleModbus.
                     -#
-                    tasmota.set_timer(15000, def() self.sondeEtats(nomCarte) end, "conn16channels_boot_" + nomCarte)
+                    modbusFonctions.armeTimer(15000, def() self.sondeEtats(nomCarte) end, "conn16channels_boot_" + nomCarte)
                 end
             end
         end
