@@ -2552,10 +2552,15 @@ modbusFonctions.relaiePushMQTT = modbusFonctions_relaiePushMQTT
 # Les mesures arrivent par regles Tasmota, a chaque TelePeriod : un capteur qui disparait ne declenche
 # plus rien et sa derniere 'value' reste en place (persist compris). D'ou la FRAICHEUR : l'esclave note
 # l'heure de chaque mesure (noteMesure) ; sans mesure depuis 3 TelePeriod (90 s au moins), il repond la
-# sentinelle. Delai de grace au demarrage : tant que ce delai n'est pas ecoule depuis le boot, la
-# derniere valeur enregistree est encore servie (premiere TelePeriod pas encore passee).
+# sentinelle. Delai de grace au demarrage (GRACE_DEMARRAGE_S) : tant qu'il court et qu'aucune mesure
+# n'est encore arrivee, la derniere valeur enregistree est encore servie.
+# 2026-10-11 : la grace etait de 3 TelePeriod (15 min) : un capteur absent des le boot (ADS1115 non
+# detecte) affichait 15 min sa vieille valeur (0 mV, 0 L) comme une mesure. Or Tasmota publie le 1er
+# SENSOR ~6 s apres le boot (vu dans les logs : SENSOR a Uptime 0T00:00:06) : sans mesure au bout
+# de 60 s, la valeur n'en est pas une. La fraicheur en regime (3 TelePeriod) est inchangee.
 modbusFonctions.SENTINELLE_UINT32 = 0x7FFFFFFF
 modbusFonctions.FRAICHEUR_MIN_S = 90
+modbusFonctions.GRACE_DEMARRAGE_S = 60
 
 # Esclave : une mesure du capteur de registre 'adresse' (type + id - 1) vient d'arriver.
 def modbusFonctions_noteMesure(adresse)
@@ -2573,7 +2578,7 @@ modbusFonctions.limiteFraicheur = modbusFonctions_limiteFraicheur
 # Esclave : true si le capteur a une mesure fraiche (ou si le delai de grace du demarrage court).
 def modbusFonctions_mesureFraiche(adresse)
     var t = modbusFonctions.etat()["mesures"].find(int(adresse))
-    if (t == nil)    return !tasmota.time_reached(modbusFonctions.limiteFraicheur())    end
+    if (t == nil)    return !tasmota.time_reached(modbusFonctions.GRACE_DEMARRAGE_S * 1000)    end
     return !tasmota.time_reached(t + modbusFonctions.limiteFraicheur())
 end
 modbusFonctions.mesureFraiche = modbusFonctions_mesureFraiche
