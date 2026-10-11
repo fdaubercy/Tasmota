@@ -51,7 +51,9 @@ def modbusFonctions_etat()
             "seqPush": 0,               # esclave : numero d'ordre du dernier push emis (pousseEtat)
             "derniersSeq": {},          # maitre : id esclave -> dernier numero d'ordre de push accepte
             "muets": {},                # maitre : adresse -> true tant que l'esclave est muet (noteAbandon)
-            "abandonsSuite": {}         # maitre : adresse -> messages abandonnes de suite, sans reponse
+            "abandonsSuite": {},        # maitre : adresse -> messages abandonnes de suite, sans reponse
+            "mesures": {},              # esclave : registre (type + id - 1) -> millis de la derniere mesure (noteMesure)
+            "sansMesure": {}            # esclave : registre -> true tant que le capteur est signale sans mesure
         }
     end
     return global._etatModbusFonctions
@@ -1699,23 +1701,28 @@ def modbusFonctions_executeCmdModbus(paramMSG)
                                     if (paramMSG["FunctionName"] == "LECTURE_REGISTRES_ENTREES")
                                         if (capteurs == "thermometres" || capteurs == "compteurs" || capteurs == "analogiques")
                                             var value = real(modules[cle]["environnement"][capteurs][numCapteur].find("value", 0.00))
+                                            # Sans mesure fraiche : sentinelle (NaN / SENTINELLE_UINT32) au lieu de la
+                                            # derniere valeur ou de 0 (voir noteMesure, 2026-10-10)
+                                            var frais = modbusFonctions.signaleMesure(typeCapteur, modules[cle]["environnement"][capteurs][numCapteur].find("nom", numCapteur),
+                                                                                      modbusFonctions.mesureFraiche(typeCapteur))
+                                            import math
 
                                             paramMSG["Count"] /= 2
-                                            
+
                                             # DS18B20
                                             if (typo == 1312)
                                                 paramMSG["type"] = "float"
 
-                                                paramMSG["Values"].push(value)
+                                                paramMSG["Values"].push(frais ? value : math.nan)
                                                 modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Demande de la valeur de %s: %.2f", modules[cle]["environnement"][capteurs][numCapteur]["nom"], real(value)), LOG_LEVEL_DEBUG_PLUS)
                                             # DHT22 (AM2302)
                                             elif (typo == 1216)
                                                 paramMSG["type"] = "float"
 
-                                                paramMSG["Values"].push(value)
+                                                paramMSG["Values"].push(frais ? value : math.nan)
 
                                                 value = real(modules[cle]["environnement"][capteurs][numCapteur].find("Humidity", 0.00))
-                                                paramMSG["Values"].push(value)
+                                                paramMSG["Values"].push(frais ? value : math.nan)
 
                                                 modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Demande de la valeur de %s: %.2f°C / %.2f%%RH", modules[cle]["environnement"][capteurs][numCapteur]["nom"], real(paramMSG["Values"][0]), real(paramMSG["Values"][1])), LOG_LEVEL_DEBUG_PLUS)
                                             # COMPTEURS / ENTRÉES ANALOGIQUES
@@ -1725,7 +1732,7 @@ def modbusFonctions_executeCmdModbus(paramMSG)
                                                 # Valeur max du compteur imposée par BERRY: int32 (0x7FFFFFFF = 2 147 483 647)
                                                 # Idéalement les valeurs max des compteurs sont:   0x3B9AC9FF = 999 999 999
                                                 # Au dela de ce chiffre, il redémarrera a 0
-                                                paramMSG["Values"].push(int(value))
+                                                paramMSG["Values"].push(frais ? int(value) : modbusFonctions.SENTINELLE_UINT32)
                                                 modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Demande de la valeur de %s: %u", modules[cle]["environnement"][capteurs][numCapteur]["nom"], value), LOG_LEVEL_DEBUG_PLUS)
                                             end
                                         end
@@ -2531,6 +2538,71 @@ def modbusFonctions_relaiePushMQTT(texte, ip)
     return topic
 end
 modbusFonctions.relaiePushMQTT = modbusFonctions_relaiePushMQTT
+
+# --- Capteur absent ou defaillant : la SENTINELLE (2026-10-10) ---
+# Avant, l'esclave repondait find("value", 0.00) : sans mesure, le maitre lisait 0, indiscernable
+# d'une vraie mesure. Une exception ModBus (0x84) n'est pas utilisable : sur le maitre serie, le pont
+# Tasmota la journalise et ne publie pas ModbusReceived (xdrv_63_modbus_bridge.ino:390) -> vue comme
+# un silence, 3 renvois, puis tout l'esclave declare muet pour UN capteur. La sentinelle, elle,
+# traverse le pont tel quel :
+#   - float (thermometres) : NaN -> le pont l'ecrit 'null' dans ModbusReceived (ext_printf.cpp),
+#     Berry recoit nil ; par UDP/TCP, decrypteMSG rend un NaN ;
+#   - uint32 (analogiques, compteurs) : 0x7FFFFFFF, hors plage (ADC <= 4095, ADS1115 <= 32767,
+#     compteurs < 1e9).
+# Les mesures arrivent par regles Tasmota, a chaque TelePeriod : un capteur qui disparait ne declenche
+# plus rien et sa derniere 'value' reste en place (persist compris). D'ou la FRAICHEUR : l'esclave note
+# l'heure de chaque mesure (noteMesure) ; sans mesure depuis 3 TelePeriod (90 s au moins), il repond la
+# sentinelle. Delai de grace au demarrage : tant que ce delai n'est pas ecoule depuis le boot, la
+# derniere valeur enregistree est encore servie (premiere TelePeriod pas encore passee).
+modbusFonctions.SENTINELLE_UINT32 = 0x7FFFFFFF
+modbusFonctions.FRAICHEUR_MIN_S = 90
+
+# Esclave : une mesure du capteur de registre 'adresse' (type + id - 1) vient d'arriver.
+def modbusFonctions_noteMesure(adresse)
+    modbusFonctions.etat()["mesures"][int(adresse)] = tasmota.millis()
+end
+modbusFonctions.noteMesure = modbusFonctions_noteMesure
+
+# Duree (ms) au-dela de laquelle une mesure n'est plus fraiche : 3 TelePeriod, FRAICHEUR_MIN_S au moins.
+def modbusFonctions_limiteFraicheur()
+    var periode = 3 * int(diverses.find("telePeriod", 300))
+    return (periode > modbusFonctions.FRAICHEUR_MIN_S ? periode : modbusFonctions.FRAICHEUR_MIN_S) * 1000
+end
+modbusFonctions.limiteFraicheur = modbusFonctions_limiteFraicheur
+
+# Esclave : true si le capteur a une mesure fraiche (ou si le delai de grace du demarrage court).
+def modbusFonctions_mesureFraiche(adresse)
+    var t = modbusFonctions.etat()["mesures"].find(int(adresse))
+    if (t == nil)    return !tasmota.time_reached(modbusFonctions.limiteFraicheur())    end
+    return !tasmota.time_reached(t + modbusFonctions.limiteFraicheur())
+end
+modbusFonctions.mesureFraiche = modbusFonctions_mesureFraiche
+
+# Maitre (et decodage) : true si 'valeur' est la sentinelle 'pas de mesure' du type donne.
+# nil = NaN converti en null par le pont serie ; NaN est la seule valeur differente d'elle-meme.
+def modbusFonctions_estSansMesure(valeur, typeValeur)
+    if (valeur == nil)    return true    end
+    if (typeValeur == "float")    return real(valeur) != real(valeur)    end
+    return int(valeur) == modbusFonctions.SENTINELLE_UINT32
+end
+modbusFonctions.estSansMesure = modbusFonctions_estSansMesure
+
+# Esclave : journalise UNE fois le passage sans mesure (erreur) et le retour (info), pas a chaque
+# releve (toutes les 30 s). Retourne 'frais'.
+def modbusFonctions_signaleMesure(adresse, nom, frais)
+    import string
+    var signales = modbusFonctions.etat()["sansMesure"]
+    if (!frais && !signales.find(int(adresse), false))
+        signales[int(adresse)] = true
+        modbusFonctions.log(string.format("CAPTEUR_SANS_MESURE: '%s' (registre %i) : aucune mesure depuis %i s (capteur absent ou defaillant), le maitre recoit la sentinelle",
+                            str(nom), int(adresse), modbusFonctions.limiteFraicheur() / 1000), LOG_LEVEL_ERREUR)
+    elif (frais && signales.find(int(adresse), false))
+        signales.remove(int(adresse))
+        modbusFonctions.log(string.format("CAPTEUR_SANS_MESURE: '%s' (registre %i) : mesure de nouveau disponible", str(nom), int(adresse)), LOG_LEVEL_INFO)
+    end
+    return frais
+end
+modbusFonctions.signaleMesure = modbusFonctions_signaleMesure
 
 # Filtre des pushes par numero d'ordre, cote maitre (2026-09-29). Retourne true si le push
 # 'seq' de l'esclave 'id' est a traiter :

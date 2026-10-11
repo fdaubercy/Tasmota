@@ -154,6 +154,17 @@ def globalFonctions_changementEtatDemarrage(value, trigger, msg)
 end
 globalFonctions.changementEtatDemarrage = globalFonctions_changementEtatDemarrage
 
+# Esclave ModBus : note qu'une mesure du capteur 'device' vient d'arriver, MEME si sa valeur n'a pas
+# change. Sans mesure recente, l'esclave repond au maitre la sentinelle 'pas de mesure'
+# (modbusFonctions.noteMesure / mesureFraiche, 2026-10-10). Rien a faire hors esclave ModBus.
+def globalFonctions_noteMesureModbus(device)
+    if (drivers.find("ModBus", {}).find("activation", "OFF") != "ON" || drivers["ModBus"].find("id", 0) <= 0)    return    end
+    if (device.find("type") == nil || device.find("id") == nil)    return    end
+    import modbusFonctions
+    modbusFonctions.noteMesure(int(device["type"]) + int(device["id"]) - 1)
+end
+globalFonctions.noteMesureModbus = globalFonctions_noteMesureModbus
+
 # Règles sur changement d'état des capteurs
 # Si relaisLie != []
 # Déclenche les relais liés aux capteurs
@@ -302,6 +313,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 		device = modules[moduleCapteur]["environnement"]["thermometres"].find(cleBouton, false)
 		if (device)
 			if device.find("activation", "OFF") == "ON" && ((device.find("pin", -1) != -1  && device.find("virtuel", "OFF") == "OFF") || device.find("virtuel", "OFF") != "OFF")
+				globalFonctions.noteMesureModbus(device)
 				if (device["value"] != value)
                     # Enregistre l'état en json
                     if (string.find(trigger, "AM2301#Temperature") > -1 || string.find(trigger, "DS18B20") > -1)
@@ -339,6 +351,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 		device = modules[moduleCapteur]["environnement"]["analogiques"].find(cleBouton, false)
 		if (device)
 			if device.find("activation", "OFF") == "ON" && ((device.find("pin", -1) != -1  && device.find("virtuel", "OFF") == "OFF") || device.find("virtuel", "OFF") != "OFF")
+                globalFonctions.noteMesureModbus(device)
                 if (device["value"] != value)
                     # Enregistre l'état en json
                     device["value"] = int(value)
@@ -359,6 +372,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 		device = modules[moduleCapteur]["environnement"]["compteurs"].find(cleBouton, false)
 		if (device)
 			if device.find("activation", "OFF") == "ON" && ((device.find("pin", -1) != -1  && device.find("virtuel", "OFF") == "OFF") || device.find("virtuel", "OFF") != "OFF")
+                globalFonctions.noteMesureModbus(device)
                 if (device["etat"] != value)
                     # Enregistre l'état en json
                     device["etat"] = real(value)

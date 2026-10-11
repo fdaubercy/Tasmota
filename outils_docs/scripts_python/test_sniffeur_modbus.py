@@ -129,6 +129,12 @@ def test_decodeur():
     f = struct.pack(">f", 21.5).hex()
     verifie("21.50" in decode("02 04 04 " + f, "02 04 05 20 00 02")["metier"], True, "ESP32 : float gros-boutien")
     verifie("12345" in decode("02 04 04 00 00 30 39", "02 04 12 60 00 02")["metier"], True, "ESP32 : uint32")
+    # Sentinelles 'pas de mesure' (modbusFonctions.estSansMesure, 2026-10-10)
+    verifie("SANS MESURE" in decode("02 04 04 7F C0 00 00", "02 04 05 20 00 02")["metier"], True, "ESP32 : NaN = sans mesure")
+    verifie("SANS MESURE" in decode("02 04 04 7F FF FF FF", "02 04 12 60 00 02")["metier"], True, "ESP32 : 0x7FFFFFFF = sans mesure")
+    r = decode("02 04 04 00 00 00 00", "02 04 05 20 00 02")["metier"]
+    verifie("SANS MESURE" not in r and "0.00" in r, True, "TEMOIN : 0.00 reste une mesure")
+    verifie("SANS MESURE" in decode("02 04 04 00 00 00 00", "02 04 12 60 00 02")["metier"], False, "TEMOIN : uint32 0 reste une mesure")
     verifie("HSBColor" in decode("02 10 05 60 00 03 06 00 78 00 64 00 32")["metier"], True, "ESP32 : WS2812")
     verifie("PUSH" in dm.decode(dm.lit_texte("ModbusPushUDP 5 0310 00A0 0001 02 00FF E7D0"), None, CARTE, TYPES)["metier"],
             True, "push UDP colle depuis un log")

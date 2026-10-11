@@ -494,9 +494,26 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                             push = false
                                         end
 
+                                        # Sentinelle 'pas de mesure' de l'esclave (capteur absent ou defaillant,
+                                        # modbusFonctions.estSansMesure, 2026-10-10) : etat 'defaillant',
+                                        # valeur precedente conservee mais plus presentee comme fraiche.
+                                        if (cleEnv == "thermometres" || cleEnv == "analogiques" || cleEnv == "compteurs")
+                                            # Liste vide = reponse anormale, pas une sentinelle : elle suit le
+                                            # chemin d'erreur (exception journalisee) plus bas.
+                                            var vals = msg.find("Values", [])
+                                            if (size(vals) > 0 && modbusFonctions.estSansMesure(vals[0], cleEnv == "thermometres" ? "float" : "uint32"))
+                                                self.noteDefaillant(env[cleEnv][cleDevice], nameTasmotaSlaveModBus)
+                                                continue
+                                            end
+                                        end
+
                                         # Valeur fraiche : leve l'etat 'inconnu' pose par le chien de garde.
                                         # (Un relai, lui, ne se constate que par une lecture 0x01, plus bas.)
                                         if (cleEnv != "relais")
+                                            if (env[cleEnv][cleDevice].find("etatConstate") == "defaillant")
+                                                logFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_CAPTEUR: '%s' (%s) : mesure de nouveau valide",
+                                                                  str(env[cleEnv][cleDevice].find("nom", cleDevice)), nameTasmotaSlaveModBus), LOG_LEVEL_INFO, "slaveModbus")
+                                            end
                                             env[cleEnv][cleDevice]["etatConstate"] = "valide"
                                             env[cleEnv][cleDevice]["constateA"] = tasmota.rtc()["local"]
                                         end
@@ -1023,6 +1040,20 @@ class MODBUS_TASMOTA_SLAVE : Driver
             self.esclavesMuets.remove(idEsclave)
             logFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_CHIEN_DE_GARDE: l'esclave d'ID=%i repond de nouveau", idEsclave), LOG_LEVEL_INFO, "slaveModbus")
         end
+    end
+
+    # Capteur sans mesure (2026-10-10) : l'esclave a repondu la sentinelle (NaN / 0x7FFFFFFF ; nil
+    # apres le pont serie). Etat constate 'defaillant', journalise UNE fois (erreur) et pas a chaque
+    # releve ; le retour est journalise a la premiere vraie valeur (recupereReponseModBus).
+    # L'esclave, lui, repond : son chien de garde n'est pas concerne.
+    def noteDefaillant(device, nomEsclave)
+        import string
+        if (device.find("etatConstate") != "defaillant")
+            logFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_CAPTEUR: '%s' (%s) : aucune mesure (capteur absent ou defaillant)",
+                              str(device.find("nom", "?")), nomEsclave), LOG_LEVEL_ERREUR, "slaveModbus")
+        end
+        device["etatConstate"] = "defaillant"
+        device["constateA"] = tasmota.rtc()["local"]
     end
 
     # Chien de garde (2026-09-29), sur le modele de la carte 16 relais : un esclave actif sans

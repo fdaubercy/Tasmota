@@ -16,6 +16,7 @@ Le decodage reproduit les conclusions du maitre (SwitchMode, Relais_i), pas une 
 """
 
 import json
+import math
 import os
 import re
 import struct
@@ -41,6 +42,19 @@ LIBELLES = {32: "bouton", 160: "interrupteur", 192: "interrupteur", 224: "relai"
             256: "relai inverse (Relais_i)", 352: "compteur", 1216: "DHT22", 1312: "DS18B20",
             1376: "LEDs WS2812", 4704: "entree analogique"}
 FLOTTANTS, ENTIERS32 = (1216, 1312), (352, 4704)
+# Sentinelles 'pas de mesure' de l'esclave (modbusFonctions.estSansMesure, 2026-10-10) : NaN pour un float,
+# 0x7FFFFFFF pour un uint32. Capteur absent ou defaillant, PAS une mesure a 0.
+SENTINELLE_UINT32 = 0x7FFFFFFF
+SANS_MESURE = "SANS MESURE (capteur absent ou defaillant)"
+
+
+def _flottant(v):
+    return SANS_MESURE + " [NaN]" if math.isnan(v) else f"{v:.2f}"
+
+
+def _entier32(brut):
+    v = int.from_bytes(brut[:4], "big")
+    return SANS_MESURE + " [0x7FFFFFFF]" if v == SENTINELLE_UINT32 else str(v)
 
 
 # ------------------------------------------------------------------ outils
@@ -303,9 +317,9 @@ def _esp32(e, fc, nat, d, reg, regs, types):
         if base in FLOTTANTS:
             vals = [struct.unpack(">f", brut[i:i + 4])[0] for i in range(0, len(brut) - 3, 4)]
             noms = ["temperature (C)", "humidite (%)"] if base == 1216 else ["temperature (C)"]
-            return f"{desc} : " + ", ".join(f"{noms[k] if k < len(noms) else 'valeur'} = {v:.2f}" for k, v in enumerate(vals))
+            return f"{desc} : " + ", ".join(f"{noms[k] if k < len(noms) else 'valeur'} = {_flottant(v)}" for k, v in enumerate(vals))
         if base in ENTIERS32 and len(brut) >= 4:
-            return f"{desc} : {int.from_bytes(brut[:4], 'big')}"
+            return f"{desc} : {_entier32(brut)}"
         return f"{desc} : mots {[m for _, m, _ in regs]}"
     if fc == 5 and len(d) == 4:
         return f"{'Accuse : ' if nat == 'reponse' else ''}Power{_id_relai(reg)} {'ON' if d[2] == 0xFF else 'OFF'}{_maitre(a)}"
@@ -325,9 +339,9 @@ def _esp32(e, fc, nat, d, reg, regs, types):
             return f"{desc} : couleur (teinte) {mots[0]}, saturation {mots[1]}, luminosite {mots[2]} (HSBColor)"
         brut = bytes(b for m in mots for b in (m >> 8, m & 0xFF))
         if base in FLOTTANTS and len(brut) >= 4:
-            v = ", ".join(f"{struct.unpack('>f', brut[i:i + 4])[0]:.2f}" for i in range(0, len(brut) - 3, 4))
+            v = ", ".join(_flottant(struct.unpack('>f', brut[i:i + 4])[0]) for i in range(0, len(brut) - 3, 4))
         elif base in ENTIERS32 and len(brut) >= 4:
-            v = str(int.from_bytes(brut[:4], "big"))
+            v = _entier32(brut)
         elif base in (32, 160, 192) and mots:            # interrupteur / bouton : 0x00FF = actif
             mode, actif = (a["switchMode"] if a else 1), bool(mots[0] & 1)
             v = f"bit 0 = {int(actif)} -> {('ON' if actif else 'OFF') if mode != 2 else ('OFF' if actif else 'ON')} (SwitchMode {mode})"

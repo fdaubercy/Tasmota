@@ -557,3 +557,41 @@ du PC verifiee correcte (groupe rejoint sur l'interface Wi-Fi, pare-feu hors de 
 - Bancs : `banc_test_modbus.be` §25, `test_discovery.be` §13 (branchement dans `lireUDP`),
   `test_sniffeur_modbus.py` `test_relais_mqtt` (faux broker local). **Pas encore observe sur la carte.**
 
+### Capteur absent ou defaillant — la sentinelle (2026-10-10)
+
+Avant : l'esclave repondait `find("value", 0.00)` ; sans mesure, le maitre lisait **0**,
+indiscernable d'une vraie mesure (cause probable des 0 de la cuve, `DSB: Capteur trouve 0`).
+
+**Pourquoi pas une exception ModBus (0x84)** : sur le maitre serie, le pont Tasmota la journalise
+(`MBR Driver receive error 4`) et ne publie **pas** `ModbusReceived`
+(`xdrv_63_modbus_bridge.ino:390`) : Berry n'y voit qu'un silence -> 3 renvois -> 2 abandons -> **tout
+l'esclave declare muet** pour un seul capteur. La corriger toucherait un fichier amont.
+
+**La sentinelle traverse le pont tel quel** :
+
+| Type | Sentinelle emise | Recue par le maitre serie | Par UDP/TCP |
+|---|---|---|---|
+| `float` (thermometres 1312, 1216) | NaN | `null` dans `ModbusReceived` (`ext_printf.cpp` : `isnan` -> `"null"`) -> `nil` | NaN |
+| `uint32` (analogiques 4704, compteurs 352) | `0x7FFFFFFF` | 2147483647 | 2147483647 |
+
+`0x7FFFFFFF` est hors plage : ADC <= 4095, ADS1115 <= 32767, compteurs < 1e9. Une vraie mesure 0
+reste 0.
+
+- **Esclave — fraicheur, pas valeur.** Les mesures arrivent par regles Tasmota a chaque
+  `TelePeriod` ; une sonde qui disparait ne declenche plus rien et sa derniere `value` reste en place
+  (persist compris). `globalFonctions.noteMesureModbus` (branches thermometres, analogiques,
+  compteurs) et `cuveFonctions` (ADS1115) appellent `modbusFonctions.noteMesure` a **chaque** mesure,
+  meme inchangee. Sans mesure depuis **3 TelePeriod** (90 s au moins ; 15 min avec TelePeriod 300),
+  `executeCmdModbus` repond la sentinelle. **Delai de grace** au demarrage : pendant cette meme duree
+  apres le boot, la derniere valeur enregistree est encore servie. Journal : `CAPTEUR_SANS_MESURE`
+  en `erreur` une fois, puis `info` au retour.
+- **Maitre** : `modbusFonctions.estSansMesure` -> `etatConstate = "defaillant"`, valeur precedente
+  gardee, requete **acquittee** normalement (l'esclave repond : chien de garde non concerne).
+  `MODBUS_TASMOTA_SLAVE_CAPTEUR` en `erreur` une fois, `info` a la premiere vraie valeur. Une reponse
+  sans valeur (`Values` vide) n'est pas une sentinelle : elle suit le chemin d'erreur.
+- **Sniffeur** : `decodeur_modbus.py` affiche `SANS MESURE (capteur absent ou defaillant)`.
+- **Limite** : un contact sec (0x02) coupe ressemble a un contact ouvert ; seule une resistance de fin
+  de ligne le rendrait detectable.
+- Bancs : `banc_test_modbus.be` §26 (temoin : esclave sans sentinelle -> 2 echecs),
+  `test_sniffeur_modbus.py` `test_decodeur`. **Pas encore observe sur la carte.**
+

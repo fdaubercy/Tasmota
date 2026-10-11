@@ -1112,6 +1112,124 @@ drivers = sauveDrivers
 serveur = sauveServeur
 
 print("")
+print("=== 26. Capteur sans mesure : sentinelle NaN / 0x7FFFFFFF (2026-10-10) ===")
+# Avant : l'esclave repondait find("value", 0.00) -> le maitre lisait 0 pour une sonde absente.
+# (a) estSansMesure : nil (NaN apres le pont serie), NaN, 0x7FFFFFFF ; 0 reste une vraie mesure
+import math
+verifie("estSansMesure nil / NaN / 21.5 / 0.0 (float)", "true/true/false/false",
+        str(modbusFonctions.estSansMesure(nil, "float")) + "/" + str(modbusFonctions.estSansMesure(math.nan, "float")) + "/" +
+        str(modbusFonctions.estSansMesure(21.5, "float")) + "/" + str(modbusFonctions.estSansMesure(0.0, "float")))
+verifie("estSansMesure 0x7FFFFFFF / 0 / 32767 (uint32)", "true/false/false",
+        str(modbusFonctions.estSansMesure(0x7FFFFFFF, "uint32")) + "/" + str(modbusFonctions.estSansMesure(0, "uint32")) + "/" +
+        str(modbusFonctions.estSansMesure(32767, "uint32")))
+
+# (b) esclave : reponse 0x04 selon la fraicheur de la mesure (TelePeriod 30 s -> limite 90 s)
+sauveDrivers = drivers
+sauveModules = modules
+var sauveDiverses = diverses
+drivers = {"ModBus": {"activation": "ON", "id": 2, "activationReponseCMD": "ON", "typeComm": {"Serial":"ON"}, "environnement": {}}}
+diverses = {"telePeriod": 30}
+modules = {"cuve": {"activation": "ON", "environnement": {
+    "thermometres": {"thermometre1": {"activation": "ON", "type": 1312, "id": 1, "value": 21.5, "nom": "T eau"}},
+    "analogiques":  {"analogique1":  {"activation": "ON", "type": 4704, "id": 1, "value": 1234, "nom": "Niveau"}}}}}
+var reponses = []
+vraiEnvoi = modbusFonctions.envoiMsgModbus
+modbusFonctions.envoiMsgModbus = def (t, typeMsg, id) reponses.push(modbusFonctions.prepareTrame(t, typeMsg).tohex()) end
+var lit04 = def (sa) return {"DeviceAddress": 2, "FunctionCode": 4, "FunctionName": "LECTURE_REGISTRES_ENTREES", "StartAddress": sa, "Count": 2, "Values": []} end
+# Donnees d'une reponse 0x04 : apres [id][fc][nb octets], avant le CRC
+var donnees = def (h) return h[6 .. size(h) - 5] end
+var etM = modbusFonctions.etat()
+etM["mesures"] = {}  etM["sansMesure"] = {}
+journal = []
+tasmota.ms = 1000                                     # demarrage, aucune mesure encore : delai de grace
+modbusFonctions.executeCmdModbus(lit04(1312))
+verifie("grace au demarrage : derniere valeur servie (21.5)", "41AC0000", donnees(reponses[-1]))
+modbusFonctions.noteMesure(1312)
+tasmota.ms = 50000                                    # mesure vieille de 49 s : fraiche
+modbusFonctions.executeCmdModbus(lit04(1312))
+verifie("mesure fraiche : valeur (21.5)", "41AC0000", donnees(reponses[-1]))
+tasmota.ms = 200000                                   # 199 s sans mesure > 90 s : sentinelle
+modbusFonctions.executeCmdModbus(lit04(1312))
+modbusFonctions.executeCmdModbus(lit04(1312))
+var nanHex = donnees(reponses[-1])
+verifie("sonde muette : NaN envoye", true, nanHex == "7FC00000" || nanHex == "FFC00000" || nanHex == "7FF80000")
+var nbErreurs = 0
+for l: journal    if string.find(l, "CAPTEUR_SANS_MESURE") >= 0 && string.find(l, "aucune mesure depuis 90 s") >= 0    nbErreurs += 1    end    end
+verifie("sonde muette : 1 seule erreur journalisee sur 2 releves", 1, nbErreurs)
+modbusFonctions.executeCmdModbus(lit04(4704))
+verifie("analogique sans aucune mesure apres la grace : 0x7FFFFFFF", "7FFFFFFF", donnees(reponses[-1]))
+modbusFonctions.noteMesure(1312)                      # la sonde revient
+modbusFonctions.executeCmdModbus(lit04(1312))
+verifie("retour de la sonde : valeur, info journalisee", "41AC0000/true", donnees(reponses[-1]) + "/" + str(journalise("mesure de nouveau disponible")))
+modules["cuve"]["environnement"]["analogiques"]["analogique1"]["value"] = 0
+modbusFonctions.noteMesure(4704)
+modbusFonctions.executeCmdModbus(lit04(4704))
+verifie("temoin : vraie mesure 0 transmise telle quelle", "00000000", donnees(reponses[-1]))
+modbusFonctions.envoiMsgModbus = vraiEnvoi
+
+# (c) globalFonctions.noteMesureModbus (le VRAI) : note la mesure d'un esclave, rien sur le maitre
+# compile() est strict : chaque global du firmware que le fichier nomme (controleGeneral...) et que le
+# banc ne declare pas est declare a nil, puis on recompile (20 essais au plus).
+var fGF = open(SOURCES + "/globalFonctions.be", "r")
+var srcGF = fGF.read()
+fGF.close()
+var gf = nil
+for essai: 1 .. 20
+  try
+    gf = compile(srcGF)()
+    break
+  except .. as e, m
+    var r = string.split(str(m), "'")
+    if (e != "syntax_error" || size(r) < 3 || string.find(str(m), "undeclared") < 0)
+      print(">>> globalFonctions.be non charge :", e, m)
+      break
+    end
+    global.(r[1]) = nil
+  end
+end
+etM["mesures"] = {}
+essaie(def () gf.noteMesureModbus({"type": 1312, "id": 1}) end)
+verifie("noteMesureModbus esclave : mesure 1312 notee", 200000, etM["mesures"].find(1312))
+drivers["ModBus"]["id"] = 0
+etM["mesures"] = {}
+essaie(def () gf.noteMesureModbus({"type": 1312, "id": 1}) end)
+verifie("temoin noteMesureModbus sur le maitre : rien note", nil, etM["mesures"].find(1312))
+
+# (d) maitre : sentinelle recue -> 'defaillant', erreur une fois, valeur gardee ; retour -> 'valide' + info
+drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial":"ON"},
+           "environnement": {"TasmotaSlaveModBus": {"debug": "OFF",
+               "TasmotaSlaveModBus1": {"activation": "ON", "id": 2, "name": "cuve"}}}}}
+modules = {"garage": {"activation": "ON", "environnement": {
+    "thermometres": {"thermometre1": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus1", "type": 1312, "idModBus": 1, "id": 1, "value": 18.0, "nom": "T eau"}},
+    "analogiques":  {"analogique1":  {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus1", "type": 4704, "idModBus": 1, "id": 1, "value": 500, "nom": "Niveau"}}}}}
+var capteur = def (f, c) return modules["garage"]["environnement"][f][c] end
+var releve = def (sa, typ, v)
+  modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 2, "FunctionCode": 4, "StartAddress": sa, "Count": 1, "type": typ}}
+  recoit(2, "ModbusReceived", {"DeviceAddress": 2, "FunctionCode": 4, "Values": [v]})
+end
+journal = []
+releve(1312, "float", nil)                            # NaN -> 'null' dans ModbusReceived -> nil
+releve(1312, "float", nil)
+var t1 = capteur("thermometres", "thermometre1")
+verifie("maitre : null -> defaillant, valeur 18.0 gardee", "defaillant/18", str(t1.find("etatConstate")) + "/" + str(t1["value"]))
+nbErreurs = 0
+for l: journal    if string.find(l, "aucune mesure (capteur absent") >= 0    nbErreurs += 1    end    end
+verifie("maitre : 1 seule erreur sur 2 releves", 1, nbErreurs)
+verifie("maitre : requete acquittee malgre la sentinelle", nil, modbusFonctions.etat()["enVol"])
+releve(4704, "uint32", 0x7FFFFFFF)
+verifie("maitre : 0x7FFFFFFF -> analogique defaillant", "defaillant/500",
+        str(capteur("analogiques", "analogique1").find("etatConstate")) + "/" + str(capteur("analogiques", "analogique1")["value"]))
+releve(1312, "float", 0.0)
+verifie("temoin maitre : 0.0 = vraie mesure -> valide, info journalisee", "valide/0/true",
+        str(t1.find("etatConstate")) + "/" + str(int(t1["value"])) + "/" + str(journalise("mesure de nouveau valide")))
+modbusFonctions.etat()["enVol"] = nil
+etM["mesures"] = {}  etM["sansMesure"] = {}
+tasmota.ms = 0
+modules = sauveModules
+drivers = sauveDrivers
+diverses = sauveDiverses
+
+print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
       total, total - echecs - bugs_connus, bugs_connus, echecs))
 print(echecs == 0 ? "BANC_MODBUS: OK" : "BANC_MODBUS: ECHEC")
