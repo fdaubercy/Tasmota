@@ -53,6 +53,17 @@ cuveFonctions.niveauEnErreur = def()
     return !modbusFonctions.mesureFraiche(int(ana["type"]) + int(ana["id"]) - 1)
 end
 
+# true si la lecture 'mV' de la voie 'cleA' de l'ADS1115 est une mesure, selon le pilote i2c_ads1115
+# (global.i2c_ads1115, instance publiee par i2c_ads1115_init). Pilote absent, ou firmware sans
+# mesureValide (pas encore recompile) : la lecture est acceptee, comme avant.
+cuveFonctions.lectureValide = def(cleA, mV, valeurs)
+    import global
+    import introspect
+    var ads = (global.contains("i2c_ads1115") ? global.i2c_ads1115 : nil)
+    if (!isinstance(ads, Driver) || introspect.get(ads, "mesureValide") == nil)    return true    end
+    return ads.mesureValide(cleA, mV, valeurs)
+end
+
 # Le relais WS2812 du module (ruban), ou nil s'il n'est pas actif
 cuveFonctions.relaisRuban = def()
     var ws2812 = modules["cuve"]["environnement"].find("relais", {}).find("relai1")
@@ -263,10 +274,39 @@ cuveFonctions.aideReglageAna = def(sujet)
     import string
     if (sujet == nil)
         return [
-            ["voltageMax", "voltageMax <volts>", "regle la tension maximale admissible de l'ADS1115"]
+            ["voltageMax", "voltageMax <volts>", "regle la tension maximale admissible de l'ADS1115"],
+            ["cablage", "cablage", "rappelle le cablage des 4 voies (pont diviseur ou shunt a poser)"],
+            ["voie", "voie <A0..A3> <tension|courant> <plage>", "regle ce que mesure une voie et rappelle son cablage"],
+            ["seuilMin", "seuilMin <A0..A3> <mV>", "en dessous, la lecture est une erreur (sonde debranchee) ; 0 = desactive"],
+            ["alimentation", "alimentation <volts>", "tension d'alimentation de l'ADS1115 (3.3 ou 5)"]
         ]
     end
     sujet = string.toupper(sujet)
+    if (sujet == "CABLAGE")
+        return ["Sans parametre. Journalise et renvoie le montage de chaque voie : pont diviseur",
+                "R1/R2 pour une tension, resistance de shunt pour un courant (valeurs E24),",
+                "calcule pour que la pleine echelle reste sous la tension d'alimentation.",
+                "Exemple : ReglageAna cablage"]
+    end
+    if (sujet == "VOIE")
+        return ["Parametres : voie A0..A3, mesure tension|courant, plage :",
+                "  tension (A0, A1) : 0-5V, 0-10V ou 0-24V",
+                "  courant (A2, A3) : 0-20mA ou 4-20mA (4-20mA : boucle coupee detectee sous 3,6 mA)",
+                "Effet : memorise drivers I2C ADS1115 voies <voie>, sauvegarde, renvoie le cablage a poser.",
+                "Exemples : ReglageAna voie A0 tension 0-10V ; ReglageAna voie A2 courant 4-20mA"]
+    end
+    if (sujet == "SEUILMIN")
+        return ["Parametres : voie A0..A3, seuil en mV mesures A L'ENTREE de l'ADS1115 (apres le pont).",
+                "Effet : une lecture sous ce seuil n'est pas une mesure (sonde debranchee ou non",
+                "        alimentee) : erreur de mesure apres le delai de fraicheur. 0 = desactive.",
+                "Exemple : ReglageAna seuilMin A0 50"]
+    end
+    if (sujet == "ALIMENTATION")
+        return ["Parametre : tension d'alimentation (VDD) de l'ADS1115, en volts : 3.3 ou 5.",
+                "Effet : pleine echelle visee 3,0 V (3,3 V) ou 4,0 V (5 V) ; change les resistances",
+                "        conseillees (ReglageAna cablage). Une entree ne doit jamais depasser VDD.",
+                "Exemple : ReglageAna alimentation 3.3"]
+    end
     if (sujet == "VOLTAGEMAX")
         return ["Parametre : nombre reel, tension max en volts (ex. 3.3 ou 3.20).",
                 "Effet : memorise modules cuve environnement analogiques voltageMax.",
@@ -321,6 +361,14 @@ cuveFonctions.reglageAna = def(cmd, idx, payload, payload_json)
         end
     end
 
+    # Voies de l'ADS1115 (2026-10-11) : la configuration vit dans drivers.I2C.environnement.ADS1115,
+    # le pilote i2c_ads1115 en deduit le cablage (rappel) et la validite des lectures (mesureValide)
+    var fonctionMaj = string.toupper(str(fonction))
+    if (fonctionMaj == "CABLAGE" || fonctionMaj == "VOIE" || fonctionMaj == "SEUILMIN" || fonctionMaj == "ALIMENTATION")
+        tasmota.resp_cmnd(json.dump(cuveFonctions.reglageVoies(fonctionMaj, (parametres.size() > 0 ? parametres[0] : ""))))
+        return
+    end
+
     # Commande réussie
     # Réponse à la commande
     # 3 valeurs pour 3 formats (il n'en passait qu'une : string.format levait, aucune reponse)
@@ -328,6 +376,63 @@ cuveFonctions.reglageAna = def(cmd, idx, payload, payload_json)
     reponse_cmnd = string.format("reglageADS1115: valeur Min=%i, valeur Max=%i, voltage Max=%.2fV",
                                     ana.find("valeurMin", 0), ana.find("valeurMax", 0), ana.find("voltageMax", 6.144))
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
+end
+
+# Sous-commandes de ReglageAna sur les voies de l'ADS1115 : retourne la reponse (map) a la commande
+cuveFonctions.reglageVoies = def(fonction, arguments)
+    import string
+    import global
+    import introspect
+    import persist
+
+    var ads = (global.contains("i2c_ads1115") ? global.i2c_ads1115 : nil)
+    if (!isinstance(ads, Driver) || introspect.get(ads, "rappel") == nil)
+        return {"erreur": "pilote i2c_ads1115 absent (ADS1115 inactif) ou firmware a recompiler"}
+    end
+    var conf = drivers["I2C"]["environnement"]["ADS1115"]
+    var mots = (arguments == "" ? [] : string.split(arguments, " "))
+
+    try
+        if (fonction == "VOIE")
+            var nom = string.toupper(mots[0])
+            var mesure = string.tolower(mots[1])
+            var plage = mots[2]
+            if (ads.VOIES.find(nom) == nil)    return {"erreur": "voie inconnue : " + nom + " (A0..A3)"}    end
+            var plages = (mesure == "courant" ? ads.PLAGES_COURANT : ads.PLAGES_TENSION)
+            if ((mesure != "tension" && mesure != "courant") || !plages.contains(plage))
+                return {"erreur": "mesure ou plage inconnue : tension 0-5V|0-10V|0-24V, courant 0-20mA|4-20mA"}
+            end
+            if (!conf.contains("voies"))    conf["voies"] = {}    end
+            var voie = conf["voies"].find(nom, {})
+            voie["mesure"] = mesure
+            voie["plage"] = plage
+            if (!voie.contains("seuilMin_mV"))    voie["seuilMin_mV"] = 0    end
+            conf["voies"][nom] = voie
+            persist.save(true)
+            cuveFonctions.log("REGLAGE_ANA: " + ads.rappel(nom), LOG_LEVEL_INFO)
+            return {nom: ads.rappel(nom)}
+        elif (fonction == "SEUILMIN")
+            var nom = string.toupper(mots[0])
+            if (ads.VOIES.find(nom) == nil)    return {"erreur": "voie inconnue : " + nom + " (A0..A3)"}    end
+            if (!conf.contains("voies"))    conf["voies"] = {}    end
+            var voie = conf["voies"].find(nom, ads.voie(nom))
+            voie["seuilMin_mV"] = int(mots[1])
+            conf["voies"][nom] = voie
+            persist.save(true)
+            return {nom: ads.rappel(nom)}
+        elif (fonction == "ALIMENTATION")
+            conf["alimentation_V"] = real(mots[0])
+            persist.save(true)
+        end
+    except .. as error, message
+        return {"erreur": "parametres invalides (" + str(message) + ") : ReglageAna aide " + string.tolower(fonction)}
+    end
+
+    # CABLAGE (et retour d'ALIMENTATION) : les 4 voies
+    ads.rappelCablage()
+    var reponse = {"alimentation_V": real(conf.find("alimentation_V", 3.3))}
+    for nom: ads.VOIES    reponse[nom] = ads.rappel(nom)    end
+    return reponse
 end
 
 # Règles sur changement d'état lors du démarrage de Tasmota
@@ -431,9 +536,15 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
                 # Teste la PRESENCE de la cle (contains) et non sa valeur : une lecture 0 est une mesure.
                 # noteMesure appele directement (et non noteMesureModbus, reserve a l'esclave ModBus) :
                 # l'erreur de mesure du ruban et de la page web (niveauEnErreur) en depend aussi (2026-10-11).
-                if (msg["ADS1115"].contains(string.format("A%d", analogiques[cleAna]["id"] - 1)))
+                # Une lecture n'est une mesure que si le pilote i2c_ads1115 l'accepte (mesureValide) : ADS1115
+                # perdu (4 voies a 0), sous le seuilMin_mV de la voie, boucle 4-20 mA coupee -> pas de noteMesure.
+                var cleA = string.format("A%d", analogiques[cleAna]["id"] - 1)
+                if (msg["ADS1115"].contains(cleA))
                     import modbusFonctions
-                    modbusFonctions.noteMesure(int(analogiques[cleAna]["type"]) + int(analogiques[cleAna]["id"]) - 1)
+                    var mVlu = tasmota.scale_int(int(msg["ADS1115"][cleA]), 0, 32767, 0, cuveFonctions.voltageMax)
+                    if (cuveFonctions.lectureValide(cleA, mVlu, msg["ADS1115"]))
+                        modbusFonctions.noteMesure(int(analogiques[cleAna]["type"]) + int(analogiques[cleAna]["id"]) - 1)
+                    end
                 end
                 if (!msg["ADS1115"].find(string.format("A%d", analogiques[cleAna]["id"] - 1), false))    continue    end
                 if int(analogiques[cleAna]["value"]) != int(msg["ADS1115"][string.format("A%d", analogiques[cleAna]["id"] - 1)])

@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="960" viewBox="0 0 1500 960" font-family="Segoe UI, Arial, sans-serif" font-size="14">
+<defs><g id="gnd" stroke="#222" stroke-width="2"><line x1="0" y1="0" x2="0" y2="12"/><line x1="-14" y1="12" x2="14" y2="12"/><line x1="-9" y1="18" x2="9" y2="18"/><line x1="-4" y1="24" x2="4" y2="24"/></g></defs>
+<rect width="1500" height="960" fill="#ffffff"/>
+<text x="30" y="42" font-size="24" font-weight="bold" fill="#111">ADS1115 alimenté en 3,3 V — montages de base</text>
+<text x="30" y="66" fill="#555">VDD = 3,3 V (cuve) · Sensor12 S1 (±4,096 V) · pleine échelle visée 3,0 V à l'entrée</text>
+<rect x="30" y="90" width="640" height="610" rx="10" fill="#fafafa" stroke="#bbb"/>
+<text x="50" y="120" font-size="17" font-weight="bold" fill="#111">Bus I²C et alimentation</text>
+<text x="50" y="152" font-size="13" fill="#333">• En 3,3 V, l'ESP32 et l'ADS1115 se relient <tspan font-weight="bold">directement</tspan> :</text>
+<text x="50" y="174" font-size="13" fill="#333">   mêmes niveaux logiques, tirages I²C du module à 3,3 V.</text>
+<text x="50" y="196" font-size="13" fill="#333">• <tspan font-weight="bold">Tous les GND sont communs</tspan> : ESP32, ADS1115, 0 V des capteurs, − alim de boucle.</text>
+<text x="50" y="218" font-size="13" fill="#333">• Les 4 voies lisent exactement 0 → ADS1115 perdu (I2C_ADS1115_MUET).</text>
+<rect x="40" y="250" width="150" height="250" rx="6" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+<text x="115" y="300" text-anchor="middle" font-weight="bold">ESP32-S3</text>
+<text x="182" y="345" text-anchor="end">3V3</text>
+<text x="182" y="385" text-anchor="end">GND</text>
+<text x="182" y="425" text-anchor="end">GPIO8 SCL</text>
+<text x="182" y="465" text-anchor="end">GPIO9 SDA</text>
+<rect x="420" y="260" width="200" height="420" rx="6" fill="#fff8e1" stroke="#f57f17" stroke-width="2"/>
+<text x="520" y="290" text-anchor="middle" font-weight="bold" font-size="16">ADS1115</text>
+<text x="520" y="308" text-anchor="middle" font-size="12" fill="#666">adresse 0x48</text>
+<text x="430" y="345">VDD</text>
+<text x="430" y="385">GND</text>
+<text x="430" y="425">SCL</text>
+<text x="430" y="465">SDA</text>
+<text x="430" y="505">ADDR</text>
+<text x="430" y="545">ALRT</text>
+<text x="610" y="325" text-anchor="end">A0</text>
+<text x="610" y="385" text-anchor="end">A1</text>
+<text x="610" y="605" text-anchor="end">A2</text>
+<text x="610" y="645" text-anchor="end">A3</text>
+<line x1="420" y1="500" x2="398" y2="500" stroke="#222" stroke-width="2"/><use href="#gnd" x="398" y="500"/>
+<text x="392" y="496" text-anchor="end" font-size="12" fill="#444">→ 0x48</text>
+<line x1="420" y1="540" x2="400" y2="540" stroke="#999" stroke-width="2"/>
+<text x="394" y="560" text-anchor="end" font-size="12" fill="#777">ALRT non reliée</text>
+<line x1="190" y1="340" x2="420" y2="340" stroke="#c62828" stroke-width="3"/>
+<line x1="190" y1="380" x2="420" y2="380" stroke="#222" stroke-width="3"/>
+<line x1="190" y1="420" x2="420" y2="420" stroke="#ef6c00" stroke-width="3"/>
+<line x1="190" y1="460" x2="420" y2="460" stroke="#1565c0" stroke-width="3"/>
+<text x="300" y="333" text-anchor="middle" font-size="12" fill="#c62828">3,3 V</text>
+<rect x="690" y="90" width="780" height="400" rx="10" fill="#f1f8e9" stroke="#9ccc65"/>
+<text x="710" y="120" font-size="17" font-weight="bold" fill="#1b5e20">A0 / A1 — tension : pont diviseur</text>
+<g font-size="13">
+<text x="710" y="150" font-weight="bold">Plage capteur</text><text x="850" y="150" font-weight="bold">R1 / R2 (VDD 3,3 V)</text><text x="1030" y="150" font-weight="bold">pleine éch.</text><text x="1130" y="150" font-weight="bold" fill="#777">(VDD 5 V : R1)</text>
+<line x1="710" y1="157" x2="1290" y2="157" stroke="#9ccc65"/>
+<text x="710" y="177">0-5 V</text><text x="850" y="177">6,8 kΩ / 10 kΩ</text><text x="1030" y="177">2,98 V</text><text x="1130" y="177" fill="#777">2,7 kΩ</text>
+<text x="710" y="197" font-weight="bold">0-10 V (cuve)</text><text x="850" y="197" font-weight="bold">24 kΩ / 10 kΩ</text><text x="1030" y="197">2,94 V</text><text x="1130" y="197" fill="#777">15 kΩ</text>
+<text x="710" y="217">0-24 V</text><text x="850" y="217">75 kΩ / 10 kΩ</text><text x="1030" y="217">2,82 V</text><text x="1130" y="217" fill="#777">51 kΩ</text>
+<text x="710" y="245" fill="#333">V entrée = V capteur × R2 / (R1 + R2)   ·   R1 = R2 × (Vmax / 3,0 − 1), arrondi E24 supérieur</text>
+</g>
+<line x1="620" y1="320" x2="960" y2="320" stroke="#2e7d32" stroke-width="3"/><circle cx="900" cy="320" r="5" fill="#2e7d32"/>
+<rect x="960" y="308" width="120" height="24" fill="#fff" stroke="#222" stroke-width="2"/>
+<text x="1020" y="300" text-anchor="middle" font-weight="bold">R1 = 24 kΩ</text>
+<line x1="1080" y1="320" x2="1240" y2="320" stroke="#2e7d32" stroke-width="3"/>
+<line x1="900" y1="320" x2="900" y2="350" stroke="#222" stroke-width="2"/>
+<rect x="888" y="350" width="24" height="60" fill="#fff" stroke="#222" stroke-width="2"/>
+<text x="922" y="385" font-weight="bold">R2 = 10 kΩ</text>
+<line x1="900" y1="410" x2="900" y2="450" stroke="#222" stroke-width="2"/><line x1="900" y1="450" x2="1240" y2="450" stroke="#222" stroke-width="2"/>
+<use href="#gnd" x="900" y="450"/>
+<text x="760" y="312" font-size="12" fill="#2e7d32">≤ 3,0 V</text>
+<rect x="1240" y="290" width="200" height="180" rx="6" fill="#fff" stroke="#2e7d32" stroke-width="2"/>
+<text x="1340" y="370" text-anchor="middle" font-weight="bold">Capteur</text><text x="1340" y="390" text-anchor="middle" font-weight="bold">0-10 V</text>
+<text x="1250" y="325">Signal</text><text x="1250" y="455">0 V</text>
+<line x1="620" y1="380" x2="650" y2="380" stroke="#2e7d32" stroke-width="2"/>
+<text x="656" y="384" font-size="13" fill="#2e7d32">A1 : même montage</text>
+<rect x="690" y="510" width="780" height="430" rx="10" fill="#f3e5f5" stroke="#ba68c8"/>
+<text x="710" y="540" font-size="17" font-weight="bold" fill="#4a148c">A2 / A3 — courant 0-20 mA / 4-20 mA : shunt</text>
+<line x1="620" y1="600" x2="720" y2="600" stroke="#6a1b9a" stroke-width="3"/>
+<rect x="720" y="588" width="100" height="24" fill="#fff" stroke="#222" stroke-width="2"/>
+<text x="770" y="580" text-anchor="middle" font-weight="bold">1 kΩ</text><text x="770" y="630" text-anchor="middle" font-size="12" fill="#555">protection</text>
+<line x1="820" y1="600" x2="1060" y2="600" stroke="#6a1b9a" stroke-width="3"/><circle cx="900" cy="600" r="5" fill="#6a1b9a"/>
+<line x1="900" y1="600" x2="900" y2="640" stroke="#222" stroke-width="2"/>
+<rect x="888" y="640" width="24" height="80" fill="#fff" stroke="#222" stroke-width="2"/>
+<text x="922" y="675" font-weight="bold">shunt 150 Ω</text><text x="922" y="693" font-size="12" fill="#555">1 % · 1/4 W</text>
+<line x1="900" y1="720" x2="900" y2="780" stroke="#222" stroke-width="2"/><line x1="900" y1="780" x2="1320" y2="780" stroke="#222" stroke-width="2"/>
+<use href="#gnd" x="900" y="780"/>
+<rect x="1060" y="560" width="160" height="100" rx="6" fill="#fff" stroke="#6a1b9a" stroke-width="2"/>
+<text x="1140" y="600" text-anchor="middle" font-weight="bold">Capteur</text><text x="1140" y="618" text-anchor="middle" font-weight="bold">4-20 mA</text><text x="1140" y="636" text-anchor="middle" font-size="12">(2 fils)</text>
+<text x="1068" y="580" font-size="15">−</text><text x="1204" y="580" font-size="15">+</text>
+<line x1="1220" y1="600" x2="1320" y2="600" stroke="#c62828" stroke-width="3"/>
+<rect x="1320" y="560" width="130" height="240" rx="6" fill="#fff" stroke="#c62828" stroke-width="2"/>
+<text x="1385" y="670" text-anchor="middle" font-weight="bold">Alim.</text><text x="1385" y="688" text-anchor="middle" font-weight="bold">boucle</text><text x="1385" y="706" text-anchor="middle">12-24 V</text>
+<text x="1330" y="605" font-size="15">+</text><text x="1330" y="785" font-size="15">−</text>
+<path d="M 1000 592 l 14 8 l -14 8" fill="none" stroke="#6a1b9a" stroke-width="2"/>
+<text x="950" y="578" font-size="12" fill="#6a1b9a">sens du courant →</text>
+<line x1="620" y1="640" x2="650" y2="640" stroke="#6a1b9a" stroke-width="2"/>
+<text x="656" y="644" font-size="13" fill="#6a1b9a">A3 : même montage</text>
+<text x="710" y="830" font-size="13" fill="#333">• Shunt = 3,0 V / 20 mA = <tspan font-weight="bold">150 Ω</tspan>, arrondi E24 inférieur.</text>
+<text x="710" y="852" font-size="13" fill="#333">• Le − de l'alim de boucle est relié au GND de l'ADS1115 (sinon la mesure flotte).</text>
+<text x="710" y="874" font-size="13" fill="#333">• Défaut capteur : 25 mA × 150 Ω = 3,75 V &gt; VDD + 0,3 V (3,6 V) : la 1 kΩ limite le courant injecté.</text>
+<text x="710" y="896" font-size="13" fill="#333">• 4-20 mA : sous 3,6 mA = boucle coupée, détectée par le code. 0-20 mA : un 0 reste une mesure.</text>
+<text x="710" y="918" font-size="13" fill="#333">• Tension de boucle ≥ tension mini du capteur (8-12 V) + chute du shunt.</text>
+<rect x="30" y="720" width="640" height="220" rx="10" fill="#ffebee" stroke="#e57373"/>
+<text x="50" y="750" font-size="17" font-weight="bold" fill="#b71c1c">À retenir</text>
+<text x="50" y="778" font-size="13" fill="#222">1. Une entrée ne dépasse <tspan font-weight="bold">jamais VDD + 0,3 V</tspan>, quelle que soit la plage Sensor12</text>
+<text x="50" y="800" font-size="13" fill="#222">    (±6,144 V n'autorise pas 6 V sur un ADS1115 alimenté en 3,3 V).</text>
+<text x="50" y="822" font-size="13" fill="#222">2. Pleine échelle visée : 3,0 V (VDD 3,3 V) ou 4,0 V (VDD 5 V).</text>
+<text x="50" y="844" font-size="13" fill="#222">3. Résistances à couche métallique 1 % ; R2 = 10 kΩ fixe.</text>
+<text x="50" y="866" font-size="13" fill="#222">4. Changer le pont ou le shunt impose de refaire l'étalonnage de la cuve.</text>
+<text x="50" y="888" font-size="13" fill="#222">5. Console : <tspan font-family="Consolas, monospace">ReglageAna alimentation 3.3</tspan> puis <tspan font-family="Consolas, monospace">ReglageAna cablage</tspan></text>
+<text x="50" y="910" font-size="13" fill="#555">Détail : outils_docs/Electronique/ADS1115/CABLAGE_ADS1115.md</text>
+</svg>

@@ -698,6 +698,7 @@ preproc.define('D_JSON_EXPORT', "Export")
 preproc.define('D_JSON_ONE_TO_RESTART', "1 to restart, 2 to halt")
 preproc.define('KNX_SLOT6', 34)
 preproc.define('USER_CONFIG_OVERRIDE_SAFE_GUARD')
+preproc.define('TASMOTALED_HARDWARE_SPI', 1)
     # ignored #define __XCHAL_HAVE_MUL32 1
 preproc.define('D_CMND_SO', "SO")
     # ignored #define __XTENSA_EL__ 1
@@ -1588,7 +1589,7 @@ preproc.define('THERMOSTAT_CONTROLLER_OUTPUTS', 1)
 preproc.define('D_SENSOR_BIOPDU_PZEM0XX_TX', "BioPDU PZEM0XX Tx")
 preproc.define('USE_SDM120')
 preproc.define('FM24CXX_BLOCK_SIZE', 256)
-preproc.define('CFG_HOLDER', 1458)
+preproc.define('CFG_HOLDER', 1460)
 preproc.define('D_MODULE', "Module")
 preproc.define('D_SENSOR_WS2812', "WS2812")
 preproc.define('D_SO_MQTTTLS', "MqttTLS")
@@ -3167,4 +3168,4 @@ preproc.define('D_JSON_HIGH', "High")
 preproc.define('D_FP_DBRANGEFAIL', "Modèle invalide")
 preproc.define('D_CONNECTING_TO_AP', "Connexion à l'AP")
 
-# 2701 defines emitted, 464 ignored
+# 2702 defines emitted, 464 ignored

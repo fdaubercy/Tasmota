@@ -1059,7 +1059,14 @@
 					"name": "Module ADS1115",
 					"adresseI2C": "0x48",
 					"I2CDriver": 13,
-					"affichageWebSensor": "OFF"
+					"affichageWebSensor": "OFF",
+					"alimentation_V": 3.3,
+					"voies": {
+						"A0": {"mesure": "tension", "plage": "0-10V", "seuilMin_mV": 0},
+						"A1": {"mesure": "tension", "plage": "0-10V", "seuilMin_mV": 0},
+						"A2": {"mesure": "courant", "plage": "0-20mA", "seuilMin_mV": 0},
+						"A3": {"mesure": "courant", "plage": "0-20mA", "seuilMin_mV": 0}
+					}
 				},
 				"MCP23017": {
 					"activation": "OFF",

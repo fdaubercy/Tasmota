@@ -21,8 +21,11 @@
  * Détecte la hauteur d'eau dans la Cuve
  * Variation de tension de 0 à 10V
  *
- * Attention l'ADS1115 n'accepte des tensions que de 0 à 6.144V
- * Donc nécessite l'emploi d'un pont diviseur de tension 10V vers 6V
+ * Attention : une entree de l'ADS1115 ne doit JAMAIS depasser sa tension d'alimentation (VDD + 0,3 V),
+ * quelle que soit la plage Sensor12 (le +/-6.144V n'autorise pas 6 V sur un ADS1115 alimente en 3,3 V).
+ * ADS1115 de la cuve alimente en 3,3 V (choix du 2026-10-11) : pont diviseur 0-10V R1 = 24 kOhm / R2 = 10 kOhm,
+ * SDA/SCL en direct sur l'ESP32 (en 5 V : R1 = 15 kOhm et convertisseur de niveau obligatoire) -> ReglageAna cablage.
+ * Detail : outils_docs/Electronique/ADS1115/CABLAGE_ADS1115.md
  * 
  * Le capteur analagique A0 sert d'étalon pour ajuster la valeur max
  * Le capteur analagique A1 sert d'étalon pour ajuster la valeur min

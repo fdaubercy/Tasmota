@@ -695,6 +695,7 @@
 #define D_JSON_ONE_TO_RESTART "1 to restart, 2 to halt"
 #define KNX_SLOT6 34
 #define USER_CONFIG_OVERRIDE_SAFE_GUARD 
+#define TASMOTALED_HARDWARE_SPI 1
 #define __XCHAL_HAVE_MUL32 1
 #define D_CMND_SO "SO"
 #define __XTENSA_EL__ 1
@@ -1585,7 +1586,7 @@
 #define D_SENSOR_BIOPDU_PZEM0XX_TX "BioPDU PZEM0XX Tx"
 #define USE_SDM120 
 #define FM24CXX_BLOCK_SIZE 256
-#define CFG_HOLDER 1458
+#define CFG_HOLDER 1460
 #define D_MODULE "Module"
 #define D_SENSOR_WS2812 "WS2812"
 #define D_SO_MQTTTLS "MqttTLS"

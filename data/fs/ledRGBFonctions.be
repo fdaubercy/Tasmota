@@ -68,6 +68,18 @@ ledRGBFonctions.connecte = def()
     return mqtt.connected()
 end
 
+# Cree le pilote de la LED : RMT d'abord, puis SPI si le RMT est plein (ruban present). Le SPI doit etre
+# DEMANDE (Leds.SPI) : sans precision, TasmotaLEDPusher::ResolveHardware ne retient que le RMT et n'essaie
+# jamais le SPI (constate sur la cuve le 2026-10-11 : 'RMT bus failed 48 err=261', aucun essai SPI).
+ledRGBFonctions.creeLeds = def(pin)
+    try
+        return Leds(1, pin)
+    except .. as error, message
+        ledRGBFonctions.log("PEINT_LED_RGB: RMT indisponible (" + str(message) + "), essai en SPI", LOG_LEVEL_DEBUG)
+    end
+    return Leds(1, pin, Leds.WS2812_GRB, Leds.SPI)
+end
+
 # Ecrit une couleur sur la LED (une seule fois par changement)
 ledRGBFonctions.peint = def(couleur, bri)
     if (ledRGBFonctions.enEchec)    return    end
@@ -76,7 +88,7 @@ ledRGBFonctions.peint = def(couleur, bri)
     var cle = str(couleur) + "@" + str(bri)
     if (cle == ledRGBFonctions.derniere)    return    end
     try
-        if (ledRGBFonctions.led == nil)    ledRGBFonctions.led = Leds(1, int(led["pin"]))    end
+        if (ledRGBFonctions.led == nil)    ledRGBFonctions.led = ledRGBFonctions.creeLeds(int(led["pin"]))    end
         ledRGBFonctions.led.clear_to(couleur, bri)
         ledRGBFonctions.led.show()
         ledRGBFonctions.derniere = cle
