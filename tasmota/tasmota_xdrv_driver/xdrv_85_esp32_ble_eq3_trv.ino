@@ -125,7 +125,7 @@ print("".join(pin))
 #define USE_EQ3_ESP32
 #endif
 
-#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32S3
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3
 #ifdef USE_EQ3_ESP32
 #ifdef ESP32                       // ESP32 only. Use define USE_HM10 for ESP8266 support
 #ifdef USE_BLE_ESP32
@@ -804,7 +804,7 @@ void TaskEQ3ParseBTHome(BLE_ESP32::ble_advertisment_t* pStruct) {
         floatVal = (ServiceData[pos + 1] | (ServiceData[pos + 2] << 8)) * 0.001f;
         eq3->Changed |= (eq3->battVolt != floatVal);
         eq3->battVolt = floatVal;
-        eq3->battPercent = tmin(floatVal * 100 / 3, 100);
+        eq3->battPercent = changeUIntScale(floatVal * 1000, 2200, 3000, 0, 100); // Map 2.2V-3.0V to 0%-100%
         AddLog(BLE_ESP32::BLELogLevel[LOG_LEVEL_DEBUG], "EQ3: %s: Rec ADV Batt: %3_f (%u%%)", addrStr(addr), &eq3->battVolt, eq3->battPercent);
         pos += 3;
         break;
