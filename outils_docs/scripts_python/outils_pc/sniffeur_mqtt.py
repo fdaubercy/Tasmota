@@ -16,7 +16,7 @@ MQTT_USER, MQTT_PASS), surchargeable en ligne de commande. Les mots de passe ne 
 ni envoyes a la page. Client ID unique (sniffeur-<poste>-<pid>) : ne deconnecte aucun module.
 
 Usage (Python de PlatformIO ou tout Python 3.8+, aucune dependance) :
-    python outils_docs/scripts_python/sniffeur_mqtt.py
+    python outils_docs/scripts_python/outils_pc/sniffeur_mqtt.py
     options : --hote 192.168.0.5 --port 1883 --utilisateur u --mot-de-passe m
               --abonnement "#" (repetable)  --http 7100  --journal fichier.log  --historique 5000
 Depuis VS Code : pioarduino > Project Tasks > <env> > Custom > « Sniffeur MQTT (HTTP 127.0.0.1) »
@@ -42,7 +42,7 @@ import sniffeur_mqtt_config     # noqa: E402
 import sniffeur_mqtt_panneaux   # noqa: E402
 import sniffeur_mqtt_web        # noqa: E402
 
-RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 CONFIG = os.path.join(RACINE, "tasmota", "user_config_override.h")
 MAX_PAYLOAD_AFFICHE = 64 * 1024     # au-dela, le payload est tronque dans la page (pas dans le journal)
 RE_DISCOVERY = re.compile(r"^tasmota/discovery/([0-9A-Fa-f]{12})/([^/]+)$")

@@ -21,7 +21,7 @@ import os
 import re
 import struct
 
-RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 PERSIST_MAITRE = os.path.join(RACINE, "data", "garage", "tasmota32p4-serveur-modbus", "_persist.json")
 TEMPLATE_GPIO = os.path.join(RACINE, "tasmota", "include", "tasmota_template.h")
 

@@ -17,7 +17,7 @@ Ce que fait ce serveur :
 Aucun POST : la page ne fait que lire (rien a proteger contre une page tierce).
 
 Usage (Python de PlatformIO ou tout Python 3.8+, aucune dependance) :
-    python outils_docs/scripts_python/syslog_tasmota.py
+    python outils_docs/scripts_python/outils_pc/syslog_tasmota.py
     options : --port 514  --ecoute 0.0.0.0  --http 7200  --journal fichier.log  --journal-max 20
               --historique 5000
 Depuis VS Code : pioarduino > Project Tasks > <env> > Custom > « Serveur syslog (HTTP 127.0.0.1) »
@@ -40,7 +40,7 @@ from urllib.parse import urlsplit
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import syslog_tasmota_web       # noqa: E402
 
-RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 CONFIG = os.path.join(RACINE, "tasmota", "user_config_override.h")
 TAILLE_MAX_DATAGRAMME = 65535
 

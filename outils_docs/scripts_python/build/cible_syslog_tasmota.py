@@ -2,9 +2,9 @@
 
 Enregistree comme la cible du sniffeur MQTT (cible_sniffeur_mqtt.py) :
   - ESP32 : importee par pre_utilitaires_platformio.py (extra_scripts des bases ESP32) ;
-  - autre env : ce fichier en extra_script direct (pre:outils_docs/scripts_python/cible_syslog_tasmota.py),
+  - autre env : ce fichier en extra_script direct (pre:outils_docs/scripts_python/build/cible_syslog_tasmota.py),
     jamais les deux sur un meme env (cible declaree deux fois).
-Lance outils_docs/scripts_python/syslog_tasmota.py. L'ecoute ne depend pas de l'env choisi : les modules
+Lance outils_docs/scripts_python/outils_pc/syslog_tasmota.py. L'ecoute ne depend pas de l'env choisi : les modules
 envoient a SYS_LOG_HOST:SYS_LOG_PORT (tasmota/user_config_override.h), qui doit designer ce poste.
     UDP     : SYS_LOG_PORT de user_config_override.h (514)
     HTTP    : custom_syslog_http (optionnel, defaut 7200) -> http://127.0.0.1:7200
@@ -23,7 +23,7 @@ NOM_CIBLE = "syslog_tasmota"
 
 def enregistre(env):
     racine = env.subst("$PROJECT_DIR")
-    script = os.path.join(racine, "outils_docs", "scripts_python", "syslog_tasmota.py")
+    script = os.path.join(racine, "outils_docs", "scripts_python", "outils_pc", "syslog_tasmota.py")
 
     def lance_syslog(*args, **kwargs):
         http = str(env.GetProjectOption("custom_syslog_http", "7200") or "7200")

@@ -4,7 +4,7 @@ Materiel vise : Waveshare USB TO RS485 (CH343G + SP485EEN, direction automatique
 Bornes : A+ -> A du bus, B- -> B du bus, GND -> masse du bus.
 
 UTILISATION (Python de PlatformIO, qui fournit pyserial) :
-    %USERPROFILE%\.platformio\penv\Scripts\python.exe outils_docs/scripts_python/test_rs485_pc.py <commande> [options]
+    %USERPROFILE%\.platformio\penv\Scripts\python.exe outils_docs/scripts_python/outils_pc/test_rs485_pc.py <commande> [options]
 
 COMMANDES
     lister                   ports serie presents (pour --port)

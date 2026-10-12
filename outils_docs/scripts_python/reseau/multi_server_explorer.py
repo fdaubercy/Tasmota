@@ -28,8 +28,8 @@ Paramètres possibles :
 
 Exemple :
 ---------
-python outils_docs/scripts_python/multi_server_explorer.py ip=0.0.0.0 port=80 d1="C:/mon_site" d2="D:/partage" favicon="C:/mon_site/favicon.ico"
-python outils_docs/scripts_python/multi_server_explorer.py ip=0.0.0.0 port=80 d1=
+python outils_docs/scripts_python/reseau/multi_server_explorer.py ip=0.0.0.0 port=80 d1="C:/mon_site" d2="D:/partage" favicon="C:/mon_site/favicon.ico"
+python outils_docs/scripts_python/reseau/multi_server_explorer.py ip=0.0.0.0 port=80 d1=
 
 Exemple dans un script Python dans un thread:
 ----------------------------------

@@ -89,7 +89,7 @@ Basculer sur `development` avec un arbre propre, puis lancer la synchro a la mai
 sortie sous les yeux ; lire le rapport et confirmer (ou non) le push :
 
 ```
-python outils_docs/scripts_python/synchronise_fork_tasmota.py
+python outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py
 ```
 
 `--dry-run` pour un diagnostic seul, qui ne modifie rien. **Ne jamais merger l'amont
@@ -97,9 +97,9 @@ dans une branche de chantier** : le hook le rappelle en affichant la branche cou
 
 ## Exception assumee a la regle des 500 lignes
 
-`outils_docs/scripts_python/synchronise_fork_tasmota.py` fait **527 lignes**, et
-c'est **voulu** (decide le 2026-07-15). Ne pas le decouper pour satisfaire le
-compteur.
+`outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py` fait **534 lignes**, et
+c'est **voulu** (decide le 2026-07-15, a 527 lignes ; +7 le 2026-10-12 pour le correctif
+du blocage sur son propre journal). Ne pas le decouper pour satisfaire le compteur.
 
 Decomposition reelle : 333 lignes de code, 57 d'en-tete docstring (qui **est** la
 sortie de `--help`), 99 vides, 38 de commentaires. La plus grosse fonction fait
@@ -150,7 +150,7 @@ sont **dans le depot**, donc deja la apres le clone.
 ### 3. Le filet — verifier que les reglages C/C++ agissent vraiment
 
 ```
-python outils_docs/scripts_python/corrige_reglages_vscode.py --verifier
+python outils_docs/scripts_python/maintenance/corrige_reglages_vscode.py --verifier
 ```
 
 Settings Sync **apporte** les reglages mais ne dit jamais **pourquoi** ils existent, et
@@ -259,7 +259,7 @@ Prise en compte a chaud, sans redemarrer VS Code.
   vide a 15:37:39, puis `*** [.pio\build\<env>\libXXX] ... Le chemin d'acces specifie est
   introuvable`. Le pre-build du sniffeur reecrit aussi `modules.h` en plein build (piege
   IntelliSense ci-dessus). Parade : pendant un build, lancer ces outils **hors PlatformIO**,
-  directement par `python outils_docs/scripts_python/<outil>.py` (ex. `sniffeur_modbus.py
+  directement par `python outils_docs/scripts_python/outils_pc/<outil>.py` (ex. `sniffeur_modbus.py
   --port auto --debit 19200 --http 7300`).
 
 ## Logs Berry — la charte (decidee le 2026-10-04)
@@ -342,11 +342,28 @@ Pour ne pas chercher : ce qui a ete produit et ou.
 - `outils_docs/Electronique/Connecteur ModBus/` — docs constructeur de la carte 16 relais
   (`... commamd.docx` = jeu de commandes, `... Manual.docx` = caracteristiques).
 - `docs/superpowers/specs/2026-07-15-solidification-berry-verdict.md` — verdict Q1/Q2/Q3.
-- `outils_docs/scripts_python/` :
-  - `synchronise_fork_tasmota.py` — synchro du fork (merge, jamais de force-push).
-  - `solidifie_et_compile_berry.py` — verifie qu'un module est solidifiable en ~10 s (compile le .h).
-  - `nomme_fonctions_berry.py` — convertit les fonctions anonymes d'un module.
-  - `corrige_reglages_vscode.py` — pose et prouve les reglages VS Code (PermissionError).
+- `outils_docs/scripts_python/`, range par usage le 2026-10-12. **Des scripts qui s'importent
+  entre eux restent dans le MEME dossier** (import d'un module voisin) : ne pas les separer.
+  - `build/` — charges par PlatformIO : `pre_utilitaires_platformio.py` (pre-script ; importe les
+    `cible_*.py` voisins), `post_lto_parallele.py`, les 4 `cible_*.py` (cibles Custom, qui lancent
+    `outils_pc/`), `ota-files-uploader.py`, `update_idf55_framework.py` (appele par le pre-script),
+    `utilitaires_persos_platformio.py` (cite nulle part, importe un module `backup` absent : code mort).
+  - `berry/` — `verifie_berry.py` (syntaxe de data/, tache VS Code de surveillance),
+    `solidifie_et_compile_berry.py` (module solidifiable en ~10 s, compile le .h),
+    `nomme_fonctions_berry.py` (fonctions anonymes -> nommees), `carte_modules_berry.py`
+    (-> `outils_docs/CARTE_MODULES_BERRY.md`), `genere_schema_persist.py`
+    (-> `outils_docs/schemas/persist.schema.json`), `gen_tapp.py`, et les bancs
+    `banc_test_modbus.{py,be}`, `test_discovery.be` avec leurs `bouchons_berry/`.
+  - `maintenance/` — `synchronise_fork_tasmota.py` (synchro du fork : merge, jamais de force-push),
+    `synchronise_upstream_tasmota.py` (variante rebase), `corrige_reglages_vscode.py` (pose et
+    prouve les reglages VS Code du PermissionError).
+  - `sauvegarde/` — `genere_sauvegarde_tasmota.py`, `restaure_sauvegarde_tasmota.py` et leur
+    interface Tk `interface_sauvegarde_restauration_tasmota.py`.
+  - `reseau/` — petits outils autonomes : `comm_udp_*.py`, `envoi_message_udp.py`,
+    `simple-server.py`, `multi_server_explorer.py`, `image_base64.py`.
+  - `outils_pc/` — les outils PC autour des cartes, qui s'importent entre eux (`ecoute_udp.py`
+    importe le sniffeur MQTT ; le sniffeur ModBus, 7 modules voisins) : `pont_serie.py`
+    (+ `pont_serie_web.py`) et ceux-ci :
   - `test_rs485_pc.py` — test du bus ModBus depuis le PC par un convertisseur USB-RS485
     (Waveshare CH343) : ecoute du bus, envoi brut, lecture/commande de la carte 16 relais,
     recherche de son debit, emulation de la carte (pour tester le maitre P4 sans elle).

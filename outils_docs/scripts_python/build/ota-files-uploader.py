@@ -8,7 +8,7 @@
 #
 #   [env:mon-environnement]
 #   extra_scripts = ${env:tasmota32_base.extra_scripts}
-#                   post:outils_docs/scripts_python/ota-files-uploader.py
+#                   post:outils_docs/scripts_python/build/ota-files-uploader.py
 
 Import("env")
 

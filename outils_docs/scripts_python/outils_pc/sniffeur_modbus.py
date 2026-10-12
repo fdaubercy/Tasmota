@@ -33,7 +33,7 @@ exact de la requete, on ne peut pas jeter « toute trame identique a l'envoi » 
 l'apprend au premier envoi d'une trame qui n'est pas 0x05/0x06 ; --echo oui | non pour l'imposer.
 
 Usage (Python de PlatformIO, qui fournit pyserial) :
-    %USERPROFILE%\.platformio\penv\Scripts\python.exe outils_docs/scripts_python/sniffeur_modbus.py
+    %USERPROFILE%\.platformio\penv\Scripts\python.exe outils_docs/scripts_python/outils_pc/sniffeur_modbus.py
     options : --port auto|COM12|loop://|aucun  --debit 19200  --http 7300  --silence 0.02  --delai 1.0
               --echo auto|oui|non  --journal fichier.log  --historique 5000  --persist <persist du maitre>
               --udp oui|non  --udp-groupe 224.3.0.1  --udp-port 4000  --udp-interface <ip locale>

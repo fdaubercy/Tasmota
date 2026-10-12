@@ -48,7 +48,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
     //  #warning *** ------------------- Le fichier 'user_config_override.ini' est appele ------------------- ***
     #if defined(CFG_HOLDER) && (CFG_HOLDER == 4617)
         #undef CFG_HOLDER
-		#define CFG_HOLDER 		1479			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
+		#define CFG_HOLDER 		1480			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
 
         // #pragma message(*** ------------------- Les paramètres flash seront remplacés ! ------------------- ***)
     #else
@@ -139,7 +139,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
         #ifdef SYS_LOG_HOST
             #undef SYS_LOG_HOST
         #endif
-        #define SYS_LOG_HOST           "192.168.0.3"                // [LogHost] PC de developpement : outils_docs/scripts_python/syslog_tasmota.py (ex-NAS 192.168.0.2, eteint)
+        #define SYS_LOG_HOST           "192.168.0.3"                // [LogHost] PC de developpement : outils_docs/scripts_python/outils_pc/syslog_tasmota.py (ex-NAS 192.168.0.2, eteint)
         #ifdef SYS_LOG_PORT
             #undef SYS_LOG_PORT
         #endif

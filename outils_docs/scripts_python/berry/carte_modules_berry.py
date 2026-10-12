@@ -2,7 +2,7 @@ r"""Genere outils_docs/CARTE_MODULES_BERRY.md : la carte des modules Berry par c
 
 UTILISATION
 -----------
-  python outils_docs/scripts_python/carte_modules_berry.py [--sortie CHEMIN] [--racine DEPOT]
+  python outils_docs/scripts_python/berry/carte_modules_berry.py [--sortie CHEMIN] [--racine DEPOT]
 
   Ecrit outils_docs/CARTE_MODULES_BERRY.md (regenere a chaque lancement), rien d'autre.
 
@@ -32,7 +32,7 @@ COMMENT LA GARDE EST TROUVEE
 import argparse, json, os, re, subprocess, sys
 from datetime import datetime
 
-RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 RACINES_PERSIST = ("serveur", "diverses", "modules", "drivers")
 INTERNES = {"partition_wizard", "leds_panel", "autoexec"}   # modules internes Tasmota
 FAMILLES = ["Socle", "Reseau", "ModBus", "Peripheriques", "Carte", "Autres"]
@@ -66,7 +66,7 @@ def envs_platformio(racine):
     return json.loads(r.stdout.strip().splitlines()[-1])
 
 def dossier_de_env(nom):
-    """Regle de transform_name() (outils_docs/scripts_python/pre_utilitaires_platformio.py,
+    """Regle de transform_name() (outils_docs/scripts_python/build/pre_utilitaires_platformio.py,
     ~l.256) : 'tasmota32s3-cave-serveur-rly' -> 'data/cave/tasmota32s3-serveur-rly'.
     Reproduite ici : ce fichier est un script de build SCons, on ne l'importe pas."""
     parts = nom.split("-")
@@ -477,7 +477,7 @@ def genere(racine, sortie):
           "pointillee = garde OFF ou non evaluable (?).", ""]
     for c in cartes:
         L += ["### %s" % c["rel"].replace("data/", ""), ""] + mermaid_carte(c, modules, fs) + [""]
-    L += ["## Comment regenerer", "", "```", "python outils_docs/scripts_python/carte_modules_berry.py", "```", "",
+    L += ["## Comment regenerer", "", "```", "python outils_docs/scripts_python/berry/carte_modules_berry.py", "```", "",
           "Lecture seule : aucun build, aucune ecriture sous `data/`. La config PlatformIO est lue par l'API "
           "`ProjectConfig` dans le Python de PlatformIO (`~/.platformio/penv`).", ""]
     with open(sortie, "w", encoding="utf-8", newline="\n") as f:

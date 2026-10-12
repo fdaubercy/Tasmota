@@ -711,7 +711,7 @@ class SynchronisationTab(TabBase):
 
     def _run(self):
         cmd = [sys.executable, "-u",
-               str(SCRIPT_DIR / "synchronise_upstream_tasmota.py")]
+               str(SCRIPT_DIR.parent / "maintenance" / "synchronise_upstream_tasmota.py")]
         if self.v_dryrun.get():
             cmd.append("--dry-run")
         self.runner.run(cmd)

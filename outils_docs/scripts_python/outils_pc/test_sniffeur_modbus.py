@@ -1,7 +1,7 @@
 r"""Banc de test du sniffeur ModBus et de ses modules, sur PC, sans materiel.
 
 UTILISATION
-    python outils_docs/scripts_python/test_sniffeur_modbus.py        (code de sortie 0 = vert)
+    python outils_docs/scripts_python/outils_pc/test_sniffeur_modbus.py        (code de sortie 0 = vert)
     (Python de PlatformIO : il fournit pyserial)
 
 CE QU'IL COUVRE

@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Persist des cartes ESP32 (fork Tasmota)",
-  "description": "Genere par outils_docs/scripts_python/genere_schema_persist.py a partir de 8 persists. Cle `required` si presente dans >= 50 % des exemplaires du parent et au moins 2. Ne pas editer a la main : regenerer.",
+  "description": "Genere par outils_docs/scripts_python/berry/genere_schema_persist.py a partir de 8 persists. Cle `required` si presente dans >= 50 % des exemplaires du parent et au moins 2. Ne pas editer a la main : regenerer.",
   "type": "object",
   "properties": {
     "diverses": {

@@ -338,7 +338,7 @@ def adapteParametresPlatformio_override():
 # dans platformio_tasmota32.ini. Évite le conflit de cache entre framework S3 et P4.
 # Note : si la valeur est modifiée, elle sera effective au prochain build.
 def update_idf55_platform_packages():
-    script = os.path.join(env.subst("$PROJECT_DIR"), "outils_docs", "scripts_python", "update_idf55_framework.py")
+    script = os.path.join(env.subst("$PROJECT_DIR"), "outils_docs", "scripts_python", "build", "update_idf55_framework.py")
     if not os.path.isfile(script):
         print(Fore.YELLOW + f"⚠ Script introuvable, synchronisation IDF55 ignorée : {script}")
         return
@@ -713,7 +713,7 @@ afficher_version_tasmota()
 # 🔌 CIBLE « PONT SERIE » (pioarduino > Project Tasks > <env> > Custom)
 # ============================================================
 from SCons.Script import COMMAND_LINE_TARGETS
-sys.path.insert(0, join(env.subst("$PROJECT_DIR"), "outils_docs", "scripts_python"))
+sys.path.insert(0, join(env.subst("$PROJECT_DIR"), "outils_docs", "scripts_python", "build"))
 import cible_pont_serie
 cible_pont_serie.enregistre(env)
 # 🛰 CIBLE « SNIFFEUR MQTT » (meme menu Custom) : ecoute / publie sur le broker MQTT

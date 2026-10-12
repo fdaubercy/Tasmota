@@ -83,7 +83,7 @@ MOTIF = "**/*.ino.cpp"
 POLICY = "checkFilesAndFolders"
 
 BLOC = '''
-// ─── Ajoute par outils_docs/scripts_python/corrige_reglages_vscode.py ───
+// ─── Ajoute par outils_docs/scripts_python/maintenance/corrige_reglages_vscode.py ───
 // Corrige le PermissionError intermittent sur tasmota/tasmota.ino.cpp.
 // Cause mesuree : cpptools-srv2.exe -i TagParser (l'indexeur C/C++) ouvre le .cpp
 // genere pendant que PlatformIO le reecrit (pioino.py:104-110). Ce n'est ni Defender

@@ -17,9 +17,9 @@
 # banc_test_modbus.be section 6, sur la meme forme de table.
 #
 # Lancer DEPUIS LA RACINE DU DEPOT :
-#     lib/libesp32/berry/berry.exe outils_docs/scripts_python/test_discovery.be
+#     lib/libesp32/berry/berry.exe outils_docs/scripts_python/berry/test_discovery.be
 # Arguments optionnels : [dossier_sources] (defaut data/fs) [dossier_bouchons]
-# (defaut outils_docs/scripts_python/bouchons_berry). Temoin : lancer sur une copie de
+# (defaut outils_docs/scripts_python/berry/bouchons_berry). Temoin : lancer sur une copie de
 # l'ancien code (git show <rev>:data/fs/<f>.be) -> les tests des correctifs doivent echouer.
 # Derniere ligne : TEST_DISCOVERY: OK|ECHEC.
 #
@@ -31,7 +31,7 @@ import sys
 import string
 import json
 var SOURCES = size(global._argv) > 1 ? global._argv[1] : "data/fs"
-sys.path().push(size(global._argv) > 2 ? global._argv[2] : "outils_docs/scripts_python/bouchons_berry")
+sys.path().push(size(global._argv) > 2 ? global._argv[2] : "outils_docs/scripts_python/berry/bouchons_berry")
 
 # --- globaux fournis par le firmware sur l'appareil, bouchonnes ici ---
 var LOG_LEVEL_DEBUG = 3

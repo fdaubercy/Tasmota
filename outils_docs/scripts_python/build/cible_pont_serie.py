@@ -4,10 +4,10 @@ Deux facons de l'enregistrer :
   - ESP32 : importee par pre_utilitaires_platformio.py (extra_scripts des bases ESP32) ;
   - autre env (ex. ESP8266 tasmota-pompe-piscine) : ce fichier en extra_script direct,
         extra_scripts = ${env.extra_scripts}
-                        pre:outils_docs/scripts_python/cible_pont_serie.py
+                        pre:outils_docs/scripts_python/build/cible_pont_serie.py
     (ne PAS mettre les deux sur un meme env : la cible serait declaree deux fois).
 Lance
-outils_docs/scripts_python/pont_serie.py avec les parametres DE L'ENVIRONNEMENT choisi :
+outils_docs/scripts_python/outils_pc/pont_serie.py avec les parametres DE L'ENVIRONNEMENT choisi :
     port    : monitor_port, sinon upload_port (s'il designe un port serie), sinon "auto"
     debit   : monitor_speed (defaut 115200)
     TCP     : custom_pont_tcp (optionnel, defaut 7000) -> http://127.0.0.1:7000 et Serial Monitor (TCP)
@@ -38,7 +38,7 @@ def _port_serie(env):
 def enregistre(env):
     racine = env.subst("$PROJECT_DIR")
     nom_env = env.subst("$PIOENV")
-    script = os.path.join(racine, "outils_docs", "scripts_python", "pont_serie.py")
+    script = os.path.join(racine, "outils_docs", "scripts_python", "outils_pc", "pont_serie.py")
 
     def lance_pont(*args, **kwargs):
         port = _port_serie(env)

@@ -2,9 +2,9 @@
 
 Enregistree comme la cible du serveur syslog (cible_syslog_tasmota.py) :
   - ESP32 : importee par pre_utilitaires_platformio.py (extra_scripts des bases ESP32) ;
-  - autre env : ce fichier en extra_script direct (pre:outils_docs/scripts_python/cible_sniffeur_modbus.py),
+  - autre env : ce fichier en extra_script direct (pre:outils_docs/scripts_python/build/cible_sniffeur_modbus.py),
     jamais les deux sur un meme env (cible declaree deux fois).
-Lance outils_docs/scripts_python/sniffeur_modbus.py. Le port n'est PAS celui de l'env (monitor_port
+Lance outils_docs/scripts_python/outils_pc/sniffeur_modbus.py. Le port n'est PAS celui de l'env (monitor_port
 designe la carte ESP32) : c'est celui du convertisseur USB-RS485, branche sur le bus.
     port    : custom_sniffeur_modbus_port (optionnel, defaut auto = le seul CH343 present ; sinon
               demarre port ferme, a choisir sur la page)
@@ -25,7 +25,7 @@ NOM_CIBLE = "sniffeur_modbus"
 
 def enregistre(env):
     racine = env.subst("$PROJECT_DIR")
-    script = os.path.join(racine, "outils_docs", "scripts_python", "sniffeur_modbus.py")
+    script = os.path.join(racine, "outils_docs", "scripts_python", "outils_pc", "sniffeur_modbus.py")
 
     def lance_sniffeur(*args, **kwargs):
         port = str(env.GetProjectOption("custom_sniffeur_modbus_port", "auto") or "auto")

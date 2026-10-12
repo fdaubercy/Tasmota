@@ -408,7 +408,7 @@ car `set_timer` **empile** toujours (`tasmota_class.be:275`) : avant le 2026-10-
   Corrigé par : choix du rôle par l'id (`forceEnvoiParams`) et effacement des fiches périmées
   (`discoveryFonctions.mqtt_discovery` : un rôle publié sous notre MAC qui n'est pas le nôtre est
   effacé du broker par une publication vide retenue ; tout module qui reçoit une charge vide retire
-  l'entrée de sa table). Bancs : `outils_docs/scripts_python/test_discovery.be` §8 à §10.
+  l'entrée de sa table). Bancs : `outils_docs/scripts_python/berry/test_discovery.be` §8 à §10.
 - **Fiche figée entre deux connexions Wi-Fi** : un `ipMaitre` reçu n'entre dans la fiche qu'à la
   reconnexion Wi-Fi suivante ; d'ici là, ImAlive et MQTT annoncent l'ancienne valeur (vide au
   premier démarrage).

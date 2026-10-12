@@ -23,7 +23,7 @@
             "label": "Berry : surveillance (verification a l'enregistrement)",
             "type": "process",
             "command": "python",
-            "args": ["-u", "outils_docs/scripts_python/verifie_berry.py", "--surveille"],
+            "args": ["-u", "outils_docs/scripts_python/berry/verifie_berry.py", "--surveille"],
             "isBackground": true,
             "runOptions": { "runOn": "folderOpen" },
             "presentation": { "reveal": "never", "panel": "dedicated", "group": "berry" },
@@ -43,7 +43,7 @@
             "label": "Berry : verifier tout data/",
             "type": "process",
             "command": "python",
-            "args": ["-u", "outils_docs/scripts_python/verifie_berry.py"],
+            "args": ["-u", "outils_docs/scripts_python/berry/verifie_berry.py"],
             "group": "test",
             "presentation": { "reveal": "always", "panel": "shared", "clear": true },
             "problemMatcher": {
@@ -57,7 +57,7 @@
             "label": "Berry : verifier le fichier courant",
             "type": "process",
             "command": "python",
-            "args": ["-u", "outils_docs/scripts_python/verifie_berry.py", "${file}"],
+            "args": ["-u", "outils_docs/scripts_python/berry/verifie_berry.py", "${file}"],
             "group": "test",
             "presentation": { "reveal": "always", "panel": "shared", "clear": true },
             "problemMatcher": {
@@ -72,7 +72,7 @@
             "label": "Berry : solidifier + compiler le fichier courant (HORS build !)",
             "type": "process",
             "command": "python",
-            "args": ["-u", "outils_docs/scripts_python/solidifie_et_compile_berry.py", "${file}"],
+            "args": ["-u", "outils_docs/scripts_python/berry/solidifie_et_compile_berry.py", "${file}"],
             "group": "test",
             "presentation": { "reveal": "always", "panel": "shared", "clear": true },
             "problemMatcher": []
@@ -81,7 +81,7 @@
             "label": "Berry : banc ModBus",
             "type": "process",
             "command": "python",
-            "args": ["-u", "outils_docs/scripts_python/banc_test_modbus.py"],
+            "args": ["-u", "outils_docs/scripts_python/berry/banc_test_modbus.py"],
             "group": "test",
             "presentation": { "reveal": "always", "panel": "shared", "clear": true },
             "problemMatcher": []
@@ -90,7 +90,7 @@
             "label": "Berry : test discovery",
             "type": "process",
             "command": "${workspaceFolder}/lib/libesp32/berry/berry.exe",
-            "args": ["outils_docs/scripts_python/test_discovery.be"],
+            "args": ["outils_docs/scripts_python/berry/test_discovery.be"],
             "group": "test",
             "presentation": { "reveal": "always", "panel": "shared", "clear": true },
             "problemMatcher": []
@@ -100,7 +100,7 @@
             "label": "Docs : regenerer la carte des modules Berry",
             "type": "process",
             "command": "python",
-            "args": ["-u", "outils_docs/scripts_python/carte_modules_berry.py"],
+            "args": ["-u", "outils_docs/scripts_python/berry/carte_modules_berry.py"],
             "presentation": { "reveal": "always", "panel": "shared", "clear": true },
             "problemMatcher": []
         },
@@ -108,7 +108,7 @@
             "label": "Docs : regenerer le schema des _persist.json",
             "type": "process",
             "command": "python",
-            "args": ["-u", "outils_docs/scripts_python/genere_schema_persist.py"],
+            "args": ["-u", "outils_docs/scripts_python/berry/genere_schema_persist.py"],
             "presentation": { "reveal": "always", "panel": "shared", "clear": true },
             "problemMatcher": []
         },
@@ -118,7 +118,7 @@
             "label": "Outil : sniffeur ModBus (http://127.0.0.1:7300)",
             "type": "process",
             "command": "${userHome}/.platformio/penv/Scripts/python.exe",
-            "args": ["-u", "outils_docs/scripts_python/sniffeur_modbus.py", "--port", "auto", "--debit", "19200", "--http", "7300"],
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/sniffeur_modbus.py", "--port", "auto", "--debit", "19200", "--http", "7300"],
             "presentation": { "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
         },
@@ -126,7 +126,7 @@
             "label": "Outil : sniffeur MQTT (http://127.0.0.1:7100)",
             "type": "process",
             "command": "${userHome}/.platformio/penv/Scripts/python.exe",
-            "args": ["-u", "outils_docs/scripts_python/sniffeur_mqtt.py", "--http", "7100"],
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/sniffeur_mqtt.py", "--http", "7100"],
             "presentation": { "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
         },
@@ -134,7 +134,7 @@
             "label": "Outil : serveur syslog (http://127.0.0.1:7200)",
             "type": "process",
             "command": "${userHome}/.platformio/penv/Scripts/python.exe",
-            "args": ["-u", "outils_docs/scripts_python/syslog_tasmota.py", "--http", "7200"],
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/syslog_tasmota.py", "--http", "7200"],
             "presentation": { "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
         },
@@ -142,7 +142,7 @@
             "label": "Outil : pont serie (port USB seul, tcp 7000)",
             "type": "process",
             "command": "${userHome}/.platformio/penv/Scripts/python.exe",
-            "args": ["-u", "outils_docs/scripts_python/pont_serie.py", "--port", "auto", "--vitesse", "115200", "--tcp", "7000"],
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/pont_serie.py", "--port", "auto", "--vitesse", "115200", "--tcp", "7000"],
             "presentation": { "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
         },
@@ -151,7 +151,7 @@
             "label": "Fork : retard sur l'amont (diagnostic, --dry-run)",
             "type": "process",
             "command": "python",
-            "args": ["-u", "outils_docs/scripts_python/synchronise_fork_tasmota.py", "--dry-run"],
+            "args": ["-u", "outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py", "--dry-run"],
             "presentation": { "reveal": "always", "panel": "shared", "clear": true },
             "problemMatcher": []
         }

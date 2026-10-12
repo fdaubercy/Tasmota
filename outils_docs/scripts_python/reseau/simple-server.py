@@ -3,12 +3,12 @@
 
 """
 Usage:
-        ./outils_docs/scripts_python/simple-server.py -i <ip_address>:<port> -d <serveur_directory>
+        ./outils_docs/scripts_python/reseau/simple-server.py -i <ip_address>:<port> -d <serveur_directory>
 
 Example:
-        ./outils_docs/scripts_python/simple-server.py -i 192.168.0.3:80 -d outils_docs/
-        ./outils_docs/scripts_python/simple-server.py -i 192.168.0.3:80
-        ./outils_docs/scripts_python/simple-server.py
+        ./outils_docs/scripts_python/reseau/simple-server.py -i 192.168.0.3:80 -d outils_docs/
+        ./outils_docs/scripts_python/reseau/simple-server.py -i 192.168.0.3:80
+        ./outils_docs/scripts_python/reseau/simple-server.py
 
 Remarques:
         - Le dossier par défaut est 'build_output/'
@@ -18,7 +18,7 @@ Remarques:
                 sudo chmod -R 755 <dossier>
                 modifier les groupes et propriétaires si nécessaire
         - Le serveur doit être démarré avec des droits administrateurs: utiliser la commande sudo chown pour changer le propriétaire du script si nécessaire:
-                ex: sudo chown <user>:<groupe> outils_docs/scripts_python/simple-server.py
+                ex: sudo chown <user>:<groupe> outils_docs/scripts_python/reseau/simple-server.py
         - Pour utiliser un autre port (ex: 8080), il faut aussi modifier l'adresse IP en conséquence.
         - Pour arrêter le serveur, faire Ctrl+C dans le terminal
 """

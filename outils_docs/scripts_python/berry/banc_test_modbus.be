@@ -4,9 +4,9 @@
 # les fonctions pures contre des attendus connus - AVANT de flasher un module.
 #
 # Lancer via son enveloppe Python (deduit racine + berry.exe, code de sortie) :
-#     python outils_docs/scripts_python/banc_test_modbus.py
+#     python outils_docs/scripts_python/berry/banc_test_modbus.py
 # Ou directement, DEPUIS LA RACINE DU DEPOT :
-#     lib/libesp32/berry/berry.exe outils_docs/scripts_python/banc_test_modbus.be
+#     lib/libesp32/berry/berry.exe outils_docs/scripts_python/berry/banc_test_modbus.be
 #
 # Portee : logique deterministe seulement (checksum, construction de trame,
 # decision d'appariement, decodage, commandes de reglage). Ne teste NI le timing,
@@ -16,14 +16,14 @@
 # Argument optionnel : le dossier des sources a tester (defaut data/fs), pour
 # eprouver un correctif sur une copie sans toucher a data/fs (ex. pendant un build,
 # qui solidifie data/fs au demarrage de chaque environnement).
-#     lib/libesp32/berry/berry.exe outils_docs/scripts_python/banc_test_modbus.be <dossier>
+#     lib/libesp32/berry/berry.exe outils_docs/scripts_python/berry/banc_test_modbus.be <dossier>
 
 import global
 import sys
 var SOURCES = size(global._argv) > 1 ? global._argv[1] : "data/fs"
 # Bouchons des modules natifs/de framework importes par les fonctions testees
 # (crc, persist, gestionFileFolder, tcpFonctions) : 'import' les trouve ici.
-sys.path().push("outils_docs/scripts_python/bouchons_berry")
+sys.path().push("outils_docs/scripts_python/berry/bouchons_berry")
 
 # --- globaux fournis par le firmware sur l'appareil, bouchonnes ici ---
 var LOG_LEVEL_DEBUG = 3

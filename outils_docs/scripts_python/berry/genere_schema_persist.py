@@ -74,7 +74,7 @@ import sys
 from itertools import combinations
 from pathlib import Path
 
-RACINE = Path(__file__).resolve().parents[2]
+RACINE = Path(__file__).resolve().parents[3]
 SCHEMA_DEFAUT = RACINE / "outils_docs" / "schemas" / "persist.schema.json"
 SEUIL_REQUIS = 0.5     # part minimale d'exemplaires du parent portant la cle
 MIN_REQUIS = 2         # et nombre minimal d'exemplaires
@@ -277,7 +277,7 @@ def genere(persists):
     corps = inf.infere(instances, "", None)
     schema = {"$schema": "http://json-schema.org/draft-07/schema#",
               "title": "Persist des cartes ESP32 (fork Tasmota)",
-              "description": ("Genere par outils_docs/scripts_python/genere_schema_persist.py a partir de "
+              "description": ("Genere par outils_docs/scripts_python/berry/genere_schema_persist.py a partir de "
                               f"{len(persists)} persists. Cle `required` si presente dans >= 50 % des exemplaires "
                               "du parent et au moins 2. Ne pas editer a la main : regenerer.")}
     schema.update(corps)

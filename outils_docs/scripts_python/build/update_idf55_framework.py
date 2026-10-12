@@ -10,7 +10,7 @@ trouve l'URL du framework correspondant dans les plateformes installées Platfor
 puis met à jour platform_packages dans platformio_override.ini.
 
 Usage :
-    python outils_docs/scripts_python/update_idf55_framework.py
+    python outils_docs/scripts_python/build/update_idf55_framework.py
     (à lancer depuis la racine du projet Tasmota)
 """
 

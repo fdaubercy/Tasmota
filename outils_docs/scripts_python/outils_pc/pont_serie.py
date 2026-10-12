@@ -19,7 +19,7 @@ Couleurs : les lignes sont colorees avec les regles Tasmota de monitor/filter_co
 regles est absent, le pont passe seul en mode sans couleurs.
 
 Usage (Python de PlatformIO, qui fournit pyserial) :
-    %USERPROFILE%\\.platformio\\penv\\Scripts\\python.exe outils_docs/scripts_python/pont_serie.py
+    %USERPROFILE%\\.platformio\\penv\\Scripts\\python.exe outils_docs/scripts_python/outils_pc/pont_serie.py
     options : --port auto|COM11|loop://|aucun  --vitesse 115200  --tcp 7000  --journal fichier.log
               --sans-couleurs  --lister (affiche les ports serie et sort)
     --port auto (defaut) : prend le SEUL port USB present ; sinon demarre port ferme.
@@ -57,7 +57,7 @@ import serial
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pont_serie_web  # noqa: E402  (module voisin : page et routes HTTP)
 
-RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 DEBUTS_HTTP = (b"GET ", b"POST", b"HEAD")
 VITESSES = [9600, 19200, 38400, 57600, 74880, 115200, 230400, 250000, 460800, 500000,
             921600, 1000000, 1500000, 2000000]   # 74880 : messages du ROM de demarrage ESP8266/ESP32

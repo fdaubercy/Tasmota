@@ -2,7 +2,7 @@ r"""Enveloppe du banc de test Berry ModBus (banc_test_modbus.be).
 
 UTILISATION
 -----------
-    python outils_docs/scripts_python/banc_test_modbus.py [dossier_sources]
+    python outils_docs/scripts_python/berry/banc_test_modbus.py [dossier_sources]
 
 dossier_sources (defaut data/fs, relatif a la racine) : pour eprouver un
 correctif sur une copie sans toucher a data/fs. Depuis n'importe quel dossier : la racine du depot et l'interpreteur berry

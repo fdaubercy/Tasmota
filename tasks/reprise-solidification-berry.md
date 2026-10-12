@@ -86,7 +86,7 @@ est un dépôt en retard sur l'état vivant, pas un effacement sec — s'assurer
 ne jamais lancer 2h16 a l'aveugle :
 
 ```
-python outils_docs/scripts_python/solidifie_et_compile_berry.py data/fs/<module>.be
+python outils_docs/scripts_python/berry/solidifie_et_compile_berry.py data/fs/<module>.be
 ```
 
 Puis console Berry du grenier (`http://192.168.0.44/` → Berry Scripting Console) :
@@ -233,7 +233,7 @@ Le stub des 9 globaux, lui, nous est propre et reste chez nous.
 Un build fait **2h16**. La chaîne complète se rejoue en **une dizaine de secondes** :
 
 ```
-python outils_docs/scripts_python/solidifie_et_compile_berry.py
+python outils_docs/scripts_python/berry/solidifie_et_compile_berry.py
 ```
 
 Elle enchaîne les 3 étapes de `gen-berry-structures.py` — solidification, `coc`, puis
@@ -244,8 +244,8 @@ compiler. **Toujours la passer avant de lancer un build.**
 Pour convertir un autre module (les 12 restants) :
 
 ```
-python outils_docs/scripts_python/nomme_fonctions_berry.py data/fs/<module>.be
-python outils_docs/scripts_python/nomme_fonctions_berry.py data/fs/<module>.be --ecrire
+python outils_docs/scripts_python/berry/nomme_fonctions_berry.py data/fs/<module>.be
+python outils_docs/scripts_python/berry/nomme_fonctions_berry.py data/fs/<module>.be --ecrire
 ```
 
 Sans `--ecrire` : simulation seule. Les deux scripts portent des chemins absolus vers ce
@@ -285,7 +285,7 @@ PYTHONPATH=../berry PYTHONUTF8=1 python -m berry_port -s -g solidify_all_python.
    qui corrigent le `PermissionError` n'arrivent jamais : ils vivent dans le profil actif,
    pas dans le profil par défaut).
 2. **PlatformIO** → rien à faire. Les 16,6 Go se réinstallent au premier `pio run`.
-3. **Le filet** → `python outils_docs/scripts_python/corrige_reglages_vscode.py --verifier`
+3. **Le filet** → `python outils_docs/scripts_python/maintenance/corrige_reglages_vscode.py --verifier`
    si le `PermissionError` intermittent sur `tasmota.ino.cpp` réapparaît.
 
 Le reste est dans le dépôt. Les outils Python n'ont **aucun chemin en dur** : racine du
@@ -298,7 +298,7 @@ dépôt, PlatformIO et toolchain xtensa sont tous déduits.
 - Modifiés en permanence par les builds, sans intérêt à committer :
   `tasmota/tasmota_defines_for_berry.{be,h}`, `tasmota/user_config_override.h`
   (CFG_HOLDER), `lib/libesp32/berry_custom/src/modules.h`, `.claude-flow/`.
-- Synchroniser le fork : `python outils_docs/scripts_python/synchronise_fork_tasmota.py`
+- Synchroniser le fork : `python outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py`
   (merge, jamais de force-push ; le journal va dans `outils_docs/HISTORIQUE_SYNCHRO_FORK.md`).
 
 ## Documents liés

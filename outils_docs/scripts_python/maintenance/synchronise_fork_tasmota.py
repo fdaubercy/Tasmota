@@ -104,7 +104,7 @@ HISTORIQUE_REL = "outils_docs/HISTORIQUE_SYNCHRO_FORK.md"
 
 EN_TETE_HISTORIQUE = """# Historique des synchronisations du fork
 
-Genere automatiquement par `outils_docs/scripts_python/synchronise_fork_tasmota.py`
+Genere automatiquement par `outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py`
 a chaque synchronisation reussie du fork avec upstream (arendst/Tasmota).
 
 Append uniquement — ne jamais supprimer d'entree existante.

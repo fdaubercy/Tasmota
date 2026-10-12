@@ -1,7 +1,7 @@
 # Carte des modules Berry par carte
 
 > Fichier GENERE par carte_modules_berry.py - ne pas editer a la main.
-> Genere le 2026-10-12 22:04.
+> Genere le 2026-10-12 22:39.
 
 40 modules (33 dans `data/fs`, 7 propres a une carte), 8 cartes.
 
@@ -156,13 +156,13 @@ flowchart LR
     m_controleWeb -.->|import| m_rangeExtenderFonctions
     m_modbusFonctions -.->|import| m_tcpFonctions
     m_modbusFonctions -.->|import| m_udpFonctions
-    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
-    m_udpFonctions -.->|import| m_modbusFonctions
-    m_globalFonctions -.->|import| m_modbusFonctions
-    m_tcpFonctions -.->|import| m_modbusFonctions
     m_controleGeneral -.->|import| m_modbusFonctions
-    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
+    m_udpFonctions -.->|import| m_modbusFonctions
+    m_tcpFonctions -.->|import| m_modbusFonctions
+    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
+    m_globalFonctions -.->|import| m_modbusFonctions
     m_controleWeb -.->|import| m_ledsPanelFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
 ```
 
 ### cave/tasmota32-serveur-rly
@@ -219,13 +219,13 @@ flowchart LR
     m_controleWeb -.->|import| m_rangeExtenderFonctions
     m_modbusFonctions -.->|import| m_tcpFonctions
     m_modbusFonctions -.->|import| m_udpFonctions
-    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
-    m_udpFonctions -.->|import| m_modbusFonctions
-    m_globalFonctions -.->|import| m_modbusFonctions
     m_controleGeneral -.->|import| m_modbusFonctions
+    m_udpFonctions -.->|import| m_modbusFonctions
     m_tcpFonctions -.->|import| m_modbusFonctions
-    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
+    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
+    m_globalFonctions -.->|import| m_modbusFonctions
     m_controleWeb -.->|import| m_ledsPanelFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
     CARTE --> m_controlePompeVideCave
 ```
 
@@ -287,11 +287,11 @@ flowchart LR
     CARTE --> m_rangeExtenderFonctions
     CARTE --> m_tcpFonctions
     CARTE --> m_udpFonctions
-    m_udpFonctions -.->|import| m_modbusFonctions
-    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
     m_globalFonctions -.->|import| m_modbusFonctions
-    m_tcpFonctions -.->|import| m_modbusFonctions
     m_controleGeneral -.->|import| m_modbusFonctions
+    m_tcpFonctions -.->|import| m_modbusFonctions
+    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
+    m_udpFonctions -.->|import| m_modbusFonctions
     CARTE -.-> m_controleLedRGB
     CARTE -.-> m_ledRGBFonctions
     m_controleWeb -.->|import| m_ledsPanelFonctions
@@ -361,11 +361,11 @@ flowchart LR
     CARTE --> m_rangeExtenderFonctions
     CARTE -.-> m_tcpFonctions
     CARTE -.-> m_udpFonctions
-    m_udpFonctions -.->|import| m_modbusFonctions
-    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
     m_globalFonctions -.->|import| m_modbusFonctions
-    m_tcpFonctions -.->|import| m_modbusFonctions
     m_controleGeneral -.->|import| m_modbusFonctions
+    m_tcpFonctions -.->|import| m_modbusFonctions
+    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
+    m_udpFonctions -.->|import| m_modbusFonctions
     CARTE -.-> m_controleLedRGB
     CARTE -.-> m_controleLoRaWan
     CARTE --> m_controleVoletRoulants
@@ -437,9 +437,9 @@ flowchart LR
     CARTE --> m_controleRangeExtender
     CARTE --> m_controleUDP
     CARTE --> m_discoveryFonctions
+    m_controleRangeExtender -.->|import| m_rangeExtenderFonctions
     m_controleWeb -.->|import| m_rangeExtenderFonctions
     m_discoveryFonctions -.->|import| m_rangeExtenderFonctions
-    m_controleRangeExtender -.->|import| m_rangeExtenderFonctions
     m_modbusFonctions -.->|import| m_tcpFonctions
     CARTE --> m_udpFonctions
     CARTE --> m_controleModbus
@@ -690,7 +690,7 @@ flowchart LR
 ## Comment regenerer
 
 ```
-python outils_docs/scripts_python/carte_modules_berry.py
+python outils_docs/scripts_python/berry/carte_modules_berry.py
 ```
 
 Lecture seule : aucun build, aucune ecriture sous `data/`. La config PlatformIO est lue par l'API `ProjectConfig` dans le Python de PlatformIO (`~/.platformio/penv`).

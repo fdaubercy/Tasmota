@@ -2,9 +2,9 @@
 
 Enregistree comme la cible du pont serie (cible_pont_serie.py) :
   - ESP32 : importee par pre_utilitaires_platformio.py (extra_scripts des bases ESP32) ;
-  - autre env : ce fichier en extra_script direct (pre:outils_docs/scripts_python/cible_sniffeur_mqtt.py),
+  - autre env : ce fichier en extra_script direct (pre:outils_docs/scripts_python/build/cible_sniffeur_mqtt.py),
     jamais les deux sur un meme env (cible declaree deux fois).
-Lance outils_docs/scripts_python/sniffeur_mqtt.py. Le broker ne depend pas de l'env choisi : il est lu
+Lance outils_docs/scripts_python/outils_pc/sniffeur_mqtt.py. Le broker ne depend pas de l'env choisi : il est lu
 dans tasmota/user_config_override.h (MQTT_HOST/PORT/USER/PASS).
     HTTP    : custom_sniffeur_http (optionnel, defaut 7100) -> http://127.0.0.1:7100
     journal : %TEMP%/sniffeur_mqtt.log
@@ -22,7 +22,7 @@ NOM_CIBLE = "sniffeur_mqtt"
 
 def enregistre(env):
     racine = env.subst("$PROJECT_DIR")
-    script = os.path.join(racine, "outils_docs", "scripts_python", "sniffeur_mqtt.py")
+    script = os.path.join(racine, "outils_docs", "scripts_python", "outils_pc", "sniffeur_mqtt.py")
 
     def lance_sniffeur(*args, **kwargs):
         http = str(env.GetProjectOption("custom_sniffeur_http", "7100") or "7100")

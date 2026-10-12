@@ -25,7 +25,7 @@
 #      development propre, avant d'ouvrir un chantier), pas l'automatisme.
 #
 #  La synchro se lance donc a la main, dans la session, sortie sous les yeux :
-#      python outils_docs/scripts_python/synchronise_fork_tasmota.py
+#      python outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py
 #
 #  DEROULE
 #  -------
@@ -79,6 +79,6 @@ BRANCHE=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
 
 echo "fork : $RETARD commit(s) de retard sur upstream/development (dernier amont : $AMONT)"
 echo "synchro a lancer a la main, sur development propre, AVANT d'ouvrir un chantier :"
-echo "  python outils_docs/scripts_python/synchronise_fork_tasmota.py"
+echo "  python outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py"
 [ "$BRANCHE" != "development" ] && echo "  (branche courante : $BRANCHE — ne pas merger l'amont dedans)"
 exit 0
