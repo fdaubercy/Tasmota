@@ -102,6 +102,11 @@ if (persist._p != nil && persist._p.size() != 0)
         gestionFileFolder.loadBerryFile("/controleLedRGB", "ON", "ON")
     end
 
+    # controleRideau n'est PAS solidifie : charge depuis le LittleFS, SEULEMENT si le module est active
+    # (le 2e argument de loadBerryFile ne filtre pas le chargement, voir plus haut). Squelette pour
+    # l'instant (2026-10-12) : la porte est pilotee par le driver voletRoulants.
+    if modules.find("rideau", {}).find("activation", "OFF") == "ON"    gestionFileFolder.loadBerryFile("/controleRideau", "ON", "ON")    end
+
     # NE PAS compiler autoexec.be en .bec : tasmota.compile() compile en contexte LOCAL
     # (tasmota_class.be:480, upstream #23457). Le .bec tournerait alors sous le nom 'loader'
     # et tous les import/var/affectations de niveau fichier ci-dessus deviendraient des

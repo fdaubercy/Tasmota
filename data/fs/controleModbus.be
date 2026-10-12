@@ -2,7 +2,7 @@
     Ce module est conçu pour permettre la communication maitre-esclave
         entre 2 modules ESP32 équipés de Tasmota
 
-    Pour l'aide au protocole ModBus: voir le fichier 'ModBus.help'
+    Pour l'aide au protocole ModBus : outils_docs/Aide/MODBUS.md (mode d'emploi) et outils_docs/PROTOCOLE_MODBUS.md (conception)
 
     Pour la transmission de données, on distingue les différents modes de communication suivants :
         - Modbus TCP : communication TCP/IP ETHERNET basée sur le modèle client/serveur

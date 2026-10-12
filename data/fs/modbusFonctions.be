@@ -1,4 +1,4 @@
-# Pour l'aide au protocole ModBus: voir le fichier 'ModBus.help'
+# Pour l'aide au protocole ModBus : outils_docs/Aide/MODBUS.md (mode d'emploi) et outils_docs/PROTOCOLE_MODBUS.md (conception)
 
 # Rend ce module solidifiable (ajouté le 2026-07-15).
 # Pour Berry, ce n'est qu'un commentaire : aucun effet sur l'appareil, le fichier

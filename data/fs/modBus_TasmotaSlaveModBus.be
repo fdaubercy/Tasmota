@@ -1,5 +1,5 @@
 #- NOTES Sur l'ajout de fonctionnalité pour les maitres des modules ModBus TasmotaSlave
-    - ModBus.help peut vous aider à comprendre la gestion des communications
+    - outils_docs/Aide/MODBUS.md et outils_docs/PROTOCOLE_MODBUS.md expliquent la gestion des communications
     - Utilise le Driver ModBus natif de Tasmota
     - Chargé de créer les devices virtuels ModBus
     - Donne de nouvelles compétences de controleau maitre sir les modules Tasmota utilisés comme esclaves ModBus
@@ -1227,7 +1227,8 @@ class MODBUS_TASMOTA_SLAVE : Driver
                 for cleDevice: env[famille].keys()
                     var device = env[famille][cleDevice]
                     # Seuls les appareils que le releve RELIT passent a 'inconnu' (audit G7) : les
-                    # autres (LEDs WS2812 1376...) n'en sortiraient jamais, faute de lecture.
+                    # autres n'en sortiraient jamais, faute de lecture. Le ruban WS2812 (1376) est
+                    # relu depuis le commit 31baef8e0 : il passe donc lui aussi a 'inconnu'.
                     if (type(device) == "instance" && device.find("virtuel") == virtuel && self.demandeLecture(device, famille, 0) != nil)
                         device["etatConstate"] = "inconnu"
                         nb += 1

@@ -85,6 +85,7 @@
 			"activation": "OFF",
 			"id": 0,
 			"log": "detail",
+			"ipMaitre": "",
 			"AP": {
 				"IPAddress": "192.168.4.1",
 				"Subnet": "255.255.255.0",
@@ -104,6 +105,11 @@
 			"log": "detail",
 			"telePeriod": 300,
 			"port": 2000
+		},
+		"tcp": {
+			"activation": "OFF",
+			"id": 0,
+			"log": "detail"
 		},
 		"discovery": {
 			"activation": "ON",
@@ -716,6 +722,14 @@
 			"mode": "8N1",
 			"timeoutReponse": 1000,
 			"log": "detail",
+			"activationReponseCMD": "ON",
+			"relaisPushMQTT": "OFF",
+			"typeComm": {
+				"Serial": "OFF",
+				"UDP": "OFF",
+				"MQTT": "OFF",
+				"TCP": "OFF"
+			},
 			"environnement": {
 				"pinsModBus": {
 					"RX": {
@@ -735,18 +749,22 @@
 						"virtuel": "OFF"
 					}
 				},
-				"Conn16channel": {
-					"activation": "OFF",
+				"Conn16channels": {
 					"log": "detail",
-					"name": "Connecteur RS485 16 sorties",
-					"id": "0x01",
-					"verifieAuDemarrage": "OFF"
+					"Conn16channel1": {
+						"activation": "OFF",
+						"name": "Connecteur RS485 16 sorties",
+						"id": 1,
+						"verifieAuDemarrage": "OFF"
+					}
 				},
-				"TasmotaSlaveModBus1": {
-					"activation": "OFF",
+				"TasmotaSlaveModBus": {
 					"log": "detail",
-					"name": "Capteurs Cuve ModBus",
-					"id": "0x02"
+					"TasmotaSlaveModBus1": {
+						"activation": "OFF",
+						"name": "Capteurs Cuve ModBus",
+						"id": 2
+					}
 				}
 			}
 		},

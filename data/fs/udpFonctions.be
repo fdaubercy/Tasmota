@@ -76,7 +76,7 @@
            l'esclave, était annoncée à la place d'esclaveN. Le maître la rangeait en 'maitre' (ignorée par
            le routage, prise pour l'id ModBus 0) et, typeReglageHeure valant 'NTP', ne renvoyait ni heure
            ni IP. Corrigé par : choix du rôle par l'id (forceEnvoiParams) + effacement des fiches périmées
-           (discoveryFonctions.mqtt_discovery). Bancs : outils_docs/scripts_python/test_discovery.be §8-10.
+           (discoveryFonctions.mqtt_discovery). Bancs : outils_docs/scripts_python/berry/test_discovery.be §8-10.
          * La fiche n'est reconstruite qu'à la connexion Wi-Fi : un ipMaitre reçu n'y entre qu'à la
            reconnexion suivante (ImAlive et MQTT annoncent l'ancienne valeur d'ici là).
       Détail et tableaux : outils_docs/ANALYSE_BERRY_MODBUS_DISCOVERY.md §2.6.

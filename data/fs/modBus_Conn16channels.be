@@ -1,6 +1,6 @@
 #- NOTES Sur le module ModBus 16 sorties numériques
     - 16 sorties numériques (coils) de 1 à 16
-    - ModBus.help peut vous aider à comprendre la gestion des communications
+    - outils_docs/Aide/MODBUS.md et outils_docs/PROTOCOLE_MODBUS.md (§8 : registres de cette carte) expliquent la gestion des communications
     - Utilise le Driver ModBus natif de Tasmota
     - Les commandes et les propriétés du module sont décrites dans le fichier '16 Channel  Multifunction RS485 Module commamd.docx'
     - Les relais de la platine 16 relais sont des relais inversés (circuit fermé lors de la presence de 0V sur la borne de commande)
