@@ -43,6 +43,15 @@ class CONTROLE_WEB
     def every_second()
     end
 
+    # Reponse a /?m=1 (rafraichissement de la page d'accueil, ~2 s) : recale les curseurs du ruban
+    # virtuel du maitre sur l'etat relu ou pousse par l'esclave (2026-10-12, ledsPanelFonctions).
+    def web_sensor()
+        if (controleGeneral.nbIOActivesJSON["WS2812"]["actives"].find("nb", 0) > controleGeneral.nbIOActivesJSON["WS2812"]["reels"].find("nb", 0))
+            import ledsPanelFonctions
+            ledsPanelFonctions.majCurseursVirtuels()
+        end
+    end
+
 	# Envoi des parametres à la page web
 	def envoiJson()
         import webFonctions
@@ -348,6 +357,9 @@ class CONTROLE_WEB
         if (controleGeneral.nbIOActivesJSON["WS2812"]["actives"].find("nb", 0) > controleGeneral.nbIOActivesJSON["WS2812"]["reels"].find("nb", 0))
             webFonctions.log("WEBSERVER: Affichage des paramètres des leds virtuelles sur webUI !", LOG_LEVEL_DEBUG)
             gestionFileFolder.readFileByLineAndContentSend("/sd/html/ledVirtuel.html")
+            # Curseurs a la couleur memorisee du ruban, puis recales a chaque /?m=1 (web_sensor)
+            import ledsPanelFonctions
+            ledsPanelFonctions.scriptCurseursVirtuels()
 
             # Menu "Animations LEDs" des rubans des esclaves (2026-10-11) : meme formulaire que sur
             # l'esclave ; 'scheme N' est la commande SCHEME du maitre (modBus_TasmotaSlaveModBus),

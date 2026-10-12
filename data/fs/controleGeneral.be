@@ -441,22 +441,39 @@ class CONTROLE_GENERAL : Driver
 				end
 			end
 		end
-		if (size(ids) == 0)	return	end
-
-		logFonctions.log(string.format("CONTROLE_GENERAL: Boutons de relais masques sur webUI : %s !", str(ids)), LOG_LEVEL_DEBUG)
-		# Cache la cellule du bouton, puis refait la grille de la table avec les seuls boutons
-		# visibles, par le calcul de Tasmota (8 colonnes max, xdrv_01_9_webserver.ino:1510-1514).
-		# Les largeurs se reglent par COLONNE, commune a toutes les rangees : recalculer une seule
-		# rangee ecrasait la derniere colonne (19 relais du P4). Les cellules sont DEPLACEES, pas
-		# recreees : ids 'o<n>' et onclick intacts. Une table de lumiere (curseurs) n'est pas touchee.
-		webserver.content_send("<script>(function(h){var s=[];h.forEach(function(n){var b=eb('o'+n);if(!b)return;" +
-			"var d=b.parentNode;d.style.display='none';if(s.indexOf(d.parentNode.parentNode)<0)s.push(d.parentNode.parentNode);});" +
-			"s.forEach(function(t){var c=t.querySelectorAll('td'),v=[],i,r;" +
-			"for(i=0;i<c.length;i++){if(!c[i].querySelector(\"button[id^='o']\"))return;if(c[i].style.display!='none')v.push(c[i]);}" +
-			"if(!v.length)return;var k=Math.ceil(v.length/Math.ceil(v.length/8)),w=Math.floor(100/k)+'%';" +
-			"while(t.firstChild)t.removeChild(t.firstChild);" +
-			"for(i=0;i<v.length;i++){if(i%k==0){r=document.createElement('tr');t.appendChild(r);}v[i].style.width=w;r.appendChild(v[i]);}" +
-			"for(i=0;i<c.length;i++)if(c[i].style.display=='none')r.appendChild(c[i]);});})(" + str(ids) + ");</script>")
+		if (size(ids) > 0)
+			logFonctions.log(string.format("CONTROLE_GENERAL: Boutons de relais masques sur webUI : %s !", str(ids)), LOG_LEVEL_DEBUG)
+		end
+		# Cache la cellule des boutons masques, puis refait la grille de CHAQUE table de boutons de
+		# relais avec les seuls boutons visibles. Les cellules sont DEPLACEES, pas recreees : ids
+		# 'o<n>' et onclick intacts (le rafraichissement de Tasmota les retrouve par eb('o<n>')).
+		# Une table de lumiere (curseurs) n'est pas touchee.
+		# Largeur FIXE (2026-10-12) : Tasmota range jusqu'a 8 boutons par rangee et le cadre de la page
+		# (inline-block) prend la largeur de leurs libelles ; avec 18 boutons (6 par rangee) la page du
+		# maitre faisait ~1250 px contre ~340 pour un esclave. Les boutons sont places dans une boite
+		# sortie du calcul de largeur (contain:inline-size) : la page garde la largeur de son autre
+		# contenu. Chaque bouton garde sa largeur NATURELLE (libelle sur une ligne) ; une rangee en
+		# prend autant que la largeur le permet, puis passe a la suivante, et ses boutons s'etirent au
+		# prorata pour la remplir. Une table par rangee : dans une seule table, les colonnes seraient
+		# communes a toutes les rangees. Recalcule si la fenetre change de taille.
+		webserver.content_send("<script>(function(h){function g(){var gs=[];" +
+			"h.forEach(function(n){var b=eb('o'+n);if(b)b.parentNode.style.display='none';});" +
+			"document.querySelectorAll(\"button[id^='o']\").forEach(function(b){if(!/^o[0-9]+$/.test(b.id))return;" +
+				"var tb=b.closest('table');if(!tb)return;var z=tb.parentNode,k=(z.dataset&&z.dataset.grille)?z:tb;if(gs.indexOf(k)<0)gs.push(k);});" +
+			"gs.forEach(function(k){var c=k.querySelectorAll('td'),v=[],x=[],i,z,W,n,rg=[],r=[],l=0;" +
+			"for(i=0;i<c.length;i++){if(!c[i].querySelector(\"button[id^='o']\"))return;(c[i].style.display=='none'?x:v).push(c[i]);}" +
+			"if(!v.length)return;" +
+			"if(k.tagName=='TABLE'){z=document.createElement('div');z.dataset.grille='1';z.style.contain='inline-size';k.parentNode.insertBefore(z,k);z.appendChild(k);}else z=k;" +
+			"W=z.clientWidth;" +
+			"n=v.map(function(d){var b=d.querySelector('button'),a=b.style.width,s=b.style.whiteSpace,w;b.style.width='auto';b.style.whiteSpace='nowrap';" +
+				"w=b.getBoundingClientRect().width+8;b.style.width=a;b.style.whiteSpace=s;return w;});" +
+			"for(i=0;i<v.length;i++){if(r.length&&l+n[i]>W){rg.push(r);r=[];l=0;}r.push(i);l+=n[i];}rg.push(r);" +
+			"while(z.firstChild)z.removeChild(z.firstChild);" +
+			"rg.forEach(function(r,j){var t=document.createElement('table'),tr=document.createElement('tr'),s=0;" +
+				"t.style.width='100%';t.style.tableLayout='fixed';t.appendChild(tr);z.appendChild(t);" +
+				"r.forEach(function(i){s+=n[i];});r.forEach(function(i){v[i].style.width=(100*n[i]/s).toFixed(2)+'%';tr.appendChild(v[i]);});" +
+				"if(j==rg.length-1)x.forEach(function(d){tr.appendChild(d);});});});}" +
+			"g();window.addEventListener('resize',g);})(" + str(ids) + ");</script>")
 	end
 
 	#- Se déclenche sur modification d'état d'un relai par l'interface webUI ou commande Power
