@@ -1,0 +1,5 @@
+(version 1)
+# Petites pastilles de masse cernees par des pistes : un seul rayon thermique suffit
+# (courant de signal). Sans cette regle, le DRC exige 2 rayons (starved_thermal).
+(rule "rayon_thermique_unique"
+	(constraint min_resolved_spokes 1))

@@ -1,0 +1,14 @@
+{
+  "_doc": "Ce que le schema ne dit pas, pour la carte cuve. Usage : bilan_alimentation.py carte_cuve.kicad_sch --bilan bilan_cuve.json",
+  "tension_entree_V": 12,
+  "marge": 0.25,
+  "taux_charge_max": 0.8,
+  "declassement_alim": 1.0,
+  "rendements": {"5V": 0.90},
+  "charges_externes": [
+    {"nom": "Ruban WS2815 (131 pixels, blanc plein)", "type": "WS2815", "qte": 131, "hors_carte": true,
+     "note": "+12 V du ruban direct depuis l'alimentation, ne traverse pas la carte"},
+    {"nom": "Boucles 4-20 mA A2/A3 (25 mA en defaut)", "type": "boucle_4_20mA", "qte": 2, "net": "+12V_CAPT"},
+    {"nom": "Capteurs 0-10 V A0/A1 (~20 mA)", "type": "capteur_0_10V", "qte": 2, "net": "+12V_CAPT"}
+  ]
+}

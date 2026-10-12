@@ -1,0 +1,9 @@
+# Fichiers locaux de KiCad et temporaires de l export
+*.kicad_prl
+*-backups/
+fp-info-cache
+*.rpt
+fabrication/_tmp/
+__pycache__/
+revue_3d/
+boitier/

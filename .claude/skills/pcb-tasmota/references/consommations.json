@@ -1,0 +1,55 @@
+{
+  "_doc": "Consommations PIRE CAS par defaut utilisees par scripts/bilan_alimentation.py. Priorite : champ de symbole Conso_mA/Rail > bilan.json 'composants' > regles ci-dessous. 'rail': 3V3 | 5V | 12V | auto (lu sur les nets du symbole, sinon 'rail_defaut'). 'groupe' : compte une seule fois (carte en plusieurs symboles).",
+  "defauts": {
+    "tension_entree_V": 12,
+    "marge": 0.25,
+    "taux_charge_max": 0.8,
+    "declassement_alim": 1.0,
+    "declassement_ptc_50C": 0.8,
+    "led_sans_resistance_mA": 10,
+    "reseau": {
+      "3V3": {"source": "5V", "type": "lineaire", "note": "3V3 fourni par le regulateur du DevKit a partir de son 5 V : meme courant cote 5 V"},
+      "5V": {"source": "ENTREE", "type": "decoupage", "rendement": 0.90, "i_max_mA": 1000, "note": "TSR 1-2450 par defaut"}
+    }
+  },
+  "tensions_rails_V": {"3V3": 3.3, "5V": 5.0, "9V": 9.0, "12V": 12.0, "24V": 24.0},
+  "tension_gpio_V": 3.3,
+  "vf_led_V": {"rouge|red": 1.9, "orange": 2.0, "jaune|yellow": 2.1, "verte?|green": 2.1, "bleue?|blue": 3.0, "blanche?|white": 3.0},
+  "ptc_maintien_A": {"MF-R010": 0.10, "MF-R016": 0.16, "MF-R020": 0.20, "MF-R025": 0.25, "MF-R030": 0.30, "MF-R050": 0.50, "MF-R075": 0.75, "MF-R090": 0.90, "MF-R110": 1.10, "MF-R135": 1.35, "MF-R160": 1.60, "MF-R185": 1.85, "MF-R250": 2.50},
+  "calibres_alim_12V_A": [1, 2, 3, 5, 8.5, 10, 12.5, 15, 20, 25, 30],
+  "calibres_fusible_A": [0.5, 1, 1.6, 2, 2.5, 3.15, 4, 5, 6.3, 8, 10, 12.5, 16],
+  "charges_externes_types": {
+    "WS2815": {"mA": 15, "rail": "12V", "source": "WS2815 : ~0,18 W/pixel en blanc plein (12 V), ~15 mA par pixel (fiche Worldsemi/revendeurs)"},
+    "WS2811_12V": {"mA": 15, "rail": "12V", "source": "WS2811 12 V : 3 pixels par circuit, ~15 mA par circuit de 3 LED"},
+    "WS2812B": {"mA": 60, "rail": "5V", "source": "WS2812B : 20 mA par couleur, 60 mA par pixel en blanc plein (fiche WorldSemi)"},
+    "boucle_4_20mA": {"mA": 25, "rail": "12V", "source": "boucle 4-20 mA en defaut : saturation ~ 22-25 mA"},
+    "capteur_0_10V": {"mA": 20, "rail": "12V", "source": "capteur 0-10 V alimente (transmetteur) : ~ 20 mA, a verifier sur sa fiche"}
+  },
+  "composants": [
+    {"id": "devkit", "designation": "DevKit ESP32-S3 (pics Wi-Fi) + LED RGB", "groupe": "devkit", "valeur": "(?i)devkit|esp32-?s3", "conso_mA": 400, "rail": "5V",
+     "source": "ESP32-S3 : pic Wi-Fi TX ~ 340-355 mA (fiche Espressif) + LED RGB, pont USB-UART, regulateur : 400 mA au 5 V, pire cas"},
+    {"id": "ads1115", "designation": "ADS1115 (module)", "valeur": "(?i)ads1115", "conso_mA": 0.2, "rail": "auto", "rail_defaut": "3V3",
+     "source": "ADS1115 : 150 uA typ, 200 uA max (fiche TI)"},
+    {"id": "rs485", "lib_exclu": "^Jumper:", "designation": "Module RS485 a direction automatique", "valeur": "(?i)rs-?485|max3?485|sp3485", "conso_mA": 20, "rail": "auto", "rail_defaut": "3V3",
+     "source": "transceiver + LED du module + emission sur bus termine (~ 60 ohm) : ~ 20 mA pire cas ; rail = cavalier 3V3/5V, a defaut 3V3 (meme courant cote 5 V)"},
+    {"id": "ahct125", "designation": "74AHCT125 (adaptation de niveau ruban)", "lib_id": "74AHC?T?125", "valeur": "(?i)74AHC?T?125", "conso_mA": 3, "rail": "5V",
+     "source": "ICC statique 40 uA (fiche TI) + commutation du signal ruban 800 kHz : 3 mA par prudence"},
+    {"id": "ds18b20", "designation": "Sonde DS18B20", "valeur": "(?i)ds18b20", "conso_mA": 1.5, "rail": "auto", "rail_defaut": "3V3",
+     "source": "DS18B20 : IDD 1,5 mA max en conversion (fiche Maxim)"},
+    {"id": "relais5", "designation": "Relais bobine 5 V", "lib_id": "^Relay", "valeur": "(?i)5 ?V", "conso_mA": 90, "rail": "5V",
+     "source": "bobine 5 V : 70-90 mA par relais, tous colles (pire cas)"},
+    {"id": "relais12", "designation": "Relais bobine 12 V", "lib_id": "^Relay", "valeur": "(?i)12 ?V", "conso_mA": 40, "rail": "12V",
+     "source": "bobine 12 V : 30-40 mA par relais, tous colles (pire cas)"},
+    {"id": "led", "designation": "LED de voyant", "type": "led", "lib_id": "^Device:LED", "source": "I = (V - Vf) / R, R identifiee sur le net de l'anode"},
+    {"id": "tsr", "designation": "TSR 1-2450 (abaisseur 12 V -> 5 V)", "type": "regulateur", "lib_id": "TSR_1-2450|TSR-1", "valeur": "(?i)tsr", "rail_sortie": "5V", "pin_entree": "1",
+     "rendement": 0.90, "i_max_mA": 1000, "source": "TRACO TSR 1-2450 : ~ 90 % a 12 V -> 5 V, 1 A max"}
+  ],
+  "ignores": [
+    {"lib_id": "^Device:(R|R_Small|C|C_Small|C_Polarized|L)$", "raison": "composant passif sans consommation propre"},
+    {"lib_id": "^Device:(D|D_Schottky|D_TVS|D_Zener)$", "raison": "diode de protection / anti-retour : pertes negligeables"},
+    {"lib_id": "^(Device:Polyfuse|Fuse:)", "raison": "fusible reinitialisable : controle a part (section Fusibles)"},
+    {"lib_id": "^Mechanical:", "raison": "mecanique"},
+    {"lib_id": "^Jumper:", "raison": "cavalier"},
+    {"lib_id": "^Connector", "raison": "connecteur/bornier : une charge branchee dessus se declare dans bilan.json (charges_externes) ou par un champ Conso_mA"}
+  ]
+}
