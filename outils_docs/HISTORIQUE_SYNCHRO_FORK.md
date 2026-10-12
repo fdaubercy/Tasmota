@@ -212,3 +212,23 @@ Les commits marques ● ont un titre qui mentionne Berry / ESP32-S3 / nos sujets
 - ● `f93502ca5` Matter update specs to 1.6.1 (to be used by AI) (#25083)
 - ● `be0c2e2b6` Clarify solidification for AI (#25085)
 - ● `c4327653d` feat(matter): Phase 1 - Update Root Node for Matter 1.6.0 (#25078)
+
+## 2026-10-12 22:26 — 13 commit(s) recupere(s) d'upstream
+
+`arendst/Tasmota:development` → `fdaubercy/Tasmota:development` (merge_type : merge)
+
+**3 commit(s) ● a lire de pres.**
+
+-   `1b13a45ee` Update it_IT.h (#25133)
+-   `87c972451` BMx280: re-init sensor after it lost its config, skip invalid reads (#25131)
+-   `24e00fc33` Update Italian language (#25134)
+-   `bf2afdc7f` Fix Zigbee cluster specific command decoding with uninitialized values (#25124)
+- ● `bcc37a50a` Matter add Wi-Fi Network Diagnostics cluster (0x0036) (#25126)
+- ● `f1244e5bb` Matter: report HTTP bridged-device reachability changes (#25115)
+-   `68157a262` support for ESP32-C61 (#25135)
+- ● `df1d8d5aa` Matter: clean up incomplete initial subscriptions (#25137)
+-   `3dc69ff8c` Enable tasmota32c61 in build workflow
+-   `71216f04e` Fix ESP32 model number in README
+-   `19c9d2c9c` Update change logs
+-   `54a1527f8` Correct and normalize eQ3/MI battery percentage calculation (#25136)
+-   `5c295fbcf` Merge commit from fork
