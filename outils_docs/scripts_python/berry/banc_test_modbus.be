@@ -9,8 +9,9 @@
 #     lib/libesp32/berry/berry.exe outils_docs/scripts_python/berry/banc_test_modbus.be
 #
 # Portee : logique deterministe seulement (checksum, construction de trame,
-# decision d'appariement, decodage, commandes de reglage). Ne teste NI le timing,
-# NI la file, NI la carte 16 reelle. La derniere ligne imprimee,
+# decision d'appariement, decodage, commandes de reglage), plus la file d'envoi et
+# ses echeances simulees (sections 16, 18, 21, 22). Ne teste NI le timing reel,
+# NI la carte 16 reelle. La derniere ligne imprimee,
 # BANC_MODBUS: OK|ECHEC, est lue par l'enveloppe Python pour son code de sortie.
 #
 # Argument optionnel : le dossier des sources a tester (defaut data/fs), pour
@@ -502,7 +503,9 @@ drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial":"ON"},
                "TasmotaSlaveModBus1": {"activation": "ON", "id": 2, "name": "cuve"},
                "TasmotaSlaveModBus2": {"activation": "ON", "id": 3, "name": "rideau"}}}}}
 modules = appareils()
-# un appareil non virtuel (ignore), un relai virtuel (lecture 0x01) et des LEDs WS2812 (non relues)
+# un appareil non virtuel (ignore), un relai virtuel (lecture 0x01) et un ruban WS2812 : relu en 0x03
+# sur 4 registres depuis 31baef8e0 (2026-10-11, 3 registres) et d0080afab (4e registre = animation),
+# demandeLecture de modBus_TasmotaSlaveModBus.be (branche 'type == 1376')
 modules["garage"]["environnement"]["interrupteurs"]["interrupteur9"] = {"activation": "ON", "virtuel": "OFF", "type": 160, "id": 9}
 modules["garage"]["environnement"]["relais"] = {"relai2": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus2", "type": 256, "idModBus": 1, "id": 2},
                                                 "relai1": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus1", "type": 1376, "idModBus": 1, "id": 1}}
@@ -512,16 +515,16 @@ modbusFonctions.envoiMsgModbus = def (t, typeMsg, id) envoyes.push(string.format
 # L'ordre de parcours d'une map n'est pas garanti : on compare par presence.
 def resume(l)
   return str(size(l)) + " : cuve=" + str(l.find("2/4/1312/float/1") != nil) + " rideau=" + str(l.find("3/2/160/uint8/1") != nil)
-         + " relai=" + str(l.find("3/1/256/uint8/1") != nil)
+         + " relai=" + str(l.find("3/1/256/uint8/1") != nil) + " ruban=" + str(l.find("2/3/1376/uint16/4") != nil)
 end
 var m = MaitreReleve()
 m.releveEsclaves()
-verifie("releve : 3 demandes (thermo 0x04, inter 0x02, relai 0x01)", "3 : cuve=true rideau=true relai=true", resume(envoyes))
+verifie("releve : 4 demandes (thermo 0x04, inter 0x02, relai 0x01, ruban 0x03)", "4 : cuve=true rideau=true relai=true ruban=true", resume(envoyes))
 # Temoin : esclave desactive -> aucune demande pour lui
 drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"]["TasmotaSlaveModBus2"]["activation"] = "OFF"
 envoyes = []
 m.releveEsclaves()
-verifie("temoin esclave rideau desactive : seule la cuve est relevee", "1 : cuve=true rideau=false relai=false", resume(envoyes))
+verifie("temoin esclave rideau desactive : seule la cuve est relevee", "2 : cuve=true rideau=false relai=false ruban=true", resume(envoyes))
 modbusFonctions.envoiMsgModbus = vraiEnvoi
 modules = sauveModules
 drivers = sauveDrivers
@@ -768,9 +771,11 @@ verifie("lecture identique a celle en vol : ignoree", false, modbusFonctions.enf
 modbusFonctions.etat()["queue"] = []
 for i: 0 .. modbusFonctions.MAX_FILE - 1    modbusFonctions.enfileMsg(lec(1000 + i), "Commande")    end
 verifie("file pleine : lecture ecartee", "false/32", str(modbusFonctions.enfileMsg(lec(5000), "Commande")) + "/" + str(size(q())))
-verifie("file pleine : une ecriture passe en evincant la plus ancienne lecture",
-        "true/32/1001/6", str(modbusFonctions.enfileMsg(ecr(1), "Commande")) + "/" + str(size(q())) + "/" +
-        str(q()[0]["paramMSG"]["StartAddress"]) + "/" + str(q()[-1]["paramMSG"]["FunctionCode"]))
+# Depuis 988a384ba (2026-10-10, placeEnFile) une ecriture passe DEVANT les lectures en attente :
+# elle est en tete (fonction 6), la lecture 1000 (la plus ancienne) est evincee, 1001 suit.
+verifie("file pleine : une ecriture passe en tete en evincant la plus ancienne lecture",
+        "true/32/6/1001", str(modbusFonctions.enfileMsg(ecr(1), "Commande")) + "/" + str(size(q())) + "/" +
+        str(q()[0]["paramMSG"]["FunctionCode"]) + "/" + str(q()[1]["paramMSG"]["StartAddress"]))
 modbusFonctions.etat()["queue"] = []
 modbusFonctions.etat()["enVol"] = nil
 drivers = sauveDrivers
@@ -800,18 +805,24 @@ drivers = sauveDrivers
 
 print("")
 print("=== 19. G7 : les appareils jamais relus ne passent pas a 'inconnu' ===")
+# Le ruban WS2812 (1376) est RELU depuis 31baef8e0 (2026-10-11) : il passe donc a 'inconnu' comme
+# le thermometre, et en ressort a sa prochaine lecture 0x03. Plus aucun appareil virtuel des persists
+# reels n'est 'jamais relu' : le cas G7 est tenu par un relai d'un type que demandeLecture ne lit
+# pas (9999, FICTIF), pour garder la garde de passeInconnu sous test.
 sauveDrivers = drivers
 drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial":"ON"},
            "environnement": {"TasmotaSlaveModBus": {"debug": "OFF",
                "TasmotaSlaveModBus1": {"activation": "ON", "id": 2, "name": "cuve"}}}}}
 modules = appareils()
-modules["garage"]["environnement"]["relais"] = {"relai1": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus1", "type": 1376, "idModBus": 1, "id": 1}}
+modules["garage"]["environnement"]["relais"] = {"relai1": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus1", "type": 1376, "idModBus": 1, "id": 1},
+                                                "relai3": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus1", "type": 9999, "idModBus": 1, "id": 3}}
 maitre = MaitreStub()
 tasmota.horloge = 0
 maitre.verifieChienDeGarde()
 tasmota.horloge = 1000
-verifie("cuve muette : seul le thermometre (relu) est marque", 1, maitre.verifieChienDeGarde())
-verifie("WS2812 (jamais relue) : pas 'inconnu'", nil, modules["garage"]["environnement"]["relais"]["relai1"].find("etatConstate"))
+verifie("cuve muette : thermometre et ruban (relus) marques", 2, maitre.verifieChienDeGarde())
+verifie("WS2812 (relue depuis 31baef8e0) : 'inconnu'", "inconnu", modules["garage"]["environnement"]["relais"]["relai1"].find("etatConstate"))
+verifie("relai de type non relu (9999) : pas 'inconnu'", nil, modules["garage"]["environnement"]["relais"]["relai3"].find("etatConstate"))
 verifie("temoin thermometre cuve : 'inconnu'", "inconnu", modules["garage"]["environnement"]["thermometres"]["thermometre1"].find("etatConstate"))
 modules = sauveModules
 drivers = sauveDrivers
@@ -920,9 +931,14 @@ drivers["ModBus"]["id"] = 0
 etM["enVol"] = nil
 etM["queue"] = []
 etM["pause"] = false
+etM["echeances"] = {}                  # le timeout du message relance en fin de section 21
 tasmota.cmds = []
 journal = []
 essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "ReglageBaudrateConn16channels 0x01 19200", nil) end)
+# Envoi TOUJOURS differe depuis 988a384ba (2026-10-10) : pompeQueue arme l'echeance 'modbus_envoi'
+# (armeTimer 0) ; l'ordre est en file, rien n'est parti tant qu'elle n'est pas echue.
+verifie("19200 : en file, rien d'envoye avant l'echeance", "1/0", str(size(etM["queue"])) + "/" + str(size(tasmota.cmds)))
+essaie(def () modbusFonctions.verifieEcheances() end)
 var envoye = size(tasmota.cmds) > 0 ? tasmota.cmds[0] : "-"
 verifie("19200 : un ModBusSend 0x06 registre 254 code 4", true,
         string.find(envoye, "ModBusSend ") == 0 && json.load(envoye[11 ..])["FunctionCode"] == 6 &&

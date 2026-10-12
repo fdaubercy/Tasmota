@@ -62,6 +62,10 @@ class TasmotaStub
     return {}
   end
   def resp_cmnd(x) end
+  # udpFonctions.envoiUDP n'envoie rien tant que le reseau n'est pas monte (d567b9d22,
+  # udpFonctions.be:467) : vrai par defaut, reseauCoupe = true simule le demarrage avant le Wi-Fi
+  var reseauCoupe
+  def is_network_up() return self.reseauCoupe != true end
   def add_rule(a, b, c) end              # controleRangeExtender (section 14)
   def add_cmd(a, b) end
   # Timers en attente : memes regles que tasmota_class.be (set_timer EMPILE, remove_timer
@@ -654,6 +658,33 @@ serveur["rangeExtender"] = {"activation": "ON", "id": 0, "debug": "ON"}
 serveur["udp"]["id"] = 0
 drivers["ModBus"] = {"id": 0}
 serveur.remove("tcp")
+
+print("")
+print("=== 15. Reseau pas encore monte : aucun envoi UDP (d567b9d22) ===")
+# udpFonctions.envoiUDP (udpFonctions.be:467) ne cree aucune socket tant que tasmota.is_network_up()
+# est faux : creer la socket avant la pile TCP/IP plantait l'ESP32 (LoadProhibited, cuve 2026-10-11).
+# Memes conditions que la section 1 (maitre, table absente), reseau coupe puis revenu (temoin).
+serveur = {"udp": {"id": 0, "debug": "ON", "activation": "ON"},
+           "rangeExtender": {"activation": "ON", "id": 0, "debug": "ON"},
+           "discovery": {"debug": "ON"},
+           "mqtt": {"topic": "garage", "groupTopic1": "tasmotas/garage"},
+           "hostname": "SERVEUR-GARAGE"}
+drivers = {"ModBus": {"id": 0}}
+diverses = {"telePeriod": 300}
+tasmota.reseauCoupe = true
+gestionFileFolder.fichiers = {}
+envois = []
+journal = []
+verifie("reseau coupe : ImAlive ne leve pas", "OK", essaie(def () imAlive(ficheCuve(true)) end))
+verifie("reseau coupe : aucun datagramme emis", 0, size(envois))
+verifie("reseau coupe : envoi refuse journalise", true, journalise("Reseau non connecte"))
+t = table()
+verifie("reseau coupe : la fiche est quand meme rangee", true, t != nil && t.contains(CLE_CUVE) && t[CLE_CUVE].contains("esclave2"))
+tasmota.reseauCoupe = nil
+gestionFileFolder.fichiers = {}
+envois = []
+imAlive(ficheCuve(true))
+verifie("temoin reseau revenu : heure + ipMaitre renvoyes", 2, size(envois))
 
 print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))
