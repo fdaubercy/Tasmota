@@ -728,7 +728,12 @@ class MODBUS_TASMOTA_SLAVE : Driver
 
                                                 if (!dataJson["Switchs"].insert("S" + str(env[cleEnv][cleDevice]["id"]), valeur))
                                                     dataJson["Switchs"]["S" + str(env[cleEnv][cleDevice]["id"])] = valeur
-                                                end 
+                                                end
+
+                                                # Capteur de fin de course d'un volet du maitre ("Interrupteur<id>" dans
+                                                # capteursPosition, 2026-10-12) : recale sa position, sur CHANGEMENT seulement
+                                                import global
+                                                if (global.vrFonctions != nil)    global.vrFonctions.capteurVirtuel(env[cleEnv][cleDevice]["id"], valeur)    end
                                             end
                                         elif (cleEnv == "boutons")
                                             if (!dataJson.find("Buttons", false))
@@ -793,14 +798,17 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                                 valeur = (int(vals[2]) > 0 ? "ON" : "OFF")
                                                 # Animation (4e registre, 2026-10-11) : absente d'une reponse d'esclave pas encore a jour -> inchangee
                                                 var animation = (size(vals) >= 4 ? int(vals[3]) : device.find("scheme", 0))
+                                                # Luminosite 0 = ruban ETEINT (etatRuban), pas un reglage : 'value' garde le dernier
+                                                # reglage, comme le Dimmer de l'esclave, sinon le curseur du maitre tombait a 0 (2026-10-12)
+                                                var luminosite = (int(vals[2]) > 0 ? int(vals[2]) : device.find("value", 100))
                                                 if (device.find("couleur") != int(vals[0]) || device.find("saturation") != int(vals[1]) ||
-                                                    device.find("value") != int(vals[2]) || device.find("etat") != valeur || device.find("scheme") != animation)
+                                                    device.find("value") != luminosite || device.find("etat") != valeur || device.find("scheme") != animation)
                                                     self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Ruban WS2812 n°%i (%s) : teinte %i, saturation %i, luminosite %i (%s), animation %i",
                                                                            device["id"], nameTasmotaSlaveModBus, int(vals[0]), int(vals[1]), int(vals[2]), valeur, animation), LOG_LEVEL_DEBUG)
                                                 end
                                                 device["couleur"] = int(vals[0])
                                                 device["saturation"] = int(vals[1])
-                                                device["value"] = int(vals[2])
+                                                device["value"] = luminosite
                                                 device["scheme"] = animation
                                                 device["etat"] = valeur
                                                 device["etatConstate"] = valeur

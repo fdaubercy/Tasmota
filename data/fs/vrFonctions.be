@@ -242,6 +242,34 @@ def vrFonctions_changementEtatCapteur(value, trigger, msg, numRideau, etatRideau
 end
 vrFonctions.changementEtatCapteur = vrFonctions_changementEtatCapteur
 
+# Capteur de position VIRTUEL (2026-10-12) : interrupteur d'un esclave ModBus, recopie sur le
+# maitre par modBus_TasmotaSlaveModBus. Tasmota n'en fait aucun evenement 'SwitchN#Action', et
+# sur le maitre 'SwitchN' designe ses interrupteurs PHYSIQUES : un volet le designe donc par
+# "Interrupteur<id>" dans 'capteursPosition'. Appelee a chaque CHANGEMENT d'etat (pas a chaque
+# releve : un ShutterSetOpen/Close en plein mouvement fausserait la position). Tous les volets
+# qui designent cet interrupteur sont recales, chacun le sien.
+def vrFonctions_capteurVirtuel(id, valeur)
+    var vrJSON = drivers.find("voletRoulants", {})
+    if (vrJSON.find("activation", "OFF") != "ON")    return    end
+
+    var nom = "Interrupteur" + str(id)
+    var vrs = vrJSON.find("environnement", {}).find("VRs", {})
+    for cle: vrs.keys()
+        var vr = vrs[cle]
+        if (type(vr) != "instance" || vr.find("activation", "OFF") != "ON")    continue    end
+        var capteurs = vr.find("capteursPosition", false)
+        if (type(capteurs) != "instance" || capteurs.find("activation", "ON") != "ON")    continue    end
+
+        if (capteurs.find("capteurOuvert") == nom)
+            vrFonctions.changementEtatCapteur(valeur, nom, {nom: valeur}, vr["id"], "ouverture")
+        end
+        if (capteurs.find("capteurFerme") == nom)
+            vrFonctions.changementEtatCapteur(valeur, nom, {nom: valeur}, vr["id"], "fermeture")
+        end
+    end
+end
+vrFonctions.capteurVirtuel = vrFonctions_capteurVirtuel
+
 # Règles sur changement d'état des capteurs
 def vrFonctions_changementDirection(value, trigger, msg, numRideau)
     import string
@@ -272,9 +300,17 @@ def vrFonctions_changementDirection(value, trigger, msg, numRideau)
 	tasmota.yield()
 
     # Modifie l'état de certains relais en fonction de la direction du volet
+    # Volet retrouve par son NUMERO (2026-10-12), et non par la cle "VR<n>" : plusieurs volets,
+    # dont la cle du persist ne suit pas forcement le numero
     var vrJSON = drivers["voletRoulants"]
-    var activationSiOuvert = vrJSON["environnement"]["VRs"][string.format("VR%i", numRideau)].find("activationSiOuvert", false)
-    var activationSiFerme = vrJSON["environnement"]["VRs"][string.format("VR%i", numRideau)].find("activationSiFerme", false)
+    var vr = nil
+    for cle: vrJSON["environnement"]["VRs"].keys()
+        var v = vrJSON["environnement"]["VRs"][cle]
+        if (type(v) == "instance" && v.find("id") == numRideau)    vr = v    break    end
+    end
+    if (vr == nil)    return    end
+    var activationSiOuvert = vr.find("activationSiOuvert", false)
+    var activationSiFerme = vr.find("activationSiFerme", false)
 
     # Parcours les relais à activer ou désactiver à l'ouverture du volet
     if (value == 1)

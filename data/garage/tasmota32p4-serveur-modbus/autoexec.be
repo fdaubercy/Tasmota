@@ -98,7 +98,9 @@ if (persist._p != nil && persist._p.size() != 0)
     do import controleModbus as _ctrl end   # solidifie : init() porte la garde d'activation
     if serveur["rangeExtender"].find("activation", "OFF") == "ON"    import controleRangeExtender as _ctrl    end
     # gestionFileFolder.loadBerryFile("/controleLoRaWan", drivers["LoRaWan"].find("activation", "OFF"), "ON")
-    # gestionFileFolder.loadBerryFile("/controleVoletRoulants", drivers.find("voletRoulants", {}).find("activation", "OFF"), "ON")
+    # Volets roulants (2026-10-12) : volet natif de Tasmota sur les relais VIRTUELS du maitre (porte de
+    # garage du rideau), meme interface que sur le rideau. Solidifie : init() porte la garde d'activation.
+    if drivers.find("voletRoulants", {}).find("activation", "OFF") == "ON"    import controleVoletRoulants as _ctrl    end
     if serveur["discovery"].find("activation", "OFF") == "ON"    import controleDiscovery as _ctrl    end
     do import controleES8311 as _ctrl end   # solidifie : init() porte la garde d'activation
     # controleGarage n'est PAS solidifie : charge depuis le LittleFS (encadres cuve de la page web, ReglageGarage)

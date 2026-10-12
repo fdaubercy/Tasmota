@@ -282,7 +282,7 @@
 						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 2,
-						"type": 256,
+						"type": 224,
 						"virtuel": "ModBus_TasmotaSlaveModBus2",
 						"value": 0,
 						"etat": "OFF",
@@ -1384,8 +1384,8 @@
 						"relais1": 2,
                         "boutons": {
                             "bouton1": {
-						        "activation": "ON",
-                                "id": 1,
+						        "activation": "OFF",
+                                "id": -1,
                                 "function": "toggle",
                                 "mqtt": "OFF"
                             },
@@ -1410,8 +1410,8 @@
                         },
 						"capteursPosition": {
 							"activation": "ON",
-							"capteurOuvert": "Switch1",
-							"capteurFerme": "Switch2"
+							"capteurOuvert": "Interrupteur1",
+							"capteurFerme": "Interrupteur2"
 						},
                         "activationSiOuvert": {
                             "activation": "ON", 

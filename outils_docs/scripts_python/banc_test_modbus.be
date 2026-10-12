@@ -460,6 +460,24 @@ verifie("reponse serie 0x02 bit 0x01 -> ON", "ON", inter())
 modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 3, "FunctionCode": 2, "StartAddress": 160, "Count": 1, "type": "uint8"}}
 recoit(3, "ModbusReceived", {"DeviceAddress": 3, "FunctionCode": 2, "Values": [0]})
 verifie("temoin reponse serie 0x02 bit 0x00 -> OFF", "OFF", inter())
+# (c2) volet du maitre (2026-10-12) : un CHANGEMENT d'etat de l'interrupteur appelle
+# vrFonctions.capteurVirtuel (recalage du volet), un releve identique ne l'appelle pas
+import global
+var sauveVr = global.vrFonctions
+var appelsVr = []
+var vrStub = module("vrStub")
+vrStub.capteurVirtuel = def (id, v) appelsVr.push(str(id) + ":" + v) end
+global.vrFonctions = vrStub
+modules = appareils()
+var lit02 = def (bit)
+  modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 3, "FunctionCode": 2, "StartAddress": 160, "Count": 1, "type": "uint8"}}
+  recoit(3, "ModbusReceived", {"DeviceAddress": 3, "FunctionCode": 2, "Values": [bit]})
+end
+lit02(1)
+lit02(1)
+lit02(0)
+verifie("volet : capteur virtuel appele sur changement seulement", "['1:ON', '1:OFF']", str(appelsVr))
+global.vrFonctions = sauveVr
 # (d) temoin : une 0x10 NON marquee (reponse a une commande WS2812) ne touche aucun etat
 modules = appareils()
 modbusFonctions.etat()["enVol"] = nil
@@ -1332,6 +1350,10 @@ verifie("temoin : etat inchange -> aucun set_power", "[]", str(tasmota.setPower)
 lit03([30, 60, 0])
 verifie("temoin reponse a 3 valeurs (esclave pas a jour) : animation inchangee", "30/OFF/7", str(ruban28.find("couleur")) + "/" + str(ruban28.find("etat")) + "/" + str(ruban28.find("scheme")))
 verifie("maitre : ruban eteint sur l'esclave -> POWER1 du maitre OFF", "['0:false']", str(tasmota.setPower))
+# Luminosite 0 = ruban eteint : le maitre garde le dernier reglage (curseur aligne sur le Dimmer de l'esclave)
+verifie("maitre : ruban eteint -> luminosite memorisee conservee (100)", 100, ruban28.find("value"))
+lit03([30, 60, 40, 7])
+verifie("temoin : luminosite non nulle recopiee (40)", "40/ON", str(ruban28.find("value")) + "/" + str(ruban28.find("etat")))
 tasmota.setPower = nil
 tasmota.power = sauvePower28
 modbusFonctions.etat()["enVol"] = nil

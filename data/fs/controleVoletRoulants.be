@@ -56,19 +56,37 @@ class CONTROLE_VR : Driver
 		-#
 		var vrJSON = drivers["voletRoulants"]
 
+        # Plusieurs volets INDEPENDANTS (2026-10-12) : chaque regle porte le numero de son volet
+        # dans son identifiant, pour pouvoir retirer celles d'un seul volet (remove_rule). Les
+        # declencheurs differant d'un volet a l'autre, l'ancien identifiant fixe ne provoquait pas
+        # de remplacement (add_rule ne remplace qu'a declencheur ET identifiant egaux).
+        # Le numero est copie dans une variable LOCALE a l'iteration, capturee par la fonction.
+        # Capteur "SwitchN" : interrupteur PHYSIQUE de la carte -> regle 'SwitchN#Action'.
+        # Capteur "InterrupteurN" : interrupteur VIRTUEL (esclave ModBus), sans evenement Tasmota :
+        # modBus_TasmotaSlaveModBus appelle vrFonctions.capteurVirtuel a chaque changement.
         if (vrJSON.find("activation", "OFF") == "ON")
             for cle: vrJSON["environnement"]["VRs"].keys()
-                if type(vrJSON["environnement"]["VRs"][cle]) != "instance"   continue    end
+                var vr = vrJSON["environnement"]["VRs"][cle]
+                if type(vr) != "instance"   continue    end
 
-                if (vrJSON["environnement"]["VRs"][cle].find("activation", "OFF") == "ON")
-                    # Rules sur changement d'état des capteurs de position
-                    if (vrJSON["environnement"]["VRs"][cle].find("capteursPosition", false) != false)
-                        tasmota.add_rule(string.format("%s#Action", vrJSON["environnement"]["VRs"][cle]["capteursPosition"]["capteurOuvert"]), def(value, trigger, msg) vrFonctions.changementEtatCapteur(value, trigger, msg, vrJSON["environnement"]["VRs"][cle]["id"], "ouverture") end, "controleVRoulant_CapteurOuvert")
-                        tasmota.add_rule(string.format("%s#Action", vrJSON["environnement"]["VRs"][cle]["capteursPosition"]["capteurFerme"]), def(value, trigger, msg) vrFonctions.changementEtatCapteur(value, trigger, msg, vrJSON["environnement"]["VRs"][cle]["id"], "fermeture") end, "controleVRoulant_CapteurFerme")
+                if (vr.find("activation", "OFF") == "ON")
+                    var idVR = vr["id"]
+
+                    # Rules sur changement d'état des capteurs de position (physiques seulement)
+                    var capteurs = vr.find("capteursPosition", false)
+                    if (capteurs != false)
+                        var ouvert = str(capteurs.find("capteurOuvert", ""))
+                        var ferme = str(capteurs.find("capteurFerme", ""))
+                        if (string.find(ouvert, "Switch") == 0)
+                            tasmota.add_rule(ouvert + "#Action", def(value, trigger, msg) vrFonctions.changementEtatCapteur(value, trigger, msg, idVR, "ouverture") end, "controleVRoulant_CapteurOuvert" + str(idVR))
+                        end
+                        if (string.find(ferme, "Switch") == 0)
+                            tasmota.add_rule(ferme + "#Action", def(value, trigger, msg) vrFonctions.changementEtatCapteur(value, trigger, msg, idVR, "fermeture") end, "controleVRoulant_CapteurFerme" + str(idVR))
+                        end
                     end
 
                     # Rules sur changement de direction du volet roulant
-                    tasmota.add_rule(string.format("Shutter%i#Direction", vrJSON["environnement"]["VRs"][cle]["id"]), def(value, trigger, msg) vrFonctions.changementDirection(value, trigger, msg, vrJSON["environnement"]["VRs"][cle]["id"]) end, "controleSensVRoulant")
+                    tasmota.add_rule(string.format("Shutter%i#Direction", idVR), def(value, trigger, msg) vrFonctions.changementDirection(value, trigger, msg, idVR) end, "controleSensVRoulant" + str(idVR))
                 end
             end
         end
