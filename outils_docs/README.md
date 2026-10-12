@@ -2,7 +2,7 @@
 
 [![GitHub version](https://img.shields.io/github/release/arendst/Tasmota.svg)](http://ota.tasmota.com/tasmota/release)
 [![GitHub download](https://img.shields.io/github/downloads/arendst/Tasmota/total.svg)](https://github.com/arendst/Tasmota/releases/latest)
-[![License](https://img.shields.io/github/license/arendst/Tasmota.svg)](LICENSE.txt)
+[![License](https://img.shields.io/github/license/arendst/Tasmota.svg)](../LICENSE.txt)
 [![Discord](https://img.shields.io/discord/479389167382691863.svg?logo=discord&logoColor=white&color=5865F2&label=Discord)](https://discord.gg/Ks2Kzd4)
 [![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/arendst/Tasmota)
 
@@ -13,9 +13,43 @@
 <hr></hr>
 
 > [!TIP]
->## Documentation technique de ce dossier :
->####    - [SOLIDIFICATION_BERRY.md](SOLIDIFICATION_BERRY.md) : la solidification Berry — comment ça marche, comment **vérifier** qu'elle a eu lieu, les paramètres, et 11 pièges documentés.
->####       * À retenir : elle est **active par défaut** à chaque build ; les modules de `data/fs/` ne sont **jamais** solidifiés ; la ligne `Berry solidification: …` d'un build **ne prouve rien** (§5).
+> ## Index de la documentation du dépôt
+> Point d'entrée unique : chaque document du fork est listé ici. Les documents restent à
+> l'endroit qu'impose leur outil (Claude Code, scripts qui les génèrent) ; seul cet index les réunit.
+> Les fichiers marqués *(généré)* se régénèrent par leur script : ne pas les éditer à la main.
+
+### Règles et chantiers
+- [CLAUDE.md](../CLAUDE.md) — règles du dépôt, synchro du fork, montage d'un nouveau poste, vigilances de build, charte des logs.
+- [tasks/lessons.md](../tasks/lessons.md) — journal des erreurs commises et règles qui en découlent (à relire avant de coder).
+- [tasks/reprise-chantier-modbus-grenier.md](../tasks/reprise-chantier-modbus-grenier.md) — chantier ModBus (⚠️ cibles = les 3 modules du **garage**, malgré le nom).
+- [tasks/reprise-solidification-berry.md](../tasks/reprise-solidification-berry.md) — chantier de solidification Berry.
+
+### Berry
+- [SOLIDIFICATION_BERRY.md](SOLIDIFICATION_BERRY.md) — la solidification Berry : fonctionnement, **vérification**, paramètres, 11 pièges.
+  À retenir : la ligne `Berry solidification: …` d'un build **ne prouve rien** (§5).
+- [CARTE_MODULES_BERRY.md](CARTE_MODULES_BERRY.md) *(généré)* — module × carte : solidifié, importé, dépendance, garde du persist, incohérences.
+- [Les logs Berry : charte et réglages](#les-logs-berry--charte-et-réglages) — plus bas dans ce fichier.
+- Conception de la solidification : [design](../docs/superpowers/specs/2026-07-15-solidification-berry-design.md),
+  [verdict](../docs/superpowers/specs/2026-07-15-solidification-berry-verdict.md),
+  [plan de la phase 1](../docs/superpowers/plans/2026-07-15-solidification-berry-phase1.md).
+
+### ModBus et réseau
+- [PROTOCOLE_MODBUS.md](PROTOCOLE_MODBUS.md) — référence de **conception** : TCP, 3 transports, file d'envoi, registres de la carte 16 relais (§8), synchronisation maître/esclave (§9).
+- [Aide/MODBUS.md](Aide/MODBUS.md) — **mode d'emploi** : commandes d'exemple (carte 16 relais, esclaves Tasmota), trames détaillées par code de fonction, activation dans Tasmota.
+- [ANALYSE_BERRY_MODBUS_DISCOVERY.md](ANALYSE_BERRY_MODBUS_DISCOVERY.md) — programmes ModBus Berry et table `/json/discovery.json`.
+- [AUDIT_MODBUS_2026-09-29.md](AUDIT_MODBUS_2026-09-29.md) — audit ModBus du garage (défauts, améliorations par priorité).
+
+### Configuration des cartes et électronique
+- [schemas/persist.schema.json](schemas/persist.schema.json) *(généré)* — schéma des `_persist.json` (autocomplétion et contrôle dans VS Code).
+- [Electronique/ADS1115/CABLAGE_ADS1115.md](Electronique/ADS1115/CABLAGE_ADS1115.md) — câblage de l'ADS1115 (cuve).
+- [Electronique/ADS1115/CABLAGE_RUBAN_LED.md](Electronique/ADS1115/CABLAGE_RUBAN_LED.md) — câblage du ruban LED.
+- PCB : la skill [pcb-tasmota](../.claude/skills/pcb-tasmota/SKILL.md) et ses agents
+  [placeur-pcb](../.claude/agents/placeur-pcb.md) / [relecteur-pcb](../.claude/agents/relecteur-pcb.md).
+
+### Outils et historique
+- [scripts_python/](scripts_python/) — outillage PC, rangé par usage : `build/`, `outils_pc/`, `berry/`, `maintenance/`, `sauvegarde/`, `reseau/` (détail dans [CLAUDE.md](../CLAUDE.md)).
+- [HISTORIQUE_SYNCHRO_FORK.md](HISTORIQUE_SYNCHRO_FORK.md) *(généré)* — journal des synchronisations du fork.
+- [CHANGELOG.md](CHANGELOG.md) — historique des évolutions.
 
 <hr></hr>
 

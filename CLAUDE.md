@@ -346,8 +346,7 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   entre eux restent dans le MEME dossier** (import d'un module voisin) : ne pas les separer.
   - `build/` — charges par PlatformIO : `pre_utilitaires_platformio.py` (pre-script ; importe les
     `cible_*.py` voisins), `post_lto_parallele.py`, les 4 `cible_*.py` (cibles Custom, qui lancent
-    `outils_pc/`), `ota-files-uploader.py`, `update_idf55_framework.py` (appele par le pre-script),
-    `utilitaires_persos_platformio.py` (cite nulle part, importe un module `backup` absent : code mort).
+    `outils_pc/`), `ota-files-uploader.py`, `update_idf55_framework.py` (appele par le pre-script).
   - `berry/` — `verifie_berry.py` (syntaxe de data/, tache VS Code de surveillance),
     `solidifie_et_compile_berry.py` (module solidifiable en ~10 s, compile le .h),
     `nomme_fonctions_berry.py` (fonctions anonymes -> nommees), `carte_modules_berry.py`

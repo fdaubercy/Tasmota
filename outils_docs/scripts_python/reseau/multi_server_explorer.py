@@ -184,7 +184,7 @@ class MultiDirHandler(SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type","text/html; charset=utf-8")
             self.end_headers()
-            self.wfile.write(b"<html><body><h2>Serveur arr\u00eat\u00e9.</h2></body></html>")
+            self.wfile.write("<html><body><h2>Serveur arr\u00eat\u00e9.</h2></body></html>".encode("utf-8"))
             threading.Thread(target=self.SERVER_REF.shutdown, daemon=True).start()
             return
 

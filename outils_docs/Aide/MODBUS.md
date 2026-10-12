@@ -1,5 +1,11 @@
 # MODBUS dans Tasmota
 
+> Ce document est le **mode d'emploi** (commandes, trames d'exemple, configuration).
+> La **conception** du fork — 3 transports, file d'envoi, registres de la carte 16 relais (§8),
+> synchronisation maitre/esclave (§9) — est dans [PROTOCOLE_MODBUS.md](../PROTOCOLE_MODBUS.md).
+> ⚠️ Pour la carte 16 relais, ce document appelle « Fermeture » l'ordre `01` que le constructeur
+> nomme « Open » (voir PROTOCOLE_MODBUS.md §8) : memes trames, sens physique a confirmer.
+
 ## Introduction
 
 MODBUS est un protocole de communication série largement utilisé dans l'industrie pour la communication entre appareils électroniques. Dans Tasmota, MODBUS permet de communiquer avec des appareils compatibles MODBUS tels que des capteurs, actionneurs et contrôleurs industriels.

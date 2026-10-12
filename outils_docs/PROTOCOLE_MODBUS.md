@@ -5,7 +5,8 @@
 > file d'attente (queue)** décidé pour le maître.
 > Fichiers : `data/fs/modbusFonctions.be` (logique), `data/fs/controleModbus.be` (driver),
 > `data/fs/modBus_TasmotaSlaveModBus.be` (Tasmota esclave), `data/fs/modBus_Conn16channels.be`
-> (relais 16 canaux). Aide utilisateur : `data/fs/ModBus.help`.
+> (relais 16 canaux). Mode d'emploi (commandes d'exemple, trames detaillees par code de
+> fonction) : [Aide/MODBUS.md](Aide/MODBUS.md) — ce document-ci est la reference de CONCEPTION.
 
 ---
 
@@ -272,6 +273,11 @@ en 0,3-0,4 s ; a raccourcir une fois les corrections ci-dessus validees sur le b
 
 Source : `outils_docs/Electronique/Connecteur ModBus/16 Channel Multifunction RS485
 Module commamd.docx` et `... Manual.docx`. **Verifie dans la doc constructeur, pas deduit.**
+
+Commandes d'exemple pretes a l'emploi (trames et `ModBusSend`) : [Aide/MODBUS.md](Aide/MODBUS.md),
+section « Exemples de commandes pour les Modules ModBus 16 channels ». ⚠️ Vocabulaire different, a
+confirmer sur la carte : l'ordre `01` y est appele « Fermeture » (et `07` « Fermeture de tous »),
+la ou le constructeur dit « Open » (« Open all ») — memes trames, sens physique a verifier.
 
 Usine : **9600 bauds, 8N1, adresse 0x01**. Deux jeux de commandes reconnus automatiquement
 (AT en ASCII, ModBus RTU en HEX) — on n'utilise que le ModBus.

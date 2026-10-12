@@ -1,7 +1,7 @@
 # Carte des modules Berry par carte
 
 > Fichier GENERE par carte_modules_berry.py - ne pas editer a la main.
-> Genere le 2026-10-12 22:39.
+> Genere le 2026-10-12 23:04.
 
 40 modules (33 dans `data/fs`, 7 propres a une carte), 8 cartes.
 
@@ -48,7 +48,7 @@ Legende : **S** solidifie dans l'env (`custom_berry_solidify`) - **I** importe p
 | `controleGarage` | Carte | # |  |  |  | P C ON |  |  | P C ON |
 | `controleGrenier` | Carte |  | # | # | P C ON |  |  |  |  |
 | `controlePompeVideCave` | Carte |  | P C ON | P C ON |  |  |  |  |  |
-| `controleRideau` | Carte |  |  |  |  |  |  | P |  |
+| `controleRideau` | Carte |  |  |  |  |  |  | P C ON |  |
 | `cuveFonctions` | Carte |  |  |  |  |  | P C ON |  |  |
 | `garageFonctions` | Carte | # |  |  |  | P C ON |  |  | P C ON |
 
@@ -70,7 +70,6 @@ Constats factuels, sans jugement : un module peut etre volontairement dans cet e
 - `garage/tasmota32s3-capteurs-cuve-modbus` : `controleTCP` solidifie, reference seulement en commentaire dans l'autoexec.
 - `garage/tasmota32s3-rideau-garage-modbus` : `controleRangeExtender` solidifie, reference seulement en commentaire dans l'autoexec.
 - `garage/tasmota32s3-rideau-garage-modbus` : `controleTCP` solidifie, reference seulement en commentaire dans l'autoexec.
-- `garage/tasmota32s3-rideau-garage-modbus` : `controleRideau.be` est dans le dossier de la carte mais l'autoexec ne le charge pas.
 - `data/etage2/tasmota32s3-grenier/controleGrenier.be` : fichier vide.
 
 ### Informations (normal ou voulu, listees pour memoire)
@@ -156,13 +155,13 @@ flowchart LR
     m_controleWeb -.->|import| m_rangeExtenderFonctions
     m_modbusFonctions -.->|import| m_tcpFonctions
     m_modbusFonctions -.->|import| m_udpFonctions
-    m_controleGeneral -.->|import| m_modbusFonctions
-    m_udpFonctions -.->|import| m_modbusFonctions
-    m_tcpFonctions -.->|import| m_modbusFonctions
     m_rangeExtenderFonctions -.->|import| m_modbusFonctions
+    m_udpFonctions -.->|import| m_modbusFonctions
     m_globalFonctions -.->|import| m_modbusFonctions
-    m_controleWeb -.->|import| m_ledsPanelFonctions
+    m_controleGeneral -.->|import| m_modbusFonctions
+    m_tcpFonctions -.->|import| m_modbusFonctions
     m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
+    m_controleWeb -.->|import| m_ledsPanelFonctions
 ```
 
 ### cave/tasmota32-serveur-rly
@@ -219,13 +218,13 @@ flowchart LR
     m_controleWeb -.->|import| m_rangeExtenderFonctions
     m_modbusFonctions -.->|import| m_tcpFonctions
     m_modbusFonctions -.->|import| m_udpFonctions
-    m_controleGeneral -.->|import| m_modbusFonctions
-    m_udpFonctions -.->|import| m_modbusFonctions
-    m_tcpFonctions -.->|import| m_modbusFonctions
     m_rangeExtenderFonctions -.->|import| m_modbusFonctions
+    m_udpFonctions -.->|import| m_modbusFonctions
     m_globalFonctions -.->|import| m_modbusFonctions
-    m_controleWeb -.->|import| m_ledsPanelFonctions
+    m_controleGeneral -.->|import| m_modbusFonctions
+    m_tcpFonctions -.->|import| m_modbusFonctions
     m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
+    m_controleWeb -.->|import| m_ledsPanelFonctions
     CARTE --> m_controlePompeVideCave
 ```
 
@@ -287,11 +286,11 @@ flowchart LR
     CARTE --> m_rangeExtenderFonctions
     CARTE --> m_tcpFonctions
     CARTE --> m_udpFonctions
-    m_globalFonctions -.->|import| m_modbusFonctions
     m_controleGeneral -.->|import| m_modbusFonctions
-    m_tcpFonctions -.->|import| m_modbusFonctions
     m_rangeExtenderFonctions -.->|import| m_modbusFonctions
+    m_globalFonctions -.->|import| m_modbusFonctions
     m_udpFonctions -.->|import| m_modbusFonctions
+    m_tcpFonctions -.->|import| m_modbusFonctions
     CARTE -.-> m_controleLedRGB
     CARTE -.-> m_ledRGBFonctions
     m_controleWeb -.->|import| m_ledsPanelFonctions
@@ -361,11 +360,11 @@ flowchart LR
     CARTE --> m_rangeExtenderFonctions
     CARTE -.-> m_tcpFonctions
     CARTE -.-> m_udpFonctions
-    m_globalFonctions -.->|import| m_modbusFonctions
     m_controleGeneral -.->|import| m_modbusFonctions
-    m_tcpFonctions -.->|import| m_modbusFonctions
     m_rangeExtenderFonctions -.->|import| m_modbusFonctions
+    m_globalFonctions -.->|import| m_modbusFonctions
     m_udpFonctions -.->|import| m_modbusFonctions
+    m_tcpFonctions -.->|import| m_modbusFonctions
     CARTE -.-> m_controleLedRGB
     CARTE -.-> m_controleLoRaWan
     CARTE --> m_controleVoletRoulants
@@ -571,6 +570,9 @@ flowchart LR
         m_ledRGBFonctions["ledRGBFonctions"]
         m_ledsPanelFonctions["ledsPanelFonctions"]
     end
+    subgraph g_Carte["Carte"]
+        m_controleRideau["controleRideau"]
+    end
     CARTE --> m_configDevices
     CARTE --> m_configGlobal
     CARTE --> m_configModules
@@ -599,6 +601,7 @@ flowchart LR
     CARTE -.-> m_ledRGBFonctions
     m_controleWeb -.->|import| m_ledsPanelFonctions
     m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
+    CARTE --> m_controleRideau
 ```
 
 ### garage/tasmota32s3-serveur-modbus
