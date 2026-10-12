@@ -1,0 +1,159 @@
+// Taches du fork Tasmota (Ctrl+Shift+P > "Tasks: Run Task").
+//
+// Pourquoi ici et pas dans le profil VS Code : ces taches ne valent que pour ce depot.
+// Pourquoi ce fichier ne gene pas la synchro du fork : l'amont n'a PAS de .vscode/tasks.json
+// (il ne suit que .vscode/settings.json, a ne jamais toucher). .vscode/ est dans le .gitignore :
+// pour faire voyager ce fichier entre postes, il faut l'ajouter par `git add -f`.
+//
+// Les outils (sniffeurs, syslog, pont serie) sont lances DIRECTEMENT par Python, pas par les
+// cibles PlatformIO "Custom" : une cible est un `pio run` qui, pendant un build, peut vider tout
+// .pio/build (piege du 2026-10-10, CLAUDE.md "Vigilances de build").
+{
+    "version": "2.0.0",
+    "options": {
+        "cwd": "${workspaceFolder}",
+        "env": { "PYTHONUTF8": "1" }
+    },
+    "tasks": [
+        // ---------------------------------------------------------------- Berry
+        {
+            // Verification a l'enregistrement : tourne en fond des l'ouverture du dossier,
+            // reverifie tout data/ a chaque modification d'un .be. Erreurs -> onglet Problemes
+            // -> Error Lens. Premiere fois : "Tasks: Manage Automatic Tasks" > Allow.
+            "label": "Berry : surveillance (verification a l'enregistrement)",
+            "type": "process",
+            "command": "python",
+            "args": ["-u", "outils_docs/scripts_python/verifie_berry.py", "--surveille"],
+            "isBackground": true,
+            "runOptions": { "runOn": "folderOpen" },
+            "presentation": { "reveal": "never", "panel": "dedicated", "group": "berry" },
+            "problemMatcher": {
+                "owner": "berry",
+                "source": "berry",
+                "fileLocation": ["autoDetect", "${workspaceFolder}"],
+                "pattern": { "regexp": "^(.+?\\.be):(\\d+): erreur: (.*)$", "file": 1, "line": 2, "message": 3 },
+                "background": {
+                    "activeBegin": true,
+                    "beginsPattern": "^\\[verifie_berry\\] debut",
+                    "endsPattern": "^\\[verifie_berry\\] fin"
+                }
+            }
+        },
+        {
+            "label": "Berry : verifier tout data/",
+            "type": "process",
+            "command": "python",
+            "args": ["-u", "outils_docs/scripts_python/verifie_berry.py"],
+            "group": "test",
+            "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+            "problemMatcher": {
+                "owner": "berry",
+                "source": "berry",
+                "fileLocation": ["autoDetect", "${workspaceFolder}"],
+                "pattern": { "regexp": "^(.+?\\.be):(\\d+): erreur: (.*)$", "file": 1, "line": 2, "message": 3 }
+            }
+        },
+        {
+            "label": "Berry : verifier le fichier courant",
+            "type": "process",
+            "command": "python",
+            "args": ["-u", "outils_docs/scripts_python/verifie_berry.py", "${file}"],
+            "group": "test",
+            "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+            "problemMatcher": {
+                "owner": "berry",
+                "source": "berry",
+                "fileLocation": ["autoDetect", "${workspaceFolder}"],
+                "pattern": { "regexp": "^(.+?\\.be):(\\d+): erreur: (.*)$", "file": 1, "line": 2, "message": 3 }
+            }
+        },
+        {
+            // Ecrit dans lib/libesp32/berry_custom : JAMAIS pendant un build (lecon du 2026-10-11).
+            "label": "Berry : solidifier + compiler le fichier courant (HORS build !)",
+            "type": "process",
+            "command": "python",
+            "args": ["-u", "outils_docs/scripts_python/solidifie_et_compile_berry.py", "${file}"],
+            "group": "test",
+            "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+            "problemMatcher": []
+        },
+        {
+            "label": "Berry : banc ModBus",
+            "type": "process",
+            "command": "python",
+            "args": ["-u", "outils_docs/scripts_python/banc_test_modbus.py"],
+            "group": "test",
+            "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+            "problemMatcher": []
+        },
+        {
+            "label": "Berry : test discovery",
+            "type": "process",
+            "command": "${workspaceFolder}/lib/libesp32/berry/berry.exe",
+            "args": ["outils_docs/scripts_python/test_discovery.be"],
+            "group": "test",
+            "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+            "problemMatcher": []
+        },
+        // ---------------------------------------------------------------- Cartes generees
+        {
+            "label": "Docs : regenerer la carte des modules Berry",
+            "type": "process",
+            "command": "python",
+            "args": ["-u", "outils_docs/scripts_python/carte_modules_berry.py"],
+            "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+            "problemMatcher": []
+        },
+        {
+            "label": "Docs : regenerer le schema des _persist.json",
+            "type": "process",
+            "command": "python",
+            "args": ["-u", "outils_docs/scripts_python/genere_schema_persist.py"],
+            "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+            "problemMatcher": []
+        },
+        // ---------------------------------------------------------------- Outils (hors PlatformIO)
+        // Python de PlatformIO : il fournit pyserial, comme pour les cibles Custom.
+        {
+            "label": "Outil : sniffeur ModBus (http://127.0.0.1:7300)",
+            "type": "process",
+            "command": "${userHome}/.platformio/penv/Scripts/python.exe",
+            "args": ["-u", "outils_docs/scripts_python/sniffeur_modbus.py", "--port", "auto", "--debit", "19200", "--http", "7300"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
+        },
+        {
+            "label": "Outil : sniffeur MQTT (http://127.0.0.1:7100)",
+            "type": "process",
+            "command": "${userHome}/.platformio/penv/Scripts/python.exe",
+            "args": ["-u", "outils_docs/scripts_python/sniffeur_mqtt.py", "--http", "7100"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
+        },
+        {
+            "label": "Outil : serveur syslog (http://127.0.0.1:7200)",
+            "type": "process",
+            "command": "${userHome}/.platformio/penv/Scripts/python.exe",
+            "args": ["-u", "outils_docs/scripts_python/syslog_tasmota.py", "--http", "7200"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
+        },
+        {
+            "label": "Outil : pont serie (port USB seul, tcp 7000)",
+            "type": "process",
+            "command": "${userHome}/.platformio/penv/Scripts/python.exe",
+            "args": ["-u", "outils_docs/scripts_python/pont_serie.py", "--port", "auto", "--vitesse", "115200", "--tcp", "7000"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
+        },
+        {
+            // Diagnostic seul : ne modifie rien. La vraie synchro se lance a la main (CLAUDE.md).
+            "label": "Fork : retard sur l'amont (diagnostic, --dry-run)",
+            "type": "process",
+            "command": "python",
+            "args": ["-u", "outils_docs/scripts_python/synchronise_fork_tasmota.py", "--dry-run"],
+            "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+            "problemMatcher": []
+        }
+    ]
+}

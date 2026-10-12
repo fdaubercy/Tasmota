@@ -1,0 +1,696 @@
+# Carte des modules Berry par carte
+
+> Fichier GENERE par carte_modules_berry.py - ne pas editer a la main.
+> Genere le 2026-10-12 22:04.
+
+40 modules (33 dans `data/fs`, 7 propres a une carte), 8 cartes.
+
+## Tableau
+
+Legende : **S** solidifie dans l'env (`custom_berry_solidify`) - **I** importe par l'autoexec - **C** `compileModule` / `loadBerryFile` - **D** charge indirectement (importe par un module charge sur la carte) - **#** reference seulement commentee - **P** fichier propre a la carte - puis la garde d'activation evaluee sur le `_persist.json` de la carte : **ON** / **OFF** / **?** (non evaluable). Pas d'etat = pas de garde. Cellule vide = rien.
+
+| Module | Famille | bureau<br>tasmota32-interrupteur-differentiel | cave<br>tasmota32-serveur-rly | cave<br>tasmota32s3-serveur-rly | etage2<br>tasmota32s3-grenier | garage<br>tasmota32p4-serveur-modbus | garage<br>tasmota32s3-capteurs-cuve-modbus | garage<br>tasmota32s3-rideau-garage-modbus | garage<br>tasmota32s3-serveur-modbus |
+|---|---|---|---|---|---|---|---|---|---|
+| `configDevices` | Socle | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON |
+| `configGlobal` | Socle | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
+| `configModules` | Socle | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON |
+| `controleGeneral` | Socle | S I | S I | S I | S I | S I | S I | S I | S I |
+| `controleLedTemoin` | Socle | S | S I | S I | S I | S I | S I | S I | S I |
+| `controleWeb` | Socle | S I | S I | S I | S I | S I | S I | S I | S I |
+| `diversFonctions` | Socle | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
+| `gestionFileFolder` | Socle | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
+| `globalFonctions` | Socle | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
+| `logFonctions` | Socle | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
+| `webFonctions` | Socle | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
+| `controleDiscovery` | Reseau | S # | S I OFF | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON |
+| `controleRangeExtender` | Reseau | S # | S I OFF | S I ON | S I ON | S I ON | S # | S # | S I ON |
+| `controleTCP` | Reseau | S | S I OFF | S I ON | S I OFF | S # | S # | S # | S I ON |
+| `controleUDP` | Reseau | S # | S I OFF | S I ON | S I OFF | S I ON | S I ON | S I ON | S I ON |
+| `discoveryFonctions` | Reseau | S # | S | S D | S D | S C ON | S C ON | S C ON | S C ON |
+| `rangeExtenderFonctions` | Reseau | S D | S D C OFF | S C ON | S C ON | S D | S D | S D | S C ON |
+| `tcpFonctions` | Reseau | S D | S D C OFF | S C ON | S C OFF | S D | S D | S D | S C ON |
+| `udpFonctions` | Reseau | S D | S D C OFF | S C ON | S C OFF | S C ON | S C ON | S C ON | S C ON |
+| `controleModbus` | ModBus | # | # | # | # | S I ON | S I ON | S I ON | S I ON |
+| `modBus_Conn16channels` | ModBus |  | # | # | # | S I ON | S I ON | S I ON | S I ON |
+| `modBus_TasmotaSlaveModBus` | ModBus |  | # | # | # | S I ON | S I ON | S I ON | S I ON |
+| `modbusFonctions` | ModBus | D | D | D | D | S I | S I | S I | S I C ON |
+| `controleES8311` | Peripheriques |  |  |  |  | S I ON |  |  |  |
+| `controleLedRGB` | Peripheriques |  |  | C OFF | C OFF |  | C ON | C OFF | C OFF |
+| `controleLoRaWan` | Peripheriques | # | # | # | S I OFF | # | # | # | S I ON |
+| `controleVoletRoulants` | Peripheriques | # | # | # | S I ON | S I ON | # | # | S I OFF |
+| `i2c_ads1115` | Peripheriques | # | # | # | # | S I ON | S I ON | S I OFF | S I ON |
+| `i2c_mcp23017` | Peripheriques | # | # | # | # | S I ON | S I ON | S I OFF | S I ON |
+| `ledRGBFonctions` | Peripheriques |  |  | C OFF | C OFF |  | C ON | C OFF | C OFF |
+| `ledsPanelFonctions` | Peripheriques | S D | S D | S D | S D | S D | S D | S D | S D |
+| `loRaWanFonctions` | Peripheriques | # | # | # | S C OFF | # | # | # | S C ON |
+| `vrFonctions` | Peripheriques | # | # | # | S C | S D | # | # | S C OFF |
+| `controleCuve` | Carte |  |  |  |  |  | P C ON |  |  |
+| `controleGarage` | Carte | # |  |  |  | P C ON |  |  | P C ON |
+| `controleGrenier` | Carte |  | # | # | P C ON |  |  |  |  |
+| `controlePompeVideCave` | Carte |  | P C ON | P C ON |  |  |  |  |  |
+| `controleRideau` | Carte |  |  |  |  |  |  | P |  |
+| `cuveFonctions` | Carte |  |  |  |  |  | P C ON |  |  |
+| `garageFonctions` | Carte | # |  |  |  | P C ON |  |  | P C ON |
+
+Envs : `bureau/tasmota32-interrupteur-differentiel` = `tasmota32-bureau-interrupteur-differentiel` ; `cave/tasmota32-serveur-rly` = `tasmota32-cave-serveur-rly` ; `cave/tasmota32s3-serveur-rly` = `tasmota32s3-cave-serveur-rly` ; `etage2/tasmota32s3-grenier` = `tasmota32s3-etage2-grenier` ; `garage/tasmota32p4-serveur-modbus` = `tasmota32p4-garage-serveur-modbus` ; `garage/tasmota32s3-capteurs-cuve-modbus` = `tasmota32s3-garage-capteurs-cuve-modbus` ; `garage/tasmota32s3-rideau-garage-modbus` = `tasmota32s3-garage-rideau-garage-modbus` ; `garage/tasmota32s3-serveur-modbus` = `tasmota32s3-garage-serveur-modbus`
+
+## Incoherences detectees
+
+Constats factuels, sans jugement : un module peut etre volontairement dans cet etat.
+
+- `bureau/tasmota32-interrupteur-differentiel` : `controleLedTemoin` solidifie, jamais importe ni charge par l'autoexec.
+- `bureau/tasmota32-interrupteur-differentiel` : `controleDiscovery` solidifie, reference seulement en commentaire dans l'autoexec.
+- `bureau/tasmota32-interrupteur-differentiel` : `controleRangeExtender` solidifie, reference seulement en commentaire dans l'autoexec.
+- `bureau/tasmota32-interrupteur-differentiel` : `controleTCP` solidifie, jamais importe ni charge par l'autoexec.
+- `bureau/tasmota32-interrupteur-differentiel` : `controleUDP` solidifie, reference seulement en commentaire dans l'autoexec.
+- `bureau/tasmota32-interrupteur-differentiel` : `discoveryFonctions` solidifie, reference seulement en commentaire dans l'autoexec.
+- `cave/tasmota32-serveur-rly` : `discoveryFonctions` solidifie, jamais importe ni charge par l'autoexec.
+- `garage/tasmota32p4-serveur-modbus` : `controleTCP` solidifie, reference seulement en commentaire dans l'autoexec.
+- `garage/tasmota32s3-capteurs-cuve-modbus` : `controleRangeExtender` solidifie, reference seulement en commentaire dans l'autoexec.
+- `garage/tasmota32s3-capteurs-cuve-modbus` : `controleTCP` solidifie, reference seulement en commentaire dans l'autoexec.
+- `garage/tasmota32s3-rideau-garage-modbus` : `controleRangeExtender` solidifie, reference seulement en commentaire dans l'autoexec.
+- `garage/tasmota32s3-rideau-garage-modbus` : `controleTCP` solidifie, reference seulement en commentaire dans l'autoexec.
+- `garage/tasmota32s3-rideau-garage-modbus` : `controleRideau.be` est dans le dossier de la carte mais l'autoexec ne le charge pas.
+- `data/etage2/tasmota32s3-grenier/controleGrenier.be` : fichier vide.
+
+### Informations (normal ou voulu, listees pour memoire)
+
+- `cave/tasmota32-serveur-rly` : `controleDiscovery` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
+- `cave/tasmota32-serveur-rly` : `controleRangeExtender` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
+- `cave/tasmota32-serveur-rly` : `controleTCP` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
+- `cave/tasmota32-serveur-rly` : `controleUDP` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
+- `cave/tasmota32-serveur-rly` : `rangeExtenderFonctions` : charge alors que sa garde vaut OFF.
+- `cave/tasmota32-serveur-rly` : `tcpFonctions` : charge alors que sa garde vaut OFF.
+- `cave/tasmota32-serveur-rly` : `udpFonctions` : charge alors que sa garde vaut OFF.
+- `cave/tasmota32s3-serveur-rly` : `controleLedRGB` charge depuis `data/fs` sans etre solidifie (copie sur le FS, compile au demarrage).
+- `cave/tasmota32s3-serveur-rly` : `controleLedRGB` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
+- `cave/tasmota32s3-serveur-rly` : `ledRGBFonctions` charge depuis `data/fs` sans etre solidifie (copie sur le FS, compile au demarrage).
+- `cave/tasmota32s3-serveur-rly` : `ledRGBFonctions` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
+- `etage2/tasmota32s3-grenier` : `controleTCP` : charge alors que sa garde vaut OFF.
+- `etage2/tasmota32s3-grenier` : `controleUDP` : charge alors que sa garde vaut OFF.
+- `etage2/tasmota32s3-grenier` : `tcpFonctions` : charge alors que sa garde vaut OFF.
+- `etage2/tasmota32s3-grenier` : `udpFonctions` : charge alors que sa garde vaut OFF.
+- `etage2/tasmota32s3-grenier` : `controleLedRGB` charge depuis `data/fs` sans etre solidifie (copie sur le FS, compile au demarrage).
+- `etage2/tasmota32s3-grenier` : `controleLedRGB` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
+- `etage2/tasmota32s3-grenier` : `controleLoRaWan` : charge alors que sa garde vaut OFF.
+- `etage2/tasmota32s3-grenier` : `ledRGBFonctions` charge depuis `data/fs` sans etre solidifie (copie sur le FS, compile au demarrage).
+- `etage2/tasmota32s3-grenier` : `ledRGBFonctions` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
+- `etage2/tasmota32s3-grenier` : `loRaWanFonctions` : charge alors que sa garde vaut OFF.
+- `garage/tasmota32s3-capteurs-cuve-modbus` : `controleLedRGB` charge depuis `data/fs` sans etre solidifie (copie sur le FS, compile au demarrage).
+- `garage/tasmota32s3-capteurs-cuve-modbus` : `ledRGBFonctions` charge depuis `data/fs` sans etre solidifie (copie sur le FS, compile au demarrage).
+- `garage/tasmota32s3-rideau-garage-modbus` : `controleLedRGB` charge depuis `data/fs` sans etre solidifie (copie sur le FS, compile au demarrage).
+- `garage/tasmota32s3-rideau-garage-modbus` : `controleLedRGB` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
+- `garage/tasmota32s3-rideau-garage-modbus` : `i2c_ads1115` : charge alors que sa garde vaut OFF.
+- `garage/tasmota32s3-rideau-garage-modbus` : `i2c_mcp23017` : charge alors que sa garde vaut OFF.
+- `garage/tasmota32s3-rideau-garage-modbus` : `ledRGBFonctions` charge depuis `data/fs` sans etre solidifie (copie sur le FS, compile au demarrage).
+- `garage/tasmota32s3-rideau-garage-modbus` : `ledRGBFonctions` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
+- `garage/tasmota32s3-serveur-modbus` : `controleLedRGB` charge depuis `data/fs` sans etre solidifie (copie sur le FS, compile au demarrage).
+- `garage/tasmota32s3-serveur-modbus` : `controleLedRGB` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
+- `garage/tasmota32s3-serveur-modbus` : `controleVoletRoulants` : charge alors que sa garde vaut OFF.
+- `garage/tasmota32s3-serveur-modbus` : `ledRGBFonctions` charge depuis `data/fs` sans etre solidifie (copie sur le FS, compile au demarrage).
+- `garage/tasmota32s3-serveur-modbus` : `ledRGBFonctions` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
+- `garage/tasmota32s3-serveur-modbus` : `vrFonctions` : charge alors que sa garde vaut OFF.
+
+## Diagrammes
+
+Un diagramme par carte (tout dans un seul serait illisible). Modules **charges** par l'autoexec (import / compileModule / loadBerryFile non commentes). Fleche pleine = garde ON ou sans garde ; pointillee = garde OFF ou non evaluable (?).
+
+### bureau/tasmota32-interrupteur-differentiel
+
+```mermaid
+flowchart LR
+    CARTE(["bureau/tasmota32-interrupteur-differentiel"])
+    subgraph g_Socle["Socle"]
+        m_configDevices["configDevices"]
+        m_configGlobal["configGlobal"]
+        m_configModules["configModules"]
+        m_controleGeneral["controleGeneral"]
+        m_controleWeb["controleWeb"]
+        m_diversFonctions["diversFonctions"]
+        m_gestionFileFolder["gestionFileFolder"]
+        m_globalFonctions["globalFonctions"]
+        m_logFonctions["logFonctions"]
+        m_webFonctions["webFonctions"]
+    end
+    subgraph g_Reseau["Reseau"]
+        m_rangeExtenderFonctions["rangeExtenderFonctions"]
+        m_tcpFonctions["tcpFonctions"]
+        m_udpFonctions["udpFonctions"]
+    end
+    subgraph g_ModBus["ModBus"]
+        m_modbusFonctions["modbusFonctions"]
+    end
+    subgraph g_Peripheriques["Peripheriques"]
+        m_ledsPanelFonctions["ledsPanelFonctions"]
+    end
+    CARTE --> m_configDevices
+    CARTE --> m_configGlobal
+    CARTE --> m_configModules
+    CARTE --> m_controleGeneral
+    CARTE --> m_controleWeb
+    CARTE --> m_diversFonctions
+    CARTE --> m_gestionFileFolder
+    CARTE --> m_globalFonctions
+    CARTE --> m_logFonctions
+    CARTE --> m_webFonctions
+    m_controleWeb -.->|import| m_rangeExtenderFonctions
+    m_modbusFonctions -.->|import| m_tcpFonctions
+    m_modbusFonctions -.->|import| m_udpFonctions
+    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
+    m_udpFonctions -.->|import| m_modbusFonctions
+    m_globalFonctions -.->|import| m_modbusFonctions
+    m_tcpFonctions -.->|import| m_modbusFonctions
+    m_controleGeneral -.->|import| m_modbusFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
+    m_controleWeb -.->|import| m_ledsPanelFonctions
+```
+
+### cave/tasmota32-serveur-rly
+
+```mermaid
+flowchart LR
+    CARTE(["cave/tasmota32-serveur-rly"])
+    subgraph g_Socle["Socle"]
+        m_configDevices["configDevices"]
+        m_configGlobal["configGlobal"]
+        m_configModules["configModules"]
+        m_controleGeneral["controleGeneral"]
+        m_controleLedTemoin["controleLedTemoin"]
+        m_controleWeb["controleWeb"]
+        m_diversFonctions["diversFonctions"]
+        m_gestionFileFolder["gestionFileFolder"]
+        m_globalFonctions["globalFonctions"]
+        m_logFonctions["logFonctions"]
+        m_webFonctions["webFonctions"]
+    end
+    subgraph g_Reseau["Reseau"]
+        m_controleDiscovery["controleDiscovery"]
+        m_controleRangeExtender["controleRangeExtender"]
+        m_controleTCP["controleTCP"]
+        m_controleUDP["controleUDP"]
+        m_rangeExtenderFonctions["rangeExtenderFonctions"]
+        m_tcpFonctions["tcpFonctions"]
+        m_udpFonctions["udpFonctions"]
+    end
+    subgraph g_ModBus["ModBus"]
+        m_modbusFonctions["modbusFonctions"]
+    end
+    subgraph g_Peripheriques["Peripheriques"]
+        m_ledsPanelFonctions["ledsPanelFonctions"]
+    end
+    subgraph g_Carte["Carte"]
+        m_controlePompeVideCave["controlePompeVideCave"]
+    end
+    CARTE --> m_configDevices
+    CARTE --> m_configGlobal
+    CARTE --> m_configModules
+    CARTE --> m_controleGeneral
+    CARTE --> m_controleLedTemoin
+    CARTE --> m_controleWeb
+    CARTE --> m_diversFonctions
+    CARTE --> m_gestionFileFolder
+    CARTE --> m_globalFonctions
+    CARTE --> m_logFonctions
+    CARTE --> m_webFonctions
+    CARTE -.-> m_controleDiscovery
+    CARTE -.-> m_controleRangeExtender
+    CARTE -.-> m_controleTCP
+    CARTE -.-> m_controleUDP
+    m_controleWeb -.->|import| m_rangeExtenderFonctions
+    m_modbusFonctions -.->|import| m_tcpFonctions
+    m_modbusFonctions -.->|import| m_udpFonctions
+    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
+    m_udpFonctions -.->|import| m_modbusFonctions
+    m_globalFonctions -.->|import| m_modbusFonctions
+    m_controleGeneral -.->|import| m_modbusFonctions
+    m_tcpFonctions -.->|import| m_modbusFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
+    m_controleWeb -.->|import| m_ledsPanelFonctions
+    CARTE --> m_controlePompeVideCave
+```
+
+### cave/tasmota32s3-serveur-rly
+
+```mermaid
+flowchart LR
+    CARTE(["cave/tasmota32s3-serveur-rly"])
+    subgraph g_Socle["Socle"]
+        m_configDevices["configDevices"]
+        m_configGlobal["configGlobal"]
+        m_configModules["configModules"]
+        m_controleGeneral["controleGeneral"]
+        m_controleLedTemoin["controleLedTemoin"]
+        m_controleWeb["controleWeb"]
+        m_diversFonctions["diversFonctions"]
+        m_gestionFileFolder["gestionFileFolder"]
+        m_globalFonctions["globalFonctions"]
+        m_logFonctions["logFonctions"]
+        m_webFonctions["webFonctions"]
+    end
+    subgraph g_Reseau["Reseau"]
+        m_controleDiscovery["controleDiscovery"]
+        m_controleRangeExtender["controleRangeExtender"]
+        m_controleTCP["controleTCP"]
+        m_controleUDP["controleUDP"]
+        m_discoveryFonctions["discoveryFonctions"]
+        m_rangeExtenderFonctions["rangeExtenderFonctions"]
+        m_tcpFonctions["tcpFonctions"]
+        m_udpFonctions["udpFonctions"]
+    end
+    subgraph g_ModBus["ModBus"]
+        m_modbusFonctions["modbusFonctions"]
+    end
+    subgraph g_Peripheriques["Peripheriques"]
+        m_controleLedRGB["controleLedRGB"]
+        m_ledRGBFonctions["ledRGBFonctions"]
+        m_ledsPanelFonctions["ledsPanelFonctions"]
+    end
+    subgraph g_Carte["Carte"]
+        m_controlePompeVideCave["controlePompeVideCave"]
+    end
+    CARTE --> m_configDevices
+    CARTE --> m_configGlobal
+    CARTE --> m_configModules
+    CARTE --> m_controleGeneral
+    CARTE --> m_controleLedTemoin
+    CARTE --> m_controleWeb
+    CARTE --> m_diversFonctions
+    CARTE --> m_gestionFileFolder
+    CARTE --> m_globalFonctions
+    CARTE --> m_logFonctions
+    CARTE --> m_webFonctions
+    CARTE --> m_controleDiscovery
+    CARTE --> m_controleRangeExtender
+    CARTE --> m_controleTCP
+    CARTE --> m_controleUDP
+    m_controleDiscovery -.->|import| m_discoveryFonctions
+    CARTE --> m_rangeExtenderFonctions
+    CARTE --> m_tcpFonctions
+    CARTE --> m_udpFonctions
+    m_udpFonctions -.->|import| m_modbusFonctions
+    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
+    m_globalFonctions -.->|import| m_modbusFonctions
+    m_tcpFonctions -.->|import| m_modbusFonctions
+    m_controleGeneral -.->|import| m_modbusFonctions
+    CARTE -.-> m_controleLedRGB
+    CARTE -.-> m_ledRGBFonctions
+    m_controleWeb -.->|import| m_ledsPanelFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
+    CARTE --> m_controlePompeVideCave
+```
+
+### etage2/tasmota32s3-grenier
+
+```mermaid
+flowchart LR
+    CARTE(["etage2/tasmota32s3-grenier"])
+    subgraph g_Socle["Socle"]
+        m_configDevices["configDevices"]
+        m_configGlobal["configGlobal"]
+        m_configModules["configModules"]
+        m_controleGeneral["controleGeneral"]
+        m_controleLedTemoin["controleLedTemoin"]
+        m_controleWeb["controleWeb"]
+        m_diversFonctions["diversFonctions"]
+        m_gestionFileFolder["gestionFileFolder"]
+        m_globalFonctions["globalFonctions"]
+        m_logFonctions["logFonctions"]
+        m_webFonctions["webFonctions"]
+    end
+    subgraph g_Reseau["Reseau"]
+        m_controleDiscovery["controleDiscovery"]
+        m_controleRangeExtender["controleRangeExtender"]
+        m_controleTCP["controleTCP"]
+        m_controleUDP["controleUDP"]
+        m_discoveryFonctions["discoveryFonctions"]
+        m_rangeExtenderFonctions["rangeExtenderFonctions"]
+        m_tcpFonctions["tcpFonctions"]
+        m_udpFonctions["udpFonctions"]
+    end
+    subgraph g_ModBus["ModBus"]
+        m_modbusFonctions["modbusFonctions"]
+    end
+    subgraph g_Peripheriques["Peripheriques"]
+        m_controleLedRGB["controleLedRGB"]
+        m_controleLoRaWan["controleLoRaWan"]
+        m_controleVoletRoulants["controleVoletRoulants"]
+        m_ledRGBFonctions["ledRGBFonctions"]
+        m_ledsPanelFonctions["ledsPanelFonctions"]
+        m_loRaWanFonctions["loRaWanFonctions"]
+        m_vrFonctions["vrFonctions"]
+    end
+    subgraph g_Carte["Carte"]
+        m_controleGrenier["controleGrenier"]
+    end
+    CARTE --> m_configDevices
+    CARTE --> m_configGlobal
+    CARTE --> m_configModules
+    CARTE --> m_controleGeneral
+    CARTE --> m_controleLedTemoin
+    CARTE --> m_controleWeb
+    CARTE --> m_diversFonctions
+    CARTE --> m_gestionFileFolder
+    CARTE --> m_globalFonctions
+    CARTE --> m_logFonctions
+    CARTE --> m_webFonctions
+    CARTE --> m_controleDiscovery
+    CARTE --> m_controleRangeExtender
+    CARTE -.-> m_controleTCP
+    CARTE -.-> m_controleUDP
+    m_controleDiscovery -.->|import| m_discoveryFonctions
+    CARTE --> m_rangeExtenderFonctions
+    CARTE -.-> m_tcpFonctions
+    CARTE -.-> m_udpFonctions
+    m_udpFonctions -.->|import| m_modbusFonctions
+    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
+    m_globalFonctions -.->|import| m_modbusFonctions
+    m_tcpFonctions -.->|import| m_modbusFonctions
+    m_controleGeneral -.->|import| m_modbusFonctions
+    CARTE -.-> m_controleLedRGB
+    CARTE -.-> m_controleLoRaWan
+    CARTE --> m_controleVoletRoulants
+    CARTE -.-> m_ledRGBFonctions
+    m_controleWeb -.->|import| m_ledsPanelFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
+    CARTE -.-> m_loRaWanFonctions
+    CARTE --> m_vrFonctions
+    CARTE --> m_controleGrenier
+```
+
+### garage/tasmota32p4-serveur-modbus
+
+```mermaid
+flowchart LR
+    CARTE(["garage/tasmota32p4-serveur-modbus"])
+    subgraph g_Socle["Socle"]
+        m_configDevices["configDevices"]
+        m_configGlobal["configGlobal"]
+        m_configModules["configModules"]
+        m_controleGeneral["controleGeneral"]
+        m_controleLedTemoin["controleLedTemoin"]
+        m_controleWeb["controleWeb"]
+        m_diversFonctions["diversFonctions"]
+        m_gestionFileFolder["gestionFileFolder"]
+        m_globalFonctions["globalFonctions"]
+        m_logFonctions["logFonctions"]
+        m_webFonctions["webFonctions"]
+    end
+    subgraph g_Reseau["Reseau"]
+        m_controleDiscovery["controleDiscovery"]
+        m_controleRangeExtender["controleRangeExtender"]
+        m_controleUDP["controleUDP"]
+        m_discoveryFonctions["discoveryFonctions"]
+        m_rangeExtenderFonctions["rangeExtenderFonctions"]
+        m_tcpFonctions["tcpFonctions"]
+        m_udpFonctions["udpFonctions"]
+    end
+    subgraph g_ModBus["ModBus"]
+        m_controleModbus["controleModbus"]
+        m_modBus_Conn16channels["modBus_Conn16channels"]
+        m_modBus_TasmotaSlaveModBus["modBus_TasmotaSlaveModBus"]
+        m_modbusFonctions["modbusFonctions"]
+    end
+    subgraph g_Peripheriques["Peripheriques"]
+        m_controleES8311["controleES8311"]
+        m_controleVoletRoulants["controleVoletRoulants"]
+        m_i2c_ads1115["i2c_ads1115"]
+        m_i2c_mcp23017["i2c_mcp23017"]
+        m_ledsPanelFonctions["ledsPanelFonctions"]
+        m_vrFonctions["vrFonctions"]
+    end
+    subgraph g_Carte["Carte"]
+        m_controleGarage["controleGarage"]
+        m_garageFonctions["garageFonctions"]
+    end
+    CARTE --> m_configDevices
+    CARTE --> m_configGlobal
+    CARTE --> m_configModules
+    CARTE --> m_controleGeneral
+    CARTE --> m_controleLedTemoin
+    CARTE --> m_controleWeb
+    CARTE --> m_diversFonctions
+    CARTE --> m_gestionFileFolder
+    CARTE --> m_globalFonctions
+    CARTE --> m_logFonctions
+    CARTE --> m_webFonctions
+    CARTE --> m_controleDiscovery
+    CARTE --> m_controleRangeExtender
+    CARTE --> m_controleUDP
+    CARTE --> m_discoveryFonctions
+    m_controleWeb -.->|import| m_rangeExtenderFonctions
+    m_discoveryFonctions -.->|import| m_rangeExtenderFonctions
+    m_controleRangeExtender -.->|import| m_rangeExtenderFonctions
+    m_modbusFonctions -.->|import| m_tcpFonctions
+    CARTE --> m_udpFonctions
+    CARTE --> m_controleModbus
+    CARTE --> m_modBus_Conn16channels
+    CARTE --> m_modBus_TasmotaSlaveModBus
+    CARTE --> m_modbusFonctions
+    CARTE --> m_controleES8311
+    CARTE --> m_controleVoletRoulants
+    CARTE --> m_i2c_ads1115
+    CARTE --> m_i2c_mcp23017
+    m_controleWeb -.->|import| m_ledsPanelFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
+    m_controleVoletRoulants -.->|import| m_vrFonctions
+    CARTE --> m_controleGarage
+    CARTE --> m_garageFonctions
+```
+
+### garage/tasmota32s3-capteurs-cuve-modbus
+
+```mermaid
+flowchart LR
+    CARTE(["garage/tasmota32s3-capteurs-cuve-modbus"])
+    subgraph g_Socle["Socle"]
+        m_configDevices["configDevices"]
+        m_configGlobal["configGlobal"]
+        m_configModules["configModules"]
+        m_controleGeneral["controleGeneral"]
+        m_controleLedTemoin["controleLedTemoin"]
+        m_controleWeb["controleWeb"]
+        m_diversFonctions["diversFonctions"]
+        m_gestionFileFolder["gestionFileFolder"]
+        m_globalFonctions["globalFonctions"]
+        m_logFonctions["logFonctions"]
+        m_webFonctions["webFonctions"]
+    end
+    subgraph g_Reseau["Reseau"]
+        m_controleDiscovery["controleDiscovery"]
+        m_controleUDP["controleUDP"]
+        m_discoveryFonctions["discoveryFonctions"]
+        m_rangeExtenderFonctions["rangeExtenderFonctions"]
+        m_tcpFonctions["tcpFonctions"]
+        m_udpFonctions["udpFonctions"]
+    end
+    subgraph g_ModBus["ModBus"]
+        m_controleModbus["controleModbus"]
+        m_modBus_Conn16channels["modBus_Conn16channels"]
+        m_modBus_TasmotaSlaveModBus["modBus_TasmotaSlaveModBus"]
+        m_modbusFonctions["modbusFonctions"]
+    end
+    subgraph g_Peripheriques["Peripheriques"]
+        m_controleLedRGB["controleLedRGB"]
+        m_i2c_ads1115["i2c_ads1115"]
+        m_i2c_mcp23017["i2c_mcp23017"]
+        m_ledRGBFonctions["ledRGBFonctions"]
+        m_ledsPanelFonctions["ledsPanelFonctions"]
+    end
+    subgraph g_Carte["Carte"]
+        m_controleCuve["controleCuve"]
+        m_cuveFonctions["cuveFonctions"]
+    end
+    CARTE --> m_configDevices
+    CARTE --> m_configGlobal
+    CARTE --> m_configModules
+    CARTE --> m_controleGeneral
+    CARTE --> m_controleLedTemoin
+    CARTE --> m_controleWeb
+    CARTE --> m_diversFonctions
+    CARTE --> m_gestionFileFolder
+    CARTE --> m_globalFonctions
+    CARTE --> m_logFonctions
+    CARTE --> m_webFonctions
+    CARTE --> m_controleDiscovery
+    CARTE --> m_controleUDP
+    CARTE --> m_discoveryFonctions
+    m_controleWeb -.->|import| m_rangeExtenderFonctions
+    m_discoveryFonctions -.->|import| m_rangeExtenderFonctions
+    m_modbusFonctions -.->|import| m_tcpFonctions
+    CARTE --> m_udpFonctions
+    CARTE --> m_controleModbus
+    CARTE --> m_modBus_Conn16channels
+    CARTE --> m_modBus_TasmotaSlaveModBus
+    CARTE --> m_modbusFonctions
+    CARTE --> m_controleLedRGB
+    CARTE --> m_i2c_ads1115
+    CARTE --> m_i2c_mcp23017
+    CARTE --> m_ledRGBFonctions
+    m_controleWeb -.->|import| m_ledsPanelFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
+    CARTE --> m_controleCuve
+    CARTE --> m_cuveFonctions
+```
+
+### garage/tasmota32s3-rideau-garage-modbus
+
+```mermaid
+flowchart LR
+    CARTE(["garage/tasmota32s3-rideau-garage-modbus"])
+    subgraph g_Socle["Socle"]
+        m_configDevices["configDevices"]
+        m_configGlobal["configGlobal"]
+        m_configModules["configModules"]
+        m_controleGeneral["controleGeneral"]
+        m_controleLedTemoin["controleLedTemoin"]
+        m_controleWeb["controleWeb"]
+        m_diversFonctions["diversFonctions"]
+        m_gestionFileFolder["gestionFileFolder"]
+        m_globalFonctions["globalFonctions"]
+        m_logFonctions["logFonctions"]
+        m_webFonctions["webFonctions"]
+    end
+    subgraph g_Reseau["Reseau"]
+        m_controleDiscovery["controleDiscovery"]
+        m_controleUDP["controleUDP"]
+        m_discoveryFonctions["discoveryFonctions"]
+        m_rangeExtenderFonctions["rangeExtenderFonctions"]
+        m_tcpFonctions["tcpFonctions"]
+        m_udpFonctions["udpFonctions"]
+    end
+    subgraph g_ModBus["ModBus"]
+        m_controleModbus["controleModbus"]
+        m_modBus_Conn16channels["modBus_Conn16channels"]
+        m_modBus_TasmotaSlaveModBus["modBus_TasmotaSlaveModBus"]
+        m_modbusFonctions["modbusFonctions"]
+    end
+    subgraph g_Peripheriques["Peripheriques"]
+        m_controleLedRGB["controleLedRGB"]
+        m_i2c_ads1115["i2c_ads1115"]
+        m_i2c_mcp23017["i2c_mcp23017"]
+        m_ledRGBFonctions["ledRGBFonctions"]
+        m_ledsPanelFonctions["ledsPanelFonctions"]
+    end
+    CARTE --> m_configDevices
+    CARTE --> m_configGlobal
+    CARTE --> m_configModules
+    CARTE --> m_controleGeneral
+    CARTE --> m_controleLedTemoin
+    CARTE --> m_controleWeb
+    CARTE --> m_diversFonctions
+    CARTE --> m_gestionFileFolder
+    CARTE --> m_globalFonctions
+    CARTE --> m_logFonctions
+    CARTE --> m_webFonctions
+    CARTE --> m_controleDiscovery
+    CARTE --> m_controleUDP
+    CARTE --> m_discoveryFonctions
+    m_controleWeb -.->|import| m_rangeExtenderFonctions
+    m_discoveryFonctions -.->|import| m_rangeExtenderFonctions
+    m_modbusFonctions -.->|import| m_tcpFonctions
+    CARTE --> m_udpFonctions
+    CARTE --> m_controleModbus
+    CARTE --> m_modBus_Conn16channels
+    CARTE --> m_modBus_TasmotaSlaveModBus
+    CARTE --> m_modbusFonctions
+    CARTE -.-> m_controleLedRGB
+    CARTE -.-> m_i2c_ads1115
+    CARTE -.-> m_i2c_mcp23017
+    CARTE -.-> m_ledRGBFonctions
+    m_controleWeb -.->|import| m_ledsPanelFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
+```
+
+### garage/tasmota32s3-serveur-modbus
+
+```mermaid
+flowchart LR
+    CARTE(["garage/tasmota32s3-serveur-modbus"])
+    subgraph g_Socle["Socle"]
+        m_configDevices["configDevices"]
+        m_configGlobal["configGlobal"]
+        m_configModules["configModules"]
+        m_controleGeneral["controleGeneral"]
+        m_controleLedTemoin["controleLedTemoin"]
+        m_controleWeb["controleWeb"]
+        m_diversFonctions["diversFonctions"]
+        m_gestionFileFolder["gestionFileFolder"]
+        m_globalFonctions["globalFonctions"]
+        m_logFonctions["logFonctions"]
+        m_webFonctions["webFonctions"]
+    end
+    subgraph g_Reseau["Reseau"]
+        m_controleDiscovery["controleDiscovery"]
+        m_controleRangeExtender["controleRangeExtender"]
+        m_controleTCP["controleTCP"]
+        m_controleUDP["controleUDP"]
+        m_discoveryFonctions["discoveryFonctions"]
+        m_rangeExtenderFonctions["rangeExtenderFonctions"]
+        m_tcpFonctions["tcpFonctions"]
+        m_udpFonctions["udpFonctions"]
+    end
+    subgraph g_ModBus["ModBus"]
+        m_controleModbus["controleModbus"]
+        m_modBus_Conn16channels["modBus_Conn16channels"]
+        m_modBus_TasmotaSlaveModBus["modBus_TasmotaSlaveModBus"]
+        m_modbusFonctions["modbusFonctions"]
+    end
+    subgraph g_Peripheriques["Peripheriques"]
+        m_controleLedRGB["controleLedRGB"]
+        m_controleLoRaWan["controleLoRaWan"]
+        m_controleVoletRoulants["controleVoletRoulants"]
+        m_i2c_ads1115["i2c_ads1115"]
+        m_i2c_mcp23017["i2c_mcp23017"]
+        m_ledRGBFonctions["ledRGBFonctions"]
+        m_ledsPanelFonctions["ledsPanelFonctions"]
+        m_loRaWanFonctions["loRaWanFonctions"]
+        m_vrFonctions["vrFonctions"]
+    end
+    subgraph g_Carte["Carte"]
+        m_controleGarage["controleGarage"]
+        m_garageFonctions["garageFonctions"]
+    end
+    CARTE --> m_configDevices
+    CARTE --> m_configGlobal
+    CARTE --> m_configModules
+    CARTE --> m_controleGeneral
+    CARTE --> m_controleLedTemoin
+    CARTE --> m_controleWeb
+    CARTE --> m_diversFonctions
+    CARTE --> m_gestionFileFolder
+    CARTE --> m_globalFonctions
+    CARTE --> m_logFonctions
+    CARTE --> m_webFonctions
+    CARTE --> m_controleDiscovery
+    CARTE --> m_controleRangeExtender
+    CARTE --> m_controleTCP
+    CARTE --> m_controleUDP
+    CARTE --> m_discoveryFonctions
+    CARTE --> m_rangeExtenderFonctions
+    CARTE --> m_tcpFonctions
+    CARTE --> m_udpFonctions
+    CARTE --> m_controleModbus
+    CARTE --> m_modBus_Conn16channels
+    CARTE --> m_modBus_TasmotaSlaveModBus
+    CARTE --> m_modbusFonctions
+    CARTE -.-> m_controleLedRGB
+    CARTE --> m_controleLoRaWan
+    CARTE -.-> m_controleVoletRoulants
+    CARTE --> m_i2c_ads1115
+    CARTE --> m_i2c_mcp23017
+    CARTE -.-> m_ledRGBFonctions
+    m_controleWeb -.->|import| m_ledsPanelFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
+    CARTE --> m_loRaWanFonctions
+    CARTE -.-> m_vrFonctions
+    CARTE --> m_controleGarage
+    CARTE --> m_garageFonctions
+```
+
+## Comment regenerer
+
+```
+python outils_docs/scripts_python/carte_modules_berry.py
+```
+
+Lecture seule : aucun build, aucune ecriture sous `data/`. La config PlatformIO est lue par l'API `ProjectConfig` dans le Python de PlatformIO (`~/.platformio/penv`).
