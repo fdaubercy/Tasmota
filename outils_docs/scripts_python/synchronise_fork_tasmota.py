@@ -373,7 +373,10 @@ def arbre_sale() -> list[str]:
     for l in sortie.split("\n"):
         if not l.strip() or l.startswith("??"):
             continue
-        if l[3:].strip().strip('"') == HISTORIQUE_REL:
+        # Pas de l[3:] : git_out() fait strip(), qui ote l'espace de tete de la 1re ligne.
+        # ' M outils_docs/...' devenait 'M outils_docs/...' et l[3:] 'utils_docs/...' :
+        # journal seul modifie (cas normal apres l'etape 3) -> blocage a chaque synchro.
+        if l.strip().split(" ", 1)[-1].strip().strip('"') == HISTORIQUE_REL:
             continue
         sales.append(l)
     return sales
