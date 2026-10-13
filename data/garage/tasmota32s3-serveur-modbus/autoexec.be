@@ -108,6 +108,14 @@ if (persist._p != nil && persist._p.size() != 0)
         gestionFileFolder.loadBerryFile("/controleLedRGB", "ON", "ON")
     end
 
+    # Historique des mesures de la carte (data/fs/historiqueFonctions.be), S3/P4 seulement : 24 h en
+    # RAM + min/moy/max horaires en flash, lus par /histo. Compile en .bec puis demarre si active.
+    if diverses.find("historique", {}).find("activation", "OFF") == "ON"
+        gestionFileFolder.compileModule("/historiqueFonctions", "ON")
+        import historiqueFonctions
+        historiqueFonctions.demarre(diverses["historique"])
+    end
+
     # NE PAS compiler autoexec.be en .bec : tasmota.compile() compile en contexte LOCAL
     # (tasmota_class.be:480, upstream #23457). Le .bec tournerait alors sous le nom 'loader'
     # et tous les import/var/affectations de niveau fichier ci-dessus deviendraient des

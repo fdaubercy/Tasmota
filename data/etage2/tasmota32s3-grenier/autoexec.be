@@ -104,5 +104,13 @@ if (persist._p != nil && persist._p.size() != 0)
 
     # Compile autoexec.be
     # gestionFileFolder.compileModule("/autoexec", "ON")
+    # Historique des mesures de la carte (data/fs/historiqueFonctions.be), S3/P4 seulement : 24 h en
+    # RAM + min/moy/max horaires en flash, lus par /histo. Compile en .bec puis demarre si active.
+    if diverses.find("historique", {}).find("activation", "OFF") == "ON"
+        gestionFileFolder.compileModule("/historiqueFonctions", "ON")
+        import historiqueFonctions
+        historiqueFonctions.demarre(diverses["historique"])
+    end
+
 else logFonctions.log("AUTO_EXE: Attention, le fichier de paramétrage est absent !", LOG_LEVEL_ERREUR)
 end

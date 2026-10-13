@@ -78,6 +78,13 @@ class CAPTEURS_CUVE : Driver
             tasmota.add_cron("*/60 * * * * *", /-> self.enregistreLogs(fileLog), "majLogCuve")
         end
 
+        # Historique de la carte (data/fs/historiqueFonctions.be, demarre par autoexec.be) : le niveau
+        # en erreur de mesure est enregistre comme absent, pas comme une fausse valeur
+        if (diverses.find("historique", {}).find("activation", "OFF") == "ON")
+            import historiqueFonctions
+            historiqueFonctions.ajouteFiltre(/ chemins, valeurs -> self.filtreHistorique(chemins, valeurs))
+        end
+
         #-         
             Ajoute les règles lancés selon l'étape de démarrage de la device tasmota :
             - Message log sur connexion wifi
@@ -294,6 +301,18 @@ class CAPTEURS_CUVE : Driver
             tasmota.response_append(string.format(", \"sensorsCuve\": %s", json.dump(cuveFonctions.sensorsCuve)))
         end
         tasmota.yield()
+    end
+
+    # Filtre de l'historique (historiqueFonctions.ajouteFiltre) : niveau en erreur de mesure
+    # (cuveFonctions.niveauEnErreur, regle de la sentinelle ModBus) -> séries sensorsCuve.niveauCuve.* à nil
+    def filtreHistorique(chemins, valeurs)
+        import string
+        import cuveFonctions
+
+        if (!cuveFonctions.niveauEnErreur())    return    end
+        for i: 0 .. size(chemins) - 1
+            if (string.startswith(chemins[i], "sensorsCuve.niveauCuve."))    valeurs[i] = nil    end
+        end
     end
 
     # Enregistre dans les logs le niveau de cuve et la température de cuve

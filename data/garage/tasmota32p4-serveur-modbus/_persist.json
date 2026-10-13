@@ -1,5 +1,13 @@
 {
 	"diverses": {
+		"historique": {
+			"activation": "ON",
+			"pasMinutes": 5,
+			"dureeHeures": 24,
+			"moisConserves": 24,
+			"seriesMax": 12,
+			"series": "auto"
+		},
 		"cmdMute": true,
 		"typeESP": "ESP32P4",
 		"logs": {

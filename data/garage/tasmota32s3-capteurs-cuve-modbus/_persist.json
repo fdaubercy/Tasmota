@@ -1,5 +1,13 @@
 {
 	"diverses": {
+		"historique": {
+			"activation": "ON",
+			"pasMinutes": 5,
+			"dureeHeures": 24,
+			"moisConserves": 24,
+			"seriesMax": 12,
+			"series": {"hauteurEau": "sensorsCuve.niveauCuve.hauteurEau", "tauxRemplissage": "sensorsCuve.niveauCuve.tauxRemplissage", "volume": "sensorsCuve.niveauCuve.volume", "temperature": "DS18B20.Temperature"}
+		},
 		"cmdMute": true,
 		"typeESP": "ESP32S3",
 		"logs": {
