@@ -1,0 +1,30 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>html,body{margin:0;background:#fff;font-family:Segoe UI,Arial,sans-serif;overflow:hidden}#g{width:900px;height:450px}</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="donnees.js"></script></head><body><div id="g"><canvas id="c" width="900" height="450"></canvas></div><script>
+const BLEU = '#1f77b4', ORANGE = '#ff7f0e', BANDE = 'rgba(31,119,180,0.22)';
+const fmt = new Intl.DateTimeFormat('fr-FR', {weekday: 'short', day: '2-digit', month: '2-digit'});
+const pts = serie => DONNEES.t.map((t, i) => ({x: t, y: serie[i]}));
+const pt = {pointRadius: 0, pointHoverRadius: 4, tension: 0, borderWidth: 2};
+new Chart(document.getElementById('c'), {
+  type: 'line',
+  data: {datasets: [
+    {label: 'min', data: pts(DONNEES.min), borderWidth: 0, pointRadius: 0, fill: false, yAxisID: 'y'},
+    {label: 'max', data: pts(DONNEES.max), borderWidth: 0, pointRadius: 0, fill: '-1', backgroundColor: BANDE, yAxisID: 'y'},
+    {label: 'Hauteur d\'eau (cm)', data: pts(DONNEES.moy), borderColor: BLEU, backgroundColor: BLEU, yAxisID: 'y', ...pt},
+    {label: 'Température de l\'eau (°C)', data: pts(DONNEES.temp), borderColor: ORANGE, backgroundColor: ORANGE, yAxisID: 'y1', ...pt},
+  ]},
+  options: {
+    animation: false, responsive: false, maintainAspectRatio: false, interaction: {mode: 'index', intersect: false},
+    scales: {
+      x: {type: 'time', time: {unit: 'day'}, ticks: {callback: v => fmt.format(new Date(v))}},
+      y: {position: 'left', min: 60, max: 120, title: {display: true, text: 'Hauteur (cm)'}},
+      y1: {position: 'right', min: 8, max: 14, title: {display: true, text: 'Température (°C)'}, grid: {drawOnChartArea: false}},
+    },
+    plugins: {
+      title: {display: true, text: 'Cuve — 7 derniers jours', font: {size: 16}},
+      legend: {labels: {filter: item => item.text !== 'min' && item.text !== 'max'}},
+    },
+  },
+});
+</script></body></html>

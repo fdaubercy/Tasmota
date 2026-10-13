@@ -1,0 +1,28 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>html,body{margin:0;background:#fff;font-family:Segoe UI,Arial,sans-serif;overflow:hidden}#g{width:900px;height:450px}</style>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+<script src="donnees.js"></script></head><body><div id="g"></div><script>
+const BLEU = '#1f77b4', ORANGE = '#ff7f0e', BANDE = 'rgba(31,119,180,0.22)';
+const fmt = new Intl.DateTimeFormat('fr-FR', {weekday: 'short', day: '2-digit', month: '2-digit'});
+const pts = serie => DONNEES.t.map((t, i) => [t, serie[i]]);
+// Bande = deux aires empilees : base (min, invisible) + ecart (max - min, ombre)
+const ecart = DONNEES.max.map((v, i) => v === null ? null : +(v - DONNEES.min[i]).toFixed(1));
+const bande = {type: 'line', stack: 'bande', symbol: 'none', silent: true, lineStyle: {opacity: 0}, tooltip: {show: false}};
+echarts.init(document.getElementById('g'), null, {renderer: 'canvas'}).setOption({
+  animation: false,
+  title: {text: 'Cuve — 7 derniers jours', left: 'center'},
+  legend: {bottom: 0, data: ['Hauteur d\'eau (cm)', 'Température de l\'eau (°C)']},
+  grid: {top: 50, left: 60, right: 60, bottom: 50},
+  tooltip: {trigger: 'axis'},
+  xAxis: {type: 'time', axisLabel: {formatter: v => fmt.format(new Date(v)), hideOverlap: true}},
+  yAxis: [
+    {type: 'value', min: 60, max: 120, name: 'Hauteur (cm)'},
+    {type: 'value', min: 8, max: 14, name: 'Température (°C)', splitLine: {show: false}},
+  ],
+  series: [
+    {...bande, name: 'min', data: pts(DONNEES.min), areaStyle: {opacity: 0}},
+    {...bande, name: 'max', data: DONNEES.t.map((t, i) => [t, ecart[i]]), areaStyle: {color: BANDE}},
+    {name: 'Hauteur d\'eau (cm)', type: 'line', symbol: 'none', data: pts(DONNEES.moy), itemStyle: {color: BLEU}, lineStyle: {width: 2}},
+    {name: 'Température de l\'eau (°C)', type: 'line', symbol: 'none', yAxisIndex: 1, data: pts(DONNEES.temp), itemStyle: {color: ORANGE}, lineStyle: {width: 2}},
+  ],
+});
+</script></body></html>

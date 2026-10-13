@@ -1,0 +1,29 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>html,body{margin:0;background:#fff;font-family:Segoe UI,Arial,sans-serif;overflow:hidden}#g{width:900px;height:450px}
+.u-legend{font-size:12px}.u-legend .u-series:nth-child(3),.u-legend .u-series:nth-child(4){display:none}</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uplot@1.6.30/dist/uPlot.min.css">
+<script src="https://cdn.jsdelivr.net/npm/uplot@1.6.30/dist/uPlot.iife.min.js"></script>
+<script src="donnees.js"></script></head><body><div id="g"></div><script>
+const BLEU = '#1f77b4', ORANGE = '#ff7f0e', BANDE = 'rgba(31,119,180,0.22)';
+const fmt = new Intl.DateTimeFormat('fr-FR', {weekday: 'short', day: '2-digit', month: '2-digit'});
+const x = DONNEES.t.map(t => t / 1000);                       // uPlot attend des secondes
+const data = [x, DONNEES.moy, DONNEES.min, DONNEES.max, DONNEES.temp];
+const opts = {
+  title: 'Cuve — 7 derniers jours', width: 900, height: 372, // hauteur = zone du trace (hors titre et legende)
+  scales: {x: {time: true}, y: {range: [60, 120]}, temp: {range: [8, 14]}},
+  series: [
+    {},
+    {label: 'Hauteur d\'eau (cm)', stroke: BLEU, width: 2, scale: 'y'},
+    {label: 'min', stroke: 'transparent', scale: 'y'},
+    {label: 'max', stroke: 'transparent', scale: 'y'},
+    {label: 'Température de l\'eau (°C)', stroke: ORANGE, width: 2, scale: 'temp'},
+  ],
+  bands: [{series: [3, 2], fill: BANDE}],                       // bande entre max (3) et min (2)
+  axes: [
+    {values: (u, v) => v.map(s => fmt.format(new Date(s * 1000))), space: 70},
+    {scale: 'y', label: 'Hauteur (cm)'},
+    {scale: 'temp', side: 1, label: 'Température (°C)', grid: {show: false}},
+  ],
+  cursor: {drag: {x: false, y: false}},                         // survol : valeurs dans la legende
+};
+new uPlot(opts, data, document.getElementById('g'));
+</script></body></html>

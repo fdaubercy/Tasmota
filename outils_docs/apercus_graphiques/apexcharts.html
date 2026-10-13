@@ -1,0 +1,30 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>html,body{margin:0;background:#fff;font-family:Segoe UI,Arial,sans-serif;overflow:hidden}#g{width:900px;height:450px}</style>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.1/dist/apexcharts.min.js"></script>
+<script src="donnees.js"></script></head><body><div id="g"></div><script>
+const BLEU = '#1f77b4', ORANGE = '#ff7f0e';
+const fmt = new Intl.DateTimeFormat('fr-FR', {weekday: 'short', day: '2-digit', month: '2-digit'});
+const pts = serie => DONNEES.t.map((t, i) => ({x: t, y: serie[i]}));
+// Apex genere ses graduations avec une derive de quelques minutes avant minuit : +1 h pour tomber sur le bon jour.
+const bande = DONNEES.t.map((t, i) => ({x: t, y: [DONNEES.min[i], DONNEES.max[i]]}));
+new ApexCharts(document.getElementById('g'), {
+  chart: {type: 'rangeArea', height: 450, width: 900, animations: {enabled: false}, toolbar: {show: false}, zoom: {enabled: false}},
+  series: [
+    {name: 'Min / max', type: 'rangeArea', data: bande},
+    {name: 'Hauteur d\'eau (cm)', type: 'line', data: pts(DONNEES.moy)},
+    {name: 'Température de l\'eau (°C)', type: 'line', data: pts(DONNEES.temp)},
+  ],
+  colors: [BLEU, BLEU, ORANGE],
+  fill: {type: ['solid', 'solid', 'solid'], opacity: [0.22, 1, 1]},
+  stroke: {width: [0, 2, 2], curve: 'straight'},
+  title: {text: 'Cuve — 7 derniers jours', align: 'center'},
+  xaxis: {type: 'datetime', labels: {formatter: (v, ts) => fmt.format(new Date(ts + 36e5))}},
+  yaxis: [
+    {seriesName: 'Min / max', min: 60, max: 120, decimalsInFloat: 0, title: {text: 'Hauteur (cm)'}},
+    {seriesName: 'Min / max', show: false, min: 60, max: 120, decimalsInFloat: 0},
+    {seriesName: 'Température de l\'eau (°C)', opposite: true, min: 8, max: 14, decimalsInFloat: 0, title: {text: 'Température (°C)'}},
+  ],
+  dataLabels: {enabled: false}, markers: {size: 0},
+  legend: {position: 'bottom'},
+  tooltip: {shared: true, x: {format: 'dd/MM HH:mm'}},
+}).render();
+</script></body></html>
