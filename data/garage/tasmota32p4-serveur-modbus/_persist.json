@@ -6,7 +6,7 @@
 			"dureeHeures": 24,
 			"moisConserves": 24,
 			"seriesMax": 12,
-			"series": "auto"
+			"series": {"temperature": "DS18B20.Temperature", "temperatureESP32": "ESP32.Temperature", "compteur": "COUNTER.C1", "hauteurEau": "sensorsCuve.niveauCuve.hauteurEau", "tauxRemplissage": "sensorsCuve.niveauCuve.tauxRemplissage", "volume": "sensorsCuve.niveauCuve.volume", "capteurHauteur_mV": "sensorsCuve.valeursAnalogiques.valeurCapteurHauteur"}
 		},
 		"cmdMute": true,
 		"typeESP": "ESP32P4",
