@@ -114,10 +114,12 @@
         },
         // ---------------------------------------------------------------- Outils (hors PlatformIO)
         // Python de PlatformIO : il fournit pyserial, comme pour les cibles Custom.
+        // ${env:USERPROFILE} et non ${userHome} : sous Windows, ${userHome} donne "/c:/Users/..."
+        // et VS Code refuse de lancer le processus (constate le 2026-10-13).
         {
             "label": "Outil : sniffeur ModBus (http://127.0.0.1:7300)",
             "type": "process",
-            "command": "${userHome}/.platformio/penv/Scripts/python.exe",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
             "args": ["-u", "outils_docs/scripts_python/outils_pc/sniffeur_modbus.py", "--port", "auto", "--debit", "19200", "--http", "7300"],
             "presentation": { "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
@@ -125,7 +127,7 @@
         {
             "label": "Outil : sniffeur MQTT (http://127.0.0.1:7100)",
             "type": "process",
-            "command": "${userHome}/.platformio/penv/Scripts/python.exe",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
             "args": ["-u", "outils_docs/scripts_python/outils_pc/sniffeur_mqtt.py", "--http", "7100"],
             "presentation": { "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
@@ -133,7 +135,7 @@
         {
             "label": "Outil : serveur syslog (http://127.0.0.1:7200)",
             "type": "process",
-            "command": "${userHome}/.platformio/penv/Scripts/python.exe",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
             "args": ["-u", "outils_docs/scripts_python/outils_pc/syslog_tasmota.py", "--http", "7200"],
             "presentation": { "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
@@ -141,7 +143,7 @@
         {
             "label": "Outil : pont serie (port USB seul, tcp 7000)",
             "type": "process",
-            "command": "${userHome}/.platformio/penv/Scripts/python.exe",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
             "args": ["-u", "outils_docs/scripts_python/outils_pc/pont_serie.py", "--port", "auto", "--vitesse", "115200", "--tcp", "7000"],
             "presentation": { "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
