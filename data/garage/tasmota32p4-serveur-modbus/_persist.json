@@ -309,7 +309,7 @@
 					"relai3": {
 						"activation": "ON",
 						"nom": "Relai 2",
-						"afficheWeb": "OFF",
+						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 3,
 						"type": 256,
