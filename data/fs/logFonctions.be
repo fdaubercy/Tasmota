@@ -57,7 +57,7 @@ logFonctions.DESCRIPTIONS = {
     "slaveModbus": "esclaves Tasmota ModBus (modBus_TasmotaSlaveModBus)",
     "lorawan": "LoRaWan (loRaWanFonctions)", "volets": "volets roulants et LED temoin (vrFonctions, controleLedTemoin)",
     "es8311": "codec audio ES8311 (controleES8311)", "garage": "module garage (garageFonctions)",
-    "cuve": "module cuve (cuveFonctions)", "leds": "LED RGB du dev-kit (ledsFonctions, controleLeds)"}
+    "cuve": "module cuve (cuveFonctions)", "leds": "LED RGB du dev-kit et ruban WS2812 (ledsFonctions, controleLeds)"}
 
 # ETAT MUTABLE DU MODULE : dans une GLOBALE, pas dans le module (un module solidifie est
 # constant, en flash). Les seuils sont lus une fois depuis le persist, puis mis en cache.

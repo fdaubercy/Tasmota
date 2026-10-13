@@ -150,11 +150,11 @@
 			"environnement": {
 				"boutons": {
 					"bouton1": {
-						"activation": "OFF",
-						"nom": "Bouton 1",
+						"activation": "ON",
+						"nom": "Bouton ruban",
 						"id": 1,
-						"pin": -1,
-						"type": 1024,
+						"pin": 7,
+						"type": 32,
 						"virtuel": "OFF",
 						"SwitchMode": 2,
 						"typeAction": "ON/OFF",
@@ -368,6 +368,22 @@
 						"id": 1,
 						"type": 1377,
 						"luminosite": 40
+					},
+					"ruban": {
+						"activation": "ON",
+						"bouton": 1,
+						"dureeManuel": 30,
+						"appuiLong": 15,
+						"palette": [
+							{"nom": "rouge", "teinte": 0, "saturation": 100},
+							{"nom": "orange", "teinte": 30, "saturation": 100},
+							{"nom": "jaune", "teinte": 60, "saturation": 100},
+							{"nom": "vert", "teinte": 120, "saturation": 100},
+							{"nom": "cyan", "teinte": 180, "saturation": 100},
+							{"nom": "bleu", "teinte": 240, "saturation": 100},
+							{"nom": "violet", "teinte": 280, "saturation": 100},
+							{"nom": "blanc", "teinte": 0, "saturation": 0}
+						]
 					}
 				}
 			}

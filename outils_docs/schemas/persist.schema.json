@@ -283,6 +283,76 @@
             "TimeDst"
           ],
           "additionalProperties": true
+        },
+        "historique": {
+          "type": "object",
+          "properties": {
+            "activation": {
+              "type": "string",
+              "description": "ON ou OFF : active ou non ce bloc.",
+              "enum": [
+                "ON",
+                "OFF"
+              ]
+            },
+            "pasMinutes": {
+              "type": "integer"
+            },
+            "dureeHeures": {
+              "type": "integer"
+            },
+            "moisConserves": {
+              "type": "integer"
+            },
+            "seriesMax": {
+              "type": "integer"
+            },
+            "series": {
+              "type": [
+                "string",
+                "object"
+              ],
+              "properties": {
+                "temperature": {
+                  "type": "string"
+                },
+                "temperatureESP32": {
+                  "type": "string"
+                },
+                "compteur": {
+                  "type": "string"
+                },
+                "hauteurEau": {
+                  "type": "string"
+                },
+                "tauxRemplissage": {
+                  "type": "string"
+                },
+                "volume": {
+                  "type": "string"
+                },
+                "capteurHauteur_mV": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "temperature",
+                "hauteurEau",
+                "tauxRemplissage",
+                "volume"
+              ],
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "activation",
+            "pasMinutes",
+            "dureeHeures",
+            "moisConserves",
+            "seriesMax",
+            "series"
+          ],
+          "additionalProperties": true
         }
       },
       "required": [
@@ -295,7 +365,8 @@
         "affichageTempESP32",
         "affichageNomModele",
         "localisation",
-        "fuseauHoraire"
+        "fuseauHoraire",
+        "historique"
       ],
       "additionalProperties": true
     },
@@ -512,6 +583,9 @@
                 "detail"
               ]
             },
+            "ipMaitre": {
+              "type": "string"
+            },
             "AP": {
               "type": "object",
               "properties": {
@@ -545,9 +619,6 @@
               ],
               "additionalProperties": true
             },
-            "ipMaitre": {
-              "type": "string"
-            },
             "telePeriod": {
               "type": "integer",
               "description": "Periode de telemetrie en secondes."
@@ -557,8 +628,8 @@
             "activation",
             "id",
             "log",
-            "AP",
-            "ipMaitre"
+            "ipMaitre",
+            "AP"
           ],
           "additionalProperties": true
         },
@@ -629,34 +700,6 @@
           ],
           "additionalProperties": true
         },
-        "discovery": {
-          "type": "object",
-          "properties": {
-            "activation": {
-              "type": "string",
-              "description": "ON ou OFF : active ou non ce bloc.",
-              "enum": [
-                "ON",
-                "OFF"
-              ]
-            },
-            "log": {
-              "type": "string",
-              "description": "Seuil de log du module : erreur, info, debug ou detail (charte data/fs/logFonctions.be).",
-              "enum": [
-                "erreur",
-                "info",
-                "debug",
-                "detail"
-              ]
-            }
-          },
-          "required": [
-            "activation",
-            "log"
-          ],
-          "additionalProperties": true
-        },
         "tcp": {
           "type": "object",
           "properties": {
@@ -689,6 +732,34 @@
             "log"
           ],
           "additionalProperties": true
+        },
+        "discovery": {
+          "type": "object",
+          "properties": {
+            "activation": {
+              "type": "string",
+              "description": "ON ou OFF : active ou non ce bloc.",
+              "enum": [
+                "ON",
+                "OFF"
+              ]
+            },
+            "log": {
+              "type": "string",
+              "description": "Seuil de log du module : erreur, info, debug ou detail (charte data/fs/logFonctions.be).",
+              "enum": [
+                "erreur",
+                "info",
+                "debug",
+                "detail"
+              ]
+            }
+          },
+          "required": [
+            "activation",
+            "log"
+          ],
+          "additionalProperties": true
         }
       },
       "required": [
@@ -705,8 +776,8 @@
         "rangeExtender",
         "serveurFTP",
         "udp",
-        "discovery",
-        "tcp"
+        "tcp",
+        "discovery"
       ],
       "additionalProperties": true
     },
@@ -794,10 +865,12 @@
                 "description": "Nombre de fichiers de log conserves."
               },
               "fileLogName": {
-                "type": "string"
+                "type": "string",
+                "description": "Chemin de base des fichiers de log tournants : /logs/cuve.log -> /logs/cuve1.log ... cuveN.log."
               },
               "fileLogSize_Ko": {
-                "type": "integer"
+                "type": "integer",
+                "description": "Taille max d'un fichier de log tournant, en OCTETS malgre le nom de la cle (10000 = ~10 Ko ; voir gestionFileFolder.enregistreLogs)."
               }
             },
             "required": [
@@ -1795,39 +1868,160 @@
               "properties": {
                 "leds": {
                   "type": "object",
-                  "additionalProperties": {
-                    "type": "object",
-                    "properties": {
-                      "activation": {
-                        "type": "string",
-                        "description": "ON ou OFF : active ou non ce bloc.",
-                        "enum": [
-                          "ON",
-                          "OFF"
-                        ]
+                  "properties": {
+                    "ledLink": {
+                      "type": "object",
+                      "properties": {
+                        "activation": {
+                          "type": "string",
+                          "description": "ON ou OFF : active ou non ce bloc.",
+                          "enum": [
+                            "ON",
+                            "OFF"
+                          ]
+                        },
+                        "pin": {
+                          "type": "integer",
+                          "description": "Numero de GPIO (-1 = non affecte)."
+                        },
+                        "type": {
+                          "type": "integer"
+                        }
                       },
-                      "pin": {
-                        "type": "integer",
-                        "description": "Numero de GPIO (-1 = non affecte)."
-                      },
-                      "type": {
-                        "type": "integer"
-                      },
-                      "id": {
-                        "type": "integer",
-                        "description": "Identifiant ModBus / reseau de la carte."
-                      },
-                      "luminosite": {
-                        "type": "integer"
-                      }
+                      "required": [
+                        "activation",
+                        "pin",
+                        "type"
+                      ],
+                      "additionalProperties": true
                     },
-                    "required": [
-                      "activation",
-                      "pin",
-                      "type"
-                    ],
-                    "additionalProperties": true
-                  }
+                    "led1": {
+                      "type": "object",
+                      "properties": {
+                        "activation": {
+                          "type": "string",
+                          "description": "ON ou OFF : active ou non ce bloc.",
+                          "enum": [
+                            "ON",
+                            "OFF"
+                          ]
+                        },
+                        "pin": {
+                          "type": "integer",
+                          "description": "Numero de GPIO (-1 = non affecte)."
+                        },
+                        "id": {
+                          "type": "integer",
+                          "description": "Identifiant ModBus / reseau de la carte."
+                        },
+                        "type": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "activation",
+                        "pin",
+                        "id",
+                        "type"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "ruban": {
+                      "type": "object",
+                      "properties": {
+                        "activation": {
+                          "type": "string",
+                          "description": "ON ou OFF : active ou non ce bloc.",
+                          "enum": [
+                            "ON",
+                            "OFF"
+                          ]
+                        },
+                        "bouton": {
+                          "type": "integer"
+                        },
+                        "dureeManuel": {
+                          "type": "integer"
+                        },
+                        "appuiLong": {
+                          "type": "integer"
+                        },
+                        "palette": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "nom": {
+                                "type": "string"
+                              },
+                              "teinte": {
+                                "type": "integer"
+                              },
+                              "saturation": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "nom",
+                              "teinte",
+                              "saturation"
+                            ],
+                            "additionalProperties": true
+                          }
+                        }
+                      },
+                      "required": [
+                        "activation",
+                        "bouton",
+                        "dureeManuel",
+                        "appuiLong",
+                        "palette"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "ledRGB": {
+                      "type": "object",
+                      "properties": {
+                        "activation": {
+                          "type": "string",
+                          "description": "ON ou OFF : active ou non ce bloc.",
+                          "enum": [
+                            "ON",
+                            "OFF"
+                          ]
+                        },
+                        "pin": {
+                          "type": "integer",
+                          "description": "Numero de GPIO (-1 = non affecte)."
+                        },
+                        "id": {
+                          "type": "integer",
+                          "description": "Identifiant ModBus / reseau de la carte."
+                        },
+                        "type": {
+                          "type": "integer"
+                        },
+                        "luminosite": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "activation",
+                        "pin",
+                        "id",
+                        "type",
+                        "luminosite"
+                      ],
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "ledLink",
+                    "led1",
+                    "ruban",
+                    "ledRGB"
+                  ],
+                  "additionalProperties": true
                 }
               },
               "additionalProperties": true
@@ -2344,6 +2538,60 @@
                 "detail"
               ]
             },
+            "activationReponseCMD": {
+              "type": "string",
+              "enum": [
+                "ON",
+                "OFF"
+              ]
+            },
+            "relaisPushMQTT": {
+              "type": "string",
+              "enum": [
+                "ON",
+                "OFF"
+              ]
+            },
+            "typeComm": {
+              "type": "object",
+              "properties": {
+                "Serial": {
+                  "type": "string",
+                  "enum": [
+                    "ON",
+                    "OFF"
+                  ]
+                },
+                "UDP": {
+                  "type": "string",
+                  "enum": [
+                    "ON",
+                    "OFF"
+                  ]
+                },
+                "MQTT": {
+                  "type": "string",
+                  "enum": [
+                    "ON",
+                    "OFF"
+                  ]
+                },
+                "TCP": {
+                  "type": "string",
+                  "enum": [
+                    "ON",
+                    "OFF"
+                  ]
+                }
+              },
+              "required": [
+                "Serial",
+                "UDP",
+                "MQTT",
+                "TCP"
+              ],
+              "additionalProperties": true
+            },
             "environnement": {
               "type": "object",
               "description": "Peripheriques et broches du bloc (cles variables selon la carte).",
@@ -2444,41 +2692,6 @@
                   ],
                   "additionalProperties": true
                 },
-                "Conn16channel": {
-                  "type": "object",
-                  "properties": {
-                    "activation": {
-                      "type": "string",
-                      "description": "ON ou OFF : active ou non ce bloc.",
-                      "enum": [
-                        "ON",
-                        "OFF"
-                      ]
-                    },
-                    "log": {
-                      "type": "string",
-                      "description": "Seuil de log du module : erreur, info, debug ou detail (charte data/fs/logFonctions.be).",
-                      "enum": [
-                        "erreur",
-                        "info",
-                        "debug",
-                        "detail"
-                      ]
-                    },
-                    "name": {
-                      "type": "string",
-                      "description": "Nom d'affichage du bloc."
-                    },
-                    "id": {
-                      "type": "string",
-                      "description": "Identifiant ModBus / reseau de la carte."
-                    },
-                    "verifieAuDemarrage": {
-                      "type": "string"
-                    }
-                  },
-                  "additionalProperties": true
-                },
                 "Conn16channels": {
                   "type": "object",
                   "properties": {
@@ -2533,20 +2746,10 @@
                     "Conn16channel1"
                   ],
                   "additionalProperties": true
-                }
-              },
-              "patternProperties": {
-                "^TasmotaSlaveModBus\\d*$": {
+                },
+                "TasmotaSlaveModBus": {
                   "type": "object",
                   "properties": {
-                    "activation": {
-                      "type": "string",
-                      "description": "ON ou OFF : active ou non ce bloc.",
-                      "enum": [
-                        "ON",
-                        "OFF"
-                      ]
-                    },
                     "log": {
                       "type": "string",
                       "description": "Seuil de log du module : erreur, info, debug ou detail (charte data/fs/logFonctions.be).",
@@ -2556,14 +2759,6 @@
                         "debug",
                         "detail"
                       ]
-                    },
-                    "name": {
-                      "type": "string",
-                      "description": "Nom d'affichage du bloc."
-                    },
-                    "id": {
-                      "type": "string",
-                      "description": "Identifiant ModBus / reseau de la carte."
                     }
                   },
                   "required": [
@@ -2602,60 +2797,6 @@
                 }
               },
               "additionalProperties": true
-            },
-            "activationReponseCMD": {
-              "type": "string",
-              "enum": [
-                "ON",
-                "OFF"
-              ]
-            },
-            "relaisPushMQTT": {
-              "type": "string",
-              "enum": [
-                "ON",
-                "OFF"
-              ]
-            },
-            "typeComm": {
-              "type": "object",
-              "properties": {
-                "Serial": {
-                  "type": "string",
-                  "enum": [
-                    "ON",
-                    "OFF"
-                  ]
-                },
-                "UDP": {
-                  "type": "string",
-                  "enum": [
-                    "ON",
-                    "OFF"
-                  ]
-                },
-                "MQTT": {
-                  "type": "string",
-                  "enum": [
-                    "ON",
-                    "OFF"
-                  ]
-                },
-                "TCP": {
-                  "type": "string",
-                  "enum": [
-                    "ON",
-                    "OFF"
-                  ]
-                }
-              },
-              "required": [
-                "Serial",
-                "UDP",
-                "MQTT",
-                "TCP"
-              ],
-              "additionalProperties": true
             }
           },
           "required": [
@@ -2666,10 +2807,10 @@
             "mode",
             "timeoutReponse",
             "log",
-            "environnement",
             "activationReponseCMD",
             "relaisPushMQTT",
-            "typeComm"
+            "typeComm",
+            "environnement"
           ],
           "additionalProperties": true
         },

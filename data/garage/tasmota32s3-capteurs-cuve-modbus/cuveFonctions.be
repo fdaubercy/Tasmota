@@ -9,16 +9,17 @@ cuveFonctions.log = def(msg, levelDebug)
     logFonctions.log(msg, levelDebug, "cuve")
 end
 
-# --- Couleur du niveau et erreur de mesure (2026-10-11) ---
+# --- Couleur du niveau et erreur de mesure (2026-10-11, mode manuel du ruban 2026-10-13) ---
 # Le ruban WS2812 et l'encadre web prennent la couleur du taux de remplissage : teinte 0 (rouge, vide)
 # a 119 (vert, pleine). En ERREUR DE MESURE, rouge clignotant. L'erreur suit la MEME regle que la
 # sentinelle 'pas de mesure' envoyee au maitre ModBus : modbusFonctions.mesureFraiche (aucune mesure
 # depuis 3 TelePeriod, 90 s au moins ; delai de grace apres le demarrage).
-# Le clignotement ecrit les pixels du ruban (classe Leds) et non light.set : light.set reecrit les
-# Settings a chaque appel, et 'rgb' 000000 couperait le ruban (Power off, xdrv_52_3_berry_light.ino:273).
+# Ruban gere par le module commun ledsFonctions (drivers.leds.environnement.leds.ruban actif) : la cuve
+# ne fait que lui donner la teinte du niveau (mode AUTO) et lui signaler l'erreur ; ledsFonctions
+# clignote, gere le mode MANUEL (bouton, page web) et la recopie par la LED du dev-kit.
+# Ruban non gere : la teinte est posee directement, sans clignotement ni mode MANUEL.
 cuveFonctions.enErreur = false          # dernier etat d'erreur constate (pour ne traiter que les transitions)
-cuveFonctions.phaseClignote = false     # phase du clignotement : true = rouge, false = eteint
-cuveFonctions.ruban = nil               # strip natif du pilote light (Leds), cree a la premiere ecriture
+cuveFonctions.retourAutoEnregistre = false  # fonction de retour en AUTO donnee a ledsFonctions
 
 # Teinte (0..119) d'un taux de remplissage, borne a [0, 1]
 cuveFonctions.teinteNiveau = def(taux)
@@ -71,28 +72,38 @@ cuveFonctions.relaisRuban = def()
     return ws2812
 end
 
-# Ecrit une couleur (entier 0xRRGGBB) sur tout le ruban, a la luminosite du pilote light.
-# Ruban eteint : rien n'est ecrit (l'erreur ne rallume pas un ruban eteint volontairement).
-cuveFonctions.peintRuban = def(couleur)
+# true si le ruban est gere par le module commun ledsFonctions (mode MANUEL, bouton, clignotement)
+cuveFonctions.rubanGere = def()
+    if (drivers.find("leds", {}).find("activation", "OFF") != "ON")    return false    end
+    return (drivers["leds"].find("environnement", {}).find("leds", {}).find("ruban", {}).find("activation", "OFF") == "ON")
+end
+
+# true si ledsFonctions est charge (ruban gere ou LED RGB du dev-kit active) : il recoit l'erreur de niveau
+cuveFonctions.ledsActif = def()
+    if (cuveFonctions.rubanGere())    return true    end
+    if (drivers.find("leds", {}).find("activation", "OFF") != "ON")    return false    end
+    return (drivers["leds"].find("environnement", {}).find("leds", {}).find("ledRGB", {}).find("activation", "OFF") == "ON")
+end
+
+# Donne au ruban la teinte du niveau : par ledsFonctions (ignoree en mode MANUEL) si le ruban est gere,
+# sinon directement (light.set sans 'power' : un ruban eteint le reste)
+cuveFonctions.appliqueCouleurNiveau = def()
+    import light
     var ws2812 = cuveFonctions.relaisRuban()
     if (ws2812 == nil)    return    end
-    var etat = light.get(ws2812.find("channel", 0))
-    if (etat == nil || !etat.find("power", false))    return    end
-    try
-        if (cuveFonctions.ruban == nil)    cuveFonctions.ruban = Leds()    end
-        cuveFonctions.ruban.clear_to(couleur, etat.find("bri", 127))
-        cuveFonctions.ruban.show()
-    except .. as error, message
-        cuveFonctions.ruban = nil
-        cuveFonctions.log("PEINT_RUBAN_ERREUR: " + str(error) + " -> " + str(message), LOG_LEVEL_ERREUR)
+    var teinte = cuveFonctions.teinteNiveau(cuveFonctions.sensorsCuve["niveauCuve"]["tauxRemplissage"])
+    if (cuveFonctions.rubanGere())
+        import ledsFonctions
+        ledsFonctions.appliqueAuto(teinte)
+    else
+        var channel = ws2812.find("channel", 0)
+        if (light.get(channel) != nil)    light.set({"hue": teinte}, channel)    end
     end
 end
 
-# Appelee chaque seconde (controleCuve.every_second) : clignotement rouge tant que le capteur de niveau
-# est en erreur ; au retour d'une mesure, le ruban reprend la couleur du niveau (celle du pilote light,
-# que le clignotement avait recouverte sans la modifier).
-# LED RGB du dev-kit (module commun ledsFonctions) : ruban allume -> elle le recopie (couleur imposee) ;
-# ruban eteint ou absent -> voyant d'etat, ou l'erreur de niveau clignote en rouge (signaleErreur).
+# Appelee chaque seconde (controleCuve.every_second) : journalise les transitions de l'erreur de niveau
+# et la signale a ledsFonctions (clignotement du ruban en AUTO, LED du dev-kit en rouge clignotant).
+# Au premier passage (demarrage termine), donne a ledsFonctions la fonction du retour en AUTO.
 cuveFonctions.majTemoinErreur = def()
     var erreur = cuveFonctions.niveauEnErreur()
 
@@ -102,36 +113,16 @@ cuveFonctions.majTemoinErreur = def()
             cuveFonctions.log("CUVE_ERREUR_MESURE: capteur de niveau sans mesure (absent ou defaillant) : ruban et encadre en rouge clignotant", LOG_LEVEL_ERREUR)
         else
             cuveFonctions.log("CUVE_ERREUR_MESURE: capteur de niveau de nouveau mesure : couleur du niveau retablie", LOG_LEVEL_INFO)
-            var ws2812 = cuveFonctions.relaisRuban()
-            var etat = (ws2812 != nil ? light.get(ws2812.find("channel", 0)) : nil)
-            if (etat != nil)    cuveFonctions.peintRuban(int("0x" + etat.find("rgb", "000000")))    end
         end
     end
 
-    # Etat du ruban
-    var ws2812 = cuveFonctions.relaisRuban()
-    var etat = (ws2812 != nil ? light.get(ws2812.find("channel", 0)) : nil)
-    var allume = (etat != nil && etat.find("power", false))
-    var couleur = (allume ? int("0x" + etat.find("rgb", "000000")) : nil)
-
-    if (erreur)
-        cuveFonctions.phaseClignote = !cuveFonctions.phaseClignote
-        couleur = (cuveFonctions.phaseClignote ? 0xFF0000 : 0x000000)
-        cuveFonctions.peintRuban(couleur)
-        if (!allume)    couleur = nil    end
-    end
-
-    cuveFonctions.majLedRGB(erreur, couleur, (etat != nil ? etat.find("bri", 127) : 127))
-end
-
-# Transmet a la LED RGB du dev-kit (si elle est activee) l'erreur de niveau et la couleur du ruban
-# (nil = ruban eteint ou absent : la LED redevient voyant d'etat)
-cuveFonctions.majLedRGB = def(erreur, couleur, bri)
-    var led = drivers.find("leds", {}).find("environnement", {}).find("leds", {}).find("ledRGB", {})
-    if (drivers.find("leds", {}).find("activation", "OFF") != "ON" || led.find("activation", "OFF") != "ON")    return    end
+    if (!cuveFonctions.ledsActif())    return    end
     import ledsFonctions
     ledsFonctions.signaleErreur("cuve", erreur)
-    ledsFonctions.imposeCouleur("cuve", couleur, bri)
+    if (!cuveFonctions.retourAutoEnregistre && cuveFonctions.rubanGere())
+        ledsFonctions.enregistreRetourAuto(/-> cuveFonctions.appliqueCouleurNiveau(), "la couleur suit le niveau de la cuve (rouge = vide, vert = pleine)")
+        cuveFonctions.retourAutoEnregistre = true
+    end
 end
 
 # Aide de la commande ReglageCuve, appelee SEULEMENT par diversFonctions.traiteAide :
@@ -582,17 +573,9 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
         cuveFonctions.sensorsCuve["niveauCuve"]["tauxRemplissage"] = pourcentageEau
         cuveFonctions.sensorsCuve["niveauCuve"]["volume"] =  int(hauteur * largeur * longueur * pourcentageEau / 1000)    # en litres
 
-        # Règle la couleur de la LED WS2812 témoin en fonction du taux de remplissage
-        # (en erreur de mesure, majTemoinErreur fait clignoter le ruban en rouge par-dessus)
-        var ws2812 = cuveFonctions.relaisRuban()
-        if (ws2812 != nil)
-            var channel = ws2812.find("channel", 0)
-            var etatWs2812 = light.get(channel)
-
-            if (etatWs2812 != nil)
-                light.set({"hue": cuveFonctions.teinteNiveau(pourcentageEau), "bri": etatWs2812["bri"], "sat": etatWs2812["sat"]}, channel)
-            end
-        end
+        # Règle la couleur du ruban WS2812 en fonction du taux de remplissage (mode AUTO ; en erreur de
+        # mesure, ledsFonctions fait clignoter le ruban en rouge par-dessus)
+        cuveFonctions.appliqueCouleurNiveau()
 
         cuveFonctions.log(string.format("CUVE_GESTION_CAPTEURS: sensorsCuve=%s", cuveFonctions.sensorsCuve), LOG_LEVEL_INFO)
     end
