@@ -111,36 +111,99 @@ def gestionFileFolder_listeEtRepartitLesFichiers()
 end
 gestionFileFolder.listeEtRepartitLesFichiers = gestionFileFolder_listeEtRepartitLesFichiers
 
-# Compte le nombre de fichiers comprenant 'nomFichier' sans l'extension
+# Découpe le chemin d'un fichier de logs : '/logs/cuve.log' -> ["/logs/", "cuve", ".log"]
+# Retourne [préfixe dossier avec son '/', nom sans extension, extension avec son '.' ("" si aucune)]
+def gestionFileFolder_decoupeCheminLog(fileChemin)
+    var posSlash = -1
+    var posPoint = -1
+
+    for i: 0 .. size(fileChemin) - 1
+        if (fileChemin[i] == "/")       posSlash = i    posPoint = -1
+        elif (fileChemin[i] == ".")     posPoint = i
+        end
+    end
+
+    var fin = (posPoint > -1 ? posPoint : size(fileChemin))
+    var prefixe = (posSlash > -1 ? fileChemin[0 .. posSlash] : "")
+    var nom = (fin > posSlash + 1 ? fileChemin[posSlash + 1 .. fin - 1] : "")
+    var extension = (posPoint > -1 ? fileChemin[posPoint .. size(fileChemin) - 1] : "")
+
+    return [prefixe, nom, extension]
+end
+gestionFileFolder.decoupeCheminLog = gestionFileFolder_decoupeCheminLog
+
+# Chemin du fichier de logs d'indice 'indice' : ('/logs/cuve.log', 3) -> '/logs/cuve3.log'
+def gestionFileFolder_nomFichierLog(fileChemin, indice)
+    import gestionFileFolder
+
+    var parties = gestionFileFolder.decoupeCheminLog(fileChemin)
+    return parties[0] + parties[1] + str(indice) + parties[2]
+end
+gestionFileFolder.nomFichierLog = gestionFileFolder_nomFichierLog
+
+# Retourne l'indice max des fichiers '<nom><indice><extension>' du dossier de 'fileChemin'
 # Retourne 0: aucun fichier trouvé
-# Retourne > 0: indice max des fichiers trouvés 
+# Un fichier qui contient le nom sans indice numérique exact (cuve.log, cuve-old.log, cuve2.log.bak) est ignoré
 def gestionFileFolder_compteIndiceMaxFileLogs(fileChemin)
     import path
     import string
-    import re
+    import gestionFileFolder
 
-    var fileName = string.split(fileChemin, "/")[string.count(fileChemin, "/")]
-        fileName = string.split(fileName, ".")[0]
-    var listFile = path.listdir("/logs")
+    var parties = gestionFileFolder.decoupeCheminLog(fileChemin)
+    var nom = parties[1]
+    var extension = parties[2]
+    var dossier = (size(parties[0]) > 1 ? parties[0][0 .. size(parties[0]) - 2] : "/")
+    var listFile = path.listdir(dossier)
     var indiceMax = 0
 
-    for nb:0 .. listFile.size() - 1
-        if (string.find(listFile[nb], fileName) > -1)
-            # Détermine l'indice du fichier
-            var result = re.search("[0-9].", listFile[nb])
+    if (listFile == nil)    return 0    end
 
-            # Détermine quel est l'indice max
-            if (result[0] != nil && int(result[0]) > indiceMax)
-                indiceMax = int(result[0])
-            elif (result[0] == nil)
-                indiceMax = 0
+    for nameFile: listFile
+        var tailleIndice = size(nameFile) - size(nom) - size(extension)
+
+        if (tailleIndice > 0 && string.startswith(nameFile, nom) && string.endswith(nameFile, extension))
+            # L'indice doit être fait uniquement de chiffres
+            var indice = nameFile[size(nom) .. size(nom) + tailleIndice - 1]
+            var chiffres = true
+            for i: 0 .. size(indice) - 1
+                if (indice[i] < "0" || indice[i] > "9")     chiffres = false    end
             end
+
+            if (chiffres && int(indice) > indiceMax)    indiceMax = int(indice)     end
         end
     end
 
     return indiceMax
 end
 gestionFileFolder.compteIndiceMaxFileLogs = gestionFileFolder_compteIndiceMaxFileLogs
+
+# Ne garde que les 'nbGarde' fichiers de logs les plus récents parmi les indices 1 .. indiceMax,
+# renumérotés de 1 (le plus ancien) à nbGarde. Les indices absents (coupure pendant un décalage) sont ignorés.
+# Parcours croissant : quand le fichier n est renommé en n - nbSuppr, cet indice a déjà été libéré.
+def gestionFileFolder_decaleFichiersLogs(fileChemin, indiceMax, nbGarde)
+    import path
+    import gestionFileFolder
+
+    var nbSuppr = indiceMax - nbGarde
+    if (nbSuppr <= 0)   return  end
+
+    for nb: 1 .. indiceMax
+        var source = gestionFileFolder.nomFichierLog(fileChemin, nb)
+
+        if (path.exists(source))
+            if (nb <= nbSuppr)
+                path.remove(source)
+            else
+                var cible = gestionFileFolder.nomFichierLog(fileChemin, nb - nbSuppr)
+                if (path.exists(cible))     path.remove(cible)  end
+                path.rename(source, cible)
+            end
+        end
+
+        tasmota.yield()
+    end
+end
+gestionFileFolder.decaleFichiersLogs = gestionFileFolder_decaleFichiersLogs
 
 def gestionFileFolder_readFile(chemin)
     import path
@@ -390,75 +453,62 @@ def gestionFileFolder_compileModule(chemin, paramDeleteBe)
 end
 gestionFileFolder.compileModule = gestionFileFolder_compileModule
 
-# Gère l'enregistrement des logs dans un fichier
-# Si le fichier existe, on l'ouvre et on ajoute les données à la fin
+# Enregistre la ligne 'data' dans les fichiers de logs tournants du module 'modulo'
+#   - fichiers : '/logs/cuve.log' -> /logs/cuve1.log (le plus ancien) ... /logs/cuveN.log (le plus récent)
+#   - modulo.nbLogsFilesMax : nombre N de fichiers conservés (0 = pas d'enregistrement)
+#   - modulo.fileLogSize_Ko : taille max d'un fichier, en OCTETS malgré le nom de la clé (10000 = ~10 Ko)
+#   - modulo.indiceLog      : indice du fichier en cours d'écriture
+# Quand le fichier N est plein, le fichier 1 est supprimé, les autres sont décalés d'un cran (2->1 ... N->N-1)
+# et l'écriture reprend dans un fichier N vide : il n'y a jamais plus de N fichiers.
 def gestionFileFolder_enregistreLogs(fileChemin, modulo, data)
-    import json
     import string
-    import path
+    import gestionFileFolder
 
-    var fileName = string.split(fileChemin, "/")[string.count(fileChemin, "/")]
-        fileName = string.split(fileName, ".")[0]
+    var nbMax = modulo.nbLogsFilesMax
+    if (nbMax == nil || nbMax <= 0)     return  end
 
-    tasmota.yield()
-
-    # On est arrivé à l'indiceMax
-    if (modulo.indiceLog > modulo.nbLogsFilesMax)
-        # On parcours tous les fichiers
-        for nb: 1 .. modulo.nbLogsFilesMax + 1
-            # On supprime le fichier avec l'indice 1
-            if (path.exists(string.replace(fileChemin, ".", str(nb) + ".")))   path.remove(string.replace(fileChemin, ".", str(nb) + "."))  end
-
-            # On décale de -1 le titre des fichiers
-            if (path.exists(string.replace(fileChemin, ".", str(nb + 1) + ".")))    path.rename(string.replace(fileChemin, ".", str(nb + 1) + "."), string.replace(fileChemin, ".", str(nb) + "."))     end
-        end
-
-        modulo.indiceLog -= 1
-    end
-
-    # Prépare les données pour écriture dans le fichier
-    data = data     # + "\n"
-
-    # Détermine le nom du fichier à ouvrir
-    var filePath = string.replace(fileChemin, ".", str(modulo.indiceLog) + ".")
-
-    # Mode lecture: détermine la taille du fichier
+    var ligne = data + "\n"
     var file
-    var sizeFile = 0
 
     try
-        file = open(filePath, 'r')
-        sizeFile = file.size()
+        # Plus de fichiers que permis (nbLogsFiles diminué dans le persist) : ne garde que les N plus récents
+        if (modulo.indiceLog == nil || modulo.indiceLog < 1)    modulo.indiceLog = 1    end
+        if (modulo.indiceLog > nbMax)
+            logFonctions.log(string.format("ENREGISTRE_LOGS: %i fichiers '%s' pour %i permis, suppression des plus anciens !", modulo.indiceLog, fileChemin, nbMax), LOG_LEVEL_INFO)
+            gestionFileFolder.decaleFichiersLogs(fileChemin, modulo.indiceLog, nbMax)
+            modulo.indiceLog = nbMax
+        end
+
+        # Ouvre en ajout (crée le fichier s'il n'existe pas) et lit sa taille sur le même descripteur
+        var filePath = gestionFileFolder.nomFichierLog(fileChemin, modulo.indiceLog)
+        file = open(filePath, 'a+')
+        var sizeFile = file.size()
+
+        tasmota.yield()
+
+        # Fichier plein (taille en octets) : passe au suivant. Un fichier vide reçoit toujours sa ligne.
+        if (sizeFile > 0 && sizeFile + size(ligne) > modulo.fileLogSize_Ko)
+            file.close()
+
+            if (modulo.indiceLog >= nbMax)
+                # Dernier fichier plein : supprime le plus ancien et décale les autres, l'indice N se libère
+                gestionFileFolder.decaleFichiersLogs(fileChemin, modulo.indiceLog, nbMax - 1)
+                modulo.indiceLog = nbMax
+            else
+                modulo.indiceLog += 1
+            end
+
+            filePath = gestionFileFolder.nomFichierLog(fileChemin, modulo.indiceLog)
+            logFonctions.log(string.format("ENREGISTRE_LOGS: Création du fichier de logs suivant: %s !", filePath), LOG_LEVEL_DEBUG_PLUS)
+            file = open(filePath, 'a+')
+        end
+
+        file.write(ligne)
+        file.close()
     except .. as error, message
+        if (file != nil)    file.close()    end
         logFonctions.log(string.format("ENREGISTRE_LOGS_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
     end
-    
-    tasmota.yield()
-
-    # Mode lecture-écriture: crée un fichier vide ou ajoute les données à la fin d'un fichier existant.
-    file = open(filePath, 'a+')
-    tasmota.yield()
-
-    # Si la taille du fichier > (fileLogSize_Ko / 1000 = kO)
-    if (sizeFile + size(data) > modulo.fileLogSize_Ko)
-        # Ferme et efface le buffer
-        file.close()
-        file.flush()
-
-        # On passe au fichier avec indice suivant
-        modulo.indiceLog += 1
-
-        filePath = string.replace(fileChemin, ".", str(modulo.indiceLog) + ".")
-        logFonctions.log(string.format("ENREGISTRE_LOGS: Création du fichier de logs suivants: %s !", filePath), LOG_LEVEL_DEBUG_PLUS)
-        file = open(filePath, 'a+')
-    end
-
-    # Ecrit les données dans le fichier
-    file.write(data + "\n")
-
-    # Ferme et efface le buffer
-    file.close()
-    file.flush()
 end
 gestionFileFolder.enregistreLogs = gestionFileFolder_enregistreLogs
 

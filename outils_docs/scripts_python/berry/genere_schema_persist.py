@@ -93,6 +93,9 @@ DESCRIPTIONS = {
     "profil": "Nom du profil de logs actif (cle de `profils`).",
     "profils": "Profils de logs : seuil de chaque sortie (serie, web, mqtt, syslog).",
     "nbLogsFiles": "Nombre de fichiers de log conserves.",
+    "fileLogSize_Ko": ("Taille max d'un fichier de log tournant, en OCTETS malgre le nom de la cle "
+                       "(10000 = ~10 Ko ; voir gestionFileFolder.enregistreLogs)."),
+    "fileLogName": "Chemin de base des fichiers de log tournants : /logs/cuve.log -> /logs/cuve1.log ... cuveN.log.",
     "name": "Nom d'affichage du bloc.",
     "reglage": "Reglage libre du bloc (ON/OFF le plus souvent).",
     "id": "Identifiant ModBus / reseau de la carte.",
