@@ -32,6 +32,10 @@ tasmota/include/local_ca_descriptor.h
 #variants
 variants3
 build
+# Fork : la regle ci-dessus ignore TOUT dossier nomme build, y compris celui des scripts
+# charges par PlatformIO (2026-10-12) ; sans cette exception, un nouveau script y serait
+# ignore en silence.
+!outils_docs/scripts_python/build/
 build_output/*
 firmware.map
 firmware.asm
