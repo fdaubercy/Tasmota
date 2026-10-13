@@ -1,0 +1,15 @@
+# Source InfluxDB de la base Iot (InfluxDB 1.8, sans authentification) - historique des capteurs
+# A copier dans /etc/grafana/provisioning/datasources/ puis redemarrer grafana-server.
+apiVersion: 1
+datasources:
+  - name: InfluxDB Iot
+    uid: influxdb-iot
+    type: influxdb
+    access: proxy
+    url: http://localhost:8086
+    database: Iot
+    isDefault: true
+    editable: true
+    jsonData:
+      dbName: Iot
+      httpMode: GET

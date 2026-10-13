@@ -1,0 +1,11 @@
+# Tableaux de bord de l'historique des capteurs, lus dans /var/lib/grafana/dashboards/historique
+# A copier dans /etc/grafana/provisioning/dashboards/ puis redemarrer grafana-server.
+apiVersion: 1
+providers:
+  - name: historique-capteurs
+    folder: Domotique
+    type: file
+    allowUiUpdates: true
+    updateIntervalSeconds: 60
+    options:
+      path: /var/lib/grafana/dashboards/historique
