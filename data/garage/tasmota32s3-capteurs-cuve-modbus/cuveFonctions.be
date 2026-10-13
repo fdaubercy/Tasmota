@@ -91,7 +91,7 @@ end
 # Appelee chaque seconde (controleCuve.every_second) : clignotement rouge tant que le capteur de niveau
 # est en erreur ; au retour d'une mesure, le ruban reprend la couleur du niveau (celle du pilote light,
 # que le clignotement avait recouverte sans la modifier).
-# LED RGB du dev-kit (module commun ledRGBFonctions) : ruban allume -> elle le recopie (couleur imposee) ;
+# LED RGB du dev-kit (module commun ledsFonctions) : ruban allume -> elle le recopie (couleur imposee) ;
 # ruban eteint ou absent -> voyant d'etat, ou l'erreur de niveau clignote en rouge (signaleErreur).
 cuveFonctions.majTemoinErreur = def()
     var erreur = cuveFonctions.niveauEnErreur()
@@ -129,9 +129,9 @@ end
 cuveFonctions.majLedRGB = def(erreur, couleur, bri)
     var led = drivers.find("leds", {}).find("environnement", {}).find("leds", {}).find("ledRGB", {})
     if (drivers.find("leds", {}).find("activation", "OFF") != "ON" || led.find("activation", "OFF") != "ON")    return    end
-    import ledRGBFonctions
-    ledRGBFonctions.signaleErreur("cuve", erreur)
-    ledRGBFonctions.imposeCouleur("cuve", couleur, bri)
+    import ledsFonctions
+    ledsFonctions.signaleErreur("cuve", erreur)
+    ledsFonctions.imposeCouleur("cuve", couleur, bri)
 end
 
 # Aide de la commande ReglageCuve, appelee SEULEMENT par diversFonctions.traiteAide :

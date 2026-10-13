@@ -98,8 +98,8 @@ if (persist._p != nil && persist._p.size() != 0)
     # LED RGB du dev-kit (drivers.leds.environnement.leds.ledRGB, 2026-10-11) : compilee et chargee
     # SEULEMENT si activee. Voyant d'etat ; un module peut y signaler une erreur ou y imposer une couleur.
     if (drivers.find("leds", {}).find("activation", "OFF") == "ON" && drivers["leds"].find("environnement", {}).find("leds", {}).find("ledRGB", {}).find("activation", "OFF") == "ON")
-        gestionFileFolder.compileModule("/ledRGBFonctions", "ON")
-        gestionFileFolder.loadBerryFile("/controleLedRGB", "ON", "ON")
+        gestionFileFolder.compileModule("/ledsFonctions", "ON")
+        gestionFileFolder.loadBerryFile("/controleLeds", "ON", "ON")
     end
 
     # controleRideau n'est PAS solidifie : charge depuis le LittleFS, SEULEMENT si le module est active

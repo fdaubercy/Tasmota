@@ -15,26 +15,26 @@
 -#
 
 # Définition du module
-var ledRGBFonctions = module("/ledRGBFonctions")
+var ledsFonctions = module("/ledsFonctions")
 
-ledRGBFonctions.LUMINOSITE = 40          # luminosite du voyant d'etat si le persist n'en donne pas (0..255)
-ledRGBFonctions.VERT = 0x00FF00
-ledRGBFonctions.ORANGE = 0xFF6000
-ledRGBFonctions.ROUGE = 0xFF0000
+ledsFonctions.LUMINOSITE = 40          # luminosite du voyant d'etat si le persist n'en donne pas (0..255)
+ledsFonctions.VERT = 0x00FF00
+ledsFonctions.ORANGE = 0xFF6000
+ledsFonctions.ROUGE = 0xFF0000
 
-ledRGBFonctions.erreurs = {}             # source -> true : erreurs signalees par les modules
-ledRGBFonctions.imposees = {}            # source -> [couleur, luminosite] imposees par les modules
-ledRGBFonctions.phase = false            # phase du clignotement : true = rouge, false = eteinte
-ledRGBFonctions.led = nil                # objet Leds, cree a la premiere ecriture
-ledRGBFonctions.derniere = nil           # derniere couleur ecrite (pas de show inutile)
-ledRGBFonctions.enEchec = false          # Leds() a echoue : plus d'essai jusqu'au redemarrage
+ledsFonctions.erreurs = {}             # source -> true : erreurs signalees par les modules
+ledsFonctions.imposees = {}            # source -> [couleur, luminosite] imposees par les modules
+ledsFonctions.phase = false            # phase du clignotement : true = rouge, false = eteinte
+ledsFonctions.led = nil                # objet Leds, cree a la premiere ecriture
+ledsFonctions.derniere = nil           # derniere couleur ecrite (pas de show inutile)
+ledsFonctions.enEchec = false          # Leds() a echoue : plus d'essai jusqu'au redemarrage
 
-ledRGBFonctions.log = def(msg, niveau)
-    logFonctions.log(msg, niveau, "ledRGB")
+ledsFonctions.log = def(msg, niveau)
+    logFonctions.log(msg, niveau, "leds")
 end
 
 # L'entree ledRGB du persist si elle est activee (et le bloc leds aussi), sinon nil
-ledRGBFonctions.config = def()
+ledsFonctions.config = def()
     if (drivers.find("leds", {}).find("activation", "OFF") != "ON")    return nil    end
     var led = drivers["leds"].find("environnement", {}).find("leds", {}).find("ledRGB")
     if (led == nil || led.find("activation", "OFF") != "ON" || led.find("pin", -1) < 0)    return nil    end
@@ -42,25 +42,25 @@ ledRGBFonctions.config = def()
 end
 
 # API des modules : signale (actif = true) ou leve (false) une erreur de la source 'source'
-ledRGBFonctions.signaleErreur = def(source, actif)
+ledsFonctions.signaleErreur = def(source, actif)
     if (actif)
-        ledRGBFonctions.erreurs[source] = true
-    elif (ledRGBFonctions.erreurs.contains(source))
-        ledRGBFonctions.erreurs.remove(source)
+        ledsFonctions.erreurs[source] = true
+    elif (ledsFonctions.erreurs.contains(source))
+        ledsFonctions.erreurs.remove(source)
     end
 end
 
 # API des modules : impose une couleur (0xRRGGBB, 0 = eteinte) a la luminosite 'bri' ; couleur nil = rend la main
-ledRGBFonctions.imposeCouleur = def(source, couleur, bri)
+ledsFonctions.imposeCouleur = def(source, couleur, bri)
     if (couleur == nil)
-        if (ledRGBFonctions.imposees.contains(source))    ledRGBFonctions.imposees.remove(source)    end
+        if (ledsFonctions.imposees.contains(source))    ledsFonctions.imposees.remove(source)    end
     else
-        ledRGBFonctions.imposees[source] = [int(couleur), (bri == nil ? ledRGBFonctions.LUMINOSITE : int(bri))]
+        ledsFonctions.imposees[source] = [int(couleur), (bri == nil ? ledsFonctions.LUMINOSITE : int(bri))]
     end
 end
 
 # true si le module est connecte : reseau (Wi-Fi ou Ethernet) et, si MQTT est active, broker MQTT
-ledRGBFonctions.connecte = def()
+ledsFonctions.connecte = def()
     import mqtt
     var reseau = tasmota.wifi("up") || tasmota.eth("up")
     if (!reseau)    return false    end
@@ -71,57 +71,57 @@ end
 # Cree le pilote de la LED : RMT d'abord, puis SPI si le RMT est plein (ruban present). Le SPI doit etre
 # DEMANDE (Leds.SPI) : sans precision, TasmotaLEDPusher::ResolveHardware ne retient que le RMT et n'essaie
 # jamais le SPI (constate sur la cuve le 2026-10-11 : 'RMT bus failed 48 err=261', aucun essai SPI).
-ledRGBFonctions.creeLeds = def(pin)
+ledsFonctions.creeLeds = def(pin)
     try
         return Leds(1, pin)
     except .. as error, message
-        ledRGBFonctions.log("PEINT_LED_RGB: RMT indisponible (" + str(message) + "), essai en SPI", LOG_LEVEL_DEBUG)
+        ledsFonctions.log("PEINT_LED_RGB: RMT indisponible (" + str(message) + "), essai en SPI", LOG_LEVEL_DEBUG)
     end
     return Leds(1, pin, Leds.WS2812_GRB, Leds.SPI)
 end
 
 # Ecrit une couleur sur la LED (une seule fois par changement)
-ledRGBFonctions.peint = def(couleur, bri)
-    if (ledRGBFonctions.enEchec)    return    end
-    var led = ledRGBFonctions.config()
+ledsFonctions.peint = def(couleur, bri)
+    if (ledsFonctions.enEchec)    return    end
+    var led = ledsFonctions.config()
     if (led == nil)    return    end
     var cle = str(couleur) + "@" + str(bri)
-    if (cle == ledRGBFonctions.derniere)    return    end
+    if (cle == ledsFonctions.derniere)    return    end
     try
-        if (ledRGBFonctions.led == nil)    ledRGBFonctions.led = ledRGBFonctions.creeLeds(int(led["pin"]))    end
-        ledRGBFonctions.led.clear_to(couleur, bri)
-        ledRGBFonctions.led.show()
-        ledRGBFonctions.derniere = cle
+        if (ledsFonctions.led == nil)    ledsFonctions.led = ledsFonctions.creeLeds(int(led["pin"]))    end
+        ledsFonctions.led.clear_to(couleur, bri)
+        ledsFonctions.led.show()
+        ledsFonctions.derniere = cle
     except .. as error, message
-        ledRGBFonctions.led = nil
-        ledRGBFonctions.enEchec = true
-        ledRGBFonctions.log("PEINT_LED_RGB_ERREUR: LED du dev-kit (GPIO" + str(led["pin"]) + ") : " + str(error) + " -> " + str(message), LOG_LEVEL_ERREUR)
+        ledsFonctions.led = nil
+        ledsFonctions.enEchec = true
+        ledsFonctions.log("PEINT_LED_RGB_ERREUR: LED du dev-kit (GPIO" + str(led["pin"]) + ") : " + str(error) + " -> " + str(message), LOG_LEVEL_ERREUR)
     end
 end
 
-# Appelee chaque seconde par controleLedRGB : applique la priorite imposee > erreur > etat
-ledRGBFonctions.maj = def()
-    var led = ledRGBFonctions.config()
+# Appelee chaque seconde par controleLeds : applique la priorite imposee > erreur > etat
+ledsFonctions.maj = def()
+    var led = ledsFonctions.config()
     if (led == nil)    return    end
-    var bri = int(led.find("luminosite", ledRGBFonctions.LUMINOSITE))
+    var bri = int(led.find("luminosite", ledsFonctions.LUMINOSITE))
 
     # 1. Couleur imposee par un module (la premiere trouvee)
-    for source: ledRGBFonctions.imposees.keys()
-        var c = ledRGBFonctions.imposees[source]
-        ledRGBFonctions.peint(c[0], c[1])
+    for source: ledsFonctions.imposees.keys()
+        var c = ledsFonctions.imposees[source]
+        ledsFonctions.peint(c[0], c[1])
         return
     end
 
     # 2. Erreur signalee : rouge clignotant
-    if (ledRGBFonctions.erreurs.size() > 0)
-        ledRGBFonctions.phase = !ledRGBFonctions.phase
-        ledRGBFonctions.peint(ledRGBFonctions.phase ? ledRGBFonctions.ROUGE : 0, bri)
+    if (ledsFonctions.erreurs.size() > 0)
+        ledsFonctions.phase = !ledsFonctions.phase
+        ledsFonctions.peint(ledsFonctions.phase ? ledsFonctions.ROUGE : 0, bri)
         return
     end
 
     # 3. Voyant d'etat
-    ledRGBFonctions.peint(ledRGBFonctions.connecte() ? ledRGBFonctions.VERT : ledRGBFonctions.ORANGE, bri)
+    ledsFonctions.peint(ledsFonctions.connecte() ? ledsFonctions.VERT : ledsFonctions.ORANGE, bri)
 end
 
 # Retourne le module lors de l'importation
-return ledRGBFonctions
+return ledsFonctions
