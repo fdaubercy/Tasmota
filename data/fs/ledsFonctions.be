@@ -552,15 +552,22 @@ ledsFonctions.reglageLeds = def(cmd, idx, payload, payload_json)
 end
 
 # Reglages Tasmota du bouton : appui long (SetOption32) ; SetOption1 ON, sinon un appui de 10 x
-# l'appui long lancerait 'Reset 1' (support_button_v4.ino:488)
+# l'appui long lancerait 'Reset 1' (support_button_v4.ino:488). SetOption1 est inscrit dans le persist
+# (diverses.eviteResetBTN, applique a chaque demarrage par configGlobal) : il ne repasse pas a OFF.
 ledsFonctions.regleBouton = def()
     import string
+    import persist
     var cfg = ledsFonctions.configRuban()
     if (cfg == nil || int(cfg.find("bouton", 0)) <= 0)    return    end
     var appui = int(cfg.find("appuiLong", 15))
     if (int(tasmota.cmd("SetOption32", boolMute).find("SetOption32", 0)) != appui)
         tasmota.cmd(string.format("SetOption32 %i", appui), boolMute)
         ledsFonctions.log(string.format("LEDS_RUBAN: Appui long regle a %i dixiemes de s (SetOption32) !", appui), LOG_LEVEL_INFO)
+    end
+    if (diverses.find("eviteResetBTN", "OFF") != "ON")
+        diverses["eviteResetBTN"] = "ON"
+        persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
+        ledsFonctions.log("LEDS_RUBAN: eviteResetBTN ON inscrit dans le persist (SetOption1) !", LOG_LEVEL_INFO)
     end
     if (tasmota.cmd("SetOption1", boolMute).find("SetOption1") != "ON")
         tasmota.cmd("SetOption1 ON", boolMute)
