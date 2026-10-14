@@ -200,9 +200,9 @@ ledsPanelFonctions.afficheSectionLocale = ledsPanelFonctions_afficheSectionLocal
    image invisible dont le 'onerror' appelle rv(teinte, saturation, luminosite). Un curseur que
    l'utilisateur vient de bouger est laisse tel quel 3 s (sinon il sauterait sous la souris).
 -#
-# [teinte 0-359, saturation 0-100, luminosite 0-100] memorises pour le premier ruban virtuel
-# ModBus actif du persist (celui que pilotent ces curseurs, via HSBColor / Dimmer), ou nil.
-def ledsPanelFonctions_hsbRubanVirtuel()
+# Relai du premier ruban virtuel ModBus actif du persist (celui que pilotent ces curseurs, via
+# HSBColor / Dimmer), ou nil.
+def ledsPanelFonctions_rubanVirtuel()
     import string
 
     for cle: modules.keys()
@@ -215,12 +215,72 @@ def ledsPanelFonctions_hsbRubanVirtuel()
             var r = relais[cleRelai]
             if (type(r) != "instance" || r.find("activation", "OFF") != "ON" || r.find("type") != 1376)    continue    end
             if (string.find(str(r.find("virtuel", "OFF")), "ModBus_TasmotaSlaveModBus") < 0)    continue    end
-            return [int(r.find("couleur", 0)), int(r.find("saturation", 0)), int(r.find("value", 0))]
+            return r
         end
     end
     return nil
 end
+ledsPanelFonctions.rubanVirtuel = ledsPanelFonctions_rubanVirtuel
+
+# [teinte 0-359, saturation 0-100, luminosite 0-100] memorises pour ce ruban, ou nil
+def ledsPanelFonctions_hsbRubanVirtuel()
+    import ledsPanelFonctions
+
+    var r = ledsPanelFonctions.rubanVirtuel()
+    if (r == nil)    return nil    end
+    return [int(r.find("couleur", 0)), int(r.find("saturation", 0)), int(r.find("value", 0))]
+end
 ledsPanelFonctions.hsbRubanVirtuel = ledsPanelFonctions_hsbRubanVirtuel
+
+#- Mode AUTO / MANUEL du ruban de l'esclave (2026-10-13).
+   L'esclave le renvoie dans le 5e registre de l'etat du ruban, recopie par
+   modBus_TasmotaSlaveModBus dans le relai sous "modeRuban" : 0 = AUTO, n = MANUEL pour encore
+   n min, 0xFFFF = MANUEL sans fin. Les boutons de la page passent par la commande RubanEsclave<n>.
+-#
+# Texte du mode, "" si inconnu (esclave pas encore a jour : la ligne est masquee)
+def ledsPanelFonctions_texteModeRuban(mode)
+    if (mode == nil)    return ""    end
+    mode = int(mode)
+    if (mode == 0)    return "AUTO"    end
+    if (mode == 0xFFFF)    return "MANUEL"    end
+    return "MANUEL, reste " + str(mode) + " min"
+end
+ledsPanelFonctions.texteModeRuban = ledsPanelFonctions_texteModeRuban
+
+# Lignes de l'aide du ruban virtuel (pastille du bouton du relai)
+def ledsPanelFonctions_aideRubanVirtuel(r)
+    var lignes = ["Ruban '" + str(r.find("nom", "ruban")) + "' : il est gere par son esclave, le maitre le commande."]
+    var b = int(r.find("bouton", 0))
+    if (b > 0)
+        var a = int(r.find("appuiLong", 15))
+        var duree = str(a / 10) + (a % 10 != 0 ? "," + str(a % 10) : "") + " s"
+        lignes.push("Bouton " + str(b) + " du maitre : appui court = allume / eteint ; appui long (" + duree +
+                    ") = couleur suivante, puis une couleur toutes les " + duree + " tant qu'il est tenu ; double appui = retour en AUTO.")
+    end
+    lignes.push("Page : ce bouton allume / eteint, les curseurs fixent la couleur, 'Couleur suivante' parcourt la palette de l'esclave, 'Auto' rend la main.")
+    lignes.push("Mode AUTO : la couleur est fixee par le module de l'esclave (la cuve : selon le niveau, rouge clignotant = mesure en erreur).")
+    lignes.push("Mode MANUEL : toute action, ici ou sur l'esclave, fige la couleur pendant la duree reglee sur l'esclave " +
+                "(ReglageLeds rubanDuree, 30 min par defaut, 0 = jusqu'au double appui), puis retour en AUTO.")
+    return lignes
+end
+ledsPanelFonctions.aideRubanVirtuel = ledsPanelFonctions_aideRubanVirtuel
+
+# Pastille d'aide (2026-10-13) posee dans le coin superieur droit du bouton 'idBouton' (ex. 'o1')
+# de la page d'accueil, et sa fenetre 'idDiv' (lignes jointes par <br>, un clic la referme).
+# La pastille est hors du bouton : un clic dessus ne le bascule pas. Partagee par ledsFonctions
+# (ruban de la carte) et le ruban virtuel du maitre. 'titre' sans apostrophe. Retourne le HTML.
+def ledsPanelFonctions_pastilleAide(idBouton, idDiv, titre, lignes)
+    return "<div id='" + idDiv + "' onclick=\"this.style.display='none'\" style='display:none;position:fixed;left:50%;top:15%;transform:translateX(-50%);" +
+           "max-width:360px;z-index:20;text-align:left;padding:10px;border:1px solid var(--c_btn);border-radius:6px;background:var(--c_bg);color:var(--c_txt)'>" +
+           lignes.concat("<br>") + "</div>" +
+           "<script>(function(){var b=eb('" + idBouton + "');if(!b)return;var t=b.parentNode;t.style.position='relative';" +
+           "var s=document.createElement('span');s.innerHTML='&#9432;';s.title='" + titre + "';" +
+           "s.style.cssText='position:absolute;top:2px;right:4px;width:18px;height:18px;line-height:18px;border-radius:50%;font-size:14px;text-align:center;" +
+           "cursor:pointer;z-index:2;background:var(--c_bg);color:var(--c_btn);border:1px solid var(--c_btn)';" +
+           "s.onclick=function(e){e.stopPropagation();var a=eb('" + idDiv + "');a.style.display=(a.style.display=='none'?'block':'none');};" +
+           "t.appendChild(s);})();</script>"
+end
+ledsPanelFonctions.pastilleAide = ledsPanelFonctions_pastilleAide
 
 # Envoie, juste apres ledVirtuel.html, la fonction rv() et les valeurs memorisees.
 # Appelee par controleWeb.web_add_main_button().
@@ -229,8 +289,21 @@ def ledsPanelFonctions_scriptCurseursVirtuels()
     import string
     import ledsPanelFonctions
 
+    var r = ledsPanelFonctions.rubanVirtuel()
+    if (r == nil)    return    end
     var hsb = ledsPanelFonctions.hsbRubanVirtuel()
-    if (hsb == nil)    return    end
+    var id = int(r.find("id", 1))
+
+    # Mode de l'esclave et ses deux ordres (2026-10-13), sous les curseurs ; rm() le tient a jour
+    var bouton = "style='width:auto;padding:0 8px;line-height:1.6;margin-left:6px'"
+    webserver.content_send(string.format("<div id='rvMode' style='text-align:center;margin:4px 0;display:none'><span id='rvTxt'></span>"
+        "<button onclick='la(\"&rvSuiv=%i\");' %s>Couleur suivante</button>"
+        "<button id='rvAuto' onclick='la(\"&rvAuto=%i\");' %s>Auto</button></div>", id, bouton, id, bouton))
+    webserver.content_send("<script>function rm(t){var d=eb('rvMode');if(!d)return;d.style.display=(t?'block':'none');"
+        "eb('rvTxt').innerHTML='Ruban : '+t;eb('rvAuto').style.display=(t.indexOf('MANUEL')==0?'':'none');}"
+        "rm('" + ledsPanelFonctions.texteModeRuban(r.find("modeRuban")) + "');</script>")
+    webserver.content_send(ledsPanelFonctions.pastilleAide("o" + str(id), "rvAide", "Aide du ruban", ledsPanelFonctions.aideRubanVirtuel(r)))
+
     webserver.content_send(
         "<script>var rvT=0;"
         "function rv(h,s,b){if(Date.now()-rvT<3000)return;"
@@ -243,15 +316,22 @@ def ledsPanelFonctions_scriptCurseursVirtuels()
 end
 ledsPanelFonctions.scriptCurseursVirtuels = ledsPanelFonctions_scriptCurseursVirtuels
 
-# Dans la reponse a /?m=1 : recale les curseurs sur l'etat memorise (relu ou pousse par l'esclave).
+# Dans la reponse a /?m=1 : recale les curseurs et le mode sur l'etat memorise (relu ou pousse par
+# l'esclave). Execute d'abord un ordre des boutons de la page (la('&rvSuiv=<n>') / la('&rvAuto=<n>')).
 # Appelee par controleWeb.web_sensor(), donc toutes les ~2 s par page ouverte : pas de log.
 def ledsPanelFonctions_majCurseursVirtuels()
     import string
+    import webserver
     import ledsPanelFonctions
 
+    var r = ledsPanelFonctions.rubanVirtuel()
+    if (r == nil)    return    end
+    if (webserver.has_arg("rvSuiv"))    tasmota.cmd("RubanEsclave" + webserver.arg("rvSuiv") + " suivante", boolMute)    end
+    if (webserver.has_arg("rvAuto"))    tasmota.cmd("RubanEsclave" + webserver.arg("rvAuto") + " auto", boolMute)    end
+
     var hsb = ledsPanelFonctions.hsbRubanVirtuel()
-    if (hsb == nil)    return    end
-    tasmota.web_send(string.format("<img style='display:none;' src onerror=\"if(window.rv)rv(%i,%i,%i);\">", hsb[0], hsb[1], hsb[2]))
+    tasmota.web_send(string.format("<img style='display:none;' src onerror=\"if(window.rv)rv(%i,%i,%i);if(window.rm)rm('%s');\">",
+                                   hsb[0], hsb[1], hsb[2], ledsPanelFonctions.texteModeRuban(r.find("modeRuban"))))
 end
 ledsPanelFonctions.majCurseursVirtuels = ledsPanelFonctions_majCurseursVirtuels
 

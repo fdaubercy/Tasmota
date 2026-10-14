@@ -443,20 +443,12 @@ ledsFonctions.aideBouton = def()
             "En MANUEL, le ruban ne clignote pas : la LED du boitier et la page web signalent toujours une erreur."]
 end
 
-# Pastille d'aide dans le coin du bouton du ruban (page d'accueil) : hors du bouton, un clic ne le bascule pas
+# Pastille d'aide dans le coin du bouton du ruban (page d'accueil), commune avec le ruban virtuel du maitre
 ledsFonctions.scriptAideWeb = def()
-    import string
+    import ledsPanelFonctions
     var r = ledsFonctions.relaisRuban()
     if (r == nil)    return ""    end
-    return "<div id='ldAide' onclick=\"this.style.display='none'\" style='display:none;position:fixed;left:50%;top:15%;transform:translateX(-50%);" +
-           "max-width:360px;z-index:20;text-align:left;padding:10px;border:1px solid var(--c_btn);border-radius:6px;background:var(--c_bg);color:var(--c_txt)'>" +
-           ledsFonctions.aideBouton().concat("<br>") + "</div>" +
-           string.format("<script>(function(){var b=eb('o%i');if(!b)return;var t=b.parentNode;t.style.position='relative';", int(r.find("id", 1))) +
-           "var s=document.createElement('span');s.innerHTML='&#9432;';s.title='Aide du ruban';" +
-           "s.style.cssText='position:absolute;top:2px;right:4px;width:18px;height:18px;line-height:18px;border-radius:50%;font-size:14px;text-align:center;" +
-           "cursor:pointer;z-index:2;background:var(--c_bg);color:var(--c_btn);border:1px solid var(--c_btn)';" +
-           "s.onclick=function(e){e.stopPropagation();var a=eb('ldAide');a.style.display=(a.style.display=='none'?'block':'none');};" +
-           "t.appendChild(s);})();</script>"
+    return ledsPanelFonctions.pastilleAide("o" + str(int(r.find("id", 1))), "ldAide", "Aide du ruban", ledsFonctions.aideBouton())
 end
 
 # Ligne d'etat du ruban (web_sensor) ; 'Auto' renvoie en AUTO par la page (argument ldAuto)

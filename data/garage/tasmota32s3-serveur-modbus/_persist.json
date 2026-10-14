@@ -279,7 +279,9 @@
 							"OFF": 0,
 							"delai": 0
 						},
-						"idModBus": 1
+						"idModBus": 1,
+						"bouton": 0,
+						"appuiLong": 15
 					},
 					"relai2": {
 						"activation": "ON",

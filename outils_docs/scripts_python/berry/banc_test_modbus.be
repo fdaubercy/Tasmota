@@ -25,6 +25,8 @@ var SOURCES = size(global._argv) > 1 ? global._argv[1] : "data/fs"
 # Bouchons des modules natifs/de framework importes par les fonctions testees
 # (crc, persist, gestionFileFolder, tcpFonctions) : 'import' les trouve ici.
 sys.path().push("outils_docs/scripts_python/berry/bouchons_berry")
+# Bouchon de ledsFonctions (section 29), a part : banc_leds.be charge le vrai
+sys.path().push("outils_docs/scripts_python/berry/bouchons_berry/leds")
 
 # --- globaux fournis par le firmware sur l'appareil, bouchonnes ici ---
 var LOG_LEVEL_DEBUG = 3
@@ -515,7 +517,7 @@ modbusFonctions.envoiMsgModbus = def (t, typeMsg, id) envoyes.push(string.format
 # L'ordre de parcours d'une map n'est pas garanti : on compare par presence.
 def resume(l)
   return str(size(l)) + " : cuve=" + str(l.find("2/4/1312/float/1") != nil) + " rideau=" + str(l.find("3/2/160/uint8/1") != nil)
-         + " relai=" + str(l.find("3/1/256/uint8/1") != nil) + " ruban=" + str(l.find("2/3/1376/uint16/4") != nil)
+         + " relai=" + str(l.find("3/1/256/uint8/1") != nil) + " ruban=" + str(l.find("2/3/1376/uint16/5") != nil)
 end
 var m = MaitreReleve()
 m.releveEsclaves()
@@ -1328,7 +1330,7 @@ modules = {"cuve": {"activation": "ON", "environnement": {"relais": {"relai1": {
 light.etat = {"power": true, "bri": 255, "hue": 120, "sat": 128}
 tasmota.retourCmd = {"Scheme": 4}
 tasmota.cmds = []
-verifie("esclave etatRuban -> [teinte, saturation, luminosite, animation]", "[120, 50, 100, 4]", str(modbusFonctions.etatRuban(1376)))
+verifie("esclave etatRuban -> [teinte, saturation, luminosite, animation, mode]", "[120, 50, 100, 4, 0]", str(modbusFonctions.etatRuban(1376)))
 verifie("animation lue par '_Scheme' (aucune publication MQTT)", "['_Scheme']", str(tasmota.cmds))
 var trames28 = []
 modbusFonctions.envoiMsgModbus = def (t, typeMsg, id) trames28.push(modbusFonctions.prepareTrame(t, typeMsg).tohex()) end
@@ -1348,7 +1350,7 @@ modules = {"garage": {"activation": "ON", "environnement": {"relais": {
     "relai1": {"activation": "ON", "nom": "LEDs Cuve", "type": 1376, "virtuel": "ModBus_TasmotaSlaveModBus1", "idModBus": 1, "id": 1, "scheme": 0}}}}}
 var ruban28 = modules["garage"]["environnement"]["relais"]["relai1"]
 var demande28 = maitre.demandeLecture(ruban28, "relais", 2)
-verifie("maitre : relecture du ruban sur 4 registres", "3/1376/4", demande28 == nil ? "nil" : str(demande28["FunctionCode"]) + "/" + str(demande28["StartAddress"]) + "/" + str(demande28["Count"]))
+verifie("maitre : relecture du ruban sur 5 registres", "3/1376/5", demande28 == nil ? "nil" : str(demande28["FunctionCode"]) + "/" + str(demande28["StartAddress"]) + "/" + str(demande28["Count"]))
 var lit03 = def (v)
   modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 2, "FunctionCode": 3, "StartAddress": 1376, "Count": size(v), "type": "uint16"}}
   recoit(2, "ModbusReceived", {"DeviceAddress": 2, "FunctionCode": 3, "Values": v})
@@ -1373,6 +1375,120 @@ verifie("temoin : luminosite non nulle recopiee (40)", "40/ON", str(ruban28.find
 tasmota.setPower = nil
 tasmota.power = sauvePower28
 modbusFonctions.etat()["enVol"] = nil
+drivers = sauveDrivers
+modules = sauveModules
+print("")
+print("=== 29. Ruban : modes AUTO / MANUEL commandes par le maitre, 5e registre (2026-10-13) ===")
+sauveDrivers = drivers
+sauveModules = modules
+var sauveDiverses29 = diverses
+import ledsFonctions                    # bouchon (bouchons_berry/leds)
+var trames29 = []
+modbusFonctions.envoiMsgModbus = def (t, typeMsg, id) trames29.push(modbusFonctions.prepareTrame(t, typeMsg).tohex()) end
+var ecrit29 = def (valeurs)
+  trames29 = []
+  tasmota.cmds = []
+  ledsFonctions.appels = []
+  modbusFonctions.executeCmdModbus({"DeviceAddress": 2, "FunctionCode": 6, "FunctionName": "ECRITURE_REGISTRE_UNIQUE",
+                                    "StartAddress": 1376, "Count": 2, "Values": valeurs})
+end
+# Esclave (id 2), ruban NON gere (pas de drivers.leds) : 0x04 ignore, echo quand meme, aucun Power
+drivers = {"ModBus": {"activation": "ON", "id": 2, "activationReponseCMD": "OFF", "typeComm": {"Serial":"ON"}, "environnement": {}}}
+modules = {"cuve": {"activation": "ON", "environnement": {"relais": {"relai1": {"activation": "ON", "type": 1376, "id": 1, "channel": 0}}}}}
+ecrit29([0x04, 0])
+verifie("temoin ruban non gere : 0x04 sans Power ni appel, echo", "[] / [] / " + trameAvecCrc("020605600400"),
+        str(tasmota.cmds) + " / " + str(ledsFonctions.appels) + " / " + (size(trames29) == 1 ? trames29[0] : str(trames29)))
+verifie("ruban non gere : mode 0 (AUTO)", 0, modbusFonctions.modeRuban())
+# Ruban gere par ledsFonctions
+drivers["leds"] = {"activation": "ON", "environnement": {"leds": {"ruban": {"activation": "ON"}}}}
+ledsFonctions.manuel = false
+ecrit29([0x04, 0])
+verifie("esclave 0x06 [0x04, 0] -> MANUEL + couleur suivante, echo", "[] / ['manuel:maitre ModBus', 'suivante'] / " + trameAvecCrc("020605600400"),
+        str(tasmota.cmds) + " / " + str(ledsFonctions.appels) + " / " + (size(trames29) == 1 ? trames29[0] : str(trames29)))
+ecrit29([0x05, 0])
+verifie("esclave 0x06 [0x05, 0] -> retour AUTO, echo", "[] / ['auto:maitre ModBus'] / " + trameAvecCrc("020605600500"),
+        str(tasmota.cmds) + " / " + str(ledsFonctions.appels) + " / " + (size(trames29) == 1 ? trames29[0] : str(trames29)))
+ecrit29([0x02, 0])
+verifie("esclave 0x06 [0x02, 0] -> Power1 ON + MANUEL", "['Power1 ON'] / ['manuel:maitre ModBus']", str(tasmota.cmds) + " / " + str(ledsFonctions.appels))
+# Mode : 0 = AUTO, n min restantes (1 au moins), 0xFFFF = sans fin
+ledsFonctions.manuel = true
+ledsFonctions.reste = 12
+var m12 = modbusFonctions.modeRuban()
+ledsFonctions.reste = 0
+var m0 = modbusFonctions.modeRuban()
+ledsFonctions.reste = nil
+var mInf = modbusFonctions.modeRuban()
+ledsFonctions.manuel = false
+verifie("modeRuban : 12 min / moins d'une min / sans fin / AUTO", "12/1/65535/0", str(m12) + "/" + str(m0) + "/" + str(mInf) + "/" + str(modbusFonctions.modeRuban()))
+# 5e registre dans la lecture 0x03 ; Count borne a 5
+ledsFonctions.manuel = true
+ledsFonctions.reste = 12
+light.etat = {"power": true, "bri": 255, "hue": 120, "sat": 128}
+tasmota.retourCmd = {"Scheme": 4}
+verifie("esclave etatRuban -> 5 valeurs, mode 12", "[120, 50, 100, 4, 12]", str(modbusFonctions.etatRuban(1376)))
+trames29 = []
+modbusFonctions.executeCmdModbus({"DeviceAddress": 2, "FunctionCode": 3, "FunctionName": "LECTURE_REGISTRES_HOLDER", "StartAddress": 1376, "Count": 5, "Values": []})
+verifie("esclave 0x03 de 5 registres : mode en 5e valeur", trameAvecCrc("02030A00780032006400040" + "00C"), size(trames29) == 1 ? trames29[0] : str(trames29))
+trames29 = []
+modbusFonctions.executeCmdModbus({"DeviceAddress": 2, "FunctionCode": 3, "FunctionName": "LECTURE_REGISTRES_HOLDER", "StartAddress": 1376, "Count": 9, "Values": []})
+verifie("temoin Count 9 : borne a 5 registres", trameAvecCrc("02030A00780032006400040" + "00C"), size(trames29) == 1 ? trames29[0] : str(trames29))
+tasmota.retourCmd = nil
+light.etat = nil
+ledsFonctions.manuel = false
+# Maitre : mode recopie, ordres RubanEsclave, bouton
+drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial":"ON"},
+           "environnement": {"TasmotaSlaveModBus": {"debug": "OFF",
+               "TasmotaSlaveModBus1": {"activation": "ON", "id": 2, "name": "cuve"}}}}}
+modules = {"garage": {"activation": "ON", "environnement": {"relais": {
+    "relai1": {"activation": "ON", "nom": "LEDs Cuve", "type": 1376, "virtuel": "ModBus_TasmotaSlaveModBus1", "idModBus": 1, "id": 1,
+               "scheme": 0, "bouton": 2, "appuiLong": 15},
+    "relai2": {"activation": "ON", "nom": "Porte", "type": 224, "virtuel": "ModBus_TasmotaSlaveModBus1", "idModBus": 1, "id": 2}}}}}
+var ruban29 = modules["garage"]["environnement"]["relais"]["relai1"]
+var sauvePower29 = tasmota.power
+tasmota.power = [false, false]
+lit03([120, 50, 100, 7, 12])
+verifie("maitre : 5e valeur recopiee dans modeRuban", 12, ruban29.find("modeRuban"))
+lit03([120, 50, 100, 7])
+verifie("temoin reponse a 4 valeurs : modeRuban inchange", 12, ruban29.find("modeRuban"))
+modbusFonctions.etat()["enVol"] = nil
+var ordre29 = trameAvecCrc("020605600400")
+var relu29 = trameAvecCrc("020305600005")
+trames29 = []
+maitre.rubanEsclave("RUBANESCLAVE", 1, "suivante", nil)
+verifie("RubanEsclave1 suivante -> 0x06 [0x04, 0] puis relecture", str([ordre29, relu29]), str(trames29))
+trames29 = []
+maitre.rubanEsclave("RUBANESCLAVE", 1, "auto", nil)
+verifie("RubanEsclave1 auto -> 0x06 [0x05, 0]", trameAvecCrc("020605600500"), size(trames29) > 0 ? trames29[0] : "rien")
+trames29 = []
+maitre.rubanEsclave("RUBANESCLAVE", 2, "suivante", nil)
+verifie("temoin RubanEsclave2 (relai ordinaire) : rien envoye", 0, size(trames29))
+# Bouton 2 du maitre : regle a id, SetOption32 regle, gestes
+diverses = {"eviteResetBTN": "ON"}
+tasmota.regles = []
+tasmota.rappels = {}
+tasmota.cmds = []
+tasmota.retourCmd = {"SetOption32": 40, "SetOption1": "ON", "StateText4": "HOLD"}
+maitre.brancheBoutonsRuban()
+verifie("bouton du maitre : regle Button2#Action a id, SetOption32 15", "['+Button2#Action/rubanMaitre2'] / true",
+        str(tasmota.regles) + " / " + str(tasmota.cmds.find("SetOption32 15") != nil))
+tasmota.retourCmd = nil
+var bouton29 = tasmota.rappels.find("rubanMaitre2")
+tasmota.cmds = []
+trames29 = []
+if bouton29 != nil    bouton29("SINGLE", "Button2#Action", {})    end
+verifie("bouton SINGLE -> Power1 TOGGLE (l'esclave suit par 0x06)", "['Power1 TOGGLE'] / 0", str(tasmota.cmds) + " / " + str(size(trames29)))
+trames29 = []
+if bouton29 != nil    bouton29("DOUBLE", "Button2#Action", {})    end
+verifie("bouton DOUBLE -> 0x05 (retour AUTO)", trameAvecCrc("020605600500"), size(trames29) > 0 ? trames29[0] : "rien")
+trames29 = []
+if bouton29 != nil    bouton29("HOLD", "Button2#Action", {})    end
+verifie("bouton HOLD -> 0x04 (couleur suivante)", ordre29, size(trames29) > 0 ? trames29[0] : "rien")
+tasmota.regles = nil
+tasmota.rappels = nil
+tasmota.power = sauvePower29
+modbusFonctions.etat()["enVol"] = nil
+modbusFonctions.envoiMsgModbus = vraiEnvoi
+diverses = sauveDiverses29
 drivers = sauveDrivers
 modules = sauveModules
 print("")

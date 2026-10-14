@@ -1242,6 +1242,12 @@
                     },
                     "scheme": {
                       "type": "integer"
+                    },
+                    "bouton": {
+                      "type": "integer"
+                    },
+                    "appuiLong": {
+                      "type": "integer"
                     }
                   },
                   "required": [

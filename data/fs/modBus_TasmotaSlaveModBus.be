@@ -20,6 +20,8 @@ class MODBUS_TASMOTA_SLAVE : Driver
     var dataJson
     var derniersContacts                # chien de garde : id esclave -> heure du dernier contact
     var esclavesMuets                   # chien de garde : id esclave -> true tant qu'il est muet
+    var texteHold                       # bouton du ruban : libelle de l'appui long (StateText4)
+    var pasDefileRuban                  # bouton du ruban : crans du defilement en cours (garde-fou)
 
     def init()
         import json
@@ -29,6 +31,8 @@ class MODBUS_TASMOTA_SLAVE : Driver
         self.nbIOActivesJSON = nil
         self.derniersContacts = {}
         self.esclavesMuets = {}
+        self.texteHold = "HOLD"
+        self.pasDefileRuban = 0
         # self.idModule = idModule
         self.dataJson = {"TasmotaSlaveModBus": {}}
 
@@ -79,6 +83,8 @@ class MODBUS_TASMOTA_SLAVE : Driver
 			tasmota.add_cmd('HSBCOLOR', def(cmd, idx, payload, payload_json)    self.HSBColor(cmd, idx, payload, payload_json)   end)
 			tasmota.add_cmd('DIMMER', def(cmd, idx, payload, payload_json)  self.Dimmer(cmd, idx, payload, payload_json)   end)
 			tasmota.add_cmd('SCHEME', def(cmd, idx, payload, payload_json)  self.Scheme(cmd, idx, payload, payload_json)   end)
+			tasmota.add_cmd('RUBANESCLAVE', def(cmd, idx, payload, payload_json)  self.rubanEsclave(cmd, idx, payload, payload_json)   end)
+			self.brancheBoutonsRuban()
 		end   
     end
 
@@ -451,6 +457,182 @@ class MODBUS_TASMOTA_SLAVE : Driver
         tasmota.resp_cmnd(string.format("{\"Scheme\":%i}", animation == nil ? memorisee : animation))
     end
 
+    #- Ruban WS2812 d'un esclave : modes AUTO / MANUEL commandes depuis le maitre (2026-10-13).
+       L'esclave gere lui-meme ses modes (ledsFonctions). Le maitre lui envoie des ordres par une
+       ecriture 0x06 au registre du ruban, [code, 0] : 0x04 = couleur suivante de la palette (passe
+       en MANUEL), 0x05 = retour en AUTO. Toute autre commande du maitre (allumage, couleur,
+       animation) passe aussi le ruban en MANUEL. L'esclave renvoie son mode dans le 5e registre de
+       l'etat du ruban (lecture 0x03 et push 0x10), recopie dans le relai sous "modeRuban" :
+       0 = AUTO, n = MANUEL pour encore n min, 0xFFFF = MANUEL sans fin.
+    -#
+    # Rubans virtuels ModBus actifs du persist : [[relai, esclave], ...]
+    def rubansVirtuels()
+        import string
+        var liste = []
+        for cle: modules.keys()
+            if (type(modules[cle]) != "instance" || modules[cle].find("activation", "OFF") != "ON")    continue    end
+            var relais = modules[cle].find("environnement", {}).find("relais")
+            if (type(relais) != "instance")    continue    end
+            for cleRLY: relais.keys()
+                var relai = relais[cleRLY]
+                if (type(relai) != "instance" || relai.find("activation", "OFF") != "ON" || relai.find("type") != 1376)    continue    end
+                var virtuel = str(relai.find("virtuel", "OFF"))
+                if (string.find(virtuel, "ModBus_TasmotaSlaveModBus") != 0 || relai.find("idModBus") == nil)    continue    end
+                var esclave = drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"].find(string.split(virtuel, "_")[1])
+                if (type(esclave) == "instance")    liste.push([relai, esclave])    end
+            end
+        end
+        return liste
+    end
+
+    # [relai, esclave] du ruban virtuel d'id Tasmota 'id' (POWERn), du premier si id == nil, sinon nil
+    def rubanVirtuel(id)
+        for rv: self.rubansVirtuels()
+            if (id == nil || int(rv[0].find("id", 0)) == int(id))    return rv    end
+        end
+        return nil
+    end
+
+    # Ordre 'code' (0x04 / 0x05) au ruban virtuel POWER'id', puis relecture de son etat (mode compris)
+    def commandeRuban(id, code)
+        import string
+        import modbusFonctions
+
+        var rv = self.rubanVirtuel(id)
+        if (rv == nil)    return false    end
+        var relai = rv[0]
+        var trameModBus = {
+                            "DeviceAddress": rv[1]["id"],
+                            "FunctionCode": 6,
+                            "StartAddress": relai["type"] + relai["idModBus"] - 1,
+                            "type": "uint8",
+                            "Count": 1,
+                            "Values": [code, 0]
+                          }
+        self.log(string.format("MODBUS_TASMOTA_SLAVE_RUBAN: %s envoye a l'esclave %i ('%s') !", (code == 0x04 ? "Couleur suivante" : "Retour en AUTO"),
+                               rv[1]["id"], str(relai.find("nom", ""))), LOG_LEVEL_DEBUG)
+        modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["DeviceAddress"])
+        self.relitRuban(relai, "relais", rv[1]["id"])
+        return true
+    end
+
+    # Aide de la commande RUBANESCLAVE, appelee SEULEMENT par diversFonctions.traiteAide
+    def aideRubanEsclave(sujet)
+        if (sujet == nil)
+            return [
+                ["etat", "etat", "mode du ruban de l'esclave : AUTO, ou MANUEL et minutes restantes (idem sans parametre)"],
+                ["auto", "auto", "renvoie le ruban de l'esclave en mode AUTO (couleur fixee par son module)"],
+                ["suivante", "suivante", "couleur suivante de la palette de l'esclave (le passe en MANUEL)"]
+            ]
+        end
+        return nil
+    end
+
+    #- Exemples:
+        RubanEsclave1 suivante   => couleur suivante sur le ruban du relai virtuel POWER1
+        RubanEsclave1 auto       => retour en AUTO (la cuve recolore selon le niveau)
+    -#
+    def rubanEsclave(cmd, idx, payload, payload_json)
+        import string
+        import diversFonctions
+
+        if diversFonctions.traiteAide("RUBANESCLAVE", payload, / s -> self.aideRubanEsclave(s), true)    return    end
+
+        if (self.rubanVirtuel(idx) == nil)
+            tasmota.resp_cmnd(string.format("{\"RubanEsclave%i\":\"erreur : POWER%i n'est pas un ruban virtuel ModBus\"}", idx, idx))
+            return
+        end
+        var ordre = string.tolower(payload == nil ? "" : str(payload))
+        if (ordre == "auto")
+            self.commandeRuban(idx, 0x05)
+        elif (ordre == "suivante")
+            self.commandeRuban(idx, 0x04)
+        end
+
+        # Mode connu au dernier etat recu : un ordre n'y apparait qu'a la relecture
+        var mode = self.rubanVirtuel(idx)[0].find("modeRuban")
+        var texte = (mode == nil ? "inconnu" : (int(mode) == 0 ? "AUTO" : "MANUEL"))
+        var reste = ((mode == nil || int(mode) == 0 || int(mode) == 0xFFFF) ? "null" : str(int(mode)))
+        tasmota.resp_cmnd(string.format("{\"RubanEsclave%i\":{\"Mode\":\"%s\",\"Reste\":%s%s}}", idx, texte, reste,
+                                        (ordre == "auto" || ordre == "suivante") ? ",\"Ordre\":\"" + ordre + "\"" : ""))
+    end
+
+    # Bouton du maitre pour le ruban d'un esclave : relai virtuel 1376 portant "bouton": n > 0.
+    # Memes gestes que sur l'esclave : SINGLE = allume / eteint (POWERn ; l'esclave passe en MANUEL),
+    # DOUBLE = retour en AUTO, appui long = couleur suivante, puis une couleur toutes les 'appuiLong'
+    # dixiemes de s jusqu'au relachement (CLEAR). Regle a id : coexiste avec celle de configDevices.
+    def brancheBoutonsRuban()
+        for rv: self.rubansVirtuels()
+            var bouton = int(rv[0].find("bouton", 0))
+            if (bouton > 0)    self.brancheBoutonRuban(int(rv[0]["id"]), bouton, int(rv[0].find("appuiLong", 15)))    end
+        end
+    end
+
+    def brancheBoutonRuban(id, bouton, appuiLong)
+        import string
+        tasmota.add_rule(string.format("Button%i#Action", bouton), def(value, trigger, msg) self.actionBoutonRuban(id, appuiLong, value) end, "rubanMaitre" + str(bouton))
+        self.regleBoutonRuban(appuiLong)
+        self.log(string.format("MODBUS_TASMOTA_SLAVE_RUBAN: Bouton %i branche sur le ruban POWER%i !", bouton, id), LOG_LEVEL_DEBUG)
+    end
+
+    # Duree de l'appui long (SetOption32), SetOption1 ON (un appui tres long ne reinitialise plus la
+    # carte, inscrit dans le persist par eviteResetBTN), libelle de l'appui long. Comme ledsFonctions.regleBouton.
+    def regleBoutonRuban(appuiLong)
+        import string
+        import persist
+
+        if (int(tasmota.cmd("SetOption32", boolMute).find("SetOption32", 0)) != appuiLong)
+            tasmota.cmd(string.format("SetOption32 %i", appuiLong), boolMute)
+            self.log(string.format("MODBUS_TASMOTA_SLAVE_RUBAN: Appui long regle a %i dixiemes de s (SetOption32) !", appuiLong), LOG_LEVEL_INFO)
+        end
+        if (diverses.find("eviteResetBTN", "OFF") != "ON")
+            diverses["eviteResetBTN"] = "ON"
+            persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien
+            self.log("MODBUS_TASMOTA_SLAVE_RUBAN: eviteResetBTN ON inscrit dans le persist (SetOption1) !", LOG_LEVEL_INFO)
+        end
+        if (tasmota.cmd("SetOption1", boolMute).find("SetOption1") != "ON")
+            tasmota.cmd("SetOption1 ON", boolMute)
+            self.log("MODBUS_TASMOTA_SLAVE_RUBAN: SetOption1 ON : un appui tres long ne reinitialise plus la carte !", LOG_LEVEL_INFO)
+        end
+        var texte = tasmota.cmd("StateText4", boolMute)
+        if (type(texte) == "instance" && texte.find("StateText4") != nil)    self.texteHold = str(texte["StateText4"])    end
+    end
+
+    # Regle Button<n>#Action : SINGLE / DOUBLE / HOLD (StateText4) / CLEAR (relachement apres HOLD)
+    def actionBoutonRuban(id, appuiLong, value)
+        import string
+
+        var action = string.toupper(str(value))
+        self.log(string.format("MODBUS_TASMOTA_SLAVE_RUBAN: Bouton du ruban POWER%i : %s !", id, action), LOG_LEVEL_DEBUG)
+        if (action == "SINGLE")
+            tasmota.cmd(string.format("Power%i TOGGLE", id), boolMute)
+        elif (action == "DOUBLE")
+            tasmota.remove_timer("rubanMaitreDefile")
+            self.commandeRuban(id, 0x05)
+        elif (action == string.toupper(self.texteHold))
+            self.commandeRuban(id, 0x04)
+            self.defileRuban(id, appuiLong)
+        elif (action == "CLEAR")
+            tasmota.remove_timer("rubanMaitreDefile")
+        end
+    end
+
+    # Bouton tenu : une couleur suivante toutes les 'appuiLong' dixiemes de s
+    def defileRuban(id, appuiLong)
+        var periode = appuiLong * 100
+        self.pasDefileRuban = 0
+        tasmota.remove_timer("rubanMaitreDefile")
+        var cran
+        cran = def()
+            self.pasDefileRuban += 1
+            # Garde-fou : 16 crans (2 tours de la palette de 8) sans relachement recu -> arret
+            if (self.pasDefileRuban > 16)    return    end
+            self.commandeRuban(id, 0x04)
+            tasmota.set_timer(periode, cran, "rubanMaitreDefile")
+        end
+        tasmota.set_timer(periode, cran, "rubanMaitreDefile")
+    end
+
     # Relecture d'un ruban WS2812 juste apres une ecriture 0x10 (2026-10-11). La reponse standard
     # a une 0x10 ne porte aucune valeur, et le pont ModBus natif refuse la fonction 0x17
     # (ecriture + lecture) : la lecture 0x03 part donc derriere l'ecriture, dans la meme file,
@@ -783,7 +965,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                                     logFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_ECART: relai n°%i (%s) : commande=%s, constate=%s",
                                                                       device["id"], nameTasmotaSlaveModBus, device.find("etat", "OFF"), valeur), LOG_LEVEL_ERREUR, "slaveModbus")
                                                 end
-                                            # Ruban WS2812 (1376, 2026-10-11) : lecture 0x03 = [teinte, saturation, luminosite, animation],
+                                            # Ruban WS2812 (1376, 2026-10-11) : lecture 0x03 = [teinte, saturation, luminosite, animation, mode],
                                             # echelle HSBColor (modbusFonctions.etatRuban). L'esclave est maitre de son ruban
                                             # (la cuve le colore selon le niveau) : le maitre RECOPIE l'etat lu, y compris
                                             # 'etat', sans ecart a journaliser.
@@ -810,6 +992,9 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                                 device["saturation"] = int(vals[1])
                                                 device["value"] = luminosite
                                                 device["scheme"] = animation
+                                                # Mode (5e registre, 2026-10-13) : 0 = AUTO, n = MANUEL encore n min, 0xFFFF = sans fin.
+                                                # Absent d'un esclave pas encore a jour : cle absente, la page n'affiche pas de mode.
+                                                if (size(vals) >= 5)    device["modeRuban"] = int(vals[4])    end
                                                 device["etat"] = valeur
                                                 device["etatConstate"] = valeur
                                                 device["constateA"] = tasmota.rtc()["local"]
@@ -1070,12 +1255,13 @@ class MODBUS_TASMOTA_SLAVE : Driver
         elif (famille == "relais" && (device["type"] == 224 || device["type"] == 256))
             trame["FunctionCode"] = 0x01
             trame["type"] = "uint8"
-        # Ruban WS2812 (1376, 2026-10-11) : lecture 0x03 de 4 registres, l'etat REEL du ruban
-        # [teinte, saturation, luminosite, animation] a l'echelle HSBColor (modbusFonctions.etatRuban).
+        # Ruban WS2812 (1376, 2026-10-11) : lecture 0x03 de 5 registres, l'etat REEL du ruban
+        # [teinte, saturation, luminosite, animation, mode] a l'echelle HSBColor (modbusFonctions.etatRuban).
+        # Un esclave pas encore a jour en renvoie au moins 3 (il borne Count) : voir recupereReponseModBus.
         elif (famille == "relais" && device["type"] == 1376)
             trame["FunctionCode"] = 0x03
             trame["type"] = "uint16"
-            trame["Count"] = 4
+            trame["Count"] = 5
         elif (famille == "analogiques" || famille == "compteurs")
             trame["FunctionCode"] = 0x04
             trame["type"] = "uint32"

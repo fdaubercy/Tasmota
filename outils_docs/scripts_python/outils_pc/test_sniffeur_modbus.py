@@ -156,6 +156,15 @@ def test_decodeur():
     verifie(("PUSH" in r, "'Une seule couleur'" in r), (True, True), "ruban : push a 4 valeurs")
     verifie("PUSH" in dm.decode(dm.lit_texte("ModbusPushUDP 5 0310 00A0 0001 02 00FF E7D0"), None, CARTE, TYPES)["metier"],
             True, "push UDP colle depuis un log")
+    # Modes AUTO / MANUEL (2026-10-13) : ordres 0x06 [04|05, 00], 5e registre = mode
+    verifie("couleur suivante" in decode("02 06 05 60 04 00")["metier"], True, "ruban : 04 = couleur suivante")
+    verifie("retour en mode AUTO" in decode("02 06 05 60 05 00")["metier"], True, "ruban : 05 = retour AUTO")
+    verifie("ni 01 a 05" in decode("02 06 05 60 06 00")["metier"], True, "TEMOIN : ruban 06 = octet fort inconnu")
+    verifie("mode AUTO/MANUEL" in decode("02 03 05 60 00 05")["metier"], True, "ruban : releve a 5 registres")
+    verifie("sans le mode" in decode("02 03 05 60 00 04")["metier"], True, "ruban : releve a 4 registres (maitre pas a jour)")
+    r = decode("02 03 0A 00 78 00 32 00 64 00 04 00 0C", "02 03 05 60 00 05")["metier"]
+    verifie("mode MANUEL (encore 12 min)" in r, True, "ruban : reponse a 5 registres, MANUEL 12 min")
+    verifie("mode AUTO" in decode("02 03 0A 00 78 00 32 00 64 00 04 00 00", "02 03 05 60 00 05")["metier"], True, "ruban : mode 0 = AUTO")
     verifie(decode("03 83 02", "03 03 00 01 00 01")["nature"], "exception", "exception")
     verifie("non vue" in decode("03 01 01 01")["metier"], True, "reponse sans sa requete")
     verifie(dm.decode(bytes.fromhex("010600010100D99B"), None, CARTE, TYPES)["nature"], "ko", "TEMOIN : CRC faux")
@@ -257,7 +266,11 @@ def test_emulation():
     verifie(emu.reponse(c("02 03 05 60 00 03")), c("02 03 06 00 00 00 00 00 64"), "ruban : 3 registres pour un ancien maitre")
     emu.modifie(2, 1376, "scheme", "4")
     verifie(emu.reponse(c("02 03 05 60 00 04"))[9:11], bytes((0, 4)), "ruban : animation editable")
-    verifie(emu.reponse(c("02 06 05 60 05 00")), None, "TEMOIN : ruban, octet fort inconnu -> silence")
+    verifie(emu.reponse(c("02 06 05 60 06 00")), None, "TEMOIN : ruban, octet fort inconnu -> silence")
+    verifie(emu.reponse(c("02 03 05 60 00 05"))[11:13], bytes((0, 30)), "ruban : commande du maitre -> MANUEL 30 min (5e registre)")
+    verifie(emu.reponse(c("02 06 05 60 05 00")), c("02 06 05 60 05 00"), "ruban : retour AUTO, echo")
+    verifie(emu.reponse(c("02 03 05 60 00 09"))[2:3] + emu.reponse(c("02 03 05 60 00 05"))[11:13], bytes((10, 0, 0)),
+            "ruban : Count borne a 5, mode AUTO apres 05")
     cuve = [e for e in emu.etat() if e["id"] == 2][0]
     ligne = [a for a in cuve["appareils"] if a["registre"] == 1376][0]
     verifie((ligne["champ"], ligne["allume"], ligne["scheme"]), ("hsb", "ON", 4), "ruban : etat pour la page")

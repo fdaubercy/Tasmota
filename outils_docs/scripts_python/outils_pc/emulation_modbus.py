@@ -11,9 +11,11 @@ Les esclaves emulables sont ceux du persist du maitre (decodeur_modbus.charge_ca
       0x05 FF00 = Power ON ; 0x06 octet fort 02 = Power ON, 01 = OFF, octet faible = delai (s) avant
            inversion. Echo de la requete.
       LEDs WS2812 (1376, modbusFonctions.etatRuban, 2026-10-11) : 0x03 -> [teinte, saturation,
-           luminosite (0 si eteint), animation], 3 registres si la requete en demande moins de 4 ;
-           0x06 octet fort 02/01 = Power ON/OFF, 03 = animation (octet faible, Scheme) ;
-           0x10 [teinte, saturation, luminosite (, animation)].
+           luminosite (0 si eteint), animation, mode], autant de registres que demande (3 a 5) ;
+           0x06 octet fort 02/01 = Power ON/OFF, 03 = animation (octet faible, Scheme),
+           04 = couleur suivante, 05 = retour AUTO ; 0x10 [teinte, saturation, luminosite (, animation)].
+           Mode (2026-10-13) : 0 = AUTO ; toute commande du maitre le passe a 30 (MANUEL, 30 min),
+           05 le remet a 0. La couleur suivante n'est pas emulee (seul le mode change).
     Un registre inconnu ne recoit AUCUNE reponse (l'esclave reel journalise et se tait).
 Valeurs editables depuis la page (choix du 2026-10-06) ; les commandes recues les mettent a jour.
 Le SwitchMode utilise est celui de la copie du maitre : la page montre donc l'etat que le maitre lira.
@@ -118,16 +120,18 @@ class EsclaveEsp32Emule:
         """Ruban WS2812 : comme modbusFonctions.executeCmdModbus + etatRuban cote esclave."""
         fc = trame[1]
         if fc == 3:
-            nb = 4 if (trame[4] << 8 | trame[5]) >= 4 else 3
-            mots = [a["hsb"][0], a["hsb"][1], a["hsb"][2] if a["allume"] else 0, a["scheme"]][:nb]
+            nb = min(5, max(3, trame[4] << 8 | trame[5]))
+            mots = [a["hsb"][0], a["hsb"][1], a["hsb"][2] if a["allume"] else 0, a["scheme"], a.get("mode", 0)][:nb]
             return rs.avec_crc(bytes((self.id, 3, 2 * nb)) + b"".join(m.to_bytes(2, "big") for m in mots))
-        if fc == 6 and len(trame) == 8 and trame[4] in (1, 2, 3):
+        if fc == 6 and len(trame) == 8 and trame[4] in (1, 2, 3, 4, 5):
             if trame[4] == 3:
                 a["scheme"] = trame[5]
-            else:
+            elif trame[4] in (1, 2):
                 a["allume"] = trame[4] == 2
+            a["mode"] = 0 if trame[4] == 5 else 30
             return bytes(trame)
         if fc == 16 and len(trame) >= 15:
+            a["mode"] = 30
             mots = [trame[7 + 2 * k] << 8 | trame[8 + 2 * k] for k in range(min(4, (len(trame) - 9) // 2))]
             a["hsb"], a["allume"] = mots[:3], mots[2] > 0
             if len(mots) >= 4:

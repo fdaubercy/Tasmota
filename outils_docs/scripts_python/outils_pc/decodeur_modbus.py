@@ -301,10 +301,18 @@ def _animation(n):
     return f"animation {n} '{ANIMATIONS.get(n, 'inconnue')}' (Scheme {n})"
 
 
+def _mode(m):
+    """5e registre du ruban (modbusFonctions.modeRuban, 2026-10-13) : 0 = AUTO, n = MANUEL n min, 0xFFFF = sans fin."""
+    if m == 0:
+        return "mode AUTO"
+    return "mode MANUEL sans fin" if m == 0xFFFF else f"mode MANUEL (encore {m} min)"
+
+
 def _hsb(mots):
-    """[teinte, saturation, luminosite (, animation)] du ruban -> texte."""
+    """[teinte, saturation, luminosite (, animation (, mode))] du ruban -> texte."""
     texte = f"couleur (teinte) {mots[0]}, saturation {mots[1]}, luminosite {mots[2]} (HSBColor)"
-    return texte + (f", {_animation(mots[3])}" if len(mots) >= 4 else "")
+    texte += f", {_animation(mots[3])}" if len(mots) >= 4 else ""
+    return texte + (f", {_mode(mots[4])}" if len(mots) >= 5 else "")
 
 
 def _maitre(a):
@@ -345,7 +353,8 @@ def _esp32(e, fc, nat, d, reg, regs, types):
         if nat == "requete":
             nb = d[2] << 8 | d[3]
             return (f"releve de l'etat du {desc} : {nb} registre(s), teinte, saturation, luminosite"
-                    + (", animation" if nb >= 4 else " (sans l'animation : maitre pas a jour)") + _maitre(a))
+                    + (", animation, mode AUTO/MANUEL" if nb >= 5 else ", animation (sans le mode : maitre pas a jour)" if nb == 4
+                       else " (sans l'animation : maitre pas a jour)") + _maitre(a))
         mots = [m for _, m, _ in regs]
         return (f"{desc} : " + (_hsb(mots) if len(mots) >= 3 else f"mots {mots}") + _maitre(a)
                 + (", animation non lue (3 registres demandes : maitre pas a jour)" if len(mots) == 3 else ""))
@@ -353,8 +362,11 @@ def _esp32(e, fc, nat, d, reg, regs, types):
         return f"{'Accuse : ' if nat == 'reponse' else ''}Power{_id_relai(reg)} {'ON' if d[2] == 0xFF else 'OFF'}{_maitre(a)}"
     if fc == 6 and len(d) == 4 and base == 1376 and d[2] == 3:    # animation du ruban (Scheme)
         return f"{'Accuse : ' if nat == 'reponse' else ''}{desc} -> {_animation(d[3])}{_maitre(a)}"
+    if fc == 6 and len(d) == 4 and base == 1376 and d[2] in (4, 5):    # ordres du maitre (2026-10-13)
+        ordre = "couleur suivante de la palette (passe en MANUEL)" if d[2] == 4 else "retour en mode AUTO"
+        return f"{'Accuse : ' if nat == 'reponse' else ''}{desc} -> {ordre}{_maitre(a)}"
     if fc == 6 and len(d) == 4:
-        attendus = "ni 01 ni 02 ni 03" if base == 1376 else "ni 01 ni 02"
+        attendus = "ni 01 a 05" if base == 1376 else "ni 01 ni 02"
         power = {2: "ON", 1: "OFF"}.get(d[2], f"? (octet fort {d[2]:02X} : {attendus})")
         texte = f"{'Accuse : ' if nat == 'reponse' else ''}{desc} -> Power{_id_relai(reg)} {power}{_maitre(a)}"
         if d[3]:

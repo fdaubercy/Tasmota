@@ -174,10 +174,10 @@
 						}
 					},
 					"bouton2": {
-						"activation": "OFF",
-						"nom": "Bouton 2",
+						"activation": "ON",
+						"nom": "Bouton ruban cuve",
 						"id": 2,
-						"pin": -1,
+						"pin": 22,
 						"type": 32,
 						"virtuel": "OFF",
 						"SwitchMode": 2,
@@ -283,7 +283,9 @@
 							"OFF": 0,
 							"delai": 0
 						},
-						"idModBus": 1
+						"idModBus": 1,
+						"bouton": 2,
+						"appuiLong": 15
 					},
 					"relai2": {
 						"activation": "ON",

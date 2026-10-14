@@ -353,7 +353,9 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     (-> `outils_docs/CARTE_MODULES_BERRY.md`), `genere_schema_persist.py`
     (-> `outils_docs/schemas/persist.schema.json`), `gen_tapp.py`, et les bancs
     `banc_test_modbus.{py,be}`, `banc_leds.{py,be}` (ruban AUTO/MANUEL, bouton, LED du dev-kit),
-    `test_discovery.be` avec leurs `bouchons_berry/`.
+    `test_discovery.be` avec leurs `bouchons_berry/` (`bouchons_berry/leds/` : bouchon de
+    `ledsFonctions`, ajoute par le seul banc ModBus ; dans `bouchons_berry/`, il masquerait le vrai
+    module a `banc_leds`).
   - `maintenance/` — `synchronise_fork_tasmota.py` (synchro du fork : merge, jamais de force-push),
     `synchronise_upstream_tasmota.py` (variante rebase), `corrige_reglages_vscode.py` (pose et
     prouve les reglages VS Code du PermissionError).

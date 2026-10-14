@@ -601,3 +601,31 @@ reste 0.
 - Bancs : `banc_test_modbus.be` §26 (temoin : esclave sans sentinelle -> 2 echecs),
   `test_sniffeur_modbus.py` `test_decodeur`. **Pas encore observe sur la carte.**
 
+
+### Ruban WS2812 d'un esclave — registre 1376, modes AUTO / MANUEL (2026-10-13)
+
+Le ruban de la cuve est **gere par l'esclave** (`ledsFonctions`) : en AUTO sa couleur suit le
+niveau, en MANUEL elle est figee (30 min par defaut, ou jusqu'au double appui). Le maitre P4 le
+commande sans lui retirer cette gestion.
+
+- **Lecture 0x03, 5 registres** (`modbusFonctions.etatRuban`) : teinte 0-360, saturation 0-100,
+  luminosite 0-100 (0 = eteint), animation 0-14, **mode** (0 = AUTO, n = MANUEL encore n min,
+  `0xFFFF` = MANUEL sans fin). L'esclave rend autant de registres que demande, borne a 3..5 :
+  un maitre pas a jour (3 ou 4) reste compris. Meme contenu dans le push 0x10 (`surveilleRubans`) :
+  le mode decroissant d'une minute, il part une fois par minute en MANUEL.
+- **Ecriture 0x06, `[code, 0]`** : 01/02 = Power OFF/ON, 03 = animation (octet faible),
+  **04 = couleur suivante** de la palette, **05 = retour en AUTO**. 04/05 ne touchent pas a Power et
+  sont renvoyes en echo. Toute commande du maitre (01/02/03/04, 0x05 coil, 0x10 HSBColor) passe
+  le ruban en MANUEL (`modbusFonctions.actionRubanMaitre`) ; sans ruban gere
+  (`drivers.leds.environnement.leds.ruban` OFF) elle s'execute sans mode, et 04/05 sont journalises
+  en `erreur` puis ignores.
+- **Maitre** (`modBus_TasmotaSlaveModBus`) : le mode est recopie dans le relai virtuel
+  (`modeRuban`). Commande `RubanEsclave<n> etat|auto|suivante` (n = POWERn du ruban), suivie d'une
+  relecture 0x03. Bouton du maitre : cle `"bouton": <n>` du relai virtuel (P4 : Button2, GPIO22),
+  appui court = `Power<n> TOGGLE`, double = 05, appui long = 04 puis une couleur toutes les
+  `appuiLong` dixiemes de s jusqu'au relachement (16 crans au plus). Page du maitre
+  (`ledsPanelFonctions`) : ligne du mode sous les curseurs, boutons *Couleur suivante* / *Auto*,
+  pastille d'aide dans le coin du bouton du relai.
+- Bancs : `banc_test_modbus.be` §29 (temoin : 05 traite en MANUEL, mode non recopie -> 3 echecs),
+  `test_sniffeur_modbus.py` (decodeur et emulation). **Pas encore observe sur la carte** : la cuve
+  et le P4 doivent etre televerses ensemble.
