@@ -385,12 +385,32 @@ def rs485():
     return nom
 
 
+# Fusible rearmable radial Bourns MF-R (2026-10-14) : KiCad 10 n'a pas de modele 3D pour
+# l'empreinte Fuse:Fuse_Bourns_MF-RHT050 (F1/F2 invisibles en revue 3D et dans le STEP du
+# boitier). Corps = contour F.Fab de l'empreinte (7,4 x 3,0) ; hauteur MF-R050 = 12,7 max
+# d'apres memoire de la fiche Bourns : A VERIFIER. Le generateur de carte l'affecte a F1/F2.
+PTC_MF_R = {"hauteur": (12.7, "fiche Bourns MF-R050 (hauteur max) - a verifier"),
+            "pied": (1.0, "pattes coudees sous le corps - a verifier")}
+
+
+def ptc_radial():
+    nom = "PTC_Bourns_MF-R_radial"
+    st = Step(nom)
+    h, pied = v(PTC_MF_R, "hauteur"), v(PTC_MF_R, "pied")
+    for x, y in ((0.0, 0.0), (5.1, 1.2)):                    # pattes, a l'aplomb des pastilles
+        st.boite(x - 0.3, y - 0.3, 0.0, x + 0.3, y + 0.3, pied, (0.75, 0.75, 0.75))
+    st.boite(-1.15, -0.9, pied, 6.25, 2.1, h, (0.85, 0.65, 0.10))   # corps jaune
+    st.ecrit(MODELES / f"{nom}.step")
+    return nom
+
+
 def main():
     BIBLIO.mkdir(exist_ok=True)
     MODELES.mkdir(exist_ok=True)
     noms = [devkit(k) for k in ENTRAXES] + [ads1115(), rs485()]
     for n in noms:
         print("ecrit :", BIBLIO.name + "/" + n + ".kicad_mod", "+", MODELES.name + "/" + n + ".step")
+    print("ecrit :", MODELES.name + "/" + ptc_radial() + ".step (modele seul, pour l'empreinte Fuse_Bourns_MF-RHT050)")
     reste = a_mesurer(DEVKIT, ADS, RS485, EMPILEMENT)
     print(f"{len(reste)} cote(s) encore a mesurer :", ", ".join(reste))
 

@@ -230,14 +230,17 @@ class Routeur:
         cel = [(int(j) + ys.start) * self.nx + int(i) + xs.start for j, i in zip(jj, ii)]
         return [l * self.N + c for l in couches for c in cel]
 
-    def route_net(self, nom, largeur):
-        if nom in self.deja:                        # deja traite par Freerouting
+    def route_net(self, nom, largeur, refs=None):
+        """Arbre du net `nom`. `refs` (ex. ("LED1", "LED2", "LED3") ou ("C9", "A1.22")) : seulement
+        ces composants ou ces pastilles - une masse locale routee AVANT les signaux, que ceux-ci ne peuvent plus
+        enfermer dans une poche du plan (cuve v0.2, 2026-10-14)."""
+        if refs is None and nom in self.deja:       # deja traite par Freerouting
             return self.deja[nom]
         ni = self.c.nets.get(nom)
         if ni is None:
             return True
         code = ni.GetNetCode()
-        pads = [o for o in self.obst_pads if o[2] == code]
+        pads = [o for o in self.obst_pads if o[2] == code and (refs is None or self._retenue(o[3], refs))]
         if len(pads) < 2:
             return True
         m = self.carte(largeur / 2).reshape(2, -1)
@@ -264,6 +267,12 @@ class Routeur:
             arbre.update(cellules[idx])
             reste.remove(idx)
         return True
+
+    @staticmethod
+    def _retenue(pad, refs):
+        """Pastille designee par `refs` : composant entier ("C9") ou pastille seule ("A1.22")."""
+        ref = pad.GetParentFootprint().GetReference()
+        return ref in refs or f"{ref}.{pad.GetNumber()}" in refs
 
     def _centre(self, o):
         f = o[1]
@@ -406,6 +415,31 @@ class Routeur:
         journal(f"{n} vias de couture {nom}")
         return n
 
+    def vias_pres(self, nom, points, rayon=2.0, journal=print):
+        """Un via du net `nom` au plus pres de chaque point (x, y) en repere carte, dans `rayon`
+        mm, la ou la place est libre sur les 2 faces : masse d'un regulateur et de ses
+        condensateurs, que les plans seuls laissent trouee (cuve v0.2, 2026-10-14).
+        A appeler APRES le routage, avant coutures()."""
+        ni = self.c.nets[nom]
+        code = ni.GetNetCode()
+        n, r = 0, int(rayon / self.pas)
+        for px, py in points:
+            vm = self.carte(self.via_d / 2 + 0.3)        # recalculee : le via precedent compte
+            ic, jc = round(px / self.pas), round(py / self.pas)
+            cand = sorted(((i - ic) ** 2 + (j - jc) ** 2, i, j)
+                          for j in range(max(jc - r, 0), min(jc + r + 1, self.ny))
+                          for i in range(max(ic - r, 0), min(ic + r + 1, self.nx))
+                          if (i - ic) ** 2 + (j - jc) ** 2 <= r * r)
+            for _, i, j in cand:
+                if vm[0, j, i] == 0 and vm[1, j, i] == 0:
+                    self._via(i * self.pas, j * self.pas, ni, code)
+                    n += 1
+                    break
+            else:
+                journal(f"pas de place pour un via {nom} pres de ({px:.2f} ; {py:.2f})")
+        journal(f"{n} via(s) {nom} de proximite")
+        return n
+
     def _arrache(self):
         for it in self.items:
             self.board.Remove(it)
@@ -413,13 +447,18 @@ class Routeur:
         self.obst = list(self.obst_fixes)
 
     def route_tout(self, nets, passes=10, journal=print):
-        """nets : [(nom, largeur_mm)] dans l'ordre de priorite. Rend la liste des echecs."""
+        """nets : [(nom, largeur_mm)] ou [(nom, largeur_mm, refs)] (sous-arbre, voir route_net),
+        dans l'ordre de priorite. Rend la liste des echecs."""
         if self.moteur == "freerouting":
             from routeur_freerouting import route_freerouting
             return route_freerouting(self, nets, journal=journal)
         ordre, meilleur = list(nets), None
+
+        def nom(x):
+            return x[0] + ("@" + ",".join(x[2]) if len(x) > 2 and x[2] else "")
+
         for p in range(passes):
-            echecs = [n for n, w in ordre if not self.route_net(n, w)]
+            echecs = [nom(x) for x in ordre if not self.route_net(*x)]
             journal(f"passe {p + 1} : {len(ordre) - len(echecs)}/{len(ordre)} nets routes"
                     + (f", echecs : {', '.join(echecs)}" if echecs else ""))
             if meilleur is None or len(echecs) < len(meilleur[1]):
@@ -427,8 +466,8 @@ class Routeur:
             if not echecs:
                 return []
             self._arrache()
-            ordre = [x for x in ordre if x[0] in echecs] + [x for x in ordre if x[0] not in echecs]
+            ordre = [x for x in ordre if nom(x) in echecs] + [x for x in ordre if nom(x) not in echecs]
         self._arrache()
-        echecs = [n for n, w in meilleur[0] if not self.route_net(n, w)]
+        echecs = [nom(x) for x in meilleur[0] if not self.route_net(*x)]
         journal(f"retenu : {len(meilleur[0]) - len(echecs)}/{len(meilleur[0])} nets routes")
         return echecs

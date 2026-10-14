@@ -192,3 +192,25 @@ génération de carte. Format : symptôme → cause vérifiée → parade (déj�
     (204 × 166 mm au lieu de 103 × 100). Filtrer aussi les formes sans solide (boîte invalide
     de ±1e100). Cuve v0.1 : 103,1 × 100 × 19,7 mm, DevKit le plus haut, queues −2,3 mm.
     Sans IHM : `"%LOCALAPPDATA%\Programs\FreeCAD 1.1\bin\FreeCADCmd.exe" script.py` (~40 s).
+
+## Placement de la cuve v0.2 (2026-10-14)
+
+55. **Une résistance debout (`R_Axial_DIN0207_..._P2.54mm_Vertical`) a 5,09 × 3,0 mm d'emprise** :
+    trois résistances alignées sous trois LED 3 mm au pas de 5,08 se chevauchent de 0,01 mm.
+    → Écarter les LED à 6,35 mm. C'est ce qui a permis de sortir R11-R13 de dessous l'ADS1115, dans
+    une bande de 3,4 mm entre les LED et le module.
+56. **Le DRC « 0 » de la v0.1 datait des PinSocket génériques** (piège 52) : après le passage aux
+    empreintes Modules_Tasmota, la carte enregistrée portait 9 erreurs (D1/U1 sous le DevKit,
+    R11-R13 sous l'ADS1115). Avant de modifier une carte, relancer son DRC tel quel : ne pas se fier
+    au dernier verdict noté. Outil : lister les emprises F.CrtYd en repère carte (origine 100 ; 50)
+    en lisant le texte du `.kicad_pcb` (pcbnew.LoadBoard plante, piège 1).
+57. **Îlot de masse enfermé par les signaux** (cuve v0.2) : la masse en pistes vient en dernier
+    (piège 16) ; entre-temps les signaux encerclent une zone sur les **deux** faces, et le plan s'y
+    découpe en un morceau sans lien. Cas vus : cathode de LED2 (pistes RS485/LED), et C9 + J14.2
+    entre les barrettes J9/J14 et le DevKit - le filtre du bouton n'avait plus de 0V. Le DRC dit
+    seulement « Zone F.Cu | Zone B.Cu » sans position → `scripts/connexite_masse.py`. Parade :
+    router d'abord une masse locale, `("GND", 0.5, ("C9", "J14", "A1.22"))` en tête de
+    `NETS_ROUTAGE` (composant entier ou pastille `REF.n`).
+58. Un via de proximité (`vias_pres`) ne trouve souvent pas de place contre un régulateur cerné
+    de pistes : la vraie parade est de rapprocher le condensateur (C3 sous U1 : boucle d'entrée
+    11 → 3,65 mm) et de laisser la masse locale en pistes faire le lien.

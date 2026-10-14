@@ -45,11 +45,12 @@ Chemins (commandes lancées depuis la racine du dépôt) :
 
 - `scripts/kicad_gen.py` (`Schema`) et `scripts/kicad_carte.py` (`Carte`, `empreinte_libre`,
   `reperes`, `cadre`, `zone`, `interdiction`, `enregistre`) ; `scripts/routeur_grille.py`
-  (`route_tout`, `route_net`, `coutures` ; `poids=2` = essai rapide à vérifier par le DRC ;
+  (`route_tout`, `route_net`, `coutures`, `vias_pres` ; entrée `("GND", 0.5, ("C9", "A1.22"))` =
+  masse locale routée avant les signaux ; `poids=2` = essai rapide à vérifier par le DRC ;
   `moteur="freerouting"` ou `PCB_ROUTEUR=freerouting` pour une carte que la grille ne finit pas,
   outils : `scripts/routeur_freerouting.py --verifier | --installer`) ; `scripts/inventaire_materiel.py` ;
   `scripts/export_fabrication.py`, `scripts/revue_3d.py`, `scripts/bilan_alimentation.py`,
-  `scripts/export_boitier.py`
+  `scripts/export_boitier.py`, `scripts/connexite_masse.py` (situe un îlot de masse que le DRC ne situe pas)
   (`--help`) ; consommations par défaut sourcées : `references/consommations.json`.
 - `assets/Signature_Auteur.pretty` : signature « Frédéric - Au Bonheur des Asturies » + logo
   (croix asturienne), **sur chaque carte** (verso par défaut) ; `assets/generer_logo.py` la régénère.

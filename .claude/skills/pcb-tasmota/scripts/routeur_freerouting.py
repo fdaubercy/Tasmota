@@ -187,6 +187,11 @@ def route_freerouting(routeur, nets, autres=None, iso=None, passes=50, delai_s=6
                       dossier=None, journal=print):
     """Route `nets` [(nom, largeur_mm)] par Freerouting ; rend la liste des echecs."""
     import pcbnew
+    # Sous-arbres (nom, largeur, refs) de routeur_grille.route_net : sans objet ici,
+    # ImportSpecctraSES remplacerait leurs pistes ; la masse suit les plans comme d'habitude.
+    if any(len(x) > 2 for x in nets):
+        journal("Freerouting : sous-arbres ignores : " + ", ".join(x[0] for x in nets if len(x) > 2))
+        nets = [x for x in nets if len(x) < 3]
     java, jar = outils()
     board = routeur.board
     routeur._arrache()                       # ImportSpecctraSES remplace toutes les pistes
