@@ -238,6 +238,7 @@ def modbusFonctions_aideReglageModbus(sujet)
             ["VerifieConn16channels", "VerifieConn16channels [corrige] [<carte>]", "retrouve l'ID et le debit de la carte 16 relais, compare au persist, corrige"],
             ["ActivationReponseCMD", "ActivationReponseCMD <ON|OFF|1|0>", "(des)active la reponse de l'esclave aux commandes ModBus"],
             ["RelaisPushMQTT", "RelaisPushMQTT [ON|OFF|1|0]", "maitre : recopie en MQTT les push UDP des esclaves (observation)"],
+            ["VoieCommandes", "VoieCommandes [Serial|UDP]", "esclave : voie par laquelle il veut ses commandes, annoncee au maitre"],
             ["ImAlive", "ImAlive <ON|OFF|1|0>", "INTERNE : force le maitre a connecter ses clients ModBus TCP"]
         ]
     end
@@ -303,6 +304,15 @@ def modbusFonctions_aideReglageModbus(sujet)
                 "Sert a observer les push depuis le reseau maison (sniffeur ModBus, Node-RED) : les",
                 "esclaves sont derriere le point d'acces du maitre, leur multicast n'en sort pas.",
                 "Exemple : ReglageModbus RelaisPushMQTT ON"]
+    elif (sujet == "VOIECOMMANDES")
+        return ["Parametre : Serial ou UDP ; absent = affiche la voie actuelle.",
+                "Effet : sauve drivers.ModBus.voieCommandes, la recopie dans la fiche locale de",
+                "/json/discovery.json, puis la renvoie aussitot au maitre (ReglageUDP forceEnvoiParams",
+                "si esclave, et fiche MQTT retenue si le broker est connecte). Le maitre envoie ensuite",
+                "ses commandes a cet esclave par cette voie ; l'esclave repond toujours par la voie",
+                "d'arrivee de la requete. Le cable RS485 reste branche : revenir a Serial suffit.",
+                "Voir outils_docs/PROTOCOLE_MODBUS.md §9, « Commandes sans fil ».",
+                "Exemple : ReglageModbus VoieCommandes UDP"]
     elif (sujet == "IMALIVE")
         return ["INTERNE : envoyee par les esclaves ModBus au maitre (UDP/MQTT) au demarrage,",
                 "et par le maitre a lui-meme au boot ; rarement tapee a la main.",
@@ -449,6 +459,9 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
         end
         reponse_cmnd += string.format("relaisPushMQTT=%s, ", drivers["ModBus"].find("relaisPushMQTT", "OFF"))
         if (drivers["ModBus"].find("id", 99) != 0)    reponse_cmnd += "sans effet hors maitre (id 0), "    end
+    # Esclave : voie de ses commandes, annoncee au maitre par sa fiche discovery (voir reglageVoieCommandes)
+    elif (string.toupper(fonction) == string.toupper("VoieCommandes"))
+        reponse_cmnd += modbusFonctions.reglageVoieCommandes(parametres) + ", "
     # Force le Client ModBus TCP (Maitre ModBus: id == 0) à se connecter au serveur TCP de ce module (utile si le client ne s'est pas encore connecté ou a perdu la connexion)
     elif (string.toupper(fonction) == string.toupper("ImAlive") && drivers["ModBus"].find("id", 99) == 0)
         # Adapte le paramètre
@@ -494,6 +507,61 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
 modbusFonctions.reglageModbus = modbusFonctions_reglageModbus
+
+# ReglageModbus VoieCommandes [Serial|UDP] (2026-10-15, PROTOCOLE_MODBUS.md §9 « Commandes sans
+# fil », M0). C'est l'ESCLAVE qui declare sa voie ; le maitre la lit dans la fiche discovery. La
+# fiche locale est construite au Wi-Fi#Connected (discoveryFonctions) puis relue par
+# forceEnvoiParams : sans la recopie ci-dessous, le changement n'atteindrait le maitre qu'au
+# prochain redemarrage. Seule la fiche du role ACTUEL est touchee (meme regle que
+# discoveryFonctions.roleLocal et forceEnvoiParams) : republier une fiche perimee restee sous
+# notre MAC (carte reaffectee) la ressusciterait chez le maitre. Retourne le texte de reponse.
+def modbusFonctions_reglageVoieCommandes(parametres)
+    import string
+    import json
+    import persist
+    import mqtt
+    import gestionFileFolder
+
+    var valeur = (size(parametres) > 0 ? string.toupper(parametres[0]) : "")
+    var voie = (valeur == "SERIAL" ? "Serial" : (valeur == "UDP" ? "UDP" : nil))
+    if (voie == nil)
+        var actuelle = drivers["ModBus"].find("voieCommandes", "Serial")
+        return (valeur == "" ? "" : "erreur=parametre Serial ou UDP, ") + "voieCommandes=" + actuelle
+    end
+
+    drivers["ModBus"]["voieCommandes"] = voie
+    persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
+
+    var idUdp = serveur.find("udp", {}).find("id", 99)
+    var role = (idUdp == 0 ? "maitre" : "esclave" + str(idUdp))
+    var mac = string.replace(str(serveur.find("adresseMAC", "")), ":", "")
+    var fiche = nil
+    try
+        var table = json.load(gestionFileFolder.readFile("/json/discovery.json"))   # absent -> nil
+        if (isinstance(table, map) && isinstance(table.find(mac), map) && isinstance(table[mac].find(role), map) &&
+            isinstance(table[mac][role].find("ModBus"), map))
+            fiche = table[mac][role]
+            fiche["ModBus"]["voieCommandes"] = voie
+            gestionFileFolder.writeFile("/json/discovery.json", json.dump(table))
+        end
+    except .. as error, message
+        modbusFonctions.log(string.format("REGLAGE_VOIE_COMMANDES_ERREUR: fiche discovery non mise a jour : %s --> %s", error, message), LOG_LEVEL_ERREUR)
+    end
+    if (fiche == nil)
+        modbusFonctions.log(string.format("REGLAGE_VOIE_COMMANDES: pas de fiche '%s' dans discovery.json : la voie partira au prochain Wi-Fi#Connected", role), LOG_LEVEL_ERREUR)
+    else
+        # Renvoi immediat au maitre, par les deux canaux de la fiche (UDP ImAlive, MQTT retenu)
+        if (idUdp > 0 && serveur.find("udp", {}).find("activation", "OFF") == "ON")
+            tasmota.cmd("ReglageUDP forceEnvoiParams ON", boolMute)
+        end
+        if (mqtt.connected())
+            mqtt.publish(string.format("tasmota/discovery/%s/%s", mac, role), json.dump(fiche), true)
+        end
+    end
+    modbusFonctions.log(string.format("REGLAGE_VOIE_COMMANDES: commandes ModBus attendues par la voie %s", voie), LOG_LEVEL_INFO)
+    return "voieCommandes=" + voie
+end
+modbusFonctions.reglageVoieCommandes = modbusFonctions_reglageVoieCommandes
 
 # Règles sur changement d'état lors du démarrage de Tasmota
 def modbusFonctions_changementEtatDemarrage(value, trigger, msg)
@@ -1304,6 +1372,18 @@ def modbusFonctions_envoiMsgModbus(paramMSG, typeMsg, id)
         if (libelle != nil)     modbusFonctions.log(string.format("ENVOI_MSG_MODBUS: %s d'ID=%i !", libelle, id), LOG_LEVEL_DEBUG)      end
     end
 
+    # Reponse a une requete venue par l'UDP (2026-10-15, PROTOCOLE_MODBUS.md §9 « Commandes sans
+    # fil », M4) : elle repart par l'UDP, a l'IP qui l'a envoyee, et par lui SEUL. Avant, la voie
+    # de reponse suivait la config de l'esclave : interroge en UDP avec Serial ON, il repondait sur
+    # le RS485. La reponse reutilise la requete recue (executeCmdModbus), qui porte Info.voie.
+    if (typeMsg == "Reponse")
+        var info = paramMSG.find("Info")
+        if (isinstance(info, map) && info.find("voie") == "UDP" && info.find("remote_ip", "") != "")
+            if (drivers["ModBus"].find("activationReponseCMD", "ON") == "ON")    modbusFonctions.repondUDP(paramMSG, info)    end
+            return
+        end
+    end
+
     # Envoi la trame par port série
     if (drivers["ModBus"].find("activationReponseCMD", "ON") == "ON")
         if(drivers["ModBus"]["typeComm"].find("Serial", "OFF") == "ON")    modbusFonctions.envoiMsgModbusSerial(paramMSG, typeMsg)     end
@@ -1458,6 +1538,22 @@ def modbusFonctions_envoiMsgModbusUDP(Trame, typeMsg)
     end
 end
 modbusFonctions.envoiMsgModbusUDP = modbusFonctions_envoiMsgModbusUDP
+
+# Esclave : reponse UniCast a la requete recue par l'UDP (2026-10-15, M4 ; appelee par
+# envoiMsgModbus). Destinataire = l'IP source de la requete (Info.remote_ip), pas une IP du
+# persist : c'est l'adresse reelle du maitre sur le point d'acces. Le tid recu (Info.transaction)
+# est renvoye tel quel : le maitre s'en sert pour apparier la reponse a sa requete (M3).
+def modbusFonctions_repondUDP(paramMSG, info)
+    import udpFonctions
+    import string
+
+    var trame = modbusFonctions.prepareTrame(paramMSG, "Reponse")
+    var tid = info.find("transaction")
+    var message = "ModbusUDP " + (tid != nil ? str(tid) + " " : "") + trame.tohex()
+    modbusFonctions.log(string.format("REPOND_UDP: reponse a %s : %s", info["remote_ip"], message), LOG_LEVEL_DEBUG_PLUS)
+    udpFonctions.envoiUDP("UniCast", info["remote_ip"], message)
+end
+modbusFonctions.repondUDP = modbusFonctions_repondUDP
 
 #- Fonction d'envoi de la commande ModBus et des réponse ModBus
     par communication TCP si le paramétre est "True" dans _persist.json

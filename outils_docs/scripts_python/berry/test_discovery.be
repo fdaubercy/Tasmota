@@ -13,6 +13,8 @@
 #   11.  mqtt_discovery : discovery.json ecrit seulement si le contenu change ; 'sensors' ignore.
 #   12.  lwt : la fiche retenue ne force plus "Online" (va-et-vient avec le LWT) ; purge des MAC
 #        anciennes publiant la meme fiche (heure du dernier 'sensors'), effacees du broker par le maitre.
+#   16.  Commandes sans fil (E1) : voieCommandes publiee dans la fiche ; lireUDP lit le tid de
+#        "ModbusUDP <tid> <hexa>" et marque Info.voie = UDP (ancien format sans tid toujours lu).
 # Les lecteurs de modbusFonctions (clients TCP, IP UDP : fichesModbus) sont testes dans
 # banc_test_modbus.be section 6, sur la meme forme de table.
 #
@@ -306,6 +308,7 @@ var CONTRAT = {
   "ModBus/id": "fichesModbus (client TCP, IP UDP)",
   "ModBus/TCP/IPAddress": "client TCP du maitre (ReglageModbus ImAlive)",
   "ModBus/UDP/IPAddress": "voie UDP ModBus",
+  "ModBus/voieCommandes": "voie des commandes annoncee par l'esclave (voieDe du maitre, 2026-10-15)",
   "rangeExtender/activation": "page /discovery",
   "rangeExtender/id": "page /discovery",
   "rangeExtender/routagePort": "routage NAPT, boutons, page",
@@ -685,6 +688,58 @@ gestionFileFolder.fichiers = {}
 envois = []
 imAlive(ficheCuve(true))
 verifie("temoin reseau revenu : heure + ipMaitre renvoyes", 2, size(envois))
+
+print("")
+print("=== 16. Commandes sans fil, etape E1 : voie annoncee, numero de transaction (2026-10-15) ===")
+# PROTOCOLE_MODBUS.md §9 « Commandes sans fil » M0 et M3. L'esclave annonce dans sa fiche la voie
+# par laquelle il veut ses commandes ; lireUDP lit le numero de transaction de "ModbusUDP <tid> <hexa>"
+# et marque la trame venue par l'UDP (Info.voie), pour que l'esclave reponde par la meme voie.
+serveur = {"adresseMAC": "", "nom": "Capteurs de Cuve", "IP": {"IPAddress": "0.0.0.0"}, "hostname": "CAPTEURS-CUVE",
+           "udp": {"id": 2, "activation": "ON", "debug": "ON"},
+           "rangeExtender": {"activation": "ON", "id": 2, "ipMaitre": "192.168.0.43", "debug": "ON"},
+           "mqtt": {"topic": "jardin/cuve", "groupTopic1": "tasmotas/garage"}, "discovery": {"debug": "ON"}}
+drivers = {"ModBus": {"activation": "ON", "id": 2, "voieCommandes": "UDP",
+                      "typeComm": {"Serial": "ON", "UDP": "ON", "TCP": "OFF", "MQTT": "OFF"}}}
+diverses = {"telePeriod": 300, "fuseauHoraire": {"typeReglageHeure": "UDP"}}
+tasmota.statusNet = {"IPAddress": "192.168.4.2", "Mac": MAC_CUVE, "Hostname": "CAPTEURS-CUVE"}
+gestionFileFolder.fichiers = {}
+discoveryFonctions.changementEtatDemarrage({"Connected": 1}, "Wifi", {"WIFI": {"Connected": 1}})
+verifie("fiche : voieCommandes du persist publiee (UDP)", "UDP", champ(table(), CLE_CUVE + "/esclave2/ModBus/voieCommandes"))
+drivers["ModBus"].remove("voieCommandes")
+gestionFileFolder.fichiers = {}
+discoveryFonctions.changementEtatDemarrage({"Connected": 1}, "Wifi", {"WIFI": {"Connected": 1}})
+verifie("temoin cle absente du persist : fiche en Serial", "Serial", champ(table(), CLE_CUVE + "/esclave2/ModBus/voieCommandes"))
+
+# lireUDP : meme faux socket que la section 13, le faux lireMsgModbus note la trame et Info
+var infos = []
+mbFaux.lireMsgModbus = def (regle, p) infos.push([p["Trame"].tohex(), p["Info"], p.find("Seq")]) end
+global.modbusFonctions = mbFaux
+def recoitUni(texte)
+  infos = []
+  etatUDP["udpReception"] = [SocketFaux([texte]), nil]
+  return essaie(def () udpFonctions.lireUDP("UniCast", {}) end)
+end
+drivers["ModBus"]["id"] = 2
+verifie("esclave : ModbusUDP avec tid lu sans exception", "OK", recoitUni("ModbusUDP 17 01030001001015C6"))
+var lu16 = size(infos) > 0 ? infos[0] : ["", {}, nil]
+verifie("... trame intacte apres le tid", "01030001001015C6", lu16[0])
+verifie("... Info : tid 17, voie UDP, IP de l'emetteur", "17/UDP/192.168.4.2",
+        str(lu16[1].find("transaction")) + "/" + str(lu16[1].find("voie")) + "/" + str(lu16[1].find("remote_ip")))
+recoitUni("ModbusUDP 01030001001015C6")
+lu16 = size(infos) > 0 ? infos[0] : ["", {}, nil]
+verifie("temoin ancien format sans tid : trame intacte, tid absent", "01030001001015C6/nil", lu16[0] + "/" + str(lu16[1].find("transaction")))
+verifie("temoin ancien format : voie UDP quand meme", "UDP", lu16[1].find("voie"))
+# Un push garde son seq et ne prend pas de tid
+drivers["ModBus"]["id"] = 0
+mbFaux.relaiePushMQTT = def (texte, ip) end
+infos = []
+etatUDP["udpReception"] = [nil, SocketFaux([PUSH])]
+udpFonctions.lireUDP("MultiCast", {})
+lu16 = size(infos) > 0 ? infos[0] : ["", {}, nil]
+verifie("push : seq 12, pas de tid", "12/nil", str(lu16[2]) + "/" + str(lu16[1].find("transaction")))
+etatUDP["udpReception"] = sauveRecep
+global.modbusFonctions = nil
+drivers = {"ModBus": {"id": 0}}
 
 print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))

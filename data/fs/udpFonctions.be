@@ -545,7 +545,11 @@ def udpFonctions_lireUDP(typeComm, paramMSG)
         # alors que l'emission envoyait une trame binaire : aucune trame n'etait lisible.
         #   "ModbusPushUDP" : push d'etat d'un esclave (option B) -> seul le MAITRE le traite ;
         #                     marque Automatique : il n'acquitte aucune requete.
-        #   "ModbusUDP"     : commande/reponse (repli quand le serie est coupe).
+        #   "ModbusUDP"     : commande/reponse. Depuis le 2026-10-15 : "ModbusUDP <tid> <trame hexa>",
+        #                     tid = numero de transaction du maitre, renvoye tel quel par l'esclave
+        #                     (PROTOCOLE_MODBUS.md §9, « Commandes sans fil », M3). L'ancien format
+        #                     "ModbusUDP <trame hexa>" reste lu (tid absent).
+        # Info.voie = "UDP" marque la trame venue par l'UDP : l'esclave y repond par la meme voie (M4).
         var enveloppe = string.split(paramMSG["msgString"], " ", 1)
         if (enveloppe[0] == "ModbusPushUDP" || enveloppe[0] == "ModbusUDP")
             var estPush = (enveloppe[0] == "ModbusPushUDP")
@@ -556,19 +560,20 @@ def udpFonctions_lireUDP(typeComm, paramMSG)
                 var ip = (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.etat()["udpReception"][0].remote_ip : udpFonctions.etat()["udpReception"][1].remote_ip
                 # Push : "ModbusPushUDP <seq> <trame hexa>" (numero d'ordre, 2026-09-29) ; un esclave
                 # d'avant le numero d'ordre envoie "ModbusPushUDP <trame hexa>" -> seq absent (nil).
+                # Le nombre avant la trame est le seq d'un push, ou le tid d'une commande/reponse
                 var hex = enveloppe[1]
-                var seq = nil
-                if (estPush)
-                    var morceaux = string.split(enveloppe[1], " ", 1)
-                    if (size(morceaux) == 2)
-                        seq = int(morceaux[0])
-                        hex = morceaux[1]
-                    end
-                    # Copie brute vers MQTT, filtre seq non applique (2026-10-10, garde dans la fonction)
-                    modbusFonctions.relaiePushMQTT(paramMSG["msgString"], ip)
+                var numero = nil
+                var morceaux = string.split(enveloppe[1], " ", 1)
+                if (size(morceaux) == 2)
+                    numero = int(morceaux[0])
+                    hex = morceaux[1]
                 end
+                var info = {"remote_ip": ip, "voie": "UDP"}
+                if (!estPush && numero != nil)    info["transaction"] = numero    end
+                # Copie brute vers MQTT, filtre seq non applique (2026-10-10, garde dans la fonction)
+                if (estPush)    modbusFonctions.relaiePushMQTT(paramMSG["msgString"], ip)    end
                 # La regle 'ModbusReceivedUDP' (controleModbus.be, modBus_TasmotaSlaveModBus.be) prend le relais
-                modbusFonctions.lireMsgModbus("ModbusReceivedUDP", {"Trame": bytes(hex), "Info": {"remote_ip": ip}, "Automatique": estPush, "Seq": seq})
+                modbusFonctions.lireMsgModbus("ModbusReceivedUDP", {"Trame": bytes(hex), "Info": info, "Automatique": estPush, "Seq": estPush ? numero : nil})
             except .. as error, message
                 udpFonctions.log(string.format("LIRE_UDP_ERREUR: trame ModBus illisible '%s' : %s --> %s", paramMSG["msgString"], error, message), LOG_LEVEL_ERREUR)
             end

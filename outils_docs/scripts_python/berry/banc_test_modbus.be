@@ -1492,6 +1492,92 @@ diverses = sauveDiverses29
 drivers = sauveDrivers
 modules = sauveModules
 print("")
+print("=== 30. Commandes sans fil, etape E1 cote esclave : reponse par la voie d'arrivee (2026-10-15) ===")
+# PROTOCOLE_MODBUS.md §9 « Commandes sans fil » M4 et M0. Une requete venue par l'UDP porte
+# Info {voie: UDP, remote_ip, transaction} (udpFonctions.lireUDP, test_discovery.be §16) :
+# la reponse repart en UniCast a cette IP avec le meme tid, et RIEN sur le serie.
+sauveDrivers = drivers
+sauveServeur = serveur
+import udpFonctions as udpStub30
+import gestionFileFolder as gff30
+import persist as persist30
+import mqtt as mqtt30
+class SerieEcrite
+  var ecrits
+  def init() self.ecrits = [] end
+  def write(b) self.ecrits.push(b.tohex()) end
+end
+var serie30 = SerieEcrite()
+var sauveSerie30 = modbusFonctions.etat()["serialModBus"]
+modbusFonctions.etat()["serialModBus"] = serie30
+drivers = {"ModBus": {"activation": "ON", "id": 3, "activationReponseCMD": "ON",
+                      "typeComm": {"Serial": "ON", "UDP": "ON", "TCP": "OFF"}, "environnement": {}}}
+serveur = {"udp": {"activation": "ON", "id": 3}, "tcp": {"activation": "OFF"}, "mqtt": {"topic": "rideau"},
+           "adresseMAC": "E8:06:90:11:22:44"}
+tasmota.power = [true, false]
+var REP30 = trameAvecCrc("03010101")                   # reponse 0x01 : relai 1 ON
+def lit30(info)
+  var r = {"DeviceAddress": 3, "FunctionCode": 1, "FunctionName": "LECTURE_COILS", "StartAddress": 256, "Count": 1, "Values": []}
+  if info != nil    r["Info"] = info    end
+  udpStub30.envois = []
+  serie30.ecrits = []
+  modbusFonctions.executeCmdModbus(r)
+  return str(udpStub30.envois) + " / serie=" + str(serie30.ecrits)
+end
+verifie("requete UDP avec tid -> UniCast a l'emetteur, meme tid, rien en serie",
+        str([["UniCast", "192.168.4.1", "ModbusUDP 17 " + REP30]]) + " / serie=[]",
+        lit30({"voie": "UDP", "remote_ip": "192.168.4.1", "transaction": 17}))
+verifie("temoin requete serie (sans Info) -> serie seul, aucun UDP",
+        "[] / serie=['" + REP30 + "']", lit30(nil))
+verifie("requete UDP ancien format (sans tid) -> 'ModbusUDP <hexa>'",
+        str([["UniCast", "192.168.4.1", "ModbusUDP " + REP30]]) + " / serie=[]",
+        lit30({"voie": "UDP", "remote_ip": "192.168.4.1"}))
+verifie("temoin Info sans voie UDP (forme TCP) -> chemin actuel (serie)",
+        "[] / serie=['" + REP30 + "']", lit30({"remote_ip": "192.168.4.1"}))
+drivers["ModBus"]["activationReponseCMD"] = "OFF"
+verifie("temoin activationReponseCMD OFF : ni UDP ni serie", "[] / serie=[]",
+        lit30({"voie": "UDP", "remote_ip": "192.168.4.1", "transaction": 17}))
+drivers["ModBus"]["activationReponseCMD"] = "ON"
+
+# ReglageModbus VoieCommandes : persist, fiche locale de discovery.json, renvoi immediat de la fiche
+var MAC30 = "E80690112244"
+gff30.fichiers = {"/json/discovery.json": json.dump({
+  MAC30: {"esclave3": {"id": 3, "ModBus": {"id": 3, "voieCommandes": "Serial"}}, "lwt": "Online"},
+  "AAAAAAAAAA00": {"maitre": {"id": 0, "ModBus": {"id": 0, "voieCommandes": "Serial"}}}})}
+def voie30(table, mac, role)
+  var t = json.load(table)
+  return t[mac][role]["ModBus"].find("voieCommandes")
+end
+tasmota.cmds = []
+persist30.nb_save = 0
+mqtt30.publies = []
+modbusFonctions.reglageModbus("ReglageModbus", 1, "VoieCommandes udp", nil)
+var disc30 = gff30.fichiers["/json/discovery.json"]
+verifie("VoieCommandes udp : persist", "UDP/1", str(drivers["ModBus"].find("voieCommandes")) + "/" + str(persist30.nb_save))
+verifie("... fiche locale de discovery.json mise a jour", "UDP", voie30(disc30, MAC30, "esclave3"))
+verifie("temoin : fiche d'un autre module intacte", "Serial", voie30(disc30, "AAAAAAAAAA00", "maitre"))
+verifie("... fiche renvoyee aussitot (forceEnvoiParams)", true, tasmota.cmds.find("ReglageUDP forceEnvoiParams ON") != nil)
+verifie("... fiche republiee retenue en MQTT", "tasmota/discovery/" + MAC30 + "/esclave3 true",
+        size(mqtt30.publies) > 0 ? mqtt30.publies[0][0] + " " + str(mqtt30.publies[0][2]) : "rien")
+tasmota.cmds = []
+persist30.nb_save = 0
+modbusFonctions.reglageModbus("ReglageModbus", 1, "VoieCommandes LoRa", nil)
+verifie("temoin voie inconnue : rien ne change", "UDP/0/false", str(drivers["ModBus"]["voieCommandes"]) + "/" + str(persist30.nb_save) + "/" +
+        str(tasmota.cmds.find("ReglageUDP forceEnvoiParams ON") != nil))
+modbusFonctions.reglageModbus("ReglageModbus", 1, "VoieCommandes", nil)
+verifie("temoin sans parametre : lecture seule", "UDP/0", str(drivers["ModBus"]["voieCommandes"]) + "/" + str(persist30.nb_save))
+drivers["ModBus"]["id"] = 0
+serveur["udp"]["id"] = 0
+tasmota.cmds = []
+modbusFonctions.reglageModbus("ReglageModbus", 1, "VoieCommandes Serial", nil)
+verifie("temoin maitre (id 0) : pas de forceEnvoiParams", false, tasmota.cmds.find("ReglageUDP forceEnvoiParams ON") != nil)
+modbusFonctions.etat()["serialModBus"] = sauveSerie30
+gff30.fichiers = {}
+gff30.contenu = "{}"
+drivers = sauveDrivers
+serveur = sauveServeur
+
+print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
       total, total - echecs - bugs_connus, bugs_connus, echecs))
 print(echecs == 0 ? "BANC_MODBUS: OK" : "BANC_MODBUS: ECHEC")

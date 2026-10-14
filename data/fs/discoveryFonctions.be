@@ -274,6 +274,10 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
                 jsonData[item].insert("ModBus", {})
                 jsonData[item]["ModBus"].insert("activation", drivers["ModBus"]["activation"])
                 jsonData[item]["ModBus"].insert("id", drivers["ModBus"]["id"])
+                # Voie par laquelle CE module veut recevoir ses commandes ModBus (2026-10-15) :
+                # c'est l'esclave qui la declare, le maitre la lit ici (PROTOCOLE_MODBUS.md §9,
+                # « Commandes sans fil », M0). Cle absente du persist -> "Serial" (le cable).
+                jsonData[item]["ModBus"].insert("voieCommandes", drivers["ModBus"].find("voieCommandes", "Serial"))
 
                 if (drivers["ModBus"]["typeComm"].find("Serial", "OFF") == "ON")
                     jsonData[item]["ModBus"].insert("Serial", {})

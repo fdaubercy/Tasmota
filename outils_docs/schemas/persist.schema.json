@@ -2534,6 +2534,12 @@
             "timeoutReponse": {
               "type": "integer"
             },
+            "voieCommandes": {
+              "type": "string"
+            },
+            "timeoutReponseUDP": {
+              "type": "integer"
+            },
             "log": {
               "type": "string",
               "description": "Seuil de log du module : erreur, info, debug ou detail (charte data/fs/logFonctions.be).",
@@ -2812,6 +2818,8 @@
             "debit",
             "mode",
             "timeoutReponse",
+            "voieCommandes",
+            "timeoutReponseUDP",
             "log",
             "activationReponseCMD",
             "relaisPushMQTT",
