@@ -629,3 +629,202 @@ commande sans lui retirer cette gestion.
 - Bancs : `banc_test_modbus.be` §29 (temoin : 05 traite en MANUEL, mode non recopie -> 3 echecs),
   `test_sniffeur_modbus.py` (decodeur et emulation). **Pas encore observe sur la carte** : la cuve
   et le P4 doivent etre televerses ensemble.
+
+
+### Commandes sans fil vers les esclaves — une voie par destinataire (2026-10-15)
+
+> **Statut : CONCEPTION, rien n'est code.** But : pouvoir commander les esclaves ESP32 (cuve,
+> rideau) sans le cable RS485, la carte 16 relais restant cablee au P4.
+> **Le ModBus filaire est CONSERVE pendant toute la mise au point** (decide le 2026-10-15) :
+> le cable reste branche, `Serial` reste ON partout, et revenir au serie pour un esclave ne
+> demande qu'un reglage, sans rebrancher quoi que ce soit.
+
+**Pourquoi l'UDP et pas le TCP** (decide le 2026-10-15). La file (§7) apporte deja ce que le
+TCP vendrait : un seul message en vol, accuse applicatif, timeout, renvoi borne. Le TCP y
+ajouterait ses propres renvois (1 a 3 s) qui s'additionnent a ceux de la file, un flux sans
+frontiere de trame (le prefixe `"ModbusTCP "` n'en donne pas, contrairement au MBAP), et des
+connexions a moitie fermees a rouvrir apres chaque reboot d'esclave ou chute de l'AP. L'UDP est
+un datagramme = une trame, livree ou perdue : la semantique exacte du RS485. Les doublons sont
+sans danger : 0x05/0x06/0x10 ecrivent une valeur **absolue**, jamais une bascule.
+
+**Principe.** Serie et UDP peuvent etre actifs ENSEMBLE sur le maitre ; ce qui est interdit,
+c'est d'envoyer la MEME commande au MEME esclave par les deux voies. Chaque destinataire a
+**une** voie :
+
+| Destinataire | Voie | Ou c'est decide |
+|---|---|---|
+| Carte 16 relais (`Conn16channels`) | `Serial`, toujours | elle n'a pas d'IP |
+| Esclave ESP32 (`TasmotaSlaveModBusN`) | `"Serial"` (defaut) ou `"UDP"` | **par l'esclave lui-meme**, annonce au maitre dans sa fiche discovery |
+
+#### Ce que fait le code aujourd'hui (verifie le 2026-10-15)
+
+1. **Aiguillage global** (`envoiMsgModbus`, `modbusFonctions.be:1307-1328`) : `typeComm.Serial`
+   ON -> tout part en serie ; l'UDP ne porte commandes et reponses que si `Serial` est coupe.
+   Couper `Serial` sur le P4 pour liberer les esclaves lui ferait perdre la carte 16 relais.
+2. **L'UDP du maitre contourne la file.** Seul `envoiMsgModbusSerial` appelle `enfileMsg` ;
+   `envoiMsgModbusUDP` emet tout de suite : ni `enVol`, ni timeout, ni renvoi. Une reponse UDP
+   arrive donc sans requete en vol a apparier (`apparieReponse` rend `false`).
+3. **Le maitre emet en multicast** (224.3.0.1), la ligne UniCast est commentee, et l'IP
+   resolue dans `discovery.json` ne sert pas. Repli sur une IP en dur (`192.168.4.2`). Or le
+   multicast Wi-Fi n'a **pas d'accuse 802.11** ni de renvoi MAC, et part au debit le plus bas :
+   c'est la forme la plus perdante du Wi-Fi.
+4. **L'esclave repond selon SA config, pas selon la voie d'arrivee** : ses reponses passent
+   par `envoiMsgModbus(paramMSG, "Reponse", ...)` (`:1864` a `:2038`), meme aiguillage global.
+   Un rideau interroge en UDP avec `Serial` ON repondrait sur le RS485.
+5. **Une reponse UDP en retard peut acquitter la requete SUIVANTE** du meme esclave :
+   `apparieReponse` ne compare que `DeviceAddress` et `FunctionCode` (risque deja note en
+   commentaire, `:1320-1325`).
+
+#### Les modifications
+
+**M0 — Esclave : il annonce sa voie dans sa fiche discovery** (decide le 2026-10-15 : c'est
+l'esclave qui la declare, pas le persist du maitre). Nouvelle cle `drivers.ModBus.voieCommandes`
+(`"Serial"` | `"UDP"`, defaut `"Serial"`) dans le persist de l'esclave ; `discoveryFonctions.be`
+(seul ecrivain du bloc `ModBus` de la fiche, `:273-305`) la publie en
+`fiche.ModBus.voieCommandes`. Elle arrive au maitre par la voie habituelle de la fiche
+(`forceEnvoiParams` au demarrage, `ImAlive` toutes les 5 min). Pour basculer sans attendre :
+sous-commande esclave `ReglageModbus VoieCommandes Serial|UDP`, qui enregistre le persist puis
+renvoie aussitot la fiche (`forceEnvoiParams`).
+
+**M1 — Maitre : voie par destinataire.** Nouvelle `modbusFonctions.voieDe(adresse)` : `"UDP"` si
+la fiche discovery de l'esclave d'`ModBus.id == adresse` porte `voieCommandes: "UDP"` ; sinon
+`"Serial"` — y compris fiche absente (maitre qui vient de redemarrer, esclave jamais annonce) :
+le cable etant conserve, le serie est le repli **sur**. Carte 16 relais : toujours `"Serial"`.
+`fichesModbus()` relit et parse `/json/discovery.json` a chaque appel : `voieDe` garde les voies
+en cache dans `modbusFonctions.etat()`, relu au plus toutes les 60 s. Dans `envoiMsgModbus`,
+branche maitre : **tout** message (serie comme UDP) passe par `enfileMsg`, l'item recoit
+`"voie"`. Si `typeComm[voie]` est OFF sur le maitre : message rejete, log `erreur` (plus de repli
+silencieux). Les branches esclave, TCP et push sont inchangees.
+
+**M2 — Maitre : la file emet selon la voie de l'item.** `envoieTete` :
+`Serial` -> `ModBusSend` comme aujourd'hui ; `UDP` -> `prepareTrame` puis envoi **UniCast** a
+l'IP de l'esclave (regle ci-dessous). IP introuvable = echec d'envoi (meme chemin que
+`ModbusSend=Failed` : renvoi borne avec backoff, log `erreur`) — **plus d'IP en dur**.
+
+*Pourquoi UniCast* (point 6 de `ANALYSE_BERRY_MODBUS_DISCOVERY.md`) : seule une trame UniCast
+est acquittee et renvoyee par la couche radio 802.11 ; le multicast part sans accuse, au debit
+le plus bas, peut etre differe jusqu'a la balise DTIM de l'AP si l'esclave economise son Wi-Fi,
+et fait decoder chaque commande par tous les esclaves.
+
+*Quelle IP — la plus fraiche d'abord* :
+1. **IP apprise** : a chaque trame UDP **valide** recue d'un esclave (push accepte par
+   `accepteSeq`, ou reponse), le maitre note `ipEsclaves[DeviceAddress] = {ip: Info.remote_ip,
+   ms: tasmota.millis()}` dans `modbusFonctions.etat()`. C'est l'adresse source reelle, revue
+   toutes les ~30 s par les push. Retenue tant qu'elle a moins de **3xT = 90 s** (meme borne
+   que le chien de garde : au-dela, l'esclave est deja « inconnu »).
+2. **Sinon, la fiche `discovery.json`** (`fichesModbus()`, `IPAddress` du role), rafraichie par
+   `ImAlive` toutes les 5 min.
+3. **Sinon, echec d'envoi.**
+Une trame en erreur (CRC, longueur) ou rejetee par `accepteSeq` n'apprend rien. Pas
+d'authentification : un appareil de l'AP qui forgerait une trame d'adresse 2 detournerait les
+commandes de la cuve — meme exposition qu'aujourd'hui (rien n'est signe), a garder en tete.
+
+*Timeout et file* : nouvelle cle `drivers.ModBus.timeoutReponseUDP` (defaut 2000 ms ; la cuve repond en 0,3 s) au lieu des
+5000 ms + `MARGE_TIMEOUT_MS` dimensionnes pour le pont serie. **Une seule file, un seul en vol
+pour les deux voies** : le volume est negligeable (< 0,1 trame/s, voir « Rythmes et budget »)
+et c'est l'invariant le plus eprouve du code. `pause` (test de debit) bloque aussi l'UDP :
+accepte, c'est rare.
+
+**M3 — Numero de transaction sur l'UDP.** Enveloppe `"ModbusUDP <tid> <trame hexa>"`, comme
+`"ModbusPushUDP <seq> <hexa>"`. `tid` = 0..255, compteur du maitre, attribue a l'item a son
+**premier** envoi et garde pour ses renvois : la reponse tardive au 1er essai acquitte le meme
+item (meme requete, ecriture idempotente), celle d'un item precedent est rejetee.
+- `udpFonctions.lireUDP` : 2 morceaux apres l'enveloppe -> `tid` + hexa ; 1 seul -> ancien
+  format, `tid` absent. Le `tid` voyage dans `Info` (`{"remote_ip": ip, "transaction": tid}`),
+  deja serialise par `lireMsgModbus` : pas de changement du format publie.
+- `apparieReponse` : si l'item en vol porte un `tid`, la reponse doit porter le meme, sinon
+  rejet (log `debug`). Un esclave pas a jour (sans `tid`) serait donc rejete : d'ou l'ordre de
+  mise en oeuvre ci-dessous, **esclaves d'abord** (ils renvoient le `tid` avant que le maitre
+  ne l'exige). Items serie : regle actuelle inchangee.
+
+**M4 — Esclave : repondre par la voie d'arrivee.** La reponse reutilise la requete recue
+(`paramMSG`), qui porte `Info.remote_ip` quand elle vient de l'UDP. Dans `envoiMsgModbus`,
+`typeMsg == "Reponse"` : si `Info.remote_ip` existe -> reponse **UniCast** a cette IP avec
+`"ModbusUDP <tid> <hexa>"` (le `tid` recu, renvoye tel quel), et **rien** sur le serie ni en
+multicast ; sinon, comportement actuel. Corrige le point 4 meme pendant une migration ou
+l'esclave garde `Serial` ON. Les push (`ModbusPushUDP`, `pousseEtat`) ne sont pas touches.
+
+**M5 — Persists** (regle du 2026-10-06 : une nouvelle cle va dans TOUS les persists qui portent
+le bloc) : `"voieCommandes": "Serial"` et `"timeoutReponseUDP": 2000` dans `drivers.ModBus` des
+8 persists qui ont ce bloc (bureau, cave x2, grenier, S3 garage, P4, cuve, rideau) — chaque
+module peut etre maitre ou esclave selon son `id`. Rien dans `TasmotaSlaveModBusN` du maitre.
+`"UDP"` ne se pose que sur la cuve puis le rideau, aux etapes E3/E4, par `ReglageModbus`.
+
+**M6 — Bancs.** `banc_test_modbus.be` : la verif « methode inchangee MultiCast|192.168.4.1 »
+(§ envoiMsgModbusUDP) devient UniCast vers l'IP de la fiche ; nouvelles sections : aiguillage
+(carte relais en serie + esclave en UDP dans la meme file), timeout UDP, IP absente -> renvoi,
+choix de l'IP (apprise < 90 s prime sur la fiche ; apprise perimee -> fiche ; temoin : trame
+en erreur CRC ou push rejete par `accepteSeq` -> l'IP apprise ne doit PAS changer),
+appariement par `tid` (temoin : reponse au `tid` precedent -> doit etre rejetee), reponse
+esclave par la voie d'arrivee (temoin : `Serial` ON + requete UDP -> rien sur le serie).
+`test_discovery.be` §13 : enveloppe `ModbusUDP` a 2 et 3 morceaux ; fiche : `voieCommandes`
+publiee (contrat ecrivain reel -> `voieDe`, regle du 2026-09-30 ; temoin : cle absente -> Serial).
+
+#### Ordre de mise en oeuvre — chaque etape se flashe et s'observe seule (2026-10-15)
+
+Le cable reste branche de bout en bout : a chaque etape, le retour arriere est un reglage.
+
+| Etape | Cartes | Contenu | Effet visible | Retour arriere |
+|---|---|---|---|---|
+| **E1** | cuve, rideau | M0 (annonce, `Serial`), M4 (reponse par la voie d'arrivee), M3 cote esclave (lire et renvoyer le `tid`), M5 | **aucun** : le maitre envoie encore tout en serie | reflasher |
+| **E2** | P4 | apprentissage des IP + `voieDe`, **en lecture seule** : log `info` de la voie annoncee et de l'IP retenue par esclave, envoi toujours en serie | les logs disent quelle IP et quelle voie le maitre utiliserait | reflasher |
+| **E3** | P4 | M1 + M2 + M3 (file multi-voies, UniCast, `tid`, `timeoutReponseUDP`) ; puis `ReglageModbus VoieCommandes UDP` sur la **cuve** seule | commandes et releves de la cuve en UDP, rideau et carte relais en serie | `ReglageModbus VoieCommandes Serial` sur la cuve |
+| **E4** | rideau | `ReglageModbus VoieCommandes UDP` | rideau en UDP | idem sur le rideau |
+| E5 | — | debrancher le cable (decision a part, apres observation) | — | rebrancher |
+
+**E1 — CODE le 2026-10-15, non flashe.** `discoveryFonctions.be` (M0), `udpFonctions.lireUDP`
+(M3), `modbusFonctions.envoiMsgModbus` + `repondUDP` (M4), `ReglageModbus VoieCommandes`
+(`reglageVoieCommandes`), 8 persists (M5), schema regenere. Bancs : `banc_test_modbus.be` §30
+(238/238), `test_discovery.be` §7 (contrat) et §16 (121/121) ; temoins par mutation sur copie
+complete de `data/fs` : M4 sans test de `Info.voie` -> echec du temoin « forme TCP » ; lireUDP
+sans tid -> echec « tid 17 ». **Reste avant flash : `solidifie_et_compile_berry.py` sur les 3
+modules (non lance : un build tournait).**
+
+**Unicast / multicast selon Range Extender ou Wi-Fi classique** (remarque de l'utilisateur,
+constatee par essais ; code relu le 2026-10-15, `udpFonctions.envoiUDP` `:466-512`) :
+- **Multicast : les montages different, confirme par le code.** Il n'est emis QUE si
+  `serveur.rangeExtender.activation` = ON : maitre (udp.id 0) -> socket lie a l'adresse de
+  l'interface AP (`begin("192.168.4.1", 0)`) puis `send` vers 224.3.0.1:4000 ; esclave ->
+  `begin_multicast` + `send_multicast`. **Range Extender OFF : aucune branche, rien ne part**
+  (`resultatEnvoi` reste nil, sans log d'echec).
+- **Unicast : aucune difference dans le code** (`begin("", 2000)` puis `send(ip, 2000)`, ecoute
+  `begin("", 2000)` sur toutes les interfaces). En theorie la pile IP choisit l'interface par
+  la destination (192.168.4.x -> AP du maitre, LAN -> STA), donc rien a distinguer — **a
+  confirmer en reel**, l'experience de l'utilisateur disant le contraire. Point suspect a
+  observer : le socket d'EMISSION se lie au port 2000, celui de l'ECOUTE ; une reponse qui
+  arriverait pendant sa courte vie pourrait lui etre remise, puis perdue a sa fermeture.
+- E1 ne s'appuie que sur l'unicast (reponse de l'esclave a `Info.remote_ip`).
+
+**Essai reel E1** (intervention de l'utilisateur ; logs `ReglageLog modbus detail` et
+`ReglageLog udp detail` sur les deux cartes) :
+1. *Range Extender* (P4 + cuve, flashes avec E1 ; inerte pour le reste) : console du P4,
+   `ReglageModbus envoiMessageUDP <IP cuve 192.168.4.x> ModbusUDP 17 020100E00001FC0F`
+   (lecture 0x01 du relai 1 de la cuve). Attendu cote cuve : `REPOND_UDP: reponse a
+   192.168.4.1 : ModbusUDP 17 02010101900C` (ou `...0051CC` si POWER1 OFF) ; cote P4 :
+   `LIRE_UDP: Donnees UDP UniCast recues de '192.168.4.x'` avec ce message ; sniffeur ModBus du
+   PC : **rien** sur le RS485 a cet instant. Temoin : meme commande sans `17` -> reponse sans tid.
+2. *Wi-Fi classique* : seul le P4 y est (2026-10-15) ; la **cuve y passe le temps de l'essai**.
+   Persist de la cuve d'abord (lecon du 2026-09-27 : un `SSId1` tape en console redemarre, et
+   `configGlobal` remettrait l'ancien reseau depuis le persist) : sauvegarder le persist,
+   `serveur.wifi.reseau1` = reseau maison (celui du P4), `reseau2` = `SERVEUR-GARAGE-GATEWAY`
+   (filet si le reseau maison ne porte pas jusqu'a la cuve), `serveur.rangeExtender.activation`
+   = OFF ; televerser, relire, comparer, puis `Restart 1`. Retour : persist sauvegarde.
+   Pendant l'essai, **attendu et non une panne** : la cuve n'emet plus AUCUN multicast (pas de
+   branche hors Range Extender, voir plus haut) -> ni `ImAlive` UDP ni push ; sa fiche arrive
+   par MQTT (broker joint directement), ses mesures par le releve serie du maitre (cable branche).
+3. Si 1 ou 2 echoue : relever l'adresse et le port source vus de chaque cote, puis essayer
+   l'emission depuis le socket d'ecoute (hypothese du port 2000 ci-dessus) avant tout autre
+   changement.
+
+Pourquoi cet ordre : E1 et E2 ne changent **aucun** comportement, on y verifie l'annonce et le
+choix d'IP sur le vrai reseau avant qu'une seule commande en depende. Esclaves avant maitre :
+le `tid` est renvoye avant d'etre exige (M3). La cuve avant le rideau : une commande perdue y
+coute un ruban mal colore, pas une porte de garage.
+
+#### Hors perimetre, a trancher plus tard
+
+- Passer aussi les **push** esclave -> maitre en UniCast (meme defaut du multicast Wi-Fi) ;
+  mais `ecoute_udp.py` et le relais MQTT du maitre s'appuient sur le groupe 224.3.0.1.
+- Voie de **secours** (UDP puis serie pour un meme esclave) : exigerait un dedoublonnage par
+  `tid` cote esclave. Non retenu.
+- Sniffeur ModBus PC : ne voit plus que la carte 16 relais une fois les esclaves en UDP.
