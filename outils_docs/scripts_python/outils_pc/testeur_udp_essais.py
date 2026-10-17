@@ -33,8 +33,8 @@ RE_IPV4 = re.compile(r"^\d{1,3}(\.\d{1,3}){3}$")
 COMMANDE_PUSH = ('Br var h = modbusFonctions.etatRuban(1376) if h != nil modbusFonctions.pousseEtat(1376, "uint16", h) '
                  'else print("PAS_DE_RUBAN") end')
 TYPES = ("texte", "modbus", "imalive", "push")
-CAS_CONNU_MULTICAST = ("cas connu : l'esclave n'emet AUCUN multicast hors Range Extender (udpFonctions.envoiUDP n'a "
-                       "pas de branche pour ce mode) - ce n'est pas une panne de l'outil")
+CAS_CONNU_MULTICAST = ("cas connu : depuis la correction C4 (2026-10-17), l'esclave emet son multicast aussi en Wi-Fi "
+                       "classique ; NON EMIS ici veut dire que la carte porte un firmware ANTERIEUR (a reflasher)")
 
 
 def crc16(donnees):

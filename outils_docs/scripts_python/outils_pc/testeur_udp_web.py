@@ -164,6 +164,10 @@ function majType(){
   if(t==='modbus'){$('sens').value='maitre>esclave';$('mode').value='UniCast';}
   if(t==='imalive'||t==='push'){$('sens').value='esclave>maitre';$('mode').value='MultiCast';}
   $('sens').disabled=$('mode').disabled=(t!=='texte');
+  // Infobulle sur la liste ET son libelle : un element desactive ne recoit plus la souris
+  const bulle=t==='texte'?'':(t==='modbus'?'Impose par le type ModbusUDP (E1) : maitre -> esclave, unicast.'
+    :'Impose par le type '+(t==='imalive'?'ImAlive':'Push')+' : esclave -> maitre, multicast.')+' Choisir Texte libre pour le changer.';
+  for(const id of ['sens','mode']){$(id).title=bulle;$(id).parentElement.title=bulle;}
   $('blocTexte').classList.toggle('cache',t!=='texte'); $('blocModbus').classList.toggle('cache',t!=='modbus');
   $('aideType').textContent=AIDES[t]; sto('type',t);
 }

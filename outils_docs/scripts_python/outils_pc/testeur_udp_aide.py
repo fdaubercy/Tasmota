@@ -44,8 +44,12 @@ Les liens vers la page du pont série (<code>127.0.0.1:7000</code>) ne valent qu
 <tr><td><b>Range Extender</b></td><td>l'esclave est client du point d'accès du maître (192.168.4.x)</td>
 <td>Le maître est vu par l'esclave à <b>192.168.4.1</b> (son point d'accès), pas à son IP du réseau maison. L'esclave <b>émet</b> le multicast (ImAlive, push).</td></tr>
 <tr><td><b>Wi-Fi classique</b></td><td>les deux cartes sont sur le réseau maison</td>
-<td>Le maître est joignable à son IP du réseau (Status 5). <b>L'esclave n'émet aucun multicast</b> : <code>ReglageUDP envoiMultiCast</code>
-ne fait rien hors Range Extender (pas de branche dans <code>udpFonctions.envoiUDP</code>). ImAlive et push donnent donc <b>NON EMIS</b> : c'est attendu, pas une panne de l'outil.</td></tr>
+<td>Le maître est joignable à son IP du réseau (Status 5). Depuis la correction <b>C4</b> (2026-10-17),
+l'esclave <b>émet</b> aussi son multicast (ImAlive, push) par sa STA ; il n'atteint le maître que si <b>la box relaie
+le multicast</b> entre clients Wi-Fi : <b>EMIS NON RECU</b> mesure donc la box, pas l'outil. Le multicast du maître
+part par son point d'accès s'il est actif : un esclave sur la box ne le reçoit pas. L'heure et <code>ipMaitre</code>
+(réponse à ImAlive) arrivent quand même, en unicast (correction <b>C5</b>). <b>NON EMIS</b> côté esclave = firmware
+antérieur à C4.</td></tr>
 </table>
 <p><b>Bascule de mode</b> (menu « Mode de connexion », après confirmation) : l'outil envoie la commande, la carte répond puis <b>redémarre seule</b>.
 La page affiche « redémarrage... », attend le retour du port, renvoie Status 5, met l'IP à jour et relit le mode.</p>
@@ -63,7 +67,7 @@ dans son propre log : c'est accepté.</p>
 <tr><td style="color:#23d18b"><b>RECU</b></td><td>La carte réceptrice a loggé <code>LIRE_UDP: msg = ...</code> avec <b>le message attendu</b> (marqueur <code>TESTUDP-n</code>, tid, ImAlive...) dans le délai.
 Un message d'un autre essai n'est jamais accepté.</td></tr>
 <tr><td style="color:#f5f543"><b>EMIS NON RECU</b></td><td>L'émettrice a loggé <code>ENVOI_MSG_UDP ... &gt;&gt;&gt;&gt; OK</code> mais rien n'est arrivé : paquet perdu, mauvaise IP, multicast filtré (le NAPT du maître ne relaie pas tout).</td></tr>
-<tr><td style="color:#f14c4c"><b>NON EMIS</b></td><td>Aucune ligne <code>ENVOI_MSG_UDP</code>, ou résultat <code>Echec</code>/<code>nil</code>, ou « Reseau non connecte ». Voir le cas connu ci-dessus (multicast hors Range Extender).</td></tr>
+<tr><td style="color:#f14c4c"><b>NON EMIS</b></td><td>Aucune ligne <code>ENVOI_MSG_UDP</code>, ou résultat <code>Echec</code>/<code>nil</code>, ou « Reseau non connecte ». Multicast esclave en Wi-Fi classique : firmware antérieur à C4 (voir ci-dessus).</td></tr>
 <tr><td style="color:#f14c4c"><b>ECHEC</b></td><td>Essai ModBus : l'esclave a aussi écrit la trame sur le RS485 (<code>ENVOI_MSG_MODBUS: Message ModBus envoyé = 0x</code>) alors que la réponse ne doit partir que par UDP.</td></tr>
 <tr><td style="color:#d670d6"><b>PAS DE RUBAN</b></td><td>Essai Push : l'esclave n'a pas de ruban (<code>PAS_DE_RUBAN</code>) : rien à pousser.</td></tr>
 </table>
