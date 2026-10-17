@@ -904,7 +904,10 @@ Proposition d'origine :
   multicast ; 2e essai sur toutes les interfaces si la liaison est refusee.
 - C2 : port source aleatoire (0) pour toutes les emissions.
 - C3 : multicast du maitre lie a l'IP de l'AP du persist (`serveur.rangeExtender.AP.IPAddress`),
-  sinon a sa STA ; plus de 192.168.4.1 en dur dans `envoiUDP`.
+  sinon a sa STA ; plus de 192.168.4.1 en dur dans `envoiUDP`. Complete le 2026-10-17
+  (`interfacesMulticastMaitre`) : par l'AP s'il est actif (inchange) ET par la STA, mais seulement si
+  la decouverte connait un esclave joignable par la box (`esclavesBox` : meme groupTopic, Online, IP
+  du /24 de la STA hors du /24 de l'AP) ; sans AP ni esclave box, rien n'est emis (`Non emis`).
 - C4 : multicast esclave aussi en Wi-Fi classique (a trancher : c'est la question « push en
   multicast ou en unicast »).
 - C5 : reponse a `ImAlive` (`Timestamp`, `ipMaitre`) en unicast a `IPAddress` de la fiche ;

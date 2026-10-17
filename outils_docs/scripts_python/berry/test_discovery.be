@@ -18,10 +18,12 @@
 #   17.  ReglageGlobal ModeConnexion : bascule Range Extender <-> Wi-Fi classique (reseaux memorises
 #        une seule fois, restaures au retour, Restart differe, mot de passe hors reponse et hors log).
 #   18.  envoiUDP : un esclave emet par sa STA (socket liee a son IP), port source aleatoire ; maitre :
-#        multicast par son AP lu dans le persist, sinon sa STA ; lireUDP d'un message d'un seul mot.
+#        multicast par son AP lu dans le persist ; lireUDP d'un message d'un seul mot.
 #   19.  C3/C4/C5 (2026-10-17) : AP du maitre lu dans le persist (adresse non standard, valeur
 #        invalide), ReglageUDP envoiMultiCast hors Range Extender, reponse a ImAlive en unicast a
 #        l'IP de la fiche (multicast si la fiche n'a pas d'IPv4 valide), estIPv4.
+#   20.  Multicast du maitre par la box (2026-10-17) : par sa STA seulement si la table connait un
+#        esclave de meme groupTopic, 'Online', sur le reseau de la box ; AP inchange ; cache de la table.
 # Les lecteurs de modbusFonctions (clients TCP, IP UDP : fichesModbus) sont testes dans
 # banc_test_modbus.be section 6, sur la meme forme de table.
 #
@@ -78,6 +80,8 @@ class TasmotaStub
   def is_network_up() return self.reseauCoupe != true end
   var ipSta                            # section 18 : IP de la STA rendue par tasmota.wifi()
   def wifi() return {"ip": (self.ipSta != nil ? self.ipSta : "192.168.4.2"), "up": true} end
+  var horloge                          # section 20 : tasmota.millis() (cache de udpFonctions.esclavesBox)
+  def millis() return self.horloge != nil ? self.horloge : 0 end
   def add_rule(a, b, c) end              # controleRangeExtender (section 14)
   def add_cmd(a, b) end
   # Timers en attente : memes regles que tasmota_class.be (set_timer EMPILE, remove_timer
@@ -907,9 +911,12 @@ liaisons = []
 udpFonctions.envoiUDP("MultiCast", "", "R9")
 verifie("C3 maitre multicast sans interface : par son AP (persist)", "192.168.4.1/224.3.0.1/4000/0", resume(dernier()))
 serveur["rangeExtender"]["activation"] = "OFF"
+gestionFileFolder.writeFile("/json/discovery.json", "{}")
 liaisons = []
+journal = []
 udpFonctions.envoiUDP("MultiCast", "", "R10")
-verifie("C3 maitre sans Range Extender : multicast par sa STA", "192.168.0.43/224.3.0.1/4000/0", resume(dernier()))
+verifie("maitre sans Range Extender ni esclave sur la box : non emis", "0/true",
+        str(size(liaisons)) + "/" + str(journalise(">>>> R10 >>>> Non emis")))
 liaisons = []
 journal = []
 udpFonctions.envoiUDP("Broadcast", "", "R11")
@@ -988,6 +995,111 @@ for k: casIP.keys()
 end
 verifie("estIPv4 : 10 cas", "[]", str(faux))
 verifie("estIPv4(nil) : false", false, udpFonctions.estIPv4(nil))
+
+print("")
+print("=== 20. Multicast du maitre par la box : seulement si un esclave y est decouvert (2026-10-17) ===")
+# Regle de l'utilisateur : sans esclave retrouve par la box, pas de multicast du maitre par sa STA.
+# Critere retenu : meme groupTopic + 'Online' + IP sur le reseau de la box ; multicast par l'AP inchange.
+# Mesure de l'essai 2 (Wi-Fi classique) : la box relaie le multicast, mais celui du maitre partait par son AP.
+import path                            # bouchon : date de la table = nombre d'ecritures
+serveur["udp"]["id"] = 0
+drivers["ModBus"]["id"] = 0
+serveur["adresseMAC"] = "AA:AA:AA:AA:AA:00"
+serveur["rangeExtender"] = {"activation": "ON", "id": 0, "AP": {"IPAddress": "192.168.4.1"}}
+tasmota.ipSta = "192.168.0.43"
+# Table a une seule entree : la fiche 'role' de la MAC 'cle', ecrite comme par les vrais ecrivains
+def tableBox(cle, role, ip, groupe, lwt)
+  var f = ficheCuve(true)["esclave2"]
+  f["IPAddress"] = ip
+  if groupe != nil    f["groupTopic"] = groupe    end
+  var entree = {}
+  entree[role] = f
+  if lwt != nil    entree["lwt"] = lwt    end
+  var t = {}
+  t[cle] = entree
+  gestionFileFolder.fichiers = {}
+  gestionFileFolder.writeFile("/json/discovery.json", json.dump(t))
+end
+def ficheBox(ip, groupe, lwt) tableBox(CLE_CUVE, "esclave2", ip, groupe, lwt) end
+# Interfaces par lesquelles le multicast du maitre est parti, dans l'ordre ("" = toutes)
+def emissions20(msg)
+  liaisons = []
+  journal = []
+  udpFonctions.envoiUDP("MultiCast", "", msg)
+  var r = []
+  for l: liaisons    r.push(str(l[0]) + (l[1] == "224.3.0.1" && l[2] == 4000 ? "" : "?"))    end
+  return r.concat("+")
+end
+var GROUPE = "tasmotas/garage"
+gestionFileFolder.writeFile("/json/discovery.json", "{}")
+verifie("table vide : AP seul (inchange)", "192.168.4.1", emissions20("T1"))
+ficheBox("192.168.0.6", GROUPE, "Online")
+verifie("esclave box, meme groupe, Online : AP + STA", "192.168.4.1+192.168.0.43", emissions20("T2"))
+verifie("... un seul log d'envoi, resultat OK", true, journalise(">>>> T2 >>>> OK"))
+verifie("... changement journalise (ACTIVE)", true, journalise("ESCLAVES_BOX: multicast du maitre par la box ACTIVE"))
+ficheBox("192.168.0.6", GROUPE, "Offline")
+verifie("esclave box Offline : AP seul", "192.168.4.1", emissions20("T3"))
+verifie("... changement journalise (DESACTIVE)", true, journalise("ESCLAVES_BOX: multicast du maitre par la box DESACTIVE"))
+ficheBox("192.168.0.6", GROUPE, nil)
+verifie("esclave box sans 'lwt' : AP seul", "192.168.4.1", emissions20("T4"))
+ficheBox("192.168.0.6", "tasmotas/cave", "Online")
+verifie("esclave box d'un autre groupe : AP seul", "192.168.4.1", emissions20("T5"))
+ficheBox("192.168.0.6", nil, "Online")
+verifie("esclave box sans groupTopic : AP seul", "192.168.4.1", emissions20("T6"))
+ficheBox("192.168.4.2", GROUPE, "Online")
+verifie("esclave derriere l'AP (192.168.4.2) : AP seul", "192.168.4.1", emissions20("T7"))
+ficheBox("10.0.0.5", GROUPE, "Online")
+verifie("esclave hors du reseau de la box : AP seul", "192.168.4.1", emissions20("T8"))
+ficheBox("0.0.0.0", GROUPE, "Online")
+verifie("esclave a l'IP invalide : AP seul", "192.168.4.1", emissions20("T9"))
+tableBox("AAAAAAAAAA00", "esclave2", "192.168.0.6", GROUPE, "Online")
+verifie("fiche sous NOTRE MAC : ignoree", "192.168.4.1", emissions20("T10"))
+tableBox(CLE_CUVE, "maitre", "192.168.0.6", GROUPE, "Online")
+verifie("fiche d'un autre maitre : ignoree", "192.168.4.1", emissions20("T11"))
+gestionFileFolder.writeFile("/json/discovery.json", "pas du json")
+verifie("table illisible : pas d'exception, AP seul", "192.168.4.1", emissions20("T12"))
+# Interface imposee par l'appelant et multicast de l'esclave : inchanges
+ficheBox("192.168.0.6", GROUPE, "Online")
+liaisons = []
+udpFonctions.envoiUDP("MultiCast", "192.168.4.1", "T13")
+verifie("interface imposee : une seule emission", "1/192.168.4.1", str(size(liaisons)) + "/" + str(dernier()[0]))
+# Liaison de la STA refusee : 2e essai sur toutes les interfaces, l'AP reste servi
+refusLiaison = "192.168.0.43"
+verifie("STA refusee : AP puis toutes les interfaces", "192.168.4.1+", emissions20("T14"))
+refusLiaison = nil
+# Sans Range Extender : la STA seulement s'il y a un esclave sur la box, sinon rien
+serveur["rangeExtender"] = {"activation": "OFF", "id": 0}
+verifie("sans AP, esclave box : STA seule", "192.168.0.43", emissions20("T15"))
+ficheBox("192.168.0.6", GROUPE, "Offline")
+verifie("sans AP, esclave Offline : non emis", "/true", emissions20("T16") + "/" + str(journalise(">>>> T16 >>>> Non emis")))
+verifie("... raison journalisee", true, journalise("multicast du maitre non emis : pas de point d'acces actif et aucun esclave joignable par la box"))
+ficheBox("192.168.0.6", GROUPE, "Online")
+tasmota.ipSta = ""
+verifie("sans AP, STA inconnue : non emis, sans exception", "", emissions20("T17"))
+tasmota.ipSta = "192.168.0.43"
+# Cache : une seule lecture de la table tant qu'elle ne change pas
+var lectures = 0
+var vraiReadFile = gestionFileFolder.readFile
+gestionFileFolder.readFile = def (chemin) lectures += 1 return vraiReadFile(chemin) end
+emissions20("T18")
+lectures = 0
+emissions20("T19") emissions20("T20") emissions20("T21")
+verifie("cache : table inchangee, aucune relecture", 0, lectures)
+ficheBox("192.168.0.6", GROUPE, "Offline")
+var e22 = emissions20("T22")
+verifie("cache : table reecrite, relue (non emis)", "1/", str(lectures) + "/" + e22)
+# Date figee (deux ecritures dans la meme seconde) : resultat garde au plus 30 s
+path.date = 1790000000
+ficheBox("192.168.0.6", GROUPE, "Offline")
+emissions20("T23")
+ficheBox("192.168.0.6", GROUPE, "Online")
+tasmota.horloge = 29000
+verifie("date figee, < 30 s : ancien resultat garde", "", emissions20("T24"))
+tasmota.horloge = 30001
+verifie("date figee, > 30 s : table relue", "192.168.0.43", emissions20("T25"))
+gestionFileFolder.readFile = vraiReadFile
+path.date = nil
+tasmota.horloge = nil
 
 print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))

@@ -489,47 +489,55 @@ def udpFonctions_envoiUDP(typeComm, ipDestinataire, message)
     #     (crochet ESP-IDF ip4_route_src_hook, lwip_default_hooks.c:122).
     #   * MAITRE, unicast : toutes les interfaces, la destination choisit (192.168.4.x -> AP, LAN -> STA).
     #   * MAITRE, multicast (correction C3) : par son point d'acces, adresse LUE dans le persist
-    #     (serveur.rangeExtender.AP.IPAddress, ipAP) au lieu du 192.168.4.1 ecrit en dur ; sans point
-    #     d'acces actif, par sa STA. Un ipDestinataire non vide impose l'interface (usage historique) :
-    #     les appelants passent "" pour laisser ce choix.
+    #     (serveur.rangeExtender.AP.IPAddress, ipAP) au lieu du 192.168.4.1 ecrit en dur. Un ipDestinataire
+    #     non vide impose l'interface (usage historique) : les appelants passent "" pour laisser ce choix.
+    #   * MAITRE, multicast par la box (2026-10-17, interfacesMulticastMaitre) : AUSSI par sa STA, mais
+    #     seulement si la decouverte connait un esclave joignable par la box (esclavesBox). Sans point
+    #     d'acces actif ni esclave sur la box, le multicast n'est pas emis ("Non emis").
     #   * Port source ALEATOIRE (0) : la socket d'emission ne se lie plus aux ports d'ecoute 2000 / 4000,
     #     elle ne peut plus capter un datagramme entrant pendant sa courte vie (udp.c:267).
     #   * Multicast aussi en Wi-Fi classique (correction C4 ; avant : seulement si activation ON). Un
     #     esclave sur la box n'atteint le maitre que si la box relaie le multicast entre clients Wi-Fi.
     var esclave = (serveur["udp"].find("id", 0) > 0)
     var mode = string.toupper(str(typeComm))
-    var ipLocale = ""
+    var interfaces = [""]       # IP locales d'emission, une socket par entree ("" = toutes) ; [] = rien a emettre
     var ipDest = ipDestinataire
     var port = nil
     if (mode == "UNICAST")
         port = udpFonctions.etat()["port"][0]
-        if (esclave)    ipLocale = udpFonctions.ipSTA()    end
+        if (esclave)    interfaces = [udpFonctions.ipSTA()]    end
     elif (mode == "MULTICAST")
         port = udpFonctions.etat()["port"][1]
         ipDest = "224.3.0.1"
         if (esclave)
-            ipLocale = udpFonctions.ipSTA()
+            interfaces = [udpFonctions.ipSTA()]
         elif (ipDestinataire != nil && ipDestinataire != "")
-            ipLocale = ipDestinataire
+            interfaces = [ipDestinataire]
         else
-            ipLocale = udpFonctions.ipAP()
-            if (ipLocale == "")    ipLocale = udpFonctions.ipSTA()    end
+            interfaces = udpFonctions.interfacesMulticastMaitre()
         end
     else
         udpFonctions.log(string.format("ENVOI_MSG_UDP_ERREUR: type de communication inconnu '%s', '%s' non envoye !", str(typeComm), message), LOG_LEVEL_ERREUR)
     end
 
-    if (port != nil)
-        var ok = udpFonctions.emet(ipLocale, ipDest, port, message)
-        # Liaison refusee (IP de la STA changee entre-temps...) : un 2e essai sur toutes les interfaces
-        # vaut mieux qu'un message perdu.
-        if (!ok && ipLocale != "")
-            udpFonctions.log(string.format("ENVOI_MSG_UDP: envoi par l'interface %s refuse, nouvel essai sur toutes les interfaces", ipLocale), LOG_LEVEL_DEBUG)
-            ipLocale = ""
-            ok = udpFonctions.emet("", ipDest, port, message)
+    if (port != nil && size(interfaces) == 0)
+        resultatEnvoi = "Non emis"
+        udpFonctions.log("ENVOI_MSG_UDP: multicast du maitre non emis : pas de point d'acces actif et aucun esclave joignable par la box", LOG_LEVEL_DEBUG)
+    elif (port != nil)
+        var ok = true
+        for ipLocale: interfaces
+            var envoye = udpFonctions.emet(ipLocale, ipDest, port, message)
+            # Liaison refusee (IP de la STA changee entre-temps...) : un 2e essai sur toutes les interfaces
+            # vaut mieux qu'un message perdu.
+            if (!envoye && ipLocale != "")
+                udpFonctions.log(string.format("ENVOI_MSG_UDP: envoi par l'interface %s refuse, nouvel essai sur toutes les interfaces", ipLocale), LOG_LEVEL_DEBUG)
+                ipLocale = ""
+                envoye = udpFonctions.emet("", ipDest, port, message)
+            end
+            ok = ok && envoye
+            udpFonctions.log(string.format("ENVOI_MSG_UDP: interface d'emission '%s', destination %s:%i", (ipLocale == "" ? "toutes" : ipLocale), str(ipDest), port), LOG_LEVEL_DEBUG_PLUS)
         end
         resultatEnvoi = (ok ? "OK" : "Echec")
-        udpFonctions.log(string.format("ENVOI_MSG_UDP: interface d'emission '%s', destination %s:%i", (ipLocale == "" ? "toutes" : ipLocale), str(ipDest), port), LOG_LEVEL_DEBUG_PLUS)
     end
 
 	# Format inchange : lu par outils_pc/testeur_udp_essais.py (RE_ENVOI)
@@ -556,6 +564,89 @@ def udpFonctions_ipAP()
     return (udpFonctions.estIPv4(ip) ? ip : "192.168.4.1")
 end
 udpFonctions.ipAP = udpFonctions_ipAP
+
+# Interfaces du multicast du MAITRE quand l'appelant n'en impose pas (2026-10-17) : son point d'acces s'il est
+# actif (inchange), PLUS sa STA si la decouverte connait un esclave joignable par la box (esclavesBox).
+# Liste vide : rien a emettre. Mesure de l'essai 2 (Wi-Fi classique) : la box relaie le multicast entre
+# clients Wi-Fi, mais celui du maitre partait par son seul point d'acces et n'atteignait pas l'esclave.
+def udpFonctions_interfacesMulticastMaitre()
+    var liste = []
+    var ap = udpFonctions.ipAP()
+    if (ap != "")    liste.push(ap)    end
+    if (udpFonctions.esclavesBox())
+        var sta = udpFonctions.ipSTA()
+        if (sta != "" && sta != ap)    liste.push(sta)    end
+    end
+    return liste
+end
+udpFonctions.interfacesMulticastMaitre = udpFonctions_interfacesMulticastMaitre
+
+# true si /json/discovery.json connait au moins un esclave joignable par la box (2026-10-17) : fiche
+# 'esclaveN' d'une autre MAC, de MEME groupTopic que la carte, MAC 'Online', IPv4 dans le /24 de la STA de la
+# carte (le reseau de la box) et HORS du /24 de son point d'acces (un esclave en 192.168.4.x est derriere le
+# point d'acces : la STA ne lui sert a rien). STA inconnue : aucun esclave (rien a emettre par elle).
+# Resultat en cache : la table n'est relue que si sa date change, ou apres 30 s (date a la seconde : deux
+# ecritures dans la meme seconde ne se distinguent pas). Les 8 ecrivains de la table restent inchanges.
+def udpFonctions_esclavesBox()
+    import path
+    import json
+    import re
+    import string
+    import gestionFileFolder
+
+    var etat = udpFonctions.etat()
+    var date = path.last_modified("/json/discovery.json")
+    var cache = etat.find("esclavesBox")
+    if (cache != nil && cache[0] == date && tasmota.millis() - cache[1] < 30000)    return cache[2]    end
+
+    var trouve = false
+    try
+        var fichier = gestionFileFolder.readFile("/json/discovery.json")
+        var table = (fichier != false && fichier != nil && fichier != "") ? json.load(fichier) : nil
+        if (isinstance(table, map))
+            var maMAC = string.replace(str(serveur.find("adresseMAC", "")), ":", "")
+            var monGroupe = serveur.find("mqtt", {}).find("groupTopic1", "")
+            var ap = udpFonctions.ipAP()
+            var reseauAP = (ap != "" ? udpFonctions.reseau24(ap) : "")
+            var sta = udpFonctions.ipSTA()
+            var reseauBox = (udpFonctions.estIPv4(sta) ? udpFonctions.reseau24(sta) : "")
+            if (reseauBox == reseauAP)    table = {}    end      # STA inconnue, ou meme reseau que l'AP
+            var pattern = re.compile('^esclave[0-9]+$')
+            for mac: table.keys()
+                var entree = table[mac]
+                if (mac == maMAC || !isinstance(entree, map) || entree.find("lwt", "") != "Online")    continue    end
+                for role: entree.keys()
+                    var fiche = entree[role]
+                    if (pattern.match(role) == nil || !isinstance(fiche, map))    continue    end
+                    if (fiche.find("groupTopic", "") != monGroupe)    continue    end
+                    var ip = str(fiche.find("IPAddress", ""))
+                    if (!udpFonctions.estIPv4(ip) || udpFonctions.reseau24(ip) != reseauBox)    continue    end
+                    trouve = true
+                    break
+                end
+                if (trouve)    break    end
+                tasmota.yield()
+            end
+        end
+    except .. as error, message
+        udpFonctions.log(string.format("ESCLAVES_BOX_ERREUR: table de decouverte illisible : %s --> %s", error, message), LOG_LEVEL_ERREUR)
+    end
+
+    if (cache == nil || cache[2] != trouve)
+        udpFonctions.log(string.format("ESCLAVES_BOX: multicast du maitre par la box %s", (trouve ? "ACTIVE (esclave joignable par la box decouvert)" : "DESACTIVE (aucun esclave joignable par la box)")), LOG_LEVEL_INFO)
+    end
+    etat["esclavesBox"] = [date, tasmota.millis(), trouve]
+    return trouve
+end
+udpFonctions.esclavesBox = udpFonctions_esclavesBox
+
+# "a.b.c." : reseau /24 d'une IPv4 deja validee par estIPv4 (2026-10-17).
+def udpFonctions_reseau24(ip)
+    import string
+    var m = string.split(str(ip), ".")
+    return m[0] + "." + m[1] + "." + m[2] + "."
+end
+udpFonctions.reseau24 = udpFonctions_reseau24
 
 # true si texte est une IPv4 utilisable "a.b.c.d" (0-255, pas 0.0.0.0) (2026-10-17, correction C5 : IP d'une fiche).
 def udpFonctions_estIPv4(texte)

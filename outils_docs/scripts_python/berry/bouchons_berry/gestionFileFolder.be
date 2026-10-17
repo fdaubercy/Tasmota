@@ -2,9 +2,11 @@
 # readFile() renvoie le fichier ecrit/pose dans 'fichiers' (chemin -> texte) s'il y est,
 # sinon le texte pose dans 'contenu' (ex. un discovery.json de test), quel que soit le chemin.
 # Mettre 'contenu' a false imite le vrai module pour un fichier absent (test_discovery.be).
+# 'ecritures' compte les writeFile : c'est la date rendue par le bouchon path.last_modified.
 var gestionFileFolder = module("gestionFileFolder")
 gestionFileFolder.contenu = "{}"
 gestionFileFolder.fichiers = {}
+gestionFileFolder.ecritures = 0
 gestionFileFolder.readFile = def (chemin) return gestionFileFolder.fichiers.find(chemin, gestionFileFolder.contenu) end
-gestionFileFolder.writeFile = def (chemin, data) gestionFileFolder.fichiers[chemin] = data end
+gestionFileFolder.writeFile = def (chemin, data) gestionFileFolder.fichiers[chemin] = data gestionFileFolder.ecritures += 1 end
 return gestionFileFolder
