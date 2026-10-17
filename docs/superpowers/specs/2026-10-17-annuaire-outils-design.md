@@ -31,8 +31,9 @@ emmène sur leur page, permet de les lancer et de les arrêter, et explique leur
 4. **Depuis un autre appareil** (téléphone) : mêmes droits que sur ce PC — voir, ouvrir, lancer, arrêter.
 5. Onglet **Aide** : usage de la page ; comment lancer un outil ; l'intérêt de chaque outil ; les
    paramètres utilisés par chacun ; comment arrêter un outil ; où trouver les journaux.
-6. Démarrage **avec VS Code** (à l'ouverture du dossier), arrêt à sa fermeture. Pas d'ouverture du
-   navigateur à ce démarrage automatique.
+6. Démarrage **avec VS Code** (à l'ouverture du dossier), arrêt à sa fermeture. La page s'ouvre dans le
+   navigateur à chaque ouverture de VS Code (révisé le 2026-10-17 à la demande de l'utilisateur ; la
+   version initiale ne l'ouvrait pas).
 
 ## Non-objectifs
 
@@ -47,8 +48,8 @@ emmène sur leur page, permet de les lancer et de les arrêter, et explique leur
 - **Lancer un outil par `pio run`** (cible Custom). Un `pio run` pendant un build peut supprimer tout
   `.pio/build` (CLAUDE.md, « Vigilances de build », piège du 2026-10-10) et réécrire `modules.h`.
   L'annuaire lance **toujours** `python <script>` directement, comme les tâches VS Code.
-- Un démarrage automatique qui **fait du bruit** : navigateur ouvert à chaque ouverture de VS Code,
-  erreur de port occupé quand une deuxième fenêtre VS Code s'ouvre sur le dépôt, terminal qui vole le focus.
+- Un démarrage automatique qui **fait du bruit** : erreur de port occupé quand une deuxième fenêtre
+  VS Code s'ouvre sur le dépôt, terminal qui vole le focus.
 - Un processus qui **consomme** au repos (cible mesurée : un serveur `http.server` Python au repos
   = 12,7 Mo privés, 0 s de CPU sur 15 s). Pas de sondage quand aucune page n'est ouverte.
 - Une Aide qui **dérive** du réel (paramètres ou ports périmés).
@@ -178,8 +179,9 @@ pare-feu Windows (réseaux privés), comme pour les autres outils.
 
 Une tâche « Outil : annuaire des outils (http://127.0.0.1:7600) » dans `.vscode/tasks.json`, avec
 `runOptions.runOn = folderOpen`, `presentation.reveal = never` (même modèle que la surveillance Berry).
-Lancée avec `--sans-navigateur`. Port **7600** (libre ; les outils occupent 7000 à 7500). Si le port est
-déjà tenu par un annuaire (deuxième fenêtre VS Code), le second sort **silencieusement, code 0**.
+Lancée **sans** `--sans-navigateur` : la page s'ouvre (révisé le 2026-10-17). Port **7600** (libre ; les
+outils occupent 7000 à 7500). Si le port est déjà tenu par un annuaire (deuxième fenêtre VS Code, cible
+Custom), le second ouvre seulement la page puis sort en **code 0** ; avec `--sans-navigateur`, il sort sans rien.
 Lancée par le `python.exe` du penv PlatformIO (comme les tâches des outils PC : pyserial y est) ; si
 pyserial manque, l'annuaire démarre quand même, sans liste de ports (champ libre, validé `COM\d+`).
 

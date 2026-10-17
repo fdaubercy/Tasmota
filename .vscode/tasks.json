@@ -176,12 +176,13 @@
         },
         {
             // Annuaire des outils : page unique (lancer / arreter les autres outils). Demarre seul a
-            // l'ouverture du dossier, sans ouvrir de navigateur. Premiere fois : "Tasks: Manage
-            // Automatic Tasks" > Allow.
+            // l'ouverture du dossier et ouvre sa page dans le navigateur (decide le 2026-10-17) ; s'il
+            // tourne deja (2e fenetre VS Code), il ouvre seulement la page. Premiere fois : "Tasks:
+            // Manage Automatic Tasks" > Allow.
             "label": "Outil : annuaire des outils (http://127.0.0.1:7600)",
             "type": "process",
             "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
-            "args": ["-u", "outils_docs/scripts_python/outils_pc/annuaire_outils.py", "--sans-navigateur"],
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/annuaire_outils.py"],
             "isBackground": true,
             "runOptions": { "runOn": "folderOpen" },
             "presentation": { "reveal": "never", "panel": "dedicated" },

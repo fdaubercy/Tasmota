@@ -451,7 +451,8 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   - `annuaire_outils.py` (+ `annuaire_registre.py`, `annuaire_presence.py`, `annuaire_lanceur.py`,
     `annuaire_page.py`) — annuaire des outils PC, page http://127.0.0.1:7600 : liste les outils (fiches de
     presence sous `%LOCALAPPDATA%\outils_tasmota\`, consoles dans `consoles\<id>.log`), les lance et les arrete.
-    Demarre seul avec VS Code (tache « Outil : annuaire des outils », `runOn: folderOpen`, `--sans-navigateur`).
+    Demarre seul avec VS Code (tache « Outil : annuaire des outils », `runOn: folderOpen`) et ouvre sa page dans
+    le navigateur a chaque ouverture de VS Code (decide le 2026-10-17 ; deja demarre -> ouvre seulement la page).
     Aussi cible Custom « Annuaire des outils (page web) » (`build/cible_annuaire.py`, `pio run` : jamais pendant
     un build) : si l'annuaire tourne deja, ouvre seulement sa page ; sinon le demarre (il s'arrete alors avec la cible).
     Les outils lances depuis l'annuaire s'arretent avec lui (job object Windows), SAUF la synchro du fork
