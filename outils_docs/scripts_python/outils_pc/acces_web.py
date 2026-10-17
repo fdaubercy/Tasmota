@@ -22,13 +22,25 @@ Integration dans un outil :
     if not acces.controle(self): return
     # controle d'origine des POST :
     acces.origine_autorisee(self)
+
+Fiche de presence (annuaire des outils, port 7600) : annonce() depose presence/<port>.json dans le
+dossier de donnees (%LOCALAPPDATA%/outils_tasmota, ou OUTILS_TASMOTA_DOSSIER s'il est defini) avec
+nom, port, pid, debut, jeton (None si --local), local, lance_par (variable OUTILS_TASMOTA_LANCE_PAR,
+posee par l'annuaire quand c'est lui qui lance l'outil). L'annuaire s'en sert pour savoir qui tourne,
+avec quel PID et quel jeton. La fiche est ecrite de facon atomique et effacee a la sortie normale
+(atexit) ; apres un arret brutal elle reste : l'annuaire verifie le PID avant de la croire.
 """
 
+import atexit
 import hmac
+import json
+import os
 import secrets
 import socket
 import threading
 import webbrowser
+from datetime import datetime
+from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit
 
 PAGE_REFUSEE = ("<!doctype html><html lang=fr><meta charset=utf-8><title>Acces refuse</title>"
@@ -70,6 +82,22 @@ def est_local(adresse):
     return ip.startswith("127.") or ip == "::1"
 
 
+def dossier_donnees():
+    """Dossier de donnees des outils : OUTILS_TASMOTA_DOSSIER, sinon %LOCALAPPDATA%\\outils_tasmota."""
+    force = os.environ.get("OUTILS_TASMOTA_DOSSIER")
+    if force:
+        return Path(force)
+    base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+    return Path(base) / "outils_tasmota"
+
+
+def dossier_presence():
+    """Dossier des fiches de presence (cree a la demande)."""
+    dossier = dossier_donnees() / "presence"
+    dossier.mkdir(parents=True, exist_ok=True)
+    return dossier
+
+
 class Acces:
     def __init__(self, port, local=False, nom="outil"):
         self.port = int(port)
@@ -97,8 +125,36 @@ class Acces:
             print("   (--local : pas d'acces depuis le reseau)", flush=True)
         elif not reseau:
             print("   (aucune adresse reseau trouvee : acces depuis ce PC seulement)", flush=True)
+        self._ecrit_presence()
         if ouvrir:
             threading.Timer(0.6, webbrowser.open, (self.lien_local(chemin),)).start()
+
+    def _fiche(self):
+        return dossier_presence() / f"{self.port}.json"
+
+    def _ecrit_presence(self):
+        """Depose la fiche de presence (atomique : .tmp puis replace) ; n'empeche jamais l'outil de demarrer."""
+        try:
+            fiche = self._fiche()
+            contenu = {"nom": self.nom, "port": self.port, "pid": os.getpid(),
+                       "debut": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+                       "jeton": None if self.local else self.jeton, "local": self.local,
+                       "lance_par": os.environ.get("OUTILS_TASMOTA_LANCE_PAR", "")}
+            tmp = fiche.with_name(fiche.name + ".tmp")
+            tmp.write_text(json.dumps(contenu, ensure_ascii=False), encoding="utf-8")
+            os.replace(tmp, fiche)
+            atexit.register(self.efface_presence)
+        except OSError as e:
+            print(f"   (fiche de presence non ecrite : {e})", flush=True)
+
+    def efface_presence(self):
+        """Supprime la fiche si elle porte notre PID ; silencieux sinon (autre processus, fiche absente)."""
+        try:
+            fiche = self._fiche()
+            if json.loads(fiche.read_text(encoding="utf-8")).get("pid") == os.getpid():
+                fiche.unlink()
+        except (OSError, ValueError):
+            pass
 
     def _jeton_valide(self, donne):
         return isinstance(donne, str) and hmac.compare_digest(donne.encode("utf-8"), self.jeton.encode("utf-8"))
