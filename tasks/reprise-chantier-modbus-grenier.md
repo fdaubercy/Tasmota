@@ -93,9 +93,22 @@ au mauvais endroit, annulées — voir `tasks/lessons.md`). Les 3 cibles sont
 > `ReglageGlobal ModeConnexion` code (aucune carte flashee avec). Essai reel 1 : P4 -> cuve OK,
 > cuve -> P4 perdu. Cause prouvee : AP de l'esclave en 192.168.4.1/24 (choix de l'utilisateur, NE PAS
 > y toucher) -> envoi par la mauvaise interface ; corrige dans `udpFonctions.envoiUDP` (C1/C2/C6,
-> socket liee a la STA de l'esclave), non commite, non flashe. **Prochaine action : rebuild complet
-> P4 + cuve (+ rideau), flash, puis essais 1 et 2 avec `outils_pc/testeur_udp.py`** (plan :
-> `outils_docs/DIAGNOSTIC_UDP_2026-10-17.md` §7). C3/C4/C5 a trancher. Detail : `PROTOCOLE_MODBUS.md` §9.
+> socket liee a la STA de l'esclave), commite (37276e5dc), rebuild fait et cartes flashees le
+> 2026-10-17 (avec la synchro de l'amont). **Essai 1 (Range Extender) VALIDE le 2026-10-17 10:30-10:40**
+> par `outils_pc/testeur_udp.py` (P4 COM4, cuve COM12) : 6/6 RECU (unicast et multicast dans les deux
+> sens, E1 `ModbusUDP` aller-retour, ImAlive) + 10/10 cuve -> P4 unicast (0,33-0,49 s), source
+> 192.168.4.2 a port aleatoire : C1 et C2 prouves sur les vraies cartes. **Decide le 2026-10-17 : C3 COMPLET + C4 + C5**, car les deux modes (Range Extender
+> ET Wi-Fi classique) sont de vrais modes d'usage. C3 complet = `ipAP()` lu dans le persist ET les 4
+> `"192.168.4.1"` en dur passes a `""` (udpFonctions.be:238, :327, :331, modbusFonctions.be:1533 :
+> une IP passee par l'appelant IMPOSE l'interface). **C3 complet + C4 + C5 CODES le 2026-10-17**
+> (non flashes) : `udpFonctions.ipAP()`/`estIPv4()`, reponse ImAlive en unicast a l'IP de la fiche
+> (multicast si IPv4 invalide), multicast esclave hors Range Extender, type d'envoi inconnu journalise.
+> Verifie : `test_discovery.be` 170/170 (section 19 neuve, temoins : ancien code + 3 mutations echouent),
+> `banc_test_modbus.be` OK, `solidifie_et_compile_berry.py` OK sur udpFonctions et modbusFonctions.
+> **Prochaine action : rebuild complet P4 + cuve + rideau, flash, puis essai 2 (Wi-Fi classique, plan §7)**
+> et rejouer l'essai 1. Limite connue : le multicast du MAITRE ne sort que par UNE interface (AP s'il est
+> actif) -> un esclave sur la box ne recoit pas `ModbusUDP` multicast du P4 (`envoiMsgModbusUDP`) ;
+> emettre sur les deux interfaces = evolution a decider apres l'essai 2. Detail : `PROTOCOLE_MODBUS.md` §9.
 
 ## LA PROCHAINE ACTION — flasher et observer
 
