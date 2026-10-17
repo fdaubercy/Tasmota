@@ -454,5 +454,8 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     Demarre seul avec VS Code (tache « Outil : annuaire des outils », `runOn: folderOpen`, `--sans-navigateur`).
     Les outils lances depuis l'annuaire s'arretent avec lui (job object Windows), SAUF la synchro du fork
     (hors job, console cachee propre, survit a la fermeture de VS Code ; arret refuse pendant un merge, rebase
-    ou push). Autre appareil : lien a jeton de la console / de la page sur le PC. Bancs : `test_annuaire.py`,
-    `test_annuaire_lanceur.py`. Spec : `docs/superpowers/specs/2026-10-17-annuaire-outils-design.md`.
+    ou push ; synchro muette : refus si MERGE_HEAD ou rebase en cours dans `.git`). Tuile « liee a
+    l'annuaire » si Windows a refuse de detacher la synchro. Client de ce PC : Host 127.0.0.1/localhost/[::1]
+    exige (DNS rebinding). Autre appareil : lien a jeton de la console / de la page sur le PC. Bancs :
+    `test_annuaire.py`, `test_annuaire_lanceur.py`, `test_annuaire_securite.py`.
+    Spec : `docs/superpowers/specs/2026-10-17-annuaire-outils-design.md`.
