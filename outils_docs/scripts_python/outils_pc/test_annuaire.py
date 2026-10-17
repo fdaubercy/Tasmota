@@ -100,7 +100,7 @@ def serveur_libre():
     """Socket en ecoute sur un port libre : (socket, port)."""
     s = socket.socket()
     s.bind(("127.0.0.1", 0))
-    s.listen(5)
+    s.listen(128)
     return s, s.getsockname()[1]
 
 
@@ -130,11 +130,16 @@ def section_presence():
     import acces_web
     import annuaire_presence as pre
     dossier = str(acces_web.dossier_presence())
+    libres = {o.id: port_libre() for o in reg.OUTILS}
     for f in os.listdir(dossier):
         os.remove(os.path.join(dossier, f))
 
     def etat(id, **kw):
-        l = pre.etat_outils(kw.get("lances", {}), kw.get("derniers", {}), kw.get("hote"))
+        # Ports de page libres par defaut : le banc ne depend pas des outils reels qui tournent.
+        derniers = {o.id: {o.cle_port_page: libres[o.id]} for o in reg.OUTILS}
+        for k, v in kw.get("derniers", {}).items():
+            derniers[k] = {**derniers.get(k, {}), **v}
+        l = pre.etat_outils(kw.get("lances", {}), derniers, kw.get("hote"))
         return next(e for e in l if e["id"] == id)
 
     verifie(pre.pid_vivant(os.getpid()), True, "pid_vivant : ce processus")
@@ -177,11 +182,19 @@ def section_presence():
             "port_sans_fiche")
     verifie(etat("syslog", derniers={"syslog": {"http": port}}, hote="192.168.0.3")["lien"], None,
             "port_sans_fiche : lien distant None")
-    verifie(etat("syslog", derniers={"syslog": {"http": "abc"}})["port"], 7200, "valeur invalide : defaut")
+    e = pre.etat_outils({}, {"syslog": {"http": "abc"}}, None)[4]
+    verifie((e["id"], e["port"]), ("syslog", reg.par_id("syslog").port_page({})), "valeur invalide : defaut")
     srv.close()
     verifie(etat("syslog", derniers={"syslog": {"http": port}})["etat"], "arrete", "TEMOIN port ferme : arrete")
 
     ecrit_fiche(dossier, "Pont serie", mort, os.getpid())
+    verifie(etat("pont_serie")["etat"], "arrete", "fiche PID vivant port ferme : pas marche")
+    verifie(os.path.exists(os.path.join(dossier, f"{mort}.json")), True, "fiche PID vivant port ferme : conservee")
+    srv2 = socket.socket()
+    srv2.bind(("127.0.0.1", mort))
+    srv2.listen(5)
+    verifie(etat("pont_serie")["etat"], "marche", "TEMOIN meme fiche, port ouvert : marche")
+    srv2.close()
     lances = {"pont_serie": {"pid": os.getpid(), "valeurs": {"port": "COM3"}}}
     e = etat("sniffeur_modbus", lances=lances, derniers={"sniffeur_modbus": {"port": "COM3"}})
     verifie((e["etat"], "COM3" in e["raison"], "Pont série" in e["raison"]), ("bloque", True, True), "com_tenu")

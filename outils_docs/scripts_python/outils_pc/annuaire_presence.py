@@ -102,6 +102,10 @@ def etat_outils(lances, derniers, hote_client):
     resultat = []
     for o in reg.OUTILS:
         fiche = fiches.get(o.nom_acces)
+        # Une fiche ne vaut "marche" que si son port repond aussi (PID reutilise, outil en demarrage) ;
+        # sinon elle est ignoree ici, mais pas supprimee.
+        if fiche and not port_repond(fiche["port"]):
+            fiche = None
         e = {"id": o.id, "etat": "arrete", "raison": "", "port": 0, "debut": None, "lien": None,
              "peut_arreter": False, "lance_ailleurs": False, "console": o.id in lances}
         if fiche:
