@@ -122,8 +122,24 @@ au mauvais endroit, annulées — voir `tasks/lessons.md`). Les 3 cibles sont
 > (avant : par sa STA). Verifie : `test_discovery.be` 195/195 (section 20 neuve ; temoin ancien code :
 > 9 echecs), `banc_test_modbus` 238/238, `test_testeur_udp` 155/155, `verifie_berry` 52/0.
 > `solidifie_et_compile_berry.py` OK sur udpFonctions (16 closures, 0 anonyme, .h compile).
-> **Reste** : rebuild + flash du P4, puis essai 2 rejoue :
-> ImAlive de la cuve d'abord, puis multicast P4 -> cuve attendu RECU par la box.
+> **Flashe sur le P4 et VALIDE le 2026-10-17** :
+> - essai 2 rejoue (Wi-Fi classique, 16:35-16:37) : ImAlive RECU, puis multicast P4 -> cuve **11/12
+>   RECU** (avant : 0), source vue 192.168.0.43 = STA du P4 relayee par la box ; 1 perte = multicast
+>   Wi-Fi sans acquittement ; cuve -> P4 multicast RECU ;
+> - contre-essai (retour en Range Extender, 16:48-16:49) : `interfacesMulticastMaitre()` = ['192.168.4.1']
+>   (regle desactivee), ImAlive RECU, multicast P4 -> cuve 2/2 RECU (source 192.168.4.1).
+> **Cuve muette sur son port serie (2026-10-17, analyse corrigee)** : ce n'etait PAS la reouverture du
+> testeur (elle avait marche : Status 5 relu a 16:38:21). COM12 est un pont **CH343** (pas l'USB natif).
+> La cuve n'a plus ecrit une ligne de 16:39:11 (en plein echange ModBus, logs `detail`) a 16:47:09, alors
+> qu'elle tournait (ImAlive UDP recu par le P4 a 16:44:26 ; P4 : « esclave 2, muet » en ModBus a 16:44:17) ;
+> fermer/rouvrir le port (16:46:15) n'a RIEN change ; seul le reset de 16:47:09 (« Vbat power on reset »,
+> bouton RST ?) l'a retablie. Pas SERIALLOG_TIMER (aucun « Serial logging disabled », 56 s apres le boot).
+> **Cause sur la carte NON etablie** (syslog eteint : pas de trace). Piste : TasmotaSerial peut prendre
+> l'UART0 de la console quand UART1/UART2 sont pris (`TasmotaSerial.cpp:168`) - non prouve. **Si ca se
+> reproduit, AVANT le reset** : console web de la cuve (ou `cmnd/jardin/cuve/SerialLog` en MQTT) pour voir si
+> elle logue encore, et lancer le serveur syslog. **Testeur corrige** : carte « muette » apres 10 s sans
+> reponse a une commande (note, pastille rouge, relance du log serie), essais signales « aucune ligne recue
+> de la carte » ; banc `test_testeur_udp_muette.py`.
 
 ## LA PROCHAINE ACTION — flasher et observer
 
