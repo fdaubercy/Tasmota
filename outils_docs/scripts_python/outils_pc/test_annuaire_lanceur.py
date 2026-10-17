@@ -28,8 +28,12 @@ RACINE = Path(DOSSIER) / "racine"
 CREATE_NO_WINDOW = 0x08000000
 
 FAUX_OUTIL = r'''
-import os, sys, time
+import ctypes, os, sys, time
 fichier = sys.argv[1]
+liste = (ctypes.c_uint32 * 64)()
+n = ctypes.windll.kernel32.GetConsoleProcessList(liste, 64)       # 0 = pas de console
+with open(fichier + ".console", "w") as f:
+    f.write(" ".join(str(liste[i]) for i in range(min(n, 64))))
 nb = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else 0
 for i in range(nb):
     print(f"ligne {i}")
@@ -52,7 +56,8 @@ os.replace(fichier + ".tmp", fichier)
 time.sleep(60)
 '''
 
-# argv : dossier outils_pc, racine, python des outils, mode (job | sans | refus), fichier de sortie
+# argv : dossier outils_pc, racine, python des outils, mode (job | sans | refus | ancien), fichier de sortie
+# ancien = job, mais drapeaux hors job d'avant le correctif (sans CREATE_NO_WINDOW) : temoin console
 MINI_ANNUAIRE = r'''
 import json, os, sys, time
 from pathlib import Path
@@ -61,8 +66,10 @@ import annuaire_lanceur as al
 import annuaire_registre as reg
 racine, python, mode, sortie = Path(sys.argv[2]), sys.argv[3], sys.argv[4], sys.argv[5]
 ok = None
-if mode == "job":
+if mode in ("job", "ancien"):
     ok = al.rattache_au_job()
+if mode == "ancien":
+    al.DRAPEAUX_HORS_JOB = al.CREATE_BREAKAWAY_FROM_JOB | al.CREATE_NEW_PROCESS_GROUP
 elif mode == "refus":
     ok = al._rattache(al.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE)     # job SANS breakaway autorise
 def outil(id, dans_job):
@@ -191,7 +198,7 @@ def section_lance_et_console():
     tete = (Path(DOSSIER) / "consoles" / "faux.log").read_text(encoding="utf-8").splitlines()[0]
     verifie(tete.startswith("[annuaire] lance "), True, "console : premiere ligne [annuaire] lance <date>")
 
-    lanceur.arrete(faux, pid)
+    verifie(lanceur.arrete(faux, pid), True, "arrete d'un outil vivant -> True")
     verifie(attend(lambda: not vivant(pid) and not vivant(reel[0]), 5), True, "arrete : lanceur et python reel morts")
     verifie("faux" in lanceur.lances, False, "arrete : lances[id] retire")
 
@@ -202,9 +209,28 @@ def section_lance_et_console():
     verifie((texte.count("[annuaire] lance "), texte.count("ligne 249")), (1, 0),
             "relance : console tronquee (une console par lancement)")
     verifie(lanceur.lances["faux"], {"pid": pid2, "valeurs": {}}, "lance sans valeurs : valeurs = {}")
-    lanceur.arrete(faux, pid2)
-    lanceur.arrete(faux, pid2)          # deja mort : taskkill echoue, sans exception
-    verifie(True, True, "arrete d'un PID deja mort : pas d'exception")
+    verifie(lanceur.arrete(faux, pid2), True, "relance : arrete -> True")
+    verifie(lanceur.arrete(faux, pid2), True, "arrete d'un PID deja mort : True, sans exception")
+
+
+def section_arrete_echoue():
+    print("== arrete_echoue ==")
+    lanceur = al.Lanceur(RACINE)
+    faux = outil("faux_tenace")
+    pid = garde(lanceur.lance(faux, [str(RACINE / "tenace.pid")]))
+    reel = lit_pids(str(RACINE / "tenace.pid"))
+    lanceur._tue_arbre = lambda p: None          # taskkill sans effet : le processus survit
+    ancien_delai, al.DELAI_ARRET = al.DELAI_ARRET, 1.0
+    try:
+        verifie(lanceur.arrete(faux, pid), False, "arrete sans effet -> False")
+        verifie(lanceur.lances.get("faux_tenace", {}).get("pid"), pid, "arrete sans effet : lances[id] garde")
+        verifie(vivant(pid) and vivant(reel[0]), True, "arrete sans effet : l'outil vit encore")
+    finally:
+        al.DELAI_ARRET = ancien_delai
+        del lanceur._tue_arbre
+    verifie(lanceur.arrete(faux, pid), True, "TEMOIN vrai taskkill : arrete -> True")
+    verifie("faux_tenace" in lanceur.lances, False, "TEMOIN vrai taskkill : lances[id] retire")
+    verifie(attend(lambda: not vivant(reel[0]), 3), True, "TEMOIN vrai taskkill : python reel mort")
 
 
 def section_arrete_arbre():
@@ -228,7 +254,7 @@ def section_arrete_arbre():
     reel_enfant = lit_pids(str(RACINE / "arbre.pid.enfant"))
     tous = [pid] + pids + reel_enfant
     verifie(all(vivant(p) for p in tous), True, "arrete_arbre : 4 processus vivants (2 lanceurs, 2 python)")
-    lanceur.arrete(parent, pid)
+    verifie(lanceur.arrete(parent, pid), True, "arrete_arbre : arrete -> True")
     verifie(attend(lambda: not any(vivant(p) for p in tous), 5), True, "arrete_arbre : les deux PID (et lanceurs) morts")
 
 
@@ -306,10 +332,38 @@ def section_breakaway_refuse():
     tete = (Path(DOSSIER) / "consoles" / "faux_hors.log").read_text(encoding="utf-8").splitlines()[:2]
     verifie(any(l.startswith("[annuaire] synchro liee a l'annuaire") for l in tete), True,
             "breakaway_refuse : '[annuaire] synchro liee a l'annuaire' en tete de console")
+    with open(prefixe + "_hors.pid.console") as f:
+        liste = [int(x) for x in f.read().split()]
+    verifie(bool(liste) and info["moi"] not in liste, True, "breakaway_refuse : repli garde sa console a lui")
     taskkill_f(info["moi"])
     verifie(attend(lambda: not vivant(info["p_hors"]) and not vivant(reel[0]), 3), True,
             "breakaway_refuse : repli = outil lie a l'annuaire (meurt avec lui)")
     nettoie()
+
+
+def consoles(mode):
+    """Mini-annuaire (python de base) ; rend (pid du mini, PIDs console outil dans_job, outil hors job)."""
+    top, info, prefixe = mini_annuaire(mode, False)
+    if info is None:
+        return None, None, None
+    listes = []
+    for nom in ("_job.pid", "_hors.pid"):
+        lit_pids(prefixe + nom)
+        with open(prefixe + nom + ".console") as f:
+            listes.append([int(x) for x in f.read().split()])
+    nettoie()
+    return info["moi"], listes[0], listes[1]
+
+
+def section_console_detachee():
+    print("== console_detachee ==")
+    moi, job, hors = consoles("job")
+    verifie(moi in (job or []), True, "TEMOIN outil dans_job : partage la console du mini-annuaire")
+    verifie(moi is not None and moi not in hors, True, "hors job : PID du mini-annuaire absent de sa console")
+    verifie(bool(hors), True, "hors job : a une console a lui (cachee)")
+    moi, job, hors = consoles("ancien")
+    verifie(moi is not None and moi in hors, True,
+            "TEMOIN anciens drapeaux (sans CREATE_NO_WINDOW) : console du mini-annuaire partagee")
 
 
 def section_derniers():
@@ -326,8 +380,9 @@ def section_derniers():
 def principal():
     prepare()
     try:
-        for section in (section_lance_et_console, section_arrete_arbre, section_taskkill_annuaire,
-                        section_breakaway_refuse, section_derniers):
+        for section in (section_lance_et_console, section_arrete_echoue, section_arrete_arbre,
+                        section_taskkill_annuaire, section_console_detachee, section_breakaway_refuse,
+                        section_derniers):
             try:
                 section()
             except Exception as e:          # une section cassee ne doit pas empecher le nettoyage
