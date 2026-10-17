@@ -1,5 +1,19 @@
 # Diagnostic UDP maître P4 <-> esclave S3 (cuve) — 2026-10-17
 
+> **Suite donnée (même jour) — le corps de ce rapport est conservé tel qu'écrit le matin.**
+> - **C1 à C6 appliqués, flashés et validés sur les cartes** (P4 COM4, cuve COM12), dans les deux modes,
+>   Range Extender ET Wi-Fi classique (décision de l'utilisateur : ce sont deux vrais modes d'usage, donc
+>   C3 complet + C4 + C5). Commits `37276e5dc` (C1, C2, C6) et `8a9a18333` (C3, C4, C5).
+> - **C3 complété** (`197af338b`) : en plus de son point d'accès, le maître émet son multicast par sa STA,
+>   mais **seulement si sa découverte connaît un esclave joignable par la box** (même groupTopic,
+>   `Online`, IP du /24 de la STA hors du /24 de l'AP) ; sans point d'accès ni tel esclave, rien n'est
+>   émis (`>>>> Non emis`). Mesuré : multicast P4 -> cuve en Wi-Fi classique 11/12 reçu par la box
+>   (0 avant), 2/2 par l'AP en Range Extender.
+> - Les résultats des essais sont dans `PROTOCOLE_MODBUS.md` §9 et `tasks/reprise-chantier-modbus-grenier.md`.
+> - `tasks/correctif-udp-interface-2026-10-17.diff` (cité ci-dessous comme `correctif_berry.diff`) est
+>   **historique** : le code de référence est `data/fs/udpFonctions.be`.
+> - C7 reste non codé ; C8 et C9 restent refusés.
+
 Analyse et propositions seulement : **rien n'a été modifié dans le dépôt**, rien n'a été flashé,
 aucune configuration de carte n'a été changée. Les mesures du 2026-10-17 04:39-04:44 ont été
 faites par le testeur UDP (http://127.0.0.1:7400, COM4 = P4, COM12 = cuve) avec des commandes

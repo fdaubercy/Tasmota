@@ -352,7 +352,9 @@ Pour ne pas chercher : ce qui a ete produit et ou.
 - `outils_docs/DIAGNOSTIC_UDP_2026-10-17.md` — diagnostic UDP maitre <-> esclave (Range Extender /
   Wi-Fi classique) : matrice attendue, cause prouvee (AP de l'esclave en 192.168.4.1/24 -> ses envois
   vers le maitre partent par son AP), corrections C1-C7, plan des essais. Resume dans
-  `PROTOCOLE_MODBUS.md` §9 ; C1/C2/C6 appliques le 2026-10-17 ; C3-C5 a trancher, code dans `tasks/correctif-udp-interface-2026-10-17.diff`.
+  `PROTOCOLE_MODBUS.md` §9 (avec les resultats des essais). C1 a C6 appliques et valides sur les cartes le
+  2026-10-17, dans les deux modes ; multicast du maitre par la box seulement si un esclave y est decouvert.
+  `tasks/correctif-udp-interface-2026-10-17.diff` est historique : la reference est `data/fs/udpFonctions.be`.
 - `outils_docs/AUDIT_MODBUS_2026-09-29.md` — audit complet ModBus garage (B1 corrige, secrets
   en clair sur depot public, defauts G1-G8 actifs, L1-L13 latents, ameliorations par priorite).
 - `outils_docs/Electronique/Connecteur ModBus/` — docs constructeur de la carte 16 relais

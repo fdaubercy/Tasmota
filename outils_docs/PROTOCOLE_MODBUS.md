@@ -896,10 +896,10 @@ precompiles (`CONFIG_LWIP_IPV4_NAPT=y`, `LWIP_HOOK_IP4_ROUTE_SRC`, identiques S3
 `udpFonctions.envoiUDP` / `ipSTA` / `emet` / `lireUDP` ; format du log `ENVOI_MSG_UDP: Donnees ...`
 inchange (lu par le testeur), interface choisie dans une ligne `detail` a part. Banc
 `test_discovery.be` §18 : 158/158 ; sur l'ancien `udpFonctions.be`, 7 echecs, tous en §18 (C1/C2/C6) ;
-`banc_test_modbus` 238/238 ; `solidifie_et_compile_berry.py udpFonctions.be` : rc 0. **C3, C4, C5 NON
-appliquees, a trancher** (leur code est dans le diff ci-dessous, qui reste la reference).
-Proposition d'origine :
-`tasks/correctif-udp-interface-2026-10-17.diff`, dans `udpFonctions.be` seulement.
+`banc_test_modbus` 238/238 ; `solidifie_et_compile_berry.py udpFonctions.be` : rc 0. **C3, C4, C5
+APPLIQUEES le meme jour** (`8a9a18333`) : les deux modes, Range Extender ET Wi-Fi classique, sont de
+vrais modes d'usage (decision de l'utilisateur). C3 complete par `197af338b` (ci-dessous). Le diff
+d'origine `tasks/correctif-udp-interface-2026-10-17.diff` est historique : la reference est le code.
 - C1 : esclave, socket d'emission liee a l'IP de sa STA (`tasmota.wifi()["ip"]`), unicast et
   multicast ; 2e essai sur toutes les interfaces si la liaison est refusee.
 - C2 : port source aleatoire (0) pour toutes les emissions.
@@ -908,8 +908,8 @@ Proposition d'origine :
   (`interfacesMulticastMaitre`) : par l'AP s'il est actif (inchange) ET par la STA, mais seulement si
   la decouverte connait un esclave joignable par la box (`esclavesBox` : meme groupTopic, Online, IP
   du /24 de la STA hors du /24 de l'AP) ; sans AP ni esclave box, rien n'est emis (`Non emis`).
-- C4 : multicast esclave aussi en Wi-Fi classique (a trancher : c'est la question « push en
-  multicast ou en unicast »).
+- C4 : multicast esclave aussi en Wi-Fi classique (il n'atteint le maitre que si la box relaie le
+  multicast entre clients Wi-Fi : c'est le cas, mesure du 2026-10-17).
 - C5 : reponse a `ImAlive` (`Timestamp`, `ipMaitre`) en unicast a `IPAddress` de la fiche ;
   multicast par l'AP si la fiche n'a pas d'IP.
 - C6 : `lireUDP` accepte un message d'un seul mot.
@@ -927,6 +927,15 @@ socket non liee depuis la cuve vers le P4 -> toujours non recu. Essai 2 (Wi-Fi c
 unicast dans les deux sens et E1 vers l'IP box de la cuve ; multicast cuve -> P4 recu seulement si
 la box relaie le multicast (a consigner tel quel) ; multicast P4 -> cuve : rien (attendu).
 Detail ligne par ligne : `outils_docs/DIAGNOSTIC_UDP_2026-10-17.md` §7.
+
+*Resultats (2026-10-17, testeur UDP, P4 COM4 + cuve COM12).* Essai 1 (Range Extender) : 6/6 RECU
+(unicast et multicast dans les deux sens, E1 aller-retour, ImAlive) et 11/11 cuve -> P4 unicast ;
+C5 : `Timestamp` et `ipMaitre` en unicast vers 192.168.4.2, recus. Essai 2 (Wi-Fi classique, cuve en
+192.168.0.6) : unicast dans les deux sens, E1 (reponse par la box), ImAlive et C5 RECU ; **la box relaie
+le multicast entre clients Wi-Fi** (cuve -> P4 RECU). Multicast P4 -> cuve : EMIS NON RECU avant
+`197af338b` (le maitre n'emettait que par son AP), **11/12 RECU apres**, source 192.168.0.43 = sa STA
+(1 perte : le multicast Wi-Fi n'est pas acquitte). Contre-essai, cuve revenue en Range Extender :
+le maitre n'emet plus que par son AP (`interfacesMulticastMaitre()` = ['192.168.4.1']), 2/2 RECU.
 
 Pourquoi cet ordre : E1 et E2 ne changent **aucun** comportement, on y verifie l'annonce et le
 choix d'IP sur le vrai reseau avant qu'une seule commande en depende. Esclaves avant maitre :
