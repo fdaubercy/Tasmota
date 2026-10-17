@@ -280,6 +280,17 @@ def _integration(verifie, attend, monte_testeur):
     verifie(sims["COM_E"].niveaux["slaveModbus"], "info", "TEMOIN esclave : slaveModbus non touche (seulement le maitre)")
     t.restaure_logs()
     verifie(attend(lambda: sims["COM_M"].niveaux["slaveModbus"] == "info", 3), True, "restauration : slaveModbus rendu")
+    # Ligne longue (discovery.json, 579 octets) : envoyee par blocs, sinon le P4 en perd (Len 443, 2026-10-17)
+    serie = sims["COM_M"].serie
+    blocs, ecrit_origine = [], serie.write
+    serie.write = lambda octets: (blocs.append(len(octets)), ecrit_origine(octets))[1]
+    t.cartes["maitre"].ecrit(tg.BR_DISCOVERY)
+    verifie(attend(lambda: tg.BR_DISCOVERY in sims["COM_M"].recus, 3), True, "commande discovery recue ENTIERE par la carte")
+    verifie((len(blocs) > 1, max(blocs) <= 64), (True, True), f"commande longue envoyee par blocs de 64 octets au plus ({blocs})")
+    blocs.clear()
+    t.cartes["maitre"].ecrit("Status 5")
+    verifie(blocs, [9], "TEMOIN commande courte : un seul envoi")
+    serie.write = ecrit_origine
     etat = testeur_udp_http.traite_post({"action": "lancer", "test": 2, "duree": 60}, t, "/grille")
     verifie(etat["en_cours"], 2, "POST /grille lancer : test 2 en cours")
     sims["COM_M"].dit("MODBUS_TASMOTA_SLAVE_RELEVE: 3 demande(s) de lecture placee(s) dans la file")

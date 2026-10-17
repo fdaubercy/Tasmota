@@ -33,6 +33,9 @@ ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 MAX_TAMPON = 64 * 1024
 PERIODE_REOUVERTURE = 1.0
 SEUIL_MUETTE = 10.0                    # s sans aucune ligne apres une commande : carte muette
+# Une ligne longue envoyee d'un bloc perd des caracteres dans le tampon de reception de la carte (constate le
+# 2026-10-17 : Br de 579 octets recu « Len 443 » par le P4, syntax_error ; par blocs de 64 : « Len 576 », execute).
+BLOC_ENVOI, PAUSE_BLOC = 64, 0.04
 PREFIXE_PONT = "pont:"
 PONTS_PROPOSES = (7000, 7001)          # toujours listes, meme pas demarres : l'utilisateur voit l'option
 PONTS_CHERCHES = range(7000, 7006)
@@ -232,7 +235,11 @@ class Carte:
             if self.serie is None:
                 return False
             try:
-                self.serie.write((commande + "\n").encode("utf-8"))
+                donnees = (commande + "\n").encode("utf-8")
+                for debut in range(0, len(donnees), BLOC_ENVOI):
+                    if debut:
+                        time.sleep(PAUSE_BLOC)
+                    self.serie.write(donnees[debut:debut + BLOC_ENVOI])
             except (serial.SerialException, OSError):
                 return False
             if self.attente_reponse is None:
