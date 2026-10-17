@@ -301,6 +301,7 @@ def section_serveur():
         s, j = appel(port, "GET", "/etat")
         verifie((s, len(j["outils"]), isinstance(j["liens_reseau"], list)), (200, 6, True),
                 "routes_get : /etat a 6 entrees")
+        verifie(isinstance(j.get("derniers"), dict), True, "routes_get : /etat porte derniers (dict)")
         verifie(appel(port, "GET", "/console?id=inconnu")[0], 404, "routes_get : console inconnue -> 404")
         verifie(appel(port, "GET", "/console?id=syslog")[1], {"lignes": []}, "routes_get : console vide")
         s, j = appel(port, "GET", "/ports")

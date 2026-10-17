@@ -90,7 +90,7 @@ PAGE = r"""<!doctype html>
 <script>
 "use strict";
 var $ = function (id) { return document.getElementById(id); };
-var registre = null, etats = {}, liensReseau = [], occupe = {}, erreurs = {}, consoleId = null;
+var registre = null, etats = {}, derniers = {}, liensReseau = [], occupe = {}, erreurs = {}, consoleId = null;
 var modaleId = null, enCours = false;
 
 // Cree un element : h("div", {class:"x", onclick:f}, enfants...) ; les textes passent par textContent.
@@ -205,6 +205,7 @@ async function rafraichit() {
     etats = {};
     r.donnees.outils.forEach(function (e) { etats[e.id] = e; });
     liensReseau = r.donnees.liens_reseau || [];
+    derniers = r.donnees.derniers || {};
     $("message").textContent = "";
   } else {
     $("message").textContent = "État indisponible : " + r.erreur;
@@ -265,6 +266,14 @@ $("panneau-ferme").onclick = function () { consoleId = null; $("panneau").style.
 // ---------- fenetre de lancement ----------
 function champ(libelle, controle) { return h("label", {"class": "champ"}, h("span", {texte: libelle}), controle); }
 
+// Valeur memorisee au dernier lancement si elle est encore proposee (liste "valides"), sinon le defaut.
+function initiale(o, p, valides) {
+  var d = derniers[o.id], v = d && d[p.cle] !== undefined && d[p.cle] !== null ? String(d[p.cle]) : null;
+  if (v === null) return p.defaut;
+  if (valides && valides.indexOf(v) < 0) return p.defaut;
+  return v;
+}
+
 function liste(options, valeur) {
   var s = h("select", {});
   options.forEach(function (o) {
@@ -302,11 +311,12 @@ async function ouvreLancement(o) {
       ports.forEach(function (x) { opts.push([x.port, libellePort(x)]); });
       if (p.genre === "com_ou_pont" && pont && pont.etat === "marche")
         opts.push(["pont:" + pont.port, "pont:" + pont.port + " — via le pont série"]);
-      ctl = liste(opts, p.defaut);
+      ctl = liste(opts, initiale(o, p, opts.map(function (x) { return x[0]; })));
     } else if (p.genre === "debit") {
-      ctl = liste(registre.debits.map(function (d) { return [String(d), String(d)]; }), p.defaut);
+      var debits = registre.debits.map(function (d) { return [String(d), String(d)]; });
+      ctl = liste(debits, initiale(o, p, debits.map(function (x) { return x[0]; })));
     } else {
-      ctl = h("input", {type: "number", min: "1024", max: "65535", value: p.defaut});
+      ctl = h("input", {type: "number", min: "1024", max: "65535", value: initiale(o, p, null)});
     }
     ctl.setAttribute("data-cle", p.cle);
     champs.appendChild(champ(p.libelle, ctl));
@@ -352,6 +362,19 @@ function montre(aide) {
 $("onglet-outils").onclick = function () { montre(false); };
 $("onglet-aide").onclick = function () { montre(true); };
 
+// Texte "Arreter" genere depuis les champs du registre (dans_job, route_occupe).
+function texteArret(o) {
+  var t = "Bouton Arrêter de la tuile, seulement si l'outil a été lancé depuis cette page. S'il a été lancé ailleurs " +
+          "(terminal, tâche VS Code), la tuile affiche « lancé ailleurs » sans bouton : Ctrl+C dans son terminal ou " +
+          "fermeture de sa tâche.";
+  if (o.route_occupe)
+    t += " L'arrêt est refusé tant qu'une opération est en cours (synchro, fusion ou envoi : l'outil le signale par " +
+         o.route_occupe + "), pour ne pas laisser un dépôt à moitié modifié.";
+  t += o.dans_job ? " Lancé d'ici, il s'arrête aussi quand l'annuaire se ferme."
+                  : " Lancé d'ici, il continue de tourner quand l'annuaire (ou VS Code) se ferme : l'arrêter avec son bouton.";
+  return t;
+}
+
 function construitAide() {
   var v = $("vue-aide");
   v.textContent = "";
@@ -369,9 +392,10 @@ function construitAide() {
       h("h2", {texte: o.nom}),
       h("h3", {texte: "Intérêt"}), h("p", {texte: o.aide}),
       h("h3", {texte: "Lancer"}),
-      h("p", {texte: "Bouton Lancer de la tuile" + (o.a_port_com ? " : une fenêtre propose le port, le débit et le port de la page." :
+      h("p", {texte: "Bouton Lancer de la tuile" + (o.a_port_com ? " : une fenêtre propose le port, le débit et le port de la page, préremplis avec le dernier lancement." :
         " : l'outil démarre avec ses valeurs par défaut.") +
         " Page par défaut : port " + o.port_defaut + "."}),
+      h("h3", {texte: "Arrêter"}), h("p", {texte: texteArret(o)}),
       h("h3", {texte: "Paramètres"}), params,
       h("h3", {texte: "Journaux"}), h("p", {texte: o.journaux})));
   });

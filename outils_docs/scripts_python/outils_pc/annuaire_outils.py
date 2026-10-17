@@ -5,7 +5,7 @@
 Acces : acces_web.py (ce PC sans jeton ; autre appareil avec le jeton du lien affiche).
 Routes (toutes derriere acces.controle) :
     GET  /          la page            GET /registre   le registre des outils (annuaire_registre.en_json)
-    GET  /etat      etat des outils + liens reseau (client local seulement)
+    GET  /etat      etat des outils + derniers parametres lances + liens reseau (client local seulement)
     GET  /ports     ports serie detectes, avec l'outil qui le tient (tenu_par)
     GET  /console?id=<id>   dernieres lignes de la console de l'outil lance par l'annuaire
     POST /lance     {"id", "valeurs"}   POST /arrete   {"id"}
@@ -116,7 +116,8 @@ def fabrique_gestionnaire(lanceur, acces):
                 self._json(reg.en_json())
             elif url.path == "/etat":
                 local = acces_web.est_local(self.client_address)
-                self._json({"outils": self._etat(), "liens_reseau": acces.liens_reseau() if local else []})
+                self._json({"outils": self._etat(), "liens_reseau": acces.liens_reseau() if local else [],
+                            "derniers": lanceur.derniers()})
             elif url.path == "/ports":
                 self._json(self._ports())
             elif url.path == "/console":
