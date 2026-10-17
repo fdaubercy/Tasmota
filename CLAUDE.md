@@ -447,7 +447,8 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     redemande au pont un port perdu, jamais apres « Arreter »). Onglet Aide. Cible PlatformIO
     « Testeur UDP maitre/esclave » dans Custom, et tache VS Code (Ctrl+Maj+P > Run Task). Banc :
     `test_testeur_udp.py` (cartes simulees par `testeur_udp_sim.py` ; groupe « pont » dans
-    `test_testeur_udp_pont.py`, sur le vrai `pont_serie.py` en loop:// ; code de sortie 0 = vert).
+    `test_testeur_udp_pont.py`, sur le vrai `pont_serie.py` en loop:// ; groupe « muette » dans
+    `test_testeur_udp_muette.py` : carte qui ne repond plus sur son port ; code de sortie 0 = vert).
   - `annuaire_outils.py` (+ `annuaire_registre.py`, `annuaire_presence.py`, `annuaire_lanceur.py`,
     `annuaire_page.py`) — annuaire des outils PC, page http://127.0.0.1:7600 : liste les outils (fiches de
     presence sous `%LOCALAPPDATA%\outils_tasmota\`, consoles dans `consoles\<id>.log`), les lance et les arrete.

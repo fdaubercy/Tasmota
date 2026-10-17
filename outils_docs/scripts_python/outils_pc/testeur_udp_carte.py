@@ -13,6 +13,11 @@
   Le pont NE rouvre PAS un port perdu : sur son annonce « [pont] port X perdu », le testeur le lui
   redemande (POST /ouvrir) a chaque tentative ; sur « [pont] port X ferme » (bouton Arreter, flash),
   il attend sans rien redemander.
+- Carte MUETTE : une commande ecrite reste sans AUCUNE ligne en retour pendant SEUIL_MUETTE s (Tasmota fait
+  l'echo « CMD: » de chaque commande). Constate le 2026-10-17 sur la cuve (pont CH343) : plus une ligne de
+  16:39:11 a 16:47:09 alors qu'elle tournait (ImAlive UDP recu par le maitre), port toujours « ouvert » ;
+  fermer/rouvrir le port n'a rien change, seul un reset de la carte l'a retablie. Signale une fois (note +
+  etat), leve a la premiere ligne revenue.
 """
 
 import json
@@ -27,6 +32,7 @@ import serial
 ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 MAX_TAMPON = 64 * 1024
 PERIODE_REOUVERTURE = 1.0
+SEUIL_MUETTE = 10.0                    # s sans aucune ligne apres une commande : carte muette
 PREFIXE_PONT = "pont:"
 PONTS_PROPOSES = (7000, 7001)          # toujours listes, meme pas demarres : l'utilisateur voit l'option
 PONTS_CHERCHES = range(7000, 7006)
@@ -162,6 +168,10 @@ class Carte:
         self.dernier_essai = 0.0
         self.pont_relance = None        # port COM a redemander au pont (il l'a perdu : carte redemarree)
         self._pont_coupe = False        # annonce du pont lue : couper la liaison TCP, reprise automatique
+        self.attente_reponse = None     # instant (monotonic) de la 1re commande restee sans ligne en retour
+        self.muette = False             # commande sans aucune ligne depuis SEUIL_MUETTE s
+        self.derniere_ligne = 0.0       # time.time() de la derniere ligne recue (essais)
+        self.sur_etat = None            # rappel sans argument : muette a change (le testeur relance le log serie)
         threading.Thread(target=self._boucle, daemon=True).start()
 
     @property
@@ -187,6 +197,7 @@ class Carte:
 
     def _installe(self, serie, nom, vitesse):
         self.serie, self.nom_port, self.vitesse, self.tampon = serie, nom, vitesse, b""
+        self.attente_reponse, self.muette = None, False
         self.generation += 1
         tcp = port_pont(nom)
         self.message = (f"connecte au pont serie http://127.0.0.1:{tcp} (le pont garde le port COM)" if tcp
@@ -197,6 +208,7 @@ class Carte:
             self.souhait, self.perdu = None, False
             self._ferme_sans_verrou()
             self.message = "port ferme"
+            self.attente_reponse, self.muette = None, False
 
     def _ferme_sans_verrou(self):
         if self.serie is not None:
@@ -223,6 +235,8 @@ class Carte:
                 self.serie.write((commande + "\n").encode("utf-8"))
             except (serial.SerialException, OSError):
                 return False
+            if self.attente_reponse is None:
+                self.attente_reponse = time.monotonic()
         self.sur_note(self.role, "envoi -> " + self.masque.applique(commande))
         return True
 
@@ -254,6 +268,8 @@ class Carte:
                 continue
             if brut:
                 self._lignes(brut)
+            else:
+                self._surveille_silence()
             if self._pont_coupe:
                 self._pont_coupe = False
                 self._perte(serie)
@@ -280,11 +296,32 @@ class Carte:
             self.perdu, self.pont_relance = False, None
         self.sur_ouverture(self.role, True)
 
+    def _surveille_silence(self):
+        debut = self.attente_reponse
+        if debut is None or self.muette or time.monotonic() - debut < SEUIL_MUETTE:
+            return
+        self.muette = True
+        self.sur_note(self.role, f"carte MUETTE : aucune ligne depuis {time.monotonic() - debut:.0f} s malgre les "
+                                 "commandes envoyees, alors que le port est ouvert ; verdicts non significatifs tant "
+                                 "qu'elle se tait. Relance du log serie (SerialLog) ; si rien ne revient : reset de la "
+                                 "carte (bouton RST) - le 2026-10-17 sur la cuve, fermer/rouvrir le port n'a rien change")
+        self._signale_etat()
+
+    def _signale_etat(self):
+        if self.sur_etat is not None:
+            self.sur_etat()
+
     def _lignes(self, brut):
         self.tampon += brut
         if len(self.tampon) > MAX_TAMPON and b"\n" not in self.tampon:
             self.tampon = self.tampon[-MAX_TAMPON:]
         *entieres, self.tampon = self.tampon.split(b"\n")
+        if entieres:
+            self.attente_reponse, self.derniere_ligne = None, time.time()
+            if self.muette:
+                self.muette = False
+                self.sur_note(self.role, "la carte repond de nouveau sur son port serie")
+                self._signale_etat()
         for octets in entieres:
             texte = ANSI.sub("", octets.decode("utf-8", "replace")).replace("\r", "").rstrip()
             if texte.strip():

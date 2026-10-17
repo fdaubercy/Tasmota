@@ -51,6 +51,7 @@ class Sim:
         self.sans_mode_connexion = False                 # True : firmware anterieur a ModeConnexion (2026-10-16)
         self.serie_coupee = False                        # True : log serie coupe par SERIALLOG_TIMER (600 s)
         self.reveils = 0                                 # SerialLog reappliques (COMMANDE_REVEIL_SERIE)
+        self.muette = False                              # True : plus rien sur le port, commandes comprises (2026-10-17)
 
     def ouvre(self):
         if self.absent:
@@ -59,7 +60,7 @@ class Sim:
         return self.serie
 
     def dit(self, texte):
-        if self.serie and not self.serie.mort and not self.serie_coupee:
+        if self.serie and not self.serie.mort and not self.serie_coupee and not self.muette:
             self.dits.append(texte)
             self.serie.sort("12:34:56.789 " + texte)
 

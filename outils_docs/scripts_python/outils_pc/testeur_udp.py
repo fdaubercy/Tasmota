@@ -84,6 +84,8 @@ class Testeur:
         self.ordre = ("maitre", "esclave")
         self.cartes = {r: tc.Carte(r, args.vitesse, self.masque, self.sur_ligne, self.sur_ouverture, self.sur_perte,
                                    self.sur_note, fabrique) for r in self.ordre}
+        for r, carte in self.cartes.items():
+            carte.sur_etat = (lambda role=r: self.sur_muette(role))
         self.infos = {r: {"ip": "", "hostname": "", "mac": ""} for r in self.ordre}
         self.acquis = {r: {"ip": False, "logs": False, "mode": False} for r in self.ordre}
         self.logs = {r: {"originaux": None, "poses": {}} for r in self.ordre}
@@ -156,7 +158,8 @@ class Testeur:
     def etat(self):
         cartes = {}
         for r, c in self.cartes.items():
-            cartes[r] = {"port": c.nom_port or c.souhait, "ouvert": c.ouvert, "attente": c.perdu, "vitesse": c.vitesse,
+            cartes[r] = {"port": c.nom_port or c.souhait, "ouvert": c.ouvert, "attente": c.perdu, "muette": c.muette,
+                         "vitesse": c.vitesse,
                          "message": c.message, **self.infos[r], "logs": self.logs[r]["poses"],
                          "originaux": self.logs[r]["originaux"]}
         redemarrage = (self.redemarrage_depuis is not None
@@ -188,6 +191,15 @@ class Testeur:
         self.note(role, ("port rouvert automatiquement : " if reouverte else "") + carte.message)
         self.pousse_etat()
         threading.Thread(target=self.initialise, args=(role, carte.generation), daemon=True).start()
+
+    def sur_muette(self, role):
+        """La carte devient muette (ou reparle). Muette : Tasmota a peut-etre coupe son log serie 600 s apres un
+        redemarrage SANS perte du port (pont CH343 : le testeur n'a pas vu le redemarrage, donc pas relance le
+        log) -> on relance UNE fois ; une reponse leve l'etat muette."""
+        carte = self.cartes[role]
+        if carte.muette:
+            carte.ecrit(COMMANDE_REVEIL_SERIE)
+        self.pousse_etat()
 
     def sur_perte(self, role):
         self.note(role, self.cartes[role].message)
@@ -357,6 +369,13 @@ class Testeur:
                 time.sleep(0.05)
             time.sleep(0.15)                                 # la derniere ligne de log
             resultat = essai.conclut()
+            # Carte muette (2026-10-17) : pas une seule ligne pendant l'essai, pas meme l'echo de la commande.
+            # Le verdict ne dit alors rien de l'UDP : l'alerte passe EN TETE des details.
+            for r in (essai.recepteur, essai.emetteur):
+                if self.cartes[r].derniere_ligne < essai.t0:
+                    resultat["details"].insert(0, f"aucune ligne recue de la carte {r} pendant l'essai (pas meme l'echo "
+                                                  "de la commande) : carte muette sur son port serie, verdict non "
+                                                  "significatif - reset de la carte")
         finally:
             self.essai = None
             self.verrou_essai.release()

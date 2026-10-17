@@ -74,6 +74,12 @@ Un message d'un autre essai n'est jamais accepté.</td></tr>
 <tr><td style="color:#f14c4c"><b>ECHEC</b></td><td>Essai ModBus : l'esclave a aussi écrit la trame sur le RS485 (<code>ENVOI_MSG_MODBUS: Message ModBus envoyé = 0x</code>) alors que la réponse ne doit partir que par UDP.</td></tr>
 <tr><td style="color:#d670d6"><b>PAS DE RUBAN</b></td><td>Essai Push : l'esclave n'a pas de ruban (<code>PAS_DE_RUBAN</code>) : rien à pousser.</td></tr>
 </table>
+<p><b>Carte muette</b> (pastille rouge, « CARTE MUETTE » à côté du port) : une commande est restée <b>10 s sans
+aucune ligne</b> en retour, pas même l'écho <code>CMD:</code>, alors que le port est ouvert. L'outil relance une fois
+le log série (<code>SerialLog</code>, coupé par Tasmota 600 s après un redémarrage qu'il n'a pas vu) ; si rien ne
+revient, <b>reset de la carte</b> (bouton RST) : le 2026-10-17, la cuve s'est tue ainsi 8 min alors qu'elle tournait
+(UDP reçu par le maître), et fermer/rouvrir le port n'a rien changé. Un essai pendant lequel une carte n'a rien écrit
+le dit en tête des détails (« aucune ligne reçue de la carte ... ») : son verdict ne dit alors rien de l'UDP.</p>
 <p>Le délai affiché va de l'envoi de la commande à la ligne de réception. « Source vue » = IP:port lus dans <code>LIRE_UDP: Données UDP ... reçues de '&lt;ip&gt;' sur le port &lt;n&gt;</code>.
 Un essai ModBus attend toute la fenêtre (l'absence de trame RS485 ne se prouve qu'à la fin).</p>
 

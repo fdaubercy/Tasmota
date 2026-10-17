@@ -120,10 +120,11 @@ function majEtat(e){
   etat=e;
   for(const role of ROLES){
     const c=e.cartes[role];
-    $('p-'+role).style.background=c.ouvert?'#23d18b':(c.attente?'#f5f543':'#808080');
+    $('p-'+role).style.background=c.ouvert?(c.muette?'#f14c4c':'#23d18b'):(c.attente?'#f5f543':'#808080');
     const viaPont=String(c.port||'').startsWith('pont:');
     $('etat-'+role).textContent=c.ouvert?(viaPont?c.message:`${c.port} ouvert a ${c.vitesse} bauds`):
      (c.attente?(viaPont?`pont ${c.port.slice(5)} : carte perdue (redemarrage ?), reprise automatique...`:`${c.port} perdu : reouverture automatique...`):'port ferme');
+    if(c.ouvert&&c.muette)$('etat-'+role).textContent+=' - CARTE MUETTE : aucune reponse aux commandes, reset de la carte (RST)';
     $('ouvrir-'+role).disabled=c.ouvert; $('fermer-'+role).disabled=!c.ouvert&&!c.attente;
     $('infos-'+role).textContent=c.ouvert?`IP (Status 5) : ${c.ip||'?'}   Hostname : ${c.hostname||'?'}   MAC : ${c.mac||'?'}`:'';
     const poses=Object.entries(c.logs||{});
