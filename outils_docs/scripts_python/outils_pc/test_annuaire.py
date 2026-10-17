@@ -1,4 +1,4 @@
-"""Banc de l'annuaire des outils PC (annuaire_registre.py ; presence et serveur ajoutes ensuite).
+"""Banc de l'annuaire des outils PC (registre, presence, serveur).
 
 Code de sortie 0 = vert. Une section par fonction, appelee par principal().
 """
@@ -205,10 +205,227 @@ def section_presence():
     verifie(e["etat"], "arrete", "TEMOIN com_tenu : lance mort ne bloque pas")
 
 
+def appel(port, methode, chemin, corps=None, entetes=None, hote="127.0.0.1"):
+    """(statut, json ou None) d'une requete HTTP sur hote:port."""
+    import http.client
+    c = http.client.HTTPConnection(hote, port, timeout=10)
+    donnees = None if corps is None else json.dumps(corps).encode("utf-8")
+    c.request(methode, chemin, body=donnees, headers=dict(entetes or {}))
+    r = c.getresponse()
+    brut = r.read()
+    c.close()
+    try:
+        return r.status, json.loads(brut.decode("utf-8"))
+    except ValueError:
+        return r.status, None
+
+
+def tue_arbre(pr):
+    """Tue le processus lance par CE test et ses enfants (par PID)."""
+    subprocess.run(["taskkill", "/T", "/F", "/PID", str(pr.pid)], capture_output=True)
+    try:
+        pr.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        pass
+
+
+def section_serveur():
+    print("== serveur ==")
+    import threading
+    import time
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    import acces_web
+    import annuaire_outils as ann
+    import annuaire_presence as pre
+    from annuaire_lanceur import Lanceur
+
+    racine = tempfile.mkdtemp()
+    os.environ["OUTILS_TASMOTA_DOSSIER"] = racine
+    dossier = str(acces_web.dossier_presence())
+    libres = {o.id: port_libre() for o in reg.OUTILS}
+    with open(os.path.join(racine, "derniers.json"), "w", encoding="utf-8") as f:
+        json.dump({o.id: {o.cle_port_page: libres[o.id]} for o in reg.OUTILS}, f)
+
+    lanceur = Lanceur(RACINE)
+    lances, arrets = [], []
+    reponse_arret = [True]
+
+    def faux_lance(outil, args, valeurs=None):
+        lances.append((outil.id, args, valeurs))
+        return 4242
+    lanceur.lance = faux_lance
+
+    def faux_arrete(outil, pid):
+        arrets.append((outil.id, pid))
+        return reponse_arret[0]
+    lanceur.arrete = faux_arrete
+
+    acces = acces_web.Acces(0, False, "Annuaire des outils")
+    srv = ann.Serveur(("0.0.0.0", 0), ann.fabrique_gestionnaire(lanceur, acces))
+    port = srv.server_address[1]
+    acces.port, acces.cookie = port, f"jeton_{port}"
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    ent = {"X-Annuaire": "1"}
+
+    def post(chemin, corps, entetes=ent, hote="127.0.0.1"):
+        return appel(port, "POST", chemin, corps, entetes, hote)
+
+    try:
+        s, j = appel(port, "GET", "/registre")
+        verifie((s, len(j["outils"])), (200, 6), "routes_get : /registre a 6 outils")
+        s, j = appel(port, "GET", "/etat")
+        verifie((s, len(j["outils"]), isinstance(j["liens_reseau"], list)), (200, 6, True),
+                "routes_get : /etat a 6 entrees")
+        verifie(appel(port, "GET", "/console?id=inconnu")[0], 404, "routes_get : console inconnue -> 404")
+        verifie(appel(port, "GET", "/console?id=syslog")[1], {"lignes": []}, "routes_get : console vide")
+        s, j = appel(port, "GET", "/ports")
+        verifie((s, isinstance(j, list)), (200, True), "routes_get : /ports liste")
+        verifie(appel(port, "GET", "/")[0], 200, "routes_get : page")
+        verifie(appel(port, "GET", "/nimporte")[0], 404, "TEMOIN routes_get : route inconnue -> 404")
+
+        verifie(post("/lance", {"id": "syslog", "valeurs": {}}), (200, {"pid": 4242}), "lance_ok : reponse")
+        verifie(lances, [("syslog", ["--http", "7200"], {})], "lance_ok : enregistreur")
+
+        del lances[:]
+        verifie(post("/lance", {"id": "sniffeur_modbus", "valeurs": {"port": "COM3 --x"}})[0], 400,
+                "lance_refuse : valeur piegee -> 400")
+        s, j = post("/lance", {"id": "sniffeur_modbus", "valeurs": {"debit": "12"}})
+        verifie((s, "erreur" in j), (400, True), "lance_refuse : message d'erreur")
+        verifie(post("/lance", {"id": "syslog", "valeurs": {}}, entetes={})[0], 403,
+                "lance_refuse : sans X-Annuaire -> 403")
+        verifie(post("/lance", {"id": "syslog", "valeurs": {}}, entetes=dict(ent, Origin="http://evil"))[0], 403,
+                "lance_refuse : Origin etrangere -> 403")
+        verifie(post("/lance", {"id": "zzz"})[0], 404, "lance : id inconnu -> 404")
+        verifie(post("/arrete", {"id": "zzz"})[0], 404, "arrete : id inconnu -> 404")
+        verifie(lances, [], "lance_refuse : enregistreur vide")
+        verifie(post("/lance", {"id": "syslog", "valeurs": {}},
+                     entetes=dict(ent, Origin=f"http://127.0.0.1:{port}"))[0], 200,
+                "TEMOIN lance_refuse : meme origine -> 200")
+        del lances[:]
+
+        # outil deja en marche (fiche + port ouvert) -> 409 ; lance par l'annuaire -> peut etre arrete
+        srv_outil, p_outil = serveur_libre()
+        ecrit_fiche(dossier, "Serveur syslog", p_outil, os.getpid())
+        s, j = post("/lance", {"id": "syslog", "valeurs": {}})
+        verifie((s, lances), (409, []), "lance : outil en marche -> 409")
+        verifie(post("/arrete", {"id": "syslog"}), (200, {"ok": True}), "arrete_ok : 200")
+        verifie(arrets, [("syslog", os.getpid())], "arrete_ok : pid de la fiche")
+        reponse_arret[0] = False
+        verifie(post("/arrete", {"id": "syslog"}),
+                (500, {"erreur": "Arret non confirme : le processus vit encore"}),
+                "arrete : mort non confirmee -> 500")
+        reponse_arret[0] = True
+        lanceur.lances["syslog"] = {"pid": 4343, "valeurs": {}}
+        del arrets[:]
+        post("/arrete", {"id": "syslog"})
+        verifie(arrets, [("syslog", 4343)], "arrete : pid de lanceur.lances prioritaire")
+        del lanceur.lances["syslog"]
+        ecrit_fiche(dossier, "Serveur syslog", p_outil, os.getpid(), lance_par="")
+        verifie(post("/arrete", {"id": "syslog"})[0], 409, "arrete : outil lance ailleurs -> 409")
+        verifie(post("/arrete", {"id": "syslog"}, entetes={})[0], 403, "arrete : sans X-Annuaire -> 403")
+        srv_outil.close()
+        os.remove(os.path.join(dossier, f"{p_outil}.json"))
+        # fenetre de demarrage : lance connu, PID vivant, pas encore de fiche -> 409
+        lanceur.lances["syslog"] = {"pid": os.getpid(), "valeurs": {}}
+        verifie(post("/lance", {"id": "syslog", "valeurs": {}})[0], 409,
+                "lance : demarrage en cours (pid vivant) -> 409")
+        lanceur.lances["syslog"] = {"pid": pid_mort(), "valeurs": {}}
+        verifie(post("/lance", {"id": "syslog", "valeurs": {}})[0], 200, "TEMOIN lance : ancien pid mort -> 200")
+        del lanceur.lances["syslog"]
+
+        # synchro : faux serveur /execution sur un port libre, fiche factice pointant dessus
+        etat_synchro = {"en_cours": True}
+
+        class Faux(BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_GET(self):
+                corps = json.dumps(etat_synchro).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(corps)))
+                self.end_headers()
+                self.wfile.write(corps)
+        faux = HTTPServer(("127.0.0.1", 0), Faux)
+        threading.Thread(target=faux.serve_forever, daemon=True).start()
+        p_sync = faux.server_address[1]
+        ecrit_fiche(dossier, "Synchro du fork", p_sync, os.getpid())
+        del arrets[:]
+        verifie(post("/arrete", {"id": "synchro_fork"}),
+                (409, {"erreur": "Une operation de synchro est en cours : arret refuse"}),
+                "arret_synchro_refuse : en_cours true -> 409")
+        verifie(arrets, [], "arret_synchro_refuse : rien arrete")
+        etat_synchro["en_cours"] = False
+        verifie(post("/arrete", {"id": "synchro_fork"})[0], 200, "TEMOIN arret_synchro : en_cours false -> 200")
+        verifie(arrets, [("synchro_fork", os.getpid())], "arret_synchro : arret demande")
+        faux.shutdown()
+        faux.server_close()
+        os.remove(os.path.join(dossier, f"{p_sync}.json"))
+
+        # acces distant
+        ips = acces_web.ips_reseau()
+        if not ips:
+            print("SAUTE  acces_distant : aucune adresse reseau sur ce PC")
+        else:
+            import test_acces_web
+            ip = ips[0]
+            verifie(test_acces_web.cas_refus(acces, ip, port), 4, f"acces_distant : 4 refus sans jeton ({ip})")
+            verifie(appel(port, "GET", "/etat", hote=ip)[0], 403, "acces_distant : /etat sans jeton -> 403")
+            cookie = {"Cookie": f"{acces.cookie}={acces.jeton}"}
+            s, j = appel(port, "GET", "/etat", entetes=cookie, hote=ip)
+            verifie((s, j["liens_reseau"]), (200, []), "acces_distant : avec jeton -> 200, pas de liens reseau")
+            verifie(post("/lance", {"id": "syslog", "valeurs": {}}, hote=ip)[0], 403,
+                    "acces_distant : POST sans jeton -> 403")
+            s, _ = post("/lance", {"id": "sniffeur_modbus", "valeurs": {"debit": "12"}},
+                        entetes=dict(ent, **cookie, Origin=f"http://{ip}:{port}"), hote=ip)
+            verifie(s, 400, "acces_distant : POST avec jeton atteint la validation")
+    finally:
+        srv.shutdown()
+        srv.server_close()
+
+    # double demarrage : vrais sous-processus, dans le dossier de donnees de test
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "annuaire_outils.py")
+    env = dict(os.environ, PYTHONIOENCODING="utf-8")
+    flags = 0x08000000 if os.name == "nt" else 0
+
+    def lance_annuaire(p):
+        return subprocess.Popen([sys.executable, script, "--http", str(p), "--sans-navigateur"], env=env,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                creationflags=flags, text=True)
+    p1 = p2 = p3 = None
+    sock = None
+    try:
+        pa = port_libre()
+        p1 = lance_annuaire(pa)
+        fin = time.monotonic() + 20
+        while time.monotonic() < fin and not (pre.port_repond(pa)
+                                              and os.path.exists(os.path.join(dossier, f"{pa}.json"))):
+            time.sleep(0.2)
+        verifie(pre.port_repond(pa), True, "double_demarrage : le premier ecoute")
+        p2 = lance_annuaire(pa)
+        sortie, _ = p2.communicate(timeout=30)
+        verifie((p2.returncode, sortie), (0, ""), "double_demarrage : le second sort en 0 sans rien afficher")
+        verifie(p1.poll(), None, "double_demarrage : le premier tourne toujours")
+        sock, q = serveur_libre()
+        p3 = lance_annuaire(q)
+        sortie, _ = p3.communicate(timeout=30)
+        verifie((p3.returncode, f"Port {q} deja utilise par un autre programme" in sortie), (1, True),
+                "double_demarrage : port pris par un autre programme -> 1 et message")
+    finally:
+        for pr in (p1, p2, p3):
+            if pr is not None and pr.poll() is None:
+                tue_arbre(pr)
+        if sock:
+            sock.close()
+        os.environ.pop("OUTILS_TASMOTA_DOSSIER", None)
+
+
 def principal():
     section_registre()
     print()
     section_presence()
+    print()
+    section_serveur()
     print()
     print("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s)")
     return 0 if not ECHECS else 1
