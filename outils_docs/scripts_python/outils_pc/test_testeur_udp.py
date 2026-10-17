@@ -45,6 +45,7 @@ import testeur_udp_http                     # noqa: E402
 import test_testeur_udp_pont  # noqa: E402  (groupe « pont » : liaison par le vrai pont_serie.py)
 import test_testeur_udp_acces  # noqa: E402  (groupe « acces » : jeton depuis un autre appareil, acces_web.py)
 import test_testeur_udp_muette  # noqa: E402  (groupe « muette » : carte qui ne repond plus sur son port)
+import test_testeur_udp_grille  # noqa: E402  (groupe « grille » : onglet Grille ModBus, sans carte)
 import acces_web                            # noqa: E402
 from testeur_udp_sim import FauxSerie, Reseau, Sim   # noqa: E402,F401
 
@@ -486,7 +487,8 @@ def main():
     for nom, groupe in (("essais", groupe_essais), ("carte", groupe_carte), ("testeur", groupe_testeur),
                         ("ancien", groupe_firmware_ancien), ("pont", lambda: test_testeur_udp_pont.groupe_pont(verifie, attend)), ("http", groupe_http),
                         ("acces", lambda: test_testeur_udp_acces.groupe_acces(verifie, monte_testeur)),
-                        ("muette", lambda: test_testeur_udp_muette.groupe_muette(verifie, attend, monte_testeur))):
+                        ("muette", lambda: test_testeur_udp_muette.groupe_muette(verifie, attend, monte_testeur)),
+                        ("grille", lambda: test_testeur_udp_grille.groupe_grille(verifie, attend, monte_testeur))):
         debut = time.time()
         try:
             groupe()

@@ -78,6 +78,17 @@ def traite_post(demande, testeur, chemin):
         testeur.envoie_commande(str(demande.get("carte", "")), commande)
     elif chemin == "/raz":
         testeur.essais.clear()
+    elif chemin == "/grille":
+        action = demande.get("action")
+        if action == "lancer":
+            testeur.grille.lance(int(demande.get("test", 0)), demande.get("duree"))
+        elif action == "repondre":
+            testeur.grille.repond(str(demande.get("reponse", "")))
+        elif action == "arreter":
+            testeur.grille.arrete()
+        else:
+            raise ValueError(f"action inconnue : {action!r}")
+        return testeur.grille.etat()
     else:
         raise LookupError(chemin)
     return {"ok": True}
@@ -120,6 +131,8 @@ def fabrique_gestionnaire(testeur, acces):
                 self._json(liste_ports())
             elif chemin == "/essais":
                 self._json(testeur.essais)
+            elif chemin == "/grille":
+                self._json(testeur.grille.etat())
             elif chemin == "/flux":
                 self.send_response(200)
                 self.send_header("Content-Type", "text/event-stream")

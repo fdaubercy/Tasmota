@@ -86,6 +86,8 @@ Un essai ModBus attend toute la fenêtre (l'absence de trame RS485 ne se prouve 
 <h2>5. Les logs posés et restaurés</h2>
 <p>À l'ouverture d'un port, l'outil envoie <code>ReglageLog</code> et mémorise <code>modules.udp</code>, <code>modules.modbus</code> et <code>sorties.serie</code>.
 Il pose ensuite <code>ReglageLog udp detail</code>, <code>ReglageLog modbus detail</code> et, si la sortie série est sous <i>debug</i>, <code>ReglageLog serie debug</code>.
+Sur le <b>maître</b> seulement, il pose aussi <code>ReglageLog slaveModbus debug</code> et <code>ReglageLog conn16channels debug</code> (relevés,
+chien de garde, carte 16 relais : l'onglet Grille ModBus en a besoin). Un niveau déjà plus haut est gardé : l'outil ne baisse jamais un niveau.
 Il ne touche <b>jamais</b> aux sorties <b>mqtt, web, syslog</b> (MqttLog en debug fait planter un esclave derrière le NAPT). À l'arrêt, à la fermeture d'un port
 et par le bouton « Restaurer les logs », il rend les valeurs d'origine (<code>ReglageLog udp &lt;niveau&gt;</code>...).</p>
 
@@ -105,4 +107,33 @@ sur l'esclave, réception <code>ModbusUDP &lt;tid&gt; ...</code> sur le maître,
 (état réel du ruban de la cuve, sans effet de bord) ; preuves : <code>POUSSE_ETAT: registre 1376 = ...</code> puis <code>LIRE_UDP</code> « ModbusPushUDP ... » sur le maître</td></tr>
 </table>
 <p>Référence : <code>outils_docs/PROTOCOLE_MODBUS.md</code>, §9 « Commandes sans fil vers les esclaves ».</p>
+
+<h2>7. Onglet Grille ModBus</h2>
+<p>La grille de validation de <code>outils_docs/AUDIT_MODBUS_2026-09-29.md</code> §6, ramenée à <b>un seul esclave</b> : celui dont l'ID, le Power du P4 et le
+registre sont lus dans le persist du maître (par défaut la cuve : ID 2, POWER1, registre 1376). Les deux cartes doivent être ouvertes (onglet Essais).
+Un seul test à la fois ; chaque test envoie ses commandes, lit les logs des deux cartes et juge chaque ligne :</p>
+<ul>
+<li><b>OK</b> : la preuve attendue a été vue (elle s'affiche dans « Détail / preuve ») ; <b>ECHEC</b> : un log interdit est apparu, ou un compte est hors bornes ;
+<b>NON VU</b> : la preuve n'est pas arrivée dans le délai ; <b>INFO</b> : relevé pour information, sans verdict.</li>
+<li>Une <b>consigne</b> (bandeau violet) demande un geste ou une constatation : « C'est fait », ou « Oui » / « Non ». Le test attend la réponse.</li>
+</ul>
+<table>
+<tr><th>Test</th><th>Ce qu'il fait</th></tr>
+<tr><td>1</td><td>Démarrage : <code>controleModbus</code> chargé sur les deux cartes, port RS485 de l'esclave ouvert (<code>Br print(...)</code>).</td></tr>
+<tr><td>2</td><td>Régime normal, rien à toucher (durée réglable, 300 s par défaut, décompte à côté du bouton « Lancer ») : compte les relevés
+et les requêtes exécutées par l'esclave, puis les réponses <b>reçues</b> par le P4 (<code>ModbusReceived</code> de son adresse : une requête
+exécutée ne prouve pas que la réponse arrive) ; échec sur message abandonné pour l'esclave testé (<code>TERMINE_EN_VOL ... (esclave 2</code>, <code>ESCLAVE_MUET</code>),
+hors-séquence, file pleine, <code>SLAVE_ERREUR</code>, chien de garde, écart de relai, erreur Berry. Les <code>SUR_TIMEOUT</code> ne sont qu'une
+information : ce log ne nomme pas l'esclave, et chaque esclave absent du bus (rideau, carte 16 relais) en produit un par relevé.</td></tr>
+<tr><td>3</td><td>Carte 16 relais, si elle est branchée : relevés, pas de chien de garde ni d'écart de voie.</td></tr>
+<tr><td>4</td><td><code>Power1 ON</code> puis <code>OFF</code> sur le P4 : publication, exécution sur l'esclave, push de l'état, constatation visuelle
+du ruban, puis <code>RubanEsclave1 auto</code>.</td></tr>
+<tr><td>5</td><td><code>Power1 TOGGLE</code> sur l'esclave → push reçu par le P4 ; <code>Restart 1</code> de l'esclave → le P4 voit le redémarrage
+(<code>ACCEPTE_SEQ</code>) et accepte le push suivant.</td></tr>
+<tr><td>6</td><td>Panne : débranchez le câble RS485 de l'esclave → chien de garde du maître (jusqu'à 150 s) ; rebranchez → l'esclave répond de nouveau.</td></tr>
+<tr><td>7</td><td>Découverte : <code>RgxState</code>, <code>forceEnvoiParams</code>, paramètres reçus par le maître, forme de <code>/json/discovery.json</code>
+contrôlée sur le P4, puis constatation de la page /discovery.</td></tr>
+</table>
+<p>Le cadre « Commande libre » envoie une commande Tasmota à l'une des cartes ; la réponse paraît dans le journal de la carte (onglet Essais).
+« Arrêter le test en cours » annule les étapes restantes. Routes : <code>GET /grille</code>, <code>POST /grille</code> (<code>action</code> = lancer, repondre, arreter).</p>
 """

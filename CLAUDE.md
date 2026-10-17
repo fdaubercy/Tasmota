@@ -438,7 +438,8 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     envoient a `SYS_LOG_HOST` (`user_config_override.h`) = **192.168.0.3, ce PC** (le NAS
     192.168.0.2 est eteint) : IP a figer par un bail DHCP fixe sur la box.
   - `testeur_udp.py` (+ `testeur_udp_carte.py`, `testeur_udp_essais.py`, `testeur_udp_http.py`,
-    `testeur_udp_web.py`, `testeur_udp_aide.py`, `build/cible_testeur_udp.py`) — page
+    `testeur_udp_web.py`, `testeur_udp_aide.py`, `testeur_udp_grille.py`, `testeur_udp_grille_web.py`,
+    `build/cible_testeur_udp.py`) — page
     http://127.0.0.1:7400 pour tester l'UDP maitre <-> esclave : ouvre les 2 ports serie (maitre et
     esclave, reglables dans la page), envoie texte libre / trames `ModbusUDP` (E1) / push / `ImAlive`
     en unicast ou multicast et juge chaque essai (RECU, EMIS NON RECU, NON EMIS...). Bascule le mode
@@ -446,11 +447,15 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     dans le persist du maitre du depot ; l'esclave memorise ses reseaux d'origine et redemarre).
     Pose les logs `udp`/`modbus` le temps des essais puis les restaure. Chaque carte se branche soit sur
     son port COM, soit par le pont serie (`pont:7000`, TCP brut ; avertit si le pont n'est pas demarre ;
-    redemande au pont un port perdu, jamais apres « Arreter »). Onglet Aide. Cible PlatformIO
+    redemande au pont un port perdu, jamais apres « Arreter »). Onglet « Grille ModBus » : les 7 tests de
+    la grille de `AUDIT_MODBUS_2026-09-29.md` §6 pour UN esclave (ID/Power/registre lus dans le persist du
+    maitre, defaut cuve), juges sur les logs des deux cartes, consignes a valider dans la page ; pose
+    aussi `slaveModbus`/`conn16channels` en debug sur le maitre. Onglet Aide. Cible PlatformIO
     « Testeur UDP maitre/esclave » dans Custom, et tache VS Code (Ctrl+Maj+P > Run Task). Banc :
     `test_testeur_udp.py` (cartes simulees par `testeur_udp_sim.py` ; groupe « pont » dans
     `test_testeur_udp_pont.py`, sur le vrai `pont_serie.py` en loop:// ; groupe « muette » dans
-    `test_testeur_udp_muette.py` : carte qui ne repond plus sur son port ; code de sortie 0 = vert).
+    `test_testeur_udp_muette.py` : carte qui ne repond plus sur son port ; groupe « grille » dans
+    `test_testeur_udp_grille.py`, avec pannes simulees ; code de sortie 0 = vert).
   - `annuaire_outils.py` (+ `annuaire_registre.py`, `annuaire_presence.py`, `annuaire_lanceur.py`,
     `annuaire_page.py`) — annuaire des outils PC, page http://127.0.0.1:7600 : liste les outils (fiches de
     presence sous `%LOCALAPPDATA%\outils_tasmota\`, consoles dans `consoles\<id>.log`), les lance et les arrete.

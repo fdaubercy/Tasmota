@@ -38,6 +38,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import acces_web                    # noqa: E402
 import testeur_udp_carte as tc      # noqa: E402
 import testeur_udp_essais as te     # noqa: E402
+import testeur_udp_grille as tg     # noqa: E402
 
 RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 PERSIST_MAITRE = os.path.join(RACINE, "data", "garage", "tasmota32p4-serveur-modbus", "_persist.json")
@@ -86,6 +87,9 @@ class Testeur:
                                    self.sur_note, fabrique) for r in self.ordre}
         for r, carte in self.cartes.items():
             carte.sur_etat = (lambda role=r: self.sur_muette(role))
+        # Onglet Grille ModBus (2026-10-17) : la grille de l'audit, jugee sur les logs des deux cartes
+        self.grille = tg.Grille(lambda role, commande: self.cartes[role].ecrit(commande), self.diffuse,
+                                tg.cible_depuis_persist(args.persist_maitre))
         self.infos = {r: {"ip": "", "hostname": "", "mac": ""} for r in self.ordre}
         self.acquis = {r: {"ip": False, "logs": False, "mode": False} for r in self.ordre}
         self.logs = {r: {"originaux": None, "poses": {}} for r in self.ordre}
@@ -180,6 +184,7 @@ class Testeur:
         essai = self.essai
         if essai is not None:
             essai.observe(role, texte, t)
+        self.grille.observe(role, texte, t)
         self.analyse(role, texte)
 
     def sur_ouverture(self, role, reouverte):
@@ -278,23 +283,24 @@ class Testeur:
 
     def traite_logs(self, role, d):
         """Etat complet de ReglageLog : memorise l'origine (une seule fois), pose udp/modbus en detail et la
-        sortie serie en debug au moins. JAMAIS mqtt / web / syslog (MqttLog debug fait planter un esclave
-        derriere le NAPT)."""
+        sortie serie en debug au moins ; sur le maitre, slaveModbus et conn16channels en debug au moins (onglet
+        Grille ModBus : releve, chien de garde, carte 16 relais). On ne baisse jamais un niveau. JAMAIS mqtt /
+        web / syslog (MqttLog debug fait planter un esclave derriere le NAPT)."""
         if not isinstance(d.get("sorties"), dict) or not isinstance(d.get("modules"), dict):
             return                                     # reponse a une commande de reglage, pas l'etat complet
         sorties = {k: premier_mot(v) for k, v in d["sorties"].items()}
         modules = {k: premier_mot(v) for k, v in d["modules"].items()}
-        actuel = {"udp": modules.get("udp"), "modbus": modules.get("modbus"), "serie": sorties.get("serie")}
+        cibles = {"udp": "detail", "modbus": "detail", "serie": "debug"}
+        if role == "maitre":
+            cibles.update(slaveModbus="debug", conn16channels="debug")
+        actuel = {cle: (sorties if cle == "serie" else modules).get(cle) for cle in cibles}
         etat = self.logs[role]
         if etat["originaux"] is None:
             etat["originaux"] = dict(actuel)
-        cibles = {"udp": "detail", "modbus": "detail"}
-        rang = NIVEAUX.index(actuel["serie"]) if actuel["serie"] in NIVEAUX else -1
-        if rang < NIVEAUX.index("debug"):
-            cibles["serie"] = "debug"
         carte = self.cartes[role]
         for cle, cible in cibles.items():
-            if actuel.get(cle) is not None and actuel[cle] != cible:
+            rang = NIVEAUX.index(actuel[cle]) if actuel.get(cle) in NIVEAUX else -1
+            if actuel.get(cle) is not None and rang < NIVEAUX.index(cible):
                 if carte.ecrit(f"ReglageLog {cle} {cible}"):
                     etat["poses"][cle] = cible
         self.acquis[role]["logs"] = True
@@ -398,6 +404,7 @@ class Testeur:
     def arrete(self):
         """Restaure les logs puis libere les ports."""
         self.arret = True
+        self.grille.arrete()
         n = self.restaure_logs()
         if n:
             time.sleep(0.5)                          # laisse la carte traiter les commandes avant la fermeture

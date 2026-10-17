@@ -87,7 +87,7 @@ class Sim:
         if ligne == "Status 5":
             self.dit('RSL: STATUS5 = {"StatusNET":{"Hostname":"%s","IPAddress":"%s","Mac":"AA:BB:CC"}}' % (self.role, self.ip))
         elif ligne == "ReglageLog":
-            mods = {k: self.niveaux[k].split()[0] for k in ("udp", "modbus")}
+            mods = {k: v.split()[0] for k, v in self.niveaux.items() if k not in ("serie", "mqtt")}
             sor = {"serie": self.niveaux["serie"], "web": "info", "mqtt": self.niveaux["mqtt"], "syslog": "info"}
             self.dit(json.dumps({"ReglageLog": {"profil": "normal", "profils": ["normal"], "sorties": sor, "modules": mods}}))
         elif mots[0] == "ReglageLog" and len(mots) == 3:

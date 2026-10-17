@@ -1,12 +1,14 @@
 r"""Page du testeur UDP (testeur_udp.py) : http://127.0.0.1:7400 sur ce PC, ou le lien avec jeton depuis le reseau.
 Ses appels (fetch, EventSource) sont RELATIFS : ils suivent l'hote qui a servi la page.
 
-Deux onglets : « Essais » (cartes, mode de l'esclave, essais, verdicts, journaux) et « Aide »
-(testeur_udp_aide.AIDE, insere a la place de <!--AIDE-->). Routes : voir testeur_udp_http.py.
+Trois onglets : « Essais » (cartes, mode de l'esclave, essais, verdicts, journaux), « Grille ModBus »
+(testeur_udp_grille_web, la grille de l'audit jugee sur les logs) et « Aide » (testeur_udp_aide.AIDE, insere a
+la place de <!--AIDE-->). Routes : voir testeur_udp_http.py.
 Les choix de ports, vitesses et reglages sont memorises par le navigateur (localStorage).
 """
 
 import testeur_udp_aide
+import testeur_udp_grille_web
 
 PAGE = r"""<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><title>Testeur UDP maitre/esclave</title>
@@ -32,10 +34,11 @@ PAGE = r"""<!doctype html>
  .journal{background:#1b1b1b;border:1px solid #333;display:flex;flex-direction:column;min-height:0}
  .journal .tete{padding:3px 6px;background:#2d2d2d;color:#29b8db} .corps{flex:1;overflow:auto;padding:4px;white-space:pre-wrap;word-break:break-all}
  .l.udp{color:#4ec9b0;background:#10302b} .l.note{color:#c586c0} .l.err{color:#f14c4c}
+ <!--GRILLE_STYLE-->
  .aide{padding:4px 16px 40px;font:13px/1.5 Segoe UI,Arial,sans-serif} .aide h2{color:#29b8db;border-bottom:1px solid #333;margin-top:22px}
  .aide code{font-family:Consolas,monospace;color:#ce9178} .aide pre{background:#1b1b1b;padding:6px;overflow:auto}
 </style></head><body>
-<div class="onglets"><button id="ongletEssais" class="choisi">Essais</button><button id="ongletAide">Aide</button>
+<div class="onglets"><button id="ongletEssais" class="choisi">Essais</button><button id="ongletGrille">Grille ModBus</button><button id="ongletAide">Aide</button>
  <span style="flex:1"></span><span id="liaison" class="gris" style="padding:6px">connexion...</span></div>
 <div id="vueEssais" class="vue">
  <div class="cartes">
@@ -70,6 +73,7 @@ PAGE = r"""<!doctype html>
  <div class="journaux"><div class="journal"><div class="tete">Maitre</div><div class="corps" id="log-maitre"></div></div>
   <div class="journal"><div class="tete">Esclave</div><div class="corps" id="log-esclave"></div></div></div>
 </div>
+<!--GRILLE-->
 <div id="vueAide" class="vue aide cache"><!--AIDE--></div>
 <script>
 const $=id=>document.getElementById(id);
@@ -208,13 +212,15 @@ $('effacer').onclick=()=>{ROLES.forEach(r=>lignes[r].length=0);redessine();};
 function recoit(m){
   if(m.k==='etat')return majEtat(m);
   if(m.k==='essai')return ajouteVerdict(m);
+  if(m.k==='grille')return majGrille(m);
   const h=new Date(m.t*1000).toLocaleTimeString('fr-FR'),l={x:m.x,udp:!!m.udp,note:m.k==='note',h:'['+h+']'};
   for(const r of (m.c?[m.c]:ROLES)){const t=lignes[r];t.push(l);if(t.length>5000)t.shift();dessine(r,l);}
 }
 // ------------------------------------------------------------ onglets, flux
-function onglet(essais){$('vueEssais').classList.toggle('cache',!essais);$('vueAide').classList.toggle('cache',essais);
- $('ongletEssais').classList.toggle('choisi',essais);$('ongletAide').classList.toggle('choisi',!essais);}
-$('ongletEssais').onclick=()=>onglet(true); $('ongletAide').onclick=()=>onglet(false);
+const VUES=['Essais','Grille','Aide'];
+function onglet(nom){for(const v of VUES){$('vue'+v).classList.toggle('cache',v!==nom);$('onglet'+v).classList.toggle('choisi',v===nom);}
+ sto('onglet',nom);}
+for(const v of VUES)$('onglet'+v).onclick=()=>onglet(v);
 function ouvreFlux(){
   const es=new EventSource('/flux');
   es.onopen=()=>{$('liaison').textContent='connecte';ROLES.forEach(r=>lignes[r].length=0);redessine();};
@@ -225,7 +231,10 @@ listePorts();
 fetch('/essais').then(r=>r.json()).then(t=>t.forEach(ajouteVerdict)).catch(()=>{});
 ouvreFlux();
 setInterval(listePorts,10000);
+<!--GRILLE_JS-->
+if(VUES.includes(sto('onglet')))onglet(sto('onglet'));
 </script></body></html>
 """
 
-PAGE = PAGE.replace("<!--AIDE-->", testeur_udp_aide.AIDE)
+PAGE = (PAGE.replace("<!--AIDE-->", testeur_udp_aide.AIDE).replace("<!--GRILLE-->", testeur_udp_grille_web.VUE)
+        .replace("<!--GRILLE_STYLE-->", testeur_udp_grille_web.STYLE).replace("<!--GRILLE_JS-->", testeur_udp_grille_web.SCRIPT))
