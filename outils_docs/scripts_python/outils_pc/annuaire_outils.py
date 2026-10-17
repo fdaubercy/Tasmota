@@ -17,6 +17,7 @@ import argparse
 import json
 import socket
 import sys
+import threading
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -73,6 +74,8 @@ def route_occupee(port, route):
 
 
 def fabrique_gestionnaire(lanceur, acces):
+    verrou_lance = threading.Lock()      # verification "deja en marche" + validation + lancement : un a la fois
+
     class Gestionnaire(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
 
@@ -152,13 +155,15 @@ def fabrique_gestionnaire(lanceur, acces):
                 outil = reg.par_id(str(demande.get("id", "")))
             except KeyError:
                 return self._erreur(404, "Outil inconnu")
-            etat = next(e for e in self._etat() if e["id"] == outil.id)
             if chemin == "/lance":
-                self._lance(outil, etat, demande.get("valeurs"))
+                with verrou_lance:
+                    self._lance(outil, demande.get("valeurs"))
             else:
-                self._arrete(outil, etat)
+                self._arrete(outil, next(e for e in self._etat() if e["id"] == outil.id))
 
-        def _lance(self, outil, etat, valeurs):
+        def _lance(self, outil, valeurs):
+            tous = self._etat()          # une seule fois : etat et ponts viennent du meme instantane
+            etat = next(e for e in tous if e["id"] == outil.id)
             if valeurs is None:
                 valeurs = {}
             if not isinstance(valeurs, dict):
@@ -166,7 +171,7 @@ def fabrique_gestionnaire(lanceur, acces):
             connu = lanceur.lances.get(outil.id)
             if etat["etat"] == "marche" or (connu and pre.pid_vivant(connu["pid"])):
                 return self._erreur(409, f"{outil.nom} est deja en marche")
-            ponts = [e["port"] for e in self._etat() if e["id"] == "pont_serie" and e["etat"] == "marche"]
+            ponts = [e["port"] for e in tous if e["id"] == "pont_serie" and e["etat"] == "marche"]
             try:
                 args = reg.valide(outil, valeurs, [p["port"] for p in liste_ports()], ponts)
             except ValueError as e:

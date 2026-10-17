@@ -117,9 +117,15 @@ def pid_mort():
     return pr.pid
 
 
-def ecrit_fiche(dossier, nom, port, pid, lance_par="annuaire", jeton="jt", local=False):
+def maintenant():
+    from datetime import datetime
+    return datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+
+
+def ecrit_fiche(dossier, nom, port, pid, lance_par="annuaire", jeton="jt", local=False, debut=None):
+    """debut par defaut = maintenant : le processus (le banc) existe deja, la fiche est donc vivante."""
     with open(os.path.join(dossier, f"{port}.json"), "w", encoding="utf-8") as f:
-        json.dump({"nom": nom, "port": port, "pid": pid, "debut": "2026-10-17T10:00:00", "jeton": jeton,
+        json.dump({"nom": nom, "port": port, "pid": pid, "debut": debut or maintenant(), "jeton": jeton,
                    "local": local, "lance_par": lance_par}, f)
 
 
@@ -152,7 +158,7 @@ def section_presence():
     ecrit_fiche(dossier, "Serveur syslog", port, os.getpid())
     e = etat("syslog")
     verifie((e["etat"], e["port"], e["lien"]), ("marche", port, f"http://127.0.0.1:{port}/"), "fiche_vivante")
-    verifie(e["debut"], "2026-10-17T10:00:00", "fiche_vivante : debut")
+    verifie(e["debut"][:10], maintenant()[:10], "fiche_vivante : debut")
     verifie(etat("syslog", hote="192.168.0.3")["lien"], f"http://192.168.0.3:{port}/?jeton=jt", "fiche_vivante : lien distant")
     verifie((e["peut_arreter"], e["lance_ailleurs"], e["console"]), (True, False, False), "peut_arreter annuaire")
     verifie(etat("syslog", lances={"syslog": {"pid": os.getpid(), "valeurs": {}}})["console"], True, "console capturee")
@@ -187,14 +193,33 @@ def section_presence():
     srv.close()
     verifie(etat("syslog", derniers={"syslog": {"http": port}})["etat"], "arrete", "TEMOIN port ferme : arrete")
 
+    # PID reutilise : fiche ecrite il y a 1 h, alors que ce processus a ete cree apres -> pas la meme vie.
+    ecrit_fiche(dossier, "Pont serie", mort, os.getpid(), debut="2020-01-01T00:00:00")
+    verifie(etat("pont_serie")["etat"], "arrete", "fiche PID reutilise (processus plus recent) : pas marche")
+    verifie(os.path.exists(os.path.join(dossier, f"{mort}.json")), True, "fiche PID reutilise : conservee")
+    # Temoin : meme PID, debut = maintenant, AUCUN serveur sur le port -> marche (pas de sondage du port).
     ecrit_fiche(dossier, "Pont serie", mort, os.getpid())
-    verifie(etat("pont_serie")["etat"], "arrete", "fiche PID vivant port ferme : pas marche")
-    verifie(os.path.exists(os.path.join(dossier, f"{mort}.json")), True, "fiche PID vivant port ferme : conservee")
-    srv2 = socket.socket()
-    srv2.bind(("127.0.0.1", mort))
-    srv2.listen(5)
-    verifie(etat("pont_serie")["etat"], "marche", "TEMOIN meme fiche, port ouvert : marche")
-    srv2.close()
+    verifie(etat("pont_serie")["etat"], "marche", "TEMOIN meme fiche, debut = maintenant, port ferme : marche")
+    # Pas de connexion au port d'un outil dont la fiche est vivante (le pont afficherait client connecte).
+    ecoute, p_pont = serveur_libre()
+    ecoute.settimeout(0.5)
+    ecrit_fiche(dossier, "Pont serie", p_pont, os.getpid())
+    os.remove(os.path.join(dossier, f"{mort}.json"))
+    verifie(etat("pont_serie")["etat"], "marche", "fiche vivante : marche")
+    try:
+        ecoute.accept()
+        connexions = 1
+    except socket.timeout:
+        connexions = 0
+    verifie(connexions, 0, "fiche vivante : aucune connexion au port de l'outil")
+    ecoute.close()
+    os.remove(os.path.join(dossier, f"{p_pont}.json"))
+    # Duree d'un etat avec tous les ports fermes (sondes en parallele).
+    import time
+    t0 = time.monotonic()
+    pre.etat_outils({}, {o.id: {o.cle_port_page: libres[o.id]} for o in reg.OUTILS}, None)
+    duree = time.monotonic() - t0
+    verifie(duree < 1.0, True, f"etat_outils, ports fermes : {duree:.2f} s < 1.0 s")
     lances = {"pont_serie": {"pid": os.getpid(), "valeurs": {"port": "COM3"}}}
     e = etat("sniffeur_modbus", lances=lances, derniers={"sniffeur_modbus": {"port": "COM3"}})
     verifie((e["etat"], "COM3" in e["raison"], "Pont série" in e["raison"]), ("bloque", True, True), "com_tenu")
@@ -332,6 +357,26 @@ def section_serveur():
         lanceur.lances["syslog"] = {"pid": pid_mort(), "valeurs": {}}
         verifie(post("/lance", {"id": "syslog", "valeurs": {}})[0], 200, "TEMOIN lance : ancien pid mort -> 200")
         del lanceur.lances["syslog"]
+
+        # lancements concurrents du meme outil : un seul doit partir
+        def lance_lent(outil, args, valeurs=None):
+            lances.append((outil.id, args, valeurs))
+            time.sleep(0.4)
+            lanceur.lances[outil.id] = {"pid": os.getpid(), "valeurs": dict(valeurs or {})}
+            return 4242
+        del lances[:]
+        lanceur.lance = lance_lent
+        reponses = []
+        fils = [threading.Thread(target=lambda: reponses.append(post("/lance", {"id": "syslog", "valeurs": {}})[0]))
+                for _ in range(2)]
+        for t in fils:
+            t.start()
+        for t in fils:
+            t.join()
+        verifie((sorted(reponses), len(lances)), ([200, 409], 1), "lance_concurrent : un 200, un 409, un seul lancement")
+        del lanceur.lances["syslog"]
+        del lances[:]
+        lanceur.lance = faux_lance
 
         # synchro : faux serveur /execution sur un port libre, fiche factice pointant dessus
         etat_synchro = {"en_cours": True}

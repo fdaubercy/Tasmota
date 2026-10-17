@@ -8,6 +8,8 @@ import ctypes
 import json
 import os
 import socket
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta
 
 import acces_web
 import annuaire_registre as reg
@@ -38,6 +40,43 @@ def pid_vivant(pid):
         return code.value == STILL_ACTIVE
     finally:
         k32.CloseHandle(h)
+
+
+def _heure_creation(pid):
+    """Heure locale de creation du processus (GetProcessTimes), ou None."""
+    k32 = ctypes.windll.kernel32
+    k32.OpenProcess.restype = ctypes.c_void_p
+    k32.OpenProcess.argtypes = [ctypes.c_uint32, ctypes.c_int, ctypes.c_uint32]
+    k32.CloseHandle.argtypes = [ctypes.c_void_p]
+    k32.GetProcessTimes.argtypes = [ctypes.c_void_p] + [ctypes.POINTER(ctypes.c_uint64)] * 4
+    h = k32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, int(pid))
+    if not h:
+        return None
+    try:
+        t = [ctypes.c_uint64() for _ in range(4)]
+        if not k32.GetProcessTimes(ctypes.c_void_p(h), *[ctypes.pointer(x) for x in t]):
+            return None
+        return datetime.fromtimestamp((t[0].value - 116444736000000000) / 1e7)
+    except (OverflowError, OSError, ValueError):
+        return None
+    finally:
+        k32.CloseHandle(h)
+
+
+def fiche_vivante(fiche):
+    """True si le PID de la fiche vit ET que ce processus existait deja a l'ecriture de la fiche.
+
+    La fiche est ecrite apres le bind : processus cree <= fiche["debut"] + 2 s. Un PID reutilise par un
+    processus ne date d'apres la fiche n'est pas le notre. Vivante implique que le port est ouvert.
+    """
+    try:
+        if not pid_vivant(fiche["pid"]):
+            return False
+        debut = datetime.strptime(fiche["debut"], "%Y-%m-%dT%H:%M:%S")
+        cree = _heure_creation(fiche["pid"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    return cree is not None and cree <= debut + timedelta(seconds=2)
 
 
 def port_repond(port, delai=0.3):
@@ -99,13 +138,15 @@ def _com_tenu(outil, derniers, lances):
 def etat_outils(lances, derniers, hote_client):
     """Une entree par outil du registre (voir la fiche de tache 3 pour le detail des champs)."""
     fiches = lit_fiches()
+    vivantes = {o.id: fiches.get(o.nom_acces) for o in reg.OUTILS}
+    vivantes = {i: f for i, f in vivantes.items() if f and fiche_vivante(f)}
+    # Sans fiche vivante : port attendu sonde, en parallele (au plus un delai pour tout l'etat).
+    attendus = {o.id: _port_attendu(o, derniers.get(o.id, {})) for o in reg.OUTILS if o.id not in vivantes}
+    with ThreadPoolExecutor(max_workers=max(1, len(attendus))) as pool:
+        sondes = dict(zip(attendus, pool.map(port_repond, attendus.values())))
     resultat = []
     for o in reg.OUTILS:
-        fiche = fiches.get(o.nom_acces)
-        # Une fiche ne vaut "marche" que si son port repond aussi (PID reutilise, outil en demarrage) ;
-        # sinon elle est ignoree ici, mais pas supprimee.
-        if fiche and not port_repond(fiche["port"]):
-            fiche = None
+        fiche = vivantes.get(o.id)
         e = {"id": o.id, "etat": "arrete", "raison": "", "port": 0, "debut": None, "lien": None,
              "peut_arreter": False, "lance_ailleurs": False, "console": o.id in lances}
         if fiche:
@@ -119,11 +160,10 @@ def etat_outils(lances, derniers, hote_client):
                 e["lien"] = f"http://{hote_client}:{port}/?jeton={fiche['jeton']}"
         else:
             valeurs = derniers.get(o.id, {})
-            port = _port_attendu(o, valeurs)
-            e["port"] = port
-            if port_repond(port):
+            e["port"] = attendus[o.id]
+            if sondes[o.id]:
                 e.update(etat="marche", raison="en marche (sans fiche)", lance_ailleurs=True,
-                         lien=f"http://127.0.0.1:{port}/" if hote_client is None else None)
+                         lien=f"http://127.0.0.1:{attendus[o.id]}/" if hote_client is None else None)
             else:
                 raison = _com_tenu(o, valeurs, lances)
                 if raison:
