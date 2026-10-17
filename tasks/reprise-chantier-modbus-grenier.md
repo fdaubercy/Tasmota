@@ -168,6 +168,10 @@ au mauvais endroit, annulées — voir `tasks/lessons.md`). Les 3 cibles sont
 > AUTO, etapes 4j-4l / 5j-5l) ; 5g cherche depuis le Restart (option `depuis`) ; bouton de consigne qui
 > restait affiche (reponse HTTP perimee : `version` + `repond()` attend la consigne retiree) ; decompte de
 > l'etape qui attend sa preuve.
+> **Test 7 (21:02)** : AP, ImAlive, fiche de la cuve, page /discovery OK. 7d d'abord faux echec (Br de 579 octets
+> tronque par le P4, `Len 443` -> syntax_error) : le testeur envoie desormais les lignes longues par blocs de 64
+> octets. Rejoue : `GRILLE_T7 KO DCB4D91B117C/esclave3 groupTopic=nil` = fiche du RIDEAU (Offline, ancien
+> firmware sans groupTopic) : attendu tant que le rideau n'est pas reflashe.
 
 ## LA PROCHAINE ACTION — flasher et observer
 
