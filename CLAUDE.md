@@ -78,33 +78,45 @@ Le lancement automatique de `synchronise_fork_tasmota.py` a ete envisage puis
   index a moitie ecrit — exactement l'etat conflictuel que le dispositif est cense
   eviter, et cree sans que personne ne regarde l'ecran ;
 - le script est ecrit **pour un humain devant un terminal** : il demande confirmation
-  avant de pousser (`input()`, ligne 434). Dans un hook, l'entree standard n'est pas
-  un terminal -> `EOFError` **apres** le merge ;
+  avant la synchro distante et avant de pousser (`demander()`, lignes 514 et 443). Dans un
+  hook, l'entree standard n'est pas un terminal -> la synchro est abandonnee (EOFError
+  lu comme « non ») ;
 - contre les conflits, la vraie prevention est la **frequence** — petits paquets, sur
   `development` propre, **avant** d'ouvrir un chantier — pas l'automatisme.
 
 ### Que faire quand le hook signale du retard
 
 Basculer sur `development` avec un arbre propre, puis lancer la synchro a la main,
-sortie sous les yeux ; lire le rapport et confirmer (ou non) le push :
+sortie sous les yeux. Une seule commande : diagnostic, nouveautes de l'amont listees
+**avant** toute action, controle d'arbre propre, puis deux confirmations (synchro du
+fork en ligne, puis push) :
 
 ```
 python outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py
 ```
 
-`--dry-run` pour un diagnostic seul, qui ne modifie rien. **Ne jamais merger l'amont
+Repondre « N » a la premiere question = un diagnostic, rien n'est modifie. `--dry-run`
+fait de meme sans poser de question. **Ne jamais merger l'amont
 dans une branche de chantier** : le hook le rappelle en affichant la branche courante.
+
+Meme chose depuis une **page web** : tache VS Code « Outil : synchro du fork » ou cible Custom
+« Synchro du fork (page web) » -> http://127.0.0.1:7500 (`maintenance/synchro_fork_web.py`). Elle lance
+les deux scripts (merge et rebase) tels qu'au terminal, leurs questions deviennent des boutons
+(`synchro_fork_question.demander`) ; en plus : etat du fork, fichiers modifies et leur diff, journal
+et son commit. Le push force du rebase exige de saisir le nom de la branche, verifie cote serveur.
 
 ## Exception assumee a la regle des 500 lignes
 
-`outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py` fait **534 lignes**, et
+`outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py` fait **558 lignes**, et
 c'est **voulu** (decide le 2026-07-15, a 527 lignes ; +7 le 2026-10-12 pour le correctif
-du blocage sur son propre journal). Ne pas le decouper pour satisfaire le compteur.
+du blocage sur son propre journal ; +24 le 2026-10-17 pour la confirmation et le
+controle d'arbre propre AVANT la synchro distante, et les questions de la page web).
+Ne pas le decouper pour satisfaire le compteur.
 
-Decomposition reelle : 333 lignes de code, 57 d'en-tete docstring (qui **est** la
-sortie de `--help`), 99 vides, 38 de commentaires. La plus grosse fonction fait
-79 lignes. L'esprit de la regle — un fichier qui n'en fait pas trop — est respecte ;
-seul le total brut deborde, de 27 lignes de documentation.
+Decomposition reelle : 345 lignes de code, 59 d'en-tete docstring (qui **est** la
+sortie de `--help`), 105 vides, 49 de commentaires. La plus grosse fonction (`main`)
+fait 92 lignes. L'esprit de la regle — un fichier qui n'en fait pas trop — est respecte ;
+seul le total brut deborde, de 58 lignes de documentation et de blancs.
 
 Extraire un module d'utilitaires partages avec `synchronise_upstream_tasmota.py`
 reste possible **le jour ou un troisieme script apparaitra**, pas avant.
@@ -362,7 +374,12 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     module a `banc_leds`).
   - `maintenance/` — `synchronise_fork_tasmota.py` (synchro du fork : merge, jamais de force-push),
     `synchronise_upstream_tasmota.py` (variante rebase), `corrige_reglages_vscode.py` (pose et
-    prouve les reglages VS Code du PermissionError).
+    prouve les reglages VS Code du PermissionError). Page web de la synchro : `synchro_fork_web.py`
+    (serveur, port 7500) + `synchro_fork_session.py` (script lance en processus enfant, questions),
+    `synchro_fork_etat.py` (bandeau, diff, journal), `synchro_fork_page.py`, `synchro_fork_question.py`
+    (importe par les deux scripts) ; banc `test_synchro_fork_web.py` (`--reel` : vrais scripts en
+    --dry-run) ; cible `build/cible_synchro_fork.py`. **Seule exception a la regle du meme dossier** :
+    `synchro_fork_web.py` importe `outils_pc/acces_web.py` par un `sys.path` explicite.
   - `sauvegarde/` — `genere_sauvegarde_tasmota.py`, `restaure_sauvegarde_tasmota.py` et leur
     interface Tk `interface_sauvegarde_restauration_tasmota.py`.
   - `reseau/` — petits outils autonomes : `comm_udp_*.py`, `envoi_message_udp.py`,
@@ -370,6 +387,15 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   - `outils_pc/` — les outils PC autour des cartes, qui s'importent entre eux (`ecoute_udp.py`
     importe le sniffeur MQTT ; le sniffeur ModBus, 7 modules voisins) : `pont_serie.py`
     (+ `pont_serie_web.py`) et ceux-ci :
+  - `acces_web.py` (banc `test_acces_web.py`) — commun aux pages des outils (pont serie, testeur UDP,
+    sniffeurs MQTT et ModBus, syslog, synchro du fork), decide le 2026-10-17 : au lancement, lien
+    cliquable dans la console (Ctrl+clic) et navigateur ouvert (`--sans-navigateur` pour l'eviter) ;
+    ecoute sur tout le reseau (`--local` = 127.0.0.1 seulement). **Depuis ce PC : sans jeton**,
+    protection d'avant (en-tete `X-...` + origine 127.0.0.1/localhost). **Depuis un autre appareil :
+    jeton obligatoire**, tire a chaque lancement, dans le lien « depuis un autre appareil du reseau »
+    de la console ; pose en cookie HttpOnly SameSite=Strict (un nom par port) puis retire de l'URL.
+    Le flux TCP brut du pont serie reste reserve a ce PC. Pare-feu Windows : autoriser Python sur
+    les reseaux prives au premier lancement, sinon les autres appareils n'atteignent pas la page.
   - `test_rs485_pc.py` — test du bus ModBus depuis le PC par un convertisseur USB-RS485
     (Waveshare CH343) : ecoute du bus, envoi brut, lecture/commande de la carte 16 relais,
     recherche de son debit, emulation de la carte (pour tester le maitre P4 sans elle).
