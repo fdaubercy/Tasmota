@@ -232,3 +232,31 @@ Les commits marques ● ont un titre qui mentionne Berry / ESP32-S3 / nos sujets
 -   `19c9d2c9c` Update change logs
 -   `54a1527f8` Correct and normalize eQ3/MI battery percentage calculation (#25136)
 -   `5c295fbcf` Merge commit from fork
+
+## 2026-10-17 10:02 — 21 commit(s) recupere(s) d'upstream
+
+`arendst/Tasmota:development` → `fdaubercy/Tasmota:development` (merge_type : merge)
+
+**3 commit(s) ● a lire de pres.**
+
+-   `bffbbeca1` Fix possible buffer overflow
+-   `b8eb9a578` Shutter: fix ShutterButton MQTT flag parameters on ESP32 (#25116)
+-   `4336cd06c` Add define EMAIL_DISABLE_CHUNKING for ESP32 mail
+-   `ad60406a3` Update change logs
+- ● `1bb26b29c` Fix Matter MQTT subscription when Matter is disabled (#25140)
+-   `c95c241fa` HttpClientLight: time out reading a body when the server goes silent (#25139)
+-   `31aa390c4` Update change logs
+-   `770960cec` Add BTHome events to GUI
+-   `90754c5b9` AsyncHttpClientLight: finish a chunked body at the empty line after the last chunk (#25142)
+- ● `a2f0c8714` LVGL library from v9.5.0 to v9.6.0 (#25144)
+-   `fbe55333e` Update change logs
+-   `3da77ba04` Update change logs
+-   `0edebb90a` Fix BTHome binary event handling
+-   `ece53a64f` AsyncHttpClientLight: end a body read when the server goes silent or closes (#25141)
+- ● `47f3dbc09` Berry webclient.connected() was implemented but not exposed (#25145)
+-   `8402d7d47` Update change logs
+-   `a0ff1cdc5` Bump version v16.0.0.1
+-   `db29ff1f1` Fix buffer overflow
+-   `dad74600a` Fix possible OOB
+-   `2289c619b` Fix SR04 serial checksum for AJ-SR04M (#25147)
+-   `c00ece868` Fix hostByName returning negative values when lookup failed
