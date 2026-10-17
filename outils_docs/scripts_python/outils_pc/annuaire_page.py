@@ -36,10 +36,11 @@ PAGE = r"""<!doctype html>
   h1{font-size:20px;margin:6px 0 10px}
   .theme{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--doux);cursor:pointer;user-select:none}
   .theme input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
-  .interrupteur{position:relative;flex:none;width:51px;height:31px;border-radius:16px;background:var(--piste);transition:background .2s}
-  .interrupteur::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.3);transition:transform .2s}
+  /* Taille en em : l'interrupteur suit la taille du texte de son libelle (13 px -> ~34 x 20 px). */
+  .interrupteur{position:relative;flex:none;width:2.6em;height:1.5em;border-radius:.75em;background:var(--piste);transition:background .2s}
+  .interrupteur::after{content:"";position:absolute;top:.15em;left:.15em;width:1.2em;height:1.2em;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}
   .theme input:checked + .interrupteur{background:#34c759}
-  .theme input:checked + .interrupteur::after{transform:translateX(20px)}
+  .theme input:checked + .interrupteur::after{transform:translateX(1.1em)}
   .theme input:focus-visible + .interrupteur{outline:2px solid var(--bleu);outline-offset:2px}
   .onglets{display:flex;gap:4px;border-bottom:1px solid var(--onglet-bord);margin-bottom:12px}
   .onglets button{padding:6px 16px;border:1px solid var(--onglet-bord);border-bottom:none;border-radius:6px 6px 0 0;background:var(--onglet);color:var(--texte);font:inherit;cursor:pointer}
