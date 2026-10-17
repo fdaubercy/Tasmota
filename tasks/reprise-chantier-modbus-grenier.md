@@ -105,10 +105,25 @@ au mauvais endroit, annulées — voir `tasks/lessons.md`). Les 3 cibles sont
 > (multicast si IPv4 invalide), multicast esclave hors Range Extender, type d'envoi inconnu journalise.
 > Verifie : `test_discovery.be` 170/170 (section 19 neuve, temoins : ancien code + 3 mutations echouent),
 > `banc_test_modbus.be` OK, `solidifie_et_compile_berry.py` OK sur udpFonctions et modbusFonctions.
-> **Prochaine action : rebuild complet P4 + cuve + rideau, flash, puis essai 2 (Wi-Fi classique, plan §7)**
-> et rejouer l'essai 1. Limite connue : le multicast du MAITRE ne sort que par UNE interface (AP s'il est
-> actif) -> un esclave sur la box ne recoit pas `ModbusUDP` multicast du P4 (`envoiMsgModbusUDP`) ;
-> emettre sur les deux interfaces = evolution a decider apres l'essai 2. Detail : `PROTOCOLE_MODBUS.md` §9.
+> **Flashes le 2026-10-17 et VALIDES sur les cartes (P4 COM4, cuve COM12)** :
+> - essai 1 rejoue (Range Extender, 12:34-12:36) : 6/6 RECU + 11/11 cuve -> P4 unicast ; C5 : Timestamp et
+>   ipMaitre partent en UniCast vers 192.168.4.2 et sont recus par la cuve ;
+> - essai 2 (Wi-Fi classique, cuve en 192.168.0.6, 12:38-12:41) : unicast dans les deux sens RECU, E1 RECU
+>   (reponse par la box), ImAlive RECU, C5 : Timestamp/ipMaitre en UniCast vers 192.168.0.6 recus ;
+>   **multicast cuve -> P4 RECU : LA BOX RELAIE LE MULTICAST entre clients Wi-Fi** (C4 utile) ;
+>   multicast P4 -> cuve EMIS NON RECU = limite connue (le maitre emet par son seul point d'acces).
+> **Tranche le 2026-10-17 (regle de l'utilisateur)** : le multicast du maitre ne part par sa STA que si
+> sa decouverte connait un esclave joignable par la box ; sinon il n'y est pas emis. Critere : fiche
+> `esclaveN` d'une autre MAC, MEME groupTopic, `lwt` Online, IP dans le /24 de la STA et hors du /24 de
+> l'AP. Multicast par l'AP INCHANGE. **CODE le 2026-10-17, NON solidifie, NON flashe** :
+> `udpFonctions.interfacesMulticastMaitre()` / `esclavesBox()` (cache : table relue si sa date change ou
+> apres 30 s) / `reseau24()` ; sans AP ni esclave box : log `>>>> Non emis` (lu par le testeur).
+> Changement de comportement : maitre SANS point d'acces et sans esclave decouvert = plus de multicast
+> (avant : par sa STA). Verifie : `test_discovery.be` 195/195 (section 20 neuve ; temoin ancien code :
+> 9 echecs), `banc_test_modbus` 238/238, `test_testeur_udp` 155/155, `verifie_berry` 52/0.
+> `solidifie_et_compile_berry.py` OK sur udpFonctions (16 closures, 0 anonyme, .h compile).
+> **Reste** : rebuild + flash du P4, puis essai 2 rejoue :
+> ImAlive de la cuve d'abord, puis multicast P4 -> cuve attendu RECU par la box.
 
 ## LA PROCHAINE ACTION — flasher et observer
 
