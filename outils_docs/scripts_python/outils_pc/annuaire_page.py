@@ -14,53 +14,81 @@ PAGE = r"""<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annuaire des outils</title>
+<script>
+  // Theme applique AVANT le rendu (pas d'eclair blanc) : choix memorise, sinon celui du systeme.
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem("annuaire-theme"); } catch (e) {}
+    if (t !== "clair" && t !== "sombre")
+      t = (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) ? "sombre" : "clair";
+    document.documentElement.setAttribute("data-theme", t);
+  })();
+</script>
 <style>
-  :root{--fond:#f6f7f9;--carte:#fff;--bord:#ddd;--texte:#222;--doux:#666;--bleu:#2563eb;--vert:#2a9d4a;--gris:#aaa;--orange:#e08a00;--rouge:#c0392b}
+  :root{color-scheme:light;--fond:#f6f7f9;--carte:#fff;--bord:#ddd;--texte:#222;--doux:#666;--discret:#777;--bleu:#2563eb;--vert:#2a9d4a;--gris:#aaa;--orange:#c27400;--rouge:#c0392b;
+    --onglet:#e8e8e8;--onglet-bord:#ccc;--btn:#fff;--btn-bord:#888;--reseau-fond:#eef3ff;--reseau-bord:#c9d8ff;--piste:#e9e9ea}
+  :root[data-theme="sombre"]{color-scheme:dark;--fond:#121417;--carte:#1d2025;--bord:#33373e;--texte:#e6e6e6;--doux:#a8adb5;--discret:#8b9099;--bleu:#5b93ff;--vert:#3fbf63;--gris:#6b7078;--orange:#f0a020;--rouge:#ff6b5b;
+    --onglet:#262a30;--onglet-bord:#3a3f47;--btn:#262a30;--btn-bord:#555b64;--reseau-fond:#18233a;--reseau-bord:#2c3f66;--piste:#39393d}
   *{box-sizing:border-box}
   body{margin:0;font:14px system-ui,sans-serif;color:var(--texte);background:var(--fond)}
   main{max-width:1100px;margin:0 auto;padding:12px 16px 40px}
+  .entete{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
   h1{font-size:20px;margin:6px 0 10px}
-  .onglets{display:flex;gap:4px;border-bottom:1px solid #ccc;margin-bottom:12px}
-  .onglets button{padding:6px 16px;border:1px solid #ccc;border-bottom:none;border-radius:6px 6px 0 0;background:#e8e8e8;font:inherit;cursor:pointer}
-  .onglets button.on{background:#fff;font-weight:600}
-  .groupe{font-size:11px;text-transform:uppercase;color:#777;margin:14px 0 6px;letter-spacing:.04em}
+  .theme{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--doux);cursor:pointer;user-select:none}
+  .theme input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+  .interrupteur{position:relative;flex:none;width:51px;height:31px;border-radius:16px;background:var(--piste);transition:background .2s}
+  .interrupteur::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.3);transition:transform .2s}
+  .theme input:checked + .interrupteur{background:#34c759}
+  .theme input:checked + .interrupteur::after{transform:translateX(20px)}
+  .theme input:focus-visible + .interrupteur{outline:2px solid var(--bleu);outline-offset:2px}
+  .onglets{display:flex;gap:4px;border-bottom:1px solid var(--onglet-bord);margin-bottom:12px}
+  .onglets button{padding:6px 16px;border:1px solid var(--onglet-bord);border-bottom:none;border-radius:6px 6px 0 0;background:var(--onglet);color:var(--texte);font:inherit;cursor:pointer}
+  .onglets button.on{background:var(--carte);font-weight:600}
+  .groupe{font-size:11px;text-transform:uppercase;color:var(--discret);margin:14px 0 6px;letter-spacing:.04em}
   .tuiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px}
   .tuile{background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
   .tuile h3{margin:0;font-size:15px}
   .tuile p{margin:0;color:var(--doux);font-size:12px}
   .pastille{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;background:var(--gris)}
   .pastille.marche{background:var(--vert)}.pastille.bloque{background:var(--orange)}
-  .meta{font-size:11px;color:#888}
+  .meta{font-size:11px;color:var(--discret)}
   .raison{font-size:12px;color:var(--orange)}
   .erreur{font-size:12px;color:var(--rouge)}
   .actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:auto}
-  .btn{display:inline-block;padding:4px 12px;border-radius:5px;border:1px solid #888;background:#fff;color:var(--texte);font:inherit;font-size:13px;cursor:pointer;text-decoration:none}
+  .btn{display:inline-block;padding:4px 12px;border-radius:5px;border:1px solid var(--btn-bord);background:var(--btn);color:var(--texte);font:inherit;font-size:13px;cursor:pointer;text-decoration:none}
   .btn.p{background:var(--bleu);color:#fff;border-color:var(--bleu)}
   .btn:disabled{opacity:.5;cursor:default}
   .lien{background:none;border:none;color:var(--bleu);cursor:pointer;font:inherit;font-size:12px;padding:0;text-decoration:underline}
-  .reseau{background:#eef3ff;border:1px solid #c9d8ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px}
+  .reseau{background:var(--reseau-fond);border:1px solid var(--reseau-bord);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px}
   .reseau code{word-break:break-all}
   .reseau div{margin-top:4px}
   .console{background:#1e1e1e;color:#cfc;font:11px/1.35 Consolas,monospace;padding:8px;border-radius:6px;max-height:300px;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:6px 0 0}
   #panneau{margin-top:16px;display:none}
   #panneau header{display:flex;justify-content:space-between;align-items:center}
   .voile{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:12px;z-index:5}
-  .modale{background:#fff;border-radius:10px;padding:16px;width:100%;max-width:440px;max-height:92vh;overflow:auto}
+  .modale{background:var(--carte);color:var(--texte);border-radius:10px;padding:16px;width:100%;max-width:440px;max-height:92vh;overflow:auto}
   .modale h2{margin:0 0 10px;font-size:17px}
   .champ{display:flex;flex-direction:column;gap:3px;margin:8px 0;font-size:13px}
-  .champ select,.champ input{font:inherit;padding:5px 6px;width:100%}
+  .champ select,.champ input{font:inherit;padding:5px 6px;width:100%;background:var(--btn);color:var(--texte);border:1px solid var(--btn-bord);border-radius:4px}
   .modale .actions{justify-content:flex-end;margin-top:14px}
-  .aide section{background:#fff;border:1px solid var(--bord);border-radius:8px;padding:10px 14px;margin:10px 0}
+  .aide section{background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:10px 14px;margin:10px 0}
   .aide h2{margin:0 0 4px;font-size:16px}
-  .aide h3{margin:8px 0 2px;font-size:12px;text-transform:uppercase;color:#777}
+  .aide h3{margin:8px 0 2px;font-size:12px;text-transform:uppercase;color:var(--discret)}
   .aide p,.aide ul{margin:2px 0;font-size:13px}
-  .intro{background:#fff;border:1px solid var(--bord);border-radius:8px;padding:10px 14px;font-size:13px}
+  .intro{background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:10px 14px;font-size:13px}
   @media (max-width:600px){.tuiles{grid-template-columns:1fr}main{padding:8px 16px 30px}}
 </style>
 </head>
 <body>
 <main>
-  <h1>Annuaire des outils</h1>
+  <div class="entete">
+    <h1>Annuaire des outils</h1>
+    <label class="theme" for="theme">
+      <span>Mode sombre</span>
+      <input id="theme" type="checkbox" role="switch">
+      <span class="interrupteur" aria-hidden="true"></span>
+    </label>
+  </div>
   <div class="onglets" role="tablist">
     <button id="onglet-outils" class="on" type="button">Outils</button>
     <button id="onglet-aide" type="button">Aide</button>
@@ -374,6 +402,15 @@ function montre(aide) {
 }
 $("onglet-outils").onclick = function () { montre(false); };
 $("onglet-aide").onclick = function () { montre(true); };
+
+// Interrupteur clair / sombre : le theme est deja pose par le script du <head> ; ici, on le reflete
+// et on memorise le choix (localStorage peut etre indisponible : le choix vaut alors pour la page).
+$("theme").checked = document.documentElement.getAttribute("data-theme") === "sombre";
+$("theme").onchange = function () {
+  var t = this.checked ? "sombre" : "clair";
+  document.documentElement.setAttribute("data-theme", t);
+  try { localStorage.setItem("annuaire-theme", t); } catch (e) {}
+};
 
 // Texte "Arreter" genere depuis les champs du registre (dans_job, route_occupe).
 function texteArret(o) {
