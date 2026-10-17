@@ -40,8 +40,9 @@
           3. multicast 224.3.0.1:4000  -------------------->  CONTROLE_UDP.every_100ms -> lireUDP
           4. re-arme le timer "forceEnvoiParams"                -> tasmota.cmd("ReglageUDP ImAlive {...}")
                                                                 -> discovery.json[MAC][role] = fiche ; [MAC]["lwt"] = "Online"
-          Time <ts>             <-- multicast "Timestamp" ---  si la fiche reçue a typeReglageHeure == "UDP"
-          persist ipMaitre      <-- multicast "ipMaitre"  ---  (topic tele/<groupTopic1>/ReglageUDP ...)
+          Time <ts>             <-- unicast "Timestamp" -----  si la fiche reçue a typeReglageHeure == "UDP"
+          persist ipMaitre      <-- unicast "ipMaitre"  -----  (topic tele/<groupTopic1>/ReglageUDP ...),
+                                                               a l'IPAddress de la fiche (multicast si absente)
 
       1. Côté esclave
          * Déclenchement : changementEtatDemarrage (System#Boot, id > 0), puis timer NOMMÉ "forceEnvoiParams"
@@ -62,7 +63,9 @@
          * ImAlive (reglageUDP) : recolle le JSON coupé aux espaces (dès le découpage, log compris) ; exige UNE fiche portant une
            adresseMAC ; écrit discovery.json[MAC][role] et [MAC]["lwt"] = "Online". Le rôle annoncé
            n'est PAS confronté à l'id. Si typeReglageHeure == "UDP" (les esclaves ; un maître est en
-           NTP ou RTC) : répond Timestamp + ipMaitre en multicast.
+           NTP ou RTC) : répond Timestamp + ipMaitre en UNICAST à l'IPAddress de la fiche (2026-10-17,
+           correction C5 : marche en Range Extender ET en Wi-Fi classique, et l'unicast est acquitté
+           par la radio) ; fiche sans IP lisible -> multicast, comme avant.
          * Contrepoids : resetClientsConnectes, une fois après telePeriod au démarrage, met tout 'Offline'.
       3. Ce que le maître fait de la table
          * rangeExtenderFonctions : boutons de la page d'accueil (RgxClients x fiches esclaveN 'Online') et
@@ -142,9 +145,9 @@ def udpFonctions_aideReglageUDP(sujet)
                 "Exemple : ReglageUDP envoiUniCast 192.168.0.43 Salut Ca gaz !"]
     elif (sujet == "ENVOIMULTICAST")
         return ["Parametre : <message> (un ou plusieurs mots ; absent -> erreur dans la reponse).",
-                "N'envoie quelque chose que si le RangeExtender est active (ON) :",
-                "esclave (id > 0) -> multicast 224.3.0.1 ; maitre (id = 0) -> via 192.168.4.1.",
-                "Sinon : aucun envoi. Sert aux tests.",
+                "Groupe 224.3.0.1, en Range Extender comme en Wi-Fi classique. Esclave (id > 0) : par",
+                "sa STA ; maitre (id = 0) : par son point d'acces s'il est actif, sinon par sa STA.",
+                "Sert aux tests.",
                 "Exemple : ReglageUDP envoiMultiCast Salut Ca gaz !"]
     elif (sujet == "FORCEENVOIPARAMS")
         return ["Parametre : ON ou 1 = envoie ; OFF ou 0 = n'envoie pas. Esclaves seulement (id > 0).",
@@ -229,13 +232,10 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
         var message = parametres.concat(" ")
         if (message == "")
             reponse_cmnd["ReglageUDP"]["erreur"] = "message absent : ReglageUDP envoiMultiCast <message>"
-        # Esclave RangeExtender (id > 0)
-        elif (serveur["rangeExtender"].find("activation", "OFF") == "ON" && serveur["udp"]["id"] > 0)
+        # Maitre ou esclave, Range Extender ou Wi-Fi classique : envoiUDP choisit l'interface (2026-10-17,
+        # correction C4 ; avant : rien ne partait hors Range Extender, et sans message d'erreur)
+        else
             udpFonctions.envoiUDP("MultiCast", "", message)
-            udpFonctions.log(string.format("ReglageUDP: Données UDP MultiCast envoyées >>> %s", message), LOG_LEVEL_DEBUG)
-        # Maitre RangeExtender (id == 0)
-        elif (serveur["rangeExtender"].find("activation", "OFF") == "ON" && serveur["udp"]["id"] == 0)
-            udpFonctions.envoiUDP("MultiCast", "192.168.4.1", message)
             udpFonctions.log(string.format("ReglageUDP: Données UDP MultiCast envoyées >>> %s", message), LOG_LEVEL_DEBUG)
         end
         
@@ -322,13 +322,21 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
             udpFonctions.log("REGLAGE_UDP: Le maitre UDP a reçu les paramètres de l'esclave '" + str(tmp[device].find("nom", device)) + "' !", LOG_LEVEL_DEBUG_PLUS)
 
             if (tmp[device].find("typeReglageHeure", "NTP") == "UDP")
-                # Envoi la mise à jour de l'heure aux esclaves en MultiCast UDP
-                var message = string.format("tele/%s/%s %s %i", serveur["mqtt"]["groupTopic1"], "ReglageUDP", "Timestamp", int(tasmota.rtc()["utc"]))
-                udpFonctions.envoiUDP("MultiCast", "192.168.4.1", message)
+                # Reponse en UNICAST a l'IP de la fiche que l'esclave vient d'envoyer (2026-10-17, correction
+                # C5) : le multicast du maitre ne sort que par UNE interface, un esclave en Wi-Fi classique
+                # (sur la box) ne le recevait jamais ; l'unicast est en plus acquitte par la radio 802.11.
+                # Fiche sans IPv4 lisible : multicast, comme avant.
+                var ipEsclave = str(tmp[device].find("IPAddress", ""))
+                var voie = (udpFonctions.estIPv4(ipEsclave) ? "UniCast" : "MultiCast")
+                var ipVoie = (voie == "UniCast" ? ipEsclave : "")
 
-                # Envoi deson adresse IP aux esclaves en MultiCast UDP
+                # Envoi la mise à jour de l'heure a l'esclave
+                var message = string.format("tele/%s/%s %s %i", serveur["mqtt"]["groupTopic1"], "ReglageUDP", "Timestamp", int(tasmota.rtc()["utc"]))
+                udpFonctions.envoiUDP(voie, ipVoie, message)
+
+                # Envoi de son adresse IP a l'esclave
                 message = string.format("tele/%s/%s %s %s", serveur["mqtt"]["groupTopic1"], "ReglageUDP", "ipMaitre", tasmota.cmd("Status 5", boolMute)["StatusNET"]["IPAddress"])
-                udpFonctions.envoiUDP("MultiCast", "192.168.4.1", message)
+                udpFonctions.envoiUDP(voie, ipVoie, message)
 
                 udpFonctions.log("REGLAGE_UDP: Envoi de la mise à jour de l'heure UDP aux esclaves & son adresse IP !", LOG_LEVEL_DEBUG_PLUS)
             end
@@ -479,10 +487,15 @@ def udpFonctions_envoiUDP(typeComm, ipDestinataire, message)
     #     d'acces en 192.168.4.1/24, c'est ce point d'acces, et tout envoi vers le maitre 192.168.4.1 etait
     #     perdu (mesure : non lie -> perdu, lie a 192.168.4.2 -> recu). La liaison choisit la STA
     #     (crochet ESP-IDF ip4_route_src_hook, lwip_default_hooks.c:122).
-    #   * MAITRE : inchange (unicast sur toutes les interfaces, multicast par l'interface ipDestinataire).
+    #   * MAITRE, unicast : toutes les interfaces, la destination choisit (192.168.4.x -> AP, LAN -> STA).
+    #   * MAITRE, multicast (correction C3) : par son point d'acces, adresse LUE dans le persist
+    #     (serveur.rangeExtender.AP.IPAddress, ipAP) au lieu du 192.168.4.1 ecrit en dur ; sans point
+    #     d'acces actif, par sa STA. Un ipDestinataire non vide impose l'interface (usage historique) :
+    #     les appelants passent "" pour laisser ce choix.
     #   * Port source ALEATOIRE (0) : la socket d'emission ne se lie plus aux ports d'ecoute 2000 / 4000,
     #     elle ne peut plus capter un datagramme entrant pendant sa courte vie (udp.c:267).
-    #   * Multicast : toujours seulement en Range Extender (activation ON), comme avant.
+    #   * Multicast aussi en Wi-Fi classique (correction C4 ; avant : seulement si activation ON). Un
+    #     esclave sur la box n'atteint le maitre que si la box relaie le multicast entre clients Wi-Fi.
     var esclave = (serveur["udp"].find("id", 0) > 0)
     var mode = string.toupper(str(typeComm))
     var ipLocale = ""
@@ -491,10 +504,19 @@ def udpFonctions_envoiUDP(typeComm, ipDestinataire, message)
     if (mode == "UNICAST")
         port = udpFonctions.etat()["port"][0]
         if (esclave)    ipLocale = udpFonctions.ipSTA()    end
-    elif (mode == "MULTICAST" && serveur["rangeExtender"].find("activation", "OFF") == "ON")
+    elif (mode == "MULTICAST")
         port = udpFonctions.etat()["port"][1]
         ipDest = "224.3.0.1"
-        ipLocale = (esclave ? udpFonctions.ipSTA() : (ipDestinataire == nil ? "" : ipDestinataire))
+        if (esclave)
+            ipLocale = udpFonctions.ipSTA()
+        elif (ipDestinataire != nil && ipDestinataire != "")
+            ipLocale = ipDestinataire
+        else
+            ipLocale = udpFonctions.ipAP()
+            if (ipLocale == "")    ipLocale = udpFonctions.ipSTA()    end
+        end
+    else
+        udpFonctions.log(string.format("ENVOI_MSG_UDP_ERREUR: type de communication inconnu '%s', '%s' non envoye !", str(typeComm), message), LOG_LEVEL_ERREUR)
     end
 
     if (port != nil)
@@ -523,6 +545,34 @@ def udpFonctions_ipSTA()
     return ((ip == "0.0.0.0" || ip == "nil") ? "" : ip)
 end
 udpFonctions.ipSTA = udpFonctions_ipSTA
+
+# Adresse du point d'acces Range Extender de la carte, lue dans le persist ; "" si le Range Extender est
+# inactif (2026-10-17, correction C3 : remplace le "192.168.4.1" ecrit en dur). Sert au multicast du maitre.
+def udpFonctions_ipAP()
+    var rgx = serveur.find("rangeExtender", {})
+    if (!isinstance(rgx, map) || rgx.find("activation", "OFF") != "ON")    return ""    end
+    var ap = rgx.find("AP", {})
+    var ip = (isinstance(ap, map) ? str(ap.find("IPAddress", "192.168.4.1")) : "192.168.4.1")
+    return (udpFonctions.estIPv4(ip) ? ip : "192.168.4.1")
+end
+udpFonctions.ipAP = udpFonctions_ipAP
+
+# true si texte est une IPv4 utilisable "a.b.c.d" (0-255, pas 0.0.0.0) (2026-10-17, correction C5 : IP d'une fiche).
+def udpFonctions_estIPv4(texte)
+    import string
+    var s = str(texte)
+    var morceaux = string.split(s, ".")
+    if (size(morceaux) != 4 || s == "0.0.0.0")    return false    end
+    for m: morceaux
+        if (size(m) == 0 || size(m) > 3)    return false    end
+        for i: 0 .. size(m) - 1
+            if (m[i] < "0" || m[i] > "9")    return false    end
+        end
+        if (int(m) > 255)    return false    end
+    end
+    return true
+end
+udpFonctions.estIPv4 = udpFonctions_estIPv4
 
 # Emet UN datagramme par une socket neuve liee a ipLocale ("" = toutes les interfaces), port source
 # ALEATOIRE (0), puis la ferme. true si la pile l'a accepte (pas une preuve de reception).

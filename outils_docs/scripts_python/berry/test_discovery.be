@@ -17,8 +17,11 @@
 #        "ModbusUDP <tid> <hexa>" et marque Info.voie = UDP (ancien format sans tid toujours lu).
 #   17.  ReglageGlobal ModeConnexion : bascule Range Extender <-> Wi-Fi classique (reseaux memorises
 #        une seule fois, restaures au retour, Restart differe, mot de passe hors reponse et hors log).
-#   18.  envoiUDP : un esclave emet par sa STA (socket liee a son IP), port source aleatoire ; maitre et
-#        regle « pas de multicast hors Range Extender » inchanges ; lireUDP d'un message d'un seul mot.
+#   18.  envoiUDP : un esclave emet par sa STA (socket liee a son IP), port source aleatoire ; maitre :
+#        multicast par son AP lu dans le persist, sinon sa STA ; lireUDP d'un message d'un seul mot.
+#   19.  C3/C4/C5 (2026-10-17) : AP du maitre lu dans le persist (adresse non standard, valeur
+#        invalide), ReglageUDP envoiMultiCast hors Range Extender, reponse a ImAlive en unicast a
+#        l'IP de la fiche (multicast si la fiche n'a pas d'IPv4 valide), estIPv4.
 # Les lecteurs de modbusFonctions (clients TCP, IP UDP : fichesModbus) sont testes dans
 # banc_test_modbus.be section 6, sur la meme forme de table.
 #
@@ -844,8 +847,8 @@ print("")
 print("=== 18. envoiUDP : un esclave emet par sa STA, port source aleatoire (diagnostic 2026-10-17) ===")
 # Chevauchement mesure le 2026-10-17 : la cuve a son AP en 192.168.4.1/24 ET est cliente du maitre en
 # 192.168.4.2/24. Socket non liee -> sortie par son AP, envoi au maitre perdu ; liee a 192.168.4.2 -> recu.
-# Corrections C1 (liaison a la STA, esclave) + C2 (port source 0) + C6 (lireUDP, un seul mot).
-# NON appliquees (a trancher) : C3 multicast maitre, C4 multicast esclave hors RE, C5 ImAlive unicast.
+# Corrections C1 (liaison a la STA, esclave) + C2 (port source 0) + C6 (lireUDP, un seul mot), et
+# depuis le 2026-10-17 C3 (multicast maitre) + C4 (multicast esclave hors RE) ; C5 : section 19.
 serveur = {"udp": {"id": 2, "debug": "ON", "activation": "ON"},
            "rangeExtender": {"activation": "ON", "id": 2, "AP": {"IPAddress": "192.168.4.1", "Subnet": "255.255.255.0"}},
            "discovery": {"debug": "ON"},
@@ -866,14 +869,14 @@ liaisons = []
 udpFonctions.envoiUDP("MultiCast", "", "R2")
 verifie("esclave RE multicast : lie a la STA, groupe 224.3.0.1:4000, port source 0",
         "192.168.4.2/224.3.0.1/4000/0", resume(dernier()))
-# Wi-Fi classique : toujours AUCUN multicast esclave (C4 non appliquee), log 'nil' comme avant
+# Wi-Fi classique : le multicast esclave part par sa STA (C4 ; avant : rien, journal 'nil')
 serveur["rangeExtender"]["activation"] = "OFF"
 tasmota.ipSta = "192.168.0.50"
 liaisons = []
 journal = []
 udpFonctions.envoiUDP("MultiCast", "", "R3")
-verifie("esclave Wi-Fi classique : multicast toujours non emis (inchange)", "0/true",
-        str(size(liaisons)) + "/" + str(journalise(">>>> R3 >>>> nil")))
+verifie("C4 esclave Wi-Fi classique : multicast par la STA", "192.168.0.50/224.3.0.1/4000/0/true",
+        resume(dernier()) + "/" + str(journalise(">>>> R3 >>>> OK")))
 liaisons = []
 udpFonctions.envoiUDP("UniCast", "192.168.0.43", "R4")
 verifie("esclave Wi-Fi classique unicast : lie a la STA", "192.168.0.50/192.168.0.43/2000/0", resume(dernier()))
@@ -890,7 +893,7 @@ verifie("liaison refusee : 2e essai sur toutes les interfaces", "1//OK", str(siz
         (journalise(">>>> R6 >>>> OK") ? "OK" : "?"))
 verifie("... et le 2e essai est journalise", true, journalise("nouvel essai sur toutes les interfaces"))
 refusLiaison = nil
-# Maitre : interfaces INCHANGEES (C3 non appliquee), seul le port source devient aleatoire
+# Maitre : unicast inchange (port source aleatoire) ; multicast par son AP (persist), sinon sa STA (C3)
 serveur["udp"]["id"] = 0
 serveur["rangeExtender"]["activation"] = "ON"
 tasmota.ipSta = "192.168.0.43"
@@ -899,23 +902,92 @@ udpFonctions.envoiUDP("UniCast", "192.168.4.2", "R7")
 verifie("maitre unicast : toutes les interfaces, port source 0 (avant : 2000)", "/192.168.4.2/2000/0", resume(dernier()))
 liaisons = []
 udpFonctions.envoiUDP("MultiCast", "192.168.4.1", "R8")
-verifie("maitre multicast : par l'interface demandee (inchange)", "192.168.4.1/224.3.0.1/4000/0", resume(dernier()))
+verifie("maitre multicast : par l'interface imposee par l'appelant", "192.168.4.1/224.3.0.1/4000/0", resume(dernier()))
 liaisons = []
 udpFonctions.envoiUDP("MultiCast", "", "R9")
-verifie("maitre multicast sans interface : toutes (inchange)", "/224.3.0.1/4000/0", resume(dernier()))
+verifie("C3 maitre multicast sans interface : par son AP (persist)", "192.168.4.1/224.3.0.1/4000/0", resume(dernier()))
 serveur["rangeExtender"]["activation"] = "OFF"
 liaisons = []
-udpFonctions.envoiUDP("MultiCast", "192.168.4.1", "R10")
-verifie("maitre sans Range Extender : multicast non emis (inchange)", 0, size(liaisons))
+udpFonctions.envoiUDP("MultiCast", "", "R10")
+verifie("C3 maitre sans Range Extender : multicast par sa STA", "192.168.0.43/224.3.0.1/4000/0", resume(dernier()))
 liaisons = []
+journal = []
 udpFonctions.envoiUDP("Broadcast", "", "R11")
-verifie("type inconnu : rien n'est emis", 0, size(liaisons))
+verifie("type inconnu : rien n'est emis, erreur journalisee", "0/true",
+        str(size(liaisons)) + "/" + str(journalise("ENVOI_MSG_UDP_ERREUR: type de communication inconnu 'Broadcast'")))
 # lireUDP : message d'un seul mot (avant : index_error dans every_100ms)
 serveur["udp"]["id"] = 2
 drivers["ModBus"]["id"] = 2
 etatUDP["udpReception"] = [SocketFaux(["TESTUDP"]), nil]
 verifie("lireUDP : message d'un seul mot sans exception", "OK", essaie(def () udpFonctions.lireUDP("UniCast", {}) end))
 etatUDP["udpReception"] = sauveRecep
+
+print("")
+print("=== 19. C3/C4/C5 : AP lu dans le persist, multicast hors Range Extender, ImAlive en unicast (2026-10-17) ===")
+# Les deux modes sont de vrais modes d'usage (decision du 2026-10-17) : Range Extender ET Wi-Fi classique.
+# C3 : maitre, AP a une adresse NON standard -> le multicast suit le persist, plus de 192.168.4.1 en dur
+serveur["udp"]["id"] = 0
+drivers["ModBus"]["id"] = 0
+serveur["rangeExtender"] = {"activation": "ON", "id": 0, "AP": {"IPAddress": "192.168.7.1"}}
+tasmota.ipSta = "192.168.0.43"
+liaisons = []
+udpFonctions.envoiUDP("MultiCast", "", "S1")
+verifie("C3 maitre multicast : AP lu dans le persist", "192.168.7.1/224.3.0.1/4000/0", resume(dernier()))
+serveur["rangeExtender"]["AP"] = {"IPAddress": "pas une adresse"}
+liaisons = []
+udpFonctions.envoiUDP("MultiCast", "", "S2")
+verifie("C3 adresse d'AP invalide : repli 192.168.4.1", "192.168.4.1/224.3.0.1/4000/0", resume(dernier()))
+serveur["rangeExtender"] = {"activation": "ON", "id": 0}
+verifie("C3 bloc AP absent : 192.168.4.1", "192.168.4.1", udpFonctions.ipAP())
+serveur["rangeExtender"]["activation"] = "OFF"
+verifie("C3 Range Extender inactif : pas d'AP", "", udpFonctions.ipAP())
+serveur["rangeExtender"] = {"activation": "ON", "id": 0, "AP": {"IPAddress": "192.168.7.1"}}
+
+# C5 : reponse a ImAlive en UNICAST a l'IP de la fiche (Range Extender : 192.168.4.2, par l'AP du maitre)
+def reponsesImAlive(fiche)
+  gestionFileFolder.fichiers = {}
+  liaisons = []
+  imAlive(fiche)
+  var r = []
+  for l: liaisons    r.push(resume(l) + (string.find(l[3], "Timestamp") >= 0 ? ":heure" : (string.find(l[3], "ipMaitre") >= 0 ? ":ip" : ":?")))    end
+  return r.concat("|")
+end
+verifie("C5 Range Extender : heure + ipMaitre en unicast a la fiche",
+        "/192.168.4.2/2000/0:heure|/192.168.4.2/2000/0:ip", reponsesImAlive(ficheCuve(true)))
+var ficheWifi = ficheCuve(true)
+ficheWifi["esclave2"]["IPAddress"] = "192.168.0.50"
+verifie("C5 Wi-Fi classique : unicast a l'IP de la box",
+        "/192.168.0.50/2000/0:heure|/192.168.0.50/2000/0:ip", reponsesImAlive(ficheWifi))
+var ficheSansIP = ficheCuve(true)
+ficheSansIP["esclave2"].remove("IPAddress")
+verifie("C5 fiche sans IP : repli multicast par l'AP",
+        "192.168.7.1/224.3.0.1/4000/0:heure|192.168.7.1/224.3.0.1/4000/0:ip", reponsesImAlive(ficheSansIP))
+ficheSansIP["esclave2"]["IPAddress"] = "0.0.0.0"
+verifie("C5 fiche en 0.0.0.0 : repli multicast",
+        "192.168.7.1/224.3.0.1/4000/0:heure|192.168.7.1/224.3.0.1/4000/0:ip", reponsesImAlive(ficheSansIP))
+var ficheNTP = ficheCuve(true)
+ficheNTP["esclave2"]["typeReglageHeure"] = "NTP"
+verifie("C5 esclave a l'heure NTP : aucune reponse (inchange)", "", reponsesImAlive(ficheNTP))
+
+# C4 : la commande de test emet aussi hors Range Extender (avant : rien, sans erreur)
+serveur["udp"]["id"] = 2
+drivers["ModBus"]["id"] = 2
+serveur["rangeExtender"] = {"activation": "OFF", "id": 2}
+tasmota.ipSta = "192.168.0.50"
+liaisons = []
+udpFonctions.reglageUDP("ReglageUDP", 0, "envoiMultiCast S4 en trois mots", nil)
+verifie("C4 ReglageUDP envoiMultiCast hors Range Extender : par la STA",
+        "192.168.0.50/224.3.0.1/4000/0|S4 en trois mots", resume(dernier()) + "|" + str(dernier()[3]))
+
+# estIPv4 : seule porte vers l'unicast de C5 (validation a la frontiere : la fiche vient du reseau)
+var casIP = {"192.168.4.2": true, "0.0.0.0": false, "256.1.1.1": false, "1.2.3": false, "1.2.3.4.5": false,
+             "a.b.c.d": false, "": false, "nil": false, "192.168.0.": false, "1.2.3.4 ": false}
+var faux = []
+for k: casIP.keys()
+  if udpFonctions.estIPv4(k) != casIP[k]    faux.push(k)    end
+end
+verifie("estIPv4 : 10 cas", "[]", str(faux))
+verifie("estIPv4(nil) : false", false, udpFonctions.estIPv4(nil))
 
 print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))

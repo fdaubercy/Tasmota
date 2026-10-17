@@ -1530,7 +1530,8 @@ def modbusFonctions_envoiMsgModbusUDP(Trame, typeMsg)
     # Si maitre ModBus (id == 0) => envoi par UDP MultiCast
     if (drivers["ModBus"].find("id", 99) == 0)
         # udpFonctions.envoiUDP("UniCast", IP_ModBus, "ModbusUDP " + Trame.tohex())
-        udpFonctions.envoiUDP("MultiCast", "192.168.4.1", "ModbusUDP " + Trame.tohex())
+        # "" : envoiUDP choisit l'interface (point d'acces lu dans le persist, sinon STA ; 2026-10-17, C3)
+        udpFonctions.envoiUDP("MultiCast", "", "ModbusUDP " + Trame.tohex())
     # Si esclave ModBus (id > 0) => envoi par UDP UniCast
     elif (drivers["ModBus"].find("id", 0) > 0)
         # udpFonctions.envoiUDP("UniCast", "192.168.0.43", "ModbusUDP " + json.dump(Trame))
