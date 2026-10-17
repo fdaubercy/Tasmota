@@ -396,6 +396,7 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     de la console ; pose en cookie HttpOnly SameSite=Strict (un nom par port) puis retire de l'URL.
     Le flux TCP brut du pont serie reste reserve a ce PC. Pare-feu Windows : autoriser Python sur
     les reseaux prives au premier lancement, sinon les autres appareils n'atteignent pas la page.
+    Ecrit aussi la fiche de presence de l'outil (`%LOCALAPPDATA%\outils_tasmota\presence\`), lue par l'annuaire.
   - `test_rs485_pc.py` — test du bus ModBus depuis le PC par un convertisseur USB-RS485
     (Waveshare CH343) : ecoute du bus, envoi brut, lecture/commande de la carte 16 relais,
     recherche de son debit, emulation de la carte (pour tester le maitre P4 sans elle).
@@ -447,3 +448,11 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     « Testeur UDP maitre/esclave » dans Custom, et tache VS Code (Ctrl+Maj+P > Run Task). Banc :
     `test_testeur_udp.py` (cartes simulees par `testeur_udp_sim.py` ; groupe « pont » dans
     `test_testeur_udp_pont.py`, sur le vrai `pont_serie.py` en loop:// ; code de sortie 0 = vert).
+  - `annuaire_outils.py` (+ `annuaire_registre.py`, `annuaire_presence.py`, `annuaire_lanceur.py`,
+    `annuaire_page.py`) — annuaire des outils PC, page http://127.0.0.1:7600 : liste les outils (fiches de
+    presence sous `%LOCALAPPDATA%\outils_tasmota\`, consoles dans `consoles\<id>.log`), les lance et les arrete.
+    Demarre seul avec VS Code (tache « Outil : annuaire des outils », `runOn: folderOpen`, `--sans-navigateur`).
+    Les outils lances depuis l'annuaire s'arretent avec lui (job object Windows), SAUF la synchro du fork
+    (hors job, console cachee propre, survit a la fermeture de VS Code ; arret refuse pendant un merge, rebase
+    ou push). Autre appareil : lien a jeton de la console / de la page sur le PC. Bancs : `test_annuaire.py`,
+    `test_annuaire_lanceur.py`. Spec : `docs/superpowers/specs/2026-10-17-annuaire-outils-design.md`.

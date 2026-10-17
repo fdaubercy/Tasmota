@@ -173,6 +173,19 @@
             "args": ["-u", "outils_docs/scripts_python/maintenance/synchro_fork_web.py", "--http", "7500"],
             "presentation": { "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
+        },
+        {
+            // Annuaire des outils : page unique (lancer / arreter les autres outils). Demarre seul a
+            // l'ouverture du dossier, sans ouvrir de navigateur. Premiere fois : "Tasks: Manage
+            // Automatic Tasks" > Allow.
+            "label": "Outil : annuaire des outils (http://127.0.0.1:7600)",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/annuaire_outils.py", "--sans-navigateur"],
+            "isBackground": true,
+            "runOptions": { "runOn": "folderOpen" },
+            "presentation": { "reveal": "never", "panel": "dedicated" },
+            "problemMatcher": []
         }
     ]
 }
