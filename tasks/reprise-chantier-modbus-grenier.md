@@ -140,6 +140,34 @@ au mauvais endroit, annulées — voir `tasks/lessons.md`). Les 3 cibles sont
 > elle logue encore, et lancer le serveur syslog. **Testeur corrige** : carte « muette » apres 10 s sans
 > reponse a une commande (note, pastille rouge, relance du log serie), essais signales « aucune ligne recue
 > de la carte » ; banc `test_testeur_udp_muette.py`.
+> **ModBus filaire : le P4 ne recoit plus RIEN (diagnostic du 2026-10-17, 20:06-20:13)**. Sur le bus (sniffeur
+> COM5, 19200) : carte relais id1 5/5 reponses (~2 ms), cuve id2 4/4 reponses valides (CRC OK, ~141 ms),
+> rideau id3 0/4. Au meme moment, le P4 (pont 7000) : `MBR Recv timed out` + `Driver receive error 11` pour
+> les TROIS esclaves ; journal du testeur 10:29-13:20 : cuve 121 reponses emises, P4 0 `ModbusReceived`.
+> L'emission du P4 marche (les esclaves repondent a ses requetes) : c'est sa RECEPTION qui est coupee.
+> **Le P4 recevait encore le 2026-10-12 jusqu'a 06:55** (syslog : 365 `ModbusReceived` id1, 1083 id2).
+> Ecarte : template du P4 lu en direct (GPIO4 = 9440 ModBr Rx, GPIO5 = 9408 ModBr Tx, codes verifies dans
+> `tasmota_template.h`), `ModbusBaudrate 19200`, `ModbusSerialConfig 8N1`, aucun `serial()` Berry sur le
+> maitre (id 0), pilotes TasmotaSerial/TasmotaModbus/xdrv_63 et plateforme inchanges depuis `196b4ff3d`
+> (`pins_arduino.h` du P4 : GPIO 4/5 non concernes). **Cause la plus probable : materielle, cote P4** -
+> sortie RO de son transceiver -> GPIO4 (fil, connecteur), ou recepteur desactive (/RE). A verifier a la main
+> AVANT tout changement de code ; test simple : debrancher le convertisseur du sniffeur et voir si le P4 recoit.
+> **Re-test 20:18-20:19 : le P4 RECOIT de nouveau** (36 `ModbusReceived` en 70 s : carte relais id1 a chaque
+> sondage /30 s, cuve id2 0x03 et 0x04) ; seuls timeouts : rideau id3. Aucun code ni reglage modifie entre
+> les deux mesures (logiciel). **Cause confirmee par l'utilisateur : un cable debranche** sur les liaisons du
+> P4, retouchees entre les deux mesures. Lecon : timeouts sur TOUS les esclaves + reponses visibles au sniffeur
+> = verifier d'abord le cablage de reception du maitre.
+> **Grille ModBus (testeur, cuve) le 2026-10-17, 20:21-20:44** : tests 1 a 5 VALIDES (5g « ECHEC » = faux echec
+> du testeur : le P4 a ecrit `ACCEPTE_SEQ: esclave d'ID=2 redemarre (seq 1 apres 8)` a 20:33:52.965, AVANT
+> l'etape 5f ; la cuve pousse son seq 1 des son demarrage). Test 6 : chien de garde OK (ID=2 muet apres 113 s),
+> 6d ECHEC reel : pendant la manipulation, le P4 a perdu la RECEPTION de TOUS les esclaves (carte relais muette
+> 20:38-20:43 alors que le sniffeur la voit repondre 82/82) ; cuve revue a 20:43:06, ~4 min apres le
+> rebranchement. => faux contact probable sur le cablage de reception du P4 : a fixer, puis rejouer le test 6.
+> Testeur corrige ensuite (banc 223/223, 4 mutations detectees) : 2b compte les requetes (en-tete
+> `executeCmdModbus`) et non les lignes ; retour en AUTO PROUVE (releve avec mode 0 puis `RubanEsclave1` =
+> AUTO, etapes 4j-4l / 5j-5l) ; 5g cherche depuis le Restart (option `depuis`) ; bouton de consigne qui
+> restait affiche (reponse HTTP perimee : `version` + `repond()` attend la consigne retiree) ; decompte de
+> l'etape qui attend sa preuve.
 
 ## LA PROCHAINE ACTION — flasher et observer
 
