@@ -469,49 +469,71 @@ def udpFonctions_envoiUDP(typeComm, ipDestinataire, message)
 		return
 	end
 
-	var udpEmission = udp()
 	var resultatEnvoi
 
     udpFonctions.log("ENVOI_MSG_UDP: ------------------------ UDP sendUDP ----------------------", LOG_LEVEL_DEBUG_PLUS)
-	
-	# Ouvre la connexion UniCast sortante ou MultiCast sortante pour les maitres RangeExtender
-	if (string.toupper(typeComm) == string.toupper("UniCast"))
-		udpEmission.begin("", udpFonctions.etat()["port"][0])      # envoi sur toutes les interfaces, port identifié
+
+    # Interface d'emission (2026-10-17, outils_docs/DIAGNOSTIC_UDP_2026-10-17.md, corrections C1 + C2) :
+    #   * ESCLAVE (udp.id > 0), unicast et multicast : socket liee a l'IP de SA STA. Sans liaison, lwIP
+    #     prend la 1re interface du sous-reseau (ip4.c:171-178) : sur un esclave qui a AUSSI son point
+    #     d'acces en 192.168.4.1/24, c'est ce point d'acces, et tout envoi vers le maitre 192.168.4.1 etait
+    #     perdu (mesure : non lie -> perdu, lie a 192.168.4.2 -> recu). La liaison choisit la STA
+    #     (crochet ESP-IDF ip4_route_src_hook, lwip_default_hooks.c:122).
+    #   * MAITRE : inchange (unicast sur toutes les interfaces, multicast par l'interface ipDestinataire).
+    #   * Port source ALEATOIRE (0) : la socket d'emission ne se lie plus aux ports d'ecoute 2000 / 4000,
+    #     elle ne peut plus capter un datagramme entrant pendant sa courte vie (udp.c:267).
+    #   * Multicast : toujours seulement en Range Extender (activation ON), comme avant.
+    var esclave = (serveur["udp"].find("id", 0) > 0)
+    var mode = string.toupper(str(typeComm))
+    var ipLocale = ""
+    var ipDest = ipDestinataire
+    var port = nil
+    if (mode == "UNICAST")
+        port = udpFonctions.etat()["port"][0]
+        if (esclave)    ipLocale = udpFonctions.ipSTA()    end
+    elif (mode == "MULTICAST" && serveur["rangeExtender"].find("activation", "OFF") == "ON")
+        port = udpFonctions.etat()["port"][1]
+        ipDest = "224.3.0.1"
+        ipLocale = (esclave ? udpFonctions.ipSTA() : (ipDestinataire == nil ? "" : ipDestinataire))
     end
 
-	# Ouvre la connexion MultiCast sortante pour le maitre RangeExtender
-    if (serveur["rangeExtender"].find("activation", "OFF") == "ON")
-        if (string.toupper(typeComm) == string.toupper("MultiCast") && serveur["udp"]["id"] == 0)
-            udpEmission.begin(ipDestinataire, 0)      # envoi sur toutes les interfaces, port aléatoire
-        # Ouvre la connexion MultiCast sortante pour les autres
-        elif (string.toupper(typeComm) == string.toupper("MultiCast") && serveur["udp"]["id"] > 0)
-            udpEmission.begin_multicast("224.3.0.1", udpFonctions.etat()["port"][1])
+    if (port != nil)
+        var ok = udpFonctions.emet(ipLocale, ipDest, port, message)
+        # Liaison refusee (IP de la STA changee entre-temps...) : un 2e essai sur toutes les interfaces
+        # vaut mieux qu'un message perdu.
+        if (!ok && ipLocale != "")
+            udpFonctions.log(string.format("ENVOI_MSG_UDP: envoi par l'interface %s refuse, nouvel essai sur toutes les interfaces", ipLocale), LOG_LEVEL_DEBUG)
+            ipLocale = ""
+            ok = udpFonctions.emet("", ipDest, port, message)
         end
-    end
-	
-	# Envoi la commande
-	# en UniCast
-	if (string.toupper(typeComm) == string.toupper("UniCast"))
-		resultatEnvoi = udpEmission.send(ipDestinataire, udpFonctions.etat()["port"][0], bytes().fromstring(message)) ? "OK" : "Echec"
+        resultatEnvoi = (ok ? "OK" : "Echec")
+        udpFonctions.log(string.format("ENVOI_MSG_UDP: interface d'emission '%s', destination %s:%i", (ipLocale == "" ? "toutes" : ipLocale), str(ipDest), port), LOG_LEVEL_DEBUG_PLUS)
     end
 
-	# en MultiCast sortante pour le maitre RangeExtender
-    if (serveur["rangeExtender"].find("activation", "OFF") == "ON")
-        if (string.toupper(typeComm) == string.toupper("MultiCast") && serveur["udp"]["id"] == 0)
-            resultatEnvoi = udpEmission.send("224.3.0.1", udpFonctions.etat()["port"][1], bytes().fromstring(message)) ? "OK" : "Echec"
-        # en MultiCast pour les autres
-        elif (string.toupper(typeComm) == string.toupper("MultiCast") && serveur["udp"]["id"] > 0)
-            resultatEnvoi = udpEmission.send_multicast(bytes().fromstring(message)) ? "OK" : "Echec"
-        end
-    end
-
+	# Format inchange : lu par outils_pc/testeur_udp_essais.py (RE_ENVOI)
 	udpFonctions.log(string.format("ENVOI_MSG_UDP: Données %s envoyées vers '%s' >>>> %s >>>> %s", typeComm, ipDestinataire, message, resultatEnvoi), LOG_LEVEL_DEBUG)
     tasmota.yield()
-	
-	# Ferme la connexion
-	udpEmission.close()
 end
 udpFonctions.envoiUDP = udpFonctions_envoiUDP
+
+# Adresse IPv4 de la STA de la carte (sa liaison Wi-Fi cliente), "" si inconnue (2026-10-17).
+def udpFonctions_ipSTA()
+    var w = tasmota.wifi()
+    var ip = (isinstance(w, map) ? str(w.find("ip", "")) : "")
+    return ((ip == "0.0.0.0" || ip == "nil") ? "" : ip)
+end
+udpFonctions.ipSTA = udpFonctions_ipSTA
+
+# Emet UN datagramme par une socket neuve liee a ipLocale ("" = toutes les interfaces), port source
+# ALEATOIRE (0), puis la ferme. true si la pile l'a accepte (pas une preuve de reception).
+def udpFonctions_emet(ipLocale, ipDest, port, message)
+    var u = udp()
+    var ok = u.begin(ipLocale, 0)
+    if (ok)    ok = u.send(ipDest, port, bytes().fromstring(message))    end
+    u.close()
+    return (ok ? true : false)
+end
+udpFonctions.emet = udpFonctions_emet
 
 # Cette fonction gère la lecture de messages UDP en unicast et multicast
 # Puis publie le message MQTT 'ModbusReceivedUDP' sur le Topic ==> Déclenchera la règle 'tasmota.add_rule('ModbusReceivedUDP')' -> vers la fonction controleModbus.recupereReponseModBusUDP()
@@ -589,7 +611,8 @@ def udpFonctions_lireUDP(typeComm, paramMSG)
             var nb_slash = string.count(params[0], "/")
 
             paramMSG["prefix"] = decoupage[0]
-            paramMSG["commande"] = decoupage[nb_slash] + " " + params[1]
+            # Message d'un seul mot (2026-10-17, C6) : params[1] levait index_error dans every_100ms
+            paramMSG["commande"] = decoupage[nb_slash] + " " + (size(params) > 1 ? params[1] : "")
             paramMSG["topic"] = ""
             for i: 1 .. nb_slash - 1
                 if paramMSG["topic"] == ""

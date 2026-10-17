@@ -803,18 +803,127 @@ constatee par essais ; code relu le 2026-10-15, `udpFonctions.envoiUDP` `:466-51
    192.168.4.1 : ModbusUDP 17 02010101900C` (ou `...0051CC` si POWER1 OFF) ; cote P4 :
    `LIRE_UDP: Donnees UDP UniCast recues de '192.168.4.x'` avec ce message ; sniffeur ModBus du
    PC : **rien** sur le RS485 a cet instant. Temoin : meme commande sans `17` -> reponse sans tid.
-2. *Wi-Fi classique* : seul le P4 y est (2026-10-15) ; la **cuve y passe le temps de l'essai**.
-   Persist de la cuve d'abord (lecon du 2026-09-27 : un `SSId1` tape en console redemarre, et
-   `configGlobal` remettrait l'ancien reseau depuis le persist) : sauvegarder le persist,
-   `serveur.wifi.reseau1` = reseau maison (celui du P4), `reseau2` = `SERVEUR-GARAGE-GATEWAY`
-   (filet si le reseau maison ne porte pas jusqu'a la cuve), `serveur.rangeExtender.activation`
-   = OFF ; televerser, relire, comparer, puis `Restart 1`. Retour : persist sauvegarde.
+2. *Wi-Fi classique* : seul le P4 y est (2026-10-15) ; la **cuve y passe le temps de l'essai**,
+   par `ReglageGlobal ModeConnexion WifiClassique <ssid> <mdp>` (2026-10-16, `globalFonctions.be`) :
+   reseaux d'origine memorises une fois (`serveur.wifi.sauvegardeRangeExtender`), `reseau1` =
+   reseau maison, `reseau2` = `SERVEUR-GARAGE-GATEWAY` (filet), `rangeExtender.activation` = OFF,
+   persist sauve, puis `Restart 1` differe d'1 s. Retour : `ReglageGlobal ModeConnexion
+   RangeExtender` (restaure les reseaux memorises). Ni `RgxState` ni le point d'acces ne sont
+   touches. Ecrit dans `ReglageGlobal` et non `ReglageRangeExtender` : `controleRangeExtender`
+   n'est pas charge sur la cuve ni le rideau. L'outil `outils_pc/testeur_udp.py` envoie ces
+   commandes par la serie. Banc : `test_discovery.be` §17 (temoins par mutation : garde de la
+   sauvegarde, Restart differe).
    Pendant l'essai, **attendu et non une panne** : la cuve n'emet plus AUCUN multicast (pas de
    branche hors Range Extender, voir plus haut) -> ni `ImAlive` UDP ni push ; sa fiche arrive
    par MQTT (broker joint directement), ses mesures par le releve serie du maitre (cable branche).
 3. Si 1 ou 2 echoue : relever l'adresse et le port source vus de chaque cote, puis essayer
    l'emission depuis le socket d'ecoute (hypothese du port 2000 ci-dessus) avant tout autre
    changement.
+
+**Essai reel 1 — 2026-10-17** (testeur UDP ; P4 SANS E1, cuve AVEC E1 mais sans `ModeConnexion`) :
+- **P4 -> cuve : OK.** `ModbusUDP 17 020100E00001FC0F` recu sur le port 2000, `REPOND_UDP: reponse a
+  192.168.4.1 : ModbusUDP 17 0201010051CC` (tid garde, POWER1 OFF), aucune copie sur le RS485. M3/M4
+  de l'esclave sont valides. Deux echecs P4 -> cuve a 03:52-03:53, puis plus aucun : non explique.
+- **Cuve -> P4 (192.168.4.1) en unicast : rien n'arrive.** La reponse E1 ne revient donc pas.
+  Explication complete et mesures : « Diagnostic UDP — 2026-10-17 » ci-dessous (premiere analyse
+  « les envois restent chez elle » : FAUSSE, ils partent par la mauvaise interface). Le multicast,
+  lui, passe dans les deux sens (echecs du matin non reproduits).
+- Hypothese du port 2000 (ci-dessus) **ecartee** : un socket neuf lie a 2000 sur le P4 atteint la cuve.
+- Piege de mesure : Tasmota coupe le log serie 600 s apres le demarrage (`SERIALLOG_TIMER`,
+  `support_tasmota.ino:1186`) sauf commande `SerialLog` ; `logFonctions.appliqueProfil` n'en envoie
+  pas si le niveau est deja le bon. Cuve muette des 03:33:21 : les essais suivants semblaient
+  « non recus ». Le testeur reapplique desormais le niveau regle a l'ouverture du port.
+
+**Diagnostic UDP — 2026-10-17, 04:39-04:44** (testeur UDP, P4 = COM4, cuve = COM12 ; sockets
+Berry de test sur 2996-2998, toutes refermees ; aucune commande de configuration). Remplace
+l'explication « restent chez elle » de l'essai reel 1 : les envois partent, mais par la mauvaise
+interface.
+
+*Mesures.* Cuve : `RgxState` ON, `RgxSSId` = 192.168.4.1 / 255.255.255.0 ; STA 192.168.4.2/24.
+
+| Essai | Resultat |
+|---|---|
+| cuve, socket `begin("",0)` -> 192.168.4.1:2997 | non recu |
+| cuve, socket `begin("192.168.4.2",0)` (liee a la STA) -> 192.168.4.1:2997 | **recu** par le P4 |
+| cuve, socket `begin("",0)` -> 192.168.0.43:2997 (IP STA du P4) | **recu** |
+| cuve, framework `ReglageUDP envoiUniCast 192.168.4.1 ...` | non recu |
+| cuve -> 192.168.4.1:2996, ecoute locale sur 2996 | non reboucle (127.0.0.1 : reboucle) |
+| multicast cuve -> P4, framework (4000) et socket neuve (2998) | **recu** |
+| multicast P4 -> cuve, framework | **recu** |
+| unicast P4 -> cuve, framework, 5 envois | **5/5** |
+
+*Cause prouvee : chevauchement de sous-reseau sur l'esclave.* Une socket non liee choisit
+l'interface par `ip4_route` : la 1re interface dont le sous-reseau contient la destination
+(`lwip/src/core/ipv4/ip4.c:171-178`). L'AP de la cuve est demarre apres sa STA
+(`xdrv_58_range_extender.ino:499`) ; `netif_add` le place en tete (`netif.c:437-438`). Le paquet
+pour 192.168.4.1 sort donc par l'AP de la cuve : ARP vers sa propre adresse, perdu. Pas de
+rebouclage : avec `IP_NAPT`, le bloc « packet to self » est compile hors (`ip4.c:1061-1079`).
+Une socket liee a 192.168.4.2 passe par le crochet ESP-IDF `ip4_route_src_hook`
+(`components/lwip/port/hooks/lwip_default_hooks.c:122-142`) : la STA est choisie. Vers
+192.168.0.43, aucune interface ne correspond : sortie par `netif_default` (STA, `route_prio` 100,
+`esp_netif_defaults.h:54`), le P4 accepte une adresse de son autre interface (`ip4.c:616-636`).
+Sources lues : `framework-espidf` 5.5.4 ; options lues dans le `sdkconfig` et le `lwipopts.h`
+precompiles (`CONFIG_LWIP_IPV4_NAPT=y`, `LWIP_HOOK_IP4_ROUTE_SRC`, identiques S3 et P4).
+
+*Consequences.*
+- Esclave -> maitre en unicast : perdu tant que l'esclave a son AP en 192.168.4.1/24 (cuve, et
+  rideau par la meme config). La reponse E1 (`repondUDP`, `modbusFonctions.be:1546-1555`, vers
+  `Info.remote_ip` = 192.168.4.1) ne peut pas revenir. Le TCP n'est pas touche (socket acceptee
+  liee a 192.168.4.2 : deduit du code, non mesure).
+- Le multicast marche en Range Extender dans les deux sens. Les echecs multicast du matin et
+  P4 -> cuve de 03:52-03:53 ne sont pas reproduits ; piste : log serie de la cuve coupe
+  (redemarree vers 03:23, `SERIALLOG_TIMER`), non prouve.
+- Le commentaire `controleUDP.be:16-19` dit l'inverse du code et des mesures : ce n'est pas le
+  mode (RE / Wi-Fi) qui decide, c'est le chevauchement.
+
+*Defauts du code releves.*
+- `udpFonctions.be:485` : le multicast du maitre est lie a 192.168.4.1 -> il ne sort que par son
+  AP. En Wi-Fi classique, `Timestamp`, `ipMaitre` et `ModbusUDP` multicast
+  (`modbusFonctions.be:1533`) n'atteignent pas un esclave sur la box.
+- `udpFonctions.be:483-490`, `:499-506`, `:233-240` : aucun multicast esclave hors Range Extender
+  (deja note plus haut).
+- `udpFonctions.be:479` : socket d'emission liee au port d'ecoute 2000. Pendant sa vie, elle est
+  en tete de `udp_pcbs` (`udp.c:298`) et capte un datagramme entrant (`udp.c:267`), perdu a sa
+  fermeture. Non observe.
+- `udpFonctions.be:592` : un message UDP d'un seul mot leve `index_error` (`params[1]`).
+- Les sockets d'ecoute s'ouvrent sur `System#Boot`, leve a la 1re connexion MQTT
+  (`xdrv_02_9_mqtt.ino:1487`) : broker injoignable au demarrage = carte sourde en UDP. Non mesure.
+- L'ecoute multicast rejoint le groupe sur les interfaces presentes a l'instant
+  (`NetworkUdp.cpp:131`, `igmp.c:455-480`) : si l'AP du maitre demarrait apres `System#Boot`,
+  il serait sourd au multicast sur son AP. Non constate sur le boot en cours du P4.
+
+*Corrections.* **C1, C2, C6 APPLIQUEES le 2026-10-17** (accord de l'utilisateur) dans
+`udpFonctions.envoiUDP` / `ipSTA` / `emet` / `lireUDP` ; format du log `ENVOI_MSG_UDP: Donnees ...`
+inchange (lu par le testeur), interface choisie dans une ligne `detail` a part. Banc
+`test_discovery.be` §18 : 158/158 ; sur l'ancien `udpFonctions.be`, 7 echecs, tous en §18 (C1/C2/C6) ;
+`banc_test_modbus` 238/238 ; `solidifie_et_compile_berry.py udpFonctions.be` : rc 0. **C3, C4, C5 NON
+appliquees, a trancher** (leur code est dans le diff ci-dessous, qui reste la reference).
+Proposition d'origine :
+`tasks/correctif-udp-interface-2026-10-17.diff`, dans `udpFonctions.be` seulement.
+- C1 : esclave, socket d'emission liee a l'IP de sa STA (`tasmota.wifi()["ip"]`), unicast et
+  multicast ; 2e essai sur toutes les interfaces si la liaison est refusee.
+- C2 : port source aleatoire (0) pour toutes les emissions.
+- C3 : multicast du maitre lie a l'IP de l'AP du persist (`serveur.rangeExtender.AP.IPAddress`),
+  sinon a sa STA ; plus de 192.168.4.1 en dur dans `envoiUDP`.
+- C4 : multicast esclave aussi en Wi-Fi classique (a trancher : c'est la question « push en
+  multicast ou en unicast »).
+- C5 : reponse a `ImAlive` (`Timestamp`, `ipMaitre`) en unicast a `IPAddress` de la fiche ;
+  multicast par l'AP si la fiche n'a pas d'IP.
+- C6 : `lireUDP` accepte un message d'un seul mot.
+Aucun changement de point d'acces : le sous-reseau AP distinct par esclave a ete refuse le
+2026-10-03 et n'est plus necessaire (C1 contourne le chevauchement, mesure a l'appui).
+`udpFonctions` est solidifie : rebuild complet et flash des 3 cartes (P4 aussi : il n'a pas E1).
+Bancs : `test_discovery.be` §18 (17 tests ; correctif 160/160, ancien code 13 echecs, tous en §18),
+bouchon `tasmota.wifi()` ajoute ; `banc_test_modbus.be` 238/238 inchange.
+
+*Essais apres flash.* Essai 1 (Range Extender) : cuve `ReglageUDP envoiUniCast 192.168.4.1
+TESTUDP-1` -> P4 `LIRE_UDP: ... recues de '192.168.4.2'` ; E1 : P4 `ReglageModbus envoiMessageUDP
+192.168.4.2 ModbusUDP 17 020100E00001FC0F` -> cuve `REPOND_UDP: reponse a 192.168.4.1 ...` puis
+`ENVOI_MSG_UDP: ... par '192.168.4.2' ... OK` -> P4 `LIRE_UDP: msg = ModbusUDP 17 ...`. Temoin :
+socket non liee depuis la cuve vers le P4 -> toujours non recu. Essai 2 (Wi-Fi classique) :
+unicast dans les deux sens et E1 vers l'IP box de la cuve ; multicast cuve -> P4 recu seulement si
+la box relaie le multicast (a consigner tel quel) ; multicast P4 -> cuve : rien (attendu).
+Detail ligne par ligne : `outils_docs/DIAGNOSTIC_UDP_2026-10-17.md` §7.
 
 Pourquoi cet ordre : E1 et E2 ne changent **aucun** comportement, on y verifie l'annonce et le
 choix d'IP sur le vrai reseau avant qu'une seule commande en depende. Esclaves avant maitre :

@@ -1,0 +1,332 @@
+diff --git a/data/fs/udpFonctions.be b/data/fs/udpFonctions.be
+index f13d776..d401e5b 100644
+--- a/data/fs/udpFonctions.be
++++ b/data/fs/udpFonctions.be
+@@ -142,9 +142,9 @@ def udpFonctions_aideReglageUDP(sujet)
+                 "Exemple : ReglageUDP envoiUniCast 192.168.0.43 Salut Ca gaz !"]
+     elif (sujet == "ENVOIMULTICAST")
+         return ["Parametre : <message> (un ou plusieurs mots ; absent -> erreur dans la reponse).",
+-                "N'envoie quelque chose que si le RangeExtender est active (ON) :",
+-                "esclave (id > 0) -> multicast 224.3.0.1 ; maitre (id = 0) -> via 192.168.4.1.",
+-                "Sinon : aucun envoi. Sert aux tests.",
++                "Groupe 224.3.0.1. Esclave (id > 0) : par sa STA (Range Extender ou Wi-Fi classique) ;",
++                "maitre (id = 0) : par son point d'acces s'il est actif, sinon par sa STA.",
++                "Sert aux tests.",
+                 "Exemple : ReglageUDP envoiMultiCast Salut Ca gaz !"]
+     elif (sujet == "FORCEENVOIPARAMS")
+         return ["Parametre : ON ou 1 = envoie ; OFF ou 0 = n'envoie pas. Esclaves seulement (id > 0).",
+@@ -229,14 +229,11 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
+         var message = parametres.concat(" ")
+         if (message == "")
+             reponse_cmnd["ReglageUDP"]["erreur"] = "message absent : ReglageUDP envoiMultiCast <message>"
+-        # Esclave RangeExtender (id > 0)
+-        elif (serveur["rangeExtender"].find("activation", "OFF") == "ON" && serveur["udp"]["id"] > 0)
++        # Maitre ou esclave, Range Extender ou Wi-Fi classique : envoiUDP choisit l'interface
++        # (2026-10-17 ; avant : rien ne partait hors Range Extender, sans message d'erreur)
++        else
+             udpFonctions.envoiUDP("MultiCast", "", message)
+             udpFonctions.log(string.format("ReglageUDP: Données UDP MultiCast envoyées >>> %s", message), LOG_LEVEL_DEBUG)
+-        # Maitre RangeExtender (id == 0)
+-        elif (serveur["rangeExtender"].find("activation", "OFF") == "ON" && serveur["udp"]["id"] == 0)
+-            udpFonctions.envoiUDP("MultiCast", "192.168.4.1", message)
+-            udpFonctions.log(string.format("ReglageUDP: Données UDP MultiCast envoyées >>> %s", message), LOG_LEVEL_DEBUG)
+         end
+         
+         reponse_cmnd["ReglageUDP"]["envoiMessage"] = message
+@@ -322,13 +319,21 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
+             udpFonctions.log("REGLAGE_UDP: Le maitre UDP a reçu les paramètres de l'esclave '" + str(tmp[device].find("nom", device)) + "' !", LOG_LEVEL_DEBUG_PLUS)
+ 
+             if (tmp[device].find("typeReglageHeure", "NTP") == "UDP")
+-                # Envoi la mise à jour de l'heure aux esclaves en MultiCast UDP
++                # Reponse en UNICAST a l'IP de la fiche (2026-10-17) : le multicast du maitre ne
++                # part que par son AP, un esclave en Wi-Fi classique (sur la box) ne la recevait
++                # jamais ; l'unicast est en plus acquitte par la couche radio. Sans IP lisible
++                # dans la fiche : multicast par l'AP, comme avant.
++                var ipEsclave = str(tmp[device].find("IPAddress", ""))
++                var voie = (size(string.split(ipEsclave, ".")) == 4 ? "UniCast" : "MultiCast")
++                var ipVoie = (voie == "UniCast" ? ipEsclave : "")
++
++                # Envoi la mise à jour de l'heure a l'esclave
+                 var message = string.format("tele/%s/%s %s %i", serveur["mqtt"]["groupTopic1"], "ReglageUDP", "Timestamp", int(tasmota.rtc()["utc"]))
+-                udpFonctions.envoiUDP("MultiCast", "192.168.4.1", message)
++                udpFonctions.envoiUDP(voie, ipVoie, message)
+ 
+-                # Envoi deson adresse IP aux esclaves en MultiCast UDP
++                # Envoi de son adresse IP a l'esclave
+                 message = string.format("tele/%s/%s %s %s", serveur["mqtt"]["groupTopic1"], "ReglageUDP", "ipMaitre", tasmota.cmd("Status 5", boolMute)["StatusNET"]["IPAddress"])
+-                udpFonctions.envoiUDP("MultiCast", "192.168.4.1", message)
++                udpFonctions.envoiUDP(voie, ipVoie, message)
+ 
+                 udpFonctions.log("REGLAGE_UDP: Envoi de la mise à jour de l'heure UDP aux esclaves & son adresse IP !", LOG_LEVEL_DEBUG_PLUS)
+             end
+@@ -456,7 +461,49 @@ def udpFonctions_changementEtatDemarrage(value, trigger, msg, typeComm)
+ end
+ udpFonctions.changementEtatDemarrage = udpFonctions_changementEtatDemarrage
+ 
++# Adresse IPv4 de la STA de la carte (sa liaison Wi-Fi cliente), "" si inconnue (2026-10-17).
++def udpFonctions_ipSTA()
++    var w = tasmota.wifi()
++    var ip = (isinstance(w, map) ? str(w.find("ip", "")) : "")
++    return ((ip == "0.0.0.0" || ip == "nil") ? "" : ip)
++end
++udpFonctions.ipSTA = udpFonctions_ipSTA
++
++# Adresse du point d'acces Range Extender de la carte (persist), "" si inactif (2026-10-17).
++# Remplace le "192.168.4.1" ecrit en dur : suit serveur.rangeExtender.AP.IPAddress.
++def udpFonctions_ipAP()
++    var rgx = serveur.find("rangeExtender", {})
++    if (!isinstance(rgx, map) || rgx.find("activation", "OFF") != "ON")    return ""    end
++    var ap = rgx.find("AP")
++    return (isinstance(ap, map) ? str(ap.find("IPAddress", "192.168.4.1")) : "192.168.4.1")
++end
++udpFonctions.ipAP = udpFonctions_ipAP
++
++# Emet UN datagramme par une socket neuve liee a ipLocale ("" = toutes les interfaces), port
++# source ALEATOIRE (0). Rend true si la pile l'a accepte (pas une preuve de reception).
++def udpFonctions_emet(ipLocale, ipDest, port, message)
++    var u = udp()
++    var ok = u.begin(ipLocale, 0)
++    if (ok)    ok = u.send(ipDest, port, bytes().fromstring(message))    end
++    u.close()
++    return ok ? true : false
++end
++udpFonctions.emet = udpFonctions_emet
++
+ # Cette fonction gère l'envoi de messages UDP en unicast et multicast
++# Choix de l'interface (2026-10-17, PROTOCOLE_MODBUS.md §9 « Diagnostic UDP ») :
++#   * ESCLAVE (udp.id > 0), unicast ET multicast : socket liee a l'IP de sa STA. lwIP choisit
++#     alors la STA par le crochet ip4_route_src_hook (ESP-IDF lwip_default_hooks.c:122). Sans
++#     elle, ip4_route prend la 1re interface du sous-reseau : sur une carte qui a AUSSI son AP en
++#     192.168.4.1/24, c'est l'AP (ajoute apres la STA, netif_add le met en tete de liste), et
++#     tout envoi vers le maitre 192.168.4.1 restait chez l'esclave.
++#   * MAITRE, multicast : socket liee a l'IP de son AP (les esclaves Range Extender) ; sans AP,
++#     a sa STA (Wi-Fi classique). ipDestinataire non vide = interface imposee (usage historique).
++#   * MAITRE, unicast : toutes les interfaces, la destination choisit (192.168.4.x -> AP, LAN -> STA).
++#   * Port source aleatoire : la socket d'emission ne se lie plus au port d'ecoute (2000), elle ne
++#     peut plus voler un datagramme entrant pendant sa courte vie (udp.c:267, 1re socket trouvee).
++#   * Le multicast n'exige plus serveur.rangeExtender.activation : en Wi-Fi classique, il part
++#     par la STA (il n'atteint le maitre que si la box relaie le multicast entre clients Wi-Fi).
+ def udpFonctions_envoiUDP(typeComm, ipDestinataire, message)
+ 	import string
+ 
+@@ -469,47 +516,44 @@ def udpFonctions_envoiUDP(typeComm, ipDestinataire, message)
+ 		return
+ 	end
+ 
+-	var udpEmission = udp()
+-	var resultatEnvoi
+-
+     udpFonctions.log("ENVOI_MSG_UDP: ------------------------ UDP sendUDP ----------------------", LOG_LEVEL_DEBUG_PLUS)
+-	
+-	# Ouvre la connexion UniCast sortante ou MultiCast sortante pour les maitres RangeExtender
+-	if (string.toupper(typeComm) == string.toupper("UniCast"))
+-		udpEmission.begin("", udpFonctions.etat()["port"][0])      # envoi sur toutes les interfaces, port identifié
+-    end
+ 
+-	# Ouvre la connexion MultiCast sortante pour le maitre RangeExtender
+-    if (serveur["rangeExtender"].find("activation", "OFF") == "ON")
+-        if (string.toupper(typeComm) == string.toupper("MultiCast") && serveur["udp"]["id"] == 0)
+-            udpEmission.begin(ipDestinataire, 0)      # envoi sur toutes les interfaces, port aléatoire
+-        # Ouvre la connexion MultiCast sortante pour les autres
+-        elif (string.toupper(typeComm) == string.toupper("MultiCast") && serveur["udp"]["id"] > 0)
+-            udpEmission.begin_multicast("224.3.0.1", udpFonctions.etat()["port"][1])
++    var esclave = (serveur["udp"].find("id", 0) > 0)
++    var mode = string.toupper(str(typeComm))
++    var ipLocale = ""
++    var ipDest = ipDestinataire
++    var port
++
++    if (mode == "UNICAST")
++        port = udpFonctions.etat()["port"][0]
++        if (esclave)    ipLocale = udpFonctions.ipSTA()    end
++    elif (mode == "MULTICAST")
++        port = udpFonctions.etat()["port"][1]
++        ipDest = (udpFonctions.etat()["ip"][1] != "" ? udpFonctions.etat()["ip"][1] : "224.3.0.1")
++        if (esclave)
++            ipLocale = udpFonctions.ipSTA()
++        else
++            ipLocale = (ipDestinataire != "" && ipDestinataire != nil ? ipDestinataire : udpFonctions.ipAP())
++            if (ipLocale == "")    ipLocale = udpFonctions.ipSTA()    end
+         end
+-    end
+-	
+-	# Envoi la commande
+-	# en UniCast
+-	if (string.toupper(typeComm) == string.toupper("UniCast"))
+-		resultatEnvoi = udpEmission.send(ipDestinataire, udpFonctions.etat()["port"][0], bytes().fromstring(message)) ? "OK" : "Echec"
++    else
++        udpFonctions.log(string.format("ENVOI_MSG_UDP_ERREUR: type de communication inconnu '%s', '%s' non envoye !", str(typeComm), message), LOG_LEVEL_ERREUR)
++        return
+     end
+ 
+-	# en MultiCast sortante pour le maitre RangeExtender
+-    if (serveur["rangeExtender"].find("activation", "OFF") == "ON")
+-        if (string.toupper(typeComm) == string.toupper("MultiCast") && serveur["udp"]["id"] == 0)
+-            resultatEnvoi = udpEmission.send("224.3.0.1", udpFonctions.etat()["port"][1], bytes().fromstring(message)) ? "OK" : "Echec"
+-        # en MultiCast pour les autres
+-        elif (string.toupper(typeComm) == string.toupper("MultiCast") && serveur["udp"]["id"] > 0)
+-            resultatEnvoi = udpEmission.send_multicast(bytes().fromstring(message)) ? "OK" : "Echec"
+-        end
++    var ok = udpFonctions.emet(ipLocale, ipDest, port, message)
++    # Socket liee refusee (IP de la STA changee entre deux lectures...) : un 2e essai sur toutes
++    # les interfaces vaut mieux qu'un message perdu.
++    if (!ok && ipLocale != "")
++        udpFonctions.log(string.format("ENVOI_MSG_UDP: envoi par l'interface %s refuse, nouvel essai sur toutes les interfaces", ipLocale), LOG_LEVEL_DEBUG)
++        ipLocale = ""
++        ok = udpFonctions.emet("", ipDest, port, message)
+     end
+ 
+-	udpFonctions.log(string.format("ENVOI_MSG_UDP: Données %s envoyées vers '%s' >>>> %s >>>> %s", typeComm, ipDestinataire, message, resultatEnvoi), LOG_LEVEL_DEBUG)
++	udpFonctions.log(string.format("ENVOI_MSG_UDP: Données %s envoyées vers '%s:%i' par '%s' >>>> %s >>>> %s", typeComm, ipDest, port,
++	                               (ipLocale == "" ? "toutes interfaces" : ipLocale), message, ok ? "OK" : "Echec"),
++	                 ok ? LOG_LEVEL_DEBUG : LOG_LEVEL_ERREUR)
+     tasmota.yield()
+-	
+-	# Ferme la connexion
+-	udpEmission.close()
+ end
+ udpFonctions.envoiUDP = udpFonctions_envoiUDP
+ 
+@@ -589,7 +633,8 @@ def udpFonctions_lireUDP(typeComm, paramMSG)
+             var nb_slash = string.count(params[0], "/")
+ 
+             paramMSG["prefix"] = decoupage[0]
+-            paramMSG["commande"] = decoupage[nb_slash] + " " + params[1]
++            # Message d'un seul mot (2026-10-17) : params[1] levait index_error dans every_100ms
++            paramMSG["commande"] = decoupage[nb_slash] + " " + (size(params) > 1 ? params[1] : "")
+             paramMSG["topic"] = ""
+             for i: 1 .. nb_slash - 1
+                 if paramMSG["topic"] == ""
+diff --git a/outils_docs/scripts_python/berry/test_discovery.be b/outils_docs/scripts_python/berry/test_discovery.be
+index 447badc..f4b5e17 100644
+--- a/outils_docs/scripts_python/berry/test_discovery.be
++++ b/outils_docs/scripts_python/berry/test_discovery.be
+@@ -71,6 +71,8 @@ class TasmotaStub
+   # udpFonctions.be:467) : vrai par defaut, reseauCoupe = true simule le demarrage avant le Wi-Fi
+   var reseauCoupe
+   def is_network_up() return self.reseauCoupe != true end
++  var ipSta                            # section 18 : IP de la STA rendue par tasmota.wifi()
++  def wifi() return {"ip": (self.ipSta != nil ? self.ipSta : "192.168.4.2"), "up": true} end
+   def add_rule(a, b, c) end              # controleRangeExtender (section 14)
+   def add_cmd(a, b) end
+   # Timers en attente : memes regles que tasmota_class.be (set_timer EMPILE, remove_timer
+@@ -96,11 +98,14 @@ end
+ var tasmota = TasmotaStub()
+ class Driver end                       # classe de base des drivers Tasmota (section 14)
+ var envois = []                        # datagrammes UDP qui seraient partis
++var liaisons = []                      # section 18 : [adresse liee, destination, port, message, port source]
++var refusLiaison = nil                 # section 18 : adresse dont begin() echoue
+ class udp
+-  def begin(a, b) return true end
+-  def begin_multicast(a, b) return true end
+-  def send(ip, port, b) envois.push(b.asstring()) return true end
+-  def send_multicast(b) envois.push(b.asstring()) return true end
++  var lie, portLie
++  def begin(a, b) self.lie = a self.portLie = b return a != refusLiaison || a == nil end
++  def begin_multicast(a, b) self.lie = "mc:" + str(a) self.portLie = b return true end
++  def send(ip, port, b) envois.push(b.asstring()) liaisons.push([self.lie, ip, port, b.asstring(), self.portLie]) return true end
++  def send_multicast(b) envois.push(b.asstring()) liaisons.push([self.lie, "224.3.0.1", self.portLie, b.asstring(), self.portLie]) return true end
+   def close() end
+ end
+ var boolMute = true
+@@ -833,5 +838,100 @@ var noms17 = []
+ for l: aide17    noms17.push(l[0])    end
+ verifie("aide : ModeConnexion listee, detail present", "true/true", str(noms17.find("ModeConnexion") != nil) + "/" + str(globalFonctions.aideReglageGlobal("ModeConnexion") != nil))
+ 
++print("")
++print("=== 18. envoiUDP : interface d'emission selon le role et le mode (diagnostic 2026-10-17) ===")
++# Chevauchement : l'esclave a son propre AP en 192.168.4.1/24 ET est client du maitre en
++# 192.168.4.2/24. Une socket liee a toutes les interfaces part par l'AP (1re interface du
++# sous-reseau, ip4.c:171-178) : l'envoi au maitre reste chez l'esclave. La socket liee a l'IP
++# de la STA force la STA (lwip_default_hooks.c:122). Port source 0 : plus de vol du port 2000.
++serveur = {"udp": {"id": 2, "debug": "ON", "activation": "ON"},
++           "rangeExtender": {"activation": "ON", "id": 2, "AP": {"IPAddress": "192.168.4.1", "Subnet": "255.255.255.0"}},
++           "discovery": {"debug": "ON"},
++           "mqtt": {"topic": "jardin/cuve", "groupTopic1": "tasmotas/garage"},
++           "hostname": "CAPTEURS-CUVE"}
++drivers = {"ModBus": {"id": 2}}
++etatUDP["ip"] = ["", "224.3.0.1"]
++etatUDP["port"] = [2000, 4000]
++def dernier() return size(liaisons) > 0 ? liaisons[size(liaisons) - 1] : ["?", "?", 0, "?"] end
++def resume(l) return str(l[0]) + "/" + str(l[1]) + "/" + str(l[2]) + "/" + str(l[4]) end
++tasmota.ipSta = "192.168.4.2"
++liaisons = []
++udpFonctions.envoiUDP("UniCast", "192.168.4.1", "R1")
++verifie("esclave RE unicast : lie a la STA, port source 0", "192.168.4.2/192.168.4.1/2000/0", resume(dernier()))
++liaisons = []
++udpFonctions.envoiUDP("MultiCast", "", "R2")
++verifie("esclave RE multicast : lie a la STA, groupe 224.3.0.1:4000", "192.168.4.2/224.3.0.1/4000/0", resume(dernier()))
++# Wi-Fi classique : activation OFF -> avant, aucun multicast (temoin : ancien code = 0 envoi)
++serveur["rangeExtender"]["activation"] = "OFF"
++tasmota.ipSta = "192.168.0.50"
++liaisons = []
++udpFonctions.envoiUDP("MultiCast", "", "R3")
++verifie("esclave Wi-Fi classique multicast : part par la STA", "1/192.168.0.50", str(size(liaisons)) + "/" + str(dernier()[0]))
++liaisons = []
++udpFonctions.envoiUDP("UniCast", "192.168.0.43", "R4")
++verifie("esclave Wi-Fi classique unicast : lie a la STA", "192.168.0.50/192.168.0.43/2000/0", resume(dernier()))
++# STA inconnue : toutes les interfaces (comportement d'avant, pas d'exception)
++tasmota.ipSta = ""
++liaisons = []
++verifie("esclave STA inconnue : pas d'exception", "OK", essaie(def () udpFonctions.envoiUDP("UniCast", "192.168.0.43", "R5") end))
++verifie("... socket sur toutes les interfaces", "/192.168.0.43/2000/0", resume(dernier()))
++# Liaison refusee : 2e essai sur toutes les interfaces
++tasmota.ipSta = "192.168.4.2"
++refusLiaison = "192.168.4.2"
++liaisons = []
++journal = []
++udpFonctions.envoiUDP("UniCast", "192.168.4.1", "R6")
++verifie("liaison refusee : 2e essai sur toutes les interfaces", "1/", str(size(liaisons)) + "/" + str(dernier()[0]))
++verifie("... et le 2e essai est journalise", true, journalise("nouvel essai sur toutes les interfaces"))
++refusLiaison = nil
++# Maitre
++serveur["udp"]["id"] = 0
++serveur["rangeExtender"]["activation"] = "ON"
++tasmota.ipSta = "192.168.0.43"
++liaisons = []
++udpFonctions.envoiUDP("UniCast", "192.168.4.2", "R7")
++verifie("maitre unicast : toutes les interfaces, port source 0", "/192.168.4.2/2000/0", resume(dernier()))
++liaisons = []
++udpFonctions.envoiUDP("MultiCast", "", "R8")
++verifie("maitre RE multicast : lie a son AP (persist)", "192.168.4.1/224.3.0.1/4000/0", resume(dernier()))
++serveur["rangeExtender"]["AP"]["IPAddress"] = "192.168.5.1"
++liaisons = []
++udpFonctions.envoiUDP("MultiCast", "", "R9")
++verifie("maitre multicast : suit l'IP de l'AP du persist (plus de 192.168.4.1 en dur)", "192.168.5.1", dernier()[0])
++liaisons = []
++udpFonctions.envoiUDP("MultiCast", "192.168.4.1", "R10")
++verifie("maitre multicast : interface imposee par l'appelant", "192.168.4.1", dernier()[0])
++serveur["rangeExtender"]["activation"] = "OFF"
++liaisons = []
++udpFonctions.envoiUDP("MultiCast", "", "R11")
++verifie("maitre sans AP : multicast par sa STA (avant : rien)", "1/192.168.0.43", str(size(liaisons)) + "/" + str(dernier()[0]))
++liaisons = []
++journal = []
++udpFonctions.envoiUDP("Broadcast", "", "R12")
++verifie("type inconnu : rien n'est emis, erreur journalisee", "0/true", str(size(liaisons)) + "/" + str(journalise("type de communication inconnu")))
++# ImAlive : la reponse Timestamp + ipMaitre part en UNICAST a l'IP de la fiche
++serveur["rangeExtender"]["activation"] = "ON"
++serveur["rangeExtender"]["AP"]["IPAddress"] = "192.168.4.1"
++gestionFileFolder.fichiers = {}
++liaisons = []
++imAlive(ficheCuve(true))
++var dest18 = []
++for l: liaisons    dest18.push(str(l[1]) + ":" + str(l[2]))    end
++verifie("ImAlive : Timestamp et ipMaitre en unicast a l'esclave", "['192.168.4.2:2000', '192.168.4.2:2000']", str(dest18))
++var f18 = ficheCuve(true)
++f18["esclave2"].remove("IPAddress")
++gestionFileFolder.fichiers = {}
++liaisons = []
++imAlive(f18)
++dest18 = []
++for l: liaisons    dest18.push(str(l[0]) + ">" + str(l[1]))    end
++verifie("temoin fiche sans IP : multicast par l'AP, comme avant", "['192.168.4.1>224.3.0.1', '192.168.4.1>224.3.0.1']", str(dest18))
++# lireUDP : message d'un seul mot
++drivers["ModBus"]["id"] = 2
++serveur["udp"]["id"] = 2
++etatUDP["udpReception"] = [SocketFaux(["TESTUDP"]), nil]
++verifie("lireUDP : message d'un seul mot sans exception", "OK", essaie(def () udpFonctions.lireUDP("UniCast", {}) end))
++etatUDP["udpReception"] = sauveRecep
++
+ print("")
+ print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))

@@ -535,10 +535,24 @@ def globalFonctions_aideReglageGlobal(sujet)
     if (sujet == nil)
         return [
             ["afficheMemoire", "afficheMemoire", "affiche l'etat de la memoire dans les logs"],
-            ["nbLogsFiles", "nbLogsFiles <n>", "regle le nombre de fichiers de logs (FileLog), sauvegarde"]
+            ["nbLogsFiles", "nbLogsFiles <n>", "regle le nombre de fichiers de logs (FileLog), sauvegarde"],
+            ["ModeConnexion", "ModeConnexion [RangeExtender | WifiClassique <ssid> <mdp>]", "esclave : bascule Range Extender / Wi-Fi classique, puis redemarre"]
         ]
     end
     sujet = string.toupper(sujet)
+    if (sujet == "MODECONNEXION")
+        return ["Sans parametre : affiche le mode actuel (serveur.rangeExtender.activation ON = RangeExtender).",
+                "WifiClassique <ssid> <mdp> : memorise les reseaux actuels (serveur.wifi.sauvegardeRangeExtender,",
+                "        une seule fois), pose reseau1 = <ssid>/<mdp> et reseau2 = l'ancien reseau1 (le point",
+                "        d'acces du maitre, en filet), rangeExtender.activation = OFF, sauve puis redemarre.",
+                "        Le SSID peut contenir des espaces : le DERNIER mot est le mot de passe.",
+                "RangeExtender : restaure les reseaux memorises, activation = ON, sauve puis redemarre.",
+                "        Sans sauvegarde : erreur, rien ne change.",
+                "Ne touche ni a RgxState ni au point d'acces. Deja dans le mode demande : rien ne change.",
+                "La commande (mot de passe compris) est journalisee par la console Tasmota.",
+                "Sert a l'outil outils_pc/testeur_udp.py (PROTOCOLE_MODBUS.md §9, « Commandes sans fil »).",
+                "Exemple : ReglageGlobal ModeConnexion WifiClassique MAISON motdepasse"]
+    end
     if (sujet == "AFFICHEMEMOIRE")
         return ["Parametre : aucun.",
                 "Effet : ecrit dans les logs (niveau debug) l'espace programme utilise, la PSRAM",
@@ -593,6 +607,12 @@ def globalFonctions_reglageGlobal(cmd, idx, payload, payload_json)
 		if (parametres.size() > 1)	logFonctions.log("REGLAGE_GLOBAL: parametre2=" + str(parametres[1]), LOG_LEVEL_DEBUG_PLUS)	end
 	end
 
+    # Bascule Range Extender / Wi-Fi classique : reponse JSON propre, lue par l'outil testeur_udp.py
+    if string.toupper(fonction) == "MODECONNEXION"
+        tasmota.resp_cmnd(json.dump({"ReglageGlobal": globalFonctions.reglageModeConnexion(parametres.size() > 0 ? parametres[0] : "")}))
+        return
+    end
+
     if string.toupper(fonction) == "AFFICHEMEMOIRE"
         diversFonctions.statMemory()          # importe en tete de fonction (un 2e import = redefinition en strict)
 	elif string.toupper(fonction) == string.toupper("nbLogsFiles")
@@ -612,6 +632,76 @@ def globalFonctions_reglageGlobal(cmd, idx, payload, payload_json)
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
 globalFonctions.reglageGlobal = globalFonctions_reglageGlobal
+
+# ReglageGlobal ModeConnexion [RangeExtender | WifiClassique <ssid> <mdp>] (2026-10-16). Bascule
+# un esclave entre le point d'acces du maitre (Range Extender) et le reseau maison, pour les essais
+# UDP de l'outil outils_pc/testeur_udp.py. Ici et non dans ReglageRangeExtender : controleRangeExtender
+# n'est pas charge sur la cuve ni le rideau, et sa garde d'activation le retirerait des activation = OFF
+# (retour impossible). Le mode ne tient qu'au persist : configGlobal applique SSId1/SSId2 au demarrage
+# et udpFonctions.envoiUDP n'emet en multicast qu'en Range Extender. RgxState et le point d'acces ne
+# sont PAS touches (choix de l'utilisateur, lecon du 2026-10-03). Retourne la map de reponse.
+def globalFonctions_reglageModeConnexion(reste)
+    import string
+    import json
+    import persist
+
+    var rgx = serveur["rangeExtender"]
+    var wifi = serveur["wifi"]
+    var actuel = (rgx.find("activation", "OFF") == "ON" ? "RangeExtender" : "WifiClassique")
+    var reponse = {"modeConnexion": actuel}
+
+    var mots = []
+    for m: string.split(str(reste), " ")
+        if (m != "")    mots.push(m)    end
+    end
+    if (size(mots) == 0)    return reponse    end
+
+    var demande = string.toupper(mots[0])
+    if (demande == "WIFICLASSIQUE")
+        if (size(mots) < 3)
+            reponse["erreur"] = "syntaxe : ModeConnexion WifiClassique <ssid> <mdp>"
+            return reponse
+        end
+        var ssid = mots[1 .. size(mots) - 2].concat(" ")
+        var mdp = mots[size(mots) - 1]
+        if (actuel == "WifiClassique" && wifi["reseau1"].find("nomReseauWifi") == ssid && wifi["reseau1"].find("mdpWifi") == mdp)
+            return reponse
+        end
+        # Les reseaux d'origine ne sont memorises qu'une fois : une 2e bascule ecraserait la
+        # sauvegarde par le reseau maison, et le retour n'aurait plus rien a restaurer.
+        if (!wifi.contains("sauvegardeRangeExtender"))
+            wifi["sauvegardeRangeExtender"] = json.load(json.dump({"reseau1": wifi["reseau1"], "reseau2": wifi["reseau2"]}))
+        end
+        wifi["reseau2"] = json.load(json.dump(wifi["sauvegardeRangeExtender"]["reseau1"]))
+        wifi["reseau1"] = {"nomReseauWifi": ssid, "mdpWifi": mdp}
+        rgx["activation"] = "OFF"
+    elif (demande == "RANGEEXTENDER")
+        if (actuel == "RangeExtender")    return reponse    end
+        var sauvegarde = wifi.find("sauvegardeRangeExtender")
+        if (!isinstance(sauvegarde, map) || !isinstance(sauvegarde.find("reseau1"), map) || !isinstance(sauvegarde.find("reseau2"), map))
+            reponse["erreur"] = "aucun reseau memorise (serveur.wifi.sauvegardeRangeExtender) : rien a restaurer"
+            return reponse
+        end
+        wifi["reseau1"] = sauvegarde["reseau1"]
+        wifi["reseau2"] = sauvegarde["reseau2"]
+        wifi.remove("sauvegardeRangeExtender")
+        rgx["activation"] = "ON"
+    else
+        reponse["erreur"] = "mode inconnu : RangeExtender ou WifiClassique"
+        return reponse
+    end
+
+    persist.serveur = serveur
+    persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
+    var nouveau = (rgx["activation"] == "ON" ? "RangeExtender" : "WifiClassique")
+    logFonctions.log(string.format("REGLAGE_MODE_CONNEXION: %s -> %s (reseau1 %s), redemarrage !", actuel, nouveau, wifi["reseau1"].find("nomReseauWifi", "?")), LOG_LEVEL_INFO)
+    # Restart differe : la reponse a la commande doit partir avant le redemarrage
+    tasmota.set_timer(1000, / -> tasmota.cmd("Restart 1", boolMute), "redemarrageModeConnexion")
+    reponse["modeConnexion"] = nouveau
+    reponse["redemarrage"] = true
+    return reponse
+end
+globalFonctions.reglageModeConnexion = globalFonctions_reglageModeConnexion
 
 # Retourne le module lors de l'importation
 return globalFonctions

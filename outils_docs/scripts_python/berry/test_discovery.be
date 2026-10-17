@@ -15,6 +15,10 @@
 #        anciennes publiant la meme fiche (heure du dernier 'sensors'), effacees du broker par le maitre.
 #   16.  Commandes sans fil (E1) : voieCommandes publiee dans la fiche ; lireUDP lit le tid de
 #        "ModbusUDP <tid> <hexa>" et marque Info.voie = UDP (ancien format sans tid toujours lu).
+#   17.  ReglageGlobal ModeConnexion : bascule Range Extender <-> Wi-Fi classique (reseaux memorises
+#        une seule fois, restaures au retour, Restart differe, mot de passe hors reponse et hors log).
+#   18.  envoiUDP : un esclave emet par sa STA (socket liee a son IP), port source aleatoire ; maitre et
+#        regle « pas de multicast hors Range Extender » inchanges ; lireUDP d'un message d'un seul mot.
 # Les lecteurs de modbusFonctions (clients TCP, IP UDP : fichesModbus) sont testes dans
 # banc_test_modbus.be section 6, sur la meme forme de table.
 #
@@ -63,17 +67,25 @@ class TasmotaStub
     if string.find(c, "RgxPort") == 0    return self.rgxRefus ? "ERROR" : "OK TCP 192.168.0.43:8081 -> 192.168.4.2:80"    end
     return {}
   end
-  def resp_cmnd(x) end
+  var reponse                          # dernier resp_cmnd (section 17)
+  def resp_cmnd(x) self.reponse = x end
   # udpFonctions.envoiUDP n'envoie rien tant que le reseau n'est pas monte (d567b9d22,
   # udpFonctions.be:467) : vrai par defaut, reseauCoupe = true simule le demarrage avant le Wi-Fi
   var reseauCoupe
   def is_network_up() return self.reseauCoupe != true end
+  var ipSta                            # section 18 : IP de la STA rendue par tasmota.wifi()
+  def wifi() return {"ip": (self.ipSta != nil ? self.ipSta : "192.168.4.2"), "up": true} end
   def add_rule(a, b, c) end              # controleRangeExtender (section 14)
   def add_cmd(a, b) end
   # Timers en attente : memes regles que tasmota_class.be (set_timer EMPILE, remove_timer
   # retire tous ceux de cet id)
   var timers
-  def set_timer(a, b, c)    if self.timers == nil  self.timers = []  end    self.timers.push(c)    end
+  var rappelsTimer                     # id -> fonction, si non nil (section 17 : Restart differe)
+  def set_timer(a, b, c)
+    if self.timers == nil  self.timers = []  end
+    self.timers.push(c)
+    if self.rappelsTimer != nil  self.rappelsTimer[c] = b  end
+  end
   def remove_timer(id)
     if self.timers == nil    return    end
     var i = 0
@@ -88,11 +100,14 @@ end
 var tasmota = TasmotaStub()
 class Driver end                       # classe de base des drivers Tasmota (section 14)
 var envois = []                        # datagrammes UDP qui seraient partis
+var liaisons = []                      # section 18 : [adresse liee, destination, port, message, port source]
+var refusLiaison = nil                 # section 18 : adresse dont begin() echoue
 class udp
-  def begin(a, b) return true end
-  def begin_multicast(a, b) return true end
-  def send(ip, port, b) envois.push(b.asstring()) return true end
-  def send_multicast(b) envois.push(b.asstring()) return true end
+  var lie, portLie
+  def begin(a, b) self.lie = a self.portLie = b return a != refusLiaison end
+  def begin_multicast(a, b) self.lie = "mc:" + str(a) self.portLie = b return true end
+  def send(ip, port, b) envois.push(b.asstring()) liaisons.push([self.lie, ip, port, b.asstring(), self.portLie]) return true end
+  def send_multicast(b) envois.push(b.asstring()) liaisons.push([self.lie, "224.3.0.1", self.portLie, b.asstring(), self.portLie]) return true end
   def close() end
 end
 var boolMute = true
@@ -109,6 +124,8 @@ var rangeExtenderFonctions = nil
 var configGlobal = nil
 var logFonctions = nil                 # la VRAIE fonction de log commune (seuil par cible)
 var modules = {}                       # lu par logFonctions (cibles garage, cuve)
+var globalFonctions = nil              # section 17 (ReglageGlobal ModeConnexion)
+var controleGeneral = nil              # reference par globalFonctions.be
 
 # --- charge les vrais modules ---
 print(">>> sources testees :", SOURCES)
@@ -122,6 +139,7 @@ charge("logFonctions")
 charge("udpFonctions")
 charge("discoveryFonctions")
 charge("rangeExtenderFonctions")
+charge("globalFonctions")
 import gestionFileFolder
 import webserver
 import mqtt
@@ -740,6 +758,164 @@ verifie("push : seq 12, pas de tid", "12/nil", str(lu16[2]) + "/" + str(lu16[1].
 etatUDP["udpReception"] = sauveRecep
 global.modbusFonctions = nil
 drivers = {"ModBus": {"id": 0}}
+
+print("")
+print("=== 17. ReglageGlobal ModeConnexion : esclave Range Extender <-> Wi-Fi classique (2026-10-16) ===")
+# Pour l'outil testeur_udp.py : bascule PAR LA SERIE, avec redemarrage. Dans ReglageGlobal (controleGeneral,
+# charge partout) et non ReglageRangeExtender : controleRangeExtender n'est pas charge sur la cuve ni le
+# rideau, et sa garde d'activation le retirerait des activation = OFF (retour impossible).
+# Ne touche ni a RgxState ni au point d'acces (choix de l'utilisateur, lecon du 2026-10-03).
+import persist
+var MDP17 = "MotDePasseSecret17"
+def esclave17()
+  serveur = {"adresseMAC": MAC_CUVE, "udp": {"id": 2, "activation": "ON"},
+             "rangeExtender": {"activation": "ON", "id": 2, "AP": {"SSID": "AP-CUVE"}},
+             "wifi": {"power": 0, "reseau1": {"nomReseauWifi": "SERVEUR-GARAGE-GATEWAY", "mdpWifi": "mdpAP"},
+                      "reseau2": {"nomReseauWifi": "iPhone de Frederic", "mdpWifi": "mdpTel"}},
+             "mqtt": {"topic": "jardin/cuve"}}
+end
+def mode17(payload)
+  tasmota.reponse = nil
+  tasmota.cmds = []
+  tasmota.rappelsTimer = {}
+  persist.nb_save = 0
+  journal = []
+  globalFonctions.reglageGlobal("ReglageGlobal", 0, "ModeConnexion" + (payload == "" ? "" : " " + payload), nil)
+  var r = json.load(str(tasmota.reponse))
+  return (isinstance(r, map) ? r.find("ReglageGlobal", {}) : {})
+end
+def redemarre17()                      # declenche le Restart differe, rend les commandes passees
+  for k: tasmota.rappelsTimer.keys()    tasmota.rappelsTimer[k]()    end
+  return tasmota.cmds.find("Restart 1") != nil
+end
+def reseaux17() return serveur["wifi"]["reseau1"]["nomReseauWifi"] + "|" + serveur["wifi"]["reseau2"]["nomReseauWifi"] end
+esclave17()
+var r17 = mode17("")
+verifie("lecture : mode RangeExtender, rien de sauve", "RangeExtender/0", str(r17.find("modeConnexion")) + "/" + str(persist.nb_save))
+r17 = mode17("WifiClassique MAISON " + MDP17)
+verifie("-> WifiClassique : reponse et redemarrage annonce", "WifiClassique/true", str(r17.find("modeConnexion")) + "/" + str(r17.find("redemarrage")))
+verifie("... reseau1 = maison, reseau2 = point d'acces du maitre (filet)", "MAISON|SERVEUR-GARAGE-GATEWAY", reseaux17())
+verifie("... mot de passe maison pose", MDP17, serveur["wifi"]["reseau1"]["mdpWifi"])
+verifie("... activation Range Extender OFF, persist sauve", "OFF/true", serveur["rangeExtender"]["activation"] + "/" + str(persist.nb_save > 0))
+verifie("... reseaux d'origine sauvegardes", "SERVEUR-GARAGE-GATEWAY|iPhone de Frederic",
+        serveur["wifi"]["sauvegardeRangeExtender"]["reseau1"]["nomReseauWifi"] + "|" + serveur["wifi"]["sauvegardeRangeExtender"]["reseau2"]["nomReseauWifi"])
+verifie("... mot de passe absent de la reponse", -1, string.find(str(tasmota.reponse), MDP17))
+verifie("... bascule journalisee sans le mot de passe", "true/false", str(journalise("REGLAGE_MODE_CONNEXION")) + "/" + str(journalise(MDP17)))
+verifie("... point d'acces non touche (aucune commande Rgx)", false, string.find(str(tasmota.cmds), "Rgx") >= 0)
+verifie("... Restart differe (reponse d'abord), puis Restart 1", "false/true", str(tasmota.cmds.find("Restart 1") != nil) + "/" + str(redemarre17()))
+r17 = mode17("WifiClassique MAISON " + MDP17)
+verifie("temoin 2e bascule identique : ni sauvegarde ecrasee, ni redemarrage", "SERVEUR-GARAGE-GATEWAY/0/nil",
+        serveur["wifi"]["sauvegardeRangeExtender"]["reseau1"]["nomReseauWifi"] + "/" + str(persist.nb_save) + "/" + str(r17.find("redemarrage")))
+r17 = mode17("WifiClassique AUTRE-RESEAU " + MDP17)
+verifie("2e bascule vers un AUTRE reseau : la sauvegarde garde l'origine", "SERVEUR-GARAGE-GATEWAY|iPhone de Frederic",
+        serveur["wifi"]["sauvegardeRangeExtender"]["reseau1"]["nomReseauWifi"] + "|" + serveur["wifi"]["sauvegardeRangeExtender"]["reseau2"]["nomReseauWifi"])
+verifie("... reseau2 reste le point d'acces du maitre", "AUTRE-RESEAU|SERVEUR-GARAGE-GATEWAY", reseaux17())
+r17 = mode17("RangeExtender")
+verifie("-> RangeExtender : reseaux d'origine restaures", "SERVEUR-GARAGE-GATEWAY|iPhone de Frederic", reseaux17())
+verifie("... mots de passe d'origine restaures", "mdpAP|mdpTel", serveur["wifi"]["reseau1"]["mdpWifi"] + "|" + serveur["wifi"]["reseau2"]["mdpWifi"])
+verifie("... sauvegarde effacee, activation ON, redemarrage", "false/ON/true",
+        str(serveur["wifi"].contains("sauvegardeRangeExtender")) + "/" + serveur["rangeExtender"]["activation"] + "/" + str(redemarre17()))
+r17 = mode17("RangeExtender")
+verifie("temoin deja en RangeExtender : rien ne change", "nil/0", str(r17.find("redemarrage")) + "/" + str(persist.nb_save))
+# Wi-Fi classique sans sauvegarde (bascule faite a la main) : le retour ne doit rien inventer
+serveur["rangeExtender"]["activation"] = "OFF"
+r17 = mode17("RangeExtender")
+verifie("temoin retour sans sauvegarde : erreur, rien ne change", "true/OFF/0/nil",
+        str(r17.find("erreur") != nil) + "/" + serveur["rangeExtender"]["activation"] + "/" + str(persist.nb_save) + "/" + str(r17.find("redemarrage")))
+esclave17()
+r17 = mode17("WifiClassique iPhone de Frederic " + MDP17)
+verifie("SSID avec espaces : dernier mot = mot de passe", "iPhone de Frederic/" + MDP17,
+        serveur["wifi"]["reseau1"]["nomReseauWifi"] + "/" + serveur["wifi"]["reseau1"]["mdpWifi"])
+esclave17()
+r17 = mode17("WifiClassique MAISON")
+verifie("temoin mot de passe absent : erreur, rien ne change", "true/SERVEUR-GARAGE-GATEWAY/0",
+        str(r17.find("erreur") != nil) + "/" + serveur["wifi"]["reseau1"]["nomReseauWifi"] + "/" + str(persist.nb_save))
+r17 = mode17("LoRa")
+verifie("temoin mode inconnu : erreur, rien ne change", "true/ON/0",
+        str(r17.find("erreur") != nil) + "/" + serveur["rangeExtender"]["activation"] + "/" + str(persist.nb_save))
+tasmota.rappelsTimer = nil
+journal = []
+var aide17 = globalFonctions.aideReglageGlobal(nil)
+var noms17 = []
+for l: aide17    noms17.push(l[0])    end
+verifie("aide : ModeConnexion listee, detail present", "true/true", str(noms17.find("ModeConnexion") != nil) + "/" + str(globalFonctions.aideReglageGlobal("ModeConnexion") != nil))
+
+print("")
+print("=== 18. envoiUDP : un esclave emet par sa STA, port source aleatoire (diagnostic 2026-10-17) ===")
+# Chevauchement mesure le 2026-10-17 : la cuve a son AP en 192.168.4.1/24 ET est cliente du maitre en
+# 192.168.4.2/24. Socket non liee -> sortie par son AP, envoi au maitre perdu ; liee a 192.168.4.2 -> recu.
+# Corrections C1 (liaison a la STA, esclave) + C2 (port source 0) + C6 (lireUDP, un seul mot).
+# NON appliquees (a trancher) : C3 multicast maitre, C4 multicast esclave hors RE, C5 ImAlive unicast.
+serveur = {"udp": {"id": 2, "debug": "ON", "activation": "ON"},
+           "rangeExtender": {"activation": "ON", "id": 2, "AP": {"IPAddress": "192.168.4.1", "Subnet": "255.255.255.0"}},
+           "discovery": {"debug": "ON"},
+           "mqtt": {"topic": "jardin/cuve", "groupTopic1": "tasmotas/garage"},
+           "hostname": "CAPTEURS-CUVE"}
+etatUDP["ip"] = ["", "224.3.0.1"]
+etatUDP["port"] = [2000, 4000]
+def dernier() return size(liaisons) > 0 ? liaisons[size(liaisons) - 1] : ["?", "?", 0, "?", "?"] end
+def resume(l) return str(l[0]) + "/" + str(l[1]) + "/" + str(l[2]) + "/" + str(l[4]) end
+tasmota.ipSta = "192.168.4.2"
+liaisons = []
+journal = []
+udpFonctions.envoiUDP("UniCast", "192.168.4.1", "R1")
+verifie("esclave RE unicast : lie a la STA, port source 0", "192.168.4.2/192.168.4.1/2000/0", resume(dernier()))
+verifie("format du log d'envoi inchange (testeur_udp_essais.RE_ENVOI)", true,
+        journalise("Données UniCast envoyées vers '192.168.4.1' >>>> R1 >>>> OK"))
+liaisons = []
+udpFonctions.envoiUDP("MultiCast", "", "R2")
+verifie("esclave RE multicast : lie a la STA, groupe 224.3.0.1:4000, port source 0",
+        "192.168.4.2/224.3.0.1/4000/0", resume(dernier()))
+# Wi-Fi classique : toujours AUCUN multicast esclave (C4 non appliquee), log 'nil' comme avant
+serveur["rangeExtender"]["activation"] = "OFF"
+tasmota.ipSta = "192.168.0.50"
+liaisons = []
+journal = []
+udpFonctions.envoiUDP("MultiCast", "", "R3")
+verifie("esclave Wi-Fi classique : multicast toujours non emis (inchange)", "0/true",
+        str(size(liaisons)) + "/" + str(journalise(">>>> R3 >>>> nil")))
+liaisons = []
+udpFonctions.envoiUDP("UniCast", "192.168.0.43", "R4")
+verifie("esclave Wi-Fi classique unicast : lie a la STA", "192.168.0.50/192.168.0.43/2000/0", resume(dernier()))
+tasmota.ipSta = ""
+liaisons = []
+verifie("esclave STA inconnue : pas d'exception", "OK", essaie(def () udpFonctions.envoiUDP("UniCast", "192.168.0.43", "R5") end))
+verifie("... socket sur toutes les interfaces", "/192.168.0.43/2000/0", resume(dernier()))
+tasmota.ipSta = "192.168.4.2"
+refusLiaison = "192.168.4.2"
+liaisons = []
+journal = []
+udpFonctions.envoiUDP("UniCast", "192.168.4.1", "R6")
+verifie("liaison refusee : 2e essai sur toutes les interfaces", "1//OK", str(size(liaisons)) + "/" + str(dernier()[0]) + "/" +
+        (journalise(">>>> R6 >>>> OK") ? "OK" : "?"))
+verifie("... et le 2e essai est journalise", true, journalise("nouvel essai sur toutes les interfaces"))
+refusLiaison = nil
+# Maitre : interfaces INCHANGEES (C3 non appliquee), seul le port source devient aleatoire
+serveur["udp"]["id"] = 0
+serveur["rangeExtender"]["activation"] = "ON"
+tasmota.ipSta = "192.168.0.43"
+liaisons = []
+udpFonctions.envoiUDP("UniCast", "192.168.4.2", "R7")
+verifie("maitre unicast : toutes les interfaces, port source 0 (avant : 2000)", "/192.168.4.2/2000/0", resume(dernier()))
+liaisons = []
+udpFonctions.envoiUDP("MultiCast", "192.168.4.1", "R8")
+verifie("maitre multicast : par l'interface demandee (inchange)", "192.168.4.1/224.3.0.1/4000/0", resume(dernier()))
+liaisons = []
+udpFonctions.envoiUDP("MultiCast", "", "R9")
+verifie("maitre multicast sans interface : toutes (inchange)", "/224.3.0.1/4000/0", resume(dernier()))
+serveur["rangeExtender"]["activation"] = "OFF"
+liaisons = []
+udpFonctions.envoiUDP("MultiCast", "192.168.4.1", "R10")
+verifie("maitre sans Range Extender : multicast non emis (inchange)", 0, size(liaisons))
+liaisons = []
+udpFonctions.envoiUDP("Broadcast", "", "R11")
+verifie("type inconnu : rien n'est emis", 0, size(liaisons))
+# lireUDP : message d'un seul mot (avant : index_error dans every_100ms)
+serveur["udp"]["id"] = 2
+drivers["ModBus"]["id"] = 2
+etatUDP["udpReception"] = [SocketFaux(["TESTUDP"]), nil]
+verifie("lireUDP : message d'un seul mot sans exception", "OK", essaie(def () udpFonctions.lireUDP("UniCast", {}) end))
+etatUDP["udpReception"] = sauveRecep
 
 print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))

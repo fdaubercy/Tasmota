@@ -125,6 +125,14 @@
             "problemMatcher": []
         },
         {
+            "label": "Outil : testeur UDP maitre/esclave (http://127.0.0.1:7400)",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/testeur_udp.py", "--http", "7400"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
+        },
+        {
             "label": "Outil : sniffeur MQTT (http://127.0.0.1:7100)",
             "type": "process",
             "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",

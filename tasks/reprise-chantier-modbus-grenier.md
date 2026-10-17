@@ -89,6 +89,14 @@ au mauvais endroit, annulées — voir `tasks/lessons.md`). Les 3 cibles sont
 `tasmota32p4-garage-serveur-modbus`, `tasmota32s3-garage-capteurs-cuve-modbus`,
 `tasmota32s3-garage-rideau-garage-modbus`.
 
+> **2026-10-17 — commandes ModBus sans fil (UDP), etat :** E1 code (cuve flashee avec, P4 non) ;
+> `ReglageGlobal ModeConnexion` code (aucune carte flashee avec). Essai reel 1 : P4 -> cuve OK,
+> cuve -> P4 perdu. Cause prouvee : AP de l'esclave en 192.168.4.1/24 (choix de l'utilisateur, NE PAS
+> y toucher) -> envoi par la mauvaise interface ; corrige dans `udpFonctions.envoiUDP` (C1/C2/C6,
+> socket liee a la STA de l'esclave), non commite, non flashe. **Prochaine action : rebuild complet
+> P4 + cuve (+ rideau), flash, puis essais 1 et 2 avec `outils_pc/testeur_udp.py`** (plan :
+> `outils_docs/DIAGNOSTIC_UDP_2026-10-17.md` §7). C3/C4/C5 a trancher. Detail : `PROTOCOLE_MODBUS.md` §9.
+
 ## LA PROCHAINE ACTION — flasher et observer
 
 > **2026-09-30 : la grille à suivre est désormais UNIQUE, dans

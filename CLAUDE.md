@@ -337,6 +337,10 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   d'IP en UDP, et tableau des elements restant a parametrer (importance/priorite/difficulte).
   §2.6 : cycle `forceEnvoiParams` -> `ImAlive` (presentation esclave -> maitre, usages de la
   table cote maitre, piege de la carte reaffectee) ; resume en tete de `data/fs/udpFonctions.be`.
+- `outils_docs/DIAGNOSTIC_UDP_2026-10-17.md` — diagnostic UDP maitre <-> esclave (Range Extender /
+  Wi-Fi classique) : matrice attendue, cause prouvee (AP de l'esclave en 192.168.4.1/24 -> ses envois
+  vers le maitre partent par son AP), corrections C1-C7, plan des essais. Resume dans
+  `PROTOCOLE_MODBUS.md` §9 ; C1/C2/C6 appliques le 2026-10-17 ; C3-C5 a trancher, code dans `tasks/correctif-udp-interface-2026-10-17.diff`.
 - `outils_docs/AUDIT_MODBUS_2026-09-29.md` — audit complet ModBus garage (B1 corrige, secrets
   en clair sur depot public, defauts G1-G8 actifs, L1-L13 latents, ameliorations par priorite).
 - `outils_docs/Electronique/Connecteur ModBus/` — docs constructeur de la carte 16 relais
@@ -404,3 +408,16 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     `%TEMP%/syslog_tasmota.log`. Cible PlatformIO « Serveur syslog » dans Custom. Les modules
     envoient a `SYS_LOG_HOST` (`user_config_override.h`) = **192.168.0.3, ce PC** (le NAS
     192.168.0.2 est eteint) : IP a figer par un bail DHCP fixe sur la box.
+  - `testeur_udp.py` (+ `testeur_udp_carte.py`, `testeur_udp_essais.py`, `testeur_udp_http.py`,
+    `testeur_udp_web.py`, `testeur_udp_aide.py`, `build/cible_testeur_udp.py`) — page
+    http://127.0.0.1:7400 pour tester l'UDP maitre <-> esclave : ouvre les 2 ports serie (maitre et
+    esclave, reglables dans la page), envoie texte libre / trames `ModbusUDP` (E1) / push / `ImAlive`
+    en unicast ou multicast et juge chaque essai (RECU, EMIS NON RECU, NON EMIS...). Bascule le mode
+    de l'esclave par `ReglageGlobal ModeConnexion RangeExtender|WifiClassique <ssid> <mdp>` (Wi-Fi lu
+    dans le persist du maitre du depot ; l'esclave memorise ses reseaux d'origine et redemarre).
+    Pose les logs `udp`/`modbus` le temps des essais puis les restaure. Chaque carte se branche soit sur
+    son port COM, soit par le pont serie (`pont:7000`, TCP brut ; avertit si le pont n'est pas demarre ;
+    redemande au pont un port perdu, jamais apres « Arreter »). Onglet Aide. Cible PlatformIO
+    « Testeur UDP maitre/esclave » dans Custom, et tache VS Code (Ctrl+Maj+P > Run Task). Banc :
+    `test_testeur_udp.py` (cartes simulees par `testeur_udp_sim.py` ; groupe « pont » dans
+    `test_testeur_udp_pont.py`, sur le vrai `pont_serie.py` en loop:// ; code de sortie 0 = vert).
