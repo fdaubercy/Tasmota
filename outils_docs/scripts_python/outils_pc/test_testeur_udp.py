@@ -156,6 +156,16 @@ def groupe_essais():
     alimente(e, "esclave", ["12:00:01 ENVOI_MSG_UDP: Reseau non connecte, 'TESTUDP-7 salut' non envoye !"])
     r = e.conclut()
     verifie((r["verdict"], "reseau non connecte" in r["details"][0]), (te.NON_EMIS, True), "texte : reseau non monte")
+    # -- multicast du maitre sans point d'acces ni esclave sur la box : "Non emis" (2026-10-17)
+    e = nouvel_essai("texte", sens="maitre>esclave", mode="MultiCast")
+    alimente(e, "maitre", [l_envoi("MultiCast", "", "TESTUDP-7 salut", "Non emis")])
+    r = e.conclut()
+    verifie((r["verdict"], any("aucun esclave joignable par la box" in d for d in r["details"])), (te.NON_EMIS, True),
+            "multicast maitre Non emis : NON EMIS + explication")
+    e = nouvel_essai("texte", sens="maitre>esclave", mode="MultiCast")
+    alimente(e, "maitre", [l_envoi("MultiCast", "", "TESTUDP-7 salut", "Echec")])
+    verifie(any("aucun esclave joignable par la box" in d for d in e.conclut()["details"]), False,
+            "TEMOIN multicast maitre Echec : pas d'explication box")
     # -- cas connu : multicast depuis un esclave en Wi-Fi classique
     e = nouvel_essai("imalive", mode_connexion="WifiClassique")
     r = e.conclut()

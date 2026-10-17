@@ -137,7 +137,9 @@ function majEtat(e){
   rempli('ipEsclave',e.cartes.esclave.ip);
   rempli('ipMaitre',e.ip_vers_maitre_defaut);
   $('rappel').textContent=`Maitre : point d'acces ${e.ip_ap_maitre}`+(e.cartes.maitre.ip?` ; IP reseau maison ${e.cartes.maitre.ip}`:'')+
-   (e.mode_esclave==='WifiClassique'?' - Rappel : hors Range Extender, l\'esclave n\'emet aucun multicast (ImAlive et push NON EMIS attendus).':'');
+   (e.mode_esclave==='WifiClassique'?' - Wi-Fi classique : multicast de l\'esclave relaye par la box (mesure 2026-10-17) ;'+
+    ' multicast du maitre par la box seulement si l\'esclave y est decouvert (ImAlive recu, Online, meme groupTopic) ;'+
+    ' heure et ipMaitre en unicast.':'');
   $('lancer').disabled=e.essai_en_cours;
 }
 function rempli(id,val){const c=$(id);if(val&&!c.dataset.touche&&document.activeElement!==c)c.value=val;}

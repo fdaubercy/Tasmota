@@ -4,7 +4,7 @@ Aucun acces serie ici : un Essai recoit les lignes de log des deux cartes (obser
 verdict (conclut). Tout est donc testable sans carte (test_testeur_udp.py).
 
 Formats de log reconnus (ceux des modules Berry udpFonctions / modbusFonctions) :
-  emission  ENVOI_MSG_UDP: Donnees <UniCast|MultiCast> envoyees vers '<ip>' >>>> <message> >>>> <OK|Echec|nil>
+  emission  ENVOI_MSG_UDP: Donnees <UniCast|MultiCast> envoyees vers '<ip>' >>>> <message> >>>> <OK|Echec|nil|Non emis>
             ENVOI_MSG_UDP: Reseau non connecte, '<message>' non envoye !
   reception LIRE_UDP: Donnees UDP <UniCast|MultiCast> recues de '<ip>' sur le port <n>   (ligne 1)
             LIRE_UDP: msg = <message>                                                   (ligne 2)
@@ -20,7 +20,7 @@ import time
 RECU, EMIS_NON_RECU, NON_EMIS, ECHEC, PAS_DE_RUBAN = "RECU", "EMIS NON RECU", "NON EMIS", "ECHEC", "PAS DE RUBAN"
 
 RE_ENVOI = re.compile(r"ENVOI_MSG_UDP: Donn.{1,3}es (UniCast|MultiCast) envoy.{1,3}es vers '([^']*)' "
-                      r">>>> (.*) >>>> (OK|Echec|nil)\s*$")
+                      r">>>> (.*) >>>> (OK|Echec|nil|Non emis)\s*$")
 RE_NON_RESEAU = re.compile(r"ENVOI_MSG_UDP: Reseau non connecte, '(.*)' non envoye")
 RE_ENTETE = re.compile(r"LIRE_UDP: Donn.{1,3}es UDP (UniCast|MultiCast) re.{1,3}ues de '([^']*)' sur le port (\d+)")
 RE_MSG = re.compile(r"LIRE_UDP: msg = (.*?)\s*$")
@@ -35,6 +35,9 @@ COMMANDE_PUSH = ('Br var h = modbusFonctions.etatRuban(1376) if h != nil modbusF
 TYPES = ("texte", "modbus", "imalive", "push")
 CAS_CONNU_MULTICAST = ("cas connu : depuis la correction C4 (2026-10-17), l'esclave emet son multicast aussi en Wi-Fi "
                        "classique ; NON EMIS ici veut dire que la carte porte un firmware ANTERIEUR (a reflasher)")
+CAS_MAITRE_SANS_BOX = ("multicast du maitre non emis (2026-10-17) : pas de point d'acces actif et aucun esclave "
+                       "joignable par la box dans sa decouverte (meme groupTopic, Online, IP du reseau de la box). "
+                       "Lancer d'abord un ImAlive de l'esclave pour qu'il soit decouvert")
 
 
 def crc16(donnees):
@@ -164,6 +167,8 @@ class Essai:
             details.append(f"aucune ligne ENVOI_MSG_UDP cote {self.emetteur}")
         if self.mode == "MultiCast" and self.emetteur == "esclave" and self.mode_connexion == "WifiClassique":
             details.append(CAS_CONNU_MULTICAST)
+        if self.mode == "MultiCast" and self.emetteur == "maitre" and any(e["resultat"] == "Non emis" for e in emises):
+            details.append(CAS_MAITRE_SANS_BOX)
         return self._res(NON_EMIS, None, "", details)
 
     def _conclut_modbus(self):
