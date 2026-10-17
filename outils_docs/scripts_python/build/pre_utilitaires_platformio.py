@@ -731,6 +731,9 @@ cible_testeur_udp.enregistre(env)
 # 🔄 CIBLE « SYNCHRO DU FORK » (meme menu Custom) : page web de la synchro du fork avec l'amont (merge / rebase)
 import cible_synchro_fork
 cible_synchro_fork.enregistre(env)
+# 🧭 CIBLE « ANNUAIRE DES OUTILS » (meme menu Custom) : page d'accueil des outils PC (ouvre la page s'il tourne deja)
+import cible_annuaire
+cible_annuaire.enregistre(env)
 
 # Cibles qui ne sont PAS des builds : ne pas incrementer CFG_HOLDER, ne pas reecrire
 # platformio_override.ini ni copier d'image FS (bloc suivant).
@@ -740,11 +743,12 @@ cible_synchro_fork.enregistre(env)
 #   - sniffeur_modbus : lancement du sniffeur ModBus ;
 #   - testeur_udp     : lancement du testeur UDP maitre/esclave ;
 #   - synchro_fork    : lancement de la page de synchro du fork ;
-#   - __idedata       : rafraichissement IntelliSense / Project Tasks par pioarduino
+#   - annuaire        : lancement (ou ouverture) de l'annuaire des outils PC ;
+#   - __idedata      : rafraichissement IntelliSense / Project Tasks par pioarduino
 #                       ('pio project init'), lance tout seul par VS Code.
 CIBLES_HORS_BUILD = (cible_pont_serie.NOM_CIBLE, cible_sniffeur_mqtt.NOM_CIBLE, cible_syslog_tasmota.NOM_CIBLE,
                      cible_sniffeur_modbus.NOM_CIBLE, cible_testeur_udp.NOM_CIBLE, cible_synchro_fork.NOM_CIBLE,
-                     "__idedata")
+                     cible_annuaire.NOM_CIBLE, "__idedata")
 hors_build = any(cible in COMMAND_LINE_TARGETS for cible in CIBLES_HORS_BUILD)
 
 # ============================================================

@@ -276,6 +276,11 @@ def principal():
         serveur = Serveur((acces.hote, args.http), fabrique_gestionnaire(lanceur, acces))
     except OSError:
         if annuaire_deja_actif(args.http):
+            # Deja demarre (tache VS Code) : sans --sans-navigateur (cible Custom, lancement a la
+            # main), on ouvre sa page plutot que de rendre la main sans rien montrer.
+            if not args.sans_navigateur:
+                print(f"Annuaire deja demarre : {acces.lien_local()} ouvert dans le navigateur", flush=True)
+                ouvre_navigateur(acces.lien_local())
             return 0
         print(f"Port {args.http} deja utilise par un autre programme", flush=True)
         return 1

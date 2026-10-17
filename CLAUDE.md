@@ -361,7 +361,7 @@ Pour ne pas chercher : ce qui a ete produit et ou.
 - `outils_docs/scripts_python/`, range par usage le 2026-10-12. **Des scripts qui s'importent
   entre eux restent dans le MEME dossier** (import d'un module voisin) : ne pas les separer.
   - `build/` — charges par PlatformIO : `pre_utilitaires_platformio.py` (pre-script ; importe les
-    `cible_*.py` voisins), `post_lto_parallele.py`, les 4 `cible_*.py` (cibles Custom, qui lancent
+    `cible_*.py` voisins), `post_lto_parallele.py`, les 7 `cible_*.py` (cibles Custom, qui lancent
     `outils_pc/`), `ota-files-uploader.py`, `update_idf55_framework.py` (appele par le pre-script).
   - `berry/` — `verifie_berry.py` (syntaxe de data/, tache VS Code de surveillance),
     `solidifie_et_compile_berry.py` (module solidifiable en ~10 s, compile le .h),
@@ -452,6 +452,8 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     `annuaire_page.py`) — annuaire des outils PC, page http://127.0.0.1:7600 : liste les outils (fiches de
     presence sous `%LOCALAPPDATA%\outils_tasmota\`, consoles dans `consoles\<id>.log`), les lance et les arrete.
     Demarre seul avec VS Code (tache « Outil : annuaire des outils », `runOn: folderOpen`, `--sans-navigateur`).
+    Aussi cible Custom « Annuaire des outils (page web) » (`build/cible_annuaire.py`, `pio run` : jamais pendant
+    un build) : si l'annuaire tourne deja, ouvre seulement sa page ; sinon le demarre (il s'arrete alors avec la cible).
     Les outils lances depuis l'annuaire s'arretent avec lui (job object Windows), SAUF la synchro du fork
     (hors job, console cachee propre, survit a la fermeture de VS Code ; arret refuse pendant un merge, rebase
     ou push ; synchro muette : refus si MERGE_HEAD ou rebase en cours dans `.git`). Tuile « liee a

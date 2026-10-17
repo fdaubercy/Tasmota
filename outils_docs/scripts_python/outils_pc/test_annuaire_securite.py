@@ -327,13 +327,40 @@ def section_navigateur():
             (True, True, False), "principal : annonce(False) puis ouvre_navigateur")
 
 
+def section_deja_actif():
+    """Annuaire deja demarre : la cible Custom (sans --sans-navigateur) ouvre sa page ; la tache VS Code
+    (--sans-navigateur) rend la main sans rien ouvrir. Port pris simule, aucun vrai navigateur."""
+    print("== annuaire deja actif ==")
+    ouverts = []
+
+    def serveur_pris(*a, **k):
+        raise OSError(10048, "port pris")
+
+    sauve = (ann.Serveur, ann.annuaire_deja_actif, ann.ouvre_navigateur, ann.rattache_au_job, sys.argv)
+    ann.Serveur, ann.rattache_au_job = serveur_pris, lambda: True
+    ann.ouvre_navigateur = lambda url, *a: ouverts.append(url)
+    try:
+        ann.annuaire_deja_actif = lambda port: True
+        sys.argv = ["annuaire_outils.py", "--http", "7999"]
+        verifie((ann.principal(), ouverts), (0, ["http://127.0.0.1:7999/"]),
+                "deja actif sans --sans-navigateur : code 0 et page ouverte")
+        ouverts.clear()
+        sys.argv = ["annuaire_outils.py", "--http", "7999", "--sans-navigateur"]
+        verifie((ann.principal(), ouverts), (0, []), "deja actif avec --sans-navigateur : code 0, rien ouvert")
+        ann.annuaire_deja_actif = lambda port: False
+        sys.argv = ["annuaire_outils.py", "--http", "7999"]
+        verifie((ann.principal(), ouverts), (1, []), "TEMOIN port pris par un autre programme : code 1, rien ouvert")
+    finally:
+        ann.Serveur, ann.annuaire_deja_actif, ann.ouvre_navigateur, ann.rattache_au_job, sys.argv = sauve
+
+
 def principal():
     git = tempfile.mkdtemp(prefix="faux_git_")
     banc = Banc(git)
     try:
         for section in (lambda: section_hote(banc), lambda: section_erreurs(banc), section_iteration,
                         lambda: section_peut_arreter_et_lie(banc), lambda: section_route_occupee(banc, git),
-                        section_navigateur):
+                        section_navigateur, section_deja_actif):
             section()
             print()
     finally:
