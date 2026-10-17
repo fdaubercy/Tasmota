@@ -22,6 +22,7 @@ class Cartes:
 
     def __init__(self, pannes=()):
         self.grille, self.pannes, self.envoyees = None, set(pannes), []
+        self.mode, self.seq = "MANUEL", 6           # ruban de la cuve ; numero d'ordre de ses push
 
     def dit(self, role, *lignes):
         def emet():
@@ -44,8 +45,29 @@ class Cartes:
             self.dit("esclave", "EXECUTE_CMD_MODBUS: DeviceAddress = 0x02",
                      f"POUSSE_ETAT: registre 1376 = [10, 20, {lum}, 0] -> maitre (UDP, seq 5) : 0210")
             self.dit("maitre", "LIRE_UDP: msg = ModbusPushUDP 5 0210")
-        elif commande.startswith("RubanEsclave1"):
-            self.dit("maitre", f"CMD: {commande}", 'RSL: RESULT = {"RubanEsclave1":"AUTO"}')
+        elif commande == "RubanEsclave1 auto":
+            # Reponses reelles (2026-10-17) : la reponse donne le mode du DERNIER etat recu ; le mode 0 arrive
+            # au releve suivant. Panne 'auto_ko' : la cuve reste en MANUEL (30 min).
+            mode = 30 if "auto_ko" in self.pannes else 0
+            self.mode = "MANUEL" if mode else "AUTO"
+            self.dit("maitre", f"CMD: {commande}",
+                     'RSL: RESULT = {"RubanEsclave1":{"Mode":"MANUEL","Reste":30,"Ordre":"auto"}}',
+                     'MQT: tele/garage/RESULT = {"ModbusReceived":{"DeviceAddress":2,"FunctionCode":3,"StartAddress":1376,'
+                     f'"Length":15,"Count":5,"Values":[0,0,0,0,{mode}]}}}}')
+        elif commande == "RubanEsclave1":
+            reste = "30" if self.mode == "MANUEL" else "null"
+            self.dit("maitre", f"CMD: {commande}", f'RSL: RESULT = {{"RubanEsclave1":{{"Mode":"{self.mode}","Reste":{reste}}}}}')
+        elif commande == "Power1 TOGGLE" and role == "esclave":
+            self.seq += 1
+            self.dit("esclave", f"POUSSE_ETAT: registre 1376 = [0, 0, 10, 0, 0] -> maitre (UDP, seq {self.seq}) : 0210")
+            self.dit("maitre", f"LIRE_UDP: msg = ModbusPushUDP {self.seq} 0210")
+        elif commande == "Restart 1" and role == "esclave":
+            # La cuve pousse son seq 1 DES SON DEMARRAGE : le P4 voit le redemarrage avant toute autre etape
+            ancien, self.seq = self.seq, 1
+            self.dit("esclave", "CMD: Restart 1")
+            if "sans_redemarrage" not in self.pannes:
+                self.dit("maitre", f"ACCEPTE_SEQ: esclave d'ID=2 redemarre (seq 1 apres {ancien})")
+            self.dit("esclave", 'MQT: tele/jardin/cuve/INFO3 = {"Info3":{"RestartReason":"Software reset CPU","BootCount":9}}')
         elif commande.startswith("Br import json"):
             self.dit("maitre", "GRILLE_T7 KO cle esclave2" if "discovery" in self.pannes else "GRILLE_T7 OK ")
         return True
@@ -107,7 +129,9 @@ def groupe_grille(verifie, attend, monte_testeur):
     verifie(isinstance(reste, int) and 0 < reste <= 300, True, f"decompte du test 2 en secondes reelles (reste = {reste})")
     for _ in range(10):
         g.observe("maitre", "MODBUS_TASMOTA_SLAVE_RELEVE: 3 demande(s) de lecture placee(s) dans la file")
-        g.observe("esclave", "EXECUTE_CMD_MODBUS: DeviceAddress = 0x02")
+        g.observe("esclave", "EXECUTE_CMD_MODBUS: -------------------- executeCmdModbus -------------------")
+        for detail in ("DeviceAddress = 0x02", "StartAddress = 0x0560", "FunctionCode = 0x03", "Count = 5"):
+            g.observe("esclave", "EXECUTE_CMD_MODBUS: " + detail)
         g.observe("maitre", 'MQT: tele/garage/RESULT = {"ModbusReceived": {"Trame": "02030A", "DeviceAddress": 2, "FunctionCode": 3}}')
     for _ in range(6):
         g.observe("maitre", "SUR_TIMEOUT: pas de reponse dans le delai imparti")
@@ -118,6 +142,8 @@ def groupe_grille(verifie, attend, monte_testeur):
             "test 2 : releves, cuve servie, 6 timeouts du rideau absent (esclave 3) -> 2c OK ; note = INFO")
     verifie((s["2m"], s["2n"], s["2o"]), ("INFO", "INFO", "OK"),
             "timeouts et abandons des autres esclaves : notes INFO ; reponses de la cuve recues : 2o OK")
+    detail_2b = next(v["detail"] for t in g.etat()["tests"] for v in t["verifs"] if v["cle"] == "2b")
+    verifie(detail_2b, "10 fois", "2b compte les REQUETES executees (10), pas les 50 lignes EXECUTE_CMD_MODBUS")
     verifie(g.etat()["reste"], None, "decompte efface a la fin du test")
     g, _, _ = nouvelle()
     g.lance(2)
@@ -125,10 +151,13 @@ def groupe_grille(verifie, attend, monte_testeur):
     attend(lambda: statuts(g, 2)["2e"] == "ECHEC", 2)
     verifie((statuts(g, 2)["2e"], g.en_cours), ("ECHEC", 2), "TEMOIN file pleine : ECHEC aussitot, test toujours en cours")
     g.observe("maitre", "TERMINE_EN_VOL: abandon d'un message sans reponse apres 3 tentative(s) (esclave 2)")
+    for _ in range(60):
+        g.observe("esclave", "EXECUTE_CMD_MODBUS: DeviceAddress = 0x02")
     attend(lambda: g.en_cours is None, 8)
     s = statuts(g, 2)
     verifie((s["2a"], s["2c"], s["2o"]), ("ECHEC", "ECHEC", "ECHEC"),
             "TEMOIN aucun releve, message de la cuve abandonne, aucune reponse recue -> 2a, 2c et 2o ECHEC")
+    verifie(s["2b"], "ECHEC", "TEMOIN 60 lignes de detail EXECUTE_CMD_MODBUS sans en-tete : 0 requete -> 2b ECHEC")
 
     # -- test 3 : la carte 16 relais absente n'est pas un echec
     g, _, _ = nouvelle()
@@ -142,8 +171,26 @@ def groupe_grille(verifie, attend, monte_testeur):
     attend(lambda: g.en_cours is None, 8)
     s = statuts(g, 4)
     verifie(sorted(set(s.values())), ["OK"], "test 4 : ruban commande, pousse, vu, rendu en AUTO -> tout OK")
-    verifie([c for r, c in cartes.envoyees], ["Power1 ON", "Power1 OFF", "RubanEsclave1 auto"],
-            "test 4 : commandes envoyees au P4, ruban rendu en AUTO a la fin")
+    verifie([c for r, c in cartes.envoyees], ["Power1 ON", "Power1 OFF", "RubanEsclave1 auto", "RubanEsclave1"],
+            "test 4 : commandes envoyees au P4, ruban rendu en AUTO a la fin puis mode relu")
+    g, _, _ = nouvelle(pannes={"auto_ko"}, reponses=["oui", "oui"])
+    g.lance(4)
+    attend(lambda: g.en_cours is None, 8)
+    s = statuts(g, 4)
+    verifie((s["4j"], s["4k"], s["4l"]), ("OK", "ECHEC", "ECHEC"),
+            "TEMOIN ordre AUTO envoye mais ruban reste en MANUEL : la reponse a l'ordre ne suffit plus -> 4k, 4l ECHEC")
+
+    # -- test 5 : le push de demarrage (seq 1) precede le changement local ; preuve cherchee depuis le Restart
+    g, cartes, _ = nouvelle()
+    g.lance(5)
+    attend(lambda: g.en_cours is None, 8)
+    s = statuts(g, 5)
+    verifie(sorted(set(s.values())), ["OK"], "test 5 : push, redemarrage vu par le P4 (avant 5f), ruban en AUTO -> tout OK")
+    verifie(s["5g"], "OK", "5g : ACCEPTE_SEQ emis AVANT le changement local de 5f, trouve depuis le Restart (5d)")
+    g, _, _ = nouvelle(pannes={"sans_redemarrage"})
+    g.lance(5)
+    attend(lambda: g.en_cours is None, 8)
+    verifie(statuts(g, 5)["5g"], "ECHEC", "TEMOIN le P4 ne voit pas le redemarrage -> 5g ECHEC")
     g, _, _ = nouvelle(pannes={"ruban"}, reponses=["non", "oui"])
     g.lance(4)
     attend(lambda: g.en_cours is None, 8)
@@ -188,6 +235,23 @@ def groupe_grille(verifie, attend, monte_testeur):
             verifie("accepte", "refuse", f"TEMOIN {nom}")
         except ValueError:
             verifie("refuse", "refuse", f"{nom} : refuse")
+    # Reponse a une consigne : l'etat renvoye a la page est deja SANS la consigne (sinon le bouton restait
+    # affiche, 2026-10-17), puis decompte de l'etape qui attend sa preuve (6b : 150 s)
+    g, _, _ = nouvelle()
+    g.lance(6)
+    attend(lambda: g.consigne is not None, 3)
+    version = g.etat()["version"]
+    g.repond("fait")
+    e = g.etat()
+    verifie((e["consigne"], e["version"] > version), (None, True),
+            "« C'est fait » : etat renvoye sans consigne, version plus recente (la page ecarte l'ancien)")
+    attend(lambda: g.etat()["reste_genre"] == "etape", 2)
+    e = g.etat()
+    verifie((e["reste_genre"], isinstance(e["reste"], int) and 0 < e["reste"] <= 150), ("etape", True),
+            f"decompte de l'etape 6b en secondes reelles (reste = {e['reste']})")
+    g.arrete()
+    attend(lambda: g.en_cours is None, 3)
+    verifie((g.etat()["reste"], g.etat()["reste_genre"]), (None, None), "decompte efface apres l'arret")
     try:
         g.repond("fait")
         verifie("accepte", "refuse", "TEMOIN reponse sans consigne")

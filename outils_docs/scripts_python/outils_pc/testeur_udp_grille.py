@@ -14,6 +14,7 @@ Genres :
   interdit  surveillance : ECHEC des que 'motif' apparait
   note      surveillance : relevee seulement (INFO), jamais un echec
 'optionnel' : un echec devient « NON VU » (jaune), pour ce qui depend du materiel branche.
+'depuis'    : (attendu) cle d'une etape anterieure : la preuve se cherche depuis cette etape, pas la derniere.
 """
 
 import json
@@ -68,6 +69,18 @@ def construit_grille(cible, duree_regime=DUREE_REGIME):
     def v(cle, carte, libelle, genre, **plus):
         return dict(cle=cle, carte=carte, libelle=libelle, genre=genre, **plus)
 
+    def retour_auto(t):
+        """Ruban rendu en AUTO, PROUVE : la reponse a « RubanEsclave auto » donne le mode du dernier etat recu
+        (constate le 2026-10-17 : {"Mode":"MANUEL","Reste":30,"Ordre":"auto"}) ; le mode 0 n'apparait qu'au
+        releve suivant (toutes les 30 s), puis la commande sans argument le confirme."""
+        return [
+            v(f"{t}j", "maitre", f"ordre AUTO envoye au ruban (RubanEsclave{p} auto)", "commande",
+              commande=f"RubanEsclave{p} auto", motif=rf'"RubanEsclave{p}"\s*:.*"Ordre"\s*:\s*"auto"', delai=6),
+            v(f"{t}k", "maitre", "le P4 relit le ruban en AUTO (mode = 0 au releve suivant)", "attendu", delai=45,
+              motif=rf'"StartAddress"\s*:\s*{reg}\s*,.*"Values"\s*:\s*\[\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*0\s*\]'),
+            v(f"{t}l", "maitre", "le ruban est bien en mode AUTO", "commande", commande=f"RubanEsclave{p}",
+              motif=rf'"RubanEsclave{p}"\s*:\s*\{{\s*"Mode"\s*:\s*"AUTO"', motif_echec=r'"Mode"\s*:\s*"MANUEL".*', delai=6)]
+
     return [
         {"num": 1, "titre": "Demarrage : modules ModBus charges, port RS485 de la cuve ouvert", "fenetre": 0, "verifs": [
             v("1a", "maitre", "controleModbus charge sur le P4", "commande",
@@ -82,8 +95,10 @@ def construit_grille(cible, duree_regime=DUREE_REGIME):
         {"num": 2, "titre": f"Regime normal ({int(duree_regime)} s sans rien toucher)", "fenetre": int(duree_regime), "verifs": [
             v("2a", "maitre", f"releve des esclaves toutes les 30 s (au moins {n_releves})", "compte",
               motif=r"MODBUS_TASMOTA_SLAVE_RELEVE: \d+ demande", mini=n_releves),
-            v("2b", "esclave", f"la cuve recoit et execute les requetes (au moins {n_releves} EXECUTE_CMD_MODBUS)", "compte",
-              motif=r"EXECUTE_CMD_MODBUS", mini=n_releves),
+            # Une requete executee ecrit 6 lignes EXECUTE_CMD_MODBUS (constate le 2026-10-17 : « 180 fois » pour
+            # 30 requetes) : seule la ligne d'en-tete compte une requete.
+            v("2b", "esclave", f"la cuve recoit et execute les requetes (au moins {n_releves} executeCmdModbus)", "compte",
+              motif=r"EXECUTE_CMD_MODBUS: -+ executeCmdModbus", mini=n_releves),
             # La cuve peut executer sans que sa reponse arrive (constate le 2026-10-17 : 60 EXECUTE, 0 recu
             # par le P4). Preuve cote maitre : la publication ModbusReceived du pont (sauf SetOption158), ou
             # le detail de slaveModbus.
@@ -131,9 +146,7 @@ def construit_grille(cible, duree_regime=DUREE_REGIME):
               motif=publie, delai=6),
             v("4g", "esclave", "la cuve pousse son ruban eteint", "attendu", motif=pousse + r"\[\d+, \d+, 0\b", delai=6),
             v("4h", "esclave", "le ruban de la cuve est-il ETEINT ?", "consigne", reponse="ouinon",
-              consigne="Regardez le ruban de la cuve : est-il ETEINT ?"),
-            v("4j", "maitre", "ruban rendu au mode AUTO (RubanEsclave auto)", "commande",
-              commande=f"RubanEsclave{p} auto", motif=rf'"RubanEsclave{p}"\s*:', delai=6)]},
+              consigne="Regardez le ruban de la cuve : est-il ETEINT ?")] + retour_auto(4)},
         {"num": 5, "titre": "Push spontane de la cuve vers le P4, puis redemarrage de la cuve (seq)", "fenetre": 0, "verifs": [
             v("5a", "esclave", "changement local du ruban (Power1 TOGGLE sur la cuve) pousse", "commande",
               commande="Power1 TOGGLE", motif=pousse + r".*seq \d+", delai=6),
@@ -145,11 +158,12 @@ def construit_grille(cible, duree_regime=DUREE_REGIME):
             v("5e", "esclave", "la cuve a redemarre", "attendu", motif=r"Nb\. de boot|RestartReason", delai=90),
             v("5f", "esclave", "nouveau changement local apres le redemarrage", "commande", commande="Power1 TOGGLE",
               motif=pousse, delai=20),
+            # La cuve pousse son seq 1 DES SON DEMARRAGE, avant le changement local de 5f (constate le 2026-10-17 :
+            # ACCEPTE_SEQ a 20:33:52.965, 5f a 20:33:55) : la preuve se cherche depuis le Restart (5d).
             v("5g", "maitre", f"le P4 voit le redemarrage (ACCEPTE_SEQ ... ID={i} redemarre)", "attendu",
-              motif=rf"ACCEPTE_SEQ: esclave d'ID={i} redemarre", delai=10),
+              motif=rf"ACCEPTE_SEQ: esclave d'ID={i} redemarre", delai=10, depuis="5d"),
             v("5h", "esclave", "retour a l'etat d'origine", "commande", commande="Power1 TOGGLE", motif=pousse, delai=6),
-            v("5i", "maitre", "ruban rendu au mode AUTO", "commande", commande=f"RubanEsclave{p} auto",
-              motif=rf'"RubanEsclave{p}"\s*:', delai=6)]},
+            ] + retour_auto(5)},
         {"num": 6, "titre": "Panne : cable RS485 de la cuve debranche puis rebranche", "fenetre": 0, "verifs": [
             v("6x", "maitre", f"chien de garde declenche UNE seule fois", "compte",
               motif=rf"CHIEN_DE_GARDE: esclave .*\(ID={i}\) muet", mini=1, maxi=1),
@@ -191,8 +205,12 @@ class Grille:
         self.lignes = []                    # (role, texte) depuis le debut du test en cours
         self.en_cours, self.consigne, self.reponse, self.arret = None, None, None, False
         self.ancre = 0                      # index de la derniere commande / consigne
+        self.ancres = {}                    # cle d'etape -> son ancre (option 'depuis')
         self.vues = {}                      # surveillance : cle -> [index deja lu, lignes vues]
         self.fin_fenetre = None             # time.monotonic() de fin de la fenetre d'observation (decompte de la page)
+        self.fin_etape = None               # idem, fin du delai de l'etape qui attend sa preuve
+        self.version = 0                    # croit a chaque changement : la page ecarte un etat plus ancien
+        self.instance = f"{time.time():.3f}"  # distingue un testeur relance (sa version repart de 0)
 
     # ------------------------------------------------------------------ entrees
     def observe(self, role, texte, t=None):
@@ -215,6 +233,7 @@ class Grille:
             if test is None:
                 raise ValueError(f"test inconnu : {num!r}")
             self.en_cours, self.lignes, self.ancre, self.reponse, self.arret = test["num"], [], 0, None, False
+            self.ancres = {}
         threading.Thread(target=self._execute, args=(test,), daemon=True).start()
 
     def repond(self, reponse):
@@ -225,6 +244,9 @@ class Grille:
                 raise OSError("aucune consigne en attente")
             self.reponse = reponse
             self.cond.notify_all()
+            # L'etat renvoye a la page doit deja etre SANS la consigne : sinon cette reponse HTTP, arrivee apres
+            # les mises a jour diffusees, reaffichait le bouton jusqu'au changement suivant (2026-10-17, test 6).
+            self.cond.wait_for(lambda: self.consigne is None or self.arret, timeout=2)
 
     def arrete(self):
         with self.cond:
@@ -232,10 +254,11 @@ class Grille:
             self.cond.notify_all()
 
     def etat(self):
-        fin = self.fin_fenetre
+        fin, genre = (self.fin_fenetre, "fenetre") if self.fin_fenetre is not None else (self.fin_etape, "etape")
         reste = None if fin is None else max(0, round((fin - time.monotonic()) / self.echelle))
         return {"cible": self.cible, "duree_regime": self.duree_regime, "en_cours": self.en_cours,
-                "consigne": self.consigne, "reste": reste,
+                "consigne": self.consigne, "reste": reste, "reste_genre": genre if reste is not None else None,
+                "version": self.version, "instance": self.instance,
                 "tests": [{"num": t["num"], "titre": t["titre"],
                            "verifs": [{"cle": v["cle"], "carte": v["carte"], "libelle": v["libelle"], "genre": v["genre"],
                                        **self.resultats.get(v["cle"], {"statut": ATTENTE, "detail": ""})}
@@ -244,6 +267,7 @@ class Grille:
     # ------------------------------------------------------------------ execution
     def _note(self, v, statut, detail=""):
         self.resultats[v["cle"]] = {"statut": statut, "detail": detail[:220]}
+        self.version += 1
         self.diffuse({"k": "grille", **self.etat()})
 
     def _trouve(self, motif, carte, depuis=0):
@@ -286,25 +310,31 @@ class Grille:
                 while self.reponse is None and not self.arret:
                     self.cond.wait(0.5)
                 reponse, self.consigne, self.ancre = self.reponse, None, len(self.lignes)
+                self.ancres[v["cle"]] = self.ancre
+                self.cond.notify_all()                       # libere repond(), qui attend la consigne retiree
             if reponse is None:
                 return
             self._note(v, ECHEC if reponse == "non" else OK, f"reponse : {reponse}")
             return
         if genre == "commande":
             with self.cond:
-                self.ancre = len(self.lignes)
+                self.ancre = self.ancres[v["cle"]] = len(self.lignes)
             if not self.ecrit(v["carte"], v["commande"]):
                 self._echec(v, f"port de la carte {v['carte']} ferme : commande non envoyee")
                 return
+        delai = v.get("delai", 10)
+        depuis = self.ancres.get(v["depuis"], self.ancre) if v.get("depuis") else self.ancre
+        self.fin_etape = time.monotonic() + delai * self.echelle      # decompte de la page
         self._note(v, EN_COURS)
         carte = v.get("carte_motif", v["carte"])
-        trouve, rate = self._attend(v["motif"], carte, v.get("delai", 10), self.ancre, v.get("motif_echec"))
+        trouve, rate = self._attend(v["motif"], carte, delai, depuis, v.get("motif_echec"))
+        self.fin_etape = None
         if trouve:
             self._note(v, OK, trouve)
         elif rate:
             self._echec(v, rate)
         elif not self.arret:
-            self._echec(v, f"rien vu en {v.get('delai', 10)} s sur la carte {carte} (attendu : {v['motif']})")
+            self._echec(v, f"rien vu en {delai} s sur la carte {carte} (attendu : {v['motif']})")
 
     def _surveille(self, v, final):
         """Surveillance : -> True si son verdict est definitif."""
@@ -357,6 +387,7 @@ class Grille:
         fin = debut + test["fenetre"] * self.echelle
         if test["fenetre"] and not self.arret:
             self.fin_fenetre = fin
+            self.version += 1
             self.diffuse({"k": "grille", **self.etat()})      # la page demarre son decompte
         with self.cond:
             while not self.arret and time.monotonic() < fin:
@@ -373,5 +404,6 @@ class Grille:
             for v in etapes:
                 if self.arret and self.resultats.get(v["cle"], {}).get("statut") in (None, ATTENTE, EN_COURS, CONSIGNE):
                     self.resultats[v["cle"]] = {"statut": ANNULE, "detail": "test arrete"}
-            self.en_cours, self.consigne, self.fin_fenetre = None, None, None
+            self.en_cours, self.consigne, self.fin_fenetre, self.fin_etape = None, None, None, None
+            self.version += 1
         self.diffuse({"k": "grille", **self.etat()})

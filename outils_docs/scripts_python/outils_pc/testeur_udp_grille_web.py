@@ -37,19 +37,26 @@ VUE = r"""
 SCRIPT = r"""
 // ------------------------------------------------------------ onglet Grille ModBus
 let grille=null, finDecompte=null;
-// Decompte de la fenetre d'observation (test 2 : 300 s par defaut) a cote du bouton Lancer du test en cours.
-// Le serveur donne le reste en secondes a chaque mise a jour ; la page decompte seule entre deux.
+// Decompte a cote du bouton Lancer du test en cours : fenetre d'observation (test 2 : 300 s par defaut), ou
+// delai de l'etape qui attend sa preuve (ex. 150 s pour le chien de garde du test 6). Le serveur donne le reste
+// en secondes a chaque mise a jour ; la page decompte seule entre deux. Rien pendant une consigne (pas de delai).
 function majDecompte(){
-  if(!grille||!grille.en_cours||finDecompte==null)return;
+  if(!grille||!grille.en_cours)return;
   const e=$('decompte'+grille.en_cours);if(!e)return;
+  if(finDecompte==null){e.textContent='';return;}
   const s=Math.max(0,Math.round((finDecompte-Date.now())/1000));
-  e.textContent=s>0?`encore ${Math.floor(s/60)} min ${String(s%60).padStart(2,'0')} s`:'bilan en cours...';
+  const duree=`${Math.floor(s/60)} min ${String(s%60).padStart(2,'0')} s`;
+  e.textContent=grille.reste_genre==='etape'?(s>0?`preuve attendue : encore ${duree}`:'')
+    :(s>0?`encore ${duree}`:'bilan en cours...');
 }
 setInterval(majDecompte,1000);
 const STATUT_CLASSE={'OK':'st-OK','ECHEC':'st-ECHEC','NON VU':'st-NONVU','INFO':'st-INFO','en cours':'st-encours',
  'consigne':'st-consigne','attente':'st-attente','annule':'st-annule'};
 function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function majGrille(g){
+  // Une reponse HTTP peut arriver APRES des mises a jour diffusees plus recentes : l'etat le plus ancien est ecarte
+  // (meme instance seulement : un testeur relance repart de la version 0)
+  if(grille&&g.instance===grille.instance&&g.version<grille.version)return;
   grille=g;
   const c=g.cible||{};
   $('grilleCible').textContent=`Esclave teste : ID ModBus ${c.id}, ruban POWER${c.power} du P4, registre ${c.registre}`+
