@@ -543,6 +543,9 @@ def udpFonctions_envoiUDP(typeComm, ipDestinataire, message)
 	# Format inchange : lu par outils_pc/testeur_udp_essais.py (RE_ENVOI)
 	udpFonctions.log(string.format("ENVOI_MSG_UDP: Données %s envoyées vers '%s' >>>> %s >>>> %s", typeComm, ipDestinataire, message, resultatEnvoi), LOG_LEVEL_DEBUG)
     tasmota.yield()
+    # true si le datagramme est parti (2026-10-17) : la file du maitre ModBus en a besoin pour renvoyer
+    # un message dont l'envoi UDP a echoue (modbusFonctions.envoieTeteUDP)
+    return resultatEnvoi == "OK"
 end
 udpFonctions.envoiUDP = udpFonctions_envoiUDP
 

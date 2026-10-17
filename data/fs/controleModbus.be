@@ -286,13 +286,13 @@ class CONTROLE_MODBUS : Driver
 
             # Si maitre ModBus (id==0)
             if (drivers["ModBus"]["id"] == 0)
-                # Seul le maitre tient la file : lui seul peut acquitter, et seulement si
-                # la trame repond vraiment a sa requete en vol. apparieReponse ecarte les
-                # trames hors-sequence ET les instantanes spontanes des esclaves (drapeau
-                # "Automatique"), qui ne repondent a aucune requete.
-                if (modbusFonctions.apparieReponse(self.reponseModBus))
-                    modbusFonctions.termineEnVol(true)
-                end
+                # N'acquitte PLUS ici (2026-10-17, commandes sans fil E3). Comme en serie, ce sont
+                # les drivers des esclaves (modBus_TasmotaSlaveModBus, regle ModbusReceivedUDP#
+                # DeviceAddress) qui apparient la reponse, la traitent PUIS l'acquittent. Les deux
+                # regles voyaient la meme trame : celle-ci, si elle passait la 1re, acquittait le
+                # message en vol, et le driver ne trouvait plus de requete a apparier -> valeurs
+                # de la reponse jetees.
+                modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_UDP: maitre : reponse laissee aux drivers des esclaves", LOG_LEVEL_DEBUG_PLUS)
 
             # Si esclave ModBus (id>0)
             elif (drivers["ModBus"]["id"] > 0)

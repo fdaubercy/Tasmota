@@ -92,6 +92,7 @@ var introspect = nil
 var tcpclientasync = nil
 var modbusFonctions = nil              # sera (re)affecte par le fichier charge
 var modBus_TasmotaSlaveModBus = nil    # idem
+var controleModbus = nil               # idem (section 31 : charge seulement la, sans init)
 var logFonctions = nil                 # idem : la VRAIE fonction de log commune (seuil par cible)
 
 # --- charge les vrais modules ---
@@ -241,7 +242,12 @@ end
 # Temoin : une vraie COMMANDE 0x02 du maitre se decode sans erreur.
 var cmd02 = modbusFonctions.prepareTrame({"DeviceAddress":2, "FunctionCode":2, "StartAddress":160,
                                           "type":"uint8", "Count":1, "Values":[]}, "Commande")
+# Decodee par l'ESCLAVE vise (id 2) : depuis le 2026-10-17, un maitre (id 0) lit une lecture 0x01-0x04
+# recue comme une REPONSE (adresse, code, nb d'octets, donnees) ; il ne recoit jamais de commande.
+var idAvant05 = drivers["ModBus"]["id"]
+drivers["ModBus"]["id"] = 2
 var d = decode(cmd02)
+drivers["ModBus"]["id"] = idAvant05
 verifie("temoin commande 0x02 : Erreur / StartAddress", "0/160", str(d["Erreur"]) + "/" + str(d["StartAddress"]))
 # Ancien defaut de FORMAT, resolu le 2026-09-29 par conception (options A + B) :
 # le push etait emis au format REPONSE 0x82/0x84, sans le registre, et rejete par
@@ -1575,6 +1581,252 @@ verifie("temoin maitre (id 0) : pas de forceEnvoiParams", false, tasmota.cmds.fi
 modbusFonctions.etat()["serialModBus"] = sauveSerie30
 gff30.fichiers = {}
 gff30.contenu = "{}"
+drivers = sauveDrivers
+serveur = sauveServeur
+
+print("")
+print("=== 31. Commandes sans fil E2/E3 cote maitre : voie et IP par esclave, file UDP, tid (2026-10-17) ===")
+# PROTOCOLE_MODBUS.md §9 « Commandes sans fil », M1 (voie par destinataire), M2 (file selon la voie,
+# UniCast), M3 (tid), E2 (IP apprise / fiche, log de route). Le P4 est simule (echeances en millis).
+sauveDrivers = drivers
+sauveServeur = serveur
+var sauveDiverses31 = diverses
+var sauveModules31 = modules
+diverses = {"typeESP": "ESP32P4"}
+import udpFonctions as udp31
+import gestionFileFolder as gff31
+drivers = {"ModBus": {"activation": "ON", "id": 0, "activationReponseCMD": "ON", "timeoutReponse": 5000, "timeoutReponseUDP": 2000,
+                      "typeComm": {"Serial": "ON", "UDP": "ON", "TCP": "OFF"},
+                      "environnement": {"Conn16channels": {"log": "detail", "Conn16channel1": {"activation": "ON", "id": 1}},
+                                        "TasmotaSlaveModBus": {"debug": "OFF",
+                                            "TasmotaSlaveModBus1": {"activation": "ON", "id": 2, "name": "cuve"},
+                                            "TasmotaSlaveModBus2": {"activation": "ON", "id": 3, "name": "rideau"}}}}}
+serveur = {"udp": {"activation": "ON", "id": 0}, "tcp": {"activation": "OFF"},
+           "mqtt": {"topic": "garage", "groupTopic1": "tasmotas/garage"}, "adresseMAC": "AA:AA:AA:AA:AA:00"}
+# Fiches : cuve (2) selon 'voieCuve', rideau (3) sans voieCommandes, et une fiche d'id 1 (= la carte 16
+# relais) qui pretend UDP : la carte relais doit rester en serie quoi qu'annonce une fiche.
+def disc31(voieCuve, ipCuve)
+  var cuve = {"ModBus": {"id": 2, "voieCommandes": voieCuve}, "groupTopic": "tasmotas/garage"}
+  if ipCuve != nil    cuve["IPAddress"] = ipCuve    end
+  gff31.fichiers = {"/json/discovery.json": json.dump({
+    "DCB4D91BCAF0": {"esclave2": cuve},
+    "DCB4D91B117C": {"esclave3": {"ModBus": {"id": 3}, "IPAddress": "192.168.4.3", "groupTopic": "tasmotas/garage"}},
+    "BBBBBBBBBB01": {"esclave1": {"ModBus": {"id": 1, "voieCommandes": "UDP"}, "IPAddress": "192.168.4.9", "groupTopic": "tasmotas/garage"}}})}
+end
+def raz31()
+  var e = modbusFonctions.etat()
+  e["routesFiches"] = {}    e["ipsApprises"] = {}    e["routesAnnoncees"] = {}    e["tid"] = 0
+  e["queue"] = []    e["enVol"] = nil    e["echeances"] = {}    e["muets"] = {}    e["abandonsSuite"] = {}    e["derniersSeq"] = {}
+  tasmota.ms = 0    tasmota.cmds = []    tasmota.retourCmd = {"ModbusSend": "Done"}
+  udp31.envois = []    udp31.refuse = false    journal.clear()
+end
+def avance31(jusqua)
+  modbusFonctions.verifieEcheances()
+  while tasmota.ms < jusqua    tasmota.ms += 100    modbusFonctions.verifieEcheances()    end
+end
+def modbusSend31()
+  var n = 0
+  for c: tasmota.cmds    if string.find(c, "ModBusSend") == 0    n += 1    end    end
+  return n
+end
+def compte31(motif)
+  var n = 0
+  for l: journal    if string.find(l, motif) >= 0    n += 1    end    end
+  return n
+end
+
+# --- T1 : voie de chaque destinataire ---
+disc31("UDP", "192.168.4.2")
+raz31()
+verifie("voieDe : la cuve annonce UDP dans sa fiche", "UDP", modbusFonctions.voieDe(2))
+verifie("temoin voieCommandes absente (rideau) -> Serial", "Serial", modbusFonctions.voieDe(3))
+verifie("carte 16 relais (id 1) : Serial, meme si une fiche annonce UDP", "Serial", modbusFonctions.voieDe(1))
+verifie("esclave sans fiche (id 4) -> Serial", "Serial", modbusFonctions.voieDe(4))
+verifie("temoin diffusion (0) et hors plage (255) -> Serial", "Serial/Serial", modbusFonctions.voieDe(0) + "/" + modbusFonctions.voieDe(255))
+disc31("Serial", "192.168.4.2")
+tasmota.ms = 59999
+verifie("voies en cache : fiche changee, pas relue avant 60 s", "UDP", modbusFonctions.voieDe(2))
+tasmota.ms = 60000
+verifie("... relue a 60 s", "Serial", modbusFonctions.voieDe(2))
+
+# --- T2 : IP de chaque esclave ---
+disc31("UDP", "192.168.4.2")
+raz31()
+verifie("ipDe : IP de la fiche sans IP apprise", "['192.168.4.2', 'fiche']", str(modbusFonctions.ipDe(2)))
+modbusFonctions.noteIP(2, "192.168.4.7")
+verifie("IP apprise (< 90 s) prioritaire sur la fiche", "['192.168.4.7', 'apprise']", str(modbusFonctions.ipDe(2)))
+tasmota.ms = 89999
+verifie("temoin 89,9 s : IP apprise encore valable", "['192.168.4.7', 'apprise']", str(modbusFonctions.ipDe(2)))
+tasmota.ms = 90000
+verifie("IP apprise perimee (90 s) -> fiche", "['192.168.4.2', 'fiche']", str(modbusFonctions.ipDe(2)))
+modbusFonctions.noteIP(2, "pas-une-ip")
+verifie("temoin IP invalide : rien n'est appris", "['192.168.4.2', 'fiche']", str(modbusFonctions.ipDe(2)))
+verifie("esclave sans IP connue (id 4) -> nil", nil, modbusFonctions.ipDe(4))
+# Apprentissage par la reception : trame valide oui ; CRC faux, push rejete par accepteSeq non
+raz31()
+var REP31 = trameAvecCrc("02010101")
+var PUSH31 = "0210056000050A00000000000A00000000CC6A"      # push reel de la cuve (logs du 2026-10-17)
+def recoit31(hex, ip, auto, seq)
+  modbusFonctions.lireMsgModbus("ModbusReceivedUDP", {"Trame": bytes(hex), "Info": {"remote_ip": ip, "voie": "UDP", "transaction": 5},
+                                                      "Automatique": auto, "Seq": seq})
+end
+recoit31(REP31[0 .. size(REP31) - 3] + (REP31[size(REP31) - 2 ..] == "00" ? "11" : "00"), "192.168.4.8", false, nil)
+verifie("temoin trame UDP en erreur (CRC) : IP non apprise", "['192.168.4.2', 'fiche']", str(modbusFonctions.ipDe(2)))
+modbusFonctions.etat()["derniersSeq"][2] = 5
+recoit31(PUSH31, "192.168.4.8", true, 5)
+verifie("temoin push rejete par accepteSeq (doublon) : IP non apprise", "['192.168.4.2', 'fiche']", str(modbusFonctions.ipDe(2)))
+recoit31(PUSH31, "192.168.4.8", true, 6)
+verifie("push accepte : IP source apprise", "['192.168.4.8', 'apprise']", str(modbusFonctions.ipDe(2)))
+recoit31(REP31, "192.168.4.7", false, nil)
+verifie("reponse UDP valide : IP source apprise", "['192.168.4.7', 'apprise']", str(modbusFonctions.ipDe(2)))
+
+# --- Decodage cote maitre des REPONSES venues par l'UDP (forme standard, trames reelles du bus) ---
+def decode31(hex)
+  var p = {"ModbusReceivedUDP": {"Trame": bytes(hex), "Info": {}, "DeviceAddress": 0, "FunctionCode": 0, "FunctionName": "", "StartAddress": 0,
+                                 "Length": 0, "Count": 0, "Values": [], "CRC": 0, "Erreur": 0}}
+  modbusFonctions.decrypteMSG(p, "ModbusReceivedUDP")
+  return p["ModbusReceivedUDP"]
+end
+var d31 = decode31("02030A00000000000000000000" + "2175")           # cuve, ruban 1376 x5 (sniffeur, 2026-10-17)
+verifie("reponse 0x03 de 5 registres : decodee (Erreur 0, 5 mots)", "0/[0, 0, 0, 0, 0]/5", str(d31["Erreur"]) + "/" + str(d31["Values"]) + "/" + str(d31["Count"]))
+d31 = decode31("0204047FFFFFFFE0D0")                                 # cuve, niveau 4704 : sentinelle uint32
+verifie("reponse 0x04 uint32 (sentinelle) : 2 mots bruts", "0/[32767, 65535]", str(d31["Erreur"]) + "/" + str(d31["Values"]))
+d31 = decode31("0201010190" + "0C")                                  # reponse E1 reelle (POWER1 ON)
+verifie("reponse 0x01 d'un relai : octet de bits", "0/[1]", str(d31["Erreur"]) + "/" + str(d31["Values"]))
+d31 = decode31(trameAvecCrc("021005600005"))
+verifie("reponse 0x10 (8 octets, sans donnees) : decodee", "0/5", str(d31["Erreur"]) + "/" + str(d31["Count"]))
+d31 = decode31(trameAvecCrc("02030A0000000000000000"))
+verifie("temoin reponse de lecture tronquee : Erreur 6", 6, d31["Erreur"])
+d31 = decode31(PUSH31)
+verifie("temoin push 0x10 (avec donnees) : lecture d'avant, inchangee", "0/5/[0, 0, 10, 0, 0]", str(d31["Erreur"]) + "/" + str(d31["Count"]) + "/" + str(d31["Values"]))
+# Conversion par type a l'appariement (reponse reseau = porte Info) : comme le pont serie
+raz31()
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 2, "FunctionCode": 4, "StartAddress": 4704, "Count": 1, "type": "uint32"}, "voie": "UDP", "tid": 3}
+var r31 = {"DeviceAddress": 2, "FunctionCode": 4, "Values": [32767, 65535], "Info": {"remote_ip": "192.168.4.2", "voie": "UDP", "transaction": 3}}
+modbusFonctions.apparieReponse(r31)
+verifie("appariement : 2 mots uint32 -> sentinelle 2147483647 (comme le pont serie)", "[2147483647]", str(r31["Values"]))
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 2, "FunctionCode": 4, "StartAddress": 1312, "Count": 1, "type": "float"}, "voie": "UDP", "tid": 3}
+r31 = {"DeviceAddress": 2, "FunctionCode": 4, "Values": [16812, 0], "Info": {"remote_ip": "192.168.4.2", "voie": "UDP", "transaction": 3}}
+modbusFonctions.apparieReponse(r31)
+verifie("appariement : 2 mots float -> 21.5", "[21.5]", str(r31["Values"]))
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 2, "FunctionCode": 4, "StartAddress": 4704, "Count": 1, "type": "uint32"}}
+r31 = {"DeviceAddress": 2, "FunctionCode": 4, "Values": [2147483647]}
+modbusFonctions.apparieReponse(r31)
+verifie("temoin reponse serie (pont Tasmota, deja convertie) : inchangee", "[2147483647]", str(r31["Values"]))
+modbusFonctions.etat()["enVol"] = nil
+
+# --- T3/T4/T5/T6 : file a deux voies, UniCast, tid, delai UDP ---
+disc31("UDP", "192.168.4.2")
+raz31()
+# Forme reelle du releve (modBus_TasmotaSlaveModBus.demandeLecture) : "Values": 0, un entier
+var LEC_CUVE31 = {"DeviceAddress": 2, "FunctionCode": 3, "StartAddress": 1376, "type": "uint16", "Count": 5, "Values": 0}
+var LEC_C16_31 = {"DeviceAddress": 1, "FunctionCode": 3, "StartAddress": 1, "type": "uint16", "Count": 16, "Values": 0}
+modbusFonctions.envoiMsgModbus(LEC_CUVE31, "Commande", 1376)
+avance31(0)
+verifie("message pour la cuve (UDP) : aucun ModBusSend", 0, modbusSend31())
+verifie("... UniCast a l'IP de la fiche, 'ModbusUDP <tid> <trame>' (trame reelle des logs)",
+        "[['UniCast', '192.168.4.2', 'ModbusUDP 1 0203056000058528']]", str(udp31.envois))
+verifie("... l'item en vol porte sa voie et son tid", "UDP/1", str(modbusFonctions.etat()["enVol"]["voie"]) + "/" + str(modbusFonctions.etat()["enVol"]["tid"]))
+verifie("... le paramMSG de l'item n'est pas modifie par prepareTrame", "nil/0", str(modbusFonctions.etat()["enVol"]["paramMSG"].find("FunctionName")) + "/" + str(modbusFonctions.etat()["enVol"]["paramMSG"]["Values"]))
+verifie("E2 : route de la cuve journalisee", 1, compte31("ROUTE_ESCLAVE: esclave d'ID=2 : voie UDP, IP 192.168.4.2 (fiche)"))
+modbusFonctions.envoiMsgModbus(LEC_C16_31, "Commande", 1)
+verifie("carte 16 relais dans la MEME file, voie Serial, attend la fin du message UDP", "Serial/0",
+        str(modbusFonctions.etat()["queue"][0]["voie"]) + "/" + str(modbusSend31()))
+verifie("temoin carte 16 relais : aucune route journalisee", 0, compte31("ROUTE_ESCLAVE: esclave d'ID=1"))
+# Delai UDP : 2000 ms (pas 5000 + 500 du pont serie), renvoi avec le MEME tid
+tasmota.ms = 1999
+modbusFonctions.verifieEcheances()
+verifie("temoin 1999 ms : pas encore de timeout", 1, size(udp31.envois))
+avance31(2200)
+verifie("timeout UDP a 2000 ms : renvoi UDP avec le meme tid", "2/ModbusUDP 1 0203056000058528",
+        str(size(udp31.envois)) + "/" + udp31.envois[size(udp31.envois) - 1][2])
+verifie("... la carte 16 relais attend toujours", 0, modbusSend31())
+# Appariement par tid
+var rep31 = def (tid) var r = {"DeviceAddress": 2, "FunctionCode": 3, "Values": [0, 0, 0, 0, 0]}
+                      if tid != nil    r["Info"] = {"remote_ip": "192.168.4.2", "voie": "UDP", "transaction": tid}    end
+                      return r end
+verifie("temoin reponse au tid d'un message precedent : rejetee", false, modbusFonctions.apparieReponse(rep31(0)))
+verifie("temoin reponse sans tid (venue par le serie) : rejetee", false, modbusFonctions.apparieReponse(rep31(nil)))
+var bonne31 = rep31(1)
+verifie("reponse au bon tid : appariee (registre complete)", "true/1376", str(modbusFonctions.apparieReponse(bonne31)) + "/" + str(bonne31.find("StartAddress")))
+modbusFonctions.termineEnVol(true)
+avance31(tasmota.ms)
+verifie("message suivant (carte 16 relais) part en serie par ModBusSend", 1, modbusSend31())
+verifie("temoin message serie en vol, reponse sans tid : appariee (regle serie inchangee)", true,
+        modbusFonctions.apparieReponse({"DeviceAddress": 1, "FunctionCode": 3, "Values": []}))
+verifie("message serie en vol : timer de 5500 ms (pont serie)", tasmota.ms + 5500, modbusFonctions.etat()["echeances"]["modbus_timeout"]["t"])
+# tid suivant : nouveau message UDP
+modbusFonctions.termineEnVol(true)
+udp31.envois = []
+modbusFonctions.envoiMsgModbus({"DeviceAddress": 2, "FunctionCode": 6, "StartAddress": 1376, "Count": 1, "type": "uint8", "Values": [1, 0]}, "Commande", 1376)
+avance31(tasmota.ms)
+verifie("nouveau message UDP : tid suivant (2)", "ModbusUDP 2 ", udp31.envois[0][2][0 .. 11])
+verifie("route inchangee : pas de 2e log de route", 1, compte31("ROUTE_ESCLAVE: esclave d'ID=2"))
+# Lecture SANS cle "Values" (autre forme de requete) : emise quand meme, sans exception
+modbusFonctions.termineEnVol(true)
+udp31.envois = []
+modbusFonctions.envoiMsgModbus({"DeviceAddress": 2, "FunctionCode": 3, "StartAddress": 1376, "type": "uint16", "Count": 5}, "Commande", 1376)
+verifie("lecture sans cle Values : trame emise sans exception", "ModbusUDP 3 0203056000058528",
+        essaie(def () avance31(tasmota.ms) return size(udp31.envois) > 0 ? udp31.envois[0][2] : "rien" end))
+
+# --- echecs d'envoi : IP absente, envoi refuse, voie coupee sur le maitre ---
+disc31("UDP", nil)
+raz31()
+modbusFonctions.envoiMsgModbus(LEC_CUVE31, "Commande", 1376)
+avance31(2000)
+verifie("IP introuvable : rien n'est emis, 3 tentatives puis abandon journalise", "0/1/1",
+        str(size(udp31.envois)) + "/" + str(compte31("abandon d'un message apres 3 tentatives d'envoi")) + "/" +
+        str(compte31("voie UDP, IP inconnue")))
+verifie("... canal libere apres l'abandon", nil, modbusFonctions.etat()["enVol"])
+disc31("UDP", "192.168.4.2")
+raz31()
+udp31.refuse = true
+modbusFonctions.envoiMsgModbus(LEC_CUVE31, "Commande", 1376)
+avance31(0)
+verifie("envoi UDP refuse : canal libere, message remis en file (1 tentative)", "nil/1",
+        str(modbusFonctions.etat()["enVol"]) + "/" + str(modbusFonctions.etat()["queue"][0]["tentatives"]))
+udp31.refuse = false
+avance31(300)
+verifie("... renvoye apres le backoff, avec un tid", "UDP/1", str(modbusFonctions.etat()["enVol"]["voie"]) + "/" + str(modbusFonctions.etat()["enVol"]["tid"]))
+raz31()
+drivers["ModBus"]["typeComm"]["UDP"] = "OFF"
+modbusFonctions.envoiMsgModbus(LEC_CUVE31, "Commande", 1376)
+verifie("voie UDP coupee sur le maitre : message rejete et journalise, rien en file", "1/0/0",
+        str(compte31("voie UDP coupee sur le maitre")) + "/" + str(size(modbusFonctions.etat()["queue"])) + "/" + str(modbusSend31()))
+drivers["ModBus"]["typeComm"]["UDP"] = "ON"
+drivers["ModBus"]["typeComm"]["Serial"] = "OFF"
+modbusFonctions.envoiMsgModbus(LEC_C16_31, "Commande", 1)
+verifie("temoin voie Serial coupee : la carte 16 relais n'est plus servie par l'UDP (plus de repli)", "1/0/[]",
+        str(compte31("voie Serial coupee sur le maitre")) + "/" + str(size(modbusFonctions.etat()["queue"])) + "/" + str(udp31.envois))
+drivers["ModBus"]["typeComm"]["Serial"] = "ON"
+
+# --- reception complete par le driver de l'esclave (regle ModbusReceivedUDP#DeviceAddress) ---
+disc31("UDP", "192.168.4.2")
+raz31()
+modules = appareils()
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 3, "FunctionCode": 2, "StartAddress": 160, "Count": 1, "type": "uint8"},
+                                   "voie": "UDP", "tid": 9, "tentatives": 0}
+recoit(3, "ModbusReceivedUDP", {"DeviceAddress": 3, "FunctionCode": 2, "Values": [1], "Info": {"remote_ip": "192.168.4.3", "voie": "UDP", "transaction": 8}})
+verifie("temoin reponse UDP d'un autre tid : ni traitee ni acquittee", "OFF/9", inter() + "/" + str(modbusFonctions.etat()["enVol"]["tid"]))
+recoit(3, "ModbusReceivedUDP", {"DeviceAddress": 3, "FunctionCode": 2, "Values": [1], "Info": {"remote_ip": "192.168.4.3", "voie": "UDP", "transaction": 9}})
+verifie("reponse UDP au bon tid : valeur appliquee PUIS message acquitte", "ON/nil", inter() + "/" + str(modbusFonctions.etat()["enVol"]))
+
+# --- T7 : controleModbus (regle ModbusReceivedUDP) n'acquitte plus cote maitre ---
+f = open(SOURCES + "/controleModbus.be", "r")
+src = f.read()
+f.close()
+compile(src)()
+class FauxControle31  var reponseModBus  var timeout_ReponseModBus_ms  end
+raz31()
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 2, "FunctionCode": 3, "StartAddress": 1376, "Count": 5}, "voie": "UDP", "tid": 4, "tentatives": 0}
+controleModbus.CONTROLE_MODBUS.recupereReponseModBusUDP(FauxControle31(), rep31(4), "ModbusReceivedUDP", {})
+verifie("controleModbus (maitre) : la reponse est laissee au driver, message toujours en vol", 4,
+        modbusFonctions.etat()["enVol"] != nil ? modbusFonctions.etat()["enVol"]["tid"] : nil)
+
+raz31()
+gff31.fichiers = {}
+modules = sauveModules31
+diverses = sauveDiverses31
 drivers = sauveDrivers
 serveur = sauveServeur
 

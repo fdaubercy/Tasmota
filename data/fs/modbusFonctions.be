@@ -54,7 +54,11 @@ def modbusFonctions_etat()
             "abandonsSuite": {},        # maitre : adresse -> messages abandonnes de suite, sans reponse
             "mesures": {},              # esclave : registre (type + id - 1) -> millis de la derniere mesure (noteMesure)
             "sansMesure": {},           # esclave : registre -> true tant que le capteur est signale sans mesure
-            "rubansPousses": {}         # esclave : registre du ruban WS2812 -> dernier [h, s, b, animation] pousse (surveilleRubans)
+            "rubansPousses": {},        # esclave : registre du ruban WS2812 -> dernier [h, s, b, animation] pousse (surveilleRubans)
+            "routesFiches": {},         # maitre : {"t": millis, "voies": {adr: "UDP"}, "ips": {adr: ip}} lus dans discovery.json (voieDe)
+            "ipsApprises": {},          # maitre : adresse -> {"ip", "ms"} source de la derniere trame UDP valide (noteIP)
+            "routesAnnoncees": {},      # maitre : adresse -> "voie|ip" deja journalise (annonceRoute)
+            "tid": 0                    # maitre : dernier numero de transaction UDP attribue (0..255)
         }
     end
     return global._etatModbusFonctions
@@ -79,6 +83,12 @@ modbusFonctions.SEUIL_MUET = 2        # messages abandonnes de suite avant de de
 # ModBusSend suivant arrivait pont occupe, etait mis de cote sans reponse ("Command Error",
 # lu comme "invalide, jetee") puis le suivant echouait ("Failed") -> file desynchronisee.
 modbusFonctions.MARGE_TIMEOUT_MS = 500
+# Commandes sans fil (2026-10-17, PROTOCOLE_MODBUS.md §9, E2/E3) : les voies annoncees par les
+# fiches sont relues au plus toutes les 60 s ; une IP apprise vaut 90 s (3 releves, comme le
+# chien de garde) ; delai de reponse UDP par defaut (drivers.ModBus.timeoutReponseUDP).
+modbusFonctions.CACHE_ROUTES_MS = 60000
+modbusFonctions.VALIDITE_IP_MS = 90000
+modbusFonctions.TIMEOUT_UDP_DEFAUT = 2000
 
 # # *************************************************
 # # * ModBus Commandes
@@ -688,8 +698,10 @@ modbusFonctions.memeLecture = modbusFonctions_memeLecture
 #   - une LECTURE identique a une lecture deja en file (ou en vol) n'est pas re-enfilee ;
 #   - file pleine (MAX_FILE) : une lecture est ecartee ; une ECRITURE (commande de relai...)
 #     passe toujours, en evincant la plus ancienne lecture en attente.
-def modbusFonctions_enfileMsg(paramMSG, typeMsg)
+def modbusFonctions_enfileMsg(paramMSG, typeMsg, voie)
     import string
+
+    if (voie == nil)    voie = "Serial"    end
 
     var file = modbusFonctions.etat()["queue"]
     var lecture = modbusFonctions.estLecture(paramMSG)
@@ -723,7 +735,7 @@ def modbusFonctions_enfileMsg(paramMSG, typeMsg)
         end
     end
 
-    modbusFonctions.placeEnFile({"paramMSG": paramMSG, "typeMsg": typeMsg, "tentatives": 0}, false)
+    modbusFonctions.placeEnFile({"paramMSG": paramMSG, "typeMsg": typeMsg, "tentatives": 0, "voie": voie}, false)
     modbusFonctions.pompeQueue()
     return true
 end
@@ -776,20 +788,18 @@ def modbusFonctions_envoieTete()
     modbusFonctions.etat()["queue"].remove(0)
     modbusFonctions.etat()["enVol"] = item
 
+    # Voie UDP (2026-10-17, M2) : UniCast a l'IP de l'esclave, numero de transaction (tid, M3)
+    if (item.find("voie", "Serial") == "UDP")
+        modbusFonctions.envoieTeteUDP(item)
+        return
+    end
+
     var reponse = tasmota.cmd("ModBusSend " + json.dump(item["paramMSG"]), boolMute)
 
     # Echec d'envoi : on relache, on remet en tete (retry borne) avec un petit backoff.
     if (reponse.find("ModbusSend", "") == "Failed")
         modbusFonctions.log("POMPE_QUEUE: ModBusSend=Echec -> renvoi programme", LOG_LEVEL_DEBUG_PLUS)
-        modbusFonctions.etat()["enVol"] = nil
-        item["tentatives"] += 1
-        if (item["tentatives"] < modbusFonctions.MAX_TENTATIVES)
-            modbusFonctions.placeEnFile(item, true)
-            modbusFonctions.armeTimer(200, / -> modbusFonctions.pompeQueue(), "modbus_repompe")
-        else
-            modbusFonctions.log("POMPE_QUEUE: abandon d'un message apres " + str(modbusFonctions.MAX_TENTATIVES) + " tentatives d'envoi", LOG_LEVEL_ERREUR)
-            modbusFonctions.pompeQueue()
-        end
+        modbusFonctions.echecEnvoi(item)
         return
     # Commande malformee : inutile de reessayer, on la jette et on avance.
     # NB : le pont repond AUSSI "Command Error" quand il est encore occupe (commande mise de
@@ -807,6 +817,59 @@ def modbusFonctions_envoieTete()
     modbusFonctions.armeTimer(int(drivers["ModBus"].find("timeoutReponse", 1000)) + modbusFonctions.MARGE_TIMEOUT_MS, / -> modbusFonctions.surTimeout(), "modbus_timeout")
 end
 modbusFonctions.envoieTete = modbusFonctions_envoieTete
+
+# Echec d'ENVOI du message en vol (pont serie qui refuse, aucune IP pour l'UDP...) : on relache le
+# canal, puis renvoi borne avec un petit backoff, ou abandon journalise.
+def modbusFonctions_echecEnvoi(item)
+    modbusFonctions.etat()["enVol"] = nil
+    item["tentatives"] += 1
+    if (item["tentatives"] < modbusFonctions.MAX_TENTATIVES)
+        modbusFonctions.placeEnFile(item, true)
+        modbusFonctions.armeTimer(200, / -> modbusFonctions.pompeQueue(), "modbus_repompe")
+    else
+        modbusFonctions.log("POMPE_QUEUE: abandon d'un message apres " + str(modbusFonctions.MAX_TENTATIVES) + " tentatives d'envoi", LOG_LEVEL_ERREUR)
+        modbusFonctions.pompeQueue()
+    end
+end
+modbusFonctions.echecEnvoi = modbusFonctions_echecEnvoi
+
+# Emission UDP de la tete de file (2026-10-17, PROTOCOLE_MODBUS.md §9, M2 + M3) : "ModbusUDP <tid> <hexa>"
+# en UniCast a l'IP de l'esclave (ipDe). Le tid est attribue au PREMIER envoi et garde pour les renvois :
+# une reponse tardive au 1er essai acquitte le meme item, celle d'un item precedent est rejetee
+# (apparieReponse). Delai : timeoutReponseUDP (la cuve repond en 0,3 s), sans la marge du pont serie.
+def modbusFonctions_envoieTeteUDP(item)
+    import udpFonctions
+    import json
+    import string
+
+    var adresse = item["paramMSG"].find("DeviceAddress")
+    var ip = modbusFonctions.ipDe(adresse)
+    if (ip == nil)
+        modbusFonctions.log(string.format("POMPE_QUEUE: aucune IP connue pour l'esclave d'ID=%s (voie UDP) : message non envoye", str(adresse)), LOG_LEVEL_ERREUR)
+        modbusFonctions.echecEnvoi(item)
+        return
+    end
+    if (item.find("tid") == nil)
+        modbusFonctions.etat()["tid"] = (modbusFonctions.etat()["tid"] + 1) % 256
+        item["tid"] = modbusFonctions.etat()["tid"]
+    end
+    # prepareTrame complete la map qu'il recoit (FunctionName, Automatique...) : une COPIE, pour que
+    # l'item garde son paramMSG d'origine (renvois, et ModBusSend s'il repassait en serie).
+    # Une requete de LECTURE n'a pas de valeurs : le releve la construit avec "Values": 0 (un entier,
+    # forme acceptee par ModBusSend), d'autres sans "Values" ; prepareTrame attend une liste.
+    var p = json.load(json.dump(item["paramMSG"]))
+    if (!isinstance(p.find("Values"), list))    p["Values"] = []    end
+    var trame = modbusFonctions.prepareTrame(p, "Commande")
+    var message = string.format("ModbusUDP %i %s", item["tid"], trame.tohex())
+    modbusFonctions.log(string.format("POMPE_QUEUE: envoi UDP a l'esclave d'ID=%s (%s, IP %s) : %s", str(adresse), ip[1], ip[0], message), LOG_LEVEL_DEBUG_PLUS)
+    if (!udpFonctions.envoiUDP("UniCast", ip[0], message))
+        modbusFonctions.log(string.format("POMPE_QUEUE: envoi UDP refuse vers %s -> renvoi programme", ip[0]), LOG_LEVEL_DEBUG)
+        modbusFonctions.echecEnvoi(item)
+        return
+    end
+    modbusFonctions.armeTimer(int(drivers["ModBus"].find("timeoutReponseUDP", modbusFonctions.TIMEOUT_UDP_DEFAUT)), / -> modbusFonctions.surTimeout(), "modbus_timeout")
+end
+modbusFonctions.envoieTeteUDP = modbusFonctions_envoieTeteUDP
 
 # Acquitte le message en vol. Appele par les handlers recupereReponse* (ok=true) ou
 # par surTimeout (ok=false). Retire/renvoie le message puis pompe le suivant.
@@ -1342,11 +1405,32 @@ def modbusFonctions_apparieReponse(reponse)
         return false
     end
 
+    # Message UDP en vol (2026-10-17, M3) : la reponse doit porter SON numero de transaction. Une reponse
+    # en retard a un message precedent du meme esclave (meme adresse, meme code) ne l'acquitte plus ; une
+    # reponse venue par le serie (sans tid) non plus. Messages serie : regle inchangee.
+    var tidAttendu = modbusFonctions.etat()["enVol"].find("tid")
+    if (tidAttendu != nil)
+        var info = reponse.find("Info")
+        var tidRecu = isinstance(info, map) ? info.find("transaction") : nil
+        if (tidRecu == nil || int(tidRecu) != int(tidAttendu))
+            modbusFonctions.log(string.format("APPARIE_REPONSE: reponse UDP de tid %s rejetee (attendu %i, esclave %s)",
+                                              str(tidRecu), tidAttendu, str(req.find("DeviceAddress", -1))), LOG_LEVEL_DEBUG)
+            return false
+        end
+    end
+
     # Correspondance etablie : la trame RTU ne porte ni StartAddress ni Count, on les
     # complete depuis la requete pour que le maitre sache a quel registre elle repond.
     reponse["StartAddress"] = req.find("StartAddress", reponse.find("StartAddress", 0))
     reponse["Count"]        = req.find("Count", reponse.find("Count", 0))
     if (req.find("type") != nil)   reponse["type"] = req["type"]   end
+    # Reponse de lecture 0x03/0x04 venue par le RESEAU (porte 'Info' : UDP ou TCP, 2026-10-17) : registres
+    # bruts de 16 bits (decrypteMSG) -> valeurs selon le type de la requete, comme le pont serie les publie
+    # (2 registres par float / uint32 / int32). Une reponse serie (pont Tasmota) arrive deja convertie.
+    var fcReponse = int(reponse.find("FunctionCode", 0))
+    if ((fcReponse == 0x03 || fcReponse == 0x04) && isinstance(reponse.find("Info"), map) && isinstance(reponse.find("Values"), list))
+        reponse["Values"] = modbusFonctions.motsVersValeurs(reponse["Values"], str(req.find("type", "")))
+    end
     return true
 end
 modbusFonctions.apparieReponse = modbusFonctions_apparieReponse
@@ -1382,6 +1466,25 @@ def modbusFonctions_envoiMsgModbus(paramMSG, typeMsg, id)
             if (drivers["ModBus"].find("activationReponseCMD", "ON") == "ON")    modbusFonctions.repondUDP(paramMSG, info)    end
             return
         end
+    end
+
+    # MAITRE : une voie par destinataire (2026-10-17, PROTOCOLE_MODBUS.md §9 « Commandes sans fil », M1).
+    # TOUT message (serie comme UDP) passe par la file, qui l'emet selon sa voie (envoieTete). Avant,
+    # l'aiguillage etait global : Serial ON -> tout en serie, et l'UDP (multicast, hors file : ni
+    # timeout ni renvoi) ne servait que si le serie etait coupe. Voie coupee sur le maitre (typeComm) :
+    # message rejete et journalise - plus de repli silencieux sur l'autre voie.
+    if (drivers["ModBus"].find("id", 99) == 0 && typeMsg != "Reponse")
+        if (drivers["ModBus"].find("activationReponseCMD", "ON") != "ON")    return    end
+        var adresse = paramMSG.find("DeviceAddress")
+        var voie = modbusFonctions.voieDe(adresse)
+        modbusFonctions.annonceRoute(adresse, voie)
+        if (drivers["ModBus"]["typeComm"].find(voie, "OFF") != "ON")
+            modbusFonctions.log(string.format("ENVOI_MSG_MODBUS: voie %s coupee sur le maitre (typeComm), message pour l'esclave d'ID=%s rejete",
+                                              voie, str(adresse)), LOG_LEVEL_ERREUR)
+            return
+        end
+        modbusFonctions.enfileMsg(paramMSG, typeMsg, voie)
+        return
     end
 
     # Envoi la trame par port série
@@ -1490,6 +1593,88 @@ def modbusFonctions_fichesModbus()
     return fiches
 end
 modbusFonctions.fichesModbus = modbusFonctions_fichesModbus
+
+#- COMMANDES SANS FIL, cote maitre (2026-10-17, PROTOCOLE_MODBUS.md §9 « Commandes sans fil », E2/E3)
+    Voie de chaque destinataire : "UDP" si la fiche discovery de l'esclave annonce voieCommandes "UDP"
+    (c'est l'esclave qui decide, M0), sinon "Serial" - fiche absente comprise : le cable etant conserve,
+    le serie est le repli sur. La carte 16 relais (Conn16channels) n'a pas d'IP : toujours "Serial".
+    IP d'un esclave, la plus fraiche d'abord : IP apprise (source de sa derniere trame UDP valide, moins
+    de VALIDITE_IP_MS), sinon IPAddress de sa fiche, sinon aucune (echec d'envoi).
+    fichesModbus() relit discovery.json a chaque appel : voies et IP des fiches sont gardees en cache
+    (routesFiches), relues au plus toutes les CACHE_ROUTES_MS.
+-#
+def modbusFonctions_estConn16(adresse)
+    var cartes = drivers["ModBus"].find("environnement", {}).find("Conn16channels", {})
+    if (!isinstance(cartes, map))    return false    end
+    for cle: cartes.keys()
+        if (isinstance(cartes[cle], map) && cartes[cle].find("id") != nil && int(cartes[cle]["id"]) == int(adresse))    return true    end
+    end
+    return false
+end
+modbusFonctions.estConn16 = modbusFonctions_estConn16
+
+def modbusFonctions_routesFiches()
+    import udpFonctions
+    var etat = modbusFonctions.etat()
+    var r = etat["routesFiches"]
+    if (r.find("t") != nil && !tasmota.time_reached(r["t"] + modbusFonctions.CACHE_ROUTES_MS))    return r    end
+
+    var voies = {}
+    var ips = {}
+    for fiche: modbusFonctions.fichesModbus()
+        var adresse = int(fiche["ModBus"].find("id", -1))
+        if (adresse <= 0)    continue    end
+        if (str(fiche["ModBus"].find("voieCommandes", "Serial")) == "UDP")    voies[adresse] = "UDP"    end
+        var ip = str(fiche.find("IPAddress", ""))
+        if (udpFonctions.estIPv4(ip))    ips[adresse] = ip    end
+    end
+    r = {"t": tasmota.millis(), "voies": voies, "ips": ips}
+    etat["routesFiches"] = r
+    return r
+end
+modbusFonctions.routesFiches = modbusFonctions_routesFiches
+
+# Voie d'un destinataire : "Serial" ou "UDP". Diffusion (0) et adresses hors plage : "Serial".
+def modbusFonctions_voieDe(adresse)
+    if (adresse == nil || int(adresse) <= 0 || int(adresse) > 247)    return "Serial"    end
+    if (modbusFonctions.estConn16(adresse))    return "Serial"    end
+    return modbusFonctions.routesFiches()["voies"].find(int(adresse), "Serial")
+end
+modbusFonctions.voieDe = modbusFonctions_voieDe
+
+# IP d'un esclave : [ip, "apprise" | "fiche"], ou nil si aucune n'est connue.
+def modbusFonctions_ipDe(adresse)
+    var apprise = modbusFonctions.etat()["ipsApprises"].find(int(adresse))
+    if (apprise != nil && !tasmota.time_reached(apprise["ms"] + modbusFonctions.VALIDITE_IP_MS))    return [apprise["ip"], "apprise"]    end
+    var ip = modbusFonctions.routesFiches()["ips"].find(int(adresse))
+    if (ip != nil)    return [ip, "fiche"]    end
+    return nil
+end
+modbusFonctions.ipDe = modbusFonctions_ipDe
+
+# Maitre : retient l'IP source d'une trame UDP VALIDE de l'esclave 'adresse' (appele par
+# lireMsgModbus apres decodage sans erreur, et pour un push seulement s'il est accepte par accepteSeq).
+def modbusFonctions_noteIP(adresse, ip)
+    import udpFonctions
+    if (adresse == nil || !udpFonctions.estIPv4(ip))    return    end
+    modbusFonctions.etat()["ipsApprises"][int(adresse)] = {"ip": str(ip), "ms": tasmota.millis()}
+end
+modbusFonctions.noteIP = modbusFonctions_noteIP
+
+# Journalise (info) la voie et l'IP retenues pour un esclave, une fois par changement de l'une ou de
+# l'autre : c'est ce que l'etape E2 fait observer. La carte 16 relais (toujours en serie) n'y figure pas.
+def modbusFonctions_annonceRoute(adresse, voie)
+    import string
+    if (adresse == nil || int(adresse) <= 0 || int(adresse) > 247 || modbusFonctions.estConn16(adresse))    return    end
+    var ip = modbusFonctions.ipDe(adresse)
+    var cle = voie + "|" + (ip == nil ? "" : ip[0])
+    var annoncees = modbusFonctions.etat()["routesAnnoncees"]
+    if (annoncees.find(int(adresse)) == cle)    return    end
+    annoncees[int(adresse)] = cle
+    modbusFonctions.log(string.format("ROUTE_ESCLAVE: esclave d'ID=%i : voie %s, IP %s", int(adresse), voie,
+                                      ip == nil ? "inconnue" : ip[0] + " (" + ip[1] + ")"), LOG_LEVEL_INFO)
+end
+modbusFonctions.annonceRoute = modbusFonctions_annonceRoute
 
 #- Fonction d'envoi de la commande ModBus et des réponse ModBus
     par communication UDP si le paramétre est "True" dans _persist.json
@@ -1707,6 +1892,10 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
         # Numero d'ordre du push (2026-09-29) : un push en double ou en retard sur un plus recent
         # du meme esclave est ecarte ici, avant publication, pour ne pas ecraser un etat plus neuf.
         if (msg.find("Automatique", false) && !modbusFonctions.accepteSeq(paramMSG[typeTitre]["DeviceAddress"], msg.find("Seq")))    return    end
+        # Maitre : trame UDP valide (decodee sans erreur, push accepte) -> IP de l'esclave apprise (E2)
+        if (typeTitre == "ModbusReceivedUDP" && drivers["ModBus"].find("id", 99) == 0 && isinstance(msg.find("Info"), map))
+            modbusFonctions.noteIP(paramMSG[typeTitre]["DeviceAddress"], msg["Info"].find("remote_ip"))
+        end
 
         tasmota.yield()
 
@@ -2220,6 +2409,43 @@ def modbusFonctions_decrypteMSG(paramMSG, typeTitre)
 
     modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: FunctionCode = 0x%02X ('%s')", paramMSG[typeTitre]["FunctionCode"], paramMSG[typeTitre]["FunctionName"]), LOG_LEVEL_DEBUG_PLUS)
     modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: StartAddress = 0x%04X", paramMSG[typeTitre]["StartAddress"]), LOG_LEVEL_DEBUG_PLUS)
+
+    # MAITRE : REPONSE d'un esclave venue par le reseau (2026-10-17, commandes sans fil E3 ; en serie,
+    # c'est le pont Tasmota qui decode). La forme standard d'une reponse differe de celle d'une requete :
+    #   lecture 0x01 a 0x04 : adresse, code, NOMBRE D'OCTETS, donnees, CRC (5 + n octets) ;
+    #   ecriture 0x10       : adresse, code, registre, quantite, CRC (8 octets, sans donnees).
+    # Seules les formes de requete etaient lues : toute reponse de lecture sortait en Erreur 6, et la
+    # reponse 0x10 aussi. Lecture 0x03/0x04 : 'Values' = registres BRUTS de 16 bits, convertis selon le
+    # type de la requete par apparieReponse (la trame ne dit ni le registre, ni le type). 0x05/0x06 : la
+    # reponse est l'echo de la requete, lue plus bas comme avant. Les push (0x10 avec donnees) et les
+    # telemetries (bit 0x80) gardent la lecture d'avant.
+    if (drivers["ModBus"].find("id", 99) == 0 && !paramMSG[typeTitre]["Automatique"])
+        var fc = paramMSG[typeTitre]["FunctionCode"]
+        var trame = paramMSG[typeTitre]["Trame"]                # CRC deja retire (resize ci-dessus)
+        var longueur = paramMSG[typeTitre]["Length"]
+        if (fc >= 0x01 && fc <= 0x04)
+            var nbOctets = trame.get(2, 1)
+            if (longueur != 5 + nbOctets)
+                paramMSG[typeTitre]["Erreur"] = 6
+                modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: reponse de lecture incomplete : %i octets recus, %i attendus", longueur, 5 + nbOctets), LOG_LEVEL_DEBUG_PLUS)
+                return
+            end
+            paramMSG[typeTitre]["StartAddress"] = 0             # complete par apparieReponse, depuis la requete
+            if (fc <= 0x02)
+                for i: 0 .. nbOctets - 1    paramMSG[typeTitre]["Values"].push(trame.get(3 + i, 1))    end
+                paramMSG[typeTitre]["Count"] = nbOctets
+            else
+                for i: 0 .. (nbOctets / 2) - 1    paramMSG[typeTitre]["Values"].push(trame.get(3 + (i * 2), -2))    end
+                paramMSG[typeTitre]["Count"] = nbOctets / 2
+            end
+            modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: reponse de lecture, Values = %s", str(paramMSG[typeTitre]["Values"])), LOG_LEVEL_DEBUG_PLUS)
+            return
+        elif (fc == 0x10 && longueur == 8)
+            paramMSG[typeTitre]["Count"] = trame.get(4, -2)
+            modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: reponse d'ecriture 0x10, %i registre(s)", paramMSG[typeTitre]["Count"]), LOG_LEVEL_DEBUG_PLUS)
+            return
+        end
+    end
 
     # Récupère les valeurs reçues en fonction de la fonction
     # FunctionCode = 0x02 (Lecture de l'état d'interrupteurs/capteurs)| 0x03 | 0x04 (Lecture T°/Hum./Compteurs/Entrées analogiques)
