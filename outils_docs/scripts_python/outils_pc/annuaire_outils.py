@@ -26,6 +26,7 @@ from urllib.parse import parse_qs, urlsplit
 import acces_web
 import annuaire_presence as pre
 import annuaire_registre as reg
+from annuaire_page import PAGE
 from annuaire_lanceur import Lanceur, rattache_au_job
 
 PORT_DEFAUT = 7600
@@ -46,13 +47,6 @@ class Serveur(ThreadingHTTPServer):
         if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
         super().server_bind()
-
-
-def page_html():
-    """La page servie sur GET / (Task 6 : annuaire_page.PAGE)."""
-    return ("<!doctype html><html lang=fr><meta charset=utf-8><title>Annuaire des outils</title>"
-            "<body style='font-family:sans-serif;margin:2em'><h1>Annuaire des outils</h1>"
-            "<p>Page en preparation.</p>")
 
 
 def liste_ports():
@@ -117,7 +111,7 @@ def fabrique_gestionnaire(lanceur, acces):
                 return
             url = urlsplit(self.path)
             if url.path == "/":
-                self._envoie(200, page_html().encode("utf-8"), "text/html")
+                self._envoie(200, PAGE.encode("utf-8"), "text/html")
             elif url.path == "/registre":
                 self._json(reg.en_json())
             elif url.path == "/etat":
