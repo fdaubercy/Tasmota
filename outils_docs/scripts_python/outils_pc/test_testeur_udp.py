@@ -14,7 +14,8 @@ CE QU'IL COUVRE
                          ReglageUDP, ReglageModbus...) reliees par un faux reseau : initialisation,
                          logs poses puis restaures (jamais mqtt / web / syslog), essais de bout en bout,
                          bascule de mode, mot de passe absent de la page et du journal ;
-    testeur_udp_http     routes GET / POST sur un vrai serveur HTTP local (port aleatoire).
+    testeur_udp_http     routes GET / POST sur un vrai serveur HTTP local (port aleatoire) ;
+    acces reseau         jeton exige d'un autre appareil, ce PC inchange (test_testeur_udp_acces.py).
 Chaque groupe a ses TEMOINS, des cas qui doivent echouer (tasks/lessons.md, regle 7).
 
 CE QU'IL NE TESTE PAS
@@ -42,6 +43,8 @@ import testeur_udp_carte as tc              # noqa: E402
 import testeur_udp_essais as te             # noqa: E402
 import testeur_udp_http                     # noqa: E402
 import test_testeur_udp_pont  # noqa: E402  (groupe « pont » : liaison par le vrai pont_serie.py)
+import test_testeur_udp_acces  # noqa: E402  (groupe « acces » : jeton depuis un autre appareil, acces_web.py)
+import acces_web                            # noqa: E402
 from testeur_udp_sim import FauxSerie, Reseau, Sim   # noqa: E402,F401
 
 RESULTATS = {"ok": 0, "ko": []}
@@ -417,9 +420,10 @@ def groupe_firmware_ancien():
 # ====================================================================== HTTP
 def groupe_http():
     t, sims, reseau, args = monte_testeur()
-    serveur = ThreadingHTTPServer(("127.0.0.1", 0), testeur_udp_http.fabrique_gestionnaire(t))
+    acces = acces_web.Acces(0, True, "Testeur UDP")
+    serveur = ThreadingHTTPServer(("127.0.0.1", 0), testeur_udp_http.fabrique_gestionnaire(t, acces))
     serveur.daemon_threads = True
-    args.http = serveur.server_address[1]
+    args.http = acces.port = serveur.server_address[1]
     threading.Thread(target=serveur.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{args.http}"
 
@@ -469,7 +473,8 @@ def groupe_http():
 
 def main():
     for nom, groupe in (("essais", groupe_essais), ("carte", groupe_carte), ("testeur", groupe_testeur),
-                        ("ancien", groupe_firmware_ancien), ("pont", lambda: test_testeur_udp_pont.groupe_pont(verifie, attend)), ("http", groupe_http)):
+                        ("ancien", groupe_firmware_ancien), ("pont", lambda: test_testeur_udp_pont.groupe_pont(verifie, attend)), ("http", groupe_http),
+                        ("acces", lambda: test_testeur_udp_acces.groupe_acces(verifie, monte_testeur))):
         debut = time.time()
         try:
             groupe()

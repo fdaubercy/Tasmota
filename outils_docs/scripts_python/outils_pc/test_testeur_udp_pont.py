@@ -34,7 +34,9 @@ def groupe_pont(verifie, attend):
 
     tcp = port_libre()
     script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pont_serie.py")
-    pont = subprocess.Popen([sys.executable, script, "--port", "aucun", "--tcp", str(tcp), "--sans-couleurs"],
+    # --local --sans-navigateur (acces_web) : pas d'onglet ouvert a chaque banc, pont jamais expose au reseau
+    pont = subprocess.Popen([sys.executable, script, "--port", "aucun", "--tcp", str(tcp), "--sans-couleurs",
+                             "--local", "--sans-navigateur"],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         def pret():

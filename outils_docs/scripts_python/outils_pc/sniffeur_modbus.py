@@ -38,7 +38,9 @@ Usage (Python de PlatformIO, qui fournit pyserial) :
               --echo auto|oui|non  --journal fichier.log  --historique 5000  --persist <persist du maitre>
               --udp oui|non  --udp-groupe 224.3.0.1  --udp-port 4000  --udp-interface <ip locale>
               --mqtt oui|non  --mqtt-hote <broker>  --mqtt-port 1883  --mqtt-utilisateur  --mqtt-mdp
+              --local (127.0.0.1 seulement)  --sans-navigateur
     --port auto (defaut) : le SEUL port CH343 present ; sinon demarre port ferme, a choisir sur la page.
+Page : ce PC sans jeton ; autre appareil du reseau par le lien avec jeton affiche (acces_web.py).
 Depuis VS Code : pioarduino > Project Tasks > <env> > Custom > « Sniffeur ModBus (HTTP 127.0.0.1) »
 (cible_sniffeur_modbus.py). Arret : Ctrl+C dans le terminal de la tache (ou la corbeille).
 """
@@ -57,6 +59,7 @@ import serial
 from serial.tools import list_ports
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import acces_web                                            # noqa: E402
 import debit_modbus                                         # noqa: E402
 import decodeur_modbus as dm                                # noqa: E402
 import ecoute_udp                                           # noqa: E402
@@ -433,7 +436,7 @@ def main():
     options = argparse.ArgumentParser(description="Sniffeur ModBus RTU (RS485) avec page web locale.")
     options.add_argument("--port", default="auto", help="auto | COM12 | loop:// | aucun (choisi sur la page)")
     options.add_argument("--debit", type=int, default=19200, help="debit du bus (defaut 19200)")
-    options.add_argument("--http", type=int, default=7300, help="port de la page http://127.0.0.1:<http>")
+    options.add_argument("--http", type=int, default=7300, help="port HTTP de la page (defaut 7300)")
     options.add_argument("--silence", type=float, default=0.02, help="silence (s) qui clot une trame")
     options.add_argument("--delai", type=float, default=1.0, help="au-dela (s), une requete est sans reponse")
     options.add_argument("--echo", choices=("auto", "oui", "non"), default="auto",
@@ -448,17 +451,19 @@ def main():
     ecoute_udp.options_relais(options)
     options.add_argument("--persist", default=dm.PERSIST_MAITRE,
                          help="_persist.json du maitre : adresses des esclaves et appareils (decodage metier)")
+    acces_web.ajoute_options(options)
     args = options.parse_args()
     if not 0 < args.http < 65536 or args.historique < 0 or args.silence <= 0 or args.delai <= 0:
         sys.exit("parametre hors bornes")
 
     sniffeur = Sniffeur(args)
+    acces = acces_web.Acces(args.http, args.local, "sniffeur ModBus")
     try:
-        http = ThreadingHTTPServer(("127.0.0.1", args.http), fabrique_gestionnaire(sniffeur))
+        http = ThreadingHTTPServer((acces.hote, args.http), fabrique_gestionnaire(sniffeur, acces))
     except OSError as erreur:
         sys.exit(f"port HTTP {args.http} indisponible ({erreur}) : un sniffeur tourne-t-il deja ? (--http <autre>)")
     http.daemon_threads = True
-    print(f"sniffeur ModBus -> http://127.0.0.1:{args.http}/")
+    acces.annonce(not args.sans_navigateur)
 
     nom = port_auto() if args.port == "auto" else (None if args.port == "aucun" else args.port)
     if nom:

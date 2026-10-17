@@ -1,4 +1,4 @@
-"""Couche HTTP du sniffeur ModBus (sniffeur_modbus.py) : routes de la page http://127.0.0.1:7300.
+"""Couche HTTP du sniffeur ModBus (sniffeur_modbus.py) : routes de la page (port 7300 par defaut).
 
     GET  /  /flux (Server-Sent Events)  /ports  /carte
     POST /port      {action: ouvrir|fermer, port, debit}
@@ -6,8 +6,10 @@
     POST /emulation {id, actif}  ou  {id, registre, champ, valeur}   (valeurs editables)
     POST /debit     {action: chercher|corriger}                      (carte 16 relais)
     POST /raz       POST /decode {hex, requete, crc}
-Les POST exigent l'en-tete X-Sniffeur: 1 et la meme origine : une page tierce visant 127.0.0.1 ne
-doit pas pouvoir commander des relais (l'en-tete impose un pre-vol CORS auquel ce serveur ne repond pas).
+Acces (acces_web.py) : depuis ce PC sans jeton ; depuis un autre appareil du reseau, jeton obligatoire
+(acces.controle en tete de do_GET, /flux compris, et de do_POST). Les POST exigent en plus l'en-tete
+X-Sniffeur: 1 et la meme origine (acces.origine_autorisee) : une page tierce ne doit pas pouvoir
+commander des relais (l'en-tete impose un pre-vol CORS auquel ce serveur ne repond pas).
 """
 
 import json
@@ -19,6 +21,7 @@ from urllib.parse import urlsplit
 import serial
 from serial.tools import list_ports
 
+import acces_web
 import decodeur_modbus as dm
 import sniffeur_modbus_web
 import test_rs485_pc as rs
@@ -73,7 +76,10 @@ def lit_demande(demande, sniffeur, chemin):
     return None
 
 
-def fabrique_gestionnaire(sniffeur):
+def fabrique_gestionnaire(sniffeur, acces=None):
+    """acces : acces_web.Acces du serveur ; absent, ce PC seulement (tout autre client refuse sans jeton)."""
+    acces = acces or acces_web.Acces(sniffeur.args.http, local=True, nom="sniffeur ModBus")
+
     class Gestionnaire(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
 
@@ -92,6 +98,8 @@ def fabrique_gestionnaire(sniffeur):
             self._envoie(200, json.dumps(donnees).encode("utf-8"), "application/json")
 
         def do_GET(self):
+            if not acces.controle(self):
+                return
             chemin = urlsplit(self.path).path
             if chemin == "/":
                 self._envoie(200, sniffeur_modbus_web.PAGE.encode("utf-8"), "text/html; charset=utf-8")
@@ -119,14 +127,17 @@ def fabrique_gestionnaire(sniffeur):
                 except OSError:
                     pass
                 finally:
+                    self.close_connection = True    # onglet ferme : ne pas relire une socket morte (trace)
                     sniffeur.desinscrit_web(file)
             else:
                 self._envoie(404, b"introuvable")
 
         def do_POST(self):
-            origine = self.headers.get("Origin", "")
-            if self.headers.get("X-Sniffeur") != "1" or (origine and origine not in (
-                    f"http://127.0.0.1:{sniffeur.args.http}", f"http://localhost:{sniffeur.args.http}")):
+            if not acces.controle(self):
+                self.close_connection = True        # corps non lu : la connexion ne peut pas resservir
+                return
+            if self.headers.get("X-Sniffeur") != "1" or not acces.origine_autorisee(self):
+                self.close_connection = True
                 self._envoie(403, b"refuse")
                 return
             try:

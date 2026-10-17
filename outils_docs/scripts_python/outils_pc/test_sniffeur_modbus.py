@@ -18,6 +18,8 @@ CE QU'IL COUVRE
     relais MQTT         push relayes par le maitre (EcouteRelaisMQTT) : faux broker sur 127.0.0.1, port
                         aleatoire - le vrai broker n'est jamais contacte ; tables de seq UDP / MQTT separees ;
     test_rs485_pc       CRC (exemples de PROTOCOLE_MODBUS.md), decoupage, loop:// ;
+    acces reseau        page et POST depuis ce PC (sans jeton) et depuis l'IP reseau du PC (jeton,
+                        cookie, origine) : test_sniffeur_modbus_acces.py, port HTTP libre, loop:// ;
     tout le decodage    20 000 trames aleatoires et leurs troncatures : aucune exception.
 Chaque groupe a ses TEMOINS, des cas qui doivent echouer (tasks/lessons.md, regle 7).
 
@@ -438,9 +440,14 @@ def test_relais_mqtt():
     verifie(eu.EcouteRelaisMQTT(sn2.traite_udp, "").demarre(), False, "TEMOIN : sans broker, rien ne demarre")
 
 
+def test_acces_reseau():
+    import test_sniffeur_modbus_acces
+    test_sniffeur_modbus_acces.groupe(verifie, sniffeur(echo="non"))
+
+
 def main():
     for groupe in (test_crc_et_cli, test_decodeur, test_fuzz, test_surveillance, test_emulation,
-                   test_sniffeur_et_debit, test_udp, test_relais_mqtt):
+                   test_sniffeur_et_debit, test_udp, test_relais_mqtt, test_acces_reseau):
         avant = len(RESULTATS["ko"])
         try:
             groupe()

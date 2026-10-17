@@ -9,7 +9,8 @@ designe la carte ESP32) : c'est celui du convertisseur USB-RS485, branche sur le
     port    : custom_sniffeur_modbus_port (optionnel, defaut auto = le seul CH343 present ; sinon
               demarre port ferme, a choisir sur la page)
     debit   : custom_sniffeur_modbus_debit (optionnel, defaut 19200, debit du bus du garage)
-    HTTP    : custom_sniffeur_modbus_http (optionnel, defaut 7300) -> http://127.0.0.1:7300
+    HTTP    : custom_sniffeur_modbus_http (optionnel, defaut 7300) -> http://127.0.0.1:7300 ; le sniffeur
+              affiche aussi le lien reseau (avec jeton) et ouvre le navigateur (acces_web.py)
     journal : %TEMP%/sniffeur_modbus.log
 
 En ligne de commande : pio run -e <env> -t sniffeur_modbus
@@ -34,7 +35,7 @@ def enregistre(env):
         journal = os.path.join(tempfile.gettempdir(), "sniffeur_modbus.log")
         commande = [env.subst("$PYTHONEXE"), "-u", script, "--port", port, "--debit", debit,
                     "--http", http, "--journal", journal]
-        print(f"sniffeur ModBus -> http://127.0.0.1:{http}  (journal : {journal})")
+        print(f"sniffeur ModBus : journal {journal}")      # les liens : affiches par le sniffeur
         try:
             return subprocess.call(commande, env=dict(os.environ, PYTHONUTF8="1"))
         except KeyboardInterrupt:

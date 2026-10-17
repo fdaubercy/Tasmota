@@ -1,7 +1,8 @@
 """Sniffeur MQTT : ecoute un broker, publie sur des topics choisis, filtre les messages.
 
 Principe : un client MQTT (client_mqtt.py, Python pur) s'abonne a '#' (reglable) et sert le flux
-sur http://127.0.0.1:<http> (page : sniffeur_mqtt_web.py + sniffeur_mqtt_panneaux.py) :
+sur http://127.0.0.1:<http> (page : sniffeur_mqtt_web.py + sniffeur_mqtt_panneaux.py) ; depuis un autre
+appareil du reseau, par le lien avec jeton affiche au lancement (acces_web.py ; --local pour l'interdire) :
     - plusieurs brokers parametrables, un seul actif (selection a chaud depuis la page) ;
     - messages en direct, filtre d'affichage (texte / regex), favoris de filtre, differences
       avec le message precedent du meme topic, export ;
@@ -19,6 +20,7 @@ Usage (Python de PlatformIO ou tout Python 3.8+, aucune dependance) :
     python outils_docs/scripts_python/outils_pc/sniffeur_mqtt.py
     options : --hote 192.168.0.5 --port 1883 --utilisateur u --mot-de-passe m
               --abonnement "#" (repetable)  --http 7100  --journal fichier.log  --historique 5000
+              --local (127.0.0.1 seulement)  --sans-navigateur
 Depuis VS Code : pioarduino > Project Tasks > <env> > Custom > « Sniffeur MQTT (HTTP 127.0.0.1) »
 (cible_sniffeur_mqtt.py). Arret : Ctrl+C dans le terminal de la tache (ou la corbeille).
 """
@@ -37,6 +39,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import acces_web                # noqa: E402
 import client_mqtt              # noqa: E402
 import sniffeur_mqtt_config     # noqa: E402
 import sniffeur_mqtt_panneaux   # noqa: E402
@@ -289,7 +292,7 @@ class Sniffeur:
             return {"module": module, "lignes": list(self.logs.get(module, []))}
 
 
-def fabrique_gestionnaire(sniffeur):
+def fabrique_gestionnaire(sniffeur, acces):
     class Gestionnaire(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
 
@@ -308,6 +311,8 @@ def fabrique_gestionnaire(sniffeur):
             self._envoie(200, json.dumps(donnees).encode("utf-8"), "application/json")
 
         def do_GET(self):
+            if not acces.controle(self):          # autre appareil : jeton (URL ou cookie), sinon 403
+                return
             url = urlsplit(self.path)
             if url.path == "/":
                 self._envoie(200, sniffeur_mqtt_web.PAGE.encode("utf-8"), "text/html; charset=utf-8")
@@ -343,10 +348,10 @@ def fabrique_gestionnaire(sniffeur):
                 self._envoie(404, b"introuvable")
 
         def do_POST(self):
-            # Contre une page web tierce visant 127.0.0.1 : en-tete personnalise + meme origine
-            origine = self.headers.get("Origin", "")
-            if self.headers.get("X-Sniffeur") != "1" or (origine and origine not in (
-                    f"http://127.0.0.1:{sniffeur.args.http}", f"http://localhost:{sniffeur.args.http}")):
+            if not acces.controle(self):
+                return
+            # Contre une page web tierce : en-tete personnalise + meme origine (acces_web.origines)
+            if self.headers.get("X-Sniffeur") != "1" or not acces.origine_autorisee(self):
                 self._envoie(403, b"refuse")
                 return
             try:
@@ -419,10 +424,11 @@ def main():
     options.add_argument("--utilisateur", default=defaut.get("MQTT_USER", ""))
     options.add_argument("--mot-de-passe", dest="mot_de_passe", default=defaut.get("MQTT_PASS", ""))
     options.add_argument("--abonnement", action="append", help="filtre MQTT (repetable) ; defaut : memorise par broker, sinon '#'")
-    options.add_argument("--http", type=int, default=7100, help="port de la page http://127.0.0.1:<http>")
+    options.add_argument("--http", type=int, default=7100, help="port de la page web (http://127.0.0.1:<http> sur ce PC)")
     options.add_argument("--journal", help="copie des messages recus dans ce fichier")
     options.add_argument("--historique", type=int, default=5000, help="messages rejoues a l'ouverture de la page")
     options.add_argument("--config", help="fichier de configuration (defaut : %%APPDATA%%\\sniffeur_mqtt\\config.json)")
+    acces_web.ajoute_options(options)
     args = options.parse_args()
     if args.abonnement and not all(valide_filtre(f) for f in args.abonnement):
         sys.exit("filtre d'abonnement invalide")
@@ -431,16 +437,18 @@ def main():
         {"nom": "Tasmota (user_config_override.h)", "hote": args.hote, "port": args.port, "tls": False,
          "verifierCertificat": True, "utilisateur": args.utilisateur, "motDePasse": args.mot_de_passe}, args.config)
     sniffeur = Sniffeur(args, configuration)
+    acces = acces_web.Acces(args.http, args.local, "Sniffeur MQTT")
     try:
-        serveur = ThreadingHTTPServer(("127.0.0.1", args.http), fabrique_gestionnaire(sniffeur))
+        serveur = ThreadingHTTPServer((acces.hote, args.http), fabrique_gestionnaire(sniffeur, acces))
     except OSError as erreur:
         sys.exit(f"port HTTP {args.http} indisponible ({erreur}) : --http <autre port>")
     serveur.daemon_threads = True
     threading.Thread(target=sniffeur.boucle_mqtt, daemon=True).start()
     b = sniffeur.broker
     print(f"sniffeur MQTT : broker '{b.get('nom')}' {b.get('hote')}:{b.get('port')} (utilisateur '{b.get('utilisateur', '')}', "
-          f"mot de passe {'fourni' if b.get('motDePasse') else 'aucun'}) -> http://127.0.0.1:{args.http}/  "
-          f"(configuration : {configuration.chemin})" + (f"  (journal : {args.journal})" if args.journal else ""))
+          f"mot de passe {'fourni' if b.get('motDePasse') else 'aucun'})  (configuration : {configuration.chemin})"
+          + (f"  (journal : {args.journal})" if args.journal else ""))
+    acces.annonce(not args.sans_navigateur)
     try:
         serveur.serve_forever()
     except KeyboardInterrupt:

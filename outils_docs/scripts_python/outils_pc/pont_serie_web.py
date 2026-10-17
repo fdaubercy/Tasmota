@@ -15,17 +15,24 @@ Le pont reconnait une requete HTTP a ses premiers octets ("GET ", "POST") et la 
                   {"mode": "binaire", "donnees": "00000001 00000110", "crc": false}
     POST /terminal lance un terminal supplementaire (pont secondaire, port serie ferme) sur le premier
                   port TCP libre ; reponse JSON {"url": "http://127.0.0.1:7001/"}, que la page ouvre
-                  dans un nouvel onglet (bouton « + Terminal »)
+                  dans un nouvel onglet (bouton « + Terminal ») ; depuis un autre appareil, l'URL
+                  reprend l'hote vise (en-tete Host) et porte le jeton, commun aux deux terminaux
 
-Securite : le pont n'ecoute que sur 127.0.0.1. Contre une page web malveillante qui viserait
-127.0.0.1:7000 depuis le navigateur, chaque POST exige l'en-tete 'X-Pont: 1' (un en-tete personnalise
-declenche une requete CORS preliminaire, a laquelle on ne repond pas) et refuse une autre Origine.
+Securite (acces_web.py) : depuis ce PC, sans jeton ; depuis un autre appareil, chaque requete passe
+par pont.acces.controle (403 sans jeton ; ?jeton= valide -> cookie + redirection). Contre une page
+web malveillante ouverte dans le navigateur, chaque POST exige en plus l'en-tete 'X-Pont: 1' (un
+en-tete personnalise declenche une requete CORS preliminaire, a laquelle on ne repond pas) et une
+Origine admise par acces.origine_autorisee (127.0.0.1 / localhost ; l'hote vise pour un autre appareil).
 """
 
 import json
 import re
 import string
 import time
+from http import HTTPStatus
+from types import SimpleNamespace
+
+import acces_web
 
 FINS_LIGNE = {"aucune": b"", "LF": b"\n", "CR": b"\r", "CRLF": b"\r\n"}
 MAX_ENVOI = 1024        # octets par envoi
@@ -177,7 +184,8 @@ connecte();
 
 
 def _lit_requete(client):
-    """Lit la ligne de requete, les en-tetes et le corps (Content-Length). Renvoie (methode, chemin, entetes, corps)."""
+    """Lit la ligne de requete, les en-tetes et le corps (Content-Length).
+    Renvoie (methode, cible = chemin ET parametres, entetes en minuscules, corps)."""
     donnees = b""
     while b"\r\n\r\n" not in donnees:
         morceau = client.recv(4096)
@@ -201,7 +209,46 @@ def _lit_requete(client):
         if not morceau:
             break
         corps += morceau
-    return methode, chemin.split("?", 1)[0], entetes, corps[:longueur]
+    return methode, chemin, entetes, corps[:longueur]
+
+
+class _Entetes(dict):
+    """En-tetes (cles en minuscules) lus comme ceux de BaseHTTPRequestHandler : get('Cookie')."""
+    def get(self, cle, defaut=None):
+        return dict.get(self, cle.lower(), defaut)
+
+
+class _Echange:
+    """Une requete du pont vue par acces_web (le sous-ensemble de BaseHTTPRequestHandler qu'il emploie)."""
+    def __init__(self, client, adresse, methode, cible, entetes):
+        self.client_address, self.command, self.path = adresse, methode, cible
+        self.headers = _Entetes(entetes)
+        self.wfile = SimpleNamespace(write=client.sendall)
+        self._tete = []
+
+    def send_response(self, code):
+        self._tete = [f"HTTP/1.1 {code} {HTTPStatus(code).phrase}", "Cache-Control: no-store", "Connection: close"]
+
+    def send_header(self, cle, valeur):
+        self._tete.append(f"{cle}: {valeur}")
+
+    def end_headers(self):
+        self.wfile.write(("\r\n".join(self._tete) + "\r\n\r\n").encode("latin-1"))
+
+
+def _hote_vise(entetes):
+    """Hote de l'en-tete Host, sans son port ('192.168.0.3', '[fe80::1]', 'pc.local'), ou None si douteux."""
+    hote = entetes.get("host", "")
+    hote = hote[:hote.index("]") + 1] if hote.startswith("[") and "]" in hote else hote.rsplit(":", 1)[0]
+    return hote if re.fullmatch(r"[A-Za-z0-9.\-]{1,253}|\[[0-9A-Fa-f:.%]{2,60}\]", hote) else None
+
+
+def url_terminal(pont, echange, port_tcp):
+    """URL du terminal supplementaire : 127.0.0.1 depuis ce PC ; sinon l'hote vise + le jeton (commun)."""
+    if acces_web.est_local(echange.client_address):
+        return f"http://127.0.0.1:{port_tcp}/"
+    hote = _hote_vise(echange.headers) or (acces_web.ips_reseau() or ["127.0.0.1"])[0]
+    return f"http://{hote}:{port_tcp}/?jeton={pont.acces.jeton}"
 
 
 def _reponse(client, statut, type_contenu="text/plain; charset=utf-8", corps=b""):
@@ -301,19 +348,21 @@ def prepare_envoi(demande):
     return octets, description
 
 
-def _autorise(entetes, port_tcp):
-    """POST accepte seulement depuis la page du pont (en-tete X-Pont, meme origine)."""
-    origine = entetes.get("origin", "")
-    return entetes.get("x-pont") == "1" and (
-        not origine or origine in (f"http://127.0.0.1:{port_tcp}", f"http://localhost:{port_tcp}"))
+def _autorise(pont, echange):
+    """POST accepte seulement depuis la page du pont (en-tete X-Pont, origine admise par acces_web)."""
+    return echange.headers.get("x-pont") == "1" and pont.acces.origine_autorisee(echange)
 
 
-def traite(pont, client, port_tcp):
+def traite(pont, client, adresse):
     """Sert UNE requete HTTP. Pour /flux, garde la connexion ouverte (client inscrit dans pont.clients_web)."""
     requete = _lit_requete(client)
     if requete is None:
         return
-    methode, chemin, entetes, corps = requete
+    methode, cible, entetes, corps = requete
+    chemin = cible.split("?", 1)[0]
+    echange = _Echange(client, adresse, methode, cible, entetes)
+    if not pont.acces.controle(echange):   # autre appareil sans jeton : 403 (ou 303 + cookie) deja envoye
+        return
 
     if methode == "GET" and chemin == "/":
         _reponse(client, "200 OK", "text/html; charset=utf-8", PAGE.encode("utf-8"))
@@ -330,14 +379,14 @@ def traite(pont, client, port_tcp):
             pass
         pont.desinscrit_web(client)
     elif methode == "POST" and chemin in ("/ouvrir", "/fermer", "/cmd", "/envoi", "/terminal"):
-        if not _autorise(entetes, port_tcp):
+        if not _autorise(pont, echange):
             _texte(client, "403 Forbidden", "refuse")
             return
         if chemin == "/terminal":
             ok, resultat = pont.lance_terminal()
             if ok:
                 _reponse(client, "200 OK", "application/json",
-                         json.dumps({"url": f"http://127.0.0.1:{resultat}/"}).encode("utf-8"))
+                         json.dumps({"url": url_terminal(pont, echange, resultat)}).encode("utf-8"))
             else:
                 _texte(client, "503 Service Unavailable", resultat)
         elif chemin == "/fermer":

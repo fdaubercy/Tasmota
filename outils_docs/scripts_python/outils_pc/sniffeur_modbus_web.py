@@ -1,4 +1,4 @@
-"""Page web du sniffeur ModBus (sniffeur_modbus.py), servie sur http://127.0.0.1:7300.
+"""Page web du sniffeur ModBus (sniffeur_modbus.py), servie sur le port 7300 (ce PC, ou le reseau avec jeton).
 
 Routes (sniffeur_modbus.py) :
     GET  /         cette page
@@ -10,7 +10,8 @@ Routes (sniffeur_modbus.py) :
     POST /emulation {id, actif} | {id, registre, champ, valeur}     POST /debit {action: chercher|corriger}
     POST /raz   (compteurs et historique)
     GET  /carte    esclaves et appareils du persist du maitre      POST /decode {hex, requete, crc}
-Les POST exigent l'en-tete X-Sniffeur: 1 (protection contre une page tierce visant 127.0.0.1).
+Les POST exigent l'en-tete X-Sniffeur: 1 (protection contre une page tierce). Toutes les URL de la page
+sont relatives : elle marche telle quelle depuis un autre appareil (jeton en cookie, acces_web.py).
 Evenements SSE en plus : 'emulation' (esclaves emulables et leurs valeurs), 'debit' (resultat
 de la recherche / correction). Fiche 'trame' : {t, dt (ms depuis la precedente), sens (bus|pc|emul|udp|mqtt|--|!!),
 hex, crc, nature (requete|reponse|exception|ko|timeout|alerte|info|?), id, fc, texte, norme, metier, champs, lat (ms, reponse appariee)}.

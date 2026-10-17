@@ -1,4 +1,5 @@
-r"""Page du testeur UDP (testeur_udp.py) : http://127.0.0.1:7400.
+r"""Page du testeur UDP (testeur_udp.py) : http://127.0.0.1:7400 sur ce PC, ou le lien avec jeton depuis le reseau.
+Ses appels (fetch, EventSource) sont RELATIFS : ils suivent l'hote qui a servi la page.
 
 Deux onglets : « Essais » (cartes, mode de l'esclave, essais, verdicts, journaux) et « Aide »
 (testeur_udp_aide.AIDE, insere a la place de <!--AIDE-->). Routes : voir testeur_udp_http.py.

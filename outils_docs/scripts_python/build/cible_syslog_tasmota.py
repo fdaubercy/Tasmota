@@ -7,7 +7,8 @@ Enregistree comme la cible du sniffeur MQTT (cible_sniffeur_mqtt.py) :
 Lance outils_docs/scripts_python/outils_pc/syslog_tasmota.py. L'ecoute ne depend pas de l'env choisi : les modules
 envoient a SYS_LOG_HOST:SYS_LOG_PORT (tasmota/user_config_override.h), qui doit designer ce poste.
     UDP     : SYS_LOG_PORT de user_config_override.h (514)
-    HTTP    : custom_syslog_http (optionnel, defaut 7200) -> http://127.0.0.1:7200
+    HTTP    : custom_syslog_http (optionnel, defaut 7200) -> http://127.0.0.1:7200 (ouverte au lancement ;
+              depuis le reseau : lien avec jeton affiche par le serveur)
     journal : %TEMP%/syslog_tasmota.log (bascule en .1 au-dela de 20 Mo)
 
 En ligne de commande : pio run -e <env> -t syslog_tasmota
@@ -29,7 +30,6 @@ def enregistre(env):
         http = str(env.GetProjectOption("custom_syslog_http", "7200") or "7200")
         journal = os.path.join(tempfile.gettempdir(), "syslog_tasmota.log")
         commande = [env.subst("$PYTHONEXE"), "-u", script, "--http", http, "--journal", journal]
-        print(f"serveur syslog -> http://127.0.0.1:{http}  (journal : {journal})")
         try:
             return subprocess.call(commande, env=dict(os.environ, PYTHONUTF8="1"))
         except KeyboardInterrupt:
@@ -47,7 +47,7 @@ def enregistre(env):
         actions=[lance_syslog],
         title="Serveur syslog (HTTP 127.0.0.1)",
         description="Recoit en UDP 514 les logs syslog des modules Tasmota et les affiche sur "
-                    "http://127.0.0.1:7200.",
+                    "http://127.0.0.1:7200 (et depuis le reseau, avec jeton).",
         always_build=True,
     )
 

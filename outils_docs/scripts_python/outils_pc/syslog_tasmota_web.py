@@ -1,4 +1,5 @@
-"""Page web du serveur syslog Tasmota (syslog_tasmota.py), servie sur http://127.0.0.1:7200.
+"""Page web du serveur syslog Tasmota (syslog_tasmota.py), servie sur http://127.0.0.1:7200
+(et depuis le reseau local, avec le jeton de la session : acces_web.py).
 
 Routes (syslog_tasmota.py) :
     GET /         cette page

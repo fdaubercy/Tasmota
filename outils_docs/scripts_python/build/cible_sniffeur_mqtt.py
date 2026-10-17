@@ -6,7 +6,8 @@ Enregistree comme la cible du pont serie (cible_pont_serie.py) :
     jamais les deux sur un meme env (cible declaree deux fois).
 Lance outils_docs/scripts_python/outils_pc/sniffeur_mqtt.py. Le broker ne depend pas de l'env choisi : il est lu
 dans tasmota/user_config_override.h (MQTT_HOST/PORT/USER/PASS).
-    HTTP    : custom_sniffeur_http (optionnel, defaut 7100) -> http://127.0.0.1:7100
+    HTTP    : custom_sniffeur_http (optionnel, defaut 7100) -> http://127.0.0.1:7100 ; liens reseau
+              (avec jeton) et ouverture du navigateur : affiches par sniffeur_mqtt.py (acces_web.py)
     journal : %TEMP%/sniffeur_mqtt.log
 
 En ligne de commande : pio run -e <env> -t sniffeur_mqtt
@@ -28,7 +29,7 @@ def enregistre(env):
         http = str(env.GetProjectOption("custom_sniffeur_http", "7100") or "7100")
         journal = os.path.join(tempfile.gettempdir(), "sniffeur_mqtt.log")
         commande = [env.subst("$PYTHONEXE"), "-u", script, "--http", http, "--journal", journal]
-        print(f"sniffeur MQTT -> http://127.0.0.1:{http}  (journal : {journal})")
+        print(f"sniffeur MQTT : journal {journal}")         # les liens sont affiches par le sniffeur
         try:
             return subprocess.call(commande, env=dict(os.environ, PYTHONUTF8="1"))
         except KeyboardInterrupt:

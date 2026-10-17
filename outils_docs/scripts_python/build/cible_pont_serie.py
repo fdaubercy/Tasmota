@@ -12,6 +12,7 @@ outils_docs/scripts_python/outils_pc/pont_serie.py avec les parametres DE L'ENVI
     debit   : monitor_speed (defaut 115200)
     TCP     : custom_pont_tcp (optionnel, defaut 7000) -> http://127.0.0.1:7000 et Serial Monitor (TCP)
     journal : %TEMP%/pont_serie_<env>.log
+Le pont ouvre sa page dans le navigateur et affiche ses liens (ce PC, et reseau local avec jeton).
 
 En ligne de commande : pio run -e <env> -t pont_serie
 Avant un flash : bouton « Arreter » de la page (libere le port, la page reste ouverte).
@@ -47,7 +48,8 @@ def enregistre(env):
         journal = os.path.join(tempfile.gettempdir(), f"pont_serie_{nom_env}.log")
         commande = [env.subst("$PYTHONEXE"), "-u", script, "--port", port, "--vitesse", debit,
                     "--tcp", tcp, "--journal", journal]
-        print(f"[{nom_env}] pont serie : port={port} debit={debit} -> http://127.0.0.1:{tcp}  (journal : {journal})")
+        # Les liens (ce PC, reseau avec jeton) sont affiches par le pont lui-meme (acces_web.annonce)
+        print(f"[{nom_env}] pont serie : port={port} debit={debit} tcp={tcp}  (journal : {journal})")
         environnement = dict(os.environ, PYTHONUTF8="1")
         try:
             return subprocess.call(commande, env=environnement)
@@ -67,7 +69,8 @@ def enregistre(env):
         actions=[lance_pont],
         title="Pont serie (TCP/HTTP 127.0.0.1)",
         description="Logs colores du port de l'env (monitor_port, monitor_speed) sur http://127.0.0.1:7000 "
-                    "et Serial Monitor (TCP). Port, vitesse et marche/arret reglables sur la page.",
+                    "(reseau local : lien avec jeton) et Serial Monitor (TCP). Port, vitesse et marche/arret "
+                    "reglables sur la page.",
         always_build=True,
     )
 

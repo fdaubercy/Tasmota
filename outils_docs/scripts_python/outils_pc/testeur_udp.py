@@ -1,7 +1,8 @@
 """Testeur UDP maitre / esclave : deux ports serie, les logs Tasmota des deux cartes, des essais UDP.
 
 Ouvre le maitre ModBus (ESP32-P4) et un esclave (ESP32-S3 cuve ou rideau) par leurs ports serie USB,
-lit leurs logs, et sur http://127.0.0.1:7400 permet d'envoyer des messages UDP unicast / multicast
+lit leurs logs, et sur sa page web (http://127.0.0.1:7400 ; depuis un autre appareil du reseau, le lien
+avec jeton affiche par la console) permet d'envoyer des messages UDP unicast / multicast
 dans les deux sens et de lire le verdict (RECU / EMIS NON RECU / NON EMIS) d'apres les logs des deux
 cartes. L'esclave est soit en « Range Extender » (client du point d'acces du maitre, 192.168.4.x),
 soit en « Wi-Fi classique » (sur le reseau maison) : la page lit et change ce mode.
@@ -11,6 +12,7 @@ Usage (Python de PlatformIO, qui fournit pyserial) :
     %USERPROFILE%\\.platformio\\penv\\Scripts\\python.exe outils_docs/scripts_python/outils_pc/testeur_udp.py
     options : --port-maitre COM11  --port-esclave COM12 (defaut vide = ferme)  --vitesse 115200
               --http 7400  --journal fichier.log  --persist-maitre <_persist.json du maitre>
+              --local (127.0.0.1 seulement)  --sans-navigateur (page non ouverte au lancement)
 Les ports se choisissent aussi depuis la page. « pont:7000 » (option ou liste de la page) : passe par
 le pont serie (pont_serie.py --tcp 7000), qui garde le port COM ; sinon FERMER le pont / le moniteur avant.
 Les ports sont ouverts SANS basculer DTR/RTS (pas de reset). A l'arret (Ctrl+C), les niveaux de
@@ -33,6 +35,7 @@ import time
 from http.server import ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import acces_web                    # noqa: E402
 import testeur_udp_carte as tc      # noqa: E402
 import testeur_udp_essais as te     # noqa: E402
 
@@ -388,10 +391,11 @@ def lit_options(argv=None):
     options.add_argument("--port-maitre", default="", help="port serie du maitre ModBus (ESP32-P4) ; vide = ferme")
     options.add_argument("--port-esclave", default="", help="port serie de l'esclave (ESP32-S3) ; vide = ferme")
     options.add_argument("--vitesse", type=int, default=115200)
-    options.add_argument("--http", type=int, default=7400, help="port HTTP local (127.0.0.1)")
+    options.add_argument("--http", type=int, default=7400, help="port HTTP de la page")
     options.add_argument("--journal", help="journal des lignes des deux cartes (mot de passe masque)")
     options.add_argument("--persist-maitre", default=PERSIST_MAITRE,
                          help="_persist.json du maitre : reseau Wi-Fi utilise pour la bascule en Wi-Fi classique")
+    acces_web.ajoute_options(options)
     return options.parse_args(argv)
 
 
@@ -399,8 +403,9 @@ def main():
     import testeur_udp_http
     args = lit_options()
     testeur = Testeur(args)
+    acces = acces_web.Acces(args.http, args.local, "Testeur UDP")
     try:
-        serveur = ThreadingHTTPServer(("127.0.0.1", args.http), testeur_udp_http.fabrique_gestionnaire(testeur))
+        serveur = ThreadingHTTPServer((acces.hote, args.http), testeur_udp_http.fabrique_gestionnaire(testeur, acces))
     except OSError as erreur:
         sys.exit(f"Port HTTP {args.http} deja utilise ({erreur}) : un autre testeur tourne ? (sinon --http 7401)")
     serveur.daemon_threads = True
@@ -408,7 +413,8 @@ def main():
         if nom:
             ok, message = testeur.cartes[role].ouvre(nom, args.vitesse)
             print(f"{role} : {message}" + ("" if ok else "  <-- AVERTISSEMENT"))
-    print(f"Testeur UDP -> http://127.0.0.1:{args.http}  (Ctrl+C pour arreter ; les logs modifies seront restaures)")
+    acces.annonce(not args.sans_navigateur)
+    print("   Ctrl+C pour arreter ; les logs modifies seront restaures", flush=True)
     try:
         serveur.serve_forever(poll_interval=0.3)
     except KeyboardInterrupt:

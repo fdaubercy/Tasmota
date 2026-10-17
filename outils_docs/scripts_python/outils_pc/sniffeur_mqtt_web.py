@@ -1,4 +1,5 @@
-"""Page web du sniffeur MQTT (sniffeur_mqtt.py), servie sur http://127.0.0.1:7100.
+"""Page web du sniffeur MQTT (sniffeur_mqtt.py), servie sur http://127.0.0.1:7100 (et sur le reseau
+local avec jeton, acces_web.py : URL relatives seulement, le cookie du jeton suit seul).
 
 Routes (sniffeur_mqtt.py) :
     GET  /             cette page            GET /panneaux.js  panneaux (sniffeur_mqtt_panneaux.py)
@@ -11,7 +12,8 @@ Routes (sniffeur_mqtt.py) :
     POST /abonnements  {"filtres": ["#", "$SYS/#"]}      (memorises pour le broker actif)
     POST /brokers      {"action": "enregistrer", "broker": {...}} | {"action": "supprimer|selectionner", "id": "b1"}
     POST /favoris      {"nom", "filtre", "champ", "regex"} | {"action": "supprimer", "nom": "..."}
-Chaque POST exige l'en-tete 'X-Sniffeur: 1' et la meme origine (protection contre une page tierce).
+Chaque POST exige l'en-tete 'X-Sniffeur: 1' et la meme origine (protection contre une page tierce) ;
+depuis un autre appareil, chaque requete exige en plus le jeton (cookie pose par acces_web).
 
 Ce fichier : barres Broker / abonnements / filtre / publication et liste des messages (differences avec
 le message precedent du meme topic, favoris, export). Les panneaux (audit discovery, connexions LWT,

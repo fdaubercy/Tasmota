@@ -1,4 +1,4 @@
-"""Couche HTTP du testeur UDP (testeur_udp.py) : routes de la page http://127.0.0.1:7400.
+"""Couche HTTP du testeur UDP (testeur_udp.py) : routes de la page (http://127.0.0.1:7400 sur ce PC).
 
     GET  /          page (testeur_udp_web.PAGE)
     GET  /flux      Server-Sent Events : etat, lignes des cartes, notes, verdicts (historique rejoue)
@@ -13,8 +13,10 @@
     POST /restaure  rend aux cartes les niveaux de log d'origine
     POST /cmd       {carte, commande}   commande libre (une ligne)
     POST /raz       vide l'historique des verdicts
-Les POST exigent l'en-tete X-Testeur: 1 et la meme origine : une page tierce visant 127.0.0.1 ne doit pas
-pouvoir commander les cartes (l'en-tete impose un pre-vol CORS auquel ce serveur ne repond pas).
+Acces (acces_web.py) : ce PC sans jeton ; un autre appareil du reseau doit avoir le jeton, controle en tete de
+chaque GET et POST (/flux compris). Les POST exigent en plus l'en-tete X-Testeur: 1 et la meme origine
+(127.0.0.1 / localhost ; depuis un autre appareil, l'hote qu'il a vise) : une page tierce ne doit pas pouvoir
+commander les cartes (l'en-tete impose un pre-vol CORS auquel ce serveur ne repond pas).
 """
 
 import json
@@ -81,7 +83,8 @@ def traite_post(demande, testeur, chemin):
     return {"ok": True}
 
 
-def fabrique_gestionnaire(testeur):
+def fabrique_gestionnaire(testeur, acces):
+    """acces : acces_web.Acces (jeton des autres appareils, origines admises des POST)."""
     class Gestionnaire(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
 
@@ -106,6 +109,8 @@ def fabrique_gestionnaire(testeur):
             self._envoie(statut, json.dumps(donnees, ensure_ascii=False).encode("utf-8"), "application/json")
 
         def do_GET(self):
+            if not acces.controle(self):          # autre appareil sans jeton : 403 (ou 303 + cookie)
+                return
             chemin = urlsplit(self.path).path
             if chemin == "/":
                 self._envoie(200, testeur_udp_web.PAGE.encode("utf-8"), "text/html; charset=utf-8")
@@ -136,10 +141,11 @@ def fabrique_gestionnaire(testeur):
                 self._envoie(404, b"introuvable")
 
         def do_POST(self):
-            origine = self.headers.get("Origin", "")
-            port = testeur.args.http
-            if self.headers.get("X-Testeur") != "1" or (origine and origine not in (
-                    f"http://127.0.0.1:{port}", f"http://localhost:{port}")):
+            if not acces.controle(self):
+                self.close_connection = True      # corps non lu : la connexion ne doit pas resservir
+                return
+            if self.headers.get("X-Testeur") != "1" or not acces.origine_autorisee(self):
+                self.close_connection = True
                 self._envoie(403, b"refuse")
                 return
             try:

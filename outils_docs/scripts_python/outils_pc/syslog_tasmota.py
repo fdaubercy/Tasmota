@@ -13,13 +13,16 @@ Ce que fait ce serveur :
     - ecoute UDP <ecoute>:<port> (defaut 0.0.0.0:514 ; pas besoin d'etre administrateur sous Windows) ;
     - page http://127.0.0.1:<http> (syslog_tasmota_web.py) : direct, filtre module / severite / texte,
       pause, export ; registre des modules vus (IP, nombre de lignes, derniere reception) ;
+      depuis un autre appareil du reseau : lien avec jeton affiche au lancement (acces_web.py) ;
+      --local : 127.0.0.1 seulement ; --sans-navigateur : pas d'ouverture de la page ;
     - journal fichier (une ligne par message, horodatage du PC), avec rotation a --journal-max Mo.
-Aucun POST : la page ne fait que lire (rien a proteger contre une page tierce).
+Aucun POST : la page ne fait que lire (rien a proteger contre une page tierce) ; le jeton protege
+la lecture des logs depuis le reseau.
 
 Usage (Python de PlatformIO ou tout Python 3.8+, aucune dependance) :
     python outils_docs/scripts_python/outils_pc/syslog_tasmota.py
     options : --port 514  --ecoute 0.0.0.0  --http 7200  --journal fichier.log  --journal-max 20
-              --historique 5000
+              --historique 5000  --local  --sans-navigateur
 Depuis VS Code : pioarduino > Project Tasks > <env> > Custom > « Serveur syslog (HTTP 127.0.0.1) »
 (cible_syslog_tasmota.py). Arret : Ctrl+C dans le terminal de la tache (ou la corbeille).
 """
@@ -38,6 +41,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import acces_web                # noqa: E402
 import syslog_tasmota_web       # noqa: E402
 
 RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
@@ -189,7 +193,7 @@ class Serveur:
                 print(f"paquet de {ip} ignore : {erreur!r}")
 
 
-def fabrique_gestionnaire(serveur):
+def fabrique_gestionnaire(serveur, acces):
     class Gestionnaire(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
 
@@ -205,6 +209,8 @@ def fabrique_gestionnaire(serveur):
             self.wfile.write(corps)
 
         def do_GET(self):
+            if not acces.controle(self):        # autre appareil sans jeton : 403 (ou 303 + cookie)
+                return
             chemin = urlsplit(self.path).path
             if chemin == "/":
                 self._envoie(200, syslog_tasmota_web.PAGE.encode("utf-8"), "text/html; charset=utf-8")
@@ -249,11 +255,13 @@ def main():
     options.add_argument("--port", type=int, default=int(defaut.get("SYS_LOG_PORT", 514)),
                          help="port UDP ecoute (defaut : SYS_LOG_PORT de user_config_override.h, sinon 514)")
     options.add_argument("--ecoute", default="0.0.0.0", help="adresse d'ecoute UDP (defaut : toutes)")
-    options.add_argument("--http", type=int, default=7200, help="port de la page http://127.0.0.1:<http>")
+    options.add_argument("--http", type=int, default=7200,
+                         help="port de la page web (ce PC, et le reseau avec jeton sauf --local)")
     options.add_argument("--journal", help="copie des messages recus dans ce fichier")
     options.add_argument("--journal-max", dest="journal_max", type=int, default=20,
                          help="taille (Mo) au-dela de laquelle le journal bascule en .1 (0 : jamais)")
     options.add_argument("--historique", type=int, default=5000, help="lignes rejouees a l'ouverture de la page")
+    acces_web.ajoute_options(options)
     args = options.parse_args()
     args.loghost = defaut.get("SYS_LOG_HOST", "")
     if not 0 < args.port < 65536 or not 0 < args.http < 65536 or args.historique < 0 or args.journal_max < 0:
@@ -266,8 +274,9 @@ def main():
     except OSError as erreur:
         sys.exit(f"port UDP {args.port} indisponible ({erreur}) : un autre serveur syslog tourne-t-il deja ?")
     serveur = Serveur(args)
+    acces = acces_web.Acces(args.http, args.local, "Serveur syslog")
     try:
-        http = ThreadingHTTPServer(("127.0.0.1", args.http), fabrique_gestionnaire(serveur))
+        http = ThreadingHTTPServer((acces.hote, args.http), fabrique_gestionnaire(serveur, acces))
     except OSError as erreur:
         sys.exit(f"port HTTP {args.http} indisponible ({erreur}) : --http <autre port>")
     http.daemon_threads = True
@@ -281,8 +290,9 @@ def main():
             ip_poste = sonde.getsockname()[0]
     except OSError:
         ip_poste = "?"
-    print(f"serveur syslog : UDP {args.ecoute}:{args.port} -> http://127.0.0.1:{args.http}/"
-          + (f"  (journal : {args.journal})" if args.journal else ""))
+    print(f"serveur syslog : ecoute UDP {args.ecoute}:{args.port}"
+          + (f"  (journal : {args.journal})" if args.journal else ""), flush=True)
+    acces.annonce(not args.sans_navigateur)
     if args.loghost and args.loghost != ip_poste:
         print(f"  attention : SYS_LOG_HOST = {args.loghost} dans user_config_override.h, ce poste semble etre "
               f"{ip_poste} -> les modules n'enverront ici qu'avec 'LogHost <ip de ce poste>'.")

@@ -31,6 +31,10 @@ Par le pont, c'est l'outil qui le lui redemande (le pont seul ne rouvre pas un p
 <pre>%USERPROFILE%\\.platformio\\penv\\Scripts\\python.exe -u outils_docs/scripts_python/outils_pc/testeur_udp.py --port-maitre COM11 --port-esclave COM12</pre></li>
 <li><b>Restriction</b> : la cible Custom est un <code>pio run</code>. Ne jamais la lancer pendant un build (elle peut effacer <code>.pio/build</code>) :
 lancer alors la tâche VS Code ou le script directement.</li>
+<li>Au lancement, la page s'ouvre dans le navigateur (sauf <code>--sans-navigateur</code>) ; la console affiche son lien
+(Ctrl+clic). <b>Depuis un autre appareil du réseau</b> (téléphone au garage) : ouvrir le lien « depuis un autre appareil du réseau »
+de la console, qui contient un <b>jeton</b> (nouveau à chaque lancement) ; sans lui, la page est refusée. <code>--local</code> : ce PC seulement.
+Les liens vers la page du pont série (<code>127.0.0.1:7000</code>) ne valent que sur ce PC.</li>
 <li>Arrêt : Ctrl+C dans le terminal de la tâche. Les niveaux de log modifiés sont restaurés avant la fermeture des ports.</li>
 </ul>
 

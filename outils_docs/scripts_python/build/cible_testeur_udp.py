@@ -8,7 +8,8 @@ Lance outils_docs/scripts_python/outils_pc/testeur_udp.py. Les ports ne sont PAS
 (monitor_port) : ce sont ceux du maitre ModBus (ESP32-P4) et d'un esclave (ESP32-S3).
     maitre  : custom_testeur_udp_port_maitre (optionnel, defaut vide = ferme, a choisir sur la page)
     esclave : custom_testeur_udp_port_esclave (optionnel, defaut vide = ferme)
-    HTTP    : custom_testeur_udp_http (optionnel, defaut 7400) -> http://127.0.0.1:7400
+    HTTP    : custom_testeur_udp_http (optionnel, defaut 7400) -> http://127.0.0.1:7400 ; le script affiche
+              aussi le lien reseau (avec jeton) et ouvre le navigateur (acces_web.py)
     journal : %TEMP%/testeur_udp.log
 
 ATTENTION : c'est un `pio run`. Ne JAMAIS la lancer pendant un build (le changement d'env peut faire
@@ -38,7 +39,7 @@ def enregistre(env):
             commande += ["--port-maitre", port_maitre]
         if port_esclave:
             commande += ["--port-esclave", port_esclave]
-        print(f"testeur UDP -> http://127.0.0.1:{http}  (journal : {journal})")
+        print(f"testeur UDP : journal {journal}  (le lien de la page suit)")
         try:
             return subprocess.call(commande, env=dict(os.environ, PYTHONUTF8="1"))
         except KeyboardInterrupt:
