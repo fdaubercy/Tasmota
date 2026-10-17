@@ -633,7 +633,9 @@ commande sans lui retirer cette gestion.
 
 ### Commandes sans fil vers les esclaves — une voie par destinataire (2026-10-15)
 
-> **Statut : CONCEPTION, rien n'est code.** But : pouvoir commander les esclaves ESP32 (cuve,
+> **Statut au 2026-10-17 : E1 (esclaves) et E2 + E3 (maitre) CODES, flashes : E1 seulement (cuve) ;
+> E3 inerte tant qu'un esclave n'annonce pas UDP. Detail : « Ordre de mise en oeuvre » plus bas.**
+> Statut d'origine (2026-10-15) : CONCEPTION, rien n'est code. But : pouvoir commander les esclaves ESP32 (cuve,
 > rideau) sans le cable RS485, la carte 16 relais restant cablee au P4.
 > **Le ModBus filaire est CONSERVE pendant toute la mise au point** (decide le 2026-10-15) :
 > le cable reste branche, `Serial` reste ON partout, et revenir au serie pour un esclave ne
@@ -779,6 +781,48 @@ Le cable reste branche de bout en bout : a chaque etape, le retour arriere est u
 complete de `data/fs` : M4 sans test de `Info.voie` -> echec du temoin « forme TCP » ; lireUDP
 sans tid -> echec « tid 17 ». **Reste avant flash : `solidifie_et_compile_berry.py` sur les 3
 modules (non lance : un build tournait).**
+
+**E2 + E3 — CODES ENSEMBLE le 2026-10-17, non flashes** (decision de l'utilisateur : un seul flash
+du P4). E3 reste **inerte** tant qu'aucun esclave n'annonce `UDP` : `voieDe` rend `Serial` pour tous
+et le P4 se comporte comme en E2. L'activation est `ReglageModbus VoieCommandes UDP` **sur la cuve** ;
+retour arriere : `ReglageModbus VoieCommandes Serial`. Code (`modbusFonctions.be` sauf mention) :
+- T1 `voieDe(adresse)` : `UDP` si la fiche de l'esclave annonce `voieCommandes: "UDP"`, sinon `Serial`
+  (fiche absente, diffusion, adresse hors 1-247) ; carte 16 relais (`estConn16`) **toujours** `Serial`,
+  quoi qu'annonce une fiche. Voies et IP des fiches en cache (`routesFiches`), relues au plus /60 s.
+- T2 `noteIP` / `ipDe` : IP source de la derniere trame UDP **valide** (decodee sans erreur ; push
+  seulement s'il passe `accepteSeq`), valable 90 s ; sinon `IPAddress` de la fiche ; sinon `nil`.
+- T3 `annonceRoute` : log `info` `ROUTE_ESCLAVE: esclave d'ID=2 : voie UDP, IP 192.168.4.2 (fiche)`, une
+  fois par changement de voie ou d'IP (ce qu'E2 fait observer). Rien pour la carte 16 relais.
+- T4 (M1) `envoiMsgModbus`, branche maitre : tout message passe par la file avec sa `voie` ; voie coupee
+  dans `typeComm` -> `ENVOI_MSG_MODBUS: voie X coupee sur le maitre ... rejete` (`erreur`), plus de repli.
+- T5 (M2) `envoieTete` -> `envoieTeteUDP` : `ModbusUDP <tid> <hexa>` en UniCast a `ipDe` ; IP absente ou
+  envoi refuse -> `echecEnvoi` (renvoi borne, backoff 200 ms, abandon apres 3). Delai
+  `timeoutReponseUDP` (2000 ms), sans la marge du pont serie. `udpFonctions.envoiUDP` rend desormais
+  `true` si le datagramme est parti. `prepareTrame` travaille sur une COPIE (l'item garde son
+  `paramMSG`) ; une lecture sans liste `Values` (`"Values": 0` du releve, ou cle absente) est normalisee.
+- T6 (M3) `apparieReponse` : un item UDP en vol n'accepte que la reponse de **son** `tid` (une reponse
+  serie ou d'un `tid` precedent est rejetee, log `debug`). Items serie : regle inchangee.
+- T7 **deux defauts trouves en codant, corriges** : (a) `decrypteMSG` ne lisait que des formes de
+  REQUETE ; une reponse de lecture recue par le reseau (adresse, code, nb d'octets, donnees) sortait en
+  Erreur 6, la reponse 0x10 (8 octets) aussi -> toute lecture UDP aurait fini en timeout. Cote maitre
+  (id 0, hors push et telemetrie), ces deux formes sont lues ; `apparieReponse` convertit les registres
+  bruts selon le `type` de la requete (`motsVersValeurs` : 2 registres par float / uint32), comme le pont
+  serie les publie. (b) `controleModbus.recupereReponseModBusUDP` acquittait aussi cote maitre : deux
+  regles voyaient la reponse, et si la sienne passait d'abord, le driver de l'esclave ne trouvait plus de
+  requete en vol et jetait les valeurs. Elle n'acquitte plus (comme en serie) : le driver apparie, traite,
+  puis acquitte.
+- T8 : `voieCommandes` et `timeoutReponseUDP` deja dans les 8 persists (E1).
+Banc `banc_test_modbus.be` §31 (54 tests, 292/292) : voie, cache, IP apprise/perimee/fiche, temoins
+(trame CRC fausse, push rejete, IP invalide -> rien appris), decodage des reponses reelles du bus
+(0x03 x5, 0x04 sentinelle, 0x01, 0x10, tronquee), conversion uint32/float, file mixte carte 16 relais +
+cuve, timeout 2000 ms, renvoi au meme `tid`, `tid` suivant, IP absente, envoi refuse, voie coupee (et
+plus de repli), reception de bout en bout par le driver, controleModbus. Temoin `§5` « commande 0x02 »
+passe en contexte esclave (id 2) : un maitre lit desormais une lecture recue comme une reponse. 14
+mutations sur copie de `data/fs`, **toutes detectees**. `test_discovery.be` 195/195 (contrat §7 :
+`ModBus/voieCommandes` arrive au maitre par UDP et MQTT). `verifie_berry` 52/0 ;
+`solidifie_et_compile_berry.py` OK sur `modbusFonctions`, `udpFonctions`, `controleModbus`.
+**Rebuild complet obligatoire** (les 3 sont solidifies). P4 au minimum ; cuve et rideau aussi si l'on veut
+`envoiUDP` a jour partout (sans effet fonctionnel cote esclave).
 
 **Unicast / multicast selon Range Extender ou Wi-Fi classique** (remarque de l'utilisateur,
 constatee par essais ; code relu le 2026-10-15, `udpFonctions.envoiUDP` `:466-512`) :

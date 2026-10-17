@@ -89,6 +89,27 @@ au mauvais endroit, annulées — voir `tasks/lessons.md`). Les 3 cibles sont
 `tasmota32p4-garage-serveur-modbus`, `tasmota32s3-garage-capteurs-cuve-modbus`,
 `tasmota32s3-garage-rideau-garage-modbus`.
 
+> **ETAT AU 2026-10-17 SOIR — LIRE EN PREMIER.** ModBus FILAIRE P4 <-> cuve : **grille de l'audit (§6)
+> VALIDEE**, tests 1 a 7, par le testeur (onglet « Grille ModBus ») - **decision de l'utilisateur : « tous
+> les tests sont bons »**. Reserves connues, acceptees : test 6 rejoue sans manipulation fiable (la reception
+> du P4 se coupait au moindre mouvement des cables : faux contact a fixer) ; 7d KO sur la seule fiche du
+> rideau (ancien firmware). UDP maitre <-> esclave : C1-C6 valides dans les deux modes (detail plus bas).
+> **E2 + E3 (commandes sans fil, cote P4) CODES le 2026-10-17, NON FLASHES** - detail et verification :
+> `outils_docs/PROTOCOLE_MODBUS.md` §9, bloc « E2 + E3 ». Inertes tant qu'aucun esclave n'annonce UDP.
+> **Reste a faire, dans l'ordre :** (1) fixer le cablage de reception du P4 ; (2) REBUILD COMPLET + flash du
+> P4 (modbusFonctions, udpFonctions, controleModbus solidifies ; cuve et rideau aussi pour udpFonctions) ;
+> (3) observer E2 : logs `ROUTE_ESCLAVE:` (voie Serial, IP de la cuve) - rien d'autre ne doit changer ;
+> (4) activer E3 : `ReglageModbus VoieCommandes UDP` SUR LA CUVE, puis repasser la grille (attendu :
+> `POMPE_QUEUE: envoi UDP`, plus rien de la cuve sur le RS485 au sniffeur ; retour : `... Serial`) ;
+> (5) flasher le rideau (id 3, muet, fiche perimee, sans E1), lui passer la grille, puis E4
+> (`VoieCommandes UDP` sur le rideau) ; (6) E5 : debrancher le cable, decision de l'utilisateur apres
+> observation ; (7) C7 et le minuteur SerialLog de `logFonctions.appliqueProfil`, sur accord de l'utilisateur.
+> **Capteurs de la cuve : PAS un defaut (tranche le 2026-10-17).** 2147483647 (registre 4704, niveau via
+> ADS1115) et null (registre 1312, DS18B20 sur GPIO18) sont les SENTINELLES « pas de mesure »
+> (`modbusFonctions.be:2801`) : l'ADS1115 et la sonde ne sont PAS branches (confirme par l'utilisateur ;
+> `I2CScan` = « No devices found », pas de DS18B20 dans `Status 10`). Rien a corriger avant leur montage ;
+> une fois branches : `I2CScan` doit montrer 0x48, `Status 10` le DS18B20 (pull-up 4,7 kohm sur GPIO18).
+
 > **2026-10-17 — commandes ModBus sans fil (UDP), etat :** E1 code (cuve flashee avec, P4 non) ;
 > `ReglageGlobal ModeConnexion` code (aucune carte flashee avec). Essai reel 1 : P4 -> cuve OK,
 > cuve -> P4 perdu. Cause prouvee : AP de l'esclave en 192.168.4.1/24 (choix de l'utilisateur, NE PAS

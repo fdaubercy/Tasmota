@@ -160,6 +160,12 @@ Restent ouverts : S1 (secrets, décision utilisateur), G4, G6, G8, latents L1-L1
 
 > Grille **unique** : remplace celles du document de reprise (2026-07-24 et compléments du
 > 2026-09-29). Chaînes de log extraites du code au 2026-09-30.
+>
+> **VALIDÉE le 2026-10-17 pour le couple P4 ↔ cuve** (ID 2), tests 1 à 7 jugés par le testeur UDP,
+> onglet « Grille ModBus » (`outils_pc/testeur_udp_grille.py`) ; décision de l'utilisateur : tous les tests
+> sont bons. Réserves : test 6 perturbé par un faux contact sur la réception du P4 ; 7d KO sur la seule fiche
+> du rideau (ancien firmware). **Reste à passer : le rideau (ID 3)**, une fois flashé. Détail :
+> `tasks/reprise-chantier-modbus-grenier.md`.
 
 ### 0. Préparation
 
