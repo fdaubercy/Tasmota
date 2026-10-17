@@ -2,8 +2,12 @@
 
     python outils_docs/scripts_python/outils_pc/annuaire_outils.py [--http 7600] [--local] [--sans-navigateur]
 
-Acces : acces_web.py (ce PC sans jeton ; autre appareil avec le jeton du lien affiche).
-Routes (toutes derriere acces.controle) :
+Acces : acces_web.py (ce PC sans jeton ; autre appareil avec le jeton du lien affiche). En plus, pour un
+client de CE PC, l'en-tete Host doit etre 127.0.0.1:<port>, localhost:<port> ou [::1]:<port> (403 sinon) :
+parade au DNS rebinding (une page dont le domaine se resout en 127.0.0.1 lirait sinon /etat et son jeton).
+Le navigateur est ouvert HORS du Job Object (cmd /c start, CREATE_BREAKAWAY_FROM_JOB) : sinon il mourrait
+avec l'annuaire.
+Routes (toutes derriere acces.controle et le controle du Host) :
     GET  /          la page            GET /registre   le registre des outils (annuaire_registre.en_json)
     GET  /etat      etat des outils + derniers parametres lances + liens reseau (client local seulement)
     GET  /ports     ports serie detectes, avec l'outil qui le tient (tenu_par)
@@ -15,10 +19,14 @@ Un second lancement sur le meme port sort en code 0 sans rien afficher (l'annuai
 
 import argparse
 import json
+import http.client
+import os
 import socket
+import subprocess
 import sys
 import threading
 import urllib.request
+import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -27,11 +35,14 @@ import acces_web
 import annuaire_presence as pre
 import annuaire_registre as reg
 from annuaire_page import PAGE
-from annuaire_lanceur import Lanceur, rattache_au_job
+from annuaire_lanceur import (CREATE_BREAKAWAY_FROM_JOB, CREATE_NO_WINDOW, ERROR_ACCESS_DENIED, Lanceur,
+                              rattache_au_job)
 
 PORT_DEFAUT = 7600
 NOM_ACCES = "Annuaire des outils"
 RACINE = Path(__file__).resolve().parents[3]
+GIT = RACINE / ".git"
+SANS_PROXY = urllib.request.build_opener(urllib.request.ProxyHandler({}))   # 127.0.0.1 : jamais de proxy
 TAILLE_MAX = 64 * 1024
 MSG_SYNCHRO = "Une operation de synchro est en cours : arret refuse"
 MSG_ARRET = "Arret non confirme : le processus vit encore"
@@ -50,24 +61,61 @@ class Serveur(ThreadingHTTPServer):
 
 
 def liste_ports():
-    """Ports serie presents ; [] si pyserial manque."""
+    """Ports serie presents ; [] si pyserial manque ou si la detection echoue (jamais d'exception)."""
     try:
         import pont_serie
         return pont_serie.liste_ports()
-    except ImportError:
+    except Exception:            # ImportError (pyserial absent) comme toute erreur de detection
         return []
 
 
-def route_occupee(port, route):
-    """True si GET 127.0.0.1:port+route repond en_cours: true ; False si l'outil ne repond pas."""
+def operation_git_en_cours(git=None):
+    """True si le depot a une fusion ou un rebase en cours (MERGE_HEAD, rebase-merge/, rebase-apply/)."""
+    git = Path(GIT if git is None else git)
+    return (git / "MERGE_HEAD").exists() or (git / "rebase-merge").is_dir() or (git / "rebase-apply").is_dir()
+
+
+def route_occupee(port, route, git=None):
+    """True si GET 127.0.0.1:port+route repond en_cours: true.
+
+    Si l'outil ne repond pas utilement (delai, erreur, reponse non JSON), on ne laisse pas arreter a
+    l'aveugle : le depot tranche (operation_git_en_cours).
+    """
     try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{int(port)}{route}", timeout=2) as r:
+        with SANS_PROXY.open(f"http://127.0.0.1:{int(port)}{route}", timeout=2) as r:
             return bool(json.loads(r.read().decode("utf-8")).get("en_cours"))
-    except (OSError, ValueError, AttributeError):
-        return False
+    except (OSError, ValueError, TypeError, AttributeError, http.client.HTTPException):
+        return operation_git_en_cours(git)
 
 
-def fabrique_gestionnaire(lanceur, acces):
+def hote_autorise(handler, port):
+    """Client de ce PC : Host doit nommer la boucle locale et notre port. Autre appareil : True (jeton)."""
+    if not acces_web.est_local(handler.client_address):
+        return True
+    hote = (handler.headers.get("Host", "") or "").strip().lower()
+    return hote in {f"127.0.0.1:{port}", f"localhost:{port}", f"[::1]:{port}"}
+
+
+def ouvre_navigateur(url, popen=subprocess.Popen):
+    """Ouvre url HORS du job de l'annuaire (cmd /c start + breakaway), sinon le navigateur, s'il demarre
+    a cette occasion, mourrait avec l'annuaire. Job parent sans breakaway (erreur 5) : sans le drapeau."""
+    if os.name != "nt":
+        webbrowser.open(url)
+        return
+    commande = ["cmd", "/c", "start", "", url]
+    options = dict(stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        try:
+            popen(commande, creationflags=CREATE_BREAKAWAY_FROM_JOB | CREATE_NO_WINDOW, **options)
+        except OSError as e:
+            if getattr(e, "winerror", None) != ERROR_ACCESS_DENIED:
+                raise
+            popen(commande, creationflags=CREATE_NO_WINDOW, **options)
+    except OSError as e:
+        print(f"   (navigateur non ouvert : {e})", flush=True)
+
+
+def fabrique_gestionnaire(lanceur, acces, git=None):
     verrou_lance = threading.Lock()      # verification "deja en marche" + validation + lancement : un a la fois
 
     class Gestionnaire(BaseHTTPRequestHandler):
@@ -90,6 +138,16 @@ def fabrique_gestionnaire(lanceur, acces):
         def _erreur(self, statut, message):
             self._json({"erreur": message}, statut)
 
+        def _controle(self):
+            """acces.controle, puis le Host d'un client local (DNS rebinding). False : reponse envoyee."""
+            if not acces.controle(self):
+                return False
+            if not hote_autorise(self, acces.port):
+                self.close_connection = True
+                self._erreur(403, "Hote refuse")
+                return False
+            return True
+
         def _hote_client(self):
             if acces_web.est_local(self.client_address):
                 return None
@@ -100,14 +158,14 @@ def fabrique_gestionnaire(lanceur, acces):
 
         def _ports(self):
             tenus = {}
-            for id, info in lanceur.lances.items():
+            for id, info in list(lanceur.lances.items()):     # copie : un POST concurrent modifie lances
                 if pre.pid_vivant(info.get("pid")):
                     for v in (info.get("valeurs") or {}).values():
                         tenus[str(v)] = reg.par_id(id).nom
             return [dict(p, tenu_par=tenus.get(p["port"])) for p in liste_ports()]
 
         def do_GET(self):
-            if not acces.controle(self):
+            if not self._controle():
                 return
             url = urlsplit(self.path)
             if url.path == "/":
@@ -131,7 +189,7 @@ def fabrique_gestionnaire(lanceur, acces):
                 self._erreur(404, "introuvable")
 
         def do_POST(self):
-            if not acces.controle(self):
+            if not self._controle():
                 return
             if self.headers.get("X-Annuaire") != "1" or not acces.origine_autorisee(self):
                 self.close_connection = True
@@ -171,13 +229,17 @@ def fabrique_gestionnaire(lanceur, acces):
                 args = reg.valide(outil, valeurs, [p["port"] for p in liste_ports()], ponts)
             except ValueError as e:
                 return self._erreur(400, str(e))
-            self._json({"pid": lanceur.lance(outil, args, valeurs)})
+            try:
+                pid = lanceur.lance(outil, args, valeurs)
+            except OSError as e:
+                return self._erreur(500, f"Lancement impossible : {e}")
+            self._json({"pid": pid})
 
         def _arrete(self, outil, etat):
             if not etat["peut_arreter"]:
                 return self._erreur(409, f"{outil.nom} n'a pas ete lance par l'annuaire : "
                                          "l'arreter depuis son terminal")
-            if outil.route_occupe and route_occupee(etat["port"], outil.route_occupe):
+            if outil.route_occupe and route_occupee(etat["port"], outil.route_occupe, git):
                 return self._erreur(409, MSG_SYNCHRO)
             connu = lanceur.lances.get(outil.id)
             fiche = pre.lit_fiches().get(outil.nom_acces)
@@ -217,7 +279,9 @@ def principal():
             return 0
         print(f"Port {args.http} deja utilise par un autre programme", flush=True)
         return 1
-    acces.annonce(not args.sans_navigateur)
+    acces.annonce(False)                 # pas webbrowser.open : il ouvrirait le navigateur DANS le job
+    if not args.sans_navigateur:
+        ouvre_navigateur(acces.lien_local())
     print("Ctrl+C pour arreter (les outils lances par l'annuaire s'arretent avec lui).", flush=True)
     try:
         serveur.serve_forever()

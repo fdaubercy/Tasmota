@@ -3,6 +3,8 @@
 PAGE est une chaine servie telle quelle par annuaire_outils.py. Elle interroge /registre (une fois),
 /etat (toutes les 3 s, arrete quand l'onglet est cache), /ports (a l'ouverture de la fenetre de lancement),
 /console (tant que le panneau est ouvert) et poste /lance et /arrete avec l'en-tete X-Annuaire: 1.
+Chaque appel est abandonne au bout de DELAI_APPEL (10 s ; un POST /arrete peut prendre ~5 s) : la page
+affiche un message et l'interrogation periodique reprend.
 Tout texte venu du serveur ou des outils est insere par textContent, jamais par innerHTML.
 """
 
@@ -92,6 +94,7 @@ PAGE = r"""<!doctype html>
 var $ = function (id) { return document.getElementById(id); };
 var registre = null, etats = {}, derniers = {}, liensReseau = [], occupe = {}, erreurs = {}, consoleId = null;
 var modaleId = null, enCours = false;
+var DELAI_APPEL = 10000;     // ms : au-dela, l'appel est abandonne (AbortController)
 
 // Cree un element : h("div", {class:"x", onclick:f}, enfants...) ; les textes passent par textContent.
 function h(balise, attrs) {
@@ -109,9 +112,11 @@ function h(balise, attrs) {
   return e;
 }
 
-// Appel HTTP qui ne leve jamais : {ok, statut, donnees, erreur}.
+// Appel HTTP qui ne leve jamais : {ok, statut, donnees, erreur}. Abandonne au bout de DELAI_APPEL.
 async function appel(url, corps) {
-  var opts = {cache: "no-store"};
+  var ctrl = new AbortController();
+  var minuterie = setTimeout(function () { ctrl.abort(); }, DELAI_APPEL);
+  var opts = {cache: "no-store", signal: ctrl.signal};
   if (corps !== undefined) {
     opts.method = "POST";
     opts.headers = {"X-Annuaire": "1", "Content-Type": "application/json"};
@@ -123,8 +128,12 @@ async function appel(url, corps) {
     statut = r.status;
     texte = await r.text();
   } catch (e) {
-    return {ok: false, statut: 0, donnees: null, erreur: "Annuaire injoignable"};
+    var abandon = ctrl.signal.aborted;
+    clearTimeout(minuterie);
+    return {ok: false, statut: 0, donnees: null,
+            erreur: abandon ? "Pas de réponse de l'annuaire en " + (DELAI_APPEL / 1000) + " s" : "Annuaire injoignable"};
   }
+  clearTimeout(minuterie);
   var donnees = null;
   try { donnees = JSON.parse(texte); } catch (e) { donnees = null; }
   if (statut >= 200 && statut < 300 && donnees !== null) return {ok: true, statut: statut, donnees: donnees, erreur: ""};
@@ -146,7 +155,7 @@ function tuile(o) {
   } else {
     if (e.etat === "marche" && e.lien)
       actions.appendChild(h("a", {"class": "btn p", href: e.lien, target: "_blank", rel: "noopener", texte: "Ouvrir ↗"}));
-    if (e.etat !== "marche")
+    if (e.etat !== "marche" && !e.peut_arreter)
       actions.appendChild(h("button", {"class": "btn p", type: "button", texte: "Lancer", onclick: function () { ouvreLancement(o); }}));
     if (e.peut_arreter)
       actions.appendChild(h("button", {"class": "btn", type: "button", texte: "Arrêter", onclick: function () { arrete(o); }}));
@@ -159,6 +168,7 @@ function tuile(o) {
     h("div", {"class": "meta", texte: meta}),
     e.etat === "marche" && e.lance_ailleurs ? h("div", {"class": "meta", texte: "lancé ailleurs"}) : null,
     e.raison ? h("div", {"class": "raison", texte: e.raison}) : null,
+    e.lie ? h("div", {"class": "erreur lie", texte: "liée à l'annuaire : s'arrêtera avec VS Code"}) : null,
     erreurs[o.id] ? h("div", {"class": "erreur", texte: erreurs[o.id]}) : null,
     actions);
 }
@@ -200,17 +210,20 @@ function copie(texte) {
 async function rafraichit() {
   if (enCours || !registre) return;
   enCours = true;
-  var r = await appel("/etat");
-  if (r.ok && r.donnees && Array.isArray(r.donnees.outils)) {
-    etats = {};
-    r.donnees.outils.forEach(function (e) { etats[e.id] = e; });
-    liensReseau = r.donnees.liens_reseau || [];
-    derniers = r.donnees.derniers || {};
-    $("message").textContent = "";
-  } else {
-    $("message").textContent = "État indisponible : " + r.erreur;
+  try {
+    var r = await appel("/etat");
+    if (r.ok && r.donnees && Array.isArray(r.donnees.outils)) {
+      etats = {};
+      r.donnees.outils.forEach(function (e) { etats[e.id] = e; });
+      liensReseau = r.donnees.liens_reseau || [];
+      derniers = r.donnees.derniers || {};
+      $("message").textContent = "";
+    } else {
+      $("message").textContent = "État indisponible : " + r.erreur;
+    }
+  } finally {
+    enCours = false;           // meme apres un abandon : l'interrogation suivante repart
   }
-  enCours = false;
   dessine();
   if (consoleId) majConsole();
 }
@@ -371,7 +384,8 @@ function texteArret(o) {
     t += " L'arrêt est refusé tant qu'une opération est en cours (synchro, fusion ou envoi : l'outil le signale par " +
          o.route_occupe + "), pour ne pas laisser un dépôt à moitié modifié.";
   t += o.dans_job ? " Lancé d'ici, il s'arrête aussi quand l'annuaire se ferme."
-                  : " Lancé d'ici, il continue de tourner quand l'annuaire (ou VS Code) se ferme : l'arrêter avec son bouton.";
+                  : " Lancé d'ici, il continue de tourner quand l'annuaire (ou VS Code) se ferme : l'arrêter avec son bouton. " +
+                    "Exception : si la tuile affiche « liée à l'annuaire », Windows a refusé de la détacher et elle s'arrêtera avec VS Code.";
   return t;
 }
 

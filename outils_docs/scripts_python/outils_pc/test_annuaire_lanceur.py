@@ -78,8 +78,9 @@ lanceur = al.Lanceur(racine, python=python)
 prefixe = sortie[:-len(".json")]
 p_job = None if mode == "refus" else lanceur.lance(outil("faux_job", True), [prefixe + "_job.pid"])
 p_hors = lanceur.lance(outil("faux_hors", False), [prefixe + "_hors.pid"])
+lie = {id: info.get("lie") for id, info in lanceur.lances.items()}
 with open(sortie + ".tmp", "w") as f:
-    json.dump({"ok": ok, "moi": os.getpid(), "p_job": p_job, "p_hors": p_hors}, f)
+    json.dump({"ok": ok, "moi": os.getpid(), "p_job": p_job, "p_hors": p_hors, "lie": lie}, f)
 os.replace(sortie + ".tmp", sortie)
 time.sleep(60)
 '''
@@ -179,7 +180,8 @@ def section_lance_et_console():
     reel = lit_pids(fichier)
     verifie(reel is not None, True, "lance_et_console : le faux outil a demarre")
     verifie(vivant(pid), True, "lance_et_console : PID rendu vivant")
-    verifie(lanceur.lances.get("faux"), {"pid": pid, "valeurs": {"port": "COM9"}}, "lances[id] = pid + valeurs")
+    verifie(lanceur.lances.get("faux"), {"pid": pid, "valeurs": {"port": "COM9"}, "lie": False},
+            "lances[id] = pid + valeurs, lie False")
     verifie(lanceur.derniers().get("faux"), {"port": "COM9"}, "lance(valeurs=...) memorise les derniers choix")
     attend(lambda: any("faux outil pret" in l for l in lanceur.console("faux")), 5)
     lignes = lanceur.console("faux")
@@ -208,7 +210,7 @@ def section_lance_et_console():
     texte = (Path(DOSSIER) / "consoles" / "faux.log").read_text(encoding="utf-8")
     verifie((texte.count("[annuaire] lance "), texte.count("ligne 249")), (1, 0),
             "relance : console tronquee (une console par lancement)")
-    verifie(lanceur.lances["faux"], {"pid": pid2, "valeurs": {}}, "lance sans valeurs : valeurs = {}")
+    verifie(lanceur.lances["faux"], {"pid": pid2, "valeurs": {}, "lie": False}, "lance sans valeurs : valeurs = {}")
     verifie(lanceur.arrete(faux, pid2), True, "relance : arrete -> True")
     verifie(lanceur.arrete(faux, pid2), True, "arrete d'un PID deja mort : True, sans exception")
 
@@ -299,6 +301,7 @@ def un_cas(mode, via_lanceur, libelle):
         console_hors = al.Lanceur(RACINE).console("faux_hors")
         verifie(any("synchro liee" in l for l in console_hors), False,
                 f"{libelle} : breakaway accepte (pas de repli)")
+        verifie(info["lie"], {"faux_job": False, "faux_hors": False}, f"{libelle} : breakaway accepte -> lie False")
     # Mini via le lanceur : on tue ce que voit VS Code (le lanceur, sans /T) ; sinon le python qui tient le job.
     taskkill_f(top if via_lanceur else info["moi"])
     job_mort = attend(lambda: not any(vivant(p) for p in job), 3)
@@ -332,6 +335,7 @@ def section_breakaway_refuse():
     tete = (Path(DOSSIER) / "consoles" / "faux_hors.log").read_text(encoding="utf-8").splitlines()[:2]
     verifie(any(l.startswith("[annuaire] synchro liee a l'annuaire") for l in tete), True,
             "breakaway_refuse : '[annuaire] synchro liee a l'annuaire' en tete de console")
+    verifie(info["lie"], {"faux_hors": True}, "breakaway_refuse : lances[id][\"lie\"] = True")
     with open(prefixe + "_hors.pid.console") as f:
         liste = [int(x) for x in f.read().split()]
     verifie(bool(liste) and info["moi"] not in liste, True, "breakaway_refuse : repli garde sa console a lui")
@@ -366,6 +370,51 @@ def section_console_detachee():
             "TEMOIN anciens drapeaux (sans CREATE_NO_WINDOW) : console du mini-annuaire partagee")
 
 
+def section_repli_seulement_erreur_5():
+    """Popen remplace (aucun processus) : seul OSError winerror 5 declenche le relancement sans breakaway."""
+    print("== repli_seulement_erreur_5 ==")
+    appels = []
+
+    class FauxProcessus:
+        pid = 999999
+
+    def popen_qui(erreur):
+        def faux(*a, **kw):
+            appels.append(kw.get("creationflags", 0))
+            if erreur is not None and len(appels) == 1:
+                raise erreur
+            return FauxProcessus()
+        return faux
+
+    vrai = al.subprocess.Popen
+    hors = outil("faux_repli", dans_job=False)
+    try:
+        al.subprocess.Popen = popen_qui(FileNotFoundError(2, "python introuvable"))
+        lanceur = al.Lanceur(RACINE)
+        try:
+            lanceur.lance(hors, [])
+            leve = None
+        except OSError as e:
+            leve = type(e).__name__
+        verifie((leve, len(appels)), ("FileNotFoundError", 1), "FileNotFoundError : remonte, pas de relance")
+        verifie("faux_repli" in lanceur.lances, False, "FileNotFoundError : rien dans lances")
+        del appels[:]
+        al.subprocess.Popen = popen_qui(OSError(None, "Acces refuse", None, 5))
+        lanceur = al.Lanceur(RACINE)
+        lanceur.lance(hors, [])
+        verifie(len(appels), 2, "TEMOIN winerror 5 : relance une fois")
+        verifie((bool(appels[0] & al.CREATE_BREAKAWAY_FROM_JOB), bool(appels[1] & al.CREATE_BREAKAWAY_FROM_JOB)),
+                (True, False), "winerror 5 : relance sans CREATE_BREAKAWAY_FROM_JOB")
+        verifie(lanceur.lances["faux_repli"]["lie"], True, "winerror 5 : lie True")
+        del appels[:]
+        al.subprocess.Popen = popen_qui(None)
+        lanceur = al.Lanceur(RACINE)
+        lanceur.lance(hors, [])
+        verifie((len(appels), lanceur.lances["faux_repli"]["lie"]), (1, False), "TEMOIN sans erreur : un appel, lie False")
+    finally:
+        al.subprocess.Popen = vrai
+
+
 def section_derniers():
     print("== derniers_memorises ==")
     al.Lanceur(RACINE).memorise("pont_serie", {"port": "COM3"})
@@ -382,7 +431,7 @@ def principal():
     try:
         for section in (section_lance_et_console, section_arrete_echoue, section_arrete_arbre,
                         section_taskkill_annuaire, section_console_detachee, section_breakaway_refuse,
-                        section_derniers):
+                        section_repli_seulement_erreur_5, section_derniers):
             try:
                 section()
             except Exception as e:          # une section cassee ne doit pas empecher le nettoyage

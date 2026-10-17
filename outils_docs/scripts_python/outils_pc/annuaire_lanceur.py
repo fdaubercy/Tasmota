@@ -7,7 +7,9 @@
 - Exception : un outil dans_job=False (la synchro du fork : un merge ne doit jamais etre coupe en plein
   vol) est lance avec CREATE_BREAKAWAY_FROM_JOB, et CREATE_NO_WINDOW pour ne pas partager la console de
   l'annuaire (voir DRAPEAUX_HORS_JOB). Si un job parent refuse le breakaway, il est relance sans ce
-  drapeau (donc lie a l'annuaire, mais toujours sur sa propre console) et sa console le dit en tete.
+  drapeau (donc lie a l'annuaire, mais toujours sur sa propre console) : sa console le dit en tete et
+  lances[id]["lie"] vaut True (la tuile de la page l'affiche). Seule l'erreur 5 (acces refuse) est
+  rattrapee ainsi ; toute autre OSError du lancement remonte.
 - La console d'un outil va dans un FICHIER (dossier_donnees()/consoles/<id>.log), jamais un tube : une
   synchro qui survit a l'annuaire ne doit pas ecrire dans un tube casse.
 - Arret : taskkill /T /F (l'arbre : le python.exe du penv est un lanceur qui cree un python enfant),
@@ -40,6 +42,7 @@ CREATE_NO_WINDOW = 0x08000000
 # chaque processus de GetConsoleProcessList (ou ConPTY envoie CTRL_CLOSE_EVENT), synchro comprise.
 # Pas DETACHED_PROCESS : les enfants console (git) ouvriraient alors des fenetres visibles.
 DRAPEAUX_HORS_JOB = CREATE_BREAKAWAY_FROM_JOB | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
+ERROR_ACCESS_DENIED = 5          # winerror d'un CreateProcess dont le job parent refuse le breakaway
 DELAI_ARRET = 5.0                # attente maximale de la mort du processus apres taskkill (s)
 LIGNE_LIEE = "[annuaire] synchro liee a l'annuaire (le job parent refuse le breakaway) : " \
              "elle s'arretera avec lui"
@@ -124,7 +127,7 @@ class Lanceur:
     def __init__(self, racine, python=sys.executable):
         self.racine = Path(racine)
         self.python = python
-        self.lances = {}         # id -> {"pid": int, "valeurs": dict}, outils lances depuis ce demarrage
+        self.lances = {}         # id -> {"pid", "valeurs", "lie"}, outils lances depuis ce demarrage
         self._processus = {}     # id -> Popen : garde le handle, le PID ne peut pas etre recycle
 
     # --- fichiers ---------------------------------------------------------------------------------
@@ -192,17 +195,20 @@ class Lanceur:
             def demarre(fl):
                 return subprocess.Popen(commande, cwd=str(self.racine), env=env, stdin=subprocess.DEVNULL,
                                         stdout=sortie, stderr=subprocess.STDOUT, creationflags=fl)
+            lie = False          # True : breakaway refuse, l'outil hors job a ete relance DANS le job
             try:
                 p = demarre(drapeaux)
-            except OSError:
-                if not drapeaux & CREATE_BREAKAWAY_FROM_JOB:
+            except OSError as e:
+                # Seul le refus du breakaway (acces refuse) se rattrape ; le reste (python absent...) remonte.
+                if not drapeaux & CREATE_BREAKAWAY_FROM_JOB or getattr(e, "winerror", None) != ERROR_ACCESS_DENIED:
                     raise
                 sortie.write((LIGNE_LIEE + "\n").encode("utf-8"))
                 sortie.flush()
                 p = demarre(drapeaux & ~CREATE_BREAKAWAY_FROM_JOB)
+                lie = True
         with _VERROU:
             self._processus[outil.id] = p
-            self.lances[outil.id] = {"pid": p.pid, "valeurs": dict(valeurs or {})}
+            self.lances[outil.id] = {"pid": p.pid, "valeurs": dict(valeurs or {}), "lie": lie}
         if valeurs is not None:
             self.memorise(outil.id, valeurs)
         return p.pid

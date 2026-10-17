@@ -127,7 +127,7 @@ def _com_tenu(outil, derniers, lances):
         v = str(derniers.get(p.cle, ""))
         if not v.upper().startswith("COM"):
             continue
-        for autre_id, info in lances.items():
+        for autre_id, info in list(lances.items()):     # copie : un POST concurrent modifie lances
             if autre_id == outil.id or not pid_vivant(info.get("pid")):
                 continue
             if any(str(x) == v for x in (info.get("valeurs") or {}).values()):
@@ -136,7 +136,12 @@ def _com_tenu(outil, derniers, lances):
 
 
 def etat_outils(lances, derniers, hote_client):
-    """Une entree par outil du registre (voir la fiche de tache 3 pour le detail des champs)."""
+    """Une entree par outil du registre (voir la fiche de tache 3 pour le detail des champs).
+
+    peut_arreter : fiche lance_par annuaire, OU outil lance ici (lances) dont le PID vit encore - meme sans
+    fiche (demarrage, outil bloque avant son bind). lie : lances[id]["lie"] (breakaway refuse, l'outil hors
+    job s'arretera avec l'annuaire) et PID vivant.
+    """
     fiches = lit_fiches()
     vivantes = {o.id: fiches.get(o.nom_acces) for o in reg.OUTILS}
     vivantes = {i: f for i, f in vivantes.items() if f and fiche_vivante(f)}
@@ -147,13 +152,16 @@ def etat_outils(lances, derniers, hote_client):
     resultat = []
     for o in reg.OUTILS:
         fiche = vivantes.get(o.id)
+        connu = lances.get(o.id) or {}
+        lance_ici = bool(connu) and pid_vivant(connu.get("pid"))
         e = {"id": o.id, "etat": "arrete", "raison": "", "port": 0, "debut": None, "lien": None,
-             "peut_arreter": False, "lance_ailleurs": False, "console": o.id in lances}
+             "peut_arreter": lance_ici, "lance_ailleurs": False, "console": o.id in lances,
+             "lie": lance_ici and bool(connu.get("lie"))}
         if fiche:
             port = fiche["port"]
             e.update(etat="marche", port=port, debut=fiche.get("debut"),
-                     peut_arreter=fiche.get("lance_par") == "annuaire",
-                     lance_ailleurs=fiche.get("lance_par") != "annuaire")
+                     peut_arreter=fiche.get("lance_par") == "annuaire" or lance_ici,
+                     lance_ailleurs=fiche.get("lance_par") != "annuaire" and not lance_ici)
             if hote_client is None:
                 e["lien"] = f"http://127.0.0.1:{port}/"
             elif fiche.get("jeton"):
@@ -162,8 +170,10 @@ def etat_outils(lances, derniers, hote_client):
             valeurs = derniers.get(o.id, {})
             e["port"] = attendus[o.id]
             if sondes[o.id]:
-                e.update(etat="marche", raison="en marche (sans fiche)", lance_ailleurs=True,
+                e.update(etat="marche", raison="en marche (sans fiche)", lance_ailleurs=not lance_ici,
                          lien=f"http://127.0.0.1:{attendus[o.id]}/" if hote_client is None else None)
+            elif lance_ici:
+                e.update(raison="lancé d'ici, page pas encore prête (démarrage ou outil bloqué)")
             else:
                 raison = _com_tenu(o, valeurs, lances)
                 if raison:
