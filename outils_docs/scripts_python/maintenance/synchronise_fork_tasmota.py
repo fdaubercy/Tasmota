@@ -22,9 +22,10 @@ DESCRIPTION
 
   Deroule :
     1. Diagnostic (lecture seule)  : combien de commits d'avance / de retard.
-    2. Synchro DISTANTE du fork    : API merge-upstream (le bouton « Sync fork »).
-    3. Les nouveautes              : resume dans le terminal + trace dans
-                                     outils_docs/HISTORIQUE_SYNCHRO_FORK.md.
+    2. Les nouveautes              : listees AVANT toute action, puis question
+                                     « Synchroniser ? [o/N] » (N = un dry-run).
+    3. Synchro DISTANTE du fork    : API merge-upstream (le bouton « Sync fork »)
+                                     + trace dans outils_docs/HISTORIQUE_SYNCHRO_FORK.md.
     4. Synchro LOCALE              : fetch + merge + push (le bouton de VS Code).
 
 STRATEGIE : MERGE, PAS REBASE
@@ -43,8 +44,9 @@ STRATEGIE : MERGE, PAS REBASE
 
 GARDE-FOUS
 ----------
-  - Arbre de travail sale  -> arret AVANT l'etape 4 (le fork distant, lui, est
-                              deja synchronise : rien n'est perdu).
+  - Arbre de travail sale  -> arret AVANT l'etape 3 : rien n'est modifie, ni le
+                              fork en ligne ni le depot local.
+  - Synchro distante       -> demande confirmation, apres lecture des nouveautes.
   - Conflit de merge       -> abort + rapport. Aucune resolution automatique.
   - Push                   -> demande confirmation (regle du depot).
   - Jamais de --force, jamais de stash.
@@ -65,6 +67,8 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+
+from synchro_fork_question import demander     # input(), ou boutons de synchro_fork_web.py
 
 # La sortie de ce script peut etre redirigee vers un fichier ; sous Windows,
 # Python passerait alors en cp1252 et le moindre caractere hors cp1252 leverait
@@ -382,21 +386,23 @@ def arbre_sale() -> list[str]:
     return sales
 
 
+def afficher_sales(sales: list[str], situation: str):
+    print(f"  {JAUNE}{GRAS}ARRET : {len(sales)} fichier(s) modifie(s) non commite(s).{RAZ}")
+    for l in sales[:15]:
+        print(f"    {l}")
+    if len(sales) > 15:
+        print(f"    {GRIS}... et {len(sales) - 15} autre(s){RAZ}")
+    print(f"\n  {situation}\n")
+    print("  Pour continuer, au choix :")
+    print(f"    - commiter ton travail, puis relancer ce script")
+    print(f"    - ou :  git stash  ->  relancer  ->  git stash pop")
+
+
 def synchro_locale(origin: str, branche: str) -> bool:
     sales = arbre_sale()
     if sales:
-        print(f"  {JAUNE}{GRAS}ARRET : {len(sales)} fichier(s) modifie(s) non commite(s).{RAZ}")
-        for l in sales[:15]:
-            print(f"    {l}")
-        if len(sales) > 15:
-            print(f"    {GRIS}... et {len(sales) - 15} autre(s){RAZ}")
-        print()
-        print(f"  {GRAS}Ton fork EN LIGNE est deja synchronise{RAZ} — rien n'est perdu.")
-        print("  Seule la mise a jour de ton depot local est reportee.")
-        print()
-        print("  Pour la faire, au choix :")
-        print(f"    - commiter ton travail, puis relancer ce script")
-        print(f"    - ou :  git stash  ->  relancer  ->  git stash pop")
+        afficher_sales(sales, f"{GRAS}Ton fork EN LIGNE est a jour{RAZ} — seule la mise a jour "
+                              "de ton depot local est reportee.")
         return False
 
     print("  fetch origin ...")
@@ -434,7 +440,8 @@ def synchro_locale(origin: str, branche: str) -> bool:
             if l:
                 print(f"    {l}")
         print()
-        rep = input(f"  {GRAS}Pousser vers origin/{branche} ? [o/N] {RAZ}").strip().lower()
+        rep = demander(f"  {GRAS}Pousser vers origin/{branche} ? [o/N] {RAZ}",
+                       [("o", "Pousser"), ("n", "Ne pas pousser")], eof="n").strip().lower()
         if rep in ("o", "oui", "y", "yes"):
             r = git_run("push", "origin", branche)
             if r.returncode == 0:
@@ -491,7 +498,26 @@ def main():
         synchro_locale(origin, branche)
         sys.exit(0)
 
-    section("Synchro distante du fork (« Sync fork » de GitHub)", 2, total)
+    section(f"Nouveautes d'upstream ({en_retard}), pas encore appliquees", 2, total)
+    afficher_nouveautes(analyses)
+
+    # Arbre sale verifie AVANT la synchro distante : sinon le fork en ligne avancerait
+    # et le local resterait en arriere, deux depots decales jusqu'a la relance.
+    sales = arbre_sale()
+    if sales:
+        print()
+        afficher_sales(sales, f"{GRAS}Rien n'a ete modifie{RAZ} (ni le fork en ligne, ni le depot local).")
+        sys.exit(1)
+
+    # Seule etape difficile a defaire : elle ne part qu'apres lecture des nouveautes.
+    # Hors terminal (EOFError), on n'invente pas de reponse : non.
+    rep = demander(f"\n  {GRAS}Synchroniser le fork avec ces {en_retard} commit(s) ? [o/N] {RAZ}",
+                   [("o", "Synchroniser"), ("n", "Ne rien faire")], eof="n")
+    if rep.strip().lower() not in ("o", "oui", "y", "yes"):
+        print(f"\n{GRIS}Synchro abandonnee : rien n'a ete modifie.{RAZ}")
+        sys.exit(0)
+
+    section("Synchro distante du fork (« Sync fork » de GitHub)", 3, total)
     ok, d = gh_api(f"repos/{origin}/merge-upstream", "POST", {"branch": branche})
     if not ok:
         print(f"  {ROUGE}{GRAS}ECHEC de la synchro distante.{RAZ}")
@@ -509,8 +535,6 @@ def main():
     if message:
         print(f"  {GRIS}{message}{RAZ}")
 
-    section(f"Nouveautes recuperees d'upstream ({en_retard})", 3, total)
-    afficher_nouveautes(analyses)
     noter_historique(analyses, origin, upstream, branche, type_merge)
 
     section("Synchro locale (« Sync » de VS Code)", 4, total)

@@ -164,6 +164,15 @@
             "args": ["-u", "outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py", "--dry-run"],
             "presentation": { "reveal": "always", "panel": "shared", "clear": true },
             "problemMatcher": []
+        },
+        {
+            // Page web de la synchro (merge et rebase) : lien dans la console, navigateur ouvert.
+            "label": "Outil : synchro du fork (http://127.0.0.1:7500)",
+            "type": "process",
+            "command": "python",
+            "args": ["-u", "outils_docs/scripts_python/maintenance/synchro_fork_web.py", "--http", "7500"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
         }
     ]
 }

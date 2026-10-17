@@ -39,6 +39,8 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='repla
 from pathlib import Path
 from datetime import datetime
 
+from synchro_fork_question import demander     # input(), ou boutons de synchro_fork_web.py
+
 # ── Localisation du repo ──────────────────────────────────────────────────────
 
 def find_git_root() -> Path:
@@ -202,7 +204,8 @@ def open_vscode(file_path: Path):
     except FileNotFoundError:
         print(f"  {YLW}[WARN]{RST} VS Code ('code') introuvable dans le PATH.")
         print(f"  Editez manuellement : {CYN}{file_path}{RST}")
-        input(f"  Appuyez sur {BLD}Entree{RST} une fois le fichier sauvegarde... ")
+        demander(f"  Appuyez sur {BLD}Entree{RST} une fois le fichier sauvegarde... ",
+                 [("", "Fichier sauvegarde")])
 
 # ── Resolution interactive d'un conflit ──────────────────────────────────────
 
@@ -242,7 +245,8 @@ def resolve_conflict(rel: str, idx: int, total: int) -> str:
               f"{BLD}[U]{RST} Prendre upstream   "
               f"{BLD}[E]{RST} Editer dans VS Code   "
               f"{BLD}[Q]{RST} Annuler le rebase")
-        choice = input(f"  Votre choix : ").strip().upper()
+        choice = demander(f"  Votre choix : ", [("M", "Garder le mien"), ("U", "Prendre upstream"),
+                          ("E", "Editer dans VS Code"), ("Q", "Annuler le rebase")], eof="Q").strip().upper()
 
         if choice == 'M':
             r = git_cmd("checkout", "--theirs", "--", rel)
@@ -270,7 +274,8 @@ def resolve_conflict(rel: str, idx: int, total: int) -> str:
             if remaining_up > 0 or remaining_mine > 0:
                 print(f"  {YLW}[ATTENTION]{RST} Des marqueurs de conflit sont "
                       f"encore presents dans le fichier.")
-                confirm = input(f"  Marquer quand meme comme resolu ? [o/N] ").strip().lower()
+                confirm = demander(f"  Marquer quand meme comme resolu ? [o/N] ",
+                                   [("o", "Marquer resolu"), ("n", "Revenir au choix")], eof="n").strip().lower()
                 if confirm != 'o':
                     continue
             git_cmd("add", "--", rel)
@@ -351,7 +356,8 @@ def run_rebase(dry_run: bool) -> bool:
                 continue
             # Erreur reelle
             print(f"\n  {RED}Erreur lors du rebase --continue.{RST}")
-            abort = input(f"  Annuler le rebase ? [O/n] ").strip().lower()
+            abort = demander(f"  Annuler le rebase ? [O/n] ",
+                             [("o", "Annuler le rebase"), ("n", "Laisser en l'etat")], eof="o").strip().lower()
             if abort != 'n':
                 git_interactive("rebase", "--abort")
                 print(f"  {YLW}Rebase annule. Votre branche est restauree.{RST}")
@@ -431,8 +437,10 @@ def main():
         section("Pousser vers origin", step=3, total=3)
         elapsed = time.monotonic() - t0
         print(f"  Duree totale : {elapsed:.1f}s\n")
-        push = input(f"  Pousser vers {CYN}origin/{branch}{RST} "
-                     f"(--force-with-lease) ? [O/n] ").strip().lower()
+        # Page web : le bouton « Pousser en force » ne s'active qu'une fois le nom de la branche saisi.
+        push = demander(f"  Pousser vers {CYN}origin/{branch}{RST} "
+                        f"(--force-with-lease) ? [O/n] ",
+                        [("o", "Pousser en force"), ("n", "Ne pas pousser")], eof="n", confirme=branch).strip().lower()
         if push != 'n':
             print(f"  {DIM}git push --force-with-lease...{RST}", end="", flush=True)
             r = git_cmd("push", "origin", branch, "--force-with-lease")
