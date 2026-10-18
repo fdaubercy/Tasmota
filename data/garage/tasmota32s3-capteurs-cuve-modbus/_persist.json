@@ -6,7 +6,9 @@
 			"dureeHeures": 24,
 			"moisConserves": 24,
 			"seriesMax": 12,
-			"series": {"hauteurEau": "sensorsCuve.niveauCuve.hauteurEau", "tauxRemplissage": "sensorsCuve.niveauCuve.tauxRemplissage", "volume": "sensorsCuve.niveauCuve.volume", "temperature": "DS18B20.Temperature"}
+			"series": {"hauteurEau": "sensorsCuve.niveauCuve.hauteurEau", "tauxRemplissage": "sensorsCuve.niveauCuve.tauxRemplissage", "volume": "sensorsCuve.niveauCuve.volume", "temperature": "DS18B20.Temperature"},
+			"affichage": {"hauteurEau": {"libelle": "Hauteur d'eau", "unite": "cm"}, "tauxRemplissage": {"libelle": "Remplissage", "unite": "%", "facteur": 100}, "volume": {"libelle": "Volume", "unite": "L"}, "temperature": {"libelle": "Température de l'eau", "unite": "°C"}},
+			"grafana": "http://192.168.0.5:3000/d/historique-cuve?var-appareil=%topic%"
 		},
 		"cmdMute": true,
 		"typeESP": "ESP32S3",

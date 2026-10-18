@@ -578,7 +578,15 @@ def copy_fs_image(source, target, env):
                 # Copier les dossiers
                 if os.path.isdir(source_dir_path):
                     print(Fore.GREEN + f"  → Copie du dossier temporaire : {source_dir_path} → {dest_dir_path}")
-                    shutil.copytree(source_dir_path, dest_dir_path, dirs_exist_ok=True)
+                    # La liste noire (custom_files_exclude) vaut aussi pour data/sd et data/json, par nom de
+                    # fichier : ex. uPlot (data/sd/js) n'est embarqué que sur les S3/P4 (2026-10-18)
+                    exclus = modules_exclus()
+                    def ignore_exclus(dossier, noms):
+                        ignores = [n for n in noms if n in exclus and os.path.isfile(os.path.join(dossier, n))]
+                        for n in ignores:
+                            print(Fore.CYAN + f"  → Liste noire (custom_files_exclude), non copié sur le LittleFS : {n}")
+                        return ignores
+                    shutil.copytree(source_dir_path, dest_dir_path, dirs_exist_ok=True, ignore=ignore_exclus)
 
                 # Copier les fichiers à la racine
                 elif os.path.isfile(source_dir_path):

@@ -6,7 +6,9 @@
 			"dureeHeures": 24,
 			"moisConserves": 24,
 			"seriesMax": 12,
-			"series": {"temperature": "DS18B20.Temperature", "temperatureESP32": "ESP32.Temperature", "compteur": "COUNTER.C1", "hauteurEau": "sensorsCuve.niveauCuve.hauteurEau", "tauxRemplissage": "sensorsCuve.niveauCuve.tauxRemplissage", "volume": "sensorsCuve.niveauCuve.volume", "capteurHauteur_mV": "sensorsCuve.valeursAnalogiques.valeurCapteurHauteur"}
+			"series": {"temperature": "DS18B20.Temperature", "temperatureESP32": "ESP32.Temperature", "compteur": "COUNTER.C1", "hauteurEau": "sensorsCuve.niveauCuve.hauteurEau", "tauxRemplissage": "sensorsCuve.niveauCuve.tauxRemplissage", "volume": "sensorsCuve.niveauCuve.volume", "capteurHauteur_mV": "sensorsCuve.valeursAnalogiques.valeurCapteurHauteur"},
+			"affichage": {"temperature": {"libelle": "Température de l'eau", "unite": "°C"}, "temperatureESP32": {"libelle": "Température ESP32", "unite": "°C"}, "compteur": {"libelle": "Compteur", "unite": ""}, "hauteurEau": {"libelle": "Hauteur d'eau", "unite": "cm"}, "tauxRemplissage": {"libelle": "Remplissage", "unite": "%", "facteur": 100}, "volume": {"libelle": "Volume", "unite": "L"}, "capteurHauteur_mV": {"libelle": "Capteur de hauteur", "unite": "mV"}},
+			"grafana": "http://192.168.0.5:3000/d/historique-cuve?var-appareil=%topic%"
 		},
 		"cmdMute": true,
 		"typeESP": "ESP32P4",
@@ -945,6 +947,13 @@
 						"pin": -1,
 						"id": 1,
 						"type": 288
+					},
+					"ledRGB": {
+						"activation": "OFF",
+						"pin": -1,
+						"id": 1,
+						"type": 1377,
+						"luminosite": 40
 					},
 					"ruban": {
 						"activation": "OFF",

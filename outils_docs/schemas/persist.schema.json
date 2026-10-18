@@ -342,6 +342,31 @@
                 "volume"
               ],
               "additionalProperties": true
+            },
+            "affichage": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "libelle": {
+                    "type": "string"
+                  },
+                  "unite": {
+                    "type": "string"
+                  },
+                  "facteur": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "libelle",
+                  "unite"
+                ],
+                "additionalProperties": true
+              }
+            },
+            "grafana": {
+              "type": "string"
             }
           },
           "required": [

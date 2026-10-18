@@ -38,6 +38,7 @@ Commandes **depuis la racine du dépôt**. `P` = `outils_docs/scripts_python`.
 |---|---|---|
 | `data/fs/modbusFonctions.be`, `logFonctions.be`, `globalFonctions.be` | ModBus (Berry) | `python P/berry/banc_test_modbus.py [dossier_sources]` |
 | `data/fs/ledsFonctions.be` | LEDs (Berry) | `python P/berry/banc_leds.py [dossier_sources]` |
+| `data/fs/graphiquesFonctions.be`, `historiqueFonctions.be` (route `/graphiques`), `data/sd/js/graphiques.js`, `data/sd/js/uPlot.iife.min.js`, filtre de `data/garage/tasmota32p4-serveur-modbus/controleGarage.be`, bloc `diverses.historique` du persist du P4 | graphiques (Berry + rendu Chrome) | `python P/berry/banc_graphiques.py` (~1 min, 42 contrôles ; `--sans-navigateur` = Berry seul, rendu NON vérifié ; `--garde DOSSIER` garde page et DOM). Copie mutée : `berry.exe P/berry/banc_graphiques.be <sortie> <dossier_sources>` |
 | `data/fs/udpFonctions.be`, `discoveryFonctions.be`, `rangeExtenderFonctions.be` | discovery (Berry) | `lib/libesp32/berry/berry.exe P/berry/test_discovery.be [dossier_sources] [dossier_bouchons]` puis **lire la dernière ligne** |
 | `P/outils_pc/acces_web.py` | **9 bancs** (commun à toutes les pages) | `test_acces_web.py`, puis `test_annuaire.py`, `test_annuaire_securite.py`, `test_pont_serie_acces.py`, `test_sniffeur_mqtt_acces.py`, `test_syslog_acces.py`, `test_sniffeur_modbus.py`, `test_testeur_udp.py`, et `python P/maintenance/test_synchro_fork_web.py` |
 | `P/outils_pc/annuaire_*.py` | annuaire | `PYPIO P/outils_pc/test_annuaire.py`, `test_annuaire_lanceur.py`, `test_annuaire_securite.py` |

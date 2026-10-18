@@ -30,6 +30,7 @@
  *     /histo?n=mesures&p=liste            -> {"nom","series","mois":["2026-09","2026-10"]}
  *     /histo?n=mesures&p=jour             -> {"nom","series","pas","t0","valeurs":[[serie 1],[serie 2]]}  (RAM)
  *     /histo?n=mesures&p=mois&m=2026-10   -> {"nom","series","lignes":[[t, min1, moy1, max1, min2, ...], ...]}
+ * Page des graphiques : /graphiques, servie par graphiquesFonctions.be (route declaree par HISTORIQUE_WEB).
 ********************************************************************************************* -#
 
 var historiqueFonctions = module("historiqueFonctions")
@@ -257,6 +258,12 @@ class HISTORIQUE_WEB : Driver
         import webserver
         import historiqueFonctions
         webserver.on("/histo", historiqueFonctions.page, webserver.HTTP_GET)
+        # Graphiques (graphiquesFonctions.be) : module importe a la premiere requete seulement
+        webserver.on("/graphiques", def () import graphiquesFonctions graphiquesFonctions.route() end, webserver.HTTP_GET)
+    end
+    def web_add_main_button()
+        import webserver
+        webserver.content_send("<p></p><form action='/graphiques' method='get'><button>Graphiques</button></form>")
     end
 end
 historiqueFonctions.HISTORIQUE_WEB = HISTORIQUE_WEB

@@ -38,6 +38,13 @@ class CONTROLE_GARAGE : Driver
             tasmota.add_cron("*/60 * * * * *", /-> controleGarage.enregistreLogs(fileLog), "majLogGarage")
         end
 
+        # Historique de la carte (data/fs/historiqueFonctions.be, demarre par autoexec.be) : sans mesure
+        # valide de la cuve, sensorsCuve publie 0 ; ces faux zeros sont enregistres comme absents (2026-10-18)
+        if (diverses.find("historique", {}).find("activation", "OFF") == "ON")
+            import historiqueFonctions
+            historiqueFonctions.ajouteFiltre(/ chemins, valeurs -> self.filtreHistorique(chemins, valeurs))
+        end
+
         #-         
             Ajoute les règles lancés selon l'étape de démarrage de la device tasmota :
             - Message log sur connexion wifi
@@ -312,6 +319,42 @@ class CONTROLE_GARAGE : Driver
                     end
                 end
             end
+        end
+    end
+
+    # Vrai si un appareil virtuel ModBus actif de la famille (analogiques, thermometres) est constate
+    # 'valide' ; 'type' (facultatif) restreint au type Tasmota (1312 = DS18B20)
+    def mesureVirtuelleValide(famille, typeAppareil)
+        import string
+        # find() plutot que [] : une exception ici ferait perdre toute la mesure de la minute (releve)
+        var appareils = modules.find("garage", {}).find("environnement", {}).find(famille)
+        if (type(appareils) != "instance")    return false    end
+        for cle: appareils.keys()
+            var device = appareils[cle]
+            if (type(device) != "instance")    continue    end
+            if (device.find("activation", "OFF") == "ON" && device.find("idModBus") == 1 &&
+                (typeAppareil == nil || device.find("type") == typeAppareil) &&
+                string.find(str(device.find("virtuel", "OFF")), "ModBus_TasmotaSlaveModBus") > -1)
+                return (device.find("etatConstate") == "valide")
+            end
+        end
+        return false
+    end
+
+    # Filtre de l'historique (historiqueFonctions.ajouteFiltre) : les mesures relayees de la cuve (esclave
+    # ModBus 1) sont publiees a 0 sans mesure reelle. Series sensorsCuve.* (niveau) et DS18B20.* (thermometre
+    # virtuel 'T° Eau de Cuve') a nil tant que leur appareil n'est pas constate 'valide' : 'defaillant'
+    # (sentinelle), 'inconnu' (esclave muet) ou pas encore relu depuis le demarrage -> pas de point, pas de faux 0
+    def filtreHistorique(chemins, valeurs)
+        import string
+
+        var niveauValide = self.mesureVirtuelleValide("analogiques")
+        var temperatureValide = self.mesureVirtuelleValide("thermometres", 1312)
+        if (niveauValide && temperatureValide)    return    end
+
+        for i: 0 .. size(chemins) - 1
+            if (!niveauValide && string.startswith(chemins[i], "sensorsCuve."))    valeurs[i] = nil    end
+            if (!temperatureValide && string.startswith(chemins[i], "DS18B20."))    valeurs[i] = nil    end
         end
     end
 
