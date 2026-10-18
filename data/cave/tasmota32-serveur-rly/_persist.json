@@ -46,7 +46,7 @@
 		"nom": "Serveur Relais Cave",
 		"hostname": "SERVEUR-RLY-CAVE",
 		"mDNS": "ON",
-		"apiHTTP": "OFF",
+		"apiHTTP": "ON",
 		"adressMAC": "",
 		"log": "detail",
 		"IP": {

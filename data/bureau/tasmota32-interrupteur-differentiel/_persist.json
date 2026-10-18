@@ -46,7 +46,7 @@
 		"nom": "Disjoncteur Différentiel PC Bureau",
 		"hostname": "DISJONCTEUR-DIFFERENTIEL-BUREAU",
 		"mDNS": "ON",
-		"apiHTTP": "OFF",
+		"apiHTTP": "ON",
 		"adressMAC": "",
 		"log": "detail",
 		"IP": {
