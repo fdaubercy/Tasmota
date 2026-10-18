@@ -325,6 +325,22 @@ les `BRY: GC` : c'est l'outil de mesure de la RAM.
 `tasks/lessons.md` — voir la section « AU DEMARRAGE DE CHAQUE SESSION » en tete de ce
 fichier. A lire en entier avant de toucher au code, a completer apres chaque correction.
 
+## Demandes recurrentes : les outils qui les automatisent (2026-10-18)
+
+Issus de l'audit des conversations du 2026-10-17. Les utiliser plutot que refaire a la main.
+
+- **Commit** : `/commite` (`pousse` en argument pour pousser). Porte les regles de la section « Commits ».
+- **Fin de conversation, passation** : `/fin-de-session` (reprise, lecons, memoire, mini-export lu
+  par `/reprise-session`). Apres un compactage, un hook le rappelle.
+- **Logs des cartes** : skill `logs-cartes` (journal syslog, pages :7200/:7100/:7000/:7600, filtres).
+- **Builds** : le hook `garde_build` refuse tout `pio run` pendant un build deja en cours. Un refus
+  n'est pas une panne : attendre la fin du build ou lancer l'outil hors PlatformIO.
+- **Berry** : chaque `.be` de `data/` edite par Claude est compile aussitot (hook `verifie_berry_edition`) ;
+  apres modification, skill `bancs` pour le banc a lancer ; avant commit, agent `relecteur-berry`.
+- **Diagnostic** : devant un bug, une erreur ou un comportement inattendu, invoquer
+  `superpowers:systematic-debugging` **avant** de proposer une correction (154 demandes de correction
+  pour 5 usages mesures).
+
 ## Carte des documents de ce depot
 
 Pour ne pas chercher : ce qui a ete produit et ou.
@@ -333,6 +349,30 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   PermissionError.
 - `.claude/hooks/verifie_synchro_fork.sh` — hook `SessionStart` : signale le retard du fork
   sur l'amont (detecteur seul, ne synchronise pas). Declare dans `.claude/settings.json`.
+- `.claude/hooks/garde_build.sh` + `garde_build.py` — hook `PreToolUse` (Bash, PowerShell) : refuse un
+  `pio run` si un `platformio run` ou un `scons` tourne (`pio home` ignore). Filtre `if` : ne se lance
+  que si la commande contient `pio`/`platformio`.
+- `.claude/hooks/rappel_apres_compactage.sh` — hook `SessionStart` (`compact`) : rappelle de mettre
+  a jour la reprise.
+- `.claude/hooks/verifie_berry_edition.sh` + `.py` — hook `PostToolUse` (Edit, Write, MultiEdit) : apres
+  chaque edition d'un `data/**/*.be` par Claude (hors `*sauvegarde*`), `verifie_berry.py <fichier>` (~0,8 s) ;
+  erreur Berry ou verification impossible -> code 2, l'erreur revient a Claude. Filtre `sh` : rien n'est lance
+  pour un autre fichier. Banc hors depot (faux depot + temoin verificateur absent).
+- `.claude/skills/bancs/` — skill : quel banc lancer pour quel fichier modifie, commande exacte (Python de
+  PlatformIO pour `outils_pc/`, pyserial), lecture vert/rouge, pieges (bancs Berry sans code de sortie,
+  `test_rs485_pc.py` n'est pas un banc, `--reel` = reseau).
+- `.claude/agents/relecteur-berry.md` — sous-agent de relecture des `.be` modifies avant commit : syntaxe,
+  charte des logs, RAM, regles du depot, bancs Berry lances. Ne modifie rien.
+- `.claude/commands/commite.md`, `.claude/commands/fin-de-session.md` — commandes `/commite`,
+  `/fin-de-session` ; `.claude/skills/logs-cartes/` — skill de lecture des logs.
+- `tasks/export-session-*.md` — mini-exports de passation ecrits par `/fin-de-session`.
+- `.claude/mods/` — marketplace locale `mods-tasmota` ; mod `meteo-contexte` : UNE barre coloree de
+  remplissage du contexte et cout de la session, au-dessus du prompt (terminal, et panneau VS Code 2.1.301 :
+  la bande y est dessinee, contrairement a la doc ; a defaut, ligne de statut + pane). Au-dela de 50 %, le
+  bouton « Preparer la passation » (`/fin-de-session`) est **toujours** visible ; toast unique. Sans processus
+  ni reseau. Banc hors depot (hote simule). Modifier le mod = monter `version` dans `plugin.json`, puis
+  `claude.cmd plugin marketplace update mods-tasmota` et `claude.cmd plugin update meteo-contexte@mods-tasmota`.
+  Installation : `/plugin marketplace add <depot>/.claude/mods` puis `/plugin install meteo-contexte@mods-tasmota`.
 - `tasks/lessons.md` — journal des erreurs et regles.
 - `tasks/reprise-solidification-berry.md` — etat du chantier solidification, prochaine action.
 - `tasks/reprise-chantier-modbus-grenier.md` — etat du chantier ModBus (carte 16 relais +

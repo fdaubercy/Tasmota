@@ -1,0 +1,16 @@
+{
+  "name": "mods-tasmota",
+  "owner": {
+    "name": "fdaubercy"
+  },
+  "metadata": {
+    "description": "Mods Claude Code du fork Tasmota."
+  },
+  "plugins": [
+    {
+      "name": "meteo-contexte",
+      "source": "./meteo-contexte",
+      "description": "Barre de remplissage du contexte au-dessus du prompt, bouton de passation a partir de 50 %."
+    }
+  ]
+}

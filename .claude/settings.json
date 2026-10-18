@@ -1,4 +1,30 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(git grep *)",
+      "Bash(tasklist)",
+      "Bash(tasklist *)",
+      "Bash(git check-ignore *)",
+      "Bash(git rev-list *)",
+      "Bash(gh search *)",
+      "mcp__Claude_Browser__read_console_messages",
+      "Bash(ping *)",
+      "Bash(git merge-base *)",
+      "mcp__claude-in-chrome__tabs_context_mcp",
+      "Bash(git check-attr *)",
+      "Bash(claude mcp list)",
+      "mcp__Claude_Browser__find",
+      "mcp__omniroute__omniroute_get_health",
+      "mcp__omniroute__omniroute_list_models_catalog",
+      "Bash(where *)",
+      "Bash(where.exe *)",
+      "Bash(nslookup *)",
+      "Bash(ipconfig)",
+      "Bash(ipconfig /all)",
+      "Bash(arp -a)",
+      "Bash(arp -a *)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {
@@ -7,6 +33,64 @@
             "type": "command",
             "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/verifie_synchro_fork.sh\"",
             "timeout": 60000
+          }
+        ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/rappel_apres_compactage.sh\"",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(*pio*)",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/garde_build.sh\"",
+            "timeout": 20000
+          },
+          {
+            "type": "command",
+            "if": "Bash(*platformio*)",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/garde_build.sh\"",
+            "timeout": 20000
+          }
+        ]
+      },
+      {
+        "matcher": "PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "PowerShell(*pio*)",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/garde_build.sh\"",
+            "timeout": 20000
+          },
+          {
+            "type": "command",
+            "if": "PowerShell(*platformio*)",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/garde_build.sh\"",
+            "timeout": 20000
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/verifie_berry_edition.sh\"",
+            "timeout": 30000
           }
         ]
       }
