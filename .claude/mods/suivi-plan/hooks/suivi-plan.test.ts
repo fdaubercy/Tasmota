@@ -12,6 +12,8 @@ const PLANS = `${RACINE}/tasks/plans`
 const PROFIL = 'C:\\Users\\moi'
 const SIGNAL = 'C:/Users/moi/.claude/suivi-plan/signal.json'
 const SOURCE = 'C:\\Users\\moi\\.claude\\plans\\plan-joyeux.md'
+const SESSION = 'sess-1'
+const RATTACHE = `C:/Users/moi/.claude/suivi-plan/conversations/${SESSION}.json`
 
 const BRUT = '# Mon plan\n\n## Contexte\nTexte.\n\n## A1 — Faire\n- [ ] étape x\n- [ ] étape y\n\n## Améliorations restantes\n- [ ] [projet] plus tard\n'
 const ESSAI = [
@@ -57,7 +59,9 @@ function monde(on: On, fichiers: Record<string, string>, dossiers: string[] = [P
     commandes.push(e.name)
     return { value: { command: e.name } }
   })
+  on('session.id', () => ({ value: SESSION }))
   on('session.start', ($, e) => ({ cwd: e.cwd }))
+  on('prompt.submit', ($, e) => ({ text: e.text }))
   on('turn.complete', ($, e) => ({ text: e.answer }))
   on('prompt.context', ($, e) => ({ blocks: e.blocks }))
   on('prompt.attachment', ($, e) => ({ text: e.text }))
@@ -102,6 +106,9 @@ test('recopie un plan approuve : fichier, context, signal, ligne de statut', asy
   expect(signal.fichier).toBe('tasks/plans/mon-plan.md')
   expect(typeof signal.horodatage).toBe('number')
   expect(m.statuts.at(-1)).toMatch(/^Plan mon-plan ░+ 0 % · A1 0\/2 · prochaine : étape x/)
+  expect(signal.session).toBe(SESSION)
+  expect(signal.ouvrir).toBe(true)
+  expect(JSON.parse(m.lire(RATTACHE))).toMatchObject({ session: SESSION, racine: RACINE, fichier: 'tasks/plans/mon-plan.md' })
 })
 
 test('plan revalide : coches gardees ; meme nom, autre source : suffixe -2', async ($, on) => {
@@ -157,6 +164,8 @@ test('TEMOIN racine sans tasks/plans : aucune ecriture, aucune ligne, aucun bloc
   await demarre($)
   const r = await $.tool.call({ tool: 'ExitPlanMode' })
   const ctx = await $.prompt.context({ blocks: [{ name: 'currentDate', text: 'x' }] })
+  await $.prompt.submit({ text: 'bonjour' })
+  await suivi($, 'detacher')
   const att = await $.prompt.attachment({ type: 'plan_mode', text: 'RAPPEL', origin: { kind: 'engine' }, detail: { reminder: 'full', planFilePath: SOURCE, hasPlan: false } })
   expect(m.ecritures).toEqual([])
   expect(r.context).toBeUndefined()
@@ -211,6 +220,9 @@ test('/suivi : resume, liste, ouvrir, clore (fins de ligne gardees)', async ($, 
   expect(texte).not.toContain('maj: 2026-10-01')
   expect(texte.replace(/\r\n/g, '').includes('\n')).toBe(false)
   expect(m.statuts.at(-1)).toBeUndefined()
+  // « ouvrir » a rattache essai a la conversation : son resume reste montre, meme clos
+  expect((await suivi($, '')).text).toContain('statut clos')
+  await suivi($, 'detacher')
   expect((await suivi($, '')).text).toContain('Aucun plan actif.')
   expect((await suivi($, 'activer ../../secret')).text).toContain('introuvable')
 })
@@ -236,7 +248,9 @@ test('etape cochee sans preuve : rappel doux ; avec preuve ou hors plan : rien',
   expect(avec.context).toBeUndefined()
   const format = await $.tool.call({ tool: 'Edit', file_path: `${PLANS}/_FORMAT.md`, old_string: '- [ ] y', new_string: '- [x] y' })
   expect(format.context).toBeUndefined()
-  expect(m.ecritures).toEqual([])                       // un plan edite (pas cree) : pas de signal
+  // un plan edite (pas cree) : pas de signal, mais la conversation le suit desormais
+  expect(m.ecritures.filter((p) => p !== RATTACHE)).toEqual([])
+  expect(JSON.parse(m.lire(RATTACHE)).fichier).toBe('tasks/plans/essai.md')
 })
 
 test('plan cree par Write : signal ecrit', async ($, on) => {
@@ -244,4 +258,42 @@ test('plan cree par Write : signal ecrit', async ($, on) => {
   await $.tool.call({ tool: 'Write', file_path: `${PLANS}/neuf.md`, content: ESSAI.replace('essai', 'neuf') })
   expect(JSON.parse(m.lire(SIGNAL)).fichier).toBe('tasks/plans/neuf.md')
   expect(m.statuts.at(-1)).toMatch(/^Plan neuf /)
+})
+
+const PLAN_B = ESSAI.replace(/Plan d'essai/g, 'Plan B').replace('chantier: essai', 'chantier: autre')
+
+test('/suivi suivre et detacher : rattachement, resume du plan suivi, signaux', async ($, on) => {
+  const m = monde(on, { [`${PLANS}/essai.md`]: ESSAI, [`${PLANS}/autre.md`]: PLAN_B })   // autre = plus recent
+  await demarre($)
+  expect((await suivi($, '')).text).toContain('Plan « Plan B »')               // sans rattachement : le plus recent
+  expect((await suivi($, 'suivre')).text).toContain('Usage : /suivi suivre <chantier>')
+  const r = await suivi($, 'suivre essai')
+  expect(r.text).toContain('Cette conversation suit tasks/plans/essai.md')
+  expect(JSON.parse(m.lire(RATTACHE)).fichier).toBe('tasks/plans/essai.md')
+  expect(JSON.parse(m.lire(SIGNAL))).toMatchObject({ fichier: 'tasks/plans/essai.md', session: SESSION, ouvrir: true })
+  expect((await suivi($, '')).text).toContain("Plan « Plan d'essai »")          // le plan suivi passe devant
+  expect((await suivi($, 'ouvrir')).text).toContain('fichier=tasks/plans/essai.md')
+  expect((await suivi($, 'suivre ../../secret')).text).toContain('introuvable')
+  const d = await suivi($, 'detacher')
+  expect(d.text).toContain('ne suit plus tasks/plans/essai.md')
+  expect(JSON.parse(m.lire(RATTACHE)).fichier).toBeNull()
+  expect(JSON.parse(m.lire(SIGNAL))).toMatchObject({ fichier: null, ouvrir: false })
+  expect((await suivi($, 'detacher')).text).toContain('ne suivait aucun plan')
+  expect(m.lire(`${PLANS}/essai.md`)).toBe(ESSAI)                               // le plan lui-meme intact
+})
+
+test('message envoye : signal sans ouverture avec le plan de la conversation', async ($, on) => {
+  const m = monde(on, { [`${PLANS}/essai.md`]: ESSAI, [`${PLANS}/autre.md`]: PLAN_B })
+  await $.prompt.submit({ text: 'bonjour' })
+  expect(JSON.parse(m.lire(SIGNAL))).toMatchObject({ racine: RACINE, fichier: null, session: SESSION, ouvrir: false })
+  await suivi($, 'suivre essai')
+  await $.prompt.submit({ text: 'et maintenant ?' })
+  expect(JSON.parse(m.lire(SIGNAL))).toMatchObject({ fichier: 'tasks/plans/essai.md', ouvrir: false })
+  // rattachement d'une autre racine, ou plan disparu : aucun plan
+  m.fs.set(RATTACHE, { texte: JSON.stringify({ session: SESSION, racine: 'D:/ailleurs', fichier: 'tasks/plans/essai.md' }), mtimeMs: ++horloge })
+  await $.prompt.submit({ text: 'x' })
+  expect(JSON.parse(m.lire(SIGNAL)).fichier).toBeNull()
+  m.fs.set(RATTACHE, { texte: JSON.stringify({ session: SESSION, racine: RACINE, fichier: 'tasks/plans/efface.md' }), mtimeMs: ++horloge })
+  await $.prompt.submit({ text: 'x' })
+  expect(JSON.parse(m.lire(SIGNAL)).fichier).toBeNull()
 })

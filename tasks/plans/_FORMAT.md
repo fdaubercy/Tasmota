@@ -52,5 +52,10 @@ Texte libre. Non compté.
   (commit, `fichier:ligne`, sortie d'un banc). Pas de coche sans preuve (même règle que `/fin-de-session`).
 - Mettre à jour `maj:` à chaque modification.
 - Ce qui reste hors du plan va dans « Améliorations restantes », avec son étiquette.
-- Plan fini (100 %) : `statut: clos`. Plusieurs plans peuvent être `actif` ; la vue et la ligne
-  d'avancement montrent le plus récemment modifié.
+- Plan fini (100 %) : `statut: clos`. Plusieurs plans peuvent être `actif` ; la ligne
+  d'avancement montre le plus récemment modifié.
+- **Plan d'une conversation** : une conversation suit le plan qu'elle a validé (ExitPlanMode), édité
+  ou ouvert (`/suivi ouvrir`) ; `/suivi suivre <chantier>` la rattache à la main, `/suivi detacher`
+  la libère (le plan reste intact). Quand l'onglet actif est une conversation Claude, la vue de droite
+  montre SON plan, ou « aucun plan » ; un onglet de fichier ne change rien ; « Choisir le plan » vaut
+  jusqu'au prochain passage sur une conversation. Rattachements : `%USERPROFILE%\.claude\suivi-plan\conversations\<session>.json`.

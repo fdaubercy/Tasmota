@@ -134,6 +134,14 @@ async function principal() {
   const vide = P.analyse('# Rien\n')
   verifie('plan sans action : % global « — »', R.rendu(vide, 'x.md', []).includes('data-type="pourcent-global">—<'))
   verifie('aucun plan : message', R.rendu(null, 'tasks/plans', []).includes('Aucun plan'))
+  const sans = R.rendu(null, 'tasks/plans', [{}], { conversation: { message: `Rien ${XSS}` } })
+  verifie('conversation sans plan : message échappé et consigne /suivi suivre',
+    sans.includes('Rien &lt;script&gt;') && !sans.includes(XSS) && sans.includes('/suivi suivre &lt;chantier&gt;'))
+  verifie('conversation sans plan : bouton « Choisir le plan » dès un plan', sans.includes('data-action="choisir"'))
+  verifie('conversation sans plan, aucun plan au dépôt : pas de bouton',
+    !R.rendu(null, 'tasks/plans', [], { conversation: {} }).includes('data-action="choisir"'))
+  verifie('conversation sans plan : message par défaut',
+    R.rendu(null, 'tasks/plans', [], { conversation: {} }).includes('Cette conversation ne suit aucun plan.'))
 
   // 4. Le vrai plan du depot
   const reel = path.join(RACINE, 'tasks', 'plans', 'suivi-plan.md')

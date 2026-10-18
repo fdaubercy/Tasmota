@@ -391,8 +391,14 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   d'avancement (`$.ui.status`), resume du plan actif injecte a chaque conversation, `/suivi`, fichier signal
   `%USERPROFILE%\.claude\suivi-plan\signal.json` qui ouvre la vue. Parseur partage avec l'extension :
   `hooks/parseur-plan.mjs` (banc `node .claude/mods/suivi-plan/tests/test_parseur.mjs`, avec mutants).
+  Plan PAR CONVERSATION (0.2.0, 2026-10-18) : rattache par ExitPlanMode, edition d'un plan, `/suivi ouvrir`,
+  `/suivi suivre <chantier>` ; `/suivi detacher` le lache. Ecrit `...\suivi-plan\conversations\<session>.json`,
+  et a chaque message un signal `ouvrir: false`. Banc : `claude.cmd plugin test .claude/mods/suivi-plan`.
 - `outils_docs/vscode/suivi-plan/` — extension VS Code `fdaubercy.suivi-plan` : vue du plan a droite (%
   par action, ameliorations restantes), barre d'etat. Installation : `maintenance/installe_suivi_plan.py`.
+  Suit l'onglet de conversation Claude actif (`conversations.js` : libelle d'onglet = titre du transcript
+  tronque comme l'extension Claude 2.1.301 ; banc `test_conversations.js`) ; journal « Suivi du plan »
+  (panneau Sortie) : une ligne par bascule.
 - `tasks/plans/` — un plan suivi par chantier ; format et regles de calcul dans `_FORMAT.md`.
 - `tasks/lessons.md` — journal des erreurs et regles.
 - `tasks/reprise-solidification-berry.md` — etat du chantier solidification, prochaine action.

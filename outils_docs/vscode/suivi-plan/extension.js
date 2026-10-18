@@ -3,6 +3,9 @@
 // (format : tasks/plans/_FORMAT.md), plus « Plan 74 % » dans la barre d'etat.
 // Le calcul vient du parseur UNIQUE du mod Claude (.claude/mods/suivi-plan/hooks/parseur-plan.mjs),
 // dont une copie est embarquee dans le .vsix par installe_suivi_plan.py.
+// Plan de la conversation : quand l'onglet actif est une conversation Claude, la vue montre le plan
+// que cette conversation suit (rattachements ecrits par le mod, voir conversations.js), ou « aucun
+// plan ». Un onglet d'un autre type ne change rien. Le choix manuel vaut jusqu'a la bascule suivante.
 'use strict'
 
 const vscode = require('vscode')
@@ -12,15 +15,23 @@ const path = require('path')
 const crypto = require('crypto')
 const { pathToFileURL } = require('url')
 const { rendu, page } = require('./rendu')
+const C = require('./conversations')
 
 const CLE_CHOIX = 'suiviPlan.choisi'
 const CLE_SIGNAL = 'suiviPlan.dernierSignal'
 const AGE_MAX_SIGNAL = 5 * 60 * 1000   // un signal plus vieux au demarrage n'ouvre rien
+const ECHANGE = path.join(os.homedir(), '.claude', 'suivi-plan')   // signal.json, conversations/
+const PROJETS = path.join(os.homedir(), '.claude', 'projects')     // transcripts <session>.jsonl
 
 const E = {
-  ctx: null, racine: null, parseur: null, panel: null, barre: null,
+  ctx: null, racine: null, parseur: null, panel: null, barre: null, journal: null,
   plans: [], affiche: null, ouvertureAutoFaite: false,
-  veilleurs: [], minuterie: null, minuterieSignal: null,
+  veilleurs: [], minuterie: null, minuterieSignal: null, minuterieOnglet: null,
+  // Conversation active : null = pas de conversation reconnue (choix memorise / automatique),
+  // sinon { session, fichier (null = aucun plan), message } ; dernierOnglet evite de refaire le travail
+  conv: null, dernierOnglet: null,
+  transcripts: new Map(),   // session -> chemin du .jsonl
+  titres: new Map(),        // chemin du .jsonl -> { mtime, taille, titre }
 }
 
 const reglages = () => vscode.workspace.getConfiguration('suiviPlan')
@@ -76,8 +87,10 @@ function listePlans() {
   return plans.sort((x, y) => y.mtime - x.mtime)
 }
 
-// Plan affiche : choix memorise, sinon le plus recent des actifs, sinon le plus recent
+// Plan affiche : celui de la conversation active (null = aucun), sinon choix memorise,
+// sinon le plus recent des actifs, sinon le plus recent
 function planCourant() {
+  if (E.conv) return E.conv.fichier ? E.plans.find(p => p.fichier === E.conv.fichier) || null : null
   const choisi = E.ctx.workspaceState.get(CLE_CHOIX)
   return E.plans.find(p => p.fichier === choisi) ||
     E.plans.find(p => p.a.meta.statut === 'actif') || E.plans[0] || null
@@ -88,6 +101,11 @@ function nonce() { return crypto.randomBytes(16).toString('base64').replace(/[^A
 function contenu() {
   const p = planCourant()
   E.affiche = p
+  if (!p && E.conv) {
+    const message = E.conv.message ||
+      (E.conv.fichier ? `Le plan suivi par cette conversation est introuvable (${E.conv.fichier}).` : '')
+    return rendu(null, dossierRel(), E.plans, { conversation: { message } })
+  }
   return rendu(p ? p.a : null, p ? p.fichier : dossierRel(), E.plans)
 }
 
@@ -131,9 +149,14 @@ function brancheVue(panel) {
   panel.webview.onDidReceiveMessage(m => recoitMessage(m))
 }
 
-// Ouvre (ou revele) la vue a droite ; @fichier : plan a afficher (deja valide), facultatif
-function ouvreVue(fichier) {
-  if (fichier) { E.ctx.workspaceState.update(CLE_CHOIX, fichier); rafraichit() }
+// Ouvre (ou revele) la vue a droite ; @fichier : plan a afficher (deja valide), facultatif ;
+// @conv : la conversation qui le demande (signal du mod), sinon c'est un choix manuel
+function ouvreVue(fichier, conv) {
+  if (conv) { E.conv = conv; rafraichit() } else if (fichier) {
+    E.conv = null
+    E.ctx.workspaceState.update(CLE_CHOIX, fichier)
+    rafraichit()
+  }
   if (E.panel) { E.panel.reveal(vscode.ViewColumn.Beside, true); majVue(); return }
   brancheVue(vscode.window.createWebviewPanel('suiviPlan.vue', 'Plan',
     { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
@@ -167,6 +190,7 @@ async function choisirPlan() {
   const choix = await vscode.window.showQuickPick(items, { placeHolder: 'Plan à afficher' })
   if (!choix) return
   await E.ctx.workspaceState.update(CLE_CHOIX, choix.fichier || undefined)
+  E.conv = null                                    // choix manuel : vaut jusqu'a la bascule suivante
   rafraichit()
   ouvreVue()
 }
@@ -191,22 +215,164 @@ function veillePlans() {
 }
 
 // --- Fichier signal du mod Claude : ~/.claude/suivi-plan/signal.json
-//     { "racine": "<depot, />", "fichier": "tasks/plans/x.md", "horodatage": <ms> }
+//     { "racine": "<depot, />", "fichier": "tasks/plans/x.md" | null, "horodatage": <ms>,
+//       "session": "<id>", "ouvrir": true|false }
+//     fichier null : la conversation ne suit aucun plan ; ouvrir false (message envoye) : la vue
+//     suit la conversation si elle est ouverte, sans s'ouvrir ; session/ouvrir absents = ancien mod.
 const normeRacine = r => String(r || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()
+const sessionValide = s => (typeof s === 'string' && /^[A-Za-z0-9-]{1,80}$/.test(s) ? s : null)
 
 function lisSignal(auDemarrage) {
   let s
-  try { s = JSON.parse(fs.readFileSync(path.join(os.homedir(), '.claude', 'suivi-plan', 'signal.json'), 'utf8')) } catch { return }
+  try { s = JSON.parse(fs.readFileSync(path.join(ECHANGE, 'signal.json'), 'utf8')) } catch { return }
   if (!s || normeRacine(s.racine) !== normeRacine(E.racine)) return
   const h = Number(s.horodatage)
   if (!Number.isFinite(h) || h <= (E.ctx.workspaceState.get(CLE_SIGNAL) || 0)) return
   E.ctx.workspaceState.update(CLE_SIGNAL, h)
   if (auDemarrage && Date.now() - h > AGE_MAX_SIGNAL) return
-  if (!reglages().get('ouvrirAuto')) return
+  const session = sessionValide(s.session)
+  const ouvrir = s.ouvrir !== false
+  // Signal « message envoye » (ou detachement) d'une AUTRE conversation que celle de l'onglet actif
+  // reconnu : ignore. Le mod l'ecrit apres la soumission (3,6 s mesurees le 2026-10-18), et un message
+  // mis en file n'est soumis qu'a la fin du tour : l'utilisateur a souvent change d'onglet entre-temps.
+  if (!ouvrir || s.fichier === null || s.fichier === undefined) {
+    const active = sessionOngletActif()
+    if (session && active && active !== session) {
+      journal(`signal ignoré : conversation ${session}, onglet actif ${active}`)
+      return
+    }
+  }
+  if (s.fichier === null || s.fichier === undefined) {
+    if (!session) return
+    E.conv = { session, fichier: null }
+    journal(`signal : conversation ${session} sans plan`)
+    return rafraichit()
+  }
   const abs = valideChemin(s.fichier)
   if (!abs) return vscode.window.showWarningMessage(`Suivi du plan : signal ignoré, chemin refusé (${String(s.fichier).slice(0, 120)}).`)
+  const fichier = s.fichier.replace(/\\/g, '/')
+  if (!ouvrir) {
+    if (!session) return
+    E.conv = { session, fichier }
+    journal(`signal : conversation ${session} -> ${fichier}`)
+    return rafraichit()
+  }
+  if (!reglages().get('ouvrirAuto')) return
   if (!fs.existsSync(abs)) return vscode.window.showWarningMessage(`Suivi du plan : plan introuvable (${s.fichier}).`)
-  ouvreVue(s.fichier.replace(/\\/g, '/'))
+  journal(`signal : ouverture de ${fichier}${session ? ` (conversation ${session})` : ''}`)
+  ouvreVue(fichier, session ? { session, fichier } : undefined)
+}
+
+// --- Conversation de l'onglet actif
+
+function journal(texte) { try { E.journal?.info(texte) } catch { /* journal ferme */ } }
+
+// Libelle de l'onglet actif s'il est une conversation Claude, sinon null
+function ongletClaudeActif() {
+  const t = vscode.window.tabGroups.activeTabGroup?.activeTab
+  const input = t?.input
+  if (!(input instanceof vscode.TabInputWebview)) return null
+  return String(input.viewType || '').endsWith(C.TYPE_ONGLET) ? t.label : null
+}
+
+// Transcript d'une session : ~/.claude/projects/<un projet>/<session>.jsonl (cache)
+function transcript(session) {
+  const connu = E.transcripts.get(session)
+  if (connu && fs.existsSync(connu)) return connu
+  let projets = []
+  try { projets = fs.readdirSync(PROJETS) } catch { return null }
+  for (const p of projets) {
+    const f = path.join(PROJETS, p, session + '.jsonl')
+    if (fs.existsSync(f)) { E.transcripts.set(session, f); return f }
+  }
+  return null
+}
+
+// Titre d'une session, lu comme l'extension Claude (64 Ko de tete et de fin), cache par mtime + taille
+function titre(session) {
+  const f = transcript(session)
+  if (!f) return null
+  let st
+  try { st = fs.statSync(f) } catch { return null }
+  const connu = E.titres.get(f)
+  if (connu && connu.mtime === st.mtimeMs && connu.taille === st.size) return connu.titre
+  let t = null
+  let fd
+  try {
+    fd = fs.openSync(f, 'r')
+    const b = Buffer.alloc(C.TAILLE_BLOC)
+    const tete = b.toString('utf8', 0, fs.readSync(fd, b, 0, C.TAILLE_BLOC, 0))
+    const fin = st.size > C.TAILLE_BLOC ? b.toString('utf8', 0, fs.readSync(fd, b, 0, C.TAILLE_BLOC, st.size - C.TAILLE_BLOC)) : tete
+    t = C.titreSession(tete, fin)
+  } catch (e) { journal(`transcript illisible ${f} : ${e.message}`) } finally { if (fd !== undefined) fs.closeSync(fd) }
+  E.titres.set(f, { mtime: st.mtimeMs, taille: st.size, titre: t })
+  return t
+}
+
+// Conversations rattachees a un plan de ce depot : [{ session, fichier, titre, horodatage }]
+function rattachements() {
+  const dossier = path.join(ECHANGE, 'conversations')
+  let noms = []
+  try { noms = fs.readdirSync(dossier).filter(n => /^[A-Za-z0-9-]{1,80}\.json$/.test(n)) } catch { return [] }
+  const r = []
+  for (const n of noms) {
+    try {
+      const c = JSON.parse(fs.readFileSync(path.join(dossier, n), 'utf8'))
+      const session = sessionValide(c?.session)
+      if (!session || normeRacine(c.racine) !== normeRacine(E.racine)) continue
+      const fichier = typeof c.fichier === 'string' && valideChemin(c.fichier) ? c.fichier.replace(/\\/g, '/') : null
+      r.push({ session, fichier, titre: titre(session), horodatage: Number(c.horodatage) || 0 })
+    } catch { /* fichier en cours d'ecriture : relu a la bascule suivante */ }
+  }
+  return r
+}
+
+// Session de l'onglet actif s'il est une conversation Claude reconnue sans ambiguite, sinon null
+function sessionOngletActif() {
+  const libelle = ongletClaudeActif()
+  if (libelle === null) return null
+  const r = C.apparie(libelle, rattachements())
+  return r.etat === 'trouvee' ? r.conversation.session : null
+}
+
+// L'onglet actif a change : si c'est une conversation Claude, la vue montre son plan.
+// @force : relire meme si le libelle n'a pas change (rattachement modifie)
+function surOnglet(force) {
+  const libelle = ongletClaudeActif()
+  if (libelle === null) { E.dernierOnglet = null; return }   // fichier, vue du plan... : rien ne change
+  if (!force && libelle === E.dernierOnglet) return
+  E.dernierOnglet = libelle
+  const r = C.apparie(libelle, rattachements())
+  if (r.etat === 'trouvee') {
+    E.conv = { session: r.conversation.session, fichier: r.conversation.fichier }
+  } else {
+    const message = r.etat === 'ambigue'
+      ? `Plusieurs conversations portent le titre « ${libelle} » et suivent des plans différents : envoyez un message dans celle-ci pour que la vue la reconnaisse.`
+      : ''
+    E.conv = { session: null, fichier: null, message }
+  }
+  journal(`onglet « ${libelle} » -> ${r.etat}` +
+    (r.etat === 'trouvee' ? ` ${r.conversation.session} : ${r.conversation.fichier ?? 'aucun plan'}` : ''))
+  rafraichit()
+}
+
+function planifieOnglet(force) {
+  clearTimeout(E.minuterieOnglet)
+  E.minuterieOnglet = setTimeout(() => surOnglet(force), 150)
+}
+
+function veilleOnglets() {
+  E.ctx.subscriptions.push(
+    vscode.window.tabGroups.onDidChangeTabs(() => planifieOnglet(false)),     // bascule ou titre renomme
+    vscode.window.tabGroups.onDidChangeTabGroups(() => planifieOnglet(false)))
+  // Rattachement ecrit par le mod (ExitPlanMode, /suivi suivre, detacher) : relire l'onglet actif
+  const dossier = path.join(ECHANGE, 'conversations')
+  if (fs.existsSync(dossier)) {
+    const v = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(vscode.Uri.file(dossier), '*.json'))
+    const relit = () => { E.dernierOnglet = null; planifieOnglet(true) }
+    v.onDidChange(relit); v.onDidCreate(relit)
+    E.ctx.subscriptions.push(v)
+  }
 }
 
 function surSignal() {
@@ -261,7 +427,12 @@ async function activate(ctx) {
   ctx.subscriptions.push(E.barre,
     vscode.commands.registerCommand('suiviPlan.ouvrir', () => pret.then(() => { rafraichit(); ouvreVue() })),
     vscode.commands.registerCommand('suiviPlan.choisir', () => pret.then(choisirPlan)),
-    { dispose: () => { for (const v of E.veilleurs) v.dispose(); clearTimeout(E.minuterie); clearTimeout(E.minuterieSignal) } })
+    { dispose: () => {
+      for (const v of E.veilleurs) v.dispose()
+      clearTimeout(E.minuterie); clearTimeout(E.minuterieSignal); clearTimeout(E.minuterieOnglet)
+    } })
+  E.journal = vscode.window.createOutputChannel('Suivi du plan', { log: true })
+  ctx.subscriptions.push(E.journal)
 
   await pret
   if (!E.parseur) {
@@ -271,11 +442,14 @@ async function activate(ctx) {
   if (!E.racine) return
   veillePlans()
   veilleSignal()
+  veilleOnglets()
   ctx.subscriptions.push(vscode.workspace.onDidChangeConfiguration(ev => {
     if (ev.affectsConfiguration('suiviPlan.dossier')) { veillePlans(); rafraichit() }
   }))
   rafraichit()
   lisSignal(true)
+  surOnglet(true)
+  journal(`actif : ${E.racine}, ${E.plans.length} plan(s)`)
 }
 
 function deactivate() {}

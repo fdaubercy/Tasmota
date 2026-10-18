@@ -6,10 +6,16 @@
 // - premier message de chaque conversation : bloc « suiviPlan » (plans actifs, prochaines etapes) ;
 // - Edit/Write d'un plan : rappel doux si une etape est cochee sans « — preuve : » ;
 // - ligne d'avancement ($.ui.status) : session.start, turn.complete, apres edition, toutes les 30 s ;
-// - commande /suivi (resume, liste, activer, clore, ouvrir).
+// - commande /suivi (resume, liste, activer, clore, ouvrir, suivre, detacher) ;
+// - plan de la conversation : rattache par ExitPlanMode, Edit/Write d'un plan, /suivi ouvrir|suivre,
+//   lache par /suivi detacher ; a chaque message envoye, signal sans ouverture (la vue suit la conversation).
 // Garde : installe pour tous les projets, le mod n'agit que si <racine>/tasks/plans existe.
-// Signal (contrat avec l'extension fdaubercy.suivi-plan) : <USERPROFILE>/.claude/suivi-plan/signal.json
-//   = { "racine": "<racine, barres />", "fichier": "tasks/plans/<x>.md", "horodatage": <Date.now()> }
+// Contrat avec l'extension fdaubercy.suivi-plan, sous <USERPROFILE>/.claude/suivi-plan/ :
+//   signal.json = { "racine": "<racine, barres />", "fichier": "tasks/plans/<x>.md" | null,
+//                   "horodatage": <Date.now()>, "session": "<id>", "ouvrir": true|false }
+//     (fichier null = la conversation ne suit aucun plan ; ouvrir absent = true)
+//   conversations/<id>.json = { "session": "<id>", "racine": "...", "fichier": "..." | null, "horodatage": <ms> }
+//     (un fichier par conversation : deux conversations n'ecrivent jamais le meme fichier)
 // Aucun processus ni reseau. Parseur : ./parseur-plan.mjs (source unique, banc tests/test_parseur.mjs).
 // L'hote lit on(...) et $.nom.methode(...) dans le source : les ecrire en toutes lettres ; les aides
 // qui recoivent $ sont des fonctions de premier niveau.
@@ -67,6 +73,7 @@ export function register(on) {
     if (r.deny !== undefined || r.isError) return r;
     cache.delete(cible.chemin);
     const apres = await lis($, cible.chemin);
+    if (apres !== null && !e.agentId) await ecrisRattachement($, cible.racine, cible.fichier);
     if (avant === null && apres !== null) await ecrisSignal($, cible.racine, cible.fichier);   // plan cree
     await majStatut($, cible.racine);
     const sansPreuve = apres === null ? [] : cocheesSansPreuve(avant, apres);
@@ -81,6 +88,16 @@ export function register(on) {
     if (e.agentId || e.detail?.reminder !== "full" || typeof r.text !== "string") return r;
     return (await racineSuivie($)) ? { ...r, text: `${r.text}\n\n${CONSIGNE}` } : r;
   });
+
+  // Message envoye dans cette conversation : la vue affiche son plan (ou « aucun plan »), sans s'ouvrir.
+  // Une commande /suivi ecrit son propre signal : pas de doublon.
+  on("prompt.submit", async ($, e, next) => {
+    const r = await next(e);
+    if (r?.drop !== undefined || e.isMeta || e.command) return r;
+    const racine = await racineSuivie($);
+    if (racine) await ecrisSignal($, racine, await planRattache($, racine), { ouvrir: false });
+    return r;
+  }).catch(($, e, next) => next(e));
 
   on("prompt.context", async ($, e, next) => {
     const r = await next(e);
@@ -141,8 +158,8 @@ async function entretien($, racine) {
     try {
       await $.command.register({
         name: "suivi",
-        description: "Avancement du plan actif : résumé, ouvrir, activer, clore, liste",
-        argumentHint: "[ouvrir|activer <chantier>|clore [<chantier>]|liste]",
+        description: "Plan de la conversation : résumé, ouvrir, suivre, detacher, activer, clore, liste",
+        argumentHint: "[ouvrir|suivre <chantier>|detacher|activer <chantier>|clore [<chantier>]|liste]",
       });
       commandeFaite = true;
     } catch {
@@ -188,6 +205,7 @@ async function recopiePlan($, racine, res) {
   const fichier = `${DOSSIER}/${nom}.md`;
   await $.fs.write(`${racine}/${fichier}`, texte);
   cache.delete(`${racine}/${fichier}`);
+  await ecrisRattachement($, racine, fichier);
   await ecrisSignal($, racine, fichier);
   const a = analyse(texte);
   const notes = [`Plan suivi : ${fichier} (${a.actions.length} actions, ${a.global ?? 0} %). ` +
@@ -215,14 +233,60 @@ function modifieEntete(texte, champs) {
   return lignes.join(fin);
 }
 
-async function ecrisSignal($, racine, fichier) {
+// Dossier d'echange avec l'extension (<USERPROFILE>/.claude/suivi-plan, barres /), ou null.
+// Peut rejeter : les appelants l'enveloppent d'un try.
+async function dossierEchange($) {
+  const profil = (await $.env.get("USERPROFILE")) ?? (await $.env.get("HOME"));
+  return profil ? `${profil.replace(/\\/g, "/").replace(/\/+$/, "")}/.claude/suivi-plan` : null;
+}
+
+// Identifiant de la conversation (nom de son transcript), ou null : rien n'est alors rattache.
+async function idSession($) {
   try {
-    const profil = (await $.env.get("USERPROFILE")) ?? (await $.env.get("HOME"));
-    if (!profil) return;
-    const chemin = `${profil.replace(/\\/g, "/").replace(/\/+$/, "")}/.claude/suivi-plan/signal.json`;
-    await $.fs.write(chemin, JSON.stringify({ racine, fichier, horodatage: Date.now() }, null, 2) + "\n");
+    const id = await $.session.id();
+    return /^[A-Za-z0-9-]{1,80}$/.test(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+// @fichier plan a afficher (tasks/plans/x.md), ou null : « cette conversation ne suit aucun plan »
+// @ouvrir  false : la vue est mise a jour si elle est ouverte, sans s'ouvrir (message envoye)
+async function ecrisSignal($, racine, fichier, { ouvrir = true } = {}) {
+  try {
+    const dossier = await dossierEchange($);
+    if (!dossier) return;
+    const signal = { racine, fichier, horodatage: Date.now(), session: await idSession($), ouvrir };
+    await $.fs.write(`${dossier}/signal.json`, JSON.stringify(signal, null, 2) + "\n");
   } catch {
     // la vue ne s'ouvrira pas d'elle-meme : /suivi ouvrir donne le lien
+  }
+}
+
+// Plan suivi par cette conversation (fichier null = detachee) : lu par l'extension a chaque
+// changement d'onglet de conversation.
+async function ecrisRattachement($, racine, fichier) {
+  try {
+    const [dossier, session] = [await dossierEchange($), await idSession($)];
+    if (!dossier || !session) return;
+    const r = { session, racine, fichier, horodatage: Date.now() };
+    await $.fs.write(`${dossier}/conversations/${session}.json`, JSON.stringify(r, null, 2) + "\n");
+  } catch {
+    // la vue ne suivra pas cette conversation ; /suivi suivre <chantier> pour reessayer
+  }
+}
+
+// Plan rattache a cette conversation pour cette racine (tasks/plans/x.md), sinon null.
+async function planRattache($, racine) {
+  try {
+    const [dossier, session] = [await dossierEchange($), await idSession($)];
+    if (!dossier || !session) return null;
+    const chemin = `${dossier}/conversations/${session}.json`;
+    const r = JSON.parse(await lis($, chemin) ?? "null");
+    const memeRacine = String(r?.racine ?? "").toLowerCase() === racine.toLowerCase();
+    return memeRacine && typeof r.fichier === "string" && (await $.fs.exists(`${racine}/${r.fichier}`)) ? r.fichier : null;
+  } catch {
+    return null;
   }
 }
 
@@ -277,8 +341,12 @@ async function commandeSuivi($, args) {
     ? plans.map((p) => `- ${p.a.meta.chantier || p.nom} · ${p.a.meta.statut || "?"} · ${p.a.global ?? 0} % (${p.fichier})`).join("\n")
     : `Aucun plan dans ${DOSSIER}/.`;
   const actif = actifs(plans)[0];
+  const rattache = await planRattache($, racine);          // plan suivi par cette conversation, ou null
   const introuvable = `Plan « ${voulu} » introuvable.\n${liste}`;
-  if (action === "") return actif ? resume(actif.a, actif.fichier) : `Aucun plan actif.\n${liste}`;
+  if (action === "") {
+    const p = plans.find((x) => x.fichier === rattache) ?? actif;
+    return p ? resume(p.a, p.fichier) : `Aucun plan actif.\n${liste}`;
+  }
   if (action === "liste") return liste;
   if (action === "activer" || action === "clore") {
     const p = voulu ? trouve(voulu) : action === "clore" ? actif : null;
@@ -289,11 +357,22 @@ async function commandeSuivi($, args) {
     await majStatut($, racine);
     return `Plan ${p.a.meta.chantier || p.nom} : statut ${statut} (${p.fichier}).`;
   }
-  if (action === "ouvrir") {
-    const p = voulu ? trouve(voulu) : actif ?? plans[0];
-    if (!p) return voulu ? introuvable : `Aucun plan dans ${DOSSIER}/.`;
+  if (action === "ouvrir" || action === "suivre") {
+    const p = voulu ? trouve(voulu) : action === "ouvrir" ? plans.find((x) => x.fichier === rattache) ?? actif ?? plans[0] : null;
+    if (!p) return voulu ? introuvable : action === "suivre" ? `Usage : /suivi suivre <chantier>\n${liste}` : `Aucun plan dans ${DOSSIER}/.`;
+    await ecrisRattachement($, racine, p.fichier);
     await ecrisSignal($, racine, p.fichier);
-    return `Vue demandée pour ${p.fichier}.\nLien : vscode://fdaubercy.suivi-plan/ouvrir?fichier=${DOSSIER}/${encodeURIComponent(p.nom)}.md`;
+    const lien = `Lien : vscode://fdaubercy.suivi-plan/ouvrir?fichier=${DOSSIER}/${encodeURIComponent(p.nom)}.md`;
+    return action === "suivre"
+      ? `Cette conversation suit ${p.fichier} : la vue l'affiche quand vous revenez sur son onglet.\n${lien}`
+      : `Vue demandée pour ${p.fichier} (plan suivi par cette conversation).\n${lien}`;
   }
-  return "Usage : /suivi [ouvrir [<chantier>]|activer <chantier>|clore [<chantier>]|liste]";
+  if (action === "detacher") {
+    await ecrisRattachement($, racine, null);
+    await ecrisSignal($, racine, null, { ouvrir: false });
+    return rattache
+      ? `Cette conversation ne suit plus ${rattache} (le plan lui-même est inchangé). /suivi suivre <chantier> pour en reprendre un.`
+      : "Cette conversation ne suivait aucun plan.";
+  }
+  return "Usage : /suivi [ouvrir [<chantier>]|suivre <chantier>|detacher|activer <chantier>|clore [<chantier>]|liste]";
 }

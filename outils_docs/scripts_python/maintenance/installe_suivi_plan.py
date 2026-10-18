@@ -24,7 +24,7 @@ UNIQUE du mod Claude, .claude/mods/suivi-plan/hooks/parseur-plan.mjs, dont le .v
 une COPIE : apres une modification du parseur, relancer ce script (--etat compare les sha256).
 
 Le .vsix est construit avec zipfile (ni vsce ni node) : [Content_Types].xml,
-extension.vsixmanifest, extension/ = l'extension sauf test_rendu.js + la copie du parseur ;
+extension.vsixmanifest, extension/ = l'extension sauf ses bancs (test_*.js) + la copie du parseur ;
 puis `code --install-extension <vsix> --force --profile <profil du depot>`. Les extensions VS Code
 sont PAR PROFIL : le profil est celui que storage.json associe au dossier du depot (« Frederic »),
 et --verifier le prouve aussi dans son extensions.json. --mod : `claude.cmd plugin marketplace add
@@ -40,7 +40,7 @@ EN DEVELOPPEMENT
 ----------------
     code --extensionDevelopmentPath=<depot>\outils_docs\vscode\suivi-plan <depot>
 L'extension lit alors le parseur directement dans .claude/mods/suivi-plan/hooks/.
-Banc du rendu : node outils_docs/vscode/suivi-plan/test_rendu.js
+Bancs : node outils_docs/vscode/suivi-plan/test_rendu.js et test_conversations.js
 =============================================================================
 """
 import argparse
@@ -60,7 +60,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8",
 RACINE = Path(__file__).resolve().parents[3]
 DOSSIER_EXT = RACINE / "outils_docs" / "vscode" / "suivi-plan"
 PARSEUR = RACINE / ".claude" / "mods" / "suivi-plan" / "hooks" / "parseur-plan.mjs"
-EXCLUS = {"test_rendu.js"}
+EXCLUS = {"test_rendu.js", "test_conversations.js"}
 IDENT = "fdaubercy.suivi-plan"
 TYPES = {".json": "application/json", ".js": "application/javascript",
          ".mjs": "application/javascript", ".css": "text/css", ".md": "text/markdown",

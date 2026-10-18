@@ -78,17 +78,28 @@ function ameliorations(liste) {
     '</div></section>'
 }
 
-function boutonChoisir(plans) {
-  return Array.isArray(plans) && plans.length > 1
+// @minimum nombre de plans a partir duquel le bouton a un sens (2 quand un plan est deja affiche)
+function boutonChoisir(plans, minimum = 2) {
+  return Array.isArray(plans) && plans.length >= minimum
     ? `<button class="choisir" data-action="choisir" type="button">Choisir le plan (${plans.length})</button>`
     : ''
+}
+
+// Conversation Claude active qui ne suit aucun plan (ou que la vue ne sait pas reconnaitre)
+function sansPlan(conversation, plans) {
+  return '<section class="aucun"><h1>Aucun plan</h1>' +
+    `<p>${enLigne(conversation.message || 'Cette conversation ne suit aucun plan.')}</p>` +
+    '<p class="discret">Pour qu\'elle en suive un : <code>/suivi suivre &lt;chantier&gt;</code> dans la conversation.</p>' +
+    `${boutonChoisir(plans, 1)}</section>`
 }
 
 // Fragment HTML de la vue.
 // @a       resultat de analyse(), ou null s'il n'y a aucun plan
 // @fichier chemin relatif du plan (tasks/plans/x.md)
 // @plans   liste des plans disponibles (seule sa longueur compte ici)
-function rendu(a, fichier, plans) {
+// @options { conversation: { message } } : a null parce que la conversation active ne suit aucun plan
+function rendu(a, fichier, plans, options = {}) {
+  if (!a && options.conversation) return sansPlan(options.conversation, plans)
   if (!a) {
     return '<section class="aucun"><h1>Aucun plan</h1><p>Aucun fichier <code>.md</code> dans le ' +
       `dossier des plans${fichier ? ' (' + enLigne(fichier) + ')' : ''}. Format : <code>tasks/plans/_FORMAT.md</code>.</p></section>`
