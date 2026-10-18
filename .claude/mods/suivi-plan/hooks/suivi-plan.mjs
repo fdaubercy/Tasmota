@@ -5,7 +5,8 @@
 // - rappel complet du mode plan : consigne de format ajoutee ;
 // - premier message de chaque conversation : bloc « suiviPlan » (plans actifs, prochaines etapes) ;
 // - Edit/Write d'un plan : rappel doux si une etape est cochee sans « — preuve : » ;
-// - ligne d'avancement ($.ui.status) : session.start, turn.complete, apres edition, toutes les 30 s ;
+// - ligne d'avancement ($.ui.status, plan de la conversation d'abord) : session.start, turn.complete,
+//   apres edition, toutes les 30 s ;
 // - commande /suivi (resume, liste, activer, clore, ouvrir, suivre, detacher) ;
 // - plan de la conversation : rattache par ExitPlanMode, Edit/Write d'un plan, /suivi ouvrir|suivre,
 //   lache par /suivi detacher ; a chaque message envoye, signal sans ouverture (la vue suit la conversation).
@@ -90,13 +91,14 @@ export function register(on) {
   });
 
   // Message envoye dans cette conversation : la vue affiche son plan (ou « aucun plan »), sans s'ouvrir.
-  // Une commande /suivi ecrit son propre signal : pas de doublon.
+  // Signal ecrit AVANT next : apres, il partait 3,6 s plus tard (mesure le 2026-10-18), souvent
+  // une fois l'utilisateur passe sur un autre onglet. Une commande /suivi ecrit son propre signal.
   on("prompt.submit", async ($, e, next) => {
-    const r = await next(e);
-    if (r?.drop !== undefined || e.isMeta || e.command) return r;
-    const racine = await racineSuivie($);
-    if (racine) await ecrisSignal($, racine, await planRattache($, racine), { ouvrir: false });
-    return r;
+    if (!e.isMeta && !e.command) {
+      const racine = await racineSuivie($);
+      if (racine) await ecrisSignal($, racine, await planRattache($, racine), { ouvrir: false });
+    }
+    return next(e);
   }).catch(($, e, next) => next(e));
 
   on("prompt.context", async ($, e, next) => {
@@ -147,9 +149,13 @@ async function lisPlans($, racine) {
 
 const actifs = (plans) => plans.filter((p) => p.a.meta.statut === "actif");
 
+// Ligne d'avancement : le plan suivi par cette conversation (quel que soit son statut), sinon le
+// plus recent des plans actifs.
 async function majStatut($, racine) {
-  const actif = actifs(await lisPlans($, racine))[0];
-  $.ui.status(actif ? ligneStatut(actif.a, actif.a.meta.chantier || actif.nom) : undefined);
+  const plans = await lisPlans($, racine);
+  const suivi = await planRattache($, racine);
+  const p = plans.find((x) => x.fichier === suivi) ?? actifs(plans)[0];
+  $.ui.status(p ? ligneStatut(p.a, p.a.meta.chantier || p.nom) : undefined);
 }
 
 // Commande, ligne d'avancement et minuterie, remises en place apres un rechargement a chaud.
@@ -322,11 +328,18 @@ function cocheesSansPreuve(avant, apres) {
 
 // ---------- contexte des conversations et commande /suivi ----------
 
-// Plans actifs (2 au plus, les plus recents) et la regle de coche : 25 lignes au plus ; "" sans plan actif.
+// Le plan suivi par cette conversation d'abord (annonce comme tel, meme clos), puis les plans actifs
+// les plus recents : 2 plans au plus, et la regle de coche ; 25 lignes au plus ; "" sans aucun plan.
 async function blocContexte($, racine) {
-  const plans = actifs(await lisPlans($, racine)).slice(0, 2);
+  const tous = await lisPlans($, racine);
+  const fichierSuivi = await planRattache($, racine);
+  const rattache = tous.find((p) => p.fichier === fichierSuivi);
+  const plans = [...(rattache ? [rattache] : []), ...actifs(tous).filter((p) => p !== rattache)].slice(0, 2);
   if (!plans.length) return "";
-  const lignes = plans.flatMap((p) => resume(p.a, p.fichier).split("\n").slice(0, plans.length > 1 ? 12 : 24));
+  const lignes = plans.flatMap((p) => [
+    ...(p === rattache ? ["Plan suivi par cette conversation :"] : []),
+    ...resume(p.a, p.fichier).split("\n").slice(0, plans.length > 1 ? 11 : 23),
+  ]);
   return [...lignes.slice(0, 24), REGLE].join("\n");
 }
 
@@ -362,6 +375,7 @@ async function commandeSuivi($, args) {
     if (!p) return voulu ? introuvable : action === "suivre" ? `Usage : /suivi suivre <chantier>\n${liste}` : `Aucun plan dans ${DOSSIER}/.`;
     await ecrisRattachement($, racine, p.fichier);
     await ecrisSignal($, racine, p.fichier);
+    await majStatut($, racine);
     const lien = `Lien : vscode://fdaubercy.suivi-plan/ouvrir?fichier=${DOSSIER}/${encodeURIComponent(p.nom)}.md`;
     return action === "suivre"
       ? `Cette conversation suit ${p.fichier} : la vue l'affiche quand vous revenez sur son onglet.\n${lien}`
@@ -370,6 +384,7 @@ async function commandeSuivi($, args) {
   if (action === "detacher") {
     await ecrisRattachement($, racine, null);
     await ecrisSignal($, racine, null, { ouvrir: false });
+    await majStatut($, racine);
     return rattache
       ? `Cette conversation ne suit plus ${rattache} (le plan lui-même est inchangé). /suivi suivre <chantier> pour en reprendre un.`
       : "Cette conversation ne suivait aucun plan.";

@@ -32,6 +32,7 @@ function monde(on: On, fichiers: Record<string, string>, dossiers: string[] = [P
   for (const [k, v] of Object.entries(fichiers)) fs.set(k, { texte: v, mtimeMs: ++horloge })
   const estDossier = (p: string) => dossiers.includes(p) || [...fs.keys()].some((k) => k.startsWith(`${p}/`))
   const statuts: (string | undefined)[] = []
+  const vuAuMoteur: (string | null)[] = []   // signal present quand le message atteint le moteur
   const ecritures: string[] = []
   const commandes: string[] = []
   on('session.root', () => ({ value: RACINE.replace(/\//g, '\\') }))
@@ -61,7 +62,10 @@ function monde(on: On, fichiers: Record<string, string>, dossiers: string[] = [P
   })
   on('session.id', () => ({ value: SESSION }))
   on('session.start', ($, e) => ({ cwd: e.cwd }))
-  on('prompt.submit', ($, e) => ({ text: e.text }))
+  on('prompt.submit', ($, e) => {
+    vuAuMoteur.push(fs.get('C:/Users/moi/.claude/suivi-plan/signal.json')?.texte ?? null)
+    return { text: e.text }
+  })
   on('turn.complete', ($, e) => ({ text: e.answer }))
   on('prompt.context', ($, e) => ({ blocks: e.blocks }))
   on('prompt.attachment', ($, e) => ({ text: e.text }))
@@ -79,7 +83,7 @@ function monde(on: On, fichiers: Record<string, string>, dossiers: string[] = [P
     return { result: {} as never }
   })
   const plans = () => ecritures.filter((p) => p.startsWith(`${PLANS}/`))
-  return { fs, statuts, ecritures, commandes, temps, plans, lire: (p: string) => fs.get(p)?.texte ?? '' }
+  return { fs, statuts, vuAuMoteur, ecritures, commandes, temps, plans, lire: (p: string) => fs.get(p)?.texte ?? '' }
 }
 
 const demarre = ($: Engine) => $.session.start({ cwd: RACINE, surface: 'terminal', isInteractive: true })
@@ -219,10 +223,11 @@ test('/suivi : resume, liste, ouvrir, clore (fins de ligne gardees)', async ($, 
   expect(texte).toContain('statut: clos\r\n')
   expect(texte).not.toContain('maj: 2026-10-01')
   expect(texte.replace(/\r\n/g, '').includes('\n')).toBe(false)
-  expect(m.statuts.at(-1)).toBeUndefined()
-  // « ouvrir » a rattache essai a la conversation : son resume reste montre, meme clos
+  // « ouvrir » a rattache essai a la conversation : sa ligne et son resume restent montres, meme clos
+  expect(m.statuts.at(-1)).toMatch(/^Plan essai /)
   expect((await suivi($, '')).text).toContain('statut clos')
   await suivi($, 'detacher')
+  expect(m.statuts.at(-1)).toBeUndefined()                // detachee, et plus aucun plan actif
   expect((await suivi($, '')).text).toContain('Aucun plan actif.')
   expect((await suivi($, 'activer ../../secret')).text).toContain('introuvable')
 })
@@ -296,4 +301,30 @@ test('message envoye : signal sans ouverture avec le plan de la conversation', a
   m.fs.set(RATTACHE, { texte: JSON.stringify({ session: SESSION, racine: RACINE, fichier: 'tasks/plans/efface.md' }), mtimeMs: ++horloge })
   await $.prompt.submit({ text: 'x' })
   expect(JSON.parse(m.lire(SIGNAL)).fichier).toBeNull()
+})
+
+test('message envoye : signal ecrit AVANT que le moteur ne recoive le message', async ($, on) => {
+  const m = monde(on, { [`${PLANS}/essai.md`]: ESSAI })
+  await suivi($, 'suivre essai')
+  m.fs.delete(SIGNAL)
+  await $.prompt.submit({ text: 'bonjour' })
+  expect(m.vuAuMoteur.length).toBe(1)
+  expect(JSON.parse(m.vuAuMoteur[0] ?? 'null')).toMatchObject({ fichier: 'tasks/plans/essai.md', ouvrir: false })
+})
+
+test('plan de la conversation : ligne d avancement et bloc de contexte le montrent d abord', async ($, on) => {
+  const m = monde(on, { [`${PLANS}/essai.md`]: ESSAI, [`${PLANS}/autre.md`]: PLAN_B })   // autre = plus recent
+  await demarre($)
+  expect(m.statuts.at(-1)).toMatch(/^Plan autre /)                              // sans rattachement
+  const sans = (await $.prompt.context({ blocks: [] })).blocks.find((b) => b.name === 'suiviPlan')?.text ?? ''
+  expect(sans).not.toContain('Plan suivi par cette conversation')
+  expect(sans.indexOf('Plan B') < sans.indexOf("Plan d'essai")).toBe(true)
+  await suivi($, 'suivre essai')
+  expect(m.statuts.at(-1)).toMatch(/^Plan essai /)                              // le plan suivi passe devant
+  const avec = (await $.prompt.context({ blocks: [] })).blocks.find((b) => b.name === 'suiviPlan')?.text ?? ''
+  expect(avec.startsWith("Plan suivi par cette conversation :\nPlan « Plan d'essai »")).toBe(true)
+  expect(avec).toContain('Plan « Plan B »')
+  expect(avec.split('\n').length <= 25).toBe(true)
+  await suivi($, 'detacher')
+  expect(m.statuts.at(-1)).toMatch(/^Plan autre /)
 })

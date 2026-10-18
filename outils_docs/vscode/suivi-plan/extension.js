@@ -22,6 +22,7 @@ const CLE_SIGNAL = 'suiviPlan.dernierSignal'
 const AGE_MAX_SIGNAL = 5 * 60 * 1000   // un signal plus vieux au demarrage n'ouvre rien
 const ECHANGE = path.join(os.homedir(), '.claude', 'suivi-plan')   // signal.json, conversations/
 const PROJETS = path.join(os.homedir(), '.claude', 'projects')     // transcripts <session>.jsonl
+const RECENTES = 30 * 24 * 3600 * 1000   // conversations non rattachees prises en compte (collisions)
 
 const E = {
   ctx: null, racine: null, parseur: null, panel: null, barre: null, journal: null,
@@ -29,7 +30,8 @@ const E = {
   veilleurs: [], minuterie: null, minuterieSignal: null, minuterieOnglet: null,
   // Conversation active : null = pas de conversation reconnue (choix memorise / automatique),
   // sinon { session, fichier (null = aucun plan), message } ; dernierOnglet evite de refaire le travail
-  conv: null, dernierOnglet: null,
+  conv: null, dernierOnglet: null, dernierLibelle: null,
+  appris: new WeakMap(),    // onglet (objet Tab de l'API) -> session designee par un message envoye
   transcripts: new Map(),   // session -> chemin du .jsonl
   titres: new Map(),        // chemin du .jsonl -> { mtime, taille, titre }
 }
@@ -232,13 +234,20 @@ function lisSignal(auDemarrage) {
   if (auDemarrage && Date.now() - h > AGE_MAX_SIGNAL) return
   const session = sessionValide(s.session)
   const ouvrir = s.ouvrir !== false
-  // Signal « message envoye » (ou detachement) d'une AUTRE conversation que celle de l'onglet actif
-  // reconnu : ignore. Le mod l'ecrit apres la soumission (3,6 s mesurees le 2026-10-18), et un message
-  // mis en file n'est soumis qu'a la fin du tour : l'utilisateur a souvent change d'onglet entre-temps.
-  if (!ouvrir || s.fichier === null || s.fichier === undefined) {
-    const active = sessionOngletActif()
-    if (session && active && active !== session) {
-      journal(`signal ignoré : conversation ${session}, onglet actif ${active}`)
+  // Onglet actif = conversation Claude : le signal vient-il d'ELLE ? (sa session si elle est reconnue,
+  // sinon le libelle que produirait le titre de la session du signal). Oui : la session est apprise a
+  // cet onglet (leve une ambiguite de libelle). Non : un signal « message envoye » ou de detachement est
+  // ignore - un message mis en file n'est soumis qu'a la fin du tour (constate le 2026-10-18 : 3,6 s
+  // apres l'envoi, l'utilisateur etait deja sur un autre onglet). Autre onglet actif : le signal fait foi.
+  const o = session ? resoutOnglet() : null
+  if (o) {
+    const vient = o.session ? o.session === session : C.libelleOnglet(titre(session)) === o.libelle
+    if (vient && o.tab && o.etat !== 'apprise') {
+      E.appris.set(o.tab, session)
+      journal(`onglet « ${o.libelle} » : conversation ${session} apprise`)
+    }
+    if (!vient && (!ouvrir || s.fichier === null || s.fichier === undefined)) {
+      journal(`signal ignoré : conversation ${session}, onglet actif « ${o.libelle} »${o.session ? ` (${o.session})` : ''}`)
       return
     }
   }
@@ -327,32 +336,74 @@ function rattachements() {
   return r
 }
 
-// Session de l'onglet actif s'il est une conversation Claude reconnue sans ambiguite, sinon null
-function sessionOngletActif() {
+// Dossiers de transcripts de ce depot : ~/.claude/projects/<racine, non alphanumeriques -> '-'>
+function dossiersProjet() {
+  const nom = E.racine.replace(/[^A-Za-z0-9]/g, '-').toLowerCase()
+  try { return fs.readdirSync(PROJETS).filter(d => d.toLowerCase() === nom).map(d => path.join(PROJETS, d)) } catch { return [] }
+}
+
+// Conversations recentes de ce depot qui ne suivent aucun plan : sans elles, une conversation non
+// rattachee dont le libelle d'onglet egale celui d'une rattachee afficherait le plan de l'autre.
+function nonRattachees(connues) {
+  const r = []
+  const limite = Date.now() - RECENTES
+  for (const d of dossiersProjet()) {
+    let noms = []
+    try { noms = fs.readdirSync(d).filter(n => /^[A-Za-z0-9-]{1,80}\.jsonl$/.test(n)) } catch { continue }
+    for (const n of noms) {
+      const session = n.slice(0, -'.jsonl'.length)
+      if (connues.has(session)) continue
+      let st
+      try { st = fs.statSync(path.join(d, n)) } catch { continue }
+      if (st.mtimeMs < limite) continue
+      E.transcripts.set(session, path.join(d, n))
+      r.push({ session, fichier: null, titre: titre(session), horodatage: st.mtimeMs })
+    }
+  }
+  return r
+}
+
+function candidates() {
+  const r = rattachements()
+  return r.concat(nonRattachees(new Set(r.map(c => c.session))))
+}
+
+// Conversation de l'onglet actif, ou null s'il n'est pas une conversation Claude :
+// { tab, libelle, etat, session, fichier }, etat = 'apprise' (un message envoye depuis CET onglet l'a
+// designee), 'trouvee' (seule conversation a ce libelle, ou toutes au meme plan), 'ambigue', 'inconnue'.
+function resoutOnglet() {
   const libelle = ongletClaudeActif()
   if (libelle === null) return null
-  const r = C.apparie(libelle, rattachements())
-  return r.etat === 'trouvee' ? r.conversation.session : null
+  const tab = vscode.window.tabGroups.activeTabGroup?.activeTab
+  const toutes = candidates()
+  const apprise = tab && E.appris.get(tab)
+  const c = apprise && toutes.find(x => x.session === apprise && C.libelleOnglet(x.titre) === libelle)
+  if (c) return { tab, libelle, etat: 'apprise', session: c.session, fichier: c.fichier }
+  const r = C.apparie(libelle, toutes)
+  return r.etat === 'trouvee'
+    ? { tab, libelle, etat: r.etat, session: r.conversation.session, fichier: r.conversation.fichier }
+    : { tab, libelle, etat: r.etat, session: null, fichier: null }
 }
 
 // L'onglet actif a change : si c'est une conversation Claude, la vue montre son plan.
-// @force : relire meme si le libelle n'a pas change (rattachement modifie)
+// @force : relire meme si l'onglet n'a pas change (rattachement modifie)
 function surOnglet(force) {
   const libelle = ongletClaudeActif()
   if (libelle === null) { E.dernierOnglet = null; return }   // fichier, vue du plan... : rien ne change
-  if (!force && libelle === E.dernierOnglet) return
-  E.dernierOnglet = libelle
-  const r = C.apparie(libelle, rattachements())
-  if (r.etat === 'trouvee') {
-    E.conv = { session: r.conversation.session, fichier: r.conversation.fichier }
+  const tab = vscode.window.tabGroups.activeTabGroup?.activeTab
+  if (!force && tab === E.dernierOnglet && libelle === E.dernierLibelle) return
+  E.dernierOnglet = tab
+  E.dernierLibelle = libelle
+  const o = resoutOnglet()
+  if (o.session) {
+    E.conv = { session: o.session, fichier: o.fichier }
   } else {
-    const message = r.etat === 'ambigue'
-      ? `Plusieurs conversations portent le titre « ${libelle} » et suivent des plans différents : envoyez un message dans celle-ci pour que la vue la reconnaisse.`
+    const message = o.etat === 'ambigue'
+      ? `Plusieurs conversations portent le titre « ${libelle} » sans suivre le même plan : envoyez un message dans celle-ci pour que la vue la reconnaisse.`
       : ''
     E.conv = { session: null, fichier: null, message }
   }
-  journal(`onglet « ${libelle} » -> ${r.etat}` +
-    (r.etat === 'trouvee' ? ` ${r.conversation.session} : ${r.conversation.fichier ?? 'aucun plan'}` : ''))
+  journal(`onglet « ${libelle} » -> ${o.etat}` + (o.session ? ` ${o.session} : ${o.fichier ?? 'aucun plan'}` : ''))
   rafraichit()
 }
 

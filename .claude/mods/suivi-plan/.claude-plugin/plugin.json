@@ -1,6 +1,6 @@
 {
   "name": "suivi-plan",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Suivi des plans de travail (tasks/plans/<chantier>.md) : recopie des plans valides, plan actif injecte dans chaque conversation, ligne d'avancement, commande /suivi.",
   "author": {
     "name": "fdaubercy"

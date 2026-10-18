@@ -69,10 +69,10 @@ Contrat de fichiers (sous `%USERPROFILE%\.claude\suivi-plan\`) :
 - [x] `tasks/plans/_FORMAT.md` (§ règles d'usage) et le bloc `.claude/mods/` de `CLAUDE.md` mis à jour (rattachement, `/suivi suivre`) — preuve : _FORMAT.md § Plan d'une conversation ; CLAUDE.md, bloc .claude/mods/suivi-plan
 
 ## Améliorations restantes
-- [ ] [projet] Ligne d'avancement (`$.ui.status`) et bloc `suiviPlan` du contexte centrés sur le plan de la conversation
-- [ ] [projet] Collision de libellés avec une conversation NON rattachée (même 24 premiers caractères) : non détectée
-- [ ] [projet] Signal du mod écrit après `await next(e)` (3,6 s mesurées) : l'écrire avant accélérerait la voie « message envoyé »
-- [ ] [projet] Panneau Claude dans la barre latérale : pas d'onglet, seule la voie « message envoyé » joue
+- [x] [projet] Ligne d'avancement (`$.ui.status`) et bloc `suiviPlan` du contexte centrés sur le plan de la conversation — preuve : mod 0.3.0, majStatut + blocContexte ; test « plan de la conversation : ligne d avancement et bloc » ; mutant B détecté (2 échecs) ; banc 18/18
+- [x] [projet] Collision de libellés avec une conversation NON rattachée (même 24 premiers caractères) : non détectée — preuve : extension 0.3.0 : conversations non rattachées des 30 derniers jours + conversation apprise par onglet ; essai de fumée 20 cas VERT, mutants 1 (3 échecs) et 2 (2 échecs) ; collision réelle relevée : « Explore this codebase an… » ×2
+- [x] [projet] Signal du mod écrit après `await next(e)` (3,6 s mesurées) : l'écrire avant accélérerait la voie « message envoyé » — preuve : signal écrit avant next ; test « signal ecrit AVANT que le moteur ne recoive le message » ; mutant A détecté
+- [x] [projet] Panneau Claude dans la barre latérale : pas d'onglet, seule la voie « message envoyé » joue — preuve : limite d'API documentée (CLAUDE.md, bloc de l'extension) ; couverte par le signal « message envoyé » (appliqué quand l'onglet actif n'est pas une conversation) et la ligne d'avancement de la conversation
 
 ## Vérification
 - Bancs : `claude.cmd plugin test .claude/mods/suivi-plan`, `node .claude/mods/suivi-plan/tests/test_parseur.mjs`,
