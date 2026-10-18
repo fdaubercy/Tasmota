@@ -1680,6 +1680,66 @@ verifie("push accepte : IP source apprise", "['192.168.4.8', 'apprise']", str(mo
 recoit31(REP31, "192.168.4.7", false, nil)
 verifie("reponse UDP valide : IP source apprise", "['192.168.4.7', 'apprise']", str(modbusFonctions.ipDe(2)))
 
+# --- Plusieurs fiches pour une meme adresse : choisitFiche + anomalies (2026-10-18) ---
+# Cas reel vise : carte remplacee, l'ancienne MAC garde sa fiche (retenue sur le broker). Avant, une
+# fiche annoncant UDP imposait l'UDP, et l'IP dependait de l'ordre de lecture de la table.
+def fiche32(role, id, voie, ip)
+  var f = {"ModBus": {"id": id, "voieCommandes": voie}, "IPAddress": ip, "groupTopic": "tasmotas/garage"}
+  var r = {}    r[role] = f
+  return r
+end
+def disc32(entrees)       # entrees : [[mac, lwt|nil, role, id, voie, ip], ...]
+  var t = {}
+  for x: entrees
+    var e = fiche32(x[2], x[3], x[4], x[5])
+    if x[1] != nil    e["lwt"] = x[1]    end
+    t[x[0]] = e
+  end
+  gff31.fichiers = {"/json/discovery.json": json.dump(t)}
+  raz31()
+  modbusFonctions.etat()["anomaliesFiches"] = {}
+end
+disc32([["0000000000A1", "Offline", "esclave2", 2, "UDP", "192.168.4.9"], ["0000000000B2", "Online", "esclave2", 2, "Serial", "192.168.4.2"]])
+verifie("fiche perimee UDP (Offline) + fiche vivante Serial (Online) -> Serial", "Serial", modbusFonctions.voieDe(2))
+verifie("... et l'IP est celle de la fiche vivante", "['192.168.4.2', 'fiche']", str(modbusFonctions.ipDe(2)))
+verifie("... sans anomalie journalisee", 0, compte31("CONFLIT_ID"))
+disc32([["0000000000A1", nil, "esclave2", 2, "UDP", "192.168.4.9"], ["0000000000B2", "Online", "esclave2", 2, "Serial", "192.168.4.2"]])
+verifie("fiche perimee sans lwt + fiche Online -> la fiche Online", "Serial", modbusFonctions.voieDe(2))
+disc32([["0000000000B2", "Offline", "esclave2", 2, "UDP", "192.168.4.2"]])
+verifie("temoin fiche SEULE Offline : garde sa voie (decide le 2026-10-18)", "UDP", modbusFonctions.voieDe(2))
+disc32([["0000000000A1", "Online", "esclave2", 2, "UDP", "192.168.4.9"], ["0000000000B2", "Online", "esclave2", 2, "Serial", "192.168.4.2"]])
+verifie("deux fiches Online discordantes -> Serial (conflit)", "Serial", modbusFonctions.voieDe(2))
+verifie("... aucune IP retenue", nil, modbusFonctions.ipDe(2))
+verifie("... CONFLIT_ID journalise une fois (erreur)", 1, compte31("CONFLIT_ID"))
+tasmota.ms = 60000
+modbusFonctions.voieDe(2)
+verifie("... pas rejournalise a la relecture suivante", 1, compte31("CONFLIT_ID"))
+disc32([["0000000000A1", "Online", "esclave2", 2, "UDP", "192.168.4.9"], ["0000000000B2", "Online", "esclave2", 2, "Serial", "192.168.4.2"]])
+modbusFonctions.noteIP(2, "192.168.4.9")
+verifie("conflit tranche par l'IP apprise (< 90 s) : la fiche qui y repond", "UDP", modbusFonctions.voieDe(2))
+disc32([["0000000000A1", "Offline", "esclave2", 2, "UDP", "192.168.4.9"], ["0000000000B2", "Offline", "esclave2", 2, "Serial", "192.168.4.2"]])
+verifie("deux fiches Offline discordantes -> Serial (conflit)", "Serial", modbusFonctions.voieDe(2))
+disc32([["0000000000A1", "Online", "esclave2", 2, "UDP", "192.168.4.2"], ["0000000000B2", "Offline", "esclave2", 2, "UDP", "192.168.4.2"]])
+verifie("temoin doublon concordant (meme voie, meme IP) : pas de conflit", "UDP/0", modbusFonctions.voieDe(2) + "/" + str(compte31("CONFLIT_ID")))
+# Identifiants : role esclaveN, ModBus.id, rangeExtender.id
+disc32([["0000000000B2", "Online", "esclave3", 2, "UDP", "192.168.4.2"]])
+verifie("role esclave3 / ModBus.id 2 : le routage reste sur ModBus.id", "UDP", modbusFonctions.voieDe(2))
+verifie("... et ID_INCOHERENT est journalise", 1, compte31("ID_INCOHERENT"))
+disc32([["0000000000B2", "Online", "esclave2", 2, "UDP", "192.168.4.2"]])
+modbusFonctions.voieDe(2)
+verifie("temoin role et ModBus.id egaux : aucun ID_INCOHERENT", 0, compte31("ID_INCOHERENT"))
+var t32 = json.load(gff31.fichiers["/json/discovery.json"])
+t32["0000000000B2"]["esclave2"]["rangeExtender"] = {"activation": "ON", "id": 4}
+gff31.fichiers = {"/json/discovery.json": json.dump(t32)}
+raz31()    modbusFonctions.etat()["anomaliesFiches"] = {}
+modbusFonctions.voieDe(2)
+verifie("rangeExtender.id 4 actif / ModBus.id 2 : ID_INCOHERENT", 1, compte31("ID_INCOHERENT"))
+t32["0000000000B2"]["esclave2"]["rangeExtender"] = {"activation": "OFF", "id": 4}
+gff31.fichiers = {"/json/discovery.json": json.dump(t32)}
+raz31()    modbusFonctions.etat()["anomaliesFiches"] = {}
+modbusFonctions.voieDe(2)
+verifie("temoin rangeExtender inactif : son id n'est pas compare", 0, compte31("ID_INCOHERENT"))
+
 # --- Decodage cote maitre des REPONSES venues par l'UDP (forme standard, trames reelles du bus) ---
 def decode31(hex)
   var p = {"ModbusReceivedUDP": {"Trame": bytes(hex), "Info": {}, "DeviceAddress": 0, "FunctionCode": 0, "FunctionName": "", "StartAddress": 0,

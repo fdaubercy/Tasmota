@@ -19,11 +19,20 @@
         - UDP: Ports 2000 & 4000
         - TCP: Port 8888
 
-    L'envoi des message ModBus est lancée par la fonction 'modbusFonctions.envoiMsgModbus(paramMSG)':
-        - controle si le message peut être envoyé par:
-            * voie serie: drivers["ModBus"]["typeComm"]["Serial"] = "ON" ==> fonction 'modbusFonctions.envoiMsgModbusSerial(paramMSG)'
-            * voie UDP: drivers["ModBus"]["typeComm"]["UDP"] = "ON" ==> fonction 'modbusFonctions.envoiMsgModbusUDP(paramMSG)'
-            * voie TCP: drivers["ModBus"]["typeComm"]["TCP"] = "ON" ==> fonction 'modbusFonctions.envoiMsgModbusTCP(paramMSG)'
+    L'envoi des message ModBus est lancée par la fonction 'modbusFonctions.envoiMsgModbus(paramMSG, typeMsg)'
+    (voie par destinataire depuis le 2026-10-17, PROTOCOLE_MODBUS.md §9 « Commandes sans fil ») :
+        - MAITRE (id 0) : UNE voie par esclave, donnee par 'modbusFonctions.voieDe(adresse)' :
+            * "UDP" si la fiche discovery de l'esclave annonce ModBus.voieCommandes = "UDP" (c'est
+              l'ESCLAVE qui la declare : 'ReglageModbus VoieCommandes Serial|UDP' sur l'esclave) ;
+            * "Serial" sinon : fiche absente, carte 16 relais (toujours), diffusion, conflit de fiches.
+          Tout message passe par la file (enfileMsg -> envoieTete) : "Serial" -> 'ModBusSend' (RS485),
+          "UDP" -> 'ModbusUDP <tid> <hexa>' en UniCast a l'IP de l'esclave (ipDe). Voie coupee dans
+          drivers["ModBus"]["typeComm"] du maitre -> message rejete et journalise, sans repli.
+        - ESCLAVE (id > 0) : une REPONSE repart par la voie d'arrivee de la requete (Info.voie = "UDP"
+          -> UniCast a l'IP emettrice, rien sur le RS485) ; sinon par les voies ON de typeComm :
+          'envoiMsgModbusSerial', 'envoiMsgModbusTCP', et 'envoiMsgModbusUDP' seulement si le
+          serie est coupe (repli). Les push d'etat ('pousseEtat') partent
+          toujours en UDP multicast, quelle que soit la voie declaree.
 
     La réception des ordres (Esclaves ModBus) ou réponse à une commande (Maitre ModBus):
         - Port Série: la réponse est interceptée par la règle -> tasmota.add_rule('ModbusReceived') -> vers la fonction controleModbus.recupereReponseModBus()
@@ -163,7 +172,17 @@ class CONTROLE_MODBUS : Driver
             end
         end
 
-        if (modifID)    tasmota.cmd("Restart 1",boolMute)   end
+        # Sauvegarde AVANT de redemarrer (2026-10-18, meme correctif que controleRangeExtender le
+        # 2026-10-10) : les modifications ci-dessus sont imbriquees (serveur["udp"]["id"]...) et ne
+        # marquent pas le persist comme modifie ; le persist.save() de Tasmota au redemarrage
+        # n'ecrivait donc rien -> au boot suivant, memes valeurs, meme correction, nouveau Restart.
+        if (modifID)
+            import persist
+            modbusFonctions.log(string.format("CONTROLE_MODBUS: identifiants UDP/TCP alignes sur ModBus.id=%i, persist sauve, redemarrage !",
+                                              drivers["ModBus"]["id"]), LOG_LEVEL_INFO)
+            persist.save(true)
+            tasmota.cmd("Restart 1",boolMute)
+        end
 
         #-  Ajoute les règles lancés selon l'étape de démarrage de la device tasmota :
             - Message log sur connexion wifi

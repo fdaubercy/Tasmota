@@ -52,7 +52,10 @@
            depuis le _persist.json (serveur, drivers.ModBus, diverses) + Status 5, et rangée sous
            discovery.json[MAC]["esclaveN"]. Champs : id, nom, topic, groupTopic, IPAddress, adresseMAC, host,
            typeReglageHeure, rangeExtender{activation, id, routagePort = 8080+id-1, ipMaitre},
-           ModBus{id, Serial{...}, TCP{IPAddress, port}, UDP{...}}.
+           ModBus{activation, id, voieCommandes, Serial{...}, TCP{IPAddress, port}, UDP{...}}.
+           voieCommandes ("Serial" | "UDP", 2026-10-15) : voie par laquelle l'esclave veut recevoir
+           les commandes du maitre ; lue par modbusFonctions.voieDe. 'ReglageModbus VoieCommandes'
+           la change et renvoie aussitot la fiche (forceEnvoiParams + MQTT retenu).
            forceEnvoiParams n'envoie QUE la clé "esclave" + serveur.udp.id (même règle que
            discoveryFonctions.roleLocal) ; fiche absente -> rien n'est envoyé.
          * Envoi : envoiUDP("MultiCast") -> 224.3.0.1:4000, message au format d'un topic MQTT.
@@ -72,7 +75,8 @@
            commande RoutageRangeExtender -> 'RgxPort tcp, <routagePort>, <IP esclave>, 80'. Rôle 'maitre' ignoré.
          * discoveryFonctions.affichePageDiscovery : boutons de /discovery, port calculé depuis ipMaitre.
          * modbusFonctions.fichesModbus (fiches des AUTRES MAC du même groupTopic portant un bloc ModBus) :
-           IP de l'esclave pour l'envoi ModBus UDP (id = 1er octet de la trame) ; clients ModBus TCP
+           voie (voieCommandes) et IP de chaque esclave pour les commandes ModBus (routesFiches ->
+           voieDe / ipDe ; une seule fiche retenue par ModBus.id, choisitFiche) ; clients ModBus TCP
            (ReglageModbus ImAlive ON).
       Pièges connus
          * Carte réaffectée (2026-10-03) : une fiche 'maitre' périmée, retenue sur le broker sous la MAC de

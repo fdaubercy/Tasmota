@@ -812,6 +812,22 @@ retour arriere : `ReglageModbus VoieCommandes Serial`. Code (`modbusFonctions.be
   requete en vol et jetait les valeurs. Elle n'acquitte plus (comme en serie) : le driver apparie, traite,
   puis acquitte.
 - T8 : `voieCommandes` et `timeoutReponseUDP` deja dans les 8 persists (E1).
+- T9 (2026-10-18, non flashe) **une fiche par adresse**. Avant, `routesFiches` posait `UDP` des qu'UNE
+  fiche de l'adresse l'annoncait (une fiche `Serial` ne l'annulait jamais) et gardait l'IP de la derniere
+  lue : la fiche perimee d'une carte remplacee (ancienne MAC, retenue sur le broker) imposait l'UDP.
+  `choisitFiche` retient : (1) une fiche SEULE, quel que soit son `lwt` (decide le 2026-10-18 : le `lwt`
+  n'est pas une preuve de vie, `resetClientsConnectes` met tout `Offline` jusqu'au prochain `ImAlive`,
+  jusqu'a 5 min apres le demarrage du maitre ; repasser en serie couperait l'esclave apres E5) ; sinon
+  (2) celles dont l'`IPAddress` est l'IP apprise (< 90 s), puis (3) celles dont la MAC est `Online` ;
+  (4) s'il en reste qui different par la voie ou l'IP : `Serial`, aucune IP, log `erreur`
+  `CONFLIT_ID: esclave d'ID=N annonce par k fiches discordantes (...)`. `incoherenceId` journalise
+  `ID_INCOHERENT` si le role `esclaveN` (serveur.udp.id) ou `rangeExtender.id` actif differe de
+  `ModBus.id` ; le routage reste sur `ModBus.id`. Chaque anomalie est journalisee une fois, a son
+  apparition (`etat()["anomaliesFiches"]`). `controleModbus` sauve le persist (`persist.save(true)`)
+  avant le `Restart 1` de l'alignement des identifiants (meme boucle de redemarrages que celle corrigee
+  dans `controleRangeExtender` le 2026-10-10). `banc_test_modbus.py` controle en plus que les
+  `_persist.json` suivis ont des identifiants alignes. Banc 309/309 (17 tests de plus, dont temoins ;
+  ancien code : 9 echecs), `test_discovery.be` 195/195.
 Banc `banc_test_modbus.be` §31 (54 tests, 292/292) : voie, cache, IP apprise/perimee/fiche, temoins
 (trame CRC fausse, push rejete, IP invalide -> rien appris), decodage des reponses reelles du bus
 (0x03 x5, 0x04 sentinelle, 0x01, 0x10, tronquee), conversion uint32/float, file mixte carte 16 relais +

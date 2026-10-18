@@ -58,6 +58,7 @@ def modbusFonctions_etat()
             "routesFiches": {},         # maitre : {"t": millis, "voies": {adr: "UDP"}, "ips": {adr: ip}} lus dans discovery.json (voieDe)
             "ipsApprises": {},          # maitre : adresse -> {"ip", "ms"} source de la derniere trame UDP valide (noteIP)
             "routesAnnoncees": {},      # maitre : adresse -> "voie|ip" deja journalise (annonceRoute)
+            "anomaliesFiches": {},      # maitre : anomalies des fiches (CONFLIT_ID, ID_INCOHERENT) deja journalisees (routesFiches)
             "tid": 0                    # maitre : dernier numero de transaction UDP attribue (0..255)
         }
     end
@@ -1568,7 +1569,9 @@ modbusFonctions.envoiMsgModbusSerial = modbusFonctions_envoiMsgModbusSerial
 # Retourne la liste des fiches (maps) qui portent un bloc 'ModBus' ; [] si la table est absente.
 # Groupe : une fiche publiee avant le 2026-09-30 n'a pas de 'groupTopic' -> elle est acceptee ;
 # un module sans groupTopic1 ne filtre pas.
-def modbusFonctions_fichesModbus()
+# @avecOrigine (2026-10-18, routesFiches) : true -> chaque element est {"mac", "role", "lwt", "fiche"},
+# le 'lwt' etant celui de la MAC (discovery.json[MAC]["lwt"], "" si absent).
+def modbusFonctions_fichesModbus(avecOrigine)
     import json
     import string
     import re
@@ -1589,7 +1592,11 @@ def modbusFonctions_fichesModbus()
             if (pattern.match(role) == nil || !isinstance(fiche, map))    continue    end
             if (!isinstance(fiche.find("ModBus", nil), map))    continue    end
             if (monGroupe != "" && fiche.find("groupTopic", monGroupe) != monGroupe)    continue    end
-            fiches.push(fiche)
+            if (avecOrigine)
+                fiches.push({"mac": mac, "role": role, "lwt": str(table[mac].find("lwt", "")), "fiche": fiche})
+            else
+                fiches.push(fiche)
+            end
         end
     end
     return fiches
@@ -1604,6 +1611,9 @@ modbusFonctions.fichesModbus = modbusFonctions_fichesModbus
     de VALIDITE_IP_MS), sinon IPAddress de sa fiche, sinon aucune (echec d'envoi).
     fichesModbus() relit discovery.json a chaque appel : voies et IP des fiches sont gardees en cache
     (routesFiches), relues au plus toutes les CACHE_ROUTES_MS.
+    Plusieurs fiches pour une meme adresse (2026-10-18) : carte remplacee dont l'ancienne MAC garde sa
+    fiche (retenue sur le broker), ou erreur de reglage. UNE seule est retenue (choisitFiche) ; avant,
+    une fiche perimee annoncant UDP imposait l'UDP, et l'IP dependait de l'ordre de lecture.
 -#
 def modbusFonctions_estConn16(adresse)
     var cartes = drivers["ModBus"].find("environnement", {}).find("Conn16channels", {})
@@ -1615,21 +1625,105 @@ def modbusFonctions_estConn16(adresse)
 end
 modbusFonctions.estConn16 = modbusFonctions_estConn16
 
+# Voie declaree par une fiche : "UDP" ou "Serial" (cle absente ou autre valeur -> "Serial")
+def modbusFonctions_voieFiche(fiche)
+    return (str(fiche["ModBus"].find("voieCommandes", "Serial")) == "UDP" ? "UDP" : "Serial")
+end
+modbusFonctions.voieFiche = modbusFonctions_voieFiche
+
+#- Choix de LA fiche d'une adresse ModBus parmi ses candidates (2026-10-18) :
+    1. une seule fiche : elle, quel que soit son lwt. Le lwt n'est pas une preuve de vie : au demarrage
+       du maitre, resetClientsConnectes met tout 'Offline' jusqu'au prochain ImAlive (jusqu'a 5 min) ;
+       repasser l'esclave en serie couperait la liaison une fois le cable retire (decide le 2026-10-18).
+    2. sinon, celles dont l'IPAddress est l'IP apprise (< VALIDITE_IP_MS) : l'esclave vient d'y repondre ;
+    3. puis, parmi elles, celles dont la MAC est 'Online' (lwt) ;
+    4. s'il en reste plusieurs qui different par la voie ou l'IP : conflit -> nil. Le maitre reste alors
+       en serie (le cable est conserve) et routesFiches journalise CONFLIT_ID.
+    @candidats : elements de fichesModbus(true). Retourne l'element retenu, ou nil.
+-#
+def modbusFonctions_choisitFiche(adresse, candidats)
+    if (size(candidats) == 1)    return candidats[0]    end
+
+    var reste = candidats
+    var apprise = modbusFonctions.etat()["ipsApprises"].find(int(adresse))
+    if (apprise != nil && !tasmota.time_reached(apprise["ms"] + modbusFonctions.VALIDITE_IP_MS))
+        var memeIP = []
+        for c: reste    if (str(c["fiche"].find("IPAddress", "")) == apprise["ip"])    memeIP.push(c)    end    end
+        if (size(memeIP) > 0)    reste = memeIP    end
+    end
+    var enLigne = []
+    for c: reste    if (c["lwt"] == "Online")    enLigne.push(c)    end    end
+    if (size(enLigne) > 0)    reste = enLigne    end
+
+    var premier = reste[0]
+    for c: reste
+        if (modbusFonctions.voieFiche(c["fiche"]) != modbusFonctions.voieFiche(premier["fiche"]) ||
+            str(c["fiche"].find("IPAddress", "")) != str(premier["fiche"].find("IPAddress", "")))    return nil    end
+    end
+    return premier
+end
+modbusFonctions.choisitFiche = modbusFonctions_choisitFiche
+
+#- Identifiants d'une fiche (2026-10-18) : le role 'esclaveN' vient de serveur.udp.id, l'adresse ModBus
+    de drivers.ModBus.id, et rangeExtender.id de serveur.rangeExtender.id. Au demarrage de l'esclave,
+    controleModbus puis controleRangeExtender les alignent (et redemarrent). Une fiche ou ils different
+    (firmware d'avant l'alignement, fiche perimee, persist televerse sans redemarrage) est journalisee ;
+    le routage reste sur ModBus.id, l'adresse que porte la trame.
+    @e : element de fichesModbus(true). Retourne le texte de l'anomalie, ou nil.
+-#
+def modbusFonctions_incoherenceId(e)
+    import string
+    var idModbus = int(e["fiche"]["ModBus"].find("id", -1))
+    var idRole = (e["role"] == "maitre" ? 0 : int(e["role"][7 ..]))       # "esclaveN" -> N
+    var rgx = e["fiche"].find("rangeExtender")
+    var idRgx = ((isinstance(rgx, map) && rgx.find("activation", "OFF") == "ON") ? int(rgx.find("id", -1)) : idModbus)
+    if (idRole == idModbus && idRgx == idModbus)    return nil    end
+    return string.format("ID_INCOHERENT: fiche '%s' de la MAC %s : role %i, ModBus.id %i, rangeExtender.id %i (routage sur ModBus.id) !",
+                         e["role"], e["mac"], idRole, idModbus, idRgx)
+end
+modbusFonctions.incoherenceId = modbusFonctions_incoherenceId
+
 def modbusFonctions_routesFiches()
     import udpFonctions
+    import string
     var etat = modbusFonctions.etat()
     var r = etat["routesFiches"]
     if (r.find("t") != nil && !tasmota.time_reached(r["t"] + modbusFonctions.CACHE_ROUTES_MS))    return r    end
 
+    var parAdresse = {}
+    var anomalies = {}
+    for e: modbusFonctions.fichesModbus(true)
+        var ecart = modbusFonctions.incoherenceId(e)
+        if (ecart != nil)    anomalies[ecart] = true    end
+        var adresse = int(e["fiche"]["ModBus"].find("id", -1))
+        if (adresse <= 0)    continue    end
+        if (!parAdresse.contains(adresse))    parAdresse[adresse] = []    end
+        parAdresse[adresse].push(e)
+    end
+
     var voies = {}
     var ips = {}
-    for fiche: modbusFonctions.fichesModbus()
-        var adresse = int(fiche["ModBus"].find("id", -1))
-        if (adresse <= 0)    continue    end
-        if (str(fiche["ModBus"].find("voieCommandes", "Serial")) == "UDP")    voies[adresse] = "UDP"    end
-        var ip = str(fiche.find("IPAddress", ""))
+    for adresse: parAdresse.keys()
+        var e = modbusFonctions.choisitFiche(adresse, parAdresse[adresse])
+        if (e == nil)
+            var fiches = []
+            for c: parAdresse[adresse]    fiches.push(c["mac"] + " " + modbusFonctions.voieFiche(c["fiche"]) + " " + str(c["fiche"].find("IPAddress", "")))    end
+            anomalies[string.format("CONFLIT_ID: esclave d'ID=%i annonce par %i fiches discordantes (%s) : voie Serial, aucune IP !",
+                                    adresse, size(fiches), fiches.concat(", "))] = true
+            continue
+        end
+        if (modbusFonctions.voieFiche(e["fiche"]) == "UDP")    voies[adresse] = "UDP"    end
+        var ip = str(e["fiche"].find("IPAddress", ""))
         if (udpFonctions.estIPv4(ip))    ips[adresse] = ip    end
     end
+
+    # Chaque anomalie est journalisee a son apparition, une seule fois ; celles qui ont disparu sont oubliees
+    var dejaVues = etat.find("anomaliesFiches", {})
+    for texte: anomalies.keys()
+        if (!dejaVues.contains(texte))    modbusFonctions.log(texte, LOG_LEVEL_ERREUR)    end
+    end
+    etat["anomaliesFiches"] = anomalies
+
     r = {"t": tasmota.millis(), "voies": voies, "ips": ips}
     etat["routesFiches"] = r
     return r
