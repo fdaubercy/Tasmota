@@ -260,3 +260,12 @@ Les commits marques ● ont un titre qui mentionne Berry / ESP32-S3 / nos sujets
 -   `dad74600a` Fix possible OOB
 -   `2289c619b` Fix SR04 serial checksum for AJ-SR04M (#25147)
 -   `c00ece868` Fix hostByName returning negative values when lookup failed
+
+## 2026-10-18 17:15 — 2 commit(s) recupere(s) d'upstream
+
+`arendst/Tasmota:development` → `fdaubercy/Tasmota:development` (merge_type : merge)
+
+**1 commit(s) ● a lire de pres.**
+
+-   `ba3ead1af` Support OUI wildcard for command MI32Keys in case multiple devices use same bindkey like IoTorero: `mi32keys 0C3D5EFFFFFF=48656c6c6f204254486f6d65210d0a00`
+- ● `6776e2ea9` Fix Modbus OOB
