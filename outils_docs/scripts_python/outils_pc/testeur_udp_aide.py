@@ -119,18 +119,24 @@ Un seul test à la fois ; chaque test envoie ses commandes, lit les logs des deu
 </ul>
 <table>
 <tr><th>Test</th><th>Ce qu'il fait</th></tr>
-<tr><td>1</td><td>Démarrage : <code>controleModbus</code> chargé sur les deux cartes, port RS485 de l'esclave ouvert (<code>Br print(...)</code>).</td></tr>
+<tr><td>1</td><td>Démarrage : <code>controleModbus</code> chargé sur les deux cartes, port RS485 de l'esclave ouvert (<code>Br print(...)</code>), puis voie de ses commandes lue par
+<code>ReglageModbus VoieCommandes</code> (lecture seule) : elle fixe le mode des tests 2 et 6, qui refusent de démarrer tant
+qu'elle est inconnue. La voie s'affiche en tête de l'onglet.</td></tr>
 <tr><td>2</td><td>Régime normal, rien à toucher (durée réglable, 300 s par défaut, décompte à côté du bouton « Lancer ») : compte les relevés
 et les requêtes exécutées par l'esclave, puis les réponses <b>reçues</b> par le P4 (<code>ModbusReceived</code> de son adresse : une requête
 exécutée ne prouve pas que la réponse arrive) ; échec sur message abandonné pour l'esclave testé (<code>TERMINE_EN_VOL ... (esclave 2</code>, <code>ESCLAVE_MUET</code>),
 hors-séquence, file pleine, <code>SLAVE_ERREUR</code>, chien de garde, écart de relai, erreur Berry. Les <code>SUR_TIMEOUT</code> ne sont qu'une
-information : ce log ne nomme pas l'esclave, et chaque esclave absent du bus (rideau, carte 16 relais) en produit un par relevé.</td></tr>
+information : ce log ne nomme pas l'esclave, et chaque esclave absent du bus (rideau, carte 16 relais) en produit un par relevé. Voie <b>UDP</b> : les requêtes doivent partir
+par UDP (<code>POMPE_QUEUE: envoi UDP</code>), sans envoi refusé, IP inconnue ni réponse au mauvais numéro de transaction ;
+voie <b>Serial</b> : aucune requête UDP vers l'esclave.</td></tr>
 <tr><td>3</td><td>Carte 16 relais, si elle est branchée : relevés, pas de chien de garde ni d'écart de voie.</td></tr>
 <tr><td>4</td><td><code>Power1 ON</code> puis <code>OFF</code> sur le P4 : publication, exécution sur l'esclave, push de l'état, constatation visuelle
 du ruban, puis <code>RubanEsclave1 auto</code>.</td></tr>
 <tr><td>5</td><td><code>Power1 TOGGLE</code> sur l'esclave → push reçu par le P4 ; <code>Restart 1</code> de l'esclave → le P4 voit le redémarrage
 (<code>ACCEPTE_SEQ</code>) et accepte le push suivant.</td></tr>
-<tr><td>6</td><td>Panne : débranchez le câble RS485 de l'esclave → chien de garde du maître (jusqu'à 150 s) ; rebranchez → l'esclave répond de nouveau.</td></tr>
+<tr><td>6</td><td>Panne : débranchez le câble RS485 de l'esclave → chien de garde du maître (jusqu'à 150 s) ; rebranchez → l'esclave répond de nouveau.<br>
+Voie <b>UDP</b> : le test s'inverse. Câble débranché, le P4 doit continuer de recevoir les réponses par UDP pendant
+150 s d'observation (plus long que le chien de garde), sans esclave déclaré muet ni message abandonné, puis après le rebranchement.</td></tr>
 <tr><td>7</td><td>Découverte : <code>RgxState</code>, <code>forceEnvoiParams</code>, paramètres reçus par le maître, forme de <code>/json/discovery.json</code>
 contrôlée sur le P4, puis constatation de la page /discovery.</td></tr>
 </table>

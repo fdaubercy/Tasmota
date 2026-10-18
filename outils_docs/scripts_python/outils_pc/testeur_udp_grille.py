@@ -10,11 +10,17 @@ Genres :
   commande  ecrit 'commande' sur 'carte', puis attend 'motif' (sur 'carte_motif', defaut 'carte') dans 'delai' s
   attendu   attend 'motif' sur 'carte' dans 'delai' s, compte depuis la derniere commande ou consigne
   consigne  affiche 'consigne' ; boutons « C'est fait » (puis 'motif' attendu dans 'delai' s) ou Oui / Non
+  pause     observe pendant 'delai' s (decompte affiche), puis OK : les surveillances jugent ce qui s'y passe
   compte    surveillance : nombre d'occurrences de 'motif' entre 'mini' et 'maxi' sur toute la duree du test
   interdit  surveillance : ECHEC des que 'motif' apparait
   note      surveillance : relevee seulement (INFO), jamais un echec
 'optionnel' : un echec devient « NON VU » (jaune), pour ce qui depend du materiel branche.
 'depuis'    : (attendu) cle d'une etape anterieure : la preuve se cherche depuis cette etape, pas la derniere.
+'lit_voie'  : (commande) la ligne trouvee donne la voie des commandes de l'esclave (voieCommandes=Serial|UDP).
+
+Voie des commandes (2026-10-18, E3) : l'esclave recoit ses commandes par le RS485 (Serial) ou par UDP
+(ReglageModbus VoieCommandes). Le test 1 la lit sur la cuve (1d) ; les tests 2 et 6 en dependent et refusent
+de demarrer tant qu'elle est inconnue. En UDP, le test 6 s'inverse : cable debranche, rien ne doit changer.
 """
 
 import json
@@ -25,6 +31,8 @@ import time
 OK, ECHEC, NON_VU, INFO, ATTENTE, EN_COURS, CONSIGNE, ANNULE = (
     "OK", "ECHEC", "NON VU", "INFO", "attente", "en cours", "consigne", "annule")
 SURVEILLANCES = ("compte", "interdit", "note")
+VOIES = ("Serial", "UDP")
+TESTS_SELON_VOIE = (2, 6)
 PERSIST_DEFAUT = {"id": 2, "power": 1, "registre": 1376}
 DUREE_REGIME = 300                       # s : test 2 (regime normal), reglable dans la page (60-900)
 ERREURS_BERRY = r"attribute_error|undeclared|writable attribute"
@@ -58,9 +66,13 @@ def cible_depuis_persist(chemin):
     return dict(PERSIST_DEFAUT)
 
 
-def construit_grille(cible, duree_regime=DUREE_REGIME):
-    """Les 7 tests, pour l'esclave 'cible' ({id, power, registre})."""
+def construit_grille(cible, duree_regime=DUREE_REGIME, voie="Serial"):
+    """Les 7 tests, pour l'esclave 'cible' ({id, power, registre}) qui recoit ses commandes par 'voie'."""
     i, p, reg = cible["id"], cible["power"], cible["registre"]
+    udp = (voie == "UDP")
+    envoi_udp = rf"POMPE_QUEUE: envoi UDP a l'esclave d'ID={i} "
+    recu = rf"""ModbusReceived(UDP)?.*"DeviceAddress": ?{i}[,}}]"""
+    muet = rf"CHIEN_DE_GARDE: esclave .*\(ID={i}\) muet"
     n_releves = max(1, int(duree_regime) // 30 - 1)
     pousse = rf"POUSSE_ETAT: registre {reg} = "
     publie = rf"Publie sur le r.{{1,2}}seau ModBus pour le relai n.{{1,2}}{p}\b"
@@ -91,8 +103,12 @@ def construit_grille(cible, duree_regime=DUREE_REGIME):
               motif=r"GRILLE_T1_ESCLAVE true", delai=8),
             v("1c", "esclave", "port RS485 ouvert (serialModBus non nil)", "commande",
               commande='Br print("GRILLE_T1_RS485", modbusFonctions.etat()["serialModBus"] != nil)',
-              motif=r"GRILLE_T1_RS485 true", delai=8)]},
-        {"num": 2, "titre": f"Regime normal ({int(duree_regime)} s sans rien toucher)", "fenetre": int(duree_regime), "verifs": [
+              motif=r"GRILLE_T1_RS485 true", delai=8),
+            # Lecture seule (sans argument) : « ReglageModbus: voieCommandes=Serial, OK » (constate le 2026-10-18)
+            v("1d", "esclave", "voie des commandes de la cuve (fixe le mode des tests 2 et 6)", "commande",
+              commande="ReglageModbus VoieCommandes", motif=r"voieCommandes=(Serial|UDP)\b", delai=8, lit_voie=True)]},
+        {"num": 2, "titre": f"Regime normal ({int(duree_regime)} s sans rien toucher, commandes par {voie})",
+         "fenetre": int(duree_regime), "verifs": [
             v("2a", "maitre", f"releve des esclaves toutes les 30 s (au moins {n_releves})", "compte",
               motif=r"MODBUS_TASMOTA_SLAVE_RELEVE: \d+ demande", mini=n_releves),
             # Une requete executee ecrit 6 lignes EXECUTE_CMD_MODBUS (constate le 2026-10-17 : « 180 fois » pour
@@ -102,9 +118,17 @@ def construit_grille(cible, duree_regime=DUREE_REGIME):
             # La cuve peut executer sans que sa reponse arrive (constate le 2026-10-17 : 60 EXECUTE, 0 recu
             # par le P4). Preuve cote maitre : la publication ModbusReceived du pont (sauf SetOption158), ou
             # le detail de slaveModbus.
-            v("2o", "maitre", f"le P4 recoit les reponses de la cuve (au moins {n_releves} ModbusReceived d'adresse {i})",
-              "compte", mini=n_releves,
-              motif=rf"""ModbusReceived.*"DeviceAddress": ?{i}[,}}]|RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: value = .*'DeviceAddress': {i}[,}}]"""),
+            v("2o", "maitre", f"le P4 recoit les reponses de la cuve (au moins {n_releves} ModbusReceived"
+              f"{'UDP' if udp else ''} d'adresse {i})", "compte", mini=n_releves,
+              motif=recu + rf"|RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: value = .*'DeviceAddress': {i}[,}}]"),
+            # Ligne d'envoi UDP au niveau detail : le testeur pose 'ReglageLog modbus detail' a l'ouverture du port
+            (v("2p", "maitre", f"les requetes partent par UDP (au moins {n_releves} envois a l'ID={i})", "compte",
+               motif=envoi_udp, mini=n_releves) if udp else
+             v("2p", "maitre", f"aucune requete UDP vers la cuve (voie Serial)", "interdit", motif=envoi_udp)),
+            v("2q", "maitre", "aucun envoi UDP refuse, aucune IP inconnue", "interdit",
+              motif=rf"POMPE_QUEUE: (envoi UDP refuse|aucune IP connue pour l'esclave d'ID={i} )"),
+            v("2r", "maitre", "aucune reponse UDP rejetee (mauvais numero de transaction)", "interdit",
+              motif=rf"reponse UDP de tid .* rejetee \(attendu \d+, esclave {i}\)"),
             # SUR_TIMEOUT ne dit pas l'esclave : un esclave absent du bus (rideau, carte 16 relais) en produit un
             # par releve (constate le 2026-10-17 : 6 en 300 s, cuve servie 60 fois). Seul l'abandon le nomme.
             v("2c", "maitre", f"aucun message abandonne pour la cuve (TERMINE_EN_VOL esclave {i}, ESCLAVE_MUET)", "interdit",
@@ -113,8 +137,7 @@ def construit_grille(cible, duree_regime=DUREE_REGIME):
             v("2e", "maitre", "jamais de file pleine", "interdit", motif=r"ENFILE_MSG: file pleine"),
             v("2f", "maitre", "persist complet (aucun MODBUS_TASMOTA_SLAVE_ERREUR)", "interdit",
               motif=r"MODBUS_TASMOTA_SLAVE_ERREUR"),
-            v("2g", "maitre", f"la cuve (ID={i}) n'est jamais declaree muette", "interdit",
-              motif=rf"CHIEN_DE_GARDE: esclave .*\(ID={i}\) muet"),
+            v("2g", "maitre", f"la cuve (ID={i}) n'est jamais declaree muette", "interdit", motif=muet),
             v("2h", "maitre", "aucun ecart commande / constate sur le ruban", "interdit", motif=ecart),
             v("2i", "maitre", "aucune erreur Berry sur le P4", "interdit", motif=ERREURS_BERRY),
             v("2j", "esclave", "aucune erreur Berry sur la cuve", "interdit", motif=ERREURS_BERRY),
@@ -164,15 +187,32 @@ def construit_grille(cible, duree_regime=DUREE_REGIME):
               motif=rf"ACCEPTE_SEQ: esclave d'ID={i} redemarre", delai=10, depuis="5d"),
             v("5h", "esclave", "retour a l'etat d'origine", "commande", commande="Power1 TOGGLE", motif=pousse, delai=6),
             ] + retour_auto(5)},
+        {"num": 6, "titre": "Cable RS485 de la cuve debranche : les commandes passent par UDP, rien ne change",
+         "fenetre": 0, "verifs": [
+            # Le chien de garde reagit sous 90 a 120 s : l'observation (6p) dure plus longtemps que lui
+            v("6x", "maitre", f"la cuve (ID={i}) n'est jamais declaree muette", "interdit", motif=muet),
+            v("6z", "maitre", f"aucun message abandonne pour la cuve", "interdit",
+              motif=rf"TERMINE_EN_VOL: abandon .*\(esclave {i}[,)]|ESCLAVE_MUET: esclave d'ID={i} "),
+            v("6y", "maitre", "jamais de file pleine", "interdit", motif=r"ENFILE_MSG: file pleine"),
+            v("6a", "maitre", "cable RS485 de la cuve debranche", "consigne", reponse="fait",
+              consigne="Debranchez le cable RS485 de la cuve (laissez-la alimentee), puis cliquez « C'est fait ». "
+                       "La cuve recoit ses commandes par UDP : le P4 ne doit rien remarquer."),
+            v("6b", "maitre", "le P4 recoit toujours les reponses de la cuve (par UDP)", "attendu",
+              motif=rf'ModbusReceivedUDP.*"DeviceAddress": ?{i}[,}}]', delai=70),
+            v("6p", "maitre", "observation 150 s, cable debranche (plus long que le chien de garde)", "pause", delai=150),
+            v("6q", "maitre", "le P4 recoit encore les reponses de la cuve", "attendu",
+              motif=rf'ModbusReceivedUDP.*"DeviceAddress": ?{i}[,}}]', delai=70),
+            v("6c", "maitre", "cable RS485 rebranche", "consigne", reponse="fait",
+              consigne="Rebranchez le cable RS485 de la cuve, puis cliquez « C'est fait »."),
+            v("6d", "maitre", "les reponses de la cuve continuent apres le rebranchement", "attendu",
+              motif=rf'ModbusReceivedUDP.*"DeviceAddress": ?{i}[,}}]', delai=70)]} if udp else
         {"num": 6, "titre": "Panne : cable RS485 de la cuve debranche puis rebranche", "fenetre": 0, "verifs": [
-            v("6x", "maitre", f"chien de garde declenche UNE seule fois", "compte",
-              motif=rf"CHIEN_DE_GARDE: esclave .*\(ID={i}\) muet", mini=1, maxi=1),
+            v("6x", "maitre", f"chien de garde declenche UNE seule fois", "compte", motif=muet, mini=1, maxi=1),
             v("6y", "maitre", "jamais de file pleine", "interdit", motif=r"ENFILE_MSG: file pleine"),
             v("6a", "maitre", "cable RS485 de la cuve debranche", "consigne", reponse="fait",
               consigne="Debranchez le cable RS485 de la cuve (laissez-la alimentee), puis cliquez « C'est fait ». "
                        "Le chien de garde du P4 doit reagir sous 90 a 120 s."),
-            v("6b", "maitre", f"le P4 declare la cuve (ID={i}) muette", "attendu",
-              motif=rf"CHIEN_DE_GARDE: esclave .*\(ID={i}\) muet", delai=150),
+            v("6b", "maitre", f"le P4 declare la cuve (ID={i}) muette", "attendu", motif=muet, delai=150),
             v("6c", "maitre", "cable RS485 rebranche", "consigne", reponse="fait",
               consigne="Rebranchez le cable RS485 de la cuve, puis cliquez « C'est fait »."),
             v("6d", "maitre", f"le P4 voit la cuve repondre de nouveau", "attendu",
@@ -199,6 +239,7 @@ class Grille:
         self.ecrit, self.diffuse, self.echelle = ecrit, diffuse, echelle
         self.cible = dict(cible or PERSIST_DEFAUT)
         self.duree_regime = DUREE_REGIME
+        self.voie = None                    # voie des commandes de l'esclave, lue par le test 1 (1d)
         self.tests = construit_grille(self.cible, self.duree_regime)
         self.resultats = {}                 # cle -> {"statut", "detail"}
         self.cond = threading.Condition()
@@ -228,10 +269,12 @@ class Grille:
                 if not 60 <= duree <= 900:
                     raise ValueError("duree du test 2 : 60 a 900 s")
                 self.duree_regime = duree
-                self.tests = construit_grille(self.cible, duree)
+                self.tests = construit_grille(self.cible, duree, self.voie or "Serial")
             test = next((t for t in self.tests if t["num"] == int(num)), None)
             if test is None:
                 raise ValueError(f"test inconnu : {num!r}")
+            if test["num"] in TESTS_SELON_VOIE and self.voie is None:
+                raise ValueError(f"test {test['num']} : voie des commandes de la cuve inconnue, lancez d'abord le test 1")
             self.en_cours, self.lignes, self.ancre, self.reponse, self.arret = test["num"], [], 0, None, False
             self.ancres = {}
         threading.Thread(target=self._execute, args=(test,), daemon=True).start()
@@ -253,10 +296,19 @@ class Grille:
             self.arret = True
             self.cond.notify_all()
 
+    def regle_voie(self, voie):
+        """Voie des commandes de l'esclave (Serial | UDP) -> tests 2 et 6 reconstruits pour elle."""
+        if voie not in VOIES:
+            raise ValueError(f"voie inconnue : {voie!r} (Serial ou UDP)")
+        with self.cond:
+            self.voie = voie
+            self.tests = construit_grille(self.cible, self.duree_regime, voie)
+            self.version += 1
+
     def etat(self):
         fin, genre = (self.fin_fenetre, "fenetre") if self.fin_fenetre is not None else (self.fin_etape, "etape")
         reste = None if fin is None else max(0, round((fin - time.monotonic()) / self.echelle))
-        return {"cible": self.cible, "duree_regime": self.duree_regime, "en_cours": self.en_cours,
+        return {"cible": self.cible, "voie": self.voie, "duree_regime": self.duree_regime, "en_cours": self.en_cours,
                 "consigne": self.consigne, "reste": reste, "reste_genre": genre if reste is not None else None,
                 "version": self.version, "instance": self.instance,
                 "tests": [{"num": t["num"], "titre": t["titre"],
@@ -316,6 +368,17 @@ class Grille:
                 return
             self._note(v, ECHEC if reponse == "non" else OK, f"reponse : {reponse}")
             return
+        if genre == "pause":
+            fin = time.monotonic() + v["delai"] * self.echelle
+            self.fin_etape = fin
+            self._note(v, EN_COURS)
+            with self.cond:
+                while not self.arret and time.monotonic() < fin:
+                    self.cond.wait(min(0.5, max(0.0, fin - time.monotonic())))
+            self.fin_etape = None
+            if not self.arret:
+                self._note(v, OK, f"{v['delai']} s observees")
+            return
         if genre == "commande":
             with self.cond:
                 self.ancre = self.ancres[v["cle"]] = len(self.lignes)
@@ -329,7 +392,10 @@ class Grille:
         carte = v.get("carte_motif", v["carte"])
         trouve, rate = self._attend(v["motif"], carte, delai, depuis, v.get("motif_echec"))
         self.fin_etape = None
-        if trouve:
+        if trouve and v.get("lit_voie"):
+            self.regle_voie(re.search(v["motif"], trouve).group(1))
+            self._note(v, OK, f"voie {self.voie} : tests 2 et 6 en mode {self.voie} ; " + trouve)
+        elif trouve:
             self._note(v, OK, trouve)
         elif rate:
             self._echec(v, rate)

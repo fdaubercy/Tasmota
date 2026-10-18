@@ -32,13 +32,13 @@ Détail et preuves complètes : la reprise, encadré « ETAT AU 2026-10-17 SOIR 
 - [x] E2 observé : routes annoncées, tout reste en série, aucune erreur — preuve : `ROUTE_ESCLAVE: esclave d'ID=2 : voie Serial, IP 192.168.4.2 (fiche)` 22:30:29 ; `routesAnnoncees` {2, 3} ; commit 3b4d4fa36
 
 ## A4 — Câblage RS485 du P4
-- [X] Fixer le faux contact (réception, et émission le 2026-10-17 : coupure 22:31:37 → 22:39:30)
-- [ ] Observation stable : au moins 1 h sans abandon sur les esclaves 1 et 2 (pont série + sniffeur)
+- [X] Fixer le faux contact (réception, et émission le 2026-10-17 : coupure 22:31:37 → 22:39:30) — preuve : câblage repris par l'utilisateur ; aucune coupure pendant l'observation ci-dessous
+- [x] Observation stable : au moins 1 h sans abandon sur les esclaves 1 et 2 (pont série + sniffeur) — preuve : 2026-10-18 12:00:00 → 13:02:30 (62,5 min), sniffeur : esclave 1 126/126, esclave 2 375/376 (la dernière en vol à l'arrêt), 0 sans réponse ; réceptions du P4 par MQTT 126 et 375, aucun trou > 5 min ; pont : 0 abandon sur 1 et 2 (les 123 abandons et 123 `MBR Recv timed out` sont tous le rideau, id 3, non flashé)
 
 ## A5 — E3 sur la cuve (commandes par UDP)
-- [ ] Sur accord : `ReglageModbus VoieCommandes UDP` sur la cuve
-- [ ] Observer : `POMPE_QUEUE: envoi UDP` sur le P4, plus aucune trame de la cuve au sniffeur RS485
-- [ ] Adapter la grille du testeur au mode UDP (critères de réception série)
+- [x] Sur accord : `ReglageModbus VoieCommandes UDP` sur la cuve — preuve : accord « A5 » le 2026-10-18 ; cuve 13:36:43 `REGLAGE_VOIE_COMMANDES: commandes ModBus attendues par la voie UDP`, fiche republiée (MQTT + ImAlive) ; retour : `ReglageModbus VoieCommandes Serial`
+- [x] Observer : `POMPE_QUEUE: envoi UDP` sur le P4, plus aucune trame de la cuve au sniffeur RS485 — preuve : P4 13:37:30 `ROUTE_ESCLAVE: esclave d'ID=2 : voie UDP, IP 192.168.4.2 (fiche)`, puis `envoi UDP ... ModbusUDP 1..12` (IP apprise dès le 2e) et `ModbusReceivedUDP` tid 1..12, aucun rejet `APPARIE_REPONSE` ; sniffeur : esclave 2 figé à 720/720 depuis 13:37:30 (avant : 717 à 13:36:42)
+- [x] Adapter la grille du testeur au mode UDP (critères de réception série) — preuve : `testeur_udp_grille.py` (1d lit `voieCommandes`, tests 2 et 6 refusés sans elle ; 2p compte/interdit selon la voie, 2q, 2r ; test 6 UDP inversé avec pause 6p de 150 s) ; `test_testeur_udp.py` 242 vérifications, 0 échec ; 6 mutants sur 6 rendus rouges
 - [ ] Repasser la grille en UDP ; retour possible par `ReglageModbus VoieCommandes Serial`
 
 ## A6 — Rideau (id 3)

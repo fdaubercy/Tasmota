@@ -104,6 +104,9 @@ au mauvais endroit, annulées — voir `tasks/lessons.md`). Les 3 cibles sont
 > (la ligne du 3 a manque a l'historique du pont, l'etat fait foi) ; aucun envoi UDP, aucune erreur. Coupure du
 > filaire 22:31:37 -> 22:39:30 (timeouts sur tous les esclaves, plus rien au sniffeur) = encore le faux contact
 > du P4 : (1) reste a FIXER pour de bon avant (4) ;
+> **(1) FAIT le 2026-10-18** : cablage repris, puis 62 min sans coupure (12:00-13:02) : sniffeur 126/126 (id 1)
+> et 375/376 (id 2, derniere en vol), 0 sans reponse, receptions du P4 par MQTT identiques, aucun trou > 5 min.
+> Plan suivi : `tasks/plans/modbus-garage.md` (A4 a 100 %). Prochaine action : (4).
 > (4) activer E3 : `ReglageModbus VoieCommandes UDP` SUR LA CUVE, puis repasser la grille (attendu :
 > `POMPE_QUEUE: envoi UDP`, plus rien de la cuve sur le RS485 au sniffeur ; retour : `... Serial`) ;
 > (5) flasher le rideau (id 3, muet, fiche perimee, sans E1), lui passer la grille, puis E4

@@ -20,8 +20,8 @@ PERSIST_P4 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."
 class Cartes:
     """Reponses des deux cartes aux commandes de la grille. 'pannes' : comportements fautifs a simuler."""
 
-    def __init__(self, pannes=()):
-        self.grille, self.pannes, self.envoyees = None, set(pannes), []
+    def __init__(self, pannes=(), voie="Serial"):
+        self.grille, self.pannes, self.envoyees, self.voie = None, set(pannes), [], voie
         self.mode, self.seq = "MANUEL", 6           # ruban de la cuve ; numero d'ordre de ses push
 
     def dit(self, role, *lignes):
@@ -39,6 +39,10 @@ class Cartes:
             self.dit(role, f"CMD: {commande}", f"{marqueur} true")
         elif commande.startswith('Br print("GRILLE_T1_RS485"'):
             self.dit(role, f"GRILLE_T1_RS485 {'false' if 'rs485' in self.pannes else 'true'}")
+        elif commande == "ReglageModbus VoieCommandes" and role == "esclave":
+            # Reponse reelle de la cuve (2026-10-18) ; panne 'voie_muette' : firmware sans la sous-commande
+            if "voie_muette" not in self.pannes:
+                self.dit(role, f'MQT: stat/jardin/cuve/RESULT = "ReglageModbus: voieCommandes={self.voie}, OK"')
         elif commande in ("Power1 ON", "Power1 OFF") and role == "maitre":
             lum = "0" if commande.endswith("OFF") or "ruban" in self.pannes else "40"
             self.dit("maitre", "GESTION_RELAIS: Publie sur le réseau ModBus pour le relai n°1 !")
@@ -73,11 +77,14 @@ class Cartes:
         return True
 
 
-def nouvelle(pannes=(), reponses=None):
-    cartes = Cartes(pannes)
+def nouvelle(pannes=(), reponses=None, voie="Serial"):
+    """voie : celle que le test 1 aurait lue sur la cuve (None = test 1 jamais lance)."""
+    cartes = Cartes(pannes, voie or "Serial")
     evenements = []
     g = tg.Grille(cartes.ecrit, evenements.append, echelle=ECHELLE)
     cartes.grille = g
+    if voie is not None:
+        g.regle_voie(voie)
     if reponses is not None:            # repond aux consignes, dans l'ordre
         def repondeur():
             file = list(reponses)
@@ -106,11 +113,34 @@ def groupe_grille(verifie, attend, monte_testeur):
     verifie(len(tg.BR_DISCOVERY) < 790, True, "commande discovery < 800 octets (tampon serie de Tasmota)")
 
     # -- test 1 : demarrage
-    g, cartes, _ = nouvelle()
+    g, cartes, _ = nouvelle(voie=None)
+    verifie(g.etat()["voie"], None, "voie inconnue tant que le test 1 n'a pas tourne")
+    for num in tg.TESTS_SELON_VOIE:
+        try:
+            g.lance(num)
+            verifie("lance", "refuse", f"TEMOIN test {num} sans voie connue")
+        except ValueError:
+            verifie("refuse", "refuse", f"test {num} refuse tant que la voie est inconnue (lancez le test 1)")
     g.lance(1)
     attend(lambda: g.en_cours is None, 5)
-    verifie(statuts(g, 1), {"1a": "OK", "1b": "OK", "1c": "OK"}, "test 1 : cartes conformes -> 3 OK")
-    verifie([r for r, _ in cartes.envoyees], ["maitre", "esclave", "esclave"], "test 1 : commandes sur la bonne carte")
+    verifie(statuts(g, 1), {"1a": "OK", "1b": "OK", "1c": "OK", "1d": "OK"}, "test 1 : cartes conformes -> 4 OK")
+    verifie([r for r, _ in cartes.envoyees], ["maitre", "esclave", "esclave", "esclave"], "test 1 : commandes sur la bonne carte")
+    verifie((g.voie, g.etat()["voie"]), ("Serial", "Serial"), "1d : voie Serial lue sur la cuve et exposee a la page")
+    g, cartes, _ = nouvelle(voie=None)
+    cartes.voie = "UDP"
+    g.lance(1)
+    attend(lambda: g.en_cours is None, 5)
+    titre6 = next(t["titre"] for t in g.etat()["tests"] if t["num"] == 6)
+    verifie((g.voie, "UDP" in titre6), ("UDP", True), "1d : voie UDP lue -> test 6 reconstruit dans sa variante UDP")
+    g, _, _ = nouvelle(pannes={"voie_muette"}, voie=None)
+    g.lance(1)
+    attend(lambda: g.en_cours is None, 5)
+    verifie((statuts(g, 1)["1d"], g.voie), ("ECHEC", None), "TEMOIN cuve sans VoieCommandes : 1d ECHEC, voie toujours inconnue")
+    try:
+        g.regle_voie("RS485")
+        verifie("accepte", "refuse", "TEMOIN voie inconnue")
+    except ValueError:
+        verifie("refuse", "refuse", "regle_voie : seulement Serial ou UDP")
     g, _, _ = nouvelle(pannes={"rs485"})
     g.lance(1)
     attend(lambda: g.en_cours is None, 5)
@@ -142,6 +172,7 @@ def groupe_grille(verifie, attend, monte_testeur):
             "test 2 : releves, cuve servie, 6 timeouts du rideau absent (esclave 3) -> 2c OK ; note = INFO")
     verifie((s["2m"], s["2n"], s["2o"]), ("INFO", "INFO", "OK"),
             "timeouts et abandons des autres esclaves : notes INFO ; reponses de la cuve recues : 2o OK")
+    verifie((s["2p"], s["2q"], s["2r"]), ("OK", "OK", "OK"), "voie Serial : aucun envoi UDP vers la cuve, ni refus, ni tid rejete")
     detail_2b = next(v["detail"] for t in g.etat()["tests"] for v in t["verifs"] if v["cle"] == "2b")
     verifie(detail_2b, "10 fois", "2b compte les REQUETES executees (10), pas les 50 lignes EXECUTE_CMD_MODBUS")
     verifie(g.etat()["reste"], None, "decompte efface a la fin du test")
@@ -158,6 +189,68 @@ def groupe_grille(verifie, attend, monte_testeur):
     verifie((s["2a"], s["2c"], s["2o"]), ("ECHEC", "ECHEC", "ECHEC"),
             "TEMOIN aucun releve, message de la cuve abandonne, aucune reponse recue -> 2a, 2c et 2o ECHEC")
     verifie(s["2b"], "ECHEC", "TEMOIN 60 lignes de detail EXECUTE_CMD_MODBUS sans en-tete : 0 requete -> 2b ECHEC")
+
+    # -- test 2 en voie UDP : envois UDP comptes, refus / IP inconnue / tid rejete interdits
+    g, _, _ = nouvelle(voie="UDP")
+    g.lance(2)
+    for n in range(10):
+        g.observe("maitre", "MODBUS_TASMOTA_SLAVE_RELEVE: 3 demande(s) de lecture placee(s) dans la file")
+        g.observe("maitre", f"POMPE_QUEUE: envoi UDP a l'esclave d'ID=2 (apprise, IP 192.168.4.2) : ModbusUDP {n} 0203")
+        g.observe("esclave", "EXECUTE_CMD_MODBUS: -------------------- executeCmdModbus -------------------")
+        g.observe("maitre", 'MQT: tele/garage/RESULT = {"ModbusReceivedUDP": {"Trame": "02030A", "Info": {"voie":"UDP"}, '
+                            '"DeviceAddress": 2, "FunctionCode": 3}}')
+    attend(lambda: g.en_cours is None, 8)
+    s = statuts(g, 2)
+    verifie((s["2o"], s["2p"], s["2q"], s["2r"]), ("OK", "OK", "OK", "OK"),
+            "voie UDP : 10 envois UDP et 10 ModbusReceivedUDP -> 2o, 2p OK ; rien d'interdit")
+    g, _, _ = nouvelle(voie="UDP")
+    g.lance(2)
+    for _ in range(10):
+        g.observe("maitre", 'MQT: tele/garage/RESULT = {"ModbusReceived": {"Trame": "02030A", "DeviceAddress": 2}}')
+    g.observe("maitre", "POMPE_QUEUE: aucune IP connue pour l'esclave d'ID=2 (voie UDP) : message non envoye")
+    g.observe("maitre", "APPARIE_REPONSE: reponse UDP de tid 4 rejetee (attendu 5, esclave 2)")
+    attend(lambda: g.en_cours is None, 8)
+    s = statuts(g, 2)
+    verifie((s["2p"], s["2q"], s["2r"]), ("ECHEC", "ECHEC", "ECHEC"),
+            "TEMOIN voie UDP mais requetes par le RS485, IP inconnue, tid rejete -> 2p, 2q, 2r ECHEC")
+    g, _, _ = nouvelle(voie="Serial")
+    g.lance(2)
+    g.observe("maitre", "POMPE_QUEUE: envoi UDP a l'esclave d'ID=2 (fiche, IP 192.168.4.2) : ModbusUDP 1 0203")
+    attend(lambda: statuts(g, 2)["2p"] == "ECHEC", 2)
+    verifie(statuts(g, 2)["2p"], "ECHEC", "TEMOIN voie Serial mais un envoi UDP vers la cuve -> 2p ECHEC aussitot")
+    g.arrete()
+    attend(lambda: g.en_cours is None, 3)
+
+    # -- test 6 en voie UDP : cable debranche, le P4 recoit toujours ; chien de garde interdit
+    def flux_udp(g, arret, panne=None):
+        """Reponses UDP de la cuve toutes les 50 ms ; panne : 'coupe' = plus rien apres 6a, 'muet' = chien de garde."""
+        while not arret.is_set():
+            if not (panne == "coupe" and statuts(g, 6).get("6a") == "OK"):
+                g.observe("maitre", 'MQT: tele/garage/RESULT = {"ModbusReceivedUDP": {"Info": {"voie":"UDP"}, "DeviceAddress": 2}}')
+            if panne == "muet" and statuts(g, 6).get("6p") == "en cours":
+                g.observe("maitre", "MODBUS_TASMOTA_SLAVE_CHIEN_DE_GARDE: esclave Capteurs Cuve (ID=2) muet depuis 90 s")
+            time.sleep(0.05)
+    tout_ok = {"6x": "OK", "6z": "OK", "6y": "OK", "6a": "OK", "6b": "OK", "6p": "OK", "6q": "OK", "6c": "OK", "6d": "OK"}
+    for panne, attendu, libelle in (
+            (None, tout_ok, "test 6 en UDP : cable debranche 150 s, reponses toujours recues, aucun muet -> tout OK"),
+            ("coupe", "6b", "TEMOIN plus aucune reponse UDP apres le debranchement -> 6b ECHEC"),
+            ("muet", "6x", "TEMOIN chien de garde pendant l'observation -> 6x ECHEC")):
+        g, _, _ = nouvelle(reponses=["fait", "fait"], voie="UDP")
+        arret = threading.Event()
+        threading.Thread(target=flux_udp, args=(g, arret, panne), daemon=True).start()
+        g.lance(6)
+        if panne is None:
+            attend(lambda: statuts(g, 6).get("6p") == "en cours", 3)
+            e = g.etat()
+            verifie((e["reste_genre"], isinstance(e["reste"], int) and 0 < e["reste"] <= 150), ("etape", True),
+                    f"pause 6p : decompte en secondes reelles (reste = {e['reste']})")
+        attend(lambda: g.en_cours is None, 10)
+        arret.set()
+        s = statuts(g, 6)
+        if isinstance(attendu, dict):
+            verifie(s, attendu, libelle)
+        else:
+            verifie(s[attendu], "ECHEC", libelle)
 
     # -- test 3 : la carte 16 relais absente n'est pas un echec
     g, _, _ = nouvelle()
@@ -291,6 +384,12 @@ def _integration(verifie, attend, monte_testeur):
     t.cartes["maitre"].ecrit("Status 5")
     verifie(blocs, [9], "TEMOIN commande courte : un seul envoi")
     serie.write = ecrit_origine
+    try:
+        testeur_udp_http.traite_post({"action": "lancer", "test": 2, "duree": 60}, t, "/grille")
+        verifie("lance", "refuse", "TEMOIN POST /grille test 2 sans voie connue")
+    except ValueError:
+        verifie("refuse", "refuse", "POST /grille lancer test 2 : refuse tant que le test 1 n'a pas lu la voie")
+    t.grille.regle_voie("Serial")
     etat = testeur_udp_http.traite_post({"action": "lancer", "test": 2, "duree": 60}, t, "/grille")
     verifie(etat["en_cours"], 2, "POST /grille lancer : test 2 en cours")
     sims["COM_M"].dit("MODBUS_TASMOTA_SLAVE_RELEVE: 3 demande(s) de lecture placee(s) dans la file")

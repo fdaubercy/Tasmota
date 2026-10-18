@@ -60,6 +60,7 @@ function majGrille(g){
   grille=g;
   const c=g.cible||{};
   $('grilleCible').textContent=`Esclave teste : ID ModBus ${c.id}, ruban POWER${c.power} du P4, registre ${c.registre}`+
+    ` - commandes par ${g.voie||'voie inconnue (lancez le test 1)'}`+
     (g.en_cours?` - test ${g.en_cours} en cours`:'');
   $('grilleArreter').disabled=!g.en_cours;
   const k=g.consigne;
