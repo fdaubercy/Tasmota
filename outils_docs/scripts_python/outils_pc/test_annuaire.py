@@ -72,6 +72,15 @@ def section_registre():
     verifie(reg.par_id("syslog").a_port_com, False, "syslog sans port com")
     verifie(reg.par_id("syslog").port_page({"http": 7250}), 7250, "port_page depuis valeurs")
 
+    ps = reg.par_id("pont_serie")
+    verifie(reg.valide(ps, {}, [], []), ["--port", "auto", "--vitesse", "115200", "--tcp", "7000"],
+            "drapeau relance_log off par defaut : option absente")
+    verifie(reg.valide(ps, {"relance_log": "on"}, [], [])[-1], "--relance-log", "drapeau on : option seule, sans valeur")
+    verifie(reg.valide(ps, {"relance_log": True}, [], [])[-1], "--relance-log", "drapeau : booleen JSON true accepte")
+    verifie("--relance-log" in reg.valide(ps, {"relance_log": "off"}, [], []), False, "drapeau off : option absente")
+    for v in ("oui --x", "1", "", "--relance-log"):
+        verifie(refuse(ps, {"relance_log": v}), True, f"drapeau : valeur piegee refusee {v!r}")
+
     for valeurs in ({"port": "COM3 --x"}, {"port": "../x"}, {"debit": "12"}, {"inconnue": "1"}, {"http": "80"},
                     {"debit": "abc"}, {"http": "70000"}):
         verifie(refuse(mb, valeurs, ports=["COM3"]), True, f"valeurs_piegees_refusees {valeurs}")

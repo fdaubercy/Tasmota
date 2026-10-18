@@ -11,6 +11,8 @@ outils_docs/scripts_python/outils_pc/pont_serie.py avec les parametres DE L'ENVI
     port    : monitor_port, sinon upload_port (s'il designe un port serie), sinon "auto"
     debit   : monitor_speed (defaut 115200)
     TCP     : custom_pont_tcp (optionnel, defaut 7000) -> http://127.0.0.1:7000 et Serial Monitor (TCP)
+    relance : custom_pont_relance_log = on (optionnel, defaut off) -> --relance-log : le pont relance le
+              log serie Tasmota, coupe par Tasmota 600 s apres son demarrage (voir pont_serie.py)
     journal : %TEMP%/pont_serie_<env>.log
 Le pont ouvre sa page dans le navigateur et affiche ses liens (ce PC, et reseau local avec jeton).
 
@@ -46,10 +48,13 @@ def enregistre(env):
         debit = str(env.GetProjectOption("monitor_speed", "115200") or "115200")
         tcp = str(env.GetProjectOption("custom_pont_tcp", "7000") or "7000")
         journal = os.path.join(tempfile.gettempdir(), f"pont_serie_{nom_env}.log")
+        relance = str(env.GetProjectOption("custom_pont_relance_log", "off") or "off").strip().lower()
+        relance = relance in ("on", "1", "oui", "true", "yes")
         commande = [env.subst("$PYTHONEXE"), "-u", script, "--port", port, "--vitesse", debit,
-                    "--tcp", tcp, "--journal", journal]
+                    "--tcp", tcp, "--journal", journal] + (["--relance-log"] if relance else [])
         # Les liens (ce PC, reseau avec jeton) sont affiches par le pont lui-meme (acces_web.annonce)
-        print(f"[{nom_env}] pont serie : port={port} debit={debit} tcp={tcp}  (journal : {journal})")
+        print(f"[{nom_env}] pont serie : port={port} debit={debit} tcp={tcp} relance_log={'on' if relance else 'off'}"
+              f"  (journal : {journal})")
         environnement = dict(os.environ, PYTHONUTF8="1")
         try:
             return subprocess.call(commande, env=environnement)

@@ -26,6 +26,7 @@ Usage (Python de PlatformIO, qui fournit pyserial) :
     %USERPROFILE%\\.platformio\\penv\\Scripts\\python.exe outils_docs/scripts_python/outils_pc/pont_serie.py
     options : --port auto|COM11|loop://|aucun  --vitesse 115200  --tcp 7000  --journal fichier.log
               --sans-couleurs  --local  --sans-navigateur  --lister (affiche les ports serie et sort)
+              --relance-log (relance le log serie Tasmota, voir plus bas)
     --port auto (defaut) : prend le SEUL port USB present ; sinon demarre port ferme.
     Deux cartes en meme temps : bouton « + Terminal » de la page (ci-dessous), ou deux ponts
     lances a la main avec deux --tcp differents (7000, 7001...).
@@ -44,6 +45,17 @@ Arret du pont : Ctrl+C dans le terminal de la tache (ou la corbeille).
 
 Le port serie n'accepte qu'un programme : FERMER LE PORT (bouton Arreter) AVANT UN FLASH.
 Le port est ouvert sans basculer DTR/RTS : pas de reset de l'ESP32 a l'ouverture.
+
+Relance du log serie Tasmota : Tasmota coupe son log serie 600 s apres son demarrage
+(« Journalisation serie desactivee », SERIALLOG_TIMER, support_tasmota.ino:1186) sauf si une commande
+SerialLog arrive avant. Relance activee ET port ouvert, le pont envoie cette commande a l'ouverture du
+port, a l'activation, puis chaque fois qu'il lit l'annonce de la coupure (carte redemarree entre-temps).
+Port ferme : rien n'est envoye. Deux facons de l'activer, propres a chaque terminal :
+  - la case « Relancer le log serie Tasmota » de la page (decochee par defaut), memorisee par le
+    navigateur pour ce terminal et renvoyee au pont au chargement de la page ;
+  - l'option --relance-log au lancement (cible PlatformIO : custom_pont_relance_log = on). Elle prime
+    sur la case memorisee ; la case reste utilisable pour la couper le temps de la session.
+  Un terminal supplementaire (« + Terminal ») n'en herite pas : il demarre relance coupee.
 """
 
 import argparse
@@ -68,6 +80,14 @@ DEBUTS_HTTP = (b"GET ", b"POST", b"HEAD")
 VAR_JETON = "PONT_SERIE_JETON"      # jeton transmis a un terminal supplementaire (pas en ligne de commande)
 VITESSES = [9600, 19200, 38400, 57600, 74880, 115200, 230400, 250000, 460800, 500000,
             921600, 1000000, 1500000, 2000000]   # 74880 : messages du ROM de demarrage ESP8266/ESP32
+# Relance du log serie (voir l'en-tete). La commande reapplique le niveau REGLE (Settings, inchange) : le compteur
+# de Tasmota s'arrete jusqu'au prochain redemarrage (SetTasConlog, support.ino:2464), et le log revient s'il etait
+# deja coupe. Meme commande que testeur_udp.COMMANDE_REVEIL_SERIE. L'annonce n'est ecrite qu'avec un log serie
+# au moins a 2 (info) : en dessous, seules l'ouverture du port et l'activation relancent.
+ANNONCES_COUPURE = [t.encode("utf-8") for t in ("Serial logging disabled", "Journalisation série désactivée")]
+LONGUEUR_TRAINE = max(len(a) for a in ANNONCES_COUPURE) - 1   # annonce coupee entre deux lectures
+COMMANDE_REVEIL_SERIE = (b'Br var r = tasmota.cmd("SerialLog", true).find("SerialLog") '
+                         b'if isinstance(r, map) for k: r.keys() tasmota.cmd("SerialLog " + k, true) end end\n')
 
 
 class SansCouleurs:
@@ -152,7 +172,7 @@ def choisit_port(demande):
 
 
 class Pont:
-    def __init__(self, coloriseur, journal, port_tcp, vitesse, options_enfant=(), acces=None):
+    def __init__(self, coloriseur, journal, port_tcp, vitesse, options_enfant=(), acces=None, relance_log=False):
         self.acces = acces or acces_web.Acces(port_tcp, True, "Pont serie")   # jeton, regles d'acces
         self.serie = None                                   # objet pyserial ; None = port ferme
         self.nom_port = None
@@ -168,6 +188,9 @@ class Pont:
         self.verrou = threading.Lock()
         self.options_enfant = list(options_enfant)          # options transmises aux terminaux supplementaires
         self.enfants = []                                   # processus des terminaux supplementaires
+        self.relance_log = bool(relance_log)                # relance du log serie Tasmota (ce terminal)
+        self.relance_imposee = bool(relance_log)            # --relance-log : prime sur la case memorisee
+        self.traine = b""                                   # fin de la derniere lecture (annonce a cheval)
 
     # ------------------------------------------------------------------ terminaux supplementaires
     def lance_terminal(self):
@@ -217,9 +240,12 @@ class Pont:
                 ok, message = False, f"impossible d'ouvrir {nom_port} : {erreur} (moniteur ou flash en cours ?)"
             else:
                 self.serie, self.nom_port, self.vitesse = serie, nom_port, int(vitesse)
+                self.traine = b""
                 ok, message = True, f"port {nom_port} ouvert a {vitesse} bauds"
         print(message)
         self.annonce(message)
+        if ok:
+            self.relance_serie("port ouvert")
         return ok, message
 
     def _ferme_sans_verrou(self):
@@ -252,7 +278,39 @@ class Pont:
 
     def etat(self):
         return {"ouvert": self.serie is not None, "port": self.nom_port, "vitesse": self.vitesse,
-                "vitesses": VITESSES, "ports": liste_ports(), "tcp": self.port_tcp}
+                "vitesses": VITESSES, "ports": liste_ports(), "tcp": self.port_tcp, "relance": self.relance_log,
+                "relanceImposee": self.relance_imposee}
+
+    # ------------------------------------------------------------------ relance du log serie Tasmota
+    def regle_relance(self, actif):
+        """Case « Relancer le log serie » : memorise le choix ; cochee, port ouvert -> commande envoyee aussitot."""
+        actif = bool(actif)
+        mot = "activee" if actif else "desactivee"
+        if actif == self.relance_log:
+            return f"relance du log serie deja {mot}"
+        self.relance_log = actif
+        message = f"relance du log serie Tasmota {mot} pour ce terminal"
+        print(message)
+        self.annonce(message)
+        self.relance_serie("case cochee")
+        return message
+
+    def relance_serie(self, raison):
+        """SerialLog reapplique si la relance est activee ET le port ouvert. True si la commande est partie."""
+        if not self.relance_log or not self.ecrit(COMMANDE_REVEIL_SERIE):
+            return False
+        message = f"log serie Tasmota relance (SerialLog, {raison})"
+        print(message)
+        self.annonce(message)
+        return True
+
+    def surveille_coupure(self, brut):
+        """Octets recus : annonce de la coupure du log serie par Tasmota -> relance (si activee)."""
+        fenetre = self.traine + brut
+        self.traine = fenetre[-LONGUEUR_TRAINE:]
+        if any(annonce in fenetre for annonce in ANNONCES_COUPURE):
+            self.traine = b""                   # une annonce = une seule relance
+            self.relance_serie("coupure annoncee par la carte")
 
     def lit_serie(self):
         while True:
@@ -280,6 +338,7 @@ class Pont:
             colore = self.coloriseur.morceau(texte)
             if colore:
                 self.diffuse(colore)
+            self.surveille_coupure(brut)
 
     # ------------------------------------------------------------------ diffusion
     @staticmethod
@@ -380,6 +439,9 @@ def main():
     options.add_argument("--lister", action="store_true", help="affiche les ports serie et sort")
     options.add_argument("--enfant", action="store_true",
                          help="terminal supplementaire (lance par le bouton « + Terminal ») : s'arrete avec son parent")
+    options.add_argument("--relance-log", action="store_true",
+                         help="relance le log serie Tasmota (SerialLog) a l'ouverture du port et a chaque coupure "
+                              "annoncee ; prime sur la case memorisee de la page")
     acces_web.ajoute_options(options)
     args = options.parse_args()
 
@@ -405,7 +467,10 @@ def main():
     journal = open(args.journal, "a", encoding="utf-8") if args.journal else None
     options_enfant = (["--vitesse", str(args.vitesse)] + (["--sans-couleurs"] if args.sans_couleurs else [])
                       + (["--local"] if args.local else []))
-    pont = Pont(coloriseur, journal, args.tcp, args.vitesse, options_enfant, acces)
+    # --relance-log n'est PAS transmis aux terminaux supplementaires : chaque terminal a son propre choix
+    pont = Pont(coloriseur, journal, args.tcp, args.vitesse, options_enfant, acces, args.relance_log)
+    if args.relance_log:
+        print("relance du log serie Tasmota activee (--relance-log)")
     # Port serie ouvert si possible ; sinon le pont demarre quand meme, port FERME, a ouvrir
     # depuis la page web (bouton Demarrer, choix du port et de la vitesse).
     nom_port = None if args.port.lower() == "aucun" else choisit_port(args.port)

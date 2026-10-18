@@ -22,7 +22,7 @@ class Parametre:
     libelle: str
     option: str
     defaut: str
-    genre: str          # com | com_ou_pont | debit | port_http
+    genre: str          # com | com_ou_pont | debit | port_http | drapeau (case : "on" -> option seule, "off" -> rien)
 
 
 @dataclass
@@ -61,11 +61,14 @@ OUTILS = [
         "Partage le port série d'une carte entre plusieurs terminaux, avec une page web.",
         "Ouvre le port série d'une carte (ESP32) et le partage : terminal sur la page web et flux TCP brut "
         "pour les autres outils (testeur UDP, console). Paramètres : le port série (auto = le seul port USB "
-        "présent), la vitesse et le port TCP/HTTP (7000 par défaut). " + ARRET,
+        "présent), la vitesse, le port TCP/HTTP (7000 par défaut) et « Relancer le log série Tasmota » "
+        "(--relance-log : Tasmota coupe son log série 600 s après son démarrage, le pont lui renvoie SerialLog "
+        "à l'ouverture du port et à chaque coupure ; la case de la page du pont reste utilisable). " + ARRET,
         DOSSIER + "outils_pc/pont_serie.py",
         [Parametre("port", "Port série", "--port", "auto", "com"),
          Parametre("vitesse", "Vitesse (bauds)", "--vitesse", "115200", "debit"),
-         _port("tcp", 7000, "Port TCP et page")],
+         _port("tcp", 7000, "Port TCP et page"),
+         Parametre("relance_log", "Relancer le log série Tasmota", "--relance-log", "off", "drapeau")],
         "tcp",
         "Console capturée : " + CONSOLE.format("pont_serie") + ". Copie brute du flux : option --journal "
         "du script (pas de fichier par défaut)."),
@@ -175,6 +178,11 @@ def _valide_une(p, valeur, ports_detectes, ponts):
         if not 1024 <= n <= 65535:
             raise ValueError(f"{p.libelle} : port entre 1024 et 65535 attendu")
         return str(n)
+    if p.genre == "drapeau":
+        v = {"on": "on", "off": "off", "true": "on", "false": "off"}.get(str(valeur).strip().lower())
+        if v is None:
+            raise ValueError(f"{p.libelle} : on ou off attendu")
+        return v
     raise ValueError(f"{p.libelle} : genre inconnu")
 
 
@@ -187,6 +195,9 @@ def valide(outil, valeurs, ports_detectes, ponts):
     for p in outil.parametres:
         v = _valide_une(p, valeurs.get(p.cle, p.defaut), ports_detectes, ponts)
         if p.genre == "com_ou_pont" and v == "":
+            continue
+        if p.genre == "drapeau":       # option sans valeur, presente seulement si cochee
+            args += [p.option] if v == "on" else []
             continue
         args += [p.option, v]
     return args

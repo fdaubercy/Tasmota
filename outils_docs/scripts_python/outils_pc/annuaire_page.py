@@ -71,6 +71,7 @@ PAGE = r"""<!doctype html>
   .modale h2{margin:0 0 10px;font-size:17px}
   .champ{display:flex;flex-direction:column;gap:3px;margin:8px 0;font-size:13px}
   .champ select,.champ input{font:inherit;padding:5px 6px;width:100%;background:var(--btn);color:var(--texte);border:1px solid var(--btn-bord);border-radius:4px}
+  .champ input[type=checkbox]{width:auto;align-self:flex-start;padding:0}
   .modale .actions{justify-content:flex-end;margin-top:14px}
   .aide section{background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:10px 14px;margin:10px 0}
   .aide h2{margin:0 0 4px;font-size:16px}
@@ -357,6 +358,9 @@ async function ouvreLancement(o) {
     } else if (p.genre === "debit") {
       var debits = registre.debits.map(function (d) { return [String(d), String(d)]; });
       ctl = liste(debits, initiale(o, p, debits.map(function (x) { return x[0]; })));
+    } else if (p.genre === "drapeau") {
+      ctl = h("input", {type: "checkbox"});
+      ctl.checked = initiale(o, p, ["on", "off"]) === "on";
     } else {
       ctl = h("input", {type: "number", min: "1024", max: "65535", value: initiale(o, p, null)});
     }
@@ -375,7 +379,10 @@ $("modale").onsubmit = async function (ev) {
   if (!o) return;
   var valeurs = {};
   var controles = $("modale-champs").querySelectorAll("[data-cle]");
-  for (var i = 0; i < controles.length; i++) valeurs[controles[i].getAttribute("data-cle")] = controles[i].value;
+  for (var i = 0; i < controles.length; i++) {
+    var c = controles[i];
+    valeurs[c.getAttribute("data-cle")] = c.type === "checkbox" ? (c.checked ? "on" : "off") : c.value;
+  }
   $("modale-ok").disabled = true;
   $("modale-erreur").textContent = "";
   var r = await lance(o, valeurs);

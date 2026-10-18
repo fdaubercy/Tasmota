@@ -13,6 +13,11 @@ Le pont reconnait une requete HTTP a ses premiers octets ("GET ", "POST") et la 
                   {"mode": "texte", "donnees": "Status 4", "finLigne": "aucune|LF|CR|CRLF"}
                   {"mode": "hex", "donnees": "01 06 00 01 01 00", "crc": true}   (CRC16 ModBus ajoute)
                   {"mode": "binaire", "donnees": "00000001 00000110", "crc": false}
+    POST /relance corps JSON {"actif": true|false} : case « Relancer le log serie » de CE terminal (SerialLog
+                  renvoye a Tasmota avant/apres la coupure de son log serie, voir pont_serie.py) ; la page
+                  memorise la case (navigateur, par terminal) et la renvoie au pont a son chargement,
+                  sauf si le pont a ete lance avec --relance-log (etat "relanceImposee") : la case
+                  affiche alors l'etat du pont
     POST /terminal lance un terminal supplementaire (pont secondaire, port serie ferme) sur le premier
                   port TCP libre ; reponse JSON {"url": "http://127.0.0.1:7001/"}, que la page ouvre
                   dans un nouvel onglet (bouton « + Terminal ») ; depuis un autre appareil, l'URL
@@ -76,6 +81,7 @@ PAGE = """<!doctype html>
  <label>Reception <select id="recep" title="affichage des octets recus"><option value="texte">Texte</option><option value="hex">Hex</option></select></label>
  <input id="filtre" placeholder="filtre (texte)" size="14">
  <label><input type="checkbox" id="suivre" checked> defilement auto</label>
+ <label title="Tasmota coupe son log serie 600 s apres son demarrage : case cochee et port ouvert, le pont lui renvoie SerialLog (niveau regle inchange) a l'ouverture du port, au cochage et a chaque annonce de coupure. Propre a ce terminal."><input type="checkbox" id="relance"> Relancer le log serie Tasmota</label>
  <button id="effacer">Effacer</button>
 </div>
 <div id="logs"></div>
@@ -83,7 +89,7 @@ PAGE = """<!doctype html>
 const $=id=>document.getElementById(id);
 const logs=$('logs'),suivre=$('suivre'),filtre=$('filtre'),selPort=$('port'),selVitesse=$('vitesse'),bascule=$('bascule'),cmd=$('cmd');
 const modeEnvoi=$('modeEnvoi'),finLigne=$('finLigne'),crc=$('crc'),recep=$('recep');
-let classes=[],reste='',etat={ouvert:false},tampon=[],historique=[],posHisto=0;
+let classes=[],reste='',etat={ouvert:false},tampon=[],historique=[],posHisto=0,relanceSynchro=false;
 const AIDES={texte:'Commande Tasmota (Entree pour envoyer), ex. Status 4',
   hex:'Octets en hexadecimal (Entree pour envoyer), ex. 01 06 00 01 01 00',
   binaire:'Octets en binaire (Entree pour envoyer), ex. 00000001 00000110'};
@@ -138,6 +144,11 @@ function appliqueEtat(e){
   $('pastillePort').style.background=e.ouvert?'#23d18b':'#808080';
   $('infoPort').textContent=e.ouvert?(e.port+' @ '+e.vitesse+' bauds'):'port ferme';
   $('nomPont').textContent='terminal :'+e.tcp;
+  // 1er etat : le choix memorise pour ce terminal est renvoye au pont, sauf si --relance-log l'impose
+  if(!relanceSynchro&&!e.relanceImposee){relanceSynchro=true;
+    const voulu=lit('relance','0')==='1';$('relance').checked=voulu;
+    if(voulu!==!!e.relance)poste('/relance',JSON.stringify({actif:voulu}));}
+  else {relanceSynchro=true;$('relance').checked=!!e.relance;}
   document.title='Pont serie '+(e.ouvert?e.port:'(ferme)')+' (:'+e.tcp+')';}
 function poste(url,corps){return fetch(url,{method:'POST',headers:{'X-Pont':'1','Content-Type':'application/json'},body:corps===undefined?'':corps})
   .then(r=>r.text().then(t=>{if(!r.ok)ajoute('\\x1b[91m[page] '+(t||r.status)+'\\x1b[0m\\n');return r.ok;}));}
@@ -169,6 +180,8 @@ cmd.addEventListener('keydown',e=>{
 for(const [el,cle] of [[modeEnvoi,'mode'],[finLigne,'fin'],[recep,'recep']]){el.value=lit(cle,el.value);
   el.addEventListener('change',()=>{ecrit(cle,el.value);if(el===recep)redessine();else majModeEnvoi();cmd.focus();});}
 crc.checked=lit('crc','0')==='1';crc.addEventListener('change',()=>ecrit('crc',crc.checked?'1':'0'));
+$('relance').addEventListener('change',()=>{const v=$('relance').checked;ecrit('relance',v?'1':'0');
+  poste('/relance',JSON.stringify({actif:v}));});
 majModeEnvoi();
 $('effacer').onclick=()=>{logs.innerHTML='';tampon=[];classes=[];reste='';};
 function connecte(){const es=new EventSource('/flux');
@@ -378,11 +391,20 @@ def traite(pont, client, adresse):
         except OSError:
             pass
         pont.desinscrit_web(client)
-    elif methode == "POST" and chemin in ("/ouvrir", "/fermer", "/cmd", "/envoi", "/terminal"):
+    elif methode == "POST" and chemin in ("/ouvrir", "/fermer", "/cmd", "/envoi", "/terminal", "/relance"):
         if not _autorise(pont, echange):
             _texte(client, "403 Forbidden", "refuse")
             return
-        if chemin == "/terminal":
+        if chemin == "/relance":
+            try:
+                actif = json.loads(corps.decode("utf-8") or "{}")["actif"]
+                if not isinstance(actif, bool):
+                    raise TypeError
+            except (ValueError, KeyError, TypeError):
+                _texte(client, "400 Bad Request", "attendu : {\"actif\": true} ou {\"actif\": false}")
+                return
+            _texte(client, "200 OK", pont.regle_relance(actif))
+        elif chemin == "/terminal":
             ok, resultat = pont.lance_terminal()
             if ok:
                 _reponse(client, "200 OK", "application/json",

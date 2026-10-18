@@ -1,4 +1,5 @@
-"""Banc de l'acces reseau du pont serie (pont_serie.py + acces_web.py). Code de sortie 0 = vert.
+"""Banc de l'acces reseau du pont serie (pont_serie.py + acces_web.py), et de la relance du log serie
+Tasmota (case de la page, option --relance-log). Code de sortie 0 = vert.
 
 Le VRAI pont_serie.py est lance en loop:// (ce qui est ecrit revient), sur un port TCP libre,
 --sans-navigateur. « Autre appareil » = connexion par l'IP reseau de ce PC : le pont ne voit plus
@@ -42,13 +43,13 @@ def port_libre():
 
 class PontLance:
     """pont_serie.py (du dossier donne) en loop://, sortie console capturee (pour y lire le jeton)."""
-    def __init__(self, dossier=ICI):
+    def __init__(self, dossier=ICI, options=()):
         self.port = port_libre()
         self.lignes = []
         env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
         env.pop("PONT_SERIE_JETON", None)
         self.proc = subprocess.Popen([sys.executable, "-u", os.path.join(dossier, "pont_serie.py"), "--port", "loop://",
-                                      "--tcp", str(self.port), "--sans-couleurs", "--sans-navigateur"],
+                                      "--tcp", str(self.port), "--sans-couleurs", "--sans-navigateur", *options],
                                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env)
         threading.Thread(target=self._lit, daemon=True).start()
         self.jeton = None
@@ -208,6 +209,117 @@ def cas_distant(pont, ip):
     verifie(requete("127.0.0.1", p2)[0], 200, "terminal supplementaire : ce PC sans jeton -> 200")
 
 
+ANNONCE = "00:10:00.001 APP: Journalisation série désactivée\r\n".encode("utf-8")
+REVEIL = b'tasmota.cmd("SerialLog", true)'
+
+
+def poste_json(p, chemin, objet, entetes=None):
+    return requete("127.0.0.1", p, "POST", chemin, {"X-Pont": "1"} if entetes is None else entetes,
+                   json.dumps(objet).encode())[0]
+
+
+def attend_relances(espion, n, delai=3.0):
+    """Nombre de SerialLog parvenus (loop:// : ce que le pont ecrit revient) une fois n atteint ou le delai passe."""
+    limite = time.time() + delai
+    while time.time() < limite and espion.recu.count(REVEIL) < n:
+        time.sleep(0.05)
+    return espion.recu.count(REVEIL)
+
+
+def mesure_relance(pont):
+    """Case cochee puis annonce de coupure : -> nombre de SerialLog envoyes (2 attendus, 1 sans detection)."""
+    espion = Espion(pont.port)
+    poste_json(pont.port, "/relance", {"actif": True})
+    attend_relances(espion, 1)
+    espion.s.sendall(ANNONCE)
+    n = attend_relances(espion, 2, 1.5)
+    espion.ferme()
+    return n
+
+
+def cas_relance(pont):
+    """Relance du log serie Tasmota : en loop://, l'annonce ecrite revient comme si la carte l'avait emise."""
+    p = pont.port
+    etat = lambda: json.loads(requete("127.0.0.1", p, chemin="/etat")[2] or b"{}").get("relance")  # noqa: E731
+    espion = Espion(p)
+    verifie(etat(), False, "relance : case decochee par defaut")
+    espion.s.sendall(ANNONCE)
+    verifie(attend_relances(espion, 1, 1.0), 0, "relance decochee : annonce lue, rien envoye a la carte")
+    verifie(poste_json(p, "/relance", {"actif": "oui"}), 400, "relance : actif non booleen -> 400")
+    verifie(poste_json(p, "/relance", {"actif": True}, {}), 403, "relance : POST sans X-Pont refuse")
+    verifie(poste_json(p, "/relance", {"actif": True}), 200, "relance : case cochee -> 200")
+    verifie((attend_relances(espion, 1), etat()), (1, True), "... port ouvert : SerialLog envoye aussitot, etat relance=true")
+    coupe = ANNONCE.index(b"\xc3") + 1           # annonce coupee au milieu du « é » : deux lectures du port
+    espion.s.sendall(ANNONCE[:coupe])
+    time.sleep(0.6)
+    espion.s.sendall(ANNONCE[coupe:])
+    verifie(attend_relances(espion, 2), 2, "annonce (francais) a cheval sur deux lectures -> SerialLog renvoye")
+    time.sleep(0.5)
+    verifie(espion.recu.count(REVEIL), 2, "... une seule relance par annonce")
+    espion.s.sendall(b"APP: Serial logging disabled\r\n")
+    verifie(attend_relances(espion, 3), 3, "annonce (anglais) -> SerialLog renvoye")
+    verifie(poste_json(p, "/ouvrir", {"port": "loop://", "vitesse": 115200}), 200, "port rouvert (case cochee)")
+    verifie(attend_relances(espion, 4), 4, "... SerialLog envoye a l'ouverture du port")
+    verifie(poste_json(p, "/relance", {"actif": False}), 200, "relance : case decochee -> 200")
+    espion.s.sendall(ANNONCE)
+    verifie(attend_relances(espion, 5, 1.0), 4, "case decochee : annonce lue, rien envoye")
+    espion.ferme()
+
+
+def cas_relance_lancement():
+    """--relance-log : relance active des le lancement (port ouvert), imposee a la page, non heritee par « + Terminal »."""
+    pont = PontLance(options=["--relance-log"])
+    try:
+        p = pont.port
+        etat = json.loads(requete("127.0.0.1", p, chemin="/etat")[2] or b"{}")
+        verifie((etat.get("relance"), etat.get("relanceImposee")), (True, True), "--relance-log : etat relance et relanceImposee")
+        console = "".join(pont.lignes)
+        verifie("log serie Tasmota relance (SerialLog, port ouvert)" in console, True,
+                "--relance-log : SerialLog envoye a l'ouverture du port au lancement")
+        espion = Espion(p)
+        espion.s.sendall(ANNONCE)
+        verifie(attend_relances(espion, 1), 1, "--relance-log : annonce de coupure -> SerialLog renvoye")
+        espion.ferme()
+        statut, _, corps = requete("127.0.0.1", p, "POST", "/terminal", {"X-Pont": "1"})
+        url = json.loads(corps or b"{}").get("url", "") if statut == 200 else ""
+        trouve = re.fullmatch(r"http://127\.0\.0\.1:(\d+)/", url)
+        etat2 = json.loads(requete("127.0.0.1", int(trouve.group(1)), chemin="/etat")[2] or b"{}") if trouve else {}
+        verifie((etat2.get("relance"), etat2.get("relanceImposee")), (False, False),
+                "+ Terminal : le terminal supplementaire n'herite pas de --relance-log")
+    finally:
+        pont.arrete()
+    pont = PontLance()
+    try:
+        etat = json.loads(requete("127.0.0.1", pont.port, chemin="/etat")[2] or b"{}")
+        verifie((etat.get("relance"), etat.get("relanceImposee")), (False, False), "sans --relance-log : relance coupee, non imposee")
+    finally:
+        pont.arrete()
+
+
+def temoin_relance():
+    """Copie du pont : intacte -> 2 SerialLog ; detection de l'annonce retiree -> 1 seul (celui du cochage)."""
+    dossier = tempfile.mkdtemp(prefix="banc_pont_relance_")
+    try:
+        for nom in ("pont_serie.py", "pont_serie_web.py", "acces_web.py"):
+            shutil.copy(os.path.join(ICI, nom), dossier)
+        for etape, attendu in (("reference : copie intacte", 2), ("detection de l'annonce retiree", 1)):
+            if attendu == 1:
+                chemin = os.path.join(dossier, "pont_serie.py")
+                with open(chemin, encoding="utf-8") as f:
+                    texte = f.read()
+                motif = "        if any(annonce in fenetre for annonce in ANNONCES_COUPURE):\n"
+                verifie(texte.count(motif), 1, "TEMOIN : motif de mutation present une fois dans pont_serie.py")
+                with open(chemin, "w", encoding="utf-8") as f:
+                    f.write(texte.replace(motif, "        if False:\n"))
+            pont = PontLance(dossier)
+            try:
+                verifie(mesure_relance(pont), attendu, f"TEMOIN relance {etape} -> {attendu} SerialLog")
+            finally:
+                pont.arrete()
+    finally:
+        shutil.rmtree(dossier, ignore_errors=True)
+
+
 def temoins(ip):
     """Copie du pont : intacte -> refus ; mutee -> le cas de refus correspondant echoue."""
     dossier = tempfile.mkdtemp(prefix="banc_pont_acces_")
@@ -249,6 +361,7 @@ def principal():
     pont = PontLance()
     try:
         cas_local(pont)
+        cas_relance(pont)
         ips = acces_web.ips_reseau()
         if not ips:
             print("SAUTE  autre appareil et temoins : aucune adresse reseau sur ce PC")
@@ -256,6 +369,8 @@ def principal():
             cas_distant(pont, ips[0])
     finally:
         pont.arrete()
+    cas_relance_lancement()
+    temoin_relance()
     if ips:
         temoins(ips[0])
     print()
