@@ -99,6 +99,11 @@ au mauvais endroit, annulées — voir `tasks/lessons.md`). Les 3 cibles sont
 > **Reste a faire, dans l'ordre :** (1) fixer le cablage de reception du P4 ; (2) REBUILD COMPLET + flash du
 > P4 (modbusFonctions, udpFonctions, controleModbus solidifies ; cuve et rideau aussi pour udpFonctions) ;
 > (3) observer E2 : logs `ROUTE_ESCLAVE:` (voie Serial, IP de la cuve) - rien d'autre ne doit changer ;
+> **(2) et (3) FAITS le 2026-10-17 soir** : P4 flashe (CfgHolder 1507), `ROUTE_ESCLAVE: esclave d'ID=2 : voie
+> Serial, IP 192.168.4.2 (fiche)` ; etat `routesAnnoncees` = {2: Serial|192.168.4.2, 3: Serial|192.168.4.3}
+> (la ligne du 3 a manque a l'historique du pont, l'etat fait foi) ; aucun envoi UDP, aucune erreur. Coupure du
+> filaire 22:31:37 -> 22:39:30 (timeouts sur tous les esclaves, plus rien au sniffeur) = encore le faux contact
+> du P4 : (1) reste a FIXER pour de bon avant (4) ;
 > (4) activer E3 : `ReglageModbus VoieCommandes UDP` SUR LA CUVE, puis repasser la grille (attendu :
 > `POMPE_QUEUE: envoi UDP`, plus rien de la cuve sur le RS485 au sniffeur ; retour : `... Serial`) ;
 > (5) flasher le rideau (id 3, muet, fiche perimee, sans E1), lui passer la grille, puis E4
