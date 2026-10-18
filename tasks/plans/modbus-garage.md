@@ -1,8 +1,8 @@
 ---
-chantier: modbus-garage
+chantier: Modbus-garage
 titre: ModBus du garage (P4, cuve, rideau) et commandes sans fil
 statut: actif
-cree: 2026-10-18
+crée: 2026-10-18
 maj: 2026-10-18
 reprise: tasks/reprise-chantier-modbus-grenier.md
 ---
@@ -32,7 +32,7 @@ Détail et preuves complètes : la reprise, encadré « ETAT AU 2026-10-17 SOIR 
 - [x] E2 observé : routes annoncées, tout reste en série, aucune erreur — preuve : `ROUTE_ESCLAVE: esclave d'ID=2 : voie Serial, IP 192.168.4.2 (fiche)` 22:30:29 ; `routesAnnoncees` {2, 3} ; commit 3b4d4fa36
 
 ## A4 — Câblage RS485 du P4
-- [ ] Fixer le faux contact (réception, et émission le 2026-10-17 : coupure 22:31:37 → 22:39:30)
+- [X] Fixer le faux contact (réception, et émission le 2026-10-17 : coupure 22:31:37 → 22:39:30)
 - [ ] Observation stable : au moins 1 h sans abandon sur les esclaves 1 et 2 (pont série + sniffeur)
 
 ## A5 — E3 sur la cuve (commandes par UDP)
