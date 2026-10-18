@@ -131,33 +131,76 @@ Les cartes ESP32-S3 et P4 tiennent un historique de leurs mesures (`data/fs/hist
 **Graphiques** de la page d'accueil ouvre `/graphiques`, qui les trace avec uPlot. Les ESP32 classiques
 n'ont ni l'historique ni la page (fichiers exclus de leur LittleFS) : leurs courbes sont dans Grafana.
 
+- **Séries découvertes** (2026-10-18) : la carte trace **ses** capteurs sans liste écrite à la main. Sont
+  retenues toutes les valeurs numériques de son JSON SENSOR (celui de `tele/<topic>/SENSOR`) : capteurs
+  réels (DS18B20, ADS1115, AM2301…) comme virtuels (valeurs reçues par ModBus, valeurs calculées par un
+  module comme `sensorsCuve`). **Jamais** les relais, entrées, boutons et volets (`POWER*`, `Switch*`,
+  `Button*`, `Shutter*`, ON/OFF), ni les mesures internes de la carte (température de l'ESP32, RSSI,
+  mémoire), ni un compteur dont le type n'est pas réglé. Découverte 2 min après le démarrage, puis à chaque
+  nouvelle heure : un capteur apparu plus tard (esclave ModBus en retard) s'ajoute ; une série déjà
+  enregistrée ce mois-ci reste (trou si elle ne mesure plus). Une série s'appelle par son chemin dans le
+  JSON, ex. `DS18B20.Temperature`. Choix et règles : `data/fs/historiqueSeries.be`.
+- **Graphiques** : « Mesures », plus un graphique par groupe déclaré dans `graphiques.json` (ex. « Cuve »
+  pour la hauteur, le volume et le remplissage, sur la cuve et le P4). Le titre d'un graphique ne
+  s'affiche que s'il y en a plusieurs.
 - **Vues** : « 24 dernières heures », puis un mois par entrée du sélecteur (moyenne horaire et bande
-  min-max). Un mois marqué « ancienne liste de séries » date d'avant un changement des séries du persist.
-- **Séries** : une case par série, mémorisée dans le navigateur. Deux axes Y, attribués aux unités les
-  plus partagées. Un trou dans une courbe = pas de mesure (carte arrêtée, esclave muet, capteur absent).
+  min-max). Un mois marqué « ancienne liste de séries » date d'avant un changement des séries (fichier
+  mis de côté en `-a`, `-b`…).
+- **Cases** : une par série, sous son graphique, mémorisée dans le navigateur. Deux axes Y par graphique,
+  attribués aux unités les plus partagées. Un trou dans une courbe = pas de mesure (carte arrêtée,
+  esclave muet, capteur absent).
 - **Historique long** : le bouton « Historique long (Grafana) » ouvre le tableau du Pi.
 - uPlot est servi **par la carte** (`/sd/js/uPlot.iife.min.js`, 49 Ko), sans Internet : il est gardé
   dans le `localStorage` du navigateur et n'est redemandé qu'à un changement de version.
 
-### Dans `_persist.json`
+### Dans `_persist.json` : ce que la relève de chaque minute utilise
+
+Le persist est chargé **entier et en permanence** en RAM : il ne porte que les réglages de la relève.
 
 ```json
 "diverses": {
     "historique": {
-        "activation": "ON",
-        "series": { ... },
-        "affichage": {
-            "tauxRemplissage":  {"libelle": "Remplissage", "unite": "%", "facteur": 100},
-            "temperatureESP32": {"libelle": "Température ESP32", "unite": "°C"}
+        "activation": "ON", "pasMinutes": 5, "dureeHeures": 24, "moisConserves": 24, "seriesMax": 12,
+        "exclues": ["sensorsCuve.valeursAnalogiques"],
+        "ajouts": ["ESP32.Temperature", "@rssi"],
+        "compteurs": {
+            "COUNTER.C1": {"type": "energie", "impulsionsParUnite": 1000, "unite": "kWh"},
+            "COUNTER.C2": {"type": "debit", "impulsionsParUnite": 450, "unite": "L/min"}
         },
         "grafana": "http://192.168.0.5:3000/d/historique-cuve?var-appareil=%topic%"
     }
 }
 ```
 
-`affichage` et `grafana` sont facultatifs. Sans `affichage`, libellé = nom de la série et unité devinée
-d'après le nom (`temperature` → °C, `hauteur` → cm, `volume` → L, `taux` → %). `facteur` multiplie la
-valeur affichée (0-1 → %). `%topic%` est remplacé par le topic de la carte ; sans `grafana`, pas de bouton.
+- `exclues` : chemins (ou débuts de chemin, par segment entier) à ne pas tracer.
+- `ajouts` : séries que le filtre écarte mais que l'on veut quand même (internes : `ESP32.Temperature`,
+  `@rssi`, `@heap` ; position d'un volet `Shutter1.Position`). `@power<n>` (relais) est refusé.
+- `compteurs` : un compteur n'est tracé qu'une fois réglé. `energie` = cumul ÷ `impulsionsParUnite` ;
+  `debit` = impulsions depuis la relève précédente ÷ `impulsionsParUnite`, **par minute** (rien à la
+  première relève ni après une remise à zéro du compteur).
+- `grafana` : `%topic%` est remplacé par le topic de la carte ; sans clé, pas de bouton. Elle reste dans le
+  persist car le bouton des ESP32 classiques (ci-dessous) la lit à cet endroit.
+
+### Dans `graphiques.json` : ce que seule la page utilise
+
+`data/<lieu>/<carte>/graphiques.json`, rangé dans `/json/` au démarrage et lu à l'ouverture de la page
+seulement (rien en RAM le reste du temps). Facultatif.
+
+```json
+{
+    "affichage": {
+        "sensorsCuve.niveauCuve.tauxRemplissage": {"libelle": "Remplissage", "unite": "%", "facteur": 100},
+        "DS18B20.Temperature": {"libelle": "Température de l'eau", "unite": "°C"}
+    },
+    "groupes": {"Cuve": ["sensorsCuve.niveauCuve"]}
+}
+```
+
+Sans `affichage`, libellé = chemin de la série (esclave ModBus remplacé par son nom du persist) et unité
+devinée de sa dernière clé (`Temperature` → °C, `Humidity` → %, `Pressure` → hPa…) ou de son nom
+(`hauteur` → cm, `volume` → L, `taux` → %) ; l'unité d'un compteur réglé vient de `compteurs`. `facteur`
+multiplie la valeur affichée (0-1 → %). `groupes` : titre → débuts de chemin ; chaque groupe a son
+graphique, les autres séries vont dans « Mesures ».
 
 **Carte sans historique local** (ESP32 classique, ou historique à `OFF`) : la même clé `grafana`, dans un bloc
 `"historique": {"grafana": "…"}`, ajoute à la page d'accueil un bouton **Historique (Grafana)** qui ouvre
@@ -170,7 +213,10 @@ des panneaux de cuve, leurs courbes y seraient vides.
 
 - `/histo?p=liste`, `/histo?p=jour`, `/histo?p=mois&m=AAAA-MM` donnent le JSON brut. En `curl`, ajouter
   `-H "Referer: http://<ip>/"` : sans lui, Tasmota coupe la connexion sans réponse (`curl: (52)`).
-- Banc hors carte : `python outils_docs/scripts_python/berry/banc_graphiques.py` (code de sortie 0 = vert).
+- Banc hors carte : `python outils_docs/scripts_python/berry/banc_graphiques.py` (code de sortie 0 = vert ;
+  inclut `banc_historique.be` : découverte des séries, compteurs, redécouverte horaire).
+- Séries retenues par une carte : log `HISTORIQUE: Series enregistrees : [...]` (puis `Nouvelles series`),
+  ou `/histo?p=liste`.
 - Sur le P4, les mesures de la cuve sont écartées de l'historique tant que l'esclave ne les donne pas
   pour valides (`controleGarage.filtreHistorique`) : une cuve sans capteur donne des trous, pas des zéros.
 

@@ -1,4 +1,4 @@
-r"""Banc des graphiques de l'historique : Berry (banc_graphiques.be) puis rendu de la page dans Chrome.
+r"""Banc des graphiques de l'historique : Berry (banc_historique.be, banc_graphiques.be) puis rendu dans Chrome.
 
 UTILISATION
 -----------
@@ -11,6 +11,8 @@ Code de sortie 0 si tout est vert, 1 sinon -> utilisable comme garde avant un te
 
 CE QU'IL FAIT
 -------------
+0. Lance `berry.exe banc_historique.be <dossier>/historique` : choix des series (decouverte filtree du JSON
+   SENSOR, exclues, ajouts, compteurs) et releve (redecouverte horaire, fichier du mois mis de cote).
 1. Lance `berry.exe banc_graphiques.be <dossier>` depuis la racine : envoi d'uPlot par morceaux, 404,
    acces refuse, URL Grafana (%topic%), page /graphiques (gabarit, window.GRAPHIQUES), filtre des faux
    zeros de la cuve du maitre P4. La page est generee par le VRAI graphiquesFonctions.page(), avec la
@@ -42,8 +44,11 @@ from urllib.parse import parse_qsl, urlparse
 
 T0 = 1792230900                    # 2026-10-17 09:55 UTC : premier point de la vue 24 h
 SEPTEMBRE = 1788220800             # 2026-09-01 00:00 UTC
-SERIES_P4 = ["capteurHauteur_mV", "compteur", "hauteurEau", "tauxRemplissage", "temperature",
-             "temperatureESP32", "volume"]
+# Series decouvertes sur le P4 (chemins du JSON SENSOR, A8) : 3 dans « Mesures », 3 dans le groupe « Cuve »
+ESCLAVE = "TasmotaSlaveModBus.TasmotaSlaveModBus1.ANALOG.A1"
+SERIES_P4 = ["DS18B20.Temperature", ESCLAVE, "sensorsCuve.niveauCuve.hauteurEau",
+             "sensorsCuve.niveauCuve.tauxRemplissage", "sensorsCuve.niveauCuve.volume",
+             "sensorsCuve.valeursAnalogiques.valeurCapteurHauteur"]
 
 
 def trouve_racine() -> Path:
@@ -71,12 +76,12 @@ def trouve_navigateur():
 
 # ---- Reponses /histo fixes ---------------------------------------------------------------------
 def jour():
-    """7 series du P4 ; temperatureESP32 avec un trou de 20 pas, le reste a 0 ou absent."""
+    """6 series du P4 ; l'entree de l'esclave avec un trou de 20 pas, la sonde absente, le reste en rampe."""
     v = []
     for nom in SERIES_P4:
-        if nom == "temperatureESP32":
+        if nom == ESCLAVE:
             v.append([None if 100 <= i < 120 else round(28 + (i % 50) / 25, 2) for i in range(288)])
-        elif nom == "temperature":
+        elif nom == "DS18B20.Temperature":
             v.append([None] * 288)
         else:
             v.append([round(i / 10, 2) for i in range(288)])
@@ -84,7 +89,7 @@ def jour():
 
 
 def mois(m):
-    noms = ["ancienneSerie"] if m.endswith("-a") else ["temperatureESP32", "tauxRemplissage"]
+    noms = ["ancienneSerie"] if m.endswith("-a") else ["DS18B20.Temperature", "sensorsCuve.niveauCuve.tauxRemplissage"]
     lignes = []
     for h in range(24 * 28):
         if 200 <= h < 230:                     # trou de 30 h
@@ -133,7 +138,7 @@ def serveur(scenario, page, uplot, css):
                 if scenario in VUE:
                     injecte += "localStorage.setItem('graphiques-vue', '%s');" % VUE[scenario]
                 if scenario == "masquees":
-                    injecte += "localStorage.setItem('graphiques-masquees', JSON.stringify(['compteur', 'volume', 'capteurHauteur_mV']));"
+                    injecte += "localStorage.setItem('graphiques-masquees', JSON.stringify(['%s', 'sensorsCuve.niveauCuve.volume']));" % ESCLAVE
                 if injecte:
                     corps = corps.replace(b"<script>window.GRAPHIQUES", ("<script>" + injecte + "</script><script>window.GRAPHIQUES").encode())
                 return self.envoie(200, "text/html; charset=utf-8", corps)
@@ -171,7 +176,13 @@ def lis_dom(dom):
                re.findall(r'<tr class="u-series"([^>]*)>.*?class="u-label"[^>]*>(.*?)</div>', d, re.S)
                if "display: none" not in attr]
     grafana = trouve(r'<button id="g_grafana"([^>]*)>') or ""
-    return {"canvas": d.count("<canvas"),
+    graphiques = []
+    for morceau in d.split('<div class="uplot')[1:]:
+        graphiques.append([html.unescape(l) for attr, l in
+                           re.findall(r'<tr class="u-series"([^>]*)>.*?class="u-label"[^>]*>(.*?)</div>', morceau, re.S)
+                           if "display: none" not in attr])
+    entetes = [html.unescape(t) for attr, t in re.findall(r'<h3([^>]*)>(.*?)</h3>', d, re.S) if "display: none" not in attr]
+    return {"canvas": d.count("<canvas"), "graphiques": graphiques, "entetes": entetes,
             "titre": html.unescape(trouve(r'class="u-title"[^>]*>(.*?)</div>') or ""),
             "legende": legende,
             "cases": len(re.findall(r'<input type="checkbox"', d)),
@@ -181,29 +192,31 @@ def lis_dom(dom):
 
 
 # Attendus par scenario : (description, fonction du DOM lu et des requetes -> vrai si conforme)
-LIBELLES_P4 = ["Heure", "Capteur de hauteur (mV)", "Compteur", "Hauteur d'eau (cm)", "Remplissage (%)",
-               "Température de l'eau (°C)", "Température ESP32 (°C)", "Volume (L)"]
+MESURES_P4 = ["Heure", "Température de l'eau (°C)", "Capteurs Cuve ModBus ANALOG A1", "Capteur de hauteur (mV)"]
+CUVE_P4 = ["Heure", "Hauteur d'eau (cm)", "Remplissage (%)", "Volume (L)"]
 OPTIONS = ["24 dernières heures", "Septembre 2026", "Août 2026 (ancienne liste de séries)"]
 ATTENDUS = {
     "jour": [
-        ("un graphique, titre « Dernières 24 h (pas de 5 min) »", lambda d, r: d["canvas"] == 1 and d["titre"] == "Dernières 24 h (pas de 5 min)"),
-        ("légende = libellés et unités du persist", lambda d, r: d["legende"] == LIBELLES_P4),
-        ("7 cases, sélecteur 24 h + mois du plus récent au plus ancien", lambda d, r: d["cases"] == 7 and d["options"] == OPTIONS),
+        ("deux graphiques titrés « Mesures » et « Cuve » (groupe de graphiques.json)", lambda d, r: d["canvas"] == 2 and d["entetes"] == ["Mesures", "Cuve"] and d["titre"] == "Dernières 24 h (pas de 5 min)"),
+        ("« Mesures » : libellés de graphiques.json, esclave ModBus nommé par le persist", lambda d, r: d["graphiques"][0] == MESURES_P4),
+        ("« Cuve » : hauteur, remplissage (facteur 100), volume", lambda d, r: d["graphiques"][1] == CUVE_P4),
+        ("6 cases, sélecteur 24 h + mois du plus récent au plus ancien", lambda d, r: d["cases"] == 6 and d["options"] == OPTIONS),
         ("bouton Grafana visible, aucun message", lambda d, r: d["grafana"] and d["message"] == ""),
         ("Referer de la page sur chaque /histo (exigé par Tasmota)", lambda d, r: all(ref and ref.endswith("/graphiques") for p, ref in r if p.startswith("/histo"))),
     ],
     "cache": [
-        ("2 affichages, uPlot demandé une seule fois (localStorage)", lambda d, r: d["canvas"] == 1 and sum("f=uplot.js" in p for p, _ in r) == 1),
+        ("2 affichages, uPlot demandé une seule fois (localStorage)", lambda d, r: d["canvas"] == 2 and sum("f=uplot.js" in p for p, _ in r) == 1),
     ],
     "mois": [
         ("titre du mois, moyenne horaire", lambda d, r: d["titre"] == "Septembre 2026 (moyenne horaire, bande min-max)"),
-        ("légende sans les séries min/max de la bande", lambda d, r: d["legende"] == ["Date", "Température ESP32 (°C)", "Remplissage (%)"]),
+        ("légendes sans les séries min/max de la bande, une série par graphique", lambda d, r: d["graphiques"] == [["Date", "Température de l'eau (°C)"], ["Date", "Remplissage (%)"]]),
     ],
     "mois_a": [
         ("mois -a tracé avec sa propre liste de séries", lambda d, r: d["legende"] == ["Date", "ancienneSerie"] and "ancienne liste de séries" in d["titre"]),
+        ("un seul graphique non vide : « Cuve » masqué, pas de titre de bloc", lambda d, r: d["canvas"] == 1 and d["entetes"] == []),
     ],
     "masquees": [
-        ("séries décochées absentes du tracé, 7 cases", lambda d, r: d["cases"] == 7 and d["legende"] == [l for l in LIBELLES_P4 if not l.startswith(("Compteur", "Volume", "Capteur"))]),
+        ("séries décochées absentes du tracé, 6 cases", lambda d, r: d["cases"] == 6 and d["graphiques"] == [[l for l in MESURES_P4 if "ModBus" not in l], CUVE_P4[:3]]),
     ],
     "absent": [
         ("historique pas démarré : message, pas de graphique", lambda d, r: d["canvas"] == 0 and "pas encore démarré" in d["message"]),
@@ -238,7 +251,10 @@ def partie_navigateur(navigateur, dossier, racine):
         lu = lis_dom(dom)
         print(f"{scenario}")
         for description, test in verifs:
-            ok = bool(test(lu, requetes))
+            try:
+                ok = bool(test(lu, requetes))
+            except (IndexError, KeyError, TypeError):      # DOM inattendu (graphique manquant) = echec, pas plantage
+                ok = False
             print(("  OK     " if ok else "  ECHEC  ") + description)
             if not ok:
                 echecs += 1
@@ -263,6 +279,17 @@ def main() -> int:
     else:
         temp = tempfile.TemporaryDirectory(prefix="banc_graphiques_")
         dossier = Path(temp.name)
+
+    print("=== Partie Berry (banc_historique.be)")
+    (dossier / "historique").mkdir(exist_ok=True)
+    r = subprocess.run([str(berry), str(Path(__file__).with_name("banc_historique.be")), str(dossier / "historique")],
+                       cwd=str(racine), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    sortie = (r.stdout or "") + (r.stderr or "")
+    print(sortie, end="" if sortie.endswith("\n") else "\n")
+    lignes = sortie.strip().splitlines()
+    if r.returncode != 0 or not lignes or lignes[-1] != "BANC_HISTORIQUE: OK":    # verdict = derniere ligne
+        print(">>> Banc de l'historique en echec (ou verdict introuvable).")
+        return 1
 
     print("=== Partie Berry (banc_graphiques.be)")
     r = subprocess.run([str(berry), str(Path(__file__).with_suffix(".be")), str(dossier)],

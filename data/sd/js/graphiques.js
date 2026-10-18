@@ -1,10 +1,15 @@
 // graphiques.js - Page /graphiques des cartes ESP32-S3 et P4 (data/fs/graphiquesFonctions.be), 2026-10-18
 // Trace l'historique de la carte (/histo, data/fs/historiqueFonctions.be) avec uPlot.
-// La carte pose avant ce script window.GRAPHIQUES = {uplot, nom, affichage, grafana} :
+// La carte pose avant ce script window.GRAPHIQUES = {uplot, nom, affichage, grafana, groupes, compteurs, esclaves} :
 //   - uplot     : cle versionnee du cache localStorage d'uPlot ('uPlot-1.6.30') ;
 //   - nom       : nom de l'historique ('mesures') ;
 //   - affichage : {serie: {libelle, unite, facteur}} du persist (diverses.historique.affichage), facultatif ;
-//   - grafana   : URL du tableau Grafana de la carte (vide = pas de bouton).
+//   - grafana   : URL du tableau Grafana de la carte (vide = pas de bouton) ;
+//   - groupes   : {titre: [debuts de chemin]} (diverses.historique.groupes) : un graphique par groupe, les
+//                 autres series dans « Mesures » ;
+//   - compteurs : reglages des compteurs (diverses.historique.compteurs), pour leur unite ;
+//   - esclaves  : {TasmotaSlaveModBusN: nom} des esclaves ModBus, pour les libelles par defaut.
+// Une serie s'appelle par son chemin dans le JSON SENSOR de la carte (ex. 'DS18B20.Temperature').
 // uPlot est garde dans le localStorage : la carte ne le renvoie (49 Ko, sans cache HTTP possible depuis
 // Berry) qu'au premier affichage ou au changement de version. Vues : 24 h (RAM de la carte, un point par
 // pas) et mois (une ligne par heure en flash : moyenne + bande min/max). Toute lecture ou ecriture du
@@ -12,7 +17,8 @@
 (function () {
   'use strict';
   var G = window.GRAPHIQUES || {};
-  var AFFICHAGE = G.affichage || {};
+  var AFFICHAGE = G.affichage || {}, GROUPES = G.groupes || {}, COMPTEURS = G.compteurs || {};
+  var ESCLAVES = G.esclaves || {};
   var COULEURS = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#17becf',
                   '#bcbd22', '#7f7f7f', '#aec7e8', '#ffbb78'];
   var CLE_MASQUEES = 'graphiques-masquees', CLE_VUE = 'graphiques-vue';
@@ -24,7 +30,8 @@
   var fmtNombre = new Intl.NumberFormat('fr-FR', {maximumFractionDigits: 2});
 
   var etat = {series: [], vue: 'jour', courbes: [], x: [], titre: '', masquees: lisListe(CLE_MASQUEES)};
-  var graphique = null;
+  // Un bloc par graphique : {titre, prefixes (null = « Mesures », les series d'aucun groupe), zone, trace, cases, uplot}
+  var blocs = [];
 
   function $(id) { return document.getElementById(id); }
 
@@ -93,8 +100,8 @@
         var d = null;
         try { d = JSON.parse(t); } catch (e) { d = null; }
         if (r.status === 404 && d && d.erreur) {
-          throw new Error('Historique pas encore démarré sur la carte (en mode auto, les séries sont ' +
-                          'fixées 2 min après le démarrage). Revenir dans quelques minutes.');
+          throw new Error('Historique pas encore démarré sur la carte (les séries sont découvertes ' +
+                          '2 min après le démarrage). Revenir dans quelques minutes.');
         }
         if (!r.ok || !d) throw new Error('Lecture de /histo impossible (HTTP ' + r.status + ')');
         return d;
@@ -103,8 +110,15 @@
   }
 
   // ---- Libelles, unites, couleurs ----------------------------------------------------------------
-  // Unite devinee du nom de la serie quand le persist n'en donne pas (diverses.historique.affichage)
+  // Unite devinee quand le persist n'en donne pas (affichage, compteurs) : d'abord la derniere cle du chemin
+  // (noms de Tasmota : Temperature, Humidity...), puis le nom entier (valeurs des modules : hauteurEau...)
+  var UNITES_TASMOTA = {Temperature: '°C', DewPoint: '°C', Humidity: '%', Pressure: 'hPa', SeaPressure: 'hPa',
+                        Illuminance: 'lx', Power: 'W', ApparentPower: 'VA', ReactivePower: 'var', Voltage: 'V',
+                        Current: 'A', Total: 'kWh', Today: 'kWh', Yesterday: 'kWh', Frequency: 'Hz', CarbonDioxide: 'ppm',
+                        eCO2: 'ppm', TVOC: 'ppb', Distance: 'mm'};
   function devineUnite(nom) {
+    var cle = nom.split('.').pop();
+    if (UNITES_TASMOTA.hasOwnProperty(cle)) return UNITES_TASMOTA[cle];
     var n = nom.toLowerCase();
     if (/temp/.test(n)) return '°C';
     if (/mv$|_mv\b/.test(n)) return 'mV';
@@ -114,20 +128,27 @@
     if (/rssi/.test(n)) return 'dBm';
     if (/press/.test(n)) return 'hPa';
     if (/heap/.test(n)) return 'o';
-    if (/power/.test(n)) return 'marche';
     return '';
+  }
+
+  // Libelle par defaut d'un chemin : esclave ModBus nomme par le persist, segments separes par des espaces
+  // ('TasmotaSlaveModBus.TasmotaSlaveModBus1.ANALOG.A1' -> 'Capteurs Cuve ModBus ANALOG A1')
+  function libelleDefaut(nom) {
+    var s = nom.split('.');
+    if (s[0] === 'TasmotaSlaveModBus' && s.length > 2) s = [ESCLAVES[s[1]] || s[1]].concat(s.slice(2));
+    return s.join(' ');
   }
 
   // Une courbe : valeurs multipliees par le facteur (ex. taux 0-1 -> %), null conserve
   function courbe(nom, moy, min, max) {
-    var a = AFFICHAGE[nom] || {};
+    var a = AFFICHAGE[nom] || {}, cpt = COMPTEURS[nom] || {};
     var f = (typeof a.facteur === 'number') ? a.facteur : 1;
     var echelle = function (v) { return v === null ? null : v * f; };
     var rang = etat.series.indexOf(nom);
     return {
       nom: nom,
-      libelle: a.libelle || nom,
-      unite: (typeof a.unite === 'string') ? a.unite : devineUnite(nom),
+      libelle: a.libelle || libelleDefaut(nom),
+      unite: (typeof a.unite === 'string') ? a.unite : (typeof cpt.unite === 'string') ? cpt.unite : devineUnite(nom),
       couleur: COULEURS[(rang < 0 ? etat.courbes.length : rang) % COULEURS.length],
       moy: moy.map(echelle), min: min ? min.map(echelle) : null, max: max ? max.map(echelle) : null
     };
@@ -147,13 +168,59 @@
   function largeur() { return Math.max(300, Math.min(window.innerWidth - 40, 1000)); }
   function hauteur() { return window.innerWidth < 600 ? 240 : 320; }
 
-  function detruit() { if (graphique) { graphique.destroy(); graphique = null; } }
+  // ---- Blocs : « Mesures » puis un graphique par groupe du persist -----------------------------------
+  function construitBlocs() {
+    var zone = $('g_graphiques');
+    var defs = [{titre: 'Mesures', prefixes: null}];
+    Object.keys(GROUPES).forEach(function (t) {
+      if (Array.isArray(GROUPES[t])) defs.push({titre: t, prefixes: GROUPES[t].map(String)});
+    });
+    defs.forEach(function (d) {
+      var b = {titre: d.titre, prefixes: d.prefixes, uplot: null, courbes: []};
+      b.zone = document.createElement('div');
+      b.entete = document.createElement('h3');
+      b.entete.textContent = d.titre;
+      b.entete.style.cssText = 'margin:16px 0 4px';
+      b.trace = document.createElement('div');
+      b.cases = document.createElement('div');
+      b.cases.className = 'g_series';
+      b.zone.appendChild(b.entete); b.zone.appendChild(b.trace); b.zone.appendChild(b.cases);
+      zone.appendChild(b.zone);
+      blocs.push(b);
+    });
+  }
 
+  function dansGroupe(nom, b) {
+    return b.prefixes.some(function (p) { return nom === p || nom.indexOf(p + '.') === 0; });
+  }
+
+  // Bloc d'une serie : le premier groupe qui la contient, sinon « Mesures »
+  function blocDe(nom) {
+    for (var i = 1; i < blocs.length; i++) if (dansGroupe(nom, blocs[i])) return blocs[i];
+    return blocs[0];
+  }
+
+  function detruit(b) { if (b.uplot) { b.uplot.destroy(); b.uplot = null; } }
+
+  // Repartit les courbes de la vue entre les blocs ; un bloc sans serie est masque ; le titre du bloc n'est
+  // affiche que s'il y a plusieurs graphiques
   function trace() {
-    var visibles = etat.courbes.filter(function (c) { return etat.masquees.indexOf(c.nom) < 0; });
-    detruit();
-    if (!etat.courbes.length) return;
-    if (!visibles.length) { message('Aucune série cochée.'); return; }
+    blocs.forEach(function (b) { b.courbes = []; });
+    etat.courbes.forEach(function (c) { blocDe(c.nom).courbes.push(c); });
+    var nbVisibles = blocs.filter(function (b) { return b.courbes.length > 0; }).length;
+    blocs.forEach(function (b) {
+      b.zone.style.display = (b.courbes.length || (b === blocs[0] && nbVisibles === 0)) ? '' : 'none';
+      b.entete.style.display = nbVisibles > 1 ? '' : 'none';
+      traceBloc(b);
+    });
+  }
+
+  function traceBloc(b) {
+    var visibles = b.courbes.filter(function (c) { return etat.masquees.indexOf(c.nom) < 0; });
+    detruit(b);
+    if (!b.courbes.length) return;
+    if (!visibles.length) { b.trace.textContent = 'Aucune série cochée.'; return; }
+    b.trace.textContent = '';
 
     var texte = couleurTheme('--c_txt', '#888'), grille = 'rgba(128,128,128,0.25)';
     // Unites des series visibles : les deux axes vont aux unites les plus partagees, « sans unite » en dernier
@@ -193,21 +260,22 @@
                  grid: i === 0 ? {stroke: grille} : {show: false}});
     });
 
-    graphique = new uPlot({
+    b.uplot = new uPlot({
       title: etat.titre, width: largeur(), height: hauteur(),
       scales: scales, series: series, axes: axes, bands: bandes,
       cursor: {drag: {x: false, y: false}}
-    }, donnees, $('g_trace'));
-    var lignes = graphique.root.querySelectorAll('.u-legend .u-series');
+    }, donnees, b.trace);
+    var lignes = b.uplot.root.querySelectorAll('.u-legend .u-series');
     cachees.forEach(function (i) { if (lignes[i]) lignes[i].style.display = 'none'; });   // min/max hors legende
     message('');
   }
 
-  // Cases a cocher, une par serie de la vue, memorisees (les series nouvelles sont cochees par defaut)
+  // Cases a cocher, une par serie de la vue, sous le graphique de la serie, memorisees (les series
+  // nouvelles sont cochees par defaut)
   function construitCases() {
-    var zone = $('g_series');
-    zone.innerHTML = '';
+    blocs.forEach(function (b) { b.cases.innerHTML = ''; });
     etat.courbes.forEach(function (c) {
+      var zone = blocDe(c.nom).cases;
       var l = document.createElement('label');
       l.style.cssText = 'display:inline-block;margin:2px 12px 2px 0;white-space:nowrap;border-left:4px solid ' +
                         c.couleur + ';padding-left:4px';
@@ -218,7 +286,7 @@
         etat.masquees = etat.masquees.filter(function (n) { return n !== c.nom; });
         if (!b.checked) etat.masquees.push(c.nom);
         ecris(CLE_MASQUEES, JSON.stringify(etat.masquees));
-        trace();
+        traceBloc(blocDe(c.nom));
       };
       l.appendChild(b);
       l.appendChild(document.createTextNode(' ' + c.libelle));
@@ -228,8 +296,8 @@
 
   function affiche(titre, x, courbes) {
     etat.titre = titre; etat.x = x; etat.courbes = courbes;
-    construitCases();
     trace();
+    construitCases();
   }
 
   // ---- Vues --------------------------------------------------------------------------------------
@@ -310,11 +378,14 @@
 
   function demarre() {
     construitGrafana();
+    construitBlocs();
     message('Chargement...');
     var redim = null;
     window.addEventListener('resize', function () {
       clearTimeout(redim);
-      redim = setTimeout(function () { if (graphique) graphique.setSize({width: largeur(), height: hauteur()}); }, 200);
+      redim = setTimeout(function () {
+        blocs.forEach(function (b) { if (b.uplot) b.uplot.setSize({width: largeur(), height: hauteur()}); });
+      }, 200);
     });
     chargeUplot().then(function () { return lisHisto('p=liste'); }).then(function (liste) {
       etat.series = liste.series || [];

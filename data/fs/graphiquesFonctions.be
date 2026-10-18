@@ -11,10 +11,17 @@
  *     /graphiques?f=uplot.js     -> /sd/js/uPlot.iife.min.js   (uPlot 1.6.30, envoye par morceaux)
  *     /graphiques?f=uplot.css    -> /sd/css/uPlot.min.css
  *
- * Reglages facultatifs de la page, dans le bloc diverses.historique du persist de la carte :
- *     "affichage": {"tauxRemplissage": {"libelle": "Remplissage", "unite": "%", "facteur": 100}, ...}
- *         libelle, unite et facteur (multiplie chaque valeur) par serie ; a defaut, le nom de la serie et une
- *         unite devinee de ce nom (temperature -> °C, hauteur -> cm, volume -> L, taux -> %...) ;
+ * Gabarit de la page : /sd/html/graphiques.html et /sd/css/graphiques.css ; logique : /sd/js/graphiques.js.
+ *
+ * Reglages facultatifs de la page, dans /json/graphiques.json de la carte (source data/<lieu>/<carte>/graphiques.json),
+ * lu a l'ouverture de la page seulement : rien en RAM le reste du temps, contrairement au persist (2026-10-18).
+ * Une serie s'appelle par son chemin dans le JSON SENSOR, ex. "sensorsCuve.niveauCuve.tauxRemplissage" :
+ *     "affichage": {"sensorsCuve.niveauCuve.tauxRemplissage": {"libelle": "Remplissage", "unite": "%", "facteur": 100}}
+ *         libelle, unite et facteur (multiplie chaque valeur) par serie ; a defaut, le chemin (esclave ModBus
+ *         remplace par son nom) et une unite devinee (Temperature -> °C, Humidity -> %, hauteur -> cm...) ;
+ *     "groupes": {"Cuve": ["sensorsCuve.niveauCuve"]}
+ *         un graphique par groupe (titre -> debuts de chemin) ; les autres series vont dans « Mesures ».
+ * Dans le bloc diverses.historique du persist (lu aussi par le bouton des ESP32 classiques, controleWeb) :
  *     "grafana": "http://192.168.0.5:3000/d/historique-cuve?var-appareil=%topic%"
  *         bouton vers le tableau Grafana du Pi ; '%topic%' = topic MQTT de la carte. Absent = pas de bouton.
  *
@@ -31,6 +38,7 @@ graphiquesFonctions.FICHIERS = {
     "uplot.css": ["/sd/css/uPlot.min.css", "text/css"]
 }
 graphiquesFonctions.MORCEAU = 2048      # octets lus et envoyes a la fois : borne la RAM
+graphiquesFonctions.FICHIER_REGLAGES = "/json/graphiques.json"      # reglages de la page (affichage, groupes)
 graphiquesFonctions.VERSION_UPLOT = "uPlot-1.6.30"     # cle du cache localStorage : a changer avec le fichier
 
 # Envoie un fichier du LittleFS par morceaux (uPlot tient sur une seule ligne de 49 Ko)
@@ -98,6 +106,50 @@ def graphiquesFonctions_urlGrafana(historique)
 end
 graphiquesFonctions.urlGrafana = graphiquesFonctions_urlGrafana
 
+# Reglages de la page (/json/graphiques.json) ; {} si le fichier est absent ou illisible (erreur journalisee)
+def graphiquesFonctions_lisReglages()
+    import path
+    import json
+    import string
+    var chemin = graphiquesFonctions.FICHIER_REGLAGES
+    if (!path.exists(chemin))    return {}    end
+    var reglages = nil
+    var f
+    try
+        f = open(chemin, "r")
+        reglages = json.load(f.read())
+        f.close()
+    except .. as erreur, message
+        if (f != nil)    f.close()    end
+        logFonctions.log(string.format("GRAPHIQUES_ERREUR: Lecture de %s : %s %s !", chemin, erreur, message), LOG_LEVEL_ERREUR, "serveurWeb")
+    end
+    if (!isinstance(reglages, map))
+        logFonctions.log(string.format("GRAPHIQUES_ERREUR: %s n'est pas un objet JSON : reglages ignores !", chemin), LOG_LEVEL_ERREUR, "serveurWeb")
+        return {}
+    end
+    return reglages
+end
+graphiquesFonctions.lisReglages = graphiquesFonctions_lisReglages
+
+# Noms des esclaves ModBus du persist (drivers.ModBus.environnement.TasmotaSlaveModBus) : cle -> name,
+# pour les libelles par defaut des series TasmotaSlaveModBus.<cle>.* ; {} sans driver ModBus
+def graphiquesFonctions_nomsEsclaves()
+    import global
+    var noms = {}
+    var esclaves = (global.contains("drivers") ? global.drivers : nil)
+    for cle: ["ModBus", "environnement", "TasmotaSlaveModBus"]      # chaque niveau peut manquer ou ne pas etre une map
+        if (!isinstance(esclaves, map))    return noms    end
+        esclaves = esclaves.find(cle)
+    end
+    if (!isinstance(esclaves, map))    return noms    end
+    for cle: esclaves.keys()
+        var e = esclaves[cle]
+        if (isinstance(e, map) && e.find("name") != nil)    noms[cle] = str(e["name"])    end
+    end
+    return noms
+end
+graphiquesFonctions.nomsEsclaves = graphiquesFonctions_nomsEsclaves
+
 # Page des graphiques, au gabarit Tasmota : le trace est fait dans le navigateur par /sd/js/graphiques.js,
 # qui lit /histo ; la carte ne fournit que la configuration (window.GRAPHIQUES)
 def graphiquesFonctions_page()
@@ -108,20 +160,20 @@ def graphiquesFonctions_page()
 
     var noms = historiqueFonctions.nomsInstances()
     var historique = (historiqueFonctions.config != nil ? historiqueFonctions.config : {})
+    var reglages = graphiquesFonctions.lisReglages()
+    var carte = def (m, cle) var v = m.find(cle) return (isinstance(v, map) ? v : {}) end     # mal type -> {} (le JS attend des objets)
     var config = {"uplot": graphiquesFonctions.VERSION_UPLOT, "nom": (size(noms) > 0 ? noms[0] : "mesures"),
-                  "affichage": historique.find("affichage", {}), "grafana": graphiquesFonctions.urlGrafana(historique)}
+                  "affichage": carte(reglages, "affichage"), "groupes": carte(reglages, "groupes"),
+                  "grafana": graphiquesFonctions.urlGrafana(historique), "compteurs": carte(historique, "compteurs"),
+                  "esclaves": graphiquesFonctions.nomsEsclaves()}
     logFonctions.log("GRAPHIQUES: Page des graphiques demandee !", LOG_LEVEL_DEBUG, "serveurWeb")
 
     webserver.content_start("Graphiques")
     webserver.content_send_style()
-    webserver.content_send("<link rel='stylesheet' href='/graphiques?f=uplot.css'>"
-                           "<style>#g_zone{text-align:left;max-width:calc(100vw - 24px)}#g_msg{margin:8px 0}.u-legend{font-size:12px}"
-                           "#g_barre{display:flex;flex-wrap:wrap}#g_barre select,#g_barre button{width:auto;max-width:100%;"
-                           "margin:0 8px 8px 0;padding:0 12px}#g_series{margin:8px 0;font-size:14px}"
-                           "@media(max-width:600px){.u-title{font-size:14px}}</style>"
-                           "<div id='g_zone'><div id='g_barre'><select id='g_vue'></select>"
-                           "<button id='g_grafana' style='display:none'>Historique long (Grafana)</button></div>"
-                           "<p id='g_msg'>Chargement...</p><div id='g_trace'></div><div id='g_series'></div></div>")
+    webserver.content_send("<style>")
+    gestionFileFolder.readFileByLineAndContentSend("/sd/css/graphiques.css")
+    webserver.content_send("</style>")
+    gestionFileFolder.readFileByLineAndContentSend("/sd/html/graphiques.html")
     # '</' echappe : un libelle du persist contenant '</script>' ne peut pas fermer le script
     import string
     webserver.content_send("<script>window.GRAPHIQUES=" + string.replace(json.dump(config), "</", "<\\/") + ";</script><script>")

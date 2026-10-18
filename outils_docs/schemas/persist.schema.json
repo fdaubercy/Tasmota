@@ -307,63 +307,15 @@
             "seriesMax": {
               "type": "integer"
             },
-            "series": {
-              "type": [
-                "string",
-                "object"
-              ],
-              "properties": {
-                "temperature": {
-                  "type": "string"
-                },
-                "temperatureESP32": {
-                  "type": "string"
-                },
-                "compteur": {
-                  "type": "string"
-                },
-                "hauteurEau": {
-                  "type": "string"
-                },
-                "tauxRemplissage": {
-                  "type": "string"
-                },
-                "volume": {
-                  "type": "string"
-                },
-                "capteurHauteur_mV": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "temperature",
-                "hauteurEau",
-                "tauxRemplissage",
-                "volume"
-              ],
-              "additionalProperties": true
+            "exclues": {
+              "type": "array"
             },
-            "affichage": {
+            "ajouts": {
+              "type": "array"
+            },
+            "compteurs": {
               "type": "object",
-              "additionalProperties": {
-                "type": "object",
-                "properties": {
-                  "libelle": {
-                    "type": "string"
-                  },
-                  "unite": {
-                    "type": "string"
-                  },
-                  "facteur": {
-                    "type": "integer"
-                  }
-                },
-                "required": [
-                  "libelle",
-                  "unite"
-                ],
-                "additionalProperties": true
-              }
+              "additionalProperties": true
             },
             "grafana": {
               "type": "string"
@@ -375,7 +327,9 @@
             "dureeHeures",
             "moisConserves",
             "seriesMax",
-            "series"
+            "exclues",
+            "ajouts",
+            "compteurs"
           ],
           "additionalProperties": true
         }

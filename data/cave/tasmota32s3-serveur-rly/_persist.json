@@ -6,7 +6,9 @@
 			"dureeHeures": 24,
 			"moisConserves": 24,
 			"seriesMax": 12,
-			"series": "auto"
+			"exclues": [],
+			"ajouts": [],
+			"compteurs": {}
 		},
 		"cmdMute": true,
 		"typeESP": "ESP32S3",

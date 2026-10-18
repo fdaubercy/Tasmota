@@ -110,6 +110,107 @@ seulement un accès depuis leur page d'accueil. Ancienne amélioration « Courbe
   - [x] Banc et README — preuve : `banc_graphiques.py` code 0, 51 contrôles (9 pour le bouton) ; témoin `controleWeb.be` de HEAD → 3 ECHEC, mutant sans la condition d'activation → 2, sans neutralisation → 1 ; README § « Carte sans historique local » ; skill `bancs` à jour
   - [ ] Essai sur carte : firmware recompilé (n'importe quelle carte : le module est solidifié) + clé posée à la main le temps de l'essai sur une carte sans historique actif ; bouton visible, lien vers le bon appareil
 
+## A8 — Séries génériques : chaque carte trace ses propres capteurs, sans liste écrite à la main
+Demande de l'utilisateur (2026-10-18) : le module doit s'adapter seul à la carte et à ses capteurs. On trace seulement
+les **mesures** : analogiques, températures, humidité…, qu'elles viennent de capteurs réels ou de capteurs virtuels
+(valeurs reçues par ModBus). **Relais et entrées numériques ne doivent jamais apparaître.**
+
+Décisions de l'utilisateur (2026-10-18) :
+- **Source = le JSON SENSOR filtré** (`tasmota.read_sensors()`, mode auto actuel), sans s'appuyer sur les
+  déclarations `modules.*.environnement` du persist.
+- **Compteurs** : un **débitmètre** est tracé en **débit** (variation par unité de temps) ; un **compteur d'énergie**
+  (type compteur électrique) est tracé en **valeur corrigée dans l'unité calculée** (impulsions → kWh…).
+- **Mesures internes de la carte** (température ESP32, RSSI, mémoire libre) : **aucune par défaut**. On les ajoute
+  à la main dans le persist (`@rssi`, `@heap`, `ESP32.Temperature`).
+- **Réglages** (exclure, renommer, unité, facteur, type de compteur) : dans le **bloc central `diverses.historique`**
+  (prolongement de `affichage`), et non sur l'entrée de chaque capteur ni dans la page web.
+- **RAM (décision de l'utilisateur, 2026-10-18)** : le persist est chargé entier et en permanence en RAM (31 Ko sur
+  disque pour le P4). Il ne garde donc que ce que la relève de chaque minute utilise : `exclues`, `ajouts`,
+  `compteurs`, `seriesMax`. Ce qui ne sert qu'à la page (`affichage`, `groupes`, et les compositions de l'A9) va
+  dans **`/json/graphiques.json`** de la carte (source : `data/<lieu>/<carte>/graphiques.json`, rangé dans `/json/`
+  au démarrage), lu seulement à l'ouverture de la page. Exception : `grafana` reste dans le persist, car le bouton
+  des ESP32 classiques (A7, `controleWeb`, solidifié) le lit à cet endroit.
+- **Page dans des fichiers (remarque de l'utilisateur, 2026-10-18)** : le squelette HTML et le style quittent
+  `graphiquesFonctions.page()` pour `/sd/html/graphiques.html` et `/sd/css/graphiques.css`, comme les autres pages
+  du dépôt (moins de chaînes en RAM dans le module).
+
+Ce qui s'y oppose aujourd'hui (constaté le 2026-10-18) :
+- `historiqueFonctions.nombre()` convertit `ON`/`OFF` en 1/0 (`historiqueFonctions.be:283`). Le mode auto retient donc
+  les `Switch<n>` et les états de boutons que `controleGeneral.json_append` (`controleGeneral.be:377`) ajoute au JSON.
+- Sur le maître, le bloc `TasmotaSlaveModBus` (`modBus_TasmotaSlaveModBus.be:648`) mélange `ANALOG`, `COUNTER`,
+  `Temperatures` (mesures) et `Switchs` (entrées des esclaves).
+- `IGNORES` n'exclut que 6 clés. `ESP32.Temperature` passe le filtre, alors que les internes doivent être exclues par défaut.
+- Les séries sont figées 2 min après le démarrage : une valeur ModBus qui arrive plus tard n'est jamais retenue.
+- Les unités sont devinées côté navigateur, d'après le nom (`graphiques.js:107`). En mode auto, ce nom est un chemin
+  (`AM2301.Humidity`) : il faut le deviner d'après la **dernière clé** (`Temperature`, `Humidity`, `Pressure`,
+  `Illuminance`, `A<n>`…).
+- `historiqueFonctions.be` fait 496 lignes : la découverte ira dans un fichier séparé si elle déborde. Le code ne doit
+  jamais être comprimé pour tenir sous les 500 lignes (lessons.md, 2026-10-18).
+
+- [x] Points ouverts tranchés par l'utilisateur — preuve : sous-étapes ci-dessous, réponses du 2026-10-18
+  - [x] Compteur sans réglage : **exclu**. Il n'apparaît qu'une fois son type précisé — preuve : décision de l'utilisateur, 2026-10-18
+  - [x] Type et conversion d'un compteur : **bloc `diverses.historique.compteurs`** = `{"COUNTER.C1": {"type": "debit"|"energie", "impulsionsParUnite": n, "unite": "L/min"|"kWh"}}` — preuve : décision de l'utilisateur, 2026-10-18
+  - [x] P4 et cuve : **passage en auto**. La liste `series` explicite disparaît des deux persist ; `affichage` et le filtre des faux zéros de la cuve (`controleGarage.filtreHistorique`) sont conservés — preuve : décision de l'utilisateur, 2026-10-18
+  - [x] Séries apparues après le démarrage : **nouvelle découverte à chaque fin d'heure**. Si la liste change, le fichier du mois repart avec le nouvel en-tête et l'ancien est mis de côté en `-a` (mécanisme existant). Les 24 h en RAM repartent à vide — preuve : décision de l'utilisateur, 2026-10-18
+  - [x] Valeurs calculées par les modules (`sensorsCuve.niveauCuve.*` : hauteur, volume, taux) : retenues, mais **dans un graphique à part sur la même page**, et **seulement sur la cuve et sur son maître** (le P4, qui reçoit aussi ces données) — preuve : décision de l'utilisateur, 2026-10-18 (corrige ma proposition de les mêler aux autres mesures)
+- [x] Graphiques par défaut : clé `groupes` = `{"Cuve": ["sensorsCuve.niveauCuve"]}` (titre → préfixes de chemins), dans `graphiques.json` (décision RAM). Les séries d'un groupe ont leur propre graphique ; toutes les autres vont dans le graphique « Mesures ». La clé n'est posée que pour la cuve et le P4 ; ailleurs, la page n'affiche qu'un graphique. Le mV brut du capteur (`sensorsCuve.valeursAnalogiques.*`) reste dans « Mesures » (choix de Claude : c'est la valeur du capteur analogique, pas une valeur calculée). C'est la composition de départ, que l'utilisateur peut ensuite modifier depuis la page (A9) — preuve : `graphiques.json` du P4 et de la cuve (`groupes` : `Cuve`) ; banc Chrome « jour » : 2 graphiques « Mesures » (sonde, ANALOG de l'esclave, mV) et « Cuve » (hauteur, remplissage, volume) ; « mois -a » : un seul graphique non vide, sans titre de bloc
+- [x] Filtre de découverte : seules les feuilles numériques (`int`/`real`) sont retenues ; `ON`/`OFF` et le texte ne sont plus convertis. Sont exclus `Switch*`, `Button*`, `POWER*`, `Switchs`, `relais`, `Id`, les unités (`TempUnit`…), les internes (`ESP32`, `@rssi`, `@heap`) et les compteurs sans réglage — preuve : `historiqueSeries.be` (`admissible`, `decouvre`) ; `banc_historique.be` §1-2 : 11 + 9 contrôles, dont le JSON SENSOR RÉEL du P4 (Status 10, 18/10 19:12) → `DS18B20.Temperature` + 4 séries `sensorsCuve.*`. Ajout de **`Shutter*`** aux exclus (choix de Claude : `Shutter1.Position/Direction/Target/Tilt` du P4 = état du volet, un actionneur)
+- [x] Exclusion par l'utilisateur : clé `diverses.historique.exclues` (liste de chemins ou de préfixes). Ajout explicite d'une série que le filtre écarte (interne : `ESP32.Temperature`, `@rssi`, `@heap`) par une clé `diverses.historique.ajouts` (choix de Claude : la liste `series` disparaît avec le passage en auto). **Le P4 perd sa série `temperatureESP32` sauf si elle est ajoutée ainsi**. `@power<n>` est refusé (relais) — preuve : `banc_historique.be` §1-2 : `exclues` par segment entier, `ajouts` (internes, `Shutter1.Position`), `@power1` refusé. Le P4 n'a PAS `ESP32.Temperature` dans `ajouts` (internes : aucune par défaut, décision de l'utilisateur)
+- [x] Compteurs : conversion débit / énergie appliquée à la mesure avant enregistrement ; une remise à zéro du compteur (redémarrage) ne doit pas produire de pic de débit négatif — preuve : `historiqueSeries.convertit` ; `banc_historique.be` §3 : énergie 2500/1000 = 2,5 ; débit 1 L/min puis 0,5 L/min (2 min) ; remise à zéro → nil ; mutant sans garde → ECHEC. `COUNTER.C1` du P4 (« Consommation électrique ») non réglé → exclu : `impulsionsParUnite` à fournir par l'utilisateur
+- [x] Redécouverte à chaque fin d'heure : liste comparée à la précédente, nouvel historique créé seulement si elle change ; log `info` du changement (ajouts et retraits) — preuve : `historiqueFonctions.choisitSeries` / `releve` ; `banc_historique.be` §4 : même heure → liste inchangée ; heure suivante → AM2301 ajouté, nouvel historique, log info « Nouvelles series » ; série disparue → gardée ; séries déjà dans le fichier du mois reprises au démarrage ; fichier mis de côté en `-b` quand `-a` existe. Mutants sans redécouverte / sans anciens / suffixe fixe → ECHEC
+- [x] Capteurs virtuels ModBus du maître : mesures de `TasmotaSlaveModBus.*.ANALOG`, `.COUNTER` et `.Temperatures` retenues, `Switchs` exclus ; libellé par défaut tiré du `name` de l'esclave dans le persist — preuve : `banc_historique.be` §1-2 : `ANALOG.A1` et `Temperatures.DS18B20-1.Temperature` d'un esclave retenus, `Switchs.*` et `COUNTER` non réglé écartés ; banc Chrome : libellé « Capteurs Cuve ModBus ANALOG A1 » (`name` de `TasmotaSlaveModBus1`, `graphiquesFonctions.nomsEsclaves`)
+- [ ] Unités devinées d'après la dernière clé du chemin (Temperature → °C, Humidity → %, Pressure → hPa, Illuminance → lx, `A<n>` → mV…), le bloc `affichage` restant prioritaire
+- [x] Nouvelles clés dans tous les `_persist.json` qui portent `diverses.historique` (valeur explicite, fins de ligne conservées) ; `persist.schema.json` régénéré — preuve : 6 persist (cave S3, grenier, rideau, S3 serveur-modbus, P4, cuve) : `series` → `exclues: []`, `ajouts: []`, `compteurs: {}` ; `affichage` du P4 et de la cuve déplacé dans leur `graphiques.json` ; fins de ligne LF conservées ; `genere_schema_persist.py` régénéré, `--valide` P4, cuve, cave S3 : 0 erreur
+- [x] Bancs : découverte sur des JSON SENSOR réels de chaque carte (P4, cuve, rideau, cave S3, grenier), témoin négatif (un `Switch1`, un `POWER`, un `Switchs` d'esclave, `ESP32.Temperature` ne doivent PAS sortir), compteur débit/énergie, mutants ; `banc_graphiques.py` vert — preuve : `banc_graphiques.py` code 0, 100 contrôles (dont `banc_historique.be` 40) ; témoin HEAD de `historiqueFonctions.be` → 5 ECHEC ; ancien `graphiques.js` → 12 ECHEC ; 5 mutants détectés sur copie ENTIÈRE de `data/fs` (copie intacte verte). JSON réels : P4 seulement (cuve et rideau derrière le NAPT du P4) ; les autres cartes sont couvertes par l'essai réel
+- [ ] `relecteur-berry` sur le diff, puis essai réel : la liste des séries relevée sur chaque carte S3/P4 ne contient ni relais ni entrée
+  - [x] Relecture `relecteur-berry` — preuve : aucun bloquant ; 2 « à corriger » traités (fichier de `graphiques.json` refermé après une exception, `nomsEsclaves` sans exception si un niveau du persist n'est pas une map) ; suggestions appliquées : réglages mal typés → `{}`, `seriesMax` borné à 1, séries déjà enregistrées prioritaires à la troncature, log « au-delà de seriesMax » en debug, ancien historique lâché avant d'allouer le nouveau ; chacune couverte par un contrôle (`banc_graphiques.py` code 0, 100 contrôles)
+  - [ ] Essai réel : LittleFS téléversé sur le P4 puis les S3 ; log `HISTORIQUE: Series enregistrees` de chaque carte sans relais, entrée, volet ni interne ; page à deux graphiques sur le P4 et la cuve
+
+## A9 — Page composable : l'utilisateur crée, modifie et supprime ses graphiques
+Demande de l'utilisateur (2026-10-18) : sur la page `/graphiques`, l'utilisateur ajoute autant de graphiques qu'il
+le souhaite, choisit leur type et les séries qu'il y place. Dépend de A8 : les séries proposées sont celles que la
+découverte a retenues.
+
+Décisions de l'utilisateur (2026-10-18) :
+- **La composition est enregistrée sur la carte**, dans son persist, par un bouton « Enregistrer ». Le PC et le
+  téléphone voient donc les mêmes graphiques.
+- **Types** : courbes, barres, escalier, aires, et **graphique combiné**, c'est-à-dire un type par série dans le même
+  graphique (par exemple des barres pour un compteur et une courbe pour une température).
+- **Tous les graphiques sont modifiables**, y compris ceux prévus par le persist (« Mesures », « Cuve ») : ils ne
+  servent que de point de départ. Un bouton « Rétablir » revient à la composition par défaut.
+- **La période (24 h ou un mois) est propre à chaque graphique.**
+
+Choix de Claude (à contester) :
+- Clé `graphiques` de **`/json/graphiques.json`** (et non du persist : décision RAM de l'A8) = liste de `{"titre", "periode": "jour"|"AAAA-MM", "type": "courbe"|"barres"|"escalier"|"aire",
+  "series": [{"chemin", "type"?}] | "autres"}`. `"autres"` = toutes les séries placées dans aucun autre graphique : un
+  graphique ainsi réglé reçoit seul les séries découvertes plus tard. Le `type` d'une série prime sur celui du graphique
+  (graphique combiné). Clé absente = composition par défaut, tirée de `groupes` (A8) ; « Rétablir » supprime la clé.
+- Une série peut figurer dans plusieurs graphiques.
+- Ordre des graphiques changé par des boutons monter/descendre (pas de glisser-déposer : plus lourd sur téléphone).
+- En vue mois : bande min-max pour les courbes et les aires ; barres et escalier sur la moyenne horaire seule.
+- Limites contrôlées par la carte (frontière système) : au plus 8 graphiques et 12 séries par graphique, titre de
+  60 caractères au plus, types et chemins validés. Un chemin inconnu est gardé, la page le signale par « absente ».
+
+- [ ] Route d'écriture `POST /graphiques` (accès privilégié, `check_privileged_access`) : corps JSON validé puis écrit
+  dans la clé `graphiques` de `/json/graphiques.json`, **sans toucher au persist** (écriture dans un fichier temporaire
+  puis renommage : une coupure ne laisse pas un fichier à moitié écrit). Réponse JSON `{ok}` ou `{erreur}` ; rien n'est
+  écrit si le corps est invalide ou trop gros ; log `info` de l'enregistrement
+- [ ] Page en mode lecture : un bloc par graphique (titre, sélecteur de période propre, cases des séries, tracé uPlot),
+  lectures de `/histo` mutualisées (une seule lecture par période demandée, même si plusieurs graphiques l'utilisent)
+- [ ] Types de tracé avec uPlot : courbe (actuel), barres (`uPlot.paths.bars`), escalier (`uPlot.paths.stepped`), aire
+  (remplissage `fill`), combiné (type par série) ; axes Y par unité dans chaque graphique, comme aujourd'hui
+- [ ] Mode édition (bouton « Modifier ») : ajouter un graphique, le renommer, le supprimer, le monter ou le descendre,
+  choisir son type, sa période, ses séries (liste des séries découvertes, avec leur libellé) et le type de chaque série ;
+  « Enregistrer » (POST), « Annuler », « Rétablir » (composition par défaut)
+- [ ] Erreurs visibles : carte injoignable, refus d'écriture, composition invalide renvoyée par la carte ; la page
+  reste utilisable en lecture
+- [ ] RAM et heap de la carte relevés pendant un enregistrement (page et persist), sans chute durable
+- [ ] Bancs : Berry (validation de la route : corps valide, trop gros, types inconnus, trop de graphiques, accès refusé,
+  globale et persist mis à jour, témoin négatif) ; Chrome sans interface (composition à 3 graphiques de types différents,
+  graphique combiné, périodes différentes, édition puis enregistrement simulé, Rétablir) ; mutants ; `banc_graphiques.py` vert
+- [ ] Essai réel sur le P4 : un graphique ajouté depuis le PC apparaît sur le téléphone, persiste après un redémarrage
+- [ ] Documentation : `outils_docs/README.md` § « Les graphiques des mesures », schéma du persist régénéré
+
 ## Améliorations restantes
 - [x] [projet] Mini-courbe 24 h sur la page d'accueil (écartée le 2026-10-18 pour garder l'accueil léger) — abandonnée : l'accueil se rafraîchit toutes les ~2 s et doit rester léger ; le bouton « Graphiques » y mène en un clic (décision de l'utilisateur, 2026-10-18)
 - [x] [projet] CDN en secours si le fichier local manque — abandonnée : les esclaves derrière le NAPT n'ont pas Internet, uPlot est gardé dans le `localStorage` ; un secours masquerait un déploiement incomplet, que le message « HTTP 404 » signale (décision de l'utilisateur, 2026-10-18)

@@ -59,17 +59,29 @@ def verifie(condition, nom)
     print((condition ? "  OK     " : "  ECHEC  ") + nom)
     if (!condition)    echecs += 1    end
 end
+# Premiere ligne GRAPHIQUES_ERREUR en erreur journalisee depuis l'indice 'depuis', ou nil
+def dernierErreur(depuis)
+    for i: depuis .. size(journal) - 1
+        if (journal[i][1] == LOG_LEVEL_ERREUR && string.find(journal[i][0], "GRAPHIQUES_ERREUR:") == 0)    return journal[i]    end
+    end
+    return nil
+end
 
 import webserver
 import historiqueFonctions
 import gestionFileFolder
 
-# Configuration reelle de la page : bloc diverses.historique du persist du maitre P4
+# Configuration reelle de la page : bloc diverses.historique et drivers (noms des esclaves ModBus) du persist du
+# maitre P4, reglages de la page dans son graphiques.json
 var fp = open("data/garage/tasmota32p4-serveur-modbus/_persist.json", "r")
-historiqueFonctions.config = json.load(fp.read())["diverses"]["historique"]
+var persistP4 = json.load(fp.read())
 fp.close()
+historiqueFonctions.config = persistP4["diverses"]["historique"]
+drivers = persistP4["drivers"]
 
 var graphiquesFonctions = charge(SOURCES + "/graphiquesFonctions.be")
+var REGLAGES_P4 = "data/garage/tasmota32p4-serveur-modbus/graphiques.json"
+graphiquesFonctions.FICHIER_REGLAGES = REGLAGES_P4
 
 # ---- 1. Envoi d'uPlot par morceaux --------------------------------------------------------------
 print("1. /graphiques?f=uplot.js et uplot.css")
@@ -146,16 +158,59 @@ verifie(config != nil, "window.GRAPHIQUES est du JSON valide")
 if (config != nil)
     verifie(config["uplot"] == "uPlot-1.6.30" && config["nom"] == "mesures", "cle de cache uPlot et nom de l'historique")
     verifie(config["grafana"] == "http://192.168.0.5:3000/d/historique-cuve?var-appareil=garage", "URL Grafana du persist, topic remplace")
-    verifie(config["affichage"].find("tauxRemplissage", {}).find("facteur") == 100, "reglages 'affichage' du persist transmis")
+    verifie(config["affichage"].find("sensorsCuve.niveauCuve.tauxRemplissage", {}).find("facteur") == 100,
+            "reglages 'affichage' de graphiques.json transmis (series nommees par leur chemin)")
+    verifie(json.dump(config["groupes"]) == json.dump({"Cuve": ["sensorsCuve.niveauCuve"]}), "groupe « Cuve » de graphiques.json transmis")
+    verifie(config["esclaves"].find("TasmotaSlaveModBus1") == "Capteurs Cuve ModBus", "noms des esclaves ModBus tires du persist")
+    verifie(isinstance(config["compteurs"], map), "reglages des compteurs du persist transmis (unites)")
 end
-verifie(string.find(page, "// graphiques.js") > 0 && string.find(page, "g_trace") > 0, "graphiques.js et la zone du trace inclus")
-# Un libelle du persist contenant </script> ne doit pas fermer le script de configuration
-historiqueFonctions.config["affichage"]["volume"]["libelle"] = "Volume</script><b>"
-webserver.raz({})
-webserver.sortie = open(SORTIE + "/page_echappee.html", "wb")
-graphiquesFonctions.route()
-webserver.sortie.close()
-historiqueFonctions.config["affichage"]["volume"]["libelle"] = "Volume"
+verifie(string.find(page, "// graphiques.js") > 0 && string.find(page, "id='g_graphiques'") > 0 && string.find(page, "#g_zone{") > 0,
+        "gabarit /sd/html/graphiques.html, style /sd/css/graphiques.css et graphiques.js inclus")
+verifie(string.find(page, "#g_zone{") > string.find(page, "<style>", string.find(page, "</head>")) , "style envoye entre <style> et </style>")
+
+# Reglages de la page absents ou illisibles : page servie quand meme, erreur journalisee si illisibles
+def pageAvecReglages(chemin, sortie)
+    graphiquesFonctions.FICHIER_REGLAGES = chemin
+    webserver.raz({})
+    webserver.sortie = open(SORTIE + "/" + sortie, "wb")
+    graphiquesFonctions.route()
+    webserver.sortie.close()
+    graphiquesFonctions.FICHIER_REGLAGES = REGLAGES_P4
+    var f = open(SORTIE + "/" + sortie, "r")
+    var texte = f.read()
+    f.close()
+    var d = string.find(texte, "window.GRAPHIQUES=")
+    return json.load(texte[d + 18 .. string.find(texte, ";</script>", d) - 1])
+end
+avant = size(journal)
+var sansReglages = pageAvecReglages(SORTIE + "/absent.json", "page_sans_reglages.html")
+verifie(webserver.termine && size(sansReglages["affichage"]) == 0 && size(sansReglages["groupes"]) == 0 && size(journal) == avant + 1,
+        "graphiques.json absent : page servie, affichage et groupes vides, aucune erreur")
+var fr = open(SORTIE + "/illisible.json", "w")
+fr.write("{pas du json")
+fr.close()
+avant = size(journal)
+var illisible = pageAvecReglages(SORTIE + "/illisible.json", "page_illisible.html")
+verifie(webserver.termine && size(illisible["affichage"]) == 0 && dernierErreur(avant) != nil,
+        "graphiques.json illisible : page servie, une ligne GRAPHIQUES_ERREUR en erreur")
+
+# Persist et reglages mal formes : la page est servie, avec des objets vides
+fr = open(SORTIE + "/mal_types.json", "w")
+fr.write(json.dump({"affichage": [], "groupes": "Cuve"}))
+fr.close()
+var driversReels = drivers
+drivers = {"ModBus": "ON"}
+var malTypes = nil
+try malTypes = pageAvecReglages(SORTIE + "/mal_types.json", "page_mal_types.html") except .. as e, m print("    exception : " + str(e) + " " + str(m)) end
+drivers = driversReels
+verifie(malTypes != nil && webserver.termine && isinstance(malTypes["affichage"], map) && isinstance(malTypes["groupes"], map)
+        && size(malTypes["esclaves"]) == 0, "reglages mal types et drivers.ModBus pas une map : page servie, objets vides, pas d'exception")
+
+# Un libelle des reglages contenant </script> ne doit pas fermer le script de configuration
+fr = open(SORTIE + "/echappe.json", "w")
+fr.write(json.dump({"affichage": {"sensorsCuve.niveauCuve.volume": {"libelle": "Volume</script><b>"}}}))
+fr.close()
+pageAvecReglages(SORTIE + "/echappe.json", "page_echappee.html")
 fpage = open(SORTIE + "/page_echappee.html", "r")
 var pageEchappee = fpage.read()
 fpage.close()

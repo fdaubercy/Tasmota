@@ -17,11 +17,16 @@
  *
  * Configuration de la CARTE dans le persist, bloc diverses.historique :
  *     {"activation": "ON", "pasMinutes": 5, "dureeHeures": 24, "moisConserves": 24, "seriesMax": 12,
- *      "series": {"hauteurEau": "sensorsCuve.niveauCuve.hauteurEau", "temperature": "DS18B20.Temperature"}}
- *   - chaque serie = un chemin dans le JSON SENSOR de la carte (tasmota.read_sensors(), le meme que
- *     tele/<topic>/SENSOR), ou une source speciale : @power<n> (etat du relais n, 1/0), @rssi, @heap ;
- *   - "series" vide = mode AUTO : toutes les valeurs numeriques (et ON/OFF) du JSON SENSOR, relevees
- *     2 min apres le demarrage, dans la limite de seriesMax. Les series sont fixees a ce moment.
+ *      "exclues": [], "ajouts": [], "compteurs": {}, "grafana": ""}
+ *   - les series sont DECOUVERTES (2026-10-18) : chaque serie = un chemin dans le JSON SENSOR de la carte
+ *     (tasmota.read_sensors(), le meme que tele/<topic>/SENSOR), ex. "DS18B20.Temperature". Seules les
+ *     mesures sont retenues : ni relais, ni entrees, ni mesures internes, ni compteurs non regles.
+ *     Regles et reglages exclues/ajouts/compteurs : voir historiqueSeries.be ;
+ *   - premiere decouverte 2 min apres le demarrage, puis a chaque nouvelle heure : une serie nouvelle
+ *     (esclave ModBus en retard, capteur rebranche) s'ajoute ; une serie deja enregistree ce mois-ci
+ *     reste (trou si elle ne mesure plus). Liste changee = nouvel historique (24 h en RAM a vide) ;
+ *   - le persist ne garde que ce que la releve utilise (il est en RAM en permanence) ; les reglages de la
+ *     page /graphiques (affichage, groupes) sont dans /json/graphiques.json (graphiquesFonctions.be).
  *   Demarrage : autoexec.be -> historiqueFonctions.demarre(diverses["historique"]) ; releve chaque minute.
  *   Un module peut corriger les valeurs avant enregistrement (mesure en erreur -> nil) :
  *     historiqueFonctions.ajouteFiltre(fonction(chemins, valeurs))   (voir controleCuve.be)
@@ -40,7 +45,7 @@ historiqueFonctions.instances = {}      # nom -> HISTORIQUE, pour la route /hist
 historiqueFonctions.config = nil        # bloc diverses.historique de la carte (demarre)
 historiqueFonctions.chemins = nil       # chemins des series dans le JSON SENSOR (ou @source)
 historiqueFonctions.filtres = []        # fonctions(chemins, valeurs) appelees avant chaque mesure
-historiqueFonctions.IGNORES = ["Time", "TempUnit", "PressureUnit", "SpeedUnit", "Id", "IPAddress"]
+historiqueFonctions.heureDecouverte = nil   # heure (epoch UTC / 3600) de la derniere decouverte des series
 
 # Noms des historiques de la carte
 def historiqueFonctions_nomsInstances()
@@ -190,8 +195,12 @@ class HISTORIQUE
         try
             var nouveau = !path.exists(fichier)
             if (!nouveau && self.lisEntete(fichier) != self.series.concat(","))
-                # Liste des series changee : l'ancien fichier du mois est mis de cote, lisible seul
-                path.rename(fichier, string.format("%s-a.bin", fichier[0 .. size(fichier) - 5]))
+                # Liste des series changee : l'ancien fichier du mois est mis de cote sous le premier suffixe
+                # libre (-a, -b...), lisible seul ; un -a existant n'est jamais ecrase
+                var base = fichier[0 .. size(fichier) - 5]
+                var suffixe = 0
+                while (suffixe < 25 && path.exists(string.format("%s-%s.bin", base, "abcdefghijklmnopqrstuvwxyz"[suffixe])))    suffixe += 1    end
+                path.rename(fichier, string.format("%s-%s.bin", base, "abcdefghijklmnopqrstuvwxyz"[suffixe]))
                 nouveau = true
                 logFonctions.log(string.format("HISTORIQUE: Series de '%s' changees, %s mis de cote !", self.nom, fichier), LOG_LEVEL_INFO, self.nom)
             end
@@ -208,12 +217,8 @@ class HISTORIQUE
 
     # Noms des series d'un fichier (texte de l'en-tete), nil si l'en-tete est illisible
     def lisEntete(fichier)
-        var f = open(fichier, "r")
-        var b = f.readbytes(7)
-        var noms = nil
-        if (size(b) == 7 && b[0 .. 3].asstring() == "HST1")    noms = f.readbytes(b.get(5, 2)).asstring()    end
-        f.close()
-        return noms
+        import historiqueFonctions
+        return historiqueFonctions.lisEntete(fichier)
     end
 
     # Mois disponibles (suffixes 'AAAA-MM' ou 'AAAA-MM-a'), tries
@@ -268,27 +273,20 @@ class HISTORIQUE_WEB : Driver
 end
 historiqueFonctions.HISTORIQUE_WEB = HISTORIQUE_WEB
 
-# Valeur numerique d'une feuille du JSON : nombre, ou ON/OFF -> 1/0 ; nil sinon
+# Valeur numerique d'une feuille du JSON ; nil sinon. ON/OFF (relais, entrees) n'est PAS une mesure (2026-10-18).
 def historiqueFonctions_nombre(v)
     if (type(v) == "int" || type(v) == "real")    return real(v)    end
-    if (v == "ON")     return 1.0    end
-    if (v == "OFF")    return 0.0    end
     return nil
 end
 historiqueFonctions.nombre = historiqueFonctions_nombre
 
-# Valeur d'un chemin : 'DS18B20.Temperature' dans le JSON SENSOR, ou source speciale @power<n>, @rssi, @heap
+# Valeur d'un chemin : 'DS18B20.Temperature' dans le JSON SENSOR, ou mesure interne @rssi, @heap (par 'ajouts')
 def historiqueFonctions_lit(donnees, chemin)
     import string
     import historiqueFonctions
     if (string.startswith(chemin, "@"))
         if (chemin == "@rssi")    return historiqueFonctions.nombre(tasmota.wifi().find("rssi"))    end
         if (chemin == "@heap")    return real(tasmota.get_free_heap())    end
-        if (string.startswith(chemin, "@power") && size(chemin) > 6)
-            var etats = tasmota.get_power()
-            var n = int(chemin[6 .. size(chemin) - 1]) - 1
-            if (n >= 0 && n < size(etats))    return (etats[n] ? 1.0 : 0.0)    end
-        end
         return nil
     end
     var v = donnees
@@ -300,23 +298,31 @@ def historiqueFonctions_lit(donnees, chemin)
 end
 historiqueFonctions.lit = historiqueFonctions_lit
 
-# Mode auto : chemins des feuilles numeriques (ou ON/OFF) du JSON SENSOR, dans la limite de 'max'
-def historiqueFonctions_decouvre(donnees, prefixe, liste, max)
-    import historiqueFonctions
-    for cle: donnees.keys()
-        if (size(liste) >= max)    break    end
-        if (historiqueFonctions.IGNORES.find(cle) != nil)    continue    end
-        var v = donnees[cle]
-        var chemin = (prefixe == "" ? cle : prefixe + "." + cle)
-        if (isinstance(v, map))
-            historiqueFonctions.decouvre(v, chemin, liste, max)
-        elif (historiqueFonctions.nombre(v) != nil)
-            liste.push(chemin)
-        end
-    end
-    return liste
+# Noms des series d'un fichier de mois (texte de l'en-tete), nil si absent ou illisible
+def historiqueFonctions_lisEntete(fichier)
+    import path
+    if (!path.exists(fichier))    return nil    end
+    var f = open(fichier, "r")
+    var b = f.readbytes(7)
+    var noms = nil
+    if (size(b) == 7 && b[0 .. 3].asstring() == "HST1")    noms = f.readbytes(b.get(5, 2)).asstring()    end
+    f.close()
+    return noms
 end
-historiqueFonctions.decouvre = historiqueFonctions_decouvre
+historiqueFonctions.lisEntete = historiqueFonctions_lisEntete
+
+# Series deja enregistrees dans le fichier du mois courant (au redemarrage : une serie lente a reapparaitre
+# - esclave ModBus - garde sa place et n'oblige pas a mettre le fichier de cote) ; [] si aucun
+def historiqueFonctions_seriesDuMois(nom)
+    import string
+    import historiqueFonctions
+    var t = tasmota.rtc()["utc"]
+    if (t < 1700000000)    return []    end
+    var d = tasmota.time_dump(t)
+    var noms = historiqueFonctions.lisEntete(string.format("%s/%s-%04i-%02i.bin", historiqueFonctions.DOSSIER, nom, d["year"], d["month"]))
+    return (noms != nil && noms != "" ? string.split(noms, ",") : [])
+end
+historiqueFonctions.seriesDuMois = historiqueFonctions_seriesDuMois
 
 # Tri par insertion d'une liste de chaines (quelques dizaines d'elements)
 def historiqueFonctions_trie(liste)
@@ -347,44 +353,69 @@ def historiqueFonctions_demarre(config)
 end
 historiqueFonctions.demarre = historiqueFonctions_demarre
 
-# Releve (chaque minute) : lit le JSON SENSOR, cree l'historique au premier passage utile, mesure
+# Decouvre les series (historiqueSeries.choisit) ; liste nouvelle -> nouvel historique « mesures ».
+# Retourne true si l'historique a ete (re)cree.
+def historiqueFonctions_choisitSeries(donnees, anciens)
+    import json
+    import string
+    import historiqueFonctions
+    import historiqueSeries
+    var chemins = historiqueSeries.choisit(donnees, historiqueFonctions.config, anciens)
+    var avant = historiqueFonctions.chemins
+    if (size(chemins) == 0 || (avant != nil && chemins == avant))    return false    end
+
+    historiqueFonctions.chemins = chemins
+    # L'ancien historique est lache AVANT d'allouer le tampon du nouveau : pas deux tampons RAM a la fois
+    historiqueFonctions.instances.remove("mesures")
+    historiqueFonctions.HISTORIQUE("mesures", chemins, historiqueFonctions.config)
+    if (avant == nil)
+        logFonctions.log(string.format("HISTORIQUE: Series enregistrees : %s !", json.dump(chemins)), LOG_LEVEL_INFO)
+    else
+        var ajoutees = []
+        for c: chemins    if (avant.find(c) == nil)    ajoutees.push(c)    end    end
+        logFonctions.log(string.format("HISTORIQUE: Nouvelles series %s, historique recommence : %s !", json.dump(ajoutees), json.dump(chemins)), LOG_LEVEL_INFO)
+    end
+    return true
+end
+historiqueFonctions.choisitSeries = historiqueFonctions_choisitSeries
+
+# Une mesure de chaque serie : lecture, conversion des compteurs, filtres des modules, enregistrement
+def historiqueFonctions_mesureTout(donnees)
+    import historiqueFonctions
+    import historiqueSeries
+    var chemins = historiqueFonctions.chemins
+    var valeurs = []
+    for c: chemins    valeurs.push(historiqueFonctions.lit(donnees, c))    end
+    historiqueSeries.convertit(chemins, valeurs, historiqueFonctions.config)
+    for f: historiqueFonctions.filtres    f(chemins, valeurs)    end
+    historiqueFonctions.instances["mesures"].mesure(valeurs)
+end
+historiqueFonctions.mesureTout = historiqueFonctions_mesureTout
+
+# Releve (chaque minute) : lit le JSON SENSOR, decouvre les series au premier passage utile puis a chaque
+# nouvelle heure, mesure
 def historiqueFonctions_releve()
     import json
     import string
     import historiqueFonctions
-    var config = historiqueFonctions.config
     try
         var texte = tasmota.read_sensors()
         var donnees = (texte != nil ? json.load(texte) : nil)
         if (!isinstance(donnees, map))    donnees = {}    end
 
         if (historiqueFonctions.chemins == nil)
-            var noms = []
-            var chemins = []
-            var series = config.find("series", {})
-            if (isinstance(series, map) && size(series) > 0)
-                for nom: series.keys()    noms.push(nom)    end
-                historiqueFonctions.trie(noms)
-                for nom: noms    chemins.push(series[nom])    end
-            else
-                if (tasmota.millis() < 120000)    return    end     # mode auto : laisser les capteurs demarrer
-                # Tout collecter, trier, PUIS tronquer : l'ordre d'une map n'est pas celui du JSON
-                chemins = historiqueFonctions.trie(historiqueFonctions.decouvre(donnees, "", [], 64))
-                var max = int(config.find("seriesMax", 12))
-                if (size(chemins) > max)    chemins = chemins[0 .. max - 1]    end
-                noms = chemins
-                if (size(chemins) == 0)    return    end
-            end
-            historiqueFonctions.chemins = chemins
-            historiqueFonctions.HISTORIQUE("mesures", noms, config)
-            logFonctions.log(string.format("HISTORIQUE: Series enregistrees : %s !", json.dump(noms)), LOG_LEVEL_INFO)
+            if (tasmota.millis() < 120000)    return    end     # laisser les capteurs demarrer
+            if (!historiqueFonctions.choisitSeries(donnees, historiqueFonctions.seriesDuMois("mesures")))    return    end
         end
+        # La mesure close d'abord l'heure precedente avec l'ancienne liste ; une serie nouvelle ne s'ajoute
+        # qu'ensuite (la minute en cours du nouvel historique est perdue)
+        historiqueFonctions.mesureTout(donnees)
 
-        var chemins = historiqueFonctions.chemins
-        var valeurs = []
-        for c: chemins    valeurs.push(historiqueFonctions.lit(donnees, c))    end
-        for f: historiqueFonctions.filtres    f(chemins, valeurs)    end
-        historiqueFonctions.instances["mesures"].mesure(valeurs)
+        var heure = tasmota.rtc()["utc"] / 3600
+        if (historiqueFonctions.heureDecouverte != nil && heure != historiqueFonctions.heureDecouverte)
+            historiqueFonctions.choisitSeries(donnees, historiqueFonctions.chemins)
+        end
+        historiqueFonctions.heureDecouverte = heure
     except .. as erreur, message
         logFonctions.log(string.format("HISTORIQUE_RELEVE_ERREUR: %s -> %s", erreur, message), LOG_LEVEL_ERREUR)
     end

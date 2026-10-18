@@ -1,0 +1,8 @@
+/* Page /graphiques (data/fs/graphiquesFonctions.be, /sd/html/graphiques.html, /sd/js/graphiques.js) */
+#g_zone{text-align:left;max-width:calc(100vw - 24px)}
+#g_msg{margin:8px 0}
+.u-legend{font-size:12px}
+#g_barre{display:flex;flex-wrap:wrap}
+#g_barre select,#g_barre button{width:auto;max-width:100%;margin:0 8px 8px 0;padding:0 12px}
+.g_series{margin:8px 0;font-size:14px}
+@media(max-width:600px){.u-title{font-size:14px}}

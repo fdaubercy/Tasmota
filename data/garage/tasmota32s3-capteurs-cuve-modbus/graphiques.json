@@ -1,0 +1,30 @@
+{
+	"affichage": {
+		"sensorsCuve.niveauCuve.hauteurEau": {
+			"libelle": "Hauteur d'eau",
+			"unite": "cm"
+		},
+		"sensorsCuve.niveauCuve.tauxRemplissage": {
+			"libelle": "Remplissage",
+			"unite": "%",
+			"facteur": 100
+		},
+		"sensorsCuve.niveauCuve.volume": {
+			"libelle": "Volume",
+			"unite": "L"
+		},
+		"sensorsCuve.valeursAnalogiques.valeurCapteurHauteur": {
+			"libelle": "Capteur de hauteur",
+			"unite": "mV"
+		},
+		"DS18B20.Temperature": {
+			"libelle": "Température de l'eau",
+			"unite": "°C"
+		}
+	},
+	"groupes": {
+		"Cuve": [
+			"sensorsCuve.niveauCuve"
+		]
+	}
+}
