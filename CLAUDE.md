@@ -494,7 +494,7 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     (accepte une ligne `ModbusPushUDP <seq> <hexa>`). Modules : `sniffeur_modbus_http.py` (routes),
     `surveillance_modbus.py` (ecart commande/releve d'un relais, collisions -> alertes dans le fil),
     `emulation_modbus.py` (le PC repond a la place de la carte relais, de la cuve, du rideau ; valeurs
-    editables dans la page), `debit_modbus.py` (trouve puis corrige, sur confirmation, le debit et
+    editables dans la page ; temperature et analogiques peuvent onduler : ± ecart, periode en min), `debit_modbus.py` (trouve puis corrige, sur confirmation, le debit et
     l'adresse de la carte relais, comme `verifieConn16`), `ecoute_udp.py` (rejoint 224.3.0.1:4000 en
     ecoute seule : push `ModbusPushUDP` des esclaves decodes et juges comme `accepteSeq` du maitre ;
     s'abonne aussi a `tele/+/MODBUSPUSH`, ou le maitre recopie les push qu'il recoit si

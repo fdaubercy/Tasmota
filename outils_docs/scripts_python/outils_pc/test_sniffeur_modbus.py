@@ -283,6 +283,57 @@ def test_emulation():
         RESULTATS["ok"] += 1
 
 
+def test_variation():
+    """Valeurs qui ondulent autour de celle de la page (± ecart, periode en minutes), sur une horloge simulee."""
+    emu = em.Emulation(CARTE, 19200)
+    emu.active(2, True), emu.active(3, True)
+    cuve = emu.actifs[2]
+    instant = [1000.0]
+    cuve.horloge = lambda: instant[0]
+    random.seed(7)                                      # bruit reproductible ; phases fixees pour les lectures rares
+    cuve.appareils[1312]["phase"] = cuve.appareils[4704]["phase"] = 0.3
+    lit_t, lit_n = c("02 04 05 20 00 02"), c("02 04 12 60 00 02")
+
+    def releve(trame, pas, nb=120):
+        """Valeurs servies au maitre, une lecture toutes les `pas` secondes."""
+        vals = []
+        for _ in range(nb):
+            r = cuve.reponse(trame)
+            vals.append(struct.unpack(">f", r[3:7])[0] if trame[2:4] == b"\x05\x20" else int.from_bytes(r[3:7], "big"))
+            instant[0] += pas
+        return vals
+
+    emu.modifie(2, 1312, "valeur", "21.5")
+    verifie(set(releve(lit_t, 30, 10)), {21.5}, "TEMOIN : ecart 0 (defaut) -> valeur fixe")
+    emu.modifie(2, 1312, "ecart", "1")
+    emu.modifie(2, 1312, "periode", "10")
+    t = releve(lit_t, 15, 120)                          # 30 min = 3 periodes
+    verifie(all(20.5 - 1e-4 <= v <= 22.5 + 1e-4 for v in t), True, "temperature dans 21,5 ± 1")
+    verifie(max(t) - min(t) > 1.2, True, "temperature : l'ondulation couvre la plage")
+    verifie(max(abs(a - b) for a, b in zip(t, t[1:])) < 0.8, True, "temperature : variation douce, pas de saut")
+    # meme horloge, lectures 10 fois plus rares : la forme suit le temps, pas le nombre de lectures
+    rare = releve(lit_t, 130, 12)
+    verifie(max(rare) - min(rare) > 1.2 and all(20.5 - 1e-4 <= v <= 22.5 + 1e-4 for v in rare), True,
+            "lectures rares : meme plage")
+    emu.modifie(2, 1312, "valeur", "30")
+    verifie(all(29 - 1e-4 <= v <= 31 + 1e-4 for v in releve(lit_t, 15, 40)), True, "valeur modifiee : le centre se deplace")
+    emu.modifie(2, 4704, "ecart", "50")
+    emu.modifie(2, 4704, "periode", "5")
+    n = releve(lit_n, 15, 80)
+    verifie(all(450 <= v <= 550 for v in n) and max(n) - min(n) > 60, True, "niveau : entier dans 500 ± 50")
+    ligne = [a for a in [e for e in emu.etat() if e["id"] == 2][0]["appareils"] if a["registre"] == 4704][0]
+    verifie((ligne["ecart"], ligne["periode"], ligne["envoyee"]), (50, 5.0, n[-1]), "niveau : etat pour la page")
+    emu.modifie(2, 1312, "ecart", "0")
+    verifie(set(releve(lit_t, 15, 10)), {30.0}, "ecart remis a 0 -> valeur fixe")
+    for reg, champ, val, nom in ((160, "ecart", "1", "interrupteur"), (1312, "periode", "0", "periode nulle"),
+                                 (1312, "ecart", "-1", "ecart negatif")):
+        try:
+            emu.modifie(3 if reg == 160 else 2, reg, champ, val)
+            RESULTATS["ko"].append(f"TEMOIN : {nom} accepte")
+        except ValueError:
+            RESULTATS["ok"] += 1
+
+
 class FauxBus:
     """Port serie : carte relais a 9600 bauds, adresse 5 ; ses reponses repassent par sniffeur.traite."""
     def __init__(self, sniffeur, echo=False, carte=True):
@@ -446,7 +497,7 @@ def test_acces_reseau():
 
 
 def main():
-    for groupe in (test_crc_et_cli, test_decodeur, test_fuzz, test_surveillance, test_emulation,
+    for groupe in (test_crc_et_cli, test_decodeur, test_fuzz, test_surveillance, test_emulation, test_variation,
                    test_sniffeur_et_debit, test_udp, test_relais_mqtt, test_acces_reseau):
         avant = len(RESULTATS["ko"])
         try:

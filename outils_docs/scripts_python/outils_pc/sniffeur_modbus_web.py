@@ -236,7 +236,8 @@ function editeur(e, a) {
     + (a.champ === "etat" ? ` <span class="gris">SwitchMode ${a.switchMode}</span>` : "");
   if (a.champ === "sortie") return `<select ${att}>${opts(["open", "close"], a.valeur)}</select>`;
   if (a.champ === "valeur") return `<input class="court" style="width:80px" type="number" step="any" value="${a.valeur}" ${att}>`
-    + (a.humidite !== undefined ? ` humidite <input class="court" style="width:60px" type="number" step="any" value="${a.humidite}" data-id="${e.id}" data-reg="${a.registre}" data-champ="humidite">` : "");
+    + (a.humidite !== undefined ? ` humidite <input class="court" style="width:60px" type="number" step="any" value="${a.humidite}" data-id="${e.id}" data-reg="${a.registre}" data-champ="humidite">` : "")
+    + (a.ecart !== undefined ? variation(e, a) : "");
   if (a.champ === "hsb") {                             // ruban WS2812 : ce que relit le maitre (0x03, 4 registres)
     const anim = Object.entries(a.animations).map(([n, nom]) => `<option value="${n}"${+n === a.scheme ? " selected" : ""}>${n} ${esc(nom)}</option>`).join("");
     const att2 = c => `data-id="${e.id}" data-reg="${a.registre}" data-champ="${c}"`;
@@ -244,6 +245,15 @@ function editeur(e, a) {
       + ` <span class="gris">teinte ${a.valeur[0]}, saturation ${a.valeur[1]}, luminosite ${a.valeur[2]}</span>`;
   }
   return "-";
+}
+// ondulation autour de la valeur (ecart 0 = fixe) et derniere valeur envoyee au maitre
+function variation(e, a) {
+  const att = c => `data-id="${e.id}" data-reg="${a.registre}" data-champ="${c}"`;
+  const lu = v => typeof v === "number" && !Number.isInteger(v) ? v.toFixed(2) : v;
+  return ` &plusmn; <input class="court" style="width:60px" type="number" min="0" step="any" value="${a.ecart}" ${att("ecart")}>`
+    + ` periode <input class="court" style="width:60px" type="number" min="0.1" step="any" value="${a.periode}" ${att("periode")}> min`
+    + (a.ecart > 0 ? ` <span class="gris">envoye : ${lu(a.envoyee)}`
+      + (a.envoyeeHumidite !== undefined ? ` / ${lu(a.envoyeeHumidite)}` : "") + "</span>" : "");
 }
 function dessineEmulation(force) {
   const panneau = $("panneauEmul");
@@ -259,7 +269,7 @@ $("panneauEmul").addEventListener("change", e => {
   const c = e.target;
   if (c.dataset.actif) return poste("/emulation", {id: +c.dataset.actif, actif: c.checked});
   if (c.dataset.champ) poste("/emulation", {id: +c.dataset.id, registre: +c.dataset.reg, champ: c.dataset.champ, valeur: c.value})
-    .then(() => c.blur());
+    .then(() => { c.blur(); dessineEmulation(true); });  // l'etat diffuse pendant la saisie a ete ignore ; refus -> valeur du serveur
 });
 // ---------------------------------------------------------------- debit / adresse de la carte relais
 $("chercherDebit").onclick = () => { $("resDebit").textContent = "recherche..."; $("corrigerDebit").classList.add("cache"); poste("/debit", {action: "chercher"}); };

@@ -18,9 +18,16 @@ Les esclaves emulables sont ceux du persist du maitre (decodeur_modbus.charge_ca
            05 le remet a 0. La couleur suivante n'est pas emulee (seul le mode change).
     Un registre inconnu ne recoit AUCUNE reponse (l'esclave reel journalise et se tait).
 Valeurs editables depuis la page (choix du 2026-10-06) ; les commandes recues les mettent a jour.
+Variation (2026-10-18) : thermometres et analogiques (pas les compteurs, qui ne redescendent pas) ondulent
+autour de la valeur de la page, sans en sortir : valeur ± ecart, une ondulation complete par `periode`
+minutes, plus un leger bruit (85 % sinusoide + 15 % bruit). Calculee sur l'horloge, pas sur le nombre de
+lectures ; ecart 0 (defaut) = valeur fixe. L'humidite du DHT22 suit le meme ecart et la meme periode.
+Rien n'est memorise : chaque lancement repart des valeurs par defaut, sans variation.
 Le SwitchMode utilise est celui de la copie du maitre : la page montre donc l'etat que le maitre lira.
 """
 
+import math
+import random
 import struct
 import time
 
@@ -28,11 +35,13 @@ import decodeur_modbus as dm
 import test_rs485_pc as rs
 
 DEFAUTS = {"thermometres": 21.5, "analogiques": 500, "compteurs": 0}
+VARIABLES = ("thermometres", "analogiques")     # familles qui peuvent onduler
 
 
 class EsclaveEsp32Emule:
     def __init__(self, esclave):
         self.id, self.nom = esclave["id"], esclave["nom"]
+        self.horloge = time.monotonic       # remplacable par le banc
         self.appareils = {}                 # registre -> {nom, famille, type, switchMode, valeur(s)}
         for reg, a in esclave["appareils"].items():
             v = dict(a)
@@ -44,6 +53,9 @@ class EsclaveEsp32Emule:
                 v.update(etat="OFF")
             elif a["famille"] in DEFAUTS:
                 v.update(valeur=DEFAUTS[a["famille"]], humidite=55.0)
+                if a["famille"] in VARIABLES:   # phase tiree au hasard : deux mesures n'ondulent pas ensemble
+                    v.update(ecart=0.0, periode=10.0, phase=random.uniform(0, 2 * math.pi),
+                             envoyee=v["valeur"], envoyeeHumidite=v["humidite"])
             self.appareils[reg] = v
 
     def _power(self, a):
@@ -51,6 +63,19 @@ class EsclaveEsp32Emule:
         if a["inverse_a"] is not None and time.monotonic() >= a["inverse_a"]:
             a["power"], a["inverse_a"] = not a["power"], None
         return a["power"]
+
+    def _servie(self, a, champ="valeur"):
+        """Valeur lue par le maitre : celle de la page, ou son ondulation si un ecart est pose."""
+        centre = a[champ]
+        if a.get("ecart"):
+            dephasage = 1.7 if champ == "humidite" else 0.0
+            angle = 2 * math.pi * self.horloge() / (a["periode"] * 60) + a["phase"] + dephasage
+            centre += a["ecart"] * (0.85 * math.sin(angle) + 0.15 * random.uniform(-1, 1))
+        if a["famille"] != "thermometres":
+            centre = int(round(centre))
+        if "envoyee" in a:
+            a["envoyee" if champ == "valeur" else "envoyeeHumidite"] = centre
+        return centre
 
     def etat(self):
         """Pour la page : un appareil par ligne, avec ce qui est editable."""
@@ -68,6 +93,10 @@ class EsclaveEsp32Emule:
                 ligne.update(champ="valeur", valeur=a["valeur"])
                 if a["type"] == 1216:
                     ligne["humidite"] = a["humidite"]
+                if "ecart" in a:
+                    ligne.update(ecart=a["ecart"], periode=a["periode"], envoyee=a["envoyee"])
+                    if a["type"] == 1216:
+                        ligne["envoyeeHumidite"] = a["envoyeeHumidite"]
             lignes.append(ligne)
         return {"id": self.id, "nom": self.nom, "driver": "esp32", "appareils": lignes}
 
@@ -85,6 +114,11 @@ class EsclaveEsp32Emule:
             a["etat"] = "ON" if valeur == "ON" else "OFF"
         elif champ in ("valeur", "humidite"):
             a[champ] = float(valeur) if a["famille"] == "thermometres" else int(valeur)
+        elif champ in ("ecart", "periode"):
+            v = float(valeur)
+            if v < 0 or (champ == "periode" and v <= 0) or not math.isfinite(v):
+                raise ValueError(f"registre {reg} : {champ} {valeur!r} invalide (ecart >= 0, periode > 0 min)")
+            a[champ] = v
 
     def reponse(self, trame):
         """Reponse a une requete, ou None."""
@@ -103,9 +137,10 @@ class EsclaveEsp32Emule:
             return rs.avec_crc(bytes((self.id, 2, 1, 1 if actif else 0)))
         if fc == 4 and "valeur" in a:
             if a["famille"] == "thermometres":
-                donnees = struct.pack(">f", a["valeur"]) + (struct.pack(">f", a["humidite"]) if a["type"] == 1216 else b"")
+                donnees = struct.pack(">f", self._servie(a)) + (struct.pack(">f", self._servie(a, "humidite"))
+                                                                 if a["type"] == 1216 else b"")
             else:
-                donnees = (int(a["valeur"]) & 0xFFFFFFFF).to_bytes(4, "big")
+                donnees = (int(self._servie(a)) & 0xFFFFFFFF).to_bytes(4, "big")
             return rs.avec_crc(bytes((self.id, 4, len(donnees))) + donnees)
         if fc == 5 and "power" in a and len(trame) == 8:
             a["power"], a["inverse_a"] = trame[4] == 0xFF, None
