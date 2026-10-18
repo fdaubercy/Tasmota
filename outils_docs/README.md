@@ -50,6 +50,7 @@
 - [scripts_python/](scripts_python/) — outillage PC, rangé par usage : `build/`, `outils_pc/`, `berry/`, `maintenance/`, `sauvegarde/`, `reseau/` (détail dans [CLAUDE.md](../CLAUDE.md)).
 - [HISTORIQUE_SYNCHRO_FORK.md](HISTORIQUE_SYNCHRO_FORK.md) *(généré)* — journal des synchronisations du fork.
 - [CHANGELOG.md](CHANGELOG.md) — historique des évolutions.
+- [Les graphiques des mesures](#les-graphiques-des-mesures-cartes-s3p4) — page `/graphiques` des cartes S3/P4, plus bas dans ce fichier.
 
 <hr></hr>
 
@@ -120,6 +121,51 @@ Tout est enregistré dans `_persist.json`. Une sortie à `detail` affiche aussi 
 
 La sortie la plus bavarde fixe le coût : Tasmota met en mémoire tout message accepté par au
 moins une sortie. Un profil « normal » sobre allège donc vraiment la carte.
+
+<hr></hr>
+
+## Les graphiques des mesures (cartes S3/P4)
+
+Les cartes ESP32-S3 et P4 tiennent un historique de leurs mesures (`data/fs/historiqueFonctions.be`) :
+24 h en RAM au pas de 5 min, et min/moy/max horaires en flash, un fichier par mois. Le bouton
+**Graphiques** de la page d'accueil ouvre `/graphiques`, qui les trace avec uPlot. Les ESP32 classiques
+n'ont ni l'historique ni la page (fichiers exclus de leur LittleFS) : leurs courbes sont dans Grafana.
+
+- **Vues** : « 24 dernières heures », puis un mois par entrée du sélecteur (moyenne horaire et bande
+  min-max). Un mois marqué « ancienne liste de séries » date d'avant un changement des séries du persist.
+- **Séries** : une case par série, mémorisée dans le navigateur. Deux axes Y, attribués aux unités les
+  plus partagées. Un trou dans une courbe = pas de mesure (carte arrêtée, esclave muet, capteur absent).
+- **Historique long** : le bouton « Historique long (Grafana) » ouvre le tableau du Pi.
+- uPlot est servi **par la carte** (`/sd/js/uPlot.iife.min.js`, 49 Ko), sans Internet : il est gardé
+  dans le `localStorage` du navigateur et n'est redemandé qu'à un changement de version.
+
+### Dans `_persist.json`
+
+```json
+"diverses": {
+    "historique": {
+        "activation": "ON",
+        "series": { ... },
+        "affichage": {
+            "tauxRemplissage":  {"libelle": "Remplissage", "unite": "%", "facteur": 100},
+            "temperatureESP32": {"libelle": "Température ESP32", "unite": "°C"}
+        },
+        "grafana": "http://192.168.0.5:3000/d/historique-cuve?var-appareil=%topic%"
+    }
+}
+```
+
+`affichage` et `grafana` sont facultatifs. Sans `affichage`, libellé = nom de la série et unité devinée
+d'après le nom (`temperature` → °C, `hauteur` → cm, `volume` → L, `taux` → %). `facteur` multiplie la
+valeur affichée (0-1 → %). `%topic%` est remplacé par le topic de la carte ; sans `grafana`, pas de bouton.
+
+### Vérifier
+
+- `/histo?p=liste`, `/histo?p=jour`, `/histo?p=mois&m=AAAA-MM` donnent le JSON brut. En `curl`, ajouter
+  `-H "Referer: http://<ip>/"` : sans lui, Tasmota coupe la connexion sans réponse (`curl: (52)`).
+- Banc hors carte : `python outils_docs/scripts_python/berry/banc_graphiques.py` (code de sortie 0 = vert).
+- Sur le P4, les mesures de la cuve sont écartées de l'historique tant que l'esclave ne les donne pas
+  pour valides (`controleGarage.filtreHistorique`) : une cuve sans capteur donne des trous, pas des zéros.
 
 <hr></hr>
 
