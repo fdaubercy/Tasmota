@@ -1,0 +1,4 @@
+# Plan vide
+
+## Contexte
+Rien.

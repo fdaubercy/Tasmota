@@ -29,6 +29,8 @@ remplace la memoire.
    des que le sujet Berry/solidification arrive.
 5. **`outils_docs/PROTOCOLE_MODBUS.md`** — a lire des que le sujet ModBus arrive : carte
    des registres de la carte 16 relais (§8) et architecture de synchronisation (§9).
+6. **`tasks/plans/`** — plans de travail suivis (`statut: actif`, format `tasks/plans/_FORMAT.md`) :
+   le mod `suivi-plan` en injecte le resume en debut de conversation ; sans le mod, lire le plan actif.
 
 Si le demarrage affiche une ligne `fork : N commit(s) de retard sur upstream/development`,
 c'est le hook de detection : voir la section « Synchro du fork » plus bas. **Ne pas lancer
@@ -171,6 +173,14 @@ applique si besoin, et **prouve** que l'exclusion agit (temoin/cible sur l'index
 
 Il est idempotent, sauvegarde avant d'ecrire, et refuse de fusionner a l'aveugle dans un
 `C_Cpp.files.exclude` existant. A lancer si le symptome ci-dessous reapparait.
+
+### 4. Suivi des plans — extension VS Code locale + mod Claude
+
+```
+python outils_docs/scripts_python/maintenance/installe_suivi_plan.py --verifier --mod
+```
+
+L'extension `fdaubercy.suivi-plan` n'est pas sur la marketplace : Settings Sync ne l'installe pas.
 
 ---
 
@@ -340,6 +350,10 @@ Issus de l'audit des conversations du 2026-10-17. Les utiliser plutot que refair
 - **Diagnostic** : devant un bug, une erreur ou un comportement inattendu, invoquer
   `superpowers:systematic-debugging` **avant** de proposer une correction (154 demandes de correction
   pour 5 usages mesures).
+- **Plans** (2026-10-18) : question complexe -> mode plan + agents. Plan ecrit au format
+  `tasks/plans/_FORMAT.md` (`## A<n> — titre` + sous-etapes `- [ ]`), recopie dans `tasks/plans/` a la
+  validation par le mod `suivi-plan`, affiche a droite par l'extension. Cocher une etape seulement apres
+  verification, avec `— preuve : …`. Commande `/suivi` (`/plan` est une commande integree).
 
 ## Carte des documents de ce depot
 
@@ -373,6 +387,13 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   ni reseau. Banc hors depot (hote simule). Modifier le mod = monter `version` dans `plugin.json`, puis
   `claude.cmd plugin marketplace update mods-tasmota` et `claude.cmd plugin update meteo-contexte@mods-tasmota`.
   Installation : `/plugin marketplace add <depot>/.claude/mods` puis `/plugin install meteo-contexte@mods-tasmota`.
+- `.claude/mods/suivi-plan/` — mod : recopie le plan valide (ExitPlanMode) dans `tasks/plans/`, ligne
+  d'avancement (`$.ui.status`), resume du plan actif injecte a chaque conversation, `/suivi`, fichier signal
+  `%USERPROFILE%\.claude\suivi-plan\signal.json` qui ouvre la vue. Parseur partage avec l'extension :
+  `hooks/parseur-plan.mjs` (banc `node .claude/mods/suivi-plan/tests/test_parseur.mjs`, avec mutants).
+- `outils_docs/vscode/suivi-plan/` — extension VS Code `fdaubercy.suivi-plan` : vue du plan a droite (%
+  par action, ameliorations restantes), barre d'etat. Installation : `maintenance/installe_suivi_plan.py`.
+- `tasks/plans/` — un plan suivi par chantier ; format et regles de calcul dans `_FORMAT.md`.
 - `tasks/lessons.md` — journal des erreurs et regles.
 - `tasks/reprise-solidification-berry.md` — etat du chantier solidification, prochaine action.
 - `tasks/reprise-chantier-modbus-grenier.md` — etat du chantier ModBus (carte 16 relais +

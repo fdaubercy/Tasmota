@@ -21,6 +21,12 @@ Pour chaque chantier touche (`tasks/reprise-*.md`, voir la carte des documents d
 mettre a jour l'encadre de tete « SI TU REPRENDS A FROID » — etat, **prochaine action**, ce qui reste,
 decisions tranchees dans cette session. Remplacer ce qui est perime au lieu d'empiler.
 
+## 2 bis. Plan actif (`tasks/plans/*.md`, `statut: actif` — format `tasks/plans/_FORMAT.md`)
+
+- Cocher les etapes faites ET verifiees dans cette session, chacune avec `— preuve : …` ; mettre a jour `maj:`.
+- Verser ce qui reste hors du plan dans « Ameliorations restantes », etiquete `[conversation]` ou `[projet]`.
+- Plan a 100 % : `statut: clos`. Dans le mini-export, ajouter la ligne `Plan : tasks/plans/<x>.md — N %`.
+
 ## 3. Lecons et memoire
 
 - `tasks/lessons.md` : ajouter (append uniquement) chaque correction de l'utilisateur pas encore notee,

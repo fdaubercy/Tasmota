@@ -1,0 +1,80 @@
+/* Vue « Suivi du plan » : uniquement des variables du theme VS Code (clair/sombre automatiques). */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 12px 16px 24px;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+  line-height: 1.45;
+}
+
+h1, h2, h3 { margin: 0; font-weight: 600; }
+h1 { font-size: 1.35em; }
+h2 { font-size: 1.05em; }
+h3 { font-size: 0.95em; margin-bottom: 4px; color: var(--vscode-descriptionForeground); }
+ul { list-style: none; margin: 0; padding: 0; }
+code { font-family: var(--vscode-editor-font-family, monospace); font-size: 0.92em; }
+
+.discret, .infos, .preuve, .compte, .vide { color: var(--vscode-descriptionForeground); }
+
+[role="button"] { cursor: pointer; }
+[role="button"]:hover, [role="button"]:focus-visible { color: var(--vscode-textLink-foreground); outline: none; }
+
+/* En-tete */
+.entete { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--vscode-panel-border); }
+.infos { margin: 4px 0 10px; font-size: 0.9em; overflow-wrap: anywhere; }
+.statut { padding: 0 6px; border: 1px solid var(--vscode-panel-border); border-radius: 8px; }
+.statut.actif { border-color: var(--vscode-testing-iconPassed); color: var(--vscode-testing-iconPassed); }
+.chiffres { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin-top: 6px; }
+.global { font-size: 1.6em; font-weight: 600; }
+
+/* Barres : la largeur du remplissage est posee par vue.js (data-pourcent) */
+.barre { width: 100%; background: var(--vscode-panel-border); border-radius: 3px; overflow: hidden; }
+.barre.grande { height: 10px; }
+.barre.petite { height: 6px; flex: 1 1 auto; min-width: 60px; }
+.remplissage { width: 0; height: 100%; background: var(--vscode-progressBar-background); }
+
+button.choisir {
+  margin-left: auto;
+  font: inherit;
+  color: var(--vscode-foreground);
+  background: transparent;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 3px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+button.choisir:hover, button.choisir:focus-visible { color: var(--vscode-textLink-foreground); border-color: var(--vscode-textLink-foreground); }
+
+/* Alertes du parseur */
+.alertes { margin: 0 0 12px; padding: 6px 10px; border-left: 3px solid var(--vscode-progressBar-background); }
+.alertes li { color: var(--vscode-descriptionForeground); }
+
+/* Actions */
+.action { padding: 10px 12px; margin-bottom: 10px; border: 1px solid var(--vscode-panel-border); border-radius: 4px; }
+.action-titre { overflow-wrap: anywhere; }
+.action-titre .id { color: var(--vscode-descriptionForeground); }
+.action.finie .action-titre .id { color: var(--vscode-testing-iconPassed); }
+.ligne-barre { display: flex; align-items: center; gap: 8px; margin: 6px 0 8px; font-size: 0.9em; }
+.ligne-barre .pourcent { min-width: 3.2em; text-align: right; font-weight: 600; }
+
+.etape { display: flex; gap: 6px; padding: 2px 0; overflow-wrap: anywhere; }
+.etape .case { flex: 0 0 auto; }
+.etape.fait .case { color: var(--vscode-testing-iconPassed); }
+.etape .corps { display: flex; flex-direction: column; min-width: 0; }
+.etape .preuve { font-size: 0.88em; }
+.etape.n1 { padding-left: 16px; }
+.etape.n2 { padding-left: 32px; }
+.etape.n3 { padding-left: 48px; }
+.etape.n4 { padding-left: 64px; }
+
+/* Ameliorations restantes : deux colonnes, une seule sous ~320 px */
+.ameliorations { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--vscode-panel-border); }
+.colonnes { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px 16px; margin-top: 8px; }
+.amelioration { padding: 2px 0 2px 10px; border-left: 2px solid var(--vscode-panel-border); margin-bottom: 4px; overflow-wrap: anywhere; }
+.amelioration.fait { text-decoration: line-through; color: var(--vscode-descriptionForeground); }
+
+.aucun p { color: var(--vscode-descriptionForeground); }

@@ -1,0 +1,28 @@
+{
+  "_lisezmoi": "Resultats attendus de parseur-plan.mjs sur tests/vecteurs/*.md, calcules a la main. actions = [id, fait, total, pourcent, ligne] ; ameliorations = [portee, fait]. Chaque vecteur est aussi rejoue en fins de ligne CRLF : resultat identique.",
+  "nominal.md": {
+    "titre": "Plan nominal", "chantier": "essai", "global": 50, "fait": 5, "total": 8,
+    "actions": [["A1", 2, 4, 50, 12], ["A2", 0, 1, 0, 18], ["A3", 3, 3, 100, 21]],
+    "ameliorations": [["conversation", false], ["projet", true], ["projet", false]],
+    "nbAlertes": 0, "preuves": ["commit abc123"]
+  },
+  "sans-etape.md": {
+    "titre": "Plan sans étape", "chantier": null, "global": 25, "fait": 1, "total": 2,
+    "actions": [["A1", 1, 2, 50, 3], ["A2", 0, 0, 0, 7]],
+    "ameliorations": [], "nbAlertes": 1, "preuves": []
+  },
+  "bloc-code.md": {
+    "titre": "Plan avec bloc de code", "chantier": null, "global": 50, "fait": 1, "total": 2,
+    "actions": [["A1", 1, 2, 50, 3]],
+    "ameliorations": [], "nbAlertes": 0, "preuves": []
+  },
+  "variantes.md": {
+    "titre": "Variantes", "chantier": null, "global": 67, "fait": 4, "total": 7,
+    "actions": [["A1", 1, 1, 100, 3], ["A2", 1, 1, 100, 5], ["A3", 1, 3, 33, 7], ["A4", 0, 1, 0, 11], ["A5", 1, 1, 100, 13]],
+    "ameliorations": [], "nbAlertes": 0, "preuves": ["sortie 309/309"]
+  },
+  "vide.md": {
+    "titre": "Plan vide", "chantier": null, "global": null, "fait": 0, "total": 0,
+    "actions": [], "ameliorations": [], "nbAlertes": 1, "preuves": []
+  }
+}

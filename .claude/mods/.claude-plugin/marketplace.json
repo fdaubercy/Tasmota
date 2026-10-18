@@ -11,6 +11,11 @@
       "name": "meteo-contexte",
       "source": "./meteo-contexte",
       "description": "Barre de remplissage du contexte au-dessus du prompt, bouton de passation a partir de 50 %."
+    },
+    {
+      "name": "suivi-plan",
+      "source": "./suivi-plan",
+      "description": "Suivi des plans de travail (tasks/plans/) : recopie des plans valides, plan actif dans chaque conversation, ligne d avancement, commande /suivi."
     }
   ]
 }

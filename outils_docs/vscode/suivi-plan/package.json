@@ -1,0 +1,48 @@
+{
+  "name": "suivi-plan",
+  "publisher": "fdaubercy",
+  "displayName": "Suivi du plan",
+  "description": "Avancement des plans de travail (tasks/plans/*.md) dans une vue a droite de l'editeur : % par action, % global, etapes, ameliorations restantes.",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "workspaceContains:tasks/plans/*.md",
+    "onUri",
+    "onWebviewPanel:suiviPlan.vue"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "suiviPlan.ouvrir",
+        "title": "Suivi du plan : ouvrir à droite"
+      },
+      {
+        "command": "suiviPlan.choisir",
+        "title": "Suivi du plan : choisir le plan"
+      }
+    ],
+    "configuration": {
+      "title": "Suivi du plan",
+      "properties": {
+        "suiviPlan.dossier": {
+          "type": "string",
+          "default": "tasks/plans",
+          "description": "Dossier des plans, relatif au dossier de travail. Les fichiers _*.md n'y sont pas des plans."
+        },
+        "suiviPlan.ouvrirAuto": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ouvrir la vue a droite quand un plan est cree ou modifie et que la vue est fermee : a la premiere modification apres l'ouverture de la fenetre, puis sur signal du mod Claude suivi-plan."
+        }
+      }
+    }
+  }
+}
