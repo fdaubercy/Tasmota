@@ -863,7 +863,9 @@ def modbusFonctions_envoieTeteUDP(item)
     var message = string.format("ModbusUDP %i %s", item["tid"], trame.tohex())
     modbusFonctions.log(string.format("POMPE_QUEUE: envoi UDP a l'esclave d'ID=%s (%s, IP %s) : %s", str(adresse), ip[1], ip[0], message), LOG_LEVEL_DEBUG_PLUS)
     if (!udpFonctions.envoiUDP("UniCast", ip[0], message))
-        modbusFonctions.log(string.format("POMPE_QUEUE: envoi UDP refuse vers %s -> renvoi programme", ip[0]), LOG_LEVEL_DEBUG)
+        # Un echec se logue en erreur (charte des logs) : chaque refus, pas seulement l'abandon apres
+        # MAX_TENTATIVES (echecEnvoi), pour retrouver les essais rates une fois le debug eteint.
+        modbusFonctions.log(string.format("POMPE_QUEUE: envoi UDP refuse vers %s -> renvoi programme", ip[0]), LOG_LEVEL_ERREUR)
         modbusFonctions.echecEnvoi(item)
         return
     end
@@ -2347,43 +2349,50 @@ def modbusFonctions_decrypteMSG(paramMSG, typeTitre)
     import crc
     import json
 
+    # Appelee a chaque trame recue (bus serie partage, UDP, TCP) : les messages "detail" ne sont
+    # construits que s'ils seront ecrits. Berry construit la chaine (string.format, str(liste)) AVANT
+    # d'appeler log() : sans cette garde, chaque trame allouait ~20 chaines aussitot jetees.
+    var detail = logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, "modbus")
+
     # Réception du message
-    modbusFonctions.log("DECRYPTE_MSG_MODBUS: -------------------- decrypteMSG -------------------", LOG_LEVEL_DEBUG_PLUS)
+    if detail    modbusFonctions.log("DECRYPTE_MSG_MODBUS: -------------------- decrypteMSG -------------------", LOG_LEVEL_DEBUG_PLUS)    end
     paramMSG[typeTitre]["Erreur"] = 0
     paramMSG[typeTitre]["Values"] = []
 
     # Parse la trame
     paramMSG[typeTitre]["DeviceAddress"] = paramMSG[typeTitre]["Trame"].get(0, -1)
-    modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: DeviceAddress = 0x%02X", paramMSG[typeTitre]["DeviceAddress"]), LOG_LEVEL_DEBUG_PLUS)
+    if detail    modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: DeviceAddress = 0x%02X", paramMSG[typeTitre]["DeviceAddress"]), LOG_LEVEL_DEBUG_PLUS)    end
 
     # Retourne 'Erreur=1' si l'adresse de l'esclave est incorrecte
     if (paramMSG[typeTitre]["DeviceAddress"] != drivers["ModBus"]["id"])
         # Refuse le message si l'ID de l'esclave ne correspond pas
         if (drivers["ModBus"].find("id", 0) > 0)  
             paramMSG[typeTitre]["Erreur"] = 1 
-            modbusFonctions.log("DECRYPTE_MSG_MODBUS: Ce n'est pas un message pour ce module !", LOG_LEVEL_DEBUG_PLUS)
-            return   
+            if detail    modbusFonctions.log("DECRYPTE_MSG_MODBUS: Ce n'est pas un message pour ce module !", LOG_LEVEL_DEBUG_PLUS)    end
+            return
         end
     end
 
     tasmota.yield()
     # Détermine la taille totale de la trame reçue
     paramMSG[typeTitre]["Length"] = paramMSG[typeTitre]["Trame"].size()
-    modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Taille totale de la trame : %i octets", paramMSG[typeTitre]["Length"]), LOG_LEVEL_DEBUG_PLUS) 
+    if detail    modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Taille totale de la trame : %i octets", paramMSG[typeTitre]["Length"]), LOG_LEVEL_DEBUG_PLUS)    end
 
     # Extrait & Supprime le CRC
     paramMSG[typeTitre]["CRC"] = paramMSG[typeTitre]["Trame"].get(paramMSG[typeTitre]["Length"] - 2, -2)
     paramMSG[typeTitre]["crcCalcule"] = modbusFonctions.crc16modbus(paramMSG[typeTitre]["Trame"].resize(paramMSG[typeTitre]["Trame"].size() - 2))
     
-    modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: CRC reçu = 0x%04X", paramMSG[typeTitre]["CRC"]), LOG_LEVEL_DEBUG_PLUS)
-    modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: CRC calculé = 0x%04X", paramMSG[typeTitre]["crcCalcule"]), LOG_LEVEL_DEBUG_PLUS)
+    if detail
+        modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: CRC reçu = 0x%04X", paramMSG[typeTitre]["CRC"]), LOG_LEVEL_DEBUG_PLUS)
+        modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: CRC calculé = 0x%04X", paramMSG[typeTitre]["crcCalcule"]), LOG_LEVEL_DEBUG_PLUS)
+    end
 
     tasmota.yield()
 
     # Retourne 'Erreur=2' si le CRC est inexacte
     if (paramMSG[typeTitre]["CRC"] != paramMSG[typeTitre]["crcCalcule"])
         paramMSG[typeTitre]["Erreur"] = 2
-        modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Le message ModBus reçu est incomplet & le CRC est inexacte = %04X", paramMSG[typeTitre]["CRC"]), LOG_LEVEL_DEBUG_PLUS)
+        if detail    modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Le message ModBus reçu est incomplet & le CRC est inexacte = %04X", paramMSG[typeTitre]["CRC"]), LOG_LEVEL_DEBUG_PLUS)    end
         return
     end
 
@@ -2399,16 +2408,18 @@ def modbusFonctions_decrypteMSG(paramMSG, typeTitre)
         # Transformation pour récupérer la fonction réelle
         paramMSG[typeTitre]["FunctionCode"] &= 0x7F
         paramMSG[typeTitre]["Automatique"] = true
-        modbusFonctions.log("DECRYPTE_MSG_MODBUS: Type de msg Modbus = Automatique", LOG_LEVEL_DEBUG_PLUS)
+        if detail    modbusFonctions.log("DECRYPTE_MSG_MODBUS: Type de msg Modbus = Automatique", LOG_LEVEL_DEBUG_PLUS)    end
     else
-        modbusFonctions.log("DECRYPTE_MSG_MODBUS: Type de msg Modbus = Réponse à un ordre", LOG_LEVEL_DEBUG_PLUS)
+        if detail    modbusFonctions.log("DECRYPTE_MSG_MODBUS: Type de msg Modbus = Réponse à un ordre", LOG_LEVEL_DEBUG_PLUS)    end
     end
 
     paramMSG[typeTitre]["FunctionName"] = modbusFonctions.tabFonctionsName[paramMSG[typeTitre]["FunctionCode"]]
     paramMSG[typeTitre]["StartAddress"] = paramMSG[typeTitre]["Trame"].get(2, -2)
 
-    modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: FunctionCode = 0x%02X ('%s')", paramMSG[typeTitre]["FunctionCode"], paramMSG[typeTitre]["FunctionName"]), LOG_LEVEL_DEBUG_PLUS)
-    modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: StartAddress = 0x%04X", paramMSG[typeTitre]["StartAddress"]), LOG_LEVEL_DEBUG_PLUS)
+    if detail
+        modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: FunctionCode = 0x%02X ('%s')", paramMSG[typeTitre]["FunctionCode"], paramMSG[typeTitre]["FunctionName"]), LOG_LEVEL_DEBUG_PLUS)
+        modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: StartAddress = 0x%04X", paramMSG[typeTitre]["StartAddress"]), LOG_LEVEL_DEBUG_PLUS)
+    end
 
     # MAITRE : REPONSE d'un esclave venue par le reseau (2026-10-17, commandes sans fil E3 ; en serie,
     # c'est le pont Tasmota qui decode). La forme standard d'une reponse differe de celle d'une requete :
@@ -2427,7 +2438,9 @@ def modbusFonctions_decrypteMSG(paramMSG, typeTitre)
             var nbOctets = trame.get(2, 1)
             if (longueur != 5 + nbOctets)
                 paramMSG[typeTitre]["Erreur"] = 6
-                modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: reponse de lecture incomplete : %i octets recus, %i attendus", longueur, 5 + nbOctets), LOG_LEVEL_DEBUG_PLUS)
+                # Reponse d'esclave rejetee : erreur (charte). Les appelants ne journalisent l'Erreur 6
+                # qu'en detail ; un datagramme UDP arrive entier, une longueur fausse est une vraie anomalie.
+                modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: reponse de lecture incomplete : %i octets recus, %i attendus", longueur, 5 + nbOctets), LOG_LEVEL_ERREUR)
                 return
             end
             paramMSG[typeTitre]["StartAddress"] = 0             # complete par apparieReponse, depuis la requete
@@ -2438,11 +2451,11 @@ def modbusFonctions_decrypteMSG(paramMSG, typeTitre)
                 for i: 0 .. (nbOctets / 2) - 1    paramMSG[typeTitre]["Values"].push(trame.get(3 + (i * 2), -2))    end
                 paramMSG[typeTitre]["Count"] = nbOctets / 2
             end
-            modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: reponse de lecture, Values = %s", str(paramMSG[typeTitre]["Values"])), LOG_LEVEL_DEBUG_PLUS)
+            if detail    modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: reponse de lecture, Values = %s", str(paramMSG[typeTitre]["Values"])), LOG_LEVEL_DEBUG_PLUS)    end
             return
         elif (fc == 0x10 && longueur == 8)
             paramMSG[typeTitre]["Count"] = trame.get(4, -2)
-            modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: reponse d'ecriture 0x10, %i registre(s)", paramMSG[typeTitre]["Count"]), LOG_LEVEL_DEBUG_PLUS)
+            if detail    modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: reponse d'ecriture 0x10, %i registre(s)", paramMSG[typeTitre]["Count"]), LOG_LEVEL_DEBUG_PLUS)    end
             return
         end
     end
@@ -2452,26 +2465,30 @@ def modbusFonctions_decrypteMSG(paramMSG, typeTitre)
     if (paramMSG[typeTitre]["FunctionName"] == "LECTURE_COILS" || paramMSG[typeTitre]["FunctionName"] == "LECTURE_ENTREES_DISCRETES" || paramMSG[typeTitre]["FunctionName"] == "LECTURE_REGISTRES_HOLDER" || paramMSG[typeTitre]["FunctionName"] == "LECTURE_REGISTRES_ENTREES")
         # Détermine le nombre d'octets de données attendus
         paramMSG[typeTitre]["Count"] = paramMSG[typeTitre]["Trame"].get(4, -2)
-        modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Count (Nb. octets demandés) = %i", paramMSG[typeTitre]["Count"]), LOG_LEVEL_DEBUG_PLUS)
+        if detail    modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Count (Nb. octets demandés) = %i", paramMSG[typeTitre]["Count"]), LOG_LEVEL_DEBUG_PLUS)    end
 
         # Sort de la fonction si la longueur de la trame reçue est != 8 octets
         if (paramMSG[typeTitre]["Length"] != 8)
             paramMSG[typeTitre]["Erreur"] = 6
-            modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Le message ModBus reçu est incomplet ! Longueur reçue = %i octets | Longueur attendue = %i octets", 
-                                                paramMSG[typeTitre]["Length"], 8), LOG_LEVEL_DEBUG_PLUS)
+            if detail
+                modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Le message ModBus reçu est incomplet ! Longueur reçue = %i octets | Longueur attendue = %i octets",
+                                                    paramMSG[typeTitre]["Length"], 8), LOG_LEVEL_DEBUG_PLUS)
+            end
             return
         end
     # FunctionCode = 0x05 | 0x06 (Ecriture de la valeur de relais)
     elif (paramMSG[typeTitre]["FunctionName"] == "ECRITURE_COIL_UNIQUE" || paramMSG[typeTitre]["FunctionName"] == "ECRITURE_REGISTRE_UNIQUE")
         # Détermine le nombre d'octets de données attendus
         paramMSG[typeTitre]["Count"] = 2
-        modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Count (Nb. octets demandés) = %i", paramMSG[typeTitre]["Count"]), LOG_LEVEL_DEBUG_PLUS)
+        if detail    modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Count (Nb. octets demandés) = %i", paramMSG[typeTitre]["Count"]), LOG_LEVEL_DEBUG_PLUS)    end
 
         # Sort de la fonction si la longueur de la trame reçue est != 8 octets
         if (paramMSG[typeTitre]["Length"] != 8)
             paramMSG[typeTitre]["Erreur"] = 6
-            modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Le message ModBus reçu est incomplet ! Longueur reçue = %i octets | Longueur attendue = %i octets", 
-                                                paramMSG[typeTitre]["Length"], 8), LOG_LEVEL_DEBUG_PLUS)
+            if detail
+                modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Le message ModBus reçu est incomplet ! Longueur reçue = %i octets | Longueur attendue = %i octets",
+                                                    paramMSG[typeTitre]["Length"], 8), LOG_LEVEL_DEBUG_PLUS)
+            end
             return
         end
 
@@ -2481,7 +2498,7 @@ def modbusFonctions_decrypteMSG(paramMSG, typeTitre)
     elif (paramMSG[typeTitre]["FunctionName"] == "ECRITURE_REGISTRES_HOLDER")
         # Détermine le nombre de registres de données à écrire
         paramMSG[typeTitre]["Count"] = paramMSG[typeTitre]["Trame"].get(4, -2)
-        modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Count (Nb. registres à écrire) = %i", paramMSG[typeTitre]["Count"]), LOG_LEVEL_DEBUG_PLUS)
+        if detail    modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Count (Nb. registres à écrire) = %i", paramMSG[typeTitre]["Count"]), LOG_LEVEL_DEBUG_PLUS)    end
 
         # Détermine le nombre d'octets/donnee à écrire
         paramMSG[typeTitre]["type"] = int(paramMSG[typeTitre]["Trame"].get(6, -1) / paramMSG[typeTitre]["Count"])
@@ -2491,13 +2508,15 @@ def modbusFonctions_decrypteMSG(paramMSG, typeTitre)
                 break
             end
         end
-        modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Type = %s", paramMSG[typeTitre]["type"]), LOG_LEVEL_DEBUG_PLUS)
+        if detail    modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Type = %s", paramMSG[typeTitre]["type"]), LOG_LEVEL_DEBUG_PLUS)    end
 
         # Sort de la fonction si la longueur de la trame reçue est != (9 + Count) octets
         if (paramMSG[typeTitre]["Length"] != (9 + (paramMSG[typeTitre]["Count"] * 2)))
             paramMSG[typeTitre]["Erreur"] = 6
-            modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Le message ModBus reçu est incomplet ! Longueur reçue = %i octets | Longueur attendue = %i octets", 
-                                                paramMSG[typeTitre]["Length"], (9 + (paramMSG[typeTitre]["Count"] * 2))), LOG_LEVEL_DEBUG_PLUS)
+            if detail
+                modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Le message ModBus reçu est incomplet ! Longueur reçue = %i octets | Longueur attendue = %i octets",
+                                                    paramMSG[typeTitre]["Length"], (9 + (paramMSG[typeTitre]["Count"] * 2))), LOG_LEVEL_DEBUG_PLUS)
+            end
             return
         end
 
@@ -2506,7 +2525,7 @@ def modbusFonctions_decrypteMSG(paramMSG, typeTitre)
         end
     end
 
-    modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Values = %s", str(paramMSG[typeTitre]["Values"])), LOG_LEVEL_DEBUG_PLUS)
+    if detail    modbusFonctions.log(string.format("DECRYPTE_MSG_MODBUS: Values = %s", str(paramMSG[typeTitre]["Values"])), LOG_LEVEL_DEBUG_PLUS)    end
 end
 modbusFonctions.decrypteMSG = modbusFonctions_decrypteMSG
 
