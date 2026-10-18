@@ -159,6 +159,13 @@ n'ont ni l'historique ni la page (fichiers exclus de leur LittleFS) : leurs cour
 d'après le nom (`temperature` → °C, `hauteur` → cm, `volume` → L, `taux` → %). `facteur` multiplie la
 valeur affichée (0-1 → %). `%topic%` est remplacé par le topic de la carte ; sans `grafana`, pas de bouton.
 
+**Carte sans historique local** (ESP32 classique, ou historique à `OFF`) : la même clé `grafana`, dans un bloc
+`"historique": {"grafana": "…"}`, ajoute à la page d'accueil un bouton **Historique (Grafana)** qui ouvre
+directement le tableau (`controleWeb.boutonGrafana`, commun à toutes les cartes ; module solidifié : il faut
+le firmware recompilé). Il n'apparaît pas là où l'historique est actif, le bouton « Graphiques » y menant
+déjà. Clé non posée sur la cave et le bureau (décidé le 2026-10-18) : le tableau `historique-cuve` n'a que
+des panneaux de cuve, leurs courbes y seraient vides.
+
 ### Vérifier
 
 - `/histo?p=liste`, `/histo?p=jour`, `/histo?p=mois&m=AAAA-MM` donnent le JSON brut. En `curl`, ajouter

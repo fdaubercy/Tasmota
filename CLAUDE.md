@@ -415,7 +415,8 @@ Pour ne pas chercher : ce qui a ete produit et ou.
 - Graphiques des cartes S3/P4 (2026-10-18) : page `/graphiques` (bouton d'accueil) servie par
   `data/fs/graphiquesFonctions.be` (route et bouton declares par le driver `HISTORIQUE_WEB` de
   `historiqueFonctions.be`), logique `data/sd/js/graphiques.js`, uPlot dans `data/sd/js/` et `data/sd/css/` ;
-  reglages `diverses.historique.affichage` / `.grafana`. Mode d'emploi : `outils_docs/README.md` § « Les graphiques
+  reglages `diverses.historique.affichage` / `.grafana` ; sans historique actif, la cle `.grafana` donne un bouton
+  « Historique (Grafana) » sur l'accueil (`controleWeb.boutonGrafana`, solidifie, toutes les cartes). Mode d'emploi : `outils_docs/README.md` § « Les graphiques
   des mesures » ; banc `berry/banc_graphiques.py` (+ `.be`, `bouchons_berry/graphiques/`) ; plan `tasks/plans/graphiques-web.md`.
 - `outils_docs/SOLIDIFICATION_BERRY.md` — mecanisme, verification (§5), parametres, 11 pieges.
 - `outils_docs/PROTOCOLE_MODBUS.md` — ModBus RTU/TCP standard, implementation maison (3 transports

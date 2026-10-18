@@ -39,6 +39,7 @@ class TASMOTA_BOUCHON
     def add_cron() end
     def add_cmd() end
     def add_driver() end
+    def add_rule() end
     def cmd(c, muet) return (c == "Topic" ? {"Topic": self.topic} : nil) end
 end
 tasmota = TASMOTA_BOUCHON()
@@ -193,5 +194,60 @@ var sansGarage = [29.4, 0.0, 0.0, 0.0]
 var leve = false
 try historiqueFonctions.filtres[0](chemins, sansGarage) except .. leve = true end
 verifie(!leve && str(sansGarage) == str([29.4, nil, nil, nil]), "modules sans bloc garage : pas d'exception (la mesure de la minute est gardee)")
+
+# ---- Bouton « Historique (Grafana) » de l'accueil (controleWeb.be, toutes les cartes, A7) --------------
+# Globales lues par controleWeb.be, declarees AVANT de le compiler (sinon « undeclared »)
+class CONTROLE_GENERAL_BOUCHON var nbIOActivesJSON def init() self.nbIOActivesJSON = {"WS2812": {"actives": {}, "reels": {}}} end end
+controleGeneral = CONTROLE_GENERAL_BOUCHON()
+boolMute = true
+serveur = {}
+diverses = {}
+charge(SOURCES + "/controleWeb.be")
+var accueilWeb = global.controleWeb.CONTROLE_WEB()   # global : controleWeb est cree par le fichier charge
+def accueil(div)
+    diverses = div
+    var f = open(SORTIE + "/accueil.html", "wb")
+    webserver.sortie = f
+    webserver.raz()
+    var leve = nil
+    try accueilWeb.web_add_main_button() except .. as e, m leve = str(e) + " : " + str(m) end
+    f.close()
+    f = open(SORTIE + "/accueil.html", "r")
+    var html = f.read()
+    f.close()
+    return (leve != nil ? "EXCEPTION " + leve : html)
+end
+def persistReel(chemin)
+    var fp = open(chemin, "r")
+    var d = json.load(fp.read())["diverses"]
+    fp.close()
+    return d
+end
+var URL_TEST = "http://pi:3000/d/x?var-appareil=%topic%"
+tasmota.topic = "cave/serveur-rly-cave"
+var html = accueil({"historique": {"grafana": URL_TEST}})
+verifie(string.find(html, "Historique (Grafana)") > 0 &&
+        string.find(html, "window.open(\"http://pi:3000/d/x?var-appareil=cave/serveur-rly-cave\",\"_blank\",\"noopener\")") > 0,
+        "carte sans historique local + cle grafana : bouton, topic remplace")
+verifie(string.find(accueil({"historique": {"activation": "OFF", "grafana": URL_TEST}}), "Historique (Grafana)") > 0,
+        "historique a OFF + cle grafana : bouton")
+verifie(accueil({"historique": {"activation": "ON", "grafana": URL_TEST}}) == "",
+        "historique local actif : pas de bouton (le bouton Graphiques y mene deja)")
+verifie(accueil({"historique": {"activation": "OFF"}}) == "" && accueil({}) == "" && accueil({"historique": {"grafana": ""}}) == "",
+        "pas de cle grafana (ou vide) : rien d'envoye")
+verifie(accueil(nil) == "", "globale diverses absente : rien d'envoye, pas d'exception")
+verifie(accueil({"historique": nil}) == "" && accueil({"historique": "x"}) == "",
+        "bloc historique null ou pas une map : rien d'envoye, l'accueil n'est pas casse")
+tasmota.topic = "garage"
+html = accueil({"historique": {"grafana": "http://pi/d/x?a='b'&c=\"d\"<e"}})
+var debutAttr = string.find(html, "onclick='")
+verifie(debutAttr > 0 && string.count(html, "'") == 2 && string.find(html, "<e") < 0 && string.find(html, "%27b%27") > 0,
+        "guillemet simple et chevron de l'URL neutralises dans l'attribut onclick")
+verifie(accueil(persistReel("data/garage/tasmota32p4-serveur-modbus/_persist.json")) == "" &&
+        accueil(persistReel("data/garage/tasmota32s3-capteurs-cuve-modbus/_persist.json")) == "",
+        "persists reels du P4 et de la cuve (historique actif) : pas de bouton en double")
+verifie(accueil(persistReel("data/cave/tasmota32-serveur-rly/_persist.json")) == "" &&
+        accueil(persistReel("data/bureau/tasmota32-interrupteur-differentiel/_persist.json")) == "",
+        "persists reels des ESP32 classiques (pas de cle grafana, decision du 2026-10-18) : pas de bouton")
 
 print(echecs == 0 ? "BANC_GRAPHIQUES: OK" : "BANC_GRAPHIQUES: ECHEC (" + str(echecs) + ")")

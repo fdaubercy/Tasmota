@@ -397,6 +397,33 @@ class CONTROLE_WEB
             import ledsPanelFonctions
             ledsPanelFonctions.afficheSectionLocale()
         end
+
+        self.boutonGrafana()
+    end
+
+    # Bouton « Historique (Grafana) » de l'accueil, commun a toutes les cartes (2026-10-18, plan
+    # graphiques-web A7) : cle facultative diverses.historique.grafana (URL, %topic% = topic de la carte).
+    # Affiche SEULEMENT si l'historique local est inactif : sur les S3/P4 a historique, le bouton
+    # « Graphiques » (historiqueFonctions) mene a /graphiques, qui porte deja ce lien.
+    # Remplacement de %topic% DUPLIQUE de graphiquesFonctions.urlGrafana, a ne pas factoriser : ce module-ci
+    # est solidifie et sert aussi les ESP32 classiques, graphiquesFonctions n'est que sur le LittleFS des S3/P4.
+    def boutonGrafana()
+        var historique = (isinstance(diverses, map) ? diverses.find("historique") : nil)
+        if (!isinstance(historique, map))    return    end
+        var url = historique.find("grafana", "")
+        if (url == "" || url == nil || historique.find("activation", "OFF") == "ON")    return    end
+
+        import webserver
+        import string
+        import json
+        url = str(url)
+        if (string.find(url, "%topic%") > -1)
+            var reponse = tasmota.cmd("Topic", true)
+            url = string.replace(url, "%topic%", (isinstance(reponse, map) ? str(reponse.find("Topic", "")) : ""))
+        end
+        # L'URL est posee dans un attribut onclick='...' : guillemet simple et chevron neutralises
+        url = string.replace(string.replace(url, "'", "%27"), "<", "%3C")
+        webserver.content_send("<p></p><button onclick='window.open(" + json.dump(url) + ",\"_blank\",\"noopener\")'>Historique (Grafana)</button>")
     end
 
 	#- Création de boutons dans le menu 'Tools' -#
