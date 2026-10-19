@@ -119,6 +119,26 @@ verifie(!A("sensorsCuve.valeursAnalogiques.valeurCapteurHauteur", C) && A("senso
         && A("sensorsCuve.valeursAnalogiquesX.y", C), "'exclues' : debut de chemin par segment entier")
 verifie(!A("hauteurEau", {}) && !A("Time", {}), "feuille de premier niveau refusee (anciens noms d'avant la decouverte)")
 verifie(!A("DS18B20.Id", {}) && !A("x.TempUnit", {}), "cles techniques refusees (Id, TempUnit)")
+# Relecture A8 (2026-10-19) : le filtre ne depend pas de la casse, ni d'un nom exact
+verifie(!A("Relais.R1", {}) && !A("x.Relays.r1", {}) && !A("x.relay1", {}) && !A("x.Power1", {}) && !A("x.power2", {})
+        && !A("TasmotaSlaveModBus.S1.Relais.r", {}), "relais refuses quelle que soit la casse (Relais, Relays, relay1, Power1, power2)")
+verifie(!A("x.Entrees.E1", {}) && !A("x.entrees.e1", {}) && !A("x.inputs.i1", {}) && !A("x.switch1", {}) && !A("x.BUTTON2", {})
+        && !A("TasmotaSlaveModBus.S1.entrees.e", {}), "entrees refusees quelle que soit la casse (Entrees, inputs, switch1, BUTTON2)")
+verifie(!A("PWM.PWM1", {}) && !A("A.PWM1", {}) && !A("A.Dimmer", {}) && !A("x.shutter1", {}), "actionneurs refuses (PWM, Dimmer, shutter)")
+verifie(A("ENERGY.Power", {}) && A("x.PowerFactor", {}) && A("x.ApparentPower", {}) && A("x.Pressure", {}),
+        "mesures dont le nom contient power ou pres de relais : acceptees (ENERGY.Power, PowerFactor, ApparentPower)")
+verifie(!A("Relais.R1", {"ajouts": ["Relais.R1"], "exclues": ["Relais.R1"]}) && !A("ESP32.Temperature", {"ajouts": ["ESP32.Temperature"], "exclues": ["ESP32"]}),
+        "'exclues' l'emporte sur 'ajouts'")
+verifie(!A("@POWER1", {"ajouts": ["@POWER1"]}) && !A("@Power1", {"ajouts": ["@Power1"]}) && !A("@foo", {"ajouts": ["@foo"]})
+        && A("@heap", {"ajouts": ["@heap"]}), "source interne : seules @rssi et @heap, meme dans 'ajouts'")
+var leveMax = nil
+var choixMax = nil
+for v: [nil, [], {}, "abc", "x"]
+    try choixMax = historiqueSeries.choisit(SENSOR, {"seriesMax": v}, nil) except .. as e, m leveMax = str(e) + " " + str(m) end
+end
+verifie(leveMax == nil && size(choixMax) >= 1, "seriesMax mal type (null, liste, map, texte) : pas d'exception")
+verifie(size(historiqueSeries.choisit(SENSOR, {"seriesMax": nil}, nil)) == size(historiqueSeries.choisit(SENSOR, {}, nil)),
+        "seriesMax null : defaut 12")
 
 # ---- 2. Decouverte dans le JSON SENSOR ----------------------------------------------------------
 print("2. Decouverte (historiqueSeries.choisit)")
@@ -340,5 +360,22 @@ var S5 = json.load(json.dump(SENSOR))
 S5["SHT3X"] = {"Temperature": 18.0, "Humidity": 60.0}
 historiqueFonctions.choisitSeries(S5, historiqueFonctions.chemins)
 verifie(historiqueFonctions.cacheDirect == nil, "nouvel historique : cache du direct lache (ancien tampon RAM liberable)")
+# Relecture A8 (2026-10-19) : tampon du nouvel historique impossible a allouer (RAM basse) -> pas d'etat incoherent
+var classeHistorique = historiqueFonctions.HISTORIQUE
+historiqueFonctions.HISTORIQUE = def (nom, chemins, config) raise "memory_error", "bytes" end
+var S6 = json.load(json.dump(S5))
+S6["BMP280"] = {"Pressure": 1013.2}
+var leveCreation = nil
+var recree = nil
+avantLog = size(journal)
+try recree = historiqueFonctions.choisitSeries(S6, historiqueFonctions.chemins) except .. as e, m leveCreation = str(e) + " " + str(m) end
+historiqueFonctions.HISTORIQUE = classeHistorique
+verifie(leveCreation == nil && recree == false && historiqueFonctions.chemins == nil && dernierLog("HISTORIQUE_ERREUR") != nil,
+        "creation impossible : pas d'exception, chemins remis a nil (redecouverte a la releve suivante), erreur journalisee")
+tasmota.capteurs = json.dump(S6)
+tasmota.ms += 60000
+historiqueFonctions.releve()
+verifie(historiqueFonctions.instances.find("mesures") != nil && historiqueFonctions.chemins != nil
+        && historiqueFonctions.chemins.find("BMP280.Pressure") != nil, "releve suivante : historique recree avec les nouvelles series")
 
 print(echecs == 0 ? "BANC_HISTORIQUE: OK" : "BANC_HISTORIQUE: ECHEC (" + str(echecs) + ")")

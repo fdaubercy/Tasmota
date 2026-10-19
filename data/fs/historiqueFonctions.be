@@ -367,12 +367,19 @@ def historiqueFonctions_choisitSeries(donnees, anciens)
     var avant = historiqueFonctions.chemins
     if (size(chemins) == 0 || (avant != nil && chemins == avant))    return false    end
 
-    historiqueFonctions.chemins = chemins
     # L'ancien historique est lache AVANT d'allouer le tampon du nouveau : pas deux tampons RAM a la fois
-    # (le cache du temps reel le tient aussi)
+    # (le cache du temps reel le tient aussi). Allocation impossible (RAM basse) : chemins remis a nil, la
+    # releve suivante refait la decouverte au lieu de mesurer dans un historique absent.
     historiqueFonctions.cacheDirect = nil
     historiqueFonctions.instances.remove("mesures")
-    historiqueFonctions.HISTORIQUE("mesures", chemins, historiqueFonctions.config)
+    historiqueFonctions.chemins = nil
+    try
+        historiqueFonctions.HISTORIQUE("mesures", chemins, historiqueFonctions.config)
+    except .. as erreur, message
+        logFonctions.log(string.format("HISTORIQUE_ERREUR: Historique non cree (%i series) -> %s %s !", size(chemins), erreur, message), LOG_LEVEL_ERREUR)
+        return false
+    end
+    historiqueFonctions.chemins = chemins
     if (avant == nil)
         logFonctions.log(string.format("HISTORIQUE: Series enregistrees : %s !", json.dump(chemins)), LOG_LEVEL_INFO)
     else
