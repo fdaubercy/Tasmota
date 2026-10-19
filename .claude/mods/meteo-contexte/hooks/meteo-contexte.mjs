@@ -18,7 +18,7 @@
 // L'hote lit on(...) et $.nom.methode(...) dans le source : les ecrire en toutes lettres, et les
 // aides qui recoivent $ sont des fonctions de premier niveau.
 
-const SEUIL = 50;            // % de contexte a partir duquel le bouton apparait (choix du 2026-10-18)
+const SEUIL = 45;            // % de contexte a partir duquel le bouton apparait (50 le 2026-10-18, 45 depuis)
 const CASES = 20;            // largeur de la barre
 const COMMANDE = "fin-de-session";
 const PANE = "passation";
