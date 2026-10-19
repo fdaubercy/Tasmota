@@ -133,8 +133,11 @@
                         Illuminance: 'lx', Power: 'W', ApparentPower: 'VA', ReactivePower: 'var', Voltage: 'V',
                         Current: 'A', Total: 'kWh', Today: 'kWh', Yesterday: 'kWh', Frequency: 'Hz', CarbonDioxide: 'ppm',
                         eCO2: 'ppm', TVOC: 'ppb', Distance: 'mm'};
+  // Entree analogique relayee par ModBus (TasmotaSlaveModBus.<esclave>.ANALOG.A<n>) : entier lu sur l'esclave, en mV
+  // (ADS1115) ; l'ANALOG natif de la carte (ANALOG.A<n>) est une valeur brute de l'ADC, sans unite (decide le 2026-10-19)
   function devineUnite(nom) {
-    var cle = nom.split('.').pop();
+    var s = nom.split('.'), cle = s[s.length - 1];
+    if (s[0] === 'TasmotaSlaveModBus' && s[s.length - 2] === 'ANALOG' && /^A\d+$/.test(cle)) return 'mV';
     if (UNITES_TASMOTA.hasOwnProperty(cle)) return UNITES_TASMOTA[cle];
     var n = nom.toLowerCase();
     if (/temp/.test(n)) return '°C';

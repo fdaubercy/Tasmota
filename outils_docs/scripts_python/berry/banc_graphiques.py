@@ -80,19 +80,33 @@ def trouve_navigateur():
 
 # ---- Reponses /histo fixes ---------------------------------------------------------------------
 def jour():
-    """6 series du P4 ; l'entree de l'esclave avec un trou de 20 pas, la sonde absente, le reste en rampe."""
+    """6 series du P4 ; l'entree de l'esclave avec un trou de 20 pas, la sonde entre 20 et 22 °C, le reste en rampe."""
     v = []
     for nom in SERIES_P4:
         if nom == ESCLAVE:
             v.append([None if 100 <= i < 120 else round(28 + (i % 50) / 25, 2) for i in range(288)])
         elif nom == "DS18B20.Temperature":
-            v.append([None] * 288)
+            v.append([round(20 + (i % 50) / 25, 2) for i in range(288)])
         else:
             v.append([round(i / 10, 2) for i in range(288)])
     # pas en cours (pas encore clos) : la page l'ajoute en dernier point
-    encours = [29.0 if nom == ESCLAVE else None if nom == "DS18B20.Temperature" else 28.8 for nom in SERIES_P4]
+    encours = [29.0 if nom == ESCLAVE else 21.0 if nom == "DS18B20.Temperature" else 28.8 for nom in SERIES_P4]
     return {"nom": "mesures", "series": SERIES_P4, "pas": 300, "t0": T0, "valeurs": v,
             "tEncours": T0 + 288 * 300, "encours": encours}
+
+
+# Unites devinees : une serie par cas, sans reglage 'affichage' sauf l'humidite (unite imposee, prioritaire)
+SERIES_UNITES = ["DS18B20.Temperature", "AM2301.Humidity", "BMP280.Pressure", "BH1750.Illuminance", "ANALOG.A1",
+                 "TasmotaSlaveModBus.TasmotaSlaveModBus1.ANALOG.A2", "ENERGY.Voltage", "sensorsCuve.niveauCuve.hauteurEau"]
+AFFICHAGE_UNITES = {"AM2301.Humidity": {"unite": "%HR"}}
+LEGENDES_UNITES = ["DS18B20 Temperature (°C)", "AM2301 Humidity (%HR)", "BMP280 Pressure (hPa)", "BH1750 Illuminance (lx)",
+                   "ANALOG A1", "Capteurs Cuve ModBus ANALOG A2 (mV)", "ENERGY Voltage (V)",
+                   "sensorsCuve niveauCuve hauteurEau (cm)"]
+
+
+def jour_unites():
+    return {"nom": "mesures", "series": SERIES_UNITES, "pas": 300, "t0": T0,
+            "valeurs": [[round(10 + k + i / 100, 2) for i in range(288)] for k in range(len(SERIES_UNITES))]}
 
 
 def mois(m):
@@ -156,6 +170,11 @@ def serveur(scenario, page, echarts_gz):
                     injecte += "localStorage.setItem('graphiques-direct', '%s');" % CADENCE[scenario]
                 if scenario == "rafraichi":       # relecture chaque seconde au lieu de 60 s
                     corps = corps.replace(b'"rafraichissement":60', b'"rafraichissement":1')
+                if scenario == "unites":           # reglages de la page remplaces : seule l'humidite a une unite imposee
+                    debut = corps.index(b"window.GRAPHIQUES=")
+                    fin = corps.index(b";</script>", debut)
+                    corps = corps[:fin] + (";window.GRAPHIQUES.affichage=%s;window.GRAPHIQUES.groupes={}"
+                                           % json.dumps(AFFICHAGE_UNITES)).encode() + corps[fin:]
                 if scenario == "masquees":
                     injecte += "localStorage.setItem('graphiques-masquees', JSON.stringify(['%s', 'sensorsCuve.niveauCuve.volume']));" % ESCLAVE
                 if injecte:
@@ -165,6 +184,9 @@ def serveur(scenario, page, echarts_gz):
                 if scenario == "absent":
                     return self.envoie(404, "application/json", '{"erreur":"historique inconnu","noms":[]}')
                 p = q.get("p")
+                if scenario == "unites" and p in ("liste", "jour"):
+                    return self.envoie(200, "application/json", json.dumps(
+                        {"nom": "mesures", "series": SERIES_UNITES, "mois": []} if p == "liste" else jour_unites()))
                 if p == "liste":
                     return self.envoie(200, "application/json", json.dumps(LISTE))
                 if p == "mois":
@@ -219,7 +241,7 @@ def lis_dom(dom):
 
 
 # Attendus par scenario : (description, fonction du DOM lu, des requetes et de l'instant du rendu (ms) -> vrai si conforme)
-MESURES_P4 = ["Température de l'eau (°C)", "Capteurs Cuve ModBus ANALOG A1", "Capteur de hauteur (mV)"]
+MESURES_P4 = ["Température de l'eau (°C)", "Capteurs Cuve ModBus ANALOG A1 (mV)", "Capteur de hauteur (mV)"]
 CUVE_P4 = ["Hauteur d'eau (cm)", "Remplissage (%)", "Volume (L)"]
 OPTIONS = ["24 dernières heures", "Septembre 2026", "Août 2026 (ancienne liste de séries)",
            "Direct : arrêt", "Direct : 2 s", "Direct : 5 s", "Direct : 10 s", "Direct : 30 s", "Direct : 1 min"]
@@ -233,11 +255,11 @@ ATTENDUS = {
         ("sélecteurs : 24 h + mois du plus récent au plus ancien, cadences du direct", lambda d, r, t: d["options"] == OPTIONS),
         ("cadence par défaut 10 s : une seule lecture directe en 8 s, tout de suite", lambda d, r, t: nb_direct(r) == 1),
         ("valeur directe tracée après le pas en cours (288 pas + en cours + direct)", lambda d, r, t: d["fins"] == [TD] * 2 and all(g["points"] == 290 for g in d["graphiques"])),
-        ("dernières valeurs = valeurs directes (ANALOG 29,5 ; taux 28,9 x 100)", lambda d, r, t: d["graphiques"][0]["derniers"]["Capteurs Cuve ModBus ANALOG A1"] == 29.5 and d["graphiques"][1]["derniers"]["Remplissage (%)"] == 2890),
+        ("dernières valeurs = valeurs directes (ANALOG 29,5 ; taux 28,9 x 100)", lambda d, r, t: d["graphiques"][0]["derniers"]["Capteurs Cuve ModBus ANALOG A1 (mV)"] == 29.5 and d["graphiques"][1]["derniers"]["Remplissage (%)"] == 2890),
         ("axe des temps prolongé jusqu'à l'heure du navigateur", lambda d, r, t: all(g["axe_x"][1] >= t - 2000 for g in d["graphiques"])),
-        ("échelle Y ajustée aux valeurs (ANALOG 28-30 : bas > 27, pas 0)", lambda d, r, t: d["echelles"][0][""][0] > 27 and d["echelles"][0][""][1] < 31),
+        ("échelle Y ajustée aux valeurs (sonde 20-22 °C : bas > 19, pas 0)", lambda d, r, t: 19 < d["echelles"][0]["°C"][0] < 20 and 22 < d["echelles"][0]["°C"][1] < 23),
         ("échelle Y de valeurs positives qui partent de 0 : pas sous zéro", lambda d, r, t: d["echelles"][0]["mV"][0] == 0 and d["echelles"][1]["cm"][0] == 0),
-        ("un axe Y par unité (Mesures : °C, sans unité, mV)", lambda d, r, t: sorted(d["echelles"][0]) == sorted(["°C", "", "mV"])),
+        ("un axe Y par unité (Mesures : °C et mV, l'entrée ModBus partageant l'axe mV)", lambda d, r, t: sorted(d["echelles"][0]) == sorted(["°C", "mV"])),
         ("bouton Grafana visible, aucun message", lambda d, r, t: d["grafana"] and d["message"] == ""),
         ("Referer de la page sur chaque /histo (exigé par Tasmota)", lambda d, r, t: all(ref and ref.endswith("/graphiques") for p, ref in r if p.startswith("/histo"))),
     ],
@@ -269,6 +291,10 @@ ATTENDUS = {
     ],
     "direct_rapide": [
         ("cadence 2 s mémorisée : lectures répétées, points ajoutés au bout des courbes", lambda d, r, t: nb_direct(r) >= 3 and d["fins"][0] >= TD + 20 and d["graphiques"][0]["points"] >= 292),
+    ],
+    "unites": [
+        ("unités devinées de la dernière clé, ANALOG ModBus en mV, ANALOG natif sans unité, 'affichage' prioritaire", lambda d, r, t: d["nb"] == 1 and d["series"][0] == LEGENDES_UNITES),
+        ("un axe Y par unité devinée", lambda d, r, t: sorted(d["echelles"][0]) == sorted(["°C", "%HR", "hPa", "lx", "", "mV", "V", "cm"])),
     ],
     "vide": [
         ("aucun pas clos : message", lambda d, r, t: d["nb"] == 0 and d["message"].startswith("Aucun pas de mesure")),

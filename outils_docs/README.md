@@ -209,7 +209,9 @@ seulement (rien en RAM le reste du temps). Facultatif.
 
 Sans `affichage`, libellé = chemin de la série (esclave ModBus remplacé par son nom du persist) et unité
 devinée de sa dernière clé (`Temperature` → °C, `Humidity` → %, `Pressure` → hPa…) ou de son nom
-(`hauteur` → cm, `volume` → L, `taux` → %) ; l'unité d'un compteur réglé vient de `compteurs`. `facteur`
+(`hauteur` → cm, `volume` → L, `taux` → %) ; une entrée analogique relayée par ModBus
+(`TasmotaSlaveModBus.<esclave>.ANALOG.A<n>`) est en mV, l'`ANALOG` natif de la carte (valeur brute de l'ADC)
+reste sans unité ; l'unité d'un compteur réglé vient de `compteurs`. `facteur`
 multiplie la valeur affichée (0-1 → %). `groupes` : titre → débuts de chemin ; chaque groupe a son
 graphique, les autres séries vont dans « Mesures ». `rafraichissement` : relecture de l'historique affiché, en
 secondes (10 au minimum). `direct` : cadence par défaut du temps réel (0 = arrêt, 2, 5, 10, 30 ou 60 s).
