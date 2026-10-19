@@ -36,7 +36,7 @@ class TASMOTA_BOUCHON
     def yield() end
     def add_cron(motif, f, nom) self.crons.push(nom) end
     def add_driver() end
-    def read_sensors() return self.capteurs end
+    def read_sensors() if (self.capteurs == "LEVE")    raise "io_error", "capteur bloque"    end return self.capteurs end
     def rtc() return {"utc": self.utc} end
     def millis() return self.ms end
     def wifi() return {"rssi": -61} end
@@ -257,5 +257,88 @@ historiqueFonctions.ajouteFiltre(def (c, v) raise "value_error", "filtre casse" 
 historiqueFonctions.releve()
 verifie(dernierLog("HISTORIQUE_RELEVE_ERREUR") != nil && dernierLog("HISTORIQUE_RELEVE_ERREUR")[1] == LOG_LEVEL_ERREUR,
         "exception d'un filtre : une ligne HISTORIQUE_RELEVE_ERREUR")
+
+# ---- 5. /histo?p=jour : le pas en cours est livre (la page suit l'heure reelle) -----------------
+print("5. /histo?p=jour : pas en cours (encours, tEncours)")
+import webserver
+def jour(nom)
+    webserver.raz({"p": "jour", "n": nom})
+    webserver.sortie = open(SORTIE + "/jour_" + nom + ".json", "wb")
+    historiqueFonctions.page()
+    webserver.sortie.close()
+    var f = open(SORTIE + "/jour_" + nom + ".json", "r")
+    var texte = f.read()
+    f.close()
+    var d = json.load(texte)
+    if (d == nil)    print("    JSON illisible : " + texte[0 .. 200])    end
+    return d
+end
+var h = historiqueFonctions.instances["mesures"]
+var jj = jour("mesures")
+var iT = h.series.find("DS18B20.Temperature")
+var iH = h.series.find("AM2301.Humidity")
+verifie(jj != nil && jj.find("tEncours") == h.pasCourant * h.pas, "tEncours = debut du pas en cours (epoch UTC)")
+verifie(jj != nil && size(jj.find("encours", [])) == h.nbSeries && jj["encours"][iT] == 12.5 && jj["encours"][iH] == nil,
+        "encours = moyenne du pas en cours par serie (12,5), null sans mesure (AM2301 muet)")
+verifie(jj != nil && size(jj["valeurs"]) == h.nbSeries && size(jj["valeurs"][0]) == h.nbPoints,
+        "valeurs des pas clos inchangees (nbPoints par serie)")
+historiqueFonctions.HISTORIQUE("vierge", ["DS18B20.Temperature"], CONFIG)
+var jv = jour("vierge")
+verifie(jv != nil && jv.find("tEncours", 0) == nil && size(jv.find("encours", [0])) == 0 && jv["t0"] == nil,
+        "historique sans mesure : tEncours null, encours vide")
+
+# ---- 6. /histo?p=direct : valeurs actuelles (graphiques en temps reel) ---------------------------
+print("6. /histo?p=direct : valeurs actuelles, lecture des capteurs en cache 4 s")
+def direct()
+    webserver.raz({"p": "direct", "n": "mesures"})
+    webserver.sortie = open(SORTIE + "/direct.json", "wb")
+    historiqueFonctions.page()
+    webserver.sortie.close()
+    var f = open(SORTIE + "/direct.json", "r")
+    var d = json.load(f.read())
+    f.close()
+    return d
+end
+var iC2 = h.series.find("COUNTER.C1")
+tasmota.capteurs = json.dump(SENSOR)
+tasmota.ms += 10000
+avantLog = size(journal)
+var dd = direct()
+verifie(dd != nil && dd["t"] == tasmota.utc && size(dd["valeurs"]) == h.nbSeries && dd["valeurs"][iT] == 12.5,
+        "valeur actuelle de chaque serie, datee de l'heure UTC de la carte")
+verifie(dd != nil && dd["valeurs"][iC2] == 2.5, "compteur energie converti (2500 / 1000)")
+verifie(dd != nil && dd["valeurs"][iH] == nil, "capteur absent du JSON : null")
+verifie(dernierLog("HISTORIQUE_DIRECT_ERREUR") != nil && size(journal) > avantLog,
+        "filtre d'un module en exception : journalise, les valeurs partent quand meme")
+var S3 = json.load(json.dump(SENSOR))
+S3["DS18B20"]["Temperature"] = 20.0
+tasmota.capteurs = json.dump(S3)
+tasmota.ms += 1000
+dd = direct()
+verifie(dd != nil && dd["valeurs"][iT] == 12.5, "moins de 4 s apres : capteurs pas relus (cache)")
+tasmota.ms += 5000
+dd = direct()
+verifie(dd != nil && dd["valeurs"][iT] == 20.0, "plus de 4 s apres : capteurs relus")
+var S4 = json.load(json.dump(SENSOR))
+S4.remove("COUNTER")
+tasmota.capteurs = json.dump(S4)
+tasmota.ms += 5000
+dd = direct()
+verifie(dd != nil && dd["valeurs"][iC2] == nil, "compteur energie absent du JSON : null (pas la moyenne du pas)")
+tasmota.capteurs = "LEVE"
+tasmota.ms += 5000
+avantLog = size(journal)
+var leveDirect = nil
+try dd = direct() except .. as e, m leveDirect = str(e) + " " + str(m) end
+verifie(leveDirect == nil && webserver.ferme && dd != nil && dd["valeurs"][iT] == nil && dernierLog("HISTORIQUE_DIRECT_ERREUR") != nil
+        && size(journal) > avantLog, "lecture des capteurs en exception : reponse fermee, JSON complet (null), erreur journalisee")
+# Nouvelles series : l'ancien historique ne doit pas rester tenu par le cache du direct (deux tampons RAM)
+tasmota.capteurs = json.dump(SENSOR)
+tasmota.ms += 5000
+direct()
+var S5 = json.load(json.dump(SENSOR))
+S5["SHT3X"] = {"Temperature": 18.0, "Humidity": 60.0}
+historiqueFonctions.choisitSeries(S5, historiqueFonctions.chemins)
+verifie(historiqueFonctions.cacheDirect == nil, "nouvel historique : cache du direct lache (ancien tampon RAM liberable)")
 
 print(echecs == 0 ? "BANC_HISTORIQUE: OK" : "BANC_HISTORIQUE: ECHEC (" + str(echecs) + ")")

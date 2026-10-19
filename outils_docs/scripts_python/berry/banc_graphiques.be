@@ -1,16 +1,16 @@
 # Banc de test Berry des graphiques de l'historique (2026-10-18) : data/fs/graphiquesFonctions.be (envoi
-# d'uPlot par morceaux, page /graphiques, URL Grafana) et le filtre d'historique du maitre P4
+# d'ECharts compresse par morceaux, page /graphiques, URL Grafana) et le filtre d'historique du maitre P4
 # (data/garage/tasmota32p4-serveur-modbus/controleGarage.be : faux zeros de la cuve -> nil).
 # -----------------------------------------------------------------------------------------------
 # Lancer via son enveloppe Python, qui ajoute le rendu de la page dans Chrome sans interface :
 #     python outils_docs/scripts_python/berry/banc_graphiques.py
-# Ou directement, DEPUIS LA RACINE DU DEPOT (dossier_sortie : ou ecrire uPlot recu et la page) :
+# Ou directement, DEPUIS LA RACINE DU DEPOT (dossier_sortie : ou ecrire ECharts recu et la page) :
 #     lib/libesp32/berry/berry.exe outils_docs/scripts_python/berry/banc_graphiques.be <dossier_sortie> [dossier_sources]
 #
 # Les VRAIS fichiers sont COMPILES depuis leur texte, pas importes : berry.exe cherche un module d'abord
 # dans le dossier du fichier qui l'importe, et data/fs/ fournirait alors les vrais historiqueFonctions et
 # gestionFileFolder a la place des bouchons (bouchons_berry/graphiques/).
-# Portee : la logique Berry. Le rendu de la page (graphiques.js, uPlot) est juge par l'enveloppe Python.
+# Portee : la logique Berry. Le rendu de la page (graphiques.js, ECharts) est juge par l'enveloppe Python.
 # La derniere ligne, BANC_GRAPHIQUES: OK|ECHEC, est lue par l'enveloppe pour son code de sortie.
 import global
 import sys
@@ -83,25 +83,25 @@ var graphiquesFonctions = charge(SOURCES + "/graphiquesFonctions.be")
 var REGLAGES_P4 = "data/garage/tasmota32p4-serveur-modbus/graphiques.json"
 graphiquesFonctions.FICHIER_REGLAGES = REGLAGES_P4
 
-# ---- 1. Envoi d'uPlot par morceaux --------------------------------------------------------------
-print("1. /graphiques?f=uplot.js et uplot.css")
-graphiquesFonctions.FICHIERS["uplot.js"][0] = "data/sd/js/uPlot.iife.min.js"
-graphiquesFonctions.FICHIERS["uplot.css"][0] = "data/sd/css/uPlot.min.css"
+# ---- 1. Envoi d'ECharts compresse par morceaux -------------------------------------------------
+print("1. /graphiques?f=echarts.js.gz")
+verifie(size(graphiquesFonctions.FICHIERS) == 1, "un seul fichier servi : echarts.js.gz (uPlot retire)")
+graphiquesFonctions.FICHIERS["echarts.js.gz"][0] = "data/sd/js/echarts.min.js.gz"
+webserver.raz({"f": "echarts.js.gz"})
+webserver.sortie = open(SORTIE + "/echarts_recu.js.gz", "wb")
+graphiquesFonctions.route()
+webserver.sortie.close()
+verifie(webserver.code == 200 && webserver.mime == "application/octet-stream", "echarts.js.gz : 200 application/octet-stream")
+verifie(webserver.envois >= 100 && webserver.ferme, "echarts.js.gz : envoye en morceaux de 2 Ko (" + str(webserver.envois) + "), reponse fermee")
 webserver.raz({"f": "uplot.js"})
-webserver.sortie = open(SORTIE + "/uplot_recu.js", "wb")
+webserver.sortie = open(SORTIE + "/ancien.txt", "wb")
 graphiquesFonctions.route()
 webserver.sortie.close()
-verifie(webserver.code == 200 && webserver.mime == "application/javascript", "uplot.js : 200 application/javascript")
-verifie(webserver.envois >= 20 && webserver.ferme, "uplot.js : envoye en morceaux de 2 Ko (" + str(webserver.envois) + "), reponse fermee")
-webserver.raz({"f": "uplot.css"})
-webserver.sortie = open(SORTIE + "/uplot_recu.css", "wb")
-graphiquesFonctions.route()
-webserver.sortie.close()
-verifie(webserver.code == 200 && webserver.mime == "text/css", "uplot.css : 200 text/css")
+verifie(webserver.code == nil && webserver.debut == "Graphiques", "ancien nom uplot.js : aucun fichier servi, la page est renvoyee")
 
 print("2. Fichier absent, acces refuse")
-graphiquesFonctions.FICHIERS["uplot.css"][0] = "data/sd/css/nexiste_pas.css"
-webserver.raz({"f": "uplot.css"})
+graphiquesFonctions.FICHIERS["echarts.js.gz"][0] = "data/sd/js/nexiste_pas.js.gz"
+webserver.raz({"f": "echarts.js.gz"})
 webserver.sortie = open(SORTIE + "/absent.txt", "wb")
 var avant = size(journal)
 graphiquesFonctions.route()
@@ -110,8 +110,8 @@ verifie(webserver.code == 404, "fichier absent : 404")
 verifie(size(journal) == avant + 1 && journal[-1][1] == LOG_LEVEL_ERREUR && string.find(journal[-1][0], "GRAPHIQUES_ERREUR:") == 0
         && journal[-1][2] == "serveurWeb", "fichier absent : une ligne GRAPHIQUES_ERREUR en erreur, cible serveurWeb")
 # Exception en plein envoi (connexion perdue, flash illisible) : fichier ET reponse fermes, erreur journalisee
-graphiquesFonctions.FICHIERS["uplot.css"][0] = "data/sd/css/uPlot.min.css"
-webserver.raz({"f": "uplot.css"})
+graphiquesFonctions.FICHIERS["echarts.js.gz"][0] = "data/sd/js/echarts.min.js.gz"
+webserver.raz({"f": "echarts.js.gz"})
 webserver.sortie = open(SORTIE + "/exception.txt", "wb")
 var envoiNormal = webserver.content_send
 webserver.content_send = def (x) raise "io_error", "connexion perdue" end
@@ -121,7 +121,7 @@ webserver.content_send = envoiNormal
 webserver.sortie.close()
 verifie(webserver.code == 200 && webserver.ferme && size(journal) == avant + 1 && journal[-1][1] == LOG_LEVEL_ERREUR,
         "exception en plein envoi : reponse fermee quand meme, une erreur journalisee")
-webserver.raz({"f": "uplot.js"})
+webserver.raz({"f": "echarts.js.gz"})
 webserver.privilegie = false
 webserver.sortie = open(SORTIE + "/refuse.txt", "wb")
 graphiquesFonctions.route()
@@ -156,17 +156,26 @@ var finConfig = string.find(page, ";</script>", debutConfig)
 var config = (debutConfig >= 0 && finConfig > 0 ? json.load(page[debutConfig + 18 .. finConfig - 1]) : nil)
 verifie(config != nil, "window.GRAPHIQUES est du JSON valide")
 if (config != nil)
-    verifie(config["uplot"] == "uPlot-1.6.30" && config["nom"] == "mesures", "cle de cache uPlot et nom de l'historique")
+    verifie(config["bibliotheque"] == "echarts-6.1.0" && config["nom"] == "mesures", "cle de cache d'ECharts et nom de l'historique")
     verifie(config["grafana"] == "http://192.168.0.5:3000/d/historique-cuve?var-appareil=garage", "URL Grafana du persist, topic remplace")
     verifie(config["affichage"].find("sensorsCuve.niveauCuve.tauxRemplissage", {}).find("facteur") == 100,
             "reglages 'affichage' de graphiques.json transmis (series nommees par leur chemin)")
     verifie(json.dump(config["groupes"]) == json.dump({"Cuve": ["sensorsCuve.niveauCuve"]}), "groupe « Cuve » de graphiques.json transmis")
     verifie(config["esclaves"].find("TasmotaSlaveModBus1") == "Capteurs Cuve ModBus", "noms des esclaves ModBus tires du persist")
     verifie(isinstance(config["compteurs"], map), "reglages des compteurs du persist transmis (unites)")
+    verifie(config["rafraichissement"] == 60, "periode de relecture par defaut : 60 s")
+    verifie(config["direct"] == 10, "cadence du temps reel par defaut : 10 s")
 end
 verifie(string.find(page, "// graphiques.js") > 0 && string.find(page, "id='g_graphiques'") > 0 && string.find(page, "#g_zone{") > 0,
         "gabarit /sd/html/graphiques.html, style /sd/css/graphiques.css et graphiques.js inclus")
 verifie(string.find(page, "#g_zone{") > string.find(page, "<style>", string.find(page, "</head>")) , "style envoye entre <style> et </style>")
+
+verifie(graphiquesFonctions.periode(120) == 120 && graphiquesFonctions.periode(3) == 10 && graphiquesFonctions.periode("x") == 60
+        && graphiquesFonctions.periode(nil) == 60, "periode de relecture : bornee a 10 s, 60 s si absente ou mal typee")
+verifie(graphiquesFonctions.cadenceDirect(0) == 0 && graphiquesFonctions.cadenceDirect(2) == 2 && graphiquesFonctions.cadenceDirect(60) == 60
+        && graphiquesFonctions.cadenceDirect(10) == 10, "cadence du temps reel : valeurs de la liste de la page (0 = arret) acceptees")
+verifie(graphiquesFonctions.cadenceDirect(7) == 10 && graphiquesFonctions.cadenceDirect("5") == 10 && graphiquesFonctions.cadenceDirect(nil) == 10
+        && graphiquesFonctions.cadenceDirect(-1) == 10, "cadence hors liste, mal typee ou absente : 10 s")
 
 # Reglages de la page absents ou illisibles : page servie quand meme, erreur journalisee si illisibles
 def pageAvecReglages(chemin, sortie)

@@ -128,7 +128,7 @@ moins une sortie. Un profil « normal » sobre allège donc vraiment la carte.
 
 Les cartes ESP32-S3 et P4 tiennent un historique de leurs mesures (`data/fs/historiqueFonctions.be`) :
 24 h en RAM au pas de 5 min, et min/moy/max horaires en flash, un fichier par mois. Le bouton
-**Graphiques** de la page d'accueil ouvre `/graphiques`, qui les trace avec uPlot. Les ESP32 classiques
+**Graphiques** de la page d'accueil ouvre `/graphiques`, qui les trace avec ECharts, en temps réel. Les ESP32 classiques
 n'ont ni l'historique ni la page (fichiers exclus de leur LittleFS) : leurs courbes sont dans Grafana.
 
 - **Séries découvertes** (2026-10-18) : la carte trace **ses** capteurs sans liste écrite à la main. Sont
@@ -146,12 +146,21 @@ n'ont ni l'historique ni la page (fichiers exclus de leur LittleFS) : leurs cour
 - **Vues** : « 24 dernières heures », puis un mois par entrée du sélecteur (moyenne horaire et bande
   min-max). Un mois marqué « ancienne liste de séries » date d'avant un changement des séries (fichier
   mis de côté en `-a`, `-b`…).
-- **Cases** : une par série, sous son graphique, mémorisée dans le navigateur. Deux axes Y par graphique,
-  attribués aux unités les plus partagées. Un trou dans une courbe = pas de mesure (carte arrêtée,
-  esclave muet, capteur absent).
+- **Temps réel** (vue 24 h et mois en cours) : la page lit les valeurs actuelles de la carte
+  (`/histo?p=direct`) et les ajoute au bout des courbes ; l'axe des temps va jusqu'à l'heure actuelle. Cadence
+  choisie dans la liste **Direct** de la page : arrêt, 2, 5, 10, 30 s ou 1 min (10 s par défaut, ou la clé
+  `direct` de `graphiques.json`) ; le choix est gardé par le navigateur. L'historique affiché est relu
+  toutes les `rafraichissement` secondes (60 par défaut ; mois en cours : 15 min), et rien n'est lu quand
+  l'onglet est caché. La carte relit ses capteurs au plus toutes les 4 s, quel que soit le nombre de pages
+  ouvertes.
+- **Légende** : un clic masque ou affiche une série, choix gardé par le navigateur. Un axe Y par unité,
+  ajusté au minimum et au maximum des valeurs tracées (sans descendre sous zéro si toutes sont
+  positives) ; molette ou pincement pour zoomer sur le temps. Un trou dans une courbe = pas de mesure
+  (carte arrêtée, esclave muet, capteur absent).
 - **Historique long** : le bouton « Historique long (Grafana) » ouvre le tableau du Pi.
-- uPlot est servi **par la carte** (`/sd/js/uPlot.iife.min.js`, 49 Ko), sans Internet : il est gardé
-  dans le `localStorage` du navigateur et n'est redemandé qu'à un changement de version.
+- ECharts 6 est servi **par la carte**, compressé (`/sd/js/echarts.min.js.gz`, 368 Ko), sans Internet :
+  le navigateur le décompresse, le garde dans son `localStorage` et ne le redemande qu'à un changement de
+  version. Il faut un navigateur récent (`DecompressionStream` : Chrome 80, Firefox 113, Safari 16.4).
 
 ### Dans `_persist.json` : ce que la relève de chaque minute utilise
 
@@ -192,7 +201,9 @@ seulement (rien en RAM le reste du temps). Facultatif.
         "sensorsCuve.niveauCuve.tauxRemplissage": {"libelle": "Remplissage", "unite": "%", "facteur": 100},
         "DS18B20.Temperature": {"libelle": "Température de l'eau", "unite": "°C"}
     },
-    "groupes": {"Cuve": ["sensorsCuve.niveauCuve"]}
+    "groupes": {"Cuve": ["sensorsCuve.niveauCuve"]},
+    "rafraichissement": 60,
+    "direct": 10
 }
 ```
 
@@ -200,7 +211,8 @@ Sans `affichage`, libellé = chemin de la série (esclave ModBus remplacé par s
 devinée de sa dernière clé (`Temperature` → °C, `Humidity` → %, `Pressure` → hPa…) ou de son nom
 (`hauteur` → cm, `volume` → L, `taux` → %) ; l'unité d'un compteur réglé vient de `compteurs`. `facteur`
 multiplie la valeur affichée (0-1 → %). `groupes` : titre → débuts de chemin ; chaque groupe a son
-graphique, les autres séries vont dans « Mesures ».
+graphique, les autres séries vont dans « Mesures ». `rafraichissement` : relecture de l'historique affiché, en
+secondes (10 au minimum). `direct` : cadence par défaut du temps réel (0 = arrêt, 2, 5, 10, 30 ou 60 s).
 
 **Carte sans historique local** (ESP32 classique, ou historique à `OFF`) : la même clé `grafana`, dans un bloc
 `"historique": {"grafana": "…"}`, ajoute à la page d'accueil un bouton **Historique (Grafana)** qui ouvre
@@ -211,7 +223,7 @@ des panneaux de cuve, leurs courbes y seraient vides.
 
 ### Vérifier
 
-- `/histo?p=liste`, `/histo?p=jour`, `/histo?p=mois&m=AAAA-MM` donnent le JSON brut. En `curl`, ajouter
+- `/histo?p=liste`, `/histo?p=jour`, `/histo?p=direct`, `/histo?p=mois&m=AAAA-MM` donnent le JSON brut. En `curl`, ajouter
   `-H "Referer: http://<ip>/"` : sans lui, Tasmota coupe la connexion sans réponse (`curl: (52)`).
 - Banc hors carte : `python outils_docs/scripts_python/berry/banc_graphiques.py` (code de sortie 0 = vert ;
   inclut `banc_historique.be` : découverte des séries, compteurs, redécouverte horaire).

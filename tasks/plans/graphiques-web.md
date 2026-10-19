@@ -3,7 +3,7 @@ chantier: graphiques-web
 titre: Graphiques des mesures dans les pages web des cartes S3/P4 (uPlot)
 statut: actif
 cree: 2026-10-18
-maj: 2026-10-18
+maj: 2026-10-19
 source: resilient-soaring-stearns.md
 ---
 # Graphiques des mesures dans les pages web des cartes S3/P4 (uPlot)
@@ -90,7 +90,7 @@ Contraintes techniques relevées :
 - [x] Agent `relecteur-berry` passé sur le diff Berry, remarques traitées — preuve : aucun bloquant ; 2 « à corriger » traités (réponse fermée après exception, cible de log `serveurWeb` et style « … ! ») ; suggestions appliquées : `</` échappé dans `window.GRAPHIQUES`, `modules.find(...)` dans le filtre (plus d'exception qui ferait perdre la mesure de la minute) ; chacune couverte par un contrôle du banc
 
 ## A6 — Essai réel sur le P4, puis les autres S3
-- [ ] Mesures de la cuve simulées pendant les essais (sa sonde et son ADS1115 ne sont pas branchés) : émulation de l'esclave 1 par le sniffeur ModBus (http://127.0.0.1:7300, `emulation_modbus.py` : thermomètre 1312 et analogique, valeurs éditables), **cuve retirée du bus RS485** pendant l'essai (deux esclaves à l'adresse 1 = collisions) ; la cuve passe à `valide`, les courbes se remplissent, puis repassent à `null` à l'arrêt de l'émulation
+- [x] Mesures de la cuve simulées pendant les essais (sa sonde et son ADS1115 ne sont pas branchés) : émulation de l'esclave 1 par le sniffeur ModBus (http://127.0.0.1:7300, `emulation_modbus.py` : thermomètre 1312 et analogique, valeurs éditables), **cuve retirée du bus RS485** pendant l'essai (deux esclaves à l'adresse 1 = collisions) ; la cuve passe à `valide`, les courbes se remplissent, puis repassent à `null` à l'arrêt de l'émulation — preuve : cuve à l'adresse ModBus **2** (la 1 est la carte relais), débranchée et éteinte ; émulation 22:02-22:25 et 22:35-23:00 : P4 `valide`, valeurs émulées reprises (ex. 23,6 °C / 1 500 mV / 48 cm / 2 894 L) ; arrêt → `inconnu` en ~130 s (22:27:18, 23:02:19) ; `/histo?p=jour` (version « séries découvertes ») : pas de 23:00 rempli, 23:05-23:20 à `null` pour `DS18B20.Temperature` et `sensorsCuve.*`, 23:25 rempli à la reprise. Défaut trouvé : 2 séries découvertes brutes (`TasmotaSlaveModBus.TasmotaSlaveModBus1.ANALOG.A1`, `…Temperatures.DS18B20-1.Temperature`), doublons non filtrés, gardaient des valeurs périmées → `"exclues": ["TasmotaSlaveModBus"]` dans le persist du P4 (dépôt + carte, à chaud à 23:38) : 5 séries, pas de 23:35/23:40 remplis
 - [x] P4 : bouton visible, `/graphiques` affiche la vue 24 h, la vue mois, les cases et le lien Grafana — preuve : accueil avec `action='/graphiques'` ; vue 24 h juste après le redémarrage : « Aucun pas de mesure encore clos… » (attendu) ; vue mois « Octobre 2026 (moyenne horaire, bande min-max) », 7 cases, axes °C / mV (capture scratchpad `a6/page_p4_mois.png`) ; `window.GRAPHIQUES.grafana` = `…var-appareil=garage`, bouton affiché. Passé par 2 redémarrages : ancien `.bec` en cache puis persist réécrit par `System#Save` (lessons.md 2026-10-18), autoexec du P4 et de la cuve corrigés
 - [x] P4 : heap libre relevé pendant le chargement de la page ; l'accueil (`/?m=1`) ne charge toujours pas uPlot — preuve : `Status 11` heap 239 Ko avant, 206 Ko pendant l'envoi simultané de la page, du CSS et d'uPlot, 239 Ko juste après et 5 s plus tard ; `/` et `/?m=1` : 0 occurrence de « uplot »
 - [x] Déployé sur les autres cartes S3 (cave serveur-rly, grenier, rideau, serveur-modbus S3, cuve) ; cuve vide attendue tant que ses capteurs ne sont pas branchés — preuve : déployé et coché par l'utilisateur (2026-10-18)
@@ -165,6 +165,42 @@ Ce qui s'y oppose aujourd'hui (constaté le 2026-10-18) :
 - [ ] `relecteur-berry` sur le diff, puis essai réel : la liste des séries relevée sur chaque carte S3/P4 ne contient ni relais ni entrée
   - [x] Relecture `relecteur-berry` — preuve : aucun bloquant ; 2 « à corriger » traités (fichier de `graphiques.json` refermé après une exception, `nomsEsclaves` sans exception si un niveau du persist n'est pas une map) ; suggestions appliquées : réglages mal typés → `{}`, `seriesMax` borné à 1, séries déjà enregistrées prioritaires à la troncature, log « au-delà de seriesMax » en debug, ancien historique lâché avant d'allouer le nouveau ; chacune couverte par un contrôle (`banc_graphiques.py` code 0, 100 contrôles)
   - [ ] Essai réel : LittleFS téléversé sur le P4 puis les S3 ; log `HISTORIQUE: Series enregistrees` de chaque carte sans relais, entrée, volet ni interne ; page à deux graphiques sur le P4 et la cuve
+
+## A10 — Page qui suit l'heure réelle, échelles Y ajustées, passage à ECharts
+Demandes de l'utilisateur (2026-10-18) :
+- l'échelle des temps ne suit pas l'heure réelle, il faut recharger la page pour voir les dernières données : le
+  graphique doit se mettre à jour régulièrement ;
+- les échelles Y doivent s'adapter aux valeurs min et max de chaque capteur ;
+- **utiliser ECharts au lieu d'uPlot, version complète** (décision de l'utilisateur, 2026-10-18, préférée à une
+  version réduite et au maintien d'uPlot). Elle remplace le choix d'uPlot du 2026-10-13 et prépare l'A9 (types
+  courbe, barres, escalier, aire et combiné fournis par ECharts).
+
+Causes mesurées sur le P4 (2026-10-18, 22:35:42) : dernier point daté 22:30. Un pas (5 min) n'est livré qu'à sa
+clôture, et le point porte l'heure de son début. La page ne lit `/histo` qu'au chargement : aucune relecture.
+
+- [x] Carte : `/histo?p=jour` livre aussi le pas en cours (`tEncours`, `encours` = moyenne des mesures déjà reçues, `null` sans mesure) — preuve : `historiqueFonctions.jsonEnCours` ; `banc_historique.be` §5 rouge avant (3 ECHEC), vert après
+- [x] ECharts complet, version épinglée, empreinte SHA-256 notée, stocké **compressé** (gzip) dans `data/sd/js/` ; — preuve : `data/sd/js/echarts.min.js.gz` (ECharts 6.1.0, 368 202 o, sha256 en tête de `graphiquesFonctions.be`), uPlot retiré (`git rm`), cenv mis à jour ; banc Berry : envoi en 180 morceaux, reçu identique octet par octet ; Chrome : « ECharts demandé une seule fois (localStorage) », « ECharts absent : message HTTP 404 »
+  servi tel quel par la route `/graphiques?f=` (Berry ne peut pas poser `Content-Encoding`), décompressé par le
+  navigateur (`DecompressionStream`) et gardé dans le `localStorage` (clé versionnée). uPlot retiré. Fichiers exclus
+  du LittleFS des 2 ESP32 classiques
+- [x] `graphiques.js` réécrit pour ECharts : « Mesures » + groupes ; axe des temps jusqu'à maintenant ; pas en cours — preuve : `banc_graphiques.py` vert (jour, mois, mois_a, masquees : titres, séries, légende, axe X jusqu'à l'heure du navigateur, axes Y par unité ajustés, plancher à zéro, bande min-max) ; mutants « axe X figé » et « échelle sans plancher » détectés
+  en dernier point ; un axe Y par unité ajusté au min/max des valeurs (`scale: true`), pas sous zéro si tout est
+  positif ; trous = pas sans mesure ; vue mois avec bande min-max ; libellés, unités, facteurs, esclaves ModBus comme
+  aujourd'hui ; séries masquées mémorisées ; zoom et infobulle ; thème clair/sombre de Tasmota
+- [x] Relecture périodique (`rafraichissement` de `graphiques.json`, 60 s par défaut, 10 s au minimum ; mois en — preuve : scénario Chrome « rafraichi » (≥ 2 lectures de p=jour sans recharger) ; mutant « relecture coupée » détecté ; banc Berry : `periode` bornée
+  cours toutes les 15 min), mise à jour sans recréer le graphique, rien quand l'onglet est caché, une lecture à la fois
+- [x] **Tous les graphiques en temps réel** (décision de l'utilisateur, 2026-10-18 : valeurs instantanées, interrogation — preuve : `banc_historique.be` §6 vert (valeurs, énergie, null, filtre et lecture en exception, cache 4 s, cache lâché au changement de séries) ; Chrome : défaut 10 s (1 lecture en 8 s), « arrêt » et 2 s mémorisés, valeur directe en dernier point ; mutants « direct jamais ajouté » et « cadence ignorée » détectés. Temps réel limité à la vue 24 h et au mois en cours (un mois clos n'a pas de présent)
+  de la carte toutes les **10 s** par défaut, **cadence modifiable dans la page par une liste déroulante** : 2, 5, 10,
+  30, 60 s ou « arrêt » ; choix de Claude : mémorisée dans le navigateur, défaut `direct` de `graphiques.json`) : route `/histo?p=direct` → `{"t", "valeurs"}`, valeur actuelle de chaque série (mêmes chemins, filtres des
+  modules et conversion « énergie » appliqués ; débit = celui du pas en cours, la conversion à état n'est pas rejouée) ;
+  `read_sensors()` mis en cache 4 s (il appelle le `json_append` de chaque driver : coûteux) ; la page ajoute ces points
+  au bout de chaque courbe, dans toutes les vues, et les remplace par l'historique à sa relecture ; rien n'est stocké
+  en plus sur la carte
+- [x] Banc Chrome adapté (ECharts dessine dans un canvas : état lu par des attributs `data-` posés par la page) ; — preuve : `banc_graphiques.py` : 28 contrôles de rendu + 100 Berry, BANC_GRAPHIQUES: OK en 2 min 11 ; 5 mutants de `graphiques.js` tous détectés (MUTANTS: OK) ; blocage de Chrome = processeur saturé par un build, bancs lancés hors build
+  blocage de Chrome sans interface avec une page qui relit en boucle compris et contourné ; témoin (ancienne page)
+  et mutants
+- [x] README, `CLAUDE.md`, mémoire, skill `bancs` à jour ; `relecteur-berry` sur le Berry touché — preuve : README § graphiques (temps réel, liste Direct, ECharts compressé), `CLAUDE.md` carte des documents, skill bancs, mémoire `project_historique_capteurs` ; relecteur : 3 défauts de `historiqueFonctions.be` corrigés, chacun avec son contrôle rouge puis vert
+- [x] Essai réel sur le P4 : premier chargement (durée, heap), courbe qui avance seule, échelles ajustées — preuve : 2026-10-19, P4 192.168.0.43 : ECharts 200, 368 202 o en 1,37 s, `cmp` identique au dépôt ; page = `graphiques.js` du dépôt, `bibliotheque` echarts-6.1.0, `direct` 10, liste `g_direct` présente ; `/histo?p=direct` répond (5 séries, valeurs actuelles), `p=jour` porte `tEncours`/`encours` ; heap 203 Ko après chargement ; page validée à l'écran par l'utilisateur
 
 ## A9 — Page composable : l'utilisateur crée, modifie et supprime ses graphiques
 Demande de l'utilisateur (2026-10-18) : sur la page `/graphiques`, l'utilisateur ajoute autant de graphiques qu'il

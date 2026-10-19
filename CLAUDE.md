@@ -382,7 +382,7 @@ Pour ne pas chercher : ce qui a ete produit et ou.
 - `tasks/export-session-*.md` — mini-exports de passation ecrits par `/fin-de-session`.
 - `.claude/mods/` — marketplace locale `mods-tasmota` ; mod `meteo-contexte` : UNE barre coloree de
   remplissage du contexte et cout de la session, au-dessus du prompt (terminal, et panneau VS Code 2.1.301 :
-  la bande y est dessinee, contrairement a la doc ; a defaut, ligne de statut + pane). Au-dela de 50 %, le
+  la bande y est dessinee, contrairement a la doc ; a defaut, ligne de statut + pane). Au-dela de 45 %, le
   bouton « Preparer la passation » (`/fin-de-session`) est **toujours** visible ; toast unique. Sans processus
   ni reseau. Banc hors depot (hote simule). Modifier le mod = monter `version` dans `plugin.json`, puis
   `claude.cmd plugin marketplace update mods-tasmota` et `claude.cmd plugin update meteo-contexte@mods-tasmota`.
@@ -415,9 +415,11 @@ Pour ne pas chercher : ce qui a ete produit et ou.
 - Graphiques des cartes S3/P4 (2026-10-18) : page `/graphiques` (bouton d'accueil) servie par
   `data/fs/graphiquesFonctions.be` (route et bouton declares par le driver `HISTORIQUE_WEB` de
   `historiqueFonctions.be`), gabarit `data/sd/html/graphiques.html` + `data/sd/css/graphiques.css`, logique
-  `data/sd/js/graphiques.js`, uPlot dans `data/sd/js/` et `data/sd/css/` ; series DECOUVERTES dans le JSON SENSOR
+  `data/sd/js/graphiques.js`, ECharts 6 COMPRESSE `data/sd/js/echarts.min.js.gz` (Berry ne pose pas Content-Encoding :
+  la page le decompresse, cache localStorage versionne) ; temps reel par `/histo?p=direct` (cadence de la liste
+  « Direct » de la page, 10 s par defaut) ; series DECOUVERTES dans le JSON SENSOR
   par `data/fs/historiqueSeries.be` (ni relais, ni entrees, ni volets, ni internes ; persist : `exclues`, `ajouts`,
-  `compteurs`) ; reglages de la page (`affichage`, `groupes`) dans `data/<lieu>/<carte>/graphiques.json` -> `/json/`,
+  `compteurs`) ; reglages de la page (`affichage`, `groupes`, `rafraichissement`, `direct`) dans `data/<lieu>/<carte>/graphiques.json` -> `/json/`,
   HORS persist (le persist est en RAM en permanence) ; `diverses.historique.grafana` reste au persist ; sans historique actif, la cle `.grafana` donne un bouton
   « Historique (Grafana) » sur l'accueil (`controleWeb.boutonGrafana`, solidifie, toutes les cartes). Mode d'emploi : `outils_docs/README.md` § « Les graphiques
   des mesures » ; banc `berry/banc_graphiques.py` (+ `.be`, `banc_historique.be`, `bouchons_berry/graphiques/` et `historique/`) ; plan `tasks/plans/graphiques-web.md`.

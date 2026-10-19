@@ -13,15 +13,18 @@ CE QU'IL FAIT
 -------------
 0. Lance `berry.exe banc_historique.be <dossier>/historique` : choix des series (decouverte filtree du JSON
    SENSOR, exclues, ajouts, compteurs) et releve (redecouverte horaire, fichier du mois mis de cote).
-1. Lance `berry.exe banc_graphiques.be <dossier>` depuis la racine : envoi d'uPlot par morceaux, 404,
+1. Lance `berry.exe banc_graphiques.be <dossier>` depuis la racine : envoi d'ECharts compresse par morceaux, 404,
    acces refuse, URL Grafana (%topic%), page /graphiques (gabarit, window.GRAPHIQUES), filtre des faux
    zeros de la cuve du maitre P4. La page est generee par le VRAI graphiquesFonctions.page(), avec la
    configuration reelle du persist du P4.
-2. Compare octet par octet uPlot recu et data/sd/js/uPlot.iife.min.js.
+2. Compare octet par octet ECharts recu et data/sd/js/echarts.min.js.gz.
 3. Sert cette page et des reponses /histo fixes (un petit serveur par scenario, port libre, 127.0.0.1)
-   et la rend dans Chrome sans interface (--dump-dom) : 24 h, cache d'uPlot, mois avec trou, mois -a,
-   series masquees, historique pas demarre, aucun pas clos, uPlot absent. Juge le DOM (titre, legende,
-   cases, selecteur, bouton Grafana, message) et les requetes recues (Referer exige par Tasmota).
+   et la rend dans Chrome sans interface (--dump-dom) : 24 h + temps reel, cache d'ECharts, mois avec trou,
+   mois -a, series masquees, relecture periodique, cadence du direct (arret, 2 s), historique pas demarre,
+   aucun pas clos, ECharts absent. ECharts dessine dans un canvas : la page expose ce qu'elle trace en
+   attributs data- de chaque graphique (titre, series, legende visible, dernier instant, bornes des axes,
+   dernieres valeurs), que le banc juge avec les listes, le bouton Grafana, le message et les requetes
+   recues (Referer exige par Tasmota).
 
 CE QU'IL NE TESTE PAS
 ---------------------
@@ -38,6 +41,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qsl, urlparse
@@ -85,7 +89,10 @@ def jour():
             v.append([None] * 288)
         else:
             v.append([round(i / 10, 2) for i in range(288)])
-    return {"nom": "mesures", "series": SERIES_P4, "pas": 300, "t0": T0, "valeurs": v}
+    # pas en cours (pas encore clos) : la page l'ajoute en dernier point
+    encours = [29.0 if nom == ESCLAVE else None if nom == "DS18B20.Temperature" else 28.8 for nom in SERIES_P4]
+    return {"nom": "mesures", "series": SERIES_P4, "pas": 300, "t0": T0, "valeurs": v,
+            "tEncours": T0 + 288 * 300, "encours": encours}
 
 
 def mois(m):
@@ -104,11 +111,21 @@ def mois(m):
 
 LISTE = {"nom": "mesures", "series": SERIES_P4, "mois": ["2026-08-a", "2026-09"]}
 VUE = {"mois": "m:2026-09", "mois_a": "m:2026-08-a"}
+CADENCE = {"direct_arret": "0", "direct_rapide": "2"}       # choix de la liste « Direct » deja memorise
+T_ENCOURS = T0 + 288 * 300         # pas en cours de la vue 24 h
+TD = T_ENCOURS + 60                # premiere valeur directe, puis +10 s par lecture
 
 
-def serveur(scenario, page, uplot, css):
+def direct(n):
+    """Valeurs actuelles (p=direct), n-ieme lecture : l'esclave a 29,5, la sonde absente, le reste a 28,9."""
+    return {"nom": "mesures", "series": SERIES_P4, "t": TD + 10 * n,
+            "valeurs": [29.5 if nom == ESCLAVE else None if nom == "DS18B20.Temperature" else 28.9 for nom in SERIES_P4]}
+
+
+def serveur(scenario, page, echarts_gz):
     """Un serveur par scenario (port libre) : origine distincte, donc localStorage distinct."""
     requetes = []
+    lectures_directes = [0]
 
     class Gestion(BaseHTTPRequestHandler):
         def log_message(self, format, *args):
@@ -126,17 +143,19 @@ def serveur(scenario, page, uplot, css):
             u = urlparse(self.path)
             q = dict(parse_qsl(u.query))
             requetes.append((self.path, self.headers.get("Referer")))
-            if u.path == "/graphiques" and q.get("f") == "uplot.js":
-                if scenario == "sans_uplot":
+            if u.path == "/graphiques" and q.get("f") == "echarts.js.gz":
+                if scenario == "sans_echarts":
                     return self.envoie(404, "text/plain", "absent")
-                return self.envoie(200, "application/javascript", uplot)
-            if u.path == "/graphiques" and q.get("f") == "uplot.css":
-                return self.envoie(200, "text/css", css)
+                return self.envoie(200, "application/octet-stream", echarts_gz)
             if u.path == "/graphiques":
                 corps = page
                 injecte = ""
                 if scenario in VUE:
                     injecte += "localStorage.setItem('graphiques-vue', '%s');" % VUE[scenario]
+                if scenario in CADENCE:
+                    injecte += "localStorage.setItem('graphiques-direct', '%s');" % CADENCE[scenario]
+                if scenario == "rafraichi":       # relecture chaque seconde au lieu de 60 s
+                    corps = corps.replace(b'"rafraichissement":60', b'"rafraichissement":1')
                 if scenario == "masquees":
                     injecte += "localStorage.setItem('graphiques-masquees', JSON.stringify(['%s', 'sensorsCuve.niveauCuve.volume']));" % ESCLAVE
                 if injecte:
@@ -153,6 +172,9 @@ def serveur(scenario, page, uplot, css):
                 if scenario == "vide":
                     return self.envoie(200, "application/json",
                                        '{"nom":"mesures","series":["a"],"pas":300,"t0":null,"valeurs":[[null,null]]}')
+                if p == "direct":
+                    lectures_directes[0] += 1
+                    return self.envoie(200, "application/json", json.dumps(direct(lectures_directes[0] - 1)))
                 return self.envoie(200, "application/json", json.dumps(jour()))
             self.envoie(404, "text/plain", "?")
 
@@ -169,77 +191,103 @@ def rend(navigateur, url, profil):
 
 
 def lis_dom(dom):
-    """Ce que la page affiche, scripts retires (le DOM contient le texte d'uPlot injecte)."""
+    """Ce que la page affiche, scripts retires (le DOM contient le texte d'ECharts injecte). Un graphique = une div
+    .g_trace qui porte les attributs data- poses par graphiques.js (sans ces attributs = bloc sans serie)."""
     d = re.sub(r"<script\b[^>]*>.*?</script>", "", dom, flags=re.S)
     trouve = lambda motif: (re.search(motif, d, re.S) or [None, None])[1]
-    legende = [html.unescape(l) for attr, l in
-               re.findall(r'<tr class="u-series"([^>]*)>.*?class="u-label"[^>]*>(.*?)</div>', d, re.S)
-               if "display: none" not in attr]
-    grafana = trouve(r'<button id="g_grafana"([^>]*)>') or ""
     graphiques = []
-    for morceau in d.split('<div class="uplot')[1:]:
-        graphiques.append([html.unescape(l) for attr, l in
-                           re.findall(r'<tr class="u-series"([^>]*)>.*?class="u-label"[^>]*>(.*?)</div>', morceau, re.S)
-                           if "display: none" not in attr])
+    for attrs in re.findall(r'<div class="g_trace"([^>]*)>', d):
+        a = {k: html.unescape(v) for k, v in re.findall(r'data-([a-z-]+)="([^"]*)"', attrs)}
+        if "series" not in a:
+            continue
+        graphiques.append({"titre": a.get("titre", ""), "series": json.loads(a["series"]),
+                           "legende": json.loads(a.get("legende", "[]")), "fin": int(a.get("fin", "0")),
+                           "points": int(a.get("points", "0")), "echelles": json.loads(a.get("echelles", "{}")),
+                           "derniers": json.loads(a.get("derniers", "{}")), "axe_x": json.loads(a.get("axe-x", "null"))})
+    grafana = trouve(r'<button id="g_grafana"([^>]*)>') or ""
     entetes = [html.unescape(t) for attr, t in re.findall(r'<h3([^>]*)>(.*?)</h3>', d, re.S) if "display: none" not in attr]
-    return {"canvas": d.count("<canvas"), "graphiques": graphiques, "entetes": entetes,
-            "titre": html.unescape(trouve(r'class="u-title"[^>]*>(.*?)</div>') or ""),
-            "legende": legende,
-            "cases": len(re.findall(r'<input type="checkbox"', d)),
+    return {"graphiques": graphiques, "nb": len(graphiques), "entetes": entetes,
+            "canvas": d.count("<canvas"),
+            "titre": graphiques[0]["titre"] if graphiques else "",
+            "legendes": [g["legende"] for g in graphiques],
+            "series": [g["series"] for g in graphiques],
+            "fins": [g["fin"] for g in graphiques],
+            "echelles": [g["echelles"] for g in graphiques],
             "options": [html.unescape(o) for o in re.findall(r"<option[^>]*>(.*?)</option>", d)],
             "grafana": "none" not in grafana,
             "message": html.unescape(trouve(r'<p id="g_msg"[^>]*>(.*?)</p>') or "")}
 
 
-# Attendus par scenario : (description, fonction du DOM lu et des requetes -> vrai si conforme)
-MESURES_P4 = ["Heure", "Température de l'eau (°C)", "Capteurs Cuve ModBus ANALOG A1", "Capteur de hauteur (mV)"]
-CUVE_P4 = ["Heure", "Hauteur d'eau (cm)", "Remplissage (%)", "Volume (L)"]
-OPTIONS = ["24 dernières heures", "Septembre 2026", "Août 2026 (ancienne liste de séries)"]
+# Attendus par scenario : (description, fonction du DOM lu, des requetes et de l'instant du rendu (ms) -> vrai si conforme)
+MESURES_P4 = ["Température de l'eau (°C)", "Capteurs Cuve ModBus ANALOG A1", "Capteur de hauteur (mV)"]
+CUVE_P4 = ["Hauteur d'eau (cm)", "Remplissage (%)", "Volume (L)"]
+OPTIONS = ["24 dernières heures", "Septembre 2026", "Août 2026 (ancienne liste de séries)",
+           "Direct : arrêt", "Direct : 2 s", "Direct : 5 s", "Direct : 10 s", "Direct : 30 s", "Direct : 1 min"]
+FIN_SEPTEMBRE = SEPTEMBRE + (24 * 28 - 1) * 3600
+nb_direct = lambda r: sum("p=direct" in p for p, _ in r)
 ATTENDUS = {
     "jour": [
-        ("deux graphiques titrés « Mesures » et « Cuve » (groupe de graphiques.json)", lambda d, r: d["canvas"] == 2 and d["entetes"] == ["Mesures", "Cuve"] and d["titre"] == "Dernières 24 h (pas de 5 min)"),
-        ("« Mesures » : libellés de graphiques.json, esclave ModBus nommé par le persist", lambda d, r: d["graphiques"][0] == MESURES_P4),
-        ("« Cuve » : hauteur, remplissage (facteur 100), volume", lambda d, r: d["graphiques"][1] == CUVE_P4),
-        ("6 cases, sélecteur 24 h + mois du plus récent au plus ancien", lambda d, r: d["cases"] == 6 and d["options"] == OPTIONS),
-        ("bouton Grafana visible, aucun message", lambda d, r: d["grafana"] and d["message"] == ""),
-        ("Referer de la page sur chaque /histo (exigé par Tasmota)", lambda d, r: all(ref and ref.endswith("/graphiques") for p, ref in r if p.startswith("/histo"))),
+        ("deux graphiques titrés « Mesures » et « Cuve » (groupe de graphiques.json)", lambda d, r, t: d["nb"] == 2 and d["canvas"] >= 2 and d["entetes"] == ["Mesures", "Cuve"] and d["titre"] == "Dernières 24 h (pas de 5 min) et temps réel"),
+        ("« Mesures » : libellés de graphiques.json, esclave ModBus nommé par le persist", lambda d, r, t: d["series"][0] == MESURES_P4 and d["legendes"][0] == MESURES_P4),
+        ("« Cuve » : hauteur, remplissage (facteur 100), volume", lambda d, r, t: d["series"][1] == CUVE_P4),
+        ("sélecteurs : 24 h + mois du plus récent au plus ancien, cadences du direct", lambda d, r, t: d["options"] == OPTIONS),
+        ("cadence par défaut 10 s : une seule lecture directe en 8 s, tout de suite", lambda d, r, t: nb_direct(r) == 1),
+        ("valeur directe tracée après le pas en cours (288 pas + en cours + direct)", lambda d, r, t: d["fins"] == [TD] * 2 and all(g["points"] == 290 for g in d["graphiques"])),
+        ("dernières valeurs = valeurs directes (ANALOG 29,5 ; taux 28,9 x 100)", lambda d, r, t: d["graphiques"][0]["derniers"]["Capteurs Cuve ModBus ANALOG A1"] == 29.5 and d["graphiques"][1]["derniers"]["Remplissage (%)"] == 2890),
+        ("axe des temps prolongé jusqu'à l'heure du navigateur", lambda d, r, t: all(g["axe_x"][1] >= t - 2000 for g in d["graphiques"])),
+        ("échelle Y ajustée aux valeurs (ANALOG 28-30 : bas > 27, pas 0)", lambda d, r, t: d["echelles"][0][""][0] > 27 and d["echelles"][0][""][1] < 31),
+        ("échelle Y de valeurs positives qui partent de 0 : pas sous zéro", lambda d, r, t: d["echelles"][0]["mV"][0] == 0 and d["echelles"][1]["cm"][0] == 0),
+        ("un axe Y par unité (Mesures : °C, sans unité, mV)", lambda d, r, t: sorted(d["echelles"][0]) == sorted(["°C", "", "mV"])),
+        ("bouton Grafana visible, aucun message", lambda d, r, t: d["grafana"] and d["message"] == ""),
+        ("Referer de la page sur chaque /histo (exigé par Tasmota)", lambda d, r, t: all(ref and ref.endswith("/graphiques") for p, ref in r if p.startswith("/histo"))),
     ],
     "cache": [
-        ("2 affichages, uPlot demandé une seule fois (localStorage)", lambda d, r: d["canvas"] == 2 and sum("f=uplot.js" in p for p, _ in r) == 1),
+        ("2 affichages, ECharts demandé une seule fois (localStorage)", lambda d, r, t: d["nb"] == 2 and sum("f=echarts" in p for p, _ in r) == 1),
     ],
     "mois": [
-        ("titre du mois, moyenne horaire", lambda d, r: d["titre"] == "Septembre 2026 (moyenne horaire, bande min-max)"),
-        ("légendes sans les séries min/max de la bande, une série par graphique", lambda d, r: d["graphiques"] == [["Date", "Température de l'eau (°C)"], ["Date", "Remplissage (%)"]]),
+        ("titre du mois, moyenne horaire, pas de temps réel (mois clos)", lambda d, r, t: d["titre"] == "Septembre 2026 (moyenne horaire, bande min-max)" and nb_direct(r) == 0),
+        ("légendes sans les séries min/max de la bande, une série par graphique", lambda d, r, t: d["series"] == [["Température de l'eau (°C)"], ["Remplissage (%)"]]),
+        ("échelle Y du mois ajustée à la bande min-max (°C 27,5-30,5)", lambda d, r, t: 27 < d["echelles"][0]["°C"][0] < 27.5 and 30.5 < d["echelles"][0]["°C"][1] < 31),
+        ("axe des temps arrêté à la fin des données (mois clos)", lambda d, r, t: all(FIN_SEPTEMBRE * 1000 <= g["axe_x"][1] <= (FIN_SEPTEMBRE + 86400) * 1000 for g in d["graphiques"])),
     ],
     "mois_a": [
-        ("mois -a tracé avec sa propre liste de séries", lambda d, r: d["legende"] == ["Date", "ancienneSerie"] and "ancienne liste de séries" in d["titre"]),
-        ("un seul graphique non vide : « Cuve » masqué, pas de titre de bloc", lambda d, r: d["canvas"] == 1 and d["entetes"] == []),
+        ("mois -a tracé avec sa propre liste de séries", lambda d, r, t: d["series"] == [["ancienneSerie"]] and "ancienne liste de séries" in d["titre"]),
+        ("un seul graphique non vide : « Cuve » masqué, pas de titre de bloc", lambda d, r, t: d["nb"] == 1 and d["entetes"] == []),
     ],
     "masquees": [
-        ("séries décochées absentes du tracé, 6 cases", lambda d, r: d["cases"] == 6 and d["graphiques"] == [[l for l in MESURES_P4 if "ModBus" not in l], CUVE_P4[:3]]),
+        ("séries masquées absentes de la légende visible, toutes encore listées", lambda d, r, t: d["series"] == [MESURES_P4, CUVE_P4] and d["legendes"] == [[l for l in MESURES_P4 if "ModBus" not in l], CUVE_P4[:2]]),
     ],
     "absent": [
-        ("historique pas démarré : message, pas de graphique", lambda d, r: d["canvas"] == 0 and "pas encore démarré" in d["message"]),
-        ("bouton Grafana quand même visible", lambda d, r: d["grafana"]),
+        ("historique pas démarré : message, pas de graphique, pas de lecture directe", lambda d, r, t: d["nb"] == 0 and "pas encore démarré" in d["message"] and nb_direct(r) == 0),
+        ("bouton Grafana quand même visible", lambda d, r, t: d["grafana"]),
+    ],
+    "rafraichi": [
+        ("la vue 24 h est relue régulièrement sans recharger la page", lambda d, r, t: sum("p=jour" in p for p, _ in r) >= 2 and d["nb"] == 2),
+    ],
+    "direct_arret": [
+        ("cadence « arrêt » mémorisée : aucune lecture directe, fin au pas en cours", lambda d, r, t: nb_direct(r) == 0 and d["fins"] == [T_ENCOURS] * 2),
+    ],
+    "direct_rapide": [
+        ("cadence 2 s mémorisée : lectures répétées, points ajoutés au bout des courbes", lambda d, r, t: nb_direct(r) >= 3 and d["fins"][0] >= TD + 20 and d["graphiques"][0]["points"] >= 292),
     ],
     "vide": [
-        ("aucun pas clos : message", lambda d, r: d["canvas"] == 0 and d["message"].startswith("Aucun pas de mesure")),
+        ("aucun pas clos : message", lambda d, r, t: d["nb"] == 0 and d["message"].startswith("Aucun pas de mesure")),
     ],
-    "sans_uplot": [
-        ("uPlot absent : message HTTP 404", lambda d, r: d["canvas"] == 0 and d["message"] == "uPlot absent de la carte (HTTP 404)"),
+    "sans_echarts": [
+        ("ECharts absent : message HTTP 404", lambda d, r, t: d["nb"] == 0 and d["message"] == "ECharts absent de la carte (HTTP 404)"),
     ],
 }
 
 
 def partie_navigateur(navigateur, dossier, racine):
     page = (dossier / "page.html").read_bytes()
-    uplot = (racine / "data/sd/js/uPlot.iife.min.js").read_bytes()
-    css = (racine / "data/sd/css/uPlot.min.css").read_bytes()
+    echarts_gz = (racine / "data/sd/js/echarts.min.js.gz").read_bytes()
     echecs = 0
     for scenario, verifs in ATTENDUS.items():
-        srv, requetes = serveur(scenario, page, uplot, css)
+        srv, requetes = serveur(scenario, page, echarts_gz)
         url = f"http://127.0.0.1:{srv.server_address[1]}/graphiques"
         profil = dossier / f"profil_{scenario}"
+        instant = time.time() * 1000              # heure du navigateur au rendu : au moins celle-ci
         try:
             dom = rend(navigateur, url, profil)
             if scenario == "cache":
@@ -252,7 +300,7 @@ def partie_navigateur(navigateur, dossier, racine):
         print(f"{scenario}")
         for description, test in verifs:
             try:
-                ok = bool(test(lu, requetes))
+                ok = bool(test(lu, requetes, instant))
             except (IndexError, KeyError, TypeError):      # DOM inattendu (graphique manquant) = echec, pas plantage
                 ok = False
             print(("  OK     " if ok else "  ECHEC  ") + description)
@@ -300,9 +348,9 @@ def main() -> int:
         print(">>> Partie Berry en echec (ou verdict introuvable).")
         return 1
 
-    recu = dossier / "uplot_recu.js"
-    identique = recu.exists() and recu.read_bytes() == (racine / "data/sd/js/uPlot.iife.min.js").read_bytes()
-    print(("  OK     " if identique else "  ECHEC  ") + "uPlot recu identique au fichier du depot (octet par octet)")
+    recu = dossier / "echarts_recu.js.gz"
+    identique = recu.exists() and recu.read_bytes() == (racine / "data/sd/js/echarts.min.js.gz").read_bytes()
+    print(("  OK     " if identique else "  ECHEC  ") + "ECharts recu identique au fichier du depot (octet par octet)")
     if not identique:
         return 1
 

@@ -33,7 +33,9 @@
  *
  * Lecture web (JSON, pour les futurs graphiques ; heures = epoch UTC en secondes, absent = null) :
  *     /histo?n=mesures&p=liste            -> {"nom","series","mois":["2026-09","2026-10"]}
- *     /histo?n=mesures&p=jour             -> {"nom","series","pas","t0","valeurs":[[serie 1],[serie 2]]}  (RAM)
+ *     /histo?n=mesures&p=jour             -> {"nom","series","pas","t0","valeurs":[[serie 1],[serie 2]],
+ *                                             "tEncours","encours":[moyenne du pas en cours par serie]}  (RAM)
+ *     /histo?n=mesures&p=direct           -> {"nom","series","t","valeurs":[valeur actuelle par serie]}  (temps reel)
  *     /histo?n=mesures&p=mois&m=2026-10   -> {"nom","series","lignes":[[t, min1, moy1, max1, min2, ...], ...]}
  * Page des graphiques : /graphiques, servie par graphiquesFonctions.be (route declaree par HISTORIQUE_WEB).
 ********************************************************************************************* -#
@@ -46,6 +48,7 @@ historiqueFonctions.config = nil        # bloc diverses.historique de la carte (
 historiqueFonctions.chemins = nil       # chemins des series dans le JSON SENSOR (ou @source)
 historiqueFonctions.filtres = []        # fonctions(chemins, valeurs) appelees avant chaque mesure
 historiqueFonctions.heureDecouverte = nil   # heure (epoch UTC / 3600) de la derniere decouverte des series
+historiqueFonctions.cacheDirect = nil       # [utc, valeurs, historique, millis] de la derniere lecture /histo?p=direct
 
 # Noms des historiques de la carte
 def historiqueFonctions_nomsInstances()
@@ -366,6 +369,8 @@ def historiqueFonctions_choisitSeries(donnees, anciens)
 
     historiqueFonctions.chemins = chemins
     # L'ancien historique est lache AVANT d'allouer le tampon du nouveau : pas deux tampons RAM a la fois
+    # (le cache du temps reel le tient aussi)
+    historiqueFonctions.cacheDirect = nil
     historiqueFonctions.instances.remove("mesures")
     historiqueFonctions.HISTORIQUE("mesures", chemins, historiqueFonctions.config)
     if (avant == nil)
@@ -453,6 +458,11 @@ def historiqueFonctions_page()
 
     if (p == "liste")
         webserver.content_send(string.format(",\"mois\":%s}", json.dump(h.mois())))
+    elif (p == "direct")
+        var d = historiqueFonctions.valeursDirectes(h)
+        var morceau = string.format(",\"t\":%i,\"valeurs\":[", d[0])
+        for i: 0 .. size(d[1]) - 1    morceau += (i > 0 ? "," : "") + historiqueFonctions.texte(d[1][i])    end
+        webserver.content_send(morceau + "]}")
     elif (p == "mois")
         historiqueFonctions.envoieMois(h, webserver.has_arg("m") ? webserver.arg("m") : "")
     else
@@ -467,11 +477,67 @@ def historiqueFonctions_page()
             webserver.content_send(morceau + "]")
             tasmota.yield()
         end
-        webserver.content_send("]}")
+        webserver.content_send("]" + historiqueFonctions.jsonEnCours(h) + "}")
     end
     webserver.content_close()
 end
 historiqueFonctions.page = historiqueFonctions_page
+
+# Valeurs actuelles des series (page en temps reel, /histo?p=direct) : [epoch UTC, [valeur par serie]].
+# read_sensors() appelle le json_append de chaque driver : lu au plus une fois par 4 s, quel que soit le nombre de
+# pages ouvertes. Compteur « energie » converti ; « debit » = moyenne du pas en cours (la conversion a etat n'est
+# jouee qu'a la releve) ; filtres des modules appliques (une exception est journalisee, les valeurs partent quand meme).
+def historiqueFonctions_valeursDirectes(h)
+    import json
+    import string
+    import historiqueFonctions
+    import historiqueSeries
+    var cache = historiqueFonctions.cacheDirect
+    if (cache != nil && cache[2] == h && tasmota.millis() - cache[3] < 4000)    return cache[0 .. 1]    end
+
+    # Appele apres l'ouverture de la reponse HTTP : aucune exception ne doit en sortir (reponse jamais fermee)
+    var donnees = nil
+    try
+        var texte = tasmota.read_sensors()
+        donnees = (texte != nil ? json.load(texte) : nil)
+    except .. as erreur, message
+        logFonctions.log(string.format("HISTORIQUE_DIRECT_ERREUR: Lecture des capteurs -> %s %s !", erreur, message), LOG_LEVEL_ERREUR)
+    end
+    if (!isinstance(donnees, map))    donnees = {}    end
+    var valeurs = []
+    for i: 0 .. h.nbSeries - 1
+        var chemin = h.series[i]
+        var v = historiqueFonctions.lit(donnees, chemin)
+        var r = historiqueSeries.reglageCompteur(historiqueFonctions.config, chemin)
+        if (r == nil)
+        elif (r["type"] == "energie")    v = (v != nil ? v / real(r["impulsionsParUnite"]) : nil)
+        else    v = (h.nbPas[i] > 0 ? h.sommePas[i] / h.nbPas[i] : nil)
+        end
+        valeurs.push(v)
+    end
+    try
+        for f: historiqueFonctions.filtres    f(h.series, valeurs)    end
+    except .. as erreur, message
+        logFonctions.log(string.format("HISTORIQUE_DIRECT_ERREUR: Filtre -> %s %s !", erreur, message), LOG_LEVEL_ERREUR)
+    end
+    historiqueFonctions.cacheDirect = [tasmota.rtc()["utc"], valeurs, h, tasmota.millis()]
+    return historiqueFonctions.cacheDirect[0 .. 1]
+end
+historiqueFonctions.valeursDirectes = historiqueFonctions_valeursDirectes
+
+# Pas en cours (pas encore clos) : ',"tEncours":<debut du pas>,"encours":[moyenne par serie]' - la page voit
+# ainsi la derniere minute au lieu d'attendre la cloture du pas (5 min) ; null et [] si aucune mesure
+def historiqueFonctions_jsonEnCours(h)
+    import string
+    import historiqueFonctions
+    if (h.pasCourant == nil)    return ",\"tEncours\":null,\"encours\":[]"    end
+    var morceau = string.format(",\"tEncours\":%i,\"encours\":[", h.pasCourant * h.pas)
+    for i: 0 .. h.nbSeries - 1
+        morceau += (i > 0 ? "," : "") + historiqueFonctions.texte(h.nbPas[i] > 0 ? h.sommePas[i] / h.nbPas[i] : nil)
+    end
+    return morceau + "]"
+end
+historiqueFonctions.jsonEnCours = historiqueFonctions_jsonEnCours
 
 # Envoie les lignes horaires d'un mois, par paquets de 24 (une journee) pour borner la RAM
 def historiqueFonctions_envoieMois(h, m)

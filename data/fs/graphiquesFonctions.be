@@ -8,8 +8,7 @@
  *
  * Route /graphiques (acces privilegie : Tasmota exige un Referer qui designe la carte) :
  *     /graphiques                -> la page (bouton « Graphiques » de l'accueil, pose par HISTORIQUE_WEB)
- *     /graphiques?f=uplot.js     -> /sd/js/uPlot.iife.min.js   (uPlot 1.6.30, envoye par morceaux)
- *     /graphiques?f=uplot.css    -> /sd/css/uPlot.min.css
+ *     /graphiques?f=echarts.js.gz -> /sd/js/echarts.min.js.gz  (ECharts 6.1.0 complet, gzip, envoye par morceaux)
  *
  * Gabarit de la page : /sd/html/graphiques.html et /sd/css/graphiques.css ; logique : /sd/js/graphiques.js.
  *
@@ -20,28 +19,35 @@
  *         libelle, unite et facteur (multiplie chaque valeur) par serie ; a defaut, le chemin (esclave ModBus
  *         remplace par son nom) et une unite devinee (Temperature -> °C, Humidity -> %, hauteur -> cm...) ;
  *     "groupes": {"Cuve": ["sensorsCuve.niveauCuve"]}
- *         un graphique par groupe (titre -> debuts de chemin) ; les autres series vont dans « Mesures ».
+ *         un graphique par groupe (titre -> debuts de chemin) ; les autres series vont dans « Mesures » ;
+ *     "rafraichissement": 60
+ *         periode de relecture de l'historique affiche, en secondes (10 au minimum ; mois en cours : 15 min) ;
+ *     "direct": 10
+ *         cadence par defaut des valeurs en temps reel (/histo?p=direct), en secondes : 0 (arret), 2, 5, 10, 30
+ *         ou 60 ; chaque visiteur la change dans la page (liste « Direct »), son choix est garde par son navigateur.
  * Dans le bloc diverses.historique du persist (lu aussi par le bouton des ESP32 classiques, controleWeb) :
  *     "grafana": "http://192.168.0.5:3000/d/historique-cuve?var-appareil=%topic%"
  *         bouton vers le tableau Grafana du Pi ; '%topic%' = topic MQTT de la carte. Absent = pas de bouton.
  *
- * Ni gzip ni cache HTTP depuis Berry : content_open pose « no-cache » et ne permet pas d'autre en-tete,
- * et UfsServe (UFILESYS_STATIC_SERVING) n'envoie pas Content-Encoding. La page garde donc uPlot dans le
- * localStorage du navigateur et ne le redemande qu'au changement de version.
+ * Ni Content-Encoding ni cache HTTP depuis Berry : content_open pose « no-cache » et ne permet pas d'autre
+ * en-tete, et UfsServe (UFILESYS_STATIC_SERVING) n'envoie pas Content-Encoding. ECharts (1,1 Mo, decide le
+ * 2026-10-18 a la place d'uPlot) est donc stocke COMPRESSE (368 Ko) et envoye tel quel ; la page le decompresse
+ * (DecompressionStream) et le garde dans le localStorage du navigateur, redemande seulement au changement de version.
+ * Source : paquet npm echarts 6.1.0 (integrite sha512 du registre verifiee), dist/echarts.min.js compresse par
+ * gzip -9 ; sha256 du .gz : 6d0658f623f5f3a8ae1f9fb8bf275c1388fd54ddfcee13f646bd0df1e2c00418.
 ********************************************************************************************* -#
 
 var graphiquesFonctions = module("graphiquesFonctions")
 
 # Fichiers servis : nom demande (f=) -> [chemin sur le LittleFS, type MIME]
 graphiquesFonctions.FICHIERS = {
-    "uplot.js":  ["/sd/js/uPlot.iife.min.js", "application/javascript"],
-    "uplot.css": ["/sd/css/uPlot.min.css", "text/css"]
+    "echarts.js.gz": ["/sd/js/echarts.min.js.gz", "application/octet-stream"]
 }
 graphiquesFonctions.MORCEAU = 2048      # octets lus et envoyes a la fois : borne la RAM
 graphiquesFonctions.FICHIER_REGLAGES = "/json/graphiques.json"      # reglages de la page (affichage, groupes)
-graphiquesFonctions.VERSION_UPLOT = "uPlot-1.6.30"     # cle du cache localStorage : a changer avec le fichier
+graphiquesFonctions.VERSION_BIBLIOTHEQUE = "echarts-6.1.0"     # cle du cache localStorage : a changer avec le fichier
 
-# Envoie un fichier du LittleFS par morceaux (uPlot tient sur une seule ligne de 49 Ko)
+# Envoie un fichier du LittleFS par morceaux, en binaire ("rb" : le fichier est compresse)
 def graphiquesFonctions_envoieFichier(chemin, mime)
     import webserver
     import path
@@ -57,7 +63,7 @@ def graphiquesFonctions_envoieFichier(chemin, mime)
     var file
     var ouverte = false         # reponse ouverte : a fermer aussi apres une exception
     try
-        file = open(chemin, "r")
+        file = open(chemin, "rb")
         webserver.content_open(200, mime)
         ouverte = true
         while (true)
@@ -76,7 +82,7 @@ def graphiquesFonctions_envoieFichier(chemin, mime)
 end
 graphiquesFonctions.envoieFichier = graphiquesFonctions_envoieFichier
 
-# Route /graphiques : f = fichier statique (uplot.js, uplot.css)
+# Route /graphiques : f = fichier statique (echarts.js.gz)
 def graphiquesFonctions_route()
     import webserver
     if (!webserver.check_privileged_access())    return nil    end
@@ -131,6 +137,21 @@ def graphiquesFonctions_lisReglages()
 end
 graphiquesFonctions.lisReglages = graphiquesFonctions_lisReglages
 
+# Periode de relecture de la page en secondes (reglage 'rafraichissement') : 60 par defaut, 10 au minimum
+# (chaque relecture de la vue 24 h coute une requete /histo d'environ 10 Ko a la carte)
+def graphiquesFonctions_periode(v)
+    if (type(v) != "int" && type(v) != "real")    return 60    end
+    return (v < 10 ? 10 : int(v))
+end
+graphiquesFonctions.periode = graphiquesFonctions_periode
+
+# Cadence par defaut du temps reel en secondes (reglage 'direct') : une des valeurs de la liste de la page, 10 sinon
+def graphiquesFonctions_cadenceDirect(v)
+    if ((type(v) == "int" || type(v) == "real") && [0, 2, 5, 10, 30, 60].find(int(v)) != nil)    return int(v)    end
+    return 10
+end
+graphiquesFonctions.cadenceDirect = graphiquesFonctions_cadenceDirect
+
 # Noms des esclaves ModBus du persist (drivers.ModBus.environnement.TasmotaSlaveModBus) : cle -> name,
 # pour les libelles par defaut des series TasmotaSlaveModBus.<cle>.* ; {} sans driver ModBus
 def graphiquesFonctions_nomsEsclaves()
@@ -162,10 +183,12 @@ def graphiquesFonctions_page()
     var historique = (historiqueFonctions.config != nil ? historiqueFonctions.config : {})
     var reglages = graphiquesFonctions.lisReglages()
     var carte = def (m, cle) var v = m.find(cle) return (isinstance(v, map) ? v : {}) end     # mal type -> {} (le JS attend des objets)
-    var config = {"uplot": graphiquesFonctions.VERSION_UPLOT, "nom": (size(noms) > 0 ? noms[0] : "mesures"),
+    var config = {"bibliotheque": graphiquesFonctions.VERSION_BIBLIOTHEQUE, "nom": (size(noms) > 0 ? noms[0] : "mesures"),
                   "affichage": carte(reglages, "affichage"), "groupes": carte(reglages, "groupes"),
                   "grafana": graphiquesFonctions.urlGrafana(historique), "compteurs": carte(historique, "compteurs"),
-                  "esclaves": graphiquesFonctions.nomsEsclaves()}
+                  "esclaves": graphiquesFonctions.nomsEsclaves(),
+                  "rafraichissement": graphiquesFonctions.periode(reglages.find("rafraichissement")),
+                  "direct": graphiquesFonctions.cadenceDirect(reglages.find("direct"))}
     logFonctions.log("GRAPHIQUES: Page des graphiques demandee !", LOG_LEVEL_DEBUG, "serveurWeb")
 
     webserver.content_start("Graphiques")
