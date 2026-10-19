@@ -6,7 +6,7 @@
 			"dureeHeures": 24,
 			"moisConserves": 24,
 			"seriesMax": 12,
-			"exclues": [],
+			"exclues": ["TasmotaSlaveModBus"],
 			"ajouts": [],
 			"compteurs": {},
 			"grafana": "http://192.168.0.5:3000/d/historique-cuve?var-appareil=%topic%"
