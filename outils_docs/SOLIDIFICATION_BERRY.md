@@ -309,6 +309,43 @@ Seul ce qui n'est **pas** du bavardage de routine (erreurs, warnings, tracebacks
 `pio run | grep -i parsing` ne renverra donc **jamais rien**, y compris quand la solidification
 fonctionne parfaitement — et on conclut à tort à un échec.
 
+### Piège 12 — Un module solidifié est EN LECTURE SEULE : son état doit vivre ailleurs
+
+Constaté en préparant la solidification de l'historique et des LED (2026-10-20), **avant** tout essai sur
+carte. La table d'un module solidifié est constante, en flash : `be_module_setmember` (`be_module.c:367-405`)
+n'écrit que si `!gc_isconst(attrs)`, sinon il appelle la fonction `setmember` du module si elle existe, et
+**lève une exception** sinon. Un `xxxFonctions.etat = valeur` exécuté sur la carte casse donc le module,
+alors que `berry.exe`, les bancs et `solidifie_et_compile_berry.py` sont **tous verts** : ils chargent le
+`.be`, dont la table est modifiable. Les conteneurs posés au niveau fichier (`xxx.liste = []`,
+`xxx.table = {}`) sont figés eux aussi : un `push` ou un `[k] = v` lèverait de même.
+
+Parade, sur le modèle de l'amont (`berry_matter/src/embedded/Matter_Module.be`) : l'état vit dans une
+globale cachée (`global.(".historiqueFonctions")`), lue par `member(nom)` (appelée pour un attribut absent
+de la table, `be_module.c:332-361` ; renvoyer le module `undefined` pour un nom inconnu) et écrite par
+`setmember(nom, valeur)`. Les attributs d'état ne doivent **jamais** être posés au niveau fichier : la
+valeur figée masquerait celle de l'état. Voir `historiqueFonctions.be`, `historiqueSeries.be`,
+`ledsFonctions.be`. Les fonctions de `member`/`setmember` appellent `xxxFonctions.etat()`, jamais
+`xxxFonctions_etat()` : le nom global d'une fonction n'existe pas une fois le module solidifié.
+
+Avant de solidifier un module, chercher : (1) les attributs posés au niveau fichier, (2) dans **tout**
+`data/`, les réaffectations de ces attributs dans du code indenté et les mutations de conteneurs
+(`push`, `insert`, `remove`, `[k] =`). L'intersection doit être vide. Sur les versions d'avant le
+2026-10-20, ce contrôle trouvait 41 écritures fautives dans les trois modules.
+
+### Piège 13 — Un `controleXxx` importé depuis le LittleFS doit finir par `return controleXxx`
+
+Le modèle « classe portée par le module + `init(m)` appelée par `import` » (`controleModbus.be`) marche
+sans `return` final tant que le module est **solidifié** : `load_native` rend le module. Importé depuis
+le LittleFS (carte où il n'est pas solidifié), le module vaut ce que **renvoie le fichier** : sans
+`return controleXxx`, `import` rend `nil`, `module_init` (`be_module.c:266-296`) n'a rien à appeler, et
+le driver ne démarre pas, **sans erreur**. `controleModbus` et `controleGeneral` n'ont pas ce `return` :
+sans conséquence, ils sont solidifiés sur toutes les cartes qui les chargent. `controleLeds`, solidifié sur
+la cuve seulement, l'a (2026-10-20).
+
+Corollaire : dans l'autoexec, toujours `do import controleXxx as _ctrl end` (ou `import ... as _ctrl` dans
+un bloc), jamais `import controleXxx` au niveau fichier : l'import de niveau fichier écrirait le **module**
+dans la globale `controleXxx`, par-dessus l'**instance** qu'`init()` vient d'y publier.
+
 ## 5. Vérifier qu'une solidification a vraiment eu lieu
 
 Par ordre de force de preuve. Les niveaux 1 et 2 sont les seuls qui comptent au quotidien.
