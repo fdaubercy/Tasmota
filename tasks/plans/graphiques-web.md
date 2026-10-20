@@ -1,7 +1,7 @@
 ---
 chantier: graphiques-web
 titre: Graphiques des mesures dans les pages web des cartes S3/P4 (uPlot)
-statut: actif
+statut: clos
 cree: 2026-10-18
 maj: 2026-10-20
 source: resilient-soaring-stearns.md
