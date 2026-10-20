@@ -268,6 +268,7 @@ class HISTORIQUE_WEB : Driver
         webserver.on("/histo", historiqueFonctions.page, webserver.HTTP_GET)
         # Graphiques (graphiquesFonctions.be) : module importe a la premiere requete seulement
         webserver.on("/graphiques", def () import graphiquesFonctions graphiquesFonctions.route() end, webserver.HTTP_GET)
+        webserver.on("/graphiques", def () import graphiquesFonctions graphiquesFonctions.enregistre() end, webserver.HTTP_POST)
     end
     def web_add_main_button()
         import webserver

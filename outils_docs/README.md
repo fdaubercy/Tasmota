@@ -140,12 +140,20 @@ n'ont ni l'historique ni la page (fichiers exclus de leur LittleFS) : leurs cour
   nouvelle heure : un capteur apparu plus tard (esclave ModBus en retard) s'ajoute ; une série déjà
   enregistrée ce mois-ci reste (trou si elle ne mesure plus). Une série s'appelle par son chemin dans le
   JSON, ex. `DS18B20.Temperature`. Choix et règles : `data/fs/historiqueSeries.be`.
-- **Graphiques** : « Mesures », plus un graphique par groupe déclaré dans `graphiques.json` (ex. « Cuve »
-  pour la hauteur, le volume et le remplissage, sur la cuve et le P4). Le titre d'un graphique ne
-  s'affiche que s'il y en a plusieurs.
-- **Vues** : « 24 dernières heures », puis un mois par entrée du sélecteur (moyenne horaire et bande
-  min-max). Un mois marqué « ancienne liste de séries » date d'avant un changement des séries (fichier
-  mis de côté en `-a`, `-b`…).
+- **Graphiques par défaut** : « Mesures », plus un graphique par groupe déclaré dans `graphiques.json` (ex.
+  « Cuve » pour la hauteur, le volume et le remplissage, sur la cuve et le P4).
+- **Composer ses graphiques** (2026-10-19) : bouton **Modifier les graphiques**. Ajouter, renommer, supprimer,
+  monter ou descendre un graphique ; choisir son type (courbes, barres, escalier, aires), sa période et ses
+  séries, et au besoin un type par série (graphique **combiné** : barres pour un compteur, courbe pour une
+  température). « Toutes les séries placées dans aucun autre graphique » reçoit aussi les séries découvertes
+  plus tard. **Enregistrer sur la carte** : la composition est écrite dans `/json/graphiques.json` (clé
+  `graphiques`), le PC et le téléphone voient donc la même page ; **Rétablir** revient aux graphiques par
+  défaut. La carte contrôle ce qu'elle reçoit : 8 graphiques, 12 séries chacun, titre de 1 à 60 caractères.
+  Une série enregistrée qui n'existe plus est signalée « absente » sous son graphique.
+- **Périodes** : chaque graphique a la sienne, dans son en-tête : « 24 dernières heures », « Mois en cours »,
+  puis un mois par entrée (moyenne horaire ; bande min-max pour les courbes et les aires). Un mois marqué
+  « ancienne liste de séries » date d'avant un changement des séries (fichier mis de côté en `-a`, `-b`…).
+  Deux graphiques sur la même période ne coûtent qu'une lecture à la carte.
 - **Temps réel** (vue 24 h et mois en cours) : la page lit les valeurs actuelles de la carte
   (`/histo?p=direct`) et les ajoute au bout des courbes ; l'axe des temps va jusqu'à l'heure actuelle. Cadence
   choisie dans la liste **Direct** de la page : arrêt, 2, 5, 10, 30 s ou 1 min (10 s par défaut, ou la clé
@@ -203,7 +211,11 @@ seulement (rien en RAM le reste du temps). Facultatif.
     },
     "groupes": {"Cuve": ["sensorsCuve.niveauCuve"]},
     "rafraichissement": 60,
-    "direct": 10
+    "direct": 10,
+    "graphiques": [{"titre": "Cuve", "periode": "jour", "type": "courbe",
+                    "series": [{"chemin": "sensorsCuve.niveauCuve.volume", "type": "barres"},
+                               {"chemin": "sensorsCuve.niveauCuve.hauteurEau"}]},
+                   {"titre": "Mesures", "periode": "mois", "type": "aire", "series": "autres"}]
 }
 ```
 
@@ -215,6 +227,8 @@ reste sans unité ; l'unité d'un compteur réglé vient de `compteurs`. `facteu
 multiplie la valeur affichée (0-1 → %). `groupes` : titre → débuts de chemin ; chaque groupe a son
 graphique, les autres séries vont dans « Mesures ». `rafraichissement` : relecture de l'historique affiché, en
 secondes (10 au minimum). `direct` : cadence par défaut du temps réel (0 = arrêt, 2, 5, 10, 30 ou 60 s).
+`graphiques` : la composition écrite par le bouton « Enregistrer » de la page (inutile de l'écrire à la main) ;
+`periode` = `jour`, `mois` (mois en cours) ou `AAAA-MM` ; sans cette clé, graphiques par défaut.
 
 **Carte sans historique local** (ESP32 classique, ou historique à `OFF`) : la même clé `grafana`, dans un bloc
 `"historique": {"grafana": "…"}`, ajoute à la page d'accueil un bouton **Historique (Grafana)** qui ouvre

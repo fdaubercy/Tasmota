@@ -415,7 +415,9 @@ Pour ne pas chercher : ce qui a ete produit et ou.
 - Graphiques des cartes S3/P4 (2026-10-18) : page `/graphiques` (bouton d'accueil) servie par
   `data/fs/graphiquesFonctions.be` (route et bouton declares par le driver `HISTORIQUE_WEB` de
   `historiqueFonctions.be`), gabarit `data/sd/html/graphiques.html` + `data/sd/css/graphiques.css`, logique
-  `data/sd/js/graphiques.js`, ECharts 6 COMPRESSE `data/sd/js/echarts.min.js.gz` (Berry ne pose pas Content-Encoding :
+  `data/sd/js/graphiques.js` (+ `graphiques_trace.js` : trace ECharts d'un graphique, `graphiques_edition.js` : mode
+  edition ; page COMPOSABLE (A9) : composition enregistree par `POST /graphiques` dans la cle `graphiques` de
+  `/json/graphiques.json`, `graphiquesFonctions.enregistre`/`valideComposition`), ECharts 6 COMPRESSE `data/sd/js/echarts.min.js.gz` (Berry ne pose pas Content-Encoding :
   la page le decompresse, cache localStorage versionne) ; temps reel par `/histo?p=direct` (cadence de la liste
   « Direct » de la page, 10 s par defaut) ; series DECOUVERTES dans le JSON SENSOR
   par `data/fs/historiqueSeries.be` (ni relais, ni entrees, ni volets, ni internes ; persist : `exclues`, `ajouts`,

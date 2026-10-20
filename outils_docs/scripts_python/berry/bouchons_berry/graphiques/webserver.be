@@ -4,6 +4,7 @@
 # d'un objet bytes de berry.exe, d'ou un fichier plutot qu'une memoire.
 var webserver = module("webserver")
 webserver.HTTP_GET = 1
+webserver.HTTP_POST = 2
 webserver.BUTTON_MAIN = 0
 webserver.sortie = nil          # fichier ouvert par le banc
 webserver.code = nil            # code et type de content_open

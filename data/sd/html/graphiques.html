@@ -1,10 +1,12 @@
 <!-- Page /graphiques des cartes ESP32-S3 et P4 (data/fs/graphiquesFonctions.be) : zones remplies par /sd/js/graphiques.js -->
+<!-- (un bloc par graphique, chacun avec sa periode) et /sd/js/graphiques_edition.js (panneau g_edition) -->
 <div id='g_zone'>
 	<div id='g_barre'>
-		<select id='g_vue' title='Période affichée'></select>
 		<select id='g_direct' title='Cadence des valeurs en temps réel'></select>
+		<button id='g_modifier' style='display:none'>Modifier les graphiques</button>
 		<button id='g_grafana' style='display:none'>Historique long (Grafana)</button>
 	</div>
 	<p id='g_msg'>Chargement...</p>
+	<div id='g_edition' style='display:none'></div>
 	<div id='g_graphiques'></div>
 </div>

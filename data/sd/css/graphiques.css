@@ -1,7 +1,23 @@
-/* Page /graphiques (data/fs/graphiquesFonctions.be, /sd/html/graphiques.html, /sd/js/graphiques.js) */
+/* Page /graphiques (data/fs/graphiquesFonctions.be, /sd/html/graphiques.html, /sd/js/graphiques*.js) */
 #g_zone{text-align:left;max-width:calc(100vw - 24px)}
 #g_msg{margin:8px 0}
 #g_barre{display:flex;flex-wrap:wrap}
 #g_barre select,#g_barre button{width:auto;max-width:100%;margin:0 8px 8px 0;padding:0 12px}
 .g_trace{width:min(1000px,calc(100vw - 40px));height:340px}
-@media(max-width:600px){.g_trace{height:260px}}
+.g_entete{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:16px 0 4px}
+.g_entete h3{margin:0}
+.g_entete select{width:auto;padding:0 8px}
+.g_note{margin:2px 0;font-size:0.9em;opacity:0.8}
+#g_edition{width:min(1000px,calc(100vw - 40px))}
+.g_ed_graphique{margin:0 0 12px;padding:8px}
+.g_ed_ligne{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.g_ed_ligne input,.g_ed_ligne select{width:auto;flex:1 1 140px;padding:0 8px}
+.g_ed_ligne button{width:auto;padding:0 10px}
+.g_ed_choix{display:block;margin:8px 0}
+.g_ed_series{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:4px 12px}
+.g_ed_serie{display:flex;align-items:center;gap:6px}
+.g_ed_serie label{flex:1}
+.g_ed_serie select{width:auto;padding:0 6px}
+.g_ed_pied{display:flex;flex-wrap:wrap;gap:8px}
+.g_ed_pied button{width:auto;padding:0 12px}
+@media(max-width:600px){.g_trace{height:260px}.g_ed_series{grid-template-columns:1fr}}

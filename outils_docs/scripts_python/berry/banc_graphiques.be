@@ -314,4 +314,206 @@ verifie(accueil(persistReel("data/cave/tasmota32-serveur-rly/_persist.json")) ==
         accueil(persistReel("data/bureau/tasmota32-interrupteur-differentiel/_persist.json")) == "",
         "persists reels des ESP32 classiques (pas de cle grafana, decision du 2026-10-18) : pas de bouton")
 
+# ---- 6. Composition enregistree (POST /graphiques) ----------------------------------------------
+print("6. Composition enregistree (POST /graphiques)")
+import os
+import path
+# Travail sur une COPIE du graphiques.json reel : jamais ecrase
+def lisFichier(chemin)
+    var f = open(chemin, "r")
+    var t = f.read()
+    f.close()
+    return t
+end
+def ecrisFichier(chemin, texte)
+    var f = open(chemin, "w")
+    f.write(texte)
+    f.close()
+end
+var COPIE = SORTIE + "/reglages6.json"
+ecrisFichier(COPIE, lisFichier(REGLAGES_P4))
+graphiquesFonctions.FICHIER_REGLAGES = COPIE
+var ORIGINAL = lisFichier(COPIE)
+var reglagesOrigine = json.load(ORIGINAL)
+
+# Envoie un POST, renvoie [code, reponse JSON ou nil, exception ou nil]
+def poste(args)
+    webserver.raz(args)
+    var f = open(SORTIE + "/post.json", "wb")
+    webserver.sortie = f
+    var leve = nil
+    try graphiquesFonctions.enregistre() except .. as e, m leve = str(e) + " : " + str(m) end
+    f.close()
+    return [webserver.code, json.load(lisFichier(SORTIE + "/post.json")), leve]
+end
+def compo(c) return {"composition": json.dump(c)} end
+def fichierEstOrigine() return lisFichier(COPIE) == ORIGINAL end
+
+var valide = [
+    {"titre": "  Cuve  ", "periode": "jour", "type": "courbe", "inconnue": 1, "series": [{"chemin": "sensorsCuve.niveauCuve.hauteurEau", "type": "aire", "x": 2}, "ESP32.Temperature"]},
+    {"titre": "Mois", "periode": "2026-10-b", "type": "barres", "series": [{"chemin": "a.b"}]},
+    {"titre": "Reste", "periode": "mois", "type": "escalier", "series": "autres"}
+]
+avant = size(journal)
+var r = poste(compo(valide))
+verifie(r[2] == nil && r[0] == 200 && r[1] != nil && r[1].find("ok") == true, "corps valide : 200, ok true" + (r[2] != nil ? " (" + r[2] + ")" : ""))
+var ecrit = (fichierEstOrigine() ? {} : json.load(lisFichier(COPIE)))
+var g = ecrit.find("graphiques")
+verifie(isinstance(g, list) && size(g) == 3, "fichier reecrit avec 3 graphiques")
+if (isinstance(g, list) && size(g) == 3)
+    verifie(g[0]["titre"] == "Cuve" && g[0]["periode"] == "jour" && g[0]["type"] == "courbe", "titre sans espaces de bord")
+    verifie(!g[0].contains("inconnue") && size(g[0]) == 4, "cle inconnue du graphique ecartee")
+    verifie(size(g[0]["series"]) == 2 && g[0]["series"][0]["type"] == "aire" && !g[0]["series"][0].contains("x"), "type par serie garde, cle inconnue de la serie ecartee")
+    verifie(g[0]["series"][1]["chemin"] == "ESP32.Temperature" && size(g[0]["series"][1]) == 1, "serie donnee en chaine acceptee")
+    verifie(g[1]["periode"] == "2026-10-b" && g[1]["type"] == "barres" && g[2]["series"] == "autres" && g[2]["type"] == "escalier" && g[2]["periode"] == "mois",
+            "periodes jour/mois/AAAA-MM-b, types barres/escalier, series 'autres'")
+end
+verifie(json.dump(ecrit.find("affichage")) == json.dump(reglagesOrigine.find("affichage")) && json.dump(ecrit.find("groupes")) == json.dump(reglagesOrigine.find("groupes")),
+        "cles affichage et groupes conservees")
+verifie(!path.exists(COPIE + ".tmp"), "fichier .tmp absent apres coup")
+verifie(size(journal) > avant && journal[-1][1] == LOG_LEVEL_INFO && journal[-1][2] == "serveurWeb" && string.find(journal[-1][0], "GRAPHIQUES: Composition enregistree (3") == 0,
+        "une ligne info journalisee")
+var ENREGISTRE = lisFichier(COPIE)
+
+# Defauts : periode et type absents
+r = poste(compo([{"titre": "T", "series": ["a.b"]}]))
+ecrit = json.load(lisFichier(COPIE))
+verifie(r[0] == 200 && ecrit["graphiques"][0]["periode"] == "jour" && ecrit["graphiques"][0]["type"] == "courbe", "periode 'jour' et type 'courbe' par defaut")
+verifie(poste(compo([]))[0] == 200 && size(json.load(lisFichier(COPIE))["graphiques"]) == 0, "liste vide acceptee")
+
+# Refus : rien d'ecrit
+def refuse(args, nom)
+    ecrisFichier(COPIE, ORIGINAL)
+    var r = poste(args)
+    verifie(r[2] == nil && r[0] == 400 && r[1] != nil && type(r[1].find("erreur")) == "string" && fichierEstOrigine() && !path.exists(COPIE + ".tmp"),
+            nom + " : 400, fichier inchange" + (r[2] != nil ? " (" + r[2] + ")" : ""))
+end
+var gros = []
+for i: 0 .. 8   gros.push({"titre": "T", "series": ["a.b"]}) end
+var trop = []
+for i: 0 .. 12   trop.push("a.b" + str(i)) end
+def avec(cle, v) var m = {"titre": "T", "series": ["a.b"]} m[cle] = v return compo([m]) end
+var longTitre = ""
+for i: 1 .. 61   longTitre += "x" end
+var remplissage = ""
+for i: 1 .. 9000   remplissage += "y" end
+var enorme = compo([{"titre": "T", "series": ["a.b"], "x": remplissage}])
+verifie(size(enorme["composition"]) > 8192, "(controle) le corps de l'essai depasse 8192 octets")
+refuse(enorme, "corps de plus de 8192 octets")
+refuse({"composition": "{pas du json"}, "JSON illisible")
+refuse({}, "parametre composition absent")
+refuse({"composition": json.dump({"titre": "T"})}, "composition qui n'est pas une liste")
+refuse(compo(gros), "9 graphiques")
+refuse(avec("series", trop), "13 series")
+refuse(avec("titre", ""), "titre vide")
+refuse(avec("titre", "   "), "titre d'espaces")
+refuse(avec("titre", longTitre), "titre de 61 caracteres")
+refuse(avec("titre", 5), "titre pas une chaine")
+refuse(avec("type", "camembert"), "type de graphique inconnu")
+refuse(avec("series", [{"chemin": "a.b", "type": "radar"}]), "type de serie inconnu")
+refuse(avec("periode", "2026-13x"), "periode 2026-13x")
+refuse(avec("periode", "semaine"), "periode semaine")
+refuse(avec("periode", "2026-13"), "periode 2026-13 (mois inexistant)")
+refuse(compo([{"titre": "T"}]), "series absente")
+refuse(avec("series", "tout"), "series chaine autre que 'autres'")
+refuse(avec("series", [{"type": "courbe"}]), "serie sans chemin")
+refuse(avec("series", [""]), "chemin vide")
+refuse(compo(["pas une map"]), "graphique pas une map")
+
+# Acces non privilegie
+webserver.privilegie = false
+r = poste(compo(valide))
+webserver.privilegie = true
+verifie(r[2] == nil && r[0] == nil && webserver.envois == 0 && fichierEstOrigine(), "acces non privilegie : rien d'envoye, fichier inchange")
+
+# Retablir (null) : la cle graphiques disparait, les autres restent
+ecrisFichier(COPIE, ENREGISTRE)
+avant = size(journal)
+r = poste({"composition": "null"})
+ecrit = json.load(lisFichier(COPIE))
+verifie(r[0] == 200 && r[1] != nil && r[1].find("ok") == true && r[1].contains("graphiques") && r[1]["graphiques"] == nil, "null : 200, ok, graphiques null")
+verifie(!ecrit.contains("graphiques") && json.dump(ecrit.find("affichage")) == json.dump(reglagesOrigine.find("affichage")) && ecrit.contains("groupes"),
+        "null : cle graphiques supprimee, autres cles conservees")
+verifie(size(journal) > avant && journal[-1][1] == LOG_LEVEL_INFO, "null : une ligne info journalisee")
+
+# Exception pendant l'ecriture : reponse fermee, erreur journalisee, fichier d'origine intact
+ecrisFichier(COPIE, ORIGINAL)
+var renommeNormal = path.rename
+path.rename = def (a, b) raise "io_error", "disque plein" end
+avant = size(journal)
+r = poste(compo(valide))
+path.rename = renommeNormal
+verifie(r[2] == nil && webserver.ferme && r[1] != nil && r[1].contains("erreur") && r[0] >= 400, "exception au renommage : reponse d'erreur, fermee, sans exception")
+verifie(fichierEstOrigine() && !path.exists(COPIE + ".tmp") && dernierErreur(avant) != nil, "exception au renommage : fichier d'origine intact, .tmp supprime, erreur journalisee")
+# Exception AVANT la reponse (lecture des reglages) : le navigateur recoit quand meme une reponse (500), pas d'attente sans fin
+var lisNormal = graphiquesFonctions.lisReglages
+graphiquesFonctions.lisReglages = def () raise "io_error", "flash illisible" end
+avant = size(journal)
+r = poste(compo(valide))
+graphiquesFonctions.lisReglages = lisNormal
+verifie(r[2] == nil && r[0] == 500 && webserver.ferme && r[1] != nil && r[1].contains("erreur") && fichierEstOrigine() && dernierErreur(avant) != nil,
+        "exception avant la reponse : 500 envoye et ferme, erreur journalisee, fichier intact")
+
+# Page : window.GRAPHIQUES.graphiques et ordre des scripts (racine factice pour ne pas dependre des vrais JS)
+var RACINE = SORTIE + "/fausse"
+for d: [RACINE, RACINE + "/sd", RACINE + "/sd/css", RACINE + "/sd/html", RACINE + "/sd/js"]
+    if (!os.path.exists(d))    os.mkdir(d)    end
+end
+ecrisFichier(RACINE + "/sd/css/graphiques.css", "/*CSS*/")
+ecrisFichier(RACINE + "/sd/html/graphiques.html", "<!--HTML-->")
+ecrisFichier(RACINE + "/sd/js/graphiques.js", "//JS_PRINCIPAL")
+ecrisFichier(RACINE + "/sd/js/graphiques_trace.js", "//JS_TRACE")
+ecrisFichier(RACINE + "/sd/js/graphiques_edition.js", "//JS_EDITION")
+var racineGestion = gestionFileFolder.racine
+gestionFileFolder.racine = RACINE
+path.racine = RACINE
+def textePage(sortie)
+    webserver.raz({})
+    webserver.sortie = open(SORTIE + "/" + sortie, "wb")
+    var leve = nil
+    try graphiquesFonctions.route() except .. as e, m leve = str(e) + " : " + str(m) end
+    webserver.sortie.close()
+    return leve != nil ? "EXCEPTION " + leve : lisFichier(SORTIE + "/" + sortie)
+end
+def configDe(page)
+    var d = string.find(page, "window.GRAPHIQUES=")
+    return json.load(page[d + 18 .. string.find(page, ";</script>", d) - 1])
+end
+ecrisFichier(COPIE, ENREGISTRE)
+var pageC = textePage("page6.html")
+var c6 = configDe(pageC)
+verifie(c6 != nil && isinstance(c6["graphiques"], list) && size(c6["graphiques"]) == 3 && c6["graphiques"][1]["titre"] == "Mois", "page : window.GRAPHIQUES.graphiques = la composition enregistree")
+var d6 = string.find(pageC, "window.GRAPHIQUES=")
+var pt = string.find(pageC, "//JS_TRACE")
+var pe = string.find(pageC, "//JS_EDITION")
+var pp = string.find(pageC, "//JS_PRINCIPAL")
+verifie(d6 >= 0 && pt > d6 && pe > pt && pp > pe, "page : graphiques_trace.js, puis graphiques_edition.js, puis graphiques.js, apres la configuration")
+# Fichiers d'edition et de trace absents : la page est servie quand meme
+os.remove(RACINE + "/sd/js/graphiques_trace.js")
+os.remove(RACINE + "/sd/js/graphiques_edition.js")
+var pageSans = textePage("page6_sans.html")
+verifie(string.find(pageSans, "EXCEPTION") != 0 && string.find(pageSans, "//JS_PRINCIPAL") > 0 && string.find(pageSans, "//JS_EDITION") < 0 && webserver.termine,
+        "scripts de trace et d'edition absents : page servie, graphiques.js present")
+# Sans cle graphiques : null
+ecrisFichier(COPIE, ORIGINAL)
+c6 = configDe(textePage("page6_null.html"))
+verifie(c6 != nil && c6.contains("graphiques") && c6["graphiques"] == nil, "page sans cle graphiques : window.GRAPHIQUES.graphiques = null")
+# Relecture A9 : un titre enregistre contenant </script> ne ferme pas le script de configuration de la page
+ecrisFichier(COPIE, ORIGINAL)
+r = poste(compo([{"titre": "</script><b>x", "series": [{"chemin": "a.</script>"}]}]))
+var pageEch = textePage("page6_echappee.html")
+var blocEch = pageEch[string.find(pageEch, "window.GRAPHIQUES=") .. string.find(pageEch, ";</script>", string.find(pageEch, "window.GRAPHIQUES=")) - 1]
+verifie(r[0] == 200 && string.find(blocEch, "</") < 0 && string.find(blocEch, "<\\/script><b>x") > 0,
+        "titre et chemin enregistres avec </script> : echappes dans window.GRAPHIQUES")
+# Relecture A9 : graphiques.json present mais illisible -> pas ecrase (affichage, groupes... seraient perdus)
+ecrisFichier(COPIE, "{pas du json")
+avant = size(journal)
+r = poste(compo(valide))
+verifie(r[2] == nil && r[0] == 500 && r[1] != nil && r[1].contains("erreur") && lisFichier(COPIE) == "{pas du json" && dernierErreur(avant) != nil,
+        "graphiques.json illisible : enregistrement refuse (500), fichier laisse tel quel, erreur journalisee")
+ecrisFichier(COPIE, ORIGINAL)
+gestionFileFolder.racine = racineGestion
+path.racine = "data"
+graphiquesFonctions.FICHIER_REGLAGES = REGLAGES_P4
+
 print(echecs == 0 ? "BANC_GRAPHIQUES: OK" : "BANC_GRAPHIQUES: ECHEC (" + str(echecs) + ")")

@@ -219,36 +219,51 @@ Décisions de l'utilisateur (2026-10-18) :
   servent que de point de départ. Un bouton « Rétablir » revient à la composition par défaut.
 - **La période (24 h ou un mois) est propre à chaque graphique.**
 
-Choix de Claude (à contester) :
-- Clé `graphiques` de **`/json/graphiques.json`** (et non du persist : décision RAM de l'A8) = liste de `{"titre", "periode": "jour"|"AAAA-MM", "type": "courbe"|"barres"|"escalier"|"aire",
-  "series": [{"chemin", "type"?}] | "autres"}`. `"autres"` = toutes les séries placées dans aucun autre graphique : un
-  graphique ainsi réglé reçoit seul les séries découvertes plus tard. Le `type` d'une série prime sur celui du graphique
-  (graphique combiné). Clé absente = composition par défaut, tirée de `groupes` (A8) ; « Rétablir » supprime la clé.
-- Une série peut figurer dans plusieurs graphiques.
-- Ordre des graphiques changé par des boutons monter/descendre (pas de glisser-déposer : plus lourd sur téléphone).
+Choix de Claude (à contester), revus le 2026-10-19 pour ECharts et le temps réel (A10) :
+- Clé `graphiques` de **`/json/graphiques.json`** (et non du persist : décision RAM de l'A8) = liste de
+  `{"titre", "periode", "type", "series"}` :
+  - `periode` : `"jour"` (24 h glissantes, temps réel), `"mois"` (mois en cours, temps réel, suit le changement de
+    mois) ou `"AAAA-MM"` (un mois figé, éventuellement `-a`, `-b`) ;
+  - `type` : `"courbe"`, `"barres"`, `"escalier"` ou `"aire"` ;
+  - `series` : `"autres"` (toutes les séries placées dans aucun autre graphique : un graphique ainsi réglé reçoit seul
+    les séries découvertes plus tard) ou liste de `{"chemin", "type"?}` ; le `type` d'une série prime sur celui du
+    graphique (graphique combiné).
+  Clé absente = composition par défaut : « Mesures » (`autres`) + un graphique par groupe de `groupes` (A8), en 24 h et
+  en courbes ; « Rétablir » supprime la clé. À la première modification, les groupes deviennent des listes explicites.
+- Envoi par `POST /graphiques`, champ de formulaire `composition` (JSON ; `null` = Rétablir) : Tasmota découpe déjà un
+  corps de formulaire en paramètres (`webserver.arg`).
+- Une série peut figurer dans plusieurs graphiques. Ordre changé par des boutons monter/descendre (pas de glisser-déposer :
+  plus lourd sur téléphone).
 - En vue mois : bande min-max pour les courbes et les aires ; barres et escalier sur la moyenne horaire seule.
-- Limites contrôlées par la carte (frontière système) : au plus 8 graphiques et 12 séries par graphique, titre de
-  60 caractères au plus, types et chemins validés. Un chemin inconnu est gardé, la page le signale par « absente ».
+- Lectures mutualisées : une lecture de `/histo` par période affichée, une seule lecture `p=direct` pour tous les
+  graphiques qui suivent l'heure ; la liste « Direct » (A10) reste commune à la page.
+- Limites contrôlées par la carte (frontière système) : corps de 8 Ko au plus, au plus 8 graphiques et 12 séries par
+  graphique, titre de 1 à 60 caractères, chemins de 120 caractères au plus, types et périodes validés, clés inconnues
+  écartées. Un chemin inconnu est gardé, la page le signale par « absente ».
+- `graphiques.js` dépasse déjà 500 lignes : l'édition va dans un fichier à part, `data/sd/js/graphiques_edition.js`.
 
-- [ ] Route d'écriture `POST /graphiques` (accès privilégié, `check_privileged_access`) : corps JSON validé puis écrit
-  dans la clé `graphiques` de `/json/graphiques.json`, **sans toucher au persist** (écriture dans un fichier temporaire
-  puis renommage : une coupure ne laisse pas un fichier à moitié écrit). Réponse JSON `{ok}` ou `{erreur}` ; rien n'est
-  écrit si le corps est invalide ou trop gros ; log `info` de l'enregistrement
-- [ ] Page en mode lecture : un bloc par graphique (titre, sélecteur de période propre, cases des séries, tracé uPlot),
-  lectures de `/histo` mutualisées (une seule lecture par période demandée, même si plusieurs graphiques l'utilisent)
-- [ ] Types de tracé avec uPlot : courbe (actuel), barres (`uPlot.paths.bars`), escalier (`uPlot.paths.stepped`), aire
-  (remplissage `fill`), combiné (type par série) ; axes Y par unité dans chaque graphique, comme aujourd'hui
-- [ ] Mode édition (bouton « Modifier ») : ajouter un graphique, le renommer, le supprimer, le monter ou le descendre,
-  choisir son type, sa période, ses séries (liste des séries découvertes, avec leur libellé) et le type de chaque série ;
+- [x] Route d'écriture `POST /graphiques` (accès privilégié, `check_privileged_access`) : champ `composition` validé — preuve : 2026-10-20, `graphiquesFonctions.enregistre`/`traiteComposition`/`valideComposition`/`ecrisReglages` + route POST dans `historiqueFonctions.web_add_handler` (GET et POST coexistent : emplacements indexés par chemin ET méthode, `xdrv_52_3_berry_webserver.ino:99-106`, 10/32 utilisés) ; `banc_graphiques.be` §6 rouge avant (31 ECHEC + plantage) puis vert : corps valide, clés inconnues écartées, 20 refus (taille, JSON, limites, types, périodes), accès refusé, Rétablir, exception au renommage et AVANT la réponse (500, témoin rouge), fichier illisible non écrasé, `</script>` échappé
+  puis écrit dans la clé `graphiques` de `/json/graphiques.json`, autres clés (`affichage`, `groupes`...) conservées,
+  **sans toucher au persist** (fichier temporaire puis renommage : une coupure ne laisse pas un fichier à moitié écrit).
+  Réponse JSON `{"ok", "graphiques"}` ou `{"erreur"}` ; rien n'est écrit si le corps est invalide ou trop gros ; log
+  `info` de l'enregistrement
+- [x] Page en mode lecture : un bloc par graphique (titre, sélecteur de période propre, légende), lectures de `/histo` — preuve : `graphiques.js` + `graphiques_trace.js` ; Chrome : « composition » (4 graphiques, ordre, périodes propres, une lecture p=jour et une du mois pour 4 graphiques), « mois » (composition enregistrée), « mois_a » (période changée dans le graphique), « jour » (une lecture p=jour pour 2 graphiques)
+  mutualisées (une seule lecture par période, même si plusieurs graphiques l'utilisent), temps réel partagé
+- [x] Types de tracé ECharts : courbe, barres, escalier (`step`), aire (`areaStyle`), combiné (type par série) ; axes Y — preuve : Chrome « composition » : rendu réel `bar`, `bar`+`line` (combiné), `line:area`, `line:step` ; bande min-max pour l'aire en mois, pas pour l'escalier ni en 24 h ; mutants « type de série ignoré », « barres en ligne », « bande pour l'escalier » détectés
+  par unité dans chaque graphique ; bande min-max en vue mois pour courbes et aires
+- [x] Mode édition (bouton « Modifier ») : ajouter un graphique, le renommer, le supprimer, le monter ou le descendre, — preuve : `graphiques_edition.js` ; Chrome « edition » (Ajouter, titre, type, série, Enregistrer → POST exact de la composition explicite, Referer, page redessinée, message gardé), « retablir » (POST null → défaut) ; mutants « message effacé par le temps réel », « autres ne retire pas » détectés
+  choisir son type, sa période, ses séries (séries découvertes, avec leur libellé) et le type de chaque série ;
   « Enregistrer » (POST), « Annuler », « Rétablir » (composition par défaut)
-- [ ] Erreurs visibles : carte injoignable, refus d'écriture, composition invalide renvoyée par la carte ; la page
+- [x] Erreurs visibles : carte injoignable, refus d'écriture, composition invalide renvoyée par la carte ; la page — preuve : Chrome « refus » (message de la carte, édition ouverte), « injoignable » (connexion coupée → « Carte injoignable »), « invalide » (titre vide : rien n'est envoyé ; mutant détecté), « absent » (pas de bouton Modifier) ; réponse 500 de la carte sur exception
   reste utilisable en lecture
-- [ ] RAM et heap de la carte relevés pendant un enregistrement (page et persist), sans chute durable
-- [ ] Bancs : Berry (validation de la route : corps valide, trop gros, types inconnus, trop de graphiques, accès refusé,
-  globale et persist mis à jour, témoin négatif) ; Chrome sans interface (composition à 3 graphiques de types différents,
-  graphique combiné, périodes différentes, édition puis enregistrement simulé, Rétablir) ; mutants ; `banc_graphiques.py` vert
+- [ ] RAM et heap de la carte relevés pendant un enregistrement, sans chute durable
+- [x] Bancs : Berry (validation de la route : corps valide, trop gros, types inconnus, trop de graphiques, accès refusé, — preuve : `banc_graphiques.py` vert (Berry + Chrome, 18 scénarios de rendu) ; 6 mutants de la page tous détectés (MUTANTS: OK) ; témoin Berry de la réponse 500 rouge
+  autres clés conservées, Rétablir, témoin négatif) ; Chrome sans interface (composition à 3 graphiques de types
+  différents, graphique combiné, périodes différentes, lectures mutualisées, édition puis enregistrement simulé,
+  Rétablir) ; mutants ; `banc_graphiques.py` vert
 - [ ] Essai réel sur le P4 : un graphique ajouté depuis le PC apparaît sur le téléphone, persiste après un redémarrage
-- [ ] Documentation : `outils_docs/README.md` § « Les graphiques des mesures », schéma du persist régénéré
+- [x] Documentation : `outils_docs/README.md` § « Les graphiques des mesures », `CLAUDE.md`, skill `bancs` ; — preuve : README § graphiques (composer ses graphiques, périodes par graphique, clé `graphiques`), `CLAUDE.md`, skill `bancs` ; `relecteur-berry` : 1 « à corriger » traité (fichier illisible écrasé → refus 500, contrôle rouge puis vert), échappement `</script>` désormais prouvé par le banc
+  `relecteur-berry` sur le Berry touché
 
 ## Améliorations restantes
 - [x] [projet] Mini-courbe 24 h sur la page d'accueil (écartée le 2026-10-18 pour garder l'accueil léger) — abandonnée : l'accueil se rafraîchit toutes les ~2 s et doit rester léger ; le bouton « Graphiques » y mène en un clic (décision de l'utilisateur, 2026-10-18)

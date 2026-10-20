@@ -1,10 +1,12 @@
 // graphiques.js - Page /graphiques des cartes ESP32-S3 et P4 (data/fs/graphiquesFonctions.be), 2026-10-18
-// Trace l'historique de la carte (/histo, data/fs/historiqueFonctions.be) avec ECharts 6 (decide le 2026-10-18 a
-// la place d'uPlot), en temps reel. La carte pose avant ce script window.GRAPHIQUES :
+// Trace l'historique de la carte (/histo, data/fs/historiqueFonctions.be) avec ECharts 6, en temps reel, dans une
+// page COMPOSABLE (A9, 2026-10-19) : graphiques_trace.js dessine un graphique, graphiques_edition.js edite la
+// composition ; tous deux sont envoyes avant ce fichier. La carte pose window.GRAPHIQUES :
 //   - bibliotheque     : cle versionnee du cache localStorage d'ECharts ('echarts-6.1.0') ;
 //   - nom              : nom de l'historique ('mesures') ;
-//   - affichage        : {serie: {libelle, unite, facteur}} (graphiques.json de la carte), facultatif ;
-//   - groupes          : {titre: [debuts de chemin]} : un graphique par groupe, les autres series dans « Mesures » ;
+//   - graphiques       : composition enregistree (graphiques.json), ou null = composition par defaut ;
+//   - affichage        : {serie: {libelle, unite, facteur}} (graphiques.json), facultatif ;
+//   - groupes          : {titre: [debuts de chemin]} : composition par defaut = « Mesures » + un graphique par groupe ;
 //   - compteurs        : reglages des compteurs (persist), pour leur unite ;
 //   - esclaves         : {TasmotaSlaveModBusN: nom} des esclaves ModBus, pour les libelles par defaut ;
 //   - grafana          : URL du tableau Grafana de la carte (vide = pas de bouton) ;
@@ -12,68 +14,48 @@
 //   - direct           : cadence par defaut des valeurs en temps reel (s, 0 = arret).
 // Une serie s'appelle par son chemin dans le JSON SENSOR de la carte (ex. 'DS18B20.Temperature').
 //
-// Temps reel : toutes les « direct » secondes (liste de la page, choix garde par le navigateur), la page lit les
-// valeurs actuelles (/histo?p=direct) et les ajoute au bout des courbes de la vue 24 h et du mois en cours.
-// L'historique (pas clos + pas en cours, ou lignes horaires) est relu toutes les « rafraichissement » secondes (mois
-// en cours : 15 min) et remplace les points directs qu'il couvre. Rien n'est lu quand l'onglet est cache.
+// Un graphique = {titre, periode ('jour' | 'mois' = mois en cours | 'AAAA-MM'), type, series ('autres' | [{chemin,
+// type?}])}. Lectures mutualisees : une lecture de /histo par periode affichee, partagee par les graphiques qui
+// l'utilisent ; temps reel : une lecture /histo?p=direct pour tous les graphiques qui suivent l'heure (24 h, mois en
+// cours), toutes les « direct » secondes (liste de la page, choix garde par le navigateur). L'historique est relu
+// toutes les « rafraichissement » secondes (mois en cours : 15 min). Rien n'est lu quand l'onglet est cache.
 // ECharts (1,1 Mo) est envoye COMPRESSE par la carte (Berry ne peut pas poser Content-Encoding) : la page le
 // decompresse (DecompressionStream) et le garde dans le localStorage, redemande seulement au changement de version.
 // Toute lecture ou ecriture du localStorage est sous try/catch : sans stockage, la page marche sans rien retenir.
 (function () {
   'use strict';
-  var G = window.GRAPHIQUES || {};
+  var G = window.GRAPHIQUES || {}, T = window.GraphiquesTrace;
   var AFFICHAGE = G.affichage || {}, GROUPES = G.groupes || {}, COMPTEURS = G.compteurs || {};
   var ESCLAVES = G.esclaves || {};
   var PERIODE = Math.max(1, +G.rafraichissement || 60) * 1000, PERIODE_MOIS = 15 * 60000;
   var CADENCES = [0, 2, 5, 10, 30, 60];
   var COULEURS = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#17becf',
                   '#bcbd22', '#7f7f7f', '#aec7e8', '#ffbb78'];
-  var CLE_MASQUEES = 'graphiques-masquees', CLE_VUE = 'graphiques-vue', CLE_DIRECT = 'graphiques-direct';
-  var LARGEUR_AXE = 56;            // px reserves par axe Y
-  var fmtHeure = new Intl.DateTimeFormat('fr-FR', {hour: '2-digit', minute: '2-digit'});
-  var fmtJour = new Intl.DateTimeFormat('fr-FR', {weekday: 'short', day: '2-digit', month: '2-digit'});
-  var fmtComplet = new Intl.DateTimeFormat('fr-FR', {weekday: 'short', day: '2-digit', month: '2-digit',
-                                                     hour: '2-digit', minute: '2-digit', second: '2-digit'});
+  var CLE_MASQUEES = 'graphiques-masquees', CLE_DIRECT = 'graphiques-direct';
   var fmtMois = new Intl.DateTimeFormat('fr-FR', {month: 'long', year: 'numeric'});
-  var fmtNombre = new Intl.NumberFormat('fr-FR', {maximumFractionDigits: 2});
 
-  // base = derniere lecture de l'historique : {titre, x (s), noms, moy, min, max, direct (vrai si la vue suit l'heure)}
-  var etat = {series: [], vue: 'jour', base: null, direct: [], x: [], courbes: [], titre: '',
+  // donnees : periode lue ('jour' | 'AAAA-MM') -> {titre, x (s), noms, moy, min, max, suit, vide} ; lectures : en cours
+  var etat = {series: [], mois: [], composition: [], donnees: {}, lectures: {}, luA: {}, direct: [],
               masquees: lisListe(CLE_MASQUEES)};
-  // Un bloc par graphique : {titre, prefixes (null = « Mesures »), zone, entete, trace, graphique, courbes, unites}
+  // Un bloc par graphique : {def, periode affichee, zone, titreEl, choix, noteEl, trace, graphique, courbes, x...}
   var blocs = [];
 
   function $(id) { return document.getElementById(id); }
-
-  function message(texte, erreur) {
+  // garde : message de l'utilisateur (composition enregistree...), que bilan() n'efface pas
+  function message(texte, erreur, garde) {
+    etat.messageGarde = !!garde;
     var m = $('g_msg');
     m.textContent = texte || '';
     m.style.display = texte ? '' : 'none';
     m.style.color = erreur ? '#ff5661' : '';
   }
-
-  function echappe(s) {
-    return String(s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; });
-  }
+  function copie(v) { return JSON.parse(JSON.stringify(v)); }
 
   // ---- localStorage, sous try/catch ----------------------------------------------------------------
   function lis(cle) { try { return localStorage.getItem(cle); } catch (e) { return null; } }
   function ecris(cle, valeur) { try { localStorage.setItem(cle, valeur); } catch (e) { /* rien */ } }
   function lisListe(cle) {
     try { var v = JSON.parse(lis(cle) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; }
-  }
-
-  // Couleur du theme Tasmota (variables CSS), pour que les axes restent lisibles en theme sombre
-  function couleurTheme(variable, defaut) {
-    try {
-      var v = getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
-      return v || defaut;
-    } catch (e) { return defaut; }
-  }
-
-  function transparence(hex, alpha) {
-    var n = parseInt(hex.slice(1), 16);
-    return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + alpha + ')';
   }
 
   // ---- ECharts : localStorage, sinon la carte (compresse) -------------------------------------------
@@ -126,6 +108,80 @@
     });
   }
 
+  function moisCourant() { return new Date().toISOString().slice(0, 7); }
+  function cleLecture(periode) { return periode === 'mois' ? moisCourant() : (periode || 'jour'); }
+
+  function libelleMois(m) {
+    var texte = fmtMois.format(new Date(+m.slice(0, 4), +m.slice(5, 7) - 1, 1));
+    return texte.charAt(0).toUpperCase() + texte.slice(1) + (m.length > 7 ? ' (ancienne liste de séries)' : '');
+  }
+  function libellePeriode(p) {
+    return p === 'jour' ? '24 dernières heures' : p === 'mois' ? 'Mois en cours' : libelleMois(p);
+  }
+  function periodes() { return ['jour', 'mois'].concat(etat.mois.slice().reverse()); }
+
+  // 24 h : tampon RAM de la carte, un point par pas (5 min par defaut), null = pas sans mesure, puis le pas en
+  // cours (moyenne des mesures deja recues)
+  function lisJour() {
+    return lisHisto('p=jour').then(function (d) {
+      var noms = d.series || [];
+      var clos = d.t0 !== null && Array.isArray(d.valeurs) && d.valeurs.length > 0;
+      var moy = clos ? d.valeurs.map(function (c) { return c.slice(); }) : noms.map(function () { return []; });
+      var x = clos ? d.valeurs[0].map(function (_, i) { return d.t0 + i * d.pas; }) : [];
+      if (typeof d.tEncours === 'number' && Array.isArray(d.encours) && d.encours.length === noms.length) {
+        var fin = x.length ? x[x.length - 1] : null;
+        if (fin !== null && d.tEncours - fin > d.pas) {           // pas sautes (coupure) : un trou, pas un trait
+          x.push(fin + d.pas);
+          moy.forEach(function (c) { c.push(null); });
+        }
+        if (fin === null || d.tEncours > fin) {
+          x.push(d.tEncours);
+          moy.forEach(function (c, i) { c.push(d.encours[i]); });
+        }
+      }
+      return {titre: 'Dernières 24 h (pas de ' + Math.round(d.pas / 60) + ' min) et temps réel', x: x, noms: noms,
+              moy: moy, min: null, max: null, suit: true,
+              vide: x.length ? '' : 'Aucun pas de mesure encore clos depuis le démarrage : revenir dans quelques minutes.'};
+    });
+  }
+
+  // Mois : une ligne par heure [t, min1, moy1, max1, ...] ; une heure absente devient un trou ; le mois en cours
+  // (UTC) est prolonge par les valeurs directes
+  function lisMois(m) {
+    return lisHisto('p=mois&m=' + encodeURIComponent(m)).then(function (d) {
+      var noms = d.seriesFichier || d.series || [], lignes = d.lignes || [];
+      var x = [], cols = noms.map(function () { return {min: [], moy: [], max: []}; }), prec = null;
+      lignes.forEach(function (l) {
+        if (prec !== null && l[0] - prec > 3600) {
+          x.push(prec + 3600);
+          cols.forEach(function (c) { c.min.push(null); c.moy.push(null); c.max.push(null); });
+        }
+        x.push(l[0]);
+        cols.forEach(function (c, i) { c.min.push(l[1 + 3 * i]); c.moy.push(l[2 + 3 * i]); c.max.push(l[3 + 3 * i]); });
+        prec = l[0];
+      });
+      var suit = m === moisCourant();
+      return {titre: libelleMois(m) + ' (moyenne horaire, bande min-max)' + (suit ? ' et temps réel' : ''), x: x,
+              noms: noms, moy: cols.map(function (c) { return c.moy; }), min: cols.map(function (c) { return c.min; }),
+              max: cols.map(function (c) { return c.max; }), suit: suit,
+              vide: x.length ? '' : 'Aucune heure enregistrée pour ce mois.'};
+    });
+  }
+
+  // Lecture d'une periode, partagee : deux graphiques sur la meme periode font UNE requete
+  function lit(cle) {
+    if (etat.lectures[cle]) return etat.lectures[cle];
+    var p = (cle === 'jour' ? lisJour() : lisMois(cle)).then(function (d) {
+      etat.donnees[cle] = d;
+      etat.luA[cle] = Date.now();
+      return d;
+    });
+    etat.lectures[cle] = p;
+    var fin = function () { delete etat.lectures[cle]; };
+    p.then(fin, fin);
+    return p;
+  }
+
   // ---- Libelles, unites, couleurs ----------------------------------------------------------------
   // Unite devinee quand le persist n'en donne pas (affichage, compteurs) : d'abord la derniere cle du chemin
   // (noms de Tasmota : Temperature, Humidity...), puis le nom entier (valeurs des modules : hauteurEau...)
@@ -159,314 +215,184 @@
     return s.join(' ');
   }
 
-  // Une courbe : valeurs multipliees par le facteur (ex. taux 0-1 -> %), null conserve
-  function courbe(nom, moy, min, max) {
+  function uniteDe(nom) {
     var a = AFFICHAGE[nom] || {}, cpt = COMPTEURS[nom] || {};
+    return (typeof a.unite === 'string') ? a.unite : (typeof cpt.unite === 'string') ? cpt.unite : devineUnite(nom);
+  }
+  function legendeDe(nom) {
+    var unite = uniteDe(nom);
+    return ((AFFICHAGE[nom] || {}).libelle || libelleDefaut(nom)) + (unite ? ' (' + unite + ')' : '');
+  }
+
+  // Une courbe : valeurs multipliees par le facteur (ex. taux 0-1 -> %), null conserve
+  function courbe(nom, type, moy, min, max, k) {
+    var a = AFFICHAGE[nom] || {};
     var f = (typeof a.facteur === 'number') ? a.facteur : 1;
     var echelle = function (v) { return (v === null || v === undefined) ? null : v * f; };
     var rang = etat.series.indexOf(nom);
-    var libelle = a.libelle || libelleDefaut(nom);
-    var unite = (typeof a.unite === 'string') ? a.unite : (typeof cpt.unite === 'string') ? cpt.unite : devineUnite(nom);
-    return {
-      nom: nom, libelle: libelle, unite: unite, legende: libelle + (unite ? ' (' + unite + ')' : ''),
-      couleur: COULEURS[(rang < 0 ? etat.courbes.length : rang) % COULEURS.length],
-      moy: moy.map(echelle), min: min ? min.map(echelle) : null, max: max ? max.map(echelle) : null
-    };
+    return {nom: nom, legende: legendeDe(nom), unite: uniteDe(nom), type: type,
+            couleur: COULEURS[(rang < 0 ? k : rang) % COULEURS.length],
+            moy: moy.map(echelle), min: min ? min.map(echelle) : null, max: max ? max.map(echelle) : null};
   }
 
-  // ---- Blocs : « Mesures » puis un graphique par groupe du persist -----------------------------------
-  function construitBlocs() {
-    var zone = $('g_graphiques');
-    var defs = [{titre: 'Mesures', prefixes: null}];
+  // ---- Composition --------------------------------------------------------------------------------
+  function dansPrefixes(nom, prefixes) {
+    return prefixes.some(function (p) { return nom === p || nom.indexOf(p + '.') === 0; });
+  }
+
+  // Par defaut : « Mesures » (series placees nulle part ailleurs) + un graphique par groupe, resolu sur les series de
+  // la periode lue (un mois ancien a sa propre liste) ; 'prefixes' n'est jamais enregistre
+  function compositionDefaut() {
+    var c = [{titre: 'Mesures', periode: 'jour', type: 'courbe', series: 'autres'}];
     Object.keys(GROUPES).forEach(function (t) {
-      if (Array.isArray(GROUPES[t])) defs.push({titre: t, prefixes: GROUPES[t].map(String)});
+      if (Array.isArray(GROUPES[t])) c.push({titre: t, periode: 'jour', type: 'courbe', prefixes: GROUPES[t].map(String)});
     });
-    defs.forEach(function (d) {
-      var b = {titre: d.titre, prefixes: d.prefixes, graphique: null, courbes: [], unites: []};
+    return c;
+  }
+
+  // Composition explicite (pour l'edition et l'enregistrement) : les groupes deviennent des listes de series
+  function explicite(composition) {
+    return composition.map(function (g) {
+      var e = {titre: g.titre, periode: g.periode, type: g.type, series: g.series};
+      if (g.prefixes) {
+        e.series = etat.series.filter(function (n) { return dansPrefixes(n, g.prefixes); })
+                              .map(function (n) { return {chemin: n}; });
+      }
+      return copie(e);
+    }).filter(function (g) { return g.series === 'autres' || g.series.length > 0; });
+  }
+
+  // Series d'un graphique pour une periode (noms = series de la periode lue) : [{chemin, type?}]
+  function seriesDu(g, noms) {
+    if (g.prefixes) return noms.filter(function (n) { return dansPrefixes(n, g.prefixes); }).map(function (n) { return {chemin: n}; });
+    if (Array.isArray(g.series)) return g.series;
+    return noms.filter(function (n) {           // 'autres' : placees dans aucun autre graphique
+      return !etat.composition.some(function (o) {
+        if (o === g) return false;
+        if (o.prefixes) return dansPrefixes(n, o.prefixes);
+        return Array.isArray(o.series) && o.series.some(function (s) { return s.chemin === n; });
+      });
+    }).map(function (n) { return {chemin: n}; });
+  }
+
+  // ---- Blocs : un graphique de la composition -----------------------------------------------------
+  function construitBlocs() {
+    blocs.forEach(function (b) { if (b.graphique) b.graphique.dispose(); });
+    blocs = [];
+    var zone = $('g_graphiques');
+    zone.innerHTML = '';
+    etat.composition.forEach(function (g) {
+      var b = {def: g, periode: g.periode || 'jour', graphique: null, courbes: [], x: [], absentes: []};
       b.zone = document.createElement('div');
-      b.entete = document.createElement('h3');
-      b.entete.textContent = d.titre;
-      b.entete.style.cssText = 'margin:16px 0 4px';
+      b.zone.className = 'g_bloc';
+      var entete = document.createElement('div');
+      entete.className = 'g_entete';
+      b.titreEl = document.createElement('h3');
+      b.titreEl.textContent = g.titre;
+      b.choix = document.createElement('select');
+      b.choix.className = 'g_periode';
+      b.choix.title = 'Période de ce graphique';
+      periodes().forEach(function (p) {
+        var o = document.createElement('option');
+        o.value = p; o.textContent = libellePeriode(p);
+        b.choix.appendChild(o);
+      });
+      if (periodes().indexOf(b.periode) < 0) {          // mois enregistre puis supprime de la carte
+        var o = document.createElement('option');
+        o.value = b.periode; o.textContent = libellePeriode(b.periode) + ' (absent)';
+        b.choix.appendChild(o);
+      }
+      b.choix.value = b.periode;
+      b.choix.onchange = function () { b.periode = b.choix.value; affiche([b]); };
+      entete.appendChild(b.titreEl); entete.appendChild(b.choix);
+      b.noteEl = document.createElement('p');
+      b.noteEl.className = 'g_note';
       b.trace = document.createElement('div');
       b.trace.className = 'g_trace';
-      b.zone.appendChild(b.entete); b.zone.appendChild(b.trace);
+      b.zone.appendChild(entete); b.zone.appendChild(b.noteEl); b.zone.appendChild(b.trace);
       zone.appendChild(b.zone);
       blocs.push(b);
     });
   }
 
-  function dansGroupe(nom, b) {
-    return b.prefixes.some(function (p) { return nom === p || nom.indexOf(p + '.') === 0; });
+  // Assemble un bloc : historique de sa periode + valeurs directes posterieures (si la periode suit l'heure)
+  function compose(b) {
+    var d = etat.donnees[cleLecture(b.periode)];
+    if (!d) return;
+    var fin = d.x.length ? d.x[d.x.length - 1] : -Infinity;
+    var ajout = d.suit ? etat.direct.filter(function (p) { return p.t > fin; }) : [];
+    var x = d.x.concat(ajout.map(function (p) { return p.t; }));
+    var vides = ajout.map(function () { return null; });
+    var voulues = seriesDu(b.def, d.noms);
+    b.x = x; b.suit = d.suit; b.titreVue = d.titre;
+    b.absentes = voulues.filter(function (s) { return d.noms.indexOf(s.chemin) < 0; }).map(function (s) { return s.chemin; });
+    b.courbes = x.length ? voulues.filter(function (s) { return d.noms.indexOf(s.chemin) >= 0; }).map(function (s, k) {
+      var i = d.noms.indexOf(s.chemin);
+      var moy = d.moy[i].concat(ajout.map(function (p) { return p.valeurs.hasOwnProperty(s.chemin) ? p.valeurs[s.chemin] : null; }));
+      return courbe(s.chemin, T.TYPES.indexOf(s.type) >= 0 ? s.type : (b.def.type || 'courbe'), moy,
+                    d.min ? d.min[i].concat(vides) : null, d.max ? d.max[i].concat(vides) : null, k);
+    }) : [];
+    var visible = b.courbes.length > 0 || (b.absentes.length > 0 && d.x.length > 0);
+    b.zone.style.display = visible ? '' : 'none';
+    b.noteEl.textContent = b.absentes.length ? 'Absente(s) de cette période : ' + b.absentes.map(legendeDe).join(', ') : '';
+    b.noteEl.style.display = b.absentes.length ? '' : 'none';
+    T.dessine(b, etat.masquees, changeMasquees);
   }
 
-  // Bloc d'une serie : le premier groupe qui la contient, sinon « Mesures »
-  function blocDe(nom) {
-    for (var i = 1; i < blocs.length; i++) if (dansGroupe(nom, blocs[i])) return blocs[i];
-    return blocs[0];
+  // Message general : le premier motif d'absence de donnees quand aucun graphique n'a de courbe
+  function bilan() {
+    if (blocs.some(function (b) { return b.courbes.length > 0; })) { if (!etat.messageGarde) message(''); return; }
+    var d = blocs.map(function (b) { return etat.donnees[cleLecture(b.periode)]; }).filter(Boolean)[0];
+    if (d) message(d.vide || 'Aucune mesure à afficher pour cette composition.');
   }
 
-  // Echelle Y d'une unite : du min au max des valeurs de ses series (visibles, dans la fenetre zoomee), 5 % de
-  // marge ; elle ne descend pas sous zero quand toutes les valeurs sont positives ; une valeur constante garde
-  // une hauteur lisible
-  function etendue(v) {
-    if (!isFinite(v.min) || !isFinite(v.max)) return [0, 1];
-    if (v.min === v.max) { var m = Math.abs(v.min) * 0.05 || 1; return [v.min - m, v.max + m]; }
-    var marge = (v.max - v.min) * 0.05, bas = v.min - marge;
-    return [(v.min >= 0 && bas < 0) ? 0 : bas, v.max + marge];
-  }
-
-  // Repartit les courbes entre les blocs ; un bloc sans serie est masque ; le titre du bloc n'est affiche que
-  // s'il y a plusieurs graphiques
-  function trace() {
-    blocs.forEach(function (b) { b.courbes = []; });
-    etat.courbes.forEach(function (c) { blocDe(c.nom).courbes.push(c); });
-    var nbVisibles = blocs.filter(function (b) { return b.courbes.length > 0; }).length;
-    blocs.forEach(function (b) {
-      b.zone.style.display = (b.courbes.length || (b === blocs[0] && nbVisibles === 0)) ? '' : 'none';
-      b.entete.style.display = nbVisibles > 1 ? '' : 'none';
-      traceBloc(b);
-    });
-  }
-
-  function traceBloc(b) {
-    if (!b.courbes.length) {
-      if (b.graphique) { b.graphique.dispose(); b.graphique = null; }
-      ['data-titre', 'data-legende', 'data-series', 'data-fin', 'data-points', 'data-echelles', 'data-derniers',
-       'data-axe-x'].forEach(function (a) {
-        b.trace.removeAttribute(a);
+  // Lit les periodes des blocs donnes (une requete par periode) puis les redessine
+  function affiche(liste) {
+    var cles = [];
+    liste.forEach(function (b) { var c = cleLecture(b.periode); if (cles.indexOf(c) < 0) cles.push(c); });
+    return Promise.all(cles.map(function (c) {
+      return lit(c).then(function () {
+        blocs.forEach(function (b) { if (cleLecture(b.periode) === c) compose(b); });
       });
-      return;
-    }
-    if (!b.graphique) {
-      b.graphique = echarts.init(b.trace, null, {renderer: 'canvas'});
-      b.graphique.on('legendselectchanged', function (e) { changeMasquees(b, e.selected); });
-    }
-    b.graphique.setOption(option(b), {replaceMerge: ['series', 'yAxis']});
-    expose(b);
+    })).then(bilan).catch(function (e) { message(e.message, true); });
   }
 
-  // Unites du bloc : les plus partagees d'abord, « sans unite » en dernier ; un axe Y chacune, alternativement a
-  // gauche et a droite
-  function unitesDe(courbes) {
-    var unites = [], compte = {};
-    courbes.forEach(function (c) {
-      if (unites.indexOf(c.unite) < 0) unites.push(c.unite);
-      compte[c.unite] = (compte[c.unite] || 0) + 1;
-    });
-    return unites.sort(function (a, b) {
-      if ((a === '') !== (b === '')) return a === '' ? 1 : -1;
-      return compte[b] - compte[a];
-    });
-  }
-
-  function option(b) {
-    var texte = couleurTheme('--c_txt', '#888'), grille = 'rgba(128,128,128,0.25)';
-    var unites = b.unites = unitesDe(b.courbes);
-    var gauche = Math.ceil(unites.length / 2), droite = Math.floor(unites.length / 2);
-    var ms = etat.x.map(function (t) { return t * 1000; });
-    var suitMaintenant = etat.base && etat.base.direct;
-    var series = [], selection = {};
-    b.courbes.forEach(function (c, k) {
-      var axe = unites.indexOf(c.unite);
-      selection[c.legende] = etat.masquees.indexOf(c.nom) < 0;
-      series.push({id: 'courbe-' + c.nom, name: c.legende, type: 'line', yAxisIndex: axe, showSymbol: false,
-                   connectNulls: false, color: c.couleur, lineStyle: {width: 2},
-                   data: ms.map(function (t, i) { return [t, c.moy[i]]; })});
-      if (c.min && c.max) {       // bande min-max : min empile avec l'ecart, meme nom (la legende masque les trois)
-        series.push({id: 'bande-min-' + c.nom, name: c.legende, type: 'line', yAxisIndex: axe, stack: 'bande' + k,
-                     showSymbol: false, silent: true, lineStyle: {opacity: 0}, color: c.couleur,
-                     data: ms.map(function (t, i) { return [t, c.min[i]]; })});
-        series.push({id: 'bande-ecart-' + c.nom, name: c.legende, type: 'line', yAxisIndex: axe, stack: 'bande' + k,
-                     showSymbol: false, silent: true, lineStyle: {opacity: 0}, color: c.couleur,
-                     areaStyle: {color: transparence(c.couleur, 0.2)},
-                     data: ms.map(function (t, i) {
-                       return [t, (c.min[i] === null || c.max[i] === null) ? null : c.max[i] - c.min[i]];
-                     })});
-      }
-    });
-    return {
-      animation: false,
-      title: {text: etat.titre, left: 'center', top: 2, textStyle: {color: texte, fontSize: 13, fontWeight: 'normal'}},
-      grid: {left: 16 + LARGEUR_AXE * gauche, right: 16 + LARGEUR_AXE * Math.max(droite, 0), top: 46, bottom: 58},
-      tooltip: {trigger: 'axis', confine: true, formatter: infobulle},
-      legend: {type: 'scroll', bottom: 0, data: b.courbes.map(function (c) { return c.legende; }), selected: selection,
-               textStyle: {color: texte}},
-      dataZoom: [{type: 'inside'}],
-      xAxis: {type: 'time', max: suitMaintenant ? function (v) { return Math.max(v.max, Date.now()); } : null,
-              axisLine: {lineStyle: {color: texte}}, splitLine: {show: false},
-              axisLabel: {color: texte, hideOverlap: true, formatter: function (v) {
-                var d = new Date(v);
-                return (d.getHours() === 0 && d.getMinutes() === 0) ? fmtJour.format(d) : fmtHeure.format(d);
-              }}},
-      yAxis: unites.map(function (unite, i) {
-        return {type: 'value', name: unite, scale: true, position: i % 2 === 0 ? 'left' : 'right',
-                offset: Math.floor(i / 2) * LARGEUR_AXE, alignTicks: false,
-                min: function (v) { return etendue(v)[0]; }, max: function (v) { return etendue(v)[1]; },
-                nameTextStyle: {color: texte}, axisLine: {show: true, lineStyle: {color: texte}},
-                axisLabel: {color: texte, formatter: function (v) { return fmtNombre.format(v); }},
-                splitLine: {show: i === 0, lineStyle: {color: grille}}};
-      }),
-      series: series
-    };
-  }
-
-  // Infobulle : date complete puis une ligne par courbe (les series de la bande min-max sont omises)
-  function infobulle(params) {
-    if (!params || !params.length) return '';
-    var lignes = [echappe(fmtComplet.format(new Date(params[0].axisValue)))];
-    params.forEach(function (p) {
-      if (String(p.seriesId).indexOf('bande-') === 0) return;
-      var v = p.value ? p.value[1] : null;
-      lignes.push(p.marker + ' ' + echappe(p.seriesName) + ' : ' + (v === null || v === undefined ? '--' : fmtNombre.format(v)));
-    });
-    return lignes.join('<br>');
-  }
-
-  // Clic dans la legende : series masquees memorisees (par chemin, pas par libelle)
+  // Clic dans la legende : series masquees memorisees (par chemin, pas par libelle), dans tous les graphiques
   function changeMasquees(b, selection) {
     b.courbes.forEach(function (c) {
       etat.masquees = etat.masquees.filter(function (n) { return n !== c.nom; });
       if (selection[c.legende] === false) etat.masquees.push(c.nom);
     });
     ecris(CLE_MASQUEES, JSON.stringify(etat.masquees));
-    expose(b);
+    T.expose(b, etat.masquees);
   }
 
-  // Etat du trace, lisible dans le DOM (diagnostic, banc) : ECharts dessine dans un canvas
-  function expose(b) {
-    var t = b.trace;
-    t.setAttribute('data-titre', etat.titre);
-    t.setAttribute('data-series', JSON.stringify(b.courbes.map(function (c) { return c.legende; })));
-    t.setAttribute('data-legende', JSON.stringify(b.courbes.filter(function (c) {
-      return etat.masquees.indexOf(c.nom) < 0;
-    }).map(function (c) { return c.legende; })));
-    t.setAttribute('data-fin', String(etat.x[etat.x.length - 1]));
-    t.setAttribute('data-points', String(etat.x.length));
-    var derniers = {};
-    b.courbes.forEach(function (c) {
-      for (var i = c.moy.length - 1; i >= 0; i--) if (c.moy[i] !== null) { derniers[c.legende] = c.moy[i]; break; }
-    });
-    t.setAttribute('data-derniers', JSON.stringify(derniers));
-    var bornes = {}, axeX = null;
-    try {
-      var modele = b.graphique.getModel();
-      b.unites.forEach(function (unite, i) {
-        var e = modele.getComponent('yAxis', i).axis.scale.getExtent();
-        bornes[unite] = [e[0], e[1]];
-      });
-      axeX = modele.getComponent('xAxis', 0).axis.scale.getExtent();
-    } catch (e) { /* API interne d'ECharts indisponible : bornes non exposees */ }
-    t.setAttribute('data-echelles', JSON.stringify(bornes));
-    t.setAttribute('data-axe-x', JSON.stringify(axeX));
-  }
-
-  // ---- Assemblage : historique + valeurs directes ------------------------------------------------
-  // Les points directs posterieurs au dernier point de l'historique prolongent chaque courbe (vue qui suit l'heure)
-  function compose() {
-    var b = etat.base;
-    if (!b) return;
-    var fin = b.x.length ? b.x[b.x.length - 1] : -Infinity;
-    var ajout = b.direct ? etat.direct.filter(function (p) { return p.t > fin; }) : [];
-    var x = b.x.concat(ajout.map(function (p) { return p.t; }));
-    var vides = ajout.map(function () { return null; });
-    etat.titre = b.titre;
-    etat.x = x;
-    etat.courbes = x.length ? b.noms.map(function (nom, i) {
-      var moy = b.moy[i].concat(ajout.map(function (p) { return p.valeurs.hasOwnProperty(nom) ? p.valeurs[nom] : null; }));
-      return courbe(nom, moy, b.min ? b.min[i].concat(vides) : null, b.max ? b.max[i].concat(vides) : null);
-    }) : [];
-    trace();
-    if (x.length) message('');
-  }
-
-  // ---- Vues --------------------------------------------------------------------------------------
-  // 24 h : tampon RAM de la carte, un point par pas (5 min par defaut), null = pas sans mesure, puis le pas en
-  // cours (moyenne des mesures deja recues)
-  function vueJour() {
-    var vue = etat.vue;
-    return lisHisto('p=jour').then(function (d) {
-      if (etat.vue !== vue) return;          // l'utilisateur a change de vue pendant la lecture
-      var noms = d.series || [];
-      var clos = d.t0 !== null && Array.isArray(d.valeurs) && d.valeurs.length > 0;
-      var moy = clos ? d.valeurs.map(function (c) { return c.slice(); }) : noms.map(function () { return []; });
-      var x = clos ? d.valeurs[0].map(function (_, i) { return d.t0 + i * d.pas; }) : [];
-      if (typeof d.tEncours === 'number' && Array.isArray(d.encours) && d.encours.length === noms.length) {
-        var fin = x.length ? x[x.length - 1] : null;
-        if (fin !== null && d.tEncours - fin > d.pas) {           // pas sautes (coupure) : un trou, pas un trait
-          x.push(fin + d.pas);
-          moy.forEach(function (c) { c.push(null); });
-        }
-        if (fin === null || d.tEncours > fin) {
-          x.push(d.tEncours);
-          moy.forEach(function (c, i) { c.push(d.encours[i]); });
-        }
-      }
-      etat.base = {titre: 'Dernières 24 h (pas de ' + Math.round(d.pas / 60) + ' min) et temps réel', x: x, noms: noms,
-                   moy: moy, min: null, max: null, direct: true};
-      compose();
-      if (!etat.x.length) {
-        message('Aucun pas de mesure encore clos depuis le démarrage : revenir dans quelques minutes.');
-      } else if (moy.every(function (c) { return c.every(function (v) { return v === null; }); })) {
-        message('Aucune mesure enregistrée sur les dernières 24 h.');
-      }
-    });
-  }
-
-  function moisCourant() { return new Date().toISOString().slice(0, 7); }
-
-  // Mois : une ligne par heure [t, min1, moy1, max1, ...] ; une heure absente devient un trou ; le mois en cours
-  // (UTC) est prolonge par les valeurs directes
-  function vueMois(m) {
-    var vue = etat.vue;
-    return lisHisto('p=mois&m=' + encodeURIComponent(m)).then(function (d) {
-      if (etat.vue !== vue) return;
-      dernierMois = Date.now();
-      var noms = d.seriesFichier || d.series || [], lignes = d.lignes || [];
-      var x = [], cols = noms.map(function () { return {min: [], moy: [], max: []}; }), prec = null;
-      lignes.forEach(function (l) {
-        if (prec !== null && l[0] - prec > 3600) {
-          x.push(prec + 3600);
-          cols.forEach(function (c) { c.min.push(null); c.moy.push(null); c.max.push(null); });
-        }
-        x.push(l[0]);
-        cols.forEach(function (c, i) { c.min.push(l[1 + 3 * i]); c.moy.push(l[2 + 3 * i]); c.max.push(l[3 + 3 * i]); });
-        prec = l[0];
-      });
-      var direct = m === moisCourant();
-      etat.base = {titre: libelleMois(m) + ' (moyenne horaire, bande min-max)' + (direct ? ' et temps réel' : ''), x: x,
-                   noms: noms, moy: cols.map(function (c) { return c.moy; }), min: cols.map(function (c) { return c.min; }),
-                   max: cols.map(function (c) { return c.max; }), direct: direct};
-      compose();
-      if (!etat.x.length) message('Aucune heure enregistrée pour ce mois.');
-    });
-  }
-
-  function libelleMois(m) {
-    var texte = fmtMois.format(new Date(+m.slice(0, 4), +m.slice(5, 7) - 1, 1));
-    return texte.charAt(0).toUpperCase() + texte.slice(1) + (m.length > 7 ? ' (ancienne liste de séries)' : '');
-  }
-
-  function montreVue(vue) {
-    etat.vue = vue;
-    ecris(CLE_VUE, vue);
-    message('Chargement...');
-    var p = (vue === 'jour') ? vueJour() : vueMois(vue.slice(2));
-    return p.catch(function (e) { message(e.message, true); });
+  // Nouvelle composition (null = par defaut) : blocs recrees puis dessines
+  function applique(composition) {
+    etat.composition = Array.isArray(composition) ? copie(composition) : compositionDefaut();
+    etat.estDefaut = !Array.isArray(composition);
+    construitBlocs();
+    return affiche(blocs);
   }
 
   // ---- Relecture periodique de l'historique affiche -----------------------------------------------
-  var dernierMois = 0, relectureEnCours = false;
   function rafraichit() {
-    if (document.hidden || relectureEnCours || !window.echarts) return;
-    var p = null;
-    if (etat.vue === 'jour') p = vueJour();
-    else if (etat.vue.slice(2) === moisCourant() && Date.now() - dernierMois > PERIODE_MOIS) p = vueMois(etat.vue.slice(2));
-    if (!p) return;
-    relectureEnCours = true;
-    p.catch(function (e) { message(e.message, true); }).then(function () { relectureEnCours = false; });
+    if (document.hidden || !window.echarts) return;
+    var cles = [];
+    blocs.forEach(function (b) {
+      var c = cleLecture(b.periode);
+      if (cles.indexOf(c) >= 0 || etat.lectures[c]) return;
+      if (c === 'jour' || (c === moisCourant() && Date.now() - (etat.luA[c] || 0) > PERIODE_MOIS)) cles.push(c);
+    });
+    cles.forEach(function (c) {
+      lit(c).then(function () {
+        blocs.forEach(function (b) { if (cleLecture(b.periode) === c) compose(b); });
+        bilan();
+      }).catch(function (e) { message(e.message, true); });
+    });
   }
 
-  // ---- Temps reel : valeurs actuelles (/histo?p=direct) ------------------------------------------
+  // ---- Temps reel : valeurs actuelles (/histo?p=direct), une lecture pour toute la page ---------------
   var minuteurDirect = null, lectureDirect = false;
 
   function cadenceDirect() {
@@ -476,7 +402,8 @@
   }
 
   function lisDirect() {
-    if (document.hidden || lectureDirect || !etat.base || !etat.base.direct) return;
+    if (document.hidden || lectureDirect) return;
+    if (!blocs.some(function (b) { var d = etat.donnees[cleLecture(b.periode)]; return d && d.suit; })) return;
     lectureDirect = true;
     lisHisto('p=direct').then(function (d) {
       if (typeof d.t !== 'number' || !Array.isArray(d.valeurs)) return;
@@ -485,7 +412,8 @@
       var dernier = etat.direct.length ? etat.direct[etat.direct.length - 1].t : 0;
       if (d.t > dernier) etat.direct.push({t: d.t, valeurs: valeurs});      // meme t = reponse en cache de la carte
       etat.direct = etat.direct.filter(function (p) { return p.t > d.t - 3 * 3600; }).slice(-2000);
-      compose();
+      blocs.forEach(function (b) { var x = etat.donnees[cleLecture(b.periode)]; if (x && x.suit) compose(b); });
+      bilan();
     }).catch(function (e) { message(e.message, true); }).then(function () { lectureDirect = false; });
   }
 
@@ -499,21 +427,23 @@
     }
   }
 
-  // ---- Barre de commande : vue, temps reel, Grafana ------------------------------------------------
-  function construitBarre(mois) {
-    var choix = $('g_vue');
-    var options = [['jour', '24 dernières heures']].concat(mois.slice().reverse().map(function (m) {
-      return ['m:' + m, libelleMois(m)];
-    }));
-    options.forEach(function (o) {
-      var e = document.createElement('option');
-      e.value = o[0]; e.textContent = o[1];
-      choix.appendChild(e);
-    });
-    var memo = lis(CLE_VUE);
-    choix.value = options.some(function (o) { return o[0] === memo; }) ? memo : 'jour';
-    choix.onchange = function () { montreVue(choix.value).then(demarreDirect); };
+  // ---- Enregistrement de la composition sur la carte (POST /graphiques) --------------------------
+  function enregistre(composition) {
+    return fetch('/graphiques', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                                 body: 'composition=' + encodeURIComponent(JSON.stringify(composition))})
+      .catch(function () { throw new Error('Carte injoignable : composition non enregistrée.'); })
+      .then(function (r) {
+        return r.text().then(function (t) {
+          var d = null;
+          try { d = JSON.parse(t); } catch (e) { d = null; }
+          if (r.ok && d && d.ok) return d;
+          throw new Error(d && d.erreur ? 'Refusé par la carte : ' + d.erreur : 'Enregistrement impossible (HTTP ' + r.status + ')');
+        });
+      });
+  }
 
+  // ---- Barre de commande : temps reel, Grafana -----------------------------------------------------
+  function construitDirect() {
     var direct = $('g_direct');
     CADENCES.forEach(function (c) {
       var e = document.createElement('option');
@@ -523,7 +453,6 @@
     });
     direct.value = String(cadenceDirect());
     direct.onchange = function () { ecris(CLE_DIRECT, direct.value); demarreDirect(); };
-    return choix.value;
   }
 
   // Bouton Grafana : pose avant toute lecture, utile meme si l'historique de la carte n'a pas demarre
@@ -534,9 +463,20 @@
     b.onclick = function () { window.open(G.grafana, '_blank', 'noopener'); };
   }
 
+  // Interface donnee a graphiques_edition.js
+  var api = {
+    TYPES: T.TYPES, message: function (t, e) { message(t, e, true); }, enregistre: enregistre, periodes: periodes, libellePeriode: libellePeriode,
+    legende: legendeDe, series: function () { return etat.series.slice(); },
+    composition: function () { return explicite(etat.composition); },
+    defaut: function () { return explicite(compositionDefaut()); },
+    estDefaut: function () { return !!etat.estDefaut; },
+    applique: function (c) { return applique(c).then(demarreDirect); },
+    montre: function (oui) { $('g_graphiques').style.display = oui ? '' : 'none'; }
+  };
+
   function demarre() {
     construitGrafana();
-    construitBlocs();
+    construitDirect();
     message('Chargement...');
     var redim = null;
     window.addEventListener('resize', function () {
@@ -545,10 +485,13 @@
     });
     chargeECharts().then(function () { return lisHisto('p=liste'); }).then(function (liste) {
       etat.series = liste.series || [];
-      return montreVue(construitBarre(liste.mois || []));
+      etat.mois = liste.mois || [];
+      return applique(Array.isArray(G.graphiques) ? G.graphiques : null);
     }).then(function () {
       demarreDirect();
       setInterval(rafraichit, PERIODE);
+      if (typeof window.GraphiquesEdition === 'function') window.GraphiquesEdition(api);
+      document.documentElement.setAttribute('data-graphiques-pret', '1');
     }).catch(function (e) { message(e.message, true); });
   }
 
