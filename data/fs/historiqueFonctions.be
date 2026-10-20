@@ -40,15 +40,46 @@
  * Page des graphiques : /graphiques, servie par graphiquesFonctions.be (route declaree par HISTORIQUE_WEB).
 ********************************************************************************************* -#
 
+#@ solidify:historiqueFonctions
 var historiqueFonctions = module("historiqueFonctions")
 
 historiqueFonctions.DOSSIER = "/histo"
-historiqueFonctions.instances = {}      # nom -> HISTORIQUE, pour la route /histo
-historiqueFonctions.config = nil        # bloc diverses.historique de la carte (demarre)
-historiqueFonctions.chemins = nil       # chemins des series dans le JSON SENSOR (ou @source)
-historiqueFonctions.filtres = []        # fonctions(chemins, valeurs) appelees avant chaque mesure
-historiqueFonctions.heureDecouverte = nil   # heure (epoch UTC / 3600) de la derniere decouverte des series
-historiqueFonctions.cacheDirect = nil       # [utc, valeurs, historique, millis] de la derniere lecture /histo?p=direct
+
+# ETAT MODIFIABLE (solidification, 2026-10-20) : solidifie, le module est en flash et sa table est
+# CONSTANTE (be_module.c:367) ; un 'historiqueFonctions.x = ...' y leverait une exception. L'etat vit donc
+# dans la globale cachee '.historiqueFonctions', lue par member() et ecrite par setmember() (modele de
+# berry_matter/src/embedded/Matter_Module.be). Ces attributs ne doivent JAMAIS etre poses au niveau fichier :
+# la valeur figee en flash masquerait celle de l'etat. Non solidifie (LittleFS, bancs), les ecritures vont
+# dans la table et les lectures d'un attribut jamais ecrit passent par member() : meme comportement.
+#   instances       : nom -> HISTORIQUE, pour la route /histo
+#   config          : bloc diverses.historique de la carte (demarre)
+#   chemins         : chemins des series dans le JSON SENSOR (ou @source)
+#   filtres         : fonctions(chemins, valeurs) appelees avant chaque mesure
+#   heureDecouverte : heure (epoch UTC / 3600) de la derniere decouverte des series
+#   cacheDirect     : [utc, valeurs, historique, millis] de la derniere lecture /histo?p=direct
+def historiqueFonctions_etat()
+    import global
+    if !global.contains(".historiqueFonctions")
+        global.(".historiqueFonctions") = {"instances": {}, "config": nil, "chemins": nil, "filtres": [],
+                                            "heureDecouverte": nil, "cacheDirect": nil}
+    end
+    return global.(".historiqueFonctions")
+end
+historiqueFonctions.etat = historiqueFonctions_etat
+
+def historiqueFonctions_member(nom)
+    import undefined
+    var etat = historiqueFonctions.etat()
+    return etat.contains(nom) ? etat[nom] : undefined
+end
+historiqueFonctions.member = historiqueFonctions_member
+
+def historiqueFonctions_setmember(nom, valeur)
+    var etat = historiqueFonctions.etat()
+    if !etat.contains(nom)    return false    end     # nom inconnu : erreur, comme une table figee
+    etat[nom] = valeur
+end
+historiqueFonctions.setmember = historiqueFonctions_setmember
 
 # Noms des historiques de la carte
 def historiqueFonctions_nomsInstances()

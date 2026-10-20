@@ -44,6 +44,14 @@ import configGlobal
 import globalFonctions
 import webFonctions
 import modbusFonctions
+# Historique et graphiques SOLIDIFIES (2026-10-20, ${berry_commun.historique} de platformio_tasmota_cenv.ini) :
+# meme raison. Sans effet tant que historiqueFonctions.demarre() n'est pas appele (ni driver, ni releve) ;
+# la version native passe avant tout .bec reste sur le LittleFS (be_module.c:286).
+import historiqueFonctions
+import historiqueSeries
+import graphiquesFonctions
+# LEDs SOLIDIFIEES sur la cuve seulement (2026-10-20) : meme raison (ledsFonctions s'appelle par son nom).
+import ledsFonctions
 
 # Vérifie si le persist.json est présent et paramétré
 if (persist._p != nil && persist._p.size() != 0)
@@ -105,7 +113,8 @@ if (persist._p != nil && persist._p.size() != 0)
     # AVANT controleCuve : la cuve donne au ruban la couleur du niveau des son initialisation.
     if (drivers.find("leds", {}).find("activation", "OFF") == "ON" && (drivers["leds"].find("environnement", {}).find("leds", {}).find("ledRGB", {}).find("activation", "OFF") == "ON" || drivers["leds"].find("environnement", {}).find("leds", {}).find("ruban", {}).find("activation", "OFF") == "ON"))
         gestionFileFolder.compileModule("/ledsFonctions", "ON")
-        gestionFileFolder.loadBerryFile("/controleLeds", "ON", "ON")
+        gestionFileFolder.compileModule("/controleLeds", "ON")
+        do import controleLeds as _ctrl end   # init() porte la garde d'activation (solidifiable, 2026-10-20)
     end
     # Historique des mesures de la carte (data/fs/historiqueFonctions.be), S3/P4 seulement : 24 h en
     # RAM + min/moy/max horaires en flash, lus par /histo et la page /graphiques. Compile en .bec puis demarre.

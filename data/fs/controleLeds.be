@@ -14,9 +14,14 @@
         * ledsFonctions.imposeCouleur("<source>", 0xRRGGBB, bri) -> couleur imposee (nil = rend la main)
         * ledsFonctions.appliqueAuto(teinte)                     -> couleur du mode AUTO du ruban
         * ledsFonctions.enregistreRetourAuto(fonction, texte)    -> repose la couleur au retour en AUTO
+    - Solidifiable (2026-10-20), sur le modele de controleModbus : la classe est portee par le module
+      'controleLeds' ; autoexec le charge par 'import' (version en FLASH si solidifie, sinon .be/.bec du
+      LittleFS), plus par loadBerryFile. 'import' appelle AUTOMATIQUEMENT controleLeds_init(m), en pied de
+      fichier, qui porte la garde d'activation.
 -#
 
-var controleLeds
+#@ solidify:controleLeds
+var controleLeds = module("controleLeds")
 
 class CONTROLE_LEDS : Driver
     def init()
@@ -63,14 +68,29 @@ class CONTROLE_LEDS : Driver
     end
 end
 
-# Active le driver seulement si la LED RGB ou le ruban est active dans le persist
-if (drivers.find("leds", {}).find("activation", "OFF") == "ON" &&
-    (drivers["leds"].find("environnement", {}).find("leds", {}).find("ledRGB", {}).find("activation", "OFF") == "ON" ||
-     drivers["leds"].find("environnement", {}).find("leds", {}).find("ruban", {}).find("activation", "OFF") == "ON"))
-    try
-        controleLeds = CONTROLE_LEDS()
-        tasmota.add_driver(controleLeds)
-    except .. as error, message
-        logFonctions.log("CONTROLE_LEDS_ERREUR: " + str(error) + " -> " + str(message), LOG_LEVEL_ERREUR, "leds")
+# Publie la classe dans le module (solidification + import).
+controleLeds.CONTROLE_LEDS = CONTROLE_LEDS
+
+# init() : APPELEE AUTOMATIQUEMENT par 'import controleLeds' (be_module.c:285-296, module_init).
+# Ne PAS la rappeler depuis autoexec. Reprend la garde d'activation de niveau fichier d'avant : le driver
+# n'est enregistre que si la LED RGB ou le ruban est active dans le persist ; l'instance est publiee
+# dans global.controleLeds.
+def controleLeds_init(m)
+    import global
+
+    if (drivers.find("leds", {}).find("activation", "OFF") == "ON" &&
+        (drivers["leds"].find("environnement", {}).find("leds", {}).find("ledRGB", {}).find("activation", "OFF") == "ON" ||
+         drivers["leds"].find("environnement", {}).find("leds", {}).find("ruban", {}).find("activation", "OFF") == "ON"))
+        try
+            global.controleLeds = m.CONTROLE_LEDS()
+            tasmota.add_driver(global.controleLeds)
+        except .. as error, message
+            logFonctions.log("CONTROLE_LEDS_ERREUR: " + str(error) + " -> " + str(message), LOG_LEVEL_ERREUR, "leds")
+        end
     end
+    return m
 end
+controleLeds.init = controleLeds_init
+
+# Valeur du module importe depuis le LittleFS (sans elle, import rend nil et init() n'est pas appelee)
+return controleLeds

@@ -26,6 +26,7 @@
  *     "seriesMax": 12                                      nombre maximal de series
 ********************************************************************************************* -#
 
+#@ solidify:historiqueSeries
 var historiqueSeries = module("historiqueSeries")
 
 # Segments qui ecartent un chemin, EN MINUSCULES (le segment est compare en minuscules) : egalite exacte, puis
@@ -34,7 +35,19 @@ historiqueSeries.IGNORES = ["time", "tempunit", "pressureunit", "speedunit", "id
                             "relais", "relays", "entrees", "inputs", "dimmer"]
 historiqueSeries.PREFIXES_EXCLUS = ["switch", "button", "shutter", "relay", "pwm"]   # shutter<n> : etat d'un volet
 historiqueSeries.INTERNES = ["@rssi", "@heap"]     # seules sources internes (lit) admises par 'ajouts'
-historiqueSeries.etatCompteurs = {}     # chemin -> [impulsions, millis] de la releve precedente (debit)
+
+# ETAT MODIFIABLE (solidification, 2026-10-20) : solidifie, la table du module est CONSTANTE (en flash) ;
+# l'etat vit dans la globale cachee '.historiqueSeries', lue par member() (voir historiqueFonctions.be).
+# Ne jamais le poser au niveau fichier : la valeur figee en flash masquerait l'etat.
+#   etatCompteurs : chemin -> [impulsions, millis] de la releve precedente (debit)
+def historiqueSeries_member(nom)
+    import global
+    import undefined
+    if (nom != "etatCompteurs")    return undefined    end
+    if !global.contains(".historiqueSeries")    global.(".historiqueSeries") = {}    end
+    return global.(".historiqueSeries")
+end
+historiqueSeries.member = historiqueSeries_member
 
 # Liste d'un reglage (exclues, ajouts) ; [] si absent ou d'un autre type
 def historiqueSeries_liste(config, cle)

@@ -44,6 +44,12 @@ import configGlobal
 import globalFonctions
 import webFonctions
 import modbusFonctions
+# Historique et graphiques SOLIDIFIES (2026-10-20, ${berry_commun.historique} de platformio_tasmota_cenv.ini) :
+# meme raison. Sans effet tant que historiqueFonctions.demarre() n'est pas appele (ni driver, ni releve) ;
+# la version native passe avant tout .bec reste sur le LittleFS (be_module.c:286).
+import historiqueFonctions
+import historiqueSeries
+import graphiquesFonctions
 
 # Vérifie si le persist.json est présent et paramétré
 if (persist._p != nil && persist._p.size() != 0)
@@ -100,13 +106,14 @@ if (persist._p != nil && persist._p.size() != 0)
     # si l'un des deux est active. Voyant d'etat ; un module peut y signaler une erreur ou y imposer une couleur.
     if (drivers.find("leds", {}).find("activation", "OFF") == "ON" && (drivers["leds"].find("environnement", {}).find("leds", {}).find("ledRGB", {}).find("activation", "OFF") == "ON" || drivers["leds"].find("environnement", {}).find("leds", {}).find("ruban", {}).find("activation", "OFF") == "ON"))
         gestionFileFolder.compileModule("/ledsFonctions", "ON")
-        gestionFileFolder.loadBerryFile("/controleLeds", "ON", "ON")
+        gestionFileFolder.compileModule("/controleLeds", "ON")
+        do import controleLeds as _ctrl end   # init() porte la garde d'activation (solidifiable, 2026-10-20)
     end
 
-    # controleRideau n'est PAS solidifie : charge depuis le LittleFS, SEULEMENT si le module est active
-    # (le 2e argument de loadBerryFile ne filtre pas le chargement, voir plus haut). Squelette pour
-    # l'instant (2026-10-12) : la porte est pilotee par le driver voletRoulants.
-    if modules.find("rideau", {}).find("activation", "OFF") == "ON"    gestionFileFolder.loadBerryFile("/controleRideau", "ON", "ON")    end
+    # controleRideau SOLIDIFIE (2026-10-20) : charge par 'import', seulement si le module est active ; son
+    # init() porte aussi la garde. Squelette pour l'instant (2026-10-12) : la porte est pilotee par le
+    # driver voletRoulants.
+    if modules.find("rideau", {}).find("activation", "OFF") == "ON"    import controleRideau as _ctrl    end
 
     # Historique des mesures de la carte (data/fs/historiqueFonctions.be), S3/P4 seulement : 24 h en
     # RAM + min/moy/max horaires en flash, lus par /histo. Compile en .bec puis demarre si active.

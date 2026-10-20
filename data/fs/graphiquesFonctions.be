@@ -47,6 +47,7 @@
  * gzip -9 ; sha256 du .gz : 6d0658f623f5f3a8ae1f9fb8bf275c1388fd54ddfcee13f646bd0df1e2c00418.
 ********************************************************************************************* -#
 
+#@ solidify:graphiquesFonctions
 var graphiquesFonctions = module("graphiquesFonctions")
 
 # Fichiers servis : nom demande (f=) -> [chemin sur le LittleFS, type MIME]

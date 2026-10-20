@@ -43,6 +43,12 @@ gestionFileFolder.listeEtRepartitLesFichiers()
 import configGlobal
 import globalFonctions
 import webFonctions
+# Historique et graphiques SOLIDIFIES (2026-10-20, ${berry_commun.historique} de platformio_tasmota_cenv.ini) :
+# meme raison. Sans effet tant que historiqueFonctions.demarre() n'est pas appele (ni driver, ni releve) ;
+# la version native passe avant tout .bec reste sur le LittleFS (be_module.c:286).
+import historiqueFonctions
+import historiqueSeries
+import graphiquesFonctions
 
 # Vérifie si le persist.json est présent et paramétré
 if (persist._p != nil && persist._p.size() != 0)
@@ -100,7 +106,8 @@ if (persist._p != nil && persist._p.size() != 0)
     # si l'un des deux est active. Voyant d'etat ; un module peut y signaler une erreur ou y imposer une couleur.
     if (drivers.find("leds", {}).find("activation", "OFF") == "ON" && (drivers["leds"].find("environnement", {}).find("leds", {}).find("ledRGB", {}).find("activation", "OFF") == "ON" || drivers["leds"].find("environnement", {}).find("leds", {}).find("ruban", {}).find("activation", "OFF") == "ON"))
         gestionFileFolder.compileModule("/ledsFonctions", "ON")
-        gestionFileFolder.loadBerryFile("/controleLeds", "ON", "ON")
+        gestionFileFolder.compileModule("/controleLeds", "ON")
+        do import controleLeds as _ctrl end   # init() porte la garde d'activation (solidifiable, 2026-10-20)
     end
 
     # Compile autoexec.be
