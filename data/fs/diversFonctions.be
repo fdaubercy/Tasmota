@@ -182,9 +182,16 @@ def diversFonctions_hiberneDriversInactifs()
 	if (aEndormir.size() > 0)
 		for nom: aEndormir	veille[nom] = drivers[nom]["environnement"]		end
 		var tmp = fichier + ".tmp"
-		gestionFileFolder.writeFile(tmp, json.dump(veille))
 		var relu = nil
-		try relu = json.load(gestionFileFolder.readFile(tmp))	except .. as e, m	end
+		# LittleFS neuf : /json n'existe pas encore (listeEtRepartitLesFichiers ne passe qu'APRES, dans l'autoexec).
+		# Une exception qui sortirait d'ici tuerait l'autoexec : aucun module ne serait charge.
+		try
+			if !path.isdir("/json")		path.mkdir("/json")		end
+			gestionFileFolder.writeFile(tmp, json.dump(veille))
+			relu = json.load(gestionFileFolder.readFile(tmp))
+		except .. as e, m
+			logFonctions.log("VEILLE_DRIVERS_ERREUR: " + tmp + " non ecrit (" + str(m) + ") !", LOG_LEVEL_ERREUR)
+		end
 		var ok = isinstance(relu, map)
 		if ok	for nom: aEndormir	ok = ok && relu.contains(nom)	end		end
 		relu = nil

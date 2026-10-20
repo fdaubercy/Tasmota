@@ -457,6 +457,7 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     (-> `outils_docs/CARTE_MODULES_BERRY.md`), `genere_schema_persist.py`
     (-> `outils_docs/schemas/persist.schema.json`), `gen_tapp.py`, et les bancs
     `banc_test_modbus.{py,be}`, `banc_leds.{py,be}` (ruban AUTO/MANUEL, bouton, LED du dev-kit),
+    `banc_veille_drivers.be` (veille des drivers inactifs sur LittleFS neuf, `bouchons_berry/veille/`),
     `test_discovery.be` avec leurs `bouchons_berry/` (`bouchons_berry/leds/` : bouchon de
     `ledsFonctions`, ajoute par le seul banc ModBus ; dans `bouchons_berry/`, il masquerait le vrai
     module a `banc_leds`).
