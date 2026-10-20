@@ -3,7 +3,7 @@ chantier: graphiques-web
 titre: Graphiques des mesures dans les pages web des cartes S3/P4 (uPlot)
 statut: actif
 cree: 2026-10-18
-maj: 2026-10-19
+maj: 2026-10-20
 source: resilient-soaring-stearns.md
 ---
 # Graphiques des mesures dans les pages web des cartes S3/P4 (uPlot)
@@ -256,12 +256,12 @@ Choix de Claude (à contester), revus le 2026-10-19 pour ECharts et le temps ré
   « Enregistrer » (POST), « Annuler », « Rétablir » (composition par défaut)
 - [x] Erreurs visibles : carte injoignable, refus d'écriture, composition invalide renvoyée par la carte ; la page — preuve : Chrome « refus » (message de la carte, édition ouverte), « injoignable » (connexion coupée → « Carte injoignable »), « invalide » (titre vide : rien n'est envoyé ; mutant détecté), « absent » (pas de bouton Modifier) ; réponse 500 de la carte sur exception
   reste utilisable en lecture
-- [ ] RAM et heap de la carte relevés pendant un enregistrement, sans chute durable
+- [x] RAM et heap de la carte relevés pendant un enregistrement, sans chute durable — preuve : P4 le 2026-10-20, 2 séries de 10 POST /graphiques (essai / Rétablir) : 1re série Berry après GC 127,7 -> 141,8 Ko = chargement unique de graphiquesFonctions.be (non solidifié, 22 Ko de source), 2e série 142,2 -> 142,7 Ko (bruit) ; heap interne 204,0 -> 205,4 Ko après GC ; creux pendant l'envoi 194,6 Ko ; un POST à 3,4 s sur 20 (autres 0,2-0,5 s) ; composition par défaut restaurée (clé absente)
 - [x] Bancs : Berry (validation de la route : corps valide, trop gros, types inconnus, trop de graphiques, accès refusé, — preuve : `banc_graphiques.py` vert (Berry + Chrome, 18 scénarios de rendu) ; 6 mutants de la page tous détectés (MUTANTS: OK) ; témoin Berry de la réponse 500 rouge
   autres clés conservées, Rétablir, témoin négatif) ; Chrome sans interface (composition à 3 graphiques de types
   différents, graphique combiné, périodes différentes, lectures mutualisées, édition puis enregistrement simulé,
   Rétablir) ; mutants ; `banc_graphiques.py` vert
-- [ ] Essai réel sur le P4 : un graphique ajouté depuis le PC apparaît sur le téléphone, persiste après un redémarrage
+- [x] Essai réel sur le P4 : un graphique ajouté depuis le PC apparaît sur le téléphone, persiste après un redémarrage — preuve : P4 le 2026-10-20, « Graphique 3 » (valeurCapteurHauteur) ajouté depuis le PC, relu dans /json/graphiques.json (3 graphiques), puis Restart 1 (StartupUTC 16:32:07, BootCount 2) : visible sur le téléphone après le redémarrage, puis supprimé depuis le téléphone (fichier réécrit 2 min 25 après le démarrage, 2 graphiques)
 - [x] Documentation : `outils_docs/README.md` § « Les graphiques des mesures », `CLAUDE.md`, skill `bancs` ; — preuve : README § graphiques (composer ses graphiques, périodes par graphique, clé `graphiques`), `CLAUDE.md`, skill `bancs` ; `relecteur-berry` : 1 « à corriger » traité (fichier illisible écrasé → refus 500, contrôle rouge puis vert), échappement `</script>` désormais prouvé par le banc
   `relecteur-berry` sur le Berry touché
 
