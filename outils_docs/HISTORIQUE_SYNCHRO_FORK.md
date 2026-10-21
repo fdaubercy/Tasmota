@@ -269,3 +269,26 @@ Les commits marques ● ont un titre qui mentionne Berry / ESP32-S3 / nos sujets
 
 -   `ba3ead1af` Support OUI wildcard for command MI32Keys in case multiple devices use same bindkey like IoTorero: `mi32keys 0C3D5EFFFFFF=48656c6c6f204254486f6d65210d0a00`
 - ● `6776e2ea9` Fix Modbus OOB
+
+## 2026-10-21 20:20 — 16 commit(s) recupere(s) d'upstream
+
+`arendst/Tasmota:development` → `fdaubercy/Tasmota:development` (merge_type : merge)
+
+**8 commit(s) ● a lire de pres.**
+
+-   `fb629eddb` uDisplay support for SPI QSPI displays (#25156)
+- ● `6389d75c6` LVGL/HASPmota visual touch pointer (dot under finger) (#25158)
+- ● `81fdbb0bb` Matter: list Window Covering commands in AcceptedCommandList (#25149)
+- ● `185e41c27` Matter: fix stale host test fixtures (#25161)
+- ● `7ecd858fb` MiEL HVAC Modbus: serve the RS485 slave from its own task (#25157)
+-   `c47ffbe6a` Update change logs
+-   `fb1929565` BTHome clarify binary state GUI display
+-   `d1358faff` Fix ble eq3 bthome decryption regression
+- ● `872daa869` Berry webclient: log the time of a connection timeout, not its code (#25163)
+- ● `a42b45810` LVGL Mirror extension crash (#25165)
+-   `00791eb3a` Fix formatting of D9 value in SH1106_display.ini
+-   `38a0a4193` Fix ESP32 PWMFrequency < 8 result in WDT restart (#25155)
+-   `1176980ad` Merge branch 'development' of https://github.com/arendst/Tasmota into development
+-   `43c6ca368` Update change logs
+- ● `da51c9b1d` LVGL add logging before crash when heap allocation fails (#25170)
+- ● `5ce1f1204` LVGL Panel improved click handling (#25171)
