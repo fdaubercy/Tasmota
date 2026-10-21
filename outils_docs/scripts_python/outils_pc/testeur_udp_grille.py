@@ -375,6 +375,9 @@ class Grille:
             with self.cond:
                 while not self.arret and time.monotonic() < fin:
                     self.cond.wait(min(0.5, max(0.0, fin - time.monotonic())))
+                # La preuve suivante se cherche APRES l'observation (2026-10-21 : sans cela, 6q reprenait la
+                # ligne deja trouvee par 6b et ne prouvait rien de ce qui suit les 150 s)
+                self.ancre = self.ancres[v["cle"]] = len(self.lignes)
             self.fin_etape = None
             if not self.arret:
                 self._note(v, OK, f"{v['delai']} s observees")

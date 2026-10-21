@@ -3,7 +3,7 @@ chantier: Modbus-garage
 titre: ModBus du garage (P4, cuve, rideau) et commandes sans fil
 statut: actif
 crée: 2026-10-18
-maj: 2026-10-18
+maj: 2026-10-21
 reprise: tasks/reprise-chantier-modbus-grenier.md
 ---
 # ModBus du garage (P4, cuve, rideau) et commandes sans fil
@@ -32,14 +32,14 @@ Détail et preuves complètes : la reprise, encadré « ETAT AU 2026-10-17 SOIR 
 - [x] E2 observé : routes annoncées, tout reste en série, aucune erreur — preuve : `ROUTE_ESCLAVE: esclave d'ID=2 : voie Serial, IP 192.168.4.2 (fiche)` 22:30:29 ; `routesAnnoncees` {2, 3} ; commit 3b4d4fa36
 
 ## A4 — Câblage RS485 du P4
-- [X] Fixer le faux contact (réception, et émission le 2026-10-17 : coupure 22:31:37 → 22:39:30) — preuve : câblage repris par l'utilisateur ; aucune coupure pendant l'observation ci-dessous
-- [x] Observation stable : au moins 1 h sans abandon sur les esclaves 1 et 2 (pont série + sniffeur) — preuve : 2026-10-18 12:00:00 → 13:02:30 (62,5 min), sniffeur : esclave 1 126/126, esclave 2 375/376 (la dernière en vol à l'arrêt), 0 sans réponse ; réceptions du P4 par MQTT 126 et 375, aucun trou > 5 min ; pont : 0 abandon sur 1 et 2 (les 123 abandons et 123 `MBR Recv timed out` sont tous le rideau, id 3, non flashé)
+- [X] Fixer le faux contact (réception, et émission le 2026-10-17 : coupure 22:31:37 → 22:39:30) — preuve : câblage repris par l'utilisateur ; aucune coupure pendant l'observation ci-dessous ; rechute constatée le 2026-10-21 (P4 sans aucune réception série depuis son flash du 20, carte relais 1229/1229 au sniffeur), câbles du P4 repositionnés par l'utilisateur à ~06:12
+- [x] Observation stable : au moins 1 h sans abandon sur les esclaves 1 et 2 (pont série + sniffeur) — preuve : 2026-10-18 12:00:00 → 13:02:30 (62,5 min), sniffeur : esclave 1 126/126, esclave 2 375/376 (la dernière en vol à l'arrêt), 0 sans réponse ; réceptions du P4 par MQTT 126 et 375, aucun trou > 5 min ; pont : 0 abandon sur 1 et 2 (les 123 abandons et 123 `MBR Recv timed out` sont tous le rideau, id 3, non flashé) ; RE-PROUVÉE le 2026-10-21 après le recâblage : 06:15:31 → 07:18:11 (62,7 min), carte relais 125/125 au sniffeur, 0 sans réponse, 125 réceptions du P4 ; cuve en UDP : 377 réceptions, aucun trou > 5 min, 0 abandon ni muet sur 1 et 2 (124 abandons = rideau, id 3)
 
 ## A5 — E3 sur la cuve (commandes par UDP)
 - [x] Sur accord : `ReglageModbus VoieCommandes UDP` sur la cuve — preuve : accord « A5 » le 2026-10-18 ; cuve 13:36:43 `REGLAGE_VOIE_COMMANDES: commandes ModBus attendues par la voie UDP`, fiche republiée (MQTT + ImAlive) ; retour : `ReglageModbus VoieCommandes Serial`
 - [x] Observer : `POMPE_QUEUE: envoi UDP` sur le P4, plus aucune trame de la cuve au sniffeur RS485 — preuve : P4 13:37:30 `ROUTE_ESCLAVE: esclave d'ID=2 : voie UDP, IP 192.168.4.2 (fiche)`, puis `envoi UDP ... ModbusUDP 1..12` (IP apprise dès le 2e) et `ModbusReceivedUDP` tid 1..12, aucun rejet `APPARIE_REPONSE` ; sniffeur : esclave 2 figé à 720/720 depuis 13:37:30 (avant : 717 à 13:36:42)
 - [x] Adapter la grille du testeur au mode UDP (critères de réception série) — preuve : `testeur_udp_grille.py` (1d lit `voieCommandes`, tests 2 et 6 refusés sans elle ; 2p compte/interdit selon la voie, 2q, 2r ; test 6 UDP inversé avec pause 6p de 150 s) ; `test_testeur_udp.py` 242 vérifications, 0 échec ; 6 mutants sur 6 rendus rouges
-- [ ] Repasser la grille en UDP ; retour possible par `ReglageModbus VoieCommandes Serial`
+- [x] Repasser la grille en UDP ; retour possible par `ReglageModbus VoieCommandes Serial` — preuve : grille du testeur, voie UDP lue en 1d, 2026-10-21 : 1 OK, 2 OK (30 envois UDP / 30 réponses), 3 OK (06:18, après recâblage du P4), 4 12/12, 5 10/11, 6 10/10 (6q à 06:20:37, après la pause), 7 5/6 ; validée par l'utilisateur avec 2 réserves : 5k (critère faussé par `StartAddress: 0` de la publication UDP, ruban bien en AUTO en 5l) et 7d (fiche périmée du rideau, réglée par A6)
 
 ## A6 — Rideau (id 3)
 - [ ] Rebuild et flash du rideau (muet, fiche périmée, sans E1)
@@ -47,9 +47,9 @@ Détail et preuves complètes : la reprise, encadré « ETAT AU 2026-10-17 SOIR 
 - [ ] E4 : `ReglageModbus VoieCommandes UDP` sur le rideau, puis grille en UDP
 
 ## A7 — E5 et finitions
-- [ ] E5 : débrancher le câble ModBus des esclaves (décision de l'utilisateur, après observation)
+- [ ] E5 : débrancher le câble ModBus des esclaves (décision de l'utilisateur, après observation) — fait pour la cuve : câble débranché par l'utilisateur vers 06:45 le 2026-10-21, observation 06:46:20 → 07:49:02 (62,7 min) VALIDE : cuve 375 réceptions UDP du P4, aucun trou > 5 min, 0 abandon ni muet ; carte relais 126/126 au sniffeur, 0 sans réponse ; MQTT connecté sans coupure (123 abandons = rideau, id 3). Reste le rideau, après A6
 - [ ] Sur accord : C7 (sockets d'écoute ouvertes aussi sans MQTT, `DIAGNOSTIC_UDP_2026-10-17.md`)
-- [ ] Sur accord : minuteur SerialLog de `logFonctions.appliqueProfil`
+- [x] Sur accord : minuteur SerialLog de `logFonctions.appliqueProfil` — preuve : décision de l'utilisateur le 2026-10-21 : NE PAS désactiver, comportement par défaut de Tasmota conservé (log série coupé 600 s après le démarrage, `SERIALLOG_TIMER`, `tasmota.h:218`) ; pour suivre une carte plus longtemps, passer par MQTT, la console web ou le syslog
 
 ## Améliorations restantes
 - [ ] [conversation] Pousser le commit 3b4d4fa36 (sur demande)

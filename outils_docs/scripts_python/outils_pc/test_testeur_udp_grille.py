@@ -225,7 +225,10 @@ def groupe_grille(verifie, attend, monte_testeur):
     def flux_udp(g, arret, panne=None):
         """Reponses UDP de la cuve toutes les 50 ms ; panne : 'coupe' = plus rien apres 6a, 'muet' = chien de garde."""
         while not arret.is_set():
-            if not (panne == "coupe" and statuts(g, 6).get("6a") == "OK"):
+            # 'apres_pause' : plus rien des que l'observation 6p commence (6q doit chercher APRES la pause,
+            # constate sur carte le 2026-10-21 : 6q reprenait la ligne deja trouvee par 6b)
+            pause = statuts(g, 6).get("6p") in ("en cours", "OK")
+            if not (panne == "coupe" and statuts(g, 6).get("6a") == "OK") and not (panne == "apres_pause" and pause):
                 g.observe("maitre", 'MQT: tele/garage/RESULT = {"ModbusReceivedUDP": {"Info": {"voie":"UDP"}, "DeviceAddress": 2}}')
             if panne == "muet" and statuts(g, 6).get("6p") == "en cours":
                 g.observe("maitre", "MODBUS_TASMOTA_SLAVE_CHIEN_DE_GARDE: esclave Capteurs Cuve (ID=2) muet depuis 90 s")
@@ -234,6 +237,7 @@ def groupe_grille(verifie, attend, monte_testeur):
     for panne, attendu, libelle in (
             (None, tout_ok, "test 6 en UDP : cable debranche 150 s, reponses toujours recues, aucun muet -> tout OK"),
             ("coupe", "6b", "TEMOIN plus aucune reponse UDP apres le debranchement -> 6b ECHEC"),
+            ("apres_pause", "6q", "TEMOIN plus aucune reponse UDP pendant et apres l'observation -> 6q ECHEC"),
             ("muet", "6x", "TEMOIN chien de garde pendant l'observation -> 6x ECHEC")):
         g, _, _ = nouvelle(reponses=["fait", "fait"], voie="UDP")
         arret = threading.Event()

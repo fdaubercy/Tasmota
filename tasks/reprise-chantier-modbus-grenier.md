@@ -112,6 +112,14 @@ au mauvais endroit, annulées — voir `tasks/lessons.md`). Les 3 cibles sont
 > (5) flasher le rideau (id 3, muet, fiche perimee, sans E1), lui passer la grille, puis E4
 > (`VoieCommandes UDP` sur le rideau) ; (6) E5 : debrancher le cable, decision de l'utilisateur apres
 > observation ; (7) C7 et le minuteur SerialLog de `logFonctions.appliqueProfil`, sur accord de l'utilisateur.
+> **Minuteur SerialLog : REFUSE le 2026-10-21** (« laissons tasmota par defaut ») - ne pas le reproposer ;
+> le log serie se coupe 600 s apres chaque demarrage, suivre une carte au-dela par MQTT / web / syslog.
+> **ETAT AU 2026-10-21 MATIN** : (4) FAIT (cuve en UDP, `voieCommandes: "UDP"` aussi dans le persist du depot :
+> un flash LittleFS l'avait remise en Serial) ; grille en UDP validee avec 2 reserves (5k : publication UDP
+> avec `StartAddress: 0`, a trancher ; 7d : fiche perimee du rideau). Faux contact du P4 RETOMBE apres son
+> flash du 20, cables repositionnes ~06:12 ; A4 re-prouvee 06:15-07:18 (carte relais 125/125, 0 sans reponse).
+> (6) E5 FAIT POUR LA CUVE : cable debranche ~06:45, 06:46-07:49 VALIDE (375 receptions UDP, aucun trou,
+> 0 abandon ; carte relais 126/126). **Prochaine action : (5) le rideau** ; puis C7 sur accord.
 > **Capteurs de la cuve : PAS un defaut (tranche le 2026-10-17).** 2147483647 (registre 4704, niveau via
 > ADS1115) et null (registre 1312, DS18B20 sur GPIO18) sont les SENTINELLES « pas de mesure »
 > (`modbusFonctions.be:2801`) : l'ADS1115 et la sonde ne sont PAS branches (confirme par l'utilisateur ;
