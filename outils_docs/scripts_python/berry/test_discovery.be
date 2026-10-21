@@ -24,6 +24,8 @@
 #        l'IP de la fiche (multicast si la fiche n'a pas d'IPv4 valide), estIPv4.
 #   20.  Multicast du maitre par la box (2026-10-17) : par sa STA seulement si la table connait un
 #        esclave de meme groupTopic, 'Online', sur le reseau de la box ; AP inchange ; cache de la table.
+#   21.  C7 (2026-10-21) : ecoute UDP ouverte sans MQTT 60 s apres le reseau si System#Boot manque ou
+#        echoue ; jamais sans reseau, jamais deux fois ; nouvel essai 60 s apres un refus ; rien apres Save.
 # Les lecteurs de modbusFonctions (clients TCP, IP UDP : fichesModbus) sont testes dans
 # banc_test_modbus.be section 6, sur la meme forme de table.
 #
@@ -1100,6 +1102,121 @@ verifie("date figee, > 30 s : table relue", "192.168.0.43", emissions20("T25"))
 gestionFileFolder.readFile = vraiReadFile
 path.date = nil
 tasmota.horloge = nil
+
+print("=== 21. C7 : ecoute UDP ouverte aussi sans MQTT (2026-10-21) ===")
+# Avant C7, les sockets d'ecoute (2000 unicast, 4000 multicast) ne s'ouvraient que sur System#Boot,
+# leve a la 1re connexion MQTT (DIAGNOSTIC_UDP_2026-10-17.md, L3) : broker injoignable au demarrage =
+# une cuve commandee par UDP n'entend plus le P4. Secours : 60 s apres la montee du reseau sans Boot.
+class udpCompte : udp
+  var n
+  def begin(a, b) self.n = (self.n == nil ? 1 : self.n + 1) return super(self).begin(a, b) end
+  def begin_multicast(a, b) self.n = (self.n == nil ? 1 : self.n + 1) return super(self).begin_multicast(a, b) end
+end
+# Etat de demarrage, comme les deux CONTROLE_UDP le posent (controleUDP.be:84-87)
+def demarre21()
+  var e = udpFonctions.etat()
+  e["udpReception"] = [udpCompte(), udpCompte()]
+  e["port"] = [2000, 4000]
+  e["typeComm"] = ["UniCast", "MultiCast"]
+  e["ip"] = ["", "224.3.0.1"]
+  e["ecouteOuverte"] = [false, false]
+  e["secoursFini"] = false
+  e["reseauDepuis"] = nil
+  e["essaiApres"] = [nil, nil]
+  tasmota.reseauCoupe = false
+  tasmota.horloge = 0
+  tasmota.timers = []
+  journal = []
+end
+# Une seconde du driver : les deux CONTROLE_UDP appellent every_second
+def seconde21(ms)
+  tasmota.horloge = ms
+  return essaie(def () udpFonctions.secoursSansMqtt("UniCast") udpFonctions.secoursSansMqtt("MultiCast") end)
+end
+def boot21()
+  return essaie(def ()
+    udpFonctions.changementEtatDemarrage({"Boot": 1}, "System", {"System": {"Boot": 1}}, "UniCast")
+    udpFonctions.changementEtatDemarrage({"Boot": 1}, "System", {"System": {"Boot": 1}}, "MultiCast")
+  end)
+end
+def ouvertures21()
+  var r = udpFonctions.etat()["udpReception"]
+  return str(r[0].n == nil ? 0 : r[0].n) + "/" + str(r[1].n == nil ? 0 : r[1].n)
+end
+serveur["udp"]["id"] = 0
+serveur["rangeExtender"] = {"activation": "ON", "id": 0, "AP": {"IPAddress": "192.168.4.1"}}
+refusLiaison = nil
+# a) Reseau absent : jamais de socket (plantage lwip_socket du 2026-10-11)
+demarre21()
+tasmota.reseauCoupe = true
+var r21 = "OK"
+for s: 1 .. 120    var x = seconde21(s * 1000)    if x != "OK"  r21 = x  end    end
+verifie("reseau absent 120 s : aucune ouverture", "OK 0/0", r21 + " " + ouvertures21())
+# b) Reseau monte a t=200 s, MQTT jamais connecte : rien avant 60 s, puis une ouverture de chaque
+tasmota.reseauCoupe = false
+seconde21(200000)
+seconde21(259000)
+verifie("reseau monte, 59 s sans Boot : pas encore ouvert", "0/0", ouvertures21())
+verifie("60 s sans Boot : unicast ET multicast ouverts", "OK 1/1", seconde21(260000) + " " + ouvertures21())
+verifie("... sur les bons ports", "/2000 mc:224.3.0.1/4000",
+        str(udpFonctions.etat()["udpReception"][0].lie) + "/" + str(udpFonctions.etat()["udpReception"][0].portLie) + " " +
+        str(udpFonctions.etat()["udpReception"][1].lie) + "/" + str(udpFonctions.etat()["udpReception"][1].portLie))
+verifie("... secours journalise", true, journalise("UDP_ECOUTE_SECOURS: "))
+for s: 261 .. 400    seconde21(s * 1000)    end
+verifie("les secondes suivantes : aucune reouverture", "1/1", ouvertures21())
+# c) MQTT revient : Boot ne rouvre pas (double begin), mais fait le reste (maitre : timer resetEsclaves)
+verifie("Boot apres le secours : sans reouverture", "OK 1/1", boot21() + " " + ouvertures21())
+verifie("... le maitre arme toujours resetEsclaves", 1, tasmota.nbTimers("resetEsclaves"))
+# d) Chemin normal : Boot a t=5 s ouvre, le secours ne fait plus rien (TEMOIN du comportement d'avant)
+demarre21()
+seconde21(1000)
+verifie("Boot normal : une ouverture de chaque", "OK 1/1", boot21() + " " + ouvertures21())
+for s: 2 .. 200    seconde21(s * 1000)    end
+verifie("... secours muet apres Boot", "1/1 false", ouvertures21() + " " + str(journalise("UDP_ECOUTE_SECOURS: ")))
+# e) Reseau qui retombe avant 60 s : le delai repart de la remontee
+demarre21()
+seconde21(0)
+tasmota.reseauCoupe = true
+seconde21(30000)
+tasmota.reseauCoupe = false
+seconde21(40000)
+seconde21(99000)
+verifie("reseau retombe a 30 s, remonte a 40 s : rien a 99 s", "0/0", ouvertures21())
+seconde21(100000)
+verifie("... ouvert a 100 s", "1/1", ouvertures21())
+# f) Ouverture refusee : erreur journalisee, nouvel essai 60 s plus tard seulement
+demarre21()
+refusLiaison = ""
+seconde21(0)
+seconde21(60000)
+verifie("unicast refuse : multicast ouvert, unicast non", "1/1 false true", ouvertures21() + " " +
+        str(udpFonctions.etat()["ecouteOuverte"][0]) + " " + str(udpFonctions.etat()["ecouteOuverte"][1]))
+verifie("... echec journalise en erreur", true, journalise("UDP_ECOUTE_ERREUR: "))
+for s: 61 .. 119    seconde21(s * 1000)    end
+verifie("... pas de nouvel essai avant 60 s", "1/1", ouvertures21())
+refusLiaison = nil
+seconde21(120000)
+verifie("... nouvel essai a 120 s, unicast ouvert", "2/1 true", ouvertures21() + " " + str(udpFonctions.etat()["ecouteOuverte"][0]))
+# g) System#Save ferme : les sockets sont notees fermees, le secours ne les rouvre pas (Boot deja vu)
+demarre21()
+boot21()
+essaie(def () udpFonctions.changementEtatDemarrage({"Save": 1}, "System", {"System": {"Save": 1}}, "UniCast") end)
+verifie("Save : sockets notees fermees", "false false", str(udpFonctions.etat()["ecouteOuverte"][0]) + " " + str(udpFonctions.etat()["ecouteOuverte"][1]))
+for s: 1 .. 200    seconde21(s * 1000)    end
+verifie("... pas de reouverture par le secours", "1/1", ouvertures21())
+# h) Boot dont l'ouverture echoue (retour du relecteur) : le secours prend le relais 60 s apres le reseau
+demarre21()
+seconde21(0)
+refusLiaison = ""
+boot21()
+refusLiaison = nil
+verifie("Boot, unicast refuse : secours pas fini", "false 1/1", str(udpFonctions.etat()["secoursFini"]) + " " + ouvertures21())
+seconde21(59000)
+verifie("... rien avant 60 s", "1/1", ouvertures21())
+seconde21(60000)
+verifie("... unicast rouvert par le secours, puis secours fini", "2/1 true", ouvertures21() + " " + str(udpFonctions.etat()["secoursFini"]))
+tasmota.horloge = nil
+tasmota.reseauCoupe = nil
 
 print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))

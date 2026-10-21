@@ -119,7 +119,11 @@ au mauvais endroit, annulées — voir `tasks/lessons.md`). Les 3 cibles sont
 > avec `StartAddress: 0`, a trancher ; 7d : fiche perimee du rideau). Faux contact du P4 RETOMBE apres son
 > flash du 20, cables repositionnes ~06:12 ; A4 re-prouvee 06:15-07:18 (carte relais 125/125, 0 sans reponse).
 > (6) E5 FAIT POUR LA CUVE : cable debranche ~06:45, 06:46-07:49 VALIDE (375 receptions UDP, aucun trou,
-> 0 abandon ; carte relais 126/126). **Prochaine action : (5) le rideau** ; puis C7 sur accord.
+> 0 abandon ; carte relais 126/126). **(5) rideau (A6) et E5 du rideau : consideres comme realises par decision de
+> l'utilisateur le 2026-10-21, NON verifies sur carte** (le rideau etait encore muet ce matin : 123 abandons/h).
+> C7 CODE le 2026-10-21 (accord donne) : reste rebuild complet +
+> flash des 3 cartes (udpFonctions et controleUDP solidifies), puis verifier `UDP_ECOUTE` au demarrage.
+> Fork synchronise le 2026-10-21 (merge 4b31fd849).
 > **Capteurs de la cuve : PAS un defaut (tranche le 2026-10-17).** 2147483647 (registre 4704, niveau via
 > ADS1115) et null (registre 1312, DS18B20 sur GPIO18) sont les SENTINELLES « pas de mesure »
 > (`modbusFonctions.be:2801`) : l'ADS1115 et la sonde ne sont PAS branches (confirme par l'utilisateur ;

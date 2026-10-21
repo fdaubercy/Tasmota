@@ -103,7 +103,11 @@ def udpFonctions_etat()
             "udpReception": [nil, nil], # objets udp de reception [UniCast, MultiCast]
             "port": [0, 0],            # ports [UniCast, MultiCast]
             "typeComm": ["", ""],      # types de communication [UniCast, MultiCast]
-            "ip": ["", ""]            # adresses [UniCast, MultiCast]
+            "ip": ["", ""],            # adresses [UniCast, MultiCast]
+            "ecouteOuverte": [false, false],   # socket d'ecoute ouverte [UniCast, MultiCast] (C7)
+            "secoursFini": false,      # les 2 ecoutes ouvertes (Boot ou secours), ou System#Save (C7)
+            "reseauDepuis": nil,       # tasmota.millis() de la montee du reseau, Boot pas encore vu (C7)
+            "essaiApres": [nil, nil]   # apres une ouverture refusee : pas de nouvel essai avant (C7)
         }
     end
     return global._etatUdpFonctions
@@ -425,13 +429,11 @@ def udpFonctions_changementEtatDemarrage(value, trigger, msg, typeComm)
 	elif (trigger == "System")
         if msg[trigger].find("Init", 0)
         elif msg[trigger].find("Boot", 0)
-            if (string.toupper(typeComm) == string.toupper("UniCast"))
-                udpFonctions.log(string.format("UDP_CHGT_ETAT_DEMARRAGE: Ouverture connexion UniCast sur le port %i: %s", 
-                                                udpFonctions.etat()["port"][0], udpFonctions.etat()["udpReception"][0].begin(udpFonctions.etat()["ip"][0], udpFonctions.etat()["port"][0]) ? "OK" : "Echec"), LOG_LEVEL_DEBUG_PLUS)
-            elif (string.toupper(typeComm) == string.toupper("MultiCast"))								
-                udpFonctions.log(string.format("UDP_CHGT_ETAT_DEMARRAGE: Ouverture connexion MultiCast sur le port %i: %s", 
-                                                udpFonctions.etat()["port"][1], udpFonctions.etat()["udpReception"][1].begin_multicast(udpFonctions.etat()["ip"][1], udpFonctions.etat()["port"][1]) ? "OK" : "Echec"), LOG_LEVEL_DEBUG_PLUS)
-            end
+            # Ouverture par ouvreEcoute (C7) : rien si le secours sans MQTT l'a deja ouverte
+            # Le secours ne s'arrete que si les DEUX ecoutes sont ouvertes : un Boot dont l'ouverture echoue
+            # le laisse reessayer (sinon plus rien ne rouvrirait l'ecoute, le defaut L3 sous une autre forme)
+            udpFonctions.ouvreEcoute(typeComm)
+            udpFonctions.etat()["secoursFini"] = (udpFonctions.etat()["ecouteOuverte"][0] && udpFonctions.etat()["ecouteOuverte"][1])
 
             # Evite de répéter l'opération 2 fois
             if (string.toupper(typeComm) == string.toupper("MultiCast"))  return  end
@@ -449,6 +451,8 @@ def udpFonctions_changementEtatDemarrage(value, trigger, msg, typeComm)
             udpFonctions.log("UDP_CHGT_ETAT_DEMARRAGE: Fermeture connexion MultiCast & UniCast", LOG_LEVEL_DEBUG_PLUS)
             udpFonctions.etat()["udpReception"][0].close()
             udpFonctions.etat()["udpReception"][1].close()
+            udpFonctions.etat()["ecouteOuverte"] = [false, false]
+            udpFonctions.etat()["secoursFini"] = true        # Save precede un redemarrage : ne rien rouvrir
         end
 	# Se déclenche après la connexion MQTT (si activé)
     elif (trigger == "Mqtt")
@@ -467,6 +471,62 @@ def udpFonctions_changementEtatDemarrage(value, trigger, msg, typeComm)
     end
 end
 udpFonctions.changementEtatDemarrage = udpFonctions_changementEtatDemarrage
+
+# Ouvre la socket d'ecoute de typeComm (UniCast : port 2000, MultiCast : 224.3.0.1:4000), UNE seule fois.
+# true si elle est ouverte. Rien tant que le reseau n'est pas monte : creer une socket avant la pile TCP/IP
+# plante l'ESP32 (constate le 2026-10-11, voir envoiUDP).
+def udpFonctions_ouvreEcoute(typeComm)
+    import string
+    var e = udpFonctions.etat()
+    var i = (string.toupper(str(typeComm)) == "UNICAST" ? 0 : 1)
+    if (e["ecouteOuverte"][i])    return true    end
+    if (e["udpReception"][i] == nil || !tasmota.is_network_up())    return false    end
+    var ok = (i == 0 ? e["udpReception"][0].begin(e["ip"][0], e["port"][0])
+                     : e["udpReception"][1].begin_multicast(e["ip"][1], e["port"][1]))
+    e["ecouteOuverte"][i] = (ok ? true : false)
+    if (ok)
+        udpFonctions.log(string.format("UDP_ECOUTE: ecoute %s ouverte sur le port %i !", str(typeComm), e["port"][i]), LOG_LEVEL_DEBUG_PLUS)
+    else
+        udpFonctions.log(string.format("UDP_ECOUTE_ERREUR: ouverture de l'ecoute %s sur le port %i refusee !", str(typeComm), e["port"][i]), LOG_LEVEL_ERREUR)
+    end
+    return e["ecouteOuverte"][i]
+end
+udpFonctions.ouvreEcoute = udpFonctions_ouvreEcoute
+
+# Correction C7 (2026-10-21, DIAGNOSTIC_UDP_2026-10-17.md, defaut L3) : System#Boot n'est leve qu'a la
+# 1re connexion MQTT (xdrv_02_9_mqtt.ino:1487). Broker injoignable au demarrage = aucune ecoute UDP, et une
+# cuve commandee par UDP n'entend plus le P4. Appelee chaque seconde par les deux CONTROLE_UDP : si les deux
+# ecoutes ne sont pas ouvertes 60 s apres la montee du reseau (Boot absent, ou son ouverture refusee), les ouvre. Les 60 s laissent le chemin
+# normal intact et le point d'acces du maitre se creer avant l'abonnement multicast (course L2).
+# Le reste de Boot (fiche de l'esclave, timer resetEsclaves du maitre) attend le vrai Boot.
+def udpFonctions_secoursSansMqtt(typeComm)
+    import string
+    var e = udpFonctions.etat()
+    if (e["secoursFini"])    return    end
+    if (!tasmota.is_network_up())
+        e["reseauDepuis"] = nil
+        return
+    end
+    var delai = 60000                       # ms, depuis la montee du reseau, puis entre deux essais
+    var maintenant = tasmota.millis()
+    if (e["reseauDepuis"] == nil)
+        e["reseauDepuis"] = maintenant
+        return
+    end
+    if (maintenant - e["reseauDepuis"] < delai)    return    end
+    var i = (string.toupper(str(typeComm)) == "UNICAST" ? 0 : 1)
+    if (e["ecouteOuverte"][i])    return    end
+    var essai = e["essaiApres"]
+    if (essai[i] != nil && (maintenant - essai[i]) < 0)    return    end    # difference : sans souci du debordement de millis
+    # Un seul evenement par ouverture (pas un log par seconde) : info admise malgre every_second
+    if (udpFonctions.ouvreEcoute(typeComm))
+        udpFonctions.log(string.format("UDP_ECOUTE_SECOURS: ecoute %s ouverte sans System#Boot (MQTT injoignable ?) ou apres son echec, %i s apres le reseau !", str(typeComm), delai / 1000), LOG_LEVEL_INFO)
+        e["secoursFini"] = (e["ecouteOuverte"][0] && e["ecouteOuverte"][1])
+    else
+        essai[i] = maintenant + delai       # ouverture refusee (erreur deja journalisee) : nouvel essai plus tard
+    end
+end
+udpFonctions.secoursSansMqtt = udpFonctions_secoursSansMqtt
 
 # Cette fonction gère l'envoi de messages UDP en unicast et multicast
 def udpFonctions_envoiUDP(typeComm, ipDestinataire, message)

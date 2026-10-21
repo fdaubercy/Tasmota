@@ -42,19 +42,19 @@ Détail et preuves complètes : la reprise, encadré « ETAT AU 2026-10-17 SOIR 
 - [x] Repasser la grille en UDP ; retour possible par `ReglageModbus VoieCommandes Serial` — preuve : grille du testeur, voie UDP lue en 1d, 2026-10-21 : 1 OK, 2 OK (30 envois UDP / 30 réponses), 3 OK (06:18, après recâblage du P4), 4 12/12, 5 10/11, 6 10/10 (6q à 06:20:37, après la pause), 7 5/6 ; validée par l'utilisateur avec 2 réserves : 5k (critère faussé par `StartAddress: 0` de la publication UDP, ruban bien en AUTO en 5l) et 7d (fiche périmée du rideau, réglée par A6)
 
 ## A6 — Rideau (id 3)
-- [ ] Rebuild et flash du rideau (muet, fiche périmée, sans E1)
-- [ ] Grille ModBus filaire P4 ↔ rideau
-- [ ] E4 : `ReglageModbus VoieCommandes UDP` sur le rideau, puis grille en UDP
+- [x] Rebuild et flash du rideau (muet, fiche périmée, sans E1) — preuve : considéré comme réalisé par décision de l'utilisateur le 2026-10-21 (non vérifié sur carte dans cette conversation)
+- [x] Grille ModBus filaire P4 ↔ rideau — preuve : considéré comme réalisé par décision de l'utilisateur le 2026-10-21 (non vérifié sur carte dans cette conversation)
+- [x] E4 : `ReglageModbus VoieCommandes UDP` sur le rideau, puis grille en UDP — preuve : considéré comme réalisé par décision de l'utilisateur le 2026-10-21 (non vérifié sur carte dans cette conversation)
 
 ## A7 — E5 et finitions
-- [ ] E5 : débrancher le câble ModBus des esclaves (décision de l'utilisateur, après observation) — fait pour la cuve : câble débranché par l'utilisateur vers 06:45 le 2026-10-21, observation 06:46:20 → 07:49:02 (62,7 min) VALIDE : cuve 375 réceptions UDP du P4, aucun trou > 5 min, 0 abandon ni muet ; carte relais 126/126 au sniffeur, 0 sans réponse ; MQTT connecté sans coupure (123 abandons = rideau, id 3). Reste le rideau, après A6
-- [ ] Sur accord : C7 (sockets d'écoute ouvertes aussi sans MQTT, `DIAGNOSTIC_UDP_2026-10-17.md`)
+- [x] E5 : débrancher le câble ModBus des esclaves (décision de l'utilisateur, après observation) — preuve : rideau considéré comme fait par décision de l'utilisateur le 2026-10-21 (non observé sur le rideau, A6 également considérée comme réalisée) ; cuve : câble débranché par l'utilisateur vers 06:45 le 2026-10-21, observation 06:46:20 → 07:49:02 (62,7 min) VALIDE : cuve 375 réceptions UDP du P4, aucun trou > 5 min, 0 abandon ni muet ; carte relais 126/126 au sniffeur, 0 sans réponse ; MQTT connecté sans coupure (123 abandons = rideau, id 3). Reste le rideau, après A6
+- [ ] Sur accord : C7 (sockets d'écoute ouvertes aussi sans MQTT, `DIAGNOSTIC_UDP_2026-10-17.md`) — accord le 2026-10-21 ; CODÉ : `udpFonctions.ouvreEcoute` / `secoursSansMqtt` + `every_second` de `controleUDP.be`, `test_discovery` 216/0 (ancien code 11 échecs, 3 mutants rouges), solidification OK, banc ModBus 309/309, relecteur-berry sans bloquant ; reste : rebuild complet + flash des 3 cartes, puis `UDP_ECOUTE` au démarrage
 - [x] Sur accord : minuteur SerialLog de `logFonctions.appliqueProfil` — preuve : décision de l'utilisateur le 2026-10-21 : NE PAS désactiver, comportement par défaut de Tasmota conservé (log série coupé 600 s après le démarrage, `SERIALLOG_TIMER`, `tasmota.h:218`) ; pour suivre une carte plus longtemps, passer par MQTT, la console web ou le syslog
 
 ## Améliorations restantes
-- [ ] [conversation] Pousser le commit 3b4d4fa36 (sur demande)
+- [x] [conversation] Pousser le commit 3b4d4fa36 (sur demande) — preuve : déjà sur origin/development (`git merge-base --is-ancestor 3b4d4fa36 origin/development`), poussé avec 10d29fe93 le 2026-10-21
 - [ ] [projet] Capteurs de la cuve une fois branchés : `I2CScan` → 0x48, `Status 10` → DS18B20 (pull-up 4,7 kΩ sur GPIO18)
-- [ ] [projet] Synchro du fork (retard sur l'amont), sur `development` propre, avant la prochaine série de builds
+- [x] [projet] Synchro du fork (retard sur l'amont), sur `development` propre, avant la prochaine série de builds — preuve : merge 4b31fd849 le 2026-10-21 (16 commits de l'amont), retard 0, local = origin
 
 ## Vérification
 Chaque étape sur carte se prouve par une ligne de log horodatée (pont série :7000, syslog :7200) ou par le

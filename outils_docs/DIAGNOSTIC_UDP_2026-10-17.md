@@ -12,7 +12,8 @@
 > - Les résultats des essais sont dans `PROTOCOLE_MODBUS.md` §9 et `tasks/reprise-chantier-modbus-grenier.md`.
 > - `tasks/correctif-udp-interface-2026-10-17.diff` (cité ci-dessous comme `correctif_berry.diff`) est
 >   **historique** : le code de référence est `data/fs/udpFonctions.be`.
-> - C7 reste non codé ; C8 et C9 restent refusés.
+> - C7 codé le 2026-10-21 (`udpFonctions.ouvreEcoute` / `secoursSansMqtt`, `every_second` de `controleUDP.be`,
+>   banc `test_discovery.be` section 21) : à flasher sur les 3 cartes. C8 et C9 restent refusés.
 
 Analyse et propositions seulement : **rien n'a été modifié dans le dépôt**, rien n'a été flashé,
 aucune configuration de carte n'a été changée. Les mesures du 2026-10-17 04:39-04:44 ont été
@@ -227,7 +228,7 @@ dans tous les env : rebuild complet + flash des 3 cartes (P4, cuve, rideau) apr�
 | **C4** | Esclave : multicast **aussi en Wi-Fi classique** (condition `activation` retirée ; `ReglageUDP envoiMultiCast` sans condition) | ImAlive et push peuvent atteindre le P4 par la box (si elle relaie le multicast) et le PC (`ecoute_udp.py`) | Trafic multicast sur le Wi-Fi maison (une trame par push / 5 min d'ImAlive) ; d'autres cartes de la maison qui écoutent 224.3.0.1:4000 le décodent (elles filtrent sur leur topic : `lireUDP` :610) | Oui |
 | **C5** | Maître : réponse à ImAlive (`Timestamp`, `ipMaitre`) en **unicast à `IPAddress` de la fiche**, multicast par l'AP en repli si la fiche n'a pas d'IP | Marche en RE et en Wi-Fi classique ; trame acquittée par la radio 802.11 | Chaque esclave reçoit SA réponse (avant : tous recevaient celle de chacun) — sans conséquence, chacun envoie ImAlive toutes les 5 min | Oui |
 | **C6** | `lireUDP` : message d'un seul mot sans exception | Supprime R4 | Aucun | Oui |
-| C7 (non codé) | Ouvrir les sockets d'écoute aussi sans MQTT (ex. au 1er `every_second` réseau monté si `System#Boot` n'est pas venu) | Supprime L3 | Double ouverture à garder (déjà ouverte -> ne rien faire) | Oui |
+| C7 (codé le 2026-10-21) | Ouvrir les sockets d'écoute aussi sans MQTT (ex. au 1er `every_second` réseau monté si `System#Boot` n'est pas venu) | Supprime L3 | Double ouverture à garder (déjà ouverte -> ne rien faire) | Oui |
 | C8 (config, option) | Sous-réseau propre à l'AP de chaque esclave (cuve 192.168.5.1/24, rideau 192.168.6.1/24) par `RgxAddress` | Supprime R1 à la source, rend possible le chaînage (aujourd'hui cassé : le DHCP de l'AP de la cuve distribuerait 192.168.4.2, sa propre IP STA) | **Refusé par l'utilisateur le 2026-10-03** (`lessons.md`, 2 entrées : « on annule B », ne plus proposer de toucher à l'AP). Rappelé ici seulement parce que la mesure B/A établit maintenant la cause ; C1 suffit sans lui. Commande `Rgx*` avec argument : interdite à l'agent ; sur la cuve et le rideau, le persist `AP` n'est appliqué par aucun script (`controleRangeExtender` non chargé). Impacts : NAPT (redirections `RgxPort` du P4 inchangées : elles visent la STA de l'esclave), DHCP de l'AP esclave, discovery (`routagePort` inchangé, `IPAddress` = STA inchangée), `routageMaitreIP`/`ipMaitre` inchangés | Oui (RgxAddress 192.168.4.1) |
 | C9 (config, option) | `RgxState 0` sur la cuve et le rideau | Supprime R1 | Contredit le choix « maître ET esclaves peuvent être point d'accès » (`lessons.md` 2026-10-03) ; redémarrage | Oui |
 

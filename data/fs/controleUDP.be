@@ -129,6 +129,12 @@ class CONTROLE_UDP
     end
 -#
 
+    # Correction C7 (2026-10-21) : ouvre l'ecoute sans MQTT si System#Boot tarde (voir udpFonctions.secoursSansMqtt)
+    def every_second()
+        import udpFonctions
+        udpFonctions.secoursSansMqtt(self.typeComm)
+    end
+
     def every_100ms()
         import string
         import udpFonctions
