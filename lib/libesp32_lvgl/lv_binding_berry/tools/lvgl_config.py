@@ -207,9 +207,9 @@ SYNONYM_FUNCTIONS = {
     "set_range": "set_axis_range",
 }
 
-# Synthetic classes seeded (in this order) before parsing, so they keep a
-# stable position at the front of the generated output. These LVGL8-style
-# classes have no auto-detected `_create` function.
+# Synthetic classes seeded before parsing, so they exist even without any
+# parsed function. These LVGL8-style classes have no auto-detected `_create`
+# function. Generated output lists all classes in alphabetical order.
 SYNTHETIC_CLASSES = ['style', 'font', 'color', 'theme']
 
 # Generic style accessors (flash saving): `lv_obj.set_style_<prop>()`,
@@ -652,6 +652,7 @@ ENUM_HEADER_PATTERNS = [
     "lv_types.h",                       # was misc/
     "widgets/*.h",                      # was widgets/*/*.h
     "display/lv_display.h",
+    "indev/lv_indev.h",                 # INDEV_TYPE_*, INDEV_STATE_*, INDEV_MODE_*, INDEV_GESTURE_*
     "layouts/*.h",                      # was layouts/**/*.h
 ]
 

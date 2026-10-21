@@ -21,11 +21,14 @@ extern int lv0_load_font(bvm *vm);
 
 extern lv_ts_calibration_t * lv_get_ts_calibration(void);
 
+// LVGL 9.6: NULL display is deprecated, and with LV_USE_CHECK_ARG 0 a NULL default display crashes; return 0 if no display (9.5 behavior)
 static int lv_get_hor_res(void) {
-  return lv_display_get_horizontal_resolution(lv_display_get_default());    // LVGL 9.6: NULL display is deprecated
+  lv_display_t * disp = lv_display_get_default();
+  return disp ? lv_display_get_horizontal_resolution(disp) : 0;
 }
 static int lv_get_ver_res(void) {
-  return lv_display_get_vertical_resolution(lv_display_get_default());      // LVGL 9.6: NULL display is deprecated
+  lv_display_t * disp = lv_display_get_default();
+  return disp ? lv_display_get_vertical_resolution(disp) : 0;
 }
 
 /* `lv` methods */
@@ -241,8 +244,6 @@ const be_const_member_t lv0_constants[] = {
     { "FT_FONT_STYLE_NORMAL", be_cconst_int(FT_FONT_STYLE_NORMAL) },
     { "GROUP_REFOCUS_POLICY_NEXT", be_cconst_int(LV_GROUP_REFOCUS_POLICY_NEXT) },
     { "GROUP_REFOCUS_POLICY_PREV", be_cconst_int(LV_GROUP_REFOCUS_POLICY_PREV) },
-    { "INDEV_STATE_PR", be_cconst_int(LV_INDEV_STATE_PRESSED) },
-    { "INDEV_STATE_REL", be_cconst_int(LV_INDEV_STATE_RELEASED) },
     { "LAYER_TYPE_NONE", be_cconst_int(LV_LAYER_TYPE_NONE) },
     { "LAYER_TYPE_SIMPLE", be_cconst_int(LV_LAYER_TYPE_SIMPLE) },
     { "LAYER_TYPE_TRANSFORM", be_cconst_int(LV_LAYER_TYPE_TRANSFORM) },
@@ -679,6 +680,27 @@ static const be_const_member_t lv0_constants_IMAGEBUTTON[] = {
     { "STATE_NUM", be_cconst_int(LV_IMAGEBUTTON_STATE_NUM) },
     { "STATE_PRESSED", be_cconst_int(LV_IMAGEBUTTON_STATE_PRESSED) },
     { "STATE_RELEASED", be_cconst_int(LV_IMAGEBUTTON_STATE_RELEASED) },
+};
+static const be_const_member_t lv0_constants_INDEV[] = {
+    { "GESTURE_CNT", be_cconst_int(LV_INDEV_GESTURE_CNT) },
+    { "GESTURE_NONE", be_cconst_int(LV_INDEV_GESTURE_NONE) },
+    { "GESTURE_PINCH", be_cconst_int(LV_INDEV_GESTURE_PINCH) },
+    { "GESTURE_ROTATE", be_cconst_int(LV_INDEV_GESTURE_ROTATE) },
+    { "GESTURE_SCROLL", be_cconst_int(LV_INDEV_GESTURE_SCROLL) },
+    { "GESTURE_SWIPE", be_cconst_int(LV_INDEV_GESTURE_SWIPE) },
+    { "GESTURE_TWO_FINGERS_SWIPE", be_cconst_int(LV_INDEV_GESTURE_TWO_FINGERS_SWIPE) },
+    { "MODE_EVENT", be_cconst_int(LV_INDEV_MODE_EVENT) },
+    { "MODE_NONE", be_cconst_int(LV_INDEV_MODE_NONE) },
+    { "MODE_TIMER", be_cconst_int(LV_INDEV_MODE_TIMER) },
+    { "STATE_PR", be_cconst_int(LV_INDEV_STATE_PRESSED) },
+    { "STATE_PRESSED", be_cconst_int(LV_INDEV_STATE_PRESSED) },
+    { "STATE_REL", be_cconst_int(LV_INDEV_STATE_RELEASED) },
+    { "STATE_RELEASED", be_cconst_int(LV_INDEV_STATE_RELEASED) },
+    { "TYPE_BUTTON", be_cconst_int(LV_INDEV_TYPE_BUTTON) },
+    { "TYPE_ENCODER", be_cconst_int(LV_INDEV_TYPE_ENCODER) },
+    { "TYPE_KEYPAD", be_cconst_int(LV_INDEV_TYPE_KEYPAD) },
+    { "TYPE_NONE", be_cconst_int(LV_INDEV_TYPE_NONE) },
+    { "TYPE_POINTER", be_cconst_int(LV_INDEV_TYPE_POINTER) },
 };
 static const be_const_member_t lv0_constants_KEY[] = {
     { "BACKSPACE", be_cconst_int(LV_KEY_BACKSPACE) },
@@ -1164,6 +1186,7 @@ const lv_const_group_t lv0_constants_groups[] = {
     { "GRID", lv0_constants_GRID, sizeof(lv0_constants_GRID)/sizeof(lv0_constants_GRID[0]) },
     { "IMAGE", lv0_constants_IMAGE, sizeof(lv0_constants_IMAGE)/sizeof(lv0_constants_IMAGE[0]) },
     { "IMAGEBUTTON", lv0_constants_IMAGEBUTTON, sizeof(lv0_constants_IMAGEBUTTON)/sizeof(lv0_constants_IMAGEBUTTON[0]) },
+    { "INDEV", lv0_constants_INDEV, sizeof(lv0_constants_INDEV)/sizeof(lv0_constants_INDEV[0]) },
     { "KEY", lv0_constants_KEY, sizeof(lv0_constants_KEY)/sizeof(lv0_constants_KEY[0]) },
     { "KEYBOARD", lv0_constants_KEYBOARD, sizeof(lv0_constants_KEYBOARD)/sizeof(lv0_constants_KEYBOARD[0]) },
     { "LABEL", lv0_constants_LABEL, sizeof(lv0_constants_LABEL)/sizeof(lv0_constants_LABEL[0]) },
