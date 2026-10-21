@@ -66,8 +66,8 @@ from SCons.Script import GetBuildFailures
 class Global:
     environnement = env.subst('$PIOENV')
     liste_fichiers_exclus = None                    # Fichiers déjà présents avant la copie ; None = copy_fs_image n'a pas tourné
-    ignore_dirs = ["fs"],                           # Dossier pour lequel les fichiers sont copiés à la racine
-    dossiers_a_copier = ["fs", "json", "sd"],       # Dossiers globaux à copie temporairement avant upload
+    ignore_dirs = ["fs"]                            # Dossier pour lequel les fichiers sont copiés à la racine
+    dossiers_a_copier = ["fs", "json", "sd"]        # Dossiers globaux à copie temporairement avant upload
     build_success = False
 
 # Détection environnement safeboot — désactive les fonctions non pertinentes
@@ -530,14 +530,9 @@ def copy_fs_image(source, target, env):
 
             Global.liste_fichiers_exclus = list_files_recursive(dest_dir)
 
-            # Liste des dossiers à ignorer lors de la copie
-            Global.ignore_dirs = ["fs"]
-            Global.ignore_dirs = Global.ignore_dirs[0]
-
             # Crée le dossier destination s'il n'existe pas
             os.makedirs(dest_dir, exist_ok=True)
 
-            Global.dossiers_a_copier = Global.dossiers_a_copier[0]
             for item in Global.dossiers_a_copier:
                 source_dir_path = os.path.join(source_dir, item)
                 dest_dir_path = os.path.join(dest_dir, item)
