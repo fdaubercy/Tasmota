@@ -1,9 +1,9 @@
 ---
 chantier: Modbus-garage
 titre: ModBus du garage (P4, cuve, rideau) et commandes sans fil
-statut: actif
+statut: clos
 crée: 2026-10-18
-maj: 2026-10-21
+maj: 2026-10-22
 reprise: tasks/reprise-chantier-modbus-grenier.md
 ---
 # ModBus du garage (P4, cuve, rideau) et commandes sans fil
@@ -48,7 +48,7 @@ Détail et preuves complètes : la reprise, encadré « ETAT AU 2026-10-17 SOIR 
 
 ## A7 — E5 et finitions
 - [x] E5 : débrancher le câble ModBus des esclaves (décision de l'utilisateur, après observation) — preuve : rideau considéré comme fait par décision de l'utilisateur le 2026-10-21 (non observé sur le rideau, A6 également considérée comme réalisée) ; cuve : câble débranché par l'utilisateur vers 06:45 le 2026-10-21, observation 06:46:20 → 07:49:02 (62,7 min) VALIDE : cuve 375 réceptions UDP du P4, aucun trou > 5 min, 0 abandon ni muet ; carte relais 126/126 au sniffeur, 0 sans réponse ; MQTT connecté sans coupure (123 abandons = rideau, id 3). Reste le rideau, après A6
-- [ ] Sur accord : C7 (sockets d'écoute ouvertes aussi sans MQTT, `DIAGNOSTIC_UDP_2026-10-17.md`) — accord le 2026-10-21 ; CODÉ : `udpFonctions.ouvreEcoute` / `secoursSansMqtt` + `every_second` de `controleUDP.be`, `test_discovery` 216/0 (ancien code 11 échecs, 3 mutants rouges), solidification OK, banc ModBus 309/309, relecteur-berry sans bloquant ; reste : rebuild complet + flash des 3 cartes, puis `UDP_ECOUTE` au démarrage
+- [x] Sur accord : C7 (sockets d'écoute ouvertes aussi sans MQTT, `DIAGNOSTIC_UDP_2026-10-17.md`) — preuve : commit 3df7e35ff ; syslog du 2026-10-22 : P4 08:00:06.861/.862 et cuve 08:12:42.786/.788 `UDP_ECOUTE: ecoute UniCast ouverte sur le port 2000 !` puis `MultiCast ... 4000 !` moins d'1 s après `MQT: Connecté`, aucun `UDP_ECOUTE_SECOURS` ni `_ERREUR` ; cuve rejointe par UDP après son flash (6 `ModbusReceivedUDP` au P4 en 1 min) ; rideau à flasher plus tard (décision de l'utilisateur) ; accord le 2026-10-21 ; CODÉ : `udpFonctions.ouvreEcoute` / `secoursSansMqtt` + `every_second` de `controleUDP.be`, `test_discovery` 216/0 (ancien code 11 échecs, 3 mutants rouges), solidification OK, banc ModBus 309/309, relecteur-berry sans bloquant ; reste : rebuild complet + flash des 3 cartes, puis `UDP_ECOUTE` au démarrage
 - [x] Sur accord : minuteur SerialLog de `logFonctions.appliqueProfil` — preuve : décision de l'utilisateur le 2026-10-21 : NE PAS désactiver, comportement par défaut de Tasmota conservé (log série coupé 600 s après le démarrage, `SERIALLOG_TIMER`, `tasmota.h:218`) ; pour suivre une carte plus longtemps, passer par MQTT, la console web ou le syslog
 
 ## Améliorations restantes

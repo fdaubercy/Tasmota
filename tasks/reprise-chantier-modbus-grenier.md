@@ -123,6 +123,9 @@ au mauvais endroit, annulées — voir `tasks/lessons.md`). Les 3 cibles sont
 > l'utilisateur le 2026-10-21, NON verifies sur carte** (le rideau etait encore muet ce matin : 123 abandons/h).
 > C7 CODE le 2026-10-21 (accord donne) : reste rebuild complet +
 > flash des 3 cartes (udpFonctions et controleUDP solidifies), puis verifier `UDP_ECOUTE` au demarrage.
+> **C7 VALIDE le 2026-10-22** sur le P4 (08:00:06) et la cuve (08:12:42) : `UDP_ECOUTE` unicast + multicast au
+> Boot, aucun secours ni erreur. Reste a flasher le RIDEAU quand l'utilisateur le pourra (verifier alors
+> ses lignes `UDP_ECOUTE`, par le pont serie s'il n'envoie rien au syslog).
 > Fork synchronise le 2026-10-21 (merge 4b31fd849).
 > **Capteurs de la cuve : PAS un defaut (tranche le 2026-10-17).** 2147483647 (registre 4704, niveau via
 > ADS1115) et null (registre 1312, DS18B20 sur GPIO18) sont les SENTINELLES « pas de mesure »
