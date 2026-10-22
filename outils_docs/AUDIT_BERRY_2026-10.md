@@ -188,9 +188,107 @@ persist appliqué par Berry est donc perdu au flash suivant.*
   dans un fichier local non suivi). *(faible, décision)*
 - **P2.10** — Ne garder qu'un seul mécanisme d'exclusion du LittleFS (voir A3). *(moyen, moyen)*
 
-## A3 — Chaîne de solidification
+## A3 — Chaîne de solidification (2026-10-22)
 
-*À faire.*
+Méthode : listes **résolues** de `custom_berry_solidify` (A2) croisées avec la carte des modules (A1).
+Contrôles statiques scriptés (scratchpad `a3/controles.py`, `dispo.py`, `nom_global.py`). Enfin,
+**passage de la vraie chaîne sur les 37 modules solidifiés** : `berry/solidifie_et_compile_berry.py`
+enchaîne solidification stricte (`globs`), `coc` et compilation C par `xtensa-esp-elf-gcc`. Lancé hors
+build, avec un témoin.
+
+### Ce qui est en place
+
+- **Trois listes partagées** dans `[berry_commun]` (`platformio_tasmota_cenv.ini`) : `socle` (20 modules,
+  toutes les cartes), `modbus` (6, garage), `historique` (3, S3/P4). Chaque env les compose et ajoute
+  ses modules propres : `controleRideau` depuis le dossier de la carte ; ES8311, volets et LoRaWan selon
+  les cartes. Au total, **37 modules distincts**, de 20 (différentiel, cave ESP32) à 33 (ancien maître S3)
+  par env.
+- **Convention de fichier** : directive `#@ solidify:<nom>`, `var <nom> = module("<nom>")` sans slash.
+  Les `controleXxx` sont chargés par `import` + `init()`. Un module natif l'emporte sur le fichier
+  (`be_module.c`, `load_native` avant `load_package`). `compileModule` d'un module solidifié devient un
+  no-op silencieux puisque son `.be` n'est pas copié (`gestionFileFolder.be:451`, `else return true`) :
+  l'autoexec n'a rien à changer.
+- **État modifiable hors du module**, dans une globale cachée lue par `member()` et écrite par
+  `setmember()` : `logFonctions` (`logFonctions_etat`), `historiqueFonctions` (`:50-82`), `ledsFonctions`
+  (`:45-92`).
+- **Solidifieur du build** : `lib/libesp32/berry_custom/solidify_all_python.be`, mode strict, liste
+  `globs` étendue par le fork de 15 noms du framework (58 lignes ajoutées, 2 supprimées par rapport à
+  l'amont). `pio-tools/solidify-from-url.py` et `gen-berry-structures.py` sont **identiques à l'amont**.
+
+### Résultats de la vérification
+
+| Contrôle | Résultat | Preuve |
+|---|---|---|
+| Solidification + `coc` + compilation C des 37 modules | **37 / 37 `rc=0`, 0 closure anonyme**. Les plus gros `.h` : `modbusFonctions` 654 Ko de source C (65 closures), `modBus_TasmotaSlaveModBus` 312 Ko, `udpFonctions` 162 Ko, `ledsFonctions` 161 Ko | `a3/compile/resume.txt`, 2026-10-22 |
+| Témoin : module qui appelle une globale inconnue | **refusé** : `'globaleInconnueDuTemoin' undeclared` (`rc=1`) | `a3/compile/zzzTemoin.log` |
+| Directive = nom du fichier = nom lu par la regex de `addEntryToModtab` (`solidify-from-url.py:36`) | 37 / 37, aucun motif `module(` dans un commentaire | `a3/controles.py` |
+| Piège 12, écriture dans un module en flash | 2 modules écrivent dans leur propre module (`historiqueFonctions`, `ledsFonctions`), **tous deux par `setmember`** : conforme | `historiqueFonctions.be:77-82`, `ledsFonctions.be:87-92` |
+| Piège 13, `return controleXxx` final | seul `controleLeds` est chargé depuis le LittleFS (cave S3, grenier, rideau) et il l'a. Les 11 autres `controleXxx` n'en ont pas mais sont solidifiés partout où ils sont chargés | matrice A1 + `a3/controles.py` |
+| Noms ajoutés par le fork à `globs` | les 15 sont encore utilisés par des modules solidifiés (de 4 à 354 occurrences) | recherche dans les 37 fichiers |
+| Listes de solidification et listes noires | aucune entrée vers un fichier absent ; aucune redondance, sauf 4 modules sur l'ancien maître S3 (archive, sans effet) | `a3` (croisement par env) |
+
+*Note de méthode : un premier passage avait donné 36 échecs. La cause était mon lanceur, pas les
+modules : la liste produite par Python sous Windows portait des `\r` en fin de chemin (« introuvable »).
+Corrigé, puis relancé ; seul le second passage est retenu ci-dessus.*
+
+### Avantages
+
+- **La chaîne est saine et prouvée** : les 37 modules passent la même chaîne que le build. La
+  convention (directive, `module()` sans slash, fonctions nommées) est respectée partout, et le
+  mécanisme `setmember` règle proprement l'état des modules en flash.
+- Listes partagées : un module de `data/fs` ne s'ajoute qu'une fois. L'oubli du 2026-09-27 n'est plus
+  possible.
+- Le fork n'a plus d'écart sur `solidify-from-url.py`. Le seul écart restant, `globs`, est commenté
+  ligne par ligne et ne sert qu'à nos noms.
+- Rien à changer dans les autoexec quand on solidifie un module (`compileModule` devient un no-op).
+- `solidifie_et_compile_berry.py` vérifie un module en environ 10 s au lieu d'un build de deux heures.
+
+### Inconvénients et défauts constatés
+
+| # | Constat | Preuve | Cote |
+|---|---|---|---|
+| S1 | **Différentiel : le persist déclare `drivers.ModBus.activation = ON`** (maître `id 0`, `log: detail`), avec une entrée analogique virtuelle `ModBus_TasmotaSlaveModBus1`. Or la pile ModBus n'est **pas** embarquée : `modbusFonctions` n'est ni solidifié ni copié, et `autoexec.be:61` et `:87` sont commentés. Les chemins sont gardés aujourd'hui (l'analogique est `OFF`, aucun relais virtuel, `globalFonctions.be:161` et `:226` exigent `id > 0`). Mais activer cette entrée ou ajouter un relais virtuel ModBus ferait échouer un `import modbusFonctions` à l'exécution. | `data/bureau/tasmota32-interrupteur-differentiel/_persist.json` ; `controleGeneral.be:600-628` | L |
+| S2 | Modules **importés mais absents** de la carte (ni flash ni LittleFS), sans incident tant que leurs gardes restent fausses : `modbusFonctions` sur la cave S3 et le grenier (ModBus `OFF`), `ledsFonctions` sur le P4 (ruban `OFF`, appel réservé à l'esclave : `modbusFonctions.be:2075-2095`). Les réceptions TCP et UDP sont protégées par `try` (`tcpFonctions.be:208`, `udpFonctions.be:788`). | `a3/dispo.py` ; sites lus un par un | L |
+| S3 | **Modules solidifiés jamais chargés** sur leur carte, donc du coût en flash sans usage : différentiel (`controleLedTemoin`, `controleDiscovery`, `controleRangeExtender`, `controleTCP`, `controleUDP`, `discoveryFonctions`), P4 (`controleTCP`), cuve et rideau (`controleRangeExtender`, `controleTCP`), cave ESP32 (`discoveryFonctions`). Conséquence du `socle` commun : simplicité contre quelques Ko de flash par carte. | incohérences de la carte des modules (A1) | S |
+| S4 | **Deux conventions** pour atteindre un module par son nom : un nom global créé par un `import` de niveau fichier dans l'autoexec (la plupart des modules), ou un `import` local en tête de chaque fonction (`ledsPanelFonctions`, et beaucoup d'appelants). La seconde ne dépend pas de l'autoexec. La première a déjà coûté un boot raté (leçon du 2026-09-27). | `ledsPanelFonctions.be` (chaque fonction) ; autoexec | S |
+| S5 | `custom_files_exclude_solidified = ON` n'a d'effet propre que pour un module solidifié **depuis le dossier de la carte** (`controleRideau`). Ailleurs, `copy_fs_image` a déjà écarté les solidifiés (voir E10). | `pre_utilitaires_platformio.py:560-565` ; `post_esp32.py:190-220` | S |
+| S6 | Le `return controleXxx` final manque à 11 `controleXxx`. Sans effet tant qu'ils restent solidifiés ; si l'un d'eux cesse de l'être sur une carte, son driver ne démarrera pas, **sans erreur** (piège 13). | `a3/controles.py` | L |
+| S7 | `carte_modules_berry.py` signale à tort `controleRideau` comme absent : il ne cherche les modules solidifiés que dans `data/fs` (`:427`). La docstring de `modules_solidifies()` cite `gestionFileFolder.be:378` pour le no-op, une ligne aujourd'hui en `:451`. | `carte_modules_berry.py:427` ; `pre_utilitaires_platformio.py:486-502` | D |
+| S8 | La liste `globs` diverge de l'amont : à chaque synchro du fork, le fichier peut entrer en conflit, et un nom ajouté en amont peut être perdu si le conflit est mal résolu. | `git diff upstream/development -- lib/libesp32/berry_custom/solidify_all_python.be` | L |
+
+### Modules candidats à la solidification
+
+Sur les cartes en service, ces modules sont encore compilés en RAM au démarrage depuis le LittleFS :
+
+| Module | Carte | Taille `.be` | Obstacles | Effort |
+|---|---|---|---|---|
+| `garageFonctions` | P4 | 5 Ko | module ; environ 7 fonctions anonymes à nommer (`nomme_fonctions_berry.py`) ; solidification depuis le dossier de la carte, comme `controleRideau` | faible |
+| `cuveFonctions` | cuve | 30 Ko | module ; environ 19 fonctions anonymes, 2 écritures du module à l'exécution (passer par `setmember`) | moyen |
+| `controleCuve`, `controleGarage`, `controlePompeVideCave` | cuve, P4, cave S3 | 19 Ko, 21 Ko, 10 Ko | scripts de driver (`tasmota.add_driver`), sans module : conversion au modèle « module + `init` » de `controleRideau` | moyen |
+| `controleLeds`, `ledsFonctions` | cave S3, rideau | — | garde `OFF` sur ces cartes : pas chargés, donc aucun gain | — |
+
+Le gain en RAM (bytecode compilé au démarrage contre structures en flash) reste à mesurer en A9.
+
+### Propositions
+
+- **P3.1** — Différentiel : remettre `drivers.ModBus.activation` à `OFF` dans le persist, ou embarquer
+  la pile ModBus si elle doit servir. *(faible, décision)*
+- **P3.2** — Généraliser l'`import` local en tête de fonction pour l'auto-appel d'un module (convention
+  S4), afin de ne plus dépendre du nom global posé par l'autoexec. *(moyen, risque faible ; vérifiable
+  module par module avec `solidifie_et_compile_berry.py` et un boot)*
+- **P3.3** — Ajouter `return controleXxx` à la fin de chaque `controleXxx`, même solidifié, pour qu'il
+  reste chargeable depuis le LittleFS. *(faible, nul)*
+- **P3.4** — Solidifier `garageFonctions`, puis `cuveFonctions` ; plus tard, convertir les trois scripts
+  de driver de carte. À mesurer d'abord en A9. *(faible à moyen)*
+- **P3.5** — Accepter les modules solidifiés inutiles (S3) comme prix de la simplicité, ou découper le
+  `socle` en `socle` et `reseau`. *(décision ; faible)*
+- **P3.6** — Corriger `carte_modules_berry.py` pour les modules solidifiés hors de `data/fs`, et mettre à
+  jour le numéro de ligne de la docstring. *(faible)*
+- **P3.7** — Réduire à un seul mécanisme d'exclusion du LittleFS : soit `copy_fs_image` traite aussi les
+  modules de carte, soit `post_esp32.py` seul (voir P2.10). *(moyen)*
+
+*Effet de bord de la vérification : l'étape `coc` a régénéré `lib/libesp32/berry/generate/` (dossier
+ignoré par git), que le prochain build régénère de toute façon. Aucun fichier suivi n'a changé.*
 
 ## A4 — Architecture et chargement des scripts Berry
 

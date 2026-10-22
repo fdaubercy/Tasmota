@@ -3,7 +3,7 @@ chantier: audit-berry
 titre: Audit complet — scripts Berry, environnements de build, solidification, logs et communications
 statut: actif
 cree: 2026-10-21
-maj: 2026-10-21
+maj: 2026-10-22
 source: partitioned-hatching-key.md
 ---
 # Audit complet — scripts Berry, environnements de build, solidification, logs et communications
@@ -83,16 +83,16 @@ voies sans fil plus efficaces que l'UDP, recherche GitHub sur ESP-NOW entre modu
 - [x] Section A2 du rapport rédigée : en place · avantages · inconvénients · propositions — preuve : outils_docs/AUDIT_BERRY_2026-10.md § A2 (15 constats E1-E15, 10 propositions P2.1-P2.10)
 
 ## A3 — Chaîne de solidification
-- [ ] Pour chaque env : liste résolue de `custom_berry_solidify` vs modules réellement importés par son `autoexec.be` et ses `controleXxx`
-- [ ] Directive `#@ solidify:` et `module("nom")` sans slash sur chaque module listé ; aucun commentaire ne reproduit le motif lu par `addEntryToModtab()` (`solidify-from-url.py:56`)
-- [ ] `globs` de `lib/libesp32/berry_custom/solidify_all_python.be` vs globales réellement appelées par nom dans les modules solidifiés
-- [ ] Modules solidifiés appelés par leur propre nom : présence d'un `import` de niveau fichier dans un script chargé en `.be`, ou d'un `global.X = X`
-- [ ] État mutable hors du module (piège 12) et `return controleXxx` en fin de fichier (piège 13), module par module
-- [ ] Exclusions du LittleFS (`custom_files_exclude_solidified`, `custom_files_exclude`, `modules_solidifies()`, `modules_exclus()`, `copy_fs_image()`) confrontées aux listes de solidification de chaque env
-- [ ] Divergences de `pio-tools/solidify-from-url.py` et `post_esp32.py` avec l'amont et risque à chaque synchro du fork
-- [ ] `solidifie_et_compile_berry.py` passé sur les modules solidifiés (sur accord, hors build) — compilation C réelle
-- [ ] Modules non solidifiés candidats (`ledsFonctions`, `vrFonctions`, `cuveFonctions`, `garageFonctions`, `controleLeds`…) : gain attendu et obstacles
-- [ ] Section A3 du rapport rédigée : en place · avantages · inconvénients · propositions
+- [x] Pour chaque env : liste résolue de `custom_berry_solidify` vs modules réellement importés par son `autoexec.be` et ses `controleXxx` — preuve : a3/dispo.py + matrice A1 ; AUDIT § A3 S1, S2, S3
+- [x] Directive `#@ solidify:` et `module("nom")` sans slash sur chaque module listé ; aucun commentaire ne reproduit le motif lu par `addEntryToModtab()` (`solidify-from-url.py:56`) — preuve : a3/controles.py : 37/37 directive = fichier = nom lu par la regex (solidify-from-url.py:36), 0 motif en commentaire
+- [x] `globs` de `lib/libesp32/berry_custom/solidify_all_python.be` vs globales réellement appelées par nom dans les modules solidifiés — preuve : 37/37 solidifiés en strict (rc=0), témoin `globaleInconnueDuTemoin` refusé ; 15 noms du fork tous utilisés ; AUDIT § A3 S8
+- [x] Modules solidifiés appelés par leur propre nom : présence d'un `import` de niveau fichier dans un script chargé en `.be`, ou d'un `global.X = X` — preuve : a3/nom_global.py : seul ledsPanelFonctions sans nom global, faux positif (import local dans chaque fonction) ; AUDIT § A3 S4
+- [x] État mutable hors du module (piège 12) et `return controleXxx` en fin de fichier (piège 13), module par module — preuve : historiqueFonctions.be:77-82 et ledsFonctions.be:87-92 par setmember ; controleLeds seul chargé depuis le FS, a son return ; AUDIT § A3 S6
+- [x] Exclusions du LittleFS (`custom_files_exclude_solidified`, `custom_files_exclude`, `modules_solidifies()`, `modules_exclus()`, `copy_fs_image()`) confrontées aux listes de solidification de chaque env — preuve : croisement par env : 0 chemin absent, 4 redondances sur l'ancien maître S3 ; AUDIT § A3 S5
+- [x] Divergences de `pio-tools/solidify-from-url.py` et `post_esp32.py` avec l'amont et risque à chaque synchro du fork — preuve : solidify-from-url.py et gen-berry-structures.py identiques à l'amont ; post_esp32.py : AUDIT § A2 E9
+- [x] `solidifie_et_compile_berry.py` passé sur les modules solidifiés (sur accord, hors build) — compilation C réelle — preuve : a3/compile/resume.txt (2026-10-22, hors build) : 37/37 rc=0, 0 anonyme ; témoin rc=1
+- [x] Modules non solidifiés candidats (`ledsFonctions`, `vrFonctions`, `cuveFonctions`, `garageFonctions`, `controleLeds`…) : gain attendu et obstacles — preuve : AUDIT § A3 « Modules candidats » (garageFonctions faible, cuveFonctions moyen, 3 scripts de driver à convertir)
+- [x] Section A3 du rapport rédigée : en place · avantages · inconvénients · propositions — preuve : outils_docs/AUDIT_BERRY_2026-10.md § A3 (8 constats S1-S8, 7 propositions P3.1-P3.7)
 
 ## A4 — Architecture et chargement des scripts Berry
 - [ ] Contrat `autoexec.be` → `controleXxx` → `xxxFonctions` tracé pour chaque carte : ordre de chargement, gardes d'activation (`loadBerryFile(..., activation)`)
