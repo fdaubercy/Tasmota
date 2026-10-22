@@ -37,6 +37,30 @@ constatés* · *Propositions*. Chaque constat cite sa preuve (`fichier:ligne`, s
 | `tasmota32s3-etage2-grenier` | grenier | en sommeil | basse |
 | `tasmota32-rdc-vr-porte` | volet de la porte du RDC | hors service | constat seulement |
 
+> **Correction du 2026-10-22, d'après l'observation passive de A7.** La carte de cave réellement en
+> service (192.168.0.48, `SERVEUR-RLY-CAVE`) **n'exécute pas** le code de
+> `data/cave/tasmota32s3-serveur-rly`, et pas davantage celui de `data/cave/tasmota32-serveur-rly`.
+> - Son topic MQTT est `cave/serveur-rly-cave`, alors que les deux persists de la cave déclarent
+>   `cave/serveur-rly-cave-v2`, et que ce `-v2` est annoncé `Offline`.
+> - Elle tourne en firmware 13.3.0.3, avec le modèle « ESP32 Relay x8 ».
+> - Elle émet des messages qui n'existent que dans `data/cave/tasmota32-serveur-rly-sauvegarde/`
+>   (`controleGlobal.be:346`).
+> - Le persist de ce dossier porte justement le topic `serveur-rly-cave`, dans l'ancienne structure
+>   `parametres`.
+>
+> **Le statut « cave S3 en service » est donc à confirmer** : soit la S3 n'est pas encore déployée, soit
+> elle a été réinstallée avec l'ancien code. Les constats « cave S3 » de cet audit portent sur le code du
+> dépôt, pas sur la carte en place.
+>
+> Même vérification pour les autres cartes, d'après les messages de discovery retenus le 2026-10-22 :
+>
+> | Carte | Firmware | Exécute le code du dépôt ? |
+> |---|---|---|
+> | P4 | 16.0.0.1 | oui |
+> | cuve | 16.0.0.1 | oui |
+> | rideau | 15.4.0.2 | `Offline` pendant l'observation : non vérifié |
+> | différentiel (192.168.0.49, `tongou SY2`) | 15.0.1 | **non** : tas Berry de 3 Ko pour 42 objets, uptime de 22 jours. Le framework Berry du dépôt n'y est pas chargé. |
+
 ### Ligne de base des bancs
 
 Lancés le 2026-10-21 vers 20:40, pendant un build de l'utilisateur (`erase_upload` cuve + P4 + rideau).
@@ -290,17 +314,447 @@ Le gain en RAM (bytecode compilé au démarrage contre structures en flash) rest
 *Effet de bord de la vérification : l'étape `coc` a régénéré `lib/libesp32/berry/generate/` (dossier
 ignoré par git), que le prochain build régénère de toute façon. Aucun fichier suivi n'a changé.*
 
-## A4 — Architecture et chargement des scripts Berry
+## A4 — Architecture et chargement des scripts Berry (2026-10-22)
 
-*À faire.*
+Périmètre : les 8 `autoexec.be` de `data/<lieu>/<carte>/` (hors `*sauvegarde*`), les `controleXxx` de
+carte, `data/fs/gestionFileFolder.be`, et les `_persist.json` des 5 cartes Berry en service (P4, cuve,
+rideau, cave S3, différentiel). Recherches faites sur `data/` entier, pages `data/sd` comprises.
+Scripts de mesure : `scratchpad/a4/fonctions_mortes.py`, `scratchpad/a4/cles_persist.py`.
 
-## A5 — Simplification des modules et drivers
+### Ce qui est en place
 
-*À faire.*
+**Le contrat de chargement.** Chaque autoexec suit les mêmes étapes :
 
-## A6 — Niveaux de log : le mécanisme
+1. Imports et globales du persist (`serveur`, `diverses`, `modules`, `drivers`).
+2. `gestionFileFolder.compileModule("/x", activation)` sur les utilitaires puis les services
+   (`udp`, `tcp`, `rangeExtender`, `discovery`, `modbus`…), chacun sous la garde de son bloc du persist.
+3. `gestionFileFolder.loadBerryFile("/controleCarte", activation, "ON")` pour le script de la carte.
+4. LEDs et historique en fin de fichier.
 
-*À faire.*
+Chaque `controleXxx` enregistre ensuite son driver (`tasmota.add_driver`) et ses commandes
+(`tasmota.add_cmd('ReglageXxx', …)` : 25 appels pour 22 noms), puis appelle ses `xxxFonctions`.
+
+**Les deux fonctions de chargement** (`gestionFileFolder.be`) :
+
+- **`compileModule(chemin, paramDeleteBe)`** (`:419-453`) :
+  - `"OFF"` avec un `.bec` présent : le `.be` est supprimé et rien n'est compilé ;
+  - sinon le `.be` est compilé en `.bec`, puis supprimé ;
+  - un module solidifié n'a pas de `.be` sur le LittleFS : la fonction ne fait rien (`:451`).
+- **`loadBerryFile(chemin, paramDeleteBe, compileBe)`** (`:377-415`) : même traitement du `.be`, puis
+  `load(chemin)`.
+  - Le test qui devait réserver ce chargement aux modules actifs est **commenté** (`:410-414`) : le
+    fichier est chargé **quelle que soit l'activation**.
+
+**Les autoexec en service** :
+
+| Carte | Lignes | Script de carte chargé | Particularités |
+|---|---|---|---|
+| P4 | 133 | `controleGarage` (`:124`) | `garageFonctions` (`:75`), discovery |
+| cuve | 140 | `controleCuve` (`:131`) | `cuveFonctions` (`:77`), LEDs |
+| rideau | 133 | aucun : `controleRideau` est solidifié | LEDs |
+| cave S3 | 135 | `controlePompeVideCave` (`:107`) | LEDs, historique |
+| différentiel | 114 | aucun | **ancien modèle** (voir D2) |
+
+Environ 50 lignes sont communes aux 8 autoexec : en-tête, globales, sept `compileModule` d'utilitaires,
+services réseau.
+
+### Avantages
+
+- Un seul modèle de démarrage pour toutes les cartes : on lit un autoexec et on sait lire les autres.
+- L'activation est portée par le persist : une carte change de rôle sans toucher à son code.
+- Chaque service ne se charge que si son bloc est actif. Les services absents ne coûtent pas de RAM.
+- Les réglages passent par `ReglageXxx`, un nom par domaine, sans collision avec le firmware. Seules
+  exceptions, et elles sont voulues : `HSBCOLOR`, `DIMMER` et `SCHEME` remplacent les commandes du
+  firmware sur un esclave dont le ruban est déporté (`modBus_TasmotaSlaveModBus.be:82-86`).
+- La compilation en `.bec` au premier démarrage évite de recompiler le source à chaque redémarrage.
+
+### Inconvénients et défauts constatés
+
+| # | Constat | Preuve | Cote |
+|---|---|---|---|
+| D1 | **`loadBerryFile` charge le fichier même si son activation est `OFF`.** Le test est commenté (`:410-414`). Avec `OFF` et un `.bec` présent, le `.be` est supprimé, puis le `.bec` est chargé : le driver démarre quand même. Sont concernés `controleGarage`, `controleCuve` et `controlePompeVideCave`, dont la seule garde est cet argument. Aucun de ces trois scripts ne teste l'activation avant `tasmota.add_driver` (`controleGarage.be:382`, `controleCuve.be:353`, `controlePompeVideCave.be:153`). Aujourd'hui les trois modules sont `ON` : chemin non emprunté. | `gestionFileFolder.be:377-415` | L |
+| D2 | **Trois générations d'autoexec coexistent**. Différentiel : ancien modèle (`var controleGeneral`, `import partition_wizard`, pas de `controleLedTemoin`, `compileModule("/webFonctions", "ON")` sans garde `serveur`). Ancien maître S3 du garage : `log (` avec une espace, compile `leds_panel` et `partition_wizard` (`:78-79`). Grenier : services compilés sans le `if … == "ON"` des autres cartes (`:64-66`) et `compileModule("/vrFonctions")` **sans activation** (`:69`), donc toujours compilé. Une correction faite dans un autoexec doit être reportée à la main dans les 7 autres. | autoexec cités | S |
+| D3 | **`paramDeleteBe` porte deux sens** : « module actif » pour l'appelant, « supprimer le source » pour la fonction. Avec `OFF`, le `.be` est effacé de la carte. Le module ne pourra plus être modifié sur place sans téléverser à nouveau son source. | `gestionFileFolder.be:424-428` | D |
+| D4 | `LOG_LEVEL_NONE = 0` n'est défini que dans l'autoexec du P4 (`:9`) et n'est lu nulle part. | recherche `LOG_LEVEL_NONE` sur `data/` | S |
+| D5 | **Doublons de cartes** : `controlePompeVideCave.be` est identique sur la cave ESP32 et la cave S3 ; `controleGarage.be` S3/P4 diffère de 216 lignes, `garageFonctions.be` de 61. Les versions S3 sont celles d'une carte remplacée mais gardée (A1) : elles ne sont plus tenues à jour et divergeront davantage. | `diff` des fichiers | S |
+| D6 | `data/cave/tasmota32-serveur-rly-sauvegarde/` : 7 fichiers suivis, 96 Ko. Aucun env ne l'utilise, mais c'est le **seul** endroit où vivent encore `typeAction`, `delaiSiON` et `delaiSiOFF` (voir D9). **Correctif A7 (2026-10-22) : c'est le code qui tourne sur la carte de cave en service** (voir la note du statut des cartes, A1). Ce n'est donc pas un dossier mort, mais la seule source de la carte réelle, et aucun env ne sait la reconstruire. | `git ls-files` ; `transform_name` ; syslog du 2026-10-22 | G |
+| D7 | `controleGrenier.be` fait **0 octet** et reste chargé par l'autoexec du grenier (`:102`). Le grenier est en sommeil : sans effet aujourd'hui. | `wc -c` | S |
+| D8 | **5 fonctions publiques sans appelant**, environ 180 lignes compilées ou solidifiées pour rien : `diversFonctions.afficheDateTime` (`:5-32`), `diversFonctions.getRandomInt` (`:35-54`), `gestionFileFolder.supprimeBerryFile` (`:303-337`), `webFonctions.reglageWeb` (`:10-42`, la commande `ReglageWeb` n'est enregistrée par aucun `add_cmd`), `webFonctions.clientWeb` (`:92-156`). | `fonctions_mortes.py` : 0 appel dans le code, 0 citation en chaîne, 0 dans `data/sd` ; liste des 25 `add_cmd` | S |
+| D9 | **Clés du persist sans lecteur**. Chaque `relaisLie` porte `delaiSiON`, `delaiSiOFF`, `etatSiON` et `etatSiOFF`, et chaque bouton porte `typeAction` : 58 `relaisLie` sur les 5 cartes. Le code n'en lit que `modules`, `ids`, `type` et **`delai`** (`globalFonctions.be:219-222`, et 4 sites identiques jusqu'à `:364`). `etatSiON`/`etatSiOFF` ne sont cités que dans la liste d'élagage des listes vides (`diversFonctions.be:239`). Ces clés pèsent de 367 o (cuve) à 1 468 o (cave S3) sur des persists de 10 à 18 Ko, persists qui restent en RAM en permanence. | `cles_persist.py` ; recherche sur `data/`, `data/sd` et `outils_docs/scripts_python` | S |
+| D10 | **Le schéma du persist inverse l'obligatoire et l'optionnel** : `persist.schema.json` déclare `delaiSiON`, `delaiSiOFF`, `etatSiON` et `etatSiOFF` **requis** (`:960-967`), et `delai`, la seule clé lue, **facultatif** (`:956`). Le schéma est produit par inférence (une clé présente dans au moins 50 % des exemples devient requise, `genere_schema_persist.py:21-23`). Il décrit l'existant, pas le contrat du code. Lecteur de clé absente : aucun cas trouvé. Les 58 `relaisLie` dont `ids` n'est pas vide portent tous `delai`. Mais une entrée nouvelle écrite d'après le schéma, avec un `ids` non vide et sans `delai`, lèverait `key_error` à la première commutation. | `persist.schema.json:956-967` ; contrôle des 5 persists | L |
+
+Faux positifs écartés :
+- Blocs `drivers.KNX`, `SD`, `ecran`, `Ethernet` et groupes `pinsXxx` : lus par itération
+  (`diversFonctions.be:151`, `controleWeb.be:107`, `controleGeneral.be:596`).
+- `diverses.logs.profils.normal` : lu par le nom du profil actif (`logFonctions.be:190`).
+- `template.CMND` : objet transmis entier au firmware (`configGlobal.be:57`).
+- Commandes `Reglage*` : toutes enregistrées par `add_cmd` dans leur `controleXxx`, sauf `ReglageWeb`.
+
+Limite : `fonctions_mortes.py` ne couvre que les fonctions de module (`M.f = M_f`), pas les méthodes de
+classe des drivers, que traitera A5.
+
+### Propositions
+
+- **P4.1** — Rétablir la garde de `loadBerryFile` : ne pas appeler `load()` si l'activation vaut `OFF`.
+  Ou tester l'activation dans chaque script de carte avant `add_driver`. Corrige D1.
+  *(faible ; risque faible : les trois modules sont `ON` ; essai : passer une carte à `OFF`, vérifier
+  que le driver ne démarre pas, puis remettre `ON`)*
+- **P4.2** — Factoriser le bloc commun des autoexec dans un module `demarrage` solidifié, par exemple
+  `demarrage.socle()`. Chaque autoexec ne garderait que ses lignes propres (une quinzaine). Remettre au
+  passage le différentiel et le grenier au modèle courant. Corrige D2 et D4.
+  *(moyen ; risque moyen : c'est le chemin de boot ; une carte à la fois, en commençant par une carte
+  remplacée)*
+- **P4.3** — Séparer les deux sens de `paramDeleteBe` : un argument d'activation (charger ou non), et une
+  option distincte et explicite pour supprimer le source. Corrige D3. *(faible)*
+- **P4.4** — Décider du sort des fichiers des cartes remplacées. Soit les geler (en-tête « carte
+  remplacée, non maintenu »), soit les retirer du dépôt, puisque git en garde l'historique. Corrige D5
+  et D7. **Ne PAS retirer le dossier `*sauvegarde*` de la cave** : il porte le code de la carte en
+  service (correctif A7). Pour lui, la décision est autre : déployer la S3 avec le code courant, ou
+  donner à ce code un env qui sache le reconstruire. Corrige D6. *(faible ; décision)*
+- **P4.5** — Supprimer les 5 fonctions sans appelant, ou les marquer « réservées » si elles doivent
+  resservir (`reglageWeb` serait alors à enregistrer par `add_cmd`). Corrige D8.
+  *(faible ; vérification : `verifie_berry.py` puis boot d'une carte)*
+- **P4.6** — Nettoyer les clés mortes de `relaisLie` et `typeAction` dans les 5 persists. Dès
+  maintenant à la main ; à terme par un script qui sauvegarde avant d'écrire. Gain attendu : 0,4 à
+  1,5 Ko de RAM par carte. Corrige D9.
+  *(faible ; risque faible ; prérequis : confirmer qu'aucun outil PC, page web ou sauvegarde ne les
+  relit — recherche faite sur `outils_docs/scripts_python` et `data/sd`, à refaire au moment de
+  l'action)*
+- **P4.7** — Rendre le schéma normatif pour `relaisLie` : `delai` requis dès que `ids` n'est pas vide,
+  clés mortes retirées. Soit par une surcharge manuelle dans `genere_schema_persist.py`, soit par un
+  `find("delai", 0)` dans les 5 sites de `globalFonctions.be`. Corrige D10. *(faible)*
+
+## A5 — Simplification des modules et drivers (2026-10-22)
+
+Périmètre : les 22 drivers (`tasmota.add_driver`), la pile ModBus, les modules réseau, les utilitaires
+transverses et les scripts des cartes en service. L'analyse a été faite en quatre parties parallèles,
+en lecture seule. Chaque constat retenu ici a été **relu dans le code** depuis le fil principal. Les
+deux bugs de N1 sont prouvés par un test Berry avec témoin (`scratchpad/a5/lambda.be`).
+
+### Ce qui est en place
+
+| Domaine | Fichiers (lignes) | Organisation |
+|---|---|---|
+| Pile ModBus | `modbusFonctions` (3242), `modBus_TasmotaSlaveModBus` (1463), `modBus_Conn16channels` (557), `controleModbus` (388) | Un module en 21 blocs : file FIFO, 3 transports, trame, CRC, esclave, push, carte 16 relais. Plus deux drivers d'esclave. Commentaires : 25 % du module. |
+| Réseau | `udpFonctions` (914), `discoveryFonctions` (722), `rangeExtenderFonctions` (428), `tcpFonctions` (268) et leurs `controleXxx` | Table `/json/discovery.json` (8 lecteurs, 8 écrivains), ImAlive, routage RgxPort |
+| Transverses | `globalFonctions` (706), `controleGeneral` (709), `configDevices` (459), `controleWeb` (474), `webFonctions` (345), `diversFonctions` (364), `gestionFileFolder` (515) | Parcours `modules → environnement → groupe → device` dans presque chaque fonction |
+| Drivers périodiques | `every_100ms` : `controleModbus`, `controleUDP` (×2 instances) ; `every_250ms` : `controleTCP` ; `every_second` : général, LEDs, ModBus, UDP, cuve | Aucun `every_50ms`. Seul `controleLedTemoin` se retire (`remove_driver`). Les autres sont gardés à l'`init` et jamais retirés. |
+
+Filets existants :
+- `banc_test_modbus` : 309 contrôles sur 309, relancé pendant A5. Il charge `modbusFonctions`,
+  l'esclave et `controleModbus`, mais **pas** `modBus_Conn16channels`.
+- `test_discovery` : 213 contrôles, sur UDP, discovery et Range Extender. Il ne charge ni TCP, ni les
+  drivers `controleUDP`/`controleTCP`, ni les commandes `ReglageDiscovery`/`RangeExtender`/`TCP`.
+- Aucun banc pour `globalFonctions`, `configDevices`, `controleGeneral`, `controleWeb` et les scripts de
+  carte : seule leur syntaxe est vérifiée.
+
+### Avantages
+
+- La pile ModBus est entièrement couverte par un banc vert, sauf la carte 16 relais : une
+  simplification y est vérifiable en quelques secondes.
+- **Aucune fonction de module morte dans `modbusFonctions`** : tout ce qui y est déclaré sert.
+- Les drivers sont gardés à l'`init` : un bloc `OFF` n'enregistre pas son driver et ne coûte aucun tick.
+- Les chemins chauds (`every_100ms`) sont peu nombreux et justifiés : 100 ms reste nécessaire pour la
+  latence de réception UDP et série.
+- Les correctifs passés sont commentés sur place (date et raison) : l'historique des décisions se lit
+  dans le code.
+
+### Inconvénients et défauts constatés
+
+**Défauts de fonctionnement**
+
+| # | Constat | Preuve | Cote |
+|---|---|---|---|
+| N1 | **Les redémarrages programmés ne s'exécutent jamais.** Les deux crons passent `/-> introspect.get(controleGeneral, "heureReboot")` : la lambda **renvoie** la méthode sans l'appeler. Sont concernés : le redémarrage quotidien (`heureReboot`, à 00:00 sur 4 cartes et 01:00 sur le différentiel), et le redémarrage si le Wi-Fi est perdu (`timerRebootSansWifi` à 300 sur le P4, la cave S3 et le différentiel). Les corriger **ferait démarrer** des redémarrages nocturnes qui n'ont jamais eu lieu. À vérifier aussi : `*/300` dans le champ des secondes de cron. | `globalFonctions.be:145`, `controleGeneral.be:97` ; test : 0 appel après la lambda, 1 avec le témoin | G |
+| N2 | **Chaque ImAlive reçu réécrit `/json/discovery.json` en flash**, sans comparer le contenu : une écriture par esclave et par période de télémétrie. Les autres écrivains comparent d'abord avec `memeValeur` (correctif de l'incident du 2026-10-05). `writeFile` ne compare rien. | `udpFonctions.be:308-327` ; `gestionFileFolder.be:232-242` ; `discoveryFonctions.be:330-339` | G |
+| N3 | **Cuve : `_Scheme` est appelé deux fois par seconde.** Une fois par `ledsFonctions.maj` (`ledsFonctions.be:444`), une fois par `surveilleRubans` → `etatRuban` (`modbusFonctions.be:2041`, `:2108`). La cuve est la seule carte avec le ruban `ON`. | persists ; lignes citées | G |
+| N4 | **P4 : la page d'accueil relit `/sd/css/webSensor.css` sur la carte SD** à chaque rafraîchissement (environ toutes les 2 s, par page ouverte). | `controleGarage.be:94` | G |
+| N5 | **Deux instances `CONTROLE_UDP`** (unicast et multicast) lisent chacune **les deux** sockets en `every_100ms` : 20 lectures par seconde pour 10 utiles, et une `map` allouée à chaque tick. | `controleUDP.be:138-147`, `:188-191` | S |
+| N6 | **TCP est forcé `ON` sans être utilisé.** `controleModbus.be:159-169` et `controleRangeExtender.be:77-90` remettent `serveur.tcp.activation` à `ON`. Or `typeComm.TCP` est `OFF` dans les 8 persists. Le P4, la cuve et le rideau ne chargent pas TCP (lignes commentées). **La cave S3 le charge** (`autoexec.be:101`) : un client TCP et un `every_250ms` sans usage. | lignes citées | L |
+| N7 | **Carte 16 relais : la réception n'est protégée par aucun `try`.** Une exception entre `:343` et `:397` empêche l'acquittement `termineEnVol` (`:402`). La file reste alors bloquée jusqu'au délai de garde. Chez l'esclave ESP32, le même chemin est protégé (G5 de l'audit ModBus). Ce driver n'a **aucun banc**. | `modBus_Conn16channels.be:318-402` | L |
+| N8 | P4 : pour un thermomètre de type 1216, l'humidité affichée est la **température** (`thermoJson["value"]` lu deux fois). La cuve lit bien `AM2301.Humidity` (`controleCuve.be:264`). Le seul thermomètre de ce type sur le P4 est `OFF`. | `controleGarage.be:204-208` | L |
+| N9 | **Déballage de `value` : deux versions coexistent.** La version correcte est `globalFonctions.be:197-208` (gère `Action`, lève l'ambiguïté). L'ancienne est recopiée 4 fois : `globalFonctions.be:424-428`, `cuveFonctions.be:436-440`, `garageFonctions.be:94-98`, `webFonctions.be:55-59`. Avec une `map` de plusieurs clés, elle indexe un scalaire. | lignes citées | L |
+| N10 | Compteur des entrées analogiques réelles **toujours à 0** : il n'est incrémenté que s'il est déjà `> 0`. Le log de `controleGeneral.be:130` affiche en plus les `compteurs.actives` à la place des `réels`. `%i` appliqué à `"ON"` affiche `0` (`configDevices.be:419`, `:424`, `:449`). | `configDevices.be:232-234` | L |
+| N11 | `controleWeb.etatCapteurs` est cassée (`self.parametres` non déclaré, `pageModifCapteurs.html` et `jsModifCapteurs.js` absents de `data/sd`). La route `/wss` et sa page `htmlWebSocket` codent une IP en dur. | `controleWeb.be:282-346`, `:450` ; `webFonctions.be:159-204` | L |
+
+**Code mort** (recherche sur `data/` entier, `data/sd` compris ; commandes citées dans les comptes
+rendus d'analyse)
+
+| Domaine | Éléments | Lignes |
+|---|---|---|
+| Réseau | Fonctions sans appelant : `udpFonctions.sendTasmotaClientUDP` (`:861-883`), `tcpFonctions.envoiMsgTCP` (`:245-266`, corps commenté), `rangeExtenderFonctions.afficheBoutonsModulesEsclaves` (`:285-353`, seul appel dans un bloc `#- -#`, `controleRangeExtender.be:122-134`). Branches d'événements jamais branchées dans les `changementEtatDemarrage` UDP, TCP, discovery et Range Extender. Commandes coquilles `ReglageDiscovery`, `ReglageRangeExtender`, `ReglageTCP` (elles journalisent puis répondent `OK`). Blocs commentés et notes périmées (`controleUDP.be:1-56` : port 3000, au lieu de 4000). | environ 330 sans risque, et 150 pour les commandes (décision) |
+| ModBus | Branches maître de `envoiMsgModbusSerial`, `TCP` et `UDP`, inatteignables : le maître quitte `envoiMsgModbus` à `:1488` pour tout message qui n'est pas une `Reponse`. Lectures de démarrage de l'esclave construites puis jamais envoyées (`modBus_TasmotaSlaveModBus.be:1153-1219`, avec un `tasmota.cmd` sur `teleperiod` à chaque boot). Constantes sans lecteur (`:70`, `:97-99`, `:102`, `:185`). `ReglageConn16Channel` sans sous-commande. `tabFonctionsName` reconstruite à chaque trame UDP (`controleModbus.be:274-283`). | environ 150 |
+| Transverses | 109 lignes commentées dans `webFonctions.be` (`tcpServeur` `:206-258`, ancien `traiteCommandeHTTP` `:286-341`). `controleGeneral.any_key` (`:672-691`), qui ne fait que journaliser. `gestionFileFolder.supprBerryFS` (appelant commenté). `cuveFonctions.voltageMin`. Trois `changementEtatDemarrage` de carte jamais branchés (`garageFonctions.be:83-119`, `cuveFonctions.be:430-467`). Les 5 fonctions mortes de A4 (D8). | environ 330 |
+| Callbacks vides | `controleWeb.every_second` (`:43`) ; `controleVoletRoulants` : `every_second`, `web_sensor`, `json_append` (`:98-110`) ; `controleRideau` : 3 callbacks et `enregistreLogs` (`:30-46`, squelette assumé) | environ 25 |
+
+**Duplications** (simplifiables sans perte de fonction)
+
+| # | Motif | Occurrences | Économie estimée |
+|---|---|---|---|
+| N12 | Bloc `relaisLie` (lecture, boucle sur `ids`, `modifEtatRelai`) | 6 copies, `globalFonctions.be:219-386`, seul le 6ᵉ argument varie | environ 16 lignes |
+| N13 | Blocs capteurs / interrupteurs / boutons copiés, avec le même push ModBus de 13 lignes | `globalFonctions.be:210-310` ; `configDevices.be:126-193` | 60 + 45 lignes |
+| N14 | Prédicat « device actif » | 16 copies (`globalFonctions`, `configDevices`, `configModules`, `controleGeneral`) | environ 16 lignes |
+| N15 | Parcours `modules → environnement → devices` avec 8 à 12 lignes de gardes | 14 dans la pile ModBus, 5 dans `controleGeneral` | environ 140 lignes |
+| N16 | `json.load(gestionFileFolder.readFile(x))` inline alors que `discoveryFonctions.lisTable` existe ; MAC normalisée par `string.replace` | 14 sites ; 17 sites | environ 30 lignes |
+| N17 | Boucles sur les fiches `esclaveN` de la discovery, regex recompilée à chaque fois | 5 boucles, 6 regex | environ 70 lignes |
+| N18 | `prepareTrame` : branches 0x03/0x04, 0x05/0x06 et `raw`/`hex`/`int8` identiques ; contrôle de longueur triplé dans `decrypteMSG` ; branches série et réseau de `lireMsgModbus` | `modbusFonctions.be:2706-2816`, `:2563-2615`, `:1943-2007` | environ 75 lignes |
+| N19 | Drivers esclave ESP32 et carte 16 relais : pose des règles, réception/acquittement, constat ECART, remise des relais au boot, `_init` | tableau des deux plages dans le compte rendu ModBus | environ 150 lignes |
+| N20 | Préambule des commandes `Reglage*` (découpage + 9 logs) | 8 fichiers | environ 45 lignes |
+| N21 | Scripts de carte : couleur du niveau (`garageFonctions.be:14-28` = `cuveFonctions.be:25-41`), hauteur → volume (×3), pages thermomètres P4/cuve, initialisation des logs (×3) | lignes citées | environ 45 lignes |
+| N22 | Données en double : l'`id` vit à 4 endroits forcés égaux, `IPAddress` est écrite 3 fois dans la fiche, `routagePort` se déduit de l'`id`, le `lwt` a 3 écrivains | `discoveryFonctions.be:254-283` ; `controleRangeExtender.be:44-90` | — |
+
+Seize logs `detail` de `prepareTrame` (`:2935-2950`) et le `json.dump` de chaque réception côté
+esclave (`:1029`) ne sont pas gardés par `logFonctions.actif`, contrairement à la règle 5 de la charte.
+Ils sont traités en A7.
+
+**Ordre de grandeur** : environ 2 000 lignes supprimables ou factorisables sur les ~20 500 de `data/`,
+fichier en double de la cave compris (186 lignes). Environ 800 d'entre elles sont à risque nul ou faible.
+
+**Gain en RAM** : la plupart de ces lignes sont dans des modules **solidifiés** (ModBus, réseau,
+transverses). Les supprimer libère surtout de la **flash**. La RAM ne gagne vraiment qu'à quatre
+endroits :
+- les scripts chargés depuis le LittleFS (`cuveFonctions`, `garageFonctions`, `controleGarage`,
+  `controleCuve`, `controlePompeVideCave`) ;
+- les tables reconstruites à chaque tick ou à chaque trame (N5, `tabFonctionsName`) ;
+- le driver TCP de la cave S3 (N6) ;
+- les clés mortes du persist (A4, D9).
+
+Ces gains seront chiffrés en A9.
+
+### Propositions
+
+Chaque proposition suppose d'abord son filet : banc existant, ou banc à écrire, avec un témoin négatif
+qui doit échouer si la simplification casse quelque chose.
+
+| # | Proposition | Corrige | Effort / risque | Filet | Témoin négatif |
+|---|---|---|---|---|---|
+| P5.1 | **Décider d'abord** si les redémarrages programmés sont voulus. Si oui, appeler la méthode (`/-> controleGeneral.heureReboot()`) et vérifier la syntaxe `*/300`. Si non, supprimer les deux crons et les clés du persist. | N1 | faible ; **décision** : comportement nouveau sur toutes les cartes | essai sur une carte remplacée | un `heureReboot` vide n'arme aucun cron |
+| P5.2 | ImAlive : ranger la fiche par une fonction commune de `discoveryFonctions`, avec `memeValeur`, et n'écrire que si elle change | N2 | faible / moyen | `test_discovery` §1, 2, 7, 11 | un ImAlive identique ne réécrit pas le fichier |
+| P5.3 | Cuve : lire `_Scheme` une seule fois par seconde et partager le résultat entre `ledsFonctions` et `surveilleRubans` | N3 | moyen | `banc_leds`, `banc_test_modbus` | une animation lancée par la page web est toujours poussée au maître |
+| P5.4 | P4 : garder le CSS en mémoire après la première lecture, ou le servir comme fichier statique | N4 | faible | aucun (page web) | page affichée sans carte SD : message clair |
+| P5.5 | Une socket par instance `CONTROLE_UDP` (lire `self.typeComm`) | N5 | faible / moyen (timing du maître) | **à écrire** : driver à 2 instances avec fausses sockets | un unicast n'est traité qu'une fois |
+| P5.6 | Ne plus forcer `tcp.activation`, ne plus charger TCP sur la cave S3. Variante lourde, sur décision : retirer tout le transport TCP (environ 500 lignes avec ModBus-TCP). | N6 | faible ; lourde = moyen | `test_discovery` §14 (à adapter) ; `banc_test_modbus` §6 | `typeComm.TCP = ON` → refus journalisé, pas d'exception |
+| P5.7 | Protéger la réception de la carte 16 relais par `try` avec acquittement en `except`, et **écrire son banc** | N7 | faible | **à écrire** | réponse 0x03 malformée → exception journalisée **et** file libérée |
+| P5.8 | Un seul `diversFonctions.valeurScalaire(value)` pour les 5 sites ; corriger l'humidité du P4 | N8, N9 | faible / moyen | aucun ; banc `globalFonctions` à écrire | `map` à 2 clés → refus journalisé |
+| P5.9 | Corriger les compteurs et logs de `configDevices` | N10 | faible | aucun | carte avec une analogique réelle → `reels = 1` |
+| P5.10 | **Lot « code mort »** : fonctions sans appelant, branches inatteignables, blocs commentés, callbacks vides, `etatCapteurs`, `/wss`, `any_key`. Chaque suppression est précédée d'une recherche à 0 résultat sur `data/`. | N11 et code mort | faible (environ 800 lignes) | `banc_test_modbus`, `test_discovery`, `verifie_berry` | les deux bancs restent verts ; `/wss` → 404 |
+| P5.11 | **Lot « petits helpers »** : `relaisLie`, `deviceActif`, `gestionFileFolder.readJson`, `macSansDeuxPoints`, `decoupeCommande` | N12, N14, N16, N20 | faible | bancs partiels ; banc `globalFonctions` à écrire | fichier JSON absent → `nil` ; commande sans espace → paramètres vides |
+| P5.12 | **Lot « factorisations »** : groupes de `changementEtatCapteur` et `configDevices`, itérateur de devices, itérateur de fiches, `prepareTrame`/`decrypteMSG` | N13, N15, N17, N18 | moyen (fort pour `configDevices`) | `banc_test_modbus` §2-31 ; reste à écrire | vecteurs CRC de `PROTOCOLE_MODBUS.md` §8 ; `SwitchMode` 2 inversé |
+| P5.13 | Base commune aux deux drivers d'esclave, **seulement après** le banc de P5.7 | N19 | fort | P5.7 | trame hors séquence → pas d'acquittement ; M0 connecté → ordre inversé |
+| P5.14 | Module commun pour les cartes cuve et P4 (couleur, volume, page thermomètre, logs) | N21 | moyen | aucun (cartes réelles) | niveau en erreur → bordure rouge clignotante |
+| P5.15 | Une seule source pour chaque donnée de la fiche : `routagePort` et `rangeExtender.id` déduits de l'`id`, `IPAddress` écrite une fois | N22 | moyen ; décision (format lu par les outils PC) | `test_discovery` | page `/discovery` et sniffeur MQTT inchangés |
+
+Ordre conseillé :
+1. P5.1 (décision), P5.2, P5.3, P5.4 et P5.7 : de vrais défauts, à faible coût.
+2. P5.10 et P5.11 : beaucoup de lignes en moins, risque faible.
+3. Écrire les bancs manquants (carte 16 relais, `globalFonctions`, driver UDP).
+4. Ensuite seulement P5.12 à P5.15.
+
+## A6 — Niveaux de log : le mécanisme (2026-10-22)
+
+Lecture de `data/fs/logFonctions.be` et de ses appelants. Les comportements marqués (T) sont prouvés par
+un test Berry sur le vrai `logFonctions.be`, avec un persist simulé (`scratchpad/a6/t.be`). Les
+lignes clés ont été relues dans le fil principal.
+
+### Ce qui est en place
+
+**Chemin d'un message.** `logFonctions.log(msg, niveau, cible)` (`:136-143`) :
+
+1. Un message `erreur` (1) passe toujours.
+2. Sinon, il est comparé au seuil de sa cible : `general` par défaut.
+3. Un `detail` (4) est ramené à 3, puis transmis à `log()` du firmware.
+
+Chaque sortie du firmware (série, web, MQTT, syslog) filtre ensuite avec son propre seuil.
+`logFonctions.actif(niveau, cible)` (`:148-151`) combine le seuil du module et `tasmota.loglevel()`.
+Ce dernier répond vrai si **au moins une** sortie accepte le message.
+
+**Seuils des modules.**
+- `seuil(cible)` (`:107-131`) lit la clé `log` du bloc trouvé par `lieu(cible)`, et met le résultat
+  en cache dans `etat()["seuils"]`.
+- Seul `regle()` invalide ce cache, c'est-à-dire la commande `ReglageLog`.
+- Une cible que `lieu()` ne connaît pas reçoit le seuil `info` (2), lui aussi mis en cache.
+
+**Seuils des sorties.**
+- `appliqueProfil()` (`:197-215`) est appelé une fois au démarrage (`configGlobal.be:236`), puis à
+  chaque `ReglageLog profil|<sortie>`.
+- Il n'envoie `SerialLog N`, `WebLog N`, `MqttLog N` ou `SysLog N` que si la valeur diffère de celle
+  du firmware.
+
+**`ReglageLog`** (`:397-418`, `regle` `:265-319`) :
+
+| Forme | Effet |
+|---|---|
+| sans argument | état : sorties, modules, profils. Lecture seule. |
+| `profil <nom>` | change le profil actif puis l'applique |
+| `<sortie> <niveau>` | modifie le profil **actif** |
+| `<cible> <niveau>` | règle le seuil d'un module |
+| `tous <niveau>` | règle toutes les cibles de `CIBLES` présentes sur la carte |
+
+Toute écriture est suivie de `persist.dirty()` puis `persist.save()` : le réglage survit au
+redémarrage (T). Une cible, un niveau ou un profil inconnus donnent une réponse d'erreur explicite (T).
+
+**Fichiers de log.**
+- `diverses.logs.nbLogsFiles` (0 sur les 5 cartes) déclenche `FileLog N` au démarrage
+  (`configGlobal.be:240-243`).
+- `modules.<x>.logs.nbLogsFiles` (15 partout) n'est lu que par `controleGarage` et `controleCuve`. Ces
+  deux scripts arment chacun un cron de 60 s pour `gestionFileFolder.enregistreLogs`.
+
+**Profils des persists du dépôt** : le profil actif est `debug` sur les 5 cartes, avec tous les modules
+à `detail`.
+
+| Carte | `normal` (série / web / MQTT / syslog) | `debug` (série / web / MQTT / syslog) |
+|---|---|---|
+| P4, cave S3, différentiel | info / info / erreur / info | debug / debug / **debug** / debug |
+| cuve, rideau | info / info / erreur / info | debug / debug / erreur / debug |
+
+### Avantages
+
+- Un seul point de passage, deux filtres simples : le comportement est prévisible et testable.
+- `detail` est ramené à 3 : le niveau 4 du firmware reste réservé à ses propres traces (`BRY: GC`).
+- `ReglageLog` règle tout depuis une seule commande, persiste ses réglages et explique ses erreurs.
+- Les profils séparent ce qu'on veut **voir** (sorties) de ce que chaque module **produit** (seuils).
+  Passer de `normal` à `debug` tient en une commande.
+- `appliqueProfil` n'émet de commande que si la valeur change : pas d'écriture inutile en flash.
+- Le cache évite de relire le persist à chaque log, sur les chemins chauds (`every_100ms`).
+
+### Inconvénients et défauts constatés
+
+| # | Constat | Preuve | Cote |
+|---|---|---|---|
+| L1 | **La cible de l'historique est inconnue** : `historiqueFonctions` passe `nom`/`self.nom`, qui vaut `"mesures"` (`:131`, `:239`, `:248`, `:286` ; instance `:409`). Cette cible n'est pas dans `CIBLES`, et `lieu()` renvoie `nil`. Le seuil est donc figé à `info`, les messages `debug` sont perdus, et `ReglageLog` refuse de régler cette cible. | (T) ; `logFonctions.be:100`, `:113-129` | G |
+| L2 | **6 clés `log` sans cible** : `drivers.KNX.log`, et `modules.<x>.log` pour `rideau`, `pompeVideCave`, `Thermo-Hygrometre`, `autres` et `differentiel`. Elles valent `detail` mais ne règlent rien, et `ReglageLog tous` les ignore : il ne parcourt que `CIBLES`. Leurs modules loguent sans cible, donc au seuil `general`. | grep des appels ; persists | G |
+| L3 | **Le cache des seuils n'est invalidé que par `ReglageLog`.** Une modification du persist par une autre voie (éditeur web du persist `controleWeb.be:208-227`, `ReglageGlobal`) n'agit qu'après redémarrage. | (T) | L |
+| L4 | **Le défaut `info` d'un bloc absent est mis en cache.** Si le bloc apparaît plus tard, par exemple un driver réveillé après la veille de `hiberneDriversInactifs`, le seuil reste à `info`. | `logFonctions.be:113-129` (lecture) | L |
+| L5 | **Une faute de frappe dans une cible passe en silence** : elle reçoit `info`, sans le moindre avertissement. | (T) | L |
+| L6 | **Un réglage manuel d'une sortie (`SerialLog 4`…) est écrasé** au redémarrage suivant, ou au prochain `ReglageLog`, par le profil du persist. C'est voulu, mais ce n'est écrit nulle part. Interaction avec `SERIALLOG_TIMER`, en constat seulement : quand `appliqueProfil` envoie un `SerialLog` différent, `SetTasConlog` remet le compte à rebours à zéro (`support.ino:2463-2466`). Sinon, la coupure à 600 s a lieu. | lecture du firmware | D |
+| L7 | **`actif()` répond « au moins une sortie »** : un message gardé par `actif` est quand même construit si seule la série est à `debug`, même quand on ne regarde que syslog. C'est correct, mais l'économie est moindre qu'annoncé. | `:148-151` | D |
+| L8 | `modules.<x>.logs.nbLogsFiles` et `fileLogName` sans lecteur sur la cave et le différentiel. Le rideau les lit, mais son `enregistreLogs` est vide. Deux conventions de sauvegarde : `ReglageGlobal nbLogsFiles` fait `persist.save(true)`, `ReglageLog` fait `dirty()` puis `save()`. | grep | S |
+| L9 | `regle("profil","NORMAL")` appelé directement plante : `trouveCle` ne passe pas en minuscules. Par la commande, aucun problème, puisque tout est mis en minuscules avant. | (T) | L |
+
+### Propositions
+
+- **P6.1** — Donner une cible réglable à l'historique : ajouter `historique` à `CIBLES`, avec un
+  `lieu` sur `diverses.historique`, et la passer à la place de `self.nom`. Corrige L1.
+  *(faible ; banc : `banc_historique.be`, témoin : `ReglageLog historique debug` doit faire apparaître le
+  message de `:131`)*
+- **P6.2** — Choisir pour les 6 clés orphelines : soit créer leurs cibles (et passer la cible dans les
+  modules concernés), soit retirer les clés des persists. Corrige L2. *(faible ; décision)*
+- **P6.3** — Vider `etat()["seuils"]` après toute écriture du persist faite hors `ReglageLog`, et ne
+  pas mettre en cache le défaut d'un bloc absent. Corrige L3 et L4. *(faible ; une ou deux lignes ;
+  test Berry existant à réutiliser)*
+- **P6.4** — Journaliser une fois en `erreur` toute cible inconnue de `lieu()`, au premier appel.
+  Corrige L5. *(faible ; témoin : une cible connue ne produit aucun message)*
+- **P6.5** — Documenter dans `README.md` § logs que le profil du persist fait foi sur les sorties, avec
+  l'effet sur `SERIALLOG_TIMER`, et que `actif()` regarde la sortie la plus bavarde. Corrige L6 et L7.
+  *(documentation)*
+- **P6.6** — Harmoniser la sauvegarde du persist (`dirty()` + `save()` partout), et retirer les clés
+  `nbLogsFiles`/`fileLogName` sans lecteur. Corrige L8. *(faible)*
+
+## A7 — Niveaux de log : conformité et sorties (2026-10-22)
+
+Deux sources :
+- **Le code** : analyse statique des 54 `.be` hors `*sauvegarde*`, par un script reproductible
+  (`scratchpad/a7/audit_logs.py`, sortie exhaustive dans `rapport_logs.txt`).
+- **Les cartes** : **observation passive** de 10 min 36 s, le 2026-10-22 : lancée à 04:00:44, analysée à 04:11:27 sur les 636 s reçues.
+  Serveur syslog et sniffeur MQTT lancés hors PlatformIO, en `--local`, puis arrêtés. Rien n'a été
+  envoyé aux cartes. La lecture `ReglageLog` des cartes, prévue en lecture seule, a été **refusée par
+  le classifieur de permissions** : elle reste à faire par l'utilisateur (voir P7.7).
+
+### Ce qui est en place
+
+**Volume dans le code** : 850 appels de log, dont 746 dans `data/fs`.
+
+| Niveau | Appels | Part |
+|---|---|---|
+| `erreur` | 111 | 13 % |
+| `info` | 76 | 9 % |
+| `debug` | 260 | 31 % |
+| `detail` | 400 | 47 % |
+
+Fichiers les plus bavards : `modbusFonctions` (141), `modBus_TasmotaSlaveModBus` (73),
+`globalFonctions` (57) et `discoveryFonctions` (50).
+
+**Chaîne syslog** :
+- `SYS_LOG_HOST` = 192.168.0.3 (ce PC), port 514, `SYS_LOG_LEVEL` = debug à la compilation.
+- `syslog_tasmota.py` range les messages par **nom d'hôte** et confond `debug` et `detail` (PRI 135),
+  comme le firmware.
+
+**Ce que les cartes ont réellement émis pendant l'observation** :
+
+| Carte | Syslog | MQTT `stat/<topic>/LOGGING` | Remarque |
+|---|---|---|---|
+| P4 (`SERVEUR-GARAGE`) | 292 lignes/min (44,8 Ko/min), 98 % `debug` | **316 messages/min (30,4 Ko/min)** | profil `debug` avec MQTT à `debug`, comme dans le persist |
+| cuve (`CAPTEURS-CUVE`) | 276 lignes/min (37,9 Ko/min), 97 % `debug` | aucun | MQTT à `erreur` : conforme au persist et à la leçon NAPT |
+| cave (`SERVEUR-RLY-CAVE`) | 54 lignes/min, tout en `INFO`, dont `GC` Berry et échos MQTT | aucun | ancien code (voir A1) ; capteur `Pin22 timeout`, 163 fois |
+| différentiel | rien | aucun | framework du dépôt non chargé (voir A1) |
+| rideau | — | — | `Offline` |
+
+- Aucun message de sévérité `ERR` en 10 minutes.
+- Sur le P4 comme sur la cuve, environ 30 % du syslog vient de `PREPARE_TRAME_MODBUS`, 20 % de
+  `DECRYPTE_MSG_MODBUS` et 12 % de `EXECUTE_CMD_MODBUS` : les traces de **chaque** échange ModBus en
+  UDP.
+- Chaque réception ModBus/UDP est aussi publiée en `tele/<topic>/RESULT` (`ModbusReceivedUDP`, environ
+  6 par minute et par carte). Chaque publication est elle-même renvoyée en syslog par le firmware
+  (`MQT:`).
+
+### Avantages
+
+- Le contournement de la charte est **rare** :
+  - un seul `log()` direct (`controleES8311.be:373`) ;
+  - aucune constante de niveau étrangère au jeu de 4 ;
+  - aucun appel sans niveau.
+- 13 % des appels sont des erreurs, toujours émises : on les retrouve même log éteint.
+- Les préfixes sont conformes à 96 % : le filtrage par texte dans la page syslog fonctionne.
+- La cuve respecte la leçon des esclaves derrière le NAPT (MQTT à `erreur`) : pas de plantage par
+  `MqttLog`.
+- Le syslog a tenu le débit observé (près de 10 lignes/s cumulées) sans perte visible.
+
+### Inconvénients et défauts constatés
+
+| # | Constat | Preuve | Cote |
+|---|---|---|---|
+| C1 | **Le P4 publie environ 316 logs par minute sur le broker** (`MqttLog` à `debug` dans son profil actif) : 30 Ko/min, environ 43 Mo/jour, à travers le Wi-Fi qui porte aussi le ModBus/UDP. Les esclaves s'en gardent (leçon du 2026-10-11) ; le maître non. | observation ; persist du P4 | G |
+| C2 | **Toutes les cartes tournent en profil `debug`**, avec tous les modules à `detail`, alors que l'exploitation voulue est `normal` partout (réponse de l'utilisateur du 2026-10-22). Un échange ModBus produit à lui seul environ 45 lignes de trace. | persists ; observation | G |
+| C3 | **6 `print('Erreur: ', e, " -> ", m)` dans des `except`** (`modbusFonctions.be:224`, `:2248`, `:2422` ; `udpFonctions.be:281`, `:365`, `:378`) : ils ne passent par aucun seuil, n'ont pas de préfixe, ne vont qu'en série, et **n'atteignent donc ni le syslog ni MQTT**. Les autres `print` actifs (10) sont l'aide des commandes : légitimes. | lignes relues | G |
+| C4 | **La règle 5 est presque ignorée** : 152 messages `debug`/`detail` coûteux ne sont pas gardés par `actif()`, dont 52 sur un chemin fréquent. Une vingtaine sont lourds (`tohex`, `json.dump`, `format` à 4 arguments ou plus) : `lireMsgModbus` (`:1935`, `:1977`), `lireUDP` (`:832-834`), `recupereReponseModBus` (`modBus_TasmotaSlaveModBus.be:988`, `:1029`), `executeCmdModbus` (`:2274`). Seuls `historiqueSeries.be:152` et `modbusFonctions.be:2449` appliquent la garde. En profil `normal`, ces chaînes sont construites puis jetées. | `rapport_logs.txt` §E | G |
+| C5 | **Règle 4, sur le P4 en service** : deux `info` dans `web_sensor` (`controleGarage.be:215`, `:248`), une ligne par valeur à chaque rafraîchissement de page. La charte ne cite pas `web_sensor` parmi les callbacks fréquents. `cuveFonctions.be:580` (`sensorsCuve=%s`, `info`) n'est pas apparu en 10 minutes : le chemin est donc rare. | lignes relues ; observation | G |
+| C6 | **Échecs logués trop bas** : l'échec d'initialisation de l'ES8311 en `debug` (`controleES8311.be:23`, `:38`, `:210`), et le `tasmota.log` direct de `:373`. Fiche absente de discovery, donc ImAlive non envoyé, en `debug` (`udpFonctions.be:268`). À arbitrer selon le bruit du bus : trame reçue avec erreur en `detail` (`modbusFonctions.be:1945`, `:1984`), réponse hors séquence rejetée en `debug` (`:1405`, `:1419`), délai de réponse isolé en `debug` (`:963`). | `rapport_logs.txt` §C | L |
+| C7 | **8 `except` sans `_ERREUR` dans le préfixe**, tous au bon niveau `erreur` : `discoveryFonctions.be:345`, `:373`, `:442`, `:507`, `:574`, `:717`, `modBus_TasmotaSlaveModBus.be:1227`, `ledsFonctions.be:171`. Une recherche de `_ERREUR` dans le syslog ne les trouve pas. | §B | L |
+| C8 | Préfixes non conformes : `ReglageUDP:` en CamelCase (`udpFonctions.be:233`, `:247`), messages ES8311 en anglais (7), un message sans préfixe (`modbusFonctions.be:509`). | §B | D |
+| C9 | Le syslog est le seul relais permanent des logs, et il dépend du **PC de développement allumé**, à une IP qui doit rester 192.168.0.3 (bail DHCP fixe, à poser). Le firmware confond `debug` et `detail` dans la sévérité : le filtre de la page ne les sépare pas. | `user_config_override.h:142` ; `syslog_tasmota.py:8` | D |
+| C10 | La charte ne dit ni comment écrire un niveau variable (3 cas dans `modbusFonctions`, `:899`, `:1209`, `:2334`), ni que `web_sensor`/`json_append` comptent parmi les chemins fréquents. | charte | D |
+
+### Propositions
+
+- **P7.1** — Passer les cartes au profil `normal`, comme décidé : `ReglageLog profil normal` sur
+  chaque carte, puis aligner les persists du dépôt (`diverses.logs.profil`). Le P4 en premier
+  (C1). Repasser en `debug` seulement le temps d'une mise au point. Corrige C1 et C2.
+  *(nul ; une commande par carte ; témoin : `stat/garage/LOGGING` doit tomber à 0 message/min, le syslog à
+  quelques lignes `info`)*
+- **P7.2** — Ramener aussi les seuils des modules à `info` (`ReglageLog tous info`). Le profil seul
+  garde les sorties à `info`, mais les modules à `detail` continuent de construire leurs chaînes
+  (C4). *(nul)*
+- **P7.3** — Remplacer les 6 `print` d'`except` par `xxxFonctions.log("…_ERREUR: …", LOG_LEVEL_ERREUR)`.
+  Corrige C3. *(faible ; bancs : `banc_test_modbus`, `test_discovery`)*
+- **P7.4** — Garde de coût sur les chemins chauds : une variable `var detail =
+  logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, cible)` en tête de `lireMsgModbus`, `lireUDP`,
+  `executeCmdModbus` et `recupereReponseModBus`, sur le modèle de `modbusFonctions.be:2449`. Corrige
+  C4. *(moyen ; risque moyen, chemin chaud ; banc ModBus ; RAM et charge à mesurer avant/après en A9)*
+- **P7.5** — Corrections ponctuelles : `info` → `detail` dans `controleGarage.web_sensor` ; ES8311 en
+  `erreur`, avec préfixe français et sans `tasmota.log` ; `_ERREUR` dans les 8 `except` ; préfixes
+  `REGLAGE_UDP:`. Trancher la politique « trame rejetée / délai isolé » (`debug` ou `erreur`). Corrige
+  C5 à C8. *(faible ; une décision)*
+- **P7.6** — Contrôle automatique de la charte dans `verifie_berry.py` (donc dans le hook d'édition),
+  en **avertissements** (code de sortie 0) et non en erreurs : `print`/`log()` direct, préfixe, `_ERREUR`
+  dans `except`, `info` dans un callback fréquent, `json.dump`/`tohex` non gardés. Le script d'audit
+  `audit_logs.py` en fournit la base. Compléter la charte (C10). *(moyen ; risque faible)*
+- **P7.7** — **À faire par l'utilisateur** (lecture seule, refusée à Claude) : envoyer `ReglageLog`
+  sans argument à chaque carte et relever le profil et les seuils réellement en vigueur. Depuis le
+  sniffeur MQTT (:7100) : topic `cmnd/garage/ReglageLog`, payload vide. Faire de même pour
+  `jardin/cuve`, et `garage/rideau` une fois en ligne.
+- **P7.8** — Fixer l'IP du PC syslog par un bail DHCP. Ou, pour ne plus dépendre du PC, envoyer le
+  syslog au Pi `SERVEUR-BUREAU`, qui fait déjà tourner Node-RED/InfluxDB. Corrige C9.
+  *(faible ; décision)*
 
 ## A7 — Niveaux de log : conformité et sorties
 
@@ -308,8 +762,9 @@ ignoré par git), que le prochain build régénère de toute façon. Aucun fichi
 
 ## A8 — Communications entre modules et ESP-NOW
 
-*Inventaire des voies en place, identification des esclaves, mesures UDP et recherche GitHub : à faire.
-Les deux analyses ci-dessous ont été faites le 2026-10-21, à la demande de l'utilisateur.*
+*A8.1 et A8.2 : le 2026-10-21, à la demande de l'utilisateur. A8.3 à A8.6 : le 2026-10-22, par lecture du
+code et des documents, plus une recherche web. Les constats locaux et l'issue Espressif ont été vérifiés
+dans le fil principal.*
 
 ### A8.1 — TasMesh, la maille ESP-NOW du firmware Tasmota
 
@@ -474,14 +929,548 @@ un firmware `esp_hosted` du C6 qui relaierait ESP-NOW au P4.
 - **P8.5** — Trancher la question du P4 (passerelle S3, ou ESP-NOW réservé aux S3) seulement après
   P8.4 et la recherche GitHub. *(décision)*
 
-## A9 — Utilisation de la RAM
+### A8.3 — Les voies en place
 
-*À faire.*
+Garage seulement. La cave en service exécute l'ancien code (A1), le grenier est en sommeil.
 
-## A10 — Autres points relevés en cours d'audit
+| Voie | Sens | Déclencheur | Accusé / reprise | Code | État |
+|---|---|---|---|---|---|
+| ModBus RTU (RS485) | P4 → carte 16 relais | relevé toutes les 30 s, commandes | un message en vol, délai de 5 s, 3 essais puis abandon ; environ 2 ms par échange | `modbusFonctions`, `modBus_Conn16channels` | en service |
+| ModBus RTU (RS485) | P4 → rideau | idem | idem ; esclave déclaré muet après 3 × 30 s | `modBus_TasmotaSlaveModBus` | en service (rideau `Offline` le 2026-10-22) |
+| `ModbusUDP <tid> <hexa>` | P4 → cuve en unicast, réponse en unicast | commandes et relevés (`voieCommandes: UDP`) | `tid` renvoyé, délai de 2000 ms, renvoi au même `tid` ; pas de repli série | `udpFonctions.envoiUDP`, `modbusFonctions.repondUDP` | en service pour la cuve depuis le 2026-10-21 |
+| `ModbusPushUDP <seq> <hexa>` | esclave → maître, multicast 224.3.0.1:4000 | changement d'état | aucun accusé ; filtre `accepteSeq` ; une perte est réparée par le relevé suivant (moins de 30 s) | `udpFonctions.be:784-806` | en service |
+| `ImAlive` | esclave → maître, multicast | démarrage, puis toutes les `telePeriod` (300 s) | aucun accusé ; le maître répond `Timestamp` et `ipMaitre` en unicast | `udpFonctions.be:288-350` | en service |
+| Discovery MQTT | chaque carte → broker → maître (`tasmota/discovery/<MAC>/…`, retenu) | `Mqtt#Connected` | conservé par le broker | `discoveryFonctions.be:357-370` | en service |
+| LWT MQTT | broker → maître | perte de session | retenu | `discoveryFonctions.be:515` | en service |
+| HTTP par RgxPort (8080 + id − 1) | navigateur → P4 → esclave:80 (NAPT) | `RoutageRangeExtender` au boot du maître | table de 10 cases | `rangeExtenderFonctions.be:35`, `:263` | en service |
+| `tele/<topic>/MODBUSPUSH` | maître → PC | push reçu, si `RelaisPushMQTT ON` | observation seule | `modbusFonctions.be:3114-3127` | codé, `OFF` par défaut, jamais observé sur carte |
+| ModBus TCP | — | — | — | `typeComm.TCP = OFF` | mort (A5 N6) |
 
-*À faire.*
+**Mesures disponibles** (`PROTOCOLE_MODBUS.md` §9, `tasks/reprise-chantier-modbus-grenier.md`) :
 
-## Synthèse des propositions
+*Range Extender, 2026-10-17 :*
 
-*À remplir en fin d'audit (A11).*
+| Mesure | Résultat |
+|---|---|
+| Unicast P4 → cuve | 5/5 au diagnostic, puis 6/6 à l'essai 1 |
+| Unicast cuve → P4 | 11/11 ; aller-retour mesuré par le testeur : 0,33 à 0,49 s |
+| Multicast | 2/2 dans chaque sens |
+
+*Wi-Fi classique :* multicast P4 → cuve 11/12 après le correctif `197af338b`.
+
+*Liaison filaire RS485 :*
+
+| Mesure | Résultat |
+|---|---|
+| Échange avec la carte relais | environ 2 ms |
+| Échange avec la cuve | environ 141 ms |
+| 62 minutes en continu | 126/126 et 375/376, sans trou de plus de 5 min |
+
+**Jamais mesurés :** la latence aller simple, la perte sur la durée en Range Extender, les doublons
+(`accepteSeq` les écarte sans les compter), le délai de découverte après le démarrage d'un esclave, le
+comportement sans broker.
+
+### A8.4 — Comment le maître Range Extender identifie ses esclaves
+
+**Chemin nominal :**
+1. À la connexion Wi-Fi, l'esclave construit sa fiche : MAC, IP, rôle, routage, bloc ModBus
+   (`discoveryFonctions.be:240-340`).
+2. À `System#Boot`, il envoie un `ImAlive` en multicast (`udpFonctions.be:443-446`) et réarme un timer de
+   `telePeriod`.
+3. Le maître range la fiche sous `discovery.json[MAC][role]` avec `lwt: Online` (`:308-327`).
+4. En parallèle, la fiche arrive par MQTT, retenue sur le broker.
+
+Le délai de découverte est de quelques secondes après la connexion MQTT de l'esclave. Il n'a jamais été
+chronométré.
+
+**`RgxClients`** (`xdrv_58_range_extender.ino:178-211`) renvoie
+`{"RgxClients":{"<MAC>":{"IPAddress":…,"RSSI":…}}}` : les stations associées au point d'accès, lues
+localement, sans trafic. On l'appelle depuis Berry par `tasmota.cmd("RgxClients")`, qui renvoie une `map`,
+et `test_discovery.be:72` sait déjà la simuler. Sa clé MAC est celle de la fiche discovery. Elle donne la
+**vérité d'association Wi-Fi**, que la discovery ne connaît pas. Elle n'est appelée que par
+`afficheBoutonsModulesEsclaves`, une fonction morte (A5).
+
+**Lu sur le P4 le 2026-10-22 à 06:41** :
+`{"RgxClients":{"DCB4D91BCAF0":{"IPAddress":"192.168.4.2","RSSI":-22}}}`.
+- Une seule station est associée : la cuve.
+- **Le rideau n'est pas associé au point d'accès.** C'est donc une panne Wi-Fi ou d'alimentation, pas une
+  panne UDP, ce que la discovery seule ne permet pas de distinguer.
+- Le format, la clé MAC sans deux-points et l'appel par MQTT sont confirmés.
+
+| # | Constat | Preuve | Cote |
+|---|---|---|---|
+| R1 | **Aucune péremption des fiches.** `resetClientsConnectes` (tout passer `Offline`) ne s'exécute **qu'une fois**, `telePeriod` secondes après le démarrage du maître (`udpFonctions.be:448`). Ensuite, un esclave qui s'éteint reste `Online` tant que le broker ne publie pas son LWT, et **indéfiniment sans broker**. Aucune règle ne regarde l'âge du dernier `ImAlive`. | lignes relues | G |
+| R2 | **Sans MQTT, un esclave ne se présente jamais** : `forceEnvoiParams` et le timer du maître sont dans la branche `System#Boot` (`:441-449`). Le secours C7 rouvre l'écoute mais ne relance pas ce cycle. | `:441-449`, `:478-529` | G |
+| R3 | **Pendant les `telePeriod` secondes qui suivent le reset, tout est `Offline`** : `RoutageRangeExtender` (appelé seulement au démarrage) et `esclavesBox` ne retiennent que les fiches `Online`. | `rangeExtenderFonctions.be:119` ; `udpFonctions.be:684` | L |
+| R4 | **Le cas « même IP, autre MAC » (carte remplacée) n'est pas détecté** : les deux fiches coexistent. `purgeAnciennes` dépend de `sensors.Time`, qui vient du broker. | `discoveryFonctions.be:85-148` | L |
+| R5 | `RgxClients` lit le RSSI dans `wifi_sta_list.sta[i]` avec l'indice de l'**autre** liste (`_with_ip`). L'IDF construit les deux dans le même ordre, donc l'effet est probablement nul, mais ce n'est pas garanti. Le fichier vient de l'amont. | `xdrv_58_range_extender.ino:186-195` | L |
+| R6 | L'en-tête de `udpFonctions.be:74` présente `RgxClients` comme utilisé : c'est faux. | | D |
+
+### A8.5 — ESP-NOW et autres voies sans fil : recherche et grille
+
+**Recherche** (2026-10-22) :
+- **Aucun binding Berry `espnow`** : dans le dépôt, `espnow` et `esp_now` n'apparaissent que dans
+  `xdrv_57_*` (TasMesh) et `xdrv_77_wizmote.ino`.
+- Aucun fork Tasmota proposant un ESP-NOW générique, aucune discussion récente chez arendst sur ESP-NOW
+  avec le P4 ou `esp_hosted`.
+- WizMote utilise la bibliothèque **QuickEspNow**, embarquée dans `lib/lib_div/QuickESPNow`, mais en
+  réception seule (`xdrv_77_wizmote.ino:290`). Elle fournit un `send` : c'est un bon socle pour un driver
+  C++ propre au fork, la voie b de A8.2.
+- **Pour le P4** : l'issue Espressif
+  [esp-hosted-mcu#19 « Support for ESP Now »](https://github.com/espressif/esp-hosted-mcu/issues/19) est
+  **ouverte** depuis le 2024-11-14. Le mainteneur l'a dite « on our roadmap » le 2025-12-31 ; la dernière
+  relance, le 2026-08-14, est restée sans réponse (vérifié le 2026-10-22). Sur le P4, `esp_now.h` est
+  injecté par `esp_wifi_remote`, mais aucune implémentation n'existe.
+- ESPHome a écrit sa propre couche (`esp_now_hosted.cpp`, avec le firmware C6 `esphome/esp-hosted-firmware`).
+  Elle prouve la faisabilité, au prix d'un **C6 reflashé** et d'un portage hors dépôt.
+- Ponts ESP-NOW ↔ MQTT tiers (par exemple `4DERT/espnow-mqtt-gateway`) : des firmwares autonomes, sans
+  intégration Tasmota.
+
+**Contraintes ESP-NOW** (IDF 5.5.5 du fork) :
+- trame de 250 octets en v1 et 1 470 en v2 (`esp_now.h:37`, P4 et S3), la v2 étant nécessaire aux deux
+  bouts ;
+- 20 pairs au plus, dont 7 chiffrés (`CONFIG_ESP_WIFI_ESPNOW_MAX_ENCRYPT_NUM=7`) ;
+- **canal imposé** : celui du point d'accès du P4, lui-même aligné sur la box ;
+- en unicast, un accusé MAC mais aucune garantie de remise à l'application : il faut garder un `seq`
+  applicatif.
+
+| Voie | Latence | Accusé natif | Coût (option) | P4 (C6 hosted) | Avec le point d'accès Range Extender | Verdict |
+|---|---|---|---|---|---|---|
+| UDP actuel | ms à dizaines de ms | non (`seq` applicatif) | déjà compilé | oui | oui (défauts C1-C7 corrigés) | à garder |
+| MQTT local | dizaines de ms | QoS 1 | déjà compilé | oui | oui ; dépend du broker | relevés |
+| ModBus TCP | 10 à 50 ms | oui (TCP) | `USE_MODBUS_BRIDGE(_TCP)` +6,5 k | oui | oui | sans gain sur l'UDP corrigé |
+| TasMesh | ms, relais par MQTT | non | `USE_TASMESH` +11 k | **non** | force AP+STA | écarté (A8.1) |
+| ESP-NOW générique (QuickEspNow) | ~ms | MAC seulement | driver C++, quelques Ko | **non** (sauf C6 reflashé) | même canal | S3 ↔ S3 seulement |
+| BLE | 50 à 500 ms | en GATT | +9 k RAM, +292 k flash | non vérifié | radio partagée, ralentit le Wi-Fi | écarté |
+| LoRa (`xdrv_73`) | 100 ms à plusieurs s | non | +5 à 16 k, plus un **module SPI à acheter** | oui | sans interférence | seulement pour une cible lointaine |
+| WizMote | — | — | — | — | — | télécommande, hors sujet |
+
+Les latences du tableau sont des ordres de grandeur, pas des mesures du parc.
+
+### A8.6 — Propositions
+
+**Voie recommandée par usage :**
+- **commande en temps réel** : ModBus filaire, ou UDP unicast avec `tid` (déjà en place). ESP-NOW ne
+  ferait gagner que quelques millisecondes, et seulement entre S3 tant que l'issue #19 reste ouverte ;
+- **relevé périodique** : push UDP ou MQTT. C'est le meilleur candidat pour l'essai ESP-NOW de P8.4 ;
+- **découverte** : `ImAlive` + discovery, complétée par `RgxClients`.
+
+**Propositions :**
+- **P8.6** — Péremption des fiches : passer une fiche à `Offline` quand aucun `ImAlive` n'est arrivé
+  depuis 2 × `telePeriod`, au lieu du reset unique. Corrige R1 et R3. *(0,5 j ; risque moyen : un
+  `Offline` à tort coupe le routage, donc garder un seuil large ; filet : `test_discovery.be` avec
+  horloge simulée ; témoin : un esclave qui émet reste `Online`)*
+- **P8.7** — Sans broker : lancer `forceEnvoiParams` depuis le secours C7. Corrige R2. *(0,25 j ; faible ;
+  `test_discovery.be` §21)*
+- **P8.8** — `etatReseau()` : croiser `RgxClients` et les fiches par MAC, puis classer chaque esclave
+  (Wi-Fi associé et UDP vivant, Wi-Fi associé mais UDP muet, fiche fantôme, IP divergente). Afficher le
+  résultat sur la page `/discovery`. Corrige R4 et R6. *(0,5 j ; risque nul, lecture seule ; banc : stub
+  `rgxClients` existant)*
+- **P8.9** — Mesurer ce qui ne l'a jamais été : latence aller simple (horodatage `tasmota.millis()`),
+  perte sur 1 h en Range Extender, délai de découverte. *(0,5 j ; testeur UDP :7400)*
+- **P8.10** — Attendre l'issue esp-hosted-mcu#19 avant tout ESP-NOW côté P4. Le reflashage du C6 avec un
+  firmware ESPHome n'est pas recommandé : il entre en conflit avec le C6 de Tasmota. *(décision)*
+
+## A9 — Utilisation de la RAM (2026-10-22)
+
+Deux sources :
+- **Le code** : mesures sous `berry.exe` (Berry 64 bits sur le PC, ramenées à 32 bits par un modèle
+  calé sur la mesure), scripts dans `scratchpad/a9/`.
+- **Les cartes** : relevés **passifs** des `tele/<topic>/STATE` publiés par les cartes, sur deux
+  fenêtres d'observation (04:00 à 04:11, puis 06:20 à 06:36), sans rien leur envoyer
+  (`scratchpad/a9/memoire_state.py`).
+
+Complément du 2026-10-22 à 06:41, à la demande de l'utilisateur : `Status 4`, `Status 1` et
+`Br tasmota.memory()` ont été envoyés par MQTT (commandes de lecture seule). Toutes les cartes ont répondu.
+
+| Carte | Tas libre | Fragmentation | Pile (minimum restant / taille) | PSRAM libre / max | Dernier redémarrage |
+|---|---|---|---|---|---|
+| P4 (16.0.0.1) | **100 Ko** | 37 % | **2,3 Ko / 8 Ko** | 32,5 Mo / 32 Mo | `Software reset CPU`, 2026-10-22 00:30 UTC ; 2 démarrages depuis le flash de 21:27 |
+| cuve (16.0.0.1) | **109 Ko** | 37 % | 19 Ko / 24 Ko | 4,5 Mo / 4,6 Mo (*) | `Software reset CPU`, 01:55 UTC ; 2 démarrages depuis 22:15 |
+| cave (13.3.0.3, ancien code) | 53 à 58 Ko | 15 % | 3,6 Ko / 8 Ko | — | uptime 7 jours ; `BootCount` 7 518, `SaveCount` 673 382 |
+| différentiel (15.0.1) | 147 Ko | 28 % | 3,9 Ko / 8 Ko | — | `Vbat power on reset`, 22 jours |
+
+(*) Sur la cuve, la PSRAM annoncée fait 4,6 Mo pour une puce de 8 Mo. Les 3,5 Mo restants correspondent
+probablement au programme copié en PSRAM (`ProgramSize` 3 566 Ko) : c'est une interprétation, non vérifiée.
+
+### Ce qui est en place
+
+**Le fait qui structure tout le reste.** `USE_BERRY_PSRAM` (`user_config_override.h:614`) envoie tout le
+tas Berry en **PSRAM** (`xdrv_52_9_berry.ino:79-81`, `special_malloc`). Au-delà de 4 Ko, un `malloc` C y
+part aussi. Sur le P4 et les S3, la RAM interne n'est donc pas consommée par Berry. Seuls les ESP32
+**sans PSRAM** (cave ESP32, différentiel) sont contraints par le framework.
+
+| | P4 | cuve / rideau (S3 N16R8) | ESP32 sans PSRAM (cave, différentiel) |
+|---|---|---|---|
+| RAM | 768 Ko de SRAM + PSRAM | 512 Ko + 8 Mo de PSRAM OPI | environ 320 Ko, sans PSRAM |
+| Partitions | app 3,9 Mo / fs 11,6 Mo | app 4 Mo / fs 11,9 Mo | app 2,7 à 2,9 Mo / fs 320 à 448 Ko |
+| Options qui pèsent | MQTT 2048 o, `MESSZ` 2000, tampon de log de 6 Ko, `USE_BERRY_DEBUG`, animation, Telegram, FTP, WSSERVER, Rules, UFILESYS + SD, I2S, LoRa | les mêmes, plus LVGL, OpenHASP, Matter | cave : animation et FTP retirés ; **différentiel : FTP et animation toujours compilés** |
+
+**Consommateurs Berry estimés** (tas vivant, 32 bits) :
+
+| Consommateur | P4 | cuve | rideau |
+|---|---|---|---|
+| Persist chargé entier, après veille des drivers inactifs | **≈ 54 Ko** (30 Ko de JSON) | ≈ 25 Ko | ≈ 26 Ko |
+| Scripts chargés depuis le LittleFS | ≈ 12 Ko (`controleGarage` + `garageFonctions`) | ≈ 25 Ko (`controleCuve` + `cuveFonctions`) | 0 |
+| Tampon de l'historique (`historiqueFonctions.be:119-123`) | ≤ 13,8 Ko | 4,6 Ko | ≤ 13,8 Ko |
+| File ModBus (`MAX_FILE` 32) | 0 à 1,5 Ko en temps normal, 15 Ko au maximum | — | — |
+| Caches (`seuils`, `rubansPousses`, `derniersSeq`, `routesFiches`…) | < 2 Ko, tous bornés | idem | idem |
+| **Total estimé** | **≈ 95 à 110 Ko** | **≈ 70 à 75 Ko** | ≈ 45 à 50 Ko |
+| **Mesuré** (`Berry.HeapUsed`, `tele/STATE`) | **100 Ko**, 1 616 objets | **76 Ko**, 1 105 objets | `Offline` |
+
+Le modèle tombe juste. Le persist représente **plus de la moitié** du tas Berry.
+
+**Relevés passifs du tas interne libre (`Heap`, en Ko) :**
+
+| Carte | 04:00-04:11 | 06:20 | 06:25 | 06:30 | 06:35 | Berry (Ko / objets) |
+|---|---|---|---|---|---|---|
+| P4 (uptime 1 h 35 à 04:05) | 194 → 192 | — | 110 | 107 | 104 | 100 / 1 616, constant |
+| cuve (redémarrée à 03:55) | 203 → 197 | 122 | 119 | 116 | — | 76 / 1 105, constant |
+| cave (ancien code, uptime 7 jours) | 48 à 58 | 48 à 58 | | | | 76 / 1 477, constant |
+| différentiel (sans framework) | 150 | 150 | | | | 3 / 42 |
+
+### Avantages
+
+- Sur les cartes à PSRAM, le choix `USE_BERRY_PSRAM` met le framework **à l'abri** de la RAM interne : le
+  tas Berry du P4 (100 Ko) ne coûte rien au Wi-Fi ni à lwIP.
+- Les caches Berry sont tous bornés, par cible, adresse ou MAC : aucune croissance sans fin repérée côté
+  Berry. `HeapUsed` et `Objects` sont restés **strictement constants** pendant 2 h 30.
+- La solidification paie déjà : `modbusFonctions` coûterait à lui seul ≈ 70 Ko en RAM, l'esclave ≈ 33 Ko,
+  `udpFonctions` ≈ 20 Ko.
+- Le tampon MQTT de 2048 o est justifié : la fiche `config` Tasmota reçue fait 1 à 1,4 Ko. Les envois sont
+  découpés en flux.
+- L'historique utilise un `bytes` compact (4 octets par point), pas des listes de réels.
+
+### Inconvénients et défauts constatés
+
+| # | Constat | Preuve | Cote |
+|---|---|---|---|
+| M1 | **Le tas interne du P4 et de la cuve baisse d'environ 0,6 Ko/min (≈ 36 Ko/h), régulièrement, pendant que le tas Berry reste constant.** Au rythme mesuré, le P4 (104 Ko libres à 06:35) serait à court en moins de 3 heures. Confirmé par `Status 4` à 06:41 : 100 Ko pour le P4, 109 Ko pour la cuve, soit la même pente. Les deux cartes avaient redémarré dans la nuit (P4 à 02:30, cuve à 03:55). `Status 1` donne `Software reset CPU` : un redémarrage **logiciel** (une commande `Restart` ou un redémarrage du firmware lui-même), et non une exception ou un chien de garde. Le lien avec la fuite n'est donc pas établi. La cave (ancien code) et le différentiel sont stables. La fuite est donc côté **C** (firmware 16.0.0.1, lwIP, sockets, MQTT…), déclenchée par un usage que le code courant est seul à faire. **Hypothèses, non prouvées** : création d'une socket `udp()` à chaque émission (`udpFonctions.be:738-741`), publication `ModbusReceivedUDP` à chaque trame, logs MQTT/syslog en `debug` (C1), firmware 16.0.0.1 lui-même. | 9 relevés `STATE` en 2 fenêtres ; `Berry.HeapUsed` constant | **G** (à confirmer) |
+| M2 | **Concaténation quadratique dans `/histo`** : `morceau +=` dans la boucle des points (`historiqueFonctions.be:512-516` pour le jour, `:616-621` pour le mois). Estimation : environ 3 Mo copiés pour une page jour à 12 séries, jusqu'à **environ 75 Mo** pour une page mois, pour 21 à 165 Ko réellement envoyés. Le délai de garde n'est pas dépassé grâce à `yield`, mais le processeur et le ramasse-miettes sont fortement sollicités. | lignes relues ; estimation | S |
+| M3 | **`discovery.json` relu en entier à chaque message discovery ou LWT** (11 Ko de texte et ≈ 28 Ko d'objets par lecture), avec une lecture triple à `discoveryFonctions.be:366-367` et `:622-623`. À chaque reconnexion MQTT : une rafale de 25 à 35 lectures, soit ≈ 1 Mo de déchets en quelques secondes. | estimation | S |
+| M4 | **Allocations à chaque tick de 100 ms** : une `map` par instance `CONTROLE_UDP` (2 instances, `controleUDP.be:144`), et `bytes` + concaténation côté esclave (`modbusFonctions.be:1916-1917`). Environ 2 à 4 Ko de déchets par seconde. Les logs `detail` actifs (A7 C2) en ajoutent 10 à 20 Ko/s : un passage du ramasse-miettes toutes les 5 à 10 s. | estimation | S |
+| M5 | **Pics trop gros pour un ESP32 sans PSRAM** : `envoiJson` du persist complet (`controleWeb.be:96-114`, ≈ 36 Ko de pic) et lecture de la discovery (30 à 45 Ko) contre 18 à 29 Ko de tas libre. Sans effet aujourd'hui : aucun ESP32 sans PSRAM n'exécute le framework courant (A1). | estimation | L |
+| M6 | **Différentiel** : FTP et animation toujours compilés, `serveurFTP` à `ON` dans son persist. C'est le scénario qui faisait planter la cave (`user_config_override.h:762`). Latent tant que le framework n'y est pas déployé. | `user_config_override.h:753-772` | L |
+| M7 | `fichesModbus()` sans cache en mode repli, quand la liaison série est coupée : ≈ 40 Ko par trame. | `modbusFonctions.be:1800` | L |
+| M8 | **Pile du P4 presque à sec** : il ne reste au minimum que 2,3 Ko sur les 8 Ko de la boucle principale (`stack_low`). La cuve en a 24 Ko (19 Ko restants). Un appel Berry profond ou un gros `string.format` dans un callback du P4 approche du débordement. | `Br tasmota.memory()` du 2026-10-22 | L |
+| M9 | Cave (ancien code) : `SaveCount` de 673 382 pour un `BootCount` de 7 518 : environ 90 sauvegardes des réglages par démarrage. L'usure de la flash est à surveiller. | `Status 1` | L |
+
+### Propositions
+
+| # | Proposition | Gain attendu | Effort / risque | Mesure avant / après |
+|---|---|---|---|---|
+| P9.1 | **Confirmer puis localiser la fuite M1.** D'abord une longue observation passive (`Heap` du `STATE` sur 12 h, et la raison du redémarrage dans `Status 1` après coup). Puis bissection, un réglage à la fois avec retour arrière : profil `normal` (P7.1), `RelaisPushMQTT`, ModBus en série au lieu de l'UDP. À traiter avec `superpowers:systematic-debugging`. | éviter les redémarrages, environ 36 Ko/h | moyen / faible | courbe `Heap` du `STATE` ; `Status 1` (RestartReason) |
+| P9.2 | `/histo` : accumuler les morceaux dans une liste puis `concat()`, ou envoyer chaque point | de 75 Mo à moins de 0,3 Mo de copies ; réponse 5 à 10 fois plus rapide | faible / faible (`banc_graphiques.py`) | `curl -w %{time_total}` sur `/histo?p=mois` |
+| P9.3 | `lisTable()` à la place des lectures triples, et cache de la table invalidé à l'écriture | −22 Ko de pic par appel, rafales évitées | faible / nul (`test_discovery.be`) | nombre de `BRY: GC` à la reconnexion MQTT |
+| P9.4 | Réutiliser la `map` et les `bytes` de tick, et sortir tôt si rien n'est disponible (avec A5 P5.5) | −2 à 4 Ko/s de déchets | faible / faible (banc ModBus) | `BRY: GC` sur 10 min |
+| P9.5 | Profil de log `normal` (A7 P7.1, P7.2) | ramasse-miettes 5 à 10 fois moins fréquent | nul | idem |
+| P9.6 | Persist : retirer les clés mortes (A4 P4.6), alléger `modules.garage` (9,8 Ko de JSON à lui seul) | 4 à 5 Ko par carte | faible | `Berry.HeapUsed` |
+| P9.7 | Solidifier `cuveFonctions` + `controleCuve`, puis les scripts du P4 (A3 P3.4) | ≈ 25 Ko et ≈ 12 Ko de **PSRAM**, gain faible ; démarrage plus rapide | moyen / moyen | `Berry.HeapUsed` |
+| P9.8 | Avant tout déploiement du framework sur un ESP32 sans PSRAM : retirer FTP et animation du différentiel, découper `envoiJson` par clé (`content_send`), et passer la discovery à `OFF` | évite un plantage au démarrage, −18 Ko de pic | faible | `Status 4` |
+
+## A10 — Autres points relevés en cours d'audit (2026-10-22)
+
+Trois volets : la couverture des bancs, la documentation confrontée au code, et la robustesse du
+démarrage. Analyse en lecture seule, constats graves relus dans le fil principal. Les bancs ont été
+relancés le 2026-10-22 et sont tous verts :
+- `BANC_VEILLE_DRIVERS: OK` ;
+- `TEST_DISCOVERY: OK (216 tests, 0 echec(s))` ;
+- `BANC_MODBUS: OK` ;
+- `BANC_LEDS: OK`.
+
+### Ce qui est en place
+
+**Couverture des bancs.** Un module est compté comme couvert si un banc charge le **vrai** fichier, pas
+un bouchon.
+
+| Couverture | Modules |
+|---|---|
+| bonne | `modbusFonctions` (logique), `logFonctions`, `udpFonctions`, `discoveryFonctions`, `rangeExtenderFonctions`, `ledsFonctions`, `graphiquesFonctions`, `historiqueFonctions`, `historiqueSeries` |
+| partielle | `modBus_TasmotaSlaveModBus`, `controleModbus` (règle UDP seule), `globalFonctions` (2 fonctions ; ailleurs un bouchon de 5 lignes), `controleRangeExtender`, `diversFonctions` (veille seule), `controleWeb` et `controleGarage` (environ 5 %) |
+| **aucune** (syntaxe seule) | `modBus_Conn16channels` (557 l.), `gestionFileFolder` (toujours bouchonné), `configGlobal`, `configDevices`, `configModules`, `controleGeneral` (709 l.), les 3 `autoexec.be`, `controleCuve`, `cuveFonctions`, `controleRideau`, `garageFonctions`, et les drivers `controleUDP`, `controleLeds`, `controleLedTemoin`, `controleDiscovery`, `controleTCP`… |
+
+Chemins réels jamais exercés, même dans les modules couverts :
+- aucun banc n'ouvre de socket, de client TCP ni de port série ;
+- aucun n'exécute un `autoexec`, `configGlobalByJson`, `configDevicesByRules` ou `controleGeneral.init` ;
+- aucun ne construit une classe `controleXxx` du parc, sauf `CONTROLE_RANGE_EXTENDER` ;
+- aucun ne teste la livraison (copie sur le LittleFS, solidification du parc entier) ;
+- seule la page `/graphiques` est rendue.
+
+**Démarrage.** L'autoexec lit les globales du persist, importe `logFonctions` et `diversFonctions`, met en
+veille les drivers inactifs, puis compile et importe les `controleXxx` dans un ordre fixe : `controleGeneral`
+(qui appelle `configDevicesByRules` puis `configGlobalByJson`), LEDs, I2C, ModBus, Web, UDP, Range Extender,
+volets, discovery, ES8311, historique, et enfin le script de la carte.
+
+### Avantages
+
+- Les quatre bancs rapides tournent en moins d'une seconde chacun, avec des témoins négatifs : une
+  régression de la logique ModBus, discovery, LEDs ou veille est visible tout de suite.
+- Les modules récents sont écrits défensivement : `graphiquesFonctions`, `historiqueFonctions` et
+  `hiberneDriversInactifs` (qui gère même l'absence de `/json`) utilisent `find` et `try/except` journalisés.
+- `configDevices` sait se réparer : sur un échec d'écriture dans `/json`, il écrit à la racine et relance la
+  répartition des fichiers (`configDevices.be:352-358`).
+- La « Carte des documents » de `CLAUDE.md` est fiable : sur environ 90 chemins, un seul est mal rangé.
+- La charte des logs de `CLAUDE.md` est identique au code.
+
+### Inconvénients et défauts constatés
+
+**Démarrage**
+
+| # | Constat | Preuve | Cote |
+|---|---|---|---|
+| B1 | **Un persist vide, corrompu ou sans `diverses` bloque tout le démarrage sans laisser de trace.** `diverses.find("cmdMute")` est exécuté à la ligne 19, **avant** la garde `if (persist._p != nil && persist._p.size() != 0)` de la ligne 56, et avant l'import de `logFonctions`. Le `else` final (« fichier de paramétrage absent », `:132`) est donc inatteignable dans ce cas. Prouvé par un test Berry : `attribute_error: 'nil' value has no method 'find'`. | P4 `autoexec.be:15-19`, `:56`, `:132` ; `scratchpad/a10/t1.be` | G |
+| B2 | **Aucun `try` dans les 3 autoexec** : une exception dans un `controleXxx` empêche le démarrage de tous les suivants. Sur le P4, un incident dans `controleModbus` priverait la carte du Range Extender, de la discovery, de l'historique et de `controleGarage`. | `grep -c try` = 0 | G |
+| B3 | **`ReglageGlobal` et `ReglageLog` ne sont enregistrées qu'après `configGlobalByJson`** (`controleGeneral.be:133-137`). Une clé manquante dans `serveur.wifi`, `IP`, `mqtt` ou `localisation` (15 accès directs relevés, `configGlobal.be:76-195`) empêche leur enregistrement : la carte ne peut plus être réglée à distance pour réparer son persist. | lignes relues | L |
+| B4 | **`listeEtRepartitLesFichiers` se rappelle elle-même après `path.mkdir("/sd")`** sans vérifier le résultat. Si le `mkdir` échoue (LittleFS plein), la récursion est infinie jusqu'au débordement de pile, déjà serrée sur le P4 (A9 M8). | `gestionFileFolder.be:76-78` | L |
+| B5 | Un driver actif dont l'`environnement` est vide (veille sans fichier de restauration) lève `key_error` à l'import de `modBus_Conn16channels` (`:197`) ou de `modBus_TasmotaSlaveModBus` (`:56`), ce qui arrête l'autoexec (B2). | lignes citées | L |
+| B6 | `try/except` qui avalent l'erreur : `ReglageGlobal nbLogsFiles` répond « réussie » même en cas d'échec (`globalFonctions.be:619-626`) ; `litVeille` perd le diagnostic (`diversFonctions.be:127-129`). | | L |
+| B7 | Cron `*/300` dans le champ des **secondes** pour `timerRebootSansWifi` : le pas dépasse 59. Le comportement réel du parseur reste à vérifier (une fois par minute ?). Aujourd'hui sans effet, puisque la lambda n'appelle pas la méthode (A5 N1). Mais corriger N1 sans corriger ce cron pourrait provoquer un redémarrage par minute sur une carte sans Wi-Fi. | `controleGeneral.be:97` | L |
+
+**Bancs**
+
+| # | Constat | Cote |
+|---|---|---|
+| B8 | Le **chemin de démarrage n'a aucun banc** : autoexec, `configGlobal`, `configDevices`, `controleGeneral`, soit environ 1 800 lignes protégées par la seule vérification de syntaxe. | G |
+| B9 | `modBus_Conn16channels` (carte 16 relais, en service) n'a **aucun banc** (déjà noté en A5 N7). | G |
+| B10 | Les scripts de carte (`controleCuve`, `cuveFonctions`, `garageFonctions`, `controleRideau`) ne sont pas couverts. Or ce sont eux qui portent la logique métier (niveau, volume, couleurs). | L |
+
+**Documentation** : environ 45 écarts sur environ 300 affirmations vérifiées, dont 9 trompeurs. Les numéros
+de ligne dérivent à chaque édition ; les noms de fonction, eux, sont tous justes.
+
+| # | Document | Écart | Cote |
+|---|---|---|---|
+| B11 | `SOLIDIFICATION_BERRY.md` §7 (`:544-557`) | Affirme « aucun build ne solidifiera les modules de `data/fs` ». C'est **contraire à la chaîne réelle** : `custom_berry_solidify` + `solidify-from-url.py` (A3), décrite au §6bis du même fichier. L'exemple du `:405-412` (« P4 : rien à ajouter ») est lui aussi périmé. | G |
+| B12 | `SOLIDIFICATION_BERRY.md`, `README.md:25`, `CLAUDE.md` | Annoncent « 11 pièges » alors que le document en contient 13 (pièges 12 et 13, `:312`, `:335`). Une dizaine de numéros de ligne périmés (`copy_fs_image`, `compileModule`, `xdrv_52_9_berry.ino`…). | D |
+| B13 | `ANALYSE_BERRY_MODBUS_DISCOVERY.md` (22 septembre) | Tous ses numéros de ligne sont faux. Ses « défauts bloquants » sont **corrigés** depuis le 30 septembre (`modbusFonctions.be:1791`), mais restent affichés comme actuels. | G |
+| B14 | `PROTOCOLE_MODBUS.md` §8-§9 | 13 numéros de ligne périmés sur environ 25 (`modbusFonctions` est passé à 3 242 lignes). Les noms cités existent tous. | D |
+| B15 | `README.md` § logs | La cible `leds` manque à la liste des cibles (`:78-80`). Les commandes `ReglageAutres`, `ReglageDHT22`, `ReglagePompe`, `ReglageAna`, `ReglageCuve`, `ReglageGarage` et `SCHEME` sont absentes de la liste des commandes. | D |
+| B16 | `CARTE_MODULES_BERRY.md` | Régénérée sans différence de fond. Elle garde le faux diagnostic sur `controleRideau` (A3 S7), et l'ordre des arêtes du graphe change d'une génération à l'autre, ce qui crée du bruit dans les diffs. | D |
+| B17 | Skill `tasmota-berry` (hors dépôt, `~/.claude/skills/`) | Les modèles `references/debug-et-deploiement.md:43-68` et `nouveau-module.md` enseignent encore `logActivation`, **supprimé**. D'autres références sont fausses : `i2c_ads1115.be:6`, `post_esp32.py:385-392`. | G |
+| B18 | Skill `bancs` | `hiberneDriversInactifs` « ligne 31 des autoexec » : c'est la ligne 32 sur le P4. Le reste est exact. | D |
+| B19 | Carte des documents de `CLAUDE.md` | Les 3 `cible_*.py` des sniffeurs et du syslog sont rangés sous `outils_pc/`, alors qu'ils sont dans `build/`. | D |
+
+### Propositions
+
+- **P10.1** — Garde de tête dans les autoexec : tester `persist._p` et `diverses` **avant** toute lecture, et
+  journaliser par `print` (avant `logFonctions`) puis par syslog. Corrige B1.
+  *(faible ; banc : `banc_boot.be` ci-dessous, avec un persist `{}` qui doit sortir proprement)*
+- **P10.2** — Entourer chaque `import controleXxx as _ctrl` d'un `try/except` journalisé
+  (`AUTO_EXE_ERREUR: <module>`), puis continuer. Enregistrer `ReglageGlobal`/`ReglageLog` **avant**
+  `configGlobalByJson`. Corrige B2 et B3. *(moyen ; risque moyen : change l'ordre des échecs. À combiner avec
+  A4 P4.2, l'autoexec commun)*
+- **P10.3** — **Écrire `banc_boot.be`** : vrais `autoexec`, `configGlobal`, `configDevices` et
+  `controleGeneral` avec un faux `tasmota`, sur trois persists :
+  1. le persist réel du P4, la référence ;
+  2. `{}`, rouge aujourd'hui (B1) ;
+  3. le persist réel privé d'une clé, avec un témoin qui doit échouer.
+
+  Corrige B8. **Premier banc à écrire**, avant P10.2 et A4 P4.2. *(moyen)*
+- **P10.4** — Écrire le banc de la carte 16 relais (déjà demandé par A5 P5.7), puis un banc des scripts de la
+  cuve (`cuveFonctions` : niveau → volume → couleur). Corrige B9 et B10. *(moyen)*
+- **P10.5** — `listeEtRepartitLesFichiers` : vérifier le résultat de `mkdir` avant de se rappeler. Valider la
+  syntaxe `*/300` sur un banc, ou la remplacer par un timer Berry avant de corriger N1. Corrige B4 et B7.
+  *(faible)*
+- **P10.6** — Documentation :
+  - réécrire `SOLIDIFICATION_BERRY.md` §7 d'après A3 ;
+  - marquer `ANALYSE_BERRY_MODBUS_DISCOVERY.md` comme « historique (2026-09-22) » ;
+  - passer à « 13 pièges » ;
+  - ajouter `leds` et les commandes manquantes au README ;
+  - retirer `logActivation` des modèles du skill `tasmota-berry`.
+
+  Corrige B11 à B15 et B17. *(faible)*
+- **P10.7** — Contre la dérive : remplacer les `fichier:ligne` des documents durables par
+  `fichier::fonction`. Ajouter un contrôle automatique (hook ou banc) qui vérifie que chaque chemin et chaque
+  fonction cités existent. Rendre `carte_modules_berry.py` déterministe et corriger son `:427`. Corrige B12,
+  B14, B16 et B19. *(moyen ; risque nul)*
+
+## Synthèse des propositions (A11, 2026-10-22)
+
+**109 constats** relevés de A2 à A10 : 23 G, 37 L, 30 S (dont les 11 duplications N12-N22), 15 D, 4 constats descriptifs non cotés (A8.1) ; **aucun B** : rien ne casse aujourd'hui un build ou un démarrage. Les défauts actifs sont une fuite de RAM interne, des fonctions jamais exécutées (redémarrages programmés), une usure de flash et un volume de logs démesuré.
+
+**78 propositions** (P2.1 à P10.7), cotées d'après le constat le plus grave qu'elles corrigent : 24 G, 16 L, 27 S, 11 D.
+
+*Cote d'une proposition = cote la plus grave des constats qu'elle corrige. Risque `dec` : une décision de l'utilisateur précède toute action.*
+
+**Les 10 actions à plus fort rapport bénéfice/effort**, dans l'ordre conseillé :
+
+1. **P7.1** — −43 Mo/jour sur le broker, GC moins fréquent *(corrige C1, C2 ; nul / nul)*
+2. **P9.1** — Évite l'épuisement du tas du P4 en ~3 h *(corrige M1 ; moyen / faible)*
+3. **P5.1** — Comportement conforme à l'intention *(corrige N1, B7 ; faible / dec)*
+4. **P10.3** — Chemin de boot (1 800 l.) enfin couvert *(corrige B8, B1 ; moyen / nul)*
+5. **P5.2** — Fin d'une écriture flash par esclave toutes les 300 s *(corrige N2 ; faible / moyen)*
+6. **P5.7** — Plus de file ModBus bloquée *(corrige N7, B9 ; faible / faible)*
+7. **P7.3** — Erreurs visibles en syslog/MQTT *(corrige C3 ; faible / faible)*
+8. **P9.2** — 75 Mo → <0,3 Mo de copies, réponse 5 à 10× plus rapide *(corrige M2 ; faible / faible)*
+9. **P10.1** — Boot dégradé journalisé au lieu d'un silence *(corrige B1 ; faible / faible)*
+10. **P8.6** — Présence des esclaves fiable *(corrige R1, R3 ; moyen / moyen)*
+
+Le plan d'action complet, sans exécution, est `tasks/plans/actions-audit-berry.md` (statut `en-pause`). Ses lots reprennent ceux du tableau ci-dessous.
+
+### A1 — Décisions à prendre (aucun code)
+
+Questions que l'audit ne peut pas trancher. Chaque réponse débloque ou annule des propositions des lots suivants.
+
+| Prop. | Proposition | Corrige | Cote | Effort | Risque | Bénéfice |
+|---|---|---|---|---|---|---|
+| P5.1 | Redémarrages programmés (heureReboot, timerRebootSansWifi) : voulus ou non ? S'ils le sont, corriger les lambdas ET le cron `*/300` (P10.5) ; sinon supprimer crons et clés | N1, B7 | G | faible | dec | comportement conforme à l'intention |
+| P2.1 | Une S3 a-t-elle un écran ? Sinon retirer LVGL/OpenHASP de la base N16R8 (ou base S3 « sans écran ») | E1 | G | faible | moyen | flash et RAM sur 3 S3 |
+| P4.4 | Cartes remplacées : geler ou retirer leurs fichiers ; cave : déployer la S3 ou donner un env à l'ancien code (ne PAS retirer le dossier *sauvegarde*) ; confirmer le statut réel de la cave et du différentiel (A1) | D5, D6, D7 | G | faible | dec | dépôt aligné sur le parc réel |
+| P6.2 | 6 clés `log` orphelines : créer leurs cibles ou retirer les clés | L2 | G | faible | dec | réglages de log qui agissent |
+| P8.5 | ESP-NOW côté P4 : passerelle S3, ou ESP-NOW réservé aux S3 (après P8.4) | T2 | G | — | dec | orientation radio |
+| P8.10 | Attendre esp-hosted-mcu#19 avant tout ESP-NOW sur le P4 ; pas de C6 reflashé | T2 | G | nul | dec | évite un chantier sans issue |
+| P3.1 | Différentiel : `drivers.ModBus.activation` à OFF, ou embarquer la pile ModBus | S1 | L | faible | dec | supprime un import impossible |
+| P3.5 | Modules solidifiés inutiles : accepter, ou découper `socle` en `socle` + `reseau` | S3 | S | faible | dec | quelques Ko de flash par carte |
+| P5.15 | Une seule source pour chaque donnée de la fiche discovery (routagePort, id, IPAddress) | N22 | S | moyen | dec | moins d'incohérences possibles |
+| P2.9 | Ports COM propres à chaque poste : hors du `.ini` partagé | E13 | D | faible | dec | deux postes sans conflit |
+| P7.8 | IP fixe du PC syslog, ou syslog vers le Pi SERVEUR-BUREAU | C9 | D | faible | dec | logs conservés PC éteint |
+
+### A2 — Réglages sur carte, sans code
+
+Effet immédiat, réversible par une commande. À faire en premier : réduit le bruit qui gêne le diagnostic de A3.
+
+| Prop. | Proposition | Corrige | Cote | Effort | Risque | Bénéfice |
+|---|---|---|---|---|---|---|
+| P7.1 | `ReglageLog profil normal` sur chaque carte (P4 d'abord), puis aligner les persists du dépôt | C1, C2 | G | nul | nul | −43 Mo/jour sur le broker, GC moins fréquent |
+| P7.2 | `ReglageLog tous info` : seuils des modules à info | C2, C4 | G | nul | nul | chaînes de log non construites |
+| P9.5 | Mesurer l'effet de P7.1/P7.2 sur le ramasse-miettes (`BRY: GC` sur 10 min) | M4 | S | nul | nul | GC 5 à 10 fois moins fréquent |
+| P7.7 | Relever `ReglageLog` (sans argument) sur chaque carte : profil et seuils réellement en vigueur | — | D | nul | nul | état réel connu |
+
+### A3 — Diagnostic de la fuite de RAM interne
+
+Le seul défaut qui peut faire tomber le P4 en quelques heures. Méthode : superpowers:systematic-debugging.
+
+| Prop. | Proposition | Corrige | Cote | Effort | Risque | Bénéfice |
+|---|---|---|---|---|---|---|
+| P9.1 | Fuite de RAM interne (~0,6 Ko/min, P4 + cuve) : observation 12 h, puis bissection un réglage à la fois (profil normal, RelaisPushMQTT, ModBus série/UDP, socket udp() par émission), retour arrière à chaque pas | M1 | G | moyen | faible | évite l'épuisement du tas du P4 en ~3 h |
+
+### A4 — Bancs manquants (avant toute refonte)
+
+Filets à poser AVANT les lots A7, A10 et A11 : chaque banc avec son témoin négatif.
+
+| Prop. | Proposition | Corrige | Cote | Effort | Risque | Bénéfice |
+|---|---|---|---|---|---|---|
+| P10.3 | Écrire `banc_boot.be` : vrais autoexec/configGlobal/configDevices/controleGeneral, persists réel, `{}`, et privé d'une clé (témoin) | B8, B1 | G | moyen | nul | chemin de boot (1 800 l.) enfin couvert |
+| P5.7 | Banc de la carte 16 relais + `try` autour de sa réception avec acquittement en `except` | N7, B9 | G | faible | faible | plus de file ModBus bloquée |
+| P10.4 | Banc des scripts de la cuve (niveau → volume → couleur) | B10 | L | moyen | nul | logique métier couverte |
+
+### A5 — Défauts actifs : petits correctifs
+
+Défauts constatés en service (cotés G), correctifs locaux, filet existant.
+
+| Prop. | Proposition | Corrige | Cote | Effort | Risque | Bénéfice |
+|---|---|---|---|---|---|---|
+| P5.2 | ImAlive : ranger la fiche via discoveryFonctions avec `memeValeur`, n'écrire que si elle change | N2 | G | faible | moyen | fin d'une écriture flash par esclave toutes les 300 s |
+| P5.3 | Cuve : un seul `_Scheme` par seconde partagé entre LEDs et surveilleRubans | N3 | G | moyen | moyen | −1 commande/s |
+| P5.4 | P4 : CSS de la page d'accueil gardé en mémoire ou servi en statique | N4 | G | faible | faible | fin des lectures SD toutes les 2 s |
+| P7.3 | 6 `print('Erreur…')` d'`except` → `xxxFonctions.log("…_ERREUR", LOG_LEVEL_ERREUR)` | C3 | G | faible | faible | erreurs visibles en syslog/MQTT |
+| P7.5 | Logs ponctuels : info→detail dans `web_sensor` du P4, ES8311 en erreur, `_ERREUR` dans 8 `except`, préfixes ; trancher « trame rejetée / délai isolé » | C5, C6, C7, C8 | G | faible | faible | logs conformes à la charte |
+| P6.1 | Cible réglable `historique` (dans CIBLES, lieu `diverses.historique`) | L1 | G | faible | faible | logs debug de l'historique récupérés |
+| P9.2 | `/histo` : morceaux dans une liste puis `concat()` | M2 | S | faible | faible | 75 Mo → <0,3 Mo de copies, réponse 5 à 10× plus rapide |
+| P9.3 | `lisTable()` à la place des lectures triples de discovery.json, cache invalidé à l'écriture | M3 | S | faible | nul | −22 Ko de pic par appel |
+
+### A6 — Défauts latents : petits correctifs
+
+Chemins non empruntés aujourd'hui mais qui casseraient au premier changement de configuration.
+
+| Prop. | Proposition | Corrige | Cote | Effort | Risque | Bénéfice |
+|---|---|---|---|---|---|---|
+| P8.7 | Sans broker : `forceEnvoiParams` lancé depuis le secours C7 | R2 | G | faible | faible | esclave présenté même sans MQTT |
+| P4.1 | `loadBerryFile` : ne pas charger si l'activation vaut OFF | D1 | L | faible | faible | un OFF arrête vraiment le driver |
+| P5.8 | `diversFonctions.valeurScalaire(value)` pour les 5 sites ; humidité du P4 | N8, N9 | L | faible | moyen | fin d'un bug sur map multi-clés |
+| P5.9 | configDevices : compteur analogique « réels », `%i` sur "ON", log des compteurs | N10 | L | faible | faible | compteurs justes |
+| P6.3 | Cache des seuils vidé après toute écriture du persist ; défaut d'un bloc absent non mis en cache | L3, L4 | L | faible | faible | réglages pris sans redémarrage |
+| P6.4 | Cible inconnue de `lieu()` journalisée une fois en erreur | L5 | L | faible | nul | fautes de frappe détectées |
+| P10.5 | `listeEtRepartitLesFichiers` : vérifier `mkdir` ; valider ou remplacer le cron `*/300` | B4, B7 | L | faible | faible | pas de récursion infinie, pas de reboot par minute |
+| P2.2 | Coquille du `USER_TEMPLATE` du rideau (`1,1s]`) | E2 | L | faible | faible | template valide après reset |
+| P2.3 | Rebouclage de `increment_config_holder` à 65535 | E5 | L | faible | faible | build qui ne casse pas |
+
+### A7 — Démarrage robuste
+
+Après le banc de démarrage (A4). Touche le chemin de boot : une carte à la fois, en commençant par une carte de banc.
+
+| Prop. | Proposition | Corrige | Cote | Effort | Risque | Bénéfice |
+|---|---|---|---|---|---|---|
+| P10.1 | Garde de tête des autoexec : `persist._p` et `diverses` testés avant toute lecture, avec trace | B1 | G | faible | faible | boot dégradé journalisé au lieu d'un silence |
+| P10.2 | `try/except` journalisé autour de chaque `import controleXxx` ; `ReglageGlobal`/`ReglageLog` enregistrées avant `configGlobalByJson` | B2, B3, B5 | G | moyen | moyen | un module en échec n'emporte plus les suivants |
+| P4.2 | Autoexec commun : module `demarrage` solidifié, ~15 lignes propres par carte ; différentiel et grenier remis au modèle | D2, D4 | S | moyen | moyen | une correction au lieu de huit |
+| P4.3 | Séparer « charger ou non » et « supprimer le source » dans `compileModule`/`loadBerryFile` | D3 | D | faible | faible | API lisible |
+
+### A8 — Découverte des esclaves
+
+Péremption des fiches, présentation sans broker, vérité Wi-Fi par RgxClients, mesures jamais faites.
+
+| Prop. | Proposition | Corrige | Cote | Effort | Risque | Bénéfice |
+|---|---|---|---|---|---|---|
+| P8.6 | Péremption : Offline si aucun ImAlive depuis 2 × telePeriod, au lieu du reset unique | R1, R3 | G | moyen | moyen | présence des esclaves fiable |
+| P8.8 | `etatReseau()` : RgxClients × fiches par MAC, affiché sur `/discovery` | R4, R6 | L | moyen | nul | panne Wi-Fi distinguée d'une panne UDP |
+| P8.9 | Mesurer latence aller simple, perte sur 1 h, délai de découverte (testeur :7400) | A8.3 | D | moyen | nul | chiffres jamais mesurés |
+
+### A9 — Nettoyage : code mort et données mortes
+
+Beaucoup de lignes en moins pour peu de risque. Chaque suppression précédée d'une recherche à 0 résultat sur data/.
+
+| Prop. | Proposition | Corrige | Cote | Effort | Risque | Bénéfice |
+|---|---|---|---|---|---|---|
+| P5.10 | Lot code mort : fonctions sans appelant, branches inatteignables, blocs commentés, callbacks vides, `etatCapteurs`, `/wss`, `any_key` | N11 et code mort | L | faible | faible | ~800 lignes en moins |
+| P4.7 | Schéma du persist normatif pour `relaisLie` (`delai` requis) | D10 | L | faible | nul | schéma qui protège au lieu de tromper |
+| P5.6 | Ne plus forcer `tcp.activation` ; ne plus charger TCP sur la cave S3 (variante lourde : retirer le transport TCP, sur décision) | N6 | L | faible | faible | client TCP et every_250ms en moins |
+| P4.5 | 5 fonctions sans appelant de A4 | D8 | S | faible | faible | ~180 lignes en moins |
+| P4.6 | Clés mortes de `relaisLie`/`typeAction` retirées des persists | D9 | S | faible | faible | 0,4 à 1,5 Ko de RAM par carte |
+| P9.6 | Alléger `modules.garage` (9,8 Ko de JSON) | D1 (A9) | S | faible | faible | 4 à 5 Ko par carte |
+| P6.6 | Sauvegarde du persist harmonisée ; clés `nbLogsFiles`/`fileLogName` sans lecteur retirées | L8 | S | faible | faible | une seule convention |
+| P2.4 | 8 sections orphelines de `user_config_override.h` ; bloc commun garage | E3, E4 | S | moyen | faible | fichier plus court, moins de copies |
+| P2.6 | Pre-script : listes (FAIT le 2026-10-21, `e26ff49d0`), garde contre le double accrochage, code mort | E6, E7 | S | faible | faible | pre-script assaini |
+| P2.8 | `data/test.mp3` (3,3 Mo) sorti du dépôt | E12 | S | faible | nul | dépôt plus léger |
+| P2.7 | Table de partitions S3 renommée d'après son contenu | E11 | D | faible | faible | nom qui ne trompe plus |
+
+### A10 — Factorisations (après les bancs de A4)
+
+Gains de lisibilité et de maintenance ; risque moyen, d'où l'exigence d'un banc vert avant ET après.
+
+| Prop. | Proposition | Corrige | Cote | Effort | Risque | Bénéfice |
+|---|---|---|---|---|---|---|
+| P7.4 | Garde `logFonctions.actif()` sur les chemins chauds ModBus/UDP | C4 | G | moyen | moyen | chaînes coûteuses non construites |
+| P3.3 | `return controleXxx` en fin de chaque `controleXxx` | S6 | L | faible | nul | chargeable depuis le LittleFS |
+| P5.11 | Petits helpers : `relaisLie`, `deviceActif`, `readJson`, `macSansDeuxPoints`, `decoupeCommande` | N12, N14, N16, N20 | S | faible | faible | ~110 lignes |
+| P5.12 | Factorisations : groupes de `changementEtatCapteur`/configDevices, itérateurs devices et fiches, `prepareTrame`/`decrypteMSG` | N13, N15, N17, N18 | S | moyen | moyen | ~430 lignes |
+| P5.13 | Base commune aux drivers esclave ESP32 et carte 16 relais (après P5.7) | N19 | S | fort | fort | ~150 lignes |
+| P5.14 | Module commun cuve/P4 : couleur, volume, page thermomètres, logs | N21 | S | moyen | moyen | ~45 lignes, une source |
+| P5.5 | Une socket par instance `CONTROLE_UDP` | N5 | S | faible | moyen | lectures de socket divisées par 2 |
+| P9.4 | Map et bytes de tick réutilisés, sortie précoce si rien à lire | M4 | S | faible | faible | −2 à 4 Ko/s de déchets |
+| P3.2 | `import` local en tête de fonction pour l'auto-appel des modules | S4 | S | moyen | faible | plus de dépendance au nom global |
+
+### A11 — Build et solidification
+
+Environnements, pio-tools, exclusions du LittleFS, solidification des scripts de carte.
+
+| Prop. | Proposition | Corrige | Cote | Effort | Risque | Bénéfice |
+|---|---|---|---|---|---|---|
+| P2.5 | `pio-tools/` : revenir à l'amont pour les écarts de pure traduction | E9 | G | moyen | faible | moins de conflits de synchro |
+| P9.8 | Avant de déployer le framework sur un ESP32 sans PSRAM : FTP/animation retirés, `envoiJson` découpé, discovery OFF | M5, M6 | L | faible | faible | évite un plantage au boot |
+| P2.10 | Un seul mécanisme d'exclusion du LittleFS | E10 | S | moyen | moyen | une seule règle à comprendre |
+| P3.7 | Idem P2.10 côté solidification : `copy_fs_image` ou `post_esp32.py` seul | S5 | S | moyen | moyen | (fusionner avec P2.10) |
+| P3.4 | Solidifier `garageFonctions` puis `cuveFonctions`, puis les scripts de driver de carte | candidats A3 | S | moyen | moyen | démarrage plus rapide |
+| P9.7 | Mesurer le gain de P3.4 (`Berry.HeapUsed`) | A9 | S | faible | nul | ≈25 Ko (cuve) et ≈12 Ko (P4) de PSRAM |
+| P3.6 | `carte_modules_berry.py` : modules de carte solidifiés, docstring | S7 | D | faible | nul | fin d'un faux diagnostic |
+
+### A12 — Outillage et documentation
+
+Contrôles automatiques contre la dérive (charte des logs, chemins et fonctions cités) et documents à corriger.
+
+| Prop. | Proposition | Corrige | Cote | Effort | Risque | Bénéfice |
+|---|---|---|---|---|---|---|
+| P10.6 | Docs : §7 de SOLIDIFICATION réécrit, ANALYSE marquée historique, « 13 pièges », README (leds, commandes), skill sans `logActivation` | B11, B13, B15, B17 | G | faible | nul | docs justes |
+| P7.6 | Contrôle automatique de la charte des logs dans `verifie_berry.py` (avertissements) | C10 | D | moyen | faible | la dérive est signalée à l'édition |
+| P10.7 | `fichier::fonction` au lieu de `fichier:ligne` ; contrôle des chemins et fonctions cités ; carte des modules déterministe | B12, B14, B16, B19 | D | moyen | nul | docs qui ne dérivent plus |
+| P6.5 | README : le profil fait foi sur les sorties, SERIALLOG_TIMER, portée de `actif()` | L6, L7 | D | faible | nul | comportement documenté |
+
+### A13 — Radio : ESP-NOW et TasMesh (exploration)
+
+Rien d'urgent : à n'engager qu'après les lots de fiabilité.
+
+| Prop. | Proposition | Corrige | Cote | Effort | Risque | Bénéfice |
+|---|---|---|---|---|---|---|
+| P8.1 | Ne pas retenir TasMesh pour le garage | T1, T2 | S | nul | nul | évite une impasse |
+| P8.2 | TasMesh seulement pour de futurs capteurs ESP8266 sur batterie, broker ESP32/S3 | T1 | S | faible | faible | option documentée |
+| P8.4 | Essai borné ESP-NOW entre deux S3 (QuickEspNow) : latence, pertes, coexistence, tas | T3-T9 | S | moyen | faible | décision radio fondée sur des mesures |
+| P8.3 | Signaler la régression T10 à l'amont après un essai | T10 | D | faible | nul | contribution amont |

@@ -1,7 +1,7 @@
 ---
 chantier: audit-berry
 titre: Audit complet — scripts Berry, environnements de build, solidification, logs et communications
-statut: actif
+statut: clos
 cree: 2026-10-21
 maj: 2026-10-22
 source: partitioned-hatching-key.md
@@ -95,75 +95,75 @@ voies sans fil plus efficaces que l'UDP, recherche GitHub sur ESP-NOW entre modu
 - [x] Section A3 du rapport rédigée : en place · avantages · inconvénients · propositions — preuve : outils_docs/AUDIT_BERRY_2026-10.md § A3 (8 constats S1-S8, 7 propositions P3.1-P3.7)
 
 ## A4 — Architecture et chargement des scripts Berry
-- [ ] Contrat `autoexec.be` → `controleXxx` → `xxxFonctions` tracé pour chaque carte : ordre de chargement, gardes d'activation (`loadBerryFile(..., activation)`)
-- [ ] Les 8 `autoexec.be` comparés bloc par bloc : partie commune, écarts voulus, dérives
-- [ ] Doublons de cartes (`controlePompeVideCave.be` ×2, `controleGarage.be`/`garageFonctions.be` S3 vs P4, autoexec cave ESP32 vs S3) qualifiés selon le statut A1
-- [ ] Fichiers vides ou morts chargés au boot (`controleGrenier.be`, modules d'envs en sommeil)
-- [ ] Fonctions sans appelant (recherche sur `data/` entier, `tasmota.add_cmd`, routes web, `add_rule`), par module
-- [ ] Clés du `_persist.json` sans lecteur et lecteurs de clés absentes, par analyse JSON + chemin complet (cohérence avec `persist.schema.json`)
-- [ ] Section A4 du rapport rédigée : en place · avantages · inconvénients · propositions
+- [x] Contrat `autoexec.be` → `controleXxx` → `xxxFonctions` tracé pour chaque carte : ordre de chargement, gardes d'activation (`loadBerryFile(..., activation)`) — preuve : contrat tracé (rapport A4 « Ce qui est en place ») ; garde commentée `gestionFileFolder.be:410-414` (D1)
+- [x] Les 8 `autoexec.be` comparés bloc par bloc : partie commune, écarts voulus, dérives — preuve : grep des `compileModule`/`loadBerryFile` des 8 autoexec ; ~50 lignes communes ; 3 générations (D2), `vrFonctions` sans activation `etage2/tasmota32s3-grenier/autoexec.be:69`
+- [x] Doublons de cartes (`controlePompeVideCave.be` ×2, `controleGarage.be`/`garageFonctions.be` S3 vs P4, autoexec cave ESP32 vs S3) qualifiés selon le statut A1 — preuve : `controlePompeVideCave.be` identique ×2, `controleGarage` S3/P4 216 l. de diff, `garageFonctions` 61 (D5, D6)
+- [x] Fichiers vides ou morts chargés au boot (`controleGrenier.be`, modules d'envs en sommeil) — preuve : `controleGrenier.be` 0 octet chargé `:102` ; dossier `*sauvegarde*` 7 fichiers 96 Ko (D6, D7)
+- [x] Fonctions sans appelant (recherche sur `data/` entier, `tasmota.add_cmd`, routes web, `add_rule`), par module — preuve : `scratchpad/a4/fonctions_mortes.py` : 5 fonctions, 0 appel, 0 chaîne, 0 dans `data/sd` ; 25 `add_cmd` (22 noms) relevés, `ReglageWeb` absent (D8)
+- [x] Clés du `_persist.json` sans lecteur et lecteurs de clés absentes, par analyse JSON + chemin complet (cohérence avec `persist.schema.json`) — preuve : `scratchpad/a4/cles_persist.py` : clés mortes de `relaisLie` + `typeAction` 367 à 1 468 o/carte (D9) ; schéma inversé `persist.schema.json:956-967` ; aucun lecteur de clé absente (D10)
+- [x] Section A4 du rapport rédigée : en place · avantages · inconvénients · propositions — preuve : `outils_docs/AUDIT_BERRY_2026-10.md` § A4, D1-D10, P4.1-P4.7
 
 ## A5 — Simplification des modules et drivers
-- [ ] Chaque driver (`tasmota.add_driver`) : callbacks `every_50ms`/`every_100ms`/`every_second`/`web_*` utiles ou non, travail fait à vide, veille quand le bloc est inactif
-- [ ] `modbusFonctions.be` (3242 l.) : responsabilités (trame, file, transports Série/UDP/TCP, esclave), code mort, branches redondantes ; gain estimé
-- [ ] `modBus_TasmotaSlaveModBus.be` et `modBus_Conn16channels.be` : logique commune (relevé, comparaison commande/état)
-- [ ] `udpFonctions.be`, `discoveryFonctions.be`, `rangeExtenderFonctions.be`, `tcpFonctions.be` : chevauchements, formes de données dupliquées
-- [ ] `globalFonctions.be`, `diversFonctions.be`, `gestionFileFolder.be`, `webFonctions.be`/`controleWeb.be` : utilitaires en double
-- [ ] Pour chaque simplification proposée : filet existant (banc, skill `bancs`) ou banc à prévoir, et témoin négatif à prévoir
-- [ ] Gain RAM de chaque simplification estimé à partir des mesures de A9
-- [ ] Section A5 du rapport rédigée : en place · avantages · inconvénients · propositions
+- [x] Chaque driver (`tasmota.add_driver`) : callbacks `every_50ms`/`every_100ms`/`every_second`/`web_*` utiles ou non, travail fait à vide, veille quand le bloc est inactif — preuve : 22 drivers tracés (rapport A5 « Ce qui est en place ») ; N3 `ledsFonctions.be:444` + `modbusFonctions.be:2041`, N4 `controleGarage.be:94`, N5 `controleUDP.be:138-147`, callbacks vides `controleVoletRoulants.be:98-110`, relus dans le fil principal
+- [x] `modbusFonctions.be` (3242 l.) : responsabilités (trame, file, transports Série/UDP/TCP, esclave), code mort, branches redondantes ; gain estimé — preuve : 21 blocs cartographiés ; aucune fonction de module morte ; branches maître inatteignables (`:1488`) ; `banc_test_modbus` 309/309 ; N18
+- [x] `modBus_TasmotaSlaveModBus.be` et `modBus_Conn16channels.be` : logique commune (relevé, comparaison commande/état) — preuve : logique commune N19 ; réception Conn16 sans `try` `modBus_Conn16channels.be:318-402` (N7), Conn16 sans banc
+- [x] `udpFonctions.be`, `discoveryFonctions.be`, `rangeExtenderFonctions.be`, `tcpFonctions.be` : chevauchements, formes de données dupliquées — preuve : N2 ImAlive `udpFonctions.be:308-327` sans `memeValeur` ; N6 TCP forcé `controleModbus.be:159-169` + chargé `cave/tasmota32s3-serveur-rly/autoexec.be:101` ; N16, N17, N22 ; 3 fonctions sans appelant
+- [x] `globalFonctions.be`, `diversFonctions.be`, `gestionFileFolder.be`, `webFonctions.be`/`controleWeb.be` : utilitaires en double — preuve : N1 crons jamais exécutés (`scratchpad/a5/lambda.be` : 0 appel, témoin 1) ; N9, N12-N14, N20 ; `relaisLie` ×6
+- [x] Pour chaque simplification proposée : filet existant (banc, skill `bancs`) ou banc à prévoir, et témoin négatif à prévoir — preuve : colonnes Filet / Témoin négatif de P5.1-P5.15 ; bancs à écrire : Conn16, `globalFonctions`, driver UDP
+- [x] Gain RAM de chaque simplification estimé à partir des mesures de A9 — preuve : estimé qualitativement (flash pour les solidifiés, RAM pour 5 scripts LittleFS, N5, N6, D9) ; chiffrage renvoyé à A9
+- [x] Section A5 du rapport rédigée : en place · avantages · inconvénients · propositions — preuve : `outils_docs/AUDIT_BERRY_2026-10.md` § A5, N1-N22, P5.1-P5.15
 
 ## A6 — Niveaux de log : le mécanisme
-- [ ] `logFonctions.be` tracé : les deux filtres, cache des seuils, cible inconnue (cas `historique` et `self.nom`), émission de `detail` au niveau 3 du firmware
-- [ ] `logFonctions.CIBLES` vs cibles réellement passées et vs blocs du persist portant une clé `log`
-- [ ] `ReglageLog` (`<cible>`, `tous`, `profil`, `<sortie>`) : comportement et persistance après redémarrage, par lecture du code puis, sur accord, essai sur carte avec réglage restauré
-- [ ] Application des seuils de sortie : `SerialLog`/`WebLog`/`MqttLog`/`SysLog` au boot et au changement de profil ; interaction avec `SERIALLOG_TIMER` (constat seulement)
-- [ ] Les deux clés `nbLogsFiles` (`diverses.logs` → `FileLog` ; `modules.<x>.logs` → rotation `enregistreLogs`) tracées jusqu'à leur lecteur
-- [ ] Section A6 du rapport rédigée : en place · avantages · inconvénients · propositions
+- [x] `logFonctions.be` tracé : les deux filtres, cache des seuils, cible inconnue (cas `historique` et `self.nom`), émission de `detail` au niveau 3 du firmware — preuve : chemin `logFonctions.be:136-151`, cache `:107-131`, cible inconnue → info figé prouvé par `scratchpad/a6/t.be` (L1, L4, L5)
+- [x] `logFonctions.CIBLES` vs cibles réellement passées et vs blocs du persist portant une clé `log` — preuve : tableau cibles × persists : cible `mesures` inconnue (L1), 6 clés `log` orphelines (L2)
+- [x] `ReglageLog` (`<cible>`, `tous`, `profil`, `<sortie>`) : comportement et persistance après redémarrage, par lecture du code puis, sur accord, essai sur carte avec réglage restauré — preuve : code `logFonctions.be:265-319`, `:397-418` + test Berry (persistance dirty+save, erreurs) ; essai sur carte non fait : observation seule choisie par l'utilisateur le 2026-10-22, lecture `ReglageLog` refusée par le classifieur (P7.7)
+- [x] Application des seuils de sortie : `SerialLog`/`WebLog`/`MqttLog`/`SysLog` au boot et au changement de profil ; interaction avec `SERIALLOG_TIMER` (constat seulement) — preuve : `appliqueProfil` `:197-215`, appelé `configGlobal.be:236` et par ReglageLog ; `SetTasConlog` remet `seriallog_timer` (L6)
+- [x] Les deux clés `nbLogsFiles` (`diverses.logs` → `FileLog` ; `modules.<x>.logs` → rotation `enregistreLogs`) tracées jusqu'à leur lecteur — preuve : `configGlobal.be:240-243` (FileLog) ; `controleGarage`/`controleCuve` cron 60 s `enregistreLogs` ; sans lecteur cave/différentiel (L8)
+- [x] Section A6 du rapport rédigée : en place · avantages · inconvénients · propositions — preuve : § A6, L1-L9, P6.1-P6.6
 
 ## A7 — Niveaux de log : conformité et sorties
-- [ ] Les 10 `log()` directs et ~36 `print()` classés (contraires à la charte / légitimes)
-- [ ] Préfixes `NOM_MAJ_SNAKE:`, suffixe `_ERREUR` dans les `except`, échecs logués en `debug` au lieu d'`erreur`
-- [ ] `info` dans un callback fréquent (règle 4) et messages coûteux non gardés par `logFonctions.actif` (règle 5)
-- [ ] Profils des 8 persists (tous `debug` dans le dépôt) : profil voulu en exploitation demandé à l'utilisateur ; risque MqttLog des esclaves derrière le NAPT rappelé
-- [ ] Sortie syslog : `SYS_LOG_HOST` 192.168.0.3, dépendance au PC allumé, lecture par `syslog_tasmota.py` (module, sévérité) cohérente avec les préfixes
-- [ ] Sortie MQTT : volume en profil `debug` observé (sniffeur MQTT :7100, `stat/<topic>/LOGGING`), effet sur le broker et le tas
-- [ ] Sur accord, essai réel sur une carte : matrice seuil du module × seuil de sortie, témoin qui doit rester muet, réglages restaurés
-- [ ] Section A7 du rapport rédigée : en place · avantages · inconvénients · propositions
+- [x] Les 10 `log()` directs et ~36 `print()` classés (contraires à la charte / légitimes) — preuve : `scratchpad/a7/audit_logs.py` : 1 `log()` direct (`controleES8311.be:373`), 16 `print` actifs dont 6 contraires (C3, lignes relues)
+- [x] Préfixes `NOM_MAJ_SNAKE:`, suffixe `_ERREUR` dans les `except`, échecs logués en `debug` au lieu d'`erreur` — preuve : §B/§C de `rapport_logs.txt` : 8 `except` sans `_ERREUR` (C7), préfixes (C8), échecs trop bas (C6)
+- [x] `info` dans un callback fréquent (règle 4) et messages coûteux non gardés par `logFonctions.actif` (règle 5) — preuve : C5 `controleGarage.be:215,248` relus ; règle 5 : 152 non gardés dont ~20 lourds (C4)
+- [x] Profils des 8 persists (tous `debug` dans le dépôt) : profil voulu en exploitation demandé à l'utilisateur ; risque MqttLog des esclaves derrière le NAPT rappelé — preuve : tous en `debug` ; profil voulu = `normal` partout (réponse utilisateur 2026-10-22) ; cuve MQTT à `erreur` conforme à la leçon NAPT (C2, P7.1)
+- [x] Sortie syslog : `SYS_LOG_HOST` 192.168.0.3, dépendance au PC allumé, lecture par `syslog_tasmota.py` (module, sévérité) cohérente avec les préfixes — preuve : `user_config_override.h:142-150` ; observation syslog 04:00:44-04:11:27, P4 292 l/min, cuve 276 l/min, cave ancien code (C9, A1 corrigé)
+- [x] Sortie MQTT : volume en profil `debug` observé (sniffeur MQTT :7100, `stat/<topic>/LOGGING`), effet sur le broker et le tas — preuve : sniffeur MQTT même fenêtre : `stat/garage/LOGGING` 316 msg/min, 30,4 Ko/min (C1) ; `scratchpad/a7/obs/analyse.txt`
+- [x] Sur accord, essai réel sur une carte : matrice seuil du module × seuil de sortie, témoin qui doit rester muet, réglages restaurés — preuve : non fait : l'utilisateur a choisi l'observation seule le 2026-10-22
+- [x] Section A7 du rapport rédigée : en place · avantages · inconvénients · propositions — preuve : § A7, C1-C10, P7.1-P7.8 ; A1 et A4 (D6, P4.4) corrigés après l'observation
 
 ## A8 — Communications entre modules et ESP-NOW
-- [ ] Inventaire des voies en place, par paire de cartes (P4 ↔ cuve, P4 ↔ rideau, P4 ↔ carte 16 relais, cave, grenier) : ModBus RTU filaire, ModBus sur UDP (`ModbusUDP`, `ModbusPushUDP`), TCP, multicast 224.3.0.1:4000, MQTT, HTTP (`/json?commande=`), discovery/`ImAlive` — sens, déclencheur, accusé, reprise sur perte
-- [ ] Identification des esclaves par un maître Range Extender : chemin actuel (`forceEnvoiParams` → `ImAlive` → `/json/discovery.json`, `ANALYSE_BERRY_MODBUS_DISCOVERY.md` §2.6), délai de découverte, esclave éteint, carte réaffectée, entrées périmées
-- [ ] Commande firmware `RgxClients` (`xdrv_58_range_extender.ino:179-205`) évaluée comme source complémentaire : appel depuis Berry, coût sur le P4, rapprochement MAC ↔ fiche discovery (lecture seule sur carte, sur accord)
-- [ ] Mesures UDP actuelles relues (testeur :7400, grille ModBus, `DIAGNOSTIC_UDP_2026-10-17.md`) : latence, pertes, doublons, en Range Extender et Wi-Fi classique
-- [ ] Alternatives présentes dans le dépôt comparées sur une même grille (latence, accusé, portée, RAM/flash, compatibilité P4, coexistence avec le point d'accès) : TasMesh/ESP-NOW (`xdrv_57_*`), WizMote (`xdrv_77`), BLE (`xdrv_79`), LoRa (`xdrv_73_*`, `controleLoRaWan.be`), MQTT local, ModBus TCP
-- [ ] Contraintes ESP-NOW vérifiées (code + doc Espressif) : canal commun imposé par le point d'accès du maître, chiffrement et nombre de pairs, taille de trame, P4 sans radio propre (coprocesseur C6 via esp_hosted)
+- [x] Inventaire des voies en place, par paire de cartes (P4 ↔ cuve, P4 ↔ rideau, P4 ↔ carte 16 relais, cave, grenier) : ModBus RTU filaire, ModBus sur UDP (`ModbusUDP`, `ModbusPushUDP`), TCP, multicast 224.3.0.1:4000, MQTT, HTTP (`/json?commande=`), discovery/`ImAlive` — sens, déclencheur, accusé, reprise sur perte — preuve : § A8.3 (tableau des voies, mesures disponibles et jamais mesurées)
+- [x] Identification des esclaves par un maître Range Extender : chemin actuel (`forceEnvoiParams` → `ImAlive` → `/json/discovery.json`, `ANALYSE_BERRY_MODBUS_DISCOVERY.md` §2.6), délai de découverte, esclave éteint, carte réaffectée, entrées périmées — preuve : § A8.4 R1-R4 ; reset unique `udpFonctions.be:448`, cycle lié à Boot `:441-449` relus
+- [x] Commande firmware `RgxClients` (`xdrv_58_range_extender.ino:179-205`) évaluée comme source complémentaire : appel depuis Berry, coût sur le P4, rapprochement MAC ↔ fiche discovery (lecture seule sur carte, sur accord) — preuve : `xdrv_58_range_extender.ino:178-211` relu (R5) ; appel Berry possible, seul appelant mort ; lu sur le P4 le 2026-10-22 06:41 par MQTT (à la demande de l'utilisateur) : seule la cuve associée, rideau absent
+- [x] Mesures UDP actuelles relues (testeur :7400, grille ModBus, `DIAGNOSTIC_UDP_2026-10-17.md`) : latence, pertes, doublons, en Range Extender et Wi-Fi classique — preuve : § A8.3 : chiffres de PROTOCOLE §9 et de la reprise ; liste de ce qui n'a jamais été mesuré
+- [x] Alternatives présentes dans le dépôt comparées sur une même grille (latence, accusé, portée, RAM/flash, compatibilité P4, coexistence avec le point d'accès) : TasMesh/ESP-NOW (`xdrv_57_*`), WizMote (`xdrv_77`), BLE (`xdrv_79`), LoRa (`xdrv_73_*`, `controleLoRaWan.be`), MQTT local, ModBus TCP — preuve : grille § A8.5 ; coûts `my_user_config.h:449,452,952,1279` relus
+- [x] Contraintes ESP-NOW vérifiées (code + doc Espressif) : canal commun imposé par le point d'accès du maître, chiffrement et nombre de pairs, taille de trame, P4 sans radio propre (coprocesseur C6 via esp_hosted) — preuve : `esp_now.h:37` (P4/S3) relu ; esp-hosted-mcu#19 ouverte, vérifiée le 2026-10-22
 - [x] Analyse de TasMesh (`xdrv_57_*`) : capacités, avantages, inconvénients, difficulté, limites, et transport du ModBus — preuve : AUDIT_BERRY_2026-10.md § A8.1 (T1 `xdrv_57_9_tasmesh.ino:382`/`:794` nœud ESP8266 seul ; T2 aucune lib esp32p4 n'exporte `esp_now_send`, témoin `esp32s3/lib/libespnow.a` ; T10 `:247` vs `xdrv_02_9_mqtt.ino:970`)
 - [x] Faisabilité d'un ESP32 / ESP32-S3 esclave ESP-NOW (SDK, coexistence Wi-Fi/Range Extender, voies de mise en œuvre, cas du maître P4) — preuve : AUDIT_BERRY_2026-10.md § A8.2 (`esp32s3/include/esp_wifi/include/esp_now.h:32,37`, `esp32s3/sdkconfig:1868`, absence de `libraries/ESP_NOW`)
-- [ ] Recherche GitHub : implémentations ESP-NOW pour Tasmota (TasMesh amont, issues/discussions, module Berry éventuel, forks, drivers tiers) — liens, maintenance, compatibilité avec la version du fork
-- [ ] Section A8 du rapport rédigée : en place · avantages · inconvénients · propositions (voie recommandée par usage : commande temps réel, relevé, découverte ; prototype éventuel avec retour arrière par réglage)
+- [x] Recherche GitHub : implémentations ESP-NOW pour Tasmota (TasMesh amont, issues/discussions, module Berry éventuel, forks, drivers tiers) — liens, maintenance, compatibilité avec la version du fork — preuve : § A8.5 : aucun binding Berry (grep), QuickESPNow `lib/lib_div`, issue #19, shim ESPHome, ponts tiers
+- [x] Section A8 du rapport rédigée : en place · avantages · inconvénients · propositions (voie recommandée par usage : commande temps réel, relevé, découverte ; prototype éventuel avec retour arrière par réglage) — preuve : § A8.3-A8.6, R1-R6, P8.6-P8.10, voie recommandée par usage
 
 ## A9 — Utilisation de la RAM
-- [ ] Profil mémoire de chaque carte active tracé : puce, PSRAM ou non (ESP32 classiques cave/différentiel sans PSRAM ; S3 N16R8 ; P4), partitions, options de `user_config_override.h` qui pèsent sur le tas
-- [ ] Relevés sur carte, sur accord et en lecture seule (`tasmota.memory()`, `Status 4`, `BRY: GC` en sortie `detail`) : tas libre, plus gros bloc (fragmentation), PSRAM, tas Berry — après boot, en régime établi, et au pic (page web, discovery, historique)
-- [ ] Consommateurs Berry recensés et chiffrés : persist chargé entier en RAM (≈31 Ko sur le P4) et globales `serveur`/`diverses`/`modules`/`drivers`, `discovery.json`, files ModBus, tampons de l'historique, chaînes de pages web, closures et drivers enregistrés
-- [ ] Modules chargés depuis le LittleFS (bytecode en RAM) vs solidifiés (en flash) : écart mesuré ou estimé par module (lien avec A3)
-- [ ] Pics transitoires : lectures de fichiers d'un bloc, `json.dump`/`json.load` de gros objets, `string.format` de grandes chaînes, concaténations en boucle ; carte sans PSRAM traitée par mesure côté PC, jamais par lecture console d'un gros fichier
-- [ ] Tampons du firmware : `MQTT_MAX_PACKET_SIZE`, tampons web/série, avec le plus gros message réellement produit (`mqtt.publish`, `publish_result`) avant toute proposition de réduction
-- [ ] Comportement du ramasse-miettes : fréquence et durée des `BRY: GC`, objets retenus par des globales ou caches jamais purgés
-- [ ] Section A9 du rapport rédigée : en place · avantages · inconvénients · propositions (gain attendu par proposition, en Ko)
+- [x] Profil mémoire de chaque carte active tracé : puce, PSRAM ou non (ESP32 classiques cave/différentiel sans PSRAM ; S3 N16R8 ; P4), partitions, options de `user_config_override.h` qui pèsent sur le tas — preuve : § A9 tableau des profils ; `USE_BERRY_PSRAM` `user_config_override.h:614`, `xdrv_52_9_berry.ino:79-81` relus
+- [x] Relevés sur carte, sur accord et en lecture seule (`tasmota.memory()`, `Status 4`, `BRY: GC` en sortie `detail`) : tas libre, plus gros bloc (fragmentation), PSRAM, tas Berry — après boot, en régime établi, et au pic (page web, discovery, historique) — preuve : relevés PASSIFS `tele/STATE` (04:00-04:11, 06:20-06:36), `scratchpad/a9/memoire_state.py` ; M1 fuite ≈0,6 Ko/min P4+cuve ; + `Status 4`, `Status 1`, `Br tasmota.memory()` le 2026-10-22 06:41 (P4 100 Ko, cuve 109 Ko, frag 37 %, pile P4 2,3/8 Ko, Software reset CPU)
+- [x] Consommateurs Berry recensés et chiffrés : persist chargé entier en RAM (≈31 Ko sur le P4) et globales `serveur`/`diverses`/`modules`/`drivers`, `discovery.json`, files ModBus, tampons de l'historique, chaînes de pages web, closures et drivers enregistrés — preuve : tableau § A9 (berry.exe + modèle 32 bits) ; total estimé P4 95-110 Ko vs `HeapUsed` mesuré 100 Ko, cuve 70-75 vs 76
+- [x] Modules chargés depuis le LittleFS (bytecode en RAM) vs solidifiés (en flash) : écart mesuré ou estimé par module (lien avec A3) — preuve : cuve ≈25 Ko, P4 ≈12 Ko, rideau 0 ; en PSRAM (P9.7)
+- [x] Pics transitoires : lectures de fichiers d'un bloc, `json.dump`/`json.load` de gros objets, `string.format` de grandes chaînes, concaténations en boucle ; carte sans PSRAM traitée par mesure côté PC, jamais par lecture console d'un gros fichier — preuve : M2 `/histo` `historiqueFonctions.be:512-516,616-621` relus ; M3, M5, M7
+- [x] Tampons du firmware : `MQTT_MAX_PACKET_SIZE`, tampons web/série, avec le plus gros message réellement produit (`mqtt.publish`, `publish_result`) avant toute proposition de réduction — preuve : MQTT 2048 (`user_config_override.h:240`) justifié par la fiche config 1-1,4 Ko ; log 6 Ko ; FTP 4,6 Ko
+- [x] Comportement du ramasse-miettes : fréquence et durée des `BRY: GC`, objets retenus par des globales ou caches jamais purgés — preuve : M4 : allocations par tick + logs detail, GC estimé toutes les 5-10 s ; caches bornés ; `HeapUsed` constant 2 h 30
+- [x] Section A9 du rapport rédigée : en place · avantages · inconvénients · propositions (gain attendu par proposition, en Ko) — preuve : § A9, M1-M7, P9.1-P9.8 avec gain en Ko
 
 ## A10 — Autres points relevés en cours d'audit
-- [ ] Couverture des bancs : modules sans banc, bancs qui ne couvrent pas le chemin réel (livraison, transport)
-- [ ] Docs de référence confrontées au code (`SOLIDIFICATION_BERRY.md`, `CARTE_MODULES_BERRY.md`, `README.md` § logs, charte de `CLAUDE.md`, skill `tasmota-berry`)
-- [ ] Robustesse des chemins de boot : `try/except` sur fichiers/JSON/réseau, persist incomplet
-- [ ] Section A10 du rapport rédigée : en place · avantages · inconvénients · propositions
+- [x] Couverture des bancs : modules sans banc, bancs qui ne couvrent pas le chemin réel (livraison, transport) — preuve : tableau § A10 ; bancs relancés le 2026-10-22 : BANC_VEILLE_DRIVERS OK, TEST_DISCOVERY OK (216), BANC_MODBUS OK, BANC_LEDS OK ; B8-B10
+- [x] Docs de référence confrontées au code (`SOLIDIFICATION_BERRY.md`, `CARTE_MODULES_BERRY.md`, `README.md` § logs, charte de `CLAUDE.md`, skill `tasmota-berry`) — preuve : ~300 affirmations vérifiées, ~45 écarts dont 9 G ; §7 `SOLIDIFICATION_BERRY.md:544-557`, cible `leds` absente `README.md:78-80`, pièges 12-13 `:312,:335` relus (B11-B19)
+- [x] Robustesse des chemins de boot : `try/except` sur fichiers/JSON/réseau, persist incomplet — preuve : B1 `autoexec.be:19` avant la garde `:56` (test `scratchpad/a10/t1.be`), B2 0 `try` dans les 3 autoexec, B3 `controleGeneral.be:133-137`, B4 `gestionFileFolder.be:76-78` relus
+- [x] Section A10 du rapport rédigée : en place · avantages · inconvénients · propositions — preuve : § A10, B1-B19, P10.1-P10.7
 
 ## A11 — Synthèse et remise à l'utilisateur
-- [ ] Rapport relu de bout en bout : chaque constat coté (B/G/L/S/D) avec sa preuve et sa proposition
-- [ ] Tableau de synthèse des propositions (cotation × effort × risque × bénéfice)
-- [ ] Plan d'action `tasks/plans/actions-audit-berry.md` rédigé au format `_FORMAT.md`, statut `en-pause` : une action par proposition, sans aucune exécution
-- [ ] Remise à l'utilisateur : rapport + plan d'action présentés ; décisions laissées à l'utilisateur
+- [x] Rapport relu de bout en bout : chaque constat coté (B/G/L/S/D) avec sa preuve et sa proposition — preuve : relecture mécanique `scratchpad/a11/relecture.py` : 109 constats, cotes vérifiées ; propositions sans renvoi (A2, A3, A8.1, A9) rattachées à la main dans la synthèse
+- [x] Tableau de synthèse des propositions (cotation × effort × risque × bénéfice) — preuve : `outils_docs/AUDIT_BERRY_2026-10.md` § Synthèse : 78 propositions × corrige × cote × effort × risque × bénéfice, 13 lots, top 10
+- [x] Plan d'action `tasks/plans/actions-audit-berry.md` rédigé au format `_FORMAT.md`, statut `en-pause` : une action par proposition, sans aucune exécution — preuve : créé, statut en-pause, 13 actions / 78 étapes (une par proposition), lu sans alerte par `parseur-plan.mjs`
+- [x] Remise à l'utilisateur : rapport + plan d'action présentés ; décisions laissées à l'utilisateur — preuve : rapport + plan présentés le 2026-10-22 ; aucune proposition exécutée
 
 ## Améliorations restantes
 - [ ] [projet] Après décision de l'utilisateur seulement : exécution des propositions qu'il aura retenues, lot par lot
