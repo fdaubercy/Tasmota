@@ -91,6 +91,12 @@ class CONTROLE_GENERAL : Driver
         import introspect
 		import logFonctions
 
+		# Commandes de reglage enregistrees EN PREMIER (audit B3, 2026-10-23) : elles etaient posees apres
+		# configGlobalByJson, qui lit ~15 cles du persist sans garde. Une cle manquante (serveur.wifi...)
+		# levait une exception avant elles : impossible alors de reparer le persist a distance.
+		tasmota.add_cmd('ReglageGlobal', globalFonctions.reglageGlobal)
+		tasmota.add_cmd('ReglageLog', logFonctions.reglageLog)     # seule commande de reglage des logs (charte : logFonctions.be)
+
 		self.enregistrePersistant = false
         self.nbIOActivesJSON = {}
 		self.connected = false
@@ -141,11 +147,9 @@ class CONTROLE_GENERAL : Driver
 									self.nbIOActivesJSON["thermometres"]["reels"].find("nb", 0), self.nbIOActivesJSON["compteurs"]["actives"].find("nb", 0)), LOG_LEVEL_DEBUG)
 
         # Configure le module tasmota (paramètres communs à tous les modules Tasmota)
-		configGlobal.configGlobalByJson(self.nbIOActivesJSON)        
+		configGlobal.configGlobalByJson(self.nbIOActivesJSON)
 
-        # Ajoute les commandes personnalisées si le module est activé
-		tasmota.add_cmd('ReglageGlobal', globalFonctions.reglageGlobal)
-		tasmota.add_cmd('ReglageLog', logFonctions.reglageLog)     # seule commande de reglage des logs (charte : logFonctions.be)
+		# (ReglageGlobal et ReglageLog : enregistrees en tete d'init, voir plus haut)
 
 		# Stats d'utilisation des mémoires
 		diversFonctions.statMemory()
