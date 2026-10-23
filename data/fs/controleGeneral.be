@@ -44,26 +44,41 @@ class CONTROLE_GENERAL : Driver
     var booted
 	var flagTimestampInitialized
 	var relances					# Relances de securite en cours, par relai : {"<module>_<id>": nb}
+	var debutSansWifi				# tasmota.millis() du debut de la coupure Wi-Fi en cours, nil si connecte
 
-	# Se lance chaque jour à minuit
+	# Lance par le cron "heureReboot" (diverses.heureReboot, arme a Time#Initialized par globalFonctions)
 	def heureReboot()
 		import string
 
-        logFonctions.log(string.format("CONTROLE_GENERAL: Reboot du module programmé à %s !", diverses["heureReboot"]), LOG_LEVEL_DEBUG)
+        logFonctions.log(string.format("CONTROLE_GENERAL: Reboot du module programmé à %s !", diverses["heureReboot"]), LOG_LEVEL_INFO)
 		tasmota.cmd("Restart 1", boolMute)
 	end
 
-	def timerRebootSiDeconnexionWifi()
-        import string
+	# Redemarre si le Wi-Fi est coupe depuis serveur.wifi.timerRebootSansWifi secondes D'AFFILEE (0 = jamais).
+	# Appelee par every_second, et non par un cron (corrige le 2026-10-23, audit N1/B7) :
+	#  - un cron ne tourne pas tant que l'heure n'est pas reglee : une carte demarree sans Wi-Fi
+	#    n'a jamais de NTP, c'est justement le cas a couvrir ;
+	#  - "*/300" dans le champ des secondes n'est pas un pas de 300 s ;
+	#  - l'ancien test ponctuel redemarrait sur une coupure de quelques secondes tombee au mauvais moment.
+	# Le drapeau 'connected' (regle Wifi de globalFonctions) est confirme par tasmota.wifi() avant de
+	# compter : un evenement Wifi manque ne doit pas faire redemarrer une carte connectee.
+	def surveilleWifi()
+		var delai = serveur["wifi"].find("timerRebootSansWifi", 0)
+		if (delai == nil || delai <= 0)		return		end
 
-        # Teste le Flag de connexion wifi
-		if (!self.connected)
-            logFonctions.log(string.format("CONTROLE_GENERAL: Reboot du module par deconnexion Wifi !", diverses["heureReboot"]), LOG_LEVEL_DEBUG)
-			tasmota.cmd("Restart 1", boolMute)
+		if (self.connected || tasmota.wifi().find("up", false))
+			self.debutSansWifi = nil
+			return
 		end
 
-        # Teste la commande Ping sur le serveur DNS ou IP de la box internet
-        # tasmota.cmd("Ping4 {tasmota.cmd('IPAddress4', boolMute)['IPAddress4']:s}", boolMute)
+		if (self.debutSansWifi == nil)
+			self.debutSansWifi = tasmota.millis()
+		elif (tasmota.millis() - self.debutSansWifi >= delai * 1000)
+			import string				# ici seulement : surveilleWifi tourne chaque seconde
+			logFonctions.log(string.format("CONTROLE_GENERAL_ERREUR: Reboot du module : Wi-Fi coupé depuis %i s !", delai), LOG_LEVEL_ERREUR)
+			self.debutSansWifi = nil
+			tasmota.cmd("Restart 1", boolMute)
+		end
 	end
 
     def init()
@@ -84,18 +99,14 @@ class CONTROLE_GENERAL : Driver
         self.flagINIT = 0
 		self.flagTimestampInitialized = false
 		self.relances = {}
+		self.debutSansWifi = nil
 
 		# Les sensors sont lus A LA DEMANDE par lectureSensors() (plus a l'init ni chaque seconde)
 		self.sensors = {}
 		self.sensorsEcheance = 0
 		self.lectureSensorsEnCours = false
 
-        logFonctions.log("CONTROLE_GENERAL: Enregistre les taches CRON !", LOG_LEVEL_DEBUG)
-		# Défini la tache cron pour le reboot sans wifi
-		if (serveur["wifi"].find("timerRebootSansWifi", 0) != 0)
-            # introspect.get(controleGeneral).heureReboot()
-			tasmota.add_cron(string.format("*/%i * * * * *", serveur["wifi"].find("timerRebootSansWifi", 0)), /-> introspect.get(controleGeneral, "timerRebootSiDeconnexionWifi"), "timerRebootSiDeconnexionWifi")
-		end
+		# Le reboot sans Wi-Fi n'est plus un cron : voir surveilleWifi(), appelee par every_second
 
         # Ajoute les règles lancés selon l'étape de démarrage de la device tasmota
         tasmota.add_rule("System", globalFonctions.changementEtatDemarrage, "controleGeneral_System")	
@@ -340,6 +351,8 @@ class CONTROLE_GENERAL : Driver
 	# a la machine de gestion des regles, uniquement si le MQTT n'est pas connecte
     def every_second()
 		import string
+
+		self.surveilleWifi()
 
 		# Cas normal (MQTT connecte) : rien a detecter -> AUCUNE lecture des sensors.
 		# La reference est oubliee pour repartir d'un etat frais a la prochaine coupure

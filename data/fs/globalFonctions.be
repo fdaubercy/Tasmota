@@ -137,14 +137,9 @@ def globalFonctions_changementEtatDemarrage(value, trigger, msg)
 																boolMute)
 				end
 
-				# Paramètre l'heure du reboot si il est paramétré
-				if (diverses["heureReboot"] != "")
-					var heures = int(string.split(diverses["heureReboot"], ":")[0])
-					var minutes = int(string.split(diverses["heureReboot"], ":")[1])
-					
-					tasmota.add_cron(string.format("0 %i %i * * *", minutes, heures), /-> introspect.get(controleGeneral, "heureReboot"), "heureReboot")
-				end		
-				
+				# Arme le reboot quotidien si diverses.heureReboot est parametre (sinon : desactive)
+				globalFonctions.armeRebootQuotidien()
+
 				# Corrige un bug sur enregistrement du paramètre 'TelePeriod' dès le paramétrage du RangeExtender
 				tasmota.cmd(string.format("TelePeriod %i", diverses.find("telePeriod", 300)), boolMute)
 			elif msg["Time"].find("Set", 0)
@@ -528,6 +523,101 @@ def globalFonctions_modifEtatRelai(moduleCapteur, idRelai, typeOrdre, etat, bool
 end
 globalFonctions.modifEtatRelai = globalFonctions_modifEtatRelai
 
+# --- Redemarrages programmes (audit P5.1, 2026-10-23) ---------------------------------------------
+# Reboot quotidien : diverses.heureReboot "HH:MM" ("" = desactive), cron "heureReboot".
+# Reboot sans Wi-Fi : serveur.wifi.timerRebootSansWifi en secondes (0 = desactive), surveille chaque
+# seconde par controleGeneral.surveilleWifi(), qui relit la valeur : un changement agit tout de suite.
+# Les deux se reglent sans redemarrer par ReglageGlobal heureReboot / timerRebootSansWifi.
+globalFonctions.REBOOT_SANS_WIFI_MIN = 60     # en dessous, une coupure breve ferait boucler les reboots
+
+# "HH:MM" -> [heures, minutes] ; nil si vide, "OFF" ou invalide
+def globalFonctions_lisHeureReboot(texte)
+    import string
+    var p = string.split(str(texte), ":")
+    if (size(p) != 2)    return nil    end
+    for morceau: p
+        if (size(morceau) < 1 || size(morceau) > 2)    return nil    end
+        for i: 0 .. size(morceau) - 1
+            if (string.find("0123456789", morceau[i]) < 0)    return nil    end
+        end
+    end
+    var h = int(p[0])    var m = int(p[1])
+    if (h > 23 || m > 59)    return nil    end
+    return [h, m]
+end
+globalFonctions.lisHeureReboot = globalFonctions_lisHeureReboot
+
+# Arme (ou retire) le cron du reboot quotidien d'apres diverses.heureReboot. Appelee a Time#Initialized
+# et par ReglageGlobal heureReboot. Retourne "HH:MM" arme, ou "OFF".
+def globalFonctions_armeRebootQuotidien()
+    import string
+    tasmota.remove_cron("heureReboot")       # Time#Initialized peut revenir : pas de doublon
+    var texte = diverses.find("heureReboot", "")
+    if (texte == "")    return "OFF"    end
+    var hm = globalFonctions.lisHeureReboot(texte)
+    if (hm == nil)
+        logFonctions.log("GLOBAL_REBOOT_ERREUR: heureReboot invalide '" + str(texte) + "' (HH:MM attendu) : reboot quotidien desactive !", LOG_LEVEL_ERREUR)
+        return "OFF"
+    end
+    # La lambda doit APPELER la methode : '/-> introspect.get(controleGeneral, "heureReboot")' la
+    # renvoyait sans l'executer, le reboot quotidien n'avait jamais lieu (audit N1, corrige le
+    # 2026-10-23). controleGeneral = l'instance du driver (global pose par controleGeneral.init).
+    tasmota.add_cron(string.format("0 %i %i * * *", hm[1], hm[0]), /-> controleGeneral.heureReboot(), "heureReboot")
+    return string.format("%02i:%02i", hm[0], hm[1])
+end
+globalFonctions.armeRebootQuotidien = globalFonctions_armeRebootQuotidien
+
+# ReglageGlobal heureReboot [HH:MM | OFF] et ReglageGlobal timerRebootSansWifi [secondes | OFF].
+# Sans valeur : etat actuel. Retourne la map de reponse.
+def globalFonctions_reglageReboot(fonction, valeur)
+    import string
+    import persist
+
+    var v = string.toupper(string.tr(str(valeur), " ", ""))
+    if (fonction == "HEUREREBOOT")
+        if (v != "")
+            if (v == "OFF" || v == "0")
+                diverses["heureReboot"] = ""
+            elif (globalFonctions.lisHeureReboot(v) != nil)
+                var hm = globalFonctions.lisHeureReboot(v)
+                diverses["heureReboot"] = string.format("%02i:%02i", hm[0], hm[1])
+            else
+                return {"heureReboot": diverses.find("heureReboot", "") == "" ? "OFF" : diverses["heureReboot"],
+                        "erreur": "HH:MM (00:00 a 23:59) ou OFF attendu"}
+            end
+            persist.diverses = diverses
+            persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
+            logFonctions.log("GLOBAL_REBOOT: reboot quotidien " + (diverses["heureReboot"] == "" ? "desactive" : "a " + diverses["heureReboot"]) + " !", LOG_LEVEL_INFO)
+        end
+        return {"heureReboot": globalFonctions.armeRebootQuotidien()}
+    end
+
+    # TIMERREBOOTSANSWIFI
+    var wifi = serveur["wifi"]
+    if (v != "")
+        var secondes = nil
+        if (v == "OFF" || v == "0")
+            secondes = 0
+        else
+            var chiffres = (size(v) > 0)
+            for i: 0 .. size(v) - 1
+                if (string.find("0123456789", v[i]) < 0)    chiffres = false    end
+            end
+            if (chiffres && int(v) >= globalFonctions.REBOOT_SANS_WIFI_MIN)    secondes = int(v)    end
+        end
+        if (secondes == nil)
+            return {"timerRebootSansWifi": wifi.find("timerRebootSansWifi", 0) > 0 ? wifi["timerRebootSansWifi"] : "OFF",
+                    "erreur": string.format("secondes (%i minimum) ou OFF attendu", globalFonctions.REBOOT_SANS_WIFI_MIN)}
+        end
+        wifi["timerRebootSansWifi"] = secondes
+        persist.serveur = serveur
+        persist.save(true)
+        logFonctions.log("GLOBAL_REBOOT: reboot sans Wi-Fi " + (secondes == 0 ? "desactive" : string.format("apres %i s", secondes)) + " !", LOG_LEVEL_INFO)
+    end
+    return {"timerRebootSansWifi": wifi.find("timerRebootSansWifi", 0) > 0 ? wifi["timerRebootSansWifi"] : "OFF"}
+end
+globalFonctions.reglageReboot = globalFonctions_reglageReboot
+
 # Aide de la commande ReglageGlobal, appelee SEULEMENT par diversFonctions.traiteAide :
 # sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
 def globalFonctions_aideReglageGlobal(sujet)
@@ -536,10 +626,26 @@ def globalFonctions_aideReglageGlobal(sujet)
         return [
             ["afficheMemoire", "afficheMemoire", "affiche l'etat de la memoire dans les logs"],
             ["nbLogsFiles", "nbLogsFiles <n>", "regle le nombre de fichiers de logs (FileLog), sauvegarde"],
-            ["ModeConnexion", "ModeConnexion [RangeExtender | WifiClassique <ssid> <mdp>]", "esclave : bascule Range Extender / Wi-Fi classique, puis redemarre"]
+            ["ModeConnexion", "ModeConnexion [RangeExtender | WifiClassique <ssid> <mdp>]", "esclave : bascule Range Extender / Wi-Fi classique, puis redemarre"],
+            ["heureReboot", "heureReboot [HH:MM | OFF]", "reboot quotidien a heure fixe, ou desactive ; sans valeur : etat"],
+            ["timerRebootSansWifi", "timerRebootSansWifi [secondes | OFF]", "reboot apres N s sans Wi-Fi d'affilee, ou desactive ; sans valeur : etat"]
         ]
     end
     sujet = string.toupper(sujet)
+    if (sujet == "HEUREREBOOT")
+        return ["HH:MM (00:00 a 23:59) : redemarre la carte chaque jour a cette heure (cron 'heureReboot').",
+                "OFF (ou 0) : desactive le reboot quotidien. Sans valeur : affiche l'heure armee ou OFF.",
+                "Effet immediat, sans redemarrer ; memorise dans diverses.heureReboot et sauvegarde.",
+                "Le cron ne part qu'une fois l'heure reglee (NTP).",
+                "Exemple : ReglageGlobal heureReboot 03:30"]
+    end
+    if (sujet == "TIMERREBOOTSANSWIFI")
+        return [string.format("Secondes (%i minimum) : redemarre si le Wi-Fi est coupe depuis ce delai D'AFFILEE", globalFonctions.REBOOT_SANS_WIFI_MIN),
+                "        (une reconnexion remet le compte a zero ; marche aussi sans heure reglee).",
+                "OFF (ou 0) : desactive. Sans valeur : affiche le delai ou OFF.",
+                "Effet immediat, sans redemarrer ; memorise dans serveur.wifi.timerRebootSansWifi et sauvegarde.",
+                "Exemple : ReglageGlobal timerRebootSansWifi 600"]
+    end
     if (sujet == "MODECONNEXION")
         return ["Sans parametre : affiche le mode actuel (serveur.rangeExtender.activation ON = RangeExtender).",
                 "WifiClassique <ssid> <mdp> : memorise les reseaux actuels (serveur.wifi.sauvegardeRangeExtender,",
@@ -610,6 +716,13 @@ def globalFonctions_reglageGlobal(cmd, idx, payload, payload_json)
     # Bascule Range Extender / Wi-Fi classique : reponse JSON propre, lue par l'outil testeur_udp.py
     if string.toupper(fonction) == "MODECONNEXION"
         tasmota.resp_cmnd(json.dump({"ReglageGlobal": globalFonctions.reglageModeConnexion(parametres.size() > 0 ? parametres[0] : "")}))
+        return
+    end
+
+    # Redemarrages programmes : activation, reglage ou etat, sans redemarrer
+    var nomReboot = string.toupper(fonction)
+    if (nomReboot == "HEUREREBOOT" || nomReboot == "TIMERREBOOTSANSWIFI")
+        tasmota.resp_cmnd(json.dump({"ReglageGlobal": globalFonctions.reglageReboot(nomReboot, parametres.size() > 0 ? parametres[0] : "")}))
         return
     end
 

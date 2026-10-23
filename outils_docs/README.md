@@ -332,6 +332,8 @@ des panneaux de cuve, leurs courbes y seraient vides.
 >
 >####    - ReglageGlobal afficheMemoire: Affiche l'utilisation des mémoires ROM, RAM & Garbage collector du module
 >####    - ReglageGlobal nbLogsFiles 14<br>
+>####    - ReglageGlobal heureReboot 03:30 | OFF : redémarrage quotidien à heure fixe, ou désactivé (sans valeur : état)
+>####    - ReglageGlobal timerRebootSansWifi 300 | OFF : redémarrage après N s sans Wi-Fi d'affilée (60 s minimum), ou désactivé<br>
 >
 >####    - ReglageLog : affiche le profil de logs actif, les sorties et le réglage de chaque module
 >####    - ReglageLog help | help <sous-commande> | help niveaux : aide en console
