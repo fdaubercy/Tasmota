@@ -84,12 +84,11 @@ def globalFonctions_changementEtatDemarrage(value, trigger, msg)
 			var adresseMAC = (isinstance(statusNET, map) && isinstance(statusNET.find("StatusNET"), map)) ? statusNET["StatusNET"].find("Mac") : nil
 			if (adresseMAC == nil)
 				logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: Adresse MAC illisible (reponse 'Status 5' invalide) !", LOG_LEVEL_ERREUR)
-			elif (!serveur.find("adressMAC", false))
-				serveur.insert("adressMAC", adresseMAC)
-				logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: Récupère l'adresse MAC du module !", LOG_LEVEL_DEBUG)
-			elif (serveur["adressMAC"] != adresseMAC)
+			elif (serveur.find("adressMAC", "") != adresseMAC)
+				# Affectation et non insert() : les persists portent "adressMAC": "" et insert() ne
+				# remplace pas une cle existante, l'adresse n'etait donc jamais enregistree (banc_boot, 2026-10-24)
+				logFonctions.log(string.format("GLOBAL_CHGT_ETAT_DEMARRAGE: Adresse MAC du module %s : %s !", serveur.find("adressMAC", "") == "" ? "relevée" : "modifiée", adresseMAC), LOG_LEVEL_DEBUG)
 				serveur["adressMAC"] = adresseMAC
-				logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: Modifie l'adresse MAC du module !", LOG_LEVEL_DEBUG)
 			end
 		elif msg[trigger].find("Save", 0)
 			try

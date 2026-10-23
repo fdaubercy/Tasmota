@@ -67,7 +67,7 @@ var DEFAUTS_CONNUS = {
     "B1": false,        # audit B1 / P10.1 : pas de garde de tete dans l'autoexec (persist vide ou sans 'diverses')
     "B2": false,        # audit B2 / P10.2 : pas de try/except par controleXxx -> un echec arrete tout l'autoexec
     "B3": false,        # audit B3 / P10.2 : ReglageGlobal/ReglageLog enregistrees APRES configGlobalByJson
-    "MAC": true,        # trouve par ce banc : globalFonctions.be:87-88, adressMAC "" jamais remplacee (map.insert)
+    "MAC": false,        # trouve par ce banc : globalFonctions.be:87-88, adressMAC "" jamais remplacee (map.insert)
     "ES8311": false,    # corrige le 2026-10-23 (garde controleES8311.pret) ; trouve par ce banc : controleES8311.be, codec absent du bus I2C -> exception a l'import
 }
 var ENV = "tasmota32p4-garage-serveur-modbus"
