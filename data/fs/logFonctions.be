@@ -64,7 +64,7 @@ logFonctions.DESCRIPTIONS = {
 def logFonctions_etat()
     import global
     if (global._etatLogFonctions == nil)
-        global._etatLogFonctions = {"seuils": {}}      # cible -> seuil (1 a 4)
+        global._etatLogFonctions = {"seuils": {}, "inconnues": {}}      # cible -> seuil (1 a 4) ; cibles inconnues deja signalees
     end
     return global._etatLogFonctions
 end
@@ -123,6 +123,16 @@ def logFonctions_seuil(cible)
                 end
             end
             if (mot != nil)    seuil = logFonctions.NIVEAUX_MODULE.find(string.tolower(str(mot)), 2)    end
+        elif (logFonctions.trouveCle(logFonctions.CIBLES, string.tolower(str(cible))) == nil)
+            # Faute de frappe ou cible jamais declaree (audit L5/P6.4) : signalee UNE fois par demarrage,
+            # meme si ReglageLog vide le cache des seuils. Une cible connue dont le bloc est absent ne dit rien.
+            var inconnues = logFonctions.etat().find("inconnues")
+            if (inconnues == nil)    inconnues = {}    logFonctions.etat()["inconnues"] = inconnues    end
+            if (!inconnues.contains(cible))
+                inconnues[cible] = true
+                logFonctions.log(string.format("LOG_ERREUR: cible de log inconnue '%s' : seuil 'info' par defaut (cibles : %s) !",
+                                 str(cible), logFonctions.enTexte(logFonctions.CIBLES)), LOG_LEVEL_ERREUR)
+            end
         end
         seuils[cible] = seuil
     end

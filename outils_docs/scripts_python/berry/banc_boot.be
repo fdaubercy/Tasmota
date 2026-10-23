@@ -388,5 +388,25 @@ else
     end
 end
 
+# Audit L5/P6.4 (2026-10-24) : une cible de log inconnue est signalee UNE fois par demarrage, une cible connue jamais
+if CAS == 1
+    import logFonctions             # niveaux en clair : LOG_LEVEL_* sont posees par l autoexec, apres la compilation du banc
+    def inconnues(motif)
+        var n = 0
+        for l: BANC_BOOT.journal    if string.find(l[0], "LOG_ERREUR: cible de log inconnue") >= 0 && string.find(l[0], motif) >= 0    n += 1    end    end
+        return n
+    end
+    controle("TEMOIN P6.4 : demarrage complet du P4, aucune cible de log inconnue signalee", inconnues("") == 0)
+    logFonctions.log("BANC: message de test", 3, "modbsu")
+    logFonctions.log("BANC: message de test", 2, "modbsu")
+    controle("cible inconnue 'modbsu' : signalee une fois en erreur (2 messages)", inconnues("'modbsu'") == 1)
+    logFonctions.etat()["seuils"] = {}          # ce que fait ReglageLog
+    logFonctions.log("BANC: message de test", 3, "modbsu")
+    controle("... pas de nouvelle erreur apres vidage du cache des seuils", inconnues("'modbsu'") == 1)
+    logFonctions.log("BANC: message de test", 3, "Modbus")
+    logFonctions.log("BANC: message de test", 3, "lorawan")      # cible connue, bloc absent du persist du P4
+    controle("cibles connues ('Modbus', 'lorawan' sans bloc) : rien de signale", inconnues("") == 1)
+end
+
 print(string.format("CAS_%i: %s", CAS, echecs == 0 ? "OK" : "ECHEC (" + str(echecs) + ")"))
 os.exit(echecs > 250 ? 250 : echecs)
