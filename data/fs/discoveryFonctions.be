@@ -68,7 +68,9 @@ def discoveryFonctions_lisTable()
     var fichier = gestionFileFolder.readFile("/json/discovery.json")
     if (fichier == false || fichier == nil || fichier == "")    return {}    end
     var table = json.load(fichier)
-    return isinstance(table, map) ? table : {}
+    if (isinstance(table, map))    return table    end
+    discoveryFonctions.log("DISCOVERY_ERREUR: /json/discovery.json illisible, table vide utilisee !", LOG_LEVEL_ERREUR)
+    return {}
 end
 discoveryFonctions.lisTable = discoveryFonctions_lisTable
 
@@ -381,13 +383,11 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
             var item = discoveryFonctions.roleLocal()
 
             try
-                # Compare ce json aux données enregistrées dans '/json/discovery.json'
-                var jsonDiscovery = {}
+                # Table '/json/discovery.json' lue une seule fois (audit M3/P9.3 : elle l'etait 3 fois)
+                var jsonDiscovery = discoveryFonctions.lisTable()
 
-                # Si fichier 'discovery.json' existe et n'est pas vide, charge les données pour comparer avec le json à envoyer
-                if (gestionFileFolder.readFile("/json/discovery.json") != false && gestionFileFolder.readFile("/json/discovery.json") != "")
-                    jsonDiscovery = json.load(gestionFileFolder.readFile("/json/discovery.json"))
-
+                # Table non vide : republie (retenue) la fiche de ce module
+                if (size(jsonDiscovery) > 0)
                     # On publie le json modifié si c'est un esclave RangeExtender
                     mqtt.publish(string.format("tasmota/discovery/%s/%s", string.replace(serveur.find("adresseMAC", "000000000000"), ":", ""), item), json.dump(jsonDiscovery[string.replace(serveur.find("adresseMAC", "000000000000"), ":", "")][item]), true)
                 end
@@ -640,101 +640,100 @@ def discoveryFonctions_affichePageDiscovery()
 
     try
         # On parcours le fichier
-        var jsonDiscovery = {}
-        if (gestionFileFolder.readFile("/json/discovery.json") != false && gestionFileFolder.readFile("/json/discovery.json") != "")
-            jsonDiscovery = json.load(gestionFileFolder.readFile("/json/discovery.json"))
+        # Table lue une seule fois (audit M3/P9.3 : elle l'etait 3 fois). Vide ou illisible : la page
+        # est quand meme terminee (avant : ni modules ni content_stop, page tronquee).
+        var jsonDiscovery = discoveryFonctions.lisTable()
 
-            # Titre de la page
-            webserver.content_send("<div style=\"padding:0px 5px;text-align:center;\"><h3><hr>Modules Tasmota connectés <br/>au réseau local<hr></h3></div>")
+        # Titre de la page
+        webserver.content_send("<div style=\"padding:0px 5px;text-align:center;\"><h3><hr>Modules Tasmota connectés <br/>au réseau local<hr></h3></div>")
 
-            var IP = ""
-            var titre = ""
-            var colorBTN = "bgrn"
+        var IP = ""
+        var titre = ""
+        var colorBTN = "bgrn"
 
-            discoveryFonctions.log("AFFICHE_DISCOVERY: Parcoure les modules Tasmota enregistrés sur le réseau local !", LOG_LEVEL_DEBUG_PLUS)
-            for item: jsonDiscovery.keys()
-                # Une entree sans bloc 'config' (module jamais vu par la decouverte MQTT native,
-                # ou ancienne fiche ImAlive rangee a la racine) n'a ni nom ni IP a afficher :
-                # on la saute. L'acces direct levait une exception qui tronquait la page (2026-09-30).
-                if (!isinstance(jsonDiscovery[item], map) || !isinstance(jsonDiscovery[item].find("config", nil), map))
-                    discoveryFonctions.log(f"AFFICHE_DISCOVERY: - Entree '{item:s}' sans bloc 'config', ignoree", LOG_LEVEL_DEBUG_PLUS)
-                    continue
-                end
+        discoveryFonctions.log("AFFICHE_DISCOVERY: Parcoure les modules Tasmota enregistrés sur le réseau local !", LOG_LEVEL_DEBUG_PLUS)
+        for item: jsonDiscovery.keys()
+            # Une entree sans bloc 'config' (module jamais vu par la decouverte MQTT native,
+            # ou ancienne fiche ImAlive rangee a la racine) n'a ni nom ni IP a afficher :
+            # on la saute. L'acces direct levait une exception qui tronquait la page (2026-09-30).
+            if (!isinstance(jsonDiscovery[item], map) || !isinstance(jsonDiscovery[item].find("config", nil), map))
+                discoveryFonctions.log(f"AFFICHE_DISCOVERY: - Entree '{item:s}' sans bloc 'config', ignoree", LOG_LEVEL_DEBUG_PLUS)
+                continue
+            end
 
-                titre = jsonDiscovery[item]['config']['dn']
-                discoveryFonctions.log(f"AFFICHE_DISCOVERY: - Pour le module Tasmota '{titre:s}':", LOG_LEVEL_DEBUG_PLUS)
-                colorBTN = "bgrn"
-                i = i + 1
+            titre = jsonDiscovery[item]['config']['dn']
+            discoveryFonctions.log(f"AFFICHE_DISCOVERY: - Pour le module Tasmota '{titre:s}':", LOG_LEVEL_DEBUG_PLUS)
+            colorBTN = "bgrn"
+            i = i + 1
 
-                portDistant = 10000 + int(string.split(jsonDiscovery[item]["config"]["ip"], ".")[3])            # portDistant = 10000 + last octet of local IP
-                portLocal = 80
+            portDistant = 10000 + int(string.split(jsonDiscovery[item]["config"]["ip"], ".")[3])            # portDistant = 10000 + last octet of local IP
+            portLocal = 80
 
-                if (typeURL == "local")
-                    IP = jsonDiscovery[item]["config"]["ip"]
-                elif (typeURL == "localDNS")
-                    IP = jsonDiscovery[item]["config"]["hn"] + ".local"
-                elif (typeURL == "freeboxDNS")
-                    IP = string.split(url_host, ":")[0]
-                end
+            if (typeURL == "local")
+                IP = jsonDiscovery[item]["config"]["ip"]
+            elif (typeURL == "localDNS")
+                IP = jsonDiscovery[item]["config"]["hn"] + ".local"
+            elif (typeURL == "freeboxDNS")
+                IP = string.split(url_host, ":")[0]
+            end
 
-                # Teste s'il s'agit d'un module RangeExtender
-                var pattern = re.compile('^(maitre|esclave[0-9]+)$')
+            # Teste s'il s'agit d'un module RangeExtender
+            var pattern = re.compile('^(maitre|esclave[0-9]+)$')
 
-                for role: jsonDiscovery[item].keys()
-                    if (pattern.match(role) != nil)
-                        if (jsonDiscovery[item][role].find("rangeExtender", false))
-                            discoveryFonctions.log(f"AFFICHE_DISCOVERY:\t * RangeExtender existant !", LOG_LEVEL_DEBUG_PLUS)
-                            # Si esclave RangeExtender (id > 0)
-                            if (jsonDiscovery[item][role]["rangeExtender"].find("activation", "OFF") == "ON" && jsonDiscovery[item][role]["rangeExtender"].find("id", 0) > 0)
-                                discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * RangeExtender activé (id = {jsonDiscovery[item][role]["rangeExtender"].find("id", 0):i})', LOG_LEVEL_DEBUG_PLUS)
+            for role: jsonDiscovery[item].keys()
+                if (pattern.match(role) != nil)
+                    if (jsonDiscovery[item][role].find("rangeExtender", false))
+                        discoveryFonctions.log(f"AFFICHE_DISCOVERY:\t * RangeExtender existant !", LOG_LEVEL_DEBUG_PLUS)
+                        # Si esclave RangeExtender (id > 0)
+                        if (jsonDiscovery[item][role]["rangeExtender"].find("activation", "OFF") == "ON" && jsonDiscovery[item][role]["rangeExtender"].find("id", 0) > 0)
+                            discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * RangeExtender activé (id = {jsonDiscovery[item][role]["rangeExtender"].find("id", 0):i})', LOG_LEVEL_DEBUG_PLUS)
 
-                                portLocal = jsonDiscovery[item][role]["rangeExtender"].find("routagePort", 8080)
-                                # ipMaitre est vide tant que l'esclave n'a pas recu 'ReglageUDP ipMaitre' du
-                                # maitre : l'indexation [3] levait alors une exception qui tronquait la page.
-                                var ipMaitre = str(jsonDiscovery[item][role]["rangeExtender"].find("ipMaitre", ""))
-                                if (size(string.split(ipMaitre, ".")) == 4)
-                                    portDistant = 10000 + int(string.split(ipMaitre, ".")[3]) + 8080 + jsonDiscovery[item][role]["rangeExtender"].find("id", 0) - 1        # portDistant = 10000 + last octet of local IP + 8080 + id - 1
-                                end
+                            portLocal = jsonDiscovery[item][role]["rangeExtender"].find("routagePort", 8080)
+                            # ipMaitre est vide tant que l'esclave n'a pas recu 'ReglageUDP ipMaitre' du
+                            # maitre : l'indexation [3] levait alors une exception qui tronquait la page.
+                            var ipMaitre = str(jsonDiscovery[item][role]["rangeExtender"].find("ipMaitre", ""))
+                            if (size(string.split(ipMaitre, ".")) == 4)
+                                portDistant = 10000 + int(string.split(ipMaitre, ".")[3]) + 8080 + jsonDiscovery[item][role]["rangeExtender"].find("id", 0) - 1        # portDistant = 10000 + last octet of local IP + 8080 + id - 1
+                            end
 
-                                if (typeURL == "local")
-                                    IP = (jsonDiscovery[item][role]["rangeExtender"].find("ipMaitre", "") == "" ? jsonDiscovery[item][role]["rangeExtender"]["ipMaitre"] : jsonDiscovery[item][role]["rangeExtender"]["ipMaitre"])
-                                elif (typeURL == "freeboxDNS")
-                                    IP = string.split(url_host, ":")[0]         #  IP = http://fdaubercy.freeboxos.fr
-                                end
+                            if (typeURL == "local")
+                                IP = (jsonDiscovery[item][role]["rangeExtender"].find("ipMaitre", "") == "" ? jsonDiscovery[item][role]["rangeExtender"]["ipMaitre"] : jsonDiscovery[item][role]["rangeExtender"]["ipMaitre"])
+                            elif (typeURL == "freeboxDNS")
+                                IP = string.split(url_host, ":")[0]         #  IP = http://fdaubercy.freeboxos.fr
+                            end
 
-                                # Change la couleur des boutons des esclaves RangeExtender
-                                colorBTN = "bgrey"
+                            # Change la couleur des boutons des esclaves RangeExtender
+                            colorBTN = "bgrey"
 
-                                # Active le routage NAPT si pas encore fait (si id == 0, c'est le maître)
-                                if (serveur["rangeExtender"].find("id", 99) == 0)
-                                    import rangeExtenderFonctions
-                                    discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * Active le routage NAPT vers le module {titre:s} ({jsonDiscovery[item][role]["IPAddress"]:s}) sur le port {portLocal:d} !', LOG_LEVEL_DEBUG)
-                                    # Par rangeExtenderFonctions.redirige (2026-10-04) : un RgxPort a chaque affichage
-                                    # de cette page creait un doublon dans la table NAPT de 10 cases du maitre
-                                    rangeExtenderFonctions.redirige(portLocal, jsonDiscovery[item][role]["IPAddress"])
-                                end
+                            # Active le routage NAPT si pas encore fait (si id == 0, c'est le maître)
+                            if (serveur["rangeExtender"].find("id", 99) == 0)
+                                import rangeExtenderFonctions
+                                discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * Active le routage NAPT vers le module {titre:s} ({jsonDiscovery[item][role]["IPAddress"]:s}) sur le port {portLocal:d} !', LOG_LEVEL_DEBUG)
+                                # Par rangeExtenderFonctions.redirige (2026-10-04) : un RgxPort a chaque affichage
+                                # de cette page creait un doublon dans la table NAPT de 10 cases du maitre
+                                rangeExtenderFonctions.redirige(portLocal, jsonDiscovery[item][role]["IPAddress"])
                             end
                         end
                     end
                 end
-
-                discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * IP = {IP:s}', LOG_LEVEL_DEBUG_PLUS)
-                discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * portLocal = {portLocal:i}', LOG_LEVEL_DEBUG_PLUS)
-                discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * portDistant = {portDistant:i}', LOG_LEVEL_DEBUG_PLUS)
-                discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * couleur du bouton = {colorBTN:s}', LOG_LEVEL_DEBUG_PLUS)
-
-                webserver.content_send(string.format("<p></p><form target='_blank'><button class='button %s' formaction='http://%s:%i'>%s</button></form>", 
-                                                        colorBTN, IP, (typeURL == "freeboxDNS" ? portDistant : portLocal), titre))
             end
 
-            # On ajoute les autres éléments de base d'une page Tasmota
-            webserver.content_send("<div></div><p></p>")
-            webserver.content_send("<form id=\"but1\" style=\"display:block;margin-top: 15px;\" action=\"mn\" method=\"get\"><button name=\"\">Tools</button></form> <p></p>")
-            webserver.content_send("<form id=\"but2\" style=\"display:block;\" action=\".\" method=\"get\"><button name=\"\">Menu principal</button></form> <p></p>")
+            discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * IP = {IP:s}', LOG_LEVEL_DEBUG_PLUS)
+            discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * portLocal = {portLocal:i}', LOG_LEVEL_DEBUG_PLUS)
+            discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * portDistant = {portDistant:i}', LOG_LEVEL_DEBUG_PLUS)
+            discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * couleur du bouton = {colorBTN:s}', LOG_LEVEL_DEBUG_PLUS)
 
-            #- end of web page -#
-            webserver.content_stop()	
+            webserver.content_send(string.format("<p></p><form target='_blank'><button class='button %s' formaction='http://%s:%i'>%s</button></form>", 
+                                                    colorBTN, IP, (typeURL == "freeboxDNS" ? portDistant : portLocal), titre))
         end
+
+        # On ajoute les autres éléments de base d'une page Tasmota
+        webserver.content_send("<div></div><p></p>")
+        webserver.content_send("<form id=\"but1\" style=\"display:block;margin-top: 15px;\" action=\"mn\" method=\"get\"><button name=\"\">Tools</button></form> <p></p>")
+        webserver.content_send("<form id=\"but2\" style=\"display:block;\" action=\".\" method=\"get\"><button name=\"\">Menu principal</button></form> <p></p>")
+
+        #- end of web page -#
+        webserver.content_stop()	
     except .. as error, message
         discoveryFonctions.log(string.format("AFFICHE_DISCOVERY: %s --> %s", error, message), LOG_LEVEL_ERREUR)
     end

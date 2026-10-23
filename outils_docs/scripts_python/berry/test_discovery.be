@@ -1231,4 +1231,50 @@ tasmota.horloge = nil
 tasmota.reseauCoupe = nil
 
 print("")
+print("=== 22. discovery.json lu UNE fois par traitement (audit M3/P9.3, 2026-10-24) ===")
+def lectures22() return gestionFileFolder.lectures.find("/json/discovery.json", 0) end
+# a) Page /discovery
+gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(init4), "/sd/css/main.css": ""}
+gestionFileFolder.lectures = {}
+webserver.envoye = []
+webserver.termine = false
+verifie("page : ne leve pas", "OK", essaie(def () discoveryFonctions.affichePageDiscovery() end))
+var boutons22 = 0
+for s: webserver.envoye    if string.find(s, "<button class='button") >= 0    boutons22 += 1    end    end
+verifie("page : 1 lecture de discovery.json, meme bouton", "1 1", str(lectures22()) + " " + str(boutons22))
+# b) Mqtt#Connected d'un esclave : sa fiche republiee (retenue)
+serveur = {"adresseMAC": MAC_CUVE, "nom": "Capteurs de Cuve", "IP": {"IPAddress": "192.168.4.2"}, "hostname": "CAPTEURS-CUVE",
+           "udp": {"id": 2, "activation": "ON"}, "rangeExtender": {"activation": "ON", "id": 2},
+           "mqtt": {"topic": "jardin/cuve", "groupTopic1": "tasmotas/garage"}, "discovery": {}}
+var init22 = {}
+init22[CLE_CUVE] = ficheCuve(true)
+gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(init22)}
+gestionFileFolder.lectures = {}
+mqtt.publies = []
+essaie(def () discoveryFonctions.changementEtatDemarrage({"Connected": 1}, "Mqtt", {"MQTT": {"Connected": 1}}) end)
+verifie("Mqtt#Connected : 1 lecture, fiche publiee", "1 tasmota/discovery/" + CLE_CUVE + "/esclave2",
+        str(lectures22()) + " " + (size(mqtt.publies) > 0 ? mqtt.publies[0][0] : "rien"))
+gestionFileFolder.fichiers = {"/json/discovery.json": ""}
+mqtt.publies = []
+journal = []
+essaie(def () discoveryFonctions.changementEtatDemarrage({"Connected": 1}, "Mqtt", {"MQTT": {"Connected": 1}}) end)
+verifie("Mqtt#Connected, table vide : rien publie, pas d'erreur", "0 false", str(size(mqtt.publies)) + " " + str(journalise("_ERREUR")))
+# c) resetClientsConnectes : toutes les MAC Offline, ecriture seulement si besoin
+gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(init22)}
+gestionFileFolder.lectures = {}
+gestionFileFolder.ecritures = 0
+udpFonctions.resetClientsConnectes()
+t = table()
+verifie("reset : 1 lecture, 1 ecriture, MAC Offline", "1 1 Offline", str(lectures22()) + " " + str(gestionFileFolder.ecritures) + " " + str(champ(t, CLE_CUVE + "/lwt")))
+gestionFileFolder.lectures = {}
+udpFonctions.resetClientsConnectes()
+verifie("reset deja Offline : 1 lecture, aucune ecriture", "1 1", str(lectures22()) + " " + str(gestionFileFolder.ecritures))
+# d) Table illisible : signalee en erreur (avant : exception journalisee par l'appelant)
+gestionFileFolder.fichiers = {"/json/discovery.json": "{pas du json", "/sd/css/main.css": ""}
+journal = []
+webserver.termine = false
+verifie("table illisible : page ne leve pas, terminee", "OK true", essaie(def () discoveryFonctions.affichePageDiscovery() end) + " " + str(webserver.termine))
+verifie("... erreur journalisee", true, journalise("DISCOVERY_ERREUR"))
+
+print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))

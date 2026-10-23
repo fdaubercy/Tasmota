@@ -883,8 +883,9 @@ def udpFonctions_resetClientsConnectes()
     import string
     import json
         
-    # Lit le fichier json
-    var paramDiscovery = json.load(gestionFileFolder.readFile("/json/discovery.json"))
+    # Lit le fichier json (une seule lecture : le texte sert aussi a la comparaison, audit P9.3)
+    var texte = gestionFileFolder.readFile("/json/discovery.json")
+    var paramDiscovery = json.load(texte)
     if (paramDiscovery == nil)
         udpFonctions.log("RESET_NB_ESCLAVES_JSON: Le fichier n'existe pas ou est vide !", LOG_LEVEL_DEBUG_PLUS)
         return
@@ -896,8 +897,9 @@ def udpFonctions_resetClientsConnectes()
     end
 
     # Enregistre ou Mets à jour en variable les capteurs activés dans un tableau
-    if (gestionFileFolder.readFile("/json/discovery.json") != json.dump(paramDiscovery))
-        gestionFileFolder.writeFile("/json/discovery.json", json.dump(paramDiscovery))
+    var nouveau = json.dump(paramDiscovery)
+    if (texte != nouveau)
+        gestionFileFolder.writeFile("/json/discovery.json", nouveau)
     end
 
     # Décharge le json
