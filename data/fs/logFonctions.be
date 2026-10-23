@@ -45,7 +45,7 @@ logFonctions.MOTS = ["aucun", "erreur", "info", "debug", "detail"]
 logFonctions.SORTIES = {"serie": "SerialLog", "web": "WebLog", "mqtt": "MqttLog", "syslog": "SysLog"}
 # Cibles connues (une par bloc du persist qui porte une cle "log")
 logFonctions.CIBLES = ["general", "serveurWeb", "udp", "tcp", "rangeExtender", "discovery", "modbus",
-                       "conn16channels", "slaveModbus", "lorawan", "volets", "es8311", "garage", "cuve", "leds"]
+                       "conn16channels", "slaveModbus", "lorawan", "volets", "es8311", "garage", "cuve", "leds", "historique"]
 # Ce que couvre chaque cible (aide de ReglageLog)
 logFonctions.DESCRIPTIONS = {
     "general": "modules communs (globalFonctions, configGlobal, controleGeneral, gestionFileFolder...)",
@@ -57,7 +57,8 @@ logFonctions.DESCRIPTIONS = {
     "slaveModbus": "esclaves Tasmota ModBus (modBus_TasmotaSlaveModBus)",
     "lorawan": "LoRaWan (loRaWanFonctions)", "volets": "volets roulants et LED temoin (vrFonctions, controleLedTemoin)",
     "es8311": "codec audio ES8311 (controleES8311)", "garage": "module garage (garageFonctions)",
-    "cuve": "module cuve (cuveFonctions)", "leds": "LED RGB du dev-kit et ruban WS2812 (ledsFonctions, controleLeds)"}
+    "cuve": "module cuve (cuveFonctions)", "leds": "LED RGB du dev-kit et ruban WS2812 (ledsFonctions, controleLeds)",
+    "historique": "historique des mesures et page /histo (historiqueFonctions, historiqueSeries)"}
 
 # ETAT MUTABLE DU MODULE : dans une GLOBALE, pas dans le module (un module solidifie est
 # constant, en flash). Les seuils sont lus une fois depuis le persist, puis mis en cache.
@@ -95,6 +96,10 @@ def logFonctions_lieu(cible)
     elif c == "garage"              bloc = (modules != nil ? modules.find("garage") : nil)
     elif c == "cuve"                bloc = (modules != nil ? modules.find("cuve") : nil)
     elif c == "leds"                bloc = d.find("leds")
+    elif c == "historique"
+        # Bloc de l'historique local (S3/P4). Un bloc reduit a {"grafana": ...} (carte sans historique) ne compte pas.
+        var h = (diverses != nil ? diverses.find("historique") : nil)
+        if (isinstance(h, map) && h.contains("activation"))    bloc = h    end
     end
 
     if (type(bloc) != "instance" || bloc.size() == 0)    return nil    end

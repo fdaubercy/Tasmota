@@ -390,6 +390,7 @@ end
 
 # Audit L5/P6.4 (2026-10-24) : une cible de log inconnue est signalee UNE fois par demarrage, une cible connue jamais
 if CAS == 1
+    import global
     import logFonctions             # niveaux en clair : LOG_LEVEL_* sont posees par l autoexec, apres la compilation du banc
     def inconnues(motif)
         var n = 0
@@ -406,6 +407,22 @@ if CAS == 1
     logFonctions.log("BANC: message de test", 3, "Modbus")
     logFonctions.log("BANC: message de test", 3, "lorawan")      # cible connue, bloc absent du persist du P4
     controle("cibles connues ('Modbus', 'lorawan' sans bloc) : rien de signale", inconnues("") == 1)
+    # Audit L1/P6.1 : l'historique a sa cible, reglable par ReglageLog, rangee dans diverses.historique
+    logFonctions.log("BANC: message de test", 3, "historique")
+    controle("P6.1 : cible 'historique' connue (aucun signalement)", inconnues("'historique'") == 0)
+    var avant61 = size(BANC_BOOT.journal)
+    logFonctions.log("BANC: debug historique", 3, "historique")
+    var perdu61 = (size(BANC_BOOT.journal) == avant61)
+    logFonctions.regle("historique", "debug")
+    logFonctions.log("BANC: debug historique", 3, "historique")
+    controle("P6.1 : seuil info -> debug perdu ; ReglageLog historique debug -> emis, range dans diverses.historique.log",
+             perdu61 && size(BANC_BOOT.journal) == avant61 + 1 && global.diverses["historique"].find("log") == "debug")
+    controle("P6.1 : 'historique' listee dans les reglages de la carte", string.find(str(logFonctions.etatReglages()), "historique") >= 0)
+    var blocHisto = global.diverses["historique"]
+    global.diverses["historique"] = {"grafana": "http://x"}
+    logFonctions.etat()["seuils"] = {}
+    controle("P6.1 : carte sans historique local (bloc reduit a 'grafana') : cible absente", logFonctions.lieu("historique") == nil)
+    global.diverses["historique"] = blocHisto
 end
 
 print(string.format("CAS_%i: %s", CAS, echecs == 0 ? "OK" : "ECHEC (" + str(echecs) + ")"))

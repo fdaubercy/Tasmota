@@ -410,4 +410,17 @@ verifie(dm != nil && dm["lignes"][1][2] == 1.25 && dm["lignes"][25][5] == nil, "
 var dv = mois("2026-08")
 verifie(dv != nil && size(dv["lignes"]) == 0, "mois sans fichier : lignes vides")
 
+# ---- 8. Cible de log 'historique' (audit L1/P6.1, 2026-10-24) -------------------------------------
+print("8. Logs de l'historique : tous sur la cible 'historique' (reglable par ReglageLog)")
+var horsCible = []
+var nbHisto = 0
+for l: journal
+    if (string.find(l[0], "HISTORIQUE") == 0)
+        nbHisto += 1
+        if (l[2] != "historique")    horsCible.push(l[0][0 .. 40] + " -> " + str(l[2]))    end
+    end
+end
+verifie(nbHisto > 10 && size(horsCible) == 0, string.format("%i logs HISTORIQUE*, tous en cible 'historique'%s", nbHisto,
+        size(horsCible) > 0 ? " (hors cible : " + horsCible[0] + ")" : ""))
+
 print(echecs == 0 ? "BANC_HISTORIQUE: OK" : "BANC_HISTORIQUE: ECHEC (" + str(echecs) + ")")

@@ -128,7 +128,7 @@ class HISTORIQUE
         path.mkdir(historiqueFonctions.DOSSIER)
         historiqueFonctions.instances[nom] = self
         self.purge()
-        logFonctions.log(string.format("HISTORIQUE: '%s' pret : %i series, %i points de %i s en RAM, %i mois en flash !", nom, self.nbSeries, self.nbPoints, self.pas, self.moisConserves), LOG_LEVEL_DEBUG, nom)
+        logFonctions.log(string.format("HISTORIQUE: '%s' pret : %i series, %i points de %i s en RAM, %i mois en flash !", nom, self.nbSeries, self.nbPoints, self.pas, self.moisConserves), LOG_LEVEL_DEBUG, "historique")
     end
 
     def razPas()
@@ -236,7 +236,7 @@ class HISTORIQUE
                 while (suffixe < 25 && path.exists(string.format("%s-%s.bin", base, "abcdefghijklmnopqrstuvwxyz"[suffixe])))    suffixe += 1    end
                 path.rename(fichier, string.format("%s-%s.bin", base, "abcdefghijklmnopqrstuvwxyz"[suffixe]))
                 nouveau = true
-                logFonctions.log(string.format("HISTORIQUE: Series de '%s' changees, %s mis de cote !", self.nom, fichier), LOG_LEVEL_INFO, self.nom)
+                logFonctions.log(string.format("HISTORIQUE: Series de '%s' changees, %s mis de cote !", self.nom, fichier), LOG_LEVEL_INFO, "historique")
             end
             file = open(fichier, "a")
             if (nouveau)    file.write(self.entete())    end
@@ -245,7 +245,7 @@ class HISTORIQUE
             if (nouveau)    self.purge()    end
         except .. as erreur, message
             if (file != nil)    file.close()    end
-            logFonctions.log(string.format("HISTORIQUE_ERREUR: %s -> %s %s", fichier, erreur, message), LOG_LEVEL_ERREUR, self.nom)
+            logFonctions.log(string.format("HISTORIQUE_ERREUR: %s -> %s %s", fichier, erreur, message), LOG_LEVEL_ERREUR, "historique")
         end
     end
 
@@ -283,7 +283,7 @@ class HISTORIQUE
         for m: self.mois()
             if (int(m[0 .. 3]) * 12 + int(m[5 .. 6]) <= limite)
                 path.remove(string.format("%s/%s-%s.bin", historiqueFonctions.DOSSIER, self.nom, m))
-                logFonctions.log(string.format("HISTORIQUE: Mois %s de '%s' supprime (plus de %i mois) !", m, self.nom, self.moisConserves), LOG_LEVEL_INFO, self.nom)
+                logFonctions.log(string.format("HISTORIQUE: Mois %s de '%s' supprime (plus de %i mois) !", m, self.nom, self.moisConserves), LOG_LEVEL_INFO, "historique")
             end
         end
     end
@@ -384,7 +384,7 @@ def historiqueFonctions_demarre(config)
     historiqueFonctions.config = config
     tasmota.add_driver(historiqueFonctions.HISTORIQUE_WEB())
     tasmota.add_cron("*/60 * * * * *", historiqueFonctions.releve, "majHistorique")
-    logFonctions.log("HISTORIQUE: Releve des mesures chaque minute activee !", LOG_LEVEL_DEBUG)
+    logFonctions.log("HISTORIQUE: Releve des mesures chaque minute activee !", LOG_LEVEL_DEBUG, "historique")
 end
 historiqueFonctions.demarre = historiqueFonctions_demarre
 
@@ -408,16 +408,16 @@ def historiqueFonctions_choisitSeries(donnees, anciens)
     try
         historiqueFonctions.HISTORIQUE("mesures", chemins, historiqueFonctions.config)
     except .. as erreur, message
-        logFonctions.log(string.format("HISTORIQUE_ERREUR: Historique non cree (%i series) -> %s %s !", size(chemins), erreur, message), LOG_LEVEL_ERREUR)
+        logFonctions.log(string.format("HISTORIQUE_ERREUR: Historique non cree (%i series) -> %s %s !", size(chemins), erreur, message), LOG_LEVEL_ERREUR, "historique")
         return false
     end
     historiqueFonctions.chemins = chemins
     if (avant == nil)
-        logFonctions.log(string.format("HISTORIQUE: Series enregistrees : %s !", json.dump(chemins)), LOG_LEVEL_INFO)
+        logFonctions.log(string.format("HISTORIQUE: Series enregistrees : %s !", json.dump(chemins)), LOG_LEVEL_INFO, "historique")
     else
         var ajoutees = []
         for c: chemins    if (avant.find(c) == nil)    ajoutees.push(c)    end    end
-        logFonctions.log(string.format("HISTORIQUE: Nouvelles series %s, historique recommence : %s !", json.dump(ajoutees), json.dump(chemins)), LOG_LEVEL_INFO)
+        logFonctions.log(string.format("HISTORIQUE: Nouvelles series %s, historique recommence : %s !", json.dump(ajoutees), json.dump(chemins)), LOG_LEVEL_INFO, "historique")
     end
     return true
 end
@@ -461,7 +461,7 @@ def historiqueFonctions_releve()
         end
         historiqueFonctions.heureDecouverte = heure
     except .. as erreur, message
-        logFonctions.log(string.format("HISTORIQUE_RELEVE_ERREUR: %s -> %s", erreur, message), LOG_LEVEL_ERREUR)
+        logFonctions.log(string.format("HISTORIQUE_RELEVE_ERREUR: %s -> %s", erreur, message), LOG_LEVEL_ERREUR, "historique")
     end
 end
 historiqueFonctions.releve = historiqueFonctions_releve
@@ -542,7 +542,7 @@ def historiqueFonctions_valeursDirectes(h)
         var texte = tasmota.read_sensors()
         donnees = (texte != nil ? json.load(texte) : nil)
     except .. as erreur, message
-        logFonctions.log(string.format("HISTORIQUE_DIRECT_ERREUR: Lecture des capteurs -> %s %s !", erreur, message), LOG_LEVEL_ERREUR)
+        logFonctions.log(string.format("HISTORIQUE_DIRECT_ERREUR: Lecture des capteurs -> %s %s !", erreur, message), LOG_LEVEL_ERREUR, "historique")
     end
     if (!isinstance(donnees, map))    donnees = {}    end
     var valeurs = []
@@ -559,7 +559,7 @@ def historiqueFonctions_valeursDirectes(h)
     try
         for f: historiqueFonctions.filtres    f(h.series, valeurs)    end
     except .. as erreur, message
-        logFonctions.log(string.format("HISTORIQUE_DIRECT_ERREUR: Filtre -> %s %s !", erreur, message), LOG_LEVEL_ERREUR)
+        logFonctions.log(string.format("HISTORIQUE_DIRECT_ERREUR: Filtre -> %s %s !", erreur, message), LOG_LEVEL_ERREUR, "historique")
     end
     historiqueFonctions.cacheDirect = [tasmota.rtc()["utc"], valeurs, h, tasmota.millis()]
     return historiqueFonctions.cacheDirect[0 .. 1]

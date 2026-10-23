@@ -149,10 +149,10 @@ def historiqueSeries_choisit(donnees, config, anciens)
         var gardes = []
         for c: chemins    if (isinstance(anciens, list) && anciens.find(c) != nil && size(gardes) < max)    gardes.push(c)    end    end
         for c: chemins    if (gardes.find(c) == nil && size(gardes) < max)    gardes.push(c)    end    end
-        if (logFonctions.actif(LOG_LEVEL_DEBUG))
+        if (logFonctions.actif(LOG_LEVEL_DEBUG, "historique"))
             var ignorees = []
             for c: chemins    if (gardes.find(c) == nil)    ignorees.push(c)    end    end
-            logFonctions.log(string.format("HISTORIQUE: %i series au-dela de seriesMax (%i) ignorees : %s !", size(ignorees), max, str(ignorees)), LOG_LEVEL_DEBUG)
+            logFonctions.log(string.format("HISTORIQUE: %i series au-dela de seriesMax (%i) ignorees : %s !", size(ignorees), max, str(ignorees)), LOG_LEVEL_DEBUG, "historique")
         end
         chemins = historiqueFonctions.trie(gardes)
     end
