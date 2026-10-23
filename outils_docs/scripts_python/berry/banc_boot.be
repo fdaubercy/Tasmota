@@ -41,6 +41,8 @@
 #      (preuve que le banc voit un echec).
 #   4. persist reel, codec ES8311 absent du bus I2C : defaut trouve par ce banc (exception a l'import de
 #      controleES8311, qui arrete l'autoexec avant l'historique et controleGarage).
+#   5. persist reel, telemetrie SANS bloc COUNTER : web_sensor du garage ne doit pas lever (fragilite
+#      de controleGarage, corrigee le 2026-10-23) ; une seule erreur journalisee, puis retour du compteur.
 #
 # DEFAUTS CONNUS : pourquoi un cas "rouge aujourd'hui" n'echoue pas le banc
 #   Le comportement ATTENDU apres correction est ecrit des aujourd'hui (fonction connu()). Tant que le
@@ -95,7 +97,7 @@ if CAS == nil
     if os.path.exists(exe)    exe = string.replace(exe, "/", string.char(92))    else    exe = "lib/libesp32/berry/berry"    end
     var options = (VERBEUX ? " --verbeux" : "")
     var rouges = []
-    for n: 1 .. 4
+    for n: 1 .. 5
         # Code de sortie du cas = nombre d'echecs (0 = vert) ; un cas qui plante sort aussi en non nul
         var rc = os.system(exe + " " + CE_FICHIER + " " + SOURCES + " --cas " + str(n) + options)
         if rc != 0    rouges.push("cas " + str(n) + " rc=" + str(rc))    end
@@ -151,11 +153,13 @@ elif CAS == 3       persistCas = json.load(json.dump(persistReel))    persistCas
 else                persistCas = persistReel
 end
 var TITRES = {1: "persist reel du P4 (reference)", 2: "persist '{}' (constat B1)", 3: "persist reel prive de serveur.wifi (constat B3)",
-              4: "persist reel, codec ES8311 absent du bus I2C (adresse 0x18)"}
+              4: "persist reel, codec ES8311 absent du bus I2C (adresse 0x18)",
+              5: "persist reel, telemetrie sans bloc COUNTER (compteur du garage absent)"}
 print("")
 print(string.format("=== Cas %i : %s -- sources %s", CAS, TITRES[CAS], SOURCES))
 
 if CAS == 4    tasmota.i2cAbsents = [0x18]    end
+if CAS == 5    tasmota.capteurs = {"Time": "2026-10-23T00:00:00"}    end      # pas de COUNTER
 var dossierSolidifies = PREPARATION_BOOT.prepare(ENV, SOURCES, CARTE, json.dump(persistCas), TRAVAIL)
 sys.path().push(CARTE)                  # fichiers de la carte (garageFonctions, ...), cherches en dernier
 sys.path().push(SOURCES)                # modules NON solidifies de data/fs
@@ -351,11 +355,34 @@ elif CAS == 3
     controlesReference(def (nom, ok) if !ok    nbEchecs += 1    if size(premiers) < 2    premiers.push(nom)    end    end end)
     controle(string.format("TEMOIN : les controles de reference voient la cle manquante (%i echec(s), dont : %s)", nbEchecs, premiers.concat(" / ")), nbEchecs > 0)
 
-else
+elif CAS == 4
     connu("ES8311", "codec ES8311 absent : l'autoexec va au bout", exception == nil, exception)
     connu("ES8311", "codec ES8311 absent : les modules suivants sont charges (driver CONTROLE_GARAGE)", classesDrivers().find("CONTROLE_GARAGE") != nil)
     controle("codec ES8311 absent : les modules charges AVANT lui sont demarres (ReglageGlobal, CONTROLE_DISCOVERY)",
              tasmota.commandes.contains("ReglageGlobal") && classesDrivers().find("CONTROLE_DISCOVERY") != nil)
+
+else
+    # web_sensor du driver garage, appele comme par le firmware (exceptions gardees par appelle())
+    var garage = nil
+    for d: tasmota.drivers    if classname(d) == "CONTROLE_GARAGE"    garage = d    end    end
+    controle("telemetrie sans COUNTER : l'autoexec va au bout, driver CONTROLE_GARAGE charge", exception == nil && garage != nil)
+    if garage != nil
+        def erreursCompteur()
+            var n = 0
+            for l: lignesErreur()    if string.find(l, "CAPTEURS_GARAGE_ERREUR") >= 0    n += 1    end    end
+            return n
+        end
+        for i: 1 .. 3    tasmota.appelle("CONTROLE_GARAGE.web_sensor", /-> garage.web_sensor(), [])    end
+        var ex = BANC_BOOT.exceptions
+        controle("telemetrie sans COUNTER : web_sensor ne leve pas (3 rafraichissements)" + (size(ex) > 0 ? " : " + str(ex[0]) : ""), size(ex) == 0)
+        controle("compteur absent journalise UNE fois en erreur (CAPTEURS_GARAGE_ERREUR), pas a chaque rafraichissement", erreursCompteur() == 1)
+        tasmota.capteurs = {"Time": "2026-10-23T00:00:10", "COUNTER": {"C1": 1500}}
+        tasmota.appelle("CONTROLE_GARAGE.web_sensor", /-> garage.web_sensor(), [])
+        controle("compteur revenu : plus marque absent, aucune nouvelle erreur", size(garage.compteursAbsents) == 0 && erreursCompteur() == 1)
+        tasmota.capteurs = {"Time": "2026-10-23T00:00:20"}
+        tasmota.appelle("CONTROLE_GARAGE.web_sensor", /-> garage.web_sensor(), [])
+        controle("compteur de nouveau absent : de nouveau signale (2e erreur)", erreursCompteur() == 2 && size(BANC_BOOT.exceptions) == 0)
+    end
 end
 
 print(string.format("CAS_%i: %s", CAS, echecs == 0 ? "OK" : "ECHEC (" + str(echecs) + ")"))

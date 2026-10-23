@@ -459,7 +459,7 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     `banc_test_modbus.{py,be}`, `banc_leds.{py,be}` (ruban AUTO/MANUEL, bouton, LED du dev-kit),
     `banc_veille_drivers.be` (veille des drivers inactifs sur LittleFS neuf, `bouchons_berry/veille/`),
     `banc_boot.{py,be}` (autoexec ENTIER du P4 sur faux firmware `bouchons_berry/boot/` : persist reel, `{}`,
-    sans `serveur.wifi`, ES8311 absent ; timers de reboot P5.1 ; defauts connus B1/B2/B3/MAC/ES8311 en `CONNU`),
+    sans `serveur.wifi`, ES8311 absent, telemetrie sans COUNTER ; timers de reboot P5.1 ; defauts connus B1/B2/B3/MAC/ES8311 en `CONNU`),
     `test_discovery.be` avec leurs `bouchons_berry/` (`bouchons_berry/leds/` : bouchon de
     `ledsFonctions`, ajoute par le seul banc ModBus ; dans `bouchons_berry/`, il masquerait le vrai
     module a `banc_leds`).

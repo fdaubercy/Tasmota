@@ -9,6 +9,8 @@ class CONTROLE_GARAGE : Driver
     var nbLogsFilesMax
     var fileLogSize_Ko
 
+    var compteursAbsents    # {cle: true} : compteur absent de la telemetrie, deja signale en erreur
+
     def init()
         import garageFonctions
         import json
@@ -16,6 +18,7 @@ class CONTROLE_GARAGE : Driver
         import string
 
         self.flagINIT = 0
+        self.compteursAbsents = {}
 
         # Flags pour les logs à enregistrer
         self.indiceLog = 0
@@ -225,6 +228,13 @@ class CONTROLE_GARAGE : Driver
         if (modules["garage"]["environnement"].find("compteurs", false))
             garageFonctions.log("WEBSERVER_GARAGE: Envoi a la page web de l'etat des compteurs !", LOG_LEVEL_DEBUG)
 
+            # Bloc COUNTER de la telemetrie, lu UNE fois pour tous les compteurs. Peut manquer (template
+            # non applique, compteur absent, read_sensors() nil) : sans garde, le key_error sortait de
+            # web_sensor a chaque rafraichissement de la page (vu par banc_boot, 2026-10-23).
+            var mesures = tasmota.read_sensors()
+            var counters = (mesures != nil ? json.load(mesures) : nil)
+            counters = (isinstance(counters, map) ? counters.find("COUNTER") : nil)
+
             # Parcours les compteurs
             for cle: modules["garage"]["environnement"]["compteurs"].keys()
                 var comptJson = modules["garage"]["environnement"]["compteurs"][cle]
@@ -233,19 +243,29 @@ class CONTROLE_GARAGE : Driver
                 tasmota.yield()
 
                 if (comptJson.find("activation", "OFF") == "ON")
-                    var compteur = 0
-
                     variablesRemplacement = {}
                     variablesRemplacement.insert("drivers1->nom", "Etat des compteurs")
 
-                    
-                    compteur = real(json.load(tasmota.read_sensors())["COUNTER"]["C1"] / 1000.00)    # En kWh
-                    # compteur = real(comptJson["value"] / 1000.00)    # En kWh
+                    # Compteur Tasmota "C<id>" de CE compteur (avant : toujours C1)
+                    var nomCompteur = "C" + str(comptJson.find("id", 1))
+                    var brut = (isinstance(counters, map) ? counters.find(nomCompteur) : nil)
 
                     # Ajoute à la page web
                     variablesRemplacement.insert("sensors->compteur->titre", comptJson["nom"])
-                    variablesRemplacement.insert("sensors->compteur->Consommation", str(compteur) + "kWh")
-                    garageFonctions.log(string.format("CAPTEURS_GARAGE: %s = %.2fkWh", comptJson["nom"], compteur), LOG_LEVEL_INFO)
+                    if (type(brut) == "int" || type(brut) == "real")
+                        var compteur = real(brut / 1000.00)    # En kWh
+                        variablesRemplacement.insert("sensors->compteur->Consommation", str(compteur) + "kWh")
+                        garageFonctions.log(string.format("CAPTEURS_GARAGE: %s = %.2fkWh", comptJson["nom"], compteur), LOG_LEVEL_INFO)
+                        self.compteursAbsents.remove(cle)
+                    else
+                        variablesRemplacement.insert("sensors->compteur->Consommation", "indisponible")
+                        # web_sensor tourne a chaque rafraichissement : l'erreur n'est journalisee qu'une fois,
+                        # jusqu'au retour du compteur dans la telemetrie
+                        if (!self.compteursAbsents.contains(cle))
+                            garageFonctions.log(string.format("CAPTEURS_GARAGE_ERREUR: compteur '%s' (%s) absent de la telemetrie (COUNTER) !", comptJson["nom"], nomCompteur), LOG_LEVEL_ERREUR)
+                            self.compteursAbsents[cle] = true
+                        end
+                    end
 
                     # Modifie le code html à afficher et l'envoi
                     gestionFileFolder.readFileByLineReplaceAndWebSend('/sd/html/webSensorCompteurElec.html', variablesRemplacement, "web_send")
