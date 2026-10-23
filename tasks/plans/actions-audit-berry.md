@@ -26,7 +26,7 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
   - [x] Décision — preuve : voulus (« normalement ces deux timers fonctionnent… rends-les fonctionnels », 2026-10-23)
   - [x] Code — preuve : `globalFonctions.be` (lambda `/-> controleGeneral.heureReboot()`, `remove_cron` avant), `controleGeneral.be` (`surveilleWifi()` dans `every_second` au lieu du cron `*/300`) ; test `test_timers.be` du scratchpad 10/10, mutant (délai /10) rouge 4 échecs ; relecteur-berry : prêt, banc ModBus 309/309
   - [x] Désactivables sans redémarrer (demande du 2026-10-23) — preuve : `ReglageGlobal heureReboot [HH:MM|OFF]`, `ReglageGlobal timerRebootSansWifi [s|OFF]` (60 s minimum), `globalFonctions.armeRebootQuotidien`/`reglageReboot` ; test `test_reglage_reboot.be` du scratchpad 28/28, mutant (24:00 accepté, minimum 1 s) rouge 7 échecs ; README § commandes
-  - [ ] Sur carte — modules solidifiés : build + flash du P4 nécessaires ; vérifier le reboot de 00:00 (`Status 1`, RestartReason) le lendemain
+  - [x] Sur carte — modules solidifiés : build + flash du P4 nécessaires ; vérifier le reboot de 00:00 (`Status 1`, RestartReason) le lendemain — preuve : firmwares du 2026-10-23 (P4 08:10, cuve 08:38) flashés ; `Status 1` le 2026-10-24 à 00:57 : P4 `StartupUTC 2026-10-23T22:00:16`, cuve `22:00:07` (= 00:00 locale), `Software reset CPU` ; `ReglageGlobal heureReboot` = 00:00 (les deux), `timerRebootSansWifi` = 300 (P4) / OFF (cuve). Reboot sans Wi-Fi non provoqué sur carte (couvert par banc_boot)
 - [ ] P2.1 — Une S3 a-t-elle un écran ? Sinon retirer LVGL/OpenHASP de la base N16R8 (ou base S3 « sans écran ») (corrige E1 ; cote G, effort faible, risque moyen)
 - [ ] P3.1 — Différentiel : `drivers.ModBus.activation` à OFF, ou embarquer la pile ModBus (corrige S1 ; cote L, effort faible, risque dec)
 - [ ] P3.5 — Modules solidifiés inutiles : accepter, ou découper `socle` en `socle` + `reseau` (corrige S3 ; cote S, effort faible, risque dec)
@@ -83,7 +83,7 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
 - [ ] P2.3 — Rebouclage de `increment_config_holder` à 65535 (corrige E5 ; cote L, effort faible, risque faible)
 
 ## A7 — Démarrage robuste
-- [ ] P10.1 — Garde de tête des autoexec : `persist._p` et `diverses` testés avant toute lecture, avec trace (corrige B1 ; cote G, effort faible, risque faible)
+- [x] P10.1 — Garde de tête des autoexec : `persist._p` et `diverses` testés avant toute lecture, avec trace (corrige B1 ; cote G, effort faible, risque faible) — preuve : `persistValide` (4 blocs serveur/diverses/modules/drivers) en tête des 8 autoexec en service (hors `*sauvegarde*`), élagage/veille/corps conditionnés, erreur finale nommant les blocs manquants ; `banc_boot` cas 2 vert (drapeau B1 à false), ancien autoexec du P4 rouge (2 échecs) (2026-10-24)
 - [ ] P10.2 — `try/except` journalisé autour de chaque `import controleXxx` ; `ReglageGlobal`/`ReglageLog` enregistrées avant `configGlobalByJson` (corrige B2, B3, B5 ; cote G, effort moyen, risque moyen)
 - [ ] P4.2 — Autoexec commun : module `demarrage` solidifié, ~15 lignes propres par carte ; différentiel et grenier remis au modèle (corrige D2, D4 ; cote S, effort moyen, risque moyen)
 - [ ] P4.3 — Séparer « charger ou non » et « supprimer le source » dans `compileModule`/`loadBerryFile` (corrige D3 ; cote D, effort faible, risque faible)

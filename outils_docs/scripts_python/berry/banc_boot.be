@@ -64,7 +64,7 @@ import json
 BANC_BOOT = nil  LITTLEFS = nil  tasmota = nil  PREPARATION_BOOT = nil  OBJET_FACTICE = nil
 
 var DEFAUTS_CONNUS = {
-    "B1": true,         # audit B1 / P10.1 : pas de garde de tete dans l'autoexec (persist vide ou sans 'diverses')
+    "B1": false,        # audit B1 / P10.1 : pas de garde de tete dans l'autoexec (persist vide ou sans 'diverses')
     "B2": true,         # audit B2 / P10.2 : pas de try/except par controleXxx -> un echec arrete tout l'autoexec
     "B3": true,         # audit B3 / P10.2 : ReglageGlobal/ReglageLog enregistrees APRES configGlobalByJson
     "MAC": true,        # trouve par ce banc : globalFonctions.be:87-88, adressMAC "" jamais remplacee (map.insert)

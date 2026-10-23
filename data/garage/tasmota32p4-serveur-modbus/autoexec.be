@@ -16,7 +16,11 @@ serveur = persist.serveur
 diverses = persist.diverses
 modules = persist.modules
 drivers = persist.drivers
-boolMute = diverses.find("cmdMute", false)
+# Garde de tete (audit P10.1, constat B1, 2026-10-23) : un persist vide, corrompu ou prive d'un de
+# ses 4 blocs faisait planter la ligne suivante (diverses.find sur nil) AVANT tout log : carte muette.
+# Persist invalide -> rien de ce qui le lit n'est execute, l'erreur est journalisee en fin de fichier.
+var persistValide = isinstance(serveur, map) && isinstance(diverses, map) && isinstance(modules, map) && isinstance(drivers, map)
+boolMute = (persistValide ? diverses.find("cmdMute", false) : true)
 
 # Fonction de log commune (charte : logFonctions.be). Importee AVANT tout le reste :
 # les modules charges ensuite loguent par logFonctions.log(). Import de niveau fichier :
@@ -28,8 +32,8 @@ import logFonctions
 #   - environnement des drivers inactifs mis en veille dans /json/driversInactifs.json (rien n'est perdu).
 # Import de niveau fichier : cree la globale 'diversFonctions' (module solidifie).
 import diversFonctions
-if (diversFonctions.elagueListesVides(persist._p) > 0)     persist.save(true)     end
-diversFonctions.hiberneDriversInactifs()
+if (persistValide && diversFonctions.elagueListesVides(persist._p) > 0)     persist.save(true)     end
+if (persistValide)    diversFonctions.hiberneDriversInactifs()    end
 
 # Execute la fonction au démarrage
 logFonctions.log("AUTO_EXE: Vérifie les fichiers à transférer sur la carte SD !", LOG_LEVEL_DEBUG)
@@ -53,7 +57,7 @@ import historiqueSeries
 import graphiquesFonctions
 
 # Vérifie si le persist.json est présent et paramétré
-if (persist._p != nil && persist._p.size() != 0)
+if (persistValide)
     # Compile les modules
     gestionFileFolder.compileModule("/configGlobal", "ON")
     gestionFileFolder.compileModule("/configDevices", "ON")
@@ -129,5 +133,9 @@ if (persist._p != nil && persist._p.size() != 0)
     # LOCALES : 'configGlobal' undeclared, puis 'controleGeneral' undeclared dans les regles,
     # des le DEUXIEME demarrage (le premier, en .be, fonctionne). Constate a la cave le 2026-09-26.
     # gestionFileFolder.compileModule("/autoexec", "ON")
-else logFonctions.log("AUTO_EXE: Attention, le fichier de paramétrage est absent !", LOG_LEVEL_ERREUR)
+else
+    var blocs = {"serveur": serveur, "diverses": diverses, "modules": modules, "drivers": drivers}
+    var manquants = []
+    for c: blocs.keys()    if !isinstance(blocs[c], map)    manquants.push(c)    end    end
+    logFonctions.log("AUTO_EXE: Attention, le fichier de paramétrage est absent ou invalide (bloc(s) manquant(s) : " + manquants.concat(", ") + ") : aucun module chargé !", LOG_LEVEL_ERREUR)
 end
