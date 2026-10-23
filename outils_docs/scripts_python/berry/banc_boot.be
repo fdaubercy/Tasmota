@@ -68,7 +68,7 @@ var DEFAUTS_CONNUS = {
     "B2": true,         # audit B2 / P10.2 : pas de try/except par controleXxx -> un echec arrete tout l'autoexec
     "B3": true,         # audit B3 / P10.2 : ReglageGlobal/ReglageLog enregistrees APRES configGlobalByJson
     "MAC": true,        # trouve par ce banc : globalFonctions.be:87-88, adressMAC "" jamais remplacee (map.insert)
-    "ES8311": true,     # trouve par ce banc : controleES8311.be, codec absent du bus I2C -> exception a l'import
+    "ES8311": false,    # corrige le 2026-10-23 (garde controleES8311.pret) ; trouve par ce banc : controleES8311.be, codec absent du bus I2C -> exception a l'import
 }
 var ENV = "tasmota32p4-garage-serveur-modbus"
 var CARTE = "data/garage/tasmota32p4-serveur-modbus"
@@ -358,6 +358,9 @@ elif CAS == 3
 elif CAS == 4
     connu("ES8311", "codec ES8311 absent : l'autoexec va au bout", exception == nil, exception)
     connu("ES8311", "codec ES8311 absent : les modules suivants sont charges (driver CONTROLE_GARAGE)", classesDrivers().find("CONTROLE_GARAGE") != nil)
+    var absenceSignalee = false
+    for l: lignesErreur()    if string.find(l, "ES8311_ERREUR") >= 0    absenceSignalee = true    end    end
+    controle("codec ES8311 absent : absence journalisee en erreur (ES8311_ERREUR)", absenceSignalee)
     controle("codec ES8311 absent : les modules charges AVANT lui sont demarres (ReglageGlobal, CONTROLE_DISCOVERY)",
              tasmota.commandes.contains("ReglageGlobal") && classesDrivers().find("CONTROLE_DISCOVERY") != nil)
 

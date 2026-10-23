@@ -12,15 +12,17 @@ class ES8311 : Driver
     # Variables
     var I2C
     var GPIO_PWR_PIN
-    
+    var pret            # true si le codec a repondu sur l'I2C ET a ete initialise
+
     def init(GPIO_PWR_PIN)
         import gpio
 
         self.GPIO_PWR_PIN = GPIO_PWR_PIN
+        self.pret = false
         self.I2C = tasmota.wire_scan(0x18)
 
         if self.I2C == nil
-            self.log("ES8311: Echec de l'initialisation I2C !", LOG_LEVEL_DEBUG)
+            self.log("ES8311_ERREUR: codec absent du bus I2C (adresse 0x18) : pas de sortie audio !", LOG_LEVEL_ERREUR)
         else
             # var i2s_conf = tasmota.cmd('i2sconfig')
             # var sample_freq = i2s_conf["I2SConfig"]["Tx"]["SampleRate"]
@@ -34,9 +36,10 @@ class ES8311 : Driver
 
                 # Active le Driver
                 tasmota.add_driver(self)
+                self.pret = true
             else
-                self.log("ES8311: Echec de l'initialisation !", LOG_LEVEL_DEBUG)
-            end 
+                self.log("ES8311_ERREUR: Echec de l'initialisation du codec : pas de sortie audio !", LOG_LEVEL_ERREUR)
+            end
         end
     end
 
@@ -365,7 +368,11 @@ controleES8311.ES8311 = ES8311
 
 # init() : APPELEE AUTOMATIQUEMENT par 'import controleES8311' (be_module.c:285-296, module_init).
 # Ne PAS la rappeler depuis autoexec. Reprend le code d'activation de niveau fichier d'avant.
-# Comme avant : l'instance n'est PAS enregistree comme driver (pas d'add_driver).
+# L'instance s'enregistre elle-meme comme driver (ES8311.init) quand le codec repond : il le faut
+# pour recevoir l'evenement 'audio power' de Tasmota, qui commute l'ampli (GPIO 53).
+# Codec absent ou en echec (2026-10-23, defaut trouve par banc_boot) : rien d'autre n'est envoye au
+# codec ni a l'I2S. Avant, set_volume ecrivait sur un bus I2C nil : l'exception arretait l'autoexec
+# (historique et controleGarage jamais charges).
 def controleES8311_init(m)
     import global
 
@@ -373,10 +380,12 @@ def controleES8311_init(m)
         tasmota.log("Activation du driver ES8311", LOG_LEVEL_INFO)
 
         global.controleES8311 = m.ES8311(53)
-        global.controleES8311.set_volume(100)
-        global.controleES8311.set_mic_gain(0x04)  # Set microphone gain to (6*4 =) 24dB
+        if global.controleES8311.pret
+            global.controleES8311.set_volume(100)
+            global.controleES8311.set_mic_gain(0x04)  # Set microphone gain to (6*4 =) 24dB
 
-        tasmota.cmd('I2SConfig {"Tx":{"SampleRate":48000,"SlotMask":1,"APLL":0,"SlotConfig":2},"Rx":{"SampleRate":32000,"Channels":1, "Mode":0}}')
+            tasmota.cmd('I2SConfig {"Tx":{"SampleRate":48000,"SlotMask":1,"APLL":0,"SlotConfig":2},"Rx":{"SampleRate":32000,"Channels":1, "Mode":0}}')
+        end
     end
     return m
 end
