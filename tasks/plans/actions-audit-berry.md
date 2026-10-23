@@ -3,7 +3,7 @@ chantier: actions-audit-berry
 titre: Plan d'action de l'audit Berry (propositions P2.1 à P10.7)
 statut: actif
 cree: 2026-10-22
-maj: 2026-10-23
+maj: 2026-10-24
 ---
 # Plan d'action de l'audit Berry (propositions P2.1 à P10.7)
 
@@ -65,7 +65,7 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
 - [x] P5.2 — ImAlive : ranger la fiche via discoveryFonctions avec `memeValeur`, n'écrire que si elle change (corrige N2 ; cote G, effort faible, risque moyen) — preuve : `discoveryFonctions.rangeFicheImAlive` (lisTable + memeValeur, écriture seulement si fiche, lwt ou purge changent), appelée par `udpFonctions.reglageUDP` ; `test_discovery` §2b (5 contrôles, 221 tests verts), ancien `udpFonctions.be` rouge (1 écriture au lieu de 0) ; bancs ModBus et boot verts (2026-10-24)
 - [ ] P5.3 — Cuve : un seul `_Scheme` par seconde partagé entre LEDs et surveilleRubans (corrige N3 ; cote G, effort moyen, risque moyen)
 - [ ] P5.4 — P4 : CSS de la page d'accueil gardé en mémoire ou servi en statique (corrige N4 ; cote G, effort faible, risque faible)
-- [ ] P9.2 — `/histo` : morceaux dans une liste puis `concat()` (corrige M2 ; cote S, effort faible, risque faible)
+- [x] P9.2 — `/histo` : morceaux dans une liste puis `concat()` (corrige M2 ; cote S, effort faible, risque faible) — preuve : `historiqueFonctions.be` (pages direct, jour, `jsonEnCours`, `envoieMois`) ; `banc_historique.be` §7 ajouté (page mois, 30 lignes sur 2 paquets, NaN -> null) ; sorties des 5 pages identiques octet pour octet entre l'ancienne et la nouvelle version (2026-10-24)
 - [ ] P9.3 — `lisTable()` à la place des lectures triples de discovery.json, cache invalidé à l'écriture (corrige M3 ; cote S, effort faible, risque nul)
 - [x] P7.3 — 6 `print('Erreur…')` d'`except` → `xxxFonctions.log("…_ERREUR", LOG_LEVEL_ERREUR)` (corrige C3 ; cote G, effort faible, risque faible) — preuve : 3 dans `modbusFonctions.be` (CONFIG_MODBUS_ERREUR, EXECUTE_CMD_MODBUS_ERREUR ×2), 3 dans `udpFonctions.be` (REGLAGE_UDP_ERREUR ×3), plus aucun `print('Erreur` ; bancs ModBus, discovery (216) et boot verts (2026-10-24). Chemins d'exception non provoqués sur banc
   - [x] Vu en passant : `udpFonctions.be` `ipMaitre` (≈ l. 371) fait `insert()` (ne remplace pas une IP déjà enregistrée, même défaut que la MAC) puis `persist.save()` sans `true` (modif imbriquée non écrite) — preuve : affectation si l'IP change, `estIPv4` à l'entrée, `persist.save(true)` seulement sur changement ; test du scratchpad `test_ipmaitre.be` 4/4, rouge 4/4 sur l'ancien code ; banc discovery vert (2026-10-24)

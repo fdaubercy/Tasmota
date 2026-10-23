@@ -499,21 +499,23 @@ def historiqueFonctions_page()
         webserver.content_send(string.format(",\"mois\":%s}", json.dump(h.mois())))
     elif (p == "direct")
         var d = historiqueFonctions.valeursDirectes(h)
-        var morceau = string.format(",\"t\":%i,\"valeurs\":[", d[0])
-        for i: 0 .. size(d[1]) - 1    morceau += (i > 0 ? "," : "") + historiqueFonctions.texte(d[1][i])    end
-        webserver.content_send(morceau + "]}")
+        var vals = []
+        for v: d[1]    vals.push(historiqueFonctions.texte(v))    end
+        webserver.content_send(string.format(",\"t\":%i,\"valeurs\":[", d[0]) + vals.concat(",") + "]}")
     elif (p == "mois")
         historiqueFonctions.envoieMois(h, webserver.has_arg("m") ? webserver.arg("m") : "")
     else
         var t0 = (h.dernierPas != nil ? (h.dernierPas - h.nbPoints + 1) * h.pas : nil)
         webserver.content_send(string.format(",\"pas\":%i,\"t0\":%s,\"valeurs\":[", h.pas, json.dump(t0)))
+        # Points accumules dans une liste puis joints UNE fois (audit M2/P9.2, 2026-10-24) : 'morceau +='
+        # recopiait toute la chaine a chaque point, soit des Mo copies pour quelques dizaines de Ko envoyes.
         for i: 0 .. h.nbSeries - 1
-            var morceau = (i > 0 ? ",[" : "[")
+            var vals = []
             for k: 0 .. h.nbPoints - 1
                 var idx = ((h.ramIndice + k) % h.nbPoints) * h.nbSeries + i
-                morceau += (k > 0 ? "," : "") + historiqueFonctions.texte(h.ram.getfloat(idx * 4))
+                vals.push(historiqueFonctions.texte(h.ram.getfloat(idx * 4)))
             end
-            webserver.content_send(morceau + "]")
+            webserver.content_send((i > 0 ? ",[" : "[") + vals.concat(",") + "]")
             tasmota.yield()
         end
         webserver.content_send("]" + historiqueFonctions.jsonEnCours(h) + "}")
@@ -570,11 +572,11 @@ def historiqueFonctions_jsonEnCours(h)
     import string
     import historiqueFonctions
     if (h.pasCourant == nil)    return ",\"tEncours\":null,\"encours\":[]"    end
-    var morceau = string.format(",\"tEncours\":%i,\"encours\":[", h.pasCourant * h.pas)
+    var vals = []
     for i: 0 .. h.nbSeries - 1
-        morceau += (i > 0 ? "," : "") + historiqueFonctions.texte(h.nbPas[i] > 0 ? h.sommePas[i] / h.nbPas[i] : nil)
+        vals.push(historiqueFonctions.texte(h.nbPas[i] > 0 ? h.sommePas[i] / h.nbPas[i] : nil))
     end
-    return morceau + "]"
+    return string.format(",\"tEncours\":%i,\"encours\":[", h.pasCourant * h.pas) + vals.concat(",") + "]"
 end
 historiqueFonctions.jsonEnCours = historiqueFonctions_jsonEnCours
 
@@ -612,15 +614,16 @@ def historiqueFonctions_envoieMois(h, m)
         var paquet = f.readbytes(taille * 24)
         var n = (paquet != nil ? size(paquet) / taille : 0)
         if (n == 0)    break    end
-        var morceau = ""
+        # Lignes accumulees dans des listes puis jointes (audit M2/P9.2) : voir la page jour
+        var lignes = []
         for r: 0 .. n - 1
             var o = r * taille
-            morceau += (premiere ? "[" : ",[") + str(paquet.get(o, 4))
-            premiere = false
-            for k: 0 .. nb * 3 - 1    morceau += "," + historiqueFonctions.texte(paquet.getfloat(o + 4 + k * 4))    end
-            morceau += "]"
+            var ligne = [str(paquet.get(o, 4))]
+            for k: 0 .. nb * 3 - 1    ligne.push(historiqueFonctions.texte(paquet.getfloat(o + 4 + k * 4)))    end
+            lignes.push("[" + ligne.concat(",") + "]")
         end
-        webserver.content_send(morceau)
+        webserver.content_send((premiere ? "" : ",") + lignes.concat(","))
+        premiere = false
         tasmota.yield()
     end
     f.close()

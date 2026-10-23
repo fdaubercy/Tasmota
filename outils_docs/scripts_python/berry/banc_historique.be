@@ -378,4 +378,36 @@ historiqueFonctions.releve()
 verifie(historiqueFonctions.instances.find("mesures") != nil && historiqueFonctions.chemins != nil
         && historiqueFonctions.chemins.find("BMP280.Pressure") != nil, "releve suivante : historique recree avec les nouvelles series")
 
+# ---- 7. /histo?p=mois : lignes d'un fichier du mois, sur plusieurs paquets de 24 (audit P9.2) ----
+print("7. /histo?p=mois : 30 lignes (2 paquets), valeur absente -> null")
+ecritEntete(DOSSIER + "/mesures-2026-09.bin", "s1,s2")
+var lignesMois = bytes()
+for r: 0 .. 29
+    lignesMois.add(T + r * 3600, 4)
+    for k: 0 .. 5
+        if (k == 4 && r == 25)    lignesMois.add(0x7FC00000, 4)    # NaN (0.0/0.0 leve en Berry)
+        else    lignesMois.addfloat(r + k * 0.25)    end
+    end
+end
+var fm = open(DOSSIER + "/mesures-2026-09.bin", "ab")
+fm.write(lignesMois)
+fm.close()
+def mois(m)
+    webserver.raz({"p": "mois", "n": "mesures", "m": m})
+    webserver.sortie = open(SORTIE + "/mois_" + m + ".json", "wb")
+    historiqueFonctions.page()
+    webserver.sortie.close()
+    var f = open(SORTIE + "/mois_" + m + ".json", "r")
+    var d = json.load(f.read())
+    f.close()
+    return d
+end
+var dm = mois("2026-09")
+verifie(dm != nil && dm["seriesFichier"].concat(",") == "s1,s2", "seriesFichier = en-tete du fichier")
+verifie(dm != nil && size(dm["lignes"]) == 30 && size(dm["lignes"][0]) == 7 && dm["lignes"][29][0] == T + 29 * 3600,
+        "30 lignes de 1 + 2 x 3 valeurs, les deux paquets joints")
+verifie(dm != nil && dm["lignes"][1][2] == 1.25 && dm["lignes"][25][5] == nil, "valeurs a 2 decimales, NaN -> null")
+var dv = mois("2026-08")
+verifie(dv != nil && size(dv["lignes"]) == 0, "mois sans fichier : lignes vides")
+
 print(echecs == 0 ? "BANC_HISTORIQUE: OK" : "BANC_HISTORIQUE: ECHEC (" + str(echecs) + ")")
