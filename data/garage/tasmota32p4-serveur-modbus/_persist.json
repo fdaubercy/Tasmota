@@ -14,12 +14,12 @@
 		"cmdMute": true,
 		"typeESP": "ESP32P4",
 		"logs": {
-			"profil": "debug",
+			"profil": "normal",
 			"profils": {
 				"normal": {"serie": "info", "web": "info", "mqtt": "erreur", "syslog": "info"},
 				"debug": {"serie": "debug", "web": "debug", "mqtt": "debug", "syslog": "debug"}
 			},
-			"general": "detail",
+			"general": "info",
 			"nbLogsFiles" : 0
 		},
 		"telePeriod": 300,
@@ -59,7 +59,7 @@
 		"mDNS": "ON",
 		"apiHTTP": "ON",
 		"adressMAC": "",
-		"log": "detail",
+		"log": "info",
 		"IP": {
 			"IPAddress": "192.168.0.43",
 			"IPGateway": "192.168.0.254",
@@ -95,7 +95,7 @@
 		"rangeExtender": {
 			"activation": "ON",
 			"id": 0,
-			"log": "detail",
+			"log": "info",
 			"ipMaitre": "",
 			"telePeriod": 300,
 			"AP": {
@@ -114,17 +114,17 @@
 		"udp": {
 			"activation": "ON",
 			"id": 0,
-			"log": "detail",
+			"log": "info",
 			"port": 2000
 		}, 
 		"tcp": {
 			"activation": "ON",
 			"id": 0,
-			"log": "detail"
+			"log": "info"
 		}, 
         "discovery": {
             "activation": "ON",
-            "log": "detail"
+            "log": "info"
         }
 	},
 	"template": {
@@ -140,7 +140,7 @@
 			"name": "Gestion des appareils de garage",
 			"activation": "ON",
 			"reglage": "OFF",
-			"log": "detail",
+			"log": "info",
 			"logs": {
 				"nbLogsFiles": 15,
 				"fileLogName": "/logs/garage.log",
@@ -1190,7 +1190,7 @@
                 "ES8311": {
                     "activation": "ON",
                     "name": "Codec Audio ES8311",
-                    "log": "detail"
+                    "log": "info"
                 }
             }
         },
@@ -1282,7 +1282,7 @@
 			"timeoutReponse": 5000,
 			"voieCommandes": "Serial",
 			"timeoutReponseUDP": 2000,
-			"log": "detail",
+			"log": "info",
             "activationReponseCMD": "ON",
             "relaisPushMQTT": "ON",
             "typeComm": {
@@ -1311,7 +1311,7 @@
 					}
 				},
 				"Conn16channels": {
-					"log": "detail",
+					"log": "info",
 					"Conn16channel1": {
 						"activation": "ON",
 						"name": "Connecteur RS485 16 sorties",
@@ -1320,7 +1320,7 @@
 					}
 				},
 				"TasmotaSlaveModBus": {
-					"log": "detail",
+					"log": "info",
 					"TasmotaSlaveModBus1": {
 						"activation": "ON",
 						"name": "Capteurs Cuve ModBus",
@@ -1345,7 +1345,7 @@
 			"activation": "ON",
 			"name": "Connexion LoRaWan 868MHz",
 			"id": 0,
-			"log": "detail",
+			"log": "info",
 			"environnement": {
                 "pinsLoRaWans": {
                     "pinsLoRaWan1": {
@@ -1411,7 +1411,7 @@
 			"activation": "ON",
 			"name": "Driver Volet Roulant",
 			"mode": 3,
-			"log": "detail",
+			"log": "info",
 			"environnement": {
 				"VRs": {
 					"VR1": {

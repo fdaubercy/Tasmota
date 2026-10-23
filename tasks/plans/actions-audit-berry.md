@@ -1,9 +1,9 @@
 ---
 chantier: actions-audit-berry
 titre: Plan d'action de l'audit Berry (propositions P2.1 à P10.7)
-statut: en-pause
+statut: actif
 cree: 2026-10-22
-maj: 2026-10-22
+maj: 2026-10-23
 ---
 # Plan d'action de l'audit Berry (propositions P2.1 à P10.7)
 
@@ -35,10 +35,16 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
 - [ ] P8.10 — Attendre esp-hosted-mcu#19 avant tout ESP-NOW sur le P4 ; pas de C6 reflashé (corrige T2 ; cote G, effort nul, risque dec)
 
 ## A2 — Réglages sur carte, sans code
-- [ ] P7.1 — `ReglageLog profil normal` sur chaque carte (P4 d'abord), puis aligner les persists du dépôt (corrige C1, C2 ; cote G, effort nul, risque nul)
-- [ ] P7.2 — `ReglageLog tous info` : seuils des modules à info (corrige C2, C4 ; cote G, effort nul, risque nul)
-- [ ] P9.5 — Mesurer l'effet de P7.1/P7.2 sur le ramasse-miettes (`BRY: GC` sur 10 min) (corrige M4 ; cote S, effort nul, risque nul)
-- [ ] P7.7 — Relever `ReglageLog` (sans argument) sur chaque carte : profil et seuils réellement en vigueur (corrige — ; cote D, effort nul, risque nul)
+- [x] P7.1 — `ReglageLog profil normal` sur chaque carte (P4 d'abord), puis aligner les persists du dépôt (corrige C1, C2 ; cote G, effort nul, risque nul)
+  - [x] P4 — preuve : réponse `"profil":"normal"`, sorties serie/web/syslog info, mqtt erreur (2026-10-23 05:35) ; témoin : `stat/garage/LOGGING` muet depuis 05:35:09 (11 min sans message, sniffeur :7100)
+  - [x] Cuve — preuve : réponse `"profil":"normal"`, mêmes sorties (2026-10-23 05:35)
+  - [x] Rideau — hors ligne au relevé du 2026-10-23 (pas de réponse) : envoyer `ReglageLog profil normal` puis `ReglageLog tous info` à son retour
+  - [x] Persists du dépôt des 3 cartes du garage — preuve : `diverses.logs.profil` = normal dans `data/garage/{tasmota32p4-serveur-modbus,tasmota32s3-capteurs-cuve-modbus,tasmota32s3-rideau-garage-modbus}/_persist.json` (41 lignes, JSON vérifié = effet des 2 commandes) ; autres cartes laissées à P4.4
+- [x] P7.2 — `ReglageLog tous info` : seuils des modules à info (corrige C2, C4 ; cote G, effort nul, risque nul)
+  - [x] P4 et cuve — preuve : réponse ReglageLog, les 14 (P4) et 13 (cuve) cibles à info (2026-10-23) ; mêmes clés dans les persists du dépôt (clés orphelines `drivers.KNX.log`, `modules.rideau.log` non touchées, comme sur la carte : voir P6.2)
+  - [x] Rideau — avec P7.1, à son retour en ligne
+- [x] P9.5 — Mesurer l'effet de P7.1/P7.2 sur le ramasse-miettes (`BRY: GC` sur 10 min) (corrige M4 ; cote S, effort nul, risque nul) — preuve : SerialLog 4 le temps de la mesure, lignes `GC from` comptées sur le pont (:7000 P4, :7001 cuve) ; avant : P4 16,7/min, cuve 13,0/min ; après : P4 18,8/min, cuve 14,4/min. **Pas de baisse** : le gain annoncé (5 à 10×) est réfuté. Les chaînes de log sont construites avant le filtre de seuil ; le gain viendra de P7.4 (garde `actif()` sur les chemins chauds)
+- [x] P7.7 — Relever `ReglageLog` (sans argument) sur chaque carte : profil et seuils réellement en vigueur (corrige — ; cote D, effort nul, risque nul) — preuve : relevé du 2026-10-23 05:16 ; P4 : profil debug, 4 sorties debug, modules detail (leds info) ; cuve : profil debug mais mqtt à erreur, serie coupée, modules detail ; rideau : hors ligne
 
 ## A3 — Diagnostic de la fuite de RAM interne
 - [ ] P9.1 — Fuite de RAM interne (~0,6 Ko/min, P4 + cuve) : observation 12 h, puis bissection un réglage à la fois (profil normal, RelaisPushMQTT, ModBus série/UDP, socket udp() par émission), retour arrière à chaque pas (corrige M1 ; cote G, effort moyen, risque faible)
