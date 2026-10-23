@@ -23,6 +23,10 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
 
 ## A1 — Décisions à prendre (aucun code)
 - [ ] P5.1 — Redémarrages programmés (heureReboot, timerRebootSansWifi) : voulus ou non ? S'ils le sont, corriger les lambdas ET le cron `*/300` (P10.5) ; sinon supprimer crons et clés (corrige N1, B7 ; cote G, effort faible, risque dec)
+  - [x] Décision — preuve : voulus (« normalement ces deux timers fonctionnent… rends-les fonctionnels », 2026-10-23)
+  - [x] Code — preuve : `globalFonctions.be` (lambda `/-> controleGeneral.heureReboot()`, `remove_cron` avant), `controleGeneral.be` (`surveilleWifi()` dans `every_second` au lieu du cron `*/300`) ; test `test_timers.be` du scratchpad 10/10, mutant (délai /10) rouge 4 échecs ; relecteur-berry : prêt, banc ModBus 309/309
+  - [x] Désactivables sans redémarrer (demande du 2026-10-23) — preuve : `ReglageGlobal heureReboot [HH:MM|OFF]`, `ReglageGlobal timerRebootSansWifi [s|OFF]` (60 s minimum), `globalFonctions.armeRebootQuotidien`/`reglageReboot` ; test `test_reglage_reboot.be` du scratchpad 28/28, mutant (24:00 accepté, minimum 1 s) rouge 7 échecs ; README § commandes
+  - [ ] Sur carte — modules solidifiés : build + flash du P4 nécessaires ; vérifier le reboot de 00:00 (`Status 1`, RestartReason) le lendemain
 - [ ] P2.1 — Une S3 a-t-elle un écran ? Sinon retirer LVGL/OpenHASP de la base N16R8 (ou base S3 « sans écran ») (corrige E1 ; cote G, effort faible, risque moyen)
 - [ ] P3.1 — Différentiel : `drivers.ModBus.activation` à OFF, ou embarquer la pile ModBus (corrige S1 ; cote L, effort faible, risque dec)
 - [ ] P3.5 — Modules solidifiés inutiles : accepter, ou découper `socle` en `socle` + `reseau` (corrige S3 ; cote S, effort faible, risque dec)
@@ -39,7 +43,7 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
   - [x] P4 — preuve : réponse `"profil":"normal"`, sorties serie/web/syslog info, mqtt erreur (2026-10-23 05:35) ; témoin : `stat/garage/LOGGING` muet depuis 05:35:09 (11 min sans message, sniffeur :7100)
   - [x] Cuve — preuve : réponse `"profil":"normal"`, mêmes sorties (2026-10-23 05:35)
   - [x] Rideau — hors ligne au relevé du 2026-10-23 (pas de réponse) : envoyer `ReglageLog profil normal` puis `ReglageLog tous info` à son retour
-  - [x] Persists du dépôt des 3 cartes du garage — preuve : `diverses.logs.profil` = normal dans `data/garage/{tasmota32p4-serveur-modbus,tasmota32s3-capteurs-cuve-modbus,tasmota32s3-rideau-garage-modbus}/_persist.json` (41 lignes, JSON vérifié = effet des 2 commandes) ; autres cartes laissées à P4.4
+  - [x] Persists du dépôt des 3 cartes du garage — preuve : `diverses.logs.profil` = normal dans `data/garage/{tasmota32p4-serveur-modbus,tasmota32s3-capteurs-cuve-modbus,tasmota32s3-rideau-garage-modbus}/_persist.json` (41 lignes, JSON vérifié = effet des 2 commandes) ; puis, à la demande du 2026-10-23, les 5 autres persists à bloc de logs (différentiel, cave ESP32 et S3, grenier, ancien maître S3 : 64 lignes, même vérification) ; `cave/tasmota32-serveur-rly-sauvegarde` non touché (ancien code, sans `diverses.logs`)
 - [x] P7.2 — `ReglageLog tous info` : seuils des modules à info (corrige C2, C4 ; cote G, effort nul, risque nul)
   - [x] P4 et cuve — preuve : réponse ReglageLog, les 14 (P4) et 13 (cuve) cibles à info (2026-10-23) ; mêmes clés dans les persists du dépôt (clés orphelines `drivers.KNX.log`, `modules.rideau.log` non touchées, comme sur la carte : voir P6.2)
   - [x] Rideau — avec P7.1, à son retour en ligne
@@ -50,7 +54,10 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
 - [ ] P9.1 — Fuite de RAM interne (~0,6 Ko/min, P4 + cuve) : observation 12 h, puis bissection un réglage à la fois (profil normal, RelaisPushMQTT, ModBus série/UDP, socket udp() par émission), retour arrière à chaque pas (corrige M1 ; cote G, effort moyen, risque faible)
 
 ## A4 — Bancs manquants (avant toute refonte)
-- [ ] P10.3 — Écrire `banc_boot.be` : vrais autoexec/configGlobal/configDevices/controleGeneral, persists réel, `{}`, et privé d'une clé (témoin) (corrige B8, B1 ; cote G, effort moyen, risque nul)
+- [x] P10.3 — Écrire `banc_boot.be` : vrais autoexec/configGlobal/configDevices/controleGeneral, persists réel, `{}`, et privé d'une clé (témoin) (corrige B8, B1 ; cote G, effort moyen, risque nul) — preuve : `python outils_docs/scripts_python/berry/banc_boot.py` code 0, 72 contrôles (64 ok, 8 CONNU : B1, B2, B3, MAC, ES8311), autoexec du P4 ENTIER ; témoin du cas 3 (30 échecs vus) ; mutant « ancienne lambda heureReboot » sur copie de data/fs → `BANC_BOOT: ECHEC`, code 1 (2026-10-23)
+  - [ ] Défaut trouvé par le banc : ES8311 absent du bus I2C → `self.I2C` nil, `write_reg` lève `attribute_error`, l'autoexec s'arrête (historique et controleGarage non chargés) — `controleES8311.be:20-24`, `:77`, `:376-377` (même nature que B2)
+  - [ ] Défaut trouvé par le banc : `serveur.adressMAC` jamais rempli (`globalFonctions.be:87-88` : `insert` ne remplace pas la clé vide `""` des 8 persists)
+  - [ ] Fragilité vue par le banc : `controleGarage.be:242` `["COUNTER"]["C1"]` sans garde (key_error dans web_sensor/json_append si le compteur manque)
 - [ ] P5.7 — Banc de la carte 16 relais + `try` autour de sa réception avec acquittement en `except` (corrige N7, B9 ; cote G, effort faible, risque faible)
 - [ ] P10.4 — Banc des scripts de la cuve (niveau → volume → couleur) (corrige B10 ; cote L, effort moyen, risque nul)
 

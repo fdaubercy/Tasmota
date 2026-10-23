@@ -3,12 +3,12 @@
 		"cmdMute": true,
 		"typeESP": "ESP32",
 		"logs": {
-			"profil": "debug",
+			"profil": "normal",
 			"profils": {
 				"normal": {"serie": "info", "web": "info", "mqtt": "erreur", "syslog": "info"},
 				"debug": {"serie": "debug", "web": "debug", "mqtt": "debug", "syslog": "debug"}
 			},
-			"general": "detail",
+			"general": "info",
 			"nbLogsFiles" : 0
 		},
 		"telePeriod": 300,
@@ -48,7 +48,7 @@
 		"mDNS": "ON",
 		"apiHTTP": "ON",
 		"adressMAC": "",
-		"log": "detail",
+		"log": "info",
 		"IP": {
 			"IPAddress": "192.168.0.49",
 			"IPGateway": "192.168.0.254",
@@ -84,7 +84,7 @@
 		"rangeExtender": {
 			"activation": "OFF",
 			"id": 0,
-			"log": "detail",
+			"log": "info",
 			"ipMaitre": "",
 			"AP": {
 				"IPAddress": "192.168.4.1",
@@ -102,18 +102,18 @@
 		"udp": {
 			"activation": "ON",
 			"id": 0,
-			"log": "detail",
+			"log": "info",
 			"telePeriod": 300,
 			"port": 2000
 		},
 		"tcp": {
 			"activation": "OFF",
 			"id": 0,
-			"log": "detail"
+			"log": "info"
 		},
 		"discovery": {
 			"activation": "ON",
-			"log": "detail"
+			"log": "info"
 		}
 	},
 	"template": {
@@ -739,7 +739,7 @@
 			"timeoutReponse": 1000,
 			"voieCommandes": "Serial",
 			"timeoutReponseUDP": 2000,
-			"log": "detail",
+			"log": "info",
 			"activationReponseCMD": "ON",
 			"relaisPushMQTT": "OFF",
 			"typeComm": {
@@ -768,7 +768,7 @@
 					}
 				},
 				"Conn16channels": {
-					"log": "detail",
+					"log": "info",
 					"Conn16channel1": {
 						"activation": "OFF",
 						"name": "Connecteur RS485 16 sorties",
@@ -777,7 +777,7 @@
 					}
 				},
 				"TasmotaSlaveModBus": {
-					"log": "detail",
+					"log": "info",
 					"TasmotaSlaveModBus1": {
 						"activation": "OFF",
 						"name": "Capteurs Cuve ModBus",
@@ -797,7 +797,7 @@
 			"activation": "OFF",
 			"name": "Connexion LoRaWan 868MHz",
 			"id": 0,
-			"log": "detail",
+			"log": "info",
 			"environnement": {}
 		}
 	}
