@@ -305,26 +305,13 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
         if (mac == "")
             udpFonctions.log("REGLAGE_UDP: ImAlive illisible ou sans adresse MAC, ignore : " + parametres.concat(" "), LOG_LEVEL_ERREUR)
         else
-            var paramDiscovery = json.load(gestionFileFolder.readFile("/json/discovery.json"))
-            if (paramDiscovery == nil)   paramDiscovery = {}      end
-
-            # Range la fiche sous sa MAC : forme {MAC: {role: {...}}}, celle des 3 autres voies
-            # d'ecriture (discoveryFonctions.be). Corrige le 2026-09-30 : elle etait rangee a la
-            # RACINE sous son role ("esclave2"), ce qui cassait la page /discovery (acces direct
-            # a ['config']) et placait le 'lwt' de resetClientsConnectes dans la fiche du role.
-            if (!paramDiscovery.contains(mac) || !isinstance(paramDiscovery[mac], map))   paramDiscovery[mac] = {}   end
-            paramDiscovery[mac][device] = tmp[device]
-
-            # Un ImAlive recu prouve que l'esclave est joignable en UDP : c'est le pendant de
-            # resetClientsConnectes (qui marque tout 'Offline'). Sans lui, un esclave RangeExtender
-            # qui n'atteint pas le broker n'avait jamais de 'lwt' et n'etait jamais route.
-            paramDiscovery[mac]["lwt"] = "Online"
-
-            # Purge l'entree racine laissee par l'ancienne version
-            if (paramDiscovery.contains(device))   paramDiscovery.remove(device)   end
-
-            # Puis enregistre le fichier
-            gestionFileFolder.writeFile("/json/discovery.json", json.dump(paramDiscovery))
+            # Range la fiche sous sa MAC ({MAC: {role: {...}}}, corrige le 2026-09-30 : elle etait rangee
+            # a la RACINE sous son role, ce qui cassait /discovery), 'lwt' = Online (sans lui, un esclave
+            # RangeExtender qui n'atteint pas le broker n'etait jamais route), purge l'ancienne entree racine.
+            # Le fichier n'est reecrit que si la fiche change (audit N2/P5.2, 2026-10-24) : voir
+            # discoveryFonctions.rangeFicheImAlive.
+            import discoveryFonctions
+            discoveryFonctions.rangeFicheImAlive(mac, device, tmp[device])
 
             tasmota.yield()
             udpFonctions.log("REGLAGE_UDP: Le maitre UDP a reçu les paramètres de l'esclave '" + str(tmp[device].find("nom", device)) + "' !", LOG_LEVEL_DEBUG_PLUS)

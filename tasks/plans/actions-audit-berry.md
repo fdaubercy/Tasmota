@@ -62,7 +62,7 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
 - [ ] P10.4 — Banc des scripts de la cuve (niveau → volume → couleur) (corrige B10 ; cote L, effort moyen, risque nul)
 
 ## A5 — Défauts actifs : petits correctifs
-- [ ] P5.2 — ImAlive : ranger la fiche via discoveryFonctions avec `memeValeur`, n'écrire que si elle change (corrige N2 ; cote G, effort faible, risque moyen)
+- [x] P5.2 — ImAlive : ranger la fiche via discoveryFonctions avec `memeValeur`, n'écrire que si elle change (corrige N2 ; cote G, effort faible, risque moyen) — preuve : `discoveryFonctions.rangeFicheImAlive` (lisTable + memeValeur, écriture seulement si fiche, lwt ou purge changent), appelée par `udpFonctions.reglageUDP` ; `test_discovery` §2b (5 contrôles, 221 tests verts), ancien `udpFonctions.be` rouge (1 écriture au lieu de 0) ; bancs ModBus et boot verts (2026-10-24)
 - [ ] P5.3 — Cuve : un seul `_Scheme` par seconde partagé entre LEDs et surveilleRubans (corrige N3 ; cote G, effort moyen, risque moyen)
 - [ ] P5.4 — P4 : CSS de la page d'accueil gardé en mémoire ou servi en statique (corrige N4 ; cote G, effort faible, risque faible)
 - [ ] P9.2 — `/histo` : morceaux dans une liste puis `concat()` (corrige M2 ; cote S, effort faible, risque faible)

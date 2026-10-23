@@ -2,7 +2,7 @@
 # -----------------------------------------------------------------------------
 # Charge les VRAIS udpFonctions.be, discoveryFonctions.be et rangeExtenderFonctions.be
 # sous des globaux bouchonnes, et verifie les lecteurs/ecrivains de la table :
-#   1-3. ImAlive (maitre) : fiche rangee sous sa MAC {MAC: {esclaveN: {...}}}, ancienne
+#   1-3. ImAlive (maitre) : fiche rangee sous sa MAC {MAC: {esclaveN: {...}}} (2b : reecrite seulement si elle change), ancienne
 #        entree racine purgee, message sans MAC ignore.
 #   4.   Page /discovery : une entree sans bloc 'config', ou un ipMaitre vide, ne tronque plus la page.
 #   5.   RoutageRangeExtender : une fiche MAC sans 'lwt' ou sans bloc 'rangeExtender' ne leve plus.
@@ -216,6 +216,18 @@ verifie("config MQTT preservee", "Capteurs de Cuve", t[CLE_CUVE].find("config", 
 verifie("lwt MQTT preserve", "Online", t[CLE_CUVE].find("lwt"))
 verifie("role ajoute a la fiche MAC", true, t[CLE_CUVE].contains("esclave2"))
 verifie("ancienne entree racine purgee", false, t.contains("esclave2"))
+
+print("")
+print("=== 2b. ImAlive repete : discovery.json reecrit SEULEMENT si la fiche change (audit P5.2) ===")
+var ecr = gestionFileFolder.ecritures
+verifie("ImAlive identique ne leve pas", "OK", essaie(def () imAlive(ficheCuve(true)) end))
+verifie("ImAlive identique : aucune ecriture flash", 0, gestionFileFolder.ecritures - ecr)
+var ficheModifiee = ficheCuve(true)
+ficheModifiee["esclave2"]["IPAddress"] = "192.168.4.3"
+ecr = gestionFileFolder.ecritures
+verifie("fiche modifiee (IP) ne leve pas", "OK", essaie(def () imAlive(ficheModifiee) end))
+verifie("fiche modifiee : une seule ecriture", 1, gestionFileFolder.ecritures - ecr)
+verifie("fiche modifiee rangee", "192.168.4.3", table()[CLE_CUVE]["esclave2"]["IPAddress"])
 
 print("")
 print("=== 3. ImAlive sans MAC : ignore, table intacte ===")

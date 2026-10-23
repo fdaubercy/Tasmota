@@ -72,6 +72,28 @@ def discoveryFonctions_lisTable()
 end
 discoveryFonctions.lisTable = discoveryFonctions_lisTable
 
+# Maitre : range la fiche d'un ImAlive recu (udpFonctions.reglageUDP) sous sa MAC, forme {MAC: {role: {...}}}.
+# Un ImAlive recu prouve que l'esclave est joignable en UDP : 'lwt' = Online (pendant de resetClientsConnectes).
+# Purge l'entree racine {role: ...} laissee par l'ancienne version. N'ECRIT le fichier que si quelque chose
+# change (audit N2/P5.2, 2026-10-24 : chaque ImAlive le reecrivait, une ecriture flash par esclave et par
+# telePeriod). Retourne true si discovery.json a ete reecrit.
+def discoveryFonctions_rangeFicheImAlive(mac, role, fiche)
+    import gestionFileFolder
+    import json
+
+    var table = discoveryFonctions.lisTable()
+    var modifie = false
+    if (!isinstance(table.find(mac), map))    table[mac] = {}    modifie = true    end
+    var entree = table[mac]
+    if (!discoveryFonctions.memeValeur(entree.find(role), fiche))    entree[role] = fiche    modifie = true    end
+    if (entree.find("lwt") != "Online")    entree["lwt"] = "Online"    modifie = true    end
+    if (table.contains(role))    table.remove(role)    modifie = true    end
+
+    if (modifie)    gestionFileFolder.writeFile("/json/discovery.json", json.dump(table))    end
+    return modifie
+end
+discoveryFonctions.rangeFicheImAlive = discoveryFonctions_rangeFicheImAlive
+
 # Fiches ANCIENNES : plusieurs MAC publient la MEME fiche (meme hostname 'hn' ET meme nom 'dn'
 # dans 'config') -- carte remplacee dont les messages retenus restent sur le broker. Constate
 # le 2026-10-05 : 3 MAC 'RIDEAU-GARAGE', 2 MAC 'SERVEUR-RLY-CAVE', qui se chassaient de la table
