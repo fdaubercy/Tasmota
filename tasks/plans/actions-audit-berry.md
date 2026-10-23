@@ -67,7 +67,8 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
 - [ ] P5.4 — P4 : CSS de la page d'accueil gardé en mémoire ou servi en statique (corrige N4 ; cote G, effort faible, risque faible)
 - [ ] P9.2 — `/histo` : morceaux dans une liste puis `concat()` (corrige M2 ; cote S, effort faible, risque faible)
 - [ ] P9.3 — `lisTable()` à la place des lectures triples de discovery.json, cache invalidé à l'écriture (corrige M3 ; cote S, effort faible, risque nul)
-- [ ] P7.3 — 6 `print('Erreur…')` d'`except` → `xxxFonctions.log("…_ERREUR", LOG_LEVEL_ERREUR)` (corrige C3 ; cote G, effort faible, risque faible)
+- [x] P7.3 — 6 `print('Erreur…')` d'`except` → `xxxFonctions.log("…_ERREUR", LOG_LEVEL_ERREUR)` (corrige C3 ; cote G, effort faible, risque faible) — preuve : 3 dans `modbusFonctions.be` (CONFIG_MODBUS_ERREUR, EXECUTE_CMD_MODBUS_ERREUR ×2), 3 dans `udpFonctions.be` (REGLAGE_UDP_ERREUR ×3), plus aucun `print('Erreur` ; bancs ModBus, discovery (216) et boot verts (2026-10-24). Chemins d'exception non provoqués sur banc
+  - [ ] Vu en passant : `udpFonctions.be` `ipMaitre` (≈ l. 371) fait `insert()` (ne remplace pas une IP déjà enregistrée, même défaut que la MAC) puis `persist.save()` sans `true` (modif imbriquée non écrite)
 - [ ] P7.5 — Logs ponctuels : info→detail dans `web_sensor` du P4, ES8311 en erreur, `_ERREUR` dans 8 `except`, préfixes ; trancher « trame rejetée / délai isolé » (corrige C5, C6, C7, C8 ; cote G, effort faible, risque faible)
 - [ ] P6.1 — Cible réglable `historique` (dans CIBLES, lieu `diverses.historique`) (corrige L1 ; cote G, effort faible, risque faible)
 

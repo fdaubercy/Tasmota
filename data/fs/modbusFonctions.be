@@ -221,7 +221,7 @@ def modbusFonctions_configModbusByJson()
                     modbusFonctions.log(string.format("CONFIG_MODBUS: Règle le timeout d'attente d'une réponse par le maitre ModBus à %sms !", modbusJSON["timeoutReponse"]), LOG_LEVEL_DEBUG)
                 end
             except .. as e, m
-                print('Erreur: ', e, " -> ", m)
+                modbusFonctions.log("CONFIG_MODBUS_ERREUR: reglage du port serie ModBus (debit, protocole, timeout) impossible : " + str(e) + " - " + str(m) + " !", LOG_LEVEL_ERREUR)
             end
         # Règle la communication ModBus si activée (Si Eslave ModBus id > 0)
         elif (modbusJSON.find("id", 0) > 0)
@@ -2245,7 +2245,7 @@ def modbusFonctions_executeCmdModbus(paramMSG)
                                     tasmota.yield()
                                     modbusFonctions.envoiMsgModbus(paramMSG, "Reponse", typeCapteur)
                                 except .. as e, m
-                                    print('Erreur: ', e, " -> ", m)
+                                    modbusFonctions.log("EXECUTE_CMD_MODBUS_ERREUR: reponse a la commande ModBus (etat des capteurs) impossible : " + str(e) + " - " + str(m) + " !", LOG_LEVEL_ERREUR)
                                 end
                             end
                         end
@@ -2419,7 +2419,7 @@ def modbusFonctions_executeCmdModbus(paramMSG)
                                         tasmota.yield()
                                         modbusFonctions.envoiMsgModbus(paramMSG, "Reponse", typeDevice)
                                     except .. as e, m
-                                        print('Erreur: ', e, " -> ", m)
+                                        modbusFonctions.log("EXECUTE_CMD_MODBUS_ERREUR: commande de couleur du ruban (HSBColor) impossible : " + str(e) + " - " + str(m) + " !", LOG_LEVEL_ERREUR)
                                     end
                                 end
                             end

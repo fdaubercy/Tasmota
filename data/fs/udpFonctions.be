@@ -278,7 +278,7 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
                 end
             end
         except .. as e, m
-            print('Erreur: ', e, " -> ", m)
+            udpFonctions.log("REGLAGE_UDP_ERREUR: envoi de ImAlive au maitre impossible : " + str(e) + " - " + str(m) + " !", LOG_LEVEL_ERREUR)
         end
 
         # Timer NOMME : set_timer empile toujours un nouveau timer (tasmota_class.be:275), donc
@@ -362,7 +362,7 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
 
             udpFonctions.log("REGLAGE_UDP: L'esclave UDP a mis à jour son horloge interne avec le timestamp: " + str(timestamp), LOG_LEVEL_DEBUG_PLUS)
         except .. as e, m
-            print('Erreur: ', e, " -> ", m)
+            udpFonctions.log("REGLAGE_UDP_ERREUR: mise a l'heure par le maitre (Timestamp) impossible : " + str(e) + " - " + str(m) + " !", LOG_LEVEL_ERREUR)
         end
     # L'esclave enregistre l'adresse IP du maitre
     elif (string.toupper(fonction) == string.toupper("ipMaitre") && serveur["udp"]["id"] > 0)
@@ -375,7 +375,7 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
 
             udpFonctions.log("REGLAGE_UDP: L'esclave UDP a enregistré l'adresse IP du maitre: " + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS)
         except .. as e, m
-            print('Erreur: ', e, " -> ", m)
+            udpFonctions.log("REGLAGE_UDP_ERREUR: enregistrement de l'IP du maitre (ipMaitre) impossible : " + str(e) + " - " + str(m) + " !", LOG_LEVEL_ERREUR)
         end
 
     end
