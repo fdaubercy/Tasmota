@@ -48,6 +48,17 @@ import configGlobal
 import globalFonctions
 import webFonctions
 
+# Charge un module SANS que son echec arrete les suivants (audit B2/B5, P10.2, 2026-10-24) : avant, une
+# exception dans un controleXxx (cle absente du persist, peripherique muet...) interrompait l'autoexec et
+# privait la carte de tous les modules charges apres lui. L'echec est journalise, le chargement continue.
+def chargeModule(nom, chargement)
+    try
+        chargement()
+    except .. as e, m
+        logFonctions.log("AUTO_EXE_ERREUR: echec du chargement de '" + nom + "' : " + str(e) + " - " + str(m) + " (modules suivants charges quand meme) !", LOG_LEVEL_ERREUR)
+    end
+end
+
 # Vérifie si le persist.json est présent et paramétré
 if (persistValide)
     # Compile les modules (no-op pour les modules solidifies : leur .be n'est plus sur le LittleFS)
@@ -77,16 +88,12 @@ if (persistValide)
     # 'import' appelle AUTOMATIQUEMENT init(module) du module (be_module.c:285-296) :
     # init() publie l'instance dans global.controleXxx et fait add_driver, comme avant.
     # Ne PAS rappeler _ctrl.init() ici : ce serait le constructeur de l'instance.
-    do
-        import controleGeneral as _ctrl
-    end
+    chargeModule("controleGeneral", def () import controleGeneral as _ctrl end)
     # gestionFileFolder.loadBerryFile("/i2c_ads1115", drivers["I2C"]["environnement"]["ADS1115"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/i2c_mcp23017", drivers["I2C"]["environnement"]["MCP23017"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/modBus_Conn16channel", drivers["ModBus"]["environnement"]["Conn16channel"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/modbus_TasmotaSlaveModBus", drivers["ModBus"]["environnement"]["TasmotaSlaveModBus1"].find("activation", "OFF"), "ON")
-    do
-        import controleWeb as _ctrl
-    end
+    chargeModule("controleWeb", def () import controleWeb as _ctrl end)
     # gestionFileFolder.loadBerryFile("/controleUDP", serveur["udp"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/controleModbus", drivers["ModBus"].find("activation", "OFF"), "ON")
     # gestionFileFolder.loadBerryFile("/controleRangeExtender", serveur["rangeExtender"].find("activation", "OFF"), "ON")

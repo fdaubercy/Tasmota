@@ -84,9 +84,9 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
 
 ## A7 — Démarrage robuste
 - [x] P10.1 — Garde de tête des autoexec : `persist._p` et `diverses` testés avant toute lecture, avec trace (corrige B1 ; cote G, effort faible, risque faible) — preuve : `persistValide` (4 blocs serveur/diverses/modules/drivers) en tête des 8 autoexec en service (hors `*sauvegarde*`), élagage/veille/corps conditionnés, erreur finale nommant les blocs manquants ; `banc_boot` cas 2 vert (drapeau B1 à false), ancien autoexec du P4 rouge (2 échecs) (2026-10-24)
-- [ ] P10.2 — `try/except` journalisé autour de chaque `import controleXxx` ; `ReglageGlobal`/`ReglageLog` enregistrées avant `configGlobalByJson` (corrige B2, B3, B5 ; cote G, effort moyen, risque moyen)
+- [x] P10.2 — `try/except` journalisé autour de chaque `import controleXxx` ; `ReglageGlobal`/`ReglageLog` enregistrées avant `configGlobalByJson` (corrige B2, B3, B5 ; cote G, effort moyen, risque moyen)
   - [x] B3 : `ReglageGlobal`/`ReglageLog` enregistrées en tête de `controleGeneral.init` — preuve : `banc_boot` cas 3 vert (drapeau B3 à false), ancien `controleGeneral.be` rouge (2 échecs) ; banc ModBus vert (2026-10-24)
-  - [ ] B2, B5 : `try/except` journalisé autour de chaque `import controleXxx`
+  - [x] B2, B5 : `try/except` journalisé autour de chaque `import controleXxx` — preuve : `chargeModule(nom, chargement)` dans les 8 autoexec en service (imports, `loadBerryFile`, `historiqueFonctions.demarre`), échec en `AUTO_EXE_ERREUR` et chargement continué ; `banc_boot` cas 3 vert (drapeau B2 à false : controleGeneral échoue, CONTROLE_GARAGE chargé), ancien autoexec du P4 rouge (2026-10-24). B5 : effet (arrêt de l'autoexec) neutralisé ; la `key_error` à l'import d'un driver ModBus à environnement vide reste, journalisée
 - [ ] P4.2 — Autoexec commun : module `demarrage` solidifié, ~15 lignes propres par carte ; différentiel et grenier remis au modèle (corrige D2, D4 ; cote S, effort moyen, risque moyen)
 - [ ] P4.3 — Séparer « charger ou non » et « supprimer le source » dans `compileModule`/`loadBerryFile` (corrige D3 ; cote D, effort faible, risque faible)
 

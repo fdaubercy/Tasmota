@@ -56,6 +56,17 @@ import historiqueFonctions
 import historiqueSeries
 import graphiquesFonctions
 
+# Charge un module SANS que son echec arrete les suivants (audit B2/B5, P10.2, 2026-10-24) : avant, une
+# exception dans un controleXxx (cle absente du persist, peripherique muet...) interrompait l'autoexec et
+# privait la carte de tous les modules charges apres lui. L'echec est journalise, le chargement continue.
+def chargeModule(nom, chargement)
+    try
+        chargement()
+    except .. as e, m
+        logFonctions.log("AUTO_EXE_ERREUR: echec du chargement de '" + nom + "' : " + str(e) + " - " + str(m) + " (modules suivants charges quand meme) !", LOG_LEVEL_ERREUR)
+    end
+end
+
 # Vérifie si le persist.json est présent et paramétré
 if (persistValide)
     # Compile les modules
@@ -90,29 +101,23 @@ if (persistValide)
     # init() publie l'instance dans global.controleXxx et fait add_driver, comme avant.
     # Ne PAS rappeler _ctrl.init() ici : ce serait le constructeur de l'instance.
     # Garder controleGeneral AVANT i2c_ads1115 (lit controleGeneral.nbIOActivesJSON).
-    do
-        import controleGeneral as _ctrl
-    end
-    do
-        import controleLedTemoin as _ctrl
-    end
-    do import i2c_ads1115 as _ctrl end   # solidifie : init() porte la garde d'activation
-    do import i2c_mcp23017 as _ctrl end   # solidifie : init() porte la garde d'activation
-    do import modBus_Conn16channels as _ctrl end   # solidifie : init() porte la garde d'activation
-    do import modBus_TasmotaSlaveModBus as _ctrl end   # solidifie : init() porte la garde d'activation
-    do
-        import controleWeb as _ctrl
-    end
-    if serveur["udp"].find("activation", "OFF") == "ON"    import controleUDP as _ctrl    end
+    chargeModule("controleGeneral", def () import controleGeneral as _ctrl end)
+    chargeModule("controleLedTemoin", def () import controleLedTemoin as _ctrl end)
+    chargeModule("i2c_ads1115", def () import i2c_ads1115 as _ctrl end)   # solidifie : init() porte la garde d'activation
+    chargeModule("i2c_mcp23017", def () import i2c_mcp23017 as _ctrl end)   # solidifie : init() porte la garde d'activation
+    chargeModule("modBus_Conn16channels", def () import modBus_Conn16channels as _ctrl end)   # solidifie : init() porte la garde d'activation
+    chargeModule("modBus_TasmotaSlaveModBus", def () import modBus_TasmotaSlaveModBus as _ctrl end)   # solidifie : init() porte la garde d'activation
+    chargeModule("controleWeb", def () import controleWeb as _ctrl end)
+    if serveur["udp"].find("activation", "OFF") == "ON"    chargeModule("controleUDP", def () import controleUDP as _ctrl end)    end
     # gestionFileFolder.loadBerryFile("/controleTCP", serveur["tcp"].find("activation", "OFF"), "ON")
-    do import controleModbus as _ctrl end   # solidifie : init() porte la garde d'activation
-    if serveur["rangeExtender"].find("activation", "OFF") == "ON"    import controleRangeExtender as _ctrl    end
+    chargeModule("controleModbus", def () import controleModbus as _ctrl end)   # solidifie : init() porte la garde d'activation
+    if serveur["rangeExtender"].find("activation", "OFF") == "ON"    chargeModule("controleRangeExtender", def () import controleRangeExtender as _ctrl end)    end
     # gestionFileFolder.loadBerryFile("/controleLoRaWan", drivers["LoRaWan"].find("activation", "OFF"), "ON")
     # Volets roulants (2026-10-12) : volet natif de Tasmota sur les relais VIRTUELS du maitre (porte de
     # garage du rideau), meme interface que sur le rideau. Solidifie : init() porte la garde d'activation.
-    if drivers.find("voletRoulants", {}).find("activation", "OFF") == "ON"    import controleVoletRoulants as _ctrl    end
-    if serveur["discovery"].find("activation", "OFF") == "ON"    import controleDiscovery as _ctrl    end
-    do import controleES8311 as _ctrl end   # solidifie : init() porte la garde d'activation
+    if drivers.find("voletRoulants", {}).find("activation", "OFF") == "ON"    chargeModule("controleVoletRoulants", def () import controleVoletRoulants as _ctrl end)    end
+    if serveur["discovery"].find("activation", "OFF") == "ON"    chargeModule("controleDiscovery", def () import controleDiscovery as _ctrl end)    end
+    chargeModule("controleES8311", def () import controleES8311 as _ctrl end)   # solidifie : init() porte la garde d'activation
     # Historique des mesures de la carte (data/fs/historiqueFonctions.be), S3/P4 seulement : 24 h en
     # RAM + min/moy/max horaires en flash, lus par /histo et la page /graphiques. Compile en .bec puis demarre.
     # AVANT controleGarage, qui l'importe pour son filtre : Berry prefere le .bec au .be
@@ -121,11 +126,11 @@ if (persistValide)
     if diverses.find("historique", {}).find("activation", "OFF") == "ON"
         gestionFileFolder.compileModule("/historiqueFonctions", "ON")
         import historiqueFonctions
-        historiqueFonctions.demarre(diverses["historique"])
+        chargeModule("historiqueFonctions", def () historiqueFonctions.demarre(diverses["historique"]) end)
     end
 
     # controleGarage n'est PAS solidifie : charge depuis le LittleFS (encadres cuve de la page web, ReglageGarage)
-    gestionFileFolder.loadBerryFile("/controleGarage", modules.find("garage", {}).find("activation", "OFF"), "ON")
+    chargeModule("controleGarage", def () gestionFileFolder.loadBerryFile("/controleGarage", modules.find("garage", {}).find("activation", "OFF"), "ON") end)
 
     # NE PAS compiler autoexec.be en .bec : tasmota.compile() compile en contexte LOCAL
     # (tasmota_class.be:480, upstream #23457). Le .bec tournerait alors sous le nom 'loader'
