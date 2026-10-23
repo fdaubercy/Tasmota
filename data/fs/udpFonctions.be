@@ -367,13 +367,20 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
     # L'esclave enregistre l'adresse IP du maitre
     elif (string.toupper(fonction) == string.toupper("ipMaitre") && serveur["udp"]["id"] > 0)
         try
-            serveur["rangeExtender"].insert("ipMaitre", parametres[0])
-            persist.serveur = serveur
-            persist.save()
+            # Corrige le 2026-10-24 : insert() ne remplace pas une cle existante (les persists portent deja
+            # "ipMaitre") et persist.save() sans true n'ecrit pas une modif imbriquee : une nouvelle IP du
+            # maitre n'etait jamais retenue. Affectation, et ecriture flash SEULEMENT si l'IP change.
+            var ip = str(parametres[0])
+            if (!udpFonctions.estIPv4(ip))
+                udpFonctions.log("REGLAGE_UDP_ERREUR: IP du maitre invalide '" + ip + "' : ignoree !", LOG_LEVEL_ERREUR)
+            elif (serveur["rangeExtender"].find("ipMaitre", "") != ip)
+                serveur["rangeExtender"]["ipMaitre"] = ip
+                persist.serveur = serveur
+                persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
+                udpFonctions.log("REGLAGE_UDP: L'esclave UDP a enregistré l'adresse IP du maitre: " + ip, LOG_LEVEL_INFO)
+            end
 
             tasmota.yield()
-
-            udpFonctions.log("REGLAGE_UDP: L'esclave UDP a enregistré l'adresse IP du maitre: " + str(parametres[0]), LOG_LEVEL_DEBUG_PLUS)
         except .. as e, m
             udpFonctions.log("REGLAGE_UDP_ERREUR: enregistrement de l'IP du maitre (ipMaitre) impossible : " + str(e) + " - " + str(m) + " !", LOG_LEVEL_ERREUR)
         end
