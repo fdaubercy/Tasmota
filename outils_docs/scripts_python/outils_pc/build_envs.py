@@ -14,9 +14,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 FICHIER_CENV = "platformio_tasmota_cenv.ini"
-FICHIERS_INI = (FICHIER_CENV, "platformio_tasmota_env32.ini", "platformio_tasmota_env.ini",
-                "platformio_override.ini")
-BASE_OTA = "env:tasmota32_base"      # son pre-script porte l'OTA ; les ESP8266 n'en heritent pas
+# Ordre des extra_configs de platformio.ini : une option d'un fichier plus tard l'emporte
+FICHIERS_INI = ("platformio_tasmota_env.ini", "platformio_tasmota_env32.ini", "platformio_override.ini",
+                FICHIER_CENV)
+PRE_SCRIPT = "pre_utilitaires_platformio.py"    # charge par les bases ESP32 : il porte l'OTA
 ENTETE_ENV = re.compile(r"\[env:([^\]]+)\]")
 PORT_VALIDE = re.compile(r"COM\d{1,3}")
 LANGUE = re.compile(r"tasmota(?:32)?-[A-Z]{2}")
@@ -52,8 +53,8 @@ def _sections(racine):
             continue
         cp = _lit_ini(chemin)
         for nom in cp.sections():
-            if nom.startswith("env:") and nom not in toutes:
-                toutes[nom] = dict(cp.items(nom))
+            if nom.startswith("env:"):
+                toutes.setdefault(nom, {}).update(cp.items(nom))     # fusion option par option
                 origine[nom] = fichier
     return toutes, origine
 
@@ -66,6 +67,21 @@ def _chaine(toutes, nom, vus=()):
     for parent in (toutes[nom].get("extends") or "").split(","):
         res += [s for s in _chaine(toutes, parent.strip(), vus + (nom,)) if s not in res]
     return res
+
+
+def _ota(toutes, chaine, vus=()):
+    """Vrai si les extra_scripts resolus de l'env chargent le pre-script (les ESP8266 non)."""
+    for nom in chaine:
+        valeur = toutes[nom].get("extra_scripts") or ""
+        if not valeur.strip():
+            continue
+        if PRE_SCRIPT in valeur:
+            return True
+        for ref in re.findall(r"\$\{(env:[^.}]+)\.extra_scripts\}", valeur):
+            if ref not in vus and ref in toutes and _ota(toutes, _chaine(toutes, ref), vus + (nom,)):
+                return True
+        return False       # la premiere section qui definit extra_scripts l'emporte
+    return False
 
 
 def _firmware(toutes, chaine):
@@ -125,7 +141,7 @@ def liste_envs(racine):
         if nom.endswith("_base"):          # tasmota32_base, tasmota32_idf55_base : pas des cibles
             continue
         chaine = _chaine(toutes, section)
-        ota = BASE_OTA in chaine[1:]
+        ota = _ota(toutes, chaine)
         ecrivable = origine[section] == FICHIER_CENV
         sous_groupe = ""
         if ecrivable:
@@ -167,6 +183,8 @@ def ecrit_port(racine, env, port):
             lignes[i] = m.group(1) + port + m.group(3)
     elif port != "":
         apres = next((i for i in range(debut + 1, fin) if re.match(r"extends\s*=", lignes[i])), debut)
+        while apres + 1 < fin and re.match(r"[ 	]+\S", lignes[apres + 1]):   # lignes de continuation
+            apres += 1
         if not lignes[apres].endswith(("\n", "\r")):
             lignes[apres] += eol
         lignes.insert(apres + 1, f"upload_port             = {port}{eol}")

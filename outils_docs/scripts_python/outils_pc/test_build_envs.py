@@ -5,6 +5,7 @@ Le controle sur les vrais fichiers du depot est en lecture seule.
 """
 
 import os
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -45,6 +46,12 @@ build_flags             = ${env:tasmota32s3-base-N16R8.build_flags}
                            -D FIRMWARE_GARAGE
 monitor_port            = COM11
 
+[env:tasmota32c6-idf]
+extends                 = env:tasmota32_idf55_base,
+                          env:tasmota32-base
+build_flags             = -D FIRMWARE_C6
+monitor_port            = COM5
+
 [env:tasmota32s3-sans-port]
 extends                 = env:tasmota32-base
 build_flags             = ${env:tasmota32-base.build_flags}
@@ -60,6 +67,10 @@ build_flags             = ${env:tasmota32_base.build_flags}
 extends                 = env:tasmota32_base
 build_flags             = ${env:tasmota32_base.build_flags}
                          -DFIRMWARE_TASMOTA32
+
+[env:tasmota32p4]
+extends                 = env:tasmota32_idf55_base
+build_flags             = -DFIRMWARE_P4
 
 [env:tasmota32-FR]
 extends                 = env:tasmota32
@@ -79,9 +90,14 @@ OVERRIDE = """\
 
 [env:tasmota32_base]
 monitor_speed           = 115200
+extra_scripts           =
+                            pre:outils_docs/scripts_python/build/pre_utilitaires_platformio.py
+                            post:outils_docs/scripts_python/build/post_lto_parallele.py
 
 [env:tasmota32_idf55_base]
 monitor_speed           = 115200
+extra_scripts           =
+                            pre:outils_docs/scripts_python/build/pre_utilitaires_platformio.py
 """
 ENTETE_H = """\
 #define WIFI_IP_ADDRESS "0.0.0.0"
@@ -164,6 +180,38 @@ def test_liste(racine):
             (False, False, True, True), "ota_esp8266_grise")
 
 
+def test_ota_idf55():
+    with tempfile.TemporaryDirectory() as t:
+        envs = {e.nom: e for e in be.liste_envs(depot_essai(t))}
+    verifie(envs["tasmota32p4"].ota_possible, True, "ota : env qui n'herite que de tasmota32_idf55_base")
+    verifie(envs["tasmota32c6-idf"].ota_possible, True, "ota : extends multiple")
+    with tempfile.TemporaryDirectory() as t:
+        r = depot_essai(t)
+        p = r / "platformio_override.ini"
+        p.write_bytes(p.read_bytes().replace(b"pre:outils_docs/scripts_python/build/pre_utilitaires_platformio.py",
+                                             b"post:autre.py"))
+        envs = {e.nom: e for e in be.liste_envs(r)}
+    verifie(envs["tasmota32s3"].ota_possible, False, "ota : sans pre-script dans les extra_scripts -> faux")
+
+
+def test_ip_comme_original():
+    """lit_ip_ota doit donner, sur le vrai .h, le meme resultat que ota-files-uploader.py."""
+    src = (RACINE / "outils_docs" / "scripts_python" / "build" / "ota-files-uploader.py").read_text(encoding="utf-8")
+    debut = src.index("def _lire_ip_override")
+    fin = src.index("def _configurer_upload_ota")
+    ns = {"re": re, "Path": Path}
+    exec(src[debut:fin], ns)
+    texte = (RACINE / "tasmota" / "user_config_override.h").read_text(encoding="utf-8", errors="ignore")
+    defines = sorted(set(re.findall(r"defined\s*\(\s*(FIRMWARE_\w+)\s*\)", texte)))
+    ecarts = []
+    for d in defines:
+        attendu = ns["_lire_ip_override"](str(RACINE), d)
+        attendu = "" if attendu in (None, "0.0.0.0") else attendu
+        if be.lit_ip_ota(texte, d) != attendu:
+            ecarts.append(d)
+    verifie((len(defines) > 10, ecarts), (True, []), f"ip : identique a l'original sur {len(defines)} defines du vrai .h")
+
+
 def test_ip():
     verifie(be.lit_ip_ota(ENTETE_H, "FIRMWARE_SIMPLE"), "10.0.0.5", "ip_bloc_simple")
     verifie(be.lit_ip_ota(ENTETE_H, "FIRMWARE_CAVE2"), "192.168.0.243", "ip_bloc_ou : second define")
@@ -194,6 +242,14 @@ def test_ecriture():
                 (True, 1), "ecrit_port_herite : ligne ';' intacte, ligne active ajoutee")
         e = [x for x in be.liste_envs(r) if x.nom == "tasmota32s3-garage"][0]
         verifie((e.port, e.port_herite), ("COM21", False), "ecrit_port_herite : relu, plus herite")
+    with tempfile.TemporaryDirectory() as t:
+        r = depot_essai(t)
+        be.ecrit_port(r, "tasmota32c6-idf", "COM8")
+        s = section(r, "tasmota32c6-idf")
+        verifie(s.splitlines()[1:5], ["extends                 = env:tasmota32_idf55_base,",
+                                      "                          env:tasmota32-base",
+                                      "upload_port             = COM8", "build_flags             = -D FIRMWARE_C6"],
+                "ecrit_port_ajoute : apres un extends multi-ligne")
     with tempfile.TemporaryDirectory() as t:
         r = depot_essai(t)
         be.ecrit_port(r, "tasmota32-cave", "COM15")
@@ -239,7 +295,9 @@ def test_vrais_fichiers():
 def principal():
     with tempfile.TemporaryDirectory() as t:
         test_liste(depot_essai(t))
+    test_ota_idf55()
     test_ip()
+    test_ip_comme_original()
     test_ecriture()
     test_vrais_fichiers()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
