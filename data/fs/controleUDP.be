@@ -143,8 +143,9 @@ class CONTROLE_UDP
         # Récupère les messages sur le port UDP (respecte l'API Tasmota)
         var paramMSG = {}
     
-        # Traitement du message
-        if (udpFonctions.lireUDP("UniCast", paramMSG) || udpFonctions.lireUDP("MultiCast", paramMSG))
+        # Traitement du message : chaque instance lit SA socket (audit N5/P5.5, 2026-10-24). Avant, les instances
+        # UniCast et MultiCast lisaient chacune les deux : 20 lectures par seconde et par socket pour 10 utiles.
+        if (udpFonctions.lireUDP(self.typeComm, paramMSG))
             udpFonctions.log("TRAITEMENT_MSG_UDP: Traitement du message en cours ...", LOG_LEVEL_DEBUG_PLUS)
 
             # paramMSG["msgHex"] = msg

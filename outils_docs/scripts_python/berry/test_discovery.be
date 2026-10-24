@@ -135,6 +135,7 @@ var serveur = {"udp": {"id": 0, "debug": "ON", "activation": "ON"},
 var drivers = {"ModBus": {"id": 0}}
 var diverses = {"telePeriod": 300}
 var udpFonctions = nil                 # (re)affectes par les fichiers charges
+var controleUDP = nil                  # section 24
 var discoveryFonctions = nil
 var rangeExtenderFonctions = nil
 var configGlobal = nil
@@ -1339,6 +1340,38 @@ verifie("System#Save : sockets d'emission fermees et oubliees", "true/0",
 etatUDP["udpReception"] = sauveRecep23
 etatUDP["socketsEmission"] = {}
 tasmota.ipSta = nil
+
+print("")
+print("=== 24. CONTROLE_UDP : chaque instance ne lit QUE sa socket (audit N5/P5.5, 2026-10-24) ===")
+# Avant : les instances UniCast et MultiCast lisaient chacune les DEUX sockets en every_100ms (20 lectures/s pour 10).
+class SocketCompteuse
+  var msgs, lectures, remote_ip, remote_port
+  def init(m) self.msgs = m self.lectures = 0 self.remote_ip = "192.168.4.2" self.remote_port = 51234 end
+  def read() self.lectures += 1 return size(self.msgs) > 0 ? bytes().fromstring(self.msgs.pop(0)) : nil end
+  def close() end
+end
+charge("controleUDP")
+serveur["udp"]["id"] = 0
+var uni24 = controleUDP.CONTROLE_UDP("UniCast", "", 2000)
+var multi24 = controleUDP.CONTROLE_UDP("MultiCast", "224.3.0.1", 4000)
+var sUni = SocketCompteuse([])
+var sMulti = SocketCompteuse([])
+etatUDP["udpReception"] = [sUni, sMulti]
+for i: 1 .. 10    uni24.every_100ms()    multi24.every_100ms()    end
+verifie("1 s des deux drivers : chaque socket lue 10 fois (avant : 20)", "10/10", str(sUni.lectures) + "/" + str(sMulti.lectures))
+uni24.every_100ms()
+verifie("l'instance UniCast ne lit pas la socket MultiCast", "11/10", str(sUni.lectures) + "/" + str(sMulti.lectures))
+multi24.every_100ms()
+verifie("l'instance MultiCast ne lit pas la socket UniCast", "11/11", str(sUni.lectures) + "/" + str(sMulti.lectures))
+# Un message de chaque cote : chacun traite une fois, par l'instance de sa socket
+journal = []
+sUni.msgs = ["TESTUDP-U"]
+sMulti.msgs = ["TESTUDP-M"]
+uni24.every_100ms()
+verifie("UniCast : son message lu, la socket MultiCast intacte", "0/1", str(size(sUni.msgs)) + "/" + str(size(sMulti.msgs)))
+multi24.every_100ms()
+verifie("MultiCast : son message lu a son tour", "0/0", str(size(sUni.msgs)) + "/" + str(size(sMulti.msgs)))
+etatUDP["udpReception"] = sauveRecep
 
 print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))

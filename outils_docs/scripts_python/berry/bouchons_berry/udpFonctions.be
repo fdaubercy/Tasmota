@@ -3,6 +3,10 @@
 # ce qui serait parti (type d'envoi, destinataire, message). Il rend true (envoye),
 # ou false si le banc pose udpFonctions.refuse = true (envoi refuse, 2026-10-17).
 # estIPv4() : copie de la vraie fonction (data/fs/udpFonctions.be).
+# test_discovery.be charge le VRAI udpFonctions par compile() dans la globale du meme nom : un 'import udpFonctions'
+# du code teste (controleUDP, section 24) doit alors voir ce module-la, pas ce bouchon (2026-10-24).
+import global
+if global.contains("udpFonctions") && global.udpFonctions != nil    return global.udpFonctions    end
 var udpFonctions = module("udpFonctions")
 udpFonctions.envois = []
 udpFonctions.refuse = false
