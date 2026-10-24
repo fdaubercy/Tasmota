@@ -296,6 +296,22 @@ def section_route_occupee(banc, git):
     verifie(banc.post("/arrete", {"id": "synchro_fork"})[0], 200, "TEMOIN synchro muette, depot propre -> 200")
     vide_presence()
 
+    # M8 : le refus nomme l'operation de l'outil (build : lancement en cours), pas « synchro » pour tous.
+    faux = HTTPServer(("127.0.0.1", 0), FauxSynchro)
+    threading.Thread(target=faux.serve_forever, daemon=True).start()
+    try:
+        FauxSynchro.reponse = b'{"en_cours": true}'
+        dossier = vide_presence()
+        ecrit_fiche(dossier, "Build et téléversement", faux.server_address[1], os.getpid())
+        del banc.arrets[:]
+        verifie(banc.post("/arrete", {"id": "build"}), (409, {"erreur": "Un lancement de build est en cours : arret refuse"}),
+                "POST /arrete build en plein lancement -> 409, message du build (pas de la synchro)")
+        verifie(banc.arrets, [], "409 build : rien arrete")
+    finally:
+        faux.shutdown()
+        faux.server_close()
+        vide_presence()
+
 
 def section_navigateur():
     print("== navigateur hors du job ==")

@@ -3,9 +3,10 @@
 Trois fonctions, appelees par build_serie.Serie apres le `pio run` qui produit ce qu'elles envoient :
 
   envoie_firmware_ota(env, ip, dossier_build, rapporte)
-      .pio/build/<env>/firmware.bin.gz, sinon firmware.bin, par POST /u2 (champ `file`), comme le
-      navigateur sur la page /up de Tasmota (bascule en safeboot comprise, voir plus bas) ; puis
-      attente du retour de la carte et preuve par `Status 2` (version + date de compilation changees).
+      .pio/build/<env>/firmware.bin.gz (s'il n'est pas plus ancien que firmware.bin), sinon
+      firmware.bin, par POST /u2 (champ `file`), comme le navigateur sur la page /up de Tasmota
+      (bascule en safeboot comprise, voir plus bas) ; puis attente du retour de la carte et preuve
+      par `Status 2` (version + date de compilation changees).
   extrait_image(image, dossier)
       fichiers de .pio/build/<env>/littlefs.bin, l'image que `pio run -t buildfs` vient d'ecrire (celle
       qu'un uploadfs par cable flasherait), copies dans un dossier temporaire. PAS littlefs_data : ce
@@ -194,8 +195,13 @@ def envoie_firmware_ota(env, ip, dossier_build, rapporte, *, delai_retour=90.0, 
     differer (sinon « firmware inchangé ») et ne plus etre le safeboot.
     """
     dossier_build = Path(dossier_build)
-    fichier = next((f for f in (dossier_build / "firmware.bin.gz", dossier_build / "firmware.bin") if f.is_file()),
-                   None)
+    gz, binaire = dossier_build / "firmware.bin.gz", dossier_build / "firmware.bin"
+    # .gz seulement s'il est au moins aussi recent que firmware.bin : une compression ratee ou
+    # desactivee laisse l'ancien .gz a cote du nouveau firmware.bin.
+    if gz.is_file() and (not binaire.is_file() or gz.stat().st_mtime >= binaire.stat().st_mtime):
+        fichier = gz
+    else:
+        fichier = binaire if binaire.is_file() else None
     if fichier is None:
         raise RuntimeError(f"{ETAPE_TELEVERSEMENT} : ni firmware.bin.gz ni firmware.bin dans {dossier_build}")
     donnees = fichier.read_bytes()

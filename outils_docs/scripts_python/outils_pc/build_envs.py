@@ -184,8 +184,11 @@ def liste_envs(racine):
                 sous_groupe = "esp32" if ota else "esp8266"
         port, herite = _port(toutes, chaine)
         firmware = _firmware(toutes, chaine)
+        # Un safeboot de l'amont charge le pre-script (extends tasmota32_base) mais c'est l'image de secours
+        # de la partition safeboot, pas un firmware a pousser par /u2 a la place de l'appli : pas d'OTA.
+        ota_possible = ota and sous_groupe != "safeboot"
         envs.append(Env(nom, famille, sous_groupe, port, herite, lit_ip_ota(texte_h, firmware),
-                        ota, firmware, ecrivable, _fs_avec_firmware(toutes, section, ota)))
+                        ota_possible, firmware, ecrivable, _fs_avec_firmware(toutes, section, ota)))
     return envs
 
 

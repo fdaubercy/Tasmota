@@ -235,6 +235,40 @@ def test_port_ecrit_puis_relu(b):
     b.json("POST", "/port", {"env": A, "port": "COM12"})
 
 
+def test_port_refuse_pendant_build_externe(b):
+    """M2 (spec 13 bis) : ecriture du port refusee pendant un build lance ailleurs (VS Code, cible Custom)."""
+    texte_avant = (b.racine / "platformio_tasmota_cenv.ini").read_bytes()
+    try:
+        b.serie.builds_en_cours = lambda: ["pio run -e tasmota32-x (VS Code)"]
+        statut, texte = b.requete("POST", "/port", {"env": A, "port": "COM14"})
+        verifie((statut, "build" in texte and "tasmota32-x" in texte), (409, True),
+                "port_refuse_pendant_build_externe : build en cours -> 409, motif cite le build")
+        b.serie.builds_en_cours = lambda: None
+        verifie(b.json("POST", "/port", {"env": A, "port": "COM14"})[0], 409,
+                "port_refuse_pendant_build_externe : detection impossible -> 409")
+        verifie((b.racine / "platformio_tasmota_cenv.ini").read_bytes(), texte_avant,
+                "port_refuse_pendant_build_externe : cenv non modifie")
+    finally:
+        b.serie.builds_en_cours = lambda: []
+    verifie(b.json("POST", "/port", {"env": A, "port": "COM12"})[0], 200,
+            "port_refuse_pendant_build_externe : temoin, aucun build -> 200")
+
+
+def test_journal_env_exact():
+    """M3 : le journal d'un env ne melange pas celui d'un env dont le nom le prolonge (x-a / x-a-b)."""
+    with tempfile.TemporaryDirectory() as t:
+        jour = Path(t) / "journaux"
+        jour.mkdir()
+        for nom, texte in ((f"20261024-100000-{A}-compiler.log", "A1\n"), (f"20261024-100001-{A}-upload-2.log", "A2\n"),
+                           (f"20261024-100002-{A}-b-compiler.log", "AB\n"), (f"20261024-100003-x{A}-buildfs.log", "XA\n"),
+                           (f"20261024-100004-{A}-compiler.log.tmp", "TMP\n")):
+            (jour / nom).write_text(texte, encoding="utf-8")
+        verifie(build_web.journal_env(t, A, 0), "A1\nA2\n", "journal_env_exact : seuls les journaux de CET env")
+        verifie(build_web.journal_env(t, A, float("inf")), "A2\n",
+                "journal_env_exact : repli sur le dernier journal de CET env (pas celui de x-a-b)")
+        verifie(build_web.journal_env(t, A + "-b", 0), "AB\n", "journal_env_exact : temoin, l'env x-a-b a le sien")
+
+
 def test_lancement(b):
     lancement = {"lignes": [LIGNE_A], "actions": ["compiler"]}
     verifie(b.json("POST", "/lancer", {"lignes": [], "actions": ["compiler"]})[0], 409, "lancer : refus du serie = 409")
@@ -341,18 +375,68 @@ def test_fermeture():
             b.ferme()
 
 
+class FausseSerie:
+    """Serie dont l'envoi en cours dure `envois` sondages ; note chaque appel a arrete()."""
+
+    def __init__(self, envois):
+        self.envois, self.actif, self.appels = envois, True, []
+
+    def en_cours(self):
+        return self.actif
+
+    def envoi_en_cours(self):
+        self.envois -= 1
+        return self.envois >= 0
+
+    def arrete(self, immediat=False):
+        self.appels.append((immediat, self.envois >= 0))         # (immediat, envoi encore en cours ?)
+        if immediat:
+            self.actif = False
+
+
+def test_fermeture_attend_envoi():
+    """M7 : a l'arret du serveur, un envoi vers une carte va a son terme ; le reste est tue."""
+    s = FausseSerie(envois=3)
+    build_web.arrete_serie(s, attente=2)
+    verifie(((True, True) in s.appels, s.appels[-1:]), (False, [(True, False)]),
+            "fermeture_attend_envoi : pas d'arret immediat tant que l'envoi dure, puis arret immediat")
+    s = FausseSerie(envois=0)                                     # temoin : pas d'envoi -> tue tout de suite
+    build_web.arrete_serie(s, attente=2)
+    verifie(s.appels[-1:], [(True, False)], "fermeture_attend_envoi : temoin, sans envoi -> arret immediat")
+    # vrai faux pio : upload par cable en pleine ecriture (etape Televersement) a l'arret du serveur
+    ecriture = ["Processing {env}", "Compiling .pio/build/{env}/src/a.cpp.o", "Linking .pio/build/{env}/firmware.elf",
+                "Uploading .pio/build/{env}/firmware.bin", "Writing at 0x00010000 (10 %)", "@pause 1.5",
+                "Writing at 0x00020000 (100 %)", "[SUCCESS] Took 2 seconds"]
+    with tempfile.TemporaryDirectory() as t:
+        b = Banc(t, {"*": {"upload": {"lignes": ecriture}}})
+        try:
+            b.json("POST", "/lancer", {"lignes": [LIGNE_A], "actions": ["upload"]})
+            limite = time.monotonic() + 10
+            while time.monotonic() < limite and not any(e["type"] == "etape" and e.get("etape") == "Téléversement"
+                                                        for e in b.serie.depuis(0, 0)):
+                time.sleep(0.05)
+            build_web.arrete_serie(b.serie)
+            journal = [json.loads(l) for l in (Path(t) / "journal.jsonl").read_text(encoding="utf-8").splitlines()]
+            verifie(([j.get("code") for j in journal if j["type"] == "fin"], b.serie.en_cours()), ([0], False),
+                    "fermeture_attend_envoi : upload en cours mene a son terme (code 0), puis serie arretee")
+        finally:
+            b.ferme()
+
+
 def principal():
     with tempfile.TemporaryDirectory() as t:
         os.environ["OUTILS_TASMOTA_DOSSIER"] = str(Path(t) / "outils")
         b = Banc(Path(t))
         try:
             for test in (test_routes_locales, test_page_contient, test_envs_fs_avec_firmware, test_post_sans_entete_refuse, test_distant_sans_jeton_refuse,
-                         test_corps_borne, test_port_ecrit_puis_relu, test_lancement, test_flux_et_journal,
-                         test_journal_dernier_lancement, test_arret):
+                         test_corps_borne, test_port_ecrit_puis_relu, test_port_refuse_pendant_build_externe,
+                         test_lancement, test_flux_et_journal, test_journal_dernier_lancement, test_arret):
                 test(b)
         finally:
             b.ferme()
+    test_journal_env_exact()
     test_fermeture()
+    test_fermeture_attend_envoi()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0
 

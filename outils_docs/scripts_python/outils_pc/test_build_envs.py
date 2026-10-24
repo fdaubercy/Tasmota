@@ -182,6 +182,8 @@ def test_liste(racine):
     verifie((envs["tasmota-pompe-piscine"].ota_possible, envs["tasmota-lite"].ota_possible,
              envs["tasmota32-cave"].ota_possible, envs["tasmota32s3"].ota_possible),
             (False, False, True, True), "ota_esp8266_grise")
+    verifie(envs["tasmota32c3-safeboot"].ota_possible, False,
+            "ota : safeboot de l'amont (charge pourtant le pre-script) -> pas d'OTA proposee")
 
 
 def test_ota_idf55():

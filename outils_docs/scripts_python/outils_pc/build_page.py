@@ -576,7 +576,9 @@ function traite(e) {
   } else if (e.type === "ligne") {
     b = bloc(e.env);
     b.derniere = e.texte || "";
-    if (/Utilisera une commande de téléchargement personnalisée/.test(b.derniere) && !b.fsAussi) { b.fsAussi = true; planifie(e.env); }
+    // FS aussi flashe : seulement par l'upload firmware par cable (post_esp32 ajoute littlefs.bin a esptool)
+    if (e.action === "upload" && b.methode === "com" && !b.fsAussi &&
+        /Utilisera une commande de téléchargement personnalisée/.test(b.derniere)) { b.fsAussi = true; planifie(e.env); }
     if (uiBlocs[e.env] && b.statut === "encours") uiBlocs[e.env].derniere.textContent = b.derniere;
   } else if (e.type === "echec") {
     if (e.env === null || e.env === undefined) {

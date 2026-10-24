@@ -475,6 +475,33 @@ def test_fin_avant_liberation():
                 "fin_avant_liberation : serie encore active quand fin est emis, libre apres")
 
 
+def test_envoi_en_cours():
+    """M7 : envoi_en_cours() vrai pendant un envoi vers une carte seulement (pas pendant la compilation)."""
+    import threading
+    vus, libere = [], threading.Event()
+    with tempfile.TemporaryDirectory() as t:
+        ecriture = ["Compiling .pio/build/{env}/src/a.cpp.o", "@pause 0.6", "Linking .pio/build/{env}/firmware.elf",
+                    "Uploading .pio/build/{env}/firmware.bin", "Writing at 0x00010000 (10 %)", "@pause 0.6",
+                    "[SUCCESS]"]
+
+        def firmware_lent(env, ip, dossier_build, rapporte):
+            vus.append(("ota", m.serie.envoi_en_cours()))
+            libere.wait(5)
+
+        m = Montage(t, {A: {"upload": {"lignes": ecriture}}}, ota_firmware=firmware_lent)
+        m.serie.lance([com(A)], {"upload"})
+        m.attend("etape", etape="Compilation")
+        vus.append(("compilation", m.serie.envoi_en_cours()))
+        m.attend("etape", etape="Téléversement")
+        vus.append(("televersement", m.serie.envoi_en_cours()))
+        m.attend("fin")
+        vus.append(("fin", m.serie.envoi_en_cours()))
+        libere.set()
+        m.lance([ota(B)], {"upload"})
+        verifie(vus, [("compilation", False), ("televersement", True), ("fin", False), ("ota", True)],
+                "envoi_en_cours : faux en compilation, vrai en Televersement par cable et pendant l'envoi OTA")
+
+
 def test_journal_ecrit():
     with tempfile.TemporaryDirectory() as t:
         m = Montage(t, {A: {"build": {"lignes": [f"{ESC}[32mCompiling .pio/build/x/a.o{ESC}[0m",
@@ -590,7 +617,7 @@ def principal():
                  test_refus_port_tenu, test_refus_meme_port, test_refus_ip_vide,
                  test_serie_attend_build_externe, test_serie_attend_detection_impossible,
                  test_arret_apres_env, test_arret_immediat, test_upload_reussi_puis_arret_immediat,
-                 test_ota_annule_si_arret_immediat, test_fin_avant_liberation,
+                 test_ota_annule_si_arret_immediat, test_fin_avant_liberation, test_envoi_en_cours,
                  test_journal_ecrit, test_reference_o_memorisee, test_rappel_fichiers_modifies,
                  test_refus_double_lancement, test_uploadfs_ota, test_garde_build_importable):
         test()

@@ -45,6 +45,8 @@ GIT = RACINE / ".git"
 SANS_PROXY = urllib.request.build_opener(urllib.request.ProxyHandler({}))   # 127.0.0.1 : jamais de proxy
 TAILLE_MAX = 64 * 1024
 MSG_SYNCHRO = "Une operation de synchro est en cours : arret refuse"
+# Refus d'arret propre a l'outil (route_occupe repond en_cours) ; a defaut, celui de la synchro.
+MSG_OCCUPE = {"build": "Un lancement de build est en cours : arret refuse"}
 MSG_ARRET = "Arret non confirme : le processus vit encore"
 
 
@@ -240,7 +242,7 @@ def fabrique_gestionnaire(lanceur, acces, git=None):
                 return self._erreur(409, f"{outil.nom} n'a pas ete lance par l'annuaire : "
                                          "l'arreter depuis son terminal")
             if outil.route_occupe and route_occupee(etat["port"], outil.route_occupe, git):
-                return self._erreur(409, MSG_SYNCHRO)
+                return self._erreur(409, MSG_OCCUPE.get(outil.id, MSG_SYNCHRO))
             connu = lanceur.lances.get(outil.id)
             fiche = pre.lit_fiches().get(outil.nom_acces)
             pid = connu["pid"] if connu else (fiche or {}).get("pid")

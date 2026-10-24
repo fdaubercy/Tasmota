@@ -15,7 +15,8 @@ Routes (les POST exigent l'en-tete X-Build: 1 et la meme origine) :
                      superieur au dernier de la serie vaut 0 : page restee ouverte sur un outil redemarre)
     GET  /journal    ?env=<env> : texte du journal pio du dernier lancement de cet env
     POST /lancer     {lignes: [{env, methode, port, ip}], actions: [...]}   409 = refus (motifs)
-    POST /port       {env, port} : ecrit upload_port (409 pendant un lancement, 400 si invalide)
+    POST /port       {env, port} : ecrit upload_port (409 pendant un lancement ou un build lance ailleurs,
+                     400 si invalide)
     POST /arreter    {immediat: bool}
 """
 
@@ -23,6 +24,7 @@ import argparse
 import atexit
 import json
 import os
+import re
 import sys
 import time
 from dataclasses import asdict
@@ -35,7 +37,6 @@ import build_envs
 import build_serie
 
 PORT_DEFAUT = 7700
-NOM_OUTIL = "Build et téléversement"          # lu tel quel par la tuile de l'annuaire
 DEPOT = Path(__file__).resolve().parents[3]
 MAX_CORPS = 64 * 1024
 
@@ -77,10 +78,16 @@ def liste_envs_json(racine, dossier):
 
 
 def journal_env(dossier, env, depuis):
-    """Texte des journaux de `env` ecrits depuis `depuis` (heure epoch) ; a defaut, le dernier."""
+    """Texte des journaux de `env` ecrits depuis `depuis` (heure epoch) ; a defaut, le dernier de CET env.
+
+    Nom exact des journaux de build_serie.Serie._journal : <AAAAMMJJ>-<HHMMSS>-<env>-<action>[-n].log. Un
+    simple motif *-<env>-*.log prendrait aussi ceux d'un env dont le nom prolonge celui-ci (x-a / x-a-b).
+    """
     if not build_serie.NOM_ENV.fullmatch(env or ""):
         raise ValueError(f"nom d'environnement invalide : {env!r}")
-    fichiers = sorted((Path(dossier) / "journaux").glob(f"*-{env}-*.log"), key=lambda f: f.name)
+    nom = re.compile(rf"\d{{8}}-\d{{6}}-{re.escape(env)}-({'|'.join(build_serie.ORDRE)})(-\d+)?\.log")
+    fichiers = sorted((f for f in (Path(dossier) / "journaux").glob("*.log") if nom.fullmatch(f.name)),
+                      key=lambda f: f.name)
     recents = [f for f in fichiers if f.stat().st_mtime >= depuis]
     return "".join(f.read_text(encoding="utf-8", errors="replace") for f in (recents or fichiers[-1:]))
 
@@ -112,6 +119,11 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
         if chemin == "/port":
             if serie.en_cours():
                 raise RuntimeError("un lancement est en cours : modifier le port apres")
+            builds = serie.builds_en_cours()             # spec 13 bis : refusee aussi pendant un build
+            if builds is None:
+                raise RuntimeError("détection des builds en cours impossible (PowerShell) : réessayer")
+            if builds:
+                raise RuntimeError(f"un build est en cours ({', '.join(builds)}) : modifier le port après")
             build_envs.ecrit_port(racine, str(demande.get("env", "")), str(demande.get("port", "")))
             return {"ok": True}
         if chemin == "/arreter":
@@ -204,9 +216,25 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
 
 
 def arrete_serie(serie, attente=15.0):
-    """A la fermeture : si un lancement est en cours, tue l'arbre du fils pio (pas de pio orphelin)."""
+    """A la fermeture : un lancement en cours est arrete, arbre du fils pio compris (pas de pio orphelin).
+
+    Un envoi vers une carte (upload ou uploadfs par cable en phase Televersement, envoi OTA) va d'abord
+    a son terme : le couper laisserait une carte a moitie flashee (anti-objectif de la spec). Plus aucun
+    env n'est lance ; une fois l'envoi fini, le reste est tue. Un second Ctrl+C force l'arret.
+    """
     if not serie.en_cours():
         return
+    serie.arrete(immediat=False)                          # aucun env suivant
+    signale = False
+    try:
+        while serie.en_cours() and serie.envoi_en_cours():
+            if not signale:
+                print("envoi en cours vers une carte : attente de sa fin avant d'arreter "
+                      "(Ctrl+C de nouveau pour forcer)...", flush=True)
+                signale = True
+            time.sleep(0.1)
+    except KeyboardInterrupt:
+        print("arret force : l'envoi en cours est coupe (carte peut-etre a moitie flashee)", flush=True)
     serie.arrete(immediat=True)
     limite = time.monotonic() + attente
     while serie.en_cours() and time.monotonic() < limite:
@@ -219,6 +247,8 @@ def principal():
     acces_web.ajoute_options(options)
     args = options.parse_args()
 
+    # Nom de la fiche de presence, en litteral : identique a nom_acces de l'outil « build »
+    # (annuaire_registre.py), sinon la tuile ne retrouve pas l'outil ; test_annuaire le verifie sur cette ligne.
     acces = acces_web.Acces(args.http, args.local, "Build et téléversement")
     dossier = acces_web.dossier_donnees() / "build"
     serie = build_serie.Serie(DEPOT, dossier)
@@ -230,7 +260,8 @@ def principal():
     serveur.daemon_threads = True
     atexit.register(arrete_serie, serie)
     acces.annonce(not args.sans_navigateur)
-    print("Ctrl+C pour arreter (un lancement en cours est alors tue, arbre pio compris).", flush=True)
+    print("Ctrl+C pour arreter (un lancement en cours est alors arrete, arbre pio compris ; un envoi vers "
+          "une carte va d'abord a son terme).", flush=True)
     try:
         serveur.serve_forever()
     except KeyboardInterrupt:
@@ -238,7 +269,7 @@ def principal():
     finally:
         serveur.server_close()
         if serie.en_cours():
-            print("lancement en cours : arret immediat...", flush=True)
+            print("lancement en cours : arret (un envoi vers une carte va a son terme)...", flush=True)
             arrete_serie(serie)
     return 0
 

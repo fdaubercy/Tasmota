@@ -148,6 +148,7 @@ class Serie:
         self._proc = None
         self._arret = False
         self._arret_immediat = False
+        self._envoi = False                              # un envoi vers une carte est en vol (envoi_en_cours)
 
     # -- evenements -------------------------------------------------------------------------------------
 
@@ -168,6 +169,17 @@ class Serie:
     def en_cours(self):
         with self.verrou:
             return self._actif
+
+    def envoi_en_cours(self):
+        """Vrai pendant un envoi vers une carte : upload / uploadfs par cable une fois en phase
+        Televersement (la compilation et la construction du FS qui precedent n'en sont pas), ou envoi
+        OTA par la page. build_web.arrete_serie attend sa fin avant de tuer quoi que ce soit."""
+        with self.verrou:
+            return self._actif and self._envoi
+
+    def _marque_envoi(self, envoi):
+        with self.verrou:
+            self._envoi = envoi
 
     # -- controle avant lancement ---------------------------------------------------------------------
 
@@ -422,11 +434,12 @@ class Serie:
                 ev = suivi.ligne(brut)
                 if ev is not None:
                     change(ev["etape"])
+                    self._marque_envoi(action in ENVOIS and ev["etape"] == ETAPE_ENVOI)
                     self._ajoute("etape", env, action=action, **ev)
             code = proc.wait()
             journal.write(f"--- code de sortie {code}\n")
         with self.verrou:
-            self._proc = None
+            self._proc, self._envoi = None, False
         termine()
         if code == 0:                                    # fini avec succes, meme si l'arret immediat arrive
             if action in ("compiler", "upload"):         # juste apres : l'upload a bien eu lieu
@@ -452,6 +465,7 @@ class Serie:
 
         rapporte({"etape": initiale, "pourcent": None, "detail": f"vers {ligne.ip}"})
         build = self.racine / ".pio" / "build" / env
+        self._marque_envoi(True)                         # l'envoi OTA ne se coupe pas (arrete_serie attend)
         try:
             if genre == "ota_firmware":
                 self.ota_firmware(env, ligne.ip, build, rapporte)
@@ -472,6 +486,7 @@ class Serie:
         except Exception as erreur:
             return False, f"erreur inattendue pendant l'envoi : {erreur!r}", [], dernier["etape"]
         finally:
+            self._marque_envoi(False)
             termine()
         return True, "", [], dernier["etape"]
 

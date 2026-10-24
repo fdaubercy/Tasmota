@@ -8,6 +8,7 @@ avec les parametres de build_fs_image (~/.platformio/platforms/espressif32/build
 """
 
 import json
+import os
 import re
 import sys
 import tempfile
@@ -496,6 +497,20 @@ def test_ota_firmware_gz_prefere():
         carte.ferme()
 
 
+def test_ota_firmware_gz_perime():
+    """M5 : un firmware.bin.gz plus ancien que firmware.bin n'est pas envoye ; s'il est a jour, il l'est."""
+    with tempfile.TemporaryDirectory() as t:
+        carte = Carte()
+        d = build_essai(t, gz=True)
+        vieux = time.time() - 3600
+        os.utime(d / "firmware.bin.gz", (vieux, vieux))
+        envoie_firmware(carte, d)
+        recu = carte.firmware or ("", b"")
+        verifie((recu[0], recu[1] == (d / "firmware.bin").read_bytes()), ("tasmota32-essai.bin", True),
+                "ota_firmware_gz_perime : .gz plus ancien que firmware.bin -> firmware.bin envoye")
+        carte.ferme()
+
+
 def test_ota_firmware_echec():
     with tempfile.TemporaryDirectory() as t:
         carte = Carte()
@@ -534,6 +549,7 @@ def principal():
                  test_ota_fs_echec_ufsu, test_ota_fs_pas_de_retour, test_ota_fs_attente_retour,
                  test_ota_fs_persist_reformate, test_ota_fs_progression, test_ota_fs_persist_invalide,
                  test_image_extraite, test_image_illisible, test_ota_firmware_echec_en_safeboot,
+                 test_ota_firmware_gz_perime,
                  test_ota_firmware_envoi, test_ota_firmware_safeboot, test_ota_firmware_sans_safeboot,
                  test_ota_firmware_inchange, test_ota_firmware_referer, test_ota_firmware_gz_prefere,
                  test_ota_firmware_echec):

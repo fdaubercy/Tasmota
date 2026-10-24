@@ -540,6 +540,15 @@ def sonde_synthetique(cdp):
     verifie((cdp.js(JS_SYNTHETIQUE).get("attente"),
              cdp.js("document.querySelector('.bloc[data-bloc=\"E\"]').textContent.includes('Reprise')")), ("", True),
             "synthetique : builds=[] -> bandeau retire, reprise notee")
+    # M4 : « FS aussi flashe avec le firmware » seulement pour un upload par cable (ligne post_esp32)
+    ligne = "Utilisera une commande de téléchargement personnalisée au lieu de esptool"
+    aussi = "(() => [...document.querySelectorAll('.bloc')].filter(b => b.textContent.includes("             "'aussi flashé avec le firmware')).map(b => b.dataset.bloc).join())()"
+    injecte(cdp, [{"type": "ligne", "env": "E", "action": "compiler", "texte": ligne},
+                  {"type": "ligne", "env": "D", "action": "upload", "texte": ligne},
+                  {"type": "ligne", "env": "D", "action": "uploadfs", "texte": ligne}])
+    verifie(cdp.js(aussi), "", "synthetique : ligne post_esp32 pendant compiler (COM) ou en OTA -> pas de mention FS")
+    injecte(cdp, [{"type": "ligne", "env": "E", "action": "upload", "texte": ligne}])
+    verifie(cdp.js(aussi), "E", "synthetique : temoin, upload par cable -> mention FS aussi flashe")
 
 
 def sonde_redemarrage(m):
