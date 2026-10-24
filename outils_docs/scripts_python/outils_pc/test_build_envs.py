@@ -58,6 +58,10 @@ build_flags             = ${env:tasmota32-base.build_flags}
                            -D FIRMWARE_SANSPORT
 """
 ENV32 = """\
+[env:tasmota32_base]
+board                   = esp32
+extra_scripts           = ${esp32_defaults.extra_scripts}
+
 [env:tasmota32c3-safeboot]
 extends                 = env:tasmota32_base
 build_flags             = ${env:tasmota32_base.build_flags}
