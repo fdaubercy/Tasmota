@@ -54,6 +54,7 @@ ENVOIS = {"upload", "uploadfs"}
 ETAPE_ENVOI_FS = "Envoi des fichiers"
 FICHIERS_MODIFIES = ["platformio_override.ini", "tasmota/user_config_override.h"]
 MAX_EVENEMENTS = 50000
+DETECTION_IMPOSSIBLE = "détection impossible"
 NOM_ENV = re.compile(r"[A-Za-z0-9_.-]+")
 
 
@@ -272,14 +273,16 @@ class Serie:
                          echecs=echecs, non_lances=non_lances, **champs)
 
     def _attend_builds(self, env):
-        """Attend qu'aucun build externe ne tourne ; False si l'arret est demande pendant l'attente."""
+        """Attend qu'aucun build externe ne tourne ; False si l'arret est demande pendant l'attente.
+
+        Detection impossible (None : PowerShell en erreur ou trop lent, typiquement machine chargee
+        par un build) = build possible : on attend et on resonde, comme au lancement on refuse.
+        """
         signale = None
         while True:
             builds = self.builds_en_cours()
             if builds is None:
-                self._ajoute("ligne", env, action="", texte="Avertissement : détection des builds impossible, "
-                                                            "la série continue.")
-                builds = []
+                builds = [DETECTION_IMPOSSIBLE]
             if not builds:
                 if signale:
                     self._ajoute("attente", env, builds=[])

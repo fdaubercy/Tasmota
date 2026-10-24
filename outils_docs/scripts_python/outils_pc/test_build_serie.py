@@ -311,6 +311,29 @@ def test_serie_attend_build_externe():
         verifie(m.appels_builds, 4, "serie_attend_build_externe : sondage jusqu'a liberation")
 
 
+def test_serie_attend_detection_impossible():
+    with tempfile.TemporaryDirectory() as t:
+        # appel 1 : lancement ; appels 2 et 3 (avant l'env 2) : PowerShell en echec (None) ; puis libre
+        heures_none = []
+
+        def builds(n):
+            if n in (2, 3):
+                heures_none.append(time.time())
+                return None
+            return []
+
+        m = Montage(t, builds=builds)
+        ev = m.lance([com(A), com(B)], {"compiler"})
+        att = du_type(ev, "attente", env=B)
+        verifie([e["builds"] for e in att], [["détection impossible"], []],
+                "serie_attend_detection_impossible : attente (detection impossible) puis reprise")
+        debut_b = [a["t"] for a in m.appels() if a["env"] == B]
+        verifie(bool(debut_b) and len(heures_none) == 2 and debut_b[0] > max(heures_none), True,
+                "serie_attend_detection_impossible : aucun fils lance pendant la detection impossible")
+        verifie([e["resultat"] for e in du_type(ev, "fin_env")], ["succes", "succes"],
+                "serie_attend_detection_impossible : les deux envs en succes apres reprise")
+
+
 def test_arret_apres_env():
     with tempfile.TemporaryDirectory() as t:
         m = Montage(t, {A: {"build": {"lignes": ["Compiling a.o", "@pause 0.5", "[SUCCESS]"]}}})
@@ -439,7 +462,8 @@ def principal():
     for test in (test_commandes, test_ota_variable, test_ordre_actions, test_serie_un_par_un,
                  test_serie_continue_apres_echec, test_duree_des_la_fin, test_refus_build_en_cours,
                  test_refus_port_tenu, test_refus_meme_port, test_refus_ip_vide,
-                 test_serie_attend_build_externe, test_arret_apres_env, test_arret_immediat,
+                 test_serie_attend_build_externe, test_serie_attend_detection_impossible,
+                 test_arret_apres_env, test_arret_immediat,
                  test_journal_ecrit, test_reference_o_memorisee, test_rappel_fichiers_modifies,
                  test_refus_double_lancement, test_uploadfs_ota, test_garde_build_importable):
         test()
