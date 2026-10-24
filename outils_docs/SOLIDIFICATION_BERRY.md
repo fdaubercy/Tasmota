@@ -8,8 +8,12 @@
 > par **observation d'un build réel** le 2026-07-15 (env `tasmota32s3-etage2-grenier`), pas par lecture.
 >
 > **Pressé ?** Trois choses à savoir : la solidification est **active par défaut** à chaque build (§6) ;
-> nos modules de `data/fs/` ne sont **jamais** solidifiés (§7) ; et la ligne `Berry solidification: …`
+> un module de `data/fs/` n'est solidifié **que s'il figure dans `custom_berry_solidify`** de l'env
+> (listes partagées `[berry_commun]`, §6 bis et §7) ; et la ligne `Berry solidification: …`
 > **ne prouve rien** — la preuve est `output_files` (§5, piège 10).
+>
+> §7 réécrit le 2026-10-24 (audit Berry, constat B11) : il affirmait qu'aucun build ne solidifiait
+> nos modules, ce qui était faux depuis la chaîne `custom_berry_solidify` du §6 bis.
 
 ## 1. Le malentendu à dissiper d'abord
 
@@ -408,12 +412,23 @@ et solidifier pour d'autres ?*
 **1. `custom_berry_solidify` est une option PAR ENVIRONNEMENT.**
 
 ```ini
-[env:tasmota32s3-etage2-grenier]           ; solidifie
-custom_berry_solidify   =   data/fs/modbusFonctions.be
+; platformio_tasmota_cenv.ini (forme en vigueur depuis le 2026-10-12)
+[berry_commun]
+socle       =   data/fs/configDevices.be
+                ...                          ; 20 modules : toutes les cartes
+modbus      =   data/fs/modbusFonctions.be
+                ...                          ; 6 modules : les cartes du garage
+historique  =   data/fs/historiqueFonctions.be
+                ...                          ; 3 modules : les S3/P4 avec historique
 
-[env:tasmota32p4-garage-serveur-modbus]    ; reste en fs
-; rien a ajouter
+[env:tasmota32p4-garage-serveur-modbus]
+custom_berry_solidify   =   ${berry_commun.socle}
+                            ${berry_commun.modbus}
+                            ...              ; puis ses modules propres
 ```
+
+Un env **sans** `custom_berry_solidify` garde tous ses modules sur le LittleFS. Liste résolue de
+chaque env : `outils_docs/CARTE_MODULES_BERRY.md` (`berry/carte_modules_berry.py`).
 
 **2. `import` prefere le natif au fichier** (piege 4). Le firmware qui embarque le module
 solidifie utilise la version en flash ; celui qui ne l'embarque pas retombe sur le `.be` du
@@ -428,6 +443,10 @@ les deux mondes ; c'est l'env qui tranche, firmware par firmware.
 ### Ce qui monte sur le LittleFS de chaque appareil
 
 À savoir, parce que c'est contre-intuitif : **tous les appareils portent TOUS les modules**.
+
+> Mise à jour 2026-10-24 : sauf exclusions par env, `custom_files_exclude` (liste noire) et
+> `custom_files_exclude_solidified` (modules solidifiés), voir §7. Deux mécanismes coexistent pour
+> cela ; les réunir est la proposition P2.10/P3.7 de l'audit Berry d'octobre.
 
 `pre_utilitaires_platformio.py` (`copy_fs_image`, l.469) copie, **au moment de l'upload
 seulement** (`buildfs`/`uploadfs`/`upload`/`erase_upload`), le contenu de `data/fs/` **à plat**
@@ -541,20 +560,50 @@ La seule ligne concernee — `compileModule("/monModule", ...)` — **reste et n
 (fichier absent → `else return true`, l.378). La laisser est meme preferable : le meme
 `autoexec.be` sert alors les appareils solidifies **et** les autres.
 
-## 7. Ce qui n'est PAS solidifié — et ne le sera jamais tout seul
+## 7. Ce qui est solidifié, et ce qui ne l'est pas
 
-Point de vigilance principal pour ce dépôt, parce qu'il est contre-intuitif.
+**Un module de `data/fs/` est solidifié si, et seulement si, il figure dans la liste
+`custom_berry_solidify` de l'env construit.** Chaque env la compose à partir des trois listes
+partagées de `[berry_commun]` (`platformio_tasmota_cenv.ini`), puis ajoute ses modules propres. Un
+module ne s'ajoute donc qu'une fois, dans `[berry_commun]` (oubli constaté le 2026-09-27).
 
-Les modules de `data/fs/` (`controleModbus.be`, `controleUDP.be`, `udpFonctions.be`, …) sont
-téléversés sur le **LittleFS** et chargés à l'exécution par `autoexec.be`. **Aucun build ne les
-solidifiera**, quel que soit le nombre de `Berry solidification:` vus passer : `solidify_all_python.be:27`
-ne lit **que** `src/embedded/`.
+La chaîne, au pré-build de chaque env :
 
-Les 34 `solidified_*.h` régénérés à chaque build sont ceux d'**arendst** (`berry_tasmota`), pas les
-nôtres. Voir un build « solidifier » abondamment ne dit donc rien de notre propre code.
+1. `pio-tools/solidify-from-url.py` (identique à l'amont) vide `lib/libesp32/berry_custom/src/`
+   (`cleanFolder()`), puis copie chaque fichier de la liste dans `src/embedded/` ;
+2. il réécrit `src/modules.h` (`CUSTOM_NATIVE_MODULES`) et déclare chaque module d'après la directive
+   `#@ solidify:<nom>` (regex de `addEntryToModtab`) ;
+3. `solidify_all_python.be` solidifie `src/embedded/` (mode strict : une globale inconnue fait
+   échouer le build ; liste `globs` étendue par le fork pour les noms du framework).
 
-Pour qu'un de nos modules soit solidifié, il faut l'amener dans `berry_custom/src/embedded/` **et**
-qu'il soit solidifiable — ce que la phase 1 doit trancher (Q1/Q2, §4 pièges 2 et 3).
+`solidify_all_python.be` ne lit **que** `src/embedded/` : c'est la copie de l'étape 1 qui y amène nos
+modules. Les 34 `solidified_*.h` d'**arendst** (`berry_tasmota`) sont régénérés à chaque build en plus :
+voir beaucoup de `Berry solidification:` ne dit rien de notre code. La preuve reste le §5.
+
+**Ce qui n'est pas solidifié :**
+
+- **`autoexec.be`**, jamais : il reste indispensable (§6 bis) ;
+- **les modules absents de la liste de l'env**, notamment les scripts propres à une carte
+  (`garageFonctions`, `cuveFonctions`…, candidats de l'audit P3.4) : ils sont chargés depuis le
+  LittleFS par `autoexec.be` ;
+- **tout `data/fs/`** pour un env sans `custom_berry_solidify`.
+
+**Côté LittleFS**, le `.be` d'un module solidifié n'est retiré de l'image que si l'env pose
+`custom_files_exclude_solidified = ON` (option du fork, désactivée par défaut : `pio-tools/post_esp32.py`,
+lecture de l'option). Retiré, `compileModule` sort par son `else return true` ; laissé, il ne coûte que du
+boot (piège 4). Dans les deux cas, `import` prend le module natif (pièges 4 et 4 bis) : l'autoexec n'a
+rien à changer.
+
+**Deux vigilances :**
+
+- `modules.h` et `src/embedded/` dépendent de l'env **actif**. Un `pio run` d'un autre env, ou la
+  reconstruction de l'index IntelliSense (`scons __idedata`), les réécrit : jamais pendant un build
+  (`CLAUDE.md`, « Vigilances de build »).
+- Un module solidifié est en lecture seule : son état vit dans une globale cachée (piège 12).
+
+Vérifier un module **avant** le build, en environ 10 s :
+`python outils_docs/scripts_python/berry/solidifie_et_compile_berry.py data/fs/<module>.be` (solidification stricte,
+`coc`, compilation C). Les 37 modules de l'audit d'octobre y passent (`AUDIT_BERRY_2026-10.md`, A3).
 
 ## 8. Méthode recommandée
 

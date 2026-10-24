@@ -27,14 +27,14 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
   - [x] Code — preuve : `globalFonctions.be` (lambda `/-> controleGeneral.heureReboot()`, `remove_cron` avant), `controleGeneral.be` (`surveilleWifi()` dans `every_second` au lieu du cron `*/300`) ; test `test_timers.be` du scratchpad 10/10, mutant (délai /10) rouge 4 échecs ; relecteur-berry : prêt, banc ModBus 309/309
   - [x] Désactivables sans redémarrer (demande du 2026-10-23) — preuve : `ReglageGlobal heureReboot [HH:MM|OFF]`, `ReglageGlobal timerRebootSansWifi [s|OFF]` (60 s minimum), `globalFonctions.armeRebootQuotidien`/`reglageReboot` ; test `test_reglage_reboot.be` du scratchpad 28/28, mutant (24:00 accepté, minimum 1 s) rouge 7 échecs ; README § commandes
   - [x] Sur carte — modules solidifiés : build + flash du P4 nécessaires ; vérifier le reboot de 00:00 (`Status 1`, RestartReason) le lendemain — preuve : firmwares du 2026-10-23 (P4 08:10, cuve 08:38) flashés ; `Status 1` le 2026-10-24 à 00:57 : P4 `StartupUTC 2026-10-23T22:00:16`, cuve `22:00:07` (= 00:00 locale), `Software reset CPU` ; `ReglageGlobal heureReboot` = 00:00 (les deux), `timerRebootSansWifi` = 300 (P4) / OFF (cuve). Reboot sans Wi-Fi non provoqué sur carte (couvert par banc_boot)
-- [ ] P2.1 — Une S3 a-t-elle un écran ? Sinon retirer LVGL/OpenHASP de la base N16R8 (ou base S3 « sans écran ») (corrige E1 ; cote G, effort faible, risque moyen)
-- [ ] P3.1 — Différentiel : `drivers.ModBus.activation` à OFF, ou embarquer la pile ModBus (corrige S1 ; cote L, effort faible, risque dec)
+- [ ] P2.1 — Une S3 a-t-elle un écran ? Sinon retirer LVGL/OpenHASP de la base N16R8 (ou base S3 « sans écran ») (corrige E1 ; cote G, effort faible, risque moyen) — décision 2026-10-24 : les S3 du GARAGE (cuve, rideau, ancien maître) n'ont pas d'écran, les autres peut-être ; à faire : retirer LVGL/OpenHASP des seuls env S3 du garage, après le build en cours
+- [x] P3.1 — Différentiel : `drivers.ModBus.activation` à OFF, ou embarquer la pile ModBus (corrige S1 ; cote L, effort faible, risque dec) — preuve : décision 2026-10-24 « pas de pile ModBus » ; `data/bureau/tasmota32-interrupteur-differentiel/_persist.json` `drivers.ModBus.activation` = OFF, JSON relu par Python ; rien à déployer tant que la carte tourne sans framework Berry
 - [ ] P3.5 — Modules solidifiés inutiles : accepter, ou découper `socle` en `socle` + `reseau` (corrige S3 ; cote S, effort faible, risque dec)
 - [ ] P4.4 — Cartes remplacées : geler ou retirer leurs fichiers ; cave : déployer la S3 ou donner un env à l'ancien code (ne PAS retirer le dossier *sauvegarde*) ; confirmer le statut réel de la cave et du différentiel (A1) (corrige D5, D6, D7 ; cote G, effort faible, risque dec)
 - [ ] P6.2 — 6 clés `log` orphelines : créer leurs cibles ou retirer les clés (corrige L2 ; cote G, effort faible, risque dec)
 - [ ] P2.9 — Ports COM propres à chaque poste : hors du `.ini` partagé (corrige E13 ; cote D, effort faible, risque dec)
 - [ ] P5.15 — Une seule source pour chaque donnée de la fiche discovery (routagePort, id, IPAddress) (corrige N22 ; cote S, effort moyen, risque dec)
-- [ ] P7.8 — IP fixe du PC syslog, ou syslog vers le Pi SERVEUR-BUREAU (corrige C9 ; cote D, effort faible, risque dec)
+- [ ] P7.8 — IP fixe du PC syslog, ou syslog vers le Pi SERVEUR-BUREAU (corrige C9 ; cote D, effort faible, risque dec) — décision 2026-10-24 : IP fixe du PC ; à faire par l'utilisateur : bail DHCP sur la box, 192.168.0.3 pour la MAC Wi-Fi DC-85-DE-D9-CA-1D, puis corriger la ligne syslog de `CLAUDE.md`
 - [ ] P8.5 — ESP-NOW côté P4 : passerelle S3, ou ESP-NOW réservé aux S3 (après P8.4) (corrige T2 ; cote G, effort —, risque dec)
 - [ ] P8.10 — Attendre esp-hosted-mcu#19 avant tout ESP-NOW sur le P4 ; pas de C6 reflashé (corrige T2 ; cote G, effort nul, risque dec)
 
@@ -133,8 +133,8 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
 ## A12 — Outillage et documentation
 - [ ] P7.6 — Contrôle automatique de la charte des logs dans `verifie_berry.py` (avertissements) (corrige C10 ; cote D, effort moyen, risque faible)
 - [ ] P10.7 — `fichier::fonction` au lieu de `fichier:ligne` ; contrôle des chemins et fonctions cités ; carte des modules déterministe (corrige B12, B14, B16, B19 ; cote D, effort moyen, risque nul)
-- [ ] P10.6 — Docs : §7 de SOLIDIFICATION réécrit, ANALYSE marquée historique, « 13 pièges », README (leds, commandes), skill sans `logActivation` (corrige B11, B13, B15, B17 ; cote G, effort faible, risque nul)
-- [ ] P6.5 — README : le profil fait foi sur les sorties, SERIALLOG_TIMER, portée de `actif()` (corrige L6, L7 ; cote D, effort faible, risque nul)
+- [ ] P10.6 — Docs : §7 de SOLIDIFICATION réécrit, ANALYSE marquée historique, « 13 pièges », README (leds, commandes), skill sans `logActivation` (corrige B11, B13, B15, B17 ; cote G, effort faible, risque nul) — en partie le 2026-10-24 : SOLIDIFICATION §7 réécrit, « Pressé ? » et §6 bis corrigés, « 13 pièges » (README, CLAUDE.md), SCHEME et RubanEsclave au README (`leds` y était déjà ; ReglageAutres/DHT22/Pompe n'existent plus dans `data/`) ; restent : ANALYSE marquée historique, skill `tasmota-berry` sans `logActivation`
+- [x] P6.5 — README : le profil fait foi sur les sorties, SERIALLOG_TIMER, portée de `actif()` (corrige L6, L7 ; cote D, effort faible, risque nul) — preuve : `outils_docs/README.md` § « Ce que le profil écrase, et ce que `actif()` économise » (profil qui fait foi, SERIALLOG_TIMER, `actif()` = au moins une sortie, d'après `logFonctions_actif`)
 
 ## A13 — Radio : ESP-NOW et TasMesh (exploration)
 - [ ] P8.1 — Ne pas retenir TasMesh pour le garage (corrige T1, T2 ; cote S, effort nul, risque nul)

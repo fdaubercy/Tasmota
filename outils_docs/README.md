@@ -25,7 +25,7 @@
 - [tasks/reprise-solidification-berry.md](../tasks/reprise-solidification-berry.md) — chantier de solidification Berry.
 
 ### Berry
-- [SOLIDIFICATION_BERRY.md](SOLIDIFICATION_BERRY.md) — la solidification Berry : fonctionnement, **vérification**, paramètres, 11 pièges.
+- [SOLIDIFICATION_BERRY.md](SOLIDIFICATION_BERRY.md) — la solidification Berry : fonctionnement, **vérification**, paramètres, 13 pièges.
   À retenir : la ligne `Berry solidification: …` d'un build **ne prouve rien** (§5).
 - [CARTE_MODULES_BERRY.md](CARTE_MODULES_BERRY.md) *(généré)* — module × carte : solidifié, importé, dépendance, garde du persist, incohérences.
 - [Les logs Berry : charte et réglages](#les-logs-berry--charte-et-réglages) — plus bas dans ce fichier.
@@ -121,6 +121,20 @@ Tout est enregistré dans `_persist.json`. Une sortie à `detail` affiche aussi 
 
 La sortie la plus bavarde fixe le coût : Tasmota met en mémoire tout message accepté par au
 moins une sortie. Un profil « normal » sobre allège donc vraiment la carte.
+
+### Ce que le profil écrase, et ce que `actif()` économise
+
+- **Le profil fait foi sur les sorties.** Un réglage tapé à la main (`SerialLog 4`, `WebLog`, `MqttLog`,
+  `SysLog`) est écrasé au redémarrage suivant, ou au prochain `ReglageLog`, par le profil du persist.
+  Pour qu'un réglage tienne : `ReglageLog serie detail` (il modifie le profil actif et l'enregistre).
+- **La console série se coupe 600 s après le démarrage** (`SERIALLOG_TIMER`, réglage par défaut de
+  Tasmota, gardé par choix). Quand le profil envoie un `SerialLog` différent du réglage en cours, le compte
+  à rebours repart de zéro ; sinon la coupure a lieu. Pour suivre une carte au-delà : MQTT, console web
+  ou syslog.
+- **`logFonctions.actif(niveau, cible)` répond « au moins une sortie ».** Il est vrai si le seuil du
+  module laisse passer le niveau **et** si une sortie au moins le reçoit (`detail` compté au niveau 3).
+  Un message gardé par `actif()` est donc construit dès que la série est à `debug`, même si l'on ne
+  regarde que le syslog. C'est correct, mais l'économie dépend de la sortie la plus bavarde.
 
 <hr></hr>
 
@@ -384,7 +398,9 @@ des panneaux de cuve, leurs courbes y seraient vides.
 >####    - (interne : ReglageModbus ImAlive ON|OFF force le maître à connecter ses clients ModBus TCP)
 >
 >####    - ReglageSlaveModBus1 id 0x02   => Change le l'adresse ModBus de l'esclave ModBus_TasmotaSlaveModBus1
->####    - HSBCOLOR1 &lt;teinte&gt; | HSBCOLOR2 &lt;saturation&gt; ; DIMMER&lt;id&gt; &lt;luminosité&gt; : sur un module à LEDS WS2812 pilotées en ModBus, remplacent les commandes Tasmota et envoient la valeur à l'esclave (DIMMER 0 = POWER OFF)<br>
+>####    - HSBCOLOR1 &lt;teinte&gt; | HSBCOLOR2 &lt;saturation&gt; ; DIMMER&lt;id&gt; &lt;luminosité&gt; : sur un module à LEDS WS2812 pilotées en ModBus, remplacent les commandes Tasmota et envoient la valeur à l'esclave (DIMMER 0 = POWER OFF)
+>####    - SCHEME 0..14 : (maître) animation des rubans WS2812 des esclaves ModBus (0 = une seule couleur) ; sans paramètre : la valeur mémorisée
+>####    - RubanEsclave1 etat | auto | suivante : (maître) mode du ruban de l'esclave du relai virtuel POWER1 (AUTO, ou MANUEL et minutes restantes), retour en AUTO, couleur suivante<br>
 >
 >####    - EtatPompe : (cave) affiche l'état de la pompe vide-cave, des niveaux et de l'alerte
 >####    - AcquittePompe : (cave) efface l'alerte et le compteur de relances, puis affiche l'état<br>

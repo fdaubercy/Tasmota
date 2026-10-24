@@ -731,7 +731,7 @@
 			}
 		},
 		"ModBus": {
-			"activation": "ON",
+			"activation": "OFF",
 			"name": "ModBus RS485",
 			"id": 0,
 			"debit": 19200,

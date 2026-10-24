@@ -25,7 +25,7 @@ remplace la memoire.
    a ete supprimee le 2026-10-04.
 3. **`tasks/reprise-solidification-berry.md`** — l'autre chantier (solidification Berry),
    sa prochaine action et ses questions ouvertes.
-4. **`outils_docs/SOLIDIFICATION_BERRY.md`** — le mecanisme complet + 11 pieges, a lire
+4. **`outils_docs/SOLIDIFICATION_BERRY.md`** — le mecanisme complet + 13 pieges, a lire
    des que le sujet Berry/solidification arrive.
 5. **`outils_docs/PROTOCOLE_MODBUS.md`** — a lire des que le sujet ModBus arrive : carte
    des registres de la carte 16 relais (§8) et architecture de synchronisation (§9).
@@ -425,7 +425,7 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   HORS persist (le persist est en RAM en permanence) ; `diverses.historique.grafana` reste au persist ; sans historique actif, la cle `.grafana` donne un bouton
   « Historique (Grafana) » sur l'accueil (`controleWeb.boutonGrafana`, solidifie, toutes les cartes). Mode d'emploi : `outils_docs/README.md` § « Les graphiques
   des mesures » ; banc `berry/banc_graphiques.py` (+ `.be`, `banc_historique.be`, `bouchons_berry/graphiques/` et `historique/`) ; plan `tasks/plans/graphiques-web.md`.
-- `outils_docs/SOLIDIFICATION_BERRY.md` — mecanisme, verification (§5), parametres, 11 pieges.
+- `outils_docs/SOLIDIFICATION_BERRY.md` — mecanisme, verification (§5), parametres, 13 pieges.
 - `outils_docs/PROTOCOLE_MODBUS.md` — ModBus RTU/TCP standard, implementation maison (3 transports
   Serie/UDP/TCP), extension esclave->maitre, failles du mecanisme d'envoi, design de queue FIFO,
   carte des registres de la carte 16 relais (§8), architecture de synchronisation (§9).
