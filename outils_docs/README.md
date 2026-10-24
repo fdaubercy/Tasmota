@@ -77,7 +77,7 @@ Un message n'est affiché que s'il passe les deux :
 
 1. **Le réglage de son module** (la *cible*) : `general`, `serveurWeb`, `udp`, `tcp`, `rangeExtender`,
    `discovery`, `modbus`, `conn16channels`, `slaveModbus`, `lorawan`, `volets`, `es8311`,
-   `garage`, `cuve`, `leds`, `historique` (S3/P4 avec historique local).
+   `garage`, `cuve`, `rideau`, `leds`, `historique` (S3/P4 avec historique local).
    (`web` désigne la **sortie** console web ; le module des pages web est `serveurWeb`.)
 2. **Le réglage de la sortie** : `serie`, `web`, `mqtt` (topic `stat/<topic>/LOGGING`),
    `syslog` (le PC, `syslog_tasmota.py`). Ces réglages forment un **profil**.

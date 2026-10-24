@@ -423,6 +423,23 @@ if CAS == 1
     logFonctions.etat()["seuils"] = {}
     controle("P6.1 : carte sans historique local (bloc reduit a 'grafana') : cible absente", logFonctions.lieu("historique") == nil)
     global.diverses["historique"] = blocHisto
+    # Audit L2/P6.2 (2026-10-24) : le module rideau a sa cible, reglee par modules.rideau.log
+    logFonctions.etat()["seuils"] = {}
+    controle("P6.2 : carte sans module rideau (le P4) : cible 'rideau' absente", logFonctions.lieu("rideau") == nil)
+    logFonctions.log("BANC: message de test", 3, "rideau")
+    controle("P6.2 : cible 'rideau' connue (aucun signalement)", inconnues("'rideau'") == 0)
+    global.modules["rideau"] = {"activation": "ON", "log": "info"}
+    logFonctions.etat()["seuils"] = {}
+    var avant62 = size(BANC_BOOT.journal)
+    logFonctions.log("BANC: debug rideau", 3, "rideau")
+    var perdu62 = (size(BANC_BOOT.journal) == avant62)
+    logFonctions.regle("rideau", "debug")
+    logFonctions.log("BANC: debug rideau", 3, "rideau")
+    controle("P6.2 : seuil info -> debug perdu ; ReglageLog rideau debug -> emis, range dans modules.rideau.log",
+             perdu62 && size(BANC_BOOT.journal) == avant62 + 1 && global.modules["rideau"].find("log") == "debug")
+    controle("P6.2 : 'rideau' listee dans les reglages de la carte", string.find(str(logFonctions.etatReglages()), "rideau") >= 0)
+    global.modules.remove("rideau")
+    logFonctions.etat()["seuils"] = {}
     # Audit L4/P6.3 : le defaut d'un bloc absent n'est pas mis en cache ; L3 : invalideSeuils oublie le cache
     var envModbus = global.drivers["ModBus"]["environnement"]
     var blocC16 = envModbus["Conn16channels"]

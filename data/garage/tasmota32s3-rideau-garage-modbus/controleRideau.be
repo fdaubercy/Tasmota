@@ -23,7 +23,7 @@ class CONTROLE_RIDEAU : Driver
         self.nbLogsFilesMax = modules["rideau"].find("logs", {}).find("nbLogsFiles", 0)
         self.fileLogSize_Ko = modules["rideau"].find("logs", {}).find("fileLogSize_Ko", 10000)
 
-        logFonctions.log("CONTROLE_RIDEAU: Driver charge (squelette) !", LOG_LEVEL_DEBUG)
+        logFonctions.log("CONTROLE_RIDEAU: Driver charge (squelette) !", LOG_LEVEL_DEBUG, "rideau")
         self.flagINIT = 1
     end
 
