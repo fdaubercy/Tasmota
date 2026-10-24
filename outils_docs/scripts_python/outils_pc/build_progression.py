@@ -1,4 +1,4 @@
-"""Progression d'un `pio run` de la page Build et televersement : lecture de la sortie, ligne a ligne.
+r"""Progression d'un `pio run` de la page Build et televersement : lecture de la sortie, ligne a ligne.
 
 Module PUR : aucune E/S, aucun appel a pio. Il recoit les lignes de la sortie (avec leurs codes ANSI
 et leurs chemins `\` ou `/`), en deduit l'etape, le pourcentage, le resultat et un extrait d'erreur.
