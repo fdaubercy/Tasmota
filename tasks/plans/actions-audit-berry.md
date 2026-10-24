@@ -81,7 +81,7 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
 - [x] P6.4 — Cible inconnue de `lieu()` journalisée une fois en erreur (corrige L5 ; cote L, effort faible, risque nul) — preuve : `logFonctions.seuil` -> `LOG_ERREUR: cible de log inconnue`, une fois par démarrage (`etat()["inconnues"]`, survit au vidage par ReglageLog) ; `banc_boot` cas 1 : témoin (démarrage du P4 : 0 signalement) + 3 contrôles, rouges 3/3 sur l'ancien code. Seule cible inconnue en service : `self.nom` de l'historique (L1) -> une erreur par démarrage jusqu'à P6.1 (2026-10-24)
 - [ ] P8.7 — Sans broker : `forceEnvoiParams` lancé depuis le secours C7 (corrige R2 ; cote G, effort faible, risque faible)
 - [ ] P10.5 — `listeEtRepartitLesFichiers` : vérifier `mkdir` ; valider ou remplacer le cron `*/300` (corrige B4, B7 ; cote L, effort faible, risque faible)
-- [ ] P2.2 — Coquille du `USER_TEMPLATE` du rideau (`1,1s]`) (corrige E2 ; cote L, effort faible, risque faible)
+- [x] P2.2 — Coquille du `USER_TEMPLATE` du rideau (`1,1s]`) (corrige E2 ; cote L, effort faible, risque faible) — preuve : `ec314011f` (`1s]` -> `1]`, `tasmota/user_config_override.h`) ; JSON des modèles S3 du garage validé par Python (rideau : 38 GPIO, invalide à HEAD avant correction) ; s'appliquera au prochain flash du rideau
 - [ ] P2.3 — Rebouclage de `increment_config_holder` à 65535 (corrige E5 ; cote L, effort faible, risque faible)
 
 ## A7 — Démarrage robuste
