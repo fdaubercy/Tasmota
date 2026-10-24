@@ -10,6 +10,8 @@ class CONTROLE_GARAGE : Driver
     var fileLogSize_Ko
 
     var compteursAbsents    # {cle: true} : compteur absent de la telemetrie, deja signale en erreur
+    var cssWebSensor        # CSS de la page d'accueil, lu UNE fois sur la carte SD (nil tant qu'il n'est pas lu)
+    var cssAbsentSignale    # true : CSS introuvable deja signale en erreur (pas a chaque rafraichissement)
 
     def init()
         import garageFonctions
@@ -93,8 +95,23 @@ class CONTROLE_GARAGE : Driver
 
         tasmota.yield()
 
-        # Affiche sur la page web le capteur de niveau de cuve 
-        gestionFileFolder.readFileByLineAndContentSend("/sd/css/webSensor.css", "", "web_send")
+        # CSS de la page : lu UNE fois sur la carte SD puis garde en memoire (925 o) (2026-10-24, audit N4/P5.4).
+        # Il etait relu a chaque rafraichissement (~2 s par page ouverte), et sans carte SD l'ouverture levait
+        # io_error et coupait tout l'affichage des capteurs. Fichier absent : erreur journalisee une fois, page
+        # sans mise en forme, nouvelle tentative au rafraichissement suivant.
+        if (self.cssWebSensor == nil)
+            var css = gestionFileFolder.readFile("/sd/css/webSensor.css")
+            if (css == false)
+                if (!self.cssAbsentSignale)
+                    garageFonctions.log("WEBSERVER_GARAGE_ERREUR: /sd/css/webSensor.css introuvable (carte SD absente ?) : page d'accueil sans mise en forme !", LOG_LEVEL_ERREUR)
+                    self.cssAbsentSignale = true
+                end
+            else
+                self.cssWebSensor = css
+                self.cssAbsentSignale = false
+            end
+        end
+        if (self.cssWebSensor != nil && size(self.cssWebSensor) > 0)    tasmota.web_send(self.cssWebSensor)    end
 
         # Pour les entrées analogiques
         variablesRemplacement = {}

@@ -375,7 +375,31 @@ else
             for l: lignesErreur()    if string.find(l, "CAPTEURS_GARAGE_ERREUR") >= 0    n += 1    end    end
             return n
         end
+        # Audit N4/P5.4 (2026-10-24) : le CSS de la page d'accueil etait relu sur la carte SD a CHAQUE rafraichissement
+        # (~2 s par page ouverte), et sans carte SD l'ouverture levait. On compte les ouvertures par la fonction open
+        # globale du faux firmware.
+        import global
+        var CSS = "/sd/css/webSensor.css"
+        var ouverturesCss = 0
+        var openOrigine = global.open
+        global.open = def (c, m) if LITTLEFS.normalise(c) == CSS    ouverturesCss += 1    end    return openOrigine(c, m) end
+        def erreursCss()
+            var n = 0
+            for l: lignesErreur()    if string.find(l, "webSensor.css") >= 0    n += 1    end    end
+            return n
+        end
+        var contenuCss = LITTLEFS.fichiers[CSS]
+        LITTLEFS.fichiers.remove(CSS)                       # carte SD absente
+        for i: 1 .. 2    tasmota.appelle("CONTROLE_GARAGE.web_sensor", /-> garage.web_sensor(), [])    end
+        controle("P5.4 : CSS absent (carte SD) : web_sensor ne leve pas, absence journalisee UNE fois en erreur",
+                 size(BANC_BOOT.exceptions) == 0 && erreursCss() == 1)
+        LITTLEFS.fichiers[CSS] = contenuCss                 # carte SD revenue
+        ouverturesCss = 0
         for i: 1 .. 3    tasmota.appelle("CONTROLE_GARAGE.web_sensor", /-> garage.web_sensor(), [])    end
+        tasmota.appelle("CONTROLE_GARAGE.web_sensor", /-> garage.web_sensor(), [])
+        controle("P5.4 : CSS revenu : lu UNE fois sur 4 rafraichissements, puis servi depuis la memoire (lu " + str(ouverturesCss) + " fois)",
+                 ouverturesCss == 1)
+        global.open = openOrigine
         var ex = BANC_BOOT.exceptions
         controle("telemetrie sans COUNTER : web_sensor ne leve pas (3 rafraichissements)" + (size(ex) > 0 ? " : " + str(ex[0]) : ""), size(ex) == 0)
         controle("compteur absent journalise UNE fois en erreur (CAPTEURS_GARAGE_ERREUR), pas a chaque rafraichissement", erreursCompteur() == 1)
