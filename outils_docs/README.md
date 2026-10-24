@@ -51,6 +51,7 @@
 - [HISTORIQUE_SYNCHRO_FORK.md](HISTORIQUE_SYNCHRO_FORK.md) *(généré)* — journal des synchronisations du fork.
 - [CHANGELOG.md](CHANGELOG.md) — historique des évolutions.
 - [Les graphiques des mesures](#les-graphiques-des-mesures-cartes-s3p4) — page `/graphiques` des cartes S3/P4, plus bas dans ce fichier.
+- [Build et téléversement (page web)](#build-et-téléversement-page-web) — compiler et téléverser les cartes (COM ou OTA) depuis http://127.0.0.1:7700, plus bas dans ce fichier.
 
 <hr></hr>
 
@@ -261,6 +262,112 @@ des panneaux de cuve, leurs courbes y seraient vides.
   ou `/histo?p=liste`.
 - Sur le P4, les mesures de la cuve sont écartées de l'historique tant que l'esclave ne les donne pas
   pour valides (`controleGarage.filtreHistorique`) : une cuve sans capteur donne des trous, pas des zéros.
+
+<hr></hr>
+
+## Build et téléversement (page web)
+
+Une page pour compiler et téléverser plusieurs cartes d'un seul écran, sans éditer les `.ini` :
+on coche des environnements PlatformIO et des actions, on choisit COM ou OTA **ligne par ligne**, et
+la page enchaîne les `pio run` en montrant l'étape, le pourcentage, les durées et les échecs en direct.
+Conception : [spec](../docs/superpowers/specs/2026-10-24-page-build-televersement-design.md) ; plan :
+`tasks/plans/page-build-televersement.md`.
+
+### Lancer la page
+
+- **Tuile de l'annuaire** (http://127.0.0.1:7600), groupe « Maintenance » : « Build et téléversement ». La page
+  ne s'arrête pas avec l'annuaire pendant un lancement, et l'annuaire refuse de l'arrêter tant qu'un lancement
+  est en cours.
+- **Tâche VS Code** : `Ctrl+Maj+P` > Run Task > « Outil : build et téléversement (http://127.0.0.1:7700) ».
+- **Ligne de commande** : `python outils_docs/scripts_python/outils_pc/build_web.py` (`--http 7700`,
+  `--local` pour n'écouter que ce PC, `--sans-navigateur`). Depuis un autre appareil du réseau : le lien à jeton
+  affiché dans la console (comme les autres outils). Pas de cible PlatformIO Custom : une cible est un `pio run`,
+  elle ne peut pas en piloter d'autres.
+
+### Les environnements et les actions
+
+- **Classement** : *Mes cartes* (envs de `platformio_tasmota_cenv.ini`), *Mes bases* (`tasmota32-base`,
+  `tasmota32s3-base-N16R8`, `tasmota32p4-base-*`) et *Tasmota (amont)*, replié par défaut, en sous-groupes
+  (safeboot, ESP32, langues, ESP8266).
+- **Quatre actions**, combinables, appliquées à tous les envs cochés : compiler, téléverser le firmware,
+  construire le file system, téléverser le file system. Dans un env, l'ordre est toujours compiler, téléverser,
+  construire le FS, téléverser le FS, en ne lançant que ce qui est coché. Un échec arrête **cet env** (étapes
+  suivantes « annulées ») ; les autres envs continuent.
+- **COM ou OTA par ligne.** Le port COM est lu dans le `upload_port` de l'env (y compris hérité par `extends`),
+  vide s'il n'y en a pas. L'IP OTA est lue dans `WIFI_IP_ADDRESS` de `tasmota/user_config_override.h`, bloc du
+  firmware de l'env. L'OTA est grisée pour les envs qui ne chargent pas `pre_utilitaires_platformio.py` (ESP8266).
+
+### Le port COM : lu, et réécrit dans le `.ini`
+
+Un port modifié sur la page d'un env **personnel** est réécrit dans la section `[env:…]` de
+`platformio_tasmota_cenv.ini` (le `.ini` reste la référence : un `pio run` lancé depuis VS Code prend le même
+port) : commentaires et alignement gardés, ligne ajoutée dans la section de l'env même si la valeur venait d'un
+`extends` (une ligne `; upload_port` n'est jamais décommentée), champ vidé = ligne active supprimée. Une copie
+`platformio_tasmota_cenv.ini.bak` est faite avant chaque écriture ; l'écriture est refusée pendant un lancement ou
+un build.
+
+> [!WARNING]
+> Réécrire le `.ini` change l'empreinte du projet : le **build suivant repart de zéro** (PlatformIO supprime
+> alors tout `.pio/build`, tous envs compris). La page le rappelle à côté du champ. Pour un env de l'amont, un
+> port saisi vaut pour le lancement seulement (`--upload-port`) : aucun fichier n'est écrit.
+
+### L'IP de l'OTA
+
+Lue dans `WIFI_IP_ADDRESS`. Si elle vaut `0.0.0.0` (DHCP) ou manque, la ligne demande une IP à saisir : elle ne
+vaut que pour ce lancement (rien n'est réécrit) et la ligne est refusée tant que le champ est vide.
+
+### OTA du firmware
+
+La page lance `pio run -e X` (compilation), puis envoie elle-même `.pio/build/<env>/firmware.bin.gz` (à défaut
+`firmware.bin`) par `/up` puis `/u2` (protocole de `pio-tools/espupload.py`). Si la carte n'a qu'une partition OTA (image
+`0xE9`), la page la bascule d'abord en safeboot par `/u4`. Succès **prouvé par `Status 2`** : la carte doit
+revenir (90 s maximum) avec une version et une date de compilation changées ; le texte de la réponse seul ne
+suffit pas. Aucun script de build n'est modifié et il n'y a plus de variable `TASMOTA_OTA_IP`.
+
+### OTA du file system
+
+Tasmota n'accepte pas d'image LittleFS en OTA : la page envoie le **contenu de `.pio/build/<env>/littlefs_data`**
+(exactement ce que contiendrait l'image), fichier par fichier par `/ufsu`, `_persist.json` compris. Déroulé :
+
+1. construction du FS si elle n'est pas déjà cochée ;
+2. **sauvegarde du `_persist.json` de la carte** dans `%LOCALAPPDATA%\outils_tasmota\build\persist\<env>-<horodatage>.json`.
+   Impossible à télécharger : **rien n'est envoyé**, l'env est en échec ;
+3. envoi des fichiers, sous-dossiers compris ;
+4. relecture du `_persist.json` de la carte, comparé octet pour octet à celui envoyé (différent : env en échec,
+   **pas de restauration automatique**, le chemin de la sauvegarde est affiché) ;
+5. rechargement des globales Berry (`Br import persist …`) ;
+6. `Restart 1`, attente du retour de la carte (90 s), relecture du persist. Si le persist relu après le
+   redémarrage diffère de celui envoyé, un **avertissement** est affiché avec le chemin de la sauvegarde (l'env
+   n'échoue pas : les fichiers sont déjà envoyés et la carte est revenue) ; carte non revenue : env en échec.
+
+### Téléversement série : il emporte `littlefs.bin`
+
+« Téléverser le firmware » **par câble** flashe aussi le file system (persist compris) si
+`.pio/build/<env>/littlefs.bin` existe, c.-à-d. si un `buildfs` a eu lieu depuis la dernière purge
+(`pio-tools/post_esp32.py`). Comportement gardé par choix ; la ligne l'annonce avant le lancement.
+
+### Refus, attente, arrêt
+
+- **Refus avant lancement** : un build tourne déjà (VS Code, cible Custom, même logique que le hook `garde_build`) ;
+  un port COM tenu par un autre outil (pont série, sniffeur, testeur) ou absent, pour une action d'envoi ; **deux
+  lignes avec envoi par COM sur le même port** (une seule carte branchée par port ; compiler seul plusieurs envs au
+  port partagé reste permis).
+- **Attente** : le contrôle « build en cours » est refait avant chaque env. Si un build est apparu entre deux envs,
+  la série attend (« en attente : build en cours ») et reprend à sa fin ; on peut l'arrêter.
+- **Arrêt** : « Arrêter après cet env » (propre) ou arrêt immédiat, qui peut laisser une carte à moitié flashée et
+  des copies temporaires dans `data/<lieu>/<carte>` (la page les signale, ne les efface pas).
+
+### Journaux, mémoire de la page, fichiers réécrits
+
+- Sortie complète de chaque `pio run` (codes ANSI retirés) : `%LOCALAPPDATA%\outils_tasmota\build\journaux\`,
+  dépliable sur la page. Références de progression (nombre de `.o` du dernier
+  build réussi de chaque env, base du % de compilation) : `references.json` dans
+  `%LOCALAPPDATA%\outils_tasmota\build\`, hors dépôt.
+- Chaque `pio run` réécrit `platformio_override.ini` et `tasmota/user_config_override.h` (`CFG_HOLDER`) :
+  **fichiers à commiter** après un lancement (la page le rappelle en fin de lancement), et à sauvegarder avant
+  une série d'essais.
+- Banc : `test_build_*.py` dans `outils_docs/scripts_python/outils_pc/` (faux `pio`, carte simulée ; code de sortie
+  0 = vert), à lancer avec le Python du penv PlatformIO.
 
 <hr></hr>
 

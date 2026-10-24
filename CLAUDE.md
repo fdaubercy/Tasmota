@@ -128,6 +128,11 @@ c'est **voulu** (decide le 2026-10-04 : « laisse ce test comme il est »). Ne p
 decouper : c'est UN fichier a televerser sur chaque carte, qui se prepare et s'explique
 seul au chargement ; le scinder imposerait deux televersements par carte.
 
+`outils_docs/scripts_python/outils_pc/build_page.py` fait **788 lignes**, et c'est **voulu**
+(decide le 2026-10-24 : exception acceptee plutot qu'un decoupage CSS/JS). C'est la page
+unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule constante
+servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
+
 ## MONTER UN NOUVEAU POSTE
 
 Trois choses, dans cet ordre. Rien d'autre n'est necessaire.
@@ -560,3 +565,21 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     exige (DNS rebinding). Autre appareil : lien a jeton de la console / de la page sur le PC. Bancs :
     `test_annuaire.py`, `test_annuaire_lanceur.py`, `test_annuaire_securite.py`.
     Spec : `docs/superpowers/specs/2026-10-17-annuaire-outils-design.md`.
+  - `build_web.py` (+ `build_page.py`, `build_serie.py`, `build_envs.py`, `build_progression.py`, `build_ota_fs.py`,
+    et pour les bancs `build_faux_pio.py`, `build_ota_carte_simulee.py`) — page « Build et televersement »
+    http://127.0.0.1:7700 (tuile de l'annuaire, groupe Maintenance, hors job : l'annuaire refuse de l'arreter pendant
+    un lancement ; tache VS Code « Outil : build et televersement », **pas** de cible Custom : une cible est un
+    `pio run`). On coche des envs (Mes cartes / Mes bases / amont) et des actions (compiler, televerser le firmware,
+    construire le FS, televerser le FS), COM ou OTA par ligne ; les `pio run` s'enchainent un a un (jamais deux
+    ensemble ; attente si un build apparait ailleurs ; refus si port tenu ou deux envois sur le meme port), avec
+    etape, % et durees en direct. Port COM lu dans `platformio_tasmota_cenv.ini` et REECRIT dans la section de l'env
+    (`.bak` ; **change l'empreinte -> le build suivant repart de zero**) ; IP OTA lue dans `WIFI_IP_ADDRESS`
+    (0.0.0.0 -> saisie pour le lancement). OTA du firmware envoyee par la page (`/up`, `/u2`, safeboot `/u4`, preuve
+    par `Status 2`) : aucun script de `build/` modifie. OTA du FS : contenu de `littlefs_data` par `/ufsu`, persist de
+    la carte sauvegarde avant dans `%LOCALAPPDATA%\outils_tasmota\build\persist\`, relu, Berry recharge, `Restart 1`.
+    Un upload serie du firmware emporte `littlefs.bin` s'il existe. Journaux de chaque `pio run` dans
+    `%LOCALAPPDATA%\outils_tasmota\build\journaux\`. Chaque lancement reecrit `platformio_override.ini` et
+    `user_config_override.h` (a commiter). Bancs : `test_build_*.py` (+ sonde `test_build_page_chrome.py`).
+    Mode d'emploi : `outils_docs/README.md` § « Build et televersement (page web) ». Spec :
+    `docs/superpowers/specs/2026-10-24-page-build-televersement-design.md` ; plan :
+    `tasks/plans/page-build-televersement.md`.
