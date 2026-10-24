@@ -23,8 +23,8 @@ action ; les « choix 1 à 17 » cités ci-dessous sont ceux de sa section « Ch
 `outils_docs/scripts_python/outils_pc/`, squelette de `maintenance/synchro_fork_web.py` (serveur
 `ThreadingHTTPServer`, `acces_web`, flux SSE rejouable). Un module par responsabilité : envs (lecture et
 écriture des `.ini`, IP OTA), progression (analyse de la sortie pio, pur), série (exécution des `pio run`),
-OTA du FS, page, serveur. L'OTA du firmware s'active sans toucher au `.ini` par la variable
-`TASMOTA_OTA_IP`, lue par les scripts de build.
+OTA (firmware et FS), page, serveur. L'OTA du firmware est envoyée par la page elle-même (`/u2`,
+protocole de `espupload.py`), sans toucher au `.ini` ni aux scripts de build (spec choix 7 révisé).
 
 **Bancs :** scripts `test_build_*.py` au modèle de `test_annuaire.py` (fonction `verifie(obtenu, attendu,
 libelle)`, liste `ECHECS`, **code de sortie 0 = vert**), lancés avec le Python du penv :
@@ -76,7 +76,7 @@ Interfaces produites :
   invalide ; `port == ""` supprime la ligne active de la section).
 - `lit_ip_ota(texte_h: str, firmware: str) -> str`
 
-- [ ] Banc d'abord, sur des `.ini` et un `.h` d'essai écrits dans un dossier temporaire (pas les vrais
+- [x] Banc d'abord, sur des `.ini` et un `.h` d'essai écrits dans un dossier temporaire (pas les vrais
   fichiers) : `classement` (un env cenv sans `-base` → `cartes` ; `tasmota32s3-base-N16R8` → `bases` ;
   `tasmota32-FR` → `amont/langues` ; `tasmota32c3-safeboot` → `amont/safeboot` ; `tasmota-lite` →
   `amont/esp8266` ; `[env:tasmota32_base]` et `[env:tasmota32_idf55_base]` absents de la liste),
@@ -84,19 +84,19 @@ Interfaces produites :
   `ecrit_port_modifie`, `ecrit_port_ajoute`, `ecrit_port_herite`, `ecrit_port_garde_commentaire`,
   `ecrit_port_vide_supprime`, `ecrit_port_refuse_amont`, `ecrit_port_refuse_injection` (`"COM3\n[env:x]"`
   refusé ; seul `^COM\d{1,3}$` accepté), `ecrit_port_sauvegarde` (`.bak` créé), `ip_bloc_simple`,
-  `ip_bloc_ou` (`defined(A) || defined(B)`), `ip_dhcp_vide` (`0.0.0.0` → `""`), `ota_esp8266_grise`.
-- [ ] Vérifier que le banc échoue (module absent).
-- [ ] Implémenter `build_envs.py` : `configparser` (sans interpolation de PlatformIO, résolution
+  `ip_bloc_ou` (`defined(A) || defined(B)`), `ip_dhcp_vide` (`0.0.0.0` → `""`), `ota_esp8266_grise`. — preuve : test_build_envs.py (commit 96b061b83)
+- [x] Vérifier que le banc échoue (module absent). — preuve : ROUGE ModuleNotFoundError, task-1-report
+- [x] Implémenter `build_envs.py` : `configparser` (sans interpolation de PlatformIO, résolution
   d'`extends` à la main, sections `env:*` de `platformio_tasmota_env32.ini`, `platformio_tasmota_env.ini`,
   `platformio_tasmota_cenv.ini`, `platformio_override.ini`) ; `firmware` = dernier `-D FIRMWARE_*` des
   `build_flags` résolus ; `lit_ip_ota` reprend l'algorithme de
   `build/ota-files-uploader.py:_lire_ip_override` (l.46-88 : blocs `#if/#elif`, profondeur) ;
   `ota_possible` = l'env hérite de `[env:tasmota32_base]` (pré-script chargé), faux pour ESP8266 ;
   `ecrit_port` réécrit le fichier **ligne à ligne** (pas `configparser.write`) pour garder commentaires et
-  alignement.
-- [ ] Banc vert ; plus un contrôle sur les **vrais** fichiers en lecture seule : 15 envs cenv listés,
-  `tasmota32s3-garage-capteurs-cuve-modbus` → COM12, `tasmota32s3-garage-serveur-modbus` → COM11 hérité.
-- [ ] Commit `feat(build-web): liste et classement des environnements, port COM et IP OTA`.
+  alignement. — preuve : commits 96b061b83, 55493e83c (OTA par pre-script, fusion des ini)
+- [x] Banc vert ; plus un contrôle sur les **vrais** fichiers en lecture seule : 15 envs cenv listés,
+  `tasmota32s3-garage-capteurs-cuve-modbus` → COM12, `tasmota32s3-garage-serveur-modbus` → COM11 hérité. — preuve : test_build_envs.py 51 OK, sortie 0 (2026-10-24)
+- [x] Commit `feat(build-web): liste et classement des environnements, port COM et IP OTA`. — preuve : 96b061b83 + 55493e83c, 85ec18057
 
 ## A2 — Progression : lecture de la sortie pio (`build_progression.py`)
 
@@ -113,18 +113,18 @@ Interfaces produites :
 - Étapes : `"Pré-build"`, `"Compilation"`, `"Édition des liens"`, `"Téléversement"`,
   `"Construction du FS"`.
 
-- [ ] Banc d'abord, sur des lignes d'essai : `progression_compilation` (avec `reference_o=1680`, 840
+- [x] Banc d'abord, sur des lignes d'essai : `progression_compilation` (avec `reference_o=1680`, 840
   lignes `Compiling .pio\build\e\src\x.o` → 50 %), `progression_sans_reference` (`pourcent` None, `detail`
   « 840 fichiers »), `progression_ansi`, `progression_chemins` (`/` et `\`), `progression_liens`
   (`Linking …firmware.elf` → étape « Édition des liens »), `progression_esptool` (`Writing at 0x00010000
   [=====>   ] 45.2% …` et l'ancien format `(45 %)` → 45), `progression_succes` (`[SUCCESS] Took 251.3
   seconds`), `progression_echec` (`[FAILED]` + extrait d'erreur), `progression_fs_aussi`, `pourcent_borne`
-  (jamais > 99 avant le SUCCESS).
-- [ ] Vérifier que le banc échoue.
-- [ ] Implémenter (expressions régulières sur la ligne sans ANSI ; durées **non** lues dans la sortie :
-  mesurées par A3).
-- [ ] Banc vert.
-- [ ] Commit `feat(build-web): suivi de progression de la sortie pio`.
+  (jamais > 99 avant le SUCCESS). — preuve : test_build_progression.py (commit 886802f53)
+- [x] Vérifier que le banc échoue. — preuve : ROUGE ModuleNotFoundError, task-2-report
+- [x] Implémenter (expressions régulières sur la ligne sans ANSI ; durées **non** lues dans la sortie :
+  mesurées par A3). — preuve : commits 886802f53, 7de6dc9f0
+- [x] Banc vert. — preuve : test_build_progression.py vert, sortie 0 avec -W error (2026-10-24)
+- [x] Commit `feat(build-web): suivi de progression de la sortie pio`. — preuve : 886802f53 + 7de6dc9f0
 - [ ] **Calibrage** (pendant A8) : rejouer une vraie sortie de build et d'upload, ajuster les expressions,
   garder cette sortie (tronquée) comme jeu d'essai du banc.
 
@@ -145,7 +145,7 @@ Interfaces :
 - Événements : `{"n", "type": "debut"|"etape"|"duree"|"ligne"|"echec"|"fin_env"|"attente"|"fin", "env",
   …}` ; `duree` porte `{"etape": "Compilation", "secondes": float}` émis **dès la fin** de l'étape.
 
-- [ ] Banc d'abord, avec `build_faux_pio.py` par `BUILD_WEB_PIO` et des fonctions injectées
+- [x] Banc d'abord, avec `build_faux_pio.py` par `BUILD_WEB_PIO` et des fonctions injectées
   (`builds_en_cours`, `port_libre`) : `commandes` (compiler → `run -e X` ; upload COM → `run -e X -t upload
   --upload-port COM12` ; compiler+upload → un seul `-t upload` ; buildfs → `-t buildfs` ; uploadfs COM →
   `-t uploadfs --upload-port …`), `ota_variable` (upload OTA : `TASMOTA_OTA_IP=<ip>` dans l'environnement
@@ -156,19 +156,19 @@ Interfaces :
   (événement `attente`, reprise), `arret_apres_env`, `arret_immediat` (arbre tué), `journal_ecrit`
   (journal sans ANSI dans `journaux/`), `reference_o_memorisee` (`references.json` mis à jour après un
   succès), `rappel_fichiers_modifies` (événement `fin` cite `platformio_override.ini` et
-  `user_config_override.h`), `refus_double_lancement`.
-- [ ] Vérifier que le banc échoue.
-- [ ] Implémenter : `builds_en_cours` par défaut = logique de `.claude/hooks/garde_build.py:56`
+  `user_config_override.h`), `refus_double_lancement`. — preuve : test_build_serie.py + build_faux_pio.py (commit d74934f6c)
+- [x] Vérifier que le banc échoue. — preuve : ROUGE ModuleNotFoundError build_serie, task-3-report
+- [x] Implémenter : `builds_en_cours` par défaut = logique de `.claude/hooks/garde_build.py:56`
   (`builds_en_cours()`, importé par `sys.path`, sans appeler `main()`) ; `port_libre(port)` par défaut =
   ouverture/fermeture `serial.Serial(port)` (PermissionError → tenu ; absent de `list_ports` → absent) ;
   contrôle « build en cours » refait avant chaque env (attente par sondage toutes les 5 s) ; nombre de `.o`
-  de référence relu après succès dans `.pio/build/<env>/` (`*.o`, récursif).
-- [ ] Banc vert.
-- [ ] Commit `feat(build-web): execution en serie des pio run, refus et arret`.
+  de référence relu après succès dans `.pio/build/<env>/` (`*.o`, récursif). — preuve : commits d74934f6c, f7b7981ec (detection None = attente)
+- [x] Banc vert. — preuve : test_build_serie.py 63 OK, sortie 0 (2026-10-24)
+- [x] Commit `feat(build-web): execution en serie des pio run, refus et arret`. — preuve : d74934f6c + f7b7981ec
 
-## A4 — OTA : firmware par `TASMOTA_OTA_IP`, file system par `/ufsu` (`build_ota_fs.py`)
+## A4 — OTA : firmware et file system envoyés par la page (`/u2`, `/ufsu`) (`build_ota_fs.py`)
 
-Fichiers : modifier `build/ota-files-uploader.py` et `build/pre_utilitaires_platformio.py` ; créer
+Fichiers : modifier `outils_pc/build_serie.py` ; créer
 `outils_pc/build_ota_fs.py`, `outils_pc/test_build_ota_fs.py` (carte simulée : petit serveur HTTP local
 qui imite `/cm`, `/ufsd`, `/ufsu`, `/ufsu?download=` et exige le `Referer`).
 
@@ -177,29 +177,29 @@ Interfaces produites :
   None]) -> None` (lève `RuntimeError("<étape> : <motif>")` en échec) ; `rapporte` reçoit
   `{"etape": "Envoi des fichiers", "pourcent": int, "detail": "12/40 sd/js/x.js"}`.
 
-- [ ] **Firmware OTA sans `.ini`** : dans `ota-files-uploader.py`, si `TASMOTA_OTA_IP` est défini, l'utiliser
-  à la place de l'IP lue dans `user_config_override.h` ; dans `pre_utilitaires_platformio.py`, si
-  `TASMOTA_OTA_IP` est défini et que l'env ne charge pas déjà `ota-files-uploader.py`, l'exécuter par
-  `env.SConscript(<chemin>, exports="env")`. Sans la variable : **aucun changement de comportement**.
-  Vérification par lecture du code de `post_esp32.py` (ordre des `AddPostAction`) ; si le remplacement de
-  `UPLOADCMD` ne peut pas passer après `post_esp32.py`, **s'arrêter et le signaler** (spec, choix 9).
-  Preuve réelle en A8.
-- [ ] Banc d'abord : `ota_fs_ordre` (téléchargement du persist → `/ufsd` + envois → relecture → `Br …
+- [x] **Firmware OTA par la page** (spec choix 7 révisé : le pré-script ne peut pas passer après
+  `post_esp32.py`) : `envoie_firmware_ota(env, ip, dossier_build, rapporte)` dans `build_ota_fs.py`
+  (`POST http://<ip>/u2?fsz=`, champ `file`, `firmware.bin.gz` sinon `firmware.bin`, `Referer`, % = octets
+  envoyés, retour de la carte par `Status` en 90 s) ; dans `build_serie.py`, upload OTA = `pio run -e X`
+  puis `envoie_firmware_ota` (plus de `TASMOTA_OTA_IP`) ; `build/` non modifié. Tests
+  `ota_firmware_envoi`, `ota_firmware_referer`, `ota_firmware_gz_prefere`, `ota_firmware_echec`,
+  `serie_upload_ota_par_page`. — preuve : envoie_firmware_ota (commits a98478c7f, d3f3da522 : bascule safeboot /u4, preuve Status 2) ; build/ non modifie
+- [x] Banc d'abord : `ota_fs_ordre` (téléchargement du persist → `/ufsd` + envois → relecture → `Br …
   persist.load() …` → `Restart 1` → attente `Status`), `ota_fs_sauvegarde` (persist de la carte écrit dans
   `persist/<env>-<AAAAMMJJ-HHMMSS>.json`), `ota_fs_persist_injoignable` (aucun `/ufsu` reçu, erreur
   « Sauvegarde du persist »), `ota_fs_relecture_differente` (erreur, pas de restauration, chemin de la
   sauvegarde dans le message), `ota_fs_sous_dossiers` (`json/`, `sd/js/` créés et remplis), `ota_fs_referer`
   (toutes les requêtes l'ont), `ota_fs_echec_ufsu` (page contenant « Failed » → erreur),
   `ota_fs_pas_de_retour` (pas de réponse 90 s après `Restart 1`, délai réduit par paramètre dans le banc),
-  `ota_fs_progression` (fichiers envoyés / total).
-- [ ] Vérifier que le banc échoue.
-- [ ] Implémenter `build_ota_fs.py` (`urllib.request`, multipart écrit à la main, champ `ufsu` ;
+  `ota_fs_progression` (fichiers envoyés / total). — preuve : test_build_ota_fs.py + build_ota_carte_simulee.py
+- [x] Vérifier que le banc échoue. — preuve : ROUGE ModuleNotFoundError puis 12 KO avant correctif, task-4-report
+- [x] Implémenter `build_ota_fs.py` (`urllib.request`, multipart écrit à la main, champ `ufsu` ;
   commande Berry exacte de la spec, choix 10.5 ; dossier courant sur la carte par le mécanisme du
   gestionnaire de fichiers de Tasmota — à lire dans `tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino`).
   Dans `build_serie.py`, l'action « téléverser le FS » en OTA = `pio run -e X -t buildfs` (si pas déjà
-  fait dans le lancement) puis `envoie_fs_ota(…, dossier_fs=.pio/build/<env>/littlefs_data)`.
-- [ ] Banc vert ; `test_build_serie.py` toujours vert.
-- [ ] Commit `feat(build-web): OTA du firmware par TASMOTA_OTA_IP et du file system par /ufsu`.
+  fait dans le lancement) puis `envoie_fs_ota(…, dossier_fs=.pio/build/<env>/littlefs_data)`. — preuve : commits a98478c7f, d3f3da522 (persist relu en JSON apres redemarrage)
+- [x] Banc vert ; `test_build_serie.py` toujours vert. — preuve : test_build_ota_fs 64 OK, test_build_serie 69 OK, sortie 0 (2026-10-24)
+- [x] Commit `feat(build-web): OTA du firmware et du file system par la page`. — preuve : a98478c7f + d3f3da522
 
 ## A5 — Serveur web (`build_web.py`)
 
@@ -213,15 +213,15 @@ Interfaces :
   (`{"en_cours": bool}`), `GET /journal?env=` (texte). Options : `--http 7700`, `--local`,
   `--sans-navigateur`.
 
-- [ ] Banc d'abord (serveur lancé sur un port libre, `Serie` sur faux pio) : `routes_locales`,
+- [x] Banc d'abord (serveur lancé sur un port libre, `Serie` sur faux pio) : `routes_locales`,
   `post_sans_entete_refuse` (en-tête `X-Build: 1` exigé, + `origine_autorisee`), `distant_sans_jeton_refuse`,
   `port_refuse_pendant_lancement` (409), `port_ecrit_puis_relu`, `lancer_409_si_en_cours`,
-  `flux_rejoue_depuis`, `execution_reflete_etat`, `corps_borne` (> 64 Ko refusé).
-- [ ] Vérifier que le banc échoue.
-- [ ] Implémenter au modèle de `maintenance/synchro_fork_web.py` (`fabrique_gestionnaire`, `_flux`,
-  `principal`) ; derniers choix lus/écrits dans `derniers.json`.
-- [ ] Banc vert.
-- [ ] Commit `feat(build-web): serveur de la page build et televersement (port 7700)`.
+  `flux_rejoue_depuis`, `execution_reflete_etat`, `corps_borne` (> 64 Ko refusé). — preuve : test_build_web.py (commit fb5b65677)
+- [x] Vérifier que le banc échoue. — preuve : ROUGE module absent, task-5-report
+- [x] Implémenter au modèle de `maintenance/synchro_fork_web.py` (`fabrique_gestionnaire`, `_flux`,
+  `principal`) ; derniers choix lus/écrits dans `derniers.json`. — preuve : commits fb5b65677, 33fd66e60 (/journal du dernier lancement)
+- [x] Banc vert. — preuve : test_build_web.py vert, sortie 0 (2026-10-24)
+- [x] Commit `feat(build-web): serveur de la page build et televersement (port 7700)`. — preuve : fb5b65677 + 33fd66e60
 
 ## A6 — Page web (`build_page.py`)
 
@@ -241,14 +241,14 @@ suivi) :
 - panneau de suivi : un bloc par env (étape, %, barre, durées dès la fin de chaque étape, extrait d'erreur,
   journal dépliable), **bandeau rouge** en tête pour chaque échec, rappel final des fichiers modifiés.
 
-- [ ] Banc d'abord : `page_contient` (les 4 actions, les 3 familles, `X-Build`), `envs_littlefs`.
-- [ ] Implémenter.
-- [ ] Banc vert.
-- [ ] **Exécution dans un vrai Chrome** (leçons du 2026-10-16 et du 2026-10-17) : Chrome par DevTools
+- [x] Banc d'abord : `page_contient` (les 4 actions, les 3 familles, `X-Build`), `envs_littlefs`. — preuve : test_build_web.py page_contient, envs_littlefs avec temoins (commit 48252486f)
+- [x] Implémenter. — preuve : build_page.py (commits 48252486f, d90f0fb4f) ; 788 lignes, exception acceptee par l'utilisateur (CLAUDE.md)
+- [x] Banc vert. — preuve : test_build_web.py 55 OK, sortie 0 (2026-10-24)
+- [x] **Exécution dans un vrai Chrome** (leçons du 2026-10-16 et du 2026-10-17) : Chrome par DevTools
   (`--remote-debugging-port`, `Runtime.evaluate` après délai, `Runtime.exceptionThrown`), serveur sur faux
   pio : aucune exception JS, familles dépliables, lancement d'un scénario « 3 envs dont 1 en échec » →
-  bandeau rouge, durées, barre à 100 % ; **témoin** : une erreur JS volontaire est bien détectée.
-- [ ] Commit `feat(build-web): page de la liste des environnements et du suivi`.
+  bandeau rouge, durées, barre à 100 % ; **témoin** : une erreur JS volontaire est bien détectée. — preuve : test_build_page_chrome.py : 40 OK sur 2 passes, temoin TypeError detecte, cas redemarrage du serveur ; captures build-page-*.png
+- [x] Commit `feat(build-web): page de la liste des environnements et du suivi`. — preuve : 48252486f + d90f0fb4f
 
 ## A7 — Tuile de l'annuaire, tâche VS Code, documentation
 
@@ -256,17 +256,17 @@ Fichiers : modifier `outils_pc/annuaire_registre.py` (entrée `OUTILS`), `outils
 (liste des ids), `.vscode/tasks.json` (`git add -f`), `CLAUDE.md` (carte des documents),
 `outils_docs/README.md`.
 
-- [ ] Entrée de registre : `id="build"`, `nom_acces="Build et téléversement"`, groupe `GROUPES[2]`
+- [x] Entrée de registre : `id="build"`, `nom_acces="Build et téléversement"`, groupe `GROUPES[2]`
   (« Maintenance »), script `outils_pc/build_web.py`, paramètre `_port("http", 7700)`, `dans_job=False`,
   `route_occupe="/execution"`, textes `interet` / `aide` / `journaux` (journaux dans
-  `%LOCALAPPDATA%\outils_tasmota\build\journaux\`).
-- [ ] `test_annuaire.py`, `test_annuaire_lanceur.py`, `test_annuaire_securite.py` verts.
-- [ ] Tâche VS Code « Outil : build et téléversement (http://127.0.0.1:7700) » (commande
+  `%LOCALAPPDATA%\outils_tasmota\build\journaux\`). — preuve : annuaire_registre.py (commit 9385cebad)
+- [x] `test_annuaire.py`, `test_annuaire_lanceur.py`, `test_annuaire_securite.py` verts. — preuve : les trois bancs d'annuaire sortie 0 (2026-10-24)
+- [x] Tâche VS Code « Outil : build et téléversement (http://127.0.0.1:7700) » (commande
   `${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe`, jamais `${userHome}`) **lancée une fois**
-  par Run Task avant d'être annoncée (leçon du 2026-10-13).
-- [ ] Documentation : section dans `outils_docs/README.md` (usage, OTA, persist, purge de `.pio/build`,
-  fichiers réécrits) ; ligne dans la carte des documents de `CLAUDE.md`.
-- [ ] Commit `feat(annuaire): tuile Build et televersement` puis `docs: page build et televersement`.
+  par Run Task avant d'être annoncée (leçon du 2026-10-13). — preuve : lancee par l'utilisateur par Run Task le 2026-10-24 ; / 200 (42 Ko), /execution 200, /envs 121 envs (10 cartes, 6 bases, 105 amont), fiche presence/7700.json
+- [x] Documentation : section dans `outils_docs/README.md` (usage, OTA, persist, purge de `.pio/build`,
+  fichiers réécrits) ; ligne dans la carte des documents de `CLAUDE.md`. — preuve : README + CLAUDE.md (commits fb7b28422, 6e7d8c3a6, a3219fe2f)
+- [x] Commit `feat(annuaire): tuile Build et televersement` puis `docs: page build et televersement`. — preuve : 9385cebad + fb7b28422
 
 ## A8 — Essais réels avec l'utilisateur
 
@@ -274,7 +274,7 @@ Chaque essai : demander à l'utilisateur, vérifier qu'aucun build ne tourne, un
 
 - [ ] Compiler seul un env (ex. cuve) : étapes, %, durée de compilation affichée dès la fin ; calibrage A2.
 - [ ] Téléverser par COM (cuve, COM12) : % esptool, mention « FS aussi flashé » si `littlefs.bin` présent.
-- [ ] Téléverser le firmware en OTA (P4) via `TASMOTA_OTA_IP` sans toucher au `.ini` : `git diff
+- [ ] Téléverser le firmware en OTA (P4) par la page (`/u2`) sans toucher au `.ini` : `git diff
   platformio_tasmota_cenv.ini` vide.
 - [ ] Téléverser le FS en OTA sur une carte choisie par l'utilisateur : sauvegarde du persist présente,
   relecture identique, persist de la carte après redémarrage = persist envoyé.
