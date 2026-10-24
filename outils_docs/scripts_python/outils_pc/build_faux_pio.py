@@ -14,6 +14,8 @@ ou <cible> vaut "build" (pas de -t), "upload", "buildfs" ou "uploadfs", et chaqu
   - "delai"     : attente entre deux lignes (0.01 s par defaut) ;
   - "code"      : code de sortie (0 par defaut) ;
   - "o"         : nombre de fichiers .o a creer dans .pio/build/<env>/src/ (cwd = racine du depot) ;
+  - "image"     : chemin d'une image LittleFS copiee dans .pio/build/<env>/littlefs.bin (ce qu'ecrit un
+                  vrai buildfs ; le faux pio, lance sans site, ne sait pas en fabriquer) ;
   - "petit_fils": lance un processus petit-fils qui dort 60 s (pour verifier que l'arbre est tue).
 Sans cas pour l'env ni pour "*", une sortie nominale propre a la cible est rejouee.
 
@@ -102,6 +104,10 @@ def main(argv):
             continue
         print(ligne.replace("{env}", env), flush=True)
         time.sleep(delai)
+    if c.get("image"):
+        dossier = Path(".pio") / "build" / env
+        dossier.mkdir(parents=True, exist_ok=True)
+        (dossier / "littlefs.bin").write_bytes(Path(c["image"]).read_bytes())
     nb_o = int(c.get("o", 0))
     if nb_o:
         dossier = Path(".pio") / "build" / env / "src"

@@ -1,13 +1,18 @@
 """Envoi par le reseau (OTA) du firmware et du file system d'une carte Tasmota, pour la page Build.
 
-Deux fonctions, appelees par build_serie.Serie apres le `pio run` qui produit ce qu'elles envoient :
+Trois fonctions, appelees par build_serie.Serie apres le `pio run` qui produit ce qu'elles envoient :
 
   envoie_firmware_ota(env, ip, dossier_build, rapporte)
       .pio/build/<env>/firmware.bin.gz, sinon firmware.bin, par POST /u2 (champ `file`), comme le
       navigateur sur la page /up de Tasmota (bascule en safeboot comprise, voir plus bas) ; puis
       attente du retour de la carte et preuve par `Status 2` (version + date de compilation changees).
+  extrait_image(image, dossier)
+      fichiers de .pio/build/<env>/littlefs.bin, l'image que `pio run -t buildfs` vient d'ecrire (celle
+      qu'un uploadfs par cable flasherait), copies dans un dossier temporaire. PAS littlefs_data : ce
+      dossier est rempli par post_esp32.py apres chaque edition des liens, jamais vide, et ne recoit
+      data/fs, data/json, data/sd que pour certaines cibles (spec, choix 10.1 revise).
   envoie_fs_ota(env, ip, dossier_fs, sauvegardes, rapporte)
-      tout .pio/build/<env>/littlefs_data par /ufsu, sous-dossiers compris (deroule du choix 10 de
+      tout ce dossier par /ufsu, sous-dossiers compris (deroule du choix 10 de
       docs/superpowers/specs/2026-10-24-page-build-televersement-design.md).
 
 Pourquoi la page envoie le firmware elle-meme (spec, choix 7 revise) : ota-files-uploader.py lance
@@ -37,7 +42,8 @@ Ce que fait Tasmota, et que ce module suit (lu dans tasmota/tasmota_xdrv_driver/
   - chemin complet limite a 49 caracteres (UFS_FILENAME_SIZE = 50) : verifie avant tout envoi.
 
 Erreurs : RuntimeError("<étape> : <motif>"). `rapporte` recoit {"etape", "pourcent", "detail"}.
-stdlib seule (urllib.request pour les GET, http.client pour les POST envoyes par morceaux).
+stdlib (urllib.request pour les GET, http.client pour les POST envoyes par morceaux), plus
+littlefs-python pour lire l'image (present dans le penv de PlatformIO, qui s'en sert pour l'ecrire).
 """
 
 import http.client
@@ -49,6 +55,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 
+ETAPE_IMAGE = "Lecture de littlefs.bin"
 ETAPE_TELEVERSEMENT = "Téléversement"
 ETAPE_SAFEBOOT = "Bascule en safeboot"
 ETAPE_SAUVEGARDE = "Sauvegarde du persist"
@@ -67,6 +74,13 @@ BR_RECHARGE = ("Br import persist persist.load() serveur = persist.serveur diver
 ECHECS_PAGE = ("Failed", "Échoué", "denied")
 LONGUEUR_MAX = 49                    # UFS_FILENAME_SIZE - 1 (xdrv_50_filesystem.ino:90)
 MORCEAU = 8192
+# Parametres de l'image ecrite par `pio run -t buildfs` : build_fs_image de
+# ~/.platformio/platforms/espressif32/builder/main.py:549-560 (block_size = FS_BLOCK = 0x1000, l.478 ;
+# block_count = FS_SIZE // block_size = taille de l'image, qui est tout le tampon). disk_version n'est
+# pas passe : au montage, littlefs accepte toute version 2.x de mineure <= la sienne (2.0 et 2.1).
+BLOC_IMAGE = 4096
+REGLAGES_IMAGE = {"block_size": BLOC_IMAGE, "read_size": 1, "prog_size": 1, "cache_size": BLOC_IMAGE,
+                  "lookahead_size": 32, "block_cycles": 500, "name_max": 64}
 SANS_PROXY = urllib.request.build_opener(urllib.request.ProxyHandler({}))   # carte sur le reseau local
 
 
@@ -233,6 +247,52 @@ def _resume(texte):
 
 
 # -- file system --------------------------------------------------------------------------------------
+
+def extrait_image(image, dossier):
+    """Copie dans `dossier` (cree) tous les fichiers de l'image LittleFS `image` ; rend leur nombre.
+
+    `image` = .pio/build/<env>/littlefs.bin juste apres `pio run -t buildfs` (cible AlwaysBuild,
+    builder/main.py:1761-1765 : l'image est reecrite a chaque buildfs). Montage EXPLICITE (mount=False
+    puis mount()) : avec mount=True, littlefs-python formate en silence une image qu'il ne sait pas
+    monter et rendrait un FS vide. Une image illisible avec les parametres du buildfs (vierge,
+    tronquee, ou ecrite par post_esp32.py, dont le name_max differe) est donc refusee.
+    """
+    image, dossier = Path(image), Path(dossier)
+    if not image.is_file():
+        raise RuntimeError(f"{ETAPE_IMAGE} : {image} absent après la construction du FS (buildfs) ; "
+                           "rien n'a été envoyé")
+    donnees = image.read_bytes()
+    if not donnees or len(donnees) % BLOC_IMAGE:
+        raise RuntimeError(f"{ETAPE_IMAGE} : taille de {image.name} ({len(donnees)} octets) non multiple de "
+                           f"{BLOC_IMAGE} : image tronquée ? rien n'a été envoyé")
+    try:
+        from littlefs import LittleFS, UserContext
+    except ImportError:
+        raise RuntimeError(f"{ETAPE_IMAGE} : module littlefs-python absent : lancer la page avec le Python "
+                           "de PlatformIO (%USERPROFILE%\\.platformio\\penv\\Scripts\\python.exe)") from None
+    try:
+        fs = LittleFS(context=UserContext(buffer=bytearray(donnees)), block_count=len(donnees) // BLOC_IMAGE,
+                      mount=False, **REGLAGES_IMAGE)
+        fs.mount()
+        contenus = {}
+        for racine, _, fichiers in fs.walk("/"):
+            for nom in fichiers:
+                rel = (racine.rstrip("/") + "/" + nom).lstrip("/")
+                with fs.open(rel, "rb") as f:
+                    contenus[rel] = f.read()
+    except Exception as erreur:                                 # LittleFSError et erreurs de structure
+        raise RuntimeError(f"{ETAPE_IMAGE} : {image} illisible avec les paramètres du buildfs ({erreur!r}) ; "
+                           "rien n'a été envoyé") from None
+    base = dossier.resolve()
+    cibles = {rel: (dossier / rel).resolve() for rel in contenus}
+    refuses = [rel for rel, cible in cibles.items() if base not in cible.parents]   # « .. », chemin absolu
+    if refuses:
+        raise RuntimeError(f"{ETAPE_IMAGE} : chemin refusé dans l'image : {', '.join(refuses)} ; rien n'a été envoyé")
+    for rel, cible in cibles.items():
+        cible.parent.mkdir(parents=True, exist_ok=True)
+        cible.write_bytes(contenus[rel])
+    return len(contenus)
+
 
 def _inventaire(dossier_fs):
     """Fichiers relatifs (posix) a envoyer, persist en dernier, et dossiers a creer (parent d'abord)."""

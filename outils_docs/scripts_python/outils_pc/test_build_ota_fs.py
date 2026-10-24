@@ -3,6 +3,8 @@
 Code de sortie 0 = vert. La carte simulee (build_ota_carte_simulee.Carte) est un serveur HTTP sur
 127.0.0.1 (port libre) qui imite Tasmota : Referer exige, /ufsd, /ufsu, /up, /u2, /u4 (safeboot),
 /cm (Br, Restart 1, Status, Status 2). Aucune vraie carte n'est contactee.
+Les images LittleFS d'essai sont de VRAIES images, construites par littlefs-python (penv de PlatformIO)
+avec les parametres de build_fs_image (~/.platformio/platforms/espressif32/builder/main.py:549-591).
 """
 
 import json
@@ -22,6 +24,8 @@ NOUVEAU_PERSIST = b'{"serveur": {"nouveau": true}, "diverses": {}}'
 BR_RECHARGE = ("Br import persist persist.load() serveur = persist.serveur diverses = persist.diverses "
                "modules = persist.modules drivers = persist.drivers")
 RAPIDE = {"delai_retour": 5.0, "attente_min": 0.0, "sondage": 0.05}
+FICHIERS_IMAGE = {"autoexec.be": b"print(1)", "json/graphiques.json": b"{}", "sd/js/graphiques.js": b"var x = 1;" * 50,
+                  "sd/css/graphiques.css": b"body{}", "_persist.json": NOUVEAU_PERSIST}
 
 
 def verifie(obtenu, attendu, libelle):
@@ -44,6 +48,40 @@ def fs_essai(t, persist=NOUVEAU_PERSIST):
     sauvegardes = Path(t) / "persist"
     sauvegardes.mkdir()
     return d, sauvegardes
+
+
+def fabrique_image(chemin, fichiers, blocs=64, post_esp32=False):
+    """Ecrit une vraie image LittleFS de `fichiers` ({chemin relatif: octets}) dans `chemin`.
+
+    Par defaut, comme `pio run -t buildfs` : build_fs_image de builder/main.py:549-591 (block_size =
+    FS_BLOCK 4096, name_max 64, disk_version 2.1, format() puis mount()). `post_esp32=True` : comme
+    l'image ecrite apres l'edition des liens par pio-tools/post_esp32.py:239-245 (name_max par defaut
+    de littlefs-python, disk_version 2.0).
+    """
+    from littlefs import LittleFS
+    if post_esp32:
+        fs = LittleFS(block_size=4096, block_count=blocs, disk_version=0x00020000, mount=True)
+    else:
+        fs = LittleFS(block_size=4096, block_count=blocs, read_size=1, prog_size=1, cache_size=4096,
+                      lookahead_size=32, block_cycles=500, name_max=64, disk_version=0x00020001, mount=False)
+        fs.format()
+        fs.mount()
+    for rel, contenu in fichiers.items():
+        parent = rel.rpartition("/")[0]
+        if parent:
+            fs.makedirs(parent, exist_ok=True)
+        with fs.open(rel, "wb") as f:
+            f.write(contenu)
+    Path(chemin).parent.mkdir(parents=True, exist_ok=True)
+    Path(chemin).write_bytes(bytes(fs.context.buffer))
+
+
+def arbre(dossier):
+    """{chemin relatif posix: octets} de tous les fichiers de `dossier` ({} s'il n'existe pas)."""
+    dossier = Path(dossier)
+    if not dossier.is_dir():
+        return {}
+    return {p.relative_to(dossier).as_posix(): p.read_bytes() for p in dossier.rglob("*") if p.is_file()}
 
 
 def envoie_fs(carte, t, **options):
@@ -256,6 +294,59 @@ def test_ota_fs_progression():
         carte.ferme()
 
 
+def test_image_extraite():
+    """C1 : le contenu envoye est celui de littlefs.bin (l'image du buildfs), pas littlefs_data."""
+    with tempfile.TemporaryDirectory() as t:
+        image = Path(t) / "littlefs.bin"
+        fabrique_image(image, FICHIERS_IMAGE)
+        dossier = Path(t) / "extrait"
+        bo.extrait_image(image, dossier)
+        verifie(arbre(dossier), FICHIERS_IMAGE, "image_extraite : fichiers et sous-dossiers de l'image, octet pour octet")
+        carte = Carte()
+        try:
+            bo.envoie_fs_ota("tasmota32-essai", carte.ip, dossier, Path(t) / "persist", lambda r: None, **RAPIDE)
+            erreur = None
+        except RuntimeError as e:
+            erreur = str(e)
+        verifie(erreur, None, "image_extraite : envoi a la carte simulee sans erreur")
+        verifie({k.lstrip("/"): v for k, v in carte.flash.items()}, FICHIERS_IMAGE,
+                "image_extraite : la carte simulee a recu exactement le contenu de l'image")
+        carte.ferme()
+
+
+def test_image_illisible():
+    with tempfile.TemporaryDirectory() as t:
+        def essai(image, libelle):
+            dossier = Path(t) / ("extrait-" + image.stem)
+            try:
+                bo.extrait_image(image, dossier)
+                erreur = ""
+            except RuntimeError as e:
+                erreur = str(e)
+            verifie((erreur.startswith(getattr(bo, "ETAPE_IMAGE", "?") + " : "), arbre(dossier)), (True, {}), libelle)
+            return erreur
+
+        erreur = essai(Path(t) / "absent.bin", "image_illisible : littlefs.bin absent -> erreur, rien d'extrait")
+        verifie("absent" in erreur, True, "image_illisible : le message dit que l'image est absente")
+        zeros = Path(t) / "zeros.bin"
+        zeros.write_bytes(bytes(4096 * 16))
+        essai(zeros, "image_illisible : image vierge -> erreur (pas de format() silencieux)")
+        tronquee = Path(t) / "tronquee.bin"
+        fabrique_image(tronquee, FICHIERS_IMAGE)
+        tronquee.write_bytes(tronquee.read_bytes()[:-100])
+        essai(tronquee, "image_illisible : taille non multiple de 4096 -> erreur")
+        post = Path(t) / "post.bin"
+        fabrique_image(post, FICHIERS_IMAGE, post_esp32=True)
+        essai(post, "image_illisible : image de post_esp32 (name_max 255, pas celle du buildfs) -> erreur")
+        # temoin : avec mount=True, littlefs-python formate en silence une image qu'il ne sait pas monter
+        from littlefs import LittleFS, UserContext
+        fs = LittleFS(context=UserContext(buffer=bytearray(post.read_bytes())), block_size=4096,
+                      block_count=post.stat().st_size // 4096, name_max=64, mount=True)
+        verifie(list(fs.walk("/")), [("/", [], [])],
+                "image_illisible : temoin, mount=True rend un FS VIDE au lieu d'une erreur (d'ou mount() explicite)")
+
+
+
 # -- tests du firmware --------------------------------------------------------------------------------
 
 def build_essai(t, gz=False, magique=b"\xe9"):
@@ -410,6 +501,7 @@ def principal():
                  test_ota_fs_relecture_differente, test_ota_fs_sous_dossiers, test_ota_fs_referer,
                  test_ota_fs_echec_ufsu, test_ota_fs_pas_de_retour, test_ota_fs_attente_retour,
                  test_ota_fs_persist_reformate, test_ota_fs_progression,
+                 test_image_extraite, test_image_illisible,
                  test_ota_firmware_envoi, test_ota_firmware_safeboot, test_ota_firmware_sans_safeboot,
                  test_ota_firmware_inchange, test_ota_firmware_referer, test_ota_firmware_gz_prefere,
                  test_ota_firmware_echec):

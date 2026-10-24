@@ -12,7 +12,9 @@ Commandes (choix 9) : compiler = `run -e X` ; upload = `run -e X -t upload` (com
 PLATFORMIO_EXTRA_SCRIPTS : ils entrent dans l'empreinte du projet et purgeraient .pio/build).
 En OTA, la page envoie elle-meme (build_ota_fs, spec choix 7 revise) : upload = `run -e X` puis la
 fonction injectee `ota_firmware` (firmware de .pio/build/<env>/ par /u2) ; uploadfs = buildfs (s'il
-n'est pas deja coche) puis la fonction injectee `ota_fs` (.pio/build/<env>/littlefs_data par /ufsu).
+n'est pas deja coche), puis les fichiers de .pio/build/<env>/littlefs.bin (l'image du buildfs, extraite
+dans un dossier temporaire par build_ota_fs.extrait_image) envoyes par la fonction injectee `ota_fs`
+(/ufsu). Jamais littlefs_data : post_esp32.py le remplit a chaque edition des liens (choix 10.1).
 
 Refus avant de lancer (choix 11) : build deja en cours (garde_build), port COM tenu ou absent, deux
 envois COM sur le meme port, IP OTA vide. Le controle « build en cours » est refait avant chaque env
@@ -39,6 +41,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from dataclasses import asdict, dataclass
@@ -443,7 +446,15 @@ class Serie:
             else:
                 sauvegardes = self.dossier / "persist"
                 sauvegardes.mkdir(parents=True, exist_ok=True)
-                self.ota_fs(env, ligne.ip, build / "littlefs_data", sauvegardes, rapporte)
+                # Les fichiers de littlefs.bin, l'image que le buildfs precedent vient d'ecrire : PAS
+                # littlefs_data, rempli par post_esp32.py a chaque edition des liens (spec, choix 10.1).
+                image = build / "littlefs.bin"
+                with tempfile.TemporaryDirectory(prefix=f"build-fs-{env}-") as provisoire:
+                    fichiers = Path(provisoire) / "fs"
+                    rapporte({"etape": build_ota_fs.ETAPE_IMAGE, "pourcent": None, "detail": str(image)})
+                    nombre = build_ota_fs.extrait_image(image, fichiers)
+                    rapporte({"etape": build_ota_fs.ETAPE_IMAGE, "pourcent": 100, "detail": f"{nombre} fichiers"})
+                    self.ota_fs(env, ligne.ip, fichiers, sauvegardes, rapporte)
         except RuntimeError as erreur:
             return False, str(erreur), [], dernier["etape"]
         except Exception as erreur:

@@ -24,6 +24,7 @@ os.environ["PLATFORMIO_EXTRA_SCRIPTS"] = "post:x.py"   # l'empreinte du projet -
 import build_faux_pio as faux                    # noqa: E402
 import build_serie as bs                         # noqa: E402  (apres BUILD_WEB_PIO)
 from build_serie import Ligne                    # noqa: E402
+from test_build_ota_fs import FICHIERS_IMAGE, arbre, fabrique_image   # noqa: E402  (vraie image LittleFS)
 
 ECHECS = []
 ESC = "\x1b"
@@ -454,17 +455,29 @@ def test_uploadfs_ota():
     appels = []
 
     def faux_ota(env, ip, dossier_fs, sauvegardes, rapporte):
-        appels.append((env, ip, dossier_fs, sauvegardes, sauvegardes.is_dir()))
+        appels.append((env, ip, Path(dossier_fs), arbre(dossier_fs), sauvegardes, sauvegardes.is_dir()))
         rapporte({"etape": "Envoi des fichiers", "pourcent": 50, "detail": "1/2 fichiers"})
         if ip == "192.168.0.66":
             raise RuntimeError("Sauvegarde du persist : carte injoignable")
 
     with tempfile.TemporaryDirectory() as t:
-        m = Montage(t, ota_fs=faux_ota)
+        image = Path(t) / "image-du-buildfs.bin"            # copiee par le faux buildfs dans .pio/build/<env>/
+        fabrique_image(image, FICHIERS_IMAGE)
+        m = Montage(t, {"*": {"buildfs": {"image": str(image)}}}, ota_fs=faux_ota)
+        perime = m.racine / ".pio" / "build" / A / "littlefs_data"      # temoin : reste d'un build firmware
+        perime.mkdir(parents=True)
+        (perime / "_persist.json").write_bytes(b'{"perime": true}')
+        (perime / "perime.be").write_bytes(b"print('perime')")
         ev = m.lance([ota(A, "192.168.0.50")], {"uploadfs"})
         verifie([a["cible"] for a in m.appels()], ["buildfs"], "uploadfs_ota : buildfs lance avant l'envoi")
-        attendu = (A, "192.168.0.50", m.racine / ".pio" / "build" / A / "littlefs_data", m.dossier / "persist", True)
-        verifie(appels[:1], [attendu], "uploadfs_ota : ota_fs(env, ip, littlefs_data, persist/, rapporte)")
+        recu = appels[0] if appels else (None,) * 6
+        verifie((recu[0], recu[1], recu[4], recu[5]), (A, "192.168.0.50", m.dossier / "persist", True),
+                "uploadfs_ota : ota_fs(env, ip, <fichiers de l'image>, persist/, rapporte)")
+        verifie(recu[3], FICHIERS_IMAGE,
+                "uploadfs_ota : fichiers envoyes = contenu de littlefs.bin (image du buildfs), sous-dossiers compris")
+        verifie((recu[2] != perime, "perime.be" in (recu[3] or {})), (True, False),
+                "uploadfs_ota : temoin, littlefs_data perime a cote n'est PAS utilise")
+        verifie(bool(recu[2]) and recu[2].exists(), False, "uploadfs_ota : dossier d'extraction efface apres l'envoi")
         verifie([e["pourcent"] for e in du_type(ev, "etape", etape="Envoi des fichiers")][-1:], [50],
                 "uploadfs_ota : rapporte -> evenement etape")
         verifie(bool(du_type(ev, "duree", etape="Envoi des fichiers")), True, "uploadfs_ota : duree de l'envoi")
@@ -480,6 +493,14 @@ def test_uploadfs_ota():
         m2 = Montage(Path(t) / "sans", ota_fs=None)
         verifie(bool(m2.serie.controle([ota(A)], {"uploadfs"})), True,
                 "uploadfs_ota : sans fonction d'envoi, uploadfs OTA refuse")
+        # buildfs reussi mais sans littlefs.bin (le faux buildfs ne copie rien) : echec clair, rien envoye
+        (Path(t) / "sans-image").mkdir()
+        appels.clear()
+        m3 = Montage(Path(t) / "sans-image", ota_fs=faux_ota)
+        ev = m3.lance([ota(A, "192.168.0.50")], {"uploadfs"})
+        e = du_type(ev, "echec", env=A)
+        verifie((bool(e) and "littlefs.bin" in e[0]["motif"] and "absent" in e[0]["motif"], appels), (True, []),
+                "uploadfs_ota : littlefs.bin absent apres buildfs -> echec qui le dit, ota_fs non appele")
 
 
 def test_garde_build_importable():
