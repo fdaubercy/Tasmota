@@ -170,14 +170,20 @@ contenu de tous les `.ini`**. Si l'empreinte change, `run/helpers.py:35-50` supp
      page affiche ses étapes *Compilation* puis *Téléversement*) ;
    - construire le FS : `pio run -e X -t buildfs` ;
    - téléverser le FS par câble : `pio run -e X -t uploadfs` ; en OTA : voir le choix 10.
-   **Fait mesuré** : `pio-tools/post_esp32.py:419-440` ajoute `littlefs.bin` à la commande esptool d'un
-   `upload` série **dès que ce fichier existe** dans `.pio/build/<env>/` → « téléverser le firmware »
-   par câble flashe aussi le FS (persist compris) si un `buildfs` a eu lieu depuis la dernière purge.
+   **Fait mesuré** (révisé le 2026-10-24 à la relecture finale) : `pio-tools/post_esp32.py:419-440`
+   ajoute `littlefs.bin` à la commande esptool d'un `upload` série dès que ce fichier existe dans
+   `.pio/build/<env>/`, **et** `esp32_build_filesystem` (`post_esp32.py:139-245`, action post-link du
+   firmware) le reconstruit à **chaque** édition des liens dès que `custom_files_upload` contient une
+   entrée autre que `no_files` ; or `CFG_HOLDER` change à chaque `pio run`, donc le firmware est toujours
+   relié. → pour un env ESP32 dont `custom_files_upload` résolu n'est ni vide ni `no_files` (cartes et
+   bases personnelles), « téléverser le firmware » par câble **flashe aussi le FS (persist compris) à
+   chaque upload par câble**, même après une purge de `.pio/build` (et non « si un `buildfs` a eu lieu »).
    Conduite retenue (**décision de l'utilisateur, 2026-10-24**) : **garder ce comportement** (firmware +
-   file system). La page ne le masque pas : quand « téléverser le firmware » par câble est coché et qu'un
-   `littlefs.bin` existe pour l'env, la ligne affiche « le file system (persist compris) sera aussi
-   flashé », et le panneau de suivi le redit au téléversement (ligne `post_esp32` « Utilisera une commande
-   de téléchargement personnalisée… »).
+   file system). La page ne le masque pas : quand « téléverser le firmware » par câble est coché pour un
+   tel env (champ `fs_avec_firmware` calculé par `build_envs` depuis les `.ini`, pas d'après la présence
+   de `littlefs.bin`), la ligne affiche « le file system (persist compris) sera aussi flashé », et le
+   panneau de suivi le redit au téléversement (ligne `post_esp32` « Utilisera une commande de
+   téléchargement personnalisée… », lue seulement pour l'action upload par câble).
    L'OTA est proposée seulement pour les envs qui chargent `pre_utilitaires_platformio.py` (envs
    personnels ESP32 et envs amont qui étendent `[env:tasmota32_base]`, surchargé dans
    `platformio_override.ini`) ; ailleurs (ESP8266 notamment) l'interrupteur OTA est grisé. Si un
@@ -185,9 +191,18 @@ contenu de tous les `.ini`**. Si l'empreinte change, `run/helpers.py:35-50` supp
    après `post_esp32.py`), le constructeur le signale avant de coder.
 10. **Téléversement du FS en OTA, déroulé** :
     1. construire le FS (`pio run -e X -t buildfs`) si ce n'est pas déjà une action cochée du même
-       lancement ; le contenu envoyé est **celui de `.pio/build/<env>/littlefs_data`**, c.-à-d. exactement
-       ce que contiendrait l'image LittleFS (dossier de la carte + `data/fs`, `data/json`, `data/sd`, moins
-       les exclus et les solidifiés) ;
+       lancement ; le contenu envoyé est **celui de l'image `.pio/build/<env>/littlefs.bin`** que ce
+       `buildfs` vient d'écrire (cible AlwaysBuild, `builder/main.py:1761-1765` de la plateforme) — celle
+       qu'un `uploadfs` par câble flasherait : dossier de la carte + `data/fs`, `data/json`, `data/sd`, moins
+       les exclus et les solidifiés. La page en extrait les fichiers dans un dossier temporaire avec
+       littlefs-python (penv), aux paramètres de `build_fs_image` (`builder/main.py:549-560` : block_size
+       4096, block_count = taille / 4096, name_max 64), par un montage explicite (une image vierge, tronquée
+       ou écrite par `post_esp32` est refusée, jamais formatée en silence) ; `littlefs.bin` absent après le
+       `buildfs` → échec, rien n'est envoyé. (Révisé le 2026-10-24 à la relecture finale : la première
+       version envoyait `.pio/build/<env>/littlefs_data`, qui n'est **pas** produit par `buildfs` mais par
+       `esp32_build_filesystem` de `post_esp32.py:139-180` après chaque édition des liens du firmware, n'est
+       jamais vidé, et ne reçoit les copies de `data/` que pour buildfs/uploadfs/upload/erase_upload
+       (`pre_utilitaires_platformio.py:520-524`) : il aurait porté les restes d'un ancien build.)
     2. **télécharger le `_persist.json` de la carte** et le ranger dans
        `%LOCALAPPDATA%\outils_tasmota\build\persist\<env>-<horodatage>.json` ;
     3. envoyer chaque fichier par `/ufsu`, sous-dossiers compris (`json/`, `sd/`…) ;

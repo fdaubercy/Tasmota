@@ -295,7 +295,8 @@ Conception : [spec](../docs/superpowers/specs/2026-10-24-page-build-televersemen
   suivantes « annulées ») ; les autres envs continuent.
 - **COM ou OTA par ligne.** Le port COM est lu dans le `upload_port` de l'env (y compris hérité par `extends`),
   vide s'il n'y en a pas. L'IP OTA est lue dans `WIFI_IP_ADDRESS` de `tasmota/user_config_override.h`, bloc du
-  firmware de l'env. L'OTA est grisée pour les envs qui ne chargent pas `pre_utilitaires_platformio.py` (ESP8266).
+  firmware de l'env. L'OTA est grisée pour les envs qui ne chargent pas `pre_utilitaires_platformio.py` (ESP8266)
+  et pour les safeboot de l'amont.
 
 ### Le port COM : lu, et réécrit dans le `.ini`
 
@@ -318,20 +319,27 @@ vaut que pour ce lancement (rien n'est réécrit) et la ligne est refusée tant 
 
 ### OTA du firmware
 
-La page lance `pio run -e X` (compilation), puis envoie elle-même `.pio/build/<env>/firmware.bin.gz` (à défaut
-`firmware.bin`) par `/up` puis `/u2` (protocole de `pio-tools/espupload.py`). Si la carte n'a qu'une partition OTA (image
-`0xE9`), la page la bascule d'abord en safeboot par `/u4`. Succès **prouvé par `Status 2`** : la carte doit
+La page lance `pio run -e X` (compilation), puis envoie elle-même `.pio/build/<env>/firmware.bin.gz` (à défaut, ou
+s'il est plus ancien que `firmware.bin` : `firmware.bin`) par `/up` puis `/u2` (protocole de `pio-tools/espupload.py`).
+Si la carte n'a qu'une partition OTA (image `0xE9`), la page la bascule d'abord en safeboot par `/u4` ; si l'envoi
+échoue ensuite, le message dit que la carte est restée en safeboot (renvoyer un firmware par `http://<ip>/up`).
+Succès **prouvé par `Status 2`** : la carte doit
 revenir (90 s maximum) avec une version et une date de compilation changées ; le texte de la réponse seul ne
 suffit pas. Aucun script de build n'est modifié et il n'y a plus de variable `TASMOTA_OTA_IP`.
 
 ### OTA du file system
 
-Tasmota n'accepte pas d'image LittleFS en OTA : la page envoie le **contenu de `.pio/build/<env>/littlefs_data`**
-(exactement ce que contiendrait l'image), fichier par fichier par `/ufsu`, `_persist.json` compris. Déroulé :
+Tasmota n'accepte pas d'image LittleFS en OTA : la page envoie le **contenu de `.pio/build/<env>/littlefs.bin`**,
+l'image que le `buildfs` vient d'écrire (celle qu'un `uploadfs` par câble flasherait), fichier par fichier par
+`/ufsu`, `_persist.json` compris. Elle lit l'image avec littlefs-python (Python du penv PlatformIO), avec les
+paramètres du `buildfs`, et en extrait les fichiers dans un dossier temporaire. **Pas `littlefs_data`** : ce dossier
+est rempli par `post_esp32.py` après chaque édition des liens du firmware, n'est jamais vidé, et ne reçoit
+`data/fs`, `data/json`, `data/sd` que pour certaines cibles : il porterait les restes d'un ancien build. Déroulé :
 
-1. construction du FS si elle n'est pas déjà cochée ;
+1. construction du FS si elle n'est pas déjà cochée, puis lecture de `littlefs.bin` (absente ou illisible : **rien
+   n'est envoyé**, l'env est en échec) ;
 2. **sauvegarde du `_persist.json` de la carte** dans `%LOCALAPPDATA%\outils_tasmota\build\persist\<env>-<horodatage>.json`.
-   Impossible à télécharger : **rien n'est envoyé**, l'env est en échec ;
+   Impossible à télécharger, ou pas du JSON valide : **rien n'est envoyé**, l'env est en échec ;
 3. envoi des fichiers, sous-dossiers compris ;
 4. relecture du `_persist.json` de la carte, comparé octet pour octet à celui envoyé (différent : env en échec,
    **pas de restauration automatique**, le chemin de la sauvegarde est affiché) ;
@@ -342,9 +350,12 @@ Tasmota n'accepte pas d'image LittleFS en OTA : la page envoie le **contenu de `
 
 ### Téléversement série : il emporte `littlefs.bin`
 
-« Téléverser le firmware » **par câble** flashe aussi le file system (persist compris) si
-`.pio/build/<env>/littlefs.bin` existe, c.-à-d. si un `buildfs` a eu lieu depuis la dernière purge
-(`pio-tools/post_esp32.py`). Comportement gardé par choix ; la ligne l'annonce avant le lancement.
+« Téléverser le firmware » **par câble** flashe aussi le file system (persist compris) **à chaque upload par câble**
+pour tout env ESP32 dont `custom_files_upload` contient des fichiers (pas seulement `no_files`) : c'est le cas des
+cartes et des bases personnelles. `pio-tools/post_esp32.py` reconstruit `littlefs.bin` à chaque édition des liens
+(toujours, puisque `CFG_HOLDER` change à chaque `pio run`), même après une purge de `.pio/build`, et l'ajoute à la
+commande esptool. Comportement gardé par choix ; la ligne l'annonce avant le lancement (d'après les `.ini`, pas
+d'après la présence de `littlefs.bin`), et le suivi le redit au téléversement.
 
 ### Refus, attente, arrêt
 
@@ -355,13 +366,17 @@ Tasmota n'accepte pas d'image LittleFS en OTA : la page envoie le **contenu de `
 - **Attente** : le contrôle « build en cours » est refait avant chaque env. Si un build est apparu entre deux envs,
   la série attend (« en attente : build en cours ») et reprend à sa fin ; on peut l'arrêter.
 - **Arrêt** : « Arrêter après cet env » (propre) ou arrêt immédiat, qui peut laisser une carte à moitié flashée et
-  des copies temporaires dans `data/<lieu>/<carte>` (la page les signale, ne les efface pas).
+  des copies temporaires dans `data/<lieu>/<carte>` (la page les signale, ne les efface pas). Un envoi OTA en
+  cours n'est pas coupé, un envoi OTA pas encore commencé est annulé ; un upload fini avec succès reste un succès.
+- **Arrêt de la page** (Ctrl+C dans sa console, fermeture) : un envoi vers une carte en cours (téléversement par
+  câble, envoi OTA) va d'abord à son terme, puis le reste du lancement est tué ; un second Ctrl+C force l'arrêt.
+  L'écriture du port COM est refusée pendant un lancement de la page **et** pendant un build lancé ailleurs.
 
 ### Journaux, mémoire de la page, fichiers réécrits
 
 - Sortie complète de chaque `pio run` (codes ANSI retirés) : `%LOCALAPPDATA%\outils_tasmota\build\journaux\`,
   dépliable sur la page.
-- Derniers choix : à chaque lancement, la page
+- Derniers choix : à chaque lancement accepté, la page
   écrit les lignes lancées (env, COM ou OTA, port, IP saisie) et les actions cochées dans `derniers.json` (dans
   `%LOCALAPPDATA%\outils_tasmota\build\`, hors dépôt, écriture atomique) ; à l'ouverture suivante elle recoche ces lignes et ces actions. Le port
   mémorisé ne sert que pour un env dont le port n'est pas réécrit dans un `.ini` (envs de l'amont), l'IP mémorisée

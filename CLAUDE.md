@@ -128,8 +128,9 @@ c'est **voulu** (decide le 2026-10-04 : « laisse ce test comme il est »). Ne p
 decouper : c'est UN fichier a televerser sur chaque carte, qui se prepare et s'explique
 seul au chargement ; le scinder imposerait deux televersements par carte.
 
-`outils_docs/scripts_python/outils_pc/build_page.py` fait **788 lignes**, et c'est **voulu**
-(decide le 2026-10-24 : exception acceptee plutot qu'un decoupage CSS/JS). C'est la page
+`outils_docs/scripts_python/outils_pc/build_page.py` fait **813 lignes**, et c'est **voulu**
+(decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
+vague de corrections finale du meme jour). C'est la page
 unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule constante
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
