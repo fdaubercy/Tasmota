@@ -72,6 +72,7 @@ class TasmotaStub
   var reseauCoupe                       # true : is_network_up() rend false (demarrage avant le Wi-Fi)
   def is_network_up() return self.reseauCoupe != true end
   def scale_uint(v, a, b, c, d) return int((v - a) * (d - c) / (b - a) + c) end
+  def memory() return {"heap_free": 53, "frag": 37} end   # Ko et %, comme tasmota.memory() (section 32)
 end
 class Driver end                       # classe de base des drivers Tasmota
 var tasmota = TasmotaStub()
@@ -1889,6 +1890,67 @@ modules = sauveModules31
 diverses = sauveDiverses31
 drivers = sauveDrivers
 serveur = sauveServeur
+
+print("")
+print("=== 32. BUS_SERIE_MUET : la carte 16 relais ne repond plus, date et contexte journalises (2026-10-24) ===")
+# Constate le 2026-10-24 (05:46:00 -> 05:46:56) : 9 ModBusSend acceptes par le pont ('Done') et AUCUN
+# octet sur le bus (sniffeur), la carte relais elle-meme sans reponse. Le maitre doit le dire en erreur,
+# UNE fois par episode, avec l'anciennete de la derniere reponse serie et le tas libre.
+sauveDrivers = drivers
+drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial": "ON"}, "timeoutReponse": 5000,
+           "environnement": {"Conn16channels": {"Conn16channel1": {"activation": "ON", "id": 1}}}}}
+def raz32()
+  var e = modbusFonctions.etat()
+  e["queue"] = []    e["enVol"] = nil    e["echeances"] = {}    e["muets"] = {}    e["abandonsSuite"] = {}
+  e["busMuet"] = nil    e["derniereReponseSerie"] = 0
+  tasmota.ms = 0    tasmota.cmds = []    journal.clear()
+end
+def lecture32(adr) return {"DeviceAddress": adr, "FunctionCode": 3, "StartAddress": 1, "Count": 1} end
+# Reponse appariee au message en vol (voie : "Serial" par defaut, comme envoieTete)
+def repond32(adr, voie)
+  var item = {"paramMSG": lecture32(adr), "tentatives": 0}
+  if voie != nil    item["voie"] = voie    end
+  modbusFonctions.etat()["enVol"] = item
+  modbusFonctions.termineEnVol(true)
+end
+# Dernier timeout d'un message : abandon
+def abandonne32(adr, voie)
+  var item = {"paramMSG": lecture32(adr), "tentatives": modbusFonctions.MAX_TENTATIVES - 1}
+  if voie != nil    item["voie"] = voie    end
+  modbusFonctions.etat()["enVol"] = item
+  modbusFonctions.termineEnVol(false)
+end
+def compte32(motif)
+  var n = 0
+  for l : journal    if string.find(l, motif) >= 0    n += 1    end    end
+  return n
+end
+raz32()
+tasmota.ms = 10000
+repond32(2)                                      # derniere reponse serie : la cuve, a t = 10 s
+tasmota.ms = 66000
+abandonne32(2)
+verifie("temoin : abandon d'un esclave ESP32 seul, pas de BUS_SERIE_MUET", 0, compte32("BUS_SERIE_MUET"))
+abandonne32(1, "UDP")
+verifie("temoin : abandon de la carte relais par une autre voie que la serie, pas de BUS_SERIE_MUET", 0, compte32("BUS_SERIE_MUET"))
+abandonne32(1)
+verifie("carte relais abandonnee : BUS_SERIE_MUET en erreur", 1, compte32("BUS_SERIE_MUET: la carte 16 relais d'ID=1 ne repond plus"))
+verifie("BUS_SERIE_MUET : anciennete de la derniere reponse serie (56 s) et tas libre (53 Ko)", true,
+        journalise("il y a 56 s") && journalise("53 Ko"))
+tasmota.ms = 83000
+abandonne32(1)
+verifie("UNE seule erreur par episode", 1, compte32("BUS_SERIE_MUET"))
+repond32(2)
+verifie("reponse d'un autre esclave serie : episode en cours, reponse comptee", "1/1",
+        str(modbusFonctions.etat()["busMuet"] != nil ? 1 : 0) + "/" + str(modbusFonctions.etat()["busMuet"].find("autres")))
+tasmota.ms = 96000
+repond32(1)
+verifie("retour de la carte relais : fin d'episode journalisee (30 s, 1 autre reponse)", "true/nil",
+        str(journalise("BUS_SERIE_MUET: la carte 16 relais d'ID=1 repond de nouveau apres 30 s ; 1 reponse(s)")) + "/" + str(modbusFonctions.etat()["busMuet"]))
+abandonne32(1)
+verifie("nouvel episode : de nouveau signale", 2, compte32("ne repond plus"))
+raz32()
+drivers = sauveDrivers
 
 print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",

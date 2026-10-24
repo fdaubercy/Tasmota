@@ -89,6 +89,14 @@ au mauvais endroit, annulées — voir `tasks/lessons.md`). Les 3 cibles sont
 `tasmota32p4-garage-serveur-modbus`, `tasmota32s3-garage-capteurs-cuve-modbus`,
 `tasmota32s3-garage-rideau-garage-modbus`.
 
+> **SURVEILLANCE EN COURS (2026-10-24) — bus serie muet cote P4.** Le 24/10, 05:45:05-05:45:41 et
+> 05:46:00-05:46:56 : le P4 envoie (`ModBusSend` 'Done', abandons `TERMINE_EN_VOL` des esclaves 2 puis 1),
+> AUCUN octet au sniffeur, carte relais sans reponse. Tas du P4 a 53 Ko (fuite, corrigee depuis). Cause non
+> trouvee : perte entre `write()` (GPIO5) et le bus ; meme symptome que la coupure « faux contact » du
+> 17/10 22:31. Detecteur ajoute : erreur `BUS_SERIE_MUET:` (carte relais sans reponse, anciennete de la
+> derniere reponse serie, tas libre), a flasher avec le prochain build du P4. Au prochain `BUS_SERIE_MUET` :
+> tas haut = cablage/emetteur (faux contact), tas bas = RAM ; si rien en quelques jours, classer.
+>
 > **ETAT AU 2026-10-17 SOIR — LIRE EN PREMIER.** ModBus FILAIRE P4 <-> cuve : **grille de l'audit (§6)
 > VALIDEE**, tests 1 a 7, par le testeur (onglet « Grille ModBus ») - **decision de l'utilisateur : « tous
 > les tests sont bons »**. Reserves connues, acceptees : test 6 rejoue sans manipulation fiable (la reception

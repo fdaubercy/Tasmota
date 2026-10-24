@@ -52,6 +52,8 @@ def modbusFonctions_etat()
             "derniersSeq": {},          # maitre : id esclave -> dernier numero d'ordre de push accepte
             "muets": {},                # maitre : adresse -> true tant que l'esclave est muet (noteAbandon)
             "abandonsSuite": {},        # maitre : adresse -> messages abandonnes de suite, sans reponse
+            "busMuet": nil,             # maitre : {"adresse", "ms", "autres"} tant que la carte 16 relais ne repond plus (noteBusMuet)
+            "derniereReponseSerie": 0,  # maitre : millis de la derniere reponse appariee par la voie serie (noteBusActif)
             "mesures": {},              # esclave : registre (type + id - 1) -> millis de la derniere mesure (noteMesure)
             "sansMesure": {},           # esclave : registre -> true tant que le capteur est signale sans mesure
             "rubansPousses": {},        # esclave : registre du ruban WS2812 -> dernier [h, s, b, animation] pousse (surveilleRubans)
@@ -884,8 +886,10 @@ def modbusFonctions_termineEnVol(ok)
     modbusFonctions.etat()["enVol"] = nil
     if (item != nil)
         var adresse = item["paramMSG"].find("DeviceAddress")
+        var serie = (item.find("voie", "Serial") != "UDP")             # meme choix de voie qu'envoieTete
         if (ok)
             modbusFonctions.noteContactBus(adresse)
+            if (serie)    modbusFonctions.noteBusActif(adresse)    end
         else
             item["tentatives"] += 1
             var muet = modbusFonctions.estMuet(adresse)
@@ -899,6 +903,7 @@ def modbusFonctions_termineEnVol(ok)
                 modbusFonctions.log(string.format("TERMINE_EN_VOL: abandon d'un message sans reponse apres %i tentative(s) (esclave %s%s)",
                                                   item["tentatives"], str(adresse), muet ? ", muet" : ""), niveau)
                 modbusFonctions.noteAbandon(adresse)
+                if (serie)    modbusFonctions.noteBusMuet(adresse)    end
             end
         end
     end
@@ -957,6 +962,45 @@ def modbusFonctions_noteAbandon(adresse)
                                       adresse, nb, retirees), LOG_LEVEL_ERREUR)
 end
 modbusFonctions.noteAbandon = modbusFonctions_noteAbandon
+
+#- BUS SERIE MUET (2026-10-24) - la carte 16 relais repond toujours : un message abandonne sur elle est suspect.
+    Constate le 2026-10-24 (05:46:00 -> 05:46:56, tas libre du P4 a 53 Ko) : 9 ModBusSend acceptes par le
+        pont ('Done') et AUCUN octet sur le bus (sniffeur), la carte relais elle-meme sans reponse. Cause non
+        trouvee : ce detecteur date la prochaine occurrence, sans rien corriger.
+    Une erreur par episode, avec l'anciennete de la derniere reponse serie (tous esclaves) et le tas libre :
+        grande anciennete = plus rien ne passe en serie (emission du maitre) ; petite = la carte seule.
+    Fin d'episode : la carte relais repond ; le compte des reponses des autres esclaves serie entre-temps
+        departage de meme (0 = bus muet).
+-#
+def modbusFonctions_noteBusActif(adresse)
+    import string
+    var etat = modbusFonctions.etat()
+    etat["derniereReponseSerie"] = tasmota.millis()
+    var episode = etat["busMuet"]
+    if (episode == nil)    return    end
+    if (adresse != episode["adresse"])
+        episode["autres"] += 1
+        return
+    end
+    etat["busMuet"] = nil
+    modbusFonctions.log(string.format("BUS_SERIE_MUET: la carte 16 relais d'ID=%i repond de nouveau apres %i s ; %i reponse(s) d'autres esclaves serie entre-temps (0 = bus serie muet)",
+                                      adresse, (tasmota.millis() - episode["ms"]) / 1000, episode["autres"]), LOG_LEVEL_INFO)
+end
+modbusFonctions.noteBusActif = modbusFonctions_noteBusActif
+
+def modbusFonctions_noteBusMuet(adresse)
+    import string
+    var etat = modbusFonctions.etat()
+    if (adresse == nil || etat["busMuet"] != nil || !modbusFonctions.estConn16(adresse))    return    end
+    var maintenant = tasmota.millis()
+    var derniere = etat["derniereReponseSerie"]
+    var anciennete = (derniere > 0) ? str((maintenant - derniere) / 1000) : "?"
+    var memoire = tasmota.memory()
+    etat["busMuet"] = {"adresse": adresse, "ms": maintenant, "autres": 0}
+    modbusFonctions.log(string.format("BUS_SERIE_MUET: la carte 16 relais d'ID=%i ne repond plus ; derniere reponse serie (tous esclaves) il y a %s s ; tas libre %s Ko, fragmentation %s %% : emission du maitre muette, ou carte hors tension",
+                                      adresse, anciennete, str(memoire.find("heap_free")), str(memoire.find("frag"))), LOG_LEVEL_ERREUR)
+end
+modbusFonctions.noteBusMuet = modbusFonctions_noteBusMuet
 
 # Le timer de timeout a expire sans reponse -> renvoi borne du message en vol.
 def modbusFonctions_surTimeout()
