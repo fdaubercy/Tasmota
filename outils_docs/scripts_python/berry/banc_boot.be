@@ -423,6 +423,33 @@ if CAS == 1
     logFonctions.etat()["seuils"] = {}
     controle("P6.1 : carte sans historique local (bloc reduit a 'grafana') : cible absente", logFonctions.lieu("historique") == nil)
     global.diverses["historique"] = blocHisto
+    # Audit L4/P6.3 : le defaut d'un bloc absent n'est pas mis en cache ; L3 : invalideSeuils oublie le cache
+    var envModbus = global.drivers["ModBus"]["environnement"]
+    var blocC16 = envModbus["Conn16channels"]
+    envModbus.remove("Conn16channels")                 # bloc absent (environnement en veille)
+    logFonctions.invalideSeuils()
+    var seuilAbsent = logFonctions.seuil("conn16channels")
+    controle("P6.3 : bloc absent -> 'info', non mis en cache", seuilAbsent == 2 && !logFonctions.etat()["seuils"].contains("conn16channels"))
+    envModbus["Conn16channels"] = {"log": "debug"}     # bloc revenu (reveil)
+    controle("P6.3 : bloc revenu -> son seuil est lu ('debug')", logFonctions.seuil("conn16channels") == 3)
+    envModbus["Conn16channels"]["log"] = "detail"       # persist modifie hors ReglageLog
+    var avantInvalide = logFonctions.seuil("conn16channels")
+    logFonctions.invalideSeuils()
+    controle("P6.3 : modification hors ReglageLog prise en compte apres invalideSeuils (3 -> 4)",
+             avantInvalide == 3 && logFonctions.seuil("conn16channels") == 4)
+    envModbus["Conn16channels"] = blocC16
+    logFonctions.invalideSeuils()
+    # Audit D1/P4.1 : loadBerryFile ne charge pas un module dont l'activation vaut OFF (avant : le .bec l'etait)
+    import gestionFileFolder
+    LITTLEFS.fichiers["/essaiOff.be"] = "import global global.essaiOffCharge = true"
+    LITTLEFS.fichiers["/essaiOff.bec"] = "import global global.essaiOffCharge = true"
+    global.essaiOffCharge = nil
+    gestionFileFolder.loadBerryFile("/essaiOff", "OFF", "ON")
+    controle("P4.1 : activation OFF -> module NON charge, .be supprime, .bec garde",
+             global.essaiOffCharge == nil && !LITTLEFS.fichiers.contains("/essaiOff.be") && LITTLEFS.fichiers.contains("/essaiOff.bec"))
+    gestionFileFolder.loadBerryFile("/essaiOff", "ON", "ON")
+    controle("P4.1 : activation ON -> module charge", global.essaiOffCharge == true)
+    LITTLEFS.fichiers.remove("/essaiOff.bec")
 end
 
 print(string.format("CAS_%i: %s", CAS, echecs == 0 ? "OK" : "ECHEC (" + str(echecs) + ")"))

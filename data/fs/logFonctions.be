@@ -139,12 +139,21 @@ def logFonctions_seuil(cible)
                                  str(cible), logFonctions.enTexte(logFonctions.CIBLES)), LOG_LEVEL_ERREUR)
             end
         end
-        seuils[cible] = seuil
+        # Bloc absent : defaut 'info' NON mis en cache (audit L4/P6.3) - le bloc peut apparaitre plus tard
+        # (environnement d'un driver reveille par diversFonctions.hiberneDriversInactifs)
+        if (lieu != nil)    seuils[cible] = seuil    end
     end
 
     return seuil
 end
 logFonctions.seuil = logFonctions_seuil
+
+# Oublie les seuils mis en cache (audit L3/P6.3) : a appeler apres toute ecriture du persist qui peut toucher
+# un bloc portant une cle "log", hors ReglageLog (qui tient le cache a jour lui-meme).
+def logFonctions_invalideSeuils()
+    logFonctions.etat()["seuils"] = {}
+end
+logFonctions.invalideSeuils = logFonctions_invalideSeuils
 
 # LA fonction de log commune. Les erreurs passent toujours ; les autres niveaux passent si le
 # seuil de la cible les accepte. "detail" (4) est emis au niveau 3 du firmware.

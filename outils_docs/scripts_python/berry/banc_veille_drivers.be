@@ -25,7 +25,11 @@ LOG_LEVEL_DEBUG_PLUS = 4
 class TASMOTA_BOUCHON    def yield() end    end
 tasmota = TASMOTA_BOUCHON()
 var journal = []
-class LOG_BOUCHON    def log(msg, niveau, cible) journal.push([msg, niveau]) end    end
+var invalidations = 0               # appels a logFonctions.invalideSeuils (audit P6.3)
+class LOG_BOUCHON
+    def log(msg, niveau, cible) journal.push([msg, niveau]) end
+    def invalideSeuils() invalidations += 1 end
+end
 logFonctions = LOG_BOUCHON()
 drivers = {}                        # global du firmware (persist.drivers), pose par prepare()
 boolMute = true                     # globale de l autoexec, lue par d autres fonctions du module
@@ -48,6 +52,7 @@ def prepare()
     gestionFileFolder.fichiers = {}
     gestionFileFolder.plein = false
     persist.sauvegardes = 0
+    invalidations = 0
     path.creations = 0
     journal = []
     drivers = {"activation": "ON",
@@ -101,6 +106,7 @@ exc = appelle()
 controle("aucune exception ne sort" + (exc ? " : " + exc : ""), exc == nil)
 controle("environnement de 'ecran' restaure", drivers["ecran"]["environnement"].find("ecran", {}).find("largeur") == 320)
 controle("persist sauvegarde", persist.sauvegardes == 1)
+controle("P6.3 : seuils de log en cache oublies (reveil)", invalidations == 1)
 
 print("4. Regime etabli : /json present, mise en veille d'un driver devenu inactif")
 prepare()
@@ -113,5 +119,6 @@ veille = json.load(gestionFileFolder.fichiers.find("/json/driversInactifs.json",
 controle("fichier complete : 'ecran' ajoute, 'SD' garde", veille.contains("ecran") && veille.find("SD", {}).find("broche") == 12)
 controle("pas de .tmp restant", !gestionFileFolder.fichiers.contains("/json/driversInactifs.json.tmp"))
 controle("persist allege et sauvegarde", drivers["ecran"]["environnement"].size() == 0 && persist.sauvegardes == 1)
+controle("P6.3 : seuils de log en cache oublies (mise en veille)", invalidations == 1)
 
 print(echecs == 0 ? "BANC_VEILLE_DRIVERS: OK" : "BANC_VEILLE_DRIVERS: ECHEC (" + str(echecs) + ")")

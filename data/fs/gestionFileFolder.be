@@ -386,7 +386,13 @@ def gestionFileFolder_loadBerryFile(chemin, paramDeleteBe, compileBe)
     if paramDeleteBe == "OFF" && path.exists(chemin + ".bec") 
         path.remove(chemin + ".be")
         logFonctions.log(string.format("LOAD_BERRY_FILE: Supprime le fichier '%s' !", chemin + ".be"), LOG_LEVEL_DEBUG)
-        # return
+    end
+    # Module desactive (activation OFF) : NI compile NI charge (audit D1/P4.1, 2026-10-24). Avant, le .bec
+    # etait charge quand meme et le driver demarrait : controleGarage, controleCuve, controlePompeVideCave
+    # n'ont pas d'autre garde que cet argument.
+    if (paramDeleteBe == "OFF")
+        logFonctions.log(string.format("LOAD_BERRY_FILE: '%s' desactive (activation OFF), non charge !", chemin), LOG_LEVEL_INFO)
+        return
     end
 
     # Compile le fichier "*.be" en "*.bec"
@@ -407,11 +413,9 @@ def gestionFileFolder_loadBerryFile(chemin, paramDeleteBe, compileBe)
         end
     end
 
-    # Charge le fichier Berry "*.be" ou "*.bec" Si le fichier est nécessaire au programme
-    # if (paramDeleteBe == "OFF")
-        logFonctions.log(string.format("LOAD_BERRY_FILE: Charge le fichier '%s' !", chemin), LOG_LEVEL_DEBUG)
-        load(chemin)
-    # end
+    # Charge le fichier Berry "*.be" ou "*.bec" (module active)
+    logFonctions.log(string.format("LOAD_BERRY_FILE: Charge le fichier '%s' !", chemin), LOG_LEVEL_DEBUG)
+    load(chemin)
 end
 gestionFileFolder.loadBerryFile = gestionFileFolder_loadBerryFile
 

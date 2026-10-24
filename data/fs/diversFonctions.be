@@ -210,7 +210,10 @@ def diversFonctions_hiberneDriversInactifs()
 	end
 	veille = nil
 
-	if (aEndormir.size() > 0 || nbReveilles > 0)		persist.save(true)		end
+	if (aEndormir.size() > 0 || nbReveilles > 0)
+		persist.save(true)
+		logFonctions.invalideSeuils()		# environnements deplaces : seuils des cibles qui y vivent a relire (P6.3)
+	end
 end
 diversFonctions.hiberneDriversInactifs = diversFonctions_hiberneDriversInactifs
 
