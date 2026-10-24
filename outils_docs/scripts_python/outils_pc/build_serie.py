@@ -475,7 +475,7 @@ class Serie:
                 # Les fichiers de littlefs.bin, l'image que le buildfs precedent vient d'ecrire : PAS
                 # littlefs_data, rempli par post_esp32.py a chaque edition des liens (spec, choix 10.1).
                 image = build / "littlefs.bin"
-                with tempfile.TemporaryDirectory(prefix=f"build-fs-{env}-") as provisoire:
+                with tempfile.TemporaryDirectory(prefix=f"build-fs-{env}-", ignore_cleanup_errors=True) as provisoire:
                     fichiers = Path(provisoire) / "fs"
                     rapporte({"etape": build_ota_fs.ETAPE_IMAGE, "pourcent": None, "detail": str(image)})
                     nombre = build_ota_fs.extrait_image(image, fichiers)
