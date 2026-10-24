@@ -1,3 +1,8 @@
+# CARTE REMPLACEE, NON MAINTENU (gele le 2026-10-24, audit P4.4)
+# Cave ESP32, remplacee par la cave S3 (data/cave/tasmota32s3-serveur-rly).
+# Ce fichier n'est plus mis a jour. Attention : la carte de cave en ligne execute l'ancien code
+# de data/cave/tasmota32-serveur-rly-sauvegarde/ (audit A7), pas ce dossier.
+
 # Déclaration des librairies utilisées
 import persist
 # import partition_wizard        # Importe la librairie Partition_Wizard

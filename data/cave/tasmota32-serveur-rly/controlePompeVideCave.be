@@ -1,3 +1,8 @@
+# CARTE REMPLACEE, NON MAINTENU (gele le 2026-10-24, audit P4.4)
+# Cave ESP32, remplacee par la cave S3 (data/cave/tasmota32s3-serveur-rly).
+# Ce fichier n'est plus mis a jour. Attention : la carte de cave en ligne execute l'ancien code
+# de data/cave/tasmota32-serveur-rly-sauvegarde/ (audit A7), pas ce dossier.
+
 # Affiche sur la page principale de Tasmota l'etat de la pompe vide-cave et des
 # capteurs de niveau (bas/haut) : derniere mise en route, nb de cycles du jour,
 # intervalle de fonctionnement moyen, etat brut des Switch associes.

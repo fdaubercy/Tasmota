@@ -1,3 +1,8 @@
+# CARTE REMPLACEE, NON MAINTENU (gele le 2026-10-24, audit P4.4)
+# Ancien maitre S3 du garage, remplace par le maitre P4 (data/garage/tasmota32p4-serveur-modbus).
+# Ce fichier n'est plus mis a jour et diverge de la version en service. Garde pour reprendre la
+# carte en secours : avant de la rebuilder, comparer avec le dossier du P4.
+
 var controleGarage
 
 class CONTROLE_GARAGE : Driver
