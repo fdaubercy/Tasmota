@@ -93,6 +93,8 @@ var introspect = nil
 var tcpclientasync = nil
 var modbusFonctions = nil              # sera (re)affecte par le fichier charge
 var modBus_TasmotaSlaveModBus = nil    # idem
+var modBus_Conn16channels = nil        # idem (section 33 : reception de la carte 16 relais)
+var controleGeneral = nil              # cite par modBus_Conn16channels_init (jamais appelee ici)
 var controleModbus = nil               # idem (section 31 : charge seulement la, sans init)
 var logFonctions = nil                 # idem : la VRAIE fonction de log commune (seuil par cible)
 
@@ -113,6 +115,11 @@ src = f.read()
 f.close()
 compile(src)()
 print(">>> modBus_TasmotaSlaveModBus charge :", modBus_TasmotaSlaveModBus != nil ? "OK" : "ECHEC")
+f = open(SOURCES + "/modBus_Conn16channels.be", "r")
+src = f.read()
+f.close()
+compile(src)()
+print(">>> modBus_Conn16channels charge :", modBus_Conn16channels != nil ? "OK" : "ECHEC")
 
 # Appelle f() et renvoie son resultat, ou "EXCEPTION <type>" si elle leve :
 # un defaut qui plante doit apparaitre comme un resultat, pas arreter le banc.
@@ -1950,6 +1957,76 @@ verifie("retour de la carte relais : fin d'episode journalisee (30 s, 1 autre re
 abandonne32(1)
 verifie("nouvel episode : de nouveau signale", 2, compte32("ne repond plus"))
 raz32()
+drivers = sauveDrivers
+
+print("")
+print("=== 33. Carte 16 relais : reception protegee, la file est liberee meme sur exception (audit P5.7, 2026-10-24) ===")
+# Avant P5.7, une exception dans recupereReponseModBus sautait l'acquittement termineEnVol : la file
+# restait bloquee jusqu'au delai de garde (3 renvois x timeout). Elle doit etre journalisee en _ERREUR
+# ET la requete en vol liberee. Sous-classe du VRAI driver : init() court-circuite (regles, crons, json).
+sauveDrivers = drivers
+var sauveModules33 = modules
+drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial": "ON"},
+           "environnement": {"Conn16channels": {"log": "erreur", "Conn16channel1": {"activation": "ON", "id": 1}}}}}
+def relais33()
+  return {"garage": {"activation": "ON", "environnement": {"relais": {
+    "relai1": {"activation": "ON", "virtuel": "ModBus_Conn16channel1", "type": 256, "idModBus": 1, "id": 1, "etat": "OFF"},
+    "relai2": {"activation": "ON", "virtuel": "ModBus_Conn16channel1", "type": 256, "idModBus": 2, "id": 2, "etat": "OFF"}}}}}
+end
+class Conn16Stub : modBus_Conn16channels.MODBUS_CONN_16CHANNEL
+  var panne                            # true : etatPourRegistre leve (registre illisible, persist incoherent...)
+  def init() self.indexRegistres = {} self.dernierSondageA = nil self.etatsInconnus = false self.panne = false end
+  def etatPourRegistre(t, r)
+    if self.panne    raise "value_error", "registre illisible (panne simulee par le banc)"    end
+    return super(self).etatPourRegistre(t, r)
+  end
+end
+var carte33 = Conn16Stub()
+def enVol33(fc, depart) modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 1, "FunctionCode": fc, "StartAddress": depart, "Count": 2, "type": "uint16"}, "tentatives": 0} end
+# Livre une trame comme la regle 'ModbusReceived#DeviceAddress==1' ; une exception qui SORT du handler
+# est rendue comme resultat ("EXCEPTION <type>") au lieu d'arreter le banc.
+def recoit33(contenu)
+  return essaie(def () carte33.recupereReponseModBus(1, "ModbusReceived#DeviceAddress==1", {"ModbusReceived": contenu}) return "ok" end)
+end
+var r33 = def (cle) return modules["garage"]["environnement"]["relais"][cle] end
+# (a) lecture 0x03 normale : 2 voies, etat constate reporte, requete acquittee. Relai de type 256, cavalier
+#     M0 deconnecte : sortie inversee (sortieInversee), donc registre 1 (open) = ON et 0 (close) = OFF
+modules = relais33()    journal.clear()    tasmota.horloge = 1000
+enVol33(3, 1)
+verifie("0x03 normale : handler sans exception", "ok", recoit33({"DeviceAddress": 1, "FunctionCode": 3, "Values": [0, 1]}))
+verifie("0x03 normale : constate relai1=OFF, relai2=ON", "OFF/ON", str(r33("relai1").find("etatConstate")) + "/" + str(r33("relai2").find("etatConstate")))
+verifie("0x03 normale : requete acquittee", nil, modbusFonctions.etat()["enVol"])
+verifie("0x03 normale : sondage date", 1000, carte33.dernierSondageA)
+# (b) echo 0x06 : acquitte, aucun etat touche
+modules = relais33()    enVol33(6, 1)
+verifie("echo 0x06 : handler sans exception", "ok", recoit33({"DeviceAddress": 1, "FunctionCode": 6, "Values": [1]}))
+verifie("echo 0x06 : requete acquittee, rien de constate", "nil/nil", str(modbusFonctions.etat()["enVol"]) + "/" + str(r33("relai1").find("etatConstate")))
+# (c) temoin : trame hors-sequence (une autre adresse est en vol) -> NI traitee NI acquittee
+modules = relais33()    modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 2, "FunctionCode": 3, "StartAddress": 1, "Count": 2}}
+recoit33({"DeviceAddress": 1, "FunctionCode": 3, "Values": [0, 0]})
+verifie("temoin hors-sequence : requete en vol conservee, rien constate", "2/nil",
+        str(modbusFonctions.etat()["enVol"]["paramMSG"]["DeviceAddress"]) + "/" + str(r33("relai1").find("etatConstate")))
+# (d) aucune carte de cette adresse dans le persist : erreur journalisee, requete acquittee quand meme
+modules = relais33()    journal.clear()    enVol33(3, 1)
+drivers["ModBus"]["environnement"]["Conn16channels"]["Conn16channel1"]["id"] = 7
+recoit33({"DeviceAddress": 1, "FunctionCode": 3, "Values": [0, 0]})
+verifie("adresse inconnue : erreur journalisee et requete acquittee", "true/nil",
+        str(journalise("aucun Conn16channel d'adresse 1")) + "/" + str(modbusFonctions.etat()["enVol"]))
+drivers["ModBus"]["environnement"]["Conn16channels"]["Conn16channel1"]["id"] = 1
+# (e) LE CAS DE L'AUDIT : exception pendant le traitement d'une 0x03 -> journalisee en _ERREUR, file liberee
+modules = relais33()    journal.clear()    enVol33(3, 1)    carte33.panne = true
+verifie("0x03 en panne : l'exception ne sort pas du handler", "ok", recoit33({"DeviceAddress": 1, "FunctionCode": 3, "Values": [0, 1]}))
+verifie("0x03 en panne : requete en vol liberee", nil, modbusFonctions.etat()["enVol"])
+verifie("0x03 en panne : exception journalisee en _ERREUR avec sa cause", true,
+        journalise("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL_ERREUR") && journalise("registre illisible"))
+carte33.panne = false
+# (f) code fonction hors table (0x2B) : tabFonctionsName leve index_error -> meme filet
+modules = relais33()    journal.clear()    enVol33(0x2B, 1)
+verifie("code fonction 0x2B : l'exception ne sort pas du handler", "ok", recoit33({"DeviceAddress": 1, "FunctionCode": 0x2B, "Values": [0]}))
+verifie("code fonction 0x2B : requete liberee, erreur journalisee", "nil/true",
+        str(modbusFonctions.etat()["enVol"]) + "/" + str(journalise("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL_ERREUR")))
+modbusFonctions.etat()["enVol"] = nil
+modules = sauveModules33
 drivers = sauveDrivers
 
 print("")

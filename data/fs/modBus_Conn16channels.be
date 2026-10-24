@@ -316,16 +316,32 @@ class MODBUS_CONN_16CHANNEL : Driver
         var estReponseEnVol = modbusFonctions.apparieReponse(msg)
         if (!estReponseEnVol && !msg.find("Automatique", false))    return    end
 
+        # Traitement protege (2026-10-24, audit P5.7/N7) : une exception (code fonction hors table,
+        # registre illisible, persist incoherent...) sautait l'acquittement ci-dessous -> la file restait
+        # bloquee jusqu'au delai de garde (3 renvois x timeout). Meme filet que l'esclave ESP32 (G5).
+        try
+            self.traiteReponse(msg)
+        except .. as erreur, message
+            self.log(string.format("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL_ERREUR: traitement de la reponse de l'adresse %s (code %s) : %s -> %s",
+                                   str(msg.find("DeviceAddress")), str(msg.find("FunctionCode")), erreur, message), LOG_LEVEL_ERREUR)
+        end
+
+        # Acquitte le message en vol (reponse recue), exception ou non -> pompe le suivant
+        if (estReponseEnVol)    modbusFonctions.termineEnVol(true)    end
+    end
+
+    # Exploite une reponse appariee (ou une telemetrie) ; appelee SOUS try par recupereReponseModBus,
+    # qui acquitte ensuite : ne jamais acquitter ici.
+    def traiteReponse(msg)
+        import modbusFonctions
+        import string
+
         # Certaines fonctions ne retournent aucune données
         msg["FunctionName"] = modbusFonctions.tabFonctionsName[msg["FunctionCode"]]
         self.log(string.format("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: FunctionCode = 0x%02X ('%s')", msg["FunctionCode"], msg["FunctionName"]), LOG_LEVEL_DEBUG_PLUS)
 
-        if (msg["FunctionName"] == "ECRITURE_REGISTRES_HOLDER")
-            # Acquitte le message en vol (reponse recue) -> pompe le suivant
-            if (estReponseEnVol)    modbusFonctions.termineEnVol(true)    end
-
-            return
-        end
+        # Echo d'une ecriture 0x06 : rien a exploiter (l'appelant acquitte)
+        if (msg["FunctionName"] == "ECRITURE_REGISTRES_HOLDER")    return    end
 
         #- RELECTURE D'ETAT (0x03) - phase 2, 2026-07-24
 
@@ -397,9 +413,6 @@ class MODBUS_CONN_16CHANNEL : Driver
 
         # Ajoute la donnée reçue en json
         # self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: dataJson=" + json.dump(self.dataJson), LOG_LEVEL_DEBUG_PLUS)
-
-        # Acquitte le message en vol (reponse recue)
-        if (estReponseEnVol)    modbusFonctions.termineEnVol(true)    end
     end
 
     # Règles sur changement d'état lors du démarrage de Tasmota
