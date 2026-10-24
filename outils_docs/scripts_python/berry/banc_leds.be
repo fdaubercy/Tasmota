@@ -194,6 +194,20 @@ verifie(string.find(web, "eb('o1')") >= 0 && string.find(web, "&#9432;") >= 0, "
 ledsFonctions.passeManuel("banc")
 verifie(string.find(ledsFonctions.ligneWeb(), "ldAuto") >= 0, "ligne web MANUEL avec bouton Auto")
 
+print("10b. Animation lue UNE fois par seconde, partagee avec modbusFonctions.etatRuban (audit N3/P5.3)")
+var nbScheme = def () var n = 0 for c: tasmota.cmds    if c == "_Scheme"    n += 1    end    end return n end
+tasmota.schema = 6
+tasmota.cmds = []
+ledsFonctions.maj()
+verifie(nbScheme() == 1 && ledsFonctions.animationRecente() == 6, "maj : un seul '_Scheme', animation 6 disponible pour les autres modules")
+tasmota.ms += 1400
+verifie(ledsFonctions.animationRecente() == 6, "1,4 s plus tard : encore fraiche (le push de la seconde suivante la reprend)")
+tasmota.ms += 200
+verifie(ledsFonctions.animationRecente() == nil, "1,6 s sans maj : perimee -> nil (l'appelant relit '_Scheme' lui-meme)")
+tasmota.schema = 0
+ledsFonctions.maj()
+ledsFonctions.retourAuto("banc")
+
 print("11. Ruban desactive : plus rien")
 ruban["activation"] = "OFF"
 ledsFonctions.imposeCouleur("ruban", 0x123456, 10)

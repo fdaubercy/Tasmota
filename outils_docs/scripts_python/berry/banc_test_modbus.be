@@ -1441,6 +1441,15 @@ ledsFonctions.reste = 12
 light.etat = {"power": true, "bri": 255, "hue": 120, "sat": 128}
 tasmota.retourCmd = {"Scheme": 4}
 verifie("esclave etatRuban -> 5 valeurs, mode 12", "[120, 50, 100, 4, 12]", str(modbusFonctions.etatRuban(1376)))
+# P5.3 (audit N3, 2026-10-24) : ruban gere, animation lue a l'instant par ledsFonctions -> pas de 2e '_Scheme'
+ledsFonctions.recente = 7
+tasmota.cmds = []
+verifie("ruban gere, animation fraiche de ledsFonctions : reprise, aucun '_Scheme'", "[120, 50, 100, 7, 12] / []",
+        str(modbusFonctions.etatRuban(1376)) + " / " + str(tasmota.cmds))
+ledsFonctions.recente = nil
+tasmota.cmds = []
+verifie("temoin : animation de ledsFonctions perimee -> '_Scheme' relu (4)", "[120, 50, 100, 4, 12] / ['_Scheme']",
+        str(modbusFonctions.etatRuban(1376)) + " / " + str(tasmota.cmds))
 trames29 = []
 modbusFonctions.executeCmdModbus({"DeviceAddress": 2, "FunctionCode": 3, "FunctionName": "LECTURE_REGISTRES_HOLDER", "StartAddress": 1376, "Count": 5, "Values": []})
 verifie("esclave 0x03 de 5 registres : mode en 5e valeur", trameAvecCrc("02030A00780032006400040" + "00C"), size(trames29) == 1 ? trames29[0] : str(trames29))

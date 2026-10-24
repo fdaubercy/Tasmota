@@ -57,6 +57,7 @@ ledsFonctions.PALETTE = [{"nom": "rouge", "teinte": 0, "saturation": 100}, {"nom
 #   indexPalette    : derniere couleur de la palette posee
 #   attendu         : [teinte, saturation] posees par ce module (detection d'un changement exterieur)
 #   animation       : derniere animation (Scheme) vue
+#   animationLueA   : tasmota.millis() de cette lecture (animationRecente, partage avec modbusFonctions)
 #   satAvant        : saturation du ruban a l'entree en MANUEL (rendue au retour en AUTO)
 #   fonctionAuto    : fonction du module metier qui repose sa couleur au retour en AUTO
 #   descriptionAuto : texte du retour en AUTO, pose par enregistreRetourAuto
@@ -68,7 +69,7 @@ def ledsFonctions_etat()
     import global
     if !global.contains(".ledsFonctions")
         global.(".ledsFonctions") = {"erreurs": {}, "imposees": {}, "phase": false, "led": nil, "derniere": nil, "enEchec": false,
-                                        "mode": "AUTO", "echeance": nil, "indexPalette": -1, "attendu": nil, "animation": 0,
+                                        "mode": "AUTO", "echeance": nil, "indexPalette": -1, "attendu": nil, "animation": 0, "animationLueA": nil,
                                         "satAvant": nil, "fonctionAuto": nil,
                                         "descriptionAuto": "la couleur est fixee par le module de la carte", "clignote": false,
                                         "ruban": nil, "pasDefile": 0, "texteHold": "HOLD"}
@@ -425,6 +426,19 @@ ledsFonctions.actionBouton = ledsFonctions_actionBouton
 
 # --- Ruban : tache de chaque seconde ---
 
+# Animation (Scheme) lue par majRuban il y a moins de 1,5 s, ou nil (2026-10-24, audit N3/P5.3) : sur la cuve,
+# '_Scheme' etait demande deux fois par seconde (majRuban et modbusFonctions.etatRuban pour le push au
+# maitre). etatRuban reprend cette lecture ; nil (driver controleLeds absent, lecture trop ancienne) -> il
+# relit '_Scheme' lui-meme. 1,5 s : les deux taches de chaque seconde peuvent tourner dans un ordre ou l'autre.
+def ledsFonctions_animationRecente()
+    var t = ledsFonctions.animationLueA
+    if (t == nil)    return nil    end
+    var d = tasmota.millis() - t
+    if (d < 0 || d > 1500)    return nil    end     # d < 0 : millis() repasse par zero (~49 jours)
+    return ledsFonctions.animation
+end
+ledsFonctions.animationRecente = ledsFonctions_animationRecente
+
 # Echeance du MANUEL, changement de couleur exterieur, clignotement d'erreur, recopie par la LED du dev-kit
 def ledsFonctions_majRuban()
     if (ledsFonctions.configRuban() == nil)
@@ -443,6 +457,7 @@ def ledsFonctions_majRuban()
     # 2. Couleur ou animation changee hors de ce module (page web, MQTT...) : c'est une action -> MANUEL
     var reponse = tasmota.cmd("_Scheme", boolMute)
     var animation = (isinstance(reponse, map) ? int(reponse.find("Scheme", 0)) : 0)
+    ledsFonctions.animationLueA = tasmota.millis()      # lecture partagee (animationRecente, audit P5.3)
     var teinte = int(e.find("hue", 0))
     var sat = int(e.find("sat", 0))
     if (animation != ledsFonctions.animation)

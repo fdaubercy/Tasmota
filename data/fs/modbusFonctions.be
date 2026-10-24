@@ -2082,8 +2082,17 @@ modbusFonctions.idRelai = modbusFonctions_idRelai
 def modbusFonctions_etatRuban(adresse)
     import light
 
-    var reponseScheme = tasmota.cmd("_Scheme", boolMute)
-    var animation = (isinstance(reponseScheme, map) ? int(reponseScheme.find("Scheme", 0)) : 0)
+    # Ruban gere par ledsFonctions : sa tache de chaque seconde vient de lire '_Scheme', on reprend sa lecture
+    # au lieu d'envoyer une 2e commande par seconde (2026-10-24, audit N3/P5.3). Lecture perimee ou absente -> nil.
+    var animation = nil
+    if (modbusFonctions.rubanGere())
+        import ledsFonctions
+        animation = ledsFonctions.animationRecente()
+    end
+    if (animation == nil)
+        var reponseScheme = tasmota.cmd("_Scheme", boolMute)
+        animation = (isinstance(reponseScheme, map) ? int(reponseScheme.find("Scheme", 0)) : 0)
+    end
 
     for cle: modules.keys()
         var m = modules[cle]

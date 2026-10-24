@@ -11,4 +11,6 @@ ledsFonctions.resteMinutes = def () return ledsFonctions.reste end
 ledsFonctions.passeManuel = def (source) ledsFonctions.appels.push("manuel:" + str(source)) ledsFonctions.manuel = true end
 ledsFonctions.retourAuto = def (source) ledsFonctions.appels.push("auto:" + str(source)) ledsFonctions.manuel = false end
 ledsFonctions.couleurSuivante = def () ledsFonctions.appels.push("suivante") end
+ledsFonctions.recente = nil             # animation rendue par animationRecente (nil = perimee) - P5.3
+ledsFonctions.animationRecente = def () return ledsFonctions.recente end
 return ledsFonctions
