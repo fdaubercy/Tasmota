@@ -8,10 +8,11 @@ spec docs/superpowers/specs/2026-10-24-page-build-televersement-design.md).
 
 Commandes (choix 9) : compiler = `run -e X` ; upload = `run -e X -t upload` (compile si besoin : si
 « compiler » est aussi coche, seul upload part) ; buildfs = `-t buildfs` ; uploadfs par cable =
-`-t uploadfs`. Port COM par `--upload-port`, OTA du firmware par la variable TASMOTA_OTA_IP (jamais
-PLATFORMIO_UPLOAD_PORT ni PLATFORMIO_EXTRA_SCRIPTS : ils entrent dans l'empreinte du projet et
-purgeraient .pio/build). uploadfs en OTA : buildfs (s'il n'est pas deja coche) puis la fonction
-injectee `ota_fs` (A4), qui envoie le contenu de .pio/build/<env>/littlefs_data.
+`-t uploadfs`. Port COM par `--upload-port` (jamais PLATFORMIO_UPLOAD_PORT ni
+PLATFORMIO_EXTRA_SCRIPTS : ils entrent dans l'empreinte du projet et purgeraient .pio/build).
+En OTA, la page envoie elle-meme (build_ota_fs, spec choix 7 revise) : upload = `run -e X` puis la
+fonction injectee `ota_firmware` (firmware de .pio/build/<env>/ par /u2) ; uploadfs = buildfs (s'il
+n'est pas deja coche) puis la fonction injectee `ota_fs` (.pio/build/<env>/littlefs_data par /ufsu).
 
 Refus avant de lancer (choix 11) : build deja en cours (garde_build), port COM tenu ou absent, deux
 envois COM sur le meme port, IP OTA vide. Le controle « build en cours » est refait avant chaque env
@@ -44,7 +45,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import build_envs
-from build_progression import ETAPE_COMPILATION, ETAPE_LIENS, ETAPE_PREBUILD, Suivi, retire_ansi
+import build_ota_fs
+from build_progression import ETAPE_COMPILATION, ETAPE_ENVOI, ETAPE_LIENS, ETAPE_PREBUILD, Suivi, retire_ansi
 
 ICI = Path(__file__).resolve().parent
 DEPOT = ICI.parents[2]
@@ -126,13 +128,15 @@ def tue_arbre(proc):
 
 class Serie:
     def __init__(self, racine, dossier, pio=None, builds_en_cours=builds_en_cours_defaut,
-                 port_libre=port_libre_defaut, ota_fs=None, sondage=5.0):
+                 port_libre=port_libre_defaut, ota_fs=build_ota_fs.envoie_fs_ota,
+                 ota_firmware=build_ota_fs.envoie_firmware_ota, sondage=5.0):
         self.racine = Path(racine)
         self.dossier = Path(dossier)
         self.commande_pio = commande_pio(pio)
         self.builds_en_cours = builds_en_cours
         self.port_libre = port_libre
         self.ota_fs = ota_fs
+        self.ota_firmware = ota_firmware
         self.sondage = sondage
         self.verrou = threading.Condition()
         self.evenements = []
@@ -200,6 +204,8 @@ class Serie:
                     motifs.append(f"{nom} : IP OTA invalide {ligne.ip!r}")
                 if "uploadfs" in actions and self.ota_fs is None:
                     motifs.append(f"{nom} : téléversement du FS en OTA pas encore disponible")
+                if "upload" in actions and self.ota_firmware is None:
+                    motifs.append(f"{nom} : téléversement du firmware en OTA pas encore disponible")
         for port, noms in ports.items():
             if len(noms) > 1:
                 motifs.append(f"{port} : une seule carte par port, envoi demandé pour {', '.join(noms)}")
@@ -230,7 +236,7 @@ class Serie:
     def arrete(self, immediat=False):
         """Arret apres l'env en cours ; `immediat` tue aussi l'arbre du fils pio en cours.
 
-        Un envoi du FS en OTA (fonction ota_fs) ne se tue pas : la serie s'arrete a sa fin.
+        Un envoi OTA (fonctions ota_firmware, ota_fs) ne se tue pas : la serie s'arrete a sa fin.
         """
         with self.verrou:
             if not self._actif:
@@ -300,7 +306,12 @@ class Serie:
         """[(type, action de suivi, cible pio, actions couvertes)] dans l'ordre d'execution."""
         plan = []
         if "upload" in actions:
-            plan.append(("pio", "upload", "upload", [a for a in ("compiler", "upload") if a in actions]))
+            couvre = [a for a in ("compiler", "upload") if a in actions]
+            if ligne.methode == "com":
+                plan.append(("pio", "upload", "upload", couvre))
+            else:
+                plan.append(("pio", "upload", "", couvre))                       # compilation seule
+                plan.append(("ota_firmware", "upload", "", couvre))
         elif "compiler" in actions:
             plan.append(("pio", "compiler", "", ["compiler"]))
         if "buildfs" in actions:
@@ -325,7 +336,7 @@ class Serie:
                 lance_pio = True
                 ok, motif, extrait, etape = self._lance_pio(ligne, action, cible)
             else:
-                ok, motif, extrait, etape = self._lance_ota_fs(ligne)
+                ok, motif, extrait, etape = self._lance_ota(ligne, genre)
             prepare = genre == "pio" and cible == "buildfs" and couvre == ["uploadfs"]
             if ok:
                 if not prepare:
@@ -367,11 +378,10 @@ class Serie:
         env = ligne.env
         args = ["run", "-e", env] + (["-t", cible] if cible else [])
         environ = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", PYTHONUNBUFFERED="1")
-        environ.pop("TASMOTA_OTA_IP", None)
+        for heritee in ("TASMOTA_OTA_IP", "PLATFORMIO_UPLOAD_PORT", "PLATFORMIO_EXTRA_SCRIPTS"):
+            environ.pop(heritee, None)                  # PLATFORMIO_* : empreinte -> purge de .pio/build
         if action in ENVOIS and ligne.methode == "com":
             args += ["--upload-port", ligne.port]
-        elif action == "upload" and ligne.methode == "ota":
-            environ["TASMOTA_OTA_IP"] = ligne.ip
         suivi = Suivi(action, self._references().get(env) if action in ("compiler", "upload") else None)
         change, termine = self._chrono(env, action)
         commande = "pio " + " ".join(args)
@@ -411,24 +421,29 @@ class Serie:
             self._memorise_reference(env)
         return True, "", [], suivi.etape
 
-    def _lance_ota_fs(self, ligne):
+    def _lance_ota(self, ligne, genre):
+        """Envoi OTA par la page : genre "ota_firmware" (action upload) ou "ota_fs" (uploadfs)."""
         env = ligne.env
-        change, termine = self._chrono(env, "uploadfs")
-        dernier = {"etape": ETAPE_ENVOI_FS}
+        action, initiale = ("upload", ETAPE_ENVOI) if genre == "ota_firmware" else ("uploadfs", ETAPE_ENVOI_FS)
+        change, termine = self._chrono(env, action)
+        dernier = {"etape": initiale}
 
         def rapporte(info):
-            etape = str(info.get("etape") or ETAPE_ENVOI_FS)
+            etape = str(info.get("etape") or initiale)
             dernier["etape"] = etape
             change(etape)
-            self._ajoute("etape", env, action="uploadfs", etape=etape, pourcent=info.get("pourcent"),
+            self._ajoute("etape", env, action=action, etape=etape, pourcent=info.get("pourcent"),
                          detail=str(info.get("detail") or ""))
 
-        rapporte({"etape": ETAPE_ENVOI_FS, "pourcent": None, "detail": f"vers {ligne.ip}"})
-        sauvegardes = self.dossier / "persist"
-        sauvegardes.mkdir(parents=True, exist_ok=True)
-        dossier_fs = self.racine / ".pio" / "build" / env / "littlefs_data"
+        rapporte({"etape": initiale, "pourcent": None, "detail": f"vers {ligne.ip}"})
+        build = self.racine / ".pio" / "build" / env
         try:
-            self.ota_fs(env, ligne.ip, dossier_fs, sauvegardes, rapporte)
+            if genre == "ota_firmware":
+                self.ota_firmware(env, ligne.ip, build, rapporte)
+            else:
+                sauvegardes = self.dossier / "persist"
+                sauvegardes.mkdir(parents=True, exist_ok=True)
+                self.ota_fs(env, ligne.ip, build / "littlefs_data", sauvegardes, rapporte)
         except RuntimeError as erreur:
             return False, str(erreur), [], dernier["etape"]
         except Exception as erreur:

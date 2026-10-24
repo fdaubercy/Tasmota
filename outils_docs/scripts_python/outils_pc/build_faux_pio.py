@@ -18,8 +18,8 @@ ou <cible> vaut "build" (pas de -t), "upload", "buildfs" ou "uploadfs", et chaqu
 Sans cas pour l'env ni pour "*", une sortie nominale propre a la cible est rejouee.
 
 Si BUILD_WEB_FAUX_JOURNAL est pose, chaque appel y ajoute des lignes JSON : "debut" (arguments,
-cible, port, TASMOTA_OTA_IP, PYTHONIOENCODING, PYTHONUTF8, cwd, heure), "petit_fils" (pid) et
-"fin" (code, heure). Un appel tue en plein vol n'a pas de ligne "fin".
+cible, port, TASMOTA_OTA_IP, PLATFORMIO_UPLOAD_PORT, PLATFORMIO_EXTRA_SCRIPTS, PYTHONIOENCODING,
+PYTHONUTF8, cwd, heure), "petit_fils" (pid) et "fin" (code, heure). Un appel tue en plein vol n'a pas de ligne "fin".
 """
 
 import json
@@ -86,7 +86,9 @@ def main(argv):
     env, cible, port = analyse(argv)
     c = cas(env, cible)
     journalise(type="debut", pid=os.getpid(), argv=argv, env=env, cible=cible, port=port,
-               ota_ip=os.environ.get("TASMOTA_OTA_IP"), pythonioencoding=os.environ.get("PYTHONIOENCODING"),
+               ota_ip=os.environ.get("TASMOTA_OTA_IP"),
+               platformio_upload_port=os.environ.get("PLATFORMIO_UPLOAD_PORT"),
+               platformio_extra_scripts=os.environ.get("PLATFORMIO_EXTRA_SCRIPTS"), pythonioencoding=os.environ.get("PYTHONIOENCODING"),
                pythonutf8=os.environ.get("PYTHONUTF8"), cwd=os.getcwd(), t=time.time())
     if c.get("petit_fils"):
         import subprocess

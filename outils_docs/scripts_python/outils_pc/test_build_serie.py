@@ -17,7 +17,9 @@ from pathlib import Path
 ICI = Path(__file__).resolve().parent
 FAUX_PIO = ICI / "build_faux_pio.py"
 os.environ["BUILD_WEB_PIO"] = str(FAUX_PIO)
-os.environ["TASMOTA_OTA_IP"] = "9.9.9.9"          # temoin : ne doit pas fuir vers un fils non OTA
+os.environ["TASMOTA_OTA_IP"] = "9.9.9.9"          # temoins : variables heritees qui ne doivent atteindre
+os.environ["PLATFORMIO_UPLOAD_PORT"] = "COM99"    # aucun fils pio (les deux dernieres entrent dans
+os.environ["PLATFORMIO_EXTRA_SCRIPTS"] = "post:x.py"   # l'empreinte du projet -> purge de .pio/build)
 
 import build_faux_pio as faux                    # noqa: E402
 import build_serie as bs                         # noqa: E402  (apres BUILD_WEB_PIO)
@@ -57,10 +59,14 @@ def verifie(obtenu, attendu, libelle):
 
 # -- montage ----------------------------------------------------------------------------------------
 
+def firmware_ok(env, ip, dossier_build, rapporte):
+    """Envoi du firmware simule : jamais la vraie fonction (elle contacterait une carte)."""
+
+
 class Montage:
     """Depot d'essai + dossier de donnees + scenario et journal du faux pio."""
 
-    def __init__(self, t, scenario=None, builds=None, ports=None, ota_fs=None):
+    def __init__(self, t, scenario=None, builds=None, ports=None, ota_fs=None, ota_firmware=firmware_ok):
         self.t = Path(t)
         self.racine = self.t / "depot"
         self.racine.mkdir()
@@ -75,7 +81,8 @@ class Montage:
         self.builds = builds or (lambda n: [])
         self.ports = ports or {}
         self.serie = bs.Serie(self.racine, self.dossier, builds_en_cours=self._builds,
-                              port_libre=lambda p: self.ports.get(p, "libre"), ota_fs=ota_fs, sondage=0.05)
+                              port_libre=lambda p: self.ports.get(p, "libre"), ota_fs=ota_fs,
+                              ota_firmware=ota_firmware, sondage=0.05)
         self.n = 0
 
     def _builds(self):
@@ -168,17 +175,41 @@ def test_commandes():
                 ("utf-8", "1", m.racine.resolve()), "commandes : PYTHONIOENCODING, PYTHONUTF8, cwd = racine")
 
 
-def test_ota_variable():
+def test_serie_upload_ota_par_page():
+    appels = []
+
+    def faux_firmware(env, ip, dossier_build, rapporte):
+        appels.append((env, ip, dossier_build))
+        rapporte({"etape": "Téléversement", "pourcent": 40, "detail": "x.bin vers " + ip})
+        if ip == "192.168.0.66":
+            raise RuntimeError("Téléversement : refusé par la carte")
+
     with tempfile.TemporaryDirectory() as t:
-        m = Montage(t)
-        m.lance([ota(A, "192.168.0.50")], {"upload"})
+        m = Montage(t, ota_firmware=faux_firmware)
+        ev = m.lance([ota(A, "192.168.0.50")], {"upload"})
         m.lance([ota(A, "192.168.0.50")], {"compiler", "buildfs"})
-        appels = m.appels()
-        verifie((appels[0]["argv"], appels[0]["ota_ip"]),
-                (["run", "-e", A, "-t", "upload"], "192.168.0.50"),
-                "ota_variable : upload OTA -> TASMOTA_OTA_IP, pas de --upload-port")
-        verifie([a["ota_ip"] for a in appels[1:]], [None, None],
-                "ota_variable : temoin, compiler et buildfs sans TASMOTA_OTA_IP (meme herite)")
+        pio = m.appels()
+        verifie(pio[0]["argv"], ["run", "-e", A],
+                "serie_upload_ota_par_page : pio compile seulement (ni -t upload ni --upload-port)")
+        verifie(appels, [(A, "192.168.0.50", m.racine / ".pio" / "build" / A)],
+                "serie_upload_ota_par_page : puis envoi par la page (env, ip, .pio/build/<env>)")
+        verifie([(a["ota_ip"], a["platformio_upload_port"], a["platformio_extra_scripts"]) for a in pio],
+                [(None, None, None)] * 3,
+                "serie_upload_ota_par_page : temoins, aucune variable TASMOTA_OTA_IP / PLATFORMIO_* heritee")
+        verifie([e["pourcent"] for e in du_type(ev, "etape", etape="Téléversement")][-1:], [40],
+                "serie_upload_ota_par_page : progression de l'envoi -> evenement etape")
+        verifie(du_type(ev, "fin_env")[0]["statuts"], {"upload": "succes"}, "serie_upload_ota_par_page : succes")
+        ev = m.lance([ota(A, "192.168.0.66"), ota(B)], {"compiler", "upload"})
+        verifie([x["statuts"] for x in du_type(ev, "fin_env")],
+                [{"compiler": "succes", "upload": "echec"}, {"compiler": "succes", "upload": "succes"}],
+                "serie_upload_ota_par_page : envoi refuse -> compiler succes, upload echec, la serie continue")
+        e = du_type(ev, "echec", env=A)
+        verifie(bool(e) and e[0]["motif"].startswith("Téléversement : "), True,
+                "serie_upload_ota_par_page : motif de l'envoi transmis")
+        (Path(t) / "sans").mkdir()
+        m2 = Montage(Path(t) / "sans", ota_firmware=None)
+        verifie(bool(m2.serie.controle([ota(A)], {"upload"})), True,
+                "serie_upload_ota_par_page : sans fonction d'envoi, upload OTA refuse")
 
 
 def test_ordre_actions():
@@ -459,7 +490,7 @@ def test_garde_build_importable():
 
 def principal():
     garde_fou()
-    for test in (test_commandes, test_ota_variable, test_ordre_actions, test_serie_un_par_un,
+    for test in (test_commandes, test_serie_upload_ota_par_page, test_ordre_actions, test_serie_un_par_un,
                  test_serie_continue_apres_echec, test_duree_des_la_fin, test_refus_build_en_cours,
                  test_refus_port_tenu, test_refus_meme_port, test_refus_ip_vide,
                  test_serie_attend_build_externe, test_serie_attend_detection_impossible,
