@@ -1,35 +1,23 @@
 """Banc de build_ota_fs (envoi du firmware par /u2 et du file system par /ufsu) sur une carte simulee.
 
-Code de sortie 0 = vert. La carte simulee est un petit serveur HTTP sur 127.0.0.1 (port libre) qui
-imite ce que fait Tasmota (tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino et
-xdrv_01_9_webserver.ino) :
-  - toute route autre que / sans `Referer: http://<ip>/` : connexion fermee sans reponse
-    (HttpCheckPriviledgedAccess, SetOption128 0) ; idem pour un fichier absent a telecharger ;
-  - GET /ufsd et /ufsu : dossier courant remis a / ; `dir=<n>` choisit le systeme de fichiers
-    (1 = carte SD) ; `download=<chemin>` : dossier -> devient le dossier courant, fichier -> envoye ;
-  - POST /ufsu (champ ufsu) : ecrit <dossier courant>/<nom> ; dossier absent -> page « Failed » ;
-  - GET /up arme l'envoi du firmware ; POST /u2 sans /up : rien n'est ecrit mais la page dit
-    « Successful » (Web.upload_file_type = UPL_NONE) ; octet magique ni 0xE9 ni 0x1F -> « Failed » ;
-  - /cm?cmnd=Br ... path.mkdir("/x") cree un dossier (dans la flash, comme Berry) ; Restart 1 ->
-    carte muette pendant `coupure` secondes (None = ne revient jamais) ; Status -> JSON.
-Aucune vraie carte n'est contactee.
+Code de sortie 0 = vert. La carte simulee (build_ota_carte_simulee.Carte) est un serveur HTTP sur
+127.0.0.1 (port libre) qui imite Tasmota : Referer exige, /ufsd, /ufsu, /up, /u2, /u4 (safeboot),
+/cm (Br, Restart 1, Status, Status 2). Aucune vraie carte n'est contactee.
 """
 
 import json
 import re
 import sys
 import tempfile
-import threading
 import time
 import urllib.parse
 import urllib.request
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
 import build_ota_fs as bo
+from build_ota_carte_simulee import ANCIEN_PERSIST, Carte
 
 ECHECS = []
-ANCIEN_PERSIST = b'{"serveur": {"ancien": true}}'
 NOUVEAU_PERSIST = b'{"serveur": {"nouveau": true}, "diverses": {}}'
 BR_RECHARGE = ("Br import persist persist.load() serveur = persist.serveur diverses = persist.diverses "
                "modules = persist.modules drivers = persist.drivers")
@@ -42,155 +30,6 @@ def verifie(obtenu, attendu, libelle):
     if not ok:
         ECHECS.append(libelle)
     return ok
-
-
-# -- carte simulee ------------------------------------------------------------------------------------
-
-class Carte:
-    def __init__(self, persist=ANCIEN_PERSIST, coupure=0.3, carte_sd=False):
-        self.flash = {"/_persist.json": persist} if persist is not None else {}
-        self.sd = {}
-        self.dossiers = {"/"}
-        self.ufs_path = "/"
-        self.ufs_dir = 1 if carte_sd else 0
-        self.type_envoi = "aucun"                    # aucun | firmware | fichier
-        self.firmware = None
-        self.journal = []                            # (methode, chemin, referer)
-        self.coupure = coupure
-        self.muette_des = 0.0                        # carte muette de muette_des a revient_a
-        self.revient_a = 0.0                         # (inf = ne revient jamais)
-        self.retard = 0.0                            # la carte repond encore `retard` s apres l'ordre
-        self.echec_fichier = None                    # nom de fichier dont l'envoi echoue
-        self.altere_persist = False                  # ecrit un autre persist que celui recu
-        self.persist_injoignable = False
-        carte = self
-
-        class Gestion(BaseHTTPRequestHandler):
-            def log_message(self, *args):
-                pass
-
-            def do_GET(self):
-                carte.traite(self, "GET")
-
-            def do_POST(self):
-                carte.traite(self, "POST")
-
-        self.serveur = ThreadingHTTPServer(("127.0.0.1", 0), Gestion)
-        self.ip = f"127.0.0.1:{self.serveur.server_address[1]}"
-        threading.Thread(target=self.serveur.serve_forever, daemon=True).start()
-
-    def ferme(self):
-        self.serveur.shutdown()
-        self.serveur.server_close()
-
-    def fs(self):
-        return self.sd if self.ufs_dir == 1 else self.flash
-
-    @staticmethod
-    def repond(h, corps, type_="text/html; charset=utf-8"):
-        donnees = corps if isinstance(corps, bytes) else corps.encode("utf-8")
-        h.send_response(200)
-        h.send_header("Content-Type", type_)
-        h.send_header("Content-Length", str(len(donnees)))
-        h.end_headers()
-        h.wfile.write(donnees)
-
-    def traite(self, h, methode):
-        corps = b""
-        if methode == "POST":
-            corps = h.rfile.read(int(h.headers.get("Content-Length") or 0))
-        if self.muette_des <= time.monotonic() < self.revient_a:
-            return                                   # en redemarrage : aucune reponse
-        url = urllib.parse.urlsplit(h.path)
-        args = dict(urllib.parse.parse_qsl(url.query, keep_blank_values=True))
-        referer = h.headers.get("Referer")
-        self.journal.append((methode, h.path, referer))
-        if url.path != "/" and referer != f"http://{self.ip}/":
-            return                                   # « HTP: Referer denied » : rien n'est renvoye
-        if url.path == "/cm":
-            return self.commande(h, args.get("cmnd", ""))
-        if url.path in ("/ufsd", "/ufsu") and methode == "GET":
-            return self.repertoire(h, args)
-        if url.path == "/ufsu" and methode == "POST":
-            self.type_envoi = "fichier"
-            return self.recoit_fichier(h, corps)
-        if url.path == "/up":
-            self.type_envoi = "firmware"
-            return self.repond(h, "<html>Mise a jour</html>")
-        if url.path == "/u2" and methode == "POST":
-            return self.recoit_firmware(h, corps)
-        return self.repond(h, "<html>Accueil</html>")
-
-    def commande(self, h, cmnd):
-        if cmnd == "Status":
-            return self.repond(h, '{"Status":{"Module":0}}', "application/json")
-        if cmnd == "Restart 1":
-            self.repond(h, '{"Restart":"Restarting"}', "application/json")
-            self.redemarre()
-            return
-        m = re.fullmatch(r'Br import path path\.mkdir\("([^"]+)"\)', cmnd)
-        if m:
-            chemin = m.group(1)
-            ok = str(PurePosixPath(chemin).parent) in self.dossiers
-            if ok:
-                self.dossiers.add(chemin)
-            return self.repond(h, json.dumps({"Br": "true" if ok else "false"}), "application/json")
-        return self.repond(h, '{"Br":"nil"}' if cmnd.startswith("Br ") else '{"Command":"Unknown"}',
-                           "application/json")
-
-    def redemarre(self):
-        self.muette_des = time.monotonic() + self.retard
-        self.revient_a = float("inf") if self.coupure is None else self.muette_des + self.coupure
-        self.ufs_path, self.type_envoi = "/", "aucun"
-
-    def repertoire(self, h, args):
-        self.ufs_path = "/"
-        if "dir" in args:
-            self.ufs_dir = int(re.match(r"\d*", args["dir"]).group(0) or 0)   # atoi
-        if "download" in args:
-            chemin = args["download"]
-            if chemin in self.dossiers:
-                self.ufs_path = chemin
-            elif chemin in self.fs() and not (chemin == "/_persist.json" and self.persist_injoignable):
-                return self.repond(h, self.fs()[chemin], "application/octet-stream")
-            else:
-                return                               # fichier absent : connexion fermee
-        return self.repond(h, "<html>Gestion du systeme de fichiers</html>")
-
-    @staticmethod
-    def multipart(h, corps):
-        limite = h.headers.get("Content-Type", "").split("boundary=")[-1].encode()
-        for partie in corps.split(b"--" + limite):
-            tete, _, contenu = partie.partition(b"\r\n\r\n")
-            m = re.search(rb'name="([^"]+)"; filename="([^"]*)"', tete)
-            if m:
-                return m.group(1).decode(), m.group(2).decode(), contenu[:-2]
-        return None, None, b""
-
-    def recoit_fichier(self, h, corps):
-        champ, nom, contenu = self.multipart(h, corps)
-        chemin = (self.ufs_path.rstrip("/") + "/" + nom) if nom else ""
-        if champ != "ufsu" or not nom or str(PurePosixPath(chemin).parent) not in self.dossiers \
-                or nom == self.echec_fichier:
-            return self.repond(h, "<b>Upload <font>Failed</font></b>")
-        if chemin == "/_persist.json" and self.altere_persist:
-            contenu = contenu + b" "
-        self.fs()[chemin] = contenu
-        return self.repond(h, "<b>Upload <font>Successful</font></b>")
-
-    def recoit_firmware(self, h, corps):
-        champ, nom, contenu = self.multipart(h, corps)
-        type_, self.type_envoi = self.type_envoi, "aucun"           # HandleUploadDone : UPL_NONE
-        if type_ == "firmware":
-            if champ != "file" or not nom or contenu[:1] not in (b"\xe9", b"\x1f"):
-                return self.repond(h, "<b>Upload <font>Failed</font></b><br>Invalid file signature")
-            self.firmware = (nom, contenu)
-        self.repond(h, "<b>Upload <font>Successful</font></b><br>Restarting")
-        self.redemarre()
-
-    # lecture du journal
-    def requetes(self, motif=""):
-        return [(m, c) for m, c, _ in self.journal if motif in c]
 
 
 def fs_essai(t, persist=NOUVEAU_PERSIST):
@@ -375,6 +214,33 @@ def test_ota_fs_attente_retour():
         carte.ferme()
 
 
+def test_ota_fs_persist_reformate():
+    """Au Restart, System#Save reecrit le persist par json.dump : seul le contenu decode compte."""
+    with tempfile.TemporaryDirectory() as t:
+        carte = Carte()
+        carte.apres_redemarrage = lambda b: json.dumps(dict(reversed(list(json.loads(b).items()))),
+                                                       separators=(",", ":")).encode()
+        erreur, rapports, _ = envoie_fs(carte, t)
+        verifie(carte.flash["/_persist.json"] != NOUVEAU_PERSIST, True,
+                "ota_fs_persist_reformate : la carte simulee a bien reecrit le persist (autres octets)")
+        verifie(erreur, None, "ota_fs_persist_reformate : reformate apres redemarrage -> succes")
+        verifie([r["detail"] for r in rapports if "AVERTISSEMENT" in str(r.get("detail"))], [],
+                "ota_fs_persist_reformate : meme contenu JSON -> pas d'avertissement")
+        carte.ferme()
+    with tempfile.TemporaryDirectory() as t:
+        carte = Carte()
+        carte.apres_redemarrage = lambda b: ANCIEN_PERSIST           # globales anciennes resauvees
+        erreur, rapports, sauvegardes = envoie_fs(carte, t)
+        avert = [r for r in rapports if "AVERTISSEMENT" in str(r.get("detail"))]
+        sauvegarde = next(iter(sauvegardes.iterdir()), None)
+        verifie(erreur, None, "ota_fs_persist_reformate : contenu different apres redemarrage -> pas d'echec")
+        verifie((len(avert), bool(avert) and avert[0]["etape"]), (1, "Vérification après redémarrage"),
+                "ota_fs_persist_reformate : un avertissement a l'etape de verification")
+        verifie(bool(avert) and str(sauvegarde) in avert[0]["detail"], True,
+                "ota_fs_persist_reformate : avertissement avec le chemin de la sauvegarde")
+        carte.ferme()
+
+
 def test_ota_fs_progression():
     with tempfile.TemporaryDirectory() as t:
         carte = Carte()
@@ -418,14 +284,71 @@ def test_ota_firmware_envoi():
         verifie(erreur, None, "ota_firmware_envoi : envoi sans erreur")
         verifie(carte.firmware, ("tasmota32-essai.bin", (d / "firmware.bin").read_bytes()),
                 "ota_firmware_envoi : firmware.bin recu tel quel (GET /up avant POST /u2)")
-        chemins = [c.split("?")[0] if "cmnd" not in c else c for _, c in carte.requetes()]
-        verifie(compacte(chemins)[:3], ["/up", "/u2", "/cm?cmnd=Status"],
-                "ota_firmware_envoi : /up -> POST /u2 -> attente du retour par Status")
+        verifie(compacte(etiquettes(carte)), ["Status 2", "/u4", "/up", "/u2", "Status", "Status 2"],
+                "ota_firmware_envoi : version -> /u4 (none) -> /up -> POST /u2 -> retour -> version")
         televersement = [r["pourcent"] for r in rapports if r.get("etape") == "Téléversement"]
         verifie((len(televersement) > 3, televersement == sorted(televersement), televersement[-1:]),
                 (True, True, [100]), "ota_firmware_envoi : % = octets envoyes / taille, croissant jusqu'a 100")
         verifie(any(c.startswith(f"/u2?fsz={(d / 'firmware.bin').stat().st_size}") for _, c in carte.requetes()),
                 True, "ota_firmware_envoi : fsz = taille du fichier")
+        carte.ferme()
+
+
+def etiquettes(carte):
+    """Requetes de la carte : chemin sans parametres, ou commande /cm decodee."""
+    return [urllib.parse.unquote(c.split("cmnd=", 1)[1]) if "cmnd=" in c else c.split("?")[0]
+            for _, c in carte.requetes()]
+
+
+def test_ota_firmware_safeboot():
+    with tempfile.TemporaryDirectory() as t:
+        carte = Carte(safeboot=True)
+        d = build_essai(t)
+        erreur, rapports = envoie_firmware(carte, d)
+        verifie(erreur, None, "ota_firmware_safeboot : envoi sans erreur")
+        verifie(compacte(etiquettes(carte)), ["Status 2", "/u4", "/up", "/u2", "Status", "Status 2"],
+                "ota_firmware_safeboot : Status 2 -> /u4 false (bascule) ... /u4 true -> /up -> /u2 -> retour -> Status 2")
+        verifie(etiquettes(carte).count("/u4") >= 2, True,
+                "ota_firmware_safeboot : /u4 redemande apres la bascule jusqu'a 'true'")
+        verifie((carte.firmware or ("", b""))[1] == (d / "firmware.bin").read_bytes() and carte.mode == "app", True,
+                "ota_firmware_safeboot : firmware ecrit depuis le safeboot, carte revenue sur l'appli")
+        verifie(any(r.get("etape") == "Bascule en safeboot" for r in rapports), True,
+                "ota_firmware_safeboot : etape de bascule rapportee")
+        carte.ferme()
+    # temoin : sur la carte simulee, sans bascule, l'appli refuse son propre ecrasement
+    carte = Carte(safeboot=True)
+    bo._get(carte.ip, "/up", 5.0)
+    verifie("Failed" in bo._poste(carte.ip, "/u2?fsz=3", "file", "x.bin", b"\xe9xx", 5.0)[1], True,
+            "ota_firmware_safeboot : temoin, POST /u2 sans bascule -> 'Failed' (partition unique)")
+    carte.ferme()
+
+
+def test_ota_firmware_sans_safeboot():
+    with tempfile.TemporaryDirectory() as t:
+        carte = Carte(safeboot=False)
+        erreur, rapports = envoie_firmware(carte, build_essai(t))
+        verifie(erreur, None, "ota_firmware_sans_safeboot : envoi sans erreur")
+        verifie((etiquettes(carte).count("/u4"), carte.mode), (1, "app"),
+                "ota_firmware_sans_safeboot : /u4 repond 'none', un seul appel, pas de bascule")
+        verifie(any(r.get("etape") == "Bascule en safeboot" for r in rapports), False,
+                "ota_firmware_sans_safeboot : pas d'etape de bascule")
+        carte.ferme()
+
+
+def test_ota_firmware_inchange():
+    with tempfile.TemporaryDirectory() as t:
+        carte = Carte(safeboot=True)
+        carte.inchange = True
+        erreur, _ = envoie_firmware(carte, build_essai(t))
+        verifie((erreur or "").startswith("Vérification après redémarrage : ") and "inchangé" in erreur, True,
+                "ota_firmware_inchange : Status 2 identique avant/apres -> echec firmware inchange")
+        carte.ferme()
+    with tempfile.TemporaryDirectory() as t:
+        carte = Carte(safeboot=True)
+        carte.reste_en_safeboot = True
+        erreur, _ = envoie_firmware(carte, build_essai(t))
+        verifie((erreur or "").startswith("Vérification après redémarrage : ") and "safeboot" in erreur, True,
+                "ota_firmware_inchange : carte restee en safeboot apres l'envoi -> echec")
         carte.ferme()
 
 
@@ -445,6 +368,8 @@ def test_ota_firmware_gz_prefere():
         envoie_firmware(carte, d)
         verifie(carte.firmware, ("tasmota32-essai.bin.gz", (d / "firmware.bin.gz").read_bytes()),
                 "ota_firmware_gz_prefere : firmware.bin.gz envoye de preference")
+        verifie("/u4" in etiquettes(carte), False,
+                "ota_firmware_gz_prefere : image compressee -> pas de /u4 (comme upl() du navigateur)")
         carte.ferme()
 
 
@@ -454,7 +379,8 @@ def test_ota_firmware_echec():
         erreur, _ = envoie_firmware(carte, build_essai(t, magique=b"\x00"))
         verifie((erreur or "").startswith("Téléversement : "), True,
                 "ota_firmware_echec : page 'Failed' (signature invalide) -> erreur 'Televersement'")
-        verifie(carte.requetes("Status"), [], "ota_firmware_echec : pas d'attente de retour apres un echec")
+        verifie([e for e in etiquettes(carte) if e == "Status"], [],
+                "ota_firmware_echec : pas d'attente de retour apres un echec")
         carte.ferme()
     with tempfile.TemporaryDirectory() as t:
         carte = Carte()
@@ -483,8 +409,9 @@ def principal():
     for test in (test_ota_fs_ordre, test_ota_fs_sauvegarde, test_ota_fs_persist_injoignable,
                  test_ota_fs_relecture_differente, test_ota_fs_sous_dossiers, test_ota_fs_referer,
                  test_ota_fs_echec_ufsu, test_ota_fs_pas_de_retour, test_ota_fs_attente_retour,
-                 test_ota_fs_progression,
-                 test_ota_firmware_envoi, test_ota_firmware_referer, test_ota_firmware_gz_prefere,
+                 test_ota_fs_persist_reformate, test_ota_fs_progression,
+                 test_ota_firmware_envoi, test_ota_firmware_safeboot, test_ota_firmware_sans_safeboot,
+                 test_ota_firmware_inchange, test_ota_firmware_referer, test_ota_firmware_gz_prefere,
                  test_ota_firmware_echec):
         try:
             test()

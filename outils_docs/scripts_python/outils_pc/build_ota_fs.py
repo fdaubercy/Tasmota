@@ -3,8 +3,9 @@
 Deux fonctions, appelees par build_serie.Serie apres le `pio run` qui produit ce qu'elles envoient :
 
   envoie_firmware_ota(env, ip, dossier_build, rapporte)
-      .pio/build/<env>/firmware.bin.gz, sinon firmware.bin, par POST /u2 (champ `file`), protocole de
-      pio-tools/espupload.py ; puis attente du retour de la carte (`/cm?cmnd=Status`).
+      .pio/build/<env>/firmware.bin.gz, sinon firmware.bin, par POST /u2 (champ `file`), comme le
+      navigateur sur la page /up de Tasmota (bascule en safeboot comprise, voir plus bas) ; puis
+      attente du retour de la carte et preuve par `Status 2` (version + date de compilation changees).
   envoie_fs_ota(env, ip, dossier_fs, sauvegardes, rapporte)
       tout .pio/build/<env>/littlefs_data par /ufsu, sous-dossiers compris (deroule du choix 10 de
       docs/superpowers/specs/2026-10-24-page-build-televersement-design.md).
@@ -20,6 +21,15 @@ Ce que fait Tasmota, et que ce module suit (lu dans tasmota/tasmota_xdrv_driver/
     UPL_NONE apres chaque envoi, xdrv_01_9 l.3469 et l.3551) ET repond quand meme « Successful » :
     d'ou le GET /up avant chaque envoi du firmware ;
   - les reponses d'envoi sont toujours HTTP 200 : l'echec se lit dans la page (« Failed », « Échoué ») ;
+  - partition OTA unique + safeboot (tables partitions/esp32_partition_app3997k_fs11862k.csv et
+    app2752k_fs448k.csv du fork) : l'appli ne peut pas s'ecraser elle-meme. La page /up sert alors
+    HTTP_FORM_RST_UPG_FCT (xdrv_01_9 l.382-395, choisi l.3420) dont le script upl() / fct()
+    (html_uncompressed/HTTP_HEAD_LAST_SCRIPT32.h l.28-64) fait, pour une image non compressee
+    (1er octet 0xE9) : GET /u4?u4=fct&api= en boucle (« false » : la carte redemarre en safeboot,
+    nouvel essai 6 s plus tard ; pas de reponse : nouvel essai 2 s plus tard ; « true » : en safeboot)
+    puis envoi du formulaire. HandleSwitchBootPartition (l.3845-3896) repond « none » s'il n'y a pas
+    de partition unique (aucun effet), et arme l'envoi (UPL_TASMOTA) quand il ne redemarre pas.
+    Une image compressee (0x1F) part directement, comme dans le navigateur ;
   - un fichier envoye par /ufsu va dans <dossier courant>/<nom> (UfsUploadFileOpen). Le dossier
     courant est remis a / par chaque GET /ufsd et devient <d> avec `download=<d>` si <d> est un
     dossier. `dir=0` vise la flash (dir=1 = carte SD, que la page de fichiers a pu choisir) ;
@@ -31,6 +41,7 @@ stdlib seule (urllib.request pour les GET, http.client pour les POST envoyes par
 """
 
 import http.client
+import json
 import re
 import time
 import urllib.parse
@@ -39,6 +50,7 @@ import uuid
 from pathlib import Path
 
 ETAPE_TELEVERSEMENT = "Téléversement"
+ETAPE_SAFEBOOT = "Bascule en safeboot"
 ETAPE_SAUVEGARDE = "Sauvegarde du persist"
 ETAPE_DOSSIERS = "Création des dossiers"
 ETAPE_ENVOI = "Envoi des fichiers"
@@ -131,9 +143,42 @@ def _attend_retour(ip, delai_retour, attente_min, sondage, delai_http):
 
 # -- firmware -----------------------------------------------------------------------------------------
 
+def _version(ip, delai):
+    """(Version, BuildDateTime) de `Status 2` ; leve OSError / HTTPException / ValueError."""
+    fwr = json.loads(_commande(ip, "Status 2", delai)).get("StatusFWR") or {}
+    if not fwr.get("Version"):
+        raise ValueError("pas de StatusFWR.Version dans la réponse")
+    return fwr.get("Version"), fwr.get("BuildDateTime")
+
+
+def _bascule_safeboot(ip, rapporte, delai_retour, sondage, delai_http):
+    """Logique fct() du navigateur : True si la carte est en safeboot, False si pas de safeboot."""
+    debut = time.monotonic()
+    while time.monotonic() - debut < delai_retour:
+        try:
+            reponse = _get(ip, "/u4?u4=fct&api=", min(5.0, delai_http)).decode("utf-8", "replace").strip()
+        except (OSError, http.client.HTTPException):
+            time.sleep(sondage)                                 # carte en redemarrage
+            continue
+        if reponse == "none":
+            return False
+        if reponse == "true":
+            return True
+        if reponse != "false":
+            raise RuntimeError(f"{ETAPE_SAFEBOOT} : réponse inattendue de /u4 : {_resume(reponse)!r}")
+        rapporte({"etape": ETAPE_SAFEBOOT, "pourcent": None, "detail": f"{ip} redémarre en safeboot"})
+        time.sleep(3 * sondage)                                 # 6 s par defaut, comme le navigateur
+    raise RuntimeError(f"{ETAPE_SAFEBOOT} : la carte {ip} n'est pas revenue en safeboot en {delai_retour:g} s")
+
+
 def envoie_firmware_ota(env, ip, dossier_build, rapporte, *, delai_retour=90.0, attente_min=15.0,
                         sondage=2.0, delai_http=30.0):
-    """Envoie firmware.bin.gz (sinon firmware.bin) de `dossier_build` par /u2, puis attend le retour."""
+    """Envoie firmware.bin.gz (sinon firmware.bin) de `dossier_build` par /u2, puis prouve le changement.
+
+    Sequence : Status 2 (version avant) -> [image 0xE9 : /u4?u4=fct&api=, bascule en safeboot si la
+    carte a une partition OTA unique] -> GET /up -> POST /u2 -> attente du retour -> Status 2, qui doit
+    differer (sinon « firmware inchangé ») et ne plus etre le safeboot.
+    """
     dossier_build = Path(dossier_build)
     fichier = next((f for f in (dossier_build / "firmware.bin.gz", dossier_build / "firmware.bin") if f.is_file()),
                    None)
@@ -142,6 +187,7 @@ def envoie_firmware_ota(env, ip, dossier_build, rapporte, *, delai_retour=90.0, 
     donnees = fichier.read_bytes()
     nom = env + fichier.name[len("firmware"):]                  # <env>.bin(.gz), comme espupload.py
     dernier = [-1]
+    reseau = (OSError, http.client.HTTPException)
 
     def progression(envoyes, total):
         pourcent = envoyes * 100 // total
@@ -151,14 +197,34 @@ def envoie_firmware_ota(env, ip, dossier_build, rapporte, *, delai_retour=90.0, 
 
     rapporte({"etape": ETAPE_TELEVERSEMENT, "pourcent": 0, "detail": f"{nom} vers {ip}"})
     try:
+        avant = _version(ip, delai_http)
+    except reseau as erreur:
+        raise RuntimeError(f"{ETAPE_TELEVERSEMENT} : carte {ip} injoignable ({erreur})") from None
+    except ValueError as erreur:
+        raise RuntimeError(f"{ETAPE_TELEVERSEMENT} : Status 2 illisible ({erreur})") from None
+    if donnees[:1] == b"\xe9":                                 # le navigateur ne bascule que dans ce cas
+        _bascule_safeboot(ip, rapporte, delai_retour, sondage, delai_http)
+        rapporte({"etape": ETAPE_TELEVERSEMENT, "pourcent": 0, "detail": f"{nom} vers {ip}"})
+    try:
         _get(ip, "/up", delai_http)                            # arme l'envoi (UPL_TASMOTA)
         statut, texte = _poste(ip, f"/u2?fsz={len(donnees)}", "file", nom, donnees, delai_http, progression)
-    except (OSError, http.client.HTTPException) as erreur:
+    except reseau as erreur:
         raise RuntimeError(f"{ETAPE_TELEVERSEMENT} : carte {ip} injoignable ou coupée ({erreur})") from None
     if _page_en_echec(statut, texte):
         raise RuntimeError(f"{ETAPE_TELEVERSEMENT} : refusé par la carte (HTTP {statut}) : {_resume(texte)}")
     rapporte({"etape": ETAPE_REDEMARRAGE, "pourcent": None, "detail": f"attente du retour de {ip}"})
     _attend_retour(ip, delai_retour, attente_min, sondage, delai_http)
+    rapporte({"etape": ETAPE_VERIFICATION, "pourcent": None, "detail": f"Status 2 (avant : {avant[0]}, {avant[1]})"})
+    try:
+        apres = _version(ip, delai_http)
+    except (*reseau, ValueError) as erreur:
+        raise RuntimeError(f"{ETAPE_VERIFICATION} : Status 2 illisible après l'envoi ({erreur})") from None
+    if apres == avant:
+        raise RuntimeError(f"{ETAPE_VERIFICATION} : firmware inchangé ({apres[0]}, compilé {apres[1]}) : "
+                           "la carte n'a pas pris le nouveau firmware")
+    if "safeboot" in str(apres[0]).lower():
+        raise RuntimeError(f"{ETAPE_VERIFICATION} : la carte est restée en safeboot ({apres[0]})")
+    rapporte({"etape": ETAPE_VERIFICATION, "pourcent": None, "detail": f"nouveau firmware : {apres[0]}, compilé {apres[1]}"})
 
 
 def _resume(texte):
@@ -267,11 +333,11 @@ def envoie_fs_ota(env, ip, dossier_fs, sauvegardes, rapporte, *, delai_retour=90
     except erreurs_reseau as erreur:
         raise RuntimeError(f"{ETAPE_REDEMARRAGE} : Restart 1 sans réponse ({erreur})") from None
     _attend_retour(ip, delai_retour, attente_min, sondage, delai_http)
-    _compare(ip, attendu, ETAPE_VERIFICATION, copie, delai_http, rapporte)
+    _verifie_apres_redemarrage(ip, attendu, copie, delai_http, rapporte)
 
 
 def _compare(ip, attendu, etape, copie, delai, rapporte):
-    """Relit le persist de la carte ; different de `attendu` -> erreur (pas de restauration)."""
+    """Relit le persist de la carte, comparaison exacte des octets ; difference -> erreur, pas de restauration."""
     rapporte({"etape": etape, "pourcent": None, "detail": PERSIST})
     try:
         lu = _telecharge_persist(ip, delai)
@@ -282,3 +348,29 @@ def _compare(ip, attendu, etape, copie, delai, rapporte):
         raise RuntimeError(f"{etape} : le {PERSIST} de la carte diffère de celui envoyé ({len(lu)} octets "
                            f"au lieu de {len(attendu)}) ; pas de restauration automatique, "
                            f"sauvegarde du persist : {copie}")
+
+
+
+def _verifie_apres_redemarrage(ip, attendu, copie, delai, rapporte):
+    """Relecture apres Restart : contenu JSON compare, une difference n'est qu'un AVERTISSEMENT.
+
+    Au Restart, l'evenement System#Save reecrit le persist par json.dump de Berry (JSON compact, ordre
+    des cles non garanti) : les octets changent meme quand le contenu est le bon. Les fichiers sont
+    deja envoyes et la carte est revenue : l'env n'echoue pas, la page affiche l'avertissement.
+    """
+    rapporte({"etape": ETAPE_VERIFICATION, "pourcent": None, "detail": PERSIST})
+    try:
+        lu = _telecharge_persist(ip, delai)
+    except (OSError, http.client.HTTPException) as erreur:
+        motif = f"{PERSIST} illisible après le redémarrage ({erreur})"
+    else:
+        try:
+            if json.loads(lu) == json.loads(attendu):
+                rapporte({"etape": ETAPE_VERIFICATION, "pourcent": None,
+                          "detail": f"{PERSIST} identique après le redémarrage (contenu JSON)"})
+                return
+            motif = f"le {PERSIST} relu après le redémarrage diffère (contenu JSON) de celui envoyé"
+        except ValueError as erreur:
+            motif = f"{PERSIST} relu après le redémarrage n'est pas du JSON valide ({erreur})"
+    rapporte({"etape": ETAPE_VERIFICATION, "pourcent": None,
+              "detail": f"AVERTISSEMENT : {motif} ; sauvegarde du persist d'avant : {copie}"})
