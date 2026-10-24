@@ -107,7 +107,8 @@ def udpFonctions_etat()
             "ecouteOuverte": [false, false],   # socket d'ecoute ouverte [UniCast, MultiCast] (C7)
             "secoursFini": false,      # les 2 ecoutes ouvertes (Boot ou secours), ou System#Save (C7)
             "reseauDepuis": nil,       # tasmota.millis() de la montee du reseau, Boot pas encore vu (C7)
-            "essaiApres": [nil, nil]   # apres une ouverture refusee : pas de nouvel essai avant (C7)
+            "essaiApres": [nil, nil],  # apres une ouverture refusee : pas de nouvel essai avant (C7)
+            "socketsEmission": {}      # sockets d'emission gardees ouvertes, par adresse locale (voir emet)
         }
     end
     return global._etatUdpFonctions
@@ -445,6 +446,7 @@ def udpFonctions_changementEtatDemarrage(value, trigger, msg, typeComm)
             udpFonctions.log("UDP_CHGT_ETAT_DEMARRAGE: Fermeture connexion MultiCast & UniCast", LOG_LEVEL_DEBUG_PLUS)
             udpFonctions.etat()["udpReception"][0].close()
             udpFonctions.etat()["udpReception"][1].close()
+            udpFonctions.fermeSocketsEmission()
             udpFonctions.etat()["ecouteOuverte"] = [false, false]
             udpFonctions.etat()["secoursFini"] = true        # Save precede un redemarrage : ne rien rouvrir
         end
@@ -726,14 +728,55 @@ def udpFonctions_estIPv4(texte)
 end
 udpFonctions.estIPv4 = udpFonctions_estIPv4
 
-# Emet UN datagramme par une socket neuve liee a ipLocale ("" = toutes les interfaces), port source
-# ALEATOIRE (0), puis la ferme. true si la pile l'a accepte (pas une preuve de reception).
+# Sockets d'emission GARDEES OUVERTES, une par adresse locale (2026-10-24, fuite de RAM P9.1) : une
+# socket neuve par datagramme (udp() + begin + send + close) perdait ~97 octets de RAM interne a chaque
+# envoi, dans ESP-IDF/lwIP (mesure sur la cuve : 117 544 -> 102 792 o pour ~151 envois, rien de rendu,
+# ni par tasmota.gc()), soit ~0,6 Ko/min sur le P4 et la cuve avec le ModBus UDP. Une socket liee au port 0
+# garde son port aleatoire toute sa vie : C2 tenu (jamais 2000 / 4000, le destinataire n'utilise pas le port
+# source). Au plus MAX_SOCKETS_EMISSION ("", STA, AP : 3 en service) ; au-dela, toutes refermees.
+udpFonctions.MAX_SOCKETS_EMISSION = 4
+
+def udpFonctions_socketEmission(ipLocale)
+    var sockets = udpFonctions.etat()["socketsEmission"]
+    var u = sockets.find(ipLocale)
+    if (u != nil)    return u    end
+    if (size(sockets) >= udpFonctions.MAX_SOCKETS_EMISSION)
+        udpFonctions.fermeSocketsEmission()
+        sockets = udpFonctions.etat()["socketsEmission"]
+    end
+    u = udp()
+    if (!u.begin(ipLocale, 0))    u.close()    return nil    end
+    sockets[ipLocale] = u
+    return u
+end
+udpFonctions.socketEmission = udpFonctions_socketEmission
+
+def udpFonctions_fermeSocketsEmission()
+    var sockets = udpFonctions.etat()["socketsEmission"]
+    for u: sockets    u.close()    end
+    udpFonctions.etat()["socketsEmission"] = {}
+end
+udpFonctions.fermeSocketsEmission = udpFonctions_fermeSocketsEmission
+
+# Emet UN datagramme par la socket gardee de ipLocale ("" = toutes les interfaces), port source ALEATOIRE (0).
+# true si la pile l'a accepte (pas une preuve de reception). Envoi refuse par une socket deja ouverte (IP
+# locale changee, Wi-Fi retombe) : elle est fermee et le datagramme repart UNE fois par une socket neuve.
 def udpFonctions_emet(ipLocale, ipDest, port, message)
-    var u = udp()
-    var ok = u.begin(ipLocale, 0)
-    if (ok)    ok = u.send(ipDest, port, bytes().fromstring(message))    end
+    # (map relue apres socketEmission : la purge a MAX_SOCKETS_EMISSION la remplace)
+    var gardee = udpFonctions.etat()["socketsEmission"].contains(ipLocale)
+    var u = udpFonctions.socketEmission(ipLocale)
+    if (u == nil)    return false    end
+    var donnees = bytes().fromstring(message)
+    if (u.send(ipDest, port, donnees))    return true    end
     u.close()
-    return (ok ? true : false)
+    udpFonctions.etat()["socketsEmission"].remove(ipLocale)
+    if (!gardee)    return false    end
+    u = udpFonctions.socketEmission(ipLocale)
+    if (u == nil)    return false    end
+    if (u.send(ipDest, port, donnees))    return true    end
+    u.close()
+    udpFonctions.etat()["socketsEmission"].remove(ipLocale)
+    return false
 end
 udpFonctions.emet = udpFonctions_emet
 

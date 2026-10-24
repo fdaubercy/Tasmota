@@ -111,13 +111,20 @@ class Driver end                       # classe de base des drivers Tasmota (sec
 var envois = []                        # datagrammes UDP qui seraient partis
 var liaisons = []                      # section 18 : [adresse liee, destination, port, message, port source]
 var refusLiaison = nil                 # section 18 : adresse dont begin() echoue
+var socketsCreees = 0                  # section 23 : udp() crees et fermees (fuite de RAM, 2026-10-24)
+var socketsFermees = 0
+var echecsEnvoi = 0                    # section 23 : nombre de send() a faire echouer
 class udp
   var lie, portLie
+  def init() socketsCreees += 1 end
   def begin(a, b) self.lie = a self.portLie = b return a != refusLiaison end
   def begin_multicast(a, b) self.lie = "mc:" + str(a) self.portLie = b return true end
-  def send(ip, port, b) envois.push(b.asstring()) liaisons.push([self.lie, ip, port, b.asstring(), self.portLie]) return true end
+  def send(ip, port, b)
+    if (echecsEnvoi > 0)    echecsEnvoi -= 1    return false    end
+    envois.push(b.asstring()) liaisons.push([self.lie, ip, port, b.asstring(), self.portLie]) return true
+  end
   def send_multicast(b) envois.push(b.asstring()) liaisons.push([self.lie, "224.3.0.1", self.portLie, b.asstring(), self.portLie]) return true end
-  def close() end
+  def close() socketsFermees += 1 end
 end
 var boolMute = true
 var serveur = {"udp": {"id": 0, "debug": "ON", "activation": "ON"},
@@ -904,6 +911,7 @@ verifie("esclave STA inconnue : pas d'exception", "OK", essaie(def () udpFonctio
 verifie("... socket sur toutes les interfaces", "/192.168.0.43/2000/0", resume(dernier()))
 tasmota.ipSta = "192.168.4.2"
 refusLiaison = "192.168.4.2"
+etatUDP["socketsEmission"] = {}        # le refus ne joue qu'a l'ouverture : pas de socket deja ouverte (section 23)
 liaisons = []
 journal = []
 udpFonctions.envoiUDP("UniCast", "192.168.4.1", "R6")
@@ -1079,6 +1087,7 @@ udpFonctions.envoiUDP("MultiCast", "192.168.4.1", "T13")
 verifie("interface imposee : une seule emission", "1/192.168.4.1", str(size(liaisons)) + "/" + str(dernier()[0]))
 # Liaison de la STA refusee : 2e essai sur toutes les interfaces, l'AP reste servi
 refusLiaison = "192.168.0.43"
+etatUDP["socketsEmission"] = {}        # le refus ne joue qu'a l'ouverture : pas de socket deja ouverte (section 23)
 verifie("STA refusee : AP puis toutes les interfaces", "192.168.4.1+", emissions20("T14"))
 refusLiaison = nil
 # Sans Range Extender : la STA seulement s'il y a un esclave sur la box, sinon rien
@@ -1275,6 +1284,61 @@ journal = []
 webserver.termine = false
 verifie("table illisible : page ne leve pas, terminee", "OK true", essaie(def () discoveryFonctions.affichePageDiscovery() end) + " " + str(webserver.termine))
 verifie("... erreur journalisee", true, journalise("DISCOVERY_ERREUR"))
+
+print("")
+print("=== 23. Socket d'emission gardee ouverte : une par interface (fuite de RAM P9.1, 2026-10-24) ===")
+# Mesure sur la cuve : chaque udp() + begin + send + close perdait ~97 octets de RAM interne (ESP-IDF/lwIP),
+# soit ~0,6 Ko/min avec le ModBus UDP. Les sockets d'emission sont desormais gardees, une par adresse locale.
+etatUDP["socketsEmission"] = {}
+serveur["udp"]["id"] = 2
+serveur["rangeExtender"]["activation"] = "ON"
+tasmota.ipSta = "192.168.4.2"
+socketsCreees = 0    socketsFermees = 0    liaisons = []
+for i: 1 .. 10    udpFonctions.envoiUDP("UniCast", "192.168.4.1", "S" + str(i))    end
+udpFonctions.envoiUDP("MultiCast", "", "S11")
+verifie("esclave : 11 envois (unicast + multicast), UNE socket creee, aucune fermee", "11/1/0",
+        str(size(liaisons)) + "/" + str(socketsCreees) + "/" + str(socketsFermees))
+verifie("... toujours liee a la STA, port source 0 (C1, C2)", "192.168.4.2/224.3.0.1/4000/0", resume(dernier()))
+# Maitre : unicast sur toutes les interfaces + multicast par son AP -> deux sockets
+etatUDP["socketsEmission"] = {}
+serveur["udp"]["id"] = 0
+tasmota.ipSta = "192.168.0.43"
+socketsCreees = 0    liaisons = []
+for i: 1 .. 3    udpFonctions.envoiUDP("UniCast", "192.168.4.2", "M" + str(i))    udpFonctions.envoiUDP("MultiCast", "", "N" + str(i))    end
+verifie("maitre : 6 envois, deux sockets ('' et l'AP)", "6/2", str(size(liaisons)) + "/" + str(socketsCreees))
+# Envoi refuse sur une socket gardee (IP changee, Wi-Fi retombe) : fermee, renvoi sur une socket neuve
+socketsCreees = 0    socketsFermees = 0    liaisons = []    journal = []
+echecsEnvoi = 1
+udpFonctions.envoiUDP("UniCast", "192.168.4.2", "M4")
+verifie("envoi refuse sur la socket gardee : fermee, renvoye par une neuve, OK", "1/1/1/true",
+        str(socketsFermees) + "/" + str(socketsCreees) + "/" + str(size(liaisons)) + "/" + str(journalise(">>>> M4 >>>> OK")))
+socketsCreees = 0    liaisons = []
+udpFonctions.envoiUDP("UniCast", "192.168.4.2", "M5")
+verifie("... la socket neuve est gardee", "0/1", str(socketsCreees) + "/" + str(size(liaisons)))
+# Adresses locales successives (DHCP) : jamais plus de MAX_SOCKETS_EMISSION sockets ouvertes
+serveur["udp"]["id"] = 2
+for i: 1 .. 10    tasmota.ipSta = "192.168.4." + str(10 + i)    udpFonctions.envoiUDP("UniCast", "192.168.4.1", "D" + str(i))    end
+verifie("10 adresses STA successives : sockets ouvertes bornees", true,
+        size(etatUDP["socketsEmission"]) <= udpFonctions.MAX_SOCKETS_EMISSION)
+# Purge au plafond PUIS envoi refuse sur la socket neuve : elle ne doit pas rester dans la table (relecture)
+etatUDP["socketsEmission"] = {}
+for i: 1 .. udpFonctions.MAX_SOCKETS_EMISSION    tasmota.ipSta = "192.168.4." + str(30 + i)    udpFonctions.envoiUDP("UniCast", "192.168.4.1", "P" + str(i))    end
+tasmota.ipSta = "192.168.4.99"
+echecsEnvoi = 1
+udpFonctions.emet("192.168.4.99", "192.168.4.1", 2000, "P9")
+verifie("purge puis envoi refuse : socket fermee retiree de la nouvelle table", false, etatUDP["socketsEmission"].contains("192.168.4.99"))
+echecsEnvoi = 0
+# System#Save (avant un redemarrage) : les sockets d'emission sont fermees avec celles d'ecoute
+var sauveRecep23 = etatUDP["udpReception"]
+etatUDP["udpReception"] = [udp(), udp()]
+socketsFermees = 0
+var ouvertes23 = size(etatUDP["socketsEmission"])
+essaie(def () udpFonctions.changementEtatDemarrage({"Save": 1}, "System", {"System": {"Save": 1}}, "UniCast") end)
+verifie("System#Save : sockets d'emission fermees et oubliees", "true/0",
+        str(socketsFermees >= 2 + ouvertes23) + "/" + str(size(etatUDP["socketsEmission"])))
+etatUDP["udpReception"] = sauveRecep23
+etatUDP["socketsEmission"] = {}
+tasmota.ipSta = nil
 
 print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))
