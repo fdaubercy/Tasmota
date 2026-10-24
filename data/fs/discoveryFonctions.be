@@ -370,7 +370,7 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
                 jsonDiscovery = {}
                 jsonData = {}
             except .. as error, message
-                discoveryFonctions.log(string.format("DISCOVERY_CHGT_ETAT_DEMARRAGE: %s --> %s", error, message), LOG_LEVEL_ERREUR)
+                discoveryFonctions.log(string.format("DISCOVERY_CHGT_ETAT_DEMARRAGE_ERREUR: %s --> %s", error, message), LOG_LEVEL_ERREUR)
             end
         elif msg["WIFI"].find("Disonnected", 0)
         end
@@ -396,7 +396,7 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
                     mqtt.publish(string.format("tasmota/discovery/%s/%s", string.replace(serveur.find("adresseMAC", "000000000000"), ":", ""), item), json.dump(jsonDiscovery[string.replace(serveur.find("adresseMAC", "000000000000"), ":", "")][item]), true)
                 end
             except .. as error, message
-                discoveryFonctions.log(string.format("DISCOVERY_CHGT_ETAT_DEMARRAGE: %s --> %s", error, message), LOG_LEVEL_ERREUR)
+                discoveryFonctions.log(string.format("DISCOVERY_CHGT_ETAT_DEMARRAGE_ERREUR: %s --> %s", error, message), LOG_LEVEL_ERREUR)
             end
         elif msg["MQTT"].find("Disconnected", 0)
         end
@@ -465,7 +465,7 @@ def discoveryFonctions_mqtt_discovery(topic, idx, data, databytes)
                 discoveryFonctions.log("DISCOVERY_MQTT_DATA: '" + typeData + "' de " + item + " retire de discovery.json", LOG_LEVEL_DEBUG_PLUS)
             end
         except .. as error, message
-            discoveryFonctions.log(string.format("DISCOVERY_MQTT_DATA: %s --> %s", error, message), LOG_LEVEL_ERREUR)
+            discoveryFonctions.log(string.format("DISCOVERY_MQTT_DATA_ERREUR: %s --> %s", error, message), LOG_LEVEL_ERREUR)
         end
         return true
     end
@@ -530,7 +530,7 @@ def discoveryFonctions_mqtt_discovery(topic, idx, data, databytes)
 
         return true
     except .. as error, message
-        discoveryFonctions.log(string.format("DISCOVERY_MQTT_DATA: %s --> %s", error, message), LOG_LEVEL_ERREUR)
+        discoveryFonctions.log(string.format("DISCOVERY_MQTT_DATA_ERREUR: %s --> %s", error, message), LOG_LEVEL_ERREUR)
     end
 end
 discoveryFonctions.mqtt_discovery = discoveryFonctions_mqtt_discovery
@@ -597,7 +597,7 @@ def discoveryFonctions_mqtt_lwt(topic, idx, data, databytes)
         jsonDiscovery = {}
         return true
     except .. as error, message
-        discoveryFonctions.log(string.format("DISCOVERY_MQTT_LWT: %s --> %s", error, message), LOG_LEVEL_ERREUR)
+        discoveryFonctions.log(string.format("DISCOVERY_MQTT_LWT_ERREUR: %s --> %s", error, message), LOG_LEVEL_ERREUR)
     end
 end
 discoveryFonctions.mqtt_lwt = discoveryFonctions_mqtt_lwt
@@ -739,7 +739,7 @@ def discoveryFonctions_affichePageDiscovery()
         #- end of web page -#
         webserver.content_stop()	
     except .. as error, message
-        discoveryFonctions.log(string.format("AFFICHE_DISCOVERY: %s --> %s", error, message), LOG_LEVEL_ERREUR)
+        discoveryFonctions.log(string.format("AFFICHE_DISCOVERY_ERREUR: %s --> %s", error, message), LOG_LEVEL_ERREUR)
     end
 end
 discoveryFonctions.affichePageDiscovery = discoveryFonctions_affichePageDiscovery

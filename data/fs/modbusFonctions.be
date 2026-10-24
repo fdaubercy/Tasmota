@@ -508,7 +508,7 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
                                                                 IP, tcpFonctions.etat()["port"], modbusFonctions.etat()["clients"][id].connect(IP, tcpFonctions.etat()["port"]) ? "OK" : "Echec"), LOG_LEVEL_DEBUG_PLUS)
 
                     tasmota.delay(250)
-                else tcpFonctions.log(string.format("Le client ModBus TCP est déjà connecté à l'esclave ModBus %i [%s]", id, IP), LOG_LEVEL_DEBUG_PLUS)
+                else tcpFonctions.log(string.format("REGLAGE_MODBUS: Le client ModBus TCP est déjà connecté à l'esclave ModBus %i [%s]", id, IP), LOG_LEVEL_DEBUG_PLUS)
                 end
             end
         end

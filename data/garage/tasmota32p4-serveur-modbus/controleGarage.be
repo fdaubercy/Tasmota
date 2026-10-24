@@ -232,7 +232,7 @@ class CONTROLE_GARAGE : Driver
                         variablesRemplacement.insert("sensors->AM2301->titre2", string.replace(thermoJson["nom"], "T°", "Humidité"))
                         variablesRemplacement.insert("sensors->AM2301->Temperature", str(temperature) + "°C")		
                         variablesRemplacement.insert("sensors->AM2301->Humidity", str(humidity) + "%RH")	
-                        garageFonctions.log(string.format("CAPTEURS_GARAGE: %s = %.1f°C / %.1f%%RH", thermoJson["nom"], temperature, humidity), LOG_LEVEL_INFO)
+                        garageFonctions.log(string.format("CAPTEURS_GARAGE: %s = %.1f°C / %.1f%%RH", thermoJson["nom"], temperature, humidity), LOG_LEVEL_DEBUG_PLUS)    # web_sensor : a chaque rafraichissement (audit C5)
 
                         # Modifie le code html à afficher et l'envoi
                         gestionFileFolder.readFileByLineReplaceAndWebSend('/sd/html/webSensorDHT22.html', variablesRemplacement, "web_send")
@@ -272,7 +272,7 @@ class CONTROLE_GARAGE : Driver
                     if (type(brut) == "int" || type(brut) == "real")
                         var compteur = real(brut / 1000.00)    # En kWh
                         variablesRemplacement.insert("sensors->compteur->Consommation", str(compteur) + "kWh")
-                        garageFonctions.log(string.format("CAPTEURS_GARAGE: %s = %.2fkWh", comptJson["nom"], compteur), LOG_LEVEL_INFO)
+                        garageFonctions.log(string.format("CAPTEURS_GARAGE: %s = %.2fkWh", comptJson["nom"], compteur), LOG_LEVEL_DEBUG_PLUS)    # web_sensor : a chaque rafraichissement (audit C5)
                         self.compteursAbsents.remove(cle)
                     else
                         variablesRemplacement.insert("sensors->compteur->Consommation", "indisponible")

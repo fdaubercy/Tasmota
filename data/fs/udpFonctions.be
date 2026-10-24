@@ -231,7 +231,7 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
     # Envoi de messages UDP UniCast sur l'IP principale du destinataire pour test
     if string.toupper(fonction) == string.toupper("envoiUniCast")
         udpFonctions.envoiUDP("UniCast", parametres[0], parametres[1])	# UniCast (Maitre ou Esclaves RangeExtender)
-        udpFonctions.log(string.format("ReglageUDP: Données UDP UniCast envoyées à %s >>> %s", parametres[0], parametres[1]), LOG_LEVEL_DEBUG)
+        udpFonctions.log(string.format("REGLAGE_UDP: Données UDP UniCast envoyées à %s >>> %s", parametres[0], parametres[1]), LOG_LEVEL_DEBUG)
 
         reponse_cmnd["ReglageUDP"]["envoiMessage"] = str(parametres[1])
     # Envoi de messages UDP MultiCast pour test
@@ -245,7 +245,7 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
         # correction C4 ; avant : rien ne partait hors Range Extender, et sans message d'erreur)
         else
             udpFonctions.envoiUDP("MultiCast", "", message)
-            udpFonctions.log(string.format("ReglageUDP: Données UDP MultiCast envoyées >>> %s", message), LOG_LEVEL_DEBUG)
+            udpFonctions.log(string.format("REGLAGE_UDP: Données UDP MultiCast envoyées >>> %s", message), LOG_LEVEL_DEBUG)
         end
         
         reponse_cmnd["ReglageUDP"]["envoiMessage"] = message

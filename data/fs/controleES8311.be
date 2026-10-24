@@ -80,7 +80,7 @@ class ES8311 : Driver
         if self.I2C.write(0x18, reg_addr, data, 1)
             return 0
         else
-            self.log(f"Write reg {reg_addr:#04x} failed", LOG_LEVEL_DEBUG_PLUS)
+            self.log(f"ES8311_ERREUR: ecriture du registre {reg_addr:#04x} echouee sur le bus I2C !", LOG_LEVEL_ERREUR)
             return -1
         end
     end
@@ -88,7 +88,12 @@ class ES8311 : Driver
     def read_reg(reg_addr)
         var data = self.I2C.read(0x18, reg_addr, 1)
 
-        self.log(f"Read reg {reg_addr:#04x} = {data:#04x}", LOG_LEVEL_DEBUG_PLUS)
+        # Message construit seulement si le detail est actif, et lecture echouee (data nil) affichee sans lever :
+        # '{data:#04x}' sur nil levait AVANT le test ci-dessous (2026-10-24, relecture P7.5)
+        if logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, "es8311")
+            import string
+            self.log(string.format("ES8311: lecture du registre %#04x = %s", reg_addr, (data != nil ? string.format("%#04x", data) : "absente")), LOG_LEVEL_DEBUG_PLUS)
+        end
 
         return data != nil ? data : -1
     end
@@ -210,7 +215,7 @@ class ES8311 : Driver
         var coeff = self.get_coeff(mclk_frequency, sample_frequency)
 
         if coeff < 0
-            self.log(f"Erreur: Configuration impossible du sample rate: {sample_frequency}", LOG_LEVEL_DEBUG_PLUS)
+            self.log(f"ES8311_ERREUR: frequence d'echantillonnage {sample_frequency} Hz impossible a configurer (MCLK {mclk_frequency} Hz) !", LOG_LEVEL_ERREUR)
             return false
         end
         
@@ -252,7 +257,7 @@ class ES8311 : Driver
         
         # Register 0x08
         self.write_reg(0x08, selected_coeff[8])
-        self.log(f"Fréquence d'échntillonnage configurée: MCLK={mclk_frequency}Hz, Sample Rate={sample_frequency}Hz, Coeff Index={coeff}", LOG_LEVEL_DEBUG_PLUS)
+        self.log(f"ES8311: frequence d'echantillonnage configuree : MCLK={mclk_frequency}Hz, echantillonnage={sample_frequency}Hz, coefficient={coeff}", LOG_LEVEL_DEBUG_PLUS)
         return true
     end
     
@@ -260,7 +265,7 @@ class ES8311 : Driver
     def init_codec(sample_freq, mclk_freq)
         import string 
 
-        self.log(f"Initialisation de l'ES8311 codec avec la fréquence d'échantillonnage: {sample_freq}Hz & la fréquence MCLK : {mclk_freq}Hz", LOG_LEVEL_INFO)
+        self.log(f"ES8311: initialisation du codec, echantillonnage {sample_freq}Hz, MCLK {mclk_freq}Hz", LOG_LEVEL_INFO)
 
         # Reset ES8311
         self.write_reg(0x00, 0x1F)
@@ -353,10 +358,10 @@ class ES8311 : Driver
     
     # Debugging: Dump des registres
     def register_dump()
-        self.log("ES8311 Register Dump:", LOG_LEVEL_INFO)
+        self.log("ES8311: copie des registres du codec :", LOG_LEVEL_INFO)
         for reg: 0..0x49
             var value = self.read_reg(reg)
-            self.log(f"REG:{reg:02X}: {value:02X}", LOG_LEVEL_INFO)
+            self.log(f"ES8311: registre {reg:02X} = {value:02X}", LOG_LEVEL_INFO)
         end
 
     end
@@ -377,7 +382,7 @@ def controleES8311_init(m)
     import global
 
     if (drivers["I2S"].find("activation", "OFF") == "ON" && drivers["I2S"]["environnement"]["ES8311"].find("activation", "OFF") == "ON")
-        tasmota.log("Activation du driver ES8311", LOG_LEVEL_INFO)
+        logFonctions.log("ES8311: activation du driver !", LOG_LEVEL_INFO, "es8311")
 
         global.controleES8311 = m.ES8311(53)
         if global.controleES8311.pret

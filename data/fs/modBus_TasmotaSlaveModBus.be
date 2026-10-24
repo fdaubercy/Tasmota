@@ -1224,7 +1224,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
                             end
                         end
                     except .. as error, message
-                        modbusFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: %s --> %s", error, message), LOG_LEVEL_ERREUR)
+                        modbusFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE_ERREUR: %s --> %s", error, message), LOG_LEVEL_ERREUR)
                     end
                 end
 
