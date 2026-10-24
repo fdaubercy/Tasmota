@@ -152,6 +152,53 @@ def test_routes_locales(b):
     verifie(b.requete("GET", "/journal?env=" + A)[0], 200, "routes_locales : journal sans fichier = 200 vide")
 
 
+# Ce que la page doit porter (spec objectifs 4 et 8, choix 4, 9, 13 et 15 ; brief A6)
+ATTENDUS_PAGE = {
+    "les 4 actions": ['value="compiler"', 'value="upload"', 'value="buildfs"', 'value="uploadfs"'],
+    "les 3 familles": ["Mes cartes", "Mes bases", "Tasmota (amont)"],
+    "les 4 sous-groupes amont": ["Safeboot", "ESP32", "Langues", "ESP8266"],
+    "l'en-tete X-Build des POST": ['"X-Build": "1"'],
+    "les routes": ['"/envs"', '"/execution"', '"/flux?depuis=0"', '"/journal?env="', '"/lancer"', '"/port"',
+                   '"/arreter"'],
+    "le bouton de lancement": ["l'un après l'autre"],
+    "les deux arrets": ["Arrêter après cet env", "Arrêt immédiat", "data/&lt;lieu&gt;/&lt;carte&gt;"],
+    "les mentions": ["repartira de zéro", "le file system (persist compris) sera aussi flashé",
+                     "valable pour ce lancement seulement"],
+}
+
+
+def manques_page(texte):
+    """Libelles des attendus absents de la page (liste vide = complete)."""
+    manques = [f"{quoi} : {motif}" for quoi, motifs in ATTENDUS_PAGE.items() for motif in motifs if motif not in texte]
+    for externe in ("http://", "https://", "//cdn", "@import"):
+        if externe in texte:
+            manques.append(f"aucune ressource externe : {externe}")
+    return manques
+
+
+def test_page_contient(b):
+    statut, texte = b.requete("GET", "/")
+    verifie((statut, manques_page(texte)), (200, []), "page_contient : actions, familles, X-Build, routes, mentions")
+    verifie(texte == build_web.page(), True, "page_contient : GET / sert build_page.PAGE")
+    # temoin : la page provisoire ne doit PAS passer le controle (sinon il ne mesure rien)
+    verifie(len(manques_page(build_web.PAGE_PROVISOIRE)) > 10, True, "page_contient : temoin, page provisoire refusee")
+
+
+def test_envs_littlefs(b):
+    racine_build = b.racine / ".pio" / "build" / B
+    _, donnees = b.json("GET", "/envs")
+    verifie(next(e["littlefs"] for e in donnees["envs"] if e["nom"] == B), False, "envs_littlefs : faux sans littlefs.bin")
+    racine_build.mkdir(parents=True)
+    (racine_build / "littlefs.bin").write_bytes(b"x")
+    _, donnees = b.json("GET", "/envs")
+    verifie(next(e["littlefs"] for e in donnees["envs"] if e["nom"] == B), True, "envs_littlefs : vrai avec littlefs.bin")
+    (racine_build / "littlefs.bin").unlink()
+    (racine_build / "littlefs.bin").mkdir()                      # temoin : un DOSSIER de ce nom n'est pas une image
+    _, donnees = b.json("GET", "/envs")
+    verifie(next(e["littlefs"] for e in donnees["envs"] if e["nom"] == B), False, "envs_littlefs : un dossier ne compte pas")
+    (racine_build / "littlefs.bin").rmdir()
+
+
 def test_post_sans_entete_refuse(b):
     corps = {"env": A, "port": "COM13"}
     verifie(b.requete("POST", "/port", corps, entetes={})[0], 403, "post_sans_entete_refuse : sans X-Build")
@@ -291,7 +338,7 @@ def principal():
         os.environ["OUTILS_TASMOTA_DOSSIER"] = str(Path(t) / "outils")
         b = Banc(Path(t))
         try:
-            for test in (test_routes_locales, test_post_sans_entete_refuse, test_distant_sans_jeton_refuse,
+            for test in (test_routes_locales, test_page_contient, test_envs_littlefs, test_post_sans_entete_refuse, test_distant_sans_jeton_refuse,
                          test_corps_borne, test_port_ecrit_puis_relu, test_lancement, test_flux_et_journal,
                          test_journal_dernier_lancement, test_arret):
                 test(b)
