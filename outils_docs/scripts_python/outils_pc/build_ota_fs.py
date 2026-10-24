@@ -216,16 +216,19 @@ def envoie_firmware_ota(env, ip, dossier_build, rapporte, *, delai_retour=90.0, 
         raise RuntimeError(f"{ETAPE_TELEVERSEMENT} : carte {ip} injoignable ({erreur})") from None
     except ValueError as erreur:
         raise RuntimeError(f"{ETAPE_TELEVERSEMENT} : Status 2 illisible ({erreur})") from None
+    en_safeboot = False
     if donnees[:1] == b"\xe9":                                 # le navigateur ne bascule que dans ce cas
-        _bascule_safeboot(ip, rapporte, delai_retour, sondage, delai_http)
+        en_safeboot = _bascule_safeboot(ip, rapporte, delai_retour, sondage, delai_http)
         rapporte({"etape": ETAPE_TELEVERSEMENT, "pourcent": 0, "detail": f"{nom} vers {ip}"})
+    # Apres une bascule effective, un echec laisse la carte en safeboot (sans Berry ni drivers) : le dire.
+    safeboot = f" ; carte restée en safeboot : renvoyer un firmware par http://{ip}/up" if en_safeboot else ""
     try:
         _get(ip, "/up", delai_http)                            # arme l'envoi (UPL_TASMOTA)
         statut, texte = _poste(ip, f"/u2?fsz={len(donnees)}", "file", nom, donnees, delai_http, progression)
     except reseau as erreur:
-        raise RuntimeError(f"{ETAPE_TELEVERSEMENT} : carte {ip} injoignable ou coupée ({erreur})") from None
+        raise RuntimeError(f"{ETAPE_TELEVERSEMENT} : carte {ip} injoignable ou coupée ({erreur}){safeboot}") from None
     if _page_en_echec(statut, texte):
-        raise RuntimeError(f"{ETAPE_TELEVERSEMENT} : refusé par la carte (HTTP {statut}) : {_resume(texte)}")
+        raise RuntimeError(f"{ETAPE_TELEVERSEMENT} : refusé par la carte (HTTP {statut}) : {_resume(texte)}{safeboot}")
     rapporte({"etape": ETAPE_REDEMARRAGE, "pourcent": None, "detail": f"attente du retour de {ip}"})
     _attend_retour(ip, delai_retour, attente_min, sondage, delai_http)
     rapporte({"etape": ETAPE_VERIFICATION, "pourcent": None, "detail": f"Status 2 (avant : {avant[0]}, {avant[1]})"})
@@ -346,6 +349,11 @@ def envoie_fs_ota(env, ip, dossier_fs, sauvegardes, rapporte, *, delai_retour=90
                            "rien n'a été envoyé") from None
     if not ancien.strip():
         raise RuntimeError(f"{ETAPE_SAUVEGARDE} : {PERSIST} de {ip} vide ; rien n'a été envoyé")
+    try:
+        json.loads(ancien)                     # une page HTML ou un persist tronque n'est pas une sauvegarde
+    except ValueError as erreur:
+        raise RuntimeError(f"{ETAPE_SAUVEGARDE} : {PERSIST} de {ip} n'est pas du JSON valide ({erreur}) : "
+                           f"pas de sauvegarde possible ; rien n'a été envoyé") from None
     copie = _sauvegarde(env, ancien, sauvegardes)
 
     # 3. dossiers puis fichiers

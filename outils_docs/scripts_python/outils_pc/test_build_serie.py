@@ -67,7 +67,8 @@ def firmware_ok(env, ip, dossier_build, rapporte):
 class Montage:
     """Depot d'essai + dossier de donnees + scenario et journal du faux pio."""
 
-    def __init__(self, t, scenario=None, builds=None, ports=None, ota_fs=None, ota_firmware=firmware_ok):
+    def __init__(self, t, scenario=None, builds=None, ports=None, ota_fs=None, ota_firmware=firmware_ok,
+                 classe=None):
         self.t = Path(t)
         self.racine = self.t / "depot"
         self.racine.mkdir()
@@ -81,7 +82,7 @@ class Montage:
         self.appels_builds = 0
         self.builds = builds or (lambda n: [])
         self.ports = ports or {}
-        self.serie = bs.Serie(self.racine, self.dossier, builds_en_cours=self._builds,
+        self.serie = (classe or bs.Serie)(self.racine, self.dossier, builds_en_cours=self._builds,
                               port_libre=lambda p: self.ports.get(p, "libre"), ota_fs=ota_fs,
                               ota_firmware=ota_firmware, sondage=0.05)
         self.n = 0
@@ -401,6 +402,79 @@ def test_arret_immediat():
                 subprocess.run(["taskkill", "/T", "/F", "/PID", str(p)], capture_output=True)
 
 
+class SerieArretFinFils(bs.Serie):
+    """Arret immediat demande juste apres la fin du fils pio `upload` (code deja lu), avant le verdict."""
+
+    def _chrono(self, env, action):
+        change, termine = super()._chrono(env, action)
+
+        def termine_puis_arret():
+            termine()
+            if action == "upload":
+                self.arrete(True)
+        return change, termine_puis_arret
+
+
+def test_upload_reussi_puis_arret_immediat():
+    """I2 : un upload qui a reussi (code 0) reste un succes meme si l'arret immediat arrive juste apres."""
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t, classe=SerieArretFinFils)
+        ev = m.lance([com(A)], {"upload", "buildfs"})
+        fe = du_type(ev, "fin_env")
+        verifie((fe[0]["statuts"], fe[0]["resultat"]) if fe else None,
+                ({"upload": "succes", "buildfs": "annulee"}, "arrete"),
+                "upload_reussi_puis_arret_immediat : upload succes (code 0), buildfs annulee, env arrete")
+        verifie((du_type(ev, "echec"), [a["cible"] for a in m.appels()]), ([], ["upload"]),
+                "upload_reussi_puis_arret_immediat : aucun echec annonce, buildfs non lance")
+
+
+class SerieArretApresPio(bs.Serie):
+    """Arret immediat demande des que le `pio run` qui precede un envoi OTA est fini (avec succes)."""
+
+    def _lance_pio(self, ligne, action, cible):
+        resultat = super()._lance_pio(ligne, action, cible)
+        self.arrete(True)
+        return resultat
+
+
+def test_ota_annule_si_arret_immediat():
+    """I5 : arret immediat demande avant l'envoi OTA -> l'envoi n'est pas fait, action « annulee »."""
+    firmwares, fs = [], []
+    with tempfile.TemporaryDirectory() as t:
+        image = Path(t) / "image.bin"
+        fabrique_image(image, FICHIERS_IMAGE)              # sans le correctif, ota_fs serait bien appele
+        m = Montage(t, {"*": {"buildfs": {"image": str(image)}}}, classe=SerieArretApresPio,
+                    ota_firmware=lambda *a: firmwares.append(a), ota_fs=lambda *a: fs.append(a))
+        ev = m.lance([ota(A)], {"compiler", "upload"})
+        fe = du_type(ev, "fin_env")
+        verifie((firmwares, fe[0]["statuts"] if fe else None, fe[0]["resultat"] if fe else None, du_type(ev, "echec")),
+                ([], {"compiler": "succes", "upload": "annulee"}, "arrete", []),
+                "ota_annule_si_arret_immediat : firmware non envoye, compiler succes, upload annulee, pas d'echec")
+        ev = m.lance([ota(A)], {"uploadfs"})
+        fe = du_type(ev, "fin_env")
+        verifie((fs, fe[0]["statuts"] if fe else None, fe[0]["resultat"] if fe else None),
+                ([], {"uploadfs": "annulee"}, "arrete"),
+                "ota_annule_si_arret_immediat : FS non envoye apres le buildfs de preparation, uploadfs annulee")
+
+
+class SerieTemoinFin(bs.Serie):
+    """Note l'etat de la serie au moment ou `fin` est emis."""
+
+    def _ajoute(self, type_, env, **champs):
+        if type_ == "fin":
+            self.actif_a_la_fin = self._actif
+        super()._ajoute(type_, env, **champs)
+
+
+def test_fin_avant_liberation():
+    """M1 : `fin` est emis AVANT que la serie ne se declare libre (sous le meme verrou)."""
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t, classe=SerieTemoinFin)
+        m.lance([com(A)], {"compiler"})
+        verifie((getattr(m.serie, "actif_a_la_fin", None), m.serie.en_cours()), (True, False),
+                "fin_avant_liberation : serie encore active quand fin est emis, libre apres")
+
+
 def test_journal_ecrit():
     with tempfile.TemporaryDirectory() as t:
         m = Montage(t, {A: {"build": {"lignes": [f"{ESC}[32mCompiling .pio/build/x/a.o{ESC}[0m",
@@ -515,7 +589,8 @@ def principal():
                  test_serie_continue_apres_echec, test_duree_des_la_fin, test_refus_build_en_cours,
                  test_refus_port_tenu, test_refus_meme_port, test_refus_ip_vide,
                  test_serie_attend_build_externe, test_serie_attend_detection_impossible,
-                 test_arret_apres_env, test_arret_immediat,
+                 test_arret_apres_env, test_arret_immediat, test_upload_reussi_puis_arret_immediat,
+                 test_ota_annule_si_arret_immediat, test_fin_avant_liberation,
                  test_journal_ecrit, test_reference_o_memorisee, test_rappel_fichiers_modifies,
                  test_refus_double_lancement, test_uploadfs_ota, test_garde_build_importable):
         test()

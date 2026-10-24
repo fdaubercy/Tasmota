@@ -346,6 +346,18 @@ def test_image_illisible():
                 "image_illisible : temoin, mount=True rend un FS VIDE au lieu d'une erreur (d'ou mount() explicite)")
 
 
+def test_ota_fs_persist_invalide():
+    """I3 : un persist telecharge qui n'est pas du JSON (page HTML, octets tronques) : rien n'est envoye."""
+    for persist in (b"<html>Gestion du systeme de fichiers</html>", b'{"serveur": {"ancien'):
+        with tempfile.TemporaryDirectory() as t:
+            carte = Carte(persist=persist)
+            erreur, _, _ = envoie_fs(carte, t)
+            verifie(((erreur or "").startswith("Sauvegarde du persist : "), "JSON" in (erreur or "")), (True, True),
+                    f"ota_fs_persist_invalide : {persist[:12]!r}... -> erreur 'Sauvegarde du persist' (JSON)")
+            verifie([c for m, c in carte.requetes() if m == "POST" or "mkdir" in c or "Restart" in c], [],
+                    "ota_fs_persist_invalide : aucun /ufsu, aucun dossier cree, pas de Restart")
+            carte.ferme()
+
 
 # -- tests du firmware --------------------------------------------------------------------------------
 
@@ -443,6 +455,26 @@ def test_ota_firmware_inchange():
         carte.ferme()
 
 
+def test_ota_firmware_echec_en_safeboot():
+    """I4 : bascule en safeboot faite, puis /u2 refuse : le message dit que la carte est restee en safeboot."""
+    with tempfile.TemporaryDirectory() as t:
+        carte = Carte(safeboot=True)
+        carte.echec_u2 = True
+        erreur, _ = envoie_firmware(carte, build_essai(t))
+        verifie((carte.mode, (erreur or "").startswith("Téléversement : ")), ("safeboot", True),
+                "ota_firmware_echec_en_safeboot : carte en safeboot, envoi refuse -> erreur 'Televersement'")
+        verifie(f"carte restée en safeboot : renvoyer un firmware par http://{carte.ip}/up" in (erreur or ""), True,
+                "ota_firmware_echec_en_safeboot : le message dit comment sortir du safeboot")
+        carte.ferme()
+    with tempfile.TemporaryDirectory() as t:
+        carte = Carte(safeboot=False)                # temoin : sans bascule, pas de mention du safeboot
+        carte.echec_u2 = True
+        erreur, _ = envoie_firmware(carte, build_essai(t))
+        verifie(((erreur or "").startswith("Téléversement : "), "safeboot" in (erreur or "")), (True, False),
+                "ota_firmware_echec_en_safeboot : temoin, pas de bascule -> pas de mention du safeboot")
+        carte.ferme()
+
+
 def test_ota_firmware_referer():
     with tempfile.TemporaryDirectory() as t:
         carte = Carte()
@@ -500,8 +532,8 @@ def principal():
     for test in (test_ota_fs_ordre, test_ota_fs_sauvegarde, test_ota_fs_persist_injoignable,
                  test_ota_fs_relecture_differente, test_ota_fs_sous_dossiers, test_ota_fs_referer,
                  test_ota_fs_echec_ufsu, test_ota_fs_pas_de_retour, test_ota_fs_attente_retour,
-                 test_ota_fs_persist_reformate, test_ota_fs_progression,
-                 test_image_extraite, test_image_illisible,
+                 test_ota_fs_persist_reformate, test_ota_fs_progression, test_ota_fs_persist_invalide,
+                 test_image_extraite, test_image_illisible, test_ota_firmware_echec_en_safeboot,
                  test_ota_firmware_envoi, test_ota_firmware_safeboot, test_ota_firmware_sans_safeboot,
                  test_ota_firmware_inchange, test_ota_firmware_referer, test_ota_firmware_gz_prefere,
                  test_ota_firmware_echec):

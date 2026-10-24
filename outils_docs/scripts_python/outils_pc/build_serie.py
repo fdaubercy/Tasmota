@@ -239,7 +239,9 @@ class Serie:
     def arrete(self, immediat=False):
         """Arret apres l'env en cours ; `immediat` tue aussi l'arbre du fils pio en cours.
 
-        Un envoi OTA (fonctions ota_firmware, ota_fs) ne se tue pas : la serie s'arrete a sa fin.
+        Un envoi OTA (fonctions ota_firmware, ota_fs) ne se tue pas : la serie s'arrete a sa fin. Les
+        etapes pas encore commencees de l'env (envoi OTA compris) sont « annulee » ; un fils pio fini
+        avec le code 0 reste un succes, meme si l'arret arrive pendant la lecture de sa fin.
         """
         with self.verrou:
             if not self._actif:
@@ -276,10 +278,12 @@ class Serie:
             champs = {"fichiers_modifies": FICHIERS_MODIFIES,
                       "message": "Fichiers réécrits par le build, à commiter : " + ", ".join(FICHIERS_MODIFIES)
                       } if pio_lance else {"fichiers_modifies": []}
+            # `fin` puis liberation sous le meme verrou (RLock de la Condition) : personne ne voit une serie
+            # libre sans son `fin`, et un nouveau lancement ne peut pas s'intercaler avant lui.
             with self.verrou:
+                self._ajoute("fin", None, resultat="arrete" if arrete else "termine", succes=succes,
+                             echecs=echecs, non_lances=non_lances, **champs)
                 self._actif, self._proc = False, None
-            self._ajoute("fin", None, resultat="arrete" if arrete else "termine", succes=succes,
-                         echecs=echecs, non_lances=non_lances, **champs)
 
     def _attend_builds(self, env):
         """Attend qu'aucun build externe ne tourne ; False si l'arret est demande pendant l'attente.
@@ -306,26 +310,30 @@ class Serie:
                     return False
 
     def _plan(self, ligne, actions):
-        """[(type, action de suivi, cible pio, actions couvertes)] dans l'ordre d'execution."""
+        """[(type, action de suivi, cible pio, actions couvertes, actions reussies si ok)] dans l'ordre.
+
+        « couvertes » : celles qu'un echec de l'etape met en echec ; « reussies » : celles qu'un succes
+        de l'etape acheve (une compilation qui prepare un envoi OTA n'acheve pas l'upload).
+        """
         plan = []
         if "upload" in actions:
             couvre = [a for a in ("compiler", "upload") if a in actions]
             if ligne.methode == "com":
-                plan.append(("pio", "upload", "upload", couvre))
+                plan.append(("pio", "upload", "upload", couvre, couvre))
             else:
-                plan.append(("pio", "upload", "", couvre))                       # compilation seule
-                plan.append(("ota_firmware", "upload", "", couvre))
+                plan.append(("pio", "upload", "", couvre, [a for a in couvre if a == "compiler"]))   # compilation
+                plan.append(("ota_firmware", "upload", "", ["upload"], ["upload"]))
         elif "compiler" in actions:
-            plan.append(("pio", "compiler", "", ["compiler"]))
+            plan.append(("pio", "compiler", "", ["compiler"], ["compiler"]))
         if "buildfs" in actions:
-            plan.append(("pio", "buildfs", "buildfs", ["buildfs"]))
+            plan.append(("pio", "buildfs", "buildfs", ["buildfs"], ["buildfs"]))
         if "uploadfs" in actions:
             if ligne.methode == "com":
-                plan.append(("pio", "uploadfs", "uploadfs", ["uploadfs"]))
+                plan.append(("pio", "uploadfs", "uploadfs", ["uploadfs"], ["uploadfs"]))
             else:
                 if "buildfs" not in actions:
-                    plan.append(("pio", "buildfs", "buildfs", ["uploadfs"]))     # preparation de l'envoi
-                plan.append(("ota_fs", "uploadfs", "", ["uploadfs"]))
+                    plan.append(("pio", "buildfs", "buildfs", ["uploadfs"], []))  # preparation de l'envoi
+                plan.append(("ota_fs", "uploadfs", "", ["uploadfs"], ["uploadfs"]))
         return plan
 
     def _execute_env(self, ligne, actions):
@@ -334,16 +342,20 @@ class Serie:
         statuts = {a: "annulee" for a in actions}
         plan = self._plan(ligne, actions)
         resultat, lance_pio = "succes", False
-        for k, (genre, action, cible, couvre) in enumerate(plan):
+        for genre, action, cible, couvre, reussies in plan:
+            if self._arrete_demande(immediat=True):     # arret immediat entre deux etapes : le reste « annulee »
+                resultat = "arrete"
+                break
             if genre == "pio":
                 lance_pio = True
                 ok, motif, extrait, etape = self._lance_pio(ligne, action, cible)
             else:
                 ok, motif, extrait, etape = self._lance_ota(ligne, genre)
-            prepare = genre == "pio" and cible == "buildfs" and couvre == ["uploadfs"]
+            if ok is None:                               # arret immediat avant le lancement du fils
+                resultat = "arrete"
+                break
             if ok:
-                if not prepare:
-                    statuts.update({a: "succes" for a in couvre})
+                statuts.update({a: "succes" for a in reussies})
                 continue
             if action == "upload" and "compiler" in couvre and etape in (ETAPE_PREBUILD, ETAPE_COMPILATION,
                                                                          ETAPE_LIENS):
@@ -392,8 +404,8 @@ class Serie:
         change(suivi.etape)
         drapeaux = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
         with self.verrou:
-            if self._arret_immediat:
-                return False, "arrêt immédiat demandé", [], suivi.etape
+            if self._arret_immediat:                     # ok None : fils jamais lance, action « annulee »
+                return None, "arrêt immédiat demandé", [], suivi.etape
             try:
                 proc = subprocess.Popen(self.commande_pio + args, cwd=self.racine, env=environ,
                                         stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
@@ -416,13 +428,13 @@ class Serie:
         with self.verrou:
             self._proc = None
         termine()
+        if code == 0:                                    # fini avec succes, meme si l'arret immediat arrive
+            if action in ("compiler", "upload"):         # juste apres : l'upload a bien eu lieu
+                self._memorise_reference(env)
+            return True, "", [], suivi.etape
         if self._arrete_demande(immediat=True):
             return False, "arrêt immédiat : arbre de processus tué", suivi.extrait_erreur, suivi.etape
-        if code != 0:
-            return False, f"pio a échoué (code de sortie {code})", suivi.extrait_erreur, suivi.etape
-        if action in ("compiler", "upload"):
-            self._memorise_reference(env)
-        return True, "", [], suivi.etape
+        return False, f"pio a échoué (code de sortie {code})", suivi.extrait_erreur, suivi.etape
 
     def _lance_ota(self, ligne, genre):
         """Envoi OTA par la page : genre "ota_firmware" (action upload) ou "ota_fs" (uploadfs)."""

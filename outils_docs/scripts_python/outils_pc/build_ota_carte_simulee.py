@@ -52,6 +52,7 @@ class Carte:
         self.inchange = False                        # le firmware recu ne change pas la version
         self.apres_redemarrage = None                # transforme le persist a chaque redemarrage
         self.reste_en_safeboot = False               # apres l'envoi, la carte redemarre en safeboot
+        self.echec_u2 = False                        # POST /u2 refuse (page « Failed ») quel que soit le mode
         carte = self
 
         class Gestion(BaseHTTPRequestHandler):
@@ -196,6 +197,8 @@ class Carte:
         if type_ == "firmware":
             if champ != "file" or not nom or contenu[:1] not in (b"\xe9", b"\x1f"):
                 return self.repond(h, "<b>Upload <font>Failed</font></b><br>Invalid file signature")
+            if self.echec_u2:
+                return self.repond(h, "<b>Upload <font>Failed</font></b><br>Flash write error")
             if self.partition_unique and self.mode == "app":     # l'appli ne s'ecrase pas elle-meme
                 return self.repond(h, "<b>Upload <font>Failed</font></b><br>Not enough space")
             self.firmware = (nom, contenu)
