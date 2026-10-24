@@ -54,6 +54,15 @@ cuveFonctions.niveauEnErreur = def()
     return !modbusFonctions.mesureFraiche(int(ana["type"]) + int(ana["id"]) - 1)
 end
 
+# Releve brut de l'ADS1115 (0..32767) -> mV. Le releve est borne a 0 AVANT scale_int (2026-10-24, audit N1) :
+# scale_int passe la valeur en uint16 (changeIntScale -> changeUIntScale, support_float.ino:466), un releve
+# negatif (bruit de l'ADS1115 a 0 V) y devenait la PLEINE echelle -> cuve vide annoncee pleine.
+cuveFonctions.versMv = def(brut)
+    var b = int(brut)
+    if (b < 0)    b = 0    end
+    return tasmota.scale_int(b, 0, 32767, 0, cuveFonctions.voltageMax)
+end
+
 # true si la lecture 'mV' de la voie 'cleA' de l'ADS1115 est une mesure, selon le pilote i2c_ads1115
 # (global.i2c_ads1115, instance publiee par i2c_ads1115_init). Pilote absent, ou firmware sans
 # mesureValide (pas encore recompile) : la lecture est acceptee, comme avant.
@@ -150,7 +159,8 @@ cuveFonctions.aideReglageCuve = def(sujet)
     if (sujet == "HAUTEURCUVE" || sujet == "LARGEURCUVE" || sujet == "LONGUEURCUVE")
         return ["Parametre : entier, dimension en cm (partie entiere retenue).",
                 "Effet : memorise modules cuve dimensions " + (sujet == "HAUTEURCUVE" ? "hauteur" : (sujet == "LARGEURCUVE" ? "largeur" : "longueur")) + ".",
-                "        et sauvegarde (persist.save). Parametre absent ou non entier : ignore.",
+                "        et sauvegarde (persist.save). Parametre absent, non numerique, < 1 cm ou > 10000 cm :",
+                "        ignore (erreur journalisee), la dimension memorisee reste en place.",
                 "        Les 3 dimensions servent au calcul du volume ; la reponse les rappelle.",
                 "Exemple : Backlog ReglageCuve hauteurCuve 110; ReglageCuve largeurCuve 180;",
                 "          ReglageCuve longueurCuve 340"]
@@ -158,7 +168,36 @@ cuveFonctions.aideReglageCuve = def(sujet)
     return nil
 end
 
-#- Exemples: 
+# Dimension de cuve saisie par ReglageCuve -> entier en cm (partie entiere), ou nil si le parametre n'est pas
+# un nombre positif (2026-10-24, audit D3) : int('abc') vaut 0 en Berry, et une hauteur 0 memorisee faisait
+# lever divzero_error a chaque releve.
+cuveFonctions.dimensionCuve = def(p)
+    var s = str(p)
+    if (size(s) == 0)    return nil    end
+    var point = false
+    for i: 0 .. size(s) - 1
+        if (s[i] == "." && !point)    point = true    continue    end
+        if (s[i] < "0" || s[i] > "9")    return nil    end
+    end
+    var r = real(s)
+    if (r < 1 || r > 10000)    return nil    end      # 1 cm .. 100 m : au-dela, int() deborderait
+    return int(r)
+end
+
+# Memorise une dimension de la cuve ("hauteur", "largeur", "longueur") si le parametre est valide
+cuveFonctions.regleDimension = def(cle, p)
+    import string
+    import persist
+    var v = cuveFonctions.dimensionCuve(p)
+    if (v == nil)
+        cuveFonctions.log(string.format("REGLAGE_CUVE_ERREUR: %s '%s' refusee : nombre de cm >= 1 attendu, valeur memorisee conservee !", cle, str(p)), LOG_LEVEL_ERREUR)
+        return
+    end
+    modules["cuve"]["dimensions"][cle] = v
+    persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
+end
+
+#- Exemples:
     ReglageCuve etalonnageCapteur ON       => Augmente la frequence de mesure pendant 10min (frequence=1mesure/10s)
     Backlog ReglageCuve hauteurCuve 110; ReglageCuve largeurCuve 180; ReglageCuve longueurCuve 340      => Force et enregistre les dimensions de la cuve
 -#
@@ -226,28 +265,13 @@ cuveFonctions.reglageCuve = def(cmd, idx, payload, payload_json)
         end
     # Reglage hauteur de Cuve
     elif string.toupper(fonction) == "HAUTEURCUVE"
-        try
-            modules["cuve"]["dimensions"]["hauteur"] = int(parametres[0])
-            persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
-        except .. as e, m
-            # print('Erreur: ', e, " -> ", m)
-        end
+        cuveFonctions.regleDimension("hauteur", parametres.size() > 0 ? parametres[0] : "")
     # Reglage largeur de Cuve
     elif string.toupper(fonction) == "LARGEURCUVE"
-        try
-            modules["cuve"]["dimensions"]["largeur"] = int(parametres[0])
-            persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
-        except .. as e, m
-            # print('Erreur: ', e, " -> ", m)
-        end
+        cuveFonctions.regleDimension("largeur", parametres.size() > 0 ? parametres[0] : "")
     # Reglage longueur de Cuve
     elif string.toupper(fonction) == "LONGUEURCUVE"
-        try
-            modules["cuve"]["dimensions"]["longueur"] = int(parametres[0])
-            persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien (persist.be:91-92)
-        except .. as e, m
-            # print('Erreur: ', e, " -> ", m)
-        end
+        cuveFonctions.regleDimension("longueur", parametres.size() > 0 ? parametres[0] : "")
     end
 
     # Commande réussie
@@ -532,7 +556,7 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
                 var cleA = string.format("A%d", analogiques[cleAna]["id"] - 1)
                 if (msg["ADS1115"].contains(cleA))
                     import modbusFonctions
-                    var mVlu = tasmota.scale_int(int(msg["ADS1115"][cleA]), 0, 32767, 0, cuveFonctions.voltageMax)
+                    var mVlu = cuveFonctions.versMv(msg["ADS1115"][cleA])
                     if (cuveFonctions.lectureValide(cleA, mVlu, msg["ADS1115"]))
                         modbusFonctions.noteMesure(int(analogiques[cleAna]["type"]) + int(analogiques[cleAna]["id"]) - 1)
                     end
@@ -546,14 +570,8 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
                     modules[moduleCapteur]["environnement"]["analogiques"][cleAna]["value"] = int(analogiques[cleAna]["value"])
 
                     # Mets àjour le taux de remplissage, et le volume d'eau disponible
-                    # Récupère la valeur analogique du capteur & la convertit en mV
-                    cuveFonctions.sensorsCuve["valeursAnalogiques"]["valeurCapteurHauteur"] = tasmota.scale_int(analogiques[cleAna]["value"], 
-                                                                                                                        0, 32767, 0, cuveFonctions.voltageMax)
-
-                    # Borne la valeur du capteur de hauteur d'eau
-                    if (cuveFonctions.sensorsCuve["valeursAnalogiques"]["valeurCapteurHauteur"] < 0)   
-                        cuveFonctions.sensorsCuve["valeursAnalogiques"]["valeurCapteurHauteur"] = 0
-                    end
+                    # Récupère la valeur analogique du capteur & la convertit en mV (bornee a 0 : versMv, audit N1)
+                    cuveFonctions.sensorsCuve["valeursAnalogiques"]["valeurCapteurHauteur"] = cuveFonctions.versMv(analogiques[cleAna]["value"])
 
                     # Convertit la valeur (en V) vers une valeur en cm
                     # Coefficient de conversion: 30mV/cm
@@ -568,10 +586,22 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
         var largeur = modules[moduleCapteur].find("dimensions", {}).find("largeur", 100)    # en cm
         var longueur = modules[moduleCapteur].find("dimensions", {}).find("longueur", 100)    # en cm
 
-        var pourcentageEau = int(cuveFonctions.sensorsCuve["niveauCuve"]["hauteurEau"] / real(hauteur) * 100) / 100.00  
+        # Hauteur nulle ou negative (persist edite a la main) : pas de calcul, sinon divzero_error a chaque
+        # releve (2026-10-24, audit D3b). Le taux et le volume precedents restent en place.
+        if (hauteur <= 0)
+            cuveFonctions.log(string.format("CUVE_GESTION_CAPTEURS_ERREUR: hauteur de cuve invalide (%s cm) : taux et volume non calcules, corriger par ReglageCuve hauteurCuve <cm> !", str(hauteur)), LOG_LEVEL_ERREUR)
+        else
+            # Pourcentage ENTIER : multiplier avant de diviser (2026-10-24, audit T1). h / H * 100 passait par
+            # une fraction non representable (0,53) et la troncature rendait 52.
+            var pourcent = int(cuveFonctions.sensorsCuve["niveauCuve"]["hauteurEau"] * 100 / real(hauteur))
+            # Borne a 0..100 % (2026-10-24, audit HB) : un capteur au-dessus de la hauteur de la cuve annoncait
+            # plus de 100 % et un volume superieur a la capacite.
+            if (pourcent > 100)    pourcent = 100    elif (pourcent < 0)    pourcent = 0    end
+            var pourcentageEau = pourcent / 100.00
 
-        cuveFonctions.sensorsCuve["niveauCuve"]["tauxRemplissage"] = pourcentageEau
-        cuveFonctions.sensorsCuve["niveauCuve"]["volume"] =  int(hauteur * largeur * longueur * pourcentageEau / 1000)    # en litres
+            cuveFonctions.sensorsCuve["niveauCuve"]["tauxRemplissage"] = pourcentageEau
+            cuveFonctions.sensorsCuve["niveauCuve"]["volume"] =  int(hauteur * largeur * longueur * pourcentageEau / 1000)    # en litres
+        end
 
         # Règle la couleur du ruban WS2812 en fonction du taux de remplissage (mode AUTO ; en erreur de
         # mesure, ledsFonctions fait clignoter le ruban en rouge par-dessus)

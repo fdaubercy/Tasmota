@@ -41,12 +41,12 @@ sys.path().push("outils_docs/scripts_python/berry/bouchons_berry")
 sys.path().push("outils_docs/scripts_python/berry/bouchons_berry/cuve")
 
 var DEFAUTS_CONNUS = {
-    "N1": true,    # lecture ADS1115 NEGATIVE (bruit a 0 V) -> scale_int la rend en pleine echelle (wrap uint16) : cuve "pleine"
-    "HB": true,    # taux et volume non bornes : un capteur au-dessus de la hauteur donne > 100 % et un volume > capacite
-    "T1": true,    # taux tronque une unite trop bas par la virgule flottante (hauteur 100 cm : 53 cm -> 52 %)
+    "N1": false,    # lecture ADS1115 NEGATIVE (bruit a 0 V) -> scale_int la rend en pleine echelle (wrap uint16) : cuve "pleine"
+    "HB": false,    # taux et volume non bornes : un capteur au-dessus de la hauteur donne > 100 % et un volume > capacite
+    "T1": false,    # taux tronque une unite trop bas par la virgule flottante (hauteur 100 cm : 53 cm -> 52 %)
     "V1": true,    # volume tronque d'un litre par la virgule flottante (cuve 100x100x100 : 13 %, 26 %, 52 %)
-    "D3": true,    # ReglageCuve hauteurCuve abc : 0 memorise, alors que l'aide promet "non entier : ignore"
-    "D3b": true,   # une dimension a 0 memorisee fait lever divzero_error a chaque releve (real(hauteur) au denominateur)
+    "D3": false,    # ReglageCuve hauteurCuve abc : 0 memorise, alors que l'aide promet "non entier : ignore"
+    "D3b": false,   # une dimension a 0 memorisee fait lever divzero_error a chaque releve (real(hauteur) au denominateur)
 }
 
 var LOG_LEVEL_ERREUR = 1
@@ -325,7 +325,7 @@ verifie(mesures()["niveauCuve"]["hauteurEau"] == hMoitie && hMoitie == 55, "a mo
 verifie(mesures()["niveauCuve"]["tauxRemplissage"] == 0.5, "a moitie : taux 0.5")
 verifie(mesures()["niveauCuve"]["volume"] == (HAUT * LARG * LONG) / 2000, "a moitie : volume " + str((HAUT * LARG * LONG) / 2000) + " L")
 verifie(derniereTeinte() == 59, "a moitie : teinte 59 (int(119 x 0.5))")
-# Balayage de toute la plage du convertisseur (hauteur au-dela de la cuve comprise : le calcul est le meme)
+# Balayage de toute la plage du convertisseur (hauteur au-dela de la cuve comprise : taux borne a 100 %, HB)
 remetNormal()
 var ecarts = []
 var maxTaux = 0
@@ -335,6 +335,7 @@ for raw: 0 .. 32767
     var mv = mesures()["valeursAnalogiques"]["valeurCapteurHauteur"]
     var h = (mv - mv % CONV) / CONV                                  # hauteur entiere en cm
     var tc = (h * 100) / HAUT                                         # taux en %, entiers purs
+    if tc > 100    tc = 100    end                                    # HB (2026-10-24) : jamais plus que la cuve
     var vol = ((HAUT * LARG * LONG / 100) * tc) / 1000                # litres, entiers purs (HAUT x l x L divisible par 100 ici)
     var teinte = (119 * tc) / 100
     if teinte > 119    teinte = 119    end
@@ -449,6 +450,13 @@ remetNormal()
 global.i2c_ads1115 = FauxAds(true)
 releve(5000)
 verifie(modbusFonctions.notes == [ADRESSE], "pilote : mesureValide = true -> noteMesure appele")
+# N1, second site (2026-10-24, relecture) : le mV passe a mesureValide etait lui aussi converti sans borne,
+# un releve negatif y arrivait en PLEINE echelle -> une lecture parasite pouvait etre jugee valide
+remetNormal()
+ads = FauxAds(true)
+global.i2c_ads1115 = ads
+releve(-3)
+verifie(size(ads.vues) == 1 && ads.vues[0][1] == 0, "N1 : releve -3 -> mesureValide recoit 0 mV, pas la pleine echelle" + (size(ads.vues) > 0 ? " (recu " + str(ads.vues[0][1]) + ")" : ""))
 global.i2c_ads1115 = nil
 remetNormal()
 verifie(cuveFonctions.niveauEnErreur() == false && modbusFonctions.demandes == [ADRESSE], "niveauEnErreur : mesure fraiche -> pas d'erreur, adresse " + str(ADRESSE) + " interrogee")
@@ -529,6 +537,33 @@ var leve = false
 try releve(9100) except .. as e, m leve = true end
 connu("D3b", "hauteur de cuve 0 memorisee : un releve ne leve pas d'exception", !leve && CUVE["dimensions"]["hauteur"] > 0,
       "divzero_error a chaque releve (cuveFonctions.be:571, real(hauteur) = 0)")
+remetNormal()
+# D3 (2026-10-24) : valeur negative refusee, refus journalise en erreur
+def erreurJournalisee(motif)
+    for e: journal    if e[0] == LOG_LEVEL_ERREUR && string.find(e[1], motif) >= 0    return true    end    end
+    return false
+end
+journal.clear()
+cuveFonctions.reglageCuve("ReglageCuve", 0, "largeurCuve -5", nil)
+verifie(CUVE["dimensions"]["largeur"] == LARG && erreurJournalisee("REGLAGE_CUVE_ERREUR: largeur '-5' refusee"),
+       "largeurCuve -5 : refusee, largeur conservee, erreur journalisee")
+for p: ["99999999999999999999", "10001", ".", "1.2.3", "0.5"]
+    cuveFonctions.reglageCuve("ReglageCuve", 0, "longueurCuve " + p, nil)
+    verifie(CUVE["dimensions"]["longueur"] == LONG, "longueurCuve " + p + " : refusee, longueur conservee")
+end
+cuveFonctions.reglageCuve("ReglageCuve", 0, "longueurCuve 10000", nil)
+verifie(CUVE["dimensions"]["longueur"] == 10000, "longueurCuve 10000 (borne haute) : acceptee")
+# D3b (2026-10-24) : hauteur 0 ecrite DIRECTEMENT dans le persist (la commande la refuse) -> releve sans exception,
+# erreur journalisee, taux et volume precedents conserves
+remetNormal()
+releve(9100)
+var tauxAvant = mesures()["niveauCuve"]["tauxRemplissage"]
+CUVE["dimensions"]["hauteur"] = 0
+journal.clear()
+leve = false
+try releve(15000) except .. as e, m leve = true end
+verifie(!leve && erreurJournalisee("CUVE_GESTION_CAPTEURS_ERREUR: hauteur de cuve invalide (0 cm)") && mesures()["niveauCuve"]["tauxRemplissage"] == tauxAvant,
+       "hauteur 0 dans le persist : pas d'exception, erreur journalisee, taux precedent conserve")
 remetNormal()
 tasmota.crons = []   tasmota.timers = []
 cuveFonctions.reglageCuve("ReglageCuve", 0, "etalonnageCapteur 1", nil)
