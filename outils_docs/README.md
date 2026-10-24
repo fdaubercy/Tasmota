@@ -363,7 +363,7 @@ Tasmota n'accepte pas d'image LittleFS en OTA : la page envoie le **contenu de `
   dépliable sur la page.
 - Derniers choix : à chaque lancement, la page
   écrit les lignes lancées (env, COM ou OTA, port, IP saisie) et les actions cochées dans `derniers.json` (dans
-  `%LOCALAPPDATA%\outils_tasmotauild\`, hors dépôt, écriture atomique) ; à l'ouverture suivante elle recoche ces lignes et ces actions. Le port
+  `%LOCALAPPDATA%\outils_tasmota\build\`, hors dépôt, écriture atomique) ; à l'ouverture suivante elle recoche ces lignes et ces actions. Le port
   mémorisé ne sert que pour un env dont le port n'est pas réécrit dans un `.ini` (envs de l'amont), l'IP mémorisée
   que si aucune IP n'est lue dans `user_config_override.h`.
 - Références de progression (nombre de `.o` du dernier
