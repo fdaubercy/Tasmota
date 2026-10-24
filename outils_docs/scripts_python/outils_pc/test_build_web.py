@@ -225,6 +225,40 @@ def test_flux_et_journal(b):
             "journal : texte du dernier journal de l'env")
 
 
+def test_journal_dernier_lancement(b):
+    """Journaux de plusieurs lancements : redemarrage -> le dernier seul ; refus -> lancement reel conserve."""
+    jour = b.dossier / "journaux"
+    ancien = jour / f"20200101-000000-{A}-compiler.log"
+    ancien.write_text("ANCIEN\n", encoding="utf-8")
+    os.utime(ancien, (1000000000, 1000000000))
+    _, avant = b.requete("GET", f"/journal?env={A}")
+    verifie(("ANCIEN" in avant, "code de sortie 0" in avant), (False, True), "journal : un ancien journal n'est pas servi")
+    # (a) page redemarree : meme dossier, nouveau serveur, aucun lancement -> seul le dernier journal
+    b2 = Banc.__new__(Banc)
+    b2.__dict__.update(b.__dict__)
+    b2.serveur = ThreadingHTTPServer(("127.0.0.1", 0), build_web.fabrique_gestionnaire(
+        b.serie, b.acces, b.racine, b.dossier))
+    b2.serveur.daemon_threads = True
+    b2.port = b2.serveur.server_address[1]
+    threading.Thread(target=b2.serveur.serve_forever, daemon=True).start()
+    _, apres = b2.requete("GET", f"/journal?env={A}")
+    b2.serveur.shutdown()
+    b2.serveur.server_close()
+    verifie(("ANCIEN" in apres, "code de sortie 0" in apres), (False, True),
+            "journal : apres redemarrage, seul le dernier journal")
+    # (b) lancement refuse pendant un lancement : les journaux du lancement reel restent servis
+    Path(os.environ[faux.VAR_SCENARIO]).write_text(json.dumps({"*": {"build": {"lignes": ["@pause 3"]}}}),
+                                                   encoding="utf-8")
+    b.json("POST", "/lancer", {"lignes": [LIGNE_A], "actions": ["compiler"]})
+    time.sleep(0.8)
+    verifie(b.json("POST", "/lancer", {"lignes": [LIGNE_A], "actions": ["compiler"]})[0], 409,
+            "journal : second lancement refuse pendant le lancement")
+    b.attend_fin()
+    _, apres = b.requete("GET", f"/journal?env={A}")
+    verifie(("ANCIEN" in apres, "code de sortie 0" in apres), (False, True),
+            "journal : un refus n'ecrase pas le debut du lancement reel")
+
+
 def test_arret(b):
     lent = {"lignes": ["Processing {env}", "@pause 30"]}
     banc_scen = Path(os.environ[faux.VAR_SCENARIO])
@@ -259,7 +293,7 @@ def principal():
         try:
             for test in (test_routes_locales, test_post_sans_entete_refuse, test_distant_sans_jeton_refuse,
                          test_corps_borne, test_port_ecrit_puis_relu, test_lancement, test_flux_et_journal,
-                         test_arret):
+                         test_journal_dernier_lancement, test_arret):
                 test(b)
         finally:
             b.ferme()

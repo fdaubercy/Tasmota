@@ -93,7 +93,7 @@ def ligne_de(donnee):
 
 
 def fabrique_gestionnaire(serie, acces, racine, dossier):
-    etat = {"debut": 0.0}                                 # heure du dernier lancement accepte
+    etat = {"debut": float("inf")}                        # heure du dernier lancement accepte (inf : aucun, repli sur le dernier journal)
 
     def traite_post(chemin, demande):
         if chemin == "/lancer":
@@ -102,11 +102,11 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                 raise ValueError("lignes et actions attendues sous forme de listes")
             objets = [ligne_de(d) for d in lignes]
             actions = [str(a) for a in actions]
-            etat["debut"] = time.time()
+            ancien, etat["debut"] = etat["debut"], time.time()
             try:
                 serie.lance(objets, actions)              # RuntimeError (409) : motifs de controle
             except RuntimeError:
-                etat["debut"] = 0.0
+                etat["debut"] = ancien                    # un refus ne change pas le lancement en cours
                 raise
             ecrit_derniers(dossier, [asdict(o) for o in objets], actions)
             return {"ok": True}
