@@ -294,11 +294,10 @@ class Montage:
         environ.pop("BUILD_WEB_FAUX_JOURNAL", None)
         self.port = port_libre()
         self.url = f"http://127.0.0.1:{self.port}/"
-        self.serveur = subprocess.Popen([sys.executable, "-u", str(Path(__file__).resolve()), "--serveur", str(self.port),
-                                         str(self.depot)] + (["--temoin"] if temoin else []),
-                                        env=environ, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-        self._attend_http(self.url + "execution", 20)
+        self.commande = ([sys.executable, "-u", str(Path(__file__).resolve()), "--serveur", str(self.port), str(self.depot)]
+                         + (["--temoin"] if temoin else []))
+        self.environ = environ
+        self.lance_serveur()
         chrome = next((c for c in CHROMES if c.is_file()), None)
         if chrome is None:
             raise FileNotFoundError("chrome.exe introuvable (Program Files, LOCALAPPDATA)")
@@ -313,6 +312,17 @@ class Montage:
         self.cdp = Cdp(page["webSocketDebuggerUrl"])
         for domaine in ("Runtime.enable", "Log.enable", "Page.enable"):
             self.cdp.appel(domaine)
+
+    def lance_serveur(self):
+        self.serveur = subprocess.Popen(self.commande, env=self.environ, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        self._attend_http(self.url + "execution", 20)
+
+    def redemarre_serveur(self):
+        """Comme l'outil tue avec VS Code puis relance par l'annuaire : meme port, numerotation repartie de 1."""
+        tue_arbre(self.serveur)
+        self.serveur.wait(10)
+        self.lance_serveur()
 
     def _attend_http(self, url, delai):
         limite = time.monotonic() + delai
@@ -446,6 +456,7 @@ def sonde_page(m, capture):
     verifie(attend(cdp, "[...document.querySelectorAll('.bandeau.echec')].map(b => b.dataset.env).join()", 8), B,
             "rechargement : l'etat du dernier lancement est reconstruit depuis le flux")
 
+    sonde_redemarrage(m)
     sonde_synthetique(cdp)
 
     # largeur telephone : colonnes empilees, pas de defilement horizontal
@@ -457,7 +468,11 @@ def sonde_page(m, capture):
     verifie((tel.get("empile"), tel.get("large") <= 390), (True, True), f"telephone : colonnes empilees, largeur {tel.get('large')} px")
     if capture:
         cdp.capture(Path(capture) / "build-page-telephone.png")
-    verifie(cdp.erreurs(), [], "fin : aucune erreur JS pendant toute la sonde")
+    # seules erreurs admises : les coupures du flux pendant le redemarrage VOULU du serveur (sonde_redemarrage)
+    coupures = [e for e in cdp.erreurs() if e.startswith("journal Chrome") and "/flux" in e
+                and ("ERR_CONNECTION_RESET" in e or "ERR_CONNECTION_REFUSED" in e)]
+    verifie([e for e in cdp.erreurs() if e not in coupures], [], "fin : aucune erreur JS pendant toute la sonde")
+    verifie(bool(coupures), True, "fin : les coupures du flux pendant le redemarrage ont bien ete vues (temoin du filtre)")
 
 
 # Evenements injectes dans traite() (fonction globale de la page) : chemins que le faux pio ne produit pas
@@ -518,6 +533,28 @@ def sonde_synthetique(cdp):
     verifie((cdp.js(JS_SYNTHETIQUE).get("attente"),
              cdp.js("document.querySelector('.bloc[data-bloc=\"E\"]').textContent.includes('Reprise')")), ("", True),
             "synthetique : builds=[] -> bandeau retire, reprise notee")
+
+
+def sonde_redemarrage(m):
+    """Outil redemarre sous la page ouverte, en plein lancement : la page doit suivre le lancement suivant."""
+    cdp = m.cdp
+    cdp.js("document.getElementById('lancer').click()")
+    verifie(bool(attend(cdp, "document.getElementById('etat').textContent === 'lancement en cours' && "
+                             f"!!document.querySelector('.bloc.encours')", 10, 0.1)), True,
+            "redemarrage : un lancement est en cours avant de tuer le serveur")
+    m.redemarre_serveur()
+    libre = attend(cdp, "!document.getElementById('lancer').disabled && document.getElementById('etat').textContent", 20)
+    verifie(libre, "au repos", "redemarrage : apres reconnexion, lancement coupe constate, bouton Lancer reactive")
+    verifie(attend(cdp, "[...document.querySelectorAll('.bandeau.avertissement')].some(b => b.textContent.includes('interrompu'))",
+                   3, 0.1), True,                    # rendu groupe : bandeaux dessines ~60 ms apres le bouton
+            "redemarrage : bandeau « lancement interrompu »")
+    cdp.js("document.getElementById('lancer').click()")
+    fin = attend(cdp, "document.getElementById('etat').textContent.startsWith('terminé') && document.getElementById('recap').textContent", 40)
+    verifie(bool(fin), True, "redemarrage : le lancement suivant est suivi jusqu'a fin")
+    time.sleep(0.4)
+    r = cdp.js(f"""(() => ({{echecs: [...document.querySelectorAll('.bandeau.echec')].map(b => b.dataset.env),
+      barre: document.querySelector('.bloc[data-bloc="{A}"] .rang[data-action=compiler] .barre span').style.width}}))()""")
+    verifie((r.get("echecs"), r.get("barre")), ([B], "100%"), "redemarrage : bandeau rouge et barre a 100 % du nouveau lancement")
 
 
 def sonde_temoin(m):

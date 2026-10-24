@@ -538,6 +538,7 @@ function activeRang(b, r) {
 
 function traite(e) {
   if (typeof e.n === "number") {
+    if (e.n === 1 && dernierN > 1) dernierN = 0;   // outil redemarre sous la page : numerotation repartie de 1
     if (e.n <= dernierN) return;          // deja vu (reprise du flux)
     dernierN = e.n;
   }
@@ -756,6 +757,23 @@ function dessineRecap() {
 }
 
 // ---------- flux SSE (reprise automatique : EventSource renvoie Last-Event-ID) ----------
+// Outil redemarre sous la page (il meurt avec VS Code, l'onglet reste) : le serveur rejoue depuis 0 un
+// Last-Event-ID plus grand que sa numerotation (build_web.py) et traite() repart a n === 1. Un lancement
+// coupe par ce redemarrage n'enverra jamais `fin` : a la reconnexion, /execution dit s'il tourne encore.
+async function verifieExecution() {
+  var r = await appel("/execution");
+  if (!r.ok || !r.donnees || r.donnees.en_cours || !enCours) return;
+  enCours = false;
+  if (L && !L.fin) {
+    L.ordre.forEach(function (env) { var b = L.blocs[env]; if (b.statut === "encours" || b.statut === "attente") { b.statut = "arrete"; planifie(env); } });
+    L.bandeaux.push({genre: "avertissement", env: "", titre: "Lancement interrompu",
+                     texte: "l'outil a redémarré pendant le lancement : vérifier les cartes concernées (fin jamais reçue)."});
+    L.attente = null;
+  }
+  majEtat();
+  planifie(null);
+}
+
 function ecoute() {
   var source = new EventSource("/flux?depuis=0");
   source.onmessage = function (m) {
@@ -763,8 +781,12 @@ function ecoute() {
     try { e = JSON.parse(m.data); } catch (err) { return; }
     traite(e);
   };
-  source.onerror = function () { fluxCoupe = true; majEtat(); };
-  source.onopen = function () { if (fluxCoupe) { fluxCoupe = false; majEtat(); } };
+  source.onerror = function () {
+    fluxCoupe = true; majEtat();
+    // ferme pour de bon (reponse non 200 pendant un redemarrage) : rouvrir ; le rejeu depuis 0 repart a n === 1
+    if (source.readyState === EventSource.CLOSED) setTimeout(ecoute, 3000);
+  };
+  source.onopen = function () { if (fluxCoupe) { fluxCoupe = false; majEtat(); setTimeout(verifieExecution, 1500); } };   // apres le rejeu eventuel
 }
 
 // Interrupteur clair / sombre (theme pose par le script du <head>, memorise ici).

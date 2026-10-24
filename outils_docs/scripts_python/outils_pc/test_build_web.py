@@ -111,9 +111,9 @@ class Banc:
         self.serveur.server_close()
 
 
-def lit_flux(banc, chemin="/flux", entetes=None, nombre=1):
-    """Les `nombre` premiers evenements (id, objet) d'un flux SSE."""
-    c = http.client.HTTPConnection("127.0.0.1", banc.port, timeout=10)
+def lit_flux(banc, chemin="/flux", entetes=None, nombre=1, delai=5):
+    """Les `nombre` premiers evenements (id, objet) d'un flux SSE ; ceux recus en `delai` s si le flux se tait."""
+    c = http.client.HTTPConnection("127.0.0.1", banc.port, timeout=delai)
     c.request("GET", chemin, headers=entetes or {})
     r = c.getresponse()
     recus, id_ = [], None
@@ -124,6 +124,8 @@ def lit_flux(banc, chemin="/flux", entetes=None, nombre=1):
                 id_ = int(ligne[4:])
             elif ligne.startswith("data: "):
                 recus.append((id_, json.loads(ligne[6:])))
+    except TimeoutError:                                      # flux muet : le test compare ce qui est arrive
+        pass
     finally:
         c.close()
     return r.status, recus
@@ -267,6 +269,16 @@ def test_flux_et_journal(b):
     verifie([i for i, _ in recus], [3, 4], "flux_rejoue_depuis : ?depuis=2 reprend a 3")
     _, recus = lit_flux(b, "/flux", entetes={"Last-Event-ID": "4"}, nombre=1)
     verifie([i for i, _ in recus], [5], "flux_rejoue_depuis : Last-Event-ID 4 reprend a 5")
+    # onglet reste ouvert sur un outil redemarre : son Last-Event-ID depasse la nouvelle numerotation
+    trop = b.serie.numero + 1000
+    _, recus = lit_flux(b, "/flux", entetes={"Last-Event-ID": str(trop)}, nombre=1)
+    verifie([i for i, _ in recus], [1], "flux_rejoue_depuis : Last-Event-ID trop grand -> rejeu depuis le debut")
+    _, recus = lit_flux(b, f"/flux?depuis={trop}", nombre=1)
+    verifie([i for i, _ in recus], [1], "flux_rejoue_depuis : ?depuis trop grand -> rejeu depuis le debut")
+    dernier = b.serie.numero
+    b.serie._ajoute("attente", A, builds=[])                  # temoin : un numero egal au dernier n'est PAS remis a 0
+    _, recus = lit_flux(b, "/flux", entetes={"Last-Event-ID": str(dernier)}, nombre=1)
+    verifie([i for i, _ in recus], [dernier + 1], "flux_rejoue_depuis : Last-Event-ID = dernier numero -> suite seule")
     statut, texte = b.requete("GET", f"/journal?env={A}")
     verifie((statut, "--- pio run -e " + A in texte, "code de sortie 0" in texte), (200, True, True),
             "journal : texte du dernier journal de l'env")

@@ -11,7 +11,8 @@ Routes (les POST exigent l'en-tete X-Build: 1 et la meme origine) :
     GET  /           la page (A6 : build_page.PAGE ; a defaut, une page provisoire)
     GET  /envs       {envs: [champs de Env + littlefs], derniers: derniers choix}
     GET  /execution  {en_cours: bool}
-    GET  /flux       Server-Sent Events de la serie (rejoues depuis Last-Event-ID ou ?depuis=n)
+    GET  /flux       Server-Sent Events de la serie (rejoues depuis Last-Event-ID ou ?depuis=n ; un numero
+                     superieur au dernier de la serie vaut 0 : page restee ouverte sur un outil redemarre)
     GET  /journal    ?env=<env> : texte du journal pio du dernier lancement de cet env
     POST /lancer     {lignes: [{env, methode, port, ip}], actions: [...]}   409 = refus (motifs)
     POST /port       {env, port} : ecrit upload_port (409 pendant un lancement, 400 si invalide)
@@ -166,7 +167,10 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                     self._json({"en_cours": serie.en_cours()})
                 elif url.path == "/flux":
                     depuis = self.headers.get("Last-Event-ID") or params.get("depuis", ["0"])[0]
-                    self._flux(int(depuis) if str(depuis).isdigit() else 0)
+                    depuis = int(depuis) if str(depuis).isdigit() else 0
+                    if depuis > serie.numero:             # onglet reste ouvert sur un outil redemarre : nouvelle
+                        depuis = 0                        # numerotation repartie de 1, rejouer depuis le debut
+                    self._flux(depuis)
                 elif url.path == "/journal":
                     self._envoie(200, journal_env(dossier, params.get("env", [""])[0], etat["debut"]).encode("utf-8"))
                 else:
