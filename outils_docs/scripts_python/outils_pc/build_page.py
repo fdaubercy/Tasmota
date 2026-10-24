@@ -6,7 +6,7 @@ marcher hors ligne). Disposition validee par l'utilisateur (maquette « B ») : 
 suivi dessous (un bloc par env, bandeau rouge par echec). Sur telephone, les colonnes s'empilent.
 
 Routes appelees (formats : docstring de build_web.py ; evenements du flux : docstring de build_serie.py) :
-    GET /envs (au chargement, et apres un lancement : littlefs.bin a pu apparaitre), GET /execution,
+    GET /envs (au chargement, et apres un lancement : ports relus), GET /execution,
     GET /flux?depuis=0 (EventSource : la reprise apres coupure envoie Last-Event-ID tout seul),
     GET /journal?env= (journal deplie), POST /lancer, /port, /arreter avec l'en-tete X-Build: 1.
 Tout texte venu du serveur est insere par textContent, jamais par innerHTML.
@@ -363,8 +363,9 @@ function majLigne(nom) {
     else if (!IPV4.test(c.ip.trim())) notes.push(["erreur", "adresse IPv4 invalide"]);
     else if (c.ip.trim() !== e.ip) notes.push(["note-info", "IP valable pour ce lancement seulement (user_config_override.h n'est pas modifié)"]);
   }
-  if (c.coche && c.methode === "com" && acts.indexOf("upload") >= 0 && e.littlefs)
-    notes.push(["note-fs", "le file system (persist compris) sera aussi flashé : littlefs.bin existe pour cet env"]);
+  if (c.coche && c.methode === "com" && acts.indexOf("upload") >= 0 && e.fs_avec_firmware)
+    notes.push(["note-fs", "le file system (persist compris) sera aussi flashé : cet env embarque des fichiers " +
+                           "(custom_files_upload), post_esp32 reconstruit littlefs.bin à chaque compilation"]);
   u.notes.textContent = "";
   notes.forEach(function (n) { u.notes.appendChild(h("div", {"class": n[0], texte: n[1]})); });
 }
@@ -431,7 +432,7 @@ async function chargeEnvs(rafraichir) {
     return;
   }
   $("message").textContent = "";
-  if (rafraichir && envs.length) {          // garde cases, methodes et saisies ; met a jour port, littlefs...
+  if (rafraichir && envs.length) {          // garde cases, methodes et saisies ; met a jour port, IP...
     r.donnees.envs.forEach(function (e) {
       var c = choix[e.nom], ancien = parNom[e.nom];
       if (c && ancien && c.port === ancien.port && e.ecrivable) c.port = e.port;
@@ -612,7 +613,7 @@ function traite(e) {
     L.attente = null;
     enCours = false;
     majBouton();
-    chargeEnvs(true);              // littlefs.bin a pu apparaitre (buildfs)
+    chargeEnvs(true);              // relit les envs (ports, IP) apres le lancement
   }
   if (e.type !== "ligne") { majEtat(); planifie(null); }
 }

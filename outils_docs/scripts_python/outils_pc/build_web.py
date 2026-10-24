@@ -9,7 +9,7 @@ Les `pio run` sont lances en serie par build_serie.Serie ; ici, seulement le ser
 
 Routes (les POST exigent l'en-tete X-Build: 1 et la meme origine) :
     GET  /           la page (A6 : build_page.PAGE ; a defaut, une page provisoire)
-    GET  /envs       {envs: [champs de Env + littlefs], derniers: derniers choix}
+    GET  /envs       {envs: [champs de Env, dont fs_avec_firmware], derniers: derniers choix}
     GET  /execution  {en_cours: bool}
     GET  /flux       Server-Sent Events de la serie (rejoues depuis Last-Event-ID ou ?depuis=n ; un numero
                      superieur au dernier de la serie vaut 0 : page restee ouverte sur un outil redemarre)
@@ -70,11 +70,9 @@ def ecrit_derniers(dossier, lignes, actions):
 
 
 def liste_envs_json(racine, dossier):
-    envs = []
-    for env in build_envs.liste_envs(racine):
-        champs = asdict(env)
-        champs["littlefs"] = (Path(racine) / ".pio" / "build" / env.nom / "littlefs.bin").is_file()
-        envs.append(champs)
+    # fs_avec_firmware (annonce « le FS sera aussi flashe ») vient des .ini, pas de la presence de
+    # littlefs.bin : post_esp32 le reconstruit a chaque compilation, meme apres une purge (spec, choix 9).
+    envs = [asdict(env) for env in build_envs.liste_envs(racine)]
     return {"envs": envs, "derniers": lit_derniers(dossier)}
 
 

@@ -34,6 +34,7 @@ class Env:
     ota_possible: bool
     firmware: str         # dernier -D FIRMWARE_* des build_flags
     ecrivable: bool       # defini dans platformio_tasmota_cenv.ini
+    fs_avec_firmware: bool = False   # un upload firmware par cable flashe aussi le FS (voir _fs_avec_firmware)
 
 
 def _lit_ini(chemin):
@@ -90,6 +91,33 @@ def _firmware(toutes, chaine):
         if trouves:
             return trouves[-1]
     return ""
+
+
+def _valeur(toutes, section, option, vus=()):
+    """Option resolue comme PlatformIO : premiere section de la chaine `extends` qui la definit, puis
+    substitution des references `${env:X.option}` (resolues de meme). "" si absente ou en boucle."""
+    if section in vus:
+        return ""
+    brut = next((toutes[nom][option] for nom in _chaine(toutes, section) if option in toutes[nom]), None)
+    if brut is None:
+        return ""
+    return re.sub(r"\$\{(env:[^.}]+)\.([^}]+)\}",
+                  lambda m: _valeur(toutes, m.group(1), m.group(2), vus + (section,)), brut or "")
+
+
+def _fs_avec_firmware(toutes, section, ota):
+    """Vrai si un `-t upload` par cable flashe aussi le file system de cet env.
+
+    Fait mesure dans pio-tools/post_esp32.py : a chaque edition des liens du firmware (toujours, puisque
+    CFG_HOLDER change a chaque run), esp32_build_filesystem (l.139-245) reconstruit littlefs.bin des que
+    custom_files_upload contient une entree autre que `no_files`, et l'upload esptool l'emporte
+    (l.419-440). ESP32 seulement (`ota` : env qui charge le pre-script des bases ESP32) ; les ESP8266
+    n'ont pas post_esp32.py.
+    """
+    if not ota:
+        return False
+    lignes = [l.strip() for l in _valeur(toutes, section, "custom_files_upload").splitlines()]
+    return any(l and not l.startswith((";", "#")) and "no_files" not in l for l in lignes)
 
 
 def _port(toutes, chaine):
@@ -157,7 +185,7 @@ def liste_envs(racine):
         port, herite = _port(toutes, chaine)
         firmware = _firmware(toutes, chaine)
         envs.append(Env(nom, famille, sous_groupe, port, herite, lit_ip_ota(texte_h, firmware),
-                        ota, firmware, ecrivable))
+                        ota, firmware, ecrivable, _fs_avec_firmware(toutes, section, ota)))
     return envs
 
 

@@ -285,15 +285,87 @@ def test_ecriture():
                 "ecrit_port : fins de ligne CRLF gardees")
 
 
+FS_CENV = """\
+[env:tasmota32-base]
+extends                 = env:tasmota32_base
+custom_files_upload     =   ${env:tasmota32_base.custom_files_upload}
+
+[env:tasmota32s3-base-N16R8]
+extends                 = env:tasmota32s3
+custom_files_upload     = ${env:tasmota32s3.custom_files_upload}
+; scripts tasmota Berry en option
+                            tasmota/berry/modules/Partition_Wizard/partition_wizard.bec
+
+[env:tasmota32-cave]
+extends                 = env:tasmota32-base
+custom_files_upload     =   ${env:tasmota32-base.custom_files_upload}
+                            data/cave/tasmota32-cave              ; scripts du module
+
+[env:tasmota32s3-garage]
+extends                 = env:tasmota32s3-base-N16R8
+
+[env:tasmota32-sans-fichier]
+extends                 = env:tasmota32-base
+
+[env:tasmota-pompe]
+extends                 = env:tasmota
+custom_files_upload     = data/piscine
+"""
+FS_ENV32 = """\
+[env:tasmota32_base]
+extra_scripts           = pre:outils_docs/scripts_python/build/pre_utilitaires_platformio.py
+custom_files_upload     = no_files
+
+[env:tasmota32s3]
+extends                 = env:tasmota32_base
+"""
+FS_ENV8266 = """\
+[env:tasmota]
+build_flags             = -DFIRMWARE_TASMOTA
+"""
+
+
+def test_fs_avec_firmware():
+    """I1 : un upload firmware par cable flashe aussi le FS des que custom_files_upload resolu a des fichiers.
+
+    post_esp32.py:139-245 reconstruit littlefs.bin a chaque edition des liens (CFG_HOLDER change a chaque
+    run : toujours une edition des liens), puis :419-440 l'ajoute a la commande esptool.
+    """
+    with tempfile.TemporaryDirectory() as t:
+        r = Path(t)
+        for nom, texte in (("platformio_tasmota_cenv.ini", FS_CENV), ("platformio_tasmota_env32.ini", FS_ENV32),
+                           ("platformio_tasmota_env.ini", FS_ENV8266)):
+            (r / nom).write_text(texte, encoding="utf-8")
+        envs = {e.nom: getattr(e, "fs_avec_firmware", None) for e in be.liste_envs(r)}
+    verifie(envs.get("tasmota32-cave"), True, "fs_avec_firmware : ${env:...} resolu + dossier de la carte")
+    verifie(envs.get("tasmota32s3-base-N16R8"), True,
+            "fs_avec_firmware : no_files herite + fichier sur une ligne de suite (apres un commentaire)")
+    verifie(envs.get("tasmota32s3-garage"), True, "fs_avec_firmware : option heritee par extends")
+    verifie((envs.get("tasmota32-sans-fichier"), envs.get("tasmota32-base"), envs.get("tasmota32s3")),
+            (False, False, False), "fs_avec_firmware : no_files seul -> faux")
+    verifie(envs.get("tasmota-pompe"), False, "fs_avec_firmware : ESP8266 (pas de post_esp32) -> faux")
+
+
 def test_vrais_fichiers():
     """Lecture seule des vrais .ini."""
     envs = {e.nom: e for e in be.liste_envs(RACINE)}
-    verifie(len([e for e in envs.values() if e.ecrivable]), 15, "reel : 15 envs cenv listes")
+    # Independant du nombre d'envs (l'utilisateur en ajoute) : au moins 15, et ceux cites ici presents.
+    cites = ["tasmota32s3-garage-capteurs-cuve-modbus", "tasmota32s3-garage-serveur-modbus", "tasmota-pompe-piscine",
+             "tasmota32-cave-serveur-rly", "tasmota32p4-garage-serveur-modbus", "tasmota32"]
+    verifie((len([e for e in envs.values() if e.ecrivable]) >= 15, [c for c in cites if c not in envs]), (True, []),
+            "reel : au moins 15 envs cenv listes, envs cites presents")
+    if any(c not in envs for c in cites):
+        return
     verifie(envs["tasmota32s3-garage-capteurs-cuve-modbus"].port, "COM12", "reel : cuve -> COM12")
     e = envs["tasmota32s3-garage-serveur-modbus"]
     verifie((e.port, e.port_herite), ("COM11", True), "reel : serveur-modbus -> COM11 herite")
     verifie(envs["tasmota-pompe-piscine"].ota_possible, False, "reel : pompe piscine (ESP8266) sans OTA")
     verifie(envs["tasmota32-cave-serveur-rly"].port, "COM11", "reel : cave -> COM11 (commentaire de fin)")
+    verifie((getattr(envs["tasmota32s3-garage-capteurs-cuve-modbus"], "fs_avec_firmware", None),
+             getattr(envs["tasmota32p4-garage-serveur-modbus"], "fs_avec_firmware", None),
+             getattr(envs["tasmota32"], "fs_avec_firmware", None),
+             getattr(envs["tasmota-pompe-piscine"], "fs_avec_firmware", None)),
+            (True, True, False, False), "reel : FS flashe avec le firmware pour cuve et P4, pas pour tasmota32 ni la pompe")
 
 
 def principal():
@@ -303,6 +375,7 @@ def principal():
     test_ip()
     test_ip_comme_original()
     test_ecriture()
+    test_fs_avec_firmware()
     test_vrais_fichiers()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0

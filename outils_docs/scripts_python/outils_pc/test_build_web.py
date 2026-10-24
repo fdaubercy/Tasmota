@@ -33,6 +33,7 @@ extra_scripts           = pre:outils_docs/scripts_python/build/pre_utilitaires_p
 [env:{A}]
 extends                 = env:tasmota32-essai-base
 upload_port             = COM12
+custom_files_upload     = data/essai/{A}
 
 [env:{B}]
 extends                 = env:tasmota32-essai-base
@@ -139,14 +140,9 @@ def test_routes_locales(b):
     verifie((statut, sorted(noms)), (200, sorted([A, B, "tasmota32-essai-base"])),
             "routes_locales : GET /envs liste les envs (famille bases comprise)")
     env_a = next((e for e in donnees["envs"] if e["nom"] == A), {})
-    verifie((env_a.get("port"), env_a.get("famille"), env_a.get("littlefs")), ("COM12", "cartes", False),
-            "routes_locales : champs de Env + littlefs")
+    verifie((env_a.get("port"), env_a.get("famille"), env_a.get("fs_avec_firmware")), ("COM12", "cartes", True),
+            "routes_locales : champs de Env (fs_avec_firmware compris)")
     verifie(donnees["derniers"], {}, "routes_locales : derniers choix vides au depart")
-    (b.racine / ".pio" / "build" / A).mkdir(parents=True)
-    (b.racine / ".pio" / "build" / A / "littlefs.bin").write_bytes(b"x")
-    _, donnees = b.json("GET", "/envs")
-    verifie({e["nom"]: e["littlefs"] for e in donnees["envs"]}, {A: True, B: False, "tasmota32-essai-base": False},
-            "routes_locales : littlefs vrai si littlefs.bin existe")
     verifie(b.json("GET", "/execution"), (200, {"en_cours": False}), "routes_locales : GET /execution")
     verifie(b.requete("GET", "/nimporte")[0], 404, "routes_locales : route inconnue = 404")
     verifie(b.requete("POST", "/nimporte", {})[0], 404, "routes_locales : POST inconnu = 404")
@@ -186,19 +182,19 @@ def test_page_contient(b):
     verifie(len(manques_page(build_web.PAGE_PROVISOIRE)) > 10, True, "page_contient : temoin, page provisoire refusee")
 
 
-def test_envs_littlefs(b):
+def test_envs_fs_avec_firmware(b):
+    """I1 : l'annonce « FS aussi flashe » depend de l'env (custom_files_upload), pas de littlefs.bin."""
+    _, donnees = b.json("GET", "/envs")
+    verifie({e["nom"]: e["fs_avec_firmware"] for e in donnees["envs"]}, {A: True, B: False, "tasmota32-essai-base": False},
+            "envs_fs_avec_firmware : vrai pour l'env qui embarque des fichiers, sans aucun littlefs.bin (purge)")
     racine_build = b.racine / ".pio" / "build" / B
-    _, donnees = b.json("GET", "/envs")
-    verifie(next(e["littlefs"] for e in donnees["envs"] if e["nom"] == B), False, "envs_littlefs : faux sans littlefs.bin")
     racine_build.mkdir(parents=True)
-    (racine_build / "littlefs.bin").write_bytes(b"x")
+    (racine_build / "littlefs.bin").write_bytes(b"x")              # temoin : un littlefs.bin ne change rien
     _, donnees = b.json("GET", "/envs")
-    verifie(next(e["littlefs"] for e in donnees["envs"] if e["nom"] == B), True, "envs_littlefs : vrai avec littlefs.bin")
+    verifie((next(e["fs_avec_firmware"] for e in donnees["envs"] if e["nom"] == B),
+             any("littlefs" in e for e in donnees["envs"])), (False, False),
+            "envs_fs_avec_firmware : temoin, littlefs.bin present sans fichiers -> faux ; plus de champ littlefs")
     (racine_build / "littlefs.bin").unlink()
-    (racine_build / "littlefs.bin").mkdir()                      # temoin : un DOSSIER de ce nom n'est pas une image
-    _, donnees = b.json("GET", "/envs")
-    verifie(next(e["littlefs"] for e in donnees["envs"] if e["nom"] == B), False, "envs_littlefs : un dossier ne compte pas")
-    (racine_build / "littlefs.bin").rmdir()
 
 
 def test_post_sans_entete_refuse(b):
@@ -350,7 +346,7 @@ def principal():
         os.environ["OUTILS_TASMOTA_DOSSIER"] = str(Path(t) / "outils")
         b = Banc(Path(t))
         try:
-            for test in (test_routes_locales, test_page_contient, test_envs_littlefs, test_post_sans_entete_refuse, test_distant_sans_jeton_refuse,
+            for test in (test_routes_locales, test_page_contient, test_envs_fs_avec_firmware, test_post_sans_entete_refuse, test_distant_sans_jeton_refuse,
                          test_corps_borne, test_port_ecrit_puis_relu, test_lancement, test_flux_et_journal,
                          test_journal_dernier_lancement, test_arret):
                 test(b)

@@ -47,10 +47,13 @@ A, B, C, BASE = "tasmota32-sonde-a", "tasmota32-sonde-b", "tasmota32s3-sonde-c",
 CENV = f"""\
 [env:{BASE}]
 extra_scripts           = pre:outils_docs/scripts_python/build/pre_utilitaires_platformio.py
+custom_files_upload     = no_files
 
 [env:{A}]
 extends                 = env:{BASE}
 upload_port             = COM12
+custom_files_upload     = ${{env:{BASE}.custom_files_upload}}
+                          data/essai/{A}
 
 [env:{B}]
 extends                 = env:{BASE}
@@ -285,8 +288,8 @@ class Montage:
         (self.depot / "platformio_tasmota_cenv.ini").write_text(CENV, encoding="utf-8")
         (self.depot / "platformio_tasmota_env32.ini").write_text(ENV32, encoding="utf-8")
         (self.depot / "platformio_tasmota_env.ini").write_text(ENV8266, encoding="utf-8")
-        (self.depot / ".pio" / "build" / A).mkdir(parents=True)
-        (self.depot / ".pio" / "build" / A / "littlefs.bin").write_bytes(b"x")   # mention « FS aussi flashe »
+        # mention « FS aussi flashe » : A embarque des fichiers (custom_files_upload), SANS littlefs.bin
+        # (apres une purge de .pio/build, post_esp32 le reconstruira quand meme a l'upload)
         scenario = self.t / "scenario.json"
         scenario.write_text(json.dumps(SCENARIO), encoding="utf-8")
         environ = dict(os.environ, BUILD_WEB_PIO=str(FAUX_PIO), BUILD_WEB_FAUX_SCENARIO=str(scenario),
@@ -383,11 +386,15 @@ def sonde_page(m, capture):
                        document.querySelector('.env[data-env=tasmota] .methode button:nth-child(2)').disabled]"""),
             [True, True, True], "familles depliables ; OTA grise pour l'ESP8266")
 
-    # mention « le FS sera aussi flashe » : A (littlefs.bin present), upload coche, methode COM
+    # mention « le FS sera aussi flashe » : A (custom_files_upload avec fichiers), upload coche, methode COM
     coche(cdp, f"#env-{A}")
+    coche(cdp, f"#env-{C}")
     coche(cdp, 'input[name=action][value="upload"]')
     verifie(cdp.js(f"document.querySelector('.env[data-env=\"{A}\"] .notes').textContent.includes('sera aussi flashé')"),
-            True, "mention : le file system (persist compris) sera aussi flashe")
+            True, "mention : le file system (persist compris) sera aussi flashe (sans littlefs.bin)")
+    verifie(cdp.js(f"document.querySelector('.env[data-env=\"{C}\"] .notes').textContent.includes('sera aussi flashé')"),
+            False, "mention : temoin, env sans fichiers (no_files) -> pas de mention")
+    coche(cdp, f"#env-{C}", False)
     coche(cdp, 'input[name=action][value="upload"]', False)
     verifie(cdp.js(f"document.querySelector('.env[data-env=\"{A}\"] .notes').textContent.includes('sera aussi flashé')"),
             False, "mention : disparait quand upload est decoche (temoin)")
