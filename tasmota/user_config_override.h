@@ -48,7 +48,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
     //  #warning *** ------------------- Le fichier 'user_config_override.ini' est appele ------------------- ***
     #if defined(CFG_HOLDER) && (CFG_HOLDER == 4617)
         #undef CFG_HOLDER
-		#define CFG_HOLDER 		1541			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
+		#define CFG_HOLDER 		1543			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
 
         // #pragma message(*** ------------------- Les paramètres flash seront remplacés ! ------------------- ***)
     #else
@@ -2149,6 +2149,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #endif
             #define USER_TEMPLATE 		"{\"NAME\":\"ESP32S3 Serveur Garage Modbus\",\"GPIO\":[1,1,1,1,9440,9408,1,1,608,640,1,1,1,288,1,1,1,1,1,1,1,1,0,0,0,0,0,544,1,352,1,1,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
 
+            // -- Pile de la boucle : 24 Ko, comme quand FIRMWARE_LVGL la fixait (LVGL retire le 2026-10-24, audit P2.1)
+            #undef SET_ESP32_STACK_SIZE
+                #define SET_ESP32_STACK_SIZE (24 * 1024)
+
             #ifdef MODULE
                 #undef MODULE
             #endif
@@ -2298,6 +2302,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
                 #undef USER_TEMPLATE
             #endif
             #define USER_TEMPLATE 		"{\"NAME\":\"ESP32S3 Capteur Cuve Modbus\",\"GPIO\":[1,1,1,1,3232,3200,1376,1,608,640,1,1,1,1,1,1,1,1,1312,1,1,1,0,0,0,0,0,544,288,1,1,1,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
+
+            // -- Pile de la boucle : 24 Ko, comme quand FIRMWARE_LVGL la fixait (LVGL retire le 2026-10-24, audit P2.1)
+            #undef SET_ESP32_STACK_SIZE
+                #define SET_ESP32_STACK_SIZE (24 * 1024)
 
             #ifdef MODULE
                 #undef MODULE
@@ -2471,7 +2479,11 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #ifdef USER_TEMPLATE
                 #undef USER_TEMPLATE
             #endif
-            #define USER_TEMPLATE 		"{\"NAME\":\"ESP32S3 Rideau Garage Modbus\",\"GPIO\":[1,1,1,1,3232,3200,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,544,288,1,224,225,1,1,1,1,1,1s],\"FLAG\":0,\"BASE\":1}"
+            #define USER_TEMPLATE 		"{\"NAME\":\"ESP32S3 Rideau Garage Modbus\",\"GPIO\":[1,1,1,1,3232,3200,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,544,288,1,224,225,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
+
+            // -- Pile de la boucle : 24 Ko, comme quand FIRMWARE_LVGL la fixait (LVGL retire le 2026-10-24, audit P2.1)
+            #undef SET_ESP32_STACK_SIZE
+                #define SET_ESP32_STACK_SIZE (24 * 1024)
 
             #ifdef MODULE
                 #undef MODULE
