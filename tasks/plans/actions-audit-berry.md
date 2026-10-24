@@ -34,7 +34,7 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
 - [ ] P6.2 — 6 clés `log` orphelines : créer leurs cibles ou retirer les clés (corrige L2 ; cote G, effort faible, risque dec)
 - [ ] P2.9 — Ports COM propres à chaque poste : hors du `.ini` partagé (corrige E13 ; cote D, effort faible, risque dec)
 - [ ] P5.15 — Une seule source pour chaque donnée de la fiche discovery (routagePort, id, IPAddress) (corrige N22 ; cote S, effort moyen, risque dec)
-- [ ] P7.8 — IP fixe du PC syslog, ou syslog vers le Pi SERVEUR-BUREAU (corrige C9 ; cote D, effort faible, risque dec) — décision 2026-10-24 : IP fixe du PC ; à faire par l'utilisateur : bail DHCP sur la box, 192.168.0.3 pour la MAC Wi-Fi DC-85-DE-D9-CA-1D, puis corriger la ligne syslog de `CLAUDE.md`
+- [x] P7.8 — IP fixe du PC syslog, ou syslog vers le Pi SERVEUR-BUREAU (corrige C9 ; cote D, effort faible, risque dec) — décision 2026-10-24 : IP fixe du PC ; à faire par l'utilisateur : bail DHCP sur la box, 192.168.0.3 pour la MAC Wi-Fi DC-85-DE-D9-CA-1D, puis corriger la ligne syslog de `CLAUDE.md` — preuve : réservation DHCP sur la box confirmée par l'utilisateur le 2026-10-24 (192.168.0.3, bail DHCP relevé sous Windows : `PrefixOrigin Dhcp`) ; `CLAUDE.md` § outils_pc/syslog corrigé
 - [ ] P8.5 — ESP-NOW côté P4 : passerelle S3, ou ESP-NOW réservé aux S3 (après P8.4) (corrige T2 ; cote G, effort —, risque dec)
 - [ ] P8.10 — Attendre esp-hosted-mcu#19 avant tout ESP-NOW sur le P4 ; pas de C6 reflashé (corrige T2 ; cote G, effort nul, risque dec)
 

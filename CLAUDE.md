@@ -525,7 +525,8 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     ecoute UDP 514, page http://127.0.0.1:7200 (filtre module / severite / texte), journal
     `%TEMP%/syslog_tasmota.log`. Cible PlatformIO « Serveur syslog » dans Custom. Les modules
     envoient a `SYS_LOG_HOST` (`user_config_override.h`) = **192.168.0.3, ce PC** (le NAS
-    192.168.0.2 est eteint) : IP a figer par un bail DHCP fixe sur la box.
+    192.168.0.2 est eteint) : IP figee par une reservation DHCP sur la box (MAC Wi-Fi
+    DC-85-DE-D9-CA-1D, confirmee le 2026-10-24 ; Windows reste en DHCP, c'est normal).
   - `testeur_udp.py` (+ `testeur_udp_carte.py`, `testeur_udp_essais.py`, `testeur_udp_http.py`,
     `testeur_udp_web.py`, `testeur_udp_aide.py`, `testeur_udp_grille.py`, `testeur_udp_grille_web.py`,
     `build/cible_testeur_udp.py`) — page
