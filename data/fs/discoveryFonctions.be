@@ -265,6 +265,10 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
 
             jsonData.insert(item, {})
 
+            # COPIES VOLONTAIRES (audit N22/P5.15, decide le 2026-10-24 : on les garde) : id = rangeExtender.id
+            # = ModBus.id (alignes au boot par controleRangeExtender), routagePort = 8080 + id - 1, IPAddress
+            # recopiee sous ModBus.TCP/UDP. Toutes ecrites ici depuis la meme valeur : ne pas en modifier
+            # une seule. Format garde pour les cartes non reflashees et les outils PC (page /discovery, sniffeur MQTT).
             jsonData[item].insert("id", serveur["udp"]["id"])
             jsonData[item].insert("nom", serveur["nom"])
 
