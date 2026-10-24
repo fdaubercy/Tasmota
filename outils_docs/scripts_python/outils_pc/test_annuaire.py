@@ -40,11 +40,11 @@ def lit(outil):
 
 def section_registre():
     print("== registre ==")
-    ids = ["pont_serie", "sniffeur_modbus", "testeur_udp", "sniffeur_mqtt", "syslog", "synchro_fork"]
-    verifie([o.id for o in reg.OUTILS], ids, "six_outils : ids et ordre")
-    verifie(all(o.groupe in reg.GROUPES for o in reg.OUTILS), True, "six_outils : groupes connus")
+    ids = ["pont_serie", "sniffeur_modbus", "testeur_udp", "sniffeur_mqtt", "syslog", "synchro_fork", "build"]
+    verifie([o.id for o in reg.OUTILS], ids, "sept_outils : ids et ordre")
+    verifie(all(o.groupe in reg.GROUPES for o in reg.OUTILS), True, "sept_outils : groupes connus")
     verifie([o.id for o in reg.OUTILS if not os.path.isfile(os.path.join(RACINE, o.script))], [],
-            "six_outils : scripts existants")
+            "sept_outils : scripts existants")
     verifie(all(o.interet and o.aide and o.journaux and o.nom for o in reg.OUTILS), True, "textes renseignes")
 
     for o in reg.OUTILS:
@@ -306,10 +306,10 @@ def section_serveur():
 
     try:
         s, j = appel(port, "GET", "/registre")
-        verifie((s, len(j["outils"])), (200, 6), "routes_get : /registre a 6 outils")
+        verifie((s, len(j["outils"])), (200, 7), "routes_get : /registre a 7 outils")
         s, j = appel(port, "GET", "/etat")
-        verifie((s, len(j["outils"]), isinstance(j["liens_reseau"], list)), (200, 6, True),
-                "routes_get : /etat a 6 entrees")
+        verifie((s, len(j["outils"]), isinstance(j["liens_reseau"], list)), (200, 7, True),
+                "routes_get : /etat a 7 entrees")
         verifie(isinstance(j.get("derniers"), dict), True, "routes_get : /etat porte derniers (dict)")
         verifie(appel(port, "GET", "/console?id=inconnu")[0], 404, "routes_get : console inconnue -> 404")
         verifie(appel(port, "GET", "/console?id=syslog")[1], {"lignes": []}, "routes_get : console vide")

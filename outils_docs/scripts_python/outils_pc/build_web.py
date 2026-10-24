@@ -221,7 +221,7 @@ def principal():
     acces_web.ajoute_options(options)
     args = options.parse_args()
 
-    acces = acces_web.Acces(args.http, args.local, NOM_OUTIL)
+    acces = acces_web.Acces(args.http, args.local, "Build et téléversement")
     dossier = acces_web.dossier_donnees() / "build"
     serie = build_serie.Serie(DEPOT, dossier)
     try:

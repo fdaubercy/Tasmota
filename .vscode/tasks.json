@@ -187,6 +187,17 @@
             "runOptions": { "runOn": "folderOpen" },
             "presentation": { "reveal": "never", "panel": "dedicated" },
             "problemMatcher": []
+        },
+        {
+            // Page de build et televersement (compiler / televerser firmware et FS, COM ou OTA par
+            // carte, suivi en direct) : lien dans la console, navigateur ouvert. Lance des `pio run`
+            // elle-meme : pas de cible PlatformIO Custom pour celle-ci.
+            "label": "Outil : build et televersement (http://127.0.0.1:7700)",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/build_web.py", "--http", "7700"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
         }
     ]
 }

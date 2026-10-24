@@ -136,6 +136,20 @@ OUTILS = [
         "Console capturée : " + CONSOLE.format("synchro_fork") + ". Historique des synchros : "
         "outils_docs/HISTORIQUE_SYNCHRO_FORK.md.",
         dans_job=False, route_occupe="/execution"),
+    Outil(
+        "build", "Build et téléversement", "Build et téléversement", GROUPES[2],
+        "Compile et téléverse les cartes du parc (firmware et file system, COM ou OTA), avec suivi en direct.",
+        "Page web de build : on coche des environnements PlatformIO et des actions (compiler, téléverser le "
+        "firmware, construire le file system, téléverser le file system), COM ou OTA par ligne ; les "
+        "environnements passent l'un après l'autre, avec étape, pourcentage, durées et échecs en direct. "
+        "Seul paramètre ici : le port de la page (7700). Pour l'arrêter : bouton Arrêter de l'annuaire "
+        "(refusé pendant un lancement), ou Ctrl+C dans son terminal s'il a été lancé ailleurs.",
+        DOSSIER + "outils_pc/build_web.py",
+        [_port("http", 7700)],
+        "http",
+        "Console capturée : " + CONSOLE.format("build") + ". Sortie complète de chaque pio run : "
+        "%LOCALAPPDATA%\\outils_tasmota\\build\\journaux\\.",
+        dans_job=False, route_occupe="/execution"),
 ]
 
 
