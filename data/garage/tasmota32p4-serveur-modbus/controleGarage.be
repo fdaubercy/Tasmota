@@ -224,7 +224,9 @@ class CONTROLE_GARAGE : Driver
                         temperature = real(thermoJson["value"])
                         temperature = int(temperature * 10) / 10.0
 
-                        humidity = real(thermoJson["value"])
+                        # Humidite : cle 'Humidity' rangee par globalFonctions.changementEtatCapteur, 'value' etant
+                        # la temperature (2026-10-24, audit N8/P5.8 : 'value' etait lu deux fois)
+                        humidity = real(thermoJson.find("Humidity", 0))
                         humidity = int(humidity * 10) / 10.0
 
                         # Ajoute à la page web

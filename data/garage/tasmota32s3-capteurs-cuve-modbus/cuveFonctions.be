@@ -462,11 +462,8 @@ cuveFonctions.changementEtatDemarrage = def(value, trigger, msg)
 	cuveFonctions.log("CUVE_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
 	cuveFonctions.log("CUVE_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}
 
-	if (type(value) == "instance")
-		for cle: value.keys()
-			value = value[cle]
-		end
-	end
+	# Pas de "deballage" de 'value' ici (inutilise dans cette fonction) : l'ancienne boucle
+	# 'for cle: value.keys() value = value[cle] end' levait des la 2e cle (2026-10-24, audit N9/P5.8).
 
 	# Lorsque la connexion Wi-Fi est change
 	if (trigger == "Wifi")
@@ -506,17 +503,9 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
     tasmota.yield()
 
 	# Extrait la valeur scalaire d'un evenement, ex: {"Action": "ON"} -> "ON", sur TOUS les niveaux
-	# d'imbrication (avant : un seul niveau deroule, et 'value' reaffectee pendant le parcours de ses
-	# cles). Une map a plusieurs cles (ex. mesures ADS1115 A0..A3) est volontairement laissee intacte.
-	while isinstance(value, map)
-		if value.contains("Action")
-			value = value["Action"]
-		elif value.size() == 1
-			value = value[value.keys()()]		# unique cle
-		else
-			break
-		end
-	end
+	# d'imbrication. Une map a plusieurs cles (ex. mesures ADS1115 A0..A3) est volontairement laissee intacte.
+	import diversFonctions
+	value = diversFonctions.valeurScalaire(value)
 
     # Si msg="" & value=""
     if (msg == "" || value == "")

@@ -45,7 +45,8 @@
                                                                a l'IPAddress de la fiche (multicast si absente)
 
       1. Côté esclave
-         * Déclenchement : changementEtatDemarrage (System#Boot, id > 0), puis timer NOMMÉ "forceEnvoiParams"
+         * Déclenchement : lanceCyclePresentation (System#Boot, ou secours C7 sans MQTT depuis le 2026-10-24,
+           P8.7 ; une fois par démarrage, id > 0), puis timer NOMMÉ "forceEnvoiParams"
            ré-armé à chaque passage (remove_timer avant set_timer : une seule chaîne d'envois, même après
            des appels manuels — avant le 2026-10-03, chaque appel manuel en ajoutait une).
          * Collecte : la fiche est CONSTRUITE à la connexion Wi-Fi par discoveryFonctions.changementEtatDemarrage
@@ -108,6 +109,7 @@ def udpFonctions_etat()
             "secoursFini": false,      # les 2 ecoutes ouvertes (Boot ou secours), ou System#Save (C7)
             "reseauDepuis": nil,       # tasmota.millis() de la montee du reseau, Boot pas encore vu (C7)
             "essaiApres": [nil, nil],  # apres une ouverture refusee : pas de nouvel essai avant (C7)
+            "cycleLance": false,       # cycle de presentation lance (Boot ou secours C7), une fois par demarrage (P8.7)
             "socketsEmission": {}      # sockets d'emission gardees ouvertes, par adresse locale (voir emet)
         }
     end
@@ -398,11 +400,8 @@ def udpFonctions_changementEtatDemarrage(value, trigger, msg, typeComm)
 	udpFonctions.log("UDP_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}
     udpFonctions.log("UDP_CHGT_ETAT_DEMARRAGE: typeComm=" + str(typeComm), LOG_LEVEL_DEBUG_PLUS)		# msg=UniCast / msg = MultiCast
 
-	if (type(value)) == "instance"
-		for cle: value.keys()
-			value = value[cle]
-		end
-	end
+	# Pas de "deballage" de 'value' ici (inutilise dans cette fonction) : l'ancienne boucle
+	# 'for cle: value.keys() value = value[cle] end' levait des la 2e cle (2026-10-24, audit N9/P5.8).
 
     tasmota.yield()
 
@@ -433,15 +432,7 @@ def udpFonctions_changementEtatDemarrage(value, trigger, msg, typeComm)
             # Evite de répéter l'opération 2 fois
             if (string.toupper(typeComm) == string.toupper("MultiCast"))  return  end
 
-            # Les esclaves envoient leurs paramètres par UDP MultiCast au Maitre / telePeriod
-            # Le Maitre reset l'état de chaque esclave connus avant réception
-            if (serveur["udp"]["id"] > 0)
-                udpFonctions.log(string.format("UDP_CHGT_ETAT_DEMARRAGE: L'esclave n°%i envoie ses paramètres au maitre !", serveur["udp"]["id"]), LOG_LEVEL_DEBUG)
-                # udpFonctions.resetClientsConnectes()
-                tasmota.cmd("ReglageUDP forceEnvoiParams ON", boolMute)
-            else 
-                tasmota.set_timer(diverses["telePeriod"] * 1000, def()  udpFonctions.resetClientsConnectes()     end, "resetEsclaves")
-            end
+            udpFonctions.lanceCyclePresentation()
         elif msg[trigger].find("Save", 0)
             udpFonctions.log("UDP_CHGT_ETAT_DEMARRAGE: Fermeture connexion MultiCast & UniCast", LOG_LEVEL_DEBUG_PLUS)
             udpFonctions.etat()["udpReception"][0].close()
@@ -467,6 +458,26 @@ def udpFonctions_changementEtatDemarrage(value, trigger, msg, typeComm)
     end
 end
 udpFonctions.changementEtatDemarrage = udpFonctions_changementEtatDemarrage
+
+# Cycle de presentation, UNE fois par demarrage : par System#Boot, ou par le secours C7 quand Boot ne vient pas
+# (broker injoignable). Avant, il n'etait lance que par Boot : sans MQTT, un esclave ne se presentait jamais
+# (2026-10-24, audit R2/P8.7). Un Boot tardif ne le relance pas : forceEnvoiParams se replanifie seul.
+#  - esclave : envoie sa fiche au maitre (forceEnvoiParams), puis toutes les telePeriod ;
+#  - maitre : remet les esclaves connus a Offline apres une telePeriod (les ImAlive les remettent Online).
+def udpFonctions_lanceCyclePresentation()
+    var e = udpFonctions.etat()
+    if (e["cycleLance"])    return    end         # appelee chaque seconde par le secours : sortie avant l'import
+    e["cycleLance"] = true
+    import string
+    if (serveur["udp"]["id"] > 0)
+        udpFonctions.log(string.format("UDP_CHGT_ETAT_DEMARRAGE: L'esclave n°%i envoie ses paramètres au maitre !", serveur["udp"]["id"]), LOG_LEVEL_DEBUG)
+        tasmota.cmd("ReglageUDP forceEnvoiParams ON", boolMute)
+    else
+        tasmota.remove_timer("resetEsclaves")
+        tasmota.set_timer(diverses["telePeriod"] * 1000, def()  udpFonctions.resetClientsConnectes()     end, "resetEsclaves")
+    end
+end
+udpFonctions.lanceCyclePresentation = udpFonctions_lanceCyclePresentation
 
 # Ouvre la socket d'ecoute de typeComm (UniCast : port 2000, MultiCast : 224.3.0.1:4000), UNE seule fois.
 # true si elle est ouverte. Rien tant que le reseau n'est pas monte : creer une socket avant la pile TCP/IP
@@ -494,7 +505,8 @@ udpFonctions.ouvreEcoute = udpFonctions_ouvreEcoute
 # cuve commandee par UDP n'entend plus le P4. Appelee chaque seconde par les deux CONTROLE_UDP : si les deux
 # ecoutes ne sont pas ouvertes 60 s apres la montee du reseau (Boot absent, ou son ouverture refusee), les ouvre. Les 60 s laissent le chemin
 # normal intact et le point d'acces du maitre se creer avant l'abonnement multicast (course L2).
-# Le reste de Boot (fiche de l'esclave, timer resetEsclaves du maitre) attend le vrai Boot.
+# Il lance aussi le cycle de presentation (fiche de l'esclave, timer resetEsclaves du maitre), sauf si Boot
+# l'a deja fait (2026-10-24, audit R2/P8.7).
 def udpFonctions_secoursSansMqtt(typeComm)
     import string
     var e = udpFonctions.etat()
@@ -510,6 +522,7 @@ def udpFonctions_secoursSansMqtt(typeComm)
         return
     end
     if (maintenant - e["reseauDepuis"] < delai)    return    end
+    udpFonctions.lanceCyclePresentation()   # sans effet si Boot l'a deja lance (P8.7)
     var i = (string.toupper(str(typeComm)) == "UNICAST" ? 0 : 1)
     if (e["ecouteOuverte"][i])    return    end
     var essai = e["essaiApres"]

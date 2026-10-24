@@ -392,9 +392,11 @@ def increment_config_holder():
         return
 
     current_value = int(current_value_match.group(1))
-    if current_value == 65535:
-        current_value = 0
-        print(Fore.RED + "La valeur de CFG_HOLDER a atteint la limite maximale de 65535 et ne peut pas être incrémentée davantage.")
+    # CFG_HOLDER est un uint16 : a 65535, on reboucle a 1 (audit E5/P2.3 : new_value n'etait pas affecte,
+    # UnboundLocalError cassait le build). Toute valeur differente de la precedente suffit a recharger SECTION1.
+    if current_value >= 65535:
+        new_value = 1
+        print(Fore.RED + "La valeur de CFG_HOLDER a atteint la limite maximale de 65535 : retour a 1.")
     else:
         new_value = current_value + 1
     lines[config_holder_line_index] = f"\t\t#define CFG_HOLDER \t\t{new_value}\t\t\t// [Reset 1] Change this value to load SECTION1 configuration parameters to flash\n"

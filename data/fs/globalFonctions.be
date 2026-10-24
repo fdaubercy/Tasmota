@@ -182,17 +182,11 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 	logFonctions.log("GLOBAL_GESTION_CAPTEURS: cleBouton=" + str(cleBouton), LOG_LEVEL_DEBUG_PLUS)					# cleBouton=bouton1
 
 	# Extrait la valeur scalaire d'un evenement, ex: {"Action": "ON"} -> "ON" (eventuellement imbrique).
-	# Avant : 'for cle: value.keys() value = value[cle] end' reaffectait 'value' PENDANT le parcours
-	# de ses cles -> des la 2e cle, indexation de la valeur extraite (erreur), et un seul niveau deroule.
-	while isinstance(value, map)
-		if value.contains("Action")
-			value = value["Action"]
-		elif value.size() == 1
-			value = value[value.keys()()]		# unique cle
-		else
-			logFonctions.log("GLOBAL_GESTION_CAPTEURS_ERREUR: Valeur ambigue pour '" + str(trigger) + "' : " + str(value), LOG_LEVEL_ERREUR)
-			return
-		end
+	import diversFonctions
+	value = diversFonctions.valeurScalaire(value)
+	if isinstance(value, map)
+		logFonctions.log("GLOBAL_GESTION_CAPTEURS_ERREUR: Valeur ambigue pour '" + str(trigger) + "' : " + str(value), LOG_LEVEL_ERREUR)
+		return
 	end
 
 	tasmota.yield()
@@ -413,10 +407,12 @@ def globalFonctions_changementEtatWS2812(value, trigger, msg, moduleLED, cleLED)
 	logFonctions.log("GLOBAL_GESTION_WS2812: moduleLED=" + str(moduleLED), LOG_LEVEL_DEBUG)					# moduleCapteur=cuve
 	logFonctions.log("GLOBAL_GESTION_WS2812: cleLED=" + str(cleLED), LOG_LEVEL_DEBUG)						# cleLED=relai1
 
-	if (type(value)) == "instance"
-		for cle: value.keys()
-			value = value[cle]
-		end
+	# Valeur scalaire de l'evenement (2026-10-24, audit N9/P5.8 : l'ancienne boucle levait des la 2e cle)
+	import diversFonctions
+	value = diversFonctions.valeurScalaire(value)
+	if isinstance(value, map)
+		logFonctions.log("GLOBAL_GESTION_WS2812_ERREUR: Valeur ambigue pour '" + str(trigger) + "' : " + str(value), LOG_LEVEL_ERREUR)
+		return
 	end
 
 	tasmota.yield()

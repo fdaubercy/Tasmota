@@ -409,6 +409,31 @@ else
         tasmota.capteurs = {"Time": "2026-10-23T00:00:20"}
         tasmota.appelle("CONTROLE_GARAGE.web_sensor", /-> garage.web_sensor(), [])
         controle("compteur de nouveau absent : de nouveau signale (2e erreur)", erreursCompteur() == 2 && size(BANC_BOOT.exceptions) == 0)
+        # Audit N8/P5.8 : thermometre AM2301 (1216) du P4 : l'humidite affichee etait la temperature ('value' lu
+        # deux fois). changementEtatCapteur range l'humidite sous la cle 'Humidity' de l'appareil.
+        import gestionFileFolder
+        var thermos = global.modules["garage"]["environnement"]["thermometres"]
+        var cleAM = nil
+        for c: thermos.keys()    if isinstance(thermos[c], map) && thermos[c].find("type") == 1216    cleAM = c    end    end
+        if cleAM == nil
+            controle("P5.8/N8 : un thermometre AM2301 (1216) existe dans le persist du P4", false)
+        else
+            var am = thermos[cleAM]
+            var sauveAM = {"activation": am.find("activation"), "value": am.find("value"), "Humidity": am.find("Humidity")}
+            thermos[cleAM]["activation"] = "ON"    thermos[cleAM]["value"] = 21.5    thermos[cleAM]["Humidity"] = 63.4
+            var envoiOrigine = gestionFileFolder.readFileByLineReplaceAndWebSend
+            var vuAM = {}
+            gestionFileFolder.readFileByLineReplaceAndWebSend = def (f, v, m)
+                if isinstance(v, map) && v.contains("sensors->AM2301->Humidity")    vuAM = v    end
+                return envoiOrigine(f, v, m)
+            end
+            tasmota.appelle("CONTROLE_GARAGE.web_sensor", /-> garage.web_sensor(), [])
+            gestionFileFolder.readFileByLineReplaceAndWebSend = envoiOrigine
+            for k: sauveAM.keys()    if sauveAM[k] == nil    am.remove(k)    else    am[k] = sauveAM[k]    end    end
+            controle("P5.8/N8 : AM2301 du P4 : T 21.5°C et humidite 63.4%RH (lu : " + str(vuAM.find("sensors->AM2301->Temperature"))
+                     + " / " + str(vuAM.find("sensors->AM2301->Humidity")) + ")",
+                     vuAM.find("sensors->AM2301->Temperature") == "21.5°C" && vuAM.find("sensors->AM2301->Humidity") == "63.4%RH")
+        end
     end
 end
 
@@ -491,6 +516,104 @@ if CAS == 1
     gestionFileFolder.loadBerryFile("/essaiOff", "ON", "ON")
     controle("P4.1 : activation ON -> module charge", global.essaiOffCharge == true)
     LITTLEFS.fichiers.remove("/essaiOff.bec")
+    # Audit B4/P10.5 : sans /sd, listeEtRepartitLesFichiers le cree puis se rappelle ; si mkdir echoue (LittleFS
+    # plein), l'ancien code se rappelait sans fin (debordement de pile). Le bouchon arrete la recursion au 4e essai.
+    import path
+    var existsOrig = path.exists
+    var mkdirOrig = path.mkdir
+    var sd = {"essais": 0, "ok": false, "cree": false}
+    path.exists = def (c) if c == "/sd" return sd["cree"] end return existsOrig(c) end
+    path.mkdir = def (c)
+        if c != "/sd"    return mkdirOrig(c)    end
+        sd["essais"] += 1
+        if sd["essais"] > 3    raise "banc_recursion", "mkdir('/sd') rappele sans fin"    end
+        if sd["ok"]    sd["cree"] = true    end
+        return sd["ok"]
+    end
+    var repartit = def ()
+        try    gestionFileFolder.listeEtRepartitLesFichiers()    return nil
+        except .. as e, m    return e + " : " + m
+        end
+    end
+    var erreursSd = def ()
+        var n = 0
+        for l: BANC_BOOT.journal    if string.find(l[0], "REPARTITION_FICHIERS_ERREUR") >= 0    n += 1    end    end
+        return n
+    end
+    sd["ok"] = true
+    var excOk = repartit()
+    controle("TEMOIN P10.5 : mkdir('/sd') reussi -> un essai, repartition terminee sans erreur",
+             excOk == nil && sd["essais"] == 1 && erreursSd() == 0)
+    sd["essais"] = 0    sd["ok"] = false    sd["cree"] = false
+    var excKo = repartit()
+    controle("P10.5 : mkdir('/sd') en echec -> un seul essai (pas de recursion), echec journalise en erreur",
+             excKo == nil && sd["essais"] == 1 && erreursSd() == 1)
+    path.exists = existsOrig
+    path.mkdir = mkdirOrig
+    # Audit N9/P5.8 : deballage de 'value' d'un evenement de regle. L'ancienne boucle 'for cle: value.keys()
+    # value = value[cle] end' indexait la valeur deja extraite des la 2e cle (type_error).
+    import diversFonctions
+    var vs = diversFonctions.valeurScalaire
+    controle("P5.8 : valeurScalaire : {'Action':'ON'} -> 'ON', imbrique -> 3, scalaire inchange, plusieurs cles -> map rendue",
+             vs({"Action": "ON"}) == "ON" && vs({"a": {"b": 3}}) == 3 && vs(5) == 5 && isinstance(vs({"A0": 1, "A1": 2}), map))
+    var plusieursCles = def () return {"AP": 1, "SSId": "box", "RSSI": 80} end      # ex. bloc 'Wifi' de STATE
+    var leve = def (f)
+        try    f()    return nil
+        except .. as e, m    return e + " : " + m
+        end
+    end
+    import webFonctions
+    import garageFonctions
+    import globalFonctions
+    var exWeb = leve(/-> webFonctions.changementEtatDemarrage(plusieursCles(), "Essai", {}))           # declencheur sans branche :
+    var exGarage = leve(/-> garageFonctions.changementEtatDemarrage(plusieursCles(), "Essai", {}))     # seul le deballage est teste
+    controle("P5.8 : changementEtatDemarrage web et garage : valeur a plusieurs cles sans exception"
+             + (exWeb != nil ? " (web : " + exWeb + ")" : "") + (exGarage != nil ? " (garage : " + exGarage + ")" : ""),
+             exWeb == nil && exGarage == nil)
+    var ambigues = def ()
+        var n = 0
+        for l: BANC_BOOT.journal    if string.find(l[0], "GLOBAL_GESTION_WS2812_ERREUR") >= 0    n += 1    end    end
+        return n
+    end
+    var exWs = leve(/-> globalFonctions.changementEtatWS2812(plusieursCles(), "Essai", {}, "garage", "inconnu"))
+    controle("P5.8 : changementEtatWS2812 : valeur ambigue -> journalisee en erreur, sans exception"
+             + (exWs != nil ? " (" + exWs + ")" : ""), exWs == nil && ambigues() == 1)
+    var exWsOk = leve(/-> globalFonctions.changementEtatWS2812({"Dimmer": 40}, "Essai", {}, "garage", "inconnu"))
+    controle("TEMOIN P5.8 : changementEtatWS2812 : valeur a une cle -> aucune erreur", exWsOk == nil && ambigues() == 1)
+    # Audit N10/P5.9 : configDevices. Le compteur des entrees analogiques REELLES n'etait incremente que s'il valait
+    # deja plus de 0 (toujours 0, regle ANALOG#A<n> jamais posee) ; '%i' applique a "ON"/"OFF" affichait 0.
+    import configDevices
+    var logsP59 = global.diverses["logs"]
+    var generalAvant = logsP59.find("general")
+    logsP59["general"] = "debug"    logFonctions.invalideSeuils()
+    var reglesAvant = tasmota.regles.copy()
+    var nbP59 = {}
+    var modulesP59 = {"essaiP59": {"activation": "ON", "environnement": {
+        "analogiques": {"analogique1": {"activation": "ON", "pin": 5, "virtuel": "OFF", "id": 1},
+                        "analogique2": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus1", "id": 2}},
+        "thermometres": {"affichageWebSensor": "OFF", "thermometre1": {"activation": "ON", "type": 1312, "pin": 6, "virtuel": "OFF", "id": 1}}}}}
+    var debutP59 = size(BANC_BOOT.journal)
+    var exP59 = leve(/-> configDevices.configDevicesByRules(modulesP59, nbP59))
+    var regleAnalog = false
+    var regleParasite = false       # ANALOG#A1 : regle d'entree REELLE posee pour la virtuelle (conditions cumulatives)
+    for r: tasmota.regles
+        if r[0] == "ANALOG#A0"    regleAnalog = true    end
+        if r[0] == "ANALOG#A1"    regleParasite = true    end
+    end
+    var affichage = nil
+    for i: debutP59 .. size(BANC_BOOT.journal) - 1
+        var l = BANC_BOOT.journal[i][0]
+        if string.find(l, "Affichage sur WebUI des thermometres") >= 0    affichage = l    end
+    end
+    tasmota.regles = reglesAvant
+    if generalAvant == nil    logsP59.remove("general")    else    logsP59["general"] = generalAvant    end
+    logFonctions.invalideSeuils()
+    controle("P5.9 : une analogique reelle + une virtuelle -> 'reels' = 1, 'actives' = 2, ANALOG#A0 posee, pas d'ANALOG#A1"
+             + (exP59 != nil ? " (" + exP59 + ")" : "") + " (actives " + str(nbP59.find("analogiques", {}).find("actives", {}).find("nb")) + ")",
+             exP59 == nil && nbP59.find("analogiques", {}).find("reels", {}).find("nb") == 1
+             && nbP59["analogiques"]["actives"].find("nb") == 2 && regleAnalog && !regleParasite)
+    controle("P5.9 : log de l'affichage WebUI des thermometres : 'OFF' du persist, pas '0' (lu : " + str(affichage) + ")",
+             affichage != nil && string.find(affichage, "= OFF") >= 0)
 end
 
 print(string.format("CAS_%i: %s", CAS, echecs == 0 ? "OK" : "ECHEC (" + str(echecs) + ")"))

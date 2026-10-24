@@ -1145,6 +1145,7 @@ def demarre21()
   e["secoursFini"] = false
   e["reseauDepuis"] = nil
   e["essaiApres"] = [nil, nil]
+  e["cycleLance"] = false
   tasmota.reseauCoupe = false
   tasmota.horloge = 0
   tasmota.timers = []
@@ -1237,6 +1238,40 @@ seconde21(59000)
 verifie("... rien avant 60 s", "1/1", ouvertures21())
 seconde21(60000)
 verifie("... unicast rouvert par le secours, puis secours fini", "2/1 true", ouvertures21() + " " + str(udpFonctions.etat()["secoursFini"]))
+# i) R2/P8.7 (2026-10-24) : sans MQTT, l'esclave se presente quand meme. Le secours lance le cycle de
+#    presentation (forceEnvoiParams) UNE fois ; un Boot tardif ne le relance pas (une seule chaine de timers).
+def presentations21()
+  var n = 0
+  for c: tasmota.cmds    if c == "ReglageUDP forceEnvoiParams ON"  n += 1  end    end
+  return n
+end
+serveur["udp"]["id"] = 1
+demarre21()
+tasmota.cmds = []
+seconde21(0)
+seconde21(59000)
+verifie("esclave sans MQTT, 59 s : pas encore de presentation", 0, presentations21())
+seconde21(60000)
+verifie("esclave sans MQTT, 60 s : presentation lancee par le secours (forceEnvoiParams)", 1, presentations21())
+for s: 61 .. 120    seconde21(s * 1000)    end
+boot21()
+verifie("... ni les secondes suivantes ni un Boot tardif ne la relancent", 1, presentations21())
+# j) TEMOIN : chemin normal, Boot -> une presentation, le secours n'en ajoute pas
+demarre21()
+tasmota.cmds = []
+seconde21(1000)
+boot21()
+for s: 2 .. 200    seconde21(s * 1000)    end
+verifie("TEMOIN : Boot normal -> une presentation, le secours n'en ajoute pas", 1, presentations21())
+# k) Maitre sans MQTT : le timer resetEsclaves est arme par le secours
+serveur["udp"]["id"] = 0
+demarre21()
+seconde21(0)
+seconde21(60000)
+verifie("maitre sans MQTT, 60 s : timer resetEsclaves arme par le secours", 1, tasmota.nbTimers("resetEsclaves"))
+# l) Audit N9/P5.8 : l'ancienne boucle de deballage de 'value' (inutilisee ici) levait des la 2e cle
+verifie("changementEtatDemarrage UDP, valeur a plusieurs cles : sans exception", "OK",
+        essaie(def () udpFonctions.changementEtatDemarrage({"AP": 1, "SSId": "box", "RSSI": 80}, "Essai", {}, "UniCast") end))
 tasmota.horloge = nil
 tasmota.reseauCoupe = nil
 

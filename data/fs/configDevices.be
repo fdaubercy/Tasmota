@@ -199,6 +199,8 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 					tasmota.yield()
 
         			if analogiques[cleAnalogiques].find("activation", "OFF") == "ON" && ((analogiques[cleAnalogiques].find("pin", -1) != -1  && analogiques[cleAnalogiques].find("virtuel", "OFF") == "OFF") || analogiques[cleAnalogiques].find("virtuel", "OFF") != "OFF")
+						var estReelle = (analogiques[cleAnalogiques].find("virtuel", "OFF") == "OFF")
+						var activesAvant = nbIOActivesJSON["analogiques"]["actives"].find("nb", 0)	# comptee ci-dessous ou non (P5.9)
 						# Pour les entrées analogiques virtuelles de type ADS1115
 						if (analogiques[cleAnalogiques].find("virtuel", "OFF") != "OFF")
 							if (analogiques[cleAnalogiques]["virtuel"] == "I2C_ADS1115")
@@ -228,19 +230,23 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 							nbIOActivesJSON["analogiques"]["actives"]["nb"] = nbIOActivesJSON["analogiques"]["actives"].find("nb", 0) + 1
 						end
 
-                        # Nb d'entrées analogiques réelles (non-virtuels)
-                        if (nbIOActivesJSON["analogiques"]["reels"].find("nb", 0) > 0)
+                        # Nb d'entrées analogiques réelles (non-virtuels). Avant : incrementé seulement s'il valait deja
+                        # plus de 0, donc toujours 0 (2026-10-24, audit N10/P5.9)
+                        if estReelle
                             nbIOActivesJSON["analogiques"]["reels"]["nb"] = nbIOActivesJSON["analogiques"]["reels"].find("nb", 0) + 1
                         end
 
+						# Branches choisies d'apres l'entree COURANTE, plus d'apres les compteurs cumules (P5.9) : une reelle
+						# apres une virtuelle passait dans la branche des virtuelles (split de "OFF" -> index_error), une
+						# virtuelle apres une reelle recevait une regle ANALOG#A<n> d'entree reelle.
 						# Pour les entrées analogiques réelles
-						if (nbIOActivesJSON["analogiques"]["reels"].find("nb", 0) > 0)
+						if (estReelle)
 							tasmota.remove_rule(string.format("ANALOG#A%d", analogiques[cleAnalogiques]["id"] - 1))
 							tasmota.add_rule(string.format("ANALOG#A%d", analogiques[cleAnalogiques]["id"] - 1), def(value, trigger, msg) globalFonctions.changementEtatCapteur(value, trigger, msg, cleModule, cleAnalogiques) end)
 						end
 
-						# Pour les entrées analogiques virtuelles
-						if (nbIOActivesJSON["analogiques"]["actives"].find("nb", 0) > nbIOActivesJSON["analogiques"]["reels"].find("nb", 0))
+						# Pour les entrées analogiques virtuelles (comptees actives : ADS1115 present, esclave ModBus actif)
+						if (!estReelle && nbIOActivesJSON["analogiques"]["actives"].find("nb", 0) > activesAvant)
                             # var typeConnex = string.split(analogiques[cleAnalogiques]["virtuel"], "_")[0]
                             var moduleConnex = string.split(analogiques[cleAnalogiques]["virtuel"], "_")[1]
                             var groupeConnex = re.search("([a-zA-Z0-9]+[^0-9$]+)", moduleConnex)[0]
@@ -416,12 +422,12 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 							if (thermos[cleTH]["type"] == 1312)
 								# Vérifie si on doit interdire l'affichage des valeurs de thermometres sur la page html
 								tasmota.cmd(string.format("WebSensor5 %s", thermos.find("affichageWebSensor", "ON")), boolMute)
-								logFonctions.log(string.format("CONTROLE_GENERAL: Affichage sur WebUI des thermometres = %i !", modules[modul].find("affichageWebSensor", "ON")), LOG_LEVEL_DEBUG)
+								logFonctions.log(string.format("CONTROLE_GENERAL: Affichage sur WebUI des thermometres = %s !", thermos.find("affichageWebSensor", "ON")), LOG_LEVEL_DEBUG)
 							# DHT11 ou DHT22
 							elif (thermos[cleTH]["type"] == 1216)
 								# Vérifie si on doit interdire l'affichage des valeurs de thermometres sur la page html
 								tasmota.cmd(string.format("WebSensor6 %s", thermos.find("affichageWebSensor", "ON")), boolMute)
-								logFonctions.log(string.format("CONTROLE_GENERAL: Affichage sur WebUI des thermohygrometres = %i !", modules[modul].find("affichageWebSensor", "ON")), LOG_LEVEL_DEBUG)
+								logFonctions.log(string.format("CONTROLE_GENERAL: Affichage sur WebUI des thermohygrometres = %s !", thermos.find("affichageWebSensor", "ON")), LOG_LEVEL_DEBUG)
 							end
 						end
 					end
@@ -446,7 +452,7 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 						if (compteurs[cleCompt]["activation"] == "ON")
 							# Vérifie si on doit interdire l'affichage des valeurs de compteurs sur la page html
 							tasmota.cmd(string.format("WebSensor1 %s", compteurs.find("affichageWebSensor", "ON")), boolMute)
-							logFonctions.log(string.format("CONTROLE_GENERAL: Affichage sur WebUI des compteurs = %i !", modules[modul].find("affichageWebSensor", "ON")), LOG_LEVEL_DEBUG)
+							logFonctions.log(string.format("CONTROLE_GENERAL: Affichage sur WebUI des compteurs = %s !", compteurs.find("affichageWebSensor", "ON")), LOG_LEVEL_DEBUG)
 						end
 					end
 				end

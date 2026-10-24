@@ -52,11 +52,8 @@ def webFonctions_changementEtatDemarrage(value, trigger, msg)
 	webFonctions.log("WEBSERVER_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
 	webFonctions.log("WEBSERVER_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}
 
-	if (type(value)) == "instance"
-		for cle: value.keys()
-			value = value[cle]
-		end
-	end
+	# Pas de "deballage" de 'value' ici (inutilise dans cette fonction) : l'ancienne boucle
+	# 'for cle: value.keys() value = value[cle] end' levait des la 2e cle (2026-10-24, audit N9/P5.8).
 
     tasmota.yield()
 

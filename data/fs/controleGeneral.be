@@ -144,7 +144,7 @@ class CONTROLE_GENERAL : Driver
                                     self.nbIOActivesJSON["relais"]["reels"].find("nb", 0), self.nbIOActivesJSON["WS2812"]["reels"].find("nb", 0), 
                                     self.nbIOActivesJSON["switchs"]["reels"].find("nb", 0), self.nbIOActivesJSON["capteurs"]["reels"].find("nb", 0), 
 									self.nbIOActivesJSON["boutons"]["reels"].find("nb", 0), self.nbIOActivesJSON["analogiques"]["reels"].find("nb", 0), 
-									self.nbIOActivesJSON["thermometres"]["reels"].find("nb", 0), self.nbIOActivesJSON["compteurs"]["actives"].find("nb", 0)), LOG_LEVEL_DEBUG)
+									self.nbIOActivesJSON["thermometres"]["reels"].find("nb", 0), self.nbIOActivesJSON["compteurs"]["reels"].find("nb", 0)), LOG_LEVEL_DEBUG)
 
         # Configure le module tasmota (paramètres communs à tous les modules Tasmota)
 		configGlobal.configGlobalByJson(self.nbIOActivesJSON)

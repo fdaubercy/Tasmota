@@ -256,6 +256,26 @@ def diversFonctions_elagueListesVides(noeud)
 end
 diversFonctions.elagueListesVides = diversFonctions_elagueListesVides
 
+# Valeur scalaire d'un evenement de regle, sur tous les niveaux d'imbrication :
+# {"Action": "ON"} -> "ON", {"State": {"POWER": 1}} -> 1, 5 -> 5 (2026-10-24, audit N9/P5.8).
+# Une map de plusieurs cles sans 'Action' est AMBIGUE : elle est rendue telle quelle, a l'appelant
+# de trancher (erreur journalisee, ou map gardee comme les mesures ADS1115 A0..A3 de la cuve).
+# Remplace l'ancienne boucle 'for cle: value.keys() value = value[cle] end', qui indexait la valeur
+# deja extraite des la 2e cle (type_error).
+def diversFonctions_valeurScalaire(value)
+	while isinstance(value, map)
+		if value.contains("Action")
+			value = value["Action"]
+		elif value.size() == 1
+			value = value[value.keys()()]		# unique cle
+		else
+			break
+		end
+	end
+	return value
+end
+diversFonctions.valeurScalaire = diversFonctions_valeurScalaire
+
 # Affiche les statistiques de mémoire
 def diversFonctions_statMemory()
 	import string 

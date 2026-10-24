@@ -73,9 +73,13 @@ def gestionFileFolder_listeEtRepartitLesFichiers()
                 fileDest.close()
             end
         end
-    # Crée le dossier 'sd'
-    else    path.mkdir("/sd")
-            gestionFileFolder.listeEtRepartitLesFichiers()
+    # Crée le dossier 'sd', puis recommence la répartition. mkdir en échec (LittleFS plein) : on s'arrête là,
+    # sinon la fonction se rappelait sans fin jusqu'au débordement de pile (2026-10-24, audit B4/P10.5).
+    elif path.mkdir("/sd")
+        gestionFileFolder.listeEtRepartitLesFichiers()
+        return
+    else
+        logFonctions.log("REPARTITION_FICHIERS_ERREUR: creation du dossier '/sd' impossible (LittleFS plein ?), fichiers web laisses a la racine !", LOG_LEVEL_ERREUR)
     end
 
     # Crée le dossier '.extensions' pour stocker les extensions tapp

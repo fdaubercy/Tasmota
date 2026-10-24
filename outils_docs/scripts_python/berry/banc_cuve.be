@@ -650,6 +650,21 @@ if ctrl != nil
     verifie(gestionFileFolder.envois[0][1]["colorWs2812"] == "FFFFFF", "web_sensor : ruban sature a 0 (blanc de la palette) -> encadre FFFFFF, couleur relue sur light")
 end
 
+# Audit N9/P5.8 : changementEtatDemarrage deballait 'value' par 'for cle: value.keys() value = value[cle] end',
+# qui levait des la 2e cle ; 'value' n'y sert pas. Declencheur sans branche : seul le deballage est teste.
+var exDemarrage = nil
+try    cuveFonctions.changementEtatDemarrage({"AP": 1, "SSId": "box", "RSSI": 80}, "Essai", {})
+except .. as e, m    exDemarrage = e + " : " + m
+end
+verifie(exDemarrage == nil, "P5.8 : changementEtatDemarrage, valeur a plusieurs cles -> sans exception" + (exDemarrage != nil ? " (" + exDemarrage + ")" : ""))
+# Deballage de changementEtatCapteur par diversFonctions.valeurScalaire : map ambigue gardee intacte (mesures A0..A3)
+journal.clear()
+var exCapteur = nil
+try    cuveFonctions.changementEtatCapteur({"A0": 1, "A1": 2}, "Essai", "", "cuve", "")
+except .. as e, m    exCapteur = e + " : " + m
+end
+verifie(exCapteur == nil, "P5.8 : changementEtatCapteur, map a plusieurs cles gardee, sans exception" + (exCapteur != nil ? " (" + exCapteur + ")" : ""))
+
 print("")
 print("Controles : " + str(nbControles) + ", echecs : " + str(echecs))
 print(echecs == 0 ? "BANC_CUVE: OK" : "BANC_CUVE: ECHEC (" + str(echecs) + ")")
