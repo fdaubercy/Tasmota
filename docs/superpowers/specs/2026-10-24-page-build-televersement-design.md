@@ -154,12 +154,20 @@ contenu de tous les `.ini`**. Si l'empreinte change, `run/helpers.py:35-50` supp
 6. **IP à `0.0.0.0` (DHCP) ou absente** sur un env personnel : OTA impossible tel quel ; la ligne affiche
    un champ IP à saisir, valable pour ce lancement seulement (pas de réécriture de
    `user_config_override.h`). Lancement refusé pour cette ligne tant que le champ est vide.
-7. **Activer l'OTA sans toucher au `.ini`** : le `.ini` ne porte que `upload_port`. Pour l'OTA, la page
-   passe l'IP par une **variable d'environnement propre au dépôt** (ex. `TASMOTA_OTA_IP`), qui n'est
-   pas une option PlatformIO donc **hors empreinte** ; un pré-script chargé par la base
-   (`pre_utilitaires_platformio.py` ou un petit script voisin) applique alors la logique de
-   `ota-files-uploader.py` à cet env. Sans la variable, comportement actuel inchangé (les envs qui
-   activent `ota-files-uploader.py` dans leur `.ini` continuent de marcher).
+7. **OTA du firmware faite par la page, sans toucher au `.ini` ni aux scripts de build** (révisé le
+   2026-10-24 : la première version passait l'IP par une variable `TASMOTA_OTA_IP` lue par un
+   pré-script ; la mise en œuvre a prouvé que `post_esp32.py` réécrase `UPLOADCMD` après tout script
+   exécuté depuis un pré-script — ordre `builder/main.py:167/173/180` — donc impasse). La page lance
+   `pio run -e X` (compilation), puis envoie elle-même `.pio/build/<env>/firmware.bin.gz` (seulement
+   s'il n'est pas plus ancien que `firmware.bin`, sinon `firmware.bin`) : `GET /up` d'abord (sans lui,
+   `/u2` répond « Successful » sans rien écrire), bascule safeboot si la carte en a un (`/u4`), puis
+   `POST http://<ip>/u2?fsz=`, multipart champ `file`, `Referer: http://<ip>/` — le
+   protocole de `pio-tools/espupload.py`, déjà utilisé par l'OTA actuelle du dépôt. Pourcentage =
+   octets envoyés / taille ; succès prouvé par la version et la date de `Status 2` avant/après
+   (retour de la carte attendu 90 s). Échec après la bascule : le message dit que la carte est restée
+   en safeboot et qu'il faut renvoyer un firmware par `http://<ip>/up`. Pas d'OTA proposée pour les envs
+   safeboot de l'amont. `pre_utilitaires_platformio.py` et `ota-files-uploader.py` ne sont pas
+   modifiés.
 8. **Ordre des actions dans un env** : compiler → téléverser le firmware → construire le FS → téléverser
    le FS, en ne lançant que les actions cochées. Un échec arrête **cet env** (étapes suivantes sautées et
    marquées « annulée ») ; **les autres envs continuent** (cartes indépendantes).

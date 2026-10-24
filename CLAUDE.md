@@ -576,9 +576,11 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     etape, % et durees en direct. Port COM lu dans `platformio_tasmota_cenv.ini` et REECRIT dans la section de l'env
     (`.bak` ; **change l'empreinte -> le build suivant repart de zero**) ; IP OTA lue dans `WIFI_IP_ADDRESS`
     (0.0.0.0 -> saisie pour le lancement). OTA du firmware envoyee par la page (`/up`, `/u2`, safeboot `/u4`, preuve
-    par `Status 2`) : aucun script de `build/` modifie. OTA du FS : contenu de `littlefs_data` par `/ufsu`, persist de
+    par `Status 2`) : aucun script de `build/` modifie. OTA du FS : fichiers extraits de `littlefs.bin` (image du `buildfs`,
+    PAS `littlefs_data`, perime) par `/ufsu`, persist de
     la carte sauvegarde avant dans `%LOCALAPPDATA%\outils_tasmota\build\persist\`, relu, Berry recharge, `Restart 1`.
-    Un upload serie du firmware emporte `littlefs.bin` s'il existe. Journaux de chaque `pio run` dans
+    Un upload serie du firmware flashe AUSSI le FS (persist compris) a chaque fois pour les envs a
+    `custom_files_upload` (post_esp32 reconstruit `littlefs.bin` a chaque edition des liens) : la page l'annonce. Journaux de chaque `pio run` dans
     `%LOCALAPPDATA%\outils_tasmota\build\journaux\`. Chaque lancement reecrit `platformio_override.ini` et
     `user_config_override.h` (a commiter). Bancs : `test_build_*.py` (+ sonde `test_build_page_chrome.py`).
     Mode d'emploi : `outils_docs/README.md` § « Build et televersement (page web) ». Spec :
