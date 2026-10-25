@@ -3,7 +3,7 @@
   "publisher": "fdaubercy",
   "displayName": "Suivi du plan",
   "description": "Avancement des plans de travail (tasks/plans/*.md) dans une vue a droite de l'editeur : % par action, % global, etapes, ameliorations restantes.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "license": "UNLICENSED",
   "engines": {
@@ -15,6 +15,7 @@
   "main": "./extension.js",
   "activationEvents": [
     "workspaceContains:tasks/plans/*.md",
+    "onStartupFinished",
     "onUri",
     "onWebviewPanel:suiviPlan.vue"
   ],
