@@ -128,18 +128,19 @@ c'est **voulu** (decide le 2026-10-04 : « laisse ce test comme il est »). Ne p
 decouper : c'est UN fichier a televerser sur chaque carte, qui se prepare et s'explique
 seul au chargement ; le scinder imposerait deux televersements par carte.
 
-`outils_docs/scripts_python/outils_pc/build_page.py` fait **1038 lignes**, et c'est **voulu**
+`outils_docs/scripts_python/outils_pc/build_page.py` fait **1053 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
 vague de corrections finale du meme jour ; 935 le 2026-10-25 avec le panneau « Sortie » et « Effacer puis
-televerser » ; 1038 le meme jour avec la pause « rebranchez la carte » et les panneaux refermes). C'est la page
+televerser » ; 1038 le meme jour avec la pause « rebranchez la carte » et les panneaux refermes ; 1053 avec
+l'envoi sans recompiler apres la pause et la pause rouverte). C'est la page
 unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule constante
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
 Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plutot qu'un decoupage) :
-`build_serie.py` fait **630 lignes** (execution en serie des `pio run` : verrous, arret immediat, attente
+`build_serie.py` fait **640 lignes** (execution en serie des `pio run` : verrous, arret immediat, attente
 d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
-verrou), et ses bancs `test_build_serie.py` (**869**), `test_build_page_chrome.py` (**905**),
-`test_build_ota_fs.py` (**566**), `test_build_web.py` (**655**), ainsi que `test_annuaire.py` (**523**,
+verrou), et ses bancs `test_build_serie.py` (**903**), `test_build_page_chrome.py` (**953**),
+`test_build_ota_fs.py` (**566**), `test_build_web.py` (**688**), ainsi que `test_annuaire.py` (**523**,
 banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
 compteur.
 
@@ -384,7 +385,9 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   que si la commande contient `pio`/`platformio`. Un `pio run` (et son scons) dont TOUTES les cibles sont des
   cibles d'outils (`CIBLES_OUTILS` = les `NOM_CIBLE` des `build/cible_*.py`) n'est PAS un build : l'outil vit
   tant que la cible vit, la page de build l'attendrait sans fin. `__idedata`, une cible melee ou un scons sans
-  cible lisible restent des builds ; lancer une cible d'outil pendant un vrai build reste refuse. Banc
+  cible lisible restent des builds ; lancer une cible d'outil pendant un vrai build reste refuse. Une cible
+  d'outil qui DEMARRE compte comme un build pendant ses 30 premieres secondes (son demarrage peut purger
+  `.pio/build`) : age par `CreationDate` dans la meme requete PowerShell. Banc
   `outils_docs/scripts_python/build/test_garde_build.py` (verifie aussi que la liste = les `NOM_CIBLE`).
 - `.claude/hooks/rappel_apres_compactage.sh` — hook `SessionStart` (`compact`) : rappelle de mettre
   a jour la reprise.

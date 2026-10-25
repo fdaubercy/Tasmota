@@ -119,7 +119,10 @@ contenu de tous les `.ini`**. Si l'empreinte change, `run/helpers.py:35-50` supp
   pont série, sniffeurs, syslog, testeur UDP, synchro du fork, page de build), et son scons (cibles en fin de
   ligne), ne sont **pas** des builds : l'outil vit tant que la cible vit, la page l'aurait attendu sans fin
   (constaté avec `platformio.exe run --target annuaire`). `__idedata`, une cible mêlée ou un scons sans cible
-  lisible restent des builds (banc `build/test_garde_build.py`).
+  lisible restent des builds (banc `build/test_garde_build.py`). Révisé encore le 2026-10-25 : une cible d'outil
+  qui **démarre** peut purger `.pio/build` (empreinte) dans ses premières secondes ; elle compte donc comme un
+  build pendant ses **30 premières secondes** (âge du processus par `CreationDate` de `Win32_Process`, lu dans la
+  même requête PowerShell ; âge inconnu → build), ignorée ensuite. Formes collées `-tupload` / `-eenv` reconnues.
 
 ## Décisions de l'utilisateur (telles qu'il les a prises)
 
@@ -241,15 +244,23 @@ contenu de tous les `.ini`**. Si l'empreinte change, `run/helpers.py:35-50` supp
     **Pause « rebranchez la carte »** (amélioration du plan, 2026-10-25, remplace le refus « même port ») : le
     lancement est accepté quand deux lignes COM partagent un port. Pour un env dont un envoi COM (upload,
     erase_upload, uploadfs) passe par un port déjà servi par un env **précédent** de la série : la compilation (si
-    cochée) se fait d'abord, en un `pio run` à part (le `-t upload` qui suit refait l'édition des liens, `CFG_HOLDER`
-    changeant à chaque `pio run`) ; juste avant son premier envoi COM, la série émet `attente_carte` (env, port,
-    env précédent) et attend. La page affiche « Branchez la carte <env> sur <COMn> puis cliquez Continuer » avec
+    cochée) se fait d'abord, en un `pio run` à part ; quand elle a réussi, l'envoi qui suit la pause part en
+    **`-t nobuild -t upload`** (resp. `-t nobuild -t erase_upload`) : le pré-script incrémente `CFG_HOLDER` dans
+    `user_config_override.h` (inclus partout) à chaque `pio run`, un `-t upload` seul recompilerait tout ; `nobuild`
+    reprend `$BUILD_DIR/${PROGNAME}.bin` (`builder/main.py` de la plateforme espressif32) sans `ConvertInoToCpp`
+    (`piobuild.py`). Compilation non cochée : `-t upload` normal. Juste avant son premier envoi COM, la série émet
+    `attente_carte` (env, port, env précédent, actions déjà faites `fait`, message `erreur`), sous la même prise du
+    verrou que la pose de la pause, et attend. La page affiche « Branchez la carte <env> sur <COMn> puis cliquez Continuer » avec
     **Continuer** et **Passer cet env** (`POST /continuer {env, choix}`, protégé comme `/arreter` ; refus si aucune
-    pause ou autre env). Continuer : un build apparu pendant la pause est attendu, puis le port est revérifié
-    (absent ou tenu → échec de cet env avec message clair, la série continue). Passer : actions restantes
-    « annulée », env « passé », la série continue. Les deux arrêts et le Ctrl+C du serveur mettent fin à la pause
-    (aucun envoi n'est en vol) ; le rejeu du flux remontre le bandeau tant que la pause dure. Les autres refus
-    (port tenu, absent) restent.
+    pause ou autre env). Après une réponse acceptée, les deux boutons restent désactivés jusqu'à la suite
+    (`reprise_carte` ou nouvelle `attente_carte`). Continuer : un build apparu pendant la pause est attendu, puis
+    le port est revérifié ; absent ou tenu → **la pause reste ouverte** (nouvelle `attente_carte` avec le message
+    « COM12 absent : rebranchez puis Continuer », ou tenu par un autre outil), l'utilisateur réessaie ou passe.
+    Passer : actions restantes « annulée », env « passé », la série continue. Les deux arrêts et le Ctrl+C du
+    serveur mettent fin à la pause (aucun envoi n'est en vol) : env « arrêté », rangé dans `arretes` (ni échec ni
+    récapitulatif rouge pour ce seul motif). Si aucun env n'a abouti (tous passés), l'état de fin n'est pas le
+    « terminé » vert. Le rejeu du flux remontre le bandeau tant que la pause dure. Les autres refus avant
+    le lancement (port tenu, absent) restent.
 12. **Progression** :
     - étapes affichées : *Pré-build* (pré-script, solidification Berry) → *Compilation* → *Édition des
       liens* → *Téléversement* (ou *Construction du FS* / *Envoi des fichiers*) ;
@@ -273,7 +284,9 @@ contenu de tous les `.ini`**. Si l'empreinte change, `run/helpers.py:35-50` supp
     `%LOCALAPPDATA%\outils_tasmota\build\journaux\`, dépliable sur la page ; derniers choix (envs cochés,
     méthodes, IP saisies) mémorisés dans ce même dossier, hors dépôt. (2026-10-25) Journaux d'un env lus dans
     l'ordre de leur date de modification, pas de l'heure du nom (qui recule au passage à l'heure d'hiver) ;
-    journaux de plus de 30 jours supprimés au démarrage de l'outil.
+    journaux de plus de 30 jours supprimés au démarrage de l'outil : seulement les fichiers au motif des
+    journaux de la série (`date-heure-env-action[-n].log`), et une fois le port d'écoute obtenu (une seconde
+    instance lancée par erreur ne purge rien).
 15. **Fichiers modifiés par un lancement** : chaque `pio run` réécrit `platformio_override.ini` et
     `user_config_override.h` (CFG_HOLDER) — comportement existant. La page le rappelle en fin de
     lancement (fichiers à commiter par l'utilisateur, cf. leçon du 2026-10-13).
@@ -309,7 +322,8 @@ Demandée après les premiers essais réels (compilation, upload COM de la cuve,
     lire ; erreurs en rouge, avertissements en orange (pas les couleurs exactes de VS Code : les journaux
     sont écrits sans ANSI). Source : le journal que l'outil écrit déjà pour chaque `pio run` (choix 14),
     lu **par incréments** pendant l'exécution (rien de plus stocké) ; la sortie d'un env terminé reste
-    relisible tant que la page est ouverte. Les lignes d'esptool qui se réécrivent (``) ne doivent pas
+    relisible tant que la page est ouverte. Les lignes d'esptool qui se réécrivent (`
+`) ne doivent pas
     noyer le panneau (une ligne par zone et par palier, ou la dernière seulement : au constructeur).
     (2026-10-25) Le panneau ouvert par la page au départ de l'env se referme quand l'env réussit, sauf si
     l'utilisateur l'a ouvert ou fermé lui-même ; il reste ouvert en échec ou arrêt ; au rechargement, un env
@@ -322,7 +336,9 @@ Demandée après les premiers essais réels (compilation, upload COM de la cuve,
     effacés et remplacés par ceux du dépôt. Même suivi que l'upload (étapes, %, zones esptool, mention
     « FS aussi flashé » selon `fs_avec_firmware`), plus une étape **« Effacement de la flash »** (texte
     exact d'esptool à lire dans le paquet installé, pas à deviner). Compte comme un envoi pour le refus
-    « port tenu / deux envois sur le même port » (choix 11) et pour l'attente de M7 (Ctrl+C).
+    « port tenu ou absent » (choix 11), pour la pause « rebranchez la carte » quand deux lignes COM partagent
+    un port (choix 11 révisé : envoi en `-t nobuild -t erase_upload` après une compilation réussie) et pour
+    l'attente de M7 (Ctrl+C).
 
 ## Laissé au constructeur
 

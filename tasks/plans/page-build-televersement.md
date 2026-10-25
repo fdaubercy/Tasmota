@@ -334,6 +334,13 @@ Fichiers : `outils_pc/build_serie.py`, `outils_pc/build_progression.py`, `outils
 - [x] [projet] Défauts relevés : ordre des journaux à l'heure d'hiver, purge à 30 jours, infobulle d'effacement,
   panneaux Sortie refermés en succès, texte d'arrêt de l'annuaire. — preuve : commit 82c924c66 ; test_build_web
   (heure qui recule, purge), test_annuaire (texteArret par node), sonde Chrome 73 OK avec témoin
+- [x] [projet] Corrections après relecture : envoi `-t nobuild` après la pause (plus de recompilation),
+  `garde_build` compte une cible d'outil comme un build pendant ses 30 premières secondes (formes collées
+  `-tupload`/`-eenv`), pause rouverte si le port manque, boutons gardés désactivés après une réponse acceptée,
+  `attente_carte` et pause sous le même verrou, env arrêté pendant la pause rangé à part, pas de « terminé » vert si
+  aucun env n'a abouti, purge limitée aux journaux de la page et à la seule instance. — preuve : commits 825511d7f,
+  b3766ae2b, e406ec547 ; test_build_serie 132 OK, test_build_web 106 OK, build/test_garde_build vert (37 OK),
+  sonde Chrome 78 OK avec témoin (6 KO vus avant la page)
 
 ## Vérification
 

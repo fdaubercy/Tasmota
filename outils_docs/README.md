@@ -284,7 +284,7 @@ Conception : [spec](../docs/superpowers/specs/2026-10-24-page-build-televersemen
   affiché dans la console (comme les autres outils).
 - **Cible PlatformIO** « Build et téléversement (page web) » dans *Project Tasks > <env> > Custom* (n'importe quel
   env ESP32) : ouvre la page si elle tourne, sinon la démarre **détachée** (console dans
-  `%LOCALAPPDATA%\outils_tasmota\consolesuild.log`) et rend la main en quelques secondes — une cible est un
+  `%LOCALAPPDATA%\outils_tasmota\consoles\build.log`) et rend la main en quelques secondes — une cible est un
   `pio run`, encore vivante elle serait prise pour un build en cours. La page survit à la cible : l'arrêter par
   l'annuaire. Comme toute cible, **jamais pendant un build** (risque de purge de `.pio/build`).
 
@@ -384,17 +384,20 @@ commande quelle que soit la cible ; même mention « FS aussi flashé » sur la 
 
 - **Refus avant lancement** : un build tourne déjà (VS Code, cible Custom, même logique que le hook `garde_build`,
   qui ne compte pas les cibles d'outils : un annuaire ou un pont série lancé par sa cible Custom n'est pas un
-  build) ; un port COM tenu par un autre outil (pont série, sniffeur, testeur) ou absent, pour une action d'envoi.
+  build, sauf pendant ses 30 premières secondes, où son démarrage peut encore purger `.pio/build`) ; un port COM tenu par un autre outil (pont série, sniffeur, testeur) ou absent, pour une action d'envoi.
 - **Plusieurs cartes sur le même port COM** (pause « rebranchez la carte ») : le lancement est accepté. Pour un env
   dont l'envoi passe par un port déjà servi par un env précédent de la série, la compilation (si cochée) se fait
   d'abord, en un `pio run` à part ; juste avant son premier envoi, la série s'arrête et la page affiche
   « **Branchez la carte X sur COMn puis cliquez Continuer** », avec **Continuer** et **Passer cet env**. Continuer :
-  la page attend un éventuel build lancé ailleurs pendant la pause, revérifie le port (absent ou tenu : échec de cet
-  env avec un message clair, la série continue), puis envoie. Passer : les actions restantes de l'env sont
-  « annulée », l'env est « passé », la série continue. Les deux arrêts et le Ctrl+C de la page mettent fin à la pause
-  (rien n'est en cours d'envoi) ; recharger la page remontre le bandeau tant que la pause dure. La ligne cochée au
-  port partagé l'annonce avant le lancement. Coût : une compilation puis un téléversement font deux `pio run`, le
-  second refait l'édition des liens (`CFG_HOLDER` change à chaque `pio run`).
+  la page attend un éventuel build lancé ailleurs pendant la pause, revérifie le port, puis envoie ; port absent ou
+  tenu : **la pause reste ouverte** avec le message dans le bandeau (« COM12 absent : rebranchez puis Continuer »,
+  ou tenu par un autre outil), on réessaie ou on passe. Après un clic accepté, les boutons restent grisés jusqu'à la
+  suite. Passer : les actions restantes de l'env sont « annulée », l'env est « passé », la série continue. Les deux
+  arrêts et le Ctrl+C de la page mettent fin à la pause (rien n'est en cours d'envoi) : l'env est « arrêté », compté
+  à part dans le récapitulatif, pas comme un échec. Recharger la page remontre le bandeau tant que la pause dure. La
+  ligne cochée au port partagé l'annonce avant le lancement. **Sans recompiler** : quand la compilation a réussi
+  avant la pause, l'envoi part en `pio run -t nobuild -t upload` (ou `erase_upload`), qui reprend le firmware déjà
+  compilé ; un `-t upload` seul recompilerait tout (`CFG_HOLDER` change à chaque `pio run`).
 - **Attente** : le contrôle « build en cours » est refait avant chaque env. Si un build est apparu entre deux envs,
   la série attend (« en attente : build en cours ») et reprend à sa fin ; on peut l'arrêter.
 - **Arrêt** : « Arrêter après cet env » (propre) ou arrêt immédiat, qui peut laisser une carte à moitié flashée et
@@ -409,7 +412,8 @@ commande quelle que soit la cible ; même mention « FS aussi flashé » sur la 
 - Sortie complète de chaque `pio run` (codes ANSI retirés) : `%LOCALAPPDATA%\outils_tasmota\build\journaux\`,
   dépliable sur la page (« Journal complet »). Les journaux d'un env se lisent dans l'ordre de leur **date de
   modification** (pas l'heure écrite dans le nom, qui recule au passage à l'heure d'hiver). Au démarrage de la page,
-  les journaux de **plus de 30 jours** sont supprimés (une suppression impossible est comptée dans la console).
+  les journaux de **plus de 30 jours** sont supprimés (une suppression impossible est comptée dans la console) :
+  seulement les journaux de la page (`date-heure-env-action.log`), et pas si une autre instance tient déjà le port.
 - **Sortie de pio en direct** : sous chaque env du suivi, un panneau « Sortie de pio (en direct) », ouvert au départ
   de l'env, montre les lignes de pio au fil de l'eau comme le terminal de VS Code (chasse fixe, fond sombre, erreurs
   en rouge, avertissements en orange). Il défile seul tant qu'on est en bas, et s'arrête si on remonte pour lire.
@@ -431,7 +435,8 @@ commande quelle que soit la cible ; même mention « FS aussi flashé » sur la 
   **fichiers à commiter** après un lancement (la page le rappelle en fin de lancement), et à sauvegarder avant
   une série d'essais.
 - Banc : `test_build_*.py` dans `outils_docs/scripts_python/outils_pc/` (faux `pio`, carte simulée ; code de sortie
-  0 = vert), à lancer avec le Python du penv PlatformIO ; détection des builds (cibles d'outils ignorées) :
+  0 = vert), à lancer avec le Python du penv PlatformIO ; détection des builds (cibles d'outils ignorées après leurs
+  30 premières secondes) :
   `outils_docs/scripts_python/build/test_garde_build.py`.
 
 <hr></hr>
