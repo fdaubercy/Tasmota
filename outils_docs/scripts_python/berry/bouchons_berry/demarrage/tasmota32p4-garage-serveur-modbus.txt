@@ -1,0 +1,11 @@
+carte : tasmota32p4-garage-serveur-modbus
+exception : aucune
+drivers (13) : CONTROLE_DISCOVERY, CONTROLE_GARAGE, CONTROLE_GENERAL, CONTROLE_MODBUS, CONTROLE_RANGE_EXTENDER, CONTROLE_UDP, CONTROLE_UDP, CONTROLE_VR, CONTROLE_WEB, ES8311, HISTORIQUE_WEB, MODBUS_CONN_16CHANNEL, MODBUS_TASMOTA_SLAVE
+regles (27) : Button1#Action, Button2#Action, Button2#Action, ModbusReceived#DeviceAddress==1, ModbusReceived#DeviceAddress==2, ModbusReceived#DeviceAddress==3, ModbusReceivedUDP, ModbusReceivedUDP#DeviceAddress==2, ModbusReceivedUDP#DeviceAddress==3, Mqtt, Mqtt, Shutter1#Direction, System, System, System, System, System, System, System, System, Tele#COUNTER#C, Tele#TasmotaSlaveModBus#TasmotaSlaveModBus1#ANALOG#A1, Tele#TasmotaSlaveModBus#TasmotaSlaveModBus1#Temperatures#DS18B20-1#Temperature, Time, Time, Wifi, Wifi
+commandes (15) : DIMMER, HSBCOLOR, RUBANESCLAVE, ReglageConn16Channel, ReglageDiscovery, ReglageGarage, ReglageGlobal, ReglageLog, ReglageModbus, ReglageRangeExtender, ReglageSlaveModBus, ReglageUDP, ReglageVolets, RoutageRangeExtender, SCHEME
+crons (3) : conn16channels_sondage_Conn16channel1, majHistorique, majLogGarage
+minuteries (1) : demarrageDiffere
+compiles (2) : /controleGarage.bec, /garageFonctions.bec
+sources (1) : /autoexec.be
+globales (24) : .historiqueFonctions:instance, LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, LOG_LEVEL_NONE:int, _etatLogFonctions:instance, _etatModbusFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controleGarage:instance, controleUDP_multicast:instance, controleUDP_unicast:instance, controleVRoulant:instance, diverses:instance, garageFonctions:nil, gpio:module, light:module, modules:instance, persist:instance, persistValide:bool, serveur:instance, wire1:instance, wire2:instance
+erreurs (0) : 

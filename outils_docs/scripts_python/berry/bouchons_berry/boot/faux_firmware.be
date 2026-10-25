@@ -35,6 +35,7 @@ class ETAT_BANC_BOOT
     var journal, echecsLoad, verbeux
     var exceptions              # [quoi, erreur] levees par une regle, une minuterie ou un callback de driver
     var sources                 # dossier des sources (data/fs ou une copie)
+    var carte                   # dossier de la carte : source d'un module solidifie absent de data/fs (banc_demarrage)
     var litDisque               # lecture d'un fichier du PC (le open() d'origine, fourni par le banc)
     var ecrisDisque             # ecriture d'un fichier du PC (enveloppes des solidifies seulement)
     var solidifies              # noms des modules solidifies dans le firmware de la carte
@@ -48,7 +49,10 @@ class ETAT_BANC_BOOT
     # Appele par les enveloppes generees pour chaque module solidifie (voir preparation_boot.be).
     def solidifie(nom)
         import global
-        var source = self.litDisque(self.sources + "/" + nom + ".be")
+        import os
+        var chemin = self.sources + "/" + nom + ".be"
+        if !os.path.exists(chemin) && self.carte != nil    chemin = self.carte + "/" + nom + ".be"    end   # ex. controleRideau
+        var source = self.litDisque(chemin)
         try
             compile(source)()
         except .. as e, m

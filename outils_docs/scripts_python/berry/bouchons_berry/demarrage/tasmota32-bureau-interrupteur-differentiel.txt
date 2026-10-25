@@ -1,0 +1,11 @@
+carte : tasmota32-bureau-interrupteur-differentiel
+exception : aucune
+drivers (2) : CONTROLE_GENERAL, CONTROLE_WEB
+regles (8) : Button1#Action, Mqtt, Switch1#Action, Switch2#Action, System, System, Time, Wifi
+commandes (2) : ReglageGlobal, ReglageLog
+crons (0) : 
+minuteries (1) : demarrageDiffere
+compiles (0) : 
+sources (1) : /autoexec.be
+globales (16) : LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, boolMute:bool, diverses:instance, gpio:module, light:module, modules:instance, partition_wizard:module, persist:instance, persistValide:bool, serveur:instance, wire1:instance, wire2:instance
+erreurs (0) : 

@@ -1,0 +1,11 @@
+carte : tasmota32s3-garage-rideau-garage-modbus
+exception : aucune
+drivers (8) : CONTROLE_DISCOVERY, CONTROLE_GENERAL, CONTROLE_MODBUS, CONTROLE_RIDEAU, CONTROLE_UDP, CONTROLE_UDP, CONTROLE_WEB, HISTORIQUE_WEB
+regles (14) : ModbusReceived, ModbusReceivedUDP, Mqtt, Mqtt, Switch1#Action, Switch2#Action, System, System, System, System, System, Time, Wifi, Wifi
+commandes (5) : ReglageDiscovery, ReglageGlobal, ReglageLog, ReglageModbus, ReglageUDP
+crons (1) : majHistorique
+minuteries (1) : demarrageDiffere
+compiles (0) : 
+sources (4) : /autoexec.be, /controleLeds.be, /controleRideau.be, /ledsFonctions.be
+globales (19) : LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatModbusFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controleUDP_multicast:instance, controleUDP_unicast:instance, diverses:instance, gpio:module, light:module, modules:instance, persist:instance, persistValide:bool, serveur:instance, wire1:instance, wire2:instance
+erreurs (0) : 

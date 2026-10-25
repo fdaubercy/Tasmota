@@ -1,0 +1,11 @@
+carte : tasmota32s3-etage2-grenier
+exception : aucune
+drivers (7) : CONTROLE_DISCOVERY, CONTROLE_GENERAL, CONTROLE_LED_TEMOIN, CONTROLE_RANGE_EXTENDER, CONTROLE_VR, CONTROLE_WEB, HISTORIQUE_WEB
+regles (13) : Button1#Action, Mqtt, Mqtt, Shutter1#Direction, Switch1#Action, Switch2#Action, System, System, System, Time, Time, Wifi, Wifi
+commandes (6) : ReglageDiscovery, ReglageGlobal, ReglageLog, ReglageRangeExtender, ReglageVolets, RoutageRangeExtender
+crons (1) : majHistorique
+minuteries (1) : demarrageDiffere
+compiles (1) : /controleGrenier.bec
+sources (3) : /autoexec.be, /controleLeds.be, /ledsFonctions.be
+globales (16) : LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, boolMute:bool, controleVRoulant:instance, diverses:instance, gpio:module, light:module, modules:instance, persist:instance, persistValide:bool, serveur:instance, wire1:instance, wire2:instance
+erreurs (0) : 
