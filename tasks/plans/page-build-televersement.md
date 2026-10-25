@@ -322,10 +322,18 @@ Fichiers : `outils_pc/build_serie.py`, `outils_pc/build_progression.py`, `outils
 
 ## Améliorations restantes
 
-- [ ] [projet] Pause « rebranchez la carte X sur COMn » entre deux envs au port partagé (aujourd'hui :
-  refus, spec choix 11).
-- [ ] [projet] Corriger le `NameError` latent de `increment_config_holder` à 65535
-  (`pre_utilitaires_platformio.py:397-402`), relevé par la reconnaissance, hors périmètre.
+- [x] [projet] Pause « rebranchez la carte X sur COMn » entre deux envs au port partagé (aujourd'hui :
+  refus, spec choix 11). — preuve : commit 320fa8f32 (build_serie._attend_carte, POST /continuer, bandeau de la
+  page) ; test_build_serie 34 vérifications « pause » vertes, test_build_web /continuer et Ctrl+C pendant la pause,
+  sonde Chrome 5 vérifications « pause » (mutant du bandeau vu rouge) ; spec choix 11 révisé
+- [x] [projet] Corriger le `NameError` latent de `increment_config_holder` à 65535
+  (`pre_utilitaires_platformio.py:397-402`), relevé par la reconnaissance, hors périmètre. — preuve : déjà corrigé par febb53fd0 (audit P2.3), pre_utilitaires_platformio.py:395-401
+- [x] [projet] `garde_build` ignore les cibles d'outils (annuaire, pont série… lancés par leur cible Custom) : la page
+  de build ne les attend plus sans fin. — preuve : commit c741dc9ae ; build/test_garde_build.py vert (28 OK, liste
+  = NOM_CIBLE des cible_*.py ; mutant sans « annuaire » vu rouge, 4 KO)
+- [x] [projet] Défauts relevés : ordre des journaux à l'heure d'hiver, purge à 30 jours, infobulle d'effacement,
+  panneaux Sortie refermés en succès, texte d'arrêt de l'annuaire. — preuve : commit 82c924c66 ; test_build_web
+  (heure qui recule, purge), test_annuaire (texteArret par node), sonde Chrome 73 OK avec témoin
 
 ## Vérification
 

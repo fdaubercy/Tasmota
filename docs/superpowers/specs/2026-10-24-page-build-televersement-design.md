@@ -114,7 +114,12 @@ contenu de tous les `.ini`**. Si l'empreinte change, `run/helpers.py:35-50` supp
 - Le pont série (:7000), le sniffeur ModBus et le testeur UDP peuvent **tenir un port COM** ; l'annuaire
   sait le détecter (`annuaire_presence.py`, `_com_tenu`).
 - Détection d'un build en cours : logique de `.claude/hooks/garde_build.py` (`builds_en_cours()`,
-  PowerShell `Get-CimInstance Win32_Process`, regex `pio|platformio … run`, ou `scons`).
+  PowerShell `Get-CimInstance Win32_Process`, regex `pio|platformio … run`, ou `scons`). Révisé le 2026-10-25 :
+  un `pio run` dont toutes les cibles sont des cibles d'outils (les `NOM_CIBLE` des `build/cible_*.py` : annuaire,
+  pont série, sniffeurs, syslog, testeur UDP, synchro du fork, page de build), et son scons (cibles en fin de
+  ligne), ne sont **pas** des builds : l'outil vit tant que la cible vit, la page l'aurait attendu sans fin
+  (constaté avec `platformio.exe run --target annuaire`). `__idedata`, une cible mêlée ou un scons sans cible
+  lisible restent des builds (banc `build/test_garde_build.py`).
 
 ## Décisions de l'utilisateur (telles qu'il les a prises)
 
@@ -228,11 +233,23 @@ contenu de tous les `.ini`**. Si l'empreinte change, `run/helpers.py:35-50` supp
     - si un build tourne déjà (logique de `garde_build`) ;
     - pour une ligne COM avec une action d'envoi, si le port est tenu par un autre outil (pont série,
       sniffeur, testeur) ou absent ;
-    - si deux lignes cochées **avec une action d'envoi par COM** ont le même port (une seule carte branchée
-      par port) ; compiler seul plusieurs envs au port partagé reste permis.
+    - ~~si deux lignes cochées **avec une action d'envoi par COM** ont le même port~~ : **révisé le 2026-10-25,
+      pause au lieu du refus** (ci-dessous).
     Le contrôle « build en cours » est **refait avant chaque env** : si un build est apparu ailleurs entre
     deux envs, la série se met en attente (« en attente : build en cours dans VS Code ») et reprend quand
     il est fini ; l'utilisateur peut arrêter.
+    **Pause « rebranchez la carte »** (amélioration du plan, 2026-10-25, remplace le refus « même port ») : le
+    lancement est accepté quand deux lignes COM partagent un port. Pour un env dont un envoi COM (upload,
+    erase_upload, uploadfs) passe par un port déjà servi par un env **précédent** de la série : la compilation (si
+    cochée) se fait d'abord, en un `pio run` à part (le `-t upload` qui suit refait l'édition des liens, `CFG_HOLDER`
+    changeant à chaque `pio run`) ; juste avant son premier envoi COM, la série émet `attente_carte` (env, port,
+    env précédent) et attend. La page affiche « Branchez la carte <env> sur <COMn> puis cliquez Continuer » avec
+    **Continuer** et **Passer cet env** (`POST /continuer {env, choix}`, protégé comme `/arreter` ; refus si aucune
+    pause ou autre env). Continuer : un build apparu pendant la pause est attendu, puis le port est revérifié
+    (absent ou tenu → échec de cet env avec message clair, la série continue). Passer : actions restantes
+    « annulée », env « passé », la série continue. Les deux arrêts et le Ctrl+C du serveur mettent fin à la pause
+    (aucun envoi n'est en vol) ; le rejeu du flux remontre le bandeau tant que la pause dure. Les autres refus
+    (port tenu, absent) restent.
 12. **Progression** :
     - étapes affichées : *Pré-build* (pré-script, solidification Berry) → *Compilation* → *Édition des
       liens* → *Téléversement* (ou *Construction du FS* / *Envoi des fichiers*) ;
@@ -254,7 +271,9 @@ contenu de tous les `.ini`**. Si l'empreinte change, `run/helpers.py:35-50` supp
     ouvert et modifié dans VS Code (VS Code recharge seul un fichier non modifié).
 14. **Journal** : sortie complète de chaque `pio run` gardée (codes ANSI retirés) dans
     `%LOCALAPPDATA%\outils_tasmota\build\journaux\`, dépliable sur la page ; derniers choix (envs cochés,
-    méthodes, IP saisies) mémorisés dans ce même dossier, hors dépôt.
+    méthodes, IP saisies) mémorisés dans ce même dossier, hors dépôt. (2026-10-25) Journaux d'un env lus dans
+    l'ordre de leur date de modification, pas de l'heure du nom (qui recule au passage à l'heure d'hiver) ;
+    journaux de plus de 30 jours supprimés au démarrage de l'outil.
 15. **Fichiers modifiés par un lancement** : chaque `pio run` réécrit `platformio_override.ini` et
     `user_config_override.h` (CFG_HOLDER) — comportement existant. La page le rappelle en fin de
     lancement (fichiers à commiter par l'utilisateur, cf. leçon du 2026-10-13).
@@ -292,6 +311,9 @@ Demandée après les premiers essais réels (compilation, upload COM de la cuve,
     lu **par incréments** pendant l'exécution (rien de plus stocké) ; la sortie d'un env terminé reste
     relisible tant que la page est ouverte. Les lignes d'esptool qui se réécrivent (``) ne doivent pas
     noyer le panneau (une ligne par zone et par palier, ou la dernière seulement : au constructeur).
+    (2026-10-25) Le panneau ouvert par la page au départ de l'env se referme quand l'env réussit, sauf si
+    l'utilisateur l'a ouvert ou fermé lui-même ; il reste ouvert en échec ou arrêt ; au rechargement, un env
+    réussi ne rouvre pas le sien et ne lit pas `/sortie`.
 19. **`erase_upload`** : commande `pio run -e X -t erase_upload --upload-port COMn` ; **COM seulement**
     (grisée sur une ligne en OTA, refusée côté serveur) ; cocher « Effacer puis téléverser » décoche
     « Téléverser le firmware » et inversement (les enchaîner flasherait deux fois) ; combinable avec

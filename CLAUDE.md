@@ -474,6 +474,8 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     `banc_veille_drivers.be` (veille des drivers inactifs sur LittleFS neuf, `bouchons_berry/veille/`),
     `banc_boot.{py,be}` (autoexec ENTIER du P4 sur faux firmware `bouchons_berry/boot/` : persist reel, `{}`,
     sans `serveur.wifi`, ES8311 absent, telemetrie sans COUNTER ; timers de reboot P5.1 ; B1, B2, B3, MAC et ES8311 corriges, plus aucun defaut `CONNU`),
+    `banc_demarrage.{py,be}` (autoexec ENTIER des 6 cartes maintenues, instantane compare a `bouchons_berry/demarrage/<env>.txt` ;
+    les autoexec ne gardent que la liste ordonnee de leurs modules, le deroule commun est dans `data/fs/demarrage.be`, P4.2),
     `test_discovery.be` avec leurs `bouchons_berry/` (`bouchons_berry/leds/` : bouchon de
     `ledsFonctions`, ajoute par le seul banc ModBus ; dans `bouchons_berry/`, il masquerait le vrai
     module a `banc_leds`).
