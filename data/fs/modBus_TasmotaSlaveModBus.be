@@ -1061,8 +1061,6 @@ class MODBUS_TASMOTA_SLAVE : Driver
                 # Configure les relais virtuels ModBus si ils existent et sont paramétrés
                 # Gère les commandes envoyées aux devices ModBus du TasmotaSlaveModBus au demarrage
 
-                # Récupère le délai de la Teleperiod
-                var teleperiod = tasmota.cmd("TelePeriod", boolMute)["TelePeriod"]
 
                 # Parcours les devices virtuels ModBus
                 for cleModule: modules.keys()
@@ -1151,70 +1149,23 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                                         end
                                                         modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"]) 
                                                     # Demande au demarrage l'état des interrupteurs virtuels ModBus
-                                                    # ex: modbussend {"Count":1,"StartAddress":0x03,"values":0,"type":"uint8","FunctionCode":2,"StartAddress":160}
                                                     elif (cleDevices == "interrupteurs" || cleDevices == "capteurs" || cleDevices == "boutons")
-                                                        trameModBus["FunctionCode"] = 0x02
-                                                        trameModBus["StartAddress"] = devices[cleDev]["type"] + devices[cleDev]["idModBus"] - 1
-                                                        trameModBus["type"] = "uint8"
-                                                        trameModBus["Count"] = 1
-                                                        trameModBus["Values"] = 0
-
-                                                        # Aucune lecture au demarrage (envoi commente ci-dessous) : le releve periodique
+                                                        # Aucune lecture au demarrage : le releve periodique
                                                         # (releveEsclaves, toutes les periodeReleve() s) s'en charge. Message corrige le 2026-10-11 :
                                                         # il annoncait une demande jamais envoyee.
                                                         self.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: " + (cleDevices == "interrupteurs" ? "Interrupteur" : (cleDevices == "boutons" ? "Bouton" : "Capteur")) + " n°%i : etat lu par le releve periodique (toutes les %i s), pas au demarrage", devices[cleDev]["id"], self.periodeReleve()), LOG_LEVEL_DEBUG)
 
-                                                        # tasmota.add_cron("*/60 * * * * *",  /-> modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"]), "majInter_TasmotaSlaveModBus")
-                                                        # modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"])
                                                     # Demande régulièrement la valeur des entrées analogiques virtuels ModBus / Teleperiod
-                                                    # ex: ModBusSend {"FunctionCode":4,"Values":0,"Count":1,"DeviceAddress":0x02,"type":"uint32","StartAddress":4704}
                                                     elif (cleDevices == "analogiques")
-                                                        trameModBus["FunctionCode"] = 0x04
-                                                        trameModBus["StartAddress"] = devices[cleDev]["type"] + devices[cleDev]["idModBus"] - 1
-                                                        trameModBus["type"] = "uint32"
-                                                        trameModBus["Count"] = 1
-                                                        trameModBus["Values"] = 0
-
                                                         self.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: Entrée analogique n°%i : valeur lue par le releve periodique (toutes les %i s), pas au demarrage", devices[cleDev]["id"], self.periodeReleve()), LOG_LEVEL_DEBUG)
 
-                                                        # tasmota.add_cron(string.format("*/%i * * * * *", teleperiod), /-> modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"]), "majAnalogiques_TasmotaSlaveModBus")
-                                                        # modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"])
                                                     # Demande au demarrage la valeur des compteurs virtuels ModBus
-                                                    # ex: ModBusSend {"FunctionCode":4,"Values":0,"Count":1,"DeviceAddress":0x02,"type":"uint32","StartAddress":352}
                                                     elif (cleDevices == "compteurs")
-                                                        trameModBus["FunctionCode"] = 0x04
-                                                        trameModBus["StartAddress"] = devices[cleDev]["type"] + devices[cleDev]["idModBus"] - 1
-                                                        trameModBus["type"] = "uint32"
-                                                        trameModBus["Count"] = 1
-                                                        trameModBus["Values"] = 0
-
                                                         self.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: Compteur n°%i : valeur lue par le releve periodique (toutes les %i s), pas au demarrage", devices[cleDev]["id"], self.periodeReleve()), LOG_LEVEL_DEBUG)
 
-                                                        # tasmota.add_cron(string.format("*/%i * * * * *", teleperiod),  /-> modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"]), "majCompteurs_TasmotaSlaveModBus")
-                                                        # modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"])
                                                     # Demande régulièrement la valeur des thermomètres & DHT22 virtuels ModBus / TelePeriod
-                                                    # ex DS18B20: ModBusSend {"DeviceAddress": 2, "FunctionCode": 4, "StartAddress": 1312, "type":"float", "Count":1, "Values":-1.5}
                                                     elif (cleDevices == "thermometres")
-                                                        # DHT22 (AM2302)
-                                                        if (devices[cleDev]["type"] == 1216)
-                                                            trameModBus["FunctionCode"] = 0x04
-                                                            trameModBus["StartAddress"] = devices[cleDev]["type"] + devices[cleDev]["idModBus"] - 1
-                                                            trameModBus["type"] = "float"
-                                                            trameModBus["Count"] = 2        # Attendra 2 valeurs: T° + Humidité
-                                                            trameModBus["Values"] = 0 
-                                                        # DS18B20
-                                                        elif (devices[cleDev]["type"] == 1312)  
-                                                            trameModBus["FunctionCode"] = 0x04
-                                                            trameModBus["StartAddress"] = devices[cleDev]["type"] + devices[cleDev]["idModBus"] - 1
-                                                            trameModBus["type"] = "float"
-                                                            trameModBus["Count"] = 1
-                                                            trameModBus["Values"] = 0  
-                                                        end
-                                                            
                                                         self.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: Thermomètre n°%i : valeur lue par le releve periodique (toutes les %i s), pas au demarrage", devices[cleDev]["id"], self.periodeReleve()), LOG_LEVEL_DEBUG)
-
-                                                        # tasmota.add_cron(string.format("*/%i * * * * *", teleperiod),  /-> modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"]), "majThermo_TasmotaSlaveModBus")
-                                                        # modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["StartAddress"])
                                                     end
                                                 end
                                             end

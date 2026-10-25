@@ -325,17 +325,22 @@ ipsId2 = []
 for fiche : modbusFonctions.fichesModbus()    if fiche["ModBus"]["id"] == 2    ipsId2.push(fiche["IPAddress"])    end    end
 verifie("temoin sans groupTopic1 : 2 fiches d'id 2", 2, size(ipsId2))
 serveur["mqtt"]["groupTopic1"] = "tasmotas/garage"
-# envoiMsgModbusUDP (repli quand le serie est coupe) : ne leve plus ; maitre -> MultiCast avec
+# envoiMsgModbusUDP (repli de l'ESCLAVE quand le serie est coupe) : ne leve plus ; MultiCast avec
 # interface "" : envoiUDP la choisit (point d'acces lu dans le persist, sinon STA ; 2026-10-17, C3).
-# Avant : "192.168.4.1" ecrit en dur, qui imposait l'AP meme sans Range Extender.
+# Avant : "192.168.4.1" ecrit en dur, qui imposait l'AP meme sans Range Extender. Le maitre n'y passe
+# jamais (envoiMsgModbus enfile tous ses messages) : sa branche est retiree (audit P5.10, 2026-10-25).
 import udpFonctions as udpStub6
 udpStub6.envois = []
-drivers = {"ModBus": {"typeComm": {"Serial":"OFF", "UDP":"ON", "TCP":"OFF"}, "environnement": {}, "id": 0}}
+drivers = {"ModBus": {"typeComm": {"Serial":"OFF", "UDP":"ON", "TCP":"OFF"}, "environnement": {}, "id": 2}}
 serveur["udp"] = {"activation": "ON"}
-verifie("envoiMsgModbusUDP (maitre) : sans exception", "OK",
-        essaie(def () modbusFonctions.envoiMsgModbusUDP(bytes("0203000100011234"), "Commande") return "OK" end))
+verifie("envoiMsgModbusUDP (esclave) : sans exception", "OK",
+        essaie(def () modbusFonctions.envoiMsgModbusUDP(bytes("0003000100011234"), "Reponse") return "OK" end))
 verifie("envoiMsgModbusUDP : multicast, interface laissee a envoiUDP", "MultiCast|",
         size(udpStub6.envois) == 1 ? udpStub6.envois[0][0] + "|" + udpStub6.envois[0][1] : str(udpStub6.envois))
+udpStub6.envois = []
+drivers["ModBus"]["id"] = 0
+modbusFonctions.envoiMsgModbusUDP(bytes("0203000100011234"), "Commande")
+verifie("envoiMsgModbusUDP appele pour le maitre : rien emis (il emet par sa file)", 0, size(udpStub6.envois))
 gestionFileFolder.contenu = "{}"
 drivers = sauveDrivers
 serveur = sauveServeur

@@ -112,39 +112,6 @@ class CONTROLE_RANGE_EXTENDER : Driver
 		tasmota.add_cmd('ReglageRangeExtender', rangeExtenderFonctions.reglageRangeExtender)
         tasmota.add_cmd('RoutageRangeExtender', rangeExtenderFonctions.routageRangeExtender)
     end
-
-	#- Création de boutons dans le menu principal -#
-    #   Ce bouton est géré par le driver 'controleWeb'
-    #   Le 'click' sur le bouton doit envoyer une requête sur l'url suivante: '/json?commande=Backlog RgxNAPT ON; RgxPort tcp, 8080, 24587CDE6688, 80;'
-    #       appel la fonction 'controleWeb.envoiJson()': prépare la réponse json à la requête
-    #       appel la fonction 'webFonctions.traiteCommandeHTTP(typeModule, categorie, commande)'
-    #       l'activation et le routage durera environ 20min
-#- 	
-    def web_add_main_button()
-        import rangeExtenderFonctions
-        import introspect
-
-        tasmota.yield()
-
-		# Affiche le bouton qui fait le lien vers chacun des modules RangeExtender esclaves connectés
-        if (introspect.module("rangeExtenderFonctions") != nil)
-            rangeExtenderFonctions.afficheBoutonsModulesEsclaves()
-        end
-    end	 
--#
-#-
-    # Création de boutons dans le menu 'Tools'
-	def web_add_management_button()
-        import webserver
-        webserver.content_send("<p></p><button onclick='la(\"&m_toggle_main=1\");'>Toggle Management</button>")
-    end	
-
-    # Création de boutons dans le menu 'Configuration'
-	def web_add_config_button()
-        import webserver
-        webserver.content_send("<p></p><button onclick='la(\"&m_toggle_config=1\");'>Toggle Config</button>")
-    end	
--#
 end
 
 # Publie la classe dans le module (solidification + import).

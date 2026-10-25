@@ -96,7 +96,6 @@ modbusFonctions.TIMEOUT_UDP_DEFAUT = 2000
 # # *************************************************
 # # * ModBus Commandes
 # # *************************************************
-modbusFonctions.UNDEFINED = 0x00
 modbusFonctions.LECTURE_COILS = 0x01
 modbusFonctions.LECTURE_ENTREES_DISCRETES = 0x02
 modbusFonctions.LECTURE_REGISTRES_HOLDER = 0x03
@@ -105,7 +104,7 @@ modbusFonctions.ECRITURE_COIL_UNIQUE = 0x05
 modbusFonctions.ECRITURE_REGISTRE_UNIQUE = 0x06
 modbusFonctions.ECRITURE_COILS = 0x0F                       # functionCode = 15
 modbusFonctions.ECRITURE_REGISTRES_HOLDER = 0x10            # functionCode = 16
-modbusFonctions.ISALIVE_ESCLAVE = 0x11                      # Inutilisée
+modbusFonctions.ISALIVE_ESCLAVE = 0x11                      # code admis par prepareTrame, sans emetteur aujourd'hui
 
 modbusFonctions.tabFonctionsName = [
                                         "UNDEFINED",                    # 0x00
@@ -1566,16 +1565,11 @@ def modbusFonctions_envoiMsgModbusSerial(paramMSG, typeMsg)
 
     var reponse = {}
 
-    # Si maitre ModBus (id = 0)
+    # Maitre (id = 0) : jamais appele pour lui (audit P5.10, 2026-10-25) : envoiMsgModbus enfile TOUS ses
+    # messages (enfileMsg -> pompeQueue, voir outils_docs/PROTOCOLE_MODBUS.md) et ne descend ici que pour une
+    # Reponse, que le maitre n'emet pas.
     if (drivers["ModBus"].find("id", 99) == 0)
-        # Teste le Flag d'attente de réponse avant d'envoyer = Une commande en cours attend déjà une réponse
-        # Si 'faux': Le canal ModBus est libre: la commande peut être envoyée
-        # Maitre (id = 0) : on ENFILE le message. La file (enfileMsg -> pompeQueue ->
-        # termineEnVol/surTimeout) envoie la tete quand le canal RS485 est libre, un
-        # seul en vol, dans l'ordre FIFO, avec timeout unique et retry borne.
-        # Remplace l'ancien booleen attenteReponse + renvoi par timer nomme par
-        # StartAddress (qui perdait des messages). Voir outils_docs/PROTOCOLE_MODBUS.md.
-        modbusFonctions.enfileMsg(paramMSG, typeMsg)
+        modbusFonctions.log("ENVOI_MSG_MODBUS_SERIAL_ERREUR: maitre : Reponse non emise (le maitre n'en envoie pas) !", LOG_LEVEL_ERREUR)
         return
     #- Si Esclave ModBus (id > 0)
         Fonction 0x02 ==> Lecture des entrées discrètes (Read Discrete Inputs) : ex=Récupérer l'état de boutons, capteurs, contacts, interrupteurs.
@@ -1823,43 +1817,15 @@ modbusFonctions.annonceRoute = modbusFonctions_annonceRoute
 -#
 def modbusFonctions_envoiMsgModbusUDP(Trame, typeMsg)
     import udpFonctions
-    import json
-    import gestionFileFolder
-    import re
-    import string
 
     if (drivers["ModBus"]["typeComm"].find("UDP", "OFF") == "OFF" && serveur["udp"].find("activation", "OFF") == "OFF")    return      end
     modbusFonctions.log("ENVOI_MSG_MODBUS_UDP: ------------------ envoiMsgModbusUDP ------------------", LOG_LEVEL_DEBUG_PLUS)
 
-    # Recherche l'IP de l'esclave ModBus dans la table des périphériques
-    # Corrige le 2026-09-30 : lisait '/json/paramDiscovery.json' (jamais ecrit -> exception) et
-    # sa propre fiche MAC seulement. L'IP trouvee sert a l'envoi UniCast (commente ci-dessous).
-    var IP_ModBus = "192.168.4.2"
-
-    # l'id du destinataire est le 1er octet de la trame ModBus
-    var id = Trame.get(0, -1)
-
-    # Si maitre ModBus (id == 0)
-    if (drivers["ModBus"].find("id", 99) == 0)
-        for fiche: modbusFonctions.fichesModbus()
-            if (fiche["ModBus"].find("id", -1) == id)
-                IP_ModBus = str(fiche.find("IPAddress", IP_ModBus))
-                break
-            end
-        end
-        modbusFonctions.log(string.format("ENVOI_MSG_MODBUS_UDP: IP de l'esclave d'ID=%i dans discovery.json : %s", id, IP_ModBus), LOG_LEVEL_DEBUG_PLUS)
-    end
-
+    # Esclave seulement (audit P5.10, 2026-10-25) : le maitre emet par sa file (envoieTete), jamais par ici.
     # La trame part en HEXA (corrige le 2026-09-29) : Trame.tostring() donnait "bytes('...')",
-    # que la reception (udpFonctions.lireUDP) ne savait pas relire.
-    # Si maitre ModBus (id == 0) => envoi par UDP MultiCast
-    if (drivers["ModBus"].find("id", 99) == 0)
-        # udpFonctions.envoiUDP("UniCast", IP_ModBus, "ModbusUDP " + Trame.tohex())
-        # "" : envoiUDP choisit l'interface (point d'acces lu dans le persist, sinon STA ; 2026-10-17, C3)
-        udpFonctions.envoiUDP("MultiCast", "", "ModbusUDP " + Trame.tohex())
-    # Si esclave ModBus (id > 0) => envoi par UDP UniCast
-    elif (drivers["ModBus"].find("id", 0) > 0)
-        # udpFonctions.envoiUDP("UniCast", "192.168.0.43", "ModbusUDP " + json.dump(Trame))
+    # que la reception (udpFonctions.lireUDP) ne savait pas relire. "" : envoiUDP choisit l'interface
+    # (point d'acces lu dans le persist, sinon STA ; 2026-10-17, C3).
+    if (drivers["ModBus"].find("id", 0) > 0)
         udpFonctions.envoiUDP("MultiCast", "", "ModbusUDP " + Trame.tohex())
     end
 end
@@ -1886,12 +1852,8 @@ modbusFonctions.repondUDP = modbusFonctions_repondUDP
     lancé après une commande 'ModBusSend' (si maitre: id == 0) OU une commande 'modbusFonctions.serialModBus.write' (si esclave: id > 0)
     depuis la fonction 'modbusFonctions.envoiMsgModbus(paramMSG, typeMsg)'
 
-    @ Client: l'instance qui porte la connexion. Elle n'est PAS passée en argument :
-        la fonction la deduit du role, car aucun appelant ne l'a sous la main.
-        Maitre  (drivers.ModBus.id == 0) -> modbusFonctions.clients[id du destinataire]
-                                            (client TCP asynchrone, cree en :288)
-        Esclave (drivers.ModBus.id  > 0) -> tcpFonctions.connexionAsync
-                                            (connexion acceptee par son serveur, tcpFonctions.be:153)
+    @ Client: la connexion acceptee par le serveur TCP de l'esclave (tcpFonctions.connexionAsync,
+        tcpFonctions.be:153). Esclave seulement (audit P5.10) : le maitre n'emet pas de Reponse.
 -#
 def modbusFonctions_envoiMsgModbusTCP(Trame, typeMsg)
     import json
@@ -1900,28 +1862,11 @@ def modbusFonctions_envoiMsgModbusTCP(Trame, typeMsg)
     if (drivers["ModBus"]["typeComm"].find("TCP", "OFF") == "OFF" && serveur["tcp"].find("activation", "OFF") == "OFF")    return      end
     modbusFonctions.log("ENVOI_MSG_MODBUS_TCP: ------------------ envoiMsgModbusTCP ------------------", LOG_LEVEL_DEBUG_PLUS)
 
-    # l'id du destinataire est le 1er octet de la trame ModBus
-    var id = Trame.get(0, -1)
     var Client
 
-    # Si maitre ModBus (id == 0) ==> Se connecte en tant que client TCP à l'esclave ModBus
-    if (drivers["ModBus"].find("id", 99) == 0)
-        # Le maitre tient un client TCP par esclave, indexe par l'id du destinataire
-        if (id < 1 || id >= size(modbusFonctions.etat()["clients"]))
-            modbusFonctions.log(string.format("ENVOI_MSG_MODBUS_TCP: Aucun client TCP pour l'esclave d'ID=%i !", id), LOG_LEVEL_ERREUR)
-            return
-        end
-        Client = modbusFonctions.etat()["clients"][id]
-
-        # Récupère les informations pour savoir si le port est disponible pour envoyer des infos ou ordre
-        if (Client != nil && Client.connected() && Client.listening())
-            modbusFonctions.log(string.format("ENVOI_MSG_MODBUS_TCP: Message ModBus TCP envoyé: %s %s", "ModbusTCP", Trame.tohex()), LOG_LEVEL_DEBUG_PLUS)
-            Client.write(bytes().fromstring("ModbusTCP ") + Trame)
-        else modbusFonctions.log(string.format("ENVOI_MSG_MODBUS_TCP: Connexion TCP avec l'esclave d'ID=%i non-etablie !", id), LOG_LEVEL_ERREUR)
-        end
-
-    # Si esclave ModBus (id > 0) ==> Envoi la trame ModBus reçue par le serveur TCP
-    elif (drivers["ModBus"].find("id", 0) > 0)
+    # Esclave seulement (audit P5.10, 2026-10-25) : envoiMsgModbus n'envoie en TCP que les Reponse, et le
+    # maitre n'en emet pas. Envoi par la connexion que le maitre a ouverte sur le serveur TCP de l'esclave.
+    if (drivers["ModBus"].find("id", 0) > 0)
         import tcpFonctions
         Client = tcpFonctions.etat()["connexionAsync"]
 

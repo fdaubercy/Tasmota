@@ -271,16 +271,11 @@ class CONTROLE_MODBUS : Driver
         import modbusFonctions
         import json
 
-        var tabFonctionsName = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
-            tabFonctionsName.insert(1, "LECTURE_COILS")
-            tabFonctionsName.insert(2, "LECTURE_ENTREES_DISCRETES")
-            tabFonctionsName.insert(3, "LECTURE_REGISTRES_HOLDER")
-            tabFonctionsName.insert(4, "LECTURE_REGISTRES_ENTREES")
-            tabFonctionsName.insert(5, "ECRITURE_COIL_UNIQUE")
-            tabFonctionsName.insert(6, "ECRITURE_REGISTRE_UNIQUE")
-            tabFonctionsName.insert(0x0F, "ECRITURE_COILS")
-            tabFonctionsName.insert(0x10, "ECRITURE_REGISTRES_HOLDER")
-            tabFonctionsName.insert(0x11, "ISALIVE_ESCLAVE")
+        # Nom de la fonction lu dans la table du module (audit P5.10, 2026-10-25) : la table locale etait
+        # reconstruite a chaque trame UDP (17 chaines + 9 insert). Code hors table -> "UNDEFINED".
+        var tabFonctionsName = modbusFonctions.tabFonctionsName
+        # Audit P7.4 (2026-10-25) : les messages "detail" ne sont construits que s'ils seront ecrits (modele : decrypteMSG)
+        var detail = logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, "modbus")
 
         # Récupère la réponse à une requête ModBus UDP
         self.reponseModBus = value
@@ -295,7 +290,8 @@ class CONTROLE_MODBUS : Driver
             # apparieReponse confirme que la trame repond bien a la requete en vol.
 
             # Pré-traitement de la trame reçue
-            self.reponseModBus["FunctionName"] = tabFonctionsName[self.reponseModBus["FunctionCode"]]
+            var code = self.reponseModBus["FunctionCode"]
+            self.reponseModBus["FunctionName"] = (isinstance(code, int) && code >= 0 && code < size(tabFonctionsName)) ? tabFonctionsName[code] : "UNDEFINED"
             self.reponseModBus["DeviceAddress"] = int(self.reponseModBus["DeviceAddress"])
             # self.reponseModBus["Values"] = []
             if (type(self.reponseModBus["Values"]) == "int")

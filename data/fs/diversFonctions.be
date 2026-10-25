@@ -2,57 +2,6 @@
 #@ solidify:diversFonctions
 var diversFonctions = module("diversFonctions")
 
-def diversFonctions_afficheDateTime(sepHoraire, boolAfficheSec, sepDateHeure)
-    import string
-
-	var time_dump = tasmota.time_dump(tasmota.rtc()["local"])
-	
-	# Paramètres par défaut si absent
-	if sepHoraire == "" sepHoraire = "-" end
-	if boolAfficheSec == nil boolAfficheSec = false end
-	
-	var date = (time_dump["day"] < 10 ? "0" + str(time_dump["day"]) : str(time_dump["day"])) + "/" 
-		date += (time_dump["month"] < 10 ? "0" + str(time_dump["month"]) : str(time_dump["month"])) + "/" 
-		date += str(time_dump["year"]) + (sepDateHeure == "" ? " " : sepDateHeure)
-		
-	if sepHoraire == ":"
-		date += (time_dump["hour"] < 10 ? "0" + str(time_dump["hour"]) : str(time_dump["hour"])) + ":" 
-		date += (time_dump["min"] < 10 ? "0" + str(time_dump["min"]) : str(time_dump["min"])) + ":" 
-		date += (time_dump["sec"] < 10 ? "0" + str(time_dump["sec"]) : str(time_dump["sec"]))
-	else
-		date += (time_dump["hour"] < 10 ? "0" + str(time_dump["hour"]) : str(time_dump["hour"])) + "h" 
-		date += (time_dump["min"] < 10 ? "0" + str(time_dump["min"]) : str(time_dump["min"]))
-		if boolAfficheSec
-			date += "min" + (time_dump["sec"] < 10 ? "0" + str(time_dump["sec"]) : str(time_dump["sec"])) + "s" 
-		end
-	end
-		
-	return date
-end
-diversFonctions.afficheDateTime = diversFonctions_afficheDateTime
-
-# Génère un débit aléatoire
-def diversFonctions_getRandomInt(min, max)
-	import math
-	import crypto
-
-	var index_found = true
-	var x1 = 0
-
-	min = math.ceil(min);
-	max = math.floor(max);
-
-	while (index_found)
-		x1 = crypto.random(1)[0]
-		if ((x1 >= min) && (x1 <= max))
-			index_found = false
-		end
-	end
-
-	return int(x1);
-end
-diversFonctions.getRandomInt = diversFonctions_getRandomInt
-
 # Récupère les template enregistré dans la device Tasmota
 # Récupère les componentes
 # @template = tableau json enregistré dans _persist.json

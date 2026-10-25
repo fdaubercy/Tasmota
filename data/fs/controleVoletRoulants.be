@@ -94,19 +94,6 @@ class CONTROLE_VR : Driver
 		# Ajoute les commandes personnalisées
 		tasmota.add_cmd('ReglageVolets', vrFonctions.reglageVolets)	
     end
-
-    def every_second()
-    end
-
-    # Affiche les capteurs du module cuve sur la page web
-    def web_sensor()
-        # Rien à afficher
-    end
-
-    # Ajoute les données des capteurs de rideau de garage à la réponse JSON
-    def json_append()
-        # Rien à ajouter
-    end
 end
 
 # Active le Driver de controle global des modules

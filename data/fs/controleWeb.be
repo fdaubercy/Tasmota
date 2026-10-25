@@ -40,9 +40,6 @@ class CONTROLE_WEB
         # tasmota.add_rule("Mqtt", def(value, trigger, msg) webFonctions.changementEtatDemarrage(value, trigger, msg) end)
     end
 
-    def every_second()
-    end
-
     # Reponse a /?m=1 (rafraichissement de la page d'accueil, ~2 s) : recale les curseurs du ruban
     # virtuel du maitre sur l'etat relu ou pousse par l'esclave (2026-10-12, ledsPanelFonctions).
     def web_sensor()
@@ -278,73 +275,6 @@ class CONTROLE_WEB
 		webserver.content_stop()	
     end
 
-    # Modifie l'état des capteurs pour test
-    def etatCapteurs()
-        import string
-        import webserver
-        import gestionFileFolder
-
-		var titreHTML = ""
-        var tempFile = ""
-        var buffer = ""
-		
-		# Gère la réponse au bouton 
-		# Requete XMLHttpResponse : Corps de la page
-		if webserver.has_arg("module")
-			titreHTML = "Modif. Capteurs"
-			self.formSelection = webserver.arg("module")
-			
-			logFonctions.log(string.format("WEBSERVER: Affichage de la page de modification des capteurs du module '%s' !", self.formSelection), LOG_LEVEL_DEBUG, "serveurWeb")
-
-			# Démarrage la page
-			webserver.content_start(titreHTML)
-			webserver.content_send_style()	
-            
-            # Envoi les scripts css
-            webserver.content_send(str(gestionFileFolder.readFile("/sd/css/main.css")))
-
-			# Envoi le formulaire de selection de module
-            tempFile = gestionFileFolder.readFile("/sd/html/formSelectParametres.html")
-            for cle: self.parametres.keys()
-                if (type(self.parametres[cle]) != "instance")   continue    end	
-                tasmota.yield()
-                
-                if cle == "serveur"
-                    buffer += "<option value='" + cle + "' " + (self.formSelection == cle ? "selected" : "") + ">Serveur</option>"
-                elif cle == "diverses"
-                    buffer += "<option value='" + cle + "' " + (self.formSelection == cle ? "selected" : "") + ">Divers</option>"
-                elif cle == "modules"
-                    for cleModule: self.parametres[cle].keys()
-                        if type(self.parametres[cle][cleModule]) != "instance"
-                            continue
-                        end	
-                        
-                        buffer += "<option value='" + cleModule + "' " + (self.formSelection == cleModule ? "selected" : "") + ">" + self.parametres[cle][cleModule]["name"] + "</option>"
-                    end
-                end
-            end
-            tempFile = string.replace(tempFile, "##SELECT_OPTION_MODULES##", buffer)
-
-            # Envoi le formulaire de selection de categorie dans le module
-            tempFile = string.replace(tempFile, "##SELECT_OPTION_CATEGORIES##", "")
-            webserver.content_send(tempFile)
-
-            # Début du formulaire
-            tempFile = gestionFileFolder.readFile("/sd/html/pageModifCapteurs.html")
-            webserver.content_send(tempFile)
-
-            # Envoi les scripts javascript
-            tempFile = gestionFileFolder.readFile("/sd/js/main.js")
-            webserver.content_send(tempFile)
-
-            tempFile = gestionFileFolder.readFile("/sd/js/jsModifCapteurs.js")
-            webserver.content_send(tempFile)
-    
-			#- end of web page -#
-			webserver.content_stop()    
-        end
-    end
-
 	#- Création de boutons dans le menu principal -#
     # Affiche les paramétres des leds WS2812 virtuelles
     # Affichage des réglages de SCHEME sur webUI
@@ -440,14 +370,11 @@ class CONTROLE_WEB
 	# Charge les appels aux fonctions selon l'url
 	def web_add_handler()
         import webserver
-        import webFonctions
 
         tasmota.yield()
 
         webserver.on("/modules", / -> self.affichePageParametres(), webserver.HTTP_GET)	
 		webserver.on("/json", / -> self.envoiJson(), webserver.HTTP_ANY)	
-        webserver.on("/capteurs", / -> self.etatCapteurs(), webserver.HTTP_GET)	
-        webserver.on("/wss", / -> webFonctions.htmlWebSocket(), webserver.HTTP_ANY)
 
         # /leds et /leds_data : miroir du ruban WS2812, si la carte en porte un (2026-10-11)
         import ledsPanelFonctions

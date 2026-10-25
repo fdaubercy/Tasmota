@@ -408,22 +408,9 @@ def udpFonctions_changementEtatDemarrage(value, trigger, msg, typeComm)
 
     tasmota.yield()
 
-	# Lorsque la connexion Wi-Fi est change
-	if (trigger == "Wifi")
-        if msg["WIFI"].find("Connected", 0)
-            # Evite de répéter l'opération 2 fois
-            if (string.toupper(typeComm) == string.toupper("MultiCast"))  return  end
-
-            # Enregistre adresse MAC en json persist
-            serveur["adresseMAC"] = tasmota.cmd("Status 5", boolMute)["StatusNET"]["Mac"]
-
-            persist.serveur = serveur
-            persist.save()
-        elif msg["WIFI"].find("Disconnected", 0)
-        end
 	# Init: Se produit une fois après le redémarrage avant que le Wi-Fi et MQTT ne soient initialisés
     # Boot: Se déclenche après la connexion du Wi-Fi et de MQTT (si activé)
-	elif (trigger == "System")
+	if (trigger == "System")
         if msg[trigger].find("Init", 0)
         elif msg[trigger].find("Boot", 0)
             # Ouverture par ouvreEcoute (C7) : rien si le secours sans MQTT l'a deja ouverte
@@ -443,20 +430,6 @@ def udpFonctions_changementEtatDemarrage(value, trigger, msg, typeComm)
             udpFonctions.fermeSocketsEmission()
             udpFonctions.etat()["ecouteOuverte"] = [false, false]
             udpFonctions.etat()["secoursFini"] = true        # Save precede un redemarrage : ne rien rouvrir
-        end
-	# Se déclenche après la connexion MQTT (si activé)
-    elif (trigger == "Mqtt")
-        if msg["MQTT"].find("Connected", 0)
-        elif msg["MQTT"].find("Disconnected", 0)
-        end
-	# Se déclenche un évènement sur les heures et la synchronisation NTP (si activé)
-    elif (trigger == "Time")
-        # A chaque fois que le NTP est initialisé et l'heure synchronisée
-        if type(msg["Time"]) == "instance"
-            if msg["Time"].find("Initialized", 0)
-            # A chaque heure, quand le système NTP est synchronisé
-            elif msg["Time"].find("Set", 0)
-            end
         end
     end
 end
@@ -908,32 +881,6 @@ def udpFonctions_lireUDP(typeComm, paramMSG)
     return false
 end
 udpFonctions.lireUDP = udpFonctions_lireUDP
-
-# Fonction qui gère l'envoi de commande TasmotaClient par UDP sous format string
-# CMD = commande répondant au fonctionnenemt de l'API Tasmota
-# Type de trame: <CMD>
-def udpFonctions_sendTasmotaClientUDP(typeComm, destinationIP, commande)
-    import string
-
-    typeComm = ((typeComm == "" || typeComm == nil) ? "MultiCast" : typeComm)
-    var port = (string.toupper(typeComm) == string.toupper("uniCast")) ? udpFonctions.etat()["port"] : udpFonctions.etat()["port"] * 2
-
-    # Test   
-    udpFonctions.log("ENVOI_TASMOTA_CLIENT_UDP: --------------- sendTasmotaClientUDP --------------", LOG_LEVEL_DEBUG_PLUS)
-    udpFonctions.log(f"ENVOI_TASMOTA_CLIENT_UDP: Données {typeComm} envoyées ({destinationIP}) >>>> {commande}", LOG_LEVEL_DEBUG)
-    udpFonctions.log(f"ENVOI_TASMOTA_CLIENT_UDP: Adresse IP = {destinationIP}", LOG_LEVEL_DEBUG_PLUS)
-    udpFonctions.log(f"ENVOI_TASMOTA_CLIENT_UDP: commande = {commande}", LOG_LEVEL_DEBUG_PLUS)
-
-    tasmota.yield()
-#-
-    if (string.toupper(typeComm) == string.toupper("uniCast"))
-        udpFonctions.udpUniCast.send(destinationIP, port, bytes().fromstring(commande))
-    elif (string.toupper(typeComm) == string.toupper("multiCast"))
-        udpFonctions.udpMultiCast.send_multicast(bytes().fromstring(commande))
-    end
--#
-end
-udpFonctions.sendTasmotaClientUDP = udpFonctions_sendTasmotaClientUDP
 
 # Maitre : peremption des fiches de /json/discovery.json (audit R1/R3, P8.6, 2026-10-25). Une fiche 'Online'
 # dont aucun ImAlive n'est arrive depuis 2 x telePeriod passe 'Offline' ; les ImAlive la remettent 'Online'

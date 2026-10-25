@@ -374,13 +374,6 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
             end
         elif msg["WIFI"].find("Disonnected", 0)
         end
-    # Init: Se produit une fois après le redémarrage avant que le Wi-Fi et MQTT ne soient initialisés
-    # Boot: Se déclenche après la connexion du Wi-Fi et de MQTT (si activé)
-    elif (trigger == "System")
-        if msg[trigger].find("Init", 0)
-        elif msg[trigger].find("Boot", 0)
-        elif msg[trigger].find("Save", 0)
-        end
     # Se déclenche après la connexion MQTT (si activé)
     elif (trigger == "Mqtt")
         if msg["MQTT"].find("Connected", 0)
@@ -399,15 +392,6 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
                 discoveryFonctions.log(string.format("DISCOVERY_CHGT_ETAT_DEMARRAGE_ERREUR: %s --> %s", error, message), LOG_LEVEL_ERREUR)
             end
         elif msg["MQTT"].find("Disconnected", 0)
-        end
-    # Se déclenche un évènement sur les heures et la synchronisation NTP (si activé)
-    elif (trigger == "Time")
-        # A chaque fois que le NTP est initialisé et l'heure synchronisée
-        if type(msg["Time"]) == "instance"
-            if msg["Time"].find("Initialized", 0)
-            # A chaque heure, quand le système NTP est synchronisé
-            elif msg["Time"].find("Set", 0)
-            end
         end
     end
 end

@@ -247,14 +247,9 @@ def rangeExtenderFonctions_changementEtatDemarrage(value, trigger, msg)
 
     tasmota.yield()
 
-	# Lorsque la connexion Wi-Fi est change
-	if (trigger == "Wifi")
-        if msg["WIFI"].find("Connected", 0)
-        elif msg["WIFI"].find("Disonnected", 0)
-        end
 	# Init: Se produit une fois après le redémarrage avant que le Wi-Fi et MQTT ne soient initialisés
     # Boot: Se déclenche après la connexion du Wi-Fi et de MQTT (si activé)
-    elif (trigger == "System")
+    if (trigger == "System")
         if msg[trigger].find("Init", 0)
         elif msg[trigger].find("Boot", 0)
             # Uniquement si c'est un Point d'accès Range Extender
@@ -263,11 +258,6 @@ def rangeExtenderFonctions_changementEtatDemarrage(value, trigger, msg)
                 tasmota.cmd("RoutageRangeExtender", boolMute)
             end
         elif msg[trigger].find("Save", 0)
-        end
-    # Se déclenche après la connexion MQTT (si activé)
-    elif (trigger == "Mqtt")
-        if msg["MQTT"].find("Connected", 0)
-        elif msg["MQTT"].find("Disconnected", 0)
         end
 	# Se déclenche un évènement sur les heures et la synchronisation NTP (si activé)
     elif (trigger == "Time")
@@ -281,76 +271,6 @@ def rangeExtenderFonctions_changementEtatDemarrage(value, trigger, msg)
     end
 end
 rangeExtenderFonctions.changementEtatDemarrage = rangeExtenderFonctions_changementEtatDemarrage
-
-# Se charge d'afficher le bouton de lien vers lapage webUI des clients Ranextender connectés
-# Fonction inutilisée
-def rangeExtenderFonctions_afficheBoutonsModulesEsclaves()
-    import webserver
-    import string
-    import gestionFileFolder
-    import json
-
-    import re
-
-    var rgxClients = {}
-    var i = 1
-    var patternEsclave = re.compile('^esclave[0-9]+$')
-
-    # Lit le fichier json (absent ou vide -> table vide, au lieu d'un .keys() sur nil)
-    var paramDiscovery = json.load(gestionFileFolder.readFile("/json/discovery.json"))
-    if (paramDiscovery == nil)    paramDiscovery = {}    end
-
-    tasmota.yield()
-
-    # Ajoute autant de boutons que de modules connectés au RangeExtender
-    # Uniquement si c'est un Point d'accès Range Extender
-    if serveur["rangeExtender"].find("id", 99) == 0
-        rangeExtenderFonctions.log("RANGE_EXTENDER: Affichage du bouton !", LOG_LEVEL_DEBUG)
-
-        # Convention : cmd avec boolMute + acces JSON garde (une cmd peut renvoyer nil
-        # ou un dict sans la cle) pour ne pas planter sur .size().
-        var _reponseRgx = tasmota.cmd("RgxClients", boolMute)
-        rgxClients = _reponseRgx ? _reponseRgx.find("RgxClients") : nil
-
-        # Si au moins 1 client est connecté
-        if (rgxClients != nil && rgxClients.size() > 0)
-            # webserver.content_send("<hr>")
-            for mac: rgxClients.keys()
-                for cle: paramDiscovery.keys()
-                    tasmota.yield()
-
-                    # Ne retient que les fiches d'esclaves (evite le maitre). Une fiche MAC porte aussi
-                    # 'config', 'sensors' (maps) et 'lwt' (chaine) : appeler .find sur 'lwt' levait
-                    # une exception qui interrompait l'affichage des boutons (corrige le 2026-09-30).
-                    if (!isinstance(paramDiscovery[cle], map))    continue    end
-                    for item: paramDiscovery[cle].keys()
-                        if (patternEsclave.match(item) != nil && isinstance(paramDiscovery[cle][item], map))
-                            var adresseMac = string.replace(paramDiscovery[cle][item].find("adresseMAC", ""), ":", "")
-                            var etat = paramDiscovery[cle].find("lwt", "Offline")
-
-                            if (adresseMac == mac && etat == "Online")
-                                # .find : un module sans RangeExtender (pas de bloc) peut etre client du point d'acces
-                                var routagePort = paramDiscovery[cle][item].find("rangeExtender", {}).find("routagePort", 8080)
-                                var ipEsclave = str(paramDiscovery[cle][item].find("IPAddress", "192.168.4.1"))
-                                var url = "http://" + serveur["hostname"] + ".local:" + str(routagePort)
-                                var titre = str(paramDiscovery[cle][item].find("nom", item))
-
-                                # Active le routage NAPT si pas encore fait (redirige ne rappelle pas
-                                # RgxPort pour une redirection deja posee : sinon doublon a chaque affichage)
-                                rangeExtenderFonctions.redirige(routagePort, ipEsclave)
-
-                                # Ouverture de la page dans un nouvel onglet
-                                var btn = "<p></p><button class=\"button bgrn\" id=\"btn_test\" onclick=\"setTimeout(() => {window&#46;open(\'" + url + "\');}, 1000);\">" + titre + "</button>"
-                                webserver.content_send(btn)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-rangeExtenderFonctions.afficheBoutonsModulesEsclaves = rangeExtenderFonctions_afficheBoutonsModulesEsclaves
 
 # Maitre RangeExtender : affiche sur SA page d'accueil une section "Leds mirroring" par esclave
 # ModBus equipe d'un ruban WS2812, pilote par un relai virtuel 'ModBus_TasmotaSlaveModBusN' (type 1376).

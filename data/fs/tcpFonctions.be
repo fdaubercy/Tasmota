@@ -126,20 +126,6 @@ def tcpFonctions_changementEtatDemarrage(value, trigger, msg)
                 tcpFonctions.etat()["serveur"].close()
             end
         end
-	# Se déclenche après la connexion MQTT (si activé)
-    elif (trigger == "Mqtt")
-        if msg["MQTT"].find("Connected", 0)
-        elif msg["MQTT"].find("Disconnected", 0)
-        end
-	# Se déclenche un évènement sur les heures et la synchronisation NTP (si activé)
-    elif (trigger == "Time")
-        # A chaque fois que le NTP est initialisé et l'heure synchronisée
-        if type(msg["Time"]) == "instance"
-            if msg["Time"].find("Initialized", 0)
-            # A chaque heure, quand le système NTP est synchronisé
-            elif msg["Time"].find("Set", 0)
-            end
-        end
     end
 end
 tcpFonctions.changementEtatDemarrage = tcpFonctions_changementEtatDemarrage
@@ -238,32 +224,6 @@ def tcpFonctions_lireTCP(typeClient)
     end
 end
 tcpFonctions.lireTCP = tcpFonctions_lireTCP
-
-# Cette fonction gère l'envoi de messages TCP ASync
-# @type typeClient: Le type de connexion TCP (Serveur ou Client)
-# @IP_Dest: L'adresse IP du destinataire (uniquement pour le client TCP)
-def tcpFonctions_envoiMsgTCP(typeClient, IP_Dest, message)
-    import json
-    import string
-
-    if (serveur["tcp"].find("activation", "OFF") == "OFF")    return      end
-    tcpFonctions.log("ENVOI_MSG_TCP: ------------------ envoiMsgTCP ------------------", LOG_LEVEL_DEBUG_PLUS)
-
-    # # Envoi du message par le serveur TCP
-    # if (typeClient == "Serveur")
-    #     if (tcpFonctions.etat()["connexionAsync"] != nil)
-    #         if (tcpFonctions.etat()["connexionAsync"].connected())
-    #             tcpFonctions.etat()["connexionAsync"].write(message)
-    #         end
-    #     end
-    # # Envoi du message par le client TCP
-    # elif (typeClient == "Client")
-    #     if (tcpFonctions.etat()["client"] != nil)
-    #         tcpFonctions.etat()["client"].write(message)
-    #     end
-    # end
-end
-tcpFonctions.envoiMsgTCP = tcpFonctions_envoiMsgTCP
 
 # Retourne le module lors de l'importation
 return tcpFonctions

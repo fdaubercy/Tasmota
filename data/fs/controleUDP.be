@@ -5,7 +5,7 @@
 
     - Les commande de réglages paramétrées sont :
         * envoiUniCast: Envoi un message UDP à l'adresse IP passée en paramètre
-        EX: ReglageUDP envoiUniCast 10.99.0.1 Salut Ca gaz !
+        EX: ReglageUDP envoiUniCast 192.168.4.2 Salut Ca gaz !
 
     - Dans le fichiers json :'json/discovery.json', il enregistre les paramètres des modules connectés:
         * id, nom, adressMAC, routagePort, routageIP, routageMaitreIP (cette dernière sera transmise après par le maitre)
@@ -24,11 +24,11 @@ API des messages UDP
         * 1 à 254 = esclaves
         * 255 = broadcast
 
-    - Les communicationsUDP sont réalisées uniquement sur l'IP Wifi principale (pas celle du RangeExtender: 10.99.0.1)
+    - Les communicationsUDP sont réalisées uniquement sur l'IP Wifi principale (pas celle du point d'acces RangeExtender : 192.168.4.1)
 
     - Principes de fonctionnement:
         * Les communications UDP MultiCast sont principalement utilisées
-            . les maitres & esclaves établissent la connexion UDP sur le port 2000 (UniCast) / port 3000 (MultiCast)
+            . les maitres & esclaves établissent la connexion UDP sur le port 2000 (UniCast) / 224.3.0.1:4000 (MultiCast)
                     Le Maitre commande tous les esclaves par communication MultiCast
                     Les esclaves répondent par communication UniCast
 
