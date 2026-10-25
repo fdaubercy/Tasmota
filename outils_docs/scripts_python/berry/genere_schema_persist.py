@@ -61,10 +61,18 @@ TYPES
 Une cle de types differents selon les fichiers recoit un tableau de types et le rapport
 le signale. `additionalProperties` reste autorise partout sur les objets fixes.
 
+CONTRATS NORMATIFS (surcharges apres inference, audit D10/P4.7, 2026-10-25)
+----------------------------------------------------------------------------
+L'inference decrit l'existant, pas le contrat du code. Pour les blocs listes dans CONTRATS,
+le sous-schema infere est REMPLACE par le contrat du code qui les lit :
+  - `relaisLie` (data/fs/globalFonctions.be) : `ids` requis ; `type` et `delai` requis des
+    que `ids` n'est pas vide (`if`/`then`) ; `modules` decrit mais facultatif (non lu) ; les
+    cles sans lecteur (delaiSiON, delaiSiOFF, etatSiON, etatSiOFF) ne sont plus decrites.
+
 PREREQUIS
 ---------
 Python 3.8+, bibliotheque standard seule (le validateur integre couvre type, enum,
-required, properties, patternProperties, additionalProperties, items).
+required, properties, patternProperties, additionalProperties, items, minItems, if/then).
 """
 import argparse
 import json
@@ -274,6 +282,39 @@ class Inference:
         schema["additionalProperties"] = additional if additional is not None else True
 
 
+# Contrats du code (voir l'en-tete) : sous-schema impose a toute cle de ce nom, ou qu'elle soit
+CONTRATS = {
+    "relaisLie": {
+        "type": "object",
+        "description": ("Relais commandes par cet element (globalFonctions.be) : chaque id de `ids` recoit "
+                        "l'ordre `type` apres `delai` secondes. `type` et `delai` sont requis des que `ids` n'est pas vide."),
+        "properties": {
+            "modules": {"type": "array", "items": {"type": "string"}},
+            "ids": {"type": "array", "items": {"type": "integer"}},
+            "type": {"type": "string"},
+            "delai": {"type": "integer"},
+        },
+        "required": ["ids"],
+        "if": {"properties": {"ids": {"minItems": 1}}, "required": ["ids"]},
+        "then": {"required": ["type", "delai"]},
+    },
+}
+
+
+def applique_contrats(noeud):
+    """Remplace, partout dans le schema, le sous-schema infere d'une cle de CONTRATS."""
+    if isinstance(noeud, dict):
+        for cle in ("properties", "patternProperties"):
+            for nom in list(noeud.get(cle, {})):
+                if nom in CONTRATS:
+                    noeud[cle][nom] = json.loads(json.dumps(CONTRATS[nom]))
+        for v in noeud.values():
+            applique_contrats(v)
+    elif isinstance(noeud, list):
+        for v in noeud:
+            applique_contrats(v)
+
+
 def genere(persists):
     inf = Inference()
     instances = [(nom_carte(p), charge(p)) for p in persists]
@@ -284,6 +325,7 @@ def genere(persists):
                               f"{len(persists)} persists. Cle `required` si presente dans >= 50 % des exemplaires "
                               "du parent et au moins 2. Ne pas editer a la main : regenerer.")}
     schema.update(corps)
+    applique_contrats(schema)
     return schema, inf.rapport
 
 
@@ -319,6 +361,10 @@ def valide(v, s, chemin="$"):
             return
     if "enum" in s and v not in s["enum"]:
         yield f"{chemin} : valeur {v!r} hors de {s['enum']}"
+    if "minItems" in s and isinstance(v, list) and len(v) < s["minItems"]:
+        yield f"{chemin} : {len(v)} element(s), au moins {s['minItems']} attendu(s)"
+    if "if" in s and not any(True for _ in valide(v, s["if"], chemin)):
+        yield from valide(v, s.get("then", {}), chemin)
     if isinstance(v, dict):
         for k in s.get("required", []):
             if k not in v:

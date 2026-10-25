@@ -308,7 +308,10 @@
               "type": "integer"
             },
             "exclues": {
-              "type": "array"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             },
             "ajouts": {
               "type": "array"
@@ -913,6 +916,7 @@
                       },
                       "relaisLie": {
                         "type": "object",
+                        "description": "Relais commandes par cet element (globalFonctions.be) : chaque id de `ids` recoit l'ordre `type` apres `delai` secondes. `type` et `delai` sont requis des que `ids` n'est pas vide.",
                         "properties": {
                           "modules": {
                             "type": "array",
@@ -929,43 +933,29 @@
                           "type": {
                             "type": "string"
                           },
-                          "delaiSiON": {
-                            "type": "array",
-                            "items": {
-                              "type": "integer"
-                            }
-                          },
-                          "delaiSiOFF": {
-                            "type": "array",
-                            "items": {
-                              "type": "integer"
-                            }
-                          },
-                          "etatSiON": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "etatSiOFF": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
                           "delai": {
                             "type": "integer"
                           }
                         },
                         "required": [
-                          "modules",
-                          "ids",
-                          "delaiSiON",
-                          "delaiSiOFF",
-                          "etatSiON",
-                          "etatSiOFF"
+                          "ids"
                         ],
-                        "additionalProperties": true
+                        "if": {
+                          "properties": {
+                            "ids": {
+                              "minItems": 1
+                            }
+                          },
+                          "required": [
+                            "ids"
+                          ]
+                        },
+                        "then": {
+                          "required": [
+                            "type",
+                            "delai"
+                          ]
+                        }
                       }
                     },
                     "required": [
@@ -1028,49 +1018,46 @@
                       },
                       "relaisLie": {
                         "type": "object",
+                        "description": "Relais commandes par cet element (globalFonctions.be) : chaque id de `ids` recoit l'ordre `type` apres `delai` secondes. `type` et `delai` sont requis des que `ids` n'est pas vide.",
                         "properties": {
                           "modules": {
-                            "type": "array"
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
                           },
                           "ids": {
-                            "type": "array"
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            }
                           },
                           "type": {
                             "type": "string"
-                          },
-                          "delaiSiON": {
-                            "type": "array",
-                            "items": {
-                              "type": "integer"
-                            }
-                          },
-                          "delaiSiOFF": {
-                            "type": "array",
-                            "items": {
-                              "type": "integer"
-                            }
-                          },
-                          "etatSiON": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "etatSiOFF": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
                           },
                           "delai": {
                             "type": "integer"
                           }
                         },
                         "required": [
-                          "ids",
-                          "type"
+                          "ids"
                         ],
-                        "additionalProperties": true
+                        "if": {
+                          "properties": {
+                            "ids": {
+                              "minItems": 1
+                            }
+                          },
+                          "required": [
+                            "ids"
+                          ]
+                        },
+                        "then": {
+                          "required": [
+                            "type",
+                            "delai"
+                          ]
+                        }
                       },
                       "idModBus": {
                         "type": "integer"
@@ -1336,45 +1323,46 @@
                     },
                     "relaisLie": {
                       "type": "object",
+                      "description": "Relais commandes par cet element (globalFonctions.be) : chaque id de `ids` recoit l'ordre `type` apres `delai` secondes. `type` et `delai` sont requis des que `ids` n'est pas vide.",
                       "properties": {
                         "modules": {
-                          "type": "array"
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
                         },
                         "ids": {
-                          "type": "array"
+                          "type": "array",
+                          "items": {
+                            "type": "integer"
+                          }
                         },
                         "type": {
                           "type": "string"
                         },
-                        "delaiSiON": {
-                          "type": "array",
-                          "items": {
-                            "type": "integer"
-                          }
-                        },
-                        "delaiSiOFF": {
-                          "type": "array",
-                          "items": {
-                            "type": "integer"
-                          }
-                        },
-                        "etatSiON": {
-                          "type": "array"
-                        },
-                        "etatSiOFF": {
-                          "type": "array"
+                        "delai": {
+                          "type": "integer"
                         }
                       },
                       "required": [
-                        "modules",
-                        "ids",
-                        "type",
-                        "delaiSiON",
-                        "delaiSiOFF",
-                        "etatSiON",
-                        "etatSiOFF"
+                        "ids"
                       ],
-                      "additionalProperties": true
+                      "if": {
+                        "properties": {
+                          "ids": {
+                            "minItems": 1
+                          }
+                        },
+                        "required": [
+                          "ids"
+                        ]
+                      },
+                      "then": {
+                        "required": [
+                          "type",
+                          "delai"
+                        ]
+                      }
                     },
                     "publishMQTT": {
                       "type": "object",
@@ -1454,6 +1442,7 @@
                       },
                       "relaisLie": {
                         "type": "object",
+                        "description": "Relais commandes par cet element (globalFonctions.be) : chaque id de `ids` recoit l'ordre `type` apres `delai` secondes. `type` et `delai` sont requis des que `ids` n'est pas vide.",
                         "properties": {
                           "modules": {
                             "type": "array",
@@ -1470,44 +1459,29 @@
                           "type": {
                             "type": "string"
                           },
-                          "delaiSiON": {
-                            "type": "array",
-                            "items": {
-                              "type": "integer"
-                            }
-                          },
-                          "delaiSiOFF": {
-                            "type": "array",
-                            "items": {
-                              "type": "integer"
-                            }
-                          },
-                          "etatSiON": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "etatSiOFF": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
                           "delai": {
                             "type": "integer"
                           }
                         },
                         "required": [
-                          "modules",
-                          "ids",
-                          "type",
-                          "delaiSiON",
-                          "delaiSiOFF",
-                          "etatSiON",
-                          "etatSiOFF"
+                          "ids"
                         ],
-                        "additionalProperties": true
+                        "if": {
+                          "properties": {
+                            "ids": {
+                              "minItems": 1
+                            }
+                          },
+                          "required": [
+                            "ids"
+                          ]
+                        },
+                        "then": {
+                          "required": [
+                            "type",
+                            "delai"
+                          ]
+                        }
                       }
                     },
                     "required": [
@@ -1576,48 +1550,46 @@
                       },
                       "relaisLie": {
                         "type": "object",
+                        "description": "Relais commandes par cet element (globalFonctions.be) : chaque id de `ids` recoit l'ordre `type` apres `delai` secondes. `type` et `delai` sont requis des que `ids` n'est pas vide.",
                         "properties": {
                           "modules": {
-                            "type": "array"
-                          },
-                          "ids": {
-                            "type": "array"
-                          },
-                          "type": {
-                            "type": "string"
-                          },
-                          "delaiSiON": {
-                            "type": "array",
-                            "items": {
-                              "type": "integer"
-                            }
-                          },
-                          "delaiSiOFF": {
-                            "type": "array",
-                            "items": {
-                              "type": "integer"
-                            }
-                          },
-                          "etatSiON": {
-                            "type": "array"
-                          },
-                          "etatSiOFF": {
                             "type": "array",
                             "items": {
                               "type": "string"
                             }
+                          },
+                          "ids": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            }
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "delai": {
+                            "type": "integer"
                           }
                         },
                         "required": [
-                          "modules",
-                          "ids",
-                          "type",
-                          "delaiSiON",
-                          "delaiSiOFF",
-                          "etatSiON",
-                          "etatSiOFF"
+                          "ids"
                         ],
-                        "additionalProperties": true
+                        "if": {
+                          "properties": {
+                            "ids": {
+                              "minItems": 1
+                            }
+                          },
+                          "required": [
+                            "ids"
+                          ]
+                        },
+                        "then": {
+                          "required": [
+                            "type",
+                            "delai"
+                          ]
+                        }
                       }
                     },
                     "required": [
@@ -1694,6 +1666,7 @@
                       },
                       "relaisLie": {
                         "type": "object",
+                        "description": "Relais commandes par cet element (globalFonctions.be) : chaque id de `ids` recoit l'ordre `type` apres `delai` secondes. `type` et `delai` sont requis des que `ids` n'est pas vide.",
                         "properties": {
                           "modules": {
                             "type": "array",
@@ -1710,44 +1683,29 @@
                           "type": {
                             "type": "string"
                           },
-                          "delaiSiON": {
-                            "type": "array",
-                            "items": {
-                              "type": "integer"
-                            }
-                          },
-                          "delaiSiOFF": {
-                            "type": "array",
-                            "items": {
-                              "type": "integer"
-                            }
-                          },
-                          "etatSiON": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "etatSiOFF": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
                           "delai": {
                             "type": "integer"
                           }
                         },
                         "required": [
-                          "modules",
-                          "ids",
-                          "type",
-                          "delaiSiON",
-                          "delaiSiOFF",
-                          "etatSiON",
-                          "etatSiOFF"
+                          "ids"
                         ],
-                        "additionalProperties": true
+                        "if": {
+                          "properties": {
+                            "ids": {
+                              "minItems": 1
+                            }
+                          },
+                          "required": [
+                            "ids"
+                          ]
+                        },
+                        "then": {
+                          "required": [
+                            "type",
+                            "delai"
+                          ]
+                        }
                       },
                       "idModBus": {
                         "type": "integer"
