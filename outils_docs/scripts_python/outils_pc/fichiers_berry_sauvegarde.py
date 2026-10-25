@@ -63,8 +63,15 @@ class Transaction:
         src, dst = self.racine / rel_src, self.racine / rel_dst
         if dst.exists():
             raise FileExistsError(f"{rel_dst} existe deja")
+        parent_cree = not dst.parent.exists()           # renommage vers un nouveau lieu : data/<lieu> a creer
+        dst.parent.mkdir(parents=True, exist_ok=True)
         src.rename(dst)
-        self._annulations.append(lambda: dst.rename(src))
+
+        def annule():
+            dst.rename(src)
+            if parent_cree and not any(dst.parent.iterdir()):
+                dst.parent.rmdir()
+        self._annulations.append(annule)
 
     def copie_dossier(self, rel_src, rel_dst, ignore=None):
         dst = self.racine / rel_dst

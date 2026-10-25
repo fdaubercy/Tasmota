@@ -169,8 +169,9 @@ def _regions(lignes):
     return {nom: (i, entetes[k + 1][0] if k + 1 < len(entetes) else len(lignes)) for k, (i, nom) in enumerate(entetes)}
 
 
-def _insere_cenv(ini, lignes, lieu, copie):
-    memes = [e for e in ini.envs_cenv() if e.split("-")[1:2] == [lieu]]
+def _insere_cenv(ini, lignes, lieu, copie, sauf=None):
+    """Apres le dernier env du lieu (hors `sauf`, l'env qu'un renommage retire), sinon sous un nouveau bandeau."""
+    memes = [e for e in ini.envs_cenv() if e.split("-")[1:2] == [lieu] and e != sauf]
     if memes:
         debut, fin = _regions(lignes)["env:" + memes[-1]]
         k = _fin_utile(lignes, debut, fin)
@@ -225,14 +226,15 @@ def _persist(texte, identite, avertissements):
     return texte
 
 
-def _prises(racine, texte_h):
-    """{champ: {valeur: ou}} des identites deja utilisees (.h et persists du depot, hors sauvegardes)."""
+def _prises(racine, texte_h, sauf_dossier=None):
+    """{champ: {valeur: ou}} des identites deja utilisees (.h et persists du depot, hors sauvegardes et hors
+    `sauf_dossier`, la carte qu'un renommage reprend)."""
     prises = {c: {} for c in UNIQUES}
     for champ in UNIQUES:
         for v in re.findall(r'#define\s+' + champ + r'\s+"([^"]*)"', texte_h):
             prises[champ].setdefault(v, FICHIER_H)
     for p in sorted(Path(racine, "data").glob("*/*/_persist.json")):
-        if "sauvegarde" in p.parent.name:
+        if "sauvegarde" in p.parent.name or (sauf_dossier and p.parent == Path(racine) / sauf_dossier):
             continue
         try:
             donnees = json.loads(p.read_text(encoding="utf-8", errors="replace"))
@@ -247,7 +249,7 @@ def _prises(racine, texte_h):
     return prises
 
 
-def _refus(racine, ini, c, env, dossier, nouveau, texte_h, texte_cenv):
+def _refus(racine, ini, c, env, dossier, nouveau, texte_h, texte_cenv, sauf_dossier=None):
     refus = []
     envs = {e["nom"]: e["famille"] for e in fbe.envs_proposes(racine)}
     if envs.get(c.modele) != "cartes":
@@ -269,7 +271,7 @@ def _refus(racine, ini, c, env, dossier, nouveau, texte_h, texte_cenv):
         v = c.identite.get(champ, "")
         if not v or any(x in v for x in '"\\\r\n'):
             refus.append(f"{champ} : valeur vide ou avec \" ou \\ : {v!r}")
-    for champ, valeurs in _prises(racine, texte_h).items():
+    for champ, valeurs in _prises(racine, texte_h, sauf_dossier).items():
         v = c.identite.get(champ)
         if v in valeurs and v != "0.0.0.0":
             refus.append(f"{champ} = {v} est deja pris ({valeurs[v]}) : deux cartes de meme identite se deconnectent")

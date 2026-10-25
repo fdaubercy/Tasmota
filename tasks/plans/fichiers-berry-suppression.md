@@ -55,13 +55,13 @@ sur exception, annulation en ordre inverse puis l'exception repart. `dossier_sau
 - [x] `fichiers_berry_ecriture.enregistre` et `fichiers_berry_creation.cree` passent par `Transaction` (plus de `.bak`) ;
   résultat `sauvegarde` = chemin du dossier ; bancs écriture/création adaptés (le `.bak` attendu devient la sauvegarde). — preuve : test_sauvegarde_et_diff et test_sauvegarde ROUGE (KeyError) puis VERT ; bancs isolés par OUTILS_TASMOTA_DOSSIER ; sonde « chemin de la sauvegarde affiché » VERT, témoin détecté
 - [x] Création atomique : test `test_creation_atomique` (écriture du cenv qui échoue → `.h` remis, dossier retiré) ROUGE puis VERT. — preuve : 4 KO puis VERT
-- [ ] Commit `feat(fichiers-berry): sauvegardes horodatees et ecritures atomiques`.
+- [x] Commit `feat(fichiers-berry): sauvegardes horodatees et ecritures atomiques`. — preuve : 40e1e96a2
 
 ## A2 — Erreurs claires (`fichiers_berry_web.py`)
 
 - [x] `test_fichiers_berry_web.py` : une exception inattendue (`OSError` levée par `builds_en_cours`) → 500 avec le
   message, connexion non coupée ; ROUGE puis VERT (`except Exception` en dernier dans `do_GET` et `do_POST`). — preuve : test_erreur_inattendue ROUGE (RemoteDisconnected, GET et POST) puis VERT
-- [ ] Commit `fix(fichiers-berry): reponse 500 avec le message sur erreur inattendue`.
+- [x] Commit `fix(fichiers-berry): reponse 500 avec le message sur erreur inattendue`. — preuve : 748e2f994
 
 ## A3 — Suppression d'un env (`fichiers_berry_suppression.py`)
 
@@ -77,7 +77,7 @@ sauvegarde, avertissements}` ; RuntimeError (→ 409) si build, empreinte périm
   - [x] refus : base héritée ou référencée (envs nommés), env inconnu, build en cours, empreinte périmée ;
   - [x] atomicité : échec à la 2e écriture → tout remis ;
   - [x] citations ailleurs (commentaires du cenv, autres fichiers `.ini`/`.py` connus) signalées, non modifiées.
-- [ ] Commit `feat(fichiers-berry): suppression d un env (cenv, .h, default_envs, dossier en -sauvegarde)`.
+- [x] Commit `feat(fichiers-berry): suppression d un env (cenv, .h, default_envs, dossier en -sauvegarde)`. — preuve : 849d21147
 
 ## A3b — Renommage d'un env (`fichiers_berry_renommage.py`, spec §10)
 
@@ -86,13 +86,13 @@ Interfaces produites : `Renommage(env, lieu, nom, identite, define="")` ; `prepa
 empreinte, builds_en_cours)`. Réutilise la copie de section et l'identité de `fichiers_berry_creation` et le retrait
 de `fichiers_berry_suppression`.
 
-- [ ] Banc `test_fichiers_berry_renommage.py` ROUGE puis VERT :
-  - [ ] rideau renommé : nouvel env lu par PlatformIO (`build_envs.liste_envs`), ancien absent, dossier déplacé (ancien
+- [x] Banc `test_fichiers_berry_renommage.py` ROUGE puis VERT : — preuve : ROUGE (module absent) puis VERT 26 contrôles
+  - [x] rideau renommé : nouvel env lu par PlatformIO (`build_envs.liste_envs`), ancien absent, dossier déplacé (ancien
     absent, pas de `-sauvegarde`), persist aux nouvelles valeurs seules (octet pour octet ailleurs) ;
-  - [ ] même IP gardée : accepté (l'identité actuelle de l'env ne compte pas) ; topic d'une AUTRE carte : refusé ;
-  - [ ] `default_envs` : ligne active reste active, commentée reste commentée, au nouveau nom ; `data_dir` suit ;
-  - [ ] renommer puis renommer en sens inverse : cenv, `.h` et dossier comme au départ, hors identité modifiée ;
-  - [ ] refus : env référencé, nouveau nom déjà pris, build ; atomicité (panne → tout remis).
+  - [x] même IP gardée : accepté (l'identité actuelle de l'env ne compte pas) ; topic d'une AUTRE carte : refusé ;
+  - [x] `default_envs` : ligne active reste active, commentée reste commentée, au nouveau nom ; `data_dir` suit ;
+  - [x] renommer puis renommer en sens inverse : cenv, `.h` et dossier comme au départ, hors identité modifiée ; (cenv, override et persist identiques ; le `.h` diffère par NAME/Hostname dérivés de l'identité)
+  - [x] refus : env référencé, nouveau nom déjà pris, build ; atomicité (panne → tout remis).
 - [ ] Commit `feat(fichiers-berry): renommage d un env (identite reproposee, dossier deplace)`.
 
 ## A4 — Routes et page de la suppression et du renommage
