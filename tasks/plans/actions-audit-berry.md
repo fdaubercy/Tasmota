@@ -3,7 +3,7 @@ chantier: actions-audit-berry
 titre: Plan d'action de l'audit Berry (propositions P2.1 à P10.7)
 statut: actif
 cree: 2026-10-22
-maj: 2026-10-24
+maj: 2026-10-25
 ---
 # Plan d'action de l'audit Berry (propositions P2.1 à P10.7)
 
@@ -89,7 +89,7 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
 - [x] P10.2 — `try/except` journalisé autour de chaque `import controleXxx` ; `ReglageGlobal`/`ReglageLog` enregistrées avant `configGlobalByJson` (corrige B2, B3, B5 ; cote G, effort moyen, risque moyen)
   - [x] B3 : `ReglageGlobal`/`ReglageLog` enregistrées en tête de `controleGeneral.init` — preuve : `banc_boot` cas 3 vert (drapeau B3 à false), ancien `controleGeneral.be` rouge (2 échecs) ; banc ModBus vert (2026-10-24)
   - [x] B2, B5 : `try/except` journalisé autour de chaque `import controleXxx` — preuve : `chargeModule(nom, chargement)` dans les 8 autoexec en service (imports, `loadBerryFile`, `historiqueFonctions.demarre`), échec en `AUTO_EXE_ERREUR` et chargement continué ; `banc_boot` cas 3 vert (drapeau B2 à false : controleGeneral échoue, CONTROLE_GARAGE chargé), ancien autoexec du P4 rouge (2026-10-24). B5 : effet (arrêt de l'autoexec) neutralisé ; la `key_error` à l'import d'un driver ModBus à environnement vide reste, journalisée
-- [ ] P4.2 — Autoexec commun : module `demarrage` solidifié, ~15 lignes propres par carte ; différentiel et grenier remis au modèle (corrige D2, D4 ; cote S, effort moyen, risque moyen)
+- [x] P4.2 — Autoexec commun : module `demarrage` solidifié, ~15 lignes propres par carte ; différentiel et grenier remis au modèle (corrige D2, D4 ; cote S, effort moyen, risque moyen) — preuve : `data/fs/demarrage.be` (socle solidifié, « LE .h COMPILE ») ; 6 autoexec de 13 à 26 lignes (P4, cuve, rideau, cave S3, différentiel, grenier) ; `banc_demarrage.py` VERT sur les 6 (instantanés d'avant la refonte : seuls écarts `persistValide` et `LOG_LEVEL_NONE` (D4), relus puis enregistrés ; témoin : P4 privé de discovery et historique -> rouge) ; banc_boot, ModBus, LEDs, cuve, discovery, veille verts ; relecteur-berry sans bloquant (2026-10-25)
 - [x] P4.3 — Séparer « charger ou non » et « supprimer le source » dans `compileModule`/`loadBerryFile` (corrige D3 ; cote D, effort faible, risque faible) — preuve : paramètre renommé `activation` ; OFF = ne pas charger, sans plus jamais effacer le source `.be` (`loadBerryFile`) ni compiler (`compileModule` rend true) ; `banc_boot` cas 1 (2 contrôles), rouges sur l'ancien code ; banc veille vert ; solidifiable (2026-10-25)
 
 ## A8 — Découverte des esclaves

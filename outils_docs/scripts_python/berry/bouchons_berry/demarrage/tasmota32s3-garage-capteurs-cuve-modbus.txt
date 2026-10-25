@@ -7,5 +7,5 @@ crons (2) : majHistorique, majLogCuve
 minuteries (1) : demarrageDiffere
 compiles (2) : /controleCuve.bec, /cuveFonctions.bec
 sources (1) : /autoexec.be
-globales (22) : .historiqueFonctions:instance, LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatModbusFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controleCuve:instance, controleUDP_multicast:instance, controleUDP_unicast:instance, cuveFonctions:nil, diverses:instance, gpio:module, light:module, modules:instance, persist:instance, persistValide:bool, serveur:instance, wire1:instance, wire2:instance
+globales (21) : .historiqueFonctions:instance, LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatModbusFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controleCuve:instance, controleUDP_multicast:instance, controleUDP_unicast:instance, cuveFonctions:nil, diverses:instance, gpio:module, light:module, modules:instance, persist:instance, serveur:instance, wire1:instance, wire2:instance
 erreurs (1) : INIT_CUVE_ERREUR: key_error -> ADS1115

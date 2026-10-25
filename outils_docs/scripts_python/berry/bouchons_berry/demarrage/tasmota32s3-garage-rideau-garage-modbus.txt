@@ -7,5 +7,5 @@ crons (1) : majHistorique
 minuteries (1) : demarrageDiffere
 compiles (0) : 
 sources (4) : /autoexec.be, /controleLeds.be, /controleRideau.be, /ledsFonctions.be
-globales (19) : LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatModbusFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controleUDP_multicast:instance, controleUDP_unicast:instance, diverses:instance, gpio:module, light:module, modules:instance, persist:instance, persistValide:bool, serveur:instance, wire1:instance, wire2:instance
+globales (18) : LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatModbusFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controleUDP_multicast:instance, controleUDP_unicast:instance, diverses:instance, gpio:module, light:module, modules:instance, persist:instance, serveur:instance, wire1:instance, wire2:instance
 erreurs (0) : 

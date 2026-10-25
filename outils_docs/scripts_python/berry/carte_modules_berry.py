@@ -214,6 +214,46 @@ def garde_init(chemin_be, nom):
 RE_IMPORT = re.compile(r"^(?:do\s+)?(?:if\s+(?P<cond>.+?)\s+)?import\s+(?P<mod>\w+)(?:\s+as\s+\w+)?\s*(?:end\s*)?(?:#.*)?$")
 RE_CHARGE = re.compile(r"^(?:do\s+)?(?:if\s+(?P<cond>.+?)\s+)?gestionFileFolder\.(?P<fn>compileModule|loadBerryFile)\(\s*\"/(?P<mod>\w+)\"\s*(?P<reste>.*)$")
 
+# Autoexec au format du module commun data/fs/demarrage.be (audit P4.2, 2026-10-25) : une ligne
+# demarrage.<fn>([noms], "bloc.sous_bloc") equivaut aux compileModule / import / loadBerryFile d'avant.
+RE_DEMARRAGE = re.compile(r'^demarrage\.(?P<fn>importe|compileSocle|compile|charge|chargeFichier|leds|historique)\((?P<args>.*)\)\s*(?:#.*)?$')
+SOCLE_DEMARRAGE = ["configGlobal", "configDevices", "configModules", "gestionFileFolder", "globalFonctions", "diversFonctions", "logFonctions"]
+COND_LEDS = ('drivers.find("leds", {}).find("activation", "OFF") == "ON" && (drivers.find("leds", {}).find("environnement", {}).find("leds", {}).find("ledRGB", {}).find("activation", "OFF") == "ON"'
+             ' || drivers.find("leds", {}).find("environnement", {}).find("leds", {}).find("ruban", {}).find("activation", "OFF") == "ON")')
+
+RE_CHARGE_MODULE = re.compile(r'^(?P<si>if\s+.+?\s+)?chargeModule\("\w+",\s*def\s*\(\)\s*(?P<corps>.+?)\s+end\)\s*(?P<fin>end)?\s*(?:#.*)?$')
+
+def _activation_demarrage(chemin):
+    """"serveur.udp" -> 'serveur.find("udp", {}).find("activation", "OFF")', comme demarrage.activation()."""
+    parties = chemin.split(".")
+    return parties[0] + "".join('.find("%s", {})' % p for p in parties[1:]) + '.find("activation", "OFF")'
+
+def refs_demarrage(l, commente, pile):
+    """References d'une ligne demarrage.<fn>(...), ou None si la ligne n'en est pas une."""
+    m = RE_DEMARRAGE.match(l)
+    if not m:
+        return None
+    noms = re.findall(r'"(\w+)"', m["args"].split("]")[0]) if "[" in m["args"] else []
+    chemins = re.findall(r'"([\w.]+)"', m["args"].split("]")[-1]) if "[" in m["args"] else re.findall(r'"([\w.]+)"', m["args"])
+    act = _activation_demarrage(chemins[-1]) if chemins and m["fn"] != "chargeFichier" else None
+    ref = lambda mod, type, arg=None, conds=(): dict(mod=mod, type=type, commente=commente, arg=arg, conds=[c for c in pile + list(conds) if c])
+    fn = m["fn"]
+    if fn == "importe":
+        return [ref(n, "I") for n in noms]
+    if fn == "compileSocle":
+        return [ref(n, "C", '"ON"') for n in SOCLE_DEMARRAGE] + [ref("webFonctions", "C", 'serveur.find("activation", "OFF")')]
+    if fn == "compile":
+        return [ref(n, "C", act or '"ON"') for n in noms]
+    if fn == "charge":
+        return [ref(n, "I", conds=[act + ' == "ON"'] if act else []) for n in noms]
+    if fn == "chargeFichier":
+        nom = re.findall(r'"(\w+)"', m["args"])[0]
+        return [ref(nom, "C", _activation_demarrage(chemins[1]) if len(chemins) > 1 else '"ON"')]
+    if fn == "leds":
+        return [ref("ledsFonctions", "C", '"ON"', [COND_LEDS]), ref("controleLeds", "C", '"ON"', [COND_LEDS]), ref("controleLeds", "I", conds=[COND_LEDS])]
+    cond = 'diverses.find("historique", {}).find("activation", "OFF") == "ON"'
+    return [ref("historiqueFonctions", "C", '"ON"', [cond]), ref("historiqueFonctions", "I", conds=[cond])]
+
 def analyse_autoexec(texte):
     """Liste de references {mod, type I/C, commente, conds [conditions englobantes+ligne], arg}."""
     refs, pile = [], []
@@ -222,6 +262,17 @@ def analyse_autoexec(texte):
         commente = l.startswith("#")
         if commente:
             l = l.lstrip("#").strip()
+        # chargeModule("x", def () <corps> end) (P10.2, cartes gelees) : seul le corps compte
+        mc = RE_CHARGE_MODULE.match(l)
+        if mc:
+            l = (mc["si"] or "") + mc["corps"] + (" end" if mc["fin"] else "")
+        if not commente and "demarrage.prologue()" in l:      # prologue : log, divers, fichiers
+            refs.extend(dict(mod=n, type="I", commente=False, arg=None, conds=[c for c in pile if c])
+                        for n in ("logFonctions", "diversFonctions", "gestionFileFolder"))
+        r = refs_demarrage(l, commente, pile)
+        if r is not None:
+            refs.extend(r)
+            continue
         m = RE_IMPORT.match(l)
         if m:
             refs.append(dict(mod=m["mod"], type="I", commente=commente, arg=None,
@@ -364,7 +415,9 @@ def dependances(fichiers):
         brut = open(chemin, encoding="utf-8-sig", errors="replace").read().splitlines()
         code = chr(10).join(l.split("#")[0] for l in brut)
         trouves = re.findall(r"\bimport\s+(\w+)", code) + [m[1] for m in re.findall(r'(compileModule|loadBerryFile)\(\s*"/(\w+)"', code)]
-        deps[nom] = {t for t in trouves if t in fichiers and t != nom}
+        # demarrage.be cite les modules que l'autoexec lui demande de charger : ses vraies
+        # dependances sont les references de l'autoexec (refs_demarrage), pas son propre code
+        deps[nom] = set() if nom == "demarrage" else {t for t in trouves if t in fichiers and t != nom}
     return deps
 
 def fermeture(graines, deps):

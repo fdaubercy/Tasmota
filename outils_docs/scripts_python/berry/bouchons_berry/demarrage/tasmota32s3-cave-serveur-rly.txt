@@ -7,5 +7,5 @@ crons (1) : majHistorique
 minuteries (1) : demarrageDiffere
 compiles (1) : /controlePompeVideCave.bec
 sources (3) : /autoexec.be, /controleLeds.be, /ledsFonctions.be
-globales (20) : LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatTcpFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controlePompeVideCave:instance, controleUDP_multicast:instance, controleUDP_unicast:instance, diverses:instance, gpio:module, light:module, modules:instance, persist:instance, persistValide:bool, serveur:instance, wire1:instance, wire2:instance
+globales (19) : LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatTcpFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controlePompeVideCave:instance, controleUDP_multicast:instance, controleUDP_unicast:instance, diverses:instance, gpio:module, light:module, modules:instance, persist:instance, serveur:instance, wire1:instance, wire2:instance
 erreurs (0) : 
