@@ -1,5 +1,21 @@
 # Analyse — ModBus en Berry & table de découverte `discovery.json`
 
+> ⚠️ **DOCUMENT HISTORIQUE — état du code au 2026-09-22 (§2.6 : au 2026-10-03).** À lire comme
+> la trace d'une analyse, pas comme une description du code actuel (constat B13 de
+> `AUDIT_BERRY_2026-10.md`) :
+> - **les numéros de ligne `fichier:ligne` sont périmés** : les fichiers ont été retravaillés
+>   depuis (factorisations, code mort retiré) ; chercher la fonction par son nom ;
+> - **les trois défauts du §2.3 sont corrigés** depuis le 2026-09-30 (lecture de
+>   `/json/discovery.json` à la bonne profondeur, forme canonique `{MAC: {role: …}}` écrite par
+>   `ImAlive`), mais restent présentés comme actuels ;
+> - `resetClientsConnectes` n'existe plus : la péremption des fiches est faite par
+>   `udpFonctions.perimeFiches` (2 × telePeriod sans `ImAlive`), et `/discovery` affiche l'état
+>   réseau de chaque fiche (`discoveryFonctions.etatReseau`), depuis le 2026-10-25.
+>
+> **Références à jour** : `PROTOCOLE_MODBUS.md` (§8 carte 16 relais, §9 synchronisation
+> maître/esclave), l'en-tête de `data/fs/udpFonctions.be` (cycle `forceEnvoiParams` → `ImAlive`)
+> et `DIAGNOSTIC_UDP_2026-10-17.md`.
+
 > Document créé le **2026-09-22**. Consigne deux analyses menées à la suite :
 > 1. **Comment fonctionnent les programmes ModBus en Berry** (les 3 transports, la carte
 >    16 relais, la communication ESP32↔ESP32, le push esclave→maître).

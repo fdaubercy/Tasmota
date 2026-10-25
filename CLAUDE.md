@@ -324,11 +324,21 @@ est dans `outils_docs/README.md`.
 2. Prefixe `NOM_MAJ_SNAKE: Message en francais !`, suffixe `_ERREUR` dans les `except`.
 3. Un echec se logue en `erreur`, jamais en `debug` « pour ne pas encombrer » : les erreurs
    sont la seule chose qu'on doit pouvoir retrouver une fois le debug eteint.
-4. Dans un callback frequent (`every_50ms`, `every_second`, reception reseau ou serie) :
-   pas d'`info`, seulement `debug` ou `detail`.
-5. Un message couteux a construire (`json.dump`, gros `format`) se garde par
+4. Dans un callback frequent (`every_50ms`, `every_100ms`, `every_250ms`, `every_second`, `web_sensor`,
+   `json_append`, reception reseau ou serie) : pas d'`info`, seulement `debug` ou `detail`.
+5. Un message couteux a construire (`json.dump`, `tohex`, gros `format`) se garde par
    `if logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, cible) ... end` : Berry construit la chaine
-   **avant** d'appeler `log()`, meme si elle est ensuite jetee.
+   **avant** d'appeler `log()`, meme si elle est ensuite jetee. Plusieurs messages dans une meme
+   fonction : `var detail = logFonctions.actif(...)` une fois, puis `if detail ... end`.
+6. Le niveau s'ecrit par sa constante `LOG_LEVEL_*`, jamais en chiffre (seule exception :
+   `data/fs/demarrage.be`, compile avant que les constantes existent). Niveau variable : un enrobeur
+   `xxxFonctions.log(msg, niveau)` qui le recoit en parametre, ou une ternaire entre constantes
+   (`ok ? LOG_LEVEL_INFO : LOG_LEVEL_ERREUR`).
+
+**Controle automatique** : `verifie_berry.py` (donc le hook `verifie_berry_edition` a chaque edition
+d'un `.be` par Claude) signale les ecarts aux regles 1, 2, 4, 5 et 6 en **avertissements**, sans
+bloquer ni changer le code de sortie (`berry/charte_logs.py`, ses limites dans sa docstring ;
+`--sans-charte` pour la syntaxe seule ; banc `berry/test_verifie_berry_charte.py`).
 
 ### Les deux filtres successifs
 
@@ -394,8 +404,10 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   a jour la reprise.
 - `.claude/hooks/verifie_berry_edition.sh` + `.py` — hook `PostToolUse` (Edit, Write, MultiEdit) : apres
   chaque edition d'un `data/**/*.be` par Claude (hors `*sauvegarde*`), `verifie_berry.py <fichier>` (~0,8 s) ;
-  erreur Berry ou verification impossible -> code 2, l'erreur revient a Claude. Filtre `sh` : rien n'est lance
-  pour un autre fichier. Banc hors depot (faux depot + temoin verificateur absent).
+  erreur Berry ou verification impossible -> code 2, l'erreur revient a Claude ; ecarts a la charte des logs
+  seuls -> code 0, avertissements renvoyes en `additionalContext` (audit P7.6). Filtre `sh` : rien n'est lance
+  pour un autre fichier. Banc hors depot (faux depot + temoin verificateur absent) ; partie 5 de
+  `berry/test_verifie_berry_charte.py` (faux depot : erreur, ecarts, fichier propre).
 - `.claude/skills/bancs/` — skill : quel banc lancer pour quel fichier modifie, commande exacte (Python de
   PlatformIO pour `outils_pc/`, pyserial), lecture vert/rouge, pieges (bancs Berry sans code de sortie,
   `test_rs485_pc.py` n'est pas un banc, `--reel` = reseau).
@@ -456,7 +468,8 @@ Pour ne pas chercher : ce qui a ete produit et ou.
 - `outils_docs/PROTOCOLE_MODBUS.md` — ModBus RTU/TCP standard, implementation maison (3 transports
   Serie/UDP/TCP), extension esclave->maitre, failles du mecanisme d'envoi, design de queue FIFO,
   carte des registres de la carte 16 relais (§8), architecture de synchronisation (§9).
-- `outils_docs/ANALYSE_BERRY_MODBUS_DISCOVERY.md` — fonctionnement des programmes ModBus
+- `outils_docs/ANALYSE_BERRY_MODBUS_DISCOVERY.md` — **historique** (etat du 2026-09-22, encadre de tete :
+  numeros de ligne perimes, defauts du §2.3 corriges depuis le 2026-09-30) — fonctionnement des programmes ModBus
   Berry (3 transports, carte 16 relais, ESP32<->ESP32, push esclave->maitre) + audit de la
   table `/json/discovery.json` : formes ecrites/lues, 3 defauts bloquants la resolution
   d'IP en UDP, et tableau des elements restant a parametrer (importance/priorite/difficulte).
@@ -478,7 +491,8 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   - `build/` — charges par PlatformIO : `pre_utilitaires_platformio.py` (pre-script ; importe les
     `cible_*.py` voisins), `post_lto_parallele.py`, les 7 `cible_*.py` (cibles Custom, qui lancent
     `outils_pc/`), `ota-files-uploader.py`, `update_idf55_framework.py` (appele par le pre-script).
-  - `berry/` — `verifie_berry.py` (syntaxe de data/, tache VS Code de surveillance),
+  - `berry/` — `verifie_berry.py` (syntaxe de data/, tache VS Code de surveillance ; avertissements de
+    charte des logs par `charte_logs.py`, banc `test_verifie_berry_charte.py`),
     `solidifie_et_compile_berry.py` (module solidifiable en ~10 s, compile le .h),
     `nomme_fonctions_berry.py` (fonctions anonymes -> nommees), `carte_modules_berry.py`
     (-> `outils_docs/CARTE_MODULES_BERRY.md`), `genere_schema_persist.py`

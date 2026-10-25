@@ -8,7 +8,9 @@ memes globales declarees que le solidifieur du build, code jamais execute.
 - erreur Berry : code 2, l'erreur (fichier:ligne: erreur: ...) part sur stderr, que Claude lit
   aussitot (l'edition est deja faite : il doit la corriger) ;
 - verification impossible (berry.exe absent, temoin rate, delai) : code 2 aussi, avec le motif,
-  pour qu'une verification muette ne passe jamais pour un succes.
+  pour qu'une verification muette ne passe jamais pour un succes ;
+- compile mais s'ecarte de la charte des logs (avertissements de verifie_berry.py, audit P7.6) :
+  code 0, les avertissements reviennent a Claude en contexte (additionalContext), sans bloquer.
 
 La tache VS Code « --surveille » fait la meme chose pour les editions de l'utilisateur, mais ses
 erreurs vont dans l'onglet Problemes, que Claude ne voit pas.
@@ -50,6 +52,11 @@ def main():
         print(f"Verification Berry impossible pour {chemin} : {e}", file=sys.stderr)
         return 2
     if r.returncode == 0:
+        avis = [l for l in r.stdout.splitlines() if ": avertissement: " in l]
+        if avis:
+            texte = ("Charte des logs (data/fs/logFonctions.be) : ecarts dans le fichier que tu viens d'editer, "
+                     "a corriger s'ils viennent de ton edition :\n" + "\n".join(avis))
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": texte}}))
         return 0
     sortie = (r.stdout + r.stderr).strip()
     if r.returncode == 1:

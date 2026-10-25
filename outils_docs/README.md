@@ -71,7 +71,11 @@ Le mécanisme vit dans `data/fs/logFonctions.be`, qui porte la même charte en t
 
 Dans le code : toujours `logFonctions.log(msg, niveau [, cible])`, jamais `log()` directement.
 Un échec se logue en `erreur`, jamais en `debug`. Pas d'`info` dans un traitement répété
-(toutes les secondes, à chaque trame reçue).
+(toutes les secondes, à chaque trame reçue, à chaque affichage de la page : `web_sensor`, `json_append`).
+Un message coûteux (`json.dump`, `tohex`) se construit seulement si `logFonctions.actif(...)` est vrai.
+Le niveau s'écrit par sa constante `LOG_LEVEL_*`, jamais en chiffre ; un niveau variable passe par
+l'enrobeur du module (`xxxFonctions.log(msg, niveau)`) ou par une ternaire entre constantes.
+`verifie_berry.py` signale les écarts à ces règles en avertissements, sans bloquer.
 
 ### Deux filtres successifs
 

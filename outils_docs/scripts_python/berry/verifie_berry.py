@@ -5,13 +5,16 @@ UTILISATION
   python verifie_berry.py                  tous les .be de data/ (hors *sauvegarde*)
   python verifie_berry.py f1.be f2.be      seulement ces fichiers
   python verifie_berry.py --surveille      reverifie tout a chaque modification d'un .be
+  python verifie_berry.py --sans-charte ... syntaxe seule, sans les avertissements de charte
 
   Chemin relatif : interprete depuis la racine du depot.
   Code de sortie : 0 = tout compile, 1 = erreur(s) Berry, 2 = verification invalide.
+  Les avertissements de charte ne changent JAMAIS le code de sortie.
 
 FORMAT DE SORTIE
 ----------------
   data/fs/udpFonctions.be:42: erreur: 'zz' undeclared (first use in this function)
+  data/fs/udpFonctions.be:57: avertissement: [prefixe] prefixe absent ou hors NOM_MAJ_SNAKE: (...)
 
 C'est le format que lit le problemMatcher "berry" des taches VS Code (tasks.json du
 profil) : les erreurs arrivent dans l'onglet Problemes, et Error Lens les ecrit au
@@ -27,6 +30,14 @@ Les globales declarees sont celles du solidifieur du build : la liste `globs` de
 lib/libesp32/berry_custom/solidify_all_python.be, relue a chaque passe. Une globale
 non declaree utilisee dans une fonction est donc refusee ICI comme elle le serait au
 build ('logFonctions undeclared', 2026-10-04). Le code n'est jamais execute.
+
+CHARTE DES LOGS (audit Berry P7.6)
+----------------------------------
+Apres la compilation, chaque fichier passe par charte_logs.py (meme dossier) : log() direct, niveau,
+prefixe, _ERREUR dans les except, info dans un callback frequent, json.dump/tohex non gardes. Ce sont des
+AVERTISSEMENTS (regles et limites : docstring de charte_logs.py). Le problemMatcher "berry" ne lit que
+les lignes "erreur:" : ils restent dans la sortie de la tache, pas dans l'onglet Problemes. Le hook
+d'edition de Claude les lui renvoie pour le seul fichier edite.
 
 TEMOIN
 ------
@@ -45,6 +56,10 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+
+# Lance par le hook avec python -I : le dossier du script n'est pas dans sys.path, l'y mettre
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import charte_logs  # noqa: E402
 
 TEMOIN = "def f() return temoin_non_declare end"
 MARQUE_DEBUT = "[verifie_berry] debut"
@@ -114,8 +129,8 @@ def ecrit_preambule(globs: list) -> Path:
     return chemin
 
 
-def verifie(racine: Path, berry: Path, fichiers: list) -> int:
-    """Une passe : affiche les erreurs au format fichier:ligne: erreur: message."""
+def verifie(racine: Path, berry: Path, fichiers: list, charte: bool = True) -> int:
+    """Une passe : erreurs (fichier:ligne: erreur: message), puis avertissements de charte."""
     preambule = ecrit_preambule(lit_globs(racine))
     relatifs = [str(f.relative_to(racine) if f.is_relative_to(racine) else f).replace("\\", "/")
                 for f in fichiers]
@@ -137,7 +152,11 @@ def verifie(racine: Path, berry: Path, fichiers: list) -> int:
         num, texte = (m.group(1), m.group(2)) if m else ("1", message)
         print(f"{fichier}:{num}: erreur: {texte}")
         nb_erreurs += 1
-    print(f"{len(relatifs)} fichier(s) verifie(s), {nb_erreurs} erreur(s).")
+    avis = charte_logs.controle_fichiers(racine, fichiers) if charte else []
+    for ligne in avis:
+        print(ligne)
+    bilan = f", {len(avis)} avertissement(s) de charte" if charte else ""
+    print(f"{len(relatifs)} fichier(s) verifie(s), {nb_erreurs} erreur(s){bilan}.")
     return 1 if nb_erreurs else 0
 
 
@@ -169,6 +188,8 @@ def main() -> int:
     racine = trouve_racine()
     berry = trouve_berry(racine)
     args = sys.argv[1:]
+    charte = "--sans-charte" not in args
+    args = [a for a in args if a != "--sans-charte"]
     if args in (["-h"], ["--help"]):
         print(__doc__)
         return 0
@@ -182,7 +203,7 @@ def main() -> int:
     if not fichiers:
         print("Aucun fichier .be a verifier.")
         return 0
-    return verifie(racine, berry, fichiers)
+    return verifie(racine, berry, fichiers, charte)
 
 
 if __name__ == "__main__":

@@ -19,9 +19,15 @@
 #      contourne le seuil du module. Sans cible, c'est le seuil "general" qui s'applique.
 #   2. Prefixe NOM_MAJ_SNAKE: Message en francais !  -- suffixe _ERREUR dans les except.
 #   3. Un echec se logue en erreur, jamais en debug.
-#   4. Callback frequent (every_50ms, every_second, reception reseau/serie) : pas d'info.
+#   4. Callback frequent (every_50ms, every_100ms, every_250ms, every_second, web_sensor, json_append,
+#      reception reseau/serie) : pas d'info.
 #   5. Message couteux a construire : if logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, cible) ... end
-#      (Berry construit la chaine AVANT d'appeler log(), meme si elle est jetee ensuite).
+#      (Berry construit la chaine AVANT d'appeler log(), meme si elle est jetee ensuite). Plusieurs messages
+#      d'une meme fonction : var detail = logFonctions.actif(...) une fois, puis if detail ... end.
+#   6. Niveau toujours par sa constante LOG_LEVEL_*, jamais en chiffre (seule exception : demarrage.be,
+#      compile avant que les constantes existent). Niveau variable : un enrobeur xxxFonctions.log(msg, niveau)
+#      qui le recoit en parametre, ou une ternaire entre constantes (ok ? LOG_LEVEL_INFO : LOG_LEVEL_ERREUR).
+#   Controle automatique (avertissements, sans bloquer) : outils_docs/scripts_python/berry/verifie_berry.py.
 #
 #   Deux filtres successifs :
 #   1. le seuil du MODULE : cle "log" du bloc du module dans _persist.json
