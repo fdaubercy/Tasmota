@@ -78,6 +78,11 @@ def test_get(b):
     verifie((statut, f["data/garage/tasmota32s3-rideau-garage-modbus/controleRideau.be"]["etat"]), (200, "solidifie"),
             "GET /etat : controleRideau solidifie")
     verifie(b.requete("GET", "/etat?env=tasmota32s3-nulle-part")[0], 404, "GET /etat : env inconnu -> 404")
+    verifie(etat.get("build_en_cours"), False, "GET /etat : build_en_cours faux sans build")
+    b.builds = ["pio run -e x"]
+    verifie(b.requete("GET", f"/etat?env={RIDEAU}")[1].get("build_en_cours"), True,
+            "GET /etat : build_en_cours vrai pendant un build")
+    b.builds = []
     statut, ident = b.requete("GET", "/identite?base=tasmota32s3-base-N16R8-sans-ecran&lieu=garage&nom=porte-test")
     verifie((statut, ident["env"], ident["define"], ident["identite"]["MQTT_TOPIC"]),
             (200, "tasmota32s3-garage-porte-test", "FIRMWARE_ESP32S3_GARAGE_PORTE_TEST", "garage/porte-test"),

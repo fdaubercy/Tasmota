@@ -105,14 +105,15 @@ de `fichiers_berry_suppression`.
 - [x] Page : bouton « Renommer cet env… » : lieu, nom, « Proposer » (identité), diff, « Renommer » (grisé si la saisie
   change après le diff) ; après succès, l'env renommé est choisi. — preuve : idem
 - [x] Sonde Chrome : créer, renommer puis supprimer un env d'essai ; refus sur une base ; ROUGE puis VERT, témoin VERT. — preuve : 11 KO puis VERT, témoin détecté
-- [ ] Commit `feat(fichiers-berry): boutons Supprimer et Renommer cet env dans la page`.
+- [x] Commit `feat(fichiers-berry): boutons Supprimer et Renommer cet env dans la page`. — preuve : 30d72376e
 
 ## A5 — Recensement et création pendant un build (amélioration 3)
 
-- [ ] `etat_env` : un `.be` du dossier de la carte identique à `data/fs/<même nom>` est une copie temporaire, ni
+- [x] `etat_env` : un `.be` du dossier de la carte identique à `data/fs/<même nom>` est une copie temporaire, ni
   proposé ni « homonyme » ; `GET /etat` porte `build_en_cours` et la page l'affiche en bandeau. Création :
-  `copie_dossier` ignore ces copies et les sous-dossiers `fs`, `json`, `sd`. Tests ROUGE puis VERT (état, création).
-- [ ] Commit `fix(fichiers-berry): copies temporaires d un build ignorees (recensement, creation)`.
+  `copie_dossier` ignore ces copies et les sous-dossiers `fs`, `json`, `sd`. Tests ROUGE puis VERT (état, création). — preuve : test_fichiers_berry_etat (test_copie_temporaire),
+  _creation (test_copies_temporaires_ignorees), _web (build_en_cours) rouges puis VERT ; 8 bancs + sonde Chrome VERT.
+- [x] Commit `fix(fichiers-berry): copies temporaires d un build ignorees (recensement, creation)`.
 
 ## A6 — Documentation et essai réel
 

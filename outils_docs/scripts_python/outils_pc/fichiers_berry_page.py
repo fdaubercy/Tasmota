@@ -245,6 +245,10 @@ function dessine() {
     $("n-" + c).textContent = "(" + cols[c].length + ")";
   });
   var av = vide($("avertissements"));
+  if (etat.build_en_cours !== false)
+    av.appendChild(h("div", {"class": "avert rouge", texte: etat.build_en_cours ? "Un build est en cours : toute écriture est refusée jusqu'à sa fin." : "Impossible de savoir si un build tourne : toute écriture sera refusée."}));
+  if (etat.copies_temporaires.length)
+    av.appendChild(h("div", {"class": "avert", texte: "Copies temporaires d'un build dans le dossier de la carte (identiques à data/fs, ignorées) : " + etat.copies_temporaires.join(", ")}));
   if (!etat.exclude_solidified)
     av.appendChild(h("div", {"class": "avert", texte: "custom_files_exclude_solidified n'est pas à ON : un fichier solidifié reste AUSSI sur le FS."}));
   etat.disparus.forEach(function (x) {

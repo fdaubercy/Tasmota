@@ -156,7 +156,10 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
                 elif url.path == "/envs":
                     self._json({"envs": fbe.envs_proposes(racine)})
                 elif url.path == "/etat":
-                    self._json(fbe.etat_env(racine, params.get("env", [""])[0]))
+                    etat = fbe.etat_env(racine, params.get("env", [""])[0])
+                    builds = builds_en_cours()            # None : detection impossible
+                    etat["build_en_cours"] = None if builds is None else bool(builds)
+                    self._json(etat)
                 elif url.path == "/identite":
                     self._json(identite(params))
                 else:

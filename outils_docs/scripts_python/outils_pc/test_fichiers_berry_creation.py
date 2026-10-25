@@ -259,6 +259,21 @@ def test_creation_atomique(racine):
     verifie(fbc.prepare_creation(racine, c)["refus"], [], "creation atomique : un nouvel essai n'est pas refuse")
 
 
+def test_copies_temporaires_ignorees(racine):
+    """Un build interrompu laisse dans le dossier du modele des copies de data/fs, json/ et sd/ : non recopiees."""
+    (racine / "data/fs").mkdir(parents=True, exist_ok=True)
+    (racine / "data/fs/copieFonctions.be").write_bytes(b"# module commun")
+    shutil.copyfile(racine / "data/fs/copieFonctions.be", racine / DOSSIER_RIDEAU / "copieFonctions.be")
+    for sous in ("json", "sd"):
+        (racine / DOSSIER_RIDEAU / sous).mkdir()
+        (racine / DOSSIER_RIDEAU / sous / "f.txt").write_bytes(b"x")
+    cree(racine, creation())
+    neuf = racine / "data/garage/tasmota32s3-porte-test"
+    verifie(((neuf / "copieFonctions.be").exists(), (neuf / "json").exists(), (neuf / "sd").exists(),
+             (neuf / "autoexec.be").is_file()), (False, False, False, True),
+            "creation : copies temporaires d'un build non recopiees, vrais fichiers copies")
+
+
 def test_vu_par_build(racine):
     cree(racine, creation())
     envs = {e.nom: e.famille for e in build_envs.liste_envs(racine)}
@@ -269,7 +284,7 @@ def principal():
     test_nom_et_define()
     for test in (test_section_cenv, test_chemins_reecrits, test_section_h, test_modele_cave, test_persist_octets,
                  test_insertion_lieu, test_refus, test_diff_masque, test_sauvegarde, test_creation_atomique,
-                 test_vu_par_build):
+                 test_copies_temporaires_ignorees, test_vu_par_build):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier
             try:

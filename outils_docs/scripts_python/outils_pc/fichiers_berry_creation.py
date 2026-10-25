@@ -16,7 +16,6 @@ import difflib
 import hashlib
 import json
 import re
-import shutil
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -335,6 +334,20 @@ def prepare_creation(racine, c):
     return {k: r[k] for k in ("env", "dossier", "define", "diff", "empreinte", "avertissements", "refus")}
 
 
+def _ignore_modele(racine, dossier_modele):
+    """Pour copier le dossier du modele : ni *sauvegarde*, ni les copies temporaires d'un build interrompu
+    (fichiers identiques a data/fs, sous-dossiers fs/json/sd recopies par copy_fs_image)."""
+    haut = Path(racine) / dossier_modele
+    copies = {Path(c).name for c in fbe.copies_temporaires(racine, dossier_modele)}
+
+    def ignore(dossier, noms):
+        res = [n for n in noms if "sauvegarde" in n]
+        if Path(dossier) == haut:
+            res += [n for n in noms if n in copies or (n in ("fs", "json", "sd") and (haut / n).is_dir())]
+        return res
+    return ignore
+
+
 def cree(racine, c, empreinte_lue, builds_en_cours):
     """Cree les trois morceaux, atomiquement (copie horodatee du cenv et du .h avant ecriture). RuntimeError (-> 409) : build en cours ou
     indetectable, fichiers modifies depuis le diff, refus."""
@@ -351,7 +364,7 @@ def cree(racine, c, empreinte_lue, builds_en_cours):
         raise RuntimeError(" ; ".join(r["refus"]))
     # atomique : une ecriture qui echoue defait les precedentes (dossier copie retire, .h remis)
     with fbs.Transaction(racine, "creation") as tr:
-        tr.copie_dossier(fbe.dossier_carte(c.modele), r["dossier"], ignore=shutil.ignore_patterns("*sauvegarde*"))
+        tr.copie_dossier(fbe.dossier_carte(c.modele), r["dossier"], ignore=_ignore_modele(racine, fbe.dossier_carte(c.modele)))
         if r["persist"] is not None:
             tr.ecrit(r["dossier"] + "/_persist.json", r["persist"].encode("utf-8", errors="surrogateescape"))
         for fichier, cle, eol in ((FICHIER_H, "h", r["eol"][1]), (fbi.FICHIER_CENV, "cenv", r["eol"][0])):

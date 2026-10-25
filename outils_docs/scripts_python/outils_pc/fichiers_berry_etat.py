@@ -39,6 +39,20 @@ def dossier_carte(env):
     return f"data/{morceaux[1]}/" + "-".join([morceaux[0]] + morceaux[2:])
 
 
+def copies_temporaires(racine, dossier):
+    """Fichiers du dossier de carte identiques a data/fs/<meme nom> : copies temporaires de copy_fs_image
+    (pre_utilitaires_platformio.py:517), presentes pendant un build ou laissees par un build interrompu.
+    Aucun vrai fichier de carte n'est la copie exacte d'un fichier de data/fs (constate le 2026-10-25)."""
+    racine, res = Path(racine), []
+    if not dossier or not (racine / dossier).is_dir():
+        return res
+    for p in sorted((racine / dossier).iterdir()):
+        commun = racine / DOSSIER_FS / p.name
+        if p.is_file() and commun.is_file() and p.read_bytes() == commun.read_bytes():
+            res.append(f"{dossier}/{p.name}")
+    return res
+
+
 def recense(racine, env):
     """Fichiers proposes pour l'env : [{"chemin", "groupe": "fs"|"carte"|"amont"}], tries par groupe.
     Pas de sous-dossier de data/fs ni du dossier de la carte (copy_fs_image n'en copie que le premier
@@ -48,8 +62,9 @@ def recense(racine, env):
     res = []
     for groupe, dossier in (("fs", DOSSIER_FS), ("carte", dossier_carte(env))):
         if dossier and (racine / dossier).is_dir():
+            copies = set(copies_temporaires(racine, dossier)) if groupe == "carte" else set()
             res += [{"chemin": f"{dossier}/{p.name}", "groupe": groupe}
-                    for p in sorted((racine / dossier).glob("*.be")) if p.is_file()]
+                    for p in sorted((racine / dossier).glob("*.be")) if p.is_file() and f"{dossier}/{p.name}" not in copies]
     amont = racine / DOSSIER_AMONT
     if amont.is_dir():
         trouves = [p for p in amont.iterdir() if p.is_file() and p.suffix in EXTENSIONS_AMONT]
@@ -119,6 +134,7 @@ def etat_env(racine, env):
                 disparus.append(dict(_entree(e), provenance=_provenance(ini, env, o, e)))
     return {"env": env, "dossier_carte": dossier_carte(env), "exclude_solidified": _exclude_solidifies(ini, env),
             "fichiers": fichiers, "hors_perimetre": hors, "disparus": disparus,
+            "copies_temporaires": copies_temporaires(racine, dossier_carte(env)),
             "heritiers": {o: fbi.heritiers(ini, env, o) for o in OPTIONS}}    # envs touches par un AJOUT
 
 

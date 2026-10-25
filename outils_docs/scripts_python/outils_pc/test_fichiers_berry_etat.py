@@ -5,6 +5,7 @@ du depot est en lecture seule.
 """
 
 import os
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -78,7 +79,7 @@ def depot_essai(dossier):
     (racine / fbi.FICHIER_CENV).write_bytes(CENV.replace("\n", "\r\n").encode("utf-8"))
     for f in FICHIERS:
         (racine / f).parent.mkdir(parents=True, exist_ok=True)
-        (racine / f).write_text("# essai\n", encoding="utf-8")
+        (racine / f).write_text(f"# essai {f}\n", encoding="utf-8")    # contenus distincts : un homonyme n'est pas une copie
     return racine
 
 
@@ -149,6 +150,21 @@ def test_etat_homonyme(racine):
     verifie(f["data/fs/x.be"]["homonyme"], None, "homonyme : x.be seul")
 
 
+def test_copie_temporaire(racine):
+    """Un .be de la carte identique a data/fs/<meme nom> = copie temporaire d'un build (copy_fs_image)."""
+    copie = racine / "data/garage/tasmota32s3-carte/x.be"
+    shutil.copyfile(racine / "data/fs/x.be", copie)
+    try:
+        etat = fbe.etat_env(racine, "tasmota32s3-garage-carte")
+        f = par_chemin(etat)
+        verifie(("data/garage/tasmota32s3-carte/x.be" in f, f["data/fs/x.be"]["homonyme"]), (False, None),
+                "copie temporaire : ni proposee, ni homonyme")
+        verifie(etat["copies_temporaires"], ["data/garage/tasmota32s3-carte/x.be"], "copie temporaire : listee")
+        verifie(f["data/garage/tasmota32s3-carte/a.be"]["homonyme"], "data/fs/a.be", "vrai homonyme (contenu different) : garde")
+    finally:
+        copie.unlink()
+
+
 def test_etat_hors_perimetre_et_disparu(racine):
     e = fbe.etat_env(racine, "tasmota32s3-garage-carte")
     verifie([x["chemin"] for x in e["hors_perimetre"]], ["data/sd/js/lourd.js.gz"], "hors perimetre : le .js.gz")
@@ -193,7 +209,7 @@ def principal():
     with tempfile.TemporaryDirectory() as t:
         racine = depot_essai(t)
         for test in (test_recense_carte, test_etat_trois_etats, test_etat_amont_absent, test_etat_doublon,
-                     test_etat_homonyme, test_etat_hors_perimetre_et_disparu, test_etat_sans_exclude_solidified,
+                     test_etat_homonyme, test_copie_temporaire, test_etat_hors_perimetre_et_disparu, test_etat_sans_exclude_solidified,
                      test_envs_proposes, test_env_inconnu):
             try:
                 test(racine)
