@@ -31,8 +31,8 @@ Evenements numerotes (modele maintenance/synchro_fork_session.Session, rejoues p
   attente  env, builds (liste vide = reprise)
   fin      env=None, resultat (termine | arrete), succes, echecs, non_lances, fichiers_modifies
 
-Journal complet de chaque fils (sans ANSI) dans <dossier>/journaux/ ; nombre de .o du dernier
-succes de chaque env dans <dossier>/references.json (base du % de compilation).
+Journal complet de chaque fils (sans ANSI) dans <dossier>/journaux/ ; par env, dans
+<dossier>/references.json, le total des .o et les objets du dernier build incremental reussi (base du %).
 """
 
 import ipaddress
@@ -409,7 +409,9 @@ class Serie:
             environ.pop(heritee, None)                  # PLATFORMIO_* : empreinte -> purge de .pio/build
         if action in ENVOIS and ligne.methode == "com":
             args += ["--upload-port", ligne.port]
-        suivi = Suivi(action, self._references().get(env) if action in ("compiler", "upload") else None)
+        ref = self._references().get(env) if action in ("compiler", "upload") else None
+        ref = ref if isinstance(ref, dict) else {"total": ref}      # ancien format : un entier = le total
+        suivi = Suivi(action, ref.get("total"), ref.get("increment"))
         change, termine = self._chrono(env, action)
         commande = "pio " + " ".join(args)
         self._ajoute("etape", env, action=action, etape=suivi.etape, pourcent=None, detail="", commande=commande)
@@ -443,7 +445,7 @@ class Serie:
         termine()
         if code == 0:                                    # fini avec succes, meme si l'arret immediat arrive
             if action in ("compiler", "upload"):         # juste apres : l'upload a bien eu lieu
-                self._memorise_reference(env)
+                self._memorise_reference(env, suivi)
             return True, "", [], suivi.etape
         if self._arrete_demande(immediat=True):
             return False, "arrêt immédiat : arbre de processus tué", suivi.extrait_erreur, suivi.etape
@@ -511,13 +513,17 @@ class Serie:
         except (OSError, ValueError):
             return {}
 
-    def _memorise_reference(self, env):
+    def _memorise_reference(self, env, suivi):
         build = self.racine / ".pio" / "build" / env
         nb = sum(1 for _ in build.rglob("*.o")) if build.is_dir() else 0
         if nb <= 0:
             return
         references = self._references()
-        references[env] = nb
+        ancien = references.get(env) if isinstance(references.get(env), dict) else {}
+        increment = ancien.get("increment")
+        if not suivi.repris and 0 < suivi.nb_o < nb:     # build incremental : sa taille devient la base
+            increment = suivi.nb_o
+        references[env] = {"total": nb, "increment": increment}
         self.dossier.mkdir(parents=True, exist_ok=True)
         provisoire = self.dossier / "references.json.tmp"
         provisoire.write_text(json.dumps(references, indent=1, sort_keys=True), encoding="utf-8")

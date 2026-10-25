@@ -519,11 +519,25 @@ def test_reference_o_memorisee():
         m = Montage(t, {A: {"build": {"lignes": lignes, "o": 4}}, B: {"build": {"code": 1, "o": 7}}})
         m.lance([com(A), com(B)], {"compiler"})
         ref = json.loads((m.dossier / "references.json").read_text(encoding="utf-8"))
-        verifie(ref, {A: 4}, "reference_o_memorisee : 4 .o apres succes ; temoin, rien pour un echec")
+        verifie(ref, {A: {"total": 4, "increment": 2}},
+                "reference_o_memorisee : 4 .o et increment 2 apres succes ; temoin, rien pour un echec")
         ev = m.lance([com(A)], {"compiler"})
         compiles = [e for e in du_type(ev, "etape", etape="Compilation") if e["detail"].endswith("fichiers")]
-        verifie([(e["pourcent"], e["detail"]) for e in compiles], [(25, "1/4 fichiers"), (50, "2/4 fichiers")],
-                "reference_o_memorisee : relue au lancement suivant (2/4 = 50 %)")
+        verifie([(e["pourcent"], e["detail"]) for e in compiles], [(50, "1/2 fichiers"), (99, "2/2 fichiers")],
+                "reference_o_memorisee : increment relu au lancement suivant (1/2 = 50 %)")
+        # Build complet (objets repris du cache) : le total change, l'increment reste celui d'avant
+        complet = ["Retrieved `x/c.o' from cache", "Compiling a.o", "[SUCCESS]"]
+        m.scenario.write_text(json.dumps({A: {"build": {"lignes": complet, "o": 4}}}), encoding="utf-8")
+        m.lance([com(A)], {"compiler"})
+        ref = json.loads((m.dossier / "references.json").read_text(encoding="utf-8"))
+        verifie(ref[A], {"total": 4, "increment": 2}, "reference_o_memorisee : build complet -> increment garde")
+        # Ancien format (un entier) : lu comme le total
+        (m.dossier / "references.json").write_text(json.dumps({A: 8}), encoding="utf-8")
+        m.scenario.write_text(json.dumps({A: {"build": {"lignes": lignes, "o": 4}}}), encoding="utf-8")
+        ev = m.lance([com(A)], {"compiler"})
+        compiles = [e for e in du_type(ev, "etape", etape="Compilation") if e["detail"].endswith("fichiers")]
+        verifie([e["detail"] for e in compiles], ["1/8 fichiers", "2/8 fichiers"],
+                "reference_o_memorisee : ancien format entier = total")
 
 
 def test_rappel_fichiers_modifies():

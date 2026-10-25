@@ -1,11 +1,12 @@
 """Banc de build_progression (lecture de la sortie de pio) sur des lignes d'essai.
 
 Code de sortie 0 = vert. Aucun appel a pio : le module est pur, il ne fait que lire du texte.
-Les lignes sont ecrites d'apres les formats connus de PlatformIO / SCons / esptool ; a calibrer
-sur une vraie sortie (action A8 du plan).
+Les lignes sont ecrites d'apres les formats connus de PlatformIO / SCons / esptool, calibrees sur
+de vraies sorties (action A8 du plan) ; `build_sortie_reelle_cuve.txt` en est un extrait.
 """
 
 import sys
+from pathlib import Path
 
 import build_progression as bp
 
@@ -139,9 +140,70 @@ def test_pourcent_borne():
     verifie(ev["pourcent"], 99, "pourcent_borne : esptool a 100 % avant SUCCESS")
 
 
+def repris_n(n):
+    return [f"Retrieved `.pio\\build\\e\\lib\\y{i}.cpp.o' from cache" for i in range(n)]
+
+
+def test_increment():
+    # Build incremental (calibrage A8, P4 : 191 Compiling, aucun objet repris) : base = dernier increment
+    s = bp.Suivi("compiler", 1682, 190)
+    ev = alimente(s, compile_n(95))
+    verifie((ev["pourcent"], ev["detail"]), (50, "95/190 fichiers"), "increment : 95/190 = 50 %, pas 95/1682")
+    ev = alimente(s, compile_n(1))
+    verifie(ev["pourcent"], 50, "increment : toujours sur la base de l'increment")
+    s = bp.Suivi("compiler", 1682, 190)
+    ev = alimente(s, compile_n(191))
+    verifie((ev["pourcent"], ev["detail"]), (11, "191/1682 fichiers"),
+            "increment depasse : bascule sur le total (build complet sans cache)")
+
+
+def test_cache():
+    # Build complet (calibrage A8, cuve : 190 Compiling + 1492 repris du cache = 1682 .o sur disque)
+    s = bp.Suivi("compiler", 1682, 190)
+    ev = alimente(s, repris_n(841))
+    verifie((ev["etape"], ev["pourcent"], ev["detail"]), ("Compilation", 50, "841/1682 fichiers"),
+            "cache : un objet repris compte, et impose le total")
+    ev = alimente(s, ["Retrieved `.pio\\build\\e\\libff5\\libWire.a' from cache"])
+    verifie(s.nb_o, 841, "cache : une bibliotheque .a reprise ne compte pas")
+    s = bp.Suivi("compiler", None, None)
+    ev = alimente(s, repris_n(2) + compile_n(1))
+    verifie((ev["pourcent"], ev["detail"]), (None, "3 fichiers"), "cache sans reference : compte seul")
+
+
+def test_zone():
+    s = bp.Suivi("upload")
+    alimente(s, ["Writing 'C:\\x\\.pio\\build\\e\\bootloader.bin' at 0x00000000..."])
+    ev = alimente(s, ["Writing at 0x00003630 [=====] 100.0% 9.45kB/9.45kB [0s] "])
+    verifie((ev["etape"], ev["pourcent"], ev["detail"]), ("Téléversement", 99, "bootloader.bin"),
+            "zone : le % d'esptool porte le nom de la zone")
+    alimente(s, ["Writing '/x/.pio/build/e/littlefs.bin' at 0x004b0000..."])
+    ev = alimente(s, ["Writing at 0x004c0000 [==   ] 12.0% 50kB/440kB [2s] "])
+    verifie((ev["pourcent"], ev["detail"]), (12, "littlefs.bin"), "zone : chemin / et nouvelle zone")
+
+
+def test_sortie_reelle():
+    # Vraie sortie tronquee (upload COM12 de la cuve, 2026-10-25), sans la MAC de la carte
+    chemin = Path(__file__).with_name("build_sortie_reelle_cuve.txt")
+    s = bp.Suivi("upload", 1682, 190)
+    etapes, zones = [], []
+    for texte in chemin.read_text(encoding="utf-8").splitlines():
+        ev = s.ligne(texte)
+        if ev and (not etapes or etapes[-1] != ev["etape"]):
+            etapes.append(ev["etape"])
+        if ev and ev["etape"] == "Téléversement" and ev["detail"] and ev["detail"] not in zones and ev["detail"] != "terminé":
+            zones.append(ev["detail"])
+    verifie(etapes, ["Compilation", "Édition des liens", "Construction du FS", "Téléversement"],
+            "sortie_reelle : enchainement des etapes")
+    verifie((s.nb_o, s.fs_aussi, s.resultat, s.pourcent), (6, True, "succes", 100),
+            "sortie_reelle : 3 compiles + 3 repris, FS aussi flashe, succes a 100 %")
+    verifie(zones, ["bootloader.bin", "partitions.bin", "boot_app0.bin", "tasmota32s3-safeboot.bin",
+                    "firmware.bin", "littlefs.bin"], "sortie_reelle : les 6 zones d'esptool nommees")
+
+
 def principal():
     for t in (test_compilation, test_sans_reference, test_ansi, test_chemins, test_liens, test_esptool,
-              test_succes, test_echec, test_fs_aussi, test_buildfs_et_prebuild, test_pourcent_borne):
+              test_succes, test_echec, test_fs_aussi, test_buildfs_et_prebuild, test_pourcent_borne,
+              test_increment, test_cache, test_zone, test_sortie_reelle):
         t()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0
