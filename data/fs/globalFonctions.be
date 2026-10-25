@@ -205,9 +205,9 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 
 					# Cherche les relais liés
 					var relaisLie = device["relaisLie"]
-					var typeOrdre = relaisLie["type"]
+					var typeOrdre = relaisLie.find("type", "")
 					for nb: 0 .. relaisLie.find("ids", []).size() - 1
-						globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie["delai"])
+						globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie.find("delai", 0))
 					end
 
                     # Envoi son état au Maitre ModBus si le module est un esclave ModBus (id > 0)
@@ -238,9 +238,9 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 
 					# Cherche les relais liés
 					var relaisLie = device["relaisLie"]
-					var typeOrdre = relaisLie["type"]
+					var typeOrdre = relaisLie.find("type", "")
 					for nb: 0 .. relaisLie.find("ids", []).size() - 1
-						globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie["delai"])
+						globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie.find("delai", 0))
 					end
 
                     # Envoi son état au Maitre ModBus si le module est un esclave ModBus (id > 0)
@@ -273,9 +273,9 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 
                     # Cherche les relais liés
                     var relaisLie = device["relaisLie"]
-                    var typeOrdre = relaisLie["type"]
+                    var typeOrdre = relaisLie.find("type", "")
                     for nb: 0 .. relaisLie.find("ids", []).size() - 1
-                        globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie["delai"])
+                        globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie.find("delai", 0))
                     end
 
                     # Envoi son état au Maitre ModBus si le module est un esclave ModBus (id > 0)
@@ -326,9 +326,9 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 
                     # Cherche les relais liés
                     var relaisLie = device["relaisLie"]
-                    var typeOrdre = relaisLie["type"]
+                    var typeOrdre = relaisLie.find("type", "")
                     for nb: 0 .. relaisLie.find("ids", []).size() - 1
-                        globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, true, relaisLie["delai"])
+                        globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, true, relaisLie.find("delai", 0))
                     end	
 				end
 			end
@@ -347,9 +347,9 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 
                     # Cherche les relais liés
                     var relaisLie = device["relaisLie"]
-                    var typeOrdre = relaisLie["type"]
+                    var typeOrdre = relaisLie.find("type", "")
                     for nb: 0 .. relaisLie.find("ids", []).size() - 1
-                        globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie["delai"])
+                        globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie.find("delai", 0))
                     end
                 end
 			end
@@ -368,9 +368,9 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
                     
                     # Cherche les relais liés
                     var relaisLie = device["relaisLie"]
-                    var typeOrdre = relaisLie["type"]
+                    var typeOrdre = relaisLie.find("type", "")
                     for nb: 0 .. relaisLie.find("ids", []).size() - 1
-                        globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie["delai"])
+                        globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie.find("delai", 0))
                     end		
                     
                     # Envoi son état au Maitre ModBus si le module est un esclave ModBus (id > 0)

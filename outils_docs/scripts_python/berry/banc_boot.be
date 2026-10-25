@@ -588,6 +588,15 @@ if CAS == 1
              + (exWs != nil ? " (" + exWs + ")" : ""), exWs == nil && ambigues() == 1)
     var exWsOk = leve(/-> globalFonctions.changementEtatWS2812({"Dimmer": 40}, "Essai", {}, "garage", "inconnu"))
     controle("TEMOIN P5.8 : changementEtatWS2812 : valeur a une cle -> aucune erreur", exWsOk == nil && ambigues() == 1)
+    # Audit D10/P4.7 : relaisLie lu par 'relaisLie["type"]' et 'relaisLie["delai"]' : une entree sans eux (ids
+    # vide, comme le bouton1 de la cuve ou du rideau) levait key_error a la premiere commutation.
+    var capteursP47 = global.modules["garage"]["environnement"].find("capteurs")
+    if !isinstance(capteursP47, map)    capteursP47 = {}    global.modules["garage"]["environnement"]["capteurs"] = capteursP47    end
+    capteursP47["capteurP47"] = {"activation": "ON", "virtuel": "ON", "pin": -1, "etat": "OFF", "relaisLie": {"ids": []}}
+    var exP47 = leve(/-> globalFonctions.changementEtatCapteur("ON", "Switch9", {}, "garage", "capteurP47"))
+    controle("P4.7 : capteur dont le relaisLie n'a ni type ni delai (ids vide) : commutation sans exception"
+             + (exP47 != nil ? " (" + exP47 + ")" : ""), exP47 == nil && capteursP47["capteurP47"]["etat"] == "ON")
+    capteursP47.remove("capteurP47")
     # Audit N10/P5.9 : configDevices. Le compteur des entrees analogiques REELLES n'etait incremente que s'il valait
     # deja plus de 0 (toujours 0, regle ANALOG#A<n> jamais posee) ; '%i' applique a "ON"/"OFF" affichait 0.
     import configDevices
