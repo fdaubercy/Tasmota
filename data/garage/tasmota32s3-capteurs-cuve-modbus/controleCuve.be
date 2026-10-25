@@ -85,16 +85,6 @@ class CAPTEURS_CUVE : Driver
             historiqueFonctions.ajouteFiltre(/ chemins, valeurs -> self.filtreHistorique(chemins, valeurs))
         end
 
-        #-         
-            Ajoute les règles lancés selon l'étape de démarrage de la device tasmota :
-            - Message log sur connexion wifi
-            - Gestion des enregistrements en mqtt si c'est un esclave RangeExtender (idDevice > 0 & idDevice != -1) pour enregistrer ses capteurs comme virtuels auprès du maitre
-            - Gestion des enregistrements en RS485 si c'est un esclave RS485 (idDevice > 0 & idDevice != -1) pour enregistrer ses capteurs comme virtuels auprès du maitre
-        -#
-        # tasmota.add_rule("Wifi", def(value, trigger, msg) cuveFonctions.changementEtatDemarrage(value, trigger, msg) end)
-        # tasmota.add_rule("Mqtt", def(value, trigger, msg) cuveFonctions.changementEtatDemarrage(value, trigger, msg) end)  
-        # tasmota.add_rule("System", def(value, trigger, msg) cuveFonctions.changementEtatDemarrage(value, trigger, msg) end) 
-
         #- Parcours tous les modules paramétrés
 		    - Ajoute les règles sur changement d'état des capteurs si ils sont activés : fonction=changementEtatCapteur
 		        Si la règle ne fonctionne par 'add_rule()' => paramétrage de la pseudo règle dans la fonction 'majCapteursJson()' lancée toutes les secondes

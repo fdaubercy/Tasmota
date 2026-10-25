@@ -79,41 +79,5 @@ garageFonctions.reglageGarage = def(cmd, idx, payload, payload_json)
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
 
-# Règles sur changement d'état lors du démarrage de Tasmota
-garageFonctions.changementEtatDemarrage = def(value, trigger, msg)
-    import string
-    import mqtt
-    import json
-
-	# Test
-	garageFonctions.log("GARAGE_CHGT_ETAT_DEMARRAGE: -------------------- Garage changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG_PLUS)
-	garageFonctions.log("GARAGE_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
-	garageFonctions.log("GARAGE_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
-	garageFonctions.log("GARAGE_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}
-
-	# Pas de "deballage" de 'value' ici (inutilise dans cette fonction) : l'ancienne boucle
-	# 'for cle: value.keys() value = value[cle] end' levait des la 2e cle (2026-10-24, audit N9/P5.8).
-
-	# Lorsque la connexion Wi-Fi est change
-	if (trigger == "Wifi")
-        if msg["WIFI"].find("Connected", 0)
-        elif msg["WIFI"].find("Disonnected", 0)
-        end
-	# Init: Se produit une fois après le redémarrage avant que le Wi-Fi et MQTT ne soient initialisés
-    # Boot: Se déclenche après la connexion du Wi-Fi et de MQTT (si activé)
-    # Save: Avant redemarrage de tasmota
-	elif (trigger == "System")
-        if msg[trigger].find("Init", 0)
-        elif msg[trigger].find("Boot", 0)
-        elif msg[trigger].find("Save", 0)
-        end
-	# Se déclenche après la connexion MQTT (si activé)
-    elif (trigger == "Mqtt")
-        if msg["MQTT"].find("Connected", 0)
-        elif msg["MQTT"].find("Disconnected", 0)
-        end
-    end
-end
-
 # Retourne le module lors de l'importation
 return garageFonctions

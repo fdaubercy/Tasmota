@@ -2,7 +2,6 @@
 var cuveFonctions = module("/cuveFonctions")
 
 cuveFonctions.sensorsCuve = {"valeursAnalogiques": {"valeurCapteurHauteur": 0}, "niveauCuve": {"hauteurEau": 0, "tauxRemplissage": 0, "volume": 0}}
-cuveFonctions.voltageMin = 0.00
 cuveFonctions.voltageMax = 0.00         # voltageMax admissible par l'ADS1115 selon la plage de mesure paramétrée
 
 cuveFonctions.log = def(msg, levelDebug)
@@ -448,42 +447,6 @@ cuveFonctions.reglageVoies = def(fonction, arguments)
     var reponse = {"alimentation_V": real(conf.find("alimentation_V", 3.3))}
     for nom: ads.VOIES    reponse[nom] = ads.rappel(nom)    end
     return reponse
-end
-
-# Règles sur changement d'état lors du démarrage de Tasmota
-cuveFonctions.changementEtatDemarrage = def(value, trigger, msg)
-    import string
-    import mqtt
-    import json
-
-	# Test
-	cuveFonctions.log("CUVE_CHGT_ETAT_DEMARRAGE: -------------------- Cuve changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG_PLUS)
-	cuveFonctions.log("CUVE_CHGT_ETAT_DEMARRAGE: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)				# value=SINGLE
-	cuveFonctions.log("CUVE_CHGT_ETAT_DEMARRAGE: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)			# trigger=Button1
-	cuveFonctions.log("CUVE_CHGT_ETAT_DEMARRAGE: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)					# msg={'Button1': {'Action': SINGLE}}
-
-	# Pas de "deballage" de 'value' ici (inutilise dans cette fonction) : l'ancienne boucle
-	# 'for cle: value.keys() value = value[cle] end' levait des la 2e cle (2026-10-24, audit N9/P5.8).
-
-	# Lorsque la connexion Wi-Fi est change
-	if (trigger == "Wifi")
-        if msg["WIFI"].find("Connected", 0)
-        elif msg["WIFI"].find("Disonnected", 0)
-        end
-	# Init: Se produit une fois après le redémarrage avant que le Wi-Fi et MQTT ne soient initialisés
-    # Boot: Se déclenche après la connexion du Wi-Fi et de MQTT (si activé)
-    # Save: Avant redemarrage de tasmota
-	elif (trigger == "System")
-        if msg[trigger].find("Init", 0)
-        elif msg[trigger].find("Boot", 0)
-        elif msg[trigger].find("Save", 0)
-        end
-	# Se déclenche après la connexion MQTT (si activé)
-    elif (trigger == "Mqtt")
-        if msg["MQTT"].find("Connected", 0)
-        elif msg["MQTT"].find("Disconnected", 0)
-        end
-    end
 end
 
 # Règles sur changement d'état des capteurs

@@ -574,10 +574,11 @@ if CAS == 1
     import garageFonctions
     import globalFonctions
     var exWeb = leve(/-> webFonctions.changementEtatDemarrage(plusieursCles(), "Essai", {}))           # declencheur sans branche :
-    var exGarage = leve(/-> garageFonctions.changementEtatDemarrage(plusieursCles(), "Essai", {}))     # seul le deballage est teste
-    controle("P5.8 : changementEtatDemarrage web et garage : valeur a plusieurs cles sans exception"
-             + (exWeb != nil ? " (web : " + exWeb + ")" : "") + (exGarage != nil ? " (garage : " + exGarage + ")" : ""),
-             exWeb == nil && exGarage == nil)
+    controle("P5.8 : changementEtatDemarrage web : valeur a plusieurs cles sans exception"                # seul le deballage est teste
+             + (exWeb != nil ? " (web : " + exWeb + ")" : ""), exWeb == nil)
+    # garageFonctions.changementEtatDemarrage : jamais branchee (regles commentees), retiree (audit P5.10, 2026-10-25)
+    import introspect
+    controle("P5.10 : garageFonctions.changementEtatDemarrage retiree (code mort)", introspect.get(garageFonctions, "changementEtatDemarrage") == nil)
     var ambigues = def ()
         var n = 0
         for l: BANC_BOOT.journal    if string.find(l[0], "GLOBAL_GESTION_WS2812_ERREUR") >= 0    n += 1    end    end
