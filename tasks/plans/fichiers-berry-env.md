@@ -259,7 +259,7 @@ CONSOLE.format("fichiers_berry"))`, `dans_job=True`, pas de `route_occupe`) ; `o
 - [x] Vérifier par lecture que `CIBLES_HORS_BUILD` contient la cible (pas de `pio run --list-targets`, leçon du
   2026-10-17) ; demander à l'utilisateur de rafraîchir Project Tasks hors build et de lancer la cible une fois. — preuve : CIBLES_HORS_BUILD : pre_utilitaires_platformio.py (lecture du code, sans pio)
 - [ ] Tâche VS Code lancée une fois (Tasks: Run Task) avant d'être annoncée (leçon du 2026-10-13).
-- [ ] Commit `feat(fichiers-berry): cible Custom et tuile de l annuaire`.
+- [x] Commit `feat(fichiers-berry): cible Custom et tuile de l annuaire`. — preuve : 3596e315a
 
 ## A8 — Liens croisés avec la page build
 
@@ -267,8 +267,8 @@ Fichiers : modifier `outils_pc/build_page.py` (`ligneEnv(e)` l.335 : lien « Ré
 `http://127.0.0.1:7800/?env=<nom>` ; lecture de `?env=` au chargement (`chargeEnvs`) qui coche cet env) et
 `outils_pc/test_build_page_chrome.py` (le lien existe, `?env=` coche l'env).
 
-- [ ] Sonde de la page build ROUGE sur les 2 nouveaux contrôles, puis modification, VERTE ; bancs `test_build_*.py`
-  tous VERTS.
+- [x] Sonde de la page build ROUGE sur les 2 nouveaux contrôles, puis modification, VERTE ; bancs `test_build_*.py`
+  tous VERTS. — preuve : sonde_liens_fichiers ROUGE (liens vides) puis VERT, temoin VERT ; test_build_envs/ota_fs/progression/serie/web codes 0
 - [ ] Commit `feat(build): liens croises avec la page Fichiers Berry par env`.
 
 ## A9 — Documentation et essai réel avec l'utilisateur

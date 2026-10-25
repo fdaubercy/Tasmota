@@ -95,6 +95,7 @@ PAGE = r"""<!doctype html>
   .env.coche{background:var(--bleu-fond)}
   .env > input[type=checkbox]{grid-area:case;width:16px;height:16px;margin:0}
   .env .nom{grid-area:nom;overflow-wrap:anywhere;cursor:pointer;font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+  .env .lien-fichiers{font-family:system-ui,sans-serif;font-size:11px;color:var(--bleu)}
   .env .methode{grid-area:methode}
   .env .champ{grid-area:champ;width:100%;font:inherit;font-size:13px;padding:3px 6px;background:var(--btn);color:var(--texte);border:1px solid var(--btn-bord);border-radius:4px}
   .env .champ.requis{border-color:var(--rouge);background:var(--rouge-fond)}
@@ -226,6 +227,7 @@ var SOUS_GROUPES = [["safeboot", "Safeboot"], ["esp32", "ESP32"], ["langues", "L
 var ETAPES_COMPILATION = ["Pré-build", "Compilation", "Édition des liens"];
 var STATUTS = {succes: "réussi", echec: "échec", annulee: "annulée", arrete: "arrêté", passe: "passé"};
 var PORT = /^COM\d{1,3}$/i;
+var URL_FICHIERS = location.protocol + "//" + location.hostname + ":7800/";   // page « Fichiers Berry par env », meme hote
 var IPV4 = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
 
 var envs = [], parNom = {}, choix = {}, ui = {}, uiBlocs = {}, enCours = false, dernierN = 0, fluxCoupe = false;
@@ -303,6 +305,9 @@ function construitListe(donnees) {
   var derniers = {};
   ((donnees.derniers && donnees.derniers.lignes) || []).forEach(function (l) { derniers[l.env] = l; });
   envs.forEach(function (e) { if (!choix[e.nom]) choix[e.nom] = valeurInitiale(e, derniers[e.nom]); });
+  // ?env=<nom> (lien de la page Fichiers Berry par env) : cet env coche au premier chargement
+  var demande = new URLSearchParams(location.search).get("env");
+  if (demande && choix[demande] && !construitListe.dejaFait) choix[demande].coche = true;
   var acts = (donnees.derniers && donnees.derniers.actions) || null;
   if (acts && !construitListe.dejaFait)
     ACTIONS.forEach(function (a) { caseAction(a).checked = a !== "erase_upload" && acts.indexOf(a) >= 0; });
@@ -356,8 +361,12 @@ function ligneEnv(e) {
   };
   champ.onchange = function () { if (c.methode === "com") changePort(e.nom); else majLigne(e.nom); };
   var notes = h("div", {"class": "notes"});
+  // Lien vers la page « Fichiers Berry par env » (port 7800), pour les envs du cenv seulement
+  var fichiers = e.ecrivable ? h("a", {"class": "lien-fichiers", href: URL_FICHIERS + "?env=" + encodeURIComponent(e.nom),
+    target: "_blank", rel: "noopener", texte: "fichiers", title: "Régler ses fichiers Berry (sur le FS, exclus, solidifiés)"}) : null;
   var ligne = h("div", {"class": "env", "data-env": e.nom}, caseEnv,
-    h("label", {"class": "nom", "for": "env-" + e.nom, texte: e.nom, title: e.firmware || ""}),
+    h("span", {"class": "nom"}, h("label", {"for": "env-" + e.nom, texte: e.nom, title: e.firmware || ""}),
+      fichiers ? " " : null, fichiers),
     h("span", {"class": "methode", role: "group", "aria-label": "Méthode d'envoi"}, bCom, bOta), champ, notes);
   ui[e.nom] = {ligne: ligne, caseEnv: caseEnv, bCom: bCom, bOta: bOta, champ: champ, notes: notes};
   majLigne(e.nom);

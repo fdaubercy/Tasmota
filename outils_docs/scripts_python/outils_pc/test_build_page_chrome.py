@@ -499,6 +499,7 @@ def sonde_page(m, capture):
     sonde_sortie(m)
     sonde_effacement(m)
     sonde_infobulle(m)
+    sonde_liens_fichiers(m)
     sonde_rechargement_effacer(m)
     sonde_pause(m)
     sonde_panneaux(m)
@@ -805,6 +806,24 @@ def sonde_infobulle(m):
     statique = cdp.js("fetch('/').then(r => r.text()).then(t => t.includes('(et le file system)'))")
     verifie(("file system" in avec and A in avec, "file system" in sans, bool(sans), statique), (True, False, True, False),
             f"infobulle : « et le file system » pour A (fichiers), pas pour C (no_files) ni dans le HTML ({sans[:70]})")
+    coche(cdp, f"#env-{C}", False)
+
+
+def sonde_liens_fichiers(m):
+    """Liens croises avec la page « Fichiers Berry par env » (port 7800) : un lien par env de carte ou de
+    base (ecrivable), aucun sur l'amont ; ?env=<nom> coche cet env au chargement."""
+    cdp = m.cdp
+    m.ouvre()
+    liens = cdp.js("Object.fromEntries([...document.querySelectorAll('.env')].map(l => "
+                   "[l.dataset.env, (l.querySelector('a.lien-fichiers') || {}).href || '']))")
+    attendus = {e: f"http://127.0.0.1:7800/?env={e}" for e in (A, B, C, BASE)}
+    verifie({e: liens.get(e) for e in attendus} if isinstance(liens, dict) else liens, attendus,
+            "liens : « fichiers » vers la page Fichiers Berry par env, avec l'env")
+    verifie(sorted(e for e, h in liens.items() if h and e not in attendus) if isinstance(liens, dict) else liens, [],
+            "liens : aucun lien sur les envs de l'amont")
+    cdp.appel("Page.navigate", url=m.url + "?env=" + C)
+    verifie(attend(cdp, f"document.getElementById('env-{C}') && document.getElementById('env-{C}').checked", 8), True,
+            "liens : ?env= coche l'env au chargement")
     coche(cdp, f"#env-{C}", False)
 
 
