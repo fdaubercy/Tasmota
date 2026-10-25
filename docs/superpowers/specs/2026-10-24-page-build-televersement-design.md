@@ -28,6 +28,7 @@ l'annuaire des outils** (http://127.0.0.1:7600).
 4. **Actions combinables** (une ou plusieurs à la fois, pour tous les environnements cochés) :
    - compiler le firmware ;
    - téléverser le firmware ;
+   - effacer la flash puis téléverser (`erase_upload`, ajout du 2026-10-25, voir plus bas) ;
    - construire le file system ;
    - téléverser le file system.
 5. **Méthode d'envoi par environnement** (maquette « B » retenue par l'utilisateur) : sur chaque ligne,
@@ -263,6 +264,40 @@ contenu de tous les `.ini`**. Si l'empreinte change, `run/helpers.py:35-50` supp
 17. Une tâche VS Code « Outil : build et téléversement (http://127.0.0.1:7700) » sur le modèle des
     autres. **Pas de cible PlatformIO Custom** (une cible est un `pio run` : elle ne peut pas piloter des
     `pio run`).
+
+## Évolution du 2026-10-25 : sortie en direct et `erase_upload`
+
+Demandée après les premiers essais réels (compilation, upload COM de la cuve, port modifié : validés).
+
+### Décisions de l'utilisateur
+
+- **Voir la sortie du script lancé comme dans le terminal de VS Code** : les lignes de pio au fil de
+  l'eau (fichiers en cours de compilation, édition des liens, écritures d'esptool, erreurs), y compris
+  pendant un `pio run -t erase_upload -e X`.
+- **`erase_upload` possible**, pour une carte dans un état bancal (partitions changées, réglages ou
+  persist corrompus) : tout effacer et repartir d'une flash propre avec le firmware et le FS du dépôt.
+- **« Téléverser le firmware » (`-t upload`) et « Effacer puis téléverser » (`-t erase_upload`) sont deux
+  actions distinctes**, côte à côte : l'utilisateur lance l'une **ou** l'autre (correction de
+  l'utilisateur : la seconde ne remplace pas la première).
+
+### Choix faits par Claude (présentés à l'utilisateur, acceptés le 2026-10-25)
+
+18. **Panneau « Sortie » par env** : dépliable sous la ligne de l'env dans le suivi, police à chasse fixe
+    sur fond sombre ; défile seul tant que l'utilisateur est en bas, s'arrête de défiler s'il remonte pour
+    lire ; erreurs en rouge, avertissements en orange (pas les couleurs exactes de VS Code : les journaux
+    sont écrits sans ANSI). Source : le journal que l'outil écrit déjà pour chaque `pio run` (choix 14),
+    lu **par incréments** pendant l'exécution (rien de plus stocké) ; la sortie d'un env terminé reste
+    relisible tant que la page est ouverte. Les lignes d'esptool qui se réécrivent (``) ne doivent pas
+    noyer le panneau (une ligne par zone et par palier, ou la dernière seulement : au constructeur).
+19. **`erase_upload`** : commande `pio run -e X -t erase_upload --upload-port COMn` ; **COM seulement**
+    (grisée sur une ligne en OTA, refusée côté serveur) ; cocher « Effacer puis téléverser » décoche
+    « Téléverser le firmware » et inversement (les enchaîner flasherait deux fois) ; combinable avec
+    compiler, construire le FS, téléverser le FS ; même place que l'upload dans l'ordre du choix 8 ; une
+    **confirmation** avant le lancement rappelle que le persist et les réglages de la carte seront
+    effacés et remplacés par ceux du dépôt. Même suivi que l'upload (étapes, %, zones esptool, mention
+    « FS aussi flashé » selon `fs_avec_firmware`), plus une étape **« Effacement de la flash »** (texte
+    exact d'esptool à lire dans le paquet installé, pas à deviner). Compte comme un envoi pour le refus
+    « port tenu / deux envois sur le même port » (choix 11) et pour l'attente de M7 (Ctrl+C).
 
 ## Laissé au constructeur
 

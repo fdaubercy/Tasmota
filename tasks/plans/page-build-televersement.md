@@ -3,7 +3,7 @@ chantier: page-build-televersement
 titre: Page web « Build et téléversement » (port 7700, tuile de l'annuaire)
 statut: actif
 cree: 2026-10-24
-maj: 2026-10-24
+maj: 2026-10-25
 ---
 # Page web « Build et téléversement » — plan d'implémentation
 
@@ -125,8 +125,8 @@ Interfaces produites :
   mesurées par A3). — preuve : commits 886802f53, 7de6dc9f0
 - [x] Banc vert. — preuve : test_build_progression.py vert, sortie 0 avec -W error (2026-10-24)
 - [x] Commit `feat(build-web): suivi de progression de la sortie pio`. — preuve : 886802f53 + 7de6dc9f0
-- [ ] **Calibrage** (pendant A8) : rejouer une vraie sortie de build et d'upload, ajuster les expressions,
-  garder cette sortie (tronquée) comme jeu d'essai du banc.
+- [x] **Calibrage** (pendant A8) : rejouer une vraie sortie de build et d'upload, ajuster les expressions,
+  garder cette sortie (tronquée) comme jeu d'essai du banc. — preuve : journaux P4 et cuve du 2026-10-25 rejoués ; objets du cache, increment, zones esptool ; build_sortie_reelle_cuve.txt (commit 40f9f0726)
 
 ## A3 — Exécution en série (`build_serie.py`) et faux pio
 
@@ -272,15 +272,43 @@ Fichiers : modifier `outils_pc/annuaire_registre.py` (entrée `OUTILS`), `outils
 
 Chaque essai : demander à l'utilisateur, vérifier qu'aucun build ne tourne, une carte à la fois.
 
-- [ ] Compiler seul un env (ex. cuve) : étapes, %, durée de compilation affichée dès la fin ; calibrage A2.
-- [ ] Téléverser par COM (cuve, COM12) : % esptool, mention « FS aussi flashé » si `littlefs.bin` présent.
+- [x] Compiler seul un env (ex. cuve) : étapes, %, durée de compilation affichée dès la fin ; calibrage A2. — preuve : essai utilisateur 2026-10-25 (P4 et cuve, journaux 20261025-000156 et -003648) ; calibrage 40f9f0726
+- [x] Téléverser par COM (cuve, COM12) : % esptool, mention « FS aussi flashé » si `littlefs.bin` présent. — preuve : essai utilisateur 2026-10-25, [SUCCESS] code 0, littlefs.bin écrit à 0x004b0000 (journal 20261025-003648)
 - [ ] Téléverser le firmware en OTA (P4) par la page (`/u2`) sans toucher au `.ini` : `git diff
   platformio_tasmota_cenv.ini` vide.
 - [ ] Téléverser le FS en OTA sur une carte choisie par l'utilisateur : sauvegarde du persist présente,
   relecture identique, persist de la carte après redémarrage = persist envoyé.
 - [ ] Série de 2 envs dont 1 en échec provoqué (port COM débranché) : bandeau rouge, l'autre env aboutit.
-- [ ] Modification d'un port sur la page : ligne réécrite dans `platformio_tasmota_cenv.ini`, `.bak`
-  présent, VS Code lit le même port.
+- [x] Modification d'un port sur la page : ligne réécrite dans `platformio_tasmota_cenv.ini`, `.bak`
+  présent, VS Code lit le même port. — preuve : essai utilisateur 2026-10-25 (« ça fonctionne »)
+
+## A9 — Sortie de pio en direct sur la page (spec, choix 18)
+
+Fichiers : `outils_pc/build_web.py` (lecture du journal par incréments), `outils_pc/build_page.py`
+(panneau « Sortie »), bancs `test_build_web.py`, `test_build_page_chrome.py`.
+
+- [ ] Banc rouge d'abord : lecture incrémentale du journal de l'env en cours (décalage, env terminé, env
+  inconnu, journal d'un autre env jamais servi) ; sonde Chrome : panneau qui se remplit pendant un faux
+  pio, défilement auto en bas, arrêté si on remonte, erreurs en rouge.
+- [ ] Serveur : lecture du journal par incréments, sans tout renvoyer à chaque fois.
+- [ ] Page : panneau « Sortie » dépliable par env, chasse fixe, fond sombre, couleurs erreur/avertissement,
+  lignes `` d'esptool contenues.
+- [ ] Bancs `test_build_*` et sonde Chrome verts.
+- [ ] Essai réel par l'utilisateur : sortie visible pendant une compilation.
+
+## A10 — Effacer puis téléverser (`erase_upload`) (spec, choix 19)
+
+Fichiers : `outils_pc/build_serie.py`, `outils_pc/build_progression.py`, `outils_pc/build_web.py`,
+`outils_pc/build_page.py`, `outils_pc/build_faux_pio.py`, leurs bancs.
+
+- [ ] Lire le texte réel d'esptool pour l'effacement (paquet installé) et la cible `erase_upload` de la
+  plateforme ; banc rouge : action `erase_upload` (ordre, COM seulement, refus OTA, exclusive avec
+  `upload`, envoi pour le refus de port et pour M7), étape « Effacement de la flash ».
+- [ ] Série et progression : `pio run -e X -t erase_upload --upload-port COMn`, étape d'effacement.
+- [ ] Page : case « Effacer puis téléverser », décoche « Téléverser le firmware » et inversement, grisée en
+  OTA, confirmation (persist et réglages effacés), mention « FS aussi flashé ».
+- [ ] Bancs `test_build_*`, `test_annuaire*` et sonde Chrome verts ; README et CLAUDE.md à jour.
+- [ ] Essai réel par l'utilisateur : `erase_upload` sur une carte choisie par lui.
 
 ## Améliorations restantes
 
