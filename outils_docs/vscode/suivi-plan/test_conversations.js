@@ -104,6 +104,21 @@ try {
   }
 } catch (e) { console.log('INFO   transcripts illisibles :', e.message) }
 
+// 4 bis. Ouverture automatique de la vue pour la conversation active qui suit un plan
+{
+  const suit = { session: 's1', fichier: 'tasks/plans/x.md' }
+  const f = C.ouvrirPourConversation
+  verifie('ouverture auto : conversation qui suit un plan, vue fermée -> ouvre', f === undefined ? false : f(true, false, suit, new Set()))
+  if (f) {
+    verifie('ouverture auto : vue déjà ouverte -> rien', !f(true, true, suit, new Set()))
+    verifie('ouverture auto : réglage coupé -> rien', !f(false, false, suit, new Set()))
+    verifie('ouverture auto : aucun plan suivi -> rien', !f(true, false, { session: 's1', fichier: null }, new Set()))
+    verifie('ouverture auto : conversation non reconnue -> rien', !f(true, false, { session: null, fichier: null }, new Set()) && !f(true, false, null, new Set()))
+    verifie('ouverture auto : déjà ouverte (ou refermée à la main) pour cette conversation -> rien', !f(true, false, suit, new Set(['s1'])))
+    verifie('ouverture auto : une autre conversation déjà vue ne bloque pas celle-ci', f(true, false, suit, new Set(['s2'])))
+  }
+}
+
 // 5. Temoin
 const source = fs.readFileSync(path.join(ICI, 'conversations.js'), 'utf8')
 const lignes = source.split('\n')

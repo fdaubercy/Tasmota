@@ -3,7 +3,7 @@
   "publisher": "fdaubercy",
   "displayName": "Suivi du plan",
   "description": "Avancement des plans de travail (tasks/plans/*.md) dans une vue a droite de l'editeur : % par action, % global, etapes, ameliorations restantes.",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "private": true,
   "license": "UNLICENSED",
   "engines": {
@@ -37,6 +37,11 @@
           "type": "string",
           "default": "tasks/plans",
           "description": "Dossier des plans, relatif au dossier de travail. Les fichiers _*.md n'y sont pas des plans."
+        },
+        "suiviPlan.ouvrirAvecConversation": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ouvrir la vue a droite quand la conversation Claude active suit un plan (message envoye, ou bascule vers son onglet), une fois par conversation et par fenetre : refermee a la main, elle ne se rouvre pas pour cette conversation."
         },
         "suiviPlan.ouvrirAuto": {
           "type": "boolean",

@@ -13,7 +13,9 @@ Calcul : parseur unique `.claude/mods/suivi-plan/hooks/parseur-plan.mjs`, copie 
 diagnostic ; `--mod` : installe aussi le mod Claude ; `--help` : repli manuel).
 
 **Commandes** : « Suivi du plan : ouvrir à droite », « Suivi du plan : choisir le plan ».
-**Reglages** : `suiviPlan.dossier` (`tasks/plans`), `suiviPlan.ouvrirAuto` (true).
+**Reglages** : `suiviPlan.dossier` (`tasks/plans`), `suiviPlan.ouvrirAuto` (true), `suiviPlan.ouvrirAvecConversation`
+(true : la vue s'ouvre d'elle-meme quand la conversation Claude active suit un plan - message envoye ou bascule vers
+son onglet -, une fois par conversation et par fenetre ; refermee a la main, elle reste fermee pour cette conversation).
 
 Developpement : `code --extensionDevelopmentPath=outils_docs/vscode/suivi-plan .` ;
 banc du rendu : `node outils_docs/vscode/suivi-plan/test_rendu.js`.

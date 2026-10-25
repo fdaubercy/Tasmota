@@ -32,6 +32,7 @@ const E = {
   // sinon { session, fichier (null = aucun plan), message } ; dernierOnglet evite de refaire le travail
   conv: null, dernierOnglet: null, dernierLibelle: null,
   appris: new WeakMap(),    // onglet (objet Tab de l'API) -> session designee par un message envoye
+  ouvertesAuto: new Set(),  // sessions qui ont deja eu la vue dans cette fenetre (auto, ou refermee a la main)
   transcripts: new Map(),   // session -> chemin du .jsonl
   titres: new Map(),        // chemin du .jsonl -> { mtime, taille, titre }
 }
@@ -147,7 +148,10 @@ function brancheVue(panel) {
   E.panel = panel
   panel.webview.options = { enableScripts: true, localResourceRoots: [media()] }
   panel.webview.html = htmlComplet(panel)
-  panel.onDidDispose(() => { if (E.panel === panel) E.panel = null })
+  panel.onDidDispose(() => {
+    if (E.panel === panel) E.panel = null
+    if (E.conv?.session) E.ouvertesAuto.add(E.conv.session)   // refermee a la main : pas rouverte pour elle
+  })
   panel.webview.onDidReceiveMessage(m => recoitMessage(m))
 }
 
@@ -164,6 +168,15 @@ function ouvreVue(fichier, conv) {
     { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
     { enableScripts: true, localResourceRoots: [media()], retainContextWhenHidden: false }))
   majVue()
+}
+
+// La conversation active suit un plan et la vue est fermee : elle s'ouvre, une fois par conversation et
+// par fenetre (reglage suiviPlan.ouvrirAvecConversation). @origine : pour le journal.
+function ouvreAvecConversation(origine) {
+  if (!C.ouvrirPourConversation(reglages().get('ouvrirAvecConversation'), Boolean(E.panel), E.conv, E.ouvertesAuto)) return
+  E.ouvertesAuto.add(E.conv.session)
+  journal(`ouverture auto (${origine}) : conversation ${E.conv.session} suit ${E.conv.fichier}`)
+  ouvreVue(E.conv.fichier, E.conv)
 }
 
 async function recoitMessage(m) {
@@ -264,7 +277,8 @@ function lisSignal(auDemarrage) {
     if (!session) return
     E.conv = { session, fichier }
     journal(`signal : conversation ${session} -> ${fichier}`)
-    return rafraichit()
+    rafraichit()
+    return ouvreAvecConversation('message envoyé')
   }
   if (!reglages().get('ouvrirAuto')) return
   if (!fs.existsSync(abs)) return vscode.window.showWarningMessage(`Suivi du plan : plan introuvable (${s.fichier}).`)
@@ -405,6 +419,7 @@ function surOnglet(force) {
   }
   journal(`onglet « ${libelle} » -> ${o.etat}` + (o.session ? ` ${o.session} : ${o.fichier ?? 'aucun plan'}` : ''))
   rafraichit()
+  ouvreAvecConversation('onglet')
 }
 
 function planifieOnglet(force) {

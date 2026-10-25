@@ -429,6 +429,9 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   lui apprend sa conversation ; un signal d'une autre conversation que l'onglet actif est ignore.
   Panneau Claude en barre laterale : aucune API ne dit quelle conversation y est affichee -> seuls le
   signal « message envoye » et la ligne d'avancement de la conversation le couvrent.
+  Depuis 0.4.0 (reglage `suiviPlan.ouvrirAvecConversation`, vrai par defaut) : la vue S'OUVRE d'elle-meme quand
+  la conversation active suit un plan (message envoye ou bascule vers son onglet), une fois par conversation et
+  par fenetre ; refermee a la main, elle ne se rouvre pas pour cette conversation (`C.ouvrirPourConversation`).
 - `tasks/plans/` — un plan suivi par chantier ; format et regles de calcul dans `_FORMAT.md`.
 - `tasks/lessons.md` — journal des erreurs et regles.
 - `tasks/reprise-solidification-berry.md` — etat du chantier solidification, prochaine action.

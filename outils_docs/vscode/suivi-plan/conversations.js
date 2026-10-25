@@ -69,4 +69,12 @@ function apparie(libelle, conversations) {
   return { etat: 'trouvee', conversation }
 }
 
-module.exports = { TAILLE_BLOC, SANS_TITRE, TYPE_ONGLET, champ, titreSession, libelleOnglet, apparie }
+// Ouvrir la vue pour la conversation active ? Oui si le reglage le permet, que la vue est fermee, que la
+// conversation est reconnue et suit un plan, et qu'elle n'a pas deja eu la vue dans cette fenetre
+// (`dejaOuvertes` : sessions ouvertes automatiquement ou dont la vue a ete refermee a la main).
+function ouvrirPourConversation(reglage, vueOuverte, conv, dejaOuvertes) {
+  return Boolean(reglage && !vueOuverte && conv && conv.session && conv.fichier && !dejaOuvertes.has(conv.session))
+}
+
+module.exports = { TAILLE_BLOC, SANS_TITRE, TYPE_ONGLET, champ, titreSession, libelleOnglet, apparie,
+  ouvrirPourConversation }
