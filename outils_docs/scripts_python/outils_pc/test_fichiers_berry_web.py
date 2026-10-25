@@ -112,6 +112,35 @@ def test_post_pendant_build(b):
     verifie((statut, "build" in texte), (409, True), "POST /enregistre pendant un build -> 409")
 
 
+class Explose:
+    """Detection de build qui casse (OSError) : erreur inattendue du point de vue du serveur."""
+    def __bool__(self):
+        raise OSError("panne simulee de la detection")
+
+
+def test_erreur_inattendue(b):
+    _, p = b.requete("POST", "/prepare", {"env": RIDEAU, "demandes": demandes()})
+    b.builds = Explose()
+    try:
+        statut, texte = b.requete("POST", "/enregistre", {"env": RIDEAU, "demandes": demandes(), "empreinte": p["empreinte"]})
+        verifie((statut, "panne simulee" in texte), (500, True), "POST, erreur inattendue -> 500 avec le message")
+    except (OSError, http.client.HTTPException) as erreur:
+        verifie(repr(erreur), "reponse 500", "POST, erreur inattendue -> 500 avec le message (connexion coupee)")
+    b.builds = []
+    origine = fbweb.fbe.etat_env
+
+    def panne(racine, env):                          # fichier verrouille, disque plein... : OSError
+        raise PermissionError("fichier verrouille (panne simulee)")
+    fbweb.fbe.etat_env = panne
+    try:
+        statut, texte = b.requete("GET", "/etat?env=" + RIDEAU)
+        verifie((statut, "verrouille" in texte), (500, True), "GET, erreur inattendue -> 500 avec le message")
+    except (OSError, http.client.HTTPException) as erreur:
+        verifie(repr(erreur), "reponse 500", "GET, erreur inattendue -> 500 avec le message (connexion coupee)")
+    finally:
+        fbweb.fbe.etat_env = origine
+
+
 def test_post_empreinte_perimee(b):
     statut, _ = b.requete("POST", "/enregistre", {"env": RIDEAU, "demandes": demandes(), "empreinte": "0" * 64})
     verifie(statut, 409, "POST /enregistre avec une empreinte perimee -> 409")
@@ -139,7 +168,7 @@ def test_post_creation(b):
 
 def principal():
     for test in (test_get, test_post_sans_entete, test_post_enregistre, test_post_pendant_build,
-                 test_post_empreinte_perimee, test_post_invalide, test_post_creation):
+                 test_post_empreinte_perimee, test_post_invalide, test_post_creation, test_erreur_inattendue):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier
             b = Banc(t)

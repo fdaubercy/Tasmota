@@ -136,6 +136,12 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
                 self._envoie(404, str(erreur).encode("utf-8"))
             except ValueError as erreur:
                 self._envoie(400, str(erreur).encode("utf-8"))
+            except Exception as erreur:                     # fichier verrouille, JSON tronque... : le dire
+                self._erreur_inattendue(erreur)
+
+        def _erreur_inattendue(self, erreur):
+            """500 avec le message, au lieu d'une connexion coupee (« outil injoignable » dans la page)."""
+            self._envoie(500, f"erreur inattendue : {type(erreur).__name__} : {erreur}".encode("utf-8"))
 
         def do_POST(self):
             if not acces.controle(self):
@@ -160,6 +166,8 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
                 self._envoie(400, str(erreur).encode("utf-8"))
             except RuntimeError as erreur:
                 self._envoie(409, str(erreur).encode("utf-8"))
+            except Exception as erreur:
+                self._erreur_inattendue(erreur)
 
     return Gestionnaire
 

@@ -59,8 +59,8 @@ sur exception, annulation en ordre inverse puis l'exception repart. `dossier_sau
 
 ## A2 — Erreurs claires (`fichiers_berry_web.py`)
 
-- [ ] `test_fichiers_berry_web.py` : une exception inattendue (`OSError` levée par `builds_en_cours`) → 500 avec le
-  message, connexion non coupée ; ROUGE puis VERT (`except Exception` en dernier dans `do_GET` et `do_POST`).
+- [x] `test_fichiers_berry_web.py` : une exception inattendue (`OSError` levée par `builds_en_cours`) → 500 avec le
+  message, connexion non coupée ; ROUGE puis VERT (`except Exception` en dernier dans `do_GET` et `do_POST`). — preuve : test_erreur_inattendue ROUGE (RemoteDisconnected, GET et POST) puis VERT
 - [ ] Commit `fix(fichiers-berry): reponse 500 avec le message sur erreur inattendue`.
 
 ## A3 — Suppression d'un env (`fichiers_berry_suppression.py`)
