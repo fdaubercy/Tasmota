@@ -212,12 +212,12 @@ Consomme A2-A4. Produit les routes (JSON) :
 - `principal()` : `--http` (défaut 7800) + `acces_web.ajoute_options` ; `acces_web.Acces(args.http, args.local,
   "Fichiers Berry par env")` ; `builds_en_cours` injectable (attribut de module) pour les bancs.
 
-- [ ] Tests (serveur sur port libre, dépôt d'essai, `builds_en_cours` simulé) : `get_etat`, `post_sans_entete`
+- [x] Tests (serveur sur port libre, dépôt d'essai, `builds_en_cours` simulé) : `get_etat`, `post_sans_entete`
   (403), `post_enregistre` (cenv modifié), `post_pendant_build` (409), `post_empreinte_perimee` (409),
-  `post_creation`, `get_env_inconnu` (404).
-- [ ] Banc ROUGE, puis écrire le module, banc VERT ; témoin : retirer le contrôle de l'en-tête →
-  `post_sans_entete` ROUGE.
-- [ ] Commit `feat(fichiers-berry): serveur web port 7800`.
+  `post_creation`, `get_env_inconnu` (404). — preuve : test_fichiers_berry_web.py (7 tests)
+- [x] Banc ROUGE, puis écrire le module, banc VERT ; témoin : retirer le contrôle de l'en-tête →
+  `post_sans_entete` ROUGE. — preuve : ROUGE (module absent) puis VERT ; temoin controle d'en-tete retire -> 2 KO
+- [x] Commit `feat(fichiers-berry): serveur web port 7800`. — preuve : a139fe40e
 
 ## A6 — Page (disposition B) et sonde Chrome (`fichiers_berry_page.py`)
 

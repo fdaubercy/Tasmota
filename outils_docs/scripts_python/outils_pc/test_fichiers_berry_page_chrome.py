@@ -1,0 +1,188 @@
+"""Sonde Chrome de la page « Fichiers Berry par env » (fichiers_berry_page.PAGE) : la page s'execute-t-elle ?
+
+UTILISATION (a la main ; aucun pio n'est lance, Chrome tourne ~30 s)
+    python outils_docs/scripts_python/outils_pc/test_fichiers_berry_page_chrome.py [--sans-temoin]
+Code de sortie 0 = vert : la vraie page passe toutes les verifications ET le temoin (la meme page avec une
+erreur JS volontaire au chargement) est detecte. Client DevTools repris de test_build_page_chrome.py.
+
+Montage : fichiers_berry_web.py dans un processus fils (mode --serveur), devant une COPIE du depot (les
+.ini, le .h, les dossiers de carte, data/fs) dans un dossier temporaire ; detection des builds neutralisee ;
+OUTILS_TASMOTA_DOSSIER temporaire. Le vrai cenv n'est jamais ecrit.
+Scenario : ?env= preselectionne le rideau ; un fichier du socle ouvre la fenetre « liste partagee »,
+Annuler ne laisse rien en attente ; un fichier propre passe en attente, diff, enregistrement (cenv de la
+copie modifie) ; le formulaire de creation se preremplit.
+"""
+
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.request
+from pathlib import Path
+
+ICI = Path(__file__).resolve().parent
+sys.path.insert(0, str(ICI))
+from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre   # client DevTools stdlib
+
+ECHECS = []
+RIDEAU = "tasmota32s3-garage-rideau-garage-modbus"
+MARQUE_TEMOIN = 'var envs = [], etat = null, attente = {}'
+INJECTION_TEMOIN = '\n$("bouton-qui-n-existe-pas").onclick = null;   // TEMOIN : TypeError au chargement\n'
+
+
+def verifie(obtenu, attendu, libelle):
+    ok = obtenu == attendu
+    print(("OK   " if ok else "KO   ") + libelle + ("" if ok else f"  (obtenu {obtenu!r}, attendu {attendu!r})"), flush=True)
+    if not ok:
+        ECHECS.append(libelle)
+    return ok
+
+
+def mode_serveur(port, depot, temoin):
+    import fichiers_berry_web as fbweb
+    if temoin:
+        import fichiers_berry_page
+        assert fichiers_berry_page.PAGE.count(MARQUE_TEMOIN) == 1, "marque du temoin introuvable dans la page"
+        fichiers_berry_page.PAGE = fichiers_berry_page.PAGE.replace(MARQUE_TEMOIN, INJECTION_TEMOIN + MARQUE_TEMOIN)
+    fbweb.DEPOT = Path(depot)
+    fbweb.builds_en_cours_defaut = lambda: []
+    sys.argv = ["fichiers_berry_web.py", "--http", str(port), "--local", "--sans-navigateur"]
+    return fbweb.principal()
+
+
+class Montage:
+    def __init__(self):
+        self.t = Path(tempfile.mkdtemp(prefix="sonde_fichiers_berry_"))
+        self.serveur = self.chrome = None
+
+    def demarre(self, temoin):
+        import test_fichiers_berry_creation as tfc
+        self.depot = tfc.depot_essai(self.t / "depot")
+        shutil.copytree(tfc.RACINE / "data" / "fs", self.depot / "data" / "fs",
+                        ignore=lambda d, noms: [n for n in noms if not n.endswith(".be")])
+        environ = dict(os.environ, OUTILS_TASMOTA_DOSSIER=str(self.t / "outils"), PYTHONIOENCODING="utf-8")
+        self.port = port_libre()
+        self.url = f"http://127.0.0.1:{self.port}/"
+        commande = ([sys.executable, "-u", str(Path(__file__).resolve()), "--serveur", str(self.port), str(self.depot)]
+                    + (["--temoin"] if temoin else []))
+        self.serveur = subprocess.Popen(commande, env=environ, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        self._attend_http(self.url + "execution", 20)
+        chrome = next((c for c in CHROMES if c.is_file()), None)
+        if chrome is None:
+            raise FileNotFoundError("chrome.exe introuvable (Program Files, LOCALAPPDATA)")
+        self.port_cdp = port_libre()
+        self.chrome = subprocess.Popen([str(chrome), "--headless=new", f"--remote-debugging-port={self.port_cdp}",
+                                        "--remote-allow-origins=*", f"--user-data-dir={self.t / 'profil'}",
+                                        "--no-first-run", "--no-default-browser-check", "--disable-extensions",
+                                        "--window-size=1280,1000", "about:blank"],
+                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        cibles = self._attend_http(f"http://127.0.0.1:{self.port_cdp}/json/list", 20)
+        page = next(c for c in json.loads(cibles) if c.get("type") == "page")
+        self.cdp = Cdp(page["webSocketDebuggerUrl"])
+        for domaine in ("Runtime.enable", "Log.enable", "Page.enable"):
+            self.cdp.appel(domaine)
+
+    def _attend_http(self, url, delai):
+        limite = time.monotonic() + delai
+        while time.monotonic() < limite:
+            try:
+                with urllib.request.urlopen(url, timeout=2) as r:
+                    return r.read().decode("utf-8")
+            except OSError:
+                time.sleep(0.2)
+        raise TimeoutError(f"{url} ne repond pas")
+
+    def ferme(self):
+        tue_arbre(self.chrome)
+        tue_arbre(self.serveur)
+        shutil.rmtree(self.t, ignore_errors=True)
+
+
+def clic(cdp, ident):
+    return cdp.js(f"(function(){{var e=document.getElementById({json.dumps(ident)}); if(!e) return 'absent'; e.click(); return 'ok';}})()")
+
+
+def choisit(cdp, chemin, etat):
+    return cdp.js("(function(){var s=document.getElementById('fichier'); s.value=" + json.dumps(chemin) +
+                  "; s.dispatchEvent(new Event('change')); var r=document.getElementById('etat-" + etat +
+                  "'); if(!r) return 'pas de radio'; r.checked=true; r.dispatchEvent(new Event('change')); return s.value;})()")
+
+
+def sonde_page(m):
+    cdp = m.cdp
+    cenv = m.depot / "platformio_tasmota_cenv.ini"
+    avant = cenv.read_bytes()
+    cdp.appel("Page.navigate", url=m.url + "?env=" + RIDEAU)
+    verifie(attend(cdp, "document.getElementById('col-solidifie') && document.getElementById('col-solidifie').textContent.indexOf('controleRideau.be') >= 0", 15),
+            True, "chargement : colonne Solidifie remplie (controleRideau.be)")
+    verifie(cdp.js("document.getElementById('env').value"), RIDEAU, "?env= preselectionne l'env")
+    verifie(choisit(cdp, "data/fs/udpFonctions.be", "fs"), "data/fs/udpFonctions.be", "choix d'un fichier du socle")
+    clic(cdp, "appliquer")
+    verifie(cdp.js("!document.getElementById('fenetre-partage').classList.contains('cache')"), True,
+            "socle : fenetre « liste partagee » ouverte")
+    verifie(cdp.js("document.getElementById('partage-envs').children.length > 1"), True, "socle : plusieurs envs nommes")
+    verifie(cdp.js("/Modifier la liste partag.e \\(\\d+ envs\\)/.test(document.getElementById('partage-modifier').textContent)"),
+            True, "socle : bouton « Modifier la liste partagee (N envs) »")
+    clic(cdp, "partage-annuler")
+    verifie(cdp.js("document.querySelectorAll('[data-attente]').length"), 0, "Annuler : rien en attente")
+    choisit(cdp, "data/fs/loRaWanFonctions.be", "fs")
+    clic(cdp, "appliquer")
+    verifie(cdp.js("document.querySelectorAll('[data-attente]').length"), 1, "fichier propre : une modification en attente")
+    clic(cdp, "voir-diff")
+    verifie(attend(cdp, "document.getElementById('diff').textContent.indexOf('loRaWanFonctions') >= 0", 10), True,
+            "diff affiche")
+    verifie(cdp.js("document.getElementById('panneau-diff').classList.contains('cache')"), False,
+            "panneau du diff visible (le bouton Enregistrer est cliquable a la main)")
+    clic(cdp, "enregistrer")
+    verifie(attend(cdp, "!!document.getElementById('message-ok')", 10), True, "enregistrement : message de reussite")
+    verifie(cenv.read_bytes() != avant, True, "enregistrement : cenv de la copie modifie")
+    verifie(cdp.js("document.getElementById('lien-build').getAttribute('href')"), "http://127.0.0.1:7700/?env=" + RIDEAU,
+            "lien vers la page build avec l'env")
+    clic(cdp, "creer")
+    cdp.js("document.getElementById('c-lieu').value='garage'; document.getElementById('c-nom').value='porte-test';"
+           "document.getElementById('c-base').value='tasmota32s3-base-N16R8-sans-ecran'; 1")
+    clic(cdp, "c-proposer")
+    verifie(attend(cdp, "document.getElementById('c-MQTT_TOPIC').value", 10), "garage/porte-test", "creation : identite proposee")
+    verifie(cdp.erreurs(), [], "aucune erreur JS pendant toute la sonde")
+
+
+def sonde_temoin(m):
+    m.cdp.appel("Page.navigate", url=m.url)
+    time.sleep(3)
+    verifie(len(m.cdp.erreurs()) > 0, True, "TEMOIN : l'erreur JS volontaire est detectee")
+
+
+def principal():
+    options = argparse.ArgumentParser(description="Sonde Chrome de la page Fichiers Berry par env.")
+    options.add_argument("--sans-temoin", action="store_true")
+    options.add_argument("--serveur", nargs=2, metavar=("PORT", "DEPOT"), help=argparse.SUPPRESS)
+    options.add_argument("--temoin", action="store_true", help=argparse.SUPPRESS)
+    args = options.parse_args()
+    if args.serveur:
+        return mode_serveur(int(args.serveur[0]), args.serveur[1], args.temoin)
+    for temoin in ([False] if args.sans_temoin else [False, True]):
+        print(f"\n=== {'TEMOIN (erreur JS volontaire)' if temoin else 'page reelle'} ===", flush=True)
+        m = None
+        try:
+            m = Montage()
+            m.demarre(temoin)
+            sonde_temoin(m) if temoin else sonde_page(m)
+        except FileNotFoundError as erreur:
+            print(f"BLOQUE : {erreur}")
+            return 3
+        except Exception as erreur:
+            verifie(repr(erreur), "pas d'exception de la sonde", "sonde : deroulement")
+        finally:
+            if m:
+                m.ferme()
+    print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
+    return 1 if ECHECS else 0
+
+
+if __name__ == "__main__":
+    sys.exit(principal())
