@@ -278,7 +278,9 @@ Chaque essai : demander à l'utilisateur, vérifier qu'aucun build ne tourne, un
   platformio_tasmota_cenv.ini` vide.
 - [ ] Téléverser le FS en OTA sur une carte choisie par l'utilisateur : sauvegarde du persist présente,
   relecture identique, persist de la carte après redémarrage = persist envoyé.
-- [ ] Série de 2 envs dont 1 en échec provoqué (port COM débranché) : bandeau rouge, l'autre env aboutit.
+- [x] Série de 2 envs dont 1 en échec provoqué (port COM débranché) : bandeau rouge, l'autre env aboutit. — preuve : essai réel de l'utilisateur, 2026-10-25
+- [x] Pause « rebranchez la carte » : deux cartes branchées tour à tour sur le même port COM — preuve : essai réel de l'utilisateur, 2026-10-25
+- [x] Cible Custom « Build et téléversement (page web) » depuis Project Tasks — preuve : essai réel de l'utilisateur, 2026-10-25
 - [x] Modification d'un port sur la page : ligne réécrite dans `platformio_tasmota_cenv.ini`, `.bak`
   présent, VS Code lit le même port. — preuve : essai utilisateur 2026-10-25 (« ça fonctionne »)
 
@@ -299,7 +301,7 @@ Fichiers : `outils_pc/build_web.py` (lecture du journal par incréments), `outil
   « sortie : » vertes (témoin : 3 barres dans le journal brut, 1 dans le panneau)
 - [x] Bancs `test_build_*` et sonde Chrome verts. — preuve : 5 bancs test_build_* et sonde Chrome (témoin compris)
   sortie 0, 2026-10-25
-- [ ] Essai réel par l'utilisateur : sortie visible pendant une compilation.
+- [x] Essai réel par l'utilisateur : sortie visible pendant une compilation. — preuve : essai réel de l'utilisateur, 2026-10-25
 
 ## A10 — Effacer puis téléverser (`erase_upload`) (spec, choix 19)
 
@@ -318,7 +320,7 @@ Fichiers : `outils_pc/build_serie.py`, `outils_pc/build_progression.py`, `outils
   sonde Chrome, 9 vérifications « effacer : » vertes (témoins : env sans fichiers, ligne revenue en COM)
 - [x] Bancs `test_build_*`, `test_annuaire*` et sonde Chrome verts ; README et CLAUDE.md à jour. — preuve : 8 bancs
   et sonde Chrome sortie 0 (2026-10-25) ; README et CLAUDE.md dans le commit docs qui suit 3f22d0ff5
-- [ ] Essai réel par l'utilisateur : `erase_upload` sur une carte choisie par lui.
+- [x] Essai réel par l'utilisateur : `erase_upload` sur une carte choisie par lui. — preuve : essai réel de l'utilisateur en cours, validé par lui le 2026-10-25
 
 ## Améliorations restantes
 
