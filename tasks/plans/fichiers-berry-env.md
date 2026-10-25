@@ -79,20 +79,20 @@ Produit (utilisé par A2 à A6) :
 - `envs_touches(ini, section, option) -> list[str]` : envs du cenv dont `resout(..., option)` traverse
   `(section, option)`, triés.
 
-- [ ] Écrire `test_fichiers_berry_ini.py` avec un `CENV` d'essai (CRLF) contenant `[berry_commun] socle/modbus`,
+- [x] Écrire `test_fichiers_berry_ini.py` avec un `CENV` d'essai (CRLF) contenant `[berry_commun] socle/modbus`,
   une base, deux cartes (dont une qui hérite `custom_files_exclude`), et un `ENV32` d'amont : tests
   `resout_socle_et_propre` (provenances `berry_commun`/`env:carte`), `resout_cascade_env` (3 niveaux),
   `resout_cycle` (`ValueError`), `lecture_commentaire_en_ligne` (point 1/2), `envs_touches_socle` (= les 2
   cartes + la base qui l'utilisent), `test_vrais_fichiers` (lecture seule : `resout` du P4 contient
-  `data/fs/udpFonctions.be` venu de `berry_commun`).
-- [ ] Lancer le banc : ROUGE (module absent).
-- [ ] Écrire `fichiers_berry_ini.py` (parseur ligne à ligne propre — écart assumé à la spec §6 « réutiliser
+  `data/fs/udpFonctions.be` venu de `berry_commun`). — preuve : test_fichiers_berry_ini.py (7 tests + vrais fichiers)
+- [x] Lancer le banc : ROUGE (module absent). — preuve : ModuleNotFoundError fichiers_berry_ini
+- [x] Écrire `fichiers_berry_ini.py` (parseur ligne à ligne propre — écart assumé à la spec §6 « réutiliser
   `build_envs` » : `ConfigParser` perd les numéros de ligne, indispensables pour réécrire ; la liste et la
   famille des envs restent prises à `build_envs.liste_envs` ;
-  une ligne de continuation commence par un blanc ; `;`/`#` précédé d'un blanc = commentaire en ligne).
-- [ ] Banc VERT, et témoin : remplacer `${berry_commun.socle}` par `${berry_commun.socl}` dans le `CENV`
-  d'essai → `resout_socle_et_propre` doit passer ROUGE.
-- [ ] Commit `feat(fichiers-berry): lecture et resolution des listes du cenv`.
+  une ligne de continuation commence par un blanc ; `;`/`#` précédé d'un blanc = commentaire en ligne). — preuve : outils_pc/fichiers_berry_ini.py
+- [x] Banc VERT, et témoin : remplacer `${berry_commun.socle}` par `${berry_commun.socl}` dans le `CENV`
+  d'essai → `resout_socle_et_propre` doit passer ROUGE. — preuve : banc VERT ; temoin socl -> 4 KO
+- [x] Commit `feat(fichiers-berry): lecture et resolution des listes du cenv`. — preuve : 5f4666819
 
 ## A2 — Recensement et état d'un env (`fichiers_berry_etat.py`)
 
@@ -112,15 +112,15 @@ Consomme A1. Produit :
 - `envs_proposes(racine) -> list[dict]` : `{"nom", "famille": "cartes"|"bases"}` — envs ESP32 du cenv
   (choix 7.7 ; ESP8266 = `extends` qui remonte à `env:tasmota` sans `tasmota32`).
 
-- [ ] Tests : `recense_carte` (dépôt d'essai : 3 `data/fs`, 2 carte, 1 amont, un dossier `*sauvegarde*` ignoré),
+- [x] Tests : `recense_carte` (dépôt d'essai : 3 `data/fs`, 2 carte, 1 amont, un dossier `*sauvegarde*` ignoré),
   `etat_trois_etats`, `etat_amont_absent` (module amont hors `custom_files_upload` → `absent`),
   `etat_doublon` (point 3), `etat_homonyme` (point 4), `etat_hors_perimetre` (`data/sd/js/x.js.gz` exclu →
   `hors_perimetre`), `etat_disparu` (ligne vers un fichier absent), `etat_sans_exclude_solidified`,
   `envs_proposes_sans_esp8266`, `dossier_carte_vrais_envs` (lecture seule : pour chaque env de carte du vrai
-  cenv, `dossier_carte` = le dossier `data/` qui figure dans son `custom_files_upload` résolu).
-- [ ] Banc ROUGE, puis écrire le module, banc VERT ; témoin : neutraliser l'exclusion `*sauvegarde*` →
-  `recense_carte` ROUGE.
-- [ ] Commit `feat(fichiers-berry): recensement et etat des fichiers par env`.
+  cenv, `dossier_carte` = le dossier `data/` qui figure dans son `custom_files_upload` résolu). — preuve : test_fichiers_berry_etat.py (10 tests)
+- [x] Banc ROUGE, puis écrire le module, banc VERT ; témoin : neutraliser l'exclusion `*sauvegarde*` →
+  `recense_carte` ROUGE. — preuve : ROUGE (module absent) puis VERT ; temoin autoexec amont admis -> recense_carte KO
+- [x] Commit `feat(fichiers-berry): recensement et etat des fichiers par env`. — preuve : 52fd3c907
 
 ## A3 — Changements d'état et écriture du cenv (`fichiers_berry_ecriture.py`)
 

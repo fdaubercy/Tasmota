@@ -52,6 +52,13 @@ class Option:
         return self.morceaux[-1][0] if self.morceaux else self.debut
 
 
+def decoupe(texte):
+    """Lignes sans fin de ligne, coupees sur CRLF ou LF seulement (pas splitlines, qui coupe aussi sur
+    \\x0c, \\x1c...) : l'ecriture (fichiers_berry_ecriture) recoud avec la meme regle, les index concordent.
+    Un fichier termine par une fin de ligne donne une derniere ligne vide."""
+    return re.split(r"\r?\n", texte)
+
+
 def normalise(chemin):
     """Chemin compare entre listes : separateurs en /, sans / final (`data/bureau/<carte>/` dans le cenv)."""
     return chemin.replace("\\", "/").rstrip("/")
@@ -75,7 +82,7 @@ class Ini:
         chemin = self.racine / fichier
         if not chemin.is_file():
             return
-        lignes = chemin.read_bytes().decode("utf-8", errors="surrogateescape").splitlines()
+        lignes = decoupe(chemin.read_bytes().decode("utf-8", errors="surrogateescape"))
         self.lignes[fichier] = lignes
         section, courante = None, None
         for i, brute in enumerate(lignes):
