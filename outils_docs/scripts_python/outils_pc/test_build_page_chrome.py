@@ -628,7 +628,7 @@ EFFACEMENT_A = ["Processing {env} (platform: espressif32)", "Compiling .pio/buil
                 "Linking .pio/build/{env}/firmware.elf",
                 "Utilisera une commande de téléchargement personnalisée pour l'opération de flashage afin d'ajouter le "
                 "système de fichiers défini pour cette cible de compilation.",
-                "Looking for upload port...", "Erasing...", "esptool v5.4.0", "Erasing flash memory (this may take a while)...",
+                "Looking for upload port...", "Erasing...", "esptool v5.4.0", "Uploading stub flasher...", "Erasing flash memory (this may take a while)...",
                 "@pause 0.6", "Flash memory erased successfully in 0.6 seconds.", "Uploading .pio/build/{env}/firmware.bin",
                 "Writing at 0x00010000 (50 %)", "Writing at 0x00020000 (100 %)", "[SUCCESS] Took 1.20 seconds"]
 

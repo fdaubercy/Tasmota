@@ -35,7 +35,8 @@ _ESPTOOL = re.compile(r"Writing at 0x[0-9a-fA-F]+.*?(\d+(?:\.\d+)?)\s*%")
 # espota (OTA) : "Uploading: [=====     ] 52%"
 _OTA = re.compile(r"^\s*Uploading:\s*\[[^\]]*\]\s*(\d+(?:\.\d+)?)\s*%")
 _ENVOI = re.compile(r"^\s*(Uploading\s+\S|Looking for upload port|Auto-detected:|Configuring upload protocol)")
-_TELEVERSE = re.compile(r"^\s*Uploading\s+\S")
+# "Uploading <fichier>" ; PAS "Uploading stub flasher..." qu'esptool ecrit en se connectant pour erase-flash
+_TELEVERSE = re.compile(r"^\s*Uploading\s+(?!stub\b)\S")
 # erase_upload : libelle "Erasing..." de l'action $ERASECMD (platforms/espressif32/builder/main.py:1990), puis
 # esptool v5.4.0 "Erasing flash memory (this may take a while)..." et "Flash memory erased successfully in X
 # seconds." (packages/tool-esptoolpy/esptool/cmds.py:2273 et :2282)

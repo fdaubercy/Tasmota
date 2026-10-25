@@ -42,7 +42,7 @@ _ENVOI = ["Uploading .pio/build/{env}/firmware.bin",
           "Writing at 0x00020000 (100 %)"]
 _FS = ["Building FS image from 'data' directory to .pio/build/{env}/littlefs.bin"]
 # textes de la cible erase_upload de la plateforme et d'esptool v5.4.0 (voir build_progression, _EFFACEMENT)
-_EFFACEMENT = ["Looking for upload port...", "Erasing...", "esptool v5.4.0", "Connecting...",
+_EFFACEMENT = ["Looking for upload port...", "Erasing...", "esptool v5.4.0", "Connecting...", "Uploading stub flasher...",
                "Erasing flash memory (this may take a while)...", "Flash memory erased successfully in 0.10 seconds."]
 NOMINAL = {"build": _COMPILE, "upload": _COMPILE + _ENVOI, "erase_upload": _COMPILE + _EFFACEMENT + _ENVOI,
            "buildfs": _FS, "uploadfs": _FS + _ENVOI}

@@ -292,7 +292,7 @@ function construitListe(donnees) {
   envs.forEach(function (e) { if (!choix[e.nom]) choix[e.nom] = valeurInitiale(e, derniers[e.nom]); });
   var acts = (donnees.derniers && donnees.derniers.actions) || null;
   if (acts && !construitListe.dejaFait)
-    ACTIONS.forEach(function (a) { caseAction(a).checked = acts.indexOf(a) >= 0; });
+    ACTIONS.forEach(function (a) { caseAction(a).checked = a !== "erase_upload" && acts.indexOf(a) >= 0; });
   construitListe.dejaFait = true;
 
   var liste = $("liste");
@@ -777,8 +777,9 @@ async function lisSortie(env) {
         if (relire) continue;
       }
       if (d.texte) ajouteSortie(b, u, d.texte);
+      var avance = d.octet !== s.octet;
       s.octet = d.octet;
-      if (!d.reste) return;
+      if (!d.reste || !avance) return;
     }
   } finally {
     s.lecture = false;

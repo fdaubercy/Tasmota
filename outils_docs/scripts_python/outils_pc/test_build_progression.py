@@ -206,7 +206,8 @@ def test_sortie_reelle():
 # (packages/tool-esptoolpy/esptool/cmds.py:2273 et :2282) ecrit les deux lignes d'effacement ci-dessous.
 SORTIE_EFFACEMENT = ["Compiling .pio\\build\\e\\src\\a.o", "Linking .pio\\build\\e\\firmware.elf",
                      "Configuring upload protocol...", "Looking for upload port...", "Auto-detected: COM12", "Erasing...",
-                     "esptool v5.4.0", "Connecting....", "Erasing flash memory (this may take a while)...",
+                     "esptool v5.4.0", "Connecting....", "Uploading stub flasher...", "Running stub flasher...",
+                     "Erasing flash memory (this may take a while)...",
                      "Flash memory erased successfully in 12.3 seconds.", "Hard resetting via RTS pin...",
                      "Uploading .pio\\build\\e\\firmware.bin", "esptool v5.4.0",
                      "Writing 'C:\\x\\.pio\\build\\e\\bootloader.bin' at 0x00000000...",
