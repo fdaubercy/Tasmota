@@ -125,8 +125,8 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
 - [ ] P2.5 — `pio-tools/` : revenir à l'amont pour les écarts de pure traduction (corrige E9 ; cote G, effort moyen, risque faible)
 - [ ] P2.10 — Un seul mécanisme d'exclusion du LittleFS (corrige E10 ; cote S, effort moyen, risque moyen)
 - [ ] P3.7 — Idem P2.10 côté solidification : `copy_fs_image` ou `post_esp32.py` seul (corrige S5 ; cote S, effort moyen, risque moyen)
-- [ ] P3.4 — Solidifier `garageFonctions` puis `cuveFonctions`, puis les scripts de driver de carte (corrige candidats A3 ; cote S, effort moyen, risque moyen)
-- [ ] P9.7 — Mesurer le gain de P3.4 (`Berry.HeapUsed`) (corrige A9 ; cote S, effort faible, risque nul)
+- [x] P3.4 — Solidifier `garageFonctions` puis `cuveFonctions`, puis les scripts de driver de carte (corrige candidats A3 ; cote S, effort moyen, risque moyen) — preuve : refusée le 2026-10-25 (annulation décidée par l'utilisateur)
+- [x] P9.7 — Mesurer le gain de P3.4 (`Berry.HeapUsed`) (corrige A9 ; cote S, effort faible, risque nul) — preuve : refusée le 2026-10-25 (annulation décidée par l'utilisateur)
 - [ ] P3.6 — `carte_modules_berry.py` : modules de carte solidifiés, docstring (corrige S7 ; cote D, effort faible, risque nul)
 - [ ] P9.8 — Avant de déployer le framework sur un ESP32 sans PSRAM : FTP/animation retirés, `envoiJson` découpé, discovery OFF (corrige M5, M6 ; cote L, effort faible, risque faible)
 
