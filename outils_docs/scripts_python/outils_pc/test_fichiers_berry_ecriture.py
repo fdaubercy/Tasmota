@@ -282,12 +282,14 @@ def test_refus_empreinte(racine):
         verifie("data/fs/y.be" in cenv(racine), False, "empreinte perimee : refus, cenv inchange")
 
 
-def test_bak_et_diff(racine):
+def test_sauvegarde_et_diff(racine):
     avant = (racine / fbi.FICHIER_CENV).read_bytes()
     p = fbw.prepare(racine, "tasmota32s3-garage-carte", [Demande("data/fs/y.be", "exclu")])
     verifie("+                            data/fs/y.be" in p["diff"], True, "diff unifie : ligne ajoutee")
-    ecrit(racine, "tasmota32s3-garage-carte", [Demande("data/fs/y.be", "exclu")])
-    verifie((racine / (fbi.FICHIER_CENV + ".bak")).read_bytes(), avant, ".bak = cenv d'avant")
+    r = ecrit(racine, "tasmota32s3-garage-carte", [Demande("data/fs/y.be", "exclu")])
+    verifie((Path(r["sauvegarde"]) / fbi.FICHIER_CENV).read_bytes(), avant, "sauvegarde horodatee = cenv d'avant")
+    verifie(str(r["sauvegarde"]).startswith(os.environ["OUTILS_TASMOTA_DOSSIER"]), True, "sauvegarde hors depot")
+    verifie((racine / (fbi.FICHIER_CENV + ".bak")).exists(), False, "plus de .bak commun avec la page build")
 
 
 def test_demandes_invalides(racine):
@@ -329,8 +331,9 @@ def principal():
                  test_ecriture_refuse_amont, test_ecriture_retire_ligne_commentee,
                  test_ecriture_doublon_partage, test_ecriture_garde_commentaires, test_ecriture_crlf,
                  test_ecriture_raison, test_commentaires_cites, test_refus_build, test_refus_empreinte,
-                 test_bak_et_diff, test_demandes_invalides, test_relu_par_platformio):
+                 test_sauvegarde_et_diff, test_demandes_invalides, test_relu_par_platformio):
         with tempfile.TemporaryDirectory() as t:
+            os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier
             try:
                 test(depot_essai(t))
             except Exception as exc:

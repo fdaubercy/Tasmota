@@ -49,12 +49,12 @@ Interfaces produites : `Transaction(racine, nature)` (gestionnaire de contexte) 
 sur exception, annulation en ordre inverse puis l'exception repart. `dossier_sauvegardes()` =
 `acces_web.dossier_donnees()/fichiers_berry/sauvegardes` ; `purge(jours=30)`.
 
-- [ ] Banc `test_fichiers_berry_sauvegarde.py` ROUGE puis VERT : copie horodatée avant écriture (contenu d'origine),
+- [x] Banc `test_fichiers_berry_sauvegarde.py` ROUGE puis VERT : copie horodatée avant écriture (contenu d'origine),
   annulation sur exception (fichier remis, dossier copié retiré, renommage défait), purge > 30 jours, rien hors
-  `OUTILS_TASMOTA_DOSSIER`.
-- [ ] `fichiers_berry_ecriture.enregistre` et `fichiers_berry_creation.cree` passent par `Transaction` (plus de `.bak`) ;
-  résultat `sauvegarde` = chemin du dossier ; bancs écriture/création adaptés (le `.bak` attendu devient la sauvegarde).
-- [ ] Création atomique : test `test_creation_atomique` (écriture du cenv qui échoue → `.h` remis, dossier retiré) ROUGE puis VERT.
+  `OUTILS_TASMOTA_DOSSIER`. — preuve : ROUGE (module absent, 4 KO) puis VERT
+- [x] `fichiers_berry_ecriture.enregistre` et `fichiers_berry_creation.cree` passent par `Transaction` (plus de `.bak`) ;
+  résultat `sauvegarde` = chemin du dossier ; bancs écriture/création adaptés (le `.bak` attendu devient la sauvegarde). — preuve : test_sauvegarde_et_diff et test_sauvegarde ROUGE (KeyError) puis VERT ; bancs isolés par OUTILS_TASMOTA_DOSSIER ; sonde « chemin de la sauvegarde affiché » VERT, témoin détecté
+- [x] Création atomique : test `test_creation_atomique` (écriture du cenv qui échoue → `.h` remis, dossier retiré) ROUGE puis VERT. — preuve : 4 KO puis VERT
 - [ ] Commit `feat(fichiers-berry): sauvegardes horodatees et ecritures atomiques`.
 
 ## A2 — Erreurs claires (`fichiers_berry_web.py`)

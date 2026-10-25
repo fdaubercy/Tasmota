@@ -227,6 +227,38 @@ def test_diff_masque(racine):
     verifie("***" in p["diff"], True, "diff masque : marque de masquage presente")
 
 
+def test_sauvegarde(racine):
+    avant_h = (racine / fbc.FICHIER_H).read_bytes()
+    _, r = cree(racine, creation())
+    verifie((Path(r["sauvegarde"]) / fbc.FICHIER_H).read_bytes(), avant_h, "creation : sauvegarde horodatee du .h d'avant")
+    verifie([f for f in (fbc.FICHIER_H, fbi.FICHIER_CENV) if (racine / (f + ".bak")).exists()], [],
+            "creation : plus de .bak commun avec la page build")
+
+
+def test_creation_atomique(racine):
+    import fichiers_berry_sauvegarde as fbs
+    avant = {f: (racine / f).read_bytes() for f in (fbc.FICHIER_H, fbi.FICHIER_CENV)}
+    c = creation()
+    p = fbc.prepare_creation(racine, c)
+    origine = fbs.Transaction.ecrit
+
+    def panne(self, rel, octets):                   # le cenv, ecrit en dernier, ne passe pas
+        if rel == fbi.FICHIER_CENV:
+            raise OSError("panne simulee")
+        return origine(self, rel, octets)
+    fbs.Transaction.ecrit = panne
+    try:
+        fbc.cree(racine, c, p["empreinte"], SANS_BUILD)
+        verifie("cree", "panne", "creation atomique : la panne remonte")
+    except OSError:
+        pass
+    finally:
+        fbs.Transaction.ecrit = origine
+    verifie({f: (racine / f).read_bytes() for f in avant} == avant, True, "creation atomique : .h et cenv remis")
+    verifie((racine / "data/garage/tasmota32s3-porte-test").exists(), False, "creation atomique : dossier copie retire")
+    verifie(fbc.prepare_creation(racine, c)["refus"], [], "creation atomique : un nouvel essai n'est pas refuse")
+
+
 def test_vu_par_build(racine):
     cree(racine, creation())
     envs = {e.nom: e.famille for e in build_envs.liste_envs(racine)}
@@ -236,8 +268,10 @@ def test_vu_par_build(racine):
 def principal():
     test_nom_et_define()
     for test in (test_section_cenv, test_chemins_reecrits, test_section_h, test_modele_cave, test_persist_octets,
-                 test_insertion_lieu, test_refus, test_diff_masque, test_vu_par_build):
+                 test_insertion_lieu, test_refus, test_diff_masque, test_sauvegarde, test_creation_atomique,
+                 test_vu_par_build):
         with tempfile.TemporaryDirectory() as t:
+            os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier
             try:
                 test(depot_essai(t))
             except Exception as exc:

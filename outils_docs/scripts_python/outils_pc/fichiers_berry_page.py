@@ -94,7 +94,7 @@ PAGE = r"""<!doctype html>
     <div class="barre"><button class="btn p" id="voir-diff" disabled>Voir le diff puis enregistrer</button></div>
     <div id="panneau-diff" class="cache">
       <p class="avert">L'enregistrement change l'empreinte du projet : <b>le build suivant repart de zéro</b>.
-        Une copie <code>.bak</code> du cenv est faite avant d'écrire.</p>
+        Le cenv d'avant est sauvegardé (copie horodatée, 30 jours) ; le chemin s'affiche après l'écriture.</p>
       <div id="cites"></div>
       <pre id="diff"></pre>
       <div class="barre"><button class="btn p" id="enregistrer">Enregistrer</button>
@@ -360,7 +360,7 @@ async function enregistrer() {
   if (!r.ok) { m.appendChild(h("div", {"class": "erreur", texte: "Refusé : " + r.texte})); return; }
   attente = {};
   $("panneau-diff").classList.add("cache");
-  m.appendChild(h("div", {"class": "ok", id: "message-ok", texte: "Enregistré dans platformio_tasmota_cenv.ini (copie .bak faite)."}));
+  m.appendChild(h("div", {"class": "ok", id: "message-ok", texte: "Enregistré dans platformio_tasmota_cenv.ini. Sauvegarde : " + r.donnees.sauvegarde}));
   m.appendChild(h("a", {id: "lien-build", href: URL_BUILD + "?env=" + encodeURIComponent(env), target: "_blank",
                         texte: "Construire / téléverser le FS de " + env + " (page build)"}));
   await chargeEtat();
@@ -407,7 +407,7 @@ async function creer() {
   if (!r.ok) { z.appendChild(h("div", {"class": "erreur", texte: "Refusé : " + r.texte})); return; }
   $("c-creer").disabled = true;
   z.appendChild(h("div", {"class": "ok", id: "c-ok", texte: "Créé : " + r.donnees.env + " et " + r.donnees.dossier +
-    " (rien n'est commité ; compléter IP et topic si besoin)."}));
+    " (rien n'est commité ; compléter IP et topic si besoin). Sauvegarde : " + r.donnees.sauvegarde}));
   await chargeEnvs();
   $("env").value = r.donnees.env;
   await chargeEtat();

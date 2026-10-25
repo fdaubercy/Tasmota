@@ -18,12 +18,12 @@ import difflib
 import hashlib
 import json
 import re
-import shutil
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import fichiers_berry_etat as fbe
 import fichiers_berry_ini as fbi
+import fichiers_berry_sauvegarde as fbs
 
 CIBLES = {"exclu": fbe.EXCLUDE, "solidifie": fbe.SOLIDIFY}
 ETATS = {"fs": ("fs", "exclu", "solidifie"), "carte": ("fs", "exclu", "solidifie"), "amont": ("fs", "absent"),
@@ -184,7 +184,7 @@ def prepare(racine, env, demandes):
 
 
 def enregistre(racine, env, demandes, empreinte_lue, builds_en_cours):
-    """Ecrit le cenv (copie .bak avant). RuntimeError (-> 409) : build en cours ou indetectable, cenv
+    """Ecrit le cenv (copie horodatee avant, fichiers_berry_sauvegarde). RuntimeError (-> 409) : build en cours ou indetectable, cenv
     modifie depuis le diff, liste partagee non acceptee, ligne de l'amont."""
     builds = builds_en_cours()
     if builds is None:
@@ -200,7 +200,6 @@ def enregistre(racine, env, demandes, empreinte_lue, builds_en_cours):
     diff = "\n".join(difflib.unified_diff(avant, apres, fbi.FICHIER_CENV, fbi.FICHIER_CENV, lineterm="", n=2))
     if apres == avant:
         return {"ecrit": False, "diff": ""}
-    chemin = Path(racine) / fbi.FICHIER_CENV
-    shutil.copyfile(chemin, chemin.with_name(chemin.name + ".bak"))
-    chemin.write_bytes(eol.join(apres).encode("utf-8", errors="surrogateescape"))
-    return {"ecrit": True, "diff": diff}
+    with fbs.Transaction(racine, "enregistrement") as tr:     # copie horodatee du cenv avant ecriture
+        tr.ecrit(fbi.FICHIER_CENV, eol.join(apres).encode("utf-8", errors="surrogateescape"))
+    return {"ecrit": True, "diff": diff, "sauvegarde": str(tr.dossier)}

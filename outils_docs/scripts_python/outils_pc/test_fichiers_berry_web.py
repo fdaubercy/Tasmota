@@ -6,6 +6,7 @@ les dossiers de carte et data/fs) dans un dossier temporaire ; la detection des 
 
 import http.client
 import json
+import os
 import shutil
 import socket
 import sys
@@ -140,6 +141,7 @@ def principal():
     for test in (test_get, test_post_sans_entete, test_post_enregistre, test_post_pendant_build,
                  test_post_empreinte_perimee, test_post_invalide, test_post_creation):
         with tempfile.TemporaryDirectory() as t:
+            os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier
             b = Banc(t)
             try:
                 test(b)

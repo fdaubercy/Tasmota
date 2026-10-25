@@ -22,6 +22,7 @@ from pathlib import Path
 
 import fichiers_berry_etat as fbe
 import fichiers_berry_ini as fbi
+import fichiers_berry_sauvegarde as fbs
 
 FICHIER_H = "tasmota/user_config_override.h"
 CHAMPS_IDENTITE = ("CODE_IMAGE_STR", "PROJECT", "WIFI_IP_ADDRESS", "WIFI_RGX_SSID", "MQTT_CLIENT_ID",
@@ -333,7 +334,7 @@ def prepare_creation(racine, c):
 
 
 def cree(racine, c, empreinte_lue, builds_en_cours):
-    """Cree les trois morceaux (copies .bak du cenv et du .h). RuntimeError (-> 409) : build en cours ou
+    """Cree les trois morceaux, atomiquement (copie horodatee du cenv et du .h avant ecriture). RuntimeError (-> 409) : build en cours ou
     indetectable, fichiers modifies depuis le diff, refus."""
     builds = builds_en_cours()
     if builds is None:
@@ -346,12 +347,12 @@ def cree(racine, c, empreinte_lue, builds_en_cours):
         raise RuntimeError("le cenv, le .h ou la saisie ont change depuis le diff : refaire « Voir le diff »")
     if r["refus"]:
         raise RuntimeError(" ; ".join(r["refus"]))
-    shutil.copytree(racine / fbe.dossier_carte(c.modele), racine / r["dossier"],
-                    ignore=shutil.ignore_patterns("*sauvegarde*"))
-    if r["persist"] is not None:
-        (racine / r["dossier"] / "_persist.json").write_bytes(r["persist"].encode("utf-8", errors="surrogateescape"))
-    for fichier, cle, eol in ((FICHIER_H, "h", r["eol"][1]), (fbi.FICHIER_CENV, "cenv", r["eol"][0])):
-        shutil.copyfile(racine / fichier, racine / (fichier + ".bak"))
-        (racine / fichier).write_bytes(_encode(r[cle], eol))
+    # atomique : une ecriture qui echoue defait les precedentes (dossier copie retire, .h remis)
+    with fbs.Transaction(racine, "creation") as tr:
+        tr.copie_dossier(fbe.dossier_carte(c.modele), r["dossier"], ignore=shutil.ignore_patterns("*sauvegarde*"))
+        if r["persist"] is not None:
+            tr.ecrit(r["dossier"] + "/_persist.json", r["persist"].encode("utf-8", errors="surrogateescape"))
+        for fichier, cle, eol in ((FICHIER_H, "h", r["eol"][1]), (fbi.FICHIER_CENV, "cenv", r["eol"][0])):
+            tr.ecrit(fichier, _encode(r[cle], eol))
     return {"cree": True, "env": r["env"], "dossier": r["dossier"], "diff": r["diff"],
-            "avertissements": r["avertissements"]}
+            "avertissements": r["avertissements"], "sauvegarde": str(tr.dossier)}

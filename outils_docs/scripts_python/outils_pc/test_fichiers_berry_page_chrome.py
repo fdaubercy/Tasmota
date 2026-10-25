@@ -155,6 +155,8 @@ def sonde_page(m):
     clic(cdp, "enregistrer")
     verifie(attend(cdp, "!!document.getElementById('message-ok')", 10), True, "enregistrement : message de reussite")
     verifie(cenv.read_bytes() != avant, True, "enregistrement : cenv de la copie modifie")
+    verifie(cdp.js("document.getElementById('message-ok').textContent.indexOf(" + json.dumps(str(m.t / "outils")) + ") >= 0"),
+            True, "enregistrement : chemin de la sauvegarde horodatee affiche")
     verifie(cdp.js("document.getElementById('lien-build').getAttribute('href')"), "http://127.0.0.1:7700/?env=" + RIDEAU,
             "lien vers la page build avec l'env")
     cdp.js("var s=document.getElementById('env'); s.value='" + BASE + "'; s.dispatchEvent(new Event('change')); 1")
