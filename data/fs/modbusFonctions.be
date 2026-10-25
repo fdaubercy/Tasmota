@@ -1887,6 +1887,10 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
     import string
     import json
 
+    # Audit P7.4 (2026-10-25) : les messages "detail" ne sont construits que s'ils seront ecrits (modele : decrypteMSG),
+    # calcule apres les sorties precoces : un tick sans rien a lire n'appelle pas actif()
+    var detail = false
+
     var paramMSG = nil
 
     tasmota.yield()
@@ -1902,12 +1906,19 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
         var serie = modbusFonctions.etat()["serialModBus"]
         if (serie == nil)    return    end
 
-        var nouveaux = serie.available() > 0 ? serie.read() : bytes()
-        var tampon = modbusFonctions.etat()["tamponSerie"] + nouveaux
+        # Audit M4/P9.4 (2026-10-25) : rien a lire et tampon vide (cas courant, toutes les 100 ms) ->
+        # sortie sans allouer ; avant, un bytes() vide et une concatenation a chaque tick.
+        var dispo = serie.available()
+        var tampon = modbusFonctions.etat()["tamponSerie"]
+        if (dispo == 0 && size(tampon) == 0)    return    end
+        var nouveaux = (dispo > 0) ? serie.read() : nil
+        var silence = (nouveaux == nil || size(nouveaux) == 0)
+        if (!silence)    tampon = tampon + nouveaux    end
         if (size(tampon) == 0)    return    end
+        detail = logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, "modbus")
         if (size(tampon) > 512)    tampon = tampon[size(tampon) - 256 .. size(tampon) - 1]    end     # bus bruite : borne la RAM
 
-        var decoupe = modbusFonctions.extraitTrames(tampon, size(nouveaux) == 0)
+        var decoupe = modbusFonctions.extraitTrames(tampon, silence)
         modbusFonctions.etat()["tamponSerie"] = decoupe[1]
 
         for trame: decoupe[0]
@@ -1920,8 +1931,8 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
             paramMSG = {typeTitre: {"Trame": trame, "DeviceAddress": 0, "FunctionCode": 0, "FunctionName": "", "StartAddress": 0, "Length": 0, "Count": 0, "Values": [], "CRC": 0, "Erreur": 0}}
 
             # Réception du message
-            modbusFonctions.log("RECEPTION_MSG_MODBUS: -------------------- lireMsgModbus -------------------", LOG_LEVEL_DEBUG_PLUS)
-            modbusFonctions.log(string.format("RECEPTION_MSG_MODBUS: Message ModBus reçu = 0x%s", trame.tohex()), LOG_LEVEL_DEBUG_PLUS)
+            if detail    modbusFonctions.log("RECEPTION_MSG_MODBUS: -------------------- lireMsgModbus -------------------", LOG_LEVEL_DEBUG_PLUS)    end
+            if detail    modbusFonctions.log(string.format("RECEPTION_MSG_MODBUS: Message ModBus reçu = 0x%s", trame.tohex()), LOG_LEVEL_DEBUG_PLUS)    end
 
             tasmota.yield()
 
@@ -1931,7 +1942,7 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
             modbusFonctions.decrypteMSG(paramMSG, typeTitre)
             if (paramMSG[typeTitre]["Erreur"] == 1)    continue    end
             if (paramMSG[typeTitre]["Erreur"] != modbusFonctions.tabErreur["noerror"])
-                modbusFonctions.log("RECEPTION_MSG_MODBUS: Message ModBus reçu avec erreur", LOG_LEVEL_DEBUG_PLUS)
+                if detail    modbusFonctions.log("RECEPTION_MSG_MODBUS: Message ModBus reçu avec erreur", LOG_LEVEL_DEBUG_PLUS)    end
                 continue
             end
 
@@ -1951,6 +1962,7 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
     # udpFonctions.lireUDP). msg["Automatique"] = true marque un push d'esclave (enveloppe
     # "ModbusPushUDP") : il est republie pour que le maitre ne l'acquitte pas.
     elif (typeTitre == "ModbusReceivedTCP" || typeTitre == "ModbusReceivedUDP")
+        detail = logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, "modbus")
         #- Exemple de json à construire à la réception d'une trame
             @ Count = Nombre d'octets de données reçus ou retournés dans la réponse
             @ Length = Longueur de la tame entière avec le CRC
@@ -1962,15 +1974,15 @@ def modbusFonctions_lireMsgModbus(typeTitre, msg)
         paramMSG[typeTitre]["Info"] = msg["Info"] 
 
         # Réception du message
-        modbusFonctions.log("RECEPTION_MSG_MODBUS: -------------------- lireMsgModbusTCP -------------------", LOG_LEVEL_DEBUG_PLUS)
-        modbusFonctions.log(string.format("RECEPTION_MSG_MODBUS: Message ModBus TCP reçu = 0x%s", paramMSG[typeTitre]["Trame"].tohex()), LOG_LEVEL_DEBUG_PLUS)
+        if detail    modbusFonctions.log("RECEPTION_MSG_MODBUS: -------------------- lireMsgModbusTCP -------------------", LOG_LEVEL_DEBUG_PLUS)    end
+        if detail    modbusFonctions.log(string.format("RECEPTION_MSG_MODBUS: Message ModBus TCP reçu = 0x%s", paramMSG[typeTitre]["Trame"].tohex()), LOG_LEVEL_DEBUG_PLUS)    end
         
         tasmota.yield()
         # Parse la trame
         modbusFonctions.decrypteMSG(paramMSG, typeTitre)
         if (paramMSG[typeTitre]["Erreur"] == 1)    return    end     # pour un autre noeud : deja journalise
         if (paramMSG[typeTitre]["Erreur"] != 0)
-            modbusFonctions.log("RECEPTION_MSG_MODBUS: Message ModBus reçu avec erreur", LOG_LEVEL_DEBUG_PLUS)
+            if detail    modbusFonctions.log("RECEPTION_MSG_MODBUS: Message ModBus reçu avec erreur", LOG_LEVEL_DEBUG_PLUS)    end
             return
         end
         if (msg.find("Automatique", false))    paramMSG[typeTitre]["Automatique"] = true    end
@@ -2128,14 +2140,17 @@ modbusFonctions.surveilleRubans = modbusFonctions_surveilleRubans
 def modbusFonctions_executeCmdModbus(paramMSG)
     import string
 
+    # Audit P7.4 (2026-10-25) : les messages "detail" ne sont construits que s'ils seront ecrits (modele : decrypteMSG)
+    var detail = logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, "modbus")
+
     # Initialise le tableau des valeurs
     tasmota.yield()
 
-    modbusFonctions.log("EXECUTE_CMD_MODBUS: -------------------- executeCmdModbus -------------------", LOG_LEVEL_DEBUG_PLUS)
-    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: DeviceAddress = 0x%02X", paramMSG["DeviceAddress"]), LOG_LEVEL_DEBUG_PLUS)
-    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: StartAddress = 0x%04X", paramMSG["StartAddress"]), LOG_LEVEL_DEBUG_PLUS)
-    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: FunctionCode = 0x%02X ('%s')", paramMSG["FunctionCode"], paramMSG["FunctionName"]), LOG_LEVEL_DEBUG_PLUS)
-    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Count = %i", str(paramMSG["Count"])), LOG_LEVEL_DEBUG_PLUS)
+    if detail    modbusFonctions.log("EXECUTE_CMD_MODBUS: -------------------- executeCmdModbus -------------------", LOG_LEVEL_DEBUG_PLUS)    end
+    if detail    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: DeviceAddress = 0x%02X", paramMSG["DeviceAddress"]), LOG_LEVEL_DEBUG_PLUS)    end
+    if detail    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: StartAddress = 0x%04X", paramMSG["StartAddress"]), LOG_LEVEL_DEBUG_PLUS)    end
+    if detail    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: FunctionCode = 0x%02X ('%s')", paramMSG["FunctionCode"], paramMSG["FunctionName"]), LOG_LEVEL_DEBUG_PLUS)    end
+    if detail    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Count = %i", str(paramMSG["Count"])), LOG_LEVEL_DEBUG_PLUS)    end
 
     # Poursuit si l'id du module esclave correspond à celui de la trame ==> N'execute pas la commande
     if (paramMSG["DeviceAddress"] != drivers["ModBus"]["id"])   return false    end
@@ -2196,7 +2211,7 @@ def modbusFonctions_executeCmdModbus(paramMSG)
                                                 paramMSG["type"] = "float"
 
                                                 paramMSG["Values"].push(frais ? value : math.nan)
-                                                modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Demande de la valeur de %s: %.2f", modules[cle]["environnement"][capteurs][numCapteur]["nom"], real(value)), LOG_LEVEL_DEBUG_PLUS)
+                                                if detail    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Demande de la valeur de %s: %.2f", modules[cle]["environnement"][capteurs][numCapteur]["nom"], real(value)), LOG_LEVEL_DEBUG_PLUS)    end
                                             # DHT22 (AM2302)
                                             elif (typo == 1216)
                                                 paramMSG["type"] = "float"
@@ -2206,7 +2221,7 @@ def modbusFonctions_executeCmdModbus(paramMSG)
                                                 value = real(modules[cle]["environnement"][capteurs][numCapteur].find("Humidity", 0.00))
                                                 paramMSG["Values"].push(frais ? value : math.nan)
 
-                                                modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Demande de la valeur de %s: %.2f°C / %.2f%%RH", modules[cle]["environnement"][capteurs][numCapteur]["nom"], real(paramMSG["Values"][0]), real(paramMSG["Values"][1])), LOG_LEVEL_DEBUG_PLUS)
+                                                if detail    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Demande de la valeur de %s: %.2f°C / %.2f%%RH", modules[cle]["environnement"][capteurs][numCapteur]["nom"], real(paramMSG["Values"][0]), real(paramMSG["Values"][1])), LOG_LEVEL_DEBUG_PLUS)    end
                                             # COMPTEURS / ENTRÉES ANALOGIQUES
                                             elif (typo == 352 || typo == 4704)
                                                 paramMSG["type"] = "uint32"
@@ -2215,7 +2230,7 @@ def modbusFonctions_executeCmdModbus(paramMSG)
                                                 # Idéalement les valeurs max des compteurs sont:   0x3B9AC9FF = 999 999 999
                                                 # Au dela de ce chiffre, il redémarrera a 0
                                                 paramMSG["Values"].push(frais ? int(value) : modbusFonctions.SENTINELLE_UINT32)
-                                                modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Demande de la valeur de %s: %u", modules[cle]["environnement"][capteurs][numCapteur]["nom"], value), LOG_LEVEL_DEBUG_PLUS)
+                                                if detail    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Demande de la valeur de %s: %u", modules[cle]["environnement"][capteurs][numCapteur]["nom"], value), LOG_LEVEL_DEBUG_PLUS)    end
                                             end
                                         end
                                     # functionCode = 0x02 ==> Récupère la valeur de l'interrupteur / capteur / bouton
@@ -2233,9 +2248,9 @@ def modbusFonctions_executeCmdModbus(paramMSG)
                                             end
                                             
                                             paramMSG["Values"].push(value)
-                                            modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Values modifiées = %s", str(paramMSG["Values"])), LOG_LEVEL_DEBUG_PLUS)
+                                            if detail    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Values modifiées = %s", str(paramMSG["Values"])), LOG_LEVEL_DEBUG_PLUS)    end
 
-                                            modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Demande de la valeur de %s: %i (%s)", modules[cle]["environnement"][capteurs][numCapteur]["nom"], int(value), etat), LOG_LEVEL_DEBUG_PLUS)
+                                            if detail    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Demande de la valeur de %s: %i (%s)", modules[cle]["environnement"][capteurs][numCapteur]["nom"], int(value), etat), LOG_LEVEL_DEBUG_PLUS)    end
                                         end
                                     end
 
@@ -2269,8 +2284,10 @@ def modbusFonctions_executeCmdModbus(paramMSG)
         paramMSG["type"] = "uint16"
         paramMSG["Count"] = nbRegistres
         paramMSG["Values"] = hsb[0 .. nbRegistres - 1]
-        modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Etat du ruban WS2812 (registre %i) : teinte %i, saturation %i, luminosite %i, animation %i, mode %i",
-                                          paramMSG["StartAddress"], hsb[0], hsb[1], hsb[2], hsb[3], hsb[4]), LOG_LEVEL_DEBUG_PLUS)
+        if detail
+            modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Etat du ruban WS2812 (registre %i) : teinte %i, saturation %i, luminosite %i, animation %i, mode %i",
+                                              paramMSG["StartAddress"], hsb[0], hsb[1], hsb[2], hsb[3], hsb[4]), LOG_LEVEL_DEBUG_PLUS)
+        end
 
         tasmota.yield()
         modbusFonctions.envoiMsgModbus(paramMSG, "Reponse", paramMSG["StartAddress"])
@@ -2287,14 +2304,14 @@ def modbusFonctions_executeCmdModbus(paramMSG)
 
         paramMSG["type"] = "uint8"
         paramMSG["Values"].push(power[idRelai - 1] ? 1 : 0)
-        modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Etat du relai %i : %s", idRelai, power[idRelai - 1] ? "ON" : "OFF"), LOG_LEVEL_DEBUG_PLUS)
+        if detail    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Etat du relai %i : %s", idRelai, power[idRelai - 1] ? "ON" : "OFF"), LOG_LEVEL_DEBUG_PLUS)    end
 
         tasmota.yield()
         modbusFonctions.envoiMsgModbus(paramMSG, "Reponse", paramMSG["StartAddress"])
     # Fonction 0x05 ==> "Écriture d’une sortie digitale unique (Coil)"   ex=Activer 1 relai
     # ex: Réponse à -> ModBusSend {"DeviceAddress": 1, "FunctionCode": 5, "StartAddress": 1, "type":"bit", "Count":1, "Values":[0]}
     elif (paramMSG["FunctionName"] == "ECRITURE_COIL_UNIQUE")
-        modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: value = 0x%02X", paramMSG["Values"][0]), LOG_LEVEL_DEBUG_PLUS)
+        if detail    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: value = 0x%02X", paramMSG["Values"][0]), LOG_LEVEL_DEBUG_PLUS)    end
 
         # Ruban WS2812 : la commande du maitre le passe en MANUEL (2026-10-13)
         if (int(paramMSG["StartAddress"]) >= 1376 && int(paramMSG["StartAddress"]) < 1408)    modbusFonctions.actionRubanMaitre(0)    end
@@ -2303,7 +2320,7 @@ def modbusFonctions_executeCmdModbus(paramMSG)
         tasmota.cmd(string.format("Power%i %s", modbusFonctions.idRelai(paramMSG["StartAddress"]), (paramMSG["Values"][0] == 0xFF ? "ON" : "OFF")))
 
         # Renvoi exactement la même trame s'il accepte la commande
-        modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Commande le Relai %i: %s (%s)", paramMSG["StartAddress"], str(paramMSG["Values"]), (paramMSG["Values"][0] == 0xFF ? "ON" : "OFF")), LOG_LEVEL_DEBUG_PLUS)
+        if detail    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Commande le Relai %i: %s (%s)", paramMSG["StartAddress"], str(paramMSG["Values"]), (paramMSG["Values"][0] == 0xFF ? "ON" : "OFF")), LOG_LEVEL_DEBUG_PLUS)    end
 
         tasmota.yield()
         modbusFonctions.envoiMsgModbus(paramMSG, "Reponse", paramMSG["StartAddress"])
@@ -2315,8 +2332,8 @@ def modbusFonctions_executeCmdModbus(paramMSG)
 
         paramMSG["type"] = "uint8"
 
-        modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: commande = 0x%02X", commande), LOG_LEVEL_DEBUG_PLUS)
-        modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: delai = 0x%02X", delai), LOG_LEVEL_DEBUG_PLUS)
+        if detail    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: commande = 0x%02X", commande), LOG_LEVEL_DEBUG_PLUS)    end
+        if detail    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: delai = 0x%02X", delai), LOG_LEVEL_DEBUG_PLUS)    end
 
         # Ruban WS2812 (registres 1376 a 1407), commande 0x03 = animation (2026-10-11) : le 2e octet
         # porte le numero d'animation (commande Tasmota 'Scheme', 0 = une seule couleur), envoye par
@@ -2355,7 +2372,7 @@ def modbusFonctions_executeCmdModbus(paramMSG)
         end
 
         # Renvoi exactement la même trame s'il accepte la commande
-        modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Commande le %i: %s (délai = %d)", paramMSG["StartAddress"], (paramMSG["Values"][0] == 0xFF ? "ON" : "OFF"), delai), LOG_LEVEL_DEBUG_PLUS)
+        if detail    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Commande le %i: %s (délai = %d)", paramMSG["StartAddress"], (paramMSG["Values"][0] == 0xFF ? "ON" : "OFF"), delai), LOG_LEVEL_DEBUG_PLUS)    end
 
         tasmota.yield()
         modbusFonctions.envoiMsgModbus(paramMSG, "Reponse", paramMSG["StartAddress"])
@@ -2398,7 +2415,7 @@ def modbusFonctions_executeCmdModbus(paramMSG)
                                         modules[cle]["environnement"][capteurs][numCapteur]["saturation"] = saturation
                                         modules[cle]["environnement"][capteurs][numCapteur]["value"] = luminosite
                                         
-                                        modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Modifie la couleur de %s: %i", modules[cle]["environnement"][capteurs][numCapteur]["nom"], luminosite), LOG_LEVEL_DEBUG_PLUS)
+                                        if detail    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Modifie la couleur de %s: %i", modules[cle]["environnement"][capteurs][numCapteur]["nom"], luminosite), LOG_LEVEL_DEBUG_PLUS)    end
                                     
                                         # Couleur imposee par le maitre : le ruban passe en MANUEL (2026-10-13)
                                         modbusFonctions.actionRubanMaitre(0)
@@ -2411,7 +2428,7 @@ def modbusFonctions_executeCmdModbus(paramMSG)
                                         paramMSG["Values"][1] = int(string.split(reponse["HSBColor"], ",")[1])
                                         paramMSG["Values"][2] = int(string.split(reponse["HSBColor"], ",")[2])
 
-                                        modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Values = %s", str(paramMSG["Values"])), LOG_LEVEL_DEBUG_PLUS)
+                                        if detail    modbusFonctions.log(string.format("EXECUTE_CMD_MODBUS: Values = %s", str(paramMSG["Values"])), LOG_LEVEL_DEBUG_PLUS)    end
 
                                         # Renvoi exactement la réponse s'il accepte la commande
                                         tasmota.yield()

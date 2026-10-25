@@ -287,10 +287,13 @@ class MODBUS_CONN_16CHANNEL : Driver
         import string
         import json
 
-        self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: -------------------- Conn16channels recupereReponseModBus -------------------", LOG_LEVEL_DEBUG_PLUS)
-        self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: value = " + str(value), LOG_LEVEL_DEBUG_PLUS)
-        self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: trigger = " + str(trigger), LOG_LEVEL_DEBUG_PLUS)
-        self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: msg = " + str(msg), LOG_LEVEL_DEBUG_PLUS)
+        # Audit P7.4 (2026-10-25) : les messages "detail" ne sont construits que s'ils seront ecrits (modele : decrypteMSG)
+        var detail = logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, "conn16channels")
+
+        if detail    self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: -------------------- Conn16channels recupereReponseModBus -------------------", LOG_LEVEL_DEBUG_PLUS)    end
+        if detail    self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: value = " + str(value), LOG_LEVEL_DEBUG_PLUS)    end
+        if detail    self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: trigger = " + str(trigger), LOG_LEVEL_DEBUG_PLUS)    end
+        if detail    self.log("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: msg = " + str(msg), LOG_LEVEL_DEBUG_PLUS)    end
 
         # Détermine l'item à analyser dans le message ModBus recu
         var TypeMsg = ""
@@ -304,7 +307,7 @@ class MODBUS_CONN_16CHANNEL : Driver
             msg = msg["ModbusReceivedTCP"]
             TypeMsg = "TCP"
         end
-        self.log(f"MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: Type de msg Modbus = {TypeMsg:s}", LOG_LEVEL_DEBUG_PLUS)
+        if detail    self.log(f"MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: Type de msg Modbus = {TypeMsg:s}", LOG_LEVEL_DEBUG_PLUS)    end
 
         # Complete la reponse de lecture avec StartAddress/Count/type de la requete en
         # vol (la trame RTU ne les porte pas) -> le maitre sait a quel registre repondre.
@@ -338,7 +341,9 @@ class MODBUS_CONN_16CHANNEL : Driver
 
         # Certaines fonctions ne retournent aucune données
         msg["FunctionName"] = modbusFonctions.tabFonctionsName[msg["FunctionCode"]]
-        self.log(string.format("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: FunctionCode = 0x%02X ('%s')", msg["FunctionCode"], msg["FunctionName"]), LOG_LEVEL_DEBUG_PLUS)
+        if logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, "conn16channels")         # audit P7.4
+            self.log(string.format("MODBUS_RECUPERE_REPONSE_CONN16CHANNEL: FunctionCode = 0x%02X ('%s')", msg["FunctionCode"], msg["FunctionName"]), LOG_LEVEL_DEBUG_PLUS)
+        end
 
         # Echo d'une ecriture 0x06 : rien a exploiter (l'appelant acquitte)
         if (msg["FunctionName"] == "ECRITURE_REGISTRES_HOLDER")    return    end

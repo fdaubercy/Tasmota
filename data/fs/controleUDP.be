@@ -69,6 +69,7 @@ class CONTROLE_UDP
     var port
     var typeComm
     var parametres
+    var paramMSG        # map du tick, reutilisee tant qu'aucun message ne l'a remplie (audit M4/P9.4)
   
     def init(typeComm, ip, port)
         import udpFonctions
@@ -79,6 +80,7 @@ class CONTROLE_UDP
         self.port = port
         self.typeComm = typeComm
         self.parametres = serveur["udp"]
+        self.paramMSG = {}
 
         # Définit les variables du module udpFonctions
         udpFonctions.etat()["udpReception"][(string.toupper(self.typeComm) == string.toupper("UniCast") ? 0 : 1)] = self.udpReception
@@ -141,15 +143,21 @@ class CONTROLE_UDP
         import json
 
         # Récupère les messages sur le port UDP (respecte l'API Tasmota)
-        var paramMSG = {}
+        # Audit M4/P9.4 (2026-10-25) : la map n'est plus allouee a chaque tick de 100 ms (2 instances),
+        # seulement apres un tick qui l'a remplie. Une map remplie n'est jamais reutilisee : une cle
+        # "prefix"/"commande" restee d'un message precedent ferait rejouer sa commande.
+        if (size(self.paramMSG) > 0)    self.paramMSG = {}    end
+        var paramMSG = self.paramMSG
     
         # Traitement du message : chaque instance lit SA socket (audit N5/P5.5, 2026-10-24). Avant, les instances
         # UniCast et MultiCast lisaient chacune les deux : 20 lectures par seconde et par socket pour 10 utiles.
         if (udpFonctions.lireUDP(self.typeComm, paramMSG))
-            udpFonctions.log("TRAITEMENT_MSG_UDP: Traitement du message en cours ...", LOG_LEVEL_DEBUG_PLUS)
+            # Audit P7.4 (2026-10-25) : les messages "detail" ne sont construits que s'ils seront ecrits (modele : decrypteMSG)
+            var detail = logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, "udp")
+            if detail    udpFonctions.log("TRAITEMENT_MSG_UDP: Traitement du message en cours ...", LOG_LEVEL_DEBUG_PLUS)    end
 
             # paramMSG["msgHex"] = msg
-            udpFonctions.log("TRAITEMENT_MSG_UDP: Message=" + paramMSG["msgString"], LOG_LEVEL_DEBUG_PLUS)
+            if detail    udpFonctions.log("TRAITEMENT_MSG_UDP: Message=" + paramMSG["msgString"], LOG_LEVEL_DEBUG_PLUS)    end
 
             # Traitement du message de type API MQTT
             # Vérifie si c'est une commande Tasmota ou personnalisée

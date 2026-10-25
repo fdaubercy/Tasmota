@@ -776,16 +776,22 @@ def udpFonctions_lireUDP(typeComm, paramMSG)
     import string
     import json
 
-    var msg = (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.etat()["udpReception"][0].read() : udpFonctions.etat()["udpReception"][1].read()
+    # Audit M4/P9.4 (2026-10-25) : socket choisie une fois, sans string.toupper dans le cas courant
+    # (appel toutes les 100 ms par instance : deux chaines allouees puis jetees a chaque tick)
+    var sock = udpFonctions.etat()["udpReception"][(typeComm == "UniCast" || string.toupper(typeComm) == "UNICAST") ? 0 : 1]
+    var msg = sock.read()
+    if (msg == nil)    return false    end
+
+    # Audit P7.4 (2026-10-25) : les messages "detail" ne sont construits que s'ils seront ecrits (modele : decrypteMSG)
+    var detail = logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, "udp")
     tasmota.yield()
 
     # Récupère les messages sur le port UDP (respecte l'API Tasmota)
     while msg != nil
         # Réception du message
-        udpFonctions.log("LIRE_UDP: ------------------------ UDP lire ----------------------", LOG_LEVEL_DEBUG_PLUS)
+        if detail    udpFonctions.log("LIRE_UDP: ------------------------ UDP lire ----------------------", LOG_LEVEL_DEBUG_PLUS)    end
         udpFonctions.log(string.format("LIRE_UDP: Données UDP %s reçues de '%s' sur le port %i", typeComm, 
-                                                (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.etat()["udpReception"][0].remote_ip : udpFonctions.etat()["udpReception"][1].remote_ip,
-                                                (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.etat()["udpReception"][0].remote_port : udpFonctions.etat()["udpReception"][1].remote_port),
+                                                sock.remote_ip, sock.remote_port),
                                                 LOG_LEVEL_DEBUG)
         udpFonctions.log("LIRE_UDP: msg = " + str(msg.asstring()), LOG_LEVEL_DEBUG)
 
@@ -814,7 +820,7 @@ def udpFonctions_lireUDP(typeComm, paramMSG)
 
             try
                 import modbusFonctions
-                var ip = (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.etat()["udpReception"][0].remote_ip : udpFonctions.etat()["udpReception"][1].remote_ip
+                var ip = sock.remote_ip
                 # Push : "ModbusPushUDP <seq> <trame hexa>" (numero d'ordre, 2026-09-29) ; un esclave
                 # d'avant le numero d'ordre envoie "ModbusPushUDP <trame hexa>" -> seq absent (nil).
                 # Le nombre avant la trame est le seq d'un push, ou le tid d'une commande/reponse
@@ -856,9 +862,9 @@ def udpFonctions_lireUDP(typeComm, paramMSG)
                 end
             end
 
-            udpFonctions.log("LIRE_UDP: prefix=" + str(paramMSG["prefix"]), LOG_LEVEL_DEBUG_PLUS)	
-            udpFonctions.log("LIRE_UDP: topic=" + str(paramMSG["topic"]), LOG_LEVEL_DEBUG_PLUS)	
-            udpFonctions.log("LIRE_UDP: commande=" + str(paramMSG["commande"]), LOG_LEVEL_DEBUG_PLUS)	
+            if detail    udpFonctions.log("LIRE_UDP: prefix=" + str(paramMSG["prefix"]), LOG_LEVEL_DEBUG_PLUS)    end
+            if detail    udpFonctions.log("LIRE_UDP: topic=" + str(paramMSG["topic"]), LOG_LEVEL_DEBUG_PLUS)    end
+            if detail    udpFonctions.log("LIRE_UDP: commande=" + str(paramMSG["commande"]), LOG_LEVEL_DEBUG_PLUS)    end
 
             # Reconnait les bons topics (Uniquement les esclaves car eux envoient leurs données avec leur topic)
             # Le maitre récupère tous les messages
@@ -875,7 +881,7 @@ def udpFonctions_lireUDP(typeComm, paramMSG)
         tasmota.yield()
 
         # Initialise le buffer
-        msg = (string.toupper(typeComm) == string.toupper("UniCast")) ? udpFonctions.etat()["udpReception"][0].read() : udpFonctions.etat()["udpReception"][1].read()
+        msg = sock.read()
     end
 
     return false

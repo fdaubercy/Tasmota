@@ -1526,4 +1526,27 @@ verifie("... tableau d'etat reseau affiche, page terminee", "true true true",
 tasmota.rgxClients = {}
 
 print("")
+print("=== 27. P9.4 : CONTROLE_UDP.every_100ms sans map neuve a chaque tick, sans commande rejouee ===")
+# Avant : 'var paramMSG = {}' a chaque tick de 100 ms, dans chacune des 2 instances. La map du tick est
+# maintenant gardee tant qu'aucun message ne l'a remplie ; remplie, elle est remplacee (sinon le
+# "prefix"/"commande" d'un message precedent ferait rejouer sa commande au message suivant).
+serveur["udp"]["id"] = 0
+var uni27 = controleUDP.CONTROLE_UDP("UniCast", "", 2000)
+var s27 = SocketCompteuse([])
+etatUDP["udpReception"] = [s27, SocketCompteuse([])]
+var map27 = nil
+verifie("la map du tick est un membre de l'instance", "OK", essaie(def () map27 = uni27.paramMSG end))
+for i: 1 .. 5    uni27.every_100ms()    end
+verifie("5 ticks sans message : meme map (aucune allocation)", true, map27 != nil && uni27.paramMSG == map27)
+tasmota.cmds = []
+s27.msgs = ["cmnd/garage/Power1 ON"]
+uni27.every_100ms()
+verifie("commande UDP executee une fois", "['Power1 ON']", str(tasmota.cmds))
+s27.msgs = ["ModbusUDP 01030001001015C6"]      # trame ModBus : lireUDP ne pose ni "prefix" ni "commande"
+uni27.every_100ms()
+verifie("trame ModBus suivante : la commande precedente n'est pas rejouee", "['Power1 ON']", str(tasmota.cmds))
+verifie("map remplie remplacee au tick suivant", true, uni27.paramMSG != map27)
+etatUDP["udpReception"] = sauveRecep
+
+print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))

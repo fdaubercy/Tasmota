@@ -660,12 +660,15 @@ class MODBUS_TASMOTA_SLAVE : Driver
         import modbusFonctions
         import globalFonctions
 
+        # Audit P7.4 (2026-10-25) : les messages "detail" ne sont construits que s'ils seront ecrits (modele : decrypteMSG)
+        var detail = logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, "slaveModbus")
+
         var nameTasmotaSlaveModBus = ""
 
-        self.log("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: -------------------- TasmotaSlaveModBus recupereReponseModBus -------------------", LOG_LEVEL_DEBUG_PLUS)
-        self.log("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: value = " + str(value), LOG_LEVEL_DEBUG_PLUS)
-        self.log("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: trigger = " + str(trigger), LOG_LEVEL_DEBUG_PLUS)
-        self.log("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: msg = " + str(msg), LOG_LEVEL_DEBUG_PLUS)
+        if detail    self.log("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: -------------------- TasmotaSlaveModBus recupereReponseModBus -------------------", LOG_LEVEL_DEBUG_PLUS)    end
+        if detail    self.log("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: value = " + str(value), LOG_LEVEL_DEBUG_PLUS)    end
+        if detail    self.log("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: trigger = " + str(trigger), LOG_LEVEL_DEBUG_PLUS)    end
+        if detail    self.log("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: msg = " + str(msg), LOG_LEVEL_DEBUG_PLUS)    end
 
         # ex: {"TasmotaSlaveModBus": {"TasmotaSlaveModBus1": {}}}
         # Doit chercher d'abord le n° du ModBus_TasmotaSlaveModBus dans persist.json
@@ -691,7 +694,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
             msg = msg["ModbusReceivedTCP"]
             TypeMsg = "TCP"
         end
-        self.log(f"MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Type de msg Modbus = {TypeMsg:s}", LOG_LEVEL_DEBUG_PLUS)
+        if detail    self.log(f"MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: Type de msg Modbus = {TypeMsg:s}", LOG_LEVEL_DEBUG_PLUS)    end
 
         # Complete la reponse de lecture avec StartAddress/Count/type de la requete en
         # vol (la trame RTU ne les porte pas) -> le maitre sait a quel registre repondre.
@@ -708,7 +711,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
 
         # Certaines fonctions ne retournent aucune données
         msg["FunctionName"] = modbusFonctions.tabFonctionsName[msg["FunctionCode"]]
-        self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: FunctionCode = 0x%02X ('%s')", msg["FunctionCode"], msg["FunctionName"]), LOG_LEVEL_DEBUG_PLUS)
+        if detail    self.log(string.format("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: FunctionCode = 0x%02X ('%s')", msg["FunctionCode"], msg["FunctionName"]), LOG_LEVEL_DEBUG_PLUS)    end
 
         # Une ECRITURE 0x10 non sollicitee (Automatique) = push d'etat de l'esclave (option B,
         # 2026-09-29) : ses 'Values' sont des registres bruts, convertis plus bas selon le type
@@ -1026,7 +1029,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
         end
 
         # Ajoute la donnée reçue en json
-        self.log("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: dataJson=" + json.dump(self.dataJson), LOG_LEVEL_DEBUG_PLUS)
+        if detail    self.log("MODBUS_RECUPERE_REPONSE_TASMOTA_SLAVE_MODBUS: dataJson=" + json.dump(self.dataJson), LOG_LEVEL_DEBUG_PLUS)    end
 
         # Acquitte le message en vol (reponse recue)
         if (estReponseEnVol)    modbusFonctions.termineEnVol(true)    end

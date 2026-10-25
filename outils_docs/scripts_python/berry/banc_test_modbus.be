@@ -73,6 +73,7 @@ class TasmotaStub
   def is_network_up() return self.reseauCoupe != true end
   def scale_uint(v, a, b, c, d) return int((v - a) * (d - c) / (b - a) + c) end
   def memory() return {"heap_free": 53, "frag": 37} end   # Ko et %, comme tasmota.memory() (section 32)
+  def loglevel(n) return true end      # une sortie au moins ouverte : logFonctions.actif ne suit que le seuil (section 34)
 end
 class Driver end                       # classe de base des drivers Tasmota
 var tasmota = TasmotaStub()
@@ -2042,6 +2043,37 @@ verifie("code fonction 0x2B : requete liberee, erreur journalisee", "nil/true",
 modbusFonctions.etat()["enVol"] = nil
 modules = sauveModules33
 drivers = sauveDrivers
+
+print("")
+print("=== 34. P7.4 : chemins chauds sans message detail construit sous le seuil ===")
+# Berry construit le message (string.format, str(map)) AVANT d'appeler log() : sous le seuil, chaque trame
+# en allouait une vingtaine pour rien. Compte les appels de logFonctions.log au niveau detail.
+var vraiLog34 = logFonctions.log
+var nbDetail34 = 0
+logFonctions.log = def (msg, niveau, cible) if niveau == LOG_LEVEL_DEBUG_PLUS    nbDetail34 += 1    end return vraiLog34(msg, niveau, cible) end
+sauveDrivers = drivers
+sauveServeur = serveur
+def passe34(seuil)
+  drivers = {"ModBus": {"activation": "ON", "id": 3, "log": seuil, "activationReponseCMD": "OFF", "typeComm": {"Serial":"ON"}, "environnement": {}}}
+  serveur = {"mqtt": {"topic": "rideau"}, "udp": {"activation": "OFF"}, "tcp": {"activation": "OFF"}}
+  logFonctions.etat()["seuils"] = {}
+  nbDetail34 = 0
+  modbusFonctions.etat()["tamponSerie"] = bytes()
+  modbusFonctions.etat()["serialModBus"] = SerieStub(rep16 + req3)
+  var r = str(essaie(def () modbusFonctions.lireMsgModbus("ModbusReceived", nil) end))
+  tasmota.cmds = []
+  r += "/" + str(essaie(def () modbusFonctions.executeCmdModbus({"DeviceAddress": 3, "FunctionCode": 6, "FunctionName": "ECRITURE_REGISTRE_UNIQUE",
+                                                             "StartAddress": 225, "Count": 2, "Values": [0x02, 0]}) end))
+  return r + "/" + str(tasmota.cmds) + "/" + str(nbDetail34 > 0)
+end
+verifie("seuil info : lecture et commande sans aucun message detail", "nil/nil/['Power2 ON']/false", passe34("info"))
+verifie("temoin seuil detail : les messages detail sont bien emis", "nil/nil/['Power2 ON']/true", passe34("detail"))
+logFonctions.log = vraiLog34
+logFonctions.etat()["seuils"] = {}
+modbusFonctions.etat()["serialModBus"] = nil
+modbusFonctions.etat()["tamponSerie"] = bytes()
+drivers = sauveDrivers
+serveur = sauveServeur
 
 print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",

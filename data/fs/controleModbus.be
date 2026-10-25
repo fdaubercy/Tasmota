@@ -227,14 +227,17 @@ class CONTROLE_MODBUS : Driver
         import modbusFonctions
         import string
 
+        # Audit P7.4 (2026-10-25) : les messages "detail" ne sont construits que s'ils seront ecrits (modele : decrypteMSG)
+        var detail = logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, "modbus")
+
         # Uniquement si esclave ModBus (id > 0)
         if (drivers["ModBus"]["id"] == 0)   return      end
 
         # Test
-        modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS: -------------------- modBus recupereReponseModBus -------------------", LOG_LEVEL_DEBUG_PLUS)
-        modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_TCP: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)
-        modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_TCP: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)
-        modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_TCP: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)
+        if detail    modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS: -------------------- modBus recupereReponseModBus -------------------", LOG_LEVEL_DEBUG_PLUS)    end
+        if detail    modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_TCP: value=" + str(value), LOG_LEVEL_DEBUG_PLUS)    end
+        if detail    modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_TCP: trigger=" + str(trigger), LOG_LEVEL_DEBUG_PLUS)    end
+        if detail    modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_TCP: msg=" + str(msg), LOG_LEVEL_DEBUG_PLUS)    end
 
         # Détermine l'item à analyser dans le message ModBus recu
         var TypeMsg = ""
@@ -248,7 +251,7 @@ class CONTROLE_MODBUS : Driver
             msg = msg["ModbusReceivedTCP"]
             TypeMsg = "TCP"
         end
-        modbusFonctions.log(f"MODBUS_RECUPERE_REPONSE_MODBUS: Type de msg Modbus = {TypeMsg:s}", LOG_LEVEL_DEBUG_PLUS)
+        if detail    modbusFonctions.log(f"MODBUS_RECUPERE_REPONSE_MODBUS: Type de msg Modbus = {TypeMsg:s}", LOG_LEVEL_DEBUG_PLUS)    end
 
         # Récupère la réponse à une requête ModBus
         self.reponseModBus = value
@@ -297,7 +300,7 @@ class CONTROLE_MODBUS : Driver
             if (type(self.reponseModBus["Values"]) == "int")
                 self.reponseModBus["Values"] = [self.reponseModBus["Values"]]
             end
-            modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_UDP: Réponse ModBus UDP reçue: " + str(self.reponseModBus), LOG_LEVEL_DEBUG_PLUS)
+            if detail    modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_UDP: Réponse ModBus UDP reçue: " + str(self.reponseModBus), LOG_LEVEL_DEBUG_PLUS)    end
 
             # Si maitre ModBus (id==0)
             if (drivers["ModBus"]["id"] == 0)
@@ -307,7 +310,7 @@ class CONTROLE_MODBUS : Driver
                 # regles voyaient la meme trame : celle-ci, si elle passait la 1re, acquittait le
                 # message en vol, et le driver ne trouvait plus de requete a apparier -> valeurs
                 # de la reponse jetees.
-                modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_UDP: maitre : reponse laissee aux drivers des esclaves", LOG_LEVEL_DEBUG_PLUS)
+                if detail    modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_UDP: maitre : reponse laissee aux drivers des esclaves", LOG_LEVEL_DEBUG_PLUS)    end
 
             # Si esclave ModBus (id>0)
             elif (drivers["ModBus"]["id"] > 0)
@@ -315,7 +318,7 @@ class CONTROLE_MODBUS : Driver
                 if (self.reponseModBus.find("Erreur", 0) == 0)
                     # Si id(maitre ou esclave) == DeviceAddress
                     if (self.reponseModBus["DeviceAddress"] == drivers["ModBus"]["id"])
-                        modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_UDP: Traitement du message en cours ...", LOG_LEVEL_DEBUG_PLUS)
+                        if detail    modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_UDP: Traitement du message en cours ...", LOG_LEVEL_DEBUG_PLUS)    end
 
                         # PAS d'acquittement ici (corrige le 2026-07-24, phase 4) : ce qui
                         # arrive est une COMMANDE entrante du maitre, pas la reponse a une
@@ -323,7 +326,7 @@ class CONTROLE_MODBUS : Driver
                         # 'enVol' qui ne concernait pas cette trame.
 
                         modbusFonctions.executeCmdModbus(self.reponseModBus)
-                    else modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_UDP: Message ModBus reçu destiné à un autre esclave ...", LOG_LEVEL_DEBUG_PLUS)
+                    elif detail    modbusFonctions.log("MODBUS_RECUPERE_REPONSE_MODBUS_UDP: Message ModBus reçu destiné à un autre esclave ...", LOG_LEVEL_DEBUG_PLUS)
                     end
                 end
             end
