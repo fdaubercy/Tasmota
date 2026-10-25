@@ -178,6 +178,44 @@ def sonde_page(m):
     attend(cdp, "!document.getElementById('c-creer').disabled", 10)
     cdp.js("var i=document.getElementById('c-WIFI_IP_ADDRESS'); i.value='192.168.0.251'; i.dispatchEvent(new Event('input', {bubbles: true})); 1")
     verifie(cdp.js("document.getElementById('c-creer').disabled"), True, "creation : saisie changee apres le diff -> Creer grise")
+    sonde_renommer_supprimer(m)
+
+
+def sonde_renommer_supprimer(m):
+    """Creer un env d'essai, le renommer, puis le supprimer ; refus de supprimer une base."""
+    cdp, essai, renomme = m.cdp, "tasmota32s3-garage-porte-test", "tasmota32s3-garage-porte-test2"
+    clic(cdp, "c-prepare")
+    attend(cdp, "!document.getElementById('c-creer').disabled", 10)
+    clic(cdp, "c-creer")
+    verifie(attend(cdp, "!!document.getElementById('c-ok') && document.getElementById('env').value === '" + essai + "'", 15),
+            True, "creation : env d'essai cree et choisi")
+    verifie(clic(cdp, "renommer"), "ok", "bouton « Renommer cet env… »")
+    cdp.js("document.getElementById('r-lieu').value='garage'; document.getElementById('r-nom').value='porte-test2'; 1")
+    clic(cdp, "r-proposer")
+    verifie(attend(cdp, "document.getElementById('r-MQTT_TOPIC') && document.getElementById('r-MQTT_TOPIC').value", 10),
+            "garage/porte-test2", "renommage : identite reproposee")
+    clic(cdp, "r-prepare")
+    verifie(attend(cdp, "!document.getElementById('r-renommer').disabled", 10), True, "renommage : diff sans refus")
+    clic(cdp, "r-renommer")
+    verifie(attend(cdp, "!!document.getElementById('r-ok') && document.getElementById('env').value === '" + renomme + "'", 15),
+            True, "renommage : env renomme et choisi")
+    verifie(((m.depot / "data/garage/tasmota32s3-porte-test2/autoexec.be").is_file(),
+             (m.depot / "data/garage/tasmota32s3-porte-test").exists()), (True, False), "renommage : dossier deplace")
+    verifie(clic(cdp, "supprimer"), "ok", "bouton « Supprimer cet env… »")
+    clic(cdp, "s-prepare")
+    verifie(attend(cdp, "!document.getElementById('s-supprimer').disabled", 10), True, "suppression : diff sans refus")
+    clic(cdp, "s-supprimer")
+    verifie(attend(cdp, "!!document.getElementById('s-ok')", 15), True, "suppression : message de reussite")
+    verifie(attend(cdp, "![...document.getElementById('env').options].some(function(o){return o.value==='" + renomme + "';})", 10),
+            True, "suppression : env retire de la liste")
+    verifie((m.depot / "data/garage/tasmota32s3-porte-test2-sauvegarde/autoexec.be").is_file(), True,
+            "suppression : dossier renomme en -sauvegarde")
+    cdp.js("var s=document.getElementById('env'); s.value='" + BASE + "'; s.dispatchEvent(new Event('change')); 1")
+    attend(cdp, "etat && etat.env === '" + BASE + "'", 10)
+    clic(cdp, "supprimer")
+    clic(cdp, "s-prepare")
+    verifie(attend(cdp, "!!document.querySelector('#s-retours .avert.rouge')", 10), True, "base : refus affiche")
+    verifie(cdp.js("document.getElementById('s-supprimer').disabled"), True, "base : Supprimer reste grise")
     verifie(cdp.erreurs(), [], "aucune erreur JS pendant toute la sonde")
 
 

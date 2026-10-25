@@ -3,7 +3,8 @@ un choix de fichier + son etat, puis trois colonnes (Sur le FS, Exclu, Solidifie
 
 Les modifications restent dans la page (« en attente ») jusqu'a « Voir le diff puis enregistrer ».
 Une ligne d'une liste partagee ([berry_commun], option d'une base) ouvre la fenetre « Modifier la liste
-partagee (N envs) » / « Annuler ». Formulaire de creation d'env a partir d'une carte modele.
+partagee (N envs) » / « Annuler ». Formulaire de creation d'env a partir d'une carte modele ; panneaux
+« Renommer » et « Supprimer » dans fichiers_berry_page_envs.py (inseres ci-dessous).
 Textes inseres par textContent uniquement. Sonde : test_fichiers_berry_page_chrome.py.
 """
 
@@ -63,6 +64,8 @@ PAGE = r"""<!doctype html>
       <label for="env">Env :</label> <select id="env"></select>
       <button class="btn" id="reverifier">Revérifier les fichiers</button>
       <button class="btn" id="creer">Créer un env à partir de…</button>
+      <button class="btn" id="renommer">Renommer cet env…</button>
+      <button class="btn" id="supprimer">Supprimer cet env…</button>
       <span id="statut" class="discret"></span>
     </div>
     <div id="avertissements"></div>
@@ -119,6 +122,7 @@ PAGE = r"""<!doctype html>
     <div id="c-retours"></div>
     <pre id="c-diff" class="cache"></pre>
   </section>
+<!--PANNEAUX_ENVS-->
 </main>
 
 <div id="fenetre-partage" class="cache"><div class="carte">
@@ -427,7 +431,7 @@ $("partage-modifier").onclick = function () {
   $("fenetre-partage").classList.add("cache");
   if (d) { d.partage_accepte = true; attente[d.chemin] = d; dessine(); }
 };
-$("creer").onclick = function () { $("panneau-creation").classList.toggle("cache"); };
+$("creer").onclick = function () { ouvre("panneau-creation"); };
 $("c-proposer").onclick = proposer;
 $("c-prepare").onclick = prepareCreation;
 $("c-creer").onclick = creer;
@@ -435,8 +439,13 @@ $("c-creer").onclick = creer;
   $("panneau-creation").addEventListener(t, function () { $("c-creer").disabled = true; });
 });
 construitIdentite();
+/*JS_ENVS*/
 chargeEnvs().then(chargeEtat);
 </script>
 </body>
 </html>
 """
+
+import fichiers_berry_page_envs as _envs     # panneaux Renommer / Supprimer (spec §9, §10)
+
+PAGE = PAGE.replace("<!--PANNEAUX_ENVS-->", _envs.HTML).replace("/*JS_ENVS*/", _envs.JS)

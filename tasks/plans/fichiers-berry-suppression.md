@@ -93,18 +93,18 @@ de `fichiers_berry_suppression`.
   - [x] `default_envs` : ligne active reste active, commentée reste commentée, au nouveau nom ; `data_dir` suit ;
   - [x] renommer puis renommer en sens inverse : cenv, `.h` et dossier comme au départ, hors identité modifiée ; (cenv, override et persist identiques ; le `.h` diffère par NAME/Hostname dérivés de l'identité)
   - [x] refus : env référencé, nouveau nom déjà pris, build ; atomicité (panne → tout remis).
-- [ ] Commit `feat(fichiers-berry): renommage d un env (identite reproposee, dossier deplace)`.
+- [x] Commit `feat(fichiers-berry): renommage d un env (identite reproposee, dossier deplace)`.
 
 ## A4 — Routes et page de la suppression et du renommage
 
-- [ ] `POST /suppression/prepare {env}`, `POST /suppression {env, empreinte}`, `POST /renommage/prepare {env, lieu, nom,
-  identite, define?}`, `POST /renommage {..., empreinte}` ; test web ROUGE puis VERT.
-- [ ] Page : bouton « Supprimer cet env… » (cartes et bases du cenv), panneau avec diff, avertissements, refus, dossier
+- [x] `POST /suppression/prepare {env}`, `POST /suppression {env, empreinte}`, `POST /renommage/prepare {env, lieu, nom,
+  identite, define?}`, `POST /renommage {..., empreinte}` ; test web ROUGE puis VERT. — preuve : test_post_renommage_puis_suppression ROUGE (400, routes absentes) puis VERT ; GET /identite?env= ajouté
+- [x] Page : bouton « Supprimer cet env… » (cartes et bases du cenv), panneau avec diff, avertissements, refus, dossier
   renommé, bouton « Supprimer <env> » grisé si refus ou si l'env choisi change ; après succès, liste des envs
-  rechargée et chemin de la sauvegarde affiché.
-- [ ] Page : bouton « Renommer cet env… » : lieu, nom, « Proposer » (identité), diff, « Renommer » (grisé si la saisie
-  change après le diff) ; après succès, l'env renommé est choisi.
-- [ ] Sonde Chrome : créer, renommer puis supprimer un env d'essai ; refus sur une base ; ROUGE puis VERT, témoin VERT.
+  rechargée et chemin de la sauvegarde affiché. — preuve : panneaux dans fichiers_berry_page_envs.py (page 451 lignes, sous 500)
+- [x] Page : bouton « Renommer cet env… » : lieu, nom, « Proposer » (identité), diff, « Renommer » (grisé si la saisie
+  change après le diff) ; après succès, l'env renommé est choisi. — preuve : idem
+- [x] Sonde Chrome : créer, renommer puis supprimer un env d'essai ; refus sur une base ; ROUGE puis VERT, témoin VERT. — preuve : 11 KO puis VERT, témoin détecté
 - [ ] Commit `feat(fichiers-berry): boutons Supprimer et Renommer cet env dans la page`.
 
 ## A5 — Recensement et création pendant un build (amélioration 3)

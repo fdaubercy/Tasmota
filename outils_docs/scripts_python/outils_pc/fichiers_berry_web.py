@@ -19,6 +19,11 @@ Routes (les POST exigent l'en-tete X-Fichiers-Berry: 1 et la meme origine ; JSON
     POST /enregistre {env, demandes, empreinte} -> {ecrit, diff} ; 409 si build, empreinte perimee, refus
     POST /creation/prepare {modele, base, lieu, nom, identite, define?} -> diff, empreinte, avertissements, refus
     POST /creation   {..., empreinte} -> {cree, env, dossier} ; 409 si build, empreinte perimee, refus
+    POST /suppression/prepare {env} -> diff, empreinte, dossier_sauvegarde, avertissements, refus
+    POST /suppression {env, empreinte} -> {supprime, dossier_sauvegarde, sauvegarde} ; 409 / 404 (env inconnu)
+    POST /renommage/prepare {env, lieu, nom, identite, define?} -> diff, empreinte, nouvel_env, avertissements, refus
+    POST /renommage  {..., empreinte} -> {renomme, env, dossier, sauvegarde} ; 409 si build, empreinte perimee, refus
+    GET  /identite   accepte aussi ?env=<carte>&lieu=&nom= (renommage : base de la carte)
 """
 
 import argparse
@@ -32,6 +37,9 @@ import acces_web
 import fichiers_berry_creation as fbc
 import fichiers_berry_ecriture as fbw
 import fichiers_berry_etat as fbe
+import fichiers_berry_ini as fbi
+import fichiers_berry_renommage as fbr
+import fichiers_berry_suppression as fbx
 
 PORT_DEFAUT = 7800
 DEPOT = Path(__file__).resolve().parents[3]
@@ -79,6 +87,14 @@ def creation_de(demande):
                         _chaine(demande, "define", ""))
 
 
+def renommage_de(demande):
+    identite = demande.get("identite")
+    if not isinstance(identite, dict) or not all(isinstance(v, str) for v in identite.values()):
+        raise ValueError("identite : objet de chaines attendu")
+    return fbr.Renommage(_chaine(demande, "env"), _chaine(demande, "lieu"), _chaine(demande, "nom"),
+                         {k: identite.get(k, "") for k in fbc.CHAMPS_IDENTITE}, _chaine(demande, "define", ""))
+
+
 def fabrique_gestionnaire(acces, racine, builds_en_cours):
     def traite_post(chemin, demande):
         if chemin == "/prepare":
@@ -90,10 +106,23 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
             return fbc.prepare_creation(racine, creation_de(demande))
         if chemin == "/creation":
             return fbc.cree(racine, creation_de(demande), _chaine(demande, "empreinte"), builds_en_cours)
+        if chemin == "/suppression/prepare":
+            return fbx.prepare_suppression(racine, _chaine(demande, "env"))
+        if chemin == "/suppression":
+            return fbx.supprime(racine, _chaine(demande, "env"), _chaine(demande, "empreinte"), builds_en_cours)
+        if chemin == "/renommage/prepare":
+            return fbr.prepare_renommage(racine, renommage_de(demande))
+        if chemin == "/renommage":
+            return fbr.renomme(racine, renommage_de(demande), _chaine(demande, "empreinte"), builds_en_cours)
         raise LookupError(chemin)
 
     def identite(params):
-        base, lieu, nom = (params.get(k, [""])[0] for k in ("base", "lieu", "nom"))
+        base, lieu, nom, env = (params.get(k, [""])[0] for k in ("base", "lieu", "nom", "env"))
+        if env:                                       # renommage : la base reste celle de la carte
+            ini = fbi.lit_sections(racine)
+            if "env:" + env not in ini.sections:
+                raise LookupError(f"env inconnu : {env!r}")
+            base = fbr._base(ini, env)
         if not base or not fbc.LIEU.fullmatch(lieu) or not fbc.NOM.fullmatch(nom):
             raise ValueError("base, lieu (minuscules, chiffres) et nom (minuscules, chiffres, tirets) attendus")
         return {"env": fbc.nom_env(base, lieu, nom), "define": fbc.define(base, lieu, nom),

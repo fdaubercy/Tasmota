@@ -166,9 +166,30 @@ def test_post_creation(b):
     verifie(statut, 409, "POST /creation une 2e fois -> 409")
 
 
+def test_post_renommage_puis_suppression(b):
+    statut, ident = b.requete("GET", f"/identite?env={RIDEAU}&lieu=garage&nom=porte2")
+    verifie((statut, ident.get("env") if isinstance(ident, dict) else ident), (200, "tasmota32s3-garage-porte2"),
+            "GET /identite?env= : base de l'env, env propose")
+    corps = {"env": RIDEAU, "lieu": "garage", "nom": "porte2", "identite": ident["identite"]}
+    statut, p = b.requete("POST", "/renommage/prepare", corps)
+    verifie((statut, p.get("refus") if isinstance(p, dict) else p), (200, []), "POST /renommage/prepare : aucun refus")
+    statut, r = b.requete("POST", "/renommage", dict(corps, empreinte=p["empreinte"]))
+    verifie((statut, r.get("env") if isinstance(r, dict) else r), (200, "tasmota32s3-garage-porte2"), "POST /renommage : renomme")
+    statut, p = b.requete("POST", "/suppression/prepare", {"env": "tasmota32s3-garage-porte2"})
+    verifie((statut, p.get("refus") if isinstance(p, dict) else p), (200, []), "POST /suppression/prepare : aucun refus")
+    statut, r = b.requete("POST", "/suppression", {"env": "tasmota32s3-garage-porte2", "empreinte": p["empreinte"]})
+    verifie((statut, r.get("dossier_sauvegarde") if isinstance(r, dict) else r),
+            (200, "data/garage/tasmota32s3-porte2-sauvegarde"), "POST /suppression : dossier en -sauvegarde")
+    statut, _ = b.requete("POST", "/suppression", {"env": "tasmota32s3-garage-porte2", "empreinte": p["empreinte"]})
+    verifie(statut, 404, "POST /suppression d'un env deja supprime -> 404")
+    statut, _ = b.requete("POST", "/suppression/prepare", {"env": "tasmota32s3-base-N16R8"})
+    verifie(statut, 200, "POST /suppression/prepare d'une base -> 200 avec refus")
+
+
 def principal():
     for test in (test_get, test_post_sans_entete, test_post_enregistre, test_post_pendant_build,
-                 test_post_empreinte_perimee, test_post_invalide, test_post_creation, test_erreur_inattendue):
+                 test_post_empreinte_perimee, test_post_invalide, test_post_creation, test_erreur_inattendue,
+                 test_post_renommage_puis_suppression):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier
             b = Banc(t)
