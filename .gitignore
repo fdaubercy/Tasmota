@@ -73,6 +73,10 @@ venv
 ## Qemu test folder
 tasmota-qemu
 
+# Local ESP-IDF build files, not tracked
+/sdkconfig.defaults
+/CMakeLists.txt
+
 ## Cache de session claude-flow (aucune valeur documentaire, reecrit a chaque session)
 .claude-flow/
 
