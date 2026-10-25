@@ -281,8 +281,12 @@ Conception : [spec](../docs/superpowers/specs/2026-10-24-page-build-televersemen
 - **Tâche VS Code** : `Ctrl+Maj+P` > Run Task > « Outil : build et téléversement (http://127.0.0.1:7700) ».
 - **Ligne de commande** : `python outils_docs/scripts_python/outils_pc/build_web.py` (`--http 7700`,
   `--local` pour n'écouter que ce PC, `--sans-navigateur`). Depuis un autre appareil du réseau : le lien à jeton
-  affiché dans la console (comme les autres outils). Pas de cible PlatformIO Custom : une cible est un `pio run`,
-  elle ne peut pas en piloter d'autres.
+  affiché dans la console (comme les autres outils).
+- **Cible PlatformIO** « Build et téléversement (page web) » dans *Project Tasks > <env> > Custom* (n'importe quel
+  env ESP32) : ouvre la page si elle tourne, sinon la démarre **détachée** (console dans
+  `%LOCALAPPDATA%\outils_tasmota\consolesuild.log`) et rend la main en quelques secondes — une cible est un
+  `pio run`, encore vivante elle serait prise pour un build en cours. La page survit à la cible : l'arrêter par
+  l'annuaire. Comme toute cible, **jamais pendant un build** (risque de purge de `.pio/build`).
 
 ### Les environnements et les actions
 

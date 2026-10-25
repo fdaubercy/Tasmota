@@ -577,8 +577,10 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   - `build_web.py` (+ `build_page.py`, `build_serie.py`, `build_envs.py`, `build_progression.py`, `build_ota_fs.py`,
     et pour les bancs `build_faux_pio.py`, `build_ota_carte_simulee.py`) — page « Build et televersement »
     http://127.0.0.1:7700 (tuile de l'annuaire, groupe Maintenance, hors job : l'annuaire refuse de l'arreter pendant
-    un lancement ; tache VS Code « Outil : build et televersement », **pas** de cible Custom : une cible est un
-    `pio run`). On coche des envs (Mes cartes / Mes bases / amont) et des actions (compiler, televerser le firmware
+    un lancement ; tache VS Code « Outil : build et televersement » ; cible Custom « Build et televersement (page web) »
+    (`build/cible_build_web.py`, banc `build/test_cible_build_web.py`) qui DEMARRE LA PAGE DETACHEE puis rend la
+    main : une cible est un `pio run`, vivante elle serait vue comme un build en cours ; `pio run` : jamais
+    pendant un build). On coche des envs (Mes cartes / Mes bases / amont) et des actions (compiler, televerser le firmware
     OU effacer puis televerser, construire le FS, televerser le FS), COM ou OTA par ligne ; les `pio run` s'enchainent
     un a un (jamais deux ensemble ; attente si un build apparait ailleurs ; refus si port tenu ou deux envois sur le
     meme port), avec etape, % et durees en direct, et la **sortie de pio en direct** par env (panneau « Sortie » :

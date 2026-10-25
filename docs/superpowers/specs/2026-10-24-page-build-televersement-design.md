@@ -262,8 +262,11 @@ contenu de tous les `.ini`**. Si l'empreinte change, `run/helpers.py:35-50` supp
     dépôt, `PYTHONIOENCODING=utf-8` et `PYTHONUTF8=1` (sinon la sortie est perdue sur le `✔` du
     pré-script). Arbre de processus tué par `taskkill /T /F /PID`.
 17. Une tâche VS Code « Outil : build et téléversement (http://127.0.0.1:7700) » sur le modèle des
-    autres. **Pas de cible PlatformIO Custom** (une cible est un `pio run` : elle ne peut pas piloter des
-    `pio run`).
+    autres. Cible PlatformIO Custom (révisé le 2026-10-25, demande de l'utilisateur) : une cible est un
+    `pio run` et ne peut pas piloter des `pio run` tant qu'elle vit (la page la verrait comme un build en
+    cours) ; la cible `build_web` (`build/cible_build_web.py`) ouvre donc la page si elle répond, sinon la
+    **démarre détachée** (hors job, sans fenêtre, console dans `consoles/build.log`) et rend la main dès
+    qu'elle répond.
 
 ## Évolution du 2026-10-25 : sortie en direct et `erase_upload`
 
