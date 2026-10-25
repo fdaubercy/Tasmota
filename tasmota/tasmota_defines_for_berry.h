@@ -38,6 +38,7 @@
 #define __UINT_LEAST16_MAX__ 0xffff
 #define D_SAT_FIX_NO_FIX "None"
 #define D_CMND_SETSENSOR "SetSensor"
+#define USE_PWM_DIMMER 
 #define __ATOMIC_ACQUIRE 2
 #define USE_IAQ 
 #define SYS_LOG_HOST "192.168.0.3"
@@ -189,6 +190,7 @@
 #define D_WEMO_EVENT_SERVICE "WeMo event service"
 #define TUYA_SETOPTION_137 false
 #define D_SENSOR_PCF8574_INT "PCF8574 Int"
+#define USE_DOMOTICZ 
 #define D_CMND_ZIGBEE_PERMITJOIN "PermitJoin"
 #define D_SENSOR_ARIRFSEL "ALux IrSel"
 #define D_JSON_CHARGE "Charge"
@@ -463,7 +465,6 @@
 #define D_JSON_FLOWRATE "FlowRate"
 #define D_FP_ENROLL_REMOVEFINGER "Retirer le doigt"
 #define __FLT_EVAL_METHOD_TS_18661_3__ 0
-#define USE_UNIVERSAL_DISPLAY 
 #define D_CMND_AP "Ap"
 #define D_NEOPOOL_RELAY_FILTRATION "Filtration"
 #define D_SO_PWMCT "PWMCT"
@@ -884,6 +885,7 @@
 #define D_DECRYPTION "Decryption"
 #define D_CMND_ZIGBEE_ENDPOINT "Endpoint"
 #define __FLT64_MIN_EXP__ (-1021)
+#define D_CMND_PWM_DIMMER_PWMS "PWMDimmerPWMs"
 #define USE_RDM6300 
 #define D_CMND_RFLOW "Low"
 #define SHELLY_FW_UPGRADE 
@@ -907,6 +909,7 @@
 #define __XCHAL_HAVE_BOOLEANS 1
 #define D_SO_ZIGBEE_NOAUTOQUERY "NoAutoQuery"
 #define D_JSON_AHUM "aHumidity"
+#define D_CMND_BRI_PRESET "BriPreset"
 #define D_SENSOR_MIEL_HVAC_RX "MiEl HVAC Rx"
 #define D_SENSOR_I2C_SDA "I2C SDa"
 #define D_DOMOTICZ_SENSOR_IDX "Sensor idx"
@@ -1072,7 +1075,6 @@
 #define __cpp_fold_expressions 201603L
 #define D_SENSOR_MAX31855_CLK "MX31855 Clk"
 #define D_CMND_PRESSURE_RESOLUTION "PressRes"
-#define USE_DISPLAY_LVGL_ONLY 
 #define D_JSON_GROUPS "Groups"
 #define DISABLE_REFERER_CHK 
 #define D_CMND_GROUPTOPIC "GroupTopic"
@@ -1329,7 +1331,6 @@
 #define D_RSLT_HASS_STATE "HASS_STATE"
 #define D_WATER_DEPTH "Profondeur de l’eau"
 #define D_CMND_SHUTTER_LOCK "Lock"
-#define USE_LVGL_OPENHASP 1
 #define GV_SAMPLING_INTERVAL 100
 #define D_CMND_BR_RUN ""
 #define D_STATUS12_STATUS "STK"
@@ -1357,7 +1358,6 @@
 #define MTX_ADDRESS3 0x75
 #define D_SENSOR_MCP23XXX_INT "MCP23xxx Int"
 #define D_AS3935_ABOVE "éclair trop intense"
-#define USE_UNIVERSAL_TOUCH 
 #define D_SENSOR_HC8_RX "HC8 Rx"
 #define D_JSON_IRHVAC_FANSPEED "FanSpeed"
 #define RGB_REMAP_RBGW 6
@@ -1589,7 +1589,7 @@
 #define D_SENSOR_BIOPDU_PZEM0XX_TX "BioPDU PZEM0XX Tx"
 #define USE_SDM120 
 #define FM24CXX_BLOCK_SIZE 256
-#define CFG_HOLDER 1510
+#define CFG_HOLDER 1547
 #define D_MODULE "Module"
 #define D_SENSOR_WS2812 "WS2812"
 #define D_SO_MQTTTLS "MqttTLS"
@@ -1653,6 +1653,7 @@
 #define USE_SCD40 
 #define QUOTEME(x) QUOTEME_1(x)
 #define D_UNIT_MILLIMETER_MERCURY "mmHg"
+#define USE_HOME_ASSISTANT 
 #define D_WARMLIGHT "Chaud"
 #define D_CHANNEL "Canal"
 #define D_HCHO "Formaldehyde"
@@ -1738,6 +1739,7 @@
 #define D_FP_ENROLL_ACTIVE "Actif"
 #define D_JSON_IR_RAWDATA "RawData"
 #define D_CMND_SHUTTER_STOPTOGGLEDIR "StopToggleDir"
+#define USE_EMULATION_WEMO 
 #define D_UNIT_WATTHOUR "Wh"
 #define WIFI_RGX_STATE 1
 #define LANGUAGE_MODULE_NAME 
@@ -2027,7 +2029,6 @@
 #define WIFI_NO_SLEEP false
 #define __FLT_HAS_INFINITY__ 1
 #define __GNUC_EXECUTION_CHARSET_NAME "UTF-8"
-#define USE_DISPLAY 
 #define D_JSON_PSRFREEMEMORY "PsrFree"
 #define _USER_CONFIG_OVERRIDE_H_ 
 #define MQTT_DISABLE_MODBUSRECEIVED 0
@@ -2137,7 +2138,6 @@
 #define DEVICE_GROUPS_PORT 4447
 #define USE_ENERGY_POWER_LIMIT 
 #define __INT_FAST8_MAX__ 0x7fffffff
-#define USE_LVGL 
 #define D_JSON_OTHER_HTTP_ERROR "Other http error"
 #define __INTPTR_MAX__ 0x7fffffff
 #define D_JSON_FREQUENCY "Frequency"
@@ -2311,6 +2311,7 @@
 #define __XCHAL_HAVE_DEPBITS 0
 #define D_GPIO_SHIFT595_SER "74x595 Ser"
 #define USE_MODBUS_BRIDGE_TCP 
+#define USE_DISPLAY_LCD 
 #define __SIZEOF_FLOAT__ 4
 #define USE_DEVICE_GROUPS 
 #define ESP32 1
@@ -2402,6 +2403,7 @@
 #define D_CMND_RESTART "Restart"
 #define WIFI_SUBNETMASK "255.255.255.0"
 #define D_WCFG_7_WIFIMANAGER_RESET_ONLY "ManagerRst"
+#define USE_DISPLAY_MATRIX 
 #define D_JSON_CURRENT_LIMIT "CurrentLimit"
 #define D_CONNECT_FAILED_TO "Échec de connexion à"
 #define D_ENERGY_YESTERDAY "Énergie hier"
@@ -2601,7 +2603,6 @@
 #define D_JSON_WHITE_CONTENT "WhiteContent"
 #define D_STATUS1_PARAMETER "PRM"
 #define __SIZEOF_WCHAR_T__ 2
-#define USE_BM8563 
 #define D_CMND_GPIOS "GPIOs"
 #define D_CMND_ZIGBEE_LOADDUMP "LoadDump"
 #define USE_ENERGY_MARGIN_DETECTION 
@@ -2686,7 +2687,6 @@
 #define DEBUG_TASMOTA_DRIVER 
 #define D_LOG_ETH "ETH: "
 #define D_JSON_IMPORT_POWER "ImportPower"
-#define USE_RTC_CHIPS 
 #define __DBL_DECIMAL_DIG__ 17
 #define KNX_ENERGY_CURRENT 20
 #define __STDC_UTF_32__ 1
@@ -2851,7 +2851,7 @@
 #define D_UNIT_CENTIMETER "cm"
 #define D_SENSOR_P9813_DAT "P9813 Dat"
 #define WIFI_RGX_IP_ADDRESS "192.168.4.1"
-#define MODULE WEMOS
+#define MODULE USER_MODULE
 #define D_JSON_START_LEARNING "Start learning"
 #define D_KNX_PHYSICAL_ADDRESS "Adresse individuelle"
 #define D_PRFX_ZB "Zb"
@@ -2980,6 +2980,7 @@
 #define D_FP_ENROLL_INACTIVE "Inactif"
 #define D_UNIT_MILLIMETER "mm"
 #define LIGHT_CHANNEL_MODE false
+#define USE_DISPLAY_SEVENSEG 
 #define __INT16_C(c) c
 #define D_UNIT_KILOMETER "km"
 #define D_CMND_VOLTAGELOW "VoltageLow"
@@ -3014,7 +3015,6 @@
 #define USE_UNISHOX_COMPRESSION 
 #define USE_I2C 
 #define D_CMND_ZIGBEE_LIGHT "Light"
-#define USE_I2S 
 #define D_PROJECT "Projet"
 #define D_RESETTABLE_TOTAL_ACTIVE "Total Active (RST)"
 #define D_CMND_ENERGYCONFIG "EnergyConfig"
@@ -3147,7 +3147,6 @@
 #define USE_LMT01 
 #define D_NEOPOOL_PR_OFF "PrOff"
 #define D_CMND_ZIGBEE_MANUF "Manuf"
-#define FIRMWARE_LVGL 1
 #define D_JSON_SAVECOUNT "SaveCount"
 #define D_JSON_ZIGBEE_OCCUPANCY "Occupancy"
 #define D_DUPLICATE_ACCESSPOINT "Point d'Accès dupliqué"
