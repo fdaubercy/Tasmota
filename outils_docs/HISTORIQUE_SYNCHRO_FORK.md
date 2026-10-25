@@ -292,3 +292,27 @@ Les commits marques ● ont un titre qui mentionne Berry / ESP32-S3 / nos sujets
 -   `43c6ca368` Update change logs
 - ● `da51c9b1d` LVGL add logging before crash when heap allocation fails (#25170)
 - ● `5ce1f1204` LVGL Panel improved click handling (#25171)
+
+## 2026-10-25 06:17 — 12 commit(s) recupere(s) d'upstream
+
+`arendst/Tasmota:development` → `fdaubercy/Tasmota:development` (merge_type : merge local, commit `217c9b384`)
+
+Synchro distante refusee par GitHub (« There are merge conflicts ») : conflit dans
+`.gitignore`, chaque cote ayant ajoute un bloc en fin de fichier (#25174 contre les
+regles `.claude/` et defines Berry du fork). Merge fait a la main, les deux blocs
+gardes ; entree ecrite a la main, pas par le script.
+
+**4 commit(s) ● a lire de pres.**
+
+- ● `fd390ea34` LVGL touch more responsive (#25172)
+-   `d8fe06cfe` Add BLE timeout and eQ3 TRV enhancements (#25173)
+-   `9515f82b2` Fix VEML7700 lux/white rounding, add new command (#25150)
+-   `805fc7cb0` WifiManager: name the setup AP as it is turned on (#25169)
+-   `2418be974` TuyaMCU: pace outgoing frames so the MCU is never written to back-to-back (#25151)
+-   `a19e0c658` Update change logs
+-   `c13305125` Remove root sdkconfig.defaults and CMakeLists.txt and ignore them (#25174)
+- ● `e1325dd29` LVGL Panel update version
+- ● `06d51e8fc` Matter: encode strings longer than 255 bytes (#25185)
+-   `4df6fa1d4` HttpClientLight: keep read timeouts longer than 65 s (#25180)
+- ● `0ad5879ab` Heap Map optional feature fur detailed memory usage at boot (#25186)
+-   `4d76e1530` wpa3 variant names changed with IDF 6.x (#25190)
