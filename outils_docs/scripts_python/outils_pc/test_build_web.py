@@ -143,7 +143,8 @@ def test_routes_locales(b):
     verifie((env_a.get("port"), env_a.get("famille"), env_a.get("fs_avec_firmware")), ("COM12", "cartes", True),
             "routes_locales : champs de Env (fs_avec_firmware compris)")
     verifie(donnees["derniers"], {}, "routes_locales : derniers choix vides au depart")
-    verifie(b.json("GET", "/execution"), (200, {"en_cours": False}), "routes_locales : GET /execution")
+    statut, execution = b.json("GET", "/execution")
+    verifie((statut, execution.get("en_cours"), execution.get("pause")), (200, False, None), "routes_locales : GET /execution")
     verifie(b.requete("GET", "/nimporte")[0], 404, "routes_locales : route inconnue = 404")
     verifie(b.requete("POST", "/nimporte", {})[0], 404, "routes_locales : POST inconnu = 404")
     verifie(b.requete("GET", "/journal?env=../x")[0], 400, "routes_locales : journal, nom d'env invalide = 400")
@@ -158,7 +159,7 @@ ATTENDUS_PAGE = {
     "les 4 sous-groupes amont": ["Safeboot", "ESP32", "Langues", "ESP8266"],
     "l'en-tete X-Build des POST": ['"X-Build": "1"'],
     "les routes": ['"/envs"', '"/execution"', '"/flux?depuis=0"', '"/journal?env="', '"/sortie?env="', '"/lancer"',
-                   '"/port"', '"/arreter"'],
+                   '"/port"', '"/arreter"', '"/continuer"'],
     "le bouton de lancement": ["l'un après l'autre"],
     "les deux arrets": ["Arrêter après cet env", "Arrêt immédiat", "data/&lt;lieu&gt;/&lt;carte&gt;"],
     "les mentions": ["repartira de zéro", "le file system (persist compris) sera aussi flashé",
@@ -372,14 +373,14 @@ def test_lancement(b):
     verifie(statut, 400, "lancer : corps mal forme = 400")
     verifie(b.json("GET", "/envs")[1]["derniers"], {}, "lancer : un refus ne memorise rien")
     verifie(b.json("POST", "/lancer", lancement), (200, {"ok": True}), "lancer : lancement accepte")
-    verifie(b.json("GET", "/execution"), (200, {"en_cours": True}), "execution_reflete_etat : en cours")
+    verifie(b.json("GET", "/execution")[1].get("en_cours"), True, "execution_reflete_etat : en cours")
     statut, texte = b.requete("POST", "/lancer", brut=json.dumps(lancement).encode("utf-8"), entetes={"X-Build": "1"})
     verifie((statut, "déjà en cours" in texte), (409, True), "lancer_409_si_en_cours : second lancement refuse")
     verifie(b.json("POST", "/port", {"env": A, "port": "COM14"})[0], 409, "port_refuse_pendant_lancement : 409")
     _, donnees = b.json("GET", "/envs")
     verifie(next(e["port"] for e in donnees["envs"] if e["nom"] == A), "COM12", "port_refuse_pendant_lancement : rien ecrit")
     b.attend_fin()
-    verifie(b.json("GET", "/execution"), (200, {"en_cours": False}), "execution_reflete_etat : termine")
+    verifie(b.json("GET", "/execution")[1].get("en_cours"), False, "execution_reflete_etat : termine")
     verifie(b.json("GET", "/envs")[1]["derniers"], {"lignes": [LIGNE_A], "actions": ["compiler"]},
             "lancer : derniers choix memorises")
     verifie(json.loads((b.dossier / "derniers.json").read_text(encoding="utf-8"))["actions"], ["compiler"],
@@ -456,6 +457,63 @@ def test_arret(b):
     verifie([e["resultat"] for e in ev if e["type"] == "fin"][-1:], ["arrete"], "arreter : lancement arrete")
 
 
+def attend_pause(b, delai=10.0):
+    limite = time.monotonic() + delai
+    while time.monotonic() < limite:
+        if b.serie.pause_en_cours():
+            return True
+        time.sleep(0.05)
+    ECHECS.append("delai depasse en attendant la pause")
+    print("KO   delai depasse en attendant la pause")
+    return False
+
+
+def test_continuer(b):
+    """Pause « rebranchez la carte » : POST /continuer protege, refus hors pause ou autre env, rejeu du flux."""
+    Path(os.environ[faux.VAR_SCENARIO]).write_text("{}", encoding="utf-8")
+    verifie(b.requete("POST", "/continuer", {"env": B, "choix": "continuer"})[0], 409, "continuer : aucune pause -> 409")
+    ligne_b = {"env": B, "methode": "com", "port": "COM12", "ip": ""}
+    verifie(b.json("POST", "/lancer", {"lignes": [LIGNE_A, ligne_b], "actions": ["upload"]})[0], 200,
+            "continuer : deux envois sur COM12 acceptes")
+    attend_pause(b)
+    _, execution = b.json("GET", "/execution")
+    verifie((execution.get("en_cours"), execution.get("pause"), execution.get("numero") == b.serie.numero),
+            (True, {"env": B, "port": "COM12", "precedent": A}, True),
+            "continuer : /execution expose la pause et le dernier numero d'evenement")
+    verifie([b.requete("POST", "/continuer", {"env": B, "choix": "continuer"}, entetes={})[0],
+             b.requete("POST", "/continuer", {"env": B, "choix": "continuer"},
+                       entetes={"X-Build": "1", "Origin": "http://evil.example"})[0]], [403, 403],
+            "continuer : sans X-Build ou d'une origine etrangere -> 403")
+    verifie([b.requete("POST", "/continuer", {"env": A, "choix": "continuer"})[0],
+             b.requete("POST", "/continuer", {"env": B, "choix": "plus tard"})[0]], [409, 400],
+            "continuer : autre env -> 409, choix invalide -> 400")
+    _, recus = lit_flux(b, "/flux?depuis=0", nombre=b.serie.numero, delai=3)
+    pauses = [e for _, e in recus if e["type"] in ("attente_carte", "reprise_carte")]
+    verifie([(e["type"], e["env"]) for e in pauses][-1:], [("attente_carte", B)],
+            "continuer : le flux rejoue la pause en cours (rechargement de la page)")
+    verifie(b.json("POST", "/continuer", {"env": B, "choix": "continuer"}), (200, {"ok": True}), "continuer : accepte")
+    b.attend_fin()
+    fins = [e for e in b.serie.depuis(0, 0) if e["type"] == "fin_env"][-2:]
+    verifie([(e["env"], e["resultat"]) for e in fins], [(A, "succes"), (B, "succes")], "continuer : les deux envs televerses")
+    verifie(b.json("GET", "/execution")[1].get("pause", "absent"), None, "continuer : plus de pause a la fin")
+
+
+def test_fermeture_pendant_pause():
+    """Ctrl+C du serveur pendant une pause : aucun envoi en vol, l'arret n'attend pas l'utilisateur."""
+    with tempfile.TemporaryDirectory() as t:
+        b = Banc(t)
+        try:
+            ligne_b = {"env": B, "methode": "com", "port": "COM12", "ip": ""}
+            b.json("POST", "/lancer", {"lignes": [LIGNE_A, ligne_b], "actions": ["upload"]})
+            attend_pause(b)
+            debut = time.monotonic()
+            build_web.arrete_serie(b.serie, attente=5)
+            verifie((b.serie.en_cours(), time.monotonic() - debut < 3), (False, True),
+                    "fermeture_pendant_pause : serie arretee sans attendre la reponse a la pause")
+        finally:
+            b.ferme()
+
+
 def test_fermeture():
     """ferme(serie) tue l'arbre du fils pio d'un lancement en cours (pas de pio orphelin)."""
     with tempfile.TemporaryDirectory() as t:
@@ -527,7 +585,7 @@ def principal():
             for test in (test_routes_locales, test_page_contient, test_envs_fs_avec_firmware, test_post_sans_entete_refuse, test_distant_sans_jeton_refuse,
                          test_corps_borne, test_port_ecrit_puis_relu, test_port_refuse_pendant_build_externe,
                          test_lancement, test_flux_et_journal, test_journal_dernier_lancement, test_arret,
-                         test_sortie_en_direct, test_erase_upload):
+                         test_sortie_en_direct, test_erase_upload, test_continuer):
                 test(b)
         finally:
             b.ferme()
@@ -535,6 +593,7 @@ def principal():
     test_sortie_env_exact()
     test_fermeture()
     test_fermeture_attend_envoi()
+    test_fermeture_pendant_pause()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0
 

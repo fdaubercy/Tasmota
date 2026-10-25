@@ -498,6 +498,7 @@ def sonde_page(m, capture):
     sonde_redemarrage(m)
     sonde_sortie(m)
     sonde_effacement(m)
+    sonde_pause(m)
     sonde_synthetique(cdp)
 
     # largeur telephone : colonnes empilees, pas de defilement horizontal
@@ -694,6 +695,44 @@ def sonde_effacement(m):
             f"effacer : acceptee -> ligne « Effacer puis téléverser », duree d'effacement, reussi ({rang[:120]})")
     verifie(cdp.js(f"document.querySelector('.bloc[data-bloc=\"{A}\"]').textContent.includes('aussi flashé avec le firmware')"), True,
             "effacer : FS aussi flashe signale dans le bloc (ligne post_esp32 d'un erase_upload)")
+
+
+def sonde_pause(m):
+    """Pause « rebranchez la carte » : deux envs sur COM12, bandeau, rechargement, Continuer, Passer."""
+    cdp = m.cdp
+    (m.t / "scenario.json").write_text("{}", encoding="utf-8")           # sorties nominales du faux pio
+    cdp.js(f"""(() => {{ const c = document.querySelector('.env[data-env="{C}"] .champ');
+      c.focus(); c.value = 'COM12'; c.dispatchEvent(new Event('input')); c.dispatchEvent(new Event('change')); c.blur(); }})()""")
+    attend(cdp, f"document.querySelector('.env[data-env=\"{C}\"] .notes').textContent.includes('repartira de zéro')", 8)
+    for env in (A, B, C):
+        coche(cdp, f"#env-{env}", env in (A, C))
+    for action in ("compiler", "upload", "erase_upload", "buildfs", "uploadfs"):
+        coche(cdp, f'input[name=action][value="{action}"]', action == "upload")
+    note = lambda env: cdp.js(f"document.querySelector('.env[data-env=\"{env}\"] .notes').textContent")
+    verifie(("même port que " + A in note(C), "même port" in note(A)), (True, False),
+            "pause : la ligne au port partage l'annonce (temoin : pas la premiere)")
+    bandeau = "(() => { const b = document.querySelector('.bandeau.carte'); return b ? b.textContent : ''; })()"
+    cdp.js("document.getElementById('lancer').click()")
+    texte = attend(cdp, bandeau, 15, 0.1) or ""
+    verifie((f"Branchez la carte {C} sur COM12 puis cliquez Continuer" in texte, "Passer cet env" in texte,
+             cdp.js("document.getElementById('etat').textContent.startsWith('en pause')"),
+             cdp.js("document.getElementById('arreter').disabled")), (True, True, True, False),
+            "pause : bandeau « Branchez la carte », Continuer / Passer, puce en pause, arret disponible")
+    m.ouvre()                                                          # rechargement pendant la pause
+    verifie(f"Branchez la carte {C}" in (attend(cdp, bandeau, 8, 0.1) or ""), True,
+            "pause : rechargement de la page -> le flux rejoue, le bandeau revient")
+    cdp.js("document.querySelector('.bandeau.carte button[data-choix=continuer]').click()")
+    fin = attend(cdp, f"(() => {{ const r = document.querySelector('.bloc[data-bloc=\"{C}\"] .rang[data-action=upload]');"
+                      " return !document.querySelector('.bandeau.carte') && r && r.textContent.includes('réussi'); })()", 15)
+    verifie(fin, True, "pause : Continuer -> bandeau retire, envoi de la 2e carte reussi")
+    attend(cdp, "!document.getElementById('lancer').disabled", 10)
+    cdp.js("document.getElementById('lancer').click()")
+    attend(cdp, bandeau, 15, 0.1)
+    cdp.js("document.querySelector('.bandeau.carte button[data-choix=passer]').click()")
+    recap = attend(cdp, "document.getElementById('recap').textContent.includes('passé') && document.getElementById('recap').textContent", 15) or ""
+    verifie(("1 passé (" + C in recap, cdp.js(f"document.querySelector('.bloc[data-bloc=\"{C}\"] .puce').textContent.startsWith('passé')"),
+             cdp.js("!document.querySelector('.bandeau.carte')")), (True, True, True),
+            f"pause : Passer cet env -> env passe, recap, bandeau retire ({recap[:90]})")
 
 
 def sonde_redemarrage(m):

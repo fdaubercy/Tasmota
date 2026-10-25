@@ -9,7 +9,7 @@ Routes appelees (formats : docstring de build_web.py ; evenements du flux : docs
     GET /envs (au chargement, et apres un lancement : ports relus), GET /execution,
     GET /flux?depuis=0 (EventSource : la reprise apres coupure envoie Last-Event-ID tout seul),
     GET /journal?env= (journal deplie), GET /sortie?env=&octet= (panneau « Sortie », lu par increments),
-    POST /lancer, /port, /arreter avec l'en-tete X-Build: 1.
+    POST /lancer, /port, /arreter, /continuer avec l'en-tete X-Build: 1.
 Tout texte venu du serveur est insere par textContent, jamais par innerHTML.
 
 Rattachements du suivi (pour ne pas creer de ligne « fantome » dans le bloc d'un env) :
@@ -21,6 +21,9 @@ Rattachements du suivi (pour ne pas creer de ligne « fantome » dans le bloc d'
 l'autre ; erase_upload par cable seulement (OTA grise), avec une confirmation avant le lancement.
 Un `detail` qui commence par « AVERTISSEMENT » (verification apres redemarrage de l'OTA du FS) donne un
 bandeau orange, distinct d'un echec (bandeau rouge).
+Pause « rebranchez la carte » (evenements attente_carte / reprise_carte) : bandeau « Branchez la carte X sur
+COMn » avec Continuer et Passer cet env (POST /continuer {env, choix}) ; le rejeu du flux le remontre tant que
+la pause dure. Une ligne cochee dont le port COM est celui d'une ligne cochee avant elle l'annonce.
 """
 
 PAGE = r"""<!doctype html>
@@ -115,6 +118,8 @@ PAGE = r"""<!doctype html>
   .bandeau.echec{background:var(--rouge-fond);border:1px solid var(--rouge);border-left:6px solid var(--rouge)}
   .bandeau.avertissement{background:var(--orange-fond);border:1px solid var(--orange);border-left:6px solid var(--orange)}
   .bandeau.attente{background:var(--bleu-fond);border:1px solid var(--bleu);border-left:6px solid var(--bleu)}
+  .bandeau.carte{background:var(--orange-fond);border:1px solid var(--orange);border-left:6px solid var(--orange);align-items:center}
+  .bandeau.carte .choix{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
   .bandeau b,.bandeau span{overflow-wrap:anywhere;min-width:0}
   .blocs{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}  /* blocs : toute la largeur, chaque rangee */
   .bloc{flex:1 1 340px;background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
@@ -178,6 +183,8 @@ PAGE = r"""<!doctype html>
         <label class="action"><input type="checkbox" name="action" value="uploadfs"> Téléverser le file system</label>
         <p class="discret" style="margin:6px 0 0">Ordre dans un env : compiler → téléverser le firmware (ou effacer puis
           téléverser) → construire le FS → téléverser le FS. Un échec arrête cet env ; les suivants continuent.</p>
+        <p class="discret" style="margin:4px 0 0">Plusieurs cartes sur le même port COM : la série compile, puis s'arrête
+          avant chaque envoi pour vous laisser brancher la carte suivante (Continuer ou Passer cet env).</p>
         <p class="discret" style="margin:4px 0 0">« Effacer puis téléverser » : à la place de « Téléverser le firmware »,
           par câble (COM) seulement ; persist et réglages de la carte effacés, remplacés par ceux du dépôt.</p>
       </div>
@@ -212,7 +219,7 @@ var TELEVERSEMENTS = ["upload", "erase_upload"];          // l'un OU l'autre : l
 var FAMILLES = [["cartes", "Mes cartes", true], ["bases", "Mes bases", true], ["amont", "Tasmota (amont)", false]];
 var SOUS_GROUPES = [["safeboot", "Safeboot"], ["esp32", "ESP32"], ["langues", "Langues"], ["esp8266", "ESP8266"]];
 var ETAPES_COMPILATION = ["Pré-build", "Compilation", "Édition des liens"];
-var STATUTS = {succes: "réussi", echec: "échec", annulee: "annulée", arrete: "arrêté"};
+var STATUTS = {succes: "réussi", echec: "échec", annulee: "annulée", arrete: "arrêté", passe: "passé"};
 var PORT = /^COM\d{1,3}$/i;
 var IPV4 = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
 
@@ -385,6 +392,10 @@ function majLigne(nom) {
     else if (!IPV4.test(c.ip.trim())) notes.push(["erreur", "adresse IPv4 invalide"]);
     else if (c.ip.trim() !== e.ip) notes.push(["note-info", "IP valable pour ce lancement seulement (user_config_override.h n'est pas modifié)"]);
   }
+  var avant = c.coche && c.methode === "com" && aUnEnvoi(acts) ? portPartage(nom) : "";
+  if (avant)
+    notes.push(["note-port", "même port que " + avant + " : la série s'arrêtera avant l'envoi pour vous laisser brancher cette carte sur " +
+                             c.port.trim().toUpperCase()]);
   if (c.coche && c.methode === "com" && televerse(acts) && e.fs_avec_firmware)
     notes.push(["note-fs", "le file system (persist compris) sera aussi flashé : cet env embarque des fichiers " +
                            "(custom_files_upload), post_esp32 reconstruit littlefs.bin à chaque compilation"]);
@@ -401,6 +412,17 @@ function majComptes() {
 }
 
 function envsCoches() { return envs.filter(function (e) { return choix[e.nom].coche; }); }
+
+// Env coche AVANT `nom` (ordre du lancement) en COM sur le meme port : la serie fera une pause avant l'envoi de `nom`.
+function portPartage(nom) {
+  var port = choix[nom].port.trim().toUpperCase(), coches = envsCoches();
+  if (!PORT.test(port)) return "";
+  for (var i = 0; i < coches.length && coches[i].nom !== nom; i++) {
+    var c = choix[coches[i].nom];
+    if (c.methode === "com" && c.port.trim().toUpperCase() === port) return coches[i].nom;
+  }
+  return "";
+}
 
 function majBouton() {
   var n = envsCoches().length;
@@ -646,6 +668,7 @@ function traite(e) {
   } else if (e.type === "fin_env") {
     b = bloc(e.env);
     b.statut = e.resultat || "succes";
+    if (L.carte && L.carte.env === e.env) L.carte = null;
     b.secondes = e.secondes;
     Object.keys(e.statuts || {}).forEach(function (a) {
       var r = b.rangs[a] || (b.rangs[a] = nouveauRang(a));
@@ -659,10 +682,18 @@ function traite(e) {
     bloc(e.env);
     if (e.builds && e.builds.length) L.attente = {env: e.env, builds: e.builds};
     else { L.attente = null; L.blocs[e.env].repris = true; planifie(e.env); }
+  } else if (e.type === "attente_carte") {
+    bloc(e.env);
+    L.carte = {env: e.env, port: e.port || "", precedent: e.precedent || "", erreur: "", envoi: false};
+    planifie(e.env);
+  } else if (e.type === "reprise_carte") {
+    if (L && L.carte && L.carte.env === e.env) L.carte = null;
+    planifie(e.env);
   } else if (e.type === "fin") {
     assureL();
     L.fin = e;
     L.attente = null;
+    L.carte = null;
     enCours = false;
     majBouton();
     chargeEnvs(true);              // relit les envs (ports, IP) apres le lancement
@@ -673,6 +704,7 @@ function traite(e) {
 function majEtat() {
   var etat = $("etat");
   if (fluxCoupe) { etat.textContent = "flux coupé : reconnexion…"; etat.className = "puce alerte"; }
+  else if (enCours && L && L.carte) { etat.textContent = "en pause : branchez la carte " + L.carte.env; etat.className = "puce alerte"; }
   else if (enCours) { etat.textContent = L && L.attente ? "en attente d'un autre build" : "lancement en cours"; etat.className = "puce encours"; }
   else if (L && L.fin) {
     var ko = (L.fin.echecs || []).length;
@@ -804,7 +836,7 @@ function dessineBloc(env) {
   var u = uiBlocs[env] || squelette(env);
   $("suivi-vide").style.display = "none";
   u.bloc.className = "bloc" + (b.statut === "echec" ? " echec" : b.statut === "encours" ? " encours" : "");
-  var classe = {attente: "", encours: "encours", succes: "ok", echec: "erreur", arrete: "alerte"}[b.statut] || "";
+  var classe = {attente: "", encours: "encours", succes: "ok", echec: "erreur", arrete: "alerte", passe: "alerte"}[b.statut] || "";
   var libelle = {attente: "en attente", encours: "en cours"}[b.statut] || STATUTS[b.statut] || b.statut;
   var methode = b.methode === "ota" ? "OTA " + (b.ip || "?") : (b.port ? "COM · " + b.port : "COM");
   u.tete.textContent = "";
@@ -816,6 +848,9 @@ function dessineBloc(env) {
   u.notes.textContent = "";
   if (b.fsAussi) u.notes.appendChild(h("div", {"class": "note-fs", texte: "Le file system (persist compris) est aussi flashé avec le firmware."}));
   if (b.repris) u.notes.appendChild(h("div", {"class": "discret", texte: "Reprise après l'attente d'un autre build."}));
+  if (L.carte && L.carte.env === env)
+    u.notes.appendChild(h("div", {"class": "note-fs", texte: "En pause : branchez la carte sur " + L.carte.port + " (bandeau en haut du suivi)."}));
+  if (b.statut === "passe") u.notes.appendChild(h("div", {"class": "discret", texte: "Env passé pendant la pause : envois non faits."}));
   u.extrait.textContent = "";
   if (b.motif) u.extrait.appendChild(h("div", {"class": "erreur", texte: b.motif}));
   if (b.extrait && b.extrait.length) u.extrait.appendChild(h("pre", {"class": "extrait", texte: b.extrait.join("\n")}));
@@ -855,6 +890,7 @@ function dessineBandeaux() {
       " et reprendra seule à sa fin. « Arrêter après cet env » annule la suite.";
     zone.appendChild(h("div", {"class": "bandeau attente"}, h("b", {texte: "En attente"}), h("span", {texte: texte})));
   }
+  if (L.carte) zone.appendChild(bandeauCarte(L.carte));
   L.bandeaux.forEach(function (x) {
     var d = h("div", {"class": "bandeau " + x.genre, "data-env": x.env}, h("b", {texte: x.titre}), h("span", {texte: x.texte}));
     if (x.env) d.appendChild(h("button", {"class": "lien", type: "button", texte: "voir le bloc", onclick: function () {
@@ -863,14 +899,40 @@ function dessineBandeaux() {
   });
 }
 
+// Pause « rebranchez la carte » : la serie attend la reponse (POST /continuer) ; les arrets restent disponibles.
+function bandeauCarte(p) {
+  var precede = p.precedent ? " (" + p.precedent + " vient d'être servi sur ce port)" : "";
+  var bContinuer = h("button", {"class": "btn p", type: "button", texte: "Continuer", "data-choix": "continuer"});
+  var bPasser = h("button", {"class": "btn", type: "button", texte: "Passer cet env", "data-choix": "passer"});
+  [bContinuer, bPasser].forEach(function (b) {
+    b.disabled = p.envoi;
+    b.onclick = function () { repondCarte(p, b.getAttribute("data-choix")); };
+  });
+  return h("div", {"class": "bandeau carte", "data-env": p.env},
+    h("b", {texte: "Branchez la carte " + p.env + " sur " + p.port + " puis cliquez Continuer"}),
+    h("span", {texte: "La compilation est faite ; rien n'est envoyé avant votre réponse" + precede + "."}),
+    p.erreur ? h("span", {"class": "erreur", texte: p.erreur}) : null,
+    h("span", {"class": "choix"}, bContinuer, bPasser));
+}
+
+async function repondCarte(p, choix) {
+  p.envoi = true; p.erreur = "";
+  planifie(null);
+  var r = await appel("/continuer", {env: p.env, choix: choix});
+  p.envoi = false;
+  if (!r.ok) p.erreur = "Réponse refusée : " + (r.texte || ("HTTP " + r.statut));
+  planifie(null);                // le bandeau disparait a l'evenement reprise_carte
+}
+
 function dessineRecap() {
   var zone = $("recap");
   zone.textContent = "";
   if (!L || !L.fin) return;
   var f = L.fin;
-  var ok = f.succes || [], ko = f.echecs || [], nl = f.non_lances || [];
+  var ok = f.succes || [], ko = f.echecs || [], nl = f.non_lances || [], pa = f.passes || [];
   var t = (f.resultat === "arrete" ? "Lancement arrêté" : "Lancement terminé") + " : " + ok.length + " réussi" + (ok.length > 1 ? "s" : "") +
           ", " + ko.length + " échec" + (ko.length > 1 ? "s" : "") + (ko.length ? " (" + ko.join(", ") + ")" : "") +
+          (pa.length ? ", " + pa.length + " passé" + (pa.length > 1 ? "s" : "") + " (" + pa.join(", ") + ")" : "") +
           (nl.length ? ", " + nl.length + " non lancé" + (nl.length > 1 ? "s" : "") + " (" + nl.join(", ") + ")" : "") + ".";
   zone.appendChild(h("div", {"class": ko.length ? "erreur" : "", style: "font-size:13px", texte: t}));
   if (f.fichiers_modifies && f.fichiers_modifies.length)
@@ -894,6 +956,7 @@ async function verifieExecution() {
     L.bandeaux.push({genre: "avertissement", env: "", titre: "Lancement interrompu",
                      texte: "l'outil a redémarré pendant le lancement : vérifier les cartes concernées (fin jamais reçue)."});
     L.attente = null;
+    L.carte = null;
   }
   majEtat();
   planifie(null);

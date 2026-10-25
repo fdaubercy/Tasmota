@@ -17,10 +17,19 @@ n'est pas deja coche), puis les fichiers de .pio/build/<env>/littlefs.bin (l'ima
 dans un dossier temporaire par build_ota_fs.extrait_image) envoyes par la fonction injectee `ota_fs`
 (/ufsu). Jamais littlefs_data : post_esp32.py le remplit a chaque edition des liens (choix 10.1).
 
-Refus avant de lancer (choix 11) : build deja en cours (garde_build), port COM tenu ou absent, deux
-envois COM sur le meme port (erase_upload est un envoi), IP OTA vide, erase_upload en OTA ou avec upload. Le controle « build en cours » est refait avant chaque env
+Refus avant de lancer (choix 11) : build deja en cours (garde_build), port COM tenu ou absent (erase_upload
+est un envoi), IP OTA vide, erase_upload en OTA ou avec upload. Le controle « build en cours » est refait avant chaque env
 suivant : la serie attend (evenement `attente`) puis reprend. Pendant qu'un fils de la serie tourne,
 rien n'est controle : la serie ne se bloque pas sur ses propres `pio run`.
+
+Pause « rebranchez la carte » (choix 11 revise, 2026-10-25) : deux lignes COM d'un meme lancement peuvent
+partager un port (une seule carte branchee a la fois). Pour un env dont l'envoi COM passe par un port deja
+servi par un env PRECEDENT de la serie, la compilation (si cochee) se fait d'abord, en un pio run a part ;
+puis, juste avant son premier envoi COM, la serie emet `attente_carte` et attend la reponse de la page
+(`reprend` : continuer ou passer). Continuer : attente d'un build externe eventuel, puis le port est
+reverifie (absent ou tenu -> echec de cet env, la serie continue). Passer : actions restantes « annulee »,
+env « passe ». Les deux arrets mettent fin a la pause (env « arrete », actions restantes « annulee ») ;
+aucun envoi n'est en vol pendant une pause.
 
 Evenements numerotes (modele maintenance/synchro_fork_session.Session, rejoues par `depuis`) :
   debut    env=None : lignes et actions du lancement ; env=X : debut d'un env
@@ -28,9 +37,11 @@ Evenements numerotes (modele maintenance/synchro_fork_session.Session, rejoues p
   duree    env, action, etape, secondes : emis des la fin de l'etape
   ligne    env, action, texte (sans ANSI)
   echec    env, action, motif, extrait
-  fin_env  env, resultat (succes | echec | arrete), statuts {action: succes | echec | annulee}
+  fin_env  env, resultat (succes | echec | arrete | passe), statuts {action: succes | echec | annulee}
   attente  env, builds (liste vide = reprise)
-  fin      env=None, resultat (termine | arrete), succes, echecs, non_lances, fichiers_modifies
+  attente_carte  env, port, precedent (env precedent sur ce port) : pause, la page demande de brancher la carte
+  reprise_carte  env, port, choix (continuer | passer | arret | echec), motif : fin de la pause
+  fin      env=None, resultat (termine | arrete), succes, echecs, passes, non_lances, fichiers_modifies
 
 Journal complet de chaque fils (sans ANSI) dans <dossier>/journaux/ ; par env, dans
 <dossier>/references.json, le total des .o et les objets du dernier build incremental reussi (base du %).
@@ -61,6 +72,7 @@ ENVOIS = {"upload", "erase_upload", "uploadfs"}
 TELEVERSEMENTS = ("upload", "erase_upload")         # televerser le firmware : l'un OU l'autre (choix 19)
 COMPILENT = ("compiler",) + TELEVERSEMENTS           # leur pio run compile : base du % et objets de reference
 ETAPE_ENVOI_FS = "Envoi des fichiers"
+ETAPE_ATTENTE_CARTE = "Attente de la carte"           # pause « rebranchez la carte » (port perdu a la reprise)
 FICHIERS_MODIFIES = ["platformio_override.ini", "tasmota/user_config_override.h"]
 MAX_EVENEMENTS = 50000
 DETECTION_IMPOSSIBLE = "détection impossible"
@@ -153,6 +165,7 @@ class Serie:
         self._arret = False
         self._arret_immediat = False
         self._envoi = False                              # un envoi vers une carte est en vol (envoi_en_cours)
+        self._pause = None                               # pause « rebranchez la carte » : {env, port, precedent, choix}
 
     # -- evenements -------------------------------------------------------------------------------------
 
@@ -184,6 +197,30 @@ class Serie:
     def _marque_envoi(self, envoi):
         with self.verrou:
             self._envoi = envoi
+
+    def pause_en_cours(self):
+        """{env, port, precedent} pendant une pause « rebranchez la carte », sinon None."""
+        with self.verrou:
+            if self._pause is None:
+                return None
+            return {k: self._pause[k] for k in ("env", "port", "precedent")}
+
+    def reprend(self, env, choix):
+        """Reponse de la page a la pause : « continuer » (carte branchee) ou « passer » (cet env).
+
+        ValueError : choix invalide ; RuntimeError : aucune pause en cours, ou elle attend un autre env.
+        """
+        if choix not in ("continuer", "passer"):
+            raise ValueError(f"choix invalide : {choix!r} (continuer ou passer)")
+        with self.verrou:
+            if not self._actif or self._pause is None:
+                raise RuntimeError("aucune pause en cours")
+            if self._pause["env"] != env:
+                raise RuntimeError(f"la pause en cours attend la carte {self._pause['env']}, pas {env}")
+            if self._pause["choix"] is not None:
+                raise RuntimeError("cette pause a déjà reçu une réponse")
+            self._pause["choix"] = choix
+            self.verrou.notify_all()
 
     # -- controle avant lancement ---------------------------------------------------------------------
 
@@ -229,9 +266,7 @@ class Serie:
                     motifs.append(f"{nom} : téléversement du FS en OTA pas encore disponible")
                 if "upload" in actions and self.ota_firmware is None:
                     motifs.append(f"{nom} : téléversement du firmware en OTA pas encore disponible")
-        for port, noms in ports.items():
-            if len(noms) > 1:
-                motifs.append(f"{port} : une seule carte par port, envoi demandé pour {', '.join(noms)}")
+        for port in ports:                              # un port partage : pause avant l'env suivant (choix 11 revise)
             etat = self.port_libre(port)
             if etat in ("tenu", "absent"):
                 quoi = "tenu par un autre outil (pont série, sniffeur, testeur ?)" if etat == "tenu" else "absent"
@@ -281,16 +316,21 @@ class Serie:
 
     def _execute(self, lignes, actions):
         ordonnees = [a for a in ORDRE if a in actions]
-        succes, echecs, non_lances, pio_lance = [], [], [], False
+        succes, echecs, passes, non_lances, pio_lance = [], [], [], [], False
+        envoi_com = bool(set(ordonnees) & ENVOIS)
+        servis = {}                                      # port COM -> dernier env de la serie qui l'a servi
         try:
             self._ajoute("debut", None, lignes=[asdict(l) for l in lignes], actions=ordonnees)
             for i, ligne in enumerate(lignes):
                 if self._arrete_demande() or (i > 0 and not self._attend_builds(ligne.env)):
                     non_lances = [l.env for l in lignes[i:]]
                     break
-                resultat, lance_pio = self._execute_env(ligne, ordonnees)
+                port = ligne.port.upper() if envoi_com and ligne.methode == "com" else ""
+                resultat, lance_pio = self._execute_env(ligne, ordonnees, servis.get(port) if port else None)
+                if port:
+                    servis[port] = ligne.env
                 pio_lance = pio_lance or lance_pio
-                (succes if resultat == "succes" else echecs).append(ligne.env)
+                {"succes": succes, "passe": passes}.get(resultat, echecs).append(ligne.env)
         except Exception as erreur:                     # garde-fou : la page doit toujours recevoir `fin`
             self._ajoute("echec", None, action="", motif=f"erreur inattendue de la série : {erreur!r}", extrait=[])
         finally:
@@ -302,8 +342,8 @@ class Serie:
             # libre sans son `fin`, et un nouveau lancement ne peut pas s'intercaler avant lui.
             with self.verrou:
                 self._ajoute("fin", None, resultat="arrete" if arrete else "termine", succes=succes,
-                             echecs=echecs, non_lances=non_lances, **champs)
-                self._actif, self._proc = False, None
+                             echecs=echecs, passes=passes, non_lances=non_lances, **champs)
+                self._actif, self._proc, self._pause = False, None, None
 
     def _attend_builds(self, env):
         """Attend qu'aucun build externe ne tourne ; False si l'arret est demande pendant l'attente.
@@ -329,17 +369,22 @@ class Serie:
                 if self._arret:
                     return False
 
-    def _plan(self, ligne, actions):
+    def _plan(self, ligne, actions, pause=False):
         """[(type, action de suivi, cible pio, actions couvertes, actions reussies si ok)] dans l'ordre.
 
         « couvertes » : celles qu'un echec de l'etape met en echec ; « reussies » : celles qu'un succes
         de l'etape acheve (une compilation qui prepare un envoi OTA n'acheve pas l'upload).
+        `pause` (port deja servi par un env precedent) : une etape « pause » juste avant le premier envoi
+        COM ; compiler + televerser y deviennent deux pio run, pour compiler avant la pause.
         """
         plan = []
         televerse = next((a for a in TELEVERSEMENTS if a in actions), None)
         if televerse:
             couvre = [a for a in ("compiler", televerse) if a in actions]
-            if ligne.methode == "com":
+            if ligne.methode == "com" and pause and "compiler" in actions:
+                plan.append(("pio", "compiler", "", ["compiler"], ["compiler"]))
+                plan.append(("pio", televerse, televerse, [televerse], [televerse]))
+            elif ligne.methode == "com":
                 plan.append(("pio", televerse, televerse, couvre, couvre))
             else:                                        # upload OTA (erase_upload en OTA : refuse par controle)
                 plan.append(("pio", "upload", "", couvre, [a for a in couvre if a == "compiler"]))   # compilation
@@ -355,19 +400,32 @@ class Serie:
                 if "buildfs" not in actions:
                     plan.append(("pio", "buildfs", "buildfs", ["uploadfs"], []))  # preparation de l'envoi
                 plan.append(("ota_fs", "uploadfs", "", ["uploadfs"], ["uploadfs"]))
+        if pause and ligne.methode == "com":
+            i = next((i for i, etape in enumerate(plan) if etape[0] == "pio" and etape[2] in ENVOIS), None)
+            if i is not None:
+                plan.insert(i, ("pause", plan[i][1], "", [plan[i][1]], []))
         return plan
 
-    def _execute_env(self, ligne, actions):
+    def _execute_env(self, ligne, actions, precedent=None):
+        """Un env ; `precedent` : env precedent de la serie sur le meme port COM (pause avant l'envoi)."""
         env, debut = ligne.env, time.monotonic()
         self._ajoute("debut", env, actions=actions, methode=ligne.methode, port=ligne.port, ip=ligne.ip)
         statuts = {a: "annulee" for a in actions}
-        plan = self._plan(ligne, actions)
+        plan = self._plan(ligne, actions, pause=precedent is not None)
         resultat, lance_pio = "succes", False
         for genre, action, cible, couvre, reussies in plan:
             if self._arrete_demande(immediat=True):     # arret immediat entre deux etapes : le reste « annulee »
                 resultat = "arrete"
                 break
-            if genre == "pio":
+            if genre == "pause":
+                choix, motif = self._attend_carte(ligne, precedent)
+                if choix in ("arret", "passer"):         # le reste « annulee »
+                    resultat = "arrete" if choix == "arret" else "passe"
+                    break
+                if choix == "continuer":
+                    continue
+                ok, extrait, etape = False, [], ETAPE_ATTENTE_CARTE      # port absent ou tenu a la reprise
+            elif genre == "pio":
                 lance_pio = True
                 ok, motif, extrait, etape = self._lance_pio(ligne, action, cible)
             else:
@@ -391,6 +449,31 @@ class Serie:
         self._ajoute("fin_env", env, resultat=resultat, statuts=statuts,
                      secondes=round(time.monotonic() - debut, 2))
         return resultat, lance_pio
+
+    def _attend_carte(self, ligne, precedent):
+        """Pause avant l'envoi : (choix, motif), choix = continuer | passer | arret | echec (port perdu).
+
+        Attend `reprend` ou un arret (les deux arrets y mettent fin : rien n'est en vol). Apres
+        « continuer » : un build externe apparu pendant la pause est attendu, puis le port est reverifie.
+        """
+        env, port = ligne.env, ligne.port.upper()
+        self._ajoute("attente_carte", env, port=port, precedent=precedent)
+        with self.verrou:
+            self._pause = {"env": env, "port": port, "precedent": precedent, "choix": None}
+            while self._pause["choix"] is None and not self._arret:
+                self.verrou.wait(1.0)
+            choix = "arret" if self._arret else self._pause["choix"]
+            self._pause = None
+        motif = ""
+        if choix == "continuer" and not self._attend_builds(env):
+            choix = "arret"
+        if choix == "continuer":
+            etat = self.port_libre(port)
+            if etat in ("tenu", "absent"):
+                quoi = "tenu par un autre outil (pont série, sniffeur, testeur ?)" if etat == "tenu" else "absent"
+                choix, motif = "echec", f"{port} {quoi} à la reprise : carte {env} non branchée ou port occupé, envoi non fait"
+        self._ajoute("reprise_carte", env, port=port, choix=choix, motif=motif)
+        return choix, motif
 
     def _chrono(self, env, action):
         """Mesure des etapes : renvoie (change(etape), termine()) qui emettent `duree` a chaque fin."""

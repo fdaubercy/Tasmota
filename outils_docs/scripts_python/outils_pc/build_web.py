@@ -10,7 +10,8 @@ Les `pio run` sont lances en serie par build_serie.Serie ; ici, seulement le ser
 Routes (les POST exigent l'en-tete X-Build: 1 et la meme origine) :
     GET  /           la page (A6 : build_page.PAGE ; a defaut, une page provisoire)
     GET  /envs       {envs: [champs de Env, dont fs_avec_firmware], derniers: derniers choix}
-    GET  /execution  {en_cours: bool}
+    GET  /execution  {en_cours: bool, numero: dernier numero d'evenement, pause: {env, port, precedent} | null}
+                     (numero : la page sait quand le rejeu du flux est fini ; l'annuaire ne lit que en_cours)
     GET  /flux       Server-Sent Events de la serie (rejoues depuis Last-Event-ID ou ?depuis=n ; un numero
                      superieur au dernier de la serie vaut 0 : page restee ouverte sur un outil redemarre)
     GET  /journal    ?env=<env> : texte du journal pio du dernier lancement de cet env
@@ -20,6 +21,8 @@ Routes (les POST exigent l'en-tete X-Build: 1 et la meme origine) :
     POST /port       {env, port} : ecrit upload_port (409 pendant un lancement ou un build lance ailleurs,
                      400 si invalide)
     POST /arreter    {immediat: bool}
+    POST /continuer  {env, choix: continuer | passer} : reponse a la pause « rebranchez la carte » (409 si
+                     aucune pause en cours ou si elle attend un autre env, 400 si choix invalide)
 """
 
 import argparse
@@ -172,6 +175,9 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
         if chemin == "/arreter":
             serie.arrete(bool(demande.get("immediat")))
             return {"ok": True}
+        if chemin == "/continuer":                         # ValueError (400) ou RuntimeError (409)
+            serie.reprend(str(demande.get("env") or ""), str(demande.get("choix") or ""))
+            return {"ok": True}
         raise LookupError(chemin)
 
     class Gestionnaire(BaseHTTPRequestHandler):
@@ -217,7 +223,7 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                 elif url.path == "/envs":
                     self._json(liste_envs_json(racine, dossier))
                 elif url.path == "/execution":
-                    self._json({"en_cours": serie.en_cours()})
+                    self._json({"en_cours": serie.en_cours(), "numero": serie.numero, "pause": serie.pause_en_cours()})
                 elif url.path == "/flux":
                     depuis = self.headers.get("Last-Event-ID") or params.get("depuis", ["0"])[0]
                     depuis = int(depuis) if str(depuis).isdigit() else 0

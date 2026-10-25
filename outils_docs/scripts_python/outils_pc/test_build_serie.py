@@ -302,15 +302,163 @@ def test_refus_port_tenu():
                 "refus_port_tenu : temoin, compiler seul ne regarde pas le port")
 
 
-def test_refus_meme_port():
+def test_meme_port_accepte():
+    """Choix 11 revise : deux envois sur le meme port sont acceptes (pause « rebranchez la carte ») ;
+    le port est toujours verifie (tenu, absent)."""
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t, ports={"COM35": "tenu"})
+        verifie(m.serie.controle([com(A, "COM34"), com(B, "COM34")], {"upload"}), [],
+                "meme_port : deux envois sur COM34 acceptes (la serie fera une pause)")
+        verifie(m.serie.controle([com(A, "COM34"), com(B, "COM34")], {"compiler"}), [],
+                "meme_port : deux compilations seules acceptees")
+        motifs = m.serie.controle([com(A, "COM35"), com(B, "COM35")], {"upload"})
+        verifie(any("COM35" in x and "tenu" in x for x in motifs), True,
+                "meme_port : temoin, port partage mais tenu par un autre outil -> refus")
+
+
+# -- pause « rebranchez la carte » (deux envs d'une meme serie sur le meme port COM) ------------------
+
+PAUSE_PORT = "COM34"
+
+
+def lance_pause(m, lignes, actions):
+    """Lance et attend la pause (evenement attente_carte) ; renvoie les evenements recus jusque-la."""
+    m.serie.lance(lignes, set(actions))
+    return m.attend("attente_carte")
+
+
+def test_pause_avant_envoi():
     with tempfile.TemporaryDirectory() as t:
         m = Montage(t)
-        motifs = m.serie.controle([com(A, "COM34"), com(B, "COM34")], {"upload"})
-        verifie(any("COM34" in x for x in motifs), True, "refus_meme_port : deux envois sur COM34 refuses")
-        verifie(m.serie.controle([com(A, "COM34"), com(B, "COM34")], {"compiler"}), [],
-                "refus_meme_port : deux compilations seules acceptees")
-        verifie(m.serie.controle([com(A, "COM34"), ota(B)], {"upload"}), [],
-                "refus_meme_port : temoin, une ligne OTA n'occupe pas le port")
+        ev = lance_pause(m, [com(A, PAUSE_PORT), com(B, PAUSE_PORT)], {"compiler", "upload"})
+        pause = du_type(ev, "attente_carte")
+        verifie([(p["env"], p["port"], p["precedent"]) for p in pause], [(B, PAUSE_PORT, A)],
+                "pause : attente_carte (env, port, env precedent sur ce port)")
+        verifie([a["argv"] for a in m.appels()],
+                [["run", "-e", A, "-t", "upload", "--upload-port", PAUSE_PORT], ["run", "-e", B]],
+                "pause : la compilation de l'env 2 se fait AVANT la pause, son envoi pas encore")
+        verifie((m.serie.en_cours(), m.serie.envoi_en_cours(), m.serie.pause_en_cours()),
+                (True, False, {"env": B, "port": PAUSE_PORT, "precedent": A}),
+                "pause : serie en cours, aucun envoi en vol, pause exposee")
+        time.sleep(0.3)
+        verifie(len(m.appels()), 2, "pause : rien n'est lance tant que l'utilisateur n'a pas repondu")
+        # apres la reponse, une pause bornee de controle des builds externes : un build est apparu pendant la pause
+        k = m.appels_builds + 1
+        m.builds = lambda n: ["tasmota32-vscode"] if n == k else []
+        m.serie.reprend(B, "continuer")
+        ev = m.attend("fin")
+        verifie([a["argv"] for a in m.appels()][2:], [["run", "-e", B, "-t", "upload", "--upload-port", PAUSE_PORT]],
+                "pause : Continuer -> envoi de l'env 2 lance")
+        verifie([(e["env"], e["choix"]) for e in du_type(ev, "reprise_carte")], [(B, "continuer")],
+                "pause : evenement reprise_carte (choix continuer)")
+        verifie([e["builds"] for e in du_type(ev, "attente", env=B)], [["tasmota32-vscode"], []],
+                "pause : build apparu pendant la pause -> attente avant l'envoi, puis reprise")
+        verifie(du_type(ev, "fin_env", env=B)[0]["statuts"] if du_type(ev, "fin_env", env=B) else None,
+                {"compiler": "succes", "upload": "succes"}, "pause : env 2 compile puis televerse, succes")
+        verifie(m.serie.pause_en_cours(), None, "pause : plus de pause apres la reponse")
+
+
+def test_pause_place():
+    """Sans compiler, la pause precede le pio run qui compile et envoie ; une seule pause par env ; temoins."""
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t)
+        lance_pause(m, [com(A, PAUSE_PORT), com(B, PAUSE_PORT)], {"upload"})
+        verifie([a["env"] for a in m.appels()], [A], "pause_place : upload seul -> pause avant le pio run de l'env 2")
+        m.serie.reprend(B, "continuer")
+        m.attend("fin")
+        lance_pause(m, [com(A, PAUSE_PORT), com(B, PAUSE_PORT)], {"buildfs", "uploadfs"})
+        verifie([(a["env"], a["cible"]) for a in m.appels()][-3:], [(A, "buildfs"), (A, "uploadfs"), (B, "buildfs")],
+                "pause_place : buildfs + uploadfs -> FS de l'env 2 construit avant la pause")
+        m.serie.reprend(B, "continuer")
+        m.attend("fin")
+        ev = lance_pause(m, [com(A, PAUSE_PORT), com(B, PAUSE_PORT)], {"upload", "uploadfs"})
+        m.serie.reprend(B, "continuer")
+        ev += m.attend("fin")
+        verifie(len(du_type(ev, "attente_carte")), 1, "pause_place : upload + uploadfs -> une seule pause par env")
+        ev = m.lance([com(A, "COM1"), com(B, "COM2"), ota(C)], {"upload"})
+        verifie(du_type(ev, "attente_carte"), [], "pause_place : temoin, ports differents ou OTA -> aucune pause")
+        ev = m.lance([com(A, PAUSE_PORT), com(B, PAUSE_PORT)], {"compiler", "buildfs"})
+        verifie(du_type(ev, "attente_carte"), [], "pause_place : temoin, sans envoi -> aucune pause")
+
+
+def test_pause_passer():
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t)
+        lance_pause(m, [com(A, PAUSE_PORT), com(B, PAUSE_PORT), com(C, "COM3")], {"compiler", "upload"})
+        m.serie.reprend(B, "passer")
+        ev = m.attend("fin")
+        fe = {e["env"]: (e["resultat"], e["statuts"]) for e in du_type(ev, "fin_env")}
+        verifie(fe.get(B), ("passe", {"compiler": "succes", "upload": "annulee"}),
+                "pause_passer : env passe, compilation faite, envoi annule")
+        verifie((fe.get(C, ("",))[0], [a["env"] for a in m.appels()]), ("succes", [A, B, C]),
+                "pause_passer : la serie continue (env 3), l'envoi de l'env 2 n'est pas lance")
+        f = du_type(ev, "fin")[0] if du_type(ev, "fin") else {}
+        verifie((f.get("succes"), f.get("echecs"), f.get("passes")), ([A, C], [], [B]), "pause_passer : fin cite l'env passe")
+
+
+def test_pause_port_perdu():
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t)
+        lance_pause(m, [com(A, PAUSE_PORT), com(B, PAUSE_PORT), com(C, "COM3")], {"compiler", "upload"})
+        m.ports[PAUSE_PORT] = "absent"                    # carte debranchee et pas rebranchee
+        m.serie.reprend(B, "continuer")
+        ev = m.attend("fin")
+        fe = {e["env"]: (e["resultat"], e["statuts"]) for e in du_type(ev, "fin_env")}
+        verifie(fe.get(B), ("echec", {"compiler": "succes", "upload": "echec"}),
+                "pause_port_perdu : port absent a la reprise -> echec de l'env, compilation gardee")
+        e = du_type(ev, "echec", env=B)
+        verifie(bool(e) and PAUSE_PORT in e[0]["motif"] and "absent" in e[0]["motif"] and B in e[0]["motif"], True,
+                f"pause_port_perdu : motif clair ({e[0]['motif'] if e else None})")
+        verifie((fe.get(C, ("",))[0], [a["env"] for a in m.appels()]), ("succes", [A, B, C]),
+                "pause_port_perdu : la serie continue, aucun envoi de l'env 2")
+        m.ports[PAUSE_PORT] = "tenu"
+        lance_pause(m, [com(A, "COM3"), com(B, "COM3")], {"upload"})
+        m.ports["COM3"] = "tenu"
+        m.serie.reprend(B, "continuer")
+        e = du_type(m.attend("fin"), "echec", env=B)
+        verifie(bool(e) and "tenu" in e[0]["motif"], True, "pause_port_perdu : port tenu a la reprise -> echec")
+
+
+def test_pause_reprend_refus():
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t)
+
+        def refus(env, choix):
+            try:
+                m.serie.reprend(env, choix)
+                return "accepte"
+            except RuntimeError:
+                return "RuntimeError"
+            except ValueError:
+                return "ValueError"
+
+        verifie(refus(B, "continuer"), "RuntimeError", "reprend : aucune pause en cours -> refus")
+        lance_pause(m, [com(A, PAUSE_PORT), com(B, PAUSE_PORT)], {"upload"})
+        verifie((refus(A, "continuer"), refus(B, "rien"), m.serie.pause_en_cours() is not None),
+                ("RuntimeError", "ValueError", True), "reprend : autre env ou choix invalide -> refus, pause gardee")
+        verifie(refus(B, "continuer"), "accepte", "reprend : temoin, bon env et bon choix")
+        m.attend("fin")
+
+
+def test_pause_arrets():
+    """Les deux arrets ne restent pas bloques sur une pause."""
+    for immediat in (False, True):
+        with tempfile.TemporaryDirectory() as t:
+            m = Montage(t)
+            lance_pause(m, [com(A, PAUSE_PORT), com(B, PAUSE_PORT), com(C, "COM3")], {"compiler", "upload"})
+            debut = time.monotonic()
+            m.serie.arrete(immediat)
+            ev = m.attend("fin", delai=5)
+            nom = "arret immediat" if immediat else "arreter apres cet env"
+            verifie(time.monotonic() - debut < 2, True, f"pause_arrets : {nom} pendant la pause -> fin rapide")
+            fe = du_type(ev, "fin_env", env=B)
+            verifie((fe[0]["resultat"], fe[0]["statuts"]) if fe else None, ("arrete", {"compiler": "succes", "upload": "annulee"}),
+                    f"pause_arrets : {nom} -> env 2 arrete, envoi annule")
+            f = du_type(ev, "fin")
+            verifie((f[0]["resultat"], f[0]["non_lances"]) if f else None, ("arrete", [C]),
+                    f"pause_arrets : {nom} -> serie arretee, env 3 non lance")
+            verifie((m.serie.en_cours(), [a["env"] for a in m.appels()]), (False, [A, B]),
+                    f"pause_arrets : {nom} -> aucun envoi de l'env 2")
 
 
 def test_refus_ip_vide():
@@ -649,8 +797,8 @@ def test_erase_upload_refus():
                 "erase_upload_refus : ligne OTA refusee (cable seulement)")
         verifie(any("COM7" in x for x in m.serie.controle([com(A, "COM7")], {"erase_upload"})), True,
                 "erase_upload_refus : port tenu refuse (c'est un envoi)")
-        verifie(any("COM34" in x for x in m.serie.controle([com(A, "COM34"), com(B, "COM34")], {"erase_upload"})), True,
-                "erase_upload_refus : deux envois sur le meme port refuses")
+        verifie(any("COM7" in x for x in m.serie.controle([com(A, "COM7"), com(B, "COM7")], {"erase_upload"})), True,
+                "erase_upload_refus : port partage et tenu -> refus (l'envoi partage n'echappe pas au controle)")
         verifie(bool(m.serie.controle([com(A, "")], {"erase_upload"})), True, "erase_upload_refus : port vide refuse")
         verifie(m.serie.controle([com(A)], {"compiler", "erase_upload", "buildfs", "uploadfs"}), [],
                 "erase_upload_refus : temoin, combinable avec compiler, buildfs, uploadfs")
@@ -703,7 +851,9 @@ def principal():
     garde_fou()
     for test in (test_commandes, test_serie_upload_ota_par_page, test_ordre_actions, test_serie_un_par_un,
                  test_serie_continue_apres_echec, test_duree_des_la_fin, test_refus_build_en_cours,
-                 test_refus_port_tenu, test_refus_meme_port, test_refus_ip_vide,
+                 test_refus_port_tenu, test_meme_port_accepte, test_refus_ip_vide,
+                 test_pause_avant_envoi, test_pause_place, test_pause_passer, test_pause_port_perdu,
+                 test_pause_reprend_refus, test_pause_arrets,
                  test_serie_attend_build_externe, test_serie_attend_detection_impossible,
                  test_arret_apres_env, test_arret_immediat, test_upload_reussi_puis_arret_immediat,
                  test_ota_annule_si_arret_immediat, test_fin_avant_liberation, test_envoi_en_cours,
