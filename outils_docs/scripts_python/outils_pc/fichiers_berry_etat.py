@@ -83,7 +83,7 @@ def _exclude_solidifies(ini, env):
 def _provenance(ini, env, option, e):
     # partagee : la ligne touche d'autres envs que celui-ci ([berry_commun], option d'une base, y compris
     # l'option propre d'une base vue depuis la base elle-meme : ses cartes en heritent)
-    envs = fbi.envs_touches(ini, e.section, e.option, option)
+    envs = fbi.envs_touches(ini, e.section, e.option, OPTIONS)      # la ligne sert peut-etre a une autre option
     return {"option": option, "section": e.section, "option_ecrite": e.option, "fichier": e.fichier,
             "ligne": e.ligne, "commentaire": e.commentaire, "partagee": bool(set(envs) - {env}),
             "amont": e.fichier != fbi.FICHIER_CENV, "envs": envs or [env]}
@@ -111,12 +111,13 @@ def etat_env(racine, env):
     for f in fichiers:
         prov = [_provenance(ini, env, o, e) for o in OPTIONS for e in listes[o] if e.chemin == f["chemin"]]
         dans = {p["option"] for p in prov}
+        doublon = len(dans) < len(prov)          # deux fois dans la meme option (socle ET liste propre)
         if f["groupe"] == "amont":
             etat = "fs" if UPLOAD in dans else "absent"
-            incoherent = bool(dans - {UPLOAD})
+            incoherent = bool(dans - {UPLOAD}) or doublon
         else:
             etat = "solidifie" if SOLIDIFY in dans else "exclu" if EXCLUDE in dans else "fs"
-            incoherent = {SOLIDIFY, EXCLUDE} <= dans
+            incoherent = {SOLIDIFY, EXCLUDE} <= dans or doublon
         autres = [c for c in noms.get(Path(f["chemin"]).name, []) if c != f["chemin"]]
         f.update(etat=etat, provenances=prov, incoherent=incoherent,
                  figes=f["groupe"] == "carte" and Path(f["chemin"]).name in FIGES,

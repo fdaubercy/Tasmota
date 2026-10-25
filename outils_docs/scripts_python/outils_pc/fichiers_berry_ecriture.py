@@ -102,6 +102,10 @@ def _calcule(racine, env, demandes):
             raise ValueError(f"etat {d.etat!r} impossible pour {f['chemin']}")
         cible = _cible(f["groupe"], d.etat)
         a_retirer = [p for p in f["provenances"] if p["option"] != cible]
+        memes = [p for p in f["provenances"] if p["option"] == cible]
+        if len(memes) > 1:                                # doublon : la ligne partagee (ou la 1re) reste
+            garde = next((p for p in memes if p["partagee"] or p["amont"]), memes[0])
+            a_retirer += [p for p in memes if p is not garde and not p["partagee"] and not p["amont"]]
         amont = [p for p in a_retirer if p["amont"]]
         if amont:
             refus += [f"{f['chemin']} : ligne de {p['section']} ecrite dans {p['fichier']} (liste de l'amont), "

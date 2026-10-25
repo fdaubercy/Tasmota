@@ -231,6 +231,29 @@ def test_define_en_commentaire(racine):
     verifie(fbc.prepare_creation(racine, creation())["refus"], [], "define cite en commentaire seulement : pas un refus")
 
 
+def test_nom_base(racine):
+    for lieu, nom in (("garage", "base-x"), ("base", "porte"), ("garage", "porte-base")):
+        try:
+            refus = fbc.prepare_creation(racine, creation(lieu=lieu, nom=nom))["refus"]
+            verifie(any("base" in r for r in refus), True, f"nom d'env avec « -base » : refus clair ({lieu}/{nom})")
+        except Exception as erreur:
+            verifie(repr(erreur), "un refus", f"nom d'env avec « -base » : refus clair ({lieu}/{nom})")
+
+
+def test_commentaire_dans_upload(racine):
+    f = racine / fbi.FICHIER_CENV
+    t = f.read_bytes().decode("utf-8")
+    eol = "\r\n" if "\r\n" in t else "\n"
+    a = "custom_files_upload     =   ${env:tasmota32s3-base-N16R8.custom_files_upload}" + eol
+    debut = t.index("[env:" + RIDEAU + "]")
+    i = t.index(a, debut)
+    f.write_bytes((t[:i + len(a)] + "; commentaire au milieu de la liste" + eol + t[i + len(a):]).encode("utf-8"))
+    cree(racine, creation())
+    up = [e.chemin for e in fbi.resout(fbi.lit_sections(racine), "tasmota32s3-garage-porte-test", "custom_files_upload")]
+    verifie((up.count("data/garage/tasmota32s3-porte-test"), DOSSIER_RIDEAU in up), (1, False),
+            "modele avec un commentaire dans custom_files_upload : liste remplacee en entier")
+
+
 def test_diff_masque(racine):
     p = fbc.prepare_creation(racine, creation())
     h = texte(racine, fbc.FICHIER_H)
@@ -300,7 +323,7 @@ def test_vu_par_build(racine):
 def principal():
     test_nom_et_define()
     for test in (test_section_cenv, test_chemins_reecrits, test_section_h, test_modele_cave, test_persist_octets,
-                 test_insertion_lieu, test_refus, test_identite_invalide, test_define_en_commentaire, test_diff_masque, test_sauvegarde, test_creation_atomique,
+                 test_insertion_lieu, test_refus, test_identite_invalide, test_define_en_commentaire, test_nom_base, test_commentaire_dans_upload, test_diff_masque, test_sauvegarde, test_creation_atomique,
                  test_copies_temporaires_ignorees, test_vu_par_build):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier

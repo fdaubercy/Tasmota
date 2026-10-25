@@ -142,7 +142,7 @@ var CHAMPS = ["CODE_IMAGE_STR", "PROJECT", "WIFI_IP_ADDRESS", "WIFI_RGX_SSID", "
               "MQTT_GRPTOPIC", "FRIENDLY_NAME"];
 var LIBELLES = {fs: "Sur le FS", exclu: "Exclu", solidifie: "Solidifié", absent: "Absent", retire: "ligne retirée"};
 var GROUPES = {fs: "data/fs", carte: "carte", amont: "amont"};
-var URL_BUILD = "http://127.0.0.1:7700/";
+var URL_BUILD = location.protocol + "//" + location.hostname + ":7700/";   // page build, meme hote
 var envs = [], etat = null, attente = {}, enAttenteDePartage = null, empreinte = "", creationEmpreinte = "";
 
 function h(balise, attrs) {
@@ -311,7 +311,7 @@ function appliquer() {
   var f = parChemin($("fichier").value), e = etatChoisi();
   $("refus-local").textContent = "";
   if (!f || !e) return;
-  if (e === f.etat) { delete attente[f.chemin]; dessine(); return; }
+  if (e === f.etat && !f.incoherent) { delete attente[f.chemin]; dessine(); return; }   // incoherent : nettoyer
   var retraits = f.provenances.filter(function (p) { return p.option !== cible(f, e); });
   var amont = retraits.filter(function (p) { return p.amont; });
   if (amont.length) {

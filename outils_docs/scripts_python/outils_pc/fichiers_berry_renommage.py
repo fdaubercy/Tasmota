@@ -80,7 +80,8 @@ def _calcule(racine, r):
     nouvel_env = fbc.nom_env(base, r.lieu, r.nom)
     nouveau = r.define or fbc.define(base, r.lieu, r.nom)
     dossier, ancien = fbe.dossier_carte(r.env), fbx.define_de(ini, r.env)
-    nouveau_dossier = fbe.dossier_carte(nouvel_env) if fbc.NOM.fullmatch(r.nom) and fbc.LIEU.fullmatch(r.lieu) else ""
+    valide = fbc.NOM.fullmatch(r.nom) and fbc.LIEU.fullmatch(r.lieu) and not fbe.est_base(nouvel_env)
+    nouveau_dossier = fbe.dossier_carte(nouvel_env) if valide else ""     # « -base » : refuse par _refus
     demande = json.dumps(asdict(r), sort_keys=True, ensure_ascii=False).encode("utf-8")
     res = {"env": r.env, "nouvel_env": nouvel_env, "dossier": dossier, "nouveau_dossier": nouveau_dossier,
            "define": nouveau, "avertissements": [], "refus": [], "diff": "", "eol": (e_c, e_h, e_o),

@@ -35,6 +35,7 @@ class Env:
     firmware: str         # dernier -D FIRMWARE_* des build_flags
     ecrivable: bool       # defini dans platformio_tasmota_cenv.ini
     fs_avec_firmware: bool = False   # un upload firmware par cable flashe aussi le FS (voir _fs_avec_firmware)
+    fichiers_berry: bool = False     # env propose par la page « Fichiers Berry par env » (ESP32 du cenv)
 
 
 def _lit_ini(chemin):
@@ -188,7 +189,8 @@ def liste_envs(racine):
         # de la partition safeboot, pas un firmware a pousser par /u2 a la place de l'appli : pas d'OTA.
         ota_possible = ota and sous_groupe != "safeboot"
         envs.append(Env(nom, famille, sous_groupe, port, herite, lit_ip_ota(texte_h, firmware),
-                        ota_possible, firmware, ecrivable, _fs_avec_firmware(toutes, section, ota)))
+                        ota_possible, firmware, ecrivable, _fs_avec_firmware(toutes, section, ota),
+                        ecrivable and any(s.startswith("env:tasmota32") for s in chaine)))   # regle de envs_proposes
     return envs
 
 

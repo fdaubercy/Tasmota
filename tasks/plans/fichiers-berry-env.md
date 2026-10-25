@@ -285,18 +285,19 @@ Fichiers : modifier `outils_pc/build_page.py` (`ligneEnv(e)` l.335 : lien « Ré
 
 ## Améliorations restantes
 
-- [ ] [projet] Supprimer ou renommer un env depuis la page (hors périmètre de la spec).
-- [ ] [projet] Revue finale (mineur) : un même fichier deux fois dans la même option (socle ET liste propre) n'est pas marqué incohérent ; « Solidifié » sans effet sur un fichier exclu ET solidifié.
-- [ ] [projet] Revue finale (mineur) : `envs_touches` ne regarde que l'option de l'env (latent : `[berry_commun]` ne sert qu'à `custom_berry_solidify`).
-- [ ] [projet] Revue finale (mineur) : lieu ou nom contenant « base » → `TypeError` rendu en 400 ; le refuser dans `_refus`.
-- [ ] [projet] Revue finale (mineur) : exceptions non captées par le serveur (`OSError`, `IndexError`, `KeyError`) → « outil injoignable » ; répondre 500 avec le message.
-- [ ] [projet] Revue finale (mineur) : verrou entre deux POST simultanés (`enregistre`, `cree`).
-- [ ] [projet] Revue finale (mineur) : création non atomique (dossier copié avant les écritures du .h et du cenv).
-- [ ] [projet] Revue finale (mineur) : recensement pendant un build = copies temporaires de `copy_fs_image` vues comme fichiers de la carte.
-- [ ] [projet] Revue finale (mineur) : `URL_BUILD` en dur (127.0.0.1) au lieu de l'hôte de la page ; lien offert à `tasmota-pompe-piscine`.
-- [ ] [projet] Revue finale (mineur) : `.bak` du cenv partagé avec la page build ; libellé « liste de l'amont » aussi pour `platformio_override.ini` ; écriture acceptée pendant la pause d'une série de la page build.
-- [ ] [projet] Revue finale (mineur) : écarts latents avec PlatformIO (extends multiple, section `[env]`, `opt =;x`, continuation après commentaire à la création).
+- [x] [projet] Supprimer ou renommer un env depuis la page (hors périmètre de la spec). — preuve : fait par le plan fichiers-berry-suppression (849d21147, acd893f8c, 30d72376e)
+- [x] [projet] Revue finale (mineur) : un même fichier deux fois dans la même option (socle ET liste propre) n'est pas marqué incohérent ; « Solidifié » sans effet sur un fichier exclu ET solidifié. — preuve : doublon marqué incohérent, « Appliquer » sur l'état affiché le nettoie (test_doublon_meme_option, test_ecriture_doublon_meme_option ROUGE puis VERT) ; COMMIT
+- [x] [projet] Revue finale (mineur) : `envs_touches` ne regarde que l'option de l'env (latent : `[berry_commun]` ne sert qu'à `custom_berry_solidify`). — preuve : envs_touches sur les 3 options (test_conforme_platformio ROUGE puis VERT) ; COMMIT
+- [x] [projet] Revue finale (mineur) : lieu ou nom contenant « base » → `TypeError` rendu en 400 ; le refuser dans `_refus`. — preuve : refus clair dans _refus, création et renommage (test_nom_base ROUGE puis VERT) ; COMMIT
+- [x] [projet] Revue finale (mineur) : exceptions non captées par le serveur (`OSError`, `IndexError`, `KeyError`) → « outil injoignable » ; répondre 500 avec le message. — preuve : 748e2f994, puis KeyError/IndexError -> 500 (671428bfd)
+- [x] [projet] Revue finale (mineur) : verrou entre deux POST simultanés (`enregistre`, `cree`). — preuve : 20588aef8 (test_ecritures_concurrentes)
+- [x] [projet] Revue finale (mineur) : création non atomique (dossier copié avant les écritures du .h et du cenv). — preuve : 40e1e96a2 (Transaction, test_creation_atomique)
+- [x] [projet] Revue finale (mineur) : recensement pendant un build = copies temporaires de `copy_fs_image` vues comme fichiers de la carte. — preuve : 9e8e7941b (copies temporaires ignorées)
+- [x] [projet] Revue finale (mineur) : `URL_BUILD` en dur (127.0.0.1) au lieu de l'hôte de la page ; lien offert à `tasmota-pompe-piscine`. — preuve : URL d'après l'hôte de la page, lien « fichiers » pour les seuls envs ESP32 du cenv (Env.fichiers_berry ; test_get, test_build_envs ROUGE puis VERT) ; COMMIT
+- [x] [projet] Revue finale (mineur) : `.bak` du cenv partagé avec la page build ; libellé « liste de l'amont » aussi pour `platformio_override.ini` ; écriture acceptée pendant la pause d'une série de la page build. — preuve : sauvegardes horodatées 40e1e96a2 ; libellé « liste de l'amont » laissé (platformio_override.ini n'est jamais réécrit par l'enregistrement) ; l'écriture pendant la pause d'une série reste ouverte, reportée en amélioration ci-dessous
+- [x] [projet] Revue finale (mineur) : écarts latents avec PlatformIO (extends multiple, section `[env]`, `opt =;x`, continuation après commentaire à la création). — preuve : chaine() = walk_options (dernier extends d'abord, puis [env]), `opt =;x` vaut `;x`, liste du modèle continuée après un commentaire ; comparaison à ProjectConfig sur un ini d'essai et sur tous les envs du vrai cenv (test_conforme_platformio, test_vrais_fichiers_conformes, test_commentaire_dans_upload) ; COMMIT
 - [x] [projet] Ajouter les bancs `test_build_*.py` à la skill `bancs`. — preuve : .claude/skills/bancs/SKILL.md, ligne « page build (7700) »
+- [ ] [projet] Écriture du cenv acceptée pendant la pause « rebranchez la carte » d'une série de la page build (aucun pio ne tourne) : l'env suivant de la série construirait son FS avec la liste modifiée.
 
 ## Vérification
 

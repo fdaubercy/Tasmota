@@ -229,6 +229,20 @@ def test_ecriture_doublon_partage(racine):
             (["data/fs/a.be"], 1), "doublon : retire du socle, garde une seule fois en exclu")
 
 
+def test_ecriture_doublon_meme_option(racine):
+    f = racine / fbi.FICHIER_CENV
+    t = f.read_bytes().decode("utf-8")
+    a = "custom_berry_solidify   =   ${berry_commun.socle}\r\n"
+    assert t.count(a) == 1
+    f.write_bytes(t.replace(a, a + "                            data/fs/a.be\r\n", 1).encode("utf-8"))
+    p = fbw.prepare(racine, "tasmota32s3-garage-carte", [Demande("data/fs/a.be", "solidifie")])
+    verifie((p["confirmations"], p["refus"], "-                            data/fs/a.be" in p["diff"]), ([], [], True),
+            "doublon dans la meme option : redemander l'etat retire la ligne propre en double")
+    ecrit(racine, "tasmota32s3-garage-carte", [Demande("data/fs/a.be", "solidifie")])
+    verifie(liste(racine, "tasmota32s3-garage-carte", "custom_berry_solidify").count("data/fs/a.be"), 1,
+            "doublon : une seule fois apres l'ecriture (celle du socle)")
+
+
 def test_ecriture_garde_commentaires(racine):
     avant = [l for l in cenv(racine).split("\r\n") if l.lstrip().startswith(";")]
     ecrit(racine, "tasmota32s3-garage-carte", [Demande("data/fs/b.be", "fs", partage_accepte=True),
@@ -329,7 +343,7 @@ def principal():
                  test_ecriture_partage_confirme, test_ecriture_base_partagee, test_ecriture_retire_disparu,
                  test_refus_demandes_changees,
                  test_ecriture_refuse_amont, test_ecriture_retire_ligne_commentee,
-                 test_ecriture_doublon_partage, test_ecriture_garde_commentaires, test_ecriture_crlf,
+                 test_ecriture_doublon_partage, test_ecriture_doublon_meme_option, test_ecriture_garde_commentaires, test_ecriture_crlf,
                  test_ecriture_raison, test_commentaires_cites, test_refus_build, test_refus_empreinte,
                  test_sauvegarde_et_diff, test_demandes_invalides, test_relu_par_platformio):
         with tempfile.TemporaryDirectory() as t:

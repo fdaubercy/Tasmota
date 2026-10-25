@@ -154,8 +154,15 @@ def _copie_cenv(ini, lignes, c, env, dossier, dossier_modele, ancien, nouveau):
         if re.match(r"custom_files_upload\s*=", l):
             col = len(re.match(r"[^=]*=\s*", l).group(0))
             res += [l[:col] + ref, " " * col + dossier]
-            while i < len(copie) and copie[i][:1].isspace() and copie[i].strip()[:1] not in ("", ";", "#"):
-                i += 1                                     # ancienne liste : base + dossier du modele
+            j = i                                          # ancienne liste : base + dossier du modele
+            while j < len(copie):
+                s = copie[j].strip()
+                if s and s[0] not in ";#" and copie[j][:1].isspace():
+                    j, i = j + 1, j + 1                    # ligne de la liste : remplacee
+                elif not s or s[0] in ";#":
+                    j += 1                                 # vide ou commentaire : la liste continue apres (ConfigParser)
+                else:
+                    break
             upload = True
             continue
         l = re.sub(r"\$\{env:([^.}]+)\.", lambda m: "${env:" + (c.base if m.group(1) in ancetres else m.group(1)) + ".", l)
@@ -270,6 +277,10 @@ def _refus(racine, ini, c, env, dossier, nouveau, texte_h, texte_cenv, sauf_doss
         refus.append(f"base inconnue : {c.base!r}")
     if not LIEU.fullmatch(c.lieu) or not NOM.fullmatch(c.nom):
         refus.append("lieu : minuscules et chiffres ; nom : minuscules, chiffres et tirets (ex. porte-garage)")
+        return refus
+    if fbe.est_base(env):
+        refus.append(f"{env} : un nom d'env contenant « -base » est pris pour une base (page build, dossier de carte) ; "
+                     "choisir un lieu et un nom sans « base » en tete")
         return refus
     if "env:" + env in ini.sections:
         refus.append(f"l'env {env} existe deja")

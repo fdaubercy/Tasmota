@@ -71,6 +71,7 @@ class Banc:
 def test_get(b):
     statut, page = b.requete("GET", "/")
     verifie((statut, "<html" in page.lower()), (200, True), "GET / : page html")
+    verifie("127.0.0.1" in page, False, "page : aucune adresse en dur (lien vers la page build d'apres l'hote)")
     verifie(b.requete("GET", "/execution"), (200, {"en_cours": False}), "GET /execution (lu par la cible)")
     statut, envs = b.requete("GET", "/envs")
     verifie((statut, {"nom": RIDEAU, "famille": "cartes"} in envs["envs"]), (200, True), "GET /envs : le rideau")

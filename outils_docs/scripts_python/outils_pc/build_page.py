@@ -361,8 +361,8 @@ function ligneEnv(e) {
   };
   champ.onchange = function () { if (c.methode === "com") changePort(e.nom); else majLigne(e.nom); };
   var notes = h("div", {"class": "notes"});
-  // Lien vers la page « Fichiers Berry par env » (port 7800), pour les envs du cenv seulement
-  var fichiers = e.ecrivable ? h("a", {"class": "lien-fichiers", href: URL_FICHIERS + "?env=" + encodeURIComponent(e.nom),
+  // Lien vers la page « Fichiers Berry par env » (port 7800), pour les envs ESP32 du cenv (ceux qu'elle propose)
+  var fichiers = e.fichiers_berry ? h("a", {"class": "lien-fichiers", href: URL_FICHIERS + "?env=" + encodeURIComponent(e.nom),
     target: "_blank", rel: "noopener", texte: "fichiers", title: "Régler ses fichiers Berry (sur le FS, exclus, solidifiés)"}) : null;
   var ligne = h("div", {"class": "env", "data-env": e.nom}, caseEnv,
     h("span", {"class": "nom"}, h("label", {"for": "env-" + e.nom, texte: e.nom, title: e.firmware || ""}),

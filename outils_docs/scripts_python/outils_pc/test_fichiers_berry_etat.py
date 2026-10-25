@@ -143,6 +143,19 @@ def test_etat_doublon(racine):
             ["custom_berry_solidify", "custom_files_exclude"], "doublon : deux provenances")
 
 
+def test_doublon_meme_option(racine):
+    f = racine / fbi.FICHIER_CENV
+    t = f.read_bytes().decode("utf-8")
+    a = "data/garage/tasmota32s3-carte/controleCarte.be\r\n"
+    f.write_bytes(t.replace(a, a + "                            data/fs/a.be\r\n", 1).encode("utf-8"))
+    try:
+        a_be = par_chemin(fbe.etat_env(racine, "tasmota32s3-garage-carte"))["data/fs/a.be"]
+        verifie((a_be["etat"], a_be["incoherent"]), ("solidifie", True),
+                "doublon dans la meme option (socle ET liste propre) : incoherent")
+    finally:
+        f.write_bytes(t.encode("utf-8"))
+
+
 def test_etat_homonyme(racine):
     f = par_chemin(fbe.etat_env(racine, "tasmota32s3-garage-carte"))
     verifie(f["data/garage/tasmota32s3-carte/a.be"]["homonyme"], "data/fs/a.be", "homonyme : a.be de la carte")
@@ -208,7 +221,7 @@ def principal():
     test_dossier_carte()
     with tempfile.TemporaryDirectory() as t:
         racine = depot_essai(t)
-        for test in (test_recense_carte, test_etat_trois_etats, test_etat_amont_absent, test_etat_doublon,
+        for test in (test_recense_carte, test_etat_trois_etats, test_etat_amont_absent, test_etat_doublon, test_doublon_meme_option,
                      test_etat_homonyme, test_copie_temporaire, test_etat_hors_perimetre_et_disparu, test_etat_sans_exclude_solidified,
                      test_envs_proposes, test_env_inconnu):
             try:

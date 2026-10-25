@@ -168,6 +168,9 @@ def test_liste(racine):
             "classement : les bases PlatformIO sont absentes de la liste")
     verifie(envs["tasmota32-cave"].ecrivable and not envs["tasmota32s3"].ecrivable, True,
             "ecrivable : cenv seulement")
+    verifie((envs["tasmota32-cave"].fichiers_berry, envs["tasmota-pompe-piscine"].fichiers_berry,
+             envs["tasmota32s3"].fichiers_berry), (True, False, False),
+            "fichiers_berry : envs ESP32 du cenv seulement (ceux de la page Fichiers Berry par env)")
     verifie(envs["tasmota32-cave"].firmware, "FIRMWARE_CAVE", "firmware : dernier -D FIRMWARE_*")
     verifie(envs["tasmota32s3-garage"].firmware, "FIRMWARE_GARAGE", "firmware : derive d'une base")
     verifie((envs["tasmota32-cave"].port, envs["tasmota32-cave"].port_herite), ("COM3", False),
@@ -215,7 +218,8 @@ def test_ip_comme_original():
         attendu = "" if attendu in (None, "0.0.0.0") else attendu
         if be.lit_ip_ota(texte, d) != attendu:
             ecarts.append(d)
-    verifie((len(defines) > 10, ecarts), (True, []), f"ip : identique a l'original sur {len(defines)} defines du vrai .h")
+    # seuil de bon sens : 10 sections depuis le retrait des sections sans env (3ec314c10, audit P2.4)
+    verifie((len(defines) >= 5, ecarts), (True, []), f"ip : identique a l'original sur {len(defines)} defines du vrai .h")
 
 
 def test_ip():

@@ -484,9 +484,11 @@ carte) : on ne l'en retire que par `custom_files_exclude`, ou par `custom_berry_
   identique octet pour octet à `data/fs/<même nom>` est une **copie temporaire**, ni proposée ni signalée comme
   homonyme ; la page la liste en avertissement (aussi après un build interrompu, qui en laisse). Un bandeau rouge
   dit qu'un build est en cours (toute écriture refusée) ou que la détection est impossible.
-- `autoexec.be` est figé sur « Sur le FS ». Un fichier présent dans deux listes est signalé comme incohérent ; une
+- `autoexec.be` est figé sur « Sur le FS ». Un fichier présent dans deux listes, ou deux fois dans la même (socle ET liste propre), est signalé comme incohérent ; « Appliquer » sur l'état affiché le nettoie (la ligne en double de l'env part, celle du socle reste) ; une
   ligne du `.ini` dont le fichier a disparu du disque est signalée, jamais retirée en silence. Les entrées non
   Berry (`.js`, `.gz`, `.html` de `custom_files_exclude`) sont montrées en lecture seule (« hors périmètre »).
+- Les listes sont résolues comme PlatformIO les lit (`walk_options` : l'env, ses `extends` en commençant par le
+  DERNIER cité, puis la section `[env]` ; `opt =;x` vaut `;x`) : le banc le compare à son `ProjectConfig`.
 - Sans `custom_files_exclude_solidified = ON`, la page avertit : un fichier solidifié reste **aussi** sur le FS.
 - Passer à « Solidifié » ne vérifie rien : avant de builder, `berry/solidifie_et_compile_berry.py <fichier>` (voir
   [SOLIDIFICATION_BERRY.md](SOLIDIFICATION_BERRY.md)).

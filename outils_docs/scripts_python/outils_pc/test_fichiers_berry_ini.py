@@ -149,6 +149,84 @@ def test_envs_touches(racine):
              "tasmota32s3-cave-boucle2"], "envs_cenv : ordre du fichier")
 
 
+CENV_PIO = """\
+[berry_commun]
+partage =   data/fs/s.be
+
+[env]
+custom_files_exclude    = data/fs/global.be
+
+[env:tasmota32s3-p1]
+extends                 = env:tasmota32s3
+custom_berry_solidify   = data/fs/p1.be
+
+[env:tasmota32s3-p2]
+extends                 = env:tasmota32s3
+custom_berry_solidify   = data/fs/p2.be
+
+[env:tasmota32s3-multi-x]
+extends                 = env:tasmota32s3-p1, env:tasmota32s3-p2
+custom_files_upload     =;x
+
+[env:tasmota32s3-garage-a]
+extends                 = env:tasmota32s3
+custom_files_exclude    = ${berry_commun.partage}
+
+[env:tasmota32s3-garage-b]
+extends                 = env:tasmota32s3
+custom_berry_solidify   = ${berry_commun.partage}
+"""
+
+OPTIONS = ("custom_berry_solidify", "custom_files_exclude", "custom_files_upload")
+
+
+def lu_par_platformio(racine, envs, fichiers):
+    """{(env, option): [chemins]} tels que PlatformIO les lit (ProjectConfig), no_files retire."""
+    import os
+    from platformio.project.config import ProjectConfig
+    pio = Path(racine) / "platformio.ini"
+    if not pio.is_file():
+        pio.write_text("[platformio]\nextra_configs = " + "\n    ".join(fichiers) + "\n", encoding="utf-8")
+    ici = os.getcwd()
+    os.chdir(racine)
+    try:
+        conf, res = ProjectConfig(str(pio)), {}
+        for env in envs:
+            for option in OPTIONS:
+                brut = conf.get("env:" + env, option, "")
+                valeurs = brut.splitlines() if isinstance(brut, str) else brut
+                res[(env, option)] = [fbi.normalise(x.strip()) for x in valeurs if x.strip() and x.strip() != "no_files"]
+        return res
+    finally:
+        os.chdir(ici)
+
+
+def test_conforme_platformio():
+    with tempfile.TemporaryDirectory() as t:
+        racine = depot_essai(t, CENV_PIO)
+        ini = fbi.lit_sections(racine)
+        verifie(chemins(fbi.resout(ini, "tasmota32s3-multi-x", "custom_berry_solidify")), ["data/fs/p2.be"],
+                "extends multiple : le DERNIER parent cite l'emporte (comme PlatformIO)")
+        e = fbi.resout(ini, "tasmota32s3-multi-x", "custom_files_exclude")
+        verifie([(x.chemin, x.section) for x in e], [("data/fs/global.be", "env")], "section [env] : consultee en dernier")
+        verifie(chemins(fbi.resout(ini, "tasmota32s3-multi-x", "custom_files_upload")), [";x"],
+                "`opt =;x` : ;x est la valeur (pas de blanc avant le ;)")
+        envs = ini.envs_cenv()
+        pio = lu_par_platformio(racine, envs, ["platformio_tasmota_env32.ini", fbi.FICHIER_CENV])
+        ecarts = [(env, o) for env in envs for o in OPTIONS if chemins(fbi.resout(ini, env, o)) != pio[(env, o)]]
+        verifie(ecarts, [], "resolution identique a ProjectConfig de PlatformIO (ini d'essai)")
+        verifie(fbi.envs_touches(ini, "berry_commun", "partage", OPTIONS), ["tasmota32s3-garage-a", "tasmota32s3-garage-b"],
+                "envs_touches : toutes les options (exclude de a, solidify de b)")
+
+
+def test_vrais_fichiers_conformes():
+    ini = fbi.lit_sections(RACINE)
+    envs = ini.envs_cenv()
+    pio = lu_par_platformio(RACINE, envs, [])
+    ecarts = [(env, o) for env in envs for o in OPTIONS if chemins(fbi.resout(ini, env, o)) != pio[(env, o)]]
+    verifie(ecarts, [], "vrais fichiers : resolution identique a ProjectConfig de PlatformIO, tous les envs du cenv")
+
+
 def test_vrais_fichiers():
     ini = fbi.lit_sections(RACINE)
     e = fbi.resout(ini, "tasmota32p4-garage-serveur-modbus", "custom_berry_solidify")
@@ -167,10 +245,11 @@ def principal():
                 test(racine)
             except Exception as exc:                       # un test qui plante est un echec, pas un arret
                 verifie(repr(exc), "pas d'exception", test.__name__)
-    try:
-        test_vrais_fichiers()
-    except Exception as exc:
-        verifie(repr(exc), "pas d'exception", "test_vrais_fichiers")
+    for test in (test_vrais_fichiers, test_conforme_platformio, test_vrais_fichiers_conformes):
+        try:
+            test()
+        except Exception as exc:
+            verifie(repr(exc), "pas d'exception", test.__name__)
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0
 

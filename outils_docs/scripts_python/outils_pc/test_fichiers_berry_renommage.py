@@ -142,6 +142,14 @@ def test_commentaire_h(racine):
             "commentaire de section sans le nom de l'env : signale")
 
 
+def test_nom_base(racine):
+    try:
+        p = fbr.prepare_renommage(racine, renommage(nom="porte-base"))
+        verifie(any("base" in x for x in p["refus"]), True, "renommage en un nom avec « -base » : refus clair")
+    except Exception as erreur:
+        verifie(repr(erreur), "un refus", "renommage en un nom avec « -base » : refus clair")
+
+
 def test_persist_change(racine):
     r = renommage()
     p = fbr.prepare_renommage(racine, r)
@@ -204,7 +212,7 @@ def test_atomique(racine):
 
 def principal():
     for test in (test_renommage_rideau, test_aller_retour, test_unicite, test_default_envs, test_autre_lieu,
-                 test_refus, test_atomique, test_commentaire_h, test_persist_change):
+                 test_refus, test_atomique, test_commentaire_h, test_persist_change, test_nom_base):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")
             try:

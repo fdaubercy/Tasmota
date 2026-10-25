@@ -7,7 +7,9 @@ rend la valeur, pas sa position. La syntaxe suivie est celle que lit PlatformIO 
   - `option = valeur` en colonne 0 ouvre une option ; une ligne indentee la continue ;
   - une ligne de commentaire entiere (`;` ou `#`) ou une ligne vide n'interrompt PAS l'option : la
     ligne indentee suivante la continue encore ;
-  - `;`/`#` precede d'un blanc commence un commentaire de fin de ligne.
+  - `;`/`#` precede d'un blanc commence un commentaire de fin de ligne (`opt =;x` vaut donc `;x`).
+Resolution d'une option comme `walk_options` (platformio/project/config.py:170) : la section, puis ses
+`extends` en profondeur, le DERNIER parent cite d'abord, puis la section `[env]` pour toute section `env:`.
 Une meme section definie dans plusieurs fichiers est fusionnee option par option (le dernier fichier
 de FICHIERS_INI l'emporte), comme PlatformIO avec ses extra_configs.
 
@@ -109,22 +111,24 @@ class Ini:
                 courante = None
                 continue
             courante = Option(fichier, section, m.group(1).strip(), i)
-            valeur, commentaire = _coupe_commentaire(" " + m.group(2))
+            valeur, commentaire = _coupe_commentaire(m.group(2))     # `=` juste avant : `opt =;x` vaut `;x`
             if valeur:
                 courante.morceaux.append((i, valeur, commentaire))
             self.sections[section][courante.nom] = courante     # le dernier fichier l'emporte
 
     def chaine(self, env):
-        """Sections de l'env puis de ses ancetres (`extends`), la fille d'abord ; un cycle est coupe."""
-        res, a_voir = [], ["env:" + env if not env.startswith("env:") else env]
-        while a_voir:
-            nom = a_voir.pop(0)
+        """Sections consultees pour une option de l'env, dans l'ordre de PlatformIO (walk_options) : l'env, ses
+        `extends` en profondeur (le dernier parent cite d'abord), puis `[env]`. Un cycle est coupe."""
+        racine = "env:" + env if not env.startswith("env:") else env
+        res, pile = [], ["env", racine]
+        while pile:
+            nom = pile.pop()
             if nom in res or nom not in self.sections:
                 continue
             res.append(nom)
             ext = self.sections[nom].get("extends")
             parents = ext.morceaux[0][1] if ext and ext.morceaux else ""
-            a_voir[0:0] = [p.strip() for p in parents.split(",") if p.strip()]
+            pile.extend(p.strip() for p in parents.split(",") if p.strip())
         return res
 
     def definie_dans(self, env, option):
@@ -199,14 +203,18 @@ def heritiers(ini, env, option):
     return sorted(res)
 
 
-def envs_touches(ini, section, option, option_env):
-    """Envs du cenv dont la valeur resolue de `option_env` passe par `section.option`, tries.
-    Un env dont la resolution boucle est ignore (il ne peut pas etre construit de toute facon)."""
+def envs_touches(ini, section, option, options_env):
+    """Envs du cenv dont la valeur resolue d'une des `options_env` (une option ou plusieurs) passe par
+    `section.option`, tries : une liste de [berry_commun] peut servir a l'exclude d'un env et au solidify d'un
+    autre. Un env dont la resolution boucle est ignore (il ne peut pas etre construit de toute facon)."""
+    options_env = (options_env,) if isinstance(options_env, str) else tuple(options_env)
     res = []
     for env in ini.envs_cenv():
-        try:
-            if (section, option) in traverses(ini, env, option_env):
-                res.append(env)
-        except ValueError:
-            continue
+        for option_env in options_env:
+            try:
+                if (section, option) in traverses(ini, env, option_env):
+                    res.append(env)
+                    break
+            except ValueError:
+                continue
     return sorted(res)

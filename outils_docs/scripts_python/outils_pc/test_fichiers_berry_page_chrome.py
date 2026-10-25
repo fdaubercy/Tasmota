@@ -132,6 +132,13 @@ def sonde_page(m):
     cdp.js("document.querySelector('#interrompues button').click(); 1")
     verifie(attend(cdp, "!document.querySelector('#interrompues .avert')", 10), True, "« J'ai verifie » : bandeau retire")
     verifie((marque.exists(), marque.parent.is_dir()), (False, True), "acquittee : marque retiree, sauvegarde gardee")
+    f = cdp.js("(function(){var f = etat.fichiers.find(function(x){return x.groupe !== 'amont' && !x.figes;});"
+               " f.incoherent = true; return [f.chemin, f.etat];})()")      # doublon ou exclu ET solidifie
+    choisit(cdp, f[0], f[1])
+    clic(cdp, "appliquer")
+    verifie(cdp.js("!!attente[" + json.dumps(f[0]) + "]"), True,
+            "incoherent : « Appliquer » sur l'etat affiche met le nettoyage en attente")
+    cdp.js("attente = {}; dessine(); 1")
     verifie(cdp.js("document.getElementById('env').value"), RIDEAU, "?env= preselectionne l'env")
     verifie(cdp.js("(function(){var b=document.querySelector('[data-retirer=\"" + DISPARU + "\"]'); if(!b) return 'absent';"
                    " b.click(); return document.querySelector('[data-attente=\"" + DISPARU + "\"]') ? 'en attente' : 'non';})()"),
