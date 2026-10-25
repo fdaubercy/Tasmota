@@ -52,6 +52,11 @@ class Option:
         return self.morceaux[-1][0] if self.morceaux else self.debut
 
 
+def normalise(chemin):
+    """Chemin compare entre listes : separateurs en /, sans / final (`data/bureau/<carte>/` dans le cenv)."""
+    return chemin.replace("\\", "/").rstrip("/")
+
+
 def _coupe_commentaire(texte):
     m = COMMENTAIRE_EN_LIGNE.search(texte)
     if not m:
@@ -152,7 +157,7 @@ def _developpe(ini, section, option, pile, traverses):
         if ref:
             res += _developpe(ini, ref.group(1), ref.group(2), pile + [cle], traverses)
         elif valeur != SANS_FICHIER:
-            res.append(Entree(valeur.replace("\\", "/"), opt.section, opt.nom, opt.fichier, i, commentaire))
+            res.append(Entree(normalise(valeur), opt.section, opt.nom, opt.fichier, i, commentaire))
     return res
 
 
