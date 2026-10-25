@@ -635,7 +635,8 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     section du cenv et du `.h` retirees, `default_envs` de `platformio_override.ini`, dossier renomme en `…-sauvegarde`) ;
     panneaux dans `fichiers_berry_page_envs.py`. Toute ecriture est ATOMIQUE (`fichiers_berry_sauvegarde.Transaction` :
     annulation sur exception, copie horodatee dans `%LOCALAPPDATA%\outils_tasmota\fichiers_berry\sauvegardes\`, 30 jours ;
-    plus de `.bak`). Copies temporaires d'un build (`.be` de la carte identique a `data/fs`) ni proposees ni recopiees ;
+    plus de `.bak` ; POST un par un ; marque `en_cours.json` restee = operation interrompue, bandeau dans la page).
+    Identite deja portee par une autre carte = avertissement (carte remplacee), pas un refus. Copies temporaires d'un build (`.be` de la carte identique a `data/fs`) ni proposees ni recopiees ;
     exception inattendue -> 500 avec son message. Bancs `test_fichiers_berry_*.py`
     (copies temporaires, jamais le vrai depot ; `_ecriture` relu par `ProjectConfig`) + sonde Chrome
     `test_fichiers_berry_page_chrome.py`. Mode d'emploi : `outils_docs/README.md` § « Fichiers Berry par env (page web) ».

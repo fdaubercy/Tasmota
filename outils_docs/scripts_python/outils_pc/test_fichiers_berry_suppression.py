@@ -69,6 +69,8 @@ def test_section_partagee_puis_tete(racine):
     verifie(re.search(r"FIRMWARE_ESP32S3?_CAVE_SERVEUR_RLY", h) is None, True, "section de tete retiree")
     verifie(h.count("        #if defined(FIRMWARE_TELEINFO_CONSO)"), 1, "section suivante passee de #elif a #if")
     verifie(h.count("        #elif defined(FIRMWARE_TELEINFO_CONSO)"), 0, "plus de #elif pour la nouvelle tete")
+    verifie(("tasmota32-cave-serveur-rly ET" in h, "Une seule section pour les deux cartes" in h), (False, False),
+            "commentaires de la section des caves partis avec elle")
 
 
 def test_default_envs(racine):
@@ -88,6 +90,39 @@ def test_default_envs(racine):
                          o.read_bytes()))
     _, r = supprime(racine, CUVE)                        # data_dir = son dossier
     verifie(any("data_dir" in a for a in r["avertissements"]), True, "data_dir sur le dossier supprime : signale")
+
+
+def test_nouveau_lieu_aller_retour(racine):
+    avant = octets(racine, fbi.FICHIER_CENV)
+    tfc.cree(racine, tfc.creation(lieu="atelier", nom="porte"))
+    _, r = supprime(racine, "tasmota32s3-atelier-porte")
+    verifie(octets(racine, fbi.FICHIER_CENV) == avant, True, "creation dans un nouveau lieu puis suppression : cenv identique")
+    verifie([a for a in r["avertissements"] if "commentaire au-dessus" in a], [],
+            "bandeau du lieu au-dessus de la section : pas d'avertissement")
+
+
+def test_default_envs_vide(racine):
+    o = racine / OVERRIDE
+    t = o.read_bytes().decode("utf-8")
+    debut = t.index("default_envs")
+    fin = t.index("\n[", debut)
+    bloc = "".join((l[:28] + "; " + l[28:]) if l.strip() and not l.strip().startswith(";") and l.startswith(" " * 28)
+                   and RIDEAU not in l else l for l in t[debut:fin].splitlines(True))
+    o.write_bytes((t[:debut] + bloc + t[fin:] + "\n[env:essai-hors-bloc]\ncustom_liste =\n    " + RIDEAU + "\n").encode("utf-8"))
+    _, r = supprime(racine, RIDEAU)
+    verifie(any("default_envs" in a and "aucun env actif" in a for a in r["avertissements"]), True,
+            "default_envs sans env actif : signale")
+    verifie("    " + RIDEAU in fbi.decoupe(tfc.texte(racine, OVERRIDE)), True, "ligne hors du bloc default_envs : gardee")
+
+
+def test_sauvegarde_apparue(racine):
+    p = fbx.prepare_suppression(racine, RIDEAU)
+    (racine / (DOSSIER_RIDEAU + "-sauvegarde")).mkdir()
+    try:
+        fbx.supprime(racine, RIDEAU, p["empreinte"], SANS_BUILD)
+        verifie("supprime", "refus", "nom -sauvegarde change depuis le diff : refus")
+    except RuntimeError:
+        verifie((racine / DOSSIER_RIDEAU).is_dir(), True, "nom -sauvegarde change depuis le diff : refus, rien de fait")
 
 
 def test_sauvegarde_prise(racine):
@@ -156,7 +191,8 @@ def test_citations(racine):
 
 def principal():
     for test in (test_aller_retour, test_section_partagee_puis_tete, test_default_envs, test_sauvegarde_prise,
-                 test_refus, test_atomique, test_citations):
+                 test_refus, test_atomique, test_citations, test_nouveau_lieu_aller_retour, test_default_envs_vide,
+                 test_sauvegarde_apparue):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")
             try:

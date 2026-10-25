@@ -149,6 +149,25 @@ def test_erreur_inattendue(b):
     finally:
         fbweb.fbe.etat_env = origine
 
+    def bogue(racine, env):                          # KeyError est un LookupError : ne doit pas donner 404
+        raise KeyError("env:x")
+    fbweb.fbe.etat_env = bogue
+    try:
+        verifie(b.requete("GET", "/etat?env=" + RIDEAU)[0], 500, "GET, KeyError interne -> 500 (pas 404)")
+    finally:
+        fbweb.fbe.etat_env = origine
+
+
+def test_interrompues(b):
+    import fichiers_berry_sauvegarde as fbs
+    tr = fbs.Transaction(b.racine, "renommage").__enter__()
+    tr.ecrit("platformio_override.ini", (b.racine / "platformio_override.ini").read_bytes())
+    statut, r = b.requete("GET", "/interrompues")
+    verifie((statut, [i["nom"] for i in r["interrompues"]]), (200, [tr.dossier.name]), "GET /interrompues : listee")
+    verifie(b.requete("POST", "/interrompue/acquitte", {"nom": "../x"})[0], 400, "POST acquitte nom invalide -> 400")
+    verifie(b.requete("POST", "/interrompue/acquitte", {"nom": tr.dossier.name})[0], 200, "POST acquitte -> 200")
+    verifie(b.requete("GET", "/interrompues")[1]["interrompues"], [], "acquittee : plus listee")
+
 
 def test_post_empreinte_perimee(b):
     statut, _ = b.requete("POST", "/enregistre", {"env": RIDEAU, "demandes": demandes(), "empreinte": "0" * 64})
@@ -229,7 +248,7 @@ def test_ecritures_concurrentes(b):
 def principal():
     for test in (test_get, test_post_sans_entete, test_post_enregistre, test_post_pendant_build,
                  test_post_empreinte_perimee, test_post_invalide, test_post_creation, test_erreur_inattendue,
-                 test_post_renommage_puis_suppression, test_ecritures_concurrentes):
+                 test_post_renommage_puis_suppression, test_ecritures_concurrentes, test_interrompues):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier
             b = Banc(t)

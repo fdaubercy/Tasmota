@@ -186,8 +186,9 @@ def test_insertion_lieu(racine):
 
 
 def test_refus(racine):
-    refus = fbc.prepare_creation(racine, creation(MQTT_TOPIC="garage/rideau"))["refus"]
-    verifie(any("garage/rideau" in r for r in refus), True, "refus : topic deja pris par le rideau")
+    p = fbc.prepare_creation(racine, creation(MQTT_TOPIC="garage/rideau"))
+    verifie((any("garage/rideau" in r for r in p["refus"]), any("garage/rideau" in a for a in p["avertissements"])),
+            (False, True), "topic deja pris par le rideau : avertissement, plus un refus (carte remplacee)")
     refus = fbc.prepare_creation(racine, creation(nom="rideau-garage-modbus"))["refus"]
     verifie(any("existe" in r for r in refus), True, "refus : env existant")
     refus = fbc.prepare_creation(racine, creation(nom="Porte_Test"))["refus"]
@@ -212,6 +213,22 @@ def test_refus(racine):
         verifie("cree", "refus", "refus empreinte")
     except RuntimeError:
         verifie((racine / "data/garage/tasmota32s3-porte-test").exists(), False, "refus empreinte : rien de cree")
+
+
+def test_identite_invalide(racine):
+    for champ, valeur in (("PROJECT", "PORTE; Reset 1"), ("PROJECT", "PORTE TEST"), ("MQTT_TOPIC", "garage/#"),
+                          ("MQTT_CLIENT_ID", "porte+"), ("FRIENDLY_NAME", "Porte;x"), ("WIFI_IP_ADDRESS", "192.168.0.1 ")):
+        refus = fbc.prepare_creation(racine, creation(**{champ: valeur}))["refus"]
+        verifie(any(champ in r for r in refus), True, f"identite invalide refusee : {champ} = {valeur!r}")
+    verifie(fbc.prepare_creation(racine, creation(FRIENDLY_NAME="Porte du garage"))["refus"], [],
+            "FRIENDLY_NAME avec espaces : accepte")
+
+
+def test_define_en_commentaire(racine):
+    for f, ligne in ((fbi.FICHIER_CENV, b"; ancien : -D FIRMWARE_ESP32S3_GARAGE_PORTE_TEST\n"),
+                     (fbc.FICHIER_H, b"// ancien : FIRMWARE_ESP32S3_GARAGE_PORTE_TEST\r\n")):
+        (racine / f).write_bytes((racine / f).read_bytes() + ligne)
+    verifie(fbc.prepare_creation(racine, creation())["refus"], [], "define cite en commentaire seulement : pas un refus")
 
 
 def test_diff_masque(racine):
@@ -283,7 +300,7 @@ def test_vu_par_build(racine):
 def principal():
     test_nom_et_define()
     for test in (test_section_cenv, test_chemins_reecrits, test_section_h, test_modele_cave, test_persist_octets,
-                 test_insertion_lieu, test_refus, test_diff_masque, test_sauvegarde, test_creation_atomique,
+                 test_insertion_lieu, test_refus, test_identite_invalide, test_define_en_commentaire, test_diff_masque, test_sauvegarde, test_creation_atomique,
                  test_copies_temporaires_ignorees, test_vu_par_build):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier

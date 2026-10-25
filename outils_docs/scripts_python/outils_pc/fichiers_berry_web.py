@@ -27,6 +27,9 @@ Routes (les POST exigent l'en-tete X-Fichiers-Berry: 1 et la meme origine ; JSON
     POST /renommage/prepare {env, lieu, nom, identite, define?} -> diff, empreinte, nouvel_env, avertissements, refus
     POST /renommage  {..., empreinte} -> {renomme, env, dossier, sauvegarde} ; 409 si build, empreinte perimee, refus
     GET  /identite   accepte aussi ?env=<carte>&lieu=&nom= (renommage : base de la carte)
+    GET  /interrompues {interrompues: [{nom, dossier, nature, debut, etapes, annulation_incomplete}]} : operations
+                     arretees en plein vol (marque restee dans leur sauvegarde)
+    POST /interrompue/acquitte {nom} -> {acquitte: true} : marque retiree (la sauvegarde reste) ; 400 nom inconnu
 """
 
 import argparse
@@ -43,6 +46,7 @@ import fichiers_berry_ecriture as fbw
 import fichiers_berry_etat as fbe
 import fichiers_berry_ini as fbi
 import fichiers_berry_renommage as fbr
+import fichiers_berry_sauvegarde as fbs
 import fichiers_berry_suppression as fbx
 
 PORT_DEFAUT = 7800
@@ -124,6 +128,11 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
             return fbr.prepare_renommage(racine, renommage_de(demande))
         if chemin == "/renommage":
             return fbr.renomme(racine, renommage_de(demande), _chaine(demande, "empreinte"), builds_en_cours)
+        if chemin == "/interrompue/acquitte":
+            nom = _chaine(demande, "nom")
+            if not fbs.acquitte(nom):
+                raise ValueError(f"operation interrompue inconnue : {nom!r}")
+            return {"acquitte": True}
         raise LookupError(chemin)
 
     def identite(params):
@@ -172,8 +181,12 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
                     self._json({"build_en_cours": None if builds is None else bool(builds)})
                 elif url.path == "/identite":
                     self._json(identite(params))
+                elif url.path == "/interrompues":
+                    self._json({"interrompues": fbs.interrompues()})
                 else:
                     self._envoie(404, b"introuvable")
+            except (KeyError, IndexError) as erreur:       # LookupError, mais un bogue : pas un « introuvable »
+                self._erreur_inattendue(erreur)
             except LookupError as erreur:
                 self._envoie(404, str(erreur).encode("utf-8"))
             except ValueError as erreur:
@@ -202,6 +215,8 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
                 if not isinstance(demande, dict):
                     raise ValueError("corps JSON attendu")
                 self._json(traite_post(urlsplit(self.path).path, demande))
+            except (KeyError, IndexError) as erreur:
+                self._erreur_inattendue(erreur)
             except LookupError as erreur:
                 self._envoie(404, str(erreur).encode("utf-8"))
             except (ValueError, TypeError) as erreur:

@@ -215,7 +215,8 @@ Quand : un env qui ne sert plus, ou une création ratée (§2.6) à défaire.
 
 **Ce que fait « Supprimer cet env »** (sur l'env choisi en haut de la page) :
 1. Retire la section `[env:…]` du cenv (de son en-tête à l'en-tête suivant) ; les commentaires des autres
-   sections ne sont pas touchés. *Choix de Claude :* le bandeau `; LOCALISATION:` reste, même vide.
+   sections ne sont pas touchés. Le bandeau `; LOCALISATION:` juste au-dessus part s'il ne couvre plus rien
+   (revu le 2026-10-25 sur la revue finale : il restait après une création dans un nouveau lieu puis sa suppression).
 2. Retire la section de l'env dans `tasmota/user_config_override.h` (repérée par son `-D FIRMWARE_…`) :
    - section propre (`#elif defined(X)`, ou `#if defined(X)` en tête de chaîne) : retirée, commentaire
      `// -- Options for …` qui la précède compris ; si c'était le `#if` de tête, la section suivante
@@ -258,6 +259,8 @@ Une seule transaction (§9, atomique), qui produit :
 4. `default_envs` : la ligne de l'env garde son état (active ou commentée) avec le nouveau nom ; `data_dir`
    qui désignait l'ancien dossier désigne le nouveau.
 
-*Choix de Claude :* le contrôle d'unicité (IP, topic, client MQTT) ignore l'identité actuelle de l'env renommé
+**Assoupli le 2026-10-25 (décision de l'utilisateur)** : une IP, un topic ou un client MQTT déjà portés par une autre
+carte ne sont qu'un avertissement, à la création comme au renommage (carte remplacée). *Choix de Claude :* le
+contrôle d'unicité ignore l'identité actuelle de l'env renommé
 (garder son IP est permis) ; refus si l'env est référencé par un autre (`${env:<env>…}` ou `extends`), si le
 nouvel env, dossier ou define existe déjà, pendant un build. Ce qui cite l'ancien nom ailleurs est signalé.

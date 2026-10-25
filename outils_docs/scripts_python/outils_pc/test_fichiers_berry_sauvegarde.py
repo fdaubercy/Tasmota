@@ -94,6 +94,41 @@ def test_annulation_incomplete(fbs, t):
     verifie((racine / "a.ini").read_bytes(), b"a\r\n", "annulation incomplete : les autres etapes sont defaites")
 
 
+def test_parents_retires(fbs, t):
+    racine = depot(t)
+    try:
+        with fbs.Transaction(racine, "essai") as tr:
+            tr.renomme("data/lieu/absent", "data/lieu2/x")          # le renommage lui-meme echoue
+    except OSError:
+        pass
+    verifie((racine / "data/lieu2").exists(), False, "renommage rate : dossier de lieu cree retire")
+    try:
+        with fbs.Transaction(racine, "essai") as tr:
+            tr.copie_dossier("data/lieu/carte", "data/lieu3/copie")
+            raise ValueError("panne simulee")
+    except ValueError:
+        pass
+    verifie((racine / "data/lieu3").exists(), False, "copie annulee : dossier de lieu cree retire")
+
+
+def test_interrompue(fbs, t):
+    racine = depot(t)
+    with fbs.Transaction(racine, "essai") as tr:
+        tr.ecrit("a.ini", b"A\r\n")
+        verifie((tr.dossier / fbs.MARQUE).is_file(), True, "marque en_cours pendant l'operation")
+    verifie(((tr.dossier / fbs.MARQUE).exists(), fbs.interrompues()), (False, []), "marque retiree a la fin")
+    verifie([p.name for p in racine.iterdir() if ".tmp" in p.name], [], "ecriture par remplacement : aucun fichier temporaire")
+    tr = fbs.Transaction(racine, "suppression").__enter__()      # processus arrete en plein vol : pas de __exit__
+    tr.ecrit("b.h", b"B\r\n")
+    trouvees = fbs.interrompues()
+    verifie([(i["nom"], i["nature"], i["etapes"]) for i in trouvees], [(tr.dossier.name, "suppression", ["b.h a remettre"])],
+            "operation interrompue : listee avec sa nature et ses etapes")
+    verifie(fbs.acquitte(tr.dossier.name), True, "acquitte : marque retiree")
+    verifie((fbs.interrompues(), (tr.dossier / "b.h").is_file()), ([], True), "acquittee : plus listee, sauvegarde gardee")
+    for nom in ("..", "../x", "inconnu"):
+        verifie(fbs.acquitte(nom), False, f"acquitte refuse un nom hors des sauvegardes : {nom!r}")
+
+
 def test_purge(fbs, t):
     racine = fbs.dossier_sauvegardes()
     vieux, recent = racine / "20000101-000000-ancien", racine / "recent"
@@ -108,7 +143,7 @@ def test_purge(fbs, t):
 
 def principal():
     for test in (test_sauvegarde_avant_ecriture, test_annulation, test_refus_cible_existante, test_purge,
-                 test_annulation_incomplete):
+                 test_annulation_incomplete, test_parents_retires, test_interrompue):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = str(Path(t) / "outils")
             try:

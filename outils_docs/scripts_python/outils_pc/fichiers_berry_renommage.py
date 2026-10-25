@@ -60,7 +60,11 @@ def _h(l_h, env, nouvel_env, ancien, nouveau, identite, av, refus):
         return fbx.retire_h(l_h[:fin] + bloc + l_h[fin:], ancien, av, refus)
     if l_h[ouv].lstrip().startswith("#if"):
         bloc[1] = bloc[1].replace("#elif", "#if", 1)
-    bloc = ([l_h[debut].replace(env, nouvel_env)] if debut < ouv else []) + bloc[1:]
+    commentaires = [l.replace(env, nouvel_env) for l in l_h[debut:ouv]]
+    if commentaires and not any(env in l for l in l_h[debut:ouv]):
+        av.append(f"{fbc.FICHIER_H} : commentaire de la section sans le nom de l'env, garde tel quel (a revoir) : "
+                  + commentaires[0].strip())
+    bloc = commentaires + bloc[1:]
     return l_h[:debut] + bloc + l_h[fin:]
 
 
@@ -80,7 +84,8 @@ def _calcule(racine, r):
     demande = json.dumps(asdict(r), sort_keys=True, ensure_ascii=False).encode("utf-8")
     res = {"env": r.env, "nouvel_env": nouvel_env, "dossier": dossier, "nouveau_dossier": nouveau_dossier,
            "define": nouveau, "avertissements": [], "refus": [], "diff": "", "eol": (e_c, e_h, e_o),
-           "empreinte": hashlib.sha256(b"\0".join((o_c, o_h, o_o, demande))).hexdigest()}
+           "empreinte": hashlib.sha256(b"\0".join((o_c, o_h, o_o, fbc._octets(racine / dossier / "_persist.json")
+                                                    if dossier else b"", demande))).hexdigest()}
     av, refus = res["avertissements"], res["refus"]
     if nouvel_env == r.env:
         refus.append("le nouveau nom est celui de l'env : rien a renommer")
@@ -94,7 +99,7 @@ def _calcule(racine, r):
     sans_c, sans_h = fbx.retire_cenv(l_c, r.env, []), fbx.retire_h(l_h, ancien, [], [])
     c = fbc.Creation(modele=r.env, base=base, lieu=r.lieu, nom=r.nom, identite=r.identite, define=r.define)
     refus += fbc._refus(racine, ini, c, nouvel_env, nouveau_dossier, nouveau, "\n".join(sans_h), "\n".join(sans_c),
-                        sauf_dossier=dossier)
+                        sauf_dossier=dossier, avertissements=av)
     if refus:
         return res
     debut, k, copie = _copie_section(l_c, r.env, nouvel_env, dossier, nouveau_dossier, ancien, nouveau)

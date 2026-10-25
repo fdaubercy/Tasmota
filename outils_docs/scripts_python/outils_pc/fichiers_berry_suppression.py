@@ -48,18 +48,31 @@ def references(ini, env):
     return sorted(res)
 
 
+def bandeau(ligne):
+    """Ligne d'un bandeau de lieu du cenv : tirets `;----` ou `; LOCALISATION: ...`."""
+    s = ligne.strip()
+    return bool(re.fullmatch(r";-{20,}", s)) or s.startswith("; LOCALISATION:")
+
+
 def retire_cenv(lignes, env, avertissements):
+    """Lignes du cenv sans la section de l'env ; le bandeau de lieu juste au-dessus part aussi s'il ne
+    couvre plus rien (lieu cree par une creation ou un renommage, puis vide)."""
     debut, fin = fbc._regions(lignes)["env:" + env]
     k = fbc._fin_utile(lignes, debut, fin)
     i = debut
     while i > 0 and lignes[i - 1].lstrip()[:1] in (";", "#") and lignes[i - 1].strip():
         i -= 1
-    if i < debut:
+    propres = [l.strip() for l in lignes[i:debut] if not bandeau(l)]
+    if propres:                              # le bandeau du lieu n'est pas un commentaire de la section
         avertissements.append(f"{fbi.FICHIER_CENV} : commentaire au-dessus de la section, garde (a revoir) : "
-                              + " / ".join(l.strip() for l in lignes[i:debut]))
-    if debut > 0 and lignes[debut - 1] == "":
-        debut -= 1                           # la ligne vide inseree avant la section par une creation
-    return lignes[:debut] + lignes[k:]
+                              + " / ".join(propres))
+    haut = debut - 1 if debut > 0 and lignes[debut - 1] == "" else debut   # ligne vide inseree par une creation
+    suite = [l for l in lignes[k:] if l.strip()]
+    if i == debut - 3 and not propres and (not suite or bandeau(suite[0])):
+        b = debut - 3 - (1 if debut > 3 and lignes[debut - 4] == "" else 0)
+        avertissements.append(f"{fbi.FICHIER_CENV} : bandeau devenu vide retire : {lignes[debut - 2].strip()}")
+        return lignes[:b] + lignes[k:]
+    return lignes[:haut] + lignes[k:]
 
 
 def retire_h(lignes, define, avertissements, refus):
@@ -97,11 +110,26 @@ def ligne_default_envs(l, env):
     return (m.group(1), m.group(2)) if m else None
 
 
+def bloc_default_envs(lignes):
+    """Indices du bloc default_envs : sa ligne et les suivantes, jusqu'a la prochaine cle ou section."""
+    d = next((i for i, l in enumerate(lignes) if re.match(r"default_envs\s*=", l)), None)
+    if d is None:
+        return range(0)
+    return range(d, next((i for i in range(d + 1, len(lignes)) if re.match(r"[\[A-Za-z_]", lignes[i])), len(lignes)))
+
+
+def _actifs(lignes, bloc):
+    if not bloc:
+        return []
+    res = [v for v in re.split(r"[\s,]+", lignes[bloc[0]].split("=", 1)[1].split(";")[0]) if v]
+    return res + [l.strip() for n, l in enumerate(lignes) if n in bloc[1:] and l.strip() and l.strip()[0] not in ";#"]
+
+
 def maj_override(lignes, env, dossier, avertissements, nouvel_env=None, nouveau_dossier=None):
-    """default_envs : ligne retiree (ou renommee, meme etat) ; data_dir : signale (ou suit le dossier)."""
-    res = []
-    for l in lignes:
-        bouts = ligne_default_envs(l, env)
+    """default_envs (son seul bloc) : ligne retiree (ou renommee, meme etat) ; data_dir : signale (ou suit le dossier)."""
+    res, bloc = [], bloc_default_envs(lignes)
+    for n, l in enumerate(lignes):
+        bouts = ligne_default_envs(l, env) if n in bloc else None
         if bouts is not None:
             if nouvel_env:
                 res.append(bouts[0] + nouvel_env + bouts[1])
@@ -113,6 +141,9 @@ def maj_override(lignes, env, dossier, avertissements, nouvel_env=None, nouveau_
             else:
                 avertissements.append(f"{OVERRIDE} : data_dir = {dossier} (dossier supprime) : a changer avant un build")
         res.append(l)
+    if not nouvel_env and _actifs(lignes, bloc) and not _actifs(res, bloc_default_envs(res)):
+        avertissements.append(f"{OVERRIDE} : default_envs n'a plus aucun env actif : un `pio run` sans -e construirait "
+                              "TOUS les envs ; decommenter un env")
     return res
 
 
@@ -156,8 +187,7 @@ def _calcule(racine, env):
     ini = fbi.lit_sections(racine)
     (o_c, e_c, l_c), (o_h, e_h, l_h), (o_o, e_o, l_o) = (lit(racine, f) for f in (fbi.FICHIER_CENV, fbc.FICHIER_H, OVERRIDE))
     dossier = fbe.dossier_carte(env)
-    res = {"env": env, "dossier": dossier, "dossier_sauvegarde": None, "avertissements": [], "refus": [],
-           "empreinte": hashlib.sha256(b"\0".join((o_c, o_h, o_o, env.encode("utf-8")))).hexdigest()}
+    res = {"env": env, "dossier": dossier, "dossier_sauvegarde": None, "avertissements": [], "refus": []}
     av, refus = res["avertissements"], res["refus"]
     dependants = references(ini, env)
     if dependants:
@@ -172,6 +202,8 @@ def _calcule(racine, env):
         res["dossier_sauvegarde"] = dossier_libre(racine, dossier)
     elif dossier:
         av.append(f"dossier {dossier} absent : rien a renommer")
+    demande = (env + "\0" + (res["dossier_sauvegarde"] or "")).encode("utf-8")    # le nom -sauvegarde montre au diff
+    res["empreinte"] = hashlib.sha256(b"\0".join((o_c, o_h, o_o, demande))).hexdigest()
     citations(racine, env, av, {fbi.FICHIER_CENV: res["cenv"], OVERRIDE: res["override"]})
     res["eol"] = (e_c, e_h, e_o)
     textes = [diff(l_c, res["cenv"], fbi.FICHIER_CENV), diff(l_h, res["h"], fbc.FICHIER_H),

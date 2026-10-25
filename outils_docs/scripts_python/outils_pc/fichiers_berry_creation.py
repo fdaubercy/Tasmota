@@ -34,6 +34,8 @@ UNIQUES = {"MQTT_TOPIC": "serveur.mqtt.topic", "MQTT_CLIENT_ID": "serveur.mqtt.c
            "WIFI_IP_ADDRESS": "serveur.IP.IPAddress"}          # deux cartes ne peuvent pas les partager
 LIEU, NOM = re.compile(r"[a-z0-9]+"), re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 DEFINE = re.compile(r"FIRMWARE_[A-Z0-9_]+")
+SANS_ESPACE = ("PROJECT", "MQTT_CLIENT_ID", "MQTT_TOPIC", "MQTT_GRPTOPIC", "WIFI_IP_ADDRESS")   # Hostname, MQTT, IP
+JOKERS_MQTT = ("MQTT_CLIENT_ID", "MQTT_TOPIC", "MQTT_GRPTOPIC")                             # + et # : jokers MQTT
 SECTION_H = re.compile(r" {8}(// -- Options for|#elif\b|#else\b|#endif\b)")   # niveau de la chaine des firmwares
 MASQUES = ((re.compile(r'(#define\s+\w*(?:PASS|PWD)\w*\s+)"[^"]*"'), r'\1"***"'),
            (re.compile(r'("\w*(?:[Mm]dp|[Pp]ass|[Pp]wd)\w*"\s*:\s*)"[^"]*"'), r'\1"***"'))
@@ -185,7 +187,11 @@ def _section_h(lignes, ancien):
                 and re.search(r"defined\(\s*" + ancien + r"\s*\)", l)), None)
     if ouv is None:
         return None
-    debut = ouv - 1 if ouv and lignes[ouv - 1].startswith("        // -- Options for") else ouv
+    debut = ouv
+    while debut and lignes[debut - 1].startswith("        //") and not lignes[debut].startswith("        // -- Options for"):
+        debut -= 1                       # commentaires contigus, jusqu'a l'en-tete « // -- Options for » compris
+    if not lignes[debut].startswith("        // -- Options for"):
+        debut = ouv                      # pas d'en-tete : les commentaires au-dessus ne sont pas a elle
     fin = next((i for i in range(ouv + 1, len(lignes)) if SECTION_H.match(lignes[i])), len(lignes))
     return debut, ouv, fin
 
@@ -248,7 +254,14 @@ def _prises(racine, texte_h, sauf_dossier=None):
     return prises
 
 
-def _refus(racine, ini, c, env, dossier, nouveau, texte_h, texte_cenv, sauf_dossier=None):
+def _sans_commentaires(texte, marque):
+    """Texte sans les commentaires de ligne (`;` du cenv, `//` du .h) : un define seulement cite n'existe pas."""
+    return "\n".join(re.sub(r"(^|\s)" + re.escape(marque) + r".*$", "", l) for l in texte.split("\n"))
+
+
+def _refus(racine, ini, c, env, dossier, nouveau, texte_h, texte_cenv, sauf_dossier=None, avertissements=None):
+    """Refus de la creation (ou du renommage). Une identite deja portee par une autre carte n'est qu'un
+    AVERTISSEMENT (carte remplacee : meme IP, topic, client ; decide le 2026-10-25), ajoute a `avertissements`."""
     refus = []
     envs = {e["nom"]: e["famille"] for e in fbe.envs_proposes(racine)}
     if envs.get(c.modele) != "cartes":
@@ -264,16 +277,18 @@ def _refus(racine, ini, c, env, dossier, nouveau, texte_h, texte_cenv, sauf_doss
         refus.append(f"le dossier {dossier} existe deja")
     if not DEFINE.fullmatch(nouveau):
         refus.append(f"define invalide : {nouveau!r}")
-    elif re.search(r"\b" + nouveau + r"\b", texte_h + texte_cenv):
+    elif re.search(r"\b" + nouveau + r"\b", _sans_commentaires(texte_h, "//") + "\n" + _sans_commentaires(texte_cenv, ";")):
         refus.append(f"le define {nouveau} existe deja")
     for champ in CHAMPS_IDENTITE:
         v = c.identite.get(champ, "")
-        if not v or any(x in v for x in '"\\\r\n'):
-            refus.append(f"{champ} : valeur vide ou avec \" ou \\ : {v!r}")
+        interdits = '"\\\r\n;' + (" \t" if champ in SANS_ESPACE else "") + ("+#" if champ in JOKERS_MQTT else "")
+        if not v or any(x in v for x in interdits):
+            refus.append(f"{champ} : valeur vide ou avec un caractere interdit ({interdits!r}) : {v!r}")
     for champ, valeurs in _prises(racine, texte_h, sauf_dossier).items():
         v = c.identite.get(champ)
-        if v in valeurs and v != "0.0.0.0":
-            refus.append(f"{champ} = {v} est deja pris ({valeurs[v]}) : deux cartes de meme identite se deconnectent")
+        if v in valeurs and v != "0.0.0.0" and avertissements is not None:
+            avertissements.append(f"{champ} = {v} est deja porte par une autre carte ({valeurs[v]}) : normal pour une "
+                                  "carte qui en remplace une autre ; sinon les deux cartes se deconnecteront")
     return refus
 
 
@@ -299,7 +314,7 @@ def _calcule(racine, c):
     ini = fbi.lit_sections(racine)
     res = {"env": env, "dossier": dossier, "define": nouveau, "avertissements": [],
            "empreinte": _empreinte(o_cenv, o_h, c), "diff": "", "eol": (_eol(t_cenv), _eol(t_h))}
-    res["refus"] = refus = _refus(racine, ini, c, env, dossier, nouveau, t_h, t_cenv)
+    res["refus"] = refus = _refus(racine, ini, c, env, dossier, nouveau, t_h, t_cenv, avertissements=res["avertissements"])
     if refus:
         return res
     flags = " ".join(v for _, v, _ in ini.sections["env:" + c.modele].get("build_flags", fbi.Option("", "", "", 0)).morceaux)

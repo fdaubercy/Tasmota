@@ -527,8 +527,12 @@ DHCP), `WIFI_RGX_SSID`, `MQTT_CLIENT_ID`, `MQTT_TOPIC`, `MQTT_GRPTOPIC`, `FRIEND
    d'identité remplacés (dont le `Hostname` de `USER_BACKLOG` et le `NAME` du `USER_TEMPLATE`). Les conditions
    internes qui citent encore l'ancien define sont signalées, à revoir à la main.
 
-Refus si l'env, le dossier ou le define existent, si l'IP (hors `0.0.0.0`), le topic ou le client MQTT sont déjà
-pris par une autre carte, ou pendant un build. **Mots de passe masqués** dans le diff. Le dossier de la nouvelle
+Refus si l'env, le dossier ou le define existent (un define seulement cité en commentaire ne compte pas), si un
+champ d'identité est vide ou contient `"`, `\`, `;` (une commande de plus dans `USER_BACKLOG`), un espace (`PROJECT`,
+`MQTT_CLIENT_ID`, `MQTT_TOPIC`, `MQTT_GRPTOPIC`, `WIFI_IP_ADDRESS`) ou un joker MQTT `+`/`#`, ou pendant un build.
+Une IP (hors `0.0.0.0`), un topic ou un client MQTT déjà portés par une autre carte ne sont qu'un **avertissement** :
+c'est normal pour une carte qui en remplace une autre (P4 après l'ancien maître S3, caves) ; sinon les deux cartes se
+déconnecteront l'une l'autre. **Mots de passe masqués** dans le diff. Le dossier de la nouvelle
 carte ne reçoit ni les `*sauvegarde*` du modèle, ni ses copies temporaires d'un build (fichiers identiques à
 `data/fs`, sous-dossiers `fs`, `json`, `sd`). La nouvelle carte apparaît ensuite d'elle-même dans la page build.
 
@@ -546,8 +550,8 @@ le diff, « Renommer » (grisé si la saisie change après le diff) écrit, en u
 4. dans `platformio_override.ini`, la ligne de `default_envs` garde son état (active ou commentée) sous le nouveau
    nom, et `data_dir` suit le dossier.
 
-Garder son IP, son topic ou son client MQTT est permis (l'identité actuelle de l'env n'est pas comptée comme
-« prise »). Refus si un autre env référence celui-ci (`extends`, `${env:<env>…}`), si le nouvel env, dossier ou
+Garder son IP, son topic ou son client MQTT est permis ; une identité portée par une AUTRE carte est signalée,
+comme à la création. Un commentaire de section du `.h` qui ne cite pas l'env est signalé (à revoir). Refus si un autre env référence celui-ci (`extends`, `${env:<env>…}`), si le nouvel env, dossier ou
 define existe déjà, ou pendant un build. Ce qui cite encore l'ancien nom (commentaires, scripts, bancs) est signalé,
 jamais modifié. Renommer puis revenir à l'ancien nom redonne des fichiers identiques.
 
@@ -556,13 +560,18 @@ jamais modifié. Renommer puis revenir à l'ancien nom redonne des fichiers iden
 « Supprimer cet env » : pour un env qui ne sert plus, ou pour défaire une création ratée. Après le diff,
 « Supprimer » :
 
-1. retire la section `[env:…]` du cenv (le bandeau `; LOCALISATION:` du lieu reste, même vide) ;
+1. retire la section `[env:…]` du cenv ; le bandeau `; LOCALISATION:` juste au-dessus part aussi s'il ne couvre plus
+   rien (lieu créé puis vidé : créer puis supprimer redonne le cenv d'origine) ;
 2. retire la section du `.h` (commentaire `// -- Options for …` compris ; si c'était le `#if` de tête, la suivante
    devient `#if`). Section partagée par deux envs (`#if defined(A) || defined(B)`) : seul `defined(<env>)` est
    retiré de la condition ;
 3. renomme le dossier `data/<lieu>/<carte>` en `<carte>-sauvegarde` (`-sauvegarde-2`, `-3`… si le nom est pris) :
    rien n'est effacé, les builds et la page l'ignorent. À retirer à la main quand on est sûr ;
-4. retire l'env de `default_envs` (ligne active ou commentée) ; un `data_dir` qui désignait le dossier est signalé.
+4. retire l'env de `default_envs` (ligne active ou commentée, dans le seul bloc `default_envs`) ; un `data_dir` qui
+   désignait le dossier est signalé, et aussi un `default_envs` sans plus aucun env actif (`pio run` sans `-e`
+   construirait alors tous les envs).
+
+Les commentaires `// -- Options for …` de la section du `.h`, et ceux qui les suivent jusqu'au `#if`, partent avec elle.
 
 Refus pour une base dont d'autres envs héritent ou qu'ils référencent (envs nommés), pour un env de l'amont, ou
 pendant un build. Les citations de l'env ailleurs sont signalées. Créer puis supprimer un env redonne un cenv, un
@@ -576,6 +585,11 @@ remis). Avant d'écrire, chaque fichier modifié est copié dans
 `%LOCALAPPDATA%\outils_tasmota\fichiers_berry\sauvegardes\<date-heure>-<nature>\` (chemins du dépôt gardés),
 **gardé 30 jours** ; la page affiche ce dossier après l'opération. Plus de `.bak` commun avec la page build.
 Une erreur inattendue (fichier verrouillé…) est affichée avec son message (réponse 500), sans rien laisser à moitié.
+Si l'annulation elle-même échoue, le message dit ce qui reste à remettre à la main. Chaque fichier est écrit par
+remplacement (jamais tronqué), et les écritures passent une par une (double clic, deux onglets). Si la page est
+arrêtée en pleine opération (annuaire, Ctrl+C), la sauvegarde garde sa marque `en_cours.json` : au chargement suivant,
+la page affiche un bandeau rouge « Opération interrompue » avec les étapes à vérifier ; « J'ai vérifié » retire la
+marque, la sauvegarde reste.
 
 ### Bancs
 

@@ -68,6 +68,7 @@ PAGE = r"""<!doctype html>
       <button class="btn" id="supprimer">Supprimer cet env…</button>
       <span id="statut" class="discret"></span>
     </div>
+    <div id="interrompues"></div>
     <div id="bandeau-build"></div>
     <div id="avertissements"></div>
   </section>
@@ -216,6 +217,19 @@ async function chargeEtat() {
   $("statut").textContent = etat.fichiers.length + " fichiers recensés à l'instant";
   dessine();
   verifieBuild();
+}
+async function chargeInterrompues() {             // operation arretee en plein vol : marque restee
+  var r = await appel("/interrompues"), z = vide($("interrompues"));
+  if (!r.ok) return;
+  r.donnees.interrompues.forEach(function (i) {
+    z.appendChild(h("div", {"class": "avert rouge"}, "Opération interrompue (" + i.nature + ", " + i.debut +
+      ") : vérifier à la main " + i.etapes.join(", ") +
+      (i.annulation_incomplete.length ? " ; annulation incomplète : " + i.annulation_incomplete.join(", ") : "") +
+      ". Versions d'origine dans " + i.dossier + " ",
+      h("button", {"class": "lien", texte: "J'ai vérifié", onclick: async function () {
+        if ((await appel("/interrompue/acquitte", {nom: i.nom})).ok) chargeInterrompues();
+      }})));
+  });
 }
 async function verifieBuild() {                     // a part : la detection prend 2 s, l'etat s'affiche avant
   var r = await appel("/build"), z = vide($("bandeau-build"));
@@ -453,6 +467,7 @@ $("c-creer").onclick = creer;
 construitIdentite();
 /*JS_ENVS*/
 chargeEnvs().then(chargeEtat);
+chargeInterrompues();
 </script>
 </body>
 </html>

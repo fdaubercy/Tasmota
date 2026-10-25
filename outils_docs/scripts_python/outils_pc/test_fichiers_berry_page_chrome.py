@@ -120,9 +120,18 @@ def sonde_page(m):
     cenv = m.depot / "platformio_tasmota_cenv.ini"
     avant = cenv.read_bytes()
     (m.depot / DISPARU).unlink()                 # ligne propre de custom_files_exclude du rideau -> « disparue »
+    marque = m.t / "outils/fichiers_berry/sauvegardes/20261025-120000-000000-suppression/en_cours.json"
+    marque.parent.mkdir(parents=True)            # operation arretee en plein vol (processus tue)
+    marque.write_text(json.dumps({"nature": "suppression", "debut": "2026-10-25T12:00:00",
+                                  "etapes": ["platformio_tasmota_cenv.ini a remettre"]}), encoding="utf-8")
     cdp.appel("Page.navigate", url=m.url + "?env=" + RIDEAU)
     verifie(attend(cdp, "document.getElementById('col-solidifie') && document.getElementById('col-solidifie').textContent.indexOf('controleRideau.be') >= 0", 15),
             True, "chargement : colonne Solidifie remplie (controleRideau.be)")
+    verifie(attend(cdp, "!!document.querySelector('#interrompues .avert.rouge') && document.getElementById('interrompues').textContent.indexOf('platformio_tasmota_cenv.ini') >= 0", 10),
+            True, "operation interrompue : bandeau rouge au chargement, etapes nommees")
+    cdp.js("document.querySelector('#interrompues button').click(); 1")
+    verifie(attend(cdp, "!document.querySelector('#interrompues .avert')", 10), True, "« J'ai verifie » : bandeau retire")
+    verifie((marque.exists(), marque.parent.is_dir()), (False, True), "acquittee : marque retiree, sauvegarde gardee")
     verifie(cdp.js("document.getElementById('env').value"), RIDEAU, "?env= preselectionne l'env")
     verifie(cdp.js("(function(){var b=document.querySelector('[data-retirer=\"" + DISPARU + "\"]'); if(!b) return 'absent';"
                    " b.click(); return document.querySelector('[data-attente=\"" + DISPARU + "\"]') ? 'en attente' : 'non';})()"),

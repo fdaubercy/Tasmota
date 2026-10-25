@@ -1,7 +1,7 @@
 ---
 chantier: fichiers-berry-suppression
 titre: Page « Fichiers Berry par env » — supprimer et renommer un env, écritures atomiques, sauvegardes, erreurs claires
-statut: actif
+statut: clos
 cree: 2026-10-25
 maj: 2026-10-25
 ---
@@ -118,13 +118,40 @@ de `fichiers_berry_suppression`.
 ## A6 — Documentation et essai réel
 
 - [x] README § « Fichiers Berry par env » (suppression, sauvegardes), `CLAUDE.md` (carte des documents), skill `bancs`. — preuve : outils_docs/README.md § Renommer / Supprimer / Sauvegardes, CLAUDE.md (carte), .claude/skills/bancs/SKILL.md:58
-- [ ] Essai réel avec l'utilisateur, hors build : créer un env d'essai, le renommer, puis le supprimer depuis la page ; `git status`
+- [x] Essai réel avec l'utilisateur, hors build : créer un env d'essai, le renommer, puis le supprimer depuis la page ; `git status`
   sans cenv ni `.h`, dossier `…-sauvegarde` présent puis retiré à la main.
-- [ ] Commit `docs: suppression et renommage d un env (README, CLAUDE.md, bancs)` ; `statut: clos`.
+- [x] Commit `docs: suppression et renommage d un env (README, CLAUDE.md, bancs)` ; `statut: clos`.
+
+## A7 — Règle d'identité assouplie et mineurs de la revue (demande du 2026-10-25)
+
+- [x] Identité déjà portée par une autre carte (IP, topic, client MQTT) : **avertissement** au lieu d'un refus, à la
+  création comme au renommage (carte remplacée). Env, dossier, define déjà pris : toujours refusés. — preuve : test_fichiers_berry_creation (topic du rideau), _renommage (test_unicite, P4 renommable) ROUGE puis VERT ; vrai dépôt : P4 renommable, 3 avertissements
+- [x] M8 : identité refusée avec `;` (tout champ), espace dans `PROJECT`, `MQTT_CLIENT_ID`, `MQTT_TOPIC`, `MQTT_GRPTOPIC`,
+  `WIFI_IP_ADDRESS`, `+`/`#` dans les champs MQTT. M4 : define cherché hors commentaires (cenv `;`, `.h` `//`). — preuve : test_identite_invalide, test_define_en_commentaire ROUGE puis VERT
+- [x] M2/M3 : `.h` : tout le bloc `// -- Options for …` + commentaires contigus suit sa section (suppression, renommage ;
+  commentaire sans le nom de l'env signalé au renommage). cenv : bandeau `; LOCALISATION:` devenu vide retiré ; pas
+  d'avertissement pour un commentaire au-dessus qui n'est que le bandeau. — preuve : test_section_partagee_puis_tete (commentaires des caves), test_nouveau_lieu_aller_retour, test_commentaire_h, test_autre_lieu ROUGE puis VERT ; vrai dépôt : plus d'avertissement pour les 3 cartes du garage
+- [x] M10 : `default_envs` lu dans son seul bloc ; avertissement s'il ne reste aucun env actif. M7 : empreinte du
+  renommage avec `_persist.json`, de la suppression avec le nom `-sauvegarde`. M5 : `KeyError`/`IndexError` → 500. — preuve : test_default_envs_vide, test_sauvegarde_apparue, test_persist_change, test_erreur_inattendue (KeyError) ROUGE puis VERT
+- [x] M1/M9 : dossier parent créé retiré si le renommage échoue (et après `copie_dossier`) ; fichier écrit par
+  remplacement atomique ; marque `en_cours.json` dans la sauvegarde, retirée à la fin : une opération interrompue
+  (processus arrêté) est signalée par la page au chargement, acquittable. — preuve : test_parents_retires, test_interrompue, test_interrompues (web), sonde Chrome (bandeau, « J'ai vérifié ») ROUGE puis VERT
+- [x] Bancs ROUGE puis VERT, suite complète + sonde Chrome VERTES ; README, spec §9-§10 mis à jour ; commit. — preuve : 11 bancs + sonde Chrome VERTS (2 passes) ; README § Créer/Renommer/Supprimer/Sauvegardes, spec §9 §10
 
 ## Améliorations restantes
 
 - [x] [projet] Renommer un env : rétabli dans le périmètre par l'utilisateur le 2026-10-25 (action A3b). — preuve : spec §10
+- [x] [conversation] Revue finale (opus) : I1 écritures concurrentes (verrou des POST, boutons grisés avant l'envoi), I2
+  annulation incomplète signalée (`AnnulationIncomplete`), M6 `GET /etat` sans attendre la détection (`GET /build`). — preuve : 20588aef8
+- [x] [projet] Mineurs de la revue, traités en A7 (demande du 2026-10-25) : M1 dossier `data/<lieu>` vide laissé si un renommage vers un
+  nouveau lieu échoue ; M2 commentaires `// -- Options for …` d'une section partagée et bandeau `; LOCALISATION:` vide laissés ;
+  M3 avertissement « commentaire au-dessus » déclenché par le bandeau du lieu ; M4 define cherché aussi dans les commentaires
+  du cenv (refus au renommage retour de la cave) ; M5 `KeyError` → 404 au lieu de 500 ; M7 empreinte du renommage sans
+  `_persist.json`, nom `-sauvegarde` recalculé à l'écriture ; M8 `;` accepté dans l'identité (commande en plus dans
+  `USER_BACKLOG`) ; M9 atomicité face aux exceptions, pas à un arrêt du processus ; M10 `default_envs` peut devenir vide.
+- [x] [projet] Question de la revue : une carte remplacée (P4 après l'ancien maître S3, caves) ne peut pas garder son
+  identité au renommage, l'ancienne carte la porte encore dans le `.h`. Garder la règle ou l'assouplir ? — réponse :
+  assouplie (avertissement), action A7
 
 ## Vérification
 

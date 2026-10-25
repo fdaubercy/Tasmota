@@ -103,7 +103,8 @@ def test_unicite(racine):
     verifie(p["refus"], [], "identite actuelle de l'env gardee : acceptee")
     cuve = identite_actuelle(racine, "FIRMWARE_ESP32S3_CAPTEURS_CUVE_MODBUS")
     p = fbr.prepare_renommage(racine, renommage(MQTT_TOPIC=cuve["MQTT_TOPIC"]))
-    verifie(any(cuve["MQTT_TOPIC"] in x for x in p["refus"]), True, "topic d'une AUTRE carte : refuse")
+    verifie((p["refus"], any(cuve["MQTT_TOPIC"] in x for x in p["avertissements"])), ([], True),
+            "topic d'une AUTRE carte : avertissement (carte remplacee), pas un refus")
 
 
 def test_default_envs(racine):
@@ -126,6 +127,31 @@ def test_autre_lieu(racine):
     verifie(t.index("; LOCALISATION: ATELIER") < t.index("[env:tasmota32s3-atelier-porte]"), True,
             "autre lieu : section sous un nouveau bandeau")
     verifie((racine / "data/atelier/tasmota32s3-porte/autoexec.be").is_file(), True, "autre lieu : dossier deplace")
+    origine = identite_persist(racine, "data/atelier/tasmota32s3-porte")
+    renomme(racine, renommage(env="tasmota32s3-atelier-porte", lieu="garage", nom="rideau-garage-modbus",
+                              define=DEFINE_RIDEAU, **origine))
+    t = tfc.texte(racine, fbi.FICHIER_CENV)
+    verifie(("LOCALISATION: ATELIER" in t, (racine / "data/atelier").exists()), (False, False),
+            "retour au lieu d'origine : bandeau ATELIER devenu vide retire, dossier data/atelier retire")
+
+
+def test_commentaire_h(racine):
+    p = fbr.prepare_renommage(racine, renommage(env="tasmota32p4-garage-serveur-modbus", nom="maitre"))
+    verifie(p["refus"], [], "P4 : renommable")
+    verifie(any("commentaire" in a and "Options for" in a for a in p["avertissements"]), True,
+            "commentaire de section sans le nom de l'env : signale")
+
+
+def test_persist_change(racine):
+    r = renommage()
+    p = fbr.prepare_renommage(racine, r)
+    f = racine / DOSSIER_RIDEAU / "_persist.json"
+    f.write_bytes(f.read_bytes() + b"\n")
+    try:
+        fbr.renomme(racine, r, p["empreinte"], SANS_BUILD)
+        verifie("renomme", "refus", "persist change depuis le diff : refus")
+    except RuntimeError:
+        verifie((racine / DOSSIER_RIDEAU).is_dir(), True, "persist change depuis le diff : refus, rien de deplace")
 
 
 def test_refus(racine):
@@ -178,7 +204,7 @@ def test_atomique(racine):
 
 def principal():
     for test in (test_renommage_rideau, test_aller_retour, test_unicite, test_default_envs, test_autre_lieu,
-                 test_refus, test_atomique):
+                 test_refus, test_atomique, test_commentaire_h, test_persist_change):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")
             try:
