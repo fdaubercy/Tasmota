@@ -27,7 +27,7 @@ Ce que fait Tasmota, et que ce module suit (lu dans tasmota/tasmota_xdrv_driver/
     UPL_NONE apres chaque envoi, xdrv_01_9 l.3469 et l.3551) ET repond quand meme « Successful » :
     d'ou le GET /up avant chaque envoi du firmware ;
   - les reponses d'envoi sont toujours HTTP 200 : l'echec se lit dans la page (« Failed », « Échoué ») ;
-  - partition OTA unique + safeboot (tables partitions/esp32_partition_app3997k_fs11862k.csv et
+  - partition OTA unique + safeboot (tables partitions/esp32_partition_app3904k_fs11584k.csv et
     app2752k_fs448k.csv du fork) : l'appli ne peut pas s'ecraser elle-meme. La page /up sert alors
     HTTP_FORM_RST_UPG_FCT (xdrv_01_9 l.382-395, choisi l.3420) dont le script upl() / fct()
     (html_uncompressed/HTTP_HEAD_LAST_SCRIPT32.h l.28-64) fait, pour une image non compressee

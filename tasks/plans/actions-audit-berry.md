@@ -107,7 +107,7 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
 - [ ] P5.6 — Ne plus forcer `tcp.activation` ; ne plus charger TCP sur la cave S3 (variante lourde : retirer le transport TCP, sur décision) (corrige N6 ; cote L, effort faible, risque faible)
 - [ ] P2.4 — 8 sections orphelines de `user_config_override.h` ; bloc commun garage (corrige E3, E4 ; cote S, effort moyen, risque faible)
 - [ ] P2.6 — Pre-script : listes (FAIT le 2026-10-21, `e26ff49d0`), garde contre le double accrochage, code mort (corrige E6, E7 ; cote S, effort faible, risque faible)
-- [ ] P2.7 — Table de partitions S3 renommée d'après son contenu (corrige E11 ; cote D, effort faible, risque faible)
+- [x] P2.7 — Table de partitions S3 renommée d'après son contenu (corrige E11 ; cote D, effort faible, risque faible) — preuve : la base S3 pointe sur `partitions/esp32_partition_app3904k_fs11584k.csv` (table amont du P4, contenu identique à l'ancienne copie du fork, supprimée) ; `board_upload.maximum_size` trompeur retiré ; ProjectConfig : les 5 envs S3 résolvent la nouvelle table (2026-10-25)
 - [ ] P2.8 — `data/test.mp3` (3,3 Mo) sorti du dépôt (corrige E12 ; cote S, effort faible, risque nul)
 
 ## A10 — Factorisations (après les bancs de A4)
