@@ -289,9 +289,10 @@ Conception : [spec](../docs/superpowers/specs/2026-10-24-page-build-televersemen
 - **Classement** : *Mes cartes* (envs de `platformio_tasmota_cenv.ini`), *Mes bases* (`tasmota32-base`,
   `tasmota32s3-base-N16R8`, `tasmota32p4-base-*`) et *Tasmota (amont)*, replié par défaut, en sous-groupes
   (safeboot, ESP32, langues, ESP8266).
-- **Quatre actions**, combinables, appliquées à tous les envs cochés : compiler, téléverser le firmware,
-  construire le file system, téléverser le file system. Dans un env, l'ordre est toujours compiler, téléverser,
-  construire le FS, téléverser le FS, en ne lançant que ce qui est coché. Un échec arrête **cet env** (étapes
+- **Cinq actions**, combinables, appliquées à tous les envs cochés : compiler, téléverser le firmware, effacer puis
+  téléverser (voir plus bas), construire le file system, téléverser le file system. Dans un env, l'ordre est
+  toujours compiler, téléverser (ou effacer puis téléverser), construire le FS, téléverser le FS, en ne lançant que
+  ce qui est coché. Un échec arrête **cet env** (étapes
   suivantes « annulées ») ; les autres envs continuent.
 - **COM ou OTA par ligne.** Le port COM est lu dans le `upload_port` de l'env (y compris hérité par `extends`),
   vide s'il n'y en a pas. L'IP OTA est lue dans `WIFI_IP_ADDRESS` de `tasmota/user_config_override.h`, bloc du
@@ -357,6 +358,24 @@ cartes et des bases personnelles. `pio-tools/post_esp32.py` reconstruit `littlef
 commande esptool. Comportement gardé par choix ; la ligne l'annonce avant le lancement (d'après les `.ini`, pas
 d'après la présence de `littlefs.bin`), et le suivi le redit au téléversement.
 
+### Effacer puis téléverser (`erase_upload`)
+
+Pour une carte dans un état bancal (partitions changées, réglages ou persist corrompus) : la page lance
+`pio run -e X -t erase_upload --upload-port COMn`, qui efface **toute** la flash (`esptool erase-flash`) puis
+téléverse le firmware, et le file system comme un upload par câble (`post_esp32.py` ajoute `littlefs.bin` à la
+commande quelle que soit la cible ; même mention « FS aussi flashé » sur la ligne).
+
+- **Par câble seulement** : la case est grisée si une ligne cochée est en OTA, et le bouton OTA des lignes est grisé
+  tant qu'elle est cochée ; le serveur refuse aussi une ligne OTA.
+- **L'une ou l'autre** avec « Téléverser le firmware » : cocher l'une décoche l'autre (les enchaîner flasherait deux
+  fois) ; le serveur refuse les deux ensemble. Combinable avec compiler, construire le FS, téléverser le FS.
+- **Confirmation** avant le lancement : le persist (`_persist.json`) et les réglages de la carte (Wi-Fi, MQTT,
+  réglages faits sur la carte) sont effacés et remplacés par ceux du dépôt ; un réglage non reporté dans le dépôt
+  est perdu. Un env sans file system dans le dépôt repart sans persist (la confirmation le nomme).
+- Suivi : étape **« Effacement de la flash »** (recherche du port puis effacement) avant « Téléversement ». C'est un
+  envoi comme l'upload : refus si le port est tenu ou partagé avec un autre envoi, et un arrêt de la page attend la
+  fin de l'effacement et du téléversement.
+
 ### Refus, attente, arrêt
 
 - **Refus avant lancement** : un build tourne déjà (VS Code, cible Custom, même logique que le hook `garde_build`) ;
@@ -375,7 +394,13 @@ d'après la présence de `littlefs.bin`), et le suivi le redit au téléversemen
 ### Journaux, mémoire de la page, fichiers réécrits
 
 - Sortie complète de chaque `pio run` (codes ANSI retirés) : `%LOCALAPPDATA%\outils_tasmota\build\journaux\`,
-  dépliable sur la page.
+  dépliable sur la page (« Journal complet »).
+- **Sortie de pio en direct** : sous chaque env du suivi, un panneau « Sortie de pio (en direct) », ouvert au départ
+  de l'env, montre les lignes de pio au fil de l'eau comme le terminal de VS Code (chasse fixe, fond sombre, erreurs
+  en rouge, avertissements en orange). Il défile seul tant qu'on est en bas, et s'arrête si on remonte pour lire.
+  Les barres d'esptool qui se réécrivent tiennent sur **une ligne par zone**, mise à jour (bootloader, firmware,
+  `littlefs.bin`…). La page lit le journal de **cet** env par morceaux (`GET /sortie?env=…&octet=…` : seulement la
+  suite, en lignes entières) ; la sortie d'un env terminé reste lisible tant que la page est ouverte.
 - Derniers choix : à chaque lancement accepté, la page
   écrit les lignes lancées (env, COM ou OTA, port, IP saisie) et les actions cochées dans `derniers.json` (dans
   `%LOCALAPPDATA%\outils_tasmota\build\`, hors dépôt, écriture atomique) ; à l'ouverture suivante elle recoche ces lignes et ces actions. Le port

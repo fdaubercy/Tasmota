@@ -287,13 +287,18 @@ Chaque essai : demander à l'utilisateur, vérifier qu'aucun build ne tourne, un
 Fichiers : `outils_pc/build_web.py` (lecture du journal par incréments), `outils_pc/build_page.py`
 (panneau « Sortie »), bancs `test_build_web.py`, `test_build_page_chrome.py`.
 
-- [ ] Banc rouge d'abord : lecture incrémentale du journal de l'env en cours (décalage, env terminé, env
+- [x] Banc rouge d'abord : lecture incrémentale du journal de l'env en cours (décalage, env terminé, env
   inconnu, journal d'un autre env jamais servi) ; sonde Chrome : panneau qui se remplit pendant un faux
-  pio, défilement auto en bas, arrêté si on remonte, erreurs en rouge.
-- [ ] Serveur : lecture du journal par incréments, sans tout renvoyer à chaque fois.
-- [ ] Page : panneau « Sortie » dépliable par env, chasse fixe, fond sombre, couleurs erreur/avertissement,
-  lignes `` d'esptool contenues.
-- [ ] Bancs `test_build_*` et sonde Chrome verts.
+  pio, défilement auto en bas, arrêté si on remonte, erreurs en rouge. — preuve : ROUGE test_build_web 10 KO
+  (/sortie 404, sortie_env absente) et sonde Chrome 6 KO (panneau absent), rapport a9-a10-report.md
+- [x] Serveur : lecture du journal par incréments, sans tout renvoyer à chaque fois. — preuve : build_web.sortie_env
+  + GET /sortie, journal écrit ligne à ligne (commit c0cbe03a2) ; test_build_web sortie_env / sortie_en_direct,
+  mutant sans buffering=1 vu rouge
+- [x] Page : panneau « Sortie » dépliable par env, chasse fixe, fond sombre, couleurs erreur/avertissement,
+  lignes `` d'esptool contenues. — preuve : build_page (commit c0cbe03a2) ; sonde Chrome, 8 vérifications
+  « sortie : » vertes (témoin : 3 barres dans le journal brut, 1 dans le panneau)
+- [x] Bancs `test_build_*` et sonde Chrome verts. — preuve : 5 bancs test_build_* et sonde Chrome (témoin compris)
+  sortie 0, 2026-10-25
 - [ ] Essai réel par l'utilisateur : sortie visible pendant une compilation.
 
 ## A10 — Effacer puis téléverser (`erase_upload`) (spec, choix 19)
@@ -301,13 +306,18 @@ Fichiers : `outils_pc/build_web.py` (lecture du journal par incréments), `outil
 Fichiers : `outils_pc/build_serie.py`, `outils_pc/build_progression.py`, `outils_pc/build_web.py`,
 `outils_pc/build_page.py`, `outils_pc/build_faux_pio.py`, leurs bancs.
 
-- [ ] Lire le texte réel d'esptool pour l'effacement (paquet installé) et la cible `erase_upload` de la
+- [x] Lire le texte réel d'esptool pour l'effacement (paquet installé) et la cible `erase_upload` de la
   plateforme ; banc rouge : action `erase_upload` (ordre, COM seulement, refus OTA, exclusive avec
-  `upload`, envoi pour le refus de port et pour M7), étape « Effacement de la flash ».
-- [ ] Série et progression : `pio run -e X -t erase_upload --upload-port COMn`, étape d'effacement.
-- [ ] Page : case « Effacer puis téléverser », décoche « Téléverser le firmware » et inversement, grisée en
-  OTA, confirmation (persist et réglages effacés), mention « FS aussi flashé ».
-- [ ] Bancs `test_build_*`, `test_annuaire*` et sonde Chrome verts ; README et CLAUDE.md à jour.
+  `upload`, envoi pour le refus de port et pour M7), étape « Effacement de la flash ». — preuve :
+  platforms/espressif32/builder/main.py:1984-1993 (« Erasing... », $ERASECMD :947), esptool 5.4.0
+  cmds.py:2273 et :2282 ; ROUGE progression (action inconnue), série (actions invalides), web 7 KO, sonde 9 KO
+- [x] Série et progression : `pio run -e X -t erase_upload --upload-port COMn`, étape d'effacement. — preuve :
+  commit 3f22d0ff5 ; test_build_serie erase_upload_* et test_build_progression effacement verts
+- [x] Page : case « Effacer puis téléverser », décoche « Téléverser le firmware » et inversement, grisée en
+  OTA, confirmation (persist et réglages effacés), mention « FS aussi flashé ». — preuve : commit 3f22d0ff5 ;
+  sonde Chrome, 9 vérifications « effacer : » vertes (témoins : env sans fichiers, ligne revenue en COM)
+- [x] Bancs `test_build_*`, `test_annuaire*` et sonde Chrome verts ; README et CLAUDE.md à jour. — preuve : 8 bancs
+  et sonde Chrome sortie 0 (2026-10-25) ; README et CLAUDE.md dans le commit docs qui suit 3f22d0ff5
 - [ ] Essai réel par l'utilisateur : `erase_upload` sur une carte choisie par lui.
 
 ## Améliorations restantes

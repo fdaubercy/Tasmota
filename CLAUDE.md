@@ -128,9 +128,10 @@ c'est **voulu** (decide le 2026-10-04 : « laisse ce test comme il est »). Ne p
 decouper : c'est UN fichier a televerser sur chaque carte, qui se prepare et s'explique
 seul au chargement ; le scinder imposerait deux televersements par carte.
 
-`outils_docs/scripts_python/outils_pc/build_page.py` fait **813 lignes**, et c'est **voulu**
+`outils_docs/scripts_python/outils_pc/build_page.py` fait **934 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
-vague de corrections finale du meme jour). C'est la page
+vague de corrections finale du meme jour ; 934 le 2026-10-25 avec le panneau « Sortie » et « Effacer puis
+televerser »). C'est la page
 unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule constante
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
@@ -570,16 +571,19 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     et pour les bancs `build_faux_pio.py`, `build_ota_carte_simulee.py`) — page « Build et televersement »
     http://127.0.0.1:7700 (tuile de l'annuaire, groupe Maintenance, hors job : l'annuaire refuse de l'arreter pendant
     un lancement ; tache VS Code « Outil : build et televersement », **pas** de cible Custom : une cible est un
-    `pio run`). On coche des envs (Mes cartes / Mes bases / amont) et des actions (compiler, televerser le firmware,
-    construire le FS, televerser le FS), COM ou OTA par ligne ; les `pio run` s'enchainent un a un (jamais deux
-    ensemble ; attente si un build apparait ailleurs ; refus si port tenu ou deux envois sur le meme port), avec
-    etape, % et durees en direct. Port COM lu dans `platformio_tasmota_cenv.ini` et REECRIT dans la section de l'env
+    `pio run`). On coche des envs (Mes cartes / Mes bases / amont) et des actions (compiler, televerser le firmware
+    OU effacer puis televerser, construire le FS, televerser le FS), COM ou OTA par ligne ; les `pio run` s'enchainent
+    un a un (jamais deux ensemble ; attente si un build apparait ailleurs ; refus si port tenu ou deux envois sur le
+    meme port), avec etape, % et durees en direct, et la **sortie de pio en direct** par env (panneau « Sortie » :
+    journal de l'env lu par increments par `GET /sortie`, barres d'esptool contenues). « Effacer puis televerser » =
+    `-t erase_upload --upload-port COMn`, COM seulement, exclusive avec l'upload, confirmation avant (persist et
+    reglages de la carte remplaces par ceux du depot), etape « Effacement de la flash ». Port COM lu dans `platformio_tasmota_cenv.ini` et REECRIT dans la section de l'env
     (`.bak` ; **change l'empreinte -> le build suivant repart de zero**) ; IP OTA lue dans `WIFI_IP_ADDRESS`
     (0.0.0.0 -> saisie pour le lancement). OTA du firmware envoyee par la page (`/up`, `/u2`, safeboot `/u4`, preuve
     par `Status 2`) : aucun script de `build/` modifie. OTA du FS : fichiers extraits de `littlefs.bin` (image du `buildfs`,
     PAS `littlefs_data`, perime) par `/ufsu`, persist de
     la carte sauvegarde avant dans `%LOCALAPPDATA%\outils_tasmota\build\persist\`, relu, Berry recharge, `Restart 1`.
-    Un upload serie du firmware flashe AUSSI le FS (persist compris) a chaque fois pour les envs a
+    Un upload (ou erase_upload) serie du firmware flashe AUSSI le FS (persist compris) a chaque fois pour les envs a
     `custom_files_upload` (post_esp32 reconstruit `littlefs.bin` a chaque edition des liens) : la page l'annonce. Journaux de chaque `pio run` dans
     `%LOCALAPPDATA%\outils_tasmota\build\journaux\`. Chaque lancement reecrit `platformio_override.ini` et
     `user_config_override.h` (a commiter). Bancs : `test_build_*.py` (+ sonde `test_build_page_chrome.py`).
