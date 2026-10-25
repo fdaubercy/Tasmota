@@ -128,19 +128,20 @@ c'est **voulu** (decide le 2026-10-04 : « laisse ce test comme il est »). Ne p
 decouper : c'est UN fichier a televerser sur chaque carte, qui se prepare et s'explique
 seul au chargement ; le scinder imposerait deux televersements par carte.
 
-`outils_docs/scripts_python/outils_pc/build_page.py` fait **935 lignes**, et c'est **voulu**
+`outils_docs/scripts_python/outils_pc/build_page.py` fait **1038 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
 vague de corrections finale du meme jour ; 935 le 2026-10-25 avec le panneau « Sortie » et « Effacer puis
-televerser »). C'est la page
+televerser » ; 1038 le meme jour avec la pause « rebranchez la carte » et les panneaux refermes). C'est la page
 unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule constante
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
 Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plutot qu'un decoupage) :
-`build_serie.py` fait **547 lignes** (execution en serie des `pio run` : verrous, arret immediat, attente
-d'un envoi au Ctrl+C, OTA ; la couper separerait un etat partage sous le meme verrou), et ses bancs
-`test_build_serie.py` (**719**), `test_build_page_chrome.py` (**741**), `test_build_ota_fs.py` (**566**),
-`test_build_web.py` (**543**) : un banc par module, chaque test lisible seul. Ne pas les decouper pour
-satisfaire le compteur.
+`build_serie.py` fait **630 lignes** (execution en serie des `pio run` : verrous, arret immediat, attente
+d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
+verrou), et ses bancs `test_build_serie.py` (**869**), `test_build_page_chrome.py` (**905**),
+`test_build_ota_fs.py` (**566**), `test_build_web.py` (**655**), ainsi que `test_annuaire.py` (**523**,
+banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
+compteur.
 
 ## MONTER UN NOUVEAU POSTE
 
@@ -358,7 +359,8 @@ Issus de l'audit des conversations du 2026-10-17. Les utiliser plutot que refair
   par `/reprise-session`). Apres un compactage, un hook le rappelle.
 - **Logs des cartes** : skill `logs-cartes` (journal syslog, pages :7200/:7100/:7000/:7600, filtres).
 - **Builds** : le hook `garde_build` refuse tout `pio run` pendant un build deja en cours. Un refus
-  n'est pas une panne : attendre la fin du build ou lancer l'outil hors PlatformIO.
+  n'est pas une panne : attendre la fin du build ou lancer l'outil hors PlatformIO. Une cible d'outil
+  vivante (annuaire, pont serie... lances par leur cible Custom) n'est pas comptee comme un build.
 - **Berry** : chaque `.be` de `data/` edite par Claude est compile aussitot (hook `verifie_berry_edition`) ;
   apres modification, skill `bancs` pour le banc a lancer ; avant commit, agent `relecteur-berry`.
 - **Diagnostic** : devant un bug, une erreur ou un comportement inattendu, invoquer
@@ -379,7 +381,11 @@ Pour ne pas chercher : ce qui a ete produit et ou.
   sur l'amont (detecteur seul, ne synchronise pas). Declare dans `.claude/settings.json`.
 - `.claude/hooks/garde_build.sh` + `garde_build.py` — hook `PreToolUse` (Bash, PowerShell) : refuse un
   `pio run` si un `platformio run` ou un `scons` tourne (`pio home` ignore). Filtre `if` : ne se lance
-  que si la commande contient `pio`/`platformio`.
+  que si la commande contient `pio`/`platformio`. Un `pio run` (et son scons) dont TOUTES les cibles sont des
+  cibles d'outils (`CIBLES_OUTILS` = les `NOM_CIBLE` des `build/cible_*.py`) n'est PAS un build : l'outil vit
+  tant que la cible vit, la page de build l'attendrait sans fin. `__idedata`, une cible melee ou un scons sans
+  cible lisible restent des builds ; lancer une cible d'outil pendant un vrai build reste refuse. Banc
+  `outils_docs/scripts_python/build/test_garde_build.py` (verifie aussi que la liste = les `NOM_CIBLE`).
 - `.claude/hooks/rappel_apres_compactage.sh` — hook `SessionStart` (`compact`) : rappelle de mettre
   a jour la reprise.
 - `.claude/hooks/verifie_berry_edition.sh` + `.py` — hook `PostToolUse` (Edit, Write, MultiEdit) : apres
@@ -584,9 +590,14 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     main : une cible est un `pio run`, vivante elle serait vue comme un build en cours ; `pio run` : jamais
     pendant un build). On coche des envs (Mes cartes / Mes bases / amont) et des actions (compiler, televerser le firmware
     OU effacer puis televerser, construire le FS, televerser le FS), COM ou OTA par ligne ; les `pio run` s'enchainent
-    un a un (jamais deux ensemble ; attente si un build apparait ailleurs ; refus si port tenu ou deux envois sur le
-    meme port), avec etape, % et durees en direct, et la **sortie de pio en direct** par env (panneau « Sortie » :
-    journal de l'env lu par increments par `GET /sortie`, barres d'esptool contenues). « Effacer puis televerser » =
+    un a un (jamais deux ensemble ; attente si un build apparait ailleurs ; refus si port tenu ou absent), avec
+    etape, % et durees en direct, et la **sortie de pio en direct** par env (panneau « Sortie » : journal de l'env
+    lu par increments par `GET /sortie`, barres d'esptool contenues ; referme quand l'env reussit sauf geste de
+    l'utilisateur, pas rouvert au rechargement pour un env reussi). **Pause « rebranchez la carte »** (choix 11
+    revise) : deux envois sur le meme port COM sont acceptes ; avant l'envoi d'un env dont le port a deja servi dans
+    la serie (compilation faite avant, en un `pio run` a part), bandeau « Branchez la carte X sur COMn » +
+    Continuer / Passer cet env (`POST /continuer`), port reverifie a la reprise. Journaux tries par date de
+    modification (pas l'heure du nom : heure d'hiver), purges au demarrage au-dela de 30 jours. « Effacer puis televerser » =
     `-t erase_upload --upload-port COMn`, COM seulement, exclusive avec l'upload, confirmation avant (persist et
     reglages de la carte remplaces par ceux du depot), etape « Effacement de la flash ». Port COM lu dans `platformio_tasmota_cenv.ini` et REECRIT dans la section de l'env
     (`.bak` ; **change l'empreinte -> le build suivant repart de zero**) ; IP OTA lue dans `WIFI_IP_ADDRESS`
