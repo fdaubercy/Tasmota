@@ -7,6 +7,7 @@ var configModules = module("configModules")
 # Parcours soit les 'modules', soit les 'drivers' paramétrés dans le json
 # @typologie = paragraphe parcouru dans le json -> "modules" ou "drivers"
 def configModules_configDevicesByJon(typologie, gpioPinUtilises, ordreGPIO, template, nbIOActivesJSON)
+	import diversFonctions
 	import string
 
 	var typeApp
@@ -98,7 +99,7 @@ def configModules_configDevicesByJon(typologie, gpioPinUtilises, ordreGPIO, temp
 						
 						typeApp = ""
 						# ex: cleDev = ["modules"]["cuve"]["environnement"]["analogiques"]["analogique1"]	
-						if env[cleDevices][cleDev].find("activation", "OFF") == "ON" && ((env[cleDevices][cleDev].find("pin", -1) != -1  && env[cleDevices][cleDev].find("virtuel", "OFF") == "OFF") || env[cleDevices][cleDev].find("virtuel", "OFF") != "OFF")
+						if diversFonctions.deviceActif(env[cleDevices][cleDev])
 							# Uniquement si pin != -1 & type != ""
 							id = int(env[cleDevices][cleDev].find("id", 1))
 							pin = env[cleDevices][cleDev]["pin"]

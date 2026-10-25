@@ -597,7 +597,48 @@ if CAS == 1
     var exP47 = leve(/-> globalFonctions.changementEtatCapteur("ON", "Switch9", {}, "garage", "capteurP47"))
     controle("P4.7 : capteur dont le relaisLie n'a ni type ni delai (ids vide) : commutation sans exception"
              + (exP47 != nil ? " (" + exP47 + ")" : ""), exP47 == nil && capteursP47["capteurP47"]["etat"] == "ON")
+    # Audit N12/P5.11 : un seul helper commandeRelaisLies pour les 6 copies. Un device sans relaisLie (cle absente)
+    # levait key_error ; avec ids [3, 5], chaque relai lie est commande avec le type et le delai du bloc.
+    capteursP47["capteurP511"] = {"activation": "ON", "virtuel": "ON", "pin": -1, "etat": "OFF"}
+    var exP511 = leve(/-> globalFonctions.changementEtatCapteur("ON", "Switch9", {}, "garage", "capteurP511"))
+    controle("P5.11 : capteur sans relaisLie : commutation sans exception"
+             + (exP511 != nil ? " (" + exP511 + ")" : ""), exP511 == nil && capteursP47["capteurP511"]["etat"] == "ON")
+    var vraiModif = globalFonctions.modifEtatRelai
+    var ordres = []
+    globalFonctions.modifEtatRelai = def (m, id, typeOrdre, etat, bCapteurs, bTimer, delai) ordres.push([m, id, typeOrdre, etat, bTimer, delai]) end
+    capteursP47["capteurP511"] = {"activation": "ON", "virtuel": "ON", "pin": -1, "etat": "OFF",
+                                  "relaisLie": {"ids": [3, 5], "type": "Switch", "delai": 7}}
+    leve(/-> globalFonctions.changementEtatCapteur("ON", "Switch9", {}, "garage", "capteurP511"))
+    controle("P5.11 : relaisLie ids [3, 5] : deux ordres, type et delai du bloc",
+             str(ordres) == "[['garage', 3, 'Switch', 'ON', false, 7], ['garage', 5, 'Switch', 'ON', false, 7]]")
+    # Seul site a boolTimer = true : le thermometre (DS18B20 / AM2301)
+    var thermosP511 = global.modules["garage"]["environnement"].find("thermometres")
+    if !isinstance(thermosP511, map)    thermosP511 = {}    global.modules["garage"]["environnement"]["thermometres"] = thermosP511    end
+    thermosP511["thermoP511"] = {"activation": "ON", "virtuel": "ON", "pin": -1, "value": 0,
+                                 "relaisLie": {"ids": [4], "type": "Switch", "delai": 2}}
+    ordres = []
+    leve(/-> globalFonctions.changementEtatCapteur(21.5, "DS18B20-1#Temperature", {}, "garage", "thermoP511"))
+    thermosP511.remove("thermoP511")
+    globalFonctions.modifEtatRelai = vraiModif
+    controle("P5.11 : thermometre (DS18B20) : relai lie commande avec boolTimer = true",
+             str(ordres) == "[['garage', 4, 'Switch', 21.5, true, 2]]")
     capteursP47.remove("capteurP47")
+    capteursP47.remove("capteurP511")
+    # Audit N14/P5.11 : diversFonctions.deviceActif remplace 16 copies du predicat ; meme verdict que la forme
+    # d'origine sur les 27 combinaisons activation x pin x virtuel (valeur, autre valeur, cle absente)
+    var origine = def (d) return d.find("activation", "OFF") == "ON" && ((d.find("pin", -1) != -1  && d.find("virtuel", "OFF") == "OFF") || d.find("virtuel", "OFF") != "OFF") end
+    var ecarts = 0    var actifs = 0
+    for a: ["ON", "OFF", nil]    for p: [-1, 5, nil]    for v: ["OFF", "ModBus_Conn16channel1", nil]
+        var d = {}
+        if a != nil    d["activation"] = a    end
+        if p != nil    d["pin"] = p    end
+        if v != nil    d["virtuel"] = v    end
+        if diversFonctions.deviceActif(d) != origine(d)    ecarts += 1    end
+        if origine(d)    actifs += 1    end
+    end    end    end
+    controle("P5.11 : deviceActif = predicat d'origine sur 27 combinaisons (" + str(actifs) + " actives)", ecarts == 0 && actifs > 0 && actifs < 27)
+    controle("TEMOIN P5.11 : deviceActif(nil) et device sans activation -> false",
+             !diversFonctions.deviceActif(nil) && !diversFonctions.deviceActif({"pin": 5}))
     # Audit N10/P5.9 : configDevices. Le compteur des entrees analogiques REELLES n'etait incremente que s'il valait
     # deja plus de 0 (toujours 0, regle ANALOG#A<n> jamais posee) ; '%i' applique a "ON"/"OFF" affichait 0.
     import configDevices

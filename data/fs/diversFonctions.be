@@ -206,6 +206,15 @@ def diversFonctions_elagueListesVides(noeud)
 end
 diversFonctions.elagueListesVides = diversFonctions_elagueListesVides
 
+# Un device (relai, capteur, bouton...) est-il actif ? (audit N14/P5.11, 2026-10-25 : 16 copies du meme
+# predicat). Actif = activation ON, et soit virtuel (pilote par un autre module, sans pin), soit reel avec une
+# pin. Forme d'origine : ON && ((pin != -1 && virtuel == OFF) || virtuel != OFF), qui se reduit a celle-ci.
+def diversFonctions_deviceActif(device)
+	if (!isinstance(device, map) || device.find("activation", "OFF") != "ON")	return false	end
+	return device.find("virtuel", "OFF") != "OFF" || device.find("pin", -1) != -1
+end
+diversFonctions.deviceActif = diversFonctions_deviceActif
+
 # Valeur scalaire d'un evenement de regle, sur tous les niveaux d'imbrication :
 # {"Action": "ON"} -> "ON", {"State": {"POWER": 1}} -> 1, 5 -> 5 (2026-10-24, audit N9/P5.8).
 # Une map de plusieurs cles sans 'Action' est AMBIGUE : elle est rendue telle quelle, a l'appelant

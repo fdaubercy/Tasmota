@@ -159,6 +159,20 @@ def globalFonctions_noteMesureModbus(device)
 end
 globalFonctions.noteMesureModbus = globalFonctions_noteMesureModbus
 
+# Commande les relais lies a un device (audit N12/P5.11, 2026-10-25 : 6 copies du meme bloc dans
+# changementEtatCapteur). Contrat du schema (P4.7) : 'ids' requis, 'type' et 'delai' si 'ids' n'est pas vide ;
+# un device sans relaisLie ne commande rien (avant : key_error). boolTimer : 6e argument de modifEtatRelai.
+def globalFonctions_commandeRelaisLies(moduleCapteur, device, value, boolTimer)
+    var relaisLie = device.find("relaisLie")
+    if (!isinstance(relaisLie, map))    return    end
+    var typeOrdre = relaisLie.find("type", "")
+    var delai = relaisLie.find("delai", 0)
+    for id: relaisLie.find("ids", [])
+        globalFonctions.modifEtatRelai(moduleCapteur, id, typeOrdre, value, false, boolTimer, delai)
+    end
+end
+globalFonctions.commandeRelaisLies = globalFonctions_commandeRelaisLies
+
 # Règles sur changement d'état des capteurs
 # Si relaisLie != []
 # Déclenche les relais liés aux capteurs
@@ -197,18 +211,14 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 	if (string.find(trigger, "Switch") > -1)
 		device = modules[moduleCapteur]["environnement"]["capteurs"].find(cleBouton, false)
 		if (device)
-			if device.find("activation", "OFF") == "ON" && ((device.find("pin", -1) != -1  && device.find("virtuel", "OFF") == "OFF") || device.find("virtuel", "OFF") != "OFF")
+			if diversFonctions.deviceActif(device)
 				if (device["etat"] != value)
 					# Enregistre l'état en json
 					device["etat"] = value
 					modules[moduleCapteur]["environnement"]["capteurs"][cleBouton]["value"] = value
 
 					# Cherche les relais liés
-					var relaisLie = device["relaisLie"]
-					var typeOrdre = relaisLie.find("type", "")
-					for nb: 0 .. relaisLie.find("ids", []).size() - 1
-						globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie.find("delai", 0))
-					end
+					globalFonctions.commandeRelaisLies(moduleCapteur, device, value, false)
 
                     # Envoi son état au Maitre ModBus si le module est un esclave ModBus (id > 0)
                     if (drivers["ModBus"].find("activation", "OFF") == "ON" && drivers["ModBus"].find("id", 0) > 0)
@@ -230,18 +240,14 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 
 		device = modules[moduleCapteur]["environnement"]["interrupteurs"].find(cleBouton, false)
 		if (device)
-			if device.find("activation", "OFF") == "ON" && ((device.find("pin", -1) != -1  && device.find("virtuel", "OFF") == "OFF") || device.find("virtuel", "OFF") != "OFF")
+			if diversFonctions.deviceActif(device)
 				if (device["etat"] != value)
 					# Enregistre l'état en json
 					device["etat"] = value
 					modules[moduleCapteur]["environnement"]["interrupteurs"][cleBouton]["value"] = value
 
 					# Cherche les relais liés
-					var relaisLie = device["relaisLie"]
-					var typeOrdre = relaisLie.find("type", "")
-					for nb: 0 .. relaisLie.find("ids", []).size() - 1
-						globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie.find("delai", 0))
-					end
+					globalFonctions.commandeRelaisLies(moduleCapteur, device, value, false)
 
                     # Envoi son état au Maitre ModBus si le module est un esclave ModBus (id > 0)
                     if (drivers["ModBus"].find("activation", "OFF") == "ON" && drivers["ModBus"].find("id", 0) > 0)
@@ -265,18 +271,14 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 	elif (string.find(trigger, "Button") > -1)
 		device = modules[moduleCapteur]["environnement"]["boutons"].find(cleBouton, false)
 		if (device)
-			if device.find("activation", "OFF") == "ON" && ((device.find("pin", -1) != -1  && device.find("virtuel", "OFF") == "OFF") || device.find("virtuel", "OFF") != "OFF")
+			if diversFonctions.deviceActif(device)
 				if (device["etat"] != value)
                     # Enregistre l'état en json
                     device["etat"] = value
                     modules[moduleCapteur]["environnement"]["boutons"][cleBouton]["value"] = value
 
                     # Cherche les relais liés
-                    var relaisLie = device["relaisLie"]
-                    var typeOrdre = relaisLie.find("type", "")
-                    for nb: 0 .. relaisLie.find("ids", []).size() - 1
-                        globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie.find("delai", 0))
-                    end
+                    globalFonctions.commandeRelaisLies(moduleCapteur, device, value, false)
 
                     # Envoi son état au Maitre ModBus si le module est un esclave ModBus (id > 0)
                     if (drivers["ModBus"].find("activation", "OFF") == "ON" && drivers["ModBus"].find("id", 0) > 0)
@@ -300,7 +302,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 	elif (string.find(trigger, "AM2301#Temperature") > -1 || string.find(trigger, "AM2301#Humidity") > -1 || string.find(trigger, "DS18B20") > -1)
 		device = modules[moduleCapteur]["environnement"]["thermometres"].find(cleBouton, false)
 		if (device)
-			if device.find("activation", "OFF") == "ON" && ((device.find("pin", -1) != -1  && device.find("virtuel", "OFF") == "OFF") || device.find("virtuel", "OFF") != "OFF")
+			if diversFonctions.deviceActif(device)
 				globalFonctions.noteMesureModbus(device)
 				if (device["value"] != value)
                     # Enregistre l'état en json
@@ -325,11 +327,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
                     end
 
                     # Cherche les relais liés
-                    var relaisLie = device["relaisLie"]
-                    var typeOrdre = relaisLie.find("type", "")
-                    for nb: 0 .. relaisLie.find("ids", []).size() - 1
-                        globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, true, relaisLie.find("delai", 0))
-                    end	
+                    globalFonctions.commandeRelaisLies(moduleCapteur, device, value, true)
 				end
 			end
 		end
@@ -338,7 +336,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 	elif (string.find(trigger, "ANALOG#A") > -1)
 		device = modules[moduleCapteur]["environnement"]["analogiques"].find(cleBouton, false)
 		if (device)
-			if device.find("activation", "OFF") == "ON" && ((device.find("pin", -1) != -1  && device.find("virtuel", "OFF") == "OFF") || device.find("virtuel", "OFF") != "OFF")
+			if diversFonctions.deviceActif(device)
                 globalFonctions.noteMesureModbus(device)
                 if (device["value"] != value)
                     # Enregistre l'état en json
@@ -346,11 +344,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
                     modules[moduleCapteur]["environnement"]["analogiques"][cleBouton]["value"] = int(value)
 
                     # Cherche les relais liés
-                    var relaisLie = device["relaisLie"]
-                    var typeOrdre = relaisLie.find("type", "")
-                    for nb: 0 .. relaisLie.find("ids", []).size() - 1
-                        globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie.find("delai", 0))
-                    end
+                    globalFonctions.commandeRelaisLies(moduleCapteur, device, value, false)
                 end
 			end
 		end	
@@ -359,7 +353,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 	elif (string.find(trigger, "COUNTER#C") > -1)
 		device = modules[moduleCapteur]["environnement"]["compteurs"].find(cleBouton, false)
 		if (device)
-			if device.find("activation", "OFF") == "ON" && ((device.find("pin", -1) != -1  && device.find("virtuel", "OFF") == "OFF") || device.find("virtuel", "OFF") != "OFF")
+			if diversFonctions.deviceActif(device)
                 globalFonctions.noteMesureModbus(device)
                 if (device["etat"] != value)
                     # Enregistre l'état en json
@@ -367,11 +361,7 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
                     modules[moduleCapteur]["environnement"]["compteurs"][cleBouton]["value"] = real(value)
                     
                     # Cherche les relais liés
-                    var relaisLie = device["relaisLie"]
-                    var typeOrdre = relaisLie.find("type", "")
-                    for nb: 0 .. relaisLie.find("ids", []).size() - 1
-                        globalFonctions.modifEtatRelai(moduleCapteur, relaisLie["ids"][nb], typeOrdre, value, false, false, relaisLie.find("delai", 0))
-                    end		
+                    globalFonctions.commandeRelaisLies(moduleCapteur, device, value, false)
                     
                     # Envoi son état au Maitre ModBus si le module est un esclave ModBus (id > 0)
                     if (drivers["ModBus"].find("activation", "OFF") == "ON" && drivers["ModBus"].find("id", 0) > 0)
@@ -421,7 +411,7 @@ def globalFonctions_changementEtatWS2812(value, trigger, msg, moduleLED, cleLED)
 	if (string.find(trigger, "Dimmer") > -1)
 		device = modules[moduleLED]["environnement"]["relais"].find(cleLED, false)
 		if (device)
-			if device.find("activation", "OFF") == "ON" && ((device.find("pin", -1) != -1  && device.find("virtuel", "OFF") == "OFF") || device.find("virtuel", "OFF") != "OFF")
+			if diversFonctions.deviceActif(device)
 				if (device["etat"] != value)	
 					# Enregistre l'état en json:
 					# de la luminosité

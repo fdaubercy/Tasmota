@@ -392,6 +392,7 @@ class CONTROLE_GENERAL : Driver
 
 	# Parcours les modules pour detecter les capteurs & boutons qui ne sont pas automatiquement ajouter dans self.sensors
 	def json_append()
+        import diversFonctions
         import string
 		import persist
 
@@ -419,7 +420,7 @@ class CONTROLE_GENERAL : Driver
 
 								tasmota.yield()
 
-								if bouton.find("activation", "OFF") == "ON" && ((bouton.find("pin", -1) != -1  && bouton.find("virtuel", "OFF") == "OFF") || bouton.find("virtuel", "OFF") != "OFF")
+								if diversFonctions.deviceActif(bouton)
 									#print("Button" + str(bouton))
 									msg += ",\"Button" + str(bouton["id"]) + "\": \"" + bouton["etat"] + "\""
 								end

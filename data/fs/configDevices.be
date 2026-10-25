@@ -9,6 +9,7 @@ var configDevices = module("configDevices")
 # Paramètre l'affichage ou non de la valeur du capteur sur webUI
 # Active ou non le Driver Tasmota dédié
 def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
+    import diversFonctions
     import gestionFileFolder
     # import introspect
     import string
@@ -42,7 +43,7 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 					tasmota.yield()
 
         			# Si le relai est activé (réels + virtuels)
-        			if relais[cleRLY].find("activation", "OFF") == "ON" && ((relais[cleRLY].find("pin", -1) != -1  && relais[cleRLY].find("virtuel", "OFF") == "OFF") || relais[cleRLY].find("virtuel", "OFF") != "OFF")
+        			if diversFonctions.deviceActif(relais[cleRLY])
         				relais[cleRLY]["timestamp"]["nbCyclesJour"] = 0 
         				if relais[cleRLY]["timestamp"]["ON"] == 0 relais[cleRLY]["timestamp"]["ON"] = tasmota.rtc()["local"] end
         				if relais[cleRLY]["timestamp"]["OFF"] == 0 relais[cleRLY]["timestamp"]["OFF"] = tasmota.rtc()["local"] end
@@ -129,7 +130,7 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
         			if type(capteurs[cleCapteurs]) != "instance"    continue    end
 					tasmota.yield()
 
-        			if capteurs[cleCapteurs].find("activation", "OFF") == "ON" && ((capteurs[cleCapteurs].find("pin", -1) != -1  && capteurs[cleCapteurs].find("virtuel", "OFF") == "OFF") || capteurs[cleCapteurs].find("virtuel", "OFF") != "OFF")
+        			if diversFonctions.deviceActif(capteurs[cleCapteurs])
         				nbIOActivesJSON["capteurs"]["actives"]["nb"] = nbIOActivesJSON["capteurs"]["actives"].find("nb", 0) + 1
 
                         # Nb de capteurs réels (non-virtuels)
@@ -152,7 +153,7 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
         			if type(interrupteurs[cleInterrupteurs]) != "instance"    continue    end
 					tasmota.yield()
 
-        			if interrupteurs[cleInterrupteurs].find("activation", "OFF") == "ON" && ((interrupteurs[cleInterrupteurs].find("pin", -1) != -1  && interrupteurs[cleInterrupteurs].find("virtuel", "OFF") == "OFF") || interrupteurs[cleInterrupteurs].find("virtuel", "OFF") != "OFF")
+        			if diversFonctions.deviceActif(interrupteurs[cleInterrupteurs])
         				nbIOActivesJSON["switchs"]["actives"]["nb"] = nbIOActivesJSON["switchs"]["actives"].find("nb", 0) + 1
 
                         # Nb d'interrupteurs réels (non-virtuels)
@@ -175,7 +176,7 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
         			if type(boutons[cleBoutons]) != "instance"  continue    end
 					tasmota.yield()
 
-        			if boutons[cleBoutons].find("activation", "OFF") == "ON" && ((boutons[cleBoutons].find("pin", -1) != -1  && boutons[cleBoutons].find("virtuel", "OFF") == "OFF") || boutons[cleBoutons].find("virtuel", "OFF") != "OFF")
+        			if diversFonctions.deviceActif(boutons[cleBoutons])
         				nbIOActivesJSON["boutons"]["actives"]["nb"] = nbIOActivesJSON["boutons"]["actives"].find("nb", 0) + 1
 
                         # Nb de boutons réels (non-virtuels)
@@ -198,7 +199,7 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
         			if type(analogiques[cleAnalogiques]) != "instance"  continue    end
 					tasmota.yield()
 
-        			if analogiques[cleAnalogiques].find("activation", "OFF") == "ON" && ((analogiques[cleAnalogiques].find("pin", -1) != -1  && analogiques[cleAnalogiques].find("virtuel", "OFF") == "OFF") || analogiques[cleAnalogiques].find("virtuel", "OFF") != "OFF")
+        			if diversFonctions.deviceActif(analogiques[cleAnalogiques])
 						var estReelle = (analogiques[cleAnalogiques].find("virtuel", "OFF") == "OFF")
 						var activesAvant = nbIOActivesJSON["analogiques"]["actives"].find("nb", 0)	# comptee ci-dessous ou non (P5.9)
 						# Pour les entrées analogiques virtuelles de type ADS1115
@@ -273,7 +274,7 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 					if type(thermos[cleTH]) != "instance"  continue    end
 					tasmota.yield()
 
-					if thermos[cleTH].find("activation", "OFF") == "ON" && ((thermos[cleTH].find("pin", -1) != -1  && thermos[cleTH].find("virtuel", "OFF") == "OFF") || thermos[cleTH].find("virtuel", "OFF") != "OFF")
+					if diversFonctions.deviceActif(thermos[cleTH])
 						nbIOActivesJSON["thermometres"]["actives"]["nb"] = nbIOActivesJSON["thermometres"]["actives"].find("nb", 0) + 1
 
                         # Nb de thermometres réels (non-virtuels)
@@ -325,7 +326,7 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 					if type(compteurs[cleCompt]) != "instance"  continue    end
 					tasmota.yield()
 
-					if compteurs[cleCompt].find("activation", "OFF") == "ON" && ((compteurs[cleCompt].find("pin", -1) != -1  && compteurs[cleCompt].find("virtuel", "OFF") == "OFF") || compteurs[cleCompt].find("virtuel", "OFF") != "OFF")
+					if diversFonctions.deviceActif(compteurs[cleCompt])
 						nbIOActivesJSON["compteurs"]["actives"]["nb"] = nbIOActivesJSON["compteurs"]["actives"].find("nb", 0) + 1
 
                         # Nb de compteurs réels (non-virtuels)
