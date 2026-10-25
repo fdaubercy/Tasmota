@@ -52,6 +52,16 @@ def test_sans_reference():
     verifie(ev["detail"], "840 fichiers", "progression_sans_reference : detail")
 
 
+def test_estimation():
+    # Total emprunte a un env de la meme puce (premier build d'un env) : % calcule, total marque « ≈ »
+    s = bp.Suivi("compiler", 1682, None, estime=True)
+    ev = alimente(s, compile_n(841))
+    verifie((ev["pourcent"], ev["detail"]), (50, "841/≈1682 fichiers"), "estimation : 841/≈1682 = 50 %")
+    t = bp.Suivi("compiler", 1682, None)
+    ev = alimente(t, compile_n(841))
+    verifie(ev["detail"], "841/1682 fichiers", "estimation : temoin, un vrai total n'est pas marque")
+
+
 def test_ansi():
     verifie(bp.retire_ansi(f"{ESC}[32mCompiling{ESC}[0m x.o"), "Compiling x.o", "progression_ansi : retire_ansi")
     s = bp.Suivi("compiler", 10)
@@ -237,7 +247,7 @@ def test_effacement():
 
 
 def principal():
-    for t in (test_compilation, test_sans_reference, test_ansi, test_chemins, test_liens, test_esptool,
+    for t in (test_compilation, test_sans_reference, test_estimation, test_ansi, test_chemins, test_liens, test_esptool,
               test_succes, test_echec, test_fs_aussi, test_buildfs_et_prebuild, test_pourcent_borne,
               test_increment, test_cache, test_zone, test_sortie_reelle, test_effacement):
         t()

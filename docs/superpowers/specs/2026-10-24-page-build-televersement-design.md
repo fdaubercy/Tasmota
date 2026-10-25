@@ -265,7 +265,8 @@ contenu de tous les `.ini`**. Si l'empreinte change, `run/helpers.py:35-50` supp
     - étapes affichées : *Pré-build* (pré-script, solidification Berry) → *Compilation* → *Édition des
       liens* → *Téléversement* (ou *Construction du FS* / *Envoi des fichiers*) ;
     - % de compilation = lignes `Compiling …` comptées / nombre de `.o` du dernier build réussi de cet env
-      (mémorisé dans le dossier de données de l'outil ; ~1680 aujourd'hui) ; sans référence, afficher le
+      (mémorisé dans le dossier de données de l'outil ; ~1680 aujourd'hui) ; sans référence, total
+      emprunté au plus grand env de la même puce, affiché « ≈ » (ajout du 2026-10-25) ; à défaut, afficher le
       compte sans % ;
     - % de téléversement série = celui d'esptool (`Writing at 0x… (NN %)`) ; OTA firmware : pas de % fourni
       par `espupload.py` → indéterminé ; envoi FS en OTA : fichiers envoyés / total ;

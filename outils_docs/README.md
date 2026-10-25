@@ -431,7 +431,9 @@ commande quelle que soit la cible ; même mention « FS aussi flashé » sur la 
   que si aucune IP n'est lue dans `user_config_override.h`.
 - Références de progression (nombre de `.o` du dernier
   build réussi de chaque env, base du % de compilation) : `references.json` dans
-  `%LOCALAPPDATA%\outils_tasmota\build\`, hors dépôt.
+  `%LOCALAPPDATA%\outils_tasmota\build\`, hors dépôt. Un env jamais compilé par la page emprunte le total
+  du plus grand env de la même puce (`tasmota32s3`, `tasmota32p4`…), affiché « 337/≈1682 fichiers » ;
+  sans env de la même puce, seul le nombre de fichiers s'affiche.
 - Chaque `pio run` réécrit `platformio_override.ini` et `tasmota/user_config_override.h` (`CFG_HOLDER`) :
   **fichiers à commiter** après un lancement (la page le rappelle en fin de lancement), et à sauvegarder avant
   une série d'essais.

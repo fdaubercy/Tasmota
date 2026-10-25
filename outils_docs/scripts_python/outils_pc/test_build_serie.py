@@ -722,6 +722,28 @@ def test_reference_o_memorisee():
                 "reference_o_memorisee : ancien format entier = total")
 
 
+def test_reference_estimee():
+    # Env sans reference (premier build par la page) : total emprunte au plus grand env de la meme puce
+    with tempfile.TemporaryDirectory() as t:
+        lignes = ["Compiling a.o", "Compiling b.o", "[SUCCESS]"]
+        m = Montage(t, {B: {"build": {"lignes": lignes, "o": 4}}})
+
+        def details(references):
+            (m.dossier / "references.json").write_text(json.dumps(references), encoding="utf-8")
+            ev = m.lance([com(B)], {"compiler"})
+            return [(e["pourcent"], e["detail"]) for e in du_type(ev, "etape", etape="Compilation")
+                    if e["detail"].endswith("fichiers")]
+
+        m.dossier.mkdir(parents=True, exist_ok=True)
+        verifie(details({A: {"total": 8, "increment": None}, C: 20, "tasmota32s3-autre": {"total": 100}}),
+                [(5, "1/≈20 fichiers"), (10, "2/≈20 fichiers")],
+                "reference_estimee : plus grand total de la meme puce (C, ancien format compris), pas le S3")
+        ref = json.loads((m.dossier / "references.json").read_text(encoding="utf-8"))
+        verifie(ref.get(B), {"total": 4, "increment": 2}, "reference_estimee : vrai total memorise apres succes")
+        verifie(details({"tasmota32s3-autre": {"total": 100}}), [(None, "1 fichiers"), (None, "2 fichiers")],
+                "reference_estimee : temoin, aucune puce identique -> compte seul")
+
+
 def test_rappel_fichiers_modifies():
     with tempfile.TemporaryDirectory() as t:
         m = Montage(t)
@@ -891,7 +913,7 @@ def principal():
                  test_serie_attend_build_externe, test_serie_attend_detection_impossible,
                  test_arret_apres_env, test_arret_immediat, test_upload_reussi_puis_arret_immediat,
                  test_ota_annule_si_arret_immediat, test_fin_avant_liberation, test_envoi_en_cours,
-                 test_journal_ecrit, test_reference_o_memorisee, test_rappel_fichiers_modifies,
+                 test_journal_ecrit, test_reference_o_memorisee, test_reference_estimee, test_rappel_fichiers_modifies,
                  test_refus_double_lancement, test_uploadfs_ota, test_garde_build_importable,
                  test_erase_upload_commandes, test_erase_upload_refus, test_erase_upload_envoi_et_echec):
         test()

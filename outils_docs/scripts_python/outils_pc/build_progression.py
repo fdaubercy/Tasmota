@@ -58,15 +58,17 @@ class Suivi:
 
     `reference_o` : nombre total d'objets de l'env (build complet) ; `increment` : objets du dernier
     build incremental. La base du % est l'increment, sauf des qu'un objet sort du cache (build
-    complet) ou que l'increment est depasse : alors le total.
+    complet) ou que l'increment est depasse : alors le total. `estime` : le total est emprunte a un
+    autre env (premier build de celui-ci), il est affiche « ≈ » dans le detail.
     """
 
-    def __init__(self, action, reference_o=None, increment=None):
+    def __init__(self, action, reference_o=None, increment=None, estime=False):
         if action not in ACTIONS:
             raise ValueError(f"action inconnue : {action!r}")
         self.action = action
         self.reference_o = reference_o if reference_o and reference_o > 0 else None
         self.increment = increment if increment and increment > 0 else None
+        self.estime = estime
         self.nb_o = 0
         self.repris = False
         self.zone = ""
@@ -107,7 +109,9 @@ class Suivi:
             self.repris = self.repris or repris
             base = self._base()
             if base:
-                return self._evenement(ETAPE_COMPILATION, self.nb_o * 100 // base, f"{self.nb_o}/{base} fichiers")
+                marque = "≈" if self.estime and base == self.reference_o else ""
+                return self._evenement(ETAPE_COMPILATION, self.nb_o * 100 // base,
+                                       f"{self.nb_o}/{marque}{base} fichiers")
             return self._evenement(ETAPE_COMPILATION, None, f"{self.nb_o} fichiers")
         if self.action == "erase_upload" and not self.efface:
             # Recherche du port et effacement : une seule etape, jusqu'a "Uploading <firmware>"

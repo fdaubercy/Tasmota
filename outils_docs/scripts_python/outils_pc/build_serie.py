@@ -48,7 +48,8 @@ Evenements numerotes (modele maintenance/synchro_fork_session.Session, rejoues p
   fin      env=None, resultat (termine | arrete), succes, echecs, passes, arretes, non_lances, fichiers_modifies
 
 Journal complet de chaque fils (sans ANSI) dans <dossier>/journaux/ ; par env, dans
-<dossier>/references.json, le total des .o et les objets du dernier build incremental reussi (base du %).
+<dossier>/references.json, le total des .o et les objets du dernier build incremental reussi (base du %) ;
+sans total pour un env, celui du plus grand env de la meme puce, affiche « ≈ » (_total_estime).
 """
 
 import ipaddress
@@ -511,9 +512,14 @@ class Serie:
             environ.pop(heritee, None)                  # PLATFORMIO_* : empreinte -> purge de .pio/build
         if action in ENVOIS and ligne.methode == "com":
             args += ["--upload-port", ligne.port]
-        ref = self._references().get(env) if action in COMPILENT else None
+        references = self._references() if action in COMPILENT else {}
+        ref = references.get(env)
         ref = ref if isinstance(ref, dict) else {"total": ref}      # ancien format : un entier = le total
-        suivi = Suivi(action, ref.get("total"), ref.get("increment"))
+        total, estime = ref.get("total"), False
+        if not total:
+            total = _total_estime(env, references)
+            estime = total is not None
+        suivi = Suivi(action, total, ref.get("increment"), estime=estime)
         change, termine = self._chrono(env, action)
         commande = "pio " + " ".join(args)
         self._ajoute("etape", env, action=action, etape=suivi.etape, pourcent=None, detail="", commande=commande)
@@ -630,6 +636,19 @@ class Serie:
         provisoire = self.dossier / "references.json.tmp"
         provisoire.write_text(json.dumps(references, indent=1, sort_keys=True), encoding="utf-8")
         os.replace(provisoire, self.dossier / "references.json")
+
+
+def _total_estime(env, references):
+    """Total de .o d'un env jamais compile par la page : le plus grand total connu d'un env de la meme puce
+    (nom avant le premier tiret : tasmota32s3, tasmota32p4...), None si aucun. Le plus grand, car un total
+    trop petit bloquerait le % a 99 bien avant la fin. Remplace par le vrai total au premier build reussi."""
+    puce = env.split("-")[0]
+    totaux = []
+    for nom, ref in references.items():
+        total = ref.get("total") if isinstance(ref, dict) else ref
+        if nom != env and nom.split("-")[0] == puce and isinstance(total, int) and total > 0:
+            totaux.append(total)
+    return max(totaux, default=None)
 
 
 def _ipv4(texte):

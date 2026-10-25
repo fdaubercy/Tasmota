@@ -138,9 +138,9 @@ unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule c
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
 Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plutot qu'un decoupage) :
-`build_serie.py` fait **640 lignes** (execution en serie des `pio run` : verrous, arret immediat, attente
+`build_serie.py` fait **659 lignes** (+19 le 2026-10-25 : total estime d'un env jamais compile ; execution en serie des `pio run` : verrous, arret immediat, attente
 d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
-verrou), et ses bancs `test_build_serie.py` (**903**), `test_build_page_chrome.py` (**953**),
+verrou), et ses bancs `test_build_serie.py` (**925**), `test_build_page_chrome.py` (**953**),
 `test_build_ota_fs.py` (**566**), `test_build_web.py` (**688**), ainsi que `test_annuaire.py` (**523**,
 banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
 compteur.
