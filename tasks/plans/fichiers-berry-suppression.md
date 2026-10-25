@@ -117,7 +117,7 @@ de `fichiers_berry_suppression`.
 
 ## A6 — Documentation et essai réel
 
-- [ ] README § « Fichiers Berry par env » (suppression, sauvegardes), `CLAUDE.md` (carte des documents), skill `bancs`.
+- [x] README § « Fichiers Berry par env » (suppression, sauvegardes), `CLAUDE.md` (carte des documents), skill `bancs`. — preuve : outils_docs/README.md § Renommer / Supprimer / Sauvegardes, CLAUDE.md (carte), .claude/skills/bancs/SKILL.md:58
 - [ ] Essai réel avec l'utilisateur, hors build : créer un env d'essai, le renommer, puis le supprimer depuis la page ; `git status`
   sans cenv ni `.h`, dossier `…-sauvegarde` présent puis retiré à la main.
 - [ ] Commit `docs: suppression et renommage d un env (README, CLAUDE.md, bancs)` ; `statut: clos`.

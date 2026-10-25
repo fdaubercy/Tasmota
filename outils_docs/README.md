@@ -447,8 +447,8 @@ commande quelle que soit la cible ; même mention « FS aussi flashé » sur la 
 Une page pour décider, carte par carte, ce que devient chaque fichier Berry : **sur le file system**, **exclu** ou
 **solidifié** dans le firmware. Elle écrit les listes de `platformio_tasmota_cenv.ini` (`custom_files_upload`,
 `custom_files_exclude`, `custom_berry_solidify`) à la place d'une édition à la main, et crée un nouvel env à partir
-d'une carte existante. Conception : [spec](../docs/superpowers/specs/2026-10-25-page-fichiers-berry-design.md) ;
-plan : `tasks/plans/fichiers-berry-env.md`.
+d'une carte existante, renomme ou supprime un env. Conception : [spec](../docs/superpowers/specs/2026-10-25-page-fichiers-berry-design.md) ;
+plans : `tasks/plans/fichiers-berry-env.md`, `tasks/plans/fichiers-berry-suppression.md`.
 
 ### Lancer la page
 
@@ -480,6 +480,10 @@ carte) : on ne l'en retire que par `custom_files_exclude`, ou par `custom_berry_
 - Fichiers proposés, **recensés à chaque chargement** (et par « Revérifier les fichiers ») : les `.be` de `data/fs`,
   ceux du dossier de la carte (`data/<lieu>/<carte>/`, aucun pour une base), les modules de l'amont (`.tapp`,
   `.be` de premier niveau, `.bec`). Dossiers `*sauvegarde*` ignorés.
+- **Pendant un build**, `copy_fs_image` recopie `data/fs` dans le dossier de la carte : un `.be` de ce dossier
+  identique octet pour octet à `data/fs/<même nom>` est une **copie temporaire**, ni proposée ni signalée comme
+  homonyme ; la page la liste en avertissement (aussi après un build interrompu, qui en laisse). Un bandeau rouge
+  dit qu'un build est en cours (toute écriture refusée) ou que la détection est impossible.
 - `autoexec.be` est figé sur « Sur le FS ». Un fichier présent dans deux listes est signalé comme incohérent ; une
   ligne du `.ini` dont le fichier a disparu du disque est signalée, jamais retirée en silence. Les entrées non
   Berry (`.js`, `.gz`, `.html` de `custom_files_exclude`) sont montrées en lecture seule (« hors périmètre »).
@@ -493,8 +497,8 @@ carte) : on ne l'en retire que par `custom_files_exclude`, ou par `custom_berry_
    « Appliquer ». Plusieurs « Appliquer » s'accumulent avant d'enregistrer (marqués « en attente »).
 2. Les trois colonnes **Sur le FS · Exclu · Solidifié** montrent l'état complet de l'env ; chaque entrée héritée
    porte un badge de son origine (`socle`, `modbus`, `historique` de `[berry_commun]`, ou l'env de base).
-3. « Voir le diff » puis « Enregistrer » : copie `platformio_tasmota_cenv.ini.bak` avant d'écrire, fins de ligne et
-   encodage gardés, **refus pendant un build** et si le fichier a changé depuis le diff.
+3. « Voir le diff » puis « Enregistrer » : sauvegarde horodatée avant d'écrire (voir « Sauvegardes » plus bas),
+   fins de ligne et encodage gardés, **refus pendant un build** et si le fichier a changé depuis le diff.
 
 - **Liste partagée** : si le fichier vient d'une liste partagée (`[berry_commun]`, ou option héritée d'un autre env),
   la page nomme les envs touchés ; deux issues : « Modifier la liste partagée (N envs) » ou « Annuler ».
@@ -524,16 +528,63 @@ DHCP), `WIFI_RGX_SSID`, `MQTT_CLIENT_ID`, `MQTT_TOPIC`, `MQTT_GRPTOPIC`, `FRIEND
    internes qui citent encore l'ancien define sont signalées, à revoir à la main.
 
 Refus si l'env, le dossier ou le define existent, si l'IP (hors `0.0.0.0`), le topic ou le client MQTT sont déjà
-pris par une autre carte, ou pendant un build. `.bak` des deux fichiers modifiés ; **mots de passe masqués** dans
-le diff. La nouvelle carte apparaît ensuite d'elle-même dans la page build.
+pris par une autre carte, ou pendant un build. **Mots de passe masqués** dans le diff. Le dossier de la nouvelle
+carte ne reçoit ni les `*sauvegarde*` du modèle, ni ses copies temporaires d'un build (fichiers identiques à
+`data/fs`, sous-dossiers `fs`, `json`, `sd`). La nouvelle carte apparaît ensuite d'elle-même dans la page build.
+
+### Renommer un env
+
+« Renommer cet env… » (cartes seulement, pas les bases) : nouveau lieu et/ou nouveau nom, puis « Proposer » :
+l'identité (les 8 champs de la création) et le define sont **reproposés d'après le nouveau nom**, modifiables. Après
+le diff, « Renommer » (grisé si la saisie change après le diff) écrit, en une seule opération :
+
+1. la section `[env:<puce>-<lieu>-<nom>]` du cenv, copie de l'ancienne (même base, chemins du dossier et define
+   remplacés), placée comme à la création ; l'ancienne est retirée ;
+2. la section du `.h` avec la nouvelle identité ; l'ancienne est retirée ;
+3. le dossier de la carte **déplacé** (pas copié) vers son nouveau nom, `_persist.json` aux nouvelles valeurs
+   d'identité (le reste octet pour octet) ;
+4. dans `platformio_override.ini`, la ligne de `default_envs` garde son état (active ou commentée) sous le nouveau
+   nom, et `data_dir` suit le dossier.
+
+Garder son IP, son topic ou son client MQTT est permis (l'identité actuelle de l'env n'est pas comptée comme
+« prise »). Refus si un autre env référence celui-ci (`extends`, `${env:<env>…}`), si le nouvel env, dossier ou
+define existe déjà, ou pendant un build. Ce qui cite encore l'ancien nom (commentaires, scripts, bancs) est signalé,
+jamais modifié. Renommer puis revenir à l'ancien nom redonne des fichiers identiques.
+
+### Supprimer un env
+
+« Supprimer cet env » : pour un env qui ne sert plus, ou pour défaire une création ratée. Après le diff,
+« Supprimer » :
+
+1. retire la section `[env:…]` du cenv (le bandeau `; LOCALISATION:` du lieu reste, même vide) ;
+2. retire la section du `.h` (commentaire `// -- Options for …` compris ; si c'était le `#if` de tête, la suivante
+   devient `#if`). Section partagée par deux envs (`#if defined(A) || defined(B)`) : seul `defined(<env>)` est
+   retiré de la condition ;
+3. renomme le dossier `data/<lieu>/<carte>` en `<carte>-sauvegarde` (`-sauvegarde-2`, `-3`… si le nom est pris) :
+   rien n'est effacé, les builds et la page l'ignorent. À retirer à la main quand on est sûr ;
+4. retire l'env de `default_envs` (ligne active ou commentée) ; un `data_dir` qui désignait le dossier est signalé.
+
+Refus pour une base dont d'autres envs héritent ou qu'ils référencent (envs nommés), pour un env de l'amont, ou
+pendant un build. Les citations de l'env ailleurs sont signalées. Créer puis supprimer un env redonne un cenv, un
+`.h` et un `platformio_override.ini` identiques à l'origine.
+
+### Sauvegardes
+
+Chaque écriture (enregistrement, création, renommage, suppression) est **atomique** : si un fichier ne peut pas
+être écrit en route, ce qui a déjà été fait est défait (fichiers remis, dossier copié retiré, dossier renommé
+remis). Avant d'écrire, chaque fichier modifié est copié dans
+`%LOCALAPPDATA%\outils_tasmota\fichiers_berry\sauvegardes\<date-heure>-<nature>\` (chemins du dépôt gardés),
+**gardé 30 jours** ; la page affiche ce dossier après l'opération. Plus de `.bak` commun avec la page build.
+Une erreur inattendue (fichier verrouillé…) est affichée avec son message (réponse 500), sans rien laisser à moitié.
 
 ### Bancs
 
 Dans `outils_docs/scripts_python/outils_pc/`, avec le Python du penv PlatformIO (code de sortie 0 = vert) :
 `test_fichiers_berry_ini.py`, `_etat.py`, `_ecriture.py` (relecture par `ProjectConfig` de PlatformIO),
-`_creation.py` (copie du dépôt dans un dossier temporaire), `_web.py`, et la sonde Chrome
+`_creation.py` (copie du dépôt dans un dossier temporaire), `_suppression.py`, `_renommage.py`, `_sauvegarde.py`,
+`_web.py`, et la sonde Chrome
 `test_fichiers_berry_page_chrome.py` ; cible Custom : `build/test_cible_fichiers_berry.py`. Aucun banc n'écrit
-dans le vrai dépôt.
+dans le vrai dépôt ni dans le vrai dossier des sauvegardes.
 
 <hr></hr>
 

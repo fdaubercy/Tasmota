@@ -617,7 +617,8 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     `docs/superpowers/specs/2026-10-24-page-build-televersement-design.md` ; plan :
     `tasks/plans/page-build-televersement.md`.
   - `fichiers_berry_web.py` (+ `fichiers_berry_page.py`, `fichiers_berry_ini.py`, `fichiers_berry_etat.py`,
-    `fichiers_berry_ecriture.py`, `fichiers_berry_creation.py`) — page « Fichiers Berry par env » http://127.0.0.1:7800
+    `fichiers_berry_ecriture.py`, `fichiers_berry_creation.py`, `fichiers_berry_suppression.py`, `fichiers_berry_renommage.py`,
+    `fichiers_berry_sauvegarde.py`, `fichiers_berry_page_envs.py`) — page « Fichiers Berry par env » http://127.0.0.1:7800
     (tuile de l'annuaire, groupe Maintenance, arret libre : rien n'est ecrit avant « Enregistrer » ; tache VS Code
     « Outil : fichiers Berry par env » ; cible Custom « Fichiers Berry par env (page web) », `build/cible_fichiers_berry.py`,
     banc `build/test_cible_fichiers_berry.py`, page demarree detachee comme celle du build ; lien « fichiers » sur chaque
@@ -626,10 +627,17 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     `custom_files_upload` / `custom_files_exclude` / `custom_berry_solidify` du cenv : resolution des `${...}` avec
     provenance (`fichiers_berry_ini.py`), liste partagee -> envs touches nommes puis « Modifier (N envs) » ou « Annuler »,
     option heritee -> `${env:<base>.opt}` + ligne, commentaires jamais touches (ceux qui citent le fichier signales),
-    raison facultative `; raison (date)`, diff puis ecriture avec empreinte, `.bak`, refus pendant un build. Creation
+    raison facultative `; raison (date)`, diff puis ecriture avec empreinte, refus pendant un build. Creation
     d'un env a partir d'une carte modele (`fichiers_berry_creation.py`) : section du cenv, dossier `data/<lieu>/<puce>-<nom>`
     (identite remplacee dans le `_persist.json`, texte garde octet pour octet), section `#elif` de `user_config_override.h` ;
-    refus si env/dossier/define/IP/topic/client deja pris ; secrets masques dans le diff. Bancs `test_fichiers_berry_*.py`
+    refus si env/dossier/define/IP/topic/client deja pris ; secrets masques dans le diff. Renommage d'un env
+    (`fichiers_berry_renommage.py`, identite reproposee, dossier DEPLACE) et suppression (`fichiers_berry_suppression.py` :
+    section du cenv et du `.h` retirees, `default_envs` de `platformio_override.ini`, dossier renomme en `…-sauvegarde`) ;
+    panneaux dans `fichiers_berry_page_envs.py`. Toute ecriture est ATOMIQUE (`fichiers_berry_sauvegarde.Transaction` :
+    annulation sur exception, copie horodatee dans `%LOCALAPPDATA%\outils_tasmota\fichiers_berry\sauvegardes\`, 30 jours ;
+    plus de `.bak`). Copies temporaires d'un build (`.be` de la carte identique a `data/fs`) ni proposees ni recopiees ;
+    exception inattendue -> 500 avec son message. Bancs `test_fichiers_berry_*.py`
     (copies temporaires, jamais le vrai depot ; `_ecriture` relu par `ProjectConfig`) + sonde Chrome
     `test_fichiers_berry_page_chrome.py`. Mode d'emploi : `outils_docs/README.md` § « Fichiers Berry par env (page web) ».
-    Spec : `docs/superpowers/specs/2026-10-25-page-fichiers-berry-design.md` ; plan : `tasks/plans/fichiers-berry-env.md`.
+    Spec : `docs/superpowers/specs/2026-10-25-page-fichiers-berry-design.md` (§9 suppression, §10 renommage) ; plans :
+    `tasks/plans/fichiers-berry-env.md`, `tasks/plans/fichiers-berry-suppression.md`.
