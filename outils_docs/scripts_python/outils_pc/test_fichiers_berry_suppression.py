@@ -67,7 +67,7 @@ def test_section_partagee_puis_tete(racine):
     supprime(racine, CAVE_S3)
     h = tfc.texte(racine, fbc.FICHIER_H)
     verifie(re.search(r"FIRMWARE_ESP32S3?_CAVE_SERVEUR_RLY", h) is None, True, "section de tete retiree")
-    verifie(h.count("        #if defined(FIRMWARE_TELEINFO_CONSO)"), 1, "section suivante passee de #elif a #if")
+    verifie(h.count("        #if defined(FIRMWARE_ESP32_VR_PORTE)"), 1, "section suivante passee de #elif a #if")   # celle qui suit la cave (audit P2.4)
     verifie(h.count("        #elif defined(FIRMWARE_TELEINFO_CONSO)"), 0, "plus de #elif pour la nouvelle tete")
     verifie(("tasmota32-cave-serveur-rly ET" in h, "Une seule section pour les deux cartes" in h), (False, False),
             "commentaires de la section des caves partis avec elle")
