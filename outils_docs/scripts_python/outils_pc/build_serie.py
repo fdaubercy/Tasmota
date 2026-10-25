@@ -1,14 +1,15 @@
 """Execution en serie des `pio run` de la page Build et televersement : refus, suivi, arret.
 
 Un lancement = des lignes (env, methode COM ou OTA, port, IP) et des actions cochees parmi
-compiler / upload / buildfs / uploadfs. Les envs passent l'un apres l'autre, un seul fils pio a la
-fois. Dans un env, ordre fixe : compiler -> televerser le firmware -> construire le FS -> televerser
-le FS. Un echec arrete CET env (actions suivantes « annulee »), les autres continuent (choix 8 de la
+compiler / upload / erase_upload / buildfs / uploadfs. Les envs passent l'un apres l'autre, un seul fils
+pio a la fois. Dans un env, ordre fixe : compiler -> televerser le firmware (ou effacer puis televerser) ->
+construire le FS -> televerser le FS. Un echec arrete CET env (actions suivantes « annulee »), les autres continuent (choix 8 de la
 spec docs/superpowers/specs/2026-10-24-page-build-televersement-design.md).
 
 Commandes (choix 9) : compiler = `run -e X` ; upload = `run -e X -t upload` (compile si besoin : si
-« compiler » est aussi coche, seul upload part) ; buildfs = `-t buildfs` ; uploadfs par cable =
-`-t uploadfs`. Port COM par `--upload-port` (jamais PLATFORMIO_UPLOAD_PORT ni
+« compiler » est aussi coche, seul upload part) ; erase_upload = `-t erase_upload` (choix 19 : par cable
+seulement, l'un OU l'autre avec upload, a sa place, compile si besoin comme lui) ; buildfs = `-t buildfs` ;
+uploadfs par cable = `-t uploadfs`. Port COM par `--upload-port` (jamais PLATFORMIO_UPLOAD_PORT ni
 PLATFORMIO_EXTRA_SCRIPTS : ils entrent dans l'empreinte du projet et purgeraient .pio/build).
 En OTA, la page envoie elle-meme (build_ota_fs, spec choix 7 revise) : upload = `run -e X` puis la
 fonction injectee `ota_firmware` (firmware de .pio/build/<env>/ par /u2) ; uploadfs = buildfs (s'il
@@ -17,7 +18,7 @@ dans un dossier temporaire par build_ota_fs.extrait_image) envoyes par la foncti
 (/ufsu). Jamais littlefs_data : post_esp32.py le remplit a chaque edition des liens (choix 10.1).
 
 Refus avant de lancer (choix 11) : build deja en cours (garde_build), port COM tenu ou absent, deux
-envois COM sur le meme port, IP OTA vide. Le controle « build en cours » est refait avant chaque env
+envois COM sur le meme port (erase_upload est un envoi), IP OTA vide, erase_upload en OTA ou avec upload. Le controle « build en cours » est refait avant chaque env
 suivant : la serie attend (evenement `attente`) puis reprend. Pendant qu'un fils de la serie tourne,
 rien n'est controle : la serie ne se bloque pas sur ses propres `pio run`.
 
@@ -49,13 +50,16 @@ from pathlib import Path
 
 import build_envs
 import build_ota_fs
-from build_progression import ETAPE_COMPILATION, ETAPE_ENVOI, ETAPE_LIENS, ETAPE_PREBUILD, Suivi, retire_ansi
+from build_progression import (ETAPE_COMPILATION, ETAPE_EFFACEMENT, ETAPE_ENVOI, ETAPE_LIENS, ETAPE_PREBUILD, Suivi,
+                               retire_ansi)
 
 ICI = Path(__file__).resolve().parent
 DEPOT = ICI.parents[2]
 PIO_PENV = Path.home() / ".platformio" / "penv" / "Scripts" / "pio.exe"
-ORDRE = ("compiler", "upload", "buildfs", "uploadfs")
-ENVOIS = {"upload", "uploadfs"}
+ORDRE = ("compiler", "upload", "erase_upload", "buildfs", "uploadfs")
+ENVOIS = {"upload", "erase_upload", "uploadfs"}
+TELEVERSEMENTS = ("upload", "erase_upload")         # televerser le firmware : l'un OU l'autre (choix 19)
+COMPILENT = ("compiler",) + TELEVERSEMENTS           # leur pio run compile : base du % et objets de reference
 ETAPE_ENVOI_FS = "Envoi des fichiers"
 FICHIERS_MODIFIES = ["platformio_override.ini", "tasmota/user_config_override.h"]
 MAX_EVENEMENTS = 50000
@@ -172,8 +176,8 @@ class Serie:
 
     def envoi_en_cours(self):
         """Vrai pendant un envoi vers une carte : upload / uploadfs par cable une fois en phase
-        Televersement (la compilation et la construction du FS qui precedent n'en sont pas), ou envoi
-        OTA par la page. build_web.arrete_serie attend sa fin avant de tuer quoi que ce soit."""
+        Televersement (la compilation et la construction du FS qui precedent n'en sont pas), erase_upload
+        des l'Effacement de la flash (le couper laisserait une flash vide), ou envoi OTA par la page. build_web.arrete_serie attend sa fin avant de tuer quoi que ce soit."""
         with self.verrou:
             return self._actif and self._envoi
 
@@ -192,6 +196,8 @@ class Serie:
             motifs.append(f"actions invalides : {sorted(actions)!r} (attendu parmi {', '.join(ORDRE)})")
         if not lignes:
             motifs.append("aucun environnement coché")
+        if set(TELEVERSEMENTS) <= set(actions):
+            motifs.append("« Téléverser le firmware » et « Effacer puis téléverser » : l'une ou l'autre, pas les deux")
         envoi = bool(set(actions) & ENVOIS)
         connus = {e.nom: e for e in build_envs.liste_envs(self.racine)}
         vus, ports = set(), {}
@@ -211,6 +217,8 @@ class Serie:
                 else:
                     ports.setdefault(ligne.port.upper(), []).append(nom)
             elif envoi and ligne.methode == "ota":
+                if "erase_upload" in actions:
+                    motifs.append(f"{nom} : « Effacer puis téléverser » se fait par câble (COM) seulement")
                 if not connus[nom].ota_possible:
                     motifs.append(f"{nom} : OTA impossible pour cet environnement")
                 if not ligne.ip:
@@ -328,11 +336,12 @@ class Serie:
         de l'etape acheve (une compilation qui prepare un envoi OTA n'acheve pas l'upload).
         """
         plan = []
-        if "upload" in actions:
-            couvre = [a for a in ("compiler", "upload") if a in actions]
+        televerse = next((a for a in TELEVERSEMENTS if a in actions), None)
+        if televerse:
+            couvre = [a for a in ("compiler", televerse) if a in actions]
             if ligne.methode == "com":
-                plan.append(("pio", "upload", "upload", couvre, couvre))
-            else:
+                plan.append(("pio", televerse, televerse, couvre, couvre))
+            else:                                        # upload OTA (erase_upload en OTA : refuse par controle)
                 plan.append(("pio", "upload", "", couvre, [a for a in couvre if a == "compiler"]))   # compilation
                 plan.append(("ota_firmware", "upload", "", ["upload"], ["upload"]))
         elif "compiler" in actions:
@@ -369,11 +378,11 @@ class Serie:
             if ok:
                 statuts.update({a: "succes" for a in reussies})
                 continue
-            if action == "upload" and "compiler" in couvre and etape in (ETAPE_PREBUILD, ETAPE_COMPILATION,
-                                                                         ETAPE_LIENS):
+            televerse = action in TELEVERSEMENTS and "compiler" in couvre
+            if televerse and etape in (ETAPE_PREBUILD, ETAPE_COMPILATION, ETAPE_LIENS):
                 statuts["compiler"] = "echec"          # echec avant le televersement : upload annulee
-            elif action == "upload" and "compiler" in couvre:
-                statuts.update(compiler="succes", upload="echec")
+            elif televerse:
+                statuts.update({"compiler": "succes", action: "echec"})
             else:
                 statuts.update({a: "echec" for a in couvre})
             self._ajoute("echec", env, action=action, motif=motif, extrait=extrait)
@@ -409,7 +418,7 @@ class Serie:
             environ.pop(heritee, None)                  # PLATFORMIO_* : empreinte -> purge de .pio/build
         if action in ENVOIS and ligne.methode == "com":
             args += ["--upload-port", ligne.port]
-        ref = self._references().get(env) if action in ("compiler", "upload") else None
+        ref = self._references().get(env) if action in COMPILENT else None
         ref = ref if isinstance(ref, dict) else {"total": ref}      # ancien format : un entier = le total
         suivi = Suivi(action, ref.get("total"), ref.get("increment"))
         change, termine = self._chrono(env, action)
@@ -436,7 +445,7 @@ class Serie:
                 ev = suivi.ligne(brut)
                 if ev is not None:
                     change(ev["etape"])
-                    self._marque_envoi(action in ENVOIS and ev["etape"] == ETAPE_ENVOI)
+                    self._marque_envoi(action in ENVOIS and ev["etape"] in (ETAPE_ENVOI, ETAPE_EFFACEMENT))
                     self._ajoute("etape", env, action=action, **ev)
             code = proc.wait()
             journal.write(f"--- code de sortie {code}\n")
@@ -444,7 +453,7 @@ class Serie:
             self._proc, self._envoi = None, False
         termine()
         if code == 0:                                    # fini avec succes, meme si l'arret immediat arrive
-            if action in ("compiler", "upload"):         # juste apres : l'upload a bien eu lieu
+            if action in COMPILENT:                      # juste apres : l'upload a bien eu lieu
                 self._memorise_reference(env, suivi)
             return True, "", [], suivi.etape
         if self._arrete_demande(immediat=True):

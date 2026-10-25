@@ -152,7 +152,8 @@ def test_routes_locales(b):
 
 # Ce que la page doit porter (spec objectifs 4 et 8, choix 4, 9, 13 et 15 ; brief A6)
 ATTENDUS_PAGE = {
-    "les 4 actions": ['value="compiler"', 'value="upload"', 'value="buildfs"', 'value="uploadfs"'],
+    "les 5 actions": ['value="compiler"', 'value="upload"', 'value="erase_upload"', 'value="buildfs"', 'value="uploadfs"'],
+    "effacer puis televerser": ["Effacer puis téléverser", "remplacés par ceux du dépôt"],
     "les 3 familles": ["Mes cartes", "Mes bases", "Tasmota (amont)"],
     "les 4 sous-groupes amont": ["Safeboot", "ESP32", "Langues", "ESP8266"],
     "l'en-tete X-Build des POST": ['"X-Build": "1"'],
@@ -345,6 +346,25 @@ def test_sortie_en_direct(b):
             "sortie_en_direct : nom d'env ou octet invalide = 400")
 
 
+def test_erase_upload(b):
+    """A10 : refus serveur (OTA, avec upload) ; journal et sortie d'un erase_upload servis ; choix memorises."""
+    statut, texte = b.requete("POST", "/lancer", {"lignes": [{"env": A, "methode": "ota", "port": "", "ip": "192.168.0.5"}],
+                                                  "actions": ["erase_upload"]})
+    verifie((statut, "COM" in texte), (409, True), "erase_upload : ligne OTA refusee par le serveur (409)")
+    statut, texte = b.requete("POST", "/lancer", {"lignes": [LIGNE_A], "actions": ["upload", "erase_upload"]})
+    verifie((statut, "Effacer puis téléverser" in texte), (409, True), "erase_upload : avec upload refuse par le serveur (409)")
+    Path(os.environ[faux.VAR_SCENARIO]).write_text("{}", encoding="utf-8")       # sortie nominale du faux pio
+    verifie(b.json("POST", "/lancer", {"lignes": [LIGNE_A], "actions": ["compiler", "erase_upload"]})[0], 200,
+            "erase_upload : lancement COM accepte")
+    b.attend_fin()
+    statut, journal = b.requete("GET", f"/journal?env={A}")
+    verifie((statut, "-t erase_upload --upload-port COM12" in journal, "Flash memory erased" in journal), (200, True, True),
+            "erase_upload : journal de l'env servi (nom en -erase_upload.log)")
+    verifie("Flash memory erased" in sortie(b, A).get("texte", ""), True, "erase_upload : sortie de l'env servie")
+    verifie(b.json("GET", "/envs")[1]["derniers"].get("actions"), ["compiler", "erase_upload"],
+            "erase_upload : actions memorisees dans derniers.json")
+
+
 def test_lancement(b):
     lancement = {"lignes": [LIGNE_A], "actions": ["compiler"]}
     verifie(b.json("POST", "/lancer", {"lignes": [], "actions": ["compiler"]})[0], 409, "lancer : refus du serie = 409")
@@ -507,7 +527,7 @@ def principal():
             for test in (test_routes_locales, test_page_contient, test_envs_fs_avec_firmware, test_post_sans_entete_refuse, test_distant_sans_jeton_refuse,
                          test_corps_borne, test_port_ecrit_puis_relu, test_port_refuse_pendant_build_externe,
                          test_lancement, test_flux_et_journal, test_journal_dernier_lancement, test_arret,
-                         test_sortie_en_direct):
+                         test_sortie_en_direct, test_erase_upload):
                 test(b)
         finally:
             b.ferme()

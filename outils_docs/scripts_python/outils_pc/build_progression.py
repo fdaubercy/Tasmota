@@ -19,8 +19,9 @@ ETAPE_COMPILATION = "Compilation"
 ETAPE_LIENS = "Édition des liens"
 ETAPE_ENVOI = "Téléversement"
 ETAPE_FS = "Construction du FS"
+ETAPE_EFFACEMENT = "Effacement de la flash"
 
-ACTIONS = ("compiler", "upload", "buildfs", "uploadfs")
+ACTIONS = ("compiler", "upload", "erase_upload", "buildfs", "uploadfs")
 PLAFOND = 99          # jamais 100 % avant le [SUCCESS] de pio
 
 _ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07")
@@ -34,10 +35,16 @@ _ESPTOOL = re.compile(r"Writing at 0x[0-9a-fA-F]+.*?(\d+(?:\.\d+)?)\s*%")
 # espota (OTA) : "Uploading: [=====     ] 52%"
 _OTA = re.compile(r"^\s*Uploading:\s*\[[^\]]*\]\s*(\d+(?:\.\d+)?)\s*%")
 _ENVOI = re.compile(r"^\s*(Uploading\s+\S|Looking for upload port|Auto-detected:|Configuring upload protocol)")
+_TELEVERSE = re.compile(r"^\s*Uploading\s+\S")
+# erase_upload : libelle "Erasing..." de l'action $ERASECMD (platforms/espressif32/builder/main.py:1990), puis
+# esptool v5.4.0 "Erasing flash memory (this may take a while)..." et "Flash memory erased successfully in X
+# seconds." (packages/tool-esptoolpy/esptool/cmds.py:2273 et :2282)
+_EFFACEMENT = re.compile(r"^\s*(Erasing\.\.\.|Erasing flash\b)")
+_EFFACE = re.compile(r"^\s*Flash memory erased successfully")
 _FS = re.compile(r"Nous allons créer le système de fichiers|Building FS image|mklittlefs|Creating filesystem")
 _FS_AUSSI = re.compile(r"Utilisera une commande de téléchargement personnalisée")
 _RESULTAT = re.compile(r"\[(SUCCESS|FAILED)\]")
-_ERREUR = re.compile(r"error:|Error|FAILED")
+_ERREUR = re.compile(r"error:|Error|FAILED|fatal error")     # esptool : "A fatal error occurred: ..."
 
 
 def retire_ansi(texte):
@@ -65,6 +72,7 @@ class Suivi:
         self.resultat = None
         self.extrait_erreur = []
         self.fs_aussi = False
+        self.efface = False               # erase_upload : effacement termine
         self.etape = ETAPE_PREBUILD
         self.pourcent = None
         self.detail = ""
@@ -100,6 +108,13 @@ class Suivi:
             if base:
                 return self._evenement(ETAPE_COMPILATION, self.nb_o * 100 // base, f"{self.nb_o}/{base} fichiers")
             return self._evenement(ETAPE_COMPILATION, None, f"{self.nb_o} fichiers")
+        if self.action == "erase_upload" and not self.efface:
+            # Recherche du port et effacement : une seule etape, jusqu'a "Uploading <firmware>"
+            if _EFFACE.match(t):
+                self.efface = True
+                return self._evenement(ETAPE_EFFACEMENT, None, "flash effacée")
+            if _EFFACEMENT.match(t) or (_ENVOI.match(t) and not _TELEVERSE.match(t)):
+                return self._evenement(ETAPE_EFFACEMENT, None, "")
         m = _ZONE.match(t)
         if m:
             self.zone = re.split(r"[\\/]", m.group(1))[-1]

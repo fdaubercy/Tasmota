@@ -17,7 +17,8 @@ script) sur un port libre, avec :
   - un depot d'essai temporaire (3 cartes, 1 base, envs amont des 4 sous-groupes) : aucun .ini reel lu
     ni ecrit (la sonde ecrit un port par la page) ;
   - OUTILS_TASMOTA_DOSSIER temporaire (journaux, derniers choix, fiche de presence) ;
-  - la detection des builds externes neutralisee (c'est la page qu'on teste, pas garde_build).
+  - la detection des builds externes neutralisee (c'est la page qu'on teste, pas garde_build) ;
+  - la verification des ports COM neutralisee (toujours « libre ») : aucun vrai port n'est ouvert.
 Scenario : 3 envs a compiler, dont le 2e en echec -> bandeau rouge sur lui seul, durees affichees,
 barre a 100 % sur les 2 autres, journal depliable, rappel des fichiers modifies ; puis largeur telephone.
 """
@@ -140,6 +141,9 @@ def mode_serveur(port, depot, temoin):
     import build_serie
     import build_web
     build_serie.garde_build = lambda: SimpleNamespace(builds_en_cours=lambda: [])
+    # jamais de vrai port COM : la verification par defaut ouvrirait le port de la carte (COM12 = la cuve sur ce PC)
+    serie_reelle = build_serie.Serie
+    build_serie.Serie = lambda *a, **k: serie_reelle(*a, **dict(k, port_libre=lambda port: "libre"))
     build_web.DEPOT = Path(depot)
     sys.argv = ["build_web.py", "--http", str(port), "--local", "--sans-navigateur"]
     return build_web.principal()
@@ -476,6 +480,7 @@ def sonde_page(m, capture):
 
     sonde_redemarrage(m)
     sonde_sortie(m)
+    sonde_effacement(m)
     sonde_synthetique(cdp)
 
     # largeur telephone : colonnes empilees, pas de defilement horizontal
@@ -617,6 +622,60 @@ def sonde_sortie(m):
     fin = attend(cdp, f"(() => {{ const c = {console}; return c.textContent.includes('code de sortie 0') && "
                       "c.scrollTop + c.clientHeight >= c.scrollHeight - 2; })()", 5, 0.1)
     verifie(fin, True, "sortie : revenu en bas -> defilement auto repris, journal lu jusqu'au bout apres la fin")
+
+
+EFFACEMENT_A = ["Processing {env} (platform: espressif32)", "Compiling .pio/build/{env}/src/a.cpp.o",
+                "Linking .pio/build/{env}/firmware.elf",
+                "Utilisera une commande de téléchargement personnalisée pour l'opération de flashage afin d'ajouter le "
+                "système de fichiers défini pour cette cible de compilation.",
+                "Looking for upload port...", "Erasing...", "esptool v5.4.0", "Erasing flash memory (this may take a while)...",
+                "@pause 0.6", "Flash memory erased successfully in 0.6 seconds.", "Uploading .pio/build/{env}/firmware.bin",
+                "Writing at 0x00010000 (50 %)", "Writing at 0x00020000 (100 %)", "[SUCCESS] Took 1.20 seconds"]
+
+
+def sonde_effacement(m):
+    """A10 : « Effacer puis téléverser » : exclusive avec upload, COM seulement, confirmation, etape d'effacement."""
+    cdp = m.cdp
+    (m.t / "scenario.json").write_text(json.dumps({A: {"erase_upload": {"lignes": EFFACEMENT_A}}}), encoding="utf-8")
+    case = lambda a: f'input[name=action][value="{a}"]'
+    etat = lambda: cdp.js("['upload', 'erase_upload'].map(a => document.querySelector('input[name=action][value=\"' + a + '\"]').checked)")
+    ota = lambda env: f"document.querySelector('.env[data-env=\"{env}\"] .methode button:nth-child(2)')"
+    for env in (A, B, C):
+        coche(cdp, f"#env-{env}", env in (A, C))
+    for action in ("compiler", "upload", "erase_upload", "buildfs", "uploadfs"):
+        coche(cdp, case(action), action == "upload")
+    coche(cdp, case("erase_upload"))
+    verifie(etat(), [False, True], "effacer : cocher « Effacer puis téléverser » décoche « Téléverser le firmware »")
+    coche(cdp, case("upload"))
+    verifie(etat(), [True, False], "effacer : et inversement")
+    coche(cdp, case("erase_upload"))
+    verifie([cdp.js(f"document.querySelector('.env[data-env=\"{e}\"] .notes').textContent.includes('sera aussi flashé')") for e in (A, C)],
+            [True, False], "effacer : mention « FS aussi flashé » selon l'env (temoin : env sans fichiers)")
+    verifie(cdp.js(f"{ota(C)}.disabled"), True, "effacer : OTA grise sur les lignes tant que l'action est cochee")
+    coche(cdp, case("erase_upload"), False)
+    cdp.js(f"{ota(C)}.click()")
+    verifie(cdp.js(f"document.querySelector('{case('erase_upload')}').disabled"), True,
+            "effacer : action grisee quand une ligne cochee est en OTA")
+    cdp.js(f"document.querySelector('.env[data-env=\"{C}\"] .methode button:nth-child(1)').click()")
+    verifie(cdp.js(f"document.querySelector('{case('erase_upload')}').disabled"), False, "effacer : temoin, ligne revenue en COM -> action disponible")
+    coche(cdp, f"#env-{C}", False)
+    coche(cdp, case("erase_upload"))
+    cdp.js("window.confirm = t => { window._confirmation = t; return false; }")      # l'utilisateur refuse
+    cdp.js("document.getElementById('lancer').click()")
+    time.sleep(0.8)
+    texte = cdp.js("window._confirmation || ''") or ""
+    derniers = cdp.js("fetch('/envs').then(r => r.json()).then(d => (d.derniers.actions || []).join())")
+    verifie(("remplacés par ceux du dépôt" in texte, "persist" in texte, A in texte, derniers), (True, True, True, "compiler"),
+            "effacer : confirmation (persist et reglages remplaces par ceux du depot) ; refusee -> rien lance")
+    cdp.js("window.confirm = t => true")
+    cdp.js("document.getElementById('lancer').click()")
+    rang = attend(cdp, f"(() => {{ const r = document.querySelector('.bloc[data-bloc=\"{A}\"] .rang[data-action=erase_upload]');"
+                       " return r && document.getElementById('etat').textContent.startsWith('terminé') ? r.textContent : ''; })()", 15)
+    rang = rang if isinstance(rang, str) else ""
+    verifie(("Effacer puis téléverser" in rang, "Effacement de la flash" in rang, "réussi" in rang), (True, True, True),
+            f"effacer : acceptee -> ligne « Effacer puis téléverser », duree d'effacement, reussi ({rang[:120]})")
+    verifie(cdp.js(f"document.querySelector('.bloc[data-bloc=\"{A}\"]').textContent.includes('aussi flashé avec le firmware')"), True,
+            "effacer : FS aussi flashe signale dans le bloc (ligne post_esp32 d'un erase_upload)")
 
 
 def sonde_redemarrage(m):

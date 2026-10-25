@@ -15,8 +15,10 @@ Tout texte venu du serveur est insere par textContent, jamais par innerHTML.
 Rattachements du suivi (pour ne pas creer de ligne « fantome » dans le bloc d'un env) :
   - la preparation d'un uploadfs OTA arrive avec action="buildfs" meme si buildfs n'est pas coche :
     elle est affichee sur la ligne « Téléverser le file system » (prefixe « Préparation ») ;
-  - si compiler ET upload sont coches, seul upload part (choix 9 de la spec) : ses etapes Pré-build,
-    Compilation et Édition des liens sont affichees sur la ligne « Compiler le firmware ».
+  - si compiler ET upload (ou erase_upload) sont coches, seul upload part (choix 9 de la spec) : ses etapes
+    Pré-build, Compilation et Édition des liens sont affichees sur la ligne « Compiler le firmware ».
+« Téléverser le firmware » et « Effacer puis téléverser » (erase_upload, choix 19) : cocher l'une decoche
+l'autre ; erase_upload par cable seulement (OTA grise), avec une confirmation avant le lancement.
 Un `detail` qui commence par « AVERTISSEMENT » (verification apres redemarrage de l'OTA du FS) donne un
 bandeau orange, distinct d'un echec (bandeau rouge).
 """
@@ -170,10 +172,14 @@ PAGE = r"""<!doctype html>
         <h2>Actions</h2>
         <label class="action"><input type="checkbox" name="action" value="compiler"> Compiler le firmware</label>
         <label class="action"><input type="checkbox" name="action" value="upload"> Téléverser le firmware</label>
+        <label class="action" title="pio run -t erase_upload : efface toute la flash, puis téléverse le firmware (et le file system) par câble">
+          <input type="checkbox" name="action" value="erase_upload"> Effacer puis téléverser</label>
         <label class="action"><input type="checkbox" name="action" value="buildfs"> Construire le file system</label>
         <label class="action"><input type="checkbox" name="action" value="uploadfs"> Téléverser le file system</label>
-        <p class="discret" style="margin:6px 0 0">Ordre dans un env : compiler → téléverser le firmware → construire le FS →
-          téléverser le FS. Un échec arrête cet env ; les suivants continuent.</p>
+        <p class="discret" style="margin:6px 0 0">Ordre dans un env : compiler → téléverser le firmware (ou effacer puis
+          téléverser) → construire le FS → téléverser le FS. Un échec arrête cet env ; les suivants continuent.</p>
+        <p class="discret" style="margin:4px 0 0">« Effacer puis téléverser » : à la place de « Téléverser le firmware »,
+          par câble (COM) seulement ; persist et réglages de la carte effacés, remplacés par ceux du dépôt.</p>
       </div>
       <div class="carte pile">
         <button id="lancer" class="btn p" type="button" disabled>Lancer (0 env, l'un après l'autre)</button>
@@ -199,9 +205,10 @@ PAGE = r"""<!doctype html>
 "use strict";
 var $ = function (id) { return document.getElementById(id); };
 var DELAI_APPEL = 15000;
-var ACTIONS = ["compiler", "upload", "buildfs", "uploadfs"];
-var LIBELLES = {compiler: "Compiler le firmware", upload: "Téléverser le firmware",
+var ACTIONS = ["compiler", "upload", "erase_upload", "buildfs", "uploadfs"];
+var LIBELLES = {compiler: "Compiler le firmware", upload: "Téléverser le firmware", erase_upload: "Effacer puis téléverser",
                 buildfs: "Construire le file system", uploadfs: "Téléverser le file system"};
+var TELEVERSEMENTS = ["upload", "erase_upload"];          // l'un OU l'autre : les enchainer flasherait deux fois
 var FAMILLES = [["cartes", "Mes cartes", true], ["bases", "Mes bases", true], ["amont", "Tasmota (amont)", false]];
 var SOUS_GROUPES = [["safeboot", "Safeboot"], ["esp32", "ESP32"], ["langues", "Langues"], ["esp8266", "ESP8266"]];
 var ETAPES_COMPILATION = ["Pré-build", "Compilation", "Édition des liens"];
@@ -262,10 +269,11 @@ function duree(s) {
   return m + " min " + (r < 10 ? "0" : "") + r + " s";
 }
 
-function actionsCochees() {
-  return ACTIONS.filter(function (a) { return document.querySelector('input[name=action][value="' + a + '"]').checked; });
-}
-function aUnEnvoi(actions) { return actions.indexOf("upload") >= 0 || actions.indexOf("uploadfs") >= 0; }
+function caseAction(a) { return document.querySelector('input[name=action][value="' + a + '"]'); }
+function actionsCochees() { return ACTIONS.filter(function (a) { return caseAction(a).checked; }); }
+function aUnEnvoi(actions) { return ["upload", "erase_upload", "uploadfs"].some(function (a) { return actions.indexOf(a) >= 0; }); }
+function televerse(actions) { return TELEVERSEMENTS.some(function (a) { return actions.indexOf(a) >= 0; }); }
+function efface() { return caseAction("erase_upload").checked; }
 
 // ---------- liste des environnements ----------
 function valeurInitiale(e, d) {
@@ -284,7 +292,7 @@ function construitListe(donnees) {
   envs.forEach(function (e) { if (!choix[e.nom]) choix[e.nom] = valeurInitiale(e, derniers[e.nom]); });
   var acts = (donnees.derniers && donnees.derniers.actions) || null;
   if (acts && !construitListe.dejaFait)
-    ACTIONS.forEach(function (a) { document.querySelector('input[name=action][value="' + a + '"]').checked = acts.indexOf(a) >= 0; });
+    ACTIONS.forEach(function (a) { caseAction(a).checked = acts.indexOf(a) >= 0; });
   construitListe.dejaFait = true;
 
   var liste = $("liste");
@@ -350,6 +358,9 @@ function majLigne(nom) {
   u.ligne.classList.toggle("coche", c.coche);
   u.bCom.setAttribute("aria-pressed", String(c.methode === "com"));
   u.bOta.setAttribute("aria-pressed", String(c.methode === "ota"));
+  u.bOta.disabled = !e.ota_possible || efface();         // effacer puis televerser : par cable seulement
+  if (e.ota_possible) u.bOta.title = efface() ? "« Effacer puis téléverser » est coché : par câble (COM) seulement" :
+                                                "Téléverser par le réseau (OTA)";
   var champ = u.champ;
   if (c.methode === "com") {
     if (document.activeElement !== champ) champ.value = c.port;
@@ -367,12 +378,14 @@ function majLigne(nom) {
   if (c.erreur) notes.push(["erreur", c.erreur]);
   if (c.methode === "com" && e.port_herite && c.port === e.port) notes.push(["note-info", "port hérité (extends)"]);
   if (c.note && c.methode === "com") notes.push(["note-port", c.note]);
+  if (c.coche && c.methode === "ota" && efface())
+    notes.push(["erreur", "« Effacer puis téléverser » : par câble (COM) seulement, passer cette ligne en COM"]);
   if (c.methode === "ota") {
     if (!c.ip.trim()) notes.push(["erreur", "IP à saisir : aucune adresse connue pour cet env (WIFI_IP_ADDRESS absente ou 0.0.0.0)"]);
     else if (!IPV4.test(c.ip.trim())) notes.push(["erreur", "adresse IPv4 invalide"]);
     else if (c.ip.trim() !== e.ip) notes.push(["note-info", "IP valable pour ce lancement seulement (user_config_override.h n'est pas modifié)"]);
   }
-  if (c.coche && c.methode === "com" && acts.indexOf("upload") >= 0 && e.fs_avec_firmware)
+  if (c.coche && c.methode === "com" && televerse(acts) && e.fs_avec_firmware)
     notes.push(["note-fs", "le file system (persist compris) sera aussi flashé : cet env embarque des fichiers " +
                            "(custom_files_upload), post_esp32 reconstruit littlefs.bin à chaque compilation"]);
   u.notes.textContent = "";
@@ -396,6 +409,13 @@ function majBouton() {
   b.disabled = enCours || !n || !actionsCochees().length;
   $("arreter").disabled = !enCours;
   $("arret-immediat").disabled = !enCours;
+  // « Effacer puis téléverser » grisee si une ligne cochee est en OTA (jamais une fois cochee : on pourrait plus la decocher)
+  var enOta = envsCoches().filter(function (e) { return choix[e.nom].methode === "ota"; }).map(function (e) { return e.nom; });
+  var ce = caseAction("erase_upload");
+  ce.disabled = !ce.checked && enOta.length > 0;
+  ce.parentNode.classList.toggle("doux", ce.disabled);
+  ce.parentNode.title = ce.disabled ? "Par câble (COM) seulement : " + enOta.join(", ") + " en OTA" :
+    "pio run -t erase_upload : efface toute la flash, puis téléverse le firmware (et le file system) par câble";
 }
 
 function majTout() {
@@ -458,7 +478,13 @@ async function chargeEnvs(rafraichir) {
   });
 }
 
-document.querySelectorAll("input[name=action]").forEach(function (i) { i.onchange = majTout; });
+document.querySelectorAll("input[name=action]").forEach(function (i) {
+  i.onchange = function () {
+    var autre = {upload: "erase_upload", erase_upload: "upload"}[i.value];     // l'un OU l'autre (choix 19)
+    if (autre && i.checked) caseAction(autre).checked = false;
+    majTout();
+  };
+});
 
 // ---------- lancement et arret ----------
 $("lancer").onclick = async function () {
@@ -468,11 +494,22 @@ $("lancer").onclick = async function () {
     var l = {env: e.nom, methode: c.methode, port: c.port.trim().toUpperCase(), ip: c.ip.trim()};
     if (envoi && c.methode === "ota" && !IPV4.test(l.ip)) { c.erreur = "IP à saisir avant de lancer"; bloque = true; }
     if (envoi && c.methode === "com" && !PORT.test(l.port)) { c.erreur = "port COM à saisir avant de lancer"; bloque = true; }
+    if (c.methode === "ota" && acts.indexOf("erase_upload") >= 0) bloque = true;     // note deja affichee sur la ligne
     return l;
   });
   $("refus").textContent = "";
   majTout();
   if (bloque) { $("refus").textContent = "Lancement impossible : compléter les champs signalés en rouge."; return; }
+  if (acts.indexOf("erase_upload") >= 0) {
+    var sansFs = lignes.filter(function (l) { return !parNom[l.env].fs_avec_firmware; }).map(function (l) { return l.env; });
+    if (!confirm("Effacer puis téléverser : TOUTE la flash va être effacée sur " + lignes.map(function (l) {
+          return l.env + " (" + l.port + ")"; }).join(", ") + ".\n\n" +
+        "Le persist (_persist.json) et les réglages de la carte (Wi-Fi, MQTT, réglages faits sur la carte) seront " +
+        "effacés et remplacés par ceux du dépôt (firmware et file system du dépôt). Un réglage fait sur la carte et " +
+        "non reporté dans le dépôt sera perdu." +
+        (sansFs.length ? "\n\nSans file system dans le dépôt (la carte repartira sans persist) : " + sansFs.join(", ") : "") +
+        "\n\nContinuer ?")) return;
+  }
   $("lancer").disabled = true;
   var r = await appel("/lancer", {lignes: lignes, actions: acts});
   if (r.ok) enCours = true;
@@ -525,7 +562,7 @@ function bloc(env) {
 function rang(b, action, etape) {
   var a = action, prepa = false;
   if (a === "buildfs" && b.actions.indexOf("buildfs") < 0 && b.actions.indexOf("uploadfs") >= 0) { a = "uploadfs"; prepa = true; }
-  else if (a === "upload" && b.actions.indexOf("compiler") >= 0 && ETAPES_COMPILATION.indexOf(etape) >= 0) a = "compiler";
+  else if (TELEVERSEMENTS.indexOf(a) >= 0 && b.actions.indexOf("compiler") >= 0 && ETAPES_COMPILATION.indexOf(etape) >= 0) a = "compiler";
   if (!b.rangs[a]) { b.rangs[a] = nouveauRang(a); if (b.actions.indexOf(a) < 0) b.actions.push(a); }
   var r = b.rangs[a];
   return {r: r, prepa: prepa, a: a};
@@ -541,7 +578,7 @@ function activeRang(b, r) {
     var autre = b.rangs[k];
     if (autre !== r && autre.actif) {
       autre.actif = false;
-      if (autre.statut === null && autre.action === "compiler" && r.action === "upload") autre.pourcent = 100;
+      if (autre.statut === null && autre.action === "compiler" && TELEVERSEMENTS.indexOf(r.action) >= 0) autre.pourcent = 100;
     }
   });
   r.actif = true;
@@ -587,8 +624,9 @@ function traite(e) {
   } else if (e.type === "ligne") {
     b = bloc(e.env);
     b.derniere = e.texte || "";
-    // FS aussi flashe : seulement par l'upload firmware par cable (post_esp32 ajoute littlefs.bin a esptool)
-    if (e.action === "upload" && b.methode === "com" && !b.fsAussi &&
+    // FS aussi flashe : seulement par le televersement du firmware par cable, upload ou erase_upload (post_esp32
+    // ajoute littlefs.bin a la commande d'esptool, quelle que soit la cible)
+    if (TELEVERSEMENTS.indexOf(e.action) >= 0 && b.methode === "com" && !b.fsAussi &&
         /Utilisera une commande de téléchargement personnalisée/.test(b.derniere)) { b.fsAussi = true; planifie(e.env); }
     if (uiBlocs[e.env] && b.statut === "encours") uiBlocs[e.env].derniere.textContent = b.derniere;
   } else if (e.type === "echec") {

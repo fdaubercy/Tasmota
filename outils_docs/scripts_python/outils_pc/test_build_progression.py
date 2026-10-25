@@ -200,10 +200,45 @@ def test_sortie_reelle():
                     "firmware.bin", "littlefs.bin"], "sortie_reelle : les 6 zones d'esptool nommees")
 
 
+# erase_upload (A10) : textes lus dans les paquets installes, pas devines. Cible de la plateforme
+# (~/.platformio/platforms/espressif32/builder/main.py:1984-1993) : "Looking for upload port...", puis l'action
+# $ERASECMD de libelle "Erasing..." (esptool erase-flash, :947), puis $UPLOADCMD. esptool v5.4.0
+# (packages/tool-esptoolpy/esptool/cmds.py:2273 et :2282) ecrit les deux lignes d'effacement ci-dessous.
+SORTIE_EFFACEMENT = ["Compiling .pio\\build\\e\\src\\a.o", "Linking .pio\\build\\e\\firmware.elf",
+                     "Configuring upload protocol...", "Looking for upload port...", "Auto-detected: COM12", "Erasing...",
+                     "esptool v5.4.0", "Connecting....", "Erasing flash memory (this may take a while)...",
+                     "Flash memory erased successfully in 12.3 seconds.", "Hard resetting via RTS pin...",
+                     "Uploading .pio\\build\\e\\firmware.bin", "esptool v5.4.0",
+                     "Writing 'C:\\x\\.pio\\build\\e\\bootloader.bin' at 0x00000000...",
+                     "Writing at 0x00003630 [=====] 100.0% 9.45kB/9.45kB [0s] ", "[SUCCESS] Took 80.1 seconds"]
+
+
+def test_effacement():
+    s = bp.Suivi("erase_upload", 4)
+    etapes, details = [], {}
+    for texte in SORTIE_EFFACEMENT:
+        ev = s.ligne(texte)
+        if ev and (not etapes or etapes[-1] != ev["etape"]):
+            etapes.append(ev["etape"])
+        if ev:
+            details.setdefault(ev["etape"], []).append(ev["detail"])
+    verifie(etapes, ["Compilation", "Édition des liens", "Effacement de la flash", "Téléversement"],
+            "effacement : port cherche puis flash effacee dans l'etape Effacement, puis Televersement (pas avant)")
+    verifie("flash effacée" in details.get("Effacement de la flash", []), True, "effacement : fin de l'effacement signalee")
+    verifie((s.resultat, s.pourcent), ("succes", 100), "effacement : succes a 100 %")
+    t = bp.Suivi("upload", 4)                         # temoin : un upload ne connait pas l'etape d'effacement
+    verifie(alimente(t, SORTIE_EFFACEMENT[:5])["etape"], "Téléversement", "effacement : temoin, upload -> Televersement")
+    e = bp.Suivi("erase_upload", 4)
+    alimente(e, SORTIE_EFFACEMENT[:6] + ["A fatal error occurred: Could not open COM12, the port is busy or doesn't exist.",
+                                         "*** [erase_upload] Error 2", "[FAILED] Took 3.1 seconds"])
+    verifie((e.etape, e.resultat, any("fatal error" in x for x in e.extrait_erreur)), ("Effacement de la flash", "echec", True),
+            "effacement : echec d'esptool dans l'etape Effacement, son message dans l'extrait")
+
+
 def principal():
     for t in (test_compilation, test_sans_reference, test_ansi, test_chemins, test_liens, test_esptool,
               test_succes, test_echec, test_fs_aussi, test_buildfs_et_prebuild, test_pourcent_borne,
-              test_increment, test_cache, test_zone, test_sortie_reelle):
+              test_increment, test_cache, test_zone, test_sortie_reelle, test_effacement):
         t()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0

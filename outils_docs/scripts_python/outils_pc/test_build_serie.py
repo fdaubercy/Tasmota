@@ -618,6 +618,81 @@ def test_uploadfs_ota():
                 "uploadfs_ota : littlefs.bin absent apres buildfs -> echec qui le dit, ota_fs non appele")
 
 
+def test_erase_upload_commandes():
+    """A10 : erase_upload = un seul `-t erase_upload --upload-port`, a la place de l'upload dans l'ordre."""
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t, {A: {"erase_upload": {"o": 3}}})
+        ev = m.lance([com(A)], {"erase_upload"})
+        ev2 = m.lance([com(A, "COM7")], {"uploadfs", "buildfs", "erase_upload", "compiler"})
+        verifie([a["argv"] for a in m.appels()],
+                [["run", "-e", A, "-t", "erase_upload", "--upload-port", "COM12"],
+                 ["run", "-e", A, "-t", "erase_upload", "--upload-port", "COM7"],
+                 ["run", "-e", A, "-t", "buildfs"], ["run", "-e", A, "-t", "uploadfs", "--upload-port", "COM7"]],
+                "erase_upload : -t erase_upload --upload-port, compile compris, a la place de l'upload dans l'ordre")
+        verifie((du_type(ev, "fin_env")[0]["statuts"], du_type(ev2, "fin_env")[0]["statuts"]),
+                ({"erase_upload": "succes"},
+                 {"compiler": "succes", "erase_upload": "succes", "buildfs": "succes", "uploadfs": "succes"}),
+                "erase_upload : statuts (compiler couvert par le meme pio run)")
+        verifie(bool(du_type(ev, "etape", etape="Effacement de la flash")), True, "erase_upload : etape Effacement de la flash")
+        ref = json.loads((m.dossier / "references.json").read_text(encoding="utf-8")) if (m.dossier / "references.json").is_file() else {}
+        verifie(ref.get(A, {}).get("total"), 3, "erase_upload : objets de reference memorises (il compile)")
+
+
+def test_erase_upload_refus():
+    """A10 : COM seulement, exclusif avec upload, compte comme un envoi (port tenu, meme port)."""
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t, ports={"COM7": "tenu"})
+        motifs = m.serie.controle([com(A)], {"upload", "erase_upload"})
+        verifie(any("Effacer puis téléverser" in x and "Téléverser le firmware" in x for x in motifs), True,
+                "erase_upload_refus : avec upload -> refus (l'une ou l'autre)")
+        verifie(any(A in x and "COM" in x for x in m.serie.controle([ota(A)], {"erase_upload"})), True,
+                "erase_upload_refus : ligne OTA refusee (cable seulement)")
+        verifie(any("COM7" in x for x in m.serie.controle([com(A, "COM7")], {"erase_upload"})), True,
+                "erase_upload_refus : port tenu refuse (c'est un envoi)")
+        verifie(any("COM34" in x for x in m.serie.controle([com(A, "COM34"), com(B, "COM34")], {"erase_upload"})), True,
+                "erase_upload_refus : deux envois sur le meme port refuses")
+        verifie(bool(m.serie.controle([com(A, "")], {"erase_upload"})), True, "erase_upload_refus : port vide refuse")
+        verifie(m.serie.controle([com(A)], {"compiler", "erase_upload", "buildfs", "uploadfs"}), [],
+                "erase_upload_refus : temoin, combinable avec compiler, buildfs, uploadfs")
+        try:
+            m.serie.lance([ota(A)], {"erase_upload"})
+            refuse = False
+        except RuntimeError:
+            refuse = True
+        verifie((refuse, m.appels()), (True, []), "erase_upload_refus : lance refuse en OTA, aucun fils")
+
+
+def test_erase_upload_envoi_et_echec():
+    """A10 : envoi_en_cours vrai des l'effacement (M7) ; echec a l'effacement -> compiler succes, erase_upload echec."""
+    lignes = ["Compiling .pio/build/{env}/src/a.cpp.o", "@pause 0.6", "Linking .pio/build/{env}/firmware.elf",
+              "Looking for upload port...", "Erasing...", "Erasing flash memory (this may take a while)...", "@pause 0.6",
+              "Flash memory erased successfully in 0.6 seconds.", "Uploading .pio/build/{env}/firmware.bin",
+              "Writing at 0x00010000 (10 %)", "@pause 0.6", "[SUCCESS]"]
+    vus = []
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t, {A: {"erase_upload": {"lignes": lignes}}})
+        m.serie.lance([com(A)], {"erase_upload"})
+        for etape in ("Compilation", "Effacement de la flash", "Téléversement"):
+            m.attend("etape", etape=etape)
+            vus.append((etape, m.serie.envoi_en_cours()))
+        m.attend("fin")
+        verifie(vus, [("Compilation", False), ("Effacement de la flash", True), ("Téléversement", True)],
+                "erase_upload_envoi : faux en compilation, vrai pendant l'effacement et le televersement")
+        rate = ["Compiling a.o", "Linking firmware.elf", "Looking for upload port...", "Erasing...",
+                "A fatal error occurred: Could not open COM12, the port is busy or doesn't exist.",
+                "*** [erase_upload] Error 2", "[FAILED] Took 1 seconds"]
+        m.scenario.write_text(json.dumps({A: {"erase_upload": {"code": 1, "lignes": rate}},
+                                          B: {"erase_upload": {"code": 1, "lignes": ["Compiling a.o", "x.cpp:1: error: y",
+                                                                                     "[FAILED]"]}}}), encoding="utf-8")
+        ev = m.lance([com(A, "COM1"), com(B, "COM2")], {"compiler", "erase_upload"})
+        verifie([x["statuts"] for x in du_type(ev, "fin_env")],
+                [{"compiler": "succes", "erase_upload": "echec"}, {"compiler": "echec", "erase_upload": "annulee"}],
+                "erase_upload_echec : a l'effacement -> erase_upload echec ; temoin, a la compilation -> annulee")
+        e = du_type(ev, "echec", env=A)
+        verifie(bool(e) and any("fatal error" in x for x in e[0]["extrait"]), True,
+                "erase_upload_echec : message d'esptool dans l'extrait")
+
+
 def test_garde_build_importable():
     module = bs.garde_build()
     verifie(callable(getattr(module, "builds_en_cours", None)), True,
@@ -633,7 +708,8 @@ def principal():
                  test_arret_apres_env, test_arret_immediat, test_upload_reussi_puis_arret_immediat,
                  test_ota_annule_si_arret_immediat, test_fin_avant_liberation, test_envoi_en_cours,
                  test_journal_ecrit, test_reference_o_memorisee, test_rappel_fichiers_modifies,
-                 test_refus_double_lancement, test_uploadfs_ota, test_garde_build_importable):
+                 test_refus_double_lancement, test_uploadfs_ota, test_garde_build_importable,
+                 test_erase_upload_commandes, test_erase_upload_refus, test_erase_upload_envoi_et_echec):
         test()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0
