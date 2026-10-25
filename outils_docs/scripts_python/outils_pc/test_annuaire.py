@@ -98,11 +98,44 @@ def section_registre():
         trouve = False
     verifie(trouve, False, "par_id inconnu -> KeyError")
 
+    section_texte_arret()
+
     j = reg.en_json()
     verifie(sorted(j), ["debits", "groupes", "outils"], "en_json : cles")
     verifie("script" in j["outils"][0], False, "en_json : sans script")
     verifie((j["outils"][2]["a_port_com"], j["outils"][2]["port_defaut"]), (True, 7400), "en_json : derives")
     verifie(isinstance(j["outils"][0]["parametres"][0], dict), True, "en_json : parametres en dicts")
+
+
+def textes_arret(ids):
+    """{id: texte} de la fonction texteArret de la page, executee par node sur les fiches de en_json().
+
+    None si node est absent (le banc le dit et retombe sur un controle statique)."""
+    import annuaire_page
+    import shutil
+    if not shutil.which("node"):
+        return None
+    m = re.search(r"function texteArret\(o\) \{.*?\n\}\n", annuaire_page.PAGE, re.S)
+    if not m:
+        return {}
+    fiches = [o for o in reg.en_json()["outils"] if o["id"] in ids]
+    script = m.group(0) + "\nconst f = " + json.dumps(fiches) + ";\n" \
+        "process.stdout.write(JSON.stringify(Object.fromEntries(f.map(o => [o.id, texteArret(o)]))));\n"
+    r = subprocess.run(["node", "-e", script], capture_output=True, timeout=30)
+    return json.loads(r.stdout.decode("utf-8")) if r.returncode == 0 else {"erreur": r.stderr.decode("utf-8", "replace")}
+
+
+def section_texte_arret():
+    """Texte « Arrêter » de l'aide : celui de l'outil build parle d'un lancement de build, pas d'un depot."""
+    textes = textes_arret(["build", "synchro_fork", "pont_serie"])
+    if textes is None:
+        print("NOTE node absent : texteArret non execute, controle statique du registre seulement")
+        textes = {o["id"]: o.get("arret_refuse", "") for o in reg.en_json()["outils"]}
+    build, synchro, pont = textes.get("build", ""), textes.get("synchro_fork", ""), textes.get("pont_serie", "")
+    verifie(("un lancement de build est en cours" in build, "jusqu'à sa fin" in build, "moitié modifié" in build),
+            (True, True, False), f"texte_arret : build -> lancement de build en cours, arret refuse jusqu'a sa fin ({build[-160:]})")
+    verifie("dépôt à moitié modifié" in synchro, True, "texte_arret : temoin, la synchro garde « depot a moitie modifie »")
+    verifie(("refusé" in pont, bool(pont)), (False, True), "texte_arret : temoin, outil sans route_occupe -> pas de refus")
 
 
 def serveur_libre():

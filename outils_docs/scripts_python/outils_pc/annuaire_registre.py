@@ -39,6 +39,7 @@ class Outil:
     journaux: str
     dans_job: bool = True
     route_occupe: str = ""
+    arret_refuse: str = ""          # pourquoi l'arret est refuse quand route_occupe repond en_cours (aide de la page)
 
     @property
     def a_port_com(self):
@@ -135,7 +136,9 @@ OUTILS = [
         "http",
         "Console capturée : " + CONSOLE.format("synchro_fork") + ". Historique des synchros : "
         "outils_docs/HISTORIQUE_SYNCHRO_FORK.md.",
-        dans_job=False, route_occupe="/execution"),
+        dans_job=False, route_occupe="/execution",
+        arret_refuse="L'arrêt est refusé tant qu'une opération est en cours (synchro, fusion ou envoi : l'outil le "
+                     "signale par /execution), pour ne pas laisser un dépôt à moitié modifié."),
     Outil(
         "build", "Build et téléversement", "Build et téléversement", GROUPES[2],
         "Compile et téléverse les cartes du parc (firmware et file system, COM ou OTA), avec suivi en direct.",
@@ -149,7 +152,10 @@ OUTILS = [
         "http",
         "Console capturée : " + CONSOLE.format("build") + ". Sortie complète de chaque pio run : "
         "%LOCALAPPDATA%\\outils_tasmota\\build\\journaux\\.",
-        dans_job=False, route_occupe="/execution"),
+        dans_job=False, route_occupe="/execution",
+        arret_refuse="Tant qu'un lancement de build est en cours (l'outil le signale par /execution), l'arrêt est "
+                     "refusé jusqu'à sa fin, pour ne pas couper un téléversement ni laisser un pio orphelin. Pour "
+                     "abréger, l'arrêter d'abord depuis sa page (« Arrêter après cet env » ou « Arrêt immédiat »)."),
 ]
 
 
@@ -223,5 +229,6 @@ def en_json():
         outils.append({"id": o.id, "nom_acces": o.nom_acces, "nom": o.nom, "groupe": o.groupe,
                        "interet": o.interet, "aide": o.aide, "parametres": [vars(p).copy() for p in o.parametres],
                        "cle_port_page": o.cle_port_page, "journaux": o.journaux, "dans_job": o.dans_job,
-                       "route_occupe": o.route_occupe, "a_port_com": o.a_port_com, "port_defaut": o.port_page({})})
+                       "route_occupe": o.route_occupe, "arret_refuse": o.arret_refuse, "a_port_com": o.a_port_com,
+                       "port_defaut": o.port_page({})})
     return {"groupes": list(GROUPES), "outils": outils, "debits": list(DEBITS)}

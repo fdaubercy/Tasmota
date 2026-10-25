@@ -498,7 +498,11 @@ def sonde_page(m, capture):
     sonde_redemarrage(m)
     sonde_sortie(m)
     sonde_effacement(m)
+    sonde_infobulle(m)
+    sonde_rechargement_effacer(m)
     sonde_pause(m)
+    sonde_panneaux(m)
+    sonde_sortie_bornee(cdp)
     sonde_synthetique(cdp)
 
     # largeur telephone : colonnes empilees, pas de defilement horizontal
@@ -637,9 +641,14 @@ def sonde_sortie(m):
     verifie(brut, 3, "sortie : temoin, le journal brut porte bien 3 lignes de progression d'esptool")
     cdp.js(f"(() => {{ const c = {console}; c.scrollTop = c.scrollHeight; c.dispatchEvent(new Event('scroll')); return true; }})()")
     attend(cdp, "document.getElementById('etat').textContent.startsWith('terminé')", 15)
+    # env reussi : la page referme le panneau qu'elle avait ouvert (defiler n'est pas ouvrir/fermer) ; rouvert par
+    # l'utilisateur, il est lu jusqu'au bout et defile en bas
+    ferme = attend(cdp, f"!{console}.closest('details').open", 5, 0.1)
+    cdp.js(f"{console}.closest('details').querySelector('summary').click()")
     fin = attend(cdp, f"(() => {{ const c = {console}; return c.textContent.includes('code de sortie 0') && "
                       "c.scrollTop + c.clientHeight >= c.scrollHeight - 2; })()", 5, 0.1)
-    verifie(fin, True, "sortie : revenu en bas -> defilement auto repris, journal lu jusqu'au bout apres la fin")
+    verifie((ferme, fin), (True, True),
+            "sortie : env reussi -> panneau referme ; rouvert -> journal lu jusqu'au bout apres la fin, en bas")
 
 
 EFFACEMENT_A = ["Processing {env} (platform: espressif32)", "Compiling .pio/build/{env}/src/a.cpp.o",
@@ -733,6 +742,105 @@ def sonde_pause(m):
     verifie(("1 passé (" + C in recap, cdp.js(f"document.querySelector('.bloc[data-bloc=\"{C}\"] .puce').textContent.startsWith('passé')"),
              cdp.js("!document.querySelector('.bandeau.carte')")), (True, True, True),
             f"pause : Passer cet env -> env passe, recap, bandeau retire ({recap[:90]})")
+
+
+def sonde_infobulle(m):
+    """« (et le file system) » dans l'infobulle d'Effacer puis televerser seulement pour un env qui embarque des fichiers."""
+    cdp = m.cdp
+    titre = "document.querySelector('input[name=action][value=\"erase_upload\"]').parentNode.title"
+    for env in (A, B, C):
+        coche(cdp, f"#env-{env}", env == A)
+    avec = cdp.js(titre) or ""
+    coche(cdp, f"#env-{A}", False)
+    coche(cdp, f"#env-{C}")
+    sans = cdp.js(titre) or ""
+    statique = cdp.js("fetch('/').then(r => r.text()).then(t => t.includes('(et le file system)'))")
+    verifie(("file system" in avec and A in avec, "file system" in sans, bool(sans), statique), (True, False, True, False),
+            f"infobulle : « et le file system » pour A (fichiers), pas pour C (no_files) ni dans le HTML ({sans[:70]})")
+    coche(cdp, f"#env-{C}", False)
+
+
+def sonde_rechargement_effacer(m):
+    """derniers.json contient erase_upload : au rechargement, « Effacer puis téléverser » n'est JAMAIS recochee."""
+    cdp = m.cdp
+    derniers = m.t / "outils" / "build" / "derniers.json"
+    derniers.parent.mkdir(parents=True, exist_ok=True)
+    derniers.write_text(json.dumps({"lignes": [{"env": A, "methode": "com", "port": "COM12", "ip": ""}],
+                                    "actions": ["compiler", "erase_upload"]}), encoding="utf-8")
+    m.ouvre()
+    r = cdp.js("['compiler', 'erase_upload', 'upload'].map(a => document.querySelector('input[name=action][value=\"' + a + '\"]').checked)")
+    lu = cdp.js("fetch('/envs').then(r => r.json()).then(d => d.derniers.actions.join())")
+    verifie((r, lu, cdp.js(f"document.getElementById('env-{A}').checked")), ([True, False, False], "compiler,erase_upload", True),
+            "rechargement : erase_upload jamais recochee (temoins : compiler recochee, derniers.json la contient)")
+
+
+JS_COMPTEUR_SORTIE = """window._sorties = {}; (function () { const f = window.fetch;
+  window.fetch = function (u) { const m = String(u).match(/\\/sortie\\?env=([^&]+)/);
+    if (m) { const e = decodeURIComponent(m[1]); window._sorties[e] = (window._sorties[e] || 0) + 1; }
+    return f.apply(this, arguments); }; })();"""
+
+
+def sonde_panneaux(m):
+    """Panneau Sortie ouvert par la page au depart de l'env : referme si l'env reussit (sauf geste de
+    l'utilisateur), garde ouvert en echec ; au rechargement, un env reussi ne rouvre ni ne lit /sortie."""
+    cdp = m.cdp
+    (m.t / "scenario.json").write_text(json.dumps({A: SCENARIO[A], B: SCENARIO[B]}), encoding="utf-8")
+    for env in (A, B, C):
+        coche(cdp, f"#env-{env}", env in (A, B))
+    for action in ("compiler", "upload", "erase_upload", "buildfs", "uploadfs"):
+        coche(cdp, f'input[name=action][value="{action}"]', action == "compiler")
+    ouvert = lambda env: f"document.querySelector('.bloc[data-bloc=\"{env}\"] details.sortie').open"
+    termine = "document.getElementById('etat').textContent.startsWith('terminé')"
+    cdp.js("document.getElementById('lancer').click()")
+    auto = attend(cdp, f"document.querySelector('.bloc[data-bloc=\"{A}\"]').classList.contains('encours') && {ouvert(A)}", 10, 0.1)
+    attend(cdp, termine, 20)
+    time.sleep(0.3)
+    verifie((auto, cdp.js(ouvert(A)), cdp.js(ouvert(B))), (True, False, True),
+            "panneaux : ouvert au depart, referme quand l'env reussit, reste ouvert sur l'echec")
+    cdp.js("document.getElementById('lancer').click()")
+    attend(cdp, f"document.querySelector('.bloc[data-bloc=\"{A}\"]').classList.contains('encours') && {ouvert(A)}", 10, 0.1)
+    cdp.js(f"document.querySelector('.bloc[data-bloc=\"{A}\"] details.sortie > summary').click()")      # l'utilisateur ferme
+    time.sleep(0.2)
+    cdp.js(f"document.querySelector('.bloc[data-bloc=\"{A}\"] details.sortie > summary').click()")      # puis rouvre
+    attend(cdp, termine, 20)
+    time.sleep(0.3)
+    verifie(cdp.js(ouvert(A)), True, "panneaux : ouvert/ferme par l'utilisateur -> la page n'y touche plus (reste ouvert)")
+    script = cdp.appel("Page.addScriptToEvaluateOnNewDocument", source=JS_COMPTEUR_SORTIE)
+    try:
+        m.ouvre()
+        attend(cdp, f"!!document.querySelector('.bloc[data-bloc=\"{B}\"]') && {ouvert(B)}", 8, 0.1)
+        time.sleep(1.0)
+        r = cdp.js(f"({{a: {ouvert(A)}, b: {ouvert(B)}, s: window._sorties}})") or {}
+        verifie((r.get("a"), (r.get("s") or {}).get(A, 0), r.get("b"), (r.get("s") or {}).get(B, 0) > 0), (False, 0, True, True),
+                f"panneaux : rechargement -> env reussi ni rouvert ni lu, env en echec rouvert et lu ({r.get('s')})")
+    finally:
+        cdp.appel("Page.removeScriptToEvaluateOnNewDocument", identifier=script["identifier"])
+
+
+def sonde_sortie_bornee(cdp):
+    """/sortie qui repond reste=vrai sans avancer : pas de relecture en boucle (requetes comptees) ; temoin :
+    une sortie qui avance est bien relue plusieurs fois de suite."""
+    cdp.js("""(() => { window._n = {}; const f0 = window.fetch; window._f0 = f0;
+      window.fetch = function (u, o) { const m = String(u).match(/\\/sortie\\?env=([^&]+)&octet=(\\d+)/);
+        if (!m || ['Z', 'Y'].indexOf(m[1]) < 0) return f0.apply(this, arguments);
+        window._n[m[1]] = (window._n[m[1]] || 0) + 1;
+        const octet = m[1] === 'Z' ? 5 : Math.min(+m[2] + 1, 30);                 // Z bloque a 5 ; Y avance de 1 octet
+        return Promise.resolve(new Response(JSON.stringify({texte: m[1] === 'Y' && +m[2] < 30 ? 'x\\n' : '', octet: octet,
+                                                             reste: true, lancement: 'L1'}), {status: 200})); };
+      return true; })()""")
+    lignes = [{"env": e, "methode": "com", "port": "COM5", "ip": ""} for e in ("Z", "Y")]
+    injecte(cdp, [{"type": "debut", "env": None, "actions": ["compiler"], "lignes": lignes},
+                  {"type": "debut", "env": "Z", "actions": ["compiler"], "methode": "com", "port": "COM5"}])
+    time.sleep(2.0)
+    bloque = cdp.js("window._n.Z || 0")
+    injecte(cdp, [{"type": "fin_env", "env": "Z", "resultat": "echec", "secondes": 1, "statuts": {"compiler": "echec"}},
+                  {"type": "debut", "env": "Y", "actions": ["compiler"], "methode": "com", "port": "COM5"}])
+    time.sleep(0.5)
+    avance = cdp.js("window._n.Y || 0")
+    injecte(cdp, [{"type": "fin_env", "env": "Y", "resultat": "echec", "secondes": 1, "statuts": {"compiler": "echec"}}])
+    cdp.js("window.fetch = window._f0; true")
+    verifie((1 <= bloque <= 8, avance >= 10), (True, True),
+            f"sortie_bornee : reste vrai sans avancer -> {bloque} requetes en 2 s (pas de boucle) ; temoin qui avance -> {avance}")
 
 
 def sonde_redemarrage(m):

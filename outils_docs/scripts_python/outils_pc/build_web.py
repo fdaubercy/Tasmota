@@ -88,8 +88,10 @@ def journaux_env(dossier, env, depuis):
 
     Nom exact des journaux de build_serie.Serie._journal : <AAAAMMJJ>-<HHMMSS>-<env>-<action>[-n].log. Un
     simple motif *-<env>-*.log prendrait aussi ceux d'un env dont le nom prolonge celui-ci (x-a / x-a-b).
-    Ordre : heure, puis rang de l'action dans build_serie.ORDRE (deux pio run du meme env dans la meme seconde,
-    upload puis buildfs, que l'ordre alphabetique inverserait), puis n. Un nouveau journal vient donc toujours
+    Ordre : date de modification (un journal est ferme avant que le suivant ne s'ouvre : un pio a la fois),
+    puis rang de l'action dans build_serie.ORDRE (deux journaux de meme date, upload puis buildfs, que l'ordre
+    alphabetique inverserait), puis n. PAS l'heure locale du nom : au passage a l'heure d'hiver (03:00 ->
+    02:00), un journal ecrit apres porterait une heure plus petite. Un nouveau journal vient donc toujours
     apres les autres : la position d'un octet dans les journaux mis bout a bout ne bouge pas (sortie_env).
     Aucun lancement depuis le demarrage de l'outil (`depuis` infini) : le dernier journal de CET env.
     """
@@ -100,11 +102,35 @@ def journaux_env(dossier, env, depuis):
     for f in (Path(dossier) / "journaux").glob("*.log"):
         m = nom.fullmatch(f.name)
         if m:
-            trouves.append(((m.group(1), build_serie.ORDRE.index(m.group(2)), int(m.group(3) or 1)), f))
-    fichiers = [f for _, f in sorted(trouves)]
+            try:
+                date = f.stat().st_mtime
+            except OSError:                                # efface entre-temps (purge d'un autre outil)
+                continue
+            trouves.append(((date, build_serie.ORDRE.index(m.group(2)), int(m.group(3) or 1)), f))
+    trouves.sort(key=lambda x: x[0])
     if depuis == float("inf"):
-        return fichiers[-1:]
-    return [f for f in fichiers if f.stat().st_mtime >= depuis]
+        return [f for _, f in trouves[-1:]]
+    return [f for (date, _, _), f in trouves if date >= depuis]
+
+
+def purge_journaux(dossier, jours=30, maintenant=None, supprime=os.remove):
+    """Supprime les journaux de <dossier>/journaux/ de plus de `jours` jours : (supprimes, erreurs).
+
+    Appelee au demarrage de l'outil, avant tout lancement : un journal du lancement en cours est recent par
+    definition, il n'est jamais concerne. Une suppression qui echoue (journal ouvert ailleurs) est comptee,
+    jamais fatale.
+    """
+    limite = (time.time() if maintenant is None else maintenant) - jours * 86400
+    supprimes = erreurs = 0
+    for f in (Path(dossier) / "journaux").glob("*.log"):
+        try:
+            if f.stat().st_mtime >= limite:
+                continue
+            supprime(f)
+            supprimes += 1
+        except OSError:
+            erreurs += 1
+    return supprimes, erreurs
 
 
 def journal_env(dossier, env, depuis):
@@ -307,6 +333,10 @@ def principal():
     # (annuaire_registre.py), sinon la tuile ne retrouve pas l'outil ; test_annuaire le verifie sur cette ligne.
     acces = acces_web.Acces(args.http, args.local, "Build et téléversement")
     dossier = acces_web.dossier_donnees() / "build"
+    supprimes, erreurs = purge_journaux(dossier)
+    if supprimes or erreurs:
+        print(f"journaux de plus de 30 jours : {supprimes} supprime(s)"
+              + (f", {erreurs} impossible(s) a supprimer (ouverts ailleurs ?)" if erreurs else ""), flush=True)
     serie = build_serie.Serie(DEPOT, dossier)
     try:
         serveur = ThreadingHTTPServer((acces.hote, args.http), fabrique_gestionnaire(serie, acces, DEPOT, dossier))

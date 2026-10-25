@@ -177,7 +177,7 @@ PAGE = r"""<!doctype html>
         <h2>Actions</h2>
         <label class="action"><input type="checkbox" name="action" value="compiler"> Compiler le firmware</label>
         <label class="action"><input type="checkbox" name="action" value="upload"> Téléverser le firmware</label>
-        <label class="action" title="pio run -t erase_upload : efface toute la flash, puis téléverse le firmware (et le file system) par câble">
+        <label class="action" title="pio run -t erase_upload : efface toute la flash, puis téléverse le firmware par câble">
           <input type="checkbox" name="action" value="erase_upload"> Effacer puis téléverser</label>
         <label class="action"><input type="checkbox" name="action" value="buildfs"> Construire le file system</label>
         <label class="action"><input type="checkbox" name="action" value="uploadfs"> Téléverser le file system</label>
@@ -226,6 +226,7 @@ var IPV4 = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
 var envs = [], parNom = {}, choix = {}, ui = {}, uiBlocs = {}, enCours = false, dernierN = 0, fluxCoupe = false;
 var L = null;                 // lancement suivi : {lignes, actions, blocs, ordre, bandeaux, attente, fin}
 var aDessiner = {}, minuterie = null;
+var rejeuJusqua = 0;          // dernier numero d'evenement au chargement (/execution) : jusque-la, le flux REJOUE
 
 // Cree un element : h("div", {class:"x", onclick:f}, enfants...) ; les textes passent par textContent.
 function h(balise, attrs) {
@@ -436,8 +437,11 @@ function majBouton() {
   var ce = caseAction("erase_upload");
   ce.disabled = !ce.checked && enOta.length > 0;
   ce.parentNode.classList.toggle("doux", ce.disabled);
+  // « et le file system » : seulement pour les envs qui embarquent des fichiers (fs_avec_firmware, spec choix 9)
+  var avecFs = envsCoches().filter(function (e) { return e.fs_avec_firmware; }).map(function (e) { return e.nom; });
   ce.parentNode.title = ce.disabled ? "Par câble (COM) seulement : " + enOta.join(", ") + " en OTA" :
-    "pio run -t erase_upload : efface toute la flash, puis téléverse le firmware (et le file system) par câble";
+    "pio run -t erase_upload : efface toute la flash, puis téléverse le firmware par câble" +
+    (avecFs.length ? " (et le file system pour " + avecFs.join(", ") + ")" : "");
 }
 
 function majTout() {
@@ -564,7 +568,8 @@ $("arret-immediat").onclick = async function () {
 function nouveauBloc(l, actions) {
   var b = {env: l.env, methode: l.methode, port: l.port, ip: l.ip, actions: actions.slice(), statut: "attente",
            rangs: {}, secondes: null, motif: "", extrait: [], derniere: "", fsAussi: false, repris: false,
-           sortie: {octet: 0, lancement: null, lecture: false, encore: false, progres: false, vides: 0, touche: false}};
+           sortie: {octet: 0, lancement: null, lecture: false, encore: false, progres: false, vides: 0, touche: false,
+                    auto: false}};
   actions.forEach(function (a) { b.rangs[a] = nouveauRang(a); });
   return b;
 }
@@ -608,10 +613,26 @@ function activeRang(b, r) {
 
 function traite(e) {
   if (typeof e.n === "number") {
-    if (e.n === 1 && dernierN > 1) dernierN = 0;   // outil redemarre sous la page : numerotation repartie de 1
+    if (e.n === 1 && dernierN > 1) { dernierN = 0; rejeuJusqua = 0; }   // outil redemarre : numerotation repartie de 1
     if (e.n <= dernierN) return;          // deja vu (reprise du flux)
     dernierN = e.n;
   }
+  var rejeu = typeof e.n === "number" && e.n <= rejeuJusqua;
+  traiteEvenement(e, rejeu);
+  if (rejeu && e.n === rejeuJusqua) finRejeu();
+}
+
+// Fin du rejeu (rechargement de la page) : seuls les panneaux « Sortie » des envs en cours, en echec ou arretes
+// rouvrent ; un env reussi ne rouvre pas le sien et ne lit pas /sortie.
+function finRejeu() {
+  rejeuJusqua = 0;
+  if (L) L.ordre.forEach(function (env) {
+    var s = L.blocs[env].statut;
+    if (s === "encours" || s === "echec" || s === "arrete") ouvreSortie(env);
+  });
+}
+
+function traiteEvenement(e, rejeu) {
   var b, x;
   if (e.type === "debut" && e.env === null) {
     L = {lignes: e.lignes || [], actions: e.actions || [], blocs: {}, ordre: [], bandeaux: [], attente: null, fin: null};
@@ -623,7 +644,7 @@ function traite(e) {
     b.statut = "encours";
     if (e.actions) { b.actions = e.actions.slice(); e.actions.forEach(function (a) { if (!b.rangs[a]) b.rangs[a] = nouveauRang(a); }); }
     b.methode = e.methode || b.methode; b.port = e.port || b.port; b.ip = e.ip || b.ip;
-    ouvreSortie(e.env);
+    if (!rejeu) ouvreSortie(e.env);          // au rejeu : decide a sa fin (finRejeu), selon le resultat
     planifie(e.env);
   } else if (e.type === "etape") {
     b = bloc(e.env);
@@ -676,7 +697,8 @@ function traite(e) {
       r.actif = false;
       if (r.statut === "succes") r.pourcent = 100;
     });
-    lisSortie(e.env);                // fin du journal (le dernier fils pio est fini)
+    if (b.statut === "succes") fermeSortie(e.env);   // ouvert par la page et reussi : refermer (sauf geste de l'utilisateur)
+    lisSortie(e.env);                // fin du journal (le dernier fils pio est fini), si le panneau reste ouvert
     planifie(e.env);
   } else if (e.type === "attente") {
     bloc(e.env);
@@ -746,10 +768,12 @@ function squelette(env) {
   var console_ = h("div", {"class": "console", role: "log"});
   var sortie = h("details", {"class": "sortie"}, h("summary", {texte: "Sortie de pio (en direct)"}), console_);
   var u = {tete: h("div", {"class": "tete"}), rangs: h("div", {}), notes: h("div", {}), extrait: h("div", {}),
-           derniere: h("div", {"class": "derniere"}), journal: journal, sortie: sortie, console: console_, ouvertureAuto: false};
-  sortie.ontoggle = function () {          // ouvert par la page (debut de l'env) ou par l'utilisateur, qui a alors le dernier mot
-    if (u.ouvertureAuto) u.ouvertureAuto = false;
-    else if (L && L.blocs[env]) L.blocs[env].sortie.touche = true;
+           derniere: h("div", {"class": "derniere"}), journal: journal, sortie: sortie, console: console_, voulu: null};
+  // Ouvert ou ferme par la page (u.voulu : etat qu'elle vient de poser) ou par l'utilisateur, qui a alors le dernier
+  // mot (touche). Comparer a l'etat voulu tient aussi si le navigateur fusionne deux bascules en un seul evenement.
+  sortie.ontoggle = function () {
+    if (u.voulu === null || sortie.open !== u.voulu) { if (L && L.blocs[env]) L.blocs[env].sortie.touche = true; }
+    u.voulu = null;
     if (sortie.open) lisSortie(env);
   };
   u.bloc = h("div", {"class": "bloc", "data-bloc": env}, u.tete, u.rangs, u.notes, u.extrait, u.derniere, sortie, journal);
@@ -764,6 +788,9 @@ function squelette(env) {
 // (\r) : dans le journal, chaque palier donne une ligne vide puis « Writing at 0x… NN % ». Le panneau garde UNE
 // ligne par zone, mise a jour a chaque palier, et saute les lignes vides qui precedent une barre (le terminal
 // montre la meme chose) ; une ligne vide suivie d'autre chose est gardee.
+// Ouverture : la page ouvre le panneau au depart de l'env et le referme si l'env REUSSIT, sauf si l'utilisateur l'a
+// ouvert ou ferme lui-meme ; il reste ouvert en echec ou arret. Au rechargement, rien n'est ouvert pendant le rejeu
+// du flux : a sa fin (numero lu dans /execution), seuls les envs en cours, en echec ou arretes rouvrent le leur.
 var PROGRES = /^\s*(Writing at 0x[0-9a-f]+\b.*\d\s*%|Uploading:\s*\[.*\d\s*%)/i;
 var ERREUR = /\berror:|\bError\b|\w+Error:|\bFAILED\b|fatal error|Traceback \(most recent/;
 var AVERT = /\bwarning:|\bWarning\b|\bWARNING\b|AVERTISSEMENT|⚠/;
@@ -771,8 +798,17 @@ var AVERT = /\bwarning:|\bWarning\b|\bWARNING\b|AVERTISSEMENT|⚠/;
 function ouvreSortie(env) {
   var b = L && L.blocs[env], u = uiBlocs[env] || (b && squelette(env));
   if (!b || b.sortie.touche || u.sortie.open) return;
-  u.ouvertureAuto = true;
+  u.voulu = true;
+  b.sortie.auto = true;
   u.sortie.open = true;                    // ontoggle lancera la lecture
+}
+
+// Referme un panneau que la page a ouvert elle-meme, si l'utilisateur n'y a pas touche (env reussi).
+function fermeSortie(env) {
+  var b = L && L.blocs[env], u = uiBlocs[env];
+  if (!b || !u || !b.sortie.auto || b.sortie.touche || !u.sortie.open) return;
+  u.voulu = false;
+  u.sortie.open = false;
 }
 
 function ajouteSortie(b, u, texte) {
@@ -988,7 +1024,11 @@ $("theme").onchange = function () {
 async function demarre() {
   await chargeEnvs(false);
   var r = await appel("/execution");
-  if (r.ok && r.donnees) { enCours = !!r.donnees.en_cours || enCours; majEtat(); }
+  if (r.ok && r.donnees) {
+    enCours = !!r.donnees.en_cours || enCours;
+    rejeuJusqua = r.donnees.numero > dernierN ? r.donnees.numero : 0;     // evenements a rejouer au chargement
+    majEtat();
+  }
   ecoute();
 }
 demarre();

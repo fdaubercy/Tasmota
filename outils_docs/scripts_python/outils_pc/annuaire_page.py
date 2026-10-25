@@ -420,14 +420,15 @@ $("theme").onchange = function () {
   try { localStorage.setItem("annuaire-theme", t); } catch (e) {}
 };
 
-// Texte "Arreter" genere depuis les champs du registre (dans_job, route_occupe).
+// Texte "Arreter" genere depuis les champs du registre (dans_job, route_occupe, arret_refuse : motif propre a
+// l'outil ; a defaut, celui de la synchro du fork).
 function texteArret(o) {
   var t = "Bouton Arrêter de la tuile, seulement si l'outil a été lancé depuis cette page. S'il a été lancé ailleurs " +
           "(terminal, tâche VS Code), la tuile affiche « lancé ailleurs » sans bouton : Ctrl+C dans son terminal ou " +
           "fermeture de sa tâche.";
   if (o.route_occupe)
-    t += " L'arrêt est refusé tant qu'une opération est en cours (synchro, fusion ou envoi : l'outil le signale par " +
-         o.route_occupe + "), pour ne pas laisser un dépôt à moitié modifié.";
+    t += " " + (o.arret_refuse || "L'arrêt est refusé tant qu'une opération est en cours (l'outil le signale par " +
+                o.route_occupe + "), pour ne pas laisser un dépôt à moitié modifié.");
   t += o.dans_job ? " Lancé d'ici, il s'arrête aussi quand l'annuaire se ferme."
                   : " Lancé d'ici, il continue de tourner quand l'annuaire (ou VS Code) se ferme : l'arrêter avec son bouton. " +
                     "Exception : si la tuile affiche « liée à l'annuaire », Windows a refusé de la détacher et elle s'arrêtera avec VS Code.";

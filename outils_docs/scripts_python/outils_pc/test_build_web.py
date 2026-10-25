@@ -300,6 +300,57 @@ def test_sortie_env_exact():
                 "sortie_env : aucun lancement depuis le demarrage -> dernier journal de l'env")
 
 
+def test_journaux_ordre_heure_hiver():
+    """Ordre des journaux par date de modification, pas par l'heure locale du nom : au passage a l'heure
+    d'hiver (03:00 -> 02:00), un journal ecrit APRES porte une heure plus petite."""
+    with tempfile.TemporaryDirectory() as t:
+        jour = Path(t) / "journaux"
+        jour.mkdir()
+        base = 1793000000                                          # octobre 2026, epoch
+        for nom, texte, quand in ((f"20261025-025958-{A}-compiler.log", "C\n", base),          # 02:59:58 heure d'ete
+                                  (f"20261025-020003-{A}-upload.log", "U\n", base + 5),         # 02:00:03 heure d'hiver
+                                  (f"20261025-020003-{A}-buildfs.log", "F\n", base + 9),
+                                  (f"20261025-020003-{A}-buildfs-2.log", "F2\n", base + 9)):
+            (jour / nom).write_bytes(texte.encode("utf-8"))
+            os.utime(jour / nom, (quand, quand))
+        verifie(build_web.journal_env(t, A, 0), "C\nU\nF\nF2\n",
+                "journaux_ordre : heure qui recule -> ordre d'ecriture (date de modification), puis rang, puis -n")
+        verifie(build_web.journal_env(t, A, float("inf")), "F2\n", "journaux_ordre : dernier journal = le plus recent ecrit")
+        verifie(build_web.sortie_env(t, A, 0, 0)["texte"], "C\nU\nF\nF2\n", "journaux_ordre : sortie dans le meme ordre")
+        verifie(build_web.journal_env(t, A, base + 5), "U\nF\nF2\n", "journaux_ordre : temoin, filtre du lancement inchange")
+
+
+def test_purge_journaux():
+    """Au demarrage : journaux de plus de 30 jours supprimes, recents gardes, erreurs comptees sans planter."""
+    with tempfile.TemporaryDirectory() as t:
+        jour = Path(t) / "journaux"
+        jour.mkdir()
+        maintenant = time.time()
+        vieux = [jour / f"20260901-10000{i}-{A}-compiler.log" for i in range(3)]
+        recents = [jour / f"20261020-100000-{A}-compiler.log", jour / f"20261025-100000-{A}-upload.log"]
+        for f in vieux + recents:
+            f.write_text("x\n", encoding="utf-8")
+        for f in vieux:
+            os.utime(f, (maintenant - 31 * 86400, maintenant - 31 * 86400))
+        os.utime(recents[0], (maintenant - 29 * 86400, maintenant - 29 * 86400))
+        autre = Path(t) / "derniers.json"                           # hors journaux/ : jamais touche
+        autre.write_text("{}", encoding="utf-8")
+        os.utime(autre, (maintenant - 90 * 86400, maintenant - 90 * 86400))
+        bloque = vieux[2]
+
+        def supprime(chemin):
+            if Path(chemin) == bloque:
+                raise PermissionError("journal ouvert ailleurs")
+            os.remove(chemin)
+
+        resultat = build_web.purge_journaux(t, jours=30, maintenant=maintenant, supprime=supprime)
+        verifie(resultat, (2, 1), "purge_journaux : 2 vieux supprimes, 1 erreur comptee (journal verrouille)")
+        verifie(sorted(f.name for f in jour.iterdir()), sorted([bloque.name] + [f.name for f in recents]),
+                "purge_journaux : journaux de moins de 30 jours gardes (temoin a 29 jours)")
+        verifie(autre.exists(), True, "purge_journaux : temoin, rien hors de journaux/")
+        verifie(build_web.purge_journaux(Path(t) / "absent"), (0, 0), "purge_journaux : dossier absent -> rien")
+
+
 def sortie(b, env, octet=0):
     """Reponse de GET /sortie en dict ({} si la route repond autre chose que du JSON objet)."""
     _, donnees = b.json("GET", f"/sortie?env={env}&octet={octet}")
@@ -591,6 +642,8 @@ def principal():
             b.ferme()
     test_journal_env_exact()
     test_sortie_env_exact()
+    test_journaux_ordre_heure_hiver()
+    test_purge_journaux()
     test_fermeture()
     test_fermeture_attend_envoi()
     test_fermeture_pendant_pause()
