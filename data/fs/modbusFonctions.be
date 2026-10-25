@@ -1677,7 +1677,7 @@ modbusFonctions.voieFiche = modbusFonctions_voieFiche
 
 #- Choix de LA fiche d'une adresse ModBus parmi ses candidates (2026-10-18) :
     1. une seule fiche : elle, quel que soit son lwt. Le lwt n'est pas une preuve de vie : au demarrage
-       du maitre, resetClientsConnectes met tout 'Offline' jusqu'au prochain ImAlive (jusqu'a 5 min) ;
+       une fiche peut etre 'Offline' a tort jusqu'a l'ImAlive suivant (perimeFiches, P8.6 : apres 2 x telePeriod muet) ;
        repasser l'esclave en serie couperait la liaison une fois le cable retire (decide le 2026-10-18).
     2. sinon, celles dont l'IPAddress est l'IP apprise (< VALIDITE_IP_MS) : l'esclave vient d'y repondre ;
     3. puis, parmi elles, celles dont la MAC est 'Online' (lwt) ;

@@ -93,7 +93,7 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
 - [x] P4.3 — Séparer « charger ou non » et « supprimer le source » dans `compileModule`/`loadBerryFile` (corrige D3 ; cote D, effort faible, risque faible) — preuve : paramètre renommé `activation` ; OFF = ne pas charger, sans plus jamais effacer le source `.be` (`loadBerryFile`) ni compiler (`compileModule` rend true) ; `banc_boot` cas 1 (2 contrôles), rouges sur l'ancien code ; banc veille vert ; solidifiable (2026-10-25)
 
 ## A8 — Découverte des esclaves
-- [ ] P8.6 — Péremption : Offline si aucun ImAlive depuis 2 × telePeriod, au lieu du reset unique (corrige R1, R3 ; cote G, effort moyen, risque moyen)
+- [x] P8.6 — Péremption : Offline si aucun ImAlive depuis 2 × telePeriod, au lieu du reset unique (corrige R1, R3 ; cote G, effort moyen, risque moyen) — preuve : `udpFonctions.perimeFiches` (timer `resetEsclaves` re-armé à chaque telePeriod, rien avant 2 × telePeriod après le lancement du cycle, heure du dernier ImAlive par MAC en RAM) remplace `resetClientsConnectes` ; `test_discovery` §25 (11 contrôles, horloge simulée ; témoin : cuve vue qui reste Online), rouge sur l'ancien code (6 échecs, dont une exception sur une entrée racine non-map) ; 259 tests verts ; solidifiable (2026-10-25)
 - [ ] P8.8 — `etatReseau()` : RgxClients × fiches par MAC, affiché sur `/discovery` (corrige R4, R6 ; cote L, effort moyen, risque nul)
 - [ ] P8.9 — Mesurer latence aller simple, perte sur 1 h, délai de découverte (testeur :7400) (corrige A8.3 ; cote D, effort moyen, risque nul)
 

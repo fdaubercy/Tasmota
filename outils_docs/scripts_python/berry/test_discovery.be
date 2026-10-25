@@ -26,6 +26,8 @@
 #        esclave de meme groupTopic, 'Online', sur le reseau de la box ; AP inchange ; cache de la table.
 #   21.  C7 (2026-10-21) : ecoute UDP ouverte sans MQTT 60 s apres le reseau si System#Boot manque ou
 #        echoue ; jamais sans reseau, jamais deux fois ; nouvel essai 60 s apres un refus ; rien apres Save.
+#   25.  P8.6 (2026-10-25) : peremption des fiches : Offline sans ImAlive depuis 2 x telePeriod, verifiee a
+#        chaque telePeriod (au lieu d'un reset unique de toutes les fiches) ; ImAlive remet Online.
 # Les lecteurs de modbusFonctions (clients TCP, IP UDP : fichesModbus) sont testes dans
 # banc_test_modbus.be section 6, sur la meme forme de table.
 #
@@ -1304,16 +1306,20 @@ mqtt.publies = []
 journal = []
 essaie(def () discoveryFonctions.changementEtatDemarrage({"Connected": 1}, "Mqtt", {"MQTT": {"Connected": 1}}) end)
 verifie("Mqtt#Connected, table vide : rien publie, pas d'erreur", "0 false", str(size(mqtt.publies)) + " " + str(journalise("_ERREUR")))
-# c) resetClientsConnectes : toutes les MAC Offline, ecriture seulement si besoin
+# c) Peremption (perimeFiches, P8.6, qui remplace resetClientsConnectes) : MAC jamais vue -> Offline,
+#    ecriture seulement si besoin
+udpFonctions.etat()["presence"] = {}
+udpFonctions.etat()["peremptionDepuis"] = nil
+init22[CLE_CUVE]["lwt"] = "Online"     # seules les fiches Online perissent
 gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(init22)}
 gestionFileFolder.lectures = {}
 gestionFileFolder.ecritures = 0
-udpFonctions.resetClientsConnectes()
+udpFonctions.perimeFiches()
 t = table()
-verifie("reset : 1 lecture, 1 ecriture, MAC Offline", "1 1 Offline", str(lectures22()) + " " + str(gestionFileFolder.ecritures) + " " + str(champ(t, CLE_CUVE + "/lwt")))
+verifie("peremption : 1 lecture, 1 ecriture, MAC Offline", "1 1 Offline", str(lectures22()) + " " + str(gestionFileFolder.ecritures) + " " + str(champ(t, CLE_CUVE + "/lwt")))
 gestionFileFolder.lectures = {}
-udpFonctions.resetClientsConnectes()
-verifie("reset deja Offline : 1 lecture, aucune ecriture", "1 1", str(lectures22()) + " " + str(gestionFileFolder.ecritures))
+udpFonctions.perimeFiches()
+verifie("peremption deja Offline : 1 lecture, aucune ecriture", "1 1", str(lectures22()) + " " + str(gestionFileFolder.ecritures))
 # d) Table illisible : signalee en erreur (avant : exception journalisee par l'appelant)
 gestionFileFolder.fichiers = {"/json/discovery.json": "{pas du json", "/sd/css/main.css": ""}
 journal = []
@@ -1407,6 +1413,57 @@ verifie("UniCast : son message lu, la socket MultiCast intacte", "0/1", str(size
 multi24.every_100ms()
 verifie("MultiCast : son message lu a son tour", "0/0", str(size(sUni.msgs)) + "/" + str(size(sMulti.msgs)))
 etatUDP["udpReception"] = sauveRecep
+
+print("")
+print("=== 25. P8.6 : peremption des fiches (Offline sans ImAlive depuis 2 x telePeriod) ===")
+# Avant : resetClientsConnectes passait TOUT a Offline une seule fois, une telePeriod apres le demarrage du
+# maitre (R1 : puis plus jamais de peremption ; R3 : tout Offline jusqu'aux ImAlive suivants).
+var CLE_RIDEAU = "E80690AABBCC"
+def lwt25(cle)
+  var t = table()
+  return (t != nil && isinstance(t.find(cle), map)) ? t[cle].find("lwt") : nil
+end
+# Le timer resetEsclaves echoit a l'instant ms (rappel capture par tasmota.rappelsTimer)
+def tick25(ms)
+  tasmota.horloge = ms
+  var f = tasmota.rappelsTimer.find("resetEsclaves")
+  tasmota.remove_timer("resetEsclaves")
+  return f == nil ? "PAS DE TIMER" : essaie(f)
+end
+serveur["udp"]["id"] = 0
+diverses = {"telePeriod": 300}
+var init25 = {}
+init25[CLE_CUVE] = {"config": configCuve(), "lwt": "Online"}
+init25[CLE_RIDEAU] = {"config": {"dn": "Rideau"}, "lwt": "Online"}
+init25["esclave9"] = "entree racine illisible"
+gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(init25)}
+demarre21()
+tasmota.rappelsTimer = {}
+udpFonctions.lanceCyclePresentation()
+verifie("maitre : timer de peremption arme", 1, tasmota.nbTimers("resetEsclaves"))
+tasmota.horloge = 100000
+imAlive(ficheCuve(true))
+verifie("t=300 s : rien de perime avant 2 telePeriod (TEMOIN : avant, tout Offline)", "OK Online Online",
+        tick25(300000) + " " + str(lwt25(CLE_CUVE)) + " " + str(lwt25(CLE_RIDEAU)))
+verifie("... timer re-arme : verification a chaque telePeriod", 1, tasmota.nbTimers("resetEsclaves"))
+verifie("t=600 s : rideau jamais vu -> Offline ; cuve vue a 100 s -> Online", "OK Online Offline",
+        tick25(600000) + " " + str(lwt25(CLE_CUVE)) + " " + str(lwt25(CLE_RIDEAU)))
+verifie("... passage journalise (UDP_PEREMPTION)", true, journalise("UDP_PEREMPTION: "))
+verifie("... entree racine illisible conservee", "entree racine illisible", table().find("esclave9"))
+tasmota.horloge = 650000
+imAlive(ficheCuve(true))
+tick25(900000)
+tick25(1200000)
+verifie("cuve vue a 650 s : encore Online a 1200 s (550 s < 600 s)", "Online", lwt25(CLE_CUVE))
+verifie("t=1500 s : cuve muette depuis 850 s -> Offline", "OK Offline", tick25(1500000) + " " + str(lwt25(CLE_CUVE)))
+var ecr25 = gestionFileFolder.ecritures
+tick25(1800000)
+verifie("rien a perimer : aucune ecriture flash", 0, gestionFileFolder.ecritures - ecr25)
+tasmota.horloge = 1810000
+imAlive(ficheCuve(true))
+verifie("ImAlive apres peremption : de nouveau Online", "Online", lwt25(CLE_CUVE))
+verifie("t=2100 s : cuve vue a 1810 s reste Online", "OK Online", tick25(2100000) + " " + str(lwt25(CLE_CUVE)))
+tasmota.rappelsTimer = nil
 
 print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))

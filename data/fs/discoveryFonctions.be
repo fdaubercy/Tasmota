@@ -75,7 +75,7 @@ end
 discoveryFonctions.lisTable = discoveryFonctions_lisTable
 
 # Maitre : range la fiche d'un ImAlive recu (udpFonctions.reglageUDP) sous sa MAC, forme {MAC: {role: {...}}}.
-# Un ImAlive recu prouve que l'esclave est joignable en UDP : 'lwt' = Online (pendant de resetClientsConnectes).
+# Un ImAlive recu prouve que l'esclave est joignable en UDP : 'lwt' = Online (pendant de udpFonctions.perimeFiches).
 # Purge l'entree racine {role: ...} laissee par l'ancienne version. N'ECRIT le fichier que si quelque chose
 # change (audit N2/P5.2, 2026-10-24 : chaque ImAlive le reecrivait, une ecriture flash par esclave et par
 # telePeriod). Retourne true si discovery.json a ete reecrit.

@@ -11,7 +11,7 @@
         changementEtatDemarrage()	    Gère les événements système (System#Boot, Wifi#Connected, System#Save) : ouvre/ferme les sockets, déclenche l'envoi des paramètres
         envoiUDP()	                    Envoie un message UDP (UniCast vers une IP, ou MultiCast selon le rôle maître/esclave)
         lireUDP()	                    Lit un paquet UDP entrant, détecte si c'est une trame ModBus ou une commande TasmotaClient, et route vers le bon handler
-        resetClientsConnectes()	        Marque tous les esclaves comme "Offline" dans /json/discovery.json (appelé au démarrage du maître)
+        perimeFiches()	                Passe "Offline" les esclaves sans ImAlive depuis 2 x telePeriod (maître, chaque telePeriod)
 
     - Sous-commandes de ReglageUDP :
         Sous-commande	                Qui	            Effet
@@ -70,7 +70,7 @@
            NTP ou RTC) : répond Timestamp + ipMaitre en UNICAST à l'IPAddress de la fiche (2026-10-17,
            correction C5 : marche en Range Extender ET en Wi-Fi classique, et l'unicast est acquitté
            par la radio) ; fiche sans IP lisible -> multicast, comme avant.
-         * Contrepoids : resetClientsConnectes, une fois après telePeriod au démarrage, met tout 'Offline'.
+         * Contrepoids : perimeFiches (P8.6), à chaque telePeriod, passe 'Offline' une fiche sans ImAlive depuis 2 x telePeriod.
       3. Ce que le maître fait de la table
          * rangeExtenderFonctions : boutons de la page d'accueil (RgxClients x fiches esclaveN 'Online') et
            commande RoutageRangeExtender -> 'RgxPort tcp, <routagePort>, <IP esclave>, 80'. Rôle 'maitre' ignoré.
@@ -110,6 +110,8 @@ def udpFonctions_etat()
             "reseauDepuis": nil,       # tasmota.millis() de la montee du reseau, Boot pas encore vu (C7)
             "essaiApres": [nil, nil],  # apres une ouverture refusee : pas de nouvel essai avant (C7)
             "cycleLance": false,       # cycle de presentation lance (Boot ou secours C7), une fois par demarrage (P8.7)
+            "presence": {},            # maitre : MAC (sans ':') -> tasmota.millis() du dernier ImAlive recu (P8.6)
+            "peremptionDepuis": nil,   # maitre : tasmota.millis() du lancement du cycle (P8.6)
             "socketsEmission": {}      # sockets d'emission gardees ouvertes, par adresse locale (voir emet)
         }
     end
@@ -315,6 +317,7 @@ def udpFonctions_reglageUDP(cmd, idx, payload, payload_json)
             # discoveryFonctions.rangeFicheImAlive.
             import discoveryFonctions
             discoveryFonctions.rangeFicheImAlive(mac, device, tmp[device])
+            udpFonctions.etat()["presence"][mac] = tasmota.millis()     # lu par perimeFiches (P8.6)
 
             tasmota.yield()
             udpFonctions.log("REGLAGE_UDP: Le maitre UDP a reçu les paramètres de l'esclave '" + str(tmp[device].find("nom", device)) + "' !", LOG_LEVEL_DEBUG_PLUS)
@@ -463,7 +466,7 @@ udpFonctions.changementEtatDemarrage = udpFonctions_changementEtatDemarrage
 # (broker injoignable). Avant, il n'etait lance que par Boot : sans MQTT, un esclave ne se presentait jamais
 # (2026-10-24, audit R2/P8.7). Un Boot tardif ne le relance pas : forceEnvoiParams se replanifie seul.
 #  - esclave : envoie sa fiche au maitre (forceEnvoiParams), puis toutes les telePeriod ;
-#  - maitre : remet les esclaves connus a Offline apres une telePeriod (les ImAlive les remettent Online).
+#  - maitre : arme la peremption des fiches, verifiee a chaque telePeriod (perimeFiches, P8.6).
 def udpFonctions_lanceCyclePresentation()
     var e = udpFonctions.etat()
     if (e["cycleLance"])    return    end         # appelee chaque seconde par le secours : sortie avant l'import
@@ -474,7 +477,8 @@ def udpFonctions_lanceCyclePresentation()
         tasmota.cmd("ReglageUDP forceEnvoiParams ON", boolMute)
     else
         tasmota.remove_timer("resetEsclaves")
-        tasmota.set_timer(diverses["telePeriod"] * 1000, def()  udpFonctions.resetClientsConnectes()     end, "resetEsclaves")
+        e["peremptionDepuis"] = tasmota.millis()
+        tasmota.set_timer(diverses["telePeriod"] * 1000, def()  udpFonctions.perimeFiches()     end, "resetEsclaves")
     end
 end
 udpFonctions.lanceCyclePresentation = udpFonctions_lanceCyclePresentation
@@ -931,37 +935,46 @@ def udpFonctions_sendTasmotaClientUDP(typeComm, destinationIP, commande)
 end
 udpFonctions.sendTasmotaClientUDP = udpFonctions_sendTasmotaClientUDP
 
-# Réinitialise les esclaves enregistrés / 300s
-# Enregistrés dans '/json/discovery.json' en paramètrant le paramètre "lwt": "Offline"
-# Cela permet de détecter si un module habituel est déconnecté
-def udpFonctions_resetClientsConnectes()
+# Maitre : peremption des fiches de /json/discovery.json (audit R1/R3, P8.6, 2026-10-25). Une fiche 'Online'
+# dont aucun ImAlive n'est arrive depuis 2 x telePeriod passe 'Offline' ; les ImAlive la remettent 'Online'
+# (discoveryFonctions.rangeFicheImAlive). Verifiee a chaque telePeriod (le timer se re-arme), et pas avant
+# 2 x telePeriod apres le lancement du cycle : une fiche jamais revue depuis le demarrage passe donc Offline
+# entre 2 et 3 telePeriod apres lui. Avant : resetClientsConnectes passait TOUT a Offline une seule fois,
+# une telePeriod apres le demarrage, puis plus jamais (un esclave eteint restait Online sans broker).
+# Seuil large : un Offline a tort coupe le routage (RoutageRangeExtender, esclavesBox).
+def udpFonctions_perimeFiches()
     import gestionFileFolder
-    import string
     import json
-        
-    # Lit le fichier json (une seule lecture : le texte sert aussi a la comparaison, audit P9.3)
+    var e = udpFonctions.etat()
+    var periode = diverses["telePeriod"] * 1000
+    tasmota.set_timer(periode, def()  udpFonctions.perimeFiches()     end, "resetEsclaves")
+    var maintenant = tasmota.millis()
+    if (e["peremptionDepuis"] != nil && maintenant - e["peremptionDepuis"] < 2 * periode)    return    end
+
+    # Une seule lecture : le texte sert aussi a la comparaison (audit P9.3)
     var texte = gestionFileFolder.readFile("/json/discovery.json")
-    var paramDiscovery = json.load(texte)
-    if (paramDiscovery == nil)
-        udpFonctions.log("RESET_NB_ESCLAVES_JSON: Le fichier n'existe pas ou est vide !", LOG_LEVEL_DEBUG_PLUS)
+    var table = json.load(texte)
+    if (!isinstance(table, map))
+        udpFonctions.log("UDP_PEREMPTION: discovery.json absent ou vide, rien a perimer !", LOG_LEVEL_DEBUG_PLUS)
         return
     end
-
-    # Parcours tous les esclaves enregistrés et les marque tous 'Offline'
-    for item: paramDiscovery.keys()
-        paramDiscovery[item]["lwt"] = "Offline"
+    var perimees = []
+    for mac: table.keys()
+        var entree = table[mac]
+        if (!isinstance(entree, map) || entree.find("lwt") != "Online")    continue    end
+        var vu = e["presence"].find(mac)
+        if (vu == nil || maintenant - vu >= 2 * periode)
+            entree["lwt"] = "Offline"
+            perimees.push(mac)
+        end
     end
-
-    # Enregistre ou Mets à jour en variable les capteurs activés dans un tableau
-    var nouveau = json.dump(paramDiscovery)
-    if (texte != nouveau)
-        gestionFileFolder.writeFile("/json/discovery.json", nouveau)
+    if (size(perimees) > 0)
+        gestionFileFolder.writeFile("/json/discovery.json", json.dump(table))
+        # Un log par verification qui change quelque chose (au plus une par telePeriod) : info admise
+        udpFonctions.log("UDP_PEREMPTION: aucun ImAlive depuis " + str(2 * periode / 1000) + " s, passe(nt) Offline : " + perimees.concat(", ") + " !", LOG_LEVEL_INFO)
     end
-
-    # Décharge le json
-    paramDiscovery = {}
 end
-udpFonctions.resetClientsConnectes = udpFonctions_resetClientsConnectes
+udpFonctions.perimeFiches = udpFonctions_perimeFiches
 
 # Retourne le module lors de l'importation
 return udpFonctions
