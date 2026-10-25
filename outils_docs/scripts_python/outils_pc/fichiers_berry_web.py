@@ -7,12 +7,15 @@ UTILISATION
 
 Rien n'est ecrit sans « Enregistrer » (ou « Creer ») : couper la page ne laisse rien a moitie fait.
 Toute ecriture est refusee pendant un build (meme detection que la page build : build_serie).
+Les POST passent un par un (verrou) : deux ecritures simultanees (double clic, deux onglets) ne s'ecrasent pas,
+la seconde recalcule sur l'etat laisse par la premiere et voit son empreinte perimee.
 
 Routes (les POST exigent l'en-tete X-Fichiers-Berry: 1 et la meme origine ; JSON) :
     GET  /           la page (fichiers_berry_page.PAGE ; a defaut, une page provisoire)
     GET  /execution  {en_cours: false} : la cible Custom l'interroge pour savoir si la page tourne
     GET  /envs       {envs: [{nom, famille}]} : envs ESP32 du cenv
     GET  /etat       ?env=<env> : etat de chaque fichier (recensement refait a chaque appel) ; 404 env inconnu
+    GET  /build      {build_en_cours: true|false|null} : a part, la detection prend 2 s et plus (null : impossible)
     GET  /identite   ?base=&lieu=&nom= : {env, define, identite} proposes pour une creation
     POST /prepare    {env, demandes: [{chemin, etat, raison?, partage_accepte?}]} -> diff, empreinte,
                      confirmations (listes partagees), commentaires_cites, refus
@@ -29,6 +32,7 @@ Routes (les POST exigent l'en-tete X-Fichiers-Berry: 1 et la meme origine ; JSON
 import argparse
 import json
 import sys
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -96,7 +100,13 @@ def renommage_de(demande):
 
 
 def fabrique_gestionnaire(acces, racine, builds_en_cours):
+    verrou = threading.Lock()
+
     def traite_post(chemin, demande):
+        with verrou:                                  # verification de l'empreinte et ecriture, d'un seul tenant
+            return _traite_post(chemin, demande)
+
+    def _traite_post(chemin, demande):
         if chemin == "/prepare":
             return fbw.prepare(racine, _chaine(demande, "env"), demandes_de(demande))
         if chemin == "/enregistre":
@@ -156,10 +166,10 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
                 elif url.path == "/envs":
                     self._json({"envs": fbe.envs_proposes(racine)})
                 elif url.path == "/etat":
-                    etat = fbe.etat_env(racine, params.get("env", [""])[0])
+                    self._json(fbe.etat_env(racine, params.get("env", [""])[0]))
+                elif url.path == "/build":
                     builds = builds_en_cours()            # None : detection impossible
-                    etat["build_en_cours"] = None if builds is None else bool(builds)
-                    self._json(etat)
+                    self._json({"build_en_cours": None if builds is None else bool(builds)})
                 elif url.path == "/identite":
                     self._json(identite(params))
                 else:

@@ -68,6 +68,7 @@ PAGE = r"""<!doctype html>
       <button class="btn" id="supprimer">Supprimer cet env…</button>
       <span id="statut" class="discret"></span>
     </div>
+    <div id="bandeau-build"></div>
     <div id="avertissements"></div>
   </section>
 
@@ -214,6 +215,13 @@ async function chargeEtat() {
   etat = r.donnees;
   $("statut").textContent = etat.fichiers.length + " fichiers recensés à l'instant";
   dessine();
+  verifieBuild();
+}
+async function verifieBuild() {                     // a part : la detection prend 2 s, l'etat s'affiche avant
+  var r = await appel("/build"), z = vide($("bandeau-build"));
+  var b = r.ok ? r.donnees.build_en_cours : null;
+  if (b !== false)
+    z.appendChild(h("div", {"class": "avert rouge", texte: b ? "Un build est en cours : toute écriture est refusée jusqu'à sa fin." : "Impossible de savoir si un build tourne : toute écriture sera refusée."}));
 }
 
 function badges(f) {
@@ -245,8 +253,6 @@ function dessine() {
     $("n-" + c).textContent = "(" + cols[c].length + ")";
   });
   var av = vide($("avertissements"));
-  if (etat.build_en_cours !== false)
-    av.appendChild(h("div", {"class": "avert rouge", texte: etat.build_en_cours ? "Un build est en cours : toute écriture est refusée jusqu'à sa fin." : "Impossible de savoir si un build tourne : toute écriture sera refusée."}));
   if (etat.copies_temporaires.length)
     av.appendChild(h("div", {"class": "avert", texte: "Copies temporaires d'un build dans le dossier de la carte (identiques à data/fs, ignorées) : " + etat.copies_temporaires.join(", ")}));
   if (!etat.exclude_solidified)
@@ -363,6 +369,7 @@ async function voirDiff() {
 }
 
 async function enregistrer() {
+  $("enregistrer").disabled = true;
   var env = etat.env, r = await appel("/enregistre", {env: env, demandes: Object.values(attente), empreinte: empreinte});
   var m = vide($("message"));
   if (!r.ok) { m.appendChild(h("div", {"class": "erreur", texte: "Refusé : " + r.texte})); return; }
@@ -411,6 +418,7 @@ async function prepareCreation() {
   $("c-creer").disabled = p.refus.length > 0;
 }
 async function creer() {
+  $("c-creer").disabled = true;
   var r = await appel("/creation", Object.assign(creationCorps(), {empreinte: creationEmpreinte})), z = vide($("c-retours"));
   if (!r.ok) { z.appendChild(h("div", {"class": "erreur", texte: "Refusé : " + r.texte})); return; }
   $("c-creer").disabled = true;

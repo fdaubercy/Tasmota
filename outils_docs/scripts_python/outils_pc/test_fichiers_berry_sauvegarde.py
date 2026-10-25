@@ -76,6 +76,24 @@ def test_refus_cible_existante(fbs, t):
                     "cible existante : refus, rien d'ecrase")
 
 
+def test_annulation_incomplete(fbs, t):
+    """Une annulation qui echoue ne doit pas passer sous silence : erreur qui la nomme, avec la sauvegarde."""
+    racine = depot(t)
+    try:
+        with fbs.Transaction(racine, "essai") as tr:
+            tr.ecrit("a.ini", b"A\r\n")
+            tr.renomme("data/lieu/carte", "data/lieu/carte2")
+            (racine / "data/lieu/carte").mkdir()        # le retour du dossier sera impossible
+            raise ValueError("panne simulee")
+    except fbs.AnnulationIncomplete as erreur:
+        texte = str(erreur)
+        verifie(("data/lieu/carte2" in texte, "panne simulee" in texte, str(tr.dossier) in texte), (True, True, True),
+                "annulation incomplete : chemin non defait, erreur d'origine et sauvegarde nommes")
+    except Exception as erreur:
+        verifie(repr(erreur), "AnnulationIncomplete", "annulation incomplete : erreur dediee")
+    verifie((racine / "a.ini").read_bytes(), b"a\r\n", "annulation incomplete : les autres etapes sont defaites")
+
+
 def test_purge(fbs, t):
     racine = fbs.dossier_sauvegardes()
     vieux, recent = racine / "20000101-000000-ancien", racine / "recent"
@@ -89,7 +107,8 @@ def test_purge(fbs, t):
 
 
 def principal():
-    for test in (test_sauvegarde_avant_ecriture, test_annulation, test_refus_cible_existante, test_purge):
+    for test in (test_sauvegarde_avant_ecriture, test_annulation, test_refus_cible_existante, test_purge,
+                 test_annulation_incomplete):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = str(Path(t) / "outils")
             try:

@@ -77,6 +77,7 @@ async function prepareRenommage() {
   $("r-renommer").disabled = r.donnees.refus.length > 0;
 }
 async function renommer() {
+  $("r-renommer").disabled = true;                  // avant l'envoi : un double clic n'envoie qu'une demande
   var r = await appel("/renommage", Object.assign(renommageCorps(), {empreinte: renommageEmpreinte})), z = vide($("r-retours"));
   if (!r.ok) { z.appendChild(h("div", {"class": "erreur", texte: "Refusé : " + r.texte})); return; }
   $("r-renommer").disabled = true;
@@ -102,6 +103,7 @@ async function prepareSuppression() {
   $("s-supprimer").disabled = r.donnees.refus.length > 0;
 }
 async function supprimer() {
+  $("s-supprimer").disabled = true;
   var env = suppressionEnv, r = await appel("/suppression", {env: env, empreinte: suppressionEmpreinte});
   var z = vide($("s-retours"));
   if (!r.ok) { z.appendChild(h("div", {"class": "erreur", texte: "Refusé : " + r.texte})); return; }

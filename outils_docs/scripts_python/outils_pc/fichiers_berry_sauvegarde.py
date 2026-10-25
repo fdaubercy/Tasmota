@@ -6,6 +6,7 @@ Chaque ecriture de la page (enregistrement, creation, suppression) passe par une
     (hors depot ; distincte du .bak de la page build, qui ecrasait le sien) ; gardee 30 jours ;
   - si une etape echoue, tout ce qui a deja ete fait est defait, en ordre inverse (fichiers remis, dossier
     copie retire, renommage defait), puis l'exception repart : jamais de carte a moitie creee ou supprimee.
+    Si une annulation echoue elle-meme (fichier tenu ouvert...), AnnulationIncomplete nomme ce qui reste a defaire.
 """
 
 import datetime
@@ -35,6 +36,10 @@ def purge(jours=JOURS):
     return retires
 
 
+class AnnulationIncomplete(Exception):
+    """Une etape a echoue ET une partie de l'annulation aussi : le message dit quoi remettre a la main."""
+
+
 class Transaction:
     """with Transaction(racine, "creation") as tr: tr.ecrit(...), tr.renomme(...), tr.copie_dossier(...)."""
 
@@ -56,7 +61,8 @@ class Transaction:
             copie = self.dossier / rel
             copie.parent.mkdir(parents=True, exist_ok=True)
             copie.write_bytes(avant)
-        self._annulations.append(lambda: chemin.write_bytes(avant) if avant is not None else chemin.unlink(missing_ok=True))
+        self._annulations.append((f"{rel} a remettre",
+                                  lambda: chemin.write_bytes(avant) if avant is not None else chemin.unlink(missing_ok=True)))
         chemin.write_bytes(octets)
 
     def renomme(self, rel_src, rel_dst):
@@ -71,20 +77,26 @@ class Transaction:
             dst.rename(src)
             if parent_cree and not any(dst.parent.iterdir()):
                 dst.parent.rmdir()
-        self._annulations.append(annule)
+        self._annulations.append((f"{rel_dst} a renommer en {rel_src}", annule))
 
     def copie_dossier(self, rel_src, rel_dst, ignore=None):
         dst = self.racine / rel_dst
         if dst.exists():
             raise FileExistsError(f"{rel_dst} existe deja")
-        self._annulations.append(lambda: shutil.rmtree(dst, ignore_errors=True))   # copie partielle comprise
+        self._annulations.append((f"{rel_dst} a effacer",                           # copie partielle comprise
+                                  lambda: shutil.rmtree(dst) if dst.exists() else None))
         shutil.copytree(self.racine / rel_src, dst, ignore=ignore)
 
     def __exit__(self, type_, exc, trace):
         if exc is not None:
-            for annule in reversed(self._annulations):
+            echecs = []
+            for libelle, annule in reversed(self._annulations):
                 try:
                     annule()
-                except OSError:
-                    pass                    # l'exception d'origine reste celle qu'on remonte
+                except OSError as erreur:    # on continue : defaire tout ce qui peut l'etre
+                    echecs.append(f"{libelle} ({erreur})")
+            if echecs:
+                raise AnnulationIncomplete(
+                    f"{type(exc).__name__} : {exc} ; ANNULATION INCOMPLETE, a remettre a la main : " + " ; ".join(echecs)
+                    + f" ; versions d'origine dans {self.dossier}") from exc
         return False

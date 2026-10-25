@@ -12,6 +12,7 @@ import socket
 import sys
 import tempfile
 import threading
+import time
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
@@ -78,10 +79,13 @@ def test_get(b):
     verifie((statut, f["data/garage/tasmota32s3-rideau-garage-modbus/controleRideau.be"]["etat"]), (200, "solidifie"),
             "GET /etat : controleRideau solidifie")
     verifie(b.requete("GET", "/etat?env=tasmota32s3-nulle-part")[0], 404, "GET /etat : env inconnu -> 404")
-    verifie(etat.get("build_en_cours"), False, "GET /etat : build_en_cours faux sans build")
+    verifie(b.requete("GET", "/build"), (200, {"build_en_cours": False}), "GET /build : faux sans build")
     b.builds = ["pio run -e x"]
-    verifie(b.requete("GET", f"/etat?env={RIDEAU}")[1].get("build_en_cours"), True,
-            "GET /etat : build_en_cours vrai pendant un build")
+    verifie(b.requete("GET", "/build"), (200, {"build_en_cours": True}), "GET /build : vrai pendant un build")
+    b.builds = None
+    verifie(b.requete("GET", "/build"), (200, {"build_en_cours": None}), "GET /build : None si detection impossible")
+    b.builds = Explose()                             # /etat ne doit pas attendre la detection (2 s et plus)
+    verifie(b.requete("GET", f"/etat?env={RIDEAU}")[0], 200, "GET /etat : independant de la detection des builds")
     b.builds = []
     statut, ident = b.requete("GET", "/identite?base=tasmota32s3-base-N16R8-sans-ecran&lieu=garage&nom=porte-test")
     verifie((statut, ident["env"], ident["define"], ident["identite"]["MQTT_TOPIC"]),
@@ -191,10 +195,41 @@ def test_post_renommage_puis_suppression(b):
     verifie(statut, 200, "POST /suppression/prepare d'une base -> 200 avec refus")
 
 
+def test_ecritures_concurrentes(b):
+    """Deux suppressions lancees ensemble, diffs faits sur le meme etat : l'une passe, l'autre est refusee
+    (empreinte perimee) ; jamais deux reussites dont l'une ecrase l'autre (section revenue, dossier renomme)."""
+    import fichiers_berry_suppression as fbx
+    cuve = "tasmota32s3-garage-capteurs-cuve-modbus"
+    empreintes = {e: b.requete("POST", "/suppression/prepare", {"env": e})[1]["empreinte"] for e in (RIDEAU, cuve)}
+    origine, arrives, verrou = fbx._calcule, [], threading.Lock()
+
+    def calcule_puis_attend(racine, env):            # les deux calculs avant les deux ecritures, si rien ne l'empeche
+        r = origine(racine, env)
+        with verrou:
+            arrives.append(env)
+        fin = time.time() + 2
+        while len(arrives) < 2 and time.time() < fin:
+            time.sleep(0.02)
+        return r
+    fbx._calcule = calcule_puis_attend
+    statuts = {}
+    try:
+        fils = [threading.Thread(target=lambda e=e: statuts.__setitem__(
+            e, b.requete("POST", "/suppression", {"env": e, "empreinte": empreintes[e]})[0])) for e in (RIDEAU, cuve)]
+        [f.start() for f in fils]
+        [f.join() for f in fils]
+    finally:
+        fbx._calcule = origine
+    verifie(sorted(statuts.values()), [200, 409], "suppressions simultanees : une reussie, une refusee")
+    cenv = (b.racine / fbi.FICHIER_CENV).read_text(encoding="utf-8")
+    for e, statut in statuts.items():
+        verifie(("[env:" + e + "]" in cenv), statut != 200, f"suppressions simultanees : section de {e} coherente")
+
+
 def principal():
     for test in (test_get, test_post_sans_entete, test_post_enregistre, test_post_pendant_build,
                  test_post_empreinte_perimee, test_post_invalide, test_post_creation, test_erreur_inattendue,
-                 test_post_renommage_puis_suppression):
+                 test_post_renommage_puis_suppression, test_ecritures_concurrentes):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier
             b = Banc(t)
