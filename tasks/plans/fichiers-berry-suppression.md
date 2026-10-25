@@ -1,11 +1,11 @@
 ---
 chantier: fichiers-berry-suppression
-titre: Page « Fichiers Berry par env » — supprimer un env, écritures atomiques, sauvegardes, erreurs claires
+titre: Page « Fichiers Berry par env » — supprimer et renommer un env, écritures atomiques, sauvegardes, erreurs claires
 statut: actif
 cree: 2026-10-25
 maj: 2026-10-25
 ---
-# Supprimer un env depuis la page « Fichiers Berry par env »
+# Supprimer et renommer un env depuis la page « Fichiers Berry par env »
 
 ## Contexte
 
@@ -79,14 +79,33 @@ sauvegarde, avertissements}` ; RuntimeError (→ 409) si build, empreinte périm
   - [ ] citations ailleurs (commentaires du cenv, autres fichiers `.ini`/`.py` connus) signalées, non modifiées.
 - [ ] Commit `feat(fichiers-berry): suppression d un env (cenv, .h, default_envs, dossier en -sauvegarde)`.
 
-## A4 — Routes et page de la suppression
+## A3b — Renommage d'un env (`fichiers_berry_renommage.py`, spec §10)
 
-- [ ] `POST /suppression/prepare {env}` et `POST /suppression {env, empreinte}` ; test web ROUGE puis VERT.
+Interfaces produites : `Renommage(env, lieu, nom, identite, define="")` ; `prepare_renommage(racine, r)` ->
+`{env, nouvel_env, dossier, nouveau_dossier, define, diff, empreinte, avertissements, refus}` ; `renomme(racine, r,
+empreinte, builds_en_cours)`. Réutilise la copie de section et l'identité de `fichiers_berry_creation` et le retrait
+de `fichiers_berry_suppression`.
+
+- [ ] Banc `test_fichiers_berry_renommage.py` ROUGE puis VERT :
+  - [ ] rideau renommé : nouvel env lu par PlatformIO (`build_envs.liste_envs`), ancien absent, dossier déplacé (ancien
+    absent, pas de `-sauvegarde`), persist aux nouvelles valeurs seules (octet pour octet ailleurs) ;
+  - [ ] même IP gardée : accepté (l'identité actuelle de l'env ne compte pas) ; topic d'une AUTRE carte : refusé ;
+  - [ ] `default_envs` : ligne active reste active, commentée reste commentée, au nouveau nom ; `data_dir` suit ;
+  - [ ] renommer puis renommer en sens inverse : cenv, `.h` et dossier comme au départ, hors identité modifiée ;
+  - [ ] refus : env référencé, nouveau nom déjà pris, build ; atomicité (panne → tout remis).
+- [ ] Commit `feat(fichiers-berry): renommage d un env (identite reproposee, dossier deplace)`.
+
+## A4 — Routes et page de la suppression et du renommage
+
+- [ ] `POST /suppression/prepare {env}`, `POST /suppression {env, empreinte}`, `POST /renommage/prepare {env, lieu, nom,
+  identite, define?}`, `POST /renommage {..., empreinte}` ; test web ROUGE puis VERT.
 - [ ] Page : bouton « Supprimer cet env… » (cartes et bases du cenv), panneau avec diff, avertissements, refus, dossier
   renommé, bouton « Supprimer <env> » grisé si refus ou si l'env choisi change ; après succès, liste des envs
   rechargée et chemin de la sauvegarde affiché.
-- [ ] Sonde Chrome : supprimer l'env créé par la sonde (création puis suppression), refus sur une base ; ROUGE puis VERT, témoin VERT.
-- [ ] Commit `feat(fichiers-berry): bouton Supprimer cet env dans la page`.
+- [ ] Page : bouton « Renommer cet env… » : lieu, nom, « Proposer » (identité), diff, « Renommer » (grisé si la saisie
+  change après le diff) ; après succès, l'env renommé est choisi.
+- [ ] Sonde Chrome : créer, renommer puis supprimer un env d'essai ; refus sur une base ; ROUGE puis VERT, témoin VERT.
+- [ ] Commit `feat(fichiers-berry): boutons Supprimer et Renommer cet env dans la page`.
 
 ## A5 — Recensement et création pendant un build (amélioration 3)
 
@@ -98,13 +117,13 @@ sauvegarde, avertissements}` ; RuntimeError (→ 409) si build, empreinte périm
 ## A6 — Documentation et essai réel
 
 - [ ] README § « Fichiers Berry par env » (suppression, sauvegardes), `CLAUDE.md` (carte des documents), skill `bancs`.
-- [ ] Essai réel avec l'utilisateur, hors build : créer un env d'essai puis le supprimer depuis la page ; `git status`
+- [ ] Essai réel avec l'utilisateur, hors build : créer un env d'essai, le renommer, puis le supprimer depuis la page ; `git status`
   sans cenv ni `.h`, dossier `…-sauvegarde` présent puis retiré à la main.
-- [ ] Commit `docs: suppression d un env (README, CLAUDE.md, bancs)` ; `statut: clos`.
+- [ ] Commit `docs: suppression et renommage d un env (README, CLAUDE.md, bancs)` ; `statut: clos`.
 
 ## Améliorations restantes
 
-- [ ] [projet] Renommer un env (hors périmètre, décidé le 2026-10-25).
+- [x] [projet] Renommer un env : rétabli dans le périmètre par l'utilisateur le 2026-10-25 (action A3b). — preuve : spec §10
 
 ## Vérification
 

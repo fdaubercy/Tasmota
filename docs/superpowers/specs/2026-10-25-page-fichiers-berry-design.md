@@ -147,7 +147,7 @@ comme les autres outils.
 - Éditer le **contenu** des fichiers (`_persist.json`, `.be`), hors le remplacement ciblé des valeurs
   d'identité à la création d'un env (§2.6).
 - Toucher aux autres options du `.ini` d'un env existant (ports, `build_flags`, partitions...).
-- Renommer un env. (La suppression est entrée dans le périmètre le 2026-10-25 : §9.)
+- (Suppression et renommage d'un env entrés dans le périmètre le 2026-10-25 : §9 et §10.)
 - Lancer un build, une solidification ou `carte_modules_berry.py`.
 - Gérer les fichiers non Berry de `data/sd`, `data/json` (même si `custom_files_exclude` s'y applique).
 
@@ -211,7 +211,7 @@ emplacement des nouvelles lignes dans une liste (en fin de liste par défaut).
 
 ## 9. Supprimer un env (demande du 2026-10-25, conception validée par l'utilisateur)
 
-Quand : un env qui ne sert plus, ou une création ratée (§2.6) à défaire. Le renommage reste hors périmètre.
+Quand : un env qui ne sert plus, ou une création ratée (§2.6) à défaire.
 
 **Ce que fait « Supprimer cet env »** (sur l'env choisi en haut de la page) :
 1. Retire la section `[env:…]` du cenv (de son en-tête à l'en-tête suivant) ; les commentaires des autres
@@ -244,3 +244,20 @@ empreinte = fichiers lus + env demandé. Rien n'est commité.
   remplace le `.bak` commun avec la page build ; la page affiche le chemin. *Choix de Claude.*
 - Ensuite : *recensement et création pendant un build* (copies temporaires de `copy_fs_image` vues comme
   fichiers de la carte, et recopiées par une création).
+
+## 10. Renommer un env (demande du 2026-10-25 ; l'utilisateur a rétabli le renommage dans le périmètre)
+
+« Renommer cet env… » : nouveau lieu et/ou nouveau nom ; **identité reproposée** d'après le nouveau nom, comme
+à la création (§2.6, 8 champs modifiables, choix de l'utilisateur) ; define proposé `FIRMWARE_<PUCE>_<LIEU>_<NOM>`.
+Une seule transaction (§9, atomique), qui produit :
+1. la section `[env:<puce>-<lieu>-<nom>]` du cenv = celle de l'env, chemins du dossier et define remplacés,
+   même base ; insérée comme à la création (sous le bandeau du lieu), l'ancienne retirée comme à la suppression ;
+2. la section du `.h` : copie avec l'identité nouvelle (comme §2.6, point 3), l'ancienne retirée comme au §9 ;
+3. le dossier `data/<lieu>/<carte>` **déplacé** (pas copié) vers son nouveau nom, `_persist.json` aux valeurs
+   d'identité nouvelles (remplacement ciblé, octet pour octet) ;
+4. `default_envs` : la ligne de l'env garde son état (active ou commentée) avec le nouveau nom ; `data_dir`
+   qui désignait l'ancien dossier désigne le nouveau.
+
+*Choix de Claude :* le contrôle d'unicité (IP, topic, client MQTT) ignore l'identité actuelle de l'env renommé
+(garder son IP est permis) ; refus si l'env est référencé par un autre (`${env:<env>…}` ou `extends`), si le
+nouvel env, dossier ou define existe déjà, pendant un build. Ce qui cite l'ancien nom ailleurs est signalé.
