@@ -142,7 +142,7 @@ Consomme A1, A2. Produit :
   ligne `option = x`, la 1re continuation remonte ; option vidée → `option =` gardée, pour ne pas réactiver
   un héritage) ; un changement d'état retire le fichier de **toutes** les listes où il figure.
 
-- [ ] Tests (sur dépôt d'essai CRLF) : `ecriture_ajout_exclu`, `ecriture_option_heritee` (la chaîne
+- [x] Tests (sur dépôt d'essai CRLF) : `ecriture_ajout_exclu`, `ecriture_option_heritee` (la chaîne
   `${env:base...}` apparaît, l'héritage reste dans `resout`), `ecriture_option_absente`, `ecriture_partage_confirme`
   (sans `partage_accepte` → `confirmations` = envs de `envs_touches`, cenv inchangé ; avec → ligne retirée de
   `[berry_commun]`), `ecriture_refuse_amont` (point 1), `ecriture_retire_ligne_commentee` (point 2),
@@ -151,9 +151,9 @@ Consomme A1, A2. Produit :
   de l'option est cité quand `loRaWanFonctions.be` bouge), `refus_build` (liste `["pio run"]` et `None`),
   `refus_empreinte` (cenv touché entre `prepare` et `enregistre`), `bak_present`, et `relu_par_platformio` :
   le cenv écrit relu par `platformio.project.config.ProjectConfig` du penv donne pour l'env la même liste que
-  `resout` (preuve de la contrainte §6 « trois lecteurs »).
-- [ ] Banc ROUGE, puis écrire le module, banc VERT ; témoin : écrire en `\n` → `ecriture_crlf` ROUGE.
-- [ ] Commit `feat(fichiers-berry): ecriture des listes du cenv (diff, empreinte, listes partagees)`.
+  `resout` (preuve de la contrainte §6 « trois lecteurs »). — preuve : test_fichiers_berry_ecriture.py (16 tests, dont relu_par_platformio)
+- [x] Banc ROUGE, puis écrire le module, banc VERT ; témoin : écrire en `\n` → `ecriture_crlf` ROUGE. — preuve : ROUGE (module absent) puis VERT ; temoin ecriture LF -> 6 KO
+- [x] Commit `feat(fichiers-berry): ecriture des listes du cenv (diff, empreinte, listes partagees)`. — preuve : d6bc80ed0
 
 ## A4 — Création d'un env depuis une carte modèle (`fichiers_berry_creation.py`)
 
@@ -188,7 +188,7 @@ Consomme A1, A2. Produit :
 - Refus : env, dossier ou define existant ; IP ≠ `0.0.0.0`, `MQTT_TOPIC` ou `MQTT_CLIENT_ID` déjà présents dans
   une autre section du `.h` ou un autre `data/**/_persist.json` (hors `*sauvegarde*`) ; nom invalide ; build.
 
-- [ ] Tests (dépôt d'essai bâti en recopiant la vraie section rideau du cenv, sa section du `.h` et son dossier
+- [x] Tests (dépôt d'essai bâti en recopiant la vraie section rideau du cenv, sa section du `.h` et son dossier
   `data/` réel) : `creation_nom_et_define`, `creation_section_cenv` (relue par `ProjectConfig` : `extends`,
   define, pas d'`upload_port`, `custom_files_upload` = base + dossier), `creation_chemins_reecrits`
   (`controleRideau.be` pointe vers le nouveau dossier), `creation_section_h` (8 defines + `USER_BACKLOG` +
@@ -196,9 +196,9 @@ Consomme A1, A2. Produit :
   (point 5), `creation_insertion_lieu` (après le dernier env garage / nouveau bandeau pour `jardin2`),
   `refus_identite_prise` (topic `garage/rideau`), `refus_existant`, `diff_masque` (aucune valeur de
   `STA_PASS*` ni mot de passe du persist dans `diff`), `refus_build`, et `nouvelle_carte_vue_par_build`
-  (`build_envs.liste_envs` du dépôt d'essai contient le nouvel env en famille `cartes`).
-- [ ] Banc ROUGE, puis écrire le module, banc VERT ; témoin : désactiver le masquage → `diff_masque` ROUGE.
-- [ ] Commit `feat(fichiers-berry): creation d un env depuis une carte modele`.
+  (`build_envs.liste_envs` du dépôt d'essai contient le nouvel env en famille `cartes`). — preuve : test_fichiers_berry_creation.py (10 tests sur copie du depot reel)
+- [x] Banc ROUGE, puis écrire le module, banc VERT ; témoin : désactiver le masquage → `diff_masque` ROUGE. — preuve : ROUGE (module absent) puis VERT ; temoin masquage coupe -> diff_masque KO
+- [x] Commit `feat(fichiers-berry): creation d un env depuis une carte modele`. — preuve : f0e234c63
 
 ## A5 — Serveur web (`fichiers_berry_web.py`)
 
