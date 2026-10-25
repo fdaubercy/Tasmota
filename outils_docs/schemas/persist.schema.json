@@ -904,9 +904,6 @@
                       "SwitchMode": {
                         "type": "integer"
                       },
-                      "typeAction": {
-                        "type": "string"
-                      },
                       "etat": {
                         "type": "string",
                         "enum": [
@@ -956,6 +953,9 @@
                             "delai"
                           ]
                         }
+                      },
+                      "typeAction": {
+                        "type": "string"
                       }
                     },
                     "required": [
@@ -966,7 +966,6 @@
                       "type",
                       "virtuel",
                       "SwitchMode",
-                      "typeAction",
                       "etat",
                       "relaisLie"
                     ],

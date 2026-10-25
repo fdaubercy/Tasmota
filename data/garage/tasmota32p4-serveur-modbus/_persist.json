@@ -156,24 +156,11 @@
 						"type": 32,
 						"virtuel": "OFF",
 						"SwitchMode": 2,
-						"typeAction": "ON/OFF",
 						"etat": "OFF",
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "Switch",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"TOGGLE"
-							],
-							"etatSiOFF": [
-								""
-							]
+							"type": "Switch"
 						}
 					},
 					"bouton2": {
@@ -184,24 +171,11 @@
 						"type": 32,
 						"virtuel": "OFF",
 						"SwitchMode": 2,
-						"typeAction": "ON/OFF",
 						"etat": "OFF",
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "Switch",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"TOGGLE"
-							],
-							"etatSiOFF": [
-								""
-							]
+							"type": "Switch"
 						}
 					}
 				},
@@ -218,19 +192,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"TOGGLE"
-							],
-							"etatSiOFF": [
-								""
-							]
+							"type": "ON/OFF"
 						},
 						"idModBus": 1
 					},
@@ -246,19 +208,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"TOGGLE"
-							],
-							"etatSiOFF": [
-								""
-							]
+							"type": "ON/OFF"
 						},
 						"idModBus": 2
 					}
@@ -692,15 +642,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": []
+							"type": "ON/OFF"
 						},
 						"publishMQTT": {
 							"topic": []
@@ -719,15 +661,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": []
+							"type": "ON/OFF"
 						},
 						"publishMQTT": {
 							"topic": []
@@ -745,15 +679,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": []
+							"type": "ON/OFF"
 						},
 						"publishMQTT": {
 							"topic": []
@@ -771,15 +697,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": []
+							"type": "ON/OFF"
 						},
 						"publishMQTT": {
 							"topic": []
@@ -799,17 +717,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": [
-								"TOGGLE"
-							]
+							"type": "ON/OFF"
 						}
 					},
 					"capteur2": {
@@ -824,17 +732,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": [
-								"TOGGLE"
-							]
+							"type": "ON/OFF"
 						}
 					}
 				},
@@ -852,17 +750,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": [
-								"TOGGLE"
-							]
+							"type": "ON/OFF"
 						}
 					}
 				},
@@ -881,19 +769,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"ON"
-							],
-							"etatSiOFF": [
-								"OFF"
-							]
+							"type": "ON/OFF"
 						},
 						"idModBus": 1
 					},
@@ -909,19 +785,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"ON"
-							],
-							"etatSiOFF": [
-								"OFF"
-							]
+							"type": "ON/OFF"
 						}
 					}
 				}

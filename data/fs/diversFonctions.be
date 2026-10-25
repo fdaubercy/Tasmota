@@ -183,12 +183,13 @@ def diversFonctions_driverComplet(nom, veille)
 end
 diversFonctions.driverComplet = diversFonctions_driverComplet
 
-# Supprime les listes VIDES de cles connues ('ids', 'modules', 'etatSiON'...) : ~60 octets
+# Supprime les listes VIDES de cles connues ('ids', 'modules', 'limites'...) : ~60 octets
 # de RAM chacune, et leurs lecteurs utilisent .find(cle, []). Liste FERMEE de cles, jamais
 # de suppression generique (une liste vide peut etre remplie ailleurs par .push()).
 # Retourne le nombre de listes supprimees.
 def diversFonctions_elagueListesVides(noeud)
-	var elaguables = ["ids", "modules", "etatSiON", "etatSiOFF", "limites", "topic", "tabRelais", "tabEtatRelais"]
+	# etatSiON/etatSiOFF retires (audit P4.6, 2026-10-25) : cles sans lecteur, sorties des persists
+	var elaguables = ["ids", "modules", "limites", "topic", "tabRelais", "tabEtatRelais"]
 	var nb = 0
 	if !isinstance(noeud, map)	return 0	end
 	var aSupprimer = []

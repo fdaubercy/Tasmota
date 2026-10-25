@@ -190,25 +190,12 @@
 						"type": 32,
 						"virtuel": "OFF",
 						"SwitchMode": 2,
-						"typeAction": "ON/OFF",
 						"etat": "OFF",
 						"relaisLie": {
 							"modules": ["pompeVideCave"],
 							"ids": [1],
 							"type": "Switch",
-							"delai": 0,
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"TOGGLE"
-							],
-							"etatSiOFF": [
-								""
-							]
+							"delai": 0
 						}
 					},
 					"bouton2": {
@@ -219,25 +206,12 @@
 						"type": 32,
 						"virtuel": "OFF",
 						"SwitchMode": 2,
-						"typeAction": "ON/OFF",
 						"etat": "OFF",
 						"relaisLie": {
 							"modules": ["pompeVideCave"],
 							"ids": [1],
 							"type": "Switch",
-							"delai": 0,
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"TOGGLE"
-							],
-							"etatSiOFF": [
-								""
-							]
+							"delai": 0
 						}
 					}
 				},
@@ -254,19 +228,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"TOGGLE"
-							],
-							"etatSiOFF": [
-								""
-							]
+							"type": "ON/OFF"
 						}
 					}
 				},
@@ -319,15 +281,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": []
+							"type": "ON/OFF"
 						},
 						"publishMQTT": {
 							"topic": []
@@ -349,17 +303,7 @@
 							"modules": ["pompeVideCave"],
 							"ids": [1],
 							"type": "OFF",
-							"delai": 0,
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": [
-								"OFF"
-							]
+							"delai": 0
 						}
 					},
 					"capteur2": {
@@ -375,17 +319,7 @@
 							"modules": ["pompeVideCave"],
 							"ids": [1],
 							"type": "ON",
-							"delai": 0,
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"ON"
-							],
-							"etatSiOFF": []
+							"delai": 0
 						}
 					}
 				},
@@ -403,17 +337,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": [
-								"TOGGLE"
-							]
+							"type": "ON/OFF"
 						}
 					}
 				},
@@ -432,19 +356,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"ON"
-							],
-							"etatSiOFF": [
-								"OFF"
-							]
+							"type": "ON/OFF"
 						},
 						"idModBus": 1
 					}
@@ -471,24 +383,11 @@
 						"type": 32,
 						"virtuel": "OFF",
 						"SwitchMode": 2,
-						"typeAction": "ON/OFF",
 						"etat": "OFF",
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "Switch",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"TOGGLE"
-							],
-							"etatSiOFF": [
-								""
-							]
+							"type": "Switch"
 						}
 					}
 				},
@@ -505,19 +404,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"TOGGLE"
-							],
-							"etatSiOFF": [
-								""
-							]
+							"type": "ON/OFF"
 						}
 					}
 				},
@@ -561,15 +448,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": []
+							"type": "ON/OFF"
 						},
 						"publishMQTT": {
 							"topic": []
@@ -590,17 +469,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": [
-								"OFF"
-							]
+							"type": "ON/OFF"
 						}
 					}
 				},
@@ -618,17 +487,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": [
-								"TOGGLE"
-							]
+							"type": "ON/OFF"
 						}
 					}
 				},
@@ -651,19 +510,7 @@
 							"modules": ["Thermo-Hygrometre"],
 							"ids": [2],
 							"type": "ON/OFF",
-							"delai": 0,
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"ON"
-							],
-							"etatSiOFF": [
-								"OFF"
-							]
+							"delai": 0
 						},
 						"idModBus": -1
 					}
@@ -690,25 +537,12 @@
 						"type": 32,
 						"virtuel": "OFF",
 						"SwitchMode": 2,
-						"typeAction": "ON/OFF",
 						"etat": "OFF",
 						"relaisLie": {
 							"modules": ["autres"],
 							"ids": [3],
 							"type": "Switch",
-							"delai": 0,
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"TOGGLE"
-							],
-							"etatSiOFF": [
-								""
-							]
+							"delai": 0
 						}
 					}
 				},
@@ -725,19 +559,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"TOGGLE"
-							],
-							"etatSiOFF": [
-								""
-							]
+							"type": "ON/OFF"
 						}
 					}
 				},
@@ -823,15 +645,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": []
+							"type": "ON/OFF"
 						},
 						"publishMQTT": {
 							"topic": []
@@ -852,17 +666,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": [
-								"OFF"
-							]
+							"type": "ON/OFF"
 						}
 					}
 				},
@@ -880,17 +684,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": [
-								"TOGGLE"
-							]
+							"type": "ON/OFF"
 						}
 					}
 				},
@@ -909,19 +703,7 @@
 						"relaisLie": {
 							"modules": [],
 							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"ON"
-							],
-							"etatSiOFF": [
-								"OFF"
-							]
+							"type": "ON/OFF"
 						},
 						"idModBus": 1
 					}
