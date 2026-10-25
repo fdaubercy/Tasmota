@@ -147,7 +147,7 @@ comme les autres outils.
 - Éditer le **contenu** des fichiers (`_persist.json`, `.be`), hors le remplacement ciblé des valeurs
   d'identité à la création d'un env (§2.6).
 - Toucher aux autres options du `.ini` d'un env existant (ports, `build_flags`, partitions...).
-- Supprimer ou renommer un env.
+- Renommer un env. (La suppression est entrée dans le périmètre le 2026-10-25 : §9.)
 - Lancer un build, une solidification ou `carte_modules_berry.py`.
 - Gérer les fichiers non Berry de `data/sd`, `data/json` (même si `custom_files_exclude` s'y applique).
 
@@ -208,3 +208,39 @@ comme les autres outils.
 
 Découpage en modules, routes HTTP, forme exacte du diff, style visuel (aligné sur la page build),
 emplacement des nouvelles lignes dans une liste (en fin de liste par défaut).
+
+## 9. Supprimer un env (demande du 2026-10-25, conception validée par l'utilisateur)
+
+Quand : un env qui ne sert plus, ou une création ratée (§2.6) à défaire. Le renommage reste hors périmètre.
+
+**Ce que fait « Supprimer cet env »** (sur l'env choisi en haut de la page) :
+1. Retire la section `[env:…]` du cenv (de son en-tête à l'en-tête suivant) ; les commentaires des autres
+   sections ne sont pas touchés. *Choix de Claude :* le bandeau `; LOCALISATION:` reste, même vide.
+2. Retire la section de l'env dans `tasmota/user_config_override.h` (repérée par son `-D FIRMWARE_…`) :
+   - section propre (`#elif defined(X)`, ou `#if defined(X)` en tête de chaîne) : retirée, commentaire
+     `// -- Options for …` qui la précède compris ; si c'était le `#if` de tête, la section suivante
+     passe de `#elif` à `#if` ;
+   - section partagée (`#if defined(A) || defined(B)`, cas de la cave) : seul `defined(X)` est retiré de
+     la condition, le corps reste (il sert à l'autre env). *Choix de Claude.*
+3. Renomme le dossier `data/<lieu>/<carte>` en `<carte>-sauvegarde` (puis `-sauvegarde-2`, `-3`… si le
+   nom est pris) : recensement, copies et builds ignorent déjà les `*sauvegarde*`. *Choix de l'utilisateur.*
+4. Retire l'env de `default_envs` dans `platformio_override.ini`, ligne active ou commentée (un env actif
+   inconnu fait échouer `pio run`) ; si `data_dir` y désigne le dossier renommé, la page le signale.
+
+**Refus** : base dont d'autres envs héritent ou qu'ils référencent (`${env:<base>…}`), envs nommés ;
+build en cours ; env absent du cenv (env de l'amont). Ce qui cite encore l'env ailleurs (commentaires,
+bancs comme `banc_demarrage.py`) est signalé, jamais modifié.
+
+**Parcours** : comme un enregistrement — diff des fichiers + renommage annoncé, puis confirmation ;
+empreinte = fichiers lus + env demandé. Rien n'est commité.
+
+**Améliorations jointes** (revue finale, priorisées par l'utilisateur) :
+- *Création et suppression atomiques* : si une écriture échoue en route, ce qui a déjà été fait est défait
+  (fichiers remis depuis les sauvegardes, dossier copié retiré ou dossier renommé remis).
+- *Erreurs claires* : toute exception inattendue d'une route donne une réponse 500 avec son message, au lieu
+  d'une connexion coupée (« outil injoignable »).
+- *Sauvegardes séparées* : avant chaque écriture, copie horodatée de chaque fichier modifié dans
+  `<dossier des outils>/fichiers_berry/sauvegardes/` (`acces_web.dossier_donnees()`), gardée 30 jours ; elle
+  remplace le `.bak` commun avec la page build ; la page affiche le chemin. *Choix de Claude.*
+- Ensuite : *recensement et création pendant un build* (copies temporaires de `copy_fs_image` vues comme
+  fichiers de la carte, et recopiées par une création).
