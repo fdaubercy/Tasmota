@@ -258,7 +258,7 @@ CONSOLE.format("fichiers_berry"))`, `dans_job=True`, pas de `route_occupe`) ; `o
 - [x] `test_cible_fichiers_berry.py` ROUGE, écrire la cible, VERT ; `test_annuaire.py` mis à jour VERT. — preuve : test_cible_fichiers_berry.py VERT 6/6 ; test_annuaire.py ROUGE (3 KO) puis VERT ; test_garde_build alignement VERT (temoin KO)
 - [x] Vérifier par lecture que `CIBLES_HORS_BUILD` contient la cible (pas de `pio run --list-targets`, leçon du
   2026-10-17) ; demander à l'utilisateur de rafraîchir Project Tasks hors build et de lancer la cible une fois. — preuve : CIBLES_HORS_BUILD : pre_utilitaires_platformio.py (lecture du code, sans pio)
-- [ ] Tâche VS Code lancée une fois (Tasks: Run Task) avant d'être annoncée (leçon du 2026-10-13).
+- [x] Tâche VS Code lancée une fois (Tasks: Run Task) avant d'être annoncée (leçon du 2026-10-13).
 - [x] Commit `feat(fichiers-berry): cible Custom et tuile de l annuaire`. — preuve : 3596e315a
 
 ## A8 — Liens croisés avec la page build
@@ -269,7 +269,7 @@ Fichiers : modifier `outils_pc/build_page.py` (`ligneEnv(e)` l.335 : lien « Ré
 
 - [x] Sonde de la page build ROUGE sur les 2 nouveaux contrôles, puis modification, VERTE ; bancs `test_build_*.py`
   tous VERTS. — preuve : sonde_liens_fichiers ROUGE (liens vides) puis VERT, temoin VERT ; test_build_envs/ota_fs/progression/serie/web codes 0
-- [ ] Commit `feat(build): liens croises avec la page Fichiers Berry par env`.
+- [x] Commit `feat(build): liens croises avec la page Fichiers Berry par env`. — preuve : 119552042
 
 ## A9 — Documentation et essai réel avec l'utilisateur
 
