@@ -68,17 +68,13 @@ class CONTROLE_RANGE_EXTENDER : Driver
             end
         end
 
-        if (serveur["tcp"].find("activation", "OFF") == "OFF")   
-            serveur["tcp"]["activation"] = "ON"
+        # TCP n'est plus force a ON (audit N6/P5.6, 2026-10-25) : aucun persist n'utilise ModBus-TCP
+        # (typeComm.TCP a OFF partout), il ne chargeait qu'un client et un every_250ms sans usage.
+        # Active a la main, son id suit celui-ci.
+        if (serveur["tcp"].find("activation", "OFF") == "ON" && serveur["tcp"].find("id") != serveur["rangeExtender"]["id"])
             serveur["tcp"]["id"] = serveur["rangeExtender"]["id"]
 
             modifID = true
-        else
-            if (serveur["tcp"]["id"] != serveur["rangeExtender"]["id"])
-                serveur["tcp"]["id"] = serveur["rangeExtender"]["id"]
-
-                modifID = true
-            end
         end
 
         # Sauvegarde AVANT de redemarrer (2026-10-10) : les modifications ci-dessus sont imbriquees

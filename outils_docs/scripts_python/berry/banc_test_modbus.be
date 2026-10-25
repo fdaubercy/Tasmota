@@ -2076,6 +2076,25 @@ drivers = sauveDrivers
 serveur = sauveServeur
 
 print("")
+print("=== 35. P5.6 : ModBus-TCP demande, serveur TCP a OFF -> refus journalise ===")
+# Avant : envoiMsgModbusTCP ne sortait que si typeComm.TCP ET serveur.tcp etaient tous deux OFF ; avec
+# typeComm.TCP a ON et serveur.tcp a OFF (TCP plus force a ON, audit N6), il importait tcpFonctions,
+# non charge sur la carte.
+sauveDrivers = drivers
+sauveServeur = serveur
+drivers = {"ModBus": {"activation": "ON", "id": 2, "typeComm": {"Serial": "OFF", "UDP": "OFF", "TCP": "ON"}, "environnement": {}}}
+serveur = {"mqtt": {"topic": "cuve"}, "udp": {"activation": "OFF"}, "tcp": {"activation": "OFF"}}
+journal.clear()
+verifie("TCP demande, serveur TCP OFF : pas d'exception", false, string.find(str(essaie(def () modbusFonctions.envoiMsgModbusTCP(bytes("020300010001"), "Reponse") end)), "EXCEPTION") >= 0)
+verifie("... refus journalise en erreur", true, journalise("ENVOI_MSG_MODBUS_TCP_ERREUR"))
+journal.clear()
+drivers["ModBus"]["typeComm"]["TCP"] = "OFF"
+essaie(def () modbusFonctions.envoiMsgModbusTCP(bytes("020300010001"), "Reponse") end)
+verifie("temoin TCP non demande : sortie muette", false, journalise("ENVOI_MSG_MODBUS_TCP"))
+drivers = sauveDrivers
+serveur = sauveServeur
+
+print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
       total, total - echecs - bugs_connus, bugs_connus, echecs))
 print(echecs == 0 ? "BANC_MODBUS: OK" : "BANC_MODBUS: ECHEC")

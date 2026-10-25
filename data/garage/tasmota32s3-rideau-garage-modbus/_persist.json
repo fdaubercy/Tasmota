@@ -117,7 +117,7 @@
 			"port": 2000
 		},
 		"tcp": {
-			"activation": "ON",
+			"activation": "OFF",
 			"id": 3,
 			"log": "info"
 		},  

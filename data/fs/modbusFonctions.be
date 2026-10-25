@@ -1859,7 +1859,13 @@ def modbusFonctions_envoiMsgModbusTCP(Trame, typeMsg)
     import json
     import string
 
-    if (drivers["ModBus"]["typeComm"].find("TCP", "OFF") == "OFF" && serveur["tcp"].find("activation", "OFF") == "OFF")    return      end
+    if (drivers["ModBus"]["typeComm"].find("TCP", "OFF") == "OFF")    return      end
+    # TCP demande sans serveur TCP (audit P5.6, 2026-10-25 : serveur.tcp n'est plus force a ON) : avant, la
+    # garde exigeait les DEUX a OFF, et l'envoi importait tcpFonctions, non charge sur la carte
+    if (serveur["tcp"].find("activation", "OFF") == "OFF")
+        modbusFonctions.log("ENVOI_MSG_MODBUS_TCP_ERREUR: typeComm TCP a ON mais serveur TCP a OFF : reponse non envoyee en TCP !", LOG_LEVEL_ERREUR)
+        return
+    end
     modbusFonctions.log("ENVOI_MSG_MODBUS_TCP: ------------------ envoiMsgModbusTCP ------------------", LOG_LEVEL_DEBUG_PLUS)
 
     var Client

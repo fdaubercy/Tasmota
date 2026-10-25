@@ -705,6 +705,13 @@ verifie("id UDP desaligne : persist sauve puis Restart", "1/true", str(persist.n
 verifie("... id UDP aligne en memoire", 2, serveur["udp"]["id"])
 initRgx(2, 2)
 verifie("temoin ids alignes : ni sauvegarde ni Restart", "0/false", str(persist.nb_save) + "/" + str(tasmota.cmds.find("Restart 1") != nil))
+# P5.6 (audit N6, 2026-10-25) : TCP a OFF n'est plus force a ON (aucun persist n'utilise ModBus-TCP)
+tasmota.cmds = []
+persist.nb_save = 0
+serveur["tcp"] = {"activation": "OFF", "id": 9}
+essaie(def () controleRangeExtender.CONTROLE_RANGE_EXTENDER() end)
+verifie("TCP a OFF : reste OFF, ni sauvegarde ni Restart", "OFF/0/false",
+        serveur["tcp"]["activation"] + "/" + str(persist.nb_save) + "/" + str(tasmota.cmds.find("Restart 1") != nil))
 serveur["rangeExtender"] = {"activation": "ON", "id": 0, "debug": "ON"}
 serveur["udp"]["id"] = 0
 drivers["ModBus"] = {"id": 0}

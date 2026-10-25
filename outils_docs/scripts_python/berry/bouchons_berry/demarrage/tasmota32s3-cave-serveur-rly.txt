@@ -1,11 +1,11 @@
 carte : tasmota32s3-cave-serveur-rly
 exception : aucune
-drivers (9) : CONTROLE_DISCOVERY, CONTROLE_GENERAL, CONTROLE_POMPE_VIDE_CAVE, CONTROLE_RANGE_EXTENDER, CONTROLE_TCP, CONTROLE_UDP, CONTROLE_UDP, CONTROLE_WEB, HISTORIQUE_WEB
-regles (18) : Button1#Action, Button2#Action, Button3#Action, Mqtt, Mqtt, Switch1#Action, Switch2#Action, System, System, System, System, System, System, Time, Time, Wifi, Wifi, Wifi
-commandes (9) : AcquittePompe, EtatPompe, ReglageDiscovery, ReglageGlobal, ReglageLog, ReglageRangeExtender, ReglageTCP, ReglageUDP, RoutageRangeExtender
+drivers (8) : CONTROLE_DISCOVERY, CONTROLE_GENERAL, CONTROLE_POMPE_VIDE_CAVE, CONTROLE_RANGE_EXTENDER, CONTROLE_UDP, CONTROLE_UDP, CONTROLE_WEB, HISTORIQUE_WEB
+regles (16) : Button1#Action, Button2#Action, Button3#Action, Mqtt, Mqtt, Switch1#Action, Switch2#Action, System, System, System, System, System, Time, Time, Wifi, Wifi
+commandes (8) : AcquittePompe, EtatPompe, ReglageDiscovery, ReglageGlobal, ReglageLog, ReglageRangeExtender, ReglageUDP, RoutageRangeExtender
 crons (1) : majHistorique
 minuteries (1) : demarrageDiffere
 compiles (1) : /controlePompeVideCave.bec
 sources (3) : /autoexec.be, /controleLeds.be, /ledsFonctions.be
-globales (19) : LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatTcpFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controlePompeVideCave:instance, controleUDP_multicast:instance, controleUDP_unicast:instance, diverses:instance, gpio:module, light:module, modules:instance, persist:instance, serveur:instance, wire1:instance, wire2:instance
+globales (18) : LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controlePompeVideCave:instance, controleUDP_multicast:instance, controleUDP_unicast:instance, diverses:instance, gpio:module, light:module, modules:instance, persist:instance, serveur:instance, wire1:instance, wire2:instance
 erreurs (0) : 
