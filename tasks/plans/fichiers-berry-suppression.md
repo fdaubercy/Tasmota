@@ -69,14 +69,14 @@ Interfaces produites : `prepare_suppression(racine, env) -> {env, dossier, dossi
 avertissements, refus}` ; `supprime(racine, env, empreinte, builds_en_cours) -> {supprime, env, dossier_sauvegarde,
 sauvegarde, avertissements}` ; RuntimeError (→ 409) si build, empreinte périmée, refus.
 
-- [ ] Banc `test_fichiers_berry_suppression.py` (copie du vrai dépôt, comme `test_fichiers_berry_creation.py`) ROUGE puis VERT :
-  - [ ] création puis suppression → cenv et `.h` identiques octet pour octet, dossier renommé `…-sauvegarde` ;
-  - [ ] section `#if` de tête (cave) supprimée → la suivante devient `#if` ; section partagée → seul `defined(X)` part ;
-  - [ ] `default_envs` : ligne active et ligne commentée retirées, aucune autre ; `data_dir` sur le dossier → avertissement ;
-  - [ ] `…-sauvegarde` déjà pris → `…-sauvegarde-2` ;
-  - [ ] refus : base héritée ou référencée (envs nommés), env inconnu, build en cours, empreinte périmée ;
-  - [ ] atomicité : échec à la 2e écriture → tout remis ;
-  - [ ] citations ailleurs (commentaires du cenv, autres fichiers `.ini`/`.py` connus) signalées, non modifiées.
+- [x] Banc `test_fichiers_berry_suppression.py` (copie du vrai dépôt, comme `test_fichiers_berry_creation.py`) ROUGE puis VERT : — preuve : ROUGE (module absent), puis VERT 34 contrôles
+  - [x] création puis suppression → cenv et `.h` identiques octet pour octet, dossier renommé `…-sauvegarde` ;
+  - [x] section `#if` de tête (cave) supprimée → la suivante devient `#if` ; section partagée → seul `defined(X)` part ;
+  - [x] `default_envs` : ligne active et ligne commentée retirées, aucune autre ; `data_dir` sur le dossier → avertissement ;
+  - [x] `…-sauvegarde` déjà pris → `…-sauvegarde-2` ;
+  - [x] refus : base héritée ou référencée (envs nommés), env inconnu, build en cours, empreinte périmée ;
+  - [x] atomicité : échec à la 2e écriture → tout remis ;
+  - [x] citations ailleurs (commentaires du cenv, autres fichiers `.ini`/`.py` connus) signalées, non modifiées.
 - [ ] Commit `feat(fichiers-berry): suppression d un env (cenv, .h, default_envs, dossier en -sauvegarde)`.
 
 ## A3b — Renommage d'un env (`fichiers_berry_renommage.py`, spec §10)
