@@ -377,24 +377,20 @@ def gestionFileFolder_supprBerryFS(folder)
 end
 gestionFileFolder.supprBerryFS = gestionFileFolder_supprBerryFS
 
-# Charge un fichier ".be" le supprime si le chargement est OK & que le fichier *.bec est généré
-def gestionFileFolder_loadBerryFile(chemin, paramDeleteBe, compileBe)
+# Charge le module 'chemin' (.be, compile en .bec si compileBe vaut "ON", ou .bec deja compile).
+# activation : "ON" (defaut) charge le module ; "OFF" ne fait RIEN d'autre que ne pas le charger.
+# Avant (audit D3/P4.3, 2026-10-24), ce parametre s'appelait paramDeleteBe et "OFF" effacait aussi le source
+# .be quand un .bec existait : le module n'etait plus modifiable sur la carte sans televerser son source.
+def gestionFileFolder_loadBerryFile(chemin, activation, compileBe)
     import path
     import string
 
-    # Si le fichier n'est pas nécessaire au programme
-    # Si paramDeleteBe=="OFF": 
-    #    * Suppression ".be" si le fichier ".bec" existe et pas de chargement
-    if (paramDeleteBe == "" || paramDeleteBe == nil)  paramDeleteBe = "ON"    end
+    if (activation == "" || activation == nil)  activation = "ON"    end
     if (compileBe == "" || compileBe == nil)  compileBe = "OFF"    end
-    if paramDeleteBe == "OFF" && path.exists(chemin + ".bec") 
-        path.remove(chemin + ".be")
-        logFonctions.log(string.format("LOAD_BERRY_FILE: Supprime le fichier '%s' !", chemin + ".be"), LOG_LEVEL_DEBUG)
-    end
     # Module desactive (activation OFF) : NI compile NI charge (audit D1/P4.1, 2026-10-24). Avant, le .bec
     # etait charge quand meme et le driver demarrait : controleGarage, controleCuve, controlePompeVideCave
     # n'ont pas d'autre garde que cet argument.
-    if (paramDeleteBe == "OFF")
+    if (activation == "OFF")
         logFonctions.log(string.format("LOAD_BERRY_FILE: '%s' desactive (activation OFF), non charge !", chemin), LOG_LEVEL_INFO)
         return
     end
@@ -423,18 +419,13 @@ def gestionFileFolder_loadBerryFile(chemin, paramDeleteBe, compileBe)
 end
 gestionFileFolder.loadBerryFile = gestionFileFolder_loadBerryFile
 
-# Charge un fichier ".be" & le supprime si le chargement est OK & que le fichier *.bec est généré
-def gestionFileFolder_compileModule(chemin, paramDeleteBe)
+# Compile le module 'chemin' (.be -> .bec, puis supprime le .be) ; true si le .bec est utilisable.
+# activation "OFF" : rien n'est compile ni supprime, rend true (audit D3/P4.3 : avant, le source .be etait efface).
+def gestionFileFolder_compileModule(chemin, activation)
     import path
     import string
 
-    # Si paramDeleteBe=="OFF": Suppression ".be" si ".bec" existe => pas de chargement
-    if (paramDeleteBe == "" || paramDeleteBe == nil)  paramDeleteBe = "ON"    end
-    if paramDeleteBe == "OFF" && path.exists(chemin + ".bec") 
-        path.remove(chemin + ".be")
-        logFonctions.log(string.format("LOAD_BERRY_FILE: Supprime le fichier '%s' !", chemin + ".be"), LOG_LEVEL_DEBUG)
-        return true
-    end
+    if (activation == "OFF")    return true    end
 
     # Compile le fichier "*.be" en "*.bec"
     # print(chemin + " exist=" + str(path.exists(chemin + ".be")))

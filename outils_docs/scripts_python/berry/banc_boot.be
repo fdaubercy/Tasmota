@@ -511,8 +511,16 @@ if CAS == 1
     LITTLEFS.fichiers["/essaiOff.bec"] = "import global global.essaiOffCharge = true"
     global.essaiOffCharge = nil
     gestionFileFolder.loadBerryFile("/essaiOff", "OFF", "ON")
-    controle("P4.1 : activation OFF -> module NON charge, .be supprime, .bec garde",
-             global.essaiOffCharge == nil && !LITTLEFS.fichiers.contains("/essaiOff.be") && LITTLEFS.fichiers.contains("/essaiOff.bec"))
+    # Audit D3/P4.3 : OFF = ne pas charger, et RIEN d'autre ; avant, le source .be etait efface (module plus
+    # modifiable sur la carte sans le televerser a nouveau)
+    controle("P4.1/P4.3 : activation OFF -> module NON charge, .be ET .bec gardes",
+             global.essaiOffCharge == nil && LITTLEFS.fichiers.contains("/essaiOff.be") && LITTLEFS.fichiers.contains("/essaiOff.bec"))
+    LITTLEFS.fichiers["/essaiComp.be"] = "import global global.essaiCompCharge = true"
+    LITTLEFS.fichiers["/essaiComp.bec"] = "ancien"
+    var compOff = gestionFileFolder.compileModule("/essaiComp", "OFF")
+    controle("P4.3 : compileModule OFF -> rend true, ni compilation ni suppression (.be et ancien .bec gardes)",
+             compOff == true && LITTLEFS.fichiers.contains("/essaiComp.be") && LITTLEFS.fichiers.find("/essaiComp.bec") == "ancien")
+    LITTLEFS.fichiers.remove("/essaiComp.be")    LITTLEFS.fichiers.remove("/essaiComp.bec")
     gestionFileFolder.loadBerryFile("/essaiOff", "ON", "ON")
     controle("P4.1 : activation ON -> module charge", global.essaiOffCharge == true)
     LITTLEFS.fichiers.remove("/essaiOff.bec")
