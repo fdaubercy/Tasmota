@@ -349,6 +349,38 @@ def test_purge_journaux():
                 "purge_journaux : journaux de moins de 30 jours gardes (temoin a 29 jours)")
         verifie(autre.exists(), True, "purge_journaux : temoin, rien hors de journaux/")
         verifie(build_web.purge_journaux(Path(t) / "absent"), (0, 0), "purge_journaux : dossier absent -> rien")
+        etranger = [jour / "notes.log", jour / f"20260901-100000-{A}-inconnue.log"]   # pas au motif de build_serie
+        for f in etranger:
+            f.write_text("x\n", encoding="utf-8")
+            os.utime(f, (maintenant - 60 * 86400, maintenant - 60 * 86400))
+        build_web.purge_journaux(t, jours=30, maintenant=maintenant)
+        verifie([f.exists() for f in etranger], [True, True],
+                "purge_journaux : seulement les fichiers au motif des journaux de build_serie")
+
+
+def test_purge_seulement_si_seule_instance():
+    """Pas de purge si le port d'ecoute est deja pris (une autre instance tourne) : purge apres son controle."""
+    with tempfile.TemporaryDirectory() as t:
+        jour = Path(t) / "build" / "journaux"
+        jour.mkdir(parents=True)
+        vieux = jour / f"20260901-100000-{A}-compiler.log"
+        vieux.write_text("x\n", encoding="utf-8")
+        os.utime(vieux, (time.time() - 40 * 86400,) * 2)
+        ancien_dossier, ancien_argv = os.environ.get("OUTILS_TASMOTA_DOSSIER"), sys.argv
+        os.environ["OUTILS_TASMOTA_DOSSIER"] = t
+        with socket.socket() as occupe:
+            occupe.bind(("127.0.0.1", 0))
+            occupe.listen(1)
+            sys.argv = ["build_web.py", "--http", str(occupe.getsockname()[1]), "--local", "--sans-navigateur"]
+            try:
+                code = build_web.principal()
+            finally:
+                sys.argv = ancien_argv
+                if ancien_dossier is None:
+                    os.environ.pop("OUTILS_TASMOTA_DOSSIER", None)
+                else:
+                    os.environ["OUTILS_TASMOTA_DOSSIER"] = ancien_dossier
+        verifie((code, vieux.exists()), (1, True), "purge : port deja pris (autre instance) -> refus, aucun journal purge")
 
 
 def sortie(b, env, octet=0):
@@ -644,6 +676,7 @@ def principal():
     test_sortie_env_exact()
     test_journaux_ordre_heure_hiver()
     test_purge_journaux()
+    test_purge_seulement_si_seule_instance()
     test_fermeture()
     test_fermeture_attend_envoi()
     test_fermeture_pendant_pause()

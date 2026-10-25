@@ -113,16 +113,22 @@ def journaux_env(dossier, env, depuis):
     return [f for (date, _, _), f in trouves if date >= depuis]
 
 
+JOURNAL_BUILD = re.compile(rf"\d{{8}}-\d{{6}}-[A-Za-z0-9_.-]+-(?:{'|'.join(build_serie.ORDRE)})(?:-\d+)?\.log")
+
+
 def purge_journaux(dossier, jours=30, maintenant=None, supprime=os.remove):
     """Supprime les journaux de <dossier>/journaux/ de plus de `jours` jours : (supprimes, erreurs).
 
-    Appelee au demarrage de l'outil, avant tout lancement : un journal du lancement en cours est recent par
-    definition, il n'est jamais concerne. Une suppression qui echoue (journal ouvert ailleurs) est comptee,
-    jamais fatale.
+    Seulement les fichiers au motif des journaux de build_serie.Serie._journal (rien d'autre n'est touche).
+    Appelee au demarrage de l'outil, une fois le port d'ecoute obtenu (une autre instance qui tournerait deja
+    garde ses journaux) et avant tout lancement : un journal du lancement en cours est recent par definition.
+    Une suppression qui echoue (journal ouvert ailleurs) est comptee, jamais fatale.
     """
     limite = (time.time() if maintenant is None else maintenant) - jours * 86400
     supprimes = erreurs = 0
     for f in (Path(dossier) / "journaux").glob("*.log"):
+        if not JOURNAL_BUILD.fullmatch(f.name):
+            continue
         try:
             if f.stat().st_mtime >= limite:
                 continue
@@ -333,16 +339,16 @@ def principal():
     # (annuaire_registre.py), sinon la tuile ne retrouve pas l'outil ; test_annuaire le verifie sur cette ligne.
     acces = acces_web.Acces(args.http, args.local, "Build et téléversement")
     dossier = acces_web.dossier_donnees() / "build"
-    supprimes, erreurs = purge_journaux(dossier)
-    if supprimes or erreurs:
-        print(f"journaux de plus de 30 jours : {supprimes} supprime(s)"
-              + (f", {erreurs} impossible(s) a supprimer (ouverts ailleurs ?)" if erreurs else ""), flush=True)
     serie = build_serie.Serie(DEPOT, dossier)
     try:
         serveur = ThreadingHTTPServer((acces.hote, args.http), fabrique_gestionnaire(serie, acces, DEPOT, dossier))
     except OSError as erreur:
         print(f"ERREUR : port {args.http} indisponible ({erreur}). L'outil tourne peut-etre deja.")
         return 1
+    supprimes, erreurs = purge_journaux(dossier)        # apres le port : seule instance, aucun lancement encore
+    if supprimes or erreurs:
+        print(f"journaux de plus de 30 jours : {supprimes} supprime(s)"
+              + (f", {erreurs} impossible(s) a supprimer (ouverts ailleurs ?)" if erreurs else ""), flush=True)
     serveur.daemon_threads = True
     atexit.register(arrete_serie, serie)
     acces.annonce(not args.sans_navigateur)
