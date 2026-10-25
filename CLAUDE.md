@@ -130,10 +130,17 @@ seul au chargement ; le scinder imposerait deux televersements par carte.
 
 `outils_docs/scripts_python/outils_pc/build_page.py` fait **934 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
-vague de corrections finale du meme jour ; 934 le 2026-10-25 avec le panneau « Sortie » et « Effacer puis
+vague de corrections finale du meme jour ; 935 le 2026-10-25 avec le panneau « Sortie » et « Effacer puis
 televerser »). C'est la page
 unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule constante
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
+
+Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plutot qu'un decoupage) :
+`build_serie.py` fait **547 lignes** (execution en serie des `pio run` : verrous, arret immediat, attente
+d'un envoi au Ctrl+C, OTA ; la couper separerait un etat partage sous le meme verrou), et ses bancs
+`test_build_serie.py` (**719**), `test_build_page_chrome.py` (**741**), `test_build_ota_fs.py` (**566**),
+`test_build_web.py` (**543**) : un banc par module, chaque test lisible seul. Ne pas les decouper pour
+satisfaire le compteur.
 
 ## MONTER UN NOUVEAU POSTE
 
