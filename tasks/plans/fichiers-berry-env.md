@@ -273,9 +273,9 @@ Fichiers : modifier `outils_pc/build_page.py` (`ligneEnv(e)` l.335 : lien « Ré
 
 ## A9 — Documentation et essai réel avec l'utilisateur
 
-- [ ] `outils_docs/README.md` : section « Fichiers Berry par env (page web) » ; `CLAUDE.md` : entrée dans la carte
+- [x] `outils_docs/README.md` : section « Fichiers Berry par env (page web) » ; `CLAUDE.md` : entrée dans la carte
   des documents (modules, port, bancs) et nouveau compte de lignes de `build_page.py` ; `.claude/skills/bancs/SKILL.md` :
-  bancs `test_fichiers_berry_*.py` (et signaler que les `test_build_*` y manquent).
+  bancs `test_fichiers_berry_*.py` (et signaler que les `test_build_*` y manquent). — preuve : README § « Fichiers Berry par env (page web) », CLAUDE.md (carte + 1062 lignes), SKILL.md (2 lignes : build et fichiers Berry)
 - [ ] Essai réel **avec l'utilisateur, hors build** : passer un fichier propre d'un env en « Exclu » puis le
   rétablir ; `git diff platformio_tasmota_cenv.ini` vide à la fin.
 - [ ] Essai réel : liste partagée → la fenêtre nomme les bons envs ; « Annuler » ne change rien.
@@ -286,7 +286,7 @@ Fichiers : modifier `outils_pc/build_page.py` (`ligneEnv(e)` l.335 : lien « Ré
 ## Améliorations restantes
 
 - [ ] [projet] Supprimer ou renommer un env depuis la page (hors périmètre de la spec).
-- [ ] [projet] Ajouter les bancs `test_build_*.py` à la skill `bancs`.
+- [x] [projet] Ajouter les bancs `test_build_*.py` à la skill `bancs`. — preuve : .claude/skills/bancs/SKILL.md, ligne « page build (7700) »
 
 ## Vérification
 

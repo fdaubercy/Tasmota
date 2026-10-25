@@ -52,6 +52,7 @@
 - [CHANGELOG.md](CHANGELOG.md) — historique des évolutions.
 - [Les graphiques des mesures](#les-graphiques-des-mesures-cartes-s3p4) — page `/graphiques` des cartes S3/P4, plus bas dans ce fichier.
 - [Build et téléversement (page web)](#build-et-téléversement-page-web) — compiler et téléverser les cartes (COM ou OTA) depuis http://127.0.0.1:7700, plus bas dans ce fichier.
+- [Fichiers Berry par env (page web)](#fichiers-berry-par-env-page-web) — sur le FS, exclu ou solidifié, et création d'un env, depuis http://127.0.0.1:7800, plus bas dans ce fichier.
 
 <hr></hr>
 
@@ -438,6 +439,101 @@ commande quelle que soit la cible ; même mention « FS aussi flashé » sur la 
   0 = vert), à lancer avec le Python du penv PlatformIO ; détection des builds (cibles d'outils ignorées après leurs
   30 premières secondes) :
   `outils_docs/scripts_python/build/test_garde_build.py`.
+
+<hr></hr>
+
+## Fichiers Berry par env (page web)
+
+Une page pour décider, carte par carte, ce que devient chaque fichier Berry : **sur le file system**, **exclu** ou
+**solidifié** dans le firmware. Elle écrit les listes de `platformio_tasmota_cenv.ini` (`custom_files_upload`,
+`custom_files_exclude`, `custom_berry_solidify`) à la place d'une édition à la main, et crée un nouvel env à partir
+d'une carte existante. Conception : [spec](../docs/superpowers/specs/2026-10-25-page-fichiers-berry-design.md) ;
+plan : `tasks/plans/fichiers-berry-env.md`.
+
+### Lancer la page
+
+- **Tuile de l'annuaire** (http://127.0.0.1:7600), groupe « Maintenance » : « Fichiers Berry par env ». L'annuaire
+  peut l'arrêter à tout moment : rien n'est écrit avant « Enregistrer ».
+- **Tâche VS Code** : `Ctrl+Maj+P` > Run Task > « Outil : fichiers Berry par env (http://127.0.0.1:7800) ». Ce
+  n'est pas un `pio run` : utilisable pendant un build (l'écriture, elle, y est refusée).
+- **Ligne de commande** : `python outils_docs/scripts_python/outils_pc/fichiers_berry_web.py` (`--http 7800`,
+  `--local`, `--sans-navigateur`) ; lien à jeton dans la console pour un autre appareil, comme les autres outils.
+- **Cible PlatformIO** « Fichiers Berry par env (page web) » dans *Project Tasks > <env> > Custom* : démarre la page
+  **détachée** (console dans `%LOCALAPPDATA%\outils_tasmota\consoles\fichiers_berry.log`) puis rend la main.
+  Comme toute cible, **jamais pendant un build**.
+- **Depuis la page build** : le lien « fichiers » de chaque env de *Mes cartes* / *Mes bases* ouvre cette page sur
+  cet env (`?env=<nom>`) ; après un enregistrement, le lien « Construire / téléverser le FS » ouvre la page build
+  avec l'env coché.
+
+### Les trois états
+
+Un `.be` de `data/fs` est **déjà sur le FS par défaut** (`copy_fs_image` recopie `data/fs` dans le dossier de la
+carte) : on ne l'en retire que par `custom_files_exclude`, ou par `custom_berry_solidify` avec
+`custom_files_exclude_solidified = ON`.
+
+| État | Fichier de `data/fs` ou du dossier de la carte | Module de l'amont (`tasmota/berry/modules/`) |
+|---|---|---|
+| **Sur le FS** | aucune ligne (retiré des autres listes) | ligne dans `custom_files_upload` |
+| **Exclu** (« Absent » pour l'amont) | ligne dans `custom_files_exclude` | ligne retirée de `custom_files_upload` |
+| **Solidifié** | ligne dans `custom_berry_solidify` | non proposé |
+
+- Fichiers proposés, **recensés à chaque chargement** (et par « Revérifier les fichiers ») : les `.be` de `data/fs`,
+  ceux du dossier de la carte (`data/<lieu>/<carte>/`, aucun pour une base), les modules de l'amont (`.tapp`,
+  `.be` de premier niveau, `.bec`). Dossiers `*sauvegarde*` ignorés.
+- `autoexec.be` est figé sur « Sur le FS ». Un fichier présent dans deux listes est signalé comme incohérent ; une
+  ligne du `.ini` dont le fichier a disparu du disque est signalée, jamais retirée en silence. Les entrées non
+  Berry (`.js`, `.gz`, `.html` de `custom_files_exclude`) sont montrées en lecture seule (« hors périmètre »).
+- Sans `custom_files_exclude_solidified = ON`, la page avertit : un fichier solidifié reste **aussi** sur le FS.
+- Passer à « Solidifié » ne vérifie rien : avant de builder, `berry/solidifie_et_compile_berry.py <fichier>` (voir
+  [SOLIDIFICATION_BERRY.md](SOLIDIFICATION_BERRY.md)).
+
+### Disposition et enregistrement
+
+1. Choisir l'env ; choisir un fichier dans la liste, son état (boutons radio), une raison facultative, puis
+   « Appliquer ». Plusieurs « Appliquer » s'accumulent avant d'enregistrer (marqués « en attente »).
+2. Les trois colonnes **Sur le FS · Exclu · Solidifié** montrent l'état complet de l'env ; chaque entrée héritée
+   porte un badge de son origine (`socle`, `modbus`, `historique` de `[berry_commun]`, ou l'env de base).
+3. « Voir le diff » puis « Enregistrer » : copie `platformio_tasmota_cenv.ini.bak` avant d'écrire, fins de ligne et
+   encodage gardés, **refus pendant un build** et si le fichier a changé depuis le diff.
+
+- **Liste partagée** : si le fichier vient d'une liste partagée (`[berry_commun]`, ou option héritée d'un autre env),
+  la page nomme les envs touchés ; deux issues : « Modifier la liste partagée (N envs) » ou « Annuler ».
+- **Option héritée** : pour ajouter une ligne dans un env qui hérite de l'option, la page écrit
+  `option = ${env:<base>.option}` puis la ligne : l'héritage est gardé.
+- **Commentaires** : jamais modifiés ni supprimés ; le diff signale ceux de la section qui citent le fichier déplacé.
+  La raison saisie est écrite en fin de ligne : `; <raison> (AAAA-MM-JJ)`.
+
+> [!WARNING]
+> Réécrire le `.ini` change l'empreinte du projet : le **build suivant repart de zéro** (PlatformIO supprime tout
+> `.pio/build`). Rien n'est commité par la page.
+
+### Créer un env à partir d'une carte modèle
+
+« Créer un env à partir de… » : carte modèle, base (celle du modèle par défaut), lieu, nom, puis les champs
+d'identité préremplis (« Proposer ») et modifiables : `CODE_IMAGE_STR`, `PROJECT`, `WIFI_IP_ADDRESS` (`0.0.0.0` =
+DHCP), `WIFI_RGX_SSID`, `MQTT_CLIENT_ID`, `MQTT_TOPIC`, `MQTT_GRPTOPIC`, `FRIENDLY_NAME`, et le define
+(`FIRMWARE_ESP<puce>_<LIEU>_<NOM>`). Après le diff des trois morceaux, la page écrit :
+
+1. la section `[env:<puce>-<lieu>-<nom>]` du cenv, copiée du modèle (`extends` = la base, define remplacé,
+   `custom_files_upload` = celui de la base + le nouveau dossier, chemins du dossier du modèle réécrits, **ports COM
+   non recopiés**), sous le bandeau `; LOCALISATION:` du lieu, sinon en fin de fichier ;
+2. le dossier `data/<lieu>/<puce>-<nom>` (nom calculé comme `transform_name`), copie de celui du modèle ; dans le
+   `_persist.json`, seules les valeurs d'identité sont remplacées, dans le texte, le reste octet pour octet ;
+3. la section `#elif defined(FIRMWARE_…)` de `tasmota/user_config_override.h`, après celle du modèle, defines
+   d'identité remplacés (dont le `Hostname` de `USER_BACKLOG` et le `NAME` du `USER_TEMPLATE`). Les conditions
+   internes qui citent encore l'ancien define sont signalées, à revoir à la main.
+
+Refus si l'env, le dossier ou le define existent, si l'IP (hors `0.0.0.0`), le topic ou le client MQTT sont déjà
+pris par une autre carte, ou pendant un build. `.bak` des deux fichiers modifiés ; **mots de passe masqués** dans
+le diff. La nouvelle carte apparaît ensuite d'elle-même dans la page build.
+
+### Bancs
+
+Dans `outils_docs/scripts_python/outils_pc/`, avec le Python du penv PlatformIO (code de sortie 0 = vert) :
+`test_fichiers_berry_ini.py`, `_etat.py`, `_ecriture.py` (relecture par `ProjectConfig` de PlatformIO),
+`_creation.py` (copie du dépôt dans un dossier temporaire), `_web.py`, et la sonde Chrome
+`test_fichiers_berry_page_chrome.py` ; cible Custom : `build/test_cible_fichiers_berry.py`. Aucun banc n'écrit
+dans le vrai dépôt.
 
 <hr></hr>
 

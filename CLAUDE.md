@@ -128,11 +128,12 @@ c'est **voulu** (decide le 2026-10-04 : « laisse ce test comme il est »). Ne p
 decouper : c'est UN fichier a televerser sur chaque carte, qui se prepare et s'explique
 seul au chargement ; le scinder imposerait deux televersements par carte.
 
-`outils_docs/scripts_python/outils_pc/build_page.py` fait **1053 lignes**, et c'est **voulu**
+`outils_docs/scripts_python/outils_pc/build_page.py` fait **1062 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
 vague de corrections finale du meme jour ; 935 le 2026-10-25 avec le panneau « Sortie » et « Effacer puis
 televerser » ; 1038 le meme jour avec la pause « rebranchez la carte » et les panneaux refermes ; 1053 avec
-l'envoi sans recompiler apres la pause et la pause rouverte). C'est la page
+l'envoi sans recompiler apres la pause et la pause rouverte ; 1062 avec le lien « fichiers » vers la page
+Fichiers Berry par env). C'est la page
 unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule constante
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
@@ -615,3 +616,20 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     Mode d'emploi : `outils_docs/README.md` § « Build et televersement (page web) ». Spec :
     `docs/superpowers/specs/2026-10-24-page-build-televersement-design.md` ; plan :
     `tasks/plans/page-build-televersement.md`.
+  - `fichiers_berry_web.py` (+ `fichiers_berry_page.py`, `fichiers_berry_ini.py`, `fichiers_berry_etat.py`,
+    `fichiers_berry_ecriture.py`, `fichiers_berry_creation.py`) — page « Fichiers Berry par env » http://127.0.0.1:7800
+    (tuile de l'annuaire, groupe Maintenance, arret libre : rien n'est ecrit avant « Enregistrer » ; tache VS Code
+    « Outil : fichiers Berry par env » ; cible Custom « Fichiers Berry par env (page web) », `build/cible_fichiers_berry.py`,
+    banc `build/test_cible_fichiers_berry.py`, page demarree detachee comme celle du build ; lien « fichiers » sur chaque
+    env personnel de la page build, `?env=` dans les deux sens). Par env : chaque `.be` (data/fs, dossier de la carte,
+    modules amont `tasmota/berry/modules`, recenses a chaque chargement) sur le FS, exclu ou solidifie, ecrit dans
+    `custom_files_upload` / `custom_files_exclude` / `custom_berry_solidify` du cenv : resolution des `${...}` avec
+    provenance (`fichiers_berry_ini.py`), liste partagee -> envs touches nommes puis « Modifier (N envs) » ou « Annuler »,
+    option heritee -> `${env:<base>.opt}` + ligne, commentaires jamais touches (ceux qui citent le fichier signales),
+    raison facultative `; raison (date)`, diff puis ecriture avec empreinte, `.bak`, refus pendant un build. Creation
+    d'un env a partir d'une carte modele (`fichiers_berry_creation.py`) : section du cenv, dossier `data/<lieu>/<puce>-<nom>`
+    (identite remplacee dans le `_persist.json`, texte garde octet pour octet), section `#elif` de `user_config_override.h` ;
+    refus si env/dossier/define/IP/topic/client deja pris ; secrets masques dans le diff. Bancs `test_fichiers_berry_*.py`
+    (copies temporaires, jamais le vrai depot ; `_ecriture` relu par `ProjectConfig`) + sonde Chrome
+    `test_fichiers_berry_page_chrome.py`. Mode d'emploi : `outils_docs/README.md` § « Fichiers Berry par env (page web) ».
+    Spec : `docs/superpowers/specs/2026-10-25-page-fichiers-berry-design.md` ; plan : `tasks/plans/fichiers-berry-env.md`.

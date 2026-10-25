@@ -53,6 +53,8 @@ Commandes **depuis la racine du dépôt**. `P` = `outils_docs/scripts_python`.
 | `P/outils_pc/pont_serie*.py` | pont série | `PYPIO P/outils_pc/test_pont_serie_acces.py`, et `test_testeur_udp.py` (groupe pont) |
 | `P/outils_pc/testeur_udp*.py` | testeur UDP | `PYPIO P/outils_pc/test_testeur_udp.py` (inclut ses 4 sous-groupes `test_testeur_udp_*.py`, non autonomes) |
 | `P/maintenance/synchro_fork_*.py` | synchro du fork | `python P/maintenance/test_synchro_fork_web.py` ; `--reel` seulement avec l'accord de l'utilisateur |
+| `P/outils_pc/build_*.py`, `P/build/cible_build_web.py` | page build (7700) | `PYPIO P/outils_pc/test_build_envs.py`, `test_build_ota_fs.py`, `test_build_progression.py`, `test_build_serie.py`, `test_build_web.py`, puis la sonde Chrome `test_build_page_chrome.py` (`PYTHONIOENCODING=utf-8` si la sortie est redirigée) ; `PYPIO P/build/test_cible_build_web.py` (intermittent : journal de console encore tenu au nettoyage) |
+| `P/outils_pc/fichiers_berry_*.py`, `P/build/cible_fichiers_berry.py` | page Fichiers Berry par env (7800) | `PYPIO P/outils_pc/test_fichiers_berry_ini.py`, `_etat.py`, `_ecriture.py`, `_creation.py`, `_web.py`, puis la sonde Chrome `test_fichiers_berry_page_chrome.py` ; `PYPIO P/build/test_cible_fichiers_berry.py`. Copies temporaires : jamais le vrai dépôt |
 
 Non autonomes (pas de `__main__`, ne pas lancer seuls) : `test_sniffeur_modbus_acces.py` (appelé par
 `test_sniffeur_modbus.py`) et les 4 `test_testeur_udp_{acces,grille,muette,pont}.py`.
