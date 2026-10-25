@@ -1,7 +1,7 @@
 ---
 chantier: fichiers-berry-env
 titre: Page web « Fichiers Berry par env » (port 7800, tuile de l'annuaire, cible Custom)
-statut: actif
+statut: clos
 cree: 2026-10-25
 maj: 2026-10-25
 ---
@@ -276,16 +276,26 @@ Fichiers : modifier `outils_pc/build_page.py` (`ligneEnv(e)` l.335 : lien « Ré
 - [x] `outils_docs/README.md` : section « Fichiers Berry par env (page web) » ; `CLAUDE.md` : entrée dans la carte
   des documents (modules, port, bancs) et nouveau compte de lignes de `build_page.py` ; `.claude/skills/bancs/SKILL.md` :
   bancs `test_fichiers_berry_*.py` (et signaler que les `test_build_*` y manquent). — preuve : README § « Fichiers Berry par env (page web) », CLAUDE.md (carte + 1062 lignes), SKILL.md (2 lignes : build et fichiers Berry)
-- [ ] Essai réel **avec l'utilisateur, hors build** : passer un fichier propre d'un env en « Exclu » puis le
-  rétablir ; `git diff platformio_tasmota_cenv.ini` vide à la fin.
-- [ ] Essai réel : liste partagée → la fenêtre nomme les bons envs ; « Annuler » ne change rien.
-- [ ] Essai réel de création (carte choisie par l'utilisateur), relecture du diff des 3 fichiers par l'utilisateur,
-  puis suppression de l'essai si ce n'était qu'un test (`.bak` à l'appui).
-- [ ] Commit `docs: page Fichiers Berry par env (README, CLAUDE.md, bancs)` ; `statut: clos` quand tout est coché.
+- [x] Essai réel **avec l'utilisateur, hors build** : passer un fichier propre d'un env en « Exclu » puis le
+  rétablir ; `git diff platformio_tasmota_cenv.ini` vide à la fin. — preuve : essai fait par l'utilisateur le 2026-10-25
+- [x] Essai réel : liste partagée → la fenêtre nomme les bons envs ; « Annuler » ne change rien. — preuve : essai fait par l'utilisateur le 2026-10-25
+- [x] Essai réel de création (carte choisie par l'utilisateur), relecture du diff des 3 fichiers par l'utilisateur,
+  puis suppression de l'essai si ce n'était qu'un test (`.bak` à l'appui). — preuve : env tasmota32-wc-wc-led créé à 15:27:22, .bak identiques à HEAD (git hash-object), fichiers rétablis et data/wc supprimé ; git status sans cenv, .h ni data/wc
+- [x] Commit `docs: page Fichiers Berry par env (README, CLAUDE.md, bancs)` ; `statut: clos` quand tout est coché. — preuve : 4c66defc3 ; corrections de la revue finale b4f1035ef
 
 ## Améliorations restantes
 
 - [ ] [projet] Supprimer ou renommer un env depuis la page (hors périmètre de la spec).
+- [ ] [projet] Revue finale (mineur) : un même fichier deux fois dans la même option (socle ET liste propre) n'est pas marqué incohérent ; « Solidifié » sans effet sur un fichier exclu ET solidifié.
+- [ ] [projet] Revue finale (mineur) : `envs_touches` ne regarde que l'option de l'env (latent : `[berry_commun]` ne sert qu'à `custom_berry_solidify`).
+- [ ] [projet] Revue finale (mineur) : lieu ou nom contenant « base » → `TypeError` rendu en 400 ; le refuser dans `_refus`.
+- [ ] [projet] Revue finale (mineur) : exceptions non captées par le serveur (`OSError`, `IndexError`, `KeyError`) → « outil injoignable » ; répondre 500 avec le message.
+- [ ] [projet] Revue finale (mineur) : verrou entre deux POST simultanés (`enregistre`, `cree`).
+- [ ] [projet] Revue finale (mineur) : création non atomique (dossier copié avant les écritures du .h et du cenv).
+- [ ] [projet] Revue finale (mineur) : recensement pendant un build = copies temporaires de `copy_fs_image` vues comme fichiers de la carte.
+- [ ] [projet] Revue finale (mineur) : `URL_BUILD` en dur (127.0.0.1) au lieu de l'hôte de la page ; lien offert à `tasmota-pompe-piscine`.
+- [ ] [projet] Revue finale (mineur) : `.bak` du cenv partagé avec la page build ; libellé « liste de l'amont » aussi pour `platformio_override.ini` ; écriture acceptée pendant la pause d'une série de la page build.
+- [ ] [projet] Revue finale (mineur) : écarts latents avec PlatformIO (extends multiple, section `[env]`, `opt =;x`, continuation après commentaire à la création).
 - [x] [projet] Ajouter les bancs `test_build_*.py` à la skill `bancs`. — preuve : .claude/skills/bancs/SKILL.md, ligne « page build (7700) »
 
 ## Vérification
