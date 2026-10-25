@@ -669,8 +669,9 @@ def sonde_effacement(m):
             "effacer : confirmation (persist et reglages remplaces par ceux du depot) ; refusee -> rien lance")
     cdp.js("window.confirm = t => true")
     cdp.js("document.getElementById('lancer').click()")
+    # attendre le statut final sur la ligne elle-meme : l'etat « terminé » est pose avant le rendu groupe du bloc (60 ms)
     rang = attend(cdp, f"(() => {{ const r = document.querySelector('.bloc[data-bloc=\"{A}\"] .rang[data-action=erase_upload]');"
-                       " return r && document.getElementById('etat').textContent.startsWith('terminé') ? r.textContent : ''; })()", 15)
+                       " return r && /réussi|échec|annulée/.test(r.textContent) ? r.textContent : ''; })()", 15)
     rang = rang if isinstance(rang, str) else ""
     verifie(("Effacer puis téléverser" in rang, "Effacement de la flash" in rang, "réussi" in rang), (True, True, True),
             f"effacer : acceptee -> ligne « Effacer puis téléverser », duree d'effacement, reussi ({rang[:120]})")
