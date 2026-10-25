@@ -406,45 +406,6 @@ def increment_config_holder():
 
     print(Fore.GREEN + f"✔ Le paramètre 'CFG_HOLDER' incrémenté de {current_value} à {new_value} dans user_config_override.h.")
 
-# Fonction chargée de changer la valeur de data_dir dans platformio.ini
-def change_data_dir_in_platformio_ini(path_tasmota_cenv, new_data_dir, boolModifDataDir=False):
-    ini_path = os.path.join(env.subst("$PROJECT_DIR"), path_tasmota_cenv)
-
-    # Crée le répertoire s'il n'existe pas
-    # repertoire = os.path.dirname(ini_path)
-    if not os.path.exists(new_data_dir):
-        os.makedirs(new_data_dir)
-
-    if not os.path.isfile(ini_path):
-        print(Fore.RED + f"Le fichier {path_tasmota_cenv} n'existe pas dans le répertoire du projet.")
-        return
-        
-    if not boolModifDataDir:
-        print(Fore.YELLOW + f"La modification de 'data_dir' dans '{path_tasmota_cenv}' est désactivée.")
-        return
-
-    with open(ini_path, "r") as file:
-        lines = file.readlines()
-
-    data_dir_line_index = None
-    for index, line in enumerate(lines):
-        if line.strip().startswith("data_dir") or line.strip().startswith("; data_dir"):
-            data_dir_line_index = index
-            break
-
-    if data_dir_line_index is not None:
-        if line.strip().startswith("data_dir"):
-            lines[data_dir_line_index] = f"data_dir = {new_data_dir}\n"
-        elif line.strip().startswith("; data_dir"):
-            lines[data_dir_line_index] = f"; data_dir = {new_data_dir}\n"
-    else:
-        lines.append(f"data_dir = {new_data_dir}\n")
-
-    with open(ini_path, "w") as file:
-        file.writelines(lines)
-
-    print(Fore.GREEN + f"*** La valeur de 'data_dir' mise à jour à '{new_data_dir}' dans '{path_tasmota_cenv}'. ***")
-
 """    
     Les differntes possibilités de récupération des build_flags: 
     env.get("BUILD_FLAGS", [])
@@ -521,6 +482,12 @@ def copy_fs_image(source, target, env):
     argv_string = " ".join(sys.argv)
 
     is_optimized_targets = any(target in argv_string for target in optimized_targets)
+    # Accrochee a firmware.bin ET a littlefs.bin : une seule copie par build (audit E6/P2.6, 2026-10-25).
+    # Un second inventaire, pris APRES la copie, ferait passer les copies temporaires pour des fichiers
+    # de la carte : remove_backup_data les laisserait alors dans son dossier.
+    if is_optimized_targets and Global.liste_fichiers_exclus is not None:
+        print(Fore.CYAN + "ℹ Fichiers temporaires deja copies pour ce build : rien a refaire")
+        return
     if is_optimized_targets:
         try:
             source_dir = "data"
@@ -656,32 +623,6 @@ def remove_backup_data(source, target, env):
             print(Fore.GREEN + "✔ Build/upload réussi")
 
 
-# Change la valeur de data_dir dans platformio_tasmota_cenv.ini (Remplacée par 'adapteParametresPlatformio_override()')
-# change_data_dir_in_platformio_ini(path_tasmota_cenv="platformio_tasmota_cenv.ini", new_data_dir=f"{Global.environnement.replace('tasmota','data-tasmota')}", boolModifDataDir=True)
-
-# Fonctions déclenchées par l'appui sur 'Build Filesystem Image' ou 'Upload Filesystem Image OTA' dans les fonction 'Platform' de Platformio
-""" 
-    # Déclenche avant l'évènement en paramètre
-    env.AddPreAction(os.path.join(".pio", "build", Global.environnement, "littlefs.bin"), lambda source, target, env: print(Fore.BLUE + ">>>>>>>>>>>>>>>>> avant: build_littlefs.bin"))
-    env.AddPreAction(os.path.join(".pio", "build", Global.environnement, "firmware.bin"), lambda source, target, env: print(Fore.BLUE + ">>>>>>>>>>>>>>>>> avant: build_firmware.bin"))
-    env.AddPreAction(os.path.join(".pio", "build", Global.environnement, "firmware.elf"), lambda source, target, env: print(Fore.BLUE + ">>>>>>>>>>>>>>>>> avant: build_firmware.elf"))
-    env.AddPreAction("factory_flash", lambda source, target, env: print(Fore.BLUE + ">>>>>>>>>>>>>>>>> avant: factory_flash"))
-    env.AddPreAction("upload", lambda source, target, env: print(Fore.BLUE + ">>>>>>>>>>>>>>>>> avant: upload"))
-    env.AddPreAction("erase_upload", lambda source, target, env: print(Fore.BLUE + ">>>>>>>>>>>>>>>>> avant: erase_upload"))
-    env.AddPreAction("uploadfs", lambda source, target, env: print(Fore.BLUE + ">>>>>>>>>>>>>>>>> avant: uploadfs"))
-    env.AddPreAction("buildfs", lambda source, target, env: print(Fore.BLUE + ">>>>>>>>>>>>>>>>> avant: buildfs"))
-
-    # Déclenche après l'évènement en paramètre
-    env.AddPostAction(os.path.join(".pio", "build", Global.environnement, "littlefs.bin"), lambda source, target, env: print(Fore.BLUE + ">>>>>>>>>>>>>>>>> apres: build_littlefs.bin"))
-    env.AddPostAction(os.path.join(".pio", "build", Global.environnement, "firmware.bin"), lambda source, target, env: print(Fore.BLUE + ">>>>>>>>>>>>>>>>> apres: build_firmware.bin"))
-    env.AddPostAction(os.path.join(".pio", "build", Global.environnement, "firmware.elf"), lambda source, target, env: print(Fore.BLUE + ">>>>>>>>>>>>>>>>> apres: build_firmware.elf"))
-    env.AddPostAction("factory_flash", lambda source, target, env: print(Fore.BLUE + ">>>>>>>>>>>>>>>>> apres: factory_flash"))
-    env.AddPostAction("upload", lambda source, target, env: print(Fore.BLUE + ">>>>>>>>>>>>>>>>> apres: upload"))
-    env.AddPostAction("erase_upload", lambda source, target, env: print(Fore.BLUE + ">>>>>>>>>>>>>>>>> apres: erase_upload"))
-    env.AddPostAction("uploadfs", lambda source, target, env: print(Fore.BLUE + ">>>>>>>>>>>>>>>>> apres: uploadfs"))
-    env.AddPostAction("buildfs", lambda source, target, env: print(Fore.BLUE + ">>>>>>>>>>>>>>>>> apres: buildfs")) 
-"""
-
 # ============================================================
 # ✨ VERSION TASMOTA ...
 # ============================================================
@@ -784,10 +725,3 @@ if not is_safeboot and not hors_build:
     env.AddPreAction(os.path.join(".pio", "build", Global.environnement, "littlefs.bin"), copy_fs_image)
 
 print(Fore.GREEN + "✔ Script pre-utilitaires_platformio.py chargé")
-
-# Déclenche après l'évènement en paramètre ==> Remplacé par 'atexit.register(remove_backup_data)'
-# env.AddPostAction("erase_upload", remove_backup_data)
-# env.AddPostAction("upload", remove_backup_data)
-# env.AddPostAction("factory_flash", remove_backup_data)
-# env.AddPostAction("buildfs", remove_backup_data)
-# env.AddPostAction("uploadfs", remove_backup_data)

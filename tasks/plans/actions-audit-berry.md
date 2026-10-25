@@ -106,7 +106,7 @@ Ordre conseillé : A1 → A2 → A3 → A4, puis A5/A6 ; A7, A10 et A11 seulemen
 - [ ] P6.6 — Sauvegarde du persist harmonisée ; clés `nbLogsFiles`/`fileLogName` sans lecteur retirées (corrige L8 ; cote S, effort faible, risque faible)
 - [ ] P5.6 — Ne plus forcer `tcp.activation` ; ne plus charger TCP sur la cave S3 (variante lourde : retirer le transport TCP, sur décision) (corrige N6 ; cote L, effort faible, risque faible)
 - [ ] P2.4 — 8 sections orphelines de `user_config_override.h` ; bloc commun garage (corrige E3, E4 ; cote S, effort moyen, risque faible)
-- [ ] P2.6 — Pre-script : listes (FAIT le 2026-10-21, `e26ff49d0`), garde contre le double accrochage, code mort (corrige E6, E7 ; cote S, effort faible, risque faible)
+- [x] P2.6 — Pre-script : listes (FAIT le 2026-10-21, `e26ff49d0`), garde contre le double accrochage, code mort (corrige E6, E7 ; cote S, effort faible, risque faible) — preuve : `copy_fs_image` ne recopie ni ne réinventorie au 2e accrochage (`Global.liste_fichiers_exclus` déjà posé) ; `change_data_dir_in_platformio_ini` et les accrochages commentés retirés (−72 lignes) ; banc `build/test_copie_fs.py` (2 cas), rouge sur l'ancien code (copies laissées dans le dossier de la carte) ; `test_config_holder.py` vert (2026-10-25)
 - [x] P2.7 — Table de partitions S3 renommée d'après son contenu (corrige E11 ; cote D, effort faible, risque faible) — preuve : la base S3 pointe sur `partitions/esp32_partition_app3904k_fs11584k.csv` (table amont du P4, contenu identique à l'ancienne copie du fork, supprimée) ; `board_upload.maximum_size` trompeur retiré ; ProjectConfig : les 5 envs S3 résolvent la nouvelle table (2026-10-25)
 - [ ] P2.8 — `data/test.mp3` (3,3 Mo) sorti du dépôt (corrige E12 ; cote S, effort faible, risque nul)
 
