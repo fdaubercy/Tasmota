@@ -17,7 +17,7 @@ import hashlib
 import json
 import re
 import shutil
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 import fichiers_berry_etat as fbe
@@ -203,7 +203,9 @@ def _copie_h(lignes, bornes, env, nouveau, identite, avertissements):
         if not motif.search(texte):
             avertissements.append(f"{FICHIER_H} : {champ} absent de la section du modele, non pose")
         texte = motif.sub(lambda m: m.group(1) + '"' + identite[champ] + '"', texte)
-    texte = re.sub(r"(Backlog Hostname\s+)[^\s\";]+", lambda m: m.group(1) + identite["PROJECT"], texte)
+    # "Backlog Hostname X" ou "Backlog Module 0; Hostname X" (cave, differentiel, grenier)
+    texte = re.sub(r"^(\s*#define\s+USER_BACKLOG\b.*?\bHostname\s+)[^\s\";]+",
+                   lambda m: m.group(1) + identite["PROJECT"], texte, flags=re.M)
     texte = re.sub(r'(\\"NAME\\":\\")(.*?)(\\")', lambda m: m.group(1) + identite["CODE_IMAGE_STR"] + m.group(3), texte)
     return [f"        // -- Options for {env} ------", f"        #elif defined({nouveau})"] + texte.split("\n")
 
@@ -279,6 +281,12 @@ def _masque(diff):
     return diff
 
 
+def _empreinte(o_cenv, o_h, c):
+    """Fichiers lus ET saisie : une saisie changee apres le diff n'est pas ecrite sans nouveau diff."""
+    demande = json.dumps(asdict(c), sort_keys=True, ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(o_cenv + b"\0" + o_h + b"\0" + demande).hexdigest()
+
+
 def _calcule(racine, c):
     racine = Path(racine)
     env, nouveau = nom_env(c.base, c.lieu, c.nom), c.define or define(c.base, c.lieu, c.nom)
@@ -288,7 +296,7 @@ def _calcule(racine, c):
     l_cenv, l_h = fbi.decoupe(t_cenv), fbi.decoupe(t_h)
     ini = fbi.lit_sections(racine)
     res = {"env": env, "dossier": dossier, "define": nouveau, "avertissements": [],
-           "empreinte": hashlib.sha256(o_cenv + b"\0" + o_h).hexdigest(), "diff": "", "eol": (_eol(t_cenv), _eol(t_h))}
+           "empreinte": _empreinte(o_cenv, o_h, c), "diff": "", "eol": (_eol(t_cenv), _eol(t_h))}
     res["refus"] = refus = _refus(racine, ini, c, env, dossier, nouveau, t_h, t_cenv)
     if refus:
         return res
@@ -335,7 +343,7 @@ def cree(racine, c, empreinte_lue, builds_en_cours):
     racine = Path(racine)
     r = _calcule(racine, c)
     if r["empreinte"] != empreinte_lue:
-        raise RuntimeError("le cenv ou le .h a change depuis le diff : recharger la page")
+        raise RuntimeError("le cenv, le .h ou la saisie ont change depuis le diff : refaire « Voir le diff »")
     if r["refus"]:
         raise RuntimeError(" ; ".join(r["refus"]))
     shutil.copytree(racine / fbe.dossier_carte(c.modele), racine / r["dossier"],

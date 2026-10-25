@@ -66,11 +66,12 @@ def _exclude_solidifies(ini, env):
 
 
 def _provenance(ini, env, option, e):
-    partagee = e.section != "env:" + env
+    # partagee : la ligne touche d'autres envs que celui-ci ([berry_commun], option d'une base, y compris
+    # l'option propre d'une base vue depuis la base elle-meme : ses cartes en heritent)
+    envs = fbi.envs_touches(ini, e.section, e.option, option)
     return {"option": option, "section": e.section, "option_ecrite": e.option, "fichier": e.fichier,
-            "ligne": e.ligne, "commentaire": e.commentaire, "partagee": partagee,
-            "amont": e.fichier != fbi.FICHIER_CENV,
-            "envs": fbi.envs_touches(ini, e.section, e.option, option) if partagee else [env]}
+            "ligne": e.ligne, "commentaire": e.commentaire, "partagee": bool(set(envs) - {env}),
+            "amont": e.fichier != fbi.FICHIER_CENV, "envs": envs or [env]}
 
 
 def _entree(e):
@@ -112,9 +113,13 @@ def etat_env(racine, env):
             cible = racine / e.chemin
             if e.chemin in connus or e.chemin.startswith(("http://", "https://")) or cible.is_dir():
                 continue
-            (hors if cible.is_file() else disparus).append(_entree(e))
+            if cible.is_file():
+                hors.append(_entree(e))
+            else:                                # provenance : une ligne Berry disparue peut etre retiree
+                disparus.append(dict(_entree(e), provenance=_provenance(ini, env, o, e)))
     return {"env": env, "dossier_carte": dossier_carte(env), "exclude_solidified": _exclude_solidifies(ini, env),
-            "fichiers": fichiers, "hors_perimetre": hors, "disparus": disparus}
+            "fichiers": fichiers, "hors_perimetre": hors, "disparus": disparus,
+            "heritiers": {o: fbi.heritiers(ini, env, o) for o in OPTIONS}}    # envs touches par un AJOUT
 
 
 def envs_proposes(racine):

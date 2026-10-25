@@ -16,29 +16,34 @@ Le fichier est relu et reecrit ligne a ligne : fins de ligne et octets non UTF-8
 import datetime
 import difflib
 import hashlib
+import json
 import re
 import shutil
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import fichiers_berry_etat as fbe
 import fichiers_berry_ini as fbi
 
 CIBLES = {"exclu": fbe.EXCLUDE, "solidifie": fbe.SOLIDIFY}
-ETATS = {"fs": ("fs", "exclu", "solidifie"), "carte": ("fs", "exclu", "solidifie"), "amont": ("fs", "absent")}
+ETATS = {"fs": ("fs", "exclu", "solidifie"), "carte": ("fs", "exclu", "solidifie"), "amont": ("fs", "absent"),
+         "disparu": ("retire",)}            # ligne Berry vers un fichier disparu du disque
 LARGEUR_CLE = 24        # `custom_files_exclude    = ` : alignement le plus courant du cenv
 
 
 @dataclass
 class Demande:
     chemin: str
-    etat: str                       # "fs" | "exclu" | "solidifie" | "absent" (amont)
+    etat: str                       # "fs" | "exclu" | "solidifie" | "absent" (amont) | "retire" (disparu)
     raison: str = ""
     partage_accepte: bool = False
 
 
-def empreinte(octets):
-    return hashlib.sha256(octets).hexdigest()
+def empreinte(octets, demandes):
+    """Cenv lu ET demandes : des demandes changees apres le diff ne sont pas ecrites sans nouveau diff."""
+    vues = json.dumps(sorted((asdict(d) for d in demandes), key=lambda d: d["chemin"]), sort_keys=True,
+                      ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(octets + b"\0" + vues).hexdigest()
 
 
 def _lit(racine):
@@ -86,7 +91,11 @@ def _calcule(racine, env, demandes):
     retraits, ajouts = set(), {}
 
     for d in demandes:
-        f = fichiers.get(fbi.normalise(d.chemin))
+        chemin = fbi.normalise(d.chemin)
+        f = fichiers.get(chemin)
+        disparues = [x["provenance"] for x in etat["disparus"] if x["chemin"] == chemin and chemin.endswith(".be")]
+        if f is None and disparues:                       # seule action : retirer la ou les lignes
+            f = {"chemin": chemin, "groupe": "disparu", "figes": False, "provenances": disparues}
         if f is None:
             raise LookupError(f"fichier non propose pour {env} : {d.chemin!r}")
         if d.etat not in ETATS[f["groupe"]] or (f["figes"] and d.etat != "fs"):
@@ -98,18 +107,19 @@ def _calcule(racine, env, demandes):
             refus += [f"{f['chemin']} : ligne de {p['section']} ecrite dans {p['fichier']} (liste de l'amont), "
                       "non modifiable ici" for p in amont]
             continue
-        a_confirmer = [p for p in a_retirer if p["partagee"] and not d.partage_accepte]
-        if a_confirmer:
-            vus = set()
-            for p in a_confirmer:
-                if (p["section"], p["option_ecrite"]) not in vus:
-                    vus.add((p["section"], p["option_ecrite"]))
-                    confirmations.append({"chemin": f["chemin"], "section": p["section"],
-                                          "option": p["option_ecrite"], "envs": p["envs"]})
-            continue
+        ajoute = bool(cible) and not any(p["option"] == cible for p in f["provenances"])
+        if not d.partage_accepte:
+            a_confirmer = {(p["section"], p["option_ecrite"]): p["envs"] for p in a_retirer if p["partagee"]}
+            heritiers = etat["heritiers"][cible] if ajoute else [env]
+            if set(heritiers) - {env}:                    # ajout dans une base : ses cartes en heritent
+                a_confirmer.setdefault(("env:" + env, cible), heritiers)
+            if a_confirmer:
+                confirmations += [{"chemin": f["chemin"], "section": s, "option": o, "envs": envs}
+                                  for (s, o), envs in a_confirmer.items()]
+                continue
         retraits |= {p["ligne"] for p in a_retirer}
         touchees |= {p["section"] for p in a_retirer}
-        if cible and not any(p["option"] == cible for p in f["provenances"]):
+        if ajoute:
             ajouts.setdefault(cible, []).append((f["chemin"], d.raison))
         tiges.append(Path(f["chemin"]).stem)
 
@@ -169,7 +179,7 @@ def prepare(racine, env, demandes):
     """Diff du cenv pour ces demandes, sans rien ecrire (voir le docstring du module)."""
     octets, _, avant, apres, confirmations, refus, touchees, tiges = _calcule(racine, env, demandes)
     diff = "\n".join(difflib.unified_diff(avant, apres, fbi.FICHIER_CENV, fbi.FICHIER_CENV, lineterm="", n=2))
-    return {"diff": diff, "empreinte": empreinte(octets), "confirmations": confirmations,
+    return {"diff": diff, "empreinte": empreinte(octets, demandes), "confirmations": confirmations,
             "commentaires_cites": _cites(avant, touchees, tiges), "refus": refus}
 
 
@@ -182,8 +192,9 @@ def enregistre(racine, env, demandes, empreinte_lue, builds_en_cours):
     if builds:
         raise RuntimeError("un build est en cours (" + ", ".join(builds) + ") : ecriture refusee")
     octets, eol, avant, apres, confirmations, refus, _, _ = _calcule(racine, env, demandes)
-    if empreinte(octets) != empreinte_lue:
-        raise RuntimeError(f"{fbi.FICHIER_CENV} a change depuis le diff : recharger la page")
+    if empreinte(octets, demandes) != empreinte_lue:
+        raise RuntimeError(f"{fbi.FICHIER_CENV} ou les modifications en attente ont change depuis le diff : "
+                           "refaire « Voir le diff »")
     if confirmations or refus:
         raise RuntimeError("liste partagee non acceptee ou ligne de l'amont : rien n'est ecrit")
     diff = "\n".join(difflib.unified_diff(avant, apres, fbi.FICHIER_CENV, fbi.FICHIER_CENV, lineterm="", n=2))

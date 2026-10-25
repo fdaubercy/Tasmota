@@ -30,6 +30,8 @@ from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre  
 
 ECHECS = []
 RIDEAU = "tasmota32s3-garage-rideau-garage-modbus"
+BASE = "tasmota32s3-base-N16R8"
+DISPARU = "data/fs/controleVoletRoulants.be"      # dans le custom_files_exclude propre du rideau
 MARQUE_TEMOIN = 'var envs = [], etat = null, attente = {}'
 INJECTION_TEMOIN = '\n$("bouton-qui-n-existe-pas").onclick = null;   // TEMOIN : TypeError au chargement\n'
 
@@ -117,10 +119,15 @@ def sonde_page(m):
     cdp = m.cdp
     cenv = m.depot / "platformio_tasmota_cenv.ini"
     avant = cenv.read_bytes()
+    (m.depot / DISPARU).unlink()                 # ligne propre de custom_files_exclude du rideau -> « disparue »
     cdp.appel("Page.navigate", url=m.url + "?env=" + RIDEAU)
     verifie(attend(cdp, "document.getElementById('col-solidifie') && document.getElementById('col-solidifie').textContent.indexOf('controleRideau.be') >= 0", 15),
             True, "chargement : colonne Solidifie remplie (controleRideau.be)")
     verifie(cdp.js("document.getElementById('env').value"), RIDEAU, "?env= preselectionne l'env")
+    verifie(cdp.js("(function(){var b=document.querySelector('[data-retirer=\"" + DISPARU + "\"]'); if(!b) return 'absent';"
+                   " b.click(); return document.querySelector('[data-attente=\"" + DISPARU + "\"]') ? 'en attente' : 'non';})()"),
+            "en attente", "disparu : « retirer la ligne » le met en attente")
+    cdp.js("document.querySelector('[data-attente=\"" + DISPARU + "\"] button').click(); 1")
     verifie(choisit(cdp, "data/fs/udpFonctions.be", "fs"), "data/fs/udpFonctions.be", "choix d'un fichier du socle")
     clic(cdp, "appliquer")
     verifie(cdp.js("!document.getElementById('fenetre-partage').classList.contains('cache')"), True,
@@ -138,16 +145,37 @@ def sonde_page(m):
             "diff affiche")
     verifie(cdp.js("document.getElementById('panneau-diff').classList.contains('cache')"), False,
             "panneau du diff visible (le bouton Enregistrer est cliquable a la main)")
+    choisit(cdp, "data/fs/vrFonctions.be", "fs")             # modification APRES le diff : il ne vaut plus
+    clic(cdp, "appliquer")
+    verifie(cdp.js("[document.getElementById('panneau-diff').classList.contains('cache'), document.getElementById('enregistrer').disabled]"),
+            [True, True], "modification apres le diff : diff referme, Enregistrer grise")
+    cdp.js("document.querySelector('[data-attente=\"data/fs/vrFonctions.be\"] button').click(); 1")
+    clic(cdp, "voir-diff")
+    attend(cdp, "!document.getElementById('panneau-diff').classList.contains('cache')", 10)
     clic(cdp, "enregistrer")
     verifie(attend(cdp, "!!document.getElementById('message-ok')", 10), True, "enregistrement : message de reussite")
     verifie(cenv.read_bytes() != avant, True, "enregistrement : cenv de la copie modifie")
     verifie(cdp.js("document.getElementById('lien-build').getAttribute('href')"), "http://127.0.0.1:7700/?env=" + RIDEAU,
             "lien vers la page build avec l'env")
+    cdp.js("var s=document.getElementById('env'); s.value='" + BASE + "'; s.dispatchEvent(new Event('change')); 1")
+    attend(cdp, "etat && etat.env === '" + BASE + "'", 10)
+    # ajout dans l'option propre d'une base : un data/fs sans aucune ligne, passe en Exclu
+    libre = cdp.js("(etat.fichiers.filter(function(f){return f.groupe==='fs' && !f.provenances.length;})[0] || {}).chemin || ''")
+    verifie(bool(libre) and choisit(cdp, libre, "exclu") == libre, True, "base : un fichier sans ligne est choisi")
+    clic(cdp, "appliquer")
+    verifie(cdp.js("[!document.getElementById('fenetre-partage').classList.contains('cache'),"
+                   " document.getElementById('partage-envs').children.length > 1]"), [True, True],
+            "base : un ajout ouvre la fenetre « liste partagee » avec ses cartes")
+    clic(cdp, "partage-annuler")
     clic(cdp, "creer")
     cdp.js("document.getElementById('c-lieu').value='garage'; document.getElementById('c-nom').value='porte-test';"
            "document.getElementById('c-base').value='tasmota32s3-base-N16R8-sans-ecran'; 1")
     clic(cdp, "c-proposer")
     verifie(attend(cdp, "document.getElementById('c-MQTT_TOPIC').value", 10), "garage/porte-test", "creation : identite proposee")
+    clic(cdp, "c-prepare")
+    attend(cdp, "!document.getElementById('c-creer').disabled", 10)
+    cdp.js("var i=document.getElementById('c-WIFI_IP_ADDRESS'); i.value='192.168.0.251'; i.dispatchEvent(new Event('input', {bubbles: true})); 1")
+    verifie(cdp.js("document.getElementById('c-creer').disabled"), True, "creation : saisie changee apres le diff -> Creer grise")
     verifie(cdp.erreurs(), [], "aucune erreur JS pendant toute la sonde")
 
 

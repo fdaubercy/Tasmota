@@ -134,7 +134,7 @@ PAGE = r"""<!doctype html>
 var $ = function (id) { return document.getElementById(id); };
 var CHAMPS = ["CODE_IMAGE_STR", "PROJECT", "WIFI_IP_ADDRESS", "WIFI_RGX_SSID", "MQTT_CLIENT_ID", "MQTT_TOPIC",
               "MQTT_GRPTOPIC", "FRIENDLY_NAME"];
-var LIBELLES = {fs: "Sur le FS", exclu: "Exclu", solidifie: "Solidifié", absent: "Absent"};
+var LIBELLES = {fs: "Sur le FS", exclu: "Exclu", solidifie: "Solidifié", absent: "Absent", retire: "ligne retirée"};
 var GROUPES = {fs: "data/fs", carte: "carte", amont: "amont"};
 var URL_BUILD = "http://127.0.0.1:7700/";
 var envs = [], etat = null, attente = {}, enAttenteDePartage = null, empreinte = "", creationEmpreinte = "";
@@ -244,7 +244,9 @@ function dessine() {
   if (!etat.exclude_solidified)
     av.appendChild(h("div", {"class": "avert", texte: "custom_files_exclude_solidified n'est pas à ON : un fichier solidifié reste AUSSI sur le FS."}));
   etat.disparus.forEach(function (x) {
-    av.appendChild(h("div", {"class": "avert rouge", texte: "Ligne vers un fichier disparu : " + x.chemin + " (" + x.option + ", " + x.section + ")"}));
+    av.appendChild(h("div", {"class": "avert rouge"}, "Ligne vers un fichier disparu : " + x.chemin + " (" + x.option + ", " + x.section + ") ",
+      /\.be$/.test(x.chemin) ? h("button", {"class": "lien", "data-retirer": x.chemin, texte: "retirer la ligne",
+                                            onclick: function () { retireDisparu(x); }}) : null));
   });
   etat.fichiers.filter(function (f) { return f.homonyme && f.groupe === "carte"; }).forEach(function (f) {
     av.appendChild(h("div", {"class": "avert", texte: "Homonyme : " + f.chemin + " et " + f.homonyme + " — custom_files_exclude agit par NOM de fichier, il retirerait les deux."}));
@@ -289,23 +291,36 @@ function appliquer() {
     return;
   }
   var demande = {chemin: f.chemin, etat: e, raison: $("raison").value.trim(), partage_accepte: false};
-  var partagees = retraits.filter(function (p) { return p.partagee; });
-  if (partagees.length) {
-    var tous = {};
-    partagees.forEach(function (p) { p.envs.forEach(function (x) { tous[x] = true; }); });
-    var liste = Object.keys(tous).sort();
-    $("partage-texte").textContent = nom(f.chemin) + " est dans la liste partagée " +
-      partagees.map(function (p) { return p.section === "berry_commun" ? "berry_commun." + p.option_ecrite : p.section + "." + p.option_ecrite; }).join(", ") +
-      ". La modifier touche " + liste.length + " env(s) :";
-    var ul = vide($("partage-envs"));
-    liste.forEach(function (x) { ul.appendChild(h("li", {texte: x})); });
-    $("partage-modifier").textContent = "Modifier la liste partagée (" + liste.length + " envs)";
-    enAttenteDePartage = demande;
-    $("fenetre-partage").classList.remove("cache");
-    return;
-  }
-  attente[f.chemin] = demande;
-  dessine();
+  var sources = retraits.filter(function (p) { return p.partagee; }).map(source);
+  // ajout dans l'option propre d'une base : ses cartes en heritent (extends ou ${env:base.option})
+  var c = cible(f, e), ajoute = c && !f.provenances.some(function (p) { return p.option === c; });
+  var heritiers = ajoute ? etat.heritiers[c] : [];
+  if (heritiers.some(function (x) { return x !== etat.env; })) sources.push({libelle: "env:" + etat.env + "." + c, envs: heritiers});
+  metEnAttente(demande, sources);
+}
+
+function source(p) {
+  return {libelle: p.section === "berry_commun" ? "berry_commun." + p.option_ecrite : p.section + "." + p.option_ecrite, envs: p.envs};
+}
+
+// Sans liste partagee : en attente. Sinon, fenetre « Modifier la liste partagee (N envs) » / « Annuler ».
+function metEnAttente(demande, sources) {
+  if (!sources.length) { attente[demande.chemin] = demande; dessine(); return; }
+  var tous = {};
+  sources.forEach(function (s) { s.envs.forEach(function (x) { tous[x] = true; }); });
+  var liste = Object.keys(tous).sort();
+  $("partage-texte").textContent = nom(demande.chemin) + " : la liste partagée " +
+    sources.map(function (s) { return s.libelle; }).join(", ") + " sera modifiée. Cela touche " + liste.length + " env(s) :";
+  var ul = vide($("partage-envs"));
+  liste.forEach(function (x) { ul.appendChild(h("li", {texte: x})); });
+  $("partage-modifier").textContent = "Modifier la liste partagée (" + liste.length + " envs)";
+  enAttenteDePartage = demande;
+  $("fenetre-partage").classList.remove("cache");
+}
+
+function retireDisparu(x) {
+  var demande = {chemin: x.chemin, etat: "retire", raison: "", partage_accepte: false};
+  metEnAttente(demande, x.provenance.partagee ? [source(x.provenance)] : []);
 }
 
 function dessineAttente() {
@@ -318,6 +333,9 @@ function dessineAttente() {
       h("button", {"class": "lien", texte: "retirer", onclick: function () { delete attente[c]; dessine(); }})));
   });
   $("voir-diff").disabled = !cles.length;
+  // le diff vu ne vaut que pour les demandes d'alors : toute modification le referme
+  $("panneau-diff").classList.add("cache");
+  $("enregistrer").disabled = true;
 }
 
 async function voirDiff() {
@@ -413,6 +431,9 @@ $("creer").onclick = function () { $("panneau-creation").classList.toggle("cache
 $("c-proposer").onclick = proposer;
 $("c-prepare").onclick = prepareCreation;
 $("c-creer").onclick = creer;
+["input", "change"].forEach(function (t) {      // saisie changee apres « Voir le diff » : refaire le diff
+  $("panneau-creation").addEventListener(t, function () { $("c-creer").disabled = true; });
+});
 construitIdentite();
 chargeEnvs().then(chargeEtat);
 </script>

@@ -146,6 +146,10 @@ def test_modele_cave(racine):
             "modele cave : ouverture de la chaine intacte")
     verifie(any("FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY" in a for a in p["avertissements"]), True,
             "modele cave : conditions internes signalees")
+    i = h.index("#elif defined(FIRMWARE_ESP32_CAVE_ESSAI)")
+    bloc = h[i:fin_section(h, i)]
+    verifie(re.findall(r"Hostname\s+([^\s\";]+)", bloc), [c.identite["PROJECT"]],
+            "modele cave (Backlog Module 0; Hostname X) : Hostname remplace par PROJECT")
 
 
 def test_persist_octets(racine):
@@ -196,6 +200,12 @@ def test_refus(racine):
             verifie("cree", "refus", "refus build")
         except RuntimeError:
             verifie((racine / "data/garage/tasmota32s3-porte-test").exists(), False, "refus build : rien de cree")
+    autre = creation(WIFI_IP_ADDRESS="192.168.0.250")       # saisie changee apres « Voir le diff »
+    try:
+        fbc.cree(racine, autre, p["empreinte"], SANS_BUILD)
+        verifie("cree", "refus", "refus : identite changee depuis le diff")
+    except RuntimeError:
+        verifie((racine / "data/garage/tasmota32s3-porte-test").exists(), False, "refus identite changee : rien de cree")
     (racine / fbc.FICHIER_H).write_bytes((racine / fbc.FICHIER_H).read_bytes() + b"// touche\r\n")
     try:
         fbc.cree(racine, c, p["empreinte"], SANS_BUILD)

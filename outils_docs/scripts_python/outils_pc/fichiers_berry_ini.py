@@ -150,8 +150,11 @@ def _option_resolue(ini, section, option):
     return ini.sections.get(section, {}).get(option)
 
 
-def _developpe(ini, section, option, pile, traverses):
+def _developpe(ini, section, option, pile, traverses, consultees=None):
     opt = _option_resolue(ini, section, option)
+    if consultees is not None and section.startswith("env:"):
+        ch = ini.chaine(section)                 # sections lues avant de trouver l'option (ou toutes)
+        consultees.update(ch[:ch.index(opt.section) + 1] if opt else ch)
     if opt is None:
         return []
     cle = (opt.section, opt.nom)
@@ -162,7 +165,7 @@ def _developpe(ini, section, option, pile, traverses):
     for i, valeur, commentaire in opt.morceaux:
         ref = REFERENCE.match(valeur)
         if ref:
-            res += _developpe(ini, ref.group(1), ref.group(2), pile + [cle], traverses)
+            res += _developpe(ini, ref.group(1), ref.group(2), pile + [cle], traverses, consultees)
         elif valeur != SANS_FICHIER:
             res.append(Entree(normalise(valeur), opt.section, opt.nom, opt.fichier, i, commentaire))
     return res
@@ -178,6 +181,22 @@ def traverses(ini, env, option):
     vus = set()
     _developpe(ini, "env:" + env, option, [], vus)
     return vus
+
+
+def heritiers(ini, env, option):
+    """Envs du cenv dont la valeur de `option` changerait si on l'ecrivait dans la section de l'env : la
+    resolution de leur option consulte cette section, par `extends` (avant la section qui la definit) ou
+    par une reference `${env:<env>.option}`. Une base a donc ses cartes pour heritiers."""
+    section, res = "env:" + env, []
+    for autre in ini.envs_cenv():
+        consultees = set()
+        try:
+            _developpe(ini, "env:" + autre, option, [], set(), consultees)
+        except ValueError:
+            continue
+        if section in consultees:
+            res.append(autre)
+    return sorted(res)
 
 
 def envs_touches(ini, section, option, option_env):

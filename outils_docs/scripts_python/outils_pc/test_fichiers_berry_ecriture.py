@@ -141,12 +141,70 @@ def test_ecriture_partage_confirme(racine):
             "partage accepte : retire de [berry_commun], donc de tous les envs")
 
 
+def test_ecriture_base_partagee(racine):
+    """Une option propre d'une BASE est une liste partagee : ses heritiers sont nommes (spec §2.4, §5)."""
+    avant = cenv(racine)
+    heritiers = ["tasmota32s3-base", "tasmota32s3-cave-fille"]      # la carte garage a son propre exclude
+    for d, libelle in ((Demande("data/fs/x.be", "fs"), "retrait"), (Demande("data/fs/y.be", "exclu"), "ajout")):
+        p = fbw.prepare(racine, "tasmota32s3-base", [d])
+        verifie([(c["chemin"], c["section"], c["option"], c["envs"]) for c in p["confirmations"]],
+                [(d.chemin, "env:tasmota32s3-base", "custom_files_exclude", heritiers)],
+                f"base ({libelle}) : confirmation avec les envs qui heritent de l'option")
+        try:
+            fbw.enregistre(racine, "tasmota32s3-base", [d], p["empreinte"], SANS_BUILD)
+            verifie("ecrit", "refus", f"base ({libelle}) sans accord : refus")
+        except RuntimeError:
+            verifie(cenv(racine), avant, f"base ({libelle}) sans accord : cenv inchange")
+    # les cartes ne l'heritent pas par extends : elles la REFERENCENT (${env:tasmota32s3-base.custom_files_upload})
+    p = fbw.prepare(racine, "tasmota32s3-base", [Demande("tasmota/berry/modules/Webui_Status.tapp", "fs")])
+    verifie([c["envs"] for c in p["confirmations"]],
+            [["tasmota32s3-base", "tasmota32s3-cave-fille", "tasmota32s3-garage-carte"]],
+            "base (ajout a une option referencee par ${env:base.opt}) : les envs qui la referencent sont nommes")
+    ecrit(racine, "tasmota32s3-base", [Demande("data/fs/y.be", "exclu", partage_accepte=True)])
+    verifie(liste(racine, "tasmota32s3-cave-fille", "custom_files_exclude"), ["data/fs/x.be", "data/fs/y.be"],
+            "base (ajout accepte) : herite par la fille")
+
+
+def test_ecriture_retire_disparu(racine):
+    """Une ligne Berry qui designe un fichier disparu du disque peut etre retiree (spec §2.2, §7.3)."""
+    (racine / "data/fs/loRaWanFonctions.be").unlink()
+    ecrit(racine, "tasmota32s3-garage-carte", [Demande("data/fs/loRaWanFonctions.be", "retire")])
+    verifie(liste(racine, "tasmota32s3-garage-carte", "custom_files_exclude"), ["data/fs/b.be"],
+            "disparu : ligne propre retiree")
+    verifie("; loRaWanFonctions : non charge" in cenv(racine), True, "disparu : commentaire plein garde")
+    (racine / "data/fs/x.be").unlink()                            # ligne de la base, vue depuis la fille
+    p = fbw.prepare(racine, "tasmota32s3-cave-fille", [Demande("data/fs/x.be", "retire")])
+    verifie([(c["section"], c["envs"]) for c in p["confirmations"]],
+            [("env:tasmota32s3-base", ["tasmota32s3-base", "tasmota32s3-cave-fille"])],
+            "disparu dans une base : liste partagee, envs nommes")
+    ecrit(racine, "tasmota32s3-cave-fille", [Demande("data/fs/x.be", "retire", partage_accepte=True)])
+    verifie(liste(racine, "tasmota32s3-base", "custom_files_exclude"), [], "disparu partage accepte : retire de la base")
+    try:
+        fbw.prepare(racine, "tasmota32s3-garage-carte", [Demande("data/fs/inconnu.be", "retire")])
+        verifie("accepte", "refus", "retire : chemin ni recense ni disparu refuse")
+    except LookupError:
+        pass
+
+
+def test_refus_demandes_changees(racine):
+    """Le diff vu vaut pour CES demandes : en ajouter une apres « Voir le diff » est refuse."""
+    avant = cenv(racine)
+    p = fbw.prepare(racine, "tasmota32s3-garage-carte", [Demande("data/fs/y.be", "exclu")])
+    try:
+        fbw.enregistre(racine, "tasmota32s3-garage-carte", [Demande("data/fs/y.be", "exclu"),
+                                                            Demande("data/fs/x.be", "exclu")], p["empreinte"], SANS_BUILD)
+        verifie("ecrit", "refus", "demandes changees depuis le diff : refus")
+    except RuntimeError:
+        verifie(cenv(racine), avant, "demandes changees depuis le diff : refus, cenv inchange")
+
+
 def test_ecriture_refuse_amont(racine):
     p = fbw.prepare(racine, "tasmota32s3-garage-carte", [Demande("tasmota/berry/modules/Partition_Manager.tapp",
                                                                   "absent", partage_accepte=True)])
     verifie(len(p["refus"]), 1, "amont : retirer une ligne de l'amont est refuse")
     verifie(p["diff"], "", "amont : aucun diff")
-    ecrit(racine, "tasmota32s3-base", [Demande("tasmota/berry/modules/Webui_Status.tapp", "fs")])
+    # une base est une liste partagee (ses cartes la referencent) : l'ajout passe par l'accord
+    ecrit(racine, "tasmota32s3-base", [Demande("tasmota/berry/modules/Webui_Status.tapp", "fs", partage_accepte=True)])
     verifie(liste(racine, "tasmota32s3-base", "custom_files_upload"),
             ["tasmota/berry/modules/Partition_Manager.tapp", "tasmota/berry/modules/Webui_Status.tapp"],
             "amont : ajout dans l'option propre de la base")
@@ -266,7 +324,9 @@ def test_relu_par_platformio(racine):
 
 def principal():
     for test in (test_ecriture_ajout_exclu, test_ecriture_option_heritee, test_ecriture_option_absente,
-                 test_ecriture_partage_confirme, test_ecriture_refuse_amont, test_ecriture_retire_ligne_commentee,
+                 test_ecriture_partage_confirme, test_ecriture_base_partagee, test_ecriture_retire_disparu,
+                 test_refus_demandes_changees,
+                 test_ecriture_refuse_amont, test_ecriture_retire_ligne_commentee,
                  test_ecriture_doublon_partage, test_ecriture_garde_commentaires, test_ecriture_crlf,
                  test_ecriture_raison, test_commentaires_cites, test_refus_build, test_refus_empreinte,
                  test_bak_et_diff, test_demandes_invalides, test_relu_par_platformio):
