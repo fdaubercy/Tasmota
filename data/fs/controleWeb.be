@@ -399,3 +399,7 @@ def controleWeb_init(m)
     return inst
 end
 controleWeb.init = controleWeb_init
+
+# Rend le module a son import (audit S6/P3.3, 2026-10-25) : sans ce return, un controleXxx charge
+# depuis le LittleFS (non solidifie) vaudrait nil et son driver ne demarrerait pas, sans erreur (piege 13).
+return controleWeb

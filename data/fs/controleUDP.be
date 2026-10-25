@@ -230,3 +230,7 @@ controleUDP.init = controleUDP_init
     u2.begin("192.168.4.1", 0)      # Envoi sur l'interface RangeExtender, choose random port number
     u2.send("224.3.0.1", 4000, bytes().fromstring("hello2"))
 -#
+
+# Rend le module a son import (audit S6/P3.3, 2026-10-25) : sans ce return, un controleXxx charge
+# depuis le LittleFS (non solidifie) vaudrait nil et son driver ne demarrerait pas, sans erreur (piege 13).
+return controleUDP

@@ -107,3 +107,7 @@ def controleDiscovery_init(m)
     return m
 end
 controleDiscovery.init = controleDiscovery_init
+
+# Rend le module a son import (audit S6/P3.3, 2026-10-25) : sans ce return, un controleXxx charge
+# depuis le LittleFS (non solidifie) vaudrait nil et son driver ne demarrerait pas, sans erreur (piege 13).
+return controleDiscovery

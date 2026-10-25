@@ -11,6 +11,8 @@ a la reference enregistree dans bouchons_berry/demarrage/<env>.txt. Une refonte 
     python outils_docs/scripts_python/berry/banc_demarrage.py --sources <copie de data/fs>
 
 Code de sortie 0 = vert (identiques), 1 = rouge (ecart ou echec), avec le diff des rubriques qui different.
+Controle statique en plus (audit S6/P3.3) : chaque <sources>/controleXxx.be finit par 'return controleXxx'
+(sinon, charge depuis le LittleFS sans etre solidifie, il vaudrait nil et son driver ne demarrerait pas).
 Les cartes gelees (ancien maitre S3 du garage, cave ESP32) ne sont pas suivies.
 """
 import difflib
@@ -40,6 +42,18 @@ def instantane(env, carte, sources):
     return None if debut is None else "\n".join(lignes[debut:]) + "\n", sortie
 
 
+def controle_returns(sources):
+    """Liste des controleXxx.be de 'sources' dont la derniere ligne de code n'est pas 'return controleXxx'."""
+    sans = []
+    for nom in sorted(os.listdir(os.path.join(RACINE, sources))):
+        if nom.startswith("controle") and nom.endswith(".be"):
+            lignes = [l.strip() for l in open(os.path.join(RACINE, sources, nom), encoding="utf-8").read().splitlines()
+                      if l.strip() and not l.strip().startswith("#")]
+            if not lignes or lignes[-1] != "return " + nom[:-3]:
+                sans.append(nom[:-3])
+    return sans
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     args = sys.argv[1:]
@@ -48,6 +62,12 @@ def main():
     cartes = {args[args.index("--carte") + 1]: CARTES[args[args.index("--carte") + 1]]} if "--carte" in args else CARTES
     os.makedirs(REFERENCES, exist_ok=True)
     rouges = []
+    sans = controle_returns(sources)
+    if sans:
+        rouges.append("return")
+        print("KO P3.3 : sans 'return controleXxx' final : %s" % ", ".join(sans))
+    else:
+        print("OK P3.3 : chaque controleXxx.be de %s finit par 'return controleXxx'" % sources)
     for env, carte in cartes.items():
         obtenu, brut = instantane(env, carte, sources)
         if obtenu is None:
