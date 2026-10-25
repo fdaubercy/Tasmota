@@ -23,7 +23,12 @@ Un `detail` qui commence par « AVERTISSEMENT » (verification apres redemarrage
 bandeau orange, distinct d'un echec (bandeau rouge).
 Pause « rebranchez la carte » (evenements attente_carte / reprise_carte) : bandeau « Branchez la carte X sur
 COMn » avec Continuer et Passer cet env (POST /continuer {env, choix}) ; le rejeu du flux le remontre tant que
-la pause dure. Une ligne cochee dont le port COM est celui d'une ligne cochee avant elle l'annonce.
+la pause dure. Une ligne cochee dont le port COM est celui d'une ligne cochee avant elle l'annonce. Apres une
+reponse acceptee, les boutons restent desactives jusqu'a reprise_carte ou une nouvelle attente_carte (pause
+rouverte : port absent ou tenu, message `erreur` dans le bandeau). Compilation faite avant la pause (`fait`) :
+l'envoi part en `-t nobuild`, ses etapes restent sur sa ligne (pas rattachees a « Compiler »). Etat de fin :
+orange pour un arret sans echec ou si aucun env n'a abouti ; les envs arretes pendant une pause (`arretes`)
+sont comptes a part dans le recapitulatif.
 """
 
 PAGE = r"""<!doctype html>
@@ -589,7 +594,8 @@ function bloc(env) {
 function rang(b, action, etape) {
   var a = action, prepa = false;
   if (a === "buildfs" && b.actions.indexOf("buildfs") < 0 && b.actions.indexOf("uploadfs") >= 0) { a = "uploadfs"; prepa = true; }
-  else if (TELEVERSEMENTS.indexOf(a) >= 0 && b.actions.indexOf("compiler") >= 0 && ETAPES_COMPILATION.indexOf(etape) >= 0) a = "compiler";
+  else if (TELEVERSEMENTS.indexOf(a) >= 0 && b.actions.indexOf("compiler") >= 0 && !b.nobuild && ETAPES_COMPILATION.indexOf(etape) >= 0)
+    a = "compiler";
   if (!b.rangs[a]) { b.rangs[a] = nouveauRang(a); if (b.actions.indexOf(a) < 0) b.actions.push(a); }
   var r = b.rangs[a];
   return {r: r, prepa: prepa, a: a};
@@ -648,6 +654,8 @@ function traiteEvenement(e, rejeu) {
     planifie(e.env);
   } else if (e.type === "etape") {
     b = bloc(e.env);
+    // envoi apres une pause « rebranchez la carte » : `-t nobuild`, ses etapes restent sur sa propre ligne
+    if (e.commande && TELEVERSEMENTS.indexOf(e.action) >= 0) b.nobuild = /\s-t nobuild\b/.test(e.commande);
     x = rang(b, e.action, e.etape);
     activeRang(b, x.r);
     x.r.prepa = x.prepa;
@@ -706,7 +714,8 @@ function traiteEvenement(e, rejeu) {
     else { L.attente = null; L.blocs[e.env].repris = true; planifie(e.env); }
   } else if (e.type === "attente_carte") {
     bloc(e.env);
-    L.carte = {env: e.env, port: e.port || "", precedent: e.precedent || "", erreur: "", envoi: false};
+    // premiere annonce, ou pause rouverte (port absent ou tenu apres Continuer) : boutons reactives, message affiche
+    L.carte = {env: e.env, port: e.port || "", precedent: e.precedent || "", fait: e.fait || [], erreur: e.erreur || "", envoi: false};
     planifie(e.env);
   } else if (e.type === "reprise_carte") {
     if (L && L.carte && L.carte.env === e.env) L.carte = null;
@@ -729,9 +738,12 @@ function majEtat() {
   else if (enCours && L && L.carte) { etat.textContent = "en pause : branchez la carte " + L.carte.env; etat.className = "puce alerte"; }
   else if (enCours) { etat.textContent = L && L.attente ? "en attente d'un autre build" : "lancement en cours"; etat.className = "puce encours"; }
   else if (L && L.fin) {
-    var ko = (L.fin.echecs || []).length;
-    etat.textContent = L.fin.resultat === "arrete" ? "arrêté" : (ko ? "terminé avec " + ko + " échec" + (ko > 1 ? "s" : "") : "terminé");
-    etat.className = "puce " + (ko || L.fin.resultat === "arrete" ? "erreur" : "ok");
+    var ko = (L.fin.echecs || []).length, ok = (L.fin.succes || []).length;
+    // arret seul (sans echec) : orange ; aucun env abouti (tous passes) : pas de « terminé » vert trompeur
+    if (L.fin.resultat === "arrete") etat.textContent = "arrêté";
+    else if (ko) etat.textContent = "terminé avec " + ko + " échec" + (ko > 1 ? "s" : "");
+    else etat.textContent = ok ? "terminé" : "terminé sans env abouti";
+    etat.className = "puce " + (ko ? "erreur" : L.fin.resultat === "arrete" || !ok ? "alerte" : "ok");
   } else { etat.textContent = "au repos"; etat.className = "puce"; }
   majBouton();
 }
@@ -946,7 +958,8 @@ function bandeauCarte(p) {
   });
   return h("div", {"class": "bandeau carte", "data-env": p.env},
     h("b", {texte: "Branchez la carte " + p.env + " sur " + p.port + " puis cliquez Continuer"}),
-    h("span", {texte: "La compilation est faite ; rien n'est envoyé avant votre réponse" + precede + "."}),
+    h("span", {texte: (p.fait.indexOf("compiler") >= 0 ? "Déjà fait : compilation (l'envoi reprendra le firmware compilé, " +
+                       "sans recompiler). " : "") + "Rien n'est envoyé avant votre réponse" + precede + "."}),
     p.erreur ? h("span", {"class": "erreur", texte: p.erreur}) : null,
     h("span", {"class": "choix"}, bContinuer, bPasser));
 }
@@ -955,9 +968,10 @@ async function repondCarte(p, choix) {
   p.envoi = true; p.erreur = "";
   planifie(null);
   var r = await appel("/continuer", {env: p.env, choix: choix});
-  p.envoi = false;
-  if (!r.ok) p.erreur = "Réponse refusée : " + (r.texte || ("HTTP " + r.statut));
-  planifie(null);                // le bandeau disparait a l'evenement reprise_carte
+  // reponse acceptee : boutons gardes desactives jusqu'a reprise_carte, ou a une nouvelle attente_carte (pause
+  // rouverte) ; la serie peut encore attendre un build ou reverifier le port, un second clic serait refuse (409)
+  if (!r.ok) { p.envoi = false; p.erreur = "Réponse refusée : " + (r.texte || ("HTTP " + r.statut)); }
+  planifie(null);
 }
 
 function dessineRecap() {
@@ -965,10 +979,11 @@ function dessineRecap() {
   zone.textContent = "";
   if (!L || !L.fin) return;
   var f = L.fin;
-  var ok = f.succes || [], ko = f.echecs || [], nl = f.non_lances || [], pa = f.passes || [];
+  var ok = f.succes || [], ko = f.echecs || [], nl = f.non_lances || [], pa = f.passes || [], ar = f.arretes || [];
   var t = (f.resultat === "arrete" ? "Lancement arrêté" : "Lancement terminé") + " : " + ok.length + " réussi" + (ok.length > 1 ? "s" : "") +
           ", " + ko.length + " échec" + (ko.length > 1 ? "s" : "") + (ko.length ? " (" + ko.join(", ") + ")" : "") +
           (pa.length ? ", " + pa.length + " passé" + (pa.length > 1 ? "s" : "") + " (" + pa.join(", ") + ")" : "") +
+          (ar.length ? ", " + ar.length + " arrêté" + (ar.length > 1 ? "s" : "") + " (" + ar.join(", ") + ")" : "") +
           (nl.length ? ", " + nl.length + " non lancé" + (nl.length > 1 ? "s" : "") + " (" + nl.join(", ") + ")" : "") + ".";
   zone.appendChild(h("div", {"class": ko.length ? "erreur" : "", style: "font-size:13px", texte: t}));
   if (f.fichiers_modifies && f.fichiers_modifies.length)

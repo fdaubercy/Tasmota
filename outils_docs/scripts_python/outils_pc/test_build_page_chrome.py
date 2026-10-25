@@ -503,6 +503,7 @@ def sonde_page(m, capture):
     sonde_pause(m)
     sonde_panneaux(m)
     sonde_sortie_bornee(cdp)
+    sonde_pause_synthetique(cdp)
     sonde_synthetique(cdp)
 
     # largeur telephone : colonnes empilees, pas de defilement horizontal
@@ -716,7 +717,7 @@ def sonde_pause(m):
     for env in (A, B, C):
         coche(cdp, f"#env-{env}", env in (A, C))
     for action in ("compiler", "upload", "erase_upload", "buildfs", "uploadfs"):
-        coche(cdp, f'input[name=action][value="{action}"]', action == "upload")
+        coche(cdp, f'input[name=action][value="{action}"]', action in ("compiler", "upload"))
     note = lambda env: cdp.js(f"document.querySelector('.env[data-env=\"{env}\"] .notes').textContent")
     verifie(("même port que " + A in note(C), "même port" in note(A)), (True, False),
             "pause : la ligne au port partage l'annonce (temoin : pas la premiere)")
@@ -724,9 +725,10 @@ def sonde_pause(m):
     cdp.js("document.getElementById('lancer').click()")
     texte = attend(cdp, bandeau, 15, 0.1) or ""
     verifie((f"Branchez la carte {C} sur COM12 puis cliquez Continuer" in texte, "Passer cet env" in texte,
+             "Déjà fait : compilation" in texte, "sans recompiler" in texte,
              cdp.js("document.getElementById('etat').textContent.startsWith('en pause')"),
-             cdp.js("document.getElementById('arreter').disabled")), (True, True, True, False),
-            "pause : bandeau « Branchez la carte », Continuer / Passer, puce en pause, arret disponible")
+             cdp.js("document.getElementById('arreter').disabled")), (True, True, True, True, True, False),
+            f"pause : bandeau « Branchez la carte », deja fait, Continuer / Passer, puce en pause, arret ({texte[:160]})")
     m.ouvre()                                                          # rechargement pendant la pause
     verifie(f"Branchez la carte {C}" in (attend(cdp, bandeau, 8, 0.1) or ""), True,
             "pause : rechargement de la page -> le flux rejoue, le bandeau revient")
@@ -734,6 +736,12 @@ def sonde_pause(m):
     fin = attend(cdp, f"(() => {{ const r = document.querySelector('.bloc[data-bloc=\"{C}\"] .rang[data-action=upload]');"
                       " return !document.querySelector('.bandeau.carte') && r && r.textContent.includes('réussi'); })()", 15)
     verifie(fin, True, "pause : Continuer -> bandeau retire, envoi de la 2e carte reussi")
+    r = cdp.js(f"""(() => {{ const b = document.querySelector('.bloc[data-bloc="{C}"]');
+      const d = a => (b.querySelector('.rang[data-action=' + a + '] .durees') || {{}}).textContent || '';
+      return {{compiler: d('compiler'), upload: d('upload')}}; }})()""") or {}
+    verifie(((r.get("compiler") or "").count("Pré-build"), "Compilation" in (r.get("compiler") or ""),
+             "Compilation" in (r.get("upload") or ""), "Téléversement" in (r.get("upload") or "")), (1, True, False, True),
+            f"pause : envoi -t nobuild suivi sur sa ligne, sans Compilation ni Pre-build en double ({r})")
     attend(cdp, "!document.getElementById('lancer').disabled", 10)
     cdp.js("document.getElementById('lancer').click()")
     attend(cdp, bandeau, 15, 0.1)
@@ -742,6 +750,46 @@ def sonde_pause(m):
     verifie(("1 passé (" + C in recap, cdp.js(f"document.querySelector('.bloc[data-bloc=\"{C}\"] .puce').textContent.startsWith('passé')"),
              cdp.js("!document.querySelector('.bandeau.carte')")), (True, True, True),
             f"pause : Passer cet env -> env passe, recap, bandeau retire ({recap[:90]})")
+
+
+JS_BANDEAU = "(() => { const b = document.querySelector('.bandeau.carte'); return b ? {texte: b.textContent, "              "off: [...b.querySelectorAll('button')].map(x => x.disabled)} : null; })()"
+
+
+def sonde_pause_synthetique(cdp):
+    """Pause rouverte (port absent apres Continuer), boutons apres une reponse acceptee, etat et recap."""
+    cdp.js("""(() => { const f0 = window.fetch; window._f1 = f0; window._continuer = 0;
+      window.fetch = function (u, o) { if (String(u) === '/continuer') { window._continuer++;
+          return Promise.resolve(new Response('{"ok": true}', {status: 200})); } return f0.apply(this, arguments); };
+      return true; })()""")
+    ligne = {"env": "P", "methode": "com", "port": "COM12", "ip": ""}
+    injecte(cdp, [{"type": "debut", "env": None, "actions": ["compiler", "upload"], "lignes": [ligne]},
+                  {"type": "debut", "env": "P", "actions": ["compiler", "upload"], "methode": "com", "port": "COM12"},
+                  {"type": "attente_carte", "env": "P", "port": "COM12", "precedent": "O", "fait": ["compiler"], "erreur": ""}])
+    cdp.js("document.querySelector('.bandeau.carte button[data-choix=continuer]').click()")
+    time.sleep(0.5)
+    apres = cdp.js(JS_BANDEAU) or {}
+    verifie((cdp.js("window._continuer"), apres.get("off")), (1, [True, True]),
+            "pause_synthetique : reponse acceptee -> boutons desactives jusqu'a la suite (pas de 409 trompeur)")
+    injecte(cdp, [{"type": "attente_carte", "env": "P", "port": "COM12", "precedent": "O", "fait": ["compiler"],
+                   "erreur": "COM12 absent : rebranchez la carte P puis cliquez Continuer (ou Passer cet env)"}])
+    rouvert = cdp.js(JS_BANDEAU) or {}
+    verifie(("COM12 absent : rebranchez" in rouvert.get("texte", ""), rouvert.get("off")), (True, [False, False]),
+            "pause_synthetique : port absent -> pause rouverte, message dans le bandeau, boutons reactives")
+    injecte(cdp, [{"type": "reprise_carte", "env": "P", "port": "COM12", "choix": "passer"},
+                  {"type": "fin_env", "env": "P", "resultat": "passe", "secondes": 1, "statuts": {"compiler": "succes", "upload": "annulee"}},
+                  {"type": "fin", "env": None, "resultat": "termine", "succes": [], "echecs": [], "passes": ["P"], "arretes": [],
+                   "non_lances": [], "fichiers_modifies": []}])
+    etat = cdp.js("({t: document.getElementById('etat').textContent, c: document.getElementById('etat').className})") or {}
+    verifie((cdp.js(JS_BANDEAU), etat.get("t") == "terminé", "ok" in (etat.get("c") or "")), (None, False, False),
+            f"pause_synthetique : tous passes -> pas d'etat vert « termine » trompeur ({etat})")
+    injecte(cdp, [{"type": "debut", "env": None, "actions": ["compiler"], "lignes": [ligne]},
+                  {"type": "fin", "env": None, "resultat": "arrete", "succes": ["O"], "echecs": [], "passes": [], "arretes": ["P"],
+                   "non_lances": ["Q"], "fichiers_modifies": []}])
+    r = cdp.js("({recap: document.getElementById('recap').textContent, rouge: !!document.querySelector('#recap .erreur'),"
+               " c: document.getElementById('etat').className})") or {}
+    verifie(("1 arrêté (P)" in r.get("recap", ""), "0 échec" in r.get("recap", ""), r.get("rouge"), "erreur" in (r.get("c") or "")),
+            (True, True, False, False), f"pause_synthetique : env arrete pendant la pause -> ni echec ni rouge ({r.get('recap', '')[:100]})")
+    cdp.js("window.fetch = window._f1; true")
 
 
 def sonde_infobulle(m):

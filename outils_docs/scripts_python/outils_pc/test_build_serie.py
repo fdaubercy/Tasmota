@@ -332,8 +332,9 @@ def test_pause_avant_envoi():
         m = Montage(t)
         ev = lance_pause(m, [com(A, PAUSE_PORT), com(B, PAUSE_PORT)], {"compiler", "upload"})
         pause = du_type(ev, "attente_carte")
-        verifie([(p["env"], p["port"], p["precedent"]) for p in pause], [(B, PAUSE_PORT, A)],
-                "pause : attente_carte (env, port, env precedent sur ce port)")
+        verifie([(p["env"], p["port"], p["precedent"], p.get("fait"), p.get("erreur")) for p in pause],
+                [(B, PAUSE_PORT, A, ["compiler"], "")],
+                "pause : attente_carte (env, port, env precedent, deja fait : compilation, pas d'erreur)")
         verifie([a["argv"] for a in m.appels()],
                 [["run", "-e", A, "-t", "upload", "--upload-port", PAUSE_PORT], ["run", "-e", B]],
                 "pause : la compilation de l'env 2 se fait AVANT la pause, son envoi pas encore")
@@ -347,8 +348,12 @@ def test_pause_avant_envoi():
         m.builds = lambda n: ["tasmota32-vscode"] if n == k else []
         m.serie.reprend(B, "continuer")
         ev = m.attend("fin")
-        verifie([a["argv"] for a in m.appels()][2:], [["run", "-e", B, "-t", "upload", "--upload-port", PAUSE_PORT]],
-                "pause : Continuer -> envoi de l'env 2 lance")
+        verifie([a["argv"] for a in m.appels()][2:],
+                [["run", "-e", B, "-t", "nobuild", "-t", "upload", "--upload-port", PAUSE_PORT]],
+                "pause : Continuer -> envoi de l'env 2 sans recompiler (-t nobuild -t upload)")
+        etapes_envoi = [e["etape"] for e in du_type(ev, "etape", env=B, action="upload")]
+        verifie(("Compilation" in etapes_envoi, "Téléversement" in etapes_envoi), (False, True),
+                f"pause : suivi de l'envoi sans etape Compilation ({etapes_envoi})")
         verifie([(e["env"], e["choix"]) for e in du_type(ev, "reprise_carte")], [(B, "continuer")],
                 "pause : evenement reprise_carte (choix continuer)")
         verifie([e["builds"] for e in du_type(ev, "attente", env=B)], [["tasmota32-vscode"], []],
@@ -362,10 +367,19 @@ def test_pause_place():
     """Sans compiler, la pause precede le pio run qui compile et envoie ; une seule pause par env ; temoins."""
     with tempfile.TemporaryDirectory() as t:
         m = Montage(t)
-        lance_pause(m, [com(A, PAUSE_PORT), com(B, PAUSE_PORT)], {"upload"})
-        verifie([a["env"] for a in m.appels()], [A], "pause_place : upload seul -> pause avant le pio run de l'env 2")
+        ev = lance_pause(m, [com(A, PAUSE_PORT), com(B, PAUSE_PORT)], {"upload"})
+        verifie(([a["env"] for a in m.appels()], du_type(ev, "attente_carte")[0].get("fait")), ([A], []),
+                "pause_place : upload seul -> pause avant le pio run de l'env 2, rien de fait")
         m.serie.reprend(B, "continuer")
         m.attend("fin")
+        verifie(m.appels()[-1]["argv"], ["run", "-e", B, "-t", "upload", "--upload-port", PAUSE_PORT],
+                "pause_place : compiler non coche -> -t upload normal (il compile)")
+        lance_pause(m, [com(A, PAUSE_PORT), com(B, PAUSE_PORT)], {"compiler", "erase_upload"})
+        m.serie.reprend(B, "continuer")
+        m.attend("fin")
+        verifie([a["argv"] for a in m.appels()][-2:],
+                [["run", "-e", B], ["run", "-e", B, "-t", "nobuild", "-t", "erase_upload", "--upload-port", PAUSE_PORT]],
+                "pause_place : compiler + erase_upload -> compilation, pause, -t nobuild -t erase_upload")
         lance_pause(m, [com(A, PAUSE_PORT), com(B, PAUSE_PORT)], {"buildfs", "uploadfs"})
         verifie([(a["env"], a["cible"]) for a in m.appels()][-3:], [(A, "buildfs"), (A, "uploadfs"), (B, "buildfs")],
                 "pause_place : buildfs + uploadfs -> FS de l'env 2 construit avant la pause")
@@ -397,26 +411,45 @@ def test_pause_passer():
 
 
 def test_pause_port_perdu():
+    """Port absent ou tenu apres Continuer : la pause RESTE ouverte avec le message ; reessayer, passer, arreter."""
     with tempfile.TemporaryDirectory() as t:
         m = Montage(t)
         lance_pause(m, [com(A, PAUSE_PORT), com(B, PAUSE_PORT), com(C, "COM3")], {"compiler", "upload"})
         m.ports[PAUSE_PORT] = "absent"                    # carte debranchee et pas rebranchee
         m.serie.reprend(B, "continuer")
+        ev = m.attend("attente_carte")
+        p = du_type(ev, "attente_carte")
+        erreur = p[-1].get("erreur", "") if p else ""
+        verifie((PAUSE_PORT in erreur, "absent" in erreur, "rebranchez" in erreur, m.serie.pause_en_cours() is not None),
+                (True, True, True, True), f"pause_port_perdu : port absent -> pause rouverte avec le message ({erreur})")
+        verifie((du_type(ev, "echec"), du_type(ev, "reprise_carte"), len(m.appels())), ([], [], 2),
+                "pause_port_perdu : ni echec ni envoi, la pause continue")
+        m.ports[PAUSE_PORT] = "tenu"
+        m.serie.reprend(B, "continuer")
+        p = du_type(m.attend("attente_carte"), "attente_carte")
+        verifie(bool(p) and "tenu par un autre outil" in p[-1].get("erreur", ""), True,
+                "pause_port_perdu : port tenu -> message, pause gardee")
+        m.ports[PAUSE_PORT] = "libre"                     # carte rebranchee : nouvel essai
+        m.serie.reprend(B, "continuer")
         ev = m.attend("fin")
         fe = {e["env"]: (e["resultat"], e["statuts"]) for e in du_type(ev, "fin_env")}
-        verifie(fe.get(B), ("echec", {"compiler": "succes", "upload": "echec"}),
-                "pause_port_perdu : port absent a la reprise -> echec de l'env, compilation gardee")
-        e = du_type(ev, "echec", env=B)
-        verifie(bool(e) and PAUSE_PORT in e[0]["motif"] and "absent" in e[0]["motif"] and B in e[0]["motif"], True,
-                f"pause_port_perdu : motif clair ({e[0]['motif'] if e else None})")
-        verifie((fe.get(C, ("",))[0], [a["env"] for a in m.appels()]), ("succes", [A, B, C]),
-                "pause_port_perdu : la serie continue, aucun envoi de l'env 2")
-        m.ports[PAUSE_PORT] = "tenu"
-        lance_pause(m, [com(A, "COM3"), com(B, "COM3")], {"upload"})
-        m.ports["COM3"] = "tenu"
+        verifie((fe.get(B), fe.get(C, ("",))[0]), (("succes", {"compiler": "succes", "upload": "succes"}), "succes"),
+                "pause_port_perdu : rebranchee puis Continuer -> envoi fait, la serie continue")
+        lance_pause(m, [com(A, PAUSE_PORT), com(B, PAUSE_PORT)], {"upload"})
+        m.ports[PAUSE_PORT] = "absent"                    # absent apres le lancement (le controle l'aurait refuse avant)
         m.serie.reprend(B, "continuer")
-        e = du_type(m.attend("fin"), "echec", env=B)
-        verifie(bool(e) and "tenu" in e[0]["motif"], True, "pause_port_perdu : port tenu a la reprise -> echec")
+        m.attend("attente_carte")
+        m.serie.reprend(B, "passer")
+        fe = du_type(m.attend("fin"), "fin_env", env=B)
+        verifie(fe[0]["resultat"] if fe else None, "passe", "pause_port_perdu : apres le message, Passer reste possible")
+        m.ports[PAUSE_PORT] = "libre"
+        lance_pause(m, [com(A, PAUSE_PORT), com(B, PAUSE_PORT)], {"upload"})
+        m.ports[PAUSE_PORT] = "absent"
+        m.serie.reprend(B, "continuer")
+        m.attend("attente_carte")
+        m.serie.arrete(False)
+        fe = du_type(m.attend("fin", delai=5), "fin_env", env=B)
+        verifie(fe[0]["resultat"] if fe else None, "arrete", "pause_port_perdu : apres le message, l'arret marche")
 
 
 def test_pause_reprend_refus():
@@ -455,8 +488,9 @@ def test_pause_arrets():
             verifie((fe[0]["resultat"], fe[0]["statuts"]) if fe else None, ("arrete", {"compiler": "succes", "upload": "annulee"}),
                     f"pause_arrets : {nom} -> env 2 arrete, envoi annule")
             f = du_type(ev, "fin")
-            verifie((f[0]["resultat"], f[0]["non_lances"]) if f else None, ("arrete", [C]),
-                    f"pause_arrets : {nom} -> serie arretee, env 3 non lance")
+            verifie((f[0]["resultat"], f[0]["non_lances"], f[0]["echecs"], f[0].get("arretes")) if f else None,
+                    ("arrete", [C], [], [B]),
+                    f"pause_arrets : {nom} -> serie arretee, env 2 arrete (pas un echec), env 3 non lance")
             verifie((m.serie.en_cours(), [a["env"] for a in m.appels()]), (False, [A, B]),
                     f"pause_arrets : {nom} -> aucun envoi de l'env 2")
 

@@ -3,7 +3,10 @@
 Appele a la place de pio.exe par la variable BUILD_WEB_PIO (build_serie.py lance un `.py` avec le
 Python courant). Accepte la forme utilisee par la serie :
 
-    build_faux_pio.py run -e <env> [-t <cible>] [--upload-port COMn]
+    build_faux_pio.py run -e <env> [-t nobuild] [-t <cible>] [--upload-port COMn]
+
+Plusieurs -t : la derniere cible choisit le cas ; avec -t nobuild (envoi apres la pause « rebranchez la
+carte » : firmware deja compile), la sortie nominale ne rejoue aucune compilation, comme le vrai pio.
 
 Le scenario est un fichier JSON dont le chemin est dans BUILD_WEB_FAUX_SCENARIO :
 
@@ -49,16 +52,17 @@ NOMINAL = {"build": _COMPILE, "upload": _COMPILE + _ENVOI, "erase_upload": _COMP
 
 
 def analyse(argv):
-    """(env, cible, port) d'un appel `run -e X [-t T] [--upload-port P]` ; ValueError sinon."""
+    """(env, cible, port, cibles) d'un appel `run -e X [-t T]... [--upload-port P]` ; ValueError sinon."""
     if not argv or argv[0] != "run":
         raise ValueError(f"faux pio : seule la commande run est simulee ({argv!r})")
-    env, cible, port, i = "", "build", "", 1
+    env, cible, port, cibles, i = "", "build", "", [], 1
     while i < len(argv):
         option = argv[i]
         valeur = argv[i + 1] if i + 1 < len(argv) else ""
         if option in ("-e", "--environment"):
             env = valeur
         elif option in ("-t", "--target"):
+            cibles.append(valeur)
             cible = valeur
         elif option == "--upload-port":
             port = valeur
@@ -67,7 +71,7 @@ def analyse(argv):
         i += 2
     if not env:
         raise ValueError("faux pio : -e manquant")
-    return env, cible, port
+    return env, cible, port, cibles
 
 
 def journalise(**enregistrement):
@@ -77,21 +81,24 @@ def journalise(**enregistrement):
             f.write(json.dumps(enregistrement, ensure_ascii=False) + "\n")
 
 
-def cas(env, cible):
+def cas(env, cible, cibles=()):
     chemin = os.environ.get(VAR_SCENARIO)
     scenario = json.loads(Path(chemin).read_text(encoding="utf-8")) if chemin else {}
     trouve = (scenario.get(env) or {}).get(cible) or (scenario.get("*") or {}).get(cible) or {}
     resultat = dict(trouve)
     if "lignes" not in resultat:
         fin = "[SUCCESS] Took 0.10 seconds" if not resultat.get("code") else "[FAILED] Took 0.10 seconds"
-        resultat["lignes"] = NOMINAL.get(cible, []) + [fin]
+        nominal = NOMINAL.get(cible, [])
+        if "nobuild" in cibles:                          # firmware deja compile : ni compilation ni edition des liens
+            nominal = [ligne for ligne in nominal if ligne not in _COMPILE[1:]]
+        resultat["lignes"] = nominal + [fin]
     return resultat
 
 
 def main(argv):
-    env, cible, port = analyse(argv)
-    c = cas(env, cible)
-    journalise(type="debut", pid=os.getpid(), argv=argv, env=env, cible=cible, port=port,
+    env, cible, port, cibles = analyse(argv)
+    c = cas(env, cible, cibles)
+    journalise(type="debut", pid=os.getpid(), argv=argv, env=env, cible=cible, cibles=cibles, port=port,
                ota_ip=os.environ.get("TASMOTA_OTA_IP"),
                platformio_upload_port=os.environ.get("PLATFORMIO_UPLOAD_PORT"),
                platformio_extra_scripts=os.environ.get("PLATFORMIO_EXTRA_SCRIPTS"), pythonioencoding=os.environ.get("PYTHONIOENCODING"),
