@@ -839,29 +839,6 @@
               "detail"
             ]
           },
-          "logs": {
-            "type": "object",
-            "properties": {
-              "nbLogsFiles": {
-                "type": "integer",
-                "description": "Nombre de fichiers de log conserves."
-              },
-              "fileLogName": {
-                "type": "string",
-                "description": "Chemin de base des fichiers de log tournants : /logs/cuve.log -> /logs/cuve1.log ... cuveN.log."
-              },
-              "fileLogSize_Ko": {
-                "type": "integer",
-                "description": "Taille max d'un fichier de log tournant, en OCTETS malgre le nom de la cle (10000 = ~10 Ko ; voir gestionFileFolder.enregistreLogs)."
-              }
-            },
-            "required": [
-              "nbLogsFiles",
-              "fileLogName",
-              "fileLogSize_Ko"
-            ],
-            "additionalProperties": true
-          },
           "environnement": {
             "type": "object",
             "description": "Peripheriques et broches du bloc (cles variables selon la carte).",
@@ -1732,6 +1709,29 @@
             },
             "additionalProperties": true
           },
+          "logs": {
+            "type": "object",
+            "properties": {
+              "nbLogsFiles": {
+                "type": "integer",
+                "description": "Nombre de fichiers de log conserves."
+              },
+              "fileLogName": {
+                "type": "string",
+                "description": "Chemin de base des fichiers de log tournants : /logs/cuve.log -> /logs/cuve1.log ... cuveN.log."
+              },
+              "fileLogSize_Ko": {
+                "type": "integer",
+                "description": "Taille max d'un fichier de log tournant, en OCTETS malgre le nom de la cle (10000 = ~10 Ko ; voir gestionFileFolder.enregistreLogs)."
+              }
+            },
+            "required": [
+              "nbLogsFiles",
+              "fileLogName",
+              "fileLogSize_Ko"
+            ],
+            "additionalProperties": true
+          },
           "dimensions": {
             "type": "object",
             "properties": {
@@ -1753,7 +1753,6 @@
           "activation",
           "reglage",
           "log",
-          "logs",
           "environnement"
         ],
         "additionalProperties": true

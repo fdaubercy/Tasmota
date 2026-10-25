@@ -177,11 +177,6 @@
 			"activation": "ON",
 			"reglage": "OFF",
 			"log": "detail",
-			"logs": {
-				"nbLogsFiles": 15,
-				"fileLogName": "/logs/grenier.log",
-				"fileLogSize_Ko": 10000
-			},
 			"environnement": {
 				"boutons": {
 					"bouton1": {

@@ -298,7 +298,9 @@ def logFonctions_regle(quoi, mot)
         var nom = logFonctions.trouveCle(profils.keys(), mot)
         if (nom == nil)    return "Erreur : profil inconnu '" + mot + "' (profils : " + logFonctions.enTexte(profils.keys()) + ")"    end
         logs["profil"] = nom
-        persist.dirty()    persist.save()
+        # Convention du depot (audit P6.6, 2026-10-25) : persist.save(true) apres une modif IMBRIQUEE (elle ne
+        # marque pas le persist modifie) ; save() seul suffit apres une affectation 'persist.x = ...'.
+        persist.save(true)
         logFonctions.appliqueProfil()
         return logFonctions.etatReglages()
     end
@@ -309,7 +311,7 @@ def logFonctions_regle(quoi, mot)
         var profil = logFonctions.profilActif()
         if (profil == nil)    return "Erreur : aucun profil actif dans diverses.logs du persist"    end
         profil[quoi] = mot
-        persist.dirty()    persist.save()
+        persist.save(true)
         logFonctions.appliqueProfil()
         return logFonctions.etatReglages()
     end
@@ -324,7 +326,7 @@ def logFonctions_regle(quoi, mot)
                 logFonctions.etat()["seuils"][c] = logFonctions.NIVEAUX_MODULE[mot]
             end
         end
-        persist.dirty()    persist.save()
+        persist.save(true)
         return logFonctions.etatReglages()
     end
 
@@ -337,7 +339,7 @@ def logFonctions_regle(quoi, mot)
     var lieu = logFonctions.lieu(cible)
     if (lieu == nil)    return "Erreur : le module '" + cible + "' n'est pas configuré sur cette carte"    end
     lieu[0][lieu[1]] = mot
-    persist.dirty()    persist.save()
+    persist.save(true)
     logFonctions.etat()["seuils"][cible] = logFonctions.NIVEAUX_MODULE[mot]
     return logFonctions.etatReglages()
 end

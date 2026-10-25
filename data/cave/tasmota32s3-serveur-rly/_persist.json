@@ -175,11 +175,6 @@
 			"activation": "ON",
 			"reglage": "OFF",
 			"log": "detail",
-			"logs": {
-				"nbLogsFiles": 15,
-				"fileLogName": "/logs/pompe-vide-cave.log",
-				"fileLogSize_Ko": 10000
-			},
 			"environnement": {
 				"boutons": {
 					"bouton1": {
@@ -368,11 +363,6 @@
 			"activation": "ON",
 			"reglage": "OFF",
 			"log": "detail",
-			"logs": {
-				"nbLogsFiles": 15,
-				"fileLogName": "/logs/thermo-hygrometre.log",
-				"fileLogSize_Ko": 10000
-			},
 			"environnement": {
 				"boutons": {
 					"bouton1": {
@@ -522,11 +512,6 @@
 			"activation": "ON",
 			"reglage": "OFF",
 			"log": "detail",
-			"logs": {
-				"nbLogsFiles": 15,
-				"fileLogName": "/logs/autres.log",
-				"fileLogSize_Ko": 10000
-			},
 			"environnement": {
 				"boutons": {
 					"bouton1": {
