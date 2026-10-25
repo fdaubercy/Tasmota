@@ -156,6 +156,21 @@ OUTILS = [
         arret_refuse="Tant qu'un lancement de build est en cours (l'outil le signale par /execution), l'arrêt est "
                      "refusé jusqu'à sa fin, pour ne pas couper un téléversement ni laisser un pio orphelin. Pour "
                      "abréger, l'arrêter d'abord depuis sa page (« Arrêter après cet env » ou « Arrêt immédiat »)."),
+    Outil(
+        "fichiers_berry", "Fichiers Berry par env", "Fichiers Berry par env", GROUPES[2],
+        "Choisit, env par env, les fichiers Berry sur le FS, exclus ou solidifiés, et crée un env à partir "
+        "d'une carte modèle.",
+        "Page web qui lit et écrit platformio_tasmota_cenv.ini : pour chaque fichier Berry (data/fs, dossier de "
+        "la carte, modules de l'amont), son état dans l'env (sur le FS, exclu, solidifié) et d'où vient sa ligne ; "
+        "une liste partagée ([berry_commun], option d'une base) n'est modifiée qu'après avoir vu les envs touchés. "
+        "Diff avant chaque écriture, copie .bak, écriture refusée pendant un build. Crée aussi un env (section du "
+        "cenv, dossier data/, section de user_config_override.h) à partir d'une carte modèle. Seul paramètre ici : "
+        "le port de la page (7800). Rien n'est écrit sans « Enregistrer » : l'arrêter à tout moment.",
+        DOSSIER + "outils_pc/fichiers_berry_web.py",
+        [_port("http", 7800)],
+        "http",
+        "Console capturée : " + CONSOLE.format("fichiers_berry") + ". Copies avant écriture : "
+        "platformio_tasmota_cenv.ini.bak et tasmota/user_config_override.h.bak."),
 ]
 
 

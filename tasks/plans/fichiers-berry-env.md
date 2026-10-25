@@ -234,11 +234,11 @@ rappel « le build suivant repart de zéro », champ « raison » par ajout), bo
 (formulaire de §2.6, champs préremplis par `identite_par_defaut` via `/creation/prepare`), et après un
 enregistrement le lien « Construire / téléverser le FS » vers `http://127.0.0.1:7700/?env=<nom>`.
 
-- [ ] Sonde : chargement sans erreur JS, `?env=` présélectionne, Appliquer sur un fichier du socle ouvre la
+- [x] Sonde : chargement sans erreur JS, `?env=` présélectionne, Appliquer sur un fichier du socle ouvre la
   fenêtre partagée avec la liste des envs, Annuler ne laisse rien en attente, diff affiché puis enregistrement
-  (cenv d'essai modifié), formulaire de création prérempli ; témoin `INJECTION_TEMOIN` → ROUGE détecté.
-- [ ] Sonde ROUGE, puis écrire la page, sonde VERTE.
-- [ ] Commit `feat(fichiers-berry): page disposition B et sonde Chrome`.
+  (cenv d'essai modifié), formulaire de création prérempli ; témoin `INJECTION_TEMOIN` → ROUGE détecté. — preuve : test_fichiers_berry_page_chrome.py (15 controles + temoin)
+- [x] Sonde ROUGE, puis écrire la page, sonde VERTE. — preuve : ROUGE contre la page provisoire, VERTE sur fichiers_berry_page.PAGE
+- [x] Commit `feat(fichiers-berry): page disposition B et sonde Chrome`. — preuve : 54a0e69b1
 
 ## A7 — Accès : cible Custom, tâche VS Code, annuaire
 
@@ -255,9 +255,9 @@ DOSSIER + "outils_pc/fichiers_berry_web.py", [_port("http", 7800)], "http", "Con
 CONSOLE.format("fichiers_berry"))`, `dans_job=True`, pas de `route_occupe`) ; `outils_pc/test_annuaire.py`
 (l.43-44 : ids + `"fichiers_berry"` ; l.342-345 : 7 → 8).
 
-- [ ] `test_cible_fichiers_berry.py` ROUGE, écrire la cible, VERT ; `test_annuaire.py` mis à jour VERT.
-- [ ] Vérifier par lecture que `CIBLES_HORS_BUILD` contient la cible (pas de `pio run --list-targets`, leçon du
-  2026-10-17) ; demander à l'utilisateur de rafraîchir Project Tasks hors build et de lancer la cible une fois.
+- [x] `test_cible_fichiers_berry.py` ROUGE, écrire la cible, VERT ; `test_annuaire.py` mis à jour VERT. — preuve : test_cible_fichiers_berry.py VERT 6/6 ; test_annuaire.py ROUGE (3 KO) puis VERT ; test_garde_build alignement VERT (temoin KO)
+- [x] Vérifier par lecture que `CIBLES_HORS_BUILD` contient la cible (pas de `pio run --list-targets`, leçon du
+  2026-10-17) ; demander à l'utilisateur de rafraîchir Project Tasks hors build et de lancer la cible une fois. — preuve : CIBLES_HORS_BUILD : pre_utilitaires_platformio.py (lecture du code, sans pio)
 - [ ] Tâche VS Code lancée une fois (Tasks: Run Task) avant d'être annoncée (leçon du 2026-10-13).
 - [ ] Commit `feat(fichiers-berry): cible Custom et tuile de l annuaire`.
 

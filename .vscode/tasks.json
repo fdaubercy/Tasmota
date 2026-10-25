@@ -190,12 +190,23 @@
         },
         {
             // Page de build et televersement (compiler / televerser firmware et FS, COM ou OTA par
-            // carte, suivi en direct) : lien dans la console, navigateur ouvert. Lance des `pio run`
-            // elle-meme : pas de cible PlatformIO Custom pour celle-ci.
+            // carte, suivi en direct) : lien dans la console, navigateur ouvert. Aussi cible Custom
+            // « Build et televersement (page web) », qui la demarre detachee (jamais pendant un build).
             "label": "Outil : build et televersement (http://127.0.0.1:7700)",
             "type": "process",
             "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
             "args": ["-u", "outils_docs/scripts_python/outils_pc/build_web.py", "--http", "7700"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
+        },
+        {
+            // Fichiers Berry de chaque env (sur le FS, exclu, solidifie) dans platformio_tasmota_cenv.ini,
+            // et creation d'un env a partir d'une carte modele. Aussi cible Custom « Fichiers Berry par env
+            // (page web) » ; cette tache, elle, n'est pas un `pio run` : utilisable pendant un build.
+            "label": "Outil : fichiers Berry par env (http://127.0.0.1:7800)",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/fichiers_berry_web.py", "--http", "7800"],
             "presentation": { "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
         }
