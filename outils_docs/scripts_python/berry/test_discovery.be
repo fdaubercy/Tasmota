@@ -7,7 +7,7 @@
 #   4.   Page /discovery : une entree sans bloc 'config', ou un ipMaitre vide, ne tronque plus la page.
 #   5.   RoutageRangeExtender : une fiche MAC sans 'lwt' ou sans bloc 'rangeExtender' ne leve plus.
 #   5 bis. redirige : RgxPort envoye une seule fois par port/IP (doublons de la table NAPT lwIP).
-#   6.   Boutons RangeExtender : 'lwt'/'config'/'sensors' ne sont plus pris pour des fiches.
+#   6.   Etat reseau (ex-boutons RangeExtender) : 'lwt'/'config'/'sensors' ne sont pas pris pour des fiches.
 #   7.   Bout en bout : l'esclave ecrit sa fiche, l'envoie en UDP (forceEnvoiParams) et en MQTT ;
 #        le maitre la range ; chaque champ lu par un script consommateur (CONTRAT) doit y etre.
 #   11.  mqtt_discovery : discovery.json ecrit seulement si le contenu change ; 'sensors' ignore.
@@ -28,6 +28,8 @@
 #        echoue ; jamais sans reseau, jamais deux fois ; nouvel essai 60 s apres un refus ; rien apres Save.
 #   25.  P8.6 (2026-10-25) : peremption des fiches : Offline sans ImAlive depuis 2 x telePeriod, verifiee a
 #        chaque telePeriod (au lieu d'un reset unique de toutes les fiches) ; ImAlive remet Online.
+#   26.  P8.8 (2026-10-25) : etatReseau croise RgxClients et les fiches par MAC (ok, muet, absent, fantome,
+#        ip, box, inconnu), affiche sur la page /discovery du maitre.
 # Les lecteurs de modbusFonctions (clients TCP, IP UDP : fichesModbus) sont testes dans
 # banc_test_modbus.be section 6, sur la meme forme de table.
 #
@@ -320,7 +322,10 @@ verifie("apres un refus : RgxPort renvoye", 1, size(tasmota.cmds))
 rangeExtenderFonctions.etat()["redirections"] = {}   # section 6 verifie un RgxPort neuf
 
 print("")
-print("=== 6. Boutons RangeExtender : fiche MAC complete (config, sensors, lwt) ===")
+print("=== 6. Etat reseau : fiche MAC complete (config, sensors, lwt) ===")
+# Les boutons RangeExtender (afficheBoutonsModulesEsclaves, appel commente) sont retires (P5.10, 2026-10-25) :
+# etatReseau (P8.8) est desormais le lecteur de RgxClients. Meme piege : 'lwt' (chaine), 'config', 'sensors'
+# ne doivent pas etre pris pour des fiches.
 var init6 = ficheCuve(true)
 init6["config"] = configCuve()
 init6["sensors"] = {"sn": {"Time": "2026-09-30T12:00:00"}}
@@ -328,21 +333,15 @@ init6["lwt"] = "Online"
 var table6 = {}
 table6[CLE_CUVE] = init6
 table6["AAAAAAAAAA01"] = {"maitre": {"id": 0, "nom": "Serveur", "IPAddress": "192.168.0.43"}, "lwt": "Online"}
-gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(table6)}
-tasmota.rgxClients = {}
-tasmota.rgxClients[CLE_CUVE] = {"IPAddress": "192.168.4.2", "RSSI": -60}
-tasmota.cmds = []
-webserver.envoye = []
-verifie("boutons ne levent pas (lwt chaine dans la fiche)", "OK", essaie(def () rangeExtenderFonctions.afficheBoutonsModulesEsclaves() end))
-verifie("1 bouton pour l'esclave connecte", 1, size(webserver.envoye))
-verifie("routage NAPT pose pour l'esclave", true, tasmota.cmds.find("RgxPort tcp, 8081, 192.168.4.2, 80") != nil)
+var rgx6 = {}
+rgx6[CLE_CUVE] = {"IPAddress": "192.168.4.2", "RSSI": -60}
+var e6 = nil
+verifie("etatReseau ne leve pas (lwt chaine dans la fiche)", "OK", essaie(def () e6 = discoveryFonctions.etatReseau(table6, rgx6) end))
+verifie("1 esclave classe, associe et vivant ; le maitre n'est pas classe", "1 ok",
+        e6 == nil ? "nil" : str(size(e6)) + " " + (size(e6) > 0 ? e6[0]["etat"] : ""))
 init6["lwt"] = "Offline"
-gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(table6)}
-webserver.envoye = []
-essaie(def () rangeExtenderFonctions.afficheBoutonsModulesEsclaves() end)
-verifie("aucun bouton si l'esclave est Offline", 0, size(webserver.envoye))
-gestionFileFolder.fichiers = {}
-verifie("table absente : ne leve pas", "OK", essaie(def () rangeExtenderFonctions.afficheBoutonsModulesEsclaves() end))
+verifie("esclave Offline : associe mais muet", "muet", discoveryFonctions.etatReseau(table6, rgx6)[0]["etat"])
+verifie("table absente : ne leve pas", "OK", essaie(def () discoveryFonctions.etatReseau(nil, rgx6) end))
 
 print("")
 print("=== 7. Bout en bout : fiche ecrite par l'esclave -> UDP et MQTT -> table du maitre ===")
@@ -1464,6 +1463,67 @@ imAlive(ficheCuve(true))
 verifie("ImAlive apres peremption : de nouveau Online", "Online", lwt25(CLE_CUVE))
 verifie("t=2100 s : cuve vue a 1810 s reste Online", "OK Online", tick25(2100000) + " " + str(lwt25(CLE_CUVE)))
 tasmota.rappelsTimer = nil
+
+print("")
+print("=== 26. P8.8 : etatReseau, RgxClients x fiches par MAC, affiche sur /discovery ===")
+# Avant : la discovery seule ne distinguait pas une panne Wi-Fi (esclave non associe au point d'acces)
+# d'une panne UDP (associe mais muet), ni une fiche fantome (carte remplacee, meme IP autre MAC) (R4).
+def fiche26(id, nom, ip, mac, typeConnection)
+  var r = {}
+  r["esclave" + str(id)] = {"id": id, "nom": nom, "IPAddress": ip, "adresseMAC": mac, "typeConnection": typeConnection,
+                            "rangeExtender": {"activation": "ON", "id": id}}
+  return r
+end
+var t26 = {}
+t26["AA0000000001"] = fiche26(2, "Cuve", "192.168.4.2", "AA:00:00:00:00:01", "RangeExtender")      # associe, vivant
+t26["AA0000000001"]["lwt"] = "Online"
+t26["AA0000000002"] = fiche26(3, "Rideau", "192.168.4.3", "AA:00:00:00:00:02", "RangeExtender")    # associe, muet
+t26["AA0000000002"]["lwt"] = "Offline"
+t26["AA0000000003"] = fiche26(4, "Ancienne cuve", "192.168.4.4", "AA:00:00:00:00:03", "RangeExtender")   # fantome
+t26["AA0000000003"]["lwt"] = "Offline"
+t26["AA0000000004"] = fiche26(5, "Piscine", "192.168.4.5", "AA:00:00:00:00:04", "RangeExtender")   # absent du point d'acces
+t26["AA0000000004"]["lwt"] = "Offline"
+t26["AA0000000005"] = fiche26(6, "Cave", "192.168.4.6", "AA:00:00:00:00:05", "RangeExtender")      # IP divergente
+t26["AA0000000005"]["lwt"] = "Online"
+t26["AA0000000006"] = fiche26(7, "Differentiel", "192.168.0.50", "AA:00:00:00:00:06", "WifiClassique")   # sur la box
+t26["AA0000000006"]["lwt"] = "Online"
+t26["BB0000000000"] = {"config": {"dn": "Module MQTT seul", "ip": "192.168.0.60", "hn": "MODULE-MQTT"}, "lwt": "Online"}                      # pas un esclave UDP
+t26["esclave9"] = "entree racine illisible"
+var rgx26 = {"AA0000000001": {"IPAddress": "192.168.4.2", "RSSI": -22},
+             "AA0000000002": {"IPAddress": "192.168.4.3", "RSSI": -70},
+             "AA0000000005": {"IPAddress": "192.168.4.9", "RSSI": -40},
+             "CC0000000007": {"IPAddress": "192.168.4.4", "RSSI": -50}}     # nouvelle carte, IP de l'ancienne cuve
+var e26 = nil
+verifie("etatReseau ne leve pas", "OK", essaie(def () e26 = discoveryFonctions.etatReseau(t26, rgx26) end))
+def classe26(mac)
+  for x: (e26 == nil ? [] : e26)    if x["mac"] == mac    return x["etat"]    end    end
+  return nil
+end
+verifie("associe et UDP vivant", "ok", classe26("AA0000000001"))
+verifie("associe mais UDP muet", "muet", classe26("AA0000000002"))
+verifie("fiche fantome : son IP est tenue par une autre MAC associee", "fantome", classe26("AA0000000003"))
+verifie("absent du point d'acces (panne Wi-Fi ou alimentation)", "absent", classe26("AA0000000004"))
+verifie("IP divergente entre la fiche et le point d'acces", "ip", classe26("AA0000000005"))
+verifie("esclave en Wi-Fi classique : hors point d'acces", "box", classe26("AA0000000006"))
+verifie("client du point d'acces sans fiche ImAlive", "inconnu", classe26("CC0000000007"))
+verifie("module MQTT sans fiche esclave : non classe", nil, classe26("BB0000000000"))
+verifie("RgxClients absent (nil) : ne leve pas", "OK", essaie(def () discoveryFonctions.etatReseau(t26, nil) end))
+# Fiche recue avec un 'config' qui n'est pas une map (fiche UDP/MQTT abimee) : la page /discovery ne casse pas
+var t26b = {"AA00000000FF": {"esclave1": {"IPAddress": "192.168.4.9"}, "config": "abime", "lwt": "Online"}}
+var nom26b = nil
+verifie("fiche au 'config' non-map : ne leve pas", "OK", essaie(def () nom26b = discoveryFonctions.etatReseau(t26b, {})[0]["nom"] end))
+verifie("... son nom affiche est sa MAC", "AA00000000FF", nom26b)
+# Page /discovery du maitre (id rangeExtender 0) : le tableau d'etat reseau est affiche
+serveur["rangeExtender"] = {"activation": "ON", "id": 0, "AP": {"IPAddress": "192.168.4.1"}}
+tasmota.rgxClients = rgx26
+gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(t26), "/sd/css/main.css": ""}
+webserver.envoye = []
+webserver.termine = false
+verifie("page /discovery ne leve pas", "OK", essaie(def () discoveryFonctions.affichePageDiscovery() end))
+var html26 = webserver.envoye.concat("")
+verifie("... tableau d'etat reseau affiche, page terminee", "true true true",
+        str(string.find(html26, "tat r") >= 0) + " " + str(string.find(html26, "Ancienne cuve") >= 0) + " " + str(webserver.termine))
+tasmota.rgxClients = {}
 
 print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))

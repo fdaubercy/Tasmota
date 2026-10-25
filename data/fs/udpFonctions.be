@@ -72,8 +72,8 @@
            par la radio) ; fiche sans IP lisible -> multicast, comme avant.
          * Contrepoids : perimeFiches (P8.6), à chaque telePeriod, passe 'Offline' une fiche sans ImAlive depuis 2 x telePeriod.
       3. Ce que le maître fait de la table
-         * rangeExtenderFonctions : boutons de la page d'accueil (RgxClients x fiches esclaveN 'Online') et
-           commande RoutageRangeExtender -> 'RgxPort tcp, <routagePort>, <IP esclave>, 80'. Rôle 'maitre' ignoré.
+         * rangeExtenderFonctions : commande RoutageRangeExtender (fiches esclaveN 'Online') -> 'RgxPort tcp, <routagePort>, <IP esclave>, 80'. Rôle 'maitre' ignoré.
+         * discoveryFonctions.etatReseau (P8.8) : RgxClients x fiches par MAC, tableau d'etat reseau de /discovery.
          * discoveryFonctions.affichePageDiscovery : boutons de /discovery, port calculé depuis ipMaitre.
          * modbusFonctions.fichesModbus (fiches des AUTRES MAC du même groupTopic portant un bloc ModBus) :
            voie (voieCommandes) et IP de chaque esclave pour les commandes ModBus (routesFiches ->

@@ -602,6 +602,92 @@ def discoveryFonctions_mqtt_lwt(topic, idx, data, databytes)
 end
 discoveryFonctions.mqtt_lwt = discoveryFonctions_mqtt_lwt
 
+# Maitre Range Extender : etat reseau de chaque esclave (audit R4/R6, P8.8, 2026-10-25), en croisant par MAC
+# RgxClients (stations associees au point d'acces du maitre : {MAC sans ':': {IPAddress, RSSI}}) et les fiches
+# esclaveN de discovery.json ('lwt' = UDP vivant, tenu par les ImAlive et udpFonctions.perimeFiches). Lecture
+# seule. Rend une liste de {"mac", "nom", "etat", "detail"}, etat parmi :
+#   ok      associe au point d'acces et UDP vivant      muet    associe mais UDP muet (pas d'ImAlive)
+#   ip      associe, IP differente de celle de la fiche  absent  fiche Range Extender non associee : panne Wi-Fi ou alimentation
+#   fantome fiche non associee dont l'IP est tenue par une AUTRE MAC associee (carte remplacee ?)
+#   box     esclave en Wi-Fi classique (sur la box) : hors point d'acces, UDP vivant ou muet dans 'detail'
+#   inconnu station associee sans fiche esclave
+# Une entree sans fiche esclaveN (module vu par la seule decouverte MQTT) n'est pas classee.
+def discoveryFonctions_etatReseau(table, rgx)
+    import re
+    var r = []
+    if (!isinstance(table, map))    table = {}    end
+    if (!isinstance(rgx, map))    rgx = {}    end
+    var patternEsclave = re.compile('^esclave[0-9]+$')
+    var ipAssociees = {}                    # IP -> MAC des stations associees
+    for mac: rgx.keys()
+        if (isinstance(rgx[mac], map))    ipAssociees[str(rgx[mac].find("IPAddress", ""))] = mac    end
+    end
+    var vues = {}
+    for mac: table.keys()
+        var entree = table[mac]
+        if (!isinstance(entree, map))    continue    end
+        var fiche = nil
+        for role: entree.keys()
+            if (patternEsclave.match(role) != nil && isinstance(entree[role], map))    fiche = entree[role]    break    end
+        end
+        if (fiche == nil)    continue    end
+        vues[mac] = true
+        var config = entree.find("config")
+        var nom = str(fiche.find("nom", isinstance(config, map) ? config.find("dn", mac) : mac))
+        var ip = str(fiche.find("IPAddress", ""))
+        var vivant = (entree.find("lwt") == "Online")
+        var station = rgx.find(mac)
+        var etat = ""
+        var detail = ""
+        if (isinstance(station, map))
+            var ipWifi = str(station.find("IPAddress", ""))
+            var rssi = "RSSI " + str(station.find("RSSI", "?")) + " dBm"
+            if (ip != "" && ipWifi != ip)
+                etat = "ip"    detail = "IP de la fiche " + ip + ", du point d'accès " + ipWifi + " (" + rssi + ")"
+            elif (vivant)
+                etat = "ok"    detail = "Wi-Fi associé, UDP vivant (" + rssi + ")"
+            else
+                etat = "muet"    detail = "Wi-Fi associé, UDP muet : aucun ImAlive récent (" + rssi + ")"
+            end
+        elif (fiche.find("typeConnection", "") == "RangeExtender")
+            var autre = ipAssociees.find(ip)
+            if (autre != nil)
+                etat = "fantome"    detail = "fiche fantôme : son IP " + ip + " est tenue par " + str(autre) + " (carte remplacée ?)"
+            else
+                etat = "absent"    detail = "absent du point d'accès : panne Wi-Fi ou d'alimentation"
+            end
+        else
+            etat = "box"    detail = "hors point d'accès (" + str(fiche.find("typeConnection", "?")) + "), UDP " + (vivant ? "vivant" : "muet")
+        end
+        r.push({"mac": mac, "nom": nom, "etat": etat, "detail": detail})
+    end
+    for mac: rgx.keys()
+        if (!vues.contains(mac) && isinstance(rgx[mac], map))
+            r.push({"mac": mac, "nom": "?", "etat": "inconnu",
+                    "detail": "associé (" + str(rgx[mac].find("IPAddress", "")) + "), sans fiche ImAlive"})
+        end
+    end
+    return r
+end
+discoveryFonctions.etatReseau = discoveryFonctions_etatReseau
+
+# Tableau d'etat reseau de la page /discovery, sur le maitre Range Extender seulement (P8.8)
+def discoveryFonctions_afficheEtatReseau(table)
+    import webserver
+    if (serveur.find("rangeExtender", {}).find("activation", "OFF") != "ON" || serveur["rangeExtender"].find("id", 99) != 0)    return    end
+    var reponse = tasmota.cmd("RgxClients", boolMute)
+    var lignes = discoveryFonctions.etatReseau(table, isinstance(reponse, map) ? reponse.find("RgxClients") : nil)
+    if (size(lignes) == 0)    return    end
+    var couleurs = {"ok": "#47c266", "muet": "#e5a50a", "ip": "#e5a50a", "absent": "#d43535", "fantome": "#d43535", "box": "#888", "inconnu": "#888"}
+    webserver.content_send("<div style='padding:0px 5px;'><h3><hr>État réseau des esclaves<hr></h3><table style='width:100%;font-size:0.9em;'>")
+    for l: lignes
+        webserver.content_send("<tr><td style='color:" + couleurs.find(l["etat"], "#888") + ";'>&#9679;</td><td>" + l["nom"] +
+                               "<br><small>" + l["mac"] + "</small></td><td><small>" + l["detail"] + "</small></td></tr>")
+    end
+    webserver.content_send("</table></div>")
+end
+discoveryFonctions.afficheEtatReseau = discoveryFonctions_afficheEtatReseau
+
 # Gestion de l'affichage de la page des modules découverts
 def discoveryFonctions_affichePageDiscovery()
     import webserver
@@ -730,6 +816,9 @@ def discoveryFonctions_affichePageDiscovery()
             webserver.content_send(string.format("<p></p><form target='_blank'><button class='button %s' formaction='http://%s:%i'>%s</button></form>", 
                                                     colorBTN, IP, (typeURL == "freeboxDNS" ? portDistant : portLocal), titre))
         end
+
+        # Etat reseau des esclaves (maitre Range Extender, P8.8)
+        discoveryFonctions.afficheEtatReseau(jsonDiscovery)
 
         # On ajoute les autres éléments de base d'une page Tasmota
         webserver.content_send("<div></div><p></p>")
