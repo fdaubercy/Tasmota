@@ -34,7 +34,12 @@ AFFECTATION = re.compile(r'^\$?[A-Za-z_][A-Za-z0-9_:]*=')
 CIBLES_OUTILS = frozenset({'pont_serie', 'sniffeur_mqtt', 'syslog_tasmota', 'sniffeur_modbus', 'testeur_udp',
                            'synchro_fork', 'annuaire', 'build_web'})
 PIO_RUN = re.compile(r'(?:platformio|pio)(?:\.exe)?"?(?:\s+-c\s+\S+)?\s+run\b', re.I)
-CIBLE_PIO = re.compile(r'(?:\s-t|\s--target)[\s=]+"?([^\s"]+)')
+# -t X, --target X, --target=X, et la forme collee -tX (click l'accepte) ; idem pour l'env
+CIBLE_PIO = re.compile(r'\s(?:-t|--target)(?:[\s=]+"?|"?(?=[^\s=-]))([^\s"]+)')
+ENV_PIO = re.compile(r'\s(?:-e|--environment)(?:[\s=]+"?|"?(?=[^\s=-]))([^\s"]+)')
+# Une cible d'outil qui DEMARRE peut purger .pio/build (empreinte du projet) dans ses premieres secondes :
+# elle compte comme un build tant que son processus a moins de DEMARRAGE_OUTIL secondes (ou un age inconnu).
+DEMARRAGE_OUTIL = 30
 
 
 def lance_pio_run(commande):
@@ -69,12 +74,33 @@ def builds_en_cours():
     """Liste des builds en cours (libelles), ou None si la detection a echoue."""
     ps = subprocess.run(
         ['powershell.exe', '-NoProfile', '-NonInteractive', '-Command',
-         "Get-CimInstance Win32_Process -Filter \"Name='pio.exe' OR Name='platformio.exe' OR "
-         "Name='python.exe'\" | ForEach-Object { $_.CommandLine }"],
+         "$t = Get-Date; Get-CimInstance Win32_Process -Filter \"Name='pio.exe' OR Name='platformio.exe' OR "
+         "Name='python.exe'\" | ForEach-Object { $a = if ($_.CreationDate) { [int]($t - $_.CreationDate).TotalSeconds } "
+         "else { -1 }; \"$a`t$($_.CommandLine)\" }"],
         capture_output=True, text=True, timeout=10)
     if ps.returncode != 0:
         return None
-    return analyse_commandes(ps.stdout.splitlines())
+    return analyse_commandes(lit_processus(ps.stdout))
+
+
+def lit_processus(texte):
+    """[(age en secondes ou None, ligne de commande)] depuis la sortie '<age>\\t<ligne>' de la requete."""
+    processus = []
+    for ligne in texte.splitlines():
+        age, _, cmd = ligne.partition('\t')
+        if not cmd:
+            continue
+        try:
+            age = int(age)
+        except ValueError:
+            age = -1
+        processus.append((age if age >= 0 else None, cmd))
+    return processus
+
+
+def demarre(age):
+    """Vrai si un processus d'age `age` (None : inconnu) est encore dans ses DEMARRAGE_OUTIL premieres secondes."""
+    return age is None or age < DEMARRAGE_OUTIL
 
 
 def cibles_scons(cmd):
@@ -96,20 +122,22 @@ def cibles_scons(cmd):
     return cibles
 
 
-def analyse_commandes(lignes):
-    """Libelles des builds parmi des lignes de commande de processus ([] si aucun)."""
+def analyse_commandes(processus):
+    """Libelles des builds parmi des processus ([] si aucun). Chaque processus est un couple (age en secondes
+    ou None, ligne de commande), ou une ligne seule (age inconnu). Fonction pure : testable sans PowerShell."""
     runs, scons = [], False
-    for cmd in lignes:
+    for p in processus:
+        age, cmd = (None, p) if isinstance(p, str) else p
         if PIO_RUN.search(cmd):
             cibles = CIBLE_PIO.findall(cmd)
-            if cibles and set(cibles) <= CIBLES_OUTILS:
-                continue                                   # cible d'outil : vit tant que l'outil vit
-            env = re.search(r'(?:\s-e|--environment)[\s=]+"?([^\s"]+)', cmd)
+            if cibles and set(cibles) <= CIBLES_OUTILS and not demarre(age):
+                continue                                   # cible d'outil installee : vit tant que l'outil vit
+            env = ENV_PIO.search(cmd)
             cible = CIBLE_PIO.search(cmd)
             runs.append(' '.join(x.group(1) for x in (env, cible) if x) or 'pio run')
         elif re.search(r'\bscons\b', cmd, re.I):
             cibles = cibles_scons(cmd)
-            if cibles and set(cibles) <= CIBLES_OUTILS:
+            if cibles and set(cibles) <= CIBLES_OUTILS and not demarre(age):
                 continue
             scons = True
     return sorted(set(runs)) or (['scons'] if scons else [])

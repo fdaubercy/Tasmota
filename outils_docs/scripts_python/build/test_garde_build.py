@@ -41,37 +41,70 @@ def verifie(obtenu, attendu, libelle):
     return ok
 
 
+def vieux(*commandes, age=600):
+    """Processus (age en secondes, ligne de commande) lances depuis `age` s."""
+    return [(age, c) for c in commandes]
+
+
+def analyse(*commandes, age=600):
+    return gb.analyse_commandes(vieux(*commandes, age=age))
+
+
 def test_vrais_builds():
-    """Temoins : le comportement d'avant pour un vrai build."""
-    verifie(gb.analyse_commandes([PIO + " run -e tasmota32-x"]), ["tasmota32-x"], "vrai build : compilation")
-    verifie(gb.analyse_commandes([PIO + " run -e tasmota32-x -t upload --upload-port COM12"]), ["tasmota32-x upload"],
+    """Temoins : le comportement d'avant pour un vrai build, quel que soit son age."""
+    verifie(analyse(PIO + " run -e tasmota32-x"), ["tasmota32-x"], "vrai build : compilation")
+    verifie(analyse(PIO + " run -e tasmota32-x", age=3), ["tasmota32-x"], "vrai build : compte aussi tout jeune")
+    verifie(analyse(PIO + " run -e tasmota32-x -t upload --upload-port COM12"), ["tasmota32-x upload"],
             "vrai build : upload")
-    verifie(gb.analyse_commandes([PIO + " -c vscode run --environment tasmota32-x --target erase_upload"]),
+    verifie(analyse(PIO + " -c vscode run --environment tasmota32-x --target erase_upload"),
             ["tasmota32-x erase_upload"], "vrai build : option globale -c, cible erase_upload")
-    verifie(gb.analyse_commandes([SCONS]), ["scons"], "vrai build : scons sans cible (compilation)")
-    verifie(gb.analyse_commandes([SCONS + " upload"]), ["scons"], "vrai build : scons de cible upload")
-    verifie(gb.analyse_commandes([SCONS + " __idedata"]), ["scons"],
+    verifie(analyse(PIO + " run -etasmota32-x -tupload"), ["tasmota32-x upload"],
+            "vrai build : formes collees -eenv -tcible (acceptees par click)")
+    verifie(analyse(SCONS), ["scons"], "vrai build : scons sans cible (compilation)")
+    verifie(analyse(SCONS + " upload"), ["scons"], "vrai build : scons de cible upload")
+    verifie(analyse(SCONS + " __idedata"), ["scons"],
             "vrai build : __idedata (reconstruction d'IntelliSense) reste un build")
-    verifie(gb.analyse_commandes([PY + r" -m SCons -Q"]), ["scons"],
+    verifie(analyse(PY + r" -m SCons -Q"), ["scons"],
             "vrai build : ligne scons sans scons.py reconnaissable -> build")
-    verifie(gb.analyse_commandes([PIO + " run -e x -t upload -t annuaire"]), ["x upload"],
+    verifie(analyse(PIO + " run -e x -t upload -t annuaire"), ["x upload"],
             "vrai build : une cible d'outil melee a une vraie cible -> build")
-    verifie(gb.analyse_commandes([PY + " -u annuaire_outils.py --http 7600", PIO + " home --port 8008"]), [],
+    verifie(analyse(PY + " -u annuaire_outils.py --http 7600", PIO + " home --port 8008"), [],
             "temoin : l'outil lui-meme et pio home ne sont pas des builds")
 
 
 def test_cibles_outils():
     for cible in sorted(gb.CIBLES_OUTILS):
-        verifie(gb.analyse_commandes([PIO + f" run --target {cible} --environment tasmota32s3-cave-serveur-rly",
-                                      SCONS + f" {cible}"]), [], f"cible d'outil ignoree : {cible} (pio run et scons)")
-    verifie(gb.analyse_commandes([PIO + " run -e x -t annuaire"]), [], "cible d'outil : forme courte -t")
-    verifie(gb.analyse_commandes([PIO + " run -e x --target=pont_serie"]), [], "cible d'outil : forme --target=")
-    verifie(gb.analyse_commandes([PY + ' -m platformio run --target "sniffeur_mqtt" -e x']), [],
+        verifie(analyse(PIO + f" run --target {cible} --environment tasmota32s3-cave-serveur-rly", SCONS + f" {cible}"),
+                [], f"cible d'outil ignoree apres 60 s : {cible} (pio run et scons)")
+    verifie(analyse(PIO + " run -e x -t annuaire"), [], "cible d'outil : forme courte -t")
+    verifie(analyse(PIO + " run -ex -tannuaire"), [], "cible d'outil : forme collee -tannuaire")
+    verifie(analyse(PIO + " run -e x --target=pont_serie"), [], "cible d'outil : forme --target=")
+    verifie(analyse(PY + ' -m platformio run --target "sniffeur_mqtt" -e x'), [],
             "cible d'outil : python -m platformio, cible entre guillemets")
-    verifie(gb.analyse_commandes([PIO + " run --target annuaire -e a", SCONS + " annuaire", PIO + " run -e b"]), ["b"],
+    verifie(analyse(PIO + " run --target annuaire -e a", SCONS + " annuaire", PIO + " run -e b"), ["b"],
             "cible d'outil + vrai build en meme temps : seul le vrai build est cite")
-    verifie(gb.analyse_commandes([PIO + " run --target annuaire -e a", SCONS + " annuaire", SCONS]), ["scons"],
+    verifie(analyse(PIO + " run --target annuaire -e a", SCONS + " annuaire", SCONS), ["scons"],
             "cible d'outil + scons d'un vrai build : build")
+
+
+def test_cibles_outils_au_demarrage():
+    """Une cible d'outil qui demarre peut purger .pio/build (empreinte) : build pendant ses 30 premieres s."""
+    verifie(analyse(PIO + " run --target annuaire -e a", age=5), ["a annuaire"],
+            "demarrage : pio run de cible d'outil age de 5 s -> compte comme un build")
+    verifie(analyse(SCONS + " annuaire", age=5), ["scons"], "demarrage : son scons age de 5 s -> build")
+    verifie(analyse(PIO + " run --target annuaire -e a", SCONS + " annuaire", age=60), [],
+            "demarrage : age de 60 s -> ignore")
+    verifie(gb.analyse_commandes([(None, PIO + " run --target annuaire -e a")]), ["a annuaire"],
+            "demarrage : age inconnu -> prudence, build")
+    verifie(gb.analyse_commandes([PIO + " run --target annuaire -e a"]), ["a annuaire"],
+            "demarrage : ligne seule (age inconnu) -> build")
+
+
+def test_lecture_powershell():
+    """Sortie de la requete PowerShell : '<age>\\t<ligne>' ; age -1 (CreationDate absente) -> None."""
+    texte = "5\t" + PIO + " run --target annuaire -e a\n-1\t" + SCONS + "\n\n120\tC:\\x\\python.exe -u y.py\n"
+    verifie(gb.lit_processus(texte), [(5, PIO + " run --target annuaire -e a"), (None, SCONS),
+                                       (120, "C:\\x\\python.exe -u y.py")], "lecture_powershell : age et ligne")
 
 
 def noms_cibles():
@@ -116,7 +149,8 @@ def test_main_inchange():
 
 
 def principal():
-    for test in (test_vrais_builds, test_cibles_outils, test_liste_alignee, test_main_inchange):
+    for test in (test_vrais_builds, test_cibles_outils, test_cibles_outils_au_demarrage, test_lecture_powershell,
+                 test_liste_alignee, test_main_inchange):
         test()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0
