@@ -442,6 +442,23 @@ def sonde_page(m, capture):
     verifie(cdp.js("document.getElementById('arret-immediat').disabled"), False, "lancement : arret immediat actif pendant la serie")
     fin = attend(cdp, "document.getElementById('etat').textContent.startsWith('terminé') && document.getElementById('recap').textContent", 40)
     verifie(bool(fin), True, "lancement : fin recue")
+    # Les blocs du suivi remplissent ensemble toute la largeur, sur chaque rangee (la derniere comprise),
+    # sur un grand ecran (3 blocs de 340 px n'y remplissent pas la largeur d'eux-memes)
+    cdp.appel("Emulation.setDeviceMetricsOverride", width=1600, height=900, deviceScaleFactor=1, mobile=False)
+    time.sleep(0.5)
+    rangees = cdp.js("""(() => { const c = document.getElementById('blocs'), cr = c.getBoundingClientRect(),
+      gap = parseFloat(getComputedStyle(c).columnGap) || 0, r = {};
+      c.querySelectorAll('.bloc').forEach(b => { const x = b.getBoundingClientRect(), k = Math.round(x.top);
+        (r[k] = r[k] || []).push(x.width); });
+      return Object.values(r).map(l => Math.round(cr.width - l.reduce((s, w) => s + w, 0) - gap * (l.length - 1))); })()""")
+    verifie(bool(rangees) and all(abs(v) <= 2 for v in rangees), True,
+            f"suivi : chaque rangee de blocs remplit la largeur (reste par rangee {rangees} px)")
+    seul = cdp.js("""(() => { const c = document.getElementById('blocs'), b = [...c.querySelectorAll('.bloc')];
+      b.slice(1).forEach(x => x.style.display = 'none');
+      const reste = Math.round(c.getBoundingClientRect().width - b[0].getBoundingClientRect().width);
+      b.slice(1).forEach(x => x.style.display = ''); return reste; })()""")
+    verifie(abs(seul) <= 2, True, f"suivi : un seul env -> son bloc prend toute la largeur (reste {seul} px)")
+    cdp.appel("Emulation.clearDeviceMetricsOverride")
     time.sleep(0.4)
     r = cdp.js(f"""(() => {{
       const bloc = e => document.querySelector('.bloc[data-bloc="' + e + '"]');

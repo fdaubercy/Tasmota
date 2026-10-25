@@ -116,8 +116,8 @@ PAGE = r"""<!doctype html>
   .bandeau.avertissement{background:var(--orange-fond);border:1px solid var(--orange);border-left:6px solid var(--orange)}
   .bandeau.attente{background:var(--bleu-fond);border:1px solid var(--bleu);border-left:6px solid var(--bleu)}
   .bandeau b,.bandeau span{overflow-wrap:anywhere;min-width:0}
-  .blocs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr));gap:10px;align-items:start}
-  .bloc{background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+  .blocs{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}  /* blocs : toute la largeur, chaque rangee */
+  .bloc{flex:1 1 340px;background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
   .bloc.echec{border-color:var(--rouge);box-shadow:inset 4px 0 0 var(--rouge)}
   .bloc.encours{border-color:var(--bleu)}
   .bloc .tete{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
@@ -150,7 +150,7 @@ PAGE = r"""<!doctype html>
   @media (max-width:520px){
     main{padding:8px 16px 30px}
     .env{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"case nom methode" ". champ champ" ". notes notes"}
-    .blocs{grid-template-columns:1fr}
+    .bloc{flex-basis:100%}
   }
 </style>
 </head>
