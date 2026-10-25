@@ -156,8 +156,8 @@ ATTENDUS_PAGE = {
     "les 3 familles": ["Mes cartes", "Mes bases", "Tasmota (amont)"],
     "les 4 sous-groupes amont": ["Safeboot", "ESP32", "Langues", "ESP8266"],
     "l'en-tete X-Build des POST": ['"X-Build": "1"'],
-    "les routes": ['"/envs"', '"/execution"', '"/flux?depuis=0"', '"/journal?env="', '"/lancer"', '"/port"',
-                   '"/arreter"'],
+    "les routes": ['"/envs"', '"/execution"', '"/flux?depuis=0"', '"/journal?env="', '"/sortie?env="', '"/lancer"',
+                   '"/port"', '"/arreter"'],
     "le bouton de lancement": ["l'un après l'autre"],
     "les deux arrets": ["Arrêter après cet env", "Arrêt immédiat", "data/&lt;lieu&gt;/&lt;carte&gt;"],
     "les mentions": ["repartira de zéro", "le file system (persist compris) sera aussi flashé",
@@ -267,6 +267,82 @@ def test_journal_env_exact():
         verifie(build_web.journal_env(t, A, float("inf")), "A2\n",
                 "journal_env_exact : repli sur le dernier journal de CET env (pas celui de x-a-b)")
         verifie(build_web.journal_env(t, A + "-b", 0), "AB\n", "journal_env_exact : temoin, l'env x-a-b a le sien")
+
+
+def test_sortie_env_exact():
+    """A9 : sortie_env lit les journaux de CET env, mis bout a bout dans l'ordre d'ecriture, par increments."""
+    with tempfile.TemporaryDirectory() as t:
+        jour = Path(t) / "journaux"
+        jour.mkdir()
+        # meme seconde : upload puis buildfs (ordre des actions) ; l'ordre alphabetique dirait l'inverse
+        for nom, texte in ((f"20261024-100000-{A}-upload.log", "U1\nU2\n"), (f"20261024-100000-{A}-buildfs.log", "F1\n"),
+                           (f"20261024-100000-{A}-b-upload.log", "AB\n")):
+            (jour / nom).write_bytes(texte.encode("utf-8"))           # LF, comme les vrais journaux
+        r = build_web.sortie_env(t, A, 0, 0)
+        verifie((r["texte"], r["octet"], r["reste"]), ("U1\nU2\nF1\n", 9, False),
+                "sortie_env : journaux de CET env, dans l'ordre des actions (upload avant buildfs)")
+        verifie(build_web.sortie_env(t, A, 0, 3)["texte"], "U2\nF1\n", "sortie_env : reprise a l'octet donne, rien de deja lu")
+        verifie(build_web.sortie_env(t, A, 0, 9), {"texte": "", "octet": 9, "reste": False}, "sortie_env : a jour -> rien")
+        verifie(build_web.sortie_env(t, A + "-b", 0, 0)["texte"], "AB\n", "sortie_env : temoin, l'env x-a-b a la sienne")
+        morceaux, octet = [], 0
+        for _ in range(10):
+            r = build_web.sortie_env(t, A, 0, octet, plafond=4)
+            morceaux.append(r["texte"])
+            octet = r["octet"]
+            if not r["reste"]:
+                break
+        verifie(morceaux, ["U1\n", "U2\n", "F1\n"], "sortie_env : plafond, lignes entieres seulement, suite au prochain appel")
+        verifie(build_web.sortie_env(t, "tasmota32-inconnu", 0, 0), {"texte": "", "octet": 0, "reste": False},
+                "sortie_env : env sans journal -> vide")
+        verifie(build_web.sortie_env(t, A, float("inf"), 0)["texte"], "F1\n",
+                "sortie_env : aucun lancement depuis le demarrage -> dernier journal de l'env")
+
+
+def sortie(b, env, octet=0):
+    """Reponse de GET /sortie en dict ({} si la route repond autre chose que du JSON objet)."""
+    _, donnees = b.json("GET", f"/sortie?env={env}&octet={octet}")
+    return donnees if isinstance(donnees, dict) else {}
+
+
+def test_sortie_en_direct(b):
+    """A9 : GET /sortie sert le journal de l'env PENDANT son pio run, par increments, jamais celui d'un autre."""
+    ancien_b = b.dossier / "journaux" / f"20200101-000000-{B}-compiler.log"
+    ancien_b.parent.mkdir(parents=True, exist_ok=True)
+    ancien_b.write_text("ANCIEN B\n", encoding="utf-8")
+    os.utime(ancien_b, (1000000000, 1000000000))
+    avant = sortie(b, A)
+    lent = ["Processing {env}", "Compiling .pio/build/{env}/src/a.cpp.o", "@pause 2", "Linking .pio/build/{env}/firmware.elf",
+            "[SUCCESS] Took 2 seconds"]
+    Path(os.environ[faux.VAR_SCENARIO]).write_text(json.dumps({"*": {"build": {"lignes": lent}}}), encoding="utf-8")
+    ligne_b = {"env": B, "methode": "com", "port": "", "ip": ""}
+    verifie(b.json("POST", "/lancer", {"lignes": [LIGNE_A, ligne_b], "actions": ["compiler"]})[0], 200, "sortie_en_direct : lancement")
+    premier, limite = {}, time.monotonic() + 1.8
+    while time.monotonic() < limite and "a.cpp.o" not in premier.get("texte", ""):
+        premier = sortie(b, A)
+        time.sleep(0.1)
+    texte1 = premier.get("texte", "")
+    verifie(("a.cpp.o" in texte1, "Linking" in texte1, b.serie.en_cours()), (True, False, True),
+            "sortie_en_direct : lignes servies pendant le pio run (journal ecrit ligne a ligne)")
+    verifie(sortie(b, B).get("texte"), "",
+            "sortie_en_direct : env pas encore lance -> vide (pas son ancien journal)")
+    verifie(bool(premier.get("lancement")) and premier.get("lancement") != avant.get("lancement"), True,
+            "sortie_en_direct : nouveau lancement -> identifiant de lancement change")
+    b.attend_fin()
+    suite = sortie(b, A, premier.get("octet", 0))
+    texte2 = suite.get("texte", "")
+    verifie(("Linking" in texte2, "code de sortie 0" in texte2, "Processing" in texte2), (True, True, False),
+            "sortie_en_direct : la suite seulement, rien de deja servi")
+    dernier = max((b.dossier / "journaux").glob(f"*-{A}-compiler*.log"), key=os.path.getmtime)
+    verifie(texte1 + texte2, dernier.read_text(encoding="utf-8"), "sortie_en_direct : morceaux bout a bout = journal de l'env")
+    verifie(sortie(b, A, suite.get("octet", 0)).get("texte"), "",
+            "sortie_en_direct : a jour -> rien de plus")
+    texte_b = sortie(b, B).get("texte", "")
+    verifie(("Processing " + B in texte_b, "ANCIEN" in texte_b, A in texte_b), (True, False, False),
+            "sortie_en_direct : env B -> son journal du lancement, ni l'ancien ni celui de A")
+    verifie((sortie(b, "tasmota32-inconnu").get("texte"), sortie(b, "tasmota32-inconnu").get("octet")), ("", 0),
+            "sortie_en_direct : env inconnu -> vide")
+    verifie([b.requete("GET", "/sortie?env=../x&octet=0")[0], b.requete("GET", f"/sortie?env={A}&octet=abc")[0]], [400, 400],
+            "sortie_en_direct : nom d'env ou octet invalide = 400")
 
 
 def test_lancement(b):
@@ -430,11 +506,13 @@ def principal():
         try:
             for test in (test_routes_locales, test_page_contient, test_envs_fs_avec_firmware, test_post_sans_entete_refuse, test_distant_sans_jeton_refuse,
                          test_corps_borne, test_port_ecrit_puis_relu, test_port_refuse_pendant_build_externe,
-                         test_lancement, test_flux_et_journal, test_journal_dernier_lancement, test_arret):
+                         test_lancement, test_flux_et_journal, test_journal_dernier_lancement, test_arret,
+                         test_sortie_en_direct):
                 test(b)
         finally:
             b.ferme()
     test_journal_env_exact()
+    test_sortie_env_exact()
     test_fermeture()
     test_fermeture_attend_envoi()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))

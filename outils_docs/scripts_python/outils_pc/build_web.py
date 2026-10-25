@@ -14,6 +14,8 @@ Routes (les POST exigent l'en-tete X-Build: 1 et la meme origine) :
     GET  /flux       Server-Sent Events de la serie (rejoues depuis Last-Event-ID ou ?depuis=n ; un numero
                      superieur au dernier de la serie vaut 0 : page restee ouverte sur un outil redemarre)
     GET  /journal    ?env=<env> : texte du journal pio du dernier lancement de cet env
+    GET  /sortie     ?env=<env>&octet=n : suite de ce journal a partir de l'octet n, lignes entieres
+                     {texte, octet, reste, lancement} (panneau « Sortie » de la page, lu par increments)
     POST /lancer     {lignes: [{env, methode, port, ip}], actions: [...]}   409 = refus (motifs)
     POST /port       {env, port} : ecrit upload_port (409 pendant un lancement ou un build lance ailleurs,
                      400 si invalide)
@@ -39,6 +41,7 @@ import build_serie
 PORT_DEFAUT = 7700
 DEPOT = Path(__file__).resolve().parents[3]
 MAX_CORPS = 64 * 1024
+MAX_SORTIE = 128 * 1024                                   # octets de journal au plus par reponse de /sortie
 
 PAGE_PROVISOIRE = ("<!doctype html><html lang=fr><meta charset=utf-8><title>Build et téléversement</title>"
                    "<body style='font-family:sans-serif;margin:2em'><h1>Build et téléversement</h1>"
@@ -77,19 +80,59 @@ def liste_envs_json(racine, dossier):
     return {"envs": envs, "derniers": lit_derniers(dossier)}
 
 
-def journal_env(dossier, env, depuis):
-    """Texte des journaux de `env` ecrits depuis `depuis` (heure epoch) ; a defaut, le dernier de CET env.
+def journaux_env(dossier, env, depuis):
+    """Journaux de `env` ecrits depuis `depuis` (heure epoch du lancement), dans l'ordre ou ils ont ete ecrits.
 
     Nom exact des journaux de build_serie.Serie._journal : <AAAAMMJJ>-<HHMMSS>-<env>-<action>[-n].log. Un
     simple motif *-<env>-*.log prendrait aussi ceux d'un env dont le nom prolonge celui-ci (x-a / x-a-b).
+    Ordre : heure, puis rang de l'action dans build_serie.ORDRE (deux pio run du meme env dans la meme seconde,
+    upload puis buildfs, que l'ordre alphabetique inverserait), puis n. Un nouveau journal vient donc toujours
+    apres les autres : la position d'un octet dans les journaux mis bout a bout ne bouge pas (sortie_env).
+    Aucun lancement depuis le demarrage de l'outil (`depuis` infini) : le dernier journal de CET env.
     """
     if not build_serie.NOM_ENV.fullmatch(env or ""):
         raise ValueError(f"nom d'environnement invalide : {env!r}")
-    nom = re.compile(rf"\d{{8}}-\d{{6}}-{re.escape(env)}-({'|'.join(build_serie.ORDRE)})(-\d+)?\.log")
-    fichiers = sorted((f for f in (Path(dossier) / "journaux").glob("*.log") if nom.fullmatch(f.name)),
-                      key=lambda f: f.name)
-    recents = [f for f in fichiers if f.stat().st_mtime >= depuis]
-    return "".join(f.read_text(encoding="utf-8", errors="replace") for f in (recents or fichiers[-1:]))
+    nom = re.compile(rf"(\d{{8}}-\d{{6}})-{re.escape(env)}-({'|'.join(build_serie.ORDRE)})(?:-(\d+))?\.log")
+    trouves = []
+    for f in (Path(dossier) / "journaux").glob("*.log"):
+        m = nom.fullmatch(f.name)
+        if m:
+            trouves.append(((m.group(1), build_serie.ORDRE.index(m.group(2)), int(m.group(3) or 1)), f))
+    fichiers = [f for _, f in sorted(trouves)]
+    if depuis == float("inf"):
+        return fichiers[-1:]
+    return [f for f in fichiers if f.stat().st_mtime >= depuis]
+
+
+def journal_env(dossier, env, depuis):
+    """Texte des journaux de `env` du dernier lancement (voir journaux_env)."""
+    return "".join(f.read_text(encoding="utf-8", errors="replace") for f in journaux_env(dossier, env, depuis))
+
+
+def sortie_env(dossier, env, depuis, octet, plafond=MAX_SORTIE):
+    """Suite de la sortie de pio de `env` (panneau « Sortie » de la page), a partir de l'octet `octet` de ses
+    journaux du lancement mis bout a bout : {texte, octet (position suivante), reste (encore a lire)}.
+
+    Seulement des lignes entieres, au plus `plafond` octets par appel : rien de deja servi n'est renvoye, et
+    une ligne en cours d'ecriture attend l'appel suivant. Les tailles sont lues une fois par appel : seul le
+    dernier journal grandit (un pio a la fois), les precedents sont fermes.
+    """
+    lu, total = b"", 0
+    for f in journaux_env(dossier, env, depuis):
+        taille = f.stat().st_size
+        if octet < total + taille and len(lu) <= plafond:
+            debut = max(0, octet - total)
+            with open(f, "rb") as fichier:
+                fichier.seek(debut)
+                lu += fichier.read(min(taille - debut, plafond + 1 - len(lu)))
+        total += taille
+    fin = lu[:plafond].rfind(b"\n") + 1
+    if not fin and len(lu) > plafond:                     # ligne plus longue que le plafond : servie en morceaux
+        fin = plafond
+        while fin and lu[fin] & 0xC0 == 0x80:             # sans couper un caractere UTF-8
+            fin -= 1
+    suivant = octet + fin if octet <= total else octet
+    return {"texte": lu[:fin].decode("utf-8", errors="replace"), "octet": suivant, "reste": suivant < total}
 
 
 def ligne_de(donnee):
@@ -183,6 +226,13 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                     self._flux(depuis)
                 elif url.path == "/journal":
                     self._envoie(200, journal_env(dossier, params.get("env", [""])[0], etat["debut"]).encode("utf-8"))
+                elif url.path == "/sortie":
+                    octet = params.get("octet", ["0"])[0]
+                    if not octet.isdigit():
+                        raise ValueError(f"octet invalide : {octet!r}")
+                    debut = etat["debut"]
+                    reponse = sortie_env(dossier, params.get("env", [""])[0], debut, int(octet))
+                    self._json(dict(reponse, lancement=repr(debut)))   # change a chaque lancement : la page repart de 0
                 else:
                     self._envoie(404, b"introuvable")
             except ValueError as erreur:

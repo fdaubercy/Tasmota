@@ -8,7 +8,8 @@ suivi dessous (un bloc par env, bandeau rouge par echec). Sur telephone, les col
 Routes appelees (formats : docstring de build_web.py ; evenements du flux : docstring de build_serie.py) :
     GET /envs (au chargement, et apres un lancement : ports relus), GET /execution,
     GET /flux?depuis=0 (EventSource : la reprise apres coupure envoie Last-Event-ID tout seul),
-    GET /journal?env= (journal deplie), POST /lancer, /port, /arreter avec l'en-tete X-Build: 1.
+    GET /journal?env= (journal deplie), GET /sortie?env=&octet= (panneau « Sortie », lu par increments),
+    POST /lancer, /port, /arreter avec l'en-tete X-Build: 1.
 Tout texte venu du serveur est insere par textContent, jamais par innerHTML.
 
 Rattachements du suivi (pour ne pas creer de ligne « fantome » dans le bloc d'un env) :
@@ -39,9 +40,11 @@ PAGE = r"""<!doctype html>
 </script>
 <style>
   :root{color-scheme:light;--fond:#f6f7f9;--carte:#fff;--bord:#ddd;--texte:#222;--doux:#666;--discret:#777;--bleu:#2563eb;--vert:#2a9d4a;--gris:#aaa;--orange:#c27400;--rouge:#c0392b;
-    --btn:#fff;--btn-bord:#888;--piste:#e9e9ea;--survol:#f0f3f8;--rouge-fond:#fdecea;--orange-fond:#fff4e0;--bleu-fond:#eef3ff;--console:#1e1e1e;--console-texte:#d8dee9}
+    --btn:#fff;--btn-bord:#888;--piste:#e9e9ea;--survol:#f0f3f8;--rouge-fond:#fdecea;--orange-fond:#fff4e0;--bleu-fond:#eef3ff;--console:#1e1e1e;--console-texte:#d8dee9;
+    --console-erreur:#ff6b5b;--console-avert:#f0a020;--console-discret:#8b9099}
   :root[data-theme="sombre"]{color-scheme:dark;--fond:#121417;--carte:#1d2025;--bord:#33373e;--texte:#e6e6e6;--doux:#a8adb5;--discret:#8b9099;--bleu:#5b93ff;--vert:#3fbf63;--gris:#6b7078;--orange:#f0a020;--rouge:#ff6b5b;
-    --btn:#262a30;--btn-bord:#555b64;--piste:#39393d;--survol:#23272d;--rouge-fond:#3a1d1b;--orange-fond:#3a2c12;--bleu-fond:#18233a;--console:#0b0e13;--console-texte:#d8dee9}
+    --btn:#262a30;--btn-bord:#555b64;--piste:#39393d;--survol:#23272d;--rouge-fond:#3a1d1b;--orange-fond:#3a2c12;--bleu-fond:#18233a;--console:#0b0e13;--console-texte:#d8dee9;
+    --console-erreur:#ff6b5b;--console-avert:#f0a020;--console-discret:#8b9099}
   *{box-sizing:border-box}
   body{margin:0;font:14px system-ui,sans-serif;color:var(--texte);background:var(--fond)}
   main{max-width:1200px;margin:0 auto;padding:12px 16px 40px}
@@ -132,6 +135,12 @@ PAGE = r"""<!doctype html>
   pre.extrait{background:var(--rouge-fond);color:var(--texte);border-radius:5px;padding:6px 8px;max-height:180px;overflow:auto}
   details.journal summary{cursor:pointer;font-size:12px;color:var(--bleu)}
   details.journal pre{background:var(--console);color:var(--console-texte);padding:8px;border-radius:6px;max-height:340px;overflow:auto;margin-top:4px}
+  /* panneau « Sortie » : la console reste sombre dans les deux themes (comme le terminal de VS Code) */
+  details.sortie summary{cursor:pointer;font-size:12px;color:var(--bleu)}
+  .console{font:11.5px/1.45 ui-monospace,Consolas,monospace;background:var(--console);color:var(--console-texte);padding:8px;border-radius:6px;
+    max-height:320px;overflow:auto;margin-top:4px;white-space:pre-wrap;word-break:break-word}
+  .console div{min-height:1.45em}
+  .console .e{color:var(--console-erreur)}.console .w{color:var(--console-avert)}.console .m{color:var(--console-discret)}
   #recap{margin-top:10px}
   #recap .fichiers{color:var(--orange);margin-top:4px}
   .vide{color:var(--discret);font-size:13px}
@@ -495,7 +504,8 @@ $("arret-immediat").onclick = async function () {
 // ---------- suivi : evenements du flux ----------
 function nouveauBloc(l, actions) {
   var b = {env: l.env, methode: l.methode, port: l.port, ip: l.ip, actions: actions.slice(), statut: "attente",
-           rangs: {}, secondes: null, motif: "", extrait: [], derniere: "", fsAussi: false, repris: false};
+           rangs: {}, secondes: null, motif: "", extrait: [], derniere: "", fsAussi: false, repris: false,
+           sortie: {octet: 0, lancement: null, lecture: false, encore: false, progres: false, vides: 0, touche: false}};
   actions.forEach(function (a) { b.rangs[a] = nouveauRang(a); });
   return b;
 }
@@ -554,6 +564,7 @@ function traite(e) {
     b.statut = "encours";
     if (e.actions) { b.actions = e.actions.slice(); e.actions.forEach(function (a) { if (!b.rangs[a]) b.rangs[a] = nouveauRang(a); }); }
     b.methode = e.methode || b.methode; b.port = e.port || b.port; b.ip = e.ip || b.ip;
+    ouvreSortie(e.env);
     planifie(e.env);
   } else if (e.type === "etape") {
     b = bloc(e.env);
@@ -604,6 +615,7 @@ function traite(e) {
       r.actif = false;
       if (r.statut === "succes") r.pourcent = 100;
     });
+    lisSortie(e.env);                // fin du journal (le dernier fils pio est fini)
     planifie(e.env);
   } else if (e.type === "attente") {
     bloc(e.env);
@@ -661,13 +673,84 @@ function squelette(env) {
   var journal = h("details", {"class": "journal"}, h("summary", {texte: "Journal complet (dernier lancement)"}), pre,
     h("button", {"class": "lien", type: "button", texte: "recharger", onclick: function () { chargeJournal(env, pre); }}));
   journal.ontoggle = function () { if (journal.open) chargeJournal(env, pre); };
+  var console_ = h("div", {"class": "console", role: "log"});
+  var sortie = h("details", {"class": "sortie"}, h("summary", {texte: "Sortie de pio (en direct)"}), console_);
   var u = {tete: h("div", {"class": "tete"}), rangs: h("div", {}), notes: h("div", {}), extrait: h("div", {}),
-           derniere: h("div", {"class": "derniere"}), journal: journal};
-  u.bloc = h("div", {"class": "bloc", "data-bloc": env}, u.tete, u.rangs, u.notes, u.extrait, u.derniere, journal);
+           derniere: h("div", {"class": "derniere"}), journal: journal, sortie: sortie, console: console_, ouvertureAuto: false};
+  sortie.ontoggle = function () {          // ouvert par la page (debut de l'env) ou par l'utilisateur, qui a alors le dernier mot
+    if (u.ouvertureAuto) u.ouvertureAuto = false;
+    else if (L && L.blocs[env]) L.blocs[env].sortie.touche = true;
+    if (sortie.open) lisSortie(env);
+  };
+  u.bloc = h("div", {"class": "bloc", "data-bloc": env}, u.tete, u.rangs, u.notes, u.extrait, u.derniere, sortie, journal);
   uiBlocs[env] = u;
   $("blocs").appendChild(u.bloc);
   return u;
 }
+
+// ---------- panneau « Sortie » : la sortie de pio de l'env, comme dans le terminal ----------
+// Le journal de CET env est lu par increments (GET /sortie, lignes entieres a partir de l'octet deja lu) tant que
+// l'env tourne et que son panneau est ouvert, puis une derniere fois a sa fin. esptool reecrit sa barre sur place
+// (\r) : dans le journal, chaque palier donne une ligne vide puis « Writing at 0x… NN % ». Le panneau garde UNE
+// ligne par zone, mise a jour a chaque palier, et saute les lignes vides qui precedent une barre (le terminal
+// montre la meme chose) ; une ligne vide suivie d'autre chose est gardee.
+var PROGRES = /^\s*(Writing at 0x[0-9a-f]+\b.*\d\s*%|Uploading:\s*\[.*\d\s*%)/i;
+var ERREUR = /\berror:|\bError\b|\w+Error:|\bFAILED\b|fatal error|Traceback \(most recent/;
+var AVERT = /\bwarning:|\bWarning\b|\bWARNING\b|AVERTISSEMENT|⚠/;
+
+function ouvreSortie(env) {
+  var b = L && L.blocs[env], u = uiBlocs[env] || (b && squelette(env));
+  if (!b || b.sortie.touche || u.sortie.open) return;
+  u.ouvertureAuto = true;
+  u.sortie.open = true;                    // ontoggle lancera la lecture
+}
+
+function ajouteSortie(b, u, texte) {
+  var c = u.console, s = b.sortie;
+  var enBas = c.scrollHeight - c.scrollTop - c.clientHeight < 24;     // l'utilisateur n'a pas remonte pour lire
+  var lignes = texte.split("\n");
+  if (lignes[lignes.length - 1] === "") lignes.pop();
+  lignes.forEach(function (ligne) {
+    if (!ligne.trim()) { s.vides++; return; }                        // en attente : reecriture d'esptool ou vraie ligne vide
+    var progres = PROGRES.test(ligne);
+    for (; s.vides > 0; s.vides--) if (!progres) c.appendChild(h("div", {}));
+    if (progres && s.progres) { c.lastChild.textContent = ligne; return; }
+    var classe = /^--- /.test(ligne) ? "m" : ERREUR.test(ligne) ? "e" : AVERT.test(ligne) ? "w" : null;
+    c.appendChild(h("div", classe ? {"class": classe, texte: ligne} : {texte: ligne}));
+    s.progres = progres;
+  });
+  if (enBas) c.scrollTop = c.scrollHeight;
+}
+
+async function lisSortie(env) {
+  var b = L && L.blocs[env], u = uiBlocs[env];
+  if (!b || !u || !u.sortie.open) return;
+  var s = b.sortie;
+  if (s.lecture) { s.encore = true; return; }          // une lecture tourne : elle relira a sa fin (fin de l'env)
+  s.lecture = true;
+  try {
+    for (var tour = 0; tour < 40; tour++) {
+      var r = await appel("/sortie?env=" + encodeURIComponent(env) + "&octet=" + s.octet);
+      if (!L || L.blocs[env] !== b || !r.ok || !r.donnees) return;   // lancement remplace, ou outil injoignable
+      var d = r.donnees;
+      if (d.lancement !== s.lancement) {               // autre lancement (ou outil redemarre) : on repart de zero
+        var relire = s.octet > 0;
+        s.lancement = d.lancement; s.octet = 0; s.progres = false; s.vides = 0; u.console.textContent = "";
+        if (relire) continue;
+      }
+      if (d.texte) ajouteSortie(b, u, d.texte);
+      s.octet = d.octet;
+      if (!d.reste) return;
+    }
+  } finally {
+    s.lecture = false;
+    if (s.encore) { s.encore = false; lisSortie(env); }
+  }
+}
+
+setInterval(function () {                  // pas pendant une coupure du flux : l'outil ne repond pas
+  if (L && !fluxCoupe) L.ordre.forEach(function (env) { if (L.blocs[env].statut === "encours") lisSortie(env); });
+}, 700);
 
 async function chargeJournal(env, pre) {
   pre.textContent = "lecture…";

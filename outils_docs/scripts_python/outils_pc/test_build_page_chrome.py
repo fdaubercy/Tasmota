@@ -90,6 +90,17 @@ SCENARIO = {
         "*** [.pio/build/{env}/src/a.cpp.o] Error 1", "[FAILED] Took 0.90 seconds"]}},
     C: {"build": {"lignes": COMPILE_LENT, "delai": 0.15}},
 }
+# A9 : sortie assez longue pour deborder du panneau, avertissement, erreur, puis esptool qui reecrit sa ligne
+# (dans le journal : une ligne vide puis la barre, a chaque palier ; voir build_page, ajouteSortie)
+SORTIE_A = (["Processing {env} (platform: espressif32)"] + [f"Compiling .pio/build/{{env}}/src/f{i}.cpp.o" for i in range(40)]
+            + ["src/x.cpp:1:1: warning: unused variable 'v' [-Wunused-variable]",
+               "src/y.cpp:2:2: error: 'z' was not declared in this scope", "@pause 2.5",
+               "Writing 'C:\\x\\.pio\\build\\{env}\\firmware.bin' at 0x00010000...", "",
+               "Writing at 0x00010000 [░░░░░░░░░░]  10.0% 16.00kB/160.00kB [0s] ", "",
+               "Writing at 0x00020000 [█████░░░░░]  50.0% 80.00kB/160.00kB [1s] ", "",
+               "Writing at 0x00030000 [██████████] 100.0% 160.00kB/160.00kB [2s] ",
+               "Wrote 163840 bytes (81920 compressed) at 0x00010000 in 2.0 seconds (655.4 kbit/s).",
+               "@pause 1.5", "[SUCCESS] Took 5.00 seconds"])
 MARQUE_TEMOIN = "var aDessiner = {}, minuterie = null;"
 INJECTION_TEMOIN = '\n$("bouton-qui-n-existe-pas").onclick = null;   // TEMOIN : TypeError au chargement\n'
 ECHECS = []
@@ -464,6 +475,7 @@ def sonde_page(m, capture):
             "rechargement : l'etat du dernier lancement est reconstruit depuis le flux")
 
     sonde_redemarrage(m)
+    sonde_sortie(m)
     sonde_synthetique(cdp)
 
     # largeur telephone : colonnes empilees, pas de defilement horizontal
@@ -475,8 +487,9 @@ def sonde_page(m, capture):
     verifie((tel.get("empile"), tel.get("large") <= 390), (True, True), f"telephone : colonnes empilees, largeur {tel.get('large')} px")
     if capture:
         cdp.capture(Path(capture) / "build-page-telephone.png")
-    # seules erreurs admises : les coupures du flux pendant le redemarrage VOULU du serveur (sonde_redemarrage)
-    coupures = [e for e in cdp.erreurs() if e.startswith("journal Chrome") and "/flux" in e
+    # seules erreurs admises : les coupures du flux, et des lectures de /sortie en vol, pendant le redemarrage VOULU
+    # du serveur (sonde_redemarrage)
+    coupures = [e for e in cdp.erreurs() if e.startswith("journal Chrome") and ("/flux" in e or "/sortie?" in e)
                 and ("ERR_CONNECTION_RESET" in e or "ERR_CONNECTION_REFUSED" in e)]
     verifie([e for e in cdp.erreurs() if e not in coupures], [], "fin : aucune erreur JS pendant toute la sonde")
     verifie(bool(coupures), True, "fin : les coupures du flux pendant le redemarrage ont bien ete vues (temoin du filtre)")
@@ -549,6 +562,61 @@ def sonde_synthetique(cdp):
     verifie(cdp.js(aussi), "", "synthetique : ligne post_esp32 pendant compiler (COM) ou en OTA -> pas de mention FS")
     injecte(cdp, [{"type": "ligne", "env": "E", "action": "upload", "texte": ligne}])
     verifie(cdp.js(aussi), "E", "synthetique : temoin, upload par cable -> mention FS aussi flashe")
+
+
+def rgb(texte):
+    """(r, g, b) d'une couleur calculee « rgb(r, g, b) » ; (0, 0, 0) sinon."""
+    try:
+        return tuple(int(float(x)) for x in texte[texte.index("(") + 1:texte.index(")")].split(",")[:3])
+    except ValueError:
+        return (0, 0, 0)
+
+
+def sonde_sortie(m):
+    """A9 : panneau « Sortie » de l'env en cours, rempli pendant le pio run (journal lu par increments)."""
+    cdp = m.cdp
+    (m.t / "scenario.json").write_text(json.dumps({A: {"build": {"lignes": SORTIE_A, "delai": 0.03}}}), encoding="utf-8")
+    for env in (A, B, C):
+        coche(cdp, f"#env-{env}", env == A)
+    for action in ("compiler", "upload", "buildfs", "uploadfs"):
+        coche(cdp, f'input[name=action][value="{action}"]', action == "compiler")
+    cdp.js("document.getElementById('lancer').click()")
+    console = f"document.querySelector('.bloc[data-bloc=\"{A}\"] details.sortie .console')"
+    attend(cdp, f"(() => {{ const c = {console}; return !!c && document.getElementById('etat').textContent === "
+                f"'lancement en cours' && c.textContent.includes(\"'z' was not declared\"); }})()", 10, 0.1)
+    r = cdp.js(f"""(() => {{ const c = {console}; if (!c) return {{}};
+      const ligne = t => [...c.children].find(x => x.textContent.includes(t));
+      const coul = x => x ? getComputedStyle(x).color : '';
+      return {{ouvert: c.closest('details').open, lignes: c.children.length, deborde: c.scrollHeight > c.clientHeight + 20,
+              en_bas: c.scrollTop + c.clientHeight >= c.scrollHeight - 2, en_cours: document.getElementById('etat').textContent,
+              erreur: coul(ligne("'z' was not declared")), avert: coul(ligne('warning: unused')), normal: coul(ligne('f3.cpp.o')),
+              chasse: getComputedStyle(c).fontFamily, fond: getComputedStyle(c).backgroundColor,
+              processing: [...c.children].filter(x => x.textContent.startsWith('Processing')).length}}; }})()""") or {}
+    verifie((r.get("ouvert"), r.get("deborde"), r.get("en_bas"), r.get("en_cours")), (True, True, True, "lancement en cours"),
+            f"sortie : panneau ouvert et rempli PENDANT le pio run, defile seul tant qu'on est en bas ({r.get('lignes')} lignes)")
+    rouge, orange, normal = rgb(r.get("erreur", "")), rgb(r.get("avert", "")), rgb(r.get("normal", ""))
+    verifie((rouge[0] > 200 and rouge[1] < 140, orange[0] > 200 and 110 < orange[1] < 200 and orange[2] < 110, normal[0] < 240),
+            (True, True, True), f"sortie : erreur en rouge, avertissement en orange, le reste neutre ({rouge}, {orange}, {normal})")
+    verifie(("monospace" in r.get("chasse", "") or "Consolas" in r.get("chasse", ""), sum(rgb(r.get("fond", ""))) < 150),
+            (True, True), "sortie : chasse fixe sur fond sombre")
+    verifie(r.get("processing"), 1, "sortie : rien n'est rajoute deux fois (lecture par increments)")
+    cdp.js(f"(() => {{ const c = {console}; c.scrollTop = 0; c.dispatchEvent(new Event('scroll')); return true; }})()")
+    attend(cdp, f"{console}.textContent.includes('Wrote 163840')", 8, 0.1)
+    r2 = cdp.js(f"""(() => {{ const c = {console}; const l = [...c.children];
+      const prog = l.filter(x => /^\\s*Writing at 0x/.test(x.textContent));
+      return {{haut: c.scrollTop, lignes: l.length, prog: prog.length, texte: prog.map(x => x.textContent).join('|'),
+              vides: l.filter(x => !x.textContent.trim()).length}}; }})()""") or {}
+    verifie((r2.get("haut"), r2.get("lignes", 0) > r.get("lignes", 0)), (0, True),
+            "sortie : remonte par l'utilisateur -> plus de defilement auto, les lignes arrivent quand meme")
+    verifie((r2.get("prog"), "100.0%" in r2.get("texte", ""), r2.get("vides")), (1, True, 0),
+            f"sortie : esptool qui reecrit sa ligne -> une ligne par zone, derniere valeur, sans lignes vides ({r2.get('texte')})")
+    brut = cdp.js(f"fetch('/journal?env={A}').then(r => r.text()).then(t => (t.match(/Writing at 0x/g) || []).length)")
+    verifie(brut, 3, "sortie : temoin, le journal brut porte bien 3 lignes de progression d'esptool")
+    cdp.js(f"(() => {{ const c = {console}; c.scrollTop = c.scrollHeight; c.dispatchEvent(new Event('scroll')); return true; }})()")
+    attend(cdp, "document.getElementById('etat').textContent.startsWith('terminé')", 15)
+    fin = attend(cdp, f"(() => {{ const c = {console}; return c.textContent.includes('code de sortie 0') && "
+                      "c.scrollTop + c.clientHeight >= c.scrollHeight - 2; })()", 5, 0.1)
+    verifie(fin, True, "sortie : revenu en bas -> defilement auto repris, journal lu jusqu'au bout apres la fin")
 
 
 def sonde_redemarrage(m):

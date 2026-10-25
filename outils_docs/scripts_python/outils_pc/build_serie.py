@@ -502,7 +502,7 @@ class Serie:
         while chemin.exists():
             i += 1
             chemin = dossier / f"{base}-{i}.log"
-        f = open(chemin, "w", encoding="utf-8", newline="\n")
+        f = open(chemin, "w", encoding="utf-8", newline="\n", buffering=1)   # ligne a ligne : /sortie le lit en direct
         f.write(f"--- {commande}\n")
         return f
 
