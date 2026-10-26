@@ -351,8 +351,9 @@ function ligneEnv(e) {
   var bOta = h("button", {type: "button", texte: "OTA", title: e.ota_possible ? "Téléverser par le réseau (OTA)" :
     "OTA impossible : cet environnement ne charge pas le pré-script du dépôt (ESP8266…)"});
   bOta.disabled = !e.ota_possible;
-  bCom.onclick = function () { c.methode = "com"; majLigne(e.nom); majBouton(); };
-  bOta.onclick = function () { c.methode = "ota"; majLigne(e.nom); majBouton(); };
+  // majTout : la methode d'une ligne change aussi les cases FS (majCasesFs) et les notes de port partage des autres
+  bCom.onclick = function () { c.methode = "com"; majTout(); };
+  bOta.onclick = function () { c.methode = "ota"; majTout(); };
   var champ = h("input", {"class": "champ", type: "text", autocomplete: "off", spellcheck: "false"});
   champ.oninput = function () {
     if (c.methode === "com") c.port = champ.value; else c.ip = champ.value;
@@ -413,7 +414,9 @@ function majLigne(nom) {
                              c.port.trim().toUpperCase()]);
   if (c.coche && c.methode === "com" && televerse(acts) && e.fs_avec_firmware)
     notes.push(["note-fs", "le file system (persist compris) sera aussi flashé : cet env embarque des fichiers " +
-                           "(custom_files_upload), post_esp32 reconstruit littlefs.bin à chaque compilation"]);
+                           "(custom_files_upload), post_esp32 reconstruit littlefs.bin à chaque compilation" +
+                           (acts.indexOf("buildfs") >= 0 || acts.indexOf("uploadfs") >= 0 ?
+                            " ; « file system » coché : rien de plus pour cet env (fait par cet envoi)" : "")]);
   u.notes.textContent = "";
   notes.forEach(function (n) { u.notes.appendChild(h("div", {"class": n[0], texte: n[1]})); });
 }
@@ -458,7 +461,25 @@ function majBouton() {
     (avecFs.length ? " (et le file system pour " + avecFs.join(", ") + ")" : "");
 }
 
+// « Construire / Téléverser le file system » grisées (et décochées) quand l'envoi série du firmware les fait déjà
+// pour TOUS les envs cochés : en COM, post_esp32 construit littlefs.bin (custom_files_upload) et esptool l'écrit
+// avec le firmware. Série mixte (OTA, env sans fichiers) : cases actives, le serveur saute le FS des seuls envs servis.
+function majCasesFs() {
+  var coches = envsCoches();
+  var parFirmware = televerse(actionsCochees()) && coches.length > 0 && coches.every(function (e) {
+    return choix[e.nom].methode === "com" && e.fs_avec_firmware; });
+  ["buildfs", "uploadfs"].forEach(function (a) {
+    var cf = caseAction(a);
+    if (parFirmware) cf.checked = false;
+    cf.disabled = parFirmware;
+    cf.parentNode.classList.toggle("doux", parFirmware);
+    cf.parentNode.title = parFirmware ? "Inutile ici : le téléversement par câble construit le file system " +
+      "(custom_files_upload) et l'écrit avec le firmware, pour chaque env coché" : "";
+  });
+}
+
 function majTout() {
+  majCasesFs();
   Object.keys(ui).forEach(majLigne);
   majComptes();
   majBouton();

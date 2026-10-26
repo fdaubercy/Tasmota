@@ -29,6 +29,7 @@ from test_build_ota_fs import FICHIERS_IMAGE, arbre, fabrique_image   # noqa: E4
 ECHECS = []
 ESC = "\x1b"
 A, B, C = "tasmota32-essai-a", "tasmota32-essai-b", "tasmota32-essai-c"
+D = "tasmota32-essai-fs"                          # embarque des fichiers (custom_files_upload) : fs_avec_firmware
 P8266 = "tasmota-essai-8266"
 
 CENV = f"""\
@@ -47,6 +48,10 @@ extends                 = env:tasmota32-essai-base
 
 [env:{P8266}]
 build_flags             = -D FIRMWARE_ESSAI
+
+[env:{D}]
+extends                 = env:tasmota32-essai-base
+custom_files_upload     = data/essai/
 """
 
 
@@ -941,6 +946,38 @@ def test_solidification_vide():
                 "solidification_vide : buildfs (pas d'edition des liens) non controle")
 
 
+def test_fs_par_firmware():
+    """L'envoi serie du firmware d'un env a custom_files_upload ecrit aussi le FS (post_esp32) : buildfs /
+    uploadfs coches ne lancent pas de pio run a part et suivent le sort de cet envoi. Temoin : env sans
+    fichiers (A), qui garde ses trois pio run."""
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t)
+        ev = m.lance([com(D)], {"upload", "buildfs", "uploadfs"})
+        ev2 = m.lance([com(D, "COM7")], {"erase_upload", "uploadfs"})
+        ev3 = m.lance([com(A)], {"upload", "buildfs", "uploadfs"})
+        verifie([a["argv"] for a in m.appels()],
+                [["run", "-e", D, "-t", "upload", "--upload-port", "COM12"],
+                 ["run", "-e", D, "-t", "erase_upload", "--upload-port", "COM7"],
+                 ["run", "-e", A, "-t", "upload", "--upload-port", "COM12"],
+                 ["run", "-e", A, "-t", "buildfs"], ["run", "-e", A, "-t", "uploadfs", "--upload-port", "COM12"]],
+                "fs_par_firmware : env a fichiers -> un seul pio run (upload ou erase_upload) ; temoin A -> trois")
+        verifie((du_type(ev, "fin_env")[0]["statuts"], du_type(ev2, "fin_env")[0]["statuts"]),
+                ({"upload": "succes", "buildfs": "succes", "uploadfs": "succes"},
+                 {"erase_upload": "succes", "uploadfs": "succes"}),
+                "fs_par_firmware : buildfs / uploadfs reussis avec l'envoi du firmware")
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t, {D: {"upload": {"code": 1, "lignes": ["[FAILED] Took 0.20 seconds"]}}})
+        ev = m.lance([com(D, "COM1"), com(A, "COM2")], {"upload", "buildfs"})
+        statuts = {e["env"]: e["statuts"] for e in du_type(ev, "fin_env")}
+        verifie((statuts.get(D), statuts.get(A)),
+                ({"upload": "echec", "buildfs": "echec"}, {"upload": "succes", "buildfs": "succes"}),
+                "fs_par_firmware : envoi en echec -> FS en echec ; serie mixte, A construit son FS")
+        verifie([a["argv"] for a in m.appels()],
+                [["run", "-e", D, "-t", "upload", "--upload-port", "COM1"],
+                 ["run", "-e", A, "-t", "upload", "--upload-port", "COM2"], ["run", "-e", A, "-t", "buildfs"]],
+                "fs_par_firmware : serie mixte, buildfs lance pour A seulement")
+
+
 def test_garde_build_importable():
     module = bs.garde_build()
     verifie(callable(getattr(module, "builds_en_cours", None)), True,
@@ -960,7 +997,7 @@ def principal():
                  test_journal_ecrit, test_reference_o_memorisee, test_reference_estimee, test_rappel_fichiers_modifies,
                  test_refus_double_lancement, test_uploadfs_ota, test_garde_build_importable,
                  test_erase_upload_commandes, test_erase_upload_refus, test_erase_upload_envoi_et_echec,
-                 test_solidification_vide):
+                 test_solidification_vide, test_fs_par_firmware):
         test()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0

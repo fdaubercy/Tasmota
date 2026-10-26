@@ -499,6 +499,7 @@ def sonde_page(m, capture):
     sonde_sortie(m)
     sonde_effacement(m)
     sonde_infobulle(m)
+    sonde_cases_fs(m)
     sonde_liens_fichiers(m)
     sonde_rechargement_effacer(m)
     sonde_pause(m)
@@ -807,6 +808,41 @@ def sonde_infobulle(m):
     verifie(("file system" in avec and A in avec, "file system" in sans, bool(sans), statique), (True, False, True, False),
             f"infobulle : « et le file system » pour A (fichiers), pas pour C (no_files) ni dans le HTML ({sans[:70]})")
     coche(cdp, f"#env-{C}", False)
+
+
+def sonde_cases_fs(m):
+    """Cases FS grisees et decochees quand l'envoi serie du firmware ecrit deja le FS de TOUS les envs coches
+    (COM + custom_files_upload) ; actives des qu'un env coche est en OTA ou sans fichiers (temoins)."""
+    cdp = m.cdp
+    case = lambda a: f'input[name=action][value="{a}"]'
+    etat = lambda: cdp.js("['buildfs', 'uploadfs'].map(a => { const c = document.querySelector("
+                          "'input[name=action][value=\"' + a + '\"]'); return [c.checked, c.disabled]; })")
+    for env in (A, B, C):
+        coche(cdp, f"#env-{env}", env == A)
+    for action in ("compiler", "upload", "erase_upload", "buildfs", "uploadfs"):
+        coche(cdp, case(action), action in ("buildfs", "uploadfs"))
+    verifie(etat(), [[True, False]] * 2, "cases_fs : FS seul coche -> cases actives")
+    coche(cdp, case("upload"))
+    titre = cdp.js(f"document.querySelector('{case('buildfs')}').parentNode.title") or ""
+    verifie((etat(), "Inutile ici" in titre), ([[False, True]] * 2, True),
+            "cases_fs : upload COM sur un env a fichiers -> FS decochees et grisees, infobulle")
+    coche(cdp, case("erase_upload"))
+    verifie(etat(), [[False, True]] * 2, "cases_fs : idem avec « Effacer puis téléverser »")
+    coche(cdp, case("erase_upload"), False)
+    verifie(etat(), [[False, False]] * 2, "cases_fs : plus d'envoi du firmware -> cases de nouveau actives")
+    coche(cdp, case("upload"))
+    coche(cdp, f"#env-{C}")
+    verifie(etat(), [[False, False]] * 2, "cases_fs : temoin, un env coche sans fichiers (C) -> cases actives")
+    coche(cdp, case("buildfs"))
+    verifie(cdp.js(f"document.querySelector('.env[data-env=\"{A}\"] .notes').textContent.includes('rien de plus pour cet env')"),
+            True, "cases_fs : serie mixte -> la ligne de A annonce que son FS est fait par l'envoi")
+    coche(cdp, f"#env-{C}", False)
+    cdp.js(f"document.querySelector('.env[data-env=\"{A}\"] .methode button:nth-child(2)').click()")     # A en OTA
+    verifie(etat()[1][1], False, "cases_fs : temoin, env a fichiers en OTA -> cases actives")
+    cdp.js(f"document.querySelector('.env[data-env=\"{A}\"] .methode button:nth-child(1)').click()")
+    for action in ("upload", "buildfs", "uploadfs"):
+        coche(cdp, case(action), False)
+    coche(cdp, f"#env-{A}", False)
 
 
 def sonde_liens_fichiers(m):

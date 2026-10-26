@@ -128,19 +128,20 @@ c'est **voulu** (decide le 2026-10-04 : « laisse ce test comme il est »). Ne p
 decouper : c'est UN fichier a televerser sur chaque carte, qui se prepare et s'explique
 seul au chargement ; le scinder imposerait deux televersements par carte.
 
-`outils_docs/scripts_python/outils_pc/build_page.py` fait **1062 lignes**, et c'est **voulu**
+`outils_docs/scripts_python/outils_pc/build_page.py` fait **1083 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
 vague de corrections finale du meme jour ; 935 le 2026-10-25 avec le panneau « Sortie » et « Effacer puis
 televerser » ; 1038 le meme jour avec la pause « rebranchez la carte » et les panneaux refermes ; 1053 avec
 l'envoi sans recompiler apres la pause et la pause rouverte ; 1062 avec le lien « fichiers » vers la page
-Fichiers Berry par env). C'est la page
+Fichiers Berry par env ; 1083 le 2026-10-26 avec les cases FS grisees quand l'envoi serie du firmware ecrit
+deja le FS). C'est la page
 unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule constante
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
 Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plutot qu'un decoupage) :
-`build_serie.py` fait **676 lignes** (+19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; execution en serie des `pio run` : verrous, arret immediat, attente
+`build_serie.py` fait **684 lignes** (+19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; execution en serie des `pio run` : verrous, arret immediat, attente
 d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
-verrou), et ses bancs `test_build_serie.py` (**970**), `test_build_page_chrome.py` (**953**),
+verrou), et ses bancs `test_build_serie.py` (**1007**), `test_build_page_chrome.py` (**1008**),
 `test_build_ota_fs.py` (**566**), `test_build_web.py` (**688**), ainsi que `test_annuaire.py` (**523**,
 banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
 compteur.
@@ -646,7 +647,9 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     PAS `littlefs_data`, perime) par `/ufsu`, persist de
     la carte sauvegarde avant dans `%LOCALAPPDATA%\outils_tasmota\build\persist\`, relu, Berry recharge, `Restart 1`.
     Un upload (ou erase_upload) serie du firmware flashe AUSSI le FS (persist compris) a chaque fois pour les envs a
-    `custom_files_upload` (post_esp32 reconstruit `littlefs.bin` a chaque edition des liens) : la page l'annonce. Journaux de chaque `pio run` dans
+    `custom_files_upload` (post_esp32 reconstruit `littlefs.bin` a chaque edition des liens) : la page l'annonce, grise
+    « Construire / Televerser le FS » si tous les envs coches sont dans ce cas, et sinon le serveur ne lance ni buildfs ni
+    uploadfs pour eux (statut de l'envoi, `build_serie.py::Serie._plan`). Journaux de chaque `pio run` dans
     `%LOCALAPPDATA%\outils_tasmota\build\journaux\`. Chaque lancement reecrit `platformio_override.ini` et
     `user_config_override.h` (a commiter). Bancs : `test_build_*.py` (+ sonde `test_build_page_chrome.py`).
     Mode d'emploi : `outils_docs/README.md` § « Build et televersement (page web) ». Spec :

@@ -9,7 +9,9 @@ spec docs/superpowers/specs/2026-10-24-page-build-televersement-design.md).
 Commandes (choix 9) : compiler = `run -e X` ; upload = `run -e X -t upload` (compile si besoin : si
 « compiler » est aussi coche, seul upload part) ; erase_upload = `-t erase_upload` (choix 19 : par cable
 seulement, l'un OU l'autre avec upload, a sa place, compile si besoin comme lui) ; buildfs = `-t buildfs` ;
-uploadfs par cable = `-t uploadfs`. Port COM par `--upload-port` (jamais PLATFORMIO_UPLOAD_PORT ni
+uploadfs par cable = `-t uploadfs`, SAUF pour un env a custom_files_upload dont le firmware part par cable
+(upload / erase_upload) : post_esp32 y ecrit deja le FS, buildfs et uploadfs suivent alors le sort de cet envoi
+sans pio run a part (_plan, 2026-10-26). Port COM par `--upload-port` (jamais PLATFORMIO_UPLOAD_PORT ni
 PLATFORMIO_EXTRA_SCRIPTS : ils entrent dans l'empreinte du projet et purgeraient .pio/build).
 En OTA, la page envoie elle-meme (build_ota_fs, spec choix 7 revise) : upload = `run -e X` puis la
 fonction injectee `ota_firmware` (firmware de .pio/build/<env>/ par /u2) ; uploadfs = buildfs (s'il
@@ -173,6 +175,7 @@ class Serie:
         self._arret_immediat = False
         self._envoi = False                              # un envoi vers une carte est en vol (envoi_en_cours)
         self._pause = None                               # pause « rebranchez la carte » : {env, port, precedent, choix}
+        self._fs_par_firmware = set()                    # envs dont l'envoi serie du firmware ecrit aussi le FS (controle)
 
     # -- evenements -------------------------------------------------------------------------------------
 
@@ -244,6 +247,7 @@ class Serie:
             motifs.append("« Téléverser le firmware » et « Effacer puis téléverser » : l'une ou l'autre, pas les deux")
         envoi = bool(set(actions) & ENVOIS)
         connus = {e.nom: e for e in build_envs.liste_envs(self.racine)}
+        self._fs_par_firmware = {nom for nom, e in connus.items() if e.fs_avec_firmware}   # lu par _plan
         vus, ports = set(), {}
         for ligne in lignes:
             nom = ligne.env
@@ -387,21 +391,27 @@ class Serie:
         """
         plan = []
         televerse = next((a for a in TELEVERSEMENTS if a in actions), None)
+        # Envoi serie du firmware d'un env a custom_files_upload : post_esp32 (esp32_build_filesystem) construit
+        # littlefs.bin et esptool l'ecrit avec le firmware. buildfs / uploadfs coches ne refont pas ce travail
+        # (buildfs prendrait meme le data_dir du lancement precedent) : ils suivent le sort de cet envoi.
+        par_firmware = [a for a in ("buildfs", "uploadfs") if a in actions] \
+            if televerse and ligne.methode == "com" and ligne.env in self._fs_par_firmware else []
         if televerse:
             couvre = [a for a in ("compiler", televerse) if a in actions]
             if ligne.methode == "com" and pause and "compiler" in actions:
                 plan.append(("pio", "compiler", "", ["compiler"], ["compiler"]))
-                plan.append(("pio", televerse, "nobuild " + televerse, [televerse], [televerse]))
+                plan.append(("pio", televerse, "nobuild " + televerse, [televerse] + par_firmware,
+                             [televerse] + par_firmware))
             elif ligne.methode == "com":
-                plan.append(("pio", televerse, televerse, couvre, couvre))
+                plan.append(("pio", televerse, televerse, couvre + par_firmware, couvre + par_firmware))
             else:                                        # upload OTA (erase_upload en OTA : refuse par controle)
                 plan.append(("pio", "upload", "", couvre, [a for a in couvre if a == "compiler"]))   # compilation
                 plan.append(("ota_firmware", "upload", "", ["upload"], ["upload"]))
         elif "compiler" in actions:
             plan.append(("pio", "compiler", "", ["compiler"], ["compiler"]))
-        if "buildfs" in actions:
+        if "buildfs" in actions and not par_firmware:
             plan.append(("pio", "buildfs", "buildfs", ["buildfs"], ["buildfs"]))
-        if "uploadfs" in actions:
+        if "uploadfs" in actions and not par_firmware:
             if ligne.methode == "com":
                 plan.append(("pio", "uploadfs", "uploadfs", ["uploadfs"], ["uploadfs"]))
             else:

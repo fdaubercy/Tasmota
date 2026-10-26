@@ -407,6 +407,13 @@ cartes et des bases personnelles. `pio-tools/post_esp32.py` reconstruit `littlef
 commande esptool. Comportement gardé par choix ; la ligne l'annonce avant le lancement (d'après les `.ini`, pas
 d'après la présence de `littlefs.bin`), et le suivi le redit au téléversement.
 
+Conséquence (2026-10-26) : « Construire le file system » et « Téléverser le file system » n'apportent rien à un tel
+envoi. Si **tous** les envs cochés sont en COM, embarquent des fichiers et « Téléverser le firmware » ou « Effacer
+puis téléverser » est coché, les deux cases sont décochées et grisées (infobulle). Dans une série mixte (un env en
+OTA ou sans fichiers), elles restent actives : le serveur ne lance alors ni `buildfs` ni `uploadfs` pour les envs
+déjà servis par leur envoi, qui prennent le statut de cet envoi (la ligne le dit). `buildfs` lirait d'ailleurs le
+`data_dir` du lancement précédent (défaut A12 du plan de la page).
+
 ### Effacer puis téléverser (`erase_upload`)
 
 Pour une carte dans un état bancal (partitions changées, réglages ou persist corrompus) : la page lance
@@ -417,7 +424,8 @@ commande quelle que soit la cible ; même mention « FS aussi flashé » sur la 
 - **Par câble seulement** : la case est grisée si une ligne cochée est en OTA, et le bouton OTA des lignes est grisé
   tant qu'elle est cochée ; le serveur refuse aussi une ligne OTA.
 - **L'une ou l'autre** avec « Téléverser le firmware » : cocher l'une décoche l'autre (les enchaîner flasherait deux
-  fois) ; le serveur refuse les deux ensemble. Combinable avec compiler, construire le FS, téléverser le FS.
+  fois) ; le serveur refuse les deux ensemble. Combinable avec compiler ; construire et téléverser le FS sont grisés
+  pour un env qui embarque des fichiers (voir plus haut).
 - **Confirmation** avant le lancement : le persist (`_persist.json`) et les réglages de la carte (Wi-Fi, MQTT,
   réglages faits sur la carte) sont effacés et remplacés par ceux du dépôt ; un réglage non reporté dans le dépôt
   est perdu. Un env sans file system dans le dépôt repart sans persist (la confirmation le nomme).
