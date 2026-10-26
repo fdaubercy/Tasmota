@@ -85,30 +85,82 @@ class CONTROLE_WEB
             end
         end
 
-        # Détermine quelle partie du json est envoyée à la page web
-        if (typeModule != "")
-            if (typeModule == "serveur" || typeModule == "diverses")
-                jsonRequete.insert(typeModule, persist._p[typeModule])
-            elif (!persist.modules.contains(typeModule) && persist.drivers.contains(typeModule))
-                # Driver : environnement reinjecte depuis /json/driversInactifs.json s'il y est en veille
-                jsonRequete.insert(typeModule, diversFonctions.driverComplet(typeModule))
-            else
-                jsonRequete.insert(typeModule, persist.modules[typeModule])
+        # Détermine quelle partie du json est envoyée à la page web. Réponse envoyée PAR MORCEAUX (audit P9.8) :
+        # un json.dump du persist complet coûtait ≈ 36 Ko de pic, plus que le tas libre d'un ESP32 sans PSRAM.
+        # Chaque sous-clé est sérialisée puis envoyée seule : le pic tombe à la plus grosse d'entre elles.
+        # Bloc demandé lu AVANT d'ouvrir la réponse : un module inconnu lève son erreur avant tout envoi.
+        var bloc = nil
+        if (typeModule == "serveur" || typeModule == "diverses")
+            bloc = persist._p[typeModule]
+        elif (typeModule != "" && !persist.modules.contains(typeModule) && persist.drivers.contains(typeModule))
+            # Driver : environnement reinjecte depuis /json/driversInactifs.json s'il y est en veille
+            bloc = diversFonctions.driverComplet(typeModule)
+        elif (typeModule != "")
+            bloc = persist.modules[typeModule]
+        end
+
+        webserver.content_open(200, "text/plain")       # même type que content_response, utilisé avant
+        try
+            webserver.content_send("{")
+            var premier = true
+            if (jsonRequete.contains("Succes"))
+                webserver.content_send("\"Succes\":" + json.dump(jsonRequete["Succes"]))
+                premier = false
             end
-        else
-            for item: persist._p.keys()
-                if (item == "drivers")
-                    # Environnement des drivers en veille reinjecte (copie : la RAM du persist n'est pas touchee)
-                    var veille = diversFonctions.litVeille()
-                    var tous = {}
-                    for nom: persist.drivers.keys()     tous[nom] = diversFonctions.driverComplet(nom, veille)     end
-                    jsonRequete.insert(item, tous)
-                else
-                    jsonRequete.insert(item, persist._p[item])
+            if (typeModule != "")
+                self.envoieCle(typeModule, bloc, premier)
+            else
+                for item: persist._p.keys()
+                    if (item == "drivers")
+                        # Environnement des drivers en veille reinjecte (copie : la RAM du persist n'est pas touchee),
+                        # un driver à la fois
+                        var veille = diversFonctions.litVeille()
+                        self.envoieCle(item, persist.drivers, premier, def (nom) return diversFonctions.driverComplet(nom, veille) end)
+                    else
+                        self.envoieCle(item, persist._p[item], premier)
+                    end
+                    premier = false
                 end
             end
+            webserver.content_send("}")
+        except .. as erreur, message
+            # Réponse déjà ouverte : la fermer quand même, sinon le navigateur attend jusqu'à son délai
+            webFonctions.log("ENVOI_JSON_ERREUR: Envoi interrompu : " + str(erreur) + " " + str(message) + " !", LOG_LEVEL_ERREUR)
         end
-        webserver.content_response(json.dump(jsonRequete))
+        webserver.content_close()
+    end
+
+    # Envoie '"nom":valeur' sans jamais sérialiser un map d'un bloc (audit P9.8). 'extrait' (facultatif)
+    # calcule la valeur envoyée pour chaque sous-clé du premier niveau.
+    def envoieCle(nom, valeur, premier, extrait)
+        import webserver
+        import json
+        webserver.content_send((premier ? "" : ",") + json.dump(str(nom)) + ":")
+        self.envoieValeur(valeur, extrait)
+    end
+
+    # Un map part clé par clé, en descendant jusqu'aux feuilles : le pic de RAM est la plus grosse feuille
+    # (liste ou valeur), pas le bloc. Le reste est sérialisé tel quel.
+    def envoieValeur(valeur, extrait)
+        import webserver
+        import json
+        if (!isinstance(valeur, map))
+            webserver.content_send(json.dump(valeur))
+            return
+        end
+        webserver.content_send("{")
+        var debut = true
+        for cle: valeur.keys()
+            var v = (extrait != nil ? extrait(cle) : valeur[cle])
+            if (isinstance(v, map))
+                webserver.content_send((debut ? "" : ",") + json.dump(str(cle)) + ":")
+                self.envoieValeur(v)
+            else                        # feuille : clé et valeur en un seul envoi
+                webserver.content_send((debut ? "" : ",") + json.dump(str(cle)) + ":" + json.dump(v))
+            end
+            debut = false
+        end
+        webserver.content_send("}")
     end
 
     # Gestion de l'affichage de la page des paramètres des capteurs pour réglage

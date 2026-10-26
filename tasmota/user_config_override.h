@@ -930,6 +930,23 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #ifndef DISABLE_REFERER_CHK
                 #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
             #endif
+
+            // -- ESP32 sans PSRAM : animation Berry et serveur FTP retires (audit Berry P9.8, 2026-10-26) --
+            // Memes raisons que la cave ESP32 (section FIRMWARE_ESP32_CAVE_SERVEUR_RLY) : l'animation est
+            // definie pour tous les modules dans la partie commune et chargee d'office par l'init amont
+            // (~94k + ~98k de flash, un peu de RAM Berry) alors que la carte n'a pas de ruban ; le FTP
+            // ('new FtpServer', relance a chaque connexion reseau) faisait planter la cave (tas < 25 Ko).
+            // A garder avant tout deploiement du framework Berry sur cette carte. serveurFTP.activation
+            // est a "OFF" dans son _persist.json.
+            #ifdef USE_BERRY_ANIMATION_DSL
+                #undef USE_BERRY_ANIMATION_DSL
+            #endif
+            #ifdef USE_BERRY_ANIMATION
+                #undef USE_BERRY_ANIMATION
+            #endif
+            #ifdef USE_FTP
+                #undef USE_FTP
+            #endif
         
             // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------
             // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino
