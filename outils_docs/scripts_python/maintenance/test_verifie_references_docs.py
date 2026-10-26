@@ -54,6 +54,9 @@ cas("conforme : chemin partiel (fin d'un chemin suivi)", "`berry/charte_logs.py`
 cas("conforme : abreviation P/ des skills", "`P/berry/verifie_berry.py`\n", [])
 cas("conforme : motif ou gabarit non verifie", "`data/<lieu>/<carte>/autoexec.be` et `data/fs/*.be`\n", [])
 cas("hors depot : signale sans defaut", "`src/solidify/solidified_driver_class.h`\n", [], hors_attendus=1)
+cas("genere par un build (absent hors build) : non verifie", "`tasmota/tasmota.ino.cpp` et `berry_custom/src/_temp_be_x_lib.c`\n",
+    [], hors_attendus=2)
+cas("temoin : chemin du depot absent, non genere -> defaut", "`tasmota/nexistepas.cpp`\n", ["chemin"])
 cas("fonction : definie (Berry, nom court)", "`logFonctions.be::actif`\n", [])
 cas("fonction : definie (Berry, nom complet)", "`logFonctions.be::logFonctions_actif`\n", [])
 cas("fonction : definie (C)", "`be_module.c::be_module_load`\n", [])

@@ -43,6 +43,9 @@ RE_CHEMIN = re.compile(r"^[\w.-]+(?:/[\w.-]+)+\." + EXT + r"$")
 DOSSIERS_DEPOT = {"data", "outils_docs", "tasmota", "lib", "pio-tools", ".claude", ".vscode", "tasks", "docs",
                   "partitions", "boards"}
 CODE_SOURCE = {".be", ".py", ".c", ".cpp", ".h", ".ino", ".js", ".mjs", ".sh", ".ps1"}
+# Fichiers ecrits par un build puis retires (tasmota.ino.cpp de pioino, _temp_be_*.c de la solidification) :
+# presents ou non selon le moment, jamais un defaut (classes « hors depot, non verifie »)
+RE_GENERE = re.compile(r"\.ino\.cpp$|(^|/)_temp_be_[\w]*\.c$")
 
 
 def racine_depot() -> Path:
@@ -88,6 +91,8 @@ class Index:
         candidats = [self.racine / c for c in self.par_nom.get(nom, []) if c == cite or c.endswith("/" + cite)]
         if candidats:
             return candidats
+        if RE_GENERE.search(cite):                      # genere par un build : absent hors build
+            return None
         if cite.split("/", 1)[0] in DOSSIERS_DEPOT:     # chemin du depot qui n'existe pas : defaut
             return []
         if self.externes is not None:
