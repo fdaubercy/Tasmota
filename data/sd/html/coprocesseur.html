@@ -10,6 +10,19 @@
 		<tr><th style="text-align:left">Sur le serveur</th><td id="c_publiee"></td></tr>
 	</table>
 	<p id="c_defaut" style="font-size:85%"></p>
+	<div id="c_bloque" style="display:none;color:#f44">
+		<p><b>Coprocesseur bloqué : la mise à jour par le réseau est impossible.</b></p>
+		<p style="font-size:85%">Le C6 refuse toute nouvelle image (code 5379, ESP_ERR_OTA_VALIDATE_FAILED). C'est un défaut connu
+		d'esp-hosted (<a href="https://github.com/espressif/esp-hosted-mcu/issues/143" target="_blank" rel="noopener">ticket #143</a>) :
+		son programme de démarrage d'usine (flash en DIO) ne valide plus les images après une application 2.1 à 2.8 (QIO)
+		reçue par le réseau. Seul un <b>flash série du C6</b> (C6_U0TXD, C6_U0RXD, C6_IO9 à la masse au démarrage, P4 en mode
+		téléchargement) avec une version 2.9 ou plus le débloque ; les mises à jour par le réseau remarchent ensuite.
+		Le Wi-Fi fonctionne en attendant. Cette alerte n'apparaît sur l'accueil que pendant la première minute après le démarrage.</p>
+	</div>
+	<div id="c_echec" style="display:none;color:#f44">
+		<p><b>Échec de la mise à jour</b> (<span id="c_code"></span>, <span id="c_tentatives"></span>).</p>
+		<p id="c_explication" style="font-size:85%"></p>
+	</div>
 	<div id="c_maj" style="display:none">
 		<p style="font-size:85%">Le P4 télécharge le fichier (environ 1,2 Mo) et le transmet au C6, puis redémarre.
 		Pendant ce temps, <b>tout le Wi-Fi du P4 est coupé</b>, y compris le point d'accès des esclaves
@@ -17,7 +30,7 @@
 		<p id="c_url" style="font-size:75%;word-break:break-all"></p>
 		<form method="post" action="/coprocesseur"
 		      onsubmit="return confirm('Mettre à jour le coprocesseur Wi-Fi ?\nLe Wi-Fi du P4 et des esclaves sera coupé une à deux minutes, puis le P4 redémarrera.')">
-			<button class="button bred">Mettre à jour le coprocesseur</button>
+			<button id="c_bouton" class="button bred">Mettre à jour le coprocesseur</button>
 		</form>
 	</div>
 	<div id="c_lancee" style="display:none">
@@ -29,16 +42,29 @@
 	var d = window.COPRO || {};
 	function pose(id, texte) { var e = document.getElementById(id); if (e) { e.textContent = texte; } }
 	var etats = {"retard": "Le firmware du coprocesseur n'est pas à jour.", "aJour": "Le firmware du coprocesseur est à jour.",
-	             "absent": "Cette carte n'a pas de coprocesseur Wi-Fi.", "inconnu": "Version du coprocesseur illisible."};
+	             "absent": "Cette carte n'a pas de coprocesseur Wi-Fi.", "bloque": "Le firmware du coprocesseur n'est pas à jour et ne peut pas l'être par le réseau.", "inconnu": "Version du coprocesseur illisible."};
 	pose("c_etat", etats[d.etat] || "Vérification en cours (environ 20 s après le démarrage).");
 	pose("c_mcu", d.mcu || "-");
 	pose("c_c6", d.c6 || "-");
 	pose("c_hote", d.hote || "-");
-	pose("c_publiee", d.publiee === true ? "publiée" : (d.publiee === false ? "pas encore publiée" :
+	pose("c_publiee", d.etat === "bloque" ? "non vérifié (inutile tant que le C6 est bloqué)" : d.publiee === true ? "publiée" : (d.publiee === false ? "pas encore publiée" :
 	     (d.etat === "retard" ? "non vérifiée (" + (d.essais || 0) + " essai(s))" : "-")));
 	if (d.defaut) {
 		pose("c_defaut", "Le fichier par défaut du serveur est en v" + d.defaut +
 		     (d.defaut !== d.hote ? " : la version visée est celle du firmware du P4." : "."));
+	}
+	if (d.etat === "bloque") {
+		document.getElementById("c_bloque").style.display = "block";
+	} else if (d.echec) {
+		var code = String(d.echec).replace("Failed ", "");
+		var causes = {"5379": "Le coprocesseur a refusé l'image reçue (ESP_ERR_OTA_VALIDATE_FAILED) : le fichier est arrivé en entier mais sa vérification a échoué.",
+		              "-1": "Le fichier n'a pas pu être téléchargé (URL, réseau ou serveur)."};
+		document.getElementById("c_echec").style.display = "block";
+		pose("c_code", "code " + code);
+		pose("c_tentatives", (d.tentatives || 1) + " essai(s) raté(s) depuis le démarrage");
+		pose("c_explication", (causes[code] || "Code renvoyé par la commande HostedOta.") +
+		     " Le coprocesseur garde son firmware actuel : le Wi-Fi fonctionne comme avant. Vous pouvez réessayer.");
+		pose("c_bouton", "Réessayer la mise à jour");
 	}
 	if (d.possible) {
 		document.getElementById("c_maj").style.display = "block";

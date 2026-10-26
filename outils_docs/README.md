@@ -286,13 +286,26 @@ le signalait. `data/fs/controleCoprocesseur.be` (solidifié sur le P4, exclu des
 - **Page `/coprocesseur`** (lien de la ligne d'alerte) : versions, état sur le serveur, URL. Le bouton « Mettre à jour
   le coprocesseur » (avec confirmation) lance `HostedOta <URL complète>`. Le Wi-Fi du P4 et le point d'accès des
   esclaves sont coupés une à deux minutes, puis le P4 redémarre. L'alerte disparaît si la mise à jour a réussi.
+- **Échec et nouvel essai** : le module suit le résultat de `HostedOta` (et de `HostedLoad`, même tapées en console)
+  par une règle. Sur `Failed <code>`, la ligne d'accueil indique « échec de la mise à jour ». La page affiche le code et
+  sa cause (-1 = téléchargement impossible), puis le bouton revient sous le nom « Réessayer la mise à jour ». Le C6
+  garde son firmware et le Wi-Fi marche comme avant. L'échec est journalisé en `erreur`.
+- **C6 bloqué (`Failed 5379`)** : `ESP_ERR_OTA_VALIDATE_FAILED`, l'image arrive en entier mais le C6 la refuse. C'est le
+  bug [esp-hosted-mcu #143](https://github.com/espressif/esp-hosted-mcu/issues/143) : programme de démarrage d'usine
+  en DIO + application 2.1 à 2.8 en QIO reçue par le réseau (cas du P4 du garage, en 2.6.6). Plus aucune mise à jour
+  par le réseau ne passe : seul un **flash série du C6** (C6_U0TXD, C6_U0RXD, C6_IO9 à la masse au démarrage, P4 en
+  mode téléchargement) avec une version 2.9 ou plus le débloque. Le module note la version bloquée dans le persist
+  (`serveur.coprocesseur.bloque`) : ensuite, ni bouton ni requête au serveur, et la ligne d'accueil ne s'affiche que
+  pendant la **première minute après le démarrage**. La page `/coprocesseur` (explication, lien du ticket) et le MQTT
+  (`"Bloque": true`) gardent l'information. Une autre version lue sur le C6 (flash série fait) efface la clé.
 - **Réglage** : bloc `serveur.coprocesseur` du persist,
   `{"activation": "ON", "url": "https://ota.tasmota.com/tasmota32/coprocessor", "mqtt": "ON"}`.
   Logs sur la cible `general`, préfixe `COPROCESSEUR`.
 - **MQTT** (`"mqtt": "ON"`, absent = OFF ; ON sur le P4 du garage) : `tele/<topic>/COPROCESSEUR`, message **retenu**,
-  publié à chaque changement d'état (versions lues, réponse du serveur, mise à jour lancée) et à chaque connexion au
-  broker : `{"MCU": "esp32c6", "Version": "2.6.6", "Attendue": "2.12.13", "AJour": false, "Publiee": true, "Lancee": false}`
-  (`Publiee` vaut `null` tant que le serveur n'a pas répondu). C'est un topic à part : le JSON `SENSOR`, lu par
+  publié à chaque changement d'état (versions lues, réponse du serveur, mise à jour lancée ou ratée) et à chaque
+  connexion au broker : `{"MCU": "esp32c6", "Version": "2.6.6", "Attendue": "2.12.13", "AJour": false, "Publiee": true,
+  "Lancee": false, "Echec": "Failed 5379", "Bloque": true}` (`Publiee` vaut `null` tant que le serveur n'a pas répondu ;
+  `Echec` vaut `null` sans échec). C'est un topic à part : le JSON `SENSOR`, lu par
   Influx et Node-RED sur le Pi et par l'historique, n'est pas modifié.
 - **Nouvelle carte P4** : la page « Fichiers Berry par env » pose l'alerte selon la **puce de la base**, quel que soit
   le modèle (`fichiers_berry_coprocesseur.py`). Sur une base P4, elle ajoute le bloc au persist, ajoute la ligne

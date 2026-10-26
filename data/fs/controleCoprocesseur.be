@@ -26,8 +26,15 @@
  * MQTT ("mqtt": "ON" ; absent = OFF) : tele/<serveur.mqtt.topic>/COPROCESSEUR, message RETENU, publie a chaque
  * changement d'etat (lecture locale, reponse du serveur, mise a jour lancee) et a chaque connexion au broker :
  *     {"MCU": "esp32c6", "Version": "2.6.6", "Attendue": "2.12.13", "AJour": false, "Publiee": true, "Lancee": false}
- * ("Publiee" : null tant que le serveur n'a pas repondu). Topic a part : le JSON SENSOR (Influx/Node-RED du Pi,
+ * ("Publiee" : null tant que le serveur n'a pas repondu ; "Echec" : "Failed <code>" du dernier essai rate, sinon null ;
+ * "Bloque" : true si le C6 refuse tout OTA, voir plus bas). Topic a part : le JSON SENSOR (Influx/Node-RED du Pi,
  * series de l'historique) n'est pas touche. Rien n'est publie pour une carte sans coprocesseur.
+ * C6 BLOQUE (2026-10-26) : "Failed 5379" (ESP_ERR_OTA_VALIDATE_FAILED) = bug esp-hosted-mcu #143 : bootloader DIO
+ * (firmware d'usine < 2.1) + application QIO (2.1 a 2.8, recue par OTA) -> plus AUCUN OTA ne passe, seul un flash
+ * serie du C6 (version >= 2.9) le debloque. La version bloquee est notee dans le persist (serveur.coprocesseur.bloque,
+ * ex. "2.6.6") : aux demarrages suivants, plus de requete au serveur ni de bouton ; la ligne d'accueil n'est montree
+ * que pendant la premiere minute apres le demarrage (DUREE_ALERTE_BLOQUE) ; la page /coprocesseur et le MQTT gardent
+ * l'information. Une autre version lue sur le C6 (flash serie fait) efface la cle.
  * Page : /coprocesseur (GET : etat, POST : lance HostedOta). Gabarit /sd/html/coprocesseur.html, rempli par
  * son script a partir de window.COPRO. Logs : cible general. Banc : outils_docs/scripts_python/berry/banc_coprocesseur.py
 ********************************************************************************************* -#
@@ -43,27 +50,38 @@ class COPROCESSEUR : Driver
     static DELAI_ESSAI = 3600000        # ms entre deux essais vers le serveur
     static DELAI_DEFAUT = 10000         # ms avant la lecture du fichier par defaut
     static ESSAIS_MAX = 6
+    static CODE_BLOQUE = "Failed 5379"  # ESP_ERR_OTA_VALIDATE_FAILED : C6 bloque (esp-hosted-mcu #143)
+    static DUREE_ALERTE_BLOQUE = 60000  # ms apres le demarrage pendant lesquels l'accueil montre le blocage
 
+    var config                          # bloc serveur.coprocesseur du persist (cle "bloque" ecrite ici)
     var base                            # URL du dossier coprocessor, sans '/' final
-    var etat                            # nil (pas lu), "absent", "inconnu", "aJour", "retard"
+    var etat                            # nil (pas lu), "absent", "inconnu", "aJour", "retard", "bloque"
     var c6, hote, mcu                   # versions "2.6.6" / "2.12.13", puce "esp32c6"
     var publiee                         # nil (non verifiee), true, false
     var versionDefaut                   # version du fichier par defaut du serveur, nil si non lue
     var lectures, essais                # lectures de Hosted, requetes au serveur
-    var lancee                          # HostedOta deja lance par la page
+    var lancee                          # mise a jour en cours (page ou console), jusqu'a son resultat
+    var echec                           # resultat du dernier essai rate ("Failed 5379"), nil sinon
+    var tentatives                      # mises a jour ratees depuis le demarrage
     var ligne                           # ligne d'accueil precalculee ("" = rien)
     var mqttActif                       # publication de l'etat sur tele/<topic>/COPROCESSEUR
 
     def init(config)
+        self.config = config
         var url = str(config.find("url", self.URL_DEFAUT))
         while (size(url) > 0 && url[-1] == "/")    url = url[0 .. -2]    end
         self.base = url
         self.lectures = 0
         self.essais = 0
         self.lancee = false
+        self.tentatives = 0
         self.ligne = ""
         self.mqttActif = (config.find("mqtt", "OFF") == "ON")
         tasmota.set_timer(self.DELAI_LOCAL, / -> self.verifieLocal(), self.ID_TIMER)
+        # Resultat de la mise a jour (xdrv_84_esp32_hosted.ino::HostedMCUEverySecond le passe aux regles) : un succes
+        # redemarre le P4, un echec ("Failed <code>") rend le bouton. Suit aussi un HostedOta / HostedLoad tape en console.
+        tasmota.add_rule("HostedOta", def (valeur, declencheur, message) self.resultatOta(valeur) end, "coprocesseurOta")
+        tasmota.add_rule("HostedLoad", def (valeur, declencheur, message) self.resultatOta(valeur) end, "coprocesseurLoad")
         # Message retenu republie a chaque (re)connexion : le broker a pu le perdre (redemarrage du Pi)
         if (self.mqttActif)    tasmota.add_rule("Mqtt#Connected", def (valeur, declencheur, message) self.publie() end, self.ID_TIMER)    end
     end
@@ -132,10 +150,22 @@ class COPROCESSEUR : Driver
             return
         end
 
+        var bloque = self.config.find("bloque")
+        if (bloque != nil && bloque != self.c6)
+            self.config.remove("bloque")
+            self.sauvePersist()
+            logFonctions.log("COPROCESSEUR: C6 passe de v" + str(bloque) + " (bloque) a v" + self.c6 + " : blocage oublie !", LOG_LEVEL_INFO)
+        end
+
         if (vC6 >= vHote)
             self.etat = "aJour"
             logFonctions.log(string.format("COPROCESSEUR: Firmware du %s a jour (v%s) !", self.mcu, self.c6), LOG_LEVEL_INFO)
             self.publie()
+            return
+        end
+
+        if (self.config.find("bloque") == self.c6)
+            self.bloque()
             return
         end
 
@@ -145,6 +175,24 @@ class COPROCESSEUR : Driver
         self.publie()
         var attente = self.DELAI_SERVEUR - tasmota.millis()
         tasmota.set_timer((attente > 1000 ? attente : 1000), / -> self.verifieServeur(), self.ID_TIMER)
+    end
+
+    # C6 qui refuse tout OTA : ni requete au serveur ni bouton ; ligne d'accueil jusqu'a DUREE_ALERTE_BLOQUE apres le
+    # demarrage, effacee par une minuterie
+    def bloque()
+        import string
+        self.etat = "bloque"
+        self.majLigne()
+        logFonctions.log(string.format("COPROCESSEUR_ERREUR: %s bloque en v%s (OTA refuse, bug esp-hosted-mcu #143) : flash serie necessaire pour passer en v%s !",
+                                       self.mcu, self.c6, self.hote), LOG_LEVEL_ERREUR)
+        self.publie()
+        var reste = self.DUREE_ALERTE_BLOQUE - tasmota.millis()
+        if (reste > 0)    tasmota.set_timer(reste, / -> self.majLigne(), self.ID_TIMER)    end
+    end
+
+    def sauvePersist()
+        import persist
+        persist.save(true)      # true : modif imbriquee, save() seul n'ecrit rien
     end
 
     # Requete des 512 premiers octets de 'url' : [code HTTP (negatif = echec reseau), version lue ou nil]
@@ -197,11 +245,11 @@ class COPROCESSEUR : Driver
     def publie()
         import mqtt
         import json
-        if (!self.mqttActif || (self.etat != "aJour" && self.etat != "retard"))    return false    end
+        if (!self.mqttActif || (self.etat != "aJour" && self.etat != "retard" && self.etat != "bloque"))    return false    end
         var topic = (isinstance(serveur, map) ? serveur.find("mqtt", {}).find("topic", "") : "")
         if (topic == "" || !mqtt.connected())    return false    end
         var etat = {"MCU": self.mcu, "Version": self.c6, "Attendue": self.hote, "AJour": (self.etat == "aJour"),
-                    "Publiee": self.publiee, "Lancee": self.lancee}
+                    "Publiee": self.publiee, "Lancee": self.lancee, "Echec": self.echec, "Bloque": (self.etat == "bloque")}
         try
             mqtt.publish("tele/" + topic + "/COPROCESSEUR", json.dump(etat), true)
         except .. as erreur, message
@@ -222,17 +270,56 @@ class COPROCESSEUR : Driver
     end
 
     def majLigne()
+        if (self.etat == "bloque")
+            self.ligne = (tasmota.millis() < self.DUREE_ALERTE_BLOQUE ?
+                          "{s}<a href='/coprocesseur' style='color:#f44;font-weight:bold;font-size:85%'>&#9888; Wi-Fi " + self.mcu +
+                          " bloqué en v" + self.c6 + "</a>{m}<span style='font-size:85%'>flash série nécessaire</span>{e}" : "")
+            return
+        end
         if (self.etat != "retard")
             self.ligne = ""
             return
         end
         var dispo = (self.publiee == true ? "disponible" : (self.publiee == false ? "pas encore publiée" : "disponibilité non vérifiée"))
-        self.ligne = "{s}<a href='/coprocesseur' style='color:#f80;font-weight:bold'>&#9888; Wi-Fi " + self.mcu +
-                     " à mettre à jour</a>{m}v" + self.c6 + " &rarr; v" + self.hote + " (" + dispo + "){e}"
+        if (self.lancee)
+            dispo = "mise à jour en cours"
+        elif (self.echec != nil)
+            dispo = "échec de la mise à jour"
+        end
+        self.ligne = "{s}<a href='/coprocesseur' style='color:#f80;font-weight:bold;font-size:85%'>&#9888; Wi-Fi " + self.mcu +
+                     " à mettre à jour</a>{m}<span style='font-size:85%'>v" + self.c6 + " &rarr; v" + self.hote + " (" + dispo + ")</span>{e}"
     end
 
     def peutMettreAJour()
         return (self.etat == "retard" && self.publiee != false && !self.lancee)
+    end
+
+    # Regles HostedOta / HostedLoad : "Version x from <url>" = lancement (reponse a la commande), "Failed <code>" =
+    # echec (5379 = 0x1503 ESP_ERR_OTA_VALIDATE_FAILED : image refusee par le coprocesseur ; -1 : telechargement
+    # impossible). "Successful" : le P4 redemarre, rien a faire.
+    def resultatOta(valeur)
+        import string
+        var texte = str(valeur)
+        if (string.find(texte, "Failed") == 0)
+            self.lancee = false
+            self.echec = texte
+            self.tentatives += 1
+            logFonctions.log(string.format("COPROCESSEUR_ERREUR: Mise a jour du %s ratee : %s (essai %i) !", str(self.mcu), texte, self.tentatives), LOG_LEVEL_ERREUR)
+            if (texte == self.CODE_BLOQUE && self.c6 != nil && self.c6 != "")
+                self.config["bloque"] = self.c6
+                self.sauvePersist()
+                self.bloque()
+                return
+            end
+        elif (string.find(texte, "Version ") == 0)
+            self.lancee = true
+            self.echec = nil
+            logFonctions.log("COPROCESSEUR: Mise a jour en cours : " + texte + " !", LOG_LEVEL_INFO)
+        else
+            return
+        end
+        self.majLigne()
+        self.publie()
     end
 
     # Rafraichissement de l'accueil (~2 s) : chaine precalculee, pas de log
@@ -255,7 +342,8 @@ class COPROCESSEUR : Driver
         if (!webserver.check_privileged_access())    return nil    end
         var donnees = {"etat": self.etat, "mcu": self.mcu, "c6": self.c6, "hote": self.hote, "publiee": self.publiee,
                        "url": (self.hote != nil ? self.urlFichier(self.hote) : nil), "defaut": self.versionDefaut,
-                       "possible": self.peutMettreAJour(), "lancee": self.lancee, "essais": self.essais}
+                       "possible": self.peutMettreAJour(), "lancee": self.lancee, "essais": self.essais,
+                       "echec": self.echec, "tentatives": self.tentatives}
         webserver.content_start("Coprocesseur Wi-Fi")
         webserver.content_send_style()
         webserver.content_send("<script>window.COPRO=" + string.replace(json.dump(donnees), "</", "<\\/") + ";</script>")
@@ -271,8 +359,10 @@ class COPROCESSEUR : Driver
         if (self.peutMettreAJour())
             var url = self.urlFichier(self.hote)
             self.lancee = true
+            self.echec = nil
             logFonctions.log("COPROCESSEUR: Mise a jour lancee depuis la page web : HostedOta " + url + " !", LOG_LEVEL_INFO)
             tasmota.cmd("HostedOta " + url, boolMute)
+            self.majLigne()
             self.publie()
         else
             logFonctions.log("COPROCESSEUR: Mise a jour refusee (etat " + str(self.etat) + ", publiee " + str(self.publiee) + ", deja lancee " + str(self.lancee) + ") !", LOG_LEVEL_DEBUG)

@@ -462,8 +462,10 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   exclu des autres envs comme `controleES8311.be`), bloc persist `serveur.coprocesseur`. Au demarrage seulement : `Hosted`
   lu en local (C6 a jour -> aucun acces reseau) ; en retard -> ligne d'alerte sur l'accueil + UNE requete `Range` de
   512 o sur `<url>/v<Host>/network_adapter_<MCU>.bin` (version lue dans l'en-tete d'image), nouvel essai horaire, 6 au
-  plus. Page `/coprocesseur` (gabarit `data/sd/html/coprocesseur.html`), bouton -> `HostedOta <URL complete>`. Version
-  visee = `Host` (bibliotheque du firmware P4), PAS le fichier par defaut du serveur (en retard). Option `"mqtt": "ON"`
+  plus. Page `/coprocesseur` (gabarit `data/sd/html/coprocesseur.html`), bouton -> `HostedOta <URL complete>` ;
+  resultat suivi par une regle `HostedOta`/`HostedLoad` : `Failed <code>` -> « echec » sur l'accueil et la page, bouton
+  « Reessayer » ; `Failed 5379` = C6 BLOQUE (bug esp-hosted-mcu #143, flash serie seul remede) : cle persist
+  `serveur.coprocesseur.bloque`, ni bouton ni requete, ligne d'accueil la 1re minute apres le demarrage seulement. Version visee = `Host` (bibliotheque du firmware P4), PAS le fichier par defaut du serveur (en retard). Option `"mqtt": "ON"`
   (ON sur le P4) : `tele/<topic>/COPROCESSEUR` RETENU, a chaque changement d'etat et a chaque `Mqtt#Connected` (le JSON
   SENSOR n'est pas touche). Nouvel env : `outils_pc/fichiers_berry_coprocesseur.py` (appele par
   `fichiers_berry_creation._calcule`) pose ou neutralise l'alerte selon la PUCE de la base (persist, autoexec, cenv).

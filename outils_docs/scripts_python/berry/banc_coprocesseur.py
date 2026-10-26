@@ -17,6 +17,8 @@ CE QU'IL FAIT
 2. Rend la page /coprocesseur du scenario « en retard, publie » (gabarit reel data/sd/html/coprocesseur.html +
    donnees produites par le module) dans Chrome sans interface et juge le DOM rempli par son script : versions
    affichees, bouton present, aucune erreur JS (lecon du 2026-10-16 : une page s'execute dans un vrai navigateur).
+   Puis la meme page apres un echec (Failed -1) : bloc « Echec », code, cause, bouton « Reessayer » ; et C6 bloque
+   (Failed 5379) : bloc « bloque » avec le lien du ticket esp-hosted #143, sans bouton.
 
 CE QU'IL NE TESTE PAS
 ---------------------
@@ -63,15 +65,18 @@ def texte(dom: str, ident: str) -> str:
     return re.sub(r"<[^>]+>", "", m.group(1)).strip() if m else ""
 
 
-def partie_navigateur(navigateur: str, page: Path, dossier: Path) -> int:
+def rend(navigateur: str, page: Path, dossier: Path, nom: str) -> str:
     html = page.read_text(encoding="utf-8")
-    fichier = dossier / "coprocesseur_rendu.html"
+    fichier = dossier / f"{nom}_rendu.html"
     fichier.write_text("<!doctype html><html><head><meta charset='utf-8'></head><body>" + SONDE + html
                        + "</body></html>", encoding="utf-8")
     r = subprocess.run([navigateur, "--headless=new", "--disable-gpu", "--no-first-run", "--lang=fr-FR",
                         f"--user-data-dir={dossier / 'profil'}", "--virtual-time-budget=3000", "--dump-dom",
                         fichier.as_uri()], capture_output=True, timeout=90)
-    dom = r.stdout.decode("utf-8", "replace")
+    return r.stdout.decode("utf-8", "replace")
+
+
+def partie_navigateur(navigateur: str, page: Path, dossier: Path) -> int:
     echecs = 0
 
     def verifie(c, nom):
@@ -81,6 +86,7 @@ def partie_navigateur(navigateur: str, page: Path, dossier: Path) -> int:
             echecs += 1
 
     print("R. Rendu de la page /coprocesseur dans le navigateur")
+    dom = rend(navigateur, page, dossier, "coprocesseur")
     bilan = texte(dom, "bilan_sonde")
     verifie(bilan.startswith("ERREURS=0"), f"aucune erreur JS ({bilan or 'bilan absent'})")
     verifie(texte(dom, "c_c6") == "2.6.6", f"version du C6 affichee ({texte(dom, 'c_c6')!r})")
@@ -91,6 +97,39 @@ def partie_navigateur(navigateur: str, page: Path, dossier: Path) -> int:
             or re.search(r"<form[^>]*action=\"/coprocesseur\"[^>]*method=\"post\"", dom, re.I) is not None,
             "formulaire POST /coprocesseur")
     verifie(re.search(r"id=\"c_lancee\"[^>]*display:\s*none", dom) is not None, "message « lancee » cache")
+    verifie(re.search(r"id=\"c_echec\"[^>]*display:\s*none", dom) is not None, "bloc « echec » cache sans echec")
+    verifie(texte(dom, "c_bouton") == "Mettre à jour le coprocesseur", f"bouton de mise a jour ({texte(dom, 'c_bouton')!r})")
+
+    page_echec = Path(str(page) + ".echec.html")
+    print("R. Rendu apres un echec (Failed -1)")
+    if not page_echec.is_file():
+        verifie(False, "la partie Berry n'a pas ecrit la page d'echec")
+        return echecs
+    dom = rend(navigateur, page_echec, dossier, "coprocesseur_echec")
+    bilan = texte(dom, "bilan_sonde")
+    verifie(bilan.startswith("ERREURS=0"), f"aucune erreur JS ({bilan or 'bilan absent'})")
+    verifie(re.search(r"id=\"c_echec\"(?![^>]*display:\s*none)", dom) is not None, "bloc « echec » visible")
+    verifie(texte(dom, "c_code") == "code -1", f"code affiche ({texte(dom, 'c_code')!r})")
+    verifie(texte(dom, "c_tentatives").startswith("1 essai"), f"essais rates ({texte(dom, 'c_tentatives')!r})")
+    verifie("pas pu être téléchargé" in texte(dom, "c_explication"),
+            f"cause expliquee ({texte(dom, 'c_explication')[:60]!r})")
+    verifie(texte(dom, "c_bouton") == "Réessayer la mise à jour", f"bouton « Reessayer » ({texte(dom, 'c_bouton')!r})")
+    verifie(re.search(r"id=\"c_maj\"(?![^>]*display:\s*none)", dom) is not None, "formulaire de nouvel essai visible")
+    verifie(re.search(r"id=\"c_bloque\"[^>]*display:\s*none", dom) is not None, "bloc « bloque » cache")
+
+    page_bloque = Path(str(page) + ".bloque.html")
+    print("R. Rendu du coprocesseur bloque (Failed 5379)")
+    if not page_bloque.is_file():
+        verifie(False, "la partie Berry n'a pas ecrit la page du blocage")
+        return echecs
+    dom = rend(navigateur, page_bloque, dossier, "coprocesseur_bloque")
+    bilan = texte(dom, "bilan_sonde")
+    verifie(bilan.startswith("ERREURS=0"), f"aucune erreur JS ({bilan or 'bilan absent'})")
+    verifie(re.search(r"id=\"c_bloque\"(?![^>]*display:\s*none)", dom) is not None, "bloc « bloque » visible")
+    verifie("issues/143" in dom, "lien vers le ticket esp-hosted #143")
+    verifie(re.search(r"id=\"c_echec\"[^>]*display:\s*none", dom) is not None, "bloc « echec » cache (remplace)")
+    verifie(re.search(r"id=\"c_maj\"[^>]*display:\s*none", dom) is not None, "pas de bouton de mise a jour")
+    verifie("réseau" in texte(dom, "c_etat"), f"etat affiche ({texte(dom, 'c_etat')!r})")
     return echecs
 
 

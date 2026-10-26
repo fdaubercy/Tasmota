@@ -367,4 +367,100 @@ c = neuf({"activation": "ON", "mqtt": "ON"})
 tasmota.declenche("coprocesseur")
 verifie(size(mqtt.publies) == 0, "topic MQTT vide : rien publie")
 
+print("15. Resultat de HostedOta (regle) : echec affiche, nouvel essai possible")
+serveur = {"coprocesseur": {"activation": "ON", "mqtt": "ON"}, "mqtt": {"topic": "SERVEUR-GARAGE"}}
+HOSTED = hosted("2.6.6", "2.12.13")
+SERVEUR = {URL_21213: [206, ENTETE_21213], URL_DEFAUT: [206, entete("2.12.6")]}
+mqtt.publies = []
+c = neuf({"activation": "ON", "mqtt": "ON"})
+verifie(tasmota.regles.contains("HostedOta") && tasmota.regles.contains("HostedLoad"), "regles HostedOta et HostedLoad posees")
+tasmota.declenche("coprocesseur")
+tasmota.declenche("coprocesseur")
+razWeb()
+c.lance()
+verifie(c.lancee && string.find(c.ligne, "mise à jour en cours") > -1, "lancee : ligne d'accueil « mise a jour en cours »")
+tasmota.regles["HostedOta"]("Version 2.6.6 from " + URL_21213, "HostedOta", {})
+verifie(c.lancee && c.echec == nil, "reponse « Version ... from » : toujours en cours")
+journal = []
+tasmota.regles["HostedOta"]("Failed -1", "HostedOta", {})
+verifie(!c.lancee && c.echec == "Failed -1" && c.tentatives == 1 && c.etat == "retard", "« Failed -1 » : echec retenu, plus en cours, pas bloque")
+verifie(journalContient("COPROCESSEUR_ERREUR", LOG_LEVEL_ERREUR) && journalContient("Failed -1", LOG_LEVEL_ERREUR), "echec journalise en erreur, avec son code")
+verifie(string.find(c.ligne, "échec de la mise à jour") > -1, "ligne d'accueil : echec")
+e = json.load(str(dernier()[1]))
+verifie(e["Echec"] == "Failed -1" && e["Lancee"] == false && e["Bloque"] == false, "echec publie en MQTT")
+verifie(c.peutMettreAJour(), "apres un echec : bouton rendu")
+razWeb()
+c.page()
+page = webserver.envoye.concat()
+debut = string.find(page, "window.COPRO=") + 13
+donnees = json.load(page[debut .. string.find(page, ";</script>", debut) - 1])
+verifie(donnees["echec"] == "Failed -1" && donnees["tentatives"] == 1 && donnees["possible"] == true, "page : echec, tentatives, bouton")
+if SORTIE_PAGE != nil
+    var f = open(SORTIE_PAGE + ".echec.html", "w")  f.write(page)  f.close()
+end
+razWeb()
+c.lance()
+verifie(compteCmd("HostedOta ") == 2 && c.lancee && c.echec == nil, "nouvel essai : second HostedOta, echec efface")
+tasmota.regles["HostedOta"]("Failed 7", "HostedOta", {})
+verifie(c.echec == "Failed 7" && c.tentatives == 2, "second echec compte")
+tasmota.regles["HostedLoad"]("Version 2.12.13 from /coprocessor/v2.12.13/network_adapter_esp32c6.bin", "HostedLoad", {})
+verifie(c.lancee && c.echec == nil && !c.peutMettreAJour(), "HostedLoad tape en console : suivi, bouton retire pendant l'essai")
+tasmota.regles["HostedLoad"]("Successful. Restarting", "HostedLoad", {})
+verifie(c.lancee && c.echec == nil, "« Successful » : rien a faire, le P4 redemarre")
+
+print("16. C6 bloque (Failed 5379, esp-hosted-mcu #143) : memorise, alerte d'accueil la 1re minute seulement")
+import persist
+persist.nb_save = 0
+HOSTED = hosted("2.6.6", "2.12.13")
+var cfg = {"activation": "ON", "mqtt": "ON"}
+mqtt.publies = []
+c = neuf(cfg)
+tasmota.declenche("coprocesseur")
+tasmota.declenche("coprocesseur")
+razWeb()
+c.lance()
+journal = []
+tasmota.regles["HostedOta"]("Failed 5379", "HostedOta", {})
+verifie(c.etat == "bloque" && cfg.find("bloque") == "2.6.6" && persist.nb_save == 1, "« Failed 5379 » : etat bloque, version notee au persist, persist sauve")
+verifie(!c.lancee && !c.peutMettreAJour(), "bloque : plus de bouton")
+verifie(c.ligne == "", "plus d'une minute apres le demarrage : pas de ligne d'accueil")
+verifie(journalContient("#143", LOG_LEVEL_ERREUR) && journalContient("flash serie", LOG_LEVEL_ERREUR), "blocage journalise en erreur (ticket, flash serie)")
+e = json.load(str(dernier()[1]))
+verifie(e["Bloque"] == true && e["AJour"] == false && e["Echec"] == "Failed 5379", "MQTT : Bloque true")
+razWeb()
+c.page()
+page = webserver.envoye.concat()
+debut = string.find(page, "window.COPRO=") + 13
+donnees = json.load(page[debut .. string.find(page, ";</script>", debut) - 1])
+verifie(donnees["etat"] == "bloque" && donnees["possible"] == false, "page : etat bloque, sans bouton")
+if SORTIE_PAGE != nil
+    var f = open(SORTIE_PAGE + ".bloque.html", "w")  f.write(page)  f.close()
+end
+razWeb()
+c.lance()
+verifie(compteCmd("HostedOta ") == 1, "POST alors que bloque : rien lance")
+# Redemarrage : la cle du persist est relue
+mqtt.publies = []
+persist.nb_save = 0
+c = neuf(cfg)
+tasmota.declenche("coprocesseur")
+verifie(c.etat == "bloque" && string.find(c.ligne, "bloqué en v2.6.6") > -1, "au demarrage suivant : bloque, ligne d'accueil (40 s)")
+verifie(tasmota.timers.contains("coprocesseur") && tasmota.timers["coprocesseur"][0] == 20000, "minuterie d'effacement a 60 s du demarrage")
+verifie(json.load(str(dernier()[1]))["Bloque"] == true, "MQTT au demarrage : Bloque true")
+tasmota.declenche("coprocesseur")
+verifie(c.ligne == "" && !tasmota.timers.contains("coprocesseur"), "a 60 s : ligne effacee, plus aucune minuterie")
+verifie(size(requetes) == 0 && persist.nb_save == 0, "bloque : aucune requete au serveur, persist non reecrit")
+verifie(!c.peutMettreAJour(), "bloque au demarrage : pas de bouton")
+# Flash serie fait : une autre version lue sur le C6 efface la cle
+HOSTED = hosted("2.9.3", "2.12.13")
+c = neuf(cfg)
+tasmota.declenche("coprocesseur")
+verifie(cfg.find("bloque") == nil && persist.nb_save == 1 && c.etat == "retard", "C6 en autre version (2.9.3) : cle effacee, persist sauve, retard normal")
+cfg["bloque"] = "2.6.6"
+persist.nb_save = 0
+HOSTED = hosted("2.12.13", "2.12.13")
+c = neuf(cfg)
+tasmota.declenche("coprocesseur")
+verifie(cfg.find("bloque") == nil && persist.nb_save == 1 && c.etat == "aJour" && c.ligne == "", "C6 a jour : cle effacee, plus d'alerte")
+
 print(echecs == 0 ? "BANC_COPROCESSEUR: OK" : "BANC_COPROCESSEUR: ECHEC (" + str(echecs) + ")")

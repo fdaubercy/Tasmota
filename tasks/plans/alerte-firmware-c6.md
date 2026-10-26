@@ -66,10 +66,10 @@ Renommé à l'écriture : module + classe `COPROCESSEUR` + `init()` sur le modè
 - [x] `verifie_references_docs.py` vert — preuve : 1 seul défaut, antérieur et sans rapport (`CLAUDE.md:277`, `tasmota/tasmota.ino.cpp`, fichier généré par le build, absent hors build) ; mes renvois sont valides
 
 ## A5 — Essai sur le P4 (avec l'utilisateur, qui lance les builds)
-- [ ] Build P4 + FS par l'utilisateur ; heure du firmware postérieure au commit
-- [ ] Alerte visible sur l'accueil, page `/coprocesseur` cohérente (2.6.6 → 2.12.13, publiée), une seule requête au serveur dans le syslog
-- [ ] Mise à jour lancée par le bouton, au moment choisi par l'utilisateur ; après redémarrage, `Hosted` = 2.12.13 et alerte disparue
-- [ ] `tele/SERVEUR-GARAGE/COPROCESSEUR` retenu vu dans le sniffeur MQTT (:7100) : `AJour false` avant, `AJour true` après
+- [x] Build P4 + FS par l'utilisateur ; heure du firmware postérieure au commit — preuve : `Status 2` BuildDateTime 2026-10-26T19:32:36, commit `5638b27ac` à 07:41
+- [x] Alerte visible sur l'accueil, page `/coprocesseur` cohérente (2.6.6 → 2.12.13, publiée), une seule requête au serveur — preuve : `/?m=1` « v2.6.6 → v2.12.13 (disponible) » ; `window.COPRO` essais 1, publiee true, defaut 2.12.6 ; console `/cs` 20:04:38 « Version v2.12.13 publiee » (syslog arrêté : console web à la place)
+- [x] Mise à jour lancée par le bouton, au moment choisi par l'utilisateur — preuve : message retenu lu sur le broker le 2026-10-26 à 21:33 avec `"Lancee":true` (seul le POST de la page le pose) ; transfert complet (1 222 736 o) puis `HST: ota_end failed 5379` : le C6 refuse l'image (bug esp-hosted-mcu #143, voir A8)
+- [x] `tele/garage/COPROCESSEUR` retenu — preuve : abonnement au broker 192.168.0.5 le 2026-10-26 à 21:33 → `retain=True`, `{"Lancee":true,"Attendue":"2.12.13","AJour":false,"Publiee":true,"MCU":"esp32c6","Version":"2.6.6"}` ; avant : console `/cs` 20:04:38 « (persistant) »
 
 ## A6 — Alerte par MQTT (décidé le 2026-10-26 : topic dédié retenu, ON sur le P4)
 - [x] Option `"mqtt"` du bloc `serveur.coprocesseur` (absente = OFF) ; `tele/<topic>/COPROCESSEUR` retenu à chaque changement d'état et à chaque `Mqtt#Connected` — preuve : `controleCoprocesseur.be::COPROCESSEUR.publie`, banc §14 (14 vérifications)
@@ -83,6 +83,14 @@ Les envs `tasmota32p4-base-*` n'ont ni dossier `data/` ni autoexec du framework 
 - [x] Branché dans `fichiers_berry_creation._calcule` (diff de l'autoexec compris) et `cree` (autoexec écrit) — preuve : `test_fichiers_berry_creation.py` VERT, 110 vérifications (P4 depuis S3, P4 depuis P4, S3 depuis P4, S3 depuis S3, cas limites)
 - [x] Témoin : adaptations neutralisées → banc rouge — preuve : rc=1, 10 KO
 - [x] Bancs voisins inchangés — preuve : renommage, suppression, web VERT
+
+## A8 — Échec de la mise à jour et C6 bloqué (décidé le 2026-10-26)
+Le C6 refuse toute image (`Failed 5379` = ESP_ERR_OTA_VALIDATE_FAILED, avec 2.12.13 comme avec 2.12.6) : bug esp-hosted-mcu #143, bootloader d'usine en DIO + application 2.6.6 en QIO reçue par OTA. Seul un flash série du C6 (version ≥ 2.9) le débloque.
+- [x] Échec affiché et nouvel essai : règle `HostedOta`/`HostedLoad` → `resultatOta` ; `Failed <code>` → ligne « échec », bloc « Échec » de la page (code, cause), bouton « Réessayer », `Echec` en MQTT — preuve : banc §15, rendu Chrome « apres un echec »
+- [x] `Failed 5379` → état « bloqué » : version notée dans `serveur.coprocesseur.bloque` (persist sauvé), plus de bouton ni de requête au serveur ; ligne d'accueil seulement pendant la 1re minute après le démarrage ; page `/coprocesseur` (lien #143, flash série) et MQTT `Bloque: true` gardent l'information ; une autre version lue sur le C6 efface la clé — preuve : banc §16, rendu Chrome « bloque », `banc_coprocesseur.py` COMPLET OK
+- [x] Solidification et démarrage — preuve : « LE .h COMPILE » ; banc_demarrage VERT (règles `HostedOta`, `HostedLoad` dans la référence P4) ; banc_boot OK
+- [ ] Sur le P4, après build + FS par l'utilisateur et un `HostedOta` refusé : état « bloqué » sur la page, `Bloque: true` retenu ; au redémarrage suivant, ligne d'accueil visible puis effacée à 60 s, aucune requête au serveur
+- [ ] Après un flash série du C6 en 2.12.13 (accord et matériel de l'utilisateur) : `Hosted` = 2.12.13, clé `bloque` effacée, alerte disparue, `AJour: true` retenu
 
 ## Améliorations restantes
 - [x] [projet] Même alerte pour une future carte P4 (`ESP32P4_BASE_WIFI6`) : bloc persist + ligne d'autoexec — preuve : A7
