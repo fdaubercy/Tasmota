@@ -65,6 +65,7 @@ PAGE = r"""<!doctype html>
   .puce{padding:2px 9px;border-radius:12px;border:1px solid var(--bord);white-space:nowrap;font-size:12px;color:var(--doux)}
   .puce.encours{color:var(--bleu);border-color:var(--bleu)}.puce.ok{color:var(--vert);border-color:var(--vert)}
   .puce.erreur{color:var(--rouge);border-color:var(--rouge)}.puce.alerte{color:var(--orange);border-color:var(--orange)}
+  .reglages{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
   .theme{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--doux);cursor:pointer;user-select:none}
   .theme input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
   .interrupteur{position:relative;flex:none;width:2.6em;height:1.5em;border-radius:.75em;background:var(--piste);transition:background .2s}
@@ -169,11 +170,18 @@ PAGE = r"""<!doctype html>
 <main>
   <div class="entete">
     <div class="gauche"><h1>Build et téléversement</h1><span id="etat" class="puce">au repos</span></div>
-    <label class="theme" for="theme">
-      <span>Mode sombre</span>
-      <input id="theme" type="checkbox" role="switch">
-      <span class="interrupteur" aria-hidden="true"></span>
-    </label>
+    <div class="reglages">
+      <label class="theme" for="son" title="Fin du lancement : deux notes montantes si tout a réussi, descendantes sinon ; pause « branchez la carte » : trois bips">
+        <span>Sons</span>
+        <input id="son" type="checkbox" role="switch" checked>
+        <span class="interrupteur" aria-hidden="true"></span>
+      </label>
+      <label class="theme" for="theme">
+        <span>Mode sombre</span>
+        <input id="theme" type="checkbox" role="switch">
+        <span class="interrupteur" aria-hidden="true"></span>
+      </label>
+    </div>
   </div>
   <div id="message" class="erreur"></div>
   <div class="disposition">
@@ -746,6 +754,7 @@ function traiteEvenement(e, rejeu) {
     bloc(e.env);
     // premiere annonce, ou pause rouverte (port absent ou tenu apres Continuer) : boutons reactives, message affiche
     L.carte = {env: e.env, port: e.port || "", precedent: e.precedent || "", fait: e.fait || [], erreur: e.erreur || "", envoi: false};
+    if (!rejeu) sonne("pause");    // le lancement attend un geste : brancher la carte, puis Continuer
     planifie(e.env);
   } else if (e.type === "reprise_carte") {
     if (L && L.carte && L.carte.env === e.env) L.carte = null;
@@ -757,6 +766,7 @@ function traiteEvenement(e, rejeu) {
     L.carte = null;
     enCours = false;
     majBouton();
+    if (!rejeu) sonneFin(e);       // pas au rechargement de la page : la fin est deja passee
     chargeEnvs(true);              // relit les envs (ports, IP) apres le lancement
   }
   if (e.type !== "ligne") { majEtat(); planifie(null); }
@@ -1064,6 +1074,44 @@ $("theme").onchange = function () {
   var t = this.checked ? "sombre" : "clair";
   document.documentElement.setAttribute("data-theme", t);
   try { localStorage.setItem("build-theme", t); } catch (e) {}
+};
+
+// Sons (Web Audio, sans fichier) : fin de lancement = deux notes montantes si tout a reussi, deux descendantes si
+// echec, arret ou aucun env abouti ; pause « rebranchez la carte » = trois bips aigus. Le navigateur ne laisse sonner une page qu'apres un geste de l'utilisateur :
+// le contexte audio nait au premier clic ou a la premiere touche (le clic sur Lancer suffit ; apres un
+// rechargement en plein lancement, un clic n'importe ou dans la page).
+var audio = null, dernierSon = "";
+function reveilleAudio() {
+  try {
+    if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === "suspended") audio.resume();
+  } catch (e) {}
+}
+document.addEventListener("pointerdown", reveilleAudio, true);
+document.addEventListener("keydown", reveilleAudio, true);
+var NOTES = {succes: [660, 880], echec: [440, 294], pause: [988, 988, 988]};
+function sonneFin(fin) {
+  var ok = fin.resultat !== "arrete" && !(fin.echecs || []).length && (fin.succes || []).length > 0;
+  sonne(ok ? "succes" : "echec");
+}
+function sonne(type) {
+  if (!$("son").checked || !audio) return;
+  dernierSon = type;
+  try {
+    NOTES[type].forEach(function (f, i) {
+      var t = audio.currentTime + i * 0.25, o = audio.createOscillator(), g = audio.createGain();
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.3, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+      o.connect(g); g.connect(audio.destination);
+      o.start(t); o.stop(t + 0.24);
+    });
+  } catch (e) {}
+}
+try { $("son").checked = localStorage.getItem("build-son") !== "0"; } catch (e) {}
+$("son").onchange = function () {
+  try { localStorage.setItem("build-son", this.checked ? "1" : "0"); } catch (e) {}
 };
 
 async function demarre() {

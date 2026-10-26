@@ -488,6 +488,13 @@ commande quelle que soit la cible ; même mention « FS aussi flashé » sur la 
   Les barres d'esptool qui se réécrivent tiennent sur **une ligne par zone**, mise à jour (bootloader, firmware,
   `littlefs.bin`…). La page lit le journal de **cet** env par morceaux (`GET /sortie?env=…&octet=…` : seulement la
   suite, en lignes entières) ; la sortie d'un env terminé reste lisible tant que la page est ouverte.
+- **Sons** (interrupteur en haut à droite, à côté de « Mode sombre », coché par défaut, mémorisé dans le
+  navigateur) : à la fin d'un lancement, la page joue deux notes **montantes** si tous les envs ont réussi, deux
+  notes **descendantes** en cas d'échec, d'arrêt ou si aucun env n'a abouti ; **trois bips aigus** quand elle se met en
+  pause « Branchez la carte X sur COMn » (le lancement attend votre geste). Le son sort du PC qui affiche la page
+  (Web Audio, sans fichier), même si l'onglet est en arrière-plan. Le navigateur ne laisse sonner une page qu'après
+  un geste de l'utilisateur : le clic sur « Lancer » suffit. Après un rechargement de la page en plein lancement,
+  cliquer une fois n'importe où dans la page. Une fin ou une pause déjà passée, rejouée au rechargement, ne sonne pas.
 - Derniers choix : à chaque lancement accepté, la page
   écrit les lignes lancées (env, COM ou OTA, port, IP saisie) et les actions cochées dans `derniers.json` (dans
   `%LOCALAPPDATA%\outils_tasmota\build\`, hors dépôt, écriture atomique) ; à l'ouverture suivante elle recoche ces

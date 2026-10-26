@@ -506,6 +506,7 @@ def sonde_page(m, capture):
     sonde_panneaux(m)
     sonde_sortie_bornee(cdp)
     sonde_pause_synthetique(cdp)
+    sonde_son(cdp)
     sonde_synthetique(cdp)
 
     # largeur telephone : colonnes empilees, pas de defilement horizontal
@@ -792,6 +793,42 @@ def sonde_pause_synthetique(cdp):
     verifie(("1 arrêté (P)" in r.get("recap", ""), "0 échec" in r.get("recap", ""), r.get("rouge"), "erreur" in (r.get("c") or "")),
             (True, True, False, False), f"pause_synthetique : env arrete pendant la pause -> ni echec ni rouge ({r.get('recap', '')[:100]})")
     cdp.js("window.fetch = window._f1; true")
+
+
+def sonde_son(cdp):
+    """Sons : fin (notes montantes si tout a reussi, descendantes sinon) et pause « branchez la carte » (bips) ;
+    muets si decoche, au rejeu, sans geste."""
+    fin = {"type": "fin", "env": None, "resultat": "termine", "succes": ["S"], "echecs": [], "passes": [], "arretes": [],
+           "non_lances": [], "fichiers_modifies": []}
+    debut = {"type": "debut", "env": None, "actions": ["compiler"], "lignes": [{"env": "S", "methode": "com", "port": "", "ip": ""}]}
+    cdp.js("audio = null; dernierSon = ''; true")
+    injecte(cdp, [debut, fin])
+    verifie(cdp.js("dernierSon"), "", "son : sans geste de l'utilisateur, aucun contexte audio, rien joue (pas d'erreur)")
+    cdp.js("document.body.dispatchEvent(new PointerEvent('pointerdown', {bubbles: true})); true")
+    verifie(cdp.js("!!audio"), True, "son : contexte audio cree au premier clic")
+    injecte(cdp, [debut, fin])
+    verifie(cdp.js("dernierSon"), "succes", "son : tout reussi -> notes montantes")
+    cdp.js("dernierSon = ''; true")
+    injecte(cdp, [debut, dict(fin, succes=["S"], echecs=["T"])])
+    verifie(cdp.js("dernierSon"), "echec", "son : un echec -> notes descendantes")
+    cdp.js("dernierSon = ''; true")
+    injecte(cdp, [debut, dict(fin, resultat="arrete")])
+    verifie(cdp.js("dernierSon"), "echec", "son : arret -> notes descendantes")
+    cdp.js("dernierSon = ''; true")
+    injecte(cdp, [debut, dict(fin, succes=[], passes=["S"])])
+    verifie(cdp.js("dernierSon"), "echec", "son : aucun env abouti -> pas de son de reussite")
+    cdp.js("dernierSon = ''; document.getElementById('son').click(); true")
+    injecte(cdp, [debut, fin])
+    verifie((cdp.js("dernierSon"), cdp.js("localStorage.getItem('build-son')")), ("", "0"),
+            "son : interrupteur decoche -> muet, choix memorise")
+    cdp.js("document.getElementById('son').click(); dernierSon = ''; true")
+    pause = {"type": "attente_carte", "env": "S", "port": "COM12", "precedent": "R", "fait": ["compiler"], "erreur": ""}
+    injecte(cdp, [debut, pause])
+    verifie(cdp.js("dernierSon"), "pause", "son : pause « branchez la carte » -> trois bips")
+    cdp.js("dernierSon = ''; window._dn = dernierN; rejeuJusqua = 1000; true")
+    injecte(cdp, [dict(debut, n=998), dict(pause, n=999), dict(fin, n=1000)])
+    verifie(cdp.js("dernierSon"), "", "son : pause et fin rejouees au rechargement de la page -> muet")
+    cdp.js("rejeuJusqua = 0; dernierN = window._dn; true")    # numerotation du vrai flux remise
 
 
 def sonde_infobulle(m):
