@@ -452,12 +452,12 @@ def modules_solidifies():
     Ces modules-là sont compilés DANS le firmware (structures C en flash). Les envoyer
     aussi sur le LittleFS ne sert à rien :
       - `import` sert le module natif et ignore le fichier
-        (lib/libesp32/berry/src/be_module.c:285-288 : load_native avant load_package) ;
+        (lib/libesp32/berry/src/be_module.c::be_module_load_nocache : load_native avant load_package) ;
       - mais `gestionFileFolder.compileModule()` compilerait quand même le .be en .bec
         au démarrage — du temps de boot et des écritures flash pour rien.
 
     En ne copiant pas le fichier, `compileModule` devient un no-op silencieux
-    (data/fs/gestionFileFolder.be:378 : `else return true` si le .be est absent).
+    (data/fs/gestionFileFolder.be::compileModule : `else return true` si le .be est absent).
     Aucune ligne de Berry à modifier, aucune double comptabilité : la déclaration
     `custom_berry_solidify` de l'env commande tout.
     """

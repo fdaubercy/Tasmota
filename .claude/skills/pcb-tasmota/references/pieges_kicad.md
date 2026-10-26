@@ -77,9 +77,9 @@ génération de carte. Format : symptôme → cause vérifiée → parade (déj�
 ## Dépôt Tasmota
 
 21. **Ne jamais ranger un projet de PCB dans `data/<lieu>/<carte>/`** : ce dossier EST le
-    `data_dir` du LittleFS (`pre_utilitaires_platformio.py:303` et `:528`) ; tout son contenu
+    `data_dir` du LittleFS (`pre_utilitaires_platformio.py::adapteParametresPlatformio_override` et `pre_utilitaires_platformio.py::copy_fs_image`) ; tout son contenu
     serait flashé dans l'ESP32.
-22. Le `template.GPIO` d'un persist peut être périmé : `configModules.be:131-146` le réécrit au
+22. Le `template.GPIO` d'un persist peut être périmé : `configModules.be::configDevicesByJon` le réécrit au
     démarrage depuis les blocs `environnement` (code = `type + id - 1`). L'environnement fait foi.
 23. Un persist décrit la configuration, pas le câblage : `alimentation_V`, un état `ON`, un
     `POWER ON` ne prouvent rien sur ce qui est soudé. Deux écrits du dépôt se sont contredits

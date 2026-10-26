@@ -1,7 +1,8 @@
 # Carte des modules Berry par carte
 
 > Fichier GENERE par carte_modules_berry.py - ne pas editer a la main.
-> Genere le 2026-10-25 08:55.
+> Sortie deterministe (ni date, ni ordre de hachage) : regeneree sans changement de fond, elle ne
+> donne aucun diff. La date de generation est celle du commit.
 
 44 modules (37 dans `data/fs`, 7 propres a une carte), 8 cartes.
 
@@ -24,11 +25,11 @@ Legende : **S** solidifie dans l'env (`custom_berry_solidify`) - **I** importe p
 | `webFonctions` | Socle | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
 | `controleDiscovery` | Reseau | S | S I OFF | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON |
 | `controleRangeExtender` | Reseau | S | S I OFF | S I ON | S I ON | S I ON | S | S | S I ON |
-| `controleTCP` | Reseau | S | S I OFF | S I ON | S I OFF | S | S | S | S I ON |
+| `controleTCP` | Reseau | S | S I OFF | S I OFF | S I OFF | S | S | S | S I ON |
 | `controleUDP` | Reseau | S | S I OFF | S I ON | S I OFF | S I ON | S I ON | S I ON | S I ON |
 | `discoveryFonctions` | Reseau | S D | S D | S D | S D | S C ON | S C ON | S C ON | S C ON |
 | `rangeExtenderFonctions` | Reseau | S D | S D C OFF | S C ON | S C ON | S D | S D | S D | S C ON |
-| `tcpFonctions` | Reseau | S D | S D C OFF | S C ON | S C OFF | S D | S D | S D | S C ON |
+| `tcpFonctions` | Reseau | S D | S D C OFF | S C OFF | S C OFF | S D | S D | S D | S C ON |
 | `udpFonctions` | Reseau | S D | S D C OFF | S C ON | S C OFF | S C ON | S C ON | S C ON | S C ON |
 | `controleModbus` | ModBus |  | # |  |  | S I ON | S I ON | S I ON | S I ON |
 | `modBus_Conn16channels` | ModBus |  | # |  |  | S I ON | S I ON | S I ON | S I ON |
@@ -71,7 +72,6 @@ Constats factuels, sans jugement : un module peut etre volontairement dans cet e
 - `garage/tasmota32p4-serveur-modbus` : `controleTCP` solidifie, jamais importe ni charge par l'autoexec.
 - `garage/tasmota32s3-capteurs-cuve-modbus` : `controleRangeExtender` solidifie, jamais importe ni charge par l'autoexec.
 - `garage/tasmota32s3-capteurs-cuve-modbus` : `controleTCP` solidifie, jamais importe ni charge par l'autoexec.
-- `garage/tasmota32s3-rideau-garage-modbus` : `controleRideau` est dans custom_berry_solidify mais `data/fs/controleRideau.be` n'existe pas.
 - `garage/tasmota32s3-rideau-garage-modbus` : `controleRangeExtender` solidifie, jamais importe ni charge par l'autoexec.
 - `garage/tasmota32s3-rideau-garage-modbus` : `controleTCP` solidifie, jamais importe ni charge par l'autoexec.
 - `garage/tasmota32s3-serveur-modbus` : `demarrage` solidifie, jamais importe ni charge par l'autoexec.
@@ -86,6 +86,8 @@ Constats factuels, sans jugement : un module peut etre volontairement dans cet e
 - `cave/tasmota32-serveur-rly` : `rangeExtenderFonctions` : charge alors que sa garde vaut OFF.
 - `cave/tasmota32-serveur-rly` : `tcpFonctions` : charge alors que sa garde vaut OFF.
 - `cave/tasmota32-serveur-rly` : `udpFonctions` : charge alors que sa garde vaut OFF.
+- `cave/tasmota32s3-serveur-rly` : `controleTCP` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
+- `cave/tasmota32s3-serveur-rly` : `tcpFonctions` : charge alors que sa garde vaut OFF.
 - `cave/tasmota32s3-serveur-rly` : `controleLeds` charge depuis `data/fs` sans etre solidifie (copie sur le FS, compile au demarrage).
 - `cave/tasmota32s3-serveur-rly` : `controleLeds` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
 - `cave/tasmota32s3-serveur-rly` : `ledsFonctions` : charge alors que sa garde vaut OFF.
@@ -157,19 +159,19 @@ flowchart LR
     CARTE --> m_logFonctions
     CARTE --> m_webFonctions
     m_udpFonctions -.->|import| m_discoveryFonctions
-    m_discoveryFonctions -.->|import| m_rangeExtenderFonctions
     m_controleWeb -.->|import| m_rangeExtenderFonctions
+    m_discoveryFonctions -.->|import| m_rangeExtenderFonctions
     m_modbusFonctions -.->|import| m_tcpFonctions
     m_modbusFonctions -.->|import| m_udpFonctions
     m_controleGeneral -.->|import| m_modbusFonctions
-    m_udpFonctions -.->|import| m_modbusFonctions
-    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
     m_globalFonctions -.->|import| m_modbusFonctions
+    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
     m_tcpFonctions -.->|import| m_modbusFonctions
+    m_udpFonctions -.->|import| m_modbusFonctions
     m_modbusFonctions -.->|import| m_ledsFonctions
-    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
-    m_ledsFonctions -.->|import| m_ledsPanelFonctions
     m_controleWeb -.->|import| m_ledsPanelFonctions
+    m_ledsFonctions -.->|import| m_ledsPanelFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
     CARTE --> m_demarrage
 ```
 
@@ -231,15 +233,15 @@ flowchart LR
     m_discoveryFonctions -.->|import| m_rangeExtenderFonctions
     m_modbusFonctions -.->|import| m_tcpFonctions
     m_modbusFonctions -.->|import| m_udpFonctions
-    m_udpFonctions -.->|import| m_modbusFonctions
-    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
-    m_globalFonctions -.->|import| m_modbusFonctions
     m_controleGeneral -.->|import| m_modbusFonctions
+    m_globalFonctions -.->|import| m_modbusFonctions
+    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
     m_tcpFonctions -.->|import| m_modbusFonctions
+    m_udpFonctions -.->|import| m_modbusFonctions
     m_modbusFonctions -.->|import| m_ledsFonctions
     m_controleWeb -.->|import| m_ledsPanelFonctions
-    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
     m_ledsFonctions -.->|import| m_ledsPanelFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
     CARTE --> m_controlePompeVideCave
 ```
 
@@ -301,23 +303,23 @@ flowchart LR
     CARTE --> m_webFonctions
     CARTE --> m_controleDiscovery
     CARTE --> m_controleRangeExtender
-    CARTE --> m_controleTCP
+    CARTE -.-> m_controleTCP
     CARTE --> m_controleUDP
-    m_udpFonctions -.->|import| m_discoveryFonctions
     m_controleDiscovery -.->|import| m_discoveryFonctions
+    m_udpFonctions -.->|import| m_discoveryFonctions
     CARTE --> m_rangeExtenderFonctions
-    CARTE --> m_tcpFonctions
+    CARTE -.-> m_tcpFonctions
     CARTE --> m_udpFonctions
-    m_udpFonctions -.->|import| m_modbusFonctions
-    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
-    m_globalFonctions -.->|import| m_modbusFonctions
     m_controleGeneral -.->|import| m_modbusFonctions
+    m_globalFonctions -.->|import| m_modbusFonctions
+    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
     m_tcpFonctions -.->|import| m_modbusFonctions
+    m_udpFonctions -.->|import| m_modbusFonctions
     CARTE -.-> m_controleLeds
     m_modbusFonctions -.->|import| m_ledsFonctions
     m_controleWeb -.->|import| m_ledsPanelFonctions
-    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
     m_ledsFonctions -.->|import| m_ledsPanelFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
     CARTE --> m_controlePompeVideCave
     CARTE --> m_demarrage
     CARTE --> m_graphiquesFonctions
@@ -389,23 +391,23 @@ flowchart LR
     CARTE --> m_controleRangeExtender
     CARTE -.-> m_controleTCP
     CARTE -.-> m_controleUDP
-    m_udpFonctions -.->|import| m_discoveryFonctions
     m_controleDiscovery -.->|import| m_discoveryFonctions
+    m_udpFonctions -.->|import| m_discoveryFonctions
     CARTE --> m_rangeExtenderFonctions
     CARTE -.-> m_tcpFonctions
     CARTE -.-> m_udpFonctions
-    m_udpFonctions -.->|import| m_modbusFonctions
-    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
-    m_globalFonctions -.->|import| m_modbusFonctions
     m_controleGeneral -.->|import| m_modbusFonctions
+    m_globalFonctions -.->|import| m_modbusFonctions
+    m_rangeExtenderFonctions -.->|import| m_modbusFonctions
     m_tcpFonctions -.->|import| m_modbusFonctions
+    m_udpFonctions -.->|import| m_modbusFonctions
     CARTE -.-> m_controleLeds
     CARTE -.-> m_controleLoRaWan
     CARTE --> m_controleVoletRoulants
     m_modbusFonctions -.->|import| m_ledsFonctions
     m_controleWeb -.->|import| m_ledsPanelFonctions
-    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
     m_ledsFonctions -.->|import| m_ledsPanelFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
     CARTE -.-> m_loRaWanFonctions
     CARTE --> m_vrFonctions
     CARTE --> m_controleGrenier
@@ -482,8 +484,8 @@ flowchart LR
     CARTE --> m_controleRangeExtender
     CARTE --> m_controleUDP
     CARTE --> m_discoveryFonctions
-    m_controleWeb -.->|import| m_rangeExtenderFonctions
     m_controleRangeExtender -.->|import| m_rangeExtenderFonctions
+    m_controleWeb -.->|import| m_rangeExtenderFonctions
     m_discoveryFonctions -.->|import| m_rangeExtenderFonctions
     m_modbusFonctions -.->|import| m_tcpFonctions
     CARTE --> m_udpFonctions
@@ -497,8 +499,8 @@ flowchart LR
     CARTE --> m_i2c_mcp23017
     m_modbusFonctions -.->|import| m_ledsFonctions
     m_controleWeb -.->|import| m_ledsPanelFonctions
-    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
     m_ledsFonctions -.->|import| m_ledsPanelFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
     m_controleVoletRoulants -.->|import| m_vrFonctions
     CARTE --> m_controleGarage
     CARTE --> m_garageFonctions
@@ -584,8 +586,8 @@ flowchart LR
     CARTE --> m_i2c_mcp23017
     CARTE --> m_ledsFonctions
     m_controleWeb -.->|import| m_ledsPanelFonctions
-    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
     m_ledsFonctions -.->|import| m_ledsPanelFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
     CARTE --> m_controleCuve
     CARTE --> m_cuveFonctions
     CARTE --> m_demarrage
@@ -669,8 +671,8 @@ flowchart LR
     CARTE -.-> m_i2c_mcp23017
     m_modbusFonctions -.->|import| m_ledsFonctions
     m_controleWeb -.->|import| m_ledsPanelFonctions
-    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
     m_ledsFonctions -.->|import| m_ledsPanelFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
     CARTE --> m_controleRideau
     CARTE --> m_demarrage
     CARTE --> m_graphiquesFonctions
@@ -762,8 +764,8 @@ flowchart LR
     CARTE --> m_i2c_mcp23017
     m_modbusFonctions -.->|import| m_ledsFonctions
     m_controleWeb -.->|import| m_ledsPanelFonctions
-    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
     m_ledsFonctions -.->|import| m_ledsPanelFonctions
+    m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
     CARTE --> m_loRaWanFonctions
     CARTE -.-> m_vrFonctions
     CARTE --> m_controleGarage

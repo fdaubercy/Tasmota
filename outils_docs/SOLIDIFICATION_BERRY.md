@@ -52,7 +52,7 @@ Il n'y a plus rien à allouer : l'objet **est** dans le binaire.
 
 Dossier fourni par arendst **exactement pour ça**, et **vide** dans notre dépôt
 (`src/embedded/.keep`). Il est déjà listé dans `SOLIDIFY_DIRS`
-(`pio-tools/gen-berry-structures.py:249`), aux côtés de `berry_tasmota`, `berry_matter`,
+(`pio-tools/gen-berry-structures.py::SOLIDIFY_DIRS`), aux côtés de `berry_tasmota`, `berry_matter`,
 `berry_animation`, `lv_binding_berry`, `lv_haspmota`.
 
 ```
@@ -64,12 +64,12 @@ lib/libesp32/berry_custom/
 │   ├── solidify/              <- les .h generes atterrissent ICI
 │   ├── be_custom_module.c     <- porte le marqueur /*solidify*/
 │   ├── modules.h              <- CUSTOM_NATIVE_MODULES / CUSTOM_NATIVE_CLASSES
-│   └── berry_custom.h         <- force-inclus par xdrv_52_9_berry.ino:42
+│   └── berry_custom.h         <- force-inclus par `xdrv_52_9_berry.ino`
 ```
 
 ### La chaîne de build
 
-`platformio_tasmota32.ini:54-56` enchaîne trois post-scripts, dans cet ordre :
+`platformio_tasmota32.ini::extra_scripts` enchaîne trois post-scripts, dans cet ordre :
 
 1. **`dump-defines.py`** — invoque le préprocesseur C++ croisé en mode `-E -dM` et écrit
    `tasmota/tasmota_defines_for_berry.h` (~3 200 `#define`, gitignoré, régénéré à chaque build).
@@ -109,8 +109,8 @@ Trois fichiers, à modifier à la main :
 #define CUSTOM_NATIVE_CLASSES
 ```
 
-`be_modtab.c:240` et `:387` consomment ces deux macros. `berry_custom.h` est force-inclus par
-`xdrv_52_9_berry.ino:42`.
+`be_modtab.c` (`modules.h::CUSTOM_NATIVE_MODULES` et `modules.h::CUSTOM_NATIVE_CLASSES`) consomment ces deux macros. `berry_custom.h` est force-inclus par
+`xdrv_52_9_berry.ino`.
 
 ## 3. Quand solidifier — et quand surtout pas
 
@@ -188,7 +188,7 @@ qui bloquait, c'est le nom. Distinction qui a coûté un build de 2h16.
 > la fois solidifié et présent sur le FS faisait « payer la RAM qu'on croyait économiser, en
 > silence ». **C'est faux**, et l'erreur venait d'une supposition jamais vérifiée dans le code.
 
-**Ce que fait réellement `import`** (`lib/libesp32/berry/src/be_module.c:282-288`) :
+**Ce que fait réellement `import`** (`lib/libesp32/berry/src/be_module.c::be_module_load_nocache`) :
 
 ```c
 int be_module_load_nocache(bvm *vm, bstring *path, bbool nocache)
@@ -259,8 +259,8 @@ expérimentaux**, surtout s'ils portent du travail non commité.
 
 ### Piège 8 — `UBE_BERRY_DEBUG_GC` : coquille amont, mais cohérente
 
-`user_config_override.h:615` déclare `UBE_BERRY_DEBUG_GC` (pour `USE_`). C'est une faute de frappe
-amont — **mais elle est cohérente avec son site d'usage** (`xdrv_52_9_berry.ino:297`). L'option
+`user_config_override.h::UBE_BERRY_DEBUG_GC` déclare `UBE_BERRY_DEBUG_GC` (pour `USE_`). C'est une faute de frappe
+amont — **mais elle est cohérente avec son site d'usage** (`xdrv_52_9_berry.ino::BerryObservability`). L'option
 fonctionne. **La « corriger » en `USE_BERRY_DEBUG_GC` la casserait.**
 
 ### Piège 9 — Mesurer le coût du debug plutôt que celui du code
@@ -279,7 +279,7 @@ Berry solidification: lib\libesp32\berry_custom\solidify_all_python.be
 ```
 
 Cette ligne dit seulement que **le script a été lancé**. Elle est imprimée par
-`gen-berry-structures.py:280` *avant* toute exécution. Avec un `src/embedded/` vide, le script nettoie
+`gen-berry-structures.py::SOLIDIFY_DIRS` *avant* toute exécution. Avec un `src/embedded/` vide, le script nettoie
 un dossier vide, liste zéro fichier et écrit zéro sortie — **la ligne s'affiche à l'identique**.
 
 Mesuré ce jour sur `tasmota32s3-etage2-grenier` :
@@ -292,15 +292,15 @@ Mesuré ce jour sur `tasmota32s3-etage2-grenier` :
 La preuve est `output_files` et les `.h`, jamais la ligne de log. Voir §5.
 
 **Corollaire non intuitif** : un module qui ne produit rien **ne peut jamais être mis en cache**.
-`gen-berry-structures.py:177-179` dit « aucune sortie enregistrée → il faut relancer ». Donc
+`gen-berry-structures.py::_is_solidify_cached` dit « aucune sortie enregistrée → il faut relancer ». Donc
 `berry_custom` vide est **relancé à chaque build, éternellement, pour ne rien faire**, et sa ligne
 apparaît toujours en clair — alors qu'un module qui a produit des `.h` affichera `(cached, skipped)`.
 Voir cette ligne à chaque build n'est donc pas le signe que ça marche : c'est le signe que c'est vide.
 
 ### Piège 11 — Ne pas grepper `Parsing:` : la ligne est filtrée
 
-`solidify_all_python.be:55` imprime bien `Parsing: <fichier>` pour chaque `.be` traité. Mais
-`gen-berry-structures.py:301-312` **filtre explicitement** cette sortie avant de la relayer :
+`solidify_all_python.be::parse_file` imprime bien `Parsing: <fichier>` pour chaque `.be` traité. Mais
+`gen-berry-structures.py::SOLIDIFY_DIRS` **filtre explicitement** cette sortie avant de la relayer :
 
 ```python
 if stripped.startswith("Parsing:"):
@@ -316,7 +316,7 @@ fonctionne parfaitement — et on conclut à tort à un échec.
 ### Piège 12 — Un module solidifié est EN LECTURE SEULE : son état doit vivre ailleurs
 
 Constaté en préparant la solidification de l'historique et des LED (2026-10-20), **avant** tout essai sur
-carte. La table d'un module solidifié est constante, en flash : `be_module_setmember` (`be_module.c:367-405`)
+carte. La table d'un module solidifié est constante, en flash : `be_module_setmember` (`be_module.c::be_module_setmember`)
 n'écrit que si `!gc_isconst(attrs)`, sinon il appelle la fonction `setmember` du module si elle existe, et
 **lève une exception** sinon. Un `xxxFonctions.etat = valeur` exécuté sur la carte casse donc le module,
 alors que `berry.exe`, les bancs et `solidifie_et_compile_berry.py` sont **tous verts** : ils chargent le
@@ -325,7 +325,7 @@ alors que `berry.exe`, les bancs et `solidifie_et_compile_berry.py` sont **tous 
 
 Parade, sur le modèle de l'amont (`berry_matter/src/embedded/Matter_Module.be`) : l'état vit dans une
 globale cachée (`global.(".historiqueFonctions")`), lue par `member(nom)` (appelée pour un attribut absent
-de la table, `be_module.c:332-361` ; renvoyer le module `undefined` pour un nom inconnu) et écrite par
+de la table, `be_module.c::be_module_attr` ; renvoyer le module `undefined` pour un nom inconnu) et écrite par
 `setmember(nom, valeur)`. Les attributs d'état ne doivent **jamais** être posés au niveau fichier : la
 valeur figée masquerait celle de l'état. Voir `historiqueFonctions.be`, `historiqueSeries.be`,
 `ledsFonctions.be`. Les fonctions de `member`/`setmember` appellent `xxxFonctions.etat()`, jamais
@@ -341,7 +341,7 @@ Avant de solidifier un module, chercher : (1) les attributs posés au niveau fic
 Le modèle « classe portée par le module + `init(m)` appelée par `import` » (`controleModbus.be`) marche
 sans `return` final tant que le module est **solidifié** : `load_native` rend le module. Importé depuis
 le LittleFS (carte où il n'est pas solidifié), le module vaut ce que **renvoie le fichier** : sans
-`return controleXxx`, `import` rend `nil`, `module_init` (`be_module.c:266-296`) n'a rien à appeler, et
+`return controleXxx`, `import` rend `nil`, `module_init` (`be_module.c::module_init`) n'a rien à appeler, et
 le driver ne démarre pas, **sans erreur**. `controleModbus` et `controleGeneral` n'ont pas ce `return` :
 sans conséquence, ils sont solidifiés sur toutes les cartes qui les chargent. `controleLeds`, solidifié sur
 la cuve seulement, l'a (2026-10-20).
@@ -364,7 +364,7 @@ Par ordre de force de preuve. Les niveaux 1 et 2 sont les seuls qui comptent au 
 | **5** | **`introspect.solidified(x)` → `true`** | console Berry de l'appareil | **La meilleure.** Ne deduit rien : demande a la VM **d'ou vient** l'objet. |
 
 **Le niveau 5 est le seul qui reponde directement.** `introspect.solidified(v)`
-(`be_introspectlib.c:140`) retourne `gc_isconst(...)` : vrai si l'objet est **const, donc en
+(`be_introspectlib.c::m_solidified`) retourne `gc_isconst(...)` : vrai si l'objet est **const, donc en
 flash** et hors du ramasse-miettes. Le niveau 4, lui, raisonne par elimination — « le fichier
 n'est pas la, donc ca vient de la flash » — ce qui reste une deduction.
 
@@ -392,8 +392,8 @@ Niveau 3 (Windows, après l'édition de liens) :
 
 | Paramètre | Où | Effet |
 |---|---|---|
-| `-DDISABLE_BERRY_SOLIDIFY` | `build_flags` | **Désactive** l'étape 1 (`gen-berry-structures.py:242`). Utile pour itérer sur du C/C++ sans retoucher au Berry ; le `coc` de l'étape 2 tourne quand même. |
-| `PYTHONUTF8=1` | posé d'office | `gen-berry-structures.py:264` le force pour le sous-processus : sans lui, la cp1252 de Windows échoue à lire certains `.be` (notamment `berry_animation`). Ne pas le retirer. |
+| `-DDISABLE_BERRY_SOLIDIFY` | `build_flags` | **Désactive** l'étape 1 (`gen-berry-structures.py::SOLIDIFY_DIRS`). Utile pour itérer sur du C/C++ sans retoucher au Berry ; le `coc` de l'étape 2 tourne quand même. |
+| `PYTHONUTF8=1` | posé d'office | `gen-berry-structures.py::SOLIDIFY_DIRS` le force pour le sous-processus : sans lui, la cp1252 de Windows échoue à lire certains `.be` (notamment `berry_animation`). Ne pas le retirer. |
 | `#@ solidify:Nom` | dans le `.be` | Désigne l'objet à solidifier. Résolu **depuis `global`** (piège 3). |
 | `#@ solidify:Nom,weak` | dans le `.be` | Idem, avec chaînes faibles. |
 | `USE_SOLIDIFY_BERRY` | *(n'existe pas encore)* | Paramètre par env envisagé en phase 2, **conditionné au verdict de la phase 1**. Ne pas le chercher aujourd'hui. |
@@ -484,7 +484,7 @@ custom_berry_solidify   =   data/fs/modbusFonctions.be
 1. le module entre dans le firmware (pre-script)
 2. son `.be` ne monte pas sur le LittleFS (`copy_fs_image`)
 3. `compileModule` ne fait rien (fichier absent)
-4. `import` trouve le natif (`be_module.c:286`)
+4. `import` trouve le natif (`be_module.c::load_native`)
 
 Verifie sur un vrai `pio run -t buildfs` : `modbusFonctions.be` saute, `udpFonctions.be`
 (non solidifie) est copie, l'image se construit.
@@ -501,7 +501,7 @@ pourquoi on ne solidifie qu'un module **fige**.
 **Le probleme n'existe que par transition.** L'image `littlefs.bin` ne contient plus les
 modules solidifies (voir ci-dessus). Un appareil garde un ancien fichier **uniquement** s'il a
 ete flashe en **firmware seul** (`-t upload`), qui ne touche pas au FS. Un `uploadfs`, ou un
-flash du `factory.bin` (qui contient le littlefs a `0x3b0000`, `post_esp32.py:21`), remplace
+flash du `factory.bin` (qui contient le littlefs a `0x3b0000`, `post_esp32.py::esp32_build_filesystem`), remplace
 tout le FS et le probleme disparait. **Aucun script.**
 
 **Et meme sans rien faire, le residu ne coute rien.** `compileModule` a supprime le `.be` des
@@ -610,7 +610,7 @@ Vérifier un module **avant** le build, en environ 10 s :
 1. **Développer dans `data/fs/`.** Boucle courte, `.be` → téléverser → `BrRestart`.
 2. **Mesurer avant de solidifier.** `ReglageLog serie detail` (sortie série au niveau 4 du
    firmware ; `ReglageGlobal logLevel` n'existe plus depuis le 2026-10-04) donne gratuitement les lignes
-   `BRY: GC from X to Y bytes` (`xdrv_52_9_berry.ino:290-293`, aucun flag requis). `tasmota.gc()`
+   `BRY: GC from X to Y bytes` (`xdrv_52_9_berry.ino::BerryObservability`, aucun flag requis). `tasmota.gc()`
    avant/après une opération donne son coût réel.
 3. **Ne solidifier qu'un module figé**, et un seul à la fois.
 4. **Vérifier le gain**, pas le supposer : `tasmota.gc()` avant/après, et `path.listdir("/")` pour
@@ -620,10 +620,10 @@ Vérifier un module **avant** le build, en environ 10 s :
 
 - Créneau utilisateur : `lib/libesp32/berry_custom/`
 - Solidifieur : `lib/libesp32/berry_custom/solidify_all_python.be`
-- Chaîne de build : `platformio_tasmota32.ini:54-56`, `pio-tools/gen-berry-structures.py`
+- Chaîne de build : `platformio_tasmota32.ini::extra_scripts`, `pio-tools/gen-berry-structures.py`
 - Defines : `lib/libesp32/berry/TASMOTA_DEFINES_FOR_BERRY.md`, `pio-tools/dump-defines.py`
 - Exemple amont : `lib/libesp32/berry_tasmota/src/embedded/driver_class.be` →
   `src/solidify/solidified_driver_class.h`
-- Enregistrement : `lib/libesp32/berry/default/be_modtab.c:240` et `:387`
+- Enregistrement : `lib/libesp32/berry/default/be_modtab.c` (`modules.h::CUSTOM_NATIVE_MODULES` et `modules.h::CUSTOM_NATIVE_CLASSES`)
 - Doc officielle : <https://tasmota.github.io/docs/Berry/>
 - Spec et verdict : `docs/superpowers/specs/2026-07-15-solidification-berry-design.md`

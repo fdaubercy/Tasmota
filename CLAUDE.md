@@ -220,7 +220,7 @@ PermissionError: [Errno 13] Permission denied: '...\tasmota\tasmota.ino.cpp'
 Ce n'est **ni** Windows Defender **ni** un build concurrent. C'est
 `cpptools-srv2.exe -i TagParser`, l'indexeur de l'extension C/C++ de VS Code :
 PlatformIO ecrit `tasmota.ino.cpp` (7,6 Mo), le relit, puis le **rouvre en ecriture**
-quelques millisecondes plus tard (`pioino.py:104-110`) — l'indexeur s'en saisit
+quelques millisecondes plus tard (`pioino.py::InoToCPPConverter.process`) — l'indexeur s'en saisit
 entre-temps. Nomme par le Restart Manager de Windows sur 23 echecs sur 23 ;
 reproduit a 92 % dans le depot, 0 % hors depot.
 
@@ -291,8 +291,8 @@ Prise en compte a chaud, sans redemarrer VS Code.
   cibles Custom « Sniffeur ModBus », « Sniffeur MQTT », « Serveur syslog » sont des `pio run`.
   Avant toute chose, `pio run` compare l'empreinte du projet a `.pio/build/project.checksum`
   et, si elle differe, **supprime tout `.pio/build`**, tous envs compris
-  (`platformio/run/helpers.py:35-41`). L'empreinte inclut la liste des `.c/.h` de `lib/`
-  (`project/helpers.py:157-175`), or le pre-build regenere les `_temp_be_*.c` de
+  (`platformio/run/helpers.py::clean_build_dir`). L'empreinte inclut la liste des `.c/.h` de `lib/`
+  (`project/helpers.py::compute_project_checksum`), or le pre-build regenere les `_temp_be_*.c` de
   `berry_custom` **selon l'env** : changer d'env change l'empreinte. Symptome : un
   `erase_upload` P4 lance a 15:14, la cible sniffeur (env cave) a 15:37:31, `.pio/build`
   vide a 15:37:39, puis `*** [.pio\build\<env>\libXXX] ... Le chemin d'acces specifie est
@@ -386,6 +386,12 @@ Issus de l'audit des conversations du 2026-10-17. Les utiliser plutot que refair
 ## Carte des documents de ce depot
 
 Pour ne pas chercher : ce qui a ete produit et ou.
+
+Dans les documents durables (ce fichier, `outils_docs/README.md`, `SOLIDIFICATION_BERRY.md`,
+`PROTOCOLE_MODBUS.md`, `CARTE_MODULES_BERRY.md`, `.claude/skills`, `agents`, `commands`), renvoyer au code par
+`fichier::fonction`, jamais par numero de ligne : un numero se decale a chaque modification. Controle :
+`python outils_docs/scripts_python/maintenance/verifie_references_docs.py` (code 1 = renvoi faux). Les documents
+dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont des traces.
 
 - `CLAUDE.md` (ce fichier) — regles du depot, synchro du fork, montage d'un nouveau poste,
   PermissionError.
@@ -495,7 +501,7 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     charte des logs par `charte_logs.py`, banc `test_verifie_berry_charte.py`),
     `solidifie_et_compile_berry.py` (module solidifiable en ~10 s, compile le .h),
     `nomme_fonctions_berry.py` (fonctions anonymes -> nommees), `carte_modules_berry.py`
-    (-> `outils_docs/CARTE_MODULES_BERRY.md`), `genere_schema_persist.py`
+    (-> `outils_docs/CARTE_MODULES_BERRY.md`, sortie deterministe : ni date ni ordre de hachage), `genere_schema_persist.py`
     (-> `outils_docs/schemas/persist.schema.json`), `gen_tapp.py`, et les bancs
     `banc_test_modbus.{py,be}`, `banc_leds.{py,be}` (ruban AUTO/MANUEL, bouton, LED du dev-kit),
     `banc_veille_drivers.be` (veille des drivers inactifs sur LittleFS neuf, `bouchons_berry/veille/`),
@@ -508,7 +514,9 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     module a `banc_leds`).
   - `maintenance/` — `synchronise_fork_tasmota.py` (synchro du fork : merge, jamais de force-push),
     `synchronise_upstream_tasmota.py` (variante rebase), `corrige_reglages_vscode.py` (pose et
-    prouve les reglages VS Code du PermissionError). Page web de la synchro : `synchro_fork_web.py`
+    prouve les reglages VS Code du PermissionError), `verifie_references_docs.py` (renvois au code des
+    documents durables : `fichier::fonction`, jamais `fichier:ligne` ; chemins et fonctions cites verifies ;
+    banc `test_verifie_references_docs.py`). Page web de la synchro : `synchro_fork_web.py`
     (serveur, port 7500) + `synchro_fork_session.py` (script lance en processus enfant, questions),
     `synchro_fork_etat.py` (bandeau, diff, journal), `synchro_fork_page.py`, `synchro_fork_question.py`
     (importe par les deux scripts) ; banc `test_synchro_fork_web.py` (`--reel` : vrais scripts en
@@ -535,7 +543,7 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     (Waveshare CH343) : ecoute du bus, envoi brut, lecture/commande de la carte 16 relais,
     recherche de son debit, emulation de la carte (pour tester le maitre P4 sans elle).
   - `sniffeur_modbus.py` (+ `sniffeur_modbus_web.py`, `sniffeur_modbus_aide.py`, `decodeur_modbus.py`,
-    `cible_sniffeur_modbus.py`) — meme convertisseur, page http://127.0.0.1:7300 : trames du bus en direct,
+    `build/cible_sniffeur_modbus.py`) — meme convertisseur, page http://127.0.0.1:7300 : trames du bus en direct,
     appariement requete/reponse (latence, sans reponse, exceptions par esclave), envoi et raccourcis carte
     16 relais, emulation de la carte. `decodeur_modbus.py` decode chaque trame selon la norme (champ par
     champ, clic sur la trame) puis selon le dialecte de l'esclave vise : carte 16 relais (Conn16channels)
@@ -556,7 +564,7 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     port de test en TTL 0 - ne JAMAIS emettre de faux push vers 224.3.0.1:4000, le vrai maitre le traiterait). Cible PlatformIO « Sniffeur ModBus » dans Custom
     (port : `custom_sniffeur_modbus_port`, defaut auto = le seul CH343 present).
   - `sniffeur_mqtt.py` (+ `sniffeur_mqtt_web.py`, `sniffeur_mqtt_panneaux.py`, `sniffeur_mqtt_config.py`,
-    `client_mqtt.py`, `cible_sniffeur_mqtt.py`) — sniffeur / publieur MQTT sur http://127.0.0.1:7100 :
+    `client_mqtt.py`, `build/cible_sniffeur_mqtt.py`) — sniffeur / publieur MQTT sur http://127.0.0.1:7100 :
     plusieurs brokers parametrables (TLS possible) et selectionnables, abonnements gerables un par
     un et memorises par broker, filtre d'affichage + favoris, differences avec le message precedent
     du meme topic, export .txt/.json, publication (retenu ou non). Panneaux : audit discovery,
@@ -564,7 +572,7 @@ Pour ne pas chercher : ce qui a ete produit et ou.
     Tasmota avec sa reponse, arborescence des topics. Broker par defaut lu dans
     `user_config_override.h` ; les autres (mots de passe compris) dans
     `%APPDATA%\sniffeur_mqtt\config.json`, HORS depot. Cible PlatformIO « Sniffeur MQTT » dans Custom.
-  - `syslog_tasmota.py` (+ `syslog_tasmota_web.py`, `cible_syslog_tasmota.py`) — serveur syslog :
+  - `syslog_tasmota.py` (+ `syslog_tasmota_web.py`, `build/cible_syslog_tasmota.py`) — serveur syslog :
     ecoute UDP 514, page http://127.0.0.1:7200 (filtre module / severite / texte), journal
     `%TEMP%/syslog_tasmota.log`. Cible PlatformIO « Serveur syslog » dans Custom. Les modules
     envoient a `SYS_LOG_HOST` (`user_config_override.h`) = **192.168.0.3, ce PC** (le NAS

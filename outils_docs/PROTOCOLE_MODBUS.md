@@ -16,7 +16,7 @@ ModBus est un protocole **maître/esclave** (un seul maître, N esclaves adress�
 **Seul le maître initie** ; un esclave ne parle **que** pour répondre à une requête qui le
 vise. C'est la limite que l'extension maison (§4) contourne.
 
-**Codes fonction utilisés ici** (`modbusFonctions.be:42-51`) :
+**Codes fonction utilisés ici** (`modbusFonctions.be::tabFonctionsName`) :
 
 | Code | Nom | Usage dans le parc |
 |---|---|---|
@@ -29,7 +29,7 @@ vise. C'est la limite que l'extension maison (§4) contourne.
 
 **Trame RTU** (série RS485) : `[adresse 1o][code 1o][données No][CRC16 2o]`.
 Le CRC16 ModBus (poly `0xA001`, init `0xFFFF`, octets inversés) est réimplémenté en Berry :
-`modbusFonctions.crc16modbus()` (`:1337`).
+`modbusFonctions.be::crc16modbus`.
 
 ---
 
@@ -65,15 +65,15 @@ l'esclave (serveur, port 502) et envoie ses requêtes. L'esclave ne peut **jamai
 
 Le framework ne s'appuie PAS sur la pile ModBus native de Tasmota seule : il gère
 **trois transports** activables par `_persist.json > drivers.ModBus.typeComm`
-(`Serial` / `TCP` / `UDP`), dispatché par `envoiMsgModbus()` (`:393`) :
+(`Serial` / `TCP` / `UDP`), dispatché par `modbusFonctions.be::envoiMsgModbus` :
 
 - **Série (RS485)** : maître → `tasmota.cmd("ModBusSend {...}")` (pile native Tasmota) ;
-  esclave → écrit la trame brute sur `serialModBus.write()` (`:508`).
-- **TCP** : `envoiMsgModbusTCP()` (`:579`) — trame **préfixée texte** `"ModbusTCP " + trame`.
-- **UDP** : `envoiMsgModbusUDP()` (`:518`) — même principe, non-standard (ModBus n'existe
+  esclave → écrit la trame brute sur `serialModBus.write()` (`modbusFonctions.be::envoiMsgModbusSerial`).
+- **TCP** : `modbusFonctions.be::envoiMsgModbusTCP` — trame **préfixée texte** `"ModbusTCP " + trame`.
+- **UDP** : `modbusFonctions.be::envoiMsgModbusUDP` — même principe, non-standard (ModBus n'existe
   pas officiellement sur UDP).
 
-**Réception** : les réponses reviennent par **règles Tasmota** (`controleModbus.be:29-33`) :
+**Réception** : les réponses reviennent par **règles Tasmota** (`controleModbus.be::init`) :
 `ModbusReceived` (série) / `ModbusReceivedTCP` / `ModbusReceivedUDP` →
 `controleModbus.recupereReponseModBus*()`.
 
@@ -92,14 +92,14 @@ ce qui est lent et bavard.
 
 **Solution maison** : sur les transports **TCP/UDP**, la connexion est **persistante et
 bidirectionnelle**. L'esclave garde le socket ouvert avec le maître et **écrit dessus quand
-il veut** (`envoiMsgModbusTCP`, branche `id > 0`, `:599-604` : `Client.write("ModbusTCP " +
+il veut** (`envoiMsgModbusTCP`, branche `id > 0`, `modbusFonctions.be::envoiMsgModbusTCP` : `Client.write("ModbusTCP " +
 trame)`). Le maître reçoit alors une trame **non sollicitée** via la règle `ModbusReceivedTCP`.
 C'est un **push esclave→maître**, impossible en ModBus standard.
 
 **État constaté / à confirmer ensemble** :
 - Le canal TCP/UDP porte bien ce push (vérifié dans `envoiMsgModbusTCP`).
 - Le code fonction custom `0x11 ISALIVE_ESCLAVE` existe mais est marqué **inutilisé**
-  (`:51`) — candidat naturel pour un keep-alive/heartbeat esclave→maître si on formalise.
+  (`modbusFonctions.be::ISALIVE_ESCLAVE`) — candidat naturel pour un keep-alive/heartbeat esclave→maître si on formalise.
 - Le chemin **série** (RS485 half-duplex) ne permet PAS ce push proprement : le bus est
   partagé, un esclave qui parle sans y être invité **collisionne**. À réviser : sur série,
   l'esclave→maître devrait rester du polling, ou passer par un time-slot.
@@ -111,16 +111,16 @@ C'est un **push esclave→maître**, impossible en ModBus standard.
 **Modèle actuel** : un **unique booléen** `modbusFonctions.attenteReponse` = « une trame est
 en vol, on attend sa réponse ». Posé/levé depuis **11 endroits dans 4 fichiers**.
 
-Envoi (`envoiMsgModbusSerial`, `:441`) :
+Envoi (`modbusFonctions.be::envoiMsgModbusSerial`) :
 - si `attenteReponse == false` → envoie, met le flag à `true`, **arme un timer de timeout**
-  (`reinitialiseFlagModBus`, `:1326`, défaut 1000 ms) qui remettra le flag à `false` ;
+  (`reinitialiseFlagModBus`, `modbusFonctions.be::surTimeout`, défaut 1000 ms) qui remettra le flag à `false` ;
 - si `attenteReponse == true` → **re-planifie l'envoi du MÊME message** dans ~1 s via un
-  timer nommé `"envoiMsgEnCours_" + StartAddress` (`:478`).
+  timer nommé `"envoiMsgEnCours_" + StartAddress` (`modbusFonctions.be::envoiMsgModbusSerial`).
 
 **Failles identifiées :**
 
 1. **Collision de nom de timer → perte de message.** Le timer d'attente est nommé par la
-   seule `StartAddress` (`:478`, et `"resetFlagTimeout_" + StartAddress` en `:1326`). Deux
+   seule `StartAddress` (`modbusFonctions.be::envoiMsgModbusSerial`, et `"resetFlagTimeout_" + StartAddress` dans `modbusFonctions.be::surTimeout`). Deux
    messages différents (function code / valeur différents) vers la **même** StartAddress
    portent le **même** nom de timer → le second **écrase** le premier → un ordre est **perdu
    en silence**.
@@ -429,8 +429,8 @@ en **« etat inconnu »**. C'est la clause « jamais faux en silence ».
 ### Le blocage actuel — verifie
 
 Les trois chemins de reception acquittent **indistinctement** :
-`controleModbus.be:261` (UDP), `controleModbus.be:181` (TCP, route vers
-`recupereReponseModBus`), `modBus_Conn16channels.be:200`, `modBus_TasmotaSlaveModBus.be:405`
+`controleModbus.be::recupereReponseModBusUDP` (UDP), `controleModbus.be::init` (TCP, route vers
+`recupereReponseModBus`), `modBus_Conn16channels.be::recupereReponseModBus`, `modBus_TasmotaSlaveModBus.be::recupereReponseModBus`
 — tous appellent `modbusFonctions.termineEnVol(true)`.
 
 **Consequence si on active le push tel quel** : un capteur qui pousse en UDP **acquitte la
@@ -440,11 +440,11 @@ une autre porte.
 
 **Correctif — les deux crans, pas un :**
 1. **Code fonction dedie** pour la trame non sollicitee (emplacement naturel :
-   `0x11 ISALIVE_ESCLAVE`, reserve et jamais cable, `modbusFonctions.be:59`). Le handler le
+   `0x11 ISALIVE_ESCLAVE`, reserve et jamais cable, `modbusFonctions.be::ISALIVE_ESCLAVE`). Le handler le
    voit **avant** tout le reste et route vers un chemin qui ne touche jamais `enVol`.
-   ⚠️ `prepareTrame:1211` rejette tout `FunctionCode > 0x06` sauf 0x0F et 0x10 : ce code
+   ⚠️ `modbusFonctions.be::prepareTrame` rejette tout `FunctionCode > 0x06` sauf 0x0F et 0x10 : ce code
    doit y etre mis en **liste blanche**.
-2. **Rejet strict dans `apparieReponse`** (`:524-527`) : la fonction detecte deja
+2. **Rejet strict dans `apparieReponse`** (`modbusFonctions.be::apparieReponse`) : la fonction detecte deja
    l'anomalie et se contente de la logguer. Si `DeviceAddress`/`FunctionCode` ne
    correspondent pas a `enVol`, ce n'est **pas** une reponse → ne pas acquitter.
 
@@ -570,7 +570,7 @@ indiscernable d'une vraie mesure (cause probable des 0 de la cuve, `DSB: Capteur
 
 **Pourquoi pas une exception ModBus (0x84)** : sur le maitre serie, le pont Tasmota la journalise
 (`MBR Driver receive error 4`) et ne publie **pas** `ModbusReceived`
-(`xdrv_63_modbus_bridge.ino:390`) : Berry n'y voit qu'un silence -> 3 renvois -> 2 abandons -> **tout
+(`xdrv_63_modbus_bridge.ino::ModbusBridgeHandle`) : Berry n'y voit qu'un silence -> 3 renvois -> 2 abandons -> **tout
 l'esclave declare muet** pour un seul capteur. La corriger toucherait un fichier amont.
 
 **La sentinelle traverse le pont tel quel** :
@@ -660,7 +660,7 @@ c'est d'envoyer la MEME commande au MEME esclave par les deux voies. Chaque dest
 
 #### Ce que fait le code aujourd'hui (verifie le 2026-10-15)
 
-1. **Aiguillage global** (`envoiMsgModbus`, `modbusFonctions.be:1307-1328`) : `typeComm.Serial`
+1. **Aiguillage global** (`envoiMsgModbus`, `modbusFonctions.be::envoiMsgModbus`) : `typeComm.Serial`
    ON -> tout part en serie ; l'UDP ne porte commandes et reponses que si `Serial` est coupe.
    Couper `Serial` sur le P4 pour liberer les esclaves lui ferait perdre la carte 16 relais.
 2. **L'UDP du maitre contourne la file.** Seul `envoiMsgModbusSerial` appelle `enfileMsg` ;
@@ -671,18 +671,18 @@ c'est d'envoyer la MEME commande au MEME esclave par les deux voies. Chaque dest
    multicast Wi-Fi n'a **pas d'accuse 802.11** ni de renvoi MAC, et part au debit le plus bas :
    c'est la forme la plus perdante du Wi-Fi.
 4. **L'esclave repond selon SA config, pas selon la voie d'arrivee** : ses reponses passent
-   par `envoiMsgModbus(paramMSG, "Reponse", ...)` (`:1864` a `:2038`), meme aiguillage global.
+   par `envoiMsgModbus(paramMSG, "Reponse", ...)` (`modbusFonctions.be::executeCmdModbus`), meme aiguillage global.
    Un rideau interroge en UDP avec `Serial` ON repondrait sur le RS485.
 5. **Une reponse UDP en retard peut acquitter la requete SUIVANTE** du meme esclave :
    `apparieReponse` ne compare que `DeviceAddress` et `FunctionCode` (risque deja note en
-   commentaire, `:1320-1325`).
+   commentaire, `modbusFonctions.be::apparieReponse`).
 
 #### Les modifications
 
 **M0 — Esclave : il annonce sa voie dans sa fiche discovery** (decide le 2026-10-15 : c'est
 l'esclave qui la declare, pas le persist du maitre). Nouvelle cle `drivers.ModBus.voieCommandes`
 (`"Serial"` | `"UDP"`, defaut `"Serial"`) dans le persist de l'esclave ; `discoveryFonctions.be`
-(seul ecrivain du bloc `ModBus` de la fiche, `:273-305`) la publie en
+(seul ecrivain du bloc `ModBus` de la fiche, `discoveryFonctions.be::changementEtatDemarrage`) la publie en
 `fiche.ModBus.voieCommandes`. Elle arrive au maitre par la voie habituelle de la fiche
 (`forceEnvoiParams` au demarrage, `ImAlive` toutes les 5 min). Pour basculer sans attendre :
 sous-commande esclave `ReglageModbus VoieCommandes Serial|UDP`, qui enregistre le persist puis
@@ -841,7 +841,7 @@ mutations sur copie de `data/fs`, **toutes detectees**. `test_discovery.be` 195/
 `envoiUDP` a jour partout (sans effet fonctionnel cote esclave).
 
 **Unicast / multicast selon Range Extender ou Wi-Fi classique** (remarque de l'utilisateur,
-constatee par essais ; code relu le 2026-10-15, `udpFonctions.envoiUDP` `:466-512`) :
+constatee par essais ; code relu le 2026-10-15, `udpFonctions.be::envoiUDP`) :
 - **Multicast : les montages different, confirme par le code.** Il n'est emis QUE si
   `serveur.rangeExtender.activation` = ON : maitre (udp.id 0) -> socket lie a l'adresse de
   l'interface AP (`begin("192.168.4.1", 0)`) puis `send` vers 224.3.0.1:4000 ; esclave ->
@@ -890,7 +890,7 @@ constatee par essais ; code relu le 2026-10-15, `udpFonctions.envoiUDP` `:466-51
   lui, passe dans les deux sens (echecs du matin non reproduits).
 - Hypothese du port 2000 (ci-dessus) **ecartee** : un socket neuf lie a 2000 sur le P4 atteint la cuve.
 - Piege de mesure : Tasmota coupe le log serie 600 s apres le demarrage (`SERIALLOG_TIMER`,
-  `support_tasmota.ino:1186`) sauf commande `SerialLog` ; `logFonctions.appliqueProfil` n'en envoie
+  `support_tasmota.ino::PerformEverySecond`) sauf commande `SerialLog` ; `logFonctions.appliqueProfil` n'en envoie
   pas si le niveau est deja le bon. Cuve muette des 03:33:21 : les essais suivants semblaient
   « non recus ». Le testeur reapplique desormais le niveau regle a l'ouverture du port.
 
@@ -914,42 +914,42 @@ interface.
 
 *Cause prouvee : chevauchement de sous-reseau sur l'esclave.* Une socket non liee choisit
 l'interface par `ip4_route` : la 1re interface dont le sous-reseau contient la destination
-(`lwip/src/core/ipv4/ip4.c:171-178`). L'AP de la cuve est demarre apres sa STA
-(`xdrv_58_range_extender.ino:499`) ; `netif_add` le place en tete (`netif.c:437-438`). Le paquet
+(`lwip/src/core/ipv4/ip4.c::ip4_route`). L'AP de la cuve est demarre apres sa STA
+(`xdrv_58_range_extender.ino::rngxSetup`) ; `netif_add` le place en tete (`netif.c::netif_add`). Le paquet
 pour 192.168.4.1 sort donc par l'AP de la cuve : ARP vers sa propre adresse, perdu. Pas de
-rebouclage : avec `IP_NAPT`, le bloc « packet to self » est compile hors (`ip4.c:1061-1079`).
+rebouclage : avec `IP_NAPT`, le bloc « packet to self » est compile hors (`ip4.c::ip4_output_if_opt_src`).
 Une socket liee a 192.168.4.2 passe par le crochet ESP-IDF `ip4_route_src_hook`
-(`components/lwip/port/hooks/lwip_default_hooks.c:122-142`) : la STA est choisie. Vers
+(`components/lwip/port/hooks/lwip_default_hooks.c::ip4_route_src_hook`) : la STA est choisie. Vers
 192.168.0.43, aucune interface ne correspond : sortie par `netif_default` (STA, `route_prio` 100,
-`esp_netif_defaults.h:54`), le P4 accepte une adresse de son autre interface (`ip4.c:616-636`).
+`esp_netif_defaults.h::ESP_NETIF_INHERENT_DEFAULT_WIFI_STA`), le P4 accepte une adresse de son autre interface (`ip4.c::ip4_input`).
 Sources lues : `framework-espidf` 5.5.4 ; options lues dans le `sdkconfig` et le `lwipopts.h`
 precompiles (`CONFIG_LWIP_IPV4_NAPT=y`, `LWIP_HOOK_IP4_ROUTE_SRC`, identiques S3 et P4).
 
 *Consequences.*
 - Esclave -> maitre en unicast : perdu tant que l'esclave a son AP en 192.168.4.1/24 (cuve, et
-  rideau par la meme config). La reponse E1 (`repondUDP`, `modbusFonctions.be:1546-1555`, vers
+  rideau par la meme config). La reponse E1 (`repondUDP`, `modbusFonctions.be::repondUDP`, vers
   `Info.remote_ip` = 192.168.4.1) ne peut pas revenir. Le TCP n'est pas touche (socket acceptee
   liee a 192.168.4.2 : deduit du code, non mesure).
 - Le multicast marche en Range Extender dans les deux sens. Les echecs multicast du matin et
   P4 -> cuve de 03:52-03:53 ne sont pas reproduits ; piste : log serie de la cuve coupe
   (redemarree vers 03:23, `SERIALLOG_TIMER`), non prouve.
-- Le commentaire `controleUDP.be:16-19` dit l'inverse du code et des mesures : ce n'est pas le
+- Le commentaire `controleUDP.be::CONTROLE_UDP` dit l'inverse du code et des mesures : ce n'est pas le
   mode (RE / Wi-Fi) qui decide, c'est le chevauchement.
 
 *Defauts du code releves.*
-- `udpFonctions.be:485` : le multicast du maitre est lie a 192.168.4.1 -> il ne sort que par son
+- `udpFonctions.be::interfacesMulticastMaitre` : le multicast du maitre est lie a 192.168.4.1 -> il ne sort que par son
   AP. En Wi-Fi classique, `Timestamp`, `ipMaitre` et `ModbusUDP` multicast
-  (`modbusFonctions.be:1533`) n'atteignent pas un esclave sur la box.
-- `udpFonctions.be:483-490`, `:499-506`, `:233-240` : aucun multicast esclave hors Range Extender
+  (`modbusFonctions.be::envoiMsgModbusUDP`) n'atteignent pas un esclave sur la box.
+- `udpFonctions.be::envoiUDP`, `udpFonctions.be::reglageUDP` : aucun multicast esclave hors Range Extender
   (deja note plus haut).
-- `udpFonctions.be:479` : socket d'emission liee au port d'ecoute 2000. Pendant sa vie, elle est
-  en tete de `udp_pcbs` (`udp.c:298`) et capte un datagramme entrant (`udp.c:267`), perdu a sa
+- `udpFonctions.be::envoiUDP` : socket d'emission liee au port d'ecoute 2000. Pendant sa vie, elle est
+  en tete de `udp_pcbs` (`udp.c::udp_input`) et capte un datagramme entrant (`udp.c::udp_input`), perdu a sa
   fermeture. Non observe.
-- `udpFonctions.be:592` : un message UDP d'un seul mot leve `index_error` (`params[1]`).
+- `udpFonctions.be::lireUDP` : un message UDP d'un seul mot leve `index_error` (`params[1]`).
 - Les sockets d'ecoute s'ouvrent sur `System#Boot`, leve a la 1re connexion MQTT
-  (`xdrv_02_9_mqtt.ino:1487`) : broker injoignable au demarrage = carte sourde en UDP. Non mesure.
+  (`xdrv_02_9_mqtt.ino::MqttConnected`) : broker injoignable au demarrage = carte sourde en UDP. Non mesure.
 - L'ecoute multicast rejoint le groupe sur les interfaces presentes a l'instant
-  (`NetworkUdp.cpp:131`, `igmp.c:455-480`) : si l'AP du maitre demarrait apres `System#Boot`,
+  (`NetworkUdp.cpp::beginMulticast`, `igmp.c::igmp_joingroup`) : si l'AP du maitre demarrait apres `System#Boot`,
   il serait sourd au multicast sur son AP. Non constate sur le boot en cours du P4.
 
 *Corrections.* **C1, C2, C6 APPLIQUEES le 2026-10-17** (accord de l'utilisateur) dans

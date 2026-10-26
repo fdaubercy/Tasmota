@@ -118,7 +118,7 @@ def analyse(persist):
         actif = e.get("activation", "ON") == "ON" and _parents_actifs(d, chemin)
         virtuel = e.get("virtuel", "OFF") not in ("OFF", "", None)
         t = e.get("type")
-        if isinstance(t, int):      # meme calcul que configModules.be:117-120
+        if isinstance(t, int):      # meme calcul que configModules.be::configDevicesByJon
             t = t + e.get("channel", 0) if t == 1376 else t + int(e.get("id", 1) or 1) - 1
         usage = {"ou": "/".join(chemin), "nom": e.get("nom") or e.get("name"),
                  "fonction": decode(t), "actif": actif, "virtuel": virtuel}

@@ -30,7 +30,6 @@ COMMENT LA GARDE EST TROUVEE
   Tout le reste donne "?".
 """
 import argparse, json, os, re, subprocess, sys
-from datetime import datetime
 
 RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 RACINES_PERSIST = ("serveur", "diverses", "modules", "drivers")
@@ -442,7 +441,7 @@ def mermaid_carte(carte, modules, fs):
         if "D" not in txt.split():
             aretes.append("    CARTE %s %s" % ("-->" if etat in ("ON", "") else "-.->", ident(nom)))
         else:   # dependance : fleche depuis chaque module charge qui l'importe
-            aretes += ["    %s -.->|import| %s" % (ident(a), ident(nom)) for a in carte["ferm"]
+            aretes += ["    %s -.->|import| %s" % (ident(a), ident(nom)) for a in sorted(carte["ferm"])
                        if nom in carte["deps"].get(a, ()) and carte["cellules"][a][2]]
     for f, noms in par_fam.items():
         if noms:
@@ -463,7 +462,7 @@ def genere(racine, sortie):
         fichiers = {n: fs.get(n) or os.path.join(c["dossier"], n + ".be") for n, _ in modules if n in fs or n in c["propres"]}
         c["deps"] = dependances(fichiers)
         c["ferm"] = fermeture([n for n, v in c["cellules"].items() if v[2] and not v[3]], c["deps"])
-        for n in c["ferm"]:   # charge indirectement (D) : importe par un module charge
+        for n in sorted(c["ferm"]):   # charge indirectement (D) : importe par un module charge
             t, e, a, b = c["cellules"][n]
             if not a or b:
                 k = [x for x in t.split() if x in ("S", "P")]
@@ -475,9 +474,10 @@ def genere(racine, sortie):
             inco.append("`%s` : pas d'autoexec.be." % nom)
         if c["persist"] is None:
             inco.append("`%s` : `_persist.json` absent ou illisible, gardes non evaluables." % nom)
-        for n in c["sol"]:
-            if n not in fs:
-                inco.append("`%s` : `%s` est dans custom_berry_solidify mais `data/fs/%s.be` n'existe pas." % (nom, n, n))
+        for n in sorted(c["sol"]):
+            # un module solidifie vit dans data/fs OU dans le dossier de la carte (controleRideau, audit S7)
+            if n not in fs and n not in c["propres"]:
+                inco.append("`%s` : `%s` est dans custom_berry_solidify mais ni `data/fs/%s.be` ni le dossier de la carte ne le contiennent." % (nom, n, n))
         for n, p in modules:
             txt, etat, actif, bloque = c["cellules"][n]
             codes = txt.split()
@@ -507,7 +507,8 @@ def genere(racine, sortie):
             inco.append("`%s` : fichier vide." % os.path.relpath(chemin, racine).replace(os.sep, "/"))
     L = ["# Carte des modules Berry par carte", "",
          "> Fichier GENERE par carte_modules_berry.py - ne pas editer a la main.",
-         "> Genere le %s." % datetime.now().strftime("%Y-%m-%d %H:%M"), "",
+         "> Sortie deterministe (ni date, ni ordre de hachage) : regeneree sans changement de fond, elle ne",
+         "> donne aucun diff. La date de generation est celle du commit.", "",
          "%d modules (%d dans `data/fs`, %d propres a une carte), %d cartes." % (len(modules), len(fs), len(propres_tous), len(cartes)),
          "", "## Tableau", "",
          "Legende : **S** solidifie dans l'env (`custom_berry_solidify`) - **I** importe par l'autoexec - "
