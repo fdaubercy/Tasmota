@@ -8,6 +8,8 @@ autoexec ni persist (lecon du 2026-09-27) ; sans section du .h, son -D FIRMWARE_
      encodage, fins de ligne et ordre des cles gardes octet pour octet) ;
   3. la section `#elif defined(FIRMWARE_...)` de user_config_override.h, copiee juste apres celle du
      modele, avec les defines d'identite remplaces.
+Selon la PUCE de la base, l'alerte du coprocesseur Wi-Fi des P4 (controleCoprocesseur.be) est posee ou neutralisee
+dans la section, le persist et l'autoexec copies, quel que soit le modele : fichiers_berry_coprocesseur.py.
 Deux cartes de meme identite (IP, topic, client MQTT) se deconnectent mutuellement : refus si deja pris.
 Rien n'est commite ; les mots de passe sont masques dans le diff.
 """
@@ -19,6 +21,7 @@ import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+import fichiers_berry_coprocesseur as fbcp
 import fichiers_berry_etat as fbe
 import fichiers_berry_ini as fbi
 import fichiers_berry_sauvegarde as fbs
@@ -335,21 +338,34 @@ def _calcule(racine, c):
     if not anciens or bornes is None or not (racine / dossier_modele).is_dir():
         refus.append(f"modele incomplet : -D FIRMWARE_ du cenv, section du .h ou dossier {dossier_modele} manquant")
         return res
+    # Alerte du coprocesseur Wi-Fi : cenv, persist et autoexec ajustes a la PUCE de la base (2026-10-26)
+    p4 = fbcp.est_p4(c.base)
     copie = _copie_cenv(ini, l_cenv, c, env, dossier, dossier_modele, anciens[-1], nouveau)
+    copie = fbcp.adapte_cenv(copie, p4, res["avertissements"])
     res["cenv"] = _insere_cenv(ini, l_cenv, c.lieu, copie)
     bloc = _copie_h(l_h, bornes, env, nouveau, c.identite, res["avertissements"])
     res["h"] = l_h[:bornes[2]] + bloc + l_h[bornes[2]:]
     p_modele = racine / dossier_modele / "_persist.json"
     t_modele = _texte(_octets(p_modele)) if p_modele.is_file() else None
     res["persist"] = _persist(t_modele, c.identite, res["avertissements"]) if t_modele is not None else None
+    if res["persist"] is not None:
+        res["persist"] = fbcp.adapte_persist(res["persist"], p4, res["avertissements"])
     if t_modele is None:
         res["avertissements"].append(f"{dossier_modele} n'a pas de _persist.json")
+    a_modele = racine / dossier_modele / "autoexec.be"
+    t_auto = _texte(_octets(a_modele)) if a_modele.is_file() else None
+    res["autoexec"] = fbcp.adapte_autoexec(t_auto, p4, res["avertissements"]) if t_auto is not None else None
+    if res["autoexec"] == t_auto:
+        res["autoexec"] = None                                      # inchange : la copie du dossier suffit
     diffs = [difflib.unified_diff(l_cenv, res["cenv"], fbi.FICHIER_CENV, fbi.FICHIER_CENV, lineterm="", n=1),
              difflib.unified_diff(l_h, res["h"], FICHIER_H, FICHIER_H, lineterm="", n=1)]
     if t_modele is not None:
         diffs.append(difflib.unified_diff(fbi.decoupe(t_modele), fbi.decoupe(res["persist"]),
                                           f"{dossier_modele}/_persist.json", f"{dossier}/_persist.json",
                                           lineterm="", n=1))
+    if res["autoexec"] is not None:
+        diffs.append(difflib.unified_diff(fbi.decoupe(t_auto), fbi.decoupe(res["autoexec"]),
+                                          f"{dossier_modele}/autoexec.be", f"{dossier}/autoexec.be", lineterm="", n=1))
     res["diff"] = _masque("\n".join("\n".join(d) for d in diffs))
     return res
 
@@ -393,6 +409,8 @@ def cree(racine, c, empreinte_lue, builds_en_cours):
         tr.copie_dossier(fbe.dossier_carte(c.modele), r["dossier"], ignore=_ignore_modele(racine, fbe.dossier_carte(c.modele)))
         if r["persist"] is not None:
             tr.ecrit(r["dossier"] + "/_persist.json", r["persist"].encode("utf-8", errors="surrogateescape"))
+        if r["autoexec"] is not None:
+            tr.ecrit(r["dossier"] + "/autoexec.be", r["autoexec"].encode("utf-8", errors="surrogateescape"))
         for fichier, cle, eol in ((FICHIER_H, "h", r["eol"][1]), (fbi.FICHIER_CENV, "cenv", r["eol"][0])):
             tr.ecrit(fichier, _encode(r[cle], eol))
     return {"cree": True, "env": r["env"], "dossier": r["dossier"], "diff": r["diff"],

@@ -1,0 +1,53 @@
+<!-- Page /coprocesseur des cartes P4 (data/fs/controleCoprocesseur.be) : firmware du coprocesseur Wi-Fi (ESP32-C6). -->
+<!-- Rempli par le script en pied a partir de window.COPRO, pose par la carte juste avant ce gabarit. -->
+<fieldset>
+	<legend><b>&nbsp;Coprocesseur Wi-Fi&nbsp;</b></legend>
+	<p id="c_etat"></p>
+	<table style="width:100%">
+		<tr><th style="text-align:left">Puce</th><td id="c_mcu"></td></tr>
+		<tr><th style="text-align:left">Firmware actuel</th><td id="c_c6"></td></tr>
+		<tr><th style="text-align:left">Version attendue par le P4</th><td id="c_hote"></td></tr>
+		<tr><th style="text-align:left">Sur le serveur</th><td id="c_publiee"></td></tr>
+	</table>
+	<p id="c_defaut" style="font-size:85%"></p>
+	<div id="c_maj" style="display:none">
+		<p style="font-size:85%">Le P4 télécharge le fichier (environ 1,2 Mo) et le transmet au C6, puis redémarre.
+		Pendant ce temps, <b>tout le Wi-Fi du P4 est coupé</b>, y compris le point d'accès des esclaves
+		(ModBus UDP, MQTT) : une à deux minutes.</p>
+		<p id="c_url" style="font-size:75%;word-break:break-all"></p>
+		<form method="post" action="/coprocesseur"
+		      onsubmit="return confirm('Mettre à jour le coprocesseur Wi-Fi ?\nLe Wi-Fi du P4 et des esclaves sera coupé une à deux minutes, puis le P4 redémarrera.')">
+			<button class="button bred">Mettre à jour le coprocesseur</button>
+		</form>
+	</div>
+	<div id="c_lancee" style="display:none">
+		<p><b>Mise à jour lancée.</b> Le P4 redémarrera à la fin. Retour à l'accueil dans <span id="c_compte">90</span> s.</p>
+	</div>
+</fieldset>
+<script>
+(function () {
+	var d = window.COPRO || {};
+	function pose(id, texte) { var e = document.getElementById(id); if (e) { e.textContent = texte; } }
+	var etats = {"retard": "Le firmware du coprocesseur n'est pas à jour.", "aJour": "Le firmware du coprocesseur est à jour.",
+	             "absent": "Cette carte n'a pas de coprocesseur Wi-Fi.", "inconnu": "Version du coprocesseur illisible."};
+	pose("c_etat", etats[d.etat] || "Vérification en cours (environ 20 s après le démarrage).");
+	pose("c_mcu", d.mcu || "-");
+	pose("c_c6", d.c6 || "-");
+	pose("c_hote", d.hote || "-");
+	pose("c_publiee", d.publiee === true ? "publiée" : (d.publiee === false ? "pas encore publiée" :
+	     (d.etat === "retard" ? "non vérifiée (" + (d.essais || 0) + " essai(s))" : "-")));
+	if (d.defaut) {
+		pose("c_defaut", "Le fichier par défaut du serveur est en v" + d.defaut +
+		     (d.defaut !== d.hote ? " : la version visée est celle du firmware du P4." : "."));
+	}
+	if (d.possible) {
+		document.getElementById("c_maj").style.display = "block";
+		pose("c_url", d.url || "");
+	}
+	if (d.lancee) {
+		document.getElementById("c_lancee").style.display = "block";
+		var n = 90;
+		setInterval(function () { n -= 1; pose("c_compte", String(n > 0 ? n : 0)); if (n <= 0) { location.href = "/"; } }, 1000);
+	}
+})();
+</script>

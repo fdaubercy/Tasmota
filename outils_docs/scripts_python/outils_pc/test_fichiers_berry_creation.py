@@ -320,11 +320,114 @@ def test_vu_par_build(racine):
     verifie(envs.get("tasmota32s3-garage-porte-test"), "cartes", "nouvelle carte vue par la page build (famille cartes)")
 
 
+P4 = "tasmota32p4-garage-serveur-modbus"
+BASE_P4 = "tasmota32p4-base-wifi6"
+CHEMIN_COPRO = "data/fs/controleCoprocesseur.be"
+
+
+def _options_cenv(racine, env):
+    """{option: [valeurs]} de la section de l'env (relue par ConfigParser, comme PlatformIO)."""
+    import configparser
+    cp = configparser.ConfigParser(inline_comment_prefixes=(";",), interpolation=None, strict=False)
+    cp.read_string(texte(racine, fbi.FICHIER_CENV))
+    s = cp["env:" + env]
+    return {k: [v.strip() for v in s.get(k, "").split("\n") if v.strip()] for k in s}
+
+
+def _bloc_copro(racine, dossier):
+    return json.loads(texte(racine, dossier + "/_persist.json"))["serveur"].get("coprocesseur")
+
+
+def test_p4_depuis_s3(racine):
+    """Future carte P4 creee depuis un modele S3 : l'alerte est posee dans les trois morceaux."""
+    c = creation(nom="essai-p4", modele=RIDEAU, base=BASE_P4)
+    modele = texte(racine, DOSSIER_RIDEAU + "/_persist.json")
+    p, _ = cree(racine, c)
+    dossier = "data/garage/tasmota32p4-essai-p4"
+    verifie(_bloc_copro(racine, dossier), {"activation": "ON", "url": "https://ota.tasmota.com/tasmota32/coprocessor",
+                                           "mqtt": "ON"}, "P4 depuis S3 : bloc serveur.coprocesseur ajoute au persist")
+    neuf = json.loads(texte(racine, dossier + "/_persist.json"))
+    neuf["serveur"].pop("coprocesseur")
+    attendu = json.loads(fbc._persist(modele, c.identite, []))
+    verifie(neuf == attendu, True, "P4 depuis S3 : reste du persist inchange (identite seule)")
+    auto = texte(racine, dossier + "/autoexec.be")
+    verifie(auto.count('demarrage.charge(["controleCoprocesseur"], "serveur.coprocesseur")'), 1,
+            "P4 depuis S3 : chargement ajoute a l'autoexec, une fois")
+    lignes = auto.splitlines()
+    i = next(k for k, l in enumerate(lignes) if "controleCoprocesseur" in l)
+    verifie((lignes[i].startswith("    "), lignes[i + 1].strip() == "end" or any(l.strip() == "end" for l in lignes[i + 1:])),
+            (True, True), "P4 depuis S3 : ligne indentee, dans le bloc if demarrage.prologue()")
+    opts = _options_cenv(racine, "tasmota32p4-garage-essai-p4")
+    verifie(CHEMIN_COPRO in opts.get("custom_files_exclude", []), False, "P4 depuis S3 : module retire des exclusions du cenv")
+    verifie(len(opts.get("custom_files_exclude", [])) > 0, True, "P4 depuis S3 : les autres exclusions restent")
+    verifie(sum("coprocesseur" in a.lower() for a in p["avertissements"]) >= 3, True, "P4 depuis S3 : ajustements annonces")
+    verifie("controleCoprocesseur" in p["diff"] and "autoexec.be" in p["diff"], True, "P4 depuis S3 : autoexec dans le diff")
+
+
+def test_p4_depuis_p4(racine):
+    """Depuis le P4 du garage : rien a ajouter, rien en double."""
+    c = creation(nom="essai-p4b", modele=P4, base=BASE_P4)
+    p, _ = cree(racine, c)
+    dossier = "data/garage/tasmota32p4-essai-p4b"
+    verifie(texte(racine, dossier + "/_persist.json").count('"coprocesseur"'), 1, "P4 depuis P4 : un seul bloc coprocesseur")
+    verifie(texte(racine, dossier + "/autoexec.be") == texte(racine, "data/garage/tasmota32p4-serveur-modbus/autoexec.be"),
+            True, "P4 depuis P4 : autoexec copie tel quel")
+    opts = _options_cenv(racine, "tasmota32p4-garage-essai-p4b")
+    verifie(CHEMIN_COPRO in opts.get("custom_berry_solidify", []), True, "P4 depuis P4 : module toujours solidifie")
+    verifie(CHEMIN_COPRO in opts.get("custom_files_exclude", []), False, "P4 depuis P4 : pas exclu")
+    verifie([a for a in p["avertissements"] if "coprocesseur" in a.lower()], [], "P4 depuis P4 : aucun ajustement annonce")
+
+
+def test_s3_depuis_p4(racine):
+    """Carte S3 creee depuis le P4 : alerte neutralisee (activation OFF, ni solidifie ni sur le LittleFS)."""
+    c = creation(nom="essai-s3", modele=P4, base=BASE_RIDEAU)
+    cree(racine, c)
+    bloc = _bloc_copro(racine, "data/garage/tasmota32s3-essai-s3")
+    verifie(bloc and bloc["activation"], "OFF", "S3 depuis P4 : activation OFF")
+    opts = _options_cenv(racine, "tasmota32s3-garage-essai-s3")
+    verifie(CHEMIN_COPRO in opts.get("custom_berry_solidify", []), False, "S3 depuis P4 : module retire de la solidification")
+    verifie(CHEMIN_COPRO in opts.get("custom_files_exclude", []), True, "S3 depuis P4 : module exclu du LittleFS")
+    verifie("data/fs/controleES8311.be" in opts.get("custom_berry_solidify", []), True,
+            "S3 depuis P4 : le reste de la solidification intact")
+
+
+def test_s3_depuis_s3(racine):
+    """Carte S3 depuis un S3 : persist, autoexec et exclusions inchanges."""
+    p, _ = cree(racine, creation(nom="essai-s3b"))
+    verifie(_bloc_copro(racine, "data/garage/tasmota32s3-essai-s3b"), None, "S3 depuis S3 : pas de bloc coprocesseur")
+    verifie(CHEMIN_COPRO in _options_cenv(racine, "tasmota32s3-garage-essai-s3b").get("custom_files_exclude", []), True,
+            "S3 depuis S3 : module toujours exclu")
+    verifie([a for a in p["avertissements"] if "coprocesseur" in a.lower()], [], "S3 depuis S3 : aucun ajustement annonce")
+
+
+def test_coprocesseur_unitaire():
+    """Cas limites des listes du cenv et de l'autoexec, hors depot."""
+    import fichiers_berry_coprocesseur as fbcp
+    av = []
+    seul = ["[env:x]", "custom_files_exclude          =   " + CHEMIN_COPRO, "autre = 1"]
+    verifie(fbcp.adapte_cenv(seul, True, av), ["[env:x]", "autre = 1"], "cenv : liste reduite au module -> option retiree")
+    tete = ["[env:x]", "custom_files_exclude = " + CHEMIN_COPRO, "                       data/fs/a.be", "autre = 1"]
+    verifie(fbcp.adapte_cenv(tete, True, []), ["[env:x]", "custom_files_exclude = data/fs/a.be", "autre = 1"],
+            "cenv : module en tete de liste -> la valeur suivante remonte")
+    sans = ["[env:x]", "autre = 1"]
+    verifie(fbcp.adapte_cenv(sans, False, []), ["[env:x]", "autre = 1", "custom_files_exclude          =   " + CHEMIN_COPRO],
+            "cenv : pas de liste d'exclusion -> creee")
+    ancien = "# ancien autoexec\nimport persist\nloadBerryFile('/x')\n"
+    av = []
+    verifie(fbcp.adapte_autoexec(ancien, True, av), ancien, "autoexec sans demarrage.prologue : inchange")
+    verifie(any("a la main" in a for a in av), True, "autoexec sans demarrage.prologue : signale")
+    crlf = "import demarrage\r\nif demarrage.prologue()\r\n    demarrage.charge([\"a\"])\r\nend\r\n"
+    verifie(fbcp.adapte_autoexec(crlf, True, []).count("\r\n"), 5, "autoexec CRLF : fins de ligne gardees")
+    verifie(fbcp.adapte_persist("{pas du json", True, []), "{pas du json", "persist illisible : rendu tel quel")
+
+
 def principal():
     test_nom_et_define()
+    test_coprocesseur_unitaire()
     for test in (test_section_cenv, test_chemins_reecrits, test_section_h, test_modele_cave, test_persist_octets,
                  test_insertion_lieu, test_refus, test_identite_invalide, test_define_en_commentaire, test_nom_base, test_commentaire_dans_upload, test_diff_masque, test_sauvegarde, test_creation_atomique,
-                 test_copies_temporaires_ignorees, test_vu_par_build):
+                 test_copies_temporaires_ignorees, test_vu_par_build,
+                 test_p4_depuis_s3, test_p4_depuis_p4, test_s3_depuis_p4, test_s3_depuis_s3):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier
             try:

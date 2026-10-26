@@ -457,6 +457,17 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   esclaves), decisions tranchees, plan en phases. ⚠️ Nom trompeur : **cibles = les 3 modules
   garage**, le grenier est en sommeil. Travail sur `development` (branche de chantier supprimee
   le 2026-10-04).
+- Firmware du coprocesseur Wi-Fi ESP32-C6 des P4 (2026-10-26) : `data/fs/controleCoprocesseur.be` (solidifie sur le P4,
+  exclu des autres envs comme `controleES8311.be`), bloc persist `serveur.coprocesseur`. Au demarrage seulement : `Hosted`
+  lu en local (C6 a jour -> aucun acces reseau) ; en retard -> ligne d'alerte sur l'accueil + UNE requete `Range` de
+  512 o sur `<url>/v<Host>/network_adapter_<MCU>.bin` (version lue dans l'en-tete d'image), nouvel essai horaire, 6 au
+  plus. Page `/coprocesseur` (gabarit `data/sd/html/coprocesseur.html`), bouton -> `HostedOta <URL complete>`. Version
+  visee = `Host` (bibliotheque du firmware P4), PAS le fichier par defaut du serveur (en retard). Option `"mqtt": "ON"`
+  (ON sur le P4) : `tele/<topic>/COPROCESSEUR` RETENU, a chaque changement d'etat et a chaque `Mqtt#Connected` (le JSON
+  SENSOR n'est pas touche). Nouvel env : `outils_pc/fichiers_berry_coprocesseur.py` (appele par
+  `fichiers_berry_creation._calcule`) pose ou neutralise l'alerte selon la PUCE de la base (persist, autoexec, cenv).
+  Bancs `berry/banc_coprocesseur.py` (+ rendu Chrome), `outils_pc/test_fichiers_berry_creation.py`. Mode d'emploi :
+  `outils_docs/README.md` ; plan `tasks/plans/alerte-firmware-c6.md`.
 - Graphiques des cartes S3/P4 (2026-10-18) : page `/graphiques` (bouton d'accueil) servie par
   `data/fs/graphiquesFonctions.be` (route et bouton declares par le driver `HISTORIQUE_WEB` de
   `historiqueFonctions.be`), gabarit `data/sd/html/graphiques.html` + `data/sd/css/graphiques.css`, logique
@@ -643,7 +654,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `tasks/plans/page-build-televersement.md`.
   - `fichiers_berry_web.py` (+ `fichiers_berry_page.py`, `fichiers_berry_ini.py`, `fichiers_berry_etat.py`,
     `fichiers_berry_ecriture.py`, `fichiers_berry_creation.py`, `fichiers_berry_suppression.py`, `fichiers_berry_renommage.py`,
-    `fichiers_berry_sauvegarde.py`, `fichiers_berry_page_envs.py`) — page « Fichiers Berry par env » http://127.0.0.1:7800
+    `fichiers_berry_sauvegarde.py`, `fichiers_berry_page_envs.py`, `fichiers_berry_coprocesseur.py`) — page « Fichiers Berry par env » http://127.0.0.1:7800
     (tuile de l'annuaire, groupe Maintenance, arret libre : rien n'est ecrit avant « Enregistrer » ; tache VS Code
     « Outil : fichiers Berry par env » ; cible Custom « Fichiers Berry par env (page web) », `build/cible_fichiers_berry.py`,
     banc `build/test_cible_fichiers_berry.py`, page demarree detachee comme celle du build ; lien « fichiers » sur chaque

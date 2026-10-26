@@ -125,6 +125,11 @@
         "discovery": {
             "activation": "ON",
             "log": "info"
+        },
+        "coprocesseur": {
+            "activation": "ON",
+            "url": "https://ota.tasmota.com/tasmota32/coprocessor",
+            "mqtt": "ON"
         }
 	},
 	"template": {

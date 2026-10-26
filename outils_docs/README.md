@@ -270,6 +270,40 @@ des panneaux de cuve, leurs courbes y seraient vides.
 
 <hr></hr>
 
+## Firmware du coprocesseur Wi-Fi des P4 (ESP32-C6)
+
+Sur le P4, le Wi-Fi passe par un ESP32-C6 (esp_hosted). Son firmware se met à jour à part, par `HostedOta` ; rien ne
+le signalait. `data/fs/controleCoprocesseur.be` (solidifié sur le P4, exclu des autres cartes) le fait :
+
+- **Version visée** : celle de la bibliothèque compilée dans le firmware du P4 (champ `Host` de la commande `Hosted`).
+  Le C6 doit avoir la même. Le fichier sans numéro de version du serveur n'est pas suivi : il était en 2.12.6 quand
+  l'hôte était en 2.12.13 (26/10/2026). La version visée est lue dans `…/coprocessor/v<Host>/network_adapter_<MCU>.bin`.
+- **Quand** : au démarrage seulement, car les deux versions ne changent qu'au redémarrage. 20 s après le chargement,
+  lecture locale de `Hosted`. C6 à jour : fin, **aucun accès réseau**. C6 en retard : une ligne d'alerte apparaît sur
+  l'accueil, puis une seule requête est envoyée 3 min après le démarrage. Elle lit les 512 premiers octets du fichier
+  (`Range`), dont l'en-tête d'image donne la version réellement publiée. En cas d'échec réseau, nouvel essai toutes
+  les heures, 6 au plus.
+- **Page `/coprocesseur`** (lien de la ligne d'alerte) : versions, état sur le serveur, URL. Le bouton « Mettre à jour
+  le coprocesseur » (avec confirmation) lance `HostedOta <URL complète>`. Le Wi-Fi du P4 et le point d'accès des
+  esclaves sont coupés une à deux minutes, puis le P4 redémarre. L'alerte disparaît si la mise à jour a réussi.
+- **Réglage** : bloc `serveur.coprocesseur` du persist,
+  `{"activation": "ON", "url": "https://ota.tasmota.com/tasmota32/coprocessor", "mqtt": "ON"}`.
+  Logs sur la cible `general`, préfixe `COPROCESSEUR`.
+- **MQTT** (`"mqtt": "ON"`, absent = OFF ; ON sur le P4 du garage) : `tele/<topic>/COPROCESSEUR`, message **retenu**,
+  publié à chaque changement d'état (versions lues, réponse du serveur, mise à jour lancée) et à chaque connexion au
+  broker : `{"MCU": "esp32c6", "Version": "2.6.6", "Attendue": "2.12.13", "AJour": false, "Publiee": true, "Lancee": false}`
+  (`Publiee` vaut `null` tant que le serveur n'a pas répondu). C'est un topic à part : le JSON `SENSOR`, lu par
+  Influx et Node-RED sur le Pi et par l'historique, n'est pas modifié.
+- **Nouvelle carte P4** : la page « Fichiers Berry par env » pose l'alerte selon la **puce de la base**, quel que soit
+  le modèle (`fichiers_berry_coprocesseur.py`). Sur une base P4, elle ajoute le bloc au persist, ajoute la ligne
+  `demarrage.charge` à l'autoexec et retire le module des exclusions. Pour une carte d'une autre puce créée depuis le
+  P4, elle passe `activation` à `OFF`, retire le module de la solidification et l'exclut du LittleFS. Chaque
+  ajustement est annoncé dans la page et visible dans le diff.
+- **Banc** : `python outils_docs/scripts_python/berry/banc_coprocesseur.py` (code 0 = vert ; inclut le rendu de la
+  page dans Chrome ; `--sans-navigateur` pour la partie Berry seule).
+
+<hr></hr>
+
 ## Build et téléversement (page web)
 
 Une page pour compiler et téléverser plusieurs cartes d'un seul écran, sans éditer les `.ini` :

@@ -18,6 +18,7 @@ if demarrage.prologue()
     demarrage.charge(["controleVoletRoulants"], "drivers.voletRoulants")   # volet natif sur les relais VIRTUELS (porte du rideau)
     demarrage.charge(["controleDiscovery"], "serveur.discovery")
     demarrage.charge(["controleES8311"])
+    demarrage.charge(["controleCoprocesseur"], "serveur.coprocesseur")    # alerte « firmware du C6 pas a jour » (accueil web)
     demarrage.historique()                                                  # AVANT controleGarage, qui l'importe
     demarrage.chargeFichier("controleGarage", "modules.garage")             # non solidifie : depuis le LittleFS
 end
