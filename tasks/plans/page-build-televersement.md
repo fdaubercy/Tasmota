@@ -3,7 +3,7 @@ chantier: page-build-televersement
 titre: Page web « Build et téléversement » (port 7700, tuile de l'annuaire)
 statut: actif
 cree: 2026-10-24
-maj: 2026-10-25
+maj: 2026-10-26
 ---
 # Page web « Build et téléversement » — plan d'implémentation
 
@@ -276,8 +276,8 @@ Chaque essai : demander à l'utilisateur, vérifier qu'aucun build ne tourne, un
 - [x] Téléverser par COM (cuve, COM12) : % esptool, mention « FS aussi flashé » si `littlefs.bin` présent. — preuve : essai utilisateur 2026-10-25, [SUCCESS] code 0, littlefs.bin écrit à 0x004b0000 (journal 20261025-003648)
 - [ ] Téléverser le firmware en OTA (P4) par la page (`/u2`) sans toucher au `.ini` : `git diff
   platformio_tasmota_cenv.ini` vide.
-- [ ] Téléverser le FS en OTA sur une carte choisie par l'utilisateur : sauvegarde du persist présente,
-  relecture identique, persist de la carte après redémarrage = persist envoyé.
+- [x] Téléverser le FS en OTA sur une carte choisie par l'utilisateur : sauvegarde du persist présente,
+  relecture identique, persist de la carte après redémarrage = persist envoyé. — preuve : essai réel de l'utilisateur sur le P4, 2026-10-26 ; sauvegarde `persist/tasmota32p4-garage-serveur-modbus-20261026-055308.json`
 - [x] Série de 2 envs dont 1 en échec provoqué (port COM débranché) : bandeau rouge, l'autre env aboutit. — preuve : essai réel de l'utilisateur, 2026-10-25
 - [x] Pause « rebranchez la carte » : deux cartes branchées tour à tour sur le même port COM — preuve : essai réel de l'utilisateur, 2026-10-25
 - [x] Cible Custom « Build et téléversement (page web) » depuis Project Tasks — preuve : essai réel de l'utilisateur, 2026-10-25
