@@ -14,6 +14,7 @@
 # Une "condition" est le chemin d'un bloc du persist dont la cle "activation" doit valoir "ON"
 # ("serveur.udp", "modules.garage", "drivers.voletRoulants"...) ; nil = toujours.
 # Logs : prefixe AUTO_EXE garde (meme texte qu'avant la refonte, filtres syslog inchanges).
+#@ solidify:demarrage
 var demarrage = module("demarrage")
 
 # Globales du demarrage, log, persist allege, fichiers repartis sur la carte SD. Rend true si le persist

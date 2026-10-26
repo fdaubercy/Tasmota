@@ -322,7 +322,62 @@ Fichiers : `outils_pc/build_serie.py`, `outils_pc/build_progression.py`, `outils
   et sonde Chrome sortie 0 (2026-10-25) ; README et CLAUDE.md dans le commit docs qui suit 3f22d0ff5
 - [x] Essai réel par l'utilisateur : `erase_upload` sur une carte choisie par lui. — preuve : essai réel de l'utilisateur en cours, validé par lui le 2026-10-25
 
+## A11 — OTA des esclaves derrière le range extender du maître (demande du 2026-10-26)
+
+Demande : l'OTA (firmware et FS) marche quand l'IP est connue (maître P4) ; pour les esclaves joints par le
+range extender du maître (cuve, rideau), trouver le mode de connexion et l'adresse ou le port qui marche, et
+afficher en face de chaque env l'adresse retenue, lue dans la config (persist) ou la télémétrie.
+Reconnaissance (2026-10-26) : cuve `rangeExtender.id` 2, rideau 3, `ipMaitre` 192.168.0.43, `apiHTTP` ON ;
+le maître redirige `<IP maître>:<8080 + id - 1>` -> `<IP esclave>:80` (`RgxPort`, posé par
+`rangeExtenderFonctions.redirige`, commande `RoutageRangeExtender`) ; table vidée au redémarrage du maître.
+Fichiers pressentis : `outils_pc/build_envs.py`, `build_ota_fs.py`, `build_serie.py`, `build_web.py`,
+`build_page.py`, leurs bancs ; spec à compléter (choix 20).
+
+- [ ] Design validé par l'utilisateur (brainstorming), spec complétée.
+- [ ] Adresse OTA déduite par env : IP fixe du `.h`, sinon `http://<ipMaitre>:<8080 + id - 1>` si l'esclave est en
+  range extender, sinon saisie ; affichée en face de l'env avec sa provenance.
+- [ ] Avant l'envoi par le maître : redirection posée (`RoutageRangeExtender` sur le maître) et identité de la carte
+  jointe vérifiée (nom d'hôte du persist) ; refus sinon.
+- [ ] Firmware et FS en OTA par le maître dans les bancs (carte simulée derrière un faux maître).
+- [ ] Essai réel par l'utilisateur : OTA du firmware ou du FS sur la cuve par le maître.
+
+Constats sur carte (2026-10-26, lecture seule sauf mention) : la table `RgxPort` du maître était vide après son
+redémarrage de 05:53 (`192.168.0.43:8081` muet) ; `RoutageRangeExtender` n'a rien posé et
+`rangeExtenderFonctions.redirige` plante (`'boolMute' undeclared`) parce que le Berry du P4 ne démarre plus (voir A12).
+Fiche discovery du maître : cuve `192.168.4.2` Online port 8081, rideau `192.168.4.3` Offline port 8082.
+
+## A12 — Défaut : `buildfs` construit le FS avec le dossier `data_dir` du lancement PRÉCÉDENT (2026-10-26)
+
+Preuve : journaux `20261026-055152-tasmota32p4-...-buildfs.log:105` (`copy_fs_image(... p4 ... littlefs.bin,
+data\garage\tasmota32s3-capteurs-cuve-modbus)`) et `20261026-054628-...cuve...-buildfs.log:103` (dossier du rideau) :
+le pré-script réécrit `data_dir` dans `platformio_override.ini` pendant le `pio run`, mais PlatformIO l'a déjà lu.
+Conséquence : l'OTA du FS du P4 de 05:53 a envoyé l'`autoexec.be` et le persist de la cuve ; depuis, le Berry du P4
+ne démarre plus (`global()` sans `serveur`, `boolMute`, `LOG_LEVEL_*`). Persist réel du P4 sauvegardé avant :
+`persist/tasmota32p4-garage-serveur-modbus-20261026-055308.json`. Les firmwares par câble (FS de
+`custom_files_upload`) et l'`uploadfs` de la cuve de 05:48 (dossier de la cuve) ne sont pas touchés.
+
+- [ ] Rendre au P4 son FS (après le build en cours) : `buildfs` du P4 (data_dir est maintenant celui du P4), OTA du
+  FS, contrôle de l'`autoexec.be` et du persist relus sur la carte.
+- [ ] Corriger à la source (choix de l'utilisateur) : la page pose `data_dir` AVANT de lancer pio, et/ou le pré-script
+  fait `env.Replace(PROJECT_DATA_DIR=...)` dans le même lancement ; banc rouge puis vert.
+- [ ] Garde dans l'OTA du FS : refuser une image dont le `_persist.json` ne porte pas l'identité de l'env (nom d'hôte,
+  topic) ; contrôle après envoi de l'`autoexec.be` relu.
+
+## A13 — Pourcentage pendant l'envoi du firmware et du FS (demande du 2026-10-26)
+
+- [ ] Vérifier ce que la page affiche aujourd'hui pendant l'envoi (COM : esptool ; OTA : `/u2` et `/ufsu`), en
+  direct sur un journal réel ; manque constaté et nommé.
+- [ ] Pourcentage visible sur la carte de l'env pendant tout envoi (firmware et FS, COM et OTA) ; bancs et sonde Chrome.
+
 ## Améliorations restantes
+
+- [x] [projet] Refuser dès la fin du pré-build un module solidifié vide (cas réel du 2026-10-26 : `demarrage.be` sans
+  `#@ solidify:demarrage`, P4 et rideau en échec d'édition des liens après 1 h ; ligne ajoutée avec l'accord de
+  l'utilisateur). — preuve : `build_solidification.py` + `build_serie._lance_pio` (pio tué à la 1re ligne de
+  compilation) ; test_build_solidification VERT (10 OK), test_build_serie VERT (7 vérifications « solidification_vide »,
+  témoin .h plein, buildfs non contrôlé ; rouge avant : 5 KO), test_build_web VERT ; sur le dépôt réel (modules.h du
+  build raté) : « solidification vide : demarrage (directive … absente de demarrage.be) » ; demarrage.be resolidifié
+  hors build : 39 718 octets avec `be_define_const_native_module(demarrage)` (373 sans la directive)
 
 - [x] [projet] Pause « rebranchez la carte X sur COMn » entre deux envs au port partagé (aujourd'hui :
   refus, spec choix 11). — preuve : commit 320fa8f32 (build_serie._attend_carte, POST /continuer, bandeau de la

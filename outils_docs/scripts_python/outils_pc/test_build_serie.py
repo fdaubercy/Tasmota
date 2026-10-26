@@ -897,6 +897,50 @@ def test_erase_upload_envoi_et_echec():
                 "erase_upload_echec : message d'esptool dans l'extrait")
 
 
+def berry_custom(racine, plein):
+    """modules.h qui inscrit le module demarrage ; son .h solidifie est vide sauf si `plein`."""
+    src = racine / "lib" / "libesp32" / "berry_custom" / "src"
+    (src / "solidify").mkdir(parents=True, exist_ok=True)
+    (src / "modules.h").write_text("#define CUSTOM_NATIVE_MODULES &be_native_module(demarrage),\n"
+                                   "be_extern_native_module(demarrage);", encoding="utf-8")
+    (src / "solidify" / "solidified_demarrage.h").write_text(
+        '#include "be_constobj.h"\n' + ("be_define_const_native_module(demarrage);\n" if plein else ""),
+        encoding="utf-8")
+
+
+def test_solidification_vide():
+    lignes = ["Processing {env} (platform: espressif32)", "Will solidify  demarrage.be", "demarrage is a module",
+              "Compiling .pio\\build\\{env}\\src\\a.cpp.o", "@pause 15", "Linking .pio\\build\\{env}\\firmware.elf",
+              "[SUCCESS] Took 15.00 seconds"]
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t, {A: {"upload": {"lignes": lignes}}})
+        berry_custom(m.racine, plein=False)
+        debut = time.monotonic()
+        ev = m.lance([com(A, "COM1")], {"upload"})
+        duree = time.monotonic() - debut
+        statuts = {e["env"]: e["statuts"] for e in du_type(ev, "fin_env")}
+        verifie(statuts.get(A), {"upload": "echec"}, "solidification_vide : env en echec")
+        e = du_type(ev, "echec", env=A)
+        verifie(bool(e) and e[0]["motif"].startswith("solidification vide : demarrage"), True,
+                "solidification_vide : motif nomme le module vide")
+        verifie(duree < 10, True, f"solidification_vide : pio arrete des la compilation ({duree:.1f} s, pas 15)")
+        verifie(len(m.appels("fin")), 0, "solidification_vide : le faux pio a ete tue (pas de ligne fin)")
+        verifie(any("solidification vide" in x.get("texte", "") for x in du_type(ev, "ligne", env=A)), True,
+                "solidification_vide : la raison apparait dans la sortie de l'env")
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t, {A: {"upload": {"lignes": lignes[:4] + lignes[5:]}}})
+        berry_custom(m.racine, plein=True)
+        ev = m.lance([com(A, "COM1")], {"upload"})
+        verifie({e["env"]: e["statuts"] for e in du_type(ev, "fin_env")}.get(A), {"upload": "succes"},
+                "solidification_vide : temoin, .h plein -> upload mene au bout")
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t, {A: {"buildfs": {"lignes": lignes[:4] + lignes[5:]}}})
+        berry_custom(m.racine, plein=False)
+        ev = m.lance([com(A, "COM1")], {"buildfs"})
+        verifie({e["env"]: e["statuts"] for e in du_type(ev, "fin_env")}.get(A), {"buildfs": "succes"},
+                "solidification_vide : buildfs (pas d'edition des liens) non controle")
+
+
 def test_garde_build_importable():
     module = bs.garde_build()
     verifie(callable(getattr(module, "builds_en_cours", None)), True,
@@ -915,7 +959,8 @@ def principal():
                  test_ota_annule_si_arret_immediat, test_fin_avant_liberation, test_envoi_en_cours,
                  test_journal_ecrit, test_reference_o_memorisee, test_reference_estimee, test_rappel_fichiers_modifies,
                  test_refus_double_lancement, test_uploadfs_ota, test_garde_build_importable,
-                 test_erase_upload_commandes, test_erase_upload_refus, test_erase_upload_envoi_et_echec):
+                 test_erase_upload_commandes, test_erase_upload_refus, test_erase_upload_envoi_et_echec,
+                 test_solidification_vide):
         test()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0

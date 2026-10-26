@@ -138,9 +138,9 @@ unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule c
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
 Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plutot qu'un decoupage) :
-`build_serie.py` fait **659 lignes** (+19 le 2026-10-25 : total estime d'un env jamais compile ; execution en serie des `pio run` : verrous, arret immediat, attente
+`build_serie.py` fait **676 lignes** (+19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; execution en serie des `pio run` : verrous, arret immediat, attente
 d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
-verrou), et ses bancs `test_build_serie.py` (**925**), `test_build_page_chrome.py` (**953**),
+verrou), et ses bancs `test_build_serie.py` (**970**), `test_build_page_chrome.py` (**953**),
 `test_build_ota_fs.py` (**566**), `test_build_web.py` (**688**), ainsi que `test_annuaire.py` (**523**,
 banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
 compteur.
@@ -623,7 +623,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `test_annuaire.py`, `test_annuaire_lanceur.py`, `test_annuaire_securite.py`.
     Spec : `docs/superpowers/specs/2026-10-17-annuaire-outils-design.md`.
   - `build_web.py` (+ `build_page.py`, `build_serie.py`, `build_envs.py`, `build_progression.py`, `build_ota_fs.py`,
-    et pour les bancs `build_faux_pio.py`, `build_ota_carte_simulee.py`) — page « Build et televersement »
+    `build_solidification.py`, et pour les bancs `build_faux_pio.py`, `build_ota_carte_simulee.py`) — page « Build et televersement »
     http://127.0.0.1:7700 (tuile de l'annuaire, groupe Maintenance, hors job : l'annuaire refuse de l'arreter pendant
     un lancement ; tache VS Code « Outil : build et televersement » ; cible Custom « Build et televersement (page web) »
     (`build/cible_build_web.py`, banc `build/test_cible_build_web.py`) qui DEMARRE LA PAGE DETACHEE puis rend la

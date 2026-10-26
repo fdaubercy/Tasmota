@@ -66,6 +66,7 @@ from pathlib import Path
 
 import build_envs
 import build_ota_fs
+import build_solidification
 from build_progression import (ETAPE_COMPILATION, ETAPE_EFFACEMENT, ETAPE_ENVOI, ETAPE_LIENS, ETAPE_PREBUILD, Suivi,
                                retire_ansi)
 
@@ -152,7 +153,8 @@ def tue_arbre(proc):
 class Serie:
     def __init__(self, racine, dossier, pio=None, builds_en_cours=builds_en_cours_defaut,
                  port_libre=port_libre_defaut, ota_fs=build_ota_fs.envoie_fs_ota,
-                 ota_firmware=build_ota_fs.envoie_firmware_ota, sondage=5.0):
+                 ota_firmware=build_ota_fs.envoie_firmware_ota, sondage=5.0,
+                 solidification=build_solidification.vides):
         self.racine = Path(racine)
         self.dossier = Path(dossier)
         self.commande_pio = commande_pio(pio)
@@ -160,6 +162,7 @@ class Serie:
         self.port_libre = port_libre
         self.ota_fs = ota_fs
         self.ota_firmware = ota_firmware
+        self.solidification = solidification            # modules solidifies vides, controles a la fin du pre-build
         self.sondage = sondage
         self.verrou = threading.Condition()
         self.evenements = []
@@ -536,6 +539,7 @@ class Serie:
             except OSError as erreur:
                 return False, f"pio introuvable ou non lançable : {erreur}", [], suivi.etape
             self._proc = proc
+        refus, controle = "", action in COMPILENT   # solidification controlee une fois, si le firmware est lie
         with proc, self._journal(env, action, commande) as journal:
             for brut in proc.stdout:
                 texte = retire_ansi(brut).rstrip("\r\n")
@@ -546,11 +550,24 @@ class Serie:
                     change(ev["etape"])
                     self._marque_envoi(action in ENVOIS and ev["etape"] in (ETAPE_ENVOI, ETAPE_EFFACEMENT))
                     self._ajoute("etape", env, action=action, **ev)
+                    if controle and ev["etape"] in (ETAPE_COMPILATION, ETAPE_LIENS):
+                        # Pre-build fini (solidification comprise) : un module vide ferait echouer l'edition des
+                        # liens a la toute fin ; on arrete pio tout de suite (build_solidification).
+                        controle = False
+                        manquants = self.solidification(self.racine)
+                        if manquants:
+                            refus = build_solidification.motif(manquants)
+                            journal.write(f"--- {refus} : pio arrêté par la page\n")
+                            self._ajoute("ligne", env, action=action, texte=f"✗ {refus} : pio arrêté par la page")
+                            tue_arbre(proc)
+                            break
             code = proc.wait()
             journal.write(f"--- code de sortie {code}\n")
         with self.verrou:
             self._proc, self._envoi = None, False
         termine()
+        if refus:
+            return False, refus, [refus], ETAPE_PREBUILD
         if code == 0:                                    # fini avec succes, meme si l'arret immediat arrive
             if action in COMPILENT:                      # juste apres : l'upload a bien eu lieu
                 self._memorise_reference(env, suivi)

@@ -337,6 +337,12 @@ Conception : [spec](../docs/superpowers/specs/2026-10-24-page-build-televersemen
   toujours compiler, téléverser (ou effacer puis téléverser), construire le FS, téléverser le FS, en ne lançant que
   ce qui est coché. Un échec arrête **cet env** (étapes
   suivantes « annulées ») ; les autres envs continuent.
+- **Solidification contrôlée dès la fin du pré-build** (compiler, téléverser, effacer puis téléverser) : si un
+  module ou une classe inscrit dans `lib/libesp32/berry_custom/src/modules.h` n'a aucune définition dans les `.h`
+  solidifiés, la page arrête `pio` aussitôt, avec le motif « solidification vide : <module> (cause) », au lieu
+  de laisser l'édition des liens échouer une heure plus tard sur `undefined reference to be_native_module_<module>`.
+  Cause habituelle : le `.be` déclare `module("X")` sans la ligne `#@ solidify:X` (cas de `demarrage.be` le
+  2026-10-26).
 - **COM ou OTA par ligne.** Le port COM est lu dans le `upload_port` de l'env (y compris hérité par `extends`),
   vide s'il n'y en a pas. L'IP OTA est lue dans `WIFI_IP_ADDRESS` de `tasmota/user_config_override.h`, bloc du
   firmware de l'env. L'OTA est grisée pour les envs qui ne chargent pas `pre_utilitaires_platformio.py` (ESP8266)
