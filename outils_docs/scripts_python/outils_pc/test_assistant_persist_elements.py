@@ -13,7 +13,6 @@ A lancer avec le Python du penv :
 """
 
 import copy
-import re
 import sys
 import tempfile
 from pathlib import Path
@@ -28,8 +27,8 @@ from assistant_persist_generation import Reponses
 from test_fichiers_berry_creation import RACINE
 
 ECHECS = []
+CONFIG = RACINE / "data/fs/configGlobal.be"
 CUVE = "data/garage/tasmota32s3-capteurs-cuve-modbus"
-CONFIG_GLOBAL = RACINE / "data/fs/configGlobal.be"
 
 
 def verifie(obtenu, attendu, libelle):
@@ -121,7 +120,7 @@ def test_couverture(modele):
             if metier == "activation" or not isinstance(bloc, dict):
                 continue
             for groupe, contenu in bloc.get("environnement", {}).items():
-                for cle, el in contenu.items():
+                for el in contenu.values():
                     if not isinstance(el, dict):
                         continue
                     connues = set(modele["metier"]["elements"][groupe]["gabarit"]) | set(modele["metier"]["elements"][groupe]["optionnelles"])
@@ -164,8 +163,7 @@ def test_verifie_elements():
 
 def test_parc_sans_refus(modele):
     for dossier, donnees in cartes():
-        r, obj = rejoue(modele, dossier, donnees)
-        principal = r.metiers[0]
+        r, _ = rejoue(modele, dossier, donnees)
         pins = ape.broches_drivers(donnees)
         refus = ape.verifie_elements(r.puce, r.elements, pins)
         verifie(refus, [], f"parc_sans_refus : {dossier.rsplit('/', 1)[-1]} : aucun faux refus")
@@ -194,6 +192,40 @@ def reponses(**kw):
 def genere(modele, r):
     v = gen.variables(RACINE, r)
     return v, gen.persist(modele, r, v, None)
+
+
+def test_robustesse(modele):
+    donnees = next(d for dossier, d in cartes() if dossier == CUVE)
+    for abime in ("texte", ["x"], None):
+        copie = copy.deepcopy(donnees)
+        copie["drivers"]["ModBus"]["environnement"] = abime
+        copie["drivers"]["I2C"]["environnement"]["pinsI2Cs"] = abime
+        copie["drivers"]["leds"] = abime
+        try:
+            pins = ape.broches_drivers(copie)
+        except Exception as exc:                      # AttributeError attendu avant correctif
+            pins = repr(exc)
+        verifie(pins, {}, f"broches_drivers : environnement/pins/pilote valant {abime!r} -> aucun plantage, aucune broche")
+    verifie(ape.broches_drivers({"drivers": "x"}), {}, "broches_drivers : drivers pas un objet")
+    r = ape.verifie_elements("ESP32S3", {"relais": [relai(6, nom=""), relai(7, nom=5), relai(8, "A", activation="OFF")]}, {})
+    verifie(len(r), 2, "nom vide ou non chaine d'un element actif : refuse (un element OFF est ignore)")
+    verifie(ape.verifie_elements("ESP32S3", {"relais": [relai(8, nom="", activation="OFF")]}, {}), [], "nom vide d'un element OFF : tolere")
+    # configGlobal.be sans la branche de la puce : refus lisibles, pas de plantage
+    with tempfile.TemporaryDirectory() as t:
+        faux = Path(t) / "data/fs"
+        faux.mkdir(parents=True)
+        texte = CONFIG.read_text(encoding="utf-8", errors="replace").replace('== "ESP32S3")', '== "ESP32S3x")')
+        (faux / "configGlobal.be").write_text(texte, encoding="utf-8")
+        try:
+            ape.broches_valides("ESP32S3", t)
+            verifie(False, True, "broches_valides sans branche S3 : ValueError")
+        except ValueError as exc:
+            verifie(("configGlobal.be" in str(exc), "ESP32S3" in str(exc)), (True, True), "broches_valides : l'erreur nomme le fichier et la puce")
+        r = ape.verifie_elements("ESP32S3", {"relais": [relai(6), relai(-1, "Sans broche"), relai(7, "Eteint", activation="OFF")]}, {}, t)
+        verifie((len(r), "ESP32S3" in r[0] and "configGlobal.be" in r[0]), (1, True),
+                "puce illisible : seul l'element actif avec broche est refuse, avec le message")
+    r = ape.verifie_elements("ESP32S3", {"relais": [relai(6)]}, {}, "/dossier/inexistant")
+    verifie(len(r), 1, "configGlobal.be absent : refus, pas de plantage")
 
 
 def test_persist(modele):
@@ -267,7 +299,7 @@ def principal():
     modele = MODELE = apm.charge_modele(RACINE)
     for test, args in ((test_gabarits, (modele,)), (test_broches, ()), (test_rejeu_environnement, (modele,)),
                        (test_couverture, (modele,)), (test_verifie_elements, ()), (test_parc_sans_refus, (modele,)),
-                       (test_broches_drivers, (modele,)), (test_persist, (modele,)), (test_coherence, (modele,)),
+                       (test_broches_drivers, (modele,)), (test_robustesse, (modele,)), (test_persist, (modele,)), (test_coherence, (modele,)),
                        (test_ds18x20, (modele,))):
         print(f"-- {test.__name__}")
         test(*args)

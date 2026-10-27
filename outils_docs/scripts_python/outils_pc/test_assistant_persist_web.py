@@ -90,7 +90,7 @@ def test_get(b):
     reel = apm.ecarts(tac.RACINE, apm.charge_modele(tac.RACINE))
     verifie(reel["disparues"], [], "VRAI parc : aucune cle disparue (le bandeau ne reste pas affiche en permanence)")
     verifie(sorted(p), sorted(["puces", "bases", "base_defaut", "maitres", "ids_pris", "id_libre", "reseaux", "blocs", "erreur_modele",
-                                      "broches", "groupes"]),
+                                      "broches", "erreur_broches", "groupes"]),
             "GET /parc : les clefs du contrat")
     verifie(([g["id"] for g in p["groupes"]], p["broches"]["ESP32S3"][-1], "relai" in [g["singulier"] for g in p["groupes"]]),
             (["boutons", "interrupteurs", "relais", "capteurs", "compteurs", "thermometres", "analogiques"], 48, True),
@@ -118,6 +118,20 @@ def test_post_securite(b):
 
 def GROUPE_RELAIS(b):
     return next(g for g in b.requete("GET", "/parc")[1]["groupes"] if g["id"] == "relais")
+
+
+def test_broches_illisibles(b):
+    fichier = b.racine / "data/fs/configGlobal.be"
+    texte = fichier.read_text(encoding="utf-8", errors="replace")
+    fichier.write_text(texte.replace('== "ESP32S3")', '== "ESP32S3x")'), encoding="utf-8")
+    ape_cache = __import__("assistant_persist_elements")._gpio_par_puce
+    ape_cache.cache_clear()
+    statut, p = b.requete("GET", "/parc")
+    verifie((statut, sorted(p.get("erreur_broches", {})), p["broches"].get("ESP32S3"), len(p["broches"]["ESP32"]) > 0),
+            (200, ["ESP32S3"], [], True), "configGlobal.be sans branche S3 : /parc repond 200, erreur_broches nomme la puce")
+    verifie("configGlobal.be" in p["erreur_broches"]["ESP32S3"], True, "erreur_broches : nomme data/fs/configGlobal.be")
+    _, a = b.requete("POST", "/apercu", {"reponses": dict(reponses(), elements={"relais": [{"nom": "R", "pin": 6, "activation": "ON"}]})})
+    verifie(any("configGlobal.be" in x for x in a["refus"]), True, "apercu : element actif refuse avec le message, sans 500")
 
 
 def test_apercu(b):
@@ -244,7 +258,7 @@ def valeurs_reelles():
 
 
 def principal():
-    for test in (test_get, test_post_securite, test_apercu, test_prepare_creation, test_content_length, test_interrompues, test_erreur_inattendue):
+    for test in (test_get, test_post_securite, test_broches_illisibles, test_apercu, test_prepare_creation, test_content_length, test_interrompues, test_erreur_inattendue):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier
             b = Banc(t)

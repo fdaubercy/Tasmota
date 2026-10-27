@@ -136,6 +136,7 @@ function noms() { return E.metiers.map(function (m) { return m.trim(); }).filter
 // ---- Entrees/sorties du bloc metier principal (un tableau par groupe, parc.groupes vient du modele) ----
 function copie(x) { return JSON.parse(JSON.stringify(x)); }
 function nouvelElement(g, n) { var e = copie(g.gabarit); e.nom = e.nom.replace(/\d+$/, "") + n; e.id = n; return e; }
+function idSuivant(l) { return l.reduce(function (m, e) { return Math.max(m, parseInt(e.id, 10) || 0); }, 0) + 1; }
 function champEl(tag, g, i, cle, valeur, options) {
   var c = el(tag, {"data-el": g + "|" + i + "|" + cle, id: "el-" + g + "-" + i + "-" + cle, "aria-label": cle});
   if (tag === "select") {
@@ -180,7 +181,7 @@ function changeElement(t) {
 }
 function ajouteElement(id) {
   var g = parc.groupes.filter(function (x) { return x.id === id; })[0], l = E.elements[id] || (E.elements[id] = []);
-  l.push(nouvelElement(g, l.length + 1)); dessineElements(); reagit();
+  l.push(nouvelElement(g, idSuivant(l))); dessineElements(); reagit();
 }
 function retireElement(id, i) { E.elements[id].splice(i, 1); dessineElements(); reagit(); }
 
@@ -309,6 +310,9 @@ async function demarre() {
   var r = await api("/parc");
   if (!r.ok || !r.donnees) { var b = $("bandeau-erreur"); b.textContent = "Le parc n'a pas pu être lu : " + r.texte; b.classList.remove("cache"); return; }
   parc = r.donnees;
+  var eb = Object.keys(parc.erreur_broches || {});
+  if (eb.length) { var bb = $("bandeau-erreur"); bb.textContent = eb.map(function (p) { return parc.erreur_broches[p]; }).join(" ; ") +
+    " — les broches de ces puces ne sont pas vérifiables."; bb.classList.remove("cache"); }
   if (parc.erreur_modele) { var m = $("bandeau-erreur"); m.textContent = parc.erreur_modele + " — création impossible tant que le modèle est illisible."; m.classList.remove("cache"); }
   remplit($("f-puce"), parc.puces.map(function (p) { return [p, p]; }), E.puce);
   E.base = parc.base_defaut[E.puce] || (parc.bases[E.puce] || [])[0] || ""; remplitBases();

@@ -50,7 +50,10 @@ def singulier(modele, groupe):
 
 @functools.lru_cache(maxsize=8)
 def _gpio_par_puce(chemin):
-    texte = Path(chemin).read_text(encoding="utf-8", errors="replace")
+    try:
+        texte = Path(chemin).read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        raise ValueError(f"{CONFIG_GLOBAL} illisible : {exc.strerror or exc}") from exc
     return {puce: [int(n) for n in re.findall(r'"GPIO(\d+)"', liste)] for puce, liste in ORDRE_GPIO.findall(texte)}
 
 
@@ -58,7 +61,7 @@ def broches_valides(puce, racine=None):
     """GPIO de la puce, dans l'ordre de configGlobal.be (ordreGPIO). ValueError si la puce n'y figure pas."""
     tables = _gpio_par_puce(str((RACINE if racine is None else Path(racine)) / CONFIG_GLOBAL))
     if puce not in tables:
-        raise ValueError(f"puce inconnue de {CONFIG_GLOBAL} : {puce!r}")
+        raise ValueError(f"{CONFIG_GLOBAL} : aucune liste ordreGPIO reconnue pour la puce {puce!r}")
     return list(tables[puce])
 
 
@@ -73,11 +76,12 @@ def broches_drivers(persist):
     drivers = persist.get("drivers", {}) if isinstance(persist, dict) else {}
     res = {}
     for nom, liste, prefixe in (("ModBus", "pinsModBus", "ModBus"), ("I2C", "pinsI2Cs", "I2C"), ("leds", "leds", "LED")):
-        pilote = drivers.get(nom)
-        if not _actif(pilote):
+        pilote = drivers.get(nom) if isinstance(drivers, dict) else None
+        if not isinstance(pilote, dict) or not _actif(pilote):
             continue
-        entrees = pilote.get("environnement", {}).get(liste, {})
-        for cle, e in entrees.items():
+        env = pilote.get("environnement")
+        entrees = env.get(liste) if isinstance(env, dict) else None
+        for cle, e in (entrees.items() if isinstance(entrees, dict) else ()):
             if _actif(e) and type(e.get("pin")) is int and e["pin"] >= 0:
                 res[f"{prefixe} {e.get('nom', cle) if nom == 'I2C' else cle}"] = e["pin"]
     return res
@@ -94,7 +98,10 @@ def _broches_prises(broches_drivers):
 def verifie_elements(puce, elements, broches_drivers, racine=None):
     """Liste des refus (vide = bon) pour elements = {groupe: [element, ...]}."""
     refus = []
-    valides = set(broches_valides(puce, racine))
+    try:
+        valides, erreur_plage = set(broches_valides(puce, racine)), ""
+    except ValueError as exc:                       # configGlobal.be reformate : refus lisible, pas de plantage
+        valides, erreur_plage = set(), str(exc)
     prises = _broches_prises(broches_drivers)
     occupees = {}
     for groupe, liste in elements.items():
@@ -107,6 +114,8 @@ def verifie_elements(puce, elements, broches_drivers, racine=None):
                 refus.append(f"{groupe} #{rang} : objet attendu")
                 continue
             nom = e.get("nom")
+            if _actif(e) and not (isinstance(nom, str) and nom.strip()):
+                refus.append(f"{groupe} #{rang} : nom vide ou non textuel")
             libelle = f"{groupe} #{rang}" + (f" « {nom} »" if isinstance(nom, str) and nom else "")
             if isinstance(nom, str) and nom:
                 if nom in noms:
@@ -117,6 +126,9 @@ def verifie_elements(puce, elements, broches_drivers, racine=None):
                 refus.append(f"{libelle} : broche entiere attendue")
                 continue
             if pin == -1 or not _actif(e):
+                continue
+            if erreur_plage:
+                refus.append(f"{libelle} : broche {pin} non verifiable ({erreur_plage})")
                 continue
             if pin < -1 or pin not in valides:
                 refus.append(f"{libelle} : broche {pin} hors plage pour {puce} (data/fs/configGlobal.be)")

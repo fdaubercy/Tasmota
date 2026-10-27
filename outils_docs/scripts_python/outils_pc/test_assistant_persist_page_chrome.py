@@ -221,6 +221,15 @@ def sonde_page(m):
     saisit(cdp, "el-relais-1-nom", "Filtre")
     verifie(attend(cdp, "document.getElementById('apercu-refus').textContent.indexOf('broche') < 0 && document.getElementById('apercu').textContent.indexOf('Filtre') >= 0", 10),
             True, "elements : broches 6 et 7, plus de refus, nom saisi dans l'apercu")
+    # ids uniques : retirer le premier relais puis en ajouter un ne doit pas dupliquer id ni nom
+    clic(cdp, "retire-relais-0")
+    clic(cdp, "ajout-relais")
+    verifie(cdp.js("Array.from(document.querySelectorAll('#groupe-relais [id$=-nom]')).map(function(e){return e.value;})"), ["Filtre", "Relais 3"],
+            "elements : retrait du 1er puis ajout -> nom « Relais 3 » (pas de doublon)")
+    verifie(attend(cdp, "(function(){try{var r=JSON.parse(document.getElementById('apercu').textContent).modules.piscine.environnement.relais;"
+                        "return Object.keys(r).length===2 && r.relai1.id!==r.relai2.id}catch(e){return false}})()", 10), True,
+            "elements : deux relais d'id differents dans l'apercu")
+    verifie(cdp.js("document.getElementById('apercu-refus').textContent.indexOf('nom') < 0"), True, "elements : aucun refus de nom en double")
     clic(cdp, "ajout-boutons")
     clic(cdp, "retire-boutons-0")
     verifie(cdp.js("document.querySelectorAll('#groupe-boutons .ligne-el:not(.tete)').length"), 0, "elements : retrait d'un bouton")

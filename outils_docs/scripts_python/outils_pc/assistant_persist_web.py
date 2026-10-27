@@ -15,7 +15,7 @@ Routes (les POST exigent l'en-tete X-Assistant-Persist: 1 et la meme origine ; J
     GET  /execution     {en_cours: false} : la cible Custom l'interroge pour savoir si la page tourne
     GET  /parc          {puces, bases: {puce: [env]}, base_defaut: {puce: env}, maitres, ids_pris: {id: [dossier]},
                         id_libre, reseaux, blocs: [{id, libelle, aide, puces, dependances}], erreur_modele,
-                        broches: {puce: [GPIO]}, groupes: [{id, singulier, gabarit}]}  (editeur des entrees/sorties)
+                        broches: {puce: [GPIO]}, erreur_broches: {puce: message}, groupes: [{id, singulier, gabarit}]}  (editeur des entrees/sorties)
     GET  /modele/etat   {ajouts, disparues, divergentes, a_completer, erreur} : bandeau du modele (A6) ; ajouts = cles
                         fusionnees d'office au demarrage, erreur = modele illisible (rien n'est alors fusionne ni ecrit)
     GET  /interrompues  operations arretees en plein vol (marque restee dans leur sauvegarde)
@@ -152,13 +152,19 @@ def donnees_parc(racine):
         puce = next((p for p, pre in parc.PREFIXES.items() if env.split("-")[0] == pre), None)
         if puce and fbe.est_base(env):
             bases[puce].append(env)
+    broches, erreurs_broches = {}, {}
+    for p in parc.PREFIXES:                         # configGlobal.be reformate : la page s'ouvre, l'erreur est affichee
+        try:
+            broches[p] = ape.broches_valides(p, racine)
+        except ValueError as exc:
+            broches[p], erreurs_broches[p] = [], str(exc)
     blocs = [{k: b.get(k, "") for k in ("id", "libelle", "aide", "puces", "dependances")}
              for b in (modele["blocs"] if modele else [])]
     return {"puces": list(parc.PREFIXES), "bases": bases,
             "base_defaut": {p: parc.base_par_defaut(racine, p) for p in parc.PREFIXES},
             "maitres": parc.maitres(racine), "ids_pris": {str(i): d for i, d in parc.ids_pris(racine).items()},
             "id_libre": parc.id_libre(racine), "reseaux": parc.reseaux(racine), "blocs": blocs, "erreur_modele": erreur,
-            "broches": {p: ape.broches_valides(p, racine) for p in parc.PREFIXES},
+            "broches": broches, "erreur_broches": erreurs_broches,
             "groupes": [{"id": g, "singulier": ape.singulier(modele, g), "gabarit": ape.gabarits_elements(modele)[g]}
                         for g in ape.GROUPES_ELEMENTS] if modele else []}
 
