@@ -24,7 +24,7 @@ Sans cas pour l'env ni pour "*", une sortie nominale propre a la cible est rejou
 
 Si BUILD_WEB_FAUX_JOURNAL est pose, chaque appel y ajoute des lignes JSON : "debut" (arguments,
 cible, port, TASMOTA_OTA_IP, PLATFORMIO_UPLOAD_PORT, PLATFORMIO_EXTRA_SCRIPTS, PYTHONIOENCODING,
-PYTHONUTF8, cwd, heure), "petit_fils" (pid) et "fin" (code, heure). Un appel tue en plein vol n'a pas de ligne "fin".
+PYTHONUTF8, cwd, data_dir de platformio_override.ini lu au demarrage, heure), "petit_fils" (pid) et "fin" (code, heure). Un appel tue en plein vol n'a pas de ligne "fin".
 """
 
 import json
@@ -95,6 +95,17 @@ def cas(env, cible, cibles=()):
     return resultat
 
 
+def data_dir():
+    """data_dir de platformio_override.ini (cwd) tel que pio le lirait au demarrage ; None sans fichier ni ligne."""
+    chemin = Path("platformio_override.ini")
+    if not chemin.is_file():
+        return None
+    for ligne in chemin.read_text(encoding="utf-8").splitlines():
+        if ligne.split("=")[0].strip() == "data_dir":
+            return ligne.split("=", 1)[1].split(";")[0].strip()
+    return None
+
+
 def main(argv):
     env, cible, port, cibles = analyse(argv)
     c = cas(env, cible, cibles)
@@ -102,7 +113,7 @@ def main(argv):
                ota_ip=os.environ.get("TASMOTA_OTA_IP"),
                platformio_upload_port=os.environ.get("PLATFORMIO_UPLOAD_PORT"),
                platformio_extra_scripts=os.environ.get("PLATFORMIO_EXTRA_SCRIPTS"), pythonioencoding=os.environ.get("PYTHONIOENCODING"),
-               pythonutf8=os.environ.get("PYTHONUTF8"), cwd=os.getcwd(), t=time.time())
+               pythonutf8=os.environ.get("PYTHONUTF8"), cwd=os.getcwd(), data_dir=data_dir(), t=time.time())
     if c.get("petit_fils"):
         import subprocess
         fils = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])

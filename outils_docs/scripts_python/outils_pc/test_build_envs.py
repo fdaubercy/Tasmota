@@ -374,7 +374,31 @@ def test_vrais_fichiers():
             (True, True, False, False), "reel : FS flashe avec le firmware pour cuve et P4, pas pour tasmota32 ni la pompe")
 
 
+def test_data_dir():
+    """data_dir pose AVANT pio (PlatformIO lit platformio_override.ini avant le pre-script, 2026-10-26)."""
+    with tempfile.TemporaryDirectory() as t:
+        r = depot_essai(t)
+        ov = r / "platformio_override.ini"
+        ov.write_bytes(("[platformio]\r\n;core_dir = .platformio\r\ndata_dir = data/garage/tasmota32s3-rideau ; note\r\n\r\n"
+                        + OVERRIDE).encode("utf-8"))
+        verifie(be.ecrit_data_dir(r, "tasmota32-cave"), "data/cave/tasmota32", "data_dir : rend le dossier pose")
+        texte = ov.read_bytes().decode("utf-8")
+        verifie("data_dir = data/cave/tasmota32 ; note\r\n" in texte, True,
+                "data_dir : ligne reecrite, commentaire et fin de ligne CRLF gardes")
+        verifie(texte.count("data_dir"), 1, "data_dir : aucune ligne ajoutee")
+        avant = ov.read_bytes()
+        verifie(be.ecrit_data_dir(r, "tasmota32-cave"), None, "data_dir : deja bon -> None")
+        verifie(ov.read_bytes(), avant, "data_dir : deja bon -> fichier intact")
+        for env, motif in (("tasmota32s3", "amont"), ("tasmota32s3-base-N16R8", "base"), ("inexistant", "inconnu")):
+            verifie(be.ecrit_data_dir(r, env), None, f"data_dir : env {motif} -> None")
+        verifie(ov.read_bytes(), avant, "data_dir : amont, base, inconnu -> fichier intact")
+        ov.write_bytes(OVERRIDE.encode("utf-8"))
+        verifie(be.ecrit_data_dir(r, "tasmota32-cave"), None, "data_dir : pas de ligne active -> rien ajoute")
+        verifie(ov.read_bytes(), OVERRIDE.encode("utf-8"), "data_dir : pas de ligne active -> fichier intact")
+
+
 def principal():
+    test_data_dir()
     with tempfile.TemporaryDirectory() as t:
         test_liste(depot_essai(t))
     test_ota_idf55()

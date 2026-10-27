@@ -543,8 +543,45 @@ def test_ota_firmware_echec():
                 "ota_firmware_echec : carte injoignable -> erreur 'Televersement'")
 
 
+def persist_carte(hote, topic):
+    return json.dumps({"serveur": {"hostname": hote, "mqtt": {"topic": topic}}, "diverses": {}}).encode("utf-8")
+
+
+def test_identite_image():
+    """L'image porte-t-elle l'identite de l'env ? (P4 avec le FS de la cuve le 2026-10-26)"""
+    with tempfile.TemporaryDirectory() as t:
+        image, env_p = Path(t) / "image", Path(t) / "env" / "_persist.json"
+        image.mkdir()
+        env_p.parent.mkdir()
+        env_p.write_bytes(persist_carte("SERVEUR-GARAGE", "garage"))
+
+        def essai(contenu_image):
+            if contenu_image is None:
+                (image / "_persist.json").unlink(missing_ok=True)
+            else:
+                (image / "_persist.json").write_bytes(contenu_image)
+            try:
+                return "ok", bo.verifie_identite(image, env_p, "tasmota32p4-garage-serveur-modbus")
+            except RuntimeError as e:
+                return "refus", str(e)
+
+        r = essai(persist_carte("SERVEUR-GARAGE", "garage"))
+        verifie((r[0], "SERVEUR-GARAGE" in r[1]), ("ok", True), "identite : meme nom d'hote et topic -> acceptee, dite")
+        verifie(essai(persist_carte("serveur-garage", "garage"))[0], "ok", "identite : nom d'hote sans casse")
+        r = essai(persist_carte("CAPTEURS-CUVE", "jardin/cuve"))
+        verifie((r[0], r[1].startswith(bo.ETAPE_IMAGE), "CAPTEURS-CUVE" in r[1], "SERVEUR-GARAGE" in r[1],
+                 "copy_fs_image" in r[1]), ("refus", True, True, True, True),
+                "identite : image de la cuve pour le P4 -> refus qui nomme les deux identites et le journal a lire")
+        verifie(essai(persist_carte("SERVEUR-GARAGE", "jardin/cuve"))[0], "refus", "identite : topic different -> refus")
+        verifie(essai(None)[0], "refus", "identite : image sans _persist.json -> refus")
+        verifie(essai(b"{pas du json")[0], "refus", "identite : _persist.json de l'image illisible -> refus")
+        env_p.unlink()
+        r = essai(persist_carte("CAPTEURS-CUVE", "jardin/cuve"))
+        verifie((r[0], "non contrôlée" in r[1]), ("ok", True), "identite : pas de persist de l'env au depot -> non controlee, dit")
+
+
 def principal():
-    for test in (test_ota_fs_ordre, test_ota_fs_sauvegarde, test_ota_fs_persist_injoignable,
+    for test in (test_identite_image, test_ota_fs_ordre, test_ota_fs_sauvegarde, test_ota_fs_persist_injoignable,
                  test_ota_fs_relecture_differente, test_ota_fs_sous_dossiers, test_ota_fs_referer,
                  test_ota_fs_echec_ufsu, test_ota_fs_pas_de_retour, test_ota_fs_attente_retour,
                  test_ota_fs_persist_reformate, test_ota_fs_progression, test_ota_fs_persist_invalide,

@@ -302,6 +302,11 @@ def adapteParametresPlatformio_override():
     # repertoire = os.path.dirname(ini_path)
     new_data_dir = transform_name(Global.environnement)
     ensure_path(new_data_dir)
+    # PlatformIO a lu platformio_override.ini AVANT ce pre-script : sans cette ligne, le lancement en cours garde le
+    # data_dir du lancement precedent, et un buildfs seul construit l'image avec le dossier d'un AUTRE env (P4 avec
+    # le FS de la cuve le 2026-10-26). La plateforme lit PROJECT_DATA_DIR apres les pre-scripts (DataToBin de son
+    # main.py). Banc : build/test_data_dir.py.
+    env.Replace(PROJECT_DATA_DIR=os.path.join(env.subst("$PROJECT_DIR"), new_data_dir))
     print(Fore.GREEN + f"✔ La valeur de 'data_dir' mise à jour à '{new_data_dir}' dans '{FILE}'.")
 
     # ============================================================

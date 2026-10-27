@@ -139,10 +139,10 @@ unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule c
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
 Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plutot qu'un decoupage) :
-`build_serie.py` fait **684 lignes** (+19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; execution en serie des `pio run` : verrous, arret immediat, attente
+`build_serie.py` fait **698 lignes** (+19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; +11 le 2026-10-27 : data_dir pose avant pio ; +3 le meme jour : identite de l'image du FS ; execution en serie des `pio run` : verrous, arret immediat, attente
 d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
-verrou), et ses bancs `test_build_serie.py` (**1007**), `test_build_page_chrome.py` (**1045**),
-`test_build_ota_fs.py` (**566**), `test_build_web.py` (**688**), ainsi que `test_annuaire.py` (**523**,
+verrou), et ses bancs `test_build_serie.py` (**1050**), `test_build_page_chrome.py` (**1045**),
+`test_build_ota_fs.py` (**603**), `test_build_web.py` (**688**), ainsi que `test_annuaire.py` (**523**,
 banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
 compteur.
 
@@ -644,11 +644,15 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     Continuer / Passer cet env (`POST /continuer`), port reverifie a la reprise. Journaux tries par date de
     modification (pas l'heure du nom : heure d'hiver), purges au demarrage au-dela de 30 jours. « Effacer puis televerser » =
     `-t erase_upload --upload-port COMn`, COM seulement, exclusive avec l'upload, confirmation avant (persist et
-    reglages de la carte remplaces par ceux du depot), etape « Effacement de la flash ». Port COM lu dans `platformio_tasmota_cenv.ini` et REECRIT dans la section de l'env
+    reglages de la carte remplaces par ceux du depot), etape « Effacement de la flash ». `data_dir` de `platformio_override.ini`
+    pose sur le dossier de l'env AVANT chaque `pio run` d'une carte (`build_envs.py::ecrit_data_dir`) : pio lit ce fichier
+    avant le pre-script, qui pose aussi `PROJECT_DATA_DIR` pour le lancement en cours (banc `build/test_data_dir.py`) ; sans
+    cela, un buildfs seul prenait le dossier de l'env precedent (P4 avec le FS de la cuve, 2026-10-26). Port COM lu dans `platformio_tasmota_cenv.ini` et REECRIT dans la section de l'env
     (`.bak` ; **change l'empreinte -> le build suivant repart de zero**) ; IP OTA lue dans `WIFI_IP_ADDRESS`
     (0.0.0.0 -> saisie pour le lancement). OTA du firmware envoyee par la page (`/up`, `/u2`, safeboot `/u4`, preuve
     par `Status 2`) : aucun script de `build/` modifie. OTA du FS : fichiers extraits de `littlefs.bin` (image du `buildfs`,
-    PAS `littlefs_data`, perime) par `/ufsu`, persist de
+    PAS `littlefs_data`, perime) par `/ufsu` apres controle d'identite (`build_ota_fs.py::verifie_identite` : nom d'hote et topic du persist de
+    l'image = ceux du persist de l'env au depot, sinon rien n'est envoye), persist de
     la carte sauvegarde avant dans `%LOCALAPPDATA%\outils_tasmota\build\persist\`, relu, Berry recharge, `Restart 1`.
     Un upload (ou erase_upload) serie du firmware flashe AUSSI le FS (persist compris) a chaque fois pour les envs a
     `custom_files_upload` (post_esp32 reconstruit `littlefs.bin` a chaque edition des liens) : la page l'annonce, grise

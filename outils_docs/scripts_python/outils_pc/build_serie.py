@@ -537,6 +537,13 @@ class Serie:
         commande = "pio " + " ".join(args)
         self._ajoute("etape", env, action=action, etape=suivi.etape, pourcent=None, detail="", commande=commande)
         change(suivi.etape)
+        try:                                             # pio lit data_dir AVANT le pre-script (build_envs.ecrit_data_dir)
+            dossier = build_envs.ecrit_data_dir(self.racine, env)
+            note = f"--- data_dir = {dossier} (posé par la page avant pio)" if dossier else ""
+        except OSError as erreur:                        # le pre-script pose aussi PROJECT_DATA_DIR : on continue
+            note = f"--- data_dir non posé par la page : {erreur}"
+        if note:
+            self._ajoute("ligne", env, action=action, texte=note)
         drapeaux = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
         with self.verrou:
             if self._arret_immediat:                     # ok None : fils jamais lance, action « annulee »
@@ -551,6 +558,8 @@ class Serie:
             self._proc = proc
         refus, controle = "", action in COMPILENT   # solidification controlee une fois, si le firmware est lie
         with proc, self._journal(env, action, commande) as journal:
+            if note:
+                journal.write(note + "\n")
             for brut in proc.stdout:
                 texte = retire_ansi(brut).rstrip("\r\n")
                 journal.write(texte + "\n")
@@ -617,6 +626,9 @@ class Serie:
                     rapporte({"etape": build_ota_fs.ETAPE_IMAGE, "pourcent": None, "detail": str(image)})
                     nombre = build_ota_fs.extrait_image(image, fichiers)
                     rapporte({"etape": build_ota_fs.ETAPE_IMAGE, "pourcent": 100, "detail": f"{nombre} fichiers"})
+                    # L'image est-elle bien celle de CET env ? (P4 avec le FS de la cuve le 2026-10-26)
+                    identite = build_ota_fs.verifie_identite(fichiers, build_envs.persist_carte(self.racine, env), env)
+                    rapporte({"etape": build_ota_fs.ETAPE_IMAGE, "pourcent": 100, "detail": identite})
                     self.ota_fs(env, ligne.ip, fichiers, sauvegardes, rapporte)
         except RuntimeError as erreur:
             return False, str(erreur), [], dernier["etape"]

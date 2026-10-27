@@ -356,12 +356,24 @@ ne démarre plus (`global()` sans `serveur`, `boolMute`, `LOG_LEVEL_*`). Persist
 `persist/tasmota32p4-garage-serveur-modbus-20261026-055308.json`. Les firmwares par câble (FS de
 `custom_files_upload`) et l'`uploadfs` de la cuve de 05:48 (dossier de la cuve) ne sont pas touchés.
 
-- [ ] Rendre au P4 son FS (après le build en cours) : `buildfs` du P4 (data_dir est maintenant celui du P4), OTA du
-  FS, contrôle de l'`autoexec.be` et du persist relus sur la carte.
-- [ ] Corriger à la source (choix de l'utilisateur) : la page pose `data_dir` AVANT de lancer pio, et/ou le pré-script
-  fait `env.Replace(PROJECT_DATA_DIR=...)` dans le même lancement ; banc rouge puis vert.
-- [ ] Garde dans l'OTA du FS : refuser une image dont le `_persist.json` ne porte pas l'identité de l'env (nom d'hôte,
-  topic) ; contrôle après envoi de l'`autoexec.be` relu.
+- [x] Rendre au P4 son FS, contrôle de l'`autoexec.be` relu sur la carte. — preuve : relu sur la carte le 2026-10-27,
+  `autoexec.be` = « Demarrage du maitre P4 du garage », `global.contains("serveur")` et `("boolMute")` vrais,
+  firmware du 2026-10-26T22:39 (`Status 2`) ; la cuve répond de nouveau par le maître (`192.168.0.43:8081`,
+  Hostname CAPTEURS-CUVE)
+- [x] Corriger à la source, page ET pré-script (choix de l'utilisateur du 2026-10-27). — preuve : pré-script
+  `env.Replace(PROJECT_DATA_DIR=...)` dans `adapteParametresPlatformio_override`, banc `build/test_data_dir.py` ROUGE
+  (`'.'`) puis VERT ; pré-scripts lus avant le script de la plateforme (`platformio/builder/main.py:167` puis `:173`) ;
+  page : `build_envs.ecrit_data_dir` appelé par `Serie._lance_pio`, test_build_envs (11 vérifications « data_dir ») et
+  test_build_serie (`data_dir_avant_pio`, faux pio qui relève le data_dir vu au démarrage) rouges puis VERTS ; bancs
+  build_web, ota_fs, solidification, progression, fichiers_berry_*, cible_build_web VERTS. Reste à lire sur un vrai
+  buildfs la ligne `copy_fs_image` du journal (dossier de l'env construit).
+- [x] Garde dans l'OTA du FS : image refusée sans l'identité de l'env. — preuve : `build_ota_fs.verifie_identite` (nom d'hôte sans casse + topic, image contre persist de l'env au dépôt) appelée par
+  `Serie._lance_ota` avant `ota_fs` ; test_build_ota_fs `test_identite_image` (7 vérifications) et test_build_serie
+  `uploadfs_ota_identite` (refus sans envoi, témoin accepté) rouges puis VERTS ; cas réel rejoué sur le dépôt (dossier
+  de la cuve présenté pour le P4) : refus « l'image porte l'identité de CAPTEURS-CUVE (jardin/cuve), pas celle de
+  tasmota32p4-garage-serveur-modbus (SERVEUR-GARAGE, garage) » ; les 8 cartes à persist acceptées avec leur dossier.
+  Contrôle de l'`autoexec.be` après envoi non ajouté : la relecture existante (carte = image) le couvre maintenant que
+  l'image est contrôlée contre l'env.
 
 ## A13 — Pourcentage pendant l'envoi du firmware et du FS (demande du 2026-10-26)
 

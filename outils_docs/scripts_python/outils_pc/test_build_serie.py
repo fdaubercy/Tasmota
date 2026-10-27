@@ -978,6 +978,48 @@ def test_fs_par_firmware():
                 "fs_par_firmware : serie mixte, buildfs lance pour A seulement")
 
 
+def test_data_dir_avant_pio():
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t)
+        (m.racine / "platformio_override.ini").write_text("[platformio]\ndata_dir = data/garage/autre\n", encoding="utf-8")
+        ev = m.lance([com(A, "COM1"), com(B, "COM2")], {"buildfs"})
+        verifie([(a["env"], a["data_dir"]) for a in m.appels()],
+                [(A, "data/essai/tasmota32-a"), (B, "data/essai/tasmota32-b")],
+                "data_dir_avant_pio : chaque pio lit le dossier de SON env, pas celui du lancement precedent")
+        verifie(any("data_dir" in x.get("texte", "") for x in du_type(ev, "ligne", env=A)), True,
+                "data_dir_avant_pio : le changement apparait dans la sortie de l'env")
+        m.lance([com(B, "COM2")], {"buildfs"})
+        verifie(m.appels()[-1]["data_dir"], "data/essai/tasmota32-b", "data_dir_avant_pio : temoin, meme env -> inchange")
+
+
+def test_uploadfs_ota_identite():
+    appels = []
+
+    def faux_ota(env, ip, dossier_fs, sauvegardes, rapporte):
+        appels.append(env)
+
+    def persist(hote, topic):
+        return json.dumps({"serveur": {"hostname": hote, "mqtt": {"topic": topic}}}).encode("utf-8")
+
+    with tempfile.TemporaryDirectory() as t:
+        image = Path(t) / "image.bin"
+        fabrique_image(image, dict(FICHIERS_IMAGE, **{"_persist.json": persist("CAPTEURS-CUVE", "jardin/cuve")}))
+        m = Montage(t, {"*": {"buildfs": {"image": str(image)}}}, ota_fs=faux_ota)
+        depot = m.racine / "data" / "essai" / "tasmota32-a"
+        depot.mkdir(parents=True)
+        (depot / "_persist.json").write_bytes(persist("SERVEUR-GARAGE", "garage"))
+        ev = m.lance([ota(A, "192.168.0.50")], {"uploadfs"})
+        e = du_type(ev, "echec", env=A)
+        verifie((bool(e) and "CAPTEURS-CUVE" in e[0]["motif"], appels), (True, []),
+                "uploadfs_ota_identite : image d'un autre env -> echec qui le dit, rien envoye")
+        (depot / "_persist.json").write_bytes(persist("CAPTEURS-CUVE", "jardin/cuve"))
+        ev = m.lance([ota(A, "192.168.0.50")], {"uploadfs"})
+        verifie((du_type(ev, "fin_env")[0]["statuts"], appels), ({"uploadfs": "succes"}, [A]),
+                "uploadfs_ota_identite : temoin, meme identite -> envoyee")
+        verifie(any("CAPTEURS-CUVE" in (x.get("detail") or "") for x in du_type(ev, "etape", env=A)), True,
+                "uploadfs_ota_identite : l'identite verifiee apparait dans l'etape")
+
+
 def test_garde_build_importable():
     module = bs.garde_build()
     verifie(callable(getattr(module, "builds_en_cours", None)), True,
@@ -997,7 +1039,8 @@ def principal():
                  test_journal_ecrit, test_reference_o_memorisee, test_reference_estimee, test_rappel_fichiers_modifies,
                  test_refus_double_lancement, test_uploadfs_ota, test_garde_build_importable,
                  test_erase_upload_commandes, test_erase_upload_refus, test_erase_upload_envoi_et_echec,
-                 test_solidification_vide, test_fs_par_firmware):
+                 test_solidification_vide, test_fs_par_firmware, test_data_dir_avant_pio,
+                 test_uploadfs_ota_identite):
         test()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0

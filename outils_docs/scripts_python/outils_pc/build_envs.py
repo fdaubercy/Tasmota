@@ -223,3 +223,56 @@ def ecrit_port(racine, env, port):
         lignes.insert(apres + 1, f"upload_port             = {port}{eol}")
     shutil.copyfile(chemin, chemin.with_name(chemin.name + ".bak"))
     chemin.write_bytes("".join(lignes).encode("utf-8"))
+
+
+FICHIER_OVERRIDE = "platformio_override.ini"
+
+
+def ecrit_data_dir(racine, env):
+    """Pose `data_dir` (section [platformio] de platformio_override.ini) sur le dossier de l'env, AVANT son pio run.
+
+    PlatformIO lit ce fichier au demarrage, avant le pre-script qui le reecrit : sans cela, un buildfs lance seul
+    prend le dossier de l'env du lancement precedent (P4 avec le FS de la cuve le 2026-10-26). Le pre-script pose
+    aussi PROJECT_DATA_DIR pour le lancement en cours (build/test_data_dir.py) : ceci couvre en plus l'empreinte du
+    projet et le cas d'un pre-script absent. Envs personnels (« Mes cartes ») seulement ; la ligne active existante
+    est reecrite (commentaire et fin de ligne gardes), aucune n'est ajoutee. Rend le dossier pose, None sinon.
+    """
+    import fichiers_berry_etat                        # ici : fichiers_berry_ini importe build_envs (cycle)
+
+    racine = Path(racine)
+    if not any(e.nom == env and e.famille == "cartes" for e in liste_envs(racine)):
+        return None
+    try:
+        dossier = fichiers_berry_etat.dossier_carte(env)
+    except ValueError:                                  # nom sans tiret : pas de dossier de carte
+        return None
+    chemin = racine / FICHIER_OVERRIDE
+    if not dossier or not chemin.is_file():
+        return None
+    lignes = chemin.read_bytes().decode("utf-8").splitlines(keepends=True)
+    dans = False
+    for i, ligne in enumerate(lignes):
+        s = ligne.strip()
+        if s.startswith("["):
+            dans = s == "[platformio]"
+            continue
+        m = re.match(r"(data_dir\s*=\s*)([^\s;#]*)(.*)$", ligne, re.S) if dans else None
+        if m:
+            if m.group(2) == dossier:
+                return None
+            lignes[i] = m.group(1) + dossier + m.group(3)
+            chemin.write_bytes("".join(lignes).encode("utf-8"))
+            return dossier
+    return None
+
+
+def persist_carte(racine, env):
+    """_persist.json de l'env au depot (data/<lieu>/<carte>/), None pour une base, un env sans tiret ou sans fichier."""
+    import fichiers_berry_etat                        # ici : fichiers_berry_ini importe build_envs (cycle)
+
+    try:
+        dossier = fichiers_berry_etat.dossier_carte(env)
+    except ValueError:
+        return None
+    chemin = Path(racine) / dossier / "_persist.json" if dossier else None
+    return chemin if chemin and chemin.is_file() else None

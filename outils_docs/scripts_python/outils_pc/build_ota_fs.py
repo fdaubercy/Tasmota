@@ -257,6 +257,38 @@ def _resume(texte):
 
 # -- file system --------------------------------------------------------------------------------------
 
+def _identite(texte):
+    """(nom d'hote, topic MQTT) d'un _persist.json : serveur.hostname et serveur.mqtt.topic."""
+    serveur = json.loads(texte).get("serveur") or {}
+    return str(serveur.get("hostname") or ""), str((serveur.get("mqtt") or {}).get("topic") or "")
+
+
+def verifie_identite(dossier_fs, persist_env, env):
+    """L'image extraite porte-t-elle l'identite de l'env ? RuntimeError(ETAPE_IMAGE) sinon, avant tout envoi.
+
+    Le 2026-10-26, un buildfs a construit l'image du P4 avec le dossier de la cuve (data_dir du lancement
+    precedent) : l'OTA a pose sur le P4 l'autoexec et le persist de la cuve, et la relecture (carte = image) ne
+    pouvait pas le voir. On compare le nom d'hote (sans casse) et le topic du _persist.json de l'image a ceux du
+    persist de l'env au depot (`persist_env`). Sans persist de l'env au depot : rien a comparer, on le dit.
+    Rend le detail a afficher.
+    """
+    if not persist_env or not Path(persist_env).is_file():
+        return f"identité non contrôlée : pas de {PERSIST} de {env} au dépôt"
+    image = Path(dossier_fs) / PERSIST
+    if not image.is_file():
+        raise RuntimeError(f"{ETAPE_IMAGE} : l'image n'a pas de {PERSIST} ; rien n'a été envoyé")
+    try:
+        hote, topic = _identite(image.read_text(encoding="utf-8"))
+    except (ValueError, AttributeError) as erreur:
+        raise RuntimeError(f"{ETAPE_IMAGE} : {PERSIST} de l'image illisible ({erreur}) ; rien n'a été envoyé") from None
+    hote_env, topic_env = _identite(Path(persist_env).read_text(encoding="utf-8"))
+    if hote.lower() != hote_env.lower() or topic != topic_env:
+        raise RuntimeError(f"{ETAPE_IMAGE} : l'image porte l'identité de {hote or '?'} ({topic or '?'}), pas celle de "
+                           f"{env} ({hote_env}, {topic_env}) ; rien n'a été envoyé. Lire dans le journal du buildfs "
+                           f"la ligne copy_fs_image : quel dossier a servi ?")
+    return f"identité vérifiée : {hote}, topic {topic}"
+
+
 def extrait_image(image, dossier):
     """Copie dans `dossier` (cree) tous les fichiers de l'image LittleFS `image` ; rend leur nombre.
 

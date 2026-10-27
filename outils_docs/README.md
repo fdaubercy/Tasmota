@@ -378,6 +378,16 @@ un build.
 > alors tout `.pio/build`, tous envs compris). La page le rappelle à côté du champ. Pour un env de l'amont, un
 > port saisi vaut pour le lancement seulement (`--upload-port`) : aucun fichier n'est écrit.
 
+### Le dossier `data_dir` : posé avant chaque `pio run`
+
+Avant de lancer pio pour un env personnel, la page pose `data_dir` de `platformio_override.ini` sur le dossier de
+l'env (`data/<lieu>/<carte>`), et le signale dans la sortie (« data_dir = … (posé par la page avant pio) ») quand il
+change. PlatformIO lit ce fichier **avant** le pré-script qui le réécrit : sans cela, un « Construire le FS » lancé
+seul prenait le dossier de l'env construit juste avant (le 2026-10-26, le P4 a reçu en OTA le FS de la cuve). Le
+pré-script corrige aussi le lancement en cours (`PROJECT_DATA_DIR`), ce qui protège les `pio run` lancés depuis VS Code.
+Pour le vérifier dans un journal : la ligne `copy_fs_image([... littlefs.bin], ["data\<lieu>\<carte>"])` doit
+nommer le dossier de l'env construit.
+
 ### L'IP de l'OTA
 
 Lue dans `WIFI_IP_ADDRESS`. Si elle vaut `0.0.0.0` (DHCP) ou manque, la ligne demande une IP à saisir : elle ne
@@ -403,7 +413,11 @@ est rempli par `post_esp32.py` après chaque édition des liens du firmware, n'e
 `data/fs`, `data/json`, `data/sd` que pour certaines cibles : il porterait les restes d'un ancien build. Déroulé :
 
 1. construction du FS si elle n'est pas déjà cochée, puis lecture de `littlefs.bin` (absente ou illisible : **rien
-   n'est envoyé**, l'env est en échec) ;
+   n'est envoyé**, l'env est en échec). **Contrôle d'identité** : le nom d'hôte (`serveur.hostname`, sans casse) et
+   le topic (`serveur.mqtt.topic`) du `_persist.json` de l'image doivent être ceux du `_persist.json` de l'env au
+   dépôt (`data/<lieu>/<carte>/`). Sinon, ou si l'image n'a pas de persist lisible, **rien n'est envoyé** et le motif
+   nomme les deux identités (le 2026-10-26, le P4 avait reçu le FS de la cuve). Sans persist de l'env au dépôt,
+   l'étape affiche « identité non contrôlée » ;
 2. **sauvegarde du `_persist.json` de la carte** dans `%LOCALAPPDATA%\outils_tasmota\build\persist\<env>-<horodatage>.json`.
    Impossible à télécharger, ou pas du JSON valide : **rien n'est envoyé**, l'env est en échec ;
 3. envoi des fichiers, sous-dossiers compris ;
