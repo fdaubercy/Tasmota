@@ -3,7 +3,7 @@ chantier: alerte-firmware-c6
 titre: Alerte web « firmware du coprocesseur ESP32-C6 pas à jour » sur les P4
 statut: actif
 cree: 2026-10-26
-maj: 2026-10-26
+maj: 2026-10-27
 source: dynamic-floating-cosmos.md
 ---
 # Alerte web « firmware du coprocesseur ESP32-C6 pas à jour » sur les P4
@@ -89,8 +89,9 @@ Le C6 refuse toute image (`Failed 5379` = ESP_ERR_OTA_VALIDATE_FAILED, avec 2.12
 - [x] Échec affiché et nouvel essai : règle `HostedOta`/`HostedLoad` → `resultatOta` ; `Failed <code>` → ligne « échec », bloc « Échec » de la page (code, cause), bouton « Réessayer », `Echec` en MQTT — preuve : banc §15, rendu Chrome « apres un echec »
 - [x] `Failed 5379` → état « bloqué » : version notée dans `serveur.coprocesseur.bloque` (persist sauvé), plus de bouton ni de requête au serveur ; ligne d'accueil seulement pendant la 1re minute après le démarrage ; page `/coprocesseur` (lien #143, flash série) et MQTT `Bloque: true` gardent l'information ; une autre version lue sur le C6 efface la clé — preuve : banc §16, rendu Chrome « bloque », `banc_coprocesseur.py` COMPLET OK
 - [x] Solidification et démarrage — preuve : « LE .h COMPILE » ; banc_demarrage VERT (règles `HostedOta`, `HostedLoad` dans la référence P4) ; banc_boot OK
-- [ ] Sur le P4, après build + FS par l'utilisateur et un `HostedOta` refusé : état « bloqué » sur la page, `Bloque: true` retenu ; au redémarrage suivant, ligne d'accueil visible puis effacée à 60 s, aucune requête au serveur
-- [ ] Après un flash série du C6 en 2.12.13 (accord et matériel de l'utilisateur) : `Hosted` = 2.12.13, clé `bloque` effacée, alerte disparue, `AJour: true` retenu
+- [ ] Sur le P4, après build + téléversement PAR CÂBLE (le FS emporte le persist et sa clé `bloque`, posée dans le dépôt le 2026-10-27 — `92d3e62d2`) : état « bloqué » sur `/coprocesseur`, sans bouton ; `Bloque: true` retenu ; ligne d'accueil visible de 20 à 60 s après le démarrage puis effacée ; aucune requête au serveur
+
+Étape retirée le 2026-10-27 : le flash série du C6 (seul remède au blocage) est **annulé**, l'utilisateur n'a pas l'accès matériel. Le C6 reste en 2.6.6 ; la clé `bloque` reste dans le persist du dépôt, et l'alerte se limite à la première minute après le démarrage.
 
 ## Améliorations restantes
 - [x] [projet] Même alerte pour une future carte P4 (`ESP32P4_BASE_WIFI6`) : bloc persist + ligne d'autoexec — preuve : A7
