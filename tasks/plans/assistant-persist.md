@@ -379,26 +379,26 @@ Page (maquette validée, onglet A de `docs/superpowers/specs/2026-10-27-assistan
 - après création : liens build et Fichiers Berry, et résumé avec un bouton « Copier ».
 
 Étapes :
-- [ ] Banc `test_assistant_persist_web.py` ROUGE. Serveur lancé sur un port libre et un dépôt d'essai.
+- [x] Banc `test_assistant_persist_web.py` ROUGE. Serveur lancé sur un port libre et un dépôt d'essai.
   - Toutes les routes : codes et formes.
   - POST sans l'en-tête → 403.
-  - **Aucune des 5 valeurs réelles de mot de passe dans aucune réponse**, y compris en erreur.
-- [ ] Écrire `assistant_persist_web.py` et `assistant_persist_page.py` jusqu'au VERT.
-- [ ] Sonde Chrome `test_assistant_persist_page_chrome.py`, sur le modèle de
+  - **Aucune des 5 valeurs réelles de mot de passe dans aucune réponse**, y compris en erreur. — preuve : test_assistant_persist_web.py ROUGE puis VERT ; aucun mot de passe dans 35 reponses HTTP ; POST sans en-tete -> 403
+- [x] Écrire `assistant_persist_web.py` et `assistant_persist_page.py` jusqu'au VERT. — preuve : 44a9c24 (assistant_persist_web.py, _page.py, _page_js.py)
+- [x] Sonde Chrome `test_assistant_persist_page_chrome.py`, sur le modèle de
   `test_fichiers_berry_page_chrome.py` (DevTools, `Runtime.exceptionThrown`).
   - Chaque pastille s'affiche.
   - Changer le nom met l'aperçu à jour (le hostname change).
   - Esclave → liste des maîtres non vide.
   - « Créer » grisé après une saisie qui suit le diff.
   - 0 erreur JS.
-  - Témoin : casser un identifiant DOM dans une copie de la page → sonde ROUGE.
-- [ ] **Annuaire** (demande explicite de l'utilisateur) :
+  - Témoin : casser un identifiant DOM dans une copie de la page → sonde ROUGE. — preuve : test_assistant_persist_page_chrome.py : 53 OK, 0 erreur JS ; temoin id=creer casse detecte
+- [x] **Annuaire** (demande explicite de l'utilisateur) :
   - ajouter `Outil("assistant_persist", "Assistant persist", "Assistant persist", GROUPES[2], …,
     DOSSIER + "outils_pc/assistant_persist_web.py", [_port("http", 7900)], "http", …)` à
     `annuaire_registre.OUTILS` ;
   - ajouter l'id à la liste figée de `test_annuaire.py` ;
-  - `test_annuaire.py`, `test_annuaire_lanceur.py` et `test_annuaire_securite.py` VERTS.
-- [ ] Cible Custom et intégration :
+  - `test_annuaire.py`, `test_annuaire_lanceur.py` et `test_annuaire_securite.py` VERTS. — preuve : tuile assistant_persist (Maintenance, 7900) ; test_annuaire, _lanceur, _securite VERTS
+- [x] Cible Custom et intégration :
   - `build/cible_assistant_persist.py`, copie adaptée de `cible_fichiers_berry.py` (`NOM_CIBLE =
     "assistant_persist"`, port 7900, page démarrée détachée) ;
   - `import` + `enregistre` et `CIBLES_HORS_BUILD` dans `pre_utilitaires_platformio.py` ;
@@ -406,8 +406,8 @@ Page (maquette validée, onglet A de `docs/superpowers/specs/2026-10-27-assistan
   - tâche « Outil : assistant persist » dans `.vscode/tasks.json`, sur le modèle de la tâche 7800.
   - Bancs VERTS : `build/test_cible_assistant_persist.py`, `build/test_garde_build.py`.
   - La tâche VS Code est lancée une fois (Tasks: Run Task) avant d'être annoncée (leçon du 2026-10-13) : à faire par
-    l'utilisateur, à noter dans le compte rendu.
-- [ ] Commit `feat(assistant-persist): page 7900, tuile de l'annuaire et cible Custom`.
+    l'utilisateur, à noter dans le compte rendu. — preuve : cible_assistant_persist.py + test VERT, garde_build CIBLES_OUTILS, CIBLES_HORS_BUILD, tasks.json (${env:USERPROFILE}) ; tache a lancer une fois par l'utilisateur
+- [x] Commit `feat(assistant-persist): page 7900, tuile de l'annuaire et cible Custom`. — preuve : 44a9c24, relecture approuvee
 
 ## A6 — Fidélité du modèle : fusion à l'ouverture et bouton
 
