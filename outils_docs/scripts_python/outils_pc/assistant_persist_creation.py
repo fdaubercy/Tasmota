@@ -28,6 +28,7 @@ import tempfile
 from dataclasses import asdict
 from pathlib import Path
 
+import assistant_persist_elements as ape
 import assistant_persist_generation as gen
 import assistant_persist_modele as apm
 import assistant_persist_parc as parc
@@ -40,6 +41,7 @@ import fichiers_berry_sauvegarde as fbs
 LIEN_BUILD = "http://127.0.0.1:7700/?env="
 LIEN_FICHIERS = "http://127.0.0.1:7800/?env="
 GABARIT_H = re.compile(r"\{\{(@?\w+)\}\}")
+DEFINE = re.compile(r"\s*#define\s+(\w+)")
 ELIF_FIRMWARE = re.compile(r" {8}#elif\s+defined\(\s*FIRMWARE_")
 INTERDITS_H = '"\\\r\n'                       # casseraient une chaine du .h (SSID, nom de template)
 
@@ -119,6 +121,10 @@ def _section_h(modele, r, v, secrets):
                     continue
                 vus.add(x.strip())
             lignes.append(_remplit(x, v, secrets))
+    deja = {m.group(1) for l in lignes if (m := DEFINE.match(l))}
+    neuves = [x for x in ape.lignes_h(modele, r) if (m := DEFINE.match(x)) is None or m.group(1) not in deja]
+    if neuves:                                               # ex. USE_DS18x20 des thermometres, sauf si la puce le pose deja
+        lignes += ["            // -- Entrees/sorties du bloc metier (assistant de persist) --"] + [_remplit(x, v, secrets) for x in neuves]
     return lignes
 
 

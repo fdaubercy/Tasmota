@@ -2,6 +2,7 @@
 (docs/superpowers/specs/2026-10-27-assistant-persist-maquette.html) : cinq etapes en pastilles, formulaire a gauche,
 apercu du _persist.json a droite (rafraichi par POST /apercu, anti-rebond de 300 ms).
 
+Etape « Bloc metier » : tableau d'elements par groupe (assistant_persist_elements), ajout, suppression, broche en liste.
 Le script est dans assistant_persist_page_js.py (fichiers de moins de 500 lignes) ; PAGE les assemble.
 Textes inseres par textContent uniquement. Sonde Chrome : test_assistant_persist_page_chrome.py.
 """
@@ -51,6 +52,9 @@ HTML = r"""<!doctype html>
   .ok{color:var(--vert);font-weight:600}.erreur{color:var(--rouge)}
   .metier{display:flex;gap:6px;margin:4px 0;align-items:center}.metier input{flex:1}
   .cache{display:none}
+  .ligne-el{display:grid;grid-template-columns:64px minmax(0,1.6fr) minmax(0,1fr) 80px auto;gap:4px;margin:3px 0;align-items:center}
+  .ligne-el.tete{font-size:11.5px;color:var(--discret)}
+  .ligne-el input,.ligne-el select{width:100%}
   details{border:1px solid var(--bord);border-radius:6px;padding:6px 10px;margin:8px 0;background:var(--carte)}
   summary{cursor:pointer;font-weight:600}
   .liens a{color:var(--bleu);margin-right:14px}
@@ -128,6 +132,11 @@ HTML = r"""<!doctype html>
         <button class="btn" id="ajout-metier" type="button">+ Ajouter un bloc métier</button>
         <p><label><input type="checkbox" id="f-squelettes" data-k="squelettes" checked> Créer les squelettes controle&lt;Nom&gt;.be et &lt;nom&gt;Fonctions.be</label></p>
         <p class="avert rouge cache" id="avert-metier">Donnez au moins un nom de bloc métier.</p>
+        <h2>Entrées et sorties du bloc principal</h2>
+        <p class="discret">Boutons, relais, capteurs… Un groupe laissé tel quel garde l'élément d'exemple du modèle. Un élément
+          OFF n'occupe pas sa broche ; les refus (broche hors plage, en double, prise par un driver, nom en double) s'affichent
+          à droite.</p>
+        <div id="elements"></div>
       </section>
       <section id="etape-4" class="cache">
         <h2>5. Vérification</h2>

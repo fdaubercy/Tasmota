@@ -14,7 +14,8 @@ Routes (les POST exigent l'en-tete X-Assistant-Persist: 1 et la meme origine ; J
     GET  /              la page (assistant_persist_page.PAGE)
     GET  /execution     {en_cours: false} : la cible Custom l'interroge pour savoir si la page tourne
     GET  /parc          {puces, bases: {puce: [env]}, base_defaut: {puce: env}, maitres, ids_pris: {id: [dossier]},
-                        id_libre, reseaux, blocs: [{id, libelle, aide, puces, dependances}], erreur_modele}
+                        id_libre, reseaux, blocs: [{id, libelle, aide, puces, dependances}], erreur_modele,
+                        broches: {puce: [GPIO]}, groupes: [{id, singulier, gabarit}]}  (editeur des entrees/sorties)
     GET  /modele/etat   {ajouts, disparues, divergentes, a_completer, erreur} : bandeau du modele (A6) ; ajouts = cles
                         fusionnees d'office au demarrage, erreur = modele illisible (rien n'est alors fusionne ni ecrit)
     GET  /interrompues  operations arretees en plein vol (marque restee dans leur sauvegarde)
@@ -24,7 +25,8 @@ Routes (les POST exigent l'en-tete X-Assistant-Persist: 1 et la meme origine ; J
     POST /modele/prepare {} -> {diff, empreinte, retraits, alignements} : retraits et alignements proposes, rien d'ecrit
     POST /modele/applique {empreinte} -> {applique, retraits, alignements} ; 409 si build, empreinte perimee, rien a faire
     POST /interrompue/acquitte {nom} -> {acquitte: true} ; 400 nom inconnu
-`reponses` = les champs de assistant_persist_generation.Reponses (puce, lieu, nom obligatoires).
+`reponses` = les champs de assistant_persist_generation.Reponses (puce, lieu, nom obligatoires) ; `elements` =
+{groupe: [element, ...]} et `elements_groupe` = {groupe: {reglage: valeur}} (groupes de assistant_persist_elements).
 """
 
 import argparse
@@ -38,6 +40,7 @@ from urllib.parse import urlsplit
 
 import acces_web
 import assistant_persist_creation as apc
+import assistant_persist_elements as ape
 import assistant_persist_generation as gen
 import assistant_persist_modele as apm
 import assistant_persist_parc as parc
@@ -62,6 +65,19 @@ def builds_en_cours_defaut():
     return build_serie.builds_en_cours_defaut()
 
 
+def _forme_elements(cle, valeur):
+    """elements : {groupe: [objet]} ; elements_groupe : {groupe: objet}. Les groupes sont ceux de GROUPES_ELEMENTS."""
+    if not isinstance(valeur, dict):
+        raise ValueError(f"{cle} : objet attendu")
+    for groupe, contenu in valeur.items():
+        if groupe not in ape.GROUPES_ELEMENTS:
+            raise ValueError(f"{cle} : groupe inconnu {groupe!r} ({', '.join(ape.GROUPES_ELEMENTS)} attendus)")
+        if cle == "elements" and not (isinstance(contenu, list) and all(isinstance(e, dict) for e in contenu)):
+            raise ValueError(f"{cle}.{groupe} : liste d'objets attendue")
+        if cle == "elements_groupe" and not isinstance(contenu, dict):
+            raise ValueError(f"{cle}.{groupe} : objet attendu")
+
+
 def reponses_de(demande):
     """Reponses depuis le corps JSON ; ValueError (-> 400) si une forme ou une puce est fausse."""
     brut = demande.get("reponses")
@@ -80,6 +96,8 @@ def reponses_de(demande):
         elif cle == "id":
             if type(valeur) is not int:
                 raise ValueError("id : entier attendu")
+        elif cle in ("elements", "elements_groupe"):
+            _forme_elements(cle, valeur)
         elif cle == "squelettes":
             if type(valeur) is not bool:
                 raise ValueError("squelettes : booleen attendu")
@@ -139,7 +157,10 @@ def donnees_parc(racine):
     return {"puces": list(parc.PREFIXES), "bases": bases,
             "base_defaut": {p: parc.base_par_defaut(racine, p) for p in parc.PREFIXES},
             "maitres": parc.maitres(racine), "ids_pris": {str(i): d for i, d in parc.ids_pris(racine).items()},
-            "id_libre": parc.id_libre(racine), "reseaux": parc.reseaux(racine), "blocs": blocs, "erreur_modele": erreur}
+            "id_libre": parc.id_libre(racine), "reseaux": parc.reseaux(racine), "blocs": blocs, "erreur_modele": erreur,
+            "broches": {p: ape.broches_valides(p, racine) for p in parc.PREFIXES},
+            "groupes": [{"id": g, "singulier": ape.singulier(modele, g), "gabarit": ape.gabarits_elements(modele)[g]}
+                        for g in ape.GROUPES_ELEMENTS] if modele else []}
 
 
 def apercu(racine, r):

@@ -18,7 +18,7 @@ var IDENT = ["hostname", "nom_lisible", "nom_template", "client", "ssid_ap", "to
 var parc = null, etape = 0, minuteur = null, numero = 0, cree = false;
 var diff = null, signatureDiff = null, manuel = {}, propositionModele = null;
 var E = {puce: "ESP32S3", base: "", lieu: "", nom: "", ip: "0.0.0.0", heure: "NTP", role: "autonome", maitre: "", id: 0,
-  reseau1: "", reseau2: "", blocs: [], metiers: [""], squelettes: true,
+  reseau1: "", reseau2: "", blocs: [], metiers: [""], squelettes: true, elements: {},
   hostname: "", nom_lisible: "", nom_template: "", client: "", ssid_ap: "", topic: ""};
 
 function el(tag, attrs, texte) {
@@ -133,6 +133,57 @@ function dessineMetiers() {
 }
 function noms() { return E.metiers.map(function (m) { return m.trim(); }).filter(function (m) { return m; }); }
 
+// ---- Entrees/sorties du bloc metier principal (un tableau par groupe, parc.groupes vient du modele) ----
+function copie(x) { return JSON.parse(JSON.stringify(x)); }
+function nouvelElement(g, n) { var e = copie(g.gabarit); e.nom = e.nom.replace(/\d+$/, "") + n; e.id = n; return e; }
+function champEl(tag, g, i, cle, valeur, options) {
+  var c = el(tag, {"data-el": g + "|" + i + "|" + cle, id: "el-" + g + "-" + i + "-" + cle, "aria-label": cle});
+  if (tag === "select") {
+    options.forEach(function (o) { var op = el("option", {value: o[0]}, o[1]); if (String(o[0]) === String(valeur)) op.selected = true; c.appendChild(op); });
+  } else { c.type = cle === "nom" ? "text" : "number"; c.value = valeur; }
+  return c;
+}
+function optionsBroches(courante) {
+  var l = [[-1, "aucune (-1)"]].concat((parc.broches[E.puce] || []).map(function (p) { return [p, "GPIO" + p]; }));
+  if (l.every(function (o) { return o[0] !== courante; })) l.push([courante, "GPIO" + courante + " (hors plage)"]);
+  return l;
+}
+function dessineElements() {
+  var zone = vide($("elements"));
+  parc.groupes.forEach(function (g) {
+    var liste = E.elements[g.id] || [], d = el("details", {id: "groupe-" + g.id}), res = el("summary", {}, g.id + " (" + liste.length + ")");
+    if (liste.length) d.setAttribute("open", "");
+    d.appendChild(res);
+    if (liste.length) {
+      var tete = el("div", {"class": "ligne-el tete"});
+      ["Activation", "Nom", "Broche", "Type", ""].forEach(function (t) { tete.appendChild(el("span", {}, t)); });
+      d.appendChild(tete);
+    }
+    liste.forEach(function (e, i) {
+      var l = el("div", {"class": "ligne-el"});
+      l.appendChild(champEl("select", g.id, i, "activation", null, [["ON", "ON"], ["OFF", "OFF"]]));
+      l.firstChild.value = e.activation;
+      l.appendChild(champEl("input", g.id, i, "nom", e.nom));
+      l.appendChild(champEl("select", g.id, i, "pin", e.pin, optionsBroches(e.pin)));
+      l.appendChild(champEl("input", g.id, i, "type", e.type));
+      l.appendChild(el("button", {"class": "btn", type: "button", id: "retire-" + g.id + "-" + i, "data-retire-el": g.id + "|" + i}, "Retirer"));
+      d.appendChild(l);
+    });
+    d.appendChild(el("button", {"class": "btn", type: "button", id: "ajout-" + g.id, "data-ajout-el": g.id}, "+ Ajouter (" + g.singulier + ")"));
+    zone.appendChild(d);
+  });
+}
+function changeElement(t) {
+  var p = t.getAttribute("data-el").split("|"), e = E.elements[p[0]][+p[1]], v = t.value;
+  e[p[2]] = (p[2] === "nom" || p[2] === "activation") ? v : (parseInt(v, 10) || 0);
+  if (p[2] === "pin") e.pin = parseInt(v, 10);
+}
+function ajouteElement(id) {
+  var g = parc.groupes.filter(function (x) { return x.id === id; })[0], l = E.elements[id] || (E.elements[id] = []);
+  l.push(nouvelElement(g, l.length + 1)); dessineElements(); reagit();
+}
+function retireElement(id, i) { E.elements[id].splice(i, 1); dessineElements(); reagit(); }
+
 // ---- Reponses envoyees au serveur ----
 function reponses(pourApercu) {
   var esc = E.role === "esclave", d = defauts(), r = {puce: E.puce, base: E.base,
@@ -140,6 +191,7 @@ function reponses(pourApercu) {
     role: E.role, maitre: esc ? E.maitre : "", id: esc ? (parseInt(E.id, 10) || 0) : 0,
     reseau1: esc ? "" : E.reseau1, reseau2: esc ? "" : E.reseau2, blocs: fermeture(), metiers: noms(),
     squelettes: !!E.squelettes};
+  if (Object.keys(E.elements).length) r.elements = E.elements;             // groupe absent = gabarit du modele
   IDENT.forEach(function (k) { r[k] = (E[k] === d[k]) ? "" : E[k]; });      // inchange -> defaut du serveur
   return r;
 }
@@ -240,12 +292,13 @@ function change(ev) {
   else if (t.hasAttribute("data-bloc")) {
     var id = t.getAttribute("data-bloc"), i = E.blocs.indexOf(id);
     if (t.checked && i < 0) E.blocs.push(id); else if (!t.checked && i >= 0) E.blocs.splice(i, 1);
-  } else if (t.hasAttribute("data-metier")) E.metiers[+t.getAttribute("data-metier")] = t.value;
+  } else if (t.hasAttribute("data-el")) changeElement(t);
+  else if (t.hasAttribute("data-metier")) E.metiers[+t.getAttribute("data-metier")] = t.value;
   else if (t.hasAttribute("data-k")) {
     var k = t.getAttribute("data-k");
     E[k] = t.type === "checkbox" ? t.checked : t.value;
     if (t.hasAttribute("data-ident")) manuel[k] = t.value !== "";
-    if (k === "puce") { E.base = parc.base_defaut[E.puce] || (parc.bases[E.puce] || [])[0] || ""; remplitBases(); E.blocs = E.blocs.filter(permis); }
+    if (k === "puce") { E.base = parc.base_defaut[E.puce] || (parc.bases[E.puce] || [])[0] || ""; remplitBases(); E.blocs = E.blocs.filter(permis); dessineElements(); }
   }
   reagit();
 }
@@ -260,7 +313,7 @@ async function demarre() {
   remplit($("f-puce"), parc.puces.map(function (p) { return [p, p]; }), E.puce);
   E.base = parc.base_defaut[E.puce] || (parc.bases[E.puce] || [])[0] || ""; remplitBases();
   $("f-ip").value = E.ip;
-  afficheEtape(0); reagit(); apercu(); majModele();
+  afficheEtape(0); dessineElements(); reagit(); apercu(); majModele();
   var i = await api("/interrompues");
   if (i.ok && i.donnees) i.donnees.interrompues.forEach(function (op) { interrompue(op); });
 }
@@ -309,6 +362,8 @@ $("formulaire").addEventListener("input", function (ev) {
 });
 $("formulaire").addEventListener("click", function (ev) {
   var t = ev.target, r = t.getAttribute && t.getAttribute("data-retire");
+  if (t.hasAttribute && t.hasAttribute("data-ajout-el")) { ajouteElement(t.getAttribute("data-ajout-el")); return; }
+  if (t.hasAttribute && t.hasAttribute("data-retire-el")) { var q = t.getAttribute("data-retire-el").split("|"); retireElement(q[0], +q[1]); return; }
   if (r !== null && r !== undefined && t.hasAttribute("data-retire")) { E.metiers.splice(+r, 1); dessineMetiers(); reagit(); }
 });
 $("pastilles").addEventListener("click", function (ev) { var e = ev.target.getAttribute("data-e"); if (e !== null) afficheEtape(+e); });

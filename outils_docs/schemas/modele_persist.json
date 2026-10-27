@@ -2156,7 +2156,197 @@
 				"condition": "modules.{{metier}}",
 				"groupe": "chargement"
 			}
-		]
+		],
+		"elements": {
+			"boutons": {
+				"singulier": "bouton",
+				"gabarit": {
+					"activation": "ON",
+					"nom": "Bouton 1",
+					"id": 1,
+					"pin": -1,
+					"type": 32,
+					"virtuel": "OFF",
+					"SwitchMode": 2,
+					"etat": "OFF",
+					"relaisLie": {
+						"modules": [],
+						"ids": []
+					}
+				},
+				"groupe": {},
+				"optionnelles": {
+					"typeAction": "ON/OFF"
+				}
+			},
+			"interrupteurs": {
+				"singulier": "interrupteur",
+				"gabarit": {
+					"activation": "ON",
+					"nom": "Interrupteur 1",
+					"id": 1,
+					"pin": -1,
+					"type": 160,
+					"virtuel": "OFF",
+					"SwitchMode": 1,
+					"etat": "OFF",
+					"relaisLie": {
+						"ids": [],
+						"delai": 0,
+						"type": "ON/OFF"
+					}
+				},
+				"groupe": {},
+				"optionnelles": {
+					"idModBus": 1
+				}
+			},
+			"relais": {
+				"singulier": "relai",
+				"gabarit": {
+					"activation": "ON",
+					"nom": "Relais 1",
+					"afficheWeb": "ON",
+					"pin": -1,
+					"id": 1,
+					"type": 224,
+					"virtuel": "OFF",
+					"value": 0,
+					"etat": "OFF",
+					"timer": 0,
+					"publishMQTT": {
+						"topic": []
+					},
+					"timestamp": {
+						"ON": 0,
+						"OFF": 0,
+						"delai": 0
+					},
+					"idModBus": -1
+				},
+				"groupe": {},
+				"optionnelles": {
+					"channel": 0,
+					"nbLeds": 131,
+					"relance": {
+						"capteur": "capteur2",
+						"pause": 10,
+						"maxRelances": 3,
+						"topicAlerte": "tele/cave/serveur-rly-cave-v2/ALERTE_POMPE"
+					},
+					"alerte": "",
+					"scheme": 0,
+					"bouton": 0,
+					"appuiLong": 15
+				}
+			},
+			"capteurs": {
+				"singulier": "capteur",
+				"gabarit": {
+					"activation": "ON",
+					"nom": "Capteur 1",
+					"id": 1,
+					"pin": -1,
+					"type": 160,
+					"virtuel": "OFF",
+					"SwitchMode": 1,
+					"etat": "OFF",
+					"relaisLie": {
+						"modules": [],
+						"ids": [],
+						"type": "ON/OFF"
+					}
+				},
+				"groupe": {},
+				"optionnelles": {}
+			},
+			"compteurs": {
+				"singulier": "compteur",
+				"gabarit": {
+					"activation": "ON",
+					"nom": "Compteur 1",
+					"id": 1,
+					"pin": -1,
+					"type": 352,
+					"virtuel": "OFF",
+					"SwitchMode": 1,
+					"value": 0,
+					"relaisLie": {
+						"modules": [],
+						"ids": [],
+						"type": "ON/OFF"
+					}
+				},
+				"groupe": {
+					"affichageWebSensor": "OFF"
+				},
+				"optionnelles": {}
+			},
+			"thermometres": {
+				"singulier": "thermometre",
+				"gabarit": {
+					"activation": "ON",
+					"nom": "Thermo 1",
+					"id": 1,
+					"pin": -1,
+					"type": 1312,
+					"virtuel": "OFF",
+					"value": 0,
+					"limites": [],
+					"relaisLie": {
+						"modules": [],
+						"ids": [],
+						"type": "ON/OFF"
+					}
+				},
+				"groupe": {
+					"affichageWebSensor": "OFF"
+				},
+				"h": [
+					"            #define USE_DS18x20                              // Sondes DS18x20 (thermometres du bloc metier)"
+				],
+				"optionnelles": {
+					"idModBus": 1,
+					"serialNumber": "041600F6FBFF"
+				}
+			},
+			"analogiques": {
+				"singulier": "analogique",
+				"gabarit": {
+					"activation": "ON",
+					"nom": "Ana 1",
+					"id": 1,
+					"pin": -1,
+					"type": 4704,
+					"virtuel": "OFF",
+					"value": 0,
+					"limites": [],
+					"relaisLie": {
+						"modules": [],
+						"ids": [],
+						"type": "ON/OFF"
+					},
+					"publishMQTT": {
+						"topic": []
+					}
+				},
+				"groupe": {
+					"activation": "OFF",
+					"name": "Capteurs analogiques",
+					"valeurMin": 0,
+					"valeurMax": 0
+				},
+				"optionnelles": {
+					"dimensions": {
+						"hauteur": 110,
+						"longueur": 340,
+						"largeur": 180
+					},
+					"conversion_mV_cm": 31,
+					"idModBus": 1
+				}
+			}
+		}
 	},
 	"cenv": [
 		"[env:{{env}}]",

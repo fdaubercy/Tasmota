@@ -203,6 +203,27 @@ def sonde_page(m):
     saisit(cdp, "metier-0", "piscine")
     verifie(cdp.js("[document.getElementById('voir-diff').disabled, document.getElementById('avert-metier').classList.contains('cache')]"),
             [False, True], "un metier : « Voir le diff » actif")
+    # editeur des entrees/sorties (A7) : 2 relais ajoutes, l'apercu change ; broche en double -> refus ; retrait
+    verifie(cdp.js("document.querySelectorAll('#elements details').length"), 7, "elements : un groupe par type d'element")
+    verifie(attend(cdp, "(function(){try{return Object.keys(JSON.parse(document.getElementById('apercu').textContent).modules.piscine.environnement.relais).length===0}catch(e){return false}})()", 10),
+            True, "elements : aucun relais avant l'ajout")
+    clic(cdp, "ajout-relais")
+    clic(cdp, "ajout-relais")
+    verifie(cdp.js("document.querySelectorAll('#groupe-relais .ligne-el:not(.tete)').length"), 2, "elements : 2 relais dans le tableau")
+    verifie(attend(cdp, "document.getElementById('apercu').textContent.indexOf('relai2') >= 0", 10), True,
+            "elements : l'apercu montre relai1 et relai2")
+    verifie(cdp.js("document.getElementById('el-relais-1-pin').options.length === 39"), True, "elements : la broche est une liste (GPIO de la puce)")
+    saisit(cdp, "el-relais-0-pin", "6", "change")
+    saisit(cdp, "el-relais-1-pin", "6", "change")
+    verifie(attend(cdp, "document.getElementById('apercu-refus').textContent.indexOf('broche 6') >= 0", 10), True,
+            "elements : deux relais sur la broche 6 -> refus affiche")
+    saisit(cdp, "el-relais-1-pin", "7", "change")
+    saisit(cdp, "el-relais-1-nom", "Filtre")
+    verifie(attend(cdp, "document.getElementById('apercu-refus').textContent.indexOf('broche') < 0 && document.getElementById('apercu').textContent.indexOf('Filtre') >= 0", 10),
+            True, "elements : broches 6 et 7, plus de refus, nom saisi dans l'apercu")
+    clic(cdp, "ajout-boutons")
+    clic(cdp, "retire-boutons-0")
+    verifie(cdp.js("document.querySelectorAll('#groupe-boutons .ligne-el:not(.tete)').length"), 0, "elements : retrait d'un bouton")
     clic(cdp, "ajout-metier")
     verifie(cdp.js("document.querySelectorAll('[data-metier]').length"), 2, "ajout d'un second bloc metier")
     cdp.js("document.querySelector('[data-retire=\"1\"]').click(); 1")
@@ -250,6 +271,8 @@ def sonde_page(m):
     verifie(attend(cdp, "!!document.getElementById('creation-ok')", 20), True, "creation : message de reussite")
     verifie(((m.depot / DOSSIER / "_persist.json").is_file(), (m.depot / DOSSIER / "controlePiscine.be").is_file()), (True, True),
             "creation : persist et squelettes ecrits dans le depot d'essai")
+    verifie(all(x in (m.depot / DOSSIER / "_persist.json").read_text(encoding="utf-8") for x in ('"relai2"', '"Filtre"')), True,
+            "creation : les 2 relais saisis sont dans le persist ecrit")
     verifie(cdp.js("location.hostname"), "localhost", "page chargee sous localhost (le serveur renvoie des liens en 127.0.0.1)")
     verifie(cdp.js("document.getElementById('lien-build').getAttribute('href')"), "http://localhost:7700/?env=" + ENV,
             "lien build : hote de la page, port 7700")

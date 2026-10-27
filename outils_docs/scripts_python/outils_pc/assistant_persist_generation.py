@@ -25,6 +25,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import assistant_persist_elements as ape
 import assistant_persist_modele as apm
 import assistant_persist_parc as parc
 import fichiers_berry_creation as fbc
@@ -69,6 +70,10 @@ class Reponses:
     nom_template: str = ""    # template.NAME
     client: str = ""          # serveur.mqtt.client
     ssid_ap: str = ""         # serveur.rangeExtender.AP.SSID
+    # entrees/sorties du metier PRINCIPAL (A7, assistant_persist_elements) : {groupe: [element, ...]} et reglages de
+    # groupe {groupe: {...}} ; un groupe absent reste celui du gabarit du modele
+    elements: dict = field(default_factory=dict)
+    elements_groupe: dict = field(default_factory=dict)
 
 
 # ---- Reponses et variables --------------------------------------------------------------------------------
@@ -171,7 +176,16 @@ def reponses_depuis_persist(modele, donnees, env, racine=None):
                     reseau2=wifi["reseau2"]["nomReseauWifi"], topic=s["mqtt"]["topic"], blocs=blocs,
                     metiers=[k for k in donnees.get("modules", {}) if k != "activation"],
                     hostname=s["hostname"], nom_lisible=s["nom"], nom_template=donnees["template"]["NAME"],
-                    client=s["mqtt"]["client"], ssid_ap=re_["AP"]["SSID"])
+                    client=s["mqtt"]["client"], ssid_ap=re_["AP"]["SSID"], **_elements_du_persist(modele, donnees))
+
+
+def _elements_du_persist(modele, donnees):
+    """Champs elements / elements_groupe d'un persist du parc : l'environnement de son metier principal."""
+    metiers = [k for k, v in donnees.get("modules", {}).items() if k != "activation" and isinstance(v, dict)]
+    if not metiers:
+        return {}
+    elements, groupes = ape.lit_elements(modele, donnees["modules"][metiers[0]].get("environnement", {}))
+    return {"elements": elements, "elements_groupe": groupes}
 
 
 # ---- Persist ------------------------------------------------------------------------------------------------
@@ -232,6 +246,7 @@ def persist(modele, r, vars, secrets=None):
     for metier in r.metiers:
         obj.setdefault("modules", {})[metier] = _substitue(modele["metier"]["gabarit"], _vars_metier(vars, metier),
                                                            secrets)
+    ape.applique(modele, obj, r)
     gabarit = obj.get("template")
     if isinstance(gabarit, dict) and gabarit.get("GPIO") == []:      # le modele porte [] : 1 par GPIO de la puce
         gabarit["GPIO"] = [1] * modele["puces"][r.puce]["gpio"]     # (configGlobal indexe ordreGPIO par cette liste)
@@ -349,6 +364,7 @@ def coherence(modele, r, obj, texte_autoexec, listes, racine=None):
       - bloc coche dont un module manque a l'autoexec ;
       - module charge par l'autoexec present dans `exclude`, ou charge comme module solidifie (importe, charge,
         leds, historique) sans etre dans `solidify` (developpe depuis [berry_commun] du cenv de `racine`) ;
+      - entrees/sorties du metier : broche hors plage ou en double, nom en double (assistant_persist_elements) ;
       - id different entre serveur.rangeExtender, serveur.udp, serveur.tcp et drivers.ModBus, ou id d'esclave < 1."""
     racine = RACINE if racine is None else Path(racine)
     refus, blocs = [], {b["id"]: b for b in modele["blocs"]}
@@ -383,6 +399,8 @@ def coherence(modele, r, obj, texte_autoexec, listes, racine=None):
                 refus.append(f"module {m} de l'autoexec exclu (custom_files_exclude)")
             if appel in EN_FLASH and fichier not in flash:
                 refus.append(f"module {m} charge par demarrage.{appel} mais absent de la flash (custom_berry_solidify)")
+    if r.elements:
+        refus += ape.verifie_elements(r.puce, r.elements, ape.broches_drivers(obj), racine)
     ids = [_sous(obj, c) for c in CHEMINS_ID]
     if len({json.dumps(i) for i in ids}) != 1 or not all(type(i) is int for i in ids):
         refus.append("id different entre serveur.rangeExtender, serveur.udp, serveur.tcp et drivers.ModBus : "

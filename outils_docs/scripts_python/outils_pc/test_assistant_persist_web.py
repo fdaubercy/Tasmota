@@ -89,8 +89,12 @@ def test_get(b):
     verifie(statut, 200, "GET /parc : 200")
     reel = apm.ecarts(tac.RACINE, apm.charge_modele(tac.RACINE))
     verifie(reel["disparues"], [], "VRAI parc : aucune cle disparue (le bandeau ne reste pas affiche en permanence)")
-    verifie(sorted(p), sorted(["puces", "bases", "base_defaut", "maitres", "ids_pris", "id_libre", "reseaux", "blocs", "erreur_modele"]),
+    verifie(sorted(p), sorted(["puces", "bases", "base_defaut", "maitres", "ids_pris", "id_libre", "reseaux", "blocs", "erreur_modele",
+                                      "broches", "groupes"]),
             "GET /parc : les clefs du contrat")
+    verifie(([g["id"] for g in p["groupes"]], p["broches"]["ESP32S3"][-1], "relai" in [g["singulier"] for g in p["groupes"]]),
+            (["boutons", "interrupteurs", "relais", "capteurs", "compteurs", "thermometres", "analogiques"], 48, True),
+            "GET /parc : groupes d'elements (gabarit, singulier) et broches de chaque puce")
     verifie(p["puces"], ["ESP32", "ESP32S3", "ESP32P4"], "GET /parc : puces")
     verifie("tasmota32s3-base-N16R8" in p["bases"]["ESP32S3"], True, "GET /parc : bases par puce")
     verifie(p["base_defaut"]["ESP32S3"] in p["bases"]["ESP32S3"], True, "GET /parc : base par defaut parmi les bases")
@@ -110,6 +114,10 @@ def test_post_securite(b):
     verifie(b.requete("POST", "/apercu", corps, entetes={"X-Assistant-Persist": "1", "Origin": "http://evil.example"})[0],
             403, "POST d'une autre origine -> 403")
     verifie(b.requete("POST", "/inconnue", {})[0], 404, "POST route inconnue -> 404")
+
+
+def GROUPE_RELAIS(b):
+    return next(g for g in b.requete("GET", "/parc")[1]["groupes"] if g["id"] == "relais")
 
 
 def test_apercu(b):
@@ -135,6 +143,16 @@ def test_apercu(b):
     verifie(b.requete("POST", "/apercu", {"reponses": dict(reponses(), id="x")})[0], 400, "id pas un entier -> 400")
     verifie(b.requete("POST", "/apercu", {"reponses": dict(reponses(), blocs="udp")})[0], 400, "blocs pas une liste -> 400")
     verifie(b.requete("POST", "/apercu", {})[0], 400, "sans reponses -> 400")
+    relais = [dict(g["gabarit"], pin=p, nom=f"R{p}") for g in [GROUPE_RELAIS(b)] for p in (6, 7)]
+    _, a6 = b.requete("POST", "/apercu", {"reponses": dict(reponses(), elements={"relais": relais})})
+    verifie((list(json.loads(a6["persist"])["modules"]["piscine"]["environnement"]["relais"]), a6["refus"]),
+            (["relai1", "relai2"], []), "apercu : 2 relais envoyes -> relai1, relai2 dans le persist, aucun refus")
+    _, a7 = b.requete("POST", "/apercu", {"reponses": dict(reponses(), elements={"relais": [relais[0], dict(relais[0], nom="Autre")]})})
+    verifie(any("broche 6" in x for x in a7["refus"]), True, "apercu : broche en double -> refus")
+    for faux in ({"relais": {}}, {"voitures": []}, {"relais": [1]}, []):
+        verifie(b.requete("POST", "/apercu", {"reponses": dict(reponses(), elements=faux)})[0], 400, f"elements de forme fausse {faux!r} -> 400")
+    verifie(b.requete("POST", "/apercu", {"reponses": dict(reponses(), elements_groupe={"relais": []})})[0], 400,
+            "elements_groupe : objet par groupe attendu -> 400")
 
 
 def test_prepare_creation(b):
