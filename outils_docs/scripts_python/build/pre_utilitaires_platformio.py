@@ -691,6 +691,9 @@ cible_build_web.enregistre(env)
 # 🗂 CIBLE « FICHIERS BERRY PAR ENV » (meme menu Custom) : fichiers Berry de chaque env et creation d'env
 import cible_fichiers_berry
 cible_fichiers_berry.enregistre(env)
+# 🧩 CIBLE « ASSISTANT PERSIST » (meme menu Custom) : creation guidee du persist d'une nouvelle carte
+import cible_assistant_persist
+cible_assistant_persist.enregistre(env)
 
 # Cibles qui ne sont PAS des builds : ne pas incrementer CFG_HOLDER, ne pas reecrire
 # platformio_override.ini ni copier d'image FS (bloc suivant).
@@ -703,11 +706,13 @@ cible_fichiers_berry.enregistre(env)
 #   - annuaire        : lancement (ou ouverture) de l'annuaire des outils PC ;
 #   - build_web       : lancement detache (ou ouverture) de la page Build et televersement ;
 #   - fichiers_berry  : lancement detache (ou ouverture) de la page Fichiers Berry par env ;
+#   - assistant_persist : lancement detache (ou ouverture) de la page Assistant persist ;
 #   - __idedata      : rafraichissement IntelliSense / Project Tasks par pioarduino
 #                       ('pio project init'), lance tout seul par VS Code.
 CIBLES_HORS_BUILD = (cible_pont_serie.NOM_CIBLE, cible_sniffeur_mqtt.NOM_CIBLE, cible_syslog_tasmota.NOM_CIBLE,
                      cible_sniffeur_modbus.NOM_CIBLE, cible_testeur_udp.NOM_CIBLE, cible_synchro_fork.NOM_CIBLE,
-                     cible_annuaire.NOM_CIBLE, cible_build_web.NOM_CIBLE, cible_fichiers_berry.NOM_CIBLE, "__idedata")
+                     cible_annuaire.NOM_CIBLE, cible_build_web.NOM_CIBLE, cible_fichiers_berry.NOM_CIBLE,
+                     cible_assistant_persist.NOM_CIBLE, "__idedata")
 hors_build = any(cible in COMMAND_LINE_TARGETS for cible in CIBLES_HORS_BUILD)
 
 # ============================================================

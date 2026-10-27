@@ -209,6 +209,16 @@
             "args": ["-u", "outils_docs/scripts_python/outils_pc/fichiers_berry_web.py", "--http", "7800"],
             "presentation": { "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
+        },
+        {
+            // Assistant de creation du persist : pose des questions et ecrit le persist, l'autoexec, la section
+            // du cenv et celle du .h d'une nouvelle carte. Aussi cible Custom « Assistant persist (page web) ».
+            "label": "Outil : assistant persist (http://127.0.0.1:7900)",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/assistant_persist_web.py", "--http", "7900"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
         }
     ]
 }

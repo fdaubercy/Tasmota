@@ -41,7 +41,7 @@ def lit(outil):
 def section_registre():
     print("== registre ==")
     ids = ["pont_serie", "sniffeur_modbus", "testeur_udp", "sniffeur_mqtt", "syslog", "synchro_fork", "build",
-           "fichiers_berry"]
+           "fichiers_berry", "assistant_persist"]
     verifie([o.id for o in reg.OUTILS], ids, "sept_outils : ids et ordre")
     verifie(all(o.groupe in reg.GROUPES for o in reg.OUTILS), True, "sept_outils : groupes connus")
     verifie([o.id for o in reg.OUTILS if not os.path.isfile(os.path.join(RACINE, o.script))], [],
@@ -340,10 +340,10 @@ def section_serveur():
 
     try:
         s, j = appel(port, "GET", "/registre")
-        verifie((s, len(j["outils"])), (200, 8), "routes_get : /registre a 8 outils")
+        verifie((s, len(j["outils"])), (200, 9), "routes_get : /registre a 9 outils")
         s, j = appel(port, "GET", "/etat")
-        verifie((s, len(j["outils"]), isinstance(j["liens_reseau"], list)), (200, 8, True),
-                "routes_get : /etat a 8 entrees")
+        verifie((s, len(j["outils"]), isinstance(j["liens_reseau"], list)), (200, 9, True),
+                "routes_get : /etat a 9 entrees")
         verifie(isinstance(j.get("derniers"), dict), True, "routes_get : /etat porte derniers (dict)")
         verifie(appel(port, "GET", "/console?id=inconnu")[0], 404, "routes_get : console inconnue -> 404")
         verifie(appel(port, "GET", "/console?id=syslog")[1], {"lignes": []}, "routes_get : console vide")
