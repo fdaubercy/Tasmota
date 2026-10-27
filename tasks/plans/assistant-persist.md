@@ -187,7 +187,7 @@ Interfaces produites :
   - `ValueError` qui nomme le réseau ou la clé (jamais la valeur) si absent ou ambigu.
 
 Étapes :
-- [ ] Banc ROUGE (module absent), avec ces tests :
+- [x] Banc ROUGE (module absent), avec ces tests :
   - `maitres_du_parc` : les dossiers des maîtres valent exactement `{data/cave/tasmota32s3-serveur-rly,
     data/etage2/tasmota32s3-grenier, data/garage/tasmota32p4-serveur-modbus, data/garage/tasmota32s3-serveur-modbus}`,
     lus en lecture seule (constat du 2026-10-27 : id 0 et Range Extender ON). La cuve, le rideau, le différentiel
@@ -198,10 +198,10 @@ Interfaces produites :
   - `secret_ambigu` (point 1) : dépôt d'essai où un persist change le mot de passe de `MAISON` → `ValueError`, avec
     `"MAISON"` dans le message et aucune des deux valeurs.
   - `reseau_inconnu` (point 1).
-  - `persist_illisible` (point 3) : un persist tronqué dans le dépôt d'essai → `maitres()` répond, carte ignorée.
-- [ ] Écrire `assistant_persist_parc.py` en s'appuyant sur `assistant_persist_modele.persists_du_depot`.
-- [ ] Banc VERT. Témoin : dans `secrets`, ignorer le cas `-GATEWAY` → `secrets_esclave` ROUGE.
-- [ ] Commit `feat(assistant-persist): lecture du parc et regles des mots de passe`.
+  - `persist_illisible` (point 3) : un persist tronqué dans le dépôt d'essai → `maitres()` répond, carte ignorée. — preuve : test_assistant_persist_parc.py ROUGE (module absent), 6 tests presents
+- [x] Écrire `assistant_persist_parc.py` en s'appuyant sur `assistant_persist_modele.persists_du_depot`. — preuve : d769850 outils_pc/assistant_persist_parc.py
+- [x] Banc VERT. Témoin : dans `secrets`, ignorer le cas `-GATEWAY` → `secrets_esclave` ROUGE. — preuve : 28 OK VERT ; temoin -GATEWAY neutralise -> secrets_esclave ROUGE (task-2-report.md)
+- [x] Commit `feat(assistant-persist): lecture du parc et regles des mots de passe`. — preuve : d769850, relecture approuvee
 
 ## A3 — Génération : persist, autoexec, listes du cenv, cohérence, squelettes
 
