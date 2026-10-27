@@ -19,6 +19,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 import acces_web
+import assistant_persist_modele as apm
 import assistant_persist_web as apw
 import test_assistant_persist_creation as tac
 
@@ -80,12 +81,14 @@ def test_get(b):
     verifie("127.0.0.1" in page, False, "page : aucune adresse en dur (liens d'apres l'hote)")
     verifie(b.requete("GET", "/execution"), (200, {"en_cours": False}), "GET /execution (lu par la cible)")
     statut, etat = b.requete("GET", "/modele/etat")
-    verifie((statut, etat), (200, {"ajouts": [], "disparues": etat["disparues"], "divergentes": {}, "a_completer": [], "erreur": ""}),
+    verifie((statut, etat), (200, {"ajouts": [], "disparues": [], "divergentes": {}, "a_completer": [], "erreur": ""}),
             "GET /modele/etat : le contrat (modele relu, parc couvert)")
     verifie(b.requete("GET", "/interrompues"), (200, {"interrompues": []}), "GET /interrompues : rien")
     verifie(b.requete("GET", "/nulle-part")[0], 404, "GET route inconnue -> 404")
     statut, p = b.requete("GET", "/parc")
     verifie(statut, 200, "GET /parc : 200")
+    reel = apm.ecarts(tac.RACINE, apm.charge_modele(tac.RACINE))
+    verifie(reel["disparues"], [], "VRAI parc : aucune cle disparue (le bandeau ne reste pas affiche en permanence)")
     verifie(sorted(p), sorted(["puces", "bases", "base_defaut", "maitres", "ids_pris", "id_libre", "reseaux", "blocs", "erreur_modele"]),
             "GET /parc : les clefs du contrat")
     verifie(p["puces"], ["ESP32", "ESP32S3", "ESP32P4"], "GET /parc : puces")

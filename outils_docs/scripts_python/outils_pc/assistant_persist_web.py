@@ -171,6 +171,8 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, etat_modele):
     def _traite_post(chemin, demande):
         if chemin == "/apercu":
             return apercu(racine, reponses_de(demande))
+        if chemin in ("/prepare", "/creation"):
+            apm.charge_modele(racine)                  # modele illisible : 400 qui cite le fichier et sa ligne
         if chemin == "/prepare":
             return apc.prepare(racine, reponses_de(demande))
         if chemin == "/creation":

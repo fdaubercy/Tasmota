@@ -250,6 +250,9 @@ def sonde_page(m):
     verifie(((m.depot / DOSSIER / "_persist.json").is_file(), (m.depot / DOSSIER / "controlePiscine.be").is_file()), (True, True),
             "creation : persist et squelettes ecrits dans le depot d'essai")
     verifie(cdp.js("document.getElementById('lien-build').getAttribute('href')"), "http://127.0.0.1:7700/?env=" + ENV, "lien vers la page build")
+    verifie(cdp.js("new URL(document.getElementById('lien-build').href).hostname === location.hostname && "
+                   "new URL(document.getElementById('lien-fichiers').href).hostname === location.hostname"), True,
+            "liens : l'hote de la page (pas une adresse en dur)")
     verifie(cdp.js("document.getElementById('lien-fichiers').getAttribute('href')"), "http://127.0.0.1:7800/?env=" + ENV,
             "lien vers Fichiers Berry")
     verifie(cdp.js("document.getElementById('resume').textContent.indexOf('" + ENV + "') >= 0"), True, "resume affiche")

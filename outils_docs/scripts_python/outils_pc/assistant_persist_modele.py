@@ -192,7 +192,9 @@ def ecarts(racine, modele):
     """{nouvelles: {chemin: [cartes]}, disparues: [chemin], divergentes: {chemin: {modele, parc}},
     illisibles: [fichier]} ; chemin = cles jointes par des points (modules.*.name, ...TasmotaSlaveModBus#.id).
       - nouvelles : chemins du parc absents du modele, sauf modules.*.<cle> de metier.cles_propres ;
-      - disparues : chemins du modele presents dans aucun persist ;
+      - disparues : chemins du SOCLE et du gabarit metier presents dans aucun persist. Les chemins de roles, de
+        puces.*.ajouts et de blocs.*.actif/inactif en sont exclus : ils decrivent ce qu'une reponse POSE, et une
+        valeur qu'aucune carte n'a encore (role sans esclave, bloc non coche) n'est pas « disparue » ;
       - divergentes : constante du SOCLE differente de la valeur commune a TOUS les persists lisibles. Les gabarits
         ({{...}}), les secrets (@secret:*) et tout chemin sous `modules` sont ignores : le nom du bloc metier y est
         reduit a `*` et ses chemins sont tronques (logs, environnement.boutons...), si bien que la « valeur » d'un
@@ -212,7 +214,8 @@ def ecarts(racine, modele):
     decrits = chemins_modele(modele)
     nouvelles = {".".join(c): sorted(cartes) for c, cartes in parc.items()
                  if c not in decrits and not _cle_propre(c, cles_propres)}
-    disparues = sorted(".".join(c) for c in decrits if c not in parc)
+    retirables = chemins(modele["socle"]) | chemins(modele.get("metier", {}).get("gabarit", {}), ("modules", "*"))
+    disparues = sorted(".".join(c) for c in retirables if c not in parc)
     divergentes = {}
     for c, vs in _valeurs(modele["socle"]).items():
         if c[:1] == ("modules",) or len(vs) != 1 or not _constante(vs[0]) or c not in parc:
@@ -230,7 +233,7 @@ def ecarts(racine, modele):
 # fusionne_nouvelles : cles NOUVELLES du parc ajoutees d'office (a l'ouverture de la page, sans validation) ;
 # propose_mise_a_jour / applique_mise_a_jour : RETRAITS et ALIGNEMENTS, proposes avec un diff, appliques apres validation.
 RETIRE = object()                      # valeur de retour de fn : retire la feuille
-SECRET = re.compile(r"^(mdp|pass|pwd)", re.I)      # feuille d'un mot de passe : jamais de valeur dans le modele
+SECRET = re.compile(r"^(mdp|pwd|password|secret|token|psk)|^(pass|passwd)$", re.I)   # feuille d'un secret (pas passerelle, passage)
 NATURE_AUTO, NATURE_MAJ = "modele-auto", "modele-maj"
 
 
@@ -262,8 +265,8 @@ def _table(table, fn):
     return res
 
 
-def _applique(modele, fn_socle, fn_autres):
-    """Copie du modele : fn_socle sur le socle, fn_autres sur roles, ajouts, blocs (actif, inactif) et gabarit metier."""
+def _applique(modele, fn_socle, fn_autres, fn_gabarit):
+    """Copie du modele : fn_socle sur le socle, fn_gabarit sur le gabarit metier, fn_autres sur roles, ajouts, blocs."""
     neuf = copy.deepcopy(modele)
     socle = _transforme(modele["socle"], (), fn_socle)
     neuf["socle"] = {} if socle is RETIRE else socle
@@ -278,7 +281,7 @@ def _applique(modele, fn_socle, fn_autres):
                 neuf["blocs"][i][cle] = _table(bloc[cle], fn_autres)
     gabarit = modele.get("metier", {}).get("gabarit")
     if gabarit is not None:
-        g = _transforme(gabarit, ("modules", "*"), fn_autres)
+        g = _transforme(gabarit, ("modules", "*"), fn_gabarit)
         neuf["metier"]["gabarit"] = {} if g is RETIRE else g
     return neuf
 
@@ -330,6 +333,14 @@ def _observations(racine, cibles):
     return vues, tout - {None}
 
 
+def _masque_feuilles(valeur, chemin):
+    """Copie de `valeur` dont chaque feuille secrete (nom SECRET), a toute profondeur, devient "@secret:<chemin>"."""
+    if isinstance(valeur, dict):
+        return {k: (("@secret:" + chemin + "." + k) if SECRET.match(k) and not isinstance(v, dict)
+                    else _masque_feuilles(v, chemin + "." + k)) for k, v in valeur.items()}
+    return valeur
+
+
 def _pose(arbre, chemin, valeur):
     """Pose `valeur` en fin de son objet parent ; False si un parent existe et n'est pas un objet."""
     for cle in chemin[:-1]:
@@ -361,7 +372,7 @@ def fusionne_nouvelles(racine, modele):
         if SECRET.match(cible[-1]):
             valeur = "@secret:" + chemin
         elif observees:
-            valeur = json.loads(Counter(v for _, v in observees).most_common(1)[0][0])
+            valeur = _masque_feuilles(json.loads(Counter(v for _, v in observees).most_common(1)[0][0]), chemin)
         else:
             continue
         porteuses = {p for p, _ in observees if p}
@@ -398,7 +409,7 @@ def _propose(racine, modele):
     def aligne(c, v):
         chemin = ".".join(c)
         return divergentes[chemin]["parc"] if chemin in divergentes else retire(c, v)
-    neuf = _applique(modele, aligne, retire)
+    neuf = _applique(modele, aligne, lambda c, v: v, retire)
     avant, apres = _serialise(modele).decode("utf-8"), _serialise(neuf)
     res["diff"] = "\n".join(difflib.unified_diff(avant.split("\n"), apres.decode("utf-8").split("\n"),
                                                 FICHIER_MODELE, FICHIER_MODELE, lineterm="", n=1))

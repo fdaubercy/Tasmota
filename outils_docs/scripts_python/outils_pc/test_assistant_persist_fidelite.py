@@ -165,6 +165,25 @@ def test_fusion_secret(t):
     verifie([x.name for x in fuite], [], "fusion_secret : aucune valeur dans les sauvegardes du modele")
 
 
+def test_fusion_secret_imbrique(t):
+    racine = depot(t)
+    for rel in deux_puces(racine):
+        pose(racine, rel, "serveur.nouveauBloc", {"actif": "ON", "mdpInterne": TEMOIN_SECRET, "passerelle": "192.168.9.1"})
+    fusionne, ajouts = apm.fusionne_nouvelles(racine, apm.charge_modele(racine))
+    bloc = fusionne["socle"]["serveur"].get("nouveauBloc", {})
+    verifie(bloc.get("mdpInterne"), "@secret:serveur.nouveauBloc.mdpInterne", "secret_imbrique : feuille mdp* masquee dans l'objet")
+    verifie((bloc.get("actif"), bloc.get("passerelle")), ("ON", "192.168.9.1"), "secret_imbrique : passerelle PAS masquee")
+    apm.ecrit_modele(racine, fusionne, apm.NATURE_AUTO)
+    verifie(TEMOIN_SECRET.encode() in octets_modele(racine), False, "secret_imbrique : aucune valeur dans le modele ecrit")
+    verifie(TEMOIN_SECRET in json.dumps(apw.etat_modele(racine, ajouts)), False, "secret_imbrique : aucune valeur dans /modele/etat")
+    sauv = fbs.dossier_sauvegardes()
+    fuite = [x for x in sauv.rglob("*") if x.is_file() and TEMOIN_SECRET.encode() in x.read_bytes()] if sauv.is_dir() else []
+    verifie(fuite, [], "secret_imbrique : aucune valeur dans les sauvegardes")
+    noms = {"mdpWifi": 1, "pwd": 1, "password": 1, "secretX": 1, "tokenA": 1, "pskB": 1, "pass": 1, "passwd": 1,
+            "passerelle": 0, "passage": 0, "gateway": 0}
+    verifie({k: bool(apm.SECRET.match(k)) for k in noms}, {k: bool(v) for k, v in noms.items()}, "secret_imbrique : motif des noms de feuille")
+
+
 # ---- fusion_rien ---------------------------------------------------------------------------------------------
 def test_fusion_rien(t):
     racine = depot(t)
@@ -265,12 +284,11 @@ def test_modele_illisible(t):
         statut, p = b.requete("GET", "/parc")
         verifie((statut, "ligne 4" in p["erreur_modele"]), (200, True), "modele_illisible : la page s'ouvre, /parc.erreur_modele")
         verifie(b.requete("POST", "/modele/prepare", {})[0], 400, "modele_illisible : /modele/prepare refuse")
-        verifie(b.requete("POST", "/modele/applique", {"empreinte": "0" * 64})[0] in (400, 409), True, "modele_illisible : /modele/applique refuse")
+        verifie(b.requete("POST", "/modele/applique", {"empreinte": "0" * 64})[0], 400, "modele_illisible : /modele/applique -> 400")
         statut, c = b.requete("POST", "/prepare", {"reponses": taw.reponses()})
-        refuse = statut != 200 or bool(c.get("refus")) or not c.get("empreinte")
-        verifie(refuse, True, "modele_illisible : creation refusee (pas d'empreinte exploitable)")
-        verifie(b.requete("POST", "/creation", {"reponses": taw.reponses(), "empreinte": "0" * 64})[0] in (400, 409), True,
-                "modele_illisible : /creation refusee")
+        verifie((statut, "modele_persist.json ligne 4" in c), (400, True), "modele_illisible : /prepare -> 400 qui cite le modele")
+        statut, texte = b.requete("POST", "/creation", {"reponses": taw.reponses(), "empreinte": "0" * 64})
+        verifie((statut, "modele_persist.json" in texte), (400, True), "modele_illisible : /creation -> 400 qui cite le modele")
         verifie(octets_modele(b.racine), casse, "modele_illisible : fichier toujours intact apres toutes les routes")
     finally:
         b.ferme()
@@ -302,7 +320,7 @@ def test_couverture_signale(t):
 def principal():
     vrai = (tac.RACINE / apm.FICHIER_MODELE).read_bytes()
     for test in (test_fusion_cle_nouvelle, test_fusion_demarrage, test_fusion_valeur_frequente, test_fusion_puce_unique,
-                 test_fusion_secret, test_fusion_rien, test_bouton_retrait, test_bouton_http, test_modele_illisible,
+                 test_fusion_secret, test_fusion_secret_imbrique, test_fusion_rien, test_bouton_retrait, test_bouton_http, test_modele_illisible,
                  test_couverture_signale):
         with tempfile.TemporaryDirectory() as t:
             try:

@@ -184,6 +184,9 @@ function fichiers() {
   if (E.squelettes) noms().forEach(function (n) { var c = n.charAt(0).toUpperCase() + n.slice(1); l.push(d + "/controle" + c + ".be", d + "/" + n + "Fonctions.be"); });
   var ul = vide($("fichiers")); l.forEach(function (x) { ul.appendChild(el("li", {}, x)); });
 }
+function lienHote(lien) {                                      // port et chemin du serveur, hote de la page (autre appareil, IPv6)
+  var u = new URL(lien); u.hostname = location.hostname; return u.href;
+}
 async function cree_env() {
   $("creer").disabled = true;
   var r = await api("/creation", {reponses: JSON.parse(signatureDiff), empreinte: diff.empreinte}), zone = vide($("resultat"));
@@ -194,8 +197,8 @@ async function cree_env() {
   cree = true; var c = r.donnees;
   zone.appendChild(el("p", {"class": "ok", id: "creation-ok"}, "Env " + c.env + " créé (sauvegarde : " + c.sauvegarde + ")."));
   var liens = el("p", {"class": "liens"});
-  [["lien-build", c.liens.build, "Compiler et téléverser (page build)"],
-   ["lien-fichiers", c.liens.fichiers, "Fichiers Berry de l'env"]].forEach(function (x) {
+  [["lien-build", lienHote(c.liens.build), "Compiler et téléverser (page build)"],
+   ["lien-fichiers", lienHote(c.liens.fichiers), "Fichiers Berry de l'env"]].forEach(function (x) {
     var a = el("a", {id: x[0], href: x[1], target: "_blank", rel: "noopener"}, x[2]); liens.appendChild(a);
   });
   zone.appendChild(liens); liste(zone, c.avertissements, "avert");
