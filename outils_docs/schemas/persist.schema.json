@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Persist des cartes ESP32 (fork Tasmota)",
-  "description": "Genere par outils_docs/scripts_python/berry/genere_schema_persist.py a partir de 8 persists. Cle `required` si presente dans >= 50 % des exemplaires du parent et au moins 2. Ne pas editer a la main : regenerer.",
+  "description": "Genere par outils_docs/scripts_python/berry/genere_schema_persist.py a partir de 8 persists. Cle `required` si presente dans >= 50 % des exemplaires du parent et au moins 2, sauf blocs optionnels (OPTIONNELS du script). Ne pas editer a la main : regenerer.",
   "type": "object",
   "properties": {
     "diverses": {
@@ -347,8 +347,7 @@
         "affichageTempESP32",
         "affichageNomModele",
         "localisation",
-        "fuseauHoraire",
-        "historique"
+        "fuseauHoraire"
       ],
       "additionalProperties": true
     },
@@ -741,6 +740,29 @@
             "activation",
             "log"
           ],
+          "additionalProperties": true
+        },
+        "coprocesseur": {
+          "type": "object",
+          "properties": {
+            "activation": {
+              "type": "string",
+              "description": "ON ou OFF : active ou non ce bloc.",
+              "enum": [
+                "ON",
+                "OFF"
+              ]
+            },
+            "url": {
+              "type": "string"
+            },
+            "mqtt": {
+              "type": "string"
+            },
+            "bloque": {
+              "type": "string"
+            }
+          },
           "additionalProperties": true
         }
       },
@@ -1959,8 +1981,7 @@
                   "required": [
                     "ledLink",
                     "led1",
-                    "ruban",
-                    "ledRGB"
+                    "ruban"
                   ],
                   "additionalProperties": true
                 }

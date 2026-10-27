@@ -1,0 +1,2146 @@
+{
+	"version": 1,
+	"socle": {
+		"diverses": {
+			"historique": {
+				"activation": "ON",
+				"pasMinutes": 5,
+				"dureeHeures": 24,
+				"moisConserves": 24,
+				"seriesMax": 12,
+				"exclues": [],
+				"ajouts": [],
+				"compteurs": {},
+				"grafana": ""
+			},
+			"cmdMute": true,
+			"typeESP": "{{type_esp}}",
+			"logs": {
+				"profil": "normal",
+				"profils": {
+					"normal": {
+						"serie": "info",
+						"web": "info",
+						"mqtt": "erreur",
+						"syslog": "info"
+					},
+					"debug": {
+						"serie": "debug",
+						"web": "debug",
+						"mqtt": "debug",
+						"syslog": "debug"
+					}
+				},
+				"general": "info",
+				"nbLogsFiles": 0
+			},
+			"telePeriod": 300,
+			"heureReboot": "00:00",
+			"eviteResetBTN": "ON",
+			"affichageTempESP32": "ON",
+			"affichageNomModele": "OFF",
+			"localisation": {
+				"latitude": "50.410931",
+				"longitude": "3.085796"
+			},
+			"fuseauHoraire": {
+				"typeReglageHeure": "{{heure}}",
+				"timezone": 99,
+				"TimeStd": {
+					"Week": 0,
+					"Month": 10,
+					"Offset": 60,
+					"Day": 1,
+					"Hemisphere": 0,
+					"Hour": 3
+				},
+				"TimeDst": {
+					"Hemisphere": 0,
+					"Week": 0,
+					"Month": 3,
+					"Day": 1,
+					"Hour": 2,
+					"Offset": 120
+				}
+			}
+		},
+		"serveur": {
+			"activation": "ON",
+			"nom": "{{nom_lisible}}",
+			"hostname": "{{hostname}}",
+			"mDNS": "ON",
+			"apiHTTP": "ON",
+			"adressMAC": "",
+			"log": "info",
+			"IP": {
+				"IPAddress": "{{ip}}",
+				"IPGateway": "{{passerelle}}",
+				"Subnet": "255.255.255.0",
+				"DNSServer": "192.168.0.254"
+			},
+			"wifi": {
+				"power": 17,
+				"selectSignalFort": "OFF",
+				"reScanBy44": "ON",
+				"timerRebootSansWifi": 300,
+				"reseau1": {
+					"nomReseauWifi": "{{reseau1}}",
+					"mdpWifi": "@secret:wifi1"
+				},
+				"reseau2": {
+					"nomReseauWifi": "{{reseau2}}",
+					"mdpWifi": "@secret:wifi2"
+				}
+			},
+			"mqtt": {
+				"activation": "ON",
+				"hote": "192.168.0.5",
+				"port": 1883,
+				"client": "{{hostname}}",
+				"utilisateur": "fdaubercy",
+				"mdp": "@secret:mqtt",
+				"topic": "{{topic}}",
+				"groupTopic1": "{{groupe}}",
+				"groupTopic2": "",
+				"groupTopic3": ""
+			},
+			"rangeExtender": {
+				"activation": "OFF",
+				"id": "{{id}}",
+				"log": "info",
+				"telePeriod": 300,
+				"ipMaitre": "{{ip_maitre}}",
+				"AP": {
+					"IPAddress": "192.168.4.1",
+					"Subnet": "255.255.255.0",
+					"routeNAPT": "OFF",
+					"SSID": "{{ssid_ap}}",
+					"mdp": "@secret:ap"
+				}
+			},
+			"serveurFTP": {
+				"activation": "ON",
+				"utilisateur": "fdaubercy",
+				"mdp": "@secret:ftp"
+			},
+			"udp": {
+				"activation": "ON",
+				"id": "{{id}}",
+				"log": "info",
+				"telePeriod": 300,
+				"port": 2000
+			},
+			"tcp": {
+				"activation": "OFF",
+				"id": "{{id}}",
+				"log": "info"
+			},
+			"discovery": {
+				"activation": "ON",
+				"log": "info"
+			}
+		},
+		"template": {
+			"BASE": 1,
+			"GPIO": [],
+			"NAME": "{{nom_lisible}}",
+			"FLAG": 0
+		},
+		"modules": {
+			"activation": "ON"
+		},
+		"drivers": {
+			"leds": {
+				"activation": "ON",
+				"name": "Leds",
+				"log": "info",
+				"ledPower": "OFF",
+				"ledState": 6,
+				"clignoteSiDeconnexion": "ON",
+				"environnement": {
+					"leds": {
+						"ledLink": {
+							"activation": "ON",
+							"pin": 38,
+							"type": 544
+						},
+						"led1": {
+							"activation": "ON",
+							"pin": 39,
+							"id": 1,
+							"type": 288
+						},
+						"ledRGB": {
+							"activation": "OFF",
+							"pin": 48,
+							"id": 1,
+							"type": 1377,
+							"luminosite": 40
+						},
+						"ruban": {
+							"activation": "OFF",
+							"bouton": 0,
+							"dureeManuel": 30,
+							"appuiLong": 15,
+							"palette": [
+								{
+									"nom": "rouge",
+									"teinte": 0,
+									"saturation": 100
+								},
+								{
+									"nom": "orange",
+									"teinte": 30,
+									"saturation": 100
+								},
+								{
+									"nom": "jaune",
+									"teinte": 60,
+									"saturation": 100
+								},
+								{
+									"nom": "vert",
+									"teinte": 120,
+									"saturation": 100
+								},
+								{
+									"nom": "cyan",
+									"teinte": 180,
+									"saturation": 100
+								},
+								{
+									"nom": "bleu",
+									"teinte": 240,
+									"saturation": 100
+								},
+								{
+									"nom": "violet",
+									"teinte": 280,
+									"saturation": 100
+								},
+								{
+									"nom": "blanc",
+									"teinte": 0,
+									"saturation": 0
+								}
+							]
+						}
+					}
+				}
+			},
+			"SD": {
+				"activation": "OFF",
+				"name": "Carte SD",
+				"environnement": {
+					"pinsSDs": {
+						"pinsSD1": {
+							"activation": "OFF",
+							"nom": "SPI_Clk",
+							"pin": 18,
+							"id": 1,
+							"type": 736
+						},
+						"pinsSD2": {
+							"activation": "OFF",
+							"nom": "SPI_MISO",
+							"pin": 19,
+							"id": 1,
+							"type": 672
+						},
+						"pinsSD3": {
+							"activation": "OFF",
+							"nom": "SPI_MOSI",
+							"pin": 23,
+							"id": 1,
+							"type": 704
+						},
+						"pinsSD4": {
+							"activation": "OFF",
+							"nom": "SDCard CS",
+							"pin": 5,
+							"id": 1,
+							"type": 6720
+						}
+					}
+				}
+			},
+			"ecran": {
+				"activation": "OFF",
+				"name": "Ecran ILI9488",
+				"environnement": {
+					"pinsEcrans": {
+						"pinsEcran1": {
+							"activation": "OFF",
+							"nom": "Option A",
+							"pin": 0,
+							"id": 3,
+							"type": 6208
+						},
+						"pinsEcran2": {
+							"activation": "OFF",
+							"nom": "SPI CS",
+							"pin": 10,
+							"id": 1,
+							"type": 768
+						},
+						"pinsEcran3": {
+							"activation": "OFF",
+							"nom": "SPI Clk",
+							"pin": 12,
+							"id": 1,
+							"type": 736
+						},
+						"pinsEcran4": {
+							"activation": "OFF",
+							"nom": "SPI MISO",
+							"pin": 13,
+							"id": 1,
+							"type": 672
+						},
+						"pinsEcran5": {
+							"activation": "OFF",
+							"nom": "SPI MOSI",
+							"pin": 11,
+							"id": 1,
+							"type": 704
+						},
+						"pinsEcran6": {
+							"activation": "OFF",
+							"nom": "SPI DC",
+							"pin": 7,
+							"id": 1,
+							"type": 800
+						},
+						"pinsEcran7": {
+							"activation": "OFF",
+							"nom": "XPT2046 CS",
+							"pin": 9,
+							"id": 1,
+							"type": 7264
+						},
+						"pinsEcran8": {
+							"activation": "OFF",
+							"nom": "TS IRQ",
+							"pin": 3,
+							"id": 1,
+							"type": 11008
+						}
+					},
+					"relais": {
+						"relai1": {
+							"activation": "OFF",
+							"nom": "Rétro Ecl",
+							"pin": 4,
+							"id": 1,
+							"type": 992
+						},
+						"relai2": {
+							"activation": "OFF",
+							"nom": "Display Rst",
+							"pin": 6,
+							"id": 1,
+							"type": 1024
+						}
+					}
+				}
+			},
+			"I2C": {
+				"activation": "OFF",
+				"name": "Bus I2C",
+				"environnement": {
+					"pinsI2Cs": {
+						"pinsI2C1": {
+							"activation": "ON",
+							"nom": "I2C SDa",
+							"pin": 9,
+							"id": 1,
+							"type": 640
+						},
+						"pinsI2C2": {
+							"activation": "ON",
+							"nom": "I2C SCl",
+							"pin": 8,
+							"id": 1,
+							"type": 608
+						}
+					},
+					"ADS1115": {
+						"activation": "OFF",
+						"name": "Module ADS1115",
+						"adresseI2C": "0x48",
+						"I2CDriver": 13,
+						"affichageWebSensor": "OFF",
+						"alimentation_V": 3.3,
+						"voies": {
+							"A0": {
+								"mesure": "tension",
+								"plage": "0-10V",
+								"seuilMin_mV": 0
+							},
+							"A1": {
+								"mesure": "tension",
+								"plage": "0-10V",
+								"seuilMin_mV": 0
+							},
+							"A2": {
+								"mesure": "courant",
+								"plage": "0-20mA",
+								"seuilMin_mV": 0
+							},
+							"A3": {
+								"mesure": "courant",
+								"plage": "0-20mA",
+								"seuilMin_mV": 0
+							}
+						}
+					},
+					"MCP23017": {
+						"activation": "OFF",
+						"name": "MCP23017 A=Ri1-8, B=Ri9-16",
+						"adresseI2C": "0x20",
+						"I2CDriver": 22
+					},
+					"DS3231": {
+						"activation": "OFF",
+						"name": "Real Time Clock",
+						"adresseI2C": "0x68",
+						"I2CDriver": 26
+					}
+				}
+			},
+			"I2S": {
+				"activation": "OFF",
+				"name": "Bus I2S",
+				"environnement": {
+					"pinsI2Ss": {
+						"pinsI2S1": {
+							"activation": "ON",
+							"nom": "I2S DOut",
+							"pin": 9,
+							"id": 1,
+							"type": 7776
+						},
+						"pinsI2S2": {
+							"activation": "ON",
+							"nom": "I2S WS",
+							"pin": 10,
+							"id": 1,
+							"type": 7840
+						},
+						"pinsI2S3": {
+							"activation": "ON",
+							"nom": "I2S DIn",
+							"pin": 11,
+							"id": 1,
+							"type": 7872
+						},
+						"pinsI2S4": {
+							"activation": "ON",
+							"nom": "I2S BClk",
+							"pin": 12,
+							"id": 1,
+							"type": 7808
+						},
+						"pinsI2S5": {
+							"activation": "ON",
+							"nom": "I2S MClk",
+							"pin": 13,
+							"id": 1,
+							"type": 9376
+						},
+						"pinsI2S6": {
+							"activation": "ON",
+							"nom": "Activation PA",
+							"pin": 53,
+							"id": 1,
+							"type": 3840
+						}
+					},
+					"ES8311": {
+						"activation": "OFF",
+						"name": "Codec Audio ES8311",
+						"log": "info"
+					}
+				}
+			},
+			"Ethernet": {
+				"activation": "OFF",
+				"name": "Bus Ethernet",
+				"environnement": {
+					"pinsEthernets": {
+						"pinsEthernet1": {
+							"activation": "OFF",
+							"nom": "ETH MDC",
+							"pin": 31,
+							"id": 1,
+							"type": 5568
+						},
+						"pinsEthernet2": {
+							"activation": "OFF",
+							"nom": "ETH Pwr",
+							"pin": 51,
+							"id": 1,
+							"type": 5536
+						},
+						"pinsEthernet3": {
+							"activation": "OFF",
+							"nom": "ETH MDIO",
+							"pin": 52,
+							"id": 1,
+							"type": 5600
+						}
+					}
+				}
+			},
+			"ModBus": {
+				"activation": "OFF",
+				"name": "ModBus RS485",
+				"id": "{{id}}",
+				"debit": 19200,
+				"mode": "8N1",
+				"timeoutReponse": 5000,
+				"voieCommandes": "Serial",
+				"timeoutReponseUDP": 2000,
+				"log": "info",
+				"activationReponseCMD": "ON",
+				"relaisPushMQTT": "OFF",
+				"typeComm": {
+					"Serial": "OFF",
+					"UDP": "OFF",
+					"MQTT": "OFF",
+					"TCP": "OFF"
+				},
+				"environnement": {
+					"pinsModBus": {
+						"RX": {
+							"activation": "OFF",
+							"nom": "ModBr Rx",
+							"pin": 4,
+							"id": 1,
+							"type": 9440,
+							"virtuel": "OFF"
+						},
+						"TX": {
+							"activation": "OFF",
+							"nom": "ModBr Tx",
+							"pin": 5,
+							"id": 1,
+							"type": 9408,
+							"virtuel": "OFF"
+						}
+					},
+					"Conn16channels": {
+						"log": "info",
+						"Conn16channel1": {
+							"activation": "OFF",
+							"name": "Connecteur RS485 16 sorties",
+							"id": 1,
+							"verifieAuDemarrage": "OFF"
+						}
+					},
+					"TasmotaSlaveModBus": {
+						"log": "info",
+						"TasmotaSlaveModBus1": {
+							"activation": "OFF",
+							"name": "Slave ModBus",
+							"id": 0
+						}
+					}
+				}
+			},
+			"KNX": {
+				"activation": "OFF",
+				"amelioration": "ON",
+				"name": "Bus KNX",
+				"log": "detail",
+				"environnement": {}
+			},
+			"LoRaWan": {
+				"activation": "OFF",
+				"name": "Connexion LoRaWan 868MHz",
+				"id": 0,
+				"log": "info",
+				"environnement": {}
+			},
+			"voletRoulants": {
+				"activation": "OFF",
+				"name": "Driver Volet Roulant",
+				"mode": 3,
+				"log": "info",
+				"environnement": {
+					"VRs": {
+						"VR1": {
+							"activation": "OFF",
+							"nom": "Volet Roulant Garage",
+							"id": 1,
+							"etat": "STOPPED",
+							"position": 0,
+							"relais1": 2,
+							"boutons": {
+								"bouton1": {
+									"activation": "OFF",
+									"id": -1,
+									"function": "toggle",
+									"mqtt": "OFF"
+								},
+								"bouton2": {
+									"activation": "OFF",
+									"id": -1,
+									"function": "up",
+									"mqtt": "OFF"
+								},
+								"bouton3": {
+									"activation": "OFF",
+									"id": -1,
+									"function": "down",
+									"mqtt": "OFF"
+								},
+								"bouton4": {
+									"activation": "OFF",
+									"id": -1,
+									"function": "updown",
+									"mqtt": "OFF"
+								}
+							},
+							"capteursPosition": {
+								"activation": "ON",
+								"capteurOuvert": "Switch1",
+								"capteurFerme": "Switch2"
+							},
+							"activationSiOuvert": {
+								"activation": "OFF",
+								"tabRelais": [],
+								"tabEtatRelais": []
+							},
+							"activationSiFerme": {
+								"activation": "OFF",
+								"tabRelais": [],
+								"tabEtatRelais": []
+							},
+							"tempsMontee": 15,
+							"tempsDescente": 15,
+							"led_temoin": {
+								"activation": "OFF",
+								"nom": "LED état Trappe",
+								"pin": 39,
+								"intervalle": 500
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"roles": {
+		"autonome": {
+			"serveur.rangeExtender.activation": "OFF",
+			"serveur.rangeExtender.ipMaitre": "",
+			"serveur.rangeExtender.AP.routeNAPT": "OFF"
+		},
+		"maitre": {
+			"serveur.rangeExtender.activation": "ON",
+			"serveur.rangeExtender.ipMaitre": "",
+			"serveur.rangeExtender.AP.routeNAPT": "ON"
+		},
+		"esclave": {
+			"serveur.IP.IPGateway": "192.168.4.1",
+			"serveur.wifi.power": 0,
+			"serveur.wifi.timerRebootSansWifi": 0,
+			"serveur.rangeExtender.activation": "ON",
+			"serveur.rangeExtender.AP.routeNAPT": "ON",
+			"diverses.logs.profils.debug.mqtt": "erreur",
+			"drivers.ModBus.environnement.pinsModBus.RX.nom": "Série Rx",
+			"drivers.ModBus.environnement.pinsModBus.RX.type": 3232,
+			"drivers.ModBus.environnement.pinsModBus.TX.nom": "Série Tx",
+			"drivers.ModBus.environnement.pinsModBus.TX.type": 3200,
+			"drivers.ModBus.environnement.Conn16channels.Conn16channel1.id": 0,
+			"drivers.LoRaWan.id": 1
+		}
+	},
+	"puces": {
+		"ESP32": {
+			"gpio": 36,
+			"historique": false,
+			"prefixe_env": "tasmota32",
+			"h": [
+				"        // -- Options for {{env}} ------",
+				"        #elif defined({{define}})",
+				"            // -- CODE_IMAGE_STR is the name shown between brackets on the",
+				"            //    Information page or in INFO MQTT messages",
+				"            #undef CODE_IMAGE_STR",
+				"                #define CODE_IMAGE_STR \"{{nom_lisible}}\"",
+				"            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section",
+				"            #ifndef DISABLE_REFERER_CHK",
+				"                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)",
+				"            #endif",
+				"",
+				"            // -- ESP32 sans PSRAM : animation Berry et serveur FTP retires (audit Berry P9.8, 2026-10-26) --",
+				"            // Memes raisons que la cave ESP32 (section des deux cartes de la cave, plus haut) : l'animation est",
+				"            // definie pour tous les modules dans la partie commune et chargee d'office par l'init amont",
+				"            // (~94k + ~98k de flash, un peu de RAM Berry) alors que la carte n'a pas de ruban ; le FTP",
+				"            // ('new FtpServer', relance a chaque connexion reseau) faisait planter la cave (tas < 25 Ko).",
+				"            // A garder avant tout deploiement du framework Berry sur cette carte. serveurFTP.activation",
+				"            // est a \"OFF\" dans son _persist.json.",
+				"            #ifdef USE_BERRY_ANIMATION_DSL",
+				"                #undef USE_BERRY_ANIMATION_DSL",
+				"            #endif",
+				"            #ifdef USE_BERRY_ANIMATION",
+				"                #undef USE_BERRY_ANIMATION",
+				"            #endif",
+				"            #ifdef USE_FTP",
+				"                #undef USE_FTP",
+				"            #endif",
+				"",
+				"            // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------",
+				"            // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino",
+				"            // #define FILE_LOG_SIZE       100",
+				"            // #define FILE_LOG_COUNT      10                        // Enable with command `FileLog 1..4` or `FileLog 11..14`",
+				"            // #define FILE_LOG_NAME       \"/logs/fileLog %02d.txt\"",
+				"",
+				"            // -- Project -------------------------------------",
+				"            #undef PROJECT",
+				"                #define PROJECT           \"{{hostname}}\"         \t // PROJECT is used as the default topic delimiter",
+				"                #define USER_TEMPLATE \t\t\"{\\\"NAME\\\":\\\"{{nom_lisible}}\\\",\\\"GPIO\\\":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],\\\"FLAG\\\":0,\\\"BASE\\\":1}\"",
+				"",
+				"            // -- Wi-Fi ---------------------------------------",
+				"            #undef WIFI_IP_ADDRESS",
+				"                #define WIFI_IP_ADDRESS       \"{{ip}}\"         // [IpAddress1] Set to 0.0.0.0 for using DHCP or enter a static IP address",
+				"            #undef WIFI_GATEWAY",
+				"                #define WIFI_GATEWAY           \"{{passerelle}}\"      // [IpAddress2] If not using DHCP set Gateway IP address",
+				"            #undef WIFI_DNS",
+				"                #define WIFI_DNS               \"192.168.0.254\"      // [IpAddress4] If not using DHCP set DNS1 IP address (might be equal to WIFI_GATEWAY)",
+				"",
+				"            #undef STA_SSID1",
+				"                #define STA_SSID1              \"{{reseau1}}\"                // [Ssid1] Wi-Fi SSID",
+				"            #undef STA_PASS1",
+				"                #define STA_PASS1              \"{{@wifi1}}\"                // [Password1] Wi-Fi password",
+				"            #undef STA_SSID2",
+				"                #define STA_SSID2              \"{{reseau2}}\"                // [Ssid2] Optional alternate AP Wi-Fi SSID",
+				"            #undef STA_PASS2",
+				"                #define STA_PASS2              \"{{@wifi2}}\"                // [Password2] Optional alternate AP Wi-Fi password",
+				"",
+				"            // -- Setup your own RANGE EXTENDER settings  -----",
+				"            // Les autres paramètres du RangeExtender sont gérés par la partie 'Post-process compile options' en fin de fichier",
+				"            // Backlog RgxSSID rangeextender ; RgxPassword securepassword ; RgxAddress 192.168.123.1 ; RgxSubnet 255.255.255.0; RgxState 1 ; RgxNAPT 1",
+				"            // RgxPort tcp, 8080, 192.168.4.1, 80",
+				"            // #define USE_WIFI_RANGE_EXTENDER",
+				"            #ifdef USE_WIFI_RANGE_EXTENDER",
+				"                #define WIFI_RGX_SSID           \"{{ssid_ap}}\"",
+				"                #define WIFI_RGX_PASSWORD       \"{{@ap}}\"",
+				"            #endif",
+				"",
+				"            // You might even pass some parameters from the command line ----------------------------",
+				"            // Ie:  export PLATFORMIO_BUILD_FLAGS='-DUSE_CONFIG_OVERRIDE -DMY_IP=\"192.168.1.99\" -DMY_GW=\"192.168.1.1\" -DMY_DNS=\"192.168.1.1\"'",
+				"",
+				"            // -- Setup your own MQTT settings  ---------------",
+				"            #undef MQTT_CLIENT_ID",
+				"                #define MQTT_CLIENT_ID \"{{hostname}}\" // [MqttClient] Also fall back topic using last 6 characters of MAC address or use \"DVES_%12X\" for complete MAC address",
+				"            #undef MQTT_TOPIC",
+				"                #define MQTT_TOPIC \"{{topic}}\" // [Topic] unique MQTT device topic including (part of) device MAC address",
+				"            #undef MQTT_GRPTOPIC",
+				"                #define MQTT_GRPTOPIC \"{{groupe}}\" // [GroupTopic] MQTT Group topic",
+				"            #undef FRIENDLY_NAME",
+				"                #define FRIENDLY_NAME \"{{nom_lisible}}\" // [FriendlyName] Friendlyname up to 32 characters used by webpages and Alexa",
+				"            #undef EMULATION",
+				"                #define EMULATION EMUL_NONE // [Emulation] Select Belkin WeMo (single relay/light) or Hue Bridge emulation (multi relay/light) (EMUL_NONE, EMUL_WEMO or EMUL_HUE)",
+				"",
+				"            // -- ESP-NOW -------------------------------------",
+				"            // Plus d'info dans le dossier : \"Tasmota\\info\\xdrv_57_tasmesh.md\"",
+				"            // #define USE_TASMESH                              // Enable Tasmota Mesh using ESP-NOW (+11k code)",
+				"",
+				"            // -- Optional modules ----------------------------",
+				"            #undef USE_SHUTTER // Add Shutter support for up to 4 shutter with different motortypes (+11k code)",
+				"",
+				"            // -- LCD I2C -----------------------",
+				"            //#define USE_I2C             // I2C using library wire (+10k code, 0k2 mem, 124 iram)",
+				"            //#define USE_DISPLAY         // Add I2C/TM1637/MAX7219 Display Support (+2k code)",
+				"            //#define USE_DISPLAY_SSD1306 // [DisplayModel 2] [I2cDriver4] Enable SSD1306 Oled 128x64 display (I2C addresses 0x3C and 0x3D) (+16k code)",
+				"            //#define USE_DISPLAY_SH1106  // [DisplayModel 7] [I2cDriver6] Enable SH1106 Oled 128x64 display (I2C addresses 0x3C and 0x3D)",
+				"            //#define USE_GRAPH           // Enable line charts with displays",
+				"            //#define NUM_GRAPHS 4        // Max 16",
+				"",
+				"            // -- I2C sensors ---------------------------------",
+				"            #define USE_I2C             // I2C using library wire (+10k code, 0k2 mem, 124 iram)",
+				"            #ifdef USE_I2C",
+				"                #define I2CDRIVERS_0_31        0xFFFFFFFF        // Enable I2CDriver0  to I2CDriver31",
+				"                #define I2CDRIVERS_32_63       0xFFFFFFFF        // Enable I2CDriver32 to I2CDriver63",
+				"                #define I2CDRIVERS_64_95       0xFFFFFFFF        // Enable I2CDriver64 to I2CDriver95",
+				"                #define I2CDRIVERS_96_127      0xFFFFFFFF        // Enable I2CDriver96 to I2CDriver127",
+				"                #define I2CDRIVERS_128_159     0xFFFFFFFF        // Enable I2CDriver128 to I2CDriver159",
+				"",
+				"                //#define USE_ADS1115                             // [I2cDriver13] Enable ADS1115 16 bit A/D converter (I2C address 0x48, 0x49, 0x4A or 0x4B) based on Adafruit ADS1x15 library (no library needed) (+0k7 code)",
+				"",
+				"                // Cf. url: https://tasmota.github.io/docs/MCP230xx/",
+				"                // Vérifier activation du driver : I2cDriver22 1",
+				"                // Tester l'adresse du module MCP23XXX (adresse comprise entre 0x20 & 0x26) : I2CScan",
+				"                // Les paramètres des I/O est realisé dans le fichier mcp23xx.dat",
+				"                // Paramètres Mode 2 MCP23017",
+				"                //#define USE_MCP23XXX_DRV",
+				"                    //#define USE_MCP230xx_ADDR 0x20                  // Enable MCP23008/MCP23017 I2C Address to use (Must be within range 0x20 through 0x26 - set according to your wired setup)",
+				"                    #undef USE_DS1624                                 // [I2cDriver42] Enable DS1624, DS1621 temperature sensor (I2C addresses 0x48 - 0x4F) (+1k2 code)",
+				"            #endif",
+				"",
+				"            // -- Internal Analog input -----------------------",
+				"            //#undef USE_ADC_VCC // Display Vcc in Power status. Disable for use as Analog input on selected devices",
+				"",
+				"            // -- Optional light modules ----------------------",
+				"            #define USE_LIGHT                                // Add support for light control",
+				"            // #define USE_WS2812                               // WS2812 Led string using library NeoPixelBus (+5k code, +1k mem, 232 iram) - Disable by //",
+				"            //  #define USE_WS2812_DMA                         // ESP8266 only, DMA supports only GPIO03 (= Serial RXD) (+1k mem). When USE_WS2812_DMA is enabled expect Exceptions on Pow",
+				"                #undef USE_WS2812_RMT",
+				"                #define USE_WS2812_RMT  1                      // ESP32 only, hardware RMT support (default). Specify the RMT channel 0..7. This should be preferred to software bit bang.",
+				"            //  #define USE_WS2812_I2S  0                      // ESP32 only, hardware I2S support. Specify the I2S channel 0..2. This is exclusive from RMT. By default, prefer RMT support",
+				"            //  #define USE_WS2812_INVERTED                    // Use inverted data signal",
+				"                #define USE_WS2812_HARDWARE  NEO_HW_WS2812     // Hardware type (NEO_HW_WS2812, NEO_HW_WS2812X, NEO_HW_WS2813, NEO_HW_SK6812, NEO_HW_LC8812, NEO_HW_APA106, NEO_HW_P9813)",
+				"                #undef USE_WS2812_CTYPE",
+				"                #define USE_WS2812_CTYPE     NEO_GRB           // Color type (NEO_RGB, NEO_GRB, NEO_BRG, NEO_RBG, NEO_RGBW, NEO_GRBW)",
+				"",
+				"            // -- One wire sensors ----------------------------",
+				"            #undef USE_HDMI_CEC                              // Add support for HDMI CEC bus (+7k code, 1456 bytes IRAM)",
+				"            #define USE_DS18x20                              // Add support for DS18x20 sensors with id sort, single scan and read retry (+2k6 code)",
+				"            //#define W1_PARASITE_POWER                      // Optimize for parasite powered sensors",
+				"            //#define DS18x20_USE_ID_AS_NAME                 // Use last 3 bytes for naming of sensors",
+				"            #define DS18x20_USE_ID_ALIAS                      // Add support aliasing for DS18x20 sensors. See comments in xsns_05 files (+0k5 code)",
+				"",
+				"            // -- Serial sensors ------------------------------",
+				"            // #define USE_MODBUS",
+				"            // #define USE_TASMOTA_CLIENT                       // Add support for Arduino Uno/Pro Mini via serial interface including flashing (+2k6 code, 64 mem)",
+				"                                                            // GPIO4=Slave TX / GPIO5=Slave RX",
+				"",
+				"            // -- Capteurs & Gestion Bluetooth ------------------------------",
+				"            // #define USE_BLE_ESP32                              // Add support for ESP32 as a BLE-bridge (+9k2? mem, +292k? flash)",
+				"",
+				"            // -- LoRaWan 868MHz ------------------------------",
+				"            // #define USE_LORAWAN_BRIDGE      // Add support for LoRaWan bridge (+8k code)",
+				"",
+				"            // -- Utilisation des WebSockets ------------------------------",
+				"            #define USE_WSSERVER",
+				"",
+				"            // -- Rules or Script  ----------------------------",
+				"            // Select none or only one of the below defines USE_RULES or USE_SCRIPT",
+				"            #define USE_RULES                                                       // Add support for rules (+8k code)",
+				"            #ifdef USE_RULES",
+				"                #define SUPPORT_MQTT_EVENT                                          // Support trigger event with MQTT subscriptions (+1k8 code)",
+				"                #define USE_EXPRESSION                                              // Add support for expression evaluation in rules (+1k7 code)",
+				"                    #define SUPPORT_IF_STATEMENT                                    // Add support for IF statement in rules (+2k7)",
+				"                //#define USER_RULE1 \"ON System#Boot DO Sensor12 S0 ENDON\"          // Add rule1 data saved at initial firmware load or when command reset is executed",
+				"                //#define USER_RULE2 \"<Any rule2 data>\"                             // Add rule2 data saved at initial firmware load or when command reset is executed",
+				"                //#define USER_RULE3 \"<Any rule3 data>\"                             // Add rule3 data saved at initial firmware load or when command reset is executed",
+				"                #define USE_VIEW_RULE_MEMS_AND_VARS                                 // Enable viewing of rule memories and variables in the web UI (+0k7 code)",
+				"            #endif",
+				"            #ifdef USER_BACKLOG",
+				"                #undef USER_BACKLOG",
+				"            #endif",
+				"            #define USER_BACKLOG      \"Backlog Module 0; Hostname {{hostname}}\"",
+				""
+			],
+			"ajouts": {
+				"diverses.historique": null,
+				"drivers.leds.environnement.leds.ledRGB": null,
+				"serveur.serveurFTP.activation": "OFF"
+			}
+		},
+		"ESP32S3": {
+			"gpio": 38,
+			"historique": true,
+			"prefixe_env": "tasmota32s3",
+			"h": [
+				"        // -- Options for {{env}} ------",
+				"        #elif defined({{define}})",
+				"            // -- CODE_IMAGE_STR is the name shown between brackets on the",
+				"            //    Information page or in INFO MQTT messages",
+				"            #undef CODE_IMAGE_STR",
+				"                #define CODE_IMAGE_STR \"{{nom_lisible}}\"",
+				"            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section",
+				"            #ifndef DISABLE_REFERER_CHK",
+				"                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)",
+				"            #endif",
+				"",
+				"            // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------",
+				"            // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino",
+				"            // #define FILE_LOG_SIZE       100",
+				"            // #define FILE_LOG_COUNT      10                        // Enable with command `FileLog 1..4` or `FileLog 11..14`",
+				"            // #define FILE_LOG_NAME       \"/logs/fileLog %02d.txt\"",
+				"",
+				"            // -- Project -------------------------------------",
+				"            #undef PROJECT",
+				"                #define PROJECT           \"{{hostname}}\"         \t // PROJECT is used as the default topic delimiter",
+				"",
+				"            #ifdef USER_TEMPLATE",
+				"                #undef USER_TEMPLATE",
+				"            #endif",
+				"            #define USER_TEMPLATE \t\t\"{\\\"NAME\\\":\\\"{{nom_lisible}}\\\",\\\"GPIO\\\":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],\\\"FLAG\\\":0,\\\"BASE\\\":1}\"",
+				"",
+				"            // -- Pile de la boucle : 24 Ko, comme quand FIRMWARE_LVGL la fixait (LVGL retire le 2026-10-24, audit P2.1)",
+				"            #undef SET_ESP32_STACK_SIZE",
+				"                #define SET_ESP32_STACK_SIZE (24 * 1024)",
+				"",
+				"            #ifdef MODULE",
+				"                #undef MODULE",
+				"            #endif",
+				"            #define MODULE USER_MODULE                       // Set template enabled by default",
+				"",
+				"            // -- Wi-Fi ---------------------------------------",
+				"            #undef WIFI_IP_ADDRESS",
+				"                #define WIFI_IP_ADDRESS        \"{{ip}}\"         // [IpAddress1] Set to 0.0.0.0 for using DHCP or enter a static IP address",
+				"            #undef WIFI_GATEWAY",
+				"                #define WIFI_GATEWAY           \"{{passerelle}}\"      // [IpAddress2] If not using DHCP set Gateway IP address",
+				"            #undef WIFI_DNS",
+				"                #define WIFI_DNS               \"192.168.0.254\"      // [IpAddress4] If not using DHCP set DNS1 IP address (might be equal to WIFI_GATEWAY)",
+				"",
+				"            #undef STA_SSID1",
+				"                #define STA_SSID1              \"{{reseau1}}\"                // [Ssid1] Wi-Fi SSID",
+				"            #undef STA_PASS1",
+				"                #define STA_PASS1              \"{{@wifi1}}\"                // [Password1] Wi-Fi password",
+				"            #undef STA_SSID2",
+				"                #define STA_SSID2              \"{{reseau2}}\"                // [Ssid2] Optional alternate AP Wi-Fi SSID",
+				"            #undef STA_PASS2",
+				"                #define STA_PASS2              \"{{@wifi2}}\"                // [Password2] Optional alternate AP Wi-Fi password",
+				"",
+				"",
+				"            // -- Setup your own RANGE EXTENDER settings  -----",
+				"            // Les autres paramètres du RangeExtender sont gérés par la partie 'Post-process compile options' en fin de fichier",
+				"            // Backlog RgxSSID rangeextender ; RgxPassword securepassword ; RgxAddress 192.168.123.1 ; RgxSubnet 255.255.255.0; RgxState 1 ; RgxNAPT 1",
+				"            // RgxPort tcp, 8080, 192.168.4.1, 80",
+				"            #define USE_WIFI_RANGE_EXTENDER",
+				"            #ifdef USE_WIFI_RANGE_EXTENDER",
+				"                #define WIFI_RGX_SSID           \"{{ssid_ap}}\"",
+				"                #define WIFI_RGX_PASSWORD       \"{{@ap}}\"",
+				"            #endif",
+				"",
+				"            // You might even pass some parameters from the command line ----------------------------",
+				"            // Ie:  export PLATFORMIO_BUILD_FLAGS='-DUSE_CONFIG_OVERRIDE -DMY_IP=\"192.168.1.99\" -DMY_GW=\"192.168.1.1\" -DMY_DNS=\"192.168.1.1\"'",
+				"",
+				"            // -- Setup your own MQTT settings  ---------------",
+				"            #undef MQTT_CLIENT_ID",
+				"                #define MQTT_CLIENT_ID \"{{hostname}}\" // [MqttClient] Also fall back topic using last 6 characters of MAC address or use \"DVES_%12X\" for complete MAC address",
+				"            #undef MQTT_TOPIC",
+				"                #define MQTT_TOPIC \"{{topic}}\" // [Topic] unique MQTT device topic including (part of) device MAC address",
+				"            #undef MQTT_GRPTOPIC",
+				"                #define MQTT_GRPTOPIC \"{{groupe}}\" // [GroupTopic] MQTT Group topic",
+				"            #undef FRIENDLY_NAME",
+				"                #define FRIENDLY_NAME \"{{nom_lisible}}\" // [FriendlyName] Friendlyname up to 32 characters used by webpages and Alexa",
+				"            #undef EMULATION",
+				"                #define EMULATION EMUL_NONE // [Emulation] Select Belkin WeMo (single relay/light) or Hue Bridge emulation (multi relay/light) (EMUL_NONE, EMUL_WEMO or EMUL_HUE)",
+				"",
+				"            // -- ESP-NOW -------------------------------------",
+				"            // Plus d'info dans le dossier : \"Tasmota\\info\\xdrv_57_tasmesh.md\"",
+				"",
+				"            // -- Optional modules ----------------------------",
+				"",
+				"            // -- LCD I2C -----------------------",
+				"            //#define USE_I2C             // I2C using library wire (+10k code, 0k2 mem, 124 iram)",
+				"            //#define USE_DISPLAY         // Add I2C/TM1637/MAX7219 Display Support (+2k code)",
+				"            //#define USE_DISPLAY_SSD1306 // [DisplayModel 2] [I2cDriver4] Enable SSD1306 Oled 128x64 display (I2C addresses 0x3C and 0x3D) (+16k code)",
+				"            //#define USE_DISPLAY_SH1106  // [DisplayModel 7] [I2cDriver6] Enable SH1106 Oled 128x64 display (I2C addresses 0x3C and 0x3D)",
+				"            //#define USE_GRAPH           // Enable line charts with displays",
+				"            //#define NUM_GRAPHS 4        // Max 16",
+				"",
+				"            // -- I2C sensors ---------------------------------",
+				"            #ifdef USE_I2C",
+				"                #define I2CDRIVERS_0_31        0xFFFFFFFF        // Enable I2CDriver0  to I2CDriver31",
+				"                #define I2CDRIVERS_32_63       0xFFFFFFFF        // Enable I2CDriver32 to I2CDriver63",
+				"                #define I2CDRIVERS_64_95       0xFFFFFFFF        // Enable I2CDriver64 to I2CDriver95",
+				"                #define I2CDRIVERS_96_127      0xFFFFFFFF        // Enable I2CDriver96 to I2CDriver127",
+				"                #define I2CDRIVERS_128_159     0xFFFFFFFF        // Enable I2CDriver128 to I2CDriver159",
+				"",
+				"",
+				"                // Cf. url: https://tasmota.github.io/docs/MCP230xx/",
+				"                // Vérifier activation du driver : I2cDriver22 1",
+				"                // Tester l'adresse du module MCP23XXX (adresse comprise entre 0x20 & 0x26) : I2CScan",
+				"                // Les paramètres des I/O est realisé dans le fichier mcp23xx.dat",
+				"                // Paramètres Mode 2 MCP23017",
+				"                //#define USE_MCP23XXX_DRV",
+				"                    //#define USE_MCP230xx_ADDR 0x20                  // Enable MCP23008/MCP23017 I2C Address to use (Must be within range 0x20 through 0x26 - set according to your wired setup)",
+				"                    #undef USE_DS1624                                 // [I2cDriver42] Enable DS1624, DS1621 temperature sensor (I2C addresses 0x48 - 0x4F) (+1k2 code)",
+				"",
+				"            #endif",
+				"",
+				"",
+				"            // -- Optional light modules ----------------------",
+				"            #define USE_LIGHT                                // Add support for light control",
+				"            #define USE_WS2812                               // WS2812 Led string using library NeoPixelBus (+5k code, +1k mem, 232 iram) - Disable by //",
+				"            //  #define USE_WS2812_DMA                         // ESP8266 only, DMA supports only GPIO03 (= Serial RXD) (+1k mem). When USE_WS2812_DMA is enabled expect Exceptions on Pow",
+				"            //  #define USE_WS2812_I2S  0                      // ESP32 only, hardware I2S support. Specify the I2S channel 0..2. This is exclusive from RMT. By default, prefer RMT support",
+				"            //  #define USE_WS2812_INVERTED                    // Use inverted data signal",
+				"                #define USE_WS2812_HARDWARE  NEO_HW_WS2812     // Hardware type (NEO_HW_WS2812, NEO_HW_WS2812X, NEO_HW_WS2813, NEO_HW_SK6812, NEO_HW_LC8812, NEO_HW_APA106, NEO_HW_P9813)",
+				"                #undef USE_WS2812_CTYPE",
+				"                #define USE_WS2812_CTYPE     NEO_GRB           // Color type (NEO_RGB, NEO_GRB, NEO_BRG, NEO_RBG, NEO_RGBW, NEO_GRBW)",
+				"",
+				"            // -- One wire sensors ----------------------------",
+				"            #undef USE_HDMI_CEC                              // Add support for HDMI CEC bus (+7k code, 1456 bytes IRAM)",
+				"",
+				"            // -- One wire sensors ----------------------------",
+				"            #undef USE_HDMI_CEC                              // Add support for HDMI CEC bus (+7k code, 1456 bytes IRAM)",
+				"",
+				"            // -- Serial sensors ------------------------------",
+				"            // #define USE_TASMOTA_CLIENT                       // Add support for Arduino Uno/Pro Mini via serial interface including flashing (+2k6 code, 64 mem)",
+				"                                                            // GPIO4=Slave TX / GPIO5=Slave RX",
+				"",
+				"            // -- LoRaWan 868MHz ------------------------------",
+				"",
+				"",
+				"            // -- Rules or Script  ----------------------------",
+				"            // Select none or only one of the below defines USE_RULES or USE_SCRIPT",
+				"            #define USE_RULES                                                       // Add support for rules (+8k code)",
+				"            #ifdef USE_RULES",
+				"                #define SUPPORT_MQTT_EVENT                                          // Support trigger event with MQTT subscriptions (+1k8 code)",
+				"                #define USE_EXPRESSION                                              // Add support for expression evaluation in rules (+1k7 code)",
+				"                    #define SUPPORT_IF_STATEMENT                                    // Add support for IF statement in rules (+2k7)",
+				"                //#define USER_RULE2 \"<Any rule2 data>\"                             // Add rule2 data saved at initial firmware load or when command reset is executed",
+				"                //#define USER_RULE3 \"<Any rule3 data>\"                             // Add rule3 data saved at initial firmware load or when command reset is executed",
+				"                #define USE_VIEW_RULE_MEMS_AND_VARS                                 // Enable viewing of rule memories and variables in the web UI (+0k7 code)",
+				"            #endif",
+				"            #ifdef USER_BACKLOG",
+				"                #undef USER_BACKLOG",
+				"            #endif",
+				"            #define USER_BACKLOG      \"Backlog Hostname {{hostname}}\"",
+				""
+			],
+			"ajouts": {}
+		},
+		"ESP32P4": {
+			"gpio": 55,
+			"historique": true,
+			"prefixe_env": "tasmota32p4",
+			"h": [
+				"        // -- Options for {{env}} ------",
+				"        #elif defined({{define}})",
+				"            // -- CODE_IMAGE_STR is the name shown between brackets on the",
+				"            //    Information page or in INFO MQTT messages",
+				"            #ifdef CODE_IMAGE_STR",
+				"                #undef CODE_IMAGE_STR",
+				"            #endif",
+				"            #define CODE_IMAGE_STR      \"{{nom_lisible}}\"",
+				"            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section",
+				"            #ifndef DISABLE_REFERER_CHK",
+				"                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)",
+				"            #endif",
+				"",
+				"            // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------",
+				"            // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino",
+				"            // #define FILE_LOG_SIZE       100",
+				"            // #define FILE_LOG_COUNT      10                        // Enable with command `FileLog 1..4` or `FileLog 11..14`",
+				"            // #define FILE_LOG_NAME       \"/logs/fileLog %02d.txt\"",
+				"",
+				"            // -- Project -------------------------------------",
+				"            #ifdef PROJECT",
+				"                #undef PROJECT",
+				"            #endif",
+				"            #define PROJECT             \"{{hostname}}\"         \t // PROJECT is used as the default topic delimiter",
+				"            #ifdef USER_TEMPLATE",
+				"                #undef USER_TEMPLATE",
+				"            #endif",
+				"",
+				"            #define USER_TEMPLATE \t\t\"{\\\"NAME\\\":\\\"{{nom_lisible}}\\\",\\\"GPIO\\\":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],\\\"FLAG\\\":0,\\\"BASE\\\":1,\\\"CMND\\\":\\\"ethtype 1|ethaddress -1\\\"}\"",
+				"",
+				"            #ifdef MODULE",
+				"                #undef MODULE",
+				"            #endif",
+				"            #define MODULE USER_MODULE                       // Set template enabled by default",
+				"",
+				"            // -- Wi-Fi ---------------------------------------",
+				"            #ifdef WIFI_IP_ADDRESS",
+				"                #undef WIFI_IP_ADDRESS",
+				"            #endif",
+				"            #define WIFI_IP_ADDRESS         \"{{ip}}\"               // [IpAddress1] Set to 0.0.0.0 for using DHCP or enter a static IP address",
+				"            #undef WIFI_GATEWAY",
+				"                #define WIFI_GATEWAY           \"{{passerelle}}\"      // [IpAddress2] If not using DHCP set Gateway IP address",
+				"            #undef WIFI_DNS",
+				"                #define WIFI_DNS               \"192.168.0.254\"      // [IpAddress4] If not using DHCP set DNS1 IP address (might be equal to WIFI_GATEWAY)",
+				"",
+				"            #undef STA_SSID1",
+				"                #define STA_SSID1              \"{{reseau1}}\"                // [Ssid1] Wi-Fi SSID",
+				"            #undef STA_PASS1",
+				"                #define STA_PASS1              \"{{@wifi1}}\"                // [Password1] Wi-Fi password",
+				"            #undef STA_SSID2",
+				"                #define STA_SSID2              \"{{reseau2}}\"                // [Ssid2] Optional alternate AP Wi-Fi SSID",
+				"            #undef STA_PASS2",
+				"                #define STA_PASS2              \"{{@wifi2}}\"                // [Password2] Optional alternate AP Wi-Fi password",
+				"",
+				"            // -- Setup your own RANGE EXTENDER settings  -----",
+				"            // Les autres paramètres du RangeExtender sont gérés par la partie 'Post-process compile options' en fin de fichier",
+				"            // Backlog RgxSSID rangeextender ; RgxPassword securepassword ; RgxAddress 192.168.123.1 ; RgxSubnet 255.255.255.0; RgxState 1 ; RgxNAPT 1",
+				"            // RgxPort tcp, 8080, 192.168.4.1, 80",
+				"            #define USE_WIFI_RANGE_EXTENDER",
+				"            #ifdef USE_WIFI_RANGE_EXTENDER",
+				"                #define WIFI_RGX_SSID           \"{{ssid_ap}}\"",
+				"                #define WIFI_RGX_PASSWORD       \"{{@ap}}\"",
+				"            #endif",
+				"",
+				"            // You might even pass some parameters from the command line ----------------------------",
+				"            // Ie:  export PLATFORMIO_BUILD_FLAGS='-DUSE_CONFIG_OVERRIDE -DMY_IP=\"192.168.1.99\" -DMY_GW=\"192.168.1.1\" -DMY_DNS=\"192.168.1.1\"'",
+				"",
+				"            // -- Setup your own MQTT settings  ---------------",
+				"            #ifdef MQTT_CLIENT_ID",
+				"                #undef MQTT_CLIENT_ID",
+				"            #endif",
+				"            #define MQTT_CLIENT_ID          \"{{hostname}}\" // [MqttClient] Also fall back topic using last 6 characters of MAC address or use \"DVES_%12X\" for complete MAC address",
+				"            #ifdef MQTT_TOPIC",
+				"                #undef MQTT_TOPIC",
+				"            #endif",
+				"            #define MQTT_TOPIC              \"{{topic}}\" // [Topic] unique MQTT device topic including (part of) device MAC address",
+				"            #ifdef MQTT_GRPTOPIC",
+				"                #undef MQTT_GRPTOPIC",
+				"            #endif",
+				"                #define MQTT_GRPTOPIC       \"{{groupe}}\" // [GroupTopic] MQTT Group topic",
+				"            #ifdef FRIENDLY_NAME",
+				"                #undef FRIENDLY_NAME",
+				"            #endif",
+				"            #define FRIENDLY_NAME           \"{{nom_lisible}}\" // [FriendlyName] Friendlyname up to 32 characters used by webpages and Alexa",
+				"            #ifdef EMULATION",
+				"                #undef EMULATION",
+				"            #endif",
+				"            #define EMULATION               EMUL_NONE // [Emulation] Select Belkin WeMo (single relay/light) or Hue Bridge emulation (multi relay/light) (EMUL_NONE, EMUL_WEMO or EMUL_HUE)",
+				"",
+				"            // -- ESP-NOW -------------------------------------",
+				"            // Plus d'info dans le dossier : \"Tasmota\\info\\xdrv_57_tasmesh.md\"",
+				"            // #define USE_TASMESH                              // Enable Tasmota Mesh using ESP-NOW (+11k code)",
+				"",
+				"            // -- Optional modules ----------------------------",
+				"            #define USE_SHUTTER // Add Shutter support for up to 4 shutter with different motortypes (+11k code)",
+				"",
+				"            // -- LCD I2C -----------------------",
+				"            //#define USE_I2C             // I2C using library wire (+10k code, 0k2 mem, 124 iram)",
+				"            //#define USE_DISPLAY         // Add I2C/TM1637/MAX7219 Display Support (+2k code)",
+				"            //#define USE_DISPLAY_SSD1306 // [DisplayModel 2] [I2cDriver4] Enable SSD1306 Oled 128x64 display (I2C addresses 0x3C and 0x3D) (+16k code)",
+				"            //#define USE_DISPLAY_SH1106  // [DisplayModel 7] [I2cDriver6] Enable SH1106 Oled 128x64 display (I2C addresses 0x3C and 0x3D)",
+				"            //#define USE_GRAPH           // Enable line charts with displays",
+				"            //#define NUM_GRAPHS 4        // Max 16",
+				"",
+				"            // -- I2C sensors ---------------------------------",
+				"            #define USE_I2C             // I2C using library wire (+10k code, 0k2 mem, 124 iram)",
+				"            #ifdef USE_I2C",
+				"                #define I2CDRIVERS_0_31        0xFFFFFFFF        // Enable I2CDriver0  to I2CDriver31",
+				"                #define I2CDRIVERS_32_63       0xFFFFFFFF        // Enable I2CDriver32 to I2CDriver63",
+				"                #define I2CDRIVERS_64_95       0xFFFFFFFF        // Enable I2CDriver64 to I2CDriver95",
+				"                #define I2CDRIVERS_96_127      0xFFFFFFFF        // Enable I2CDriver96 to I2CDriver127",
+				"                #define I2CDRIVERS_128_159     0xFFFFFFFF        // Enable I2CDriver128 to I2CDriver159",
+				"",
+				"                #define USE_ADS1115                             // [I2cDriver13] Enable ADS1115 16 bit A/D converter (I2C address 0x48, 0x49, 0x4A or 0x4B) based on Adafruit ADS1x15 library (no library needed) (+0k7 code)",
+				"",
+				"                // Cf. url: https://tasmota.github.io/docs/MCP230xx/",
+				"                // Vérifier activation du driver : I2cDriver22 1",
+				"                // Tester l'adresse du module MCP23XXX (adresse comprise entre 0x20 & 0x26) : I2CScan",
+				"                // Les paramètres des I/O est realisé dans le fichier mcp23xx.dat",
+				"                // Paramètres Mode 2 MCP23017",
+				"                //#define USE_MCP23XXX_DRV",
+				"                    //#define USE_MCP230xx_ADDR 0x20                  // Enable MCP23008/MCP23017 I2C Address to use (Must be within range 0x20 through 0x26 - set according to your wired setup)",
+				"                    #undef USE_DS1624                                 // [I2cDriver42] Enable DS1624, DS1621 temperature sensor (I2C addresses 0x48 - 0x4F) (+1k2 code)",
+				"",
+				"                #define USE_RTC_CHIPS                                 // Enable RTC chip support and NTP server",
+				"            #endif",
+				"",
+				"            // -- Internal Analog input -----------------------",
+				"            //#undef USE_ADC_VCC // Display Vcc in Power status. Disable for use as Analog input on selected devices",
+				"",
+				"            // -- Optional light modules ----------------------",
+				"            #define USE_LIGHT                                       // Add support for light control",
+				"            #define USE_WS2812                                      // WS2812 Led string using library NeoPixelBus (+5k code, +1k mem, 232 iram) - Disable by //",
+				"            //  #define USE_WS2812_DMA                              // ESP8266 only, DMA supports only GPIO03 (= Serial RXD) (+1k mem). When USE_WS2812_DMA is enabled expect Exceptions on Pow",
+				"                #undef USE_WS2812_RMT",
+				"                    #define USE_WS2812_RMT  1                       // ESP32 only, hardware RMT support (default). Specify the RMT channel 0..7. This should be preferred to software bit bang.",
+				"            //  #define USE_WS2812_I2S  0                           // ESP32 only, hardware I2S support. Specify the I2S channel 0..2. This is exclusive from RMT. By default, prefer RMT support",
+				"            //  #define USE_WS2812_INVERTED                         // Use inverted data signal",
+				"                #define USE_WS2812_HARDWARE  NEO_HW_WS2812          // Hardware type (NEO_HW_WS2812, NEO_HW_WS2812X, NEO_HW_WS2813, NEO_HW_SK6812, NEO_HW_LC8812, NEO_HW_APA106, NEO_HW_P9813)",
+				"                #undef USE_WS2812_CTYPE",
+				"                    #define USE_WS2812_CTYPE     NEO_GRB            // Color type (NEO_RGB, NEO_GRB, NEO_BRG, NEO_RBG, NEO_RGBW, NEO_GRBW)",
+				"",
+				"            // -- One wire sensors ----------------------------",
+				"            #undef USE_HDMI_CEC                                     // Add support for HDMI CEC bus (+7k code, 1456 bytes IRAM)",
+				"            #define USE_DS18x20                                     // Add support for DS18x20 sensors with id sort, single scan and read retry (+2k6 code)",
+				"            //#define W1_PARASITE_POWER                             // Optimize for parasite powered sensors",
+				"            //#define DS18x20_USE_ID_AS_NAME                        // Use last 3 bytes for naming of sensors",
+				"            #define DS18x20_USE_ID_ALIAS                            // Add support aliasing for DS18x20 sensors. See comments in xsns_05 files (+0k5 code)",
+				"",
+				"            // -- Serial sensors ------------------------------",
+				"            #define USE_MODBUS",
+				"            // #define USE_TASMOTA_CLIENT                       // Add support for Arduino Uno/Pro Mini via serial interface including flashing (+2k6 code, 64 mem)",
+				"                                                            // GPIO4=Slave TX / GPIO5=Slave RX",
+				"",
+				"            // -- Capteurs & Gestion Bluetooth ------------------------------",
+				"            // #define USE_BLE_ESP32                              // Add support for ESP32 as a BLE-bridge (+9k2? mem, +292k? flash)",
+				"",
+				"            // -- LoRaWan 868MHz ------------------------------",
+				"            #define USE_LORAWAN_BRIDGE      // Add support for LoRaWan bridge (+8k code)",
+				"            #define USE_LORA_SX126X         // Add driver support for LoRa on SX1262 based devices like LiliGo T3S3 Lora32 (+16k code)",
+				"",
+				"            // -- Utilisation des WebSockets ------------------------------",
+				"            #define USE_WSSERVER",
+				"",
+				"            // -- SPI sensors ---------------------------------",
+				"            #define USE_SPI                                  // Hardware SPI using GPIO12(MISO), GPIO13(MOSI) and GPIO14(CLK) in addition to two user selectable GPIOs(CS and DC)",
+				"            #ifdef USE_SPI",
+				"                #define USE_UFILESYS",
+				"                #define GUI_EDIT_FILE",
+				"                #define GUI_TRASH_FILE",
+				"",
+				"            // -- SD Card support -----------------------------",
+				"                #define USE_SDCARD                      // mount SD Card, requires configured SPI pins and setting of `SDCard CS` gpio",
+				"                #define SDC_HIDE_INVISIBLES             // hide hidden directories from the SD Card, which prevents crashes when dealing SD created on MacOS",
+				"                #define SDCARD_CS_PIN 45                 // Not strictly necessary since the same #define happens in xdrv_50_filesystem.ino",
+				"            #endif",
+				"",
+				"            // -- Rules or Script  ----------------------------",
+				"            // Select none or only one of the below defines USE_RULES or USE_SCRIPT",
+				"            #define USE_RULES                                                       // Add support for rules (+8k code)",
+				"            #ifdef USE_RULES",
+				"                #define SUPPORT_MQTT_EVENT                                          // Support trigger event with MQTT subscriptions (+1k8 code)",
+				"                #define USE_EXPRESSION                                              // Add support for expression evaluation in rules (+1k7 code)",
+				"                    #define SUPPORT_IF_STATEMENT                                    // Add support for IF statement in rules (+2k7)",
+				"                //#define USER_RULE1 \"ON System#Boot DO Sensor12 S0 ENDON\"          // Add rule1 data saved at initial firmware load or when command reset is executed",
+				"                //#define USER_RULE2 \"<Any rule2 data>\"                             // Add rule2 data saved at initial firmware load or when command reset is executed",
+				"                // USER_RULE3 \"<Any rule3 data>\"                                    // Add rule3 data saved at initial firmware load or when command reset is executed",
+				"                #define USE_VIEW_RULE_MEMS_AND_VARS                                 // Enable viewing of rule memories and variables in the web UI (+0k7 code)",
+				"            #endif",
+				"",
+				"            // -- Compétences Audio  ----------------------------",
+				"            #define USE_I2S_ALL",
+				"",
+				"            // -- Rules or Script  ----------------------------",
+				"            #ifdef USER_BACKLOG",
+				"                #undef USER_BACKLOG",
+				"            #endif",
+				"            #define USER_BACKLOG      \"Backlog Hostname {{hostname}}\""
+			],
+			"ajouts": {
+				"serveur.wifi.power": 0,
+				"serveur.coprocesseur": {
+					"activation": "ON",
+					"url": "https://ota.tasmota.com/tasmota32/coprocessor",
+					"mqtt": "ON",
+					"bloque": "2.6.6"
+				},
+				"template.CMND": "ethtype 1|ethaddress -1",
+				"drivers.leds.environnement.leds.ledLink.pin": -1,
+				"drivers.leds.environnement.leds.led1.pin": -1,
+				"drivers.leds.environnement.leds.ledRGB.pin": -1,
+				"drivers.SD.environnement.pinsSDs.pinsSD4.nom": "CarteSD CS",
+				"drivers.SD.environnement.pinsSDs.pinsSD4.pin": 45,
+				"drivers.I2C.environnement.pinsI2Cs.pinsI2C1.pin": 7,
+				"drivers.I2C.environnement.pinsI2Cs.pinsI2C2.pin": 8,
+				"drivers.HostedESPC6": {
+					"activation": "ON",
+					"name": "Connexions avec ESP32C6",
+					"environnement": {
+						"pinsHosteds": {
+							"pinsHosted1": {
+								"activation": "ON",
+								"nom": "SDIO D0",
+								"pin": 39,
+								"id": 1,
+								"type": 8864
+							},
+							"pinsHosted2": {
+								"activation": "ON",
+								"nom": "SDIO D1",
+								"pin": 40,
+								"id": 1,
+								"type": 8896
+							},
+							"pinsHosted3": {
+								"activation": "ON",
+								"nom": "SDIO D2",
+								"pin": 41,
+								"id": 1,
+								"type": 8928
+							},
+							"pinsHosted4": {
+								"activation": "ON",
+								"nom": "SDIO D3",
+								"pin": 42,
+								"id": 1,
+								"type": 8960
+							},
+							"pinsHosted5": {
+								"activation": "ON",
+								"nom": "SDIO Clk",
+								"pin": 43,
+								"id": 1,
+								"type": 8832
+							},
+							"pinsHosted6": {
+								"activation": "ON",
+								"nom": "SDIO Cmd",
+								"pin": 44,
+								"id": 1,
+								"type": 8800
+							}
+						}
+					}
+				},
+				"drivers.LoRaWan.environnement": {
+					"pinsLoRaWans": {
+						"pinsLoRaWan1": {
+							"activation": "ON",
+							"nom": "SPI MISO",
+							"pin": -1,
+							"id": 1,
+							"type": 672,
+							"virtuel": "OFF"
+						},
+						"pinsLoRaWan2": {
+							"activation": "ON",
+							"nom": "SPI Clk",
+							"pin": -1,
+							"id": 1,
+							"type": 736,
+							"virtuel": "OFF"
+						},
+						"pinsLoRaWan3": {
+							"activation": "ON",
+							"nom": "SPI MOSI",
+							"pin": -1,
+							"id": 1,
+							"type": 704,
+							"virtuel": "OFF"
+						},
+						"pinsLoRaWan4": {
+							"activation": "ON",
+							"nom": "LoRa CS",
+							"pin": -1,
+							"id": 1,
+							"type": 10656,
+							"virtuel": "OFF"
+						},
+						"pinsLoRaWan5": {
+							"activation": "ON",
+							"nom": "LoRa Rst",
+							"pin": -1,
+							"id": 1,
+							"type": 10688,
+							"virtuel": "OFF"
+						},
+						"pinsLoRaWan6": {
+							"activation": "ON",
+							"nom": "LoRa DIO1",
+							"pin": -1,
+							"id": 1,
+							"type": 10784,
+							"virtuel": "OFF"
+						},
+						"pinsLoRaWan7": {
+							"activation": "ON",
+							"nom": "LoRa Busy",
+							"pin": -1,
+							"id": 1,
+							"type": 10720,
+							"virtuel": "OFF"
+						}
+					}
+				}
+			}
+		}
+	},
+	"blocs": [
+		{
+			"id": "udp",
+			"libelle": "Communication UDP entre cartes",
+			"aide": "Échanges entre cartes (ModBus par UDP, présence, discovery). Activée sur presque toutes les cartes du parc.",
+			"puces": [
+				"ESP32",
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"serveur.udp.activation": "ON"
+			},
+			"inactif": {
+				"serveur.udp.activation": "OFF"
+			},
+			"solidify": [],
+			"exclude_si_inactif": [],
+			"autoexec": [
+				{
+					"rang": 300,
+					"appel": "compile",
+					"modules": [
+						"udpFonctions"
+					],
+					"condition": "serveur.udp",
+					"groupe": "compilation"
+				},
+				{
+					"rang": 500,
+					"appel": "charge",
+					"modules": [
+						"controleUDP"
+					],
+					"condition": "serveur.udp",
+					"groupe": "chargement"
+				}
+			]
+		},
+		{
+			"id": "tcp",
+			"libelle": "Communication TCP entre cartes",
+			"aide": "Transport TCP du ModBus maison (rarement utilisé).",
+			"puces": [
+				"ESP32",
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"serveur.tcp.activation": "ON"
+			},
+			"inactif": {
+				"serveur.tcp.activation": "OFF"
+			},
+			"solidify": [],
+			"exclude_si_inactif": [],
+			"autoexec": [
+				{
+					"rang": 310,
+					"appel": "compile",
+					"modules": [
+						"tcpFonctions"
+					],
+					"condition": "serveur.tcp",
+					"groupe": "compilation"
+				},
+				{
+					"rang": 510,
+					"appel": "charge",
+					"modules": [
+						"controleTCP"
+					],
+					"condition": "serveur.tcp",
+					"groupe": "chargement"
+				}
+			]
+		},
+		{
+			"id": "rangeExtender",
+			"libelle": "Point d'accès Range Extender (maître)",
+			"aide": "La carte ouvre son point d'accès <HOSTNAME>-GATEWAY pour ses esclaves. Coché d'office pour un maître ; un esclave garde le Range Extender activé par son rôle, sans charger ce module.",
+			"puces": [
+				"ESP32",
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"serveur.rangeExtender.activation": "ON"
+			},
+			"inactif": {},
+			"solidify": [],
+			"exclude_si_inactif": [],
+			"autoexec": [
+				{
+					"rang": 320,
+					"appel": "compile",
+					"modules": [
+						"rangeExtenderFonctions"
+					],
+					"condition": "serveur.rangeExtender",
+					"groupe": "compilation"
+				},
+				{
+					"rang": 530,
+					"appel": "charge",
+					"modules": [
+						"controleRangeExtender"
+					],
+					"condition": "serveur.rangeExtender",
+					"groupe": "chargement"
+				}
+			]
+		},
+		{
+			"id": "discovery",
+			"libelle": "Découverte des cartes (discovery)",
+			"aide": "Publie la fiche de la carte et apprend celles des autres (table /json/discovery.json).",
+			"puces": [
+				"ESP32",
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"serveur.discovery.activation": "ON"
+			},
+			"inactif": {
+				"serveur.discovery.activation": "OFF"
+			},
+			"solidify": [],
+			"exclude_si_inactif": [],
+			"autoexec": [
+				{
+					"rang": 330,
+					"appel": "compile",
+					"modules": [
+						"discoveryFonctions"
+					],
+					"condition": "serveur.discovery",
+					"groupe": "compilation"
+				},
+				{
+					"rang": 560,
+					"appel": "charge",
+					"modules": [
+						"controleDiscovery"
+					],
+					"condition": "serveur.discovery",
+					"groupe": "chargement"
+				}
+			]
+		},
+		{
+			"id": "modbus",
+			"libelle": "Bus ModBus RS485",
+			"aide": "Pile ModBus (berry_commun.modbus) : port série RS485, carte 16 relais, esclaves ESP32, extensions I2C.",
+			"puces": [
+				"ESP32",
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"drivers.ModBus.activation": "ON",
+				"drivers.ModBus.typeComm.Serial": "ON",
+				"drivers.ModBus.environnement.pinsModBus.RX.activation": "ON",
+				"drivers.ModBus.environnement.pinsModBus.TX.activation": "ON"
+			},
+			"inactif": {
+				"drivers.ModBus.activation": "OFF",
+				"drivers.ModBus.typeComm.Serial": "OFF",
+				"drivers.ModBus.environnement.pinsModBus.RX.activation": "OFF",
+				"drivers.ModBus.environnement.pinsModBus.TX.activation": "OFF"
+			},
+			"solidify": [
+				"${berry_commun.modbus}"
+			],
+			"exclude_si_inactif": [
+				"data/fs/modbusFonctions.be",
+				"data/fs/modBus_Conn16channels.be",
+				"data/fs/modBus_TasmotaSlaveModBus.be",
+				"data/fs/controleModbus.be",
+				"data/fs/i2c_mcp23017.be",
+				"data/fs/i2c_ads1115.be"
+			],
+			"autoexec": [
+				{
+					"rang": 110,
+					"appel": "importe",
+					"modules": [
+						"modbusFonctions"
+					],
+					"condition": null,
+					"groupe": "compilation"
+				},
+				{
+					"rang": 410,
+					"appel": "charge",
+					"modules": [
+						"i2c_ads1115",
+						"i2c_mcp23017",
+						"modBus_Conn16channels",
+						"modBus_TasmotaSlaveModBus"
+					],
+					"condition": null,
+					"groupe": "chargement"
+				},
+				{
+					"rang": 520,
+					"appel": "charge",
+					"modules": [
+						"controleModbus"
+					],
+					"condition": null,
+					"groupe": "chargement"
+				}
+			]
+		},
+		{
+			"id": "modbusUdp",
+			"libelle": "Commandes ModBus par UDP",
+			"aide": "Le ModBus passe aussi par UDP (sans fil), en plus du câble RS485.",
+			"puces": [
+				"ESP32",
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [
+				"modbus",
+				"udp"
+			],
+			"actif": {
+				"drivers.ModBus.typeComm.UDP": "ON"
+			},
+			"inactif": {
+				"drivers.ModBus.typeComm.UDP": "OFF"
+			},
+			"solidify": [],
+			"exclude_si_inactif": [],
+			"autoexec": []
+		},
+		{
+			"id": "i2c",
+			"libelle": "Bus I2C",
+			"aide": "Bus I2C de la carte (ADS1115, MCP23017, horloge DS3231).",
+			"puces": [
+				"ESP32",
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"drivers.I2C.activation": "ON",
+				"drivers.I2C.environnement.pinsI2Cs.pinsI2C1.activation": "ON",
+				"drivers.I2C.environnement.pinsI2Cs.pinsI2C2.activation": "ON"
+			},
+			"inactif": {
+				"drivers.I2C.activation": "OFF"
+			},
+			"solidify": [],
+			"exclude_si_inactif": [],
+			"autoexec": []
+		},
+		{
+			"id": "ads1115",
+			"libelle": "Convertisseur analogique ADS1115",
+			"aide": "Mesures analogiques 4 voies sur le bus I2C.",
+			"puces": [
+				"ESP32",
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [
+				"i2c"
+			],
+			"actif": {
+				"drivers.I2C.environnement.ADS1115.activation": "ON"
+			},
+			"inactif": {
+				"drivers.I2C.environnement.ADS1115.activation": "OFF"
+			},
+			"solidify": [
+				"data/fs/i2c_ads1115.be"
+			],
+			"exclude_si_inactif": [],
+			"autoexec": [
+				{
+					"rang": 410,
+					"appel": "charge",
+					"modules": [
+						"i2c_ads1115"
+					],
+					"condition": null,
+					"groupe": "chargement"
+				}
+			]
+		},
+		{
+			"id": "ds3231",
+			"libelle": "Horloge RTC DS3231",
+			"aide": "Horloge sur le bus I2C : obligatoire si l'heure est réglée par RTC.",
+			"puces": [
+				"ESP32",
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [
+				"i2c"
+			],
+			"actif": {
+				"drivers.I2C.environnement.DS3231.activation": "ON"
+			},
+			"inactif": {
+				"drivers.I2C.environnement.DS3231.activation": "OFF"
+			},
+			"solidify": [],
+			"exclude_si_inactif": [],
+			"autoexec": []
+		},
+		{
+			"id": "sd",
+			"libelle": "Carte SD",
+			"aide": "Lecteur de carte SD (pages web et journaux sur la carte SD).",
+			"puces": [
+				"ESP32",
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"drivers.SD.activation": "ON"
+			},
+			"inactif": {
+				"drivers.SD.activation": "OFF"
+			},
+			"solidify": [],
+			"exclude_si_inactif": [],
+			"autoexec": []
+		},
+		{
+			"id": "i2s",
+			"libelle": "Bus I2S et codec audio ES8311",
+			"aide": "Codec audio du dev-kit ESP32-P4.",
+			"puces": [
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"drivers.I2S.activation": "ON",
+				"drivers.I2S.environnement.ES8311.activation": "ON"
+			},
+			"inactif": {
+				"drivers.I2S.activation": "OFF",
+				"drivers.I2S.environnement.ES8311.activation": "OFF"
+			},
+			"solidify": [
+				"data/fs/controleES8311.be"
+			],
+			"exclude_si_inactif": [
+				"data/fs/controleES8311.be"
+			],
+			"autoexec": [
+				{
+					"rang": 570,
+					"appel": "charge",
+					"modules": [
+						"controleES8311"
+					],
+					"condition": null,
+					"groupe": "chargement"
+				}
+			]
+		},
+		{
+			"id": "ethernet",
+			"libelle": "Ethernet",
+			"aide": "Port Ethernet du dev-kit ESP32-P4.",
+			"puces": [
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"drivers.Ethernet.activation": "ON",
+				"drivers.Ethernet.environnement.pinsEthernets.pinsEthernet1.activation": "ON",
+				"drivers.Ethernet.environnement.pinsEthernets.pinsEthernet2.activation": "ON",
+				"drivers.Ethernet.environnement.pinsEthernets.pinsEthernet3.activation": "ON"
+			},
+			"inactif": {
+				"drivers.Ethernet.activation": "OFF"
+			},
+			"solidify": [],
+			"exclude_si_inactif": [],
+			"autoexec": []
+		},
+		{
+			"id": "lorawan",
+			"libelle": "Passerelle LoRaWan 868 MHz",
+			"aide": "Pont LoRaWan (driver Berry loRaWanFonctions).",
+			"puces": [
+				"ESP32",
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"drivers.LoRaWan.activation": "ON"
+			},
+			"inactif": {
+				"drivers.LoRaWan.activation": "OFF"
+			},
+			"solidify": [
+				"data/fs/loRaWanFonctions.be",
+				"data/fs/controleLoRaWan.be"
+			],
+			"exclude_si_inactif": [
+				"data/fs/loRaWanFonctions.be",
+				"data/fs/controleLoRaWan.be"
+			],
+			"autoexec": [
+				{
+					"rang": 340,
+					"appel": "compile",
+					"modules": [
+						"loRaWanFonctions"
+					],
+					"condition": "drivers.LoRaWan",
+					"groupe": "compilation"
+				},
+				{
+					"rang": 540,
+					"appel": "charge",
+					"modules": [
+						"controleLoRaWan"
+					],
+					"condition": "drivers.LoRaWan",
+					"groupe": "chargement"
+				}
+			]
+		},
+		{
+			"id": "voletRoulants",
+			"libelle": "Volets roulants",
+			"aide": "Volet, trappe ou porte motorisée (driver voletRoulants).",
+			"puces": [
+				"ESP32",
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"drivers.voletRoulants.activation": "ON"
+			},
+			"inactif": {
+				"drivers.voletRoulants.activation": "OFF"
+			},
+			"solidify": [
+				"data/fs/vrFonctions.be",
+				"data/fs/controleVoletRoulants.be"
+			],
+			"exclude_si_inactif": [
+				"data/fs/vrFonctions.be",
+				"data/fs/controleVoletRoulants.be"
+			],
+			"autoexec": [
+				{
+					"rang": 350,
+					"appel": "compile",
+					"modules": [
+						"vrFonctions"
+					],
+					"condition": "drivers.voletRoulants",
+					"groupe": "compilation"
+				},
+				{
+					"rang": 550,
+					"appel": "charge",
+					"modules": [
+						"controleVoletRoulants"
+					],
+					"condition": "drivers.voletRoulants",
+					"groupe": "chargement"
+				}
+			]
+		},
+		{
+			"id": "ruban",
+			"libelle": "Ruban de LED WS2812",
+			"aide": "Ruban AUTO/MANUEL avec bouton (ledsFonctions).",
+			"puces": [
+				"ESP32",
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"drivers.leds.environnement.leds.ruban.activation": "ON"
+			},
+			"inactif": {
+				"drivers.leds.environnement.leds.ruban.activation": "OFF"
+			},
+			"solidify": [
+				"data/fs/ledsFonctions.be",
+				"data/fs/controleLeds.be"
+			],
+			"exclude_si_inactif": [
+				"data/fs/ledsFonctions.be",
+				"data/fs/controleLeds.be"
+			],
+			"autoexec": [
+				{
+					"rang": 130,
+					"appel": "importe",
+					"modules": [
+						"ledsFonctions"
+					],
+					"condition": null,
+					"groupe": "compilation"
+				},
+				{
+					"rang": 800,
+					"appel": "leds",
+					"modules": [],
+					"condition": null,
+					"groupe": "chargement"
+				}
+			]
+		},
+		{
+			"id": "ledRGB",
+			"libelle": "LED RGB du dev-kit ESP32-S3",
+			"aide": "LED RGB intégrée au dev-kit S3 (GPIO48).",
+			"puces": [
+				"ESP32S3"
+			],
+			"dependances": [],
+			"actif": {
+				"drivers.leds.environnement.leds.ledRGB.activation": "ON"
+			},
+			"inactif": {
+				"drivers.leds.environnement.leds.ledRGB.activation": "OFF"
+			},
+			"solidify": [
+				"data/fs/ledsFonctions.be",
+				"data/fs/controleLeds.be"
+			],
+			"exclude_si_inactif": [
+				"data/fs/ledsFonctions.be",
+				"data/fs/controleLeds.be"
+			],
+			"autoexec": [
+				{
+					"rang": 130,
+					"appel": "importe",
+					"modules": [
+						"ledsFonctions"
+					],
+					"condition": null,
+					"groupe": "compilation"
+				},
+				{
+					"rang": 800,
+					"appel": "leds",
+					"modules": [],
+					"condition": null,
+					"groupe": "chargement"
+				}
+			]
+		},
+		{
+			"id": "historique",
+			"libelle": "Historique des mesures et page /graphiques",
+			"aide": "Courbes des mesures sur la carte (ESP32-S3 et P4 seulement : il faut de la PSRAM).",
+			"puces": [
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"diverses.historique.activation": "ON"
+			},
+			"inactif": {
+				"diverses.historique.activation": "OFF"
+			},
+			"solidify": [
+				"${berry_commun.historique}"
+			],
+			"exclude_si_inactif": [
+				"data/fs/historiqueFonctions.be",
+				"data/fs/historiqueSeries.be",
+				"data/fs/graphiquesFonctions.be",
+				"data/sd/js/echarts.min.js.gz",
+				"data/sd/js/graphiques.js",
+				"data/sd/js/graphiques_trace.js",
+				"data/sd/js/graphiques_edition.js",
+				"data/sd/html/graphiques.html",
+				"data/sd/css/graphiques.css"
+			],
+			"autoexec": [
+				{
+					"rang": 120,
+					"appel": "importe",
+					"modules": [
+						"historiqueFonctions",
+						"historiqueSeries",
+						"graphiquesFonctions"
+					],
+					"condition": null,
+					"groupe": "compilation"
+				},
+				{
+					"rang": 850,
+					"appel": "historique",
+					"modules": [],
+					"condition": null,
+					"groupe": "chargement"
+				}
+			]
+		},
+		{
+			"id": "coprocesseur",
+			"libelle": "Alerte du firmware du coprocesseur Wi-Fi ESP32-C6",
+			"aide": "Signale sur l'accueil un firmware du C6 en retard (P4 seulement).",
+			"puces": [
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"serveur.coprocesseur.activation": "ON"
+			},
+			"inactif": {
+				"serveur.coprocesseur.activation": "OFF"
+			},
+			"solidify": [
+				"data/fs/controleCoprocesseur.be"
+			],
+			"exclude_si_inactif": [
+				"data/fs/controleCoprocesseur.be"
+			],
+			"autoexec": [
+				{
+					"rang": 580,
+					"appel": "charge",
+					"modules": [
+						"controleCoprocesseur"
+					],
+					"condition": "serveur.coprocesseur",
+					"groupe": "chargement"
+				}
+			]
+		}
+	],
+	"socle_autoexec": {
+		"entete": [
+			"# Demarrage de la carte {{nom_lisible}} (env {{env}}), genere par l'assistant de creation du persist. Le deroule",
+			"# commun (globales, garde du persist, logs, carte SD, chargement protege de chaque module) est dans le module",
+			"# solidifie data/fs/demarrage.be (audit P4.2, 2026-10-25) : ce fichier ne garde que la LISTE ORDONNEE des",
+			"# modules de la carte. Ne pas le compiler en .bec (voir demarrage.be)."
+		],
+		"entrees": [
+			{
+				"rang": 100,
+				"appel": "importe",
+				"modules": [
+					"configGlobal",
+					"globalFonctions",
+					"webFonctions"
+				],
+				"condition": null,
+				"groupe": "compilation"
+			},
+			{
+				"rang": 200,
+				"appel": "compileSocle",
+				"modules": [],
+				"condition": null,
+				"groupe": "compilation"
+			},
+			{
+				"rang": 400,
+				"appel": "charge",
+				"modules": [
+					"controleGeneral",
+					"controleLedTemoin"
+				],
+				"condition": null,
+				"groupe": "chargement"
+			},
+			{
+				"rang": 420,
+				"appel": "charge",
+				"modules": [
+					"controleWeb"
+				],
+				"condition": null,
+				"groupe": "chargement"
+			}
+		]
+	},
+	"metier": {
+		"gabarit": {
+			"name": "{{Metier}}",
+			"activation": "ON",
+			"reglage": "OFF",
+			"log": "info",
+			"logs": {
+				"nbLogsFiles": 15,
+				"fileLogName": "/logs/{{metier}}.log",
+				"fileLogSize_Ko": 10000
+			},
+			"environnement": {
+				"boutons": {},
+				"interrupteurs": {},
+				"relais": {},
+				"analogiques": {},
+				"capteurs": {},
+				"compteurs": {},
+				"thermometres": {}
+			}
+		},
+		"controle": [
+			"# Driver du module metier {{metier}} : squelette genere par l'assistant de creation du persist, a completer.",
+			"# Charge depuis le LittleFS par demarrage.chargeFichier(\"controle{{Metier}}\", \"modules.{{metier}}\"), seulement",
+			"# si modules.{{metier}}.activation vaut \"ON\" ; ses fonctions sont dans {{metier}}Fonctions.be, compile avant.",
+			"# Logs : charte du CLAUDE.md (logFonctions.log, cible \"{{metier}}\" reglee par ReglageLog {{metier}} <niveau>).",
+			"",
+			"class CONTROLE_{{Metier}} : Driver",
+			"    def init()",
+			"        import {{metier}}Fonctions",
+			"        logFonctions.log(\"CONTROLE_METIER: module {{metier}} charge (squelette) !\", LOG_LEVEL_INFO, \"{{metier}}\")",
+			"    end",
+			"",
+			"    # Chaque seconde : rien dans le squelette (callback frequent : jamais de log info ici)",
+			"    def every_second()",
+			"    end",
+			"",
+			"    # Lignes de la page d'accueil : rien a afficher dans le squelette",
+			"    def web_sensor()",
+			"    end",
+			"",
+			"    # Telemetrie (JSON SENSOR) : rien a ajouter dans le squelette",
+			"    def json_append()",
+			"    end",
+			"end",
+			"",
+			"# Active le driver du module",
+			"controle{{Metier}} = CONTROLE_{{Metier}}()",
+			"tasmota.add_driver(controle{{Metier}})"
+		],
+		"fonctions": [
+			"# Fonctions du module metier {{metier}} : squelette genere par l'assistant de creation du persist, a completer.",
+			"# Compile en .bec par demarrage.compile([\"{{metier}}Fonctions\"], \"modules.{{metier}}\"), importe par",
+			"# controle{{Metier}}.be. Logs : charte du CLAUDE.md (logFonctions.log, cible \"{{metier}}\").",
+			"var {{metier}}Fonctions = module(\"{{metier}}Fonctions\")",
+			"",
+			"# Log du module sous le seuil de sa cible (ReglageLog {{metier}} <niveau>) ; niveau = constante LOG_LEVEL_*",
+			"def {{metier}}Fonctions_log(msg, niveau)",
+			"    logFonctions.log(msg, niveau, \"{{metier}}\")",
+			"end",
+			"{{metier}}Fonctions.log = {{metier}}Fonctions_log",
+			"",
+			"# Retourne le module lors de l'importation",
+			"return {{metier}}Fonctions"
+		],
+		"autoexec": [
+			{
+				"rang": 900,
+				"appel": "compile",
+				"modules": [
+					"{{metier}}Fonctions"
+				],
+				"condition": "modules.{{metier}}",
+				"groupe": "chargement"
+			},
+			{
+				"rang": 999,
+				"appel": "chargeFichier",
+				"modules": [
+					"controle{{Metier}}"
+				],
+				"condition": "modules.{{metier}}",
+				"groupe": "chargement"
+			}
+		]
+	},
+	"cenv": [
+		"[env:{{env}}]",
+		"; Carte creee par l'assistant de creation du persist (page 7900). Upload par port serie : decommenter et ajuster.",
+		"; upload_port             = COMx",
+		"; monitor_port            = COMx",
+		"",
+		"extends                 = env:{{base}}",
+		"build_flags             = ${env:{{base}}.build_flags}",
+		"; Firmware perso : active la section de la carte dans user_config_override.h",
+		"                           -D {{define}}",
+		"",
+		"; Solidification Berry : listes partagees [berry_commun] et modules des blocs actives",
+		"custom_berry_solidify   =   {{solidify}}",
+		"",
+		"custom_files_exclude_solidified = ON",
+		"",
+		"; Liste noire explicite : modules des blocs non actives, ni en flash ni sur le LittleFS",
+		"custom_files_exclude          =   {{exclude}}",
+		"",
+		"; scripts tasmota Berry specifiques au module",
+		"custom_files_upload     =   ${env:{{base}}.custom_files_upload}",
+		"                            {{dossier}}"
+	],
+	"a_completer": []
+}

@@ -33,6 +33,11 @@ EXCEPTIONS A `required`
   - Enfants directs de `drivers`, `modules`, `environnement` : leur presence depend du
     materiel de la carte (Ethernet, ADS1115...), jamais requis (le rapport les marque
     « bloc materiel »). Leurs cles INTERNES, elles, suivent la regle.
+  - Blocs OPTIONNELS (constante OPTIONNELS, consultee AVANT SEUIL_REQUIS) : blocs qu'une
+    carte peut ne pas porter selon sa puce ou ses fonctions (historique et LED RGB absents des
+    ESP32 sans PSRAM, coprocesseur et HostedESPC6 propres au P4...). Sans cette liste, la regle
+    des 50 % les rendait obligatoires et --valide echouait sur le differentiel et la cave
+    ESP32 (assistant de creation du persist, 2026-10-27). Le rapport les marque « optionnel ».
   - Sous-schemas FUSIONNES (blocs de dictionnaire variable, groupes a suffixe numerique,
     et tout ce qui en descend) : requis seulement si presente dans 100 % des exemplaires
     (>= 2), car on y melange des blocs de natures differentes (ledLink n'a pas d'id).
@@ -88,6 +93,9 @@ SEUIL_REQUIS = 0.5     # part minimale d'exemplaires du parent portant la cle
 MIN_REQUIS = 2         # et nombre minimal d'exemplaires
 SEUIL_FORME = 0.7      # ressemblance moyenne pour un dictionnaire de blocs de meme forme
 BLOCS_MATERIEL = ("drivers", "modules", "environnement")   # enfants nommes par le materiel : jamais requis
+# Blocs optionnels (chemins pointes depuis la racine) : jamais requis, quelle que soit leur frequence (voir l'en-tete)
+OPTIONNELS = ("diverses.historique", "drivers.leds.environnement.leds.ledRGB", "serveur.coprocesseur", "drivers.I2S",
+              "drivers.Ethernet", "drivers.voletRoulants", "drivers.HostedESPC6")
 
 NIVEAUX_MODULE = ["erreur", "info", "debug", "detail"]
 NIVEAUX_SORTIE = ["aucun", "erreur", "info", "debug", "detail"]
@@ -266,7 +274,9 @@ class Inference:
             props[k] = self.infere(lst, chem, k, parent_cle=cle_parent, strict=strict)
             x = len(lst)
             seuil = 1.0 if strict else SEUIL_REQUIS
-            if cle_parent not in BLOCS_MATERIEL and x * 1.0 / n >= seuil and x >= MIN_REQUIS:
+            if chem in OPTIONNELS:
+                pass                                    # bloc optionnel : jamais requis, avant toute regle de frequence
+            elif cle_parent not in BLOCS_MATERIEL and x * 1.0 / n >= seuil and x >= MIN_REQUIS:
                 requis.append(k)
             if x < n:
                 manque = [e for e, d in objets if k not in d]
@@ -323,7 +333,8 @@ def genere(persists):
               "title": "Persist des cartes ESP32 (fork Tasmota)",
               "description": ("Genere par outils_docs/scripts_python/berry/genere_schema_persist.py a partir de "
                               f"{len(persists)} persists. Cle `required` si presente dans >= 50 % des exemplaires "
-                              "du parent et au moins 2. Ne pas editer a la main : regenerer.")}
+                              "du parent et au moins 2, sauf blocs optionnels (OPTIONNELS du script). "
+                              "Ne pas editer a la main : regenerer.")}
     schema.update(corps)
     applique_contrats(schema)
     return schema, inf.rapport
