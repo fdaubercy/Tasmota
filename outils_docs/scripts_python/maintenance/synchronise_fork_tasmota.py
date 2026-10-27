@@ -324,13 +324,13 @@ def afficher_nouveautes(analyses: list):
 
 
 def noter_historique(analyses: list, origin: str, upstream: str,
-                     branche: str, type_merge: str):
-    """Ajoute une entree au journal des synchros. Append uniquement."""
+                     branche: str, type_merge: str, historique=None):
+    """Ajoute une entree au journal (historique : autre chemin, assistant de la page). Append uniquement."""
     if not analyses:
         return
-
-    HISTORIQUE.parent.mkdir(parents=True, exist_ok=True)
-    neuf = not HISTORIQUE.exists()
+    historique = Path(historique) if historique else HISTORIQUE
+    historique.parent.mkdir(parents=True, exist_ok=True)
+    neuf = not historique.exists()
 
     horodatage = datetime.now().strftime("%Y-%m-%d %H:%M")
     nb_saillants = sum(1 for _, _, t in analyses if t)
@@ -350,7 +350,7 @@ def noter_historique(analyses: list, origin: str, upstream: str,
         lignes.append(f"- {marque}`{sha}` {titre_md}\n")
 
     try:
-        with io.open(HISTORIQUE, "a", encoding="utf-8") as f:
+        with io.open(historique, "a", encoding="utf-8") as f:
             if neuf:
                 f.write(EN_TETE_HISTORIQUE)
             f.writelines(lignes)

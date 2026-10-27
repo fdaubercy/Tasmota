@@ -51,10 +51,8 @@ def dossier_git(racine):
 
 
 def operation(racine):
-    try:
-        git = dossier_git(racine)
-    except RuntimeError:
-        return ""
+    """"rebase", "merge" ou "" ; RuntimeError si le dossier .git est introuvable (jamais « rien en cours »)."""
+    git = dossier_git(racine)
     if (git / "rebase-merge").exists() or (git / "rebase-apply").exists():
         return "rebase"
     return "merge" if (git / "MERGE_HEAD").exists() else ""
@@ -100,10 +98,19 @@ def _voie(retard, non_pousses, prev):
 
 
 def analyse(racine=REPO, fetch=True):
-    a = {"branche": "", "operation": operation(racine), "merge_assistant": False, "retard": 0, "non_pousses": 0,
+    import synchro_fork_fusion as fusion   # ici : fusion importe ce module (import circulaire)
+    a = {"branche": "", "operation": "", "merge_assistant": False, "retard": 0, "non_pousses": 0,
          "retard_origin": 0, "commits": [], "touches_amont": [], "touches_deux": [],
-         "prevision": {"possible": False, "conflits": []}, "fichiers": [], "non_suivis": 0,
+         "prevision": {"possible": False, "conflits": []}, "fichiers": [], "non_suivis": 0, "conflits": [],
          "journal_modifie": False, "voie": "", "etapes": [], "erreur": ""}
+    try:
+        a["operation"] = operation(racine)
+        a["merge_assistant"] = fusion.merge_assistant_en_cours(racine)
+        if a["merge_assistant"]:
+            a["conflits"] = fusion.conflits(racine)
+    except RuntimeError as e:
+        a["erreur"] = str(e)
+        return a
     if fetch:
         a["erreur"] = recupere(racine)
         if a["erreur"]:
@@ -125,10 +132,11 @@ def analyse(racine=REPO, fetch=True):
     a["prevision"] = prevision(racine)
     suivis, a["non_suivis"] = sfe.fichiers_modifies(racine)
     a["journal_modifie"] = any(f["journal"] for f in suivis)
-    a["fichiers"] = [{"etat": f["etat"], "chemin": f["chemin"],
-                      "classe": "amont" if f["chemin"] in amont else "libre",
-                      "build": f["chemin"] in FICHIERS_BUILD} for f in suivis if not f["journal"]]
-    a["voie"] = _voie(retard, non_pousses, a["prevision"])
+    # Pendant le merge de l'assistant, les fichiers modifies sont ceux du merge : ils ne salissent pas l'arbre.
+    a["fichiers"] = [] if a["merge_assistant"] else [
+        {"etat": f["etat"], "chemin": f["chemin"], "classe": "amont" if f["chemin"] in amont else "libre",
+         "build": f["chemin"] in FICHIERS_BUILD} for f in suivis if not f["journal"]]
+    a["voie"] = "B" if a["merge_assistant"] else _voie(retard, non_pousses, a["prevision"])
     a["etapes"] = etapes(a)
     return a
 
@@ -144,7 +152,7 @@ def etapes(a):
     if a.get("erreur"):
         return []
     retard, voie, prev = a["retard"], a["voie"], a["prevision"]
-    rien = not retard and not a["non_pousses"] and not a["journal_modifie"]
+    rien = not a.get("merge_assistant") and not retard and not a["non_pousses"] and not a["journal_modifie"]
     liste = []   # (id, titre, detail, information ?, bloquee ?)
     if a["operation"] and not a["merge_assistant"]:
         liste.append(("operation", f"Un {a['operation']} est deja en cours",
@@ -175,8 +183,10 @@ def etapes(a):
         if voie == "A":
             liste.append(("synchro_a", "Synchroniser (en ligne puis local)", "Lance le script de merge.", False, False))
         elif voie == "B":
-            liste.append(("fusion_b", "Merger en local et resoudre", "Merge local guide, fichier par fichier.",
-                          False, False))
+            detail = "Merge local guide, fichier par fichier."
+            if a.get("merge_assistant"):
+                detail = f"Merge en cours : {len(a.get('conflits', []))} fichier(s) encore en conflit."
+            liste.append(("fusion_b", "Merger en local et resoudre", detail, False, False))
         if a["non_pousses"]:
             liste.append(("pousser", "Pousser vers origin", f"{a['non_pousses']} commit(s) non pousse(s).",
                           False, False))
