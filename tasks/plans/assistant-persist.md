@@ -432,7 +432,7 @@ Interfaces produites :
   validation).
 
 Étapes :
-- [ ] Banc ROUGE. Tests :
+- [x] Banc ROUGE. Tests :
   - `fusion_cle_nouvelle` : dépôt d'essai, clé `serveur.udp.essai = 7` ajoutée à 2 persists → ajoutée au socle avec 7,
     présente dans `a_completer`, modèle écrit et sauvegarde créée ;
   - `fusion_secret` : nouvelle clé `serveur.mqtt.mdpSecours` → `@secret:…`, aucune valeur ;
@@ -442,10 +442,10 @@ Interfaces produites :
   - `modele_illisible` (point 2) : modèle invalide → `principal` démarre, `/modele/etat.erreur` non vide, fichier
     intact, `/prepare` refusé ;
   - `banc_couverture_signale` : après fusion, `test_assistant_persist_modele.rien_a_completer` échoue (attendu :
-    le modèle fusionné doit être relu).
-- [ ] Écrire jusqu'au VERT, puis relancer la sonde Chrome avec un bandeau présent.
-- [ ] Témoin : désactiver l'ajout à `a_completer` → `fusion_cle_nouvelle` ROUGE.
-- [ ] Commit `feat(assistant-persist): mise a jour automatique et manuelle du modele`.
+    le modèle fusionné doit être relu). — preuve : test_assistant_persist_fidelite.py (fusion_cle_nouvelle, fusion_secret, fusion_rien, bouton_retrait, modele_illisible, banc_couverture_signale + secret_imbrique, secret_liste, secret_cle_liste) ROUGE avant 6b838af
+- [x] Écrire jusqu'au VERT, puis relancer la sonde Chrome avec un bandeau présent. — preuve : fidelite VERT (82 OK, relance controleur), modele 45 OK, web 57 OK ; sonde Chrome VERTE avec temoin (chargee sous localhost)
+- [x] Témoin : désactiver l'ajout à `a_completer` → `fusion_cle_nouvelle` ROUGE. — preuve : temoin fait par l'implementeur, ROUGE puis VERT (task-6-report)
+- [x] Commit `feat(assistant-persist): mise a jour automatique et manuelle du modele`. — preuve : 6b838af + corrections 44c1a8f, 085aeea, df62ddc ; re-relecture approuvee (2 mineurs differes)
 
 ## A7 — Éditeur des entrées/sorties du bloc métier (décision 4, 2e étape)
 
