@@ -316,9 +316,9 @@ Interfaces :
 - `empreinte` = sha256(octets cenv + octets `.h` + octets `modele_persist.json` + `json.dumps(asdict(r), sort_keys=True)`).
 
 Étapes :
-- [ ] Extraire `refus_nom`, `refus_identite`, `avertit_prises` ; `test_fichiers_berry_creation.py`,
-  `test_fichiers_berry_renommage.py` et `test_fichiers_berry_web.py` restent VERTS **sans changer leurs attentes**.
-- [ ] Banc `test_assistant_persist_creation.py` ROUGE. Tests sur `depot_essai` (importé de
+- [x] Extraire `refus_nom`, `refus_identite`, `avertit_prises` ; `test_fichiers_berry_creation.py`,
+  `test_fichiers_berry_renommage.py` et `test_fichiers_berry_web.py` restent VERTS **sans changer leurs attentes**. — preuve : refus_nom/refus_identite/avertit_prises extraits ; bancs 7800 (creation, renommage, web, suppression) VERTS sans changer leurs attentes (96519fd)
+- [x] Banc `test_assistant_persist_creation.py` ROUGE. Tests sur `depot_essai` (importé de
   `test_fichiers_berry_creation`) :
   - `cree_esclave_s3` : `Reponses(puce="ESP32S3", lieu="garage", nom="piscine", role="esclave",
     maitre="tasmota32p4-garage-serveur-modbus", blocs=["udp","discovery","rangeExtender","modbus","leds",
@@ -334,15 +334,15 @@ Interfaces :
   - `refus_existant` : nom de l'env du rideau → refus ;
   - `refus_metier` : `metiers=["Piscine-2"]` → refus ; `metiers=["general"]` (`data/fs/controleGeneral.be` existe) → refus ;
   - `atomique` : une exception injectée dans la 3e écriture → dépôt identique (octets du cenv et du `.h`, dossier absent) ;
-  - `diff_sans_secret` : aucune valeur réelle dans `diff`, `resume`, `apercu`.
-- [ ] Écrire `assistant_persist_creation.py` jusqu'au VERT.
-- [ ] Ajouter `--dossier <data/…> --env <env>` à `banc_demarrage.py` pour une carte hors de `CARTES` : instantané sans
+  - `diff_sans_secret` : aucune valeur réelle dans `diff`, `resume`, `apercu`. — preuve : test_assistant_persist_creation.py ROUGE (module absent), tests du brief + refus_metier
+- [x] Écrire `assistant_persist_creation.py` jusqu'au VERT. — preuve : 96519fd ; 49 OK VERT
+- [x] Ajouter `--dossier <data/…> --env <env>` à `banc_demarrage.py` pour une carte hors de `CARTES` : instantané sans
   référence, **rouge si la rubrique erreurs n'est pas vide**. Puis le lancer sur la carte `piscine` générée dans un
   dépôt d'essai (`--sources` = copie de `data/fs`).
   - Attendu : aucune erreur. Si `controleGeneral` ou `configModules` refusent un `environnement` vide, corriger le
-    gabarit `metier` (A1), pas les modules de `data/fs`.
-- [ ] Témoin du démarrage : retirer `return controlePiscine` du squelette (copie) → `banc_demarrage --dossier` ROUGE.
-- [ ] Commit `feat(assistant-persist): creation atomique d'un env genere`.
+    gabarit `metier` (A1), pas les modules de `data/fs`. — preuve : banc_demarrage --dossier : carte piscine generee, erreurs (0) ; 6 cartes de reference inchangees
+- [x] Témoin du démarrage : retirer `return controlePiscine` du squelette (copie) → `banc_demarrage --dossier` ROUGE. — preuve : temoin sans return controlePiscine : ROUGE sur copie (task-4-report.md)
+- [x] Commit `feat(assistant-persist): creation atomique d'un env genere`. — preuve : 96519fd, relecture approuvee
 
 ## A5 — Page 7900 (disposition A), serveur et annuaire
 
