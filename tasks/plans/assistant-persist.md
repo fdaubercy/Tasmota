@@ -261,7 +261,7 @@ class Reponses:
 - `reponses_depuis_persist(modele, donnees, env) -> Reponses` : sert au rejeu du parc (§7).
 
 Étapes :
-- [ ] Banc ROUGE (module absent). Tests :
+- [x] Banc ROUGE (module absent). Tests :
   - `rejeu_parc` : pour chaque carte au format actuel (P4, cuve, rideau, cave S3, différentiel, grenier),
     `persist(modele, reponses_depuis_persist(...), …, secrets=<vrais>)` comparé au vrai persist, sur les chemins de
     `chemins_modele`. Écarts tolérés : `template.GPIO`, le contenu de `modules.<x>.environnement`, et les clés de
@@ -274,12 +274,12 @@ class Reponses:
   - `ids_alignes` : esclave id 4 → les 4 chemins valent l'entier 4.
   - `aucun_secret_sans_secrets` : `texte_persist(persist(..., secrets=None))` ne contient aucune valeur réelle.
   - `squelettes_compilent` : écrire les squelettes de `piscine` dans un dossier temporaire et lancer
-    `python outils_docs/scripts_python/berry/verifie_berry.py <fichier>` → code 0, aucun avertissement de charte.
-- [ ] Écrire `assistant_persist_generation.py` jusqu'au VERT. Si `rejeu_parc` révèle une clé du parc absente ou fausse,
-  corriger le **modèle** (A1), jamais la tolérance.
-- [ ] Témoin : retirer le rôle `esclave` de `ipMaitre` dans une copie du modèle → `rejeu_parc` ROUGE sur la cuve et le
-  rideau seulement.
-- [ ] Commit `feat(assistant-persist): generation du persist, de l'autoexec et des listes du cenv`.
+    `python outils_docs/scripts_python/berry/verifie_berry.py <fichier>` → code 0, aucun avertissement de charte. — preuve : test_assistant_persist_generation.py ROUGE (module absent), tests du brief presents
+- [x] Écrire `assistant_persist_generation.py` jusqu'au VERT. Si `rejeu_parc` révèle une clé du parc absente ou fausse,
+  corriger le **modèle** (A1), jamais la tolérance. — preuve : a92c232 ; 41 OK VERT ; rejeu : 13 tolerances nommees (Ruling 8), autoexec_cuve = vrai autoexec
+- [x] Témoin : retirer le rôle `esclave` de `ipMaitre` dans une copie du modèle → `rejeu_parc` ROUGE sur la cuve et le
+  rideau seulement. — preuve : temoin ipMaitre retire : ROUGE cuve + rideau seulement (task-3-report.md)
+- [x] Commit `feat(assistant-persist): generation du persist, de l'autoexec et des listes du cenv`. — preuve : a92c232, relecture approuvee
 
 ## A4 — Création atomique (cenv, `.h`, dossier) et démarrage prouvé
 
