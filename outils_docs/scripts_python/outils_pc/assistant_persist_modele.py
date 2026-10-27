@@ -9,8 +9,8 @@ FORME DU MODELE (contrat partage par les actions A1 a A6)
   version         1.
   socle           arbre complet d'un persist, dans l'ordre des cles du parc (diverses, serveur, template, modules,
                   drivers), toutes les cles avec leur valeur par defaut (la valeur commune du parc quand elle existe).
-                  Gabarits : "{{lieu}}", "{{nom}}", "{{nom_lisible}}", "{{hostname}}", "{{topic}}", "{{groupe}}"
-                  (= tasmotas/<lieu>), "{{ip}}", "{{passerelle}}", "{{reseau1}}", "{{reseau2}}", "{{id}}",
+                  Gabarits : "{{lieu}}", "{{nom}}", "{{nom_lisible}}", "{{nom_template}}" (template.NAME),
+                  "{{hostname}}", "{{client}}" (mqtt.client), "{{topic}}", "{{groupe}}" (= tasmotas/<lieu>), "{{ip}}", "{{passerelle}}", "{{reseau1}}", "{{reseau2}}", "{{id}}",
                   "{{ip_maitre}}", "{{type_esp}}", "{{heure}}", "{{ssid_ap}}". Une chaine qui vaut EXACTEMENT
                   "{{id}}" est remplacee par l'entier. template.GPIO vaut [] : le generateur le remplit de 1, sur la
                   longueur puces.<p>.gpio. Secrets : "@secret:wifi1", "@secret:wifi2", "@secret:mqtt", "@secret:ap",
@@ -41,8 +41,10 @@ FORME DU MODELE (contrat partage par les actions A1 a A6)
 Ordre d'application (generateur, A2) : socle, puis roles[role], puis puces[puce].ajouts, puis, pour chaque bloc
 PERMIS pour la puce, actif ou inactif selon la reponse (un bloc interdit pour la puce n'applique rien). Une valeur
 null retire la cle du persist. Une cle absente du socle est ajoutee en fin de son objet parent. Les entrees
-d'autoexec sont triees par rang ; deux entrees consecutives de meme appel et meme condition peuvent etre fusionnees
-en une ligne (dedoublonnee), comme `demarrage.charge([...])` de la cuve ; un module requis par un bloc actif n'est
+d'autoexec sont triees par (groupe, rang) : groupe `compilation` d'abord, puis `chargement`, une ligne vide entre
+les deux (Ruling 9 : le compile du metier, rang 900, est du groupe compilation comme dans l'autoexec de la cuve) ;
+deux entrees consecutives de meme appel et meme condition sont fusionnees en une ligne (dedoublonnee), comme
+`demarrage.charge([...])` de la cuve (assistant_persist_generation.autoexec) ; un module requis par un bloc actif n'est
 jamais exclu, meme s'il figure dans exclude_si_inactif d'un bloc inactif.
 
 CHEMINS ET COUVERTURE (decision 1 du controleur, 2026-10-27)

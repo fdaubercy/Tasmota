@@ -96,7 +96,7 @@
 				"activation": "ON",
 				"hote": "192.168.0.5",
 				"port": 1883,
-				"client": "{{hostname}}",
+				"client": "{{client}}",
 				"utilisateur": "fdaubercy",
 				"mdp": "@secret:mqtt",
 				"topic": "{{topic}}",
@@ -109,7 +109,7 @@
 				"id": "{{id}}",
 				"log": "info",
 				"telePeriod": 300,
-				"ipMaitre": "{{ip_maitre}}",
+				"ipMaitre": "",
 				"AP": {
 					"IPAddress": "192.168.4.1",
 					"Subnet": "255.255.255.0",
@@ -143,7 +143,7 @@
 		"template": {
 			"BASE": 1,
 			"GPIO": [],
-			"NAME": "{{nom_lisible}}",
+			"NAME": "{{nom_template}}",
 			"FLAG": 0
 		},
 		"modules": {
@@ -644,6 +644,7 @@
 		},
 		"esclave": {
 			"serveur.IP.IPGateway": "192.168.4.1",
+			"serveur.rangeExtender.ipMaitre": "{{ip_maitre}}",
 			"serveur.wifi.power": 0,
 			"serveur.wifi.timerRebootSansWifi": 0,
 			"serveur.rangeExtender.activation": "ON",
@@ -2058,7 +2059,10 @@
 			"",
 			"# Active le driver du module",
 			"controle{{Metier}} = CONTROLE_{{Metier}}()",
-			"tasmota.add_driver(controle{{Metier}})"
+			"tasmota.add_driver(controle{{Metier}})",
+			"",
+			"# Valeur du fichier charge (controle P3.3 de banc_demarrage : un controleXxx.be finit par son return)",
+			"return controle{{Metier}}"
 		],
 		"fonctions": [
 			"# Fonctions du module metier {{metier}} : squelette genere par l'assistant de creation du persist, a completer.",
@@ -2083,7 +2087,7 @@
 					"{{metier}}Fonctions"
 				],
 				"condition": "modules.{{metier}}",
-				"groupe": "chargement"
+				"groupe": "compilation"
 			},
 			{
 				"rang": 999,
