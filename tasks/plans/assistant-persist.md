@@ -466,16 +466,16 @@ Interfaces produites :
 - `Reponses.elements: dict[groupe, list[dict]]`, écrit dans `modules.<principal>.environnement.<groupe>.<groupe sing.>N`.
 
 Étapes :
-- [ ] Banc ROUGE :
+- [x] Banc ROUGE :
   - `rejeu_environnement` : l'`environnement` de la cuve rejoué = le vrai ;
   - `broche_double` : refus ;
   - `broche_hors_plage_esp32` : refus ;
-  - `broche_driver` : relais sur la broche RX ModBus → refus.
-- [ ] Écrire jusqu'au VERT ; retirer la tolérance `environnement` de `rejeu_parc` (A3), qui doit rester VERT.
-- [ ] Page : étape Bloc métier, tableau d'éléments (ajout, suppression, broche en liste), sonde Chrome étendue
-  (ajouter 2 relais et voir l'aperçu changer).
-- [ ] Témoin : `verifie_elements` sans les broches des drivers → `broche_driver` ROUGE.
-- [ ] Commit `feat(assistant-persist): editeur des entrees/sorties`.
+  - `broche_driver` : relais sur la broche RX ModBus → refus. — preuve : test_assistant_persist_elements.py ROUGE (module absent) avant 13410e4 ; rejeu elargi a tout le parc
+- [x] Écrire jusqu'au VERT ; retirer la tolérance `environnement` de `rejeu_parc` (A3), qui doit rester VERT. — preuve : _elements, _generation, _modele, _parc, _creation, _web, _fidelite VERTS (code 0) ; aucune tolerance environnement n'existait (couverture tronquee), rejeu des elements de tout le parc dans _elements (Ruling 14)
+- [x] Page : étape Bloc métier, tableau d'éléments (ajout, suppression, broche en liste), sonde Chrome étendue
+  (ajouter 2 relais et voir l'aperçu changer). — preuve : sonde Chrome VERTE (relance controleur, code 0) : 2 relais, doublon de broche refuse puis leve, retrait + ajout -> « Relais 3 » sans doublon
+- [x] Témoin : `verifie_elements` sans les broches des drivers → `broche_driver` ROUGE. — preuve : 3 KO puis VERT apres restauration (task-7-report)
+- [x] Commit `feat(assistant-persist): editeur des entrees/sorties`. — preuve : 13410e4 + correction a46a56a ; relecture approuvee, re-relecture 5/5 corriges
 
 ## A8 — Analyse des clés `adressMAC` / `adresseMAC` et `telePeriod` (lecture seule)
 
