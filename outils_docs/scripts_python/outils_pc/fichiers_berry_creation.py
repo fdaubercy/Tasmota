@@ -269,16 +269,14 @@ def _sans_commentaires(texte, marque):
     return "\n".join(re.sub(r"(^|\s)" + re.escape(marque) + r".*$", "", l) for l in texte.split("\n"))
 
 
-def _refus(racine, ini, c, env, dossier, nouveau, texte_h, texte_cenv, sauf_dossier=None, avertissements=None):
-    """Refus de la creation (ou du renommage). Une identite deja portee par une autre carte n'est qu'un
-    AVERTISSEMENT (carte remplacee : meme IP, topic, client ; decide le 2026-10-25), ajoute a `avertissements`."""
+def refus_nom(racine, ini, base, lieu, nom, env, dossier, nouveau, texte_h, texte_cenv):
+    """Refus portant sur le NOM de la carte : base inconnue, lieu et nom, « -base », env, dossier, define. Commun a la
+    page 7800 et a l'assistant de persist (7900)."""
     refus = []
     envs = {e["nom"]: e["famille"] for e in fbe.envs_proposes(racine)}
-    if envs.get(c.modele) != "cartes":
-        refus.append(f"modele inconnu ou pas une carte : {c.modele!r}")
-    if envs.get(c.base) != "bases":
-        refus.append(f"base inconnue : {c.base!r}")
-    if not LIEU.fullmatch(c.lieu) or not NOM.fullmatch(c.nom):
+    if envs.get(base) != "bases":
+        refus.append(f"base inconnue : {base!r}")
+    if not LIEU.fullmatch(lieu) or not NOM.fullmatch(nom):
         refus.append("lieu : minuscules et chiffres ; nom : minuscules, chiffres et tirets (ex. porte-garage)")
         return refus
     if fbe.est_base(env):
@@ -293,16 +291,41 @@ def _refus(racine, ini, c, env, dossier, nouveau, texte_h, texte_cenv, sauf_doss
         refus.append(f"define invalide : {nouveau!r}")
     elif re.search(r"\b" + nouveau + r"\b", _sans_commentaires(texte_h, "//") + "\n" + _sans_commentaires(texte_cenv, ";")):
         refus.append(f"le define {nouveau} existe deja")
+    return refus
+
+
+def refus_identite(identite):
+    """Refus portant sur les 8 champs d'identite : vide ou caractere interdit."""
+    refus = []
     for champ in CHAMPS_IDENTITE:
-        v = c.identite.get(champ, "")
+        v = identite.get(champ, "")
         interdits = '"\\\r\n;' + (" \t" if champ in SANS_ESPACE else "") + ("+#" if champ in JOKERS_MQTT else "")
         if not v or any(x in v for x in interdits):
             refus.append(f"{champ} : valeur vide ou avec un caractere interdit ({interdits!r}) : {v!r}")
+    return refus
+
+
+def avertit_prises(racine, texte_h, identite, avertissements, sauf_dossier=None):
+    """Avertit (sans refuser) qu'une identite est deja portee par une autre carte (decide le 2026-10-25)."""
     for champ, valeurs in _prises(racine, texte_h, sauf_dossier).items():
-        v = c.identite.get(champ)
+        v = identite.get(champ)
         if v in valeurs and v != "0.0.0.0" and avertissements is not None:
             avertissements.append(f"{champ} = {v} est deja porte par une autre carte ({valeurs[v]}) : normal pour une "
                                   "carte qui en remplace une autre ; sinon les deux cartes se deconnecteront")
+
+
+def _refus(racine, ini, c, env, dossier, nouveau, texte_h, texte_cenv, sauf_dossier=None, avertissements=None):
+    """Refus de la creation (ou du renommage). Une identite deja portee par une autre carte n'est qu'un
+    AVERTISSEMENT (carte remplacee : meme IP, topic, client ; decide le 2026-10-25), ajoute a `avertissements`."""
+    refus = []
+    envs = {e["nom"]: e["famille"] for e in fbe.envs_proposes(racine)}
+    if envs.get(c.modele) != "cartes":
+        refus.append(f"modele inconnu ou pas une carte : {c.modele!r}")
+    refus += refus_nom(racine, ini, c.base, c.lieu, c.nom, env, dossier, nouveau, texte_h, texte_cenv)
+    if not LIEU.fullmatch(c.lieu) or not NOM.fullmatch(c.nom) or fbe.est_base(env):
+        return refus                     # refus_nom s'est arrete avant l'identite
+    refus += refus_identite(c.identite)
+    avertit_prises(racine, texte_h, c.identite, avertissements, sauf_dossier)
     return refus
 
 

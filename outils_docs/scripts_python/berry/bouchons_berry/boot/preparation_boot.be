@@ -70,7 +70,8 @@ class PREPARATION_BOOT_CLASSE
 
     def prepare(env, sources, carte, persistTexte, travail)
         var lit = global.BANC_BOOT.litDisque
-        self.ini = lit("platformio_tasmota_cenv.ini")
+        # cenv d'un depot d'essai (banc_demarrage --cenv) : la globale CENV_BANC, absente pour banc_boot
+        self.ini = lit(global.contains("CENV_BANC") && global.CENV_BANC != nil ? global.CENV_BANC : "platformio_tasmota_cenv.ini")
         var solidifies = self.fichiers("env:" + env, "custom_berry_solidify")
         var exclus = self.fichiers("env:" + env, "custom_files_exclude")
         if size(solidifies) == 0    raise "banc_error", "aucun module solidifie lu pour env:" + env    end

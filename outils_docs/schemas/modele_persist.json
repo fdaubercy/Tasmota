@@ -2023,10 +2023,67 @@
 				"boutons": {},
 				"interrupteurs": {},
 				"relais": {},
-				"analogiques": {},
+				"analogiques": {
+					"activation": "OFF",
+					"name": "Capteurs analogiques",
+					"valeurMin": 0,
+					"valeurMax": 0,
+					"analogique1": {
+						"activation": "OFF",
+						"nom": "Ana 1",
+						"id": 1,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "OFF",
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF"
+						},
+						"publishMQTT": {
+							"topic": []
+						}
+					}
+				},
 				"capteurs": {},
-				"compteurs": {},
-				"thermometres": {}
+				"compteurs": {
+					"affichageWebSensor": "OFF",
+					"compteur1": {
+						"activation": "OFF",
+						"nom": "Compteur 1",
+						"id": 1,
+						"pin": -1,
+						"type": 352,
+						"virtuel": "OFF",
+						"SwitchMode": 1,
+						"value": 0,
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF"
+						}
+					}
+				},
+				"thermometres": {
+					"affichageWebSensor": "OFF",
+					"thermometre1": {
+						"activation": "OFF",
+						"nom": "Thermo 1",
+						"id": 1,
+						"pin": -1,
+						"type": 1312,
+						"virtuel": "OFF",
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF"
+						}
+					}
+				}
 			}
 		},
 		"cles_propres": [
@@ -2036,12 +2093,13 @@
 			"# Driver du module metier {{metier}} : squelette genere par l'assistant de creation du persist, a completer.",
 			"# Charge depuis le LittleFS par demarrage.chargeFichier(\"controle{{Metier}}\", \"modules.{{metier}}\"), seulement",
 			"# si modules.{{metier}}.activation vaut \"ON\" ; ses fonctions sont dans {{metier}}Fonctions.be, compile avant.",
-			"# Logs : charte du CLAUDE.md (logFonctions.log, cible \"{{metier}}\" reglee par ReglageLog {{metier}} <niveau>).",
+			"# Logs : charte du CLAUDE.md (logFonctions.log, sans cible : seuil `general`). Une cible propre au module se declare a la main",
+			"# dans data/fs/logFonctions.be (CIBLES et logFonctions_lieu) : une cible inconnue y est signalee en erreur au demarrage.",
 			"",
 			"class CONTROLE_{{Metier}} : Driver",
 			"    def init()",
 			"        import {{metier}}Fonctions",
-			"        logFonctions.log(\"CONTROLE_METIER: module {{metier}} charge (squelette) !\", LOG_LEVEL_INFO, \"{{metier}}\")",
+			"        logFonctions.log(\"CONTROLE_METIER: module {{metier}} charge (squelette) !\", LOG_LEVEL_INFO)",
 			"    end",
 			"",
 			"    # Chaque seconde : rien dans le squelette (callback frequent : jamais de log info ici)",
@@ -2067,12 +2125,12 @@
 		"fonctions": [
 			"# Fonctions du module metier {{metier}} : squelette genere par l'assistant de creation du persist, a completer.",
 			"# Compile en .bec par demarrage.compile([\"{{metier}}Fonctions\"], \"modules.{{metier}}\"), importe par",
-			"# controle{{Metier}}.be. Logs : charte du CLAUDE.md (logFonctions.log, cible \"{{metier}}\").",
+			"# controle{{Metier}}.be. Logs : charte du CLAUDE.md (logFonctions.log, sans cible : seuil `general`).",
 			"var {{metier}}Fonctions = module(\"{{metier}}Fonctions\")",
 			"",
-			"# Log du module sous le seuil de sa cible (ReglageLog {{metier}} <niveau>) ; niveau = constante LOG_LEVEL_*",
+			"# Log du module sous le seuil `general` (ReglageLog general <niveau>) ; niveau = constante LOG_LEVEL_*",
 			"def {{metier}}Fonctions_log(msg, niveau)",
-			"    logFonctions.log(msg, niveau, \"{{metier}}\")",
+			"    logFonctions.log(msg, niveau)",
 			"end",
 			"{{metier}}Fonctions.log = {{metier}}Fonctions_log",
 			"",

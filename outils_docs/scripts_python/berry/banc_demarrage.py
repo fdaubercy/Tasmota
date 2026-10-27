@@ -9,6 +9,12 @@ a la reference enregistree dans bouchons_berry/demarrage/<env>.txt. Une refonte 
     python outils_docs/scripts_python/berry/banc_demarrage.py --enregistre    # (re)ecrit les references
     python outils_docs/scripts_python/berry/banc_demarrage.py --carte <env>   # une seule carte
     python outils_docs/scripts_python/berry/banc_demarrage.py --sources <copie de data/fs>
+    python outils_docs/scripts_python/berry/banc_demarrage.py --dossier <data/...> --env <env> [--cenv <ini>] [--sources <fs>]
+
+--dossier : UNE carte hors de CARTES (par exemple generee par l'assistant de persist, dans un depot d'essai ; --cenv
+donne alors le cenv de ce depot, ou l'env est declare). Aucune reference : l'instantane est imprime, et le banc est
+ROUGE si l'exception n'est pas « aucune », si la rubrique « erreurs » n'est pas vide, ou si un controleXxx.be du dossier
+de la carte ne finit pas par 'return controleXxx'.
 
 Code de sortie 0 = vert (identiques), 1 = rouge (ecart ou echec), avec le diff des rubriques qui different.
 Controle statique en plus (audit S6/P3.3) : chaque <sources>/controleXxx.be finit par 'return controleXxx'
@@ -34,8 +40,9 @@ CARTES = {
 }
 
 
-def instantane(env, carte, sources):
-    sortie = subprocess.run([BERRY, BANC, "--env", env, "--carte", carte, sources], cwd=RACINE,
+def instantane(env, carte, sources, cenv=None):
+    options = ["--cenv", cenv] if cenv else []
+    sortie = subprocess.run([BERRY, BANC, "--env", env, "--carte", carte, *options, sources], cwd=RACINE,
                             capture_output=True, text=True, encoding="utf-8", errors="replace").stdout
     lignes = sortie.splitlines()
     debut = next((i for i, l in enumerate(lignes) if l.startswith("carte : ")), None)
@@ -54,9 +61,47 @@ def controle_returns(sources):
     return sans
 
 
+def valeur(args, option):
+    return args[args.index(option) + 1] if option in args else None
+
+
+def rubrique(instantane_, titre):
+    """Ligne « titre (n) : ... » de l'instantane, ou « titre : ... » pour l'exception."""
+    return next((l for l in instantane_.splitlines() if l.startswith(titre + " (") or l.startswith(titre + " :")), "")
+
+
+def main_dossier(args):
+    """Une carte hors de CARTES : pas de reference, rouge si exception, erreurs ou 'return' manquant."""
+    env, dossier, sources = valeur(args, "--env"), valeur(args, "--dossier"), valeur(args, "--sources") or "data/fs"
+    if not env:
+        print("KO : --dossier demande aussi --env <env>")
+        return 1
+    rouges = []
+    sans = controle_returns(sources) + controle_returns(dossier)
+    print(("KO P3.3 : sans 'return controleXxx' final : %s" % ", ".join(sans)) if sans else
+          "OK P3.3 : chaque controleXxx.be de %s et du dossier de la carte finit par 'return controleXxx'" % sources)
+    if sans:
+        rouges.append("return")
+    obtenu, brut = instantane(env, dossier, sources, valeur(args, "--cenv"))
+    if obtenu is None:
+        print("KO %s : instantane absent (le banc a echoue)\n%s" % (env, brut[-1500:]))
+        return 1
+    print(obtenu.rstrip())
+    exception, erreurs = rubrique(obtenu, "exception"), rubrique(obtenu, "erreurs")
+    if exception != "exception : aucune":
+        rouges.append("exception")
+    if not erreurs.startswith("erreurs (0)"):
+        rouges.append("erreurs")
+    print("OK %s" % env if not rouges else "KO %s : %s" % (env, ", ".join(rouges)))
+    print("VERT" if not rouges else "ROUGE : %s" % ", ".join(rouges))
+    return 1 if rouges else 0
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     args = sys.argv[1:]
+    if "--dossier" in args:
+        return main_dossier(args)
     enregistre = "--enregistre" in args
     sources = args[args.index("--sources") + 1] if "--sources" in args else "data/fs"
     cartes = {args[args.index("--carte") + 1]: CARTES[args[args.index("--carte") + 1]]} if "--carte" in args else CARTES

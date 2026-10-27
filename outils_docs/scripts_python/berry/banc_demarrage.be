@@ -3,7 +3,7 @@
 # Lance par son enveloppe, depuis la racine du depot (les 6 cartes maintenues, comparees a leur reference) :
 #     python outils_docs/scripts_python/berry/banc_demarrage.py [--enregistre] [--carte <env>]
 # ou pour une carte (imprime son instantane) :
-#     lib/libesp32/berry/berry.exe outils_docs/scripts_python/berry/banc_demarrage.be --env <env> --carte <dossier> [sources]
+#     lib/libesp32/berry/berry.exe outils_docs/scripts_python/berry/banc_demarrage.be --env <env> --carte <dossier> [--cenv <ini>] [sources]
 #
 # Execute l'autoexec.be ENTIER de la carte sur le faux firmware de banc_boot (bouchons_berry/boot/ : LittleFS en
 # memoire, modules solidifies de l'env lus dans platformio_tasmota_cenv.ini, persist de la carte), puis imprime
@@ -19,7 +19,7 @@ import os
 import string
 import json
 
-BANC_BOOT = nil  LITTLEFS = nil  tasmota = nil  PREPARATION_BOOT = nil  OBJET_FACTICE = nil
+BANC_BOOT = nil  LITTLEFS = nil  tasmota = nil  PREPARATION_BOOT = nil  OBJET_FACTICE = nil  CENV_BANC = nil
 
 var BOUCHONS = "outils_docs/scripts_python/berry/bouchons_berry/boot"
 var ENV = nil
@@ -30,11 +30,12 @@ while i < size(global._argv)
     var a = global._argv[i]
     if a == "--env"    ENV = global._argv[i + 1]    i += 1
     elif a == "--carte"    CARTE = global._argv[i + 1]    i += 1
+    elif a == "--cenv"    CENV_BANC = global._argv[i + 1]    i += 1
     else    SOURCES = a
     end
     i += 1
 end
-if ENV == nil || CARTE == nil    print("usage : banc_demarrage.be --env <env> --carte <dossier> [sources]")    return    end
+if ENV == nil || CARTE == nil    print("usage : banc_demarrage.be --env <env> --carte <dossier> [--cenv <ini>] [sources]")    return    end
 var TRAVAIL = ".pio/banc_demarrage_" + ENV
 
 def litDisque(chemin)

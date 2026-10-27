@@ -5,6 +5,7 @@ Fonctions PURES (rien n'est ecrit) : `variables` lit le parc (maitre, passerelle
   - persist(modele, r, vars, secrets)   ordre d'application : socle, roles[role], puces[puce].ajouts, blocs PERMIS
                                         pour la puce (actif si coche, inactif sinon), puis un bloc modules.<metier>
                                         par metier. null retire la cle ; une cle nouvelle va en fin de son parent.
+                                        template.GPIO [] -> 1 par GPIO de la puce (puces.<p>.gpio).
                                         secrets=None : chaque "@secret:x" devient "***" (apercu de la page).
   - autoexec(modele, r)                 entrees du socle, des blocs coches, puis du metier principal ; triees par
                                         (groupe, rang) ; entrees consecutives de meme appel, meme condition et meme
@@ -231,6 +232,9 @@ def persist(modele, r, vars, secrets=None):
     for metier in r.metiers:
         obj.setdefault("modules", {})[metier] = _substitue(modele["metier"]["gabarit"], _vars_metier(vars, metier),
                                                            secrets)
+    gabarit = obj.get("template")
+    if isinstance(gabarit, dict) and gabarit.get("GPIO") == []:      # le modele porte [] : 1 par GPIO de la puce
+        gabarit["GPIO"] = [1] * modele["puces"][r.puce]["gpio"]     # (configGlobal indexe ordreGPIO par cette liste)
     return obj
 
 
