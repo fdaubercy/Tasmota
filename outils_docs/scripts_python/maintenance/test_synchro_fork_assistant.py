@@ -8,6 +8,7 @@ trois voies hors liste, une seule etape courante.
 Temoin : une analyse qui ignore `non_pousses` dans la regle de voie DOIT faire echouer `non_pousses_force_b`.
 """
 
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -155,11 +156,70 @@ def c_arbre_sale(a, t):
     verifie(par_chemin["tasmota/user_config_override.h"]["classe"], "libre", "arbre_sale : classe libre")
     verifie(a["non_suivis"], 1, "arbre_sale : un non suivi compte, non liste")
     statuts = {e["id"]: e["statut"] for e in a["etapes"]}
-    verifie(statuts["arbre"], "courante", "arbre_sale : etape arbre courante")
+    verifie(statuts["arbre"], "bloquee", "arbre_sale : etape arbre bloquee")
+    verifie(nb_courantes(a), 0, "arbre_sale : aucune courante tant que l'arbre est sale")
     verifie(statuts["synchro_a"], "attente", "arbre_sale : synchro_a en attente")
 
 
+def arbre_sale_rien_a_faire(d, t):
+    (t / "a.txt").write_text("modif\n", encoding="utf-8")
+    fd.git(t, "switch", "-q", "-c", "essai")
+
+
+def c_arbre_sale_rien_a_faire(a, t):
+    verifie((a["retard"], a["non_pousses"], len(a["fichiers"])), (0, 0, 1), "arbre_sale_rien_a_faire : etat")
+    verifie(a["etapes"], [], "arbre_sale_rien_a_faire : rien a faire, aucune etape")
+
+
+def operation_merge(d, t):
+    fd.commit_amont(d, {"commun.txt": commun_ligne(3, "amont")}, "amont l3")
+    fd.commit_local(t, {"commun.txt": commun_ligne(3, "local")}, "local l3")
+    fd.git(t, "fetch", "-q", "upstream")
+    subprocess.run(["git", "merge", "upstream/development"], cwd=t, capture_output=True, env=fd.ENV)
+
+
+def c_operation_merge(a, t):
+    verifie((a["operation"], a["merge_assistant"]), ("merge", False), "operation_merge : merge etranger vu")
+    statuts = {e["id"]: e["statut"] for e in a["etapes"]}
+    verifie(ids(a)[0], "operation", "operation_merge : operation en tete")
+    verifie(statuts["operation"], "bloquee", "operation_merge : operation bloquee")
+    verifie(nb_courantes(a), 0, "operation_merge : aucune courante")
+
+
+def retard_origin(d, t):
+    with tempfile.TemporaryDirectory() as tmp:
+        clone = Path(tmp) / "c"
+        fd.git(tmp, "clone", "-q", str(d / "origin.git"), str(clone))
+        fd.git(clone, "config", "user.name", "B")
+        fd.git(clone, "config", "user.email", "b@example.invalid")
+        fd._commit(clone, {"o.txt": "o\n"}, "origin avance")
+        fd.git(clone, "push", "-q", "origin", "development")
+
+
+def c_retard_origin(a, t):
+    verifie((a["retard_origin"], a["non_pousses"], a["retard"]), (1, 0, 0), "retard_origin : origin a avance")
+
+
+def prevision_impossible_pure():
+    """Pas de moyen simple de rendre merge-tree impossible sur le faux depot : cas teste sur `etapes` pure."""
+    a = {"erreur": "", "operation": "", "merge_assistant": False, "branche": "development", "retard": 2,
+         "non_pousses": 0, "journal_modifie": False, "fichiers": [], "touches_deux": [], "voie": "A",
+         "prevision": {"possible": False, "conflits": []}}
+    e = {x["id"]: x for x in etapes_pures(a)}
+    verifie("impossible" in e["prevision"]["detail"], True, "prevision_impossible : dit impossible")
+    verifie(e["synchro_a"]["statut"], "courante", "prevision_impossible : voie A quand meme proposee")
+    a.update(branche="essai", fichiers=[{"chemin": "a.txt"}])
+    e = {x["id"]: x["statut"] for x in etapes_pures(a)}
+    verifie((e["branche"], e["arbre"], e["synchro_a"]), ("bloquee", "bloquee", "attente"),
+            "branche_arbre_sale : branche bloquee aussi, suite en attente")
+
+
+def etapes_pures(a):
+    return asst.etapes(a)
+
+
 def autre_branche(d, t):
+    fd.commit_amont(d, {"a.txt": "a2" + chr(10)}, "amont a")   # du retard : sinon rien a faire, pas d'etape
     fd.git(t, "switch", "-q", "-c", "essai")
 
 
@@ -236,10 +296,15 @@ def principal():
            ("deux_cotes_sans_conflit", deux_cotes_sans_conflit, c_deux_cotes_sans_conflit),
            ("conflit", conflit, c_conflit), ("non_pousses_force_b", non_pousses_force_b, c_non_pousses_force_b),
            ("arbre_sale", arbre_sale, c_arbre_sale), ("autre_branche", autre_branche, c_autre_branche),
+           ("arbre_sale_rien_a_faire", arbre_sale_rien_a_faire, c_arbre_sale_rien_a_faire),
+           ("operation_merge", operation_merge, c_operation_merge),
+           ("retard_origin", retard_origin, c_retard_origin),
            ("fetch_impossible", fetch_impossible, c_fetch_impossible),
            ("accents", accents_et_espaces, c_accents_et_espaces),
            ("commits_adaptateur", commits_adaptateur, c_commits_adaptateur),
            ("journal", journal, c_journal2), ("trois_voies", trois_voies, c_trois_voies)]
+    print("-- prevision_impossible (pur)")
+    prevision_impossible_pure()
     with tempfile.TemporaryDirectory() as modele:
         fd.cree(Path(modele))
         MODELE["dossier"] = Path(modele)

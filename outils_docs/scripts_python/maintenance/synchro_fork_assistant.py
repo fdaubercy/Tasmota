@@ -8,22 +8,22 @@ Toutes travaillent sur `racine` (le depot reel par defaut, un faux depot dans le
 
 import os
 import subprocess
+from pathlib import Path
 
 import synchro_fork_etat as sfe
 import synchronise_fork_tasmota as sft
 
 REPO = sfe.REPO
 DELAI_FETCH = 60
-DELAI_GIT = 60
 FICHIERS_BUILD = ("platformio_override.ini", "tasmota/user_config_override.h",
                   "lib/libesp32/berry_custom/src/modules.h", "tasmota/tasmota_defines_for_berry.be",
                   "tasmota/tasmota_defines_for_berry.h")
 ENV = {**os.environ, "GIT_EDITOR": "true", "GIT_TERMINAL_PROMPT": "0"}
 
 
-def _git(racine, *args, delai=DELAI_GIT):
-    """(code, sortie, erreur). Delai depasse -> code -1 (le processus n'est pas tue : subprocess.run le fait
-    pour ses seules lectures, aucun merge n'est lance ici)."""
+def _git(racine, *args, delai=None):
+    """(code, sortie, erreur). Delai seulement pour le fetch (reseau) ; les lectures locales n'en ont pas.
+    Delai depasse -> code -1 (jamais de kill d'un merge : aucun n'est lance ici)."""
     try:
         r = subprocess.run(["git", "-c", "core.quotePath=false", *args], cwd=racine, capture_output=True,
                            text=True, encoding="utf-8", errors="replace", env=ENV, timeout=delai)
@@ -42,11 +42,22 @@ def _entier(racine, *args):
     return int(sortie.strip()) if code == 0 and sortie.strip().isdigit() else None
 
 
+def dossier_git(racine):
+    """Dossier .git reel (--absolute-git-dir : marche aussi dans un worktree) ; A2 y ecrit sa marque."""
+    code, sortie, erreur = _git(racine, "rev-parse", "--absolute-git-dir")
+    if code != 0 or not sortie.strip():
+        raise RuntimeError(f"dossier .git introuvable : {erreur.strip()[:300]}")
+    return Path(sortie.strip())
+
+
 def operation(racine):
-    git = os.path.join(racine, ".git")
-    if os.path.exists(os.path.join(git, "rebase-merge")) or os.path.exists(os.path.join(git, "rebase-apply")):
+    try:
+        git = dossier_git(racine)
+    except RuntimeError:
+        return ""
+    if (git / "rebase-merge").exists() or (git / "rebase-apply").exists():
         return "rebase"
-    return "merge" if os.path.exists(os.path.join(git, "MERGE_HEAD")) else ""
+    return "merge" if (git / "MERGE_HEAD").exists() else ""
 
 
 def recupere(racine):
@@ -133,43 +144,54 @@ def etapes(a):
     if a.get("erreur"):
         return []
     retard, voie, prev = a["retard"], a["voie"], a["prevision"]
-    liste = []   # (id, titre, detail, information ?)
+    rien = not retard and not a["non_pousses"] and not a["journal_modifie"]
+    liste = []   # (id, titre, detail, information ?, bloquee ?)
     if a["operation"] and not a["merge_assistant"]:
         liste.append(("operation", f"Un {a['operation']} est deja en cours",
-                      "Termine-le ou abandonne-le avant toute synchro.", False))
-    if a["branche"] != "development":
-        liste.append(("branche", "Passer sur development",
-                      f"Branche actuelle : {a['branche'] or 'inconnue'}. La synchro ne vise que development.", False))
-    if a["fichiers"]:
-        liste.append(("arbre", "Arbre de travail propre", f"{len(a['fichiers'])} fichier(s) suivi(s) modifie(s) : "
-                      "a commiter avant la synchro (/commite).", False))
-    if retard:
-        liste.append(("nouveautes", "Nouveautes de l'amont", f"{retard} commit(s) de retard.", True))
-        if a["touches_deux"]:
-            liste.append(("deux_cotes", "Fichiers touches des deux cotes", ", ".join(a["touches_deux"]), True))
-        if not prev["possible"]:
-            texte = "prevision impossible (git trop ancien ou commande en echec)"
-        elif prev["conflits"]:
-            texte = f"{len(prev['conflits'])} fichier(s) en conflit"
-        else:
-            texte = "sans conflit"
-        liste.append(("prevision", "Prevision du merge", texte, True))
-    if voie == "A":
-        liste.append(("synchro_a", "Synchroniser (en ligne puis local)", "Lance le script de merge.", False))
-    elif voie == "B":
-        liste.append(("fusion_b", "Merger en local et resoudre", "Merge local guide, fichier par fichier.", False))
-    if a["non_pousses"]:
-        liste.append(("pousser", "Pousser vers origin", f"{a['non_pousses']} commit(s) non pousse(s).", False))
-    if a["journal_modifie"]:
-        liste.append(("journal", "Commiter le journal", "Le journal des synchros a ete complete.", False))
-    resultat, courante_posee = [], False
-    for id_, titre, detail, info in liste:
+                      "Termine-le ou abandonne-le avant toute synchro (bloque tant qu'il est en cours).", False, True))
+    if rien:
+        pass   # rien a faire : ni arbre sale ni autre branche ne justifient une etape
+    else:
+        if a["branche"] != "development":
+            detail = f"Branche actuelle : {a['branche'] or 'inconnue'}. La synchro ne vise que development."
+            if a["fichiers"]:
+                detail += " Bouton actif seulement sur un arbre propre : commite d'abord les fichiers modifies."
+            liste.append(("branche", "Passer sur development", detail, False, bool(a["fichiers"])))
+        if a["fichiers"]:
+            liste.append(("arbre", "Arbre de travail propre", f"{len(a['fichiers'])} fichier(s) suivi(s) modifie(s) :"
+                          " bloquee tant qu'ils ne sont pas commites (/commite).", False, True))
+        if retard:
+            liste.append(("nouveautes", "Nouveautes de l'amont", f"{retard} commit(s) de retard.", True, False))
+            if a["touches_deux"]:
+                liste.append(("deux_cotes", "Fichiers touches des deux cotes", ", ".join(a["touches_deux"]),
+                              True, False))
+            if not prev["possible"]:
+                texte = "prevision impossible (git trop ancien ou commande en echec)"
+            elif prev["conflits"]:
+                texte = f"{len(prev['conflits'])} fichier(s) en conflit"
+            else:
+                texte = "sans conflit"
+            liste.append(("prevision", "Prevision du merge", texte, True, False))
+        if voie == "A":
+            liste.append(("synchro_a", "Synchroniser (en ligne puis local)", "Lance le script de merge.", False, False))
+        elif voie == "B":
+            liste.append(("fusion_b", "Merger en local et resoudre", "Merge local guide, fichier par fichier.",
+                          False, False))
+        if a["non_pousses"]:
+            liste.append(("pousser", "Pousser vers origin", f"{a['non_pousses']} commit(s) non pousse(s).",
+                          False, False))
+        if a["journal_modifie"]:
+            liste.append(("journal", "Commiter le journal", "Le journal des synchros a ete complete.", False, False))
+    resultat, bloque, courante_posee = [], False, False
+    for id_, titre, detail, info, bloquante in liste:
         if info:
             statut = "faite"
-        elif not courante_posee:
-            statut, courante_posee = "courante", True
-        else:
+        elif bloquante:
+            statut, bloque = "bloquee", True
+        elif bloque or courante_posee:
             statut = "attente"
+        else:
+            statut, courante_posee = "courante", True
         resultat.append(_etape(id_, titre, statut, detail))
     return resultat
 
