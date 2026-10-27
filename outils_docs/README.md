@@ -298,6 +298,8 @@ le signalait. `data/fs/controleCoprocesseur.be` (solidifié sur le P4, exclu des
   (`serveur.coprocesseur.bloque`) : ensuite, ni bouton ni requête au serveur, et la ligne d'accueil ne s'affiche que
   pendant la **première minute après le démarrage**. La page `/coprocesseur` (explication, lien du ticket) et le MQTT
   (`"Bloque": true`) gardent l'information. Une autre version lue sur le C6 (flash série fait) efface la clé.
+  La clé est **écrite dans le `_persist.json` du dépôt** (P4 du garage, et toute nouvelle carte P4) : une clé
+  apprise sur la carte seule serait perdue au flash série suivant, qui réécrit le FS, persist compris.
 - **Réglage** : bloc `serveur.coprocesseur` du persist,
   `{"activation": "ON", "url": "https://ota.tasmota.com/tasmota32/coprocessor", "mqtt": "ON"}`.
   Logs sur la cible `general`, préfixe `COPROCESSEUR`.
@@ -308,7 +310,8 @@ le signalait. `data/fs/controleCoprocesseur.be` (solidifié sur le P4, exclu des
   `Echec` vaut `null` sans échec). C'est un topic à part : le JSON `SENSOR`, lu par
   Influx et Node-RED sur le Pi et par l'historique, n'est pas modifié.
 - **Nouvelle carte P4** : la page « Fichiers Berry par env » pose l'alerte selon la **puce de la base**, quel que soit
-  le modèle (`fichiers_berry_coprocesseur.py`). Sur une base P4, elle ajoute le bloc au persist, ajoute la ligne
+  le modèle (`fichiers_berry_coprocesseur.py`). Sur une base P4, elle ajoute le bloc au persist (avec
+  `"bloque": "2.6.6"`, ajoutée aussi à un bloc qui ne l'a pas, voir « C6 bloqué »), ajoute la ligne
   `demarrage.charge` à l'autoexec et retire le module des exclusions. Pour une carte d'une autre puce créée depuis le
   P4, elle passe `activation` à `OFF`, retire le module de la solidification et l'exclut du LittleFS. Chaque
   ajustement est annoncé dans la page et visible dans le diff.

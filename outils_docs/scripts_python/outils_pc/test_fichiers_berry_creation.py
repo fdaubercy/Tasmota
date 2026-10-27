@@ -345,7 +345,8 @@ def test_p4_depuis_s3(racine):
     p, _ = cree(racine, c)
     dossier = "data/garage/tasmota32p4-essai-p4"
     verifie(_bloc_copro(racine, dossier), {"activation": "ON", "url": "https://ota.tasmota.com/tasmota32/coprocessor",
-                                           "mqtt": "ON"}, "P4 depuis S3 : bloc serveur.coprocesseur ajoute au persist")
+                                           "mqtt": "ON", "bloque": "2.6.6"},
+            "P4 depuis S3 : bloc serveur.coprocesseur ajoute au persist, cle bloque comprise")
     neuf = json.loads(texte(racine, dossier + "/_persist.json"))
     neuf["serveur"].pop("coprocesseur")
     attendu = json.loads(fbc._persist(modele, c.identite, []))
@@ -419,6 +420,15 @@ def test_coprocesseur_unitaire():
     crlf = "import demarrage\r\nif demarrage.prologue()\r\n    demarrage.charge([\"a\"])\r\nend\r\n"
     verifie(fbcp.adapte_autoexec(crlf, True, []).count("\r\n"), 5, "autoexec CRLF : fins de ligne gardees")
     verifie(fbcp.adapte_persist("{pas du json", True, []), "{pas du json", "persist illisible : rendu tel quel")
+    sans_cle = ('{\n    "serveur": {\n        "coprocesseur": {\n            "activation": "ON",\n'
+                '            "mqtt": "ON"\n        }\n    }\n}\n')
+    av = []
+    obtenu = fbcp.adapte_persist(sans_cle, True, av)
+    verifie((json.loads(obtenu)["serveur"]["coprocesseur"].get("bloque"), '            "bloque": "2.6.6"' in obtenu),
+            ("2.6.6", True), "persist P4 sans cle bloque : ajoutee au bloc, meme indentation")
+    verifie(any("bloque" in a for a in av), True, "persist P4 sans cle bloque : ajout annonce")
+    verifie(fbcp.adapte_persist(obtenu, True, []), obtenu, "persist P4 avec cle bloque : inchange")
+    verifie(fbcp.adapte_persist(sans_cle, False, []).count("bloque"), 0, "persist d'une autre puce : pas de cle bloque")
 
 
 def principal():

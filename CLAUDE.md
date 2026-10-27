@@ -465,7 +465,9 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   plus. Page `/coprocesseur` (gabarit `data/sd/html/coprocesseur.html`), bouton -> `HostedOta <URL complete>` ;
   resultat suivi par une regle `HostedOta`/`HostedLoad` : `Failed <code>` -> « echec » sur l'accueil et la page, bouton
   « Reessayer » ; `Failed 5379` = C6 BLOQUE (bug esp-hosted-mcu #143, flash serie seul remede) : cle persist
-  `serveur.coprocesseur.bloque`, ni bouton ni requete, ligne d'accueil la 1re minute apres le demarrage seulement. Version visee = `Host` (bibliotheque du firmware P4), PAS le fichier par defaut du serveur (en retard). Option `"mqtt": "ON"`
+  `serveur.coprocesseur.bloque`, ni bouton ni requete, ligne d'accueil la 1re minute apres le demarrage seulement. Cle posee dans
+  le persist du DEPOT (un flash serie reecrit le FS) : P4 du garage, et toute nouvelle carte P4 par
+  `fichiers_berry_coprocesseur.VERSION_BLOQUEE` (regle du 2026-10-27). Version visee = `Host` (bibliotheque du firmware P4), PAS le fichier par defaut du serveur (en retard). Option `"mqtt": "ON"`
   (ON sur le P4) : `tele/<topic>/COPROCESSEUR` RETENU, a chaque changement d'etat et a chaque `Mqtt#Connected` (le JSON
   SENSOR n'est pas touche). Nouvel env : `outils_pc/fichiers_berry_coprocesseur.py` (appele par
   `fichiers_berry_creation._calcule`) pose ou neutralise l'alerte selon la PUCE de la base (persist, autoexec, cenv).

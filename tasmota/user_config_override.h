@@ -48,7 +48,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
     //  #warning *** ------------------- Le fichier 'user_config_override.ini' est appele ------------------- ***
     #if defined(CFG_HOLDER) && (CFG_HOLDER == 4617)
         #undef CFG_HOLDER
-		#define CFG_HOLDER 		1561			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
+		#define CFG_HOLDER 		1562			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
 
         // #pragma message(*** ------------------- Les paramètres flash seront remplacés ! ------------------- ***)
     #else
@@ -932,7 +932,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #endif
 
             // -- ESP32 sans PSRAM : animation Berry et serveur FTP retires (audit Berry P9.8, 2026-10-26) --
-            // Memes raisons que la cave ESP32 (section FIRMWARE_ESP32_CAVE_SERVEUR_RLY) : l'animation est
+            // Memes raisons que la cave ESP32 (section des deux cartes de la cave, plus haut) : l'animation est
             // definie pour tous les modules dans la partie commune et chargee d'office par l'init amont
             // (~94k + ~98k de flash, un peu de RAM Berry) alors que la carte n'a pas de ruban ; le FTP
             // ('new FtpServer', relance a chaque connexion reseau) faisait planter la cave (tas < 25 Ko).

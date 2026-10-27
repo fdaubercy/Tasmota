@@ -3,7 +3,8 @@
 Une carte nait d'un modele (fichiers_berry_creation) : sa section du cenv, son persist et son autoexec sont
 recopies. L'alerte « firmware du coprocesseur ESP32-C6 pas a jour » ne vaut que sur un P4 : selon la PUCE de la
 base choisie, ces trois copies sont ajustees, quel que soit le modele.
-  - base P4 (tasmota32p4*) : bloc serveur.coprocesseur ajoute au persist s'il manque, ligne
+  - base P4 (tasmota32p4*) : bloc serveur.coprocesseur ajoute au persist s'il manque, cle "bloque" ajoutee au
+    bloc si elle y manque (decide le 2026-10-27, voir VERSION_BLOQUEE), ligne
     demarrage.charge(["controleCoprocesseur"], "serveur.coprocesseur") ajoutee a l'autoexec s'il ne la porte
     pas, module retire des custom_files_exclude (il est alors charge depuis le LittleFS ; le P4 du garage le
     solidifie, une copie de sa section le solidifie aussi) ;
@@ -19,7 +20,13 @@ import re
 CHEMIN = "data/fs/controleCoprocesseur.be"
 LIGNE_AUTOEXEC = ('demarrage.charge(["controleCoprocesseur"], "serveur.coprocesseur")'
                   "    # alerte « firmware du C6 pas a jour » (accueil web, MQTT)")
-BLOC = (("activation", "ON"), ("url", "https://ota.tasmota.com/tasmota32/coprocessor"), ("mqtt", "ON"))
+# Version du C6 qui refuse tout OTA (bug esp-hosted-mcu #143 : bootloader DIO + application QIO 2.1 a 2.8), constatee
+# sur le P4 du garage le 2026-10-26. Posee d'office sur toute nouvelle carte P4 (decision de l'utilisateur, 2026-10-27) :
+# sans elle, la carte ne l'apprendrait qu'apres un essai rate, et le perdrait au flash serie suivant (FS reecrit).
+# Sans risque : si le C6 de la carte est dans une autre version, controleCoprocesseur.be l'efface au demarrage.
+VERSION_BLOQUEE = "2.6.6"
+BLOC = (("activation", "ON"), ("url", "https://ota.tasmota.com/tasmota32/coprocessor"), ("mqtt", "ON"),
+        ("bloque", VERSION_BLOQUEE))
 OPTION = re.compile(r"([A-Za-z_][\w.]*)\s*=\s*(.*)$")
 
 
@@ -178,6 +185,20 @@ def adapte_persist(texte, p4, avertissements):
             avertissements.append("carte sans coprocesseur Wi-Fi : serveur.coprocesseur.activation passe a OFF")
             return texte[:activation[2]] + '"OFF"' + texte[activation[3]:]
         return texte
+    if isinstance(bloc, dict):
+        if "bloque" in bloc:
+            return texte
+        copro = next(m for m in enfants if m[0] == "coprocesseur")
+        membres = _membres(texte, copro[2])
+        if not membres:
+            avertissements.append('_persist.json : bloc serveur.coprocesseur vide, cle "bloque" a ajouter a la main')
+            return texte
+        _, cle, _, fin = membres[-1]
+        eol = "\r\n" if "\r\n" in texte else "\n"
+        ind = texte[texte.rfind("\n", 0, cle) + 1:cle]
+        avertissements.append(f'carte P4 : serveur.coprocesseur.bloque = "{VERSION_BLOQUEE}" ajoute au persist '
+                              "(C6 qui refuse les mises a jour par le reseau, efface par la carte si son C6 differe)")
+        return texte[:fin] + f',{eol}{ind}"bloque": {json.dumps(VERSION_BLOQUEE)}' + texte[fin:]
     if bloc is not None:
         return texte
     if not enfants:

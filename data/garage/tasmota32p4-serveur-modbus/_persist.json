@@ -129,7 +129,8 @@
         "coprocesseur": {
             "activation": "ON",
             "url": "https://ota.tasmota.com/tasmota32/coprocessor",
-            "mqtt": "ON"
+            "mqtt": "ON",
+            "bloque": "2.6.6"
         }
 	},
 	"template": {

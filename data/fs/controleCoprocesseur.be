@@ -272,8 +272,8 @@ class COPROCESSEUR : Driver
     def majLigne()
         if (self.etat == "bloque")
             self.ligne = (tasmota.millis() < self.DUREE_ALERTE_BLOQUE ?
-                          "{s}<a href='/coprocesseur' style='color:#f44;font-weight:bold;font-size:85%'>&#9888; Wi-Fi " + self.mcu +
-                          " bloqué en v" + self.c6 + "</a>{m}<span style='font-size:85%'>flash série nécessaire</span>{e}" : "")
+                          "{s}<a href='/coprocesseur' style='color:#f44;font-weight:bold;font-size:70%'>&#9888; Wi-Fi " + self.mcu +
+                          " bloqué en v" + self.c6 + "</a>{m}<span style='font-size:70%'>flash série nécessaire</span>{e}" : "")
             return
         end
         if (self.etat != "retard")
@@ -286,8 +286,8 @@ class COPROCESSEUR : Driver
         elif (self.echec != nil)
             dispo = "échec de la mise à jour"
         end
-        self.ligne = "{s}<a href='/coprocesseur' style='color:#f80;font-weight:bold;font-size:85%'>&#9888; Wi-Fi " + self.mcu +
-                     " à mettre à jour</a>{m}<span style='font-size:85%'>v" + self.c6 + " &rarr; v" + self.hote + " (" + dispo + ")</span>{e}"
+        self.ligne = "{s}<a href='/coprocesseur' style='color:#f80;font-weight:bold;font-size:70%'>&#9888; Wi-Fi " + self.mcu +
+                     " à mettre à jour</a>{m}<span style='font-size:70%'>v" + self.c6 + " &rarr; v" + self.hote + " (" + dispo + ")</span>{e}"
     end
 
     def peutMettreAJour()
