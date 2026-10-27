@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maquette assistant persist</title>
+<style>
+  :root{color-scheme:light dark;--fond:#f6f7f9;--carte:#fff;--bord:#ddd;--texte:#222;--doux:#666;--discret:#777;--bleu:#2563eb;
+    --vert:#2a9d4a;--orange:#c27400;--rouge:#c0392b;--btn:#fff;--btn-bord:#888;--orange-fond:#fff4e0;
+    --bleu-fond:#eef3ff;--console:#1e1e1e;--console-texte:#d8dee9}
+  @media (prefers-color-scheme: dark){:root{--fond:#121417;--carte:#1d2025;--bord:#33373e;--texte:#e6e6e6;--doux:#a8adb5;
+    --discret:#8b9099;--bleu:#5b93ff;--vert:#3fbf63;--orange:#f0a020;--rouge:#ff6b5b;--btn:#262a30;--btn-bord:#555b64;
+    --orange-fond:#3a2c12;--bleu-fond:#18233a;--console:#0b0e13}}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px system-ui,sans-serif;color:var(--texte);background:var(--fond)}
+  main{max-width:1200px;margin:0 auto;padding:12px 16px 40px}
+  h1{font-size:20px;margin:6px 0 4px} h2{font-size:15px;margin:0 0 8px}
+  .carte{background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:10px 12px;margin-bottom:12px}
+  .discret{color:var(--discret);font-size:12px}
+  .btn{padding:6px 12px;border-radius:6px;border:1px solid var(--btn-bord);background:var(--btn);color:var(--texte);font:inherit;font-size:13px;cursor:pointer}
+  .btn.p{background:var(--bleu);color:#fff;border-color:var(--bleu);font-weight:600}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  select,input[type=text],input[type=number]{font:inherit;font-size:13px;padding:4px 6px;background:var(--btn);color:var(--texte);border:1px solid var(--btn-bord);border-radius:4px;max-width:100%}
+  .onglets{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 14px}
+  .onglets button{padding:8px 14px;border-radius:6px 6px 0 0;border:1px solid var(--bord);border-bottom:3px solid transparent;background:var(--carte);color:var(--texte);cursor:pointer;font:inherit}
+  .onglets button.actif{border-bottom-color:var(--bleu);font-weight:600}
+  .bandeau{background:var(--orange-fond);border-left:3px solid var(--orange);padding:6px 10px;border-radius:4px;font-size:13px;margin-bottom:10px}
+  .grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px 12px}
+  .grille label{display:flex;flex-direction:column;font-size:12px;color:var(--doux);gap:2px}
+  .cases{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px 12px}
+  .cases label{cursor:pointer}
+  .radios label{display:block;margin:3px 0;cursor:pointer}
+  .indice{font-size:11.5px;color:var(--vert)} .indice.av{color:var(--orange)}
+  .etapes{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+  .etapes span{padding:4px 10px;border-radius:12px;background:var(--bleu-fond);color:var(--doux);font-size:12.5px;cursor:pointer}
+  .etapes span.actif{background:var(--bleu);color:#fff;font-weight:600}
+  .etapes span.fait{color:var(--vert)}
+  .deux{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px}
+  @media (max-width:800px){.deux{grid-template-columns:minmax(0,1fr)}}
+  .nav{display:flex;justify-content:space-between;margin-top:12px}
+  pre{background:var(--console);color:var(--console-texte);padding:8px;border-radius:6px;overflow:auto;max-height:520px;font-size:12px;margin:0}
+  details{border:1px solid var(--bord);border-radius:6px;padding:6px 10px;margin-bottom:8px;background:var(--carte)}
+  summary{cursor:pointer;font-weight:600}
+  .bas{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+  .cache{display:none}
+  .diff .plus{color:#7fd17f}
+</style>
+</head>
+<body>
+<main>
+  <h1>Assistant de création du persist — maquette</h1>
+  <div class="bandeau">Page de TEST jetable : rien n'est écrit, les données sont fictives. Les trois onglets partagent les mêmes réponses — changez une valeur, puis passez d'un onglet à l'autre.</div>
+  <div class="onglets" id="onglets">
+    <button data-v="A" class="actif">A — Étapes + aperçu en direct</button>
+    <button data-v="B">B — Étapes sans aperçu</button>
+    <button data-v="C">C — Formulaire unique</button>
+  </div>
+  <div id="vue"></div>
+</main>
+<script>
+const MAITRES = [{nom: "SERVEUR-GARAGE", env: "tasmota32p4-garage-serveur-modbus", id: 0, ip: "192.168.0.60"}];
+const IDS_PRIS = [0, 2, 3];
+const FONCTIONS = [
+  ["udp", "UDP (échanges maître/esclaves)"], ["discovery", "Discovery (fiche MQTT)"], ["rangeExtender", "Range Extender (point d'accès)"],
+  ["modbus", "ModBus RS485"], ["i2c", "I2C"], ["ads1115", "ADS1115 (analogiques I2C)"], ["leds", "Ruban de LED"],
+  ["historique", "Historique + graphiques"], ["volets", "Volets roulants"], ["lorawan", "LoRaWan"]];
+const E = {puce: "ESP32S3", lieu: "garage", nom: "piscine", ip: "0.0.0.0", role: "esclave", maitre: "SERVEUR-GARAGE", id: 4,
+  heure: "UDP", f: {udp: true, discovery: true, rangeExtender: true, modbus: true, i2c: false, ads1115: false, leds: true, historique: true, volets: false, lorawan: false},
+  metier: "piscine", squelettes: true};
+let vue = "A", etape = 0;
+const ETAPES = ["Carte", "Réseau", "Fonctions", "Bloc métier", "Vérification"];
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const host = () => (E.nom || "?").toUpperCase() + "-" + (E.lieu || "?").toUpperCase();
+const env = () => ({ESP32: "tasmota32", ESP32S3: "tasmota32s3", ESP32P4: "tasmota32p4"}[E.puce]) + "-" + E.lieu + "-" + E.nom;
+const lgGpio = () => ({ESP32: 36, ESP32S3: 38, ESP32P4: 55}[E.puce]);
+
+function persist() {
+  const esclave = E.role === "esclave", id = E.role === "esclave" ? +E.id : 0, m = MAITRES.find(x => x.nom === E.maitre) || MAITRES[0];
+  const onoff = b => b ? "ON" : "OFF";
+  const p = {diverses: {}, serveur: {}, template: {}, modules: {activation: "ON"}, drivers: {}};
+  if (E.f.historique && E.puce !== "ESP32") p.diverses.historique = {activation: "ON", pasMinutes: 5, dureeHeures: 24};
+  Object.assign(p.diverses, {cmdMute: true, typeESP: E.puce, logs: {profil: "normal", general: "info"}, telePeriod: 300,
+    fuseauHoraire: {typeReglageHeure: E.heure}});
+  Object.assign(p.serveur, {activation: "ON", nom: E.nom.charAt(0).toUpperCase() + E.nom.slice(1), hostname: host(),
+    IP: {IPAddress: E.ip, IPGateway: esclave ? "192.168.4.1" : "192.168.0.254"},
+    wifi: {reseau1: {nomReseauWifi: esclave ? m.nom + "-GATEWAY" : "Livebox-maison", mdpWifi: "***"}},
+    mqtt: {client: host(), topic: E.lieu + "/" + E.nom, groupTopic1: "tasmotas/" + E.lieu, mdp: "***"},
+    rangeExtender: {activation: onoff(E.f.rangeExtender), id, ipMaitre: esclave ? m.ip : "", AP: {SSID: host() + "-GATEWAY", mdp: "***"}},
+    udp: {activation: onoff(E.f.udp), id}, tcp: {activation: "OFF", id}, discovery: {activation: onoff(E.f.discovery)}});
+  p.template = {NAME: E.puce + " " + E.nom, GPIO: "[1 x " + lgGpio() + "]", FLAG: 0, BASE: 1};
+  p.modules[E.metier || "?"] = {name: E.metier, activation: "ON", reglage: "OFF", log: "info",
+    environnement: {boutons: {}, interrupteurs: {}, relais: {}, capteurs: {}}};
+  p.drivers = {leds: {activation: "ON", environnement: {leds: {ruban: {activation: onoff(E.f.leds)}}}},
+    I2C: {activation: onoff(E.f.i2c || E.f.ads1115), environnement: {ADS1115: {activation: onoff(E.f.ads1115)}}},
+    ModBus: {activation: onoff(E.f.modbus), id, typeComm: {Serial: onoff(E.f.modbus), UDP: onoff(E.f.modbus && E.f.udp)}},
+    LoRaWan: {activation: onoff(E.f.lorawan)}, voletRoulants: {activation: onoff(E.f.volets)}};
+  return JSON.stringify(p, null, 2).replace(/"\[1 x (\d+)\]"/, "[1, 1, … ($1 valeurs)]");
+}
+
+function autoexec() {
+  const l = ["import demarrage", "if demarrage.prologue()", "    demarrage.compileSocle()"];
+  if (E.f.udp) l.push('    demarrage.charge(["controleUDP"], "serveur.udp")');
+  if (E.f.modbus) l.push('    demarrage.charge(["controleModbus"])');
+  if (E.f.discovery) l.push('    demarrage.charge(["controleDiscovery"], "serveur.discovery")');
+  if (E.f.leds) l.push("    demarrage.leds()");
+  if (E.f.historique && E.puce !== "ESP32") l.push("    demarrage.historique()");
+  l.push('    demarrage.chargeFichier("controle' + cap(E.metier) + '", "modules.' + E.metier + '")', "end");
+  return l.join("\n");
+}
+const cap = s => (s || "").charAt(0).toUpperCase() + (s || "").slice(1);
+
+// --- blocs de formulaire, communs aux trois vues ---
+const B = {
+  carte: () => `<div class="grille">
+    <label>Puce<select data-k="puce">${["ESP32", "ESP32S3", "ESP32P4"].map(v => `<option${v === E.puce ? " selected" : ""}>${v}</option>`).join("")}</select></label>
+    <label>Lieu<input type="text" data-k="lieu" value="${esc(E.lieu)}"></label>
+    <label>Nom<input type="text" data-k="nom" value="${esc(E.nom)}"></label>
+    <label>Réglage de l'heure<select data-k="heure">${["NTP", "RTC", "UDP"].map(v => `<option${v === E.heure ? " selected" : ""}>${v}</option>`).join("")}</select></label></div>
+    <p class="discret">Env : <b>${esc(env())}</b> · dossier data/${esc(E.lieu)}/${esc(env().split("-")[0])}-${esc(E.nom)} · hostname ${esc(host())}${E.heure === "RTC" ? " · RTC ⇒ DS3231 activé" : ""}</p>`,
+  reseau: () => `<div class="radios">
+    ${["autonome", "maitre", "esclave"].map(r => `<label><input type="radio" name="role" data-k="role" value="${r}"${E.role === r ? " checked" : ""}> ${{autonome: "Autonome", maitre: "Maître", esclave: "Esclave de"}[r]}</label>`).join("")}</div>
+    ${E.role === "esclave" ? `<div class="grille"><label>Maître<select data-k="maitre">${MAITRES.map(m => `<option>${m.nom}</option>`).join("")}</select></label>
+      <label>Id (ModBus, UDP, TCP, Range Extender)<input type="number" data-k="id" value="${E.id}" min="1">
+      <span class="indice${IDS_PRIS.includes(+E.id) ? " av" : ""}">${IDS_PRIS.includes(+E.id) ? "⚠ id déjà pris dans le parc (carte remplaçante ?)" : "✔ libre — pris : " + IDS_PRIS.join(", ")}</span></label></div>` : ""}
+    <div class="grille"><label>Adresse IP (0.0.0.0 = DHCP)<input type="text" data-k="ip" value="${esc(E.ip)}"></label></div>
+    <p class="discret">Mots de passe : recopiés par le serveur, jamais affichés.</p>`,
+  fonctions: () => `<div class="cases">${FONCTIONS.map(([k, t]) => {
+      const off = k === "historique" && E.puce === "ESP32";
+      return `<label${off ? ' class="discret" title="S3 et P4 seulement"' : ""}><input type="checkbox" data-f="${k}"${E.f[k] && !off ? " checked" : ""}${off ? " disabled" : ""}> ${t}${off ? " (S3/P4)" : ""}</label>`;
+    }).join("")}</div>`,
+  metier: () => `<div class="grille"><label>Nom du bloc modules.&lt;…&gt;<input type="text" data-k="metier" value="${esc(E.metier)}"></label></div>
+    <label><input type="checkbox" data-k="squelettes"${E.squelettes ? " checked" : ""}> Créer les squelettes controle${esc(cap(E.metier))}.be + ${esc(E.metier)}Fonctions.be</label>
+    <p class="discret">Éditeur des relais / boutons / capteurs : seconde étape du plan (ici l'environnement est créé vide).</p>`,
+  verif: () => `<p><b>Fichiers qui seront écrits</b> : platformio_tasmota_cenv.ini, tasmota/user_config_override.h, data/${esc(E.lieu)}/…/_persist.json, autoexec.be${E.f.historique && E.puce !== "ESP32" ? ", graphiques.json" : ""}${E.squelettes ? ", controle" + esc(cap(E.metier)) + ".be, " + esc(E.metier) + "Fonctions.be" : ""}</p>
+    <p class="indice">✔ Validé par le schéma persist</p>
+    <details><summary>autoexec.be généré</summary><pre>${esc(autoexec())}</pre></details>
+    <details><summary>Diff (extrait)</summary><pre class="diff"><span class="plus">+[env:${esc(env())}]
++extends = env:${esc(env().split("-")[0])}-base…</span></pre></details>`};
+
+function section(nom) { return B[{Carte: "carte", "Réseau": "reseau", Fonctions: "fonctions", "Bloc métier": "metier", "Vérification": "verif"}[nom]](); }
+
+function rendu() {
+  const v = document.getElementById("vue");
+  const pastilles = `<div class="etapes">${ETAPES.map((n, i) => `<span data-e="${i}" class="${i === etape ? "actif" : i < etape ? "fait" : ""}">${i + 1}. ${n}</span>`).join("")}</div>`;
+  const nav = `<div class="nav"><button class="btn" data-nav="-1"${etape === 0 ? " disabled" : ""}>← Précédent</button>
+    ${etape === ETAPES.length - 1 ? '<button class="btn p" disabled title="maquette">Créer l\'env</button>' : '<button class="btn p" data-nav="1">Suivant →</button>'}</div>`;
+  if (vue === "A")
+    v.innerHTML = pastilles + `<div class="deux"><div class="carte"><h2>${etape + 1}. ${ETAPES[etape]}</h2>${section(ETAPES[etape])}${nav}</div>
+      <div class="carte"><h2>Aperçu _persist.json <span class="discret">(mis à jour à chaque saisie)</span></h2><pre id="apercu">${esc(persist())}</pre></div></div>`;
+  else if (vue === "B")
+    v.innerHTML = pastilles + `<div class="carte"><h2>${etape + 1}. ${ETAPES[etape]}</h2>${section(ETAPES[etape])}
+      ${etape === ETAPES.length - 1 ? `<details open><summary>_persist.json généré</summary><pre>${esc(persist())}</pre></details>` : ""}${nav}</div>`;
+  else
+    v.innerHTML = ETAPES.slice(0, 4).map((n, i) => `<details${i < 2 ? " open" : ""}><summary>${n}</summary><div style="margin-top:8px">${section(n)}</div></details>`).join("")
+      + `<div class="bas"><button class="btn" data-diff>Voir le diff</button><button class="btn p" disabled title="maquette">Créer l'env</button></div>
+      <div id="diffC" class="cache carte" style="margin-top:10px">${B.verif()}<details><summary>_persist.json généré</summary><pre>${esc(persist())}</pre></details></div>`;
+}
+
+document.getElementById("onglets").addEventListener("click", ev => {
+  const b = ev.target.closest("button"); if (!b) return;
+  vue = b.dataset.v; document.querySelectorAll("#onglets button").forEach(x => x.classList.toggle("actif", x === b)); rendu();
+});
+document.getElementById("vue").addEventListener("click", ev => {
+  const t = ev.target;
+  if (t.dataset.nav) { etape = Math.max(0, Math.min(ETAPES.length - 1, etape + +t.dataset.nav)); rendu(); }
+  else if (t.dataset.e !== undefined) { etape = +t.dataset.e; rendu(); }
+  else if (t.hasAttribute("data-diff")) document.getElementById("diffC").classList.toggle("cache");
+});
+document.getElementById("vue").addEventListener("change", ev => {
+  const t = ev.target;
+  if (t.dataset.f) E.f[t.dataset.f] = t.checked;
+  else if (t.dataset.k) E[t.dataset.k] = t.type === "checkbox" ? t.checked : t.value;
+  const ouverts = [...document.querySelectorAll("#vue details")].map(d => d.open);
+  rendu();
+  document.querySelectorAll("#vue details").forEach((d, i) => { if (ouverts[i] !== undefined) d.open = ouverts[i]; });
+});
+document.getElementById("vue").addEventListener("input", ev => {
+  const t = ev.target; if (!t.dataset.k || t.type === "checkbox" || t.type === "radio") return;
+  E[t.dataset.k] = t.value; const a = document.getElementById("apercu"); if (a) a.textContent = persist();
+});
+rendu();
+</script>
+</body>
+</html>
