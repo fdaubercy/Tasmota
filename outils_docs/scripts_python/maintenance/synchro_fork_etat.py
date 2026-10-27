@@ -16,16 +16,16 @@ MAX_DIFF = 300 * 1024
 MAX_JOURNAL = 300 * 1024
 
 
-def _git(*args):
+def _git(*args, racine=REPO):
     """Sortie brute (sans strip : `git status --porcelain` commence par un espace significatif)."""
-    r = subprocess.run(["git", "-c", "core.quotePath=false", *args], cwd=REPO, capture_output=True,
+    r = subprocess.run(["git", "-c", "core.quotePath=false", *args], cwd=racine, capture_output=True,
                        text=True, encoding="utf-8", errors="replace")
     return r.returncode, r.stdout, r.stderr
 
 
-def fichiers_modifies():
+def fichiers_modifies(racine=REPO):
     """Fichiers suivis modifies : [{"etat": "M", "chemin": ...}] (les non suivis sont comptes a part)."""
-    _, sortie, _ = _git("status", "--porcelain")
+    _, sortie, _ = _git("status", "--porcelain", racine=racine)
     suivis, non_suivis = [], 0
     for ligne in sortie.splitlines():
         if not ligne.strip():
