@@ -201,6 +201,26 @@ def test_fusion_secret_liste(t):
     verifie(fuite, [], "secret_liste : aucune valeur dans les sauvegardes")
 
 
+def test_fusion_secret_cle_liste(t):
+    racine = depot(t)
+    t1, t2 = TEMOIN_SECRET + "-1", TEMOIN_SECRET + "-2"
+    for rel in deux_puces(racine):
+        pose(racine, rel, "serveur.blocTokens", {"actif": "ON", "tokens": [t1, t2], "tokenObj": {"a": t1}})
+    fusionne, ajouts = apm.fusionne_nouvelles(racine, apm.charge_modele(racine))
+    bloc = fusionne["socle"]["serveur"].get("blocTokens", {})
+    verifie((bloc.get("tokens"), bloc.get("tokenObj"), bloc.get("actif")),
+            ("@secret:serveur.blocTokens.tokens", "@secret:serveur.blocTokens.tokenObj", "ON"),
+            "secret_cle_liste : cle secrete (liste ou objet) remplacee en bloc")
+    apm.ecrit_modele(racine, fusionne, apm.NATURE_AUTO)
+    texte = octets_modele(racine)
+    verifie((t1.encode() in texte, t2.encode() in texte), (False, False), "secret_cle_liste : aucune valeur dans le modele ecrit")
+    etat = json.dumps(apw.etat_modele(racine, ajouts))
+    verifie((t1 in etat, t2 in etat), (False, False), "secret_cle_liste : aucune valeur dans /modele/etat")
+    sauv = fbs.dossier_sauvegardes()
+    fuite = [x for x in sauv.rglob("*") if x.is_file() and (t1.encode() in x.read_bytes() or t2.encode() in x.read_bytes())] if sauv.is_dir() else []
+    verifie(fuite, [], "secret_cle_liste : aucune valeur dans les sauvegardes")
+
+
 # ---- fusion_rien ---------------------------------------------------------------------------------------------
 def test_fusion_rien(t):
     racine = depot(t)
@@ -337,7 +357,7 @@ def test_couverture_signale(t):
 def principal():
     vrai = (tac.RACINE / apm.FICHIER_MODELE).read_bytes()
     for test in (test_fusion_cle_nouvelle, test_fusion_demarrage, test_fusion_valeur_frequente, test_fusion_puce_unique,
-                 test_fusion_secret, test_fusion_secret_imbrique, test_fusion_secret_liste, test_fusion_rien, test_bouton_retrait, test_bouton_http, test_modele_illisible,
+                 test_fusion_secret, test_fusion_secret_imbrique, test_fusion_secret_liste, test_fusion_secret_cle_liste, test_fusion_rien, test_bouton_retrait, test_bouton_http, test_modele_illisible,
                  test_couverture_signale):
         with tempfile.TemporaryDirectory() as t:
             try:

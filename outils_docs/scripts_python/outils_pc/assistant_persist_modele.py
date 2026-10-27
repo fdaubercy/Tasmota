@@ -213,7 +213,8 @@ def ecarts(racine, modele):
             valeurs.setdefault(c, []).append([json.dumps(v, sort_keys=True, ensure_ascii=False) for v in vs])
     decrits = chemins_modele(modele)
     nouvelles = {".".join(c): sorted(cartes) for c, cartes in parc.items()
-                 if c not in decrits and not _cle_propre(c, cles_propres)}
+                 if c not in decrits and not _cle_propre(c, cles_propres)
+                 and not any(c[:k] in decrits for k in range(1, len(c)))}      # sous une feuille du modele (secret en bloc)
     retirables = chemins(modele["socle"]) | chemins(modele.get("metier", {}).get("gabarit", {}), ("modules", "*"))
     disparues = sorted(".".join(c) for c in retirables if c not in parc)
     divergentes = {}
@@ -336,7 +337,7 @@ def _observations(racine, cibles):
 def _masque_feuilles(valeur, chemin):
     """Copie de `valeur` dont chaque feuille secrete (nom SECRET), a toute profondeur, devient "@secret:<chemin>"."""
     if isinstance(valeur, dict):
-        return {k: (("@secret:" + chemin + "." + k) if SECRET.match(k) and not isinstance(v, (dict, list))
+        return {k: (("@secret:" + chemin + "." + k) if SECRET.match(k)
                     else _masque_feuilles(v, chemin + "." + k)) for k, v in valeur.items()}
     if isinstance(valeur, list):                      # objets d'une liste : chemin avec #
         return [_masque_feuilles(v, chemin + "#") for v in valeur]
@@ -369,8 +370,16 @@ def fusionne_nouvelles(racine, modele):
     cibles = {tuple(chemin.split(".")): chemin for chemin in nouvelles}
     vues, puces_du_parc = _observations(racine, cibles)
     ajouts = []
+    faits = set()
     for cible, chemin in cibles.items():
         observees = vues[cible]
+        for i, nom in enumerate(cible[:-1]):             # cle secrete AU-DESSUS de la feuille : tout le sous-arbre est masque
+            if SECRET.match(nom):
+                cible, chemin = cible[:i + 1], ".".join(cible[:i + 1])
+                break
+        if cible in faits:
+            continue
+        faits.add(cible)
         if SECRET.match(cible[-1]):
             valeur = "@secret:" + chemin
         elif observees:
