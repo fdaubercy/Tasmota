@@ -138,16 +138,16 @@ Interfaces produites (`assistant_persist_modele.py`) :
   {modele, parc}}, illisibles: [fichier]}`.
 
 Étapes :
-- [ ] Schéma :
+- [x] Schéma :
   - dans `genere_schema_persist.py`, ne plus rendre `required` les blocs optionnels. Ajouter
     `diverses.historique`, `drivers.leds.environnement.leds.ledRGB`, `serveur.coprocesseur`, `drivers.I2S`,
     `drivers.Ethernet`, `drivers.voletRoulants`, `drivers.HostedESPC6` à une constante `OPTIONNELS` consultée avant
     `SEUIL_REQUIS` ;
   - régénérer le schéma (`python outils_docs/scripts_python/berry/genere_schema_persist.py`) ;
-  - attendu : `--valide` → 8/8 OK, et le schéma contient `coprocesseur`.
-- [ ] Témoin du schéma : retirer temporairement `diverses.historique` de `OPTIONNELS` (copie du script dans le
-  scratchpad) → `--valide` doit redonner KO sur le différentiel et la cave ESP32.
-- [ ] Banc `test_assistant_persist_modele.py` (rouge d'abord, module absent) :
+  - attendu : `--valide` → 8/8 OK, et le schéma contient `coprocesseur`. — preuve : genere_schema_persist.py --valide 8/8 OK, coprocesseur dans le schema (fb2fd6b)
+- [x] Témoin du schéma : retirer temporairement `diverses.historique` de `OPTIONNELS` (copie du script dans le
+  scratchpad) → `--valide` doit redonner KO sur le différentiel et la cave ESP32. — preuve : task-1-report.md §3 : KO differentiel et cave ESP32
+- [x] Banc `test_assistant_persist_modele.py` (rouge d'abord, module absent) :
   - `couverture_parc` : `ecarts(RACINE, charge_modele(RACINE))["nouvelles"] == {}` en lecture seule des vrais
     persists ;
   - `aucun_secret` : aucune des valeurs réelles des 5 chemins secrets (lues dans le parc) n'apparaît dans le texte du
@@ -156,15 +156,15 @@ Interfaces produites (`assistant_persist_modele.py`) :
   - `ordre_racine` : `list(modele["socle"]) == ["diverses", "serveur", "template", "modules", "drivers"]` ;
   - `chemins_reduits` : `("drivers","ModBus","environnement","TasmotaSlaveModBus","TasmotaSlaveModBus#","id")` présent,
     `modules.*` présent ;
-  - `rien_a_completer` : `modele["a_completer"] == []`.
-- [ ] Écrire `assistant_persist_modele.py` puis `modele_persist.json`, à partir des 8 persists et de leur constat (§4,
+  - `rien_a_completer` : `modele["a_completer"] == []`. — preuve : test_assistant_persist_modele.py ROUGE (module absent) puis 45 OK VERT (3af4c55)
+- [x] Écrire `assistant_persist_modele.py` puis `modele_persist.json`, à partir des 8 persists et de leur constat (§4,
   §5.6).
   - Les 4 blocs de l'autoexec de la cuve donnent les rangs de référence.
   - Le gabarit `h` de chaque puce reprend les lignes communes des sections existantes de la puce. Les mots de passe y
-    sont écrits `{{@wifi1}}` / `{{@wifi2}}` / `{{@ap}}`.
-- [ ] Banc VERT. Témoin : supprimer `drivers.voletRoulants` du modèle (copie) → `couverture_parc` ROUGE, avec les 7
-  cartes nommées.
-- [ ] Commit `feat(assistant-persist): modele de persist et schema corrige`.
+    sont écrits `{{@wifi1}}` / `{{@wifi2}}` / `{{@ap}}`. — preuve : fb2fd6b + 3af4c55 (blocs[].h, metier.cles_propres)
+- [x] Banc VERT. Témoin : supprimer `drivers.voletRoulants` du modèle (copie) → `couverture_parc` ROUGE, avec les 7
+  cartes nommées. — preuve : VERT ; temoin sans voletRoulants : 29 chemins, 7 cartes nommees (task-1-report.md §3)
+- [x] Commit `feat(assistant-persist): modele de persist et schema corrige`. — preuve : fb2fd6b, correction 3af4c55 ; relecture + re-relecture : tous constats corriges
 
 ## A2 — Lecture du parc et règles des mots de passe
 
