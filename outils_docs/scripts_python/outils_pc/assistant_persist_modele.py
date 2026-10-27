@@ -336,8 +336,10 @@ def _observations(racine, cibles):
 def _masque_feuilles(valeur, chemin):
     """Copie de `valeur` dont chaque feuille secrete (nom SECRET), a toute profondeur, devient "@secret:<chemin>"."""
     if isinstance(valeur, dict):
-        return {k: (("@secret:" + chemin + "." + k) if SECRET.match(k) and not isinstance(v, dict)
+        return {k: (("@secret:" + chemin + "." + k) if SECRET.match(k) and not isinstance(v, (dict, list))
                     else _masque_feuilles(v, chemin + "." + k)) for k, v in valeur.items()}
+    if isinstance(valeur, list):                      # objets d'une liste : chemin avec #
+        return [_masque_feuilles(v, chemin + "#") for v in valeur]
     return valeur
 
 

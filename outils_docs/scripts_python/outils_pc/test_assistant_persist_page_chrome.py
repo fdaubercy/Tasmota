@@ -124,7 +124,8 @@ def visible(cdp, ident):
 def sonde_page(m):
     import test_assistant_persist_web as taw
     cdp = m.cdp
-    cdp.appel("Page.navigate", url=m.url)
+    # page chargee sous un AUTRE hote que 127.0.0.1 (celui des liens du serveur) : les liens doivent suivre la page
+    cdp.appel("Page.navigate", url=m.url.replace("127.0.0.1", "localhost"))
     verifie(attend(cdp, "document.getElementById('f-puce') && document.getElementById('f-puce').options.length === 3", 15), True,
             "chargement : les 3 puces dans la liste")
     verifie(attend(cdp, "document.getElementById('apercu').textContent.indexOf('\"serveur\"') >= 0", 15), True,
@@ -249,12 +250,11 @@ def sonde_page(m):
     verifie(attend(cdp, "!!document.getElementById('creation-ok')", 20), True, "creation : message de reussite")
     verifie(((m.depot / DOSSIER / "_persist.json").is_file(), (m.depot / DOSSIER / "controlePiscine.be").is_file()), (True, True),
             "creation : persist et squelettes ecrits dans le depot d'essai")
-    verifie(cdp.js("document.getElementById('lien-build').getAttribute('href')"), "http://127.0.0.1:7700/?env=" + ENV, "lien vers la page build")
-    verifie(cdp.js("new URL(document.getElementById('lien-build').href).hostname === location.hostname && "
-                   "new URL(document.getElementById('lien-fichiers').href).hostname === location.hostname"), True,
-            "liens : l'hote de la page (pas une adresse en dur)")
-    verifie(cdp.js("document.getElementById('lien-fichiers').getAttribute('href')"), "http://127.0.0.1:7800/?env=" + ENV,
-            "lien vers Fichiers Berry")
+    verifie(cdp.js("location.hostname"), "localhost", "page chargee sous localhost (le serveur renvoie des liens en 127.0.0.1)")
+    verifie(cdp.js("document.getElementById('lien-build').getAttribute('href')"), "http://localhost:7700/?env=" + ENV,
+            "lien build : hote de la page, port 7700")
+    verifie(cdp.js("document.getElementById('lien-fichiers').getAttribute('href')"), "http://localhost:7800/?env=" + ENV,
+            "lien fichiers : hote de la page, port 7800")
     verifie(cdp.js("document.getElementById('resume').textContent.indexOf('" + ENV + "') >= 0"), True, "resume affiche")
     clic(cdp, "copier")
     verifie(attend(cdp, "document.getElementById('copier').textContent === 'Copié'", 5), True, "bouton « Copier » : confirmation")
