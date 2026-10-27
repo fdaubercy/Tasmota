@@ -3,6 +3,8 @@
 Etat unique E (les reponses), tout est re-derive de lui :
   - l'apercu (POST /apercu, anti-rebond 300 ms, reponses perimees ignorees) ;
   - les cases de fonctions : dependances cochees d'office et expliquees, cases grisees avec leur raison ;
+  - le bandeau du modele (GET /modele/etat) : cles ajoutees d'office a relire, retraits et alignements proposes par le
+    bouton « Mettre a jour le modele » (diff, puis validation) ;
   - « Creer l'env » : actif seulement si le dernier « Voir le diff » n'a aucun refus ET si rien n'a ete saisi depuis
     (signature des reponses comparee a celle du diff) ; sinon le serveur repondrait « saisie changee ».
 Textes inseres par textContent uniquement.
@@ -13,9 +15,8 @@ JS = r"""
 var $ = function (id) { return document.getElementById(id); };
 var ETAPES = ["Carte", "Réseau", "Fonctions", "Bloc métier", "Vérification"];
 var IDENT = ["hostname", "nom_lisible", "nom_template", "client", "ssid_ap", "topic"];
-var PORT_BUILD = "7700", PORT_FICHIERS = "7800";
 var parc = null, etape = 0, minuteur = null, numero = 0, cree = false;
-var diff = null, signatureDiff = null, manuel = {};
+var diff = null, signatureDiff = null, manuel = {}, propositionModele = null;
 var E = {puce: "ESP32S3", base: "", lieu: "", nom: "", ip: "0.0.0.0", heure: "NTP", role: "autonome", maitre: "", id: 0,
   reseau1: "", reseau2: "", blocs: [], metiers: [""], squelettes: true,
   hostname: "", nom_lisible: "", nom_template: "", client: "", ssid_ap: "", topic: ""};
@@ -164,6 +165,9 @@ function majCreer() {
   }
   $("voir-diff").disabled = noms().length === 0 || cree;
 }
+function invalideDiff() {                                      // le diff ne vaut plus : il faut en demander un autre
+  diff = null; signatureDiff = null; $("panneau-diff").classList.add("cache"); vide($("retours")); majCreer();
+}
 function liste(zone, textes, classe) { textes.forEach(function (t) { zone.appendChild(el("div", {"class": classe}, t)); }); }
 async function voirDiff() {
   var rep = reponses(false), zone = vide($("retours")), r = await api("/prepare", {reponses: rep});
@@ -183,12 +187,15 @@ function fichiers() {
 async function cree_env() {
   $("creer").disabled = true;
   var r = await api("/creation", {reponses: JSON.parse(signatureDiff), empreinte: diff.empreinte}), zone = vide($("resultat"));
-  if (!r.ok || !r.donnees) { zone.appendChild(el("div", {"class": "avert rouge", id: "creation-erreur"}, r.texte)); majCreer(); return; }
-  cree = true; var c = r.donnees, base = location.protocol + "//" + location.hostname + ":";
+  if (!r.ok || !r.donnees) {
+    if (r.statut === 409) invalideDiff();                       // saisie ou fichiers changes : un nouveau « Voir le diff » est exige
+    zone.appendChild(el("div", {"class": "avert rouge", id: "creation-erreur"}, r.texte)); majCreer(); return;
+  }
+  cree = true; var c = r.donnees;
   zone.appendChild(el("p", {"class": "ok", id: "creation-ok"}, "Env " + c.env + " créé (sauvegarde : " + c.sauvegarde + ")."));
   var liens = el("p", {"class": "liens"});
-  [["lien-build", base + PORT_BUILD + "/?env=" + encodeURIComponent(c.env), "Compiler et téléverser (page build)"],
-   ["lien-fichiers", base + PORT_FICHIERS + "/?env=" + encodeURIComponent(c.env), "Fichiers Berry de l'env"]].forEach(function (x) {
+  [["lien-build", c.liens.build, "Compiler et téléverser (page build)"],
+   ["lien-fichiers", c.liens.fichiers, "Fichiers Berry de l'env"]].forEach(function (x) {
     var a = el("a", {id: x[0], href: x[1], target: "_blank", rel: "noopener"}, x[2]); liens.appendChild(a);
   });
   zone.appendChild(liens); liste(zone, c.avertissements, "avert");
@@ -250,9 +257,39 @@ async function demarre() {
   remplit($("f-puce"), parc.puces.map(function (p) { return [p, p]; }), E.puce);
   E.base = parc.base_defaut[E.puce] || (parc.bases[E.puce] || [])[0] || ""; remplitBases();
   $("f-ip").value = E.ip;
-  afficheEtape(0); reagit(); apercu();
+  afficheEtape(0); reagit(); apercu(); majModele();
   var i = await api("/interrompues");
   if (i.ok && i.donnees) i.donnees.interrompues.forEach(function (op) { interrompue(op); });
+}
+// ---- Bandeau du modele (fusion automatique faite au demarrage ; retraits et alignements a la demande) ----
+function pluriel(n, un, plusieurs) { return n + " " + (n > 1 ? plusieurs : un); }
+async function majModele() {
+  var r = await api("/modele/etat"), b = $("bandeau-modele");
+  if (!r.ok || !r.donnees) return;
+  var e = r.donnees, n = e.a_completer.length, ret = e.disparues.length, ali = Object.keys(e.divergentes).length, t = [];
+  if (n) t.push(pluriel(n, "clé ajoutée", "clés ajoutées") + " au modèle, à compléter");
+  if (ret) t.push(pluriel(ret, "clé du modèle absente", "clés du modèle absentes") + " du parc");
+  if (ali) t.push(pluriel(ali, "défaut divergent", "défauts divergents"));
+  b.classList.toggle("cache", !!e.erreur || t.length === 0);
+  $("texte-modele").textContent = t.join(" · ");
+  $("liste-modele").textContent = n ? e.a_completer.join(", ") : "";
+}
+async function proposeModele() {
+  var zone = vide($("retours-modele")), r = await api("/modele/prepare", {});
+  $("panneau-modele").classList.remove("cache");
+  if (!r.ok || !r.donnees) { liste(zone, [r.texte], "avert rouge"); $("valide-modele").disabled = true; return; }
+  propositionModele = r.donnees;
+  var rien = !propositionModele.empreinte;
+  if (rien) liste(zone, ["Rien à retirer ni à aligner : le modèle suit le parc."], "avert");
+  $("diff-modele").textContent = propositionModele.diff;
+  $("valide-modele").disabled = rien;
+}
+async function appliqueModele() {
+  var zone = vide($("retours-modele")), r = await api("/modele/applique", {empreinte: propositionModele.empreinte});
+  if (!r.ok || !r.donnees) { liste(zone, [r.texte], "avert rouge"); $("valide-modele").disabled = true; return; }
+  $("panneau-modele").classList.add("cache"); propositionModele = null;
+  invalideDiff();                                               // l'empreinte de la creation couvre le modele
+  await majModele();
 }
 function interrompue(op) {
   var d = el("div", {"class": "avert rouge"}), b = el("button", {"class": "btn", type: "button"}, "J'ai vérifié");
@@ -276,6 +313,9 @@ $("prec").onclick = function () { afficheEtape(etape - 1); };
 $("suiv").onclick = function () { afficheEtape(etape + 1); };
 $("ajout-metier").onclick = function () { E.metiers.push(""); dessineMetiers(); };
 $("voir-diff").onclick = voirDiff;
+$("maj-modele").onclick = proposeModele;
+$("valide-modele").onclick = appliqueModele;
+$("annule-modele").onclick = function () { $("panneau-modele").classList.add("cache"); propositionModele = null; };
 $("creer").onclick = cree_env;
 dessineMetiers();
 demarre();

@@ -36,7 +36,8 @@ FORME DU MODELE (contrat partage par les actions A1 a A6)
                   {{Metier}}.
   cenv            lignes du gabarit de la section [env:...] ; {{env}}, {{base}}, {{define}}, {{dossier}},
                   {{solidify}} et {{exclude}} (une valeur par ligne, alignees sous la premiere).
-  a_completer     chemins ajoutes par la fusion automatique (A6), a relire : vide dans un modele relu.
+  a_completer     chemins ajoutes par la fusion automatique (A6), a relire : vide dans un modele relu
+                  (a_completer(modele) en donne la liste ; les bancs l'appellent, jamais sur le vrai modele fusionne).
 
 Ordre d'application (generateur, A2) : socle, puis roles[role], puis puces[puce].ajouts, puis, pour chaque bloc
 PERMIS pour la puce, actif ou inactif selon la reponse (un bloc interdit pour la puce n'applique rien). Une valeur
@@ -63,9 +64,15 @@ modules.cuve.seuilX) sort dans « nouvelles », meme portee par une seule carte 
 Les environnements des DRIVERS restent couverts en entier.
 """
 
+import copy
+import difflib
+import hashlib
 import json
 import re
+from collections import Counter
 from pathlib import Path
+
+import fichiers_berry_sauvegarde as fbs
 
 FICHIER_MODELE = "outils_docs/schemas/modele_persist.json"
 CLES_MODELE = ("version", "socle", "roles", "puces", "blocs", "socle_autoexec", "metier", "cenv", "a_completer")
@@ -217,3 +224,203 @@ def ecarts(racine, modele):
                 divergentes[".".join(c)] = {"modele": vs[0], "parc": commune}
     return {"nouvelles": dict(sorted(nouvelles.items())), "disparues": disparues,
             "divergentes": dict(sorted(divergentes.items())), "illisibles": illisibles}
+
+
+# ---- Fidelite du modele (A6, spec §5.4, decisions 14 et 15) ------------------------------------------------------
+# fusionne_nouvelles : cles NOUVELLES du parc ajoutees d'office (a l'ouverture de la page, sans validation) ;
+# propose_mise_a_jour / applique_mise_a_jour : RETRAITS et ALIGNEMENTS, proposes avec un diff, appliques apres validation.
+RETIRE = object()                      # valeur de retour de fn : retire la feuille
+SECRET = re.compile(r"^(mdp|pass|pwd)", re.I)      # feuille d'un mot de passe : jamais de valeur dans le modele
+NATURE_AUTO, NATURE_MAJ = "modele-auto", "modele-maj"
+
+
+def a_completer(modele):
+    """Chemins ajoutes par la fusion automatique et pas encore relus ; [] dans un modele relu."""
+    return list(modele.get("a_completer", []))
+
+
+def _transforme(donnees, prefixe, fn):
+    """Copie de `donnees` dont chaque feuille passe par fn(chemin_reduit, valeur) -> valeur | RETIRE ; un objet
+    vide par les retraits disparait aussi (sinon il deviendrait lui-meme une feuille)."""
+    if isinstance(donnees, dict) and donnees:
+        res = {}
+        for cle, valeur in donnees.items():
+            nouveau = _transforme(valeur, prefixe + (cle,), fn)
+            if nouveau is not RETIRE:
+                res[cle] = nouveau
+        return res if res else RETIRE
+    return fn(reduit(prefixe), donnees)
+
+
+def _table(table, fn):
+    """Meme chose pour une table {"a.b.c": valeur} (roles, ajouts, actif, inactif) ; null = retrait, laisse tel quel."""
+    res = {}
+    for cle, valeur in table.items():
+        nouveau = valeur if valeur is None else _transforme(valeur, tuple(cle.split(".")), fn)
+        if nouveau is not RETIRE:
+            res[cle] = nouveau
+    return res
+
+
+def _applique(modele, fn_socle, fn_autres):
+    """Copie du modele : fn_socle sur le socle, fn_autres sur roles, ajouts, blocs (actif, inactif) et gabarit metier."""
+    neuf = copy.deepcopy(modele)
+    socle = _transforme(modele["socle"], (), fn_socle)
+    neuf["socle"] = {} if socle is RETIRE else socle
+    for nom, role in modele.get("roles", {}).items():
+        neuf["roles"][nom] = _table(role, fn_autres)
+    for nom, puce in modele.get("puces", {}).items():
+        if "ajouts" in puce:
+            neuf["puces"][nom]["ajouts"] = _table(puce["ajouts"], fn_autres)
+    for i, bloc in enumerate(modele.get("blocs", [])):
+        for cle in ("actif", "inactif"):
+            if cle in bloc:
+                neuf["blocs"][i][cle] = _table(bloc[cle], fn_autres)
+    gabarit = modele.get("metier", {}).get("gabarit")
+    if gabarit is not None:
+        g = _transforme(gabarit, ("modules", "*"), fn_autres)
+        neuf["metier"]["gabarit"] = {} if g is RETIRE else g
+    return neuf
+
+
+# ---- Ecriture ------------------------------------------------------------------------------------------------
+def _serialise(modele, eol="\n"):
+    texte = json.dumps(modele, indent="\t", ensure_ascii=False) + "\n"
+    return texte.replace("\n", eol).encode("utf-8", errors="surrogateescape")
+
+
+def _fichier(racine):
+    chemin = Path(racine) / FICHIER_MODELE
+    return chemin.read_bytes() if chemin.is_file() else b""
+
+
+def ecrit_modele(racine, modele, nature):
+    """Ecrit le modele (JSON indente par tabulation, fins de ligne du fichier en place) dans une Transaction : la
+    version d'origine est sauvegardee avant (<dossier des outils>/fichiers_berry/sauvegardes/...-<nature>)."""
+    eol = "\r\n" if b"\r\n" in _fichier(racine) else "\n"
+    with fbs.Transaction(racine, nature) as tr:
+        tr.ecrit(FICHIER_MODELE, _serialise(modele, eol))
+
+
+# ---- Fusion automatique ----------------------------------------------------------------------------------------
+def _sous(donnees, chemin):
+    for cle in chemin:
+        donnees = donnees[cle]
+    return donnees
+
+
+def _observations(racine, cibles):
+    """({cible: [(puce, valeur json)]}, puces du parc) dans l'ordre des persists du depot (chemins tries) : de quoi
+    choisir la valeur la plus frequente et la ou les puces qui portent la cle."""
+    import assistant_persist_parc as parc
+    puces = {pre: p for p, pre in parc.PREFIXES.items()}
+    vues, tout = {c: [] for c in cibles}, set()
+    for rel, donnees, _ in persists_du_depot(racine):
+        if donnees is None:
+            continue
+        puce = puces.get(Path(rel).parent.name.split("-")[0])
+        tout.add(puce)
+        deja = set()
+        for brut, _v in _feuilles(donnees, ()):
+            r = reduit(brut)
+            if r in vues and (r, brut[:len(r)]) not in deja:
+                deja.add((r, brut[:len(r)]))
+                valeur = {} if len(r) == 4 and r[2:3] == ("environnement",) else _sous(donnees, brut[:len(r)])
+                vues[r].append((puce, json.dumps(valeur, ensure_ascii=False)))
+    return vues, tout - {None}
+
+
+def _pose(arbre, chemin, valeur):
+    """Pose `valeur` en fin de son objet parent ; False si un parent existe et n'est pas un objet."""
+    for cle in chemin[:-1]:
+        arbre = arbre.setdefault(cle, {})
+        if not isinstance(arbre, dict):
+            return False
+    if not isinstance(arbre, dict) or chemin[-1] in arbre:
+        return False
+    arbre[chemin[-1]] = valeur
+    return True
+
+
+def fusionne_nouvelles(racine, modele):
+    """(modele, ajouts) : chaque chemin de ecarts()["nouvelles"] est ajoute au modele (copie ; l'entree n'est pas
+    modifiee), sans validation. Place : metier.gabarit pour modules.*.<cle> ; sinon le socle, ou puces.<p>.ajouts si
+    UNE seule puce (sur plusieurs dans le parc) porte la cle. Valeur = la plus frequente du parc (egalite : la
+    premiere carte par ordre de chemin) ; un element numerote xxx# est ecrit xxx1 ; un objet d'environnement est
+    pose vide ; une feuille mdp*/pass*/pwd* devient "@secret:<chemin>" SANS aucune valeur. Chaque chemin est
+    ajoute a a_completer. ajouts = ces chemins (ceux de ecarts), [] si le parc est couvert."""
+    nouvelles = ecarts(racine, modele)["nouvelles"]
+    if not nouvelles:
+        return modele, []
+    neuf = copy.deepcopy(modele)
+    cibles = {tuple(chemin.split(".")): chemin for chemin in nouvelles}
+    vues, puces_du_parc = _observations(racine, cibles)
+    ajouts = []
+    for cible, chemin in cibles.items():
+        observees = vues[cible]
+        if SECRET.match(cible[-1]):
+            valeur = "@secret:" + chemin
+        elif observees:
+            valeur = json.loads(Counter(v for _, v in observees).most_common(1)[0][0])
+        else:
+            continue
+        porteuses = {p for p, _ in observees if p}
+        cle = tuple(c.replace("#", "1") for c in cible)
+        if cible[:2] == ("modules", "*"):
+            place = _pose(neuf["metier"]["gabarit"], cle[2:], valeur)
+        else:
+            place = False
+            if not (len(porteuses) == 1 and len(puces_du_parc) > 1):
+                place = _pose(neuf["socle"], cle, valeur)
+            if not place:                       # une seule puce porte la cle, ou un parent qui n'est pas un objet
+                for puce in sorted(porteuses):
+                    neuf["puces"].setdefault(puce, {}).setdefault("ajouts", {})[".".join(cle)] = valeur
+                    place = True
+        if place:
+            ajouts.append(chemin)
+            if chemin not in neuf["a_completer"]:
+                neuf["a_completer"].append(chemin)
+    return (neuf, ajouts) if ajouts else (modele, [])
+
+
+# ---- Mise a jour manuelle : retraits et alignements ------------------------------------------------------------
+def _propose(racine, modele):
+    e = ecarts(racine, modele)
+    disparues, divergentes = set(e["disparues"]), e["divergentes"]
+    res = {"diff": "", "empreinte": "", "retraits": sorted(disparues),
+           "alignements": [{"chemin": c, "modele": v["modele"], "parc": v["parc"]} for c, v in divergentes.items()]}
+    if not disparues and not divergentes:
+        return res, modele
+
+    def retire(c, v):
+        return RETIRE if ".".join(c) in disparues else v
+
+    def aligne(c, v):
+        chemin = ".".join(c)
+        return divergentes[chemin]["parc"] if chemin in divergentes else retire(c, v)
+    neuf = _applique(modele, aligne, retire)
+    avant, apres = _serialise(modele).decode("utf-8"), _serialise(neuf)
+    res["diff"] = "\n".join(difflib.unified_diff(avant.split("\n"), apres.decode("utf-8").split("\n"),
+                                                FICHIER_MODELE, FICHIER_MODELE, lineterm="", n=1))
+    res["empreinte"] = hashlib.sha256(_fichier(racine) + b"\0" + apres).hexdigest()
+    return res, neuf
+
+
+def propose_mise_a_jour(racine, modele):
+    """{diff, empreinte, retraits, alignements} : retire les chemins disparus du parc (partout ou le modele les
+    decrit) et aligne les defauts du socle divergents ; a_completer est laisse tel quel. Rien n'est ecrit. diff =
+    unified diff du modele ; empreinte = fichier actuel + proposition ("" si rien a faire)."""
+    return _propose(racine, modele)[0]
+
+
+def applique_mise_a_jour(racine, empreinte):
+    """Applique la proposition recalculee sur le modele ACTUEL si son empreinte est celle que l'utilisateur a vue ;
+    RuntimeError (-> 409) sinon ou s'il n'y a plus rien a faire. Renvoie {applique, retraits, alignements}."""
+    modele = charge_modele(racine)
+    p, neuf = _propose(racine, modele)
+    if not p["empreinte"]:
+        raise RuntimeError("rien a mettre a jour dans le modele")
+    if empreinte != p["empreinte"]:
+        raise RuntimeError("le modele ou le parc a change depuis le diff : refaire « Mettre a jour le modele »")
+    ecrit_modele(racine, neuf, NATURE_MAJ)
+    return {"applique": True, "retraits": p["retraits"], "alignements": [a["chemin"] for a in p["alignements"]]}

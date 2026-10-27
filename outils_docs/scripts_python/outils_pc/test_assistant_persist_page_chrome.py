@@ -65,6 +65,9 @@ class Montage:
     def demarre(self, temoin):
         import test_assistant_persist_creation as tac
         self.depot = tac.depot(self.t)
+        import test_assistant_persist_fidelite as taf          # une cle nouvelle du parc : le demarrage la fusionne, bandeau present
+        for rel in taf.deux_puces(self.depot):
+            taf.pose(self.depot, rel, "serveur.udp.essai", 7)
         environ = dict(os.environ, OUTILS_TASMOTA_DOSSIER=str(self.t / "outils"), PYTHONIOENCODING="utf-8")
         self.port = port_libre()
         self.url = f"http://127.0.0.1:{self.port}/"
@@ -126,6 +129,17 @@ def sonde_page(m):
             "chargement : les 3 puces dans la liste")
     verifie(attend(cdp, "document.getElementById('apercu').textContent.indexOf('\"serveur\"') >= 0", 15), True,
             "chargement : apercu du persist rempli")
+    verifie(attend(cdp, "!document.getElementById('bandeau-modele').classList.contains('cache')", 10), True,
+            "bandeau du modele : visible (une cle nouvelle fusionnee au demarrage)")
+    verifie(cdp.js("document.getElementById('texte-modele').textContent.indexOf('1 clé ajoutée au modèle, à compléter') >= 0"), True,
+            "bandeau du modele : « 1 clé ajoutée au modèle, à compléter »")
+    verifie(cdp.js("document.getElementById('liste-modele').textContent"), "serveur.udp.essai", "bandeau du modele : la cle est nommee")
+    verifie(cdp.js("document.getElementById('bandeau-erreur').classList.contains('cache')"), True, "modele lisible : pas de bandeau d'erreur")
+    clic(cdp, "maj-modele")
+    verifie(attend(cdp, "!document.getElementById('panneau-modele').classList.contains('cache') && (document.getElementById('diff-modele').textContent !== '' || document.getElementById('retours-modele').textContent !== '')", 10),
+            True, "bouton « Mettre à jour le modèle » : proposition affichee (diff ou « rien a faire »)")
+    clic(cdp, "annule-modele")
+    verifie(visible(cdp, "panneau-modele"), False, "annulation : le panneau se referme")
     for i, ident in enumerate(("f-puce", "f-ip", "cases", "metiers", "voir-diff")):
         clic(cdp, f"pastille-{i}")
         verifie(cdp.js("[0,1,2,3,4].map(function(k){return !document.getElementById('etape-'+k).classList.contains('cache');})"),
@@ -217,6 +231,18 @@ def sonde_page(m):
     clic(cdp, "pastille-1")
     clic(cdp, "role-esclave")
     clic(cdp, "pastille-4")
+    clic(cdp, "voir-diff")
+    attend(cdp, "!document.getElementById('creer').disabled", 20)
+    # Ruling 11 (1) : un 409 de /creation invalide le diff ; « Creer » ne se reactive pas sans nouveau « Voir le diff »
+    cdp.js("window.__fetch0 = window.fetch; window.fetch = function(u, o){ if (String(u) === '/creation') "
+           "return Promise.resolve(new Response('saisie changee depuis le diff', {status: 409})); return window.__fetch0(u, o); }; 1")
+    clic(cdp, "creer")
+    verifie(attend(cdp, "!!document.getElementById('creation-erreur')", 10), True, "409 de /creation : message affiche")
+    verifie(cdp.js("[document.getElementById('creer').disabled, document.getElementById('panneau-diff').classList.contains('cache')]"),
+            [True, True], "409 de /creation : diff invalide, « Creer l'env » reste grise")
+    time.sleep(0.5)
+    verifie(cdp.js("document.getElementById('creer').disabled"), True, "409 de /creation : toujours grise apres coup (nouveau diff exige)")
+    cdp.js("window.fetch = window.__fetch0; 1")
     clic(cdp, "voir-diff")
     attend(cdp, "!document.getElementById('creer').disabled", 20)
     clic(cdp, "creer")

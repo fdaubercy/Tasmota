@@ -60,6 +60,19 @@ HTML = r"""<!doctype html>
 <main>
   <h1>Assistant de création du persist</h1>
   <div id="bandeau-erreur" class="avert rouge cache"></div>
+  <div id="bandeau-modele" class="avert cache">
+    <span id="texte-modele"></span>
+    <button class="btn" id="maj-modele" type="button">Mettre à jour le modèle</button>
+    <div class="discret" id="liste-modele"></div>
+  </div>
+  <div id="panneau-modele" class="carte cache">
+    <h2>Mise à jour du modèle</h2>
+    <p class="discret">Retire les clés absentes du parc et aligne les défauts divergents. Les clés à compléter ne sont pas touchées.</p>
+    <div id="retours-modele"></div>
+    <pre id="diff-modele"></pre>
+    <p><button class="btn p" id="valide-modele" type="button">Appliquer au modèle</button>
+      <button class="btn" id="annule-modele" type="button">Annuler</button></p>
+  </div>
   <div id="interrompues"></div>
   <div class="etapes" id="pastilles"></div>
   <div class="deux">

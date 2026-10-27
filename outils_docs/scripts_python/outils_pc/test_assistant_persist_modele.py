@@ -92,7 +92,7 @@ def test_chemins_reduits(modele):
 
 
 def test_rien_a_completer(modele):
-    verifie(modele["a_completer"], [], "rien_a_completer")
+    verifie(apm.a_completer(modele), [], "rien_a_completer")
 
 
 def test_puces(modele):

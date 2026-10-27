@@ -15,11 +15,14 @@ Routes (les POST exigent l'en-tete X-Assistant-Persist: 1 et la meme origine ; J
     GET  /execution     {en_cours: false} : la cible Custom l'interroge pour savoir si la page tourne
     GET  /parc          {puces, bases: {puce: [env]}, base_defaut: {puce: env}, maitres, ids_pris: {id: [dossier]},
                         id_libre, reseaux, blocs: [{id, libelle, aide, puces, dependances}], erreur_modele}
-    GET  /modele/etat   etat du modele (bandeau, fusion) : rempli par A6, {} ici
+    GET  /modele/etat   {ajouts, disparues, divergentes, a_completer, erreur} : bandeau du modele (A6) ; ajouts = cles
+                        fusionnees d'office au demarrage, erreur = modele illisible (rien n'est alors fusionne ni ecrit)
     GET  /interrompues  operations arretees en plein vol (marque restee dans leur sauvegarde)
     POST /apercu        {reponses} -> {persist, autoexec, refus, avertissements} (sans mot de passe, sans ecriture)
     POST /prepare       {reponses} -> assistant_persist_creation.prepare : diff, empreinte (vide si refus precoce), refus
     POST /creation      {reponses, empreinte} -> assistant_persist_creation.cree ; 409 si build, empreinte perimee, refus
+    POST /modele/prepare {} -> {diff, empreinte, retraits, alignements} : retraits et alignements proposes, rien d'ecrit
+    POST /modele/applique {empreinte} -> {applique, retraits, alignements} ; 409 si build, empreinte perimee, rien a faire
     POST /interrompue/acquitte {nom} -> {acquitte: true} ; 400 nom inconnu
 `reponses` = les champs de assistant_persist_generation.Reponses (puce, lieu, nom obligatoires).
 """
@@ -95,6 +98,35 @@ def _modele(racine):
         return None, str(exc)
 
 
+def demarre_modele(racine, builds_en_cours=None):
+    """Fusion AUTOMATIQUE des cles nouvelles du parc dans le modele (decision 14), sans validation, ecrite par une
+    Transaction (nature modele-auto). Liste des chemins ajoutes ; [] si le parc est couvert, si le modele est
+    illisible (ni fusion ni reecriture : le bandeau rouge le dit) ou si un build tourne (ecriture du depot refusee)."""
+    modele, _ = _modele(racine)
+    if modele is None:
+        return []
+    if builds_en_cours is not None:
+        builds = builds_en_cours()
+        if builds is None or builds:
+            print("Modele : fusion des cles nouvelles reportee (build en cours ou indetectable).", flush=True)
+            return []
+    neuf, ajouts = apm.fusionne_nouvelles(racine, modele)
+    if ajouts:
+        apm.ecrit_modele(racine, neuf, apm.NATURE_AUTO)
+        print(f"Modele : {len(ajouts)} cle(s) nouvelle(s) du parc ajoutee(s), a completer.", flush=True)
+    return ajouts
+
+
+def etat_modele(racine, ajouts):
+    """Etat pour le bandeau : calcule a chaque lecture (le parc et le modele peuvent changer pendant la session)."""
+    modele, erreur = _modele(racine)
+    if modele is None:
+        return {"ajouts": [], "disparues": [], "divergentes": {}, "a_completer": [], "erreur": erreur}
+    e = apm.ecarts(racine, modele)
+    return {"ajouts": list(ajouts), "disparues": e["disparues"], "divergentes": e["divergentes"],
+            "a_completer": apm.a_completer(modele), "erreur": ""}
+
+
 def donnees_parc(racine):
     modele, erreur = _modele(racine)
     ini, bases = fbi.lit_sections(racine), {p: [] for p in parc.PREFIXES}
@@ -146,6 +178,16 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, etat_modele):
             if not isinstance(empreinte, str) or not empreinte:
                 raise ValueError("empreinte : chaine non vide attendue (refaire « Voir le diff »)")
             return apc.cree(racine, reponses_de(demande), empreinte, builds_en_cours)
+        if chemin == "/modele/prepare":
+            return apm.propose_mise_a_jour(racine, apm.charge_modele(racine))      # ValueError si illisible -> 400
+        if chemin == "/modele/applique":
+            empreinte = demande.get("empreinte")
+            if not isinstance(empreinte, str) or not empreinte:
+                raise ValueError("empreinte : chaine non vide attendue (refaire « Mettre a jour le modele »)")
+            builds = builds_en_cours()
+            if builds is None or builds:
+                raise RuntimeError("un build tourne ou n'est pas detectable : modele non modifie")
+            return apm.applique_mise_a_jour(racine, empreinte)
         if chemin == "/interrompue/acquitte":
             nom = demande.get("nom")
             if not isinstance(nom, str) or not fbs.acquitte(nom):
@@ -202,7 +244,13 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, etat_modele):
                 self._envoie(403, b"refuse")
                 return
             try:
-                longueur = int(self.headers.get("Content-Length", "0") or 0)
+                try:
+                    longueur = int(self.headers.get("Content-Length", "0") or 0)
+                except ValueError:
+                    longueur = -1
+                if longueur < 0:                              # non entier ou negatif : read(-1) attendrait la fin du flux
+                    self.close_connection = True              # corps non lu : la connexion ne doit pas resservir
+                    raise ValueError("Content-Length invalide (entier positif attendu)")
                 if longueur > MAX_CORPS:
                     self.close_connection = True              # corps non lu : la connexion ne doit pas resservir
                     self._envoie(413, "corps trop gros (64 Ko au plus)".encode("utf-8"))
@@ -235,8 +283,13 @@ def principal():
     # (annuaire_registre.py), sinon la tuile ne retrouve pas l'outil ; test_annuaire le verifie sur cette ligne.
     acces = acces_web.Acces(args.http, args.local, "Assistant persist")
     try:
+        ajouts = demarre_modele(DEPOT, builds_en_cours_defaut)
+    except OSError as erreur:                                 # fichier tenu ouvert... : la page s'ouvre quand meme
+        print(f"Modele : fusion impossible ({erreur}).", flush=True)
+        ajouts = []
+    try:
         serveur = ThreadingHTTPServer((acces.hote, args.http),
-                                      fabrique_gestionnaire(acces, DEPOT, builds_en_cours_defaut, lambda: {}))
+                                      fabrique_gestionnaire(acces, DEPOT, builds_en_cours_defaut, lambda: etat_modele(DEPOT, ajouts)))
     except OSError as erreur:
         print(f"ERREUR : port {args.http} indisponible ({erreur}). L'outil tourne peut-etre deja.")
         return 1

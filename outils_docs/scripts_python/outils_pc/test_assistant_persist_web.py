@@ -35,15 +35,17 @@ def verifie(obtenu, attendu, libelle):
 
 
 class Banc:
-    def __init__(self, t):
-        self.racine = tac.depot(t)
+    def __init__(self, t, ajouts=None, racine=None):
+        self.racine = racine or tac.depot(t)
+        self.ajouts = ajouts or []
         self.builds = []
         with socket.socket() as s:
             s.bind(("127.0.0.1", 0))
             self.port = s.getsockname()[1]
         acces = acces_web.Acces(self.port, True, "Assistant persist")
         self.serveur = ThreadingHTTPServer(("127.0.0.1", self.port),
-                                           apw.fabrique_gestionnaire(acces, self.racine, lambda: self.builds, lambda: {}))
+                                           apw.fabrique_gestionnaire(acces, self.racine, lambda: self.builds,
+                                                                   lambda: apw.etat_modele(self.racine, self.ajouts)))
         self.serveur.daemon_threads = True
         threading.Thread(target=self.serveur.serve_forever, daemon=True).start()
 
@@ -77,7 +79,9 @@ def test_get(b):
     verifie((statut, "<html" in page.lower()), (200, True), "GET / : page html")
     verifie("127.0.0.1" in page, False, "page : aucune adresse en dur (liens d'apres l'hote)")
     verifie(b.requete("GET", "/execution"), (200, {"en_cours": False}), "GET /execution (lu par la cible)")
-    verifie(b.requete("GET", "/modele/etat"), (200, {}), "GET /modele/etat : vide ici (A6)")
+    statut, etat = b.requete("GET", "/modele/etat")
+    verifie((statut, etat), (200, {"ajouts": [], "disparues": etat["disparues"], "divergentes": {}, "a_completer": [], "erreur": ""}),
+            "GET /modele/etat : le contrat (modele relu, parc couvert)")
     verifie(b.requete("GET", "/interrompues"), (200, {"interrompues": []}), "GET /interrompues : rien")
     verifie(b.requete("GET", "/nulle-part")[0], 404, "GET route inconnue -> 404")
     statut, p = b.requete("GET", "/parc")
@@ -160,6 +164,32 @@ def test_prepare_creation(b):
             "creation une 2e fois -> 409")
 
 
+def echange_brut(b, entetes):
+    """Requete POST ecrite a la main (http.client refuse un Content-Length negatif) : ligne d'etat de la reponse."""
+    corps = b'{"reponses": {}}'
+    requete = "POST /apercu HTTP/1.1\r\nHost: 127.0.0.1:%d\r\nX-Assistant-Persist: 1\r\n%s\r\n\r\n" % (b.port, entetes)
+    with socket.create_connection(("127.0.0.1", b.port), timeout=10) as s:
+        s.sendall(requete.encode("ascii") + corps)
+        donnees = b""
+        try:
+            while b"\r\n" not in donnees:
+                bloc = s.recv(4096)
+                if not bloc:
+                    break
+                donnees += bloc
+        except OSError:
+            pass
+    return donnees.split(b"\r\n", 1)[0].decode("latin-1")
+
+
+def test_content_length(b):
+    """Ruling 11 (2) : un Content-Length negatif ou non entier est refuse en 400, sans attendre un corps."""
+    for entete, libelle in (("Content-Length: -5", "negatif"), ("Content-Length: abc", "non entier")):
+        verifie(" 400 " in echange_brut(b, entete), True, f"Content-Length {libelle} -> 400")
+    verifie(" 413 " in echange_brut(b, "Content-Length: 99999999"), True, "Content-Length enorme -> 413 (inchange)")
+    verifie(b.requete("POST", "/apercu", {"reponses": reponses()})[0], 200, "le serveur repond encore apres ces refus")
+
+
 def test_interrompues(b):
     verifie(b.requete("POST", "/interrompue/acquitte", {"nom": "../x"})[0], 400, "acquitte nom invalide -> 400")
     verifie(b.requete("POST", "/interrompue/acquitte", {})[0], 400, "acquitte sans nom -> 400")
@@ -193,7 +223,7 @@ def valeurs_reelles():
 
 
 def principal():
-    for test in (test_get, test_post_securite, test_apercu, test_prepare_creation, test_interrompues, test_erreur_inattendue):
+    for test in (test_get, test_post_securite, test_apercu, test_prepare_creation, test_content_length, test_interrompues, test_erreur_inattendue):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier
             b = Banc(t)
