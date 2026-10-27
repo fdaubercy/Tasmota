@@ -119,6 +119,39 @@ def test_temoin_couverture(modele):
             "temoin_couverture : chaque chemin manquant nomme les 7 cartes")
 
 
+def test_temoin_cle_metier_nouvelle(modele):
+    """Temoin (Ruling 1 precise) : le VRAI persist de la cuve, recopie dans un depot d'essai avec une cle
+    modules.cuve.seuilX de plus, doit faire sortir cette cle (et elle seule) dans « nouvelles »."""
+    with tempfile.TemporaryDirectory() as t:
+        cuve = json.loads((RACINE / "data/garage/tasmota32s3-capteurs-cuve-modbus/_persist.json").read_text(encoding="utf-8"))
+        _ecrit(Path(t) / "data/garage/tasmota32s3-capteurs-cuve-modbus/_persist.json", json.dumps(cuve, ensure_ascii=False))
+        verifie(apm.ecarts(t, modele)["nouvelles"], {}, "temoin_cle_metier : la cuve telle quelle est couverte")
+        cuve["modules"]["cuve"]["seuilX"] = 12
+        _ecrit(Path(t) / "data/garage/tasmota32s3-capteurs-cuve-modbus/_persist.json", json.dumps(cuve, ensure_ascii=False))
+        verifie(apm.ecarts(t, modele)["nouvelles"], {"modules.*.seuilX": ["tasmota32s3-capteurs-cuve-modbus"]},
+                "temoin_cle_metier : modules.cuve.seuilX sort dans nouvelles")
+
+
+def test_defines_par_bloc(modele):
+    """Ruling 6 : les defines qui dependent d'un bloc sont dans blocs[].h, plus dans les gabarits des puces."""
+    import re
+    blocs = {b["id"]: b for b in modele["blocs"]}
+    verifie(all(isinstance(b.get("h"), list) for b in modele["blocs"]), True, "defines_par_bloc : chaque bloc a un champ h")
+    verifie(any(re.match(r"\s*#define\s+USE_MODBUS\b", l) for l in blocs["modbus"]["h"]), True,
+            "defines_par_bloc : le bloc modbus porte #define USE_MODBUS")
+    actif = re.compile(r"\s*#\s*define\s+USE_MODBUS\b")          # une ligne en commentaire (// #define) ne compte pas
+    verifie([p for p, x in modele["puces"].items() if any(actif.match(l) for l in x["h"])], [],
+            "defines_par_bloc : aucun gabarit de puce (dont S3) ne definit USE_MODBUS hors commentaire")
+    attendus = {"i2c": "USE_I2C", "ads1115": "USE_ADS1115", "ds3231": "USE_RTC_CHIPS", "lorawan": "USE_LORAWAN_BRIDGE",
+                "voletRoulants": "USE_SHUTTER", "ruban": "USE_WS2812", "ledRGB": "TASMOTALED_HARDWARE_SPI",
+                "i2s": "USE_I2S_ALL", "sd": "USE_SDCARD"}
+    verifie([i for i, d in attendus.items() if not any(re.match(r"\s*#define\s+" + d + r"\b", l) for l in blocs[i]["h"])],
+            [], "defines_par_bloc : i2c, ads1115, ds3231, lorawan, volets, ruban, ledRGB, i2s, sd portent leur define")
+    tous = re.compile(r"\s*#\s*(define|undef)\s+(" + "|".join(list(attendus.values()) + ["USE_MODBUS", "USE_SPI"]) + r")\b")
+    verifie({p: [l.strip() for l in x["h"] if tous.match(l)] for p, x in modele["puces"].items()},
+            {p: [] for p in modele["puces"]}, "defines_par_bloc : gabarits des puces sans aucun define de bloc")
+
+
 # ---- Fonctions pures --------------------------------------------------------------------------------------
 def test_chemins_unitaires():
     d = {"modules": {"activation": "ON",
@@ -188,8 +221,8 @@ def test_parc_essai():
     """Persists hors sauvegarde, illisible signale sans planter, cle propre a UNE carte ignoree (decision 1)."""
     with tempfile.TemporaryDirectory() as t:
         racine = Path(t)
-        # dimensions : sur UNE carte -> ignoree ; propre : 2 blocs, mais d'une seule carte -> ignoree aussi ;
-        # commune : sur 2 cartes -> nouvelle
+        # dimensions : listee dans metier.cles_propres -> ignoree ; propre : d'une seule carte mais NON listee ->
+        # nouvelle quand meme ; commune : sur 2 cartes -> nouvelle
         a = {"serveur": {"udp": {"activation": "ON"}}, "modules": {"activation": "ON", "cuve": {"name": "c",
              "dimensions": {"h": 1}, "commune": 0}}}
         b = {"serveur": {"udp": {"activation": "ON"}, "neuve": 1}, "modules": {"activation": "ON",
@@ -204,11 +237,16 @@ def test_parc_essai():
         verifie([(d is None, bool(e)) for _, d, e in lus], [(True, True), (False, False), (False, False)],
                 "persists_du_depot : illisible -> (None, erreur)")
         modele = {"socle": {"serveur": {"udp": {"activation": "OFF"}}, "modules": {"activation": "ON"}},
-                  "roles": {}, "puces": {}, "blocs": [], "metier": {"gabarit": {"name": "n"}}}
+                  "roles": {}, "puces": {}, "blocs": [],
+                  "metier": {"gabarit": {"name": "n"}, "cles_propres": ["dimensions"]}}
         e = apm.ecarts(racine, modele)
         verifie(e["illisibles"], ["data/cave/carte-d/_persist.json"], "ecarts : persist illisible signale")
-        verifie(e["nouvelles"], {"serveur.neuve": ["carte-b"], "modules.*.commune": ["carte-a", "carte-b"]},
-                "ecarts : nouvelles (cles metier propres a une carte ignorees : dimensions, propre)")
+        verifie(e["nouvelles"], {"serveur.neuve": ["carte-b"], "modules.*.commune": ["carte-a", "carte-b"],
+                                 "modules.*.propre": ["carte-b"]},
+                "ecarts : nouvelles (seule dimensions, listee dans cles_propres, est ignoree)")
+        del modele["metier"]["cles_propres"]
+        verifie("modules.*.dimensions" in apm.ecarts(racine, modele)["nouvelles"], True,
+                "ecarts : sans cles_propres, dimensions est une cle nouvelle")
         verifie(e["divergentes"], {"serveur.udp.activation": {"modele": "OFF", "parc": "ON"}},
                 "ecarts : defaut divergent de la valeur commune du parc")
         modele["socle"]["serveur"]["fantome"] = 1
@@ -229,7 +267,8 @@ def principal():
         modele = None
     if modele is not None:
         for test in (test_couverture_parc, test_aucun_secret, test_secrets_marques, test_ordre_racine,
-                     test_chemins_reduits, test_rien_a_completer, test_puces, test_temoin_couverture):
+                     test_chemins_reduits, test_rien_a_completer, test_puces, test_temoin_couverture,
+                     test_temoin_cle_metier_nouvelle, test_defines_par_bloc):
             try:
                 test(modele)
             except Exception as exc:

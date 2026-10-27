@@ -126,13 +126,16 @@ DESCRIPTIONS = {
 
 # --------------------------------------------------------------------- lecture
 def liste_persists():
-    """Persists suivis par git (hors dossiers « sauvegarde »), chemins absolus."""
+    """Persists suivis par git (hors dossiers « sauvegarde »), chemins absolus. Seuls les fichiers NOMMES
+    `_persist.json` sous data/ : outils_docs/schemas/modele_persist.json (modele de l'assistant) finit aussi par
+    « _persist.json » mais n'est pas un persist de carte."""
     try:
         sortie = subprocess.check_output(["git", "ls-files"], cwd=RACINE).decode("utf-8")
         noms = [n for n in sortie.splitlines()]
     except Exception:
         noms = [str(p.relative_to(RACINE)).replace("\\", "/") for p in RACINE.glob("data/**/_persist.json")]
-    return [RACINE / n for n in noms if n.endswith("_persist.json") and "sauvegarde" not in n.lower()]
+    return [RACINE / n for n in noms
+            if n.startswith("data/") and n.rsplit("/", 1)[-1] == "_persist.json" and "sauvegarde" not in n.lower()]
 
 
 def charge(chemin):

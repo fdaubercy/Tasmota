@@ -20,13 +20,20 @@ FORME DU MODELE (contrat partage par les actions A1 a A6)
                   de la section `#elif` du .h (variables {{env}}, {{define}} et celles du socle ; mots de passe
                   {{@wifi1}}, {{@wifi2}}, {{@ap}}) ; ajouts = {"<chemin.pointe>": valeur}.
   blocs           liste ordonnee (ordre des questions) de {id, libelle, aide, puces, dependances, actif, inactif,
-                  solidify, exclude_si_inactif, autoexec}. autoexec = [{rang, appel, modules, condition, groupe}],
+                  solidify, exclude_si_inactif, autoexec, h}. autoexec = [{rang, appel, modules, condition, groupe}],
                   appel parmi importe | compile | charge | leds | historique ; condition = chemin du bloc du persist
-                  dont "activation" doit valoir "ON" (demarrage.be), null = toujours.
+                  dont "activation" doit valoir "ON" (demarrage.be), null = toujours. h = lignes du .h propres au
+                  bloc (USE_MODBUS, USE_I2C, USE_SHUTTER...), reprises des sections #elif reelles : ajoutees en fin
+                  de la section #elif de la carte quand le bloc est coche (A4), dedoublonnees (ruban et ledRGB
+                  portent tous deux USE_WS2812) ; [] si le bloc n'a pas de define. Ces lignes ne figurent PAS dans
+                  puces.<p>.h (Ruling 6) ; la partie « post-process » commune du .h en tire les defines derives
+                  (USE_MODBUS -> USE_MODBUS_BRIDGE, USE_RTC_CHIPS -> USE_DS3231, USE_SHUTTER -> SHUTTER_SUPPORT...).
   socle_autoexec  {entete: [lignes de commentaire], entrees: [meme forme]} ; seul le socle a l'appel compileSocle.
-  metier          {gabarit, controle, fonctions, autoexec} : gabarit de modules.<metier> a environnement vide ;
-                  lignes des squelettes controle{{Metier}}.be et {{metier}}Fonctions.be ; lignes d'autoexec du bloc
-                  principal (compile au rang 900, chargeFichier au rang 999). Variables {{metier}}, {{Metier}}.
+  metier          {gabarit, cles_propres, controle, fonctions, autoexec} : gabarit de modules.<metier> a
+                  environnement vide ; cles_propres = cles de premier niveau propres a une carte, hors couverture
+                  (voir plus bas) ; lignes des squelettes controle{{Metier}}.be et {{metier}}Fonctions.be ; lignes
+                  d'autoexec du bloc principal (compile au rang 900, chargeFichier au rang 999). Variables {{metier}},
+                  {{Metier}}.
   cenv            lignes du gabarit de la section [env:...] ; {{env}}, {{base}}, {{define}}, {{dossier}},
                   {{solidify}} et {{exclude}} (une valeur par ligne, alignees sous la premiere).
   a_completer     chemins ajoutes par la fusion automatique (A6), a relire : vide dans un modele relu.
@@ -48,8 +55,10 @@ Un chemin est le tuple des cles jusqu'a une feuille (valeur non objet, ou objet 
     comparaison s'arrete aux cles de premier niveau du bloc metier (name, activation, reglage, log, logs,
     environnement...) et aux NOMS des groupes de son environnement (boutons, relais...). Le contenu des elements
     `xxxN.*` et les sous-cles (logs.*, dimensions.*) relevent de l'editeur d'elements (A7).
-Dans ecarts(), une cle de premier niveau d'un bloc metier portee par UNE SEULE carte (modules.cuve.dimensions) est
-propre a cette carte : elle n'est pas une cle « nouvelle ». Les environnements des DRIVERS restent couverts en entier.
+Seules les cles de premier niveau listees EXPLICITEMENT dans metier.cles_propres (["dimensions"] : la cuve) echappent
+a la couverture dans ecarts() ; toute autre cle de premier niveau absente du gabarit metier (une future
+modules.cuve.seuilX) sort dans « nouvelles », meme portee par une seule carte (Ruling 1 precise, tour de correction 1).
+Les environnements des DRIVERS restent couverts en entier.
 """
 
 import json
@@ -158,8 +167,9 @@ def persists_du_depot(racine):
     return res
 
 
-def _propre_a_une_carte(chemin, cartes):
-    return len(chemin) == 3 and chemin[:2] == ("modules", "*") and len(cartes) == 1
+def _cle_propre(chemin, cles_propres):
+    """modules.*.<cle> listee dans metier.cles_propres : hors couverture (liste explicite, jamais deduite du parc)."""
+    return len(chemin) == 3 and chemin[:2] == ("modules", "*") and chemin[2] in cles_propres
 
 
 def _constante(valeur):
@@ -171,7 +181,15 @@ def _constante(valeur):
 
 def ecarts(racine, modele):
     """{nouvelles: {chemin: [cartes]}, disparues: [chemin], divergentes: {chemin: {modele, parc}},
-    illisibles: [fichier]} ; chemin = cles jointes par des points (modules.*.name, ...TasmotaSlaveModBus#.id)."""
+    illisibles: [fichier]} ; chemin = cles jointes par des points (modules.*.name, ...TasmotaSlaveModBus#.id).
+      - nouvelles : chemins du parc absents du modele, sauf modules.*.<cle> de metier.cles_propres ;
+      - disparues : chemins du modele presents dans aucun persist ;
+      - divergentes : constante du SOCLE differente de la valeur commune a TOUS les persists lisibles. Les gabarits
+        ({{...}}), les secrets (@secret:*) et tout chemin sous `modules` sont ignores : le nom du bloc metier y est
+        reduit a `*` et ses chemins sont tronques (logs, environnement.boutons...), si bien que la « valeur » d'un
+        tel chemin est un objet propre a chaque carte, pas un defaut comparable ; le gabarit metier est d'ailleurs
+        hors socle (le socle ne porte que modules.activation, ignore avec le reste)."""
+    cles_propres = modele.get("metier", {}).get("cles_propres", [])
     parc, valeurs, illisibles, lus = {}, {}, [], 0
     for rel, donnees, _ in persists_du_depot(racine):
         if donnees is None:
@@ -184,7 +202,7 @@ def ecarts(racine, modele):
             valeurs.setdefault(c, []).append([json.dumps(v, sort_keys=True, ensure_ascii=False) for v in vs])
     decrits = chemins_modele(modele)
     nouvelles = {".".join(c): sorted(cartes) for c, cartes in parc.items()
-                 if c not in decrits and not _propre_a_une_carte(c, cartes)}
+                 if c not in decrits and not _cle_propre(c, cles_propres)}
     disparues = sorted(".".join(c) for c in decrits if c not in parc)
     divergentes = {}
     for c, vs in _valeurs(modele["socle"]).items():

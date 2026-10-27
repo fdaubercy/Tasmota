@@ -749,7 +749,6 @@
 				"            // #define USE_TASMESH                              // Enable Tasmota Mesh using ESP-NOW (+11k code)",
 				"",
 				"            // -- Optional modules ----------------------------",
-				"            #undef USE_SHUTTER // Add Shutter support for up to 4 shutter with different motortypes (+11k code)",
 				"",
 				"            // -- LCD I2C -----------------------",
 				"            //#define USE_I2C             // I2C using library wire (+10k code, 0k2 mem, 124 iram)",
@@ -760,25 +759,6 @@
 				"            //#define NUM_GRAPHS 4        // Max 16",
 				"",
 				"            // -- I2C sensors ---------------------------------",
-				"            #define USE_I2C             // I2C using library wire (+10k code, 0k2 mem, 124 iram)",
-				"            #ifdef USE_I2C",
-				"                #define I2CDRIVERS_0_31        0xFFFFFFFF        // Enable I2CDriver0  to I2CDriver31",
-				"                #define I2CDRIVERS_32_63       0xFFFFFFFF        // Enable I2CDriver32 to I2CDriver63",
-				"                #define I2CDRIVERS_64_95       0xFFFFFFFF        // Enable I2CDriver64 to I2CDriver95",
-				"                #define I2CDRIVERS_96_127      0xFFFFFFFF        // Enable I2CDriver96 to I2CDriver127",
-				"                #define I2CDRIVERS_128_159     0xFFFFFFFF        // Enable I2CDriver128 to I2CDriver159",
-				"",
-				"                //#define USE_ADS1115                             // [I2cDriver13] Enable ADS1115 16 bit A/D converter (I2C address 0x48, 0x49, 0x4A or 0x4B) based on Adafruit ADS1x15 library (no library needed) (+0k7 code)",
-				"",
-				"                // Cf. url: https://tasmota.github.io/docs/MCP230xx/",
-				"                // Vérifier activation du driver : I2cDriver22 1",
-				"                // Tester l'adresse du module MCP23XXX (adresse comprise entre 0x20 & 0x26) : I2CScan",
-				"                // Les paramètres des I/O est realisé dans le fichier mcp23xx.dat",
-				"                // Paramètres Mode 2 MCP23017",
-				"                //#define USE_MCP23XXX_DRV",
-				"                    //#define USE_MCP230xx_ADDR 0x20                  // Enable MCP23008/MCP23017 I2C Address to use (Must be within range 0x20 through 0x26 - set according to your wired setup)",
-				"                    #undef USE_DS1624                                 // [I2cDriver42] Enable DS1624, DS1621 temperature sensor (I2C addresses 0x48 - 0x4F) (+1k2 code)",
-				"            #endif",
 				"",
 				"            // -- Internal Analog input -----------------------",
 				"            //#undef USE_ADC_VCC // Display Vcc in Power status. Disable for use as Analog input on selected devices",
@@ -937,29 +917,10 @@
 				"            //#define NUM_GRAPHS 4        // Max 16",
 				"",
 				"            // -- I2C sensors ---------------------------------",
-				"            #ifdef USE_I2C",
-				"                #define I2CDRIVERS_0_31        0xFFFFFFFF        // Enable I2CDriver0  to I2CDriver31",
-				"                #define I2CDRIVERS_32_63       0xFFFFFFFF        // Enable I2CDriver32 to I2CDriver63",
-				"                #define I2CDRIVERS_64_95       0xFFFFFFFF        // Enable I2CDriver64 to I2CDriver95",
-				"                #define I2CDRIVERS_96_127      0xFFFFFFFF        // Enable I2CDriver96 to I2CDriver127",
-				"                #define I2CDRIVERS_128_159     0xFFFFFFFF        // Enable I2CDriver128 to I2CDriver159",
-				"",
-				"",
-				"                // Cf. url: https://tasmota.github.io/docs/MCP230xx/",
-				"                // Vérifier activation du driver : I2cDriver22 1",
-				"                // Tester l'adresse du module MCP23XXX (adresse comprise entre 0x20 & 0x26) : I2CScan",
-				"                // Les paramètres des I/O est realisé dans le fichier mcp23xx.dat",
-				"                // Paramètres Mode 2 MCP23017",
-				"                //#define USE_MCP23XXX_DRV",
-				"                    //#define USE_MCP230xx_ADDR 0x20                  // Enable MCP23008/MCP23017 I2C Address to use (Must be within range 0x20 through 0x26 - set according to your wired setup)",
-				"                    #undef USE_DS1624                                 // [I2cDriver42] Enable DS1624, DS1621 temperature sensor (I2C addresses 0x48 - 0x4F) (+1k2 code)",
-				"",
-				"            #endif",
 				"",
 				"",
 				"            // -- Optional light modules ----------------------",
 				"            #define USE_LIGHT                                // Add support for light control",
-				"            #define USE_WS2812                               // WS2812 Led string using library NeoPixelBus (+5k code, +1k mem, 232 iram) - Disable by //",
 				"            //  #define USE_WS2812_DMA                         // ESP8266 only, DMA supports only GPIO03 (= Serial RXD) (+1k mem). When USE_WS2812_DMA is enabled expect Exceptions on Pow",
 				"            //  #define USE_WS2812_I2S  0                      // ESP32 only, hardware I2S support. Specify the I2S channel 0..2. This is exclusive from RMT. By default, prefer RMT support",
 				"            //  #define USE_WS2812_INVERTED                    // Use inverted data signal",
@@ -1098,7 +1059,6 @@
 				"            // #define USE_TASMESH                              // Enable Tasmota Mesh using ESP-NOW (+11k code)",
 				"",
 				"            // -- Optional modules ----------------------------",
-				"            #define USE_SHUTTER // Add Shutter support for up to 4 shutter with different motortypes (+11k code)",
 				"",
 				"            // -- LCD I2C -----------------------",
 				"            //#define USE_I2C             // I2C using library wire (+10k code, 0k2 mem, 124 iram)",
@@ -1109,34 +1069,12 @@
 				"            //#define NUM_GRAPHS 4        // Max 16",
 				"",
 				"            // -- I2C sensors ---------------------------------",
-				"            #define USE_I2C             // I2C using library wire (+10k code, 0k2 mem, 124 iram)",
-				"            #ifdef USE_I2C",
-				"                #define I2CDRIVERS_0_31        0xFFFFFFFF        // Enable I2CDriver0  to I2CDriver31",
-				"                #define I2CDRIVERS_32_63       0xFFFFFFFF        // Enable I2CDriver32 to I2CDriver63",
-				"                #define I2CDRIVERS_64_95       0xFFFFFFFF        // Enable I2CDriver64 to I2CDriver95",
-				"                #define I2CDRIVERS_96_127      0xFFFFFFFF        // Enable I2CDriver96 to I2CDriver127",
-				"                #define I2CDRIVERS_128_159     0xFFFFFFFF        // Enable I2CDriver128 to I2CDriver159",
-				"",
-				"                #define USE_ADS1115                             // [I2cDriver13] Enable ADS1115 16 bit A/D converter (I2C address 0x48, 0x49, 0x4A or 0x4B) based on Adafruit ADS1x15 library (no library needed) (+0k7 code)",
-				"",
-				"                // Cf. url: https://tasmota.github.io/docs/MCP230xx/",
-				"                // Vérifier activation du driver : I2cDriver22 1",
-				"                // Tester l'adresse du module MCP23XXX (adresse comprise entre 0x20 & 0x26) : I2CScan",
-				"                // Les paramètres des I/O est realisé dans le fichier mcp23xx.dat",
-				"                // Paramètres Mode 2 MCP23017",
-				"                //#define USE_MCP23XXX_DRV",
-				"                    //#define USE_MCP230xx_ADDR 0x20                  // Enable MCP23008/MCP23017 I2C Address to use (Must be within range 0x20 through 0x26 - set according to your wired setup)",
-				"                    #undef USE_DS1624                                 // [I2cDriver42] Enable DS1624, DS1621 temperature sensor (I2C addresses 0x48 - 0x4F) (+1k2 code)",
-				"",
-				"                #define USE_RTC_CHIPS                                 // Enable RTC chip support and NTP server",
-				"            #endif",
 				"",
 				"            // -- Internal Analog input -----------------------",
 				"            //#undef USE_ADC_VCC // Display Vcc in Power status. Disable for use as Analog input on selected devices",
 				"",
 				"            // -- Optional light modules ----------------------",
 				"            #define USE_LIGHT                                       // Add support for light control",
-				"            #define USE_WS2812                                      // WS2812 Led string using library NeoPixelBus (+5k code, +1k mem, 232 iram) - Disable by //",
 				"            //  #define USE_WS2812_DMA                              // ESP8266 only, DMA supports only GPIO03 (= Serial RXD) (+1k mem). When USE_WS2812_DMA is enabled expect Exceptions on Pow",
 				"                #undef USE_WS2812_RMT",
 				"                    #define USE_WS2812_RMT  1                       // ESP32 only, hardware RMT support (default). Specify the RMT channel 0..7. This should be preferred to software bit bang.",
@@ -1154,7 +1092,6 @@
 				"            #define DS18x20_USE_ID_ALIAS                            // Add support aliasing for DS18x20 sensors. See comments in xsns_05 files (+0k5 code)",
 				"",
 				"            // -- Serial sensors ------------------------------",
-				"            #define USE_MODBUS",
 				"            // #define USE_TASMOTA_CLIENT                       // Add support for Arduino Uno/Pro Mini via serial interface including flashing (+2k6 code, 64 mem)",
 				"                                                            // GPIO4=Slave TX / GPIO5=Slave RX",
 				"",
@@ -1162,24 +1099,11 @@
 				"            // #define USE_BLE_ESP32                              // Add support for ESP32 as a BLE-bridge (+9k2? mem, +292k? flash)",
 				"",
 				"            // -- LoRaWan 868MHz ------------------------------",
-				"            #define USE_LORAWAN_BRIDGE      // Add support for LoRaWan bridge (+8k code)",
-				"            #define USE_LORA_SX126X         // Add driver support for LoRa on SX1262 based devices like LiliGo T3S3 Lora32 (+16k code)",
 				"",
 				"            // -- Utilisation des WebSockets ------------------------------",
 				"            #define USE_WSSERVER",
 				"",
 				"            // -- SPI sensors ---------------------------------",
-				"            #define USE_SPI                                  // Hardware SPI using GPIO12(MISO), GPIO13(MOSI) and GPIO14(CLK) in addition to two user selectable GPIOs(CS and DC)",
-				"            #ifdef USE_SPI",
-				"                #define USE_UFILESYS",
-				"                #define GUI_EDIT_FILE",
-				"                #define GUI_TRASH_FILE",
-				"",
-				"            // -- SD Card support -----------------------------",
-				"                #define USE_SDCARD                      // mount SD Card, requires configured SPI pins and setting of `SDCard CS` gpio",
-				"                #define SDC_HIDE_INVISIBLES             // hide hidden directories from the SD Card, which prevents crashes when dealing SD created on MacOS",
-				"                #define SDCARD_CS_PIN 45                 // Not strictly necessary since the same #define happens in xdrv_50_filesystem.ino",
-				"            #endif",
 				"",
 				"            // -- Rules or Script  ----------------------------",
 				"            // Select none or only one of the below defines USE_RULES or USE_SCRIPT",
@@ -1195,7 +1119,6 @@
 				"            #endif",
 				"",
 				"            // -- Compétences Audio  ----------------------------",
-				"            #define USE_I2S_ALL",
 				"",
 				"            // -- Rules or Script  ----------------------------",
 				"            #ifdef USER_BACKLOG",
@@ -1370,7 +1293,8 @@
 					"condition": "serveur.udp",
 					"groupe": "chargement"
 				}
-			]
+			],
+			"h": []
 		},
 		{
 			"id": "tcp",
@@ -1409,7 +1333,8 @@
 					"condition": "serveur.tcp",
 					"groupe": "chargement"
 				}
-			]
+			],
+			"h": []
 		},
 		{
 			"id": "rangeExtender",
@@ -1446,7 +1371,8 @@
 					"condition": "serveur.rangeExtender",
 					"groupe": "chargement"
 				}
-			]
+			],
+			"h": []
 		},
 		{
 			"id": "discovery",
@@ -1485,7 +1411,8 @@
 					"condition": "serveur.discovery",
 					"groupe": "chargement"
 				}
-			]
+			],
+			"h": []
 		},
 		{
 			"id": "modbus",
@@ -1551,6 +1478,9 @@
 					"condition": null,
 					"groupe": "chargement"
 				}
+			],
+			"h": [
+				"            #define USE_MODBUS"
 			]
 		},
 		{
@@ -1574,7 +1504,8 @@
 			},
 			"solidify": [],
 			"exclude_si_inactif": [],
-			"autoexec": []
+			"autoexec": [],
+			"h": []
 		},
 		{
 			"id": "i2c",
@@ -1596,7 +1527,18 @@
 			},
 			"solidify": [],
 			"exclude_si_inactif": [],
-			"autoexec": []
+			"autoexec": [],
+			"h": [
+				"            #define USE_I2C             // I2C using library wire (+10k code, 0k2 mem, 124 iram)",
+				"            #ifdef USE_I2C",
+				"                #define I2CDRIVERS_0_31        0xFFFFFFFF        // Enable I2CDriver0  to I2CDriver31",
+				"                #define I2CDRIVERS_32_63       0xFFFFFFFF        // Enable I2CDriver32 to I2CDriver63",
+				"                #define I2CDRIVERS_64_95       0xFFFFFFFF        // Enable I2CDriver64 to I2CDriver95",
+				"                #define I2CDRIVERS_96_127      0xFFFFFFFF        // Enable I2CDriver96 to I2CDriver127",
+				"                #define I2CDRIVERS_128_159     0xFFFFFFFF        // Enable I2CDriver128 to I2CDriver159",
+				"                    #undef USE_DS1624                                 // [I2cDriver42] Enable DS1624, DS1621 temperature sensor (I2C addresses 0x48 - 0x4F) (+1k2 code)",
+				"            #endif"
+			]
 		},
 		{
 			"id": "ads1115",
@@ -1630,6 +1572,9 @@
 					"condition": null,
 					"groupe": "chargement"
 				}
+			],
+			"h": [
+				"            #define USE_ADS1115                             // [I2cDriver13] Enable ADS1115 16 bit A/D converter (I2C address 0x48, 0x49, 0x4A or 0x4B) based on Adafruit ADS1x15 library (no library needed) (+0k7 code)"
 			]
 		},
 		{
@@ -1652,7 +1597,10 @@
 			},
 			"solidify": [],
 			"exclude_si_inactif": [],
-			"autoexec": []
+			"autoexec": [],
+			"h": [
+				"            #define USE_RTC_CHIPS                                 // Enable RTC chip support and NTP server"
+			]
 		},
 		{
 			"id": "sd",
@@ -1672,7 +1620,12 @@
 			},
 			"solidify": [],
 			"exclude_si_inactif": [],
-			"autoexec": []
+			"autoexec": [],
+			"h": [
+				"            #define USE_SPI                                  // Hardware SPI using GPIO12(MISO), GPIO13(MOSI) and GPIO14(CLK) in addition to two user selectable GPIOs(CS and DC)",
+				"            #define USE_SDCARD                      // mount SD Card, requires configured SPI pins and setting of `SDCard CS` gpio",
+				"            #define SDC_HIDE_INVISIBLES             // hide hidden directories from the SD Card, which prevents crashes when dealing SD created on MacOS"
+			]
 		},
 		{
 			"id": "i2s",
@@ -1706,6 +1659,9 @@
 					"condition": null,
 					"groupe": "chargement"
 				}
+			],
+			"h": [
+				"            #define USE_I2S_ALL"
 			]
 		},
 		{
@@ -1727,7 +1683,8 @@
 			},
 			"solidify": [],
 			"exclude_si_inactif": [],
-			"autoexec": []
+			"autoexec": [],
+			"h": []
 		},
 		{
 			"id": "lorawan",
@@ -1772,6 +1729,10 @@
 					"condition": "drivers.LoRaWan",
 					"groupe": "chargement"
 				}
+			],
+			"h": [
+				"            #define USE_LORAWAN_BRIDGE      // Add support for LoRaWan bridge (+8k code)",
+				"            #define USE_LORA_SX126X         // Add driver support for LoRa on SX1262 based devices like LiliGo T3S3 Lora32 (+16k code)"
 			]
 		},
 		{
@@ -1817,6 +1778,9 @@
 					"condition": "drivers.voletRoulants",
 					"groupe": "chargement"
 				}
+			],
+			"h": [
+				"            #define USE_SHUTTER // Add Shutter support for up to 4 shutter with different motortypes (+11k code)"
 			]
 		},
 		{
@@ -1860,6 +1824,9 @@
 					"condition": null,
 					"groupe": "chargement"
 				}
+			],
+			"h": [
+				"            #define USE_WS2812                               // WS2812 Led string using library NeoPixelBus (+5k code, +1k mem, 232 iram) - Disable by //"
 			]
 		},
 		{
@@ -1901,6 +1868,11 @@
 					"condition": null,
 					"groupe": "chargement"
 				}
+			],
+			"h": [
+				"            #define USE_WS2812                               // WS2812 Led string using library NeoPixelBus (+5k code, +1k mem, 232 iram) - Disable by //",
+				"            // 2e chaine WS2812 pilotee par Berry (Leds) : la LED RGB du dev-kit. Le ruban occupe TOUTE la memoire RMT de l'ESP32-S3 : sans le repli SPI, Leds() echoue (constate le 2026-10-11).",
+				"            #define TASMOTALED_HARDWARE_SPI 1"
 			]
 		},
 		{
@@ -1951,7 +1923,8 @@
 					"condition": null,
 					"groupe": "chargement"
 				}
-			]
+			],
+			"h": []
 		},
 		{
 			"id": "coprocesseur",
@@ -1983,7 +1956,8 @@
 					"condition": "serveur.coprocesseur",
 					"groupe": "chargement"
 				}
-			]
+			],
+			"h": []
 		}
 	],
 	"socle_autoexec": {
@@ -2054,6 +2028,9 @@
 				"thermometres": {}
 			}
 		},
+		"cles_propres": [
+			"dimensions"
+		],
 		"controle": [
 			"# Driver du module metier {{metier}} : squelette genere par l'assistant de creation du persist, a completer.",
 			"# Charge depuis le LittleFS par demarrage.chargeFichier(\"controle{{Metier}}\", \"modules.{{metier}}\"), seulement",
