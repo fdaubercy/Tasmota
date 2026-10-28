@@ -759,7 +759,7 @@ aucun : ses valeurs sont `@secret:<famille>`.
 - Les broches de **SD, I2S, Ethernet et LoRa** ne sont pas contrôlées.
 - Les éléments ne vont que sur le **bloc métier principal**.
 - La **modification d'un env existant** (A10) est en pause : l'assistant ne sait que créer.
-- Clés `adressMAC` / `adresseMAC` et `telePeriod` : incohérences relevées dans le parc, décision **en attente** ;
+- Clés `adressMAC` / `adresseMAC` et `telePeriod` : tranché le 2026-10-28 — `telePeriod` de `serveur.udp` et `serveur.rangeExtender` retirées (jamais lues), MAC écrite dans `adresseMAC` dès le boot par `globalFonctions`, `adressMAC` retirée ;
   voir `outils_docs/ANALYSE_CLES_MAC_TELEPERIOD_2026-10-27.md`.
 
 ### Bancs
