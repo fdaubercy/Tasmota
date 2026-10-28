@@ -61,18 +61,24 @@ function diffHtml(texte){
   return texte.split("\n").map(l => `<span class="${l.startsWith("+") ? "a" : l.startsWith("-") ? "r" : l.startsWith("@@") ? "c" : ""}">${echappe(l)}</span>`).join("\n") || "(pas de diff)";
 }
 function boutonsConflit(c){
-  const f = c.chemin, at = choix => `data-action="resout" data-choix="${choix}" data-chemin="${echappe(f)}"`;
+  const f = c.chemin, q = f.includes(" ") ? `"${f}"` : f;      // commande exacte et copiable
+  const at = choix => `data-action="resout" data-choix="${choix}" data-chemin="${echappe(f)}"`;
   if (c.type === "UU" || c.type === "AA") {
-    let h = bouton("Garder le mien", `git checkout --ours -- ${f} && git add -- ${f}`, at("mien"))
-      + bouton("Prendre l'amont", `git checkout --theirs -- ${f} && git add -- ${f}`, at("amont"));
-    if (!c.binaire) h += bouton("Ouvrir dans VS Code", `code -r ${f}`, `data-action="ouvre" data-chemin="${echappe(f)}"`)
-      + bouton("Marquer résolu", `git add -- ${f}`, at("resolu"));
+    let h = bouton("Garder le mien", `git checkout --ours -- ${q} && git add -- ${q}`, at("mien"))
+      + bouton("Prendre l'amont", `git checkout --theirs -- ${q} && git add -- ${q}`, at("amont"));
+    if (!c.binaire) h += bouton("Ouvrir dans VS Code", `code -r ${q}`, `data-action="ouvre" data-chemin="${echappe(f)}"`)
+      + bouton("Marquer résolu", `git add -- ${q}`, at("resolu"));
     return h;
   }
-  if (c.type === "DD") return bouton("Le supprimer", `git rm -- ${f}`, at("supprimer"));
-  if (["DU", "UD", "AU", "UA"].includes(c.type))
-    return bouton("Garder le fichier", `git add -- ${f}`, at("garder")) + bouton("Le supprimer", `git rm -- ${f}`, at("supprimer"));
-  return `<div class="avert">À résoudre au terminal : <code>git status</code>, puis <code>git add -- ${echappe(f)}</code> ou <code>git rm -- ${echappe(f)}</code>.</div>`;
+  // garder = `git add` du fichier tel qu'il est sur le disque (la version qui survit au merge), supprimer = `git rm`
+  const LIBELLES = {UD: ["Garder mon fichier", "Le supprimer comme l'amont"],
+    DU: ["Reprendre le fichier de l'amont", "Le laisser supprimé"],
+    AU: ["Garder mon fichier (ajouté chez moi)", "Ne pas l'ajouter"],
+    UA: ["Reprendre le fichier de l'amont (ajouté par l'amont)", "Ne pas l'ajouter"]};
+  if (c.type === "DD") return bouton("Le laisser supprimé", `git rm -- ${q}`, at("supprimer"));
+  if (LIBELLES[c.type]) return bouton(LIBELLES[c.type][0], `git add -- ${q}`, at("garder"))
+    + bouton(LIBELLES[c.type][1], `git rm -- ${q}`, at("supprimer"));
+  return `<div class="avert">À résoudre au terminal : <code>git status</code>, puis <code>git add -- ${echappe(q)}</code> ou <code>git rm -- ${echappe(q)}</code>.</div>`;
 }
 function tableConflits(a){
   if (!a.conflits.length) return '<p class="doux">Aucun fichier en conflit.</p>';
@@ -167,12 +173,16 @@ $("assistant").onclick = ev => {
   else if (d.voies) montreVoies(d.voies);
   else if (d.reanalyse) chargeAssistant();
   else if (d.journal) commiteJournal();
-  else if (d.lance) { lancementPropre = {script: "merge", simulation: false}; lance("merge", false); }
+  else if (d.lance) lance("merge", false);
   else if (d.action) agit({action: d.action, chemin: d.chemin, choix: d.choix, confirmation: d.confirme});
 };
 // Les evenements du flux sont rejoues a chaque ouverture de la page : seuls comptent les lancements faits ICI.
-$("mergeDiag").addEventListener("click", () => { lancementPropre = {script: "merge", simulation: true}; });
-$("mergeLance").addEventListener("click", () => { lancementPropre = {script: "merge", simulation: false}; });
+const posteBase = poste;
+poste = async function(url, corps){                 // lancement pose avant l'appel (la fin peut suivre vite), rendu si refus
+  const propre = url === "/lance" && corps && corps.script === "merge", avant = lancementPropre;
+  if (propre) lancementPropre = {script: "merge", simulation: !!corps.simulation};
+  try { return await posteBase(url, corps); } catch (err) { if (propre) lancementPropre = avant; throw err; }
+};
 const traiteBase = traite;
 traite = function(e){
   traiteBase(e);

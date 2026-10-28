@@ -40,6 +40,9 @@ CHROMES = [Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Google/C
            Path(os.environ.get("LOCALAPPDATA", "")) / "Google/Chrome/Application/chrome.exe"]
 FAUX_SCRIPT = 'print("diagnostic simule", flush=True)\n'
 INJECTION_TEMOIN = '\n$("assistant-absent").onclick = null;   // TEMOIN : TypeError au chargement\n'
+TITRE_HOSTILE = '<img src=x onerror="window.__xss=1">'
+HOSTILE = "&lt;b&gt;x y.txt"      # AA (ajoute des deux cotes) ; commun.txt = UD (modifie ici, supprime par l'amont)
+TEMOINS = {"script": "SCRIPT casse (id absent)", "echappe": "echappe() retire du titre de commit"}
 ECHECS = []
 
 
@@ -72,10 +75,14 @@ def mode_serveur(port, travail, faux, temoin):
     import acces_web
     from http.server import ThreadingHTTPServer
     travail = Path(travail)
-    if temoin:
+    if temoin == "script":
         import synchro_fork_page_assistant as pa
         assert synchro_fork_page.PAGE.count(pa.SCRIPT) == 1, "SCRIPT de l'assistant introuvable dans la page"
         synchro_fork_page.PAGE = synchro_fork_page.PAGE.replace(pa.SCRIPT, pa.SCRIPT + INJECTION_TEMOIN)
+    elif temoin == "echappe":
+        avant = "${echappe(c.titre)}</span>`))"
+        assert synchro_fork_page.PAGE.count(avant) == 1, "echappe() du titre de commit introuvable dans la page"
+        synchro_fork_page.PAGE = synchro_fork_page.PAGE.replace(avant, "${c.titre}</span>`))")
     # /etat factice : pas de GitHub ; seul operation_git lit le faux depot (c'est lui qui declenche l'assistant)
     synchro_fork_etat.etat = lambda: {
         "branche": "development", "origin": "banc/origin", "upstream": "banc/upstream", "avance": 1, "retard": 1,
@@ -242,15 +249,16 @@ class Montage:
         import faux_depot_synchro as fd
         (self.t / "depot").mkdir()
         self.travail = fd.cree(self.t / "depot")
-        fd.commit_amont(self.t / "depot", {"a.txt": "amont\n"}, "amont change a")
-        fd.commit_local(self.travail, {"a.txt": "local\n"}, "local change a")
+        # cas hostile : titre de commit en HTML, nom de fichier avec entites et espace (Windows refuse < > " dans un nom)
+        fd.commit_amont(self.t / "depot", {"a.txt": "amont\n", HOSTILE: "amont\n", "commun.txt": None}, TITRE_HOSTILE)
+        fd.commit_local(self.travail, {"a.txt": "local\n", HOSTILE: "local\n", "commun.txt": "local\n"}, "local change a")
         self.faux = self.t / "faux"
         self.faux.mkdir()
         (self.faux / "synchronise_fork_tasmota.py").write_text(FAUX_SCRIPT, encoding="utf-8")
         self.port = port_libre()
         self.url = f"http://127.0.0.1:{self.port}/"
         self.commande = ([sys.executable, "-u", str(Path(__file__).resolve()), "--serveur", str(self.port),
-                          str(self.travail), str(self.faux)] + (["--temoin"] if temoin else []))
+                          str(self.travail), str(self.faux)] + (["--temoin", temoin] if temoin else []))
         self.environ = dict(os.environ, PYTHONIOENCODING="utf-8", OUTILS_TASMOTA_DOSSIER=str(self.t / "outils"))
         self.lance_serveur()
         chrome = next((c for c in CHROMES if c.is_file()), None)
@@ -352,15 +360,31 @@ def sonde_page(m):
             True, "chaque bouton d'action affiche sa commande git")
     # 2. Lancer le merge -> un conflit
     verifie(cdp.js(clique("Lancer le merge", ASSISTANT)), True, "bouton « Lancer le merge »")
-    verifie(bool(attend(cdp, LIGNES_CONFLITS + " === 1", 25)), True, "merge lancé : le tableau des conflits a une ligne")
-    verifie(cdp.js("document.querySelector('#assistant table.conflits tbody tr td').textContent.trim()"), "a.txt", "ligne : a.txt")
+    verifie(bool(attend(cdp, LIGNES_CONFLITS + " === 3", 25)), True, "merge lancé : le tableau des conflits a 3 lignes")
+    verifie(cdp.js("[...document.querySelectorAll('#assistant table.conflits tbody tr')].map(r => r.cells[0].textContent.trim())"),
+            [HOSTILE, "a.txt", "commun.txt"], "lignes : fichier hostile, a.txt, commun.txt")
+    # echappement : rien du titre ni du nom n'est interprete comme du HTML
+    verifie(cdp.js("window.__xss === undefined"), True, "XSS : le titre de commit hostile n'exécute rien (window.__xss indéfini)")
+    verifie(cdp.js("document.querySelector('#assistant li[data-etape=\"nouveautes\"]').textContent.includes(" + json.dumps(TITRE_HOSTILE) + ")"),
+            True, "XSS : le titre hostile apparaît littéralement dans le texte")
+    verifie(cdp.js("!document.querySelector('#assistant img, #assistant table.conflits b')"), True,
+            "XSS : aucune balise <img> ni <b> créée par le titre ou le nom de fichier")
+    verifie(cdp.js("document.querySelector('#assistant table.conflits tbody tr').querySelector('code').textContent.includes("
+                   + json.dumps('"' + HOSTILE + '"') + ")"),
+            True, "commande affichée : chemin avec espace entre guillemets")
+    ligne_ud = "[...document.querySelectorAll('#assistant table.conflits tbody tr')].find(r => r.cells[0].textContent.trim() === 'commun.txt')"
+    verifie(cdp.js(ligne_ud + ".textContent.includes('Garder mon fichier') && " + ligne_ud + ".textContent.includes(\"Le supprimer comme l'amont\")"),
+            True, "UD (supprimé par l'amont) : « Garder mon fichier » / « Le supprimer comme l'amont »")
     verifie(cdp.js("!!document.querySelector('#assistant [data-demande=\"abandonne\"]')"), True, "« Abandonner le merge » visible")
-    cdp.js("document.querySelector('#assistant [data-voies]').click()")
+    cdp.js("document.querySelector('#assistant [data-voies=\"a.txt\"]').click()")
     verifie(bool(attend(cdp, "document.querySelectorAll('#assistantVoies pre').length === 2 && "
                              "document.querySelector('#assistantVoies pre').textContent.includes('local')", 15)),
             True, "vue des deux diffs (base→mien, base→amont) au clic sur le fichier")
     # 3. Prendre l'amont -> la ligne disparait
-    verifie(cdp.js(clique("Prendre l'amont", ASSISTANT)), True, "bouton « Prendre l'amont »")
+    for restantes in (2, 1):
+        verifie(cdp.js(clique("Prendre l'amont", ASSISTANT)), True, "bouton « Prendre l'amont »")
+        verifie(bool(attend(cdp, LIGNES_CONFLITS + f" === {restantes}", 25)), True, f"amont pris : {restantes} ligne(s) de conflit")
+    verifie(cdp.js(clique("Le supprimer comme l'amont", ASSISTANT)), True, "bouton « Le supprimer comme l'amont » (UD)")
     verifie(bool(attend(cdp, LIGNES_CONFLITS + " === 0 && " + etape("fusion_b", "courante"), 25)), True,
             "amont pris : plus de ligne de conflit, merge toujours en cours")
     # 4. serveur arrete en plein merge, page rouverte : l'assistant se montre sans diagnostic
@@ -381,8 +405,9 @@ def sonde_page(m):
     verifie(erreurs(cdp), [], "aucune exception JS après rechargement")
 
 
-def sonde_temoin(m):
-    """Meme scenario sur la page au SCRIPT casse : il DOIT echouer, exception relevee."""
+def sonde_temoin(m, temoin):
+    """Meme scenario sur une page volontairement cassee : il DOIT echouer (script : exception relevee ;
+    echappe : la verification XSS en particulier)."""
     global ECHECS
     vrais, ECHECS = ECHECS, []
     try:
@@ -390,27 +415,30 @@ def sonde_temoin(m):
         echecs_temoin, exceptions = list(ECHECS), erreurs(m.cdp)
     finally:
         ECHECS = vrais
-    print(f"     temoin : {len(echecs_temoin)} verification(s) rouge(s), exceptions : {exceptions}", flush=True)
-    verifie(bool(echecs_temoin) and any("assistant-absent" in e or "null" in e for e in exceptions), True,
-            "TEMOIN : la page au SCRIPT cassé est ROUGE (exception relevée)")
+    print(f"     temoin {temoin} : {len(echecs_temoin)} verification(s) rouge(s), exceptions : {exceptions}", flush=True)
+    if temoin == "script":
+        detecte = bool(echecs_temoin) and any("setting 'onclick'" in e for e in exceptions)
+    else:
+        detecte = any(e.startswith("XSS") for e in echecs_temoin)
+    verifie(detecte, True, f"TEMOIN ({TEMOINS[temoin]}) : la page est ROUGE")
 
 
 def principal():
     options = argparse.ArgumentParser(description="Sonde Chrome de la page de la synchro du fork.")
     options.add_argument("--sans-temoin", action="store_true", help="ne pas rejouer la page avec une erreur volontaire")
     options.add_argument("--serveur", nargs=3, metavar=("PORT", "TRAVAIL", "FAUX"), help=argparse.SUPPRESS)
-    options.add_argument("--temoin", action="store_true", help=argparse.SUPPRESS)
+    options.add_argument("--temoin", default="", help=argparse.SUPPRESS)
     args = options.parse_args()
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     if args.serveur:
         return mode_serveur(int(args.serveur[0]), args.serveur[1], args.serveur[2], args.temoin)
-    for temoin in ([False] if args.sans_temoin else [False, True]):
-        print(f"\n=== {'TEMOIN (erreur JS volontaire)' if temoin else 'page reelle'} ===", flush=True)
+    for temoin in ([""] if args.sans_temoin else ["", *TEMOINS]):
+        print(f"\n=== {'TEMOIN ' + TEMOINS[temoin] if temoin else 'page reelle'} ===", flush=True)
         m = None
         try:
             m = Montage()
             m.demarre(temoin)
-            sonde_temoin(m) if temoin else sonde_page(m)
+            sonde_temoin(m, temoin) if temoin else sonde_page(m)
         except Exception as erreur:
             verifie(f"{type(erreur).__name__}: {erreur}", "", "la sonde va au bout")
         finally:
