@@ -493,7 +493,7 @@ Décision du 2026-10-27 : les clés restent telles quelles ; l'analyse est rendu
   - effet de chacune sur le modèle et sur les cartes.
   Aucun fichier de code modifié. — preuve : f9d3577 (1 fichier, 128 lignes)
 - [x] Commit `docs: analyse des cles adressMAC/adresseMAC et telePeriod`, puis présenter les options à l'utilisateur. — preuve : f9d3577 ; decisions du 2026-10-28 : telePeriod mortes RETIREES, MAC FUSIONNEE vers adresseMAC (chantier a part)
-- [ ] Retirer `serveur.udp.telePeriod` et `serveur.rangeExtender.telePeriod` du modèle, des persists du dépôt et du schéma ; supprimer leurs 2 tolérances de `rejeu_parc` ; bancs VERTS. Commit `refactor(assistant-persist): retrait des telePeriod jamais lues`.
+- [x] Retirer `serveur.udp.telePeriod` et `serveur.rangeExtender.telePeriod` du modèle, des persists du dépôt et du schéma ; supprimer leurs 2 tolérances de `rejeu_parc` ; bancs VERTS. Commit `refactor(assistant-persist): retrait des telePeriod jamais lues`. — preuve : d12fe30 (4 persists, modele, schema 8/8, 2 tolerances) ; bancs assistant + banc_demarrage code 0 ; lecteurs JS = diverses (controleur)
 
 ## A9 — Documentation
 
