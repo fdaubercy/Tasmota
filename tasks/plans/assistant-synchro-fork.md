@@ -256,7 +256,7 @@ Comportement :
   - `outils_pc/build_serie` ajouté à l'exception d'import.
   - Puis `python outils_docs/scripts_python/maintenance/verifie_references_docs.py` → code 0.
 - [x] Relecture du diff complet par un sous-agent neuf (superpowers:requesting-code-review). Corriger, puis relancer les trois bancs. — preuve : relecture finale (opus) 0 critique, 2 importants + 9 mineurs corriges en 33e191da5, re-relecture 11/11 ; bancs assistant, fusion, fusion_suite, web x3, sonde Chrome verts ; 3 residus notes (registre)
-- [ ] Commit `docs(synchro-fork): assistant pas a pas`.
+- [x] Commit `docs(synchro-fork): assistant pas a pas`. — preuve : b34af1581
 
 ## A6 — Essai réel (avec l'utilisateur)
 
