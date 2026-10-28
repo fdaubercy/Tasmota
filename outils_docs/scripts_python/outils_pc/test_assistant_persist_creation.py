@@ -168,6 +168,9 @@ def test_refus(t):
     verifie(any("au moins un metier" in x for x in refus_de(racine, reponses(metiers=[], squelettes=False))), True,
             "aucun metier -> refus (controleGeneral echouerait au demarrage)")
     verifie(refus_de(racine, reponses(topic="garage/#")) != [], True, "identite : topic avec joker -> refus")
+    for ip in ("foo", "999.1.1.1", "::1", ""):
+        verifie(any("ip" in x.lower() for x in refus_de(racine, reponses(ip=ip))), True, f"ip invalide {ip!r} -> refus")
+    verifie([x for x in refus_de(racine, reponses(ip="0.0.0.0")) if "ip" in x.lower()], [], "ip 0.0.0.0 (DHCP) toleree")
     p = apc.prepare(racine, reponses(id=3))
     verifie(any("id 3" in x for x in p["avertissements"]), True, "id d'esclave deja pris -> avertissement")
 

@@ -181,11 +181,24 @@ def _cle_propre(chemin, cles_propres):
     return len(chemin) == 3 and chemin[:2] == ("modules", "*") and chemin[2] in cles_propres
 
 
-def _constante(valeur):
-    """Valeur du socle comparable au parc : ni gabarit, ni secret, ni objet."""
+# Seule definition du motif des noms de secrets (masquer trop est sans danger, pas assez si) ; passerelle, passage : non.
+SECRET = re.compile(r"^(mdp|pwd|password|secret|token|psk|motdepasse|api_?key)|^(pass|passwd)$|^.*key$", re.I)
+
+
+def porte_secret(valeur):
+    """Vrai si `valeur` est, ou contient a toute profondeur, un @secret: ou une cle de nom secret."""
     if isinstance(valeur, dict):
+        return any(SECRET.match(k) or porte_secret(v) for k, v in valeur.items())
+    if isinstance(valeur, list):
+        return any(porte_secret(v) for v in valeur)
+    return isinstance(valeur, str) and valeur.startswith("@secret:")
+
+
+def _constante(valeur):
+    """Valeur du socle comparable au parc : ni gabarit, ni secret (meme enfoui), ni objet."""
+    if isinstance(valeur, dict) or porte_secret(valeur):
         return False
-    return not (isinstance(valeur, str) and ("{{" in valeur or valeur.startswith("@secret:")))
+    return not (isinstance(valeur, str) and "{{" in valeur)
 
 
 def ecarts(racine, modele):
@@ -224,7 +237,7 @@ def ecarts(racine, modele):
         observees = {v for liste in valeurs[c] for v in liste}
         if len(valeurs[c]) == lus and len(observees) == 1:
             commune = json.loads(next(iter(observees)))
-            if commune != vs[0]:
+            if commune != vs[0] and not porte_secret(commune):
                 divergentes[".".join(c)] = {"modele": vs[0], "parc": commune}
     return {"nouvelles": dict(sorted(nouvelles.items())), "disparues": disparues,
             "divergentes": dict(sorted(divergentes.items())), "illisibles": illisibles}
@@ -234,7 +247,6 @@ def ecarts(racine, modele):
 # fusionne_nouvelles : cles NOUVELLES du parc ajoutees d'office (a l'ouverture de la page, sans validation) ;
 # propose_mise_a_jour / applique_mise_a_jour : RETRAITS et ALIGNEMENTS, proposes avec un diff, appliques apres validation.
 RETIRE = object()                      # valeur de retour de fn : retire la feuille
-SECRET = re.compile(r"^(mdp|pwd|password|secret|token|psk)|^(pass|passwd)$", re.I)   # feuille d'un secret (pas passerelle, passage)
 NATURE_AUTO, NATURE_MAJ = "modele-auto", "modele-maj"
 
 

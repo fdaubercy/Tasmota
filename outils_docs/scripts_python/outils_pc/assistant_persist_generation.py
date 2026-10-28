@@ -20,6 +20,7 @@ nom_template suit nom_lisible, client suit hostname et ssid_ap vaut <hostname>-G
 """
 
 import copy
+import ipaddress
 import json
 import re
 from dataclasses import dataclass, field
@@ -116,6 +117,11 @@ def variables(racine, r):
         raise ValueError(f"role inconnu : {r.role!r}")
     if r.heure not in HEURES:
         raise ValueError(f"reglage de l'heure inconnu : {r.heure!r}")
+    try:
+        if ipaddress.ip_address(r.ip).version != 4:
+            raise ValueError
+    except ValueError:
+        raise ValueError(f"ip invalide : {r.ip!r} (adresse IPv4 attendue, 0.0.0.0 = DHCP)") from None
     prefixe = _prefixe(r.puce)
     base = r.base or parc.base_par_defaut(racine, r.puce)
     v = dict(_identite(r), lieu=r.lieu, nom=r.nom, ip=r.ip, heure=r.heure, type_esp=r.puce, ip_maitre="",
@@ -189,6 +195,16 @@ def _elements_du_persist(modele, donnees):
 
 
 # ---- Persist ------------------------------------------------------------------------------------------------
+SECRETS_CONNUS = ("wifi1", "wifi2", "mqtt", "ap", "ftp")     # les cles de assistant_persist_parc.secrets
+
+
+def secret_connu(nom):
+    """`nom` d'un @secret:<nom> du modele ; ValueError (refus, sans valeur) s'il n'a pas de valeur connue."""
+    if nom not in SECRETS_CONNUS:
+        raise ValueError(f"secret du modele sans valeur : {nom} — cle a completer dans le modele")
+    return nom
+
+
 def _substitue(valeur, v, secrets):
     if isinstance(valeur, dict):
         return {k: _substitue(x, v, secrets) for k, x in valeur.items()}
@@ -197,7 +213,8 @@ def _substitue(valeur, v, secrets):
     if not isinstance(valeur, str):
         return valeur
     if valeur.startswith("@secret:"):
-        return "***" if secrets is None else secrets[valeur[len("@secret:"):]]
+        nom = secret_connu(valeur[len("@secret:"):])
+        return "***" if secrets is None else secrets[nom]
     if valeur == "{{id}}":
         return v["id"]
 

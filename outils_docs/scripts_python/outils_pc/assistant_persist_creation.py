@@ -99,6 +99,7 @@ def _remplit(ligne, v, secrets):
     def sub(m):
         nom = m.group(1)
         if nom.startswith("@"):
+            gen.secret_connu(nom[1:])
             return "***" if secrets is None else secrets[nom[1:]]
         if nom not in v:
             raise ValueError(f"gabarit inconnu dans le modele : {m.group(0)}")
@@ -165,6 +166,15 @@ def _diff(nom, avant, apres):
 
 
 def _calcule(racine, r):
+    """_calcule_brut, mais toute ValueError de generation (secret du modele sans valeur...) devient un refus."""
+    try:
+        return _calcule_brut(racine, r)
+    except ValueError as exc:
+        return {"refus": [str(exc)], "avertissements": [], "env": "", "dossier": "", "define": "", "diff": "",
+                "apercu": {"persist": "", "autoexec": ""}}
+
+
+def _calcule_brut(racine, r):
     racine = Path(racine)
     res = {"env": "", "dossier": "", "define": "", "diff": "", "avertissements": [], "refus": [],
            "apercu": {"persist": "", "autoexec": ""}}
@@ -258,10 +268,10 @@ def cree(racine, r, empreinte_lue, builds_en_cours):
         raise RuntimeError("un build est en cours (" + ", ".join(builds) + ") : creation refusee")
     racine = Path(racine)
     res = _calcule(racine, r)
-    if res.get("empreinte") != empreinte_lue:
-        raise RuntimeError("le cenv, le .h, le modele ou la saisie ont change depuis le diff : refaire « Voir le diff »")
     if res["refus"]:
         raise RuntimeError(" ; ".join(res["refus"]))
+    if res.get("empreinte") != empreinte_lue:
+        raise RuntimeError("le cenv, le .h, le modele ou la saisie ont change depuis le diff : refaire « Voir le diff »")
     eol_cenv, eol_h = res["eol"]
     with tempfile.TemporaryDirectory() as tmp:               # dossier monte hors depot, copie en une etape annulable
         for nom, texte in res["fichiers"].items():

@@ -44,6 +44,7 @@ import assistant_persist_elements as ape
 import assistant_persist_generation as gen
 import assistant_persist_modele as apm
 import assistant_persist_parc as parc
+from annuaire_outils import hote_autorise
 import fichiers_berry_etat as fbe
 import fichiers_berry_ini as fbi
 import fichiers_berry_sauvegarde as fbs
@@ -135,14 +136,25 @@ def demarre_modele(racine, builds_en_cours=None):
     return ajouts
 
 
-def etat_modele(racine, ajouts):
+def demarre_sur(racine, builds_en_cours=None):
+    """(ajouts, erreur) : demarre_modele, mais toute exception (OSError, ImportError de build_serie...) reporte la
+    fusion au lieu d'arreter l'outil ; le message va dans /modele/etat.erreur."""
+    try:
+        return demarre_modele(racine, builds_en_cours), ""
+    except Exception as exc:
+        message = f"fusion du modele impossible : {type(exc).__name__} : {exc}"
+        print(f"Modele : {message}.", flush=True)
+        return [], message
+
+
+def etat_modele(racine, ajouts, erreur_demarrage=""):
     """Etat pour le bandeau : calcule a chaque lecture (le parc et le modele peuvent changer pendant la session)."""
     modele, erreur = _modele(racine)
     if modele is None:
         return {"ajouts": [], "disparues": [], "divergentes": {}, "a_completer": [], "erreur": erreur}
     e = apm.ecarts(racine, modele)
     return {"ajouts": list(ajouts), "disparues": e["disparues"], "divergentes": e["divergentes"],
-            "a_completer": apm.a_completer(modele), "erreur": ""}
+            "a_completer": apm.a_completer(modele), "erreur": erreur_demarrage}
 
 
 def donnees_parc(racine):
@@ -243,8 +255,18 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, etat_modele):
             """500 avec le message, au lieu d'une connexion coupee (« outil injoignable » dans la page)."""
             self._envoie(500, f"erreur inattendue : {type(erreur).__name__} : {erreur}".encode("utf-8"))
 
-        def do_GET(self):
+        def _controle(self):
+            """acces.controle, puis le Host d'un client local (DNS rebinding, comme l'annuaire). False : reponse envoyee."""
             if not acces.controle(self):
+                return False
+            if not hote_autorise(self, acces.port):
+                self.close_connection = True
+                self._envoie(403, b"Hote refuse")
+                return False
+            return True
+
+        def do_GET(self):
+            if not self._controle():
                 return
             chemin = urlsplit(self.path).path
             try:
@@ -266,7 +288,7 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, etat_modele):
                 self._erreur_inattendue(erreur)
 
         def do_POST(self):
-            if not acces.controle(self):
+            if not self._controle():
                 return
             if self.headers.get("X-Assistant-Persist") != "1" or not acces.origine_autorisee(self):
                 self.close_connection = True
@@ -311,14 +333,10 @@ def principal():
     # Nom de la fiche de presence, en litteral : identique a nom_acces de l'outil « assistant_persist »
     # (annuaire_registre.py), sinon la tuile ne retrouve pas l'outil ; test_annuaire le verifie sur cette ligne.
     acces = acces_web.Acces(args.http, args.local, "Assistant persist")
-    try:
-        ajouts = demarre_modele(DEPOT, builds_en_cours_defaut)
-    except OSError as erreur:                                 # fichier tenu ouvert... : la page s'ouvre quand meme
-        print(f"Modele : fusion impossible ({erreur}).", flush=True)
-        ajouts = []
+    ajouts, erreur_demarrage = demarre_sur(DEPOT, builds_en_cours_defaut)    # la page s'ouvre quand meme
     try:
         serveur = ThreadingHTTPServer((acces.hote, args.http),
-                                      fabrique_gestionnaire(acces, DEPOT, builds_en_cours_defaut, lambda: etat_modele(DEPOT, ajouts)))
+                                      fabrique_gestionnaire(acces, DEPOT, builds_en_cours_defaut, lambda: etat_modele(DEPOT, ajouts, erreur_demarrage)))
     except OSError as erreur:
         print(f"ERREUR : port {args.http} indisponible ({erreur}). L'outil tourne peut-etre deja.")
         return 1

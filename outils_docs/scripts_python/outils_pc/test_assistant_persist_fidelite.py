@@ -221,6 +221,94 @@ def test_fusion_secret_cle_liste(t):
     verifie(fuite, [], "secret_cle_liste : aucune valeur dans les sauvegardes")
 
 
+def _fuites(valeur):
+    """Fichiers de sauvegarde du modele qui contiennent `valeur` (noms seulement)."""
+    sauv = fbs.dossier_sauvegardes()
+    return [x.name for x in sauv.rglob("*") if x.is_file() and valeur.encode() in x.read_bytes()] if sauv.is_dir() else []
+
+
+# ---- final-fix I1 : secret du modele sans valeur connue -> refus, pas de 500 ---------------------------------
+def test_secret_inconnu(t):
+    racine = depot(t)
+    for rel in persists(racine):
+        pose(racine, rel, "serveur.wifi.reseau3.mdpWifi", TEMOIN_SECRET)
+    fusionne, ajouts = apm.fusionne_nouvelles(racine, apm.charge_modele(racine))
+    verifie("serveur.wifi.reseau3.mdpWifi" in ajouts, True, "secret_inconnu : cle fusionnee")
+    apm.ecrit_modele(racine, fusionne, apm.NATURE_AUTO)
+    r = tac.reponses()
+    attendu = "serveur.wifi.reseau3.mdpWifi"
+    ap = apw.apercu(racine, r)
+    verifie(any(attendu in x and "sans valeur" in x for x in ap["refus"]), True, "secret_inconnu : apercu refuse en nommant la cle")
+    p = apc_prepare(racine, r)
+    verifie(any(attendu in x and "sans valeur" in x for x in p["refus"]), True, "secret_inconnu : prepare refuse en nommant la cle")
+    try:
+        apc_cree(racine, r, p["empreinte"])
+        msg = None
+    except RuntimeError as exc:
+        msg = str(exc)
+    verifie(msg is not None and attendu in msg, True, "secret_inconnu : cree refuse (RuntimeError -> 409, pas de 500)")
+    tout = json.dumps([ap, p, msg])
+    verifie(TEMOIN_SECRET in tout, False, "secret_inconnu : aucune valeur dans les refus")
+    verifie(_fuites(TEMOIN_SECRET), [], "secret_inconnu : aucune valeur dans les sauvegardes")
+
+
+def apc_prepare(racine, r):
+    import assistant_persist_creation as apc
+    return apc.prepare(racine, r)
+
+
+def apc_cree(racine, r, empreinte):
+    import assistant_persist_creation as apc
+    return apc.cree(racine, r, empreinte, lambda: [])
+
+
+# ---- final-fix I2 : liste d'objets a mot de passe, jamais constante ni alignee --------------------------------
+def test_liste_secrete_non_alignee(t):
+    racine = depot(t)
+    valeur = [{"nom": "a", "mdp": TEMOIN_SECRET}]
+    for rel in persists(racine):
+        pose(racine, rel, "serveur.nouveau.liste", valeur)
+    modele = apm.charge_modele(racine)
+    fusionne, ajouts = apm.fusionne_nouvelles(racine, modele)
+    verifie(ajouts, ["serveur.nouveau.liste"], "liste_secrete : cle fusionnee")
+    liste = fusionne["socle"]["serveur"]["nouveau"]["liste"]
+    verifie(TEMOIN_SECRET in json.dumps(liste), False, "liste_secrete : masquee dans le modele fusionne")
+    apm.ecrit_modele(racine, fusionne, apm.NATURE_AUTO)
+    modele = apm.charge_modele(racine)
+    # un modele relu a la main avec la liste en clair (cas fautif) : le parc ne doit jamais ressortir
+    modele["socle"]["serveur"]["nouveau"]["liste"] = [{"nom": "b", "mdp": "autre"}]
+    e = apm.ecarts(racine, modele)
+    verifie(TEMOIN_SECRET in json.dumps(e), False, "liste_secrete : ecarts() sans la valeur du parc")
+    verifie("serveur.nouveau.liste" in e["divergentes"], False, "liste_secrete : jamais proposee a l'alignement")
+    modele = apm.charge_modele(racine)
+    verifie(TEMOIN_SECRET in json.dumps(apw.etat_modele(racine, ajouts)), False, "liste_secrete : /modele/etat")
+    p = apm.propose_mise_a_jour(racine, modele)
+    verifie(TEMOIN_SECRET in json.dumps(p), False, "liste_secrete : propose_mise_a_jour (alignements, diff)")
+    verifie(TEMOIN_SECRET.encode() in octets_modele(racine), False, "liste_secrete : modele ecrit")
+    verifie(_fuites(TEMOIN_SECRET), [], "liste_secrete : sauvegardes")
+
+
+def test_fusion_idempotente(t):
+    racine = depot(t)
+    for rel in persists(racine):
+        pose(racine, rel, "serveur.nouveau.liste", [{"nom": "a", "mdp": TEMOIN_SECRET}])
+        pose(racine, rel, "serveur.blocCle.token", {"liste": [{"x": 1}], "y": 2})
+        pose(racine, rel, "serveur.plain", 5)
+    modele = apm.charge_modele(racine)
+    fusionne, ajouts = apm.fusionne_nouvelles(racine, modele)
+    verifie(len(ajouts) >= 3, True, "idempotence : 3 cles fusionnees")
+    apm.ecrit_modele(racine, fusionne, apm.NATURE_AUTO)
+    modele = apm.charge_modele(racine)
+    verifie(apm.ecarts(racine, modele)["nouvelles"], {}, "idempotence : plus de nouvelle apres fusion")
+    verifie(apm.fusionne_nouvelles(racine, modele)[1], [], "idempotence : seconde fusion -> []")
+
+
+def test_motif_secret():
+    noms = {"motdepasse": 1, "motDePasse": 1, "apikey": 1, "api_key": 1, "apiKey": 1, "cleKey": 1, "privateKey": 1,
+            "mdp": 1, "passerelle": 0, "passage": 0, "gateway": 0}
+    verifie({k: bool(apm.SECRET.match(k)) for k in noms}, {k: bool(v) for k, v in noms.items()}, "motif_secret : noms elargis")
+
+
 # ---- fusion_rien ---------------------------------------------------------------------------------------------
 def test_fusion_rien(t):
     racine = depot(t)
@@ -357,13 +445,15 @@ def test_couverture_signale(t):
 def principal():
     vrai = (tac.RACINE / apm.FICHIER_MODELE).read_bytes()
     for test in (test_fusion_cle_nouvelle, test_fusion_demarrage, test_fusion_valeur_frequente, test_fusion_puce_unique,
-                 test_fusion_secret, test_fusion_secret_imbrique, test_fusion_secret_liste, test_fusion_secret_cle_liste, test_fusion_rien, test_bouton_retrait, test_bouton_http, test_modele_illisible,
+                 test_fusion_secret, test_fusion_secret_imbrique, test_fusion_secret_liste, test_fusion_secret_cle_liste, test_secret_inconnu, test_liste_secrete_non_alignee,
+                 test_fusion_idempotente, test_fusion_rien, test_bouton_retrait, test_bouton_http, test_modele_illisible,
                  test_couverture_signale):
         with tempfile.TemporaryDirectory() as t:
             try:
                 test(t)
             except Exception as exc:
                 verifie(repr(exc), "pas d'exception", test.__name__)
+    test_motif_secret()
     verifie((tac.RACINE / apm.FICHIER_MODELE).read_bytes() == vrai, True, "le VRAI modele_persist.json n'a pas ete touche")
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0

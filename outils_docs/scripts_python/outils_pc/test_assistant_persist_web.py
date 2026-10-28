@@ -108,6 +108,30 @@ def test_get(b):
             "GET /parc : dependances et puces des blocs (RTC -> i2c ; LED RGB S3)")
 
 
+def test_hote(b):
+    """DNS rebinding : un Host etranger depuis ce PC est refuse (GET et POST), le Host local passe."""
+    for chemin in ("/", "/parc", "/modele/etat", "/interrompues"):
+        verifie(b.requete("GET", chemin, entetes={"Host": "evil.example"})[0], 403, f"hote : GET {chemin} Host etranger -> 403")
+    verifie(b.requete("POST", "/apercu", {}, entetes={"X-Assistant-Persist": "1", "Host": "evil.example"})[0], 403,
+            "hote : POST Host etranger -> 403")
+    for hote in (f"127.0.0.1:{b.port}", f"localhost:{b.port}"):
+        verifie(b.requete("GET", "/parc", entetes={"Host": hote})[0], 200, f"hote : GET /parc Host {hote} -> 200")
+
+
+def test_demarrage_robuste(b):
+    """Une exception autre qu'OSError a la fusion (ImportError...) reporte la fusion et reste lisible dans /modele/etat."""
+    vrai = apm.fusionne_nouvelles
+    def casse(*a):
+        raise ImportError("module absent (essai)")
+    apm.fusionne_nouvelles = casse
+    try:
+        ajouts, erreur = apw.demarre_sur(b.racine, lambda: [])
+    finally:
+        apm.fusionne_nouvelles = vrai
+    verifie((ajouts, "module absent" in erreur), ([], True), "demarrage : ImportError rattrapee, message garde")
+    verifie("module absent" in apw.etat_modele(b.racine, ajouts, erreur)["erreur"], True, "demarrage : message dans /modele/etat.erreur")
+
+
 def test_post_securite(b):
     corps = {"reponses": reponses()}
     verifie(b.requete("POST", "/apercu", corps, entetes={})[0], 403, "POST sans en-tete -> 403")
@@ -258,7 +282,7 @@ def valeurs_reelles():
 
 
 def principal():
-    for test in (test_get, test_post_securite, test_broches_illisibles, test_apercu, test_prepare_creation, test_content_length, test_interrompues, test_erreur_inattendue):
+    for test in (test_get, test_hote, test_demarrage_robuste, test_post_securite, test_broches_illisibles, test_apercu, test_prepare_creation, test_content_length, test_interrompues, test_erreur_inattendue):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier
             b = Banc(t)
