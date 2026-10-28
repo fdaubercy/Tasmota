@@ -73,8 +73,8 @@ def action_assistant(demande, racine, builds_en_cours):
 
 def traite_post(chemin, demande, session, racine=synchro_fork_etat.REPO,
                 builds_en_cours=build_serie.builds_en_cours_defaut, verrou=None):
+    verrou = verrou or VERROU
     if chemin == "/assistant/action":
-        verrou = verrou or VERROU
         if not verrou.acquire(blocking=False):
             raise RuntimeError("une action est deja en cours")
         try:
@@ -85,10 +85,15 @@ def traite_post(chemin, demande, session, racine=synchro_fork_etat.REPO,
         finally:
             verrou.release()
     if chemin == "/lance":
-        if synchro_fork_etat.operation_git():
-            raise RuntimeError(f"un {synchro_fork_etat.operation_git()} est en cours dans le depot : le terminer "
-                               "ou l'annuler avant toute synchro")
-        session.lance(str(demande.get("script", "")), bool(demande.get("simulation")))
+        if not verrou.acquire(blocking=False):      # exclusion mutuelle avec les actions de l'assistant
+            raise RuntimeError("une action de l'assistant est en cours")
+        try:
+            if synchro_fork_etat.operation_git(racine):
+                raise RuntimeError(f"un {synchro_fork_etat.operation_git(racine)} est en cours dans le depot : le terminer "
+                                   "ou l'annuler avant toute synchro")
+            session.lance(str(demande.get("script", "")), bool(demande.get("simulation")))
+        finally:
+            verrou.release()
         return {"ok": True}
     if chemin == "/repond":
         session.repond(str(demande.get("valeur", "")), str(demande.get("confirmation", "")))

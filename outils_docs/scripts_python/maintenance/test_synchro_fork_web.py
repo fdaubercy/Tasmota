@@ -222,6 +222,12 @@ def groupe_assistant(dossier):
         for f in fils:
             f.join()
         verifie(sorted(statuts), [200, 409], "double clic sur merge : un 200 et un 409")
+        synchro_fork_web.VERROU.acquire()               # une action de l'assistant tient le verrou : /lance refuse
+        try:
+            verifie(requete("127.0.0.1", port, "POST", "/lance", {"script": "merge"}, x)[0], 409,
+                    "lancement d'un script pendant une action de l'assistant : 409")
+        finally:
+            synchro_fork_web.VERROU.release()
         statut, corps = requete("127.0.0.1", port, "POST", action, {"action": "abandonne", "confirmation": "oui"}, x)
         verifie((statut, json.loads(corps).get("ok") if statut == 200 else corps), (200, True), "abandonne confirme")
         srv.shutdown()

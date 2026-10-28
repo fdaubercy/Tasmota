@@ -1,6 +1,9 @@
-"""Page HTML de synchro_fork_web.py (http://127.0.0.1:7500). Les POST portent l'en-tete X-Synchro: 1."""
+"""Page HTML de synchro_fork_web.py (http://127.0.0.1:7500). Les POST portent l'en-tete X-Synchro: 1.
+Le bloc de l'assistant (synchro_fork_page_assistant) est insere aux trois reperes BLOC, STYLE et SCRIPT."""
 
-PAGE = r"""<!doctype html>
+import synchro_fork_page_assistant as assistant
+
+PAGE_BASE = r"""<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Synchro du fork</title>
 <style>
@@ -32,15 +35,17 @@ pre{font:12.5px/1.4 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-br
 .fichier{cursor:pointer;text-decoration:underline dotted}.doux{color:var(--doux)}
 .a{color:#4cc38a}.r{color:#f07878}.j{color:#e0b252}.c{color:#56b6c2}.m{color:#c678dd}.g{color:#8b95a7}.b{font-weight:700}
 input[type=text]{font:inherit;padding:5px 8px;border-radius:6px;border:1px solid var(--bord);background:var(--fond);color:var(--texte)}
+/*STYLE_ASSISTANT*/
 </style></head><body>
 <header><h1>Synchro du fork</h1><span id="etatBranche" class="puce">branche ?</span><span id="etatRetard" class="puce">…</span>
 <span id="etatLocal" class="puce">…</span><span id="etatArbre" class="puce">…</span><span id="etatOperation" class="puce erreur" hidden></span>
 <span id="etatExecution" class="puce">au repos</span><button id="rafraichir">Rafraichir</button></header>
 <main>
 <div id="erreurEtat" class="avert" hidden></div>
-<nav id="onglets"><button data-onglet="merge" class="actif">Synchro (merge)</button><button data-onglet="rebase">Synchro (rebase)</button>
+<nav id="onglets"><button data-onglet="merge" class="actif">Synchro (merge)</button>
 <button data-onglet="fichiers">Fichiers modifies <span id="nbFichiers"></span></button><button data-onglet="historique">Historique</button>
-<button data-onglet="aide">Aide</button></nav>
+<button data-onglet="aide">Aide</button>
+<details id="avance"><summary>Avancé</summary><button data-onglet="rebase">Synchro (rebase)</button></details></nav>
 
 <section id="onglet-merge" class="onglet actif"><div class="carte">
 <p>Strategie habituelle de ce fork : <b>merge</b>, comme le bouton « Sync fork » de GitHub. Aucun commit publie n'est reecrit.
@@ -51,6 +56,7 @@ Le script s'arrete avant toute action si l'arbre est sale, puis demande deux con
 <h3 id="titreCommits">Nouveautes de l'amont</h3><ul id="commits" class="commits"></ul></div></section>
 
 <section id="onglet-rebase" class="onglet"><div class="carte">
+<div class="avert"><b>Stratégie rebase : ne pas l'alterner avec le merge, c'est ce qui fait diverger un fork.</b> Pour la synchro habituelle, utiliser l'assistant de l'onglet « Synchro (merge) ».</div>
 <div class="avert"><b>Attention : le rebase reecrit l'historique du fork</b> (tous ses commits propres sont rejoues sur l'amont)
 puis propose un <b>push force</b> (--force-with-lease), qui ne s'active qu'apres saisie du nom de la branche.
 Ne pas alterner merge et rebase au fil du temps : c'est ce qui fait diverger un fork. Une branche de sauvegarde
@@ -63,7 +69,7 @@ Ne pas alterner merge et rebase au fil du temps : c'est ce qui fait diverger un 
 <section id="onglet-fichiers" class="onglet"><div class="carte"><p class="doux">Fichiers suivis modifies (ils bloquent la synchro). Cliquer pour voir le diff.</p>
 <ul id="listeFichiers"></ul><pre id="diff" hidden></pre></div></section>
 <section id="onglet-historique" class="onglet"><div class="carte"><pre id="historique">…</pre></div></section>
-<section id="onglet-aide" class="onglet"><div class="carte"><p>Cette page lance les scripts tels qu'au terminal ; leurs questions
+<section id="onglet-aide" class="onglet"><div class="carte"><p><b>Assistant pas à pas</b> (onglet « Synchro (merge) », après « Diagnostic seul ») : une liste d'étapes propre au cas constaté. Sans conflit ni commit local non poussé, il lance le script de merge habituel. Sinon (voie B) il fait le merge en local, fichier par fichier, puis le commit et le push. Chaque bouton montre la commande git qu'il lance. Il ne force jamais un push, ne fait ni reset, ni stash, ni rebase.</p><p>Cette page lance les scripts tels qu'au terminal ; leurs questions
 deviennent les boutons du cadre bleu. Depuis un autre appareil du reseau, utiliser le lien « depuis un autre appareil » de la console (il contient le jeton de la session).</p>
 <h3>synchronise_fork_tasmota.py (merge)</h3><pre id="aideMerge">…</pre><h3>synchronise_upstream_tasmota.py (rebase)</h3><pre id="aideRebase">…</pre></div></section>
 
@@ -71,6 +77,7 @@ deviennent les boutons du cadre bleu. Depuis un autre appareil du reseau, utilis
 <label>Tapez <b id="questionAttendu"></b> pour confirmer : <input type="text" id="questionSaisie" autocomplete="off"></label></div>
 <div id="questionChoix" class="actions"></div><span id="questionErreur" class="r"></span></div>
 <div class="carte"><div class="actions" style="margin-top:0"><b>Sortie du script</b><span id="commande" class="doux"></span></div><pre id="console"></pre></div>
+<!--BLOC_ASSISTANT-->
 </main>
 <script>
 const $ = id => document.getElementById(id);
@@ -123,6 +130,7 @@ async function chargeAide(){ try { const a = await (await fetch("/aide")).json()
 function choisitOnglet(nom){
   for (const b of document.querySelectorAll("#onglets button")) b.classList.toggle("actif", b.dataset.onglet === nom);
   for (const s of document.querySelectorAll(".onglet")) s.classList.toggle("actif", s.id === "onglet-" + nom);
+  if (nom === "rebase") $("avance").open = true;
   if (nom === "historique") chargeTexte("/historique", "historique");
   try { localStorage.setItem("synchroOnglet", nom); } catch (e) {}
 }
@@ -172,6 +180,7 @@ function ecoute(){
   source.onmessage = m => { try { traite(JSON.parse(m.data)); } catch (err) { console.error(err); } };
 }
 
+/*SCRIPT_ASSISTANT*/
 for (const b of document.querySelectorAll("#onglets button")) b.onclick = () => choisitOnglet(b.dataset.onglet);
 $("rafraichir").onclick = chargeEtat;
 $("mergeDiag").onclick = () => lance("merge", true);
@@ -193,3 +202,5 @@ choisitOnglet(document.getElementById("onglet-" + ongletMemorise) ? ongletMemori
 boutonsActifs(); chargeEtat(); chargeAide(); ecoute();
 </script></body></html>
 """
+PAGE = (PAGE_BASE.replace("/*STYLE_ASSISTANT*/", assistant.STYLE).replace("<!--BLOC_ASSISTANT-->", assistant.BLOC)
+        .replace("/*SCRIPT_ASSISTANT*/", assistant.SCRIPT))
