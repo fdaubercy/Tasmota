@@ -332,20 +332,25 @@ async function majModele() {
   if (ali) t.push(pluriel(ali, "défaut divergent", "défauts divergents"));
   b.classList.toggle("cache", !!e.erreur || t.length === 0);
   $("texte-modele").textContent = t.join(" · ");
-  $("liste-modele").textContent = n ? e.a_completer.join(", ") : "";
+  var l = vide($("liste-modele"));
+  e.a_completer.forEach(function (c) {                          // une ligne par clé : chemin = défaut (secret masqué) + « Relue »
+    var ligne = el("div", {}, c + " = " + e.valeurs[c] + " "), bt = el("button", {"class": "btn", type: "button"}, "Relue");
+    bt.onclick = function () { proposeModele(c); };
+    ligne.appendChild(bt); l.appendChild(ligne);
+  });
 }
-async function proposeModele() {
-  var zone = vide($("retours-modele")), r = await api("/modele/prepare", {});
+async function proposeModele(relue) {                          // relue : chemin à marquer relu ; sinon retraits et alignements
+  var zone = vide($("retours-modele")), r = await api("/modele/prepare", relue ? {relue: relue} : {});
   $("panneau-modele").classList.remove("cache");
   if (!r.ok || !r.donnees) { liste(zone, [r.texte], "avert rouge"); $("valide-modele").disabled = true; return; }
-  propositionModele = r.donnees;
+  propositionModele = r.donnees; propositionModele.relue = relue;
   var rien = !propositionModele.empreinte;
   if (rien) liste(zone, ["Rien à retirer ni à aligner : le modèle suit le parc."], "avert");
   $("diff-modele").textContent = propositionModele.diff;
   $("valide-modele").disabled = rien;
 }
 async function appliqueModele() {
-  var zone = vide($("retours-modele")), r = await api("/modele/applique", {empreinte: propositionModele.empreinte});
+  var zone = vide($("retours-modele")), r = await api("/modele/applique", {empreinte: propositionModele.empreinte, relue: propositionModele.relue});
   if (!r.ok || !r.donnees) { liste(zone, [r.texte], "avert rouge"); $("valide-modele").disabled = true; return; }
   $("panneau-modele").classList.add("cache"); propositionModele = null;
   invalideDiff();                                               // l'empreinte de la creation couvre le modele
@@ -375,7 +380,7 @@ $("prec").onclick = function () { afficheEtape(etape - 1); };
 $("suiv").onclick = function () { afficheEtape(etape + 1); };
 $("ajout-metier").onclick = function () { E.metiers.push(""); dessineMetiers(); };
 $("voir-diff").onclick = voirDiff;
-$("maj-modele").onclick = proposeModele;
+$("maj-modele").onclick = function () { proposeModele(); };
 $("valide-modele").onclick = appliqueModele;
 $("annule-modele").onclick = function () { $("panneau-modele").classList.add("cache"); propositionModele = null; };
 $("creer").onclick = cree_env;

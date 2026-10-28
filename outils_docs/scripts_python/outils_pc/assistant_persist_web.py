@@ -23,6 +23,7 @@ Routes (les POST exigent l'en-tete X-Assistant-Persist: 1 et la meme origine ; J
     POST /prepare       {reponses} -> assistant_persist_creation.prepare : diff, empreinte (vide si refus precoce), refus
     POST /creation      {reponses, empreinte} -> assistant_persist_creation.cree ; 409 si build, empreinte perimee, refus
     POST /modele/prepare {} -> {diff, empreinte, retraits, alignements} : retraits et alignements proposes, rien d'ecrit
+        {relue: chemin} -> {diff, empreinte} : retrait de ce chemin de a_completer (400 s'il n'y est pas) ; idem a /applique
     POST /modele/applique {empreinte} -> {applique, retraits, alignements} ; 409 si build, empreinte perimee, rien a faire
     POST /interrompue/acquitte {nom} -> {acquitte: true} ; 400 nom inconnu
 `reponses` = les champs de assistant_persist_generation.Reponses (puce, lieu, nom obligatoires) ; `elements` =
@@ -44,6 +45,7 @@ import assistant_persist_elements as ape
 import assistant_persist_generation as gen
 import assistant_persist_modele as apm
 import assistant_persist_parc as parc
+import assistant_persist_relue as apr
 from annuaire_outils import hote_autorise
 import fichiers_berry_etat as fbe
 import fichiers_berry_ini as fbi
@@ -154,7 +156,8 @@ def etat_modele(racine, ajouts, erreur_demarrage=""):
         return {"ajouts": [], "disparues": [], "divergentes": {}, "a_completer": [], "erreur": erreur}
     e = apm.ecarts(racine, modele)
     return {"ajouts": list(ajouts), "disparues": e["disparues"], "divergentes": e["divergentes"],
-            "a_completer": apm.a_completer(modele), "erreur": erreur_demarrage}
+            "a_completer": apm.a_completer(modele), "erreur": erreur_demarrage,
+            "valeurs": {c: apr.valeur_affichee(modele, c) for c in apm.a_completer(modele)}}
 
 
 def donnees_parc(racine):
@@ -220,6 +223,8 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, etat_modele):
                 raise ValueError("empreinte : chaine non vide attendue (refaire « Voir le diff »)")
             return apc.cree(racine, reponses_de(demande), empreinte, builds_en_cours)
         if chemin == "/modele/prepare":
+            if "relue" in demande:
+                return apr.propose_relue(racine, demande["relue"])
             return apm.propose_mise_a_jour(racine, apm.charge_modele(racine))      # ValueError si illisible -> 400
         if chemin == "/modele/applique":
             empreinte = demande.get("empreinte")
@@ -228,6 +233,8 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, etat_modele):
             builds = builds_en_cours()
             if builds is None or builds:
                 raise RuntimeError("un build tourne ou n'est pas detectable : modele non modifie")
+            if "relue" in demande:
+                return apr.applique_relue(racine, demande["relue"], empreinte)
             return apm.applique_mise_a_jour(racine, empreinte)
         if chemin == "/interrompue/acquitte":
             nom = demande.get("nom")

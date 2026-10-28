@@ -435,11 +435,16 @@ def _propose(racine, modele):
         chemin = ".".join(c)
         return divergentes[chemin]["parc"] if chemin in divergentes else retire(c, v)
     neuf = _applique(modele, aligne, lambda c, v: v, retire)
-    avant, apres = _serialise(modele).decode("utf-8"), _serialise(neuf)
-    res["diff"] = "\n".join(difflib.unified_diff(avant.split("\n"), apres.decode("utf-8").split("\n"),
-                                                FICHIER_MODELE, FICHIER_MODELE, lineterm="", n=1))
-    res["empreinte"] = hashlib.sha256(_fichier(racine) + b"\0" + apres).hexdigest()
+    res["diff"], res["empreinte"] = _diff(racine, modele, neuf)
     return res, neuf
+
+
+def _diff(racine, modele, neuf):
+    "(diff unifie, empreinte = fichier actuel + proposition) du modele vers neuf."
+    avant, apres = _serialise(modele).decode("utf-8"), _serialise(neuf)
+    diff = "\n".join(difflib.unified_diff(avant.split("\n"), apres.decode("utf-8").split("\n"),
+                                          FICHIER_MODELE, FICHIER_MODELE, lineterm="", n=1))
+    return diff, hashlib.sha256(_fichier(racine) + b"\0" + apres).hexdigest()
 
 
 def propose_mise_a_jour(racine, modele):

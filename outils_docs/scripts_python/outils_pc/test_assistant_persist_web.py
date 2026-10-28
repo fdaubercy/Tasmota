@@ -81,7 +81,7 @@ def test_get(b):
     verifie("127.0.0.1" in page, False, "page : aucune adresse en dur (liens d'apres l'hote)")
     verifie(b.requete("GET", "/execution"), (200, {"en_cours": False}), "GET /execution (lu par la cible)")
     statut, etat = b.requete("GET", "/modele/etat")
-    verifie((statut, etat), (200, {"ajouts": [], "disparues": [], "divergentes": {}, "a_completer": [], "erreur": ""}),
+    verifie((statut, etat), (200, {"ajouts": [], "disparues": [], "divergentes": {}, "a_completer": [], "erreur": "", "valeurs": {}}),
             "GET /modele/etat : le contrat (modele relu, parc couvert)")
     verifie(b.requete("GET", "/interrompues"), (200, {"interrompues": []}), "GET /interrompues : rien")
     verifie(b.requete("GET", "/nulle-part")[0], 404, "GET route inconnue -> 404")

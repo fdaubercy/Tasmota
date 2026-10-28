@@ -134,13 +134,20 @@ def sonde_page(m):
             "bandeau du modele : visible (une cle nouvelle fusionnee au demarrage)")
     verifie(cdp.js("document.getElementById('texte-modele').textContent.indexOf('1 clé ajoutée au modèle, à compléter') >= 0"), True,
             "bandeau du modele : « 1 clé ajoutée au modèle, à compléter »")
-    verifie(cdp.js("document.getElementById('liste-modele').textContent"), "serveur.udp.essai", "bandeau du modele : la cle est nommee")
+    verifie(cdp.js("document.getElementById('liste-modele').textContent"), "serveur.udp.essai = 7 Relue", "bandeau du modele : la cle, son defaut et « Relue »")
     verifie(cdp.js("document.getElementById('bandeau-erreur').classList.contains('cache')"), True, "modele lisible : pas de bandeau d'erreur")
     clic(cdp, "maj-modele")
     verifie(attend(cdp, "!document.getElementById('panneau-modele').classList.contains('cache') && (document.getElementById('diff-modele').textContent !== '' || document.getElementById('retours-modele').textContent !== '')", 10),
             True, "bouton « Mettre à jour le modèle » : proposition affichee (diff ou « rien a faire »)")
     clic(cdp, "annule-modele")
     verifie(visible(cdp, "panneau-modele"), False, "annulation : le panneau se referme")
+    verifie(cdp.js("document.querySelectorAll('#liste-modele button').length"), 1, "« Relue » : un bouton visible pour la cle a completer")
+    cdp.js("document.querySelector('#liste-modele button').click()")
+    verifie(attend(cdp, "!document.getElementById('panneau-modele').classList.contains('cache') && document.getElementById('diff-modele').textContent.indexOf('serveur.udp.essai') >= 0", 10),
+            True, "« Relue » : le diff du retrait est affiche")
+    clic(cdp, "valide-modele")
+    verifie(attend(cdp, "document.getElementById('bandeau-modele').classList.contains('cache') && document.getElementById('liste-modele').textContent === ''", 10),
+            True, "« Relue » validee : le bandeau ne liste plus la cle")
     for i, ident in enumerate(("f-puce", "f-ip", "cases", "metiers", "voir-diff")):
         clic(cdp, f"pastille-{i}")
         verifie(cdp.js("[0,1,2,3,4].map(function(k){return !document.getElementById('etape-'+k).classList.contains('cache');})"),

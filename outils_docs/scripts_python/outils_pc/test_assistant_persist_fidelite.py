@@ -394,6 +394,79 @@ def test_bouton_http(t):
         b.ferme()
 
 
+# ---- bouton « Relue » : retire UN chemin de a_completer (routes /modele/prepare et /modele/applique + "relue") -------
+def banc_fusionne(t, secret=False):
+    """(racine, banc) : depot d'essai avec une cle nouvelle fusionnee et ecrite ; secret -> une cle mdp au temoin."""
+    racine = depot(t)
+    for rel in deux_puces(racine):
+        pose(racine, rel, "serveur.udp.essai", 7)
+        if secret:
+            pose(racine, rel, "serveur.udp.mdpessai", TEMOIN_SECRET)
+    fusionne, _ = apm.fusionne_nouvelles(racine, apm.charge_modele(racine))
+    apm.ecrit_modele(racine, fusionne, apm.NATURE_AUTO)
+    return racine, taw.Banc(t, racine=racine)
+
+
+def test_relue_retire_marque(t):
+    racine, b = banc_fusionne(t)
+    try:
+        avant, octets0 = apm.charge_modele(racine), octets_modele(racine)
+        statut, p = b.requete("POST", "/modele/prepare", {"relue": "serveur.udp.essai"})
+        verifie((statut, bool(p["empreinte"]), "serveur.udp.essai" in p["diff"]), (200, True, True), "relue_retire_marque : preparation et diff")
+        verifie(octets_modele(racine), apm._serialise(avant).replace(b"\r\n", b"\n"), "relue_retire_marque : preparer n'ecrit rien")
+        n = len(sauvegardes(apm.NATURE_MAJ))
+        statut, r = b.requete("POST", "/modele/applique", {"relue": "serveur.udp.essai", "empreinte": p["empreinte"]})
+        verifie(statut, 200, "relue_retire_marque : application")
+        neuf = apm.charge_modele(racine)
+        verifie("serveur.udp.essai" in apm.a_completer(neuf), False, "relue_retire_marque : le chemin a quitte a_completer")
+        verifie(neuf["socle"]["serveur"]["udp"]["essai"], 7, "relue_retire_marque : la valeur 7 reste au socle")
+        avant["a_completer"].remove("serveur.udp.essai")
+        verifie(neuf, avant, "relue_retire_marque : le reste du modele est inchange")
+        verifie(len(sauvegardes(apm.NATURE_MAJ)), n + 1, "relue_retire_marque : sauvegarde creee")
+        b.builds = ["pio run"]
+        verifie(b.requete("POST", "/modele/applique", {"relue": "serveur.udp.essai", "empreinte": p["empreinte"]})[0], 409,
+                "relue_retire_marque : pendant un build -> 409")
+    finally:
+        b.ferme()
+
+
+def test_relue_empreinte(t):
+    racine, b = banc_fusionne(t)
+    try:
+        avant = octets_modele(racine)
+        verifie(b.requete("POST", "/modele/applique", {"relue": "serveur.udp.essai", "empreinte": "0" * 64})[0], 409, "relue_empreinte : mauvaise empreinte -> 409")
+        verifie(b.requete("POST", "/modele/applique", {"relue": "serveur.udp.essai"})[0], 400, "relue_empreinte : sans empreinte -> 400")
+        verifie(octets_modele(racine), avant, "relue_empreinte : rien n'est ecrit")
+    finally:
+        b.ferme()
+
+
+def test_relue_inconnue(t):
+    racine, b = banc_fusionne(t)
+    try:
+        avant = octets_modele(racine)
+        for corps, libelle in (({"relue": "serveur.udp.inconnue"}, "inconnue"), ({"relue": 3}, "non texte")):
+            verifie(b.requete("POST", "/modele/prepare", corps)[0], 400, f"relue_inconnue : prepare {libelle} -> 400")
+            verifie(b.requete("POST", "/modele/applique", dict(corps, empreinte="0" * 64))[0], 400, f"relue_inconnue : applique {libelle} -> 400")
+        verifie(b.requete("POST", "/modele/prepare", {"relue": "serveur.udp.essai"}, entetes={})[0], 403, "relue_inconnue : sans en-tete -> 403")
+        verifie(octets_modele(racine), avant, "relue_inconnue : rien n'est ecrit")
+    finally:
+        b.ferme()
+
+
+def test_relue_secret(t):
+    racine, b = banc_fusionne(t, secret=True)
+    try:
+        _, etat = b.requete("GET", "/modele/etat")
+        verifie("serveur.udp.mdpessai" in etat["a_completer"], True, "relue_secret : la cle secrete est a completer")
+        verifie(etat["valeurs"].get("serveur.udp.essai"), "7", "relue_secret : la valeur ordinaire est affichee")
+        verifie(etat["valeurs"].get("serveur.udp.mdpessai"), "***", "relue_secret : la valeur secrete est masquee")
+        _, p = b.requete("POST", "/modele/prepare", {"relue": "serveur.udp.mdpessai"})
+        verifie(TEMOIN_SECRET in json.dumps(etat) + json.dumps(p), False, "relue_secret : le temoin n'apparait ni dans l'etat ni dans la preparation")
+    finally:
+        b.ferme()
+
+
 # ---- modele_illisible (point 2) -------------------------------------------------------------------------------
 def test_modele_illisible(t):
     racine = depot(t)
@@ -451,7 +524,8 @@ def principal():
     vrai = (tac.RACINE / apm.FICHIER_MODELE).read_bytes()
     for test in (test_fusion_cle_nouvelle, test_fusion_demarrage, test_fusion_valeur_frequente, test_fusion_puce_unique,
                  test_fusion_secret, test_fusion_secret_imbrique, test_fusion_secret_liste, test_fusion_secret_cle_liste, test_secret_inconnu, test_liste_secrete_non_alignee,
-                 test_fusion_idempotente, test_fusion_rien, test_bouton_retrait, test_bouton_http, test_modele_illisible,
+                 test_fusion_idempotente, test_fusion_rien, test_bouton_retrait, test_bouton_http, test_relue_retire_marque, test_relue_empreinte, test_relue_inconnue,
+                 test_relue_secret, test_modele_illisible,
                  test_couverture_signale):
         with tempfile.TemporaryDirectory() as t:
             try:

@@ -746,6 +746,7 @@ aucun : ses valeurs sont `@secret:<famille>`.
   **fusionnées automatiquement** ; un bandeau orange « à compléter » liste celles qu'il faut documenter (texte de
   question, valeur par défaut).
 - **« Mettre à jour le modèle »** : le bouton affiche le diff de la mise à jour proposée, puis la valide.
+- **« Relue »** (une par clé du bandeau « à compléter », avec son chemin et sa valeur par défaut, `***` si secret) : retire cette seule clé de `a_completer` après diff et validation ; le modèle n'est écrit que si l'empreinte du diff est encore la bonne (409 sinon).
 - Chaque écriture du modèle est précédée d'une **sauvegarde horodatée**, au même endroit que les autres.
 - Modèle **cassé à la main** (JSON invalide) : la page s'ouvre avec un bandeau rouge qui donne l'erreur et sa ligne ;
   ni fusion ni réécriture, et la création est refusée.
