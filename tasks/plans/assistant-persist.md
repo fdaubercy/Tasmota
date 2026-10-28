@@ -529,7 +529,7 @@ Ne pas commencer sans son feu vert. À ce moment-là, écrire d'abord un plan d�
   - création d'un env de test par la page ;
   - compilation par la page build, hors d'un autre build ;
   - suppression par la page 7800.
-- [ ] [projet] Relire et compléter les questions des clés `a_completer` après chaque fusion automatique.
+- [x] [projet] Relire et compléter les questions des clés `a_completer` après chaque fusion automatique. — preuve : liste vide au 2026-10-28 ; bouton « Relue » par clé (choix de l'utilisateur) 444e362, fidelite/web/sonde Chrome code 0 (controleur), temoin ROUGE
 - [x] [projet] Fusion de la MAC vers `adresseMAC` (décision du 2026-10-28, chantier à part) : `globalFonctions` écrit `adresseMAC` au `System#Boot` (corrige le différentiel, udp ON et discovery OFF), puis retrait d'`adressMAC` du modèle, du schéma et des persists ; modules téléversés avant les persists ; `banc_boot` à adapter. — preuve : 6836a0d29 (globalFonctions + 8 persists + modele + schema 8/8) ; banc_boot (controle MAC ok) et banc_demarrage code 0 ; relecteur-berry : commitable
 
 ## Vérification
