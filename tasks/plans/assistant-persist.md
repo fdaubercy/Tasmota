@@ -481,17 +481,17 @@ Interfaces produites :
 
 Décision du 2026-10-27 : les clés restent telles quelles ; l'analyse est rendue à l'utilisateur, qui décide.
 
-- [ ] Recenser :
+- [x] Recenser :
   - écrivains et lecteurs de `serveur.adressMAC` et de `serveur.adresseMAC` dans `data/` (hors `*sauvegarde*`),
     au format `fichier::fonction` ;
-  - quand chacune est écrite (démarrage, discovery), et si une carte lit l'une en croyant lire l'autre.
-- [ ] Recenser les lecteurs de `serveur.udp.telePeriod`, `serveur.rangeExtender.telePeriod` et `diverses.telePeriod`
-  (grep du chemin complet et des accès par `find("telePeriod")`, leçon du 2026-10-04).
-- [ ] Rédiger `outils_docs/ANALYSE_CLES_MAC_TELEPERIOD_2026-10-27.md` :
+  - quand chacune est écrite (démarrage, discovery), et si une carte lit l'une en croyant lire l'autre. — preuve : ANALYSE §2 ; adressMAC ecrite par globalFonctions (System#Boot), lue nulle part (grep controleur) ; adresseMAC ecrite par discovery, lue par udp/modbus ; differentiel (udp ON, discovery OFF) lit adresseMAC jamais ecrite
+- [x] Recenser les lecteurs de `serveur.udp.telePeriod`, `serveur.rangeExtender.telePeriod` et `diverses.telePeriod`
+  (grep du chemin complet et des accès par `find("telePeriod")`, leçon du 2026-10-04). — preuve : seule diverses.telePeriod lue (configGlobal data = diverses, globalFonctions, udpFonctions, modbusFonctions) ; udp et rangeExtender mortes
+- [x] Rédiger `outils_docs/ANALYSE_CLES_MAC_TELEPERIOD_2026-10-27.md` :
   - en place, avantages, inconvénients ;
   - options : laisser, fusionner, retirer ;
   - effet de chacune sur le modèle et sur les cartes.
-  Aucun fichier de code modifié.
+  Aucun fichier de code modifié. — preuve : f9d3577 (1 fichier, 128 lignes)
 - [ ] Commit `docs: analyse des cles adressMAC/adresseMAC et telePeriod`, puis présenter les options à l'utilisateur.
 
 ## A9 — Documentation
