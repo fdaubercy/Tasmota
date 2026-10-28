@@ -92,7 +92,7 @@ Interfaces produites :
   - Contenu : diffs `base→HEAD` et `base→upstream/development`, tronqués à `synchro_fork_etat.MAX_DIFF`.
 
 Étapes :
-- [ ] Banc rouge d'abord (module absent), un test par cas, sur `faux_depot_synchro`.
+- [x] Banc rouge d'abord (module absent), un test par cas, sur `faux_depot_synchro`. — preuve : test_synchro_fork_assistant.py, 18 cas (3001502fc, 9b644313b)
   - `a_jour` : `voie == ""`, `etapes == []`.
   - `avance_seule` : un commit local poussé, `retard == 0` → `etapes == []`.
   - `non_pousses_seuls` : `[e["id"] for e in etapes] == ["pousser"]`.
@@ -109,11 +109,11 @@ Interfaces produites :
   - `commits_adaptateur` : le titre `"Berry: fix"` donne un tuple avec `"berry"` dans les mots.
   - `trois_voies_hors_liste` : `ValueError`.
   - `courante_unique` : dans chaque cas, au plus une étape a le statut `courante`.
-- [ ] Lancer : ROUGE (ImportError).
-- [ ] Ajouter `racine` à `synchro_fork_etat`, puis écrire `faux_depot_synchro.py` et `synchro_fork_assistant.py`.
-- [ ] Banc VERT, et `test_synchro_fork_web.py` toujours vert.
-- [ ] Témoin : une copie de l'analyse (dans le scratchpad) qui ignore `non_pousses` dans la règle de voie fait passer `non_pousses_force_b` au ROUGE.
-- [ ] Commit `feat(synchro-fork): analyse de l assistant pas a pas`.
+- [x] Lancer : ROUGE (ImportError). — preuve : ModuleNotFoundError (task-1-report.md)
+- [x] Ajouter `racine` à `synchro_fork_etat`, puis écrire `faux_depot_synchro.py` et `synchro_fork_assistant.py`. — preuve : 3001502fc
+- [x] Banc VERT, et `test_synchro_fork_web.py` toujours vert. — preuve : 72 OK 0 KO code 0, web vert ; relecture approuvee + correctif statuts bloques re-relu (9b644313b)
+- [x] Témoin : une copie de l'analyse (dans le scratchpad) qui ignore `non_pousses` dans la règle de voie fait passer `non_pousses_force_b` au ROUGE. — preuve : temoin 2 KO, code 1 (task-1-report.md)
+- [x] Commit `feat(synchro-fork): analyse de l assistant pas a pas`. — preuve : 3001502fc + fix 9b644313b
 
 ## A2 — Voie B : merge local guidé et push
 
@@ -152,7 +152,7 @@ Interfaces produites :
   - `pousse(racine) -> str` : `git push origin development`, sortie de git rendue, `RuntimeError` si le code ≠ 0.
 
 Étapes :
-- [ ] Banc rouge, groupe `fusion`.
+- [x] Banc rouge, groupe `fusion`. — preuve : test_synchro_fork_fusion.py, 121 OK code 0 (9318a0193, f9fdb16ae)
   - `merge_propre` : voie B sans conflit → `lance_merge`, `conflits == []`, `termine` → `git log -1 --format=%P` montre 2 parents ; le journal du faux dépôt contient le titre du commit amont.
   - `mien` / `amont` : le contenu de `commun.txt` est celui du côté choisi, `conflits == []`.
   - `resolu_avec_marqueurs` : `RuntimeError` ; après réécriture propre du fichier, accepté.
@@ -166,13 +166,13 @@ Interfaces produites :
   - `push` : `pousse` → `git -C origin.git log development` contient le commit de merge.
   - `push_refuse` (vigilance 3) : `origin` est avancé par un autre clone → `pousse` → `RuntimeError` ; `origin` est inchangé.
   - `jamais_de_force` : la source de `synchro_fork_fusion.py` ne contient ni `--force`, ni `"-f"`, ni `stash`, ni `reset`, ni `rebase`.
-- [ ] Lancer : ROUGE.
-- [ ] Ajouter `historique=None` à `noter_historique` (défaut `HISTORIQUE`), puis écrire `synchro_fork_fusion.py` et le brancher dans `analyse`.
-- [ ] Banc VERT. Le script au terminal reste inchangé : `python -u outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py --help` affiche le même texte.
-- [ ] Témoins (copies dans le scratchpad) :
+- [x] Lancer : ROUGE. — preuve : ModuleNotFoundError (task-2-report.md)
+- [x] Ajouter `historique=None` à `noter_historique` (défaut `HISTORIQUE`), puis écrire `synchro_fork_fusion.py` et le brancher dans `analyse`. — preuve : 9318a0193
+- [x] Banc VERT. Le script au terminal reste inchangé : `python -u outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py --help` affiche le même texte. — preuve : fusion 121 OK, assistant 72 OK, web vert, --help identique ; relecture + re-relecture (8/8 traites)
+- [x] Témoins (copies dans le scratchpad) : — preuve : temoins resolu sans marqueurs et liste de prevision ROUGES ; +4 temoins du correctif ROUGES (task-2-report.md)
   - un `resolu` qui n'inspecte pas les marqueurs → ROUGE ;
   - une liste de conflits prise dans `prevision()` au lieu de `--diff-filter=U` → ROUGE sur `merge_etranger` ou `reprise`.
-- [ ] Commit `feat(synchro-fork): merge local guide de l assistant`.
+- [x] Commit `feat(synchro-fork): merge local guide de l assistant`. — preuve : 9318a0193 + fix f9fdb16ae
 
 ## A3 — Routes du serveur
 
@@ -195,7 +195,7 @@ Interfaces produites :
 - Le verrou est un `threading.Lock` pris par `acquire(blocking=False)`. S'il est occupé : `RuntimeError("une action est deja en cours")`.
 
 Étapes :
-- [ ] Banc rouge, groupe `assistant` : serveur sur un port libre, avec `racine` = faux dépôt et `builds_en_cours=lambda: []`.
+- [x] Banc rouge, groupe `assistant` : serveur sur un port libre, avec `racine` = faux dépôt et `builds_en_cours=lambda: []`. — preuve : test_synchro_fork_web.py groupe assistant (52e466b23)
   - `GET /assistant` rend 200 et une liste `etapes`.
   - Un POST sans `X-Synchro` rend 403.
   - Une action inconnue rend 400.
@@ -203,10 +203,10 @@ Interfaces produites :
   - Un chemin de `/trois-voies` hors liste rend 400.
   - Une action pendant une exécution de la session (faux script qui attend une question) rend 409.
   - **Double clic** (vigilance 4) : deux POST `merge` simultanés (deux threads) rendent exactement un 200 et un 409.
-- [ ] Lancer : ROUGE.
-- [ ] Implémenter. Ajouter les routes à la docstring de `synchro_fork_web.py`.
-- [ ] Banc VERT (tous les groupes de `test_synchro_fork_web.py`, plus `test_synchro_fork_assistant.py`).
-- [ ] Commit `feat(synchro-fork): routes de l assistant`.
+- [x] Lancer : ROUGE. — preuve : TypeError sur racine (task-3-report.md)
+- [x] Implémenter. Ajouter les routes à la docstring de `synchro_fork_web.py`. — preuve : 52e466b23
+- [x] Banc VERT (tous les groupes de `test_synchro_fork_web.py`, plus `test_synchro_fork_assistant.py`). — preuve : web VERT, double clic [200, 409], assistant et fusion verts ; relecture approuvee
+- [x] Commit `feat(synchro-fork): routes de l assistant`. — preuve : 52e466b23
 
 ## A4 — La page
 
@@ -233,7 +233,7 @@ Comportement :
 - Aide : un paragraphe sur l'assistant.
 
 Étapes :
-- [ ] Sonde Chrome rouge d'abord, sur le modèle de `outils_pc/test_build_page_chrome.py` : DevTools, `Runtime.evaluate` après délai, `Runtime.exceptionThrown`.
+- [x] Sonde Chrome rouge d'abord, sur le modèle de `outils_pc/test_build_page_chrome.py` : DevTools, `Runtime.evaluate` après délai, `Runtime.exceptionThrown`. — preuve : test_synchro_fork_page_chrome.py ROUGE 12 KO (task-4-report.md)
   - Mise en place : serveur sur le faux dépôt en conflit ; la session porte un faux `synchronise_fork_tasmota.py` (dossier temporaire) qui imprime puis sort en 0.
   - Clic sur « Diagnostic seul » → l'élément `#assistant` est visible et contient `fusion_b` courante.
   - Clic sur « Lancer le merge » → le tableau des conflits a une ligne.
@@ -242,10 +242,10 @@ Comportement :
   - Rechargement en plein merge (vigilance 5) → l'assistant est visible sans dry-run.
   - `<details>` « Avancé » présent, onglet rebase accessible.
   - Aucune exception JS.
-- [ ] Lancer : ROUGE (`#assistant` absent).
-- [ ] Implémenter le bloc et l'insérer dans `PAGE`.
-- [ ] Sonde VERTE. Témoin : un `SCRIPT` qui référence un id absent → exception relevée, ROUGE.
-- [ ] Commit `feat(synchro-fork): assistant pas a pas sur la page`.
+- [x] Lancer : ROUGE (`#assistant` absent). — preuve : #assistant absent avant implementation
+- [x] Implémenter le bloc et l'insérer dans `PAGE`. — preuve : 722d4684f
+- [x] Sonde VERTE. Témoin : un `SCRIPT` qui référence un id absent → exception relevée, ROUGE. — preuve : sonde VERTE sans exception JS + XSS teste ; temoins id absent et sans echappe ROUGES (4fd8f5452)
+- [x] Commit `feat(synchro-fork): assistant pas a pas sur la page`. — preuve : 722d4684f + fix 4fd8f5452
 
 ## A5 — Documentation et relecture
 
@@ -255,7 +255,7 @@ Comportement :
   - compte de lignes de `synchronise_fork_tasmota.py` ;
   - `outils_pc/build_serie` ajouté à l'exception d'import.
   - Puis `python outils_docs/scripts_python/maintenance/verifie_references_docs.py` → code 0.
-- [ ] Relecture du diff complet par un sous-agent neuf (superpowers:requesting-code-review). Corriger, puis relancer les trois bancs.
+- [x] Relecture du diff complet par un sous-agent neuf (superpowers:requesting-code-review). Corriger, puis relancer les trois bancs. — preuve : relecture finale (opus) 0 critique, 2 importants + 9 mineurs corriges en 33e191da5, re-relecture 11/11 ; bancs assistant, fusion, fusion_suite, web x3, sonde Chrome verts ; 3 residus notes (registre)
 - [ ] Commit `docs(synchro-fork): assistant pas a pas`.
 
 ## A6 — Essai réel (avec l'utilisateur)
