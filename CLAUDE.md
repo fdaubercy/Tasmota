@@ -689,3 +689,19 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `test_fichiers_berry_page_chrome.py`. Mode d'emploi : `outils_docs/README.md` § « Fichiers Berry par env (page web) ».
     Spec : `docs/superpowers/specs/2026-10-25-page-fichiers-berry-design.md` (§9 suppression, §10 renommage) ; plans :
     `tasks/plans/fichiers-berry-env.md`, `tasks/plans/fichiers-berry-suppression.md`.
+  - `assistant_persist_web.py` (+ `assistant_persist_page.py`, `assistant_persist_page_js.py`, `assistant_persist_modele.py`,
+    `assistant_persist_parc.py`, `assistant_persist_generation.py`, `assistant_persist_elements.py`,
+    `assistant_persist_creation.py`) — page « Assistant persist » http://127.0.0.1:7900 (tuile de l'annuaire, groupe
+    Maintenance, arret libre : rien n'est ecrit avant « Creer l'env » ; tache VS Code « Outil : assistant persist » ;
+    cible Custom « Assistant persist (page web) », `build/cible_assistant_persist.py`, banc
+    `build/test_cible_assistant_persist.py`). Pose des questions et en tire le `_persist.json` d'une NOUVELLE carte, son
+    autoexec, la section du cenv et la section `#elif` du `.h`, d'apres le modele `outils_docs/schemas/modele_persist.json`
+    (se met a jour du parc : fusion des cles nouvelles a l'ouverture, bouton « Mettre a jour le modele » avec diff,
+    sauvegardes horodatees). Editeur des entrees/sorties du bloc metier (broches de `data/fs/configGlobal.be`, refus des
+    doublons et des broches ModBus/I2C/LEDs). Mots de passe JAMAIS envoyes a la page : recopies cote serveur, `***` dans
+    l'apercu et le diff. Creation en une transaction, moteur de `fichiers_berry_creation.py` reutilise ; refusee pendant
+    un build. Limites : seuls activation, nom, broche et type s'editent ; bloc metier principal seulement ; modification
+    d'un env existant (A10) en pause. Bancs `test_assistant_persist_*.py` + sonde Chrome
+    `test_assistant_persist_page_chrome.py`. Mode d'emploi : `outils_docs/README.md` § « Assistant persist (page web) ».
+    Spec : `docs/superpowers/specs/2026-10-27-assistant-persist-design.md` ; plan : `tasks/plans/assistant-persist.md` ;
+    analyse en attente de decision : `outils_docs/ANALYSE_CLES_MAC_TELEPERIOD_2026-10-27.md`.

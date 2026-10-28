@@ -693,6 +693,82 @@ Dans `outils_docs/scripts_python/outils_pc/`, avec le Python du penv PlatformIO 
 `test_fichiers_berry_page_chrome.py` ; cible Custom : `build/test_cible_fichiers_berry.py`. Aucun banc n'écrit
 dans le vrai dépôt ni dans le vrai dossier des sauvegardes.
 
+## Assistant persist (page web)
+
+Une page qui pose des questions et en tire le `_persist.json` d'une **nouvelle carte**, avec l'`autoexec.be`, la
+section du cenv et la section `#elif` de `tasmota/user_config_override.h` qui vont avec. Les questions et leurs règles
+viennent d'un **modèle** (`outils_docs/schemas/modele_persist.json`) qui se met à jour à partir des persists du dépôt.
+Le moteur d'écriture est celui de « Fichiers Berry par env » (créer un env), sans changement de comportement.
+Conception : [spec](../docs/superpowers/specs/2026-10-27-assistant-persist-design.md) ; plan :
+`tasks/plans/assistant-persist.md`.
+
+### Lancer la page
+
+- **Tuile de l'annuaire** (http://127.0.0.1:7600), groupe « Maintenance » : « Assistant persist ». Rien n'est écrit
+  avant « Créer l'env » : on peut l'arrêter à tout moment.
+- **Tâche VS Code** : `Ctrl+Maj+P` > Run Task > « Outil : assistant persist (http://127.0.0.1:7900) ».
+- **Ligne de commande** : `python outils_docs/scripts_python/outils_pc/assistant_persist_web.py` (`--http 7900`,
+  `--local`, `--sans-navigateur`).
+- **Cible PlatformIO** « Assistant persist (page web) » dans *Project Tasks > <env> > Custom* : démarre la page
+  détachée (console dans `%LOCALAPPDATA%\outils_tasmota\consoles\assistant_persist.log`) puis rend la main.
+  Comme toute cible, **jamais pendant un build**.
+
+Port **7900**. Depuis un autre appareil : lien à jeton affiché dans la console, comme les autres outils
+(`acces_web.py`) ; depuis ce PC, aucun jeton.
+
+### Les étapes de la page
+
+1. **Questions** : identité de la carte (puce, lieu, nom, topic, IP), réseau, fonctions à activer.
+2. **Entrées et sorties du bloc métier** : un éditeur par groupe (boutons, interrupteurs, relais, capteurs, compteurs,
+   thermomètres, analogiques). Les broches proposées sont celles de la puce d'après `data/fs/configGlobal.be`.
+   La page **refuse** une broche en double, une broche déjà prise par ModBus, I2C ou LEDs, ou hors plage.
+   Un élément **OFF** n'est pas contrôlé : il n'occupe pas sa broche.
+3. **Aperçu** du `_persist.json` en direct, mots de passe masqués (`***`).
+4. **Diff** de chaque fichier touché (nouveau dossier `data/<lieu>/<puce>-<nom>`, cenv, `.h`).
+5. **Création** en **une transaction** : si un fichier ne peut pas être écrit, tout est défait. Sauvegardes
+   horodatées dans `%LOCALAPPDATA%\outils_tasmota\fichiers_berry\sauvegardes\`, gardées 30 jours. Refusée pendant un
+   build, et si la saisie a changé depuis « Voir le diff » (le bouton se grise, le serveur répond 409).
+
+Après la création, la page affiche un **résumé à copier** et deux liens : la page build (7700, env coché) et
+« Fichiers Berry par env » (7800, `?env=<nom>`) pour choisir ce qui est sur le FS, exclu ou solidifié.
+
+### Les mots de passe
+
+**Ils ne sont jamais envoyés à la page.** Le serveur les recopie : mots de passe Wi-Fi des familles « maison » prises
+dans les persists du parc, et mot de passe commun mqtt / point d'accès / FTP. L'aperçu, le diff, le résumé et les
+erreurs montrent `***` ou rien. Si deux persists donnent deux mots de passe pour le même nom de réseau, ou si le
+réseau est inconnu du parc, la création est refusée en nommant le réseau (sans valeur). Le modèle n'en contient
+aucun : ses valeurs sont `@secret:<famille>`.
+
+### Le modèle `modele_persist.json`
+
+- **À l'ouverture**, les clés **nouvelles** du parc (présentes dans un persist du dépôt, absentes du modèle) sont
+  **fusionnées automatiquement** ; un bandeau orange « à compléter » liste celles qu'il faut documenter (texte de
+  question, valeur par défaut).
+- **« Mettre à jour le modèle »** : le bouton affiche le diff de la mise à jour proposée, puis la valide.
+- Chaque écriture du modèle est précédée d'une **sauvegarde horodatée**, au même endroit que les autres.
+- Modèle **cassé à la main** (JSON invalide) : la page s'ouvre avec un bandeau rouge qui donne l'erreur et sa ligne ;
+  ni fusion ni réécriture, et la création est refusée.
+- Persist du dépôt illisible : ignoré avec un avertissement.
+
+### Limites connues
+
+- L'éditeur ne règle que **activation, nom, broche et type**. `idModBus`, `virtuel`, `channel`, `nbLeds` se
+  complètent à la main dans le `_persist.json` créé.
+- Les broches de **SD, I2S, Ethernet et LoRa** ne sont pas contrôlées.
+- Les éléments ne vont que sur le **bloc métier principal**.
+- La **modification d'un env existant** (A10) est en pause : l'assistant ne sait que créer.
+- Clés `adressMAC` / `adresseMAC` et `telePeriod` : incohérences relevées dans le parc, décision **en attente** ;
+  voir `outils_docs/ANALYSE_CLES_MAC_TELEPERIOD_2026-10-27.md`.
+
+### Bancs
+
+Dans `outils_docs/scripts_python/outils_pc/`, avec le Python du penv PlatformIO (code de sortie 0 = vert) :
+`test_assistant_persist_modele.py`, `_parc.py`, `_elements.py`, `_generation.py`, `_creation.py`, `_fidelite.py`,
+`_web.py`, et la sonde Chrome `test_assistant_persist_page_chrome.py` ; cible Custom :
+`build/test_cible_assistant_persist.py`. Les bancs travaillent sur un dépôt d'essai temporaire (lecture seule des
+vrais persists) : aucun n'écrit dans le vrai dépôt ni dans le vrai dossier des sauvegardes.
+
 <hr></hr>
 
 ## Les devices Tasmota développées :
