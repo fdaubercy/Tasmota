@@ -236,7 +236,7 @@ var ETAPES_COMPILATION = ["Pré-build", "Compilation", "Édition des liens"];
 var STATUTS = {succes: "réussi", echec: "échec", annulee: "annulée", arrete: "arrêté", passe: "passé"};
 var PORT = /^COM\d{1,3}$/i;
 var URL_FICHIERS = location.protocol + "//" + location.hostname + ":7800/";   // page « Fichiers Berry par env », meme hote
-var IPV4 = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+var IPV4 = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}(:\d{1,5})?$/;   // :port = esclave par le maitre
 
 var envs = [], parNom = {}, choix = {}, ui = {}, uiBlocs = {}, enCours = false, dernierN = 0, fluxCoupe = false;
 var L = null;                 // lancement suivi : {lignes, actions, blocs, ordre, bandeaux, attente, fin}
@@ -402,7 +402,7 @@ function majLigne(nom) {
   } else {
     if (document.activeElement !== champ) champ.value = c.ip;
     champ.placeholder = "IP à saisir";
-    champ.title = "Adresse IP de la carte (OTA)";
+    champ.title = "Adresse de la carte (OTA) : IP, ou IP du maître:port pour un esclave du range extender";
     champ.classList.toggle("requis", !c.ip.trim());
   }
   var notes = [];
@@ -413,8 +413,10 @@ function majLigne(nom) {
     notes.push(["erreur", "« Effacer puis téléverser » : par câble (COM) seulement, passer cette ligne en COM"]);
   if (c.methode === "ota") {
     if (!c.ip.trim()) notes.push(["erreur", "IP à saisir : aucune adresse connue pour cet env (WIFI_IP_ADDRESS absente ou 0.0.0.0)"]);
-    else if (!IPV4.test(c.ip.trim())) notes.push(["erreur", "adresse IPv4 invalide"]);
+    else if (!IPV4.test(c.ip.trim())) notes.push(["erreur", "adresse invalide (IPv4, ou IPv4:port par le maître)"]);
     else if (c.ip.trim() !== e.ip) notes.push(["note-info", "IP valable pour ce lancement seulement (user_config_override.h n'est pas modifié)"]);
+    else if (e.ip_source === "maitre") notes.push(["note-info", "par le maître (range extender, persist) : redirection posée et nom d'hôte de la carte vérifié avant l'envoi"]);
+    else if (e.ip_source === "h") notes.push(["note-info", "IP fixe de user_config_override.h"]);
   }
   var avant = c.coche && c.methode === "com" && aUnEnvoi(acts) ? portPartage(nom) : "";
   if (avant)

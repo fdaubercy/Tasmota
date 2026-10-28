@@ -8,6 +8,7 @@ Aucun appel a pio : seuls les fichiers sont lus.
 """
 
 import configparser
+import json
 import re
 import shutil
 from dataclasses import dataclass
@@ -36,6 +37,7 @@ class Env:
     ecrivable: bool       # defini dans platformio_tasmota_cenv.ini
     fs_avec_firmware: bool = False   # un upload firmware par cable flashe aussi le FS (voir _fs_avec_firmware)
     fichiers_berry: bool = False     # env propose par la page « Fichiers Berry par env » (ESP32 du cenv)
+    ip_source: str = ""              # "h" (WIFI_IP_ADDRESS) | "maitre" (esclave joint par le range extender) | ""
 
 
 def _lit_ini(chemin):
@@ -188,10 +190,30 @@ def liste_envs(racine):
         # Un safeboot de l'amont charge le pre-script (extends tasmota32_base) mais c'est l'image de secours
         # de la partition safeboot, pas un firmware a pousser par /u2 a la place de l'appli : pas d'OTA.
         ota_possible = ota and sous_groupe != "safeboot"
-        envs.append(Env(nom, famille, sous_groupe, port, herite, lit_ip_ota(texte_h, firmware),
+        ip, source = lit_ip_ota(texte_h, firmware), "h"
+        if not ip and famille == "cartes" and ota_possible:
+            ip, source = adresse_par_maitre(persist_carte(racine, nom)), "maitre"
+        envs.append(Env(nom, famille, sous_groupe, port, herite, ip,
                         ota_possible, firmware, ecrivable, _fs_avec_firmware(toutes, section, ota),
-                        ecrivable and any(s.startswith("env:tasmota32") for s in chaine)))   # regle de envs_proposes
+                        ecrivable and any(s.startswith("env:tasmota32") for s in chaine),   # regle de envs_proposes
+                        source if ip else ""))
     return envs
+
+
+def adresse_par_maitre(persist):
+    """`<ipMaitre>:<8080 + id - 1>` pour un esclave du range extender du maitre, "" sinon.
+
+    Le maitre redirige ce port vers l'esclave:80 (RgxPort, routagePort de discoveryFonctions) ; son propre
+    bloc a id 0 et pas d'ipMaitre. Un persist illisible ne donne pas d'adresse : l'IP reste a saisir.
+    """
+    try:
+        bloc = json.loads(Path(persist).read_text(encoding="utf-8"))["serveur"]["rangeExtender"] if persist else {}
+        ident, maitre = int(bloc.get("id") or 0), str(bloc.get("ipMaitre") or "")
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return ""
+    if str(bloc.get("activation", "")).upper() != "ON" or ident < 1 or not maitre:
+        return ""
+    return f"{maitre}:{8080 + ident - 1}"
 
 
 def ecrit_port(racine, env, port):

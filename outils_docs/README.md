@@ -393,6 +393,21 @@ nommer le dossier de l'env construit.
 Lue dans `WIFI_IP_ADDRESS`. Si elle vaut `0.0.0.0` (DHCP) ou manque, la ligne demande une IP à saisir : elle ne
 vaut que pour ce lancement (rien n'est réécrit) et la ligne est refusée tant que le champ est vide.
 
+**Esclaves derrière le range extender du maître** (cuve, rideau) : sans IP fixe, la page propose
+`<IP du maître>:<8080 + id - 1>` (`192.168.0.43:8081` pour la cuve, `192.168.0.43:8082` pour le rideau), tiré de
+`serveur.rangeExtender` du persist de la carte au dépôt (`activation` ON, `id` ≥ 1, `ipMaitre`). La note sous la
+ligne dit d'où vient l'adresse (« par le maître », ou « IP fixe de user_config_override.h »). Le champ accepte
+aussi une saisie `IP:port`. Avant d'envoyer quoi que ce soit à une adresse `IP:port`, la page (étape
+« Connexion par le maître ») :
+
+1. envoie `RoutageRangeExtender` au maître, qui pose ses redirections d'après sa table de découverte (la table
+   des redirections se vide à chaque redémarrage du maître) ;
+2. demande `Status 5` à la carte jointe par ce port, et compare son nom d'hôte à celui du persist de l'env.
+
+Maître injoignable, Berry du maître arrêté, esclave hors ligne pour le maître (rien derrière le port) ou autre
+carte derrière le port : **refus, rien n'est envoyé**. Ensuite, firmware et FS passent par la redirection comme
+pour une carte jointe directement.
+
 ### OTA du firmware
 
 La page lance `pio run -e X` (compilation), puis envoie elle-même `.pio/build/<env>/firmware.bin.gz` (à défaut, ou
@@ -519,10 +534,19 @@ commande quelle que soit la cible ; même mention « FS aussi flashé » sur la 
   mémorisé ne sert que pour un env dont le port n'est pas réécrit dans un `.ini` (envs de l'amont), l'IP mémorisée
   que si aucune IP n'est lue dans `user_config_override.h`.
 - Références de progression (nombre de `.o` du dernier
-  build réussi de chaque env, base du % de compilation) : `references.json` dans
+  build réussi de chaque env, base du % de compilation ; durée de chaque zone du dernier envoi par câble, base du
+  % de l'envoi) : `references.json` dans
   `%LOCALAPPDATA%\outils_tasmota\build\`, hors dépôt. Un env jamais compilé par la page emprunte le total
   du plus grand env de la même puce (`tasmota32s3`, `tasmota32p4`…), affiché « 337/≈1682 fichiers » ;
   sans env de la même puce, seul le nombre de fichiers s'affiche.
+- **Pourcentage pendant l'envoi** (ligne « Téléversement » de l'env) :
+  - **par câble** : esptool écrit plusieurs zones (bootloader, partitions, boot_app0, safeboot, firmware,
+    `littlefs.bin`). Dès le deuxième envoi du même env, la barre donne **un seul %** pour l'envoi entier, pondéré par
+    la durée de chaque zone au dernier envoi (le FS, effacé avant d'être écrit, pèse plus que sa taille), avec
+    « littlefs.bin 40 % · zone 6/6 ». Au premier envoi, ou si les zones ont changé, le % reste celui de la zone en cours ;
+  - **OTA du firmware** : le % de l'envoi HTTP, un point à la fois ;
+  - **OTA du FS** : le % des **octets** envoyés (pas du nombre de fichiers), mis à jour pendant chaque fichier, avec
+    « 3/17 js/echarts.min.js.gz ».
 - Chaque `pio run` réécrit `platformio_override.ini` et `tasmota/user_config_override.h` (`CFG_HOLDER`) :
   **fichiers à commiter** après un lancement (la page le rappelle en fin de lancement), et à sauvegarder avant
   une série d'essais.

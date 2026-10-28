@@ -285,13 +285,37 @@ def test_ota_fs_progression():
         carte = Carte()
         _, rapports, _ = envoie_fs(carte, t)
         envois = [r for r in rapports if r.get("etape") == "Envoi des fichiers"]
-        verifie([r["detail"].split(" ")[0] for r in envois], ["1/5", "2/5", "3/5", "4/5", "5/5"],
-                "ota_fs_progression : un rapport par fichier, fichiers envoyes / total")
-        verifie([r["pourcent"] for r in envois], [20, 40, 60, 80, 100], "ota_fs_progression : pourcentages")
+        rangs = list(dict.fromkeys(r["detail"].split(" ")[0] for r in envois))
+        verifie(rangs, ["1/5", "2/5", "3/5", "4/5", "5/5"],
+                "ota_fs_progression : chaque fichier annonce AVANT son envoi, n/total, dans l'ordre")
+        pourcents = [r["pourcent"] for r in envois]
+        verifie((pourcents[:1], pourcents[-1:], all(a <= b for a, b in zip(pourcents, pourcents[1:]))), ([0], [100], True),
+                f"ota_fs_progression : % des octets, de 0 a 100 sans reculer ({pourcents})")
         verifie(envois[-1]["detail"] if envois else "", "5/5 _persist.json",
                 "ota_fs_progression : detail = n/total chemin (persist en dernier)")
         verifie("sd/js/graphiques.js" in [r["detail"].split(" ", 1)[1] for r in envois], True,
                 "ota_fs_progression : chemin relatif avec ses dossiers")
+        carte.ferme()
+
+
+def test_ota_fs_progression_octets():
+    """A13 : % des octets, mis a jour PENDANT un gros fichier (echarts.min.js.gz = 368 Ko sur le P4, autres 10-40 Ko)."""
+    with tempfile.TemporaryDirectory() as t:
+        d = Path(t) / "fs"
+        (d / "sd" / "js").mkdir(parents=True)
+        (d / "sd" / "js" / "gros.js.gz").write_bytes(b"x" * (12 * bo.MORCEAU))
+        (d / "autoexec.be").write_bytes(b"print(1)" * 100)
+        (d / "_persist.json").write_bytes(NOUVEAU_PERSIST)
+        carte, rapports = Carte(), []
+        try:
+            bo.envoie_fs_ota("tasmota32-essai", carte.ip, d, Path(t) / "persist", rapports.append, **RAPIDE)
+            erreur = None
+        except RuntimeError as e:
+            erreur = str(e)
+        verifie(erreur, None, "ota_fs_progression_octets : envoi sans erreur")
+        gros = [r["pourcent"] for r in rapports if r.get("etape") == "Envoi des fichiers" and "gros.js.gz" in r["detail"]]
+        verifie(len(set(gros)) >= 8, True, f"ota_fs_progression_octets : le % avance pendant le gros fichier ({gros})")
+        verifie(max(gros, default=0) >= 90, True, "ota_fs_progression_octets : le gros fichier pese presque tout le total")
         carte.ferme()
 
 
@@ -580,11 +604,56 @@ def test_identite_image():
         verifie((r[0], "non contrôlée" in r[1]), ("ok", True), "identite : pas de persist de l'env au depot -> non controlee, dit")
 
 
+def test_par_maitre():
+    """A11 : redirection posee par le maitre (RoutageRangeExtender), puis nom d'hote de la carte jointe verifie."""
+    maitre, esclave = Carte(), Carte()
+    maitre.maitre = True
+    try:
+        with tempfile.TemporaryDirectory() as t:
+            env_p = Path(t) / "_persist.json"
+            env_p.write_bytes(persist_carte("capteurs-cuve", "jardin/cuve"))
+            etapes = []
+
+            def essai(persist=env_p):
+                etapes.clear()
+                try:
+                    return "ok", bo.joint_par_maitre(esclave.ip, persist, "cuve", etapes.append, maitre=maitre.ip, delai=2)
+                except RuntimeError as e:
+                    return "refus", str(e)
+
+            r = essai()
+            verifie((r[0], "CAPTEURS-CUVE" in r[1], etapes[0]["etape"]), ("ok", True, bo.ETAPE_CONNEXION),
+                    "par_maitre : meme nom d'hote (sans casse) -> accepte, carte jointe dite")
+            verifie([c for _, c, _ in maitre.journal], ["/cm?cmnd=RoutageRangeExtender"],
+                    "par_maitre : le maitre pose ses redirections (RoutageRangeExtender)")
+            verifie([c for _, c, _ in esclave.journal], ["/cm?cmnd=Status%205"], "par_maitre : puis Status 5 a la carte jointe")
+            esclave.hostname = "RIDEAU-GARAGE"
+            r = essai()
+            verifie((r[0], "RIDEAU-GARAGE" in r[1], "capteurs-cuve" in r[1]), ("refus", True, True),
+                    "par_maitre : autre carte derriere le port -> refus qui nomme les deux")
+            r = essai(None)
+            verifie((r[0], "non contrôlée" in r[1]), ("ok", True), "par_maitre : pas de persist au depot -> non controlee, dit")
+            maitre.maitre = False
+            r = essai()
+            verifie((r[0], "Berry" in r[1]), ("refus", True), "par_maitre : maitre sans RoutageRangeExtender -> refus")
+            maitre.maitre = True
+            esclave.ferme()
+            r = essai()
+            verifie((r[0], "aucune carte" in r[1]), ("refus", True), "par_maitre : rien derriere le port -> refus")
+            maitre.ferme()
+            r = essai()
+            verifie((r[0], "injoignable" in r[1]), ("refus", True), "par_maitre : maitre eteint -> refus")
+    finally:
+        maitre.ferme()
+        esclave.ferme()
+
+
 def principal():
-    for test in (test_identite_image, test_ota_fs_ordre, test_ota_fs_sauvegarde, test_ota_fs_persist_injoignable,
+    for test in (test_identite_image, test_par_maitre,test_ota_fs_ordre, test_ota_fs_sauvegarde, test_ota_fs_persist_injoignable,
                  test_ota_fs_relecture_differente, test_ota_fs_sous_dossiers, test_ota_fs_referer,
                  test_ota_fs_echec_ufsu, test_ota_fs_pas_de_retour, test_ota_fs_attente_retour,
-                 test_ota_fs_persist_reformate, test_ota_fs_progression, test_ota_fs_persist_invalide,
+                 test_ota_fs_persist_reformate, test_ota_fs_progression, test_ota_fs_progression_octets,
+                 test_ota_fs_persist_invalide,
                  test_image_extraite, test_image_illisible, test_ota_firmware_echec_en_safeboot,
                  test_ota_firmware_gz_perime,
                  test_ota_firmware_envoi, test_ota_firmware_safeboot, test_ota_firmware_sans_safeboot,

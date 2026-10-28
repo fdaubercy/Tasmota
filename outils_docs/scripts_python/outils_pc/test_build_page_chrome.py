@@ -303,6 +303,11 @@ class Montage:
         (self.depot / "platformio_tasmota_cenv.ini").write_text(CENV, encoding="utf-8")
         (self.depot / "platformio_tasmota_env32.ini").write_text(ENV32, encoding="utf-8")
         (self.depot / "platformio_tasmota_env.ini").write_text(ENV8266, encoding="utf-8")
+        # A11 : B est un esclave du range extender du maitre -> adresse 192.168.0.43:8081 deduite du persist
+        persist_b = self.depot / "data" / "sonde" / "tasmota32-b" / "_persist.json"
+        persist_b.parent.mkdir(parents=True)
+        persist_b.write_text(json.dumps({"serveur": {"rangeExtender": {"activation": "ON", "id": 2, "ipMaitre": "192.168.0.43"}}}),
+                             encoding="utf-8")
         # mention « FS aussi flashe » : A embarque des fichiers (custom_files_upload), SANS littlefs.bin
         # (apres une purge de .pio/build, post_esp32 le reconstruira quand meme a l'upload)
         scenario = self.t / "scenario.json"
@@ -419,6 +424,11 @@ def sonde_page(m, capture):
     verifie(cdp.js(f"document.querySelector('.env[data-env=\"{C}\"] .champ').classList.contains('requis')"), True,
             "OTA sans IP : champ signale requis")
     cdp.js(f"document.querySelector('.env[data-env=\"{C}\"] .methode button:nth-child(1)').click()")
+    cdp.js(f"document.querySelector('.env[data-env=\"{B}\"] .methode button:nth-child(2)').click()")
+    verifie(cdp.js(f"(() => {{ const e = document.querySelector('.env[data-env=\"{B}\"]'); return [e.querySelector('.champ').value,"
+                   " e.querySelector('.notes').textContent.includes('par le maître')]; })()"), ["192.168.0.43:8081", True],
+            "OTA par le maitre (A11) : adresse deduite du persist et sa provenance en face de l'env")
+    cdp.js(f"document.querySelector('.env[data-env=\"{B}\"] .methode button:nth-child(1)').click()")
 
     # port d'un env ecrivable : POST /port puis « repartira de zero » (depot d'essai)
     cdp.js(f"""(() => {{ const c = document.querySelector('.env[data-env="{C}"] .champ');
@@ -497,6 +507,7 @@ def sonde_page(m, capture):
 
     sonde_redemarrage(m)
     sonde_sortie(m)
+    sonde_pourcent_envoi(m)
     sonde_effacement(m)
     sonde_infobulle(m)
     sonde_cases_fs(m)
@@ -664,6 +675,48 @@ EFFACEMENT_A = ["Processing {env} (platform: espressif32)", "Compiling .pio/buil
                 "Writing at 0x00010000 (50 %)", "Writing at 0x00020000 (100 %)", "[SUCCESS] Took 1.20 seconds"]
 
 
+def _zone_envoi(nom, paliers, secondes):
+    """Lignes d'esptool pour une zone : en-tete, paliers de %, « Wrote ... in X seconds » (durees memorisees, A13)."""
+    return ([f"Writing 'C:\\x\\.pio\\build\\{{env}}\\{nom}' at 0x00010000...", "@pause 0.3"]
+            + sum([[f"Writing at 0x000{i:05x} [░░░░░░░░░░] {i * 100 / paliers:5.1f}% {i}kB/{paliers}kB [0s] ", "", "@pause 0.3"]
+                   for i in range(1, paliers + 1)], [])
+            + [f"Wrote {paliers * 1024} bytes ({paliers * 512} compressed) at 0x00010000 in {secondes} seconds.", "@pause 0.2"])
+
+
+ENVOI_ZONES = (["Processing {env} (platform: espressif32)", "Compiling .pio/build/{env}/src/a.cpp.o",
+                "Linking .pio/build/{env}/firmware.elf", "Looking for upload port...", "Uploading .pio/build/{env}/firmware.bin"]
+               + _zone_envoi("bootloader.bin", 1, 0.4) + _zone_envoi("firmware.bin", 4, 30.0)
+               + _zone_envoi("littlefs.bin", 3, 40.0) + ["[SUCCESS] Took 9.00 seconds"])
+
+
+def sonde_pourcent_envoi(m):
+    """A13 : au 2e envoi par cable du meme env, un seul % pour tout l'envoi (duree des zones memorisee au 1er)."""
+    cdp = m.cdp
+    (m.t / "scenario.json").write_text(json.dumps({A: {"upload": {"lignes": ENVOI_ZONES, "delai": 0.02, "o": 1}}}),
+                                       encoding="utf-8")
+    for env in (A, B, C):
+        coche(cdp, f"#env-{env}", env == A)
+    for action in ("compiler", "upload", "erase_upload", "buildfs", "uploadfs"):
+        coche(cdp, f'input[name=action][value="{action}"]', action == "upload")
+    rang = f"document.querySelector('.bloc[data-bloc=\"{A}\"] .rang[data-action=\"upload\"]')"
+    releves = []
+    for passage in (1, 2):
+        cdp.js("document.getElementById('lancer').click()")
+        attend(cdp, "document.getElementById('etat').textContent === 'lancement en cours'", 10, 0.1)
+        limite = time.monotonic() + 30
+        while time.monotonic() < limite and not str(cdp.js("document.getElementById('etat').textContent")).startswith("terminé"):
+            r = cdp.js(f"(() => {{ const r = {rang}; return r ? [r.querySelector('.libelle').textContent, "
+                       f"r.querySelector('.barre span').style.width] : null; }})()")
+            if passage == 2 and r and "Téléversement" in r[0] and (not releves or releves[-1] != r):
+                releves.append(r)
+            time.sleep(0.1)
+    largeurs = [float(w.rstrip("%")) for _, w in releves if w]
+    verifie((len(largeurs) >= 5, all(a <= b for a, b in zip(largeurs, largeurs[1:]))), (True, True),
+            f"pourcent_envoi : 2e envoi, la barre ne recule pas d'une zone a l'autre ({largeurs})")
+    verifie(any("zone 3/3" in t for t, _ in releves) and any("littlefs.bin" in t for t, _ in releves), True,
+            "pourcent_envoi : « littlefs.bin … · zone 3/3 » dans le texte de la ligne")
+
+
 def sonde_effacement(m):
     """A10 : « Effacer puis téléverser » : exclusive avec upload, COM seulement, confirmation, etape d'effacement."""
     cdp = m.cdp
@@ -691,12 +744,14 @@ def sonde_effacement(m):
     verifie(cdp.js(f"document.querySelector('{case('erase_upload')}').disabled"), False, "effacer : temoin, ligne revenue en COM -> action disponible")
     coche(cdp, f"#env-{C}", False)
     coche(cdp, case("erase_upload"))
+    lus = "fetch('/envs').then(r => r.json()).then(d => (d.derniers.actions || []).join())"
+    avant = cdp.js(lus)                                                               # dernier lancement des sondes precedentes
     cdp.js("window.confirm = t => { window._confirmation = t; return false; }")      # l'utilisateur refuse
     cdp.js("document.getElementById('lancer').click()")
     time.sleep(0.8)
     texte = cdp.js("window._confirmation || ''") or ""
-    derniers = cdp.js("fetch('/envs').then(r => r.json()).then(d => (d.derniers.actions || []).join())")
-    verifie(("remplacés par ceux du dépôt" in texte, "persist" in texte, A in texte, derniers), (True, True, True, "compiler"),
+    derniers = cdp.js(lus)
+    verifie(("remplacés par ceux du dépôt" in texte, "persist" in texte, A in texte, derniers), (True, True, True, avant),
             "effacer : confirmation (persist et reglages remplaces par ceux du depot) ; refusee -> rien lance")
     cdp.js("window.confirm = t => true")
     cdp.js("document.getElementById('lancer').click()")

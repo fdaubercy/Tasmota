@@ -156,7 +156,7 @@ class Serie:
     def __init__(self, racine, dossier, pio=None, builds_en_cours=builds_en_cours_defaut,
                  port_libre=port_libre_defaut, ota_fs=build_ota_fs.envoie_fs_ota,
                  ota_firmware=build_ota_fs.envoie_firmware_ota, sondage=5.0,
-                 solidification=build_solidification.vides):
+                 solidification=build_solidification.vides, par_maitre=build_ota_fs.joint_par_maitre):
         self.racine = Path(racine)
         self.dossier = Path(dossier)
         self.commande_pio = commande_pio(pio)
@@ -164,6 +164,7 @@ class Serie:
         self.port_libre = port_libre
         self.ota_fs = ota_fs
         self.ota_firmware = ota_firmware
+        self.par_maitre = par_maitre                    # `IP:port` : redirection du maitre posee, carte jointe verifiee
         self.solidification = solidification            # modules solidifies vides, controles a la fin du pre-build
         self.sondage = sondage
         self.verrou = threading.Condition()
@@ -532,7 +533,9 @@ class Serie:
         if not total:
             total = _total_estime(env, references)
             estime = total is not None
-        suivi = Suivi(action, total, ref.get("increment"), estime=estime)
+        # envoi par cable : durees des zones du dernier envoi reussi -> % de l'envoi entier (A13)
+        zones = ref.get("zones") if action in TELEVERSEMENTS and ligne.methode == "com" else None
+        suivi = Suivi(action, total, ref.get("increment"), estime=estime, zones=zones)
         change, termine = self._chrono(env, action)
         commande = "pio " + " ".join(args)
         self._ajoute("etape", env, action=action, etape=suivi.etape, pourcent=None, detail="", commande=commande)
@@ -613,6 +616,9 @@ class Serie:
         build = self.racine / ".pio" / "build" / env
         self._marque_envoi(True)                         # l'envoi OTA ne se coupe pas (arrete_serie attend)
         try:
+            if ":" in ligne.ip:
+                rapporte({"etape": build_ota_fs.ETAPE_CONNEXION, "pourcent": 100, "detail": self.par_maitre(
+                    ligne.ip, build_envs.persist_carte(self.racine, env), env, rapporte)})
             if genre == "ota_firmware":
                 self.ota_firmware(env, ligne.ip, build, rapporte)
             else:
@@ -663,14 +669,19 @@ class Serie:
     def _memorise_reference(self, env, suivi):
         build = self.racine / ".pio" / "build" / env
         nb = sum(1 for _ in build.rglob("*.o")) if build.is_dir() else 0
-        if nb <= 0:
+        if nb <= 0 and not suivi.zones_ecrites:
             return
         references = self._references()
         ancien = references.get(env) if isinstance(references.get(env), dict) else {}
-        increment = ancien.get("increment")
-        if not suivi.repris and 0 < suivi.nb_o < nb:     # build incremental : sa taille devient la base
-            increment = suivi.nb_o
-        references[env] = {"total": nb, "increment": increment}
+        nouveau = dict(ancien)
+        if nb > 0:
+            increment = ancien.get("increment")
+            if not suivi.repris and 0 < suivi.nb_o < nb:     # build incremental : sa taille devient la base
+                increment = suivi.nb_o
+            nouveau.update(total=nb, increment=increment)
+        if suivi.zones_ecrites:                          # envoi par cable : durees de ses zones (A13)
+            nouveau["zones"] = suivi.zones_ecrites
+        references[env] = nouveau
         self.dossier.mkdir(parents=True, exist_ok=True)
         provisoire = self.dossier / "references.json.tmp"
         provisoire.write_text(json.dumps(references, indent=1, sort_keys=True), encoding="utf-8")
@@ -691,8 +702,10 @@ def _total_estime(env, references):
 
 
 def _ipv4(texte):
+    """IPv4, ou `IPv4:port` (esclave joint par la redirection du maitre)."""
+    ip, deux_points, port = texte.partition(":")
     try:
-        ipaddress.IPv4Address(texte)
-        return True
+        ipaddress.IPv4Address(ip)
     except ValueError:
         return False
+    return not deux_points or (port.isdigit() and 0 < int(port) < 65536)

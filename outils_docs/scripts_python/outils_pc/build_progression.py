@@ -29,6 +29,8 @@ _ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07")
 _COMPILE = re.compile(r"^\s*Compiling\s+\S.*\.o\s*$")
 _REPRIS = re.compile(r"^\s*Retrieved\s+`.*\.o' from cache\s*$")
 _ZONE = re.compile(r"^\s*Writing\s+'([^']+)'\s+at\s+0x")
+# fin d'une zone : "Wrote 2925792 bytes (1691499 compressed) at 0x000e0000 in 31.1 seconds (752.9 kbit/s)."
+_ZONE_FINIE = re.compile(r"^\s*Wrote\s+\d+\s+bytes.*?\bin\s+(\d+(?:\.\d+)?)\s+seconds")
 _LIENS = re.compile(r"^\s*Linking\s+\S")
 # esptool : "Writing at 0x00010000 [=====>  ] 45.2% 123/456 bytes..." ou ancien "Writing at 0x... (45 %)"
 _ESPTOOL = re.compile(r"Writing at 0x[0-9a-fA-F]+.*?(\d+(?:\.\d+)?)\s*%")
@@ -60,9 +62,15 @@ class Suivi:
     build incremental. La base du % est l'increment, sauf des qu'un objet sort du cache (build
     complet) ou que l'increment est depasse : alors le total. `estime` : le total est emprunte a un
     autre env (premier build de celui-ci), il est affiche « ≈ » dans le detail.
+
+    Envoi par cable (A13) : esptool ecrit plusieurs zones (bootloader, partitions, boot_app0, safeboot, firmware,
+    littlefs), chacune de 0 a 100 %. `zones` : [[nom, secondes], ...] du dernier envoi reussi de l'env (releve
+    dans `zones_ecrites`, memorise par la serie) ; avec elles, le % est celui de l'envoi entier, pondere par la
+    DUREE des zones (littlefs : 451 Ko compresses mais 40 s, effacement de sa region compris ; firmware : 1,7 Mo en
+    31 s), et le detail dit « <zone> <%> % · zone k/n ». Une zone absente de la memoire garde son % a elle.
     """
 
-    def __init__(self, action, reference_o=None, increment=None, estime=False):
+    def __init__(self, action, reference_o=None, increment=None, estime=False, zones=None):
         if action not in ACTIONS:
             raise ValueError(f"action inconnue : {action!r}")
         self.action = action
@@ -76,6 +84,8 @@ class Suivi:
         self.extrait_erreur = []
         self.fs_aussi = False
         self.efface = False               # erase_upload : effacement termine
+        self.zones = {str(n): float(s) for n, s in (zones or []) if isinstance(s, (int, float)) and s >= 0}
+        self.zones_ecrites = []           # [[nom, secondes], ...] des zones finies de cet envoi
         self.etape = ETAPE_PREBUILD
         self.pourcent = None
         self.detail = ""
@@ -123,17 +133,34 @@ class Suivi:
         m = _ZONE.match(t)
         if m:
             self.zone = re.split(r"[\\/]", m.group(1))[-1]
-            return self._evenement(ETAPE_ENVOI, None, self.zone)
+            return self._envoi(None)
+        m = _ZONE_FINIE.match(t)
+        if m and self.zone:
+            self.zones_ecrites.append([self.zone, float(m.group(1))])
+            return None
         if _LIENS.match(t):
             return self._evenement(ETAPE_LIENS, None, "")
         m = _ESPTOOL.search(t) or _OTA.match(t)
         if m:
-            return self._evenement(ETAPE_ENVOI, float(m.group(1)), self.zone)
+            return self._envoi(float(m.group(1)))
         if _ENVOI.match(t):
-            return self._evenement(ETAPE_ENVOI, None, self.zone)
+            return self._envoi(None)
         if _FS.search(t):
             return self._evenement(ETAPE_FS, None, "")
         return None
+
+    def _envoi(self, pourcent_zone):
+        """Evenement d'envoi : % de la zone, ou de l'envoi entier si la duree des zones est connue (voir classe)."""
+        total = sum(self.zones.values())
+        if not total or (self.zone and self.zone not in self.zones):
+            return self._evenement(ETAPE_ENVOI, pourcent_zone, self.zone)
+        finies = sum(self.zones.get(nom, 0.0) for nom, _ in self.zones_ecrites)
+        if not self.zone or (self.zones_ecrites and self.zones_ecrites[-1][0] == self.zone):
+            return self._evenement(ETAPE_ENVOI, finies * 100 / total, self.zone)    # avant la 1re zone, entre deux
+        fraction = (pourcent_zone or 0.0) / 100
+        detail = f"{self.zone}{'' if pourcent_zone is None else f' {int(pourcent_zone)} %'} · zone " \
+                 f"{len(self.zones_ecrites) + 1}/{len(self.zones)}"
+        return self._evenement(ETAPE_ENVOI, (finies + self.zones[self.zone] * fraction) * 100 / total, detail)
 
     def _base(self):
         """Base du % de compilation (voir la docstring de la classe), None si aucune."""

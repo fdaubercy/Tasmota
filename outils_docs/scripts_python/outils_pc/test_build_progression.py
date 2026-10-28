@@ -210,6 +210,41 @@ def test_sortie_reelle():
                     "firmware.bin", "littlefs.bin"], "sortie_reelle : les 6 zones d'esptool nommees")
 
 
+def test_zones_ecrites():
+    """A13 : chaque zone finie (« Wrote ... in X seconds ») est relevee avec sa duree, pour le % global suivant."""
+    s = bp.Suivi("upload", 1682, 190)
+    alimente(s, Path(__file__).with_name("build_sortie_reelle_cuve.txt").read_text(encoding="utf-8").splitlines())
+    verifie(s.zones_ecrites, [["bootloader.bin", 0.4], ["partitions.bin", 0.0], ["boot_app0.bin", 0.1],
+                              ["tasmota32s3-safeboot.bin", 8.5], ["firmware.bin", 31.1], ["littlefs.bin", 40.5]],
+            "zones_ecrites : les 6 zones et leur duree (littlefs 40,5 s : effacement de sa region compris)")
+
+
+def test_pourcent_global():
+    """A13 : avec les durees du dernier envoi, un seul % pour tout l'envoi, qui ne recule pas d'une zone a l'autre."""
+    lignes = Path(__file__).with_name("build_sortie_reelle_cuve.txt").read_text(encoding="utf-8").splitlines()
+    zones = [["bootloader.bin", 0.4], ["partitions.bin", 0.0], ["boot_app0.bin", 0.1],
+             ["tasmota32s3-safeboot.bin", 8.5], ["firmware.bin", 31.1], ["littlefs.bin", 40.5]]
+    s = bp.Suivi("upload", 1682, 190, zones=zones)
+    envoi = [ev for ev in (s.ligne(t) for t in lignes) if ev and ev["etape"] == "Téléversement" and ev["detail"] != "terminé"]
+    pourcents = [ev["pourcent"] for ev in envoi]
+    verifie(all(p is not None for p in pourcents), True, "pourcent_global : jamais indetermine pendant l'envoi")
+    verifie(all(a <= b for a, b in zip(pourcents, pourcents[1:])), True, f"pourcent_global : ne recule pas ({pourcents})")
+    debut_fw = next(ev for ev in envoi if ev["detail"].startswith("firmware.bin"))
+    verifie((debut_fw["pourcent"], "zone 5/6" in debut_fw["detail"]), (11, True),
+            "pourcent_global : debut du firmware = zones finies (9 s sur 80,6 s), « zone 5/6 » dit")
+    fin_fw = [ev for ev in envoi if ev["detail"].startswith("firmware.bin")][-1]
+    verifie(fin_fw["pourcent"], 49, "pourcent_global : fin du firmware = 40,1 s sur 80,6 s")
+    verifie(s.ligne("[SUCCESS] Took 90.00 seconds")["pourcent"], 100, "pourcent_global : 100 au SUCCESS seulement")
+
+
+def test_zones_autres():
+    """Durees d'un envoi aux zones differentes (FS ajoute ou retire) : la zone inconnue garde son % a elle."""
+    s = bp.Suivi("upload", zones=[["bootloader.bin", 1.0], ["firmware.bin", 30.0]])
+    alimente(s, ["Writing '/x/.pio/build/e/littlefs.bin' at 0x004b0000..."])
+    ev = alimente(s, ["Writing at 0x004c0000 [==   ] 12.0% 50kB/440kB [2s] "])
+    verifie((ev["pourcent"], ev["detail"]), (12, "littlefs.bin"), "zones_autres : zone hors memoire -> % de la zone")
+
+
 # erase_upload (A10) : textes lus dans les paquets installes, pas devines. Cible de la plateforme
 # (~/.platformio/platforms/espressif32/builder/main.py:1984-1993) : "Looking for upload port...", puis l'action
 # $ERASECMD de libelle "Erasing..." (esptool erase-flash, :947), puis $UPLOADCMD. esptool v5.4.0
@@ -249,7 +284,8 @@ def test_effacement():
 def principal():
     for t in (test_compilation, test_sans_reference, test_estimation, test_ansi, test_chemins, test_liens, test_esptool,
               test_succes, test_echec, test_fs_aussi, test_buildfs_et_prebuild, test_pourcent_borne,
-              test_increment, test_cache, test_zone, test_sortie_reelle, test_effacement):
+              test_increment, test_cache, test_zone, test_sortie_reelle, test_effacement, test_zones_ecrites,
+              test_pourcent_global, test_zones_autres):
         t()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0

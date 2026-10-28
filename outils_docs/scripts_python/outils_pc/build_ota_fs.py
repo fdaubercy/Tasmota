@@ -57,6 +57,7 @@ import uuid
 from pathlib import Path
 
 ETAPE_IMAGE = "Lecture de littlefs.bin"
+ETAPE_CONNEXION = "Connexion par le maître"
 ETAPE_TELEVERSEMENT = "Téléversement"
 ETAPE_SAFEBOOT = "Bascule en safeboot"
 ETAPE_SAUVEGARDE = "Sauvegarde du persist"
@@ -289,6 +290,37 @@ def verifie_identite(dossier_fs, persist_env, env):
     return f"identité vérifiée : {hote}, topic {topic}"
 
 
+def joint_par_maitre(adresse, persist_env, env, rapporte, *, maitre=None, delai=8.0):
+    """Esclave joint par le maitre (`<ip maitre>:<port>`) : redirection posee, puis identite de la carte verifiee.
+
+    La table RgxPort du maitre se vide a son redemarrage (constat du 2026-10-26) : on lui fait poser ses
+    redirections (RoutageRangeExtender, d'apres sa table de decouverte), puis on demande son nom d'hote a la
+    carte jointe par `adresse` (Status 5). Une redirection absente ou vers une autre carte -> RuntimeError,
+    rien n'est envoye. `maitre` : adresse HTTP du maitre (defaut : l'IP de `adresse`, port 80).
+    """
+    maitre = maitre or adresse.rsplit(":", 1)[0]
+    rapporte({"etape": ETAPE_CONNEXION, "pourcent": None, "detail": f"redirection posée par le maître {maitre}"})
+    try:
+        reponse = _commande(maitre, "RoutageRangeExtender", delai)
+    except (OSError, http.client.HTTPException) as erreur:
+        raise RuntimeError(f"{ETAPE_CONNEXION} : maître {maitre} injoignable ({erreur}) ; rien n'a été envoyé") from None
+    if "RoutageRangeExtender" not in reponse:
+        raise RuntimeError(f"{ETAPE_CONNEXION} : le maître {maitre} ne connaît pas RoutageRangeExtender (Berry arrêté ?) : "
+                           f"{_resume(reponse)} ; rien n'a été envoyé")
+    try:
+        hote = str(json.loads(_commande(adresse, "Status 5", delai)).get("StatusNET", {}).get("Hostname") or "")
+    except (OSError, http.client.HTTPException, ValueError, AttributeError) as erreur:
+        raise RuntimeError(f"{ETAPE_CONNEXION} : aucune carte derrière {adresse} ({erreur}) : esclave hors ligne pour le "
+                           f"maître (fiche Offline de sa découverte) ? rien n'a été envoyé") from None
+    if not persist_env or not Path(persist_env).is_file():
+        return f"carte jointe : {hote or '?'} (identité non contrôlée : pas de {PERSIST} de {env} au dépôt)"
+    attendu = _identite(Path(persist_env).read_text(encoding="utf-8"))[0]
+    if hote.lower() != attendu.lower():
+        raise RuntimeError(f"{ETAPE_CONNEXION} : {adresse} mène à {hote or '?'}, pas à {env} ({attendu}) ; "
+                           f"rien n'a été envoyé")
+    return f"carte jointe par le maître : {hote}"
+
+
 def extrait_image(image, dossier):
     """Copie dans `dossier` (cree) tous les fichiers de l'image LittleFS `image` ; rend leur nombre.
 
@@ -404,17 +436,32 @@ def envoie_fs_ota(env, ip, dossier_fs, sauvegardes, rapporte, *, delai_retour=90
             if "_error" in reponse:
                 raise RuntimeError(f"{etape} : {dossier} : {reponse} ; sauvegarde du persist : {copie}")
         etape = ETAPE_ENVOI
+        # % des OCTETS envoyes, mis a jour a chaque morceau (A13) : au nombre de fichiers, il restait fige pendant
+        # echarts.min.js.gz (368 Ko sur le P4, contre 10 a 40 Ko pour les autres) puis sautait.
+        total = sum((dossier_fs / rel).stat().st_size for rel in fichiers) or 1
+        faits, dernier = 0, [-1]
         for i, rel in enumerate(fichiers, 1):
             en_cours = rel
+            detail = f"{i}/{len(fichiers)} {rel}"
             parent, _, nom = rel.rpartition("/")
+            rapporte({"etape": etape, "pourcent": faits * 100 // total, "detail": detail})      # fichier annonce avant
+
+            def progression(envoyes, _taille, detail=detail, faits=faits):
+                pourcent = min(99, (faits + envoyes) * 100 // total)    # 100 : dernier fichier ACCEPTE seulement
+                if pourcent != dernier[0]:                     # un evenement par point de %
+                    dernier[0] = pourcent
+                    rapporte({"etape": etape, "pourcent": pourcent, "detail": detail})
+
             # dossier courant de la carte : / puis <parent> (sur un dossier, download= ne telecharge pas)
             _get(ip, "/ufsd?dir=0" + (f"&download=/{urllib.parse.quote(parent)}" if parent else ""), delai_http)
             donnees = (dossier_fs / rel).read_bytes()
-            statut, texte = _poste(ip, f"/ufsu?fsz={len(donnees)}", "ufsu", nom, donnees, delai_http)
+            statut, texte = _poste(ip, f"/ufsu?fsz={len(donnees)}", "ufsu", nom, donnees, delai_http, progression)
             if _page_en_echec(statut, texte):
                 raise RuntimeError(f"{etape} : {rel} refusé par la carte (HTTP {statut}) : {_resume(texte)} ; "
                                    f"sauvegarde du persist : {copie}")
-            rapporte({"etape": etape, "pourcent": i * 100 // len(fichiers), "detail": f"{i}/{len(fichiers)} {rel}"})
+            faits += len(donnees)
+        rapporte({"etape": etape, "pourcent": 100, "detail": f"{len(fichiers)}/{len(fichiers)} {fichiers[-1]}"
+                  if fichiers else "aucun fichier"})
     except erreurs_reseau as erreur:
         # Tasmota ferme aussi sans repondre quand le dossier demande n'existe pas.
         raise RuntimeError(f"{etape} : {en_cours} : pas de réponse de la carte {ip} ({erreur}) ; "

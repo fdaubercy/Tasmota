@@ -341,6 +341,23 @@ Demandée après les premiers essais réels (compilation, upload COM de la cuve,
     un port (choix 11 révisé : envoi en `-t nobuild -t erase_upload` après une compilation réussie) et pour
     l'attente de M7 (Ctrl+C).
 
+## Évolution du 2026-10-28 : OTA des esclaves derrière le range extender du maître (A11)
+
+L'utilisateur a demandé de commencer sans questions (« démarre tout de suite sans questions ») ; les choix
+ci-dessous sont ceux de Claude.
+
+20. **Adresse OTA par env**, dans cet ordre : IP fixe de `WIFI_IP_ADDRESS` (provenance « h ») ; sinon, pour une
+    carte du cenv dont le persist au dépôt a `serveur.rangeExtender` à `activation` ON, `id` ≥ 1 et un
+    `ipMaitre`, l'adresse `<ipMaitre>:<8080 + id - 1>` (provenance « maitre », même règle que `routagePort` de
+    `discoveryFonctions`) ; sinon, une adresse à saisir. Le maître lui-même a `id` 0 : pas de redirection.
+    La page montre la provenance sous la ligne, et accepte la saisie `IPv4` ou `IPv4:port`.
+21. **Avant tout envoi vers une adresse `IP:port`** : `RoutageRangeExtender` sur le maître (port 80 de l'IP)
+    pour qu'il pose ses redirections (sa table `RgxPort` se vide à chaque redémarrage), puis `Status 5` sur
+    l'adresse : le `Hostname` doit être celui du persist de l'env au dépôt (sans casse). Maître injoignable,
+    commande inconnue (Berry arrêté), rien derrière le port ou une autre carte : refus, rien n'est envoyé.
+    Sans persist au dépôt (adresse saisie pour un env de l'amont) : carte jointe dite, identité non contrôlée.
+    Le reste de l'envoi (firmware, FS) est inchangé : `http://<IP:port>/…` passe par la redirection.
+
 ## Laissé au constructeur
 
 - Découpage en modules (registre des envs, lecture/écriture du `.ini`, exécution, OTA, page), sans

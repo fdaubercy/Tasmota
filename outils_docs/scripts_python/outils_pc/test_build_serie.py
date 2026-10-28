@@ -219,6 +219,32 @@ def test_serie_upload_ota_par_page():
                 "serie_upload_ota_par_page : sans fonction d'envoi, upload OTA refuse")
 
 
+def test_ota_par_maitre():
+    """A11 : `IP:port` -> redirection et identite par le maitre AVANT l'envoi ; refus du maitre -> rien d'envoye."""
+    appels = []
+
+    def par_maitre(adresse, persist, env, rapporte):
+        appels.append(("maitre", adresse, env))
+        if adresse.endswith(":8082"):
+            raise RuntimeError("Connexion par le maître : 192.168.0.43:8082 mène à CAPTEURS-CUVE")
+        return "carte jointe par le maître : X"
+
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t, ota_firmware=lambda env, ip, *a: appels.append(("envoi", ip, env)))
+        m.serie.par_maitre = par_maitre
+        verifie([bool(m.serie.controle([ota(A, ip)], {"upload"})) for ip in
+                 ("192.168.0.43:8081", "192.168.0.43:0", "192.168.0.43:65536", "192.168.0.43:", "x:8081")],
+                [False, True, True, True, True], "ota_par_maitre : IPv4:port accepte, port hors 1-65535 ou IP fausse refuses")
+        ev = m.lance([ota(A, "192.168.0.43:8081"), ota(B, "192.168.0.43:8082"), ota(C, "192.168.0.50")], {"upload"})
+        verifie(appels, [("maitre", "192.168.0.43:8081", A), ("envoi", "192.168.0.43:8081", A),
+                         ("maitre", "192.168.0.43:8082", B), ("envoi", "192.168.0.50", C)],
+                "ota_par_maitre : maitre consulte avant l'envoi, refus -> pas d'envoi, IP seule -> pas de maitre")
+        verifie([x["statuts"]["upload"] for x in du_type(ev, "fin_env")], ["succes", "echec", "succes"],
+                "ota_par_maitre : statuts des trois envs")
+        verifie([e["detail"] for e in du_type(ev, "etape", env=A, etape="Connexion par le maître")], ["carte jointe par le maître : X"],
+                "ota_par_maitre : carte jointe affichee dans la ligne de l'env")
+
+
 def test_ordre_actions():
     with tempfile.TemporaryDirectory() as t:
         m = Montage(t)
@@ -1020,6 +1046,30 @@ def test_uploadfs_ota_identite():
                 "uploadfs_ota_identite : l'identite verifiee apparait dans l'etape")
 
 
+def test_pourcent_global_envoi():
+    """A13 : les durees des zones d'un envoi par cable reussi sont memorisees ; l'envoi suivant a un % global."""
+    zone = lambda nom, s: [f"Writing 'C:\\x\\.pio\\build\\{{env}}\\{nom}' at 0x00010000...",
+                           "Writing at 0x00010000 [=====] 50.0% 8kB/16kB [0s] ",
+                           f"Wrote 16384 bytes (8192 compressed) at 0x00010000 in {s} seconds (100.0 kbit/s)."]
+    lignes = (["Processing {env} (platform: espressif32)", "Compiling .pio\\build\\{env}\\src\\a.cpp.o",
+               "Uploading .pio\\build\\{env}\\firmware.bin"] + zone("bootloader.bin", 1.0) + zone("firmware.bin", 3.0)
+              + ["[SUCCESS] Took 5.00 seconds"])
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t, {A: {"upload": {"lignes": lignes, "o": 1}}})
+        ev = m.lance([com(A, "COM1")], {"upload"})
+        refs = json.loads((m.dossier / "references.json").read_text(encoding="utf-8"))
+        verifie(refs.get(A, {}).get("zones"), [["bootloader.bin", 1.0], ["firmware.bin", 3.0]],
+                "pourcent_global_envoi : durees des zones memorisees apres l'envoi reussi")
+        premier = [e["pourcent"] for e in du_type(ev, "etape", env=A, etape="Téléversement")]
+        ev = m.lance([com(A, "COM1")], {"upload"})
+        envoi = du_type(ev, "etape", env=A, etape="Téléversement")
+        verifie([e["pourcent"] for e in envoi if e["detail"] != "terminé"][-2:], [25, 62],
+                f"pourcent_global_envoi : 2e envoi, % de l'envoi entier (bootloader 50 % = 12, firmware 50 % = 62 ; "
+                f"1er envoi : {premier})")
+        verifie(any("zone 2/2" in e["detail"] for e in envoi), True, "pourcent_global_envoi : « zone k/n » dans le detail")
+        verifie(refs[A].get("total"), 1, "pourcent_global_envoi : temoin, le total des .o reste memorise a cote")
+
+
 def test_garde_build_importable():
     module = bs.garde_build()
     verifie(callable(getattr(module, "builds_en_cours", None)), True,
@@ -1028,7 +1078,7 @@ def test_garde_build_importable():
 
 def principal():
     garde_fou()
-    for test in (test_commandes, test_serie_upload_ota_par_page, test_ordre_actions, test_serie_un_par_un,
+    for test in (test_commandes, test_serie_upload_ota_par_page, test_ota_par_maitre, test_ordre_actions, test_serie_un_par_un,
                  test_serie_continue_apres_echec, test_duree_des_la_fin, test_refus_build_en_cours,
                  test_refus_port_tenu, test_meme_port_accepte, test_refus_ip_vide,
                  test_pause_avant_envoi, test_pause_place, test_pause_passer, test_pause_port_perdu,
@@ -1040,7 +1090,7 @@ def principal():
                  test_refus_double_lancement, test_uploadfs_ota, test_garde_build_importable,
                  test_erase_upload_commandes, test_erase_upload_refus, test_erase_upload_envoi_et_echec,
                  test_solidification_vide, test_fs_par_firmware, test_data_dir_avant_pio,
-                 test_uploadfs_ota_identite):
+                 test_uploadfs_ota_identite, test_pourcent_global_envoi):
         test()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0

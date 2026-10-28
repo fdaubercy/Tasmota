@@ -139,10 +139,10 @@ unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule c
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
 Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plutot qu'un decoupage) :
-`build_serie.py` fait **698 lignes** (+19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; +11 le 2026-10-27 : data_dir pose avant pio ; +3 le meme jour : identite de l'image du FS ; execution en serie des `pio run` : verrous, arret immediat, attente
+`build_serie.py` fait **711 lignes** (+19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; +11 le 2026-10-27 : data_dir pose avant pio ; +3 le meme jour : identite de l'image du FS ; +7 le meme jour : duree des zones d'envoi memorisee, A13 ; +6 le 2026-10-28 : OTA par le maitre, A11 ; execution en serie des `pio run` : verrous, arret immediat, attente
 d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
-verrou), et ses bancs `test_build_serie.py` (**1050**), `test_build_page_chrome.py` (**1045**),
-`test_build_ota_fs.py` (**603**), `test_build_web.py` (**688**), ainsi que `test_annuaire.py` (**523**,
+verrou), et ses bancs `test_build_serie.py` (**1100**), `test_build_page_chrome.py` (**1100**),
+`test_build_ota_fs.py` (**672**), `test_build_web.py` (**688**), ainsi que `test_annuaire.py` (**523**,
 banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
 compteur.
 
@@ -649,7 +649,10 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     avant le pre-script, qui pose aussi `PROJECT_DATA_DIR` pour le lancement en cours (banc `build/test_data_dir.py`) ; sans
     cela, un buildfs seul prenait le dossier de l'env precedent (P4 avec le FS de la cuve, 2026-10-26). Port COM lu dans `platformio_tasmota_cenv.ini` et REECRIT dans la section de l'env
     (`.bak` ; **change l'empreinte -> le build suivant repart de zero**) ; IP OTA lue dans `WIFI_IP_ADDRESS`
-    (0.0.0.0 -> saisie pour le lancement). OTA du firmware envoyee par la page (`/up`, `/u2`, safeboot `/u4`, preuve
+    (0.0.0.0 -> esclave du range extender du maitre : `<ipMaitre>:<8080 + id - 1>` tire du persist,
+    `build_envs.py::adresse_par_maitre` ; sinon saisie pour le lancement). Vers une adresse `IP:port`, AVANT tout envoi :
+    `RoutageRangeExtender` sur le maitre puis `Status 5` compare au nom d'hote du persist (`build_ota_fs.py::joint_par_maitre`),
+    refus sinon. OTA du firmware envoyee par la page (`/up`, `/u2`, safeboot `/u4`, preuve
     par `Status 2`) : aucun script de `build/` modifie. OTA du FS : fichiers extraits de `littlefs.bin` (image du `buildfs`,
     PAS `littlefs_data`, perime) par `/ufsu` apres controle d'identite (`build_ota_fs.py::verifie_identite` : nom d'hote et topic du persist de
     l'image = ceux du persist de l'env au depot, sinon rien n'est envoye), persist de

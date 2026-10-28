@@ -4,6 +4,7 @@ Code de sortie 0 = vert. Aucune lecture de pio ; les ecritures se font dans un d
 Le controle sur les vrais fichiers du depot est en lecture seule.
 """
 
+import json
 import os
 import re
 import sys
@@ -397,8 +398,39 @@ def test_data_dir():
         verifie(ov.read_bytes(), OVERRIDE.encode("utf-8"), "data_dir : pas de ligne active -> fichier intact")
 
 
+def test_adresse_par_maitre():
+    """A11 : esclave du range extender -> <ipMaitre>:<8080 + id - 1> ; IP fixe du .h prioritaire ; maitre (id 0) non."""
+    def persist(dossier, bloc):
+        (dossier).mkdir(parents=True, exist_ok=True)
+        (dossier / "_persist.json").write_text(json.dumps({"serveur": {"rangeExtender": bloc}}), encoding="utf-8")
+
+    esclave = {"activation": "ON", "id": 2, "ipMaitre": "192.168.0.43"}
+    with tempfile.TemporaryDirectory() as t:
+        r = depot_essai(t)
+        persist(r / "data" / "garage" / "tasmota32s3", esclave)
+        persist(r / "data" / "cave" / "tasmota32", esclave)
+        envs = {e.nom: e for e in be.liste_envs(r)}
+        verifie((envs["tasmota32s3-garage"].ip, envs["tasmota32s3-garage"].ip_source), ("192.168.0.43:8081", "maitre"),
+                "par_maitre : IP 0.0.0.0 au .h + esclave id 2 -> 192.168.0.43:8081, provenance maitre")
+        verifie((envs["tasmota32-cave"].ip, envs["tasmota32-cave"].ip_source), ("192.168.0.243", "h"),
+                "par_maitre : IP fixe du .h prioritaire sur le persist")
+        verifie((envs["tasmota32s3-sans-port"].ip, envs["tasmota32s3-sans-port"].ip_source), ("", ""),
+                "par_maitre : ni IP ni persist -> a saisir, sans provenance")
+        p = r / "data" / "garage" / "tasmota32s3" / "_persist.json"
+        for bloc, motif in (({"activation": "ON", "id": 0, "ipMaitre": ""}, "le maitre lui-meme (id 0)"),
+                            ({"activation": "OFF", "id": 2, "ipMaitre": "192.168.0.43"}, "range extender OFF"),
+                            ({"activation": "ON", "id": 3, "ipMaitre": ""}, "sans ipMaitre")):
+            persist(p.parent, bloc)
+            verifie(be.adresse_par_maitre(p), "", f"par_maitre : {motif} -> pas d'adresse")
+        p.write_text("{pas du json", encoding="utf-8")
+        verifie(be.adresse_par_maitre(p), "", "par_maitre : persist illisible -> pas d'adresse")
+        persist(p.parent, {"activation": "ON", "id": "3", "ipMaitre": "10.0.0.1"})
+        verifie(be.adresse_par_maitre(p), "10.0.0.1:8082", "par_maitre : id 3 -> port 8082")
+
+
 def principal():
     test_data_dir()
+    test_adresse_par_maitre()
     with tempfile.TemporaryDirectory() as t:
         test_liste(depot_essai(t))
     test_ota_idf55()

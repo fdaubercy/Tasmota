@@ -3,7 +3,7 @@ chantier: page-build-televersement
 titre: Page web « Build et téléversement » (port 7700, tuile de l'annuaire)
 statut: actif
 cree: 2026-10-24
-maj: 2026-10-26
+maj: 2026-10-28
 ---
 # Page web « Build et téléversement » — plan d'implémentation
 
@@ -333,12 +333,21 @@ le maître redirige `<IP maître>:<8080 + id - 1>` -> `<IP esclave>:80` (`RgxPor
 Fichiers pressentis : `outils_pc/build_envs.py`, `build_ota_fs.py`, `build_serie.py`, `build_web.py`,
 `build_page.py`, leurs bancs ; spec à compléter (choix 20).
 
-- [ ] Design validé par l'utilisateur (brainstorming), spec complétée.
-- [ ] Adresse OTA déduite par env : IP fixe du `.h`, sinon `http://<ipMaitre>:<8080 + id - 1>` si l'esclave est en
+- [x] Design validé par l'utilisateur (brainstorming), spec complétée. — preuve : l'utilisateur a choisi de sauter les
+  questions (« démarre tout de suite sans questions », 2026-10-28) ; choix de Claude écrits dans la spec, choix 20 et 21.
+- [x] Adresse OTA déduite par env : IP fixe du `.h`, sinon `http://<ipMaitre>:<8080 + id - 1>` si l'esclave est en — preuve : `build_envs.py::adresse_par_maitre`, banc
   range extender, sinon saisie ; affichée en face de l'env avec sa provenance.
-- [ ] Avant l'envoi par le maître : redirection posée (`RoutageRangeExtender` sur le maître) et identité de la carte
+  `test_build_envs::test_adresse_par_maitre` VERT ; vrai dépôt : cuve `192.168.0.43:8081`, rideau `:8082` (maitre),
+  P4 `192.168.0.43` (h) ; sonde Chrome VERTE (100 OK), « OTA par le maitre (A11) : adresse et provenance en face de l'env ».
+- [x] Avant l'envoi par le maître : redirection posée (`RoutageRangeExtender` sur le maître) et identité de la carte — preuve : `build_ota_fs.py::joint_par_maitre`,
   jointe vérifiée (nom d'hôte du persist) ; refus sinon.
-- [ ] Firmware et FS en OTA par le maître dans les bancs (carte simulée derrière un faux maître).
+  appelé par `build_serie.py::Serie._lance_ota` ; bancs `test_build_ota_fs::test_par_maitre` (8 cas) et
+  `test_build_serie::test_ota_par_maitre` VERTS ; sur les vraies cartes (2026-10-28, sans envoi) : cuve « carte
+  jointe par le maître : CAPTEURS-CUVE », rideau hors ligne -> refus « aucune carte derrière 192.168.0.43:8082 ».
+- [x] Firmware et FS en OTA par le maître dans les bancs (carte simulée derrière un faux maître). — preuve : faux maître
+  = `Carte(maitre=True)` de `build_ota_carte_simulee.py` (RoutageRangeExtender, Status 5) ; les envois firmware et FS
+  des bancs `test_build_ota_fs` visent déjà une adresse `127.0.0.1:<port>` (même forme `IP:port`), tous VERTS ;
+  `test_ota_par_maitre` : maître consulté avant l'envoi, refus -> aucun envoi.
 - [ ] Essai réel par l'utilisateur : OTA du firmware ou du FS sur la cuve par le maître.
 
 Constats sur carte (2026-10-26, lecture seule sauf mention) : la table `RgxPort` du maître était vide après son
@@ -377,9 +386,17 @@ ne démarre plus (`global()` sans `serveur`, `boolMute`, `LOG_LEVEL_*`). Persist
 
 ## A13 — Pourcentage pendant l'envoi du firmware et du FS (demande du 2026-10-26)
 
-- [ ] Vérifier ce que la page affiche aujourd'hui pendant l'envoi (COM : esptool ; OTA : `/u2` et `/ufsu`), en
-  direct sur un journal réel ; manque constaté et nommé.
-- [ ] Pourcentage visible sur la carte de l'env pendant tout envoi (firmware et FS, COM et OTA) ; bancs et sonde Chrome.
+- [x] Vérifier ce que la page affiche pendant l'envoi ; manque constaté et nommé. — preuve : journal réel
+  `20261027-064311-…cuve…-erase_upload.log` rejoué dans `Suivi` (% par zone : bootloader, partitions, boot_app0,
+  safeboot, firmware, littlefs) et page réelle dans Chrome (faux pio, 4 zones) : « firmware.bin · 16 % … 99 % » puis
+  « littlefs.bin · 25 % », la barre repart de 0 à chaque zone, aucun % de l'envoi entier. OTA du firmware : un
+  événement par point de %, correct. OTA du FS : % = fichiers finis / nombre de fichiers, émis APRÈS chaque fichier ;
+  sur le P4, `echarts.min.js.gz` fait 368 Ko contre 10 à 40 Ko pour les autres : le % reste figé puis saute.
+- [x] Pourcentage visible sur la carte de l'env pendant tout envoi (firmware et FS, COM et OTA) ; bancs et sonde Chrome. — preuve : sonde Chrome VERTE (99 OK) dont « pourcent_envoi » : 2e envoi par câble, barre
+  [11, 21, 32, 43, 43, 62, 81, 99] sans recul, texte « littlefs.bin … · zone 3/3 » ; bancs verts `test_build_progression`
+  (extrait réel cuve : début du firmware 11 %, fin 49 %, jamais de recul), `test_build_serie::test_pourcent_global_envoi`,
+  `test_build_ota_fs::test_ota_fs_progression_octets` (% des octets, ≥ 8 valeurs pour un fichier de 12 morceaux).
+  `build_progression.py::Suivi._envoi` (% pondéré par la durée des zones, `references.json`), `build_ota_fs.py::envoie_fs_ota`.
 
 ## Améliorations restantes
 

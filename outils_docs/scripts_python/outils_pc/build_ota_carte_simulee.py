@@ -11,7 +11,8 @@ xdrv_01_9_webserver.ino) :
   - GET /up arme l'envoi du firmware ; POST /u2 sans /up : rien n'est ecrit mais la page dit
     « Successful » (Web.upload_file_type = UPL_NONE) ; octet magique ni 0xE9 ni 0x1F -> « Failed » ;
   - /cm?cmnd=Br ... path.mkdir("/x") cree un dossier (dans la flash, comme Berry) ; Restart 1 ->
-    carte muette pendant `coupure` secondes (None = ne revient jamais) ; Status, Status 2 -> JSON ;
+    carte muette pendant `coupure` secondes (None = ne revient jamais) ; Status, Status 2, Status 5 -> JSON ;
+    RoutageRangeExtender repond si `maitre` (Berry du maitre en marche), sinon commande inconnue ;
   - partition OTA unique + safeboot (`safeboot=True`, HandleSwitchBootPartition de xdrv_01_9) :
     GET /u4?u4=fct&api= repond « false » et redemarre en safeboot, puis « true » une fois en safeboot ;
     sans safeboot il repond « none ». Un POST /u2 sur l'appli en cours (partition unique) echoue.
@@ -53,6 +54,8 @@ class Carte:
         self.apres_redemarrage = None                # transforme le persist a chaque redemarrage
         self.reste_en_safeboot = False               # apres l'envoi, la carte redemarre en safeboot
         self.echec_u2 = False                        # POST /u2 refuse (page « Failed ») quel que soit le mode
+        self.hostname = "CAPTEURS-CUVE"              # Hostname de Status 5
+        self.maitre = False                          # repond a RoutageRangeExtender (Berry du maitre en marche)
         carte = self
 
         class Gestion(BaseHTTPRequestHandler):
@@ -120,6 +123,10 @@ class Carte:
                                                             "Boot": 31, "Core": "3_1_3"}}), "application/json")
         if cmnd == "Status":
             return self.repond(h, '{"Status":{"Module":0}}', "application/json")
+        if cmnd == "Status 5":
+            return self.repond(h, json.dumps({"StatusNET": {"Hostname": self.hostname}}), "application/json")
+        if cmnd == "RoutageRangeExtender" and self.maitre:
+            return self.repond(h, '{"RoutageRangeExtender":{"commmande":"","status":"Succès"}}', "application/json")
         if cmnd == "Restart 1":
             self.repond(h, '{"Restart":"Restarting"}', "application/json")
             self.redemarre()
