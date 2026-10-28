@@ -4,24 +4,25 @@ fichier par fichier, commit du merge, journal, push. Appelees par les routes de 
 Garde-fous (spec docs/superpowers/specs/2026-10-27-assistant-synchro-fork-design.md, §6 et §7) :
 - chaque action qui modifie l'arbre verifie d'abord qu'aucun build ne tourne (`builds_en_cours`, injecte :
   liste non vide ou None = refus) ;
-- le merge lance par l'assistant laisse une marque dans .git (`MARQUE`, JSON : sha fusionne et commits a noter
-  au journal) ; resolution et fin du merge revérifient a CHAQUE appel branche development et MERGE_HEAD = ce
-  sha, sinon refus « merge étranger » ;
-- seules commandes git : switch development, merge (--ff-only, --no-ff --no-commit, --abort), checkout
-  --ours/--theirs, add, rm, commit --no-edit, push origin development. Aucun forcage, aucune reecriture
-  d'historique ; aucun delai sur les commandes qui ecrivent (jamais de kill d'un git en plein vol).
+- le merge lance par l'assistant laisse une marque dans .git (`MARQUE`, JSON : sha fusionne, HEAD au lancement,
+  date de MERGE_HEAD, commits a noter au journal) ; resolution et fin du merge reverifient a CHAQUE appel branche
+  development et marque = merge en cours, sinon refus « merge étranger » ;
+- seules commandes git qui ecrivent : switch development, merge (--ff-only, --no-ff --no-commit, --abort),
+  checkout --ours/--theirs, add, rm, commit --no-edit, push origin development (liste blanche verifiee au banc).
+  Aucun forcage, aucune reecriture d'historique ; aucun delai sur les commandes qui ecrivent (jamais de kill d'un
+  git en plein vol) ; chemins toujours litteraux (--literal-pathspecs : `a[1].txt` n'est pas un motif).
 
 Les textes des exceptions sont affiches dans la page : francais avec accents.
 """
 
 import json
+import os
 import re
 import shutil
 import subprocess
 from pathlib import Path
 
 import synchro_fork_assistant as asst
-import synchro_fork_etat as sfe
 import synchronise_fork_tasmota as sft
 
 MARQUE = "synchro-fork-assistant"
@@ -29,15 +30,22 @@ AMONT = "upstream/development"
 BRANCHE = "development"
 TYPE_MERGE = "merge local (conflits resolus)"
 CHOIX = ("mien", "amont", "garder", "supprimer", "resolu")
-SUPPRESSION_D_UN_COTE = ("DU", "UD")
-SANS_MARQUEURS = ("DU", "UD", "AU", "UA")
+AVEC_MARQUEURS = ("UU", "AA")                  # mien, amont, resolu
+GARDER = ("DU", "UD", "AU", "UA")              # present d'un seul cote : garder ou supprimer
+SUPPRIMER = GARDER + ("DD",)
+CARACTERES_CMD = '&|%^<>"'                     # interpretes par cmd.exe, que traverse code.cmd
 
 
 # -- lectures ----------------------------------------------------------------------------------------------------
 
+def _git(racine, *args):
+    """Toute commande git de ce module : chemins litteraux, sans delai (cf. asst._git)."""
+    return asst._git(racine, "--literal-pathspecs", *args)
+
+
 def _git_ok(racine, *args):
     """Commande git qui doit reussir : sortie (stdout + stderr) ou RuntimeError avec le texte de git."""
-    code, sortie, erreur = asst._git(racine, *args)
+    code, sortie, erreur = _git(racine, *args)
     texte = (sortie + erreur).strip()
     if code != 0:
         raise RuntimeError(f"git {' '.join(args[:2])} a échoué (code {code}) : {texte[:800]}")
@@ -45,14 +53,18 @@ def _git_ok(racine, *args):
 
 
 def _liste_z(racine, *args):
-    code, sortie, erreur = asst._git(racine, *args)
+    code, sortie, erreur = _git(racine, *args)
     if code != 0:
         raise RuntimeError(f"git {' '.join(args[:2])} a échoué : {(sortie + erreur).strip()[:400]}")
     return [c for c in sortie.split("\0") if c]
 
 
 def _branche(racine):
-    return asst._git(racine, "rev-parse", "--abbrev-ref", "HEAD")[1].strip()
+    return _git(racine, "rev-parse", "--abbrev-ref", "HEAD")[1].strip()
+
+
+def _head(racine):
+    return _git(racine, "rev-parse", "HEAD")[1].strip()
 
 
 def _marque(racine):
@@ -71,13 +83,21 @@ def _efface_marque(racine):
     _marque(racine).unlink(missing_ok=True)
 
 
+def oublie_marque_perimee(racine):
+    """Marque sans merge en cours (abandonne au terminal) : effacee, elle ne doit pas adopter un merge futur."""
+    if not (asst.dossier_git(racine) / "MERGE_HEAD").exists():
+        _efface_marque(racine)
+
+
 def merge_assistant_en_cours(racine):
-    """MERGE_HEAD present ET egal au sha note dans la marque au lancement du merge par l'assistant."""
+    """Le merge en cours est celui de l'assistant : MERGE_HEAD = sha note, HEAD = HEAD au lancement, et MERGE_HEAD
+    est le fichier ecrit par CE merge (date a la nanoseconde : un merge relance a la main le reecrit)."""
     merge_head = asst.dossier_git(racine) / "MERGE_HEAD"
     marque = _lit_marque(racine)
     if not marque or not merge_head.exists():
         return False
-    return merge_head.read_text(encoding="utf-8", errors="replace").strip() == marque.get("sha")
+    return (merge_head.read_text(encoding="utf-8", errors="replace").strip() == marque.get("sha")
+            and merge_head.stat().st_mtime_ns == marque.get("date") and _head(racine) == marque.get("head"))
 
 
 def _types(racine):
@@ -113,7 +133,7 @@ def conflits(racine):
 
 def _etiquette(racine, remote):
     """« proprietaire/depot » pour une URL GitHub, sinon le nom du remote (faux depot du banc)."""
-    url = asst._git(racine, "remote", "get-url", remote)[1].strip()
+    url = _git(racine, "remote", "get-url", remote)[1].strip()
     m = re.search(r"github\.com[:/]+([^/]+/[^/]+?)(?:\.git)?$", url)
     return m.group(1) if m else remote
 
@@ -130,7 +150,13 @@ def _verifie_build(builds_en_cours):
 
 
 def _verifie_propre(racine):
-    sales = [f["chemin"] for f in sfe.fichiers_modifies(racine)[0] if not f["journal"]]
+    """Fichiers suivis modifies, journal excepte. Un `git status` en echec leve (jamais « arbre propre »)."""
+    entrees, sales, i = _liste_z(racine, "status", "--porcelain", "-z", "--untracked-files=no"), [], 0
+    while i < len(entrees):
+        code, chemin = entrees[i][:2], entrees[i][3:]
+        i += 2 if code[0] in "RC" else 1
+        if chemin != sft.HISTORIQUE_REL:
+            sales.append(chemin)
     if sales:
         raise RuntimeError(f"arbre de travail non propre ({len(sales)} fichier(s) : {', '.join(sales[:5])}) :"
                            " commite-les d'abord (/commite).")
@@ -149,16 +175,17 @@ def _verifie_branche(racine):
 
 
 def _verifie_merge(racine):
-    """Revérification a chaque clic de la voie B : jamais d'action sur un merge que l'assistant n'a pas lancé."""
+    """Reverification a chaque clic de la voie B : jamais d'action sur un merge que l'assistant n'a pas lance."""
     if _branche(racine) != BRANCHE or not merge_assistant_en_cours(racine):
         raise RuntimeError("merge étranger : aucun merge lancé par l'assistant n'est en cours sur development."
                            " Abandonne-le ou termine-le au terminal.")
 
 
 def _verifie_index(racine):
-    """Rien d'indexe hors des fichiers que le merge peut changer (differents entre HEAD et MERGE_HEAD)."""
+    """Rien d'indexe hors des fichiers que l'amont a changes depuis la base commune (HEAD...MERGE_HEAD) : un
+    fichier propre au fork, indexe pendant le merge par une autre session, ne part pas avec le merge."""
     indexes = set(_liste_z(racine, "diff", "--cached", "--name-only", "--no-renames", "-z", "HEAD"))
-    du_merge = set(_liste_z(racine, "diff", "--name-only", "--no-renames", "-z", "HEAD", "MERGE_HEAD"))
+    du_merge = set(_liste_z(racine, "diff", "--name-only", "--no-renames", "-z", "HEAD...MERGE_HEAD"))
     etrangers = sorted(indexes - du_merge)
     if etrangers:
         raise RuntimeError(f"fichier(s) indexé(s) hors du merge : {', '.join(etrangers[:5])}. Retire-les de"
@@ -172,6 +199,22 @@ def _a_des_marqueurs(fichier):
         if ligne.startswith((b"<<<<<<<", b">>>>>>>")) or ligne.rstrip() == b"=======":
             return True
     return False
+
+
+def _verifie_choix(chemin, conflit, choix, racine):
+    type_ = conflit["type"]
+    if choix in ("mien", "amont", "resolu") and type_ not in AVEC_MARQUEURS:
+        raise RuntimeError(f"{chemin} ({type_}) n'existe pas des deux côtés : choisis « garder » ou « supprimer ».")
+    if choix == "garder" and type_ not in GARDER:
+        raise RuntimeError(f"« garder » ne vaut que pour un fichier présent d'un seul côté ({chemin} : {type_}).")
+    if choix == "supprimer" and type_ not in SUPPRIMER:
+        raise RuntimeError(f"« supprimer » ne vaut que pour un fichier absent d'un côté ({chemin} : {type_}).")
+    if choix == "resolu":
+        fichier = Path(racine) / chemin
+        if conflit["binaire"] or not fichier.exists():
+            raise RuntimeError(f"{chemin} ne se marque pas résolu (binaire ou absent) : garde le mien ou prends l'amont.")
+        if _a_des_marqueurs(fichier):
+            raise RuntimeError(f"{chemin} contient encore des marqueurs de conflit (<<<<<<<, =======, >>>>>>>).")
 
 
 # -- actions -----------------------------------------------------------------------------------------------------
@@ -193,6 +236,14 @@ def ff_origin(racine, builds_en_cours):
     return _git_ok(racine, "merge", "--ff-only", "origin/development")
 
 
+def _ecrit_marque(racine, marque):
+    """Ecriture atomique : une analyse concurrente ne lit jamais une marque a moitie ecrite."""
+    cible = _marque(racine)
+    temporaire = cible.with_name(MARQUE + ".tmp")
+    temporaire.write_text(json.dumps(marque, ensure_ascii=False), encoding="utf-8")
+    os.replace(temporaire, cible)
+
+
 def lance_merge(racine, builds_en_cours):
     """`git merge --no-ff --no-commit upstream/development` ; un conflit n'est pas une erreur (code 1)."""
     _verifie_build(builds_en_cours)
@@ -208,13 +259,16 @@ def lance_merge(racine, builds_en_cours):
     commits = asst.commits_locaux(racine)
     if not commits:
         raise RuntimeError(f"rien à fusionner : aucun commit de {AMONT} absent de {BRANCHE}.")
-    code, sortie, erreur = asst._git(racine, "merge", "--no-ff", "--no-commit", AMONT)
+    head = _head(racine)
+    _efface_marque(racine)                     # une marque restee d'un merge abandonne au terminal
+    code, sortie, erreur = _git(racine, "merge", "--no-ff", "--no-commit", AMONT)
     merge_head = asst.dossier_git(racine) / "MERGE_HEAD"
     if not merge_head.exists():
         raise RuntimeError(f"git merge a échoué (code {code}) : {(sortie + erreur).strip()[:800]}")
-    marque = {"sha": merge_head.read_text(encoding="utf-8").strip(), "commits": [list(c) for c in commits]}
+    marque = {"sha": merge_head.read_text(encoding="utf-8").strip(), "head": head,
+              "date": merge_head.stat().st_mtime_ns, "commits": [list(c) for c in commits]}
     try:
-        _marque(racine).write_text(json.dumps(marque, ensure_ascii=False), encoding="utf-8")
+        _ecrit_marque(racine, marque)
     except OSError as e:
         raise RuntimeError(f"merge lancé mais marque non écrite ({e}) : il apparaîtra comme étranger,"
                            " abandonne-le.") from e
@@ -232,17 +286,7 @@ def resout(racine, chemin, choix, builds_en_cours):
     conflit = {c["chemin"]: c for c in conflits(racine)}.get(chemin)
     if conflit is None:
         raise ValueError(f"pas un fichier en conflit : {chemin!r}")
-    type_ = conflit["type"]
-    if choix in ("mien", "amont") and type_ in SUPPRESSION_D_UN_COTE:
-        raise RuntimeError(f"{chemin} est supprimé d'un côté ({type_}) : choisis « garder » ou « supprimer ».")
-    if choix in ("garder", "supprimer") and type_ not in SANS_MARQUEURS:
-        raise RuntimeError(f"« {choix} » ne vaut que pour un fichier ajouté ou supprimé d'un côté ({type_}).")
-    if choix == "resolu":
-        fichier = Path(racine) / chemin
-        if type_ in SANS_MARQUEURS or conflit["binaire"] or not fichier.exists():
-            raise RuntimeError(f"{chemin} ne se marque pas résolu ({type_}) : utilise les autres boutons.")
-        if _a_des_marqueurs(fichier):
-            raise RuntimeError(f"{chemin} contient encore des marqueurs de conflit (<<<<<<<, =======, >>>>>>>).")
+    _verifie_choix(chemin, conflit, choix, racine)
     if choix in ("mien", "amont"):
         _git_ok(racine, "checkout", "--ours" if choix == "mien" else "--theirs", "--", chemin)
     if choix == "supprimer":
@@ -257,6 +301,9 @@ def ouvre(racine, chemin):
     if chemin not in [c["chemin"] for c in conflits(racine)]:
         raise ValueError(f"pas un fichier en conflit : {chemin!r}")
     absolu = Path(racine).resolve() / chemin
+    if any(c in str(absolu) for c in CARACTERES_CMD):
+        raise RuntimeError(f"chemin avec un caractère spécial ({CARACTERES_CMD}) : ouverture refusée, ouvre le"
+                           f" fichier à la main : {absolu}")
     code = shutil.which("code")
     if not code:
         raise RuntimeError(f"commande « code » introuvable : ouvre le fichier à la main : {absolu}")
@@ -287,7 +334,7 @@ def abandonne(racine, builds_en_cours):
     _verifie_build(builds_en_cours)
     op = asst.operation(racine)
     if op and op != "merge":
-        raise RuntimeError(f"un {op} est en cours, pas un merge : il se termine au terminal.")
+        raise RuntimeError(f"un {op} est en cours, pas un merge : il se termine (ou s'annule) au terminal.")
     if not op:
         _efface_marque(racine)
         raise RuntimeError("aucun merge en cours : rien à abandonner.")
@@ -299,7 +346,7 @@ def abandonne(racine, builds_en_cours):
 def pousse(racine):
     """`git push origin development` ; la sortie de git est rendue telle quelle, un refus leve RuntimeError."""
     _verifie_sans_operation(racine)
-    code, sortie, erreur = asst._git(racine, "push", "origin", BRANCHE)
+    code, sortie, erreur = _git(racine, "push", "origin", BRANCHE)
     texte = (sortie + erreur).strip()
     if code != 0:
         raise RuntimeError(f"push refusé par git (code {code}) : {texte[:800]}")

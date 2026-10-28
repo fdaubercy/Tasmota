@@ -1,7 +1,8 @@
 """Analyse de l'assistant pas a pas de la synchro du fork : l'etat REEL du depot local (branche, arbre, retard,
 commits non pousses, fichiers touches des deux cotes, prevision du merge) puis la liste d'etapes qui en decoule.
 
-Lecture seule : seul le `git fetch` ecrit (dans .git, jamais dans l'arbre). Aucune fonction n'agit sur l'arbre.
+Lecture seule : seuls le `git fetch` et l'effacement d'une marque perimee de l'assistant ecrivent (dans .git,
+jamais dans l'arbre). Aucune fonction n'agit sur l'arbre.
 Toutes travaillent sur `racine` (le depot reel par defaut, un faux depot dans le banc).
 `analyse` rend un dict, `etapes` en tire la liste (fonction pure), `trois_voies` rend les deux diffs d'un fichier.
 """
@@ -50,12 +51,17 @@ def dossier_git(racine):
     return Path(sortie.strip())
 
 
+OPERATIONS = (("MERGE_HEAD", "merge"), ("CHERRY_PICK_HEAD", "cherry-pick"), ("REVERT_HEAD", "revert"),
+              ("BISECT_LOG", "bisect"))
+
+
 def operation(racine):
-    """"rebase", "merge" ou "" ; RuntimeError si le dossier .git est introuvable (jamais « rien en cours »)."""
+    """"rebase", "merge", "cherry-pick", "revert", "bisect" ou "" ; RuntimeError si le dossier .git est
+    introuvable (jamais « rien en cours » par defaut)."""
     git = dossier_git(racine)
     if (git / "rebase-merge").exists() or (git / "rebase-apply").exists():
         return "rebase"
-    return "merge" if (git / "MERGE_HEAD").exists() else ""
+    return next((nom for fichier, nom in OPERATIONS if (git / fichier).exists()), "")
 
 
 def recupere(racine):
@@ -105,6 +111,7 @@ def analyse(racine=REPO, fetch=True):
          "journal_modifie": False, "voie": "", "etapes": [], "erreur": ""}
     try:
         a["operation"] = operation(racine)
+        fusion.oublie_marque_perimee(racine)   # seule ecriture hors fetch : la marque d'un merge abandonne
         a["merge_assistant"] = fusion.merge_assistant_en_cours(racine)
         if a["merge_assistant"]:
             a["conflits"] = fusion.conflits(racine)

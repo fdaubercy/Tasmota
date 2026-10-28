@@ -5,7 +5,8 @@ dans un dossier temporaire : jamais le vrai depot, jamais le reseau, jamais `pio
 Cas : merge propre (2 parents, journal), mien, amont, marqueurs restants, modifie ici et supprime par l'amont,
 chemin accentue, binaire, merge etranger, reprise, abandon (assistant, etranger, autre operation), avance
 rapide sur origin, build en cours ou indetectable, prealables, bascule, index hors du merge, ouvre, push,
-push refuse, jamais de forcage, depot introuvable (analyse en erreur).
+push refuse, fichier du fork indexe, renommages croises (DD/AU/UA), chemins speciaux, cherry-pick et bisect,
+marque perimee, depot introuvable ; liste blanche de TOUTES les commandes git lancees (liste_blanche_git_synchro).
 Temoins : un « resolu » qui n'inspecte pas les marqueurs DOIT faire echouer `resolu_avec_marqueurs` ; une liste
 de conflits prise dans la prevision au lieu de `--diff-filter=U` DOIT faire echouer `mien` ou `reprise`.
 """
@@ -18,6 +19,7 @@ from pathlib import Path
 ICI = Path(__file__).resolve().parent
 sys.path.insert(0, str(ICI))
 import faux_depot_synchro as fd  # noqa: E402
+import liste_blanche_git_synchro as lb  # noqa: E402
 import synchro_fork_assistant as asst  # noqa: E402
 import synchro_fork_fusion as fu  # noqa: E402
 import synchronise_fork_tasmota as sft  # noqa: E402
@@ -67,18 +69,6 @@ def marque(t):
 
 def chemins(t):
     return [c["chemin"] for c in fu.conflits(t)]
-
-
-def autre_clone_pousse(d, nom="o.txt"):
-    """Un autre poste pousse sur origin : origin avance sans que le clone de travail le sache."""
-    with tempfile.TemporaryDirectory() as tmp:
-        clone = Path(tmp) / "c"
-        fd.git(tmp, "clone", "-q", str(d / "origin.git"), str(clone))
-        fd.git(clone, "config", "user.name", "B")
-        fd.git(clone, "config", "user.email", "b@example.invalid")
-        sha = fd._commit(clone, {nom: "o\n"}, "origin avance")
-        fd.git(clone, "push", "-q", "origin", "development")
-    return sha
 
 
 def conflit(d, t, chemin="commun.txt", amont=None, local=None, titre="amont l3"):
@@ -256,7 +246,7 @@ def abandon(d, t):
 
 def ff_origin(d, t):
     fd.commit_amont(d, {"a.txt": "a2\n"}, "amont a")
-    autre_clone_pousse(d)
+    fd.commit_origin(d, {"o.txt": "o\n"}, "origin avance")
     a = asst.analyse(t, fetch=True)
     verifie((a["retard_origin"], a["retard"]), (1, 1), "ff_origin : origin en avance d'un commit")
     refuse(lambda: fu.lance_merge(t, SANS), RuntimeError, "ff_origin : lance_merge refuse", "origin")
@@ -345,9 +335,121 @@ def push_refuse(d, t):
     fd.git(t, "fetch", "-q", "upstream")
     fu.lance_merge(t, SANS)
     fu.termine(t, SANS)
-    autre = autre_clone_pousse(d)
+    autre = fd.commit_origin(d, {"o.txt": "o\n"}, "origin avance")
     refuse(lambda: fu.pousse(t), RuntimeError, "push_refuse : refus de git remonte")
     verifie(fd.git(d / "origin.git", "rev-parse", "development"), autre, "push_refuse : origin inchange")
+
+
+def index_fork(d, t):
+    """Fichier propre au fork, indexe pendant le merge (autre session) : il ne part pas avec le merge."""
+    fd.commit_local(t, {"fork.txt": "fork\n"}, "fichier du fork")
+    fd.git(t, "push", "-q", "origin", "development")
+    fd.commit_amont(d, {"a.txt": "a2\n"}, "amont a")
+    fd.git(t, "fetch", "-q", "upstream")
+    avant = fd.git(t, "rev-parse", "HEAD")
+    fu.lance_merge(t, SANS)
+    (t / "fork.txt").write_text("modifie pendant le merge\n", encoding="utf-8")
+    fd.git(t, "add", "--", "fork.txt")
+    refuse(lambda: fu.termine(t, SANS), RuntimeError, "index_fork : termine refuse", "fork.txt")
+    verifie((fd.git(t, "rev-parse", "HEAD"), merge_head(t)), (avant, True), "index_fork : rien commite, merge intact")
+
+
+def renommages_croises(d, t):
+    """Renomme des deux cotes : r.txt DD, r_local.txt AU, r_amont.txt UA (garder/supprimer seulement)."""
+    texte = "".join(f"contenu {i}\n" for i in range(20))
+    fd.commit_amont(d, {"r.txt": texte}, "amont ajoute r.txt")
+    fd.git(t, "fetch", "-q", "upstream")
+    fd.git(t, "merge", "-q", "--ff-only", "upstream/development")
+    fd.commit_amont(d, {"r.txt": None, "r_amont.txt": texte}, "amont renomme r.txt")
+    fd.commit_local(t, {"r.txt": None, "r_local.txt": texte}, "local renomme r.txt")
+    fd.git(t, "push", "-q", "origin", "development")
+    fd.git(t, "fetch", "-q", "upstream")
+    fu.lance_merge(t, SANS)
+    verifie({c["chemin"]: c["type"] for c in fu.conflits(t)}, {"r.txt": "DD", "r_local.txt": "AU", "r_amont.txt": "UA"},
+            "renommages : types DD, AU, UA")
+    refuse(lambda: fu.resout(t, "r_local.txt", "mien", SANS), RuntimeError, "renommages : mien refuse sur AU")
+    refuse(lambda: fu.resout(t, "r_amont.txt", "amont", SANS), RuntimeError, "renommages : amont refuse sur UA")
+    refuse(lambda: fu.resout(t, "r.txt", "garder", SANS), RuntimeError, "renommages : garder refuse sur DD")
+    fu.resout(t, "r.txt", "supprimer", SANS)
+    fu.resout(t, "r_local.txt", "garder", SANS)
+    fu.resout(t, "r_amont.txt", "supprimer", SANS)
+    fu.termine(t, SANS)
+    verifie(fd.git(t, "ls-files", "--", "r*.txt").split(), ["r_local.txt"], "renommages : seul r_local.txt reste")
+
+
+def chemins_speciaux(d, t):
+    """`a[1].txt` est un motif qui designe aussi `a1.txt` sans --literal-pathspecs ; `&` et `%` passent par cmd."""
+    fd.commit_amont(d, {"a[1].txt": "base\n", "a1.txt": "base\n", "b&c%.txt": "base\n"}, "amont ajoute")
+    fd.git(t, "fetch", "-q", "upstream")
+    fd.git(t, "merge", "-q", "--ff-only", "upstream/development")
+    fd.commit_amont(d, {"a[1].txt": "amont\n", "a1.txt": "amont\n", "b&c%.txt": "amont\n"}, "amont modifie")
+    fd.commit_local(t, {"a[1].txt": "local\n", "b&c%.txt": "local\n"}, "local modifie")
+    fd.git(t, "push", "-q", "origin", "development")
+    fd.git(t, "fetch", "-q", "upstream")
+    fu.lance_merge(t, SANS)
+    verifie(chemins(t), ["a[1].txt", "b&c%.txt"], "chemins_speciaux : deux conflits")
+    (t / "a1.txt").write_text("edition en cours\n", encoding="utf-8")   # non indexee : un motif l'ecraserait
+    fu.resout(t, "a[1].txt", "mien", SANS)
+    verifie((lit(t, "a[1].txt"), lit(t, "a1.txt"), fd.git(t, "show", ":a1.txt")), ("local\n", "edition en cours\n",
+            "amont"), "chemins_speciaux : seul a[1].txt touche (a1.txt ni ecrase ni indexe)")
+    vrai = fu.shutil.which
+    fu.shutil.which = lambda nom: "C:/faux/code.cmd"
+    try:
+        refuse(lambda: fu.ouvre(t, "b&c%.txt"), RuntimeError, "chemins_speciaux : ouvre refuse & et %", "b&c%.txt")
+    finally:
+        fu.shutil.which = vrai
+
+
+def autres_operations(d, t):
+    """cherry-pick et bisect en cours : bloquants, jamais abandonnes par la page ; git status en echec = refus."""
+    fd.commit_amont(d, {"a.txt": "a2\n"}, "amont a")
+    fd.git(t, "fetch", "-q", "upstream")
+    fd.git(t, "switch", "-q", "-c", "autre")
+    fd.commit_local(t, {"commun.txt": commun_ligne(3, "autre")}, "autre l3")
+    fd.git(t, "switch", "-q", "development")
+    fd.commit_local(t, {"commun.txt": commun_ligne(3, "local")}, "local l3")
+    fd.git(t, "push", "-q", "origin", "development")
+    subprocess.run(["git", "cherry-pick", "autre"], cwd=t, capture_output=True, env=fd.ENV)
+    verifie(asst.operation(t), "cherry-pick", "autres_operations : cherry-pick vu")
+    refuse(lambda: fu.lance_merge(t, SANS), RuntimeError, "autres_operations : merge refuse", "cherry-pick")
+    refuse(lambda: fu.abandonne(t, SANS), RuntimeError, "autres_operations : cherry-pick non abandonne", "terminal")
+    a = asst.analyse(t, fetch=False)
+    verifie([e["id"] for e in a["etapes"]][:1], ["operation"], "autres_operations : etape operation")
+    fd.git(t, "cherry-pick", "--abort")
+    fd.git(t, "bisect", "start")
+    verifie(asst.operation(t), "bisect", "autres_operations : bisect vu")
+    refuse(lambda: fu.abandonne(t, SANS), RuntimeError, "autres_operations : bisect non abandonne", "terminal")
+    fd.git(t, "bisect", "reset")
+    vrai = asst._git
+    asst._git = lambda r, *a, delai=None: (128, "", "fatal: panne") if "status" in a else vrai(r, *a, delai=delai)
+    try:
+        refuse(lambda: fu.lance_merge(t, SANS), RuntimeError, "autres_operations : git status en echec", "status")
+    finally:
+        asst._git = vrai
+
+
+def marque_perimee(d, t):
+    """Merge de l'assistant abandonne AU TERMINAL puis relance a la main : jamais adopte par l'assistant."""
+    conflit(d, t)
+    fu.lance_merge(t, SANS)
+    fd.git(t, "merge", "--abort")
+    asst.analyse(t, fetch=False)
+    verifie(marque(t), False, "marque_perimee : effacee par l'analyse sans merge en cours")
+    fu.lance_merge(t, SANS)
+    fd.git(t, "merge", "--abort")
+    merge_a_la_main(t)                                 # meme sha, meme HEAD, sans analyse entre-temps
+    verifie((merge_head(t), fu.merge_assistant_en_cours(t)), (True, False), "marque_perimee : merge a la main etranger")
+    refuse(lambda: fu.resout(t, "commun.txt", "mien", SANS), RuntimeError, "marque_perimee : resout refuse", "étranger")
+
+
+def liste_blanche():
+    print("-- liste_blanche")
+    verifie(lb.hors_liste(), [], "liste_blanche : toute commande git lancee pendant les cas est autorisee")
+    verifie({("commit", "--no-edit"), ("push", "origin", "development"), ("merge", "--abort")} <= lb.vues(), True,
+            "liste_blanche : les ecritures ont bien ete observees (espion branche)")
+    for interdit in (("push", "--force", "origin", "development"), ("push", "origin", "+development"),
+                     ("checkout", "autre"), ("commit", "-a", "--no-edit"), ("add", "--", "a", "b")):
+        verifie(lb.autorise(interdit), False, f"liste_blanche : « {' '.join(interdit)} » refusee")
 
 
 def jamais_de_force():
@@ -372,14 +474,18 @@ def principal():
            ("garder_refuse_sur_uu", garder_refuse_sur_uu), ("chemin_accentue", chemin_accentue), ("binaire", binaire),
            ("merge_etranger", merge_etranger), ("reprise", reprise), ("abandon", abandon), ("ff_origin", ff_origin),
            ("build_en_cours", build_en_cours), ("prealables", prealables), ("ouvre", ouvre), ("push", push),
-           ("push_refuse", push_refuse)]
+           ("push_refuse", push_refuse), ("index_fork", index_fork), ("renommages_croises", renommages_croises),
+           ("chemins_speciaux", chemins_speciaux), ("autres_operations", autres_operations),
+           ("marque_perimee", marque_perimee)]
     jamais_de_force()
     depot_introuvable()
     with tempfile.TemporaryDirectory() as modele:
         fd.cree(Path(modele))
         MODELE["dossier"] = Path(modele)
+        lb.espionne(asst)
         for nom, scenario in cas:
             un_cas(nom, scenario)
+    liste_blanche()
     if ECHECS:
         print(f"\n{len(ECHECS)} ECHEC(S)")
         sys.exit(1)

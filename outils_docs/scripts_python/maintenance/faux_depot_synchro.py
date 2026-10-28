@@ -4,6 +4,7 @@ et un clone de travail avec les remotes `upstream` et `origin`. Aucun reseau, ja
     travail = cree(dossier)                      # dossier/amont.git, dossier/origin.git, dossier/travail
     commit_amont(dossier, {"a.txt": "x\\n"}, "msg") # commit dans l'amont (clone jetable) ; None = suppression
     commit_local(travail, {"b.txt": "y\\n"}, "msg") # commit dans le clone de travail (non pousse)
+    commit_origin(dossier, {"o.txt": "o\\n"}, "msg") # un autre poste pousse sur origin
 """
 
 import os
@@ -83,6 +84,17 @@ def commit_amont(dossier: Path, fichiers: dict, message: str) -> str:
     with tempfile.TemporaryDirectory() as tmp:
         clone = Path(tmp) / "c"
         git(tmp, "clone", "-q", str(Path(dossier) / "amont.git"), str(clone))
+        _identite(clone)
+        sha = _commit(clone, fichiers, message)
+        git(clone, "push", "-q", "origin", "development")
+    return sha
+
+
+def commit_origin(dossier: Path, fichiers: dict, message: str) -> str:
+    """Un autre poste pousse sur origin (clone jetable) : origin avance sans que le clone de travail le sache."""
+    with tempfile.TemporaryDirectory() as tmp:
+        clone = Path(tmp) / "c"
+        git(tmp, "clone", "-q", str(Path(dossier) / "origin.git"), str(clone))
         _identite(clone)
         sha = _commit(clone, fichiers, message)
         git(clone, "push", "-q", "origin", "development")
