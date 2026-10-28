@@ -37,7 +37,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-# acces_web vit avec les outils PC qui l'utilisent aussi (outils_pc/) : seul import hors de ce dossier.
+# acces_web et build_serie vivent avec les outils PC (outils_pc/) : seuls imports hors de ce dossier.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "outils_pc"))
 import acces_web  # noqa: E402
 

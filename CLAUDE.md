@@ -106,13 +106,19 @@ Meme chose depuis une **page web** : tache VS Code « Outil : synchro du fork »
 les deux scripts (merge et rebase) tels qu'au terminal, leurs questions deviennent des boutons
 (`synchro_fork_question.demander`) ; en plus : etat du fork, fichiers modifies et leur diff, journal
 et son commit. Le push force du rebase exige de saisir le nom de la branche, verifie cote serveur.
+Depuis le 2026-10-27, apres un « Diagnostic seul » reussi, la page affiche un **assistant pas a pas**
+(etapes calculees sur le depot local) : voie A = le script de merge, voie B = merge local guide
+fichier par fichier si conflit prevu ou commits non pousses. Jamais de rebase, stash, reset ni push
+force ; le rebase est replie dans « Avance ». Mode d'emploi : `outils_docs/README.md` § « Synchro du fork
+(page web) ».
 
 ## Exception assumee a la regle des 500 lignes
 
-`outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py` fait **558 lignes**, et
+`outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py` fait **560 lignes**, et
 c'est **voulu** (decide le 2026-07-15, a 527 lignes ; +7 le 2026-10-12 pour le correctif
 du blocage sur son propre journal ; +24 le 2026-10-17 pour la confirmation et le
-controle d'arbre propre AVANT la synchro distante, et les questions de la page web).
+controle d'arbre propre AVANT la synchro distante, et les questions de la page web ; +2 le
+2026-10-27 pour le journal ecrit par l'assistant de la page web, `noter_historique(historique=)`).
 Ne pas le decouper pour satisfaire le compteur.
 
 Decomposition reelle : 345 lignes de code, 59 d'en-tete docstring (qui **est** la
@@ -536,8 +542,17 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     (serveur, port 7500) + `synchro_fork_session.py` (script lance en processus enfant, questions),
     `synchro_fork_etat.py` (bandeau, diff, journal), `synchro_fork_page.py`, `synchro_fork_question.py`
     (importe par les deux scripts) ; banc `test_synchro_fork_web.py` (`--reel` : vrais scripts en
-    --dry-run) ; cible `build/cible_synchro_fork.py`. **Seule exception a la regle du meme dossier** :
-    `synchro_fork_web.py` importe `outils_pc/acces_web.py` par un `sys.path` explicite.
+    --dry-run) ; cible `build/cible_synchro_fork.py`. Assistant pas a pas (2026-10-27) :
+    `synchro_fork_assistant.py` (analyse en lecture seule hors fetch, prevision `git merge-tree`, liste
+    d'etapes), `synchro_fork_fusion.py` (voie B : merge local, resolution, termine, abandonne, pousse ;
+    marque `.git/synchro-fork-assistant`), `synchro_fork_page_assistant.py` (bloc, style et script de la
+    page) ; bancs `test_synchro_fork_assistant.py`, `test_synchro_fork_fusion.py`,
+    `test_synchro_fork_fusion_suite.py` (faux depot `faux_depot_synchro.py` : amont et origin nus + clone ;
+    commandes git d'ecriture limitees par `liste_blanche_git_synchro.py`), sonde Chrome
+    `test_synchro_fork_page_chrome.py`. Spec `docs/superpowers/specs/2026-10-27-assistant-synchro-fork-design.md`,
+    plan `tasks/plans/assistant-synchro-fork.md`. **Seule exception a la regle du meme dossier** :
+    `synchro_fork_web.py` importe `outils_pc/acces_web.py` et `outils_pc/build_serie.py` (detection
+    d'un build en cours) par un `sys.path` explicite.
   - `sauvegarde/` — `genere_sauvegarde_tasmota.py`, `restaure_sauvegarde_tasmota.py` et leur
     interface Tk `interface_sauvegarde_restauration_tasmota.py`.
   - `reseau/` — petits outils autonomes : `comm_udp_*.py`, `envoi_message_udp.py`,

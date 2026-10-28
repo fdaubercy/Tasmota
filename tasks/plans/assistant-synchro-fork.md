@@ -3,7 +3,7 @@ chantier: assistant-synchro-fork
 titre: Assistant pas à pas de la page « Synchro du fork » (port 7500)
 statut: actif
 cree: 2026-10-27
-maj: 2026-10-27
+maj: 2026-10-28
 ---
 # Assistant pas à pas de la synchro du fork — plan d'implémentation
 
@@ -249,8 +249,8 @@ Comportement :
 
 ## A5 — Documentation et relecture
 
-- [ ] `outils_docs/README.md`, section de la synchro du fork : l'assistant, ses deux voies, ce qu'il ne fait jamais.
-- [ ] `CLAUDE.md` :
+- [x] `outils_docs/README.md`, section de la synchro du fork : l'assistant, ses deux voies, ce qu'il ne fait jamais. — preuve : nouvelle section « Synchro du fork (page web) » (lancer, l'assistant, ce qu'il ne fait jamais, bancs) + ligne d'index
+- [x] `CLAUDE.md` : — preuve : 560 lignes, carte `maintenance/` (3 modules, 3 bancs, sonde, faux depot, liste blanche), exception `build_serie`, paragraphe de la page web ; `verifie_references_docs.py` → 0 defaut, code 0
   - ligne `synchro_fork_*` de la carte des documents (nouveaux modules, bancs, sonde) ;
   - compte de lignes de `synchronise_fork_tasmota.py` ;
   - `outils_pc/build_serie` ajouté à l'exception d'import.
