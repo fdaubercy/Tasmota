@@ -232,7 +232,9 @@ def ecarts(racine, modele):
     disparues = sorted(".".join(c) for c in retirables if c not in parc)
     divergentes = {}
     for c, vs in _valeurs(modele["socle"]).items():
-        if c[:1] == ("modules",) or len(vs) != 1 or not _constante(vs[0]) or c not in parc:
+        # cle de nom secret : jamais comparee, meme si le modele porte a tort une valeur en clair
+        if (c[:1] == ("modules",) or len(vs) != 1 or not _constante(vs[0]) or c not in parc
+                or any(SECRET.match(str(k)) for k in c)):
             continue
         observees = {v for liste in valeurs[c] for v in liste}
         if len(valeurs[c]) == lus and len(observees) == 1:

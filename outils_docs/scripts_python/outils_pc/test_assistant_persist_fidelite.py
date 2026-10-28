@@ -280,6 +280,11 @@ def test_liste_secrete_non_alignee(t):
     e = apm.ecarts(racine, modele)
     verifie(TEMOIN_SECRET in json.dumps(e), False, "liste_secrete : ecarts() sans la valeur du parc")
     verifie("serveur.nouveau.liste" in e["divergentes"], False, "liste_secrete : jamais proposee a l'alignement")
+    # scalaire sous une cle de nom secret, ecrit en clair a la main dans le modele (cas fautif)
+    for rel in persists(racine):
+        pose(racine, rel, "serveur.nouveau.mdpEssai", TEMOIN_SECRET)
+    modele["socle"]["serveur"]["nouveau"]["mdpEssai"] = "autre"
+    verifie(TEMOIN_SECRET in json.dumps(apm.ecarts(racine, modele)), False, "secret_clair_modele : ecarts() sans la valeur du parc")
     modele = apm.charge_modele(racine)
     verifie(TEMOIN_SECRET in json.dumps(apw.etat_modele(racine, ajouts)), False, "liste_secrete : /modele/etat")
     p = apm.propose_mise_a_jour(racine, modele)
