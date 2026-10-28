@@ -492,22 +492,23 @@ Décision du 2026-10-27 : les clés restent telles quelles ; l'analyse est rendu
   - options : laisser, fusionner, retirer ;
   - effet de chacune sur le modèle et sur les cartes.
   Aucun fichier de code modifié. — preuve : f9d3577 (1 fichier, 128 lignes)
-- [ ] Commit `docs: analyse des cles adressMAC/adresseMAC et telePeriod`, puis présenter les options à l'utilisateur.
+- [x] Commit `docs: analyse des cles adressMAC/adresseMAC et telePeriod`, puis présenter les options à l'utilisateur. — preuve : f9d3577 ; decisions du 2026-10-28 : telePeriod mortes RETIREES, MAC FUSIONNEE vers adresseMAC (chantier a part)
+- [ ] Retirer `serveur.udp.telePeriod` et `serveur.rangeExtender.telePeriod` du modèle, des persists du dépôt et du schéma ; supprimer leurs 2 tolérances de `rejeu_parc` ; bancs VERTS. Commit `refactor(assistant-persist): retrait des telePeriod jamais lues`.
 
 ## A9 — Documentation
 
-- [ ] `outils_docs/README.md` : § « Assistant persist (page web) » :
+- [x] `outils_docs/README.md` : § « Assistant persist (page web) » :
   - lancement (tuile, tâche, cible) ;
   - étapes ;
   - mots de passe ;
   - mise à jour du modèle ;
-  - bancs.
-- [ ] `CLAUDE.md`, carte des documents : entrée `assistant_persist_web.py` (+ modules, bancs, spec, plan), sur le
+  - bancs. — preuve : 0757b91 (+76 lignes, travail d'une autre session laisse intact et non commite)
+- [x] `CLAUDE.md`, carte des documents : entrée `assistant_persist_web.py` (+ modules, bancs, spec, plan), sur le
   modèle de l'entrée `fichiers_berry_web.py`. Lancer
-  `python outils_docs/scripts_python/maintenance/verifie_references_docs.py` → code 0.
-- [ ] Skill `bancs` : ligne « assistant_persist_* → bancs `test_assistant_persist_*.py` ».
-- [ ] Description de l'outil dans `annuaire_registre.py` relue. Mémoire du projet : une entrée.
-- [ ] Commit `docs(assistant-persist): mode d'emploi et carte des documents`.
+  `python outils_docs/scripts_python/maintenance/verifie_references_docs.py` → code 0. — preuve : 0757b91, verifie_references_docs code 0 (18 documents, 0 defaut)
+- [x] Skill `bancs` : ligne « assistant_persist_* → bancs `test_assistant_persist_*.py` ». — preuve : 0757b91 (.claude/skills/bancs/SKILL.md)
+- [x] Description de l'outil dans `annuaire_registre.py` relue. Mémoire du projet : une entrée. — preuve : description relue sans changement ; memory/project_assistant_persist.md + pointeur MEMORY.md
+- [x] Commit `docs(assistant-persist): mode d'emploi et carte des documents`. — preuve : 0757b91
 
 ## A10 — Modification d'un env existant (décision 9 : à déclencher par l'utilisateur)
 
@@ -529,6 +530,7 @@ Ne pas commencer sans son feu vert. À ce moment-là, écrire d'abord un plan d�
   - compilation par la page build, hors d'un autre build ;
   - suppression par la page 7800.
 - [ ] [projet] Relire et compléter les questions des clés `a_completer` après chaque fusion automatique.
+- [ ] [projet] Fusion de la MAC vers `adresseMAC` (décision du 2026-10-28, chantier à part) : `globalFonctions` écrit `adresseMAC` au `System#Boot` (corrige le différentiel, udp ON et discovery OFF), puis retrait d'`adressMAC` du modèle, du schéma et des persists ; modules téléversés avant les persists ; `banc_boot` à adapter.
 
 ## Vérification
 
