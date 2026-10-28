@@ -6,6 +6,7 @@ Groupes :
             sans le nom de la branche refuse, une seule execution a la fois, fermeture = reponse prudente ;
   http      serveur sur port libre : page, X-Synchro, erreurs, diff hors des fichiers modifies refuse,
             acces depuis l'IP reseau de ce PC sans jeton refuse ;
+  assistant routes de l'assistant sur un faux depot : refus, 409 (session occupee, double clic), reponse ;
   reel      (--reel) les VRAIS scripts en --dry-run par la session : lecture seule (GitHub, git fetch upstream).
 Temoin : une session qui transmet toute reponse sans la valider DOIT faire echouer le groupe session.
 """
@@ -168,6 +169,64 @@ def groupe_http(dossier):
     srv.shutdown()
 
 
+def groupe_assistant(dossier):
+    """Routes /assistant, /trois-voies, /assistant/action sur un faux depot (racine) et un faux script (session)."""
+    print("\n== assistant (faux depot)")
+    import faux_depot_synchro as fd
+    with tempfile.TemporaryDirectory() as tmp:
+        travail = fd.cree(Path(tmp))
+        fd.commit_amont(tmp, {"a.txt": "amont\n"}, "amont change a")
+        fd.git(travail, "fetch", "-q", "upstream")
+        appels = []
+
+        def builds():                                  # 1er appel lent : la course du double clic est deterministe
+            appels.append(1)
+            if len(appels) == 1:
+                time.sleep(1.0)
+            return []
+
+        session = synchro_fork_session.Session(dossier=dossier)
+        acces = acces_web.Acces(0, False, "banc")
+        gest = synchro_fork_web.fabrique_gestionnaire(session, acces, racine=travail, builds_en_cours=builds)
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), gest)
+        acces.port = port = srv.server_address[1]
+        acces.cookie = f"jeton_{port}"
+        Thread(target=srv.serve_forever, daemon=True).start()
+        x = {"X-Synchro": "1", "Content-Type": "application/json"}
+        action = "/assistant/action"
+        statut, corps = requete("127.0.0.1", port, "GET", "/assistant")
+        verifie((statut, isinstance(json.loads(corps).get("etapes"), list)), (200, True), "GET /assistant : etapes")
+        verifie(requete("127.0.0.1", port, "POST", action, {"action": "merge"})[0], 403, "POST sans X-Synchro refuse")
+        verifie(requete("127.0.0.1", port, "POST", action, {"action": "rm"}, x)[0], 400, "action inconnue refusee")
+        verifie(requete("127.0.0.1", port, "POST", action, {"action": "pousse"}, x)[0], 400,
+                "pousse sans confirmation refusee")
+        verifie(requete("127.0.0.1", port, "POST", action, {"action": "abandonne", "confirmation": "non"}, x)[0],
+                400, "abandonne sans confirmation 'oui' refuse")
+        verifie(requete("127.0.0.1", port, "GET", "/trois-voies?chemin=../../Windows/win.ini")[0], 400,
+                "trois-voies hors liste refuse")
+        verifie(len(appels), 0, "refus sans toucher aux builds")
+        # session occupee (faux script en attente d'une question) -> 409
+        session.lance("merge")
+        attend(lambda: session.etat()["question"] is not None)
+        verifie(requete("127.0.0.1", port, "POST", action, {"action": "bascule"}, x)[0], 409,
+                "action pendant une execution de la session : 409")
+        session.repond("n")
+        attend(lambda: not session.en_cours())
+        # double clic : exactement un 200 et un 409
+        statuts = []
+        fils = [Thread(target=lambda: statuts.append(requete("127.0.0.1", port, "POST", action,
+                                                              {"action": "merge"}, x)[0])) for _ in range(2)]
+        for f in fils:
+            f.start()
+            time.sleep(0.2)
+        for f in fils:
+            f.join()
+        verifie(sorted(statuts), [200, 409], "double clic sur merge : un 200 et un 409")
+        statut, corps = requete("127.0.0.1", port, "POST", action, {"action": "abandonne", "confirmation": "oui"}, x)
+        verifie((statut, json.loads(corps).get("ok") if statut == 200 else corps), (200, True), "abandonne confirme")
+        srv.shutdown()
+
+
 def groupe_reel():
     print("\n== reel (vrais scripts en --dry-run, lecture seule)")
     session = synchro_fork_session.Session(racine=ICI.parents[2])
@@ -186,6 +245,7 @@ def principal():
         groupe_question()
         groupe_session(dossier)
         groupe_http(dossier)
+        groupe_assistant(dossier)
     if "--reel" in sys.argv:
         groupe_reel()
     print("\nVERT" if not ECHECS else f"\nROUGE : {len(ECHECS)} echec(s)")

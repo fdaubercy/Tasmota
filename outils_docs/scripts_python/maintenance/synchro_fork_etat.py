@@ -38,14 +38,11 @@ def fichiers_modifies(racine=REPO):
     return suivis, non_suivis
 
 
-def operation_git():
-    """Merge ou rebase laisse en cours dans le depot (a terminer ou annuler avant toute synchro)."""
-    git = REPO / ".git"
-    if (git / "rebase-merge").exists() or (git / "rebase-apply").exists():
-        return "rebase"
-    if (git / "MERGE_HEAD").exists():
-        return "merge"
-    return ""
+def operation_git(racine=REPO):
+    """Rebase, merge, cherry-pick, revert ou bisect laisse en cours (a terminer ou annuler avant toute synchro).
+    Meme definition que l'assistant (qui importe ce module : import tardif). Dossier .git introuvable -> RuntimeError."""
+    import synchro_fork_assistant
+    return synchro_fork_assistant.operation(racine)
 
 
 def etat():

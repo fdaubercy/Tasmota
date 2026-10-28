@@ -22,11 +22,17 @@ Routes (les POST exigent l'en-tete X-Synchro: 1 et la meme origine) :
     POST /lance        {script: merge|rebase, simulation: bool}
     POST /repond       {valeur, confirmation}
     POST /commit-journal
+    GET  /assistant    analyse du cas et liste d'etapes (synchro_fork_assistant.analyse)
+    GET  /trois-voies  ?chemin=<fichier touche des deux cotes ou en conflit> : diffs {mien, amont}
+    POST /assistant/action  {action: bascule|ff-origin|merge|resout|ouvre|termine|abandonne|pousse,
+                             chemin?, choix?, confirmation?} ; une seule a la fois (409), refusee pendant une
+                             execution de la session ; abandonne et pousse exigent confirmation "oui"
 """
 
 import argparse
 import json
 import sys
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -35,14 +41,49 @@ from urllib.parse import parse_qs, urlsplit
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "outils_pc"))
 import acces_web  # noqa: E402
 
+import build_serie  # noqa: E402
+import synchro_fork_assistant  # noqa: E402
 import synchro_fork_etat  # noqa: E402  (importe synchronise_fork_tasmota : sortie standard en utf-8)
+import synchro_fork_fusion  # noqa: E402
 import synchro_fork_page  # noqa: E402
 import synchro_fork_session  # noqa: E402
 
 PORT_DEFAUT = 7500
+VERROU = threading.Lock()      # une seule action d'assistant a la fois
 
 
-def traite_post(chemin, demande, session):
+def action_assistant(demande, racine, builds_en_cours):
+    """Une action de synchro_fork_fusion ; rend le texte du resultat. Erreurs : ValueError (demande), RuntimeError."""
+    nom, f = str(demande.get("action", "")), synchro_fork_fusion
+    chemin, choix = str(demande.get("chemin", "")), str(demande.get("choix", ""))
+    if nom in ("abandonne", "pousse") and demande.get("confirmation") != "oui":
+        raise ValueError(f"{nom} exige confirmation = \"oui\"")
+    actions = {"bascule": lambda: f.bascule(racine, builds_en_cours),
+               "ff-origin": lambda: f.ff_origin(racine, builds_en_cours),
+               "merge": lambda: f.lance_merge(racine, builds_en_cours),
+               "resout": lambda: f.resout(racine, chemin, choix, builds_en_cours),
+               "ouvre": lambda: f.ouvre(racine, chemin),
+               "termine": lambda: f.termine(racine, builds_en_cours),
+               "abandonne": lambda: f.abandonne(racine, builds_en_cours),
+               "pousse": lambda: f.pousse(racine)}
+    if nom not in actions:
+        raise ValueError(f"action inconnue : {nom!r}")
+    return actions[nom]()
+
+
+def traite_post(chemin, demande, session, racine=synchro_fork_etat.REPO,
+                builds_en_cours=build_serie.builds_en_cours_defaut, verrou=None):
+    if chemin == "/assistant/action":
+        verrou = verrou or VERROU
+        if not verrou.acquire(blocking=False):
+            raise RuntimeError("une action est deja en cours")
+        try:
+            if session.en_cours():
+                raise RuntimeError("une synchro est en cours : attendre sa fin avant toute action de l'assistant")
+            resultat = action_assistant(demande, racine, builds_en_cours)
+            return {"ok": True, "resultat": resultat, "analyse": synchro_fork_assistant.analyse(racine, fetch=False)}
+        finally:
+            verrou.release()
     if chemin == "/lance":
         if synchro_fork_etat.operation_git():
             raise RuntimeError(f"un {synchro_fork_etat.operation_git()} est en cours dans le depot : le terminer "
@@ -59,7 +100,8 @@ def traite_post(chemin, demande, session):
     raise LookupError(chemin)
 
 
-def fabrique_gestionnaire(session, acces):
+def fabrique_gestionnaire(session, acces, racine=synchro_fork_etat.REPO,
+                          builds_en_cours=build_serie.builds_en_cours_defaut):
     class Gestionnaire(BaseHTTPRequestHandler):
         def log_message(self, *args):
             pass
@@ -111,12 +153,20 @@ def fabrique_gestionnaire(session, acces):
                     self._envoie(200, synchro_fork_etat.diff(params.get("chemin", [""])[0]).encode("utf-8"))
                 elif url.path == "/historique":
                     self._envoie(200, synchro_fork_etat.historique().encode("utf-8"))
+                elif url.path == "/assistant":
+                    self._json(synchro_fork_assistant.analyse(racine))
+                elif url.path == "/trois-voies":
+                    a = synchro_fork_assistant.analyse(racine, fetch=False)
+                    autorises = a["touches_deux"] + [c["chemin"] for c in a["conflits"]]
+                    self._json(synchro_fork_assistant.trois_voies(racine, params.get("chemin", [""])[0], autorises))
                 elif url.path == "/aide":
                     self._json(synchro_fork_etat.aide())
                 else:
                     self._envoie(404, b"introuvable")
             except ValueError as erreur:
                 self._envoie(400, str(erreur).encode("utf-8"))
+            except RuntimeError as erreur:
+                self._envoie(409, str(erreur).encode("utf-8"))
 
         def do_POST(self):
             if not acces.controle(self):
@@ -129,7 +179,7 @@ def fabrique_gestionnaire(session, acces):
                 demande = json.loads(self.rfile.read(longueur).decode("utf-8") or "{}")
                 if not isinstance(demande, dict):
                     raise ValueError("corps JSON attendu")
-                self._json(traite_post(urlsplit(self.path).path, demande, session))
+                self._json(traite_post(urlsplit(self.path).path, demande, session, racine, builds_en_cours))
             except LookupError:
                 self._envoie(404, b"introuvable")
             except (ValueError, TypeError) as erreur:

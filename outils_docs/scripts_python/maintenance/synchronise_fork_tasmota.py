@@ -74,10 +74,12 @@ from synchro_fork_question import demander     # input(), ou boutons de synchro_
 # Python passerait alors en cp1252 et le moindre caractere hors cp1252 leverait
 # UnicodeEncodeError. On force l'utf-8 avec errors="replace" : la sortie ne peut
 # plus faire tomber le script.
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8",
-                              errors="replace", line_buffering=True)
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8",
-                              errors="replace", line_buffering=True)
+if sys.stdout is not None:      # None sans console (pythonw, serveur detache)
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8",
+                                  errors="replace", line_buffering=True)
+if sys.stderr is not None:
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8",
+                                  errors="replace", line_buffering=True)
 
 
 # ── Localisation du depot ─────────────────────────────────────────────────────
