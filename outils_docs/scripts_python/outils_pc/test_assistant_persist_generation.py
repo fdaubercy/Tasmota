@@ -63,10 +63,6 @@ TOLERANCES = [
     # -- famille 4 : reglages propres a une carte
     ("diverses.historique.grafana", (CAVE3, GRENIER, RIDEAU_), "cle absente de ces S3 (ajoutee au parc apres eux)"),
     ("serveur.rangeExtender.AP.routeNAPT", (CAVE3, GRENIER), "le role maitre ne tranche pas : cave S3 et grenier a OFF, P4 a ON"),
-    ("serveur.udp.telePeriod", (CAVE1, CAVE3, GRENIER, P4, CUVE_, RIDEAU_),
-     "porte par le seul differentiel (choix A1 n. 5 : le socle le garde)"),
-    ("serveur.rangeExtender.telePeriod", (DIFF, CAVE1, CAVE3, GRENIER),
-     "porte par P4, cuve et rideau seulement (choix A1 n. 5)"),
     # -- famille 5 : blocs absents d'un vieux persist
     ("drivers.I2S.*", (DIFF,), "bloc absent du vieux persist du differentiel (OFF sur une carte generee)"),
     ("drivers.Ethernet.*", (DIFF,), "bloc absent du vieux persist du differentiel (OFF sur une carte generee)"),

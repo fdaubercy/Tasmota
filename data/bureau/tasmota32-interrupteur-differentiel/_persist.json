@@ -103,7 +103,6 @@
 			"activation": "ON",
 			"id": 0,
 			"log": "info",
-			"telePeriod": 300,
 			"port": 2000
 		},
 		"tcp": {

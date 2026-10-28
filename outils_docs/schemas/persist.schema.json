@@ -599,10 +599,6 @@
                 "mdp"
               ],
               "additionalProperties": true
-            },
-            "telePeriod": {
-              "type": "integer",
-              "description": "Periode de telemetrie en secondes."
             }
           },
           "required": [
@@ -664,10 +660,6 @@
                 "debug",
                 "detail"
               ]
-            },
-            "telePeriod": {
-              "type": "integer",
-              "description": "Periode de telemetrie en secondes."
             },
             "port": {
               "type": "integer"

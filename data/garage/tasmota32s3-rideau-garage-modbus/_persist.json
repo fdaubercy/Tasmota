@@ -95,7 +95,6 @@
 			"activation": "ON",
 			"id": 3,
 			"log": "info",
-			"telePeriod": 300,
             "ipMaitre": "192.168.0.43",
 			"AP": {
 				"IPAddress": "192.168.4.1",
