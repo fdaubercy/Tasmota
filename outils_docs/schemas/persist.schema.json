@@ -3282,12 +3282,50 @@
                             },
                             "capteurFerme": {
                               "type": "string"
+                            },
+                            "inclinaison": {
+                              "type": "object",
+                              "properties": {
+                                "activation": {
+                                  "type": "string",
+                                  "description": "ON ou OFF : active ou non ce bloc.",
+                                  "enum": [
+                                    "ON",
+                                    "OFF"
+                                  ]
+                                },
+                                "adresse": {
+                                  "type": "integer"
+                                },
+                                "axes": {
+                                  "type": "string"
+                                },
+                                "angleOuvert": {
+                                  "type": "number"
+                                },
+                                "angleFerme": {
+                                  "type": "number"
+                                },
+                                "marge": {
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "activation",
+                                "adresse",
+                                "axes",
+                                "angleOuvert",
+                                "angleFerme",
+                                "marge"
+                              ],
+                              "additionalProperties": true
                             }
                           },
                           "required": [
                             "activation",
                             "capteurOuvert",
-                            "capteurFerme"
+                            "capteurFerme",
+                            "inclinaison"
                           ],
                           "additionalProperties": true
                         },

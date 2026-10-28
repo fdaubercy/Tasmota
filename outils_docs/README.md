@@ -29,6 +29,7 @@
   À retenir : la ligne `Berry solidification: …` d'un build **ne prouve rien** (§5).
 - [CARTE_MODULES_BERRY.md](CARTE_MODULES_BERRY.md) *(généré)* — module × carte : solidifié, importé, dépendance, garde du persist, incohérences.
 - [Les logs Berry : charte et réglages](#les-logs-berry--charte-et-réglages) — plus bas dans ce fichier.
+- [Inclinaison d'un volet ou d'une trappe (MPU6050)](#inclinaison-dun-volet-ou-dune-trappe-mpu6050) — capteur de position par l'angle, apprentissage des butées.
 - Conception de la solidification : [design](../docs/superpowers/specs/2026-07-15-solidification-berry-design.md),
   [verdict](../docs/superpowers/specs/2026-07-15-solidification-berry-verdict.md),
   [plan de la phase 1](../docs/superpowers/plans/2026-07-15-solidification-berry-phase1.md).
@@ -268,6 +269,80 @@ des panneaux de cuve, leurs courbes y seraient vides.
   ou `/histo?p=liste`.
 - Sur le P4, les mesures de la cuve sont écartées de l'historique tant que l'esclave ne les donne pas
   pour valides (`controleGarage.filtreHistorique`) : une cuve sans capteur donne des trous, pas des zéros.
+
+<hr></hr>
+
+## Inclinaison d'un volet ou d'une trappe (MPU6050)
+
+Un MPU6050 fixé sur une trappe (ou un volet) qui pivote autour d'une charnière horizontale donne son angle réel :
+l'accéléromètre mesure la gravité, `atan2` en tire l'angle. Il sert de **capteur de position** du volet, sous le
+nom `"Inclinaison"`, comme un fin de course : au franchissement d'une butée, le Shutter de Tasmota est recalé
+(`vrFonctions.changementEtatCapteur`). Gain principal : la position est connue dès le démarrage. Une trappe qui
+coulisse à plat, sans changer d'inclinaison, ne peut pas être suivie ainsi.
+
+**Ce n'est pas une sécurité** : la lecture se fait en Berry, toutes les 250 ms au mieux. Les fins de course
+physiques qui coupent le moteur restent indispensables.
+
+### Le capteur
+
+- Bus I2C de la carte (SDA/SCL déclarés dans le gabarit), adresse `0x68` (`104`), ou `0x69` (`105`) si AD0 est au
+  +3,3 V. Fil court et souple : l'I2C supporte mal plus d'un mètre, et un câble qui se plie à chaque manœuvre casse.
+- Lu en Berry (`tasmota.wire_scan`, registres `0x6B` et `0x3B`), **pas** par le pilote C de Tasmota : ne pas
+  compiler `USE_MPU6050`. Ce pilote ne lit le capteur qu'une fois par TelePeriod et se le disputerait avec Berry.
+- Sans `"activation": "ON"`, rien n'est lu : ni bus, ni minuterie, ni ligne sur la page. Tous les persists du
+  dépôt portent le bloc, désactivé.
+
+### Dans `_persist.json`
+
+Sous `drivers.voletRoulants.environnement.VRs.<VR>.capteursPosition` :
+
+```json
+"capteurOuvert": "Inclinaison",
+"capteurFerme": "Switch2",
+"inclinaison": {
+    "activation": "ON",
+    "adresse": 104,
+    "axes": "YZ",
+    "angleOuvert": 85.0,
+    "angleFerme": 3.0,
+    "marge": 3
+}
+```
+
+- `capteurOuvert` / `capteurFerme` : `"Inclinaison"` pour que l'angle recale cette butée. Les deux types se
+  mélangent : un fin de course physique d'un côté, l'inclinaison de l'autre.
+- `axes` : les 2 axes de l'accéléromètre dans le plan de rotation (l'angle vaut `atan2` du 1er sur le 2e).
+- `angleOuvert` / `angleFerme` : les butées, en degrés. `angleOuvert` peut être plus petit que `angleFerme`
+  (selon le montage).
+- `marge` : hystérésis en degrés pour QUITTER une butée (pas de rebond au seuil).
+
+### Apprentissage des butées
+
+Plutôt que de régler `axes` et les angles à la main :
+
+1. amener le volet en butée **ouverte** (commande habituelle), puis `ReglageVolets Apprentissage 1 ouvert` ;
+2. amener le volet en butée **fermée**, puis `ReglageVolets Apprentissage 1 ferme`.
+
+Les 2 butées relevées, la carte choisit les axes (l'axe de rotation est celui qui varie le moins) et l'ordre qui
+évite la coupure ±180° de l'angle, écrit `axes`, `angleOuvert` et `angleFerme` dans le persist et l'enregistre.
+L'apprentissage **ne commande jamais le moteur**. Il est refusé, sans rien écrire, si les butées sont à moins de
+10° l'une de l'autre, ou si l'arc traverse la coupure dans les deux ordres (tourner le capteur d'un quart de tour).
+Un redémarrage entre les 2 temps efface la 1re butée : recommencer. L'apprentissage marche aussi avec l'inclinaison
+désactivée, ce qui permet de régler avant d'activer.
+
+`ReglageVolets Inclinaison 1` affiche l'angle mesuré et l'état qu'il donne, sans recaler le volet.
+
+### Sur la page d'accueil
+
+Une ligne `<nom du volet> : inclinaison  85.3 ° (ouvert)` par volet dont l'inclinaison est active. Elle montre le
+**dernier angle relevé** (au démarrage, pendant la course, à l'arrêt), sans relire le bus à chaque rafraîchissement :
+une trappe bougée à la main n'y apparaît qu'à la prochaine manœuvre. « capteur muet » après une panne du capteur.
+
+### Banc
+
+`python outils_docs/scripts_python/berry/banc_inclinaison.py` : le vrai `vrFonctions.be` sous `berry.exe`, avec un
+faux bus I2C (garde d'activation, angles, hystérésis, recalage, suivi pendant la course, pannes, apprentissage,
+ligne web). Code de sortie 0 = vert. Ne teste ni le vrai bus, ni le vrai Shutter, ni le capteur physique.
 
 <hr></hr>
 
@@ -998,7 +1073,9 @@ commandes git d'écriture sont limitées par `liste_blanche_git_synchro.py`.
 >####    - EtatPompe : (cave) affiche l'état de la pompe vide-cave, des niveaux et de l'alerte
 >####    - AcquittePompe : (cave) efface l'alerte et le compteur de relances, puis affiche l'état<br>
 >
->####    - ReglageGarage, ReglageDiscovery, ReglageRangeExtender, ReglageConn16Channel, ReglageTCP, ReglageVolets, ReglageLoRaWan : aucune sous-commande (seulement help ; leurs logs se règlent avec ReglageLog)
+>####    - ReglageVolets Inclinaison &lt;id&gt; : angle mesuré par le MPU6050 du volet ; ReglageVolets Apprentissage &lt;id&gt; ouvert|ferme : apprend ses butées (voir « Inclinaison d'un volet ou d'une trappe »)<br>
+>
+>####    - ReglageGarage, ReglageDiscovery, ReglageRangeExtender, ReglageConn16Channel, ReglageTCP, ReglageLoRaWan : aucune sous-commande (seulement help ; leurs logs se règlent avec ReglageLog)
 
 <hr></hr>
 

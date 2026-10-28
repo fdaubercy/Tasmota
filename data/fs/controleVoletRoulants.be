@@ -89,10 +89,25 @@ class CONTROLE_VR : Driver
                     tasmota.add_rule(string.format("Shutter%i#Direction", idVR), def(value, trigger, msg) vrFonctions.changementDirection(value, trigger, msg, idVR) end, "controleSensVRoulant" + str(idVR))
                 end
             end
+
+            # Capteur d'inclinaison (MPU6050) : seulement pour les volets qui l'activent dans le persist.
+            # Sinon ni bus I2C ni minuterie : une carte sans capteur n'attend aucune donnee.
+            for vr: vrFonctions.inclinaisonsActives()
+                vrFonctions.log(string.format("CONTROLE_VR: Inclinaison active sur le volet %i !", vr["id"]), LOG_LEVEL_INFO)
+                vrFonctions.releveInclinaison(vr)      # position reelle des le demarrage
+            end
         end
 
 		# Ajoute les commandes personnalisées
 		tasmota.add_cmd('ReglageVolets', vrFonctions.reglageVolets)	
+    end
+
+    # Page d'accueil : une ligne « inclinaison » par volet dont le capteur est actif (aucune sinon)
+    def web_sensor()
+        import vrFonctions
+        for vr: vrFonctions.inclinaisonsActives()
+            tasmota.web_send_decimal(vrFonctions.ligneWebInclinaison(vr))
+        end
     end
 end
 

@@ -1318,7 +1318,15 @@
 						"capteursPosition": {
 							"activation": "ON",
 							"capteurOuvert": "Interrupteur1",
-							"capteurFerme": "Interrupteur2"
+							"capteurFerme": "Interrupteur2",
+							"inclinaison": {
+								"activation": "OFF",
+								"adresse": 104,
+								"axes": "YZ",
+								"angleOuvert": 85.0,
+								"angleFerme": 3.0,
+								"marge": 3
+							}
 						},
                         "activationSiOuvert": {
                             "activation": "ON", 
