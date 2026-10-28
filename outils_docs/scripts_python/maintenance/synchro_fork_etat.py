@@ -75,12 +75,12 @@ def etat():
     return resultat
 
 
-def diff(chemin):
+def diff(chemin, racine=REPO):
     """Diff d'un fichier suivi modifie ; refuse tout autre chemin (pas de lecture arbitraire du disque)."""
-    suivis, _ = fichiers_modifies()
+    suivis, _ = fichiers_modifies(racine)
     if chemin not in [f["chemin"] for f in suivis]:
         raise ValueError(f"pas un fichier suivi modifie : {chemin!r}")
-    _, sortie, _ = _git("diff", "HEAD", "--", chemin)
+    _, sortie, _ = _git("diff", "HEAD", "--", chemin, racine=racine)
     if len(sortie) > MAX_DIFF:
         sortie = sortie[:MAX_DIFF] + f"\n... (tronque a {MAX_DIFF // 1024} Ko)\n"
     return sortie
@@ -93,15 +93,16 @@ def historique():
     return texte if len(texte) <= MAX_JOURNAL else "... (debut omis)\n" + texte[-MAX_JOURNAL:]
 
 
-def commit_journal():
-    """Commite le SEUL journal (`git commit -- <journal>` ignore le reste de l'index). Jamais de push."""
-    suivis, _ = fichiers_modifies()
+def commit_journal(racine=REPO):
+    """Commite le SEUL journal (`git commit -- <journal>` ignore le reste de l'index). Jamais de push.
+    Tout se fait dans `racine` (un faux depot au banc : jamais un commit dans le vrai)."""
+    suivis, _ = fichiers_modifies(racine)
     if not any(f["journal"] for f in suivis):
-        raise ValueError("le journal n'a pas ete modifie : rien a commiter")
-    code, sortie, erreur = _git("commit", "-m", "docs: synchro du fork", "--", sft.HISTORIQUE_REL)
+        raise ValueError("le journal n'a pas été modifié : rien à commiter")
+    code, sortie, erreur = _git("commit", "-m", "docs: synchro du fork", "--", sft.HISTORIQUE_REL, racine=racine)
     if code != 0:
-        raise RuntimeError((sortie + erreur).strip()[:800] or f"git commit a echoue (code {code})")
-    return sft.git_out("log", "-1", "--format=%h %s")
+        raise RuntimeError((sortie + erreur).strip()[:800] or f"git commit a échoué (code {code})")
+    return _git("log", "-1", "--format=%h %s", racine=racine)[1].strip()
 
 
 def aide():

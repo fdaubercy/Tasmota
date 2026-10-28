@@ -28,7 +28,8 @@ import synchronise_fork_tasmota as sft
 MARQUE = "synchro-fork-assistant"
 AMONT = "upstream/development"
 BRANCHE = "development"
-TYPE_MERGE = "merge local (conflits resolus)"
+TYPE_MERGE = "merge local (conflits résolus)"
+DELAI_PUSH = 120                               # s : un push (jamais un merge) peut etre arrete
 CHOIX = ("mien", "amont", "garder", "supprimer", "resolu")
 AVEC_MARQUEURS = ("UU", "AA")                  # mien, amont, resolu
 GARDER = ("DU", "UD", "AU", "UA")              # present d'un seul cote : garder ou supprimer
@@ -38,9 +39,9 @@ CARACTERES_CMD = '&|%^<>"'                     # interpretes par cmd.exe, que tr
 
 # -- lectures ----------------------------------------------------------------------------------------------------
 
-def _git(racine, *args):
-    """Toute commande git de ce module : chemins litteraux, sans delai (cf. asst._git)."""
-    return asst._git(racine, "--literal-pathspecs", *args)
+def _git(racine, *args, delai=None):
+    """Toute commande git de ce module : chemins litteraux, sans delai sauf demande (cf. asst._git)."""
+    return asst._git(racine, "--literal-pathspecs", *args, delai=delai)
 
 
 def _git_ok(racine, *args):
@@ -112,10 +113,10 @@ def _types(racine):
     return types
 
 
-def _binaires(racine):
-    """Chemins dont `git diff --numstat` entre HEAD et MERGE_HEAD donne « - » comme compteur."""
+def _binaires(racine, chemins):
+    """Parmi `chemins`, ceux dont `git diff --numstat` entre HEAD et MERGE_HEAD donne « - » comme compteur."""
     binaires = set()
-    for ligne in _liste_z(racine, "diff", "--numstat", "--no-renames", "-z", "HEAD", "MERGE_HEAD"):
+    for ligne in _liste_z(racine, "diff", "--numstat", "--no-renames", "-z", "HEAD", "MERGE_HEAD", "--", *chemins):
         ajouts, _, reste = ligne.partition("\t")
         if ajouts == "-":
             binaires.add(reste.partition("\t")[2])
@@ -127,7 +128,7 @@ def conflits(racine):
     chemins = sorted(set(_liste_z(racine, "diff", "--name-only", "-z", "--diff-filter=U")))
     if not chemins:
         return []
-    types, binaires = _types(racine), _binaires(racine)
+    types, binaires = _types(racine), _binaires(racine, chemins)
     return [{"chemin": c, "type": types.get(c, "UU"), "binaire": c in binaires} for c in chemins]
 
 
@@ -324,9 +325,14 @@ def termine(racine, builds_en_cours, historique=None):
     commits = (_lit_marque(racine) or {}).get("commits") or []
     _git_ok(racine, "commit", "--no-edit")
     _efface_marque(racine)
+    journal = Path(historique or Path(racine) / sft.HISTORIQUE_REL)
+    avant = journal.stat().st_size if journal.exists() else 0
     sft.noter_historique([tuple(c) for c in commits], _etiquette(racine, "origin"), _etiquette(racine, "upstream"),
-                         BRANCHE, TYPE_MERGE, historique=historique or Path(racine) / sft.HISTORIQUE_REL)
-    return "Merge commité : " + _git_ok(racine, "log", "-1", "--format=%h %s")
+                         BRANCHE, TYPE_MERGE, historique=journal)
+    texte = "Merge commité : " + _git_ok(racine, "log", "-1", "--format=%h %s")
+    if not journal.exists() or journal.stat().st_size <= avant:   # noter_historique avale l'OSError (print)
+        texte += " Attention : le journal des synchros n'a pas pu être écrit (le merge, lui, est commité)."
+    return texte
 
 
 def abandonne(racine, builds_en_cours):
@@ -346,7 +352,10 @@ def abandonne(racine, builds_en_cours):
 def pousse(racine):
     """`git push origin development` ; la sortie de git est rendue telle quelle, un refus leve RuntimeError."""
     _verifie_sans_operation(racine)
-    code, sortie, erreur = _git(racine, "push", "origin", BRANCHE)
+    code, sortie, erreur = _git(racine, "push", "origin", BRANCHE, delai=DELAI_PUSH)
+    if code == -1:
+        raise RuntimeError(f"git push n'a pas fini en {DELAI_PUSH} s (fenêtre d'identifiants en attente ?) : il a été"
+                           " arrêté, rien n'est perdu, tes commits sont toujours en local. Réessaie.")
     texte = (sortie + erreur).strip()
     if code != 0:
         raise RuntimeError(f"push refusé par git (code {code}) : {texte[:800]}")

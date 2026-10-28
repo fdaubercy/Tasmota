@@ -107,7 +107,7 @@ def merge_propre(d, t):
     verifie("Amont: titre du commit propre" in journal, True, "merge_propre : titre amont au journal du faux depot")
     verifie("`upstream:development` → `origin:development`" in journal, True,
             "merge_propre : remotes nommes d'apres le faux depot (pas le vrai)")
-    verifie("merge local (conflits resolus)" in journal, True, "merge_propre : type de merge au journal")
+    verifie("merge local (conflits résolus)" in journal, True, "merge_propre : type de merge au journal")
     suivis = fd.git(t, "ls-files", "--", sft.HISTORIQUE_REL)
     verifie(suivis, "", "merge_propre : le journal n'est pas commite par termine")
 

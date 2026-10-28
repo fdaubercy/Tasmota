@@ -350,9 +350,25 @@ def sonde_page(m):
     cdp.js("document.querySelector('button[data-onglet=\"merge\"]').click()")
     verifie(cdp.js("!document.getElementById('assistant') || getComputedStyle(document.getElementById('assistant')).display === 'none'"),
             True, "avant tout diagnostic : assistant absent ou masqué")
-    # 1. Diagnostic seul -> assistant, fusion_b courante
+    # 0. arbre sale : a.txt (touche aussi par l'amont) et un fichier sans recouvrement -> classes affichees, diff au clic
+    (m.travail / "a.txt").write_text("sale\n", encoding="utf-8")
+    (m.travail / "dossier é" / "fichier x.txt").write_text("sale aussi\n", encoding="utf-8")
     verifie(cdp.js(clique("Diagnostic seul")), True, "bouton « Diagnostic seul » cliquable")
+    verifie(bool(attend(cdp, etape("arbre", "bloquee"), 25)), True, "arbre sale : étape arbre bloquée")
+    lignes = "[...document.querySelectorAll('#assistant li[data-etape=\"arbre\"] li')].map(l => [l.querySelector('button').textContent, "             "l.querySelector('[data-classe]').dataset.classe, l.querySelector('[data-classe]').textContent])"
+    verifie(cdp.js(lignes), [["a.txt", "amont", "touché aussi par l'amont"], ["dossier é/fichier x.txt", "libre", "sans recouvrement"]],
+            "arbre : classement affiché (touché aussi par l'amont / sans recouvrement)")
+    verifie(cdp.js("getComputedStyle(document.querySelector('[data-classe=\"amont\"]')).color"), "rgb(240, 120, 120)",
+            "arbre : « touché aussi par l'amont » en rouge")
+    cdp.js("document.querySelector('#assistant [data-diff=\"a.txt\"]').click()")
+    verifie(bool(attend(cdp, "!!document.querySelector('#assistant li[data-etape=\"arbre\"] pre[data-diff-arbre]') && "
+                             "document.querySelector('pre[data-diff-arbre]').textContent.includes('+sale')", 15)),
+            True, "arbre : clic sur le chemin -> diff du fichier dans l'étape")
+    subprocess.run(["git", "checkout", "--", "a.txt", "dossier é/fichier x.txt"], cwd=m.travail, check=True, capture_output=True)
+    verifie(cdp.js(clique("Revérifier", ASSISTANT)) or cdp.js(clique("Réanalyser", ASSISTANT)), True, "arbre rendu propre : nouvelle analyse")
+    # 1. Diagnostic -> assistant, fusion_b courante
     verifie(bool(attend(cdp, etape("fusion_b", "courante"), 25)), True, "diagnostic : #assistant avec fusion_b courante")
+    verifie(cdp.js("!document.querySelector('[data-fusion-en-cours]')"), True, "avant le merge : pas d'avertissement de merge en cours")
     verifie(cdp.js(visible("#assistant")), True, "#assistant visible")
     verifie(cdp.js(etape("prevision", "faite")) and cdp.js(etape("pousser", "attente")), True, "prévision faite, pousser en attente")
     verifie(cdp.js("(() => { const a = [...document.querySelectorAll('#assistant .act')];"
@@ -361,6 +377,8 @@ def sonde_page(m):
     # 2. Lancer le merge -> un conflit
     verifie(cdp.js(clique("Lancer le merge", ASSISTANT)), True, "bouton « Lancer le merge »")
     verifie(bool(attend(cdp, LIGNES_CONFLITS + " === 3", 25)), True, "merge lancé : le tableau des conflits a 3 lignes")
+    verifie(cdp.js("(document.querySelector('#assistant [data-fusion-en-cours]')?.textContent || '').includes('aucune autre session ni outil ne doit commiter, abandonner ou relancer de merge')"),
+            True, "merge en cours : avertissement « aucune autre session ni outil... »")
     verifie(cdp.js("[...document.querySelectorAll('#assistant table.conflits tbody tr')].map(r => r.cells[0].textContent.trim())"),
             [HOSTILE, "a.txt", "commun.txt"], "lignes : fichier hostile, a.txt, commun.txt")
     # echappement : rien du titre ni du nom n'est interprete comme du HTML

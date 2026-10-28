@@ -21,7 +21,7 @@ import tempfile
 import time
 from http.server import ThreadingHTTPServer
 from pathlib import Path
-from threading import Thread
+from threading import Event, Thread
 
 ICI = Path(__file__).resolve().parent
 sys.path.insert(0, str(ICI))
@@ -134,8 +134,8 @@ def groupe_session(dossier):
     verifie(all(temoin), False, "TEMOIN session sans validation : le scenario echoue")
 
 
-def requete(hote, port, methode="GET", chemin="/", corps=None, entetes=None):
-    c = http.client.HTTPConnection(hote, port, timeout=10)
+def requete(hote, port, methode="GET", chemin="/", corps=None, entetes=None, delai=10):
+    c = http.client.HTTPConnection(hote, port, timeout=delai)
     c.request(methode, chemin, body=json.dumps(corps).encode() if corps is not None else None, headers=entetes or {})
     r = c.getresponse()
     donnees = r.read()
@@ -179,10 +179,12 @@ def groupe_assistant(dossier):
         fd.git(travail, "fetch", "-q", "upstream")
         appels = []
 
-        def builds():                                  # 1er appel lent : la course du double clic est deterministe
+        libere = Event()
+
+        def builds():                                  # 1er appel bloque jusqu'au 409 du 2e clic : course deterministe
             appels.append(1)
             if len(appels) == 1:
-                time.sleep(1.0)
+                libere.wait(60)
             return []
 
         session = synchro_fork_session.Session(dossier=dossier)
@@ -194,7 +196,7 @@ def groupe_assistant(dossier):
         Thread(target=srv.serve_forever, daemon=True).start()
         x = {"X-Synchro": "1", "Content-Type": "application/json"}
         action = "/assistant/action"
-        statut, corps = requete("127.0.0.1", port, "GET", "/assistant")
+        statut, corps = requete("127.0.0.1", port, "GET", "/assistant", delai=60)
         verifie((statut, isinstance(json.loads(corps).get("etapes"), list)), (200, True), "GET /assistant : etapes")
         verifie(requete("127.0.0.1", port, "POST", action, {"action": "merge"})[0], 403, "POST sans X-Synchro refuse")
         verifie(requete("127.0.0.1", port, "POST", action, {"action": "rm"}, x)[0], 400, "action inconnue refusee")
@@ -214,11 +216,18 @@ def groupe_assistant(dossier):
         attend(lambda: not session.en_cours())
         # double clic : exactement un 200 et un 409
         statuts = []
-        fils = [Thread(target=lambda: statuts.append(requete("127.0.0.1", port, "POST", action,
-                                                              {"action": "merge"}, x)[0])) for _ in range(2)]
-        for f in fils:
-            f.start()
-            time.sleep(0.2)
+
+        def clic():
+            try:
+                statuts.append(requete("127.0.0.1", port, "POST", action, {"action": "merge"}, x, delai=60)[0])
+            except Exception as e:  # noqa: BLE001  (une exception de thread serait invisible : on la note)
+                statuts.append(repr(e))
+        fils = [Thread(target=clic) for _ in range(2)]
+        fils[0].start()
+        attend(lambda: len(appels) >= 1, 30)            # le 1er clic tient le verrou, bloque dans builds()
+        fils[1].start()
+        attend(lambda: len(statuts) >= 1, 30)           # le 2e clic a recu son 409
+        libere.set()
         for f in fils:
             f.join()
         verifie(sorted(statuts), [200, 409], "double clic sur merge : un 200 et un 409")

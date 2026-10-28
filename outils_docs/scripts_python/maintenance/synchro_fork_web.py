@@ -76,10 +76,10 @@ def traite_post(chemin, demande, session, racine=synchro_fork_etat.REPO,
     verrou = verrou or VERROU
     if chemin == "/assistant/action":
         if not verrou.acquire(blocking=False):
-            raise RuntimeError("une action est deja en cours")
+            raise RuntimeError("une action est déjà en cours")
         try:
             if session.en_cours():
-                raise RuntimeError("une synchro est en cours : attendre sa fin avant toute action de l'assistant")
+                raise RuntimeError("une synchro est en cours : attends sa fin avant toute action de l'assistant")
             resultat = action_assistant(demande, racine, builds_en_cours)
             return {"ok": True, "resultat": resultat, "analyse": synchro_fork_assistant.analyse(racine, fetch=False)}
         finally:
@@ -89,7 +89,7 @@ def traite_post(chemin, demande, session, racine=synchro_fork_etat.REPO,
             raise RuntimeError("une action de l'assistant est en cours")
         try:
             if synchro_fork_etat.operation_git(racine):
-                raise RuntimeError(f"un {synchro_fork_etat.operation_git(racine)} est en cours dans le depot : le terminer "
+                raise RuntimeError(f"un {synchro_fork_etat.operation_git(racine)} est en cours dans le dépôt : le terminer "
                                    "ou l'annuler avant toute synchro")
             session.lance(str(demande.get("script", "")), bool(demande.get("simulation")))
         finally:
@@ -100,8 +100,8 @@ def traite_post(chemin, demande, session, racine=synchro_fork_etat.REPO,
         return {"ok": True}
     if chemin == "/commit-journal":
         if session.en_cours():
-            raise RuntimeError("une synchro est en cours : commiter le journal apres")
-        return {"ok": True, "commit": synchro_fork_etat.commit_journal()}
+            raise RuntimeError("une synchro est en cours : commite le journal après")
+        return {"ok": True, "commit": synchro_fork_etat.commit_journal(racine)}
     raise LookupError(chemin)
 
 
@@ -155,15 +155,14 @@ def fabrique_gestionnaire(session, acces, racine=synchro_fork_etat.REPO,
                     depuis = self.headers.get("Last-Event-ID") or params.get("depuis", ["0"])[0]
                     self._flux(int(depuis) if str(depuis).isdigit() else 0)
                 elif url.path == "/diff":
-                    self._envoie(200, synchro_fork_etat.diff(params.get("chemin", [""])[0]).encode("utf-8"))
+                    self._envoie(200, synchro_fork_etat.diff(params.get("chemin", [""])[0], racine).encode("utf-8"))
                 elif url.path == "/historique":
                     self._envoie(200, synchro_fork_etat.historique().encode("utf-8"))
                 elif url.path == "/assistant":
                     self._json(synchro_fork_assistant.analyse(racine))
                 elif url.path == "/trois-voies":
-                    a = synchro_fork_assistant.analyse(racine, fetch=False)
-                    autorises = a["touches_deux"] + [c["chemin"] for c in a["conflits"]]
-                    self._json(synchro_fork_assistant.trois_voies(racine, params.get("chemin", [""])[0], autorises))
+                    self._json(synchro_fork_assistant.trois_voies(racine, params.get("chemin", [""])[0],
+                                                                   synchro_fork_assistant.autorises(racine)))
                 elif url.path == "/aide":
                     self._json(synchro_fork_etat.aide())
                 else:

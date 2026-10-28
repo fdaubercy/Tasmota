@@ -198,6 +198,31 @@ def retard_origin(d, t):
 
 def c_retard_origin(a, t):
     verifie((a["retard_origin"], a["non_pousses"], a["retard"]), (1, 0, 0), "retard_origin : origin a avance")
+    verifie(ids(a), ["ff_origin"], "retard_origin : jamais « a jour », etape ff_origin (avance rapide sur origin)")
+    verifie([e["statut"] for e in a["etapes"]], ["courante"], "retard_origin : ff_origin est courante")
+
+
+def retard_origin_et_retard(d, t):
+    retard_origin(d, t)
+    fd.commit_amont(d, {"a.txt": "amont\n"}, "amont change a")
+
+
+def c_retard_origin_et_retard(a, t):
+    verifie((a["retard"], a["retard_origin"], a["non_pousses"], a["prevision"]["conflits"]), (1, 1, 0, []),
+            "retard_origin_et_retard : retard des deux cotes, aucun conflit, rien a pousser")
+    verifie(a["voie"], "B", "retard_origin_et_retard : retard_origin impose la voie B (qui offre ff-origin)")
+
+
+def journal_et_pousser(d, t):
+    fd.commit_local(t, {"outils_docs/HISTORIQUE_SYNCHRO_FORK.md": "j\n"}, "journal")
+    fd.git(t, "push", "-q", "origin", "development")
+    fd.commit_local(t, {"b.txt": "b\n"}, "local non pousse")
+    (t / "outils_docs" / "HISTORIQUE_SYNCHRO_FORK.md").write_text("j\nsuite\n", encoding="utf-8")
+
+
+def c_journal_et_pousser(a, t):
+    verifie(ids(a), ["journal", "pousser"], "journal_et_pousser : le journal se commite AVANT le push (un seul push)")
+    verifie([e["statut"] for e in a["etapes"]], ["courante", "attente"], "journal_et_pousser : journal courante")
 
 
 def prevision_impossible_pure():
@@ -287,6 +312,7 @@ def c_trois_voies(a, t):
     r = asst.trois_voies(t, "commun.txt", ["commun.txt"])
     verifie(("+local" in r["mien"], "+amont" in r["amont"]), (True, True), "trois_voies : mien et amont")
     verifie("+amont" in r["mien"], False, "trois_voies : le diff « mien » ne contient pas l'amont")
+    verifie(asst.autorises(t), ["commun.txt"], "autorises : touches des deux cotes, sans analyse complete")
 
 
 def principal():
@@ -302,6 +328,8 @@ def principal():
            ("fetch_impossible", fetch_impossible, c_fetch_impossible),
            ("accents", accents_et_espaces, c_accents_et_espaces),
            ("commits_adaptateur", commits_adaptateur, c_commits_adaptateur),
+           ("retard_origin_et_retard", retard_origin_et_retard, c_retard_origin_et_retard),
+           ("journal_et_pousser", journal_et_pousser, c_journal_et_pousser),
            ("journal", journal, c_journal2), ("trois_voies", trois_voies, c_trois_voies)]
     print("-- prevision_impossible (pur)")
     prevision_impossible_pure()

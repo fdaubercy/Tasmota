@@ -45,7 +45,7 @@ const ICONES = {faite:"✔", bloquee:"✖", attente:"○", courante:"▶"};
 const NOTES = {UU:"modifié des deux côtés", AA:"ajouté des deux côtés", DD:"supprimé des deux côtés",
   DU:"supprimé chez moi, modifié dans l'amont", UD:"modifié chez moi, supprimé dans l'amont",
   AU:"ajouté chez moi seulement", UA:"ajouté dans l'amont seulement"};
-let analyseCourante = null, occupe = false, confirmationEn = "", lancementPropre = null, assistantTeste = false;
+let diffArbre = null, analyseCourante = null, occupe = false, confirmationEn = "", lancementPropre = null, assistantTeste = false;
 
 function bouton(libelle, commande, attrs, classe){
   const inactif = occupe || enCours ? " disabled" : "";
@@ -93,7 +93,8 @@ function corpsFusion(a){
       + `<p class="doux">Le dépôt local a ${a.retard_origin} commit(s) de retard sur origin : à rattraper avant le merge.</p>`;
     return bouton("Lancer le merge", "git merge --no-ff --no-commit upstream/development", 'data-action="merge"');
   }
-  return tableConflits(a) + bouton("Terminer le merge", "git commit --no-edit", 'data-action="termine"' + (a.conflits.length ? " disabled" : ""), "principal")
+  return '<div class="avert" data-fusion-en-cours="1">Merge en cours : aucune autre session ni outil ne doit commiter, abandonner ou relancer de merge avant « Terminer » ou « Abandonner ».</div>'
+    + tableConflits(a) + bouton("Terminer le merge", "git commit --no-edit", 'data-action="termine"' + (a.conflits.length ? " disabled" : ""), "principal")
     + (a.conflits.length ? '<span class="doux">Actif quand plus aucun fichier n\'est en conflit.</span>' : "");
 }
 function liste(elements){ return "<ul>" + elements.map(x => `<li>${x}</li>`).join("") + "</ul>"; }
@@ -103,7 +104,10 @@ function corpsEtape(e, a){
     case "operation": return a.operation === "merge" ? boutonConfirme("abandonne", "Abandonner le merge", "git merge --abort") : "";
     case "branche": return actif || e.statut === "bloquee" ? bouton("Basculer sur development", "git switch development",
       'data-action="bascule"' + (a.fichiers.length ? " disabled" : "")) : "";
-    case "arbre": return liste(a.fichiers.map(f => `<span class="sha">${echappe(f.etat)}</span> ${echappe(f.chemin)}${f.build ? " (fichier de build)" : ""}`))
+    case "arbre": return liste(a.fichiers.map(f => `<span class="sha">${echappe(f.etat)}</span> <button class="lien" data-diff="${echappe(f.chemin)}">${echappe(f.chemin)}</button> `
+      + (f.classe === "amont" ? '<span class="r" data-classe="amont">touché aussi par l\'amont</span>' : '<span class="doux" data-classe="libre">sans recouvrement</span>')
+      + (f.build ? ' <span class="doux">(réécrit par le build)</span>' : "")))
+      + (diffArbre && a.fichiers.some(f => f.chemin === diffArbre.chemin) ? `<pre data-diff-arbre="1">${diffHtml(diffArbre.texte)}</pre>` : "")
       + bouton("Revérifier", "git status --porcelain", 'data-reanalyse="1"');
     case "nouveautes": return a.commits.length ? `<details><summary>${a.commits.length} commit(s) de l'amont</summary>`
       + liste(a.commits.map(c => `<span class="${c.saillant ? "saillant" : ""}">${c.saillant ? "● " : ""}<span class="sha">${echappe(c.sha)}</span> ${echappe(c.titre)}</span>`)) + "</details>" : "";
@@ -112,6 +116,7 @@ function corpsEtape(e, a){
     case "synchro_a": return actif ? bouton("Lancer le script de merge", "python synchronise_fork_tasmota.py", 'data-lance="1"', "principal") : "";
     case "fusion_b": return actif ? corpsFusion(a) : "";
     case "pousser": return actif ? boutonConfirme("pousse", "Pousser vers origin", "git push origin development") : "";
+    case "ff_origin": return actif ? bouton("Mettre à jour depuis origin", "git merge --ff-only origin/development", 'data-action="ff-origin"') : "";
     case "journal": return actif ? bouton("Commiter le journal", "git commit -- HISTORIQUE_SYNCHRO_FORK.md", 'data-journal="1"') : "";
   }
   return "";
@@ -122,7 +127,7 @@ function rendAssistant(){
   if (!a) return;
   let html = "";
   if (a.erreur) html = `<div class="avert"><b>Analyse impossible :</b> ${echappe(a.erreur)}</div>`;
-  else if (!a.etapes.length) html = '<p class="doux">Fork à jour : rien à faire.</p>';
+  else if (!a.etapes.length) html = '<p class="doux">Fork à jour : rien à faire. Les commits que ton fork a en avance sur l\'amont sont normaux et restent dans le fork.</p>';
   else html = '<ol class="etapes">' + a.etapes.map(e => `<li class="etape ${e.statut}" data-etape="${e.id}">
     <div class="titre"><span class="icone">${ICONES[e.statut] || "○"}</span>${echappe(e.titre)} <span class="doux">${echappe(e.detail)}</span></div>${corpsEtape(e, a)}</li>`).join("") + "</ol>";
   if (a.merge_assistant) html += boutonConfirme("abandonne", "Abandonner le merge", "git merge --abort");
@@ -137,11 +142,18 @@ async function chargeAssistant(){
     if (!r.ok) throw new Error(texte || ("HTTP " + r.status));
     analyseCourante = JSON.parse(texte);
   } catch (err) { analyseCourante = {erreur: "analyse illisible : " + err.message, etapes: [], conflits: [], merge_assistant: false}; }
-  confirmationEn = ""; rendAssistant();
+  confirmationEn = ""; diffArbre = null; rendAssistant();
+}
+async function montreDiff(chemin){
+  try {
+    const r = await fetch("/diff?chemin=" + encodeURIComponent(chemin)), texte = await r.text();
+    diffArbre = {chemin, texte: r.ok ? texte : (texte || "HTTP " + r.status)};
+  } catch (err) { diffArbre = {chemin, texte: err.message}; }
+  rendAssistant();
 }
 async function agit(corps){
   if (occupe) return;
-  occupe = true; confirmationEn = ""; message("…"); rendAssistant();
+  occupe = true; confirmationEn = ""; diffArbre = null; message("…"); rendAssistant();
   try {
     const r = await poste("/assistant/action", corps);
     message(r.resultat, "ok"); analyseCourante = r.analyse; chargeEtat();
@@ -171,6 +183,7 @@ $("assistant").onclick = ev => {
   else if (d.annule) { confirmationEn = ""; rendAssistant(); }
   else if (d.ferme) $("assistantVoies").hidden = true;
   else if (d.voies) montreVoies(d.voies);
+  else if (d.diff) montreDiff(d.diff);
   else if (d.reanalyse) chargeAssistant();
   else if (d.journal) commiteJournal();
   else if (d.lance) lance("merge", false);

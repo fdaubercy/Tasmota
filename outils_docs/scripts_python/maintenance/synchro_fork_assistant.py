@@ -29,7 +29,7 @@ def _git(racine, *args, delai=None):
         r = subprocess.run(["git", "-c", "core.quotePath=false", *args], cwd=racine, capture_output=True,
                            text=True, encoding="utf-8", errors="replace", env=ENV, timeout=delai)
     except subprocess.TimeoutExpired:
-        return -1, "", f"delai de {delai} s depasse : git {' '.join(args[:2])}"
+        return -1, "", f"délai de {delai} s dépassé : git {' '.join(args[:2])}"
     return r.returncode, r.stdout, r.stderr
 
 
@@ -69,7 +69,7 @@ def recupere(racine):
     for args in (("fetch", "-q", "upstream", "development"), ("fetch", "-q", "origin")):
         code, sortie, erreur = _git(racine, *args, delai=DELAI_FETCH)
         if code != 0:
-            return (erreur or sortie).strip()[:400] or f"git {args[0]} {args[2]} a echoue (code {code})"
+            return (erreur or sortie).strip()[:400] or f"git {args[0]} {args[-1]} a échoué (code {code})"
     return ""
 
 
@@ -95,10 +95,10 @@ def prevision(racine):
     return {"possible": False, "conflits": []}
 
 
-def _voie(retard, non_pousses, prev):
+def _voie(retard, non_pousses, prev, retard_origin=0):
     if not retard:
         return ""
-    if prev["conflits"] or non_pousses:
+    if prev["conflits"] or non_pousses or retard_origin:   # la voie B propose l'avance rapide sur origin
         return "B"
     return "A"
 
@@ -132,10 +132,8 @@ def analyse(racine=REPO, fetch=True):
         return a
     a["retard"], a["non_pousses"], a["retard_origin"] = retard, non_pousses, retard_origin
     a["commits"] = [{"sha": s, "titre": t, "saillant": bool(m)} for s, t, m in commits_locaux(racine)]
-    amont = _lignes(racine, "diff", "--name-only", "HEAD...upstream/development")
-    fork = set(_lignes(racine, "diff", "--name-only", "upstream/development...HEAD"))
-    a["touches_amont"] = sorted(amont)
-    a["touches_deux"] = sorted(set(amont) & fork)
+    amont, a["touches_deux"] = touches(racine)
+    a["touches_amont"] = amont
     a["prevision"] = prevision(racine)
     suivis, a["non_suivis"] = sfe.fichiers_modifies(racine)
     a["journal_modifie"] = any(f["journal"] for f in suivis)
@@ -143,9 +141,23 @@ def analyse(racine=REPO, fetch=True):
     a["fichiers"] = [] if a["merge_assistant"] else [
         {"etat": f["etat"], "chemin": f["chemin"], "classe": "amont" if f["chemin"] in amont else "libre",
          "build": f["chemin"] in FICHIERS_BUILD} for f in suivis if not f["journal"]]
-    a["voie"] = "B" if a["merge_assistant"] else _voie(retard, non_pousses, a["prevision"])
+    a["voie"] = "B" if a["merge_assistant"] else _voie(retard, non_pousses, a["prevision"], retard_origin)
     a["etapes"] = etapes(a)
     return a
+
+
+def touches(racine):
+    """([fichiers que l'amont a touches], [ceux touches aussi par le fork]) depuis la base commune."""
+    amont = _lignes(racine, "diff", "--name-only", "HEAD...upstream/development")
+    fork = set(_lignes(racine, "diff", "--name-only", "upstream/development...HEAD"))
+    return sorted(amont), sorted(set(amont) & fork)
+
+
+def autorises(racine):
+    """Fichiers dont /trois-voies rend les diffs : touches des deux cotes + en conflit (sans analyse complete)."""
+    import synchro_fork_fusion as fusion
+    en_conflit = [c["chemin"] for c in fusion.conflits(racine)] if fusion.merge_assistant_en_cours(racine) else []
+    return touches(racine)[1] + en_conflit
 
 
 def _etape(id_, titre, statut, detail=""):
@@ -162,10 +174,12 @@ def etapes(a):
     rien = not a.get("merge_assistant") and not retard and not a["non_pousses"] and not a["journal_modifie"]
     liste = []   # (id, titre, detail, information ?, bloquee ?)
     if a["operation"] and not a["merge_assistant"]:
-        liste.append(("operation", f"Un {a['operation']} est deja en cours",
-                      "Termine-le ou abandonne-le avant toute synchro (bloque tant qu'il est en cours).", False, True))
+        liste.append(("operation", f"Un {a['operation']} est déjà en cours",
+                      "Termine-le ou abandonne-le avant toute synchro (bloqué tant qu'il est en cours).", False, True))
     if rien:
-        pass   # rien a faire : ni arbre sale ni autre branche ne justifient une etape
+        if a.get("retard_origin") and a["branche"] == "development":   # « a jour » serait faux : origin a avance
+            liste.append(("ff_origin", "Rattraper origin", f"{a['retard_origin']} commit(s) de retard sur origin.",
+                          False, False))
     else:
         if a["branche"] != "development":
             detail = f"Branche actuelle : {a['branche'] or 'inconnue'}. La synchro ne vise que development."
@@ -173,32 +187,32 @@ def etapes(a):
                 detail += " Bouton actif seulement sur un arbre propre : commite d'abord les fichiers modifies."
             liste.append(("branche", "Passer sur development", detail, False, bool(a["fichiers"])))
         if a["fichiers"]:
-            liste.append(("arbre", "Arbre de travail propre", f"{len(a['fichiers'])} fichier(s) suivi(s) modifie(s) :"
-                          " bloquee tant qu'ils ne sont pas commites (/commite).", False, True))
+            liste.append(("arbre", "Arbre de travail propre", f"{len(a['fichiers'])} fichier(s) suivi(s) modifié(s) :"
+                          " bloquée tant qu'ils ne sont pas commités (/commite).", False, True))
         if retard:
-            liste.append(("nouveautes", "Nouveautes de l'amont", f"{retard} commit(s) de retard.", True, False))
+            liste.append(("nouveautes", "Nouveautés de l'amont", f"{retard} commit(s) de retard.", True, False))
             if a["touches_deux"]:
-                liste.append(("deux_cotes", "Fichiers touches des deux cotes", ", ".join(a["touches_deux"]),
+                liste.append(("deux_cotes", "Fichiers touchés des deux côtés", ", ".join(a["touches_deux"]),
                               True, False))
             if not prev["possible"]:
-                texte = "prevision impossible (git trop ancien ou commande en echec)"
+                texte = "prévision impossible (git trop ancien ou commande en échec)"
             elif prev["conflits"]:
                 texte = f"{len(prev['conflits'])} fichier(s) en conflit"
             else:
                 texte = "sans conflit"
-            liste.append(("prevision", "Prevision du merge", texte, True, False))
+            liste.append(("prevision", "Prévision du merge", texte, True, False))
         if voie == "A":
             liste.append(("synchro_a", "Synchroniser (en ligne puis local)", "Lance le script de merge.", False, False))
         elif voie == "B":
-            detail = "Merge local guide, fichier par fichier."
+            detail = "Merge local guidé, fichier par fichier."
             if a.get("merge_assistant"):
                 detail = f"Merge en cours : {len(a.get('conflits', []))} fichier(s) encore en conflit."
-            liste.append(("fusion_b", "Merger en local et resoudre", detail, False, False))
-        if a["non_pousses"]:
-            liste.append(("pousser", "Pousser vers origin", f"{a['non_pousses']} commit(s) non pousse(s).",
-                          False, False))
+            liste.append(("fusion_b", "Merger en local et résoudre", detail, False, False))
         if a["journal_modifie"]:
-            liste.append(("journal", "Commiter le journal", "Le journal des synchros a ete complete.", False, False))
+            liste.append(("journal", "Commiter le journal", "Le journal des synchros a été complété.", False, False))
+        if a["non_pousses"]:
+            liste.append(("pousser", "Pousser vers origin", f"{a['non_pousses']} commit(s) non poussé(s).",
+                          False, False))
     resultat, bloque, courante_posee = [], False, False
     for id_, titre, detail, info, bloquante in liste:
         if info:
@@ -225,6 +239,6 @@ def trois_voies(racine, chemin, autorises):
     for cible in ("HEAD", "upstream/development"):
         _, texte, _ = _git(racine, "diff", base, cible, "--", chemin)
         if len(texte) > sfe.MAX_DIFF:
-            texte = texte[:sfe.MAX_DIFF] + f"\n... (tronque a {sfe.MAX_DIFF // 1024} Ko)\n"
+            texte = texte[:sfe.MAX_DIFF] + f"\n... (tronqué à {sfe.MAX_DIFF // 1024} Ko)\n"
         sorties.append(texte)
     return {"mien": sorties[0], "amont": sorties[1]}
