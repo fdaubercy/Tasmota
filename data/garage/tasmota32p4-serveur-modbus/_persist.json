@@ -1325,7 +1325,9 @@
 								"axes": "YZ",
 								"angleOuvert": 85.0,
 								"angleFerme": 3.0,
-								"marge": 3
+								"marge": 3,
+								"blocage": 5,
+								"blocageDegres": 1
 							}
 						},
                         "activationSiOuvert": {

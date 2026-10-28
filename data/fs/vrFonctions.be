@@ -526,12 +526,36 @@ vrFonctions.releveInclinaison = vrFonctions_releveInclinaison
 def vrFonctions_suitInclinaison(vr)
     var nom = "vrInclinaison" + str(vr["id"])
     tasmota.remove_timer(nom)
-    if (vrFonctions.releveInclinaison(vr) == nil)    return    end
-    if (vrFonctions.suiviInclinaison(vr["id"])["enCourse"])
+    var angle = vrFonctions.releveInclinaison(vr)
+    if (angle == nil)    return    end
+    if (vrFonctions.suiviInclinaison(vr["id"])["enCourse"] && !vrFonctions.verifieBlocage(vr, angle))
         tasmota.set_timer(250, def () vrFonctions.suitInclinaison(vr) end, nom)
     end
 end
 vrFonctions.suitInclinaison = vrFonctions_suitInclinaison
+
+# Blocage : moteur en marche mais angle fige (moins de 'blocageDegres' de mouvement pendant 'blocage'
+# secondes ; 0 = pas de detection) -> ShutterStop + erreur. Rend true si le volet vient d'etre arrete.
+# Le repere [angle, millis] est remis a nil a chaque changement de direction (changementDirection).
+def vrFonctions_verifieBlocage(vr, angle)
+    import string
+    import math
+    var incl = vrFonctions.inclinaison(vr)
+    var delai = incl.find("blocage", 5)
+    if (delai <= 0)    return false    end
+    var suivi = vrFonctions.suiviInclinaison(vr["id"])
+    var repere = suivi.find("repere")
+    if (repere == nil || math.abs(angle - repere[0]) >= incl.find("blocageDegres", 1))
+        suivi["repere"] = [angle, tasmota.millis()]    # le volet bouge : nouveau repere
+        return false
+    end
+    if (!tasmota.time_reached(repere[1] + int(delai * 1000)))    return false    end
+    suivi["repere"] = nil
+    tasmota.cmd(string.format("ShutterStop%i", vr["id"]), boolMute)
+    vrFonctions.log(string.format("VR_INCLINAISON: Volet %i bloque a %.1f degres (%s) depuis %s s : moteur arrete !", vr["id"], angle, str(suivi["etat"]), str(delai)), LOG_LEVEL_ERREUR)
+    return true
+end
+vrFonctions.verifieBlocage = vrFonctions_verifieBlocage
 
 # Ligne de la page d'accueil : DERNIER angle releve (demarrage, course, arret), sans relire le bus a
 # chaque rafraichissement de la page (un capteur muet loguerait une erreur toutes les 2 s)
@@ -586,7 +610,9 @@ def vrFonctions_changementDirection(value, trigger, msg, numRideau)
 
     # Capteur d'inclinaison actif : suivi pendant la course, derniere lecture a l'arret
     if (vrFonctions.inclinaison(vr) != nil)
-        vrFonctions.suiviInclinaison(numRideau)["enCourse"] = (value != 0)
+        var suivi = vrFonctions.suiviInclinaison(numRideau)
+        suivi["enCourse"] = (value != 0)
+        suivi["repere"] = nil                       # detection de blocage : repere repris a chaque course
         vrFonctions.suitInclinaison(vr)
     end
 

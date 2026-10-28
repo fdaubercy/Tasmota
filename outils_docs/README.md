@@ -305,7 +305,9 @@ Sous `drivers.voletRoulants.environnement.VRs.<VR>.capteursPosition` :
     "axes": "YZ",
     "angleOuvert": 85.0,
     "angleFerme": 3.0,
-    "marge": 3
+    "marge": 3,
+    "blocage": 5,
+    "blocageDegres": 1
 }
 ```
 
@@ -315,6 +317,16 @@ Sous `drivers.voletRoulants.environnement.VRs.<VR>.capteursPosition` :
 - `angleOuvert` / `angleFerme` : les butées, en degrés. `angleOuvert` peut être plus petit que `angleFerme`
   (selon le montage).
 - `marge` : hystérésis en degrés pour QUITTER une butée (pas de rebond au seuil).
+- `blocage` / `blocageDegres` : détection de blocage (ci-dessous). `blocage` à 0 la désactive.
+
+### Détection de blocage
+
+Pendant la course, si l'angle bouge de moins de `blocageDegres` (1° par défaut) pendant `blocage` secondes
+(5 par défaut) alors que le moteur tourne, la carte envoie `ShutterStop<id>` et logue une erreur
+`VR_INCLINAISON: Volet 1 bloque a 40.0 degres (entre) depuis 5 s : moteur arrete !`. Cas couverts : trappe
+coincée, moteur qui force contre une butée parce que la position estimée était fausse. Le délai repart à chaque
+mouvement et à chaque nouvelle course : un départ lent ne déclenche rien tant qu'il dure moins de `blocage`
+secondes. Régler `blocage` au-dessus du temps de démarrage réel du moteur.
 
 ### Apprentissage des butées
 
@@ -341,8 +353,8 @@ une trappe bougée à la main n'y apparaît qu'à la prochaine manœuvre. « cap
 ### Banc
 
 `python outils_docs/scripts_python/berry/banc_inclinaison.py` : le vrai `vrFonctions.be` sous `berry.exe`, avec un
-faux bus I2C (garde d'activation, angles, hystérésis, recalage, suivi pendant la course, pannes, apprentissage,
-ligne web). Code de sortie 0 = vert. Ne teste ni le vrai bus, ni le vrai Shutter, ni le capteur physique.
+faux bus I2C et une horloge simulée (garde d'activation, angles, hystérésis, recalage, suivi pendant la course, pannes,
+apprentissage, blocage, ligne web). Code de sortie 0 = vert. Ne teste ni le vrai bus, ni le vrai Shutter, ni le capteur physique.
 
 <hr></hr>
 

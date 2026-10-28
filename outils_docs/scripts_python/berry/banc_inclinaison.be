@@ -50,8 +50,10 @@ class WireStub
 end
 
 class TasmotaStub
-    var cmds, timers, scans, bus, reponse
-    def init() self.cmds = [] self.timers = {} self.scans = [] self.bus = {} self.reponse = nil end
+    var cmds, timers, scans, bus, reponse, horloge     # horloge : millis simulees, avancees par le test
+    def init() self.cmds = [] self.timers = {} self.scans = [] self.bus = {} self.reponse = nil self.horloge = 0 end
+    def millis() return self.horloge end
+    def time_reached(t) return self.horloge >= t end
     def cmd(c, m) self.cmds.push(c) return {} end
     def wire_scan(adr, idx) self.scans.push(adr) return self.bus.find(adr) end
     def set_timer(d, f, id) self.timers[id] = f end
@@ -256,5 +258,51 @@ mpu.accel = nil
 vrFonctions.releveInclinaison(vr1)
 verifie(string.find(vrFonctions.ligneWebInclinaison(vr1), "capteur muet") > 0, "capteur muet affiche apres une panne")
 mpu.accel = [0, 0, 16384]
+
+print("10. Blocage : moteur en marche, angle fige 'blocage' secondes -> ShutterStop + erreur")
+inclinaison["angleOuvert"] = 85
+inclinaison["angleFerme"] = 3
+vrFonctions.etat()["inclinaison"] = {}
+def pas()                                       # un pas de suivi : 250 ms plus tard
+    tasmota.horloge += 250
+    if tasmota.timers.contains("vrInclinaison1")    tasmota.timers["vrInclinaison1"]()    end
+end
+def stops()
+    var l = []
+    for c: tasmota.cmds    if string.find(c, "ShutterStop") == 0    l.push(c)    end    end
+    return l
+end
+tasmota.cmds = []
+incline(mpu, 40)
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+for n: 1 .. 19    pas()    end
+verifie(size(stops()) == 0, "angle fige 4,75 s : pas encore de blocage")
+avant = erreurs()
+pas()
+verifie(stops() == ["ShutterStop1"] && erreurs() == avant + 1, "angle fige 5 s : ShutterStop1 et une erreur")
+verifie(!tasmota.timers.contains("vrInclinaison1"), "blocage : suivi non rearme")
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+tasmota.cmds = []
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+for n: 1 .. 40
+    incline(mpu, 40 + n * 0.5)
+    pas()
+end
+verifie(size(stops()) == 0 && tasmota.timers.contains("vrInclinaison1"), "volet qui bouge (2 degres/s) pendant 10 s : pas de blocage")
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+tasmota.horloge += 10000                        # volet a l'arret 10 s, au meme angle
+vrFonctions.changementDirection(-1, "Shutter1#Direction", {}, 1)
+for n: 1 .. 19    pas()    end
+verifie(size(stops()) == 0, "temoin : nouvelle course, repere repris au depart (pas de blocage immediat)")
+pas()
+verifie(stops() == ["ShutterStop1"], "nouvelle course figee 5 s : blocage")
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+tasmota.cmds = []
+inclinaison["blocage"] = 0
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+for n: 1 .. 40    pas()    end
+verifie(size(stops()) == 0, "blocage 0 : pas de detection")
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+inclinaison.remove("blocage")
 
 print(echecs == 0 ? "BANC_INCLINAISON: OK" : "BANC_INCLINAISON: ECHEC (" + str(echecs) + ")")
