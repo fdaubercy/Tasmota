@@ -8,7 +8,7 @@
         EX: ReglageUDP envoiUniCast 192.168.4.2 Salut Ca gaz !
 
     - Dans le fichiers json :'json/discovery.json', il enregistre les paramètres des modules connectés:
-        * id, nom, adressMAC, routagePort, routageIP, routageMaitreIP (cette dernière sera transmise après par le maitre)
+        * id, nom, adresseMAC, routagePort, routageIP, routageMaitreIP (cette dernière sera transmise après par le maitre)
         * les paramètres de routage vont servir si le RangeExtender est activé
         * Il enregistre aussi les règles de routage pour chaque module connecté.
         * Il contient les paramètres pour le maitre et les esclaves.

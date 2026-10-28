@@ -70,7 +70,6 @@
 			"hostname": "{{hostname}}",
 			"mDNS": "ON",
 			"apiHTTP": "ON",
-			"adressMAC": "",
 			"log": "info",
 			"IP": {
 				"IPAddress": "{{ip}}",

@@ -58,7 +58,6 @@
 		"hostname": "SERVEUR-GARAGE",
 		"mDNS": "ON",
 		"apiHTTP": "ON",
-		"adressMAC": "",
 		"log": "info",
 		"IP": {
 			"IPAddress": "192.168.0.43",

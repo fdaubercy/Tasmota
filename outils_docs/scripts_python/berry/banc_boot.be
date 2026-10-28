@@ -67,7 +67,7 @@ var DEFAUTS_CONNUS = {
     "B1": false,        # audit B1 / P10.1 : pas de garde de tete dans l'autoexec (persist vide ou sans 'diverses')
     "B2": false,        # audit B2 / P10.2 : pas de try/except par controleXxx -> un echec arrete tout l'autoexec
     "B3": false,        # audit B3 / P10.2 : ReglageGlobal/ReglageLog enregistrees APRES configGlobalByJson
-    "MAC": false,        # trouve par ce banc : globalFonctions.be:87-88, adressMAC "" jamais remplacee (map.insert)
+    "MAC": false,        # trouve par ce banc : globalFonctions.be:87-88, adressMAC "" jamais remplacee (map.insert) ; cle devenue adresseMAC le 2026-10-28
     "ES8311": false,    # corrige le 2026-10-23 (garde controleES8311.pret) ; trouve par ce banc : controleES8311.be, codec absent du bus I2C -> exception a l'import
 }
 var ENV = "tasmota32p4-garage-serveur-modbus"
@@ -298,8 +298,8 @@ def controlesPremieresSecondes()
     controle(string.format("%i regles declenchees par System#Init/Boot, WIFI, MQTT, Time, HTTP", n), n >= 5)
     var cg = global.controleGeneral
     controle("System#Boot pose controleGeneral.booted", cg.booted == true)
-    connu("MAC", "System#Boot : adresse MAC (Status 5) relevee dans serveur.adressMAC", global.serveur.find("adressMAC") == tasmota.mac,
-          "adressMAC reste '" + str(global.serveur.find("adressMAC")) + "' : map.insert ne remplace pas la cle vide du persist")
+    connu("MAC", "System#Boot : adresse MAC (Status 5) relevee dans serveur.adresseMAC", global.serveur.find("adresseMAC") == tasmota.mac,
+          "adresseMAC reste '" + str(global.serveur.find("adresseMAC")) + "' : map.insert ne remplace pas la cle vide du persist")
 
     for d: tasmota.drivers.copy()
         if introspect.get(d, "web_add_handler") != nil    tasmota.appelle(classname(d) + ".web_add_handler", /-> d.web_add_handler(), [])    end

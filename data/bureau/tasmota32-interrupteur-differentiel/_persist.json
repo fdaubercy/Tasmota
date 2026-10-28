@@ -47,7 +47,6 @@
 		"hostname": "DISJONCTEUR-DIFFERENTIEL-BUREAU",
 		"mDNS": "ON",
 		"apiHTTP": "ON",
-		"adressMAC": "",
 		"log": "info",
 		"IP": {
 			"IPAddress": "192.168.0.49",

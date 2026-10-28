@@ -58,7 +58,6 @@
 		"hostname": "CAPTEURS-CUVE",
 		"mDNS": "ON",
 		"apiHTTP": "ON",
-		"adressMAC": "",
 		"log": "info",
 		"IP": {
 			"IPAddress": "0.0.0.0",

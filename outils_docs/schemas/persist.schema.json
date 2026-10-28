@@ -382,9 +382,6 @@
             "OFF"
           ]
         },
-        "adressMAC": {
-          "type": "string"
-        },
         "log": {
           "type": "string",
           "description": "Seuil de log du module : erreur, info, debug ou detail (charte data/fs/logFonctions.be).",
@@ -764,7 +761,6 @@
         "hostname",
         "mDNS",
         "apiHTTP",
-        "adressMAC",
         "log",
         "IP",
         "wifi",
