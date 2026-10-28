@@ -274,8 +274,12 @@ Chaque essai : demander à l'utilisateur, vérifier qu'aucun build ne tourne, un
 
 - [x] Compiler seul un env (ex. cuve) : étapes, %, durée de compilation affichée dès la fin ; calibrage A2. — preuve : essai utilisateur 2026-10-25 (P4 et cuve, journaux 20261025-000156 et -003648) ; calibrage 40f9f0726
 - [x] Téléverser par COM (cuve, COM12) : % esptool, mention « FS aussi flashé » si `littlefs.bin` présent. — preuve : essai utilisateur 2026-10-25, [SUCCESS] code 0, littlefs.bin écrit à 0x004b0000 (journal 20261025-003648)
-- [ ] Téléverser le firmware en OTA (P4) par la page (`/u2`) sans toucher au `.ini` : `git diff
+- [x] Téléverser le firmware en OTA (P4) par la page (`/u2`) sans toucher au `.ini` : `git diff — preuve : essai réel de l'utilisateur, 2026-10-28
   platformio_tasmota_cenv.ini` vide.
+  ; journal `20261028-063324-tasmota32p4-garage-serveur-modbus-upload.log` = `pio run -e …` SANS `-t upload` (compilation
+  seule, SUCCESS) ; P4 relu après : `Status 2` BuildDateTime 2026-10-28T06:51:41 (cette compilation), redémarrage
+  logiciel à 07:12:45 (`Status 1`), juste après `firmware.bin` (07:11) ; `git diff platformio_tasmota_cenv.ini` vide
+  (dernier commit du fichier : 5638b27ac du 26/10).
 - [x] Téléverser le FS en OTA sur une carte choisie par l'utilisateur : sauvegarde du persist présente,
   relecture identique, persist de la carte après redémarrage = persist envoyé. — preuve : essai réel de l'utilisateur sur le P4, 2026-10-26 ; sauvegarde `persist/tasmota32p4-garage-serveur-modbus-20261026-055308.json`
 - [x] Série de 2 envs dont 1 en échec provoqué (port COM débranché) : bandeau rouge, l'autre env aboutit. — preuve : essai réel de l'utilisateur, 2026-10-25
@@ -349,6 +353,15 @@ Fichiers pressentis : `outils_pc/build_envs.py`, `build_ota_fs.py`, `build_serie
   des bancs `test_build_ota_fs` visent déjà une adresse `127.0.0.1:<port>` (même forme `IP:port`), tous VERTS ;
   `test_ota_par_maitre` : maître consulté avant l'envoi, refus -> aucun envoi.
 - [ ] Essai réel par l'utilisateur : OTA du firmware ou du FS sur la cuve par le maître.
+
+Essai du 2026-10-28 (08:03) : ÉCHEC. Connexion par le maître OK (CAPTEURS-CUVE), bascule en safeboot OK, puis envoi
+coupé à 3 % (`WinError 10053`) ; cuve restée en safeboot (Tasmota 15.4.0.1, `/u4` -> `true`, ne connaît pas `Status`).
+Cause reproduite sans écriture (POST de zéros sur `/u2` armé, octet magique refusé) : par la redirection du maître,
+~16 Ko/s puis une pause de 6,4 s à 172 Ko -> la cuve ferme (WebServer Arduino : `HTTP_MAX_POST_WAIT` 5000 ms).
+Le téléchargement par la carte (`Upgrade`) aurait le même délai (`HTTPCLIENT_DEFAULT_TCP_TIMEOUT` 5000 ms).
+Second défaut : la page lit `Status 2` avant l'envoi -> impossible de relancer vers une carte déjà en safeboot.
+CAUSE PROUVÉE (même mesure, 1 Mo) : `Sleep` du maître. `Sleep 0` -> 74 et 102 Ko/s, aucune pause, envoi complet ;
+`Sleep 50` (réglage du maître) -> 16 à 27 Ko/s, pauses jusqu'à 7,8 s, coupure (deux mesures). `Sleep 50` remis après.
 
 Constats sur carte (2026-10-26, lecture seule sauf mention) : la table `RgxPort` du maître était vide après son
 redémarrage de 05:53 (`192.168.0.43:8081` muet) ; `RoutageRangeExtender` n'a rien posé et
