@@ -140,7 +140,8 @@ vague de corrections finale du meme jour ; 935 le 2026-10-25 avec le panneau « 
 televerser » ; 1038 le meme jour avec la pause « rebranchez la carte » et les panneaux refermes ; 1053 avec
 l'envoi sans recompiler apres la pause et la pause rouverte ; 1062 avec le lien « fichiers » vers la page
 Fichiers Berry par env ; 1083 le 2026-10-26 avec les cases FS grisees quand l'envoi serie du firmware ecrit
-deja le FS ; 1131 le meme jour avec les sons de fin de lancement et de pause). C'est la page
+deja le FS ; 1131 le meme jour avec les sons de fin de lancement et de pause ; 1152 le 2026-10-29 avec le
+branchement de l'onglet « Fichiers », dont le code vit dans `build_page_fichiers.py`). C'est la page
 unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule constante
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
@@ -648,7 +649,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     exige (DNS rebinding). Autre appareil : lien a jeton de la console / de la page sur le PC. Bancs :
     `test_annuaire.py`, `test_annuaire_lanceur.py`, `test_annuaire_securite.py`.
     Spec : `docs/superpowers/specs/2026-10-17-annuaire-outils-design.md`.
-  - `build_web.py` (+ `build_page.py`, `build_serie.py`, `build_envs.py`, `build_progression.py`, `build_ota_fs.py`, `build_fichiers.py`,
+  - `build_web.py` (+ `build_page.py`, `build_serie.py`, `build_envs.py`, `build_progression.py`, `build_ota_fs.py`, `build_fichiers.py`, `build_page_fichiers.py`,
     `build_solidification.py`, et pour les bancs `build_faux_pio.py`, `build_ota_carte_simulee.py`) — page « Build et televersement »
     http://127.0.0.1:7700 (tuile de l'annuaire, groupe Maintenance, hors job : l'annuaire refuse de l'arreter pendant
     un lancement ; tache VS Code « Outil : build et televersement » ; cible Custom « Build et televersement (page web) »
@@ -687,7 +688,9 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `user_config_override.h` (a commiter). Bancs : `test_build_*.py` (+ sonde `test_build_page_chrome.py`).
     Onglet « Fichiers » (A15, en cours, spec choix 24) : `GET /fichiers?env=` (`build_fichiers.py::liste` : fichiers de
     l'image du dernier buildfs, jeton = date de l'image) puis action `fichiers` de la serie (une carte OTA, fichiers
-    choisis, refus si l'image a change depuis la liste ; `build_ota_fs.py::envoie_fs_ota` avec `fichiers=`).
+    choisis, refus si l'image a change depuis la liste ; `build_ota_fs.py::envoie_fs_ota` avec `fichiers=`). Page :
+    `build_page_fichiers.py` (CSS/HTML/JS de l'onglet, maquette E, inseres dans `build_page.PAGE` ; avancement en % et
+    journal des etapes dans l'onglet) ; sonde `test_build_page_fichiers_chrome.py` (Python de PlatformIO, aucun envoi).
     Mode d'emploi : `outils_docs/README.md` § « Build et televersement (page web) ». Spec :
     `docs/superpowers/specs/2026-10-24-page-build-televersement-design.md` ; plan :
     `tasks/plans/page-build-televersement.md`.

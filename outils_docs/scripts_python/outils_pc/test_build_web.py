@@ -476,6 +476,10 @@ def test_fichiers(b):
     verifie(recus, [{"fichiers": ["autoexec.be"], "recharger_berry": True, "redemarrer": False}],
             "fichiers : choix et options transmis a l'envoi")
     verifie(b.json("GET", "/envs")[1]["derniers"], avant, "fichiers : derniers choix de l'onglet Build intacts")
+    verifie(b.json("POST", "/lancer", {"lignes": [dict(ligne, methode="com", ip="")], "actions": ["buildfs"],
+                                       "onglet": "fichiers"})[0], 200, "fichiers : « Préparer la liste » (buildfs) accepte")
+    b.attend_fin()
+    verifie(b.json("GET", "/envs")[1]["derniers"], avant, "fichiers : « Préparer la liste » ne touche pas aux derniers choix du Build")
 
 
 def test_lancement(b):

@@ -29,6 +29,8 @@ rouverte : port absent ou tenu, message `erreur` dans le bandeau). Compilation f
 l'envoi part en `-t nobuild`, ses etapes restent sur sa ligne (pas rattachees a « Compiler »). Etat de fin :
 orange pour un arret sans echec ou si aucun env n'a abouti ; les envs arretes pendant une pause (`arretes`)
 sont comptes a part dans le recapitulatif.
+Onglet « Fichiers » (A15) : build_page_fichiers.py, insere a la fin de ce module ; traite() lui passe chaque
+evenement (fichiersEvenement) et majBouton ses boutons (majBoutonsFichiers).
 """
 
 PAGE = r"""<!doctype html>
@@ -158,6 +160,7 @@ PAGE = r"""<!doctype html>
   #recap{margin-top:10px}
   #recap .fichiers{color:var(--orange);margin-top:4px}
   .vide{color:var(--discret);font-size:13px}
+/*CSS_FICHIERS*/
   @media (max-width:820px){.disposition{grid-template-columns:1fr}.commandes{position:static}}
   @media (max-width:520px){
     main{padding:8px 16px 30px}
@@ -184,7 +187,11 @@ PAGE = r"""<!doctype html>
     </div>
   </div>
   <div id="message" class="erreur"></div>
-  <div class="disposition">
+  <nav class="onglets" role="tablist" aria-label="Onglets">
+    <button id="onglet-build" type="button" role="tab" aria-selected="true" aria-controls="vue-build">Build</button>
+    <button id="onglet-fichiers" type="button" role="tab" aria-selected="false" aria-controls="vue-fichiers">Fichiers</button>
+  </nav>
+  <div id="vue-build" class="disposition" role="tabpanel" aria-labelledby="onglet-build">
     <section id="liste" aria-label="Environnements"><div class="vide">Lecture des environnements…</div></section>
     <aside class="commandes">
       <div class="carte">
@@ -213,6 +220,7 @@ PAGE = r"""<!doctype html>
       </div>
     </aside>
   </div>
+<!--VUE_FICHIERS-->
   <section id="suivi" class="carte" aria-live="polite">
     <h2>Suivi</h2>
     <div id="bandeaux"></div>
@@ -228,7 +236,7 @@ var $ = function (id) { return document.getElementById(id); };
 var DELAI_APPEL = 15000;
 var ACTIONS = ["compiler", "upload", "erase_upload", "buildfs", "uploadfs"];
 var LIBELLES = {compiler: "Compiler le firmware", upload: "Téléverser le firmware", erase_upload: "Effacer puis téléverser",
-                buildfs: "Construire le file system", uploadfs: "Téléverser le file system"};
+                buildfs: "Construire le file system", uploadfs: "Téléverser le file system", fichiers: "Envoyer des fichiers"};
 var TELEVERSEMENTS = ["upload", "erase_upload"];          // l'un OU l'autre : les enchainer flasherait deux fois
 var FAMILLES = [["cartes", "Mes cartes", true], ["bases", "Mes bases", true], ["amont", "Tasmota (amont)", false]];
 var SOUS_GROUPES = [["safeboot", "Safeboot"], ["esp32", "ESP32"], ["langues", "Langues"], ["esp8266", "ESP8266"]];
@@ -348,6 +356,7 @@ function construitListe(donnees) {
     liste.appendChild(fam);
   });
   majTout();
+  fichiersCartes();
 }
 
 function ligneEnv(e) {
@@ -469,6 +478,7 @@ function majBouton() {
   ce.parentNode.title = ce.disabled ? "Par câble (COM) seulement : " + enOta.join(", ") + " en OTA" :
     "pio run -t erase_upload : efface toute la flash, puis téléverse le firmware par câble" +
     (avecFs.length ? " (et le file system pour " + avecFs.join(", ") + ")" : "");
+  majBoutonsFichiers();
 }
 
 // « Construire / Téléverser le file system » grisées (et décochées) quand l'envoi série du firmware les fait déjà
@@ -665,6 +675,7 @@ function traite(e) {
   }
   var rejeu = typeof e.n === "number" && e.n <= rejeuJusqua;
   traiteEvenement(e, rejeu);
+  fichiersEvenement(e, rejeu);       // onglet Fichiers : avancement du lancement parti de lui
   if (rejeu && e.n === rejeuJusqua) finRejeu();
 }
 
@@ -934,7 +945,8 @@ function dessineBloc(env) {
   u.tete.appendChild(h("span", {}, h("span", {"class": "discret", texte: methode + "  "}),
     h("span", {"class": "puce " + classe, texte: libelle + (b.secondes !== null ? " · " + duree(b.secondes) : "")})));
   u.rangs.textContent = "";
-  ACTIONS.filter(function (a) { return b.rangs[a]; }).forEach(function (a) { u.rangs.appendChild(dessineRang(b, b.rangs[a])); });
+  // « fichiers » : action de l'onglet Fichiers, sans case dans l'onglet Build
+  ACTIONS.concat("fichiers").filter(function (a) { return b.rangs[a]; }).forEach(function (a) { u.rangs.appendChild(dessineRang(b, b.rangs[a])); });
   u.notes.textContent = "";
   if (b.fsAussi) u.notes.appendChild(h("div", {"class": "note-fs", texte: "Le file system (persist compris) est aussi flashé avec le firmware."}));
   if (b.repris) u.notes.appendChild(h("div", {"class": "discret", texte: "Reprise après l'attente d'un autre build."}));
@@ -1116,6 +1128,8 @@ $("son").onchange = function () {
   try { localStorage.setItem("build-son", this.checked ? "1" : "0"); } catch (e) {}
 };
 
+/*JS_FICHIERS*/
+
 async function demarre() {
   await chargeEnvs(false);
   var r = await appel("/execution");
@@ -1131,3 +1145,9 @@ demarre();
 </body>
 </html>
 """
+
+# Onglet « Fichiers » (A15) : dans son propre module, la page depasse deja les 1100 lignes
+import build_page_fichiers                          # noqa: E402
+
+PAGE = (PAGE.replace("/*CSS_FICHIERS*/", build_page_fichiers.CSS).replace("<!--VUE_FICHIERS-->", build_page_fichiers.HTML)
+        .replace("/*JS_FICHIERS*/", build_page_fichiers.JS))

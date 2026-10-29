@@ -526,7 +526,8 @@ le verrou d'envoi de `build_serie.py` (jamais pendant un build ni un autre envoi
   Énoncé : `GET /fichiers?env=` (liste de l'image : chemin, taille, date de l'image, image absente ou plus
   ancienne que le dépôt signalée) et lancement d'un envoi partiel dans la série (`build_serie`, refus pendant un build).
   Banc `test_build_web` / `test_build_serie`.
-- [ ] Page : onglet « Fichiers » (`build_page.py`), sélection, envoi, suivi ; sonde Chrome `test_build_page_chrome`.
+- [x] Page : onglet « Fichiers » (`build_page.py`), sélection, envoi, suivi ; sonde Chrome `test_build_page_chrome`. — preuve : `test_build_page_fichiers_chrome.py` VERT (33 OK, maquette E, barre % et journal, envoi intercepté) ; `test_build_page_chrome.py` VERT (témoin compris) ; `test_build_web.py` VERT (+2, mutant `onglet` rouge) ; défaut trouvé par la sonde corrigé (ligne « fichiers » absente du Suivi).
+  Code : `build_page_fichiers.py` (inséré dans PAGE), `build_web.py` (`onglet: "fichiers"` : derniers choix du Build non écrits).
   Demande de l'utilisateur (2026-10-29) : l'onglet montre l'avancement de l'envoi, barre en POURCENTAGE et journal
   des étapes (événements `etape` de l'action « fichiers » : étape, %, détail « 3/5 /controleCuve.be »), sans passer
   par l'onglet Build.

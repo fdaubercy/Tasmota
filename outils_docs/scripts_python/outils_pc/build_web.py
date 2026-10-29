@@ -20,7 +20,8 @@ Routes (les POST exigent l'en-tete X-Build: 1 et la meme origine) :
     GET  /fichiers   ?env=<env> : fichiers de l'image du FS de l'env (onglet Fichiers, build_fichiers.liste)
     POST /lancer     {lignes: [{env, methode, port, ip}], actions: [...]}   409 = refus (motifs) ; onglet
                      Fichiers : actions ["fichiers"], une ligne OTA, et fichiers {liste, jeton, recharger_berry,
-                     redemarrer} (jeton = celui de /fichiers : image inchangee depuis la liste)
+                     redemarrer} (jeton = celui de /fichiers : image inchangee depuis la liste) ; onglet: "fichiers"
+                     (envoi ou « Préparer la liste ») : derniers choix de l'onglet Build non ecrits
     POST /port       {env, port} : ecrit upload_port (409 pendant un lancement ou un build lance ailleurs,
                      400 si invalide)
     POST /arreter    {immediat: bool}
@@ -199,7 +200,7 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
             except RuntimeError:
                 etat["debut"] = ancien                    # un refus ne change pas le lancement en cours
                 raise
-            if not fichiers:                              # les choix de l'onglet Build ne sont pas ceux de Fichiers
+            if not fichiers and demande.get("onglet") != "fichiers":   # les choix du Build ne sont pas ceux de Fichiers
                 ecrit_derniers(dossier, [asdict(o) for o in objets], actions)
             return {"ok": True}
         if chemin == "/port":
