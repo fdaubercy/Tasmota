@@ -521,6 +521,16 @@ Ne pas commencer sans son feu vert. À ce moment-là, écrire d'abord un plan d�
   `fichiers_berry_coprocesseur._membres`), jamais par un `json.dumps` complet ;
 - même transaction, même diff.
 
+Demandes de l'utilisateur (2026-10-29) :
+- reprendre un env existant dans la page et le modifier ;
+- toute modification d'un paramètre, dans n'importe quel onglet, réactive « Voir le diff », y compris après une
+  création (aujourd'hui `cree` le grise pour de bon : `assistant_persist_page_js.py::majCreer`) ;
+- « Créer l'environnement » devient « Modifier l'environnement » quand l'env saisi existe déjà ;
+- supprimer un env depuis la page : sa section du cenv, sa section de `user_config_override.h` et le dossier créé
+  (moteur existant de la page 7800 : `fichiers_berry_suppression.py`).
+
+Feu vert donné le 2026-10-29. Plan détaillé : `tasks/plans/assistant-persist-modification.md` (spec §10).
+
 - [ ] Feu vert de l'utilisateur, puis plan détaillé de l'action écrit et validé.
 - [ ] Réalisation selon ce plan.
 

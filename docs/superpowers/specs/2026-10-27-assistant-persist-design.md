@@ -396,3 +396,69 @@ commit `git commit -- <chemins>`.
 - Fichiers < 500 lignes, sauf exception décidée par l'utilisateur. Ne jamais compresser des commentaires pour tenir
   la limite (leçon du 2026-10-18).
 - `data/fs/*.be` non modifiés.
+
+## 10. Avenant du 2026-10-29 — reprendre, modifier et supprimer un env existant (action A10)
+
+Déclenché par l'utilisateur le 2026-10-29. Il lève, pour la page 7900, la décision 2 (« pas de préremplissage
+depuis une carte existante ») et les non-objectifs « Préremplir depuis une carte existante » et « Modifier un env
+existant ». Le reste de la spec s'applique tel quel (mots de passe, build en cours, transaction, `data/fs/*.be`).
+
+### 10.1 Demandes de l'utilisateur
+
+1. Reprendre un env existant dans la page et le modifier.
+2. Toute modification d'un paramètre, dans n'importe quel onglet, réactive « Voir le diff », y compris après une
+   création ou une modification réussie.
+3. « Créer l'environnement » devient « Modifier l'environnement » quand l'env renseigné existe déjà.
+4. Supprimer un env depuis la page : sa section du cenv, sa section de `user_config_override.h` et le dossier créé.
+   **Le dossier est renommé `…-sauvegarde`** (choix du 2026-10-29, comme la page 7800), rien n'est effacé.
+5. Avant une suppression, la page présente **chacun des éléments touchés** et l'utilisateur les vérifie avant de
+   valider.
+
+### 10.2 Principe de la modification : appliquer un écart, jamais régénérer
+
+Les fichiers d'une carte ont pu être retouchés à la main (clés propres, ports dans le cenv, lignes du `.h`). On ne
+les régénère donc jamais. On génère deux fois :
+- **A** = ce que l'assistant produirait à partir des réponses **relues** de la carte (`reponses_depuis_persist`) ;
+- **B** = ce qu'il produirait à partir des réponses **modifiées** dans la page.
+
+Seul l'écart A → B est appliqué au vrai fichier ; tout ce qui n'est pas dans l'écart reste octet pour octet.
+- **Persist** : écart par chemin JSON (valeur changée, clé ajoutée, clé retirée), appliqué dans le texte. Les
+  objets sont parcourus, jamais remplacés en bloc : une clé propre à la carte, absente du modèle, survit.
+- **Autoexec, section du cenv, section du `.h`** : écart ligne à ligne (blocs de `difflib` entre A et B), appliqué
+  seulement si les lignes de A concernées se retrouvent telles quelles dans la vraie section. Sinon (ligne retouchée
+  à la main), **toute la modification est refusée**, et le refus cite le fichier et les lignes, mots de passe masqués
+  (décision de l'utilisateur du 2026-10-29).
+- A et B sont générés avec les **vrais** mots de passe, côté serveur : un changement de réseau Wi-Fi change aussi
+  le mot de passe. Aperçu, diff et erreurs restent masqués (`***`).
+- **Propriété attendue** : sans aucun changement dans la page, l'écart est vide et rien n'est écrit, pour chaque
+  carte du parc.
+
+### 10.3 Ce qui se modifie, ce qui est figé
+
+- Figés : lieu, nom, puce et base (renommer est le rôle de la page 7800 ; changer de puce ou de base, c'est créer
+  une autre carte).
+- Modifiables : tout le reste des questions (réseau, rôle, heure, identité, blocs, métiers, éléments).
+- Un métier ajouté suit les règles de la création (squelettes) ; un fichier déjà présent dans le dossier n'est
+  jamais écrasé. `graphiques.json` et les autres fichiers du dossier ne sont pas touchés.
+- Contrôles « déjà pris » : l'env, son dossier et son define ne sont pas contrôlés contre eux-mêmes ; l'identité
+  (IP, topic, client) l'est contre les **autres** cartes (avertissement, comme à la création).
+- Empreinte : cenv, `.h`, modèle, persist et autoexec de la carte, env et saisie.
+
+### 10.4 La page
+
+- Étape « Carte » : liste « Env » = « (nouvel env) » + les cartes existantes ; « Charger » remplit toutes les
+  étapes avec les réponses relues. Lieu, nom, puce et base deviennent non modifiables.
+- Si lieu + nom (+ puce) saisis correspondent à un env existant, le bouton devient « Modifier l'environnement » et
+  un bandeau propose « Charger ses réglages ».
+- Après une création ou une modification réussie, la page reste sur cet env en mode modification.
+- « Supprimer cet env… » (mode modification) : panneau listant section du cenv, section du `.h` (define),
+  `default_envs` / `data_dir`, dossier renommé (nouveau nom), refus (envs dépendants), avertissements et diff ;
+  une case « J'ai vérifié ces éléments » active « Supprimer ». Moteur : `fichiers_berry_suppression.py`, inchangé.
+
+### 10.5 Vérification attendue
+
+- Rejeu du parc : chaque carte chargée puis préparée sans changement donne un écart vide.
+- Aller-retour : une modification puis la modification inverse redonnent les fichiers d'origine, octet pour octet.
+- Clé propre à une carte, port du cenv, ligne ajoutée à la main dans le `.h` : conservés après une modification.
+- Mots de passe : jamais dans une réponse HTTP, diff, erreur ou sortie de banc.
+- Fumée réelle avec l'utilisateur sur l'env de test `tasmota32p4-cellier-controleur` : modifier, compiler, supprimer.
