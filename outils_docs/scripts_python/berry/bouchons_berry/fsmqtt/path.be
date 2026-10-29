@@ -26,4 +26,9 @@ path.listdir = def (d) import global import string
     end
     return noms
 end
+# format(true) : FS vide (formatage) ; global.FORMAT_KO -> echec, comme un LittleFS.format() rate
+path.format = def (b) import global
+    if b != true || global.FORMAT_KO    return false    end
+    global.FS = {"fichiers": {}, "dossiers": {}}  return true
+end
 return path

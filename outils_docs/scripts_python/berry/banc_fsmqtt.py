@@ -19,7 +19,7 @@ from banc_coprocesseur import trouve_berry, trouve_racine  # noqa: E402  (meme d
 MUTANTS = [
     ("position non controlee", "if position == t[\"recus\"] && size(b) > 4", "if size(b) > 4"),
     ("MD5 non controle", "if md5 != t[\"md5\"]", "if false"),
-    ("effacement d'un seul coup", "while n < fsMqtt.LOT && size(x[\"fichiers\"]) > 0", "while size(x[\"fichiers\"]) > 0"),
+    ("formatage sans controle de son resultat", "if !path.format(true)", "if path.format(true) && false"),
 ]
 
 

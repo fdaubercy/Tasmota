@@ -694,8 +694,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `build_page_fichiers.py` (CSS/HTML/JS de l'onglet, maquette E, inseres dans `build_page.PAGE` ; avancement en % et
     journal des etapes dans l'onglet) ; sonde `test_build_page_fichiers_chrome.py` (Python de PlatformIO, aucun envoi).
     Transport MQTT (A16, spec choix 25 a 28) : `build_ota_mqtt.py::envoie_fs_mqtt` -> module carte `data/fs/fsMqtt.be`
-    (topics `fsmqtt/<topic du persist>/ordre|morceau|etat|lu`, fichier temporaire + MD5, effacement total par lots ;
-    charge par AUCUN autoexec tant que l'utilisateur n'a pas choisi les cartes). Bancs `berry/banc_fsmqtt.py` (mutants),
+    (topics `fsmqtt/<topic du persist>/ordre|morceau|etat|lu`, fichier temporaire + MD5, effacement = formatage
+    `path.format`, bloquant : watchdog de 5 s ; SOLIDIFIE dans `berry_commun.socle`, charge par l'autoexec du P4 et de la cuve). Bancs `berry/banc_fsmqtt.py` (mutants),
     `test_build_ota_mqtt.py` (carte MQTT simulee).
     Mode d'emploi : `outils_docs/README.md` § « Build et televersement (page web) » (onglet : « Onglet « Fichiers » :
     envoyer quelques fichiers du FS »). Spec :

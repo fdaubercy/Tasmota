@@ -646,13 +646,14 @@ redirection ni `Sleep 0`. Débit mesuré : 14 à 18 Ko/s vers la cuve, sans coup
 quand le relais du maître marque une pause). Chaque fichier s'écrit dans `/fsmqtt.tmp` et ne remplace le vrai
 qu'après contrôle de sa taille et de son MD5. Même déroulé que l'HTTP (persist sauvegardé par MQTT s'il part, envoyé
 en dernier, rechargé ; redémarrage ou `BrRestart`, puis attente du « prêt » du module). **Prérequis** : `fsMqtt.be`
-chargé par l'autoexec de la carte (`demarrage.charge(["fsMqtt"])`) et présent sur son FS — à envoyer une première
-fois en HTTP ou par câble. Sans lui, la page le dit (« aucune réponse sur fsmqtt/<topic> ») et rien n'est envoyé.
+est solidifié dans le socle (toutes les cartes, firmware recompilé) et chargé par l'autoexec de la carte
+(`demarrage.charge(["fsMqtt"])` : maître P4 et cuve à ce jour). Sans lui, la page le dit (« aucune réponse sur
+fsmqtt/<topic> ») et rien n'est envoyé.
 
-**Effacer tout le FS avant l'envoi** (MQTT seulement, confirmation) : la carte supprime TOUS ses fichiers et
-dossiers (persist, autoexec et `fsMqtt.be` compris ; `/sd` de la flash aussi), par lots de 20 pour ne jamais
-bloquer, puis toute l'image est envoyée. Le module reste en mémoire le temps de la session ; si la carte redémarre
-entre les deux, elle repart sans Berry : la reprendre en HTTP (cet onglet) ou par câble. Bancs :
+**Effacer tout le FS avant l'envoi** (MQTT seulement, confirmation) : la carte FORMATE son FS (`path.format`,
+persist et autoexec compris ; `/sd` de la flash aussi), puis toute l'image est envoyée. Le module, solidifié, survit.
+Le formatage bloque la carte : s'il dépasse les 5 s du watchdog de la boucle, elle redémarre avec un FS vide, donc
+sans autoexec ni Berry : la reprendre en HTTP (cet onglet) ou par câble. Idem si elle redémarre entre les deux. Bancs :
 `berry/banc_fsmqtt.py` (module), `outils_pc/test_build_ota_mqtt.py` (PC) ; aucun essai sur carte à ce jour.
 
 ### Téléversement série : il emporte `littlefs.bin`

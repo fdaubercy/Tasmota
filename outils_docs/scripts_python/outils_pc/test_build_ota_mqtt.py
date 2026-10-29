@@ -88,11 +88,9 @@ class Carte:
             for p in range(0, len(d), bm.CHARGE):
                 self.publie("lu", struct.pack(">I", p) + d[p:p + bm.CHARGE])
             self.repond(o, chemin=o["chemin"], octets=len(d), md5=hashlib.md5(d).hexdigest())
-        elif op == "efface":
-            n = len(self.fs)
-            self.repond(o, restants=n)
-            self.repond(o, restants=0, fichiers=n, dossiers=0)
+        elif op == "efface":                                 # formatage : une seule reponse
             self.fs = {}
+            self.repond(o)
         elif op in ("recharge", "berry", "redemarre"):
             self.repond(o)
             if op != "recharge":

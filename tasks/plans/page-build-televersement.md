@@ -512,7 +512,13 @@ fichier relu ou contrôlé à la fin ; même choix de fichiers, de carte et d'op
 - [x] Onglet : choix du transport (HTTP / MQTT) ; doc ; bancs et sonde Chrome. — preuve :
   `test_build_page_fichiers_chrome.py` VERT (+8 : MQTT sans adresse, effacement confirmé ou refusé, retour en HTTP) ;
   README § « Onglet « Fichiers » », CLAUDE.md.
-- [ ] Essai réel par l'utilisateur : maître, puis cuve par le maître.
+- [x] Décisions de l'utilisateur sur les choix (2026-10-29) — preuve : spec choix 26 et 27 révisés ; `fsMqtt.be`
+  solidifiable (`solidifie_et_compile_berry.py` : .h compilé par xtensa, 0 anonyme), dans `berry_commun.socle`,
+  chargé par les autoexec du P4 et de la cuve (`banc_demarrage.py` VERT, références des 2 cartes réenregistrées :
+  + règle `Mqtt#Connected`, + globale `fsMqttRecepteur` ; `banc_boot.py` OK) ; `efface` = `path.format(true)`
+  (`banc_fsmqtt.py` VERT, mutant « formatage sans contrôle » rouge ; `test_build_ota_mqtt.py` VERT).
+- [ ] Essai réel par l'utilisateur : maître, puis cuve par le maître. Avant : firmware recompilé et envoyé aux 2 cartes
+  (fsMqtt en flash), puis leur autoexec (onglet Fichiers, HTTP = essai A15). Mesurer la durée du formatage.
 
 ## A15 — Onglet « Fichiers » : envoyer des fichiers choisis du dépôt à une carte choisie, par HTTP (demande du 2026-10-29)
 

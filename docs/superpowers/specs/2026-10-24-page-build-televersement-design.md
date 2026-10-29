@@ -424,19 +424,22 @@ L'utilisateur a passé les questions de conception (« passons ») : tout ce qui
       `debut` pendant un autre l'abandonne d'abord), une seule lecture, un seul effacement (le second est refusé).
       Toute exception (écriture, lecture, suppression) est rattrapée : fichier fermé, temporaire supprimé, refus
       répondu au PC et journalisé en erreur.
-26. **Effacement total** : `efface` supprime TOUS les fichiers et dossiers du LittleFS (`/sd` de la flash compris,
-    pas une carte SD), `_persist.json` et le module lui-même compris, **fichier par fichier** (`path.listdir`, `path.remove`, `path.rmdir`), par lots de 20 entrées
-    par rappel enchaînés par `tasmota.set_timer(0)` : jamais un long blocage (watchdog 5 s, `USE_ESP32_WDT`), ce
-    que `path.format(true)` ne garantit pas (toute la partition d'un bloc, ~11 Mo). Avancement publié par lot
-    (`{"op": "efface", "restants": k}`), puis `{"ok": true, "fichiers": n, "dossiers": m}`. Le module reste en
-    RAM : l'envoi de TOUT le FS (« effacer puis envoyer tout le FS ») suit dans la même session Berry. Risque
-    accepté : une carte redémarrée entre l'effacement et le renvoi n'a plus de module ni d'autoexec -> retour par
-    l'onglet en HTTP (`/ufsu` ne dépend pas de Berry) ou par câble. Le persist en RAM est réécrit par le
-    System#Save d'un redémarrage : la page envoie donc toujours le persist après un effacement. Page :
+26. **Effacement total** — RÉVISÉ par l'utilisateur le 2026-10-29 (« formater se fera par script berry ») : `efface`
+    FORMATE le LittleFS par `path.format(true)` (`be_port.cpp::be_format_fs` -> `LittleFS.format()`), `/sd` de la
+    flash compris (pas une carte SD), `_persist.json` et autoexec compris ; refusé pendant une lecture, transfert en
+    cours abandonné ; une seule réponse `{"op": "efface", "ok": true}`, refus si le firmware rend `false`. La première
+    version (fichier par fichier, lots de 20) est abandonnée. RISQUE : le formatage est BLOQUANT ; `LittleFS.format()`
+    ne coupe que le watchdog du cœur 0, celui de la boucle (`USE_ESP32_WDT`, 5 s, actif sur toutes les cartes ESP32 :
+    `user_config_override.h`) redémarre la carte s'il dure plus -> FS vide, à reprendre en HTTP (`/ufsu` ne dépend pas
+    de Berry) ou par câble. Durée à mesurer au premier essai. Le module, SOLIDIFIÉ (27), survit au formatage ;
+    l'autoexec non : le PC envoie TOUT le FS juste après, dans la même session Berry. Le persist en RAM est réécrit
+    par le System#Save d'un redémarrage : la page envoie donc toujours le persist après un effacement. Page :
     confirmation explicite, comme `erase_upload` ; essai réel d'abord sur une carte hors service.
-27. **Module récepteur** : `data/fs/fsMqtt.be` (nouveau fichier, A16 lancée par l'utilisateur), NON solidifié
-    (pas de changement de build) ; chargé par l'autoexec des cartes visées SEULEMENT après accord de
-    l'utilisateur sur la liste des cartes (un module à envoyer d'abord par HTTP ou câble). Abonnements par
+27. **Module récepteur** : `data/fs/fsMqtt.be` (nouveau fichier, A16 lancée par l'utilisateur), SOLIDIFIÉ dans
+    `berry_commun.socle` (décision de l'utilisateur, 2026-10-29 : présent sur toutes les cartes), chargé par
+    `demarrage.charge(["fsMqtt"])` dans l'autoexec du maître P4 et de la cuve ; `import` appelle `fsMqtt_init(m)`
+    (instance dans `global.fsMqttRecepteur`, constantes en membres statiques : table du module constante, piège 12).
+    Ces deux cartes ont besoin d'un firmware recompilé (module en flash), puis de leur nouvel autoexec. Abonnements par
     `mqtt.subscribe` (comme `controleDiscovery.be`), rappels courts, charte des logs (cible `general` :
     `logFonctions` n'a pas de bloc `fsmqtt`, l'ajouter toucherait un module protégé), RAM : un
     morceau à la fois, fichier ouvert en ajout, rien de gardé en mémoire.

@@ -1,7 +1,7 @@
 # Banc Berry de data/fs/fsMqtt.be : reception de fichiers du FS par MQTT (A16 de la page Build 7700).
 # Charge le VRAI module sous des bouchons (bouchons_berry/fsmqtt/ : FS en memoire, mqtt, crypto, persist,
 # logFonctions ; open() et tasmota bouchonnes ici) et rejoue les ordres du PC : envoi par morceaux, morceaux
-# perdus ou en double, controles de fin, chemins refuses, lecture, rechargement, BrRestart/Restart, effacement.
+# perdus ou en double, controles de fin, chemins refuses, lecture, rechargement, BrRestart/Restart, formatage.
 #
 # Lancer via son enveloppe Python (racine, berry.exe, code de sortie, temoin mute) :
 #     python outils_docs/scripts_python/berry/banc_fsmqtt.py
@@ -22,6 +22,7 @@ var LOG_LEVEL_DEBUG_PLUS = 4
 var JOURNAL = []
 var RENOMMAGE_REFUSE = false
 var ECRITURE_KO = false
+var FORMAT_KO = false
 var FS = {"fichiers": {}, "dossiers": {}}
 
 # open() du firmware sur le FS en memoire (le module est compile apres cette globale : elle remplace le builtin)
@@ -96,7 +97,7 @@ end
 
 # --- chargement
 verifie(mqtt.abonnes.contains(BASE + "ordre") && mqtt.abonnes.contains(BASE + "morceau"), "chargement : abonne a ordre et morceau sous le topic du persist")
-verifie(etats()[0]["op"] == "pret" && etats()[0]["version"] == 1, "chargement : « pret » publie (MQTT connecte)")
+verifie(etats()[0]["op"] == "pret" && etats()[0]["version"] == 2, "chargement : « pret » publie (MQTT connecte)")
 mqtt.publies = []
 tasmota.regles["Mqtt#Connected"]()
 verifie(dernier()["op"] == "pret", "reconnexion MQTT : « pret » republie")
@@ -232,27 +233,37 @@ var n = size(JOURNAL)
 mqtt.abonnes[BASE + "ordre"](BASE + "ordre", 0, "pas du json", bytes())
 verifie(size(JOURNAL) == n + 1 && JOURNAL[-1][1] == LOG_LEVEL_ERREUR, "ordre illisible : erreur journalisee")
 
-# --- effacement total, par lots, /sd compris (dossier du LittleFS, celui de l'image)
-FS = {"fichiers": {"/sd/html/a.html": bytes("01")}, "dossiers": {"/sd": true, "/sd/html": true}}
-for i: 0 .. 29    FS["fichiers"]["/f" + str(i) + ".be"] = bytes("01")    end
-FS["dossiers"]["/json"] = true  FS["dossiers"]["/json/a"] = true
-FS["fichiers"]["/json/a/z.json"] = bytes("01")
-mqtt.publies = []
+# --- effacement total = formatage (path.format(true)), /sd compris (dossier du LittleFS, celui de l'image)
+def remplit()
+    FS = {"fichiers": {"/sd/html/a.html": bytes("01"), "/json/a/z.json": bytes("01")},
+          "dossiers": {"/sd": true, "/sd/html": true, "/json": true, "/json/a": true}}
+end
+remplit()
+FORMAT_KO = true
 ordre({"op": "efface"})
-verifie(dernier()["restants"] > 0 && size(FS["fichiers"]) > 1, "efface : premier lot seulement, avancement publie (" + str(dernier()["restants"]) + " restants)")
+verifie(!dernier()["ok"] && string.find(dernier()["erreur"], "formatage refusé") >= 0 && size(FS["fichiers"]) == 2,
+        "efface : formatage rate -> refus repondu, rien de touche")
+FORMAT_KO = false
+ordre({"op": "debut", "chemin": "/x.be", "taille": 3, "md5": md5(bytes("010203"))})
 ordre({"op": "efface"})
-verifie(!dernier()["ok"] && string.find(dernier()["erreur"], "déjà en cours") >= 0, "efface : second ordre pendant l'effacement refuse")
-var lots = 1
-while tasmota.declenche("fsmqtt_efface")    lots += 1    end
-verifie(lots == 2 && dernier()["ok"] && dernier()["restants"] == 0 && dernier()["fichiers"] == 32 && dernier()["dossiers"] == 4,
-        "efface : 2 lots de 20, 32 fichiers et 4 dossiers (" + str(dernier()) + ")")
-verifie(size(FS["fichiers"]) == 0 && size(FS["dossiers"]) == 0, "efface : tout le FS supprime, /sd compris")
+verifie(dernier()["op"] == "efface" && dernier()["ok"] && size(FS["fichiers"]) == 0 && size(FS["dossiers"]) == 0,
+        "efface : FS formate, /sd compris, transfert en cours abandonne")
+morceau(0, bytes("010203"))
+verifie(dernier()["op"] == "efface", "efface : plus aucun transfert apres le formatage (morceau ignore)")
+remplit()
+FS["fichiers"]["/gros.json"] = donnees(10000)
+ordre({"op": "lit", "chemin": "/gros.json"})
+ordre({"op": "efface"})
+verifie(!dernier()["ok"] && string.find(dernier()["erreur"], "lecture en cours") >= 0 && size(FS["fichiers"]) == 3,
+        "efface : refuse pendant une lecture")
+while tasmota.declenche("fsmqtt_lit") end
 
 # --- sans topic dans le persist : rien n'est abonne
 persist._p = {"serveur": {}}
 mqtt.abonnes = {}
 n = size(JOURNAL)
-verifie(fsMqtt.demarre() == nil && size(mqtt.abonnes) == 0 && JOURNAL[-1][1] == LOG_LEVEL_ERREUR, "sans serveur.mqtt.topic : inactif, erreur journalisee")
+global.fsMqttRecepteur = nil
+verifie(type(fsMqtt.init(fsMqtt)) == "module" && global.fsMqttRecepteur == nil && size(mqtt.abonnes) == 0 && JOURNAL[-1][1] == LOG_LEVEL_ERREUR, "sans serveur.mqtt.topic : inactif, erreur journalisee")
 
 var cibles = []
 for j: JOURNAL    if j[2] != nil    cibles.push(j[2])    end    end

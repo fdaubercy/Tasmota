@@ -1,6 +1,7 @@
 # Reception de fichiers du FS par MQTT (« MQTT pousse », A16 de la page Build 7700 ; protocole : choix 25 a 27 de
-# docs/superpowers/specs/2026-10-24-page-build-televersement-design.md). NON solidifie : charge par l'autoexec
-# (demarrage.charge(["fsMqtt"])) des cartes ou l'utilisateur l'a voulu.
+# docs/superpowers/specs/2026-10-24-page-build-televersement-design.md). SOLIDIFIE dans le socle (berry_commun.socle,
+# toutes les cartes, decision du 2026-10-29) : il survit au formatage du FS. Charge par demarrage.charge(["fsMqtt"])
+# dans l'autoexec : 'import' appelle fsMqtt_init(m), en pied de fichier.
 #
 # Topics, sous le topic MQTT du persist (serveur.mqtt.topic) :
 #   fsmqtt/<topic>/ordre    (PC -> carte) JSON {"op", "id", ...}
@@ -12,26 +13,25 @@
 # Au chargement, et a chaque connexion MQTT : {"op": "pret"} sur .../etat.
 # Logs : cible "general" (pas de bloc fsmqtt dans logFonctions) ; rappels de reception -> debug/detail
 # seulement (charte, regle 4).
-import mqtt
-import json
-
+# Solidifiable : aucun import ni appel tasmota au niveau fichier (piege 2), constantes en membres statiques de la
+# classe et instance hors du module (la table d'un module solidifie est constante, piege 12).
+#@ solidify:fsMqtt
 var fsMqtt = module("fsMqtt")
-fsMqtt.VERSION = 1
-fsMqtt.TEMP = "/fsmqtt.tmp"
-fsMqtt.MORCEAU = 1900                    # MQTT_MAX_PACKET_SIZE 2048 - en-tete - topic (essai A14)
-fsMqtt.TAILLE_MAX = 1048576
-fsMqtt.LONGUEUR_MAX = 49                 # UFS_FILENAME_SIZE - 1 de Tasmota
-fsMqtt.LOT = 20                          # entrees supprimees par rappel (efface) : jamais un long blocage
-fsMqtt.LOT_LU = 4                        # morceaux publies par rappel (lit) : un publish peut attendre derriere le NAPT
 
 class FsMqttRecepteur
-    var base, transfert, efface, lecture
+    static VERSION = 2                   # 2 : efface = formatage (path.format)
+    static TEMP = "/fsmqtt.tmp"
+    static MORCEAU = 1900                # MQTT_MAX_PACKET_SIZE 2048 - en-tete - topic (essai A14)
+    static TAILLE_MAX = 1048576
+    static LONGUEUR_MAX = 49             # UFS_FILENAME_SIZE - 1 de Tasmota
+    static LOT_LU = 4                    # morceaux publies par rappel (lit) : un publish peut attendre derriere le NAPT
+    var base, transfert, lecture
 
     def init(topic)
         self.base = "fsmqtt/" + topic + "/"
         self.transfert = nil              # {id, chemin, taille, md5, recus, hache}
-        self.efface = nil                 # {id, fichiers, dossiers, n_fichiers, n_dossiers}
         self.lecture = nil                # {id, chemin, f, hache, position}
+        import mqtt
         mqtt.subscribe(self.base + "ordre", /t, i, s, b -> self.ordre(s))
         mqtt.subscribe(self.base + "morceau", /t, i, s, b -> self.morceau(b))
         tasmota.add_rule("Mqtt#Connected", /-> self.pret(), "fsmqtt_pret")
@@ -48,6 +48,8 @@ class FsMqttRecepteur
         r["id"] = id
         r["op"] = op
         r["ok"] = ok
+        import mqtt
+        import json
         mqtt.publish(self.base + "etat", json.dump(r))
     end
 
@@ -57,18 +59,21 @@ class FsMqttRecepteur
     end
 
     def pret()
-        mqtt.publish(self.base + "etat", json.dump({"op": "pret", "version": fsMqtt.VERSION}))
+        import mqtt
+        import json
+        mqtt.publish(self.base + "etat", json.dump({"op": "pret", "version": self.VERSION}))
     end
 
     # Chemin du FS accepte : absolu, sans "..", court, pas le fichier temporaire. /sd/... est un dossier du LittleFS
     # (be_port.cpp n'ecrit que sur ffsp, la flash), celui de l'image : accepte comme les autres
     def chemin_valide(c)
         import string
-        return type(c) == "string" && size(c) > 1 && size(c) <= fsMqtt.LONGUEUR_MAX && c[0] == "/" && c[-1] != "/" &&
-               string.find(c, "..") < 0 && c != fsMqtt.TEMP
+        return type(c) == "string" && size(c) > 1 && size(c) <= self.LONGUEUR_MAX && c[0] == "/" && c[-1] != "/" &&
+               string.find(c, "..") < 0 && c != self.TEMP
     end
 
     def ordre(s)
+        import json
         var o = json.load(s)
         if !isinstance(o, map) || type(o.find("op")) != "string"
             self.log("FS_MQTT: ordre illisible : " + str(s) + " !", LOG_LEVEL_ERREUR)
@@ -86,7 +91,7 @@ class FsMqttRecepteur
             elif op == "recharge"    self.recharge(id)
             elif op == "berry"       self.repond(id, op, true)  tasmota.cmd("Backlog BrRestart")   # hors de la VM
             elif op == "redemarre"   self.repond(id, op, true)  tasmota.cmd("Backlog Restart 1")
-            elif op == "efface"      self.commence_efface(id)
+            elif op == "efface"      self.efface(id)
             else                     self.refuse(id, op, "ordre inconnu")
             end
         except .. as e, m
@@ -102,7 +107,7 @@ class FsMqttRecepteur
         var c = o.find("chemin")
         var taille = o.find("taille")
         if !self.chemin_valide(c)    return self.refuse(id, "debut", "chemin refusé : " + str(c))    end
-        if type(taille) != "int" || taille < 0 || taille > fsMqtt.TAILLE_MAX
+        if type(taille) != "int" || taille < 0 || taille > self.TAILLE_MAX
             return self.refuse(id, "debut", "taille refusée : " + str(taille))
         end
         if type(o.find("md5")) != "string"    return self.refuse(id, "debut", "md5 absent")    end
@@ -116,7 +121,7 @@ class FsMqttRecepteur
             if !path.isdir(d)    return self.refuse(id, "debut", "dossier impossible : " + d)    end
             i = string.find(c, "/", i + 1)
         end
-        var f = open(fsMqtt.TEMP, "w")
+        var f = open(self.TEMP, "w")
         f.close()
         import crypto
         self.transfert = {"id": id, "chemin": c, "taille": taille, "md5": string.tolower(o["md5"]), "recus": 0,
@@ -139,7 +144,7 @@ class FsMqttRecepteur
                 if t["recus"] + size(donnees) > t["taille"]
                     erreur = "plus de données que la taille annoncée"
                 else
-                    f = open(fsMqtt.TEMP, "a")
+                    f = open(self.TEMP, "a")
                     f.write(donnees)
                     f.close()
                     f = nil
@@ -156,6 +161,8 @@ class FsMqttRecepteur
             self.refuse(t["id"], "morceau", erreur)
             return true
         end
+        import mqtt
+        import json
         mqtt.publish(self.base + "etat", json.dump({"id": t["id"], "op": "morceau", "ok": true, "octets": t["recus"]}))
         return true
     end
@@ -175,7 +182,7 @@ class FsMqttRecepteur
             return self.refuse(id, "fin", "MD5 différent (reçu " + md5 + ")")
         end
         if path.exists(t["chemin"])    path.remove(t["chemin"])    end
-        if !path.rename(fsMqtt.TEMP, t["chemin"])
+        if !path.rename(self.TEMP, t["chemin"])
             self.abandonne()
             return self.refuse(id, "fin", "renommage impossible vers " + t["chemin"])
         end
@@ -187,7 +194,7 @@ class FsMqttRecepteur
     def abandonne()
         import path
         self.transfert = nil
-        if path.exists(fsMqtt.TEMP)    path.remove(fsMqtt.TEMP)    end
+        if path.exists(self.TEMP)    path.remove(self.TEMP)    end
     end
 
     # Renvoie le fichier sur .../lu, par morceaux (position + donnees), LOT_LU par rappel, puis taille et MD5 sur .../etat
@@ -204,12 +211,13 @@ class FsMqttRecepteur
 
     def lot_lit()
         import string
+        import mqtt
         var l = self.lecture
         var fini = false
         try
             var k = 0
-            while k < fsMqtt.LOT_LU && !fini
-                var d = l["f"].readbytes(fsMqtt.MORCEAU - 4)
+            while k < self.LOT_LU && !fini
+                var d = l["f"].readbytes(self.MORCEAU - 4)
                 if size(d) == 0
                     fini = true
                 else
@@ -248,70 +256,38 @@ class FsMqttRecepteur
         self.repond(id, "recharge", true)
     end
 
-    # Effacement TOTAL du LittleFS (/sd compris : dossier de la flash) : inventaire d'un coup, suppression par lots
-    def commence_efface(id)
+    # Effacement TOTAL du LittleFS (/sd compris : dossier de la flash) par formatage (decision du 2026-10-29).
+    # path.format(true) = LittleFS.format(), BLOQUANT : il ne coupe que le watchdog du coeur 0 ; celui de la boucle
+    # (USE_ESP32_WDT, 5 s) redemarre la carte si le formatage dure plus -> FS vide, a reprendre en HTTP ou par cable.
+    # Le module, solidifie, survit ; l'autoexec non : le PC envoie toute l'image juste apres.
+    def efface(id)
         import path
-        if self.efface != nil    return self.refuse(id, "efface", "effacement déjà en cours")    end
+        if self.lecture != nil    return self.refuse(id, "efface", "lecture en cours")    end
         self.abandonne()
-        var fichiers = []
-        var dossiers = []
-        var a_voir = ["/"]
-        while size(a_voir) > 0
-            var d = a_voir.pop()
-            for nom: path.listdir(d)
-                var c = (d == "/" ? "/" : d + "/") + nom
-                if path.isdir(c)    dossiers.push(c)  a_voir.push(c)    else    fichiers.push(c)    end
-            end
-        end
-        self.efface = {"id": id, "fichiers": fichiers, "dossiers": dossiers, "n_fichiers": size(fichiers),
-                       "n_dossiers": size(dossiers)}
-        self.log("FS_MQTT: effacement du FS : " + str(size(fichiers)) + " fichiers, " + str(size(dossiers)) + " dossiers", LOG_LEVEL_DEBUG)
-        self.lot_efface()
-    end
-
-    def lot_efface()
-        import path
-        var x = self.efface
-        var restants = 0
-        try
-            var n = 0
-            while n < fsMqtt.LOT && size(x["fichiers"]) > 0
-                path.remove(x["fichiers"].pop())
-                n += 1
-            end
-            while n < fsMqtt.LOT && size(x["fichiers"]) == 0 && size(x["dossiers"]) > 0
-                path.rmdir(x["dossiers"].pop())      # les plus profonds d'abord (ajoutes apres leur parent)
-                n += 1
-            end
-            restants = size(x["fichiers"]) + size(x["dossiers"])
-        except .. as e, m
-            self.efface = nil
-            self.log("FS_MQTT_ERREUR: efface : " + str(e) + " - " + str(m) + " !", LOG_LEVEL_ERREUR)
-            self.repond(x["id"], "efface", false, {"erreur": str(e) + " - " + str(m)})
-            return
-        end
-        if restants > 0
-            mqtt.publish(self.base + "etat", json.dump({"id": x["id"], "op": "efface", "ok": true, "restants": restants}))
-            tasmota.set_timer(0, /-> self.lot_efface(), "fsmqtt_efface")
-            return
-        end
-        self.efface = nil
-        self.repond(x["id"], "efface", true, {"restants": 0, "fichiers": x["n_fichiers"], "dossiers": x["n_dossiers"]})
+        self.log("FS_MQTT: formatage du FS", LOG_LEVEL_DEBUG)
+        if !path.format(true)    return self.refuse(id, "efface", "formatage refusé par le firmware")    end
+        self.repond(id, "efface", true)
     end
 end
 
-# Demarrage : topic du persist ; sans topic, rien n'est abonne (erreur dite)
-def fsMqtt_demarre()
+fsMqtt.FsMqttRecepteur = FsMqttRecepteur
+
+# init() : APPELEE AUTOMATIQUEMENT par 'import fsMqtt' (be_module.c::module_init), une fois par session Berry.
+# Abonnements sous le topic du persist ; sans topic, rien n'est abonne (erreur dite). L'instance vit par ses
+# rappels MQTT et dans global.fsMqttRecepteur (pas dans le module : sa table est constante une fois solidifie).
+def fsMqtt_init(m)
+    import global
     import persist
+    import logFonctions
     var topic = persist.find("serveur", {}).find("mqtt", {}).find("topic")
     if type(topic) != "string" || size(topic) == 0
-        import logFonctions
         logFonctions.log("FS_MQTT_ERREUR: pas de serveur.mqtt.topic dans le persist : réception MQTT inactive !", LOG_LEVEL_ERREUR)
-        return nil
+        return m
     end
-    return FsMqttRecepteur(topic)
+    global.fsMqttRecepteur = m.FsMqttRecepteur(topic)
+    return m
 end
-fsMqtt.demarre = fsMqtt_demarre
-fsMqtt.recepteur = fsMqtt.demarre()
+fsMqtt.init = fsMqtt_init
 
+# Rend le module a son import depuis le LittleFS (carte au firmware sans fsMqtt solidifie, piege 13)
 return fsMqtt

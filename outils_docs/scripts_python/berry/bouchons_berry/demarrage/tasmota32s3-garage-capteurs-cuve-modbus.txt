@@ -1,11 +1,11 @@
 carte : tasmota32s3-garage-capteurs-cuve-modbus
 exception : aucune
 drivers (10) : CAPTEURS_CUVE, CONTROLE_DISCOVERY, CONTROLE_GENERAL, CONTROLE_LEDS, CONTROLE_MODBUS, CONTROLE_UDP, CONTROLE_UDP, CONTROLE_WEB, HISTORIQUE_WEB, I2C_ADS1115
-regles (18) : Button1#Action, Button1#Action, Dimmer, Dimmer1, ModbusReceived, ModbusReceivedUDP, Mqtt, Mqtt, System, System, System, System, System, Tele#ADS1115#A0, Tele#DS18B20-1#Temperature, Time, Wifi, Wifi
+regles (19) : Button1#Action, Button1#Action, Dimmer, Dimmer1, ModbusReceived, ModbusReceivedUDP, Mqtt, Mqtt, Mqtt#Connected, System, System, System, System, System, Tele#ADS1115#A0, Tele#DS18B20-1#Temperature, Time, Wifi, Wifi
 commandes (8) : ReglageAna, ReglageCuve, ReglageDiscovery, ReglageGlobal, ReglageLeds, ReglageLog, ReglageModbus, ReglageUDP
 crons (2) : majHistorique, majLogCuve
 minuteries (1) : demarrageDiffere
 compiles (2) : /controleCuve.bec, /cuveFonctions.bec
 sources (1) : /autoexec.be
-globales (21) : .historiqueFonctions:instance, LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatModbusFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controleCuve:instance, controleUDP_multicast:instance, controleUDP_unicast:instance, cuveFonctions:nil, diverses:instance, gpio:module, light:module, modules:instance, persist:instance, serveur:instance, wire1:instance, wire2:instance
+globales (22) : .historiqueFonctions:instance, LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatModbusFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controleCuve:instance, controleUDP_multicast:instance, controleUDP_unicast:instance, cuveFonctions:nil, diverses:instance, fsMqttRecepteur:instance, gpio:module, light:module, modules:instance, persist:instance, serveur:instance, wire1:instance, wire2:instance
 erreurs (1) : INIT_CUVE_ERREUR: key_error -> ADS1115

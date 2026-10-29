@@ -4,7 +4,7 @@
 > Sortie deterministe (ni date, ni ordre de hachage) : regeneree sans changement de fond, elle ne
 > donne aucun diff. La date de generation est celle du commit.
 
-44 modules (37 dans `data/fs`, 7 propres a une carte), 8 cartes.
+46 modules (39 dans `data/fs`, 7 propres a une carte), 8 cartes.
 
 ## Tableau
 
@@ -52,7 +52,9 @@ Legende : **S** solidifie dans l'env (`custom_berry_solidify`) - **I** importe p
 | `controleRideau` | Carte |  |  |  |  |  |  | S P I ON |  |
 | `cuveFonctions` | Carte |  |  |  |  |  | P C ON |  |  |
 | `garageFonctions` | Carte |  |  |  |  | P C ON |  |  | P C ON |
+| `controleCoprocesseur` | Autres |  |  |  |  | S I ON |  |  |  |
 | `demarrage` | Autres | S I | S | S I | S I | S I | S I | S I | S |
+| `fsMqtt` | Autres | S | S | S | S | S I | S I | S | S |
 | `graphiquesFonctions` | Autres |  |  | S I | S I | S I | S I | S I | S I |
 | `historiqueFonctions` | Autres |  |  | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
 | `historiqueSeries` | Autres |  |  | S I | S I | S I | S I | S I | S I |
@@ -68,13 +70,19 @@ Constats factuels, sans jugement : un module peut etre volontairement dans cet e
 - `bureau/tasmota32-interrupteur-differentiel` : `controleRangeExtender` solidifie, jamais importe ni charge par l'autoexec.
 - `bureau/tasmota32-interrupteur-differentiel` : `controleTCP` solidifie, jamais importe ni charge par l'autoexec.
 - `bureau/tasmota32-interrupteur-differentiel` : `controleUDP` solidifie, jamais importe ni charge par l'autoexec.
+- `bureau/tasmota32-interrupteur-differentiel` : `fsMqtt` solidifie, jamais importe ni charge par l'autoexec.
 - `cave/tasmota32-serveur-rly` : `demarrage` solidifie, jamais importe ni charge par l'autoexec.
+- `cave/tasmota32-serveur-rly` : `fsMqtt` solidifie, jamais importe ni charge par l'autoexec.
+- `cave/tasmota32s3-serveur-rly` : `fsMqtt` solidifie, jamais importe ni charge par l'autoexec.
+- `etage2/tasmota32s3-grenier` : `fsMqtt` solidifie, jamais importe ni charge par l'autoexec.
 - `garage/tasmota32p4-serveur-modbus` : `controleTCP` solidifie, jamais importe ni charge par l'autoexec.
 - `garage/tasmota32s3-capteurs-cuve-modbus` : `controleRangeExtender` solidifie, jamais importe ni charge par l'autoexec.
 - `garage/tasmota32s3-capteurs-cuve-modbus` : `controleTCP` solidifie, jamais importe ni charge par l'autoexec.
 - `garage/tasmota32s3-rideau-garage-modbus` : `controleRangeExtender` solidifie, jamais importe ni charge par l'autoexec.
 - `garage/tasmota32s3-rideau-garage-modbus` : `controleTCP` solidifie, jamais importe ni charge par l'autoexec.
+- `garage/tasmota32s3-rideau-garage-modbus` : `fsMqtt` solidifie, jamais importe ni charge par l'autoexec.
 - `garage/tasmota32s3-serveur-modbus` : `demarrage` solidifie, jamais importe ni charge par l'autoexec.
+- `garage/tasmota32s3-serveur-modbus` : `fsMqtt` solidifie, jamais importe ni charge par l'autoexec.
 - `data/etage2/tasmota32s3-grenier/controleGrenier.be` : fichier vide.
 
 ### Informations (normal ou voulu, listees pour memoire)
@@ -464,7 +472,9 @@ flowchart LR
         m_garageFonctions["garageFonctions"]
     end
     subgraph g_Autres["Autres"]
+        m_controleCoprocesseur["controleCoprocesseur"]
         m_demarrage["demarrage"]
+        m_fsMqtt["fsMqtt"]
         m_graphiquesFonctions["graphiquesFonctions"]
         m_historiqueFonctions["historiqueFonctions"]
         m_historiqueSeries["historiqueSeries"]
@@ -504,7 +514,9 @@ flowchart LR
     m_controleVoletRoulants -.->|import| m_vrFonctions
     CARTE --> m_controleGarage
     CARTE --> m_garageFonctions
+    CARTE --> m_controleCoprocesseur
     CARTE --> m_demarrage
+    CARTE --> m_fsMqtt
     CARTE --> m_graphiquesFonctions
     CARTE --> m_historiqueFonctions
     CARTE --> m_historiqueSeries
@@ -555,6 +567,7 @@ flowchart LR
     end
     subgraph g_Autres["Autres"]
         m_demarrage["demarrage"]
+        m_fsMqtt["fsMqtt"]
         m_graphiquesFonctions["graphiquesFonctions"]
         m_historiqueFonctions["historiqueFonctions"]
         m_historiqueSeries["historiqueSeries"]
@@ -591,6 +604,7 @@ flowchart LR
     CARTE --> m_controleCuve
     CARTE --> m_cuveFonctions
     CARTE --> m_demarrage
+    CARTE --> m_fsMqtt
     CARTE --> m_graphiquesFonctions
     CARTE --> m_historiqueFonctions
     CARTE --> m_historiqueSeries

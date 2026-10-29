@@ -5,7 +5,8 @@
       meme role et meme deroule que build_ota_fs.envoie_fs_ota (dossier extrait de littlefs.bin, persist en
       dernier, sauvegarde du persist de la carte s'il part, rechargement, redemarrage ou BrRestart), par le
       broker de user_config_override.h au lieu de HTTP. `topic` = serveur.mqtt.topic du persist de l'env.
-      `effacer` : tout le FS de la carte est d'abord supprime (hors /sd) ; seulement avec l'image ENTIERE.
+      `effacer` : le FS de la carte est d'abord FORMATE (path.format, /sd de la flash compris) ; seulement avec
+      l'image ENTIERE. fsMqtt.be, solidifie, survit ; le formatage bloque la carte (watchdog de la boucle : 5 s).
 
 Protocole (choix 25 a 28 de docs/superpowers/specs/2026-10-24-page-build-televersement-design.md) : ordres JSON sur
 fsmqtt/<topic>/ordre, reponses sur .../etat ; morceaux = 4 octets de position + donnees sur .../morceau, `FENETRE`
@@ -189,16 +190,9 @@ def envoie_fs_mqtt(env, topic, dossier_fs, sauvegardes, rapporte, *, fichiers=No
                                    "pas de sauvegarde possible ; rien n'a été envoyé") from None
             sauve = f" ; sauvegarde du persist : {_sauvegarde(env, ancien, sauvegardes)}"
         if effacer:
-            rapporte({"etape": ETAPE_EFFACEMENT, "pourcent": 0, "detail": "tout le FS (hors /sd)"})
-            r = canal.ordre(ETAPE_EFFACEMENT, "efface", delai)
-            total = None
-            while r.get("restants"):
-                total = total or r["restants"]
-                rapporte({"etape": ETAPE_EFFACEMENT, "pourcent": 100 - r["restants"] * 100 // total,
-                          "detail": f"{r['restants']} entrées restantes"})
-                r = canal.attend(ETAPE_EFFACEMENT, "efface", r["id"], delai)
-            rapporte({"etape": ETAPE_EFFACEMENT, "pourcent": 100,
-                      "detail": f"{r.get('fichiers')} fichiers et {r.get('dossiers')} dossiers supprimés"})
+            rapporte({"etape": ETAPE_EFFACEMENT, "pourcent": 0, "detail": "formatage de tout le FS (/sd compris)"})
+            canal.ordre(ETAPE_EFFACEMENT, "efface", delai)
+            rapporte({"etape": ETAPE_EFFACEMENT, "pourcent": 100, "detail": "FS formaté"})
         total = sum((dossier_fs / rel).stat().st_size for rel in fichiers) or 1
         faits, dernier = 0, [-1]
         for i, rel in enumerate(fichiers, 1):
