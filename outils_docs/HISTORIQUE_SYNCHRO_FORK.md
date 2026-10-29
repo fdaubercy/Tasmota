@@ -316,3 +316,17 @@ gardes ; entree ecrite a la main, pas par le script.
 -   `4df6fa1d4` HttpClientLight: keep read timeouts longer than 65 s (#25180)
 - ● `0ad5879ab` Heap Map optional feature fur detailed memory usage at boot (#25186)
 -   `4d76e1530` wpa3 variant names changed with IDF 6.x (#25190)
+
+## 2026-10-29 04:01 — 7 commit(s) recupere(s) d'upstream
+
+`arendst/Tasmota:development` → `fdaubercy/Tasmota:development` (merge_type : merge)
+
+**2 commit(s) ● a lire de pres.**
+
+- ● `d309da183` Berry `lv.start()` raises an error instead of crashing when the display can't start (#25193)
+- ● `63c38614e` ESP32-S3 RGB display: fix permanent image shift after flash writes (DMA sync guard) (#25194)
+-   `18ded7dc9` Platform 2026.10.50 Tasmota Arduino Core 3.3.12-1 based on IDF 5.5.5 (#25196)
+-   `20b034694` Fix SML ESP8266 serial mode (#25201)
+-   `8eace7eeb` Fix MPR121 sizeof (#25203)
+-   `44356df05` ESP32: steady 38 kHz IR carrier (fixes #25168) (#25176)
+-   `3fd043055` Boot loop when using a literal WIFI_DEFAULT_HOSTNAME (#25205)
