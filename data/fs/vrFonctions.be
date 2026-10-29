@@ -33,6 +33,7 @@ def vrFonctions_aideReglageVolets(sujet)
     if (sujet == "INCLINAISON")
         return ["Lit l'angle du volet (moyenne de 4 lectures) et l'etat qu'il donne, sans recaler le volet.",
                 "Repond meme si capteursPosition.inclinaison.activation vaut OFF : sert au calibrage avant activation.",
+                "Donne aussi les durees de course mesurees butee a butee et la valeur proposee pour tempsMontee / tempsDescente.",
                 "Exemple : ReglageVolets Inclinaison 1"]
     elif (sujet == "APPRENTISSAGE")
         return ["1. Amener le volet en butee OUVERTE (commande habituelle), puis : ReglageVolets Apprentissage 1 ouvert",
@@ -92,7 +93,7 @@ def vrFonctions_reglageVolets(cmd, idx, payload, payload_json)
             if (angle == nil)
                 reponse_cmnd += string.format("volet %i : MPU6050 muet (voir les logs)", id)
             else
-                reponse_cmnd += string.format("volet %i : angle %.1f degres, etat %s", id, angle, vrFonctions.etatInclinaison(angle, incl, nil))
+                reponse_cmnd += string.format("volet %i : angle %.1f degres, etat %s", id, angle, vrFonctions.etatInclinaison(angle, incl, nil)) + vrFonctions.texteDurees(id)
             end
         end
         tasmota.resp_cmnd(json.dump(reponse_cmnd))
@@ -268,11 +269,11 @@ def vrFonctions_changementEtatCapteur(value, trigger, msg, numRideau, etatRideau
     var vrJSON = drivers["voletRoulants"]
     if (etatRideau == "ouverture" && value == "ON")
         # On force l'affichage de l'état 'ouvert' du rideau
-        tasmota.cmd(string.format("ShutterSetClose%i", numRideau), boolMute)
+        vrFonctions.commandeArret(numRideau, string.format("ShutterSetClose%i", numRideau))
         vrFonctions.log(string.format("VR_GESTION_CAPTEURS: Force l'affichage du volet %i en ouverture !", numRideau), LOG_LEVEL_DEBUG)
     elif (etatRideau == "fermeture" && value == "ON")
         # On force l'affichage de l'état 'fermé' du rideau
-        tasmota.cmd(string.format("ShutterSetOpen%i", numRideau), boolMute)
+        vrFonctions.commandeArret(numRideau, string.format("ShutterSetOpen%i", numRideau))
         vrFonctions.log(string.format("VR_GESTION_CAPTEURS: Force l'affichage du volet %i en fermeture !", numRideau), LOG_LEVEL_DEBUG)
     end
 
@@ -280,6 +281,25 @@ def vrFonctions_changementEtatCapteur(value, trigger, msg, numRideau, etatRideau
 	# persist.modules = modules
 end
 vrFonctions.changementEtatCapteur = vrFonctions_changementEtatCapteur
+
+# ShutterSetOpen/Close/Position passent par ShutterStartInit -> ShutterWaitForMotorStart, qui BOUCLE sur loop()
+# tant que ShutterMotorStop (500 ms par defaut) n'est pas ecoule depuis le dernier arret : envoyees depuis Berry
+# juste apres un arret (suivi["arret"]), loop() serait reentre. La commande part alors apres ce delai, et
+# seulement si aucune course n'a repris (elle remettrait 'direction' a 0 sans couper le moteur). Sinon : tout de suite.
+def vrFonctions_commandeArret(id, commande)
+    var suivi = vrFonctions.suiviInclinaison(id)
+    var delai = 0
+    if (suivi.find("arret") != nil)
+        var r = tasmota.cmd("ShutterMotorStop", boolMute)
+        delai = suivi["arret"] + (isinstance(r, map) ? r.find("ShutterMotorStop", 500) : 500) + 100 - tasmota.millis()
+    end
+    if (delai <= 0)
+        tasmota.cmd(commande, boolMute)
+        return
+    end
+    tasmota.set_timer(delai, def () if (!vrFonctions.suiviInclinaison(id)["enCourse"])    tasmota.cmd(commande, boolMute)    end end, "vr" + commande)
+end
+vrFonctions.commandeArret = vrFonctions_commandeArret
 
 # Capteur de position VIRTUEL (2026-10-12) : interrupteur d'un esclave ModBus, recopie sur le
 # maitre par modBus_TasmotaSlaveModBus. Tasmota n'en fait aucun evenement 'SwitchN#Action', et
@@ -350,15 +370,39 @@ vrFonctions.suiviInclinaison = vrFonctions_suiviInclinaison
 
 # Le bloc 'inclinaison' du volet de numero 'id', ACTIF OU NON (calibrage, apprentissage), sinon nil
 def vrFonctions_trouveInclinaison(id)
+    var v = vrFonctions.trouveVolet(id)
+    var capteurs = v != nil ? v.find("capteursPosition") : nil
+    var incl = type(capteurs) == "instance" ? capteurs.find("inclinaison") : nil
+    return type(incl) == "instance" ? incl : nil
+end
+vrFonctions.trouveInclinaison = vrFonctions_trouveInclinaison
+
+# Le volet de numero 'id' du persist, sinon nil
+def vrFonctions_trouveVolet(id)
     for v: drivers.find("voletRoulants", {}).find("environnement", {}).find("VRs", {})
-        if (type(v) != "instance" || v.find("id") != id)    continue    end
-        var capteurs = v.find("capteursPosition")
-        var incl = type(capteurs) == "instance" ? capteurs.find("inclinaison") : nil
-        return type(incl) == "instance" ? incl : nil
+        if (type(v) == "instance" && v.find("id") == id)    return v    end
     end
     return nil
 end
-vrFonctions.trouveInclinaison = vrFonctions_trouveInclinaison
+vrFonctions.trouveVolet = vrFonctions_trouveVolet
+
+# Durees de course mesurees butee a butee et proposition pour tempsMontee (ouverture) / tempsDescente
+# (fermeture), en secondes entieres arrondies au-dessus. Jamais appliquees : configVRByJson reecrit
+# ShutterOpen/CloseDuration depuis le persist a chaque demarrage, c'est donc le persist qu'il faut changer.
+def vrFonctions_texteDurees(id)
+    import string
+    var durees = vrFonctions.suiviInclinaison(id).find("durees", {})
+    var vr = vrFonctions.trouveVolet(id)
+    var texte = ""
+    for sens: [["ouverture", "tempsMontee"], ["fermeture", "tempsDescente"]]
+        var d = durees.find(sens[0])
+        if (d == nil)    continue    end
+        var propose = int(d) + (d > int(d) ? 1 : 0)
+        texte += string.format(" ; %s %.1f s mesuree -> %s %i (actuel %s)", sens[0], d, sens[1], propose, str(vr.find(sens[1])))
+    end
+    return texte
+end
+vrFonctions.texteDurees = vrFonctions_texteDurees
 
 # Acceleration moyenne [AX, AY, AZ] sur 4 lectures (unites brutes), ou nil + erreur si le capteur ne repond pas
 def vrFonctions_lireVecteur(id, incl)
@@ -511,12 +555,23 @@ def vrFonctions_releveInclinaison(vr)
     var capteurs = vr["capteursPosition"]
     var nom = "Inclinaison"
     var designe = (etat == "ouvert" && capteurs.find("capteurOuvert") == nom) || (etat == "ferme" && capteurs.find("capteurFerme") == nom)
+    var cible = suivi.find("sens") == 1 ? "ouvert" : "ferme"
+    # Duree de course : partie de l'autre butee (etat au depart, note par changementDirection), arrivee a celle-ci
+    var debut = suivi.find("debut")
+    if (suivi["enCourse"] && etat == cible && debut != nil && debut[0] == (cible == "ouvert" ? "ferme" : "ouvert"))
+        suivi["debut"] = nil
+        if (!suivi.contains("durees"))    suivi["durees"] = {}    end
+        var sens = cible == "ouvert" ? "ouverture" : "fermeture"
+        suivi["durees"][sens] = (tasmota.millis() - debut[1]) / 1000.0
+        vrFonctions.log(string.format("VR_INCLINAISON: Volet %i, %s butee a butee en %.1f s !", id, sens, suivi["durees"][sens]), LOG_LEVEL_DEBUG)
+    end
     # Arret en butee : en course vers une butee designee et l'atteint (ou y est deja). ShutterStop AVANT le
     # recalage : il coupe le moteur sur-le-champ, alors que ShutterSetOpen/Close ne fait que remettre 'direction' a 0.
-    var arret = designe && suivi["enCourse"] && etat == (suivi.find("sens") == 1 ? "ouvert" : "ferme")
+    var arret = designe && suivi["enCourse"] && etat == cible
     if (arret)
         suivi["enCourse"] = false                   # chaine de 250 ms coupee ; Shutter<n>#Direction 0 suivra
         suivi["etat"] = etat                        # AVANT ShutterStop : un Direction 0 synchrone ne recale pas une 2e fois
+        suivi["arret"] = tasmota.millis()           # recalage qui suit : differe (commandeArret)
         tasmota.cmd(string.format("ShutterStop%i", id), boolMute)
         vrFonctions.log(string.format("VR_INCLINAISON: Volet %i arrete en butee %s (%.1f degres) !", id, etat, angle), LOG_LEVEL_DEBUG)
     elif (etat == suivi["etat"])
@@ -539,7 +594,7 @@ def vrFonctions_suitInclinaison(vr)
     tasmota.remove_timer(nom)
     var angle = vrFonctions.releveInclinaison(vr)
     if (angle == nil)    return    end
-    if (vrFonctions.suiviInclinaison(vr["id"])["enCourse"] && !vrFonctions.verifieBlocage(vr, angle))
+    if (vrFonctions.suiviInclinaison(vr["id"])["enCourse"] && !vrFonctions.verifieSens(vr, angle) && !vrFonctions.verifieBlocage(vr, angle))
         tasmota.set_timer(250, def () vrFonctions.suitInclinaison(vr) end, nom)
     end
 end
@@ -567,6 +622,7 @@ def vrFonctions_verifieBlocage(vr, angle)
     end
     if (!tasmota.time_reached(repere[1] + int(delai * 1000)))    return false    end
     suivi["repere"] = nil
+    suivi["arret"] = tasmota.millis()
     tasmota.cmd(string.format("ShutterStop%i", vr["id"]), boolMute)
     # Fige sur la butee de son sens (non tenue par l'inclinaison) : arrivee normale, moteur qui force -> arret sans alerte
     if (suivi.find("etat") == (suivi.find("sens") == 1 ? "ouvert" : "ferme"))
@@ -575,10 +631,39 @@ def vrFonctions_verifieBlocage(vr, angle)
     end
     vrFonctions.log(string.format("VR_INCLINAISON: Volet %i bloque a %.1f degres (%s) depuis %s s : moteur arrete !", vr["id"], angle, str(suivi["etat"]), str(delai)), LOG_LEVEL_ERREUR)
     suivi["bloque"] = true                          # page d'accueil et MQTT, jusqu'a la prochaine course
+    suivi["cause"] = "blocage"
     vrFonctions.publieBlocage(vr["id"], suivi)
     return true
 end
 vrFonctions.verifieBlocage = vrFonctions_verifieBlocage
+
+# Sens inverse : l'angle s'eloigne de 'sensInverse' degres (3 par defaut ; 0 = pas de detection) de son
+# angle de depart, a l'oppose du sens de course (moteur cable a l'envers, ShutterInvert faux) -> ShutterStop,
+# erreur et alerte comme un blocage. Rend true si le volet vient d'etre arrete. Depart remis a nil par
+# changementDirection, note au 1er releve de la course.
+def vrFonctions_verifieSens(vr, angle)
+    import string
+    var incl = vrFonctions.inclinaison(vr)
+    var seuil = incl.find("sensInverse", 3)
+    if (seuil <= 0)    return false    end
+    var suivi = vrFonctions.suiviInclinaison(vr["id"])
+    var depart = suivi.find("depart")
+    if (depart == nil)
+        suivi["depart"] = angle
+        return false
+    end
+    var s = incl.find("angleOuvert", 85) >= incl.find("angleFerme", 3) ? 1 : -1     # ouverture = angle croissant ?
+    if ((angle - depart) * suivi["sens"] * s > -seuil)    return false    end
+    suivi["arret"] = tasmota.millis()
+    tasmota.cmd(string.format("ShutterStop%i", vr["id"]), boolMute)
+    vrFonctions.log(string.format("VR_INCLINAISON: Volet %i part a l'envers (%.1f -> %.1f degres en %s) : moteur arrete, verifier le cablage ou ShutterInvert !",
+                                  vr["id"], depart, angle, suivi["sens"] == 1 ? "ouverture" : "fermeture"), LOG_LEVEL_ERREUR)
+    suivi["bloque"] = true
+    suivi["cause"] = "sens inverse"
+    vrFonctions.publieBlocage(vr["id"], suivi)
+    return true
+end
+vrFonctions.verifieSens = vrFonctions_verifieSens
 
 # Etat de blocage sur tele/<topic>/INCLINAISON<id>, RETENU (une alerte Node-RED le relit a sa connexion).
 # Appelee au changement seulement : blocage, puis course suivante.
@@ -589,7 +674,7 @@ def vrFonctions_publieBlocage(id, suivi)
     var topic = isinstance(serveur, map) ? serveur.find("mqtt", {}).find("topic", "") : ""
     if (topic == "" || !mqtt.connected())    return    end
     try
-        mqtt.publish(string.format("tele/%s/INCLINAISON%i", topic, id), json.dump({"Volet": id, "Bloque": suivi["bloque"], "Angle": suivi.find("angle"), "Etat": suivi.find("etat")}), true)
+        mqtt.publish(string.format("tele/%s/INCLINAISON%i", topic, id), json.dump({"Volet": id, "Bloque": suivi["bloque"], "Cause": suivi.find("cause"), "Angle": suivi.find("angle"), "Etat": suivi.find("etat")}), true)
     except .. as erreur, message
         vrFonctions.log(string.format("VR_INCLINAISON_ERREUR: Publication MQTT du volet %i : %s %s !", id, str(erreur), str(message)), LOG_LEVEL_ERREUR)
     end
@@ -603,10 +688,60 @@ def vrFonctions_ligneWebInclinaison(vr)
     var suivi = vrFonctions.suiviInclinaison(vr["id"])
     var nom = vr.find("nom", "Volet " + str(vr["id"]))
     if (suivi.find("angle") == nil)    return string.format("{s}%s : inclinaison{m}capteur muet ou pas encore lu{e}", nom)    end
-    var bloque = suivi.find("bloque", false) ? " &ndash; <b>BLOQU&Eacute;</b>" : ""
+    var bloque = suivi.find("bloque", false) ? " &ndash; <b>BLOQU&Eacute;</b>" + (suivi.find("cause") == "sens inverse" ? " (sens inverse)" : "") : ""
     return string.format("{s}%s : inclinaison{m}%.1f &deg; (%s)%s{e}", nom, suivi["angle"], str(suivi["etat"]), bloque)
 end
 vrFonctions.ligneWebInclinaison = vrFonctions_ligneWebInclinaison
+
+# Surveillance a l'arret : une lecture toutes les 'surveillance' s (0 par defaut = aucune), volet ARRETE
+# seulement (en course, suitInclinaison lit deja). Trappe bougee hors manoeuvre (main, vent, effraction) :
+# ligne info, recalage si elle atteint une butee, position reelle. Lancee par CONTROLE_VR.init.
+def vrFonctions_surveille(vr)
+    import string
+    import math
+    var incl = vrFonctions.inclinaison(vr)
+    var periode = incl != nil ? incl.find("surveillance", 0) : 0
+    if (periode <= 0)    return    end
+    var id = vr["id"]
+    var nom = "vrSurveillance" + str(id)
+    tasmota.remove_timer(nom)
+    var suivi = vrFonctions.suiviInclinaison(id)
+    if (!suivi["enCourse"])
+        var avant = suivi.find("angle")
+        var angle = vrFonctions.releveInclinaison(vr)
+        # Position corrigee seulement apres un vrai mouvement : un moteur qui vient de demarrer (Direction pas
+        # encore recu) n'a pas encore bouge, et ShutterSetPosition remettrait sa direction a 0 sans le couper
+        if (angle != nil && avant != nil && math.abs(angle - avant) >= incl.find("marge", 3))
+            vrFonctions.log(string.format("VR_INCLINAISON: Volet %i bouge hors manoeuvre : %.1f -> %.1f degres (%s) !", id, avant, angle, str(suivi["etat"])), LOG_LEVEL_INFO)
+            vrFonctions.positionReelle(vr, angle)
+        end
+        suivi["echecs"] = angle == nil ? suivi.find("echecs", 0) + 1 : 0     # capteur muet : periode doublee (x128 au plus)
+    end
+    var n = suivi.find("echecs", 0)
+    tasmota.set_timer(int(periode * 1000) * (1 << (n < 7 ? n : 7)), def () vrFonctions.surveille(vr) end, nom)
+end
+vrFonctions.surveille = vrFonctions_surveille
+
+# Position en % d'apres l'angle ('positionReelle' ON), volet ARRETE seulement : ShutterSetPosition passe par
+# ShutterStartInit(i, 0, ...), qui remet 'direction' a 0 SANS couper le moteur. ShutterInvert 1 (configVRByJson) :
+# position Tasmota = 100 - % d'ouverture (ShutterSetClose = ouvert). Ecart < 2 % : rien (reglages non reecrits).
+def vrFonctions_positionReelle(vr, angle)
+    import string
+    import math
+    var incl = vrFonctions.inclinaison(vr)
+    if (incl == nil || angle == nil || incl.find("positionReelle", "OFF") != "ON")    return    end
+    var suivi = vrFonctions.suiviInclinaison(vr["id"])
+    var ouvert = incl.find("angleOuvert", 85)
+    var ferme = incl.find("angleFerme", 3)
+    if (suivi["enCourse"] || ouvert == ferme)    return    end
+    var pct = (angle - ferme) * 100.0 / (ouvert - ferme)
+    var position = 100 - int((pct < 0 ? 0 : (pct > 100 ? 100 : pct)) + 0.5)
+    if (suivi.find("position") != nil && math.abs(position - suivi["position"]) < 2)    return    end
+    suivi["position"] = position
+    vrFonctions.commandeArret(vr["id"], string.format("ShutterSetPosition%i %i", vr["id"], position))
+    vrFonctions.log(string.format("VR_INCLINAISON: Volet %i a %.1f degres : position Tasmota %i !", vr["id"], angle, position), LOG_LEVEL_DEBUG)
+end
+vrFonctions.positionReelle = vrFonctions_positionReelle
 
 # Règles sur changement d'état des capteurs
 def vrFonctions_changementDirection(value, trigger, msg, numRideau)
@@ -654,11 +789,15 @@ def vrFonctions_changementDirection(value, trigger, msg, numRideau)
         suivi["enCourse"] = (value != 0)
         suivi["sens"] = value                       # 1 = ouverture (Direction n'est pas inverse par ShutterInvert)
         suivi["repere"] = nil                       # detection de blocage : repere repris a chaque course
+        suivi["depart"] = nil                       # sens inverse : angle de depart note au 1er releve
+        suivi["debut"] = value != 0 ? [suivi.find("etat"), tasmota.millis()] : nil     # duree de course
+        if (value == 0)    suivi["arret"] = tasmota.millis()    else    suivi["position"] = nil    end     # position Tasmota : derive en course
         if (value != 0 && suivi.find("bloque", false))
             suivi["bloque"] = false
             vrFonctions.publieBlocage(numRideau, suivi)
         end
         vrFonctions.suitInclinaison(vr)
+        if (value == 0)    vrFonctions.positionReelle(vr, suivi.find("angle"))    end
     end
 
     var activationSiOuvert = vr.find("activationSiOuvert", false)

@@ -56,12 +56,32 @@ Constat dans `xdrv_27_esp32_shutter.ino` : `CmndShutterStop` coupe le moteur sur
 - [x] README § Inclinaison : arrêt en butée, blocage visible, `filtre` — preuve : § Détection de blocage, § Arrêt en butée, cle filtre ; verifie_references_docs : 0 defaut
 - [x] Commit et push (demandés par l'utilisateur le 2026-10-29) — preuve : commit 945c016af, poussé sur development
 
+## A8 — Sens inverse (2026-10-29)
+- [x] Banc d'abord : angle qui part à l'opposé du sens de course de `sensInverse` degrés (3 par défaut) depuis le départ -> `ShutterStop` + erreur + alerte (ligne web, MQTT `"Cause": "sens inverse"`) ; mouvement dans le bon sens -> rien ; `sensInverse` 0 -> rien — preuve : banc section 13, rouge avant le code puis vert ; mutant sans detection ECHEC (4)
+- [x] `vrFonctions.verifieSens` appelée par `suitInclinaison` ; angle de départ noté au 1er relevé de la course ; sens attendu = `sens` × signe(angleOuvert − angleFerme) — preuve : vrFonctions.be::vrFonctions_verifieSens, appel dans vrFonctions_suitInclinaison, depart remis a nil dans vrFonctions_changementDirection
+
+## A9 — Durées de course mesurées
+- [x] Banc d'abord : course partie d'une butée et arrivée à l'autre -> durée mémorisée ; `ReglageVolets Inclinaison <id>` la donne avec la proposition `tempsMontee` (ouverture) / `tempsDescente` (fermeture), en secondes entières arrondies au-dessus ; course partie d'entre deux -> pas de mesure — preuve : banc section 14 (12.5 s -> tempsMontee 13) ; mutant duree ECHEC (2)
+- [x] Mesure dans `releveInclinaison` (départ : `changementDirection`) ; jamais appliquée seule (`configVRByJson` réécrit ShutterOpen/CloseDuration depuis le persist à chaque démarrage) — preuve : vrFonctions.be::vrFonctions_releveInclinaison, vrFonctions_texteDurees, debut pose par vrFonctions_changementDirection
+
+## A10 — Surveillance à l'arrêt
+- [x] Banc d'abord : `surveillance` N s (0 par défaut = rien) -> une lecture toutes les N s volet arrêté, aucune en course ; trappe bougée hors manœuvre -> log info + recalage si butée ; minuterie seulement si l'inclinaison est active — preuve : banc section 15 (+ periode doublee si capteur muet, relecture) ; mutants surv_course ECHEC (1), echecs ECHEC (1)
+- [x] `vrFonctions.surveille(vr)` (chaîne `set_timer` `vrSurveillance<id>`), lancée par `CONTROLE_VR.init` après le relevé de démarrage — preuve : vrFonctions.be::vrFonctions_surveille ; controleVoletRoulants.be::CONTROLE_VR.init
+
+## A11 — Position réelle en %
+Constat : `ShutterSetPosition` passe par `ShutterStartInit(i, 0, …)`, qui remet `direction` à 0 sans couper le moteur ->
+JAMAIS pendant une course. Appliquée à l'arrêt seulement (fin de course, surveillance).
+- [x] Banc d'abord : `positionReelle` ON, volet arrêté entre les butées -> `ShutterSetPosition<id> <100 − %ouverture>` (ShutterInvert 1 : `ShutterSetClose` = ouvert) ; écart < 2 % -> rien (pas d'écriture de réglages à chaque relevé) ; en course -> rien ; OFF -> rien — preuve : banc section 16 (+ renvoi apres course, relecture) ; mutants pos_course ECHEC (1), pos_invert ECHEC (3), cache ECHEC (3)
+- [x] `vrFonctions.positionReelle(vr, angle)` appelée par `changementDirection` (arrêt) et la surveillance — preuve : vrFonctions.be::vrFonctions_positionReelle, par vrFonctions_commandeArret (differe apres un arret : ShutterWaitForMotorStart boucle sur loop(), relecture) ; mutants immediat ECHEC (3), abandon ECHEC (1)
+
+## A12 — Persists, vérifications, doc, commit
+- [x] Clés `sensInverse: 3`, `surveillance: 0`, `positionReelle: "OFF"` dans les 7 persists et le modèle, schéma régénéré — preuve : 7 persists + modele_persist.json (JSON relus) ; genere_schema_persist.py --valide : 8 cartes a 0 erreur
+- [x] Bancs inclinaison (+ mutants), boot, démarrage verts ; solidification des 2 `.be` ; `relecteur-berry` — preuve : BANC_INCLINAISON OK, 9 mutants ECHEC ; BANC_BOOT OK ; banc_demarrage VERT ; les 2 .h compilent (apres la fin du build de la cuve, 05:03) ; relecteur : rien de bloquant, 4 points corriges (commandes differees apres arret, cache de position, position en surveillance apres mouvement, periode doublee capteur muet)
+- [x] README § Inclinaison ; aide `ReglageVolets Inclinaison` — preuve : § Sens inverse, Durées de course, Surveillance à l'arrêt, Position réelle ; aide INCLINAISON ; verifie_references_docs : 0 defaut
+- [ ] Commit et push
+
 ## Améliorations restantes
 - [ ] [projet] Essai réel sur la trappe du grenier (avec le reste de l'inclinaison)
-- [ ] [projet] Position réelle en % : angle converti entre les butées puis `ShutterSetPosition`, pour une position juste à tout moment (à décider après l'essai réel)
-- [ ] [projet] Surveillance à l'arrêt : une lecture toutes les ~30 s volet arrêté (trappe bougée à la main, forcée, vent) ; aujourd'hui la page montre le dernier angle de manœuvre (à décider après l'essai réel)
-- [ ] [projet] Sens inverse : angle qui part à l'opposé du sens de course -> `ShutterStop` + erreur (moteur câblé à l'envers, `ShutterInvert` faux)
-- [ ] [projet] Durées de course mesurées butée à butée, proposées pour `ShutterOpenDuration` / `ShutterCloseDuration`
 - [ ] [projet] Accessoire — angle dans le JSON SENSOR (Grafana, historique ; vérifier que `historiqueSeries` n'exclut pas les volets)
 - [ ] [projet] Accessoire — température interne du MPU6050 (registre `0x41`) comme capteur du grenier
 - Écartés : relance automatique après un blocage (danger si quelque chose coince la trappe) ; apprentissage qui commande le moteur (refusé le 2026-10-28).

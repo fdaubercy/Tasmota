@@ -94,7 +94,8 @@ class CONTROLE_VR : Driver
             # Sinon ni bus I2C ni minuterie : une carte sans capteur n'attend aucune donnee.
             for vr: vrFonctions.inclinaisonsActives()
                 vrFonctions.log(string.format("CONTROLE_VR: Inclinaison active sur le volet %i !", vr["id"]), LOG_LEVEL_INFO)
-                vrFonctions.releveInclinaison(vr)      # position reelle des le demarrage
+                vrFonctions.positionReelle(vr, vrFonctions.releveInclinaison(vr))     # position reelle des le demarrage
+                vrFonctions.surveille(vr)              # lecture periodique a l'arret, si 'surveillance' > 0
             end
         end
 

@@ -1302,7 +1302,10 @@
 								"angleFerme": 3.0,
 								"marge": 3,
 								"blocage": 5,
-								"blocageDegres": 1
+								"blocageDegres": 1,
+								"sensInverse": 3,
+								"surveillance": 0,
+								"positionReelle": "OFF"
 							}
 						},
                         "activationSiOuvert": {

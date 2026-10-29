@@ -57,7 +57,8 @@ class TasmotaStub
     var surCmd                                      # facultatif : rejoue un evenement synchrone (Direction 0)
     def cmd(c, m) self.cmds.push(c) if self.surCmd != nil    self.surCmd(c)    end return {} end
     def wire_scan(adr, idx) self.scans.push(adr) return self.bus.find(adr) end
-    def set_timer(d, f, id) self.timers[id] = f end
+    var delais
+    def set_timer(d, f, id) self.timers[id] = f if self.delais == nil    self.delais = {}    end self.delais[id] = d end
     def remove_timer(id) if self.timers.contains(id) self.timers.remove(id) end end
     def resp_cmnd(x) self.reponse = x end
     def yield() end
@@ -93,6 +94,23 @@ def shutterSet()
     var l = []
     for c: tasmota.cmds    if string.find(c, "ShutterSet") == 0    l.push(c)    end    end
     return l
+end
+# Commandes du Shutter (ShutterStop, ShutterSet*), sans la lecture de ShutterMotorStop
+def pilotage()
+    var l = []
+    for c: tasmota.cmds    if string.find(c, "ShutterS") == 0    l.push(c)    end    end
+    return l
+end
+# ShutterMotorStop (500 ms) + 100 ms ecoules : les commandes differees apres un arret partent
+def attente()
+    tasmota.horloge += 700
+    var noms = []
+    for k: tasmota.timers.keys()    if string.find(k, "vrShutter") == 0    noms.push(k)    end    end
+    for k: noms
+        var f = tasmota.timers[k]
+        tasmota.timers.remove(k)
+        f()
+    end
 end
 
 print("1. Garde : inclinaison OFF (ou bloc absent) -> le bus n'est jamais touche")
@@ -165,6 +183,8 @@ verifie(mpu.lectures == lu + 4 && tasmota.timers.contains("vrInclinaison1"), "pa
 incline(mpu, 90)
 vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
 verifie(!tasmota.timers.contains("vrInclinaison1"), "arret : suivi coupe")
+verifie(size(shutterSet()) == 0, "juste apres l'arret : recalage differe (ShutterMotorStop, sinon loop() reentre)")
+attente()
 verifie(shutterSet() == ["ShutterSetClose1"], "arret : derniere lecture, ouvert -> recalage")
 
 print("6. Pannes : capteur absent, bus muet, axes invalides -> erreur, pas d'exception, suivi coupe")
@@ -322,7 +342,9 @@ pas()
 verifie(size(stops()) == 0, "ouverture a 70 degres : pas d'arret")
 incline(mpu, 86)
 pas()
-verifie(tasmota.cmds == ["ShutterStop1", "ShutterSetClose1"], "butee ouverte atteinte : ShutterStop1 AVANT ShutterSetClose1 (ShutterSet* ne coupe pas le moteur)")
+verifie(pilotage() == ["ShutterStop1"], "butee ouverte atteinte : ShutterStop1 tout de suite")
+attente()
+verifie(pilotage() == ["ShutterStop1", "ShutterSetClose1"], "puis ShutterSetClose1 apres ShutterMotorStop (ShutterSet* ne coupe pas le moteur)")
 verifie(!tasmota.timers.contains("vrInclinaison1"), "arret en butee : suivi coupe")
 vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
 tasmota.cmds = []
@@ -330,11 +352,19 @@ vrFonctions.changementDirection(-1, "Shutter1#Direction", {}, 1)
 verifie(size(tasmota.cmds) == 0, "depart de la butee ouverte vers la fermeture : rien")
 incline(mpu, 2)
 pas()
-verifie(tasmota.cmds == ["ShutterStop1", "ShutterSetOpen1"], "butee fermee atteinte en fermeture : arret puis recalage")
+attente()
+verifie(pilotage() == ["ShutterStop1", "ShutterSetOpen1"], "butee fermee atteinte en fermeture : arret puis recalage")
 vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
 tasmota.cmds = []
 vrFonctions.changementDirection(-1, "Shutter1#Direction", {}, 1)
-verifie(tasmota.cmds == ["ShutterStop1", "ShutterSetOpen1"], "deja fermee et commandee en fermeture : arret et recalage immediats")
+attente()
+verifie(pilotage() == ["ShutterStop1", "ShutterSetOpen1"], "deja fermee et commandee en fermeture : arret et recalage")
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+tasmota.cmds = []
+vrFonctions.changementDirection(-1, "Shutter1#Direction", {}, 1)
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+attente()
+verifie(pilotage() == ["ShutterStop1"], "temoin : une course reprend avant le delai -> recalage differe abandonne")
 vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
 capteurs["capteurOuvert"] = "Switch1"
 tasmota.cmds = []
@@ -362,7 +392,8 @@ vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
 incline(mpu, 86)
 pas()
 tasmota.surCmd = nil
-verifie(tasmota.cmds == ["ShutterStop1", "ShutterSetClose1"], "Direction 0 synchrone pendant ShutterStop : un seul recalage")
+attente()
+verifie(pilotage() == ["ShutterStop1", "ShutterSetClose1"], "Direction 0 synchrone pendant ShutterStop : un seul recalage")
 
 print("12. Blocage visible : ligne web et tele/<topic>/INCLINAISON<id> retenu, au changement seulement")
 import mqtt as mqttBouchon
@@ -384,5 +415,152 @@ verifie(string.find(vrFonctions.ligneWebInclinaison(vr1), "BLOQU") < 0, "nouvell
 pas()
 vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
 verifie(size(publies) == 2, "course sans blocage : rien de plus publie")
+
+print("13. Sens inverse : l'angle part a l'oppose du sens de course -> ShutterStop + erreur + alerte")
+vrFonctions.etat()["inclinaison"] = {}
+publies.clear()
+tasmota.cmds = []
+incline(mpu, 40)
+avant = erreurs()
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+incline(mpu, 38)
+pas()
+verifie(size(stops()) == 0, "2 degres a l'envers : sous le seuil (3), rien")
+incline(mpu, 36.5)
+pas()
+verifie(stops() == ["ShutterStop1"] && erreurs() == avant + 1, "3,5 degres a l'envers : ShutterStop1 et une erreur")
+verifie(!tasmota.timers.contains("vrInclinaison1"), "sens inverse : suivi coupe")
+verifie(string.find(vrFonctions.ligneWebInclinaison(vr1), "sens inverse") > 0, "ligne web : BLOQUE (sens inverse)")
+verifie(size(publies) == 1 && json.load(publies[0][1])["Cause"] == "sens inverse", "MQTT : Cause sens inverse")
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+tasmota.cmds = []
+vrFonctions.changementDirection(-1, "Shutter1#Direction", {}, 1)
+for n: 1 .. 8
+    incline(mpu, 36 - n * 2)
+    pas()
+end
+verifie(size(stops()) == 0, "fermeture dans le bon sens : rien")
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+inclinaison["sensInverse"] = 0
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+incline(mpu, 10)
+pas()
+verifie(size(stops()) == 0, "sensInverse 0 : pas de detection")
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+inclinaison.remove("sensInverse")
+
+print("14. Durees de course mesurees butee a butee, proposees pour tempsMontee / tempsDescente")
+vr1["tempsMontee"] = 10
+vr1["tempsDescente"] = 10
+vrFonctions.etat()["inclinaison"] = {}
+incline(mpu, 2)
+vrFonctions.releveInclinaison(vr1)
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+for n: 1 .. 50
+    incline(mpu, 2 + n * 1.67)
+    pas()
+end
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+vrFonctions.reglageVolets("ReglageVolets", 0, "Inclinaison 1", nil)
+verifie(string.find(tasmota.reponse, "ouverture 12.5 s") > 0, "ferme -> ouvert en 50 pas : ouverture 12.5 s mesuree")
+verifie(string.find(tasmota.reponse, "tempsMontee 13 (actuel 10)") > 0, "proposition tempsMontee 13, arrondie au-dessus")
+vrFonctions.changementDirection(-1, "Shutter1#Direction", {}, 1)
+incline(mpu, 50)
+pas()
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+vrFonctions.changementDirection(-1, "Shutter1#Direction", {}, 1)
+incline(mpu, 2)
+pas()
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+vrFonctions.reglageVolets("ReglageVolets", 0, "Inclinaison 1", nil)
+verifie(string.find(tasmota.reponse, "fermeture") < 0, "course partie d'entre deux : pas de mesure de fermeture")
+
+print("15. Surveillance a l'arret : une lecture toutes les 'surveillance' s, jamais en course")
+def infos(motif)
+    var n = 0
+    for l: journal    if l[1] == LOG_LEVEL_INFO && string.find(l[0], motif) >= 0    n += 1    end    end
+    return n
+end
+vrFonctions.etat()["inclinaison"] = {}
+incline(mpu, 40)
+vrFonctions.surveille(vr1)
+verifie(!tasmota.timers.contains("vrSurveillance1"), "surveillance 0 (defaut) : aucune minuterie")
+inclinaison["surveillance"] = 30
+vrFonctions.surveille(vr1)
+verifie(tasmota.timers.contains("vrSurveillance1"), "surveillance 30 s : minuterie armee")
+incline(mpu, 60)
+var bouge = infos("hors manoeuvre")
+tasmota.timers["vrSurveillance1"]()
+verifie(proche(vrFonctions.suiviInclinaison(1)["angle"], 60), "tick : angle relu (60)")
+verifie(infos("hors manoeuvre") == bouge + 1, "trappe bougee a la main : une ligne info")
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+lu = mpu.lectures
+tasmota.timers["vrSurveillance1"]()
+verifie(mpu.lectures == lu && tasmota.timers.contains("vrSurveillance1"), "en course : pas de lecture, minuterie rearmee")
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+attente()                                       # commandes differees des sections precedentes
+tasmota.cmds = []
+incline(mpu, 88)
+tasmota.timers["vrSurveillance1"]()
+attente()
+verifie(shutterSet() == ["ShutterSetClose1"], "amenee en butee ouverte a la main : recalage")
+mpu.accel = nil
+tasmota.timers["vrSurveillance1"]()
+tasmota.timers["vrSurveillance1"]()
+verifie(tasmota.delais["vrSurveillance1"] == 120000, "capteur muet : periode doublee a chaque echec (2 echecs -> 120 s)")
+mpu.accel = [0, 0, 16384]
+incline(mpu, 88)
+tasmota.timers["vrSurveillance1"]()
+verifie(tasmota.delais["vrSurveillance1"] == 30000, "capteur revenu : periode normale")
+tasmota.remove_timer("vrSurveillance1")
+inclinaison["activation"] = "OFF"
+vrFonctions.surveille(vr1)
+verifie(!tasmota.timers.contains("vrSurveillance1"), "inclinaison OFF : aucune minuterie")
+inclinaison["activation"] = "ON"
+
+print("16. Position reelle en % : volet ARRETE seulement, ShutterSetPosition<id> <100 - %ouverture>")
+def positions()
+    var l = []
+    for c: tasmota.cmds    if string.find(c, "ShutterSetPosition") == 0    l.push(c)    end    end
+    return l
+end
+vrFonctions.etat()["inclinaison"] = {}
+tasmota.cmds = []
+incline(mpu, 44)
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+verifie(size(positions()) == 0, "positionReelle OFF (defaut) : rien")
+inclinaison["positionReelle"] = "ON"
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+verifie(size(positions()) == 0, "en course : jamais (ShutterSetPosition ne coupe pas le moteur)")
+vrFonctions.positionReelle(vr1, 60)
+verifie(size(positions()) == 0, "appel direct en course : refuse aussi")
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+attente()
+verifie(positions() == ["ShutterSetPosition1 50"], "arret a 44 degres (50 % ouvert) : ShutterSetPosition1 50")
+tasmota.cmds = []
+incline(mpu, 45)
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+attente()
+verifie(positions() == ["ShutterSetPosition1 49"], "apres une course : renvoyee meme a 1 % (Tasmota a pu deriver en course)")
+tasmota.cmds = []
+vrFonctions.positionReelle(vr1, 46)
+attente()
+verifie(size(positions()) == 0, "volet arrete, ecart de 1 % : rien (pas d'ecriture a chaque releve)")
+incline(mpu, 20)
+vrFonctions.changementDirection(-1, "Shutter1#Direction", {}, 1)
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+attente()
+verifie(positions() == ["ShutterSetPosition1 79"], "arret a 20 degres (21 % ouvert) : ShutterSetPosition1 79 (ShutterInvert 1)")
+vrFonctions.surveille(vr1)                      # surveillance relancee (arretee en fin de section 15)
+tasmota.cmds = []
+incline(mpu, 70)
+tasmota.timers["vrSurveillance1"]()
+attente()
+verifie(positions() == ["ShutterSetPosition1 18"], "surveillance : trappe bougee a la main -> position corrigee")
+tasmota.remove_timer("vrSurveillance1")
+inclinaison.remove("surveillance")
+inclinaison.remove("positionReelle")
 
 print(echecs == 0 ? "BANC_INCLINAISON: OK" : "BANC_INCLINAISON: ECHEC (" + str(echecs) + ")")

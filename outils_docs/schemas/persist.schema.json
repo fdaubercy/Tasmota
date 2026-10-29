@@ -3314,6 +3314,19 @@
                                 },
                                 "blocageDegres": {
                                   "type": "integer"
+                                },
+                                "sensInverse": {
+                                  "type": "integer"
+                                },
+                                "surveillance": {
+                                  "type": "integer"
+                                },
+                                "positionReelle": {
+                                  "type": "string",
+                                  "enum": [
+                                    "ON",
+                                    "OFF"
+                                  ]
                                 }
                               },
                               "required": [
@@ -3324,7 +3337,10 @@
                                 "angleFerme",
                                 "marge",
                                 "blocage",
-                                "blocageDegres"
+                                "blocageDegres",
+                                "sensInverse",
+                                "surveillance",
+                                "positionReelle"
                               ],
                               "additionalProperties": true
                             }

@@ -307,7 +307,10 @@ Sous `drivers.voletRoulants.environnement.VRs.<VR>.capteursPosition` :
     "angleFerme": 3.0,
     "marge": 3,
     "blocage": 5,
-    "blocageDegres": 1
+    "blocageDegres": 1,
+    "sensInverse": 3,
+    "surveillance": 0,
+    "positionReelle": "OFF"
 }
 ```
 
@@ -318,6 +321,9 @@ Sous `drivers.voletRoulants.environnement.VRs.<VR>.capteursPosition` :
   (selon le montage).
 - `marge` : hystérésis en degrés pour QUITTER une butée (pas de rebond au seuil).
 - `blocage` / `blocageDegres` : détection de blocage (ci-dessous). `blocage` à 0 la désactive.
+- `sensInverse` : seuil en degrés de la détection de sens inverse (ci-dessous) ; 0 la désactive.
+- `surveillance` : période en secondes de la lecture à l'arrêt (0 = aucune).
+- `positionReelle` : `"ON"` pour que l'angle donne la position en % à Tasmota, volet arrêté.
 - `filtre` (facultatif, 6 par défaut) : filtre passe-bas du MPU6050 (registre `0x1A`, 0 à 6 ; 6 = ~5 Hz) contre
   les vibrations du moteur. Écrit une fois, au réveil du capteur.
 
@@ -335,6 +341,45 @@ arrivée, pas un blocage. Le moteur qui force est arrêté de la même façon, s
 Un blocage s'affiche aussi sur la page d'accueil (« BLOQUÉ » sur la ligne du volet) et part en MQTT, **retenu**, sur
 `tele/<topic>/INCLINAISON<id>` : `{"Volet": 1, "Bloque": true, "Angle": 40.0, "Etat": "entre"}`. La course suivante
 efface l'alerte (`"Bloque": false` publié). Rien n'est publié en dehors de ces deux changements.
+
+### Sens inverse
+
+Pendant la course, si l'angle s'éloigne de `sensInverse` degrés (3 par défaut) de son angle de départ dans le sens
+OPPOSÉ à celui demandé, la carte arrête le moteur (`ShutterStop<id>`) et logue une erreur : moteur câblé à l'envers,
+ou `ShutterInvert` faux. L'alerte est la même que pour un blocage (« BLOQUÉ (sens inverse) » sur la page,
+`"Cause": "sens inverse"` en MQTT ; `"Cause": "blocage"` pour un blocage).
+
+### Durées de course
+
+Une course partie d'une butée et arrivée à l'autre est chronométrée. `ReglageVolets Inclinaison <id>` la donne avec la
+valeur proposée, en secondes entières arrondies au-dessus : `tempsMontee` pour l'ouverture, `tempsDescente` pour la
+fermeture. Rien n'est appliqué seul : `configVRByJson` réécrit `ShutterOpenDuration` / `ShutterCloseDuration` depuis
+ces clés du persist à chaque démarrage, c'est donc le persist qu'il faut corriger. La mesure va du départ de la course
+au franchissement de l'angle de butée : elle ne compte ni le temps de démarrage du moteur avant la règle `Direction`,
+ni la fin de course mécanique au-delà de l'angle. Une course que Tasmota coupe avant la butée (durée trop courte) ne
+donne pas de mesure : allonger d'abord la durée, puis mesurer.
+
+### Surveillance à l'arrêt
+
+Avec `surveillance` > 0 (30 s par exemple), le volet arrêté est relu toutes les `surveillance` secondes : la page
+d'accueil suit une trappe bougée à la main, une ligne `info` signale un mouvement hors manœuvre (au moins `marge`
+degrés), et une butée atteinte ainsi recale la position. Aucune lecture pendant une course (le suivi de 250 ms s'en
+charge). La position réelle n'y est corrigée qu'après un vrai mouvement (au moins `marge` degrés) : un moteur qui
+vient de démarrer, avant que la règle `Direction` n'arrive, n'a pas encore bougé. Capteur muet : une erreur par
+lecture, et la période double à chaque échec (jusqu'à 128 fois), puis revient à la normale dès qu'il répond.
+
+### Position réelle
+
+Avec `positionReelle` à `"ON"`, l'angle est converti en % d'ouverture entre `angleFerme` et `angleOuvert`, et donné à
+Tasmota par `ShutterSetPosition<id>` : à l'arrêt d'une course, au démarrage et à chaque lecture de surveillance. Avec
+`ShutterInvert 1` (posé par `configVRByJson`), la position Tasmota vaut 100 − % d'ouverture. **Jamais pendant une
+course** : `ShutterSetPosition` remet la direction du Shutter à 0 sans couper le moteur. Un écart de moins de 2 % ne
+renvoie rien, pour ne pas réécrire les réglages à chaque lecture ; après une course, la position est toujours renvoyée
+(l'estimation au temps de Tasmota a pu dériver).
+
+Les commandes `ShutterSetOpen/Close/Position` envoyées moins de `ShutterMotorStop` (500 ms par défaut) + 100 ms après
+un arrêt partent en différé : dans ce délai, Tasmota attend la fin de l'arrêt moteur en bouclant sur `loop()`, ce
+qu'il ne faut pas provoquer depuis Berry. Une commande différée est abandonnée si une course a repris entre-temps.
 
 ### Arrêt en butée
 
