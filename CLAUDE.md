@@ -146,10 +146,10 @@ unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule c
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
 Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plutot qu'un decoupage) :
-`build_serie.py` fait **750 lignes** (+19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; +11 le 2026-10-27 : data_dir pose avant pio ; +3 le meme jour : identite de l'image du FS ; +7 le meme jour : duree des zones d'envoi memorisee, A13 ; +6 le 2026-10-28 : OTA par le maitre, A11 ; +9 le meme jour : Sleep 0 du maitre pendant l'envoi ; +30 le 2026-10-29 : action « fichiers » de l'onglet Fichiers ; execution en serie des `pio run` : verrous, arret immediat, attente
+`build_serie.py` fait **752 lignes** (+19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; +11 le 2026-10-27 : data_dir pose avant pio ; +3 le meme jour : identite de l'image du FS ; +7 le meme jour : duree des zones d'envoi memorisee, A13 ; +6 le 2026-10-28 : OTA par le maitre, A11 ; +9 le meme jour : Sleep 0 du maitre pendant l'envoi ; +30 le 2026-10-29 : action « fichiers » de l'onglet Fichiers ; execution en serie des `pio run` : verrous, arret immediat, attente
 d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
 verrou), et ses bancs `test_build_serie.py` (**1150**), `test_build_page_chrome.py` (**1100**),
-`test_build_ota_fs.py` (**799**), `test_build_web.py` (**721**), ainsi que `test_annuaire.py` (**523**,
+`test_build_ota_fs.py` (**802**), `test_build_web.py` (**721**), ainsi que `test_annuaire.py` (**523**,
 banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
 compteur.
 
@@ -649,7 +649,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     exige (DNS rebinding). Autre appareil : lien a jeton de la console / de la page sur le PC. Bancs :
     `test_annuaire.py`, `test_annuaire_lanceur.py`, `test_annuaire_securite.py`.
     Spec : `docs/superpowers/specs/2026-10-17-annuaire-outils-design.md`.
-  - `build_web.py` (+ `build_page.py`, `build_serie.py`, `build_envs.py`, `build_progression.py`, `build_ota_fs.py`, `build_fichiers.py`, `build_page_fichiers.py`,
+  - `build_web.py` (+ `build_page.py`, `build_serie.py`, `build_envs.py`, `build_progression.py`, `build_ota_fs.py` (FS ; firmware : `build_ota_firmware.py` ; maitre :
+    `build_ota_maitre.py` ; transport HTTP : `build_ota_http.py`, decoupe le 2026-10-29), `build_fichiers.py`, `build_page_fichiers.py`,
     `build_solidification.py`, et pour les bancs `build_faux_pio.py`, `build_ota_carte_simulee.py`) — page « Build et televersement »
     http://127.0.0.1:7700 (tuile de l'annuaire, groupe Maintenance, hors job : l'annuaire refuse de l'arreter pendant
     un lancement ; tache VS Code « Outil : build et televersement » ; cible Custom « Build et televersement (page web) »
@@ -673,9 +674,9 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     (`.bak` ; **change l'empreinte -> le build suivant repart de zero**) ; IP OTA lue dans `WIFI_IP_ADDRESS`
     (0.0.0.0 -> esclave du range extender du maitre : `<ipMaitre>:<8080 + id - 1>` tire du persist,
     `build_envs.py::adresse_par_maitre` ; sinon saisie pour le lancement). Vers une adresse `IP:port`, AVANT tout envoi :
-    `RoutageRangeExtender` sur le maitre puis `Status 5` compare au nom d'hote du persist (`build_ota_fs.py::joint_par_maitre`),
-    refus sinon ; maitre en `Sleep 0` le temps de l'envoi (`build_ota_fs.py::coupe_sleep`, a `Sleep 50` son relais
-    coupe l'envoi) ; carte deja en safeboot reconnue a sa page d'accueil (`build_ota_fs.py::_page_safeboot`), envoi relance. OTA du firmware envoyee par la page (`/up`, `/u2`, safeboot `/u4`, preuve
+    `RoutageRangeExtender` sur le maitre puis `Status 5` compare au nom d'hote du persist (`build_ota_maitre.py::joint_par_maitre`),
+    refus sinon ; maitre en `Sleep 0` le temps de l'envoi (`build_ota_maitre.py::coupe_sleep`, a `Sleep 50` son relais
+    coupe l'envoi) ; carte deja en safeboot reconnue a sa page d'accueil (`build_ota_http.py::_page_safeboot`), envoi relance. OTA du firmware envoyee par la page (`/up`, `/u2`, safeboot `/u4`, preuve
     par `Status 2`) : aucun script de `build/` modifie. OTA du FS : fichiers extraits de `littlefs.bin` (image du `buildfs`,
     PAS `littlefs_data`, perime) par `/ufsu` apres controle d'identite (`build_ota_fs.py::verifie_identite` : nom d'hote et topic du persist de
     l'image = ceux du persist de l'env au depot, sinon rien n'est envoye), persist de

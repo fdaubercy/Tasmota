@@ -1,4 +1,4 @@
-"""Carte Tasmota simulee pour les bancs de build_ota_fs (serveur HTTP local, aucune vraie carte).
+"""Carte Tasmota simulee pour les bancs de build_ota_firmware, build_ota_fs et build_ota_maitre (serveur HTTP local, aucune vraie carte).
 
 Petit serveur HTTP sur 127.0.0.1 (port libre) qui
 imite ce que fait Tasmota (tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino et

@@ -13,7 +13,7 @@ uploadfs par cable = `-t uploadfs`, SAUF pour un env a custom_files_upload dont 
 (upload / erase_upload) : post_esp32 y ecrit deja le FS, buildfs et uploadfs suivent alors le sort de cet envoi
 sans pio run a part (_plan, 2026-10-26). Port COM par `--upload-port` (jamais PLATFORMIO_UPLOAD_PORT ni
 PLATFORMIO_EXTRA_SCRIPTS : ils entrent dans l'empreinte du projet et purgeraient .pio/build).
-En OTA, la page envoie elle-meme (build_ota_fs, spec choix 7 revise) : upload = `run -e X` puis la
+En OTA, la page envoie elle-meme (build_ota_firmware, build_ota_fs, spec choix 7 revise) : upload = `run -e X` puis la
 fonction injectee `ota_firmware` (firmware de .pio/build/<env>/ par /u2) ; uploadfs = buildfs (s'il
 n'est pas deja coche), puis les fichiers de .pio/build/<env>/littlefs.bin (l'image du buildfs, extraite
 dans un dossier temporaire par build_ota_fs.extrait_image) envoyes par la fonction injectee `ota_fs`
@@ -67,7 +67,9 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import build_envs
+import build_ota_firmware
 import build_ota_fs
+import build_ota_maitre
 import build_solidification
 from build_progression import (ETAPE_COMPILATION, ETAPE_EFFACEMENT, ETAPE_ENVOI, ETAPE_LIENS, ETAPE_PREBUILD, Suivi,
                                retire_ansi)
@@ -157,9 +159,9 @@ def tue_arbre(proc):
 class Serie:
     def __init__(self, racine, dossier, pio=None, builds_en_cours=builds_en_cours_defaut,
                  port_libre=port_libre_defaut, ota_fs=build_ota_fs.envoie_fs_ota,
-                 ota_firmware=build_ota_fs.envoie_firmware_ota, sondage=5.0,
-                 solidification=build_solidification.vides, par_maitre=build_ota_fs.joint_par_maitre,
-                 coupe_sleep=build_ota_fs.coupe_sleep):
+                 ota_firmware=build_ota_firmware.envoie_firmware_ota, sondage=5.0,
+                 solidification=build_solidification.vides, par_maitre=build_ota_maitre.joint_par_maitre,
+                 coupe_sleep=build_ota_maitre.coupe_sleep):
         self.racine = Path(racine)
         self.dossier = Path(dossier)
         self.commande_pio = commande_pio(pio)
@@ -651,9 +653,9 @@ class Serie:
             if ":" in ligne.ip:
                 maitre = ligne.ip.rsplit(":", 1)[0]
                 valeur, remet = self.coupe_sleep(maitre)
-                rapporte({"etape": build_ota_fs.ETAPE_CONNEXION, "pourcent": None,
+                rapporte({"etape": build_ota_maitre.ETAPE_CONNEXION, "pourcent": None,
                           "detail": f"Sleep du maître {maitre} : {valeur} -> 0 le temps de l'envoi"})
-                rapporte({"etape": build_ota_fs.ETAPE_CONNEXION, "pourcent": 100, "detail": self.par_maitre(
+                rapporte({"etape": build_ota_maitre.ETAPE_CONNEXION, "pourcent": 100, "detail": self.par_maitre(
                     ligne.ip, build_envs.persist_carte(self.racine, env), env, rapporte)})
             if genre == "ota_firmware":
                 self.ota_firmware(env, ligne.ip, build, rapporte)

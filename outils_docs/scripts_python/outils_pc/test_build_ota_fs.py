@@ -1,4 +1,4 @@
-"""Banc de build_ota_fs (envoi du firmware par /u2 et du file system par /ufsu) sur une carte simulee.
+"""Banc de build_ota_firmware, build_ota_fs, build_ota_maitre et build_ota_http (envoi du firmware par /u2 et du file system par /ufsu) sur une carte simulee.
 
 Code de sortie 0 = vert. La carte simulee (build_ota_carte_simulee.Carte) est un serveur HTTP sur
 127.0.0.1 (port libre) qui imite Tasmota : Referer exige, /ufsd, /ufsu, /up, /u2, /u4 (safeboot),
@@ -17,7 +17,10 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+import build_ota_firmware as bf
 import build_ota_fs as bo
+import build_ota_http as bh
+import build_ota_maitre as bm
 from build_ota_carte_simulee import ANCIEN_PERSIST, Carte
 
 ECHECS = []
@@ -226,7 +229,7 @@ def test_ota_fs_sous_dossiers():
     # temoin : la carte simulee refuse un fichier dont le dossier n'existe pas
     carte = Carte()
     carte.ufs_path = "/absent"
-    verifie("Failed" in bo._poste(carte.ip, "/ufsu?fsz=1", "ufsu", "x.js", b"x", 5.0)[1], True,
+    verifie("Failed" in bh._poste(carte.ip, "/ufsu?fsz=1", "ufsu", "x.js", b"x", 5.0)[1], True,
             "ota_fs_sous_dossiers : temoin, dossier absent -> 'Failed' sur la carte simulee")
     carte.ferme()
 
@@ -336,7 +339,7 @@ def test_ota_fs_progression_octets():
     with tempfile.TemporaryDirectory() as t:
         d = Path(t) / "fs"
         (d / "sd" / "js").mkdir(parents=True)
-        (d / "sd" / "js" / "gros.js.gz").write_bytes(b"x" * (12 * bo.MORCEAU))
+        (d / "sd" / "js" / "gros.js.gz").write_bytes(b"x" * (12 * bh.MORCEAU))
         (d / "autoexec.be").write_bytes(b"print(1)" * 100)
         (d / "_persist.json").write_bytes(NOUVEAU_PERSIST)
         carte, rapports = Carte(), []
@@ -431,7 +434,7 @@ def build_essai(t, gz=False, magique=b"\xe9"):
 def envoie_firmware(carte, dossier, **options):
     rapports = []
     try:
-        bo.envoie_firmware_ota("tasmota32-essai", carte.ip, dossier, rapports.append, **{**RAPIDE, **options})
+        bf.envoie_firmware_ota("tasmota32-essai", carte.ip, dossier, rapports.append, **{**RAPIDE, **options})
         return None, rapports
     except RuntimeError as erreur:
         return str(erreur), rapports
@@ -478,8 +481,8 @@ def test_ota_firmware_safeboot():
         carte.ferme()
     # temoin : sur la carte simulee, sans bascule, l'appli refuse son propre ecrasement
     carte = Carte(safeboot=True)
-    bo._get(carte.ip, "/up", 5.0)
-    verifie("Failed" in bo._poste(carte.ip, "/u2?fsz=3", "file", "x.bin", b"\xe9xx", 5.0)[1], True,
+    bh._get(carte.ip, "/up", 5.0)
+    verifie("Failed" in bh._poste(carte.ip, "/u2?fsz=3", "file", "x.bin", b"\xe9xx", 5.0)[1], True,
             "ota_firmware_safeboot : temoin, POST /u2 sans bascule -> 'Failed' (partition unique)")
     carte.ferme()
 
@@ -548,14 +551,14 @@ def test_coupe_sleep():
     """A11 : Sleep 0 sur le maitre le temps de l'envoi (pauses du NAPT a Sleep 50), valeur d'avant remise."""
     maitre = Carte()
     try:
-        valeur, remet = bo.coupe_sleep(maitre.ip, delai=2)
+        valeur, remet = bm.coupe_sleep(maitre.ip, delai=2)
         verifie((valeur, maitre.sleeps), ("50", [0]), "coupe_sleep : valeur d'avant lue, Sleep 0 pose")
         verifie((remet(), maitre.sleeps), ("", [0, 50]), "coupe_sleep : remet() repose la valeur d'avant")
-        valeur, remet = bo.coupe_sleep(maitre.ip, delai=2)
+        valeur, remet = bm.coupe_sleep(maitre.ip, delai=2)
         maitre.ferme()
         verifie("NON remis" in remet(), True, "coupe_sleep : maitre perdu -> remet() rend le message, sans lever")
         try:
-            bo.coupe_sleep(maitre.ip, delai=2)
+            bm.coupe_sleep(maitre.ip, delai=2)
             verifie("leve", "RuntimeError", "coupe_sleep : maitre injoignable -> RuntimeError")
         except RuntimeError as e:
             verifie("rien n'a été envoyé" in str(e), True, "coupe_sleep : maitre injoignable -> RuntimeError, rien envoye")
@@ -578,20 +581,20 @@ def test_maitre_lent():
     maitre.commande = lente
     try:
         muettes[0] = 2
-        valeur, remet = bo.coupe_sleep(maitre.ip, delai=0.3)
+        valeur, remet = bm.coupe_sleep(maitre.ip, delai=0.3)
         verifie((valeur, maitre.sleeps), ("50", [0]), "maitre_lent : 2 requetes sans reponse -> Sleep lu et coupe quand meme")
         muettes[0] = 2
         verifie((remet(), maitre.sleeps), ("", [0, 50]), "maitre_lent : remet() rejoue aussi")
-        muettes[0] = bo.ESSAIS_MAITRE
+        muettes[0] = bm.ESSAIS_MAITRE
         try:
-            bo.coupe_sleep(maitre.ip, delai=0.3)
+            bm.coupe_sleep(maitre.ip, delai=0.3)
             verifie("leve", "RuntimeError", "maitre_lent : toujours muet -> RuntimeError")
         except RuntimeError as e:
-            verifie((f"{bo.ESSAIS_MAITRE} essais" in str(e), "rien n'a été envoyé" in str(e)), (True, True),
+            verifie((f"{bm.ESSAIS_MAITRE} essais" in str(e), "rien n'a été envoyé" in str(e)), (True, True),
                     "maitre_lent : toujours muet -> refus qui dit le nombre d'essais, rien envoye")
         time.sleep(1)                                # laisse finir les requetes abandonnees
         muettes[0] = 2
-        r = bo.joint_par_maitre(esclave.ip, None, "cuve", lambda _: None, maitre=maitre.ip, delai=0.3)
+        r = bm.joint_par_maitre(esclave.ip, None, "cuve", lambda _: None, maitre=maitre.ip, delai=0.3)
         verifie("carte jointe" in r, True, "maitre_lent : RoutageRangeExtender rejoue -> carte jointe")
     finally:
         maitre.ferme()
@@ -735,12 +738,12 @@ def test_par_maitre():
             def essai(persist=env_p):
                 etapes.clear()
                 try:
-                    return "ok", bo.joint_par_maitre(esclave.ip, persist, "cuve", etapes.append, maitre=maitre.ip, delai=2)
+                    return "ok", bm.joint_par_maitre(esclave.ip, persist, "cuve", etapes.append, maitre=maitre.ip, delai=2)
                 except RuntimeError as e:
                     return "refus", str(e)
 
             r = essai()
-            verifie((r[0], "CAPTEURS-CUVE" in r[1], etapes[0]["etape"]), ("ok", True, bo.ETAPE_CONNEXION),
+            verifie((r[0], "CAPTEURS-CUVE" in r[1], etapes[0]["etape"]), ("ok", True, bm.ETAPE_CONNEXION),
                     "par_maitre : meme nom d'hote (sans casse) -> accepte, carte jointe dite")
             verifie([c for _, c, _ in maitre.journal], ["/cm?cmnd=RoutageRangeExtender"],
                     "par_maitre : le maitre pose ses redirections (RoutageRangeExtender)")
