@@ -512,6 +512,14 @@ Maître injoignable, Berry du maître arrêté, esclave hors ligne pour le maît
 carte derrière le port : **refus, rien n'est envoyé**. Ensuite, firmware et FS passent par la redirection comme
 pour une carte jointe directement.
 
+Pendant tout l'envoi, la page met le maître en `Sleep 0`, puis remet sa valeur, même en cas d'échec : à `Sleep 50`,
+le relais du maître marque des pauses de plusieurs secondes et l'esclave abandonne l'envoi au bout de 5 s
+(mesure du 2026-10-28 : coupé à 3 % ; à `Sleep 0`, 74 à 102 Ko/s sans pause). Si la valeur n'a pas pu être
+remise, la ligne de l'env le dit : la remettre à la main (`Sleep 50` dans la console du maître).
+
+Une carte restée **en safeboot** par un envoi coupé ne connaît plus `Status` : la page la reconnaît à sa page
+d'accueil (« SAFEBOOT », titre = `serveur.nom` du persist) et relance l'envoi du firmware sans autre geste.
+
 ### OTA du firmware
 
 La page lance `pio run -e X` (compilation), puis envoie elle-même `.pio/build/<env>/firmware.bin.gz` (à défaut, ou

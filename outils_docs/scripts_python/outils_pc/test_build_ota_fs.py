@@ -480,6 +480,56 @@ def test_ota_firmware_inchange():
         carte.ferme()
 
 
+def test_ota_firmware_deja_en_safeboot():
+    """Envoi coupe (A11, 2026-10-28) : carte laissee en safeboot, qui ne connait pas Status 2 -> l'envoi se relance."""
+    with tempfile.TemporaryDirectory() as t:
+        carte = Carte(safeboot=True)
+        carte.safeboot_reel, carte.mode = True, "safeboot"
+        d = build_essai(t)
+        erreur, rapports = envoie_firmware(carte, d)
+        verifie(erreur, None, "ota_firmware_deja_en_safeboot : Status 2 inconnu + page SAFEBOOT -> envoi sans erreur")
+        verifie(compacte(etiquettes(carte)), ["Status 2", "/", "/u4", "/up", "/u2", "Status", "Status 2"],
+                "ota_firmware_deja_en_safeboot : Status 2 -> page d'accueil -> /u4 true -> /up -> /u2 -> retour -> Status 2")
+        verifie(((carte.firmware or ("", b""))[1] == (d / "firmware.bin").read_bytes(), carte.mode), (True, "app"),
+                "ota_firmware_deja_en_safeboot : firmware ecrit, carte revenue sur l'appli")
+        verifie(any(r.get("etape") == "Bascule en safeboot" for r in rapports), False,
+                "ota_firmware_deja_en_safeboot : deja en safeboot, pas de bascule")
+        carte.ferme()
+    with tempfile.TemporaryDirectory() as t:
+        carte = Carte(safeboot=True)
+        carte.safeboot_reel, carte.mode, carte.reste_en_safeboot = True, "safeboot", True
+        erreur, _ = envoie_firmware(carte, build_essai(t))
+        verifie("restée en safeboot : renvoyer un firmware" in (erreur or ""), True,
+                "ota_firmware_deja_en_safeboot : toujours en safeboot apres l'envoi -> dit, pas « Status 2 illisible »")
+        carte.ferme()
+    with tempfile.TemporaryDirectory() as t:
+        carte = Carte(safeboot=True)                 # temoin : Status 2 inconnu hors safeboot -> refus, rien envoye
+        carte.commande = lambda h, cmnd: carte.repond(h, '{"Command":"Unknown"}', "application/json")
+        erreur, _ = envoie_firmware(carte, build_essai(t))
+        verifie(("Status 2 illisible" in (erreur or ""), carte.firmware), (True, None),
+                "ota_firmware_deja_en_safeboot : temoin, Status 2 inconnu sans page SAFEBOOT -> refus, rien envoye")
+        carte.ferme()
+
+
+def test_coupe_sleep():
+    """A11 : Sleep 0 sur le maitre le temps de l'envoi (pauses du NAPT a Sleep 50), valeur d'avant remise."""
+    maitre = Carte()
+    try:
+        valeur, remet = bo.coupe_sleep(maitre.ip, delai=2)
+        verifie((valeur, maitre.sleeps), ("50", [0]), "coupe_sleep : valeur d'avant lue, Sleep 0 pose")
+        verifie((remet(), maitre.sleeps), ("", [0, 50]), "coupe_sleep : remet() repose la valeur d'avant")
+        valeur, remet = bo.coupe_sleep(maitre.ip, delai=2)
+        maitre.ferme()
+        verifie("NON remis" in remet(), True, "coupe_sleep : maitre perdu -> remet() rend le message, sans lever")
+        try:
+            bo.coupe_sleep(maitre.ip, delai=2)
+            verifie("leve", "RuntimeError", "coupe_sleep : maitre injoignable -> RuntimeError")
+        except RuntimeError as e:
+            verifie("rien n'a été envoyé" in str(e), True, "coupe_sleep : maitre injoignable -> RuntimeError, rien envoye")
+    finally:
+        maitre.ferme()
+
+
 def test_ota_firmware_echec_en_safeboot():
     """I4 : bascule en safeboot faite, puis /u2 refuse : le message dit que la carte est restee en safeboot."""
     with tempfile.TemporaryDirectory() as t:
@@ -633,6 +683,15 @@ def test_par_maitre():
                     "par_maitre : autre carte derriere le port -> refus qui nomme les deux")
             r = essai(None)
             verifie((r[0], "non contrôlée" in r[1]), ("ok", True), "par_maitre : pas de persist au depot -> non controlee, dit")
+            esclave.safeboot_reel, esclave.mode = True, "safeboot"   # envoi precedent coupe : Status 5 inconnu
+            env_p.write_text(json.dumps({"serveur": {"nom": "capteurs de cuve", "hostname": "CAPTEURS-CUVE"}}), encoding="utf-8")
+            r = essai()
+            verifie((r[0], "Capteurs de Cuve" in r[1], "safeboot" in r[1]), ("ok", True, True),
+                    "par_maitre : carte en safeboot -> nom de sa page = serveur.nom (sans casse), accepte et dit")
+            esclave.nom = "Rideau du Garage"
+            r = essai()
+            verifie((r[0], "Rideau du Garage" in r[1]), ("refus", True), "par_maitre : autre carte en safeboot -> refus")
+            esclave.safeboot_reel, esclave.mode = False, "app"
             maitre.maitre = False
             r = essai()
             verifie((r[0], "Berry" in r[1]), ("refus", True), "par_maitre : maitre sans RoutageRangeExtender -> refus")
@@ -649,7 +708,7 @@ def test_par_maitre():
 
 
 def principal():
-    for test in (test_identite_image, test_par_maitre,test_ota_fs_ordre, test_ota_fs_sauvegarde, test_ota_fs_persist_injoignable,
+    for test in (test_identite_image, test_par_maitre, test_coupe_sleep, test_ota_firmware_deja_en_safeboot, test_ota_fs_ordre, test_ota_fs_sauvegarde, test_ota_fs_persist_injoignable,
                  test_ota_fs_relecture_differente, test_ota_fs_sous_dossiers, test_ota_fs_referer,
                  test_ota_fs_echec_ufsu, test_ota_fs_pas_de_retour, test_ota_fs_attente_retour,
                  test_ota_fs_persist_reformate, test_ota_fs_progression, test_ota_fs_progression_octets,

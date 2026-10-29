@@ -156,7 +156,8 @@ class Serie:
     def __init__(self, racine, dossier, pio=None, builds_en_cours=builds_en_cours_defaut,
                  port_libre=port_libre_defaut, ota_fs=build_ota_fs.envoie_fs_ota,
                  ota_firmware=build_ota_fs.envoie_firmware_ota, sondage=5.0,
-                 solidification=build_solidification.vides, par_maitre=build_ota_fs.joint_par_maitre):
+                 solidification=build_solidification.vides, par_maitre=build_ota_fs.joint_par_maitre,
+                 coupe_sleep=build_ota_fs.coupe_sleep):
         self.racine = Path(racine)
         self.dossier = Path(dossier)
         self.commande_pio = commande_pio(pio)
@@ -165,6 +166,7 @@ class Serie:
         self.ota_fs = ota_fs
         self.ota_firmware = ota_firmware
         self.par_maitre = par_maitre                    # `IP:port` : redirection du maitre posee, carte jointe verifiee
+        self.coupe_sleep = coupe_sleep                  # `IP:port` : Sleep 0 sur le maitre le temps de l'envoi
         self.solidification = solidification            # modules solidifies vides, controles a la fin du pre-build
         self.sondage = sondage
         self.verrou = threading.Condition()
@@ -615,8 +617,13 @@ class Serie:
         rapporte({"etape": initiale, "pourcent": None, "detail": f"vers {ligne.ip}"})
         build = self.racine / ".pio" / "build" / env
         self._marque_envoi(True)                         # l'envoi OTA ne se coupe pas (arrete_serie attend)
+        remet = None
         try:
             if ":" in ligne.ip:
+                maitre = ligne.ip.rsplit(":", 1)[0]
+                valeur, remet = self.coupe_sleep(maitre)
+                rapporte({"etape": build_ota_fs.ETAPE_CONNEXION, "pourcent": None,
+                          "detail": f"Sleep du maître {maitre} : {valeur} -> 0 le temps de l'envoi"})
                 rapporte({"etape": build_ota_fs.ETAPE_CONNEXION, "pourcent": 100, "detail": self.par_maitre(
                     ligne.ip, build_envs.persist_carte(self.racine, env), env, rapporte)})
             if genre == "ota_firmware":
@@ -641,6 +648,8 @@ class Serie:
         except Exception as erreur:
             return False, f"erreur inattendue pendant l'envoi : {erreur!r}", [], dernier["etape"]
         finally:
+            if remet and (echec := remet()):             # sans changer l'etape rendue
+                self._ajoute("etape", env, action=action, etape=dernier["etape"], pourcent=None, detail=echec)
             self._marque_envoi(False)
             termine()
         return True, "", [], dernier["etape"]

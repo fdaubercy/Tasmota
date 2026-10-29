@@ -357,6 +357,14 @@ ci-dessous sont ceux de Claude.
     commande inconnue (Berry arrêté), rien derrière le port ou une autre carte : refus, rien n'est envoyé.
     Sans persist au dépôt (adresse saisie pour un env de l'amont) : carte jointe dite, identité non contrôlée.
     Le reste de l'envoi (firmware, FS) est inchangé : `http://<IP:port>/…` passe par la redirection.
+22. **`Sleep 0` sur le maître le temps de l'envoi** (accepté par l'utilisateur le 2026-10-28, après l'échec du
+    premier essai réel) : valeur lue avant, remise à la fin, même sur échec ; non remise -> dite dans la ligne
+    de l'env. Cause mesurée : à `Sleep 50`, pauses du relais NAPT jusqu'à 7,8 s, au-delà des 5 s
+    (`HTTP_MAX_POST_WAIT`) où l'esclave abandonne ; à `Sleep 0`, 74 à 102 Ko/s sans pause.
+23. **Carte déjà en safeboot** (même date) : le safeboot répond « Unknown » à `Status`, `Status 2` et `Status 5`,
+    et `/u4?api=` dit « true » pour toute partition OTA unique. La page reconnaît le safeboot à sa page
+    d'accueil (`<h3>SAFEBOOT</h3>`) : identité = titre (`DeviceName`) comparé à `serveur.nom` du persist,
+    puis envoi sans bascule ; après l'envoi, une carte encore en safeboot est dite comme telle.
 
 ## Laissé au constructeur
 

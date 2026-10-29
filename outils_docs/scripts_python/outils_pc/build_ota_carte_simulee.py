@@ -16,6 +16,9 @@ xdrv_01_9_webserver.ino) :
   - partition OTA unique + safeboot (`safeboot=True`, HandleSwitchBootPartition de xdrv_01_9) :
     GET /u4?u4=fct&api= repond « false » et redemarre en safeboot, puis « true » une fois en safeboot ;
     sans safeboot il repond « none ». Un POST /u2 sur l'appli en cours (partition unique) echoue.
+    `safeboot_reel` : en safeboot, toute commande repond « Unknown » et la page d'accueil porte <h3>SAFEBOOT</h3>
+    (le vrai safeboot de la cuve, 2026-10-28) ;
+  - Sleep / Sleep <n> -> {"Sleep":{"<n>":{"Active":"<n>"}}} (forme du maitre P4), valeurs posees dans `sleeps`.
 Aucune vraie carte n'est contactee.
 """
 
@@ -56,6 +59,10 @@ class Carte:
         self.echec_u2 = False                        # POST /u2 refuse (page « Failed ») quel que soit le mode
         self.hostname = "CAPTEURS-CUVE"              # Hostname de Status 5
         self.maitre = False                          # repond a RoutageRangeExtender (Berry du maitre en marche)
+        self.safeboot_reel = False                   # safeboot comme le vrai : Status* « Unknown », page d'accueil SAFEBOOT
+        self.nom = "Capteurs de Cuve"                # DeviceName, titre de la page d'accueil
+        self.sleep = 50                              # Sleep (commande, sans effet ici)
+        self.sleeps = []                             # valeurs posees par « Sleep <n> »
         carte = self
 
         class Gestion(BaseHTTPRequestHandler):
@@ -114,9 +121,19 @@ class Carte:
             return self.recoit_firmware(h, corps)
         if url.path == "/u4" and "api" in args:
             return self.bascule(h, args.get("u4", ""))
-        return self.repond(h, "<html>Accueil</html>")
+        if self.safeboot_reel and self.mode == "safeboot":
+            return self.repond(h, f"<html><title>{self.nom} Main Menu</title><h3>SAFEBOOT</h3><h3></h3></html>")
+        return self.repond(h, f"<html><title>{self.nom} Main Menu</title>Accueil</html>")
 
     def commande(self, h, cmnd):
+        if self.safeboot_reel and self.mode == "safeboot" and not cmnd.startswith("Br "):
+            return self.repond(h, json.dumps({"Command": "Unknown", "Input": cmnd.upper()}), "application/json")
+        sleep = re.fullmatch(r"Sleep(?: (\d+))?", cmnd)
+        if sleep:
+            if sleep.group(1):
+                self.sleep = int(sleep.group(1))
+                self.sleeps.append(self.sleep)
+            return self.repond(h, json.dumps({"Sleep": {str(self.sleep): {"Active": str(self.sleep)}}}), "application/json")
         if cmnd == "Status 2":
             version = "15.0.1(safeboot)" if self.mode == "safeboot" else "15.0.1(tasmota)"
             return self.repond(h, json.dumps({"StatusFWR": {"Version": version, "BuildDateTime": self.compilation,

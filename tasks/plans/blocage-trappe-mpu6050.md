@@ -54,7 +54,7 @@ Constat dans `xdrv_27_esp32_shutter.ino` : `CmndShutterStop` coupe le moteur sur
 - [x] `banc_inclinaison.py` vert + mutants ; `banc_boot.py`, `banc_demarrage.py` verts ; solidification : le .h compile — preuve : BANC_INCLINAISON: OK ; BANC_BOOT: OK ; banc_demarrage VERT ; « LE .h COMPILE », lib/ inchange ; verifie_berry 0 erreur
 - [x] Agent `relecteur-berry` sur `vrFonctions.be` (couvre aussi le commit 2a7a35884) — preuve : rien de bloquant ; 2 corrections appliquees avec test rouge puis vert (Direction 0 synchrone : un seul recalage ; butee non designee : arret sans alerte) + repere mis a jour sans allocation
 - [x] README § Inclinaison : arrêt en butée, blocage visible, `filtre` — preuve : § Détection de blocage, § Arrêt en butée, cle filtre ; verifie_references_docs : 0 defaut
-- [ ] Commit et push (demandés par l'utilisateur le 2026-10-29)
+- [x] Commit et push (demandés par l'utilisateur le 2026-10-29) — preuve : commit 945c016af, poussé sur development
 
 ## Améliorations restantes
 - [ ] [projet] Essai réel sur la trappe du grenier (avec le reste de l'inclinaison)

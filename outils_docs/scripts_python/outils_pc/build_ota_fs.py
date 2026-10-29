@@ -167,6 +167,23 @@ def _version(ip, delai):
     return fwr.get("Version"), fwr.get("BuildDateTime")
 
 
+def _page_safeboot(ip, delai):
+    """Nom de la carte si sa page d'accueil est celle du safeboot, sinon None.
+
+    Le safeboot ne connait ni Status, ni Status 2, ni Status 5 (« Unknown », cuve le 2026-10-28), et /u4?api=
+    repond « true » des qu'il y a une partition OTA unique : seule la page d'accueil le dit (<h3>SAFEBOOT</h3>,
+    titre « <DeviceName> Main Menu »).
+    """
+    try:
+        texte = _get(ip, "/", delai).decode("utf-8", "replace")
+    except (OSError, http.client.HTTPException):
+        return None
+    if "<h3>SAFEBOOT</h3>" not in texte:
+        return None
+    titre = re.search(r"<title>(.*?)(?: Main Menu)?</title>", texte)
+    return titre.group(1) if titre else ""
+
+
 def _bascule_safeboot(ip, rapporte, delai_retour, sondage, delai_http):
     """Logique fct() du navigateur : True si la carte est en safeboot, False si pas de safeboot."""
     debut = time.monotonic()
@@ -222,8 +239,11 @@ def envoie_firmware_ota(env, ip, dossier_build, rapporte, *, delai_retour=90.0, 
     except reseau as erreur:
         raise RuntimeError(f"{ETAPE_TELEVERSEMENT} : carte {ip} injoignable ({erreur})") from None
     except ValueError as erreur:
-        raise RuntimeError(f"{ETAPE_TELEVERSEMENT} : Status 2 illisible ({erreur})") from None
-    en_safeboot = False
+        # Carte restee en safeboot par un envoi coupe : on relance l'envoi (essai A11 du 2026-10-28).
+        if _page_safeboot(ip, delai_http) is None:
+            raise RuntimeError(f"{ETAPE_TELEVERSEMENT} : Status 2 illisible ({erreur})") from None
+        avant = ("safeboot", "carte trouvée en safeboot")
+    en_safeboot = avant[0] == "safeboot"
     if donnees[:1] == b"\xe9":                                 # le navigateur ne bascule que dans ce cas
         en_safeboot = _bascule_safeboot(ip, rapporte, delai_retour, sondage, delai_http)
         rapporte({"etape": ETAPE_TELEVERSEMENT, "pourcent": 0, "detail": f"{nom} vers {ip}"})
@@ -241,7 +261,12 @@ def envoie_firmware_ota(env, ip, dossier_build, rapporte, *, delai_retour=90.0, 
     rapporte({"etape": ETAPE_VERIFICATION, "pourcent": None, "detail": f"Status 2 (avant : {avant[0]}, {avant[1]})"})
     try:
         apres = _version(ip, delai_http)
-    except (*reseau, ValueError) as erreur:
+    except reseau as erreur:
+        raise RuntimeError(f"{ETAPE_VERIFICATION} : Status 2 illisible après l'envoi ({erreur})") from None
+    except ValueError as erreur:
+        if _page_safeboot(ip, delai_http) is not None:
+            raise RuntimeError(f"{ETAPE_VERIFICATION} : la carte est restée en safeboot : renvoyer un firmware "
+                               f"par http://{ip}/up") from None
         raise RuntimeError(f"{ETAPE_VERIFICATION} : Status 2 illisible après l'envoi ({erreur})") from None
     if apres == avant:
         raise RuntimeError(f"{ETAPE_VERIFICATION} : firmware inchangé ({apres[0]}, compilé {apres[1]}) : "
@@ -312,13 +337,47 @@ def joint_par_maitre(adresse, persist_env, env, rapporte, *, maitre=None, delai=
     except (OSError, http.client.HTTPException, ValueError, AttributeError) as erreur:
         raise RuntimeError(f"{ETAPE_CONNEXION} : aucune carte derrière {adresse} ({erreur}) : esclave hors ligne pour le "
                            f"maître (fiche Offline de sa découverte) ? rien n'a été envoyé") from None
+    # Safeboot : pas de Status 5, on compare le DeviceName du titre de sa page a serveur.nom du persist.
+    nom = None if hote else _page_safeboot(adresse, delai)
     if not persist_env or not Path(persist_env).is_file():
-        return f"carte jointe : {hote or '?'} (identité non contrôlée : pas de {PERSIST} de {env} au dépôt)"
-    attendu = _identite(Path(persist_env).read_text(encoding="utf-8"))[0]
+        return f"carte jointe : {hote or nom or '?'} (identité non contrôlée : pas de {PERSIST} de {env} au dépôt)"
+    texte = Path(persist_env).read_text(encoding="utf-8")
+    if nom is not None:
+        attendu = str((json.loads(texte).get("serveur") or {}).get("nom") or "")
+        if nom.lower() != attendu.lower():
+            raise RuntimeError(f"{ETAPE_CONNEXION} : {adresse} mène à une carte en safeboot nommée {nom or '?'}, pas à "
+                               f"{env} ({attendu}) ; rien n'a été envoyé")
+        return f"carte jointe par le maître : {nom} (en safeboot)"
+    attendu = _identite(texte)[0]
     if hote.lower() != attendu.lower():
         raise RuntimeError(f"{ETAPE_CONNEXION} : {adresse} mène à {hote or '?'}, pas à {env} ({attendu}) ; "
                            f"rien n'a été envoyé")
     return f"carte jointe par le maître : {hote}"
+
+
+def coupe_sleep(maitre, delai=8.0):
+    """`Sleep 0` sur le maitre le temps d'un envoi par sa redirection -> (valeur d'avant, fonction qui la remet).
+
+    Mesure du 2026-10-28 (1 Mo vers la cuve par la redirection) : `Sleep 50` -> pauses du relais NAPT jusqu'a
+    7,8 s, au-dela des 5 s ou le serveur web de l'esclave abandonne un envoi (HTTP_MAX_POST_WAIT) ; `Sleep 0` ->
+    74 a 102 Ko/s, aucune pause. La fonction rendue remet la valeur et rend "" ou le message d'echec.
+    """
+    try:
+        valeur = re.search(r'"Sleep"\D*(\d+)', _commande(maitre, "Sleep", delai))   # {"Sleep":{"50":{"Active":"50"}}}
+        if valeur is None:
+            raise ValueError("réponse de Sleep illisible")
+        _commande(maitre, "Sleep 0", delai)
+    except (OSError, http.client.HTTPException, ValueError) as erreur:
+        raise RuntimeError(f"{ETAPE_CONNEXION} : Sleep du maître {maitre} non coupé ({erreur}) ; rien n'a été envoyé") from None
+    valeur = valeur.group(1)
+
+    def remet():
+        try:
+            _commande(maitre, f"Sleep {valeur}", delai)
+            return ""
+        except (OSError, http.client.HTTPException) as erreur:
+            return f"Sleep {valeur} NON remis sur le maître {maitre} ({erreur}) : le remettre à la main"
+    return valeur, remet
 
 
 def extrait_image(image, dossier):

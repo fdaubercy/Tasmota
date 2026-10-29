@@ -301,7 +301,8 @@ Fichiers : `outils_pc/build_web.py` (lecture du journal par incréments), `outil
   + GET /sortie, journal écrit ligne à ligne (commit c0cbe03a2) ; test_build_web sortie_env / sortie_en_direct,
   mutant sans buffering=1 vu rouge
 - [x] Page : panneau « Sortie » dépliable par env, chasse fixe, fond sombre, couleurs erreur/avertissement,
-  lignes `` d'esptool contenues. — preuve : build_page (commit c0cbe03a2) ; sonde Chrome, 8 vérifications
+  lignes `
+` d'esptool contenues. — preuve : build_page (commit c0cbe03a2) ; sonde Chrome, 8 vérifications
   « sortie : » vertes (témoin : 3 barres dans le journal brut, 1 dans le panneau)
 - [x] Bancs `test_build_*` et sonde Chrome verts. — preuve : 5 bancs test_build_* et sonde Chrome (témoin compris)
   sortie 0, 2026-10-25
@@ -362,6 +363,9 @@ Le téléchargement par la carte (`Upgrade`) aurait le même délai (`HTTPCLIENT
 Second défaut : la page lit `Status 2` avant l'envoi -> impossible de relancer vers une carte déjà en safeboot.
 CAUSE PROUVÉE (même mesure, 1 Mo) : `Sleep` du maître. `Sleep 0` -> 74 et 102 Ko/s, aucune pause, envoi complet ;
 `Sleep 50` (réglage du maître) -> 16 à 27 Ko/s, pauses jusqu'à 7,8 s, coupure (deux mesures). `Sleep 50` remis après.
+CORRIGÉ dans le code (2026-10-28, à valider par l'essai réel) : `build_ota_fs.py::coupe_sleep` (maître en `Sleep 0`
+le temps de l'envoi, valeur remise) ; carte déjà en safeboot reconnue à sa page d'accueil
+(`build_ota_fs.py::_page_safeboot`), envoi relancé. Bancs `test_build_ota_fs.py` et `test_build_serie.py` verts.
 
 Constats sur carte (2026-10-26, lecture seule sauf mention) : la table `RgxPort` du maître était vide après son
 redémarrage de 05:53 (`192.168.0.43:8081` muet) ; `RoutageRangeExtender` n'a rien posé et

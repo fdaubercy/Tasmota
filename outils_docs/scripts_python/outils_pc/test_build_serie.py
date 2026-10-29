@@ -229,20 +229,30 @@ def test_ota_par_maitre():
             raise RuntimeError("Connexion par le maître : 192.168.0.43:8082 mène à CAPTEURS-CUVE")
         return "carte jointe par le maître : X"
 
+    def coupe_sleep(maitre):
+        appels.append(("sleep 0", maitre))
+        return "50", lambda: appels.append(("sleep 50", maitre)) or ("" if len(appels) < 5 else "Sleep 50 NON remis")
+
     with tempfile.TemporaryDirectory() as t:
         m = Montage(t, ota_firmware=lambda env, ip, *a: appels.append(("envoi", ip, env)))
-        m.serie.par_maitre = par_maitre
+        m.serie.par_maitre, m.serie.coupe_sleep = par_maitre, coupe_sleep
         verifie([bool(m.serie.controle([ota(A, ip)], {"upload"})) for ip in
                  ("192.168.0.43:8081", "192.168.0.43:0", "192.168.0.43:65536", "192.168.0.43:", "x:8081")],
                 [False, True, True, True, True], "ota_par_maitre : IPv4:port accepte, port hors 1-65535 ou IP fausse refuses")
         ev = m.lance([ota(A, "192.168.0.43:8081"), ota(B, "192.168.0.43:8082"), ota(C, "192.168.0.50")], {"upload"})
-        verifie(appels, [("maitre", "192.168.0.43:8081", A), ("envoi", "192.168.0.43:8081", A),
-                         ("maitre", "192.168.0.43:8082", B), ("envoi", "192.168.0.50", C)],
-                "ota_par_maitre : maitre consulte avant l'envoi, refus -> pas d'envoi, IP seule -> pas de maitre")
+        verifie(appels, [("sleep 0", "192.168.0.43"), ("maitre", "192.168.0.43:8081", A), ("envoi", "192.168.0.43:8081", A),
+                         ("sleep 50", "192.168.0.43"), ("sleep 0", "192.168.0.43"), ("maitre", "192.168.0.43:8082", B),
+                         ("sleep 50", "192.168.0.43"), ("envoi", "192.168.0.50", C)],
+                "ota_par_maitre : Sleep 0 puis maitre consulte avant l'envoi, Sleep remis apres (meme sur refus), "
+                "IP seule -> ni Sleep ni maitre")
+        verifie([(e["detail"], e["etape"]) for e in du_type(ev, "etape", env=B) if "NON remis" in e["detail"]],
+                [("Sleep 50 NON remis", "Connexion par le maître")],
+                "ota_par_maitre : Sleep non remis -> dit dans la ligne de l'env, sans changer l'etape")
         verifie([x["statuts"]["upload"] for x in du_type(ev, "fin_env")], ["succes", "echec", "succes"],
                 "ota_par_maitre : statuts des trois envs")
-        verifie([e["detail"] for e in du_type(ev, "etape", env=A, etape="Connexion par le maître")], ["carte jointe par le maître : X"],
-                "ota_par_maitre : carte jointe affichee dans la ligne de l'env")
+        verifie([e["detail"] for e in du_type(ev, "etape", env=A, etape="Connexion par le maître")],
+                ["Sleep du maître 192.168.0.43 : 50 -> 0 le temps de l'envoi", "carte jointe par le maître : X"],
+                "ota_par_maitre : Sleep coupe et carte jointe affiches dans la ligne de l'env")
 
 
 def test_ordre_actions():
