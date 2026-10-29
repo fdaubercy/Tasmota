@@ -423,9 +423,22 @@ Pistes déjà relevées : firmware -> commande native `FileUpload` (type 1 = fir
 `tasmota/tasmota_xdrv_driver/xdrv_02_1_mqtt_file.ino`, exemple `tools/mqtt-file/upload-ota.py`) ; le FS n'a PAS de type
 `FileUpload` -> à faire passer par Berry (abonnement MQTT, écriture par morceaux) ou par `Upgrade`/`UfsServe`.
 
-- [ ] Firmware par `FileUpload` : protocole (morceaux, base64 ou binaire, MD5, `MqttFileValidate`), taille des
+- [x] Firmware par `FileUpload` — preuve : lecture du code le 2026-10-29, conclusion ci-dessous. Protocole
+  (morceaux, base64 ou binaire, MD5, `MqttFileValidate`), taille des
   morceaux et tampon MQTT (`MQTT_MAX_PACKET_SIZE`), safeboot (partition OTA unique : bascule nécessaire comme `/u4` ?),
   redémarrage, preuve par `Status 2` ; activé dans nos firmwares ? (`USE_MQTT_FILE`).
+  CONCLUSION : `FileUpload` type 1 INUTILISABLE sur nos cartes S3/P4, qui ont UNE partition OTA + safeboot
+  (cuve : bascule `/u4` constatée). Dans l'appli, `xdrv_02_1_mqtt_file.ino::MqttFileUploadValidate` fait
+  `Update.begin` sur la partition OTA suivante, qui n'existe pas (la seule est celle qui tourne) ; dans le safeboot,
+  `FileUpload` n'existe pas : le safeboot est compilé en `FIRMWARE_MINIMAL` (`tasmota_configurations_ESP32.h`, juste
+  après « FIRMWARE_SAFEBOOT specific additions ») et la commande est sous `#ifndef FIRMWARE_MINIMAL`
+  (`xdrv_02_9_mqtt.ino`), comme `Status`, que le safeboot de la cuve refuse (« Unknown », 2026-10-28). Reste vrai :
+  `USE_MQTT_FILE` est défini en tête de `xdrv_02_1_mqtt_file.ino` (actif dans l'appli), mot de passe = celui du
+  MQTT de la carte, morceaux ≈ `MQTT_MAX_PACKET_SIZE` (2048 chez nous) − en-tête − topic, MD5 final, `restart_flag = 2`.
+  PISTE QUI RESTE pour le firmware : `OtaUrl <url du PC>` + `Upgrade 1` envoyés PAR MQTT
+  (`support_tasmota.ino` : partition unique -> `OtaFactoryWrite`, redémarrage en safeboot, qui TIRE l'URL en HTTP ;
+  `Upgrade` et `OtaUrl` restent dans le safeboot). Il faut un serveur HTTP sur le PC ; un esclave le joint par la
+  sortie NAPT du maître (même relais : `Sleep 0` du maître toujours utile, délai `HTTPCLIENT_DEFAULT_TCP_TIMEOUT` 5 s).
 - [ ] FS par MQTT : aucun type natif ; chiffrer une réception Berry (`mqtt.subscribe`, écriture par morceaux dans
   LittleFS, contrôle MD5, RAM du S3 et du P4, persist en RAM) ; ou tirer les fichiers par HTTP depuis le PC sur ordre MQTT.
 - [ ] Esclaves derrière le NAPT du maître : passent-ils par le broker sans redirection ? débit mesuré (le `Sleep`
