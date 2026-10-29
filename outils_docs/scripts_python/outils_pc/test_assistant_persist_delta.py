@@ -1,6 +1,6 @@
 """Banc de assistant_persist_delta (ecart ligne a ligne applique a une zone). Code de sortie 0 = vert.
 
-Le .h reel est lu en lecture seule ; aucune de ses lignes n'est affichee (il contient des mots de passe).
+Le .h et les autoexec reels sont lus en lecture seule ; aucune de leurs lignes n'est affichee (mots de passe).
 """
 
 import os
@@ -53,6 +53,24 @@ def aller_retour_h(d):
     verifie((retour == reel, refus), (True, []), "aller_retour : B -> A redonne le reel")
 
 
+def autoexec_reel(d):
+    """Insert juste apres une ligne vide (plusieurs dans le fichier) suivie d'une ligne unique."""
+    for f in sorted((RACINE / "data").glob("*/*/autoexec.be")):
+        lignes = f.read_text(encoding="utf-8").splitlines(keepends=True)
+        cle = [l.rstrip() for l in lignes]
+        i = next((i for i in range(len(cle) - 1)
+                  if not cle[i] and cle.count("") > 1 and cle[i + 1] and cle.count(cle[i + 1]) == 1), None)
+        if i is None:
+            continue
+        b = lignes[:i + 1] + ["// ligne ajoutee par le banc\n"] + lignes[i + 1:]
+        aller, refus = d.applique_lignes(lignes, lignes, b)
+        verifie((aller == b, refus), (True, []), "autoexec_reel : insert apres une ligne vide")
+        retour, refus = d.applique_lignes(aller, b, lignes)
+        verifie((retour == lignes, refus), (True, []), "autoexec_reel : aller-retour")
+        return
+    verifie("aucun", "autoexec exploitable", "autoexec_reel : ligne vide suivie d'une ligne unique")
+
+
 def principal():
     import assistant_persist_delta as d
 
@@ -85,6 +103,16 @@ def principal():
     r, refus = d.applique_lignes(["l1\n", "l2\n"], ["l1\n", "l2\n"], ["l1\n", "n\n", "m\n", "l2\n"])
     verifie((len(refus), r), (0, ["l1\n", "n\n", "m\n", "l2\n"]), "insert_multiligne")
 
+    # ---- insert : repli par contexte quand l'ancre precedente est banale ----
+    r, refus = d.applique_lignes(["h\n", "\n", "main\n", "u\n", "\n"], ["h\n", "\n", "u\n"], ["h\n", "\n", "n\n", "u\n"])
+    verifie((r, refus), (["h\n", "\n", "main\n", "n\n", "u\n", "\n"], []), "insert_precedente_banale_suivante_unique : pose avant la suivante")
+    banal = ["#endif\n", "\n", "#endif\n", "\n", "k\n", "#endif\n"]
+    r, refus = d.applique_lignes(banal, ["\n", "#endif\n"], ["\n", "ins\n", "#endif\n"])
+    verifie((r, refus), (banal[:2] + ["ins\n"] + banal[2:], []), "insert_voisines_banales_paire_unique : pose entre les deux")
+    r, refus = d.applique_lignes(["\n", "#endif\n", "\n", "#endif\n"], ["\n", "#endif\n"], ["\n", "ins\n", "#endif\n"])
+    verifie(len(refus), 1, "insert_tout_ambigu : refuse")
+
+    autoexec_reel(d)
     aller_retour_h(d)
     print("\nVERT" if not ECHECS else f"\nROUGE : {len(ECHECS)} echec(s)")
     return 1 if ECHECS else 0

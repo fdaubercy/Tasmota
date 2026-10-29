@@ -23,11 +23,13 @@ def _zone(reel, a, tag, i1, i2):
         return trouve[0], trouve[0] + i2 - i1
     if not a:
         return len(reel), len(reel)
-    ancre = i1 - 1 if i1 else 0         # apres la ligne qui precede, sinon avant la premiere qui suit
-    trouve = _positions(reel, [a[ancre]])
-    if len(trouve) != 1:
-        return f"ancre {'absente' if not trouve else 'ambigue'} dans le fichier"
-    return (trouve[0] + 1,) * 2 if i1 else (trouve[0],) * 2
+    # repli par contexte : precedente seule, puis la paire precedente+suivante, puis suivante seule
+    essais = [(a[i1 - 1:i1], 1)] * (i1 > 0) + [(a[i1 - 1:i1 + 1], 1)] * (0 < i1 < len(a)) + [(a[i1:i1 + 1], 0)] * (i1 < len(a))
+    for motif, decalage in essais:
+        trouve = _positions(reel, motif)
+        if len(trouve) == 1:
+            return (trouve[0] + decalage,) * 2
+    return "ancre absente ou ambigue dans le fichier"
 
 
 def _chevauche(z, y):
