@@ -1,7 +1,7 @@
 ---
 chantier: assistant-synchro-fork
 titre: Assistant pas à pas de la page « Synchro du fork » (port 7500)
-statut: actif
+statut: clos
 cree: 2026-10-27
 maj: 2026-10-29
 ---
@@ -262,7 +262,7 @@ Comportement :
 
 - [x] Page lancée par l'utilisateur (tâche « Outil : synchro du fork »), dry-run sur le vrai dépôt : l'assistant montre les étapes attendues pour l'état du jour. Au 2026-10-27 : 2 commits de retard, prévision sans conflit ; l'arbre sale bloque tant que les fichiers du build ne sont pas commités. — preuve : confirmé par l'utilisateur le 2026-10-29 (« ca marche ») ; page 7500 relue en Chrome sans fenêtre : 7 commits de retard, étapes arbre (bloquée, 26 cases, « Commiter la sélection (26) »), nouveautés, deux côtés, prévision sans conflit, synchro_a en attente, aucune erreur JS
 - [x] Défaut trouvé pendant l'essai : un onglet ouvert avant un redémarrage du serveur ne recevait plus le flux (Last-Event-ID d'un serveur précédent), donc pas d'assistant après le dry-run. — preuve : 930132db4 (rejeu depuis 0), banc web rouge sans le correctif, VERT avec
-- [ ] Après accord de l'utilisateur seulement : voie A jusqu'à la question « Pousser ? », à laquelle **l'utilisateur** répond. Résultat noté ici.
+- [x] Après accord de l'utilisateur seulement : voie A jusqu'à la question « Pousser ? », à laquelle **l'utilisateur** répond. Résultat noté ici. — preuve : synchro du 2026-10-29 04:01 faite par l'utilisateur (« c ok ») : merge en ligne 08add9060 (7 commits de l'amont), merge local de origin 061d11041, poussé (HEAD..origin/development = 0, HEAD..upstream/development = 0), journal e2c5319aa. Lancée avec un commit local non poussé (fd8dd618b) : l'assistant proposait alors la voie B ; le script a fait un merge local au lieu d'une avance rapide, sans dommage.
 
 ## A7 — Commit depuis l'étape « Arbre propre » (demande du 2026-10-29)
 
