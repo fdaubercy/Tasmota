@@ -9,6 +9,7 @@ Aucun mot de passe n'apparait dans les messages d'erreur : seulement des chemins
 """
 
 import json
+import re
 
 from fichiers_berry_coprocesseur import _membres
 
@@ -53,8 +54,8 @@ def _parent(texte, chemin):
 
 def _unite(texte):
     """Indentation d'un niveau, lue sur le premier membre de la racine (4 espaces par defaut)."""
-    membres = _membres(texte, texte.index("{"))
-    ind = _prefixe(texte, membres[0][1]) if membres else ""
+    m = re.search(r'\n([ \t]+)"', texte)
+    ind = m.group(1) if m else ""
     return "\t" if ind.startswith("\t") else (len(ind) or 4)
 
 
@@ -79,7 +80,10 @@ def _un(texte, chemin, op, valeur, apres=None):
         if i is None:
             return texte
         if len(membres) == 1:
-            return texte[:debut + 1] + texte[texte.index("}", membres[0][3]):]
+            fermant = texte.index("}", membres[0][3])     # objet multi-ligne : le '}' reste sur sa ligne
+            ligne = texte[texte.rfind("\n", 0, debut) + 1:debut]
+            vide = eol + ligne[:len(ligne) - len(ligne.lstrip(" \t"))] if "\n" in texte[debut:fermant] else ""
+            return texte[:debut + 1] + vide + texte[fermant:]
         if i < len(membres) - 1:
             return texte[:membres[i][1]] + texte[membres[i + 1][1]:]
         return texte[:membres[i - 1][3]] + texte[membres[i][3]:]
@@ -89,6 +93,19 @@ def _un(texte, chemin, op, valeur, apres=None):
         return texte[:v] + _ecrit(valeur, _prefixe(texte, k), unite, eol, texte[v:fin]) + texte[fin:]
     pas = unite if isinstance(unite, str) else " " * unite
     nom = json.dumps(cle, ensure_ascii=False)
+    fermant = texte.index("}", membres[-1][3] if membres else debut)
+    obj = texte[debut:fermant + 1]
+    if "\n" not in obj:                                   # objet compact : tout reste sur la meme ligne
+        sc = ": " if ": " in obj or not membres else ":"
+        si = ", " if ", " in obj or sc == ": " else ","
+        v = json.dumps(valeur, ensure_ascii=False, separators=(si, sc))
+        if not membres:
+            return texte[:debut + 1] + nom + sc + v + texte[fermant:]
+        if apres is None:
+            k = membres[0][1]
+            return texte[:k] + nom + sc + v + si + texte[k:]
+        j = next((j for j, m in enumerate(membres) if m[0] == apres), len(membres) - 1)
+        return texte[:membres[j][3]] + si + nom + sc + v + texte[membres[j][3]:]
     if membres and apres is None:                         # en tete
         ind = _prefixe(texte, membres[0][1])
         k = membres[0][1]
@@ -101,7 +118,6 @@ def _un(texte, chemin, op, valeur, apres=None):
     ligne = texte[texte.rfind("\n", 0, debut) + 1:debut]  # objet vide : un membre sur sa ligne
     base = ligne[:len(ligne) - len(ligne.lstrip(" \t"))]
     ind = base + pas
-    fermant = texte.index("}", debut)
     return (texte[:debut + 1] + f"{eol}{ind}{nom}: {_ecrit(valeur, ind, unite, eol)}{eol}{base}"
             + texte[fermant:])
 

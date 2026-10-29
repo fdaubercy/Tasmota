@@ -51,7 +51,7 @@ def principal():
     r = tout(esp, [(("d",), "ajoute", {"x": 1, "y": [2]}, "a")], "ajoute_4_espaces_lf")
     verifie(r, '{\n    "a": 1,\n    "d": {\n        "x": 1,\n        "y": [\n            2\n        ]\n    }\n}', "ajoute_4_espaces_lf : texte")
     r = tout('{\n    "a": 1,\n    "o": {}\n}', [(("o", "k"), "ajoute", 1, None)], "ajoute_objet_vide")
-    verifie(r, '{\n    "a": 1,\n    "o": {\n        "k": 1\n    }\n}', "ajoute_objet_vide : texte")
+    verifie(r, '{\n    "a": 1,\n    "o": {"k": 1}\n}', "ajoute_objet_vide : texte (objet {} compact)")
 
     # ---- retire : virgules ----
     trois = '{\n\t"a": 1,\n\t"b": 2,\n\t"c": 3\n}'
@@ -115,16 +115,75 @@ def principal():
     r = t.applique('{\n\t"a": 1\n}', [(("m",), "ajoute", "é", None)])
     verifie(('"é"' in r, "\\u" in r), (True, False), "accents : gardes non echappes")
 
-    # ---- vrais persists : aucun ecart = octets identiques ----
-    n = 0
+    # ---- objet compact : la forme est gardee ----
+    c0 = '{\n\t"p": {"a": 1, "b": 2, "c": 3},\n\t"q": {"a":1,"b":2}\n}'
+    pa, qa = {"a": 1, "b": 2, "c": 3}, {"a": 1, "b": 2}
+    for av, bv, cle in ((pa, {"a": 1, "c": 3}, "p"), (pa, {"b": 2, "c": 3}, "p"), (pa, {"a": 1, "b": 2}, "p"),
+                        (qa, {"b": 2}, "q"), (qa, {"a": 1}, "q")):
+        A, B = {"p": pa, "q": qa}, {"p": pa, "q": qa}
+        B[cle] = bv
+        r2 = tout(c0, t.ecart(A, B), "compact_retire")
+        verifie(t.applique(r2, t.ecart(B, A)), c0, f"compact : retire puis ajoute octets identiques ({cle} -> {sorted(bv)})")
+    r = tout(c0, [(("p", "n"), "ajoute", [1, 2], None)], "compact_tete")
+    verifie(r, c0.replace('{"a": 1, "b"', '{"n": [1, 2], "a": 1, "b"'), "ajoute en tete d'un objet compact")
+    r = tout(c0, [(("q", "n"), "ajoute", 5, "zz")], "compact_repli")
+    verifie(r, c0.replace('"b":2}', '"b":2,"n":5}'), "repli en fin d'objet compact (separateurs ',' et ':')")
+    verifie(tout('{\n\t"o": {}\n}', [(("o", "k"), "ajoute", {"x": 1}, None)], "compact_vide"), '{\n\t"o": {"k": {"x": 1}}\n}', "ajoute dans {} compact")
+
+    # ---- vrais persists : aller-retour octet pour octet sur un echantillon de feuilles (lecture seule) ----
+    def feuilles(d, ch=()):
+        for k, v in d.items():
+            if isinstance(v, dict):
+                yield from feuilles(v, ch + (k,))
+            else:
+                yield ch + (k,)
+
+    def sans(d, ch):
+        d = dict(d)
+        if len(ch) > 1:
+            d[ch[0]] = sans(d[ch[0]], ch[1:])
+        else:
+            del d[ch[0]]
+        return d
+
+    def avec(d, ch, v):
+        d = dict(d)
+        d[ch[0]] = avec(d[ch[0]], ch[1:], v) if len(ch) > 1 else v
+        return d
+
+    def lit(d, ch):
+        for k in ch:
+            d = d[k]
+        return d
+
+    n = f = 0
     for p in sorted((RACINE / "data").glob("*/*/_persist.json")):
         if "sauvegarde" in p.parent.name:
             continue
         txt = p.read_bytes().decode("utf-8-sig")
+        a = json.loads(txt)
         n += 1
-        if t.applique(txt, []) != txt:
-            verifie("different", "identique", f"vrai persist #{n}")
-    verifie(n > 0, True, f"vrais_persists : {n} fichiers lus, applique(t, []) identique")
+        toutes = list(feuilles(a))
+        echant = (toutes[::max(1, len(toutes) // 2)][:2] + [c for c in toutes if c[:3] == ("diverses", "logs", "profils")][:2]
+                  + [c for c in toutes if "voies" in c][:1])   # borne : _membres est lent (~0,05 s par operation)
+        for c in dict.fromkeys(echant):
+            nom = f"{p.parent.name} {'.'.join(c)}"
+            try:
+                b = sans(a, c)
+                t2 = t.applique(txt, t.ecart(a, b))
+                json.loads(t2)
+                ok = t.applique(t2, t.ecart(b, a)) == txt
+                v2 = lit(a, c)
+                b2 = avec(a, c, v2 + [0] if isinstance(v2, list) else [v2, 0])
+                t4 = t.applique(txt, t.ecart(a, b2))
+                ok = ok and json.loads(t4) == b2 and t.applique(t4, t.ecart(b2, a)) == txt
+            except Exception as e:                       # jamais de valeur dans le message
+                ok = False
+                nom += " " + type(e).__name__
+            f += 1
+            if not ok:
+                verifie("different", "identique", "vrai persist aller-retour : " + nom)
+    verifie((n > 0, f > 0), (True, True), f"vrais_persists : {n} fichiers, {f} feuilles en aller-retour octet pour octet")
 
     print(f"\n{len(ECHECS)} echec(s)")
     return 1 if ECHECS else 0
