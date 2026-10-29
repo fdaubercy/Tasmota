@@ -112,6 +112,9 @@ def principal():
     r, refus = d.applique_lignes(["\n", "#endif\n", "\n", "#endif\n"], ["\n", "#endif\n"], ["\n", "ins\n", "#endif\n"])
     verifie(len(refus), 1, "insert_tout_ambigu : refuse")
 
+    r, refus = d.applique_lignes(["h\n", "retouchee\n", "u\n"], ["h\n", "p\n", "u\n"], ["h\n", "p\n", "n\n", "u\n"])
+    verifie((r, len(refus)), (["h\n", "retouchee\n", "u\n"], 1), "insert_precedente_absente_suivante_unique : refuse")
+
     autoexec_reel(d)
     aller_retour_h(d)
     print("\nVERT" if not ECHECS else f"\nROUGE : {len(ECHECS)} echec(s)")
