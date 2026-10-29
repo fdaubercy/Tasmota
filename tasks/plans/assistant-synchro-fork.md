@@ -260,7 +260,8 @@ Comportement :
 
 ## A6 — Essai réel (avec l'utilisateur)
 
-- [ ] Page lancée par l'utilisateur (tâche « Outil : synchro du fork »), dry-run sur le vrai dépôt : l'assistant montre les étapes attendues pour l'état du jour. Au 2026-10-27 : 2 commits de retard, prévision sans conflit ; l'arbre sale bloque tant que les fichiers du build ne sont pas commités.
+- [x] Page lancée par l'utilisateur (tâche « Outil : synchro du fork »), dry-run sur le vrai dépôt : l'assistant montre les étapes attendues pour l'état du jour. Au 2026-10-27 : 2 commits de retard, prévision sans conflit ; l'arbre sale bloque tant que les fichiers du build ne sont pas commités. — preuve : confirmé par l'utilisateur le 2026-10-29 (« ca marche ») ; page 7500 relue en Chrome sans fenêtre : 7 commits de retard, étapes arbre (bloquée, 26 cases, « Commiter la sélection (26) »), nouveautés, deux côtés, prévision sans conflit, synchro_a en attente, aucune erreur JS
+- [x] Défaut trouvé pendant l'essai : un onglet ouvert avant un redémarrage du serveur ne recevait plus le flux (Last-Event-ID d'un serveur précédent), donc pas d'assistant après le dry-run. — preuve : 930132db4 (rejeu depuis 0), banc web rouge sans le correctif, VERT avec
 - [ ] Après accord de l'utilisateur seulement : voie A jusqu'à la question « Pousser ? », à laquelle **l'utilisateur** répond. Résultat noté ici.
 
 ## A7 — Commit depuis l'étape « Arbre propre » (demande du 2026-10-29)
