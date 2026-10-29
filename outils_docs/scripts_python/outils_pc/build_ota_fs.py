@@ -106,6 +106,19 @@ def _commande(ip, cmnd, delai):
     return _get(ip, "/cm?cmnd=" + urllib.parse.quote(cmnd, safe=""), delai).decode("utf-8", "replace")
 
 
+ESSAIS_MAITRE = 3   # liaison du maitre P4 irreguliere : 2 requetes sur 40 au-dela de 8 s, 15 % de ping perdus (2026-10-29)
+
+
+def _commande_repetee(ip, cmnd, delai, essais=ESSAIS_MAITRE):
+    """_commande rejouee jusqu'a `essais` fois sans reponse : seulement pour une commande sans effet si rejouee."""
+    for _ in range(essais - 1):
+        try:
+            return _commande(ip, cmnd, delai)
+        except (OSError, http.client.HTTPException):
+            pass
+    return _commande(ip, cmnd, delai)
+
+
 def _poste(ip, chemin, champ, nom, donnees, delai, progression=None):
     """POST multipart (un seul fichier, ecrit a la main) envoye par morceaux -> (statut, texte).
 
@@ -326,14 +339,15 @@ def joint_par_maitre(adresse, persist_env, env, rapporte, *, maitre=None, delai=
     maitre = maitre or adresse.rsplit(":", 1)[0]
     rapporte({"etape": ETAPE_CONNEXION, "pourcent": None, "detail": f"redirection posée par le maître {maitre}"})
     try:
-        reponse = _commande(maitre, "RoutageRangeExtender", delai)
+        reponse = _commande_repetee(maitre, "RoutageRangeExtender", delai)
     except (OSError, http.client.HTTPException) as erreur:
-        raise RuntimeError(f"{ETAPE_CONNEXION} : maître {maitre} injoignable ({erreur}) ; rien n'a été envoyé") from None
+        raise RuntimeError(f"{ETAPE_CONNEXION} : maître {maitre} injoignable après {ESSAIS_MAITRE} essais ({erreur}) ; "
+                           f"rien n'a été envoyé") from None
     if "RoutageRangeExtender" not in reponse:
         raise RuntimeError(f"{ETAPE_CONNEXION} : le maître {maitre} ne connaît pas RoutageRangeExtender (Berry arrêté ?) : "
                            f"{_resume(reponse)} ; rien n'a été envoyé")
     try:
-        hote = str(json.loads(_commande(adresse, "Status 5", delai)).get("StatusNET", {}).get("Hostname") or "")
+        hote = str(json.loads(_commande_repetee(adresse, "Status 5", delai)).get("StatusNET", {}).get("Hostname") or "")
     except (OSError, http.client.HTTPException, ValueError, AttributeError) as erreur:
         raise RuntimeError(f"{ETAPE_CONNEXION} : aucune carte derrière {adresse} ({erreur}) : esclave hors ligne pour le "
                            f"maître (fiche Offline de sa découverte) ? rien n'a été envoyé") from None
@@ -363,17 +377,20 @@ def coupe_sleep(maitre, delai=8.0):
     74 a 102 Ko/s, aucune pause. La fonction rendue remet la valeur et rend "" ou le message d'echec.
     """
     try:
-        valeur = re.search(r'"Sleep"\D*(\d+)', _commande(maitre, "Sleep", delai))   # {"Sleep":{"50":{"Active":"50"}}}
+        valeur = re.search(r'"Sleep"\D*(\d+)', _commande_repetee(maitre, "Sleep", delai))   # {"Sleep":{"50":{"Active":"50"}}}
         if valeur is None:
             raise ValueError("réponse de Sleep illisible")
-        _commande(maitre, "Sleep 0", delai)
-    except (OSError, http.client.HTTPException, ValueError) as erreur:
+        _commande_repetee(maitre, "Sleep 0", delai)
+    except (OSError, http.client.HTTPException) as erreur:
+        raise RuntimeError(f"{ETAPE_CONNEXION} : Sleep du maître {maitre} non coupé après {ESSAIS_MAITRE} essais ({erreur}) ; "
+                           f"rien n'a été envoyé") from None
+    except ValueError as erreur:
         raise RuntimeError(f"{ETAPE_CONNEXION} : Sleep du maître {maitre} non coupé ({erreur}) ; rien n'a été envoyé") from None
     valeur = valeur.group(1)
 
     def remet():
         try:
-            _commande(maitre, f"Sleep {valeur}", delai)
+            _commande_repetee(maitre, f"Sleep {valeur}", delai)
             return ""
         except (OSError, http.client.HTTPException) as erreur:
             return f"Sleep {valeur} NON remis sur le maître {maitre} ({erreur}) : le remettre à la main"

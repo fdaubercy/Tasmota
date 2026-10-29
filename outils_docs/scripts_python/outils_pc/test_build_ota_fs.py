@@ -530,6 +530,41 @@ def test_coupe_sleep():
         maitre.ferme()
 
 
+def test_maitre_lent():
+    """Liaison du maitre irreguliere (2026-10-29) : commande sans reponse rejouee, ESSAIS_MAITRE fois au plus."""
+    maitre, esclave = Carte(), Carte()
+    maitre.maitre = True
+    vraie, muettes = maitre.commande, [0]
+
+    def lente(h, cmnd):
+        if muettes[0] > 0:
+            muettes[0] -= 1
+            time.sleep(0.8)                          # au-dela du delai de 0,3 s : le client abandonne
+            return None
+        return vraie(h, cmnd)
+    maitre.commande = lente
+    try:
+        muettes[0] = 2
+        valeur, remet = bo.coupe_sleep(maitre.ip, delai=0.3)
+        verifie((valeur, maitre.sleeps), ("50", [0]), "maitre_lent : 2 requetes sans reponse -> Sleep lu et coupe quand meme")
+        muettes[0] = 2
+        verifie((remet(), maitre.sleeps), ("", [0, 50]), "maitre_lent : remet() rejoue aussi")
+        muettes[0] = bo.ESSAIS_MAITRE
+        try:
+            bo.coupe_sleep(maitre.ip, delai=0.3)
+            verifie("leve", "RuntimeError", "maitre_lent : toujours muet -> RuntimeError")
+        except RuntimeError as e:
+            verifie((f"{bo.ESSAIS_MAITRE} essais" in str(e), "rien n'a été envoyé" in str(e)), (True, True),
+                    "maitre_lent : toujours muet -> refus qui dit le nombre d'essais, rien envoye")
+        time.sleep(1)                                # laisse finir les requetes abandonnees
+        muettes[0] = 2
+        r = bo.joint_par_maitre(esclave.ip, None, "cuve", lambda _: None, maitre=maitre.ip, delai=0.3)
+        verifie("carte jointe" in r, True, "maitre_lent : RoutageRangeExtender rejoue -> carte jointe")
+    finally:
+        maitre.ferme()
+        esclave.ferme()
+
+
 def test_ota_firmware_echec_en_safeboot():
     """I4 : bascule en safeboot faite, puis /u2 refuse : le message dit que la carte est restee en safeboot."""
     with tempfile.TemporaryDirectory() as t:
@@ -708,7 +743,7 @@ def test_par_maitre():
 
 
 def principal():
-    for test in (test_identite_image, test_par_maitre, test_coupe_sleep, test_ota_firmware_deja_en_safeboot, test_ota_fs_ordre, test_ota_fs_sauvegarde, test_ota_fs_persist_injoignable,
+    for test in (test_identite_image, test_par_maitre, test_coupe_sleep, test_maitre_lent,test_ota_firmware_deja_en_safeboot, test_ota_fs_ordre, test_ota_fs_sauvegarde, test_ota_fs_persist_injoignable,
                  test_ota_fs_relecture_differente, test_ota_fs_sous_dossiers, test_ota_fs_referer,
                  test_ota_fs_echec_ufsu, test_ota_fs_pas_de_retour, test_ota_fs_attente_retour,
                  test_ota_fs_persist_reformate, test_ota_fs_progression, test_ota_fs_progression_octets,
