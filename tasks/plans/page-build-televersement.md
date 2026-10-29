@@ -416,6 +416,25 @@ ne démarre plus (`global()` sans `serveur`, `boolMute`, `LOG_LEVEL_*`). Persist
   `test_build_ota_fs::test_ota_fs_progression_octets` (% des octets, ≥ 8 valeurs pour un fichier de 12 morceaux).
   `build_progression.py::Suivi._envoi` (% pondéré par la durée des zones, `references.json`), `build_ota_fs.py::envoie_fs_ota`.
 
+## A14 — Étude de faisabilité : envoi du firmware et du FS par MQTT (demande du 2026-10-29)
+
+Étude en LECTURE SEULE : trace, avantages/inconvénients, propositions ; l'utilisateur décide de la suite.
+Pistes déjà relevées : firmware -> commande native `FileUpload` (type 1 = firmware OTA, type 2 = réglages,
+`tasmota/tasmota_xdrv_driver/xdrv_02_1_mqtt_file.ino`, exemple `tools/mqtt-file/upload-ota.py`) ; le FS n'a PAS de type
+`FileUpload` -> à faire passer par Berry (abonnement MQTT, écriture par morceaux) ou par `Upgrade`/`UfsServe`.
+
+- [ ] Firmware par `FileUpload` : protocole (morceaux, base64 ou binaire, MD5, `MqttFileValidate`), taille des
+  morceaux et tampon MQTT (`MQTT_MAX_PACKET_SIZE`), safeboot (partition OTA unique : bascule nécessaire comme `/u4` ?),
+  redémarrage, preuve par `Status 2` ; activé dans nos firmwares ? (`USE_MQTT_FILE`).
+- [ ] FS par MQTT : aucun type natif ; chiffrer une réception Berry (`mqtt.subscribe`, écriture par morceaux dans
+  LittleFS, contrôle MD5, RAM du S3 et du P4, persist en RAM) ; ou tirer les fichiers par HTTP depuis le PC sur ordre MQTT.
+- [ ] Esclaves derrière le NAPT du maître : passent-ils par le broker sans redirection ? débit mesuré (le `Sleep`
+  du maître compte-t-il encore ?), effet sur MqttLog et sur les plantages déjà vus (broker chargé, mémoire
+  `project_mqttlog_esclaves_napt`).
+- [ ] Comparaison avec l'OTA HTTP actuelle (durée, robustesse, sécurité : mot de passe `FileUpload`, broker public ?)
+  et place dans la page 7700 (méthode « MQTT » par ligne ?).
+- [ ] Rapport rendu à l'utilisateur (propositions avec avantages/inconvénients) ; décision de l'utilisateur notée ici.
+
 ## Améliorations restantes
 
 - [x] [projet] Refuser dès la fin du pré-build un module solidifié vide (cas réel du 2026-10-26 : `demarrage.be` sans
@@ -448,8 +467,11 @@ ne démarre plus (`global()` sans `serveur`, `boolMute`, `LOG_LEVEL_*`). Persist
 - [ ] [projet] Relance de l'OTA vers une carte DÉJÀ en safeboot, prouvée en réel : le 2026-10-28 à 19:31 (cuve en
   safeboot par le maître), envoi à 100 % puis réponse jugée « refusé par la carte (HTTP 200) », motif tronqué : vrai
   refus ou mot de `ECHECS_PAGE` trouvé dans le script de la page ? Garder la réponse entière, puis essai réel.
-- [ ] [projet] OTA du FS vers un esclave par le maître (cuve ou rideau), essai réel : jamais fait (l'esclave est lui
-  aussi en `Sleep 50`, effet non mesuré).
+- [x] [projet] OTA du FS vers un esclave par le maître (cuve ou rideau), essai réel : jamais fait (l'esclave est lui
+  aussi en `Sleep 50`, effet non mesuré). — preuve : essai de l'utilisateur du 2026-10-29 (page 7700, capture),
+  cuve par 192.168.0.43:8081, « réussi · 2 min 51 s », envoi des fichiers 49 s ; avertissement « persist relu
+  différent » expliqué : la cuve réécrit son persist au démarrage (drivers OFF et listes vides retirés, MAC ajoutée,
+  état du relais, template GPIO), comparé au dépôt le même jour
 
 ## Vérification
 
