@@ -488,6 +488,16 @@ fichier relu ou contrôlé à la fin ; même choix de fichiers, de carte et d'op
   `relecteur-berry`.
 - [ ] Côté PC : envoi par `client_mqtt.py` dans `build_ota_fs.py` (fenêtre, reprise, % en direct), banc Python avec une
   carte MQTT simulée + témoin.
+- [ ] EFFACER TOTALEMENT le FS de la carte cible par MQTT (demande du 2026-10-29). Relevé dans le code le
+  2026-10-29 : pas de commande `UfsFormat` (commandes Ufs : Type, Size, Free, Delete, Rename, Run, List, Serve) ;
+  Berry a `path.format(true)` -> `be_port.cpp::be_format_fs` -> `LittleFS.format()`, en UNE commande, envoyable telle
+  quelle sur `cmnd/<topic>/Br`. RISQUES à trancher à la conception : le formatage efface toute la partition d'un bloc
+  (environ 11 Mo sur la cuve, partition à 0x4b0000) et peut dépasser le watchdog de 5 s (`USE_ESP32_WDT`) -> carte
+  redémarrée en plein effacement ; autre voie sans long blocage : supprimer fichier par fichier (`UfsList` +
+  `UfsDelete`, dossiers par `path.rmdir`), à mesurer. Après effacement : le persist est en RAM et le System#Save d'un
+  redémarrage le RÉÉCRIT (FS pas vide) ; plus d'autoexec ni de modules non solidifiés -> la carte perd ses fonctions
+  Berry jusqu'au renvoi du FS. Page : confirmation explicite (comme `erase_upload`), proposer « effacer puis envoyer
+  tout le FS », essai d'abord sur une carte hors service.
 - [ ] Onglet : choix du transport (HTTP / MQTT) ; doc ; bancs et sonde Chrome.
 - [ ] Essai réel par l'utilisateur : maître, puis cuve par le maître.
 
