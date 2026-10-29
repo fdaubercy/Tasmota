@@ -439,14 +439,80 @@ Pistes déjà relevées : firmware -> commande native `FileUpload` (type 1 = fir
   (`support_tasmota.ino` : partition unique -> `OtaFactoryWrite`, redémarrage en safeboot, qui TIRE l'URL en HTTP ;
   `Upgrade` et `OtaUrl` restent dans le safeboot). Il faut un serveur HTTP sur le PC ; un esclave le joint par la
   sortie NAPT du maître (même relais : `Sleep 0` du maître toujours utile, délai `HTTPCLIENT_DEFAULT_TCP_TIMEOUT` 5 s).
-- [ ] FS par MQTT : aucun type natif ; chiffrer une réception Berry (`mqtt.subscribe`, écriture par morceaux dans
-  LittleFS, contrôle MD5, RAM du S3 et du P4, persist en RAM) ; ou tirer les fichiers par HTTP depuis le PC sur ordre MQTT.
-- [ ] Esclaves derrière le NAPT du maître : passent-ils par le broker sans redirection ? débit mesuré (le `Sleep`
+- [x] FS par MQTT — preuve : lecture du code le 2026-10-29, conclusion ci-dessous. Aucun type natif ; chiffrer une
+  réception Berry (`mqtt.subscribe`, écriture par morceaux dans LittleFS, contrôle MD5, RAM du S3 et du P4, persist
+  en RAM) ; ou tirer les fichiers par HTTP depuis le PC sur ordre MQTT.
+  CONCLUSION : aucune commande Tasmota ne télécharge un fichier dans le FS (`FileUpload` : firmware et réglages
+  seulement ; pas d'`UrlFetch`). Deux voies, toutes deux en Berry, donc un module à écrire et à charger sur chaque carte :
+  (1) POUSSÉE par MQTT : abonnement `mqtt.subscribe` (déjà utilisé : `controleDiscovery.be`, rappel avec `databytes`),
+  morceaux de ≤ ~2 Ko (`MQTT_MAX_PACKET_SIZE` 2048 moins topic et en-tête), ajoutés au fichier, accusé publié par
+  morceau, MD5 à la fin ; chaque rappel est court (sous `USE_BERRY_TIMEOUT`, 4 s), RAM ~2 Ko par message ; lent
+  (un aller-retour broker par morceau) mais aucun serveur à ouvrir sur le PC.
+  (2) TIRÉE en HTTP sur ordre MQTT : `webclient().write_file(<chemin>)` (`xdrv_52_3_berry_webclient.ino::wc_writefile`,
+  écrit le corps dans le fichier) depuis un serveur HTTP du PC ; rapide, mais BLOQUANT : un gros fichier dépasse les
+  4 s d'un rappel Berry -> passer par `async_get_start` ou découper ; même relais NAPT que l'OTA HTTP pour un esclave.
+  Dans les deux cas, persist en RAM : recharger Berry puis `Restart 1`, comme l'OTA HTTP du FS (`envoie_fs_ota`).
+- [x] Esclaves derrière le NAPT du maître — preuve : essais réels du 2026-10-29 (`essai_a14.py`, scratchpad : script
+  Berry temporaire `/a14_essai.be`, fichiers aléatoires relus par `/ufsu` = IDENTIQUES à chaque essai, nettoyage fait,
+  aucun redémarrage, mémoire Berry inchangée). Poussée MQTT (morceaux de 1900 o) / tirée HTTP (`write_file`) :
+  maître P4 (Sleep 50) : poussée 3,6 Ko/s (1 morceau en vol) et 8,1 Ko/s (4) ; tirée 32 Ko en 0,56 s ;
+  cuve par le maître, Sleep 50 : poussée 0,8 Ko/s (1, pauses jusqu'à 14 s, MAIS sans coupure) et 14,2 Ko/s (4) ;
+  tirée 32 Ko en 0,34 s ;
+  cuve, maître en Sleep 0 : poussée 5,7 / 15,9 / 18,3 Ko/s (1 / 4 / 8 en vol) ; tirée 8 Ko 0,1 s, 32 Ko 0,7 s,
+  128 Ko 1,7 s (≈ 77 Ko/s ; au-delà de ~250 Ko, risque Berry 4 s / watchdog 5 s -> asynchrone obligatoire).
+  L'esclave joint le broker et le PC par la sortie NAPT du maître, sans redirection ; MQTT tolère les pauses du
+  relais (pas de délai de 5 s comme le serveur web), le `Sleep 0` du maître n'est utile qu'en poussée sans fenêtre.
+  Non mesuré : effet sur MqttLog. Questions d'origine : passent-ils par le broker sans redirection ? débit mesuré (le `Sleep`
   du maître compte-t-il encore ?), effet sur MqttLog et sur les plantages déjà vus (broker chargé, mémoire
   `project_mqttlog_esclaves_napt`).
-- [ ] Comparaison avec l'OTA HTTP actuelle (durée, robustesse, sécurité : mot de passe `FileUpload`, broker public ?)
-  et place dans la page 7700 (méthode « MQTT » par ligne ?).
-- [ ] Rapport rendu à l'utilisateur (propositions avec avantages/inconvénients) ; décision de l'utilisateur notée ici.
+- [x] Comparaison avec l'OTA HTTP actuelle — preuve : mesures du 2026-10-29 ci-dessus et du 2026-10-28 (A11).
+  Durée et robustesse : HTTP `/u2`/`/ufsu` 74 à 102 Ko/s mais coupé par les pauses du relais (maître en Sleep 50,
+  délai de 5 s du serveur web de l'esclave) ; MQTT poussé 14 à 18 Ko/s (4 à 8 morceaux en vol), SANS coupure
+  malgré des pauses de 14 s ; MQTT tiré ~77 Ko/s mais bloquant (4 s Berry, watchdog 5 s). Sécurité : broker local
+  sans TLS (192.168.0.5), comme les commandes déjà envoyées par MQTT ; `FileUpload` (mot de passe) hors sujet.
+  Place dans la page : transport choisi dans l'onglet « Fichiers » (A15 puis A16).
+- [x] Rapport rendu à l'utilisateur ; décision notée — preuve : rapport du 2026-10-29 dans la conversation ;
+  DÉCISION DE L'UTILISATEUR (2026-10-29) : « utilisons la voie poussée par mqtt » -> réalisée en A16, après l'onglet
+  HTTP (A15) demandé d'abord. Le firmware reste en HTTP (étape 1 : pas de `FileUpload` possible).
+
+## A16 — Transport « MQTT poussé » dans l'onglet « Fichiers » (décision du 2026-10-29)
+
+Fichiers envoyés par morceaux sur `<préfixe>/<topic>/morceau`, accusé cumulé de la carte, 4 à 8 morceaux en vol,
+fichier relu ou contrôlé à la fin ; même choix de fichiers, de carte et d'options après envoi que A15.
+
+- [ ] Conception validée : topics, protocole (début avec chemin et taille, morceaux, fin avec contrôle, erreur,
+  abandon), écriture dans un fichier temporaire puis renommage (pas de fichier à moitié écrit), dossiers créés,
+  limite de taille, sécurité (seulement la carte visée : topic de la carte ; rien hors du FS).
+- [ ] Module Berry récepteur (NOUVEAU fichier de `data/fs`, avec l'accord de l'utilisateur ; charte des logs,
+  rappels courts, RAM ; chargé par l'autoexec des cartes visées, solidification à décider) ; banc Berry + mutants ;
+  `relecteur-berry`.
+- [ ] Côté PC : envoi par `client_mqtt.py` dans `build_ota_fs.py` (fenêtre, reprise, % en direct), banc Python avec une
+  carte MQTT simulée + témoin.
+- [ ] Onglet : choix du transport (HTTP / MQTT) ; doc ; bancs et sonde Chrome.
+- [ ] Essai réel par l'utilisateur : maître, puis cuve par le maître.
+
+## A15 — Onglet « Fichiers » : envoyer des fichiers choisis du dépôt à une carte choisie, par HTTP (demande du 2026-10-29)
+
+Choix de l'utilisateur (2026-10-29) : onglet de la page 7700 ; fichiers DU DÉPÔT seulement ; après l'envoi, choix
+à l'envoi (« recharger Berry » cochée d'office si un `.be` ou `_persist.json` part, « redémarrer » décochée ; persist
+de la carte sauvegardé avant d'être remplacé). Envoi HTTP classique (`/ufsu`) d'abord ; MQTT plus tard (A14).
+Réutilisé, pas réécrit : `build_ota_fs.py::extrait_image` + `verifie_identite` (liste et chemins EXACTS du FS, depuis
+l'image `littlefs.bin` du buildfs : même résultat que l'OTA complète du FS), l'envoi de `envoie_fs_ota` (dossiers
+créés, persist sauvegardé puis relu, `BR_RECHARGE`, `Restart 1`), `joint_par_maitre` + `coupe_sleep` pour un esclave,
+le verrou d'envoi de `build_serie.py` (jamais pendant un build ni un autre envoi).
+
+- [ ] Conception validée : maquette de l'onglet (carte choisie dans la liste des envs à adresse OTA, bouton « Préparer »
+  = buildfs de cet env puis liste des fichiers de l'image, cases à cocher, dossier de destination = celui de l'image,
+  options après envoi, suivi et journal comme les autres envois) ; spec complétée (choix 24).
+- [ ] `build_ota_fs.envoie_fs_ota` accepte un SOUS-ENSEMBLE de fichiers et les options après envoi (recharger Berry,
+  redémarrer) ; sans sous-ensemble, comportement inchangé. Banc `test_build_ota_fs` (sous-ensemble seul envoyé,
+  persist non coché -> pas de sauvegarde ni de relecture, options respectées) + témoin.
+- [ ] Serveur : `GET /fichiers?env=` (liste de l'image : chemin, taille, date de l'image, image absente ou plus
+  ancienne que le dépôt signalée) et lancement d'un envoi partiel dans la série (`build_serie`, refus pendant un build).
+  Banc `test_build_web` / `test_build_serie`.
+- [ ] Page : onglet « Fichiers » (`build_page.py`), sélection, envoi, suivi ; sonde Chrome `test_build_page_chrome`.
+- [ ] Doc : README § Build et téléversement, CLAUDE.md (tailles) ; `verifie_references_docs` sans défaut.
+- [ ] Essai réel par l'utilisateur : un fichier `.be` vers le maître, puis vers la cuve par le maître.
 
 ## Améliorations restantes
 

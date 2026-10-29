@@ -15,7 +15,7 @@ après une édition à la main : `node .claude/hooks/index_plans.mjs` (`--verifi
 
 | Plan | Objectif principal | Statut | Avancement | Créé | Mis à jour |
 |---|---|---|---|---|---|
-| [Page web « Build et téléversement » (port 7700, tuile de l'annuaire)](plans/page-build-televersement.md) | Compiler et téléverser en série (COM ou OTA) les envs cochés depuis une page web, avec progression en direct | actif | █████████░ 94 % (66/70) | 2026-10-24 | 2026-10-29 |
+| [Page web « Build et téléversement » (port 7700, tuile de l'annuaire)](plans/page-build-televersement.md) | Compiler et téléverser en série (COM ou OTA) les envs cochés depuis une page web, avec progression en direct | actif | █████████░ 88 % (70/81) | 2026-10-24 | 2026-10-29 |
 | [Assistant de création du persist d'un nouvel env (page 7900, tuile de l'annuaire)](plans/assistant-persist.md) | Créer le persist, l'autoexec et les sections de build d'une nouvelle carte par questions, depuis une page web | actif | █████████░ 90 % (45/47) | 2026-10-27 | 2026-10-27 |
 | [Plan d'action de l'audit Berry (propositions P2.1 à P10.7)](plans/actions-audit-berry.md) | Mettre en œuvre, lot par lot et sur décision de l'utilisateur, les 78 propositions de l'audit Berry | actif | █████████░ 91 % (89/95) | 2026-10-22 | 2026-10-26 |
 | [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) | Ajouter l'Ethernet en option sur le maître ModBus P4, le Wi-Fi restant le défaut | actif | ░░░░░░░░░░ 0 % (0/37) | 2026-10-26 | 2026-10-26 |
