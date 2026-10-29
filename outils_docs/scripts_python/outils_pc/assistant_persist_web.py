@@ -26,6 +26,13 @@ Routes (les POST exigent l'en-tete X-Assistant-Persist: 1 et la meme origine ; J
         {relue: chemin} -> {diff, empreinte} : retrait de ce chemin de a_completer (400 s'il n'y est pas) ; idem a /applique
     POST /modele/applique {empreinte} -> {applique, retraits, alignements} ; 409 si build, empreinte perimee, rien a faire
     POST /interrompue/acquitte {nom} -> {acquitte: true} ; 400 nom inconnu
+    GET  /env?nom=      assistant_persist_modification.charge_env : reponses relues de la carte ; 404 inconnu, 400 illisible
+    POST /modification/prepare {env, reponses} -> {diff, empreinte, vide, chemins, avertissements, refus} (sans ecriture)
+    POST /modification {env, reponses, empreinte} -> {modifie, diff, sauvegarde} ; 409 build, empreinte, ecart inapplicable ;
+        400 aucun changement
+    POST /suppression/prepare {env} -> fichiers_berry_suppression.prepare_suppression + elements (liste lisible)
+    POST /suppression {env, empreinte} -> {supprime, dossier_sauvegarde, sauvegarde} ; 409 ; 404 env inconnu
+(+ cartes dans GET /parc : [{env, dossier, puce}])
 `reponses` = les champs de assistant_persist_generation.Reponses (puce, lieu, nom obligatoires) ; `elements` =
 {groupe: [element, ...]} et `elements_groupe` = {groupe: {reglage: valeur}} (groupes de assistant_persist_elements).
 """
@@ -33,23 +40,27 @@ Routes (les POST exigent l'en-tete X-Assistant-Persist: 1 et la meme origine ; J
 import argparse
 import dataclasses
 import json
+import re
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 import acces_web
 import assistant_persist_creation as apc
 import assistant_persist_elements as ape
 import assistant_persist_generation as gen
 import assistant_persist_modele as apm
+import assistant_persist_modification as apm2
 import assistant_persist_parc as parc
 import assistant_persist_relue as apr
 from annuaire_outils import hote_autorise
+import fichiers_berry_creation as fbc
 import fichiers_berry_etat as fbe
 import fichiers_berry_ini as fbi
 import fichiers_berry_sauvegarde as fbs
+import fichiers_berry_suppression as fbx
 
 PORT_DEFAUT = 7900
 DEPOT = Path(__file__).resolve().parents[3]
@@ -179,9 +190,37 @@ def donnees_parc(racine):
             "base_defaut": {p: parc.base_par_defaut(racine, p) for p in parc.PREFIXES},
             "maitres": parc.maitres(racine), "ids_pris": {str(i): d for i, d in parc.ids_pris(racine).items()},
             "id_libre": parc.id_libre(racine), "reseaux": parc.reseaux(racine), "blocs": blocs, "erreur_modele": erreur,
-            "broches": broches, "erreur_broches": erreurs_broches,
+            "broches": broches, "erreur_broches": erreurs_broches, "cartes": apm2.cartes(racine),
             "groupes": [{"id": g, "singulier": ape.singulier(modele, g), "gabarit": ape.gabarits_elements(modele)[g]}
                         for g in ape.GROUPES_ELEMENTS] if modele else []}
+
+
+def _env_de(demande):
+    env = demande.get("env")
+    if not isinstance(env, str) or not env:
+        raise ValueError("env : chaine non vide attendue")
+    return env
+
+
+def _empreinte_de(demande, refaire):
+    empreinte = demande.get("empreinte")
+    if not isinstance(empreinte, str) or not empreinte:
+        raise ValueError(f"empreinte : chaine non vide attendue (refaire {refaire})")
+    return empreinte
+
+
+def elements_supprimes(racine, prep):
+    """Liste lisible des elements retires, tiree du diff de prepare_suppression (en-tetes `--- fichier`)."""
+    env, touches = prep["env"], re.findall(r"^--- (\S+)", prep["diff"], re.M)
+    res = [f"section [env:{env}] de {fbi.FICHIER_CENV}"]
+    if fbc.FICHIER_H in touches:
+        define = fbx.define_de(fbi.lit_sections(racine), env)
+        res.append(f"section de {fbc.FICHIER_H}" + (f" ({define})" if define else ""))
+    if fbx.OVERRIDE in touches:
+        res.append(f"reference a {env} ou a son dossier dans {fbx.OVERRIDE} (default_envs, data_dir)")
+    if prep["dossier_sauvegarde"]:
+        res.append(f"dossier {prep['dossier']} renomme en {prep['dossier_sauvegarde']}")
+    return res
 
 
 def apercu(racine, r):
@@ -222,6 +261,16 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, etat_modele):
             if not isinstance(empreinte, str) or not empreinte:
                 raise ValueError("empreinte : chaine non vide attendue (refaire « Voir le diff »)")
             return apc.cree(racine, reponses_de(demande), empreinte, builds_en_cours)
+        if chemin == "/modification/prepare":
+            return apm2.prepare_modification(racine, _env_de(demande), reponses_de(demande))
+        if chemin == "/modification":
+            return apm2.modifie(racine, _env_de(demande), reponses_de(demande),
+                                _empreinte_de(demande, "« Voir le diff »"), builds_en_cours)
+        if chemin == "/suppression/prepare":
+            prep = fbx.prepare_suppression(racine, _env_de(demande))
+            return {**prep, "elements": elements_supprimes(racine, prep)}
+        if chemin == "/suppression":
+            return fbx.supprime(racine, _env_de(demande), _empreinte_de(demande, "le diff"), builds_en_cours)
         if chemin == "/modele/prepare":
             if "relue" in demande:
                 return apr.propose_relue(racine, demande["relue"])
@@ -283,12 +332,18 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, etat_modele):
                     self._json({"en_cours": False})
                 elif chemin == "/parc":
                     self._json(donnees_parc(racine))
+                elif chemin == "/env":
+                    self._json(apm2.charge_env(racine, _env_de({"env": (parse_qs(urlsplit(self.path).query).get("nom") or [""])[0]})))
                 elif chemin == "/modele/etat":
                     self._json(etat_modele())
                 elif chemin == "/interrompues":
                     self._json({"interrompues": fbs.interrompues()})
                 else:
                     self._envoie(404, b"introuvable")
+            except KeyError as erreur:
+                self._erreur_inattendue(erreur)
+            except LookupError as erreur:
+                self._envoie(404, str(erreur).encode("utf-8"))
             except ValueError as erreur:
                 self._envoie(400, str(erreur).encode("utf-8"))
             except Exception as erreur:                     # fichier verrouille, JSON tronque... : le dire

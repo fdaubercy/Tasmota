@@ -90,7 +90,7 @@ def test_get(b):
     reel = apm.ecarts(tac.RACINE, apm.charge_modele(tac.RACINE))
     verifie(reel["disparues"], [], "VRAI parc : aucune cle disparue (le bandeau ne reste pas affiche en permanence)")
     verifie(sorted(p), sorted(["puces", "bases", "base_defaut", "maitres", "ids_pris", "id_libre", "reseaux", "blocs", "erreur_modele",
-                                      "broches", "erreur_broches", "groupes"]),
+                                      "broches", "erreur_broches", "groupes", "cartes"]),
             "GET /parc : les clefs du contrat")
     verifie(([g["id"] for g in p["groupes"]], p["broches"]["ESP32S3"][-1], "relai" in [g["singulier"] for g in p["groupes"]]),
             (["boutons", "interrupteurs", "relais", "capteurs", "compteurs", "thermometres", "analogiques"], 48, True),
@@ -223,6 +223,62 @@ def test_prepare_creation(b):
             "creation une 2e fois -> 409")
 
 
+def test_modification_suppression(b):
+    """A6 : /parc.cartes, /env, /modification*, /suppression* sur une carte creee dans le depot d'essai."""
+    _, p = b.requete("POST", "/prepare", {"reponses": reponses()})
+    b.requete("POST", "/creation", {"reponses": reponses(), "empreinte": p["empreinte"]})
+    cartes = b.requete("GET", "/parc")[1].get("cartes", [])
+    verifie((tac.ENV in [c["env"] for c in cartes], sorted(cartes[0]) if cartes else None), (True, ["dossier", "env", "puce"]),
+            "GET /parc : cartes (env, dossier, puce)")
+    statut, e = b.requete("GET", "/env?nom=" + tac.ENV)
+    verifie((statut, e.get("env") if isinstance(e, dict) else e, sorted(e.get("reponses", {})) == sorted(reponses()) if isinstance(e, dict) else None),
+            (200, tac.ENV, True), "GET /env : reponses relues de la carte")
+    verifie(b.requete("GET", "/env?nom=tasmota32s3-nulle-part")[0], 404, "GET /env : env inconnu -> 404")
+    verifie(b.requete("GET", "/env")[0], 400, "GET /env : sans nom -> 400")
+    rep = e["reponses"] if isinstance(e, dict) else reponses()
+    # modification
+    statut, m = b.requete("POST", "/modification/prepare", {"env": tac.ENV, "reponses": rep})
+    verifie((statut, m.get("vide") if isinstance(m, dict) else m), (200, True), "modification/prepare : aucun ecart -> vide")
+    verifie(b.requete("POST", "/modification", {"env": tac.ENV, "reponses": rep, "empreinte": m.get("empreinte", "x") if isinstance(m, dict) else "x"})[0],
+            400, "modification sans ecart -> 400 (aucun changement)")
+    neuf = dict(rep, ip="192.168.0.77")
+    statut, m = b.requete("POST", "/modification/prepare", {"env": tac.ENV, "reponses": neuf})
+    verifie((statut, m.get("vide"), bool(m.get("empreinte")), "chemins" in m, "192.168.0.77" in m.get("diff", "")),
+            (200, False, True, True, True), "modification/prepare : ecart, empreinte, chemins, diff")
+    verifie(b.requete("POST", "/modification/prepare", {"env": "tasmota32s3-nulle-part", "reponses": neuf})[0], 404, "modification/prepare : env inconnu -> 404")
+    verifie(b.requete("POST", "/modification/prepare", {"env": tac.ENV})[0], 400, "modification/prepare : sans reponses -> 400")
+    verifie(b.requete("POST", "/modification/prepare", {"reponses": neuf})[0], 400, "modification/prepare : sans env -> 400")
+    verifie(b.requete("POST", "/modification/prepare", {"env": tac.ENV, "reponses": neuf}, entetes={})[0], 403, "modification/prepare sans en-tete -> 403")
+    verifie(b.requete("POST", "/modification", {"env": tac.ENV, "reponses": neuf})[0], 400, "modification sans empreinte -> 400")
+    verifie(b.requete("POST", "/modification", {"env": tac.ENV, "reponses": neuf, "empreinte": "0" * 64})[0], 409, "modification : empreinte perimee -> 409")
+    b.builds = ["pio run -e x"]
+    verifie(b.requete("POST", "/modification", {"env": tac.ENV, "reponses": neuf, "empreinte": m["empreinte"]})[0], 409, "modification pendant un build -> 409")
+    b.builds = []
+    statut, ok = b.requete("POST", "/modification", {"env": tac.ENV, "reponses": neuf, "empreinte": m["empreinte"]})
+    verifie((statut, ok.get("modifie") if isinstance(ok, dict) else ok), (200, True), "POST /modification : ecrit")
+    verifie("192.168.0.77" in (b.racine / tac.DOSSIER / "_persist.json").read_text(encoding="utf-8"), True, "modification : persist de la carte change")
+    # suppression
+    statut, s = b.requete("POST", "/suppression/prepare", {"env": tac.ENV})
+    verifie((statut, s.get("refus"), bool(s.get("empreinte")), s.get("dossier_sauvegarde")), (200, [], True, tac.DOSSIER + "-sauvegarde"),
+            "suppression/prepare : empreinte, dossier -sauvegarde")
+    el = s.get("elements", [])
+    verifie((isinstance(el, list) and len(el) >= 3, any(tac.DOSSIER + "-sauvegarde" in x for x in el), any(tac.ENV in x for x in el)),
+            (True, True, True), "suppression/prepare : elements lisibles (cenv, .h, dossier)")
+    verifie(b.requete("POST", "/suppression/prepare", {"env": "tasmota32s3-nulle-part"})[0], 404, "suppression/prepare : env inconnu -> 404")
+    verifie(b.requete("POST", "/suppression/prepare", {})[0], 400, "suppression/prepare : sans env -> 400")
+    verifie(b.requete("POST", "/suppression/prepare", {"env": tac.ENV}, entetes={})[0], 403, "suppression/prepare sans en-tete -> 403")
+    verifie(b.requete("POST", "/suppression", {"env": tac.ENV})[0], 400, "suppression sans empreinte -> 400")
+    verifie(b.requete("POST", "/suppression", {"env": tac.ENV, "empreinte": "0" * 64})[0], 409, "suppression : empreinte perimee -> 409")
+    b.builds = ["pio run -e x"]
+    verifie(b.requete("POST", "/suppression", {"env": tac.ENV, "empreinte": s["empreinte"]})[0], 409, "suppression pendant un build -> 409")
+    b.builds = []
+    statut, d = b.requete("POST", "/suppression", {"env": tac.ENV, "empreinte": s["empreinte"]})
+    verifie((statut, d.get("supprime") if isinstance(d, dict) else d), (200, True), "POST /suppression : supprime")
+    verifie(((b.racine / tac.DOSSIER).exists(), (b.racine / (tac.DOSSIER + "-sauvegarde")).is_dir()), (False, True), "suppression : dossier renomme")
+    verifie((("[env:" + tac.ENV + "]") in (b.racine / "platformio_tasmota_cenv.ini").read_text(encoding="utf-8"),
+             tac.ENV in [c["env"] for c in b.requete("GET", "/parc")[1]["cartes"]]), (False, False), "suppression : section du cenv retiree, carte disparue de /parc")
+
+
 def echange_brut(b, entetes):
     """Requete POST ecrite a la main (http.client refuse un Content-Length negatif) : ligne d'etat de la reponse."""
     corps = b'{"reponses": {}}'
@@ -282,7 +338,7 @@ def valeurs_reelles():
 
 
 def principal():
-    for test in (test_get, test_hote, test_demarrage_robuste, test_post_securite, test_broches_illisibles, test_apercu, test_prepare_creation, test_content_length, test_interrompues, test_erreur_inattendue):
+    for test in (test_get, test_hote, test_demarrage_robuste, test_post_securite, test_broches_illisibles, test_apercu, test_prepare_creation, test_modification_suppression, test_content_length, test_interrompues, test_erreur_inattendue):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier
             b = Banc(t)
