@@ -6,6 +6,8 @@ A gauche, la carte destinataire (envs « Mes cartes » envoyables en OTA, adress
 Dossiers / fichiers de l'image (GET /fichiers?env=) / panier « À envoyer » avec ses options, et l'envoi
 (POST /lancer, action « fichiers », jeton de la liste). Les deux lancements portent `onglet: "fichiers"` :
 le serveur n'ecrit pas les derniers choix de l'onglet Build.
+Transport (A16, spec choix 25 a 28) : HTTP (adresse de la carte) ou MQTT (broker, module fsMqtt.be de la carte, adresse
+inutile) ; « Effacer tout le FS avant l'envoi » : MQTT seulement, confirmation, puis TOUTE l'image part.
 Avancement dans l'onglet : barre en pourcentage et journal des etapes, nourris par les evenements du flux du
 lancement parti d'ici (fichiersEvenement, appele par traite() de build_page). Le Suivi commun reste dessous.
 Tout texte venu du serveur passe par textContent (fonction h de build_page).
@@ -70,6 +72,14 @@ HTML = r"""
         <div class="carte pile">
           <h2>À envoyer</h2>
           <div id="f-panier"></div>
+          <div role="radiogroup" aria-label="Transport">
+            <label class="action" title="POST /ufsu vers l'adresse de la carte (ou du maître:port)">
+              <input type="radio" name="f-transport" value="http" checked> HTTP (adresse de la carte)</label>
+            <label class="action" title="Par le broker de user_config_override.h, vers le module fsMqtt.be de la carte">
+              <input type="radio" name="f-transport" value="mqtt"> MQTT (module fsMqtt.be)</label>
+          </div>
+          <label class="action" title="MQTT seulement : tout le FS de la carte est supprimé, puis toute l'image est envoyée">
+            <input type="checkbox" id="f-effacer" disabled> Effacer tout le FS avant l'envoi</label>
           <label class="action"><input type="checkbox" id="f-berry"> Recharger Berry (BrRestart)</label>
           <label class="action"><input type="checkbox" id="f-restart"> Redémarrer la carte (Restart 1)</label>
           <div id="f-note" class="discret"></div>
@@ -113,6 +123,10 @@ function dateLisible(s) {
   return new Date(s * 1000).toLocaleString("fr-FR", {day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"});
 }
 function choisis() { return F.liste ? F.liste.fichiers.filter(function (f) { return F.coches[f.chemin]; }) : []; }
+function transport() { return document.querySelector("input[name=f-transport]:checked").value; }
+function effaceFs() { return transport() === "mqtt" && $("f-effacer").checked; }
+// Fichiers qui partiront : tous ceux de l'image si l'on efface d'abord, sinon les coches
+function aEnvoyer() { return effaceFs() && F.liste ? F.liste.fichiers : choisis(); }
 
 // Cartes destinataires : appelee aussi par construitListe (envs relus). Adresse = celle de l'onglet Build.
 function fichiersCartes() {
@@ -238,26 +252,38 @@ function majPanier() {
     zp.appendChild(ul);
     zp.appendChild(h("div", {"class": "discret", texte: "Total : " + tailleLisible(liste.reduce(function (s, f) { return s + f.taille; }, 0))}));
   }
+  if (effaceFs()) liste = aEnvoyer();
   var persist = liste.some(function (f) { return f.chemin === "_persist.json"; });
   // Recharger Berry : coche d'office si un .be ou le persist part, tant que l'utilisateur n'y a pas touche
   if (!F.berryTouche) $("f-berry").checked = persist || liste.some(function (f) { return /\.be$/.test(f.chemin); });
-  $("f-note").textContent = (persist ? "_persist.json : le persist de la carte est sauvegardé avant l'envoi, puis rechargé " +
+  $("f-note").textContent = (effaceFs() ? "Tout le FS de la carte sera supprimé (persist compris), puis les " + liste.length +
+    " fichiers de l'image envoyés. " : "") + (persist ? "_persist.json : le persist de la carte est sauvegardé avant l'envoi, puis rechargé " +
     "(persist.load()) avant tout redémarrage. " : "") + ($("f-restart").checked ? "Le redémarrage recharge aussi Berry." : "");
   majBoutonsFichiers();
 }
 $("f-berry").onchange = function () { F.berryTouche = true; };
 $("f-restart").onchange = function () { $("f-berry").disabled = this.checked; majPanier(); };
+$("f-effacer").onchange = function () { majPanier(); };
+document.querySelectorAll("input[name=f-transport]").forEach(function (r) {
+  r.onchange = function () {
+    $("f-effacer").disabled = transport() !== "mqtt";
+    if (transport() !== "mqtt") $("f-effacer").checked = false;
+    majPanier();
+  };
+});
 
 // Appelee aussi par majBouton (build_page) : un lancement qui commence ou finit change les boutons.
 function majBoutonsFichiers() {
-  var l = F.liste, n = choisis().length, c = F.env ? choix[F.env] : null, occupe = enCours || F.prepa;
+  var l = F.liste, c = F.env ? choix[F.env] : null, occupe = enCours || F.prepa;
+  var n = l && l.image.present ? aEnvoyer().length : 0;
   $("f-preparer").disabled = !F.env || occupe;
   $("f-preparer").textContent = F.prepa ? "Préparation…" : "Préparer la liste";
   var manque = !F.env ? "choisir une carte" : occupe ? "un lancement est en cours" :
-    !c || !IPV4.test(c.ip.trim()) ? "adresse de la carte à saisir (IPv4, ou IPv4:port par le maître)" :
+    transport() === "http" && (!c || !IPV4.test(c.ip.trim())) ? "adresse de la carte à saisir (IPv4, ou IPv4:port par le maître)" :
     !l || !l.image.present ? "préparer la liste" : !n ? "cocher des fichiers" : "";
   $("f-envoyer").disabled = !!manque;
-  $("f-envoyer").textContent = "Envoyer " + n + " fichier" + (n > 1 ? "s" : "");
+  $("f-envoyer").textContent = (effaceFs() ? "Effacer puis envoyer " : "Envoyer ") + n + " fichier" + (n > 1 ? "s" : "") +
+    (transport() === "mqtt" ? " par MQTT" : "");
   $("f-pourquoi").textContent = manque ? "Envoi impossible : " + manque + "." : "";
 }
 
@@ -281,10 +307,15 @@ $("f-preparer").onclick = async function () {
 
 $("f-envoyer").onclick = async function () {
   var c = choix[F.env];
+  if (effaceFs() && !confirm("Effacer tout le FS de " + F.env + " : TOUS ses fichiers sont supprimés, persist, autoexec et " +
+      "fsMqtt.be compris, puis les " + aEnvoyer().length + " fichiers de l'image sont envoyés par MQTT.\n\nLe persist de la " +
+      "carte est sauvegardé avant. Si la carte redémarre entre les deux, elle repart sans Berry : la reprendre en HTTP " +
+      "(onglet Fichiers) ou par câble.\n\nContinuer ?")) return;
   $("f-refus").textContent = "";
   $("f-envoyer").disabled = true;
   var r = await appel("/lancer", {lignes: [{env: F.env, methode: "ota", port: "", ip: c.ip.trim()}], actions: ["fichiers"],
-    onglet: "fichiers", fichiers: {liste: choisis().map(function (f) { return f.chemin; }), jeton: F.liste.image.jeton,
+    onglet: "fichiers", fichiers: {liste: aEnvoyer().map(function (f) { return f.chemin; }), jeton: F.liste.image.jeton,
+                                   transport: transport(), effacer: effaceFs(),
                                    recharger_berry: $("f-berry").checked && !$("f-restart").checked,
                                    redemarrer: $("f-restart").checked}});
   if (r.ok) enCours = true; else refusFichiers(r);

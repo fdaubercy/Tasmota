@@ -480,15 +480,26 @@ Pistes déjà relevées : firmware -> commande native `FileUpload` (type 1 = fir
 Fichiers envoyés par morceaux sur `<préfixe>/<topic>/morceau`, accusé cumulé de la carte, 4 à 8 morceaux en vol,
 fichier relu ou contrôlé à la fin ; même choix de fichiers, de carte et d'options après envoi que A15.
 
-- [ ] Conception validée : topics, protocole (début avec chemin et taille, morceaux, fin avec contrôle, erreur,
+- [x] Conception validée — preuve : spec choix 25 à 28 (section A16) ; l'utilisateur a passé les questions
+  (« passons », 2026-10-29) : CHOIX DE CLAUDE, à relire par l'utilisateur. Énoncé : topics, protocole (début avec chemin et taille, morceaux, fin avec contrôle, erreur,
   abandon), écriture dans un fichier temporaire puis renommage (pas de fichier à moitié écrit), dossiers créés,
   limite de taille, sécurité (seulement la carte visée : topic de la carte ; rien hors du FS).
-- [ ] Module Berry récepteur (NOUVEAU fichier de `data/fs`, avec l'accord de l'utilisateur ; charte des logs,
+- [x] Module Berry récepteur — preuve : `data/fs/fsMqtt.be` (A16 lancée par l'utilisateur ; chargé par AUCUN autoexec,
+  liste des cartes à décider) ; `berry/banc_fsmqtt.py` VERT (FS en mémoire, 3 mutants rouges : position, MD5,
+  effacement d'un seul coup) ; `relecteur-berry` : 0 bloquant, 6 corrections faites (cible de log, exceptions de
+  morceau/lit/efface, payload vide, `lit` par lots, efface réentrant, chemin de dossier) et testées.
+  Énoncé : Module Berry récepteur (NOUVEAU fichier de `data/fs`, avec l'accord de l'utilisateur ; charte des logs,
   rappels courts, RAM ; chargé par l'autoexec des cartes visées, solidification à décider) ; banc Berry + mutants ;
   `relecteur-berry`.
-- [ ] Côté PC : envoi par `client_mqtt.py` dans `build_ota_fs.py` (fenêtre, reprise, % en direct), banc Python avec une
+- [x] Côté PC — preuve : `build_ota_mqtt.py::envoie_fs_mqtt` (module à part, `build_ota_fs.py` découpé le même jour) ;
+  `test_build_ota_mqtt.py` VERT (21 OK : carte MQTT simulée, perte et renvoi avec témoin, fenêtre de 4, carte muette,
+  MD5 refusé, persist illisible, options, effacement ; mutant sans retour arrière rouge) ; `test_build_serie::
+  test_fichiers_mqtt` VERT (7 OK). Énoncé : Côté PC : envoi par `client_mqtt.py` dans `build_ota_fs.py` (fenêtre, reprise, % en direct), banc Python avec une
   carte MQTT simulée + témoin.
-- [ ] EFFACER TOTALEMENT le FS de la carte cible par MQTT (demande du 2026-10-29). Relevé dans le code le
+- [x] EFFACER TOTALEMENT le FS — preuve : ordre `efface` de `fsMqtt.be` (fichier par fichier, lots de 20 par
+  minuterie, `/sd` de la flash compris : Berry n'écrit que sur `ffsp`), testé par les deux bancs ; page : case
+  « Effacer tout le FS avant l'envoi », MQTT seulement, confirmation, toute l'image envoyée ensuite (sonde Chrome).
+  NON essayé sur carte. Énoncé : EFFACER TOTALEMENT le FS de la carte cible par MQTT (demande du 2026-10-29). Relevé dans le code le
   2026-10-29 : pas de commande `UfsFormat` (commandes Ufs : Type, Size, Free, Delete, Rename, Run, List, Serve) ;
   Berry a `path.format(true)` -> `be_port.cpp::be_format_fs` -> `LittleFS.format()`, en UNE commande, envoyable telle
   quelle sur `cmnd/<topic>/Br`. RISQUES à trancher à la conception : le formatage efface toute la partition d'un bloc
@@ -498,7 +509,9 @@ fichier relu ou contrôlé à la fin ; même choix de fichiers, de carte et d'op
   redémarrage le RÉÉCRIT (FS pas vide) ; plus d'autoexec ni de modules non solidifiés -> la carte perd ses fonctions
   Berry jusqu'au renvoi du FS. Page : confirmation explicite (comme `erase_upload`), proposer « effacer puis envoyer
   tout le FS », essai d'abord sur une carte hors service.
-- [ ] Onglet : choix du transport (HTTP / MQTT) ; doc ; bancs et sonde Chrome.
+- [x] Onglet : choix du transport (HTTP / MQTT) ; doc ; bancs et sonde Chrome. — preuve :
+  `test_build_page_fichiers_chrome.py` VERT (+8 : MQTT sans adresse, effacement confirmé ou refusé, retour en HTTP) ;
+  README § « Onglet « Fichiers » », CLAUDE.md.
 - [ ] Essai réel par l'utilisateur : maître, puis cuve par le maître.
 
 ## A15 — Onglet « Fichiers » : envoyer des fichiers choisis du dépôt à une carte choisie, par HTTP (demande du 2026-10-29)

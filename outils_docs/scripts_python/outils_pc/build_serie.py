@@ -70,6 +70,7 @@ import build_envs
 import build_ota_firmware
 import build_ota_fs
 import build_ota_maitre
+import build_ota_mqtt
 import build_solidification
 from build_progression import (ETAPE_COMPILATION, ETAPE_EFFACEMENT, ETAPE_ENVOI, ETAPE_LIENS, ETAPE_PREBUILD, Suivi,
                                retire_ansi)
@@ -161,7 +162,7 @@ class Serie:
                  port_libre=port_libre_defaut, ota_fs=build_ota_fs.envoie_fs_ota,
                  ota_firmware=build_ota_firmware.envoie_firmware_ota, sondage=5.0,
                  solidification=build_solidification.vides, par_maitre=build_ota_maitre.joint_par_maitre,
-                 coupe_sleep=build_ota_maitre.coupe_sleep):
+                 coupe_sleep=build_ota_maitre.coupe_sleep, fs_mqtt=build_ota_mqtt.envoie_fs_mqtt):
         self.racine = Path(racine)
         self.dossier = Path(dossier)
         self.commande_pio = commande_pio(pio)
@@ -171,6 +172,7 @@ class Serie:
         self.ota_firmware = ota_firmware
         self.par_maitre = par_maitre                    # `IP:port` : redirection du maitre posee, carte jointe verifiee
         self.coupe_sleep = coupe_sleep                  # `IP:port` : Sleep 0 sur le maitre le temps de l'envoi
+        self.fs_mqtt = fs_mqtt                          # onglet Fichiers, transport « mqtt » (A16)
         self.solidification = solidification            # modules solidifies vides, controles a la fin du pre-build
         self.sondage = sondage
         self.verrou = threading.Condition()
@@ -254,6 +256,7 @@ class Serie:
         if set(TELEVERSEMENTS) <= set(actions):
             motifs.append("« Téléverser le firmware » et « Effacer puis téléverser » : l'une ou l'autre, pas les deux")
         envoi = bool(set(actions) & ENVOIS)
+        par_mqtt = (fichiers or {}).get("transport") == "mqtt"     # par le broker : pas d'adresse de la carte
         connus = {e.nom: e for e in build_envs.liste_envs(self.racine)}
         self._fs_par_firmware = {nom for nom, e in connus.items() if e.fs_avec_firmware}   # lu par _plan
         vus, ports = set(), {}
@@ -277,7 +280,9 @@ class Serie:
                     motifs.append(f"{nom} : « Effacer puis téléverser » se fait par câble (COM) seulement")
                 if not connus[nom].ota_possible:
                     motifs.append(f"{nom} : OTA impossible pour cet environnement")
-                if not ligne.ip:
+                if par_mqtt:
+                    pass
+                elif not ligne.ip:
                     motifs.append(f"{nom} : IP OTA à saisir")
                 elif not _ipv4(ligne.ip):
                     motifs.append(f"{nom} : IP OTA invalide {ligne.ip!r}")
@@ -304,6 +309,10 @@ class Serie:
         motifs = []
         if set(actions) != {"fichiers"} or len(lignes) != 1:
             motifs.append("« fichiers » : une seule carte et aucune autre action")
+        if (fichiers or {}).get("transport", "http") not in ("http", "mqtt"):
+            motifs.append("« fichiers » : transport http ou mqtt")
+        if (fichiers or {}).get("effacer") and (fichiers or {}).get("transport") != "mqtt":
+            motifs.append("« fichiers » : effacer le FS se fait par MQTT seulement")
         if lignes and lignes[0].methode != "ota":
             motifs.append("« fichiers » : envoi par le réseau (OTA) seulement")
         liste = (fichiers or {}).get("liste")
@@ -329,7 +338,8 @@ class Serie:
                 raise RuntimeError(" ; ".join(motifs))
             self._actif, self._arret, self._arret_immediat = True, False, False
             self._choix = {"fichiers": list(fichiers["liste"]), "recharger_berry": bool(fichiers.get("recharger_berry")),
-                           "redemarrer": bool(fichiers.get("redemarrer"))} if fichiers else {}
+                           "redemarrer": bool(fichiers.get("redemarrer")), "transport": fichiers.get("transport", "http"),
+                           "effacer": bool(fichiers.get("effacer"))} if fichiers else {}
         threading.Thread(target=self._execute, args=(lignes, actions), daemon=True).start()
 
     def arrete(self, immediat=False):
@@ -645,12 +655,13 @@ class Serie:
             self._ajoute("etape", env, action=action, etape=etape, pourcent=info.get("pourcent"),
                          detail=str(info.get("detail") or ""))
 
-        rapporte({"etape": initiale, "pourcent": None, "detail": f"vers {ligne.ip}"})
+        par_mqtt = genre == "ota_fichiers" and self._choix.get("transport") == "mqtt"
+        rapporte({"etape": initiale, "pourcent": None, "detail": "par MQTT" if par_mqtt else f"vers {ligne.ip}"})
         build = self.racine / ".pio" / "build" / env
         self._marque_envoi(True)                         # l'envoi OTA ne se coupe pas (arrete_serie attend)
         remet = None
         try:
-            if ":" in ligne.ip:
+            if ":" in ligne.ip and not par_mqtt:
                 maitre = ligne.ip.rsplit(":", 1)[0]
                 valeur, remet = self.coupe_sleep(maitre)
                 rapporte({"etape": build_ota_maitre.ETAPE_CONNEXION, "pourcent": None,
@@ -673,8 +684,13 @@ class Serie:
                     # L'image est-elle bien celle de CET env ? (P4 avec le FS de la cuve le 2026-10-26)
                     identite = build_ota_fs.verifie_identite(fichiers, build_envs.persist_carte(self.racine, env), env)
                     rapporte({"etape": build_ota_fs.ETAPE_IMAGE, "pourcent": 100, "detail": identite})
-                    self.ota_fs(env, ligne.ip, fichiers, sauvegardes, rapporte,
-                                **(self._choix if genre == "ota_fichiers" else {}))
+                    choix = {k: v for k, v in self._choix.items() if k in ("fichiers", "recharger_berry", "redemarrer")}
+                    if par_mqtt:                 # effacer : l'image ENTIERE part (fichiers=None)
+                        self.fs_mqtt(env, build_envs.topic_carte(self.racine, env), fichiers, sauvegardes, rapporte,
+                                     **dict(choix, effacer=self._choix["effacer"],
+                                            fichiers=None if self._choix["effacer"] else choix["fichiers"]))
+                    else:
+                        self.ota_fs(env, ligne.ip, fichiers, sauvegardes, rapporte, **choix)
         except RuntimeError as erreur:
             return False, str(erreur), [], dernier["etape"]
         except Exception as erreur:

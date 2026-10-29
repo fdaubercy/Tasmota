@@ -1068,6 +1068,46 @@ def test_fichiers_ota():
                 "fichiers_ota : image absente -> refus « préparer la liste »")
 
 
+
+def test_fichiers_mqtt():
+    """A16 : transport « mqtt » de l'onglet Fichiers : ni IP ni maitre, topic du persist, effacer -> image entiere."""
+    appels = []
+
+    def faux_mqtt(env, topic, dossier_fs, sauvegardes, rapporte, **options):
+        appels.append((env, topic, sorted(arbre(dossier_fs)), options))
+
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t, ota_fs=lambda *a, **k: appels.append("http"))
+        m.serie.fs_mqtt = faux_mqtt
+        m.serie.coupe_sleep = lambda *a: appels.append("sleep")
+        depot = m.racine / "data" / "essai" / "tasmota32-a"
+        depot.mkdir(parents=True)
+        topic = "essai/a"
+        persist = json.dumps({"serveur": {"hostname": "carte-a", "mqtt": {"topic": topic}}}).encode("utf-8")
+        (depot / "_persist.json").write_bytes(persist)       # identite de l'image
+        image = m.racine / ".pio" / "build" / A / "littlefs.bin"
+        fabrique_image(image, dict(FICHIERS_IMAGE, **{"_persist.json": persist}))
+        choix = {"liste": ["autoexec.be"], "jeton": str(image.stat().st_mtime_ns), "recharger_berry": True,
+                 "redemarrer": False, "transport": "mqtt"}
+        verifie(m.serie.controle([ota(A, "")], {"fichiers"}, choix), [], "fichiers_mqtt : sans adresse de la carte -> accepte")
+        verifie(bool(m.serie.controle([ota(A, "")], {"fichiers"}, dict(choix, transport="http"))), True,
+                "fichiers_mqtt : temoin, en http sans adresse -> refuse")
+        verifie(bool(m.serie.controle([ota(A)], {"fichiers"}, dict(choix, transport="ftp"))), True, "fichiers_mqtt : transport inconnu refuse")
+        verifie(bool(m.serie.controle([ota(A)], {"fichiers"}, dict(choix, transport="http", effacer=True))), True,
+                "fichiers_mqtt : effacer en http refuse")
+        m.serie.lance([ota(A, "192.168.0.43:8081")], {"fichiers"}, choix)
+        ev = m.attend("fin")
+        verifie(appels, [(A, topic, sorted(FICHIERS_IMAGE), {"fichiers": ["autoexec.be"], "recharger_berry": True,
+                                                             "redemarrer": False, "effacer": False})],
+                "fichiers_mqtt : fs_mqtt(topic du persist, options), ni Sleep du maitre ni HTTP")
+        verifie(du_type(ev, "etape", action="fichiers")[0]["detail"], "par MQTT", "fichiers_mqtt : premiere etape « par MQTT »")
+        appels.clear()
+        m.serie.lance([ota(A, "")], {"fichiers"}, dict(choix, effacer=True))
+        m.attend("fin")
+        verifie(appels[0][3], {"fichiers": None, "recharger_berry": True, "redemarrer": False, "effacer": True},
+                "fichiers_mqtt : effacer -> toute l'image (fichiers=None)")
+
+
 def test_uploadfs_ota_identite():
     appels = []
 
@@ -1140,7 +1180,7 @@ def principal():
                  test_refus_double_lancement, test_uploadfs_ota, test_garde_build_importable,
                  test_erase_upload_commandes, test_erase_upload_refus, test_erase_upload_envoi_et_echec,
                  test_solidification_vide, test_fs_par_firmware, test_data_dir_avant_pio,
-                 test_uploadfs_ota_identite, test_fichiers_ota, test_pourcent_global_envoi):
+                 test_uploadfs_ota_identite, test_fichiers_ota, test_fichiers_mqtt, test_pourcent_global_envoi):
         test()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0

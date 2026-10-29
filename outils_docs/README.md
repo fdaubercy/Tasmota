@@ -603,8 +603,8 @@ est rempli par `post_esp32.py` après chaque édition des liens du firmware, n'e
 ### Onglet « Fichiers » : envoyer quelques fichiers du FS
 
 Pour remplacer un ou deux fichiers sur une carte (un `.be` corrigé, un gabarit, le persist) sans renvoyer tout le
-file system. Onglet **Fichiers**, en haut de la page (l'onglet ouvert est retenu au rechargement). Envoi **par le
-réseau (HTTP)** seulement ; l'envoi par MQTT viendra plus tard (A16 du plan de la page).
+file system. Onglet **Fichiers**, en haut de la page (l'onglet ouvert est retenu au rechargement). Deux transports :
+**HTTP** (adresse de la carte) ou **MQTT** (par le broker, voir plus bas).
 
 1. **Carte destinataire** (colonne de gauche) : les envs « Mes cartes » envoyables en OTA. L'adresse et sa
    provenance sont celles de l'onglet Build (IP fixe de `user_config_override.h`, ou `IP du maître:port` pour un
@@ -637,6 +637,23 @@ L'avancement s'affiche **dans l'onglet** : barre en pourcentage, étape en cours
 détail (« 2/3 /controleCuve.be »), pour l'envoi comme pour la préparation de la liste. Le Suivi commun, sous les
 deux onglets, montre la même chose sur la ligne « Envoyer des fichiers ». Les lancements partis de cet onglet ne
 modifient pas les derniers choix mémorisés de l'onglet Build.
+
+**Transport MQTT** (A16) : choisi dans le panier « À envoyer ». Les fichiers passent par le broker de
+`user_config_override.h`, en morceaux de 1 900 octets (4 en vol, accusé cumulé, renvoi si un morceau se perd), vers le
+module **`data/fs/fsMqtt.be` de la carte**, sous le topic de son persist (`fsmqtt/<serveur.mqtt.topic>/…`).
+L'adresse de la carte est inutile : un esclave du range extender joint le broker par la sortie de son maître, sans
+redirection ni `Sleep 0`. Débit mesuré : 14 à 18 Ko/s vers la cuve, sans coupure (HTTP : 74 à 102 Ko/s, mais coupé
+quand le relais du maître marque une pause). Chaque fichier s'écrit dans `/fsmqtt.tmp` et ne remplace le vrai
+qu'après contrôle de sa taille et de son MD5. Même déroulé que l'HTTP (persist sauvegardé par MQTT s'il part, envoyé
+en dernier, rechargé ; redémarrage ou `BrRestart`, puis attente du « prêt » du module). **Prérequis** : `fsMqtt.be`
+chargé par l'autoexec de la carte (`demarrage.charge(["fsMqtt"])`) et présent sur son FS — à envoyer une première
+fois en HTTP ou par câble. Sans lui, la page le dit (« aucune réponse sur fsmqtt/<topic> ») et rien n'est envoyé.
+
+**Effacer tout le FS avant l'envoi** (MQTT seulement, confirmation) : la carte supprime TOUS ses fichiers et
+dossiers (persist, autoexec et `fsMqtt.be` compris ; `/sd` de la flash aussi), par lots de 20 pour ne jamais
+bloquer, puis toute l'image est envoyée. Le module reste en mémoire le temps de la session ; si la carte redémarre
+entre les deux, elle repart sans Berry : la reprendre en HTTP (cet onglet) ou par câble. Bancs :
+`berry/banc_fsmqtt.py` (module), `outils_pc/test_build_ota_mqtt.py` (PC) ; aucun essai sur carte à ce jour.
 
 ### Téléversement série : il emporte `littlefs.bin`
 

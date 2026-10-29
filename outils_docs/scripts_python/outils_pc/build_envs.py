@@ -298,3 +298,15 @@ def persist_carte(racine, env):
         return None
     chemin = Path(racine) / dossier / "_persist.json" if dossier else None
     return chemin if chemin and chemin.is_file() else None
+
+
+def topic_carte(racine, env):
+    """serveur.mqtt.topic du persist de l'env au depot (transport MQTT de l'onglet Fichiers) ; RuntimeError sinon."""
+    chemin = persist_carte(racine, env)
+    try:
+        topic = (json.loads(chemin.read_text(encoding="utf-8")).get("serveur") or {}).get("mqtt", {}).get("topic") if chemin else None
+    except (OSError, ValueError, AttributeError):
+        topic = None
+    if not topic:
+        raise RuntimeError(f"Connexion MQTT : pas de serveur.mqtt.topic dans le persist de {env} au dépôt ; rien n'a été envoyé")
+    return topic

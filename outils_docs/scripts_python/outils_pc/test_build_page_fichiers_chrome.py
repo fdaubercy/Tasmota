@@ -117,7 +117,8 @@ def sonde_onglet(m, capture):
               (["fichiers"], "fichiers", [{"env": A, "methode": "ota", "port": "", "ip": IP}]),
               "envoi : action « fichiers », une ligne OTA a l'adresse saisie, onglet fichiers")
     s.verifie(corps["fichiers"], {"liste": ["_persist.json", "autoexec.be"], "jeton": jeton, "recharger_berry": False,
-                                  "redemarrer": True}, "envoi : fichiers, jeton de l'image, options")
+                                  "redemarrer": True, "transport": "http", "effacer": False},
+              "envoi : fichiers, jeton de l'image, options, transport http par defaut")
 
     # avancement : un lancement de l'onglet Build n'est pas suivi ici (temoin), celui des fichiers l'est
     s.injecte(cdp, [{"type": "debut", "env": None, "lignes": [{"env": B, "methode": "com", "port": "COM13", "ip": ""}],
@@ -168,6 +169,35 @@ def sonde_onglet(m, capture):
     e = etat(cdp)
     s.verifie(("Préparation de la liste de " + A in e["titre"], e["preparer"], cdp.js("window.__lectures")),
               (True, "Préparer la liste", 1), "preparer : suivi dans l'onglet, liste relue a la fin")
+
+    # A16 : transport MQTT (adresse inutile) et effacement de tout le FS (MQTT seulement, confirme)
+    js = lambda x: cdp.js(f"(() => {{ const t = id => document.getElementById(id); return {x}; }})()")
+    cdp.js(f"""(() => {{ const c = document.querySelector('#f-cartes .champ[aria-label$="{A}"]');
+      c.value = ''; c.dispatchEvent(new Event('input')); return true; }})()""")
+    s.verifie("adresse de la carte" in etat(cdp)["pourquoi"], True, "mqtt : temoin, en HTTP sans adresse -> envoi refuse")
+    s.verifie(js("t('f-effacer').disabled"), True, "mqtt : « Effacer tout le FS » grise en HTTP")
+    clic(cdp, "input[name=f-transport][value=mqtt]")
+    e = etat(cdp)
+    s.verifie((e["pourquoi"], e["envoyer"], e["envoyer_off"]), ("", "Envoyer 2 fichiers par MQTT", False),
+              "mqtt : sans adresse, envoi possible")
+    clic(cdp, "#f-effacer")
+    e = etat(cdp)
+    s.verifie((e["envoyer"], "Tout le FS de la carte sera supprimé" in e["note"]), ("Effacer puis envoyer 4 fichiers par MQTT", True),
+              "effacer : toute l'image annoncee, avertissement")
+    n = len(cdp.js("window.__corps"))
+    cdp.js("window.confirm = () => false")
+    clic(cdp, "#f-envoyer")
+    time.sleep(0.3)
+    s.verifie(len(cdp.js("window.__corps")), n, "effacer : confirmation refusee -> rien lance")
+    cdp.js("window.confirm = () => true")
+    clic(cdp, "#f-envoyer")
+    time.sleep(0.3)
+    corps = cdp.js("window.__corps")[-1]
+    s.verifie((corps["fichiers"]["transport"], corps["fichiers"]["effacer"], corps["fichiers"]["liste"]),
+              ("mqtt", True, sorted(IMAGE)), "effacer : corps transport mqtt, effacer, liste = toute l'image")
+    s.injecte(cdp, [{"type": "fin", "resultat": "succes", "succes": [A], "echecs": []}])
+    clic(cdp, "input[name=f-transport][value=http]")
+    s.verifie((js("t('f-effacer').checked"), js("t('f-effacer').disabled")), (False, True), "retour en HTTP : effacement decoche et grise")
 
     # telephone, puis onglet retenu au rechargement
     cdp.appel("Emulation.setDeviceMetricsOverride", width=390, height=844, deviceScaleFactor=1, mobile=True)

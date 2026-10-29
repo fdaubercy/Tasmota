@@ -386,6 +386,70 @@ ci-dessous sont ceux de Claude.
     `verifie_identite`) ; l'envoi reprend celui de l'OTA du FS (dossiers créés, persist sauvegardé puis relu,
     esclave par le maître avec `Sleep 0`). Transport MQTT poussé : plus tard (A16).
 
+## Évolution du 2026-10-29 : transport « MQTT poussé » et effacement du FS (A16)
+
+Décision de l'utilisateur (2026-10-29, fin de A14) : « utilisons la voie poussée par mqtt », dans l'onglet
+« Fichiers », après le transport HTTP ; la page doit aussi pouvoir **effacer totalement** le FS de la carte par MQTT.
+L'utilisateur a passé les questions de conception (« passons ») : tout ce qui suit est **choix de Claude**, à relire.
+
+25. **Protocole** (repris de l'essai A14, prouvé sur le maître et la cuve par le maître : morceaux de 1900 o, 4 à 8 en
+    vol, aucune coupure malgré des pauses du relais de 14 s).
+    - Topics, sous le topic MQTT du persist de la carte (`serveur.mqtt.topic`, celui que la page connaît et que
+      `verifie_identite` contrôle) : le PC publie sur `fsmqtt/<topic>/ordre` (JSON) et `fsmqtt/<topic>/morceau`
+      (binaire) ; la carte répond sur `fsmqtt/<topic>/etat` (JSON) et `fsmqtt/<topic>/lu` (binaire). Préfixe propre,
+      hors `cmnd/` : rien ne passe par l'analyseur de commandes de Tasmota, et le binaire passe tel quel.
+    - Ordres (`{"op": …, "id": n}`, `id` rendu dans chaque réponse ; réponse `{"id", "op", "ok": true, …}` ou
+      `{"id", "op", "ok": false, "erreur": "…"}`) :
+      `debut {chemin, taille, md5}` ouvre `/fsmqtt.tmp` en écriture, crée les dossiers du chemin ;
+      chaque **morceau** = 4 octets de position (gros-boutiste) + données ; la carte n'ajoute que le morceau dont la
+      position est celle attendue, et accuse le CUMUL (`{"op": "morceau", "octets": n}`) ; un morceau perdu ou en
+      double ne casse rien : le PC, sans progrès de l'accusé pendant 5 s, renvoie à partir de `octets`
+      (« retour arrière », au plus 3 fois de suite) ;
+      `fin` contrôle taille et MD5 (`crypto.MD5`, compilé sans condition), supprime l'ancien fichier puis renomme
+      le temporaire : jamais de fichier à moitié écrit à sa place ;
+      `abandon` ferme et supprime le temporaire ;
+      `lit {chemin}` renvoie le fichier sur `…/lu` en morceaux (position + données), 4 par rappel enchaînés par
+      `tasmota.set_timer(0)` (un `publish` peut attendre derrière le NAPT du maître), puis `{"op": "lit", "octets",
+      "md5"}` : sert à **sauvegarder le persist avant de le remplacer**, comme en HTTP ;
+      `recharge` = `persist.load()` et les globales (même chose que `BR_RECHARGE`) ;
+      `berry` = `BrRestart` et `redemarre` = `Restart 1`, passés par `Backlog` APRÈS la réponse : `BrRestart` détruit
+      la VM (`BerryInit`), il ne peut pas tourner dans un rappel Berry ; `Backlog` l'exécute depuis la boucle principale ;
+      `efface` : voir 26.
+    - Au chargement du module (démarrage de la carte, ou `BrRestart`), la carte publie `{"op": "pret", "version"}`
+      sur `…/etat` : c'est ce que le PC attend après `redemarre` ou `berry` (90 s), et la preuve que le module est là.
+    - Chemins refusés : hors `/`, avec `..`, plus de 49 caractères (limite `UFS_FILENAME_SIZE` de Tasmota), le
+      temporaire. `/sd/…` est accepté : Berry n'écrit que dans le LittleFS de la flash (`be_port.cpp`, `ffsp`), où
+      `/sd` est un dossier ordinaire, celui de l'image (`sd/html`, `sd/js`…) ; une carte SD montée est hors de portée ;
+      chemin finissant par `/` ou d'un dossier existant ; taille au plus 1 Mo ; un seul transfert à la fois (un
+      `debut` pendant un autre l'abandonne d'abord), une seule lecture, un seul effacement (le second est refusé).
+      Toute exception (écriture, lecture, suppression) est rattrapée : fichier fermé, temporaire supprimé, refus
+      répondu au PC et journalisé en erreur.
+26. **Effacement total** : `efface` supprime TOUS les fichiers et dossiers du LittleFS (`/sd` de la flash compris,
+    pas une carte SD), `_persist.json` et le module lui-même compris, **fichier par fichier** (`path.listdir`, `path.remove`, `path.rmdir`), par lots de 20 entrées
+    par rappel enchaînés par `tasmota.set_timer(0)` : jamais un long blocage (watchdog 5 s, `USE_ESP32_WDT`), ce
+    que `path.format(true)` ne garantit pas (toute la partition d'un bloc, ~11 Mo). Avancement publié par lot
+    (`{"op": "efface", "restants": k}`), puis `{"ok": true, "fichiers": n, "dossiers": m}`. Le module reste en
+    RAM : l'envoi de TOUT le FS (« effacer puis envoyer tout le FS ») suit dans la même session Berry. Risque
+    accepté : une carte redémarrée entre l'effacement et le renvoi n'a plus de module ni d'autoexec -> retour par
+    l'onglet en HTTP (`/ufsu` ne dépend pas de Berry) ou par câble. Le persist en RAM est réécrit par le
+    System#Save d'un redémarrage : la page envoie donc toujours le persist après un effacement. Page :
+    confirmation explicite, comme `erase_upload` ; essai réel d'abord sur une carte hors service.
+27. **Module récepteur** : `data/fs/fsMqtt.be` (nouveau fichier, A16 lancée par l'utilisateur), NON solidifié
+    (pas de changement de build) ; chargé par l'autoexec des cartes visées SEULEMENT après accord de
+    l'utilisateur sur la liste des cartes (un module à envoyer d'abord par HTTP ou câble). Abonnements par
+    `mqtt.subscribe` (comme `controleDiscovery.be`), rappels courts, charte des logs (cible `general` :
+    `logFonctions` n'a pas de bloc `fsmqtt`, l'ajouter toucherait un module protégé), RAM : un
+    morceau à la fois, fichier ouvert en ajout, rien de gardé en mémoire.
+28. **Côté PC** : `build_ota_mqtt.py::envoie_fs_mqtt`, même signature que `envoie_fs_ota` (mêmes `fichiers=`,
+    `recharger_berry=`, `redemarrer=`, plus `effacer=`), client `client_mqtt.py`, broker de
+    `user_config_override.h` (`sniffeur_mqtt.lit_config_broker`). Même déroulé que l'HTTP : identité de l'image
+    vérifiée, persist de la carte sauvegardé (par `lit`) s'il part, envoyé en dernier, `recharge` toujours s'il
+    part, puis `redemarre` ou `berry`. Esclave du range extender : rien de spécial (sortie NAPT du maître vers le
+    broker, sans redirection ni `Sleep 0`). Avancement : un `%` par fichier et global, comme l'HTTP.
+    Pas de relecture du persist après redémarrage (la carte le réécrit à son démarrage : différence toujours
+    signalée, A11). Onglet : choix « HTTP / MQTT » dans les options, case « Effacer tout le FS avant l'envoi »
+    (MQTT seulement), envoi au topic du persist de l'env.
+
 ## Laissé au constructeur
 
 - Découpage en modules (registre des envs, lecture/écriture du `.ini`, exécution, OTA, page), sans
