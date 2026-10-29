@@ -600,6 +600,44 @@ est rempli par `post_esp32.py` après chaque édition des liens du firmware, n'e
    redémarrage diffère de celui envoyé, un **avertissement** est affiché avec le chemin de la sauvegarde (l'env
    n'échoue pas : les fichiers sont déjà envoyés et la carte est revenue) ; carte non revenue : env en échec.
 
+### Onglet « Fichiers » : envoyer quelques fichiers du FS
+
+Pour remplacer un ou deux fichiers sur une carte (un `.be` corrigé, un gabarit, le persist) sans renvoyer tout le
+file system. Onglet **Fichiers**, en haut de la page (l'onglet ouvert est retenu au rechargement). Envoi **par le
+réseau (HTTP)** seulement ; l'envoi par MQTT viendra plus tard (A16 du plan de la page).
+
+1. **Carte destinataire** (colonne de gauche) : les envs « Mes cartes » envoyables en OTA. L'adresse et sa
+   provenance sont celles de l'onglet Build (IP fixe de `user_config_override.h`, ou `IP du maître:port` pour un
+   esclave du range extender) ; une adresse saisie ici vaut aussi pour l'onglet Build, pour ce lancement seulement.
+2. **Préparer la liste** : construit l'image du FS de la carte (`pio run -t buildfs`, comme « Construire le file
+   system ») à partir des fichiers **du dépôt**, puis la relit. Refusé pendant un build, comme tout lancement.
+3. La liste montre les fichiers **de l'image** (pas ceux de la carte), par dossier : taille, date du fichier au
+   dépôt, et « dépôt plus récent que l'image » quand un fichier a été modifié depuis (préparer à nouveau). Cocher
+   dans le tableau (la case d'en-tête coche le dossier affiché) ; le panier « À envoyer » les reprend, avec
+   « retirer » et le total.
+4. **Options**, choisies à chaque envoi :
+   - **Recharger Berry** (`BrRestart`) : cochée d'office dès qu'un `.be` ou le persist part (décochable) ;
+   - **Redémarrer la carte** (`Restart 1`, puis attente de son retour) : recharge aussi Berry, l'autre case est
+     alors grisée. Sans aucune des deux, les fichiers sont seulement écrits.
+5. **Envoyer N fichiers**. Le bouton dit pourquoi il est grisé (carte, adresse, liste, fichiers, lancement en cours).
+
+Déroulé côté serveur (`build_ota_fs.py::envoie_fs_ota` avec `fichiers=`) :
+
+- l'image envoyée doit être **celle de la liste** : si un `buildfs` l'a réécrite entre-temps, l'envoi est refusé
+  (« préparer à nouveau ») ;
+- **même contrôle d'identité** que l'OTA du FS : une image d'une autre carte n'est jamais envoyée (la liste
+  s'affiche quand même, avec le motif) ; par le maître, même redirection et vérification du nom d'hôte, et maître en
+  `Sleep 0` le temps de l'envoi ;
+- **si `_persist.json` est coché** (annoncé « sauvegardé avant l'envoi ») : sauvegarde du persist de la carte,
+  persist envoyé en dernier, relu et comparé, puis **toujours** rechargé (`persist.load()`) avant tout redémarrage
+  (le persist vit en RAM : un redémarrage sans rechargement réécrirait l'ancien par-dessus le nouveau) ; après
+  `Restart 1`, relecture comme pour l'OTA du FS. Sans persist coché, rien de tout cela.
+
+L'avancement s'affiche **dans l'onglet** : barre en pourcentage, étape en cours et journal des étapes avec leur
+détail (« 2/3 /controleCuve.be »), pour l'envoi comme pour la préparation de la liste. Le Suivi commun, sous les
+deux onglets, montre la même chose sur la ligne « Envoyer des fichiers ». Les lancements partis de cet onglet ne
+modifient pas les derniers choix mémorisés de l'onglet Build.
+
 ### Téléversement série : il emporte `littlefs.bin`
 
 « Téléverser le firmware » **par câble** flashe aussi le file system (persist compris) **à chaque upload par câble**
