@@ -45,43 +45,43 @@ def principal():
 
     # ---- ajoute : indentation et fins de ligne du fichier ----
     tab = '{\r\n\t"a": 1,\r\n\t"o": {\r\n\t\t"b": 2\r\n\t}\r\n}'
-    r = tout(tab, [(("o", "c"), "ajoute", "v")], "ajoute_tab_crlf")
+    r = tout(tab, [(("o", "c"), "ajoute", "v", "b")], "ajoute_tab_crlf")
     verifie(r, '{\r\n\t"a": 1,\r\n\t"o": {\r\n\t\t"b": 2,\r\n\t\t"c": "v"\r\n\t}\r\n}', "ajoute_tab_crlf : texte")
     esp = '{\n    "a": 1\n}'
-    r = tout(esp, [(("d",), "ajoute", {"x": 1, "y": [2]})], "ajoute_4_espaces_lf")
+    r = tout(esp, [(("d",), "ajoute", {"x": 1, "y": [2]}, "a")], "ajoute_4_espaces_lf")
     verifie(r, '{\n    "a": 1,\n    "d": {\n        "x": 1,\n        "y": [\n            2\n        ]\n    }\n}', "ajoute_4_espaces_lf : texte")
-    r = tout('{\n    "a": 1,\n    "o": {}\n}', [(("o", "k"), "ajoute", 1)], "ajoute_objet_vide")
+    r = tout('{\n    "a": 1,\n    "o": {}\n}', [(("o", "k"), "ajoute", 1, None)], "ajoute_objet_vide")
     verifie(r, '{\n    "a": 1,\n    "o": {\n        "k": 1\n    }\n}', "ajoute_objet_vide : texte")
 
     # ---- retire : virgules ----
     trois = '{\n\t"a": 1,\n\t"b": 2,\n\t"c": 3\n}'
-    verifie(tout(trois, [(("c",), "retire", None)], "retire_dernier"), '{\n\t"a": 1,\n\t"b": 2\n}', "retire_dernier")
-    verifie(tout(trois, [(("b",), "retire", None)], "retire_milieu"), '{\n\t"a": 1,\n\t"c": 3\n}', "retire_milieu")
-    verifie(tout(trois, [(("a",), "retire", None)], "retire_premier"), '{\n\t"b": 2,\n\t"c": 3\n}', "retire_premier")
-    verifie(json.loads(tout('{\n\t"a": 1\n}', [(("a",), "retire", None)], "retire_seul")), {}, "retire_seul")
-    verifie(tout(trois, [(("zz",), "retire", None)], "retire_absent"), trois, "retire_absent : ignore")
+    verifie(tout(trois, [(("c",), "retire", None, None)], "retire_dernier"), '{\n\t"a": 1,\n\t"b": 2\n}', "retire_dernier")
+    verifie(tout(trois, [(("b",), "retire", None, None)], "retire_milieu"), '{\n\t"a": 1,\n\t"c": 3\n}', "retire_milieu")
+    verifie(tout(trois, [(("a",), "retire", None, None)], "retire_premier"), '{\n\t"b": 2,\n\t"c": 3\n}', "retire_premier")
+    verifie(json.loads(tout('{\n\t"a": 1\n}', [(("a",), "retire", None, None)], "retire_seul")), {}, "retire_seul")
+    verifie(tout(trois, [(("zz",), "retire", None, None)], "retire_absent"), trois, "retire_absent : ignore")
 
     # ---- objet parcouru : cle absente du modele conservee ----
     txt = '{\n\t"a": {\n\t\t"b": {\n\t\t\t"c": 1,\n\t\t\t"propre": "p"\n\t\t}\n\t}\n}'
     ops = t.ecart({"a": {"b": {"c": 1}}}, {"a": {"b": {"c": 2}}})
-    verifie(ops, [(("a", "b", "c"), "remplace", 2)], "objet_parcouru : ecart")
+    verifie(ops, [(("a", "b", "c"), "remplace", 2, None)], "objet_parcouru : ecart")
     r = tout(txt, ops, "objet_parcouru")
     verifie(json.loads(r), {"a": {"b": {"c": 2, "propre": "p"}}}, "objet_parcouru : propre gardee")
 
     # ---- ecart : ordre et nature ----
     verifie(t.ecart({"x": 1, "y": 2}, {"n": 0, "x": 3}),
-            [(("n",), "ajoute", 0), (("x",), "remplace", 3), (("y",), "retire", None)], "ecart : ordre b puis retraits")
+            [(("n",), "ajoute", 0, None), (("x",), "remplace", 3, None), (("y",), "retire", None, None)], "ecart : ordre b puis retraits")
     verifie(t.ecart({"l": [1]}, {"l": [1]}), [], "ecart : liste egale")
-    verifie(t.ecart({"l": {"a": 1}}, {"l": [1]}), [(("l",), "remplace", [1])], "ecart : dict -> liste en bloc")
+    verifie(t.ecart({"l": {"a": 1}}, {"l": [1]}), [(("l",), "remplace", [1], None)], "ecart : dict -> liste en bloc")
 
     # ---- remplace d'une cle absente = ajoute ; parent absent = LookupError ----
-    verifie(json.loads(t.applique(trois, [(("q",), "remplace", 9)]))["q"], 9, "remplace absent -> ajoute")
+    verifie(json.loads(t.applique(trois, [(("q",), "remplace", 9, None)]))["q"], 9, "remplace absent -> ajoute")
     try:
-        t.applique(trois, [(("nul", "q"), "ajoute", "MOTDEPASSE")])
+        t.applique(trois, [(("nul", "q"), "ajoute", "MOTDEPASSE", None)])
         verifie("rien", "LookupError", "parent absent")
     except LookupError as e:
         verifie(("nul.q" in str(e), "MOTDEPASSE" in str(e)), (True, False), "parent absent : chemin nomme, jamais la valeur")
-    verifie(t.ecart_applicable(trois, [(("nul", "q"), "ajoute", 1), (("a",), "remplace", 1)]), ["nul.q"], "ecart_applicable")
+    verifie(t.ecart_applicable(trois, [(("nul", "q"), "ajoute", 1, None), (("a",), "remplace", 1, None)]), ["nul.q"], "ecart_applicable")
 
     # ---- aller-retour ----
     a = {"a": 1, "o": {"b": "x", "l": [1, 2]}}
@@ -91,8 +91,28 @@ def principal():
         aller = tout(txt, t.ecart(a, b), "aller_retour_" + libelle)
         verifie(t.applique(aller, t.ecart(b, a)), txt, "aller_retour_" + libelle)
 
+    # ---- Ruling 5 : forme de l'ancienne valeur gardee ----
+    for av, nv, vieux, neuf in (([1, 2], [3, 4, 5], "[1, 2]", "[3, 4, 5]"), ([1, 2], [3, 4, 5], "[1,2]", "[3,4,5]"),
+                                ({"k": 1}, {"k": 2, "j": 3}, '{"k": 1}', '{"k": 2, "j": 3}'),
+                                ({"k": 1}, {"k": 2, "j": 3}, '{"k":1}', '{"k":2,"j":3}')):
+        txt = '{\n\t"a": 1,\n\t"l": ' + vieux + ',\n\t"z": 2\n}'
+        r = tout(txt, [(("l",), "remplace", nv, None)], "compact")
+        verifie(r, '{\n\t"a": 1,\n\t"l": ' + neuf + ',\n\t"z": 2\n}', "remplace compact " + vieux)
+    ml = '{\n\t"l": [\n\t\t1\n\t]\n}'
+    verifie(tout(ml, t.ecart({"l": [1]}, {"l": [2]}), "multi"), '{\n\t"l": [\n\t\t2\n\t]\n}', "remplace multi-ligne reste indente")
+
+    # ---- Ruling 5 : ajoute apres la soeur qui precede dans b ----
+    a3 = {"a": 1, "b": 2, "c": 3}
+    ops = t.ecart(a3, {"a": 1, "x": 9, "c": 3})
+    verifie(ops, [(("x",), "ajoute", 9, "a"), (("b",), "retire", None, None)], "ecart : apres = soeur precedente")
+    verifie(tout(trois, ops, "milieu"), '{\n\t"a": 1,\n\t"x": 9,\n\t"c": 3\n}', "retire milieu + ajoute a sa place")
+    verifie(tout(trois, t.ecart(a3, {"n": 0, **a3}), "tete"), '{\n\t"n": 0,\n\t"a": 1,\n\t"b": 2,\n\t"c": 3\n}', "ajoute en tete (apres=None)")
+    verifie(tout(trois, [(("x",), "ajoute", 9, "absente")], "repli"), '{\n\t"a": 1,\n\t"b": 2,\n\t"c": 3,\n\t"x": 9\n}', "repli en fin d'objet")
+    verifie(tout(trois, t.ecart(a3, {"a": 1, "p": 1, "q": 2, "b": 2, "c": 3}), "deux"),
+            '{\n\t"a": 1,\n\t"p": 1,\n\t"q": 2,\n\t"b": 2,\n\t"c": 3\n}', "deux ajouts consecutifs gardent l'ordre de b")
+
     # ---- accents non echappes ----
-    r = t.applique('{\n\t"a": 1\n}', [(("m",), "ajoute", "é")])
+    r = t.applique('{\n\t"a": 1\n}', [(("m",), "ajoute", "é", None)])
     verifie(('"é"' in r, "\\u" in r), (True, False), "accents : gardes non echappes")
 
     # ---- vrais persists : aucun ecart = octets identiques ----
