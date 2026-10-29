@@ -75,8 +75,10 @@ from build_progression import (ETAPE_COMPILATION, ETAPE_EFFACEMENT, ETAPE_ENVOI,
 ICI = Path(__file__).resolve().parent
 DEPOT = ICI.parents[2]
 PIO_PENV = Path.home() / ".platformio" / "penv" / "Scripts" / "pio.exe"
-ORDRE = ("compiler", "upload", "erase_upload", "buildfs", "uploadfs")
-ENVOIS = {"upload", "erase_upload", "uploadfs"}
+ORDRE = ("compiler", "upload", "erase_upload", "buildfs", "uploadfs", "fichiers")
+ENVOIS = {"upload", "erase_upload", "uploadfs", "fichiers"}
+# « fichiers » (onglet Fichiers, spec choix 24) : envoi OTA des fichiers choisis de l'image deja construite,
+# SEULE action du lancement, une seule ligne ; l'image ne doit pas avoir change depuis la liste (jeton).
 TELEVERSEMENTS = ("upload", "erase_upload")         # televerser le firmware : l'un OU l'autre (choix 19)
 COMPILENT = ("compiler",) + TELEVERSEMENTS           # leur pio run compile : base du % et objets de reference
 ETAPE_ENVOI_FS = "Envoi des fichiers"
@@ -179,6 +181,7 @@ class Serie:
         self._envoi = False                              # un envoi vers une carte est en vol (envoi_en_cours)
         self._pause = None                               # pause « rebranchez la carte » : {env, port, precedent, choix}
         self._fs_par_firmware = set()                    # envs dont l'envoi serie du firmware ecrit aussi le FS (controle)
+        self._choix = {}                                 # action « fichiers » : liste, recharger_berry, redemarrer
 
     # -- evenements -------------------------------------------------------------------------------------
 
@@ -237,9 +240,9 @@ class Serie:
 
     # -- controle avant lancement ---------------------------------------------------------------------
 
-    def controle(self, lignes, actions):
-        """Motifs de refus (liste vide = lancement possible)."""
-        motifs = []
+    def controle(self, lignes, actions, fichiers=None):
+        """Motifs de refus (liste vide = lancement possible). `fichiers` : choix de l'action « fichiers »."""
+        motifs = self._controle_fichiers(lignes, actions, fichiers)
         if self.en_cours():
             motifs.append("un lancement est déjà en cours")
         if not actions or not set(actions) <= set(ORDRE):
@@ -276,7 +279,7 @@ class Serie:
                     motifs.append(f"{nom} : IP OTA à saisir")
                 elif not _ipv4(ligne.ip):
                     motifs.append(f"{nom} : IP OTA invalide {ligne.ip!r}")
-                if "uploadfs" in actions and self.ota_fs is None:
+                if {"uploadfs", "fichiers"} & set(actions) and self.ota_fs is None:
                     motifs.append(f"{nom} : téléversement du FS en OTA pas encore disponible")
                 if "upload" in actions and self.ota_firmware is None:
                     motifs.append(f"{nom} : téléversement du firmware en OTA pas encore disponible")
@@ -292,17 +295,39 @@ class Serie:
             motifs.append(f"un build est déjà en cours ({', '.join(builds)})")
         return motifs
 
+    def _controle_fichiers(self, lignes, actions, fichiers):
+        """Motifs propres a l'action « fichiers » (le reste : controle commun d'un envoi OTA)."""
+        if "fichiers" not in actions:
+            return ["choix de fichiers sans l'action « fichiers »"] if fichiers else []
+        motifs = []
+        if set(actions) != {"fichiers"} or len(lignes) != 1:
+            motifs.append("« fichiers » : une seule carte et aucune autre action")
+        if lignes and lignes[0].methode != "ota":
+            motifs.append("« fichiers » : envoi par le réseau (OTA) seulement")
+        liste = (fichiers or {}).get("liste")
+        if not isinstance(liste, list) or not liste or not all(isinstance(f, str) and f for f in liste):
+            motifs.append("« fichiers » : aucun fichier choisi")
+        if lignes and NOM_ENV.fullmatch(lignes[0].env or ""):
+            image = self.racine / ".pio" / "build" / lignes[0].env / "littlefs.bin"
+            if not image.is_file():
+                motifs.append(f"{lignes[0].env} : pas d'image du FS, préparer la liste")
+            elif str(image.stat().st_mtime_ns) != str((fichiers or {}).get("jeton") or ""):
+                motifs.append(f"{lignes[0].env} : l'image du FS a été reconstruite depuis la liste : préparer à nouveau")
+        return motifs
+
     # -- lancement et arret -----------------------------------------------------------------------------
 
-    def lance(self, lignes, actions):
+    def lance(self, lignes, actions, fichiers=None):
         lignes, actions = list(lignes), set(actions)
-        motifs = self.controle(lignes, actions)
+        motifs = self.controle(lignes, actions, fichiers)
         with self.verrou:
             if self._actif:
                 motifs = motifs or ["un lancement est déjà en cours"]
             if motifs:
                 raise RuntimeError(" ; ".join(motifs))
             self._actif, self._arret, self._arret_immediat = True, False, False
+            self._choix = {"fichiers": list(fichiers["liste"]), "recharger_berry": bool(fichiers.get("recharger_berry")),
+                           "redemarrer": bool(fichiers.get("redemarrer"))} if fichiers else {}
         threading.Thread(target=self._execute, args=(lignes, actions), daemon=True).start()
 
     def arrete(self, immediat=False):
@@ -392,6 +417,8 @@ class Serie:
         COM ; compiler + televerser y deviennent deux pio run, pour compiler avant la pause, et l'envoi part
         en `-t nobuild -t <cible>` (cible pio a plusieurs mots : un -t par mot) pour ne pas tout recompiler.
         """
+        if "fichiers" in actions:                        # seule action (controle) : image deja construite
+            return [("ota_fichiers", "fichiers", "", ["fichiers"], ["fichiers"])]
         plan = []
         televerse = next((a for a in TELEVERSEMENTS if a in actions), None)
         # Envoi serie du firmware d'un env a custom_files_upload : post_esp32 (esp32_build_filesystem) construit
@@ -601,9 +628,11 @@ class Serie:
         return False, f"pio a échoué (code de sortie {code})", suivi.extrait_erreur, suivi.etape
 
     def _lance_ota(self, ligne, genre):
-        """Envoi OTA par la page : genre "ota_firmware" (action upload) ou "ota_fs" (uploadfs)."""
+        """Envoi OTA par la page : genre "ota_firmware" (action upload), "ota_fs" (uploadfs) ou "ota_fichiers"
+        (fichiers choisis de l'image, options apres envoi : self._choix)."""
         env = ligne.env
-        action, initiale = ("upload", ETAPE_ENVOI) if genre == "ota_firmware" else ("uploadfs", ETAPE_ENVOI_FS)
+        action, initiale = {"ota_firmware": ("upload", ETAPE_ENVOI), "ota_fichiers": ("fichiers", ETAPE_ENVOI_FS)
+                            }.get(genre, ("uploadfs", ETAPE_ENVOI_FS))
         change, termine = self._chrono(env, action)
         dernier = {"etape": initiale}
 
@@ -642,7 +671,8 @@ class Serie:
                     # L'image est-elle bien celle de CET env ? (P4 avec le FS de la cuve le 2026-10-26)
                     identite = build_ota_fs.verifie_identite(fichiers, build_envs.persist_carte(self.racine, env), env)
                     rapporte({"etape": build_ota_fs.ETAPE_IMAGE, "pourcent": 100, "detail": identite})
-                    self.ota_fs(env, ligne.ip, fichiers, sauvegardes, rapporte)
+                    self.ota_fs(env, ligne.ip, fichiers, sauvegardes, rapporte,
+                                **(self._choix if genre == "ota_fichiers" else {}))
         except RuntimeError as erreur:
             return False, str(erreur), [], dernier["etape"]
         except Exception as erreur:

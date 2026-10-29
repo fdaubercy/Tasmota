@@ -23,6 +23,7 @@ import acces_web                                  # noqa: E402
 import build_faux_pio as faux                    # noqa: E402
 import build_serie as bs                         # noqa: E402  (apres BUILD_WEB_PIO)
 import build_web                                 # noqa: E402
+from test_build_ota_fs import FICHIERS_IMAGE, fabrique_image   # noqa: E402
 
 ECHECS = []
 A, B = "tasmota32-essai-a", "tasmota32-essai-b"
@@ -449,6 +450,34 @@ def test_erase_upload(b):
             "erase_upload : actions memorisees dans derniers.json")
 
 
+def test_fichiers(b):
+    """Onglet « Fichiers » (A15) : GET /fichiers, POST /lancer avec l'action « fichiers » ; derniers.json du Build intact."""
+    verifie(b.requete("GET", "/fichiers?env=tasmota32-inconnu-x")[0], 400, "fichiers : env inconnu -> 400")
+    statut, r = b.json("GET", f"/fichiers?env={A}")
+    verifie((statut, r.get("image", {}).get("present"), "Préparer" in r.get("erreur", "")), (200, False, True),
+            "fichiers : pas d'image -> 200, « Préparer la liste »")
+    image = b.racine / ".pio" / "build" / A / "littlefs.bin"
+    fabrique_image(image, FICHIERS_IMAGE)
+    statut, r = b.json("GET", f"/fichiers?env={A}")
+    verifie((statut, sorted(f["chemin"] for f in r.get("fichiers", [])), r.get("image", {}).get("jeton")),
+            (200, sorted(FICHIERS_IMAGE), str(image.stat().st_mtime_ns)), "fichiers : liste de l'image et jeton servis")
+    ligne = {"env": A, "methode": "ota", "port": "", "ip": "192.168.0.50"}
+    choix = {"liste": ["autoexec.be"], "jeton": r.get("image", {}).get("jeton"), "recharger_berry": True, "redemarrer": False}
+    avant = b.json("GET", "/envs")[1]["derniers"]
+    verifie(b.requete("POST", "/lancer", {"lignes": [ligne], "actions": ["fichiers"], "fichiers": "x"})[0], 400,
+            "fichiers : champ fichiers mal forme -> 400")
+    statut, texte = b.requete("POST", "/lancer", {"lignes": [ligne], "actions": ["fichiers"], "fichiers": dict(choix, jeton="1")})
+    verifie((statut, "reconstruite" in texte), (409, True), "fichiers : image reconstruite depuis la liste -> 409")
+    recus = []
+    b.serie.ota_fs = lambda env, ip, dossier_fs, sauvegardes, rapporte, **options: recus.append(options)
+    verifie(b.json("POST", "/lancer", {"lignes": [ligne], "actions": ["fichiers"], "fichiers": choix})[0], 200,
+            "fichiers : envoi accepte")
+    b.attend_fin()
+    verifie(recus, [{"fichiers": ["autoexec.be"], "recharger_berry": True, "redemarrer": False}],
+            "fichiers : choix et options transmis a l'envoi")
+    verifie(b.json("GET", "/envs")[1]["derniers"], avant, "fichiers : derniers choix de l'onglet Build intacts")
+
+
 def test_lancement(b):
     lancement = {"lignes": [LIGNE_A], "actions": ["compiler"]}
     verifie(b.json("POST", "/lancer", {"lignes": [], "actions": ["compiler"]})[0], 409, "lancer : refus du serie = 409")
@@ -668,7 +697,7 @@ def principal():
             for test in (test_routes_locales, test_page_contient, test_envs_fs_avec_firmware, test_post_sans_entete_refuse, test_distant_sans_jeton_refuse,
                          test_corps_borne, test_port_ecrit_puis_relu, test_port_refuse_pendant_build_externe,
                          test_lancement, test_flux_et_journal, test_journal_dernier_lancement, test_arret,
-                         test_sortie_en_direct, test_erase_upload, test_continuer):
+                         test_sortie_en_direct, test_erase_upload, test_fichiers, test_continuer):
                 test(b)
         finally:
             b.ferme()

@@ -518,10 +518,18 @@ le verrou d'envoi de `build_serie.py` (jamais pendant un build ni un autre envoi
 - [x] `build_ota_fs.envoie_fs_ota` accepte un SOUS-ENSEMBLE — preuve : `test_build_ota_fs::test_ota_fs_partiel` VERT (22 OK : 5 cas de sous-ensemble et d'options, refus d'un fichier absent ou d'une liste vide sans contacter la carte), témoin `test_ota_fs_ordre` (envoi complet) inchangé ; 2 mutants rouges (choix ignoré : 15 KO ; persist toujours sauvegardé : 6 KO) ; test_build_serie et test_build_web VERTS. Persist choisi -> BR_RECHARGE toujours (sinon le System#Save d'un redémarrage réécrirait l'ancien) ; « redémarrer » prime sur « recharger Berry » (`BrRestart`). Énoncé : SOUS-ENSEMBLE de fichiers et les options après envoi (recharger Berry,
   redémarrer) ; sans sous-ensemble, comportement inchangé. Banc `test_build_ota_fs` (sous-ensemble seul envoyé,
   persist non coché -> pas de sauvegarde ni de relecture, options respectées) + témoin.
-- [ ] Serveur : `GET /fichiers?env=` (liste de l'image : chemin, taille, date de l'image, image absente ou plus
+- [x] Serveur — preuve : `build_fichiers.py::liste` + banc NEUF `test_build_fichiers.py` VERT (10 OK : chemins, tailles,
+  dossiers, « plus récent que l'image », identité, image absente / illisible / d'une autre carte, env inconnu) ;
+  `test_build_serie::test_fichiers_ota` VERT (12 OK : 6 refus, aucun pio run, choix transmis, % sous l'action
+  « fichiers ») ; `test_build_web::test_fichiers` VERT deux fois (8 OK : 400/409, jeton, derniers.json du Build intact) ;
+  sonde Chrome VERTE (un 1er passage KO sur `sonde_sortie`, barre du panneau Sortie, vert au 2e : délai, sans rapport).
+  Énoncé : `GET /fichiers?env=` (liste de l'image : chemin, taille, date de l'image, image absente ou plus
   ancienne que le dépôt signalée) et lancement d'un envoi partiel dans la série (`build_serie`, refus pendant un build).
   Banc `test_build_web` / `test_build_serie`.
 - [ ] Page : onglet « Fichiers » (`build_page.py`), sélection, envoi, suivi ; sonde Chrome `test_build_page_chrome`.
+  Demande de l'utilisateur (2026-10-29) : l'onglet montre l'avancement de l'envoi, barre en POURCENTAGE et journal
+  des étapes (événements `etape` de l'action « fichiers » : étape, %, détail « 3/5 /controleCuve.be »), sans passer
+  par l'onglet Build.
 - [ ] Doc : README § Build et téléversement, CLAUDE.md (tailles) ; `verifie_references_docs` sans défaut.
 - [ ] Essai réel par l'utilisateur : un fichier `.be` vers le maître, puis vers la cuve par le maître.
 

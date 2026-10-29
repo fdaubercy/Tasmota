@@ -17,7 +17,10 @@ Routes (les POST exigent l'en-tete X-Build: 1 et la meme origine) :
     GET  /journal    ?env=<env> : texte du journal pio du dernier lancement de cet env
     GET  /sortie     ?env=<env>&octet=n : suite de ce journal a partir de l'octet n, lignes entieres
                      {texte, octet, reste, lancement} (panneau « Sortie » de la page, lu par increments)
-    POST /lancer     {lignes: [{env, methode, port, ip}], actions: [...]}   409 = refus (motifs)
+    GET  /fichiers   ?env=<env> : fichiers de l'image du FS de l'env (onglet Fichiers, build_fichiers.liste)
+    POST /lancer     {lignes: [{env, methode, port, ip}], actions: [...]}   409 = refus (motifs) ; onglet
+                     Fichiers : actions ["fichiers"], une ligne OTA, et fichiers {liste, jeton, recharger_berry,
+                     redemarrer} (jeton = celui de /fichiers : image inchangee depuis la liste)
     POST /port       {env, port} : ecrit upload_port (409 pendant un lancement ou un build lance ailleurs,
                      400 si invalide)
     POST /arreter    {immediat: bool}
@@ -39,6 +42,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import acces_web
 import build_envs
+import build_fichiers
 import build_serie
 
 PORT_DEFAUT = 7700
@@ -186,13 +190,17 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                 raise ValueError("lignes et actions attendues sous forme de listes")
             objets = [ligne_de(d) for d in lignes]
             actions = [str(a) for a in actions]
+            fichiers = demande.get("fichiers")             # onglet Fichiers : {liste, jeton, recharger_berry, redemarrer}
+            if fichiers is not None and not isinstance(fichiers, dict):
+                raise ValueError("fichiers attendu sous forme d'objet")
             ancien, etat["debut"] = etat["debut"], time.time()
             try:
-                serie.lance(objets, actions)              # RuntimeError (409) : motifs de controle
+                serie.lance(objets, actions, fichiers)    # RuntimeError (409) : motifs de controle
             except RuntimeError:
                 etat["debut"] = ancien                    # un refus ne change pas le lancement en cours
                 raise
-            ecrit_derniers(dossier, [asdict(o) for o in objets], actions)
+            if not fichiers:                              # les choix de l'onglet Build ne sont pas ceux de Fichiers
+                ecrit_derniers(dossier, [asdict(o) for o in objets], actions)
             return {"ok": True}
         if chemin == "/port":
             if serie.en_cours():
@@ -271,6 +279,11 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                     debut = etat["debut"]
                     reponse = sortie_env(dossier, params.get("env", [""])[0], debut, int(octet))
                     self._json(dict(reponse, lancement=repr(debut)))   # change a chaque lancement : la page repart de 0
+                elif url.path == "/fichiers":
+                    try:
+                        self._json(build_fichiers.liste(racine, params.get("env", [""])[0]))
+                    except LookupError as erreur:
+                        raise ValueError(str(erreur)) from None
                 else:
                     self._envoie(404, b"introuvable")
             except ValueError as erreur:

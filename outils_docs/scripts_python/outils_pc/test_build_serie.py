@@ -1028,6 +1028,46 @@ def test_data_dir_avant_pio():
         verifie(m.appels()[-1]["data_dir"], "data/essai/tasmota32-b", "data_dir_avant_pio : temoin, meme env -> inchange")
 
 
+def test_fichiers_ota():
+    """Onglet « Fichiers » (A15) : action « fichiers » = envoi des fichiers choisis de l'image DEJA construite."""
+    appels = []
+
+    def faux_ota(env, ip, dossier_fs, sauvegardes, rapporte, **options):
+        appels.append((env, ip, sorted(arbre(dossier_fs)), options))
+        rapporte({"etape": "Envoi des fichiers", "pourcent": 40, "detail": "1/2 autoexec.be"})
+
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t, ota_fs=faux_ota)
+        image = m.racine / ".pio" / "build" / A / "littlefs.bin"
+        fabrique_image(image, FICHIERS_IMAGE)
+        jeton = str(image.stat().st_mtime_ns)
+        choix = {"liste": ["autoexec.be", "json/graphiques.json"], "jeton": jeton, "recharger_berry": True,
+                 "redemarrer": False}
+        refus = {
+            "autre action": ([ota(A)], {"fichiers", "buildfs"}, choix),
+            "deux cartes": ([ota(A), ota(B)], {"fichiers"}, choix),
+            "par cable": ([Ligne(A, "com", "COM12", "")], {"fichiers"}, choix),
+            "liste vide": ([ota(A)], {"fichiers"}, dict(choix, liste=[])),
+            "image reconstruite": ([ota(A)], {"fichiers"}, dict(choix, jeton="1")),
+            "choix sans l'action": ([ota(A)], {"uploadfs"}, choix),
+        }
+        for cas, (lignes, actions, fichiers) in refus.items():
+            verifie(bool(m.serie.controle(lignes, actions, fichiers)), True, f"fichiers_ota : refus, {cas}")
+        verifie(m.serie.controle([ota(A)], {"fichiers"}, choix), [], "fichiers_ota : une carte OTA, image inchangee -> accepte")
+        m.serie.lance([ota(A, "192.168.0.50")], {"fichiers"}, choix)
+        ev = m.attend("fin")
+        verifie(m.appels(), [], "fichiers_ota : aucun pio run (pas de buildfs : l'image listee est envoyee)")
+        verifie(appels, [(A, "192.168.0.50", sorted(FICHIERS_IMAGE),
+                          {"fichiers": ["autoexec.be", "json/graphiques.json"], "recharger_berry": True, "redemarrer": False})],
+                "fichiers_ota : ota_fs(<fichiers de l'image>, fichiers=choix, options) appelee une fois")
+        verifie([e["pourcent"] for e in du_type(ev, "etape", action="fichiers", etape="Envoi des fichiers")][-1:], [40],
+                "fichiers_ota : avancement rapporte sous l'action « fichiers » (barre de l'onglet)")
+        verifie(du_type(ev, "fin_env")[0]["statuts"], {"fichiers": "succes"}, "fichiers_ota : succes")
+        image.unlink()
+        verifie(any("préparer la liste" in x for x in m.serie.controle([ota(A)], {"fichiers"}, choix)), True,
+                "fichiers_ota : image absente -> refus « préparer la liste »")
+
+
 def test_uploadfs_ota_identite():
     appels = []
 
@@ -1100,7 +1140,7 @@ def principal():
                  test_refus_double_lancement, test_uploadfs_ota, test_garde_build_importable,
                  test_erase_upload_commandes, test_erase_upload_refus, test_erase_upload_envoi_et_echec,
                  test_solidification_vide, test_fs_par_firmware, test_data_dir_avant_pio,
-                 test_uploadfs_ota_identite, test_pourcent_global_envoi):
+                 test_uploadfs_ota_identite, test_fichiers_ota, test_pourcent_global_envoi):
         test()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0

@@ -145,10 +145,10 @@ unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule c
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
 Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plutot qu'un decoupage) :
-`build_serie.py` fait **720 lignes** (+19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; +11 le 2026-10-27 : data_dir pose avant pio ; +3 le meme jour : identite de l'image du FS ; +7 le meme jour : duree des zones d'envoi memorisee, A13 ; +6 le 2026-10-28 : OTA par le maitre, A11 ; +9 le meme jour : Sleep 0 du maitre pendant l'envoi ; execution en serie des `pio run` : verrous, arret immediat, attente
+`build_serie.py` fait **750 lignes** (+19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; +11 le 2026-10-27 : data_dir pose avant pio ; +3 le meme jour : identite de l'image du FS ; +7 le meme jour : duree des zones d'envoi memorisee, A13 ; +6 le 2026-10-28 : OTA par le maitre, A11 ; +9 le meme jour : Sleep 0 du maitre pendant l'envoi ; +30 le 2026-10-29 : action « fichiers » de l'onglet Fichiers ; execution en serie des `pio run` : verrous, arret immediat, attente
 d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
-verrou), et ses bancs `test_build_serie.py` (**1110**), `test_build_page_chrome.py` (**1100**),
-`test_build_ota_fs.py` (**799**), `test_build_web.py` (**688**), ainsi que `test_annuaire.py` (**523**,
+verrou), et ses bancs `test_build_serie.py` (**1150**), `test_build_page_chrome.py` (**1100**),
+`test_build_ota_fs.py` (**799**), `test_build_web.py` (**717**), ainsi que `test_annuaire.py` (**523**,
 banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
 compteur.
 
@@ -648,7 +648,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     exige (DNS rebinding). Autre appareil : lien a jeton de la console / de la page sur le PC. Bancs :
     `test_annuaire.py`, `test_annuaire_lanceur.py`, `test_annuaire_securite.py`.
     Spec : `docs/superpowers/specs/2026-10-17-annuaire-outils-design.md`.
-  - `build_web.py` (+ `build_page.py`, `build_serie.py`, `build_envs.py`, `build_progression.py`, `build_ota_fs.py`,
+  - `build_web.py` (+ `build_page.py`, `build_serie.py`, `build_envs.py`, `build_progression.py`, `build_ota_fs.py`, `build_fichiers.py`,
     `build_solidification.py`, et pour les bancs `build_faux_pio.py`, `build_ota_carte_simulee.py`) — page « Build et televersement »
     http://127.0.0.1:7700 (tuile de l'annuaire, groupe Maintenance, hors job : l'annuaire refuse de l'arreter pendant
     un lancement ; tache VS Code « Outil : build et televersement » ; cible Custom « Build et televersement (page web) »
@@ -685,6 +685,9 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     uploadfs pour eux (statut de l'envoi, `build_serie.py::Serie._plan`). Journaux de chaque `pio run` dans
     `%LOCALAPPDATA%\outils_tasmota\build\journaux\`. Chaque lancement reecrit `platformio_override.ini` et
     `user_config_override.h` (a commiter). Bancs : `test_build_*.py` (+ sonde `test_build_page_chrome.py`).
+    Onglet « Fichiers » (A15, en cours, spec choix 24) : `GET /fichiers?env=` (`build_fichiers.py::liste` : fichiers de
+    l'image du dernier buildfs, jeton = date de l'image) puis action `fichiers` de la serie (une carte OTA, fichiers
+    choisis, refus si l'image a change depuis la liste ; `build_ota_fs.py::envoie_fs_ota` avec `fichiers=`).
     Mode d'emploi : `outils_docs/README.md` § « Build et televersement (page web) ». Spec :
     `docs/superpowers/specs/2026-10-24-page-build-televersement-design.md` ; plan :
     `tasks/plans/page-build-televersement.md`.
