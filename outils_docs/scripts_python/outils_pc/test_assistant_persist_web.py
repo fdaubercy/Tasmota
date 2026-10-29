@@ -257,8 +257,25 @@ def test_modification_suppression(b):
     statut, ok = b.requete("POST", "/modification", {"env": tac.ENV, "reponses": neuf, "empreinte": m["empreinte"]})
     verifie((statut, ok.get("modifie") if isinstance(ok, dict) else ok), (200, True), "POST /modification : ecrit")
     verifie("192.168.0.77" in (b.racine / tac.DOSSIER / "_persist.json").read_text(encoding="utf-8"), True, "modification : persist de la carte change")
+    # IndexError dans une route GET : 500, pas un faux 404
+    vrai = apw.apm2.charge_env
+    def casse(*a):
+        raise IndexError("liste vide (essai)")
+    apw.apm2.charge_env = casse
+    try:
+        verifie(b.requete("GET", "/env?nom=" + tac.ENV)[0], 500, "GET /env : IndexError -> 500 (pas 404)")
+    finally:
+        apw.apm2.charge_env = vrai
+    # suppression reservee aux cartes du parc
+    base = next(e for e in b.requete("GET", "/parc")[1]["bases"]["ESP32S3"])
+    avant = (b.racine / "platformio_tasmota_cenv.ini").read_bytes()
+    for route in ("/suppression/prepare", "/suppression"):
+        for env in (base, "tasmota32s3-nulle-part"):
+            statut, msg = b.requete("POST", route, {"env": env, "empreinte": "0" * 64})
+            verifie((statut, "7800" in msg), (404, True), f"{route} : {'base' if env == base else 'env inconnu'} -> 404 renvoyant a la page 7800")
+    verifie((b.racine / "platformio_tasmota_cenv.ini").read_bytes(), avant, "suppression refusee : cenv intact")
     # suppression
-    statut, s = b.requete("POST", "/suppression/prepare", {"env": tac.ENV})
+    statut, s =b.requete("POST", "/suppression/prepare", {"env": tac.ENV})
     verifie((statut, s.get("refus"), bool(s.get("empreinte")), s.get("dossier_sauvegarde")), (200, [], True, tac.DOSSIER + "-sauvegarde"),
             "suppression/prepare : empreinte, dossier -sauvegarde")
     el = s.get("elements", [])

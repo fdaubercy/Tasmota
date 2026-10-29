@@ -202,6 +202,14 @@ def _env_de(demande):
     return env
 
 
+def _carte_de(racine, demande):
+    """Env d'une carte du parc seulement : les autres (bases, sans _persist.json) se suppriment par la page 7800."""
+    env = _env_de(demande)
+    if env not in [c["env"] for c in apm2.cartes(racine)]:
+        raise LookupError(f"{env} n'est pas une carte du parc : supprimer par la page Fichiers Berry (7800)")
+    return env
+
+
 def _empreinte_de(demande, refaire):
     empreinte = demande.get("empreinte")
     if not isinstance(empreinte, str) or not empreinte:
@@ -267,10 +275,10 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, etat_modele):
             return apm2.modifie(racine, _env_de(demande), reponses_de(demande),
                                 _empreinte_de(demande, "« Voir le diff »"), builds_en_cours)
         if chemin == "/suppression/prepare":
-            prep = fbx.prepare_suppression(racine, _env_de(demande))
+            prep = fbx.prepare_suppression(racine, _carte_de(racine, demande))
             return {**prep, "elements": elements_supprimes(racine, prep)}
         if chemin == "/suppression":
-            return fbx.supprime(racine, _env_de(demande), _empreinte_de(demande, "le diff"), builds_en_cours)
+            return fbx.supprime(racine, _carte_de(racine, demande),_empreinte_de(demande, "le diff"), builds_en_cours)
         if chemin == "/modele/prepare":
             if "relue" in demande:
                 return apr.propose_relue(racine, demande["relue"])
@@ -340,7 +348,7 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, etat_modele):
                     self._json({"interrompues": fbs.interrompues()})
                 else:
                     self._envoie(404, b"introuvable")
-            except KeyError as erreur:
+            except (KeyError, IndexError) as erreur:
                 self._erreur_inattendue(erreur)
             except LookupError as erreur:
                 self._envoie(404, str(erreur).encode("utf-8"))
