@@ -3,7 +3,7 @@ chantier: page-build-televersement
 titre: Page web « Build et téléversement » (port 7700, tuile de l'annuaire)
 statut: actif
 cree: 2026-10-24
-maj: 2026-10-28
+maj: 2026-10-29
 ---
 # Page web « Build et téléversement » — plan d'implémentation
 
@@ -353,7 +353,7 @@ Fichiers pressentis : `outils_pc/build_envs.py`, `build_ota_fs.py`, `build_serie
   = `Carte(maitre=True)` de `build_ota_carte_simulee.py` (RoutageRangeExtender, Status 5) ; les envois firmware et FS
   des bancs `test_build_ota_fs` visent déjà une adresse `127.0.0.1:<port>` (même forme `IP:port`), tous VERTS ;
   `test_ota_par_maitre` : maître consulté avant l'envoi, refus -> aucun envoi.
-- [ ] Essai réel par l'utilisateur : OTA du firmware ou du FS sur la cuve par le maître.
+- [x] Essai réel par l'utilisateur : OTA du firmware ou du FS sur la cuve par le maître. — preuve : flux de la page 7700 du 2026-10-29, `Sleep 50 -> 0`, carte jointe CAPTEURS-CUVE, bascule safeboot, envoi 100 % en 62 s, `Status 2` compilé 02:33:57 -> 04:31:47, succès, aucun « Sleep NON remis »
 
 Essai du 2026-10-28 (08:03) : ÉCHEC. Connexion par le maître OK (CAPTEURS-CUVE), bascule en safeboot OK, puis envoi
 coupé à 3 % (`WinError 10053`) ; cuve restée en safeboot (Tasmota 15.4.0.1, `/u4` -> `true`, ne connaît pas `Status`).
@@ -444,6 +444,11 @@ ne démarre plus (`global()` sans `serveur`, `boolMute`, `LOG_LEVEL_*`). Persist
   aucun env n'a abouti, purge limitée aux journaux de la page et à la seule instance. — preuve : commits 825511d7f,
   b3766ae2b, e406ec547 ; test_build_serie 132 OK, test_build_web 106 OK, build/test_garde_build vert (37 OK),
   sonde Chrome 78 OK avec témoin (6 KO vus avant la page)
+- [ ] [projet] Relance de l'OTA vers une carte DÉJÀ en safeboot, prouvée en réel : le 2026-10-28 à 19:31 (cuve en
+  safeboot par le maître), envoi à 100 % puis réponse jugée « refusé par la carte (HTTP 200) », motif tronqué : vrai
+  refus ou mot de `ECHECS_PAGE` trouvé dans le script de la page ? Garder la réponse entière, puis essai réel.
+- [ ] [projet] OTA du FS vers un esclave par le maître (cuve ou rideau), essai réel : jamais fait (l'esclave est lui
+  aussi en `Sleep 50`, effet non mesuré).
 
 ## Vérification
 
