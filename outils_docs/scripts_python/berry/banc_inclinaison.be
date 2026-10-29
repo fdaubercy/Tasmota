@@ -54,7 +54,8 @@ class TasmotaStub
     def init() self.cmds = [] self.timers = {} self.scans = [] self.bus = {} self.reponse = nil self.horloge = 0 end
     def millis() return self.horloge end
     def time_reached(t) return self.horloge >= t end
-    def cmd(c, m) self.cmds.push(c) return {} end
+    var surCmd                                      # facultatif : rejoue un evenement synchrone (Direction 0)
+    def cmd(c, m) self.cmds.push(c) if self.surCmd != nil    self.surCmd(c)    end return {} end
     def wire_scan(adr, idx) self.scans.push(adr) return self.bus.find(adr) end
     def set_timer(d, f, id) self.timers[id] = f end
     def remove_timer(id) if self.timers.contains(id) self.timers.remove(id) end end
@@ -68,6 +69,7 @@ var capteurs = {"activation": "ON", "capteurOuvert": "Inclinaison", "capteurFerm
 var vr1 = {"activation": "ON", "id": 1, "capteursPosition": capteurs}
 var drivers = {"voletRoulants": {"activation": "ON", "mode": 1, "environnement": {"VRs": {"VR1": vr1}}}}
 var persist = {}
+var serveur = {"mqtt": {"topic": "grenier"}}
 
 import vrFonctions
 
@@ -109,9 +111,14 @@ for deg: [0, 45, 90, -30]
     incline(mpu, deg)
     verifie(proche(vrFonctions.lireAngle(1, inclinaison), deg), "angle " + str(deg) + " degres")
 end
-verifie(size(mpu.ecrits) == 1 && mpu.ecrits[0][1] == 0x6B && mpu.ecrits[0][2] == 0, "reveil 0x6B = 0 ecrit une seule fois")
+verifie(mpu.ecrits == [[104, 0x6B, 0], [104, 0x1A, 6]], "reveil 0x6B = 0 puis filtre passe-bas 0x1A = 6, une seule fois")
 verifie(mpu.lectures == 16, "4 lectures par angle")
 verifie(size(tasmota.scans) == 1, "wire_scan fait une fois, puis en cache")
+inclinaison["filtre"] = 3
+vrFonctions.etat()["bus"] = {}
+vrFonctions.lireAngle(1, inclinaison)
+verifie(mpu.ecrits[-1] == [104, 0x1A, 3], "cle 'filtre' du persist ecrite dans 0x1A")
+inclinaison.remove("filtre")
 
 print("3. ReglageVolets Inclinaison : lisible meme inclinaison OFF (calibrage), sans recalage")
 incline(mpu, 42)
@@ -304,5 +311,78 @@ for n: 1 .. 40    pas()    end
 verifie(size(stops()) == 0, "blocage 0 : pas de detection")
 vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
 inclinaison.remove("blocage")
+
+print("11. Arret en butee : le volet atteint la butee vers laquelle il va -> ShutterStop PUIS recalage")
+vrFonctions.etat()["inclinaison"] = {}
+tasmota.cmds = []
+incline(mpu, 40)
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+incline(mpu, 70)
+pas()
+verifie(size(stops()) == 0, "ouverture a 70 degres : pas d'arret")
+incline(mpu, 86)
+pas()
+verifie(tasmota.cmds == ["ShutterStop1", "ShutterSetClose1"], "butee ouverte atteinte : ShutterStop1 AVANT ShutterSetClose1 (ShutterSet* ne coupe pas le moteur)")
+verifie(!tasmota.timers.contains("vrInclinaison1"), "arret en butee : suivi coupe")
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+tasmota.cmds = []
+vrFonctions.changementDirection(-1, "Shutter1#Direction", {}, 1)
+verifie(size(tasmota.cmds) == 0, "depart de la butee ouverte vers la fermeture : rien")
+incline(mpu, 2)
+pas()
+verifie(tasmota.cmds == ["ShutterStop1", "ShutterSetOpen1"], "butee fermee atteinte en fermeture : arret puis recalage")
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+tasmota.cmds = []
+vrFonctions.changementDirection(-1, "Shutter1#Direction", {}, 1)
+verifie(tasmota.cmds == ["ShutterStop1", "ShutterSetOpen1"], "deja fermee et commandee en fermeture : arret et recalage immediats")
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+capteurs["capteurOuvert"] = "Switch1"
+tasmota.cmds = []
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+incline(mpu, 86)
+pas()
+verifie(size(tasmota.cmds) == 0, "butee ouverte non designee (Switch1) : ni arret ni recalage par l'inclinaison")
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+vrFonctions.etat()["inclinaison"] = {}
+incline(mpu, 40)
+tasmota.cmds = []
+avant = erreurs()
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+incline(mpu, 86)
+for n: 1 .. 21    pas()    end
+verifie(stops() == ["ShutterStop1"] && erreurs() == avant, "moteur qui force 5 s sur la butee non designee : arret SANS erreur de blocage")
+verifie(!vrFonctions.suiviInclinaison(1).find("bloque", false), "butee non designee atteinte : pas d'etat BLOQUE")
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+capteurs["capteurOuvert"] = "Inclinaison"
+vrFonctions.etat()["inclinaison"] = {}
+incline(mpu, 40)
+tasmota.cmds = []
+tasmota.surCmd = def (c) if c == "ShutterStop1"    vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)    end end
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+incline(mpu, 86)
+pas()
+tasmota.surCmd = nil
+verifie(tasmota.cmds == ["ShutterStop1", "ShutterSetClose1"], "Direction 0 synchrone pendant ShutterStop : un seul recalage")
+
+print("12. Blocage visible : ligne web et tele/<topic>/INCLINAISON<id> retenu, au changement seulement")
+import mqtt as mqttBouchon
+import json
+var publies = mqttBouchon.publies
+publies.clear()
+vrFonctions.etat()["inclinaison"] = {}
+incline(mpu, 40)
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+for n: 1 .. 20    pas()    end
+verifie(string.find(vrFonctions.ligneWebInclinaison(vr1), "BLOQU") > 0, "apres un blocage : ligne web BLOQUE")
+verifie(size(publies) == 1 && publies[0][0] == "tele/grenier/INCLINAISON1" && publies[0][2] == true, "blocage publie sur tele/grenier/INCLINAISON1, retenu")
+verifie(size(publies) == 1 && json.load(publies[0][1])["Bloque"] == true, "message : Bloque true")
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+verifie(size(publies) == 1, "arret apres le blocage : pas de nouvelle publication")
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+verifie(size(publies) == 2 && json.load(publies[1][1])["Bloque"] == false, "nouvelle course : Bloque false publie")
+verifie(string.find(vrFonctions.ligneWebInclinaison(vr1), "BLOQU") < 0, "nouvelle course : ligne web normale")
+pas()
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+verifie(size(publies) == 2, "course sans blocage : rien de plus publie")
 
 print(echecs == 0 ? "BANC_INCLINAISON: OK" : "BANC_INCLINAISON: ECHEC (" + str(echecs) + ")")

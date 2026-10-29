@@ -318,6 +318,8 @@ Sous `drivers.voletRoulants.environnement.VRs.<VR>.capteursPosition` :
   (selon le montage).
 - `marge` : hystérésis en degrés pour QUITTER une butée (pas de rebond au seuil).
 - `blocage` / `blocageDegres` : détection de blocage (ci-dessous). `blocage` à 0 la désactive.
+- `filtre` (facultatif, 6 par défaut) : filtre passe-bas du MPU6050 (registre `0x1A`, 0 à 6 ; 6 = ~5 Hz) contre
+  les vibrations du moteur. Écrit une fois, au réveil du capteur.
 
 ### Détection de blocage
 
@@ -327,6 +329,20 @@ Pendant la course, si l'angle bouge de moins de `blocageDegres` (1° par défaut
 coincée, moteur qui force contre une butée parce que la position estimée était fausse. Le délai repart à chaque
 mouvement et à chaque nouvelle course : un départ lent ne déclenche rien tant qu'il dure moins de `blocage`
 secondes. Régler `blocage` au-dessus du temps de démarrage réel du moteur.
+Angle figé sur la butée vers laquelle va le volet, quand cette butée n'est pas désignée `"Inclinaison"` : c'est une
+arrivée, pas un blocage. Le moteur qui force est arrêté de la même façon, sans erreur ni alerte.
+
+Un blocage s'affiche aussi sur la page d'accueil (« BLOQUÉ » sur la ligne du volet) et part en MQTT, **retenu**, sur
+`tele/<topic>/INCLINAISON<id>` : `{"Volet": 1, "Bloque": true, "Angle": 40.0, "Etat": "entre"}`. La course suivante
+efface l'alerte (`"Bloque": false` publié). Rien n'est publié en dehors de ces deux changements.
+
+### Arrêt en butée
+
+Un volet en course vers une butée désignée `"Inclinaison"` (`capteurOuvert` en ouverture, `capteurFerme` en
+fermeture) est arrêté dès qu'il l'atteint : `ShutterStop<id>`, puis recalage de la position. Il l'est aussi aussitôt
+s'il y est déjà et qu'on le commande encore vers elle. L'arrêt passe AVANT le recalage : `ShutterStop` coupe le moteur
+sur-le-champ, alors que `ShutterSetOpen/Close` seul ne le coupe pas (`xdrv_27_esp32_shutter.ino`). Une butée tenue
+par un fin de course physique (`SwitchN`) n'est pas arrêtée par l'inclinaison.
 
 ### Apprentissage des butées
 
