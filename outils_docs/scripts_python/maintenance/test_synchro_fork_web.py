@@ -166,6 +166,15 @@ def groupe_http(dossier):
     ips = acces_web.ips_reseau()
     if ips:
         verifie(requete(ips[0], port)[0], 403, f"autre appareil ({ips[0]}) sans jeton refuse")
+    # onglet ouvert avant un redemarrage du serveur : EventSource se reconnecte avec l'ancien Last-Event-ID (60),
+    # plus grand que tout ce que ce serveur a numerote -> il doit tout rejouer, sinon l'onglet ne recoit plus rien
+    session._ajoute(type="debut", script="merge", simulation=True)
+    session._ajoute(type="fin", script="merge", code=0)
+    c = http.client.HTTPConnection("127.0.0.1", port, timeout=20)     # sans rejeu : « : veille » au bout de 15 s
+    c.request("GET", "/flux?depuis=0", headers={"Last-Event-ID": "60"})
+    debut = c.getresponse().read1(4096).decode("utf-8", "replace")
+    c.close()
+    verifie(('"type": "debut"' in debut), True, "flux : Last-Event-ID d'un serveur precedent -> evenements rejoues")
     srv.shutdown()
 
 

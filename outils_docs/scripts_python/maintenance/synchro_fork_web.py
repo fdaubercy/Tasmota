@@ -155,7 +155,9 @@ def fabrique_gestionnaire(session, acces, racine=synchro_fork_etat.REPO,
                     self._json(session.etat())
                 elif url.path == "/flux":
                     depuis = self.headers.get("Last-Event-ID") or params.get("depuis", ["0"])[0]
-                    self._flux(int(depuis) if str(depuis).isdigit() else 0)
+                    depuis = int(depuis) if str(depuis).isdigit() else 0
+                    # au-dela de ce que ce serveur a numerote = onglet d'un serveur precedent : tout rejouer
+                    self._flux(0 if depuis > session.numero else depuis)
                 elif url.path == "/diff":
                     self._envoie(200, synchro_fork_etat.diff(params.get("chemin", [""])[0], racine).encode("utf-8"))
                 elif url.path == "/historique":
