@@ -1,6 +1,7 @@
 ---
 chantier: audit-berry
 titre: Audit complet — scripts Berry, environnements de build, solidification, logs et communications
+objectif: Auditer en lecture seule le code Berry, les envs de build, la solidification, les logs et les communications
 statut: clos
 cree: 2026-10-21
 maj: 2026-10-22

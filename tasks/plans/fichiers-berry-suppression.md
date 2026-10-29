@@ -1,6 +1,7 @@
 ---
 chantier: fichiers-berry-suppression
 titre: Page « Fichiers Berry par env » — supprimer et renommer un env, écritures atomiques, sauvegardes, erreurs claires
+objectif: Supprimer et renommer un env depuis la page Fichiers Berry, avec écritures atomiques et sauvegardes
 statut: clos
 cree: 2026-10-25
 maj: 2026-10-25

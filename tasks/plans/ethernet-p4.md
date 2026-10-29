@@ -1,6 +1,7 @@
 ---
 chantier: ethernet-p4
 titre: Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)
+objectif: Ajouter l'Ethernet en option sur le maître ModBus P4, le Wi-Fi restant le défaut
 statut: actif
 cree: 2026-10-26
 maj: 2026-10-26

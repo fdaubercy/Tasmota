@@ -1,6 +1,7 @@
 ---
 chantier: assistant-synchro-fork
 titre: Assistant pas à pas de la page « Synchro du fork » (port 7500)
+objectif: Guider pas à pas la synchro du fork sur la page 7500, avec résolution des conflits fichier par fichier
 statut: clos
 cree: 2026-10-27
 maj: 2026-10-29

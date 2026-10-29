@@ -1,6 +1,7 @@
 ---
 chantier: fichiers-berry-env
 titre: Page web « Fichiers Berry par env » (port 7800, tuile de l'annuaire, cible Custom)
+objectif: Régler par une page web l'état de chaque fichier Berry par env (FS, exclu, solidifié) et créer un env
 statut: clos
 cree: 2026-10-25
 maj: 2026-10-25

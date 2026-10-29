@@ -1,6 +1,7 @@
 ---
 chantier: assistant-persist
 titre: Assistant de création du persist d'un nouvel env (page 7900, tuile de l'annuaire)
+objectif: Créer le persist, l'autoexec et les sections de build d'une nouvelle carte par questions, depuis une page web
 statut: actif
 cree: 2026-10-27
 maj: 2026-10-27

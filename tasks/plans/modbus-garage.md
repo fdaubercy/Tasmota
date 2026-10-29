@@ -1,6 +1,7 @@
 ---
 chantier: Modbus-garage
 titre: ModBus du garage (P4, cuve, rideau) et commandes sans fil
+objectif: Fiabiliser le ModBus filaire du garage (P4, cuve, rideau) puis passer les commandes par UDP
 statut: clos
 crée: 2026-10-18
 maj: 2026-10-22

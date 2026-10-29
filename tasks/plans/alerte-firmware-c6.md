@@ -1,6 +1,7 @@
 ---
 chantier: alerte-firmware-c6
 titre: Alerte web « firmware du coprocesseur ESP32-C6 pas à jour » sur les P4
+objectif: Signaler sur les P4 un firmware du coprocesseur Wi-Fi ESP32-C6 en retard et proposer sa mise à jour (HostedOta)
 statut: clos
 cree: 2026-10-26
 maj: 2026-10-27

@@ -1,7 +1,8 @@
 ---
 chantier: blocage-trappe-mpu6050
 titre: Détection de blocage d'un volet par son inclinaison (MPU6050)
-statut: actif
+objectif: Arrêter un volet et loguer une erreur quand son inclinaison ne bouge plus pendant la course (trappe bloquée)
+statut: clos
 cree: 2026-10-28
 maj: 2026-10-29
 ---
@@ -78,7 +79,7 @@ JAMAIS pendant une course. Appliquée à l'arrêt seulement (fin de course, surv
 - [x] Clés `sensInverse: 3`, `surveillance: 0`, `positionReelle: "OFF"` dans les 7 persists et le modèle, schéma régénéré — preuve : 7 persists + modele_persist.json (JSON relus) ; genere_schema_persist.py --valide : 8 cartes a 0 erreur
 - [x] Bancs inclinaison (+ mutants), boot, démarrage verts ; solidification des 2 `.be` ; `relecteur-berry` — preuve : BANC_INCLINAISON OK, 9 mutants ECHEC ; BANC_BOOT OK ; banc_demarrage VERT ; les 2 .h compilent (apres la fin du build de la cuve, 05:03) ; relecteur : rien de bloquant, 4 points corriges (commandes differees apres arret, cache de position, position en surveillance apres mouvement, periode doublee capteur muet)
 - [x] README § Inclinaison ; aide `ReglageVolets Inclinaison` — preuve : § Sens inverse, Durées de course, Surveillance à l'arrêt, Position réelle ; aide INCLINAISON ; verifie_references_docs : 0 defaut
-- [ ] Commit et push
+- [x] Commit et push — preuve : commit dae984ee7, poussé sur development
 
 ## Améliorations restantes
 - [ ] [projet] Essai réel sur la trappe du grenier (avec le reste de l'inclinaison)

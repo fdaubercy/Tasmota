@@ -1,6 +1,7 @@
 ---
 chantier: inclinaison-trappe-mpu6050
 titre: Capteur d'inclinaison MPU6050 pour les volets (trappe du grenier)
+objectif: Lire l'angle réel de la trappe du grenier par un MPU6050 pour recaler la position du volet
 statut: clos
 cree: 2026-10-28
 maj: 2026-10-28

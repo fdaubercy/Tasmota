@@ -1,6 +1,7 @@
 ---
 chantier: ruban-cuve
 titre: Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2
+objectif: Piloter le ruban WS2812 de la cuve en AUTO/MANUEL (bouton et ModBus) et préparer la carte cuve v0.2
 statut: actif
 cree: 2026-10-18
 maj: 2026-10-18

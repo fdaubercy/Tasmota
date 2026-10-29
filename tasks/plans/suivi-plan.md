@@ -1,6 +1,7 @@
 ---
 chantier: suivi-plan
 titre: Suivi des plans de travail (extension VS Code + mod)
+objectif: Suivre l'avancement des plans en % dans une vue VS Code à droite, partagée entre conversations et postes
 statut: clos
 cree: 2026-10-18
 maj: 2026-10-18

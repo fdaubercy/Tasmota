@@ -1,6 +1,7 @@
 ---
 chantier: actions-audit-berry
 titre: Plan d'action de l'audit Berry (propositions P2.1 à P10.7)
+objectif: Mettre en œuvre, lot par lot et sur décision de l'utilisateur, les 78 propositions de l'audit Berry
 statut: actif
 cree: 2026-10-22
 maj: 2026-10-26

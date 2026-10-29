@@ -1,6 +1,7 @@
 ---
 chantier: graphiques-web
 titre: Graphiques des mesures dans les pages web des cartes S3/P4 (uPlot)
+objectif: Afficher l'historique et le temps réel des mesures en graphiques dans les pages web des cartes S3/P4
 statut: clos
 cree: 2026-10-18
 maj: 2026-10-20

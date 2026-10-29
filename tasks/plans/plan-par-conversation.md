@@ -1,6 +1,7 @@
 ---
 chantier: plan-par-conversation
 titre: La vue de droite suit le plan de la conversation active
+objectif: Faire afficher par la vue de droite le plan suivi par la conversation Claude active
 statut: clos
 cree: 2026-10-18
 maj: 2026-10-18

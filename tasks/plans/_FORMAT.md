@@ -10,6 +10,7 @@ par `_` (comme celui-ci) ne sont pas des plans.
 ---
 chantier: voie-modbus          # nom court, = nom du fichier sans .md
 titre: Fin des correctifs « voie ModBus »
+objectif: Une phrase : le but principal du plan   # repris dans tasks/README.md (pas de « # » dans le texte)
 statut: actif                  # actif | en-pause | clos
 cree: 2026-10-18
 maj: 2026-10-18
@@ -51,6 +52,9 @@ Texte libre. Non compté.
 - **Cocher une étape seulement après l'avoir vérifiée**, avec sa preuve après ` — preuve : `
   (commit, `fichier:ligne`, sortie d'un banc). Pas de coche sans preuve (même règle que `/fin-de-session`).
 - Mettre à jour `maj:` à chaque modification.
+- **Index des plans** : `tasks/README.md` liste chaque plan (objectif, statut, %). Son tableau est
+  régénéré par `node .claude/hooks/index_plans.mjs` — automatiquement quand Claude édite un plan (hook
+  `index_plans_edition.sh`), à la main après une édition hors Claude. `--verifier` : code 1 s'il est en retard.
 - Ce qui reste hors du plan va dans « Améliorations restantes », avec son étiquette.
 - Plan fini (100 %) : `statut: clos`. Plusieurs plans peuvent être `actif` ; la ligne
   d'avancement montre le plus récemment modifié.

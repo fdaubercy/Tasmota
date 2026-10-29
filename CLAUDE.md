@@ -458,6 +458,12 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   la conversation active suit un plan (message envoye ou bascule vers son onglet), une fois par conversation et
   par fenetre ; refermee a la main, elle ne se rouvre pas pour cette conversation (`C.ouvrirPourConversation`).
 - `tasks/plans/` — un plan suivi par chantier ; format et regles de calcul dans `_FORMAT.md`.
+- `tasks/README.md` — index des plans (demande du 2026-10-29) : objectif (cle `objectif:` de l'en-tete),
+  statut, % de chaque plan. **A tenir a jour a chaque progression d'un plan** : le tableau est regenere par
+  `node .claude/hooks/index_plans.mjs` (parseur du mod, memes % que la vue de droite), automatiquement par le
+  hook `PostToolUse` `index_plans_edition.sh` quand Claude edite un `tasks/plans/*.md` ; a la main apres une
+  edition hors Claude (dont la recopie d'un plan par le mod a ExitPlanMode) ; `--verifier` = code 1 si en retard.
+  Nouveau plan : lui donner une cle `objectif:`. Banc `node .claude/hooks/test_index_plans.mjs`.
 - `tasks/lessons.md` — journal des erreurs et regles.
 - `tasks/reprise-solidification-berry.md` — etat du chantier solidification, prochaine action.
 - `tasks/reprise-chantier-modbus-grenier.md` — etat du chantier ModBus (carte 16 relais +
