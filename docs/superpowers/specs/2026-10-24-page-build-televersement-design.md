@@ -366,6 +366,26 @@ ci-dessous sont ceux de Claude.
     d'accueil (`<h3>SAFEBOOT</h3>`) : identité = titre (`DeviceName`) comparé à `serveur.nom` du persist,
     puis envoi sans bascule ; après l'envoi, une carte encore en safeboot est dite comme telle.
 
+## Évolution du 2026-10-29 : onglet « Fichiers » (A15)
+
+24. **Onglet « Fichiers » de la page 7700 : envoyer des fichiers choisis du dépôt à une carte choisie, en HTTP.**
+    Choix de l'utilisateur : onglet de cette page ; fichiers DU DÉPÔT seulement ; options après envoi choisies à
+    l'envoi ; disposition « C + colonne destinataire de B » (maquette E, comparée dans le navigateur à quatre
+    autres le 2026-10-29) :
+    - à gauche, **Carte destinataire** : une carte par ligne (bouton radio), avec son adresse OTA et sa provenance
+      (IP fixe du `.h`, « par le maître », ou adresse à saisir), comme la liste du Build ;
+    - en haut à droite, la carte choisie, **Préparer la liste** (buildfs de cet env, refusé pendant un build ou un
+      envoi) et la date de l'image du FS ;
+    - dessous, trois colonnes : **Dossiers** de l'image (avec le nombre de fichiers), **tableau** du dossier choisi
+      (case, fichier, taille, date dans le dépôt, « plus récent que l'image », « sauvegardé avant » pour
+      `_persist.json`), **panier « À envoyer »** (fichiers cochés, tous dossiers confondus, options « recharger
+      Berry » cochée d'office si un `.be` ou le persist part et « redémarrer » décochée, bouton « Envoyer N
+      fichiers ») ;
+    - le panneau **Suivi** existant, partagé avec l'onglet Build ; sur écran étroit, les colonnes s'empilent.
+    La liste vient de l'image `littlefs.bin` du buildfs (chemins exacts du FS, identité contrôlée par
+    `verifie_identite`) ; l'envoi reprend celui de l'OTA du FS (dossiers créés, persist sauvegardé puis relu,
+    esclave par le maître avec `Sleep 0`). Transport MQTT poussé : plus tard (A16).
+
 ## Laissé au constructeur
 
 - Découpage en modules (registre des envs, lecture/écriture du `.ini`, exécution, OTA, page), sans

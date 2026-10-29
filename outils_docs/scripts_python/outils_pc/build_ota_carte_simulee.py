@@ -144,6 +144,8 @@ class Carte:
             return self.repond(h, json.dumps({"StatusNET": {"Hostname": self.hostname}}), "application/json")
         if cmnd == "RoutageRangeExtender" and self.maitre:
             return self.repond(h, '{"RoutageRangeExtender":{"commmande":"","status":"Succès"}}', "application/json")
+        if cmnd == "BrRestart":                      # CmndBrRestart : machine Berry neuve, la carte reste en marche
+            return self.repond(h, '{"BrRestart":"Berry VM restarted"}', "application/json")
         if cmnd == "Restart 1":
             self.repond(h, '{"Restart":"Restarting"}', "application/json")
             self.redemarre()

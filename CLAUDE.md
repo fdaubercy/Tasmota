@@ -148,7 +148,7 @@ Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plut
 `build_serie.py` fait **720 lignes** (+19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; +11 le 2026-10-27 : data_dir pose avant pio ; +3 le meme jour : identite de l'image du FS ; +7 le meme jour : duree des zones d'envoi memorisee, A13 ; +6 le 2026-10-28 : OTA par le maitre, A11 ; +9 le meme jour : Sleep 0 du maitre pendant l'envoi ; execution en serie des `pio run` : verrous, arret immediat, attente
 d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
 verrou), et ses bancs `test_build_serie.py` (**1110**), `test_build_page_chrome.py` (**1100**),
-`test_build_ota_fs.py` (**766**), `test_build_web.py` (**688**), ainsi que `test_annuaire.py` (**523**,
+`test_build_ota_fs.py` (**799**), `test_build_web.py` (**688**), ainsi que `test_annuaire.py` (**523**,
 banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
 compteur.
 

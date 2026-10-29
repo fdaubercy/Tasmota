@@ -66,6 +66,7 @@ ETAPE_ENVOI = "Envoi des fichiers"
 ETAPE_RELECTURE = "Relecture du persist"
 ETAPE_RECHARGEMENT = "Rechargement du persist"
 ETAPE_REDEMARRAGE = "Redémarrage"
+ETAPE_BERRY = "Rechargement de Berry"
 ETAPE_VERIFICATION = "Vérification après redémarrage"
 
 PERSIST = "_persist.json"
@@ -443,15 +444,24 @@ def extrait_image(image, dossier):
     return len(contenus)
 
 
-def _inventaire(dossier_fs):
-    """Fichiers relatifs (posix) a envoyer, persist en dernier, et dossiers a creer (parent d'abord)."""
+def _inventaire(dossier_fs, choix=None):
+    """Fichiers relatifs (posix) a envoyer, persist en dernier, et dossiers a creer (parent d'abord).
+
+    `choix` : sous-ensemble de ces fichiers (onglet « Fichiers », A15) ; None = tous, persist obligatoire.
+    """
     if not dossier_fs.is_dir():
         raise RuntimeError(f"{ETAPE_ENVOI} : dossier {dossier_fs} absent (construction du FS manquante ?)")
     fichiers = sorted(p.relative_to(dossier_fs).as_posix() for p in dossier_fs.rglob("*") if p.is_file())
-    if PERSIST not in fichiers:
+    if choix is not None:
+        inconnus = sorted(set(choix) - set(fichiers))
+        if inconnus or not choix:
+            raise RuntimeError(f"{ETAPE_ENVOI} : " + (f"absents de l'image : {', '.join(inconnus)}" if inconnus
+                               else "aucun fichier choisi") + " ; rien n'a été envoyé")
+        fichiers = sorted(set(choix))
+    elif PERSIST not in fichiers:
         raise RuntimeError(f"{ETAPE_ENVOI} : {PERSIST} absent de {dossier_fs}")
     # Persist en dernier : un echec en cours de route laisse a la carte son persist d'origine.
-    fichiers = [f for f in fichiers if f != PERSIST] + [PERSIST]
+    fichiers = [f for f in fichiers if f != PERSIST] + ([PERSIST] if PERSIST in fichiers else [])
     # Chemin ecrit par Tasmota : <dossier courant> + "/" + <nom>, soit "//nom" a la racine.
     trop_longs = [f for f in fichiers if len(("/" if "/" in f else "//") + f) > LONGUEUR_MAX]
     if trop_longs:
@@ -480,27 +490,37 @@ def _sauvegarde(env, contenu, sauvegardes):
 
 
 def envoie_fs_ota(env, ip, dossier_fs, sauvegardes, rapporte, *, delai_retour=90.0, attente_min=15.0,
-                  sondage=2.0, delai_http=30.0):
-    """Envoie tout `dossier_fs` a la carte (deroule du choix 10 de la spec)."""
+                  sondage=2.0, delai_http=30.0, fichiers=None, recharger_berry=False, redemarrer=True):
+    """Envoie tout `dossier_fs` a la carte (deroule du choix 10 de la spec).
+
+    Onglet « Fichiers » (choix 24) : `fichiers` = sous-ensemble a envoyer (chemins relatifs de l'image). Le persist
+    n'est sauvegarde, relu et recharge que s'il en fait partie. Apres l'envoi : `redemarrer` -> Restart 1 (Berry
+    repart avec la carte) ; sinon `recharger_berry` -> BrRestart (machine Berry neuve, autoexec rejoue).
+    """
     dossier_fs, sauvegardes = Path(dossier_fs), Path(sauvegardes)
-    fichiers, dossiers = _inventaire(dossier_fs)
+    fichiers, dossiers = _inventaire(dossier_fs, fichiers)
     erreurs_reseau = (OSError, http.client.HTTPException)
+    avec_persist = PERSIST in fichiers
+    copie = None
+    sauve = ""                                 # suffixe des messages d'erreur : ou retrouver le persist d'avant
 
     # 2. persist de la carte : sans lui, rien n'est envoye
-    rapporte({"etape": ETAPE_SAUVEGARDE, "pourcent": None, "detail": f"depuis {ip}"})
-    try:
-        ancien = _telecharge_persist(ip, delai_http)
-    except erreurs_reseau as erreur:
-        raise RuntimeError(f"{ETAPE_SAUVEGARDE} : impossible de télécharger {PERSIST} de {ip} ({erreur}) ; "
-                           "rien n'a été envoyé") from None
-    if not ancien.strip():
-        raise RuntimeError(f"{ETAPE_SAUVEGARDE} : {PERSIST} de {ip} vide ; rien n'a été envoyé")
-    try:
-        json.loads(ancien)                     # une page HTML ou un persist tronque n'est pas une sauvegarde
-    except ValueError as erreur:
-        raise RuntimeError(f"{ETAPE_SAUVEGARDE} : {PERSIST} de {ip} n'est pas du JSON valide ({erreur}) : "
-                           f"pas de sauvegarde possible ; rien n'a été envoyé") from None
-    copie = _sauvegarde(env, ancien, sauvegardes)
+    if avec_persist:
+        rapporte({"etape": ETAPE_SAUVEGARDE, "pourcent": None, "detail": f"depuis {ip}"})
+        try:
+            ancien = _telecharge_persist(ip, delai_http)
+        except erreurs_reseau as erreur:
+            raise RuntimeError(f"{ETAPE_SAUVEGARDE} : impossible de télécharger {PERSIST} de {ip} ({erreur}) ; "
+                               "rien n'a été envoyé") from None
+        if not ancien.strip():
+            raise RuntimeError(f"{ETAPE_SAUVEGARDE} : {PERSIST} de {ip} vide ; rien n'a été envoyé")
+        try:
+            json.loads(ancien)                 # une page HTML ou un persist tronque n'est pas une sauvegarde
+        except ValueError as erreur:
+            raise RuntimeError(f"{ETAPE_SAUVEGARDE} : {PERSIST} de {ip} n'est pas du JSON valide ({erreur}) : "
+                               f"pas de sauvegarde possible ; rien n'a été envoyé") from None
+        copie = _sauvegarde(env, ancien, sauvegardes)
+        sauve = f" ; sauvegarde du persist : {copie}"
 
     # 3. dossiers puis fichiers
     etape, en_cours = ETAPE_DOSSIERS, ""
@@ -510,7 +530,7 @@ def envoie_fs_ota(env, ip, dossier_fs, sauvegardes, rapporte, *, delai_retour=90
             rapporte({"etape": etape, "pourcent": i * 100 // len(dossiers), "detail": dossier})
             reponse = _commande(ip, f'Br import path path.mkdir("{dossier}")', delai_http)
             if "_error" in reponse:
-                raise RuntimeError(f"{etape} : {dossier} : {reponse} ; sauvegarde du persist : {copie}")
+                raise RuntimeError(f"{etape} : {dossier} : {reponse}{sauve}")
         etape = ETAPE_ENVOI
         # % des OCTETS envoyes, mis a jour a chaque morceau (A13) : au nombre de fichiers, il restait fige pendant
         # echarts.min.js.gz (368 Ko sur le P4, contre 10 a 40 Ko pour les autres) puis sautait.
@@ -533,36 +553,47 @@ def envoie_fs_ota(env, ip, dossier_fs, sauvegardes, rapporte, *, delai_retour=90
             donnees = (dossier_fs / rel).read_bytes()
             statut, texte = _poste(ip, f"/ufsu?fsz={len(donnees)}", "ufsu", nom, donnees, delai_http, progression)
             if _page_en_echec(statut, texte):
-                raise RuntimeError(f"{etape} : {rel} refusé par la carte (HTTP {statut}) : {_resume(texte)} ; "
-                                   f"sauvegarde du persist : {copie}")
+                raise RuntimeError(f"{etape} : {rel} refusé par la carte (HTTP {statut}) : {_resume(texte)}{sauve}")
             faits += len(donnees)
         rapporte({"etape": etape, "pourcent": 100, "detail": f"{len(fichiers)}/{len(fichiers)} {fichiers[-1]}"
                   if fichiers else "aucun fichier"})
     except erreurs_reseau as erreur:
         # Tasmota ferme aussi sans repondre quand le dossier demande n'existe pas.
-        raise RuntimeError(f"{etape} : {en_cours} : pas de réponse de la carte {ip} ({erreur}) ; "
-                           f"sauvegarde du persist : {copie}") from None
+        raise RuntimeError(f"{etape} : {en_cours} : pas de réponse de la carte {ip} ({erreur}){sauve}") from None
 
-    # 4. relecture, comparaison exacte des octets, AVANT le rechargement
-    attendu = (dossier_fs / PERSIST).read_bytes()
-    _compare(ip, attendu, ETAPE_RELECTURE, copie, delai_http, rapporte)
+    if avec_persist:
+        # 4. relecture, comparaison exacte des octets, AVANT le rechargement
+        attendu = (dossier_fs / PERSIST).read_bytes()
+        _compare(ip, attendu, ETAPE_RELECTURE, copie, delai_http, rapporte)
 
-    # 5. rechargement des globales Berry, 6. redemarrage et verification
-    rapporte({"etape": ETAPE_RECHARGEMENT, "pourcent": None, "detail": "persist.load()"})
-    try:
-        reponse = _commande(ip, BR_RECHARGE, delai_http)
-    except erreurs_reseau as erreur:
-        raise RuntimeError(f"{ETAPE_RECHARGEMENT} : {ip} ne répond pas ({erreur}) ; "
-                           f"sauvegarde du persist : {copie}") from None
-    if "_error" in reponse:
-        raise RuntimeError(f"{ETAPE_RECHARGEMENT} : {reponse} ; sauvegarde du persist : {copie}")
-    rapporte({"etape": ETAPE_REDEMARRAGE, "pourcent": None, "detail": f"Restart 1, attente du retour de {ip}"})
-    try:
-        _commande(ip, "Restart 1", delai_http)
-    except erreurs_reseau as erreur:
-        raise RuntimeError(f"{ETAPE_REDEMARRAGE} : Restart 1 sans réponse ({erreur})") from None
-    _attend_retour(ip, delai_retour, attente_min, sondage, delai_http)
-    _verifie_apres_redemarrage(ip, attendu, copie, delai_http, rapporte)
+        # 5. rechargement des globales Berry : TOUJOURS si le persist part, il est en RAM et le System#Save d'un
+        # redemarrage ecrirait l'ancien par-dessus le nouveau
+        rapporte({"etape": ETAPE_RECHARGEMENT, "pourcent": None, "detail": "persist.load()"})
+        try:
+            reponse = _commande(ip, BR_RECHARGE, delai_http)
+        except erreurs_reseau as erreur:
+            raise RuntimeError(f"{ETAPE_RECHARGEMENT} : {ip} ne répond pas ({erreur}){sauve}") from None
+        if "_error" in reponse:
+            raise RuntimeError(f"{ETAPE_RECHARGEMENT} : {reponse}{sauve}")
+
+    # 6. redemarrage et verification, ou Berry seul relance
+    if redemarrer:
+        rapporte({"etape": ETAPE_REDEMARRAGE, "pourcent": None, "detail": f"Restart 1, attente du retour de {ip}"})
+        try:
+            _commande(ip, "Restart 1", delai_http)
+        except erreurs_reseau as erreur:
+            raise RuntimeError(f"{ETAPE_REDEMARRAGE} : Restart 1 sans réponse ({erreur})") from None
+        _attend_retour(ip, delai_retour, attente_min, sondage, delai_http)
+        if avec_persist:
+            _verifie_apres_redemarrage(ip, attendu, copie, delai_http, rapporte)
+    elif recharger_berry:
+        rapporte({"etape": ETAPE_BERRY, "pourcent": None, "detail": "BrRestart"})
+        try:
+            reponse = _commande(ip, "BrRestart", delai_http)
+        except erreurs_reseau as erreur:
+            raise RuntimeError(f"{ETAPE_BERRY} : {ip} ne répond pas ({erreur}){sauve}") from None
+        if "restarted" not in reponse:
+            raise RuntimeError(f"{ETAPE_BERRY} : réponse inattendue : {_resume(reponse)}{sauve}")
 
 
 def _compare(ip, attendu, etape, copie, delai, rapporte):

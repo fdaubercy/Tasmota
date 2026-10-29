@@ -107,7 +107,7 @@ def genre(methode, chemin):
         return "envoi"
     if cmnd.startswith("Br import persist"):
         return "rechargement"
-    return {"Restart 1": "restart", "Status": "status"}.get(cmnd, chemin)
+    return {"Restart 1": "restart", "Status": "status", "BrRestart": "brrestart"}.get(cmnd, chemin)
 
 
 def compacte(liste):
@@ -128,6 +128,39 @@ def test_ota_fs_ordre():
         verifie(br, [BR_RECHARGE], "ota_fs_ordre : commande Berry exacte de la spec (choix 10.5), URL-encodee")
         verifie(carte.flash["/_persist.json"], NOUVEAU_PERSIST, "ota_fs_ordre : persist de la carte remplace")
         carte.ferme()
+
+
+def test_ota_fs_partiel():
+    """Onglet « Fichiers » (A15, choix 24) : seuls les fichiers choisis partent ; persist non choisi -> ni sauvegarde,
+    ni relecture, ni rechargement ; options apres envoi respectees."""
+    cas = [  # (fichiers, options, deroule attendu)
+        (["json/graphiques.json", "autoexec.be"], {}, ["dossier", "envoi", "restart", "status"]),
+        (["autoexec.be"], {"redemarrer": False, "recharger_berry": True}, ["envoi", "brrestart"]),
+        (["autoexec.be"], {"redemarrer": False}, ["envoi"]),
+        (["_persist.json", "autoexec.be"], {"redemarrer": False, "recharger_berry": True},
+         ["persist", "envoi", "persist", "rechargement", "brrestart"]),
+        (["_persist.json"], {}, ["persist", "envoi", "persist", "rechargement", "restart", "status", "persist"]),
+    ]
+    for fichiers, options, attendu in cas:
+        with tempfile.TemporaryDirectory() as t:
+            carte = Carte()
+            erreur, _, sauvegardes = envoie_fs(carte, t, fichiers=fichiers, **options)
+            nom = f"ota_fs_partiel {fichiers} {options}"
+            verifie(erreur, None, f"{nom} : envoi sans erreur")
+            verifie(compacte([genre(m, c) for m, c in carte.requetes()]), attendu, f"{nom} : deroule")
+            verifie(sorted(k for k in carte.flash if k != "/_persist.json"),
+                    sorted("/" + f for f in fichiers if f != "_persist.json"), f"{nom} : seuls les fichiers choisis ecrits")
+            avec = "_persist.json" in fichiers
+            verifie((carte.flash["/_persist.json"] == NOUVEAU_PERSIST, len(list(sauvegardes.iterdir()))),
+                    (avec, 1 if avec else 0), f"{nom} : persist remplace et sauvegarde seulement s'il est choisi")
+            carte.ferme()
+    for fichiers, motif in ((["absent.be"], "absents de l'image : absent.be"), ([], "aucun fichier choisi")):
+        with tempfile.TemporaryDirectory() as t:
+            carte = Carte()
+            erreur, _, _ = envoie_fs(carte, t, fichiers=fichiers)
+            verifie((motif in (erreur or ""), carte.requetes()), (True, []),
+                    f"ota_fs_partiel : {fichiers} -> refus, carte non contactee")
+            carte.ferme()
 
 
 def test_ota_fs_sauvegarde():
@@ -743,7 +776,7 @@ def test_par_maitre():
 
 
 def principal():
-    for test in (test_identite_image, test_par_maitre, test_coupe_sleep, test_maitre_lent,test_ota_firmware_deja_en_safeboot, test_ota_fs_ordre, test_ota_fs_sauvegarde, test_ota_fs_persist_injoignable,
+    for test in (test_identite_image, test_par_maitre, test_coupe_sleep, test_maitre_lent,test_ota_firmware_deja_en_safeboot, test_ota_fs_ordre, test_ota_fs_partiel, test_ota_fs_sauvegarde, test_ota_fs_persist_injoignable,
                  test_ota_fs_relecture_differente, test_ota_fs_sous_dossiers, test_ota_fs_referer,
                  test_ota_fs_echec_ufsu, test_ota_fs_pas_de_retour, test_ota_fs_attente_retour,
                  test_ota_fs_persist_reformate, test_ota_fs_progression, test_ota_fs_progression_octets,

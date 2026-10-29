@@ -501,10 +501,11 @@ l'image `littlefs.bin` du buildfs : même résultat que l'OTA complète du FS), 
 créés, persist sauvegardé puis relu, `BR_RECHARGE`, `Restart 1`), `joint_par_maitre` + `coupe_sleep` pour un esclave,
 le verrou d'envoi de `build_serie.py` (jamais pendant un build ni un autre envoi).
 
-- [ ] Conception validée : maquette de l'onglet (carte choisie dans la liste des envs à adresse OTA, bouton « Préparer »
+- [x] Conception validée — preuve : choix de l'utilisateur du 2026-10-29 (maquette C + colonne destinataire de B =
+  maquette E, comparée à A, B, C, D dans le navigateur), spec choix 24. Maquette de l'onglet (carte choisie dans la liste des envs à adresse OTA, bouton « Préparer »
   = buildfs de cet env puis liste des fichiers de l'image, cases à cocher, dossier de destination = celui de l'image,
   options après envoi, suivi et journal comme les autres envois) ; spec complétée (choix 24).
-- [ ] `build_ota_fs.envoie_fs_ota` accepte un SOUS-ENSEMBLE de fichiers et les options après envoi (recharger Berry,
+- [x] `build_ota_fs.envoie_fs_ota` accepte un SOUS-ENSEMBLE — preuve : `test_build_ota_fs::test_ota_fs_partiel` VERT (22 OK : 5 cas de sous-ensemble et d'options, refus d'un fichier absent ou d'une liste vide sans contacter la carte), témoin `test_ota_fs_ordre` (envoi complet) inchangé ; 2 mutants rouges (choix ignoré : 15 KO ; persist toujours sauvegardé : 6 KO) ; test_build_serie et test_build_web VERTS. Persist choisi -> BR_RECHARGE toujours (sinon le System#Save d'un redémarrage réécrirait l'ancien) ; « redémarrer » prime sur « recharger Berry » (`BrRestart`). Énoncé : SOUS-ENSEMBLE de fichiers et les options après envoi (recharger Berry,
   redémarrer) ; sans sous-ensemble, comportement inchangé. Banc `test_build_ota_fs` (sous-ensemble seul envoyé,
   persist non coché -> pas de sauvegarde ni de relecture, options respectées) + témoin.
 - [ ] Serveur : `GET /fichiers?env=` (liste de l'image : chemin, taille, date de l'image, image absente ou plus
