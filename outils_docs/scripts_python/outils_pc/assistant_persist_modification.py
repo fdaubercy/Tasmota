@@ -141,15 +141,22 @@ def _applique_section(fichier, reel, a, b, refus):
 
 def _calcule(racine, env, r):
     """_calcule_brut ; une ValueError de generation (secret du modele sans valeur...) devient un refus.
-    LookupError (pas une carte) remonte : c'est un 404 pour la page."""
+    LookupError (pas une carte) remonte : c'est un 404 pour la page.
+    Point UNIQUE de masquage : refus, avertissements et diff sortent tous d'ici, retours anticipes et repli compris ;
+    `secrets` est rempli des que les mots de passe sont connus (avant toute citation de ligne)."""
+    secrets = set()
     try:
-        return _calcule_brut(Path(racine), env, r)
+        res = _calcule_brut(Path(racine), env, r, secrets)
     except ValueError as exc:
-        return {"env": env, "dossier": fbe.dossier_carte(env), "diff": "", "empreinte": "", "avertissements": [],
-                "refus": [str(exc)], "vide": False, "chemins": []}
+        res = {"env": env, "dossier": fbe.dossier_carte(env), "diff": "", "empreinte": "", "avertissements": [],
+               "refus": [str(exc)], "vide": False, "chemins": []}
+    for cle in ("refus", "avertissements"):
+        res[cle] = [_cache(x, secrets) for x in res[cle]]
+    res["diff"] = _cache(res["diff"], secrets)
+    return res
 
 
-def _calcule_brut(racine, env, r):
+def _calcule_brut(racine, env, r, secrets):
     d = fbe.dossier_carte(env)
     res = {"env": env, "dossier": d, "diff": "", "empreinte": "", "avertissements": [], "refus": [], "vide": False,
            "chemins": []}
@@ -173,7 +180,7 @@ def _calcule_brut(racine, env, r):
     modele = apm.charge_modele(racine)
     va, vb = gen.variables(racine, a), gen.variables(racine, b)
     sa, sb = gen.secrets_reponses(racine, a), gen.secrets_reponses(racine, b)
-    secrets = {x for x in (*sa.values(), *sb.values()) if x}
+    secrets.update(x for x in (*sa.values(), *sb.values()) if x)
     # 3. persist : ecart par chemin JSON, applique dans le texte
     PA, PB = gen.persist(modele, a, va, sa), gen.persist(modele, b, vb, sb)
     ops = texte.ecart(PA, PB)
@@ -258,8 +265,7 @@ def _calcule_brut(racine, env, r):
         res["avertissements"].append(f"id {b.id} deja pris par une autre carte : deux esclaves de meme id se repondent l'un a l'autre")
     diffs = [_diff(f, avant[f], apres[f]) for f in ecritures if f in avant]
     diffs += [_diff(f, [], fbi.decoupe(txt)) for f, txt in squelettes.items()]
-    res["diff"] = _cache("\n".join(x for x in diffs if x), secrets)
-    res["refus"] = [_cache(x, secrets) for x in refus]
+    res["diff"] = "\n".join(x for x in diffs if x)
     res["_ecritures"] = {**ecritures, **{f: txt.encode("utf-8") for f, txt in squelettes.items()}}
     return res
 

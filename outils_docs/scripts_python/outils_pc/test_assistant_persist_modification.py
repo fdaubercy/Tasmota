@@ -270,6 +270,8 @@ def test_modification(t):
     # reseau_change : carte autonome, SSID et mot de passe changent ensemble
     reseau_change(t)
     esclave_range_extender(t)
+    doublon_refuse(t)
+    masquage_unique(t)
 
 
 def reseau_change(t):
@@ -314,7 +316,51 @@ def esclave_range_extender(t):
     res, msg = modifie(racine, ENV, r)
     lignes = [l.strip() for l in lit(racine, d + "/autoexec.be").decode("utf-8").splitlines() if l.strip().startswith("demarrage.")]
     verifie(len(lignes) == len(set(lignes)), True, "rangeExtender esclave : aucune ligne en double dans l'autoexec")
-    verifie(res is not None or msg is not None, True, "rangeExtender esclave : ecrit sans doublon, ou refuse")
+    verifie((res is None, (msg or "").startswith("RuntimeError")), (True, True), "rangeExtender esclave : refuse (RuntimeError)")
+
+
+def doublon_refuse(t):
+    """I2 : une ligne presente UNE fois dans le vrai autoexec (ajoutee a la main) que l'ecart A -> B ajoute encore :
+    refus qui la cite, rien d'ecrit. Prouve par temoin que _doublons est ce qui refuse."""
+    racine = cree_piscine(t, "dbl", [b for b in SANS_RE if b != "historique"])
+    d = fbe.dossier_carte(ENV)
+    chemin = racine / d / "autoexec.be"
+    texte_a = chemin.read_bytes().decode("utf-8")
+    eol = fbc._eol(texte_a)
+    lignes = texte_a.split(eol)
+    lignes.insert(len(lignes) - 1 - lignes[::-1].index("end"), "    demarrage.historique()")
+    chemin.write_bytes(eol.join(lignes).encode("utf-8"))
+    origine = fichiers(racine, ENV)
+    r = replace(reps(racine, ENV), blocs=list(SANS_RE))              # la page coche historique : A -> B l'ajoute
+    p = prepare(racine, ENV, r)
+    verifie(any("serait en double" in x and "demarrage.historique()" in x and d + "/autoexec.be" in x for x in p["refus"]), True,
+            "doublon_refuse : prepare cite le fichier et la ligne")
+    res, msg = modifie(racine, ENV, r)
+    verifie((res, (msg or "").startswith("RuntimeError")), (None, True), "doublon_refuse : modifie -> RuntimeError")
+    verifie(fichiers(racine, ENV), origine, "doublon_refuse : rien d'ecrit")
+
+
+def masquage_unique(t):
+    """I1 : un retour anticipe (section .h introuvable) et le repli sur ValueError masquent aussi les secrets."""
+    racine = cree_piscine(t, "msq", SANS_RE)
+    r = replace(reps(racine, ENV), ip="192.168.0.77")
+    secret = apmod.gen.secrets_reponses(racine, reps(racine, ENV))["mqtt"]
+    verifie(bool(secret), True, "masquage_unique : secret de test present")
+    orig = (apmod.delta.applique_lignes, apmod.fbc._section_h, apmod.gen.persist)
+    try:
+        apmod.delta.applique_lignes = lambda reel, a, b: (reel, [f"replace : lignes absentes :\n  ligne citee {secret} fin"])
+        apmod.fbc._section_h = lambda lignes, define: None                      # retour anticipe apres le refus cite
+        p = prepare(racine, ENV, r)
+        res, msg = modifie(racine, ENV, r)
+        verifie((len(p["refus"]) >= 2, secret in json.dumps(p), secret in (msg or ""), "***" in " ".join(p["refus"])),
+                (True, False, False, True), "masquage_unique : retour anticipe, refus et exception masques")
+        apmod.gen.persist = lambda *a, **k: (_ for _ in ()).throw(ValueError(f"boom {secret}"))     # repli _calcule
+        p = prepare(racine, ENV, r)
+        res, msg = modifie(racine, ENV, r)
+        verifie((secret in json.dumps(p), secret in (msg or ""), "***" in " ".join(p["refus"])), (False, False, True),
+                "masquage_unique : repli ValueError masque")
+    finally:
+        apmod.delta.applique_lignes, apmod.fbc._section_h, apmod.gen.persist = orig
 
 
 def test_rejeu_parc(t):
