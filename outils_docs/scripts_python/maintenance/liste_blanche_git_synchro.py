@@ -25,6 +25,8 @@ def autorise(args):
         return True
     if len(args) == 4 and args[0] == "checkout" and args[1] in ("--ours", "--theirs") and args[2] == "--":
         return True
+    if len(args) >= 5 and args[:2] == ("commit", "-m") and args[3] == "--":    # fichiers coches de l'etape arbre
+        return True
     return (len(args) == 3 and args[:2] == ("add", "--")) or (len(args) == 4 and args[:3] == ("rm", "-q", "--"))
 
 

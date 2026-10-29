@@ -60,6 +60,8 @@ def action_assistant(demande, racine, builds_en_cours):
         raise ValueError(f"{nom} exige confirmation = \"oui\"")
     actions = {"bascule": lambda: f.bascule(racine, builds_en_cours),
                "ff-origin": lambda: f.ff_origin(racine, builds_en_cours),
+               "commite": lambda: f.commite(racine, demande.get("chemins"), str(demande.get("message", "")),
+                                            builds_en_cours),
                "merge": lambda: f.lance_merge(racine, builds_en_cours),
                "resout": lambda: f.resout(racine, chemin, choix, builds_en_cours),
                "ouvre": lambda: f.ouvre(racine, chemin),

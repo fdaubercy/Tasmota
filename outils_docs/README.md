@@ -923,7 +923,9 @@ d'étapes verticale, une seule dépliée à la fois. Après chaque action, tout 
    rebase : à finir au terminal).
 2. **Branche `development`** : bouton « Basculer » si l'arbre est propre.
 3. **Arbre propre** : fichiers modifiés classés — **rouge** « touché aussi par l'amont », « sans recouvrement »,
-   « réécrit par le build ». L'assistant **ne les commite pas** : `/commite`, puis « Revérifier ».
+   « réécrit par le build ». Chaque fichier a une case (toutes cochées au départ) : un message, puis
+   « Commiter la sélection » (`git commit -m <message> -- <fichiers cochés>`, le reste de l'index ne part pas ;
+   accents retirés du message, règle du dépôt). Ou `/commite`, puis « Revérifier ».
 4. **Nouveautés de l'amont** (information) : commits et fichiers touchés.
 5. **Fichiers touchés des deux côtés** (information) : vue trois colonnes base / mon fork / l'amont.
 6. **Prévision du merge** (`git merge-tree`) : sans conflit, ou la liste des fichiers en conflit. Elle choisit la voie.
@@ -943,7 +945,8 @@ Retard nul et rien à pousser : une ligne « fork à jour », les commits d'avan
 
 - `--force`, `stash`, `reset`, `rebase` (le rebase est replié dans la section **Avancé**, à lancer soi-même).
 - Une action sans clic, hormis le fetch ; chaque bouton affiche la commande git exacte.
-- Commiter autre chose que le merge en cours ou le journal.
+- Commiter autre chose que le merge en cours, le journal ou les fichiers cochés à l'étape « Arbre propre » ; jamais
+  de commit pendant un merge.
 - Agir pendant un build (refus, et refus aussi si la détection est impossible), pendant qu'un script tourne, ou sur
   un merge qu'il n'a pas lancé (marque `.git/synchro-fork-assistant`, datée par `MERGE_HEAD`).
 - Tuer un merge en plein vol : un délai dépassé est signalé, rien n'est arrêté.

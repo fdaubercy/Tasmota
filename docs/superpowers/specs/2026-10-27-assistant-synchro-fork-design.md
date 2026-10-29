@@ -56,7 +56,8 @@ opérations ; chaque étape dit pourquoi elle est là, ce qu'elle va faire, et a
 - Un `git push --force`, un `git stash`, un `git reset`, ou un rebase déclenché par l'assistant.
 - Une action qui modifie quelque chose (fetch excepté) sans clic explicite de l'utilisateur.
 - Un merge tué en plein vol, laissant `MERGE_HEAD` sans que la page le montre.
-- Commiter les fichiers de travail de l'utilisateur (règle du dépôt).
+- Commiter les fichiers de travail de l'utilisateur (règle du dépôt) **sans son geste** : depuis le 2026-10-29, à sa
+  demande, l'étape 3 propose de commiter les fichiers qu'il coche, avec son message (§5.2).
 - Annoncer « aucun conflit » sur une prévision qui ne regarde pas le dépôt local réel.
 
 ## 4. Les étapes
@@ -132,7 +133,9 @@ brutes), la classe suivante :
 Les fichiers que le build réécrit (`platformio_override.ini`, `tasmota/user_config_override.h`,
 `lib/libesp32/berry_custom/src/modules.h`, `tasmota/tasmota_defines_for_berry.*`) sont signalés comme
 tels (« réécrit par le build ») : c'est le cas le plus fréquent, et la règle du dépôt dit lesquels se
-commitent (voir `tasks/lessons.md`, 2026-10-13). L'assistant **n'en commite aucun** : il renvoie à
+commitent (voir `tasks/lessons.md`, 2026-10-13). L'assistant **n'en commite aucun de lui-même** (révisé le 2026-10-29, demande de l'utilisateur : une case par
+fichier, toutes cochées au départ, un message, bouton « Commiter la sélection » = `git commit -m <msg> -- <cochés>`,
+chemins pris dans la liste calculée, accents retirés, refus pendant un build ou une opération git) ; sinon il renvoie à
 `/commite`.
 
 ### 5.3 Vue trois colonnes (étape 5 et voie B)
@@ -190,7 +193,7 @@ merge (`synchro_fork_etat.operation_git`) reste en place.
   merge, fichier à lui). Sinon refus 409 « merge étranger » : jamais de `checkout --ours/--theirs` sur
   un merge que l'assistant n'a pas lancé.
 - **Jamais** : `--force`, `stash`, `reset`, `rebase`, `checkout` d'une autre branche que
-  `development`, commit d'un autre fichier que ceux du merge en cours ou du journal.
+  `development`, commit d'un autre fichier que ceux du merge en cours, du journal ou cochés à l'étape 3.
 - Les POST de l'assistant suivent les règles des POST existants : en-tête `X-Synchro: 1`, même
   origine, corps JSON validé, refus 409 si un script tourne ou si une autre action de l'assistant est en
   cours (un verrou).

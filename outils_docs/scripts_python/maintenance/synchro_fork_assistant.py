@@ -188,7 +188,7 @@ def etapes(a):
             liste.append(("branche", "Passer sur development", detail, False, bool(a["fichiers"])))
         if a["fichiers"]:
             liste.append(("arbre", "Arbre de travail propre", f"{len(a['fichiers'])} fichier(s) suivi(s) modifié(s) :"
-                          " bloquée tant qu'ils ne sont pas commités (/commite).", False, True))
+                          " bloquée tant qu'ils ne sont pas commités (ci-dessous, ou /commite).", False, True))
         if retard:
             liste.append(("nouveautes", "Nouveautés de l'amont", f"{retard} commit(s) de retard.", True, False))
             if a["touches_deux"]:

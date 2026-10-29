@@ -3,7 +3,7 @@ chantier: assistant-synchro-fork
 titre: Assistant pas à pas de la page « Synchro du fork » (port 7500)
 statut: actif
 cree: 2026-10-27
-maj: 2026-10-28
+maj: 2026-10-29
 ---
 # Assistant pas à pas de la synchro du fork — plan d'implémentation
 
@@ -262,6 +262,13 @@ Comportement :
 
 - [ ] Page lancée par l'utilisateur (tâche « Outil : synchro du fork »), dry-run sur le vrai dépôt : l'assistant montre les étapes attendues pour l'état du jour. Au 2026-10-27 : 2 commits de retard, prévision sans conflit ; l'arbre sale bloque tant que les fichiers du build ne sont pas commités.
 - [ ] Après accord de l'utilisateur seulement : voie A jusqu'à la question « Pousser ? », à laquelle **l'utilisateur** répond. Résultat noté ici.
+
+## A7 — Commit depuis l'étape « Arbre propre » (demande du 2026-10-29)
+
+- [x] `synchro_fork_fusion.commite` + action `commite` de `/assistant/action` + liste blanche (`commit -m <msg> -- <chemins>`). — preuve : test_synchro_fork_fusion_suite.py vert (commite_selection, commite_refus), test_synchro_fork_web.py VERT
+- [x] Page : une case par fichier (cochée), champ message, bouton « Commiter la sélection (N) ». — preuve : sonde Chrome VERT (45 OK, 6 verifs du commit depuis la page, 2 temoins rouges)
+- [x] Bancs : `test_synchro_fork_fusion_suite.py` (cas commite_selection, commite_refus), sonde Chrome (commit depuis la page). — preuve : bancs fusion, fusion_suite, assistant, web, sonde verts le 2026-10-29
+- [x] README et spec (§3, §5.2, §7) révisés ; commit. — preuve : verifie_references_docs 0 defaut ; commit fix(synchro-fork) du 2026-10-29
 
 ## Améliorations restantes
 

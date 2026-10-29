@@ -364,7 +364,20 @@ def sonde_page(m):
     verifie(bool(attend(cdp, "!!document.querySelector('#assistant li[data-etape=\"arbre\"] pre[data-diff-arbre]') && "
                              "document.querySelector('pre[data-diff-arbre]').textContent.includes('+sale')", 15)),
             True, "arbre : clic sur le chemin -> diff du fichier dans l'étape")
-    subprocess.run(["git", "checkout", "--", "a.txt", "dossier é/fichier x.txt"], cwd=m.travail, check=True, capture_output=True)
+    # commit depuis la page : a.txt decoche, message tape (accents retires), seul le fichier sans recouvrement part
+    verifie(cdp.js("document.querySelectorAll('#assistant input[data-coche]:checked').length"), 2, "arbre : tout coché par défaut")
+    cdp.js("document.querySelector('#assistant input[data-coche=\"a.txt\"]').click()")
+    cdp.js("(() => { const i = document.getElementById('messageCommit'); i.value = 'fix: sonde é';"
+           " i.dispatchEvent(new Event('input', {bubbles: true})); })()")
+    verifie(cdp.js(clique("Commiter la sélection (1)", ASSISTANT)), True, "arbre : bouton « Commiter la sélection (1) »")
+    verifie(bool(attend(cdp, "document.getElementById('assistantMessage').textContent.startsWith('Commité')", 15)), True,
+            "arbre : commit annoncé dans la page")
+    journal = subprocess.run(["git", "-c", "core.quotePath=false", "log", "-1", "--format=%s", "--name-only"], cwd=m.travail, capture_output=True,
+                             text=True, encoding="utf-8").stdout.split()
+    verifie(journal, ["fix:", "sonde", "e", "dossier", "é/fichier", "x.txt"], "arbre : seul le fichier coché est commité")
+    verifie(cdp.js("[...document.querySelectorAll('#assistant input[data-coche]')].map(c => c.dataset.coche)"), ["a.txt"],
+            "arbre : reste a.txt, toujours bloquée")
+    subprocess.run(["git", "checkout", "--", "a.txt"], cwd=m.travail, check=True, capture_output=True)
     verifie(cdp.js(clique("Revérifier", ASSISTANT)) or cdp.js(clique("Réanalyser", ASSISTANT)), True, "arbre rendu propre : nouvelle analyse")
     # 1. Diagnostic -> assistant, fusion_b courante
     verifie(bool(attend(cdp, etape("fusion_b", "courante"), 25)), True, "diagnostic : #assistant avec fusion_b courante")

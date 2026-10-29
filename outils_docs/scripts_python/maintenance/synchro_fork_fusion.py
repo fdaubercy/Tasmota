@@ -8,7 +8,8 @@ Garde-fous (spec docs/superpowers/specs/2026-10-27-assistant-synchro-fork-design
   date de MERGE_HEAD, commits a noter au journal) ; resolution et fin du merge reverifient a CHAQUE appel branche
   development et marque = merge en cours, sinon refus « merge étranger » ;
 - seules commandes git qui ecrivent : switch development, merge (--ff-only, --no-ff --no-commit, --abort),
-  checkout --ours/--theirs, add, rm, commit --no-edit, push origin development (liste blanche verifiee au banc).
+  checkout --ours/--theirs, add, rm, commit --no-edit, commit -m <msg> -- <fichiers coches>, push origin
+  development (liste blanche verifiee au banc).
   Aucun forcage, aucune reecriture d'historique ; aucun delai sur les commandes qui ecrivent (jamais de kill d'un
   git en plein vol) ; chemins toujours litteraux (--literal-pathspecs : `a[1].txt` n'est pas un motif).
 
@@ -20,9 +21,11 @@ import os
 import re
 import shutil
 import subprocess
+import unicodedata
 from pathlib import Path
 
 import synchro_fork_assistant as asst
+import synchro_fork_etat as sfe
 import synchronise_fork_tasmota as sft
 
 MARQUE = "synchro-fork-assistant"
@@ -235,6 +238,26 @@ def ff_origin(racine, builds_en_cours):
     _verifie_branche(racine)
     _verifie_propre(racine)
     return _git_ok(racine, "merge", "--ff-only", "origin/development")
+
+
+def commite(racine, chemins, message, builds_en_cours):
+    """Etape « arbre » : commite les fichiers cochés dans la page. `git commit -- <chemins>` ignore le reste de
+    l'index ; chaque chemin doit etre dans la liste des fichiers modifies (jamais un chemin libre), journal exclu
+    (il a son etape). Jamais pendant un merge : le commit emporterait le merge a moitie resolu."""
+    _verifie_build(builds_en_cours)
+    _verifie_sans_operation(racine)
+    if not isinstance(chemins, list) or not chemins or not all(isinstance(c, str) for c in chemins):
+        raise ValueError("aucun fichier coché")
+    # Regle du depot : messages sans accents (precedent d'encodage casse) ; « é » devient « e ».
+    message = unicodedata.normalize("NFKD", str(message)).encode("ascii", "ignore").decode().strip()
+    if not message:
+        raise ValueError("message de commit vide")
+    modifies = {f["chemin"] for f in sfe.fichiers_modifies(racine)[0] if not f["journal"]}
+    hors = [c for c in chemins if c not in modifies]
+    if hors:
+        raise ValueError(f"fichier(s) absent(s) de la liste des fichiers modifiés : {', '.join(hors[:5])}")
+    _git_ok(racine, "commit", "-m", message, "--", *dict.fromkeys(chemins))
+    return "Commité : " + _git_ok(racine, "log", "-1", "--format=%h %s")
 
 
 def _ecrit_marque(racine, marque):

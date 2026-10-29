@@ -46,6 +46,9 @@ const NOTES = {UU:"modifié des deux côtés", AA:"ajouté des deux côtés", DD
   DU:"supprimé chez moi, modifié dans l'amont", UD:"modifié chez moi, supprimé dans l'amont",
   AU:"ajouté chez moi seulement", UA:"ajouté dans l'amont seulement"};
 let diffArbre = null, analyseCourante = null, occupe = false, confirmationEn = "", lancementPropre = null, assistantTeste = false;
+// etape « arbre » : tout est coche par defaut ; decoches et message survivent aux re-rendus (innerHTML)
+let decoches = new Set(), messageCommit = "";
+const coches = a => a.fichiers.map(f => f.chemin).filter(c => !decoches.has(c));
 
 function bouton(libelle, commande, attrs, classe){
   const inactif = occupe || enCours ? " disabled" : "";
@@ -104,10 +107,12 @@ function corpsEtape(e, a){
     case "operation": return a.operation === "merge" ? boutonConfirme("abandonne", "Abandonner le merge", "git merge --abort") : "";
     case "branche": return actif || e.statut === "bloquee" ? bouton("Basculer sur development", "git switch development",
       'data-action="bascule"' + (a.fichiers.length ? " disabled" : "")) : "";
-    case "arbre": return liste(a.fichiers.map(f => `<span class="sha">${echappe(f.etat)}</span> <button class="lien" data-diff="${echappe(f.chemin)}">${echappe(f.chemin)}</button> `
+    case "arbre": return liste(a.fichiers.map(f => `<input type="checkbox" data-coche="${echappe(f.chemin)}"${decoches.has(f.chemin) ? "" : " checked"}> <span class="sha">${echappe(f.etat)}</span> <button class="lien" data-diff="${echappe(f.chemin)}">${echappe(f.chemin)}</button> `
       + (f.classe === "amont" ? '<span class="r" data-classe="amont">touché aussi par l\'amont</span>' : '<span class="doux" data-classe="libre">sans recouvrement</span>')
       + (f.build ? ' <span class="doux">(réécrit par le build)</span>' : "")))
       + (diffArbre && a.fichiers.some(f => f.chemin === diffArbre.chemin) ? `<pre data-diff-arbre="1">${diffHtml(diffArbre.texte)}</pre>` : "")
+      + `<div class="act"><input type="text" id="messageCommit" size="48" value="${echappe(messageCommit)}" placeholder="fix: titre du commit (accents retirés)"></div>`
+      + bouton(`Commiter la sélection (${coches(a).length})`, `git commit -m "<message>" -- <${coches(a).length} fichier(s) coché(s)>`, 'data-commite="1"', "principal")
       + bouton("Revérifier", "git status --porcelain", 'data-reanalyse="1"');
     case "nouveautes": return a.commits.length ? `<details><summary>${a.commits.length} commit(s) de l'amont</summary>`
       + liste(a.commits.map(c => `<span class="${c.saillant ? "saillant" : ""}">${c.saillant ? "● " : ""}<span class="sha">${echappe(c.sha)}</span> ${echappe(c.titre)}</span>`)) + "</details>" : "";
@@ -157,6 +162,7 @@ async function agit(corps){
   try {
     const r = await poste("/assistant/action", corps);
     message(r.resultat, "ok"); analyseCourante = r.analyse; chargeEtat();
+    if (corps.action === "commite") { messageCommit = ""; decoches.clear(); }
   } catch (err) { message(err.message, "erreur"); }
   occupe = false; rendAssistant();
 }
@@ -187,7 +193,15 @@ $("assistant").onclick = ev => {
   else if (d.reanalyse) chargeAssistant();
   else if (d.journal) commiteJournal();
   else if (d.lance) lance("merge", false);
+  else if (d.commite) agit({action: "commite", chemins: coches(analyseCourante), message: messageCommit});
   else if (d.action) agit({action: d.action, chemin: d.chemin, choix: d.choix, confirmation: d.confirme});
+};
+$("assistant").oninput = ev => { if (ev.target.id === "messageCommit") messageCommit = ev.target.value; };
+$("assistant").onchange = ev => {
+  const c = ev.target.dataset && ev.target.dataset.coche;
+  if (c === undefined) return;
+  if (ev.target.checked) decoches.delete(c); else decoches.add(c);
+  rendAssistant();                                                  // compte du bouton
 };
 // Les evenements du flux sont rejoues a chaque ouverture de la page : seuls comptent les lancements faits ICI.
 const posteBase = poste;
