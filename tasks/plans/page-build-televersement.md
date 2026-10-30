@@ -555,7 +555,9 @@ le verrou d'envoi de `build_serie.py` (jamais pendant un build ni un autre envoi
   des étapes (événements `etape` de l'action « fichiers » : étape, %, détail « 3/5 /controleCuve.be »), sans passer
   par l'onglet Build.
 - [x] Doc : README § Build et téléversement, CLAUDE.md (tailles) ; `verifie_references_docs` sans défaut. — preuve : `outils_docs/README.md` § « Onglet « Fichiers » : envoyer quelques fichiers du FS » ; CLAUDE.md (build_page 1153, test_build_web 721, `build_page_fichiers.py`, sonde) ; `verifie_references_docs.py` : 18 documents, 0 défaut.
-- [ ] Essai réel par l'utilisateur : un fichier `.be` vers le maître, puis vers la cuve par le maître.
+- [x] Essai réel par l'utilisateur : un fichier `.be` vers le maître, puis vers la cuve par le maître. — preuve : validé
+  par l'utilisateur le 2026-10-30 (« tu peux également cocher la dernière étape de A15 ») ; `/autoexec.be` des deux
+  cartes identique au dépôt (MD5 56637B4E…, E60F6778…), voir l'essai A16 du même jour.
 
 ## Améliorations restantes
 
