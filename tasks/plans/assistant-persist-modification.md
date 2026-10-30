@@ -4,7 +4,7 @@ titre: Assistant persist — reprendre, modifier et supprimer un env existant (A
 objectif: Reprendre un env existant dans la page 7900 pour le modifier sans perdre ses retouches, ou le supprimer après vérification
 statut: actif
 cree: 2026-10-29
-maj: 2026-10-29
+maj: 2026-10-30
 ---
 # Assistant persist — modification et suppression d'un env (A10)
 
@@ -70,7 +70,10 @@ Interfaces produites :
   Valeurs écrites par `json.dumps(v, indent=<indent détecté>, ensure_ascii=False)`, réindentées à la profondeur.
 - `ecart_applicable(texte, operations) -> list[str]` : chemins dont le parent n'existe pas dans le texte.
 
-- [ ] Banc rouge `test_assistant_persist_texte.py` (modèle `ECHECS`/`verifie`/`principal`) :
+- [x] Banc rouge `test_assistant_persist_texte.py` (modèle `ECHECS`/`verifie`/`principal`) — preuve : banc commité
+  (dee32c576), complété aux rondes 1-2 (5351e2099, 103a3f1f6) ; `vrais_persists` remplacé par un vrai aller-retour
+  (retrait/ré-ajout et remplace/inverse de feuilles, objets compacts compris, octets identiques) — relecture du 2026-10-29 :
+  
   - `remplace_chaine`, `remplace_nombre`, `remplace_liste` : seuls les octets de la valeur changent (comparaison du
     texte avant/après hors de l'intervalle de la valeur) ;
   - `ajoute_tab_crlf`, `ajoute_4_espaces_lf` : indentation et fins de ligne du fichier respectées, `json.loads` OK ;
@@ -79,10 +82,15 @@ Interfaces produites :
   - `aller_retour` : `applique(applique(t, ecart(a, b)), ecart(b, a)) == t` ;
   - `accents` : `"é"` gardé non échappé ;
   - `vrais_persists` : pour chaque `data/*/*/_persist.json` (lecture seule), `applique(t, []) == t`.
-- [ ] Lancer : ROUGE (module absent).
-- [ ] Écrire le module (< 250 lignes), sur `fbcp._membres`.
-- [ ] Lancer : VERT.
-- [ ] Commit `feat(assistant-persist): ecart et edition d'un JSON dans son texte (A10)`.
+- [x] Lancer : ROUGE (module absent). — preuve : ModuleNotFoundError, code 1 (rapport SDD de A2) ; rondes : `too many
+  values to unpack`, `KO compact : retire puis ajoute octets identiques`.
+- [x] Écrire le module (< 250 lignes), sur `fbcp._membres`. — preuve : `assistant_persist_texte.py` ; interface amendée
+  (décision du 2026-10-29) : opérations `(chemin, op, valeur, apres)`, « remplace » garde la forme (compacte ou
+  indentée), « ajoute » se pose après sa sœur `apres` (en tête si None, fin d'objet à défaut), objets compacts gérés.
+- [x] Lancer : VERT. — preuve : banc code 0, 0 échec (~20 s), 9 vrais persists en aller-retour octet pour octet.
+- [x] Commit `feat(assistant-persist): ecart et edition d'un JSON dans son texte (A10)`. — preuve : dee32c576 +
+  correctifs 5351e2099, 103a3f1f6 ; relecture de tâche close.
+  Limite acceptée : un bloc objet entier retiré puis ré-ajouté est réécrit en indentation uniforme (forme mixte perdue).
 
 ## A3 — Écart ligne à ligne (`assistant_persist_delta.py`)
 
@@ -94,16 +102,21 @@ Interface produite :
   suit. Renvoie `(nouvelles lignes, blocs non appliqués en texte)`. Comparaison sur `rstrip()` : espaces de fin et
   `\r` ignorés.
 
-- [ ] Banc rouge `test_assistant_persist_delta.py` :
+- [x] Banc rouge `test_assistant_persist_delta.py` — preuve : 8562fdf14, complété aux rondes c11b87071, a7f52880e
+  (ancre banale, précédente absente, vrai autoexec et section `.h` réelle en lecture seule) :
   - `ecart_vide` : `a == b` → `reel` rendu tel quel, aucun bloc ;
   - `ligne_ajoutee_a_la_main_gardee` : une ligne de `reel` absente de `a` survit ;
   - `insert_apres`, `insert_en_tete`, `delete`, `replace` ;
   - `bloc_introuvable` et `bloc_ambigu` (lignes présentes deux fois) → non appliqués, cités ;
   - `aller_retour` sur une section `.h` réelle (lecture seule).
-- [ ] Lancer : ROUGE.
-- [ ] Écrire le module (< 120 lignes).
-- [ ] Lancer : VERT.
-- [ ] Commit `feat(assistant-persist): ecart ligne a ligne d'un fichier genere (A10)`.
+- [x] Lancer : ROUGE. — preuve : ModuleNotFoundError (rapport SDD de A3) ; rondes : 4 puis 1 échec avant correction.
+- [x] Écrire le module (< 120 lignes). — preuve : `assistant_persist_delta.py`, 63 lignes. Ancre d'un insert
+  (décision du 2026-10-29) : ligne précédente unique -> après ; absente -> refus ; ambiguë -> paire précédente+suivante,
+  puis suivante seule, sinon refus.
+- [x] Lancer : VERT. — preuve : banc 24 OK, code 0.
+- [x] Commit `feat(assistant-persist): ecart ligne a ligne d'un fichier genere (A10)`. — preuve : 8562fdf14 +
+  correctifs c11b87071, a7f52880e ; relecture de tâche close. À la charge de A5 : fins de ligne de `b` alignées
+  sur `reel`, lignes citées par un refus masquées.
 
 ## A4 — Charger un env existant (`assistant_persist_modification.py`, partie 1)
 
@@ -116,15 +129,17 @@ Interfaces produites :
 - `charge_env(racine, env) -> dict` : `{env, reponses (asdict, sans secret), reglages_propres: int, avertissements}`
   ; `reglages_propres` = nombre de chemins où le vrai persist diffère de A (conservés à la modification).
 
-- [ ] Banc rouge `test_assistant_persist_modification.py`, groupe « charge » :
+- [x] Banc rouge `test_assistant_persist_modification.py`, groupe « charge » — preuve : a41354906 (22 vérifications ;
+  esclave : le bloc `rangeExtender` n'est pas relu, voulu en A1, sans effet sur le persist) :
   - `cartes_du_parc` : les cartes du dépôt d'essai, pas les bases ;
   - `charge_carte_creee` : une carte créée par `apc.cree` se recharge avec les mêmes réponses (champs saisis) ;
   - `charge_inconnu` → `LookupError` ; `charge_persist_casse` → `ValueError` sans valeur secrète dans le message ;
   - `aucun_secret` : le témoin secret du dépôt d'essai n'apparaît pas dans `json.dumps(charge_env(...))`.
-- [ ] Lancer : ROUGE.
-- [ ] Écrire la partie 1.
-- [ ] Lancer : VERT.
-- [ ] Commit `feat(assistant-persist): chargement d'un env existant (A10)`.
+- [x] Lancer : ROUGE. — preuve : ModuleNotFoundError (rapport SDD de A4).
+- [x] Écrire la partie 1. — preuve : `assistant_persist_modification.py`, 82 lignes.
+- [x] Lancer : VERT. — preuve : banc code 0 ; `test_assistant_persist_creation.py` vert, attentes inchangées.
+- [x] Commit `feat(assistant-persist): chargement d'un env existant (A10)`. — preuve : a41354906 ; relecture de tâche
+  close sans correction.
 
 ## A5 — Préparer et écrire une modification (`assistant_persist_modification.py`, partie 2)
 
@@ -151,7 +166,8 @@ Calcul (`_calcule(racine, env, r)`) :
 10. Empreinte : sha256 de cenv, `.h`, modèle, persist, autoexec, env, `asdict(r)` triés.
 Écriture : `fbs.Transaction(racine, "modification-assistant")`, `tr.ecrit` des seuls fichiers changés.
 
-- [ ] Banc rouge, groupe « modification » (dépôt d'essai, carte créée par `apc.cree`) :
+- [x] Banc rouge, groupe « modification » (dépôt d'essai, carte créée par `apc.cree`) — preuve : 3f062a0e9, complété
+  en eb3798865 (`masquage_unique`, `doublon_refuse`, `esclave_range_extender`) :
   - `rien_change_ecart_vide` : `vide` vrai, `modifie` → `ValueError` ;
   - `rejeu_parc_ecart_vide` : chaque carte du vrai parc copiée dans le dépôt d'essai, chargée puis préparée sans
     changement → `vide` vrai (sinon le chemin fautif est affiché, sans valeur) ;
@@ -167,10 +183,16 @@ Calcul (`_calcule(racine, env, r)`) :
   - `empreinte_perimee`, `build_en_cours`, `build_inconnu` → `RuntimeError` ;
   - `metier_nouveau_squelettes`, `fichier_existant_non_ecrase` ;
   - `aucun_secret` dans toute sortie (diff, refus, erreurs).
-- [ ] Lancer : ROUGE.
-- [ ] Écrire la partie 2 (module total < 500 lignes, sinon le signaler).
-- [ ] Lancer : VERT, et les bancs `test_assistant_persist_*.py` et `test_fichiers_berry_*.py` : VERT.
-- [ ] Commit `feat(assistant-persist): modification d'un env existant par ecart (A10)`.
+- [x] Lancer : ROUGE. — preuve : AttributeError (pas de `prepare_modification`), rapport SDD de A5 ; ronde 1 : rouge sur
+  copie de HEAD, témoin `_doublons` neutralisé -> 5 KO.
+- [x] Écrire la partie 2 (module total < 500 lignes, sinon le signaler). — preuve : module ~300 lignes ; masquage en un
+  point unique (`_calcule`) ; ligne qui deviendrait double -> refus (décision du 2026-10-29, carte esclave et
+  `rangeExtender`).
+- [x] Lancer : VERT, et les bancs `test_assistant_persist_*.py` et `test_fichiers_berry_*.py` : VERT. — preuve : tous
+  code 0 (3f062a0e9) ; rejeu du parc : 9 cartes à écart vide, aucune exclue, P4/cuve/rideau compris ; banc modification
+  vert après eb3798865 (seul importeur du module).
+- [x] Commit `feat(assistant-persist): modification d'un env existant par ecart (A10)`. — preuve : 3f062a0e9 + correctif
+  eb3798865 ; relecture de tâche close.
 
 ## A6 — Routes du serveur (`assistant_persist_web.py`)
 
@@ -183,13 +205,18 @@ Calcul (`_calcule(racine, env, r)`) :
 | POST `/suppression/prepare` | `{env}` | `fbx.prepare_suppression` + `elements` (liste lisible : section du cenv, section du `.h` et define, `default_envs`/`data_dir`, dossier → nom `-sauvegarde`) |
 | POST `/suppression` | `{env, empreinte}` | `fbx.supprime(..., builds_en_cours)` ; 409 |
 
-- [ ] Banc rouge (ajouts à `test_assistant_persist_web.py`) : chaque route sur le dépôt d'essai ; 404/400/409 ;
-  en-tête POST manquant → 403 ; aucun mot de passe réel dans aucune réponse, erreurs comprises ; suppression : dossier
-  renommé, section du cenv et du `.h` retirées.
-- [ ] Lancer : ROUGE.
-- [ ] Ajouter les routes (`assistant_persist_web.py` < 500 lignes).
-- [ ] Lancer : VERT.
-- [ ] Commit `feat(assistant-persist): routes de modification et de suppression (A10)`.
+- [x] Banc rouge (ajouts à `test_assistant_persist_web.py`) — preuve : 6e0cbd584, complété en db707928c et b976cd08c
+  (IndexError en 500, base et env inconnu refusés avec dépôt inchangé par instantané complet) : chaque route sur le
+  dépôt d'essai ; 404/400/409 ; en-tête POST manquant → 403 ; aucun mot de passe réel dans aucune réponse, erreurs
+  comprises ; suppression : dossier renommé, section du cenv et du `.h` retirées.
+- [x] Lancer : ROUGE. — preuve : 6 échecs (rapport SDD de A6) ; rondes : 5 échecs, puis témoin `_carte_de` neutralisé
+  -> 4 échecs.
+- [x] Ajouter les routes (`assistant_persist_web.py` < 500 lignes). — preuve : 426 lignes ; suppression réservée aux
+  cartes du parc, sinon 404 renvoyant à la page 7800 (décision du 2026-10-29).
+- [x] Lancer : VERT. — preuve : `test_assistant_persist_web.py` code 0 ; `_modification` et `test_fichiers_berry_suppression`
+  code 0 (6e0cbd584). Une passe isolée rouge de `test_post_securite`, non reproduite (3 relances vertes).
+- [x] Commit `feat(assistant-persist): routes de modification et de suppression (A10)`. — preuve : 6e0cbd584 +
+  correctifs db707928c, b976cd08c ; relecture de tâche close.
 
 ## A7 — La page : mode modification et suppression vérifiée
 
@@ -205,23 +232,31 @@ Comportement (spec §10.4) :
   diff masqué ; case « J'ai vérifié ces éléments » → active « Supprimer » ; après succès, retour au mode création
   et `cartes` relu.
 
-- [ ] Sonde Chrome rouge (`test_assistant_persist_page_chrome.py`, aucun envoi réel hors dépôt d'essai) :
+- [x] Sonde Chrome rouge `test_assistant_persist_page_chrome.py` — preuve : b4912f189 (création, modification puis
+  suppression réelles dans le dépôt d'essai ; aucun envoi réel hors dépôt d'essai) :
   - `charger_env` : champs remplis, lieu/nom/puce/base désactivés, bouton « Modifier l'environnement » ;
   - `diff_reactive_apres_creation` : créer, changer un paramètre → « Voir le diff » actif ;
   - `libelle_si_existe` : saisir lieu/nom d'une carte → libellé « Modifier », bandeau visible ;
   - `suppression_verifiee` : « Supprimer » désactivé tant que la case n'est pas cochée ; éléments listés ;
   - `temoin_id_casse` : le témoin existant reste rouge si un id DOM manque.
-- [ ] Lancer : ROUGE.
-- [ ] Écrire `assistant_persist_page_js_env.py` et les retouches (`_page.py`, `_page_js.py` < 500 lignes chacun).
-- [ ] Lancer : VERT, plus tous les bancs `test_assistant_persist_*.py`.
-- [ ] Commit `feat(assistant-persist): page en mode modification et suppression verifiee (A10)`.
+- [x] Lancer : ROUGE. — preuve : 30 KO avant le code (rapport SDD de A7).
+- [x] Écrire `assistant_persist_page_js_env.py` — preuve : 119 lignes ; retouches `_page.py` 195 et `_page_js.py` 397
+  lignes (< 500 chacun) ; un seul mécanisme d'appel (`api()`), aucun `innerHTML`.
+- [x] Lancer : VERT, plus tous les bancs `test_assistant_persist_*.py`. — preuve : sonde 112 OK, code 0 ; les 10 bancs
+  `test_assistant_persist_*.py` code 0.
+- [x] Commit `feat(assistant-persist): page en mode modification et suppression verifiee (A10)`. — preuve : b4912f189 ;
+  relecture de tâche close sans correction.
 
 ## A8 — Documentation, relecture, fumée réelle
 
-- [ ] `outils_docs/README.md` § « Assistant persist » : charger, modifier, supprimer ; limites (lignes retouchées).
-- [ ] `CLAUDE.md` (carte des documents : modules neufs, A10 fait) et `.claude/skills/bancs/SKILL.md` (bancs neufs).
-- [ ] `verifie_references_docs.py` : code 0.
-- [ ] Relecture finale de la branche (modèle le plus capable), corrections.
+- [x] `outils_docs/README.md` — preuve : 0d72c8d7f, phrase de chargement corrigée contre le code en f68fdeae2 ;
+  § « Assistant persist » : charger, modifier, supprimer ; limites (lignes retouchées).
+- [x] `CLAUDE.md` et `.claude/skills/bancs/SKILL.md` — preuve : 0d72c8d7f ; carte des documents (modules neufs, A10
+  fait) et bancs neufs.
+- [x] `verifie_references_docs.py` : code 0. — preuve : « 18 document(s), 0 defaut(s) », code 0 (0d72c8d7f, puis f68fdeae2).
+- [x] Relecture finale de la branche (modèle le plus capable), corrections. — preuve : relecture sur Sonnet (Opus limité
+  jusqu'au 2026-10-30 13 h) « avec corrections » ; vague f68fdeae2 (secrets masqués du plus long au plus court, rejeu
+  du parc avec une vraie modification d'IP) re-relue : 5/5 traités.
 - [ ] Fumée réelle **avec l'utilisateur** sur `tasmota32p4-cellier-controleur` : charger, ajouter un bloc, compiler
   par la page 7700, puis supprimer par la page 7900 en vérifiant chaque élément listé.
 - [ ] Plan `assistant-persist.md` : A10 coché avec renvoi à ce plan.
