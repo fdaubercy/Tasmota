@@ -48,7 +48,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
     //  #warning *** ------------------- Le fichier 'user_config_override.ini' est appele ------------------- ***
     #if defined(CFG_HOLDER) && (CFG_HOLDER == 4617)
         #undef CFG_HOLDER
-		#define CFG_HOLDER 		1579			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
+		#define CFG_HOLDER 		1582			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
 
         // #pragma message(*** ------------------- Les paramètres flash seront remplacés ! ------------------- ***)
     #else
@@ -1736,7 +1736,14 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #ifndef DISABLE_REFERER_CHK
                 #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
             #endif
-        
+            // -- Wi-Fi jamais en veille modem (SetOption127 1), ajoute le 2026-10-30 : avec la veille (Sleep 50), le
+            //    Wi-Fi du P4 (coprocesseur C6) perdait 27 a 35 % des pings (moyenne ~0,7 s, envois MQTT expires) ;
+            //    sans elle 0 %, 43 ms, Sleep 50 garde. CFG_HOLDER change a chaque build : la commande seule serait perdue.
+            #ifdef WIFI_NO_SLEEP
+                #undef WIFI_NO_SLEEP
+            #endif
+            #define WIFI_NO_SLEEP       true                    // [SetOption127] Keep Wifi in no-sleep mode
+
             // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------
             // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino
             // #define FILE_LOG_SIZE       100
