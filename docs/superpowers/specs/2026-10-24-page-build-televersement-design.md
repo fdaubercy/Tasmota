@@ -446,8 +446,9 @@ L'utilisateur a passé les questions de conception (« passons ») : tout ce qui
 28. **Côté PC** : `build_ota_mqtt.py::envoie_fs_mqtt`, même signature que `envoie_fs_ota` (mêmes `fichiers=`,
     `recharger_berry=`, `redemarrer=`, plus `effacer=`), client `client_mqtt.py`, broker de
     `user_config_override.h` (`sniffeur_mqtt.lit_config_broker`). Même déroulé que l'HTTP : identité de l'image
-    vérifiée, persist de la carte sauvegardé (par `lit`) s'il part, envoyé en dernier, `recharge` toujours s'il
-    part, puis `redemarre` ou `berry`. Esclave du range extender : rien de spécial (sortie NAPT du maître vers le
+    vérifiée, persist de la carte sauvegardé (par `lit`) s'il part, envoyé en dernier (en PREMIER après un
+    `efface`, révisé le 2026-10-30 : l'essai réel a échoué au fichier 27/31 après formatage, laissant le P4 sans
+    persist), `recharge` toujours s'il part, puis `redemarre` ou `berry`. Esclave du range extender : rien de spécial (sortie NAPT du maître vers le
     broker, sans redirection ni `Sleep 0`). Avancement : un `%` par fichier et global, comme l'HTTP.
     Pas de relecture du persist après redémarrage (la carte le réécrit à son démarrage : différence toujours
     signalée, A11). Onglet : choix « HTTP / MQTT » dans les options, case « Effacer tout le FS avant l'envoi »

@@ -223,6 +223,12 @@ def test_options_et_effacement():
                 True, "effacer : persist sauvegarde AVANT l'effacement, envoi APRES")
         eff = [e["pourcent"] for e in etapes if e["etape"] == bm.ETAPE_EFFACEMENT]
         verifie((eff[0], eff[-1]), (0, 100), "effacer : avancement 0 -> 100 %")
+        envois = [e["detail"] for e in etapes if e["etape"] == bm.ETAPE_ENVOI]
+        verifie(envois[0], f"1/{len(IMAGE)} /_persist.json",
+                "effacer : persist envoye JUSTE APRES le formatage (un echec ensuite laisse la carte avec son persist)")
+        r, etapes = envoie(Carte(), image(t), Path(t) / "s")
+        verifie([e["detail"] for e in etapes if e["etape"] == bm.ETAPE_ENVOI][-2], f"{len(IMAGE)}/{len(IMAGE)} /_persist.json",
+                "sans effacer : temoin, persist toujours en dernier")
 
 
 def principal():

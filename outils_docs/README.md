@@ -651,7 +651,9 @@ est solidifié dans le socle (toutes les cartes, firmware recompilé) et chargé
 fsmqtt/<topic> ») et rien n'est envoyé.
 
 **Effacer tout le FS avant l'envoi** (MQTT seulement, confirmation) : la carte FORMATE son FS (`path.format`,
-persist et autoexec compris ; `/sd` de la flash aussi), puis toute l'image est envoyée. Le module, solidifié, survit.
+persist et autoexec compris ; `/sd` de la flash aussi), puis toute l'image est envoyée, **persist en premier** (sans
+effacement, il part en dernier) : un échec en cours d'envoi laisse au moins à la carte son persist, celui de l'image ;
+celui d'avant reste dans la sauvegarde faite par la page. Le module, solidifié, survit.
 Le formatage bloque la carte : s'il dépasse les 5 s du watchdog de la boucle, elle redémarre avec un FS vide, donc
 sans autoexec ni Berry : la reprendre en HTTP (cet onglet) ou par câble. Idem si elle redémarre entre les deux. Bancs :
 `berry/banc_fsmqtt.py` (module), `outils_pc/test_build_ota_mqtt.py` (PC) ; aucun essai sur carte à ce jour.

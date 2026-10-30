@@ -187,6 +187,8 @@ def envoie_fs_mqtt(env, topic, dossier_fs, sauvegardes, rapporte, *, fichiers=No
         raise RuntimeError(f"{ETAPE_EFFACEMENT} : effacer le FS demande d'envoyer l'image ENTIÈRE (persist compris) ; "
                            "rien n'a été envoyé")
     fichiers, _ = _inventaire(dossier_fs, fichiers)
+    if effacer:                 # apres un formatage, plus de persist d'origine a preserver : le poser d'abord
+        fichiers = [PERSIST] + [f for f in fichiers if f != PERSIST]
     avec_persist = PERSIST in fichiers
     rapporte({"etape": ETAPE_CONNEXION_MQTT, "pourcent": None, "detail": f"fsmqtt/{topic}"})
     try:
