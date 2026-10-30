@@ -77,7 +77,7 @@ def builds_en_cours():
          "$t = Get-Date; Get-CimInstance Win32_Process -Filter \"Name='pio.exe' OR Name='platformio.exe' OR "
          "Name='python.exe'\" | ForEach-Object { $a = if ($_.CreationDate) { [int]($t - $_.CreationDate).TotalSeconds } "
          "else { -1 }; \"$a`t$($_.CommandLine)\" }"],
-        capture_output=True, text=True, timeout=10)
+        capture_output=True, text=True, timeout=30)    # 9 a 10,5 s mesures le 2026-10-30 (PC charge) : 10 ne suffisait plus
     if ps.returncode != 0:
         return None
     return analyse_commandes(lit_processus(ps.stdout))
