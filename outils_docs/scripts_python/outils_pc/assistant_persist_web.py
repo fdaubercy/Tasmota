@@ -278,7 +278,7 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, etat_modele):
             prep = fbx.prepare_suppression(racine, _carte_de(racine, demande))
             return {**prep, "elements": elements_supprimes(racine, prep)}
         if chemin == "/suppression":
-            return fbx.supprime(racine, _carte_de(racine, demande),_empreinte_de(demande, "le diff"), builds_en_cours)
+            return fbx.supprime(racine, _carte_de(racine, demande), _empreinte_de(demande, "le diff"), builds_en_cours)
         if chemin == "/modele/prepare":
             if "relue" in demande:
                 return apr.propose_relue(racine, demande["relue"])

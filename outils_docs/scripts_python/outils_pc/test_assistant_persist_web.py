@@ -21,6 +21,7 @@ from pathlib import Path
 import acces_web
 import assistant_persist_modele as apm
 import assistant_persist_web as apw
+import fichiers_berry_suppression as fbx
 import test_assistant_persist_creation as tac
 
 ECHECS = []
@@ -268,14 +269,23 @@ def test_modification_suppression(b):
         apw.apm2.charge_env = vrai
     # suppression reservee aux cartes du parc
     base = next(e for e in b.requete("GET", "/parc")[1]["bases"]["ESP32S3"])
-    avant = (b.racine / "platformio_tasmota_cenv.ini").read_bytes()
+    def instantane():       # octets des fichiers de config (absents -> None) + tous les dossiers du depot d'essai
+        fichiers = [b.racine / f for f in ("platformio_tasmota_cenv.ini", "tasmota/user_config_override.h", "platformio_override.ini")]
+        dossiers = sorted(str(d.relative_to(b.racine)) for d in b.racine.rglob("*") if d.is_dir())
+        return [f.read_bytes() if f.is_file() else None for f in fichiers], dossiers
+    avant = instantane()
     for route in ("/suppression/prepare", "/suppression"):
         for env in (base, "tasmota32s3-nulle-part"):
-            statut, msg = b.requete("POST", route, {"env": env, "empreinte": "0" * 64})
-            verifie((statut, "7800" in msg), (404, True), f"{route} : {'base' if env == base else 'env inconnu'} -> 404 renvoyant a la page 7800")
-    verifie((b.racine / "platformio_tasmota_cenv.ini").read_bytes(), avant, "suppression refusee : cenv intact")
+            cas = f"{route} : {'base' if env == base else 'env inconnu'}"
+            try:                # empreinte VALIDE si l'env existe au cenv : sans le controle, la suppression irait au bout
+                empreinte = fbx.prepare_suppression(b.racine, env)["empreinte"]
+            except LookupError:
+                empreinte = "0" * 64
+            statut, msg = b.requete("POST", route, {"env": env, "empreinte": empreinte})
+            verifie((statut, "7800" in msg), (404, True), cas + " -> 404 renvoyant a la page 7800")
+            verifie(instantane() == avant, True, cas + " : cenv, .h, override, dossiers intacts (aucun -sauvegarde)")
     # suppression
-    statut, s =b.requete("POST", "/suppression/prepare", {"env": tac.ENV})
+    statut, s = b.requete("POST", "/suppression/prepare", {"env": tac.ENV})
     verifie((statut, s.get("refus"), bool(s.get("empreinte")), s.get("dossier_sauvegarde")), (200, [], True, tac.DOSSIER + "-sauvegarde"),
             "suppression/prepare : empreinte, dossier -sauvegarde")
     el = s.get("elements", [])
