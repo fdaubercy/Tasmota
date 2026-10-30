@@ -50,8 +50,9 @@ def client_par_defaut():
 class Canal:
     """Liaison avec fsMqtt.be d'une carte : un fil lit le broker, les reponses attendent dans une file."""
 
-    def __init__(self, client, topic):
+    def __init__(self, client, topic, journal=None):
         self.client, self.base = client, f"fsmqtt/{topic}/"
+        self.journal, self.verrou_journal = journal, threading.Lock()     # trace horodatee de l'echange (diagnostic)
         self.reponses = queue.Queue()
         self.accuses, self.lus = {}, []                  # accuses[id] = octets ; lus = [(position, donnees)]
         self.refus_morceau = None
@@ -62,15 +63,28 @@ class Canal:
         self.fil = threading.Thread(target=self._lit, daemon=True)
         self.fil.start()
 
+    def note(self, texte):
+        if self.journal is not None:
+            with self.verrou_journal:
+                self.journal.write(f"{time.strftime('%H:%M:%S')}.{int(time.time() * 1000) % 1000:03d} {texte}\n")
+
     def _lit(self):
         while self.ouvert:
             try:
                 m = self.client.recoit()
                 self.client.entretient()
-            except OSError:
+            except OSError as erreur:
+                if self.ouvert:
+                    self.note(f"fil de lecture arrêté : {erreur!r}")
                 return
+            except Exception as erreur:
+                self.note(f"fil de lecture arrêté : {erreur!r}")
+                raise
             if m is None:
                 continue
+            self.note(f"<- {m.topic[len(self.base):]} " + (f"position {struct.unpack('>I', m.payload[:4])[0]}, "
+                      f"{len(m.payload) - 4} o" if m.topic.endswith("/lu") and len(m.payload) >= 4
+                      else m.payload.decode("utf-8", "replace")))
             if m.topic == self.base + "lu" and len(m.payload) >= 4:
                 with self.change:
                     self.lus.append((struct.unpack(">I", m.payload[:4])[0], m.payload[4:]))
@@ -96,7 +110,9 @@ class Canal:
 
     def publie_ordre(self, op, **champs):
         self.id += 1
-        self.client.publie(self.base + "ordre", json.dumps(dict(champs, op=op, id=self.id)))
+        ordre = json.dumps(dict(champs, op=op, id=self.id))
+        self.note(f"-> ordre {ordre}")
+        self.client.publie(self.base + "ordre", ordre)
         return self.id
 
     def attend(self, etape, op, id=None, delai=15.0):
@@ -106,6 +122,8 @@ class Canal:
             try:
                 r = self.reponses.get(timeout=max(0.0, fin - time.monotonic()))
             except queue.Empty:
+                self.note(f"rien reçu pour « {op} » (id {id}) en {delai:g} s ; fil de lecture "
+                          f"{'vivant' if self.fil.is_alive() else 'ARRÊTÉ'}")
                 raise RuntimeError(f"{etape} : pas de réponse « {op} » de la carte en {delai:g} s") from None
             if r.get("op") == op and (id is None or r.get("id") == id):
                 return r
@@ -151,7 +169,9 @@ class Canal:
                     raise RuntimeError(f"{etape} : {chemin} : accusé bloqué à {acquitte} o sur {len(donnees)} "
                                        f"après {REPRISES} renvois")
                 envoye, dernier_progres = acquitte, time.monotonic()      # retour arriere
+                self.note(f"renvoi n° {reprises} depuis {acquitte} o")
             if envoye - acquitte < fenetre * CHARGE and envoye < len(donnees):
+                self.note(f"-> morceau position {envoye}")
                 self.client.publie(self.base + "morceau", struct.pack(">I", envoye) + donnees[envoye:envoye + CHARGE])
                 envoye += len(donnees[envoye:envoye + CHARGE])
         self.ordre(etape, "fin", 2 * delai)
@@ -159,9 +179,9 @@ class Canal:
 
 def envoie_fs_mqtt(env, topic, dossier_fs, sauvegardes, rapporte, *, fichiers=None, recharger_berry=False,
                    redemarrer=True, effacer=False, delai_retour=90.0, client=None, fenetre=FENETRE,
-                   attente_morceau=5.0, delai=15.0):
+                   attente_morceau=5.0, delai=15.0, journal=None):
     """Voir la docstring du module. `client` : ClientMQTT non connecte (defaut : broker du dépôt) ; `delai` : attente
-    de chaque reponse de la carte."""
+    de chaque reponse de la carte ; `journal` : fichier texte ouvert, trace horodatee de chaque message."""
     dossier_fs, sauvegardes = Path(dossier_fs), Path(sauvegardes)
     if effacer and fichiers is not None:
         raise RuntimeError(f"{ETAPE_EFFACEMENT} : effacer le FS demande d'envoyer l'image ENTIÈRE (persist compris) ; "
@@ -170,7 +190,7 @@ def envoie_fs_mqtt(env, topic, dossier_fs, sauvegardes, rapporte, *, fichiers=No
     avec_persist = PERSIST in fichiers
     rapporte({"etape": ETAPE_CONNEXION_MQTT, "pourcent": None, "detail": f"fsmqtt/{topic}"})
     try:
-        canal = Canal(client or client_par_defaut(), topic)
+        canal = Canal(client or client_par_defaut(), topic, journal)
     except OSError as erreur:
         raise RuntimeError(f"{ETAPE_CONNEXION_MQTT} : broker injoignable ({erreur}) ; rien n'a été envoyé") from None
     sauve = ""

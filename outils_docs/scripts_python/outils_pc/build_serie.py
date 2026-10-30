@@ -686,9 +686,11 @@ class Serie:
                     rapporte({"etape": build_ota_fs.ETAPE_IMAGE, "pourcent": 100, "detail": identite})
                     choix = {k: v for k, v in self._choix.items() if k in ("fichiers", "recharger_berry", "redemarrer")}
                     if par_mqtt:                 # effacer : l'image ENTIERE part (fichiers=None)
-                        self.fs_mqtt(env, build_envs.topic_carte(self.racine, env), fichiers, sauvegardes, rapporte,
-                                     **dict(choix, effacer=self._choix["effacer"],
-                                            fichiers=None if self._choix["effacer"] else choix["fichiers"]))
+                        topic = build_envs.topic_carte(self.racine, env)
+                        with self._journal(env, "fichiers-mqtt", f"fsmqtt/{topic}") as journal:
+                            self.fs_mqtt(env, topic, fichiers, sauvegardes, rapporte, journal=journal,
+                                         **dict(choix, effacer=self._choix["effacer"],
+                                                fichiers=None if self._choix["effacer"] else choix["fichiers"]))
                     else:
                         self.ota_fs(env, ligne.ip, fichiers, sauvegardes, rapporte, **choix)
         except RuntimeError as erreur:

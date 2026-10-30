@@ -5,6 +5,7 @@ Aucun broker, aucune carte : tout est en memoire. Code de sortie 0 = vert.
 """
 
 import hashlib
+import io
 import json
 import queue
 import struct
@@ -182,6 +183,17 @@ def test_refus_et_absences():
         carte.muette = True
         r, _ = envoie(carte, image(t), Path(t) / "s")
         verifie(("aucune réponse" in r, "rien n'a été envoyé" in r), (True, True), "carte muette : module absent dit, rien envoye")
+        journal = io.StringIO()
+        r, _ = envoie(Carte(), image(t), Path(t) / "s", fichiers=["autoexec.be"], redemarrer=False, journal=journal)
+        trace = journal.getvalue()
+        verifie((r, '-> ordre {"chemin": "/autoexec.be"' in trace, '<- etat {"id": 2, "op": "debut", "ok": true}' in trace,
+                 "-> morceau position 0" in trace), ("ok", True, True, True), "journal : ordres, reponses et morceaux horodates")
+        journal = io.StringIO()
+        carte = Carte()
+        carte.muette = True
+        envoie(carte, image(t), Path(t) / "s", journal=journal)
+        verifie("rien reçu pour « abandon » (id 1) en 1 s ; fil de lecture vivant" in journal.getvalue(), True,
+                "journal : attente vaine notee, avec l'etat du fil de lecture")
         carte = Carte()
         carte.corrompt = True
         r, _ = envoie(carte, image(t), Path(t) / "s")

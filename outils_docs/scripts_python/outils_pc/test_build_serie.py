@@ -1073,7 +1073,8 @@ def test_fichiers_mqtt():
     """A16 : transport « mqtt » de l'onglet Fichiers : ni IP ni maitre, topic du persist, effacer -> image entiere."""
     appels = []
 
-    def faux_mqtt(env, topic, dossier_fs, sauvegardes, rapporte, **options):
+    def faux_mqtt(env, topic, dossier_fs, sauvegardes, rapporte, journal, **options):
+        journal.write("trace\n")                         # journal ouvert, un fichier par envoi
         appels.append((env, topic, sorted(arbre(dossier_fs)), options))
 
     with tempfile.TemporaryDirectory() as t:
