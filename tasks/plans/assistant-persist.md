@@ -531,7 +531,7 @@ Demandes de l'utilisateur (2026-10-29) :
 
 Feu vert donné le 2026-10-29. Plan détaillé : `tasks/plans/assistant-persist-modification.md` (spec §10).
 
-- [ ] Feu vert de l'utilisateur, puis plan détaillé de l'action écrit et validé.
+- [x] Feu vert de l'utilisateur, puis plan détaillé de l'action écrit et validé. — preuve : 623e3d8f1 (spec §10 + plan), « validé » de l'utilisateur le 2026-10-29 (A1 du plan de modification 2/2)
 - [ ] Réalisation selon ce plan.
 
 ## Améliorations restantes
