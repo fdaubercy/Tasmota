@@ -932,7 +932,8 @@ dans le vrai dépôt ni dans le vrai dossier des sauvegardes.
 
 ## Assistant persist (page web)
 
-Une page qui pose des questions et en tire le `_persist.json` d'une **nouvelle carte**, avec l'`autoexec.be`, la
+Une page qui pose des questions et en tire le `_persist.json` d'une **nouvelle carte** (elle sait aussi **modifier ou
+supprimer un env existant**, voir plus bas), avec l'`autoexec.be`, la
 section du cenv et la section `#elif` de `tasmota/user_config_override.h` qui vont avec. Les questions et leurs règles
 viennent d'un **modèle** (`outils_docs/schemas/modele_persist.json`) qui se met à jour à partir des persists du dépôt.
 Le moteur d'écriture est celui de « Fichiers Berry par env » (créer un env), sans changement de comportement.
@@ -989,13 +990,49 @@ aucun : ses valeurs sont `@secret:<famille>`.
   ni fusion ni réécriture, et la création est refusée.
 - Persist du dépôt illisible : ignoré avec un avertissement.
 
+### Modifier ou supprimer un env existant
+
+Conception : spec §10 ; plan `tasks/plans/assistant-persist-modification.md`. Code : `assistant_persist_texte.py`
+(édition du texte sans le reformater), `assistant_persist_delta.py` (écart A -> B), `assistant_persist_modification.py`
+(application aux fichiers), `assistant_persist_page_js_env.py` (page).
+
+**Charger.** La liste des cartes du parc (`cartes` dans `/parc`) permet de choisir un env : `GET /env` relit son
+`_persist.json`, son autoexec, sa section du cenv et sa section du `.h`, et remplit les questions avec ces réponses.
+
+**Modifier.** L'assistant ne régénère jamais une carte. Il génère **A** (les réponses relues) et **B** (les réponses de
+la page), puis applique au vrai fichier le **seul écart A -> B** ; tout le reste (retouches à la main, ordre,
+commentaires) ne bouge pas d'un octet. Écart vide : rien n'est écrit et « Modifier » est grisé. Même cheminement que
+la création : « Voir le diff » (`/modification/prepare`), puis « Modifier » (`/modification`) en une transaction.
+
+- **Persist** : l'écart est calculé par chemin JSON et appliqué dans le texte. Un `remplace` garde la forme de la valeur
+  (compacte sur une ligne ou indentée) ; un ajout se pose après sa clé soeur ; les objets compacts sont gérés.
+  *Limite* : un bloc objet **entier** retiré puis ré-ajouté est réécrit en indentation uniforme (sa mise en forme mixte
+  d'origine est perdue ; le JSON reste valide).
+- **Autoexec, section du cenv, section du `.h`** : écart ligne à ligne. Si une ligne de A est introuvable telle quelle
+  (retouchée à la main), **toute** la modification est refusée (409) ; le refus cite le fichier et les lignes, mots de
+  passe masqués. Ancre d'un ajout : la ligne précédente si elle est unique (ajout après elle) ; absente, refus ;
+  présente plusieurs fois, la paire précédente + suivante, puis la suivante seule, sinon refus. Une ligne qui deviendrait
+  double (par exemple un module déjà ajouté à la main) est refusée.
+- **Figés** : lieu, nom, puce et base. Renommer se fait dans la page 7800 « Fichiers Berry par env » ; changer de base
+  ou de puce revient à créer une autre carte.
+- **Esclave** : le bloc `rangeExtender` n'est pas relu (voulu). Cocher la case sur un esclave qui a déjà ces lignes est
+  refusé comme doublon.
+- **Métiers 2 à N** : leurs éléments sont conservés mais non éditables.
+- Mots de passe, build et empreinte comme à la création : jamais envoyés à la page, `***` dans le diff, les refus et
+  les erreurs ; refus pendant un build ; empreinte périmée -> refaire « Voir le diff ».
+
+**Supprimer.** Réservé aux **cartes du parc** listées par l'assistant (une base, ou un env sans `_persist.json` :
+page 7800). `/suppression/prepare` affiche le panneau des éléments retirés : section du cenv, section du `.h` et son
+define, `default_envs` et `data_dir` de `platformio_override.ini`, dossier renommé en `...-sauvegarde`. Il faut cocher
+« J'ai vérifié ces éléments » avant que « Supprimer » (`/suppression`) s'active.
+
 ### Limites connues
 
 - L'éditeur ne règle que **activation, nom, broche et type**. `idModBus`, `virtuel`, `channel`, `nbLeds` se
   complètent à la main dans le `_persist.json` créé.
 - Les broches de **SD, I2S, Ethernet et LoRa** ne sont pas contrôlées.
 - Les éléments ne vont que sur le **bloc métier principal**.
-- La **modification d'un env existant** (A10) est en pause : l'assistant ne sait que créer.
+- Les éléments des **métiers 2 à N** sont conservés lors d'une modification, mais non éditables (voir « Modifier ou supprimer un env existant »).
 - Clés `adressMAC` / `adresseMAC` et `telePeriod` : tranché le 2026-10-28 — `telePeriod` de `serveur.udp` et `serveur.rangeExtender` retirées (jamais lues), MAC écrite dans `adresseMAC` dès le boot par `globalFonctions`, `adressMAC` retirée ;
   voir `outils_docs/ANALYSE_CLES_MAC_TELEPERIOD_2026-10-27.md`.
 
@@ -1003,7 +1040,7 @@ aucun : ses valeurs sont `@secret:<famille>`.
 
 Dans `outils_docs/scripts_python/outils_pc/`, avec le Python du penv PlatformIO (code de sortie 0 = vert) :
 `test_assistant_persist_modele.py`, `_parc.py`, `_elements.py`, `_generation.py`, `_creation.py`, `_fidelite.py`,
-`_web.py`, et la sonde Chrome `test_assistant_persist_page_chrome.py` ; cible Custom :
+`_texte.py`, `_delta.py`, `_modification.py` (lent : plusieurs minutes, rejeu du parc), `_web.py`, et la sonde Chrome `test_assistant_persist_page_chrome.py` ; cible Custom :
 `build/test_cible_assistant_persist.py`. Les bancs travaillent sur un dépôt d'essai temporaire (lecture seule des
 vrais persists) : aucun n'écrit dans le vrai dépôt ni dans le vrai dossier des sauvegardes.
 
