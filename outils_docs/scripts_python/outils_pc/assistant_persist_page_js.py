@@ -15,7 +15,7 @@ JS = r"""
 var $ = function (id) { return document.getElementById(id); };
 var ETAPES = ["Carte", "Réseau", "Fonctions", "Bloc métier", "Vérification"];
 var IDENT = ["hostname", "nom_lisible", "nom_template", "client", "ssid_ap", "topic"];
-var parc = null, etape = 0, minuteur = null, numero = 0, cree = false;
+var parc = null, etape = 0, minuteur = null, numero = 0, modif = "";
 var diff = null, signatureDiff = null, manuel = {}, propositionModele = null;
 var E = {puce: "ESP32S3", base: "", lieu: "", nom: "", ip: "0.0.0.0", heure: "NTP", role: "autonome", maitre: "", id: 0,
   reseau1: "", reseau2: "", blocs: [], metiers: [""], squelettes: true, elements: {},
@@ -56,7 +56,7 @@ function defauts() {
 function majIdentite() {
   var d = defauts();
   IDENT.forEach(function (k) { if (!manuel[k]) { E[k] = d[k]; $("f-" + k).value = d[k]; } });
-  var pre = {ESP32: "tasmota32", ESP32S3: "tasmota32s3", ESP32P4: "tasmota32p4"}[E.puce];
+  var pre = prefixe();
   $("env-propose").textContent = "Env : " + pre + "-" + (E.lieu || "?") + "-" + (E.nom || "?") + " · dossier data/" +
     (E.lieu || "?") + "/" + pre + "-" + (E.nom || "?");
 }
@@ -194,6 +194,7 @@ function reponses(pourApercu) {
     squelettes: !!E.squelettes};
   if (Object.keys(E.elements).length) r.elements = E.elements;             // groupe absent = gabarit du modele
   IDENT.forEach(function (k) { r[k] = (E[k] === d[k]) ? "" : E[k]; });      // inchange -> defaut du serveur
+  if (modif) { r.define = E.define; r.elements_groupe = E.elements_groupe; }   // relus de la carte, a renvoyer tels quels
   return r;
 }
 
@@ -211,27 +212,32 @@ async function apercu() {
 // ---- Diff et creation ----
 function signature() { return JSON.stringify(reponses(false)); }
 function majCreer() {
-  var pret = !!diff && !cree && diff.refus.length === 0 && !!diff.empreinte && signature() === signatureDiff;
+  var pret = !!diff && diff.refus.length === 0 && !!diff.empreinte && !diff.vide && signature() === signatureDiff;
   $("creer").disabled = !pret;
   if (diff && signature() !== signatureDiff) {                  // saisie apres le diff : il ne vaut plus
     diff = null; $("panneau-diff").classList.add("cache"); vide($("retours"));
   }
-  $("voir-diff").disabled = noms().length === 0 || cree;
+  $("voir-diff").disabled = noms().length === 0;
+  majLibelle();
 }
 function invalideDiff() {                                      // le diff ne vaut plus : il faut en demander un autre
   diff = null; signatureDiff = null; $("panneau-diff").classList.add("cache"); vide($("retours")); majCreer();
 }
 function liste(zone, textes, classe) { textes.forEach(function (t) { zone.appendChild(el("div", {"class": classe}, t)); }); }
 async function voirDiff() {
-  var rep = reponses(false), zone = vide($("retours")), r = await api("/prepare", {reponses: rep});
+  var rep = reponses(false), zone = vide($("retours"));
+  var r = modif ? await api("/modification/prepare", {env: modif, reponses: rep}) : await api("/prepare", {reponses: rep});
   if (!r.ok || !r.donnees) { liste(zone, [r.texte], "avert rouge"); return; }
   diff = r.donnees; signatureDiff = JSON.stringify(rep);
   liste(zone, diff.refus, "avert rouge"); liste(zone, diff.avertissements, "avert");
-  $("diff").textContent = diff.diff; $("autoexec").textContent = diff.apercu.autoexec;
-  $("panneau-diff").classList.toggle("cache", diff.refus.length > 0 && !diff.diff);
+  if (diff.vide) liste(zone, ["Aucun changement : rien à modifier."], "avert");
+  $("diff").textContent = diff.diff; $("autoexec").textContent = diff.apercu ? diff.apercu.autoexec : "";
+  $("details-autoexec").classList.toggle("cache", !diff.apercu);
+  $("panneau-diff").classList.toggle("cache", !diff.diff);
   majCreer();
 }
 function fichiers() {
+  if (modif) { vide($("fichiers")).appendChild(el("li", {}, "Les seuls écarts du diff, dans les fichiers existants de l'env")); return; }
   var d = "data/" + (E.lieu || "?") + "/…", l = ["platformio_tasmota_cenv.ini", "tasmota/user_config_override.h",
     d + "/_persist.json", d + "/autoexec.be", d + "/graphiques.json"];
   if (E.squelettes) noms().forEach(function (n) { var c = n.charAt(0).toUpperCase() + n.slice(1); l.push(d + "/controle" + c + ".be", d + "/" + n + "Fonctions.be"); });
@@ -247,7 +253,7 @@ async function cree_env() {
     if (r.statut === 409) invalideDiff();                       // saisie ou fichiers changes : un nouveau « Voir le diff » est exige
     zone.appendChild(el("div", {"class": "avert rouge", id: "creation-erreur"}, r.texte)); majCreer(); return;
   }
-  cree = true; var c = r.donnees;
+  var c = r.donnees;
   zone.appendChild(el("p", {"class": "ok", id: "creation-ok"}, "Env " + c.env + " créé (sauvegarde : " + c.sauvegarde + ")."));
   var liens = el("p", {"class": "liens"});
   [["lien-build", lienHote(c.liens.build), "Compiler et téléverser (page build)"],
@@ -258,7 +264,8 @@ async function cree_env() {
   zone.appendChild(el("pre", {id: "resume"}, c.resume));
   var copie = el("button", {"class": "btn", id: "copier", type: "button"}, "Copier le résumé");
   copie.onclick = function () { copier(c.resume, copie); };
-  zone.appendChild(copie); majCreer();
+  zone.appendChild(copie);
+  await relitParc(); await chargeEnv(c.env, true);                // la page reste sur l'env cree, en mode modification
 }
 function copier(texte, bouton) {
   var fini = function () { bouton.textContent = "Copié"; };
@@ -317,7 +324,7 @@ async function demarre() {
   remplit($("f-puce"), parc.puces.map(function (p) { return [p, p]; }), E.puce);
   E.base = parc.base_defaut[E.puce] || (parc.bases[E.puce] || [])[0] || ""; remplitBases();
   $("f-ip").value = E.ip;
-  afficheEtape(0); dessineElements(); reagit(); apercu(); majModele();
+  afficheEtape(0); dessineElements(); dessineListeEnv(); reagit(); apercu(); majModele();
   var i = await api("/interrompues");
   if (i.ok && i.donnees) i.donnees.interrompues.forEach(function (op) { interrompue(op); });
 }
@@ -363,6 +370,7 @@ function interrompue(op) {
   d.appendChild(b); $("interrompues").appendChild(d);
 }
 
+/*ENV*/
 $("formulaire").addEventListener("change", function (ev) { if (parc) change(ev); });
 $("formulaire").addEventListener("input", function (ev) {
   if (!parc) return;
@@ -383,7 +391,7 @@ $("voir-diff").onclick = voirDiff;
 $("maj-modele").onclick = function () { proposeModele(); };
 $("valide-modele").onclick = appliqueModele;
 $("annule-modele").onclick = function () { $("panneau-modele").classList.add("cache"); propositionModele = null; };
-$("creer").onclick = cree_env;
+$("creer").onclick = function () { return modif ? modifieEnv() : cree_env(); };
 dessineMetiers();
 demarre();
 """

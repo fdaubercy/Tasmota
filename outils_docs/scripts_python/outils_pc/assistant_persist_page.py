@@ -3,11 +3,13 @@
 apercu du _persist.json a droite (rafraichi par POST /apercu, anti-rebond de 300 ms).
 
 Etape « Bloc metier » : tableau d'elements par groupe (assistant_persist_elements), ajout, suppression, broche en liste.
-Le script est dans assistant_persist_page_js.py (fichiers de moins de 500 lignes) ; PAGE les assemble.
+Le script est dans assistant_persist_page_js.py et assistant_persist_page_js_env.py (mode modification et suppression,
+A10) ; PAGE les assemble.
 Textes inseres par textContent uniquement. Sonde Chrome : test_assistant_persist_page_chrome.py.
 """
 
 import assistant_persist_page_js as _js
+import assistant_persist_page_js_env as _env
 
 HTML = r"""<!doctype html>
 <html lang="fr">
@@ -58,6 +60,7 @@ HTML = r"""<!doctype html>
   details{border:1px solid var(--bord);border-radius:6px;padding:6px 10px;margin:8px 0;background:var(--carte)}
   summary{cursor:pointer;font-weight:600}
   .liens a{color:var(--bleu);margin-right:14px}
+  .danger{border-color:var(--rouge)}
 </style>
 </head>
 <body>
@@ -83,6 +86,13 @@ HTML = r"""<!doctype html>
     <div class="carte" id="formulaire">
       <section id="etape-0">
         <h2>1. Carte</h2>
+        <div class="grille">
+          <label>Env (modifier une carte existante)<select id="f-env"></select></label>
+          <label>&nbsp;<button class="btn" id="charger" type="button">Charger</button></label>
+        </div>
+        <div id="retours-env"></div>
+        <div id="bandeau-existe" class="avert cache">Cet env existe déjà —
+          <button class="btn" id="charger-existe" type="button"></button></div>
         <div class="grille">
           <label>Puce<select id="f-puce" data-k="puce"></select></label>
           <label>Base (env de départ)<select id="f-base" data-k="base"></select></label>
@@ -146,10 +156,21 @@ HTML = r"""<!doctype html>
         <div id="retours"></div>
         <div id="panneau-diff" class="cache">
           <details open><summary>Diff (mots de passe masqués)</summary><pre id="diff"></pre></details>
-          <details><summary>autoexec.be généré</summary><pre id="autoexec"></pre></details>
+          <details id="details-autoexec"><summary>autoexec.be généré</summary><pre id="autoexec"></pre></details>
         </div>
         <p><button class="btn p" id="creer" type="button" disabled>Créer l'env</button>
           <span class="discret" id="creer-aide">Voir le diff d'abord ; toute saisie ensuite le grise.</span></p>
+        <p><button class="btn cache" id="supprimer-env" type="button">Supprimer cet env…</button></p>
+        <div id="panneau-suppr" class="carte danger cache">
+          <h2>Suppression de l'env</h2>
+          <p class="discret">Sera retiré ou renommé :</p>
+          <ul id="suppr-elements"></ul>
+          <div id="suppr-retours"></div>
+          <details><summary>Diff (mots de passe masqués)</summary><pre id="suppr-diff"></pre></details>
+          <p><label><input type="checkbox" id="suppr-verifie"> J'ai vérifié ces éléments</label></p>
+          <p><button class="btn p" id="suppr-confirme" type="button" disabled>Supprimer</button>
+            <button class="btn" id="suppr-annule" type="button">Annuler</button></p>
+        </div>
         <div id="resultat"></div>
       </section>
       <div class="nav" id="nav">
@@ -171,4 +192,4 @@ HTML = r"""<!doctype html>
 </html>
 """
 
-PAGE = HTML.replace("/*JS*/", _js.JS)
+PAGE = HTML.replace("/*JS*/", _js.JS.replace("/*ENV*/", _env.JS))

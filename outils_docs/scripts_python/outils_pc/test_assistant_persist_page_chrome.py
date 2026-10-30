@@ -34,6 +34,7 @@ ENV = "tasmota32s3-garage-piscine"
 DOSSIER = "data/garage/tasmota32s3-piscine"
 CASSE = 'id="creer"'
 CASSE_PAR = 'id="creer-casse"'
+IP_CAVE_S3 = "192.168.0.243"                  # IPAddress du persist de data/cave/tasmota32s3-serveur-rly
 
 
 def verifie(obtenu, attendu, libelle):
@@ -298,10 +299,97 @@ def sonde_page(m):
     clic(cdp, "copier")
     verifie(attend(cdp, "document.getElementById('copier').textContent === 'Copié'", 5), True, "bouton « Copier » : confirmation")
     verifie(cdp.js("document.getElementById('creer').disabled"), True, "apres creation : « Creer l'env » grise")
-    html = cdp.js("document.documentElement.outerHTML + document.body.textContent")
+    sonde_modification(m)
+    html =cdp.js("document.documentElement.outerHTML + document.body.textContent")
     fuites = [i for i, s in enumerate(taw.valeurs_reelles()) if s in html]
     verifie(fuites, [], "aucun mot de passe du parc dans la page")
     verifie(cdp.erreurs(), [], "aucune erreur JS pendant toute la sonde")
+
+
+def choisit_env(cdp, env):
+    cdp.js("var s=document.getElementById('f-env'); s.value=" + json.dumps(env) + "; s.dispatchEvent(new Event('change',{bubbles:true})); 1")
+
+
+def sonde_modification(m):
+    """A10 : mode modification (charger, libelle, diff reactif), puis suppression verifiee. Depot d'essai seulement."""
+    cdp = m.cdp
+    verifie(cdp.js("(function(){var o=document.getElementById('f-env').options;return o.length>1&&o[0].value===''})()"), True,
+            "liste Env : « (nouvel env) » puis les cartes")
+    # diff_reactive_apres_creation : on reste sur l'env cree, en mode modification, et un parametre change reactive le diff
+    verifie(attend(cdp, "document.getElementById('f-lieu').disabled && document.getElementById('f-env').value === '" + ENV + "'", 10),
+            True, "apres creation : page en mode modification sur l'env cree (lieu grise)")
+    verifie(cdp.js("document.getElementById('creer').textContent"), "Modifier l'environnement", "apres creation : bouton « Modifier l'environnement »")
+    verifie(cdp.js("document.getElementById('voir-diff').disabled"), False, "apres creation : « Voir le diff » actif (env deja cree)")
+    saisit(cdp, "f-ip", "192.168.0.78")
+    clic(cdp, "pastille-4")
+    clic(cdp, "voir-diff")
+    verifie(attend(cdp, "document.getElementById('diff').textContent.indexOf('192.168.0.78') >= 0 && !document.getElementById('creer').disabled", 20),
+            True, "modification : diff de l'IP affiche, bouton actif")
+    saisit(cdp, "f-ip", "192.168.0.79")
+    verifie(cdp.js("document.getElementById('creer').disabled"), True, "modification : toute saisie grise de nouveau le bouton")
+    saisit(cdp, "f-ip", "192.168.0.78")
+    clic(cdp, "voir-diff")
+    attend(cdp, "!document.getElementById('creer').disabled", 20)
+    clic(cdp, "creer")
+    verifie(attend(cdp, "!!document.getElementById('modification-ok')", 20), True, "modification : message de reussite")
+    verifie("192.168.0.78" in (m.depot / DOSSIER / "_persist.json").read_text(encoding="utf-8"), True, "modification : IP ecrite dans le persist d'essai")
+    verifie(attend(cdp, "document.getElementById('f-ip').value === '192.168.0.78' && document.getElementById('f-lieu').disabled", 10), True,
+            "modification : on reste en mode modification, reponses rechargees")
+    clic(cdp, "voir-diff")
+    verifie(attend(cdp, "document.getElementById('retours').textContent.indexOf('Aucun changement') >= 0", 20), True, "ecart vide : « Aucun changement »")
+    verifie(cdp.js("document.getElementById('creer').disabled"), True, "ecart vide : bouton grise")
+    # charger_env : une autre carte du parc
+    clic(cdp, "pastille-0")
+    choisit_env(cdp, "tasmota32s3-cave-serveur-rly")
+    clic(cdp, "charger")
+    verifie(attend(cdp, "document.getElementById('f-nom').value === 'serveur-rly' && document.getElementById('f-lieu').value === 'cave'", 15), True,
+            "charger : lieu et nom relus de la carte")
+    verifie(cdp.js("['f-lieu','f-nom','f-puce','f-base'].map(function(i){return document.getElementById(i).disabled})"), [True] * 4,
+            "charger : lieu, nom, puce et base non modifiables")
+    verifie(cdp.js("document.getElementById('f-puce').value + '|' + document.getElementById('f-ip').value"), "ESP32S3|" + IP_CAVE_S3,
+            "charger : puce et IP relues")
+    verifie(cdp.js("document.getElementById('metier-0').value !== ''"), True, "charger : bloc metier rempli")
+    verifie(cdp.js("document.getElementById('creer').textContent"), "Modifier l'environnement", "charger : bouton « Modifier l'environnement »")
+    # libelle_si_existe : retour en creation, lieu + nom d'une carte existante
+    choisit_env(cdp, "")
+    verifie(cdp.js("['f-lieu','f-nom','f-puce','f-base'].map(function(i){return document.getElementById(i).disabled})"), [False] * 4,
+            "(nouvel env) : champs de nouveau modifiables")
+    saisit(cdp, "f-lieu", "garage")
+    saisit(cdp, "f-nom", "serveur-modbus")
+    verifie(cdp.js("document.getElementById('creer').textContent"), "Modifier l'environnement", "env existant saisi : libelle « Modifier »")
+    verifie(visible(cdp, "bandeau-existe"), True, "env existant saisi : bandeau « Cet env existe deja »")
+    saisit(cdp, "f-nom", "inconnu-zz")
+    verifie(cdp.js("[document.getElementById('creer').textContent, document.getElementById('bandeau-existe').classList.contains('cache')]"),
+            ["Créer l'env", True], "env inexistant : libelle « Créer l'env », pas de bandeau")
+    saisit(cdp, "f-nom", "serveur-modbus")
+    clic(cdp, "charger-existe")
+    verifie(attend(cdp, "document.getElementById('f-lieu').disabled && document.getElementById('f-env').value === 'tasmota32s3-garage-serveur-modbus'", 15),
+            True, "bandeau : « Charger ses reglages » charge l'env")
+    # suppression_verifiee : l'env cree par la sonde
+    choisit_env(cdp, ENV)
+    clic(cdp, "charger")
+    verifie(attend(cdp, "document.getElementById('f-nom').value === 'piscine' && document.getElementById('f-nom').disabled", 15), True, "suppression : env d'essai charge")
+    clic(cdp, "pastille-4")
+    verifie(visible(cdp, "panneau-suppr"), False, "suppression : panneau ferme au depart")
+    clic(cdp, "supprimer-env")
+    verifie(attend(cdp, "document.querySelectorAll('#suppr-elements li').length > 0", 15), True, "suppression : elements listes")
+    verifie(cdp.js("document.getElementById('suppr-elements').textContent.indexOf('" + ENV + "') >= 0"), True, "suppression : la section du cenv est nommee")
+    verifie(cdp.js("document.getElementById('suppr-diff').textContent.length > 0"), True, "suppression : diff affiche")
+    verifie(cdp.js("[document.getElementById('suppr-verifie').checked, document.getElementById('suppr-confirme').disabled]"), [False, True],
+            "suppression : « Supprimer » grise tant que la case n'est pas cochee")
+    clic(cdp, "suppr-verifie")
+    verifie(cdp.js("document.getElementById('suppr-confirme').disabled"), False, "suppression : case cochee -> « Supprimer » actif")
+    clic(cdp, "suppr-verifie")
+    verifie(cdp.js("document.getElementById('suppr-confirme').disabled"), True, "suppression : case decochee -> grise de nouveau")
+    clic(cdp, "suppr-verifie")
+    clic(cdp, "suppr-confirme")
+    verifie(attend(cdp, "!!document.getElementById('suppression-ok')", 20), True, "suppression : message de reussite")
+    verifie((m.depot / DOSSIER).exists(), False, "suppression : dossier de la carte renomme dans le depot d'essai")
+    verifie(cdp.js("[document.getElementById('f-lieu').disabled, document.getElementById('f-env').value, document.getElementById('creer').textContent]"),
+            [False, "", "Créer l'env"], "suppression : retour au mode creation")
+    verifie(cdp.js("Array.from(document.getElementById('f-env').options).some(function(o){return o.value==='" + ENV + "'})"), False,
+            "suppression : la carte a disparu de la liste Env (parc relu)")
+    verifie(visible(cdp, "panneau-suppr"), False, "suppression : panneau referme")
 
 
 def sonde_temoin(m):
