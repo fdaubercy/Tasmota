@@ -522,8 +522,7 @@ fichier relu ou contrôlé à la fin ; même choix de fichiers, de carte et d'op
   `fsmqtt/garage/` et `fsmqtt/jardin/cuve/`), `/fsMqtt.be` absent du FS (module du firmware) ; envois de l'onglet
   Fichiers en MQTT (dit par l'utilisateur), persist sauvegardé avant à 06:51 (P4) et 06:53 (cuve) ; `/autoexec.be`
   des cartes identique au dépôt (2020 o MD5 56637B4E…, 1888 o MD5 E60F6778…).
-- [x] Essai réel par l'utilisateur : « Effacer tout le FS » (formatage) sur une carte, durée du formatage mesurée.
-  — preuve : P4, 2026-10-30 19:38, journal `20261030-193815-…-fichiers-mqtt.log` : `efface` répondu en 0,22 s (page :
+- [x] Essai réel par l'utilisateur : « Effacer tout le FS » sur une carte, durée mesurée. — preuve : P4, 2026-10-30 19:38, journal `20261030-193815-…-fichiers-mqtt.log` : `efface` répondu en 0,22 s (page :
   0,2 s, sans redémarrage, uptime 11 h 39), persist en PREMIER (`6457148a1`), 31 debut / 31 fin, recharge, BrRestart,
   « pret » à 19:40:12 ; carte relue : `/_persist.json` et `/logs` présents, fsMqtt actif. Premier essai du matin
   ÉCHOUÉ (fichier 27/31, réponse 22 s après l'ordre) : veille modem du Wi-Fi du P4 en Sleep 50, corrigée par
