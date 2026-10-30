@@ -2,9 +2,9 @@
 chantier: assistant-persist
 titre: Assistant de création du persist d'un nouvel env (page 7900, tuile de l'annuaire)
 objectif: Créer le persist, l'autoexec et les sections de build d'une nouvelle carte par questions, depuis une page web
-statut: actif
+statut: clos
 cree: 2026-10-27
-maj: 2026-10-27
+maj: 2026-10-30
 ---
 # Assistant de création du persist — plan d'implémentation
 
@@ -532,14 +532,14 @@ Demandes de l'utilisateur (2026-10-29) :
 Feu vert donné le 2026-10-29. Plan détaillé : `tasks/plans/assistant-persist-modification.md` (spec §10).
 
 - [x] Feu vert de l'utilisateur, puis plan détaillé de l'action écrit et validé. — preuve : 623e3d8f1 (spec §10 + plan), « validé » de l'utilisateur le 2026-10-29 (A1 du plan de modification 2/2)
-- [ ] Réalisation selon ce plan.
+- [x] Réalisation selon ce plan. — preuve : `tasks/plans/assistant-persist-modification.md` A1 à A8 cochés (dee32c576 à f68fdeae2), relecture finale close, fumée réelle du 2026-10-30 (modification, compilation 7700 SUCCESS, suppression 7900) sur `tasmota32p4-cellier-controleur`
 
 ## Améliorations restantes
 
-- [ ] [projet] Fumée réelle avec l'utilisateur (spec §7) :
+- [x] [projet] Fumée réelle avec l'utilisateur (spec §7) — preuve : création, compilation et suppression faites (voir ci-dessous) :
   - création d'un env de test par la page ; — fait le 2026-10-29 par l'utilisateur : `tasmota32p4-cellier-controleur`
   - compilation par la page build, hors d'un autre build ; — preuve : journal `20261029-183934-tasmota32p4-cellier-controleur-compiler.log`, SUCCESS en 02:25:32, code de sortie 0
-  - suppression : reportée à A8 de `tasks/plans/assistant-persist-modification.md` (modification puis suppression par la page 7900, au lieu de la 7800).
+  - suppression : faite le 2026-10-30 par la page 7900 après une modification — preuve : A8 de `tasks/plans/assistant-persist-modification.md` (transaction `20261030-043840-...-suppression`, dossier renommé en `-sauvegarde`).
 - [x] [projet] Relire et compléter les questions des clés `a_completer` après chaque fusion automatique. — preuve : liste vide au 2026-10-28 ; bouton « Relue » par clé (choix de l'utilisateur) 444e362, fidelite/web/sonde Chrome code 0 (controleur), temoin ROUGE
 - [x] [projet] Fusion de la MAC vers `adresseMAC` (décision du 2026-10-28, chantier à part) : `globalFonctions` écrit `adresseMAC` au `System#Boot` (corrige le différentiel, udp ON et discovery OFF), puis retrait d'`adressMAC` du modèle, du schéma et des persists ; modules téléversés avant les persists ; `banc_boot` à adapter. — preuve : 6836a0d29 (globalFonctions + 8 persists + modele + schema 8/8) ; banc_boot (controle MAC ok) et banc_demarrage code 0 ; relecteur-berry : commitable
 

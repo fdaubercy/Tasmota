@@ -2,7 +2,7 @@
 chantier: assistant-persist-modification
 titre: Assistant persist — reprendre, modifier et supprimer un env existant (A10)
 objectif: Reprendre un env existant dans la page 7900 pour le modifier sans perdre ses retouches, ou le supprimer après vérification
-statut: actif
+statut: clos
 cree: 2026-10-29
 maj: 2026-10-30
 ---
@@ -257,9 +257,15 @@ Comportement (spec §10.4) :
 - [x] Relecture finale de la branche (modèle le plus capable), corrections. — preuve : relecture sur Sonnet (Opus limité
   jusqu'au 2026-10-30 13 h) « avec corrections » ; vague f68fdeae2 (secrets masqués du plus long au plus court, rejeu
   du parc avec une vraie modification d'IP) re-relue : 5/5 traités.
-- [ ] Fumée réelle **avec l'utilisateur** sur `tasmota32p4-cellier-controleur` : charger, ajouter un bloc, compiler
-  par la page 7700, puis supprimer par la page 7900 en vérifiant chaque élément listé.
-- [ ] Plan `assistant-persist.md` : A10 coché avec renvoi à ce plan.
+- [x] Fumée réelle **avec l'utilisateur** sur `tasmota32p4-cellier-controleur` — preuve : transaction
+  `20261030-035439-...-modification-assistant` (blocs `rangeExtender` + ADS1115 : persist 2 chemins OFF -> ON,
+  16 391 -> 16 389 octets ; autoexec 3 lignes ; cenv 2 ; `.h` 2 ; rien d'autre), compilation par la page 7700
+  `20261030-035717-...-compiler.log` SUCCESS en 39:46, code 0 ; suppression `20261030-043840-...-suppression` : section
+  du cenv (39 lignes, cenv revenu à HEAD) et du `.h` (175 lignes, `#endif` gardé) retirées, dossier renommé en
+  `tasmota32p4-controleur-sauvegarde`. `data_dir` de `platformio_override.ini` laissé sur l'ancien dossier : signalé
+  par le moteur de la 7800 (comportement voulu), réécrit par la page 7700 à chaque build.
+- [x] Plan `assistant-persist.md` : A10 coché avec renvoi à ce plan. — preuve : case « Réalisation selon ce plan »
+  cochée le 2026-10-30.
 
 ## Améliorations restantes
 

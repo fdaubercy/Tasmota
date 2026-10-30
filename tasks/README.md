@@ -11,16 +11,16 @@ après une édition à la main : `node .claude/hooks/index_plans.mjs` (`--verifi
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-17 plans : 6 actif, 0 en-pause, 11 clos.
+17 plans : 4 actif, 0 en-pause, 13 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Créé | Mis à jour |
 |---|---|---|---|---|---|
-| [Assistant persist — reprendre, modifier et supprimer un env existant (A10)](plans/assistant-persist-modification.md) | Reprendre un env existant dans la page 7900 pour le modifier sans perdre ses retouches, ou le supprimer après vérification | actif | ██████████ 96 % (36/38) | 2026-10-29 | 2026-10-30 |
 | [Page web « Build et téléversement » (port 7700, tuile de l'annuaire)](plans/page-build-televersement.md) | Compiler et téléverser en série (COM ou OTA) les envs cochés depuis une page web, avec progression en direct | actif | ██████████ 98 % (81/83) | 2026-10-24 | 2026-10-29 |
-| [Assistant de création du persist d'un nouvel env (page 7900, tuile de l'annuaire)](plans/assistant-persist.md) | Créer le persist, l'autoexec et les sections de build d'une nouvelle carte par questions, depuis une page web | actif | ██████████ 95 % (46/47) | 2026-10-27 | 2026-10-27 |
 | [Plan d'action de l'audit Berry (propositions P2.1 à P10.7)](plans/actions-audit-berry.md) | Mettre en œuvre, lot par lot et sur décision de l'utilisateur, les 78 propositions de l'audit Berry | actif | █████████░ 91 % (89/95) | 2026-10-22 | 2026-10-26 |
 | [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) | Ajouter l'Ethernet en option sur le maître ModBus P4, le Wi-Fi restant le défaut | actif | ░░░░░░░░░░ 0 % (0/37) | 2026-10-26 | 2026-10-26 |
 | [Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2](plans/ruban-cuve.md) | Piloter le ruban WS2812 de la cuve en AUTO/MANUEL (bouton et ModBus) et préparer la carte cuve v0.2 | actif | ███████░░░ 67 % (13/21) | 2026-10-18 | 2026-10-18 |
+| [Assistant persist — reprendre, modifier et supprimer un env existant (A10)](plans/assistant-persist-modification.md) | Reprendre un env existant dans la page 7900 pour le modifier sans perdre ses retouches, ou le supprimer après vérification | clos | ██████████ 100 % (38/38) | 2026-10-29 | 2026-10-30 |
+| [Assistant de création du persist d'un nouvel env (page 7900, tuile de l'annuaire)](plans/assistant-persist.md) | Créer le persist, l'autoexec et les sections de build d'une nouvelle carte par questions, depuis une page web | clos | ██████████ 100 % (47/47) | 2026-10-27 | 2026-10-30 |
 | [Assistant pas à pas de la page « Synchro du fork » (port 7500)](plans/assistant-synchro-fork.md) | Guider pas à pas la synchro du fork sur la page 7500, avec résolution des conflits fichier par fichier | clos | ██████████ 100 % (33/33) | 2026-10-27 | 2026-10-29 |
 | [Détection de blocage d'un volet par son inclinaison (MPU6050)](plans/blocage-trappe-mpu6050.md) | Arrêter un volet et loguer une erreur quand son inclinaison ne bouge plus pendant la course (trappe bloquée) | clos | ██████████ 100 % (29/29) | 2026-10-28 | 2026-10-29 |
 | [Capteur d'inclinaison MPU6050 pour les volets (trappe du grenier)](plans/inclinaison-trappe-mpu6050.md) | Lire l'angle réel de la trappe du grenier par un MPU6050 pour recaler la position du volet | clos | ██████████ 100 % (28/28) | 2026-10-28 | 2026-10-28 |
