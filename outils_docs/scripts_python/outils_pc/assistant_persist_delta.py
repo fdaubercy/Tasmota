@@ -26,7 +26,7 @@ def _zone(reel, a, tag, i1, i2):
     # repli par contexte : precedente seule, puis la paire precedente+suivante, puis suivante seule
     if i1 and not _positions(reel, a[i1 - 1:i1]):
         return "ancre absente dans le fichier"      # precedente retouchee : jamais de repli (spec §10.2)
-    essais = [(a[i1 - 1:i1], 1)] * (i1 > 0) +[(a[i1 - 1:i1 + 1], 1)] * (0 < i1 < len(a)) + [(a[i1:i1 + 1], 0)] * (i1 < len(a))
+    essais = [(a[i1 - 1:i1], 1)] * (i1 > 0) + [(a[i1 - 1:i1 + 1], 1)] * (0 < i1 < len(a)) + [(a[i1:i1 + 1], 0)] * (i1 < len(a))
     for motif, decalage in essais:
         trouve = _positions(reel, motif)
         if len(trouve) == 1:

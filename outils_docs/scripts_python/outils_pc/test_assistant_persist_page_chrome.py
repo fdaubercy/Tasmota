@@ -300,7 +300,7 @@ def sonde_page(m):
     verifie(attend(cdp, "document.getElementById('copier').textContent === 'Copié'", 5), True, "bouton « Copier » : confirmation")
     verifie(cdp.js("document.getElementById('creer').disabled"), True, "apres creation : « Creer l'env » grise")
     sonde_modification(m)
-    html =cdp.js("document.documentElement.outerHTML + document.body.textContent")
+    html = cdp.js("document.documentElement.outerHTML + document.body.textContent")
     fuites = [i for i, s in enumerate(taw.valeurs_reelles()) if s in html]
     verifie(fuites, [], "aucun mot de passe du parc dans la page")
     verifie(cdp.erreurs(), [], "aucune erreur JS pendant toute la sonde")

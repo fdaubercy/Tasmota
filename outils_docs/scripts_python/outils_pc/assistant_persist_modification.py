@@ -91,7 +91,7 @@ def _relit(racine, env):
 
 
 def reponses_de_l_env(racine, env):
-    modele, _, r = _relit(racine, env)
+    r = _relit(racine, env)[2]
     gen.variables(racine, r)                                  # ValueError : role, heure, ip ou maitre inadmissibles
     return r
 
@@ -123,7 +123,7 @@ def _doublons(avant, apres, genere):
 def _cache(txt, secrets):
     """Texte masque : regex du depot, puis toute valeur de secret en clair (une valeur retouchee a la main aussi)."""
     txt = fbc._masque(txt)
-    for s in secrets:
+    for s in sorted((x for x in secrets if x), key=len, reverse=True):     # le long d'abord : un secret en contient un autre
         txt = txt.replace(s, "***")
     return txt
 

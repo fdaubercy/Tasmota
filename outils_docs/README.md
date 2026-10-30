@@ -997,7 +997,8 @@ Conception : spec §10 ; plan `tasks/plans/assistant-persist-modification.md`. C
 (application aux fichiers), `assistant_persist_page_js_env.py` (page).
 
 **Charger.** La liste des cartes du parc (`cartes` dans `/parc`) permet de choisir un env : `GET /env` relit son
-`_persist.json`, son autoexec, sa section du cenv et sa section du `.h`, et remplit les questions avec ces réponses.
+`_persist.json` (plus la base et le define tirés du cenv) et remplit les questions avec ces réponses. L'autoexec et
+les sections du cenv et du `.h` ne sont lus qu'à la préparation de la modification.
 
 **Modifier.** L'assistant ne régénère jamais une carte. Il génère **A** (les réponses relues) et **B** (les réponses de
 la page), puis applique au vrai fichier le **seul écart A -> B** ; tout le reste (retouches à la main, ordre,
@@ -1033,6 +1034,7 @@ define, `default_envs` et `data_dir` de `platformio_override.ini`, dossier renom
 - Les broches de **SD, I2S, Ethernet et LoRa** ne sont pas contrôlées.
 - Les éléments ne vont que sur le **bloc métier principal**.
 - Les éléments des **métiers 2 à N** sont conservés lors d'une modification, mais non éditables (voir « Modifier ou supprimer un env existant »).
+- Une carte dont la section du `.h` (ou l'autoexec, ou la section du cenv) a été retouchée à la main au point qu'une ligne générée ne s'y retrouve plus est **refusée à la modification** (le refus cite le fichier et la ligne) : c'est le cas aujourd'hui de plusieurs cartes anciennes du parc — les reprendre à la main ou les recréer.
 - Clés `adressMAC` / `adresseMAC` et `telePeriod` : tranché le 2026-10-28 — `telePeriod` de `serveur.udp` et `serveur.rangeExtender` retirées (jamais lues), MAC écrite dans `adresseMAC` dès le boot par `globalFonctions`, `adressMAC` retirée ;
   voir `outils_docs/ANALYSE_CLES_MAC_TELEPERIOD_2026-10-27.md`.
 

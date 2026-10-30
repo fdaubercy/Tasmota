@@ -342,6 +342,9 @@ def doublon_refuse(t):
 
 def masquage_unique(t):
     """I1 : un retour anticipe (section .h introuvable) et le repli sur ValueError masquent aussi les secrets."""
+    # secrets emboites, le court en premier (pire ordre d'iteration) : aucun fragment du long en clair
+    sortie = apmod._cache("x abcdef y abc z", ["abc", "abcdef", ""])
+    verifie((("def" in sortie), sortie.count("***")), (False, 2), "masquage_unique : secrets emboites, le long masque d'abord")
     racine = cree_piscine(t, "msq", SANS_RE)
     r = replace(reps(racine, ENV), ip="192.168.0.77")
     secret = apmod.gen.secrets_reponses(racine, reps(racine, ENV))["mqtt"]
@@ -379,9 +382,42 @@ def test_rejeu_parc(t):
             print("     chemins fautifs :", ", ".join(p["chemins"]) or "(aucun)")
     for env in GARAGE:
         verifie((env in vues, env in exclues), (True, False), f"rejeu_parc_ecart_vide : {env} (garage) rejouee, jamais exclue")
+    rejeu_vraie_modification(racine, vues)
     print(f"     rejouees : {len(vues)} ({', '.join(vues)})")
     for env, raison in exclues.items():
         print(f"     exclue : {env} : {raison}")
+
+
+def feuilles(o, chemin=()):
+    if isinstance(o, dict):
+        return {k: v for c, x in o.items() for k, v in feuilles(x, chemin + (c,)).items()}
+    if isinstance(o, list):
+        return {k: v for i, x in enumerate(o) for k, v in feuilles(x, chemin + (str(i),)).items()}
+    return {".".join(chemin): o}
+
+
+def rejeu_vraie_modification(racine, envs):
+    """I2 : ici A et B ne sont pas identiques par construction : on change l'IP, on prepare puis on ecrit (sur la copie).
+    Chaque carte est soit appliquee (le persist ne change qu'aux chemins de l'ecart, et l'IP y passe de l'ancienne a la
+    nouvelle), soit refusee par un refus qui cite un fichier. Les cartes du garage doivent etre appliquees."""
+    for i, env in enumerate(envs):
+        r = reps(racine, env)
+        r2 = replace(r, ip=f"192.168.0.{200 + i}")
+        p = prepare(racine, env, r2)
+        if p["refus"]:
+            fich = sorted({m for x in p["refus"] for m in re.findall(r"[\w./-]+\.(?:json|be|ini|h)\b", x)})
+            print(f"     {env} : refuse ({', '.join(fich) or 'aucun fichier cite'})")
+            verifie((bool(fich), env in GARAGE), (True, False), f"rejeu_parc_modifie : {env} refus cite un fichier, hors garage")
+            continue
+        fp = fbe.dossier_carte(env) + "/_persist.json"
+        avant = feuilles(json.loads(lit(racine, fp)))
+        res, msg = modifie(racine, env, r2)
+        apres = feuilles(json.loads(lit(racine, fp)))
+        diff = {k for k in avant.keys() | apres.keys() if avant.get(k) != apres.get(k)}
+        ip_ok = all(r2.ip in str(apres.get(k)) and r.ip in str(avant.get(k)) for k in diff)
+        ok = verifie((msg, p["vide"], diff == set(p["chemins"]), ip_ok), (None, False, True, True),
+                     f"rejeu_parc_modifie : {env} appliquee, seule l'IP change dans le persist")
+        print(f"     {env} : applique ({len(diff)} chemin(s) du persist)" if ok else f"     {env} : ECHEC")
 
 
 def test_aucun_secret():
