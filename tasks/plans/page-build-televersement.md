@@ -517,8 +517,12 @@ fichier relu ou contrôlé à la fin ; même choix de fichiers, de carte et d'op
   chargé par les autoexec du P4 et de la cuve (`banc_demarrage.py` VERT, références des 2 cartes réenregistrées :
   + règle `Mqtt#Connected`, + globale `fsMqttRecepteur` ; `banc_boot.py` OK) ; `efface` = `path.format(true)`
   (`banc_fsmqtt.py` VERT, mutant « formatage sans contrôle » rouge ; `test_build_ota_mqtt.py` VERT).
-- [ ] Essai réel par l'utilisateur : maître, puis cuve par le maître. Avant : firmware recompilé et envoyé aux 2 cartes
-  (fsMqtt en flash), puis leur autoexec (onglet Fichiers, HTTP = essai A15). Mesurer la durée du formatage.
+- [x] Essai réel par l'utilisateur : envoi par MQTT, maître puis cuve par le maître. — preuve : firmware des 2 cartes
+  par `erase_upload` le 2026-10-30 (05:06 et 05:55) ; `global.fsMqttRecepteur` = instance sur les deux (topics
+  `fsmqtt/garage/` et `fsmqtt/jardin/cuve/`), `/fsMqtt.be` absent du FS (module du firmware) ; envois de l'onglet
+  Fichiers en MQTT (dit par l'utilisateur), persist sauvegardé avant à 06:51 (P4) et 06:53 (cuve) ; `/autoexec.be`
+  des cartes identique au dépôt (2020 o MD5 56637B4E…, 1888 o MD5 E60F6778…).
+- [ ] Essai réel par l'utilisateur : « Effacer tout le FS » (formatage) sur une carte, durée du formatage mesurée.
 
 ## A15 — Onglet « Fichiers » : envoyer des fichiers choisis du dépôt à une carte choisie, par HTTP (demande du 2026-10-29)
 
