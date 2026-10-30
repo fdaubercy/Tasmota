@@ -4,7 +4,7 @@ titre: Page web « Build et téléversement » (port 7700, tuile de l'annuaire)
 objectif: Compiler et téléverser en série (COM ou OTA) les envs cochés depuis une page web, avec progression en direct
 statut: actif
 cree: 2026-10-24
-maj: 2026-10-29
+maj: 2026-10-30
 ---
 # Page web « Build et téléversement » — plan d'implémentation
 
