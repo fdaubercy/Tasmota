@@ -48,6 +48,9 @@ _FS = re.compile(r"Nous allons créer le système de fichiers|Building FS image|
 _FS_AUSSI = re.compile(r"Utilisera une commande de téléchargement personnalisée")
 _RESULTAT = re.compile(r"\[(SUCCESS|FAILED)\]")
 _ERREUR = re.compile(r"error:|Error|FAILED|fatal error")     # esptool : "A fatal error occurred: ..."
+# Controle du lib_ignore par le pre-script (build/verifie_lib_ignore.py::controle) : detail du Pre-build ; ses
+# lignes ✗ (bibliotheque ignoree mais utilisee) vont dans l'extrait d'erreur
+_LIB_IGNORE = re.compile(r"^[^\w]*(lib_ignore\b.*)$")
 
 
 def retire_ansi(texte):
@@ -106,6 +109,12 @@ class Suivi:
             self.extrait_erreur = list(self._erreurs)
         if _FS_AUSSI.search(t):
             self.fs_aussi = True
+        m = _LIB_IGNORE.match(t)
+        if m:
+            if "✗" in t:
+                self._erreurs.append(m.group(1))
+                self.extrait_erreur = list(self._erreurs)
+            return self._evenement(ETAPE_PREBUILD, None, m.group(1))
         m = _RESULTAT.search(t)
         if m:
             self.resultat = "succes" if m.group(1) == "SUCCESS" else "echec"

@@ -722,6 +722,10 @@ hors_build = any(cible in COMMAND_LINE_TARGETS for cible in CIBLES_HORS_BUILD)
 # ✨ FONCTIONS ACTIVES UNIQUEMENT HORS SAFEBOOT ...
 # ============================================================
 if not is_safeboot and not hors_build:
+    # Avant le scan des dependances : un lib_ignore qui ignore une bibliotheque utilisee arrete le build ici
+    import verifie_lib_ignore
+    verifie_lib_ignore.controle(env)
+
     adapteParametresPlatformio_override()
 
     if ("32p4" in Global.environnement) and (any("UPDATE_IDF55_PLATFORM" in f for f in env.get("BUILD_FLAGS", []))):

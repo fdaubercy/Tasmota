@@ -281,11 +281,29 @@ def test_effacement():
             "effacement : echec d'esptool dans l'etape Effacement, son message dans l'extrait")
 
 
+def test_lib_ignore():
+    """Lignes du controle du lib_ignore (build/verifie_lib_ignore.py::controle), avec leurs couleurs."""
+    s = bp.Suivi("compiler", 10)
+    ev = alimente(s, [f"{ESC}[36m… lib_ignore de cuve : controle de 23 bibliotheque(s)…{ESC}[0m"])
+    verifie((ev["etape"], ev["detail"]), ("Pré-build", "lib_ignore de cuve : controle de 23 bibliotheque(s)…"),
+            "lib_ignore : debut du controle dans le detail du Pre-build")
+    ev = alimente(s, [f"{ESC}[32m✔ lib_ignore de cuve : 23 bibliotheque(s) ignoree(s), aucune utilisee{ESC}[0m"])
+    verifie((ev["detail"].startswith("lib_ignore de cuve : 23"), s.extrait_erreur), (True, []),
+            "lib_ignore : succes affiche, pas d'extrait d'erreur")
+    alimente(s, [f"{ESC}[31m✗ lib_ignore de cuve : esp_wireguard_tasmota ignoree mais utilisee - "
+                 f"tasmota\\x.ino:27 #include \"crypto/refc/poly1305-donna.h\" (garde active){ESC}[0m",
+                 "[FAILED] Took 30.2 seconds"])
+    verifie((s.resultat, any("esp_wireguard_tasmota" in x for x in s.extrait_erreur)), ("echec", True),
+            "lib_ignore : la bibliotheque fautive dans l'extrait d'erreur")
+    verifie(alimente(bp.Suivi("compiler", 10), ["lib_ignore = lvgl"]) is not None, True,
+            "lib_ignore : limite assumee, toute ligne commencant par lib_ignore est prise (pio n'en ecrit pas)")
+
+
 def principal():
     for t in (test_compilation, test_sans_reference, test_estimation, test_ansi, test_chemins, test_liens, test_esptool,
               test_succes, test_echec, test_fs_aussi, test_buildfs_et_prebuild, test_pourcent_borne,
               test_increment, test_cache, test_zone, test_sortie_reelle, test_effacement, test_zones_ecrites,
-              test_pourcent_global, test_zones_autres):
+              test_pourcent_global, test_zones_autres, test_lib_ignore):
         t()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0

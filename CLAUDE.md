@@ -539,7 +539,11 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   entre eux restent dans le MEME dossier** (import d'un module voisin) : ne pas les separer.
   - `build/` — charges par PlatformIO : `pre_utilitaires_platformio.py` (pre-script ; importe les
     `cible_*.py` voisins), `post_lto_parallele.py`, les 7 `cible_*.py` (cibles Custom, qui lancent
-    `outils_pc/`), `ota-files-uploader.py`, `update_idf55_framework.py` (appele par le pre-script).
+    `outils_pc/`), `ota-files-uploader.py`, `update_idf55_framework.py` (appele par le pre-script),
+    `verifie_lib_ignore.py` (garde du pre-script, AVANT le scan des dependances : arrete le build si le `lib_ignore`
+    qu'un env personnel ajoute a son parent ignore une bibliotheque incluse sous une garde vraie ou incertaine ;
+    ~11 s ; ligne « lib_ignore de <env> : » lue par la page build ; `--propose <env>` = liste ignorable de l'env ;
+    banc `test_verifie_lib_ignore.py [--reel]` ; plan `tasks/plans/lib-ignore-envs.md`).
   - `berry/` — `verifie_berry.py` (syntaxe de data/, tache VS Code de surveillance ; avertissements de
     charte des logs par `charte_logs.py`, banc `test_verifie_berry_charte.py`),
     `solidifie_et_compile_berry.py` (module solidifiable en ~10 s, compile le .h),

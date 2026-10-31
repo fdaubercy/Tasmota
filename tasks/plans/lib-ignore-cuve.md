@@ -2,7 +2,7 @@
 chantier: lib-ignore-cuve
 titre: Accélérer le scan des dépendances (LDF) — essai lib_ignore sur l'env de la cuve
 objectif: Réduire le temps du scan LDF et de la compilation de l'env cuve en ignorant les bibliothèques qu'il n'utilise pas, mesuré avant et après
-statut: actif
+statut: clos
 cree: 2026-10-31
 maj: 2026-10-31
 ---
@@ -56,8 +56,8 @@ Pièges :
 
 ## A6 — Bilan et suite
 - [x] Gains chiffrés consignés dans ce plan (Vérification) et rapportés à l'utilisateur — preuve : section « Bilan » ci-dessous, rapportée le 2026-10-31
-- [ ] Décision de l'utilisateur : étendre au P4 et au rideau, ou en rester là
-- [ ] Commit du cenv et de ce plan (message en français sans accents, sans trailer)
+- [x] Décision de l'utilisateur : étendre au P4 et au rideau, ou en rester là — preuve : 2026-10-31 « Étends le principe des lib_ignore pour chaque environnement personnalisé », script de vérification d'abord (plan `tasks/plans/lib-ignore-envs.md`)
+- [x] Commit du cenv et de ce plan (message en français sans accents, sans trailer) — preuve : d16b266c4 (retrait d'esp_wireguard_tasmota), puis commit des listes de tous les envs (plan lib-ignore-envs) ; la liste de la cuve vit désormais dans `[lib_inutiles]`
 
 ## Améliorations restantes
 - [ ] [projet] Couper par `#undef` (section de la cuve dans `user_config_override.h`) les 7 fonctions actives inutiles (IR, DALI, TM1638, LoRa, iBeacon, Berry Animation, SEN5X) puis ignorer leurs bibliothèques : firmware plus petit, à valider sur la carte. **Matter, SendMail et KNX restent actifs** (décision de l'utilisateur du 2026-10-31) : jamais dans un `lib_ignore` ni un `#undef`
