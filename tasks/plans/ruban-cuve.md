@@ -52,7 +52,9 @@ la cuve refonctionne et sa grille ModBus a été validée le 17/10 (plan `modbus
 - [x] Commit — preuve : commit 91bbae69a
 
 ## A5 — Avant de commander la carte
-- [ ] Identifier le module RS485 réel et adapter son empreinte
+- [x] Identifier le module RS485 réel et adapter son empreinte — preuve : XY-017 confirmé par l'utilisateur le 2026-10-31 ; empreinte `Modules_Tasmota:Module_RS485_Auto_XY-017` debout sous le DevKit, bornier A/B au-dessus du coin bas droit libéré (voies décalées de 10,16 mm), DRC 0
+- [x] Corrections de la relecture du 2026-10-31 (v0.3) : voies entrée/0V/+12, JP1 supprimé (RS485 en 3,3 V fixe), bornier J15 du bouton, R16 10 k de rappel sur l'entrée du 74AHCT125, C1 35 V, type de voie sérigraphié — preuve : carte routée, DRC parité 0 / 0 non connecté / 0 violation, ERC 0 erreur, masse en 1 groupe (connexite_masse.py), bilan 2,25 A sans alerte
+- [ ] Tension laissée au capteur de niveau (~11 V, ~8 V sur une voie 4-20 mA) vérifiée avec sa référence et sa voie — question à reposer à l'utilisateur
 - [ ] Mesurer le DevKit ESP32-S3 et les modules (entraxes des broches)
 - [ ] Vérifier la hauteur des fusibles MF-R dans le boîtier
 - [ ] Relecture finale par l'agent `relecteur-pcb`
