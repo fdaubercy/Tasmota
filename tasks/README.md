@@ -17,7 +17,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 | Plan | Objectif principal | Statut | Avancement | Créé | Mis à jour |
 |---|---|---|---|---|---|
-| [Page dédiée « Niveau de la cuve » (jauges A et H), lien depuis l'encadré de la cuve](plans/jauges-cuve.md) | Afficher le volume (jauge liquide A, en litres) et le taux (demi-cercle H, en %) de la cuve sur une page dédiée ouverte depuis son encadré | actif | █████░░░░░ 46 % (10/20) | 2026-10-31 | 2026-10-31 |
+| [Page dédiée « Niveau de la cuve » (jauges A, H et B), lien depuis l'encadré de la cuve](plans/jauges-cuve.md) | Afficher volume (jauge A), taux (jauge H) et tensions brute et recalculée de la sonde (cadran B) de la cuve sur une page dédiée ouverte depuis son encadré, sur la cuve et le P4 | actif | ████░░░░░░ 38 % (13/32) | 2026-10-31 | 2026-10-31 |
 | [Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2](plans/ruban-cuve.md) | Piloter le ruban WS2812 de la cuve en AUTO/MANUEL (bouton et ModBus) et préparer la carte cuve v0.2 | actif | ████████░░ 77 % (21/29) | 2026-10-18 | 2026-10-31 |
 | [Page web « Build et téléversement » (port 7700, tuile de l'annuaire)](plans/page-build-televersement.md) | Compiler et téléverser en série (COM ou OTA) les envs cochés depuis une page web, avec progression en direct | actif | ██████████ 100 % (84/84) | 2026-10-24 | 2026-10-30 |
 | [Plan d'action de l'audit Berry (propositions P2.1 à P10.7)](plans/actions-audit-berry.md) | Mettre en œuvre, lot par lot et sur décision de l'utilisateur, les 78 propositions de l'audit Berry | actif | █████████░ 91 % (89/95) | 2026-10-22 | 2026-10-26 |

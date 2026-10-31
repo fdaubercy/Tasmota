@@ -120,10 +120,11 @@ OUTILS = [
         "et texte, registre des modules vus, export. Seul paramètre ici : le port de la page (7200). "
         + ARRET,
         DOSSIER + "outils_pc/syslog_tasmota.py",
-        [_port("http", 7200)],
+        # Journal sur disque par defaut (2026-10-31) : la memoire (5000 lignes) ne couvre que ~1 h 20
+        [_port("http", 7200), Parametre("journal", "Journal sur disque", "--journal", "on", "drapeau")],
         "http",
         "Console capturée : " + CONSOLE.format("syslog") + ". Journal des messages (une ligne par message, "
-        "rotation à 20 Mo) : option --journal du script, pas de fichier par défaut."),
+        "rotation à 20 Mo) : %TEMP%\\syslog_tasmota.log, comme la cible Custom (case « Journal sur disque »)."),
     Outil(
         "synchro_fork", "Synchro du fork", "Synchro du fork", GROUPES[2],
         "Synchronise le fork avec l'amont arendst/Tasmota, questions posées par boutons.",

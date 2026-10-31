@@ -353,7 +353,7 @@ def section_serveur():
         verifie(appel(port, "GET", "/nimporte")[0], 404, "TEMOIN routes_get : route inconnue -> 404")
 
         verifie(post("/lance", {"id": "syslog", "valeurs": {}}), (200, {"pid": 4242}), "lance_ok : reponse")
-        verifie(lances, [("syslog", ["--http", "7200"], {})], "lance_ok : enregistreur")
+        verifie(lances, [("syslog", ["--http", "7200", "--journal"], {})], "lance_ok : enregistreur")
 
         del lances[:]
         verifie(post("/lance", {"id": "sniffeur_modbus", "valeurs": {"port": "COM3 --x"}})[0], 400,

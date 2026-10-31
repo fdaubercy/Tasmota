@@ -61,8 +61,8 @@ la cuve refonctionne et sa grille ModBus a été validée le 17/10 (plan `modbus
 - [ ] Export de fabrication (Gerber, BOM, CPL pour JLCPCB)
 
 ## Améliorations restantes
-- [ ] [projet] Cuve : PSRAM détectée un démarrage sur deux le 2026-10-14 (même firmware) ; cause non établie (câble, alimentation ou module). La surveiller au prochain démarrage par le pont série.
-- [ ] [projet] Cuve : cause du blocage après `HDW:` à la suite du flash du 2026-10-15 non établie.
+- [ ] [projet] Cuve : PSRAM détectée un démarrage sur deux le 2026-10-14 (même firmware) ; cause non établie (câble, alimentation ou module). La surveiller au prochain démarrage par le pont série. Le 2026-10-31 : un seul défaut avec le blocage ci-dessous (bloquée = `HDW:` SANS « (PSRAM) », le code s'exécute depuis la PSRAM : PsrMax 5376 Ko = 8 Mo − programme) ; config OPI correcte ; 25/25 démarrages avec PSRAM les 24-25/10 ; hypothèse non prouvée : les 2 USB-C branchés le 14/10. Surveillance : syslog journalisé par l'annuaire (`%TEMP%\syslog_tasmota.log`), une ligne `HDW:` sans « (PSRAM) » = récidive.
+- [ ] [projet] Cuve : cause du blocage après `HDW:` à la suite du flash du 2026-10-15 non établie. Même défaut que la PSRAM ci-dessus (voir sa ligne).
 
 ## Vérification
 Étapes sur carte : une ligne de log horodatée (pont série :7000, syslog :7200) ou un relevé `RubanEsclave<n> etat`.

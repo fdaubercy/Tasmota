@@ -21,7 +21,7 @@ la lecture des logs depuis le reseau.
 
 Usage (Python de PlatformIO ou tout Python 3.8+, aucune dependance) :
     python outils_docs/scripts_python/outils_pc/syslog_tasmota.py
-    options : --port 514  --ecoute 0.0.0.0  --http 7200  --journal fichier.log  --journal-max 20
+    options : --port 514  --ecoute 0.0.0.0  --http 7200  --journal [fichier.log]  --journal-max 20
               --historique 5000  --local  --sans-navigateur
 Depuis VS Code : pioarduino > Project Tasks > <env> > Custom > « Serveur syslog (HTTP 127.0.0.1) »
 (cible_syslog_tasmota.py). Arret : Ctrl+C dans le terminal de la tache (ou la corbeille).
@@ -35,6 +35,7 @@ import queue
 import re
 import socket
 import sys
+import tempfile
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -257,7 +258,9 @@ def main():
     options.add_argument("--ecoute", default="0.0.0.0", help="adresse d'ecoute UDP (defaut : toutes)")
     options.add_argument("--http", type=int, default=7200,
                          help="port de la page web (ce PC, et le reseau avec jeton sauf --local)")
-    options.add_argument("--journal", help="copie des messages recus dans ce fichier")
+    options.add_argument("--journal", nargs="?", const=os.path.join(tempfile.gettempdir(), "syslog_tasmota.log"),
+                         help="copie des messages recus dans ce fichier (seul : %%TEMP%%\\syslog_tasmota.log, "
+                              "comme la cible Custom)")
     options.add_argument("--journal-max", dest="journal_max", type=int, default=20,
                          help="taille (Mo) au-dela de laquelle le journal bascule en .1 (0 : jamais)")
     options.add_argument("--historique", type=int, default=5000, help="lignes rejouees a l'ouverture de la page")
