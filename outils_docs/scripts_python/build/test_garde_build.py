@@ -148,9 +148,29 @@ def test_main_inchange():
     verifie(lance_main("git status", ["x"])[0], 0, "main : temoin, commande sans pio run -> autorisee")
 
 
+def test_enrobeur():
+    """pio passe en argument a un script : la sous-commande `run` n'apparait pas dans la commande.
+    Commandes reelles du 2026-10-31 (la premiere est passee, et a vide .pio/build en plein build)."""
+    P = '"$USERPROFILE/.platformio/penv/Scripts'
+    enrobe = P + '/python.exe" "$S/mesure_pio.py" ' + P + '/pio.exe" tasmota32s3-x "$S/avant_1.log"'
+    verifie(gb.lance_pio_run(enrobe), True, "enrobeur : pio.exe en argument d'un script -> compte")
+    verifie(lance_main(enrobe, ["x upload"])[0], 2, "enrobeur : refuse pendant un build")
+    verifie(gb.lance_pio_run('cd /c/x; export PYTHONIOENCODING=utf-8; ' + P + '/pio.exe" run -e x 2>&1 | '
+                             + P + '/python.exe" "$S/horodate.py" "$S/l.log"'), True,
+            "enrobeur : pio run tube vers un horodateur -> compte")
+    verifie(gb.lance_pio_run(r'python C:\x\mesure.py C:\Users\fdaub\.platformio\penv\Scripts\platformio env'), True,
+            "enrobeur : chemin Windows vers platformio en argument -> compte")
+    verifie(gb.lance_pio_run('ls -la ' + P + '/pio.exe"'), True,
+            "enrobeur : simple chemin vers pio.exe en argument -> compte (limite assumee, sans effet hors build)")
+    verifie(gb.lance_pio_run(P + '/pio.exe" home --port 8008'), False, "temoin : pio.exe en tete sans run -> libre")
+    verifie(gb.lance_pio_run('grep -n pio CLAUDE.md; echo platformio'), False,
+            "temoin : le mot pio en argument nu -> libre")
+    verifie(gb.lance_pio_run('ls ~/.platformio/penv/Scripts/'), False, "temoin : dossier .platformio -> libre")
+
+
 def principal():
     for test in (test_vrais_builds, test_cibles_outils, test_cibles_outils_au_demarrage, test_lecture_powershell,
-                 test_liste_alignee, test_main_inchange):
+                 test_liste_alignee, test_main_inchange, test_enrobeur):
         test()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0

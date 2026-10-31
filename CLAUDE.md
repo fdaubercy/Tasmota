@@ -408,7 +408,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   sur l'amont (detecteur seul, ne synchronise pas). Declare dans `.claude/settings.json`.
 - `.claude/hooks/garde_build.sh` + `garde_build.py` — hook `PreToolUse` (Bash, PowerShell) : refuse un
   `pio run` si un `platformio run` ou un `scons` tourne (`pio home` ignore). Filtre `if` : ne se lance
-  que si la commande contient `pio`/`platformio`. Un `pio run` (et son scons) dont TOUTES les cibles sont des
+  que si la commande contient `pio`/`platformio`. Un chemin vers `pio.exe`/`platformio` passe en ARGUMENT
+  (enrobeur, script de mesure) compte comme un `pio run` (`garde_build.py::est_pio`, incident du 2026-10-31). Un `pio run` (et son scons) dont TOUTES les cibles sont des
   cibles d'outils (`CIBLES_OUTILS` = les `NOM_CIBLE` des `build/cible_*.py`) n'est PAS un build : l'outil vit
   tant que la cible vit, la page de build l'attendrait sans fin. `__idedata`, une cible melee ou un scons sans
   cible lisible restent des builds ; lancer une cible d'outil pendant un vrai build reste refuse. Une cible

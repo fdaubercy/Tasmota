@@ -42,16 +42,29 @@ ENV_PIO = re.compile(r'\s(?:-e|--environment)(?:[\s=]+"?|"?(?=[^\s=-]))([^\s"]+)
 DEMARRAGE_OUTIL = 30
 
 
+def est_pio(mot):
+    """Vrai si `mot` designe l'executable pio : chemin vers pio/platformio, ou pio.exe / platformio.exe nu."""
+    nom = os.path.basename(mot.replace('\\', '/')).lower()
+    return nom in PIO and (nom.endswith('.exe') or '/' in mot or '\\' in mot)
+
+
 def lance_pio_run(commande):
-    """Vrai si un segment de la commande lance `pio run` / `platformio run` / `python -m platformio run`."""
+    """Vrai si un segment de la commande lance `pio run` / `platformio run` / `python -m platformio run`,
+    ou passe l'executable pio en argument a un enrobeur (script de mesure...), dont la sous-commande est
+    invisible ici (incident du 2026-10-31 : un `pio run` lance par un script a vide .pio/build en plein build)."""
     for segment in SEPARATEURS.split(commande):
         try:
             mots = shlex.split(segment, posix=False)
         except ValueError:
             mots = segment.split()
         mots = [m.strip('"\'') for m in mots]
-        while mots and (AFFECTATION.match(mots[0]) or mots[0] in ('&', 'sudo', 'time', 'nohup', '(', '{')):
-            mots = mots[1:]
+        tete = 0
+        while tete < len(mots) and (AFFECTATION.match(mots[tete]) or mots[tete] in ('&', 'sudo', 'time', 'nohup', '(', '{')):
+            tete += 1
+        # shortcut: un chemin vers pio.exe en simple argument (ls, Test-Path) est aussi compte ; sans effet hors build
+        if any(est_pio(m) for i, m in enumerate(mots) if i != tete):
+            return True
+        mots = mots[tete:]
         if not mots:
             continue
         tete = os.path.basename(mots[0].replace('\\', '/')).lower()
