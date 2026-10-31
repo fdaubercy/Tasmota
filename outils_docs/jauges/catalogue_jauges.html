@@ -1,0 +1,295 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>
+<title>Jauges de la cuve</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Planche d'instruments : une grille de cartes égales, un curseur commun en tête qui pilote toutes les jauges */
+:root{
+  --bg:#eef2f4; --surface:#ffffff; --fg:#17242c; --muted:#5b6b75; --line:#d3dce1;
+  --eau:#1f7fc4; --eau-clair:#7cc0ec; --verre:#e4eef3;
+  --alerte:#c8402f; --vigilance:#d68a12; --ok:#2f8f5b;
+  --f-titre:"Barlow Semi Condensed","Arial Narrow",sans-serif;
+  --f-texte:"Source Sans 3","Segoe UI",sans-serif;
+  --f-chiffre:"JetBrains Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f171c; --surface:#17222a; --fg:#e3ecf1; --muted:#93a5b0; --line:#2a3943;
+  --eau:#3d9be0; --eau-clair:#1e5a86; --verre:#1d2b34;
+  --alerte:#e2604e; --vigilance:#e3a03a; --ok:#4fb57e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f171c; --surface:#17222a; --fg:#e3ecf1; --muted:#93a5b0; --line:#2a3943;
+  --eau:#3d9be0; --eau-clair:#1e5a86; --verre:#1d2b34;
+  --alerte:#e2604e; --vigilance:#e3a03a; --ok:#4fb57e; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-texte);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+.page{max-width:1180px;margin:0 auto;display:grid;gap:24px}
+h1{font-family:var(--f-titre);font-weight:700;font-size:2rem;margin:0;text-wrap:balance;letter-spacing:.01em}
+.intro{color:var(--muted);max-width:68ch;margin:6px 0 0}
+.pilote{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px 18px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+.pilote label{font-family:var(--f-titre);font-weight:600;text-transform:uppercase;letter-spacing:.08em;font-size:.8rem;color:var(--muted)}
+.pilote input{width:min(320px,60vw);accent-color:var(--eau)}
+.lecture{display:flex;gap:22px;flex-wrap:wrap;font-family:var(--f-chiffre);font-variant-numeric:tabular-nums}
+.lecture b{font-weight:500;color:var(--fg)} .lecture span{color:var(--muted);font-size:.85rem}
+.famille{font-family:var(--f-titre);font-weight:600;font-size:1.15rem;margin:8px 0 -8px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.famille small{font-family:var(--f-texte);font-weight:400;color:var(--muted);font-size:.9rem}
+.grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+.carte{background:var(--surface);border:1px solid var(--line);border-radius:6px;display:grid;grid-template-rows:auto 210px auto;min-width:0}
+.tete{display:flex;gap:10px;align-items:baseline;padding:12px 14px 0}
+.lettre{font-family:var(--f-chiffre);font-size:.8rem;border:1.5px solid var(--fg);border-radius:4px;padding:0 6px}
+.tete h3{font-family:var(--f-titre);font-weight:600;font-size:1.08rem;margin:0}
+.scene{display:flex;align-items:center;justify-content:center;padding:8px;min-width:0}
+.scene>svg,.scene>div,.scene>canvas{max-width:100%}
+.pied{padding:0 14px 14px;font-size:.88rem;display:grid;gap:6px}
+.pied .src{color:var(--muted)}
+.pastilles{display:flex;flex-wrap:wrap;gap:6px}
+.pastille{font-size:.75rem;border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--muted)}
+.pastille.bon{border-color:var(--ok);color:var(--ok)} .pastille.moyen{border-color:var(--vigilance);color:var(--vigilance)}
+.avis{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px 18px}
+.avis h2{font-family:var(--f-titre);font-size:1.2rem;margin:0 0 6px}
+.avis p{margin:6px 0;max-width:80ch}
+.avis code,.pied code{font-family:var(--f-chiffre);font-size:.85em}
+a{color:var(--eau)}
+.indispo{color:var(--muted);font-size:.85rem;text-align:center}
+/* Modèle E : bulle */
+.vague{animation:defile 3s linear infinite}
+@keyframes defile{to{transform:translateX(-120px)}}
+.ondule{animation:ondule 4s ease-in-out infinite alternate}
+@keyframes ondule{to{transform:translateX(-40px)}}
+@media (prefers-reduced-motion:reduce){.vague,.ondule{animation:none}}
+/* Modèle G : segments */
+.segments{display:flex;flex-direction:column-reverse;gap:4px;width:84px}
+.segments i{height:13px;border-radius:2px;background:var(--verre);border:1px solid var(--line)}
+.segments i.on{border-color:transparent}
+.segcol{display:flex;gap:14px;align-items:center}
+.segval{font-family:var(--f-chiffre);font-size:1.6rem}
+.segval small{display:block;font-size:.8rem;color:var(--muted)}
+svg text{font-family:var(--f-chiffre)}
+</style>
+
+<div class="page">
+  <header>
+    <h1>Jauges de niveau pour la cuve du garage</h1>
+    <p class="intro">Huit modèles trouvés en ligne, dessinés avec les vraies dimensions de la cuve (340 × 180 × 110 cm, soit 6 732 L). Faites glisser le curseur : toutes les jauges suivent, avec le seuil d'alerte sous 20 % et de vigilance sous 40 %. Choisissez une lettre.</p>
+  </header>
+
+  <div class="pilote">
+    <label for="niveau">Remplissage</label>
+    <input id="niveau" type="range" min="0" max="100" value="62">
+    <div class="lecture">
+      <div><b id="l-taux">62 %</b> <span>taux</span></div>
+      <div><b id="l-haut">68 cm</b> <span>hauteur d'eau</span></div>
+      <div><b id="l-vol">4 174 L</b> <span>volume</span></div>
+    </div>
+  </div>
+
+  <div class="famille">SVG ou CSS pur <small>posable tel quel dans <code>webSensorNiveauCuve.html</code>, aucune librairie, 1 à 3 Ko</small></div>
+  <div class="grille">
+
+    <article class="carte">
+      <div class="tete"><span class="lettre">D</span><h3>Coupe de la cuve</h3></div>
+      <div class="scene">
+        <svg id="d" viewBox="0 0 340 170" width="300" role="img" aria-label="Coupe de la cuve">
+          <defs><clipPath id="d-clip"><rect x="40" y="20" width="270" height="110" rx="3"/></clipPath></defs>
+          <rect x="40" y="20" width="270" height="110" rx="3" fill="var(--verre)"/>
+          <g clip-path="url(#d-clip)">
+            <rect id="d-eau" x="0" y="62" width="400" height="120" fill="var(--eau)"/>
+            <path id="d-surf" class="ondule" d="M0 0 q20 -4 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 v6 h-360z" fill="var(--eau-clair)" opacity=".55"/>
+          </g>
+          <rect x="40" y="20" width="270" height="110" rx="3" fill="none" stroke="var(--fg)" stroke-width="2"/>
+          <g id="d-grad" font-size="9" fill="var(--muted)"></g>
+          <text id="d-txt" x="175" y="155" text-anchor="middle" font-size="12" fill="var(--fg)">4 174 L · 68 cm</text>
+        </svg>
+      </div>
+      <div class="pied">
+        <div class="src">Inspiré des fils Node-RED « tank level » et des citernes SCADA de ThingsBoard ; à l'échelle (1 unité = 1 cm).</div>
+        <div class="pastilles"><span class="pastille bon">≈ 2 Ko</span><span class="pastille bon">page d'accueil</span><span class="pastille">parle en litres et cm</span></div>
+      </div>
+    </article>
+
+    <article class="carte">
+      <div class="tete"><span class="lettre">E</span><h3>Bulle à vague</h3></div>
+      <div class="scene">
+        <svg id="e" viewBox="0 0 180 180" width="180" role="img" aria-label="Bulle de remplissage">
+          <defs><clipPath id="e-clip"><circle cx="90" cy="90" r="74"/></clipPath></defs>
+          <circle cx="90" cy="90" r="84" fill="none" stroke="var(--eau)" stroke-width="5" id="e-anneau"/>
+          <text id="e-t1" x="90" y="102" text-anchor="middle" font-size="34" fill="var(--eau)">62 %</text>
+          <g clip-path="url(#e-clip)">
+            <g id="e-niv"><path class="vague" id="e-vague" d="M0 0 q30 -9 60 0 t60 0 t60 0 t60 0 t60 0 t60 0 v200 h-360z" fill="var(--eau)"/></g>
+            <text id="e-t2" x="90" y="102" text-anchor="middle" font-size="34" fill="#fff" clip-path="url(#e-eauclip)">62 %</text>
+          </g>
+          <clipPath id="e-eauclip"><rect id="e-eaurect" x="0" y="70" width="180" height="200"/></clipPath>
+        </svg>
+      </div>
+      <div class="pied">
+        <div class="src">Recréation sans D3 du <a href="https://gist.github.com/brattonc/5e5ce9beee483220e2f6" target="_blank" rel="noopener">D3 Liquid Fill Gauge</a> (le chiffre change de couleur sous la surface).</div>
+        <div class="pastilles"><span class="pastille bon">≈ 2 Ko</span><span class="pastille moyen">vague relancée à chaque rafraîchissement</span></div>
+      </div>
+    </article>
+
+    <article class="carte">
+      <div class="tete"><span class="lettre">F</span><h3>Tube à flotteur</h3></div>
+      <div class="scene">
+        <svg id="f" viewBox="0 0 150 190" width="150" role="img" aria-label="Tube de niveau à flotteur">
+          <rect x="42" y="12" width="26" height="165" rx="13" fill="var(--verre)" stroke="var(--fg)" stroke-width="2"/>
+          <rect id="f-eau" x="45" y="80" width="20" height="94" rx="10" fill="var(--eau)"/>
+          <rect id="f-flot" x="38" y="76" width="34" height="8" rx="2" fill="var(--alerte)"/>
+          <g id="f-grad" font-size="9" fill="var(--muted)"></g>
+        </svg>
+      </div>
+      <div class="pied">
+        <div class="src">Indicateur industriel à voyant, comme le « Analog Water Level Meter » de <a href="https://thingsboard.io/docs/reference/widgets/scada/traditional-fluid-system/right-analog-water-level-meter/" target="_blank" rel="noopener">ThingsBoard</a>. Graduation en cm, 0 à 110.</div>
+        <div class="pastilles"><span class="pastille bon">≈ 2 Ko</span><span class="pastille bon">page d'accueil</span><span class="pastille">étroit</span></div>
+      </div>
+    </article>
+
+    <article class="carte">
+      <div class="tete"><span class="lettre">G</span><h3>Barre de segments</h3></div>
+      <div class="scene">
+        <div class="segcol"><div class="segments" id="g"></div><div class="segval" id="g-val">62 %<small>4 174 L</small></div></div>
+      </div>
+      <div class="pied">
+        <div class="src">Afficheur à LED façon tableau de bord, 10 segments de 10 % ; couleur du seuil atteint.</div>
+        <div class="pastilles"><span class="pastille bon">&lt; 1 Ko</span><span class="pastille bon">page d'accueil</span><span class="pastille">lecture d'un coup d'œil</span></div>
+      </div>
+    </article>
+
+    <article class="carte">
+      <div class="tete"><span class="lettre">H</span><h3>Demi-cercle sobre</h3></div>
+      <div class="scene">
+        <svg id="h" viewBox="0 0 200 130" width="230" role="img" aria-label="Jauge en demi-cercle">
+          <path d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="var(--verre)" stroke-width="18"/>
+          <path id="h-arc" d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="var(--eau)" stroke-width="18" pathLength="100" stroke-dasharray="62 100"/>
+          <text id="h-val" x="100" y="98" text-anchor="middle" font-size="28" fill="var(--fg)">62 %</text>
+          <text x="20" y="127" text-anchor="middle" font-size="9" fill="var(--muted)">0 L</text>
+          <text x="180" y="127" text-anchor="middle" font-size="9" fill="var(--muted)">6 732 L</text>
+        </svg>
+      </div>
+      <div class="pied">
+        <div class="src">Style <a href="https://github.com/toorshia/justgage" target="_blank" rel="noopener">JustGage</a>, refait en un seul arc SVG (l'original demande Raphaël, ~90 Ko).</div>
+        <div class="pastilles"><span class="pastille bon">≈ 1 Ko</span><span class="pastille bon">page d'accueil</span></div>
+      </div>
+    </article>
+  </div>
+
+  <div class="famille">Librairies <small>rendu réel des librairies ; demandent un script, donc une page à part comme <code>/graphiques</code></small></div>
+  <div class="grille">
+    <article class="carte">
+      <div class="tete"><span class="lettre">A</span><h3>Liquide animé ECharts</h3></div>
+      <div class="scene"><div id="a" style="width:220px;height:200px"></div></div>
+      <div class="pied">
+        <div class="src">Extension <a href="https://github.com/ecomfe/echarts-liquidfill" target="_blank" rel="noopener">echarts-liquidfill</a> (MIT). Vagues, forme de récipient ou chemin SVG libre.</div>
+        <div class="pastilles"><span class="pastille moyen">ECharts + extension</span><span class="pastille moyen">v3 faite pour ECharts 5 (vous avez la 6)</span></div>
+      </div>
+    </article>
+
+    <article class="carte">
+      <div class="tete"><span class="lettre">B</span><h3>Cadran ECharts</h3></div>
+      <div class="scene"><div id="b" style="width:250px;height:210px"></div></div>
+      <div class="pied">
+        <div class="src">Série <code>gauge</code> native d'ECharts, déjà présente dans <code>data/sd/js/echarts.min.js.gz</code>. Zones de couleur aux seuils.</div>
+        <div class="pastilles"><span class="pastille bon">0 Ko de plus</span><span class="pastille moyen">ECharts = 368 Ko à charger</span></div>
+      </div>
+    </article>
+
+    <article class="carte">
+      <div class="tete"><span class="lettre">C</span><h3>Règle graduée canvas-gauges</h3></div>
+      <div class="scene"><canvas id="c"></canvas></div>
+      <div class="pied">
+        <div class="src"><a href="https://github.com/Mikhus/canvas-gauges" target="_blank" rel="noopener">canvas-gauges</a>, jauge linéaire (MIT, sans dépendance). Ici en cm, zone rouge sous 22 cm.</div>
+        <div class="pastilles"><span class="pastille moyen">≈ 30 Ko</span><span class="pastille">aiguille animée</span></div>
+      </div>
+    </article>
+  </div>
+
+  <section class="avis">
+    <h2>Mon conseil</h2>
+    <p><b>D</b> (coupe de la cuve) pour la page d'accueil : à l'échelle, en litres et en cm, sans librairie, et la valeur se substitue directement dans le gabarit par vos <code>#…#</code>. <b>F</b> ou <b>G</b> si la place manque. <b>E</b> est le plus joli, mais la page d'accueil de Tasmota remplace ce bloc toutes les ~2 s : la vague repart de zéro à chaque fois (c'est vrai aussi pour l'ondulation de D, qu'on peut retirer).</p>
+    <p><b>A</b>, <b>B</b> et <b>C</b> ne s'exécutent pas dans le bloc de la page d'accueil (un script inséré là n'est pas lancé). Ils se justifient sur une page dédiée ; <b>B</b> est alors le plus économique, ECharts étant déjà sur les cartes qui ont <code>/graphiques</code>.</p>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts-liquidfill@3.1.0/dist/echarts-liquidfill.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-gauges@2.1.7/gauge.min.js"></script>
+<script>
+const H_MAX = 110, VOL_MAX = 340 * 180 * 110 / 1000; // cm et litres
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt = n => Math.round(n).toLocaleString('fr-FR');
+const couleur = t => t < 20 ? css('--alerte') : t < 40 ? css('--vigilance') : css('--eau');
+const $ = id => document.getElementById(id);
+
+// Graduations statiques de D et F
+(() => {
+  let g = '';
+  for (let cm = 0; cm <= 110; cm += 20) {
+    const y = 130 - cm;
+    g += `<line x1="34" x2="40" y1="${y}" y2="${y}" stroke="var(--muted)"/><text x="30" y="${y + 3}" text-anchor="end">${cm}</text>`;
+  }
+  $('d-grad').innerHTML = g;
+  let f = '';
+  for (let cm = 0; cm <= 110; cm += 10) {
+    const y = 174 - cm * 1.5, long = cm % 50 === 0;
+    f += `<line x1="72" x2="${long ? 86 : 80}" y1="${y}" y2="${y}" stroke="var(--muted)"/>` + (cm % 20 === 0 || cm === 110 ? `<text x="90" y="${y + 3}">${cm}</text>` : '');
+  }
+  $('f-grad').innerHTML = f;
+  $('g').innerHTML = '<i></i>'.repeat(10);
+})();
+
+let a, b, c;
+try { a = echarts.init($('a')); } catch (e) { $('a').innerHTML = '<p class="indispo">ECharts non chargé</p>'; }
+try { b = echarts.init($('b')); } catch (e) { $('b').innerHTML = '<p class="indispo">ECharts non chargé</p>'; }
+try {
+  c = new LinearGauge({ renderTo: 'c', width: 120, height: 200, minValue: 0, maxValue: 110, units: 'cm',
+    majorTicks: ['0', '20', '40', '60', '80', '100', '110'].slice(0, 6), minorTicks: 4, strokeTicks: true,
+    highlights: [{ from: 0, to: 22, color: 'rgba(200,64,47,.6)' }, { from: 22, to: 44, color: 'rgba(214,138,18,.45)' }],
+    colorPlate: 'transparent', borderShadowWidth: 0, borders: false, barBeginCircle: false, barWidth: 14,
+    needleType: 'arrow', needleWidth: 3, animationDuration: 600, valueBox: true, value: 68,
+    fontNumbersSize: 22, fontUnitsSize: 22, fontValueSize: 30 }).draw();
+} catch (e) { $('c').outerHTML = '<p class="indispo">canvas-gauges non chargé</p>'; }
+
+function maj(t) {
+  const h = t / 100 * H_MAX, v = t / 100 * VOL_MAX, col = couleur(t);
+  $('l-taux').textContent = t + ' %'; $('l-haut').textContent = fmt(h) + ' cm'; $('l-vol').textContent = fmt(v) + ' L';
+  // D
+  const yD = 130 - h;
+  $('d-eau').setAttribute('y', yD); $('d-eau').setAttribute('fill', col);
+  $('d-surf').setAttribute('transform', `translate(0 ${yD})`);
+  $('d-txt').textContent = `${fmt(v)} L · ${fmt(h)} cm`;
+  // E
+  const yE = 164 - t / 100 * 148;
+  $('e-niv').setAttribute('transform', `translate(0 ${yE})`);
+  $('e-eaurect').setAttribute('y', yE);
+  $('e-vague').setAttribute('fill', col); $('e-anneau').setAttribute('stroke', col);
+  $('e-t1').setAttribute('fill', col);
+  $('e-t1').textContent = $('e-t2').textContent = t + ' %';
+  // F
+  const yF = 174 - h * 1.5;
+  $('f-eau').setAttribute('y', yF); $('f-eau').setAttribute('height', Math.max(0, 174 - yF));
+  $('f-eau').setAttribute('fill', col); $('f-flot').setAttribute('y', yF - 4);
+  // G
+  const n = Math.ceil(t / 10);
+  [...$('g').children].forEach((s, i) => { s.className = i < n ? 'on' : ''; s.style.background = i < n ? col : ''; });
+  $('g-val').innerHTML = `${t} %<small>${fmt(v)} L</small>`;
+  // H
+  $('h-arc').setAttribute('stroke-dasharray', `${t} 100`); $('h-arc').setAttribute('stroke', col);
+  $('h-val').textContent = t + ' %';
+  // A, B, C
+  const fg = css('--fg'), muted = css('--muted'), verre = css('--verre');
+  if (a) a.setOption({ series: [{ type: 'liquidFill', data: [t / 100, t / 100 * .9], radius: '88%', color: [col, css('--eau-clair')],
+    backgroundStyle: { color: verre }, outline: { borderDistance: 3, itemStyle: { borderColor: col, borderWidth: 3 } },
+    label: { formatter: () => t + ' %', fontSize: 30, color: col, insideColor: '#fff', fontFamily: 'JetBrains Mono' } }] });
+  if (b) b.setOption({ series: [{ type: 'gauge', min: 0, max: 100, radius: '95%', center: ['50%', '58%'],
+    axisLine: { lineStyle: { width: 14, color: [[.2, css('--alerte')], [.4, css('--vigilance')], [1, css('--eau')]] } },
+    axisTick: { lineStyle: { color: muted } }, splitLine: { length: 14, lineStyle: { color: muted } },
+    axisLabel: { color: muted, distance: 18, fontSize: 10 }, pointer: { itemStyle: { color: fg } },
+    detail: { formatter: '{value} %', color: fg, fontSize: 22, offsetCenter: [0, '58%'], fontFamily: 'JetBrains Mono' },
+    title: { show: true, offsetCenter: [0, '84%'], color: muted, fontSize: 11 }, data: [{ value: t, name: fmt(v) + ' L' }] }] });
+  if (c) { c.update({ colorNumbers: muted, colorUnits: muted, colorMajorTicks: muted, colorMinorTicks: muted,
+    colorBarProgress: col, colorBar: verre, colorNeedle: fg, colorNeedleEnd: fg, colorValueText: fg, colorValueBoxBackground: 'transparent' });
+    c.value = Math.round(h); }
+}
+$('niveau').addEventListener('input', e => maj(+e.target.value));
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => maj(+$('niveau').value));
+maj(62);
+</script>
+</body></html>

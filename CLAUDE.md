@@ -500,6 +500,10 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   HORS persist (le persist est en RAM en permanence) ; `diverses.historique.grafana` reste au persist ; sans historique actif, la cle `.grafana` donne un bouton
   « Historique (Grafana) » sur l'accueil (`controleWeb.boutonGrafana`, solidifie, toutes les cartes). Mode d'emploi : `outils_docs/README.md` § « Les graphiques
   des mesures » ; banc `berry/banc_graphiques.py` (+ `.be`, `banc_historique.be`, `bouchons_berry/graphiques/` et `historique/`) ; plan `tasks/plans/graphiques-web.md`.
+- `outils_docs/jauges/` — catalogue de 8 jauges pour afficher une mesure de capteur (2026-10-31) : images
+  `jauge-A.png` a `jauge-H.png`, code `catalogue_jauges.html`, fiche `README.md`. **Choix retenu : A (liquide
+  anime ECharts) ou H (demi-cercle SVG)**. Un gabarit `webSensor*.html` n'execute aucun script (zone remplacee
+  toutes les ~2 s) : seuls les modeles SVG/CSS (D a H) s'y posent tels quels.
 - `outils_docs/SOLIDIFICATION_BERRY.md` — mecanisme, verification (§5), parametres, 13 pieges.
 - `outils_docs/PROTOCOLE_MODBUS.md` — ModBus RTU/TCP standard, implementation maison (3 transports
   Serie/UDP/TCP), extension esclave->maitre, failles du mecanisme d'envoi, design de queue FIFO,
