@@ -54,10 +54,13 @@ mal nommée.</p>
 
 <h2>Lire ou écrire un registre (onglet Envoi)</h2>
 <p><b>Par la carte</b> (bus en service) : la carte Tasmota, seul maître du bus, reçoit une commande Berry
-<code>Br (wire1.detect(adr) ? wire1 : wire2).read(...)</code> ou <code>.write(...)</code> par HTTP. La commande est
+<code>Br (wire1.detect(adr) ? wire1 : wire2).read(...)</code> ou <code>.write(...)</code>, par HTTP ou par MQTT
+(<code>cmnd/&lt;topic&gt;/Br</code>, réponse sur <code>stat/&lt;topic&gt;/RESULT</code>, broker du dépôt). La commande est
 <b>montrée avant l'envoi</b>, une à la fois ; une écriture demande une confirmation (écrire dans un extenseur commute
 un relais). Le fil doit ensuite montrer la trame : « trame vue », sinon « trame non vue » (sniffeur sur un autre bus).
-Pour un esclave derrière le point d'accès du maître, l'adresse proposée est <code>&lt;ip du maître&gt;:&lt;port&gt;</code>.</p>
+Pour un esclave derrière le point d'accès du maître, l'adresse HTTP proposée est <code>&lt;ip du maître&gt;:&lt;port&gt;</code>
+(il faut alors le <code>RoutageRangeExtender</code> du maître) : la page choisit MQTT d'office, l'esclave joignant le broker
+par la sortie du maître. Le topic proposé est celui du <code>_persist.json</code> de la carte observée.</p>
 <p><b>Par le sniffeur</b> (au banc) : le sniffeur devient maître à 100 kHz, <b>uniquement sur un composant débranché
 de sa carte</b>, alimenté par le DevKit (3,3 V), avec les résistances de tirage de son module. Le firmware refuse
 si le bus a vécu dans les 2 dernières secondes : un autre maître est présent.</p>

@@ -622,7 +622,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     3,3 V seulement ; coeur 1 sans interruption, chien de garde des interruptions du coeur 1 coupe). Une ligne texte
     par transaction (protocole v=1, `sniffeur_i2c_protocole.py`, commun au futur Pico). Decodage jusqu'au registre
     (ADS1115, MCP23017, TCA9554, DS3231, MPU6050, ES8311) ; adresses partagees (0x20, 0x68) levees par la carte
-    observee (puces actives de son persist), sinon « ambigu ». Envoi : par la carte (`Br (wire1.detect(a) ? wire1 :
+    observee (puces actives de son persist), sinon « ambigu ». Envoi : par la carte, en HTTP ou en MQTT (`cmnd/<topic>/Br`,
+    reponse `stat/<topic>/RESULT` : esclaves derriere le NAPT) (`Br (wire1.detect(a) ? wire1 :
     wire2).read/write`, pas `tasmota.wire_scan` qui rend nil pour une puce prise par un pilote C ; apercu avant envoi,
     ecriture confirmee, rapprochement de la trame) ou par le sniffeur maitre (composant isole, refus si le bus a vecu
     dans les 2 s). Journal `%LOCALAPPDATA%\outils_tasmota\sniffeur_i2c\` (30 jours). Bancs : `test_sniffeur_i2c.py`,

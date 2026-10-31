@@ -567,10 +567,13 @@ répond comme un sniffeur : une carte Tasmota branchée en USB est écartée. Le
 
 ### Lire ou écrire un registre (onglet « Envoi »)
 
-- **Par la carte** (bus en service) : la carte, seul maître du bus, reçoit par HTTP
+- **Par la carte** (bus en service) : la carte, seul maître du bus, reçoit par HTTP ou par MQTT
   `Br (wire1.detect(0x48) ? wire1 : wire2).read(0x48, 0x01, 2)` (ou `.write(...)`). `wire1`/`wire2` plutôt que
   `tasmota.wire_scan`, qui rend `nil` pour une puce déjà prise par un pilote C de Tasmota. L'IP est proposée
-  d'après le dépôt (`WIFI_IP_ADDRESS`, ou `<ip du maître>:<port>` pour un esclave du range extender). La commande
+  d'après le dépôt (`WIFI_IP_ADDRESS`, ou `<ip du maître>:<port>` pour un esclave du range extender, qui exige le
+  `RoutageRangeExtender` du maître). **Voie MQTT** (liste « par ») : `cmnd/<topic>/Br`, réponse lue sur
+  `stat/<topic>/RESULT`, par le broker de `user_config_override.h` ; topic proposé d'après le `_persist.json` de la
+  carte observée, et voie choisie d'office pour un esclave (il joint le broker par la sortie du maître). La commande
   est **montrée avant l'envoi**, une seule à la fois, et toute écriture demande une confirmation. Le fil dit
   ensuite « trame vue » ou « trame NON VUE » (sniffeur branché sur un autre bus).
 - **Par le sniffeur** (au banc) : le sniffeur devient maître à 100 kHz, **uniquement sur un composant débranché de

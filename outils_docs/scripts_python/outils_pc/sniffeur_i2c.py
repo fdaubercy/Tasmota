@@ -278,7 +278,8 @@ class Sniffeur:
         with self.verrou:
             self.carte, self.decodeur = carte, di.Decodeur(puces)
             self._diffuse([self._paquet("etat", self.etat())])
-        return {"carte": carte, "puces": puces, "ip": carte_i2c.ip_proposee(self.racine, carte) if carte else ""}
+        return {"carte": carte, "puces": puces, "ip": carte_i2c.ip_proposee(self.racine, carte) if carte else "",
+                "topic": carte_i2c.topic_propose(self.racine, carte) if carte else ""}
 
     # ------------------------------------------------------------------ port serie
     def ouvre(self, nom):

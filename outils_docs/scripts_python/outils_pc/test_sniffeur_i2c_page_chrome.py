@@ -147,9 +147,14 @@ def sonde_page(m):
             True, "carte observee (cave S3) : 0x20 decode TCA9554")
     clic(cdp, "ongletEnvoi")
     verifie(cdp.js("!document.getElementById('vueEnvoi').classList.contains('cache')"), True, "onglet Envoi")
+    verifie(attend(cdp, "document.getElementById('cTopic').value === 'cave/serveur-rly-cave-v2'", 10), True,
+            "topic MQTT de la carte propose")
+    cdp.js("var s=document.getElementById('cTransport'); s.value='mqtt'; s.dispatchEvent(new Event('change')); 1")
+    verifie(cdp.js("[document.getElementById('cIp').disabled, document.getElementById('cTopic').disabled]"), [True, False],
+            "voie MQTT : IP grisee, topic saisissable")
     clic(cdp, "cApercu")
     verifie(attend(cdp, "document.getElementById('cCommande').textContent.indexOf('Br (wire1.detect(0x') === 0", 10), True,
-            "apercu de la commande Br")
+            "apercu de la commande Br (voie MQTT)")
     clic(cdp, "mApercu")
     verifie(attend(cdp, "document.getElementById('mResultat').textContent.indexOf('debranche') >= 0", 10), True,
             "sniffeur maitre sans « composant isole » : refus affiche")

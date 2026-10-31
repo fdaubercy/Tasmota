@@ -71,9 +71,11 @@ PAGE = r"""<!doctype html>
 </div>
 <div id="vueEnvoi" class="vue envoi cache">
 <h2>Par la carte Tasmota (bus en service)</h2>
-<p class="gris">La carte, seul maître du bus, fait l'échange (commande Berry <code>Br</code> par HTTP). Le fil du sniffeur doit ensuite montrer la trame.</p>
+<p class="gris">La carte, seul maître du bus, fait l'échange (commande Berry <code>Br</code> par HTTP ou MQTT ; MQTT pour un esclave derrière le maître). Le fil du sniffeur doit ensuite montrer la trame.</p>
 <div class="barre" style="background:none;border:0;padding:0">
+ <span class="gris">par</span><select id="cTransport"><option value="http">HTTP</option><option value="mqtt">MQTT</option></select>
  <span class="gris">IP</span><input id="cIp" placeholder="192.168.0.x ou ip:port" style="width:170px">
+ <span class="gris">topic</span><input id="cTopic" placeholder="lieu/carte" style="width:170px">
  <span class="gris">puce</span><select id="cPuce"></select>
  <span class="gris">adresse 0x</span><input id="cAdr" class="court" value="48">
  <span class="gris">registre</span><select id="cReg"></select>
@@ -206,6 +208,8 @@ $("filtre").oninput = redessine;
 $("carte").onchange = async () => {
   const r = await poste("carte", {carte: $("carte").value});
   if (r && r.ip !== undefined) $("cIp").value = r.ip || "";
+  if (r && r.topic !== undefined) $("cTopic").value = r.topic || "";
+  if (r && r.topic) { $("cTransport").value = (!r.ip || r.ip.includes(":")) ? "mqtt" : "http"; choisitTransport(); }
   if (r && r.puces) { const p = Object.keys(r.puces)[0]; if (p) { $("cPuce").value = p; choisitPuce(); $("cAdr").value = h2(r.puces[p][0]); } }
 };
 // ---------------------------------------------------------------- envoi
@@ -216,7 +220,11 @@ function choisitPuce() {
   $("cReg").replaceChildren(...Object.entries(p.registres).map(([r, nom]) => new Option(`0x${r} ${nom}`, r)));
 }
 $("cPuce").onchange = choisitPuce;
-const ordreCarte = () => ({voie: "carte", ip: $("cIp").value, a: $("cAdr").value, reg: $("cReg").value || "00",
+function choisitTransport() { const mqtt = $("cTransport").value === "mqtt"; $("cIp").disabled = mqtt; $("cTopic").disabled = !mqtt; }
+$("cTransport").onchange = choisitTransport;
+choisitTransport();
+const ordreCarte = () => ({voie: "carte", transport: $("cTransport").value, ip: $("cIp").value, topic: $("cTopic").value,
+                           a: $("cAdr").value, reg: $("cReg").value || "00",
                            n: +$("cN").value, valeur: $("cVal").value.trim() || null});
 const ordreMaitre = () => ({voie: "maitre", nom: $("mNom").value, a: $("mAdr").value, d: $("mD").value, n: +$("mN").value,
                             isole: $("mIsole").checked});

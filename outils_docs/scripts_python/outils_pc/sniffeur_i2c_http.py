@@ -2,8 +2,8 @@
 
     GET  /  /flux (Server-Sent Events)  /ports  /cartes  /puces  /export?format=txt|json
     POST /port   {action: ouvrir|fermer, port}
-    POST /carte  {carte: "data/<lieu>/<carte>" | ""}           carte observee (puces, IP proposee)
-    POST /ordre  {voie: "carte", ip, a, reg, n, valeur|null, confirme}
+    POST /carte  {carte: "data/<lieu>/<carte>" | ""}           carte observee (puces, IP et topic proposes)
+    POST /ordre  {voie: "carte", transport: http|mqtt, ip|topic, a, reg, n, valeur|null, confirme}
                  {voie: "maitre", nom: MW|MR|MWR, a, d (hexa), n, isole, confirme}
     POST /raz
 {apercu: true} en plus : rend {commande} SANS RIEN ENVOYER (la page la montre avant l'envoi).
@@ -42,6 +42,9 @@ def lit_ordre(demande, sniffeur):
             return {"commande": carte_i2c.commande_br(a, reg, n, valeur)}
         if valeur is not None and demande.get("confirme") is not True:
             raise ValueError("ecriture non confirmee : rien n'a ete envoye")
+        if demande.get("transport") == "mqtt":
+            return sniffeur.ordre_carte(carte_i2c.verifie_topic(demande.get("topic", "")), a, reg, n, valeur,
+                                        envoie=carte_i2c.envoie_mqtt)
         return sniffeur.ordre_carte(carte_i2c.verifie_ip(demande.get("ip", "")), a, reg, n, valeur)
     if demande.get("voie") == "maitre":
         nom = str(demande.get("nom", ""))

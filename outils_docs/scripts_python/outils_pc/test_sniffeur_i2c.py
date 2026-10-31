@@ -261,6 +261,7 @@ def test_sniffeur():
     contient(texte, "injoignable", "carte injoignable : texte")
     verifie(sc.envoie("192.168.0.999", "Br 1", transport=lambda *a: "x")[0], False, "IP invalide refusee")
     verifie(sc.verifie_ip("192.168.4.1:8081"), "192.168.4.1:8081", "IP:port du range extender")
+    test_mqtt()
     # un ordre a la fois
     sn.verrou_ordre.acquire()
     try:
@@ -351,6 +352,50 @@ def test_sonde():
 
 
 # ---------------------------------------------------------------------------------------------- HTTP
+class FauxClientMQTT:
+    """ClientMQTT sans reseau : `recus` = messages rendus par recoit(), puis None."""
+    def __init__(self, recus):
+        self.recus, self.abonnements, self.publications, self.ferme_appele = list(recus), [], [], False
+
+    def connecte(self):
+        pass
+
+    def abonne(self, filtres):
+        self.abonnements += filtres
+
+    def publie(self, topic, payload, retain=False):
+        self.publications.append((topic, payload))
+
+    def recoit(self):
+        return self.recus.pop(0) if self.recus else None
+
+    def ferme(self):
+        self.ferme_appele = True
+
+
+def test_mqtt():
+    from client_mqtt import Message
+    res = "stat/garage/cuve/RESULT"
+    client = FauxClientMQTT([Message(res, b'{"POWER":"ON"}', 0, False), Message("stat/autre/RESULT", b'{"Br":"1"}', 0, False),
+                             Message(res, b"pas du json", 0, False), Message(res, b'{"Br":"50051"}', 0, False)])
+    commande = sc.commande_br(0x48, 0x01, 2)
+    ok, texte = sc.envoie_mqtt("garage/cuve/", commande, transport=lambda t, c, d: sc.commande_mqtt(t, c, d, lambda: client))
+    verifie((ok, texte), (True, '{"Br":"50051"}'), "MQTT : seule la reponse Br de la carte compte")
+    verifie(client.abonnements, [res], "MQTT : abonne a stat/<topic>/RESULT")
+    verifie(client.publications, [("cmnd/garage/cuve/Br", "(wire1.detect(0x48) ? wire1 : wire2).read(0x48, 0x01, 2)")],
+            "MQTT : cmnd/<topic>/Br, charge sans le prefixe Br")
+    verifie(client.ferme_appele, True, "MQTT : liaison fermee")
+    # TEMOIN : aucune reponse Br -> echec sans exception, liaison fermee quand meme
+    muet = FauxClientMQTT([Message(res, b'{"POWER":"ON"}', 0, False)])
+    ok, texte = sc.envoie_mqtt("garage/cuve", commande, 0.2, lambda t, c, d: sc.commande_mqtt(t, c, d, lambda: muet))
+    verifie((ok, muet.ferme_appele), (False, True), "MQTT muet : echec, liaison fermee")
+    contient(texte, "aucune reponse sur stat/garage/cuve/RESULT", "MQTT muet : texte")
+    for mauvais in ("", "garage/#", "garage/+/x", "a b"):
+        verifie(sc.envoie_mqtt(mauvais, commande, transport=lambda *a: "x")[0], False, f"topic {mauvais!r} refuse")
+    verifie(sc.topic_propose(di.RACINE, "data/cave/tasmota32s3-serveur-rly"), "cave/serveur-rly-cave-v2", "topic du persist")
+    verifie(sc.topic_propose(di.RACINE, "data/rien/absent"), "", "topic : carte sans persist")
+
+
 def test_http():
     s = socket.socket()
     s.bind(("127.0.0.1", 0))
@@ -391,6 +436,9 @@ def test_http():
         verifie(len(sn.historique), 0, "apercu : rien envoye ni journalise")
         statut, corps = post("/ordre", {"voie": "carte", "ip": "192.168.0.10", "a": "20", "reg": "01", "n": 1, "valeur": "FF"})
         verifie(statut, 400, "ecriture non confirmee refusee")
+        statut, corps = post("/ordre", {"voie": "carte", "transport": "mqtt", "topic": "garage/#", "a": "48", "reg": "01", "n": 2})
+        verifie(statut, 400, "MQTT : topic a joker refuse avant tout envoi")
+        verifie(len(sn.historique), 0, "MQTT refuse : rien envoye ni journalise")
         statut, corps = post("/ordre", {"voie": "maitre", "nom": "MR", "a": "48", "n": 2})
         verifie(statut, 400, "maitre sans « composant isole » refuse")
         contient(corps, "debranche", "maitre refuse : raison")
@@ -401,6 +449,7 @@ def test_http():
                 "maitre port ferme : 409")
         statut, corps = post("/carte", {"carte": "data/cave/tasmota32s3-serveur-rly"})
         verifie("TCA9554" in json.loads(corps)["puces"], True, "/carte : puces de la carte")
+        verifie(json.loads(corps)["topic"], "cave/serveur-rly-cave-v2", "/carte : topic propose")
         verifie(post("/carte", {"carte": "../secret"})[0], 400, "/carte hors depot refusee")
         sn.traite_lignes([X(0x20, "W", "0109")])
         contient(get("/export?format=txt")[1], "0x20 W [01 09]", "export txt")
