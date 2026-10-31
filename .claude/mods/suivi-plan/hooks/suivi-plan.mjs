@@ -7,6 +7,8 @@
 // - Edit/Write d'un plan : rappel doux si une etape est cochee sans « — preuve : » ;
 // - ligne d'avancement ($.ui.status, plan de la conversation d'abord) : session.start, turn.complete,
 //   apres edition, toutes les 30 s ;
+// - panneau « Suivi du plan » (Pane, ./panneau.mjs) : ouvert par ExitPlanMode et /suivi ouvrir|suivre,
+//   redessine par majStatut quand le plan montre (ou son mtime) change ;
 // - commande /suivi (resume, liste, activer, clore, ouvrir, suivre, detacher) ;
 // - plan de la conversation : rattache par ExitPlanMode, Edit/Write d'un plan, /suivi ouvrir|suivre,
 //   lache par /suivi detacher ; a chaque message envoye, signal sans ouverture (la vue suit la conversation).
@@ -21,9 +23,14 @@
 // L'hote lit on(...) et $.nom.methode(...) dans le source : les ecrire en toutes lettres ; les aides
 // qui recoivent $ sont des fonctions de premier niveau.
 
+import { atom, read, update } from "claude-code";
 import { analyse, ligneStatut, resume, slug, enPlanSuivi, fusionneCoches } from "./parseur-plan.mjs";
+import { panneau } from "./panneau.mjs";
 
 const DOSSIER = "tasks/plans";
+const PANNEAU = "suivi-plan";
+// Plan montre par le panneau (contrat : types/index.d.ts) ; survit au rechargement a chaud.
+const vue = atom({ plugin: "suivi-plan", key: "vue" }, { racine: null, fichier: null, mtimeMs: 0 }, { shape: "vue-1" });
 const PERIODE = 30000;              // relecture des plans pour la ligne d'avancement
 const REGLE = "Règle : coche une étape seulement après l'avoir vérifiée, avec « — preuve : … » (commit, fichier:ligne, sortie d'un banc), et mets à jour maj:.";
 const CONSIGNE = [
@@ -110,6 +117,13 @@ export function register(on) {
 
   // Commande enregistree par ce module : le hook repond lui-meme, sans next.
   on("command.run", { command: "suivi" }, async ($, e) => ({ text: await commandeSuivi($, String(e.args ?? "").trim()) }));
+
+  on("ui.render", { component: "Pane", requestId: PANNEAU }, async ($, e) => {
+    const el = $.ui.resolve(e);
+    const v = await read($, vue);
+    const p = v?.racine && v.fichier ? (await lisPlans($, v.racine)).find((x) => x.fichier === v.fichier) : null;
+    return panneau(h, el, p?.a ?? null, p?.fichier);
+  });
 }
 
 // ---------- garde, lecture des plans, ligne d'avancement ----------
@@ -156,6 +170,19 @@ async function majStatut($, racine) {
   const suivi = await planRattache($, racine);
   const p = plans.find((x) => x.fichier === suivi) ?? actifs(plans)[0];
   $.ui.status(p ? ligneStatut(p.a, p.a.meta.chantier || p.nom) : undefined);
+  // Panneau : n'ecrire que si le plan montre change (une ecriture redessine ses lecteurs)
+  const voulu = { racine, fichier: p?.fichier ?? null, mtimeMs: p?.mtimeMs ?? 0 };
+  const v = await read($, vue);
+  if (v?.racine !== voulu.racine || v?.fichier !== voulu.fichier || v?.mtimeMs !== voulu.mtimeMs) await update($, vue, () => voulu);
+}
+
+// Demande le panneau ; un refus (pas de surface, ecran trop etroit) laisse la ligne d'avancement seule.
+async function ouvrePanneau($) {
+  try {
+    await $.ui.open({ id: PANNEAU, title: "Suivi du plan" });
+  } catch {
+    // /suivi ouvrir redemande le panneau
+  }
 }
 
 // Commande, ligne d'avancement et minuterie, remises en place apres un rechargement a chaud.
@@ -213,6 +240,7 @@ async function recopiePlan($, racine, res) {
   cache.delete(`${racine}/${fichier}`);
   await ecrisRattachement($, racine, fichier);
   await ecrisSignal($, racine, fichier);
+  await ouvrePanneau($);
   const a = analyse(texte);
   const notes = [`Plan suivi : ${fichier} (${a.actions.length} actions, ${a.global ?? 0} %). ` +
     "Coche chaque étape vérifiée avec « — preuve : … » et mets à jour maj:."];
@@ -376,7 +404,8 @@ async function commandeSuivi($, args) {
     await ecrisRattachement($, racine, p.fichier);
     await ecrisSignal($, racine, p.fichier);
     await majStatut($, racine);
-    const lien = `Lien : vscode://fdaubercy.suivi-plan/ouvrir?fichier=${DOSSIER}/${encodeURIComponent(p.nom)}.md`;
+    await ouvrePanneau($);
+    const lien =`Lien : vscode://fdaubercy.suivi-plan/ouvrir?fichier=${DOSSIER}/${encodeURIComponent(p.nom)}.md`;
     return action === "suivre"
       ? `Cette conversation suit ${p.fichier} : la vue l'affiche quand vous revenez sur son onglet.\n${lien}`
       : `Vue demandée pour ${p.fichier} (plan suivi par cette conversation).\n${lien}`;

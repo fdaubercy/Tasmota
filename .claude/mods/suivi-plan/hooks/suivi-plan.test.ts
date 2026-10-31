@@ -328,3 +328,44 @@ test('plan de la conversation : ligne d avancement et bloc de contexte le montre
   await suivi($, 'detacher')
   expect(m.statuts.at(-1)).toMatch(/^Plan autre /)
 })
+
+// Panneau de l'app : props que le moteur estampille pour un Pane place a droite.
+const PANNEAU = {
+  plugin: 'suivi-plan',
+  component: 'Pane',
+  requestId: 'suivi-plan',
+  props: { title: 'Suivi du plan', isFocused: false, bodyColumns: 60, placement: 'dock', scroll: { offset: 0, bodyRows: 40 }, view: {} },
+} as const
+
+test('panneau : /suivi ouvrir le demande, il montre le plan et se redessine apres une coche', async ($, on) => {
+  const m = monde(on, { [`${PLANS}/essai.md`]: ESSAI })
+  const ouverts: string[] = []
+  on('ui.open', ($, e) => {
+    ouverts.push(e.id)
+    return { value: { isPlaced: true } }
+  })
+  await demarre($)
+  await suivi($, 'ouvrir')
+  expect(ouverts).toEqual(['suivi-plan'])
+  for (const surface of ['desktop', 'terminal'] as const) {
+    const ui = await $.ui.mount({ ...PANNEAU, surface })
+    expect((await ui.find({ type: 'Text', text: /^Plan d'essai$/ }))?.text).toBe("Plan d'essai")
+    expect((await ui.find({ type: 'Text', text: /étapes$/ }))?.text).toBe('25 % · 1/3 étapes')
+    expect((await ui.find({ type: 'Text', text: /preuve/ }))?.text).toBe('   preuve : banc vert')
+    await ui.unmount()
+  }
+  m.fs.set(`${PLANS}/essai.md`, { texte: ESSAI.replace('- [ ] étape à faire', '- [x] étape à faire — preuve : ok'), mtimeMs: ++horloge })
+  await m.temps.advance(30000)
+  const ui = await $.ui.mount({ ...PANNEAU, surface: 'desktop' })
+  expect((await ui.find({ type: 'Text', text: /étapes$/ }))?.text).toBe('50 % · 2/3 étapes')
+  await ui.unmount()
+})
+
+test('panneau sans plan suivi ni actif : invitation a /suivi suivre', async ($, on) => {
+  monde(on, {})
+  await demarre($)
+  const ui = await $.ui.mount({ ...PANNEAU, surface: 'desktop' })
+  expect((await ui.find({ type: 'Text', text: /^Aucun plan$/ }))?.text).toBe('Aucun plan')
+  expect((await ui.find({ type: 'Text', text: /suivi suivre/ }))?.text).toContain('/suivi suivre <chantier>')
+  await ui.unmount()
+})
