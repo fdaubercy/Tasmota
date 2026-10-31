@@ -117,14 +117,15 @@ OUTILS = [
         "syslog", "Serveur syslog", "Serveur syslog", GROUPES[1],
         "Reçoit les logs syslog (UDP 514) des modules Tasmota et les affiche sur une page filtrable.",
         "Écoute les logs envoyés en UDP par les modules (SYS_LOG_HOST) : page avec filtre module, sévérité "
-        "et texte, registre des modules vus, export. Seul paramètre ici : le port de la page (7200). "
+        "et texte, registre des modules vus, export, journal sur disque (toujours actif). "
         + ARRET,
         DOSSIER + "outils_pc/syslog_tasmota.py",
-        # Journal sur disque par defaut (2026-10-31) : la memoire (5000 lignes) ne couvre que ~1 h 20
+        # Journal sur disque par defaut (2026-10-31) : la memoire (5000 lignes) ne couvre que ~1 h 20.
+        # Sans port COM, l'annuaire lance sans fenetre de parametres : la case n'est jamais montree.
         [_port("http", 7200), Parametre("journal", "Journal sur disque", "--journal", "on", "drapeau")],
         "http",
         "Console capturée : " + CONSOLE.format("syslog") + ". Journal des messages (une ligne par message, "
-        "rotation à 20 Mo) : %TEMP%\\syslog_tasmota.log, comme la cible Custom (case « Journal sur disque »)."),
+        "rotation à 20 Mo) : %TEMP%\\syslog_tasmota.log, comme la cible Custom (toujours actif)."),
     Outil(
         "synchro_fork", "Synchro du fork", "Synchro du fork", GROUPES[2],
         "Synchronise le fork avec l'amont arendst/Tasmota, questions posées par boutons.",

@@ -24,7 +24,7 @@ jeton : ne jamais les afficher**. Se fier a `/etat` de l'annuaire.
 
 | Source | Ce qu'on y voit | Acces (lecture seule) | Prerequis |
 |---|---|---|---|
-| Journal syslog | tout ce que les cartes envoient en syslog (Tasmota + Berry) | `tail -n 200 "$TEMP/syslog_tasmota.log"` (puis `.log.1`) | `syslog_tasmota.py` lance **avec `--journal`** (la cible PlatformIO et l'annuaire le font, case « Journal sur disque » depuis le 2026-10-31) ; sortie `syslog` du profil ouverte |
+| Journal syslog | tout ce que les cartes envoient en syslog (Tasmota + Berry) | `tail -n 200 "$TEMP/syslog_tasmota.log"` (puis `.log.1`) | `syslog_tasmota.py` lance **avec `--journal`** (la cible PlatformIO et l'annuaire le font, ce dernier toujours depuis le 2026-10-31) ; sortie `syslog` du profil ouverte |
 | Page syslog :7200 | flux direct, modules vus | `curl -s http://127.0.0.1:7200/etat`, `/modules` (JSON), `/flux` (SSE, `curl -N -m 5`) | syslog lance |
 | Sniffeur MQTT :7100 | `stat/<topic>/LOGGING` par carte | `curl -s http://127.0.0.1:7100/logs` (topics), `curl -s "http://127.0.0.1:7100/logs?module=jardin%2Fcuve"` (3000 lignes max, en memoire) | sniffeur lance, broker 192.168.0.5, sortie `mqtt` de la carte ouverte |
 | Pont serie :7000 (:7001…) | console serie d'une carte | `curl -s http://127.0.0.1:7000/etat` (port COM), `curl -s -N -m 5 http://127.0.0.1:7000/flux` (SSE, texte JSON avec sequences ANSI) | pont lance ; il **tient** le port COM |
