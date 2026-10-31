@@ -1,7 +1,7 @@
 ---
 chantier: cave-s3-waveshare
 titre: Env S3 relais cave adapté à la carte Waveshare ESP32-S3-ETH-8DI-8RO
-statut: actif
+statut: clos
 cree: 2026-10-31
 maj: 2026-10-31
 source: concurrent-crafting-knuth.md

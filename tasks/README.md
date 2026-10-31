@@ -13,11 +13,10 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-22 plans : 8 actif, 1 en-pause, 13 clos.
+22 plans : 7 actif, 1 en-pause, 14 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Créé | Mis à jour |
 |---|---|---|---|---|---|
-| [Env S3 relais cave adapté à la carte Waveshare ESP32-S3-ETH-8DI-8RO](plans/cave-s3-waveshare.md) | Faire tourner les entrées-sorties actuelles du persist de la cave S3 sur la carte Waveshare 8DI-8RO, relais par le TCA9554 | actif | ██████████ 100 % (17/17) | 2026-10-31 | 2026-10-31 |
 | [Page dédiée « Niveau de la cuve » (jauges A, H et B), lien depuis l'encadré de la cuve](plans/jauges-cuve.md) | Afficher volume (jauge A), taux (jauge H) et tensions brute et recalculée de la sonde (cadran B) de la cuve sur une page dédiée ouverte depuis son encadré, sur la cuve et le P4 | actif | █████████░ 88 % (26/32) | 2026-10-31 | 2026-10-31 |
 | [Cave — envs ESP32/S3 alignés sur la carte en ligne, audit de l'env S3, carte S3 8 relais de remplacement](plans/relais-cave-s3.md) | Aligner les envs de la cave sur les broches de la carte en ligne, auditer l'env S3 et choisir une carte ESP32-S3 à 8 relais pour la remplacer | actif | ████████░░ 80 % (17/19) | 2026-10-31 | 2026-10-31 |
 | [Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2](plans/ruban-cuve.md) | Piloter le ruban WS2812 de la cuve en AUTO/MANUEL (bouton et ModBus) et préparer la carte cuve v0.2 | actif | ████████░░ 77 % (21/29) | 2026-10-18 | 2026-10-31 |
@@ -26,6 +25,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 | [Plan d'action de l'audit Berry (propositions P2.1 à P10.7)](plans/actions-audit-berry.md) | Mettre en œuvre, lot par lot et sur décision de l'utilisateur, les 78 propositions de l'audit Berry | actif | █████████░ 91 % (89/95) | 2026-10-22 | 2026-10-26 |
 | [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) | Ajouter l'Ethernet en option sur le maître ModBus P4, le Wi-Fi restant le défaut | actif | ░░░░░░░░░░ 0 % (0/37) | 2026-10-26 | 2026-10-26 |
 | [Suites de l'audit de l'env S3 du serveur relais de la cave](plans/audit-relais-cave-s3.md) | Rendre l'env tasmota32s3-cave-serveur-rly prêt à remplacer la carte de la cave en ligne, selon les propositions de l'audit | en-pause | ░░░░░░░░░░ 0 % (0/22) | 2026-10-31 | 2026-10-31 |
+| [Env S3 relais cave adapté à la carte Waveshare ESP32-S3-ETH-8DI-8RO](plans/cave-s3-waveshare.md) | Faire tourner les entrées-sorties actuelles du persist de la cave S3 sur la carte Waveshare 8DI-8RO, relais par le TCA9554 | clos | ██████████ 100 % (17/17) | 2026-10-31 | 2026-10-31 |
 | [Assistant persist — reprendre, modifier et supprimer un env existant (A10)](plans/assistant-persist-modification.md) | Reprendre un env existant dans la page 7900 pour le modifier sans perdre ses retouches, ou le supprimer après vérification | clos | ██████████ 100 % (38/38) | 2026-10-29 | 2026-10-30 |
 | [Assistant de création du persist d'un nouvel env (page 7900, tuile de l'annuaire)](plans/assistant-persist.md) | Créer le persist, l'autoexec et les sections de build d'une nouvelle carte par questions, depuis une page web | clos | ██████████ 100 % (47/47) | 2026-10-27 | 2026-10-30 |
 | [Assistant pas à pas de la page « Synchro du fork » (port 7500)](plans/assistant-synchro-fork.md) | Guider pas à pas la synchro du fork sur la page 7500, avec résolution des conflits fichier par fichier | clos | ██████████ 100 % (33/33) | 2026-10-27 | 2026-10-29 |
