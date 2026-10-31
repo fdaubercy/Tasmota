@@ -31,7 +31,7 @@ SEPARATEURS = re.compile(r'\|\||&&|;|\||\n')
 AFFECTATION = re.compile(r'^\$?[A-Za-z_][A-Za-z0-9_:]*=')
 # NOM_CIBLE des outils_docs/scripts_python/build/cible_*.py, recopies ici (le hook tourne en `python -I`,
 # sans le depot dans son chemin) ; build/test_garde_build.py verifie que la liste reste alignee.
-CIBLES_OUTILS = frozenset({'pont_serie', 'sniffeur_mqtt', 'syslog_tasmota', 'sniffeur_modbus', 'testeur_udp',
+CIBLES_OUTILS = frozenset({'pont_serie', 'sniffeur_mqtt', 'syslog_tasmota', 'sniffeur_modbus', 'sniffeur_i2c', 'testeur_udp',
                            'synchro_fork', 'annuaire', 'build_web', 'fichiers_berry', 'assistant_persist'})
 PIO_RUN = re.compile(r'(?:platformio|pio)(?:\.exe)?"?(?:\s+-c\s+\S+)?\s+run\b', re.I)
 # -t X, --target X, --target=X, et la forme collee -tX (click l'accepte) ; idem pour l'env

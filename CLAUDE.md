@@ -614,6 +614,19 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     Banc : `test_sniffeur_modbus.py` (code de sortie 0 = vert ; persist de test ; UDP sur un groupe et un
     port de test en TTL 0 - ne JAMAIS emettre de faux push vers 224.3.0.1:4000, le vrai maitre le traiterait). Cible PlatformIO « Sniffeur ModBus » dans Custom
     (port : `custom_sniffeur_modbus_port`, defaut auto = le seul CH343 present).
+  - `sniffeur_i2c.py` (+ `sniffeur_i2c_web.py`, `sniffeur_i2c_http.py`, `sniffeur_i2c_aide.py`, `sniffeur_i2c_protocole.py`,
+    `sniffeur_i2c_alertes.py`, `sniffeur_i2c_carte.py`, `decodeur_i2c.py`, `decodeur_i2c_puces.py`,
+    `build/cible_sniffeur_i2c.py`) — page http://127.0.0.1:7350 (2026-10-31) : trafic d'un bus I2C par un ESP32-S3
+    DEDIE (firmware autonome `outils_docs/firmware_sniffeur_i2c/`, PAS un env Tasmota ; SDA GPIO4, SCL GPIO5, GND,
+    3,3 V seulement ; coeur 1 sans interruption, chien de garde des interruptions du coeur 1 coupe). Une ligne texte
+    par transaction (protocole v=1, `sniffeur_i2c_protocole.py`, commun au futur Pico). Decodage jusqu'au registre
+    (ADS1115, MCP23017, TCA9554, DS3231, MPU6050, ES8311) ; adresses partagees (0x20, 0x68) levees par la carte
+    observee (puces actives de son persist), sinon « ambigu ». Envoi : par la carte (`Br (wire1.detect(a) ? wire1 :
+    wire2).read/write`, pas `tasmota.wire_scan` qui rend nil pour une puce prise par un pilote C ; apercu avant envoi,
+    ecriture confirmee, rapprochement de la trame) ou par le sniffeur maitre (composant isole, refus si le bus a vecu
+    dans les 2 s). Journal `%LOCALAPPDATA%\outils_tasmota\sniffeur_i2c\` (30 jours). Bancs : `test_sniffeur_i2c.py`,
+    sonde `test_sniffeur_i2c_page_chrome.py`, machine du firmware `firmware_sniffeur_i2c/banc/lance_banc.py` (MSVC ou
+    g++). Spec `docs/superpowers/specs/2026-10-31-sniffeur-i2c-design.md` ; plan `tasks/plans/sniffeur-i2c.md`.
   - `sniffeur_mqtt.py` (+ `sniffeur_mqtt_web.py`, `sniffeur_mqtt_panneaux.py`, `sniffeur_mqtt_config.py`,
     `client_mqtt.py`, `build/cible_sniffeur_mqtt.py`) — sniffeur / publieur MQTT sur http://127.0.0.1:7100 :
     plusieurs brokers parametrables (TLS possible) et selectionnables, abonnements gerables un par

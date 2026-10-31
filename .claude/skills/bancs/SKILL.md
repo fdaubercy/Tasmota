@@ -50,6 +50,7 @@ Commandes **depuis la racine du dépôt**. `P` = `outils_docs/scripts_python`.
 | `P/outils_pc/acces_web.py` | **9 bancs** (commun à toutes les pages) | `test_acces_web.py`, puis `test_annuaire.py`, `test_annuaire_securite.py`, `test_pont_serie_acces.py`, `test_sniffeur_mqtt_acces.py`, `test_syslog_acces.py`, `test_sniffeur_modbus.py`, `test_testeur_udp.py`, et `python P/maintenance/test_synchro_fork_web.py` |
 | `P/outils_pc/annuaire_*.py` | annuaire | `PYPIO P/outils_pc/test_annuaire.py`, `test_annuaire_lanceur.py`, `test_annuaire_securite.py` |
 | `P/outils_pc/sniffeur_modbus*.py`, `decodeur_modbus.py`, `surveillance_modbus.py`, `emulation_modbus.py`, `debit_modbus.py`, `ecoute_udp.py`, `client_mqtt.py` | sniffeur ModBus | `PYPIO P/outils_pc/test_sniffeur_modbus.py` (tous les groupes, dont un fuzz de 20 000 trames) |
+| `P/outils_pc/sniffeur_i2c*.py`, `decodeur_i2c*.py` | sniffeur I2C | `PYPIO P/outils_pc/test_sniffeur_i2c.py` (100 000 lignes incluses, ~15 s), puis la page : `PYPIO P/outils_pc/test_sniffeur_i2c_page_chrome.py` ; firmware `outils_docs/firmware_sniffeur_i2c/src/machine_i2c.h` : `python outils_docs/firmware_sniffeur_i2c/banc/lance_banc.py` |
 | `P/outils_pc/sniffeur_mqtt*.py` | sniffeur MQTT | `PYPIO P/outils_pc/test_sniffeur_mqtt_acces.py` |
 | `P/outils_pc/syslog_tasmota*.py` | syslog | `PYPIO P/outils_pc/test_syslog_acces.py` |
 | `P/outils_pc/pont_serie*.py` | pont série | `PYPIO P/outils_pc/test_pont_serie_acces.py`, et `test_testeur_udp.py` (groupe pont) |

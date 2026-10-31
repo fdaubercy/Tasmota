@@ -676,6 +676,9 @@ cible_syslog_tasmota.enregistre(env)
 # 🔀 CIBLE « SNIFFEUR MODBUS » (meme menu Custom) : ecoute le bus RS485 par le convertisseur USB-RS485
 import cible_sniffeur_modbus
 cible_sniffeur_modbus.enregistre(env)
+# 🔍 CIBLE « SNIFFEUR I2C » (meme menu Custom) : ecoute un bus I2C par l'ESP32-S3 dedie (firmware_sniffeur_i2c)
+import cible_sniffeur_i2c
+cible_sniffeur_i2c.enregistre(env)
 # 📡 CIBLE « TESTEUR UDP » (meme menu Custom) : teste l'UDP unicast / multicast maitre <-> esclave par leurs ports serie
 import cible_testeur_udp
 cible_testeur_udp.enregistre(env)

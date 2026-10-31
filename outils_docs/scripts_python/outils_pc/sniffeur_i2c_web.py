@@ -206,7 +206,7 @@ $("filtre").oninput = redessine;
 $("carte").onchange = async () => {
   const r = await poste("carte", {carte: $("carte").value});
   if (r && r.ip !== undefined) $("cIp").value = r.ip || "";
-  if (r && r.puces) { const p = Object.keys(r.puces)[0]; if (p) { $("cPuce").value = p; choisitPuce(); } }
+  if (r && r.puces) { const p = Object.keys(r.puces)[0]; if (p) { $("cPuce").value = p; choisitPuce(); $("cAdr").value = h2(r.puces[p][0]); } }
 };
 // ---------------------------------------------------------------- envoi
 function choisitPuce() {
