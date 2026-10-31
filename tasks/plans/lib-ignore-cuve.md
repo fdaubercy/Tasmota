@@ -35,8 +35,8 @@ Pièges :
 
 ## A2 — Essai exclusion Defender (avant lib_ignore)
 - [x] Exclusions posées par l'utilisateur (PowerShell admin) : dépôt + `~/.platformio` — preuve : `Add-MpPreference -ExclusionPath …` lancé le 2026-10-31 vers 14:04, pendant la mesure 1 (scan de la mesure 1 fait AVEC Defender)
-- [ ] Mesure incrémentale avec exclusion : durée du scan comparée aux 21 min 42 de la mesure 1, durée totale
-- [ ] Bilan rapporté ; exclusions gardées ou retirées (`Remove-MpPreference -ExclusionPath …`) selon la décision de l'utilisateur
+- [x] Mesure incrémentale avec exclusion : durée du scan comparée aux 21 min 42 de la mesure 1, durée totale — preuve : `incremental_3.log` (scratchpad), 20:03:42 → 20:38:47, SUCCESS ; scan **7 min 36** ; total **35 min 04** (avec lib_ignore : effets confondus, voir Vérification)
+- [x] Bilan rapporté ; exclusions gardées ou retirées (`Remove-MpPreference -ExclusionPath …`) selon la décision de l'utilisateur — preuve : décision du 2026-10-31 « retire les exclusions Defender » (gain non démontré) ; `Remove-MpPreference` en fenêtre élevée → « retirees », `Get-MpPreference` ne liste plus ni le dépôt ni `.platformio`
 
 ## A3 — Liste des bibliothèques à ignorer
 - [x] Defines actifs de l'env relevés (sortie de `pio-tools/dump-defines.py` ou `tasmota/tasmota_defines_for_berry.h`) — preuve : `tasmota/tasmota_defines_for_berry.h` régénéré par le build de la cuve (14:53:33, 3 170 lignes)
@@ -48,19 +48,19 @@ Pièges :
 - [x] `pio project config` relu : le `lib_ignore` résolu de l'env contient l'hérité ET la liste — preuve : `ProjectConfig('platformio.ini').get(...)` = 31 entrées (7 héritées + 24) ; rideau inchangé (7) ; build_flags de la cuve intacts
 
 ## A5 — Mesure après et validation
-- [ ] Premier `pio run` (repart de zéro) : compilation sans erreur ; sinon retirer de la liste la bibliothèque fautive et recommencer
-- [ ] Durée du scan et nombre de bibliothèques du graphe relevés
-- [ ] Taille du firmware comparée à A1 (écart attendu faible ; un écart fort se justifie)
-- [ ] Second `pio run` : durée incrémentale comparée à A2 (même état Defender)
-- [ ] Carte flashée (OTA ou série) puis vérifiée en fonctionnement : Berry chargé, ModBus esclave répond, capteurs de la cuve publiés
+- [x] Premier `pio run` (repart de zéro) : compilation sans erreur ; sinon retirer de la liste la bibliothèque fautive et recommencer — preuve : essai 1 en échec (`esp_wireguard_tasmota` retirée, voir Vérification) ; essai 2 SUCCESS, journal `20261031-190812-…-cuve-modbus-erase_upload.log` (page build)
+- [x] Durée du scan et nombre de bibliothèques du graphe relevés — preuve : 115 compatibles (138 avant), 99 au 1er niveau du graphe (122 avant) ; pré-build (pré-scripts + scan) 852 s = 14 min 12 contre 27 min 17 en A1 ; flux `/flux` de la page build
+- [x] Taille du firmware comparée à A1 (écart attendu faible ; un écart fort se justifie) — preuve : Flash 2 934 259 o contre 2 934 339 (−80 o), RAM 71 484 o identique
+- [x] Second `pio run` : durée incrémentale comparée à A2 (même état Defender) — preuve : `incremental_3.log`, empreinte inchangée (57c90b23…), 176 fichiers recompilés (Berry solidifié régénéré + bibliothèques touchées), 35 min 04
+- [x] Carte flashée (OTA ou série) puis vérifiée en fonctionnement : Berry chargé, ModBus esclave répond, capteurs de la cuve publiés — preuve : erase_upload de 19:08 (empreintes vérifiées), `Status 2` build 19:24:05, `sensorsCuve` publié par la cuve et relu par le P4 ; hauteur 0 = entrée analogique en erreur, sans lien avec le lib_ignore (confirmé par l'utilisateur le 2026-10-31)
 
 ## A6 — Bilan et suite
-- [ ] Gains chiffrés consignés dans ce plan (Vérification) et rapportés à l'utilisateur
+- [x] Gains chiffrés consignés dans ce plan (Vérification) et rapportés à l'utilisateur — preuve : section « Bilan » ci-dessous, rapportée le 2026-10-31
 - [ ] Décision de l'utilisateur : étendre au P4 et au rideau, ou en rester là
 - [ ] Commit du cenv et de ce plan (message en français sans accents, sans trailer)
 
 ## Améliorations restantes
-- [ ] [projet] Couper par `#undef` (section de la cuve dans `user_config_override.h`) les 10 fonctions actives inutiles (Matter, IR, KNX, SendMail, DALI, TM1638, LoRa, iBeacon, Berry Animation, SEN5X) puis ignorer leurs bibliothèques : firmware plus petit, à valider sur la carte
+- [ ] [projet] Couper par `#undef` (section de la cuve dans `user_config_override.h`) les 7 fonctions actives inutiles (IR, DALI, TM1638, LoRa, iBeacon, Berry Animation, SEN5X) puis ignorer leurs bibliothèques : firmware plus petit, à valider sur la carte. **Matter, SendMail et KNX restent actifs** (décision de l'utilisateur du 2026-10-31) : jamais dans un `lib_ignore` ni un `#undef`
 - [ ] [projet] Si concluant : même essai sur `tasmota32p4-garage-serveur-modbus` et `tasmota32s3-garage-rideau-garage-modbus`
 - [ ] [projet] Si concluant sur plusieurs envs : liste commune dans une section `[lib_inutiles]` du cenv, réutilisée par les envs
 
@@ -75,5 +75,36 @@ Claude 4,6 Go, VS Code 2,7 Go ; scons à ~20 % d'un cœur pendant le scan, Power
 | 1 — Defender actif, `.pio/build` vide | 5 min 35 | 21 min 42 | 1 h 22 min 17 |
 | 2 — exclusion Defender, incrémental | 2 min 29 | > 29 min 30 (arrêtée à 14:53) | — |
 
-Conclusion provisoire : l'exclusion Defender ne raccourcit pas le scan ; le manque de mémoire domine.
+Essai 1 de A5 (2026-10-31, page build, après le P4) : échec en compilation, `xdrv_52_3_berry_crypto.ino:27`
+`crypto/refc/poly1305-donna.h: No such file` : cet en-tête vient de `esp_wireguard_tasmota`, inclus sous
+`USE_BERRY` seul (actif) → retiré de la liste (23 bibliothèques, 30 entrées résolues). Pré-build 11 min 46.
+Recherche des en-têtes des 23 restantes dans `tasmota/` et le Berry : toutes sous une garde inactive.
+
+| Mesure | Pré-build (pré-scripts + scan) | Compilation | Liens | Total pio |
+|---|---|---|---|---|
+| 1 — A1, sans lib_ignore, `.pio/build` vide | 27 min 17 | — | — | 1 h 22 min 17 (compil seule) |
+| 3 — A5, lib_ignore (23), `.pio/build` vide, 689 objets du cache | 14 min 12 | 18 min 01 | 7 min 34 | 41 min 27 (compil + flash) |
+
+| 4 — exclusion Defender + lib_ignore, incrémental (20:03) | 3 min 13 + scan **7 min 36** | 11 min 36 (176 fichiers) | 7 min 23 | **35 min 04** |
+
+Mesure 4 détaillée : pré-scripts 0 → 193 s ; scan 193 → 650 s ; defines Berry + solidification 650 → 945 s ;
+compilation 945 → 1641 s ; LTO 1641 → 2084 s. Flash 2 935 519 o (+1 260 o : modules Berry modifiés par une autre
+session entre-temps). Defender et lib_ignore ne sont pas séparables sur ces mesures.
+
+Témoin même soirée, P4 sans lib_ignore : pré-build 21 min 37 puis 17 min 04 (−21 %) ; la cuve gagne −48 %.
+Carte flashée (erase_upload, empreintes vérifiées) : `Status 2` = build 2026-10-31T19:24:05, `sensorsCuve` publié,
+Berry chargé ; le P4 voit `sensorsCuve` et `TasmotaSlaveModBus1`. Hauteur lue = 0 (à confirmer : capteur ou cuve vide ?).
+
+### Bilan (2026-10-31)
+- 23 bibliothèques ignorées sur la cuve : 138 → 115 compatibles, 122 → 99 au 1er niveau du graphe.
+- Scan LDF : 21 min 42 → 7 min 36 ; pré-build complet : 27 min 17 → 14 min 12. Part de la machine non isolée
+  (témoin P4 sans lib_ignore : −21 % le même soir) ; gain attribuable au lib_ignore estimé à au moins 25-30 %.
+- Firmware identique (−80 o, RAM égale) ; carte flashée et fonctionnelle.
+- Exclusion Defender : aucun gain démontré (mesure 2 : scan > 29 min) → retirée.
+- Piège payé : un en-tête d'une bibliothèque « inutile » peut être inclus par un AUTRE module sous une garde active
+  (`esp_wireguard_tasmota` ← Berry crypto) : vérifier les inclusions de TOUS ses en-têtes, pas seulement son pilote.
+- Ce qui reste lent, et que le lib_ignore ne touche pas : solidification Berry à chaque lancement (~5 min, 176
+  fichiers recompilés même en incrémental) et LTO (~7 min 30).
+
+Conclusion provisoire (avant le bilan) : l'exclusion Defender ne raccourcit pas le scan ; le manque de mémoire domine.
 À remesurer après un redémarrage (mémoire propre, seuls VS Code et la conversation ouverts).
