@@ -66,20 +66,20 @@ Le plan `relais-cave-s3` garde l'étape `.h` de l'ESP32 ; ses étapes `.h` et ce
 - [x] Contrôle (script du scratchpad, comme `verif_cave.py`) : JSON valide, aucun doublon de `pin` actif, aucune broche prise par la carte (12-18, 38 actif, 40, 45-47, 33-37), template décodé = tableau ci-dessus — preuve : « doublons: [] », « sur broches de la carte: [] » (led_temoin VR GPIO39 : driver voletRoulants OFF)
 
 ## A2 — Relais du TCA9554 reconnus par le framework
-- [ ] `data/fs/configDevices.be` : la branche `virtuel == "I2C_MCP23017"` traite aussi `"I2C_TCA9554"`, avec l'adresse lue dans `drivers.I2C.environnement[<suffixe>]` ; commentaire d'une ligne sur le pourquoi
-- [ ] Hook `verifie_berry_edition` vert sur `configDevices.be` (syntaxe et charte des logs)
+- [x] `data/fs/configDevices.be` : la branche `virtuel == "I2C_MCP23017"` traite aussi `"I2C_TCA9554"`, avec l'adresse lue dans `drivers.I2C.environnement[<suffixe>]` ; commentaire d'une ligne sur le pourquoi — preuve : branche I2C_MCP23017 || I2C_TCA9554, puce = suffixe de `virtuel` ; témoin Berry 5 relais actifs avec la branche, 0 avec le configDevices.be de HEAD
+- [x] Hook `verifie_berry_edition` vert sur `configDevices.be` (syntaxe et charte des logs) — preuve : hook sans erreur à l'édition (10:13)
 - [x] `data/cave/tasmota32s3-serveur-rly/tca9554.dat` : `{"NAME":"TCA9554","GPIO":[224,225,226,227,228,0,0,0]}` (relais 1-5 = CH1-CH5, CH6-8 libres) — preuve : fichier créé
 - [x] Le `.dat` part bien sur le FS : dossier listé dans `custom_files_upload` de l'env ; vérifier qu'aucun filtre n'exclut l'extension `.dat` (pre-script) — preuve : pio-tools/post_esp32.py copie le dossier entier (shutil.copytree), sans filtre d'extension
 
 ## A3 — Firmware : template et drivers
-- [ ] Juste avant l'édition, aucun build en cours (le `.h` est réécrit par chaque build)
-- [ ] `tasmota/user_config_override.h`, branche `FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY` : `USER_TEMPLATE` = template de A1 ; commentaire de brochage réécrit pour la Waveshare ; `#define USE_TCA9554` (et `USE_I2C` s'il n'est pas déjà actif pour cet env)
-- [ ] `platformio_tasmota_cenv.ini` : commentaire de l'env S3 réécrit (carte Waveshare, relais TCA9554, tableau des GPIO, GPIO occupés par la carte) ; aucune option changée
+- [x] Juste avant l'édition, aucun build en cours (le `.h` est réécrit par chaque build) — preuve : 10:12:28, 0 processus pio run/scons (build de la cuve fini à 10:11:49)
+- [x] `tasmota/user_config_override.h`, branche `FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY` : `USER_TEMPLATE` = template de A1 ; commentaire de brochage réécrit pour la Waveshare ; `#define USE_TCA9554` (et `USE_I2C` s'il n'est pas déjà actif pour cet env) — preuve : USER_TEMPLATE S3 = template du persist (comparaison scriptée : True), USE_TCA9554 ajouté ; USE_I2C déjà actif (my_user_config.h, aucun #undef)
+- [x] `platformio_tasmota_cenv.ini` : commentaire de l'env S3 réécrit (carte Waveshare, relais TCA9554, tableau des GPIO, GPIO occupés par la carte) ; aucune option changée — preuve : git diff du cenv : 12 lignes de commentaire, aucune option
 
 ## A4 — Vérifications
-- [ ] `banc_demarrage.py` sur les **6 cartes** (code partagé) : seule la cave S3 peut changer ; écarts relus puis enregistrés
-- [ ] Témoin : dans le faux firmware, le template final de la cave S3 contient 608/640 aux GPIO 41/42, 1216 au 21, 288 au 48, aucun relais ; et `nbIOActivesJSON.relais.actives.nb` = 5 (script du scratchpad qui charge `banc_demarrage.be` puis lit le gabarit) ; mutant : `virtuel` MCP23017 sur la cave -> 5 relais aussi, `I2C_XXX` inconnu -> 0
-- [ ] Agent `relecteur-berry` sur `configDevices.be` avant commit
+- [x] `banc_demarrage.py` sur les **6 cartes** (code partagé) : seule la cave S3 peut changer ; écarts relus puis enregistrés — preuve : cave S3, P4, cuve, bureau OK ; rideau et grenier KO sur « sources » seulement, identique avec le data/fs de HEAD (référence périmée depuis 91bbae69a, pas de ce chantier, non réenregistrée)
+- [x] Témoin : dans le faux firmware, le template final de la cave S3 contient 608/640 aux GPIO 41/42, 1216 au 21, 288 au 48, aucun relais ; et `nbIOActivesJSON.relais.actives.nb` = 5 (script du scratchpad qui charge `banc_demarrage.be` puis lit le gabarit) ; mutant : `virtuel` MCP23017 sur la cave -> 5 relais aussi, `I2C_XXX` inconnu -> 0 — preuve : gabarit final [33,1,1,1,32,34,160,161,…,1216,…,608,640,…,288], 5 relais actifs ; mutant MCP23017 5 ; adresse absente 0x27 -> 0
+- [x] Agent `relecteur-berry` sur `configDevices.be` avant commit — preuve : verdict « prêt », aucun défaut (MCP23017 inchangé, string importé, charte respectée)
 
 ## A5 — Commit
 - [ ] `git commit -- <chemins de ce plan>`, message en français sans accents ; changements de build du `.h` (CFG_HOLDER) montrés avant de les inclure

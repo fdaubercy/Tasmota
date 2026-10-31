@@ -36,15 +36,15 @@ Contraintes : un build du P4 (`erase_upload`) tourne → `tasmota/user_config_ov
 qu'après sa fin (un build réécrit ce fichier). Jamais de `pio run` de ma part pendant un build de l'utilisateur.
 
 ## A1 — Env ESP32 `tasmota32-cave-serveur-rly` aligné sur la carte en ligne
-- [ ] Aucun `pio run`/scons en cours juste avant les éditions (garde_build / Win32_Process)
-- [ ] `user_config_override.h` (branche `#else` du `USER_TEMPLATE` de la section cave) : 160 et 161 retirés → template identique octet pour octet à celui de la carte en ligne
+- [x] Aucun `pio run`/scons en cours juste avant les éditions (garde_build / Win32_Process) — preuve : 10:12:28, 0 processus pio run/scons
+- [x] `user_config_override.h` (branche `#else` du `USER_TEMPLATE` de la section cave) : 160 et 161 retirés → template identique octet pour octet à celui de la carte en ligne — preuve : template ESP32 du .h = persist ESP32 = carte en ligne (comparaison scriptée : True)
 - [x] `data/cave/tasmota32-serveur-rly/_persist.json` : `pompeVideCave.capteurs.capteur1/2` en `activation: OFF` (broches 2/15 gardées), `Thermo-Hygrometre.thermometre1` en `activation: ON` (GPIO 22, type 1216) ; template du bloc `modele` du persist aligné s'il en porte un ; édition par Edit, texte d'origine conservé (pas de réécriture par `json.dump`) — preuve : git diff du persist (5 valeurs), relance de pompe sans effet sur capteur désactivé (controleGeneral.be::niveauHautActif)
 - [x] Contrôle : JSON relu par `json.load` ; template décodé GPIO par GPIO = celui de la carte en ligne (script du scratchpad) — preuve : verif_cave.py « identique a la carte en ligne : True », aucun doublon
 
 ## A2 — Env S3 `tasmota32s3-cave-serveur-rly` aligné (même logique, broches S3)
-- [ ] `user_config_override.h` (branche S3 du `USER_TEMPLATE`) : 160 (GPIO 2) et 161 (GPIO 15) retirés, 1216 (AM2301) posé à l'index du GPIO 11
+- [x] `user_config_override.h` (branche S3 du `USER_TEMPLATE`) : 160 (GPIO 2) et 161 (GPIO 15) retirés, 1216 (AM2301) posé à l'index du GPIO 11 — preuve : remplacé par le plan cave-s3-waveshare (A3) : template de la Waveshare
 - [x] `data/cave/tasmota32s3-serveur-rly/_persist.json` : capteurs de niveau OFF, `thermometre1` ON sur le **pin 11** ; template du bloc `modele` aligné — preuve : verif_cave.py (template S3 38 cases, AM2301 au GPIO 11 ; l'ancien était le tableau ESP32 de 36 cases)
-- [ ] Commentaire de l'env S3 dans `platformio_tasmota_cenv.ini` mis à jour (AM2301 sur le GPIO 11, capteurs de niveau inactifs comme sur la carte en ligne)
+- [x] Commentaire de l'env S3 dans `platformio_tasmota_cenv.ini` mis à jour (AM2301 sur le GPIO 11, capteurs de niveau inactifs comme sur la carte en ligne) — preuve : remplacé par le plan cave-s3-waveshare (A3) : commentaire réécrit pour la Waveshare
 - [x] Contrôle : JSON valide ; aucune broche interdite S3 (19-20, 26-37, 43-46) ; aucun doublon de broche dans le persist — preuve : verif_cave.py « interdits S3: [] », « doublons: [] »
 - [x] `banc_demarrage.py` (skill `bancs`) : si l'instantané de la cave S3 change, la différence = exactement ces broches, puis instantané mis à jour — preuve : écart règles Switch1/2 -> Tele#AM2301 ; écart « sources 3 -> 1 » antérieur (témoin HEAD identique, référence non réenregistrée depuis 91bbae69a) ; --enregistre puis VERT
 

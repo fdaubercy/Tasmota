@@ -66,18 +66,21 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 								end
 							end
 
-							if (relais[cleRLY]["virtuel"] == "I2C_MCP23017")
+							# Relais d'un expandeur I2C : MCP23017 (driver Berry i2c_mcp23017) ou TCA9554 (driver Tasmota
+							# xdrv_69 lu dans /tca9554.dat, carte Waveshare 8DI-8RO) ; adresse dans drivers.I2C.environnement.<puce>
+							if (relais[cleRLY]["virtuel"] == "I2C_MCP23017" || relais[cleRLY]["virtuel"] == "I2C_TCA9554")
+								var puce = string.split(relais[cleRLY]["virtuel"], "_")[1]
 								var result = tasmota.cmd("I2CScan", boolMute)
 								# Si les connexions I2C sont activées dans le firmware et les ports I2C configurés
 								if (result.contains("I2CScan"))
-									# Module MCP23017 connecté
-									var adresseI2C = drivers["I2C"]["environnement"].find("MCP23017", {}).find("adresseI2C")		# absent si le driver I2C est en veille
+									# Expandeur connecté
+									var adresseI2C = drivers["I2C"]["environnement"].find(puce, {}).find("adresseI2C")		# absent si le driver I2C est en veille
 									if (adresseI2C != nil && string.find(result["I2CScan"], str(adresseI2C)) > -1)
 										nbIOActivesJSON["relais"]["actives"]["nb"] = nbIOActivesJSON["relais"]["actives"].find("nb", 0) + 1
 										if (relais[cleRLY]["type"] == 1376)
-											nbIOActivesJSON["WS2812"]["actives"]["nb"] = nbIOActivesJSON["WS2812"]["actives"].find("nb", 0) + 1	
+											nbIOActivesJSON["WS2812"]["actives"]["nb"] = nbIOActivesJSON["WS2812"]["actives"].find("nb", 0) + 1
 										end
-									else logFonctions.log(string.format("CONFIG_DEV_BY_RULES: Le MCP23017 n'est pas connecté: Le relai %i ne sera pas comptabilisé !", relais[cleRLY]["id"]), LOG_LEVEL_DEBUG_PLUS)
+									else logFonctions.log(string.format("CONFIG_DEV_BY_RULES: Le %s n'est pas connecté: Le relai %i ne sera pas comptabilisé !", puce, relais[cleRLY]["id"]), LOG_LEVEL_DEBUG_PLUS)
 									end
 								elif (result.contains("Command"))
 									if (result["Command"] == "Error")

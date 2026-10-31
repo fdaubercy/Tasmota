@@ -727,15 +727,19 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #undef PROJECT
                 #define PROJECT           "SERVEUR-RLY-CAVE"         	 // PROJECT is used as the default topic delimiter
             #if defined(FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY)
-                // ESP32-S3 N16R8 + module 8 relais en GPIO directs (38 positions : GPIO0-21 puis 33-48 ;
-                // 33-37 = PSRAM octale -> 0). Meme brochage logique que la carte ESP32 :
-                //   Button2 GPIO0, Switch1 GPIO2 (niveau bas), Button1 GPIO4, Relay1-3 GPIO5-7,
-                //   Switch2 GPIO15 (niveau haut), Relay4-5 GPIO16-17, Button3 GPIO18, Led1 GPIO21.
-                // Pas de DHT (GPIO22 n'existe pas sur S3 ; desactive dans le persist de toute facon).
+                // Carte Waveshare ESP32-S3-ETH-8DI-8RO (WROOM-1U-N16R8 ; 38 positions : GPIO0-21 puis 33-48,
+                // 33-37 = PSRAM octale -> 0). Memes entrees-sorties que la carte ESP32, GPIO de la Waveshare :
+                //   Button2 GPIO0 (BOOT), Button1 GPIO4 (DI1), Button3 GPIO5 (DI2), Switch1 GPIO6 (DI3, niveau bas),
+                //   Switch2 GPIO7 (DI4, niveau haut), AM2301 GPIO21, I2C SCL 41 / SDA 42, Led1 GPIO48 (en-tete).
+                // Relais 1-5 = CH1-CH5 sur le TCA9554 (I2C 0x20) : pas de GPIO, crees par xdrv_69 a partir de
+                // /tca9554.dat (data/cave/tasmota32s3-serveur-rly). Pris par la carte : 12-16 W5500, 17/18 RS485,
+                // 38 WS2812, 40 RTC, 45/47/48 carte TF, 46 buzzer.
                 // Les 'pin' du _persist.json doivent correspondre (voir [env:tasmota32s3-cave-serveur-rly]).
-                #define USER_TEMPLATE "{\"NAME\":\"ESP32S3 Relay x8 Cave\",\"GPIO\":[33,1,160,1,32,224,225,226,1,1,1,1,1,1,1,161,227,228,34,1,1,288,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
+                #define USER_TEMPLATE "{\"NAME\":\"ESP32S3 Waveshare 8DI-8RO Cave\",\"GPIO\":[33,1,1,1,32,34,160,161,1,1,1,1,1,1,1,1,1,1,1,1,1,1216,0,0,0,0,0,1,1,1,608,640,1,1,1,1,1,288],\"FLAG\":0,\"BASE\":1}"
+                #define USE_TCA9554                             // [I2cDriver81] relais de la carte sur l'expandeur TCA9554
             #else
-                #define USER_TEMPLATE "{\"NAME\":\"ESP32 Relay x8\",\"GPIO\":[33,1,160,1,32,1,1,1,1,1,1,161,1,1,34,1,1,1,1216,288,1,226,227,228,1,1,1,1,224,225,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
+                // Identique au template de la carte en ligne (relu le 2026-10-31) : capteurs de niveau sans Switch
+                #define USER_TEMPLATE "{\"NAME\":\"ESP32 Relay x8\",\"GPIO\":[33,1,1,1,32,1,1,1,1,1,1,1,1,1,34,1,1,1,1216,288,1,226,227,228,1,1,1,1,224,225,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
             #endif
 
             #ifdef MODULE
