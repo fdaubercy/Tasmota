@@ -1,0 +1,28 @@
+<!-- Page /cuve de la cuve et du maitre P4 (data/fs/cuvePageFonctions.be) : jauges remplies par /sd/js/cuve.js -->
+<!-- (jauge liquide ECharts = volume en litres ; demi-cercle SVG = taux de remplissage en % ; cadran ECharts = tensions -->
+<!-- de la sonde : anneau exterieur = sonde recalculee 0-10 V, anneau interieur = brute a l'entree de l'ADS1115) -->
+<div id='c_zone'>
+	<p id='c_msg'>Chargement...</p>
+	<div id='c_jauges' data-volume='' data-taux='' data-tension-brute='' data-tension-sonde=''>
+		<figure class='c_jauge'>
+			<div id='c_volume' class='c_trace'></div>
+			<figcaption>Volume disponible</figcaption>
+		</figure>
+		<figure class='c_jauge'>
+			<svg id='c_taux' class='c_trace' viewBox='0 0 200 130' role='img' aria-label='Taux de remplissage'>
+				<path class='c_fond' d='M20 110 A80 80 0 0 1 180 110' pathLength='100'/>
+				<path id='c_arc' class='c_arc' d='M20 110 A80 80 0 0 1 180 110' pathLength='100' stroke-dasharray='0 100'/>
+				<text id='c_tauxTexte' x='100' y='98' text-anchor='middle' class='c_valeur'>-,-- %</text>
+				<text x='20' y='127' text-anchor='middle' class='c_borne'>0 %</text>
+				<text x='180' y='127' text-anchor='middle' class='c_borne'>100 %</text>
+			</svg>
+			<figcaption>Taux de remplissage</figcaption>
+		</figure>
+		<figure class='c_jauge'>
+			<div id='c_tension' class='c_trace'></div>
+			<figcaption>Tensions de la sonde</figcaption>
+			<div class='c_note'><span class='c_ext'>●</span> sonde (recalculée) : <b id='c_tSonde'>-,--</b> V<br><span class='c_int'>●</span> brute (entrée ADS1115) : <b id='c_tBrute'>-,--</b> V</div>
+		</figure>
+	</div>
+	<p id='c_maj' class='c_note'></p>
+</div>

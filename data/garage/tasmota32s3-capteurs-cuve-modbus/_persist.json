@@ -230,6 +230,15 @@
 						"publishMQTT": {
 							"topic": []
 						}
+					},
+					"analogique5": {
+						"activation": "ON",
+						"nom": "Tension sonde (recalculée)",
+						"id": 5,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "Calcul_tensionSonde",
+						"value": 0
 					}
 				},
 				"capteurs": {

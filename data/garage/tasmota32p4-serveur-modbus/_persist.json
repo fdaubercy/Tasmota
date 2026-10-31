@@ -654,12 +654,12 @@
 						"idModBus": 1
 					},
 					"analogique2": {
-						"activation": "OFF",
-						"nom": "Analogique 2",
+						"activation": "ON",
+						"nom": "Tension sonde (recalculée)",
 						"id": 2,
 						"pin": -1,
 						"type": 4704,
-						"virtuel": "I2C_ADS1115",
+						"virtuel": "ModBus_TasmotaSlaveModBus1",
 						"value": 0,
 						"limites": [],
 						"relaisLie": {
@@ -669,7 +669,8 @@
 						},
 						"publishMQTT": {
 							"topic": []
-						}
+						},
+						"idModBus": 5
 					},
 					"analogique3": {
 						"activation": "OFF",

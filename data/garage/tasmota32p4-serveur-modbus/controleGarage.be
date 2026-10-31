@@ -73,6 +73,40 @@ class CONTROLE_GARAGE : Driver
         self.flagINIT = 1 
     end
 
+    # Tension de la sonde de niveau recalculee par la cuve, servie par ModBus (entree analogique idModBus 5 = registre
+    # 4708 de la cuve, mV entiers, 2026-10-31) : en volts, ou nil (entree absente, jamais relevee ou en erreur de mesure)
+    def tensionSonde()
+        import string
+        import garageFonctions
+        for anaJson: modules["garage"]["environnement"].find("analogiques", {})
+            if (isinstance(anaJson, map) && anaJson.find("activation", "OFF") == "ON" && anaJson.find("idModBus") == 5 &&
+                string.find(str(anaJson.find("virtuel", "")), "ModBus_TasmotaSlaveModBus") > -1)
+                return (garageFonctions.mesureEnErreur(anaJson) ? nil : int(anaJson.find("value", 0)) / 1000.0)
+            end
+        end
+        return nil
+    end
+
+    # Page /cuve : jauges du volume et du taux de la cuve (data/fs/cuvePageFonctions.be, importe a la premiere requete)
+    def web_add_handler()
+        import webserver
+        webserver.on("/cuve", / -> self.pageCuve(), webserver.HTTP_GET)
+    end
+
+    # Dimensions de la cuve : celles de son entree analogique (esclave ModBus 1), choisie comme dans web_sensor
+    def pageCuve()
+        import string
+        import cuvePageFonctions
+        var dimensions = {}
+        for anaJson: modules["garage"]["environnement"].find("analogiques", {})
+            if (type(anaJson) == "instance" && anaJson.find("idModBus") == 1 && string.find(str(anaJson.find("virtuel", "")), "ModBus_TasmotaSlaveModBus") > -1)
+                dimensions = anaJson.find("dimensions", {})
+                break
+            end
+        end
+        cuvePageFonctions.route(dimensions, nil)        # montage de la sonde inconnu du P4 : echelles par defaut
+    end
+
     # Affiche les capteurs du module cuve sur la page web
     def web_sensor()
         import json
@@ -125,10 +159,14 @@ class CONTROLE_GARAGE : Driver
                             # bordure rouge clignotante, comme sur la page de l'esclave cuve
                             var erreur = garageFonctions.mesureEnErreur(anaJson)
                             var vide = "-,--"
-                            variablesRemplacement.insert("sensorsCuve->valeurCapteurHauteur->titre", anaJson["nom"])
+                            variablesRemplacement.insert("sensorsCuve->valeurCapteurHauteur->titre", "Tension brute (ADS1115) : ")
 
                             var value = tasmota.scale_int(int(anaJson["value"]), 0, 32767, 0, 6144)
                             variablesRemplacement.insert("sensorsCuve->valeursAnalogiques->valeurCapteurHauteur", (erreur ? vide : str(value)) + "mV")
+                            # Tension de la sonde recalculee par la cuve et servie par ModBus (tensionSonde)
+                            var tension = self.tensionSonde()
+                            variablesRemplacement.insert("sensorsCuve->tensionSonde->titre", "Tension sonde (recalculée) : ")
+                            variablesRemplacement.insert("sensorsCuve->valeursAnalogiques->tensionSonde", (tension != nil ? string.format("%.2fV", tension) : vide + "V"))
 
                             # Convertit la valeur (en V) vers une valeur en cm
                             # Coefficient de conversion: 30mV/cm
@@ -342,8 +380,11 @@ class CONTROLE_GARAGE : Driver
 
                             var volume =  int(hauteur * largeur * longueur * pourcentageEau / 1000)    # en litres
 
-                            tasmota.response_append(string.format(", \"sensorsCuve\": {\"valeursAnalogiques\": {\"valeurCapteurHauteur\": %i}, \"niveauCuve\":{\"tauxRemplissage\": %.2f, \"hauteurEau\": %i, \"volume\": %i}}", 
-                                                                                tasmota.scale_int(int(anaJson["value"]), 0, 32767, 0, 6144), real(pourcentageEau), int(hauteurEau), volume))
+                            var tension = self.tensionSonde()
+                            tasmota.response_append(string.format(", \"sensorsCuve\": {\"valeursAnalogiques\": {\"valeurCapteurHauteur\": %i%s}, \"niveauCuve\":{\"tauxRemplissage\": %.2f, \"hauteurEau\": %i, \"volume\": %i}}",
+                                                                                tasmota.scale_int(int(anaJson["value"]), 0, 32767, 0, 6144),
+                                                                                (tension != nil ? string.format(", \"tensionSonde_V\": %.2f", tension) : ""),
+                                                                                real(pourcentageEau), int(hauteurEau), volume))
                         end
                     end
                 end

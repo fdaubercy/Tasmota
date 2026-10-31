@@ -1,8 +1,11 @@
 <table style='width:100%'>
     <fieldset class='#classeErreur#' style='border-color:##colorWs2812#;'>
-        <legend><b title='sensorNiveauCuve'>#drivers->nom#</b></legend>
+        <legend><b title='sensorNiveauCuve'>#drivers->nom#</b> <a href='/cuve' title='Jauges du volume et du taux de remplissage'>(jauges)</a></legend>
         <div class='parametre'>
-            <div>#sensorsCuve->valeurCapteurHauteur->titre#: </div><div>#sensorsCuve->valeursAnalogiques->valeurCapteurHauteur#</div>
+            <div>#sensorsCuve->valeurCapteurHauteur->titre#</div><div>#sensorsCuve->valeursAnalogiques->valeurCapteurHauteur#</div>
+        </div>
+        <div class='parametre'>
+            <div>#sensorsCuve->tensionSonde->titre#</div><div>#sensorsCuve->valeursAnalogiques->tensionSonde#</div>
         </div>
         <div class='parametre'>
             <div>#sensorsCuve->hauteurEau->titre#</div><div>#sensorsCuve->niveauCuve->hauteurEau#</div>

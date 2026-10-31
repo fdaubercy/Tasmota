@@ -135,6 +135,18 @@ class CAPTEURS_CUVE : Driver
         cuveFonctions.majTemoinErreur()
     end
 
+    # Page /cuve : jauges du volume et du taux (data/fs/cuvePageFonctions.be, importe a la premiere requete)
+    def web_add_handler()
+        import webserver
+        webserver.on("/cuve", / -> self.pageCuve(), webserver.HTTP_GET)
+    end
+
+    def pageCuve()
+        import cuvePageFonctions
+        import cuveFonctions
+        cuvePageFonctions.route(modules["cuve"].find("dimensions", {}), cuveFonctions.montageSonde())
+    end
+
     # Affiche les capteurs du module cuve sur la page web
     def web_sensor()
         import json
@@ -172,8 +184,14 @@ class CAPTEURS_CUVE : Driver
                     if (anaJson["virtuel"] == "I2C_ADS1115")
                         # Ajoute à la page web
                         if (anaJson["id"] == 1)
-                            variablesRemplacement.insert("sensorsCuve->valeurCapteurHauteur->titre", anaJson["nom"])
-                            variablesRemplacement.insert("sensorsCuve->valeursAnalogiques->valeurCapteurHauteur", (erreurNiveau ? vide : str(cuveFonctions.sensorsCuve["valeursAnalogiques"]["valeurCapteurHauteur"])) + "mV")
+                            # Tension brute (entree de l'ADS1115, apres le pont) et tension de la sonde recalculee
+                            # (2026-10-31) : affichees meme en erreur de mesure, elles servent a la diagnostiquer
+                            var tensions = cuveFonctions.sensorsCuve["valeursAnalogiques"]
+                            variablesRemplacement.insert("sensorsCuve->valeurCapteurHauteur->titre", "Tension brute (ADS1115) : ")
+                            variablesRemplacement.insert("sensorsCuve->valeursAnalogiques->valeurCapteurHauteur", str(tensions["valeurCapteurHauteur"]) + "mV")
+                            variablesRemplacement.insert("sensorsCuve->tensionSonde->titre", "Tension sonde (recalculée) : ")
+                            variablesRemplacement.insert("sensorsCuve->valeursAnalogiques->tensionSonde",
+                                                         (tensions.contains("tensionSonde_V") ? string.format("%.2fV", tensions["tensionSonde_V"]) : vide + "V"))
 
                             variablesRemplacement.insert("sensorsCuve->hauteurEau->titre", "Hauteur Eau: ")
                             variablesRemplacement.insert("sensorsCuve->niveauCuve->hauteurEau", (erreurNiveau ? vide : str(cuveFonctions.sensorsCuve["niveauCuve"]["hauteurEau"])) + "cm")

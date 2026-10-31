@@ -632,6 +632,18 @@ reste 0.
   `MODBUS_TASMOTA_SLAVE_CAPTEUR` en `erreur` une fois, `info` a la premiere vraie valeur. Une reponse
   sans valeur (`Values` vide) n'est pas une sentinelle : elle suit le chemin d'erreur.
 - **Sniffeur** : `decodeur_modbus.py` affiche `SANS MESURE (capteur absent ou defaillant)`.
+
+**Valeur calculee servie par l'esclave : la tension de la sonde de la cuve (2026-10-31).** `executeCmdModbus` sert
+TOUT appareil analogique actif du persist a `4704 + id - 1`, quel que soit son `virtuel` : une valeur calculee en
+Berry se publie donc sans toucher aux modules solidifies. La cuve declare `analogique5` (`virtuel`
+`Calcul_tensionSonde`, id 5 -> **registre 4708**) ; `cuveFonctions.changementEtatCapteur` y ecrit la tension de la
+sonde recalculee par le pont (mV a l'entree de l'ADS1115 x rapport de `i2c_ads1115.montage`), en **mV entiers**, et
+note sa fraicheur (`noteMesure(4708)`) avec celle du niveau : la sentinelle `0x7FFFFFFF` vaut pour elle aussi. Le
+maitre P4 la lit par son `analogique2` (`virtuel ModBus_TasmotaSlaveModBus1`, `idModBus 5`) ;
+`controleGarage.be::CONTROLE_GARAGE.tensionSonde` la rend en volts (nil en erreur de mesure) pour l'encadre de
+l'accueil, le JSON SENSOR (`sensorsCuve.valeursAnalogiques.tensionSonde_V`) et la page `/cuve`. Le sniffeur nomme le
+registre d'apres le persist du maitre. Seuls les virtuels `I2C_ADS1115` sont des voies de l'ADS1115 dans le releve
+de la cuve.
 - **Limite** : un contact sec (0x02) coupe ressemble a un contact ouvert ; seule une resistance de fin
   de ligne le rendrait detectable.
 - Bancs : `banc_test_modbus.be` §26 (temoin : esclave sans sentinelle -> 2 echecs),

@@ -1,0 +1,15 @@
+/* Page /cuve (data/fs/cuvePageFonctions.be, /sd/html/cuve.html, /sd/js/cuve.js) */
+#c_zone{text-align:left;max-width:calc(100vw - 24px)}
+#c_msg{margin:8px 0}
+#c_jauges{display:flex;flex-wrap:wrap;justify-content:center;gap:16px}
+.c_jauge{margin:0;display:flex;flex-direction:column;align-items:center}
+.c_jauge figcaption{margin-top:4px;font-weight:bold}
+.c_trace{width:240px;height:200px;max-width:calc(100vw - 40px)}
+.c_fond{fill:none;stroke:rgba(127,127,127,0.25);stroke-width:18}
+.c_arc{fill:none;stroke:#1f7fc4;stroke-width:18;transition:stroke-dasharray 0.6s}
+.c_valeur{font-size:28px;fill:currentColor}
+.c_borne{font-size:10px;fill:currentColor;opacity:0.7}
+.c_note{margin:8px 0;font-size:0.9em;opacity:0.8;text-align:center}
+.c_ext{color:#1f7fc4}
+.c_int{color:#d68a12}
+@media(prefers-reduced-motion:reduce){.c_arc{transition:none}}

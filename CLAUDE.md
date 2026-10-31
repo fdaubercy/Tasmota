@@ -504,6 +504,13 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   `jauge-A.png` a `jauge-H.png`, code `catalogue_jauges.html`, fiche `README.md`. **Choix retenu : A (liquide
   anime ECharts) ou H (demi-cercle SVG)**. Un gabarit `webSensor*.html` n'execute aucun script (zone remplacee
   toutes les ~2 s) : seuls les modeles SVG/CSS (D a H) s'y posent tels quels.
+- Page `/cuve` (2026-10-31, premier essai, plan `tasks/plans/jauges-cuve.md`) : jauges A (volume en L) et H (taux en %)
+  de la cuve, lien « (jauges) » dans la legende de `webSensorNiveauCuve.html`. Module `data/fs/cuvePageFonctions.be`
+  (route declaree par `controleCuve.be::CAPTEURS_CUVE` et `controleGarage.be::CONTROLE_GARAGE` du P4), page
+  `data/sd/{html,css,js}/cuve.*`, extension `data/sd/js/echarts-liquidfill.min.js.gz` ; valeurs par `/histo?p=direct`.
+  Fichiers embarques sur la cuve et le P4 SEULEMENT : liste `page_cuve` de `[berry_commun]` dans le
+  `custom_files_exclude` de tous les autres envs (regle : une page ne part que sur les cartes qui s'en servent).
+  Banc `berry/banc_cuve_page.py`. Mode d'emploi : `outils_docs/README.md`.
 - `outils_docs/SOLIDIFICATION_BERRY.md` — mecanisme, verification (§5), parametres, 13 pieges.
 - `outils_docs/PROTOCOLE_MODBUS.md` — ModBus RTU/TCP standard, implementation maison (3 transports
   Serie/UDP/TCP), extension esclave->maitre, failles du mecanisme d'envoi, design de queue FIFO,

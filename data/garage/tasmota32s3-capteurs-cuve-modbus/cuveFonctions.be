@@ -73,6 +73,32 @@ cuveFonctions.lectureValide = def(cleA, mV, valeurs)
     return ads.mesureValide(cleA, mV, valeurs)
 end
 
+# Montage de la sonde de niveau, d'apres sa voie de l'ADS1115 (i2c_ads1115.montage, 2026-10-31) :
+# {"rapport", "entreeMax_V", "sondeMax_V"}, rapport = tension de la sonde / tension a l'entree de l'ADS1115
+# (pont R1/R2 ; 1 en direct). nil sans pilote (ou firmware sans montage), sans capteur de niveau, ou si la voie
+# mesure un courant.
+cuveFonctions.montageSonde = def()
+    import global
+    import string
+    import introspect
+    var ana = cuveFonctions.capteurNiveau()
+    var ads = (global.contains("i2c_ads1115") ? global.i2c_ads1115 : nil)
+    if (ana == nil || !isinstance(ads, Driver) || introspect.get(ads, "montage") == nil)    return nil    end
+    var m = ads.montage(string.format("A%d", int(ana["id"]) - 1))
+    var rapport = (m["montage"] == "pont" ? real(m["R1"] + m["R2"]) / m["R2"] : (m["montage"] == "direct" ? 1.0 : nil))
+    if (rapport == nil)    return nil    end
+    return {"rapport": rapport, "entreeMax_V": m["pleineEchelle_V"], "sondeMax_V": m["pleineEchelle_V"] * rapport}
+end
+
+# Entree analogique qui sert la tension de la sonde au maitre par ModBus (virtuel "Calcul_tensionSonde", 2026-10-31) :
+# registre type + id - 1 (4708 pour l'id 5), valeur en mV entiers. nil si le persist n'en a pas (ou desactivee).
+cuveFonctions.entreeTensionSonde = def()
+    for e: modules["cuve"]["environnement"].find("analogiques", {})
+        if (isinstance(e, map) && e.find("activation", "OFF") == "ON" && e.find("virtuel") == "Calcul_tensionSonde")    return e    end
+    end
+    return nil
+end
+
 # Le relais WS2812 du module (ruban), ou nil s'il n'est pas actif
 cuveFonctions.relaisRuban = def()
     var ws2812 = modules["cuve"]["environnement"].find("relais", {}).find("relai1")
@@ -488,17 +514,17 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
 
     # Evite un bug
     if (analogiques && msg["ADS1115"].size() == 4 && string.find(json.dump(msg), "div10") < 0)
-        var nb = 1
-
-        # Parcours les capteurs analogiques enregistrés pour enregistrer leur valeur
+        # Parcours les voies de l'ADS1115 enregistrees pour enregistrer leur valeur. Vraie cle de chaque entree, et
+        # seulement les virtuels I2C_ADS1115 (2026-10-31) : la boucle relisait 'analogique<rang>' (key_error si les
+        # numeros ne se suivent pas) et prenait tout virtuel pour une voie (analogique5, tension de la sonde servie
+        # par ModBus, aurait ete ecrasee par la voie A4).
+        var sonde = cuveFonctions.montageSonde()               # une fois par releve (montage : boucle E24, petites maps)
+        var entree = cuveFonctions.entreeTensionSonde()
         for cleAna: analogiques.keys()
             tasmota.yield()
             if type(analogiques[cleAna]) != "instance"   continue    end
 
-            cleAna = string.format("analogique%d", nb)
-            nb += 1
-
-            if (analogiques[cleAna].find("activation", "OFF") == "ON" && analogiques[cleAna].find("virtuel", "OFF") != "OFF")
+            if (analogiques[cleAna].find("activation", "OFF") == "ON" && analogiques[cleAna].find("virtuel", "OFF") == "I2C_ADS1115")
                 # Mesure recue (meme inchangee) : fraicheur pour la sentinelle ModBus (2026-10-10).
                 # Teste la PRESENCE de la cle (contains) et non sa valeur : une lecture 0 est une mesure.
                 # noteMesure appele directement (et non noteMesureModbus, reserve a l'esclave ModBus) :
@@ -511,6 +537,10 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
                     var mVlu = cuveFonctions.versMv(msg["ADS1115"][cleA])
                     if (cuveFonctions.lectureValide(cleA, mVlu, msg["ADS1115"]))
                         modbusFonctions.noteMesure(int(analogiques[cleAna]["type"]) + int(analogiques[cleAna]["id"]) - 1)
+                        # La tension de la sonde servie au maitre est fraiche avec la mesure dont elle est tiree
+                        if (entree != nil && sonde != nil)
+                            modbusFonctions.noteMesure(int(entree["type"]) + int(entree["id"]) - 1)
+                        end
                     end
                 end
                 if (!msg["ADS1115"].find(string.format("A%d", analogiques[cleAna]["id"] - 1), false))    continue    end
@@ -524,6 +554,15 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
                     # Mets àjour le taux de remplissage, et le volume d'eau disponible
                     # Récupère la valeur analogique du capteur & la convertit en mV (bornee a 0 : versMv, audit N1)
                     cuveFonctions.sensorsCuve["valeursAnalogiques"]["valeurCapteurHauteur"] = cuveFonctions.versMv(analogiques[cleAna]["value"])
+
+                    # Tension de la sonde (0-10 V) recalculee par le rapport du pont, au centieme de volt
+                    # (2026-10-31) : affichee sur l'accueil et la page /cuve a cote de la tension brute
+                    if (sonde != nil)
+                        var mVSonde = cuveFonctions.sensorsCuve["valeursAnalogiques"]["valeurCapteurHauteur"] * sonde["rapport"]
+                        cuveFonctions.sensorsCuve["valeursAnalogiques"]["tensionSonde_V"] = int(mVSonde / 10 + 0.5) / 100.0
+                        # ... et servie au maitre P4 par ModBus, en mV entiers (entreeTensionSonde)
+                        if (entree != nil)    entree["value"] = int(mVSonde + 0.5)    end
+                    end
 
                     # Convertit la valeur (en V) vers une valeur en cm
                     # Coefficient de conversion: 30mV/cm

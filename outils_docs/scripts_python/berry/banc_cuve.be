@@ -465,6 +465,38 @@ verifie(cuveFonctions.niveauEnErreur() == true, "niveauEnErreur : mesure perimee
 ANA0["activation"] = "OFF"
 verifie(cuveFonctions.niveauEnErreur() == false, "niveauEnErreur : capteur desactive -> jamais en erreur")
 
+print("9 bis. Tension de la sonde recalculee par le pont (montageSonde, tensionSonde_V, 2026-10-31)")
+# Montage reel de la cuve : 0-10 V sur ADS1115 en 3,3 V -> pont 24 kOhm / 10 kOhm (CABLAGE_ADS1115.md), rapport 3,4 FIGE ici
+class FauxAdsMontage : Driver
+    var reponse
+    def init(r) self.reponse = r end
+    def mesureValide(cle, mV, valeurs) return true end
+    def montage(nom) return self.reponse end
+end
+remetNormal()
+global.i2c_ads1115 = FauxAdsMontage({"montage": "pont", "R1": 24000, "R2": 10000, "pleineEchelle_V": 10.0 * 10000 / 34000})
+var ms = cuveFonctions.montageSonde()
+verifie(ms != nil && proche(ms["rapport"], 3.4, 0.0001) && proche(ms["sondeMax_V"], 10.0, 0.0001) && proche(ms["entreeMax_V"], 2.941, 0.001),
+        "montageSonde : pont 24k/10k -> rapport 3,4, sonde 10 V, entree 2,94 V")
+releve(16000)
+var mvSonde = mesures()["valeursAnalogiques"]["valeurCapteurHauteur"]
+verifie(proche(mesures()["valeursAnalogiques"].find("tensionSonde_V", -1), mvSonde * 3.4 / 1000, 0.006),
+        "releve : tensionSonde_V = " + str(mvSonde) + " mV x 3,4 = " + str(mesures()["valeursAnalogiques"].find("tensionSonde_V")) + " V (au centieme)")
+# Servie au maitre par ModBus : analogique5 du persist reel (virtuel Calcul_tensionSonde, id 5 -> registre 4708)
+var e5 = cuveFonctions.entreeTensionSonde()
+verifie(e5 != nil && e5["value"] == int(mvSonde * 3.4 + 0.5), "ModBus : analogique5.value = tension de la sonde en mV entiers (" + str(e5 != nil ? e5["value"] : nil) + ")")
+verifie(modbusFonctions.notes == [ADRESSE, 4708], "ModBus : fraicheur notee sur 4704 (niveau) ET 4708 (tension de la sonde) : " + str(modbusFonctions.notes))
+verifie(ANA0["value"] != e5["value"], "la boucle du releve ne prend plus analogique5 pour une voie de l'ADS1115 (vraie cle, virtuels I2C_ADS1115 seuls)")
+remetNormal()
+global.i2c_ads1115 = FauxAdsMontage({"montage": "shunt", "Rshunt": 150, "pleineEchelle_V": 3.0})
+releve(16000)
+verifie(cuveFonctions.montageSonde() == nil && !mesures()["valeursAnalogiques"].contains("tensionSonde_V"), "voie en courant (shunt) : pas de tension de sonde")
+remetNormal()
+global.i2c_ads1115 = FauxAds(true)
+releve(16000)
+verifie(cuveFonctions.montageSonde() == nil && !mesures()["valeursAnalogiques"].contains("tensionSonde_V"), "pilote sans montage (firmware ancien) : pas de tension de sonde, pas d'exception")
+global.i2c_ads1115 = nil
+
 # ================================================================================================
 print("10. Couleur du ruban : appliqueCouleurNiveau")
 remetNormal()
@@ -628,6 +660,13 @@ if ctrl != nil
     verifie(gestionFileFolder.envois[0][0] == "/sd/html/webSensorNiveauCuve.html", "web_sensor : gabarit du niveau de cuve")
     verifie(string.find(niv["sensorsCuve->niveauCuve->tauxRemplissage"], "50%") == 0 && niv["sensorsCuve->niveauCuve->volume"] == str((HAUT * LARG * LONG) / 2000) + "L", "web_sensor : taux '50%' et volume " + str((HAUT * LARG * LONG) / 2000) + "L")
     verifie(niv["sensorsCuve->niveauCuve->hauteurEau"] == "55cm" && string.find(niv["sensorsCuve->valeursAnalogiques->valeurCapteurHauteur"], "mV") > 0, "web_sensor : hauteur '55cm', tension en mV")
+    verifie(niv.contains("sensorsCuve->tensionSonde->titre") && niv["sensorsCuve->valeursAnalogiques->tensionSonde"] == "-,--V",
+            "web_sensor : ligne de la tension recalculee presente, '-,--V' sans montage connu (" + str(niv.find("sensorsCuve->valeursAnalogiques->tensionSonde")) + ")")
+    cuveFonctions.sensorsCuve["valeursAnalogiques"]["tensionSonde_V"] = 6.8
+    gestionFileFolder.envois = []
+    ctrl.web_sensor()
+    verifie(gestionFileFolder.envois[0][1]["sensorsCuve->valeursAnalogiques->tensionSonde"] == "6.80V", "web_sensor : tension recalculee 6,8 V -> '6.80V'")
+    cuveFonctions.sensorsCuve["valeursAnalogiques"].remove("tensionSonde_V")
     verifie(niv["colorWs2812"] == cuveFonctions.couleurTeinte(59, 255) && niv["colorWs2812"] == "FFFA00" && niv["classeErreur"] == "", "web_sensor : couleur de l'encadre = teinte 59 a saturation 255 (FFFA00), pas de classe d'erreur")
     verifie(size(gestionFileFolder.envois) == 2 && string.find(gestionFileFolder.envois[1][1]["sensors->DS18B20->Temperature"], "12.3") == 0, "web_sensor : thermometre 12.34 -> '12.3' (une decimale tronquee)")
     # web_sensor : sonde absente

@@ -16,9 +16,12 @@ affichage de mesure** (niveau, température, tension, taux...). Huit modèles, c
 | Technique | extension `echarts-liquidfill` (MIT) sur ECharts | un seul arc SVG (`stroke-dasharray`), aucune librairie |
 | Poids | ECharts (`data/sd/js/echarts.min.js.gz`, 368 Ko) + l'extension | ≈ 1 Ko |
 | Où | page à part (comme `/graphiques`) ou script chargé hors de la zone rafraîchie | directement dans un gabarit `data/sd/html/webSensor*.html` |
-| Point ouvert | `echarts-liquidfill` 3.x vise ECharts 5 ; les cartes ont ECharts 6 : compatibilité **non vérifiée** | la valeur substituée dans l'attribut doit être un nombre seul (sans « % ») |
+| Point ouvert | `echarts-liquidfill` 3.x vise ECharts 5 ; rendu vérifié avec l'ECharts 6.1.0 des cartes le 2026-10-31 | dans un gabarit `webSensor*`, la valeur substituée dans l'attribut doit être un nombre seul (sans « % ») |
 
-Arbitrage entre les deux non tranché au 2026-10-31.
+**En service (premier essai, 2026-10-31)** : les deux, sur la page `/cuve` de la cuve et du P4 — A pour le
+volume en litres, H pour le taux en %. Compatibilité de l'extension avec ECharts 6.1.0 vérifiée (rendu et mise à
+jour). Mode d'emploi : `outils_docs/README.md` § « Les jauges du niveau de la cuve » ; code :
+`data/fs/cuvePageFonctions.be`, `data/sd/js/cuve.js`.
 
 ## Tous les modèles
 
