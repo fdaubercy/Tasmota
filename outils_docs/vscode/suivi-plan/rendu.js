@@ -51,8 +51,11 @@ function action(a) {
   const etapes = a.etapes.length
     ? `<ul class="etapes">${a.etapes.map(etape).join('')}</ul>`
     : '<p class="vide">Aucune sous-étape.</p>'
-  return `<article class="action${finie ? ' finie' : ''}">` +
+  // Bouton plier/deplier : bascule par media/vue.js (aucun message a l'extension) ; le titre ouvre le .md
+  return `<article class="action${finie ? ' finie' : ''}" data-id="${echappe(a.id)}">` +
     `<h2 class="action-titre" data-type="action" data-ligne="${entier(a.ligne)}" tabindex="0" role="button">` +
+    `<button class="plier" data-action="plier" type="button" aria-expanded="true" ` +
+    `aria-label="Plier ou déplier ${echappe(a.id)}" title="Plier / déplier"></button>` +
     `<span class="id">${echappe(a.id)}</span> — ${enLigne(a.titre)}</h2>` +
     `<div class="ligne-barre">${barre(a.pourcent, 'petite')}` +
     `<span class="compte">${entier(a.fait)}/${entier(a.total)}</span>` +

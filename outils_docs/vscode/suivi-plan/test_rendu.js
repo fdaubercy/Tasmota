@@ -117,6 +117,14 @@ async function principal() {
   verifie('bouton « Choisir le plan » si plusieurs plans', R.rendu(a, 'x.md', [{}, {}]).includes('data-action="choisir"'))
   verifie('pas de bouton avec un seul plan', !R.rendu(a, 'x.md', [{}]).includes('data-action="choisir"'))
   verifie('aucun attribut style (CSP)', !/\sstyle=/.test(R.rendu(a, 'x.md', [{}, {}])))
+  const avecPlis = R.rendu(a, 'x.md', [])
+  verifie('bouton plier/déplier : un par action',
+    (avecPlis.match(/data-action="plier"/g) || []).length === a.actions.length)
+  verifie('data-id des actions = id du parseur',
+    JSON.stringify([...avecPlis.matchAll(/class="action[^"]*" data-id="([^"]*)"/g)].map(m => m[1])) ===
+    JSON.stringify(a.actions.map(x => x.id)))
+  verifie('action finie marquée « finie » (pliée par défaut dans la vue)',
+    (avecPlis.match(/class="action finie"/g) || []).length === a.actions.filter(x => x.total > 0 && x.fait === x.total).length)
 
   // 2. Page complete
   const doc = R.page('NONCE123', 'https://cdn.exemple', 'https://cdn.exemple/vue.css', 'https://cdn.exemple/vue.js', '<p>x</p>')

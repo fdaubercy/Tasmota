@@ -57,6 +57,23 @@ button.choisir:hover, button.choisir:focus-visible { color: var(--vscode-textLin
 .action { padding: 10px 12px; margin-bottom: 10px; border: 1px solid var(--vscode-panel-border); border-radius: 4px; }
 .action-titre { overflow-wrap: anywhere; }
 .action-titre .id { color: var(--vscode-descriptionForeground); }
+
+/* Plier / deplier une action : seules ses etapes disparaissent, la barre et le % restent */
+button.plier {
+  font: inherit;
+  width: 1.4em;
+  padding: 0;
+  margin-right: 2px;
+  color: var(--vscode-descriptionForeground);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+button.plier::before { content: "\25BE"; }
+.action.pliee button.plier::before { content: "\25B8"; }
+button.plier:hover, button.plier:focus-visible { color: var(--vscode-textLink-foreground); outline: none; }
+.action.pliee .etapes, .action.pliee > .vide { display: none; }
+.action.pliee .ligne-barre { margin-bottom: 0; }
 .action.finie .action-titre .id { color: var(--vscode-testing-iconPassed); }
 .ligne-barre { display: flex; align-items: center; gap: 8px; margin: 6px 0 8px; font-size: 0.9em; }
 .ligne-barre .pourcent { min-width: 3.2em; text-align: right; font-weight: 600; }

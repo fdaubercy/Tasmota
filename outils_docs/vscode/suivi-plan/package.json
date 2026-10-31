@@ -3,7 +3,7 @@
   "publisher": "fdaubercy",
   "displayName": "Suivi du plan",
   "description": "Avancement des plans de travail (tasks/plans/*.md) dans une vue a droite de l'editeur : % par action, % global, etapes, ameliorations restantes.",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "private": true,
   "license": "UNLICENSED",
   "engines": {

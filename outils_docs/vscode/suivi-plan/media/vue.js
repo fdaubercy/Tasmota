@@ -19,11 +19,42 @@
     vscode.setState(etat)
   }
 
-  // Clic ou Entree/Espace sur un element marque -> message a l'extension
+  // Pliage des actions Ax : choix manuel memorise par plan (cle = chemin du plan affiche), sinon une
+  // action finie est pliee. Reapplique apres chaque mise a jour, qui remplace tout le HTML.
+  function clePlan() {
+    const f = contenu.querySelector('.fichier')
+    return f ? f.textContent : ''
+  }
+
+  function appliquePlis() {
+    const etat = vscode.getState() || {}
+    const choix = (etat.plis && etat.plis[clePlan()]) || {}
+    for (const art of contenu.querySelectorAll('.action[data-id]')) {
+      const id = art.getAttribute('data-id')
+      const pliee = Object.prototype.hasOwnProperty.call(choix, id) ? choix[id] : art.classList.contains('finie')
+      art.classList.toggle('pliee', pliee)
+      const bouton = art.querySelector('.plier')
+      if (bouton) bouton.setAttribute('aria-expanded', String(!pliee))
+    }
+  }
+
+  function basculePli(bouton) {
+    const art = bouton.closest('.action[data-id]')
+    if (!art) return
+    const etat = vscode.getState() || {}
+    const plis = etat.plis || (etat.plis = {})
+    const choix = plis[clePlan()] || (plis[clePlan()] = {})
+    choix[art.getAttribute('data-id')] = !art.classList.contains('pliee')
+    vscode.setState(etat)
+    appliquePlis()
+  }
+
+  // Clic ou Entree/Espace sur un element marque -> message a l'extension (sauf le pliage, local)
   function active(cible) {
     const el = cible && cible.closest ? cible.closest('[data-action], [data-ligne]') : null
     if (!el) return false
-    if (el.getAttribute('data-action') === 'choisir') vscode.postMessage({ type: 'choisir' })
+    if (el.getAttribute('data-action') === 'plier') basculePli(el)
+    else if (el.getAttribute('data-action') === 'choisir') vscode.postMessage({ type: 'choisir' })
     else vscode.postMessage({ type: 'ouvrir', ligne: Number(el.getAttribute('data-ligne')) })
     return true
   }
@@ -47,10 +78,12 @@
     const y = window.scrollY
     contenu.innerHTML = m.html
     largeurs()
+    appliquePlis()
     window.scrollTo(0, y)
   })
 
   largeurs()
+  appliquePlis()
   const etat = vscode.getState()
   if (etat && typeof etat.scrollY === 'number') window.scrollTo(0, etat.scrollY)
   vscode.postMessage({ type: 'pret' })

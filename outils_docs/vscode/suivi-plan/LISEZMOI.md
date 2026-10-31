@@ -2,7 +2,9 @@
 
 Affiche, dans une vue a droite de l'editeur, l'avancement du plan `tasks/plans/<chantier>.md`
 (format : `tasks/plans/_FORMAT.md`) : % global, % et etapes de chaque action (clic = ouvre la
-ligne a gauche), ameliorations restantes, alertes. Rafraichie a chaque enregistrement du plan ;
+ligne a gauche), ameliorations restantes, alertes. Bouton ▾/▸ devant chaque action : plie ou deplie ses
+etapes (barre et % restent) ; par defaut, une action finie est pliee ; le choix manuel est memorise par plan
+(etat de la webview, `media/vue.js::basculePli`). Rafraichie a chaque enregistrement du plan ;
 `Plan 74 %` dans la barre d'etat. S'ouvre aussi sur le signal du mod Claude `suivi-plan`
 (`~/.claude/suivi-plan/signal.json`) ou par `vscode://fdaubercy.suivi-plan/ouvrir?fichier=tasks/plans/x.md`.
 
