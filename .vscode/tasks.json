@@ -125,6 +125,14 @@
             "problemMatcher": []
         },
         {
+            "label": "Outil : sniffeur I2C (http://127.0.0.1:7350)",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/sniffeur_i2c.py", "--port", "auto", "--http", "7350"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
+        },
+        {
             "label": "Outil : testeur UDP maitre/esclave (http://127.0.0.1:7400)",
             "type": "process",
             "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",

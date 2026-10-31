@@ -40,7 +40,7 @@ def lit(outil):
 
 def section_registre():
     print("== registre ==")
-    ids = ["pont_serie", "sniffeur_modbus", "testeur_udp", "sniffeur_mqtt", "syslog", "synchro_fork", "build",
+    ids = ["pont_serie", "sniffeur_modbus", "sniffeur_i2c", "testeur_udp", "sniffeur_mqtt", "syslog", "synchro_fork", "build",
            "fichiers_berry", "assistant_persist"]
     verifie([o.id for o in reg.OUTILS], ids, "sept_outils : ids et ordre")
     verifie(all(o.groupe in reg.GROUPES for o in reg.OUTILS), True, "sept_outils : groupes connus")
@@ -104,7 +104,7 @@ def section_registre():
     j = reg.en_json()
     verifie(sorted(j), ["debits", "groupes", "outils"], "en_json : cles")
     verifie("script" in j["outils"][0], False, "en_json : sans script")
-    verifie((j["outils"][2]["a_port_com"], j["outils"][2]["port_defaut"]), (True, 7400), "en_json : derives")
+    verifie((j["outils"][3]["a_port_com"], j["outils"][3]["port_defaut"]), (True, 7400), "en_json : derives")
     verifie(isinstance(j["outils"][0]["parametres"][0], dict), True, "en_json : parametres en dicts")
 
 
@@ -231,7 +231,7 @@ def section_presence():
             "port_sans_fiche")
     verifie(etat("syslog", derniers={"syslog": {"http": port}}, hote="192.168.0.3")["lien"], None,
             "port_sans_fiche : lien distant None")
-    e = pre.etat_outils({}, {"syslog": {"http": "abc"}}, None)[4]
+    e = pre.etat_outils({}, {"syslog": {"http": "abc"}}, None)[5]
     verifie((e["id"], e["port"]), ("syslog", reg.par_id("syslog").port_page({})), "valeur invalide : defaut")
     srv.close()
     verifie(etat("syslog", derniers={"syslog": {"http": port}})["etat"], "arrete", "TEMOIN port ferme : arrete")
@@ -340,10 +340,10 @@ def section_serveur():
 
     try:
         s, j = appel(port, "GET", "/registre")
-        verifie((s, len(j["outils"])), (200, 9), "routes_get : /registre a 9 outils")
+        verifie((s, len(j["outils"])), (200, 10), "routes_get : /registre a 10 outils")
         s, j = appel(port, "GET", "/etat")
-        verifie((s, len(j["outils"]), isinstance(j["liens_reseau"], list)), (200, 9, True),
-                "routes_get : /etat a 9 entrees")
+        verifie((s, len(j["outils"]), isinstance(j["liens_reseau"], list)), (200, 10, True),
+                "routes_get : /etat a 10 entrees")
         verifie(isinstance(j.get("derniers"), dict), True, "routes_get : /etat porte derniers (dict)")
         verifie(appel(port, "GET", "/console?id=inconnu")[0], 404, "routes_get : console inconnue -> 404")
         verifie(appel(port, "GET", "/console?id=syslog")[1], {"lignes": []}, "routes_get : console vide")

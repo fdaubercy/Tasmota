@@ -88,6 +88,20 @@ OUTILS = [
         "Console capturée : " + CONSOLE.format("sniffeur_modbus") + ". Copie des trames : option --journal "
         "du script (pas de fichier par défaut)."),
     Outil(
+        "sniffeur_i2c", "sniffeur I2C", "Sniffeur I2C", GROUPES[0],
+        "Écoute un bus I2C par un ESP32-S3 dédié et décode chaque transaction jusqu'au registre.",
+        "Écoute un bus I2C (3 fils : SDA -> GPIO4, SCL -> GPIO5, GND ; 3,3 V seulement) par un ESP32-S3 DevKit "
+        "dédié, firmware outils_docs/firmware_sniffeur_i2c : transactions en direct, puces du parc décodées "
+        "(ADS1115, MCP23017, TCA9554, DS3231, MPU6050, ES8311), inventaire, alertes, export ; lecture ou "
+        "écriture d'un registre par la carte Tasmota ou par le sniffeur (composant isolé). Paramètres : le port "
+        "série (auto = le seul sniffeur qui répond) et le port de la page (7350). " + ARRET,
+        DOSSIER + "outils_pc/sniffeur_i2c.py",
+        [Parametre("port", "Port série", "--port", "auto", "com"),
+         _port("http", 7350)],
+        "http",
+        "Console capturée : " + CONSOLE.format("sniffeur_i2c") + ". Fil complet : "
+        "%LOCALAPPDATA%\\outils_tasmota\\sniffeur_i2c\\sniffeur_i2c_<date>.log (toujours actif, 30 jours)."),
+    Outil(
         "testeur_udp", "Testeur UDP", "Testeur UDP", GROUPES[0],
         "Teste l'UDP entre le maître et l'esclave ModBus et juge chaque essai.",
         "Ouvre les ports série du maître et de l'esclave (ou le pont série, pont:7000), envoie des trames "
