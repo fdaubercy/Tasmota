@@ -82,8 +82,8 @@ Le plan `relais-cave-s3` garde l'étape `.h` de l'ESP32 ; ses étapes `.h` et ce
 - [x] Agent `relecteur-berry` sur `configDevices.be` avant commit — preuve : verdict « prêt », aucun défaut (MCP23017 inchangé, string importé, charte respectée)
 
 ## A5 — Commit
-- [ ] `git commit -- <chemins de ce plan>`, message en français sans accents ; changements de build du `.h` (CFG_HOLDER) montrés avant de les inclure
-- [ ] `git show --stat HEAD` relu ; `tasks/README.md` régénéré
+- [x] `git commit -- <chemins de ce plan>`, message en français sans accents ; changements de build du `.h` (CFG_HOLDER) montrés avant de les inclure — preuve : 8cb16a3a2 (persist, tca9554.dat) et 72b2aef87 (configDevices, .h, cenv), poussés sur development
+- [x] `git show --stat HEAD` relu ; `tasks/README.md` régénéré — preuve : stat relue pour chaque commit ; index régénéré par node .claude/hooks/index_plans.mjs
 
 ## Améliorations restantes
 - [ ] [projet] Compiler l'env S3 (page build) une fois le build du P4 fini : prouve `USE_TCA9554` et la taille (audit P1)

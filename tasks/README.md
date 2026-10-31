@@ -17,7 +17,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 | Plan | Objectif principal | Statut | Avancement | Créé | Mis à jour |
 |---|---|---|---|---|---|
-| [Env S3 relais cave adapté à la carte Waveshare ESP32-S3-ETH-8DI-8RO](plans/cave-s3-waveshare.md) | Faire tourner les entrées-sorties actuelles du persist de la cave S3 sur la carte Waveshare 8DI-8RO, relais par le TCA9554 | actif | ████████░░ 80 % (15/17) | 2026-10-31 | 2026-10-31 |
+| [Env S3 relais cave adapté à la carte Waveshare ESP32-S3-ETH-8DI-8RO](plans/cave-s3-waveshare.md) | Faire tourner les entrées-sorties actuelles du persist de la cave S3 sur la carte Waveshare 8DI-8RO, relais par le TCA9554 | actif | ██████████ 100 % (17/17) | 2026-10-31 | 2026-10-31 |
 | [Page dédiée « Niveau de la cuve » (jauges A, H et B), lien depuis l'encadré de la cuve](plans/jauges-cuve.md) | Afficher volume (jauge A), taux (jauge H) et tensions brute et recalculée de la sonde (cadran B) de la cuve sur une page dédiée ouverte depuis son encadré, sur la cuve et le P4 | actif | █████████░ 88 % (26/32) | 2026-10-31 | 2026-10-31 |
 | [Cave — envs ESP32/S3 alignés sur la carte en ligne, audit de l'env S3, carte S3 8 relais de remplacement](plans/relais-cave-s3.md) | Aligner les envs de la cave sur les broches de la carte en ligne, auditer l'env S3 et choisir une carte ESP32-S3 à 8 relais pour la remplacer | actif | ████████░░ 80 % (17/19) | 2026-10-31 | 2026-10-31 |
 | [Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2](plans/ruban-cuve.md) | Piloter le ruban WS2812 de la cuve en AUTO/MANUEL (bouton et ModBus) et préparer la carte cuve v0.2 | actif | ████████░░ 77 % (21/29) | 2026-10-18 | 2026-10-31 |
