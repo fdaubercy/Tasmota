@@ -122,9 +122,18 @@ Interfaces : `commande_br(bus: int, a: int, reg: int, n: int, valeur: int | None
 - [ ] `tasks/README.md` à jour (`node .claude/hooks/index_plans.mjs --verifier`), plan `statut: clos`
 - [ ] Commits relus, push du sha relu
 
+## A10 — Voie MQTT pour l'envoi par la carte (demande du 2026-10-31)
+Esclaves derrière le NAPT du maître : HTTP seulement par `<ip du maître>:<port>` avec `RoutageRangeExtender` ;
+MQTT les joint par le broker. `sniffeur_i2c_carte.py::commande_mqtt` : `cmnd/<topic>/Br` (charge sans « Br »),
+réponse = le `stat/<topic>/RESULT` qui porte la clé `Br` ; topic du persist (`serveur.mqtt.topic`).
+- [x] `sniffeur_i2c_carte.py` : `topic_propose`, `verifie_topic` (ni joker ni espace), `commande_mqtt`, `envoie_mqtt` — preuve : `test_sniffeur_i2c.py::test_mqtt` VERT (RESULT d'une autre commande, autre topic, charge illisible ignorés ; carte muette = échec sans exception, liaison fermée ; topics `""`, `#`, `+`, espace refusés) ; témoin « tout RESULT accepté » ROUGE 3 échecs
+- [x] Route `/ordre` (`transport: mqtt`, `topic`), `/carte` rend le topic ; page : liste « par » HTTP/MQTT, MQTT d'office pour un esclave (IP vide ou `ip:port`) ; Aide, README, CLAUDE.md — preuve : `test_http` (topic à joker 400, rien journalisé ; topic proposé) ; sonde Chrome VERTE (topic proposé, IP grisée en MQTT, aperçu)
+- [ ] Essai réel : lecture d'un registre d'un esclave par MQTT, trame vue dans le fil (avec A8)
+- [x] Commit — preuve : 101e03106
+
 ## Améliorations restantes
 - [ ] [projet] Voie 2 : firmware Raspberry Pi Pico (PIO) parlant le même protocole, `I puce=rp2040`
-- [ ] [projet] Voie MQTT pour l'envoi par la carte (esclaves injoignables en HTTP)
+- [x] [projet] Voie MQTT pour l'envoi par la carte (esclaves injoignables en HTTP) — devenue l'action A10
 
 ## Vérification
 Bancs : `PYPIO outils_pc/test_sniffeur_i2c.py` (code 0 = vert), sonde Chrome de la page, `test_annuaire*.py`,
