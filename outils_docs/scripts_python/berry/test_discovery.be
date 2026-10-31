@@ -1514,6 +1514,13 @@ verifie("IP divergente entre la fiche et le point d'acces", "ip", classe26("AA00
 verifie("esclave en Wi-Fi classique : hors point d'acces", "box", classe26("AA0000000006"))
 verifie("client du point d'acces sans fiche ImAlive", "inconnu", classe26("CC0000000007"))
 verifie("module MQTT sans fiche esclave : non classe", nil, classe26("BB0000000000"))
+def rssi26(mac)
+  for x: (e26 == nil ? [] : e26)    if x["mac"] == mac    return x["rssi"]    end    end
+end
+verifie("RSSI rendu en entier pour une station associee", -22, rssi26("AA0000000001"))
+verifie("RSSI nil pour un esclave absent du point d'acces", nil, rssi26("AA0000000004"))
+verifie("RSSI rendu aussi pour une station sans fiche", -50, rssi26("CC0000000007"))
+verifie("RSSI non numerique : nil", nil, discoveryFonctions.etatReseau({}, {"DD": {"IPAddress": "192.168.4.8", "RSSI": "?"}})[0]["rssi"])
 verifie("RgxClients absent (nil) : ne leve pas", "OK", essaie(def () discoveryFonctions.etatReseau(t26, nil) end))
 # Fiche recue avec un 'config' qui n'est pas une map (fiche UDP/MQTT abimee) : la page /discovery ne casse pas
 var t26b = {"AA00000000FF": {"esclave1": {"IPAddress": "192.168.4.9"}, "config": "abime", "lwt": "Online"}}
@@ -1530,6 +1537,9 @@ verifie("page /discovery ne leve pas", "OK", essaie(def () discoveryFonctions.af
 var html26 = webserver.envoye.concat("")
 verifie("... tableau d'etat reseau affiche, page terminee", "true true true",
         str(string.find(html26, "tat r") >= 0) + " " + str(string.find(html26, "Ancienne cuve") >= 0) + " " + str(webserver.termine))
+verifie("... une carte par esclave classe (6) + 1 inconnu, badge et signal", "7 true true",
+        str(size(string.split(html26, "class='esc-l'")) - 1) + " " + str(string.find(html26, "ABSENT") >= 0) + " " +
+        str(string.find(html26, "esc-sig esc-n4") >= 0))
 tasmota.rgxClients = {}
 
 print("")

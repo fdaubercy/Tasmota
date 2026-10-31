@@ -122,3 +122,20 @@ input[type=checkbox] {
 	opacity: 1;
 	color: #252525;
 }
+/* Etat reseau des esclaves (/discovery du maitre Range Extender) : couleur de l'etat posee en style par le .be */
+.esc-l{border-left:4px solid;background:#2f2f2f;border-radius:4px;padding:6px 8px;margin:6px 0;text-align:left}
+.esc-h{display:flex;align-items:center;gap:6px}
+.esc-nom{font-weight:bold;flex:1}
+.esc-b{font-size:.7em;font-weight:bold;padding:2px 7px;border-radius:9px;color:#252525;white-space:nowrap}
+.esc-m{font-family:monospace;font-size:.75em;color:#999}
+.esc-d{font-size:.8em;color:#ccc;margin-top:2px}
+.esc-sig{display:inline-flex;align-items:flex-end;gap:2px;height:14px}
+.esc-sig i{width:4px;background:#555;border-radius:1px}
+.esc-sig i:nth-child(1){height:4px}
+.esc-sig i:nth-child(2){height:7px}
+.esc-sig i:nth-child(3){height:10px}
+.esc-sig i:nth-child(4){height:14px}
+.esc-n3 i:nth-child(-n+3),.esc-n4 i:nth-child(-n+4){background:#47c266}
+.esc-n2 i:nth-child(-n+2){background:#e5a50a}
+.esc-n1 i:nth-child(-n+1){background:#d43535}
+.esc-dbm{font-size:.75em;color:#aaa}

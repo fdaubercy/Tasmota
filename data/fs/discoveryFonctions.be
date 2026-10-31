@@ -586,10 +586,17 @@ def discoveryFonctions_mqtt_lwt(topic, idx, data, databytes)
 end
 discoveryFonctions.mqtt_lwt = discoveryFonctions_mqtt_lwt
 
+# RSSI d'une station de RgxClients en entier, nil s'il manque ou n'est pas un nombre
+def discoveryFonctions_rssi(station)
+    var v = station.find("RSSI")
+    return (type(v) == 'int' || type(v) == 'real') ? int(v) : nil
+end
+discoveryFonctions.rssi = discoveryFonctions_rssi
+
 # Maitre Range Extender : etat reseau de chaque esclave (audit R4/R6, P8.8, 2026-10-25), en croisant par MAC
 # RgxClients (stations associees au point d'acces du maitre : {MAC sans ':': {IPAddress, RSSI}}) et les fiches
 # esclaveN de discovery.json ('lwt' = UDP vivant, tenu par les ImAlive et udpFonctions.perimeFiches). Lecture
-# seule. Rend une liste de {"mac", "nom", "etat", "detail"}, etat parmi :
+# seule. Rend une liste de {"mac", "nom", "etat", "detail", "rssi"} (rssi nil hors point d'acces), etat parmi :
 #   ok      associe au point d'acces et UDP vivant      muet    associe mais UDP muet (pas d'ImAlive)
 #   ip      associe, IP differente de celle de la fiche  absent  fiche Range Extender non associee : panne Wi-Fi ou alimentation
 #   fantome fiche non associee dont l'IP est tenue par une AUTRE MAC associee (carte remplacee ?)
@@ -623,39 +630,41 @@ def discoveryFonctions_etatReseau(table, rgx)
         var station = rgx.find(mac)
         var etat = ""
         var detail = ""
+        var rssi = nil
         if (isinstance(station, map))
             var ipWifi = str(station.find("IPAddress", ""))
-            var rssi = "RSSI " + str(station.find("RSSI", "?")) + " dBm"
+            rssi = discoveryFonctions.rssi(station)
             if (ip != "" && ipWifi != ip)
-                etat = "ip"    detail = "IP de la fiche " + ip + ", du point d'accès " + ipWifi + " (" + rssi + ")"
+                etat = "ip"    detail = "IP de la fiche " + ip + ", du point d'accès " + ipWifi
             elif (vivant)
-                etat = "ok"    detail = "Wi-Fi associé, UDP vivant (" + rssi + ")"
+                etat = "ok"    detail = "Wi-Fi associé, UDP vivant"
             else
-                etat = "muet"    detail = "Wi-Fi associé, UDP muet : aucun ImAlive récent (" + rssi + ")"
+                etat = "muet"    detail = "Wi-Fi associé, aucun ImAlive récent"
             end
         elif (fiche.find("typeConnection", "") == "RangeExtender")
             var autre = ipAssociees.find(ip)
             if (autre != nil)
-                etat = "fantome"    detail = "fiche fantôme : son IP " + ip + " est tenue par " + str(autre) + " (carte remplacée ?)"
+                etat = "fantome"    detail = "Son IP " + ip + " est tenue par " + str(autre) + " (carte remplacée ?)"
             else
-                etat = "absent"    detail = "absent du point d'accès : panne Wi-Fi ou d'alimentation"
+                etat = "absent"    detail = "Absent du point d'accès : panne Wi-Fi ou d'alimentation"
             end
         else
-            etat = "box"    detail = "hors point d'accès (" + str(fiche.find("typeConnection", "?")) + "), UDP " + (vivant ? "vivant" : "muet")
+            etat = "box"    detail = "Hors point d'accès (" + str(fiche.find("typeConnection", "?")) + "), UDP " + (vivant ? "vivant" : "muet")
         end
-        r.push({"mac": mac, "nom": nom, "etat": etat, "detail": detail})
+        r.push({"mac": mac, "nom": nom, "etat": etat, "detail": detail, "rssi": rssi})
     end
     for mac: rgx.keys()
         if (!vues.contains(mac) && isinstance(rgx[mac], map))
-            r.push({"mac": mac, "nom": "?", "etat": "inconnu",
-                    "detail": "associé (" + str(rgx[mac].find("IPAddress", "")) + "), sans fiche ImAlive"})
+            r.push({"mac": mac, "nom": "?", "etat": "inconnu", "rssi": discoveryFonctions.rssi(rgx[mac]),
+                    "detail": "Associé (" + str(rgx[mac].find("IPAddress", "")) + "), sans fiche ImAlive"})
         end
     end
     return r
 end
 discoveryFonctions.etatReseau = discoveryFonctions_etatReseau
 
-# Tableau d'etat reseau de la page /discovery, sur le maitre Range Extender seulement (P8.8)
+# Tableau d'etat reseau de la page /discovery, sur le maitre Range Extender seulement (P8.8).
+# Une carte par esclave (classes esc-* de /sd/css/main.css) : liseré et badge a la couleur de l'etat, signal en barres.
 def discoveryFonctions_afficheEtatReseau(table)
     import webserver
     if (serveur.find("rangeExtender", {}).find("activation", "OFF") != "ON" || serveur["rangeExtender"].find("id", 99) != 0)    return    end
@@ -663,12 +672,22 @@ def discoveryFonctions_afficheEtatReseau(table)
     var lignes = discoveryFonctions.etatReseau(table, isinstance(reponse, map) ? reponse.find("RgxClients") : nil)
     if (size(lignes) == 0)    return    end
     var couleurs = {"ok": "#47c266", "muet": "#e5a50a", "ip": "#e5a50a", "absent": "#d43535", "fantome": "#d43535", "box": "#888", "inconnu": "#888"}
-    webserver.content_send("<div style='padding:0px 5px;'><h3><hr>État réseau des esclaves<hr></h3><table style='width:100%;font-size:0.9em;'>")
+    var badges = {"ok": "&#10003; EN LIGNE", "muet": "! UDP MUET", "ip": "! IP", "absent": "&#10005; ABSENT",
+                  "fantome": "&#9888; FANTÔME", "box": "&#8962; BOX", "inconnu": "? INCONNU"}
+    webserver.content_send("<div style='padding:0px 5px;'><h3><hr>État réseau des esclaves<hr></h3>")
     for l: lignes
-        webserver.content_send("<tr><td style='color:" + couleurs.find(l["etat"], "#888") + ";'>&#9679;</td><td>" + l["nom"] +
-                               "<br><small>" + l["mac"] + "</small></td><td><small>" + l["detail"] + "</small></td></tr>")
+        var c = couleurs.find(l["etat"], "#888")
+        var signal = ""
+        if (l.find("rssi") != nil)
+            var r = l["rssi"]
+            var n = r >= -55 ? 4 : (r >= -65 ? 3 : (r >= -75 ? 2 : 1))
+            signal = "<span class='esc-sig esc-n" + str(n) + "'><i></i><i></i><i></i><i></i></span><span class='esc-dbm'>" + str(r) + " dBm</span>"
+        end
+        webserver.content_send("<div class='esc-l' style='border-color:" + c + ";'><div class='esc-h'><span class='esc-nom'>" + l["nom"] + "</span>" +
+                               signal + "<span class='esc-b' style='background:" + c + ";'>" + badges.find(l["etat"], "?") + "</span></div>" +
+                               "<div class='esc-m'>" + l["mac"] + "</div><div class='esc-d'>" + l["detail"] + "</div></div>")
     end
-    webserver.content_send("</table></div>")
+    webserver.content_send("</div>")
 end
 discoveryFonctions.afficheEtatReseau = discoveryFonctions_afficheEtatReseau
 
