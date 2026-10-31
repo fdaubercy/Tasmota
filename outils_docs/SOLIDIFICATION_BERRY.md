@@ -343,8 +343,8 @@ sans `return` final tant que le module est **solidifié** : `load_native` rend l
 le LittleFS (carte où il n'est pas solidifié), le module vaut ce que **renvoie le fichier** : sans
 `return controleXxx`, `import` rend `nil`, `module_init` (`be_module.c::module_init`) n'a rien à appeler, et
 le driver ne démarre pas, **sans erreur**. `controleModbus` et `controleGeneral` n'ont pas ce `return` :
-sans conséquence, ils sont solidifiés sur toutes les cartes qui les chargent. `controleLeds`, solidifié sur
-la cuve seulement, l'a (2026-10-20).
+sans conséquence, ils sont solidifiés sur toutes les cartes qui les chargent. `controleLeds` l'a (2026-10-20) :
+solidifié sur les 5 S3 qui l'embarquent (liste `berry_commun.leds`, 2026-10-30), il reste sur le LittleFS des autres.
 
 Corollaire : dans l'autoexec, toujours `do import controleXxx as _ctrl end` (ou `import ... as _ctrl` dans
 un bloc), jamais `import controleXxx` au niveau fichier : l'import de niveau fichier écrirait le **module**

@@ -4,7 +4,7 @@ titre: Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2
 objectif: Piloter le ruban WS2812 de la cuve en AUTO/MANUEL (bouton et ModBus) et préparer la carte cuve v0.2
 statut: actif
 cree: 2026-10-18
-maj: 2026-10-18
+maj: 2026-10-31
 ---
 # Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2
 
@@ -27,7 +27,7 @@ la cuve refonctionne et sa grille ModBus a été validée le 17/10 (plan `modbus
 - [x] Mode AUTO/MANUEL, palette, bouton, `ReglageLeds`, bloc persist `drivers.leds.environnement.leds.ruban` — preuve : commit 113e3b4c2
 - [x] Le bouton du ruban inscrit `eviteResetBTN ON` dans le persist — preuve : commit 6c7624020
 - [x] Banc Berry `banc_leds` (ruban, bouton, LED du dev-kit) — preuve : commit 2cbb2bc15
-- [ ] Bouton physique de la cuve (GPIO7) essayé sur la carte : appui court = couleur suivante, appui long = retour AUTO
+- [ ] Bouton physique de la cuve (GPIO7) essayé sur la carte : appui court = allume/éteint, appui long = couleur suivante (MANUEL), double appui = retour AUTO
 
 ## A3 — Lot 3 : pilotage du ruban depuis le maître P4
 - [x] Registre 1376 sur 5 registres, codes 0x04 et 0x05, `RubanEsclave`, bouton `rubanMaitre<n>`, curseurs de la page web — preuve : commit eefeb463b
@@ -42,6 +42,14 @@ la cuve refonctionne et sa grille ModBus a été validée le 17/10 (plan `modbus
 - [x] Points 1 à 4 de la relecture : R15, C3 sous U1, F1 hors du trajet USB + modèle 3D, R11 180 Ω / R12 560 Ω — preuve : commit 0727f1749
 - [x] Routage : DRC parité 0, 0 non connecté, une seule composante de masse — preuve : commit 0727f1749
 - [x] Skill pcb-tasmota : `route_net`, `vias_pres`, `connexite_masse.py`, pièges 55-58 — preuve : commit e8eaa1dbb
+
+## A6 — Symbole du mode sur la page et solidification sur les S3
+- [x] Ligne « Ruban LED » remplacée par un symbole après le curseur de luminosité (⟳ AUTO, ✋ + minutes MANUEL, clic = retour AUTO) — preuve : banc_leds vert (3 vérifications ajoutées), data/fs/ledsFonctions.be:522
+- [x] `ledsFonctions` et `controleLeds` solidifiables — preuve : solidifie_et_compile_berry.py rc 0 pour les deux, contrôle du piège 12 vide
+- [x] Liste partagée `berry_commun.leds`, reprise par la cuve, la cave S3, le grenier, le S3 serveur-modbus et le rideau — preuve : ProjectConfig résout les 2 modules dans les 5 envs, CARTE_MODULES_BERRY.md régénérée
+- [x] Symbole placé DANS la cellule du curseur (une 3e cellule élargissait la page à toute la fenêtre) — preuve : capture Chrome de la vraie page de la cuve, largeur 1168 px avant, 350 px après (= sans symbole), « ✋ 15 » affiché ; banc_leds vert
+- [x] Firmware de la cuve recompilé et téléversé : symbole visible sur la page, clic en MANUEL = retour AUTO — preuve : vu par l'utilisateur le 2026-10-31 (✋ 29) ; relevé par le maître avant le clic MANUEL, reste 29 min, après le clic `ledsFonctions.mode` = AUTO et ligne `ldM` data-m='AUTO' ; modules absents du FS (solidifiés)
+- [x] Commit — preuve : commit « feat(leds): symbole du mode du ruban... » (voir git log)
 
 ## A5 — Avant de commander la carte
 - [ ] Identifier le module RS485 réel et adapter son empreinte

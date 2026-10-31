@@ -191,8 +191,10 @@ var aide = ledsFonctions.aideBouton()
 verifie(string.find(aide.concat(" "), "1,5 s") >= 0 && string.find(aide.concat(" "), "suit le niveau") >= 0, "aide : appui long 1,5 s, description du module")
 var web = ledsFonctions.scriptAideWeb()
 verifie(string.find(web, "eb('o1')") >= 0 && string.find(web, "&#9432;") >= 0, "pastille sur le bouton o1")
+verifie(string.find(web, "ldAuto") >= 0 && string.find(web, "MutationObserver") >= 0, "symbole du mode : clic = retour AUTO, suit la zone l1")
+verifie(string.find(ledsFonctions.ligneWeb(), "data-m='AUTO' data-t='&#10227;'") >= 0, "ligne cachee AUTO = cycle")
 ledsFonctions.passeManuel("banc")
-verifie(string.find(ledsFonctions.ligneWeb(), "ldAuto") >= 0, "ligne web MANUEL avec bouton Auto")
+verifie(string.find(ledsFonctions.ligneWeb(), "data-m='MANUEL' data-t='&#9995; ") >= 0, "ligne cachee MANUEL = main")
 
 print("10b. Animation lue UNE fois par seconde, partagee avec modbusFonctions.etatRuban (audit N3/P5.3)")
 var nbScheme = def () var n = 0 for c: tasmota.cmds    if c == "_Scheme"    n += 1    end    end return n end

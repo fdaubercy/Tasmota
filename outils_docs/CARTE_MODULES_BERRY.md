@@ -36,12 +36,12 @@ Legende : **S** solidifie dans l'env (`custom_berry_solidify`) - **I** importe p
 | `modBus_TasmotaSlaveModBus` | ModBus |  | # |  |  | S I ON | S I ON | S I ON | S I ON |
 | `modbusFonctions` | ModBus | D | D | D | D | S I | S I | S I | S I C ON |
 | `controleES8311` | Peripheriques |  |  |  |  | S I ON |  |  |  |
-| `controleLeds` | Peripheriques |  |  | I C OFF | I C OFF |  | S I C ? | I C OFF | I C OFF |
+| `controleLeds` | Peripheriques |  |  | S I C OFF | S I C OFF |  | S I C ? | S I C OFF | S I C OFF |
 | `controleLoRaWan` | Peripheriques |  | # |  | S I OFF |  |  |  | S I ON |
 | `controleVoletRoulants` | Peripheriques |  | # |  | S I ON | S I ON |  |  | S I OFF |
 | `i2c_ads1115` | Peripheriques |  | # |  |  | S I ON | S I ON | S I OFF | S I ON |
 | `i2c_mcp23017` | Peripheriques |  | # |  |  | S I ON | S I ON | S I OFF | S I ON |
-| `ledsFonctions` | Peripheriques | D | D | D C OFF | D C OFF | D | S I C ON | D C OFF | D C OFF |
+| `ledsFonctions` | Peripheriques | D | D | S D C OFF | S D C OFF | D | S I C ON | S D C OFF | S D C OFF |
 | `ledsPanelFonctions` | Peripheriques | S D | S D | S D | S D | S D | S D | S D | S D |
 | `loRaWanFonctions` | Peripheriques |  | # |  | S C OFF |  |  |  | S C ON |
 | `vrFonctions` | Peripheriques |  | # |  | S C ON | S D |  |  | S C OFF |
@@ -96,24 +96,20 @@ Constats factuels, sans jugement : un module peut etre volontairement dans cet e
 - `cave/tasmota32-serveur-rly` : `udpFonctions` : charge alors que sa garde vaut OFF.
 - `cave/tasmota32s3-serveur-rly` : `controleTCP` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
 - `cave/tasmota32s3-serveur-rly` : `tcpFonctions` : charge alors que sa garde vaut OFF.
-- `cave/tasmota32s3-serveur-rly` : `controleLeds` charge depuis `data/fs` sans etre solidifie (copie sur le FS, compile au demarrage).
 - `cave/tasmota32s3-serveur-rly` : `controleLeds` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
 - `cave/tasmota32s3-serveur-rly` : `ledsFonctions` : charge alors que sa garde vaut OFF.
 - `etage2/tasmota32s3-grenier` : `controleTCP` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
 - `etage2/tasmota32s3-grenier` : `controleUDP` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
 - `etage2/tasmota32s3-grenier` : `tcpFonctions` : charge alors que sa garde vaut OFF.
 - `etage2/tasmota32s3-grenier` : `udpFonctions` : charge alors que sa garde vaut OFF.
-- `etage2/tasmota32s3-grenier` : `controleLeds` charge depuis `data/fs` sans etre solidifie (copie sur le FS, compile au demarrage).
 - `etage2/tasmota32s3-grenier` : `controleLeds` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
 - `etage2/tasmota32s3-grenier` : `controleLoRaWan` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
 - `etage2/tasmota32s3-grenier` : `ledsFonctions` : charge alors que sa garde vaut OFF.
 - `etage2/tasmota32s3-grenier` : `loRaWanFonctions` : charge alors que sa garde vaut OFF.
-- `garage/tasmota32s3-rideau-garage-modbus` : `controleLeds` charge depuis `data/fs` sans etre solidifie (copie sur le FS, compile au demarrage).
 - `garage/tasmota32s3-rideau-garage-modbus` : `controleLeds` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
 - `garage/tasmota32s3-rideau-garage-modbus` : `i2c_ads1115` : charge alors que sa garde vaut OFF.
 - `garage/tasmota32s3-rideau-garage-modbus` : `i2c_mcp23017` : charge alors que sa garde vaut OFF.
 - `garage/tasmota32s3-rideau-garage-modbus` : `ledsFonctions` : charge alors que sa garde vaut OFF.
-- `garage/tasmota32s3-serveur-modbus` : `controleLeds` charge depuis `data/fs` sans etre solidifie (copie sur le FS, compile au demarrage).
 - `garage/tasmota32s3-serveur-modbus` : `controleLeds` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
 - `garage/tasmota32s3-serveur-modbus` : `controleVoletRoulants` : charge alors que sa garde vaut OFF.
 - `garage/tasmota32s3-serveur-modbus` : `ledsFonctions` : charge alors que sa garde vaut OFF.

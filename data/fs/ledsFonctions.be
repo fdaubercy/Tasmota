@@ -519,21 +519,37 @@ def ledsFonctions_aideBouton()
 end
 ledsFonctions.aideBouton = ledsFonctions_aideBouton
 
-# Pastille d'aide dans le coin du bouton du ruban (page d'accueil), commune avec le ruban virtuel du maitre
+# Pastille d'aide dans le coin du bouton du ruban (page d'accueil), commune avec le ruban virtuel du maitre,
+# puis symbole du mode (AUTO / MANUEL) en bout de la ligne du bouton, apres le curseur de luminosite.
+# Le symbole entre DANS la cellule du curseur (flex) : une 3e cellule elargissait toute la page.
+# Le symbole se recopie de la ligne cachee 'ldM' (ligneWeb) a chaque rafraichissement de la zone 'l1'.
 def ledsFonctions_scriptAideWeb()
     import ledsPanelFonctions
     var r = ledsFonctions.relaisRuban()
     if (r == nil)    return ""    end
-    return ledsPanelFonctions.pastilleAide("o" + str(int(r.find("id", 1))), "ldAide", "Aide du ruban", ledsFonctions.aideBouton())
+    var idBouton = "o" + str(int(r.find("id", 1)))
+    return ledsPanelFonctions.pastilleAide(idBouton, "ldAide", "Aide du ruban", ledsFonctions.aideBouton()) +
+           "<script>(function(){var b=eb('" + idBouton + "');if(!b)return;var td=b.parentNode.nextElementSibling;if(!td)return;" +
+           "var w=document.createElement('div');w.style.cssText='display:flex;align-items:center';" +
+           "while(td.firstChild){var e=td.firstChild;if(e.style){e.style.flex='1';e.style.minWidth='0';}w.appendChild(e);}td.appendChild(w);" +
+           "var s=document.createElement('span');s.id='ldS';s.style.cssText='white-space:nowrap;padding-left:6px;font-size:20px';w.appendChild(s);" +
+           "function m(){var d=eb('ldM');if(!d)return;var man=d.dataset.m=='MANUEL';s.textContent=d.dataset.t;s.title=d.dataset.ti;" +
+           "s.style.cursor=man?'pointer':'default';s.onclick=man?function(){la('&ldAuto=1');}:null;}" +
+           "var l=eb('l1');if(l)new MutationObserver(m).observe(l,{childList:true,subtree:true});m();})();</script>"
 end
 ledsFonctions.scriptAideWeb = ledsFonctions_scriptAideWeb
 
-# Ligne d'etat du ruban (web_sensor) ; 'Auto' renvoie en AUTO par la page (argument ldAuto)
+# Ligne cachee de la zone capteurs (web_sensor), lue par le symbole du mode (scriptAideWeb) :
+# AUTO = cycle, MANUEL = main + minutes restantes (infini sans fin) ; clic en MANUEL = retour AUTO (argument ldAuto)
 def ledsFonctions_ligneWeb()
-    if (ledsFonctions.mode != "MANUEL")    return "{s}Ruban LED{m}AUTO{e}"    end
-    var reste = ledsFonctions.resteMinutes()
-    return "{s}Ruban LED{m}MANUEL" + (reste == nil ? "" : ", reste " + str(reste) + " min") +
-           " <button onclick='la(\"&ldAuto=1\");' style='width:auto;padding:0 8px;line-height:1.6'>Auto</button>{e}"
+    var t = "&#10227;"
+    var titre = "Ruban en AUTO : suit le niveau"
+    if (ledsFonctions.mode == "MANUEL")
+        var reste = ledsFonctions.resteMinutes()
+        t = "&#9995; " + (reste == nil ? "&#8734;" : str(reste))
+        titre = "Ruban en MANUEL" + (reste == nil ? "" : ", reste " + str(reste) + " min") + " : clic = retour en AUTO"
+    end
+    return "<tr id='ldM' style='display:none' data-m='" + str(ledsFonctions.mode) + "' data-t='" + t + "' data-ti='" + titre + "'></tr>"
 end
 ledsFonctions.ligneWeb = ledsFonctions_ligneWeb
 
