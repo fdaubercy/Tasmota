@@ -295,9 +295,10 @@ function duree(s) {
   if (s === null || s === undefined) return "";
   if (s < 10) return s.toFixed(1).replace(".", ",") + " s";
   if (s < 60) return Math.round(s) + " s";
-  var m = Math.floor(s / 60), r = Math.round(s - m * 60);
-  if (r === 60) { m += 1; r = 0; }
-  return m + " min " + (r < 10 ? "0" : "") + r + " s";
+  var t = Math.round(s), h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), r = t % 60;
+  var sec = (r < 10 ? "0" : "") + r + " s";
+  if (h) return h + " h " + (m < 10 ? "0" : "") + m + " min " + sec;   // au-dela de 60 min
+  return m + " min " + sec;
 }
 
 function caseAction(a) { return document.querySelector('input[name=action][value="' + a + '"]'); }

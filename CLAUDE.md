@@ -134,14 +134,15 @@ c'est **voulu** (decide le 2026-10-04 : « laisse ce test comme il est »). Ne p
 decouper : c'est UN fichier a televerser sur chaque carte, qui se prepare et s'explique
 seul au chargement ; le scinder imposerait deux televersements par carte.
 
-`outils_docs/scripts_python/outils_pc/build_page.py` fait **1131 lignes**, et c'est **voulu**
+`outils_docs/scripts_python/outils_pc/build_page.py` fait **1154 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
 vague de corrections finale du meme jour ; 935 le 2026-10-25 avec le panneau « Sortie » et « Effacer puis
 televerser » ; 1038 le meme jour avec la pause « rebranchez la carte » et les panneaux refermes ; 1053 avec
 l'envoi sans recompiler apres la pause et la pause rouverte ; 1062 avec le lien « fichiers » vers la page
 Fichiers Berry par env ; 1083 le 2026-10-26 avec les cases FS grisees quand l'envoi serie du firmware ecrit
 deja le FS ; 1131 le meme jour avec les sons de fin de lancement et de pause ; 1153 le 2026-10-29 avec le
-branchement de l'onglet « Fichiers », dont le code vit dans `build_page_fichiers.py`). C'est la page
+branchement de l'onglet « Fichiers », dont le code vit dans `build_page_fichiers.py` ; 1154 le 2026-10-31 avec
+les durees en heures au-dela de 60 min). C'est la page
 unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule constante
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
