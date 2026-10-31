@@ -49,7 +49,7 @@ la cuve refonctionne et sa grille ModBus a été validée le 17/10 (plan `modbus
 - [x] Liste partagée `berry_commun.leds`, reprise par la cuve, la cave S3, le grenier, le S3 serveur-modbus et le rideau — preuve : ProjectConfig résout les 2 modules dans les 5 envs, CARTE_MODULES_BERRY.md régénérée
 - [x] Symbole placé DANS la cellule du curseur (une 3e cellule élargissait la page à toute la fenêtre) — preuve : capture Chrome de la vraie page de la cuve, largeur 1168 px avant, 350 px après (= sans symbole), « ✋ 15 » affiché ; banc_leds vert
 - [x] Firmware de la cuve recompilé et téléversé : symbole visible sur la page, clic en MANUEL = retour AUTO — preuve : vu par l'utilisateur le 2026-10-31 (✋ 29) ; relevé par le maître avant le clic MANUEL, reste 29 min, après le clic `ledsFonctions.mode` = AUTO et ligne `ldM` data-m='AUTO' ; modules absents du FS (solidifiés)
-- [x] Commit — preuve : commit « feat(leds): symbole du mode du ruban... » (voir git log)
+- [x] Commit — preuve : commit 91bbae69a
 
 ## A5 — Avant de commander la carte
 - [ ] Identifier le module RS485 réel et adapter son empreinte

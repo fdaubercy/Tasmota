@@ -4,8 +4,10 @@ Trace des plans de modification du fork (`tasks/plans/`, format `tasks/plans/_FO
 Avancement = moyenne des % des actions `## A<n>`, chaque action pesant autant (même calcul que la
 vue « Suivi du plan » de VS Code). L'objectif vient de la clé `objectif:` de l'en-tête de chaque plan.
 
-Le tableau se met à jour seul quand Claude édite un plan (hook `.claude/hooks/index_plans_edition.sh`) ;
-après une édition à la main : `node .claude/hooks/index_plans.mjs` (`--verifier` : code 1 s'il est en retard).
+Le tableau se met à jour seul dès qu'un plan change, quel qu'en soit l'auteur (Claude, la main, le mod à
+la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du plan » ≥ 0.4.1), et quand Claude
+édite un plan (hook `.claude/hooks/index_plans_edition.sh`). À la main : `node .claude/hooks/index_plans.mjs`
+(`--verifier` : code 1 s'il est en retard).
 
 ## Plans suivis
 
@@ -15,10 +17,10 @@ après une édition à la main : `node .claude/hooks/index_plans.mjs` (`--verifi
 
 | Plan | Objectif principal | Statut | Avancement | Créé | Mis à jour |
 |---|---|---|---|---|---|
+| [Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2](plans/ruban-cuve.md) | Piloter le ruban WS2812 de la cuve en AUTO/MANUEL (bouton et ModBus) et préparer la carte cuve v0.2 | actif | ███████░░░ 72 % (19/27) | 2026-10-18 | 2026-10-31 |
 | [Page web « Build et téléversement » (port 7700, tuile de l'annuaire)](plans/page-build-televersement.md) | Compiler et téléverser en série (COM ou OTA) les envs cochés depuis une page web, avec progression en direct | actif | ██████████ 100 % (84/84) | 2026-10-24 | 2026-10-30 |
 | [Plan d'action de l'audit Berry (propositions P2.1 à P10.7)](plans/actions-audit-berry.md) | Mettre en œuvre, lot par lot et sur décision de l'utilisateur, les 78 propositions de l'audit Berry | actif | █████████░ 91 % (89/95) | 2026-10-22 | 2026-10-26 |
 | [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) | Ajouter l'Ethernet en option sur le maître ModBus P4, le Wi-Fi restant le défaut | actif | ░░░░░░░░░░ 0 % (0/37) | 2026-10-26 | 2026-10-26 |
-| [Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2](plans/ruban-cuve.md) | Piloter le ruban WS2812 de la cuve en AUTO/MANUEL (bouton et ModBus) et préparer la carte cuve v0.2 | actif | ███████░░░ 67 % (13/21) | 2026-10-18 | 2026-10-18 |
 | [Assistant persist — reprendre, modifier et supprimer un env existant (A10)](plans/assistant-persist-modification.md) | Reprendre un env existant dans la page 7900 pour le modifier sans perdre ses retouches, ou le supprimer après vérification | clos | ██████████ 100 % (38/38) | 2026-10-29 | 2026-10-30 |
 | [Assistant de création du persist d'un nouvel env (page 7900, tuile de l'annuaire)](plans/assistant-persist.md) | Créer le persist, l'autoexec et les sections de build d'une nouvelle carte par questions, depuis une page web | clos | ██████████ 100 % (47/47) | 2026-10-27 | 2026-10-30 |
 | [Assistant pas à pas de la page « Synchro du fork » (port 7500)](plans/assistant-synchro-fork.md) | Guider pas à pas la synchro du fork sur la page 7500, avec résolution des conflits fichier par fichier | clos | ██████████ 100 % (33/33) | 2026-10-27 | 2026-10-29 |

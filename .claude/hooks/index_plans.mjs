@@ -45,8 +45,8 @@ const ENTETE = `# Suivi des plans de travail
 
 Trace des plans de modification du fork (\`tasks/plans/\`, format \`tasks/plans/_FORMAT.md\`).
 Avancement = moyenne des % des actions \`## A<n>\`, chaque action pesant autant (même calcul que la
-vue « Suivi du plan » de VS Code). Le tableau se met à jour seul quand Claude édite un plan ;
-après une édition à la main : \`node .claude/hooks/index_plans.mjs\`.
+vue « Suivi du plan » de VS Code). Le tableau se met à jour seul dès qu'un plan change (extension VS Code) ;
+sans VS Code : \`node .claude/hooks/index_plans.mjs\`.
 
 `
 

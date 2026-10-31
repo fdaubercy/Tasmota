@@ -462,8 +462,9 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
 - `tasks/README.md` — index des plans (demande du 2026-10-29) : objectif (cle `objectif:` de l'en-tete),
   statut, % de chaque plan. **A tenir a jour a chaque progression d'un plan** : le tableau est regenere par
   `node .claude/hooks/index_plans.mjs` (parseur du mod, memes % que la vue de droite), automatiquement par le
-  hook `PostToolUse` `index_plans_edition.sh` quand Claude edite un `tasks/plans/*.md` ; a la main apres une
-  edition hors Claude (dont la recopie d'un plan par le mod a ExitPlanMode) ; `--verifier` = code 1 si en retard.
+  hook `PostToolUse` `index_plans_edition.sh` quand Claude edite un `tasks/plans/*.md`, et par l'extension
+  `suivi-plan` (>= 0.4.1, `extension.js::regenereIndex`) a TOUTE modification d'un plan tant que VS Code est ouvert
+  (Bash, main, recopie par le mod a ExitPlanMode) ; `--verifier` = code 1 si en retard.
   Nouveau plan : lui donner une cle `objectif:`. Banc `node .claude/hooks/test_index_plans.mjs`.
 - `tasks/lessons.md` — journal des erreurs et regles.
 - `tasks/reprise-solidification-berry.md` — etat du chantier solidification, prochaine action.

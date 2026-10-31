@@ -210,10 +210,20 @@ async function choisirPlan() {
   ouvreVue()
 }
 
+// Index des plans (tasks/README.md) regenere a chaque modification d'un plan, quel qu'en soit l'auteur
+// (Claude par n'importe quel outil, la main, le mod a ExitPlanMode) : meme script que le hook PostToolUse.
+async function regenereIndex() {
+  const script = E.racine && path.join(E.racine, '.claude', 'hooks', 'index_plans.mjs')
+  if (!script || !fs.existsSync(script)) return            // depot sans index : rien a faire
+  try { (await import(pathToFileURL(script).href)).regenere(E.racine) }
+  catch (e) { console.error('suivi-plan : index des plans non regenere', e) }
+}
+
 // Un plan cree ou modifie (anti-rebond 200 ms). Ouverture auto : une seule fois par fenetre.
 function surModification() {
   clearTimeout(E.minuterie)
   E.minuterie = setTimeout(() => {
+    regenereIndex()
     rafraichit()
     if (!E.panel && reglages().get('ouvrirAuto') && !E.ouvertureAutoFaite && E.plans.length) {
       E.ouvertureAutoFaite = true
