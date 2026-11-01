@@ -7,6 +7,8 @@ affichage de mesure** (niveau, température, tension, taux...). Huit modèles, c
 - Images : `jauge-A.png` à `jauge-H.png` (ce dossier).
 - Code de chaque modèle, interactif (curseur commun, seuils de couleur) : `catalogue_jauges.html`,
   à ouvrir dans un navigateur. Les librairies A, B, C y viennent de jsDelivr (réseau requis).
+- Autour des jauges (2026-10-31) : `liens_vers_jauges.html` (signaler le lien vers une page de
+  jauges) et `dispositions_page_energie.html` (organiser une page de graphiques), voir plus bas.
 
 ## Choix retenu : A ou H
 
@@ -50,6 +52,41 @@ conséquences :
 
 Pour A, B ou C : page dédiée servie par un module Berry (modèle : `/graphiques`), ou script chargé
 une seule fois hors de la zone rafraîchie qui redessine après chaque remplacement (non essayé).
+
+## Signaler le lien vers une page de jauges
+
+`liens_vers_jauges.html` : 8 façons d'annoncer, dans un encadré de l'accueil, la page dédiée
+(maquettes de l'encadré de la cuve à 340 px, HTML et CSS seuls, compatibles avec la contrainte
+ci-dessus). **Retenu le 2026-10-31 pour la cuve : B, icône de cadran seule** (SVG en ligne dans la
+`<legend>` de `data/sd/html/webSensorNiveauCuve.html`, infobulle « Jauges du volume et du taux »).
+
+| Lettre | Forme | Coût sur l'encadré |
+|---|---|---|
+| A | texte « (jauges) » dans le titre | aucun |
+| B | icône de cadran seule dans le titre | aucun |
+| C | petit bouton bleu « Jauges › » dans le titre | allonge la ligne du titre |
+| D | titre entier cliquable avec ↗ | aucun |
+| E | bouton « Voir les jauges » en bas | une ligne de plus (~40 px) |
+| F | barre d'aperçu du taux, cliquable | une ligne ; taux numérique dans le gabarit |
+| G | puce icône + « Jauges » | allonge la ligne du titre |
+| H | valeurs (taux, volume) cliquables | aucun |
+
+## Disposer une page de graphiques
+
+`dispositions_page_energie.html` : 3 façons d'organiser une page de mesures avec des
+consommations par heure, par jour et par mois (exemple : énergie du différentiel). **Retenu le
+2026-10-31 pour la page Énergie : B, les trois graphiques empilés.**
+
+| Lettre | Disposition | Pour |
+|---|---|---|
+| A | onglets Jour / Mois / Année, un seul graphique en barres | page courte, téléphone |
+| B | les trois périodes empilées, plus petites | tout voir sans cliquer |
+| C | exploration par clic (année → mois → jour), fil pour remonter | revoir un jour passé ; demande de garder les heures de chaque jour |
+
+Règle de choix du graphique selon la donnée : une **quantité sur une période** (kWh d'une heure,
+d'un jour, d'un mois) en **barres** ; une **grandeur instantanée** (puissance, courant) en
+**courbe** ; un **rapport borné** (facteur de puissance 0..1) en **cadran** ; une valeur quasi
+constante (fréquence) en **simple valeur**.
 
 ## Défauts connus des images
 
