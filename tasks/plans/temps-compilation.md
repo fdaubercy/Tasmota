@@ -80,7 +80,7 @@ pas de modification de fichiers amont (`pio-tools/`, `platformio.ini`) ; lire `t
   repris du cache au retour sur l'env, donc pas de `firmware.map`, et `pio-tools/tasmotapiolib.py::get_source_map_path`
   lève `FileNotFoundError` sans texte ; défaut amené par `ino_stable.py` (l'elf devient reprenable). Correctif prouvé — preuve :
   cuve, P4, retour cuve du 01/11 (`make_retour`, journal `20261101-181702`) SUCCESS, lien refait, `firmware.map` présent, « Image LittleFS créée »
-- [ ] Vrai envoi du FS de la cuve par l'utilisateur
+- [x] Vrai envoi du FS de la cuve par l'utilisateur — preuve : fait et confirmé par l'utilisateur le 01/11
 
 ## A2 — Mesurer le coût d'un changement d'env, puis décider du dossier de build par env
 - [x] Relevé des durées et du nombre de fichiers compilés, même env répété vs après changement d'env — preuve : cuve sans changement

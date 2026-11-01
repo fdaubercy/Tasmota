@@ -4,7 +4,7 @@ titre: Accélérer le scan des dépendances (LDF) — essai lib_ignore sur l'env
 objectif: Réduire le temps du scan LDF et de la compilation de l'env cuve en ignorant les bibliothèques qu'il n'utilise pas, mesuré avant et après
 statut: clos
 cree: 2026-10-31
-maj: 2026-10-31
+maj: 2026-11-01
 ---
 # Essai lib_ignore sur l'env de la cuve
 
@@ -61,8 +61,8 @@ Pièges :
 
 ## Améliorations restantes
 - [ ] [projet] Couper par `#undef` (section de la cuve dans `user_config_override.h`) les 7 fonctions actives inutiles (IR, DALI, TM1638, LoRa, iBeacon, Berry Animation, SEN5X) puis ignorer leurs bibliothèques : firmware plus petit, à valider sur la carte. **Matter, SendMail et KNX restent actifs** (décision de l'utilisateur du 2026-10-31) : jamais dans un `lib_ignore` ni un `#undef`
-- [ ] [projet] Si concluant : même essai sur `tasmota32p4-garage-serveur-modbus` et `tasmota32s3-garage-rideau-garage-modbus`
-- [ ] [projet] Si concluant sur plusieurs envs : liste commune dans une section `[lib_inutiles]` du cenv, réutilisée par les envs
+- [x] [projet] Si concluant : même essai sur `tasmota32p4-garage-serveur-modbus` et `tasmota32s3-garage-rideau-garage-modbus` — preuve : fait par le plan `lib-ignore-envs` sur les 9 envs ESP32 personnels, commits `e822b21be` et `51fd93da0`
+- [x] [projet] Si concluant sur plusieurs envs : liste commune dans une section `[lib_inutiles]` du cenv, réutilisée par les envs — preuve : `platformio_tasmota_cenv.ini` section `[lib_inutiles]` (`commun`, `sans_ecran`), commit `e822b21be`
 
 ## Vérification
 À remplir : tableau avant/après (scan, total, incrémental, nombre de bibliothèques, taille du firmware).
