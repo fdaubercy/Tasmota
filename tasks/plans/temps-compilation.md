@@ -107,12 +107,14 @@ pas de modification de fichiers amont (`pio-tools/`, `platformio.ini`) ; lire `t
 
 ## A7 — Mesurer la mémoire de chaque env (à faire plus tard)
 Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs/partitions/`.
-- [ ] Module `outils_pc/build_memoire.py` : table lue dans le CSV de l'env (`board_build.partitions`, sinon celui du board), `app0` = `firmware.bin`, `safeboot` = binaire de `variants/tasmota/`, FS = fichiers de l'image (`build_fichiers.py::liste`), RAM = tableau « Memory Type Usage Summary » du journal
-- [ ] Mesures enregistrées dans `%LOCALAPPDATA%\outils_tasmota\build\memoire\<env>.json`, avec leur date : `.pio/build` est effacé à chaque changement d'env, et une compilation sans changement ne réaffiche plus le tableau mémoire
-- [ ] Analyse automatique à la fin de chaque compilation réussie (`build_serie.py`), sans toucher aux scripts amont
-- [ ] Analyse lancée seule depuis l'onglet (`POST /memoire/analyser`) : relit les fichiers existants, jamais de `pio run`, permise pendant un build
+- [x] Module `outils_pc/build_memoire.py` — preuve : `build_memoire.py::analyse` sur les vrais P4, cuve, cave, différentiel (tables, app0, safeboot, zones RAM ; cave et différentiel sans journal : note)
+  (app0 = ligne « Flash: » du dernier journal RÉUSSI ; safeboot = binaire cité par le journal ; FS = `littlefs_data`
+  arrondi au bloc, estimation : l'image écrite par post_esp32.py n'est pas lisible avec les réglages du buildfs)
+- [x] Mesures enregistrées dans `%LOCALAPPDATA%\outils_tasmota\build\memoire\<env>.json` — preuve : `build_memoire.py::enregistre`, `::derniere`, cas du banc
+- [x] Analyse automatique après chaque compilation réussie — preuve : `build_serie.py::Serie._execute_env` ; `test_build_serie.py` VERT (effective au prochain redémarrage de la page)
+- [x] Analyse lancée seule — preuve : `build_web.py` `POST /memoire/analyser` et `GET /memoire` ; `test_build_web.py` VERT
 - [ ] Lecture sur la carte : `Status 4` et `UfsSize`/`UfsFree` (PSRAM, tas, FS réel), par le transport HTTP de `build_ota_http.py` ; carte muette = message, pas d'échec
-- [ ] Banc `test_build_memoire.py`, fondé sur de vrais journaux P4 (DIRAM, HP core, LP) et S3 (DIRAM, IRAM, RTC) et sur un env jamais compilé
+- [x] Banc `test_build_memoire.py` — preuve : 16 cas VERTS sur des extraits de vrais journaux P4 et S3, 6 mutants tués (un mutant équivalent écarté, et le test mort qu'il révélait supprimé)
 
 ## A8 — Onglet « Mémoire et partitions », modèle B (à faire plus tard)
 - [ ] Module `outils_pc/build_page_memoire.py`, inséré comme `build_page_fichiers.py`

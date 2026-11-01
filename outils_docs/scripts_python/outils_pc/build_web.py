@@ -18,6 +18,7 @@ Routes (les POST exigent l'en-tete X-Build: 1 et la meme origine) :
     GET  /sortie     ?env=<env>&octet=n : suite de ce journal a partir de l'octet n, lignes entieres
                      {texte, octet, reste, lancement} (panneau « Sortie » de la page, lu par increments)
     GET  /fichiers   ?env=<env> : fichiers de l'image du FS de l'env (onglet Fichiers, build_fichiers.liste)
+    GET  /memoire    ?env=<env> : derniere analyse memoire enregistree de l'env, null si aucune (build_memoire)
     POST /lancer     {lignes: [{env, methode, port, ip}], actions: [...]}   409 = refus (motifs) ; onglet
                      Fichiers : actions ["fichiers"], une ligne OTA, et fichiers {liste, jeton, recharger_berry,
                      redemarrer} (jeton = celui de /fichiers : image inchangee depuis la liste) ; onglet: "fichiers"
@@ -25,6 +26,8 @@ Routes (les POST exigent l'en-tete X-Build: 1 et la meme origine) :
     POST /port       {env, port} : ecrit upload_port (409 pendant un lancement ou un build lance ailleurs,
                      400 si invalide)
     POST /arreter    {immediat: bool}
+    POST /memoire/analyser {env} : relit le dernier build de l'env (aucun pio, permis pendant un build), enregistre
+                     et rend l'analyse ; une serie l'enregistre aussi apres chaque compilation reussie
     POST /continuer  {env, choix: continuer | passer} : reponse a la pause « rebranchez la carte » (409 si
                      aucune pause en cours ou si elle attend un autre env, 400 si choix invalide)
 """
@@ -44,6 +47,7 @@ from urllib.parse import parse_qs, urlsplit
 import acces_web
 import build_envs
 import build_fichiers
+import build_memoire
 import build_serie
 
 PORT_DEFAUT = 7700
@@ -219,6 +223,14 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
         if chemin == "/continuer":                         # ValueError (400) ou RuntimeError (409)
             serie.reprend(str(demande.get("env") or ""), str(demande.get("choix") or ""))
             return {"ok": True}
+        if chemin == "/memoire/analyser":                  # relit le dernier build, sans pio : permis pendant un build
+            env = str(demande.get("env") or "")
+            try:
+                res = build_memoire.analyse(racine, env, dossier / "journaux")
+            except LookupError as erreur:
+                raise ValueError(str(erreur)) from None
+            build_memoire.enregistre(dossier, env, res)
+            return res
         raise LookupError(chemin)
 
     class Gestionnaire(BaseHTTPRequestHandler):
@@ -280,6 +292,8 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                     debut = etat["debut"]
                     reponse = sortie_env(dossier, params.get("env", [""])[0], debut, int(octet))
                     self._json(dict(reponse, lancement=repr(debut)))   # change a chaque lancement : la page repart de 0
+                elif url.path == "/memoire":              # derniere analyse enregistree de l'env, null si aucune
+                    self._json(build_memoire.derniere(dossier, params.get("env", [""])[0]))
                 elif url.path == "/fichiers":
                     try:
                         self._json(build_fichiers.liste(racine, params.get("env", [""])[0]))
