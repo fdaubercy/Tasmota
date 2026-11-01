@@ -714,7 +714,10 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     Spec : `docs/superpowers/specs/2026-10-17-annuaire-outils-design.md`.
   - `build_web.py` (+ `build_page.py`, `build_serie.py`, `build_envs.py`, `build_progression.py`, `build_ota_fs.py` (FS ; firmware : `build_ota_firmware.py` ; maitre :
     `build_ota_maitre.py` ; transport HTTP : `build_ota_http.py`, decoupe le 2026-10-29 ; FS par MQTT : `build_ota_mqtt.py`,
-    A16), `build_fichiers.py`, `build_page_fichiers.py`,
+    A16), `build_fichiers.py`, `build_page_fichiers.py`, `build_memoire.py` (occupation memoire de l'env, relue du dernier
+    build, `GET /memoire`, `POST /memoire/analyser`), `build_partitions.py` (table de partitions de l'env : validation,
+    `partitions/env_<env>.csv`, OTA bloquee jusqu'au prochain effacement ; `POST /partitions/diff|ecrire` ; plan
+    `tasks/plans/temps-compilation.md` A7 a A10),
     `build_solidification.py`, et pour les bancs `build_faux_pio.py`, `build_ota_carte_simulee.py`) — page « Build et televersement »
     http://127.0.0.1:7700 (tuile de l'annuaire, groupe Maintenance, hors job : l'annuaire refuse de l'arreter pendant
     un lancement ; tache VS Code « Outil : build et televersement » ; cible Custom « Build et televersement (page web) »

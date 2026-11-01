@@ -90,7 +90,7 @@ pas de modification de fichiers amont (`pio-tools/`, `platformio.ini`) ; lire `t
   (`nobuild`, ou seulement des cibles de `SANS_COMPILATION` ; cibles passées par le pré-build)
 - [x] Ligne « lib_ignore de <env> : controle saute… » lue par la page — preuve : `build_progression._LIB_IGNORE` la capte (essai direct)
 - [x] Bancs verts — preuve : `test_verifie_lib_ignore.py`, `test_build_progression.py`, `test_data_dir.py`, `test_copie_fs.py` VERTS (Python de PlatformIO)
-- [ ] Vu dans le journal d'un `nobuild upload` ou d'un `buildfs` réel
+- [x] Vu dans le journal d'un `nobuild upload` ou d'un `buildfs` réel — preuve : buildfs de la cuve lancé par la page le 01/11 09:01, journal `20261101-090109-…-buildfs.log` ligne 6, SUCCESS en 110,8 s
 
 ## A4 — Script d'exclusions Windows Defender
 - [x] Script `maintenance/exclusions_defender.ps1` — preuve : analyse PowerShell 0 erreur ; refuse hors administrateur (essai, code 1)
@@ -130,11 +130,11 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
 - [ ] Sonde Chrome `test_build_page_memoire_chrome.py`, exécutée dans un vrai navigateur ; aucune écriture dans le dépôt réel
 
 ## A9 — Écrire la table de partitions d'un env (à faire plus tard)
-- [ ] Module `outils_pc/build_partitions.py` : validation (alignement et tailles de 64 Ko, `nvs` en 0x9000, `otadata` en 0xE000, `app0` obligatoire, minimum = occupé, somme = flash), mêmes règles que la maquette
+- [x] Module `outils_pc/build_partitions.py` — preuve : `build_partitions.py::valide`, 11 cas de refus VERTS ; validation (alignement et tailles de 64 Ko, `nvs` en 0x9000, `otadata` en 0xE000, `app0` obligatoire, minimum = occupé, somme = flash), mêmes règles que la maquette
 - [ ] Suppression : `safeboot` et `spiffs` demandent une confirmation qui nomme la conséquence ; `nvs`, `otadata`, `app0` refusées aussi côté serveur
-- [ ] Écriture d'un CSV propre à l'env dans `partitions/`, et de `board_build.partitions` dans sa section du cenv : diff d'abord, transaction et sauvegarde (`fichiers_berry_sauvegarde.Transaction`), refus pendant un build ; les autres envs ne changent pas
-- [ ] OTA du firmware et du FS BLOQUÉES pour un env dont la table a changé, avec le motif affiché, jusqu'au prochain « Effacer puis téléverser » réussi (état hors dépôt, contrôle côté serveur dans `build_serie.py`)
-- [ ] Avant l'écriture, rappeler que le flash série remplace le persist de la carte par celui du dépôt, et annoncer la purge de `.pio/build` (le cenv change)
+- [x] Écriture d'un CSV propre à l'env — preuve : `build_partitions.py::prepare`, `::ecrit` (`partitions/env_<env>.csv`, `build_envs.py::pose_option`), routes `POST /partitions/diff` et `/partitions/ecrire` de `build_web.py` ; écriture d'un CSV propre à l'env dans `partitions/`, et de `board_build.partitions` dans sa section du cenv : diff d'abord, transaction et sauvegarde (`fichiers_berry_sauvegarde.Transaction`), refus pendant un build ; les autres envs ne changent pas
+- [x] OTA BLOQUÉES — preuve : `build_partitions.py::ota_bloquee`, `::libere` appelés par `build_serie.py::Serie.controle` et `::_execute_env` ; OTA du firmware et du FS BLOQUÉES pour un env dont la table a changé, avec le motif affiché, jusqu'au prochain « Effacer puis téléverser » réussi (état hors dépôt, contrôle côté serveur dans `build_serie.py`)
+- [x] Rappels — preuve : avertissements de `build_partitions.py::prepare` (persist, purge, OTA, héritiers) ; avant l'écriture, rappeler que le flash série remplace le persist de la carte par celui du dépôt, et annoncer la purge de `.pio/build` (le cenv change)
 - [x] Vérifier `post_esp32.py::patch_partitions_bin` et `partition_core` — preuve : lecture du code le 01/11 (voir dessous)
   `patch_partitions_bin` écrit la taille du FS aux octets 0x89-0x8B (5e entrée) et l'empreinte MD5 en 0xA0 : il suppose
   EXACTEMENT 5 partitions. Avec 4 (safeboot ou FS supprimé) ou 6 (ajout), il corromprait la table. Il ne s'applique que
@@ -142,9 +142,11 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
   `partition_core.be::resize_fs_to_max` et `::invalidate_spiffs` supposent le FS en DERNIÈRE position.
 - [ ] Règle à appliquer : FS toujours dernier ; une table de 4 ou 6 partitions n'est acceptée que si l'env déclare sa
   flash (`board_upload.flash_size`) et qu'un contrôle avant l'upload série refuse tout écart avec la flash détectée ;
-  sinon refus avec le motif. S'applique aussi à la suppression de `safeboot` (le choix « supprimer » reste possible)
+  sinon refus avec le motif. S'applique aussi à la suppression de `safeboot` (le choix « supprimer » reste possible).
+  État au 01/11 : le contrôle de la flash détectée avant l'upload série n'existe pas encore, donc `valide` refuse
+  toute table qui n'a pas 5 partitions, en nommant la conséquence (suppression de `safeboot`/`spiffs` comprise)
 - [ ] Préréglages (tables de `partitions/`), import et export d'un CSV, passés par la même validation
-- [ ] Banc `test_build_partitions.py` (copies temporaires du cenv, relues par `ProjectConfig`, avec mutants) ; table produite identique octet pour octet à `esp32_partition_app3904k_fs11584k.csv` sans modification
+- [x] Banc — preuve : `test_build_partitions.py` VERT, 27 cas, 10 mutants tués, deux vraies tables reproduites octet pour octet ; banc `test_build_partitions.py` (copies temporaires du cenv, relues par `ProjectConfig`, avec mutants) ; table produite identique octet pour octet à `esp32_partition_app3904k_fs11584k.csv` sans modification
 - [ ] Essai réel par l'utilisateur sur une carte, par câble : démarrage, FS et Berry vérifiés, puis OTA de nouveau permise
 
 ## A10 — Annuaire et documentation de la fonction (à faire plus tard)

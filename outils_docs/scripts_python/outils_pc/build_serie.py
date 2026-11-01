@@ -68,6 +68,7 @@ from pathlib import Path
 
 import build_envs
 import build_memoire
+import build_partitions
 import build_ota_firmware
 import build_ota_fs
 import build_ota_maitre
@@ -281,6 +282,8 @@ class Serie:
                     motifs.append(f"{nom} : « Effacer puis téléverser » se fait par câble (COM) seulement")
                 if not connus[nom].ota_possible:
                     motifs.append(f"{nom} : OTA impossible pour cet environnement")
+                if bloque := build_partitions.ota_bloquee(self.dossier, nom):
+                    motifs.append(f"{nom} : {bloque}")
                 if par_mqtt:
                     pass
                 elif not ligne.ip:
@@ -511,6 +514,8 @@ class Serie:
                 build_memoire.enregistre(self.dossier, env, build_memoire.analyse(self.racine, env, self.dossier / "journaux"))
             except Exception:                            # noqa: BLE001 - une analyse ratee ne fait jamais echouer la serie
                 pass
+        if statuts.get("erase_upload") == "succes":     # la table du depot est flashee : l'OTA redevient permise (A9)
+            build_partitions.libere(self.dossier, env)
         self._ajoute("fin_env", env, resultat=resultat, statuts=statuts,
                      secondes=round(time.monotonic() - debut, 2))
         return resultat, lance_pio

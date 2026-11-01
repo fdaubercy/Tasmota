@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+"""Banc de build_partitions.py (plan temps-compilation, A9) : faux depot temporaire (cenv relu par ProjectConfig), vraies
+tables de partitions/ lues seulement ; sauvegardes de la Transaction dans un dossier temporaire
+(OUTILS_TASMOTA_DOSSIER). Puis chaque mutant de build_partitions.py doit faire echouer au moins un cas.
+
+    <Python de PlatformIO> outils_docs/scripts_python/outils_pc/test_build_partitions.py
+
+Code de sortie 0 = vert, 1 = rouge.
+"""
+import os
+import sys
+import tempfile
+import types
+from pathlib import Path
+
+ICI = Path(__file__).resolve().parent
+sys.path.insert(0, str(ICI))
+DEPOT = ICI.parents[2]
+SOURCE = (ICI / "build_partitions.py").read_text(encoding="utf-8")
+ENV = "tasmota32s3-garage-essai-partitions"
+REL = f"partitions/env_{ENV}.csv"
+M16 = 16 * 1024 * 1024
+CENV = f"""; cenv d'essai\r
+[env:base-essai]\r
+board                   = esp32s3-qio_opi\r
+board_build.partitions  = partitions/esp32_partition_app3904k_fs11584k.csv\r
+board_upload.flash_size = 16MB\r
+\r
+[env:{ENV}]\r
+extends                 = env:base-essai\r
+build_flags             = -DESSAI\r
+\r
+[env:heritier-essai]\r
+extends                 = env:{ENV}\r
+"""
+ENV32 = "[env:amont-seul]\nboard = esp32s3-qio_opi\nboard_build.partitions = partitions/esp32_partition_app3904k_fs11584k.csv\nboard_upload.flash_size = 16MB\n"
+MUTANTS = {
+    "64 Ko ignores": ("elif sz % PAS or debut % PAS:", "elif False:"),
+    "fin de flash ignoree": ("elif debut != flash:", "elif False:"),
+    "5 partitions non exigees": ("if len(parts) != 5:", "if False:"),
+    "contenu ignore": ("if sz < (occupes.get(nom) or 0):", "if False:"),
+    "FS dernier ignore": ('and parts[-1].get("sous_type") != "spiffs"', "and False"),
+    "nvs deplacable": ("if (debut, sz) != TETE[nom][:2]:", "if False:"),
+    "empreinte ignoree": ('if p["empreinte"] != empreinte_lue:', "if False:"),
+    "build en cours ignore": ("    if builds:\n", "    if False:\n"),
+    "OTA jamais liberee": ("_blocages(dossier, lambda b: b.pop(env, None))", "pass"),
+    "colonnes non alignees": ("{adresse:<9}", "{adresse}"),
+}
+
+
+def module(source):
+    import build_memoire
+    m = types.ModuleType("build_partitions_essai")
+    exec(compile(source, "build_partitions.py", "exec"), m.__dict__)
+    return m, build_memoire
+
+
+def table_reelle(bm, nom):
+    octets = (DEPOT / "partitions" / nom).read_bytes()
+    parts = bm.lit_csv(octets.decode("utf-8"))
+    return octets, [{k: p[k] for k in ("nom", "type", "sous_type", "taille")} for p in parts]
+
+
+def cas(m, bm):
+    res = []
+
+    def verifie(nom, ok):
+        res.append((nom, bool(ok)))
+
+    def erreurs(parts, flash=M16, occupes=None):
+        return m.valide(parts, flash, occupes)[1]
+
+    for nom, flash in (("esp32_partition_app3904k_fs11584k.csv", M16), ("esp32_partition_app2752k_fs448k.csv", 4 * 1024 * 1024)):
+        octets, parts = table_reelle(bm, nom)
+        table, err = m.valide(parts, flash)
+        eol = "\r\n" if b"\r\n" in octets else "\n"
+        verifie(f"{nom} : valide, sans erreur", not err)
+        verifie(f"{nom} : CSV produit identique octet pour octet", m.texte_csv(table, eol).encode("utf-8") == octets)
+
+    _, base = table_reelle(bm, "esp32_partition_app3904k_fs11584k.csv")
+    modif = [dict(p) for p in base]
+    modif[3]["taille"] += 0x10000
+    modif[4]["taille"] -= 0x10000
+    table, err = m.valide(modif, M16)
+    verifie("app0 +64 Ko, FS -64 Ko : accepte, FS deplace en 0x4C0000", not err and table[4]["debut"] == 0x4C0000)
+    impair = [dict(p) for p in base]
+    impair[3]["taille"] += 0x1000
+    impair[4]["taille"] -= 0x1000
+    verifie("taille hors pas de 64 Ko : refusee", any("64 Ko" in e for e in erreurs(impair)))
+    court = [dict(p) for p in base]
+    court[4]["taille"] -= 0x10000
+    verifie("table qui ne finit pas a la fin de la flash : refusee", any("la flash fait" in e for e in erreurs(court)))
+    sans_safeboot = [dict(p) for p in modif if p["nom"] != "safeboot"]
+    sans_safeboot[2]["taille"] += 0xD0000
+    e = erreurs(sans_safeboot)
+    verifie("4 partitions : refusee, la consequence de la suppression nommee",
+            any("tables de 5" in x and "plus d'OTA du firmware" in x for x in e))
+    fs_milieu = [base[0], base[1], base[4], base[2], base[3]]
+    verifie("FS pas en dernier : refuse", any("dernière partition" in x for x in erreurs(fs_milieu)))
+    nvs = [dict(p) for p in base]
+    nvs[0]["taille"], nvs[1]["taille"] = 0x6000, 0x1000
+    verifie("nvs redimensionnee : refusee", any("nvs doit rester" in x for x in erreurs(nvs)))
+    sans_app0 = [dict(p) for p in base]
+    sans_app0[3]["sous_type"] = "ota_1"
+    verifie("sans app0 (ota_0) : refusee", any("obligatoire" in x for x in erreurs(sans_app0)))
+    verifie("app0 plus petite que le firmware : refusee",
+            any("moins que" in x for x in erreurs(modif, occupes={"app0": modif[3]["taille"] + 1})))
+    verifie("flash inconnue : refusee", any("flash inconnue" in x for x in erreurs(base, flash=None)))
+    double = [dict(p) for p in base]
+    double[2]["nom"] = "app0"
+    verifie("nom en double : refuse", any("double" in x for x in erreurs(double)))
+    verifie("taille booleenne : refusee", any("taille invalide" in x for x in erreurs([dict(base[0])] + [dict(p, taille=True) for p in base[1:]])))
+
+    with tempfile.TemporaryDirectory() as d:
+        d = Path(d)
+        os.environ["OUTILS_TASMOTA_DOSSIER"] = str(d / "outils")
+        racine, dossier = d / "depot", d / "outils" / "build"
+        (racine / "partitions").mkdir(parents=True)
+        for nom in ("esp32_partition_app3904k_fs11584k.csv",):
+            (racine / "partitions" / nom).write_bytes((DEPOT / "partitions" / nom).read_bytes())
+        (racine / "platformio_tasmota_cenv.ini").write_bytes(CENV.encode("utf-8"))
+        (racine / "platformio_tasmota_env32.ini").write_text(ENV32, encoding="utf-8")
+        (racine / "platformio.ini").write_text("[platformio]\nextra_configs = platformio_tasmota_env32.ini\n"
+                                               "  platformio_tasmota_cenv.ini\n", encoding="utf-8")
+
+        p = m.prepare(racine, dossier, ENV, modif)
+        verifie("prepare : aucune erreur, diff du cenv et du CSV", not p["erreurs"] and f"+board_build.partitions  = {REL}" in p["diff"]
+                and "+app0,     app,  ota_0,   0xE0000, 0x3E0000," in p["diff"])
+        verifie("prepare : heritier signale, persist et OTA rappeles",
+                any("heritier-essai" in a for a in p["avertissements"]) and any("persist" in a for a in p["avertissements"])
+                and any("OTA" in a for a in p["avertissements"]))
+        verifie("prepare : rien d'ecrit", not (racine / REL).exists())
+        verifie("env hors du cenv : refuse", m.prepare(racine, dossier, "amont-seul", modif)["erreurs"])
+
+        def jamais():
+            return []
+
+        for nom, args in (("build en cours : refus", (p["empreinte"], lambda: ["pio run"])),
+                          ("empreinte perimee : refus", ("faux", jamais)),
+                          ("table invalide : refus", (m.prepare(racine, dossier, ENV, court)["empreinte"], jamais))):
+            try:
+                m.ecrit(racine, dossier, ENV, court if "invalide" in nom else modif, *args)
+                verifie(nom, False)
+            except RuntimeError:
+                verifie(nom, not (racine / REL).exists())
+
+        r = m.ecrit(racine, dossier, ENV, modif, p["empreinte"], jamais)
+        cenv = (racine / "platformio_tasmota_cenv.ini").read_bytes().decode("utf-8")
+        verifie("ecrit : CSV de l'env ecrit, fins de ligne du cenv", r["ecrit"] and (racine / REL).read_bytes()
+                == p["texte_csv"].encode("utf-8") and "\r\n" in p["texte_csv"])
+        verifie("ecrit : section de l'env seule changee", cenv.count("board_build.partitions") == 2
+                and "board_build.partitions  = partitions/esp32_partition_app3904k_fs11584k.csv" in cenv)
+        ici = os.getcwd()
+        os.chdir(racine)                                           # extra_configs : relatifs au dossier courant
+        try:
+            from platformio.project.config import ProjectConfig
+            conf = ProjectConfig(str(racine / "platformio.ini"))
+            verifie("ProjectConfig : table de l'env et de l'heritier, base inchangee",
+                    conf.get(f"env:{ENV}", "board_build.partitions") == REL
+                    and conf.get("env:heritier-essai", "board_build.partitions") == REL
+                    and conf.get("env:base-essai", "board_build.partitions").endswith("app3904k_fs11584k.csv"))
+        except ImportError:
+            verifie("ProjectConfig importable (lancer avec le Python de PlatformIO)", False)
+        finally:
+            os.chdir(ici)
+        verifie("OTA bloquee apres ecriture, motif nomme", "OTA bloquée" in m.ota_bloquee(dossier, ENV)
+                and m.ota_bloquee(dossier, "heritier-essai") == "")
+        m.libere(dossier, ENV)
+        verifie("OTA liberee apres l'effacement", m.ota_bloquee(dossier, ENV) == "")
+        del os.environ["OUTILS_TASMOTA_DOSSIER"]
+    return res
+
+
+def main():
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    echecs = 0
+    for nom, ok in cas(*module(SOURCE)):
+        echecs += 0 if ok else 1
+        print(("OK " if ok else "KO ") + nom)
+    for nom, (avant, apres) in MUTANTS.items():
+        if avant not in SOURCE:
+            echecs += 1
+            print(f"KO mutant « {nom} » : motif introuvable")
+            continue
+        try:
+            tues = [n for n, ok in cas(*module(SOURCE.replace(avant, apres, 1))) if not ok]
+        except Exception as erreur:                                # noqa: BLE001 - un mutant qui plante est tue
+            tues = [repr(erreur)]
+        echecs += 0 if tues else 1
+        print(("OK " if tues else "KO ") + f"mutant « {nom} » " + (f"tue par : {tues[0]}" if tues else "SURVIT"))
+    print("VERT" if echecs == 0 else f"ROUGE : {echecs} echec(s)")
+    return 0 if echecs == 0 else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

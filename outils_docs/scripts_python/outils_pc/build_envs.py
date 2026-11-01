@@ -221,30 +221,38 @@ def ecrit_port(racine, env, port):
     if port != "" and not PORT_VALIDE.fullmatch(port):
         raise ValueError(f"port invalide : {port!r} (attendu COMn)")
     chemin = Path(racine) / FICHIER_CENV
-    lignes = chemin.read_bytes().decode("utf-8").splitlines(keepends=True)
+    texte = pose_option(chemin.read_bytes().decode("utf-8"), env, "upload_port", port)
+    shutil.copyfile(chemin, chemin.with_name(chemin.name + ".bak"))
+    chemin.write_bytes(texte.encode("utf-8"))
+
+
+def pose_option(texte, env, option, valeur):
+    """Texte du cenv avec `option = valeur` dans la section de l'env (ligne active reecrite, commentaire et fin de
+    ligne gardes ; sinon ajoutee apres `extends`) ; valeur "" retire la ligne active. Rien n'est ecrit ici."""
+    lignes = texte.splitlines(keepends=True)
     debut = next((i for i, l in enumerate(lignes)
                   if (m := ENTETE_ENV.fullmatch(l.strip())) and m.group(1) == env), None)
     if debut is None:
         raise ValueError(f"environnement non ecrivable (absent de {FICHIER_CENV}) : {env!r}")
     fin = next((i for i in range(debut + 1, len(lignes)) if lignes[i].startswith("[")), len(lignes))
     eol = "\r\n" if lignes[debut].endswith("\r\n") else "\n"
-    actives = [i for i in range(debut + 1, fin) if re.match(r"upload_port\s*=", lignes[i])]
+    motif = re.escape(option) + r"\s*="
+    actives = [i for i in range(debut + 1, fin) if re.match(motif, lignes[i])]
     if actives:
         i = actives[0]
-        if port == "":
+        if valeur == "":
             del lignes[i]
         else:
-            m = re.match(r"(upload_port\s*=\s*)(\S*)(.*)$", lignes[i], re.S)
-            lignes[i] = m.group(1) + port + m.group(3)
-    elif port != "":
+            m = re.match(rf"({motif}\s*)(\S*)(.*)$", lignes[i], re.S)
+            lignes[i] = m.group(1) + valeur + m.group(3)
+    elif valeur != "":
         apres = next((i for i in range(debut + 1, fin) if re.match(r"extends\s*=", lignes[i])), debut)
         while apres + 1 < fin and re.match(r"[ 	]+\S", lignes[apres + 1]):   # lignes de continuation
             apres += 1
         if not lignes[apres].endswith(("\n", "\r")):
             lignes[apres] += eol
-        lignes.insert(apres + 1, f"upload_port             = {port}{eol}")
-    shutil.copyfile(chemin, chemin.with_name(chemin.name + ".bak"))
-    chemin.write_bytes("".join(lignes).encode("utf-8"))
+        lignes.insert(apres + 1, f"{option:<24}= {valeur}{eol}")
+    return "".join(lignes)
 
 
 FICHIER_OVERRIDE = "platformio_override.ini"

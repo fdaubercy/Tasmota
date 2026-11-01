@@ -28,6 +28,10 @@ Routes (les POST exigent l'en-tete X-Build: 1 et la meme origine) :
     POST /arreter    {immediat: bool}
     POST /memoire/analyser {env} : relit le dernier build de l'env (aucun pio, permis pendant un build), enregistre
                      et rend l'analyse ; une serie l'enregistre aussi apres chaque compilation reussie
+    POST /partitions/diff   {env, partitions: [{nom, type, sous_type, taille}]} : table validee, diff, erreurs,
+                     avertissements, empreinte (rien n'est ecrit ; build_partitions.prepare)
+    POST /partitions/ecrire {env, partitions, empreinte} : CSV de l'env et cenv, puis OTA de l'env bloquee (409 pendant
+                     un lancement ou un build, si la table est refusee ou si les fichiers ont change depuis le diff)
     POST /continuer  {env, choix: continuer | passer} : reponse a la pause « rebranchez la carte » (409 si
                      aucune pause en cours ou si elle attend un autre env, 400 si choix invalide)
 """
@@ -48,6 +52,7 @@ import acces_web
 import build_envs
 import build_fichiers
 import build_memoire
+import build_partitions
 import build_serie
 
 PORT_DEFAUT = 7700
@@ -231,6 +236,20 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                 raise ValueError(str(erreur)) from None
             build_memoire.enregistre(dossier, env, res)
             return res
+        if chemin in ("/partitions/diff", "/partitions/ecrire"):   # build_partitions : prepare (rien d'ecrit) / ecrit
+            env, parts = str(demande.get("env") or ""), demande.get("partitions")
+            if not isinstance(parts, list) or not all(isinstance(p, dict) for p in parts):
+                raise ValueError("partitions attendues sous forme de liste d'objets")
+            try:
+                if chemin == "/partitions/diff":
+                    p = build_partitions.prepare(racine, dossier, env, parts)
+                    return {k: p[k] for k in ("csv", "table", "diff", "erreurs", "avertissements", "empreinte")}
+                if serie.en_cours():
+                    raise RuntimeError("un lancement est en cours : écrire la table après")
+                return build_partitions.ecrit(racine, dossier, env, parts, str(demande.get("empreinte") or ""),
+                                              serie.builds_en_cours)
+            except LookupError as erreur:
+                raise ValueError(str(erreur)) from None
         raise LookupError(chemin)
 
     class Gestionnaire(BaseHTTPRequestHandler):
