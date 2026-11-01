@@ -110,7 +110,7 @@
 			"log": "info"
 		},
 		"discovery": {
-			"activation": "OFF",
+			"activation": "ON",
 			"log": "info"
 		}
 	},
@@ -140,7 +140,8 @@
 						"etat": "OFF",
 						"relaisLie": {
 							"modules": [],
-							"ids": [],
+							"ids": [1],
+							"delai": 0,
 							"type": "Switch"
 						}
 					},
@@ -200,8 +201,6 @@
 						"pin": 2,
 						"id": 1,
 						"type": 9312,
-						"channel": 0,
-						"nbLeds": 131,
 						"virtuel": "OFF",
 						"value": 0,
 						"etat": "OFF",
@@ -215,27 +214,29 @@
 							"delai": 0
 						},
 						"idModBus": 1
-					},
-					"relai2": {
+					}
+				},
+				"pinsTechniques": {
+					"relaiBistable2": {
 						"activation": "ON",
-						"nom": "Relai 2",
-						"afficheWeb": "ON",
+						"nom": "Relais bistable, 2e bobine (Relay_b2)",
 						"pin": 12,
 						"id": 2,
-						"type": 9312,
-						"virtuel": "OFF",
-						"value": 0,
-						"etat": "OFF",
-						"timer": 0,
-						"publishMQTT": {
-							"topic": []
-						},
-						"timestamp": {
-							"ON": 0,
-							"OFF": 0,
-							"delai": 0
-						},
-						"idModBus": 1
+						"type": 9312
+					},
+					"rxBL0942": {
+						"activation": "ON",
+						"nom": "BL0942 Rx (mesure d'energie)",
+						"pin": 13,
+						"id": 1,
+						"type": 8160
+					},
+					"txBL0942": {
+						"activation": "ON",
+						"nom": "BL0942 Tx (Serial Tx)",
+						"pin": 14,
+						"id": 1,
+						"type": 3200
 					}
 				},
 				"analogiques": {
@@ -325,11 +326,11 @@
 				},
 				"capteurs": {
 					"capteur1": {
-						"activation": "ON",
-						"nom": "Consommation Electrique",
+						"activation": "OFF",
+						"nom": "Capteur 1",
 						"id": 1,
-						"pin": 13,
-						"type": 8160,
+						"pin": -1,
+						"type": 160,
 						"virtuel": "OFF",
 						"SwitchMode": 1,
 						"etat": "OFF",
@@ -340,10 +341,10 @@
 						}
 					},
 					"capteur2": {
-						"activation": "ON",
+						"activation": "OFF",
 						"nom": "Capteur 2",
 						"id": 2,
-						"pin": 16,
+						"pin": -1,
 						"type": 160,
 						"virtuel": "OFF",
 						"SwitchMode": 1,

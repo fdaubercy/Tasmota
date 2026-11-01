@@ -391,6 +391,12 @@
 							}
 						}
 					},
+					"TCA9554": {
+						"activation": "OFF",
+						"name": "Relais de la carte Waveshare 8DI-8RO (CH1-CH8)",
+						"adresseI2C": "0x20",
+						"I2CDriver": 81
+					},
 					"MCP23017": {
 						"activation": "OFF",
 						"name": "MCP23017 A=Ri1-8, B=Ri9-16",
@@ -2058,6 +2064,7 @@
 					}
 				},
 				"capteurs": {},
+				"pinsTechniques": {},
 				"compteurs": {
 					"affichageWebSensor": "OFF",
 					"compteur1": {

@@ -1099,12 +1099,6 @@
                     "type": {
                       "type": "integer"
                     },
-                    "channel": {
-                      "type": "integer"
-                    },
-                    "nbLeds": {
-                      "type": "integer"
-                    },
                     "virtuel": {
                       "type": "string"
                     },
@@ -1192,6 +1186,12 @@
                     "alerte": {
                       "type": "string"
                     },
+                    "channel": {
+                      "type": "integer"
+                    },
+                    "nbLeds": {
+                      "type": "integer"
+                    },
                     "scheme": {
                       "type": "integer"
                     },
@@ -1218,6 +1218,96 @@
                   ],
                   "additionalProperties": true
                 }
+              },
+              "pinsTechniques": {
+                "type": "object",
+                "properties": {
+                  "relaiBistable2": {
+                    "type": "object",
+                    "properties": {
+                      "activation": {
+                        "type": "string",
+                        "description": "ON ou OFF : active ou non ce bloc.",
+                        "enum": [
+                          "ON",
+                          "OFF"
+                        ]
+                      },
+                      "nom": {
+                        "type": "string"
+                      },
+                      "pin": {
+                        "type": "integer",
+                        "description": "Numero de GPIO (-1 = non affecte)."
+                      },
+                      "id": {
+                        "type": "integer",
+                        "description": "Identifiant ModBus / reseau de la carte."
+                      },
+                      "type": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": true
+                  },
+                  "rxBL0942": {
+                    "type": "object",
+                    "properties": {
+                      "activation": {
+                        "type": "string",
+                        "description": "ON ou OFF : active ou non ce bloc.",
+                        "enum": [
+                          "ON",
+                          "OFF"
+                        ]
+                      },
+                      "nom": {
+                        "type": "string"
+                      },
+                      "pin": {
+                        "type": "integer",
+                        "description": "Numero de GPIO (-1 = non affecte)."
+                      },
+                      "id": {
+                        "type": "integer",
+                        "description": "Identifiant ModBus / reseau de la carte."
+                      },
+                      "type": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": true
+                  },
+                  "txBL0942": {
+                    "type": "object",
+                    "properties": {
+                      "activation": {
+                        "type": "string",
+                        "description": "ON ou OFF : active ou non ce bloc.",
+                        "enum": [
+                          "ON",
+                          "OFF"
+                        ]
+                      },
+                      "nom": {
+                        "type": "string"
+                      },
+                      "pin": {
+                        "type": "integer",
+                        "description": "Numero de GPIO (-1 = non affecte)."
+                      },
+                      "id": {
+                        "type": "integer",
+                        "description": "Identifiant ModBus / reseau de la carte."
+                      },
+                      "type": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                },
+                "additionalProperties": true
               },
               "analogiques": {
                 "type": "object",
@@ -1373,10 +1463,7 @@
                     "pin",
                     "type",
                     "virtuel",
-                    "value",
-                    "limites",
-                    "relaisLie",
-                    "publishMQTT"
+                    "value"
                   ],
                   "additionalProperties": true
                 }
@@ -2436,6 +2523,30 @@
                     "adresseI2C",
                     "I2CDriver"
                   ],
+                  "additionalProperties": true
+                },
+                "TCA9554": {
+                  "type": "object",
+                  "properties": {
+                    "activation": {
+                      "type": "string",
+                      "description": "ON ou OFF : active ou non ce bloc.",
+                      "enum": [
+                        "ON",
+                        "OFF"
+                      ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Nom d'affichage du bloc."
+                    },
+                    "adresseI2C": {
+                      "type": "string"
+                    },
+                    "I2CDriver": {
+                      "type": "integer"
+                    }
+                  },
                   "additionalProperties": true
                 }
               },

@@ -9,5 +9,7 @@ if demarrage.prologue()
     demarrage.importe(["configGlobal", "globalFonctions", "webFonctions"])
     demarrage.compileSocle()
     demarrage.compile(["partition_wizard"])
+    demarrage.compile(["discoveryFonctions"], "serveur.discovery")
     demarrage.charge(["controleGeneral", "controleWeb"])
+    demarrage.charge(["controleDiscovery"], "serveur.discovery")       # page /discovery : modules du reseau (2026-10-31)
 end

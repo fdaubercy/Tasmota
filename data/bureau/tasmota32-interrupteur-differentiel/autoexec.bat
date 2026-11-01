@@ -11,8 +11,6 @@ SetOption1 OFF
 ; Paramétrage du wifi et de l'IP :
 ;Backlog WifiPower 17; SSId1 MAISON; Password1 obdormisti-pervigile%.-ficiendus;
 
-; Modèle :
-Template {"NAME":"tongou SY2","GPIO":[32,1,9312,1,1,320,1,1,9313,8160,3200,544,1,1,1,1,0,1,1,1,0,0,1,1,0,0,0,0,1,1,4736,1,1,0,0,1],"FLAG":0,"BASE":1}
 
 ; Recherche du signal wifi le plus fort :
 SetOption56 ON
@@ -48,16 +46,12 @@ Backlog LedPower OFF; SetOption31 OFF; LedState 6;
 ; Paramètre le niveau des logs (Niveau=LOG_LEVEL_DEBUG) :
 Backlog SerialLog 3; WebLog 3;
 
-; Paramètre le pin, le type & le numero des boutons (Button) : 
-; Détache les buttons & Active le mutipress :
-SetOption73 OFF
-; Parametrage du mode du bouton : ON=0 / OFF=1
-Backlog SwitchMode1 0; SwitchMode2 0;
 
 
+; Minuteries (relevees sur la carte le 2026-10-31) : relais allume a 08:00, coupe de 00:00 a 07:30 (Timer2 a 01:00 +/- 5 min)
+Timers 1
 Timer1 {"Enable":1,"Mode":0,"Time":"08:00","Window":0,"Days":"1111111","Repeat":1,"Output":1,"Action":1}
-Timer2 {"Enable":1,"Mode":0,"Time":"23:30","Window":0,"Days":"1111111","Repeat":1,"Output":1,"Action":0}
-Timer3 {"Enable":1,"Mode":0,"Time":"00:00","Window":0,"Days":"1111111","Repeat":1,"Output":1,"Action":0}
+Timer2 {"Enable":1,"Mode":0,"Time":"01:00","Window":5,"Days":"1111111","Repeat":1,"Output":1,"Action":0}
 Timer3 {"Enable":1,"Mode":0,"Time":"00:00","Window":0,"Days":"1111111","Repeat":1,"Output":1,"Action":0}
 Timer4 {"Enable":1,"Mode":0,"Time":"01:00","Window":0,"Days":"1111111","Repeat":1,"Output":1,"Action":0}
 Timer5 {"Enable":1,"Mode":0,"Time":"02:00","Window":0,"Days":"1111111","Repeat":1,"Output":1,"Action":0}
