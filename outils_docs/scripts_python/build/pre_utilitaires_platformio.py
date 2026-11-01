@@ -722,9 +722,14 @@ hors_build = any(cible in COMMAND_LINE_TARGETS for cible in CIBLES_HORS_BUILD)
 # ✨ FONCTIONS ACTIVES UNIQUEMENT HORS SAFEBOOT ...
 # ============================================================
 if not is_safeboot and not hors_build:
-    # Avant le scan des dependances : un lib_ignore qui ignore une bibliotheque utilisee arrete le build ici
-    import verifie_lib_ignore
-    verifie_lib_ignore.controle(env)
+    # Avant le scan des dependances : un lib_ignore qui ignore une bibliotheque utilisee arrete le build ici.
+    # Un defaut du controle lui-meme (module illisible...) ne bloque jamais le build.
+    try:
+        import verifie_lib_ignore
+    except Exception as e:                           # noqa: BLE001
+        print(Fore.YELLOW + f"⚠ lib_ignore : controle indisponible ({e}), build laisse continuer")
+    else:
+        verifie_lib_ignore.controle(env)
 
     adapteParametresPlatformio_override()
 

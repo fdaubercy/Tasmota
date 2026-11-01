@@ -543,6 +543,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `verifie_lib_ignore.py` (garde du pre-script, AVANT le scan des dependances : arrete le build si le `lib_ignore`
     qu'un env personnel ajoute a son parent ignore une bibliotheque incluse sous une garde vraie ou incertaine ;
     ~11 s ; ligne « lib_ignore de <env> : » lue par la page build ; `--propose <env>` = liste ignorable de l'env ;
+    lecture des gardes dans le module voisin `lecture_gardes.py` ; un defaut du controle ne bloque jamais le build ;
     banc `test_verifie_lib_ignore.py [--reel]` ; plan `tasks/plans/lib-ignore-envs.md`).
   - `berry/` — `verifie_berry.py` (syntaxe de data/, tache VS Code de surveillance ; avertissements de
     charte des logs par `charte_logs.py`, banc `test_verifie_berry_charte.py`),

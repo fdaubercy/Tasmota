@@ -28,151 +28,19 @@ import subprocess
 import sys
 import time
 
+from lecture_gardes import (DIRECTIVE, FAIT_FOI, FAUX, INCERTAIN, INCLUDE, VRAI, Contexte, evalue,  # noqa: F401
+                            includes_actifs, sans_commentaires)
+
 PACKAGES = os.path.join(os.path.expanduser("~"), ".platformio", "packages")
+CACHE = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "outils_tasmota", "lib_ignore")
 EXT_SOURCES = (".h", ".hpp", ".c", ".cpp", ".ino")
 DOSSIERS_IGNORES = {"examples", "example", "test", "tests", "extras", "docs", "doc", "tools", "generate"}
-# Macros dont les defines de l'env font foi : absentes = non definies. Toute autre macro inconnue est incertaine
-# (ESP_IDF_VERSION_MAJOR, SOC_*, macros propres d'une bibliotheque...).
-FAIT_FOI = re.compile(r"^(USE_\w+|FIRMWARE_\w+|ESP8266|ARDUINO_ARCH_ESP8266|ARDUINO_ARCH_AVR|__AVR\w*)$")
-INCLUDE = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]')
+DEFINE = re.compile(r"^\s*#\s*define\s+(\w+)", re.M)
 INCLUDE_RAPIDE = re.compile(r'#\s*include\s*[<"]([^>"]+)[>"]')
-DIRECTIVE = re.compile(r"^\s*#\s*(ifdef|ifndef|if|elif|else|endif|define|undef)\b\s*(.*)$")
-VRAI, FAUX, INCERTAIN = True, False, None
-
-
-# ---------- evaluation des gardes (logique a trois valeurs) ----------
-
-def et(a, b):
-    if a is FAUX or b is FAUX:
-        return FAUX
-    return VRAI if a is VRAI and b is VRAI else INCERTAIN
-
-
-def ou(a, b):
-    if a is VRAI or b is VRAI:
-        return VRAI
-    return FAUX if a is FAUX and b is FAUX else INCERTAIN
-
-
-def non(a):
-    return INCERTAIN if a is INCERTAIN else not a
-
-
-class Contexte:
-    """Defines de l'env + macros #define'es quelque part dans les sources (`connues`) : une macro absente des
-    defines et definie nulle part est fausse si `sures` (sources de tasmota/), sinon seulement si FAIT_FOI."""
-
-    def __init__(self, defines, connues=(), sures=False):
-        self.defines, self.connues, self.sures = defines, set(connues), sures
-
-    def fait_foi(self, nom):
-        return FAIT_FOI.match(nom) or (self.sures and nom not in self.connues)
-
-
-def est_defini(nom, ctx, locales):
-    if nom in locales:
-        return locales[nom]
-    if nom in ctx.defines:
-        return VRAI
-    return FAUX if ctx.fait_foi(nom) else INCERTAIN
-
-
-ESSAIS_DEFINED, ESSAIS_VALEUR = (0, 1), (0, 1, 5, 100000, -1)
-
-
-def evalue(expr, ctx, locales):
-    """Valeur d'une expression #if : VRAI, FAUX ou INCERTAIN. Chaque macro inconnue prend plusieurs valeurs
-    d'essai ; un resultat identique pour toutes est sur (`0 && X >= 5` est faux quel que soit X)."""
-    inconnues = []                                   # [(nom de variable python, valeurs d'essai)]
-
-    def inconnue(essais):
-        inconnues.append(("_u%d" % len(inconnues), essais))
-        return " %s " % inconnues[-1][0]
-
-    def remplace_defined(m):
-        v = est_defini(m.group(1) or m.group(2), ctx, locales)
-        return inconnue(ESSAIS_DEFINED) if v is INCERTAIN else (" 1 " if v else " 0 ")
-
-    expr = re.sub(r"\bdefined\s*\(\s*(\w+)\s*\)|\bdefined\s+(\w+)", remplace_defined, expr)
-    if re.search(r"[A-Za-z_]\w*\s*\(", expr):        # macro fonction (ESP_IDF_VERSION_VAL, __has_include...)
-        return INCERTAIN
-
-    def remplace_nom(m):
-        nom = m.group(0)
-        if nom.startswith("_u") and nom[2:].isdigit():
-            return nom
-        if nom in ("true", "false"):
-            return " 1 " if nom == "true" else " 0 "
-        if locales.get(nom) is FAUX:
-            return " 0 "
-        if nom not in ctx.defines:
-            if locales.get(nom):
-                return inconnue(ESSAIS_VALEUR)
-            return " 0 " if ctx.fait_foi(nom) else inconnue(ESSAIS_VALEUR)
-        valeur = ctx.defines[nom]
-        if valeur is None:
-            return " 1 "                             # defini sans valeur : rarement compare a un nombre
-        nombre = re.fullmatch(r"\(?\s*(-?(?:0[xX][0-9a-fA-F]+|\d+))[uUlL]*\s*\)?", valeur.strip())
-        return " %d " % int(nombre.group(1), 0) if nombre else inconnue(ESSAIS_VALEUR)
-
-    expr = re.sub(r"\b(0[xX][0-9a-fA-F]+|\d+)[uUlL]+\b", r"\1", expr)
-    expr = re.sub(r"\b[A-Za-z_]\w*\b", remplace_nom, expr)
-    py = expr.replace("&&", " and ").replace("||", " or ").replace("/", "//")
-    py = re.sub(r"!(?!=)", " not ", py)
-    combinaisons = [{}]
-    for nom, essais in inconnues:
-        combinaisons = [dict(c, **{nom: e}) for c in combinaisons for e in essais]
-        if len(combinaisons) > 500:
-            return INCERTAIN
-    resultats = set()
-    try:
-        for c in combinaisons:
-            resultats.add(bool(eval(py, {"__builtins__": {}}, c)))  # noqa: S307 - nombres et operateurs seuls
-    except Exception:                                # noqa: BLE001 - expression non comprise : incertain
-        return INCERTAIN
-    return resultats.pop() if len(resultats) == 1 else INCERTAIN
-
-
-def sans_commentaires(texte):
-    texte = re.sub(r"/\*.*?\*/", lambda m: "\n" * m.group(0).count("\n"), texte, flags=re.S)
-    return re.sub(r"//[^\n]*", "", texte).replace("\\\n", " ")
-
-
-def includes_actifs(texte, ctx):
-    """[(en-tete, numero de ligne, VRAI|INCERTAIN)] des #include dont la garde n'est pas fausse."""
-    locales, pile, actif, resultat = {}, [], VRAI, []
-    for numero, ligne in enumerate(sans_commentaires(texte).split("\n"), 1):
-        if "#" not in ligne:
-            continue
-        m = INCLUDE.match(ligne)
-        if m:
-            if actif is not FAUX:
-                resultat.append((m.group(1), numero, actif))
-            continue
-        d = DIRECTIVE.match(ligne)
-        if not d:
-            continue
-        mot, reste = d.group(1), d.group(2).strip()
-        if mot in ("ifdef", "ifndef", "if"):
-            if mot == "if":
-                cond = evalue(reste, ctx, locales)
-            else:
-                cond = est_defini(reste.split()[0] if reste else "", ctx, locales)
-                cond = non(cond) if mot == "ifndef" else cond
-            pile.append([actif, cond])                 # [actif du parent, une branche deja prise ?]
-            actif = et(actif, cond)
-        elif mot in ("elif", "else") and pile:
-            parent, prise = pile[-1]
-            cond = VRAI if mot == "else" else evalue(reste, ctx, locales)
-            pile[-1][1] = ou(prise, cond)
-            actif = et(parent, et(non(prise), cond))
-        elif mot == "endif" and pile:
-            actif = pile.pop()[0]
-        elif mot in ("define", "undef") and actif is not FAUX and reste:
-            nom = re.match(r"\w+", reste)
-            if nom:
-                locales[nom.group(0)] = (VRAI if actif is VRAI else INCERTAIN) if mot == "define" else FAUX
-    return resultat
+# Fichiers de configuration de Tasmota : une macro qui y est #define'e ou #undef'e (meme commentee) est une option ;
+# absente des defines de l'env, elle est fausse.
+CONFIG_TASMOTA = ("tasmota/my_user_config.h", "tasmota/user_config_override.h",
+                  "tasmota/include/tasmota_configurations*.h", "include/tasmota_options.h")
 
 
 # ---------- bibliotheques et sources ----------
@@ -239,8 +107,11 @@ def bibliotheques(projet, dossiers_lib):
 
 
 def lit(fichier):
-    with open(fichier, encoding="utf-8", errors="ignore") as f:
-        return f.read()
+    try:
+        with open(fichier, encoding="utf-8", errors="ignore") as f:
+            return f.read()
+    except FileNotFoundError:                        # regenere par la solidification Berry pendant la lecture
+        return ""
 
 
 # ---------- configuration de l'env ----------
@@ -255,8 +126,11 @@ def options_env(config, nom_env):
     with open(os.path.join(os.path.dirname(config.path), "boards", config.get(s, "board") + ".json"),
               encoding="utf-8") as f:
         build = json.load(f)["build"]
+    carte = build.get("extra_flags", [])                # -D de la carte (BOARD_HAS_PSRAM...), hors build_flags
+    carte = carte.split() if isinstance(carte, str) else list(carte)
     return {"plateforme": plateforme, "mcu": build.get("mcu", "esp32"),
-            "memoire": (build.get("arduino") or {}).get("memory_type", ""), "build_flags": liste("build_flags"),
+            "memoire": (build.get("arduino") or {}).get("memory_type", ""),
+            "build_flags": liste("build_flags") + carte,
             "lib_ignore": liste("lib_ignore"), "lib_deps": liste("lib_deps"),
             "lib_dirs": dossiers + [d for d in liste("lib_extra_dirs") if d]}
 
@@ -294,6 +168,40 @@ def defines_env(projet, opts):
     return defines
 
 
+def racines_framework(mcu):
+    fw = os.path.join(PACKAGES, "framework-arduinoespressif32")
+    return [os.path.dirname(os.path.dirname(compilateur(mcu))), os.path.join(fw, "cores"),
+            os.path.join(fw, "libraries"), os.path.join(fw, "tools", "esp32-arduino-libs", mcu)]
+
+
+def macros_framework(mcu):
+    """Macros #define'es par les en-tetes du framework et de la chaine de compilation de la puce. Cache disque
+    (CACHE : outils_tasmota/lib_ignore sous LOCALAPPDATA) tant que les dossiers des paquets ne changent pas."""
+    racines = [r for r in racines_framework(mcu) if os.path.isdir(r)]
+    cle = [[r, os.path.getmtime(r)] for r in racines]
+    cache = os.path.join(CACHE, f"macros_{mcu}.json")
+    try:
+        with open(cache, encoding="utf-8") as f:
+            donnees = json.load(f)
+        if donnees.get("cle") == cle:
+            return set(donnees["macros"])
+    except (OSError, ValueError):
+        pass
+    macros = set()
+    for r in racines:
+        for racine, _, fichiers in os.walk(r):
+            for f in fichiers:
+                if f.endswith((".h", ".hpp")) or "." not in f:
+                    macros.update(DEFINE.findall(lit(os.path.join(racine, f))))
+    try:
+        os.makedirs(os.path.dirname(cache), exist_ok=True)
+        with open(cache, "w", encoding="utf-8") as f:
+            json.dump({"cle": cle, "macros": sorted(macros)}, f)
+    except OSError:
+        pass
+    return macros
+
+
 # ---------- analyse ----------
 
 class Analyse:
@@ -304,11 +212,12 @@ class Analyse:
         self.libs = [b for b in bibliotheques(projet, opts["lib_dirs"]) if b.compatible(opts["plateforme"])]
         self.tasmota = list(sources(os.path.join(projet, "tasmota")))
         self._noms = {}                              # fichier -> noms de base des en-tetes inclus (sans gardes)
-        connues = set()
-        for f in self.tasmota:
-            connues.update(re.findall(r"^\s*#\s*define\s+(\w+)", lit(f), re.M))
-        self.ctx_tasmota = Contexte(defines, connues, sures=True)
-        self.ctx_lib = Contexte(defines)
+        options = set()
+        for motif in CONFIG_TASMOTA:
+            for f in glob.glob(os.path.join(projet, motif)):
+                options.update(re.findall(r"#\s*(?:define|undef)\s+(\w+)", lit(f)))
+        self._definies = None                        # rempli a la premiere lecture (macros_framework + sources lues)
+        self.ctx = Contexte(defines, options)
         self._systeme = None
         self._par_nom = {}                           # nom de base d'en-tete -> bibliotheques qui le fournissent
         for b in self.libs:
@@ -334,7 +243,11 @@ class Analyse:
     def noms_inclus(self, fichier):
         noms = self._noms.get(fichier)
         if noms is None:
-            noms = self._noms[fichier] = {os.path.basename(i) for i in INCLUDE_RAPIDE.findall(lit(fichier))}
+            if self._definies is None:
+                self._definies = self.ctx.definies = macros_framework(self.opts["mcu"])
+            texte = lit(fichier)
+            self._definies.update(DEFINE.findall(texte))
+            noms = self._noms[fichier] = {os.path.basename(i) for i in INCLUDE_RAPIDE.findall(texte)}
         return noms
 
     def ailleurs(self, include, gardees):
@@ -347,9 +260,7 @@ class Analyse:
         if self._systeme is None:
             # shortcut: index par nom de fichier, sans les chemins d'inclusion reels ; suffit pour stdint.h & co
             self._systeme = set()
-            fw = os.path.join(PACKAGES, "framework-arduinoespressif32")
-            for d in [os.path.dirname(os.path.dirname(compilateur(self.opts["mcu"]))), os.path.join(fw, "cores"),
-                      os.path.join(fw, "libraries"), os.path.join(fw, "tools", "esp32-arduino-libs", self.opts["mcu"])]:
+            for d in racines_framework(self.opts["mcu"]):
                 for _, _, fichiers in os.walk(d):
                     self._systeme.update(f for f in fichiers if f.endswith((".h", ".hpp")) or "." not in f)
         return os.path.basename(include) in self._systeme
@@ -360,12 +271,11 @@ class Analyse:
         gardees = [b for b in self.libs if not self.ignoree(b, ignores)]
         filtre = {os.path.basename(e) for b in visees for e in b.entetes}
         trouve = {}
-        fichiers = [(f, self.ctx_tasmota) for f in self.tasmota] + [
-            (f, self.ctx_lib) for b in self.atteignables(gardees) for f in b.fichiers]
-        for fichier, ctx in fichiers:
+        fichiers = self.tasmota + [f for b in self.atteignables(gardees) for f in b.fichiers]
+        for fichier in fichiers:
             if not self.noms_inclus(fichier) & filtre:
                 continue
-            for include, ligne, etat in includes_actifs(lit(fichier), ctx):
+            for include, ligne, etat in includes_actifs(lit(fichier), self.ctx):
                 if os.path.basename(include) not in filtre:
                     continue
                 for b in visees:
@@ -440,7 +350,7 @@ def controle(env):
     try:
         opts = options_env(config, nom_env)
         trouve = Analyse(projet, opts, defines_env(projet, opts)).utilisations(ajouts)
-    except (OSError, RuntimeError, subprocess.SubprocessError, KeyError) as e:
+    except Exception as e:                           # noqa: BLE001 - un defaut du controle ne bloque jamais un build
         print(Fore.YELLOW + f"⚠ lib_ignore de {nom_env} : controle impossible ({e}), build laisse continuer")
         return
     duree = f"{time.monotonic() - debut:.0f} s"
