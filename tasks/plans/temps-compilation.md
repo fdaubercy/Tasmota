@@ -75,7 +75,7 @@ pas de modification de fichiers amont (`pio-tools/`, `platformio.ini`) ; lire `t
 - [x] `firmware.bin` refabriqué à chaque run (FS joint à l'envoi série) — preuve : journal `20261101-155306`, « Building firmware.bin » et « Image LittleFS créée » sans édition de liens
   (`AlwaysBuild` visait un chemin relatif, résolu dans le dossier du script : sans effet. La « preuve » du 01/11 07:43 ne valait pas, l'elf y était refait)
 
-- [ ] Échec de la construction du FS de la cuve (signalé par l'utilisateur le 01/11) : évaluer pourquoi. Journal
+- [x] Échec de la construction du FS de la cuve (signalé par l'utilisateur le 01/11) : évaluer pourquoi. Journal
   `20261101-162445` : `*** [firmware.bin]` sans message, juste après « Image LittleFS créée ». Cause trouvée : `firmware.elf`
   repris du cache au retour sur l'env, donc pas de `firmware.map`, et `pio-tools/tasmotapiolib.py::get_source_map_path`
   lève `FileNotFoundError` sans texte ; défaut amené par `ino_stable.py` (l'elf devient reprenable). Correctif prouvé — preuve :
@@ -114,7 +114,7 @@ pas de modification de fichiers amont (`pio-tools/`, `platformio.ini`) ; lire `t
 - [x] Outil `maintenance/purge_cache_build.py` — preuve : `--dry-run` réel : 17 391 Mo, 29 185 objets / 5 383 Mo libérables (7 s)
   (objets inutilisés depuis N jours, défaut 30 ; fichier `config` du cache gardé ; refus pendant un build par `garde_build.builds_en_cours`)
 - [x] Banc sur un faux cache — preuve : `test_purge_cache_build.py` VERT (9 cas, témoin objet récent gardé) ; mention dans `outils_docs/README.md`
-- [ ] Purge réelle lancée par l'utilisateur (sans `--dry-run`)
+- [x] Purge réelle lancée par l'utilisateur (sans `--dry-run`) — preuve : faite et déclarée par l'utilisateur le 01/11
 
 ## A6 — Documentation
 - [x] `CLAUDE.md` § « Vigilances de build » et carte des documents — preuve : `verifie_references_docs.py` 0 défaut
@@ -169,14 +169,14 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
 - [ ] [projet] Chrome prend ~16 s de CPU sur 23 s pendant un lien (mesure du 01/11, 15 processus ; poste à 2 cœurs physiques, CPU à ~98 %) : identifier l'onglet, peut-être une page d'outil ouverte
 - [ ] [projet] `cpptools` (indexeur C/C++ de VS Code) occupe 0,75 cœur sur 4 hors build (mesure du 01/11, 8 s) : exclure `.pio`, `.cache` et `lib/` de son analyse, dans le profil VS Code, à essayer et à mesurer
 - [ ] [projet] QEMU d'Espressif (ESP32-S3 seulement, pas le P4 ; sans support officiel) : essai borné pour démarrer une table modifiée sans toucher une carte, avant l'essai réel de A9 ; démarrage de Tasmota non garanti
-- [ ] [projet] LDF (110-180 s à chaque build, le plus gros poste restant) : réutiliser son résultat quand rien n'a changé (interne à PlatformIO, fragile)
-- [ ] [projet] Sortir le port COM du cenv si les changements de port deviennent fréquents
 - [ ] [projet] Défaut existant, à vérifier : un `nobuild upload` (envoi après la pause « rebranchez la carte ») n'a
   pas de règle pour `firmware.bin` (`builder/main.py`, bloc `nobuild`), donc la post-action FS de `post_esp32.py` ne tourne
   pas et le FS ne serait PAS joint, alors que la page grise « Construire / Téléverser le FS » (`build_serie.py::Serie._plan`).
   Aucun journal `nobuild` pour trancher.
 - [ ] [projet] `CFG_HOLDER` et `user_config_override.h` sont communs à tous les envs : modifier le `.h` pour une carte fait
   tout recompiler aux autres et recharge leurs réglages SECTION1 au flash suivant. À revoir seulement si cela gêne.
+
+Annulées par l'utilisateur le 01/11 : réutiliser le résultat du LDF, sortir le port COM du cenv.
 
 ## Vérification
 - A1 : `test_cfg_holder.py` vert (mutants tués) ; deux compilations successives du même env par l'utilisateur, la
