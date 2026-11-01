@@ -94,7 +94,8 @@ def _fs_utilise(dossier):
     """Octets occupes dans le FS d'apres les fichiers de littlefs_data, chacun arrondi au bloc ; None si absent.
 
     shortcut: estimation (metadonnees de LittleFS ignorees, fichiers ecrits par la carte depuis le flash inconnus) ;
-    la valeur reelle se lit sur la carte (UfsSize / UfsFree).
+    la valeur reelle se lit sur la carte (UfsSize / UfsFree). Controle du 2026-11-01 sur la cuve : 100 Ko estimes,
+    27 blocs (108 Ko) occupes dans le vrai littlefs.bin, memes 6 fichiers.
     """
     dossier = Path(dossier)
     if not dossier.is_dir():

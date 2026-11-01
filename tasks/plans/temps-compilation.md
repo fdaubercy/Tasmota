@@ -72,10 +72,14 @@ pas de modification de fichiers amont (`pio-tools/`, `platformio.ini`) ; lire `t
   6 bibliothèques, `dump-defines.py`) et ne garder que ce qui sert
 
 ## A2 — Mesurer le coût d'un changement d'env, puis décider du dossier de build par env
-- [ ] Relevé sur les journaux de la page : durée d'un build même env répété vs après changement d'env (après A1,
-  pour isoler la purge) ; nombre de « Retrieved … from cache » et de « Compiling »
-- [ ] Taille de `.cache` et de `.pio/build` relevée (hors build) — `.cache` : 17 391 Mo le 2026-11-01 (dont 5 383 Mo inutilisés depuis 30 j) ; `.pio/build` à relever
-- [ ] Synthèse chiffrée présentée à l'utilisateur ; décision consignée ici (faire / ne pas faire). Si « faire » :
+- [x] Relevé des durées et du nombre de fichiers compilés, même env répété vs après changement d'env — preuve : cuve sans changement
+  23 min 24 s (1 compilé) ; P4 après la cuve 29 min 39 s (177 compilés : son propre CFG_HOLDER/défines) ; retour à la
+  cuve après le P4 14 min 57 s, 1 compilé, le reste repris de `.cache` (journaux du 01/11 de la page)
+- [x] Taille de `.cache` et de `.pio/build` relevée (hors build) — preuve : `.cache` 17 391 Mo (dont 5 383 Mo inutilisés depuis 30 j) ; `.pio/build` 183 Mo
+- [x] Synthèse chiffrée présentée à l'utilisateur ; décision consignée ici (faire / ne pas faire) — preuve : la purge
+  de `.pio/build` au changement d'env ne coûte rien de mesurable (le cache objet rend 771 objets sur 772) :
+  **ne pas faire** (proposé le 01/11 sur ces chiffres ; à rouvrir si un retour d'env dépasse 10 min de plus qu'un
+  build sans changement). Si « faire » :
   nouveau plan (`PLATFORMIO_BUILD_DIR` par env posé par la page, ~18 fichiers dont le pré-build
   `pre_utilitaires_platformio.py` qui code `.pio/build` en dur pour `copy_fs_image`)
 
@@ -148,7 +152,7 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
 - [ ] `outils_docs/README.md` § build et `CLAUDE.md` (carte des documents, nouveaux modules)
 
 ## Améliorations restantes
-- [ ] [projet] Dossier de build par env, si A2 conclut « faire »
+- [ ] [projet] Dossier de build par env, si A2 conclut « faire » (A2 a conclu « ne pas faire » le 01/11)
 - [ ] [projet] `cpptools` (indexeur C/C++ de VS Code) occupe 0,75 cœur sur 4 hors build (mesure du 01/11, 8 s) : exclure `.pio`, `.cache` et `lib/` de son analyse, dans le profil VS Code, à essayer et à mesurer
 - [ ] [projet] QEMU d'Espressif (ESP32-S3 seulement, pas le P4 ; sans support officiel) : essai borné pour démarrer une table modifiée sans toucher une carte, avant l'essai réel de A9 ; démarrage de Tasmota non garanti
 - [ ] [projet] Sortir le port COM du cenv si les changements de port deviennent fréquents
