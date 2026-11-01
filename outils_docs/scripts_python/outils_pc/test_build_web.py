@@ -257,6 +257,37 @@ def test_port_refuse_pendant_build_externe(b):
             "port_refuse_pendant_build_externe : temoin, aucun build -> 200")
 
 
+def test_defaut(b):
+    """Onglet « Envs par defaut » : lecture, apercu sans ecriture, refus pendant un build ou un lancement, ecriture."""
+    fichier = b.racine / "platformio_override.ini"
+    texte = f"[platformio]\ndefault_envs =\n    {A}\n    ; {B}\n"
+    fichier.write_text(texte, encoding="utf-8", newline="")
+    statut, lu = b.json("GET", "/defaut")
+    verifie((statut, lu["actifs"]), (200, [A]), "defaut : etat lu")
+    statut, diff = b.json("POST", "/defaut/diff", {"coches": [B]})
+    verifie((statut, "apres" in diff, [l["m"] for l in diff["apercu"] if l["m"]]), (200, False, ["modif", "modif"]),
+            "defaut : apercu, deux lignes basculees")
+    verifie(fichier.read_text(encoding="utf-8"), texte, "defaut : l'apercu n'ecrit rien")
+    verifie(b.json("POST", "/defaut/diff", {"coches": "x"})[0], 400, "defaut : coches invalides -> 400")
+    demande = {"coches": [B], "empreinte": diff["empreinte"]}
+    try:
+        b.serie.builds_en_cours = lambda: ["pio run -e x"]
+        verifie(b.json("POST", "/defaut/ecrire", demande)[0], 409, "defaut : build en cours -> 409")
+        b.serie.builds_en_cours = lambda: None
+        verifie(b.json("POST", "/defaut/ecrire", demande)[0], 409, "defaut : detection impossible -> 409")
+    finally:
+        b.serie.builds_en_cours = lambda: []
+    en_cours, b.serie.en_cours = b.serie.en_cours, lambda: True
+    try:
+        verifie(b.json("POST", "/defaut/ecrire", demande)[0], 409, "defaut : lancement en cours -> 409")
+    finally:
+        b.serie.en_cours = en_cours
+    verifie(fichier.read_text(encoding="utf-8"), texte, "defaut : refus -> fichier intact")
+    verifie(b.json("POST", "/defaut/ecrire", demande)[0], 200, "defaut : temoin, aucun build -> 200")
+    verifie(fichier.read_text(encoding="utf-8"), f"[platformio]\ndefault_envs =\n    ; {A}\n    {B}\n", "defaut : fichier ecrit")
+    fichier.unlink()
+
+
 def test_journal_env_exact():
     """M3 : le journal d'un env ne melange pas celui d'un env dont le nom le prolonge (x-a / x-a-b)."""
     with tempfile.TemporaryDirectory() as t:
@@ -699,7 +730,7 @@ def principal():
         b = Banc(Path(t))
         try:
             for test in (test_routes_locales, test_page_contient, test_envs_fs_avec_firmware, test_post_sans_entete_refuse, test_distant_sans_jeton_refuse,
-                         test_corps_borne, test_port_ecrit_puis_relu, test_port_refuse_pendant_build_externe,
+                         test_corps_borne, test_port_ecrit_puis_relu, test_port_refuse_pendant_build_externe, test_defaut,
                          test_lancement, test_flux_et_journal, test_journal_dernier_lancement, test_arret,
                          test_sortie_en_direct, test_erase_upload, test_fichiers, test_continuer):
                 test(b)

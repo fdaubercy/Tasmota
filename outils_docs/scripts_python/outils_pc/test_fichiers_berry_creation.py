@@ -74,6 +74,34 @@ def section_cenv(racine, env):
     return lignes[i:j]
 
 
+def test_default_envs(racine):
+    """Case de creation : sans elle, le fichier ne bouge pas ; avec elle, l'env devient actif, les autres gardent leur etat."""
+    import build_defaut
+    fichier = racine / "platformio_override.ini"
+    avant = fichier.read_bytes()
+    actifs_avant = build_defaut.lit(racine)["actifs"]
+    cree(racine, creation(nom="sans-case", lieu="essaidefaut"))
+    verifie(fichier.read_bytes(), avant, "default_envs : case non cochee, fichier intact")
+    c = creation(nom="avec-case", lieu="essaidefaut")
+    c.default_envs = True
+    p, r = cree(racine, c)
+    verifie(sorted(build_defaut.lit(racine)["actifs"]), sorted(actifs_avant + [r["env"]]),
+            "default_envs : case cochee, l'env s'ajoute aux actifs, qui restent")
+    verifie(f"+{r['env']}" in p["diff"].replace(" ", ""), True, "default_envs : la ligne ajoutee figure au diff")
+    verifie(any("pio/build" in a for a in p["avertissements"]), True, "default_envs : purge annoncee")
+    verifie((Path(r["sauvegarde"]) / "platformio_override.ini").read_bytes(), avant, "default_envs : fichier d'origine sauvegarde")
+    c2 = creation(nom="change-case", lieu="essaidefaut")
+    e = fbc.prepare_creation(racine, c2)["empreinte"]
+    c2.default_envs = True
+    verifie(fbc.prepare_creation(racine, c2)["empreinte"] != e, True, "default_envs : cocher apres le diff impose un nouveau diff")
+    fichier.write_bytes(avant.replace(b"default_envs", b"default_envs_absent"))     # bloc introuvable : la creation passe
+    c3 = creation(nom="sans-bloc", lieu="essaidefaut")
+    c3.default_envs = True
+    p3, _ = cree(racine, c3)
+    verifie(any("non ajoute a default_envs" in a for a in p3["avertissements"]), True, "default_envs : bloc introuvable -> creation faite, signale")
+    fichier.write_bytes(avant)
+
+
 def test_nom_et_define():
     verifie(fbc.nom_env(BASE_RIDEAU, "garage", "porte-test"), "tasmota32s3-garage-porte-test", "nom_env")
     verifie(fbc.define(BASE_RIDEAU, "garage", "porte-test"), "FIRMWARE_ESP32S3_GARAGE_PORTE_TEST", "define S3")
@@ -436,7 +464,7 @@ def principal():
     test_coprocesseur_unitaire()
     for test in (test_section_cenv, test_chemins_reecrits, test_section_h, test_modele_cave, test_persist_octets,
                  test_insertion_lieu, test_refus, test_identite_invalide, test_define_en_commentaire, test_nom_base, test_commentaire_dans_upload, test_diff_masque, test_sauvegarde, test_creation_atomique,
-                 test_copies_temporaires_ignorees, test_vu_par_build,
+                 test_copies_temporaires_ignorees, test_vu_par_build, test_default_envs,
                  test_p4_depuis_s3, test_p4_depuis_p4, test_s3_depuis_p4, test_s3_depuis_s3):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier

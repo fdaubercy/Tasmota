@@ -186,6 +186,9 @@ def sonde_page(m):
             "base : un ajout ouvre la fenetre « liste partagee » avec ses cartes")
     clic(cdp, "partage-annuler")
     clic(cdp, "creer")
+    verifie(cdp.js("(() => { const c = document.getElementById('c-default-envs'), avant = creationCorps().default_envs; c.click();"
+                   " const r = [c.offsetParent !== null, avant, creationCorps().default_envs]; c.click(); return r; })()"),
+            [True, False, True], "creation : case default_envs visible, decochee par defaut, envoyee au serveur")
     cdp.js("document.getElementById('c-lieu').value='garage'; document.getElementById('c-nom').value='porte-test';"
            "document.getElementById('c-base').value='tasmota32s3-base-N16R8-sans-ecran'; 1")
     clic(cdp, "c-proposer")

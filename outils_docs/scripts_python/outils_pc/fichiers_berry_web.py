@@ -92,7 +92,7 @@ def creation_de(demande):
         raise ValueError("identite : objet de chaines attendu")
     return fbc.Creation(_chaine(demande, "modele"), _chaine(demande, "base"), _chaine(demande, "lieu"),
                         _chaine(demande, "nom"), {k: identite.get(k, "") for k in fbc.CHAMPS_IDENTITE},
-                        _chaine(demande, "define", ""))
+                        _chaine(demande, "define", ""), demande.get("default_envs") is True)
 
 
 def renommage_de(demande):

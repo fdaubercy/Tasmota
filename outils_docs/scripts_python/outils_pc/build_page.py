@@ -162,6 +162,7 @@ PAGE = r"""<!doctype html>
   .vide{color:var(--discret);font-size:13px}
 /*CSS_FICHIERS*/
 /*CSS_MEMOIRE*/
+/*CSS_DEFAUT*/
   @media (max-width:820px){.disposition{grid-template-columns:1fr}.commandes{position:static}}
   @media (max-width:520px){
     main{padding:8px 16px 30px}
@@ -192,6 +193,7 @@ PAGE = r"""<!doctype html>
     <button id="onglet-build" type="button" role="tab" aria-selected="true" aria-controls="vue-build">Build</button>
     <button id="onglet-fichiers" type="button" role="tab" aria-selected="false" aria-controls="vue-fichiers">Fichiers</button>
     <button id="onglet-memoire" type="button" role="tab" aria-selected="false" aria-controls="vue-memoire">Mémoire et partitions</button>
+    <button id="onglet-defaut" type="button" role="tab" aria-selected="false" aria-controls="vue-defaut">Envs par défaut</button>
   </nav>
   <div id="vue-build" class="disposition" role="tabpanel" aria-labelledby="onglet-build">
     <section id="liste" aria-label="Environnements"><div class="vide">Lecture des environnements…</div></section>
@@ -224,6 +226,7 @@ PAGE = r"""<!doctype html>
   </div>
 <!--VUE_FICHIERS-->
 <!--VUE_MEMOIRE-->
+<!--VUE_DEFAUT-->
   <section id="suivi" class="carte" aria-live="polite">
     <h2>Suivi</h2>
     <div id="bandeaux"></div>
@@ -1135,6 +1138,7 @@ $("son").onchange = function () {
 
 /*JS_FICHIERS*/
 /*JS_MEMOIRE*/
+/*JS_DEFAUT*/
 
 async function demarre() {
   await chargeEnvs(false);
@@ -1160,3 +1164,6 @@ PAGE = (PAGE.replace("/*CSS_FICHIERS*/", build_page_fichiers.CSS).replace("<!--V
 import build_page_memoire                           # noqa: E402 - onglet « Mémoire et partitions » (A8)
 PAGE = (PAGE.replace("/*CSS_MEMOIRE*/", build_page_memoire.CSS).replace("<!--VUE_MEMOIRE-->", build_page_memoire.HTML)
         .replace("/*JS_MEMOIRE*/", build_page_memoire.JS))
+import build_page_defaut                            # noqa: E402 - onglet « Envs par défaut » (plan default-envs-page)
+PAGE = (PAGE.replace("/*CSS_DEFAUT*/", build_page_defaut.CSS).replace("<!--VUE_DEFAUT-->", build_page_defaut.HTML)
+        .replace("/*JS_DEFAUT*/", build_page_defaut.JS))

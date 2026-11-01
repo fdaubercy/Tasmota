@@ -106,13 +106,14 @@ var F = {env: "", liste: null, dossier: null, coches: {}, berryTouche: false, pr
          tout: null, vus: [], dessin: null};
 
 function montreOnglet(nom) {
-  ["build", "fichiers", "memoire"].forEach(function (o) {     // memoire : build_page_memoire.py (A8)
+  ["build", "fichiers", "memoire", "defaut"].forEach(function (o) {     // memoire : build_page_memoire.py (A8) ; defaut : build_page_defaut.py
     $("vue-" + o).hidden = o !== nom;
     $("onglet-" + o).setAttribute("aria-selected", String(o === nom));
   });
   try { localStorage.setItem("build-onglet", nom); } catch (e) {}
   if (nom === "fichiers") fichiersCartes();
   if (nom === "memoire") mEnvs();
+  if (nom === "defaut") dOuvre();
 }
 $("onglet-build").onclick = function () { montreOnglet("build"); };
 $("onglet-fichiers").onclick = function () { montreOnglet("fichiers"); };

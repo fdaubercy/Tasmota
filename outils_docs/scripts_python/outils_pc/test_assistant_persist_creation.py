@@ -233,10 +233,26 @@ def test_demarrage(t):
     verifie(sortie.returncode, 0, "demarrage : banc_demarrage --dossier vert (aucune erreur)")
 
 
+def test_default_envs(t):
+    racine = depot(t)
+    os.environ["OUTILS_TASMOTA_DOSSIER"] = str(Path(t) / "outils")
+    fichier = racine / "platformio_override.ini"
+    avant = fichier.read_bytes()
+    r = reponses(default_envs=True)
+    verifie(apc.prepare(racine, reponses())["empreinte"] != apc.prepare(racine, r)["empreinte"], True,
+            "default_envs : cocher apres le diff impose un nouveau diff")
+    verifie(fichier.read_bytes(), avant, "default_envs : prepare n'ecrit rien")
+    p, c = cree_ok(racine, r)
+    verifie(any(l.strip() == ENV for l in fichier.read_text(encoding="utf-8").splitlines()), True, "default_envs : case cochee, env actif")
+    verifie(f"+{ENV}" in p["diff"].replace(" ", ""), True, "default_envs : la ligne figure au diff")
+    verifie((Path(c["sauvegarde"]) / "platformio_override.ini").read_bytes(), avant, "default_envs : fichier d'origine sauvegarde")
+    verifie(octets(racine, "platformio_override.ini") != hashlib.sha256(avant).hexdigest(), True, "default_envs : fichier modifie")
+
+
 def principal():
-    garde = sys.argv[sys.argv.index("--garde") + 1] if "--garde" in sys.argv else None
+    garde =sys.argv[sys.argv.index("--garde") + 1] if "--garde" in sys.argv else None
     for test in (test_creation, test_empreinte_perimee, test_build_en_cours, test_refus, test_atomique, test_sans_secret,
-                 test_demarrage):
+                 test_demarrage, test_default_envs):
         with tempfile.TemporaryDirectory() as t:
             test(t)
             if garde and test is test_creation:

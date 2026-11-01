@@ -119,6 +119,7 @@ PAGE = r"""<!doctype html>
     <div class="barre" style="margin:8px 0"><button class="btn" id="c-proposer">Proposer l'identité</button>
       <span id="c-env" class="discret"></span></div>
     <div class="grille" id="c-identite"></div>
+    <label style="display:block;margin-top:8px"><input type="checkbox" id="c-default-envs"> Ajouter à <code>default_envs</code> : compilé aussi par un simple <code>pio run</code></label>
     <div class="barre" style="margin-top:8px"><button class="btn p" id="c-prepare">Voir le diff</button>
       <button class="btn" id="c-creer" disabled>Créer</button></div>
     <div id="c-retours"></div>
@@ -402,7 +403,8 @@ function identiteSaisie() {
 }
 function creationCorps() {
   return {modele: $("c-modele").value, base: $("c-base").value, lieu: $("c-lieu").value.trim(),
-          nom: $("c-nom").value.trim(), identite: identiteSaisie(), define: $("c-define").value.trim()};
+          nom: $("c-nom").value.trim(), identite: identiteSaisie(), define: $("c-define").value.trim(),
+          default_envs: $("c-default-envs").checked};
 }
 function construitIdentite() {
   var g = $("c-identite");

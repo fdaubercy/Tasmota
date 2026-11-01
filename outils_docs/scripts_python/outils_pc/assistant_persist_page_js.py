@@ -18,7 +18,7 @@ var IDENT = ["hostname", "nom_lisible", "nom_template", "client", "ssid_ap", "to
 var parc = null, etape = 0, minuteur = null, numero = 0, modif = "";
 var diff = null, signatureDiff = null, manuel = {}, propositionModele = null;
 var E = {puce: "ESP32S3", base: "", lieu: "", nom: "", ip: "0.0.0.0", heure: "NTP", role: "autonome", maitre: "", id: 0,
-  reseau1: "", reseau2: "", blocs: [], metiers: [""], squelettes: true, elements: {},
+  reseau1: "", reseau2: "", blocs: [], metiers: [""], squelettes: true, default_envs: false, elements: {},
   hostname: "", nom_lisible: "", nom_template: "", client: "", ssid_ap: "", topic: ""};
 
 function el(tag, attrs, texte) {
@@ -191,7 +191,7 @@ function reponses(pourApercu) {
     lieu: E.lieu || (pourApercu ? "lieu" : ""), nom: E.nom || (pourApercu ? "nom" : ""), ip: E.ip, heure: E.heure,
     role: E.role, maitre: esc ? E.maitre : "", id: esc ? (parseInt(E.id, 10) || 0) : 0,
     reseau1: esc ? "" : E.reseau1, reseau2: esc ? "" : E.reseau2, blocs: fermeture(), metiers: noms(),
-    squelettes: !!E.squelettes};
+    squelettes: !!E.squelettes, default_envs: !modif && !!E.default_envs};
   if (Object.keys(E.elements).length) r.elements = E.elements;             // groupe absent = gabarit du modele
   IDENT.forEach(function (k) { r[k] = (E[k] === d[k]) ? "" : E[k]; });      // inchange -> defaut du serveur
   if (modif) { r.define = E.define; r.elements_groupe = E.elements_groupe; }   // relus de la carte, a renvoyer tels quels

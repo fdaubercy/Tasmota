@@ -888,6 +888,27 @@ commande quelle que soit la cible ; même mention « FS aussi flashé » sur la 
   câble, envoi OTA) va d'abord à son terme, puis le reste du lancement est tué ; un second Ctrl+C force l'arrêt.
   L'écriture du port COM est refusée pendant un lancement de la page **et** pendant un build lancé ailleurs.
 
+### Onglet « Envs par défaut » : ce que compile un simple `pio run`
+
+Le bloc `default_envs` de `platformio_override.ini` fixe les envs compilés par un `pio run` sans `-e`. L'onglet le
+modifie sans ouvrir le fichier ; il ne lance rien.
+
+- **Colonnes** : une par puce (Safeboot, ESP32, ESP32-S3, ESP32-P4, Autres), avec les lignes du bloc. Vos cartes et bases
+  qui n'y sont pas apparaissent aussi, marquées « absent du bloc » : cochées, elles y sont ajoutées dans le groupe de
+  leur puce (sinon à la fin du bloc) ; non cochées, rien n'est écrit pour elles.
+- **Modifications en attente** : le futur fichier entier, recalculé à chaque case, lignes changées surlignées. Rien
+  n'est écrit avant « Enregistrer ». Seul l'état commenté ou actif d'une ligne change : commentaires, indentation et
+  fins de ligne restent. Copie d'origine dans `%LOCALAPPDATA%\outils_tasmota\fichiers_berry\sauvegardes\`.
+- **« Cocher ces envs dans l'onglet Build »** remplace la sélection de cet onglet, sans toucher aux actions : on lance
+  ensuite par le bouton habituel. Les cases non enregistrées sont reportées aussi.
+- **À la création d'un env** (pages Fichiers Berry par env et Assistant persist) : la case « Ajouter à `default_envs` »,
+  décochée par défaut, l'y rend actif du même coup, en une seule écriture ; le diff le montre avant « Créer ».
+- **Refus** : liste vide (un `pio run` construirait tous les envs), env inconnu, ligne `default_envs = x` ou ligne à
+  plusieurs envs à corriger à la main, écriture pendant un lancement ou un build, fichier changé depuis l'aperçu.
+- **À savoir** : enregistrer change l'empreinte du projet, donc le `pio run` suivant vide `.pio/build` (les objets
+  inchangés reviennent du cache `.cache`). L'ordre des lignes n'a aucun effet : `pio run` suit l'ordre des sections
+  des `.ini`, c'est pourquoi l'onglet ne propose pas de réordonner.
+
 ### Journaux, mémoire de la page, fichiers réécrits
 
 - Sortie complète de chaque `pio run` (codes ANSI retirés) : `%LOCALAPPDATA%\outils_tasmota\build\journaux\`,

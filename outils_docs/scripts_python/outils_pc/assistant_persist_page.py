@@ -158,6 +158,7 @@ HTML = r"""<!doctype html>
           <details open><summary>Diff (mots de passe masqués)</summary><pre id="diff"></pre></details>
           <details id="details-autoexec"><summary>autoexec.be généré</summary><pre id="autoexec"></pre></details>
         </div>
+        <p id="ligne-default-envs"><label><input type="checkbox" id="f-default-envs" data-k="default_envs"> Ajouter à <code>default_envs</code> : compilé aussi par un simple <code>pio run</code></label></p>
         <p><button class="btn p" id="creer" type="button" disabled>Créer l'env</button>
           <span class="discret" id="creer-aide">Voir le diff d'abord ; toute saisie ensuite le grise.</span></p>
         <p><button class="btn cache" id="supprimer-env" type="button">Supprimer cet env…</button></p>

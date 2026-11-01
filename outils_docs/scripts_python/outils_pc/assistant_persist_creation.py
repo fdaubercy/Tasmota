@@ -237,6 +237,8 @@ def _calcule_brut(racine, r):
     diffs = [_diff(fbi.FICHIER_CENV, l_cenv, cenv), _diff(fbc.FICHIER_H, l_h, h_montre)]
     diffs += [_diff(f"{dossier}/{nom}", [], fbi.decoupe(texte)) for nom, texte in montre.items()]
     res["diff"] = fbc._masque("\n".join(diffs))
+    if r.default_envs:
+        res["diff"] += "\n" + fbc.ajoute_default_envs(racine, env, res)
     return res
 
 
@@ -280,6 +282,8 @@ def cree(racine, r, empreinte_lue, builds_en_cours):
             tr.copie_dossier(tmp, res["dossier"])
             tr.ecrit(fbc.FICHIER_H, fbc._encode(res["h"], eol_h))
             tr.ecrit(fbi.FICHIER_CENV, fbc._encode(res["cenv"], eol_cenv))
+            if res.get("override"):
+                tr.ecrit("platformio_override.ini", res["override"].encode("utf-8"))
     return {"cree": True, "env": res["env"], "dossier": res["dossier"], "diff": res["diff"],
             "avertissements": res["avertissements"], "sauvegarde": str(tr.dossier), "resume": _resume(res, r),
             "liens": {"build": LIEN_BUILD + res["env"], "fichiers": LIEN_FICHIERS + res["env"]}}

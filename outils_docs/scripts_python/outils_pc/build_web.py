@@ -34,6 +34,10 @@ Routes (les POST exigent l'en-tete X-Build: 1 et la meme origine) :
                      un lancement ou un build, si la table est refusee ou si les fichiers ont change depuis le diff)
     POST /continuer  {env, choix: continuer | passer} : reponse a la pause « rebranchez la carte » (409 si
                      aucune pause en cours ou si elle attend un autre env, 400 si choix invalide)
+    GET  /defaut     bloc default_envs de platformio_override.ini : colonnes, actifs, apercu (build_defaut.lit)
+    POST /defaut/diff   {coches} : futur fichier, erreurs, avertissements, empreinte (rien n'est ecrit)
+    POST /defaut/ecrire {coches, empreinte} : ecrit le bloc (409 pendant un lancement ou un build, si la liste est
+                     refusee ou si le fichier a change depuis l'apercu)
 """
 
 import argparse
@@ -49,6 +53,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import acces_web
+import build_defaut
 import build_envs
 import build_fichiers
 import build_memoire
@@ -260,6 +265,12 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                                               serie.builds_en_cours, nom, doublon)
             except LookupError as erreur:
                 raise ValueError(str(erreur)) from None
+        if chemin == "/defaut/diff":                       # rien n'est ecrit
+            return {k: v for k, v in build_defaut.prepare(racine, demande.get("coches")).items() if k != "apres"}
+        if chemin == "/defaut/ecrire":
+            if serie.en_cours():
+                raise RuntimeError("un lancement est en cours : enregistrer après")
+            return build_defaut.ecrit(racine, demande.get("coches"), str(demande.get("empreinte") or ""), serie.builds_en_cours)
         raise LookupError(chemin)
 
     class Gestionnaire(BaseHTTPRequestHandler):
@@ -328,6 +339,8 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                         self._json(build_partitions.tables(racine, dossier, params.get("env", [""])[0]))
                     except LookupError as erreur:
                         raise ValueError(str(erreur)) from None
+                elif url.path == "/defaut":
+                    self._json(build_defaut.lit(racine))
                 elif url.path == "/fichiers":
                     try:
                         self._json(build_fichiers.liste(racine, params.get("env", [""])[0]))

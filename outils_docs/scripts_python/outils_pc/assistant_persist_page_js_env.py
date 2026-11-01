@@ -21,6 +21,7 @@ function carteExiste() {
 function majLibelle() {
   var existe = carteExiste(), mode = !!modif || existe;
   $("creer").textContent = mode ? "Modifier l'environnement" : "Créer l'env";
+  $("ligne-default-envs").classList.toggle("cache", mode);
   $("creer-aide").textContent = modif ? "Voir le diff d'abord : seul l'écart est appliqué aux fichiers de l'env."
     : "Voir le diff d'abord ; toute saisie ensuite le grise.";
   $("bandeau-existe").classList.toggle("cache", !existe);

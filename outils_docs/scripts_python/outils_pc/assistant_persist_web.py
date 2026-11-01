@@ -112,9 +112,9 @@ def reponses_de(demande):
                 raise ValueError("id : entier attendu")
         elif cle in ("elements", "elements_groupe"):
             _forme_elements(cle, valeur)
-        elif cle == "squelettes":
+        elif cle in ("squelettes", "default_envs"):
             if type(valeur) is not bool:
-                raise ValueError("squelettes : booleen attendu")
+                raise ValueError(f"{cle} : booleen attendu")
         elif not isinstance(valeur, str):
             raise ValueError(f"{cle} : chaine attendue")
     if brut["puce"] not in parc.PREFIXES:

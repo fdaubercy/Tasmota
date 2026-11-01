@@ -134,7 +134,7 @@ c'est **voulu** (decide le 2026-10-04 : « laisse ce test comme il est »). Ne p
 decouper : c'est UN fichier a televerser sur chaque carte, qui se prepare et s'explique
 seul au chargement ; le scinder imposerait deux televersements par carte.
 
-`outils_docs/scripts_python/outils_pc/build_page.py` fait **1162 lignes**, et c'est **voulu**
+`outils_docs/scripts_python/outils_pc/build_page.py` fait **1169 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
 vague de corrections finale du meme jour ; 935 le 2026-10-25 avec le panneau « Sortie » et « Effacer puis
 televerser » ; 1038 le meme jour avec la pause « rebranchez la carte » et les panneaux refermes ; 1053 avec
@@ -143,7 +143,8 @@ Fichiers Berry par env ; 1083 le 2026-10-26 avec les cases FS grisees quand l'en
 deja le FS ; 1131 le meme jour avec les sons de fin de lancement et de pause ; 1153 le 2026-10-29 avec le
 branchement de l'onglet « Fichiers », dont le code vit dans `build_page_fichiers.py` ; 1154 le 2026-10-31 avec
 les durees en heures au-dela de 60 min ; 1162 le 2026-11-01 avec le branchement de l'onglet « Mémoire et partitions », dont
-le code vit dans `build_page_memoire.py`). C'est la page
+le code vit dans `build_page_memoire.py` ; 1169 le meme jour avec le branchement de l'onglet « Envs par défaut », dont le
+code vit dans `build_page_defaut.py`). C'est la page
 unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule constante
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
@@ -151,7 +152,7 @@ Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plut
 `build_serie.py` fait **782 lignes** (+14 le 2026-11-01 : table de partitions de l'env ; +19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; +11 le 2026-10-27 : data_dir pose avant pio ; +3 le meme jour : identite de l'image du FS ; +7 le meme jour : duree des zones d'envoi memorisee, A13 ; +6 le 2026-10-28 : OTA par le maitre, A11 ; +9 le meme jour : Sleep 0 du maitre pendant l'envoi ; +30 le 2026-10-29 : action « fichiers » de l'onglet Fichiers ; +16 le meme jour : transport MQTT (A16) ; execution en serie des `pio run` : verrous, arret immediat, attente
 d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
 verrou), et ses bancs `test_build_serie.py` (**1190**), `test_build_page_chrome.py` (**1100**),
-`test_build_ota_fs.py` (**802**), `test_build_web.py` (**721**), ainsi que `test_annuaire.py` (**523**,
+`test_build_ota_fs.py` (**802**), `test_build_web.py` (**752**), ainsi que `test_annuaire.py` (**523**,
 banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
 compteur.
 
@@ -292,12 +293,12 @@ Prise en compte a chaud, sans redemarrer VS Code.
 
 - `tasmota.ino.cpp` portait en ligne 1 un nom de fichier temporaire aleatoire, donc n'etait jamais repris du cache :
   `build/ino_stable.py` rend ce nom fixe (mesure du 2026-11-01 sur la cuve, rien de modifie : 355 s au lieu de 771 s).
-- Un build reecrit `platformio_override.ini` (`adapteParametresPlatformio_override`), et
 - Le pre-script pose `env.Decider("content-timestamp")` et `SetOption("implicit_cache", 1)` : ~20 s au lieu de ~230 s de
   parcours SCons sans rien compiler (mesure du 2026-11-01). Limite d'`implicit_cache` : un NOUVEL en-tete qui en masque un
   autre de meme nom plus loin dans les `-I` n'est vu qu'a la modification d'un fichier de la chaine (banc `build/test_scons_cache.py`).
 - `firmware.elf` ne passe pas par le cache objet : repris du cache, il arrive sans `firmware.map`, et
   `pio-tools/name-firmware.py` echoue par `*** [firmware.bin]` sans message. Un retour sur un env refait donc son edition de liens.
+- Un build reecrit `platformio_override.ini` (`adapteParametresPlatformio_override`), et
   `tasmota/user_config_override.h` (`increment_config_holder`) **seulement** si ce `.h` (hors ligne `CFG_HOLDER`) a
   change depuis le dernier increment, et pour un `pio run` qui compile le firmware (`build/cfg_holder.py`, decide le
   2026-11-01 ; etat commun a tous les envs dans `%LOCALAPPDATA%\outils_tasmota\build\cfg_holder.json` ; le `_persist.json`
@@ -572,8 +573,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   - `build/` — charges par PlatformIO : `pre_utilitaires_platformio.py` (pre-script ; importe les
     `cible_*.py` voisins), `post_lto_parallele.py`, les 7 `cible_*.py` (cibles Custom, qui lancent
     `outils_pc/`), `ota-files-uploader.py`, `update_idf55_framework.py` (appele par le pre-script),
-    `cfg_holder.py` (decide si le pre-script incremente `CFG_HOLDER`, banc `test_cfg_holder.py` ; plan
     `ino_stable.py` (banc `test_ino_stable.py`), `test_scons_cache.py` (banc des reglages SCons du pre-script),
+    `cfg_holder.py` (decide si le pre-script incremente `CFG_HOLDER`, banc `test_cfg_holder.py` ; plan
     `tasks/plans/temps-compilation.md`),
     `verifie_lib_ignore.py` (garde du pre-script, AVANT le scan des dependances : arrete le build si le `lib_ignore`
     qu'un env personnel ajoute a son parent ignore une bibliotheque incluse sous une garde vraie ou incertaine ;
@@ -727,7 +728,10 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     build, `GET /memoire`, `POST /memoire/analyser`), `build_page_memoire.py` (onglet « Mémoire et partitions », modele B ;
     sonde `test_build_page_memoire_chrome.py`), `build_partitions.py` (table de partitions de l'env : validation,
     `partitions/env_<env>.csv`, OTA bloquee jusqu'au prochain effacement ; `POST /partitions/diff|ecrire` ; plan
-    `tasks/plans/temps-compilation.md` A7 a A10),
+    `tasks/plans/temps-compilation.md` A7 a A10), `build_defaut.py` (bloc `default_envs` de `platformio_override.ini`, ce que
+    compile un `pio run` sans -e : `GET /defaut`, `POST /defaut/diff|ecrire` ; banc `test_build_defaut.py`), `build_page_defaut.py`
+    (onglet « Envs par défaut », modele B + futur fichier dessous ; sonde `test_build_page_defaut_chrome.py` ; maquettes
+    `outils_docs/default_envs/` ; plan `tasks/plans/default-envs-page.md` ; case de creation d'env : `fichiers_berry_creation.py::ajoute_default_envs`),
     `build_solidification.py`, et pour les bancs `build_faux_pio.py`, `build_ota_carte_simulee.py`) — page « Build et televersement »
     http://127.0.0.1:7700 (tuile de l'annuaire, groupe Maintenance, hors job : l'annuaire refuse de l'arreter pendant
     un lancement ; tache VS Code « Outil : build et televersement » ; cible Custom « Build et televersement (page web) »

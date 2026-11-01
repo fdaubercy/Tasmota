@@ -53,6 +53,7 @@ class Creation:
     nom: str
     identite: dict = field(default_factory=dict)    # CHAMPS_IDENTITE -> valeur
     define: str = ""                # vide -> define(base, lieu, nom)
+    default_envs: bool = False      # active aussi l'env dans default_envs de platformio_override.ini
 
 
 def nom_env(base, lieu, nom):
@@ -335,6 +336,22 @@ def _masque(diff):
     return diff
 
 
+def ajoute_default_envs(racine, env, res):
+    """Si demande a la creation : res["override"] (futur platformio_override.ini). Un bloc que la page ne sait pas
+    modifier n'empeche pas la creation : signale, l'env reste a ajouter dans l'onglet « Envs par defaut ». Rend le diff."""
+    import build_defaut                               # ici : build_defaut importe fichiers_berry_suppression, qui importe ce module (cycle)
+
+    p = build_defaut.avec_env_cree(racine, env)
+    if p["erreurs"]:
+        res["avertissements"].append("env non ajoute a default_envs : " + " ; ".join(p["erreurs"]))
+        return ""
+    res["override"] = p["apres"]
+    res["avertissements"] += p["avertissements"]
+    avant = _texte(_octets(Path(racine) / build_defaut.FICHIER))
+    return "\n".join(difflib.unified_diff(fbi.decoupe(avant), fbi.decoupe(p["apres"]), build_defaut.FICHIER, build_defaut.FICHIER,
+                                          lineterm="", n=1))
+
+
 def _empreinte(o_cenv, o_h, c):
     """Fichiers lus ET saisie : une saisie changee apres le diff n'est pas ecrite sans nouveau diff."""
     demande = json.dumps(asdict(c), sort_keys=True, ensure_ascii=False).encode("utf-8")
@@ -390,6 +407,8 @@ def _calcule(racine, c):
         diffs.append(difflib.unified_diff(fbi.decoupe(t_auto), fbi.decoupe(res["autoexec"]),
                                           f"{dossier_modele}/autoexec.be", f"{dossier}/autoexec.be", lineterm="", n=1))
     res["diff"] = _masque("\n".join("\n".join(d) for d in diffs))
+    if c.default_envs:
+        res["diff"] += "\n" + ajoute_default_envs(racine, env, res)
     return res
 
 
@@ -436,5 +455,7 @@ def cree(racine, c, empreinte_lue, builds_en_cours):
             tr.ecrit(r["dossier"] + "/autoexec.be", r["autoexec"].encode("utf-8", errors="surrogateescape"))
         for fichier, cle, eol in ((FICHIER_H, "h", r["eol"][1]), (fbi.FICHIER_CENV, "cenv", r["eol"][0])):
             tr.ecrit(fichier, _encode(r[cle], eol))
+        if r.get("override"):
+            tr.ecrit("platformio_override.ini", r["override"].encode("utf-8"))
     return {"cree": True, "env": r["env"], "dossier": r["dossier"], "diff": r["diff"],
             "avertissements": r["avertissements"], "sauvegarde": str(tr.dossier)}

@@ -64,6 +64,7 @@ class Reponses:
     blocs: list = field(default_factory=list)    # ids de modele["blocs"] coches
     metiers: list = field(default_factory=list)  # noms modules.<x> ; le 1er = principal (decision 16)
     squelettes: bool = False
+    default_envs: bool = False  # creation : active aussi l'env dans default_envs de platformio_override.ini
     define: str = ""          # vide -> fichiers_berry_creation.define(base, lieu, nom)
     # identite (Ruling 8) : vide -> identite_par_defaut / derivation (voir l'en-tete)
     hostname: str = ""

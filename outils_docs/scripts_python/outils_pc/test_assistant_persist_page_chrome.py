@@ -248,6 +248,9 @@ def sonde_page(m):
     # etape Verification : diff, bouton grise a la moindre saisie
     clic(cdp, "pastille-4")
     verifie(cdp.js("document.getElementById('creer').disabled"), True, "avant le diff : « Creer l'env » grise")
+    verifie(cdp.js("(() => { const c = document.getElementById('f-default-envs'), avant = reponses(false).default_envs; c.click();"
+                   " const r = [c.offsetParent !== null, avant, reponses(false).default_envs]; c.click(); return r; })()"),
+            [True, False, True], "creation : case default_envs visible, decochee par defaut, envoyee au serveur")
     clic(cdp, "voir-diff")
     verifie(attend(cdp, "document.getElementById('diff').textContent.indexOf('" + ENV + "') >= 0", 20), True, "diff affiche")
     verifie(cdp.js("document.querySelectorAll('#retours .avert.rouge').length"), 0, "diff sans refus")
