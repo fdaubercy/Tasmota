@@ -99,6 +99,9 @@ PAGE = r"""<!doctype html>
   .env > input[type=checkbox]{grid-area:case;width:16px;height:16px;margin:0}
   .env .nom{grid-area:nom;overflow-wrap:anywhere;cursor:pointer;font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
   .env .lien-fichiers{font-family:system-ui,sans-serif;font-size:11px;color:var(--bleu)}
+  .env .m-resume{display:block;background:none;border:none;padding:0;cursor:pointer;font:11px system-ui,sans-serif;color:var(--discret);text-align:left}
+  .env .m-resume:hover{text-decoration:underline}
+  .env .m-resume .o{color:var(--orange);font-weight:600}.env .m-resume .r{color:var(--rouge);font-weight:600}
   .env .methode{grid-area:methode}
   .env .champ{grid-area:champ;width:100%;font:inherit;font-size:13px;padding:3px 6px;background:var(--btn);color:var(--texte);border:1px solid var(--btn-bord);border-radius:4px}
   .env .champ.requis{border-color:var(--rouge);background:var(--rouge-fond)}
@@ -222,6 +225,14 @@ PAGE = r"""<!doctype html>
           à moitié flashée, et des copies temporaires peuvent rester dans data/&lt;lieu&gt;/&lt;carte&gt; (la page ne les efface pas).</div>
         <div id="info-arret" class="discret"></div>
       </div>
+      <div class="carte pile">
+        <button id="purger" class="btn" type="button">Purger le cache de compilation</button>
+        <p class="discret" style="margin:0">Le cache <code>.cache</code> garde chaque fichier compilé, pour le recopier au lieu
+          de le recompiler, surtout après un changement d'env. Il grossit sans fin : la purge libère de la place sur le disque en
+          retirant ce qu'aucune compilation n'a repris depuis 30 jours. Sans risque : un fichier retiré qui resservirait est
+          recompilé une fois. Le détail est demandé avant de supprimer ; refusé pendant une compilation.</p>
+        <div id="purge-etat" class="discret" role="status"></div>
+      </div>
     </aside>
   </div>
 <!--VUE_FICHIERS-->
@@ -274,9 +285,10 @@ function h(balise, attrs) {
 }
 
 // Appel HTTP qui ne leve jamais : {ok, statut, donnees, texte}. Les POST portent X-Build: 1.
-async function appel(url, corps) {
+async function appel(url, corps, delai) {
   var ctrl = new AbortController();
-  var minuteur = setTimeout(function () { ctrl.abort(); }, DELAI_APPEL);
+  delai = delai || DELAI_APPEL;
+  var minuteur = setTimeout(function () { ctrl.abort(); }, delai);
   var opts = {cache: "no-store", signal: ctrl.signal};
   if (corps !== undefined) {
     opts.method = "POST";
@@ -293,9 +305,30 @@ async function appel(url, corps) {
   } catch (e) {
     clearTimeout(minuteur);
     return {ok: false, statut: 0, donnees: null,
-            texte: ctrl.signal.aborted ? "pas de réponse en " + (DELAI_APPEL / 1000) + " s" : "outil injoignable"};
+            texte: ctrl.signal.aborted ? "pas de réponse en " + (delai / 1000) + " s" : "outil injoignable"};
   }
 }
+
+// Purge du cache objet : parcours et suppression de dizaines de milliers de fichiers, d'ou le long delai.
+$("purger").onclick = async function () {
+  var etat = $("purge-etat"), bouton = this;
+  function mo(octets) { return Math.round(octets / 1048576) + " Mo"; }
+  bouton.disabled = true;
+  etat.textContent = "Lecture du cache…";
+  try {
+    var lu = await appel("/cache", undefined, 300000);
+    if (!lu.ok) { etat.textContent = "Lecture impossible : " + lu.texte; return; }
+    var d = lu.donnees;
+    if (!d.objets) { etat.textContent = "Rien à purger : cache de " + mo(d.total) + ", tout a servi depuis " + d.jours + " jours."; return; }
+    if (!confirm("Cache de compilation : " + mo(d.total) + ". Supprimer " + d.objets + " fichiers inutilisés depuis " + d.jours
+        + " jours, soit " + mo(d.liberable) + " ?")) { etat.textContent = ""; return; }
+    etat.textContent = "Purge en cours…";
+    var r = await appel("/cache/purger", {}, 300000);
+    etat.textContent = r.ok ? "Libéré : " + mo(r.donnees.liberes) + "." : "Refusé : " + r.texte;
+  } finally {
+    bouton.disabled = false;
+  }
+};
 
 function duree(s) {
   if (s === null || s === undefined) return "";
@@ -365,6 +398,7 @@ function construitListe(donnees) {
   majTout();
   fichiersCartes();
   mEnvs();
+  mResumes();
 }
 
 function ligneEnv(e) {
@@ -390,11 +424,13 @@ function ligneEnv(e) {
   // Lien vers la page « Fichiers Berry par env » (port 7800), pour les envs ESP32 du cenv (ceux qu'elle propose)
   var fichiers = e.fichiers_berry ? h("a", {"class": "lien-fichiers", href: URL_FICHIERS + "?env=" + encodeURIComponent(e.nom),
     target: "_blank", rel: "noopener", texte: "fichiers", title: "Régler ses fichiers Berry (sur le FS, exclus, solidifiés)"}) : null;
+  var resume = h("button", {"class": "m-resume", type: "button", hidden: true});
+  resume.onclick = function () { mOuvre(e.nom); };
   var ligne = h("div", {"class": "env", "data-env": e.nom}, caseEnv,
     h("span", {"class": "nom"}, h("label", {"for": "env-" + e.nom, texte: e.nom, title: e.firmware || ""}),
-      fichiers ? " " : null, fichiers),
+      fichiers ? " " : null, fichiers, resume),
     h("span", {"class": "methode", role: "group", "aria-label": "Méthode d'envoi"}, bCom, bOta), champ, notes);
-  ui[e.nom] = {ligne: ligne, caseEnv: caseEnv, bCom: bCom, bOta: bOta, champ: champ, notes: notes};
+  ui[e.nom] = {resume: resume, ligne: ligne, caseEnv: caseEnv, bCom: bCom, bOta: bOta, champ: champ, notes: notes};
   majLigne(e.nom);
   return ligne;
 }
@@ -781,6 +817,7 @@ function traiteEvenement(e, rejeu) {
     if (L && L.carte && L.carte.env === e.env) L.carte = null;
     planifie(e.env);
   } else if (e.type === "fin") {
+    if (!rejeu) mResumes();
     assureL();
     L.fin = e;
     L.attente = null;

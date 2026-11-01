@@ -288,6 +288,48 @@ def test_defaut(b):
     fichier.unlink()
 
 
+def test_memoire_carte(b):
+    """Lire sur la carte : adresse validee, refus pendant un envoi, carte muette = reponse normale, resume sans analyse."""
+    verifie(b.json("GET", "/memoire/resume")[0], 200, "memoire : resume lisible")
+    verifie(b.json("POST", "/memoire/carte", {"env": A, "adresse": "evil.example/x"})[0], 400, "memoire carte : adresse invalide -> 400")
+    verifie(b.json("POST", "/memoire/carte", {"env": A, "adresse": ""})[0], 400, "memoire carte : adresse vide -> 400")
+    envoi, b.serie.envoi_en_cours = b.serie.envoi_en_cours, lambda: True
+    try:
+        verifie(b.json("POST", "/memoire/carte", {"env": A, "adresse": "127.0.0.1"})[0], 409, "memoire carte : envoi en cours -> 409")
+    finally:
+        b.serie.envoi_en_cours = envoi
+    statut, lu = b.json("POST", "/memoire/carte", {"env": A, "adresse": "127.0.0.1"})
+    verifie((statut, lu["joignable"], "muette" in lu["message"]), (200, False, True), "memoire carte : rien n'ecoute -> 200, message")
+
+
+def test_cache(b):
+    """Purge du cache objet : etat, refus pendant un lancement ou un build, seuls les objets de plus de 30 jours partent."""
+    cache = b.racine / ".cache"
+    verifie(b.json("GET", "/cache")[1]["total"], 0, "cache : absent -> 0")
+    (cache / "ab").mkdir(parents=True)
+    (cache / "config").write_bytes(b"x")
+    vieux, recent = cache / "ab" / "vieux", cache / "ab" / "recent"
+    vieux.write_bytes(b"x" * 1000)
+    recent.write_bytes(b"x" * 10)
+    os.utime(vieux, (time.time() - 40 * 86400,) * 2)
+    verifie(b.json("GET", "/cache")[1], {"total": 1010, "objets": 1, "liberable": 1000, "jours": 30}, "cache : etat lu, config exclu")
+    try:
+        b.serie.builds_en_cours = lambda: ["pio run -e x"]
+        verifie(b.json("POST", "/cache/purger", {})[0], 409, "cache : build en cours -> 409")
+        b.serie.builds_en_cours = lambda: None
+        verifie(b.json("POST", "/cache/purger", {})[0], 409, "cache : detection impossible -> 409")
+    finally:
+        b.serie.builds_en_cours = lambda: []
+    en_cours, b.serie.en_cours = b.serie.en_cours, lambda: True
+    try:
+        verifie(b.json("POST", "/cache/purger", {})[0], 409, "cache : lancement en cours -> 409")
+    finally:
+        b.serie.en_cours = en_cours
+    verifie(vieux.exists(), True, "cache : refus -> rien supprime")
+    verifie(tuple(b.json("POST", "/cache/purger", {})), (200, {"liberes": 1000}), "cache : temoin, purge -> 1000 octets liberes")
+    verifie((vieux.exists(), recent.exists(), (cache / "config").exists()), (False, True, True), "cache : seul le vieil objet part")
+
+
 def test_journal_env_exact():
     """M3 : le journal d'un env ne melange pas celui d'un env dont le nom le prolonge (x-a / x-a-b)."""
     with tempfile.TemporaryDirectory() as t:
@@ -730,7 +772,7 @@ def principal():
         b = Banc(Path(t))
         try:
             for test in (test_routes_locales, test_page_contient, test_envs_fs_avec_firmware, test_post_sans_entete_refuse, test_distant_sans_jeton_refuse,
-                         test_corps_borne, test_port_ecrit_puis_relu, test_port_refuse_pendant_build_externe, test_defaut,
+                         test_corps_borne, test_port_ecrit_puis_relu, test_port_refuse_pendant_build_externe, test_defaut, test_cache, test_memoire_carte,
                          test_lancement, test_flux_et_journal, test_journal_dernier_lancement, test_arret,
                          test_sortie_en_direct, test_erase_upload, test_fichiers, test_continuer):
                 test(b)

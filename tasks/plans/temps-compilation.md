@@ -128,7 +128,7 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
 - [x] Mesures enregistrées dans `%LOCALAPPDATA%\outils_tasmota\build\memoire\<env>.json` — preuve : `build_memoire.py::enregistre`, `::derniere`, cas du banc
 - [x] Analyse automatique après chaque compilation réussie — preuve : `build_serie.py::Serie._execute_env` ; `test_build_serie.py` VERT (effective au prochain redémarrage de la page)
 - [x] Analyse lancée seule — preuve : `build_web.py` `POST /memoire/analyser` et `GET /memoire` ; `test_build_web.py` VERT
-- [ ] Lecture sur la carte : `Status 4` et `UfsSize`/`UfsFree` (PSRAM, tas, FS réel), par le transport HTTP de `build_ota_http.py` ; carte muette = message, pas d'échec
+- [x] Lecture sur la carte — preuve : `build_memoire.py::lit_carte`, `test_build_memoire.py` VERT, réponses réelles du P4 du 01/11 ; `Status 4` et `UfsSize`/`UfsFree` (PSRAM, tas, FS réel), par le transport HTTP de `build_ota_http.py` ; carte muette = message, pas d'échec
 - [x] Banc `test_build_memoire.py` — preuve : 16 cas VERTS sur des extraits de vrais journaux P4 et S3, 6 mutants tués (un mutant équivalent écarté, et le test mort qu'il révélait supprimé)
 
 ## A8 — Onglet « Mémoire et partitions », modèle B (à faire plus tard)
@@ -136,8 +136,8 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
 - [x] Liste des envs — preuve : `build_page_memoire.py` (`mEnvs`), sonde `test_build_page_memoire_chrome.py` VERTE (22 vérifications) (env par défaut, pas d'env amont) ; par défaut le premier env coché sur la page d'accueil ; en choisir un autre ne change pas les cases
 - [x] Jauges — preuve : sonde `test_build_page_memoire_chrome.py` VERTE (22 vérifications) (7 zones, 73,0 %, FS marqué ≈) ; jauges par zone (capacité, occupé, libre, date de l'analyse), orange à 85 %, rouge à 95 %
 - [x] Barre et lignes — preuve : sonde `test_build_page_memoire_chrome.py` VERTE (22 vérifications) (app0 +64 Ko -> FS en 0x4C0000, nvs/otadata/app0 non supprimables) ; barre de la flash et une ligne par partition : case de suppression, curseur par pas de 64 Ko, champ en Ko, occupé
-- [ ] Résumé sur chaque env de la page d'accueil (app0, FS, DIRAM), avec les mêmes seuils ; un clic ouvre l'onglet
-- [ ] Bouton « Analyser » et bouton « Lire sur la carte »
+- [x] Résumé sur chaque env de la page d'accueil (app0, FS, DIRAM), avec les mêmes seuils ; un clic ouvre l'onglet — preuve : `build_memoire.py::resume`, `build_page_memoire.py::mResumes`, sonde `test_build_page_memoire_chrome.py` VERTE
+- [x] Bouton « Analyser » et bouton « Lire sur la carte » — preuve : sonde `test_build_page_memoire_chrome.py` VERTE (sans carte : message) ; `test_build_web.py` VERT
 - [x] Sonde Chrome — preuve : sonde `test_build_page_memoire_chrome.py` VERTE (22 vérifications), dépôt d'essai temporaire, écriture jusqu'au bout puis OTA refusée (409) ; sonde Chrome `test_build_page_memoire_chrome.py`, exécutée dans un vrai navigateur ; aucune écriture dans le dépôt réel
 
 ## A9 — Écrire la table de partitions d'un env (à faire plus tard)
@@ -158,7 +158,7 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
   (vide : `env_<env>.csv` ; saisi : `<nom>.csv` ; table identique à un fichier de `partitions/`, `env_*` compris : proposée, refus possible ; fichier nommé existant jamais réécrit)
 - [x] Import et export d'un CSV, passés par la même validation — preuve : `build_partitions.py::lit_import`, `test_build_partitions.py` VERT, sonde `test_build_page_memoire_chrome.py` VERT
 - [x] Banc — preuve : `test_build_partitions.py` VERT, 27 cas, 10 mutants tués, deux vraies tables reproduites octet pour octet ; banc `test_build_partitions.py` (copies temporaires du cenv, relues par `ProjectConfig`, avec mutants) ; table produite identique octet pour octet à `esp32_partition_app3904k_fs11584k.csv` sans modification
-- [ ] Essai réel par l'utilisateur sur une carte, par câble : démarrage, FS et Berry vérifiés, puis OTA de nouveau permise
+- [x] Essai réel par l'utilisateur sur une carte, par câble : démarrage, FS et Berry vérifiés, puis OTA de nouveau permise — preuve : fait et déclaré par l'utilisateur le 01/11
 
 ## A10 — Annuaire et documentation de la fonction (à faire plus tard)
 - [x] Descriptif de la tuile — preuve : `annuaire_registre.py` (entrée `build`), `test_annuaire.py` VERT ; descriptif de la tuile « Build et téléversement » (`annuaire_registre.py`) : occupation de la mémoire et réglage des partitions par env, écrit quand la fonction existe ; `test_annuaire.py` vert

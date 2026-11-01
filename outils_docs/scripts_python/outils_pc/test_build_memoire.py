@@ -72,6 +72,10 @@ MUTANTS = {
     "extends ignore": ('opt("board_build.partitions") or ', ""),
     "FS sans arrondi au bloc": ("-(-f.stat().st_size // BLOC_FS) * BLOC_FS", "f.stat().st_size"),
     "suffixe K ignore": ('{"": 1, "k": 1024, "m": 1024 * 1024}[m.group(2).lower()]', "1"),
+    "carte muette non rattrapee": ("except (OSError, http.client.HTTPException, RuntimeError, ValueError, KeyError, AttributeError) as erreur:", "except KeyError as erreur:"),
+    "identite non controlee": ('if ":" in adresse:', "if False:"),
+    "FS : libre pris pour occupe": ('(taille - libre) * 1024', "libre * 1024"),
+    "resume : DIRAM ignoree": ('z["zone"] == "DIRAM"', 'z["zone"] == "IRAM"'),
     "offset vide non aligne": ('alignement = 0x10000 if cols[1] == "app" else 0x1000', "alignement = 1"),
 }
 
@@ -92,6 +96,53 @@ def faux_depot(d, safeboot):
     (fs / "sd").mkdir(parents=True)
     (fs / "_persist.json").write_bytes(b"x" * 5000)                  # 2 blocs
     (fs / "sd" / "page.html").write_bytes(b"x" * 10)                 # 1 bloc
+
+
+def cas_carte(m):
+    """resume et lit_carte, avec une carte simulee (reponses reelles du P4 du 2026-11-01)."""
+    res = []
+    reponses = {"Status 4": '{"StatusMEM":{"Heap":231,"PsrMax":32768,"PsrFree":32587}}', "Status 5": '{"StatusNET":{"Hostname":"SERVEUR-GARAGE"}}',
+                "UfsSize": '{"UfsSize":11584}', "UfsFree": '{"UfsFree":10772}'}
+    jointes = []
+    faux = lambda _a, c, _d: reponses[c]
+    joint = lambda *a: jointes.append(a[0])
+    lu = m.lit_carte("192.168.0.43", None, "e", faux, joint)
+    res.append(("carte : FS, PSRAM, tas en octets", (lu["joignable"], lu["hote"], lu["fs"], lu["psram"], lu["tas_libre"], jointes) ==
+                (True, "SERVEUR-GARAGE", {"u": 812 * 1024, "t": 11584 * 1024}, {"u": 181 * 1024, "t": 32768 * 1024}, 231 * 1024, [])))
+    m.lit_carte("192.168.0.43:8082", None, "e", faux, joint)
+    res.append(("carte : esclave IP:port, identite controlee d'abord", jointes == ["192.168.0.43:8082"]))
+    sans = dict(reponses, **{"Status 4": '{"StatusMEM":{"Heap":100,"PsrMax":0,"PsrFree":0}}', "UfsSize": '{"UfsSize":0}'})
+    lu = m.lit_carte("1.2.3.4", None, "e", lambda _a, c, _d: sans[c], joint)
+    res.append(("carte : ni PSRAM ni FS -> absents", (lu["joignable"], lu["psram"], lu["fs"]) == (True, None, None)))
+
+    def muette(*_):
+        raise OSError("timed out")
+
+    lu = m.lit_carte("1.2.3.4", None, "e", muette, joint)
+    res.append(("carte muette : message, pas d'exception", (lu["joignable"], "muette" in lu["message"]) == (False, True)))
+    lu = m.lit_carte("1.2.3.4", None, "e", lambda *_: '{"Command":"Unknown"}', joint)
+    res.append(("safeboot (Unknown) : message, pas d'exception", (lu["joignable"], "safeboot" in lu["message"]) == (False, True)))
+
+    def autre_carte(*_):
+        raise RuntimeError("mene a une autre carte")
+
+    lu = m.lit_carte("1.2.3.4:8080", None, "e", faux, autre_carte)
+    res.append(("esclave : autre carte derriere le port -> rien n'est lu", (lu["joignable"], lu["fs"], "autre carte" in lu["message"]) == (False, None, True)))
+
+    with tempfile.TemporaryDirectory() as d:
+        res.append(("resume : aucune analyse", m.resume(d) == {}))
+        m.enregistre(d, "x", {"partitions": [{"sous_type": "ota_0", "taille": 100, "utilise": 73, "estime": False},
+                                             {"sous_type": "spiffs", "taille": 200, "utilise": 20, "estime": True},
+                                             {"sous_type": "factory", "taille": 9, "utilise": 9, "estime": False}],
+                              "ram": [{"zone": "IRAM", "utilise": 1, "total": 2}, {"zone": "DIRAM", "utilise": 3, "total": 4}]})
+        m.enregistre(d, "sans", {"partitions": [{"sous_type": "ota_0", "taille": 100, "utilise": None}], "ram": []})
+        m.enregistre(d, "ram", {"partitions": [], "ram": [{"zone": "RAM", "utilise": 5, "total": 6}]})
+        (Path(d) / "memoire" / "casse.json").write_text("{", encoding="utf-8")
+        r = m.resume(d)
+        res.append(("resume : app0, FS estime, DIRAM ; rien d'autre", r.get("x") == {"app0": {"u": 73, "t": 100, "estime": False},
+                    "FS": {"u": 20, "t": 200, "estime": True}, "DIRAM": {"u": 3, "t": 4, "estime": False}}))
+        res.append(("resume : env sans mesure ou illisible absent ; RAM en secours", sorted(r) == ["ram", "x"] and r["ram"]["DIRAM"]["u"] == 5))
+    return res
 
 
 def cas(m):
@@ -143,6 +194,7 @@ def cas(m):
         p = m.lit_csv((DEPOT / "partitions" / nom).read_text(encoding="utf-8"))
         fin = p[-1]["debut"] + p[-1]["taille"]
         verifie(f"vraie table {nom} : 5 partitions, fin {fin // 1048576} Mo", len(p) == 5 and fin in (4 * 1048576, 16 * 1048576))
+    res.extend(cas_carte(m))
     return res
 
 

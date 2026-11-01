@@ -662,6 +662,7 @@ un build.
 - **Le cache grossit sans fin** (17 Go le 2026-11-01) :
   `python outils_docs/scripts_python/maintenance/purge_cache_build.py --dry-run` montre ce que libérerait la
   suppression des objets inutilisés depuis 30 jours ; sans `--dry-run`, il les supprime (refus pendant un build).
+  Même purge sur la page Build (:7700), onglet Build : bouton « Purger le cache de compilation », avec confirmation.
 - **Windows Defender** : `outils_docs/scripts_python/maintenance/exclusions_defender.ps1`, en administrateur,
   exclut `.pio`, `.cache` et `~/.platformio` de l'analyse en temps réel.
 
@@ -813,6 +814,12 @@ sans toucher aux cases.
   l'env pointe vers lui et aucun CSV n'est créé (c'est aussi le retour à la table par défaut) (copie d'origine dans `%LOCALAPPDATA%\outils_tasmota\fichiers_berry\sauvegardes\`).
 - **Importer, exporter, ajouter** : « Importer un CSV » passe par les mêmes contrôles (adresses contiguës, pas de colonne
   Flags), « Exporter en CSV » télécharge la table réglée, « Ajouter la partition » l'insère avant le FS, 64 Ko pris sur lui.
+- **Résumé dans l'onglet Build** : sous le nom de chaque env déjà analysé, `app0`, `FS` et `DIRAM` en %, en orange à 85 %, en
+  rouge à 95 % comme les jauges. Un clic ouvre cet onglet sur l'env.
+- **Lire sur la carte** : interroge la carte par le réseau, en lecture seule (`Status 4`, `Status 5`, `UfsSize`, `UfsFree`), à
+  l'adresse de sa ligne dans l'onglet Build : FS réel (le `≈` du dessus est une estimation), PSRAM, tas libre, nom de la carte
+  lue. Rien n'est enregistré. Carte muette : un message. Esclave joint par le maître : redirection posée et identité vérifiée
+  d'abord. Refusé pendant un envoi.
 - **Nom du fichier** : facultatif. Vide, la table part dans `partitions/env_<env>.csv` ; saisi, dans `partitions/<nom>.csv`.
   Un fichier nommé qui existe déjà n'est jamais réécrit, ni un `env_` qui sert aussi à un autre env. « Voir le diff » compare
   la table à TOUS les fichiers de `partitions/` : si elle est identique à l'un d'eux, la page le propose ; OK = l'env pointe

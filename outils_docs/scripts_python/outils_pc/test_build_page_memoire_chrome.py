@@ -12,6 +12,7 @@ dans le depot d'essai, puis l'OTA de A doit etre refusee par POST /lancer.
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -207,6 +208,57 @@ def sonde_ota_bloquee(m):
     s.verifie(texte.startswith("409") and "OTA bloquée" in texte, True, "lancer : OTA de A refusee apres l'ecriture de la table")
 
 
+def sonde_resume(m, capture=None):
+    """Resume d'un env sur l'onglet Build ; un clic ouvre l'onglet sur cet env ; Lire sur la carte sans carte : message."""
+    cdp = m.cdp
+    m.ouvre()
+    clic(cdp, "#onglet-build")                # la page rouvre le dernier onglet
+    selecteur = f"[data-env='{A}'] .m-resume"
+    s.attend(cdp, f"document.querySelector(\"{selecteur}\") && !document.querySelector(\"{selecteur}\").hidden", 10)
+    texte = cdp.js(f"document.querySelector(\"{selecteur}\").textContent")
+    # 72 % et non 73 % : sonde_onglet vient d'agrandir app0 de 64 Ko et d'ecrire la table
+    s.verifie(("app0 72 %" in texte, "FS ≈" in texte, "DIRAM" in texte), (True, True, True), f"resume : app0, FS estime, DIRAM ({texte})")
+    s.verifie(cdp.js("[mNiveau(84.9), mNiveau(85), mNiveau(94.9), mNiveau(95)].join()"), ",o,o,r", "resume : memes seuils que les jauges")
+    # Purge : depot d'essai sans .cache, puis un vieil objet (la confirmation repond oui) : seul le depot d'essai est touche
+    clic(cdp, "#purger")
+    s.attend(cdp, "document.getElementById('purge-etat').textContent.includes('Rien à purger')", 10)
+    vieux = m.depot / ".cache" / "ab" / "vieux"
+    vieux.parent.mkdir(parents=True)
+    vieux.write_bytes(b"x" * 2097152)
+    os.utime(vieux, (time.time() - 40 * 86400,) * 2)
+    cdp.js("window.confirm = texte => { window.texteConfirme = texte; return true; }")
+    clic(cdp, "#purger")
+    s.attend(cdp, "document.getElementById('purge-etat').textContent.includes('Libéré')", 10)
+    s.verifie((vieux.exists(), cdp.js("document.getElementById('purge-etat').textContent"), "2 Mo" in cdp.js("window.texteConfirme")),
+              (False, "Libéré : 2 Mo.", True), "purge : confirmation chiffree puis objet supprime")
+    if capture:
+        cdp.capture(Path(capture) / "build-accueil.png")
+    autres = cdp.js("[...document.querySelectorAll('.m-resume')].filter(b => !b.hidden).length")
+    s.verifie(autres, 1, "resume : seul l'env analyse en a un")
+    clic(cdp, selecteur)
+    s.attend(cdp, f"!document.getElementById('vue-memoire').hidden && document.getElementById('m-env').value === '{A}' "
+                  "&& document.querySelectorAll('#m-parts tr').length > 0", 10)
+    s.verifie(cdp.js("document.getElementById('vue-build').hidden"), True, "resume : le clic ouvre l'onglet Memoire sur l'env")
+    clic(cdp, "#m-carte")
+    zone = cdp.js("document.getElementById('m-sur-carte').textContent")
+    s.verifie("Adresse de la carte inconnue" in zone, True, f"lire sur la carte : sans adresse, message ({zone[:60]})")
+    # Reponse simulee (valeurs reelles du P4), l'appel reseau a son banc : test_build_web.py
+    cdp.js("""(() => { choix[M.env].ip = '192.168.0.43'; window.vraiAppel = appel; appel = async (u, c, d) => u !== '/memoire/carte' ? vraiAppel(u, c, d) : ({ok: true, donnees: {joignable: true,
+        adresse: '192.168.0.43', hote: 'SERVEUR-GARAGE', date: 1793000000, tas_libre: 231 * 1024, fs: {u: 812 * 1024, t: 11584 * 1024},
+        psram: {u: 181 * 1024, t: 32768 * 1024}}}); })()""")
+    clic(cdp, "#m-carte")
+    s.attend(cdp, "document.querySelectorAll('#m-sur-carte .m-zone').length === 2", 5)
+    zone = cdp.js("document.getElementById('m-sur-carte').textContent")
+    s.verifie(("FS sur la carte" in zone, "7,0 %" in zone, "PSRAM" in zone, "SERVEUR-GARAGE" in zone, "tas libre 231" in zone), (True,) * 5,
+              f"lire sur la carte : jauges et nom de la carte ({zone[:120]})")
+    cdp.js("appel = async (u, c, d) => u !== '/memoire/carte' ? vraiAppel(u, c, d) : ({ok: true, donnees: {joignable: false, message: 'carte muette ou en safeboot'}})")
+    clic(cdp, "#m-carte")
+    s.attend(cdp, "document.getElementById('m-sur-carte').textContent.includes('muette')", 5)
+    s.verifie(cdp.js("document.querySelectorAll('#m-sur-carte .m-zone').length"), 0, "lire sur la carte : carte muette, message sans jauge")
+    cdp.js("appel = window.vraiAppel")
+    s.verifie(cdp.erreurs(), [], "resume : aucune erreur JavaScript")
+
+
 def principal():
     options = argparse.ArgumentParser(description="Sonde Chrome de l'onglet Mémoire et partitions de la page build.")
     options.add_argument("--capture", help="dossier ou ecrire les captures PNG")
@@ -217,6 +269,7 @@ def principal():
         m.demarre(False)
         prepare_depot(m)
         sonde_onglet(m, args.capture)
+        sonde_resume(m, args.capture)
         sonde_ota_bloquee(m)
     except FileNotFoundError as erreur:
         print(f"BLOQUE : {erreur}")

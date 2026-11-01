@@ -50,9 +50,11 @@ HTML = r"""
       <span style="flex:1"></span>
       <span id="m-date" class="discret"></span>
       <button id="m-analyser" class="btn p" type="button" title="Relit le dernier build de l'env (aucune compilation)">Analyser</button>
+      <button id="m-carte" class="btn" type="button" title="Interroge la carte par le réseau (lecture seule) : FS réel, tas, PSRAM">Lire sur la carte</button>
     </div>
     <div class="carte"><h2>Occupation, selon les capacités paramétrées</h2>
-      <div id="m-zones" class="m-grille"></div><p id="m-notes" class="discret" style="margin:6px 0 0"></p></div>
+      <div id="m-zones" class="m-grille"></div><p id="m-notes" class="discret" style="margin:6px 0 0"></p>
+      <div id="m-sur-carte" role="status" style="margin-top:8px"></div></div>
     <div class="carte" style="margin-top:10px"><h2>Régler chaque partition</h2>
       <div class="m-actions" style="margin:0 0 6px">
         <label>Partir d'une table existante <select id="m-table" aria-label="Table existante"></select></label>
@@ -134,9 +136,10 @@ function mRegle(p, v) {
   M.empreinte = "";
   mRendu();
 }
+function mNiveau(pc) { return pc >= 95 ? "r" : pc >= 85 ? "o" : ""; }
 function mJauge(u, t) {
   var pc = t ? 100 * u / t : 0;
-  return h("div", {"class": "m-jauge"}, h("i", {"class": pc >= 95 ? "r" : pc >= 85 ? "o" : "", style: "width:" + Math.min(100, pc) + "%"}));
+  return h("div", {"class": "m-jauge"}, h("i", {"class": mNiveau(pc), style: "width:" + Math.min(100, pc) + "%"}));
 }
 function mPourcent(u, t) { return t ? (100 * u / t).toFixed(1).replace(".", ",") + " %" : "—"; }
 function mZone(nom, couleur, u, t, estime) {
@@ -166,7 +169,56 @@ $("m-env").onchange = function () {
   mCharge($("m-env").value);
 };
 
+// Resume de chaque env de l'onglet Build : dernieres analyses enregistrees, memes seuils que les jauges ; clic = onglet.
+async function mResumes() {
+  var r = await appel("/memoire/resume");
+  if (!r.ok || !r.donnees) return;
+  Object.keys(ui).forEach(function (nom) {
+    var b = ui[nom].resume, z = r.donnees[nom];
+    b.textContent = "";
+    b.hidden = !z || parNom[nom].famille === "amont";
+    if (b.hidden) return;
+    b.title = "Occupation d'après la dernière analyse : ouvrir l'onglet Mémoire et partitions";
+    ["app0", "FS", "DIRAM"].forEach(function (cle) {
+      if (!z[cle]) return;
+      var pc = 100 * z[cle].u / z[cle].t;
+      if (b.childNodes.length) b.appendChild(document.createTextNode(" · "));
+      b.appendChild(h("span", {"class": mNiveau(pc), texte: cle + " " + (z[cle].estime ? "≈ " : "") + Math.round(pc) + " %"}));
+    });
+  });
+}
+function mOuvre(env) {
+  $("onglet-memoire").click();
+  $("m-env").value = env;
+  $("m-env-note").textContent = "choisi depuis l'onglet Build";
+  mCharge(env);
+}
+
+$("m-carte").onclick = async function () {
+  if (!M.env) return;
+  var zone = $("m-sur-carte"), env = M.env, bouton = this;
+  var c = choix[env], adresse = (c && c.ip) || (parNom[env] && parNom[env].ip) || "";
+  if (!adresse) { zone.textContent = "Adresse de la carte inconnue : la saisir sur la ligne de l'env, onglet Build (méthode OTA)."; return; }
+  bouton.disabled = true;
+  zone.textContent = "Lecture sur la carte…";
+  var r = await appel("/memoire/carte", {env: env, adresse: adresse}, 60000);
+  bouton.disabled = false;
+  if (env !== M.env) return;
+  zone.textContent = "";
+  if (!r.ok || !r.donnees.joignable) {
+    zone.appendChild(h("p", {"class": "discret", style: "margin:0", texte: r.ok ? r.donnees.message : "Lecture refusée : " + r.texte}));
+    return;
+  }
+  var d = r.donnees, grille = h("div", {"class": "m-grille"});
+  if (d.fs) grille.appendChild(mZone("FS sur la carte", M_COUL.spiffs, d.fs.u, d.fs.t, false));
+  if (d.psram) grille.appendChild(mZone("PSRAM", "#b07ad9", d.psram.u, d.psram.t, false));
+  zone.appendChild(grille);
+  zone.appendChild(h("p", {"class": "discret", style: "margin:6px 0 0", texte: "Lu sur " + (d.hote || "?") + " (" + d.adresse + "), "
+    + dateLisible(d.date) + (d.tas_libre == null ? "" : " · tas libre " + mFmt(mKo(d.tas_libre))) + (d.psram ? "" : " · pas de PSRAM")}));
+};
+
 async function mCharge(env, analyser) {
+  if (env !== M.env) $("m-sur-carte").textContent = "";
   var n = ++M.lecture;
   M.env = env;
   $("m-date").textContent = analyser ? "Analyse…" : "Lecture…";

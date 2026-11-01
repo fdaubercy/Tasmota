@@ -14,6 +14,7 @@ page build : .claude/hooks/garde_build.py::builds_en_cours).
 
 --dry-run : affiche la taille du cache et ce qui serait libere, sans rien supprimer (permis pendant un build).
 Code de sortie : 0 = fait, 1 = refus (build en cours, detection impossible, cache absent).
+Meme purge depuis la page build : routes /cache et /cache/purger de outils_pc/build_web.py.
 """
 import argparse
 import os
@@ -23,6 +24,7 @@ from pathlib import Path
 
 DEPOT = Path(__file__).resolve().parents[3]
 CACHE = DEPOT / ".cache"
+JOURS_DEFAUT = 30
 
 
 def builds_en_cours_defaut():
@@ -52,13 +54,25 @@ def inventaire(cache, jours, maintenant=None):
     return total, vieux
 
 
+def supprime(vieux):
+    """Supprime les objets de `inventaire` ; rend les octets liberes."""
+    liberes = 0
+    for chemin, octets in vieux:
+        try:
+            os.remove(chemin)
+            liberes += octets
+        except OSError:                              # objet pris entre-temps : il reste, sans gravite
+            pass
+    return liberes
+
+
 def mo(octets):
     return f"{octets / 1048576:.0f} Mo"
 
 
 def main(arguments=None, cache=CACHE, builds_en_cours=builds_en_cours_defaut):
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p.add_argument("--jours", type=int, default=30, help="age minimal (derniere utilisation) d'un objet supprime")
+    p.add_argument("--jours", type=int, default=JOURS_DEFAUT, help="age minimal (derniere utilisation) d'un objet supprime")
     p.add_argument("--dry-run", action="store_true", help="n'affiche que ce qui serait libere")
     args = p.parse_args(arguments)
     if args.jours < 1:
@@ -81,14 +95,7 @@ def main(arguments=None, cache=CACHE, builds_en_cours=builds_en_cours_defaut):
     if args.dry_run:
         print("--dry-run : rien n'est supprime")
         return 0
-    supprimes = 0
-    for chemin, octets in vieux:
-        try:
-            os.remove(chemin)
-            supprimes += octets
-        except OSError:                              # objet pris entre-temps : il reste, sans gravite
-            pass
-    print(f"Libere : {mo(supprimes)}")
+    print(f"Libere : {mo(supprime(vieux))}")
     return 0
 
 

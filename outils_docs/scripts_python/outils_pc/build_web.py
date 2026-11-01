@@ -28,12 +28,17 @@ Routes (les POST exigent l'en-tete X-Build: 1 et la meme origine) :
     POST /arreter    {immediat: bool}
     POST /memoire/analyser {env} : relit le dernier build de l'env (aucun pio, permis pendant un build), enregistre
                      et rend l'analyse ; une serie l'enregistre aussi apres chaque compilation reussie
+    GET  /memoire/resume  app0, FS et DIRAM de chaque analyse enregistree (build_memoire.resume)
+    POST /memoire/carte {env, adresse} : FS reel, tas et PSRAM lus sur la carte (409 pendant un envoi, 400 si adresse
+                     invalide ; carte muette : 200, joignable faux)
     POST /partitions/diff   {env, partitions: [{nom, type, sous_type, taille}]} : table validee, diff, erreurs,
                      avertissements, empreinte (rien n'est ecrit ; build_partitions.prepare)
     POST /partitions/ecrire {env, partitions, empreinte} : CSV de l'env et cenv, puis OTA de l'env bloquee (409 pendant
                      un lancement ou un build, si la table est refusee ou si les fichiers ont change depuis le diff)
     POST /continuer  {env, choix: continuer | passer} : reponse a la pause « rebranchez la carte » (409 si
                      aucune pause en cours ou si elle attend un autre env, 400 si choix invalide)
+    GET  /cache      cache objet .cache : taille, objets inutilises depuis 30 jours et leur taille (rien n'est supprime)
+    POST /cache/purger {} : supprime ces objets (409 pendant un lancement ou un build)
     GET  /defaut     bloc default_envs de platformio_override.ini : colonnes, actifs, apercu (build_defaut.lit)
     POST /defaut/diff   {coches} : futur fichier, erreurs, avertissements, empreinte (rien n'est ecrit)
     POST /defaut/ecrire {coches, empreinte} : ecrit le bloc (409 pendant un lancement ou un build, si la liste est
@@ -60,7 +65,11 @@ import build_memoire
 import build_partitions
 import build_serie
 
+sys.path.append(str(Path(__file__).resolve().parents[1] / "maintenance"))
+import purge_cache_build                                  # noqa: E402 - seul import hors de outils_pc/
+
 PORT_DEFAUT = 7700
+ADRESSE_CARTE = re.compile(r"\d{1,3}(\.\d{1,3}){3}(:\d{1,5})?")
 DEPOT = Path(__file__).resolve().parents[3]
 MAX_CORPS = 64 * 1024
 MAX_SORTIE = 128 * 1024                                   # octets de journal au plus par reponse de /sortie
@@ -241,6 +250,13 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                 raise ValueError(str(erreur)) from None
             build_memoire.enregistre(dossier, env, res)
             return res
+        if chemin == "/memoire/carte":
+            if serie.envoi_en_cours():
+                raise RuntimeError("un envoi est en cours : lire la carte après")
+            env, adresse = str(demande.get("env") or ""), str(demande.get("adresse") or "").strip()
+            if not ADRESSE_CARTE.fullmatch(adresse):
+                raise ValueError("adresse de la carte attendue (IPv4, ou IPv4:port par le maître) : la saisir dans l'onglet Build")
+            return build_memoire.lit_carte(adresse, build_envs.persist_carte(racine, env), env)
         if chemin == "/partitions/importer":                # lit et valide un CSV, rien n'est ecrit
             texte = demande.get("texte")
             if not isinstance(texte, str) or len(texte) > 65536:
@@ -265,6 +281,15 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                                               serie.builds_en_cours, nom, doublon)
             except LookupError as erreur:
                 raise ValueError(str(erreur)) from None
+        if chemin == "/cache/purger":
+            if serie.en_cours():
+                raise RuntimeError("un lancement est en cours : purger après")
+            builds = serie.builds_en_cours()
+            if builds is None:
+                raise RuntimeError("détection des builds en cours impossible (PowerShell) : réessayer")
+            if builds:
+                raise RuntimeError(f"un build est en cours ({', '.join(builds)}) : purger après")
+            return {"liberes": purge_cache_build.supprime(inventaire_cache()[1])}
         if chemin == "/defaut/diff":                       # rien n'est ecrit
             return {k: v for k, v in build_defaut.prepare(racine, demande.get("coches")).items() if k != "apres"}
         if chemin == "/defaut/ecrire":
@@ -272,6 +297,10 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                 raise RuntimeError("un lancement est en cours : enregistrer après")
             return build_defaut.ecrit(racine, demande.get("coches"), str(demande.get("empreinte") or ""), serie.builds_en_cours)
         raise LookupError(chemin)
+
+    def inventaire_cache():
+        cache = Path(racine) / ".cache"
+        return purge_cache_build.inventaire(cache, purge_cache_build.JOURS_DEFAUT) if cache.is_dir() else (0, [])
 
     class Gestionnaire(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -332,6 +361,8 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                     debut = etat["debut"]
                     reponse = sortie_env(dossier, params.get("env", [""])[0], debut, int(octet))
                     self._json(dict(reponse, lancement=repr(debut)))   # change a chaque lancement : la page repart de 0
+                elif url.path == "/memoire/resume":
+                    self._json(build_memoire.resume(dossier))
                 elif url.path == "/memoire":              # derniere analyse enregistree de l'env, null si aucune
                     self._json(build_memoire.derniere(dossier, params.get("env", [""])[0]))
                 elif url.path == "/partitions/tables":    # tables existantes de partitions/ pour la flash de l'env
@@ -339,6 +370,10 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                         self._json(build_partitions.tables(racine, dossier, params.get("env", [""])[0]))
                     except LookupError as erreur:
                         raise ValueError(str(erreur)) from None
+                elif url.path == "/cache":
+                    total, vieux = inventaire_cache()
+                    self._json({"total": total, "objets": len(vieux), "liberable": sum(o for _, o in vieux),
+                                "jours": purge_cache_build.JOURS_DEFAUT})
                 elif url.path == "/defaut":
                     self._json(build_defaut.lit(racine))
                 elif url.path == "/fichiers":
