@@ -212,7 +212,7 @@ def sonde_page(m):
     verifie(cdp.js("[document.getElementById('voir-diff').disabled, document.getElementById('avert-metier').classList.contains('cache')]"),
             [False, True], "un metier : « Voir le diff » actif")
     # editeur des entrees/sorties (A7) : 2 relais ajoutes, l'apercu change ; broche en double -> refus ; retrait
-    verifie(cdp.js("document.querySelectorAll('#elements details').length"), 7, "elements : un groupe par type d'element")
+    verifie(cdp.js("document.querySelectorAll('#elements details').length"), 8, "elements : un groupe par type d'element (pinsTechniques compris)")
     verifie(attend(cdp, "(function(){try{return Object.keys(JSON.parse(document.getElementById('apercu').textContent).modules.piscine.environnement.relais).length===0}catch(e){return false}})()", 10),
             True, "elements : aucun relais avant l'ajout")
     clic(cdp, "ajout-relais")

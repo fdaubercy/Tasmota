@@ -1,8 +1,11 @@
 """Entrees/sorties du bloc metier (assistant de creation du persist, spec 2026-10-27 decision 4, action A7).
 
-Un bloc metier porte, dans modules.<principal>.environnement, sept GROUPES d'elements : boutons, interrupteurs, relais,
-capteurs, compteurs, thermometres, analogiques. Un element est un objet {activation, nom, id, pin, type, virtuel,
-relaisLie, ...} range sous la cle <singulier><N> (relai1, relai2... N = rang de l'element, a partir de 1). Le groupe
+Un bloc metier porte, dans modules.<principal>.environnement, huit GROUPES d'elements : boutons, interrupteurs, relais,
+capteurs, compteurs, thermometres, analogiques, pinsTechniques (broches du gabarit qui ne sont ni relais ni capteurs :
+UART de la BL0942 et 2e bobine du relais bistable du differentiel). Un element est un objet {activation, nom, id, pin,
+type, virtuel, relaisLie, ...} range sous une cle : celle du persist relu, gardee dans CLE (analogique5 de la cuve,
+rxBL0942 du differentiel), sinon <singulier><N> (N = rang de l'element, a partir de 1, ou le suivant libre). Un groupe
+absent du gabarit n'est ecrit que s'il a un contenu (pinsTechniques). Le groupe
 porte aussi ses propres reglages (analogiques : activation, name, valeurMin, valeurMax ; compteurs et thermometres :
 affichageWebSensor). Le modele les decrit dans metier.elements :
   metier.elements.<groupe> = {singulier, gabarit (element neuf), optionnelles ({cle: defaut} des cles que le parc
@@ -24,12 +27,16 @@ doublon) : il n'occupe pas sa broche (cuve : compteur1 OFF sur la broche RX ModB
 
 import copy
 import functools
+import itertools
 import json
 import re
 from collections import Counter
 from pathlib import Path
 
-GROUPES_ELEMENTS = ("boutons", "interrupteurs", "relais", "capteurs", "compteurs", "thermometres", "analogiques")
+GROUPES_ELEMENTS = ("boutons", "interrupteurs", "relais", "capteurs", "compteurs", "thermometres", "analogiques",
+                    "pinsTechniques")
+CLE = "_cle"                                    # cle d'origine d'un element relu, retiree a l'ecriture (applique)
+CLE_VALIDE = re.compile(r"[A-Za-z][A-Za-z0-9_]*$")
 RACINE = Path(__file__).resolve().parents[3]
 CONFIG_GLOBAL = "data/fs/configGlobal.be"
 ORDRE_GPIO = re.compile(r'==\s*"(\w+)"\s*\)\s*\n\s*ordreGPIO\s*=\s*\[([^\]]*)\]')
@@ -160,22 +167,34 @@ def applique(modele, obj, r):
             liste = r.elements[groupe]
             if "activation" in reglages and "activation" not in r.elements_groupe.get(groupe, {}):
                 reglages["activation"] = "ON" if any(isinstance(e, dict) and e.get("activation") == "ON" for e in liste) else "OFF"
-            contenu = {f"{sing}{i}": copy.deepcopy(e) for i, e in enumerate(liste, 1)}
+            gardees = {e.get(CLE) for e in liste if isinstance(e, dict) and isinstance(e.get(CLE), str)}
+            contenu = {}
+            for i, e in enumerate(liste, 1):
+                e = copy.deepcopy(e)
+                cle = e.pop(CLE, None) if isinstance(e, dict) else None
+                if not (isinstance(cle, str) and CLE_VALIDE.match(cle)) or cle in contenu:
+                    cle = next(c for c in (f"{sing}{n}" for n in itertools.count(i)) if c not in contenu and c not in gardees)
+                contenu[cle] = e
         else:
             contenu = {k: v for k, v in ancien.items() if isinstance(v, dict)}
+        if groupe not in env and not contenu and not reglages:
+            continue                                     # groupe hors gabarit et vide (pinsTechniques) : pas ecrit
         env[groupe] = dict(copy.deepcopy(reglages), **contenu)
 
 
 def lit_elements(modele, environnement):
-    """({groupe: [element, ...]}, {groupe: reglages du groupe}) d'un `environnement` du parc : l'inverse d'applique."""
+    """({groupe: [element, ...]}, {groupe: reglages du groupe}) d'un `environnement` du parc : l'inverse d'applique.
+    Chaque element porte sa cle dans CLE ; les cles <singulier><N> d'abord, par N, puis les autres dans l'ordre du
+    fichier (pinsTechniques du differentiel : relaiBistable2, rxBL0942, txBL0942)."""
     elements, groupes = {}, {}
     for groupe in GROUPES_ELEMENTS:
         contenu = environnement.get(groupe)
         if not isinstance(contenu, dict):
             continue
         motif = re.compile(re.escape(singulier(modele, groupe)) + r"(\d+)$")
-        numerotes = sorted((int(motif.match(k).group(1)), k) for k, v in contenu.items() if isinstance(v, dict) and motif.match(k))
-        elements[groupe] = [copy.deepcopy(contenu[k]) for _, k in numerotes]
+        cles = sorted((k for k, v in contenu.items() if isinstance(v, dict)),
+                      key=lambda k: (0, int(motif.match(k).group(1))) if motif.match(k) else (1, 0))
+        elements[groupe] = [dict(copy.deepcopy(contenu[k]), **{CLE: k}) for k in cles]
         groupes[groupe] = {k: copy.deepcopy(v) for k, v in contenu.items() if not isinstance(v, dict)}
     return elements, groupes
 
@@ -209,7 +228,8 @@ def releve_modele(racine, modele):
                     continue
                 for cle, e in contenu.items():
                     if isinstance(e, dict):
-                        sing.setdefault(groupe, re.sub(r"\d+$", "", cle))
+                        if re.fullmatch(r"[a-z]+\d+", cle):  # cle numerotee simple ; rxBL0942 ne dit pas le singulier
+                            sing.setdefault(groupe, re.sub(r"\d+$", "", cle))
                         for c, v in e.items():
                             vues[groupe].setdefault(c, Counter())[json.dumps(v, ensure_ascii=False)] += 1
     res = {}

@@ -13,6 +13,7 @@ A lancer avec le Python du penv :
 """
 
 import copy
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -71,15 +72,17 @@ def test_gabarits(modele):
     verifie(tuple(g), ape.GROUPES_ELEMENTS, "gabarits : un par groupe, dans l'ordre de GROUPES_ELEMENTS")
     socle = {"activation", "nom", "id", "pin", "type", "virtuel", "relaisLie"}
     # un relais du parc n'a jamais de relaisLie (rapport A7 : ecart au brief, qui le met au socle)
-    verifie([x for x in g if not (socle - ({"relaisLie"} if x == "relais" else set())) <= set(g[x])], [],
-            "gabarits : le socle activation, nom, id, pin, type, virtuel, relaisLie (sauf relais : sans relaisLie dans le parc)")
+    sans = {"relais": {"relaisLie"}, "pinsTechniques": {"relaisLie", "virtuel"}}       # absents de ces groupes du parc
+    verifie([x for x in g if not (socle - sans.get(x, set())) <= set(g[x])], [],
+            "gabarits : le socle activation, nom, id, pin, type, virtuel, relaisLie (relais sans relaisLie, pinsTechniques sans les deux)")
     verifie(sorted({"afficheWeb", "value", "etat", "timer", "publishMQTT", "timestamp", "idModBus"} - set(g["relais"])), [],
             "gabarits : le relais porte afficheWeb, value, etat, timer, publishMQTT, timestamp, idModBus")
     opt = modele["metier"]["elements"]["relais"]["optionnelles"]
     verifie(sorted({"channel", "nbLeds"} - set(opt)), [], "gabarits : channel et nbLeds (LED) sont des cles optionnelles du relais")
     verifie({x: ape.singulier(modele, x) for x in g},
             {"boutons": "bouton", "interrupteurs": "interrupteur", "relais": "relai", "capteurs": "capteur",
-             "compteurs": "compteur", "thermometres": "thermometre", "analogiques": "analogique"},
+             "compteurs": "compteur", "thermometres": "thermometre", "analogiques": "analogique",
+             "pinsTechniques": "pinTechnique"},
             "singuliers lus dans le parc (relais -> relai)")
     g["relais"]["nom"] = "touche"
     verifie(ape.gabarits_elements(modele)["relais"]["nom"] != "touche", True, "gabarits : une copie (le modele n'est pas modifie)")
@@ -259,6 +262,29 @@ def test_persist(modele):
             "persist : ordre des groupes du gabarit")
 
 
+def test_cles_gardees(modele):
+    """Une cle relue est reecrite telle quelle ; un element nouveau prend le premier <singulier><N> libre."""
+    env = {"analogiques": {"activation": "ON", "analogique1": {"nom": "A", "id": 1}, "analogique5": {"nom": "E", "id": 5}},
+           "pinsTechniques": {"rxBL0942": {"nom": "Rx", "pin": 13}, "txBL0942": {"nom": "Tx", "pin": 14}}}
+    elements, _ = ape.lit_elements(modele, env)
+    verifie([e[ape.CLE] for e in elements["analogiques"]], ["analogique1", "analogique5"], "cles : relues avec l'element")
+    verifie([e[ape.CLE] for e in elements["pinsTechniques"]], ["rxBL0942", "txBL0942"], "cles : nommees, ordre du fichier")
+    nouveau = copy.deepcopy(ape.gabarits_elements(modele)["analogiques"])
+    faux = dict(nouveau, **{ape.CLE: "a b"})                      # cle invalide : renumerotee, jamais ecrite
+    r = reponses(elements={"analogiques": elements["analogiques"] + [nouveau, faux], "pinsTechniques": elements["pinsTechniques"]})
+    env2 = genere(modele, r)[1]["modules"]["piscine"]["environnement"]
+    verifie([k for k in env2["analogiques"] if k.startswith("analogique")], ["analogique1", "analogique5", "analogique3", "analogique4"],
+            "cles : analogique5 garde, nouveaux en analogique3 et 4 (premier libre)")
+    verifie(list(env2["pinsTechniques"]), ["rxBL0942", "txBL0942"], "cles : pinsTechniques ecrit sous ses cles")
+    verifie(ape.CLE in json.dumps(env2), False, "cles : la marque de cle n'entre jamais dans le persist")
+    env3 = genere(modele, reponses(elements={"pinsTechniques": []}))[1]["modules"]["piscine"]["environnement"]
+    verifie("pinsTechniques" in env3, False, "pinsTechniques vide : groupe pas ecrit")
+    double = [dict(nouveau, **{ape.CLE: "analogique2"}), dict(nouveau, **{ape.CLE: "analogique2"})]
+    env4 = genere(modele, reponses(elements={"analogiques": double}))[1]["modules"]["piscine"]["environnement"]
+    verifie([k for k in env4["analogiques"] if k.startswith("analogique")], ["analogique2", "analogique3"],
+            "cles : une cle en double n'ecrase pas le premier element")
+
+
 def test_coherence(modele):
     def refus(r):
         v, obj = genere(modele, r)
@@ -299,7 +325,8 @@ def principal():
     modele = MODELE = apm.charge_modele(RACINE)
     for test, args in ((test_gabarits, (modele,)), (test_broches, ()), (test_rejeu_environnement, (modele,)),
                        (test_couverture, (modele,)), (test_verifie_elements, ()), (test_parc_sans_refus, (modele,)),
-                       (test_broches_drivers, (modele,)), (test_robustesse, (modele,)), (test_persist, (modele,)), (test_coherence, (modele,)),
+                       (test_broches_drivers, (modele,)), (test_robustesse, (modele,)), (test_persist, (modele,)), (test_cles_gardees, (modele,)),
+                       (test_coherence, (modele,)),
                        (test_ds18x20, (modele,))):
         print(f"-- {test.__name__}")
         test(*args)

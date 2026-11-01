@@ -67,6 +67,8 @@ TOLERANCES = [
     ("drivers.I2S.*", (DIFF,), "bloc absent du vieux persist du differentiel (OFF sur une carte generee)"),
     ("drivers.Ethernet.*", (DIFF,), "bloc absent du vieux persist du differentiel (OFF sur une carte generee)"),
     ("drivers.voletRoulants.*", (DIFF,), "bloc absent du vieux persist du differentiel (OFF sur une carte generee)"),
+    ("drivers.I2C.environnement.pinsI2Cs.pinsI2C#.pin", (CAVE3,), "broches I2C de la carte Waveshare 8DI-8RO de la cave S3"),
+    ("drivers.leds.environnement.leds.ledRGB.pin", (CAVE3,), "LED RGB de la carte Waveshare 8DI-8RO de la cave S3"),
     ("drivers.I2C.environnement.TCA9554.*", (DIFF, CAVE1, GRENIER, P4, CUVE_, RIDEAU_),
      "seule la cave S3 (Waveshare 8DI-8RO) porte ce bloc (OFF sur une carte generee)"),
 ]

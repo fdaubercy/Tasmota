@@ -94,7 +94,7 @@ def test_get(b):
                                       "broches", "erreur_broches", "groupes", "cartes"]),
             "GET /parc : les clefs du contrat")
     verifie(([g["id"] for g in p["groupes"]], p["broches"]["ESP32S3"][-1], "relai" in [g["singulier"] for g in p["groupes"]]),
-            (["boutons", "interrupteurs", "relais", "capteurs", "compteurs", "thermometres", "analogiques"], 48, True),
+            (["boutons", "interrupteurs", "relais", "capteurs", "compteurs", "thermometres", "analogiques", "pinsTechniques"], 48, True),
             "GET /parc : groupes d'elements (gabarit, singulier) et broches de chaque puce")
     verifie(p["puces"], ["ESP32", "ESP32S3", "ESP32P4"], "GET /parc : puces")
     verifie("tasmota32s3-base-N16R8" in p["bases"]["ESP32S3"], True, "GET /parc : bases par puce")

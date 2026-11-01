@@ -2073,7 +2073,6 @@
 					}
 				},
 				"capteurs": {},
-				"pinsTechniques": {},
 				"compteurs": {
 					"affichageWebSensor": "OFF",
 					"compteur1": {
@@ -2371,6 +2370,18 @@
 					"conversion_mV_cm": 31,
 					"idModBus": 1
 				}
+			},
+			"pinsTechniques": {
+				"singulier": "pinTechnique",
+				"gabarit": {
+					"activation": "ON",
+					"nom": "Broche 1",
+					"pin": -1,
+					"id": 1,
+					"type": 0
+				},
+				"groupe": {},
+				"optionnelles": {}
 			}
 		}
 	},
