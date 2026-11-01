@@ -48,7 +48,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
     //  #warning *** ------------------- Le fichier 'user_config_override.ini' est appele ------------------- ***
     #if defined(CFG_HOLDER) && (CFG_HOLDER == 4617)
         #undef CFG_HOLDER
-		#define CFG_HOLDER 		1600			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
+		#define CFG_HOLDER 		1608			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
 
         // #pragma message(*** ------------------- Les paramètres flash seront remplacés ! ------------------- ***)
     #else
@@ -961,7 +961,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             // -- Project -------------------------------------
             #undef PROJECT
                 #define PROJECT           "DISJONCTEUR-DIFFERENTIEL-BUREAU"         	 // PROJECT is used as the default topic delimiter
-                #define USER_TEMPLATE 		"{\"NAME\":\"Int Diff Nous D3T\",\"GPIO\":[32,1,9312,1,1,320,1,1,9313,8160,3200,544,1,1,1,1,0,1,1,1,0,0,1,1,0,0,0,0,1,1,4736,1,1,0,0,1],\"FLAG\":0,\"BASE\":1}"
+            #ifdef USER_TEMPLATE
+                #undef USER_TEMPLATE
+            #endif
+            #define USER_TEMPLATE 		"{\"NAME\":\"Int Diff Nous D3T\",\"GPIO\":[32,1,9312,1,1,320,1,1,9313,8160,3200,544,1,1,1,1,0,1,1,1,0,0,1,1,0,0,0,0,1,1,4736,1,1,0,0,1],\"FLAG\":0,\"BASE\":1}"
                 
             // -- Wi-Fi ---------------------------------------
             #undef WIFI_IP_ADDRESS
@@ -1008,47 +1011,18 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             //#define NUM_GRAPHS 4        // Max 16
         
             // -- I2C sensors ---------------------------------
-            #define USE_I2C             // I2C using library wire (+10k code, 0k2 mem, 124 iram)
-            #ifdef USE_I2C
-                #define I2CDRIVERS_0_31        0xFFFFFFFF        // Enable I2CDriver0  to I2CDriver31
-                #define I2CDRIVERS_32_63       0xFFFFFFFF        // Enable I2CDriver32 to I2CDriver63
-                #define I2CDRIVERS_64_95       0xFFFFFFFF        // Enable I2CDriver64 to I2CDriver95
-                #define I2CDRIVERS_96_127      0xFFFFFFFF        // Enable I2CDriver96 to I2CDriver127
-                #define I2CDRIVERS_128_159     0xFFFFFFFF        // Enable I2CDriver128 to I2CDriver159
-        
-                //#define USE_ADS1115                             // [I2cDriver13] Enable ADS1115 16 bit A/D converter (I2C address 0x48, 0x49, 0x4A or 0x4B) based on Adafruit ADS1x15 library (no library needed) (+0k7 code)
-        
-                // Cf. url: https://tasmota.github.io/docs/MCP230xx/
-                // Vérifier activation du driver : I2cDriver22 1
-                // Tester l'adresse du module MCP23XXX (adresse comprise entre 0x20 & 0x26) : I2CScan
-                // Les paramètres des I/O est realisé dans le fichier mcp23xx.dat
-                // Paramètres Mode 2 MCP23017
-                //#define USE_MCP23XXX_DRV
-                    //#define USE_MCP230xx_ADDR 0x20                  // Enable MCP23008/MCP23017 I2C Address to use (Must be within range 0x20 through 0x26 - set according to your wired setup)
-                    #undef USE_DS1624                                 // [I2cDriver42] Enable DS1624, DS1621 temperature sensor (I2C addresses 0x48 - 0x4F) (+1k2 code)
-            #endif
+            #undef USE_I2C                                   // pas de bus I2C sur le D3T (nettoyage du 2026-11-01)
         
             // -- Internal Analog input -----------------------
             //#undef USE_ADC_VCC // Display Vcc in Power status. Disable for use as Analog input on selected devices	
         
             // -- Optional light modules ----------------------
-            #define USE_LIGHT                                // Add support for light control
-            // #define USE_WS2812                               // WS2812 Led string using library NeoPixelBus (+5k code, +1k mem, 232 iram) - Disable by //
-            //  #define USE_WS2812_DMA                         // ESP8266 only, DMA supports only GPIO03 (= Serial RXD) (+1k mem). When USE_WS2812_DMA is enabled expect Exceptions on Pow
-                #undef USE_WS2812_RMT
-                #define USE_WS2812_RMT  1                      // ESP32 only, hardware RMT support (default). Specify the RMT channel 0..7. This should be preferred to software bit bang.
-            //  #define USE_WS2812_I2S  0                      // ESP32 only, hardware I2S support. Specify the I2S channel 0..2. This is exclusive from RMT. By default, prefer RMT support
-            //  #define USE_WS2812_INVERTED                    // Use inverted data signal
-                #define USE_WS2812_HARDWARE  NEO_HW_WS2812     // Hardware type (NEO_HW_WS2812, NEO_HW_WS2812X, NEO_HW_WS2813, NEO_HW_SK6812, NEO_HW_LC8812, NEO_HW_APA106, NEO_HW_P9813)
-                #undef USE_WS2812_CTYPE
-                #define USE_WS2812_CTYPE     NEO_GRB           // Color type (NEO_RGB, NEO_GRB, NEO_BRG, NEO_RBG, NEO_RGBW, NEO_GRBW)
+            // USE_LIGHT et USE_WS2812 restent au defaut amont malgre l'absence de ruban : configDevices.be (light.set)
+            // et ledsPanelFonctions.be (Leds()), solidifies sur cet env, citent ces globals (sinon 'undeclared' au chargement).
         
             // -- One wire sensors ----------------------------
             #undef USE_HDMI_CEC                              // Add support for HDMI CEC bus (+7k code, 1456 bytes IRAM)
-            #define USE_DS18x20                              // Add support for DS18x20 sensors with id sort, single scan and read retry (+2k6 code)
-            //#define W1_PARASITE_POWER                      // Optimize for parasite powered sensors
-            //#define DS18x20_USE_ID_AS_NAME                 // Use last 3 bytes for naming of sensors
-            #define DS18x20_USE_ID_ALIAS                      // Add support aliasing for DS18x20 sensors. See comments in xsns_05 files (+0k5 code)
+            #undef USE_DS18x20                               // pas de sonde DS18B20 sur le D3T (nettoyage du 2026-11-01)
         
             // -- Serial sensors ------------------------------
             // #define USE_MODBUS
