@@ -270,6 +270,7 @@ class Serie:
             if not NOM_ENV.fullmatch(nom or "") or nom not in connus:
                 motifs.append(f"{nom} : environnement inconnu")
                 continue
+            motifs += [f"{nom} : {m}" for m in build_partitions.motifs_envoi(self.racine, nom, actions, ligne.methode)]
             if ligne.methode not in ("com", "ota"):
                 motifs.append(f"{nom} : méthode invalide {ligne.methode!r}")
             elif envoi and ligne.methode == "com":

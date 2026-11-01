@@ -6,7 +6,12 @@ Regles (celles de la maquette outils_docs/partitions/, modele B) :
   - app0 (ota_0) obligatoire ; les autres partitions par pas de 64 Ko, la premiere en 0x10000 ;
   - aucune partition plus petite que ce qu'elle contient (derniere analyse de build_memoire) ;
   - le FS (spiffs) en dernier (partition_core.be::resize_fs_to_max) ; la table finit a la fin de la flash ;
-  - exactement 5 partitions : post_esp32.py::patch_partitions_bin ecrit la taille du FS dans la 5e entree.
+  - safeboot (factory) en 0x10000 s'il existe : le JSON de la carte y pose son image (upload.arduino.flash_extra_images),
+    et cette option est videe dans la section de l'env si la table n'a pas de safeboot ;
+  - 4 ou 6 partitions permises, mais post_esp32.py::patch_partitions_bin ecrit la taille du FS dans la 5e entree et le
+    hachage en 0xA0 : sur une cible `upload` exacte (jamais `erase_upload`) dont la flash detectee depasse celle declaree,
+    il abimerait une table a FS qui n'a pas 5 partitions. `motifs_envoi` refuse donc cet envoi (build_serie.py::controle).
+    shortcut: un `pio run -t upload` hors de la page n'est pas controle, a garder dans le pre-script si cela arrive.
 Deux temps comme la page Fichiers Berry : `prepare` (diff, rien n'est ecrit), `ecrit` (refait le calcul, empreinte,
 aucun build en cours, Transaction). Table identique a un fichier de partitions/ (`tables` les propose) : l'env pointe
 vers ce fichier, rien n'est cree ; sinon partitions/env_<env>.csv. Dans les deux cas `board_build.partitions` est pose
@@ -32,8 +37,7 @@ TETE = {"nvs": (0x9000, 0x5000, "nvs,      data, nvs,     0x9000,  0x5000,"),
 ENTETE = "# Name,   Type, SubType, Offset,  Size, Flags"
 NOM = re.compile(r"[A-Za-z0-9_]{1,16}")
 SOUS_TYPES = {"app": {"factory", "ota_0", "ota_1", "test"}, "data": {"spiffs", "coredump", "fat", "littlefs"}}
-CONSEQUENCES = {"safeboot": "plus d'OTA du firmware (la page envoie par le safeboot)",
-                "spiffs": "plus de FS : ni persist, ni autoexec, ni Berry non solidifie"}
+IMAGES = "board_upload.arduino.flash_extra_images"
 FICHIER_BLOCAGE = "partitions_modifiees.json"
 OPTION = "board_build.partitions"
 
@@ -44,10 +48,6 @@ def valide(parts, flash, occupes=None):
     noms = [p.get("nom", "") for p in parts]
     if noms[:2] != ["nvs", "otadata"]:
         erreurs.append("nvs puis otadata doivent rester en tête de la table")
-    if len(parts) != 5:
-        manque = "".join(f" ; {n} supprimée : {effet}" for n, effet in CONSEQUENCES.items() if n not in noms)
-        erreurs.append(f"{len(parts)} partitions : seules les tables de 5 sont acceptées (post_esp32.py"
-                       f"::patch_partitions_bin écrit la taille du FS dans la 5e entrée){manque}")
     for p in parts:
         nom, type_, st, sz = p.get("nom", ""), p.get("type", ""), p.get("sous_type", ""), p.get("taille")
         if not NOM.fullmatch(nom) or noms.count(nom) > 1:
@@ -66,6 +66,8 @@ def valide(parts, flash, occupes=None):
             erreurs.append(f"{nom} : {sz // 1024} Ko, moins que les {-(-occupes[nom] // 1024)} Ko qu'elle contient")
         table.append({"nom": nom, "type": type_, "sous_type": st, "debut": debut, "taille": sz})
         debut += sz
+    if any(p["sous_type"] == "factory" and p["debut"] != PAS for p in table):
+        erreurs.append(f"le safeboot doit rester en {PAS:#x} : le JSON de la carte y pose son image")
     if not any(p.get("sous_type") == "ota_0" for p in parts):
         erreurs.append("app0 (ota_0) est obligatoire")
     if any(p.get("sous_type") == "spiffs" for p in parts) and parts[-1].get("sous_type") != "spiffs":
@@ -110,6 +112,51 @@ def _existantes(racine):
     return res
 
 
+def _parts_env(racine, env):
+    """Partitions de la table de l'env (sans journal ni analyse), [] si illisible."""
+    try:
+        opt = build_memoire._options(racine, env)
+        csv = opt(OPTION) or build_memoire._board(racine, opt("board")).get("build", {}).get("partitions", "")
+        return build_memoire.lit_csv(_lit(Path(racine) / csv)) if csv else []
+    except (LookupError, ValueError):
+        return []
+
+
+def motifs_envoi(racine, env, actions, methode):
+    """Ce que la table de l'env interdit dans ce lancement (texte sans le nom de l'env)."""
+    parts, motifs = _parts_env(racine, env), []
+    if not parts:
+        return motifs
+    a_fs = any(p["sous_type"] == "spiffs" for p in parts)
+    if "upload" in actions and methode == "com" and a_fs and len(parts) != 5:
+        motifs.append(f"table de {len(parts)} partitions : par câble, « Effacer puis téléverser » seulement "
+                      "(post_esp32.py::patch_partitions_bin suppose 5 partitions)")
+    if "upload" in actions and methode == "ota" and not any(p["sous_type"] == "factory" for p in parts):
+        motifs.append("table sans safeboot : OTA du firmware impossible, câble seulement")
+    if not a_fs and set(actions) & {"buildfs", "uploadfs", "fichiers"}:
+        motifs.append("table sans FS : rien à construire ni à envoyer")
+    return motifs
+
+
+def lit_import(racine, dossier, env, texte):
+    """(partitions, erreurs) d'un CSV importe : memes regles que `valide`, adresses du fichier comprises."""
+    try:
+        parts = build_memoire.lit_csv(texte)
+    except ValueError as erreur:
+        return [], [str(erreur)]
+    if not parts:
+        return [], ["aucune partition dans ce fichier"]
+    drapeaux = [c[0] for c in (l.split("#", 1)[0].split(",") for l in texte.splitlines()) if len(c) > 5 and c[5].strip()]
+    mem = build_memoire.analyse(racine, env, Path(dossier) / "journaux")     # LookupError : env inconnu
+    occupes = {p["nom"]: p["utilise"] for p in mem["partitions"] if p.get("utilise")}
+    table, erreurs = valide(parts, mem["flash"], occupes)
+    if not erreurs and _forme(table) != _forme(parts):
+        erreurs.append("adresses non contiguës dans ce fichier : la page ne sait pas garder de trou")
+    if drapeaux:
+        erreurs.append("drapeaux non pris en charge (colonne Flags) : " + ", ".join(d.strip() for d in drapeaux))
+    return parts, erreurs
+
+
 def tables(racine, dossier, env):
     """Tables existantes a la taille de la flash de l'env : [{csv, partitions, erreurs}] (erreurs : ne convient pas)."""
     mem = build_memoire.analyse(racine, env, Path(dossier) / "journaux")     # LookupError : env inconnu
@@ -129,7 +176,11 @@ def prepare(racine, dossier, env, parts):
     rel = mem["csv"] if inchange else existante or f"partitions/env_{env}.csv"
     cenv_avant = _lit(racine / build_envs.FICHIER_CENV)
     try:
-        cenv_apres = cenv_avant if inchange else build_envs.pose_option(cenv_avant, env, OPTION, rel)
+        cenv_apres = cenv_avant
+        if not inchange:
+            sans_safeboot = not erreurs and not any(p["sous_type"] == "factory" for p in table)
+            cenv_apres = build_envs.pose_option(cenv_avant, env, OPTION, rel)
+            cenv_apres = build_envs.pose_option(cenv_apres, env, IMAGES, "", vide=sans_safeboot)
     except ValueError as erreur:                      # env hors du cenv : ni ecrivable, ni modifiable ici
         erreurs.append(str(erreur))
         cenv_apres = cenv_avant
@@ -147,6 +198,13 @@ def prepare(racine, dossier, env, parts):
         "le flash série (« Effacer puis téléverser ») remplace le persist et les réglages de la carte par ceux du dépôt",
         f"{build_envs.FICHIER_CENV} change : le prochain build repart de zéro (.pio/build purgé)",
         "l'OTA de cet env (firmware et FS) est bloquée jusqu'au prochain « Effacer puis téléverser » réussi"]
+    if not inchange and not any(p["sous_type"] == "factory" for p in table):
+        avertissements.append("sans safeboot : plus d'OTA du firmware, ni par Tasmota ni par la page. Seul le câble reste")
+    if not inchange and not any(p["sous_type"] == "spiffs" for p in table):
+        avertissements.append("sans FS : ni persist, ni autoexec, ni Berry non solidifié. Le module démarre sans son programme")
+    if not inchange and len(table) != 5 and any(p["sous_type"] == "spiffs" for p in table):
+        avertissements.append(f"{len(table)} partitions : par câble, « Effacer puis téléverser » seulement "
+                              "(post_esp32.py::patch_partitions_bin suppose 5 partitions)")
     if heritiers and not inchange:
         avertissements.append("hérite aussi de cette table : " + ", ".join(heritiers))
     vus = json.dumps(parts, sort_keys=True, ensure_ascii=False)

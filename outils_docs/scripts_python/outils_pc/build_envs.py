@@ -226,9 +226,10 @@ def ecrit_port(racine, env, port):
     chemin.write_bytes(texte.encode("utf-8"))
 
 
-def pose_option(texte, env, option, valeur):
+def pose_option(texte, env, option, valeur, vide=False):
     """Texte du cenv avec `option = valeur` dans la section de l'env (ligne active reecrite, commentaire et fin de
-    ligne gardes ; sinon ajoutee apres `extends`) ; valeur "" retire la ligne active. Rien n'est ecrit ici."""
+    ligne gardes ; sinon ajoutee apres `extends`) ; valeur "" retire la ligne active, sauf `vide` : `option =` sans
+    valeur. Rien n'est ecrit ici."""
     lignes = texte.splitlines(keepends=True)
     debut = next((i for i, l in enumerate(lignes)
                   if (m := ENTETE_ENV.fullmatch(l.strip())) and m.group(1) == env), None)
@@ -240,12 +241,12 @@ def pose_option(texte, env, option, valeur):
     actives = [i for i in range(debut + 1, fin) if re.match(motif, lignes[i])]
     if actives:
         i = actives[0]
-        if valeur == "":
+        if valeur == "" and not vide:
             del lignes[i]
         else:
             m = re.match(rf"({motif}\s*)(\S*)(.*)$", lignes[i], re.S)
             lignes[i] = m.group(1) + valeur + m.group(3)
-    elif valeur != "":
+    elif valeur != "" or vide:
         apres = next((i for i in range(debut + 1, fin) if re.match(r"extends\s*=", lignes[i])), debut)
         while apres + 1 < fin and re.match(r"[ 	]+\S", lignes[apres + 1]):   # lignes de continuation
             apres += 1

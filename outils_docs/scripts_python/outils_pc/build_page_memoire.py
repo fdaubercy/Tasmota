@@ -8,12 +8,13 @@ pio). Jauges orange a 85 %, rouge a 95 %. Table : un curseur et un champ par par
 (sinon app0) compense pour que la flash reste repartie ; nvs, otadata et app0 non supprimables. « Voir le diff » =
 POST /partitions/diff, « Écrire » = POST /partitions/ecrire apres confirmation (build_partitions.py valide tout cote
 serveur ; la page ne fait que proposer). « Partir d'une table existante » (GET /partitions/tables) regle les curseurs
-sur une table de partitions/ ; identique a l'ecriture, l'env pointe vers ce fichier. Tout texte venu du serveur passe par textContent (fonction h de build_page).
+sur une table de partitions/ ; identique a l'ecriture, l'env pointe vers ce fichier. « Importer un CSV » passe par
+POST /partitions/importer, « Exporter » par le texte du diff, « Ajouter » insere avant le FS. Tout texte venu du serveur passe par textContent (fonction h de build_page).
 """
 
 CSS = r"""
   .m-barre{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
-  .m-barre select,#m-table{font:inherit;color:inherit;background:var(--btn);border:1px solid var(--btn-bord);border-radius:6px;padding:5px 8px}
+  .m-barre select,#m-table,#m-ajout-type{font:inherit;color:inherit;background:var(--btn);border:1px solid var(--btn-bord);border-radius:6px;padding:5px 8px}
   .m-grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px}
   .m-zone .tete{display:flex;justify-content:space-between;gap:6px;font-size:13px}
   .m-jauge{height:9px;background:var(--piste);border-radius:5px;overflow:hidden;margin:4px 0 2px}
@@ -53,7 +54,18 @@ HTML = r"""
     <div class="carte"><h2>Occupation, selon les capacités paramétrées</h2>
       <div id="m-zones" class="m-grille"></div><p id="m-notes" class="discret" style="margin:6px 0 0"></p></div>
     <div class="carte" style="margin-top:10px"><h2>Régler chaque partition</h2>
-      <label>Partir d'une table existante <select id="m-table" aria-label="Table existante"></select></label>
+      <div class="m-actions" style="margin:0 0 6px">
+        <label>Partir d'une table existante <select id="m-table" aria-label="Table existante"></select></label>
+        <button id="m-importer" class="btn" type="button">Importer un CSV</button>
+        <input id="m-fichier" type="file" accept=".csv,text/csv" hidden>
+        <button id="m-exporter" class="btn" type="button">Exporter en CSV</button>
+        <span style="flex:1"></span>
+        <label>Ajouter <select id="m-ajout-type" aria-label="Sous-type de la partition ajoutée">
+          <option value="coredump">coredump</option><option value="ota_1">ota_1</option>
+          <option value="fat">fat</option><option value="littlefs">littlefs</option></select></label>
+        <input id="m-ajout-nom" class="m-num" style="text-align:left" maxlength="16" placeholder="nom" aria-label="Nom de la partition ajoutée">
+        <button id="m-ajouter" class="btn" type="button">Ajouter la partition</button>
+      </div>
       <div id="m-ruban" class="m-ruban"></div>
       <div class="m-defile"><table class="m-table"><thead><tr><th>Suppr.</th><th>Partition</th><th>Adresse</th>
         <th style="width:40%">Taille</th><th>Ko</th><th>Occupé</th></tr></thead><tbody id="m-parts"></tbody></table></div>
@@ -195,11 +207,50 @@ async function mTables(env) {
 $("m-table").onchange = function () {
   var t = (M.tables || []).filter(function (x) { return x.csv === $("m-table").value; })[0];
   if (!t) { if (M.analyse) mDepuisAnalyse(); return; }
+  mPose(t.partitions);
+};
+// Regle les curseurs sur une table (occupation reprise de l'analyse, par nom)
+function mPose(parts) {
   var avant = M.parts;
-  M.parts = t.partitions.map(function (p) {
+  M.parts = parts.map(function (p) {
     var a = avant.filter(function (x) { return x.nom === p.nom; })[0] || {};
     return {nom: p.nom, type: p.type, sous_type: p.sous_type, k: mKo(p.taille), u: a.u == null ? null : a.u, estime: a.estime, suppr: false};
   });
+  M.empreinte = "";
+  mRendu();
+}
+async function mImporte(texte) {
+  var r = await appel("/partitions/importer", {env: M.env, texte: texte});
+  if (!r.ok || !r.donnees) { mMessages([["r", "Import impossible : " + (r.texte || "HTTP " + r.statut)]]); return; }
+  if (r.donnees.erreurs.length) { mMessages(r.donnees.erreurs.map(function (e) { return ["r", "CSV refusé : " + e]; })); return; }
+  mPose(r.donnees.partitions);
+}
+$("m-importer").onclick = function () { $("m-fichier").value = ""; $("m-fichier").click(); };
+$("m-fichier").onchange = async function () {
+  var f = $("m-fichier").files[0];
+  if (f) mImporte(await f.text());
+};
+function mTelecharge(nom, texte) {
+  var a = h("a", {href: URL.createObjectURL(new Blob([texte], {type: "text/csv"}))});
+  a.download = nom;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+$("m-exporter").onclick = async function () {
+  if (!M.env) return;
+  var r = await appel("/partitions/diff", {env: M.env, partitions: mDemande()});
+  if (!r.ok || !r.donnees) { mMessages([["r", "Export impossible : " + (r.texte || "HTTP " + r.statut)]]); return; }
+  if (r.donnees.erreurs.length) { mMessages(r.donnees.erreurs.map(function (e) { return ["r", "Export refusé : " + e]; })); return; }
+  mTelecharge(r.donnees.csv.replace("partitions/", ""), r.donnees.texte_csv);
+};
+$("m-ajouter").onclick = function () {
+  var nom = $("m-ajout-nom").value.trim(), st = $("m-ajout-type").value;
+  if (!/^[A-Za-z0-9_]{1,16}$/.test(nom) || mPart(nom)) { mMessages([["r", "Nom invalide ou déjà pris : lettres, chiffres, _ (16 au plus)."]]); return; }
+  var p = {nom: nom, type: st === "ota_1" ? "app" : "data", sous_type: st, k: 64, u: null, estime: false, suppr: false};
+  var c = mCompensateur(p), fs = M.parts.indexOf(mPart("spiffs"));
+  if (c) c.k -= p.k;
+  M.parts.splice(fs < 0 ? M.parts.length : fs, 0, p);
+  $("m-ajout-nom").value = "";
   M.empreinte = "";
   mRendu();
 };
@@ -230,7 +281,7 @@ function mRendu() {
     caseS.onchange = function () {
       p.suppr = caseS.checked;
       var c = mCompensateur(p);
-      if (c && c.nom === "spiffs") c.k += p.suppr ? p.k : -p.k;
+      if (c) c.k += p.suppr ? p.k : -p.k;
       M.empreinte = "";
       mRendu();
     };

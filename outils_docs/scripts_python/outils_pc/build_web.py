@@ -236,6 +236,15 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                 raise ValueError(str(erreur)) from None
             build_memoire.enregistre(dossier, env, res)
             return res
+        if chemin == "/partitions/importer":                # lit et valide un CSV, rien n'est ecrit
+            texte = demande.get("texte")
+            if not isinstance(texte, str) or len(texte) > 65536:
+                raise ValueError("texte du CSV attendu (64 Ko au plus)")
+            try:
+                parts, erreurs = build_partitions.lit_import(racine, dossier, str(demande.get("env") or ""), texte)
+            except LookupError as erreur:
+                raise ValueError(str(erreur)) from None
+            return {"partitions": parts, "erreurs": erreurs}
         if chemin in ("/partitions/diff", "/partitions/ecrire"):   # build_partitions : prepare (rien d'ecrit) / ecrit
             env, parts = str(demande.get("env") or ""), demande.get("partitions")
             if not isinstance(parts, list) or not all(isinstance(p, dict) for p in parts):
@@ -243,7 +252,7 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
             try:
                 if chemin == "/partitions/diff":
                     p = build_partitions.prepare(racine, dossier, env, parts)
-                    return {k: p[k] for k in ("csv", "inchange", "table", "diff", "erreurs", "avertissements", "empreinte")}
+                    return {k: p[k] for k in ("csv", "inchange", "texte_csv", "table", "diff", "erreurs", "avertissements", "empreinte")}
                 if serie.en_cours():
                     raise RuntimeError("un lancement est en cours : écrire la table après")
                 return build_partitions.ecrit(racine, dossier, env, parts, str(demande.get("empreinte") or ""),

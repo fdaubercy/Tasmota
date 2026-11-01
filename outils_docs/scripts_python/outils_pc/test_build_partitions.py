@@ -8,6 +8,7 @@ tables de partitions/ lues seulement ; sauvegardes de la Transaction dans un dos
 Code de sortie 0 = vert, 1 = rouge.
 """
 import os
+import re
 import sys
 import tempfile
 import types
@@ -37,7 +38,11 @@ ENV32 = "[env:amont-seul]\nboard = esp32s3-qio_opi\nboard_build.partitions = par
 MUTANTS = {
     "64 Ko ignores": ("elif sz % PAS or debut % PAS:", "elif False:"),
     "fin de flash ignoree": ("elif debut != flash:", "elif False:"),
-    "5 partitions non exigees": ("if len(parts) != 5:", "if False:"),
+    "safeboot deplacable": ('p["sous_type"] == "factory" and p["debut"] != PAS', "False"),
+    "upload par cable permis": ('"upload" in actions and methode == "com" and a_fs and len(parts) != 5', "False"),
+    "OTA sans safeboot permise": ('"upload" in actions and methode == "ota" and not any', 'False and not any'),
+    "image safeboot gardee": ("vide=sans_safeboot", "vide=False"),
+    "trou accepte a l'import": ("if not erreurs and _forme(table) != _forme(parts):", "if False:"),
     "contenu ignore": ("if sz < (occupes.get(nom) or 0):", "if False:"),
     "FS dernier ignore": ('and parts[-1].get("sous_type") != "spiffs"', "and False"),
     "nvs deplacable": ("if (debut, sz) != TETE[nom][:2]:", "if False:"),
@@ -96,9 +101,15 @@ def cas(m, bm):
     verifie("table qui ne finit pas a la fin de la flash : refusee", any("la flash fait" in e for e in erreurs(court)))
     sans_safeboot = [dict(p) for p in modif if p["nom"] != "safeboot"]
     sans_safeboot[2]["taille"] += 0xD0000
-    e = erreurs(sans_safeboot)
-    verifie("4 partitions : refusee, la consequence de la suppression nommee",
-            any("tables de 5" in x and "plus d'OTA du firmware" in x for x in e))
+    verifie("4 partitions sans safeboot : acceptee, app0 en 0x10000",
+            not erreurs(sans_safeboot) and m.valide(sans_safeboot, M16)[0][2]["debut"] == 0x10000)
+    mal = [dict(p) for p in base]
+    mal[2], mal[3] = mal[3], mal[2]
+    verifie("safeboot hors de 0x10000 : refuse", any("safeboot doit rester" in x for x in erreurs(mal)))
+    six = [dict(p) for p in base]
+    six[4]["taille"] -= 0x10000
+    six.insert(4, {"nom": "coredump", "type": "data", "sous_type": "coredump", "taille": 0x10000})
+    verifie("6 partitions : acceptee", not erreurs(six))
     fs_milieu = [base[0], base[1], base[4], base[2], base[3]]
     verifie("FS pas en dernier : refuse", any("dernière partition" in x for x in erreurs(fs_milieu)))
     nvs = [dict(p) for p in base]
@@ -198,6 +209,46 @@ def cas(m, bm):
                 and m.ota_bloquee(dossier, "heritier-essai") == "")
         m.libere(dossier, ENV)
         verifie("OTA liberee apres l'effacement", m.ota_bloquee(dossier, ENV) == "")
+
+        verifie("5 partitions : aucun envoi refuse", not m.motifs_envoi(racine, ENV, ["upload", "buildfs"], "com")
+                and not m.motifs_envoi(racine, ENV, ["upload"], "ota"))
+        p4 = m.prepare(racine, dossier, ENV, sans_safeboot)
+        verifie("sans safeboot : image videe dans la section, consequences dites",
+                not p4["erreurs"] and re.search(r"^\+board_upload\.arduino\.flash_extra_images\s*=\s*$", p4["diff"], re.M)
+                and any("sans safeboot" in a for a in p4["avertissements"]))
+        m.ecrit(racine, dossier, ENV, sans_safeboot, p4["empreinte"], jamais)
+        os.chdir(racine)
+        try:
+            conf = ProjectConfig(str(racine / "platformio.ini"))
+            verifie("ProjectConfig : image vide pour l'env seul", conf.get(f"env:{ENV}", m.IMAGES) == ""
+                    and not conf.has_option("env:base-essai", m.IMAGES))
+            from platformio.platform.board import PlatformBoardConfig
+            carte = PlatformBoardConfig(str(DEPOT / "boards" / "esp32s3-qio_opi.json"))
+            avant = carte.get("upload.arduino.flash_extra_images", [])
+            carte.update("upload.arduino.flash_extra_images", conf.get(f"env:{ENV}", m.IMAGES))
+            verifie("carte PlatformIO : image du safeboot retiree par l'option vide", avant
+                    and not carte.get("upload.arduino.flash_extra_images", []))
+        finally:
+            os.chdir(ici)
+        verifie("4 partitions : upload par cable refuse, erase_upload permis", m.motifs_envoi(racine, ENV, ["upload"], "com")
+                and not m.motifs_envoi(racine, ENV, ["erase_upload"], "com"))
+        verifie("sans safeboot : OTA du firmware refusee, OTA du FS permise", m.motifs_envoi(racine, ENV, ["upload"], "ota")
+                and not m.motifs_envoi(racine, ENV, ["uploadfs"], "ota"))
+        retour = m.prepare(racine, dossier, ENV, modif)
+        verifie("retour avec safeboot : option retiree", not retour["erreurs"] and m.IMAGES not in retour["cenv"].split(f"[env:{ENV}]")[1].split("[env:")[0])
+        sans_fs = [dict(q) for q in base if q["nom"] != "spiffs"]
+        sans_fs[3]["taille"] += base[4]["taille"]
+        verifie("sans FS : acceptee, consequence dite", not m.valide(sans_fs, M16)[1]
+                and any("sans FS" in a for a in m.prepare(racine, dossier, ENV, sans_fs)["avertissements"]))
+        csv_ok = m.texte_csv(m.valide(six, M16)[0])
+        verifie("import : 6 partitions lues, sans erreur", (lambda r: len(r[0]) == 6 and not r[1])(m.lit_import(racine, dossier, ENV, csv_ok)))
+        fin = m.valide(six, M16)[0][-1]["debut"]
+        verifie("import : trou d'adresses refuse", any("contiguës" in x for x in m.lit_import(
+            racine, dossier, ENV, csv_ok.replace(f"0x{fin:X},", f"0x{fin + 0x10000:X},", 1))[1]))
+        verifie("import : drapeaux refuses", any("Flags" in x for x in m.lit_import(
+            racine, dossier, ENV, csv_ok.rstrip() + " encrypted\n")[1]))
+        verifie("import : illisible ou vide refuse", m.lit_import(racine, dossier, ENV, "x,y,z,0,pas_une_taille,")[1]
+                and m.lit_import(racine, dossier, ENV, "# rien\n")[1])
         del os.environ["OUTILS_TASMOTA_DOSSIER"]
     return res
 
