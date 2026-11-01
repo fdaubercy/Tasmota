@@ -1,0 +1,244 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lien vers les jauges</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Mise en page : une planche de 8 maquettes, chacune = l'encadré réel de l'accueil Tasmota à 340 px, avec sa fiche. */
+:root{
+  --fond:#17191c;          /* planche */
+  --carte:#202327;         /* fiche d'une proposition */
+  --trait:#33373d;
+  --texte:#e4e6e8;
+  --doux:#9aa1a9;
+  --tas-fond:#252525;      /* page Tasmota */
+  --tas-texte:#eaeaea;
+  --tas-bleu:#1fa3ec;      /* liens et boutons Tasmota */
+  --tas-bouton:#1fa3ec;
+  --ruban:#c0392b;         /* bordure = couleur du ruban WS2812 (rouge sur la capture) */
+  --plus:#5fbf7f; --moins:#e0a050;
+  --f-ui:"IBM Plex Sans",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --f-tas:verdana,sans-serif;
+  color-scheme:dark;
+}
+body{background:var(--fond);color:var(--texte);font-family:var(--f-ui);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+.entete{max-width:1180px;margin:0 auto 22px}
+h1{font-size:1.6rem;margin:0 0 6px;text-wrap:balance;font-weight:600}
+.entete p{margin:0;color:var(--doux);max-width:70ch}
+.entete code{font-family:var(--f-mono);font-size:.85em;color:var(--texte)}
+.planche{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:18px}
+.prop{background:var(--carte);border:1px solid var(--trait);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.prop header{display:flex;align-items:baseline;gap:10px}
+.lettre{font-family:var(--f-mono);font-weight:600;font-size:1.05rem;color:#111;background:var(--texte);border-radius:5px;padding:0 8px}
+.prop h2{font-size:1.02rem;margin:0;font-weight:600}
+.actuel{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--doux);margin-left:auto}
+.notes{margin:0;padding:0;list-style:none;font-size:.88rem;display:grid;gap:3px}
+.notes li{padding-left:16px;position:relative}
+.notes li::before{position:absolute;left:0;font-family:var(--f-mono)}
+.notes .p::before{content:"+";color:var(--plus)}
+.notes .m::before{content:"–";color:var(--moins)}
+.code{font-family:var(--f-mono);font-size:.74rem;color:var(--doux);background:#16181b;border-radius:6px;padding:7px 9px;overflow-x:auto;white-space:pre;margin:0}
+
+/* ---- Reproduction de l'accueil Tasmota (gabarit webSensorNiveauCuve.html + webSensor.css) ---- */
+.tas{background:var(--tas-fond);color:var(--tas-texte);font-family:var(--f-tas);font-size:15px;border-radius:6px;padding:10px;max-width:340px;width:100%;box-sizing:border-box;align-self:center}
+.tas .ligneEsp{display:flex;justify-content:space-between;font-weight:bold;padding:3px}
+.tas fieldset{border:2px solid var(--ruban);border-radius:.3rem;margin:0 0 5px;padding:3px;min-width:0}
+.tas legend{font-weight:bold;padding:0 4px}
+.tas a{color:var(--tas-bleu);text-decoration:none}
+.tas a:hover{text-decoration:underline}
+.tas a:focus-visible,.tas button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.tas .parametre{display:flex;justify-content:space-between;gap:8px;padding:1px 3px;font-size:.93em}
+.tas .parametre div:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* B — icône seule */
+.ico{display:inline-flex;vertical-align:-3px;margin-left:4px}
+.ico svg{width:18px;height:18px}
+/* C — pastille bouton */
+.pastille{display:inline-block;font-size:.78em;font-weight:bold;background:var(--tas-bouton);color:#fff!important;border-radius:.3rem;padding:1px 8px;margin-left:6px;vertical-align:1px}
+.pastille:hover{text-decoration:none!important;filter:brightness(1.12)}
+/* D — titre cliquable */
+.titreLien{color:var(--tas-texte)!important}
+.titreLien span{color:var(--tas-bleu);font-weight:normal;margin-left:3px}
+/* E — bouton pleine largeur, comme les boutons de Tasmota */
+.boutonTas{display:block;width:100%;box-sizing:border-box;margin-top:6px;border:0;border-radius:.3rem;background:var(--tas-bouton);color:#fff!important;line-height:2.2rem;font-size:1rem;text-align:center;font-family:var(--f-tas)}
+.boutonTas:hover{text-decoration:none!important;filter:brightness(1.12)}
+/* F — aperçu du taux cliquable */
+.apercu{display:flex;align-items:center;gap:8px;padding:4px 3px 6px;color:var(--tas-texte)!important}
+.apercu .barre{flex:1;height:10px;background:#3a3a3a;border-radius:5px;overflow:hidden}
+.apercu .barre i{display:block;height:100%;background:var(--tas-bleu);border-radius:5px}
+.apercu .suite{color:var(--tas-bleu);font-size:.85em;white-space:nowrap}
+.apercu:hover{text-decoration:none!important}
+.apercu:hover .suite{text-decoration:underline}
+/* G — puce contour */
+.puce{display:inline-flex;align-items:center;gap:4px;font-size:.78em;font-weight:bold;border:1px solid var(--tas-bleu);border-radius:999px;padding:0 8px 0 6px;margin-left:6px;vertical-align:1px}
+.puce svg{width:13px;height:13px}
+.puce:hover{text-decoration:none!important;background:#1fa3ec22}
+/* H — valeurs cliquables */
+.valeurLien{border-bottom:1px dotted var(--tas-bleu);color:var(--tas-texte)!important}
+.valeurLien:hover{color:var(--tas-bleu)!important;text-decoration:none!important}
+
+.pied{max-width:1180px;margin:24px auto 0;color:var(--doux);font-size:.88rem}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="entete">
+  <h1>Lien vers les jauges de la cuve</h1>
+  <p>Huit façons d'annoncer la page <code>/cuve</code> dans l'encadré « Capteurs de Niveau de Cuve » de l'accueil. Chaque maquette reproduit l'encadré à sa largeur réelle (340&nbsp;px), avec des valeurs d'exemple. Toutes tiennent dans le gabarit tel qu'il est : du HTML et du CSS seuls, sans script (la zone des capteurs est remplacée toutes les 2&nbsp;s). Survole les liens pour voir leur réaction, puis donne-moi la lettre retenue.</p>
+</header>
+
+<main class="planche">
+
+<!-- A -->
+<section class="prop">
+  <header><span class="lettre">A</span><h2>Texte « (jauges) »</h2></header>
+  <div class="tas">
+    <div class="ligneEsp"><span>ESP32 Température</span><span>28,4 °C</span></div>
+    <fieldset><legend>Capteurs de Niveau de Cuve <a href="#a" title="Jauges du volume et du taux de remplissage">(jauges)</a></legend>
+      <div class="parametre"><div>Tension brute (ADS1115) :</div><div>2000mV</div></div>
+      <div class="parametre"><div>Tension sonde (recalculée) :</div><div>6.80V</div></div>
+      <div class="parametre"><div>Taux de remplissage:</div><div>68%</div></div>
+      <div class="parametre"><div>Volume disponible:</div><div>4578L</div></div>
+    </fieldset>
+  </div>
+  <ul class="notes"><li class="p">Discret, déjà en place, se lit sans légende.</li><li class="m">Petit et en retrait : facile à manquer au premier coup d'œil.</li></ul>
+</section>
+
+<!-- B -->
+<section class="prop">
+  <header><span class="lettre">B</span><h2>Icône de cadran seule</h2><span class="actuel">retenu (cuve)</span></header>
+  <div class="tas">
+    <div class="ligneEsp"><span>ESP32 Température</span><span>28,4 °C</span></div>
+    <fieldset><legend>Capteurs de Niveau de Cuve <a class="ico" href="#b" title="Jauges du volume et du taux de remplissage" aria-label="Jauges"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3.5 16a8.5 8.5 0 0 1 17 0"/><path d="M12 16l4.2-5.2"/><circle cx="12" cy="16" r="1.4" fill="currentColor" stroke="none"/></svg></a></legend>
+      <div class="parametre"><div>Tension brute (ADS1115) :</div><div>2000mV</div></div>
+      <div class="parametre"><div>Tension sonde (recalculée) :</div><div>6.80V</div></div>
+      <div class="parametre"><div>Taux de remplissage:</div><div>68%</div></div>
+      <div class="parametre"><div>Volume disponible:</div><div>4578L</div></div>
+    </fieldset>
+  </div>
+  <ul class="notes"><li class="p">Le plus compact ; l'icône dit « jauge » sans un mot.</li><li class="m">Sens à deviner la première fois (l'infobulle ne s'affiche pas au doigt sur téléphone).</li></ul>
+</section>
+
+<!-- C -->
+<section class="prop">
+  <header><span class="lettre">C</span><h2>Petit bouton dans le titre</h2></header>
+  <div class="tas">
+    <div class="ligneEsp"><span>ESP32 Température</span><span>28,4 °C</span></div>
+    <fieldset><legend>Capteurs de Niveau de Cuve <a class="pastille" href="#c" title="Jauges du volume et du taux de remplissage">Jauges ›</a></legend>
+      <div class="parametre"><div>Tension brute (ADS1115) :</div><div>2000mV</div></div>
+      <div class="parametre"><div>Tension sonde (recalculée) :</div><div>6.80V</div></div>
+      <div class="parametre"><div>Taux de remplissage:</div><div>68%</div></div>
+      <div class="parametre"><div>Volume disponible:</div><div>4578L</div></div>
+    </fieldset>
+  </div>
+  <ul class="notes"><li class="p">Se voit tout de suite, reprend le bleu des boutons de Tasmota.</li><li class="m">Allonge la ligne du titre : un nom d'encadré plus long passerait sur deux lignes.</li></ul>
+</section>
+
+<!-- D -->
+<section class="prop">
+  <header><span class="lettre">D</span><h2>Titre entier cliquable</h2></header>
+  <div class="tas">
+    <div class="ligneEsp"><span>ESP32 Température</span><span>28,4 °C</span></div>
+    <fieldset><legend><a class="titreLien" href="#d" title="Jauges du volume et du taux de remplissage">Capteurs de Niveau de Cuve<span>↗</span></a></legend>
+      <div class="parametre"><div>Tension brute (ADS1115) :</div><div>2000mV</div></div>
+      <div class="parametre"><div>Tension sonde (recalculée) :</div><div>6.80V</div></div>
+      <div class="parametre"><div>Taux de remplissage:</div><div>68%</div></div>
+      <div class="parametre"><div>Volume disponible:</div><div>4578L</div></div>
+    </fieldset>
+  </div>
+  <ul class="notes"><li class="p">Grande zone à toucher, aucun mot ajouté ; la flèche signale le lien.</li><li class="m">Le titre ne ressemble plus aux autres encadrés de l'accueil.</li></ul>
+</section>
+
+<!-- E -->
+<section class="prop">
+  <header><span class="lettre">E</span><h2>Bouton en bas de l'encadré</h2></header>
+  <div class="tas">
+    <div class="ligneEsp"><span>ESP32 Température</span><span>28,4 °C</span></div>
+    <fieldset><legend>Capteurs de Niveau de Cuve</legend>
+      <div class="parametre"><div>Tension brute (ADS1115) :</div><div>2000mV</div></div>
+      <div class="parametre"><div>Tension sonde (recalculée) :</div><div>6.80V</div></div>
+      <div class="parametre"><div>Taux de remplissage:</div><div>68%</div></div>
+      <div class="parametre"><div>Volume disponible:</div><div>4578L</div></div>
+      <a class="boutonTas" href="#e" title="Jauges du volume et du taux de remplissage">Voir les jauges</a>
+    </fieldset>
+  </div>
+  <ul class="notes"><li class="p">Le plus clair, et le plus facile au doigt : c'est un vrai bouton Tasmota.</li><li class="m">Rallonge l'encadré d'une ligne (environ 40&nbsp;px) sur l'accueil.</li></ul>
+</section>
+
+<!-- F -->
+<section class="prop">
+  <header><span class="lettre">F</span><h2>Aperçu du taux cliquable</h2></header>
+  <div class="tas">
+    <div class="ligneEsp"><span>ESP32 Température</span><span>28,4 °C</span></div>
+    <fieldset><legend>Capteurs de Niveau de Cuve</legend>
+      <a class="apercu" href="#f" title="Jauges du volume et du taux de remplissage"><span class="barre"><i style="width:68%"></i></span><span class="suite">Jauges ›</span></a>
+      <div class="parametre"><div>Tension brute (ADS1115) :</div><div>2000mV</div></div>
+      <div class="parametre"><div>Tension sonde (recalculée) :</div><div>6.80V</div></div>
+      <div class="parametre"><div>Taux de remplissage:</div><div>68%</div></div>
+      <div class="parametre"><div>Volume disponible:</div><div>4578L</div></div>
+    </fieldset>
+  </div>
+  <ul class="notes"><li class="p">Montre déjà le niveau d'un coup d'œil, puis mène au détail.</li><li class="m">La largeur de la barre vient du taux : il faut une valeur de plus dans le gabarit (taux sans le « % » quand il est inconnu).</li></ul>
+  <pre class="code">&lt;i style='width:#…tauxRemplissage#'&gt;</pre>
+</section>
+
+<!-- G -->
+<section class="prop">
+  <header><span class="lettre">G</span><h2>Puce icône et texte</h2></header>
+  <div class="tas">
+    <div class="ligneEsp"><span>ESP32 Température</span><span>28,4 °C</span></div>
+    <fieldset><legend>Capteurs de Niveau de Cuve <a class="puce" href="#g" title="Jauges du volume et du taux de remplissage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M3.5 16a8.5 8.5 0 0 1 17 0"/><path d="M12 16l4.2-5.2"/></svg>Jauges</a></legend>
+      <div class="parametre"><div>Tension brute (ADS1115) :</div><div>2000mV</div></div>
+      <div class="parametre"><div>Tension sonde (recalculée) :</div><div>6.80V</div></div>
+      <div class="parametre"><div>Taux de remplissage:</div><div>68%</div></div>
+      <div class="parametre"><div>Volume disponible:</div><div>4578L</div></div>
+    </fieldset>
+  </div>
+  <ul class="notes"><li class="p">Entre A et C : visible, mais plus léger qu'un bouton plein.</li><li class="m">Comme C, allonge la ligne du titre.</li></ul>
+</section>
+
+<!-- H -->
+<section class="prop">
+  <header><span class="lettre">H</span><h2>Valeurs cliquables</h2></header>
+  <div class="tas">
+    <div class="ligneEsp"><span>ESP32 Température</span><span>28,4 °C</span></div>
+    <fieldset><legend>Capteurs de Niveau de Cuve</legend>
+      <div class="parametre"><div>Tension brute (ADS1115) :</div><div>2000mV</div></div>
+      <div class="parametre"><div>Tension sonde (recalculée) :</div><div>6.80V</div></div>
+      <div class="parametre"><div>Taux de remplissage:</div><div><a class="valeurLien" href="#h" title="Jauge du taux">68%</a></div></div>
+      <div class="parametre"><div>Volume disponible:</div><div><a class="valeurLien" href="#h" title="Jauge du volume">4578L</a></div></div>
+    </fieldset>
+  </div>
+  <ul class="notes"><li class="p">Le lien est là où l'œil cherche le niveau ; l'encadré ne change pas de forme.</li><li class="m">Le soulignement pointillé est subtil : il faut savoir qu'on peut cliquer.</li></ul>
+</section>
+
+</main>
+
+<p class="pied">Les combinaisons sont possibles (par exemple B dans le titre et H sur les valeurs). Les valeurs affichées sont des exemples, pas une mesure de la cuve.</p>
+
+<div class="avis" id="avis" role="status" aria-live="polite" hidden></div>
+<style>
+.avis{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--texte);color:#111;
+  font-family:var(--f-ui);font-size:.92rem;border-radius:8px;padding:9px 14px;box-shadow:0 6px 20px #0008;max-width:calc(100% - 32px);z-index:5}
+.prop.choisie{border-color:var(--tas-bleu);box-shadow:0 0 0 1px var(--tas-bleu)}
+</style>
+<script>
+// Les liens des maquettes ne quittent pas la page : ils montrent ce qu'ils feraient sur la carte.
+(function(){
+  var avis=document.getElementById('avis'), minuterie=null;
+  document.querySelectorAll('.tas a').forEach(function(a){
+    a.addEventListener('click',function(e){
+      e.preventDefault();
+      var prop=a.closest('.prop'), lettre=prop.querySelector('.lettre').textContent;
+      document.querySelectorAll('.prop.choisie').forEach(function(p){p.classList.remove('choisie')});
+      prop.classList.add('choisie');
+      avis.textContent='Proposition '+lettre+' : sur la carte, ce clic ouvre la page /cuve (jauges du volume, du taux et des tensions).';
+      avis.hidden=false;
+      clearTimeout(minuterie); minuterie=setTimeout(function(){avis.hidden=true},4000);
+    });
+  });
+})();
+</script>
+
+</html>

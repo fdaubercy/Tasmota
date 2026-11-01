@@ -41,6 +41,11 @@ if (!os.path.exists(SORTIE + "/modules"))    os.mkdir(SORTIE + "/modules")    en
 for m: ["cuvePageFonctions", "graphiquesFonctions"]
     ecrisFichier(SORTIE + "/modules/" + m + ".be", lisFichier(SOURCES + "/fs/" + m + ".be"))
 end
+# Solidifie sur la carte, cuvePageFonctions n'est PAS un global (ses fonctions cherchent leur module dans global :
+# 'cuvePageFonctions' undeclared, constate sur la cuve le 2026-10-31). Charge depuis un fichier, le `var` du module
+# serait capture par ses fonctions et masquerait le defaut : on le declare en global, puis on retire ce global.
+ecrisFichier(SORTIE + "/modules/cuvePageFonctions.be", string.replace(lisFichier(SORTIE + "/modules/cuvePageFonctions.be"),
+    'var cuvePageFonctions = module("cuvePageFonctions")', 'import global global.cuvePageFonctions = module("cuvePageFonctions")'))
 # cuveFonctions (importe par pageCuve de la cuve pour le montage de la sonde) : bouchon, sans montage connu
 ecrisFichier(SORTIE + "/modules/cuveFonctions.be", "var m = module('cuveFonctions')\nm.montageSonde = def () return nil end\nreturn m\n")
 sys.path().push("outils_docs/scripts_python/berry/bouchons_berry/graphiques")
@@ -88,6 +93,8 @@ path.racine = SOURCES
 
 import cuvePageFonctions
 import graphiquesFonctions
+var CPF = cuvePageFonctions
+global.cuvePageFonctions = nil        # comme sur la carte (voir plus haut)
 
 # Rend la page ou le fichier d'une requete ; renvoie le texte ecrit (ou "EXCEPTION ...")
 def sert(args, appel, nomFichier)
@@ -106,7 +113,7 @@ def configDe(page)
     return (d >= 0 && fin > 0 ? json.load(page[d + 12 .. fin - 1]) : nil)
 end
 def route(dim, args, nom, sonde)
-    return sert(args, def () cuvePageFonctions.route(dim, sonde) end, nom)
+    return sert(args, def () CPF.route(dim, sonde) end, nom)
 end
 
 # ---- 1. Acces et fichier de l'extension --------------------------------------------------------
@@ -120,27 +127,27 @@ sortie = route({}, {"f": "liquidfill.js.gz"}, "refuse_f.txt")
 webserver.privilegie = true
 verifie(webserver.code == nil && webserver.envois == 0 && sortie == "", "acces non privilegie + f= : rien n'est envoye non plus")
 
-var fichierLiquid = cuvePageFonctions.FICHIERS.find("liquidfill.js.gz")
-verifie(size(cuvePageFonctions.FICHIERS) == 1 && fichierLiquid != nil && fichierLiquid[0] == "/sd/js/echarts-liquidfill.min.js.gz"
+var fichierLiquid = CPF.FICHIERS.find("liquidfill.js.gz")
+verifie(size(CPF.FICHIERS) == 1 && fichierLiquid != nil && fichierLiquid[0] == "/sd/js/echarts-liquidfill.min.js.gz"
         && fichierLiquid[1] == "application/octet-stream", "un seul fichier servi : /sd/js/echarts-liquidfill.min.js.gz en application/octet-stream")
 # L'envoi lit le chemin tel quel sur le disque : on le pointe vers le fichier des sources, apres avoir verifie le chemin declare
 fichierLiquid[0] = SOURCES + "/sd/js/echarts-liquidfill.min.js.gz"
 webserver.raz({"f": "liquidfill.js.gz"})
 webserver.sortie = open(SORTIE + "/liquidfill_recu.js.gz", "wb")
-cuvePageFonctions.route({})
+CPF.route({})
 webserver.sortie.close()
 fichierLiquid[0] = "/sd/js/echarts-liquidfill.min.js.gz"
 verifie(webserver.code == 200 && webserver.mime == "application/octet-stream" && webserver.envois >= 1 && webserver.ferme && webserver.debut == nil,
         "liquidfill.js.gz : 200 application/octet-stream, " + str(webserver.envois) + " morceaux, reponse fermee, pas de page")
 webserver.raz({"f": "inconnu.js"})
 webserver.sortie = open(SORTIE + "/inconnu.txt", "wb")
-cuvePageFonctions.route({})
+CPF.route({})
 webserver.sortie.close()
 verifie(webserver.code == nil && webserver.debut == "Niveau de la cuve", "f= inconnu : aucun fichier servi, la page est renvoyee")
 
 # ---- 2. Dimensions et page ----------------------------------------------------------------------
 print("2. Dimensions de la cuve")
-var D = cuvePageFonctions.dimension
+var D = CPF.dimension
 verifie(D({"hauteur": 110}, "hauteur") == 110 && D({"hauteur": 55.5}, "hauteur") == 55.5, "dimension en cm lue (entier ou reel)")
 verifie(D({}, "hauteur") == 100 && D(nil, "hauteur") == 100 && D("x", "hauteur") == 100 && D([1], "hauteur") == 100, "bloc absent, vide ou pas une map : 100")
 verifie(D({"hauteur": 0}, "hauteur") == 100 && D({"hauteur": -5}, "hauteur") == 100 && D({"hauteur": "110"}, "hauteur") == 100
@@ -191,7 +198,7 @@ verifie(cfg != nil && cfg.find("sonde") == nil, "map invalide {entreeMax_V: 0} :
 cfg = configDe(route(DIM, {}, "page_sonde.html", SONDE))
 verifie(cfg != nil && isinstance(cfg.find("sonde"), map) && cfg["sonde"]["entreeMax_V"] == 3.3 && cfg["sonde"]["sondeMax_V"] == 10 && cfg["sonde"]["rapport"] > 3.02 && cfg["sonde"]["rapport"] < 3.04,
         "map valide : gardee telle quelle dans window.CUVE.sonde")
-var S = cuvePageFonctions.sonde
+var S = CPF.sonde
 verifie(S(SONDE) == SONDE && S(nil) == nil && S("x") == nil && S([1]) == nil, "sonde() : map valide rendue, nil / chaine / liste : nil")
 verifie(S({"entreeMax_V": 3.3}) == nil && S({"sondeMax_V": 10}) == nil && S({"entreeMax_V": 3.3, "sondeMax_V": 0}) == nil && S({"entreeMax_V": -1, "sondeMax_V": 10}) == nil
         && S({"entreeMax_V": "3.3", "sondeMax_V": 10}) == nil && S({"entreeMax_V": nil, "sondeMax_V": 10}) == nil, "sonde() : cle absente, nulle, negative ou mal typee : nil")

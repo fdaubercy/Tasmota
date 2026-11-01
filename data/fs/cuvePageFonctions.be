@@ -60,6 +60,7 @@ cuvePageFonctions.sonde = cuvePageFonctions_sonde
 # dimensions : bloc {hauteur, longueur, largeur} en cm de la cuve ; sonde : voir sonde(). Fournis par le driver de la carte
 def cuvePageFonctions_route(dimensions, sonde)
     import webserver
+    import cuvePageFonctions        # solidifie, le module n'est pas un global : les appelants l'importent en local
     if (!webserver.check_privileged_access())    return nil    end
 
     var f = (webserver.has_arg("f") ? webserver.arg("f") : "")
@@ -81,6 +82,7 @@ def cuvePageFonctions_page(dimensions, sonde)
     import gestionFileFolder
     import graphiquesFonctions
     import historiqueFonctions
+    import cuvePageFonctions        # voir route()
 
     var hauteur = cuvePageFonctions.dimension(dimensions, "hauteur")
     var volumeMax = int(hauteur * cuvePageFonctions.dimension(dimensions, "longueur") * cuvePageFonctions.dimension(dimensions, "largeur") / 1000)   # cm3 -> L
