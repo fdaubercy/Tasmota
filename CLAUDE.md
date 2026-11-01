@@ -290,11 +290,12 @@ Prise en compte a chaud, sans redemarrer VS Code.
 ## Vigilances de build
 
 - Un build reecrit `platformio_override.ini` (`adapteParametresPlatformio_override`), et
-  `tasmota/user_config_override.h` (`increment_config_holder`) **seulement** si ce `.h` (hors ligne `CFG_HOLDER`)
-  ou le `_persist.json` de l'env a change depuis le dernier increment de cet env, et pour un `pio run` qui compile
-  le firmware (`build/cfg_holder.py`, decide le 2026-11-01 ; etat par env dans
-  `%LOCALAPPDATA%\outils_tasmota\build\cfg_holder.json`). Avant, `CFG_HOLDER` changeait a chaque run et
-  `tasmota.ino.cpp` n'etait jamais repris du cache objet (`.cache`, `build_cache_dir`). Le pre-script force aussi la
+  `tasmota/user_config_override.h` (`increment_config_holder`) **seulement** si ce `.h` (hors ligne `CFG_HOLDER`) a
+  change depuis le dernier increment, et pour un `pio run` qui compile le firmware (`build/cfg_holder.py`, decide le
+  2026-11-01 ; etat commun a tous les envs dans `%LOCALAPPDATA%\outils_tasmota\build\cfg_holder.json` ; le `_persist.json`
+  n'y entre pas, retire a la demande de l'utilisateur). Avant, `CFG_HOLDER` changeait a chaque run : `tasmota.ino.cpp` et
+  tout Berry, soit 175 fichiers sur la cuve, n'etaient jamais repris du cache objet (`.cache`, `build_cache_dir`), car
+  `berry_conf.h` inclut `my_user_config.h`. Le pre-script force aussi la
   refabrication de `firmware.bin` (`AlwaysBuild`) : sinon la post-action de `pio-tools/post_esp32.py` ne joindrait plus
   le FS a l'upload serie. Sauvegarder avant une serie de builds experimentaux.
 - **Ne jamais lancer un build en parallele de celui de l'utilisateur** : deux `pio` ecrivant

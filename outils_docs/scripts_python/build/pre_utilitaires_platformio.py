@@ -740,22 +740,18 @@ if not is_safeboot and not hors_build:
     else:
         print(Fore.YELLOW + "⚠ Synchronisation IDF55 ignorée (non applicable pour cet environnement ou flag non défini)")
 
-    # CFG_HOLDER : seulement pour un pio run qui compile le firmware, et si user_config_override.h ou le persist de
-    # l'env a change depuis le dernier increment de cet env (cfg_holder.py, plan temps-compilation A1). Avant, il
-    # changeait a chaque run : tasmota.ino.cpp n'etait jamais repris du cache objet.
+    # CFG_HOLDER : seulement pour un pio run qui compile le firmware, et si user_config_override.h a change depuis le
+    # dernier increment (cfg_holder.py, plan temps-compilation A1). Avant, il changeait a chaque run : tasmota.ino.cpp
+    # et tout Berry (berry_conf.h inclut ce .h) n'etaient jamais repris du cache objet.
     import cfg_holder
     if cfg_holder.construit_firmware(COMMAND_LINE_TARGETS):
         chemin_h = os.path.join(env.subst("$PROJECT_SRC_DIR"), "user_config_override.h")
-        try:
-            chemin_persist = os.path.join(env.subst("$PROJECT_DIR"), transform_name(Global.environnement), "_persist.json")
-        except ValueError:                           # env sans tiret (amont) : pas de dossier de carte
-            chemin_persist = ""
-        incrementer, motif = cfg_holder.doit_incrementer(Global.environnement, chemin_h, chemin_persist)
+        incrementer, motif = cfg_holder.doit_incrementer(chemin_h)
         if not incrementer:
             print(Fore.YELLOW + f"⚠ CFG_HOLDER inchangé : {motif}.")
         elif increment_config_holder():
             print(Fore.GREEN + f"✔ CFG_HOLDER incrémenté : {motif}.")
-            cfg_holder.enregistre(Global.environnement, chemin_h, chemin_persist)
+            cfg_holder.enregistre(chemin_h)
 
         # pio-tools/post_esp32.py reconstruit littlefs.bin et joint le FS a l'upload serie dans une post-action de
         # firmware.bin (esp32_create_combined_bin) : firmware.bin a jour ou repris du cache, elle ne tournerait pas.

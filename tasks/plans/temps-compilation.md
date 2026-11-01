@@ -21,13 +21,17 @@ Ce que montrent les journaux de la page (`%LOCALAPPDATA%\outils_tasmota\build\jo
 - **Le cache objet amortit** : `build_cache_dir = .cache` (`platformio.ini`, amont).
 - **`CFG_HOLDER` est incrémenté à CHAQUE `pio run`** (`pre_utilitaires_platformio.py::increment_config_holder`,
   appelé sans condition hors safeboot et hors cibles d'outils, envois et buildfs compris). `user_config_override.h`
-  change, donc `tasmota.ino.cpp` (~7,6 Mo, un seul cœur) n'est jamais repris du cache. Cuve du 31/10 :
-  655 s pour UN fichier compilé (`tasmota.ino.cpp`) + édition de liens LTO.
+  change, donc `tasmota.ino.cpp` n'est jamais repris du cache, ni Berry (`berry_conf.h` inclut `my_user_config.h`).
+  Cuve du 01/11, build réussi : 175 fichiers recompilés (berry_tasmota 66, berry 42, berry_custom 35…), 584 repris, 51 min.
+  Le « 655 s pour 1 fichier » du 31/10 écrit d'abord ici venait d'un build ÉCHOUÉ (coupé en cours) : chiffre faux.
 
 Décisions de l'utilisateur (2026-11-01) :
-- `CFG_HOLDER` incrémenté **seulement si** `user_config_override.h` (hors ligne `CFG_HOLDER`) **ou** le `_persist.json`
-  de l'env a changé depuis le dernier incrément de cet env. NB signalé : le persist vit sur le FS et ne passe pas
-  par SECTION1 ; l'inclure recharge les réglages Tasmota de la carte au prix d'une recompilation (choix assumé).
+- `CFG_HOLDER` incrémenté **seulement si** `user_config_override.h` (hors ligne `CFG_HOLDER`) a changé depuis le dernier
+  incrément. Le `_persist.json`, d'abord inclus, a été retiré le même jour à la demande de l'utilisateur (175 fichiers
+  recompilés pour toutes les cartes, alors qu'il ne passe pas par SECTION1). État commun à tous les envs.
+- Autonomie (2026-11-01) : Claude avance seul, compilations de mesure comprises, quand aucun build ne tourne ; seuil de
+  A2 : 10 min par changement d'env ; purge après les mesures ; essai QEMU borné. Restent à l'utilisateur : flash d'une
+  carte, modification de la table d'un env réel, Defender.
 - Dossier de build par env : **mesurer d'abord**, décider ensuite.
 - Port COM : **reste dans le cenv** (changement rare, la purge est acceptée).
 - Inclus : contrôle `lib_ignore` sauté sans compilation, script d'exclusions Defender, purge de `.cache`.
@@ -42,10 +46,9 @@ Inspiration : ESP32 Partition Builder (README seul, l'outil n'a pas pu être lu)
 Contraintes : jamais de `pio run` pendant un build de l'utilisateur (hook `garde_build`, leçon du 2026-10-31) ;
 pas de modification de fichiers amont (`pio-tools/`, `platformio.ini`) ; lire `tasks/lessons.md` avant le code.
 
-## A1 — CFG_HOLDER incrémenté seulement si le .h ou le persist de l'env a changé
+## A1 — CFG_HOLDER incrémenté seulement si le .h a changé
 - [x] Module voisin `build/cfg_holder.py` — preuve : `cfg_holder.py::doit_incrementer`, `::enregistre`, `test_cfg_holder.py` VERT
-  (empreinte de `user_config_override.h` sans la ligne `#define CFG_HOLDER`, empreinte du `_persist.json` de l'env,
-  dossier donné par `transform_name` ; état par env dans `%LOCALAPPDATA%\outils_tasmota\build\cfg_holder.json`, hors
+  (empreinte de `user_config_override.h` sans la ligne `#define CFG_HOLDER` ; état commun dans `%LOCALAPPDATA%\outils_tasmota\build\cfg_holder.json`, hors
   dépôt ; illisible ou absent = incrément)
 - [x] Incrément seulement pour un `pio run` qui construit le firmware — preuve : `cfg_holder.py::construit_firmware`, 7 cas VERTS
   (aucune cible, `upload`, `erase_upload` ; jamais `nobuild`, `buildfs`, `uploadfs` seuls)
@@ -129,14 +132,15 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
 
 ## Améliorations restantes
 - [ ] [projet] Dossier de build par env, si A2 conclut « faire »
+- [ ] [projet] `cpptools` (indexeur C/C++ de VS Code) occupe 0,75 cœur sur 4 hors build (mesure du 01/11, 8 s) : exclure `.pio`, `.cache` et `lib/` de son analyse, dans le profil VS Code, à essayer et à mesurer
+- [ ] [projet] QEMU d'Espressif (ESP32-S3 seulement, pas le P4 ; sans support officiel) : essai borné pour démarrer une table modifiée sans toucher une carte, avant l'essai réel de A9 ; démarrage de Tasmota non garanti
 - [ ] [projet] Sortir le port COM du cenv si les changements de port deviennent fréquents
 - [ ] [projet] Défaut existant, à vérifier : un `nobuild upload` (envoi après la pause « rebranchez la carte ») n'a
   pas de règle pour `firmware.bin` (`builder/main.py`, bloc `nobuild`), donc la post-action FS de `post_esp32.py` ne tourne
   pas et le FS ne serait PAS joint, alors que la page grise « Construire / Téléverser le FS » (`build_serie.py::Serie._plan`).
   Aucun journal `nobuild` pour trancher.
-- [ ] [projet] `CFG_HOLDER` est commun à tous les envs : un incrément pour un env (persist modifié) fait recompiler
-  `tasmota.ino.cpp` aux autres et recharge leurs réglages SECTION1 au flash suivant. Un `CFG_HOLDER` par env
-  (`-D` dans le cenv) l'éviterait.
+- [ ] [projet] `CFG_HOLDER` et `user_config_override.h` sont communs à tous les envs : modifier le `.h` pour une carte fait
+  tout recompiler aux autres et recharge leurs réglages SECTION1 au flash suivant. À revoir seulement si cela gêne.
 
 ## Vérification
 - A1 : `test_cfg_holder.py` vert (mutants tués) ; deux compilations successives du même env par l'utilisateur, la
