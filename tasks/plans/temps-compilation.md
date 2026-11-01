@@ -52,16 +52,24 @@ pas de modification de fichiers amont (`pio-tools/`, `platformio.ini`) ; lire `t
   dépôt ; illisible ou absent = incrément)
 - [x] Incrément seulement pour un `pio run` qui construit le firmware — preuve : `cfg_holder.py::construit_firmware`, 7 cas VERTS
   (aucune cible, `upload`, `erase_upload` ; jamais `nobuild`, `buildfs`, `uploadfs` seuls)
-- [ ] Garder le FS joint à l'upload série : la post-action de `firmware.bin` (`pio-tools/post_esp32.py::esp32_create_combined_bin`)
-  ne tournait QUE parce que `CFG_HOLDER` forçait l'édition des liens à chaque fois ; `env.AlwaysBuild` + `env.NoCache`
-  sur `firmware.bin` dans le pré-build ; vérifié sur un journal d'upload sans changement (« Utilisera une commande de
-  téléchargement personnalisée »)
+- [x] Garder le FS joint à l'upload série — preuve : compilation de mesure du 01/11 07:43 sans changement : « Building firmware.bin », « Image LittleFS créée », « Utilisera une commande de téléchargement personnalisée »
+  (la post-action de `firmware.bin`, `pio-tools/post_esp32.py::esp32_create_combined_bin`, ne tournait que parce que
+  `CFG_HOLDER` forçait l'édition des liens ; `env.AlwaysBuild` + `env.NoCache` sur `firmware.bin` dans le pré-build)
 - [x] Commentaires « CFG_HOLDER change à chaque run » corrigés — preuve : `build_envs.py::_fs_avec_firmware`, en-têtes de `syslog_tasmota.py` et `build_serie.py`
 - [x] `increment_config_holder` inchangé (rend True), appelé seulement si `cfg_holder.doit_incrementer` — preuve : `pre_utilitaires_platformio.py` (bloc « CFG_HOLDER : seulement… »), `test_config_holder.py` VERT
   (état enregistré après l'écriture du .h ; lignes « CFG_HOLDER inchangé : … » / « CFG_HOLDER incrémenté : … »)
 - [x] Banc `build/test_cfg_holder.py` — preuve : 19 cas VERTS, 6 mutants tués, contrat avec la vraie `increment_config_holder`
-- [ ] Mesure réelle (build lancé par l'utilisateur) : deux compilations du même env sans modification → la seconde
-  reprend `tasmota.ino.cpp` du cache ; durée relevée dans le journal
+- [x] Mesure réelle — preuve : cuve, 01/11 06:40 (incrément) 51 min, 175 compilés / 584 repris ; 01/11 07:43 « CFG_HOLDER inchangé », 23 min 24 s, 1 compilé / 771 repris
+  (étapes datées par les fichiers produits : préparation ~8 min 30, `tasmota.ino.cpp` ~9 min sur un cœur, lien LTO 5 min 38)
+
+## A11 — Ce qui reste dans les 23 min d'un build sans changement (constaté le 01/11)
+- [ ] `tasmota.ino.cpp` recompilé alors que `user_config_override.h` et `CFG_HOLDER` sont inchangés (~9 min) : trouver la
+  cause par `--debug=explain` de SCons (lancer hors page, en accord avec l'utilisateur), puis la corriger si elle est de notre fait
+- [ ] Lien LTO en série malgré `post_lto_parallele.py` (« lto-wrapper: using serial compilation of 32 LTRANS jobs ») :
+  hypothèse, GCC a besoin d'un `make` sous Windows pour paralléliser et le poste n'en a pas ; vérifier, puis essayer un `make`
+  dans le PATH du build, et mesurer
+- [ ] Préparation de ~8 min 30 : détailler (contrôle `lib_ignore` 80 s à chaque compilation, LDF, solidification Berry de
+  6 bibliothèques, `dump-defines.py`) et ne garder que ce qui sert
 
 ## A2 — Mesurer le coût d'un changement d'env, puis décider du dossier de build par env
 - [ ] Relevé sur les journaux de la page : durée d'un build même env répété vs après changement d'env (après A1,
