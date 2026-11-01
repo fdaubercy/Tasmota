@@ -432,6 +432,11 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   d'outil qui DEMARRE compte comme un build pendant ses 30 premieres secondes (son demarrage peut purger
   `.pio/build`) : age par `CreationDate` dans la meme requete PowerShell. Banc
   `outils_docs/scripts_python/build/test_garde_build.py` (verifie aussi que la liste = les `NOM_CIBLE`).
+- `.claude/hooks/reprise_limite.py` — hook `StopFailure` (`rate_limit`), demande du 2026-11-01 : a la limite
+  d'utilisation, demarre une veille detachee qui retente `claude -p --resume <session>` toutes les 15 min (8 jours au
+  plus, abandon apres 3 echecs qui ne sont pas des limites), dans le mode de la conversation (jamais bypassPermissions).
+  Ne change jamais de compte. Journal `%LOCALAPPDATA%\outils_tasmota\reprise_limite\journal.log` ; banc
+  `.claude/hooks/test_reprise_limite.py` (ne prouve pas le declenchement reel).
 - `.claude/hooks/rappel_apres_compactage.sh` — hook `SessionStart` (`compact`) : rappelle de mettre
   a jour la reprise.
 - `.claude/hooks/verifie_berry_edition.sh` + `.py` — hook `PostToolUse` (Edit, Write, MultiEdit) : apres
