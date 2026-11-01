@@ -7,12 +7,13 @@ GET /memoire?env= (derniere analyse enregistree), « Analyser » = POST /memoire
 pio). Jauges orange a 85 %, rouge a 95 %. Table : un curseur et un champ par partition, par pas de 64 Ko ; le FS
 (sinon app0) compense pour que la flash reste repartie ; nvs, otadata et app0 non supprimables. « Voir le diff » =
 POST /partitions/diff, « Écrire » = POST /partitions/ecrire apres confirmation (build_partitions.py valide tout cote
-serveur ; la page ne fait que proposer). Tout texte venu du serveur passe par textContent (fonction h de build_page).
+serveur ; la page ne fait que proposer). « Partir d'une table existante » (GET /partitions/tables) regle les curseurs
+sur une table de partitions/ ; identique a l'ecriture, l'env pointe vers ce fichier. Tout texte venu du serveur passe par textContent (fonction h de build_page).
 """
 
 CSS = r"""
   .m-barre{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
-  .m-barre select{font:inherit;color:inherit;background:var(--btn);border:1px solid var(--btn-bord);border-radius:6px;padding:5px 8px}
+  .m-barre select,#m-table{font:inherit;color:inherit;background:var(--btn);border:1px solid var(--btn-bord);border-radius:6px;padding:5px 8px}
   .m-grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px}
   .m-zone .tete{display:flex;justify-content:space-between;gap:6px;font-size:13px}
   .m-jauge{height:9px;background:var(--piste);border-radius:5px;overflow:hidden;margin:4px 0 2px}
@@ -28,6 +29,7 @@ CSS = r"""
   .m-table tr.suppr td{opacity:.5;text-decoration:line-through}.m-table tr.suppr td:first-child{opacity:1;text-decoration:none}
   .m-table input[type=range]{width:100%;accent-color:var(--bleu)}
   .m-num{width:92px;text-align:right;font:inherit;color:inherit;background:var(--btn);border:1px solid var(--btn-bord);border-radius:6px;padding:4px 6px}
+  .m-role{display:block;font-size:11px;line-height:1.3;color:var(--doux);margin-top:2px;max-width:260px}
   .m-pastille{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
   .m-defile{overflow-x:auto}
   .m-deux{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
@@ -51,6 +53,7 @@ HTML = r"""
     <div class="carte"><h2>Occupation, selon les capacités paramétrées</h2>
       <div id="m-zones" class="m-grille"></div><p id="m-notes" class="discret" style="margin:6px 0 0"></p></div>
     <div class="carte" style="margin-top:10px"><h2>Régler chaque partition</h2>
+      <label>Partir d'une table existante <select id="m-table" aria-label="Table existante"></select></label>
       <div id="m-ruban" class="m-ruban"></div>
       <div class="m-defile"><table class="m-table"><thead><tr><th>Suppr.</th><th>Partition</th><th>Adresse</th>
         <th style="width:40%">Taille</th><th>Ko</th><th>Occupé</th></tr></thead><tbody id="m-parts"></tbody></table></div>
@@ -75,6 +78,14 @@ var M = {env: "", analyse: null, parts: [], flash: 0, empreinte: "", lecture: 0}
 var M_COUL = {nvs: "#8b95a5", otadata: "#8b95a5", safeboot: "#b07ad9", app0: "#2563eb", spiffs: "#0d9488"};
 var M_RAISON = {nvs: "position fixe 0x9000 : réglages Tasmota et Wi-Fi", otadata: "position fixe 0xE000 : boot_app0.bin y est écrit",
                 app0: "le firmware : indispensable"};
+// Utilite de chaque partition, sous son nom (par nom, sinon par sous-type)
+var M_ROLE = {nvs: "Réglages Tasmota et Wi-Fi, écrits par la carte elle-même.",
+              otadata: "Dit au démarrage quelle application lancer : safeboot ou app0.",
+              safeboot: "Firmware minimal de secours : il reçoit l'OTA et écrit le nouveau firmware dans app0.",
+              app0: "Le firmware Tasmota de la carte, Berry solidifié compris.",
+              spiffs: "Système de fichiers LittleFS : autoexec, persist, scripts Berry, pages web.",
+              ota_1: "Second emplacement de firmware.", coredump: "Vidage de la mémoire après un plantage.",
+              fat: "Système de fichiers FAT.", littlefs: "Système de fichiers LittleFS."};
 
 function mKo(o) { return Math.round(o / 1024); }
 function mFmt(k) { return k >= 1024 ? (k / 1024).toFixed(k % 1024 ? 2 : 0).replace(".", ",") + " Mo" : String(k).replace(".", ",") + " Ko"; }
@@ -149,6 +160,7 @@ async function mCharge(env, analyser) {
   if (!r.ok) { $("m-date").textContent = ""; $("m-notes").textContent = "Analyse indisponible : " + (r.texte || "HTTP " + r.statut); return; }
   if (!r.donnees && !analyser) return mCharge(env, true);   // jamais analyse : une premiere lecture du dernier build
   M.analyse = r.donnees;
+  await mTables(env);
   mDepuisAnalyse();
 }
 function mDepuisAnalyse() {
@@ -163,8 +175,34 @@ function mDepuisAnalyse() {
   $("m-notes").textContent = (a.notes || []).join(" ; ") || "Taille du FS estimée d'après les fichiers de l'image ; le reste vient du journal de compilation.";
   $("m-titre-diff").textContent = "Diff";
   $("m-diff-texte").textContent = "« Voir le diff » montre ce qui serait écrit.";
+  $("m-table").value = "";
   mRendu();
 }
+async function mTables(env) {
+  var r = await appel("/partitions/tables?env=" + encodeURIComponent(env));
+  if (env !== M.env) return;
+  var sel = $("m-table");
+  sel.textContent = "";
+  sel.appendChild(h("option", {value: "", texte: "Table actuelle de l'env"}));
+  M.tables = r.ok && r.donnees ? r.donnees : [];
+  M.tables.forEach(function (t) {
+    var o = h("option", {value: t.csv, texte: t.csv.replace("partitions/", "") + (t.erreurs.length ? " (ne convient pas)" : "")});
+    o.disabled = t.erreurs.length > 0;
+    if (o.disabled) o.title = t.erreurs.join(" ; ");
+    sel.appendChild(o);
+  });
+}
+$("m-table").onchange = function () {
+  var t = (M.tables || []).filter(function (x) { return x.csv === $("m-table").value; })[0];
+  if (!t) { if (M.analyse) mDepuisAnalyse(); return; }
+  var avant = M.parts;
+  M.parts = t.partitions.map(function (p) {
+    var a = avant.filter(function (x) { return x.nom === p.nom; })[0] || {};
+    return {nom: p.nom, type: p.type, sous_type: p.sous_type, k: mKo(p.taille), u: a.u == null ? null : a.u, estime: a.estime, suppr: false};
+  });
+  M.empreinte = "";
+  mRendu();
+};
 
 function mRendu() {
   var zones = $("m-zones");
@@ -209,7 +247,8 @@ function mRendu() {
     }
     corps.appendChild(h("tr", {"class": p.suppr ? "suppr" : ""},
       h("td", {}, caseS),
-      h("td", {}, h("span", {"class": "m-pastille", style: "background:" + (M_COUL[p.nom] || "#d97706")}), h("b", {texte: p.nom})),
+      h("td", {}, h("span", {"class": "m-pastille", style: "background:" + (M_COUL[p.nom] || "#d97706")}), h("b", {texte: p.nom}),
+        h("span", {"class": "m-role", texte: M_ROLE[p.nom] || M_ROLE[p.sous_type] || ""})),
       h("td", {"class": "mono", texte: p.suppr ? "—" : mHex(o[p.nom])}),
       h("td", {}, curseur || h("span", {"class": "discret", texte: M_RAISON[p.nom] || ""})),
       h("td", {}, champ || String(p.k)),
@@ -245,9 +284,10 @@ $("m-diff").onclick = async function () {
   var r = await appel("/partitions/diff", {env: M.env, partitions: mDemande()});
   if (!r.ok || !r.donnees) { mMessages([["r", "Diff impossible : " + (r.texte || "HTTP " + r.statut)]]); return; }
   var d = r.donnees;
-  M.empreinte = d.erreurs.length ? "" : d.empreinte;
+  M.empreinte = d.erreurs.length || d.inchange ? "" : d.empreinte;
   M.avertissements = d.avertissements;
-  mMessages(d.erreurs.map(function (e) { return ["r", e]; }).concat(d.avertissements.map(function (e) { return ["o", e]; })));
+  mMessages(d.inchange && !d.erreurs.length ? [["v", "C'est déjà la table de cet env : rien à écrire."]]
+    : d.erreurs.map(function (e) { return ["r", e]; }).concat(d.avertissements.map(function (e) { return ["o", e]; })));
   $("m-titre-diff").textContent = d.erreurs.length ? "Diff (table refusée)" : "Diff : " + d.csv;
   $("m-diff-texte").textContent = d.diff || "(aucun changement)";
   $("m-ecrire").disabled = !M.empreinte;
@@ -258,6 +298,6 @@ $("m-ecrire").onclick = async function () {
   M.empreinte = "";
   $("m-ecrire").disabled = true;
   if (!r.ok) { mMessages([["r", "Écriture refusée : " + (r.texte || "HTTP " + r.statut)]]); return; }
-  mMessages([["v", "Table écrite (copie d'origine : " + r.donnees.sauvegarde + "). OTA de l'env bloquée jusqu'au prochain « Effacer puis téléverser »."]]);
+  mMessages([["v", "Table écrite : env réglé sur " + r.donnees.csv + " (copie d'origine : " + r.donnees.sauvegarde + "). OTA de l'env bloquée jusqu'au prochain « Effacer puis téléverser »."]]);
 };
 """

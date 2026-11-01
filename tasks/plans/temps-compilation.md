@@ -95,7 +95,7 @@ pas de modification de fichiers amont (`pio-tools/`, `platformio.ini`) ; lire `t
 ## A4 — Script d'exclusions Windows Defender
 - [x] Script `maintenance/exclusions_defender.ps1` — preuve : analyse PowerShell 0 erreur ; refuse hors administrateur (essai, code 1)
   (exclusions `.pio`, `.cache` du dépôt et `~/.platformio` ; `-Verifier` = lecture seule, idempotent)
-- [ ] Lancé par l'utilisateur ; exclusions constatées par `-Verifier`
+- [x] Lancé par l'utilisateur — preuve : déclaré fait par l'utilisateur le 2026-11-01 ; non relu par Claude (`Get-MpPreference` sans administrateur : « Must be an administrator to view exclusions »)
 - [x] Mention dans `CLAUDE.md` — preuve : § « MONTER UN NOUVEAU POSTE », sous-titre « 5. Exclusions Windows Defender »
 
 ## A5 — Purge du cache objet .cache
@@ -145,7 +145,8 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
   sinon refus avec le motif. S'applique aussi à la suppression de `safeboot` (le choix « supprimer » reste possible).
   État au 01/11 : le contrôle de la flash détectée avant l'upload série n'existe pas encore, donc `valide` refuse
   toute table qui n'a pas 5 partitions, en nommant la conséquence (suppression de `safeboot`/`spiffs` comprise)
-- [ ] Préréglages (tables de `partitions/`), import et export d'un CSV, passés par la même validation
+- [x] Préréglages (tables de `partitions/`), même validation ; table identique à un fichier = l'env pointe vers lui — preuve : `test_build_partitions.py` VERT (14 mutants), `test_build_page_memoire_chrome.py` VERT
+- [ ] Import et export d'un CSV, passés par la même validation
 - [x] Banc — preuve : `test_build_partitions.py` VERT, 27 cas, 10 mutants tués, deux vraies tables reproduites octet pour octet ; banc `test_build_partitions.py` (copies temporaires du cenv, relues par `ProjectConfig`, avec mutants) ; table produite identique octet pour octet à `esp32_partition_app3904k_fs11584k.csv` sans modification
 - [ ] Essai réel par l'utilisateur sur une carte, par câble : démarrage, FS et Berry vérifiés, puis OTA de nouveau permise
 

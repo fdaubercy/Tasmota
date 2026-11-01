@@ -22,13 +22,15 @@ from test_build_memoire import JOURNAL_S3
 A = s.A
 DEPOT = Path(__file__).resolve().parents[3]
 TABLE = "partitions/esp32_partition_app3904k_fs11584k.csv"
+AUTRE = "partitions/esp32_partition_app3904k_fs11392k.csv"
 ETAT = """(() => { const t = id => document.getElementById(id);
   return {build: t('vue-build').hidden, fichiers: t('vue-fichiers').hidden, memoire: t('vue-memoire').hidden,
           selection: t('onglet-memoire').getAttribute('aria-selected'), env: t('m-env').value,
           envs: [...t('m-env').options].map(o => o.value),
           zones: [...document.querySelectorAll('#m-zones .m-zone')].map(z => z.querySelector('.tete').textContent),
           noms: [...document.querySelectorAll('#m-zones .m-zone b')].map(b => b.textContent),
-          lignes: [...document.querySelectorAll('#m-parts tr')].map(r => r.children[1].textContent),
+          lignes: [...document.querySelectorAll('#m-parts tr')].map(r => r.children[1].querySelector('b').textContent),
+          roles: [...document.querySelectorAll('#m-parts tr')].map(r => !!r.children[1].querySelector('.m-role').textContent),
           interdites: [...document.querySelectorAll('#m-parts tr')].map(r => r.querySelector('input[type=checkbox]').disabled),
           adresses: [...document.querySelectorAll('#m-parts tr')].map(r => r.children[2].textContent),
           messages: [...document.querySelectorAll('#m-messages div')].map(d => d.className + ':' + d.textContent),
@@ -58,6 +60,7 @@ def prepare_depot(m):
         encoding="utf-8")
     (m.depot / "partitions").mkdir()
     (m.depot / TABLE).write_bytes((DEPOT / TABLE).read_bytes())
+    (m.depot / AUTRE).write_bytes((DEPOT / AUTRE).read_bytes())
     journaux = m.t / "outils" / "build" / "journaux"
     journaux.mkdir(parents=True, exist_ok=True)
     (journaux / f"20261101-064021-{A}-compiler.log").write_text(JOURNAL_S3, encoding="utf-8")
@@ -81,8 +84,25 @@ def sonde_onglet(m, capture):
     s.verifie(["73,0 %" in z for z in e["zones"][:2]], [False, True], "zones : app0 a 73,0 % (ligne Flash du journal)")
     s.verifie("≈" in e["zones"][2], True, "zones : FS marque estime")
     s.verifie(e["lignes"], ["nvs", "otadata", "safeboot", "app0", "spiffs"], "table : les 5 partitions du CSV")
+    s.verifie(e["roles"], [True] * 5, "table : utilite ecrite sous chaque partition")
     s.verifie(e["interdites"], [True, True, False, True, False], "table : nvs, otadata, app0 non supprimables")
     s.verifie(e["ecrire_off"], True, "ecrire : grise avant le diff")
+
+    def choisit(valeur):
+        cdp.js(f"""(() => {{ const c = document.getElementById('m-table'); c.value = {json.dumps(valeur)}; c.dispatchEvent(new Event('change')); }})()""")
+
+    s.verifie(cdp.js("[...document.getElementById('m-table').options].map(o => o.value)"), ["", AUTRE, TABLE],
+              "table existante : les tables de la flash proposees")
+    choisit(AUTRE)
+    clic(cdp, "#m-diff")
+    s.attend(cdp, "document.getElementById('m-diff-texte').textContent.includes('board_build.partitions')", 10)
+    e = etat(cdp)
+    s.verifie((f"= {AUTRE}" in e["diff"], "env_" in e["diff"], e["ecrire_off"]), (True, False, False),
+              "table existante : l'env pointe vers le fichier, aucun CSV d'env ; ecrire permis")
+    choisit("")
+    clic(cdp, "#m-diff")
+    s.attend(cdp, "document.getElementById('m-messages').textContent.includes('déjà la table')", 10)
+    s.verifie(etat(cdp)["ecrire_off"], True, "table actuelle : rien a ecrire, ecrire grise")
 
     champ(cdp, "app0", 3904 + 64)
     e = etat(cdp)

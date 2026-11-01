@@ -45,6 +45,10 @@ MUTANTS = {
     "build en cours ignore": ("    if builds:\n", "    if False:\n"),
     "OTA jamais liberee": ("_blocages(dossier, lambda b: b.pop(env, None))", "pass"),
     "colonnes non alignees": ("{adresse:<9}", "{adresse}"),
+    "inchange ignore": ('_forme(table) == _forme(mem["partitions"])', "False"),
+    "table existante ignoree": ('if _forme(t) == _forme(table)), "")', 'if False), "")'),
+    "env_ proposes": ('if chemin.name.startswith("env_"):', "if False:"),
+    "flash des tables ignoree": ('if parts and parts[-1]["debut"] + parts[-1]["taille"] == mem["flash"]]', "]"),
 }
 
 
@@ -134,6 +138,33 @@ def cas(m, bm):
 
         def jamais():
             return []
+
+        actuelle = [dict(q) for q in base]
+        i = m.prepare(racine, dossier, ENV, actuelle)
+        verifie("table actuelle : inchangee, rien a ecrire", i["inchange"] and not i["diff"] and not i["avertissements"]
+                and i["cenv"] == CENV)
+        try:
+            m.ecrit(racine, dossier, ENV, actuelle, i["empreinte"], jamais)
+            verifie("table actuelle : ecriture refusee", False)
+        except RuntimeError:
+            verifie("table actuelle : ecriture refusee, OTA pas bloquee", m.ota_bloquee(dossier, ENV) == "")
+        (racine / "partitions" / "esp32_autre_essai.csv").write_text(
+            m.texte_csv(m.valide(modif, M16)[0]), encoding="utf-8")
+        e2 = m.prepare(racine, dossier, ENV, modif)
+        verifie("table identique a un fichier existant : l'env pointe vers lui, aucun CSV cree",
+                e2["csv"] == "partitions/esp32_autre_essai.csv" and not e2["cree_csv"] and not e2["inchange"]
+                and "+board_build.partitions  = partitions/esp32_autre_essai.csv" in e2["diff"])
+        t = {x["csv"]: x for x in m.tables(racine, dossier, ENV)}
+        verifie("tables : fichiers a la taille de la flash proposes", set(t) == {
+            "partitions/esp32_autre_essai.csv", "partitions/esp32_partition_app3904k_fs11584k.csv"}
+            and not t["partitions/esp32_autre_essai.csv"]["erreurs"])
+        (racine / "partitions" / "esp32_autre_essai.csv").unlink()
+        (racine / "partitions" / "esp32_4mo_essai.csv").write_bytes((DEPOT / "partitions" / "esp32_partition_app2752k_fs448k.csv").read_bytes())
+        (racine / "partitions" / f"env_{ENV}x.csv").write_bytes((DEPOT / "partitions" / "esp32_partition_app3904k_fs11584k.csv").read_bytes())
+        verifie("tables : autre flash et env_* ecartes", {x["csv"] for x in m.tables(racine, dossier, ENV)} == {
+            "partitions/esp32_partition_app3904k_fs11584k.csv"})
+        (racine / "partitions" / "esp32_4mo_essai.csv").unlink()
+        (racine / "partitions" / f"env_{ENV}x.csv").unlink()
 
         for nom, args in (("build en cours : refus", (p["empreinte"], lambda: ["pio run"])),
                           ("empreinte perimee : refus", ("faux", jamais)),

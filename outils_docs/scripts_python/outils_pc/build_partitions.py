@@ -8,8 +8,9 @@ Regles (celles de la maquette outils_docs/partitions/, modele B) :
   - le FS (spiffs) en dernier (partition_core.be::resize_fs_to_max) ; la table finit a la fin de la flash ;
   - exactement 5 partitions : post_esp32.py::patch_partitions_bin ecrit la taille du FS dans la 5e entree.
 Deux temps comme la page Fichiers Berry : `prepare` (diff, rien n'est ecrit), `ecrit` (refait le calcul, empreinte,
-aucun build en cours, Transaction). Le CSV ecrit est partitions/env_<env>.csv, pose par `board_build.partitions`
-dans la section de l'env (les autres envs ne changent pas). Une table ecrite BLOQUE l'OTA de l'env (firmware et
+aucun build en cours, Transaction). Table identique a un fichier de partitions/ (`tables` les propose) : l'env pointe
+vers ce fichier, rien n'est cree ; sinon partitions/env_<env>.csv. Dans les deux cas `board_build.partitions` est pose
+dans la section de l'env (les autres envs ne changent pas). Table identique a celle de l'env : rien a ecrire. Une table ecrite BLOQUE l'OTA de l'env (firmware et
 FS : une OTA n'ecrit jamais la table en 0x8000) jusqu'au prochain « Effacer puis televerser » reussi (build_serie.py).
 Banc : test_build_partitions.py.
 """
@@ -92,38 +93,65 @@ def _lit(chemin):
     return chemin.read_bytes().decode("utf-8", errors="surrogateescape") if chemin.is_file() else ""
 
 
+def _forme(parts):
+    return [(p["nom"], p["type"], p["sous_type"], p["debut"], p["taille"]) for p in parts]
+
+
+def _existantes(racine):
+    """[(chemin relatif, partitions)] des tables de partitions/ ; les env_<env>.csv, propres a un env, n'en sont pas."""
+    res = []
+    for chemin in sorted((Path(racine) / "partitions").glob("*.csv")):
+        if chemin.name.startswith("env_"):
+            continue
+        try:
+            res.append((f"partitions/{chemin.name}", build_memoire.lit_csv(_lit(chemin))))
+        except ValueError:                            # CSV illisible : simplement pas propose
+            continue
+    return res
+
+
+def tables(racine, dossier, env):
+    """Tables existantes a la taille de la flash de l'env : [{csv, partitions, erreurs}] (erreurs : ne convient pas)."""
+    mem = build_memoire.analyse(racine, env, Path(dossier) / "journaux")     # LookupError : env inconnu
+    occupes = {p["nom"]: p["utilise"] for p in mem["partitions"] if p.get("utilise")}
+    return [{"csv": rel, "partitions": parts, "erreurs": valide(parts, mem["flash"], occupes)[1]}
+            for rel, parts in _existantes(racine) if parts and parts[-1]["debut"] + parts[-1]["taille"] == mem["flash"]]
+
+
 def prepare(racine, dossier, env, parts):
     """Diff du cenv et du CSV, erreurs et avertissements ; rien n'est ecrit."""
     racine = Path(racine)
     mem = build_memoire.analyse(racine, env, Path(dossier) / "journaux")     # LookupError : env inconnu
     occupes = {p["nom"]: p["utilise"] for p in mem["partitions"] if p.get("utilise")}
     table, erreurs = valide(parts, mem["flash"], occupes)
-    rel = f"partitions/env_{env}.csv"
+    inchange = not erreurs and _forme(table) == _forme(mem["partitions"])
+    existante = "" if erreurs else next((r for r, t in _existantes(racine) if _forme(t) == _forme(table)), "")
+    rel = mem["csv"] if inchange else existante or f"partitions/env_{env}.csv"
     cenv_avant = _lit(racine / build_envs.FICHIER_CENV)
     try:
-        cenv_apres = build_envs.pose_option(cenv_avant, env, OPTION, rel)
+        cenv_apres = cenv_avant if inchange else build_envs.pose_option(cenv_avant, env, OPTION, rel)
     except ValueError as erreur:                      # env hors du cenv : ni ecrivable, ni modifiable ici
         erreurs.append(str(erreur))
         cenv_apres = cenv_avant
     eol = "\r\n" if "\r\n" in cenv_avant else "\n"
     csv_avant = _lit(racine / mem["csv"]) if mem["csv"] else ""
-    csv_apres = "" if erreurs else texte_csv(table, eol)
+    csv_apres = "" if erreurs else _lit(racine / rel) if inchange or existante else texte_csv(table, eol)
     diff = "\n".join(difflib.unified_diff(cenv_avant.splitlines(), cenv_apres.splitlines(), build_envs.FICHIER_CENV,
                                           build_envs.FICHIER_CENV, lineterm="", n=1))
-    if csv_apres:
+    if csv_apres and not inchange:
         diff += "\n" + "\n".join(difflib.unified_diff(csv_avant.splitlines(), csv_apres.splitlines(),
                                                       mem["csv"] or "(aucune)", rel, lineterm="", n=5))
     toutes, _ = build_envs._sections(racine)
     heritiers = sorted(s[4:] for s in toutes if f"env:{env}" in build_envs._chaine(toutes, s)[1:])
-    avertissements = [
+    avertissements = [] if inchange else [
         "le flash série (« Effacer puis téléverser ») remplace le persist et les réglages de la carte par ceux du dépôt",
         f"{build_envs.FICHIER_CENV} change : le prochain build repart de zéro (.pio/build purgé)",
         "l'OTA de cet env (firmware et FS) est bloquée jusqu'au prochain « Effacer puis téléverser » réussi"]
-    if heritiers:
+    if heritiers and not inchange:
         avertissements.append("hérite aussi de cette table : " + ", ".join(heritiers))
     vus = json.dumps(parts, sort_keys=True, ensure_ascii=False)
     empreinte = hashlib.sha256((cenv_avant + "\0" + csv_avant + "\0" + vus).encode("utf-8", "surrogateescape")).hexdigest()
-    return {"env": env, "csv": rel, "texte_csv": csv_apres, "cenv": cenv_apres, "table": table, "diff": diff,
+    return {"env": env, "csv": rel, "cree_csv": not (inchange or existante), "inchange": inchange, "texte_csv": csv_apres, "cenv": cenv_apres, "table": table, "diff": diff,
             "erreurs": erreurs, "avertissements": avertissements, "empreinte": empreinte}
 
 
@@ -138,13 +166,16 @@ def ecrit(racine, dossier, env, parts, empreinte_lue, builds_en_cours):
     p = prepare(racine, dossier, env, parts)
     if p["erreurs"]:
         raise RuntimeError("table refusée : " + " ; ".join(p["erreurs"]))
+    if p["inchange"]:
+        raise RuntimeError("c'est déjà la table de cet env : rien à écrire")
     if p["empreinte"] != empreinte_lue:
         raise RuntimeError("le cenv, la table ou les réglages ont changé depuis le diff : refaire « Voir le diff »")
     with fbs.Transaction(racine, "partitions") as tr:
-        tr.ecrit(p["csv"], p["texte_csv"].encode("utf-8"))
+        if p["cree_csv"]:
+            tr.ecrit(p["csv"], p["texte_csv"].encode("utf-8"))
         tr.ecrit(build_envs.FICHIER_CENV, p["cenv"].encode("utf-8", errors="surrogateescape"))
     _blocages(dossier, lambda b: b.__setitem__(env, {"csv": p["csv"], "date": time.time()}))
-    return {"ecrit": True, "diff": p["diff"], "sauvegarde": str(tr.dossier)}
+    return {"ecrit": True, "csv": p["csv"], "diff": p["diff"], "sauvegarde": str(tr.dossier)}
 
 
 def _blocages(dossier, change=None):

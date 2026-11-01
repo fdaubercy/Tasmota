@@ -243,7 +243,7 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
             try:
                 if chemin == "/partitions/diff":
                     p = build_partitions.prepare(racine, dossier, env, parts)
-                    return {k: p[k] for k in ("csv", "table", "diff", "erreurs", "avertissements", "empreinte")}
+                    return {k: p[k] for k in ("csv", "inchange", "table", "diff", "erreurs", "avertissements", "empreinte")}
                 if serie.en_cours():
                     raise RuntimeError("un lancement est en cours : écrire la table après")
                 return build_partitions.ecrit(racine, dossier, env, parts, str(demande.get("empreinte") or ""),
@@ -313,6 +313,11 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                     self._json(dict(reponse, lancement=repr(debut)))   # change a chaque lancement : la page repart de 0
                 elif url.path == "/memoire":              # derniere analyse enregistree de l'env, null si aucune
                     self._json(build_memoire.derniere(dossier, params.get("env", [""])[0]))
+                elif url.path == "/partitions/tables":    # tables existantes de partitions/ pour la flash de l'env
+                    try:
+                        self._json(build_partitions.tables(racine, dossier, params.get("env", [""])[0]))
+                    except LookupError as erreur:
+                        raise ValueError(str(erreur)) from None
                 elif url.path == "/fichiers":
                     try:
                         self._json(build_fichiers.liste(racine, params.get("env", [""])[0]))
