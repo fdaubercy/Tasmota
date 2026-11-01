@@ -131,7 +131,14 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
 - [ ] Écriture d'un CSV propre à l'env dans `partitions/`, et de `board_build.partitions` dans sa section du cenv : diff d'abord, transaction et sauvegarde (`fichiers_berry_sauvegarde.Transaction`), refus pendant un build ; les autres envs ne changent pas
 - [ ] OTA du firmware et du FS BLOQUÉES pour un env dont la table a changé, avec le motif affiché, jusqu'au prochain « Effacer puis téléverser » réussi (état hors dépôt, contrôle côté serveur dans `build_serie.py`)
 - [ ] Avant l'écriture, rappeler que le flash série remplace le persist de la carte par celui du dépôt, et annoncer la purge de `.pio/build` (le cenv change)
-- [ ] Ajout d'une partition (coredump…) : d'abord vérifier `post_esp32.py::patch_partitions_bin` (FS supposé en 5e position) et `partition_core` (FS supposé en dernier), puis autoriser ou refuser selon le résultat
+- [x] Vérifier `post_esp32.py::patch_partitions_bin` et `partition_core` — preuve : lecture du code le 01/11 (voir dessous)
+  `patch_partitions_bin` écrit la taille du FS aux octets 0x89-0x8B (5e entrée) et l'empreinte MD5 en 0xA0 : il suppose
+  EXACTEMENT 5 partitions. Avec 4 (safeboot ou FS supprimé) ou 6 (ajout), il corromprait la table. Il ne s'applique que
+  lors d'un upload série quand esptool détecte une flash plus grande que celle déclarée (`esp32_detect_flashsize`).
+  `partition_core.be::resize_fs_to_max` et `::invalidate_spiffs` supposent le FS en DERNIÈRE position.
+- [ ] Règle à appliquer : FS toujours dernier ; une table de 4 ou 6 partitions n'est acceptée que si l'env déclare sa
+  flash (`board_upload.flash_size`) et qu'un contrôle avant l'upload série refuse tout écart avec la flash détectée ;
+  sinon refus avec le motif. S'applique aussi à la suppression de `safeboot` (le choix « supprimer » reste possible)
 - [ ] Préréglages (tables de `partitions/`), import et export d'un CSV, passés par la même validation
 - [ ] Banc `test_build_partitions.py` (copies temporaires du cenv, relues par `ProjectConfig`, avec mutants) ; table produite identique octet pour octet à `esp32_partition_app3904k_fs11584k.csv` sans modification
 - [ ] Essai réel par l'utilisateur sur une carte, par câble : démarrage, FS et Berry vérifiés, puis OTA de nouveau permise
