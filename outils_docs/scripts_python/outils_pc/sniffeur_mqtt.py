@@ -7,7 +7,8 @@ appareil du reseau, par le lien avec jeton affiche au lancement (acces_web.py ; 
     - messages en direct, filtre d'affichage (texte / regex), favoris de filtre, differences
       avec le message precedent du meme topic, export ;
     - abonnements (filtrage COTE BROKER) gerables un par un, memorises par broker ;
-    - publication (texte ou hexa, retenu ou non ; vide + retenu = effacer un retenu) ;
+    - publication (texte ou hexa, retenu ou non ; vide + retenu = effacer un retenu ; en masse :
+      bouton « Effacer les retenus affiches », selon le filtre d'affichage) ;
     - panneaux : audit discovery, connexions (LWT), console de logs par carte (stat/<topic>/LOGGING),
       commande Tasmota avec sa reponse, arborescence des topics.
 

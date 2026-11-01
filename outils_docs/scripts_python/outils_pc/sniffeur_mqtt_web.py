@@ -100,6 +100,7 @@ PAGE = r"""<!doctype html>
  <label><input type="checkbox" id="suivre" checked> defilement auto</label>
  <button id="pause" title="fige l'affichage ; les messages continuent d'etre recus">Pause</button>
  <button id="effacer">Effacer</button>
+ <button id="effacerRetenus" title="effacer DU BROKER les messages retenus affiches (filtre courant) : publication vide retenue sur chaque topic">Effacer les retenus affiches</button>
  <select id="formatExport"><option value="txt">.txt</option><option value="json">.json</option></select>
  <button id="exporter" title="telecharger les messages affiches (filtres)">Exporter</button>
  <span class="gris" id="compteur"></span>
@@ -189,12 +190,19 @@ function ajoute(m){
 function effaceRetenu(topic){
   if(!confirm('Effacer du broker le message retenu de :\n'+topic+' ?\n(publication vide retenue, irreversible)'))return;
   poste('/publier',{topic,payload:'',format:'texte',retain:true});}
+$('effacerRetenus').onclick=async()=>{const t=testeur();   // topics dont le dernier message recu n'est pas deja vide
+  const choix=[...new Set(msgs.filter(m=>!m.note&&m.retain&&m.taille&&dernier[m.topic]!==''&&visible(m,t)).map(m=>m.topic))];
+  if(!choix.length)return erreurPage('aucun message retenu affiche a effacer (filtre, case « retenus »)');
+  if(!confirm('Effacer du broker les '+choix.length+' messages retenus affiches ?\n\n'+choix.slice(0,30).join('\n')+
+    (choix.length>30?'\n... et '+(choix.length-30)+' autres':'')+'\n\n(publication vide retenue, irreversible)'))return;
+  let n=0;for(const topic of choix){if(!await poste('/publier',{topic,payload:'',format:'texte',retain:true}))break;n++;}
+  ajoute({note:true,t:maintenant(),texte:n+' / '+choix.length+' messages retenus effaces'});};
 // ---------------------------------------------------------------- etat, brokers, abonnements
 function appliqueEtat(e){etat=e;
   $('pBroker').style.background=e.connecte?'#23d18b':'#f14c4c';
   $('eBroker').textContent=e.connecte?('connecte a '+e.hote+':'+e.port+(e.broker&&e.broker.tls?' (TLS)':'')):('deconnecte'+(e.erreur?' : '+e.erreur:''));
   $('infoClient').textContent=e.clientId+' - '+e.recus+' recus';
-  dessineAbos(e.abonnements);$('publier').disabled=!e.connecte;
+  dessineAbos(e.abonnements);$('publier').disabled=$('effacerRetenus').disabled=!e.connecte;
   if(e.broker&&brokers.actif!==e.broker.id)chargeBrokers();
   document.title='Sniffeur MQTT '+(e.broker?e.broker.nom:'')+(e.connecte?'':' (deconnecte)');}
 function chargeBrokers(){return fetch('/brokers').then(r=>r.json()).then(b=>{brokers=b;const sel=$('brokerSel'),choisi=sel.value||b.actif;sel.innerHTML='';
