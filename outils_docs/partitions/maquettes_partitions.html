@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Mémoire et partitions : maquettes</title>
+<style>
+  :root{color-scheme:light;--fond:#f6f7f9;--carte:#fff;--bord:#ddd;--texte:#222;--doux:#666;--bleu:#2563eb;--bleu-fond:#eef3ff;--vert:#15803d;--orange:#b45309;--orange-fond:#fff4e0;--rouge:#b91c1c;--rouge-fond:#fdecea;--piste:#e9e9ea;
+    --z-sys:#8b95a5;--z-safe:#b07ad9;--z-app:#2563eb;--z-fs:#0d9488;--z-autre:#d97706}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark;--fond:#121417;--carte:#1d2025;--bord:#33373e;--texte:#e6e6e6;--doux:#a8adb5;--bleu:#6b9bff;--bleu-fond:#182338;--vert:#4ade80;--orange:#f0a020;--orange-fond:#3a2c12;--rouge:#ff6b5b;--rouge-fond:#3a1d1b;--piste:#39393d}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fond);color:var(--texte);font:14px/1.45 system-ui,"Segoe UI",sans-serif}
+  .catalogue{background:#1f2937;color:#fff;padding:8px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .catalogue b{margin-right:8px}
+  .catalogue button{background:#374151;color:#fff;border:1px solid #4b5563;border-radius:6px;padding:5px 10px;cursor:pointer;font:inherit}
+  .catalogue button.actif{background:#2563eb;border-color:#2563eb}
+  main{max-width:1060px;margin:0 auto;padding:14px 16px 28px}
+  h1{font-size:18px;margin:0 0 8px}
+  h2{font-size:14px;margin:0 0 8px}
+  .onglets{display:flex;gap:4px;border-bottom:1px solid var(--bord);margin-bottom:12px}
+  .onglets span{padding:7px 14px;border:1px solid transparent;border-bottom:0;border-radius:6px 6px 0 0;color:var(--doux)}
+  .onglets span.actif{background:var(--carte);border-color:var(--bord);color:var(--texte);font-weight:600;margin-bottom:-1px}
+  .carte{background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:12px;margin-bottom:12px}
+  .barre-env{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  select,input[type=number],input[type=text],button.b{font:inherit;color:inherit;background:var(--carte);border:1px solid #888;border-radius:6px;padding:5px 8px}
+  button.b{cursor:pointer}
+  button.b.p{background:var(--bleu);border-color:var(--bleu);color:#fff}
+  button.b:disabled{opacity:.5;cursor:not-allowed}
+  .doux{color:var(--doux);font-size:12.5px}
+  .grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px}
+  .zone .tete{display:flex;justify-content:space-between;gap:6px;font-size:13px}
+  .jauge{height:9px;background:var(--piste);border-radius:5px;overflow:hidden;margin:4px 0 2px}
+  .jauge i{display:block;height:100%;background:var(--vert)}
+  .jauge i.o{background:#d98a06}.jauge i.r{background:var(--rouge)}
+  .ruban{position:relative;height:44px;background:var(--piste);border-radius:6px;overflow:hidden;touch-action:none}
+  .ruban .seg{position:absolute;top:0;bottom:0;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden;border-right:1px solid rgba(255,255,255,.7)}
+  .ruban .plein{position:absolute;left:0;top:0;bottom:0;background:rgba(0,0,0,.24)}
+  .ruban .seg span{position:relative}
+  .poignee{position:absolute;top:0;bottom:0;width:16px;margin-left:-8px;cursor:ew-resize;background:transparent;border:0;padding:0;z-index:2}
+  .poignee::after{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:6px;border-radius:3px;background:#fff;border:1px solid #333}
+  .poignee:focus-visible::after{outline:2px solid #facc15}
+  table{border-collapse:collapse;width:100%}
+  th{font-size:12px;color:var(--doux);text-align:left;font-weight:600;padding:5px 6px;border-bottom:1px solid var(--bord)}
+  td{padding:6px;border-bottom:1px solid var(--bord);vertical-align:middle}
+  tr:last-child td{border-bottom:0}
+  tr.suppr td{opacity:.5;text-decoration:line-through}
+  tr.suppr td:first-child{opacity:1;text-decoration:none}
+  .pastille{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+  input[type=range]{width:100%;accent-color:var(--bleu)}
+  input:disabled{cursor:not-allowed}
+  code,.mono{font-family:Consolas,monospace;font-size:12.5px}
+  .num{width:92px;text-align:right}
+  .deux{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .gros{font-size:24px;font-weight:700}
+  .messages div{padding:7px 10px;border-radius:6px;margin-bottom:6px}
+  .messages .r{background:var(--rouge-fond);color:var(--rouge)}
+  .messages .o{background:var(--orange-fond);color:var(--orange)}
+  .messages .v{color:var(--vert);padding:2px 0}
+  pre{margin:0;background:#16181c;color:#d7dae0;border-radius:6px;padding:10px;overflow:auto;font:12.5px/1.45 Consolas,monospace}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .defile{overflow-x:auto}
+  @media (max-width:720px){.deux{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="catalogue" id="catalogue"><b>Maquettes (rien n'est écrit)</b></div>
+<main>
+  <h1>Build et téléversement</h1>
+  <div class="onglets"><span>Build</span><span>Fichiers</span><span class="actif">Mémoire et partitions</span></div>
+  <div class="carte barre-env">
+    <label>Environnement <select id="env"></select></label>
+    <span class="doux" id="envNote">repris de la page d'accueil (env coché)</span>
+    <span style="flex:1"></span>
+    <span class="doux" id="date"></span>
+    <button class="b p" id="analyser" type="button">Analyser</button>
+    <button class="b" type="button" id="lireCarte">Lire sur la carte</button>
+  </div>
+  <div class="carte"><h2>Occupation, selon les capacités paramétrées</h2><div class="grille" id="zones"></div><p class="doux" id="vide" style="margin:6px 0 0"></p></div>
+  <div class="carte" id="editeur"></div>
+  <div class="deux">
+    <div class="carte"><h2>Contrôles</h2><div class="messages" id="messages"></div>
+      <div class="actions"><button class="b" type="button">Voir le diff</button><button class="b p" type="button" id="ecrire">Écrire la table de l'env</button><button class="b" type="button" id="annuler">Revenir à la table actuelle</button></div>
+      <p class="doux" style="margin:8px 0 0">Effet au prochain « Effacer puis téléverser » par câble : une OTA ne change jamais la table.</p></div>
+    <div class="carte"><h2 id="nomCsv">partitions/…csv</h2><pre id="csv"></pre></div>
+  </div>
+</main>
+<script>
+var COUL = {sys:"var(--z-sys)", safeboot:"var(--z-safe)", app0:"var(--z-app)", spiffs:"var(--z-fs)", autre:"var(--z-autre)"};
+var ENVS = {
+  "tasmota32p4-garage-serveur-modbus": {flash:16384, date:"analyse du 01/11 04:32", tailles:{safeboot:[832,785], app0:[3904,3462], spiffs:[11584,1800]},
+    ram:[["DIRAM",133488,445392],["HP core RAM",1408,8192],["LP RAM",488,23168]]},
+  "tasmota32s3-garage-capteurs-cuve-modbus": {flash:16384, date:"analyse du 31/10 19:08", tailles:{safeboot:[832,777], app0:[3904,2866], spiffs:[11584,1700]},
+    ram:[["DIRAM",130007,341760],["IRAM",16384,16384],["RTC SLOW",468,4096],["RTC FAST",92,8192]]},
+  "tasmota32-cave-serveur-rly": {flash:4096, date:"jamais analysé", tailles:{safeboot:[832,759], app0:[2752,null], spiffs:[448,null]}, ram:[]}
+};
+var modele = new URLSearchParams(location.search).get("modele") || "B";
+var MODELES = {A:"A. Barre à poignée", B:"B. Un curseur par partition", C:"C. Un seul curseur code / fichiers", D:"D. Tableau façon Partition Builder"};
+var $ = function(i){return document.getElementById(i)}, etat, envNom = Object.keys(ENVS)[0];
+var RAISON = {nvs:"position fixe 0x9000 : réglages Tasmota et Wi-Fi", otadata:"position fixe 0xE000 : boot_app0.bin y est écrit", app0:"le firmware : indispensable"};
+
+function charge(){
+  var e = ENVS[envNom], t = e.tailles;
+  etat = {flash:e.flash, parts:[
+    {n:"nvs",ty:"data",st:"nvs",k:20,u:null,fixe:1},
+    {n:"otadata",ty:"data",st:"ota",k:8,u:null,fixe:1},
+    {n:"safeboot",ty:"app",st:"factory",k:t.safeboot[0],u:t.safeboot[1]},
+    {n:"app0",ty:"app",st:"ota_0",k:t.app0[0],u:t.app0[1]},
+    {n:"spiffs",ty:"data",st:"spiffs",k:t.spiffs[0],u:t.spiffs[1]}]};
+}
+function vivantes(){return etat.parts.filter(function(p){return !p.suppr})}
+function part(n){return etat.parts.filter(function(p){return p.n===n})[0]}
+function fmt(k){return k>=1024?(k/1024).toFixed(k%1024?2:0).replace(".",",")+" Mo":String(k).replace(".",",")+" Ko"}
+function hex(k){return "0x"+(k*1024).toString(16).toUpperCase()}
+function offsets(){var o=36,r={};vivantes().forEach(function(p){if(p.ty==="app"&&o%64)o=Math.ceil(o/64)*64;r[p.n]=o;o+=p.k});r._fin=o;return r}
+function couleur(p){return p.n==="nvs"||p.n==="otadata"?COUL.sys:(COUL[p.n]||COUL.autre)}
+function minimum(p){return p.u==null?64:Math.ceil(p.u/64)*64}
+function compensateur(p){var fs=part("spiffs"),app=part("app0");if(p!==fs&&fs&&!fs.suppr)return fs;if(p!==app&&app&&!app.suppr)return app;return null}
+function regle(p,v){
+  var c=compensateur(p);v=Math.round(v/64)*64;
+  var bas=minimum(p),haut=p.k+(c?c.k-minimum(c):0);
+  if(!c)haut=p.k+Math.max(0,etat.flash-offsets()._fin);
+  v=Math.max(bas,Math.min(haut,v));
+  if(c)c.k-=v-p.k;
+  p.k=v;rendu();
+}
+function jauge(u,t){var pc=t?100*u/t:0,cl=pc>=95?"r":pc>=85?"o":"";return '<div class="jauge"><i class="'+cl+'" style="width:'+Math.min(100,pc)+'%"></i></div>'}
+function pourcent(u,t){return t?(100*u/t).toFixed(1).replace(".",",")+" %":"—"}
+
+function zones(){
+  var e=ENVS[envNom],h="";
+  vivantes().forEach(function(p){
+    if(p.fixe)return;
+    var est=p.n==="spiffs"&&p.u!=null?"≈ ":"";
+    h+='<div class="zone"><div class="tete"><b><span class="pastille" style="background:'+couleur(p)+'"></span>Flash '+p.n+'</b><span>'+(p.u==null?"non mesuré":est+pourcent(p.u,p.k))+'</span></div>'+jauge(p.u||0,p.k)+'<span class="doux">'+(p.u==null?"— ":est+fmt(p.u))+' sur '+fmt(p.k)+(p.u==null?"":" · libre "+fmt(Math.max(0,p.k-p.u)))+'</span></div>';
+  });
+  e.ram.forEach(function(r){var l=(r[2]-r[1])/1024;
+    h+='<div class="zone"><div class="tete"><b><span class="pastille" style="background:var(--z-sys)"></span>'+r[0]+'</b><span>'+pourcent(r[1],r[2])+'</span></div>'+jauge(r[1],r[2])+'<span class="doux">'+fmt(+(r[1]/1024).toFixed(1))+' sur '+fmt(+(r[2]/1024).toFixed(1))+' · libre '+fmt(+l.toFixed(1))+'</span></div>'});
+  h+='<div class="zone"><div class="tete"><b><span class="pastille" style="background:var(--z-sys)"></span>PSRAM et tas</b><span>sur la carte</span></div><div class="jauge"></div><span class="doux">Valeurs vivantes : bouton « Lire sur la carte »</span></div>';
+  $("zones").innerHTML=h;
+  $("vide").textContent=e.ram.length?"Taille des fichiers du FS estimée pour cette maquette ; les autres chiffres viennent de tes journaux de build.":"Cet env n'a pas encore de journal avec le bilan mémoire : seule la table est connue. Compiler l'env, ou « Analyser » s'il a déjà un firmware.elf.";
+  $("date").textContent=e.date;
+}
+function ruban(avecPoignee){
+  var o=offsets(),f=etat.flash,h='<div class="ruban" id="ruban"><div class="seg" style="left:0;width:'+(36/f*100)+'%;background:var(--z-sys)"></div>';
+  vivantes().forEach(function(p){
+    var l=o[p.n]/f*100,w=p.k/f*100,plein=p.u?Math.min(100,p.u/p.k*100):0;
+    h+='<div class="seg" style="left:'+l+'%;width:'+w+'%;background:'+couleur(p)+'"><div class="plein" style="width:'+plein+'%"></div><span>'+(w>7?p.n+" "+fmt(p.k):"")+'</span></div>';
+  });
+  if(avecPoignee&&part("spiffs")&&!part("spiffs").suppr&&!part("app0").suppr)h+='<button class="poignee" id="poignee" type="button" role="slider" aria-label="Limite entre app0 et spiffs" aria-valuemin="0" aria-valuemax="'+f+'" aria-valuenow="'+o.spiffs+'" style="left:'+(o.spiffs/f*100)+'%"></button>';
+  return h+'</div>';
+}
+function poignee(){
+  var pg=$("poignee");if(!pg)return;
+  pg.onpointerdown=function(ev){pg.setPointerCapture(ev.pointerId);
+    pg.onpointermove=function(m){var r=$("ruban").getBoundingClientRect(),k=(m.clientX-r.left)/r.width*etat.flash;var o=offsets();part("app0").k=part("app0").k;var pid=ev.pointerId;regle(part("app0"),k-o.app0);var n=$("poignee");if(n){n.setPointerCapture(pid);n.onpointermove=pg.onpointermove;n.onpointerup=pg.onpointerup}};
+    pg.onpointerup=function(){pg.onpointermove=null}};
+  pg.onkeydown=function(ev){var d=ev.key==="ArrowRight"?64:ev.key==="ArrowLeft"?-64:0;if(d){ev.preventDefault();regle(part("app0"),part("app0").k+d);var n=$("poignee");if(n)n.focus()}};
+}
+function caseSuppr(p){
+  var inter=p.fixe||p.n==="app0";
+  return '<input type="checkbox" data-suppr="'+p.n+'" aria-label="Supprimer '+p.n+'" '+(p.suppr?"checked ":"")+(inter?'disabled title="'+RAISON[p.n]+'"':"")+'>';
+}
+function modA(){
+  var h='<h2>Glisser la limite entre le code et les fichiers</h2>'+ruban(true)+'<p class="doux" style="margin:6px 0 10px">Foncé = occupé. La poignée avance par pas de 64 Ko (flèches du clavier aussi).</p><table><thead><tr><th>Suppr.</th><th>Partition</th><th>Adresse</th><th>Taille</th><th>Occupé</th></tr></thead><tbody>';
+  var o=offsets();
+  etat.parts.forEach(function(p){h+='<tr class="'+(p.suppr?"suppr":"")+'"><td>'+caseSuppr(p)+'</td><td><span class="pastille" style="background:'+couleur(p)+'"></span>'+p.n+'</td><td class="mono">'+(p.suppr?"—":hex(o[p.n]))+'</td><td>'+fmt(p.k)+'</td><td>'+(p.u==null?"—":fmt(p.u))+'</td></tr>'});
+  return h+'</tbody></table>';
+}
+function modB(){
+  var o=offsets(),h='<h2>Régler chaque partition</h2>'+ruban(false)+'<div class="defile"><table style="margin-top:8px;min-width:640px"><thead><tr><th>Suppr.</th><th>Partition</th><th>Adresse</th><th style="width:40%">Taille</th><th>Ko</th><th>Occupé</th></tr></thead><tbody>';
+  etat.parts.forEach(function(p){
+    var bas=minimum(p),c=compensateur(p),haut=p.k+(c?c.k-minimum(c):0);
+    h+='<tr class="'+(p.suppr?"suppr":"")+'"><td>'+caseSuppr(p)+'</td><td><span class="pastille" style="background:'+couleur(p)+'"></span><b>'+p.n+'</b></td><td class="mono">'+(p.suppr?"—":hex(o[p.n]))+'</td><td>'+(p.fixe?'<span class="doux">'+RAISON[p.n]+'</span>':'<input type="range" aria-label="Taille de '+p.n+'" data-taille="'+p.n+'" min="'+bas+'" max="'+haut+'" step="64" value="'+p.k+'"'+(p.suppr?" disabled":"")+'>')+'</td><td>'+(p.fixe?p.k:'<input class="num" type="number" aria-label="Taille de '+p.n+' en Ko" data-num="'+p.n+'" step="64" value="'+p.k+'"'+(p.suppr?" disabled":"")+'>')+'</td><td>'+(p.u==null?"—":fmt(p.u))+'</td></tr>'});
+  return h+'</tbody></table></div><div class="actions" style="margin-top:8px"><button class="b" type="button" data-ajout="coredump">+ Ajouter une partition coredump (64 Ko)</button><span class="doux">Le FS s\'ajuste : la flash reste entièrement répartie.</span></div>';
+}
+function modC(){
+  var a=part("app0"),f=part("spiffs"),min=minimum(a),max=a.k+f.k-minimum(f);
+  if(f.suppr)f.suppr=false;
+  return '<h2>Partager la flash entre le code et les fichiers</h2><div class="deux"><div><div class="doux">Code (app0)</div><div class="gros" style="color:var(--z-app)">'+fmt(a.k)+'</div>'+jauge(a.u||0,a.k)+'<span class="doux">'+(a.u==null?"firmware non mesuré":"firmware "+fmt(a.u)+" · marge "+fmt(a.k-a.u))+'</span></div><div style="text-align:right"><div class="doux">Fichiers (FS)</div><div class="gros" style="color:var(--z-fs)">'+fmt(f.k)+'</div>'+jauge(f.u||0,f.k)+'<span class="doux">'+(f.u==null?"fichiers non mesurés":"fichiers ≈ "+fmt(f.u)+" · libre ≈ "+fmt(f.k-f.u))+'</span></div></div><input type="range" style="margin-top:12px" aria-label="Limite entre le code et les fichiers" data-taille="app0" min="'+min+'" max="'+max+'" step="64" value="'+a.k+'"><div class="actions" style="justify-content:space-between"><span class="doux">minimum '+fmt(min)+' (firmware actuel)</span><span class="doux">maximum '+fmt(max)+' (fichiers actuels)</span></div><details style="margin-top:10px"><summary>Partitions système (non modifiables ici) et suppression</summary><table style="margin-top:6px"><tbody><tr><td>nvs, otadata</td><td class="doux">28 Ko, positions fixes</td></tr><tr><td><label>'+caseSuppr(part("safeboot"))+' Supprimer safeboot</label></td><td class="doux">'+fmt(part("safeboot").k)+'. Sans elle, plus d\'OTA du firmware</td></tr></tbody></table></details>';
+}
+function modD(){
+  var o=offsets(),presets=["esp32_partition_app3904k_fs11584k","esp32_partition_app3904k_fs11456k","esp32_partition_app3904k_fs3392k","esp32_partition_app2880k_fs320k","esp32_partition_app2752k_fs448k","esp32_partition_app1856k_fs1344k"];
+  var h='<h2>Éditer la table, ligne par ligne</h2><div class="actions" style="margin-bottom:8px"><label>Partir de <select id="preset"><option>table actuelle</option>'+presets.map(function(p){return "<option>"+p+"</option>"}).join("")+'</select></label><button class="b" type="button" data-ajout="coredump">+ Ligne</button><button class="b" type="button">Importer un CSV</button><button class="b" type="button">Exporter le CSV</button><label class="doux"><input type="checkbox" checked disabled> Adresses automatiques</label></div>'+ruban(false)+'<div class="defile"><table style="margin-top:8px;min-width:640px"><thead><tr><th>Suppr.</th><th>Nom</th><th>Type</th><th>Sous-type</th><th>Adresse</th><th>Taille (Ko)</th><th>Libre après occupation</th></tr></thead><tbody>';
+  etat.parts.forEach(function(p){h+='<tr class="'+(p.suppr?"suppr":"")+'"><td>'+caseSuppr(p)+'</td><td class="mono"><b>'+p.n+'</b></td><td class="mono">'+p.ty+'</td><td class="mono">'+p.st+'</td><td class="mono">'+(p.suppr?"—":hex(o[p.n]))+'</td><td>'+(p.fixe?p.k:'<input class="num" type="number" aria-label="Taille de '+p.n+' en Ko" data-num="'+p.n+'" step="64" value="'+p.k+'"'+(p.suppr?" disabled":"")+'>')+'</td><td>'+(p.u==null?"—":fmt(p.k-p.u))+'</td></tr>'});
+  return h+'</tbody></table></div>';
+}
+function controles(){
+  var m=[],s=part("safeboot"),f=part("spiffs"),a=part("app0"),o=offsets();
+  if(s.suppr)m.push(["r","Sans safeboot : plus d'OTA du firmware, ni par Tasmota ni par la page. Seul le câble reste."]);
+  if(f.suppr)m.push(["r","Sans FS : ni autoexec, ni persist, ni Berry de la carte. Le module démarre sans son programme."]);
+  if(a.u!=null&&(a.k-a.u)/a.k<.05)m.push(["o","Marge de app0 sous 5 % : le prochain firmware peut ne plus tenir."]);
+  if(s.k<832&&!s.suppr)m.push(["o","safeboot réduite : un futur safeboot de l'amont peut ne plus y tenir ("+fmt(s.u)+" aujourd'hui)."]);
+  var ajout=etat.parts.some(function(p){return p.ajout&&!p.suppr});
+  if(ajout)m.push(["o","Partition ajoutée : à vérifier, post_esp32.py suppose le FS en 5e position quand il corrige la table (flash détectée plus grande)."]);
+  if(!f.suppr&&o._fin<etat.flash)m.push(["o",fmt(etat.flash-o._fin)+" non attribués : le FS les absorbera au premier démarrage."]);
+  if(o._fin>etat.flash)m.push(["r","La table dépasse la flash de "+fmt(o._fin-etat.flash)+"."]);
+  if(!m.length)m.push(["v","Table valide : tout tient dans "+fmt(etat.flash)+", alignement de 64 Ko respecté."]);
+  $("messages").innerHTML=m.map(function(x){return '<div class="'+x[0]+'">'+x[1]+'</div>'}).join("");
+  var bloque=m.some(function(x){return x[0]==="r"&&x[1].indexOf("dépasse")>=0});
+  $("ecrire").disabled=bloque;
+}
+function csv(){
+  var o=offsets(),l=["# Name,   Type, SubType, Offset,  Size, Flags"];
+  vivantes().forEach(function(p){l.push((p.n+",").padEnd(10)+(p.ty+",").padEnd(6)+(p.st+",").padEnd(9)+(hex(o[p.n])+",").padEnd(10)+hex(p.k)+",")});
+  $("csv").textContent=l.join("\n");
+  var a=part("app0").k,f=part("spiffs");$("nomCsv").textContent="partitions/esp32_partition_app"+a+"k_fs"+(f.suppr?0:f.k)+"k.csv";
+}
+function rendu(){
+  $("editeur").innerHTML={A:modA,B:modB,C:modC,D:modD}[modele]();
+  zones();controles();csv();poignee();
+  document.querySelectorAll("[data-taille]").forEach(function(i){i.oninput=function(){var n=i.dataset.taille,v=+i.value,fo=document.activeElement===i;regle(part(n),v);if(fo){var q=document.querySelector('[data-taille="'+n+'"]');if(q)q.focus()}}});
+  document.querySelectorAll("[data-num]").forEach(function(i){i.onchange=function(){regle(part(i.dataset.num),+i.value)}});
+  document.querySelectorAll("[data-suppr]").forEach(function(i){i.onchange=function(){var p=part(i.dataset.suppr);p.suppr=i.checked;var c=compensateur(p);if(c&&c.n==="spiffs"){c.k+=i.checked?p.k:-p.k}rendu()}});
+  document.querySelectorAll("[data-ajout]").forEach(function(b){b.onclick=function(){if(part("coredump"))return;var f=part("spiffs");if(f.k-64<minimum(f))return;f.k-=64;etat.parts.splice(etat.parts.indexOf(f),0,{n:"coredump",ty:"data",st:"coredump",k:64,u:null,ajout:1});rendu()}});
+}
+Object.keys(MODELES).forEach(function(k){var b=document.createElement("button");b.type="button";b.textContent=MODELES[k];if(k===modele)b.className="actif";b.onclick=function(){location.search="?modele="+k};$("catalogue").appendChild(b)});
+Object.keys(ENVS).forEach(function(n){var o=document.createElement("option");o.textContent=n;$("env").appendChild(o)});
+$("env").onchange=function(){envNom=$("env").value;$("envNote").textContent="choisi ici (ne change pas les cases de la page d'accueil)";charge();rendu()};
+$("annuler").onclick=function(){charge();rendu()};
+charge();rendu();
+</script>
+</body>
+</html>

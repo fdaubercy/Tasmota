@@ -521,6 +521,9 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   `jauge-A.png` a `jauge-H.png`, code `catalogue_jauges.html`, fiche `README.md`. **Choix retenu : A (liquide
   anime ECharts) ou H (demi-cercle SVG)**. Un gabarit `webSensor*.html` n'execute aucun script (zone remplacee
   toutes les ~2 s) : seuls les modeles SVG/CSS (D a H) s'y posent tels quels.
+- `outils_docs/partitions/` — maquettes de l'onglet « Mémoire et partitions » de la page build (2026-11-01) : images
+  `modele-A.png` à `modele-D.png`, code `maquettes_partitions.html`, contraintes `README.md`. **Choix retenu : B**. Pas
+  encore réalisé : plan `tasks/plans/temps-compilation.md`, A7 à A10.
 - Page `/cuve` (2026-10-31, premier essai, plan `tasks/plans/jauges-cuve.md`) : jauges A (volume en L) et H (taux en %)
   de la cuve, lien « (jauges) » dans la legende de `webSensorNiveauCuve.html`. Module `data/fs/cuvePageFonctions.be`
   (route declaree par `controleCuve.be::CAPTEURS_CUVE` et `controleGarage.be::CONTROLE_GARAGE` du P4), page

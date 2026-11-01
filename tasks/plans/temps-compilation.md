@@ -5,7 +5,7 @@ statut: actif
 cree: 2026-11-01
 maj: 2026-11-01
 source: breezy-mapping-backus.md
-objectif: Ne plus recompiler tasmota.ino.cpp ni purger .pio/build sans raison, et mesurer avant de séparer les dossiers de build par env
+objectif: Ne plus recompiler tasmota.ino.cpp ni purger .pio/build sans raison, mesurer avant de séparer les dossiers de build par env, puis montrer l'occupation mémoire et régler les partitions depuis la page build
 ---
 # Réduire le temps des compilations
 
@@ -33,6 +33,11 @@ Décisions de l'utilisateur (2026-11-01) :
 - Inclus : contrôle `lib_ignore` sauté sans compilation, script d'exclusions Defender, purge de `.cache`.
 - Rejeté : deux compilations en parallèle (fichiers partagés ; worktree possible mais 4 cœurs déjà saturés),
   coupure de la LTO (firmware différent de celui livré).
+
+Décisions sur la mémoire et les partitions (2026-11-01, actions A7 à A10, à réaliser plus tard) : interface **modèle B**
+(un curseur par partition) ; mesures dans un onglet + résumé sur la page d'accueil ; **OTA bloquée** tant qu'une table
+modifiée n'a pas été flashée par câble ; ajoutés : lecture sur la carte, ajout d'une partition, préréglages et CSV.
+Inspiration : ESP32 Partition Builder (README seul, l'outil n'a pas pu être lu).
 
 Contraintes : jamais de `pio run` pendant un build de l'utilisateur (hook `garde_build`, leçon du 2026-10-31) ;
 pas de modification de fichiers amont (`pio-tools/`, `platformio.ini`) ; lire `tasks/lessons.md` avant le code.
@@ -88,6 +93,39 @@ pas de modification de fichiers amont (`pio-tools/`, `platformio.ini`) ; lire `t
 ## A6 — Documentation
 - [x] `CLAUDE.md` § « Vigilances de build » et carte des documents — preuve : `verifie_references_docs.py` 0 défaut
 - [x] `outils_docs/README.md` § build — preuve : sous-titre « Ce qui fait recompiler (et ce qui ne le fait plus) »
+
+## A7 — Mesurer la mémoire de chaque env (à faire plus tard)
+Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs/partitions/`.
+- [ ] Module `outils_pc/build_memoire.py` : table lue dans le CSV de l'env (`board_build.partitions`, sinon celui du board), `app0` = `firmware.bin`, `safeboot` = binaire de `variants/tasmota/`, FS = fichiers de l'image (`build_fichiers.py::liste`), RAM = tableau « Memory Type Usage Summary » du journal
+- [ ] Mesures enregistrées dans `%LOCALAPPDATA%\outils_tasmota\build\memoire\<env>.json`, avec leur date : `.pio/build` est effacé à chaque changement d'env, et une compilation sans changement ne réaffiche plus le tableau mémoire
+- [ ] Analyse automatique à la fin de chaque compilation réussie (`build_serie.py`), sans toucher aux scripts amont
+- [ ] Analyse lancée seule depuis l'onglet (`POST /memoire/analyser`) : relit les fichiers existants, jamais de `pio run`, permise pendant un build
+- [ ] Lecture sur la carte : `Status 4` et `UfsSize`/`UfsFree` (PSRAM, tas, FS réel), par le transport HTTP de `build_ota_http.py` ; carte muette = message, pas d'échec
+- [ ] Banc `test_build_memoire.py`, fondé sur de vrais journaux P4 (DIRAM, HP core, LP) et S3 (DIRAM, IRAM, RTC) et sur un env jamais compilé
+
+## A8 — Onglet « Mémoire et partitions », modèle B (à faire plus tard)
+- [ ] Module `outils_pc/build_page_memoire.py`, inséré comme `build_page_fichiers.py`
+- [ ] Liste des envs : par défaut le premier env coché sur la page d'accueil ; en choisir un autre ne change pas les cases
+- [ ] Jauges par zone (capacité, occupé, libre, date de l'analyse), orange à 85 %, rouge à 95 %
+- [ ] Barre de la flash et une ligne par partition : case de suppression, curseur par pas de 64 Ko, champ en Ko, occupé
+- [ ] Résumé sur chaque env de la page d'accueil (app0, FS, DIRAM), avec les mêmes seuils ; un clic ouvre l'onglet
+- [ ] Bouton « Analyser » et bouton « Lire sur la carte »
+- [ ] Sonde Chrome `test_build_page_memoire_chrome.py`, exécutée dans un vrai navigateur ; aucune écriture dans le dépôt réel
+
+## A9 — Écrire la table de partitions d'un env (à faire plus tard)
+- [ ] Module `outils_pc/build_partitions.py` : validation (alignement et tailles de 64 Ko, `nvs` en 0x9000, `otadata` en 0xE000, `app0` obligatoire, minimum = occupé, somme = flash), mêmes règles que la maquette
+- [ ] Suppression : `safeboot` et `spiffs` demandent une confirmation qui nomme la conséquence ; `nvs`, `otadata`, `app0` refusées aussi côté serveur
+- [ ] Écriture d'un CSV propre à l'env dans `partitions/`, et de `board_build.partitions` dans sa section du cenv : diff d'abord, transaction et sauvegarde (`fichiers_berry_sauvegarde.Transaction`), refus pendant un build ; les autres envs ne changent pas
+- [ ] OTA du firmware et du FS BLOQUÉES pour un env dont la table a changé, avec le motif affiché, jusqu'au prochain « Effacer puis téléverser » réussi (état hors dépôt, contrôle côté serveur dans `build_serie.py`)
+- [ ] Avant l'écriture, rappeler que le flash série remplace le persist de la carte par celui du dépôt, et annoncer la purge de `.pio/build` (le cenv change)
+- [ ] Ajout d'une partition (coredump…) : d'abord vérifier `post_esp32.py::patch_partitions_bin` (FS supposé en 5e position) et `partition_core` (FS supposé en dernier), puis autoriser ou refuser selon le résultat
+- [ ] Préréglages (tables de `partitions/`), import et export d'un CSV, passés par la même validation
+- [ ] Banc `test_build_partitions.py` (copies temporaires du cenv, relues par `ProjectConfig`, avec mutants) ; table produite identique octet pour octet à `esp32_partition_app3904k_fs11584k.csv` sans modification
+- [ ] Essai réel par l'utilisateur sur une carte, par câble : démarrage, FS et Berry vérifiés, puis OTA de nouveau permise
+
+## A10 — Annuaire et documentation de la fonction (à faire plus tard)
+- [ ] Descriptif de la tuile « Build et téléversement » (`annuaire_registre.py`) : occupation de la mémoire et réglage des partitions par env, écrit quand la fonction existe ; `test_annuaire.py` vert
+- [ ] `outils_docs/README.md` § build et `CLAUDE.md` (carte des documents, nouveaux modules)
 
 ## Améliorations restantes
 - [ ] [projet] Dossier de build par env, si A2 conclut « faire »
