@@ -6,6 +6,6 @@ commandes (6) : ReglageDiscovery, ReglageGlobal, ReglageLog, ReglageRangeExtende
 crons (1) : majHistorique
 minuteries (1) : demarrageDiffere
 compiles (1) : /controleGrenier.bec
-sources (3) : /autoexec.be, /controleLeds.be, /ledsFonctions.be
+sources (1) : /autoexec.be
 globales (15) : LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, boolMute:bool, controleVRoulant:instance, diverses:instance, gpio:module, light:module, modules:instance, persist:instance, serveur:instance, wire1:instance, wire2:instance
 erreurs (0) : 

@@ -50,6 +50,9 @@ la cuve refonctionne et sa grille ModBus a été validée le 17/10 (plan `modbus
 - [x] Symbole placé DANS la cellule du curseur (une 3e cellule élargissait la page à toute la fenêtre) — preuve : capture Chrome de la vraie page de la cuve, largeur 1168 px avant, 350 px après (= sans symbole), « ✋ 15 » affiché ; banc_leds vert
 - [x] Firmware de la cuve recompilé et téléversé : symbole visible sur la page, clic en MANUEL = retour AUTO — preuve : vu par l'utilisateur le 2026-10-31 (✋ 29) ; relevé par le maître avant le clic MANUEL, reste 29 min, après le clic `ledsFonctions.mode` = AUTO et ligne `ldM` data-m='AUTO' ; modules absents du FS (solidifiés)
 - [x] Commit — preuve : commit 91bbae69a
+- [x] Même symbole sur la page du maître pour le ruban virtuel (texte « Ruban : … » et bouton « Auto » remplacés, « Couleur suivante » gardé) — preuve : vraie page du P4 avec le nouveau code en Chrome sans fenêtre, largeur 409 px dans les 3 cas (inconnu, AUTO, MANUEL 30), banc_leds et banc_test_modbus verts
+- [ ] Firmware du P4 recompilé et téléversé (`ledsPanelFonctions` est solidifié) : symbole visible, clic en MANUEL = retour AUTO
+
 
 ## A5 — Avant de commander la carte
 - [x] Identifier le module RS485 réel et adapter son empreinte — preuve : XY-017 confirmé par l'utilisateur le 2026-10-31 ; empreinte `Modules_Tasmota:Module_RS485_Auto_XY-017` debout sous le DevKit, bornier A/B au-dessus du coin bas droit libéré (voies décalées de 10,16 mm), DRC 0
