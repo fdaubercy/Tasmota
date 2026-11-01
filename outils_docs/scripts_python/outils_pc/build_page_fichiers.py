@@ -106,16 +106,17 @@ var F = {env: "", liste: null, dossier: null, coches: {}, berryTouche: false, pr
          tout: null, vus: [], dessin: null};
 
 function montreOnglet(nom) {
-  var fichiers = nom === "fichiers";
-  $("vue-build").hidden = fichiers;
-  $("vue-fichiers").hidden = !fichiers;
-  $("onglet-build").setAttribute("aria-selected", String(!fichiers));
-  $("onglet-fichiers").setAttribute("aria-selected", String(fichiers));
+  ["build", "fichiers", "memoire"].forEach(function (o) {     // memoire : build_page_memoire.py (A8)
+    $("vue-" + o).hidden = o !== nom;
+    $("onglet-" + o).setAttribute("aria-selected", String(o === nom));
+  });
   try { localStorage.setItem("build-onglet", nom); } catch (e) {}
-  if (fichiers) fichiersCartes();
+  if (nom === "fichiers") fichiersCartes();
+  if (nom === "memoire") mEnvs();
 }
 $("onglet-build").onclick = function () { montreOnglet("build"); };
 $("onglet-fichiers").onclick = function () { montreOnglet("fichiers"); };
+$("onglet-memoire").onclick = function () { montreOnglet("memoire"); };
 
 function parentDe(chemin) { var i = chemin.lastIndexOf("/"); return i < 0 ? "" : chemin.slice(0, i); }
 function tailleLisible(o) { return o < 1024 ? o + " o" : (o / 1024).toFixed(1).replace(".", ",") + " Ko"; }
@@ -366,5 +367,5 @@ function dessineSuiviFichiers() {
   j.scrollTop = j.scrollHeight;
 }
 
-try { if (localStorage.getItem("build-onglet") === "fichiers") montreOnglet("fichiers"); } catch (e) {}
+try { var ongletLu = localStorage.getItem("build-onglet"); if (ongletLu === "fichiers" || ongletLu === "memoire") montreOnglet(ongletLu); } catch (e) {}
 """

@@ -157,10 +157,15 @@ OUTILS = [
                      "signale par /execution), pour ne pas laisser un dépôt à moitié modifié."),
     Outil(
         "build", "Build et téléversement", "Build et téléversement", GROUPES[2],
-        "Compile et téléverse les cartes du parc (firmware et file system, COM ou OTA), avec suivi en direct.",
+        "Compile et téléverse les cartes du parc (firmware et file system, COM ou OTA), avec suivi en direct ; "
+        "occupation de la mémoire et partitions de chaque env.",
         "Page web de build : on coche des environnements PlatformIO et des actions (compiler, téléverser le "
         "firmware, construire le file system, téléverser le file system), COM ou OTA par ligne ; les "
         "environnements passent l'un après l'autre, avec étape, pourcentage, durées et échecs en direct. "
+        "Onglet « Mémoire et partitions » : occupation de chaque zone (partitions de la flash, DIRAM, IRAM, RTC...) "
+        "selon les capacités paramétrées, relevée après chaque compilation ou par « Analyser » ; réglage de la table "
+        "de partitions d'un env par curseurs (diff, puis écriture d'un CSV propre à l'env ; l'OTA de l'env reste "
+        "bloquée jusqu'au prochain « Effacer puis téléverser »). "
         "Seul paramètre ici : le port de la page (7700). Pour l'arrêter : bouton Arrêter de l'annuaire "
         "(refusé pendant un lancement), ou Ctrl+C dans son terminal s'il a été lancé ailleurs.",
         DOSSIER + "outils_pc/build_web.py",

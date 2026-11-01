@@ -161,6 +161,7 @@ PAGE = r"""<!doctype html>
   #recap .fichiers{color:var(--orange);margin-top:4px}
   .vide{color:var(--discret);font-size:13px}
 /*CSS_FICHIERS*/
+/*CSS_MEMOIRE*/
   @media (max-width:820px){.disposition{grid-template-columns:1fr}.commandes{position:static}}
   @media (max-width:520px){
     main{padding:8px 16px 30px}
@@ -190,6 +191,7 @@ PAGE = r"""<!doctype html>
   <nav class="onglets" role="tablist" aria-label="Onglets">
     <button id="onglet-build" type="button" role="tab" aria-selected="true" aria-controls="vue-build">Build</button>
     <button id="onglet-fichiers" type="button" role="tab" aria-selected="false" aria-controls="vue-fichiers">Fichiers</button>
+    <button id="onglet-memoire" type="button" role="tab" aria-selected="false" aria-controls="vue-memoire">Mémoire et partitions</button>
   </nav>
   <div id="vue-build" class="disposition" role="tabpanel" aria-labelledby="onglet-build">
     <section id="liste" aria-label="Environnements"><div class="vide">Lecture des environnements…</div></section>
@@ -221,6 +223,7 @@ PAGE = r"""<!doctype html>
     </aside>
   </div>
 <!--VUE_FICHIERS-->
+<!--VUE_MEMOIRE-->
   <section id="suivi" class="carte" aria-live="polite">
     <h2>Suivi</h2>
     <div id="bandeaux"></div>
@@ -358,6 +361,7 @@ function construitListe(donnees) {
   });
   majTout();
   fichiersCartes();
+  mEnvs();
 }
 
 function ligneEnv(e) {
@@ -1130,6 +1134,7 @@ $("son").onchange = function () {
 };
 
 /*JS_FICHIERS*/
+/*JS_MEMOIRE*/
 
 async function demarre() {
   await chargeEnvs(false);
@@ -1152,3 +1157,6 @@ import build_page_fichiers                          # noqa: E402
 
 PAGE = (PAGE.replace("/*CSS_FICHIERS*/", build_page_fichiers.CSS).replace("<!--VUE_FICHIERS-->", build_page_fichiers.HTML)
         .replace("/*JS_FICHIERS*/", build_page_fichiers.JS))
+import build_page_memoire                           # noqa: E402 - onglet « Mémoire et partitions » (A8)
+PAGE = (PAGE.replace("/*CSS_MEMOIRE*/", build_page_memoire.CSS).replace("<!--VUE_MEMOIRE-->", build_page_memoire.HTML)
+        .replace("/*JS_MEMOIRE*/", build_page_memoire.JS))

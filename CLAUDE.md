@@ -134,7 +134,7 @@ c'est **voulu** (decide le 2026-10-04 : « laisse ce test comme il est »). Ne p
 decouper : c'est UN fichier a televerser sur chaque carte, qui se prepare et s'explique
 seul au chargement ; le scinder imposerait deux televersements par carte.
 
-`outils_docs/scripts_python/outils_pc/build_page.py` fait **1154 lignes**, et c'est **voulu**
+`outils_docs/scripts_python/outils_pc/build_page.py` fait **1162 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
 vague de corrections finale du meme jour ; 935 le 2026-10-25 avec le panneau « Sortie » et « Effacer puis
 televerser » ; 1038 le meme jour avec la pause « rebranchez la carte » et les panneaux refermes ; 1053 avec
@@ -142,7 +142,8 @@ l'envoi sans recompiler apres la pause et la pause rouverte ; 1062 avec le lien 
 Fichiers Berry par env ; 1083 le 2026-10-26 avec les cases FS grisees quand l'envoi serie du firmware ecrit
 deja le FS ; 1131 le meme jour avec les sons de fin de lancement et de pause ; 1153 le 2026-10-29 avec le
 branchement de l'onglet « Fichiers », dont le code vit dans `build_page_fichiers.py` ; 1154 le 2026-10-31 avec
-les durees en heures au-dela de 60 min). C'est la page
+les durees en heures au-dela de 60 min ; 1162 le 2026-11-01 avec le branchement de l'onglet « Mémoire et partitions », dont
+le code vit dans `build_page_memoire.py`). C'est la page
 unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule constante
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
@@ -715,7 +716,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   - `build_web.py` (+ `build_page.py`, `build_serie.py`, `build_envs.py`, `build_progression.py`, `build_ota_fs.py` (FS ; firmware : `build_ota_firmware.py` ; maitre :
     `build_ota_maitre.py` ; transport HTTP : `build_ota_http.py`, decoupe le 2026-10-29 ; FS par MQTT : `build_ota_mqtt.py`,
     A16), `build_fichiers.py`, `build_page_fichiers.py`, `build_memoire.py` (occupation memoire de l'env, relue du dernier
-    build, `GET /memoire`, `POST /memoire/analyser`), `build_partitions.py` (table de partitions de l'env : validation,
+    build, `GET /memoire`, `POST /memoire/analyser`), `build_page_memoire.py` (onglet « Mémoire et partitions », modele B ;
+    sonde `test_build_page_memoire_chrome.py`), `build_partitions.py` (table de partitions de l'env : validation,
     `partitions/env_<env>.csv`, OTA bloquee jusqu'au prochain effacement ; `POST /partitions/diff|ecrire` ; plan
     `tasks/plans/temps-compilation.md` A7 a A10),
     `build_solidification.py`, et pour les bancs `build_faux_pio.py`, `build_ota_carte_simulee.py`) — page « Build et televersement »

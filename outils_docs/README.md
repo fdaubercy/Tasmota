@@ -796,6 +796,25 @@ Le formatage bloque la carte : s'il dépasse les 5 s du watchdog de la boucle, e
 sans autoexec ni Berry : la reprendre en HTTP (cet onglet) ou par câble. Idem si elle redémarre entre les deux. Bancs :
 `berry/banc_fsmqtt.py` (module), `outils_pc/test_build_ota_mqtt.py` (PC) ; aucun essai sur carte à ce jour.
 
+### Onglet « Mémoire et partitions » : occupation et table de chaque env
+
+L'onglet s'ouvre sur l'env coché dans l'onglet Build (sinon la première carte) ; la liste en haut en choisit un autre
+sans toucher aux cases.
+
+- **Occupation** : une jauge par partition de la flash et par zone RAM du journal (DIRAM, IRAM, RTC, LP RAM...),
+  orange à 85 %, rouge à 95 %. Elle est relevée seule après chaque compilation réussie ; « Analyser » relit le dernier
+  build sans rien compiler. La taille du FS est estimée (`≈`) d'après les fichiers de l'image ; PSRAM et tas ne se
+  lisent que sur la carte (pas encore dans l'onglet).
+- **Table** : un curseur et un champ en Ko par partition, par pas de 64 Ko ; le FS (sinon app0) compense pour que toute
+  la flash reste répartie. `nvs`, `otadata` et `app0` ne se suppriment pas. « Voir le diff » fait valider la table par
+  le serveur (`build_partitions.py`), puis « Écrire » pose `partitions/env_<env>.csv` et `board_build.partitions` dans
+  la section de l'env (copie d'origine dans `%LOCALAPPDATA%\outils_tasmotaichiers_berry\sauvegardes\`).
+- **Après l'écriture** : la nouvelle table ne part qu'avec un « Effacer puis téléverser » par câble, qui remplace aussi
+  le persist de la carte par celui du dépôt. D'ici là, toute OTA de l'env est refusée (une OTA n'écrit jamais la
+  table). Le prochain build repart de zéro (le cenv a changé).
+- **Limite** : seules les tables de 5 partitions sont acceptées (`post_esp32.py::patch_partitions_bin` corrige la 5e
+  entrée) ; supprimer `safeboot` ou le FS est donc refusé pour l'instant, avec la conséquence nommée.
+
 ### Téléversement série : il emporte `littlefs.bin`
 
 « Téléverser le firmware » **par câble** flashe aussi le file system (persist compris) **à chaque upload par câble**

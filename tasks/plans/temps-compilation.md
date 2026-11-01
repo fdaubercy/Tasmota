@@ -121,13 +121,13 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
 - [x] Banc `test_build_memoire.py` — preuve : 16 cas VERTS sur des extraits de vrais journaux P4 et S3, 6 mutants tués (un mutant équivalent écarté, et le test mort qu'il révélait supprimé)
 
 ## A8 — Onglet « Mémoire et partitions », modèle B (à faire plus tard)
-- [ ] Module `outils_pc/build_page_memoire.py`, inséré comme `build_page_fichiers.py`
-- [ ] Liste des envs : par défaut le premier env coché sur la page d'accueil ; en choisir un autre ne change pas les cases
-- [ ] Jauges par zone (capacité, occupé, libre, date de l'analyse), orange à 85 %, rouge à 95 %
-- [ ] Barre de la flash et une ligne par partition : case de suppression, curseur par pas de 64 Ko, champ en Ko, occupé
+- [x] Module `outils_pc/build_page_memoire.py` — preuve : marques `/*CSS_MEMOIRE*/`, `<!--VUE_MEMOIRE-->`, `/*JS_MEMOIRE*/` de `build_page.py` ; sonde `test_build_page_memoire_chrome.py` VERTE (22 vérifications) ; inséré comme `build_page_fichiers.py`
+- [x] Liste des envs — preuve : `build_page_memoire.py` (`mEnvs`), sonde `test_build_page_memoire_chrome.py` VERTE (22 vérifications) (env par défaut, pas d'env amont) ; par défaut le premier env coché sur la page d'accueil ; en choisir un autre ne change pas les cases
+- [x] Jauges — preuve : sonde `test_build_page_memoire_chrome.py` VERTE (22 vérifications) (7 zones, 73,0 %, FS marqué ≈) ; jauges par zone (capacité, occupé, libre, date de l'analyse), orange à 85 %, rouge à 95 %
+- [x] Barre et lignes — preuve : sonde `test_build_page_memoire_chrome.py` VERTE (22 vérifications) (app0 +64 Ko -> FS en 0x4C0000, nvs/otadata/app0 non supprimables) ; barre de la flash et une ligne par partition : case de suppression, curseur par pas de 64 Ko, champ en Ko, occupé
 - [ ] Résumé sur chaque env de la page d'accueil (app0, FS, DIRAM), avec les mêmes seuils ; un clic ouvre l'onglet
 - [ ] Bouton « Analyser » et bouton « Lire sur la carte »
-- [ ] Sonde Chrome `test_build_page_memoire_chrome.py`, exécutée dans un vrai navigateur ; aucune écriture dans le dépôt réel
+- [x] Sonde Chrome — preuve : sonde `test_build_page_memoire_chrome.py` VERTE (22 vérifications), dépôt d'essai temporaire, écriture jusqu'au bout puis OTA refusée (409) ; sonde Chrome `test_build_page_memoire_chrome.py`, exécutée dans un vrai navigateur ; aucune écriture dans le dépôt réel
 
 ## A9 — Écrire la table de partitions d'un env (à faire plus tard)
 - [x] Module `outils_pc/build_partitions.py` — preuve : `build_partitions.py::valide`, 11 cas de refus VERTS ; validation (alignement et tailles de 64 Ko, `nvs` en 0x9000, `otadata` en 0xE000, `app0` obligatoire, minimum = occupé, somme = flash), mêmes règles que la maquette
@@ -150,8 +150,8 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
 - [ ] Essai réel par l'utilisateur sur une carte, par câble : démarrage, FS et Berry vérifiés, puis OTA de nouveau permise
 
 ## A10 — Annuaire et documentation de la fonction (à faire plus tard)
-- [ ] Descriptif de la tuile « Build et téléversement » (`annuaire_registre.py`) : occupation de la mémoire et réglage des partitions par env, écrit quand la fonction existe ; `test_annuaire.py` vert
-- [ ] `outils_docs/README.md` § build et `CLAUDE.md` (carte des documents, nouveaux modules)
+- [x] Descriptif de la tuile — preuve : `annuaire_registre.py` (entrée `build`), `test_annuaire.py` VERT ; descriptif de la tuile « Build et téléversement » (`annuaire_registre.py`) : occupation de la mémoire et réglage des partitions par env, écrit quand la fonction existe ; `test_annuaire.py` vert
+- [x] Documentation — preuve : `outils_docs/README.md` § « Onglet « Mémoire et partitions » », `CLAUDE.md` (carte des documents), `verifie_references_docs.py` 0 défaut ; `outils_docs/README.md` § build et `CLAUDE.md` (carte des documents, nouveaux modules)
 
 ## Améliorations restantes
 - [ ] [projet] Dossier de build par env, si A2 conclut « faire » (A2 a conclu « ne pas faire » le 01/11)
