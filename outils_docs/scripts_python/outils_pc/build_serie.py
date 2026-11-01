@@ -29,8 +29,8 @@ partager un port (une seule carte branchee a la fois). Pour un env dont l'envoi 
 servi par un env PRECEDENT de la serie, la compilation (si cochee) se fait d'abord, en un pio run a part ;
 puis, juste avant son premier envoi COM, la serie emet `attente_carte` et attend la reponse de la page
 (`reprend` : continuer ou passer). L'envoi qui suit une compilation reussie part en `-t nobuild -t upload`
-(resp. erase_upload) : le pre-script incremente CFG_HOLDER a chaque pio run, un `-t upload` seul recompilerait
-tout ; nobuild reprend le firmware deja compile (builder/main.py de la plateforme, cible nobuild). Continuer :
+(resp. erase_upload) : un `-t upload` seul repasserait par le pre-build, le scan des dependances et la
+solidification ; nobuild reprend le firmware deja compile (builder/main.py de la plateforme, cible nobuild). Continuer :
 attente d'un build externe eventuel, puis le port est reverifie ; absent ou tenu -> la pause RESTE ouverte
 (nouvel `attente_carte` avec le message : rebrancher puis Continuer, ou Passer). Passer : actions restantes
 « annulee », env « passe ». Les deux arrets mettent fin a la pause (env « arrete », range dans `arretes`, pas

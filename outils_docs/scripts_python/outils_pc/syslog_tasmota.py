@@ -2,7 +2,8 @@
 
 Principe : Tasmota envoie chaque ligne de log en UDP (RFC5424) vers LogHost:LogPort, des que SysLog > 0.
 Defauts de compilation : SYS_LOG_HOST / SYS_LOG_PORT / SYS_LOG_LEVEL de tasmota/user_config_override.h
-(reappliques a chaque flash, CFG_HOLDER changeant a chaque build). A chaud : LogHost, LogPort, SysLog.
+(reappliques au flash qui suit une modification de user_config_override.h ou du persist de l'env : CFG_HOLDER,
+build/cfg_holder.py). A chaud : LogHost, LogPort, SysLog.
 Format recu (tasmota_support/support.ino, SyslogAsync) :
     <PRI>1 2026-10-03T14:02:11.123000+02:00 <hostname> tasmota - - - BRY: message
     PRI = 128 + severite : 131 erreur, 134 info, 135 debug (Tasmota DEBUG et DEBUG_MORE confondus)

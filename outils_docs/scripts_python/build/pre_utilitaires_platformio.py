@@ -410,6 +410,7 @@ def increment_config_holder():
         file.writelines(lines)
 
     print(Fore.GREEN + f"✔ Le paramètre 'CFG_HOLDER' incrémenté de {current_value} à {new_value} dans user_config_override.h.")
+    return True
 
 """    
     Les differntes possibilités de récupération des build_flags: 
@@ -729,7 +730,7 @@ if not is_safeboot and not hors_build:
     except Exception as e:                           # noqa: BLE001
         print(Fore.YELLOW + f"⚠ lib_ignore : controle indisponible ({e}), build laisse continuer")
     else:
-        verifie_lib_ignore.controle(env)
+        verifie_lib_ignore.controle(env, COMMAND_LINE_TARGETS)
 
     adapteParametresPlatformio_override()
 
@@ -739,7 +740,29 @@ if not is_safeboot and not hors_build:
     else:
         print(Fore.YELLOW + "⚠ Synchronisation IDF55 ignorée (non applicable pour cet environnement ou flag non défini)")
 
-    increment_config_holder()
+    # CFG_HOLDER : seulement pour un pio run qui compile le firmware, et si user_config_override.h ou le persist de
+    # l'env a change depuis le dernier increment de cet env (cfg_holder.py, plan temps-compilation A1). Avant, il
+    # changeait a chaque run : tasmota.ino.cpp n'etait jamais repris du cache objet.
+    import cfg_holder
+    if cfg_holder.construit_firmware(COMMAND_LINE_TARGETS):
+        chemin_h = os.path.join(env.subst("$PROJECT_SRC_DIR"), "user_config_override.h")
+        try:
+            chemin_persist = os.path.join(env.subst("$PROJECT_DIR"), transform_name(Global.environnement), "_persist.json")
+        except ValueError:                           # env sans tiret (amont) : pas de dossier de carte
+            chemin_persist = ""
+        incrementer, motif = cfg_holder.doit_incrementer(Global.environnement, chemin_h, chemin_persist)
+        if not incrementer:
+            print(Fore.YELLOW + f"⚠ CFG_HOLDER inchangé : {motif}.")
+        elif increment_config_holder():
+            print(Fore.GREEN + f"✔ CFG_HOLDER incrémenté : {motif}.")
+            cfg_holder.enregistre(Global.environnement, chemin_h, chemin_persist)
+
+        # pio-tools/post_esp32.py reconstruit littlefs.bin et joint le FS a l'upload serie dans une post-action de
+        # firmware.bin (esp32_create_combined_bin) : firmware.bin a jour ou repris du cache, elle ne tournerait pas.
+        # On force donc sa refabrication (conversion elf -> bin seulement, l'edition des liens suit ses dependances).
+        firmware_bin = os.path.join(".pio", "build", Global.environnement, "firmware.bin")
+        env.AlwaysBuild(firmware_bin)
+        env.NoCache(firmware_bin)
 
     atexit.register(remove_backup_data, "", "sortie_script", "")
 

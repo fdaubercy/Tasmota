@@ -332,7 +332,18 @@ def envs_personnels(projet):
         return set(re.findall(r"^\[env:([^\]]+)\]", f.read(), re.M))
 
 
-def controle(env):
+# Cibles qui ne compilent rien : la plateforme y coupe meme le scan des dependances (builder/main.py::switch_off_ldf),
+# et nobuild reprend le firmware deja compile. Le controle n'y protege rien (plan temps-compilation, A3).
+SANS_COMPILATION = {"buildfs", "uploadfs", "uploadfsota", "erase", "download_fs"}
+
+
+def compile_rien(cibles):
+    """Vrai si un pio run de ces cibles ne compile rien : nobuild, ou seulement des cibles de SANS_COMPILATION."""
+    cibles = set(cibles)
+    return "nobuild" in cibles or (bool(cibles) and cibles <= SANS_COMPILATION)
+
+
+def controle(env, cibles=()):
     """Pre-script : arrete le build si le lib_ignore de l'env (ajouts au parent) ignore une bibliotheque utilisee."""
     from colorama import Fore
     projet, nom_env = env.subst("$PROJECT_DIR"), env.subst("$PIOENV")
@@ -342,6 +353,9 @@ def controle(env):
     config = env.GetProjectConfig()
     ajouts = ajouts_env(config, nom_env, personnels)
     if not ajouts:
+        return
+    if compile_rien(cibles):
+        print(Fore.YELLOW + f"⚠ lib_ignore de {nom_env} : controle saute, ce pio run ne compile pas")
         return
     # Les lignes « lib_ignore de <env> : » sont lues par la page build (outils_pc/build_progression.py) :
     # detail de l'etape Pre-build, et les lignes ✗ dans l'extrait d'erreur.

@@ -208,6 +208,16 @@ python outils_docs/scripts_python/maintenance/installe_suivi_plan.py --verifier 
 
 L'extension `fdaubercy.suivi-plan` n'est pas sur la marketplace : Settings Sync ne l'installe pas.
 
+### 5. Exclusions Windows Defender (vitesse des builds)
+
+En PowerShell **administrateur** (le script refuse sinon) :
+
+```
+powershell -ExecutionPolicy Bypass -File outils_docs\scripts_python\maintenance\exclusions_defender.ps1
+```
+
+Exclut `.pio`, `.cache` et `~/.platformio` de l'analyse en temps reel ; `-Verifier` = lecture seule.
+
 ---
 
 ## Le PermissionError sur tasmota.ino.cpp — pourquoi ces reglages existent
@@ -279,9 +289,14 @@ Prise en compte a chaud, sans redemarrer VS Code.
 
 ## Vigilances de build
 
-- Un build reecrit `tasmota/user_config_override.h` (`increment_config_holder`) et
-  `platformio_override.ini` (`adapteParametresPlatformio_override`). Sauvegarder avant une
-  serie de builds experimentaux.
+- Un build reecrit `platformio_override.ini` (`adapteParametresPlatformio_override`), et
+  `tasmota/user_config_override.h` (`increment_config_holder`) **seulement** si ce `.h` (hors ligne `CFG_HOLDER`)
+  ou le `_persist.json` de l'env a change depuis le dernier increment de cet env, et pour un `pio run` qui compile
+  le firmware (`build/cfg_holder.py`, decide le 2026-11-01 ; etat par env dans
+  `%LOCALAPPDATA%\outils_tasmota\build\cfg_holder.json`). Avant, `CFG_HOLDER` changeait a chaque run et
+  `tasmota.ino.cpp` n'etait jamais repris du cache objet (`.cache`, `build_cache_dir`). Le pre-script force aussi la
+  refabrication de `firmware.bin` (`AlwaysBuild`) : sinon la post-action de `pio-tools/post_esp32.py` ne joindrait plus
+  le FS a l'upload serie. Sauvegarder avant une serie de builds experimentaux.
 - **Ne jamais lancer un build en parallele de celui de l'utilisateur** : deux `pio` ecrivant
   `tasmota/tasmota.ino.cpp` se plantent mutuellement.
 - **IntelliSense ne doit jamais se reconstruire pendant un build** (constate le 2026-10-01) :
@@ -540,6 +555,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   - `build/` — charges par PlatformIO : `pre_utilitaires_platformio.py` (pre-script ; importe les
     `cible_*.py` voisins), `post_lto_parallele.py`, les 7 `cible_*.py` (cibles Custom, qui lancent
     `outils_pc/`), `ota-files-uploader.py`, `update_idf55_framework.py` (appele par le pre-script),
+    `cfg_holder.py` (decide si le pre-script incremente `CFG_HOLDER`, banc `test_cfg_holder.py` ; plan
+    `tasks/plans/temps-compilation.md`),
     `verifie_lib_ignore.py` (garde du pre-script, AVANT le scan des dependances : arrete le build si le `lib_ignore`
     qu'un env personnel ajoute a son parent ignore une bibliotheque incluse sous une garde vraie ou incertaine ;
     ~11 s ; ligne « lib_ignore de <env> : » lue par la page build ; `--propose <env>` = liste ignorable de l'env ;
@@ -561,7 +578,10 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `test_discovery.be` avec leurs `bouchons_berry/` (`bouchons_berry/leds/` : bouchon de
     `ledsFonctions`, ajoute par le seul banc ModBus ; dans `bouchons_berry/`, il masquerait le vrai
     module a `banc_leds`).
-  - `maintenance/` — `synchronise_fork_tasmota.py` (synchro du fork : merge, jamais de force-push),
+  - `maintenance/` — `purge_cache_build.py` (vide les objets du cache `.cache` inutilises depuis N jours, defaut 30 ;
+    `--dry-run` ; refus pendant un build ; banc `test_purge_cache_build.py`), `exclusions_defender.ps1` (exclusions
+    Defender des dossiers de build, en administrateur, `-Verifier`),
+    `synchronise_fork_tasmota.py` (synchro du fork : merge, jamais de force-push),
     `synchronise_upstream_tasmota.py` (variante rebase), `corrige_reglages_vscode.py` (pose et
     prouve les reglages VS Code du PermissionError), `verifie_references_docs.py` (renvois au code des
     documents durables : `fichier::fonction`, jamais `fichier:ligne` ; chemins et fonctions cites verifies ;

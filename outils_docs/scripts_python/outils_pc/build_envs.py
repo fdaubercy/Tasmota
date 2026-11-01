@@ -111,8 +111,8 @@ def _valeur(toutes, section, option, vus=()):
 def _fs_avec_firmware(toutes, section, ota):
     """Vrai si un `-t upload` par cable flashe aussi le file system de cet env.
 
-    Fait mesure dans pio-tools/post_esp32.py : a chaque edition des liens du firmware (toujours, puisque
-    CFG_HOLDER change a chaque run), esp32_build_filesystem (l.139-245) reconstruit littlefs.bin des que
+    Fait mesure dans pio-tools/post_esp32.py : a chaque fabrication de firmware.bin (toujours : le pre-script la
+    force par AlwaysBuild, CFG_HOLDER ne changeant plus a chaque run), esp32_build_filesystem (l.139-245) reconstruit littlefs.bin des que
     custom_files_upload contient une entree autre que `no_files`, et l'upload esptool l'emporte
     (l.419-440). ESP32 seulement (`ota` : env qui charge le pre-script des bases ESP32) ; les ESP8266
     n'ont pas post_esp32.py.

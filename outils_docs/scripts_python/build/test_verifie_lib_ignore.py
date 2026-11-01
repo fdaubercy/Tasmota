@@ -194,8 +194,16 @@ def test_reel():
                     [(fichier, ligne, entete, etat)], f"reel : {lib} refusee sur {nom} ({fichier}:{ligne})")
 
 
+def test_compile_rien():
+    """Plan temps-compilation A3 : controle saute seulement pour un pio run qui ne compile rien."""
+    for cibles, attendu in (((), False), (("upload",), False), (("erase_upload",), False), (("size",), False),
+                            (("nobuild", "upload"), True), (("buildfs",), True), (("uploadfs",), True),
+                            (("buildfs", "uploadfs"), True), (("buildfs", "upload"), False)):
+        verifie(v.compile_rien(cibles), attendu, f"compile_rien{list(cibles)}")
+
+
 def principal():
-    for t in (test_evalue, test_commentaires, test_includes_actifs, test_analyse, test_ajouts_env):
+    for t in (test_evalue, test_commentaires, test_includes_actifs, test_analyse, test_ajouts_env, test_compile_rien):
         t()
     if "--reel" in sys.argv:
         test_reel()
