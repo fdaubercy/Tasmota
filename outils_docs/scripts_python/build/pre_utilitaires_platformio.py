@@ -722,6 +722,15 @@ hors_build = any(cible in COMMAND_LINE_TARGETS for cible in CIBLES_HORS_BUILD)
 # ============================================================
 # ✨ FONCTIONS ACTIVES UNIQUEMENT HORS SAFEBOOT ...
 # ============================================================
+# tasmota.ino.cpp identique d'un build a l'autre, sinon il n'est jamais repris du cache (ino_stable.py).
+# Un defaut ici ne bloque jamais le build : il redevient seulement plus long.
+try:
+    import ino_stable
+    from platformio.builder.tools.pioino import ConvertInoToCpp
+    env.AddMethod(ino_stable.enveloppe(ConvertInoToCpp, env["PIOENV"]), "ConvertInoToCpp")
+except Exception as e:                               # noqa: BLE001
+    print(Fore.YELLOW + f"⚠ tasmota.ino.cpp : nom temporaire aleatoire conserve ({e})" + Style.RESET_ALL)
+
 if not is_safeboot and not hors_build:
     # Avant le scan des dependances : un lib_ignore qui ignore une bibliotheque utilisee arrete le build ici.
     # Un defaut du controle lui-meme (module illisible...) ne bloque jamais le build.

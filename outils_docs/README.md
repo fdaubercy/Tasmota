@@ -811,6 +811,13 @@ sans toucher aux cases.
   la section de l'env : la table par défaut, partagée, n'est jamais modifiée. « Partir d'une table existante » règle les
   curseurs sur une table de `partitions/` à la taille de la flash ; si la table finale est identique à un de ces fichiers,
   l'env pointe vers lui et aucun CSV n'est créé (c'est aussi le retour à la table par défaut) (copie d'origine dans `%LOCALAPPDATA%\outils_tasmota\fichiers_berry\sauvegardes\`).
+- **Importer, exporter, ajouter** : « Importer un CSV » passe par les mêmes contrôles (adresses contiguës, pas de colonne
+  Flags), « Exporter en CSV » télécharge la table réglée, « Ajouter la partition » l'insère avant le FS, 64 Ko pris sur lui.
+- **4 ou 6 partitions** : acceptées, le FS restant dernier et un safeboot restant en 0x10000. Sans safeboot, l'env reçoit
+  `board_upload.arduino.flash_extra_images =` (vide) et l'OTA du firmware est refusée. Avec un FS, le « Téléverser le
+  firmware » par câble est refusé, seul « Effacer puis téléverser » passe : `post_esp32.py::patch_partitions_bin` suppose
+  5 partitions. ⚠️ La page ne contrôle pas un `pio run -t upload` lancé hors d'elle ; une telle table n'a pas encore été
+  essayée sur une carte.
 - **Après l'écriture** : la nouvelle table ne part qu'avec un « Effacer puis téléverser » par câble, qui remplace aussi
   le persist de la carte par celui du dépôt. D'ici là, toute OTA de l'env est refusée (une OTA n'écrit jamais la
   table). Le prochain build repart de zéro (le cenv a changé).

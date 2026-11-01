@@ -63,8 +63,8 @@ pas de modification de fichiers amont (`pio-tools/`, `platformio.ini`) ; lire `t
   (étapes datées par les fichiers produits : préparation ~8 min 30, `tasmota.ino.cpp` ~9 min sur un cœur, lien LTO 5 min 38)
 
 ## A11 — Ce qui reste dans les 23 min d'un build sans changement (constaté le 01/11)
-- [ ] `tasmota.ino.cpp` recompilé alors que `user_config_override.h` et `CFG_HOLDER` sont inchangés (~9 min) : trouver la
-  cause par `--debug=explain` de SCons (lancer hors page, en accord avec l'utilisateur), puis la corriger si elle est de notre fait
+- [x] `tasmota.ino.cpp` recompilé sans changement : cause et correctif — preuve : journal `20261101-134632` (`SCONSFLAGS=--debug=explain`), plus aucun « Compiling » ni « Linking », 355 s contre 771 s à 13:15
+  (`pioino.py::InoToCPPConverter._gcc_preprocess` : nom temporaire aléatoire écrit en ligne 1 par `g++ -E`, seule différence entre deux générations ; `build/ino_stable.py`, banc `test_ino_stable.py`)
 - [ ] Lien LTO en série malgré `post_lto_parallele.py` (« lto-wrapper: using serial compilation of 32 LTRANS jobs ») :
   hypothèse, GCC a besoin d'un `make` sous Windows pour paralléliser et le poste n'en a pas ; vérifier, puis essayer un `make`
   dans le PATH du build, et mesurer
@@ -131,7 +131,7 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
 
 ## A9 — Écrire la table de partitions d'un env (à faire plus tard)
 - [x] Module `outils_pc/build_partitions.py` — preuve : `build_partitions.py::valide`, 11 cas de refus VERTS ; validation (alignement et tailles de 64 Ko, `nvs` en 0x9000, `otadata` en 0xE000, `app0` obligatoire, minimum = occupé, somme = flash), mêmes règles que la maquette
-- [ ] Suppression : `safeboot` et `spiffs` demandent une confirmation qui nomme la conséquence ; `nvs`, `otadata`, `app0` refusées aussi côté serveur
+- [x] Suppression — preuve : `build_partitions.py::prepare` (avertissements, repris par le `confirm` de la page), `test_build_partitions.py` VERT, sonde VERT : `safeboot` et `spiffs` demandent une confirmation qui nomme la conséquence ; `nvs`, `otadata`, `app0` refusées aussi côté serveur
 - [x] Écriture d'un CSV propre à l'env — preuve : `build_partitions.py::prepare`, `::ecrit` (`partitions/env_<env>.csv`, `build_envs.py::pose_option`), routes `POST /partitions/diff` et `/partitions/ecrire` de `build_web.py` ; écriture d'un CSV propre à l'env dans `partitions/`, et de `board_build.partitions` dans sa section du cenv : diff d'abord, transaction et sauvegarde (`fichiers_berry_sauvegarde.Transaction`), refus pendant un build ; les autres envs ne changent pas
 - [x] OTA BLOQUÉES — preuve : `build_partitions.py::ota_bloquee`, `::libere` appelés par `build_serie.py::Serie.controle` et `::_execute_env` ; OTA du firmware et du FS BLOQUÉES pour un env dont la table a changé, avec le motif affiché, jusqu'au prochain « Effacer puis téléverser » réussi (état hors dépôt, contrôle côté serveur dans `build_serie.py`)
 - [x] Rappels — preuve : avertissements de `build_partitions.py::prepare` (persist, purge, OTA, héritiers) ; avant l'écriture, rappeler que le flash série remplace le persist de la carte par celui du dépôt, et annoncer la purge de `.pio/build` (le cenv change)
@@ -140,13 +140,10 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
   EXACTEMENT 5 partitions. Avec 4 (safeboot ou FS supprimé) ou 6 (ajout), il corromprait la table. Il ne s'applique que
   lors d'un upload série quand esptool détecte une flash plus grande que celle déclarée (`esp32_detect_flashsize`).
   `partition_core.be::resize_fs_to_max` et `::invalidate_spiffs` supposent le FS en DERNIÈRE position.
-- [ ] Règle à appliquer : FS toujours dernier ; une table de 4 ou 6 partitions n'est acceptée que si l'env déclare sa
-  flash (`board_upload.flash_size`) et qu'un contrôle avant l'upload série refuse tout écart avec la flash détectée ;
-  sinon refus avec le motif. S'applique aussi à la suppression de `safeboot` (le choix « supprimer » reste possible).
-  État au 01/11 : le contrôle de la flash détectée avant l'upload série n'existe pas encore, donc `valide` refuse
-  toute table qui n'a pas 5 partitions, en nommant la conséquence (suppression de `safeboot`/`spiffs` comprise)
+- [x] Tables de 4 ou 6 partitions, FS toujours dernier — preuve : `test_build_partitions.py` VERT (image du safeboot retirée vérifiée par `PlatformBoardConfig`) ; essai sur carte non fait
+  (`post_esp32.py::esp32_detect_flashsize` ne teste la flash que pour la cible `upload` exacte : `erase_upload` n'est jamais corrigé. Plutôt qu'un contrôle de la flash détectée, `build_partitions.py::motifs_envoi` refuse donc l'`upload` par câble de ces tables ; sans safeboot, `board_upload.arduino.flash_extra_images` vidé dans la section de l'env)
 - [x] Préréglages (tables de `partitions/`), même validation ; table identique à un fichier = l'env pointe vers lui — preuve : `test_build_partitions.py` VERT (14 mutants), `test_build_page_memoire_chrome.py` VERT
-- [ ] Import et export d'un CSV, passés par la même validation
+- [x] Import et export d'un CSV, passés par la même validation — preuve : `build_partitions.py::lit_import`, `test_build_partitions.py` VERT, sonde `test_build_page_memoire_chrome.py` VERT
 - [x] Banc — preuve : `test_build_partitions.py` VERT, 27 cas, 10 mutants tués, deux vraies tables reproduites octet pour octet ; banc `test_build_partitions.py` (copies temporaires du cenv, relues par `ProjectConfig`, avec mutants) ; table produite identique octet pour octet à `esp32_partition_app3904k_fs11584k.csv` sans modification
 - [ ] Essai réel par l'utilisateur sur une carte, par câble : démarrage, FS et Berry vérifiés, puis OTA de nouveau permise
 
