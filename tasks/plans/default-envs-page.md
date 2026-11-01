@@ -71,7 +71,7 @@ Demande du 2026-11-01 : décochée par défaut, sur la page Fichiers Berry par e
 - [x] Case dans les deux pages, envoyée au serveur — preuve : sondes test_fichiers_berry_page_chrome.py et test_assistant_persist_page_chrome.py, ligne « case default_envs visible » OK
 
 ## Améliorations restantes
-- [ ] [projet] Sonde `test_assistant_persist_page_chrome.py` rouge sur le bandeau du modèle : elle attend 1 clé à compléter, le parc réel en donne 5 (TCA9554 du persist de la cave, absentes de `modele_persist.json`) ; sans lien avec ce plan
+- [x] [projet] Sonde `test_assistant_persist_page_chrome.py` rouge sur le bandeau du modèle : elle attend 1 clé à compléter, le parc réel en donne 5 (TCA9554 du persist de la cave, absentes de `modele_persist.json`) ; sans lien avec ce plan — preuve : bloc TCA9554 (OFF) au socle du modèle (arrivé dans le commit 88444d66b), sonde, `test_assistant_persist_modele.py` et `test_assistant_persist_fidelite.py` VERT le 2026-11-01 ; écarts TCA9554 tolérés dans `test_assistant_persist_generation.py`
 
 ## Vérification
 1. `test_build_defaut.py` : la liste relue par `ProjectConfig` est exactement celle cochée, et le diff ne touche que les lignes visées.
