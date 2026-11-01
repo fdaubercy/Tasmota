@@ -665,7 +665,8 @@ discoveryFonctions.etatReseau = discoveryFonctions_etatReseau
 
 # Tableau d'etat reseau de la page /discovery, sur le maitre Range Extender seulement (P8.8).
 # Une carte par esclave (classes esc-* de /sd/css/main.css) : liseré et badge a la couleur de l'etat, signal en barres.
-def discoveryFonctions_afficheEtatReseau(table)
+# liens : {MAC: url de sa page} (calcule par affichePageDiscovery), carte cliquable si l'esclave y figure
+def discoveryFonctions_afficheEtatReseau(table, liens)
     import webserver
     if (serveur.find("rangeExtender", {}).find("activation", "OFF") != "ON" || serveur["rangeExtender"].find("id", 99) != 0)    return    end
     var reponse = tasmota.cmd("RgxClients", boolMute)
@@ -683,13 +684,23 @@ def discoveryFonctions_afficheEtatReseau(table)
             var n = r >= -55 ? 4 : (r >= -65 ? 3 : (r >= -75 ? 2 : 1))
             signal = "<span class='esc-sig esc-n" + str(n) + "'><i></i><i></i><i></i><i></i></span><span class='esc-dbm'>" + str(r) + " dBm</span>"
         end
-        webserver.content_send("<div class='esc-l' style='border-color:" + c + ";'><div class='esc-h'><span class='esc-nom'>" + l["nom"] + "</span>" +
-                               signal + "<span class='esc-b' style='background:" + c + ";'>" + badges.find(l["etat"], "?") + "</span></div>" +
-                               "<div class='esc-m'>" + l["mac"] + "</div><div class='esc-d'>" + l["detail"] + "</div></div>")
+        webserver.content_send(discoveryFonctions.carte(isinstance(liens, map) ? liens.find(l["mac"]) : nil, c, l["nom"],
+                               signal + "<span class='esc-b' style='background:" + c + ";'>" + badges.find(l["etat"], "?") + "</span>",
+                               l["mac"], l["detail"], false))
     end
     webserver.content_send("</div>")
 end
 discoveryFonctions.afficheEtatReseau = discoveryFonctions_afficheEtatReseau
+
+# Carte d'un module (classes esc-* de /sd/css/main.css) : lien vers sa page, dans un nouvel onglet, si url ; grise si horsLigne
+def discoveryFonctions_carte(url, couleur, nom, entete, ligne, detail, horsLigne)
+    var classe = "esc-l" + (horsLigne ? " esc-off" : "")
+    return (url ? "<a class='" + classe + "' target='_blank' href='" + url + "'" : "<div class='" + classe + "'") +
+           " style='border-color:" + couleur + ";'><div class='esc-h'><span class='esc-nom'>" + nom + "</span>" + entete +
+           (url ? "<span class='esc-fl'>&#8250;</span>" : "") + "</div><div class='esc-m'>" + ligne + "</div><div class='esc-d'>" +
+           detail + "</div>" + (url ? "</a>" : "</div>")
+end
+discoveryFonctions.carte = discoveryFonctions_carte
 
 # Gestion de l'affichage de la page des modules découverts
 def discoveryFonctions_affichePageDiscovery()
@@ -742,7 +753,12 @@ def discoveryFonctions_affichePageDiscovery()
 
         var IP = ""
         var titre = ""
-        var colorBTN = "bgrn"
+        # Sur le maitre Range Extender, les esclaves ont leur carte dans « Etat reseau des esclaves » : pas de doublon ici
+        var maitreRE = (serveur.find("rangeExtender", {}).find("activation", "OFF") == "ON" && serveur["rangeExtender"].find("id", 99) == 0)
+        var macLocale = string.toupper(string.replace(serveur.find("adresseMAC", ""), ":", ""))
+        var liens = {}                      # MAC -> url de la page de l'esclave, pour ses cartes d'etat reseau
+        var enLigne = []
+        var horsLigne = []                  # cartes des modules hors ligne, affichees apres celles en ligne
 
         discoveryFonctions.log("AFFICHE_DISCOVERY: Parcoure les modules Tasmota enregistrés sur le réseau local !", LOG_LEVEL_DEBUG_PLUS)
         for item: jsonDiscovery.keys()
@@ -756,7 +772,6 @@ def discoveryFonctions_affichePageDiscovery()
 
             titre = jsonDiscovery[item]['config']['dn']
             discoveryFonctions.log(f"AFFICHE_DISCOVERY: - Pour le module Tasmota '{titre:s}':", LOG_LEVEL_DEBUG_PLUS)
-            colorBTN = "bgrn"
             i = i + 1
 
             portDistant = 10000 + int(string.split(jsonDiscovery[item]["config"]["ip"], ".")[3])            # portDistant = 10000 + last octet of local IP
@@ -772,9 +787,12 @@ def discoveryFonctions_affichePageDiscovery()
 
             # Teste s'il s'agit d'un module RangeExtender
             var pattern = re.compile('^(maitre|esclave[0-9]+)$')
+            var esclave = false
+            var maitre = false
 
             for role: jsonDiscovery[item].keys()
                 if (pattern.match(role) != nil)
+                    if (role == "maitre")    maitre = true    else    esclave = true    end
                     if (jsonDiscovery[item][role].find("rangeExtender", false))
                         discoveryFonctions.log(f"AFFICHE_DISCOVERY:\t * RangeExtender existant !", LOG_LEVEL_DEBUG_PLUS)
                         # Si esclave RangeExtender (id > 0)
@@ -795,11 +813,8 @@ def discoveryFonctions_affichePageDiscovery()
                                 IP = string.split(url_host, ":")[0]         #  IP = http://fdaubercy.freeboxos.fr
                             end
 
-                            # Change la couleur des boutons des esclaves RangeExtender
-                            colorBTN = "bgrey"
-
                             # Active le routage NAPT si pas encore fait (si id == 0, c'est le maître)
-                            if (serveur["rangeExtender"].find("id", 99) == 0)
+                            if (maitreRE)                   # maitre Range Extender ACTIF (avant : id 0 seul, vrai aussi sur une carte sans Range Extender)
                                 import rangeExtenderFonctions
                                 discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * Active le routage NAPT vers le module {titre:s} ({jsonDiscovery[item][role]["IPAddress"]:s}) sur le port {portLocal:d} !', LOG_LEVEL_DEBUG)
                                 # Par rangeExtenderFonctions.redirige (2026-10-04) : un RgxPort a chaque affichage
@@ -814,14 +829,30 @@ def discoveryFonctions_affichePageDiscovery()
             discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * IP = {IP:s}', LOG_LEVEL_DEBUG_PLUS)
             discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * portLocal = {portLocal:i}', LOG_LEVEL_DEBUG_PLUS)
             discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * portDistant = {portDistant:i}', LOG_LEVEL_DEBUG_PLUS)
-            discoveryFonctions.log(f'AFFICHE_DISCOVERY:\t * couleur du bouton = {colorBTN:s}', LOG_LEVEL_DEBUG_PLUS)
 
-            webserver.content_send(string.format("<p></p><form target='_blank'><button class='button %s' formaction='http://%s:%i'>%s</button></form>", 
-                                                    colorBTN, IP, (typeURL == "freeboxDNS" ? portDistant : portLocal), titre))
+            var url = string.format("http://%s:%i", IP, (typeURL == "freeboxDNS" ? portDistant : portLocal))
+            if (maitreRE && esclave)
+                liens[item] = url
+                continue
+            end
+            # La table peut garder un LWT perime pour ce module : il sert la page, il est donc en ligne
+            var moi = (item == macLocale)
+            var actif = moi || jsonDiscovery[item].find("lwt") == "Online"
+            var config = jsonDiscovery[item]["config"]
+            var liste = actif ? enLigne : horsLigne
+            liste.push(discoveryFonctions.carte(url, actif ? "#47c266" : "#d43535",
+                    str(titre) + (moi ? "<span class='esc-moi'>ce module</span>" : ""),
+                    "<span class='esc-b' style='background:" + (actif ? "#47c266;'>&#10003; EN LIGNE" : "#d43535;'>&#10005; HORS LIGNE") + "</span>",
+                    str(config.find("ip", "")) + " · " + str(config.find("hn", "")),
+                    str(config.find("md", "")) + " · " + str(config.find("sw", "")) + (maitre ? " · maître" : ""), !actif))
         end
+        webserver.content_send("<div style='padding:0px 5px;'>")
+        for c: enLigne    webserver.content_send(c)    end
+        for c: horsLigne    webserver.content_send(c)    end
+        webserver.content_send("</div>")
 
         # Etat reseau des esclaves (maitre Range Extender, P8.8)
-        discoveryFonctions.afficheEtatReseau(jsonDiscovery)
+        discoveryFonctions.afficheEtatReseau(jsonDiscovery, liens)
 
         # On ajoute les autres éléments de base d'une page Tasmota
         webserver.content_send("<div></div><p></p>")

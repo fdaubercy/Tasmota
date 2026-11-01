@@ -911,10 +911,18 @@ def udpFonctions_perimeFiches()
         udpFonctions.log("UDP_PEREMPTION: discovery.json absent ou vide, rien a perimer !", LOG_LEVEL_DEBUG_PLUS)
         return
     end
+    import re
+    var patternEsclave = re.compile('^esclave[0-9]+$')
     var perimees = []
     for mac: table.keys()
         var entree = table[mac]
         if (!isinstance(entree, map) || entree.find("lwt") != "Online")    continue    end
+        # Seuls les esclaves envoient des ImAlive : un module sans fiche esclaveN (maitre, Sonoff...) garde le LWT MQTT
+        var esclave = false
+        for role: entree.keys()
+            if (patternEsclave.match(role) != nil)    esclave = true    break    end
+        end
+        if (!esclave)    continue    end
         var vu = e["presence"].find(mac)
         if (vu == nil || maintenant - vu >= 2 * periode)
             entree["lwt"] = "Offline"

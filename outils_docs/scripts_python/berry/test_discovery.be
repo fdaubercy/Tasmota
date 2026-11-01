@@ -262,8 +262,8 @@ webserver.termine = false
 verifie("page ne leve pas", "OK", essaie(def () discoveryFonctions.affichePageDiscovery() end))
 verifie("page terminee (content_stop)", true, webserver.termine)
 var boutons = 0
-for s: webserver.envoye    if string.find(s, "<button class='button") >= 0    boutons += 1    end    end
-verifie("1 bouton (seule l'entree avec config)", 1, boutons)
+for s: webserver.envoye    if string.find(s, "<a class='esc-l") >= 0    boutons += 1    end    end
+verifie("1 carte cliquable (seule l'entree avec config)", 1, boutons)
 # Esclave RangeExtender qui n'a pas encore recu l'IP du maitre (ipMaitre vide)
 var ficheSansIpMaitre = ficheCuve(true)
 ficheSansIpMaitre["esclave2"]["rangeExtender"]["ipMaitre"] = ""
@@ -1293,8 +1293,8 @@ webserver.envoye = []
 webserver.termine = false
 verifie("page : ne leve pas", "OK", essaie(def () discoveryFonctions.affichePageDiscovery() end))
 var boutons22 = 0
-for s: webserver.envoye    if string.find(s, "<button class='button") >= 0    boutons22 += 1    end    end
-verifie("page : 1 lecture de discovery.json, meme bouton", "1 1", str(lectures22()) + " " + str(boutons22))
+for s: webserver.envoye    if string.find(s, "<a class='esc-l") >= 0    boutons22 += 1    end    end
+verifie("page : 1 lecture de discovery.json, meme carte", "1 1", str(lectures22()) + " " + str(boutons22))
 # b) Mqtt#Connected d'un esclave : sa fiche republiee (retenue)
 serveur = {"adresseMAC": MAC_CUVE, "nom": "Capteurs de Cuve", "IP": {"IPAddress": "192.168.4.2"}, "hostname": "CAPTEURS-CUVE",
            "udp": {"id": 2, "activation": "ON"}, "rangeExtender": {"activation": "ON", "id": 2},
@@ -1440,7 +1440,13 @@ serveur["udp"]["id"] = 0
 diverses = {"telePeriod": 300}
 var init25 = {}
 init25[CLE_CUVE] = {"config": configCuve(), "lwt": "Online"}
-init25[CLE_RIDEAU] = {"config": {"dn": "Rideau"}, "lwt": "Online"}
+init25[CLE_RIDEAU] = {"config": {"dn": "Rideau"}, "lwt": "Online", "esclave3": {"id": 3, "nom": "Rideau"}}
+# Modules sans fiche esclave : ils n'envoient jamais d'ImAlive, leur etat vient du LWT MQTT (retenu par le broker).
+# Avant (constate sur le P4 le 2026-10-31, syslog 19:28:40) : le maitre lui-meme et les Sonoff passaient Offline.
+var CLE_SONOFF = "A4CF12DAD757"
+var CLE_GRENIER = "ACA704298570"
+init25[CLE_SONOFF] = {"config": {"dn": "TV de Salon"}, "lwt": "Online"}
+init25[CLE_GRENIER] = {"config": {"dn": "Serveur Grenier"}, "lwt": "Online", "maitre": {"id": 0}}
 init25["esclave9"] = "entree racine illisible"
 gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(init25)}
 demarre21()
@@ -1455,6 +1461,7 @@ verifie("... timer re-arme : verification a chaque telePeriod", 1, tasmota.nbTim
 verifie("t=600 s : rideau jamais vu -> Offline ; cuve vue a 100 s -> Online", "OK Online Offline",
         tick25(600000) + " " + str(lwt25(CLE_CUVE)) + " " + str(lwt25(CLE_RIDEAU)))
 verifie("... passage journalise (UDP_PEREMPTION)", true, journalise("UDP_PEREMPTION: "))
+verifie("... module MQTT seul et maitre : non perimes (pas d'ImAlive, LWT MQTT)", "Online Online", str(lwt25(CLE_SONOFF)) + " " + str(lwt25(CLE_GRENIER)))
 verifie("... entree racine illisible conservee", "entree racine illisible", table().find("esclave9"))
 tasmota.horloge = 650000
 imAlive(ficheCuve(true))
@@ -1537,9 +1544,48 @@ verifie("page /discovery ne leve pas", "OK", essaie(def () discoveryFonctions.af
 var html26 = webserver.envoye.concat("")
 verifie("... tableau d'etat reseau affiche, page terminee", "true true true",
         str(string.find(html26, "tat r") >= 0) + " " + str(string.find(html26, "Ancienne cuve") >= 0) + " " + str(webserver.termine))
-verifie("... une carte par esclave classe (6) + 1 inconnu, badge et signal", "7 true true",
+verifie("... une carte par esclave classe (6) + 1 inconnu + le module MQTT seul, badge et signal", "8 true true",
         str(size(string.split(html26, "class='esc-l'")) - 1) + " " + str(string.find(html26, "ABSENT") >= 0) + " " +
         str(string.find(html26, "esc-sig esc-n4") >= 0))
+# Modules en cartes cliquables (choix A du 2026-10-31) : l'esclave n'est plus en double en haut, sa carte
+# d'etat reseau devient le lien (port du routage NAPT du maitre) ; hors ligne apres en ligne ; ce module en ligne
+var t26c = {}
+t26c[CLE_CUVE] = ficheCuve(true)
+t26c[CLE_CUVE]["config"] = configCuve()
+t26c[CLE_CUVE]["lwt"] = "Online"
+t26c["AA0000000010"] = {"config": {"dn": "Module eteint", "ip": "192.168.0.61", "hn": "ETEINT", "md": "Sonoff", "sw": "13.1.0"}, "lwt": "Offline"}
+t26c["AA0000000011"] = {"config": {"dn": "Module allume", "ip": "192.168.0.62", "hn": "ALLUME"}, "lwt": "Online"}
+t26c["AA0000000012"] = {"config": {"dn": "Ce serveur", "ip": "192.168.0.43", "hn": "SERVEUR"}, "lwt": "Offline", "maitre": {"id": 0}}
+var macAvant26 = serveur.find("adresseMAC")
+serveur["adresseMAC"] = "AA:00:00:00:00:12"
+tasmota.rgxClients = {CLE_CUVE: {"IPAddress": "192.168.4.2", "RSSI": -27}}
+gestionFileFolder.fichiers = {"/json/discovery.json": json.dump(t26c), "/sd/css/main.css": ""}
+webserver.envoye = []
+webserver.termine = false
+verifie("page en cartes ne leve pas, terminee", "OK true", essaie(def () discoveryFonctions.affichePageDiscovery() end) + " " + str(webserver.termine))
+var h26 = webserver.envoye.concat("")
+var cuve26 = string.find(h26, "<a class='esc-l' target='_blank' href='http://192.168.0.43:8081'")
+verifie("... esclave : une seule carte (pas de doublon), lien par le routage du maitre", "1 true",
+        str(size(string.split(h26, "Capteurs de Cuve")) - 1) + " " + str(cuve26 > string.find(h26, "tat r")))
+verifie("... module en ligne : lien vers son IP, avant le module hors ligne grise", "true true",
+        str(string.find(h26, "href='http://192.168.0.62:80'") >= 0 && string.find(h26, "Module allume") < string.find(h26, "Module eteint")) + " " +
+        str(string.find(h26, "<a class='esc-l esc-off' target='_blank' href='http://192.168.0.61:80'") >= 0))
+verifie("... detail : IP, nom d'hote, modele, version", true, string.find(h26, "192.168.0.61 · ETEINT</div><div class='esc-d'>Sonoff · 13.1.0") >= 0)
+var moi26 = string.find(h26, "Ce serveur<span class='esc-moi'>ce module</span>")
+verifie("... ce module : marque, en ligne malgre un LWT Offline, maitre", "true true true",
+        str(moi26 >= 0) + " " + str(string.find(h26, "EN LIGNE", moi26) < string.find(h26, "</a>", moi26)) + " " +
+        str(string.find(h26, "· maître", moi26) < string.find(h26, "</a>", moi26)))
+# Carte SANS Range Extender actif mais id 0 (differentiel du bureau) : aucune redirection NAPT posee.
+# Avant : la condition testait l'id seul et lancait RgxPort sur une carte qui n'a pas de point d'acces.
+var reAvant26 = serveur["rangeExtender"]
+serveur["rangeExtender"] = {"activation": "OFF", "id": 0}
+tasmota.cmds = []
+webserver.envoye = []
+verifie("carte sans Range Extender (id 0) : page sans RgxPort, esclave en carte", "OK 0 true",
+        essaie(def () discoveryFonctions.affichePageDiscovery() end) + " " +
+        str(size(string.split(tasmota.cmds.concat("|"), "RgxPort")) - 1) + " " + str(string.find(webserver.envoye.concat(""), "Capteurs de Cuve") >= 0))
+serveur["rangeExtender"] = reAvant26
+serveur["adresseMAC"] = macAvant26
 tasmota.rgxClients = {}
 
 print("")
