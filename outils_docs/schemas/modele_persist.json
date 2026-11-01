@@ -2021,6 +2021,15 @@
 				],
 				"condition": null,
 				"groupe": "chargement"
+			},
+			{
+				"rang": 430,
+				"appel": "charge",
+				"modules": [
+					"fsMqtt"
+				],
+				"condition": null,
+				"groupe": "chargement"
 			}
 		]
 	},

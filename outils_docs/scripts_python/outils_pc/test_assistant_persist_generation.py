@@ -158,12 +158,14 @@ def test_rejeu_parc(modele):
 
 
 def _appels(texte):
-    """Suite des appels demarrage.* sans commentaires ni lignes vides."""
+    """Suite des appels demarrage.* ; deux lignes consecutives de meme appel et meme condition n'en font qu'une, comme
+    au generateur : demarrage_charge enchaine ses modules un par un, couper la liste ne change rien sur la carte."""
     res = []
-    for ligne in texte.splitlines():
-        code = ligne.split("#", 1)[0].strip()
-        if code.startswith("demarrage."):
-            res.append(code)
+    for appel, modules, condition in gen._appels(texte):
+        if res and res[-1][0] == appel and res[-1][2] == condition and appel != "chargeFichier":
+            res[-1][1].extend(modules)
+        else:
+            res.append((appel, modules, condition))
     return res
 
 
