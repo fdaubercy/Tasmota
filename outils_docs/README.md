@@ -813,6 +813,10 @@ sans toucher aux cases.
   l'env pointe vers lui et aucun CSV n'est créé (c'est aussi le retour à la table par défaut) (copie d'origine dans `%LOCALAPPDATA%\outils_tasmota\fichiers_berry\sauvegardes\`).
 - **Importer, exporter, ajouter** : « Importer un CSV » passe par les mêmes contrôles (adresses contiguës, pas de colonne
   Flags), « Exporter en CSV » télécharge la table réglée, « Ajouter la partition » l'insère avant le FS, 64 Ko pris sur lui.
+- **Nom du fichier** : facultatif. Vide, la table part dans `partitions/env_<env>.csv` ; saisi, dans `partitions/<nom>.csv`.
+  Un fichier nommé qui existe déjà n'est jamais réécrit, ni un `env_` qui sert aussi à un autre env. « Voir le diff » compare
+  la table à TOUS les fichiers de `partitions/` : si elle est identique à l'un d'eux, la page le propose ; OK = l'env pointe
+  vers lui, Annuler = un nouveau fichier est créé quand même.
 - **4 ou 6 partitions** : acceptées, le FS restant dernier et un safeboot restant en 0x10000. Sans safeboot, l'env reçoit
   `board_upload.arduino.flash_extra_images =` (vide) et l'OTA du firmware est refusée. Avec un FS, le « Téléverser le
   firmware » par câble est refusé, seul « Effacer puis téléverser » passe : `post_esp32.py::patch_partitions_bin` suppose
@@ -821,8 +825,6 @@ sans toucher aux cases.
 - **Après l'écriture** : la nouvelle table ne part qu'avec un « Effacer puis téléverser » par câble, qui remplace aussi
   le persist de la carte par celui du dépôt. D'ici là, toute OTA de l'env est refusée (une OTA n'écrit jamais la
   table). Le prochain build repart de zéro (le cenv a changé).
-- **Limite** : seules les tables de 5 partitions sont acceptées (`post_esp32.py::patch_partitions_bin` corrige la 5e
-  entrée) ; supprimer `safeboot` ou le FS est donc refusé pour l'instant, avec la conséquence nommée.
 
 ### Téléversement série : il emporte `littlefs.bin`
 

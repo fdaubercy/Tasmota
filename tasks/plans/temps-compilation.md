@@ -65,11 +65,22 @@ pas de modification de fichiers amont (`pio-tools/`, `platformio.ini`) ; lire `t
 ## A11 — Ce qui reste dans les 23 min d'un build sans changement (constaté le 01/11)
 - [x] `tasmota.ino.cpp` recompilé sans changement : cause et correctif — preuve : journal `20261101-134632` (`SCONSFLAGS=--debug=explain`), plus aucun « Compiling » ni « Linking », 355 s contre 771 s à 13:15
   (`pioino.py::InoToCPPConverter._gcc_preprocess` : nom temporaire aléatoire écrit en ligne 1 par `g++ -E`, seule différence entre deux générations ; `build/ino_stable.py`, banc `test_ino_stable.py`)
-- [ ] Lien LTO en série malgré `post_lto_parallele.py` (« lto-wrapper: using serial compilation of 32 LTRANS jobs ») :
-  hypothèse, GCC a besoin d'un `make` sous Windows pour paralléliser et le poste n'en a pas ; vérifier, puis essayer un `make`
-  dans le PATH du build, et mesurer
-- [ ] Préparation de ~8 min 30 : détailler (contrôle `lib_ignore` 80 s à chaque compilation, LDF, solidification Berry de
-  6 bibliothèques, `dump-defines.py`) et ne garder que ce qui sert
+- [x] Lien LTO en série malgré `post_lto_parallele.py` : mesuré, `make` retiré du build, aucun gain — preuve : 5 liens de la cuve du 01/11 par la page, `firmware.bin` identique (`11a3f8d574cd6ec3`) dans tous les cas
+  (`make -f ….mk -j4` est bien appelé et le message `using serial` disparaît, mais jamais plus d'un `lto1` sur ~130 relevés. Lien : `-flto=auto` 518, 470, 397 s ; `-flto=2` 556 s ; `-flto` nu avec `make` dans le PATH, série non prouvée, 524, 367 s ; série de référence sans `make` 338 s, poste plus calme.
+  Pourquoi un seul `lto1` : non trouvé. `make` reste installé sur le poste, inutilisé)
+- [x] Préparation détaillée, gardé ce qui sert — preuve : journaux datés du 01/11, cuve sans changement, 229 et 255 s (`build/test_scons_cache.py` VERT)
+  (avant : 420 à 650 s, dont ~230 s de parcours SCons sans rien compiler ; `env.Decider("content-timestamp")` et
+  `SetOption("implicit_cache", 1)` le ramènent à ~20 s. Reste : LDF 110-180 s, solidification de `berry_custom` 46-100 s,
+  `lib_ignore` 5-11 s à chaud et 49 s à froid, `dump-defines` et les 6 solidifications en cache ~20 s : tout sert, rien retiré)
+- [x] `firmware.bin` refabriqué à chaque run (FS joint à l'envoi série) — preuve : journal `20261101-155306`, « Building firmware.bin » et « Image LittleFS créée » sans édition de liens
+  (`AlwaysBuild` visait un chemin relatif, résolu dans le dossier du script : sans effet. La « preuve » du 01/11 07:43 ne valait pas, l'elf y était refait)
+
+- [ ] Échec de la construction du FS de la cuve (signalé par l'utilisateur le 01/11) : évaluer pourquoi. Journal
+  `20261101-162445` : `*** [firmware.bin]` sans message, juste après « Image LittleFS créée ». Cause trouvée : `firmware.elf`
+  repris du cache au retour sur l'env, donc pas de `firmware.map`, et `pio-tools/tasmotapiolib.py::get_source_map_path`
+  lève `FileNotFoundError` sans texte ; défaut amené par `ino_stable.py` (l'elf devient reprenable). Correctif prouvé — preuve :
+  cuve, P4, retour cuve du 01/11 (`make_retour`, journal `20261101-181702`) SUCCESS, lien refait, `firmware.map` présent, « Image LittleFS créée »
+- [ ] Vrai envoi du FS de la cuve par l'utilisateur
 
 ## A2 — Mesurer le coût d'un changement d'env, puis décider du dossier de build par env
 - [x] Relevé des durées et du nombre de fichiers compilés, même env répété vs après changement d'env — preuve : cuve sans changement
@@ -143,6 +154,8 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
 - [x] Tables de 4 ou 6 partitions, FS toujours dernier — preuve : `test_build_partitions.py` VERT (image du safeboot retirée vérifiée par `PlatformBoardConfig`) ; essai sur carte non fait
   (`post_esp32.py::esp32_detect_flashsize` ne teste la flash que pour la cible `upload` exacte : `erase_upload` n'est jamais corrigé. Plutôt qu'un contrôle de la flash détectée, `build_partitions.py::motifs_envoi` refuse donc l'`upload` par câble de ces tables ; sans safeboot, `board_upload.arduino.flash_extra_images` vidé dans la section de l'env)
 - [x] Préréglages (tables de `partitions/`), même validation ; table identique à un fichier = l'env pointe vers lui — preuve : `test_build_partitions.py` VERT (14 mutants), `test_build_page_memoire_chrome.py` VERT
+- [x] Nom du fichier de la table et recherche d'une table identique (demande du 01/11) — preuve : `test_build_partitions.py` VERT (mutants), sonde `test_build_page_memoire_chrome.py` VERT
+  (vide : `env_<env>.csv` ; saisi : `<nom>.csv` ; table identique à un fichier de `partitions/`, `env_*` compris : proposée, refus possible ; fichier nommé existant jamais réécrit)
 - [x] Import et export d'un CSV, passés par la même validation — preuve : `build_partitions.py::lit_import`, `test_build_partitions.py` VERT, sonde `test_build_page_memoire_chrome.py` VERT
 - [x] Banc — preuve : `test_build_partitions.py` VERT, 27 cas, 10 mutants tués, deux vraies tables reproduites octet pour octet ; banc `test_build_partitions.py` (copies temporaires du cenv, relues par `ProjectConfig`, avec mutants) ; table produite identique octet pour octet à `esp32_partition_app3904k_fs11584k.csv` sans modification
 - [ ] Essai réel par l'utilisateur sur une carte, par câble : démarrage, FS et Berry vérifiés, puis OTA de nouveau permise
@@ -153,8 +166,10 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
 
 ## Améliorations restantes
 - [ ] [projet] Dossier de build par env, si A2 conclut « faire » (A2 a conclu « ne pas faire » le 01/11)
+- [ ] [projet] Chrome prend ~16 s de CPU sur 23 s pendant un lien (mesure du 01/11, 15 processus ; poste à 2 cœurs physiques, CPU à ~98 %) : identifier l'onglet, peut-être une page d'outil ouverte
 - [ ] [projet] `cpptools` (indexeur C/C++ de VS Code) occupe 0,75 cœur sur 4 hors build (mesure du 01/11, 8 s) : exclure `.pio`, `.cache` et `lib/` de son analyse, dans le profil VS Code, à essayer et à mesurer
 - [ ] [projet] QEMU d'Espressif (ESP32-S3 seulement, pas le P4 ; sans support officiel) : essai borné pour démarrer une table modifiée sans toucher une carte, avant l'essai réel de A9 ; démarrage de Tasmota non garanti
+- [ ] [projet] LDF (110-180 s à chaque build, le plus gros poste restant) : réutiliser son résultat quand rien n'a changé (interne à PlatformIO, fragile)
 - [ ] [projet] Sortir le port COM du cenv si les changements de port deviennent fréquents
 - [ ] [projet] Défaut existant, à vérifier : un `nobuild upload` (envoi après la pause « rebranchez la carte ») n'a
   pas de règle pour `firmware.bin` (`builder/main.py`, bloc `nobuild`), donc la post-action FS de `post_esp32.py` ne tourne

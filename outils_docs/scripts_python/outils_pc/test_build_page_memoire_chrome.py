@@ -16,6 +16,7 @@ import sys
 import time
 from pathlib import Path
 
+import build_partitions as bp
 import test_build_page_chrome as s
 from test_build_memoire import JOURNAL_S3
 
@@ -115,6 +116,26 @@ def sonde_onglet(m, capture):
               "diff : CSV de l'env et option du cenv ; ecrire permis")
     s.verifie(any("persist" in x for x in e["messages"]) and any("OTA" in x for x in e["messages"]), True,
               "diff : persist remplace et OTA bloquee annonces")
+
+    cdp.js("window.proposes = []; window.confirm = t => { window.proposes.push(t); return true; }")
+    parts = bp.build_memoire.lit_csv((m.depot / TABLE).read_text(encoding="utf-8"))
+    for x in parts:
+        x["taille"] += {"app0": 0x10000, "spiffs": -0x10000}.get(x["nom"], 0)
+    (m.depot / "partitions" / "deja_la.csv").write_text(bp.texte_csv(bp.valide(parts, 0x1000000)[0]), encoding="utf-8")
+    cdp.js("document.getElementById('m-nom').value = 'autre_nom'")
+    clic(cdp, "#m-diff")
+    s.attend(cdp, "window.proposes.length > 0", 10)
+    s.attend(cdp, "document.getElementById('m-messages').textContent.includes('identique')", 10)
+    s.verifie(("deja_la.csv" in cdp.js("window.proposes[0]"), "= partitions/deja_la.csv" in etat(cdp)["diff"]), (True, True),
+              "table identique : fichier existant propose, l'env pointerait vers lui")
+    cdp.js("window.proposes = []; window.confirm = t => { window.proposes.push(t); return false; }")
+    clic(cdp, "#m-diff")
+    s.attend(cdp, "document.getElementById('m-diff-texte').textContent.includes('autre_nom')", 10)
+    s.verifie("= partitions/autre_nom.csv" in etat(cdp)["diff"], True, "proposition refusee : fichier au nom saisi")
+    (m.depot / "partitions" / "deja_la.csv").unlink()
+    cdp.js("document.getElementById('m-nom').value = ''; window.confirm = () => true")
+    clic(cdp, "#m-diff")
+    s.attend(cdp, f"document.getElementById('m-diff-texte').textContent.includes('env_{A}.csv')", 10)
 
     cdp.js("window.confirm = () => false")
     clic(cdp, "#m-ecrire")

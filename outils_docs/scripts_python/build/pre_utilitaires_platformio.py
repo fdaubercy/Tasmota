@@ -731,6 +731,10 @@ try:
 except Exception as e:                               # noqa: BLE001
     print(Fore.YELLOW + f"⚠ tasmota.ino.cpp : nom temporaire aleatoire conserve ({e})" + Style.RESET_ALL)
 
+# Un fichier a la meme date n'est pas relu pour calculer son empreinte (mesure : plan temps-compilation, A11).
+env.Decider("content-timestamp")
+SetOption("implicit_cache", 1)
+
 if not is_safeboot and not hors_build:
     # Avant le scan des dependances : un lib_ignore qui ignore une bibliotheque utilisee arrete le build ici.
     # Un defaut du controle lui-meme (module illisible...) ne bloque jamais le build.
@@ -765,9 +769,19 @@ if not is_safeboot and not hors_build:
         # pio-tools/post_esp32.py reconstruit littlefs.bin et joint le FS a l'upload serie dans une post-action de
         # firmware.bin (esp32_create_combined_bin) : firmware.bin a jour ou repris du cache, elle ne tournerait pas.
         # On force donc sa refabrication (conversion elf -> bin seulement, l'edition des liens suit ses dependances).
-        firmware_bin = os.path.join(".pio", "build", Global.environnement, "firmware.bin")
+        # Chemin absolu : un chemin relatif designerait ici un noeud du dossier de ce script, sans effet sur le vrai fichier
+        # (seul AddPreAction, enveloppe par PlatformIO, le resout depuis le projet). Pas de ${PROGNAME} : la plateforme ne
+        # le pose qu'apres les pre-scripts.
+        firmware_bin = os.path.join(env.subst("$BUILD_DIR"), "firmware.bin")
         env.AlwaysBuild(firmware_bin)
         env.NoCache(firmware_bin)
+
+        # firmware.map nait de l'edition des liens et n'est pas dans le cache objet : un firmware.elf repris du cache (retour
+        # sur un env apres la purge de .pio/build) le laisse absent, et pio-tools/name-firmware.py echoue sans message.
+        firmware_elf = os.path.join(env.subst("$BUILD_DIR"), "firmware.elf")
+        env.NoCache(firmware_elf)
+        if os.path.isfile(firmware_elf) and not os.path.isfile(os.path.join(env.subst("$BUILD_DIR"), "firmware.map")):
+            os.remove(firmware_elf)
 
     atexit.register(remove_backup_data, "", "sortie_script", "")
 

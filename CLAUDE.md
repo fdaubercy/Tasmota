@@ -293,6 +293,11 @@ Prise en compte a chaud, sans redemarrer VS Code.
 - `tasmota.ino.cpp` portait en ligne 1 un nom de fichier temporaire aleatoire, donc n'etait jamais repris du cache :
   `build/ino_stable.py` rend ce nom fixe (mesure du 2026-11-01 sur la cuve, rien de modifie : 355 s au lieu de 771 s).
 - Un build reecrit `platformio_override.ini` (`adapteParametresPlatformio_override`), et
+- Le pre-script pose `env.Decider("content-timestamp")` et `SetOption("implicit_cache", 1)` : ~20 s au lieu de ~230 s de
+  parcours SCons sans rien compiler (mesure du 2026-11-01). Limite d'`implicit_cache` : un NOUVEL en-tete qui en masque un
+  autre de meme nom plus loin dans les `-I` n'est vu qu'a la modification d'un fichier de la chaine (banc `build/test_scons_cache.py`).
+- `firmware.elf` ne passe pas par le cache objet : repris du cache, il arrive sans `firmware.map`, et
+  `pio-tools/name-firmware.py` echoue par `*** [firmware.bin]` sans message. Un retour sur un env refait donc son edition de liens.
   `tasmota/user_config_override.h` (`increment_config_holder`) **seulement** si ce `.h` (hors ligne `CFG_HOLDER`) a
   change depuis le dernier increment, et pour un `pio run` qui compile le firmware (`build/cfg_holder.py`, decide le
   2026-11-01 ; etat commun a tous les envs dans `%LOCALAPPDATA%\outils_tasmota\build\cfg_holder.json` ; le `_persist.json`
@@ -568,6 +573,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `cible_*.py` voisins), `post_lto_parallele.py`, les 7 `cible_*.py` (cibles Custom, qui lancent
     `outils_pc/`), `ota-files-uploader.py`, `update_idf55_framework.py` (appele par le pre-script),
     `cfg_holder.py` (decide si le pre-script incremente `CFG_HOLDER`, banc `test_cfg_holder.py` ; plan
+    `ino_stable.py` (banc `test_ino_stable.py`), `test_scons_cache.py` (banc des reglages SCons du pre-script),
     `tasks/plans/temps-compilation.md`),
     `verifie_lib_ignore.py` (garde du pre-script, AVANT le scan des dependances : arrete le build si le `lib_ignore`
     qu'un env personnel ajoute a son parent ignore une bibliotheque incluse sous une garde vraie ou incertaine ;

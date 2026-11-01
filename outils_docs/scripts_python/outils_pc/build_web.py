@@ -247,16 +247,17 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
             return {"partitions": parts, "erreurs": erreurs}
         if chemin in ("/partitions/diff", "/partitions/ecrire"):   # build_partitions : prepare (rien d'ecrit) / ecrit
             env, parts = str(demande.get("env") or ""), demande.get("partitions")
+            nom, doublon = str(demande.get("nom") or ""), demande.get("doublon") is True
             if not isinstance(parts, list) or not all(isinstance(p, dict) for p in parts):
                 raise ValueError("partitions attendues sous forme de liste d'objets")
             try:
                 if chemin == "/partitions/diff":
-                    p = build_partitions.prepare(racine, dossier, env, parts)
-                    return {k: p[k] for k in ("csv", "inchange", "texte_csv", "table", "diff", "erreurs", "avertissements", "empreinte")}
+                    p = build_partitions.prepare(racine, dossier, env, parts, nom, doublon)
+                    return {k: p[k] for k in ("csv", "cible", "proposition", "inchange", "texte_csv", "table", "diff", "erreurs", "avertissements", "empreinte")}
                 if serie.en_cours():
                     raise RuntimeError("un lancement est en cours : écrire la table après")
                 return build_partitions.ecrit(racine, dossier, env, parts, str(demande.get("empreinte") or ""),
-                                              serie.builds_en_cours)
+                                              serie.builds_en_cours, nom, doublon)
             except LookupError as erreur:
                 raise ValueError(str(erreur)) from None
         raise LookupError(chemin)

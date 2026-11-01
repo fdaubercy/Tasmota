@@ -13,9 +13,11 @@ Regles (celles de la maquette outils_docs/partitions/, modele B) :
     il abimerait une table a FS qui n'a pas 5 partitions. `motifs_envoi` refuse donc cet envoi (build_serie.py::controle).
     shortcut: un `pio run -t upload` hors de la page n'est pas controle, a garder dans le pre-script si cela arrive.
 Deux temps comme la page Fichiers Berry : `prepare` (diff, rien n'est ecrit), `ecrit` (refait le calcul, empreinte,
-aucun build en cours, Transaction). Table identique a un fichier de partitions/ (`tables` les propose) : l'env pointe
-vers ce fichier, rien n'est cree ; sinon partitions/env_<env>.csv. Dans les deux cas `board_build.partitions` est pose
-dans la section de l'env (les autres envs ne changent pas). Table identique a celle de l'env : rien a ecrire. Une table ecrite BLOQUE l'OTA de l'env (firmware et
+aucun build en cours, Transaction). Nom du fichier : `nom` donne par l'utilisateur, sinon env_<env>. Table identique a un
+fichier de partitions/, env_* compris : `prepare` le propose (`proposition`), l'env pointe vers lui et rien n'est cree, sauf
+`doublon` (l'utilisateur a refuse la proposition). Un fichier nomme existant n'est jamais reecrit, ni l'env_ d'un autre env
+s'il sert aussi ailleurs. Dans tous les cas `board_build.partitions` est pose dans la section de l'env (les autres envs ne
+changent pas). Table identique a celle de l'env : rien a ecrire. Une table ecrite BLOQUE l'OTA de l'env (firmware et
 FS : une OTA n'ecrit jamais la table en 0x8000) jusqu'au prochain « Effacer puis televerser » reussi (build_serie.py).
 Banc : test_build_partitions.py.
 """
@@ -36,6 +38,7 @@ TETE = {"nvs": (0x9000, 0x5000, "nvs,      data, nvs,     0x9000,  0x5000,"),
         "otadata": (0xE000, 0x2000, "otadata,  data, ota,     0xe000,  0x2000,")}
 ENTETE = "# Name,   Type, SubType, Offset,  Size, Flags"
 NOM = re.compile(r"[A-Za-z0-9_]{1,16}")
+NOM_FICHIER = re.compile(r"(?!env_)(?!(?:CON|PRN|AUX|NUL|COM\d|LPT\d)$)[A-Za-z0-9_-]{1,64}", re.IGNORECASE)
 SOUS_TYPES = {"app": {"factory", "ota_0", "ota_1", "test"}, "data": {"spiffs", "coredump", "fat", "littlefs"}}
 IMAGES = "board_upload.arduino.flash_extra_images"
 FICHIER_BLOCAGE = "partitions_modifiees.json"
@@ -99,11 +102,11 @@ def _forme(parts):
     return [(p["nom"], p["type"], p["sous_type"], p["debut"], p["taille"]) for p in parts]
 
 
-def _existantes(racine):
-    """[(chemin relatif, partitions)] des tables de partitions/ ; les env_<env>.csv, propres a un env, n'en sont pas."""
+def _existantes(racine, env_aussi=False):
+    """[(chemin relatif, partitions)] des tables de partitions/ ; les env_<env>.csv, propres a un env, seulement si demande."""
     res = []
     for chemin in sorted((Path(racine) / "partitions").glob("*.csv")):
-        if chemin.name.startswith("env_"):
+        if chemin.name.startswith("env_") and not env_aussi:
             continue
         try:
             res.append((f"partitions/{chemin.name}", build_memoire.lit_csv(_lit(chemin))))
@@ -165,15 +168,40 @@ def tables(racine, dossier, env):
             for rel, parts in _existantes(racine) if parts and parts[-1]["debut"] + parts[-1]["taille"] == mem["flash"]]
 
 
-def prepare(racine, dossier, env, parts):
-    """Diff du cenv et du CSV, erreurs et avertissements ; rien n'est ecrit."""
+def _cible(racine, toutes, env, nom, heritiers):
+    """(chemin relatif du fichier a creer, erreurs) d'apres le nom saisi."""
+    nom = nom.strip()
+    if nom.lower().endswith(".csv"):
+        nom = nom[:-4]
+    if nom and not NOM_FICHIER.fullmatch(nom):
+        return f"partitions/env_{env}.csv", [f"nom de fichier invalide : {nom!r} (lettres, chiffres, _ et -, 64 au plus, sans env_ devant)"]
+    rel = f"partitions/{nom or 'env_' + env}.csv"
+    if not (Path(racine) / rel).is_file():
+        return rel, []
+    if nom:
+        return rel, [f"{rel} existe déjà avec une autre table : choisir un autre nom"]
+    autres = sorted(s[4:] for s in toutes if s.startswith("env:") and s != f"env:{env}" and s[4:] not in heritiers
+                    and build_envs._valeur(toutes, s, OPTION) == rel)
+    return rel, [f"{rel} sert aussi à {', '.join(autres)} : donner un nom à cette table"] if autres else []
+
+
+def prepare(racine, dossier, env, parts, nom="", doublon=False):
+    """Diff du cenv et du CSV, erreurs, avertissements et table identique deja enregistree ; rien n'est ecrit."""
     racine = Path(racine)
     mem = build_memoire.analyse(racine, env, Path(dossier) / "journaux")     # LookupError : env inconnu
     occupes = {p["nom"]: p["utilise"] for p in mem["partitions"] if p.get("utilise")}
     table, erreurs = valide(parts, mem["flash"], occupes)
     inchange = not erreurs and _forme(table) == _forme(mem["partitions"])
-    existante = "" if erreurs else next((r for r, t in _existantes(racine) if _forme(t) == _forme(table)), "")
-    rel = mem["csv"] if inchange else existante or f"partitions/env_{env}.csv"
+    toutes, _ = build_envs._sections(racine)
+    heritiers = sorted(s[4:] for s in toutes if f"env:{env}" in build_envs._chaine(toutes, s)[1:])
+    identiques = [] if erreurs else [r for r, t in _existantes(racine, True) if _forme(t) == _forme(table)]
+    nom_saisi = nom.strip()
+    cible = f"partitions/{nom_saisi[:-4] if nom_saisi.lower().endswith('.csv') else nom_saisi or 'env_' + env}.csv"
+    existante = cible if cible in identiques else "" if doublon or not identiques else identiques[0]
+    if not inchange and not existante:
+        cible, refus = _cible(racine, toutes, env, nom, heritiers)
+        erreurs.extend(refus)
+    rel = mem["csv"] if inchange else existante or cible
     cenv_avant = _lit(racine / build_envs.FICHIER_CENV)
     try:
         cenv_apres = cenv_avant
@@ -192,8 +220,6 @@ def prepare(racine, dossier, env, parts):
     if csv_apres and not inchange:
         diff += "\n" + "\n".join(difflib.unified_diff(csv_avant.splitlines(), csv_apres.splitlines(),
                                                       mem["csv"] or "(aucune)", rel, lineterm="", n=5))
-    toutes, _ = build_envs._sections(racine)
-    heritiers = sorted(s[4:] for s in toutes if f"env:{env}" in build_envs._chaine(toutes, s)[1:])
     avertissements = [] if inchange else [
         "le flash série (« Effacer puis téléverser ») remplace le persist et les réglages de la carte par ceux du dépôt",
         f"{build_envs.FICHIER_CENV} change : le prochain build repart de zéro (.pio/build purgé)",
@@ -208,12 +234,13 @@ def prepare(racine, dossier, env, parts):
     if heritiers and not inchange:
         avertissements.append("hérite aussi de cette table : " + ", ".join(heritiers))
     vus = json.dumps(parts, sort_keys=True, ensure_ascii=False)
-    empreinte = hashlib.sha256((cenv_avant + "\0" + csv_avant + "\0" + vus).encode("utf-8", "surrogateescape")).hexdigest()
-    return {"env": env, "csv": rel, "cree_csv": not (inchange or existante), "inchange": inchange, "texte_csv": csv_apres, "cenv": cenv_apres, "table": table, "diff": diff,
+    empreinte = hashlib.sha256((cenv_avant + "\0" + csv_avant + "\0" + rel + "\0" + vus).encode("utf-8", "surrogateescape")).hexdigest()
+    return {"env": env, "csv": rel, "cible": cible, "proposition": existante if existante != cible and not inchange else "",
+            "cree_csv": not (inchange or existante), "inchange": inchange, "texte_csv": csv_apres, "cenv": cenv_apres, "table": table, "diff": diff,
             "erreurs": erreurs, "avertissements": avertissements, "empreinte": empreinte}
 
 
-def ecrit(racine, dossier, env, parts, empreinte_lue, builds_en_cours):
+def ecrit(racine, dossier, env, parts, empreinte_lue, builds_en_cours, nom="", doublon=False):
     """Ecrit le CSV et le cenv en une Transaction, puis bloque l'OTA de l'env. RuntimeError (-> 409) : build en cours
     ou indetectable, fichiers changes depuis le diff, table invalide."""
     builds = builds_en_cours()
@@ -221,7 +248,7 @@ def ecrit(racine, dossier, env, parts, empreinte_lue, builds_en_cours):
         raise RuntimeError("impossible de savoir si un build tourne : écriture refusée")
     if builds:
         raise RuntimeError("un build est en cours (" + ", ".join(builds) + ") : écriture refusée")
-    p = prepare(racine, dossier, env, parts)
+    p = prepare(racine, dossier, env, parts, nom, doublon)
     if p["erreurs"]:
         raise RuntimeError("table refusée : " + " ; ".join(p["erreurs"]))
     if p["inchange"]:

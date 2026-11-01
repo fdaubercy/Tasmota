@@ -72,6 +72,9 @@ HTML = r"""
     </div>
     <div class="m-deux">
       <div class="carte"><h2>Contrôles</h2><div id="m-messages" class="m-messages"></div>
+        <label class="discret" style="display:block;margin-top:8px">Nom du fichier de la table (facultatif)
+          <input id="m-nom" maxlength="64" placeholder="env_&lt;env&gt;.csv si vide" aria-label="Nom du fichier de la table"
+            style="font:inherit;color:inherit;background:var(--btn);border:1px solid var(--btn-bord);border-radius:6px;padding:5px 8px;width:100%;box-sizing:border-box;margin-top:4px"></label>
         <div class="m-actions">
           <button id="m-diff" class="btn" type="button">Voir le diff</button>
           <button id="m-ecrire" class="btn p" type="button" disabled title="Voir le diff d'abord">Écrire la table de l'env</button>
@@ -188,6 +191,8 @@ function mDepuisAnalyse() {
   $("m-titre-diff").textContent = "Diff";
   $("m-diff-texte").textContent = "« Voir le diff » montre ce qui serait écrit.";
   $("m-table").value = "";
+  $("m-nom").value = "";
+  M.doublon = false;
   mRendu();
 }
 async function mTables(env) {
@@ -238,7 +243,7 @@ function mTelecharge(nom, texte) {
 }
 $("m-exporter").onclick = async function () {
   if (!M.env) return;
-  var r = await appel("/partitions/diff", {env: M.env, partitions: mDemande()});
+  var r = await appel("/partitions/diff", {env: M.env, partitions: mDemande(), nom: $("m-nom").value});
   if (!r.ok || !r.donnees) { mMessages([["r", "Export impossible : " + (r.texte || "HTTP " + r.statut)]]); return; }
   if (r.donnees.erreurs.length) { mMessages(r.donnees.erreurs.map(function (e) { return ["r", "Export refusé : " + e]; })); return; }
   mTelecharge(r.donnees.csv.replace("partitions/", ""), r.donnees.texte_csv);
@@ -330,22 +335,28 @@ function mDemande() {
 
 $("m-analyser").onclick = function () { if (M.env) mCharge(M.env, true); };
 $("m-annuler").onclick = function () { if (M.analyse) mDepuisAnalyse(); };
-$("m-diff").onclick = async function () {
+$("m-nom").oninput = function () { M.empreinte = ""; M.doublon = false; $("m-ecrire").disabled = true; };
+$("m-diff").onclick = function () { mDiff(false); };
+async function mDiff(doublon) {
   if (!M.env) return;
-  var r = await appel("/partitions/diff", {env: M.env, partitions: mDemande()});
+  var r = await appel("/partitions/diff", {env: M.env, partitions: mDemande(), nom: $("m-nom").value, doublon: doublon});
   if (!r.ok || !r.donnees) { mMessages([["r", "Diff impossible : " + (r.texte || "HTTP " + r.statut)]]); return; }
   var d = r.donnees;
+  M.doublon = doublon;
+  if (d.proposition && d.proposition !== $("m-table").value && !confirm("Une table identique existe déjà : " + d.proposition
+      + "\n\nOK : utiliser ce fichier, sans en créer un autre.\nAnnuler : créer quand même " + d.cible + ".")) { mDiff(true); return; }
   M.empreinte = d.erreurs.length || d.inchange ? "" : d.empreinte;
   M.avertissements = d.avertissements;
   mMessages(d.inchange && !d.erreurs.length ? [["v", "C'est déjà la table de cet env : rien à écrire."]]
-    : d.erreurs.map(function (e) { return ["r", e]; }).concat(d.avertissements.map(function (e) { return ["o", e]; })));
+    : d.erreurs.map(function (e) { return ["r", e]; }).concat(d.proposition ? [["v", "Table identique déjà enregistrée : " + d.proposition + ". Aucun fichier créé."]] : [],
+      d.avertissements.map(function (e) { return ["o", e]; })));
   $("m-titre-diff").textContent = d.erreurs.length ? "Diff (table refusée)" : "Diff : " + d.csv;
   $("m-diff-texte").textContent = d.diff || "(aucun changement)";
   $("m-ecrire").disabled = !M.empreinte;
-};
+}
 $("m-ecrire").onclick = async function () {
   if (!M.empreinte || !confirm("Écrire la table de " + M.env + " ?\n\n- " + (M.avertissements || []).join("\n- "))) return;
-  var r = await appel("/partitions/ecrire", {env: M.env, partitions: mDemande(), empreinte: M.empreinte});
+  var r = await appel("/partitions/ecrire", {env: M.env, partitions: mDemande(), empreinte: M.empreinte, nom: $("m-nom").value, doublon: !!M.doublon});
   M.empreinte = "";
   $("m-ecrire").disabled = true;
   if (!r.ok) { mMessages([["r", "Écriture refusée : " + (r.texte || "HTTP " + r.statut)]]); return; }

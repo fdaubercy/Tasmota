@@ -51,8 +51,11 @@ MUTANTS = {
     "OTA jamais liberee": ("_blocages(dossier, lambda b: b.pop(env, None))", "pass"),
     "colonnes non alignees": ("{adresse:<9}", "{adresse}"),
     "inchange ignore": ('_forme(table) == _forme(mem["partitions"])', "False"),
-    "table existante ignoree": ('if _forme(t) == _forme(table)), "")', 'if False), "")'),
-    "env_ proposes": ('if chemin.name.startswith("env_"):', "if False:"),
+    "table existante ignoree": ('if _forme(t) == _forme(table)]', "if False]"),
+    "env_ proposes": ('if chemin.name.startswith("env_") and not env_aussi:', "if False:"),
+    "fichier nomme reecrit": ('[f"{rel} existe déjà avec une autre table : choisir un autre nom"]', "[]"),
+    "env_ partage reecrit": ('if autres else []', "if False else []"),
+    "doublon ignore": ('"" if doublon or not identiques', '"" if not identiques'),
     "flash des tables ignoree": ('if parts and parts[-1]["debut"] + parts[-1]["taille"] == mem["flash"]]', "]"),
 }
 
@@ -169,7 +172,31 @@ def cas(m, bm):
         verifie("tables : fichiers a la taille de la flash proposes", set(t) == {
             "partitions/esp32_autre_essai.csv", "partitions/esp32_partition_app3904k_fs11584k.csv"}
             and not t["partitions/esp32_autre_essai.csv"]["erreurs"])
+        verifie("identique : proposition rendue, nom saisi ignore", m.prepare(racine, dossier, ENV, modif, "ma_table")["proposition"]
+                == "partitions/esp32_autre_essai.csv" and not (racine / "partitions" / "ma_table.csv").exists())
+        d = m.prepare(racine, dossier, ENV, modif, "ma_table", doublon=True)
+        verifie("proposition refusee : le fichier nomme serait cree", d["csv"] == "partitions/ma_table.csv" and d["cree_csv"]
+                and not d["proposition"] and not d["erreurs"])
+        d = m.prepare(racine, dossier, ENV, modif, "esp32_autre_essai.csv", doublon=True)
+        verifie("nom d'un fichier identique : pas de proposition, rien de cree", d["csv"] == "partitions/esp32_autre_essai.csv"
+                and not d["cree_csv"] and not d["proposition"])
         (racine / "partitions" / "esp32_autre_essai.csv").unlink()
+        (racine / "partitions" / "env_autre_env.csv").write_text(m.texte_csv(m.valide(modif, M16)[0]), encoding="utf-8")
+        verifie("identique a l'env_ d'un autre env : propose aussi", m.prepare(racine, dossier, ENV, modif)["proposition"]
+                == "partitions/env_autre_env.csv")
+        (racine / "partitions" / "env_autre_env.csv").unlink()
+        for mauvais in ("../evil", "a/b", "a b", "env_x", "CON", "x" * 65):
+            verifie(f"nom refuse : {mauvais[:10]!r}", any("invalide" in e for e in m.prepare(racine, dossier, ENV, modif, mauvais)["erreurs"]))
+        verifie("nom d'un fichier existant, autre table : refus", any("existe déjà" in e for e in m.prepare(
+            racine, dossier, ENV, modif, "esp32_partition_app3904k_fs11584k")["erreurs"]))
+        n = m.prepare(racine, dossier, ENV, modif, "ma_table.csv")
+        verifie("nom saisi : fichier a ce nom, extension toleree", n["csv"] == "partitions/ma_table.csv" and n["cree_csv"]
+                and "= partitions/ma_table.csv" in n["diff"] and n["empreinte"] != p["empreinte"])
+        try:
+            m.ecrit(racine, dossier, ENV, modif, p["empreinte"], jamais, "ma_table")
+            verifie("empreinte d'un autre nom : refus", False)
+        except RuntimeError:
+            verifie("empreinte d'un autre nom : refus", not (racine / "partitions" / "ma_table.csv").exists())
         (racine / "partitions" / "esp32_4mo_essai.csv").write_bytes((DEPOT / "partitions" / "esp32_partition_app2752k_fs448k.csv").read_bytes())
         (racine / "partitions" / f"env_{ENV}x.csv").write_bytes((DEPOT / "partitions" / "esp32_partition_app3904k_fs11584k.csv").read_bytes())
         verifie("tables : autre flash et env_* ecartes", {x["csv"] for x in m.tables(racine, dossier, ENV)} == {
@@ -212,6 +239,12 @@ def cas(m, bm):
 
         verifie("5 partitions : aucun envoi refuse", not m.motifs_envoi(racine, ENV, ["upload", "buildfs"], "com")
                 and not m.motifs_envoi(racine, ENV, ["upload"], "ota"))
+        fichier_cenv = racine / "platformio_tasmota_cenv.ini"
+        cenv_avant = fichier_cenv.read_bytes()
+        fichier_cenv.write_bytes(cenv_avant + f"\n[env:un_autre]\nboard_build.partitions = {REL}\n".encode())
+        verifie("env_ qui sert aussi a un autre env : refus, un nom est demande", any(
+            "sert aussi à un_autre" in e for e in m.prepare(racine, dossier, ENV, sans_safeboot)["erreurs"]))
+        fichier_cenv.write_bytes(cenv_avant)
         p4 = m.prepare(racine, dossier, ENV, sans_safeboot)
         verifie("sans safeboot : image videe dans la section, consequences dites",
                 not p4["erreurs"] and re.search(r"^\+board_upload\.arduino\.flash_extra_images\s*=\s*$", p4["diff"], re.M)
