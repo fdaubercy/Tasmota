@@ -810,7 +810,7 @@ sans toucher aux cases.
   le serveur (`build_partitions.py`), puis « Écrire » pose `partitions/env_<env>.csv` et `board_build.partitions` dans
   la section de l'env : la table par défaut, partagée, n'est jamais modifiée. « Partir d'une table existante » règle les
   curseurs sur une table de `partitions/` à la taille de la flash ; si la table finale est identique à un de ces fichiers,
-  l'env pointe vers lui et aucun CSV n'est créé (c'est aussi le retour à la table par défaut) (copie d'origine dans `%LOCALAPPDATA%\outils_tasmotaichiers_berry\sauvegardes\`).
+  l'env pointe vers lui et aucun CSV n'est créé (c'est aussi le retour à la table par défaut) (copie d'origine dans `%LOCALAPPDATA%\outils_tasmota\fichiers_berry\sauvegardes\`).
 - **Après l'écriture** : la nouvelle table ne part qu'avec un « Effacer puis téléverser » par câble, qui remplace aussi
   le persist de la carte par celui du dépôt. D'ici là, toute OTA de l'env est refusée (une OTA n'écrit jamais la
   table). Le prochain build repart de zéro (le cenv a changé).
