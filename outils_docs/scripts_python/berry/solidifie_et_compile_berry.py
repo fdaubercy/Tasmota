@@ -99,6 +99,21 @@ if not SOURCE.is_absolute():
 if not SOURCE.is_file():
     sys.exit(f"ERREUR : {SOURCE} introuvable.")
 
+# Jamais pendant un build : EMBEDDED est vide ci-dessous, or le build y a copie ses modules et les solidifie un
+# quart d'heure plus tard (2026-11-01 : cuve en echec, `cannot open file 'src/embedded/webFonctions.be'`).
+# Meme detection que le hook garde_build (qui ne voit que les `pio run`, pas ce script).
+sys.path.insert(0, str(RACINE / ".claude" / "hooks"))
+try:
+    import garde_build
+    BUILDS = garde_build.builds_en_cours()
+except Exception:                                    # noqa: BLE001 - hook absent ou PowerShell en echec
+    BUILDS = None
+if BUILDS:
+    sys.exit(f"REFUS : un build PlatformIO est en cours ({', '.join(BUILDS)}). Ce script vide "
+             f"{EMBEDDED.relative_to(RACINE)}, dont le build a besoin : attendre la fin du build.")
+if BUILDS is None:
+    print("ATTENTION : detection des builds impossible ; s'assurer qu'aucun build ne tourne.")
+
 GCC = trouve_gcc(PIO)
 ENV = {**os.environ, "PYTHONPATH": str(BERRY), "PYTHONUTF8": "1"}
 

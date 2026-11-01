@@ -547,7 +547,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     banc `test_verifie_lib_ignore.py [--reel]` ; plan `tasks/plans/lib-ignore-envs.md`).
   - `berry/` — `verifie_berry.py` (syntaxe de data/, tache VS Code de surveillance ; avertissements de
     charte des logs par `charte_logs.py`, banc `test_verifie_berry_charte.py`),
-    `solidifie_et_compile_berry.py` (module solidifiable en ~10 s, compile le .h),
+    `solidifie_et_compile_berry.py` (module solidifiable en ~10 s, compile le .h ; REFUSE pendant un build : il vide
+    `berry_custom/src/embedded`, dont le build a besoin, incident du 2026-11-01),
     `nomme_fonctions_berry.py` (fonctions anonymes -> nommees), `carte_modules_berry.py`
     (-> `outils_docs/CARTE_MODULES_BERRY.md`, sortie deterministe : ni date ni ordre de hachage), `genere_schema_persist.py`
     (-> `outils_docs/schemas/persist.schema.json`), `gen_tapp.py`, et les bancs

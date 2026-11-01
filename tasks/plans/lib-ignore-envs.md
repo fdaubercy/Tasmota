@@ -27,7 +27,8 @@ Décisions :
 - [x] Banc `build/test_verifie_lib_ignore.py` (faux dépôt + `--reel` sur la cuve) — preuve : VERT ; mutants court-circuit, atteignabilité, en-tête ailleurs tous tués
 - [x] Branché au pré-build (`pre_utilitaires_platformio.py`, hors safeboot et hors cibles d'outils) — preuve : appel `verifie_lib_ignore.controle(env)` avant `adapteParametresPlatformio_override()`
 - [x] Affichage sur la page build (`outils_pc/build_progression.py`, `_LIB_IGNORE`) + test — preuve : `test_build_progression.py` VERT (test_lib_ignore)
-- [ ] Premier build réel avec la garde : ligne ✔ visible dans le terminal et dans le détail du Pré-build de la page
+- [x] Premier build réel avec la garde : ligne ✔ visible dans la sortie de pio (terminal, panneau « Sortie de pio », journal) — preuve : journal `20261101-051927-tasmota32s3-garage-capteurs-cuve-modbus-erase_upload.log` lignes 7-8, version corrigée (58 bibliothèques, 60 s), vu par l'utilisateur
+- [ ] Ligne lib_ignore dans le détail de l'étape Pré-build de la page — en attente : serveur de la page démarré le 2026-10-31 à 15:41, avant la modification de `build_progression.py` (21:08) ; à revoir après un redémarrage de la page
 - [x] Correctifs après les échecs du 2026-10-31 (P4 : ESP8266SAM.h ; cuve : ESPFtpServer.h ; garde passée ✔ les deux fois) — preuve : causes tracées (1) commentaires retirés en deux passes, `//*****` ouvrait un bloc et effaçait xdrv_50 jusqu'à la ligne 1912 → découpage en un passage (`lecture_gardes.py::sans_commentaires`) ; (2) macro inconnue crue fausse dans tasmota/ (ESP_IDF_VERSION_MAJOR, du framework) → fausse seulement si option Tasmota ou définie nulle part (index des macros du framework en cache) ; (3) un défaut du contrôle ne bloque plus le build ; banc VERT avec les 3 échecs réels refusés en `--reel`, mutants tués
 - [x] Module scindé sous 500 lignes — preuve : `verifie_lib_ignore.py` 398 lignes + `lecture_gardes.py` 167
 
@@ -70,4 +71,11 @@ Listes posées le 2026-10-31 (lib_ignore résolu / ajouté par le cenv) :
 | grenier | 56 | 49 |
 
 (Résolues = ajoutées + héritées de l'amont ; tableau du 2026-11-01, après correction.)
+
+Builds avec les listes corrigées (page build, 2026-11-01) :
+- P4 : réussi, 47 min 12 (pré-build 15 min 27, compilation 16 min 35, liens 12 min 56), effacé puis téléversé.
+- Cuve : échec en solidification Berry (`cannot open file 'src/embedded/webFonctions.be'`), SANS lien avec le
+  lib_ignore (80 bibliothèques compatibles, 115 avant ; contrôle ✔ 58) : une autre conversation a lancé
+  `solidifie_et_compile_berry.py` à 05:35:27, qui vide `embedded/`, 18 s avant l'échec. Ce script refuse
+  désormais de tourner pendant un build. Cuve à relancer.
 
