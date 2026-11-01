@@ -169,12 +169,17 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
 - [ ] [projet] Chrome prend ~16 s de CPU sur 23 s pendant un lien (mesure du 01/11, 15 processus ; poste à 2 cœurs physiques, CPU à ~98 %) : identifier l'onglet, peut-être une page d'outil ouverte
 - [ ] [projet] `cpptools` (indexeur C/C++ de VS Code) occupe 0,75 cœur sur 4 hors build (mesure du 01/11, 8 s) : exclure `.pio`, `.cache` et `lib/` de son analyse, dans le profil VS Code, à essayer et à mesurer
 - [ ] [projet] QEMU d'Espressif (ESP32-S3 seulement, pas le P4 ; sans support officiel) : essai borné pour démarrer une table modifiée sans toucher une carte, avant l'essai réel de A9 ; démarrage de Tasmota non garanti
-- [ ] [projet] Défaut existant, à vérifier : un `nobuild upload` (envoi après la pause « rebranchez la carte ») n'a
+- [x] [projet] Défaut existant, à vérifier : un `nobuild upload` (envoi après la pause « rebranchez la carte ») n'a
   pas de règle pour `firmware.bin` (`builder/main.py`, bloc `nobuild`), donc la post-action FS de `post_esp32.py` ne tourne
   pas et le FS ne serait PAS joint, alors que la page grise « Construire / Téléverser le FS » (`build_serie.py::Serie._plan`).
-  Aucun journal `nobuild` pour trancher.
-- [ ] [projet] `CFG_HOLDER` et `user_config_override.h` sont communs à tous les envs : modifier le `.h` pour une carte fait
-  tout recompiler aux autres et recharge leurs réglages SECTION1 au flash suivant. À revoir seulement si cela gêne.
+  Aucun journal `nobuild` pour trancher. — preuve : défaut confirmé sous le vrai SCons 4.11 (post-action d'un nœud sans
+  builder jamais exécutée, upload exécuté) ; corrigé par un `nobuild uploadfs` après l'envoi (`build_serie.py::Serie._plan`),
+  `test_build_serie.py::test_pause_fs_par_firmware` VERT. Pire que prévu : `nobuild erase_upload` laissait un FS VIDE
+- [x] [projet] `CFG_HOLDER` et `user_config_override.h` sont communs à tous les envs : modifier le `.h` pour une carte fait
+  tout recompiler aux autres et recharge leurs réglages SECTION1 au flash suivant. À revoir seulement si cela gêne. — preuve :
+  `CFG_HOLDER` par carte dans sa section (`cfg_holder.py::incremente_section`, état par env), `test_cfg_holder.py` VERT (10 mutants
+  tués), `test_config_holder.py` VERT. Reste : les autres cartes recompilent (fichier commun) ; chaque carte incrémente une fois au
+  prochain build (ancien état commun ignoré)
 
 Annulées par l'utilisateur le 01/11 : réutiliser le résultat du LDF, sortir le port COM du cenv.
 

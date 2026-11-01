@@ -1014,6 +1014,29 @@ def test_fs_par_firmware():
                 "fs_par_firmware : serie mixte, buildfs lance pour A seulement")
 
 
+def test_pause_fs_par_firmware():
+    """Apres la pause, l'envoi part en nobuild, qui ne joint PAS le FS (post-action de post_esp32 sans builder) :
+    un env a fichiers recoit son FS par un nobuild uploadfs. Temoin : env sans fichiers (A), un seul envoi."""
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t)
+        lance_pause(m, [com(A, PAUSE_PORT), com(D, PAUSE_PORT)], {"compiler", "erase_upload"})
+        m.serie.reprend(D, "continuer")
+        ev = m.attend("fin")
+        verifie([a["argv"] for a in m.appels()][2:],
+                [["run", "-e", D, "-t", "nobuild", "-t", "erase_upload", "--upload-port", PAUSE_PORT],
+                 ["run", "-e", D, "-t", "nobuild", "-t", "uploadfs", "--upload-port", PAUSE_PORT]],
+                "pause_fs : env a fichiers -> nobuild erase_upload puis nobuild uploadfs")
+        verifie(du_type(ev, "fin_env", env=D)[0]["statuts"], {"compiler": "succes", "erase_upload": "succes"},
+                "pause_fs : succes apres l'envoi du FS")
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t, {D: {"uploadfs": {"code": 1, "lignes": ["[FAILED] Took 0.20 seconds"]}}})
+        lance_pause(m, [com(A, PAUSE_PORT), com(D, PAUSE_PORT)], {"compiler", "upload", "uploadfs"})
+        m.serie.reprend(D, "continuer")
+        ev = m.attend("fin")
+        verifie(du_type(ev, "fin_env", env=D)[0]["statuts"], {"compiler": "succes", "upload": "echec", "uploadfs": "echec"},
+                "pause_fs : FS en echec -> envoi en echec (le firmware seul ne suffit pas)")
+
+
 def test_data_dir_avant_pio():
     with tempfile.TemporaryDirectory() as t:
         m = Montage(t)
@@ -1180,7 +1203,7 @@ def principal():
                  test_journal_ecrit, test_reference_o_memorisee, test_reference_estimee, test_rappel_fichiers_modifies,
                  test_refus_double_lancement, test_uploadfs_ota, test_garde_build_importable,
                  test_erase_upload_commandes, test_erase_upload_refus, test_erase_upload_envoi_et_echec,
-                 test_solidification_vide, test_fs_par_firmware, test_data_dir_avant_pio,
+                 test_solidification_vide, test_fs_par_firmware, test_pause_fs_par_firmware, test_data_dir_avant_pio,
                  test_uploadfs_ota_identite, test_fichiers_ota, test_fichiers_mqtt, test_pourcent_global_envoi):
         test()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))

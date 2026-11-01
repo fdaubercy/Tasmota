@@ -759,12 +759,20 @@ if not is_safeboot and not hors_build:
     import cfg_holder
     if cfg_holder.construit_firmware(COMMAND_LINE_TARGETS):
         chemin_h = os.path.join(env.subst("$PROJECT_SRC_DIR"), "user_config_override.h")
-        incrementer, motif = cfg_holder.doit_incrementer(chemin_h)
+        noms = cfg_holder.defines(env.get("BUILD_FLAGS", []))
+        incrementer, motif = cfg_holder.doit_incrementer(chemin_h, env["PIOENV"], noms)
         if not incrementer:
             print(Fore.YELLOW + f"⚠ CFG_HOLDER inchangé : {motif}.")
-        elif increment_config_holder():
-            print(Fore.GREEN + f"✔ CFG_HOLDER incrémenté : {motif}.")
-            cfg_holder.enregistre(chemin_h)
+        else:
+            # Carte avec sa section dans le .h : SON CFG_HOLDER, les autres cartes ne rechargent pas SECTION1
+            par_section = None if "CFG_HOLDER" in noms else cfg_holder.incremente_section(chemin_h, noms)
+            if par_section:
+                print(Fore.GREEN + f"✔ CFG_HOLDER de cet env incrémenté de {par_section[0]} à {par_section[1]} : {motif}.")
+            elif increment_config_holder():
+                print(Fore.GREEN + f"✔ CFG_HOLDER incrémenté : {motif}.")
+                par_section = True
+            if par_section:
+                cfg_holder.enregistre(chemin_h, env["PIOENV"], noms)
 
         # pio-tools/post_esp32.py reconstruit littlefs.bin et joint le FS a l'upload serie dans une post-action de
         # firmware.bin (esp32_create_combined_bin) : firmware.bin a jour ou repris du cache, elle ne tournerait pas.

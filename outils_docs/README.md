@@ -656,7 +656,9 @@ un build.
 - **`tasmota.ino.cpp` et tout Berry** (175 fichiers sur la cuve : `berry_conf.h` inclut `my_user_config.h`, donc
   `user_config_override.h`) : depuis le 2026-11-01, un `CFG_HOLDER` inchangé les laisse reprendre du cache. `CFG_HOLDER` n'est plus
   incrémenté à chaque `pio run`, seulement si `user_config_override.h` (hors ligne `CFG_HOLDER`) a changé depuis le
-  dernier incrément. La sortie de pio l'annonce (« CFG_HOLDER inchangé : … » ou « CFG_HOLDER incrémenté : … »).
+  dernier incrément. Une carte qui a sa section `#elif defined(FIRMWARE_...)` dans ce fichier y porte son propre
+  `CFG_HOLDER` (posé au premier incrément) : seule la partie commune du fichier ou sa section le font changer ; modifier la
+  section d'une autre carte ne recharge pas ses réglages SECTION1 (le fichier ayant changé, elle recompile quand même). La sortie de pio l'annonce (« CFG_HOLDER inchangé : … » ou « CFG_HOLDER incrémenté : … »).
   Conséquence : un flash ne recharge les réglages SECTION1 (Wi-Fi, MQTT, syslog…) que si ce fichier a changé ; un
   « Effacer puis téléverser » les recharge toujours. Modifier un `_persist.json` ne recompile rien : il part avec le FS.
 - **Le cache grossit sans fin** (17 Go le 2026-11-01) :
@@ -885,7 +887,9 @@ commande quelle que soit la cible ; même mention « FS aussi flashé » sur la 
   à part dans le récapitulatif, pas comme un échec. Recharger la page remontre le bandeau tant que la pause dure. La
   ligne cochée au port partagé l'annonce avant le lancement. **Sans recompiler** : quand la compilation a réussi
   avant la pause, l'envoi part en `pio run -t nobuild -t upload` (ou `erase_upload`), qui reprend le firmware déjà
-  compilé ; un `-t upload` seul recompilerait tout (`CFG_HOLDER` change à chaque `pio run`).
+  compilé. Un env dont l'envoi série joint le FS reçoit ensuite son FS par `pio run -t nobuild -t uploadfs` : en
+  `nobuild`, la jointure du FS de `post_esp32.py` ne tourne pas (corrigé le 2026-11-01 ; avant, la carte recevait le
+  firmware SANS le FS, et un « effacer puis téléverser » la laissait avec un FS vide).
 - **Attente** : le contrôle « build en cours » est refait avant chaque env. Si un build est apparu entre deux envs,
   la série attend (« en attente : build en cours ») et reprend à sa fin ; on peut l'arrêter.
 - **Arrêt** : « Arrêter après cet env » (propre) ou arrêt immédiat, qui peut laisser une carte à moitié flashée et

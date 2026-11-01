@@ -447,8 +447,14 @@ class Serie:
             couvre = [a for a in ("compiler", televerse) if a in actions]
             if ligne.methode == "com" and pause and "compiler" in actions:
                 plan.append(("pio", "compiler", "", ["compiler"], ["compiler"]))
+                # En nobuild, firmware.bin n'a pas de builder : la post-action de post_esp32 qui joint le FS ne tourne
+                # pas (prouve sous SCons le 2026-11-01) ; le FS, construit par la compilation, part donc a part.
+                fs_a_part = ligne.env in self._fs_par_firmware
                 plan.append(("pio", televerse, "nobuild " + televerse, [televerse] + par_firmware,
-                             [televerse] + par_firmware))
+                             [] if fs_a_part else [televerse] + par_firmware))
+                if fs_a_part:
+                    plan.append(("pio", "uploadfs", "nobuild uploadfs", [televerse] + par_firmware,
+                                 [televerse] + par_firmware))
             elif ligne.methode == "com":
                 plan.append(("pio", televerse, televerse, couvre + par_firmware, couvre + par_firmware))
             else:                                        # upload OTA (erase_upload en OTA : refuse par controle)
