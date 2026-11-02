@@ -40,6 +40,7 @@ MUTANTS = [
     ("points de la coupure gardes", "courbe.set(2 * i, energieFonctions.POINT_VIDE, 2)\n    end\n    return courbe", "end\n    return courbe"),
     ("copie perimee relue", "ecoule >= energieFonctions.NB_POINTS * energieFonctions.PAS_COURBE_S", "false"),
     ("acces non controle", "if (!webserver.check_privileged_access())    return nil    end\n    var f =", "var f ="),
+    ("acces au prix non controle", "if (!webserver.check_privileged_access())    return nil    end\n    var erreur =", "var erreur ="),
 ]
 
 
