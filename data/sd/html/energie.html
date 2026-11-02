@@ -1,0 +1,30 @@
+<!-- Page /energie (data/fs/energieFonctions.be), disposition B : tracee en SVG par /sd/js/energie.js, sans bibliotheque -->
+<div id='e_zone'>
+	<p id='e_msg'></p>
+	<div id='e_tuiles'>
+		<div class='e_tuile'><b id='e_p'>--</b> W<small>Puissance</small></div>
+		<div class='e_tuile'><b id='e_i'>--</b> A<small>Courant</small></div>
+		<div class='e_tuile'>
+			<svg viewBox='0 0 100 58' role='img' aria-label='Facteur de puissance'>
+				<path class='e_fond' d='M10 50 A40 40 0 0 1 90 50' pathLength='100'/>
+				<path id='e_arc' class='e_arc' d='M10 50 A40 40 0 0 1 90 50' pathLength='100' stroke-dasharray='0 100'/>
+				<text id='e_f' x='50' y='48' text-anchor='middle' class='e_cadran'>--</text>
+			</svg>
+			<small>Facteur</small>
+		</div>
+		<div class='e_tuile'><b id='e_hz'>--</b> Hz<small>Fréquence</small></div>
+	</div>
+	<section><h3>Aujourd'hui par heure <span id='e_totalH' class='e_total'></span></h3><svg id='e_h' class='e_graphe' role='img' aria-label='Consommation par heure'></svg></section>
+	<section><h3>Ce mois par jour <span id='e_totalD' class='e_total'></span></h3><svg id='e_d' class='e_graphe' role='img' aria-label='Consommation par jour'></svg></section>
+	<section><h3>12 derniers mois <span id='e_totalA' class='e_total'></span></h3><svg id='e_a' class='e_graphe' role='img' aria-label='Consommation par mois'></svg></section>
+	<section><h3>Puissance sur 24 h</h3><svg id='e_c' class='e_graphe' role='img' aria-label='Puissance sur 24 heures'></svg></section>
+	<section id='e_prix'>
+		<p id='e_prixActuel'></p>
+		<p id='e_rappel' hidden></p>
+		<form id='e_form'>
+			<label>Prix TTC (€/kWh) <input id='e_montant' type='number' step='0.0001' min='0.0001' max='2' required></label>
+			<label>À partir du <input id='e_date' type='date' required></label>
+			<button>Enregistrer le prix</button>
+		</form>
+	</section>
+</div>

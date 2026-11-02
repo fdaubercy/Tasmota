@@ -12,4 +12,5 @@ if demarrage.prologue()
     demarrage.compile(["discoveryFonctions"], "serveur.discovery")
     demarrage.charge(["controleGeneral", "controleWeb"])
     demarrage.charge(["controleDiscovery"], "serveur.discovery")       # page /discovery : modules du reseau (2026-10-31)
+    demarrage.charge(["controleEnergie"], "diverses.energie")          # page /energie, releve de consommation (2026-11-02)
 end

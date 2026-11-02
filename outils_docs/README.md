@@ -273,9 +273,32 @@ des panneaux de cuve, leurs courbes y seraient vides.
 
 <hr></hr>
 
+## La page Énergie (page `/energie`, différentiel du bureau)
+
+Bouton **Énergie** de l'accueil, page gardée par la carte elle-même, sans le Pi. En haut : puissance, courant, facteur
+de puissance en cadran, fréquence (relus toutes les 10 s, mêmes précisions que l'accueil). Puis, en barres, les
+consommations **d'aujourd'hui par heure**, **du mois par jour**, des **12 derniers mois**, chacune avec son total en kWh
+(en Wh sous 1 kWh) et son coût ; enfin la courbe de puissance sur 24 h et le prix.
+
+- **Calcul** : écart de `ENERGY.Total` à chaque changement d'heure locale ; l'heure en cours est ajoutée à l'affichage
+  (le total du jour suit donc « Énergie aujourd'hui » de l'accueil, sauf heure non notée après une coupure). Un compteur
+  qui baisse, ou un écart impossible (`EnergyTotal` rétabli à la main), n'est pas compté : log `erreur`.
+- **Prix** : saisi sur la page, avec sa date d'effet, en € TTC par kWh. Chaque consommation garde le coût du prix en
+  vigueur à sa date : un nouveau prix ne touche jamais le passé. Même date = prix remplacé. Rappel au-delà de 6 mois.
+- **Fichiers de la carte**, dans `/energie/` : `etat.json` (une écriture par heure), `mois-AAAA-MM.json` (mois clos, 24
+  au plus ; les plus anciens sont effacés si le FS passe sous 40 Ko libres), `prix.json`, `courbe.bin` (copie horaire de
+  la courbe : une coupure en perd au plus 1 h).
+- **Calibrage** : `diverses.energie.calibrage` du persist. Une minute après le démarrage, si les trois valeurs lues sont
+  les défauts de la BL0942 (596 / 15187 / 251213), celles du persist sont rejouées ; sinon rien, un recalibrage manuel est
+  respecté. Le compteur `Total` n'est PAS rétabli seul : avant un flash, le relever, puis `EnergyTotal <Wh>`.
+- **Code** : `data/fs/energieFonctions.be`, `data/fs/controleEnergie.be`, `data/sd/{html,css,js}/energie.*`, sur le seul
+  différentiel (liste `page_energie` de `[berry_commun]`, exclue des autres envs). Banc :
+  `outils_docs/scripts_python/berry/banc_energie.py`. Conception :
+  `docs/superpowers/specs/2026-10-31-page-energie-differentiel-design.md`.
+
 ## Les jauges du niveau de la cuve (page `/cuve`, cuve et P4)
 
-Premier essai du 2026-10-31. Le lien **(jauges)** dans le titre de l'encadré du niveau de la cuve, sur la page
+Premier essai du 2026-10-31. L'**icône de cadran** dans le titre de l'encadré du niveau de la cuve, sur la page
 d'accueil de la cuve et du maître P4, ouvre `/cuve` : une **jauge liquide** pour le volume disponible en litres
 (modèle A du catalogue `outils_docs/jauges/`, ECharts + extension echarts-liquidfill), un **demi-cercle** pour
 le taux de remplissage en % (modèle H, SVG) et un **cadran des tensions** (modèle B, ECharts) : anneau extérieur =
@@ -922,12 +945,12 @@ modifie sans ouvrir le fichier ; il ne lance rien.
 
 ### Journaux, mémoire de la page, fichiers réécrits
 
-- Sortie complète de chaque `pio run` (codes ANSI retirés) : `%LOCALAPPDATA%\outils_tasmota\build\journaux\`,
+- Sortie complète de chaque `pio run` (avec ses codes de couleur ANSI, retirés par « Journal complet ») : `%LOCALAPPDATA%\outils_tasmota\build\journaux\`,
   dépliable sur la page (« Journal complet »). Les journaux d'un env se lisent dans l'ordre de leur **date de
   modification** (pas l'heure écrite dans le nom, qui recule au passage à l'heure d'hiver). Au démarrage de la page,
   les journaux de **plus de 30 jours** sont supprimés (une suppression impossible est comptée dans la console) :
   seulement les journaux de la page (`date-heure-env-action.log`), et pas si une autre instance tient déjà le port.
-- **Sortie de pio en direct** : sous chaque env du suivi, un panneau « Sortie de pio (en direct) », ouvert au départ
+- **Sortie de pio en direct** : mêmes couleurs que le terminal de VS Code (`PLATFORMIO_FORCE_ANSI`, palette du thème sombre par défaut, `build_page_couleurs.py`) ; sous chaque env du suivi, un panneau « Sortie de pio (en direct) », ouvert au départ
   de l'env, montre les lignes de pio au fil de l'eau comme le terminal de VS Code (chasse fixe, fond sombre, erreurs
   en rouge, avertissements en orange). Il défile seul tant qu'on est en bas, et s'arrête si on remonte pour lire.
   Il se **referme quand l'env réussit**, sauf si on l'a ouvert ou fermé soi-même ; il reste ouvert en échec ou arrêt.

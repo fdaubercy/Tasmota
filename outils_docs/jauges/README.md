@@ -71,6 +71,9 @@ ci-dessus). **Retenu le 2026-10-31 pour la cuve : B, icône de cadran seule** (S
 | G | puce icône + « Jauges » | allonge la ligne du titre |
 | H | valeurs (taux, volume) cliquables | aucun |
 
+`bouton_energie_accueil.png` : maquette du bouton « Énergie » sur la vraie page d'accueil du différentiel, **retenue le
+2026-11-02** (l'encadré d'énergie est généré par Tasmota, sans gabarit où poser une icône).
+
 ## Disposer une page de graphiques
 
 `dispositions_page_energie.html` : 3 façons d'organiser une page de mesures avec des

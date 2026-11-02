@@ -2,6 +2,7 @@
 	"version": 1,
 	"socle": {
 		"diverses": {
+			"energie": {"activation": "OFF", "calibrage": {"PowerCal": 596, "VoltageCal": 15187, "CurrentCal": 251213}},
 			"historique": {
 				"activation": "ON",
 				"pasMinutes": 5,

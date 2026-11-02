@@ -73,7 +73,7 @@ historique. Le dispositif doit pouvoir resservir plus tard à d'autres cartes qu
 - **Heure** *(choix du concepteur)* : aucune note tant que l'heure n'est pas valide (NTP) ; les
   périodes sont en **heure locale** (ce que lit l'utilisateur). Passage à l'heure d'hiver : l'heure
   répétée est versée dans la même case ; passage à l'heure d'été : l'heure sautée reste vide.
-- **Redémarrages** : le redémarrage quotidien de 01:00 est logiciel, Tasmota garde alors `Total`
+- **Redémarrages** : *(corrigé le 2026-11-02 : la carte sous Tasmota d'origine ne redémarre pas, 33 jours sans interruption relevés ; le redémarrage de 01:00 n'existera qu'avec le framework, par `diverses.heureReboot` du persist)* le redémarrage quotidien de 01:00 est logiciel, Tasmota garde alors `Total`
   dans sa mémoire RTC : pas de perte attendue (à vérifier sur la carte). Une coupure secteur peut
   faire perdre la consommation non encore sauvegardée par Tasmota : elle est absente de
   l'historique, sans correction *(choix du concepteur)*.
@@ -91,7 +91,7 @@ historique. Le dispositif doit pouvoir resservir plus tard à d'autres cartes qu
 | consommation par mois | 12 derniers mois | flash |
 | dernière note de `Total` (valeur, date) | 1 | flash |
 | liste des prix (date d'effet, €/kWh) | toutes | flash (persist ou fichier) |
-| courbe de puissance des 24 h | 24 h glissantes, sous les trois graphiques de consommation (décision de l'utilisateur) ; repart vide après le redémarrage de 01:00 | RAM |
+| courbe de puissance des 24 h | 24 h glissantes, sous les trois graphiques de consommation (décision de l'utilisateur) ; redémarrage de 01:00 retiré du persist, copie horaire en flash (décisions du 2026-11-02) : une coupure en perd au plus 1 h | RAM + flash |
 
 Quelques centaines d'octets en tout. Écritures limitées (usure) : une par heure au plus.
 Purge (décision 6) : les mois les plus anciens partent d'abord ; seuil, mesure de la place

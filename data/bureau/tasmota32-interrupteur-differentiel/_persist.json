@@ -1,6 +1,7 @@
 {
 	"diverses": {
 		"cmdMute": true,
+		"energie": {"activation": "ON", "calibrage": {"PowerCal": 310, "VoltageCal": 15963, "CurrentCal": 124194}},
 		"typeESP": "ESP32",
 		"logs": {
 			"profil": "normal",
@@ -12,7 +13,7 @@
 			"nbLogsFiles" : 0
 		},
 		"telePeriod": 300,
-		"heureReboot": "01:00",
+		"heureReboot": "",
 		"eviteResetBTN": "ON",
 		"affichageTempESP32": "ON",
 		"affichageNomModele": "OFF",

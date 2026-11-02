@@ -1,0 +1,23 @@
+/* Page /energie (data/fs/energieFonctions.be, /sd/html/energie.html, /sd/js/energie.js) */
+#e_zone{text-align:left;max-width:calc(100vw - 24px)}
+#e_zone h3{margin:14px 0 4px;font-size:1em}
+#e_msg:empty{display:none}
+#e_tuiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.e_tuile{border:1px solid rgba(127,127,127,0.4);border-radius:6px;padding:6px;text-align:center}
+.e_tuile b{font-size:1.5em}
+.e_tuile small{display:block;opacity:0.8}
+.e_tuile svg{display:block;width:100%;max-height:50px}
+.e_fond{fill:none;stroke:rgba(127,127,127,0.25);stroke-width:9}
+.e_arc{fill:none;stroke:#1f7fc4;stroke-width:9}
+.e_cadran{font-size:18px;fill:currentColor}
+.e_total{font-weight:normal;opacity:0.8;float:right}
+.e_graphe{display:block;width:100%;height:auto}
+.e_barre{fill:#1f7fc4}
+.e_ligne{fill:none;stroke:#1f7fc4;stroke-width:1.5;stroke-linecap:round}
+.e_axe{stroke:rgba(127,127,127,0.5);stroke-width:1}
+.e_txt{font-size:9px;fill:currentColor;opacity:0.75}
+#e_prix{margin-top:14px}
+#e_prix p{margin:4px 0}
+#e_rappel{color:#d68a12;font-weight:bold}
+#e_form label{display:block;margin:4px 0}
+#e_form input{width:100%;box-sizing:border-box}

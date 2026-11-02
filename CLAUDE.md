@@ -134,7 +134,7 @@ c'est **voulu** (decide le 2026-10-04 : « laisse ce test comme il est »). Ne p
 decouper : c'est UN fichier a televerser sur chaque carte, qui se prepare et s'explique
 seul au chargement ; le scinder imposerait deux televersements par carte.
 
-`outils_docs/scripts_python/outils_pc/build_page.py` fait **1206 lignes**, et c'est **voulu**
+`outils_docs/scripts_python/outils_pc/build_page.py` fait **1210 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
 vague de corrections finale du meme jour ; 935 le 2026-10-25 avec le panneau « Sortie » et « Effacer puis
 televerser » ; 1038 le meme jour avec la pause « rebranchez la carte » et les panneaux refermes ; 1053 avec
@@ -144,14 +144,14 @@ deja le FS ; 1131 le meme jour avec les sons de fin de lancement et de pause ; 1
 branchement de l'onglet « Fichiers », dont le code vit dans `build_page_fichiers.py` ; 1154 le 2026-10-31 avec
 les durees en heures au-dela de 60 min ; 1162 le 2026-11-01 avec le branchement de l'onglet « Mémoire et partitions », dont
 le code vit dans `build_page_memoire.py` ; 1169 le meme jour avec le branchement de l'onglet « Envs par défaut », dont le
-code vit dans `build_page_defaut.py` ; 1206 le meme jour avec le bouton de purge du cache et le resume memoire de chaque env). C'est la page
+code vit dans `build_page_defaut.py` ; 1206 le meme jour avec le bouton de purge du cache et le resume memoire de chaque env ; 1210 le 2026-11-02 avec les couleurs du panneau « Sortie », dont le code vit dans `build_page_couleurs.py`). C'est la page
 unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule constante
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
 Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plutot qu'un decoupage) :
-`build_serie.py` fait **782 lignes** (+14 le 2026-11-01 : table de partitions de l'env ; +19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; +11 le 2026-10-27 : data_dir pose avant pio ; +3 le meme jour : identite de l'image du FS ; +7 le meme jour : duree des zones d'envoi memorisee, A13 ; +6 le 2026-10-28 : OTA par le maitre, A11 ; +9 le meme jour : Sleep 0 du maitre pendant l'envoi ; +30 le 2026-10-29 : action « fichiers » de l'onglet Fichiers ; +16 le meme jour : transport MQTT (A16) ; execution en serie des `pio run` : verrous, arret immediat, attente
+`build_serie.py` fait **789 lignes** (+14 le 2026-11-01 : table de partitions de l'env ; +19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; +11 le 2026-10-27 : data_dir pose avant pio ; +3 le meme jour : identite de l'image du FS ; +7 le meme jour : duree des zones d'envoi memorisee, A13 ; +6 le 2026-10-28 : OTA par le maitre, A11 ; +9 le meme jour : Sleep 0 du maitre pendant l'envoi ; +30 le 2026-10-29 : action « fichiers » de l'onglet Fichiers ; +16 le meme jour : transport MQTT (A16) ; execution en serie des `pio run` : verrous, arret immediat, attente
 d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
-verrou), et ses bancs `test_build_serie.py` (**1190**), `test_build_page_chrome.py` (**1100**),
+verrou), et ses bancs `test_build_serie.py` (**1215**), `test_build_page_chrome.py` (**1103**),
 `test_build_ota_fs.py` (**802**), `test_build_web.py` (**794**), ainsi que `test_annuaire.py` (**523**,
 banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
 compteur.
@@ -549,6 +549,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   Fichiers embarques sur la cuve et le P4 SEULEMENT : liste `page_cuve` de `[berry_commun]` dans le
   `custom_files_exclude` de tous les autres envs (regle : une page ne part que sur les cartes qui s'en servent).
   Banc `berry/banc_cuve_page.py`. Mode d'emploi : `outils_docs/README.md`.
+- Page `/energie` du differentiel (2026-11-02, plan `tasks/plans/energie-differentiel.md`) : kWh et couts par heure, jour, mois gardes en flash, courbe de puissance 24 h ; `data/fs/energieFonctions.be` + `controleEnergie.be` (SOLIDIFIES, charges par l'autoexec, garde `diverses.energie`), `data/sd/{html,css,js}/energie.*` ; liste `page_energie` de `[berry_commun]` exclue de tous les autres envs. Banc `berry/banc_energie.py`. Mode d'emploi : `outils_docs/README.md`.
 - `outils_docs/SOLIDIFICATION_BERRY.md` — mecanisme, verification (§5), parametres, 13 pieges.
 - `outils_docs/PROTOCOLE_MODBUS.md` — ModBus RTU/TCP standard, implementation maison (3 transports
   Serie/UDP/TCP), extension esclave->maitre, failles du mecanisme d'envoi, design de queue FIFO,
@@ -736,7 +737,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     compile un `pio run` sans -e : `GET /defaut`, `POST /defaut/diff|ecrire` ; banc `test_build_defaut.py`), `build_page_defaut.py`
     (onglet « Envs par défaut », modele B + futur fichier dessous ; sonde `test_build_page_defaut_chrome.py` ; maquettes
     `outils_docs/default_envs/` ; plan `tasks/plans/default-envs-page.md` ; case de creation d'env : `fichiers_berry_creation.py::ajoute_default_envs`),
-    `build_solidification.py`, et pour les bancs `build_faux_pio.py`, `build_ota_carte_simulee.py`) — page « Build et televersement »
+    `build_solidification.py`, `build_page_couleurs.py` (codes ANSI du journal -> couleurs du terminal de VS Code dans le panneau « Sortie »), et pour les bancs `build_faux_pio.py`, `build_ota_carte_simulee.py`) — page « Build et televersement »
     http://127.0.0.1:7700 (tuile de l'annuaire, groupe Maintenance, hors job : l'annuaire refuse de l'arreter pendant
     un lancement ; tache VS Code « Outil : build et televersement » ; cible Custom « Build et televersement (page web) »
     (`build/cible_build_web.py`, banc `build/test_cible_build_web.py`) qui DEMARRE LA PAGE DETACHEE puis rend la
