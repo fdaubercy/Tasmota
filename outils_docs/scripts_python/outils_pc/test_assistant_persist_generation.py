@@ -44,11 +44,12 @@ EXCLUES = {
 }
 
 # (motif fnmatch du chemin reduit, cartes (noms de dossier) ou None = toutes, raison). Ruling 8 : familles 2 a 5.
-DIFF, CAVE1, CAVE3, GRENIER, P4, CUVE_, RIDEAU_ = ("tasmota32-interrupteur-differentiel", "tasmota32-serveur-rly",
+DIFF, CAVE1, CAVE3, GRENIER, P4, CUVE_, RIDEAU_ = ("tasmota32-interrupteur-energie", "tasmota32-serveur-rly",
                                                  "tasmota32s3-serveur-rly", "tasmota32s3-grenier",
                                                  "tasmota32p4-serveur-modbus", "tasmota32s3-capteurs-cuve-modbus",
                                                  "tasmota32s3-rideau-garage-modbus")
 TOLERANCES = [
+    ("diverses.energie.*", None, "bloc de la page Energie : absent des cartes plus anciennes (lu par .find), ON sur la seule carte qui mesure l'energie"),
     # -- famille 3 : bloc metier ecrit a la main
     ("modules.*.name", None, "nom du bloc metier : texte libre de chaque carte (gabarit = nom du module)"),
     ("modules.*.logs", (DIFF, CAVE1, CAVE3, GRENIER),

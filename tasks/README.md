@@ -13,12 +13,13 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-27 plans : 8 actif, 1 en-pause, 18 clos.
+28 plans : 9 actif, 1 en-pause, 18 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Créé | Mis à jour |
 |---|---|---|---|---|---|
-| [Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)](plans/energie-differentiel.md) | Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h) | actif | ████████░░ 81 % (29/36) | 2026-10-31 | 2026-11-02 |
+| [Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)](plans/energie-differentiel.md) | Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h) | actif | ████████░░ 81 % (50/60) | 2026-10-31 | 2026-11-02 |
 | [Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2](plans/ruban-cuve.md) | Piloter le ruban WS2812 de la cuve en AUTO/MANUEL (bouton et ModBus) et préparer la carte cuve v0.2 | actif | ████████░░ 77 % (23/31) | 2026-10-18 | 2026-11-02 |
+| [Voie Ethernet complète — FTP, UDP, esclaves par le point d'accès, repli sur le Wi-Fi](plans/voie-reseau-ethernet.md) | Qu'une carte en voie Ethernet garde tous ses services et ses esclaves, et ne devienne jamais injoignable si le câble tombe | actif | █░░░░░░░░░ 8 % (2/29) | 2026-11-02 | 2026-11-02 |
 | [Page dédiée « Niveau de la cuve » (jauges A, H et B), lien depuis l'encadré de la cuve](plans/jauges-cuve.md) | Afficher volume (jauge A), taux (jauge H) et tensions brute et recalculée de la sonde (cadran B) de la cuve sur une page dédiée ouverte depuis son encadré, sur la cuve et le P4 | actif | █████████░ 88 % (26/32) | 2026-10-31 | 2026-10-31 |
 | [Cave — envs ESP32/S3 alignés sur la carte en ligne, audit de l'env S3, carte S3 8 relais de remplacement](plans/relais-cave-s3.md) | Aligner les envs de la cave sur les broches de la carte en ligne, auditer l'env S3 et choisir une carte ESP32-S3 à 8 relais pour la remplacer | actif | ████████░░ 80 % (17/19) | 2026-10-31 | 2026-10-31 |
 | [Sniffeur I2C (ESP32-S3 dédié + outil PC de l'annuaire)](plans/sniffeur-i2c.md) | Voir en direct le trafic I2C de n'importe quelle carte du parc, décodé jusqu'au registre, et lire ou écrire un registre par la carte ou au banc | actif | ███████░░░ 72 % (33/43) | 2026-10-31 | 2026-10-31 |

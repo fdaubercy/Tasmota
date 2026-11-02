@@ -44,6 +44,9 @@ def _version(ip, delai):
     return fwr.get("Version"), fwr.get("BuildDateTime")
 
 
+ESSAIS_SAFEBOOT = 4
+
+
 def _bascule_safeboot(ip, rapporte, delai_retour, sondage, delai_http):
     """Logique fct() du navigateur : True si la carte est en safeboot, False si pas de safeboot."""
     debut = time.monotonic()
@@ -109,11 +112,19 @@ def envoie_firmware_ota(env, ip, dossier_build, rapporte, *, delai_retour=90.0, 
         rapporte({"etape": ETAPE_TELEVERSEMENT, "pourcent": 0, "detail": f"{nom} vers {ip}"})
     # Apres une bascule effective, un echec laisse la carte en safeboot (sans Berry ni drivers) : le dire.
     safeboot = f" ; carte restée en safeboot : renvoyer un firmware par http://{ip}/up" if en_safeboot else ""
-    try:
-        _get(ip, "/up", delai_http)                            # arme l'envoi (UPL_TASMOTA)
-        statut, texte = _poste(ip, f"/u2?fsz={len(donnees)}", "file", nom, donnees, delai_http, progression)
-    except reseau as erreur:
-        raise RuntimeError(f"{ETAPE_TELEVERSEMENT} : carte {ip} injoignable ou coupée ({erreur}){safeboot}") from None
+    # Tout juste basculee, la carte coupe la connexion puis accepte l'envoi (differentiel, safeboot 14.1.0 : coupe 3 fois sur
+    # 3 le 2026-11-02, 0,1 s apres la bascule ; meme envoi reussi 1 min apres). Seulement en safeboot : ailleurs, une coupure reste un echec.
+    essais = ESSAIS_SAFEBOOT if en_safeboot else 1
+    for essai in range(1, essais + 1):
+        try:
+            _get(ip, "/up", delai_http)                        # arme l'envoi (UPL_TASMOTA)
+            statut, texte = _poste(ip, f"/u2?fsz={len(donnees)}", "file", nom, donnees, delai_http, progression)
+            break
+        except reseau as erreur:
+            if essai == essais:
+                raise RuntimeError(f"{ETAPE_TELEVERSEMENT} : carte {ip} injoignable ou coupée ({erreur}){safeboot}") from None
+            rapporte({"etape": ETAPE_TELEVERSEMENT, "pourcent": 0, "detail": f"coupé en safeboot, nouvel essai ({essai + 1}/{essais})"})
+            time.sleep(5 * sondage)                            # 10 s par defaut
     if _page_en_echec(statut, texte):
         raise RuntimeError(f"{ETAPE_TELEVERSEMENT} : refusé par la carte (HTTP {statut}) : {_resume(texte)}{safeboot}")
     rapporte({"etape": ETAPE_REDEMARRAGE, "pourcent": None, "detail": f"attente du retour de {ip}"})

@@ -35,7 +35,7 @@ CARTES = {
     "tasmota32s3-garage-capteurs-cuve-modbus": "data/garage/tasmota32s3-capteurs-cuve-modbus",
     "tasmota32s3-garage-rideau-garage-modbus": "data/garage/tasmota32s3-rideau-garage-modbus",
     "tasmota32s3-cave-serveur-rly": "data/cave/tasmota32s3-serveur-rly",
-    "tasmota32-bureau-interrupteur-differentiel": "data/bureau/tasmota32-interrupteur-differentiel",
+    "tasmota32-bureau-interrupteur-energie": "data/bureau/tasmota32-interrupteur-energie",
     "tasmota32s3-etage2-grenier": "data/etage2/tasmota32s3-grenier",
 }
 

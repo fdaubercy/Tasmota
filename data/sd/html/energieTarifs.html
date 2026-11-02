@@ -1,0 +1,19 @@
+<!-- Sous-page de Configuration : /energie?f=tarifs (data/fs/energieFonctions.be), script /sd/js/energieTarifs.js -->
+<div id='e_zone'>
+	<h3>Tarifs de l'électricité</h3>
+	<p id='e_msg'></p>
+	<table id='e_liste'></table>
+	<p id='e_prixActuel' class='e_lieu'></p>
+	<form id='e_form'>
+		<label>À partir du <input id='e_date' type='date' required></label>
+		<label><input type='radio' name='e_abo' value='base' checked> Base</label>
+		<label><input type='radio' name='e_abo' value='hchp' id='e_hchp'> Heures creuses / heures pleines</label>
+		<label><span id='e_libelle'>Prix TTC (€/kWh)</span> <input id='e_montant' type='number' step='0.0001' min='0.0001' max='2' required></label>
+		<div id='e_zoneHc' hidden>
+			<label>Heures creuses, prix TTC (€/kWh) <input id='e_hc' type='number' step='0.0001' min='0.0001' max='2'></label>
+			<label>Plages d'heures creuses <input id='e_plages' placeholder='22-6,14-17'></label>
+			<p class='e_lieu'>En heures entières : la carte note le compteur une fois par heure. Une heure compte en entier au tarif de son début.</p>
+		</div>
+		<button>Enregistrer le tarif</button>
+	</form>
+</div>

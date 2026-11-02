@@ -106,7 +106,7 @@ var F = {env: "", liste: null, dossier: null, coches: {}, berryTouche: false, pr
          tout: null, vus: [], dessin: null};
 
 function montreOnglet(nom) {
-  ["build", "fichiers", "memoire", "defaut"].forEach(function (o) {     // memoire : build_page_memoire.py (A8) ; defaut : build_page_defaut.py
+  ["build", "fichiers", "memoire", "defaut", "aide"].forEach(function (o) {     // memoire : build_page_memoire.py (A8) ; defaut : build_page_defaut.py
     $("vue-" + o).hidden = o !== nom;
     $("onglet-" + o).setAttribute("aria-selected", String(o === nom));
   });
@@ -118,6 +118,7 @@ function montreOnglet(nom) {
 $("onglet-build").onclick = function () { montreOnglet("build"); };
 $("onglet-fichiers").onclick = function () { montreOnglet("fichiers"); };
 $("onglet-memoire").onclick = function () { montreOnglet("memoire"); };
+$("onglet-aide").onclick = function () { montreOnglet("aide"); };
 
 function parentDe(chemin) { var i = chemin.lastIndexOf("/"); return i < 0 ? "" : chemin.slice(0, i); }
 function tailleLisible(o) { return o < 1024 ? o + " o" : (o / 1024).toFixed(1).replace(".", ",") + " Ko"; }
@@ -368,5 +369,5 @@ function dessineSuiviFichiers() {
   j.scrollTop = j.scrollHeight;
 }
 
-try { var ongletLu = localStorage.getItem("build-onglet"); if (ongletLu === "fichiers" || ongletLu === "memoire") montreOnglet(ongletLu); } catch (e) {}
+try { var ongletLu = localStorage.getItem("build-onglet"); if (ongletLu === "fichiers" || ongletLu === "memoire" || ongletLu === "aide") montreOnglet(ongletLu); } catch (e) {}
 """

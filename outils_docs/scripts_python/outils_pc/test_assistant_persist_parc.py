@@ -19,7 +19,7 @@ ECHECS = []
 MAITRES = {"data/cave/tasmota32s3-serveur-rly", "data/etage2/tasmota32s3-grenier",
            "data/garage/tasmota32p4-serveur-modbus", "data/garage/tasmota32s3-serveur-modbus"}
 P4 = "data/garage/tasmota32p4-serveur-modbus/_persist.json"
-BUREAU = "data/bureau/tasmota32-interrupteur-differentiel/_persist.json"
+BUREAU = "data/bureau/tasmota32-interrupteur-energie/_persist.json"
 
 
 def verifie(obtenu, attendu, libelle):

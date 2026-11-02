@@ -54,6 +54,27 @@ class CONTROLE_ENERGIE : Driver
         webserver.content_send("<style>table:has(td>button){border-spacing:0;margin:0 -5px;width:calc(100% + 10px)!important}</style><p></p><form action='/energie' method='get'><button>Énergie</button></form>")
     end
 
+    def web_add_config_button()
+        import webserver
+        webserver.content_send("<p></p><form action='/energie' method='get'><input type='hidden' name='f' value='tarifs'><button>Tarifs de l'électricité</button></form>")
+    end
+
+    # Remplace la ligne « ADC1 Temperature » de Tasmota (masquee par WebSensor2 0 dans autoexec.bat) : son nom est fige en C
+    def web_sensor()
+        import json
+        import string
+        import webserver
+        try
+            var analog = json.load(tasmota.read_sensors()).find("ANALOG")
+            var t = (isinstance(analog, map) ? analog.find("Temperature1") : nil)
+            if (t != nil)
+                webserver.content_send("{s}Température ambiante{m}" + string.replace(string.format("%.1f", t), ".", ",") + " °C{e}")
+            end
+        except .. as erreur, message
+            logFonctions.log("ENERGIE_ERREUR: Temperature : " + str(erreur) + " " + str(message) + " !", LOG_LEVEL_ERREUR)
+        end
+    end
+
     def web_add_handler()
         import webserver
         import energieFonctions

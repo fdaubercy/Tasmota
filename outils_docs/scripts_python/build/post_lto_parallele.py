@@ -24,3 +24,12 @@ apres = ["-flto=auto" if f == "-flto" else f for f in avant]
 if apres != avant:
     env.Replace(LINKFLAGS=apres)
     print(Fore.GREEN + "✔ LTO : edition de liens parallelisee (-flto -> -flto=auto)")
+
+# gen-berry-structures (post:) reecrit generate/ et solidify/ APRES le LDF, qui a deja lu leurs dates : avec
+# implicit_cache, SCons les croirait inchanges et reprendrait du cache un be_string.c.o sans les nouveaux textes
+# (undefined reference to be_const_str_..., 2026-11-02). Banc : build/test_scons_cache.py.
+import glob
+import os
+for motif in ("lib/libesp32/berry/generate/*", "lib/libesp32/berry*/src/solidify/*"):
+    for chemin in glob.glob(os.path.join(env.subst("$PROJECT_DIR"), motif)):
+        env.File(chemin).clear_memoized_values()

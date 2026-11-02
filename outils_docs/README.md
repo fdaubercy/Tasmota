@@ -278,13 +278,17 @@ des panneaux de cuve, leurs courbes y seraient vides.
 Bouton **Énergie** de l'accueil, page gardée par la carte elle-même, sans le Pi. En haut : puissance, courant, facteur
 de puissance en cadran, fréquence (relus toutes les 10 s, mêmes précisions que l'accueil). Puis, en barres, les
 consommations **d'aujourd'hui par heure**, **du mois par jour**, des **12 derniers mois**, chacune avec son total en kWh
-(en Wh sous 1 kWh) et son coût ; enfin la courbe de puissance sur 24 h et le prix.
+(en Wh sous 1 kWh) et son coût ; enfin la courbe de puissance sur 24 h. En bas, en petit, l'endroit où régler le prix.
 
 - **Calcul** : écart de `ENERGY.Total` à chaque changement d'heure locale ; l'heure en cours est ajoutée à l'affichage
   (le total du jour suit donc « Énergie aujourd'hui » de l'accueil, sauf heure non notée après une coupure). Un compteur
   qui baisse, ou un écart impossible (`EnergyTotal` rétabli à la main), n'est pas compté : log `erreur`.
-- **Prix** : saisi sur la page, avec sa date d'effet, en € TTC par kWh. Chaque consommation garde le coût du prix en
-  vigueur à sa date : un nouveau prix ne touche jamais le passé. Même date = prix remplacé. Rappel au-delà de 6 mois.
+- **Prix** : Configuration > « Tarifs de l'électricité » (`/energie?f=tarifs`) : liste des tarifs et, en petit dessous,
+  le tarif en vigueur. On saisit une date d'effet, en € TTC par kWh, et **Base** (un prix) ou **HC/HP** (deux prix et les
+  plages d'heures creuses, par exemple `22-6` ou `2-7,14-17`). Plages en heures entières : le compteur est noté une fois
+  par heure, une heure compte en entier au tarif de son début. Chaque consommation garde le coût du tarif en vigueur à sa
+  date et à son heure : un nouveau tarif ne touche jamais le passé. Même date = tarif remplacé. `/energie` alerte si
+  aucun prix n'est saisi ou s'il a plus de 6 mois.
 - **Fichiers de la carte**, dans `/energie/` : `etat.json` (une écriture par heure), `mois-AAAA-MM.json` (mois clos, 24
   au plus ; les plus anciens sont effacés si le FS passe sous 16 Ko libres), `prix.json`, `courbe.bin` (copie horaire de
   la courbe : une coupure en perd au plus 1 h).
@@ -873,6 +877,15 @@ puis téléverser » est coché, les deux cases sont décochées et grisées (in
 OTA ou sans fichiers), elles restent actives : le serveur ne lance alors ni `buildfs` ni `uploadfs` pour les envs
 déjà servis par leur envoi, qui prennent le statut de cet envoi (la ligne le dit). `buildfs` lirait d'ailleurs le
 `data_dir` du lancement précédent (défaut A12 du plan de la page).
+
+### Calibrage d'énergie gardé autour d'un flash par câble
+
+Avant un envoi du firmware par câble (ou « Effacer puis téléverser »), la page copie `/.drvset003` de la carte par le
+réseau (calibrage et compteurs ; rôle des fichiers `.drvset` : onglet « Aide » de la page et `FICHIERS_DRVSET.md`). Après un envoi réussi, elle le renvoie, redémarre par
+`Restart 99` (`Restart 1` réécrirait le fichier avec la RAM de la carte neuve) et relit le calibrage. Étape
+« Calibrage » sur la ligne de l'env. Carte injoignable ou sans ce fichier : le flash a lieu quand même, sans
+rétablissement. Échec du rétablissement : le message donne le chemin de la copie, sous
+`%LOCALAPPDATA%\outils_tasmota\build\drvset\`.
 
 ### Effacer puis téléverser (`erase_upload`)
 

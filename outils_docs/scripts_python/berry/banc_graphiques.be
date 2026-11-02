@@ -311,7 +311,7 @@ verifie(accueil(persistReel("data/garage/tasmota32p4-serveur-modbus/_persist.jso
         accueil(persistReel("data/garage/tasmota32s3-capteurs-cuve-modbus/_persist.json")) == "",
         "persists reels du P4 et de la cuve (historique actif) : pas de bouton en double")
 verifie(accueil(persistReel("data/cave/tasmota32-serveur-rly/_persist.json")) == "" &&
-        accueil(persistReel("data/bureau/tasmota32-interrupteur-differentiel/_persist.json")) == "",
+        accueil(persistReel("data/bureau/tasmota32-interrupteur-energie/_persist.json")) == "",
         "persists reels des ESP32 classiques (pas de cle grafana, decision du 2026-10-18) : pas de bouton")
 
 # ---- 6. Composition enregistree (POST /graphiques) ----------------------------------------------

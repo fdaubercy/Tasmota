@@ -34,6 +34,10 @@ MUTANTS = [
     ("compteur retabli compte", "real(delta) > real(energieFonctions.PUISSANCE_MAX_W) * (ecoule + 3600) / 3600", "false"),
     ("purge du plus recent", "archives[i] < archives[ancien]", "archives[i] > archives[ancien]"),
     ("prix futur applique", "p[0] <= jour", "true"),
+    ("heures creuses ignorees", "((p[3] >> heure) & 1) != 0", "false"),
+    ("heure de la note ignoree", 'prixA(etat["j"], t["hour"])', 'prixA(etat["j"], 0)'),
+    ("plage a cheval perdue", "if (debut == fin)    return nil    end\n        while", "if (debut >= fin)    return nil    end\n        while"),
+    ("journee entiere acceptee", "masque == 0xFFFFFF ? nil : masque", "masque"),
     ("heure d'ete portee au constat", 'ecoule <= energieFonctions.ECART_CONSECUTIF_S ? etat["l"] : local - 3600', "local - 3600"),
     ("calibrage ecrase", "r.find(cle) != energieFonctions.DEFAUTS_BL0942[cle]", "false"),
     ("import du module oublie (solidifie)", "    import energieFonctions\n    var t = tasmota.time_dump(instant)", "    var t = tasmota.time_dump(instant)"),
@@ -74,11 +78,11 @@ def partie_berry(tmp):
     return ok, json.loads((d / "donnees.json").read_text(encoding="utf-8"))
 
 
-def page_html(js_modifie=None):
+def page_html(js_modifie=None, nom="energie"):
     sd = RACINE / "data/sd"
-    js = js_modifie if js_modifie is not None else (sd / "js/energie.js").read_text(encoding="utf-8")
+    js = js_modifie if js_modifie is not None else (sd / f"js/{nom}.js").read_text(encoding="utf-8")
     return ("<!doctype html><meta charset='utf-8'><body style='width:320px'><style>" + (sd / "css/energie.css").read_text(encoding="utf-8")
-            + "</style>" + (sd / "html/energie.html").read_text(encoding="utf-8") + "<script>" + js + "</script>")
+            + "</style>" + (sd / f"html/{nom}.html").read_text(encoding="utf-8") + "<script>" + js + "</script>")
 
 
 def serveur(page, donnees, direct):
@@ -174,7 +178,9 @@ def partie_rendu(nav, tmp, base, garde):
     ok &= juge("facteur", "0,87", texte(dom, "e_f"))
     ok &= juge("arc du facteur", "87 100", attribut(dom, "e_arc", "stroke-dasharray"))
     ok &= juge("frequence : entiere comme la carte", "50", texte(dom, "e_hz"))
-    ok &= juge("prix affiche", "Prix : 0,2000 €/kWh depuis le 2026-11-01", texte(dom, "e_prixActuel"))
+    ok &= juge("prix absent de la page", None, texte(dom, "e_prixActuel"))
+    ok &= juge("formulaire absent de la page", False, "id=\"e_form\"" in dom)
+    ok &= juge("endroit du prix indique", True, "Tarifs de l'électricité" in html.unescape(dom) and "/energie?f=tarifs" in dom)
     ok &= juge("prix recent : pas de rappel", True, bool(re.search(r'id="e_rappel"[^>]*hidden', dom)))
 
     print("--- Rendu : petite consommation (Yesterday 0,002 kWh releve sur la carte le 2026-11-02)")
@@ -221,13 +227,30 @@ def partie_rendu(nav, tmp, base, garde):
     neuf = {"aujourdhui": base["aujourdhui"], "etat": None, "prix": [], "courbe": [None] * 288}
     dom, _ = scenario(nav, tmp, "neuf", page_html(), neuf, {"p": None, "i": None, "f": None, "hz": None})
     ok &= juge("message", True, "Aucun relevé" in (texte(dom, "e_msg") or ""))
-    ok &= juge("sans prix", "Aucun prix saisi : les coûts ne sont pas calculés.", texte(dom, "e_prixActuel"))
+    ok &= juge("sans prix", "Aucun prix saisi : les coûts ne sont pas calculés.", texte(dom, "e_rappel"))
     ok &= juge("mesure absente", "--", texte(dom, "e_p"))
 
-    print("--- Rendu : saisie d'un prix")
+    print("--- Rendu : heure en cours en heures creuses")
+    hc = json.loads(json.dumps(cours))
+    hc["prix"] = [["2026-01-01", 2000, 1000, 1 << 11]]
+    hc["wCourant"] = c["w"] + 150
+    dom, _ = scenario(nav, tmp, "cours_hc", page_html(), hc, direct)
+    ok &= juge("cout de l'heure en cours au tarif HC", str(sum(c["he"]) + 150 * 1000 // 1000), attribut(dom, "e_totalH", "data-euros"))
+
+    print("--- Rendu : sous-page des tarifs")
+    t = {"aujourdhui": "2026-11-02", "etat": None, "courbe": [], "prix": [["2026-01-01", 1500], ["2026-11-01", 2000, 1000, 0xC0003F], ["2027-01-01", 2500]]}
+    dom, _ = scenario(nav, tmp, "tarifs", page_html(nom="energieTarifs"), t, direct)
+    ok &= juge("tarif en vigueur, en petit, sous la liste", "Prix : HP 0,2000 €/kWh, HC 0,1000 €/kWh depuis le 01/11/2026", texte(dom, "e_prixActuel"))
+    ok &= juge("liste : du plus recent au plus ancien", ["01/01/2027", "01/11/2026", "01/01/2026"], re.findall(r"<td>(\d\d/\d\d/\d{4})</td>", dom))
+    ok &= juge("plages lues du masque", True, "22 h-6 h" in dom)
+    ok &= juge("zone HC cachee en Base", True, bool(re.search(r'id="e_zoneHc"[^>]*hidden', dom)))
     envoi = "<script>setTimeout(function(){e_montant.value='0.2316';e_date.value='2026-12-01';e_form.dispatchEvent(new Event('submit',{cancelable:true}));},500);</script>"
-    _, posts = scenario(nav, tmp, "post", page_html() + envoi, d, direct)
-    ok &= juge("POST du prix", [{"jour": "2026-12-01", "prix": "0.2316"}], posts)
+    _, posts = scenario(nav, tmp, "post", page_html(nom="energieTarifs") + envoi, t, direct)
+    ok &= juge("POST Base", [{"jour": "2026-12-01", "prix": "0.2316"}], posts)
+    envoi = ("<script>setTimeout(function(){e_hchp.checked=true;e_hchp.dispatchEvent(new Event('change'));e_montant.value='0.2';e_hc.value='0.1';e_plages.value='22-6';"
+             "e_date.value='2026-12-01';e_form.dispatchEvent(new Event('submit',{cancelable:true}));},500);</script>")
+    dom, posts = scenario(nav, tmp, "post_hc", page_html(nom="energieTarifs") + envoi, t, direct)
+    ok &= juge("POST HC/HP", [{"jour": "2026-12-01", "prix": "0.2", "hc": "0.1", "plages": "22-6"}], posts)
 
     print("--- Temoin du rendu (doit etre rouge)")
     js = (RACINE / "data/sd/js/energie.js").read_text(encoding="utf-8")

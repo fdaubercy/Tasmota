@@ -35,6 +35,7 @@ ecris(SORTIE + "/modules/path.be", "import os\nvar path = module('path')\n"
     "return path\n")
 ecris(SORTIE + "/modules/webserver.be", "import global\nvar w = module('webserver')\n"
     "w.BUTTON_MAIN = 0\n"
+    "w.BUTTON_CONFIGURATION = 1\n"
     "w.check_privileged_access = def () return global.ACCES end\n"
     "w.has_arg = def (a) return global.ARGS.contains(a) end\n"
     "w.arg = def (a) return global.ARGS[a] end\n"
@@ -263,6 +264,34 @@ for cas: ["0", "-1", "2.5", "abc", ""]
     verifie("prix refuse '" + cas + "'", "Prix invalide", E.ajoutePrix("2026-05-01", cas))
 end
 
+print("--- Tarif HC/HP")
+verifie("plage a cheval sur minuit", 0xC0003F, E.masqueHC("22-6"))
+verifie("deux plages, zeros, espaces", 0x01C0F8, E.masqueHC(" 03-8 , 14-17"))
+verifie("fin a 24", 0xC00000, E.masqueHC("22-24"))
+for cas: ["", "22", "22-", "-6", "a-b", "25-3", "3-25", "5-5", "0-24", "0-12,12-0", "22-6-8", "1.5-3"]
+    verifie("plages refusees '" + cas + "'", nil, E.masqueHC(cas))
+end
+vide()
+verifie("HC/HP valide", nil, E.ajoutePrix("2026-11-02", "0.2", "0,1", "22-6"))
+verifie("entree HC/HP", ["2026-11-02", 2000, 1000, 0xC0003F], E.lisJson("prix.json")[0])
+verifie("heure creuse", 1000, E.prixA("2026-11-03", 23))
+verifie("derniere heure creuse", 1000, E.prixA("2026-11-03", 5))
+verifie("premiere heure pleine", 2000, E.prixA("2026-11-03", 6))
+verifie("HC invalide", "Prix invalide", E.ajoutePrix("2026-12-01", "0.2", "abc", "22-6"))
+verifie("plages invalides", "Heures creuses invalides", E.ajoutePrix("2026-12-01", "0.2", "0.1", "x"))
+verifie("refus : rien d'ecrit", 1, size(E.lisJson("prix.json")))
+verifie("Base apres HC/HP", nil, E.ajoutePrix("2026-12-01", "0.3"))
+verifie("Base : plus d'heures creuses", 3000, E.prixA("2026-12-02", 23))
+verifie("HC/HP avant", 1000, E.prixA("2026-11-30", 23))
+var hc23 = 1604358000 # 2020-11-02 23:00 UTC : seule l'heure du jour compte ici
+vide()
+E.ajoutePrix("2020-01-01", "0.2", "0.1", "22-6")
+var etatHc = E.etatNeuf()
+E.verse(etatHc, 1000, hc23)
+E.verse(etatHc, 1000, hc23 - 17 * 3600)
+verifie("heure creuse valorisee", 1000, etatHc["he"][23])
+verifie("heure pleine valorisee", 2000, etatHc["he"][6])
+
 print("--- Heure d'ete et d'hiver")
 vide()
 var ete = epoch(2027, 3, 28, 1)        # 01:00 locale, 03:00 une heure reelle plus tard
@@ -439,6 +468,15 @@ global.ARGS = {}
 E.route(courbe)
 verifie("page : ordre css, html, js", "[/sd/css/energie.css]", global.REPONSE[string.find(global.REPONSE, "[") .. string.find(global.REPONSE, "]")])
 verifie("page : gabarit puis script", true, string.find(global.REPONSE, "energie.html") < string.find(global.REPONSE, "energie.js"))
+global.ARGS = {"f": "tarifs"}
+E.route(courbe)
+verifie("tarifs : gabarit", true, string.find(global.REPONSE, "energieTarifs.html") >= 0 && string.find(global.REPONSE, "energieTarifs.js") >= 0)
+global.ARGS = {"jour": "2026-12-05", "prix": "0.3", "hc": "0.15", "plages": "x"}
+E.enregistrePrix()
+verifie("POST HC/HP refuse", "Heures creuses invalides", json.load(global.REPONSE)["erreur"])
+global.ARGS = {"jour": "2026-12-05", "prix": "0.3", "hc": "0.15", "plages": "22-6"}
+E.enregistrePrix()
+verifie("POST HC/HP accepte", 1500, E.prixA("2026-12-06", 22))
 global.ARGS = {"jour": "2026-13-01", "prix": "0.3"}
 E.enregistrePrix()
 verifie("POST refuse : 400", 400, global.CODE)

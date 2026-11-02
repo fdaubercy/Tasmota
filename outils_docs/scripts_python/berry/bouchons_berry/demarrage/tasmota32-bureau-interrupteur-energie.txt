@@ -1,4 +1,4 @@
-carte : tasmota32-bureau-interrupteur-differentiel
+carte : tasmota32-bureau-interrupteur-energie
 exception : aucune
 drivers (3) : CONTROLE_ENERGIE, CONTROLE_GENERAL, CONTROLE_WEB
 regles (7) : Button1#Action, Mqtt, System, System, Time, Time#Initialized, Wifi

@@ -487,6 +487,28 @@ def test_ota_firmware_safeboot():
     carte.ferme()
 
 
+def test_ota_firmware_coupure():
+    with tempfile.TemporaryDirectory() as t:
+        carte = Carte(safeboot=True)
+        carte.coupures_u2 = 2
+        d = build_essai(t)
+        erreur, rapports = envoie_firmware(carte, d)
+        verifie((erreur, carte.mode, carte.coupures_u2), (None, "app", 0), "ota_firmware_coupure : safeboot tout juste bascule, 2 coupures puis envoi reussi")
+        verifie(sum("nouvel essai" in r.get("detail", "") for r in rapports), 2, "ota_firmware_coupure : chaque nouvel essai est rapporte")
+        carte.ferme()
+        carte = Carte(safeboot=True)
+        carte.coupures_u2 = 99
+        erreur, _ = envoie_firmware(carte, d)
+        verifie("restée en safeboot" in (erreur or ""), True, "ota_firmware_coupure : coupures sans fin -> echec qui dit le safeboot")
+        verifie(99 - carte.coupures_u2, 4, "ota_firmware_coupure : 4 essais au plus")
+        carte.ferme()
+        carte = Carte(safeboot=False)
+        carte.coupures_u2 = 1
+        erreur, _ = envoie_firmware(carte, d)
+        verifie(("coupée" in (erreur or ""), carte.coupures_u2), (True, 0), "ota_firmware_coupure : hors safeboot, pas de nouvel essai")
+        carte.ferme()
+
+
 def test_ota_firmware_sans_safeboot():
     with tempfile.TemporaryDirectory() as t:
         carte = Carte(safeboot=False)
@@ -786,7 +808,7 @@ def principal():
                  test_ota_fs_persist_invalide,
                  test_image_extraite, test_image_illisible, test_ota_firmware_echec_en_safeboot,
                  test_ota_firmware_gz_perime,
-                 test_ota_firmware_envoi, test_ota_firmware_safeboot, test_ota_firmware_sans_safeboot,
+                 test_ota_firmware_envoi, test_ota_firmware_safeboot, test_ota_firmware_coupure, test_ota_firmware_sans_safeboot,
                  test_ota_firmware_inchange, test_ota_firmware_referer, test_ota_firmware_gz_prefere,
                  test_ota_firmware_echec):
         try:

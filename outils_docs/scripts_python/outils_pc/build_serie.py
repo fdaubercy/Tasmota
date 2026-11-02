@@ -69,6 +69,7 @@ from pathlib import Path
 import build_envs
 import build_memoire
 import build_partitions
+import build_drvset
 import build_ota_firmware
 import build_ota_fs
 import build_ota_maitre
@@ -484,7 +485,7 @@ class Serie:
         self._ajoute("debut", env, actions=actions, methode=ligne.methode, port=ligne.port, ip=ligne.ip)
         statuts = {a: "annulee" for a in actions}
         plan = self._plan(ligne, actions, pause=precedent is not None)
-        resultat, lance_pio = "succes", False
+        resultat, lance_pio, drvset = "succes", False, None
         for genre, action, cible, couvre, reussies in plan:
             if self._arrete_demande(immediat=True):     # arret immediat entre deux etapes : le reste « annulee »
                 resultat = "arrete"
@@ -497,6 +498,8 @@ class Serie:
                 continue
             if genre == "pio":
                 lance_pio = True
+                if ligne.methode == "com" and action in TELEVERSEMENTS and cible.split()[-1:] == [action]:
+                    drvset = self._sauve_drvset(ligne)   # le flash serie va remplacer le FS
                 ok, motif, extrait, etape = self._lance_pio(ligne, action, cible)
             else:
                 ok, motif, extrait, etape = self._lance_ota(ligne, genre)
@@ -516,6 +519,13 @@ class Serie:
             self._ajoute("echec", env, action=action, motif=motif, extrait=extrait)
             resultat = "arrete" if self._arrete_demande(immediat=True) else "echec"
             break
+        if drvset and resultat == "succes":
+            try:
+                relu = build_drvset.retablit(drvset[0], drvset[1])
+                self._ajoute("etape", env, action="upload", etape="Calibrage", pourcent=100, detail=f"rétabli : {relu}")
+            except RuntimeError as erreur:
+                self._ajoute("echec", env, action="upload", motif=str(erreur), extrait="")
+                resultat = "echec"
         if statuts.get("compiler") == "succes":         # bilan memoire relu tant que .pio/build est celui de l'env (A7)
             try:
                 build_memoire.enregistre(self.dossier, env, build_memoire.analyse(self.racine, env, self.dossier / "journaux"))
@@ -526,6 +536,14 @@ class Serie:
         self._ajoute("fin_env", env, resultat=resultat, statuts=statuts,
                      secondes=round(time.monotonic() - debut, 2))
         return resultat, lance_pio
+
+    def _sauve_drvset(self, ligne):
+        """(ip, copie de /.drvset003) avant un flash serie, None si rien a sauver (build_drvset.py)."""
+        ip = next((e.ip for e in build_envs.liste_envs(self.racine) if e.nom == ligne.env), "")
+        copie = build_drvset.sauvegarde(ligne.env, ip, self.dossier) if ip else None
+        self._ajoute("etape", ligne.env, action="upload", etape="Calibrage", pourcent=None,
+                     detail=f"sauvegardé : {copie}" if copie else "pas de calibrage sauvegardé (carte injoignable ou sans mesure)")
+        return (ip, copie) if copie else None
 
     def _attend_carte(self, ligne, precedent, fait):
         """Pause avant l'envoi : renvoie continuer | passer | arret.

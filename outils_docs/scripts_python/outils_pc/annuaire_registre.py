@@ -158,7 +158,7 @@ OUTILS = [
     Outil(
         "build", "Build et téléversement", "Build et téléversement", GROUPES[2],
         "Compile et téléverse les cartes du parc (firmware et file system, COM ou OTA), avec suivi en direct ; "
-        "occupation de la mémoire et partitions de chaque env.",
+        "fichiers du FS un par un, mémoire et partitions, envs par défaut, calibrage gardé autour d'un flash, aide.",
         "Page web de build : on coche des environnements PlatformIO et des actions (compiler, téléverser le "
         "firmware, construire le file system, téléverser le file system), COM ou OTA par ligne ; les "
         "environnements passent l'un après l'autre, avec étape, pourcentage, durées et échecs en direct. "

@@ -47,14 +47,13 @@
 		g.innerHTML = "<path class='e_ligne' d='" + d + "'/><line class='e_axe' x1='0' x2='" + L + "' y1='" + BAS + "' y2='" + BAS + "'/><text class='e_txt' x='0' y='9'>" + max + " W</text><text class='e_txt' x='0' y='87'>-24 h</text><text class='e_txt' x='" + L + "' y='87' text-anchor='end'>maintenant</text>";
 	}
 
+	// Le prix se regle dans Configuration (energieTarifs.*) : ici, seulement ce qui touche les couts affiches
 	function prix(liste, jour) {
-		var actuel = null;
+		var actuel = null, r = $('e_rappel');
 		liste.forEach(function (p) { if (p[0] <= jour) actuel = p; });
-		$('e_prixActuel').textContent = actuel ? 'Prix : ' + nombre(actuel[1] / 10000, 4) + ' €/kWh depuis le ' + actuel[0] : 'Aucun prix saisi : les coûts ne sont pas calculés.';
-		var r = $('e_rappel');
-		r.hidden = !(actuel && (new Date(jour) - new Date(actuel[0])) / 86400000 > 183);
-		if (!r.hidden) r.textContent = 'Le prix a plus de 6 mois : vérifiez votre tarif.';
-		if (!$('e_date').value) $('e_date').value = jour;
+		var vieux = actuel && (new Date(jour) - new Date(actuel[0])) / 86400000 > 183;
+		r.hidden = !(vieux || !actuel);
+		if (!r.hidden) r.textContent = actuel ? 'Le prix a plus de 6 mois : vérifiez votre tarif.' : 'Aucun prix saisi : les coûts ne sont pas calculés.';
 	}
 
 	// Heure en cours, ni terminee ni ecrite en flash : ajoutee a l'affichage pour coller a « Energie aujourd'hui » de l'accueil
@@ -62,7 +61,7 @@
 		var delta = wh === null ? 0 : wh - e.w;
 		if (!(delta > 0) || e.a.length == 0) return;
 		var p = 0, cout, heure = new Date(e.l * 1000).getUTCHours(), jour = parseInt(e.j.slice(8), 10) - 1, a = e.a[e.a.length - 1];
-		liste.forEach(function (x) { if (x[0] <= e.j) p = x[1]; });
+		liste.forEach(function (x) { if (x[0] <= e.j) p = x.length > 2 && (x[3] >> heure) & 1 ? x[2] : x[1]; });
 		cout = Math.round(delta * p / 1000);
 		e.h[heure] += delta; e.he[heure] += cout;
 		e.d[jour] += delta; e.de[jour] += cout;
@@ -100,16 +99,6 @@
 			$('e_arc').setAttribute('stroke-dasharray', (v(o.f) ? Math.max(0, Math.min(1, o.f)) * 100 : 0) + ' 100');
 		}).catch(function () {});
 	}
-
-	$('e_form').addEventListener('submit', function (ev) {
-		ev.preventDefault();
-		fetch(url, {method: 'POST', body: new URLSearchParams({jour: $('e_date').value, prix: $('e_montant').value})}).then(function (r) {
-			return r.json().then(function (o) {
-				$('e_msg').textContent = r.ok ? '' : o.erreur;
-				if (r.ok) { $('e_montant').value = ''; donnees(); }
-			});
-		}).catch(function () { $('e_msg').textContent = 'Enregistrement impossible.'; });
-	});
 
 	donnees();
 	direct();

@@ -19,5 +19,10 @@
 #e_prix{margin-top:14px}
 #e_prix p{margin:4px 0}
 #e_rappel{color:#d68a12;font-weight:bold}
+.e_lieu{font-size:0.8em;opacity:0.8}
+#e_liste{width:100%;border-collapse:collapse;font-size:0.9em}
+#e_liste th,#e_liste td{padding:3px 4px;text-align:left;border-bottom:1px solid rgba(127,127,127,0.4)}
+#e_form{margin-top:12px}
 #e_form label{display:block;margin:4px 0}
 #e_form input{width:100%;box-sizing:border-box}
+#e_form input[type=radio]{width:auto}

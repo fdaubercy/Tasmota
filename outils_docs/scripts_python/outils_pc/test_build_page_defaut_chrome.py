@@ -51,6 +51,8 @@ def sonde(m, capture):
     fichier.write_text(OVERRIDE, encoding="utf-8", newline="")
     m.ouvre()
     clic(cdp, f"#liste .env input[type=checkbox]")          # selection de l'onglet Build, a remplacer par le report
+    clic(cdp, "#onglet-aide")
+    s.verifie(cdp.js("(() => { const v = document.getElementById('vue-aide'); return [v.hidden, document.getElementById('vue-build').hidden, v.textContent.includes('.drvset003')]; })()"), [False, True, True], "onglet Aide : affiche, Build masque")
     clic(cdp, "#onglet-defaut")
     s.attend(cdp, "document.querySelectorAll('#d-colonnes input').length > 0", 10)
     s.attend(cdp, "document.querySelectorAll('#d-apercu .d-l').length > 0", 10)

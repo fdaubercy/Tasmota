@@ -19,12 +19,7 @@
 	<section><h3>12 derniers mois <span id='e_totalA' class='e_total'></span></h3><svg id='e_a' class='e_graphe' role='img' aria-label='Consommation par mois'></svg></section>
 	<section><h3>Puissance sur 24 h</h3><svg id='e_c' class='e_graphe' role='img' aria-label='Puissance sur 24 heures'></svg></section>
 	<section id='e_prix'>
-		<p id='e_prixActuel'></p>
 		<p id='e_rappel' hidden></p>
-		<form id='e_form'>
-			<label>Prix TTC (€/kWh) <input id='e_montant' type='number' step='0.0001' min='0.0001' max='2' required></label>
-			<label>À partir du <input id='e_date' type='date' required></label>
-			<button>Enregistrer le prix</button>
-		</form>
+		<p class='e_lieu'>Prix et tarifs : <a href='/cn'>Configuration</a> &gt; <a href='/energie?f=tarifs'>Tarifs de l'électricité</a></p>
 	</section>
 </div>

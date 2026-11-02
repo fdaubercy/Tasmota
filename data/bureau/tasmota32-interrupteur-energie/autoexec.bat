@@ -50,6 +50,7 @@ Backlog SerialLog 3; WebLog 3;
 
 ; Minuteries (relevees sur la carte le 2026-10-31) : relais allume a 08:00, coupe de 00:00 a 07:30 (Timer2 a 01:00 +/- 5 min)
 AdcParam1 34,32000,10000,15000,0
+WebSensor2 0
 
 Timers 1
 Timer1 {"Enable":1,"Mode":0,"Time":"08:00","Window":0,"Days":"1111111","Repeat":1,"Output":1,"Action":1}

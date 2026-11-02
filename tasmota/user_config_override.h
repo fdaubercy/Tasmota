@@ -925,7 +925,9 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #define USER_BACKLOG      "Backlog Module 0; Hostname VR-PORTE"
 
         // -- Options for firmware tasmota32-interrupteur-differentiel-bureau ------
-        #elif defined(FIRMWARE_ESP32_BUREAU_DISJONCTEUR_DIFFERENTIEL)
+        #elif defined(FIRMWARE_ESP32_BUREAU_INTERRUPTEUR_ENERGIE)
+            #undef CFG_HOLDER
+            #define CFG_HOLDER  1609    // propre a cet env, incremente par le pre-script (cfg_holder.py)
             // -- CODE_IMAGE_STR is the name shown between brackets on the 
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
@@ -964,7 +966,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #ifdef USER_TEMPLATE
                 #undef USER_TEMPLATE
             #endif
-            #define USER_TEMPLATE 		"{\"NAME\":\"Int Diff Nous D3T\",\"GPIO\":[32,1,9312,1,1,320,1,1,9313,8160,3200,544,1,1,1,1,0,1,1,1,0,0,1,1,0,0,0,0,1,1,4736,1,1,0,0,1],\"FLAG\":0,\"BASE\":1}"
+            #define USER_TEMPLATE 		"{\"NAME\":\"Disjoncteur Différentiel PC Bureau\",\"GPIO\":[32,1,9312,1,1,320,1,1,9313,8160,3200,544,1,1,1,1,0,1,1,1,0,0,1,1,0,0,0,0,1,1,4736,1,1,0,0,1],\"FLAG\":0,\"BASE\":1}"
                 
             // -- Wi-Fi ---------------------------------------
             #undef WIFI_IP_ADDRESS

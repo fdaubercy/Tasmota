@@ -105,7 +105,7 @@ jobs:
           - tasmota32p4r3-base-devkit
           - tasmota32-cave-serveur-rly
           - tasmota32-rdc-vr-porte
-          - tasmota32-bureau-interrupteur-differentiel
+          - tasmota32-bureau-interrupteur-energie
           - tasmota32s3-etage2-grenier
           - tasmota32p4-garage-serveur-modbus
           - tasmota32s3-garage-serveur-modbus

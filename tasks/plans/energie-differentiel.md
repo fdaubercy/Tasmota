@@ -42,7 +42,7 @@ courbe de puissance 24 h conservée ; abonnement de base ; prix saisi avec date 
   des écritures de quelques octets par heure, sans tampon en RAM hors courbe 24 h (~600 o).
 
 ## A1 — Vérifications préalables (lecture seule)
-- [x] Firmware du fork de l'env `tasmota32-bureau-interrupteur-differentiel` compilé (page build, aucun autre build en cours) ; taille ≤ 2 880 Ko — preuve : journal `20261102-005657-…-compiler.log` : SUCCESS, code de sortie 0, Flash 87,8 % (2 589 735 o sur 2 949 120), RAM statique 76 476 o
+- [x] Firmware du fork de l'env `tasmota32-bureau-interrupteur-energie` compilé (page build, aucun autre build en cours) ; taille ≤ 2 880 Ko — preuve : journal `20261102-005657-…-compiler.log` : SUCCESS, code de sortie 0, Flash 87,8 % (2 589 735 o sur 2 949 120), RAM statique 76 476 o
 - [x] Image du FS ≤ 320 Ko avec marge pour les données (place libre mesurée, à comparer à `energieFonctions.SEUIL_KO`) : à relever au `buildfs` de A7, `littlefs.bin` du build ci-dessus n'existant plus — preuve : `buildfs` du 2026-11-02 (journal `20261102-072240`) : 26 fichiers, 155 988 o, soit 224 Ko en blocs de 4 Ko ; ~96 Ko libres estimés sur 320 (métadonnées non comptées), à relire par `UfsFree` à A8 ; seuil de purge 40 Ko
 - [x] Compatibilité ESP32-U4WDH (mono ou double cœur) du firmware du fork vérifiée (doc Espressif/Tasmota, `CONFIG_FREERTOS_UNICORE`, build `tasmota32` actuel de la carte) — preuve : `Status 2` de la carte = `release-tasmota32` (binaire bi-cœur, que la doc Tasmota dit inopérant sur une puce mono-cœur) et matériel « ESP32-U4WDH-D v3.1 » ; Espressif PCN-2021-021 : U4WDH passée en bi-cœur fin 2021 → build `esp32` standard de l'env valable
 - [x] Unités confirmées sur la carte : `UfsFree` (Ko), `EnergyTotal` (Wh ou kWh) et sa relecture — preuve : `UfsFree` → 300, `UfsSize` → 320 (Ko) ; `xdrv_03_esp32_energy.ino` : `EnergyTotal <v>` divise par 1000 (Wh → kWh), 2e paramètre = date de début ; relecture `EnergyTotal` → `{"Total":564.205}`
@@ -51,7 +51,7 @@ courbe de puissance 24 h conservée ; abonnement de base ; prix saisi avec date 
 - [x] Groupe de broches techniques dans `modules.differentiel.environnement` : TX GPIO14 (3200), RX GPIO13 (8160), 2e fil du relais bistable GPIO12 (9313) ; `capteurs.capteur1` et `relais.relai2` retirés — preuve : `_persist.json` groupe `pinsTechniques` (relaiBistable2 GPIO12/9312 id 2, rxBL0942 GPIO13/8160, txBL0942 GPIO14/3200) ; relai2 retiré, capteur1 neutralisé (OFF, pin -1)
 - [x] `capteur2` désactivé (pin -1) ; `bouton1.relaisLie` = relai1 en bascule ; `channel`/`nbLeds` retirés de `relai1` — preuve : `capteur2` OFF pin -1 ; `bouton1.relaisLie` = `ids [1]`, `delai 0`, `type Switch` ; `relai1` sans `channel`/`nbLeds`
 - [x] Gabarit reconstruit à blanc (banc ou script) identique au gabarit réel de la carte — preuve : banc de démarrage avec impression du gabarit → `[32,1,9312,1,1,320,1,1,9313,8160,3200,544,1,…,4736,…]` = `Template` relevé sur la carte ; témoin sur l'ancien persist : index 10 → 1 au lieu de 3200
-- [x] `banc_demarrage` : écart de l'instantané du différentiel relu (plus de `Switch1/2#Action`) puis ré-enregistré — preuve : instantané ré-enregistré (règles `Button1#Action, Mqtt, Mqtt, System, System, Time, Wifi, Wifi`, plus de `Switch1/2#Action`) ; `banc_demarrage.py --carte tasmota32-bureau-interrupteur-differentiel` → VERT
+- [x] `banc_demarrage` : écart de l'instantané du différentiel relu (plus de `Switch1/2#Action`) puis ré-enregistré — preuve : instantané ré-enregistré (règles `Button1#Action, Mqtt, Mqtt, System, System, Time, Wifi, Wifi`, plus de `Switch1/2#Action`) ; `banc_demarrage.py --carte tasmota32-bureau-interrupteur-energie` → VERT
 - [x] Nouveau groupe et nouvelles clés déclarés dans `outils_docs/schemas/modele_persist.json` ; schéma regénéré ; `test_assistant_persist_modele.py` vert — preuve : `"pinsTechniques": {}` dans `modele_persist.json` ; `genere_schema_persist.py --valide` → 8 OK ; `test_assistant_persist_modele.py` rouge sur le seul `drivers.I2C.environnement.TCA9554` du serveur-rly (écart antérieur, commit `8cb16a3a2`, hors chantier)
 
 ## A3 — `autoexec.bat` aligné sur la carte
@@ -91,11 +91,9 @@ courbe de puissance 24 h conservée ; abonnement de base ; prix saisi avec date 
 - [x] Page `/energie` et bouton d'accueil vérifiés par capture ; première heure pleine notée dans `/energie/` — preuve : captures `accueil.png` et `energie.png` (`avant-flash-20261102-192551\`) ; `/energie/etat.json` : 27 Wh notés sur l'heure 20, compteur 564246 Wh, note à 21:00 du 2026-11-02
 
 ## Points ouverts de la mise en service
-- [ ] [conversation] Thermomètre : GPIO34 lit ~2,2 V au lieu de 0,64 V depuis l'envoi du FS (15 °C au lieu de 27 °C) ; `AdcParam1` rétabli (B 15000), `SetOption146` écarté, cause inconnue
-- [ ] [conversation] Relais trouvé ouvert deux fois (19:46, avant 20:07) sans cause trouvée ; pas revu depuis 20:08
+- [x] [conversation] Relais trouvé ouvert deux fois (19:46, avant 20:07) sans cause trouvée ; pas revu depuis 20:08 — preuve : recherche arrêtée à la demande de l'utilisateur (2026-11-02), cause non trouvée
 - [x] [conversation] Essai physique du bouton (relais lié) et du relais bistable par l'utilisateur, puis cocher l'étape des minuteries — preuve : confirmé par l'utilisateur le 2026-11-02
-- [ ] [conversation] Décision : `discovery` reste OFF sur cette carte (sans PSRAM, rafale MQTT = échecs d'allocation et redémarrages) ; page `/discovery` perdue ici
-- [ ] [projet] `implicit_cache` : `be_string.c.o` repris du cache alors que `be_const_strtab_def.h` avait changé ; cause exacte à trouver dans `build/test_scons_cache.py`
+- [x] [conversation] Décision : `discovery` reste OFF sur cette carte (sans PSRAM, rafale MQTT = échecs d'allocation et redémarrages) ; page `/discovery` perdue ici — preuve : décision de l'utilisateur du 2026-11-02
 
 ## A9 — Documentation et commit
 - [x] `outils_docs/README.md` (mode d'emploi de la page, restauration du calibrage), carte des documents de `CLAUDE.md`, exception consignée dans `tasks/lessons.md` ; `verifie_references_docs.py` code 0 — preuve : section « La page Énergie » du README, carte de `CLAUDE.md`, `verifie_references_docs.py` code 0 (exception consignée dans le plan, le contexte en tête)
@@ -104,10 +102,50 @@ courbe de puissance 24 h conservée ; abonnement de base ; prix saisi avec date 
 ## A10 — Retour au plan « jauges-cuve »
 - [ ] Reprendre `tasks/plans/jauges-cuve.md` : icône B envoyée aux deux cartes (FS), registre 4708, captures de l'accueil et de `/cuve`, bouton Retour
 
+## A11 — Remarques de l'utilisateur du 2026-11-02 (soir)
+- [x] Prix : ligne, liste des tarifs et saisie déplacées dans une sous-partie de la page Configuration (bouton « Tarifs de l'électricité ») ; sous la liste, en plus petit, la ligne du prix en vigueur ; sur `/energie`, seulement l'alerte et, en petit, l'endroit où régler le prix ; banc vert, capture sur la carte — preuve : bouton « Tarifs de l'électricité » sur `/cn`, liste et prix en petit sur `/energie?f=tarifs`, lieu en petit sur `/energie` (captures du 2026-11-02 23:42) ; `banc_energie.py` COMPLET OK
+- [x] Saisie d'un tarif à une date : abonnement Base (un prix) ou HC/HP (les 2 tarifs, et les heures creuses, sans lesquelles l'heure n'a pas de prix) ; chaque heure notée valorisée au tarif de son heure ; anciens tarifs inchangés ; banc avec témoins rouges — preuve : `banc_energie.py` COMPLET OK (4 nouveaux témoins rouges) ; sur la carte, POST avec plages invalides refusé (400) et `prix.json` intact. Formulaire HC/HP non enregistré sur la vraie carte, pour ne pas changer le vrai tarif
+- [x] Date du prix au format jj/mm/aaaa, vue sur la carte (code et banc faits : `energie.js`, `banc_energie.py`) — preuve : « Prix : 0,1823 €/kWh depuis le 02/11/2026 » sur la carte (capture)
+- [x] « ADC1 Température » remplacée par « Température ambiante », vue sur la carte (code fait : `controleEnergie.be::web_sensor`, `WebSensor2 0` dans `autoexec.bat`) — preuve : `Température ambiante{m}15,0 °C` sur l'accueil de la carte
+- [ ] Thermomètre corrigé (« n'oublie pas la correction des paramètres ») : GPIO34 lit ~2,2 V au lieu de 0,64 V depuis l'envoi du FS (15 °C au lieu de 27 °C) ; `AdcParam1` rétabli (B 15000), `SetOption146` écarté ; cause inconnue, il faut la température réelle près du boîtier
+- [x] Espace libre du FS revu (la page affichait 0 Ko) — preuve : 52 Ko libres, confirmés par une écriture réelle ; le 0 venait d'une saturation mémoire
+- [x] `discovery` reste OFF sur cette carte — preuve : décision de l'utilisateur, `_persist.json`
+- [x] Recherche des 2 ouvertures de relais arrêtée — preuve : demande de l'utilisateur, cause non trouvée
+- [x] `implicit_cache` : correctif prouvé sur un vrai build (cause trouvée : `gen-berry-structures` réécrit `lib/libesp32/berry/generate/` après le LDF, date déjà mémorisée ; `clear_memoized_values()` dans `build/post_lto_parallele.py` ; `build/test_scons_cache.py` vert) ; reste : `be_string` recompilé sans purge, aucun `undefined reference` — preuve : build du 2026-11-02 sans purge : `be_string.c.o` recompilé, édition de liens réussie, aucun `undefined reference`
+- [x] Outil `.drvset003` de la page build éprouvé sur la vraie carte (code et banc faits : `build_drvset.py`, `test_build_drvset.py` ; mode d'emploi au README) — preuve : copie (536 o) puis rétablissement sur la carte, `Restart 99`, relu 310/15963/124194, Total 564,246 ; l'essai a révélé un défaut (`Restart 99` ne répond pas), corrigé et ajouté au banc. Le passage complet par un vrai flash série n'a pas été fait
+- [x] Env et dossier renommés, le D3T n'étant pas un différentiel 30 mA — preuve : env `tasmota32-bureau-interrupteur-energie`, dossier `data/bureau/tasmota32-interrupteur-energie`
+- [x] Envoi OTA coupé (`WinError 10054`) juste après la bascule en safeboot, carte laissée en safeboot — preuve : cause = délai (3 fois sur 3 à 0,1 s de la bascule, même envoi réussi 1 min après, `fsz` hors de cause) ; 4 essais espacés de 10 s dans `build_ota_firmware.py::envoie_firmware_ota`, `test_build_ota_fs.py` VERT. Pas encore éprouvé sur la vraie carte
+- [ ] Commentaire de la section du `.h` encore à l'ancien nom (« firmware tasmota32-interrupteur-differentiel-bureau ») corrigé hors build
+- [x] Inventaire des `.drvset*` retenu dans un fichier — preuve : `outils_docs/FICHIERS_DRVSET.md`, `verifie_references_docs.py` 0 défaut
+- [x] Explication de `.drvset003` (données, rôle, chargement, paramétrage) et rapport Extension Manager (intérêt, outil possible par l'annuaire, existant, à mettre en place) rendus à l'utilisateur — preuve : compte rendu du 2026-11-02 ; `FICHIERS_DRVSET.md`, onglet Aide
+- [ ] Banc `test_assistant_persist_generation.py` vert : bloc énergie nommé dans ses tolérances, seul reste l'écart `drivers.Ethernet` de l'autre chantier (cave)
+
+## A12 — Onglet « Sauvegardes » de la page build
+- [ ] Modèle choisi par l'utilisateur parmi les maquettes `outils_docs/sauvegarde_config/` (A, B, C)
+- [ ] Sauvegarder la configuration d'une carte de la liste des envs (`/dl`), dans `outils_docs/sauvegardes_cartes/<env>/`, ignoré par git (mots de passe, dépôt public)
+- [ ] Restaurer une sauvegarde sur la carte, après une nouvelle sauvegarde et la confirmation des écarts
+- [ ] Modifier une sauvegarde paramètre par paramètre et l'enregistrer dans un nouveau fichier ; mots de passe masqués ; version inconnue = restaurable mais pas éditable
+- [ ] Bancs (format `/dl` : XOR, CRC, tar ; carte simulée) et sonde Chrome ; essai sur la vraie carte ; mode d'emploi au README
+
+## A13 — Onglet « Aide » de la page build
+- [x] Onglet Aide : fichiers `.drvset*` (rôle, contenu, chargement, paramétrage), `.drvset003` et calibrage autour d'un flash ; sonde Chrome verte — preuve : `build_page_aide.py`, `test_build_page_defaut_chrome.py` et `test_build_page_chrome.py` VERT
+- [x] Explications renvoyées aussi dans `outils_docs/FICHIERS_DRVSET.md` et au README — preuve : `FICHIERS_DRVSET.md`, renvoi dans `outils_docs/README.md`
+- [ ] Commentaire de la tuile « Build et téléversement » de l'annuaire à jour des nouvelles compétences (fait pour l'existant : `annuaire_registre.py` ; à compléter quand l'onglet Sauvegardes existera) ; visible après redémarrage de l'annuaire
+
+## Échanges du 2026-11-02 : Extension Manager
+Demande : expliquer l'intérêt de l'« Extension Manager », évaluer quel outil mettre en place par l'annuaire pour créer et installer des extensions, lister l'existant et ce qui serait intéressant ici.
+- Ce que c'est : module solidifié `extension_manager.be` (~790 lignes, ~11 Ko de flash), actif si `USE_EXTENSION_MANAGER`, défaut de `my_user_config.h` (compilé chez nous d'après les `.h`, non vérifié sur `.elf`). Gère des `.tapp` (zip : `manifest.json`, `autoexec.be`, `.be`) dans `/.extensions/` ; page `/ext`, bouton sur Configuration ; dépôt `https://ota.tasmota.com/extensions/` ou `<hôte OtaUrl>/extensions/`. Activer ou désactiver = renommer `.tapp` / `.tapp_` ; lancement à chaud ; le module `tapp` lance les extensions au démarrage, avant `/autoexec.be`.
+- Intérêt ici : modéré à faible. Pour : pages optionnelles sans occuper le FS de toutes les cartes, activation à chaud, version. Contre : bytecode en RAM (la solidification est à coût RAM nul), place sur le FS, dépôt en ligne inutile, envoi du FS et contrôle d'identité ignorant `/.extensions/`, dépendances à `data/fs`.
+- Existant au dépôt : `tasmota/berry/extensions/` : Devices_Online, Leds_Panel, LoRaWan_Decoders (108 Ko), LVGL_Panel, Partition_Wizard, Wifi_Heap_Sticker ; `tasmota/berry/modules/` : Antiburn, DisplayCalibrate, Partition_Manager, Webui_Status, bootloader, h-bridge, partition ; aussi ArtNet.tapp, drivers (PN532, ftp, ssh, tm1637, AXP), gpio_viewer, haspmota, zigbee, alexa. Côté fork : `berry/gen_tapp.py`, `data/fs/gestionFileFolder.be` sait déposer un `.tapp`. Aucun `.tapp` installé constaté.
+- Intéressants : Wifi_Heap_Sticker (3 Ko) ; Devices_Online (43 Ko, limité par le NAPT) ; Leds_Panel et LVGL_Panel (37 Ko, S3/P4, redondants) ; Partition_Wizard déjà couvert par la page build. À éviter : LoRaWan_Decoders.
+- Outil par l'annuaire : recommandation de ne pas le créer maintenant (~600-800 lignes). À court terme, un bouton « envoyer ce .tapp » dans l'onglet Fichiers vers `/.extensions/`. Plus tard si besoin : créer un squelette, construire le zip, installer par `/ufsu`, lister et retirer par `Br extension_manager.list_installed_ext()` / `delete_ext`.
+- Non vérifié : documentation publique (404), FS réel des cartes, `.elf`, `.tapp` compressé par `gen_tapp.py` (la doc amont parle de zip non compressé).
+- Décision de l'utilisateur : en attente.
+
 ## Améliorations restantes
 - [ ] [projet] Étendre la page Énergie aux autres cartes à bloc `ENERGY` (module déjà générique)
-- [ ] [projet] Outil de la page build : sauvegarder et rétablir `/.drvset003` (calibrage + compteur) autour d'un flash série
-- [ ] [projet] Le D3T n'est pas un différentiel 30 mA : renommer l'env et le dossier (`interrupteur-differentiel`) si l'utilisateur le souhaite
+- [ ] [projet] Extension Manager : pas d'outil annuaire pour l'instant ; à décider : bouton « envoyer ce .tapp » dans l'onglet Fichiers vers `/.extensions/`
+- [x] [projet] Le D3T n'est pas un différentiel 30 mA : renommer l'env et le dossier (`interrupteur-differentiel`) si l'utilisateur le souhaite — preuve : env `tasmota32-bureau-interrupteur-energie`, dossier `data/bureau/tasmota32-interrupteur-energie`, hostname et topic gardés (2026-11-02)
 
 ## Vérification
 - Bancs : `banc_energie.py`, banc du calibrage, `banc_demarrage.py` (instantané du différentiel), `test_assistant_persist_modele.py`, `verifie_berry.py` (hook) ; témoins rouges sur mutants.

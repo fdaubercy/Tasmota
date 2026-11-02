@@ -22,6 +22,7 @@ xdrv_01_9_webserver.ino) :
 Aucune vraie carte n'est contactee.
 """
 
+import socket
 import json
 import re
 import threading
@@ -56,6 +57,7 @@ class Carte:
         self.inchange = False                        # le firmware recu ne change pas la version
         self.apres_redemarrage = None                # transforme le persist a chaque redemarrage
         self.reste_en_safeboot = False               # apres l'envoi, la carte redemarre en safeboot
+        self.coupures_u2 = 0                         # nombre de POST /u2 dont la connexion est coupee (safeboot tout juste bascule)
         self.echec_u2 = False                        # POST /u2 refuse (page « Failed ») quel que soit le mode
         self.hostname = "CAPTEURS-CUVE"              # Hostname de Status 5
         self.maitre = False                          # repond a RoutageRangeExtender (Berry du maitre en marche)
@@ -117,6 +119,11 @@ class Carte:
         if url.path == "/up":
             self.type_envoi = "firmware"
             return self.repond(h, "<html>Mise a jour</html>")
+        if url.path == "/u2" and methode == "POST" and self.coupures_u2 > 0:
+            self.coupures_u2 -= 1
+            h.close_connection = True
+            h.connection.shutdown(socket.SHUT_RDWR)
+            return
         if url.path == "/u2" and methode == "POST":
             return self.recoit_firmware(h, corps)
         if url.path == "/u4" and "api" in args:
@@ -146,6 +153,16 @@ class Carte:
             return self.repond(h, '{"RoutageRangeExtender":{"commmande":"","status":"Succès"}}', "application/json")
         if cmnd == "BrRestart":                      # CmndBrRestart : machine Berry neuve, la carte reste en marche
             return self.repond(h, '{"BrRestart":"Berry VM restarted"}', "application/json")
+        if cmnd == "Restart 99":                     # sans sauvegarde (build_drvset.py)
+            if getattr(self, "restart_muet", False):  # comme la vraie carte : redemarre sans repondre
+                h.close_connection = True
+                h.connection.shutdown(socket.SHUT_RDWR)
+            else:
+                self.repond(h, '{"Restart":"Force restarting"}', "application/json")
+            if getattr(self, "apres_commande_restart", None):
+                self.apres_commande_restart()
+            self.redemarre()
+            return
         if cmnd == "Restart 1":
             self.repond(h, '{"Restart":"Restarting"}', "application/json")
             self.redemarre()

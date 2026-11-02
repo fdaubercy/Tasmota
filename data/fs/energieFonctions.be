@@ -146,14 +146,15 @@ def energieFonctions_purge()
 end
 energieFonctions.purge = energieFonctions_purge
 
-# Prix en dix-milliemes d'euro par kWh en vigueur a la date 'jour', 0 si aucun
-def energieFonctions_prixA(jour)
+# Prix en dix-milliemes d'euro par kWh en vigueur a la date 'jour' et a l'heure 'heure', 0 si aucun.
+# Entree de prix.json : [date, prix] (Base) ou [date, prix HP, prix HC, heures creuses (bit n = heure n)]
+def energieFonctions_prixA(jour, heure)
     import energieFonctions
     var liste = energieFonctions.lisJson("prix.json")
     var prix = 0
     if (isinstance(liste, list))
         for p: liste
-            if (p[0] <= jour)    prix = p[1]    end
+            if (p[0] <= jour)    prix = ((size(p) > 2 && ((p[3] >> heure) & 1) != 0) ? p[2] : p[1])    end
         end
     end
     return prix
@@ -197,7 +198,7 @@ def energieFonctions_verse(etat, wh, instant)
     import energieFonctions
     var t = tasmota.time_dump(instant)
     energieFonctions.bascule(etat, t)
-    var euros = int(real(wh) * energieFonctions.prixA(etat["j"]) / 1000 + 0.5)
+    var euros = int(real(wh) * energieFonctions.prixA(etat["j"], t["hour"]) / 1000 + 0.5)
     var a = etat["a"][-1]
     etat["h"][t["hour"]] += wh
     etat["he"][t["hour"]] += euros
@@ -263,8 +264,44 @@ def energieFonctions_releve(mesure, rtc)
 end
 energieFonctions.releve = energieFonctions_releve
 
-# Enregistre un prix (date AAAA-MM-JJ, euros par kWh) ; rend nil, ou le message d'erreur. Meme date : prix remplace.
-def energieFonctions_ajoutePrix(jour, euros)
+# Euros par kWh (texte) -> dix-milliemes d'euro, nil si hors limites
+def energieFonctions_lisPrix(euros)
+    import string
+    import energieFonctions
+    var valeur = real(string.replace(str(euros), ",", "."))
+    if (!(valeur > 0) || valeur > energieFonctions.PRIX_MAX)    return nil    end
+    return int(valeur * 10000 + 0.5)
+end
+energieFonctions.lisPrix = energieFonctions_lisPrix
+
+# Heures creuses "22-6,14-17" -> masque (bit n = heure n) ; nil si illisible ou si elles couvrent toute la journee
+def energieFonctions_masqueHC(texte)
+    import string
+    var masque = 0
+    for plage: string.split(string.replace(str(texte), " ", ""), ",")
+        var bornes = string.split(plage, "-")
+        if (size(bornes) != 2)    return nil    end
+        var debut = int(bornes[0])
+        var fin = int(bornes[1])
+        for i: 0 .. 1
+            var lue = (i == 0 ? debut : fin)
+            if (bornes[i] != str(lue) && bornes[i] != string.format("%02i", lue))    return nil    end
+        end
+        if (debut < 0 || debut > 23 || fin < 0 || fin > 24)    return nil    end
+        fin = fin % 24
+        if (debut == fin)    return nil    end
+        while (debut != fin)
+            masque = masque | (1 << debut)
+            debut = (debut + 1) % 24
+        end
+    end
+    return (masque == 0xFFFFFF ? nil : masque)
+end
+energieFonctions.masqueHC = energieFonctions_masqueHC
+
+# Enregistre un tarif (date AAAA-MM-JJ, euros par kWh ; si HC/HP : 'euros' = HP, plus le prix HC et les plages d'heures
+# creuses) ; rend nil, ou le message d'erreur. Meme date : tarif remplace.
+def energieFonctions_ajoutePrix(jour, euros, eurosHC, plages)
     import string
     import energieFonctions
     if (type(jour) != "string" || size(jour) != 10 || jour[4] != "-" || jour[7] != "-")    return "Date invalide"    end
@@ -274,11 +311,18 @@ def energieFonctions_ajoutePrix(jour, euros)
     var bissextile = (a % 4 == 0 && (a % 100 != 0 || a % 400 == 0))
     if (a < 2000 || m < 1 || m > 12 || string.format("%04i-%02i-%02i", a, m, j) != jour)    return "Date invalide"    end
     if (j < 1 || j > [31, bissextile ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1])    return "Date invalide"    end
-    var valeur = real(string.replace(str(euros), ",", "."))
-    if (!(valeur > 0) || valeur > energieFonctions.PRIX_MAX)    return "Prix invalide"    end
+    var prix = energieFonctions.lisPrix(euros)
+    if (prix == nil)    return "Prix invalide"    end
+    var nouveau = [jour, prix]
+    if (eurosHC != nil)
+        var hc = energieFonctions.lisPrix(eurosHC)
+        if (hc == nil)    return "Prix invalide"    end
+        var masque = energieFonctions.masqueHC(plages)
+        if (masque == nil)    return "Heures creuses invalides"    end
+        nouveau = [jour, prix, hc, masque]
+    end
     var liste = energieFonctions.lisJson("prix.json")
     if (!isinstance(liste, list))    liste = []    end
-    var nouveau = [jour, int(valeur * 10000 + 0.5)]
     var i = 0
     while (i < size(liste) && liste[i][0] < jour)    i += 1    end
     if (i < size(liste) && liste[i][0] == jour)
@@ -288,7 +332,7 @@ def energieFonctions_ajoutePrix(jour, euros)
         liste.insert(i, nouveau)
     end
     if (!energieFonctions.ecrisJson("prix.json", liste))    return "Ecriture impossible"    end
-    logFonctions.log("ENERGIE: Prix de " + str(valeur) + " euros par kWh a partir du " + jour + " !", LOG_LEVEL_INFO)
+    logFonctions.log("ENERGIE: Tarif " + str(nouveau) + " enregistre !", LOG_LEVEL_INFO)
     return nil
 end
 energieFonctions.ajoutePrix = energieFonctions_ajoutePrix
@@ -423,7 +467,8 @@ def energieFonctions_envoieDirect()
 end
 energieFonctions.envoieDirect = energieFonctions_envoieDirect
 
-def energieFonctions_page()
+# Page 'nom' (gabarit et script du meme nom), le bouton de retour en bas
+def energieFonctions_page(nom, bouton)
     import webserver
     import gestionFileFolder
     logFonctions.log("ENERGIE: Page demandee !", LOG_LEVEL_DEBUG, "serveurWeb")
@@ -432,16 +477,16 @@ def energieFonctions_page()
     webserver.content_send("<style>")
     gestionFileFolder.readFileByLineAndContentSend("/sd/css/energie.css")
     webserver.content_send("</style>")
-    gestionFileFolder.readFileByLineAndContentSend("/sd/html/energie.html")
+    gestionFileFolder.readFileByLineAndContentSend("/sd/html/" + nom + ".html")
     webserver.content_send("<script>")
-    gestionFileFolder.readFileByLineAndContentSend("/sd/js/energie.js")
+    gestionFileFolder.readFileByLineAndContentSend("/sd/js/" + nom + ".js")
     webserver.content_send("</script>")
-    webserver.content_button(webserver.BUTTON_MAIN)
+    webserver.content_button(bouton)
     webserver.content_stop()
 end
 energieFonctions.page = energieFonctions_page
 
-# Route GET /energie : f=donnees, f=direct, sinon la page. courbe : le bytes du driver
+# Route GET /energie : f=donnees, f=direct, f=tarifs (sous-page de Configuration), sinon la page. courbe : le bytes du driver
 def energieFonctions_route(courbe)
     import webserver
     import energieFonctions
@@ -457,8 +502,10 @@ def energieFonctions_route(courbe)
             energieFonctions.envoieDonnees(courbe)
         elif (f == "direct")
             energieFonctions.envoieDirect()
+        elif (f == "tarifs")
+            energieFonctions.page("energieTarifs", webserver.BUTTON_CONFIGURATION)
         else
-            energieFonctions.page()
+            energieFonctions.page("energie", webserver.BUTTON_MAIN)
         end
     except .. as erreur, message
         logFonctions.log("ENERGIE_ERREUR: Route /energie : " + str(erreur) + " " + str(message) + " !", LOG_LEVEL_ERREUR, "serveurWeb")
@@ -467,13 +514,14 @@ def energieFonctions_route(courbe)
 end
 energieFonctions.route = energieFonctions_route
 
-# Route POST /energie : jour (AAAA-MM-JJ) et prix (euros par kWh)
+# Route POST /energie : jour (AAAA-MM-JJ), prix (euros par kWh) ; si HC/HP : hc (euros par kWh) et plages
 def energieFonctions_enregistrePrix()
     import json
     import webserver
     import energieFonctions
     if (!webserver.check_privileged_access())    return nil    end
-    var erreur = energieFonctions.ajoutePrix(webserver.has_arg("jour") ? webserver.arg("jour") : "", webserver.has_arg("prix") ? webserver.arg("prix") : "")
+    var erreur = energieFonctions.ajoutePrix(webserver.has_arg("jour") ? webserver.arg("jour") : "", webserver.has_arg("prix") ? webserver.arg("prix") : "",
+                                              webserver.has_arg("hc") ? webserver.arg("hc") : nil, webserver.has_arg("plages") ? webserver.arg("plages") : "")
     webserver.content_open(erreur == nil ? 200 : 400, "application/json")
     webserver.content_send(erreur == nil ? "{\"ok\":true}" : json.dump({"erreur": erreur}))
     webserver.content_close()

@@ -166,6 +166,7 @@ PAGE = r"""<!doctype html>
 /*CSS_FICHIERS*/
 /*CSS_MEMOIRE*/
 /*CSS_DEFAUT*/
+/*CSS_AIDE*/
   @media (max-width:820px){.disposition{grid-template-columns:1fr}.commandes{position:static}}
   @media (max-width:520px){
     main{padding:8px 16px 30px}
@@ -197,6 +198,7 @@ PAGE = r"""<!doctype html>
     <button id="onglet-fichiers" type="button" role="tab" aria-selected="false" aria-controls="vue-fichiers">Fichiers</button>
     <button id="onglet-memoire" type="button" role="tab" aria-selected="false" aria-controls="vue-memoire">Mémoire et partitions</button>
     <button id="onglet-defaut" type="button" role="tab" aria-selected="false" aria-controls="vue-defaut">Envs par défaut</button>
+    <button id="onglet-aide" type="button" role="tab" aria-selected="false" aria-controls="vue-aide">Aide</button>
   </nav>
   <div id="vue-build" class="disposition" role="tabpanel" aria-labelledby="onglet-build">
     <section id="liste" aria-label="Environnements"><div class="vide">Lecture des environnements…</div></section>
@@ -238,6 +240,7 @@ PAGE = r"""<!doctype html>
 <!--VUE_FICHIERS-->
 <!--VUE_MEMOIRE-->
 <!--VUE_DEFAUT-->
+<!--VUE_AIDE-->
   <section id="suivi" class="carte" aria-live="polite">
     <h2>Suivi</h2>
     <div id="bandeaux"></div>
@@ -1206,5 +1209,7 @@ PAGE = (PAGE.replace("/*CSS_MEMOIRE*/", build_page_memoire.CSS).replace("<!--VUE
 import build_page_defaut                            # noqa: E402 - onglet « Envs par défaut » (plan default-envs-page)
 PAGE = (PAGE.replace("/*CSS_DEFAUT*/", build_page_defaut.CSS).replace("<!--VUE_DEFAUT-->", build_page_defaut.HTML)
         .replace("/*JS_DEFAUT*/", build_page_defaut.JS))
+import build_page_aide                              # noqa: E402 - onglet « Aide »
+PAGE = PAGE.replace("/*CSS_AIDE*/", build_page_aide.CSS).replace("<!--VUE_AIDE-->", build_page_aide.HTML)
 import build_page_couleurs                          # noqa: E402 - couleurs du panneau « Sortie »
 PAGE = PAGE.replace("/*JS_COULEURS*/", build_page_couleurs.JS)

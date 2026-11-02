@@ -4,13 +4,13 @@
 > Sortie deterministe (ni date, ni ordre de hachage) : regeneree sans changement de fond, elle ne
 > donne aucun diff. La date de generation est celle du commit.
 
-46 modules (39 dans `data/fs`, 7 propres a une carte), 8 cartes.
+49 modules (42 dans `data/fs`, 7 propres a une carte), 8 cartes.
 
 ## Tableau
 
 Legende : **S** solidifie dans l'env (`custom_berry_solidify`) - **I** importe par l'autoexec - **C** `compileModule` / `loadBerryFile` - **D** charge indirectement (importe par un module charge sur la carte) - **#** reference seulement commentee - **P** fichier propre a la carte - puis la garde d'activation evaluee sur le `_persist.json` de la carte : **ON** / **OFF** / **?** (non evaluable). Pas d'etat = pas de garde. Cellule vide = rien.
 
-| Module | Famille | bureau<br>tasmota32-interrupteur-differentiel | cave<br>tasmota32-serveur-rly | cave<br>tasmota32s3-serveur-rly | etage2<br>tasmota32s3-grenier | garage<br>tasmota32p4-serveur-modbus | garage<br>tasmota32s3-capteurs-cuve-modbus | garage<br>tasmota32s3-rideau-garage-modbus | garage<br>tasmota32s3-serveur-modbus |
+| Module | Famille | bureau<br>tasmota32-interrupteur-energie | cave<br>tasmota32-serveur-rly | cave<br>tasmota32s3-serveur-rly | etage2<br>tasmota32s3-grenier | garage<br>tasmota32p4-serveur-modbus | garage<br>tasmota32s3-capteurs-cuve-modbus | garage<br>tasmota32s3-rideau-garage-modbus | garage<br>tasmota32s3-serveur-modbus |
 |---|---|---|---|---|---|---|---|---|---|
 | `configDevices` | Socle | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON |
 | `configGlobal` | Socle | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
@@ -23,11 +23,11 @@ Legende : **S** solidifie dans l'env (`custom_berry_solidify`) - **I** importe p
 | `globalFonctions` | Socle | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
 | `logFonctions` | Socle | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
 | `webFonctions` | Socle | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
-| `controleDiscovery` | Reseau | S | S I OFF | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON |
+| `controleDiscovery` | Reseau | S I OFF | S I OFF | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON |
 | `controleRangeExtender` | Reseau | S | S I OFF | S I ON | S I ON | S I ON | S | S | S I ON |
 | `controleTCP` | Reseau | S | S I OFF | S I OFF | S I OFF | S | S | S | S I ON |
 | `controleUDP` | Reseau | S | S I OFF | S I ON | S I OFF | S I ON | S I ON | S I ON | S I ON |
-| `discoveryFonctions` | Reseau | S D | S D | S D | S D | S C ON | S C ON | S C ON | S C ON |
+| `discoveryFonctions` | Reseau | S C OFF | S D | S D | S D | S C ON | S C ON | S C ON | S C ON |
 | `rangeExtenderFonctions` | Reseau | S D | S D C OFF | S C ON | S C ON | S D | S D | S D | S C ON |
 | `tcpFonctions` | Reseau | S D | S D C OFF | S C OFF | S C OFF | S D | S D | S D | S C ON |
 | `udpFonctions` | Reseau | S D | S D C OFF | S C ON | S C OFF | S C ON | S C ON | S C ON | S C ON |
@@ -53,24 +53,26 @@ Legende : **S** solidifie dans l'env (`custom_berry_solidify`) - **I** importe p
 | `cuveFonctions` | Carte |  |  |  |  |  | P C ON |  |  |
 | `garageFonctions` | Carte |  |  |  |  | P C ON |  |  | P C ON |
 | `controleCoprocesseur` | Autres |  |  |  |  | S I ON |  |  |  |
+| `controleEnergie` | Autres | S I ON |  |  |  |  |  |  |  |
+| `cuvePageFonctions` | Autres |  |  |  |  | S D | S D |  |  |
 | `demarrage` | Autres | S I | S | S I | S I | S I | S I | S I | S |
+| `energieFonctions` | Autres | S D |  |  |  |  |  |  |  |
 | `fsMqtt` | Autres | S | S | S | S | S I | S I | S | S |
 | `graphiquesFonctions` | Autres |  |  | S I | S I | S I | S I | S I | S I |
 | `historiqueFonctions` | Autres |  |  | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
 | `historiqueSeries` | Autres |  |  | S I | S I | S I | S I | S I | S I |
 
-Envs : `bureau/tasmota32-interrupteur-differentiel` = `tasmota32-bureau-interrupteur-differentiel` ; `cave/tasmota32-serveur-rly` = `tasmota32-cave-serveur-rly` ; `cave/tasmota32s3-serveur-rly` = `tasmota32s3-cave-serveur-rly` ; `etage2/tasmota32s3-grenier` = `tasmota32s3-etage2-grenier` ; `garage/tasmota32p4-serveur-modbus` = `tasmota32p4-garage-serveur-modbus` ; `garage/tasmota32s3-capteurs-cuve-modbus` = `tasmota32s3-garage-capteurs-cuve-modbus` ; `garage/tasmota32s3-rideau-garage-modbus` = `tasmota32s3-garage-rideau-garage-modbus` ; `garage/tasmota32s3-serveur-modbus` = `tasmota32s3-garage-serveur-modbus`
+Envs : `bureau/tasmota32-interrupteur-energie` = `tasmota32-bureau-interrupteur-energie` ; `cave/tasmota32-serveur-rly` = `tasmota32-cave-serveur-rly` ; `cave/tasmota32s3-serveur-rly` = `tasmota32s3-cave-serveur-rly` ; `etage2/tasmota32s3-grenier` = `tasmota32s3-etage2-grenier` ; `garage/tasmota32p4-serveur-modbus` = `tasmota32p4-garage-serveur-modbus` ; `garage/tasmota32s3-capteurs-cuve-modbus` = `tasmota32s3-garage-capteurs-cuve-modbus` ; `garage/tasmota32s3-rideau-garage-modbus` = `tasmota32s3-garage-rideau-garage-modbus` ; `garage/tasmota32s3-serveur-modbus` = `tasmota32s3-garage-serveur-modbus`
 
 ## Incoherences detectees
 
 Constats factuels, sans jugement : un module peut etre volontairement dans cet etat.
 
-- `bureau/tasmota32-interrupteur-differentiel` : `controleLedTemoin` solidifie, jamais importe ni charge par l'autoexec.
-- `bureau/tasmota32-interrupteur-differentiel` : `controleDiscovery` solidifie, jamais importe ni charge par l'autoexec.
-- `bureau/tasmota32-interrupteur-differentiel` : `controleRangeExtender` solidifie, jamais importe ni charge par l'autoexec.
-- `bureau/tasmota32-interrupteur-differentiel` : `controleTCP` solidifie, jamais importe ni charge par l'autoexec.
-- `bureau/tasmota32-interrupteur-differentiel` : `controleUDP` solidifie, jamais importe ni charge par l'autoexec.
-- `bureau/tasmota32-interrupteur-differentiel` : `fsMqtt` solidifie, jamais importe ni charge par l'autoexec.
+- `bureau/tasmota32-interrupteur-energie` : `controleLedTemoin` solidifie, jamais importe ni charge par l'autoexec.
+- `bureau/tasmota32-interrupteur-energie` : `controleRangeExtender` solidifie, jamais importe ni charge par l'autoexec.
+- `bureau/tasmota32-interrupteur-energie` : `controleTCP` solidifie, jamais importe ni charge par l'autoexec.
+- `bureau/tasmota32-interrupteur-energie` : `controleUDP` solidifie, jamais importe ni charge par l'autoexec.
+- `bureau/tasmota32-interrupteur-energie` : `fsMqtt` solidifie, jamais importe ni charge par l'autoexec.
 - `cave/tasmota32-serveur-rly` : `demarrage` solidifie, jamais importe ni charge par l'autoexec.
 - `cave/tasmota32-serveur-rly` : `fsMqtt` solidifie, jamais importe ni charge par l'autoexec.
 - `cave/tasmota32s3-serveur-rly` : `fsMqtt` solidifie, jamais importe ni charge par l'autoexec.
@@ -87,6 +89,8 @@ Constats factuels, sans jugement : un module peut etre volontairement dans cet e
 
 ### Informations (normal ou voulu, listees pour memoire)
 
+- `bureau/tasmota32-interrupteur-energie` : `controleDiscovery` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
+- `bureau/tasmota32-interrupteur-energie` : `discoveryFonctions` : charge alors que sa garde vaut OFF.
 - `cave/tasmota32-serveur-rly` : `controleDiscovery` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
 - `cave/tasmota32-serveur-rly` : `controleRangeExtender` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
 - `cave/tasmota32-serveur-rly` : `controleTCP` : import / chargement conditionne par l'autoexec, condition evaluee OFF (non execute).
@@ -119,11 +123,11 @@ Constats factuels, sans jugement : un module peut etre volontairement dans cet e
 
 Un diagramme par carte (tout dans un seul serait illisible). Modules **charges** par l'autoexec (import / compileModule / loadBerryFile non commentes). Fleche pleine = garde ON ou sans garde ; pointillee = garde OFF ou non evaluable (?).
 
-### bureau/tasmota32-interrupteur-differentiel
+### bureau/tasmota32-interrupteur-energie
 
 ```mermaid
 flowchart LR
-    CARTE(["bureau/tasmota32-interrupteur-differentiel"])
+    CARTE(["bureau/tasmota32-interrupteur-energie"])
     subgraph g_Socle["Socle"]
         m_configDevices["configDevices"]
         m_configGlobal["configGlobal"]
@@ -137,6 +141,7 @@ flowchart LR
         m_webFonctions["webFonctions"]
     end
     subgraph g_Reseau["Reseau"]
+        m_controleDiscovery["controleDiscovery"]
         m_discoveryFonctions["discoveryFonctions"]
         m_rangeExtenderFonctions["rangeExtenderFonctions"]
         m_tcpFonctions["tcpFonctions"]
@@ -150,7 +155,9 @@ flowchart LR
         m_ledsPanelFonctions["ledsPanelFonctions"]
     end
     subgraph g_Autres["Autres"]
+        m_controleEnergie["controleEnergie"]
         m_demarrage["demarrage"]
+        m_energieFonctions["energieFonctions"]
     end
     CARTE --> m_configDevices
     CARTE --> m_configGlobal
@@ -162,7 +169,8 @@ flowchart LR
     CARTE --> m_globalFonctions
     CARTE --> m_logFonctions
     CARTE --> m_webFonctions
-    m_udpFonctions -.->|import| m_discoveryFonctions
+    CARTE -.-> m_controleDiscovery
+    CARTE -.-> m_discoveryFonctions
     m_controleWeb -.->|import| m_rangeExtenderFonctions
     m_discoveryFonctions -.->|import| m_rangeExtenderFonctions
     m_modbusFonctions -.->|import| m_tcpFonctions
@@ -176,7 +184,9 @@ flowchart LR
     m_controleWeb -.->|import| m_ledsPanelFonctions
     m_ledsFonctions -.->|import| m_ledsPanelFonctions
     m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
+    CARTE --> m_controleEnergie
     CARTE --> m_demarrage
+    m_controleEnergie -.->|import| m_energieFonctions
 ```
 
 ### cave/tasmota32-serveur-rly
@@ -469,6 +479,7 @@ flowchart LR
     end
     subgraph g_Autres["Autres"]
         m_controleCoprocesseur["controleCoprocesseur"]
+        m_cuvePageFonctions["cuvePageFonctions"]
         m_demarrage["demarrage"]
         m_fsMqtt["fsMqtt"]
         m_graphiquesFonctions["graphiquesFonctions"]
@@ -511,6 +522,7 @@ flowchart LR
     CARTE --> m_controleGarage
     CARTE --> m_garageFonctions
     CARTE --> m_controleCoprocesseur
+    m_controleGarage -.->|import| m_cuvePageFonctions
     CARTE --> m_demarrage
     CARTE --> m_fsMqtt
     CARTE --> m_graphiquesFonctions
@@ -562,6 +574,7 @@ flowchart LR
         m_cuveFonctions["cuveFonctions"]
     end
     subgraph g_Autres["Autres"]
+        m_cuvePageFonctions["cuvePageFonctions"]
         m_demarrage["demarrage"]
         m_fsMqtt["fsMqtt"]
         m_graphiquesFonctions["graphiquesFonctions"]
@@ -599,6 +612,7 @@ flowchart LR
     m_rangeExtenderFonctions -.->|import| m_ledsPanelFonctions
     CARTE --> m_controleCuve
     CARTE --> m_cuveFonctions
+    m_controleCuve -.->|import| m_cuvePageFonctions
     CARTE --> m_demarrage
     CARTE --> m_fsMqtt
     CARTE --> m_graphiquesFonctions
