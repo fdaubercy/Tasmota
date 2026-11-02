@@ -4,7 +4,7 @@ titre: Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2
 objectif: Piloter le ruban WS2812 de la cuve en AUTO/MANUEL (bouton et ModBus) et préparer la carte cuve v0.2
 statut: actif
 cree: 2026-10-18
-maj: 2026-10-31
+maj: 2026-11-02
 ---
 # Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2
 
@@ -51,7 +51,7 @@ la cuve refonctionne et sa grille ModBus a été validée le 17/10 (plan `modbus
 - [x] Firmware de la cuve recompilé et téléversé : symbole visible sur la page, clic en MANUEL = retour AUTO — preuve : vu par l'utilisateur le 2026-10-31 (✋ 29) ; relevé par le maître avant le clic MANUEL, reste 29 min, après le clic `ledsFonctions.mode` = AUTO et ligne `ldM` data-m='AUTO' ; modules absents du FS (solidifiés)
 - [x] Commit — preuve : commit 91bbae69a
 - [x] Même symbole sur la page du maître pour le ruban virtuel (texte « Ruban : … » et bouton « Auto » remplacés, « Couleur suivante » gardé) — preuve : vraie page du P4 avec le nouveau code en Chrome sans fenêtre, largeur 409 px dans les 3 cas (inconnu, AUTO, MANUEL 30), banc_leds et banc_test_modbus verts
-- [ ] Firmware du P4 recompilé et téléversé (`ledsPanelFonctions` est solidifié) : symbole visible, clic en MANUEL = retour AUTO
+- [x] Firmware du P4 recompilé et téléversé (`ledsPanelFonctions` est solidifié) : symbole visible, clic en MANUEL = retour AUTO — preuve : envoi du 2026-11-02 05:17 code 0, BuildDateTime 2026-11-01T16:12:46, ⟳ vu en capture Chrome ; ✋ et clic essayés par l'utilisateur le 2026-11-02
 
 
 ## A5 — Avant de commander la carte
