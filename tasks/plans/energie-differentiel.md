@@ -87,13 +87,13 @@ courbe de puissance 24 h conservée ; abonnement de base ; prix saisi avec date 
 - [x] Partitions de la carte = celles de l'env, safeboot présent — preuve : capture de l'assistant de partitions par l'utilisateur (2026-11-02) : safeboot 832 Ko (97 %), app0 2 880 Ko (71 %), fs 320 Ko, disposition Safeboot = `esp32_partition_app2880k_fs320k.csv` (0xD0000 / 0x2D0000 / 0x50000) ; démarrage réel du safeboot NON éprouvé
 - [x] Firmware puis FS envoyés en OTA par la page build ; carte revenue sur 192.168.0.49 — preuve : 16.0.0.2 du 2026-11-02 20:57 sur 192.168.0.49, FS envoyé par la page. ÉCARTS : boucle `Hostname` de `autoexec.bat`, `partition_wizard`, tas à 24-32 Ko avec `discovery` (mis à OFF) ; un envoi coupé (WinError 10054) a laissé la carte en safeboot, relancé à la main par `/up` + `/u2`
 - [x] Calibrage réappliqué (automatique A5, sinon `Backlog VoltageCal…`) et `EnergyTotal` rétabli puis relu ; mesure d'une charge connue comparée à avant — preuve : 310/15963/124194 et Total conservés sans rejeu (564,246) ; sous 37-39 W : 0,172-0,18 A, facteur 0,99 = avant
-- [ ] Minuteries actives (`Timers`), bouton et relais bistable essayés, tas libre (`Status 4`) noté et > 40 Ko
-- [ ] Page `/energie` et bouton d'accueil vérifiés par capture ; première heure pleine notée dans `/energie/`
+- [x] Minuteries actives (`Timers`), bouton et relais bistable essayés, tas libre (`Status 4`) noté et > 40 Ko — preuve : `Timers` ON, identiques au relevé d'avant flash ; bouton et relais bistable essayés par l'utilisateur (confirmé le 2026-11-02) ; `Status 4` Heap 52 Ko, `Status 11` 58 Ko à 21:26
+- [x] Page `/energie` et bouton d'accueil vérifiés par capture ; première heure pleine notée dans `/energie/` — preuve : captures `accueil.png` et `energie.png` (`avant-flash-20261102-192551\`) ; `/energie/etat.json` : 27 Wh notés sur l'heure 20, compteur 564246 Wh, note à 21:00 du 2026-11-02
 
 ## Points ouverts de la mise en service
 - [ ] [conversation] Thermomètre : GPIO34 lit ~2,2 V au lieu de 0,64 V depuis l'envoi du FS (15 °C au lieu de 27 °C) ; `AdcParam1` rétabli (B 15000), `SetOption146` écarté, cause inconnue
 - [ ] [conversation] Relais trouvé ouvert deux fois (19:46, avant 20:07) sans cause trouvée ; pas revu depuis 20:08
-- [ ] [conversation] Essai physique du bouton (relais lié) et du relais bistable par l'utilisateur, puis cocher l'étape des minuteries
+- [x] [conversation] Essai physique du bouton (relais lié) et du relais bistable par l'utilisateur, puis cocher l'étape des minuteries — preuve : confirmé par l'utilisateur le 2026-11-02
 - [ ] [conversation] Décision : `discovery` reste OFF sur cette carte (sans PSRAM, rafale MQTT = échecs d'allocation et redémarrages) ; page `/discovery` perdue ici
 - [ ] [projet] `implicit_cache` : `be_string.c.o` repris du cache alors que `be_const_strtab_def.h` avait changé ; cause exacte à trouver dans `build/test_scons_cache.py`
 
