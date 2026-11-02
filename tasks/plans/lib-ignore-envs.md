@@ -2,7 +2,7 @@
 chantier: lib-ignore-envs
 titre: lib_ignore pour chaque env personnel, avec garde au pre-build
 objectif: Etendre a tous les envs personnels le lib_ignore valide sur la cuve, chaque liste etablie et controlee par un script avant le scan des dependances
-statut: actif
+statut: clos
 cree: 2026-10-31
 maj: 2026-11-02
 ---
@@ -47,7 +47,7 @@ Décisions :
 - [x] Cartes flashées et vérifiées par l'utilisateur — preuve : déclaration de l'utilisateur du 2026-11-02 (« coche la partie cartes flashées et vérifiées ») ; vu par Claude : P4 seul, `Status 2` build du 2026-11-01 04:48:18
 
 ## A5 — Bilan
-- [ ] Gains par env consignés ; commit du cenv et des plans
+- [x] Gains par env consignés ; commit du cenv et des plans — preuve : tableau « Gains par env » en § Vérification ; cenv commité (`e822b21be`, `51fd93da0`, aucun écart avec HEAD) ; « avant » mesuré seulement sur cuve, P4 et rideau (journaux de build), le temps seulement sur la cuve
 
 ## Améliorations restantes
 - [ ] [projet] Piscine (ESP8266) : liste établie à la main avec `--propose` si un jour utile (pas de garde)
@@ -91,4 +91,29 @@ Série des 7 autres envs (page build, compilation seule, `.pio/build` vidé par 
 | grenier | 13 min 36 | 57 s | 89 | 84 min 36 |
 | S3 serveur garage | 11 min 53 | 56 s | 80 | 56 min 40 |
 | rideau | 10 min 07 | 9 s | 80 | 32 min 30 |
+
+### Gains par env (bilan du 2026-11-02)
+
+| Env | Ignorées par le cenv | Compatibles avant → après | Pré-build avant → après |
+|---|---|---|---|
+| cuve | 58 | 138 → 80 | 27 min 17 → 3 min 40 à 10 min 51 |
+| P4 | 56 | 141 → 85 | non mesuré → 8 min 12 à 15 min 27 |
+| rideau | 58 | 138 → 80 | non mesuré → 10 min 07 |
+| S3 serveur garage | 58 | non mesuré → 80 | non mesuré → 11 min 53 |
+| cave S3 | 50 | non mesuré → 88 | non mesuré → 9 min 36 |
+| cave ESP32 | 61 | non mesuré → 78 | non mesuré → 21 min 29 |
+| différentiel | 61 | non mesuré → 78 | non mesuré → 8 min 25 |
+| VR porte | 59 | non mesuré → 80 | non mesuré → 7 min 38 |
+| grenier | 49 | non mesuré → 89 | non mesuré → 13 min 36 |
+
+Sources de l'« avant » : `lib-ignore-cuve.md` A1 pour le temps de la cuve ; journaux de build du 2026-10-25 au 2026-10-31
+pour les compatibles (cuve, P4, rideau). Les 6 autres envs n'avaient aucun journal sans `lib_ignore`.
+
+Limites :
+- Le gain de temps n'est prouvé que sur la cuve, et n'est pas dû au seul `lib_ignore` : les réglages SCons du pré-script
+  (`implicit_cache`, `content-timestamp`) sont arrivés le 2026-11-01. L'écart 3 min 40 / 10 min 51 sur un même env et une même
+  liste montre aussi le poids de l'état de la machine et du cache.
+- Durées mesurées sur le pré-build complet (pré-scripts, contrôle et scan) : le scan seul n'est pas isolé.
+- Cave ESP32 : 21 min 29 en premier de la série, contrôle 168 s contre 7 à 57 s ailleurs ; cause non cherchée.
+- Le coût du contrôle reste faible : 7 à 57 s, hors cave ESP32.
 
