@@ -1,9 +1,9 @@
 ---
 chantier: temps-compilation
 titre: Réduire le temps des compilations et éviter les recompilations complètes
-statut: actif
+statut: clos
 cree: 2026-11-01
-maj: 2026-11-01
+maj: 2026-11-02
 source: breezy-mapping-backus.md
 objectif: Ne plus recompiler tasmota.ino.cpp ni purger .pio/build sans raison, mesurer avant de séparer les dossiers de build par env, puis montrer l'occupation mémoire et régler les partitions depuis la page build
 ---
@@ -165,7 +165,7 @@ Décidé le 2026-11-01. Maquettes, chiffres réels et contraintes : `outils_docs
 - [x] Documentation — preuve : `outils_docs/README.md` § « Onglet « Mémoire et partitions » », `CLAUDE.md` (carte des documents), `verifie_references_docs.py` 0 défaut ; `outils_docs/README.md` § build et `CLAUDE.md` (carte des documents, nouveaux modules)
 
 ## Améliorations restantes
-- [ ] [projet] Dossier de build par env, si A2 conclut « faire » (A2 a conclu « ne pas faire » le 01/11)
+- [x] [projet] Dossier de build par env, si A2 conclut « faire » — preuve : sans objet, A2 a conclu « ne pas faire » le 01/11
 - [x] [projet] Chrome prend ~16 s de CPU sur 23 s pendant un lien (mesure du 01/11, 15 processus ; poste à 2 cœurs physiques, CPU à ~98 %) : identifier l'onglet, peut-être une page d'outil ouverte — preuve : non reproduit, relevés par processus du 01/11 au soir : 0,05 cœur au repos, 0,04 pendant 15 min de build, 0,01 sur 71 s ; onglet de l'époque non identifiable après coup, rien à corriger
 - [x] [projet] `cpptools` (indexeur C/C++ de VS Code) occupe 0,75 cœur sur 4 hors build (mesure du 01/11, 8 s) : exclure `.pio`, `.cache` et `lib/` de son analyse, dans le profil VS Code, à essayer et à mesurer — preuve : `C_Cpp.files.exclude` du profil « Frédéric » (`**/.pio`, `**/.cache`, `${workspaceFolder}/lib`) et `files.watcherExclude` (`.pio`, `.cache`) posés le 01/11 ; pendant un build : ~0,5 cœur avant (15 min relevées), 0,0 après (71 s relevées, une seule fenêtre). Copie d'origine du profil dans le scratchpad de la conversation
 - [x] [projet] QEMU d'Espressif (ESP32-S3 seulement, pas le P4 ; sans support officiel) : essai borné pour démarrer une table modifiée sans toucher une carte, avant l'essai réel de A9 ; démarrage de Tasmota non garanti — preuve : essai du 01/11, QEMU esp-develop 9.2.2 (20260417), image `tasmota32s3-garage-capteurs-cuve-modbus.factory.bin` : la ROM charge le chargeur de démarrage, puis arrêt (flash émulée M25P80 : commandes 0x5A, 0x77, 0x7A, 0x90 inconnues). Conclusion : inutilisable sans un chargeur de démarrage refait pour QEMU, abandonné

@@ -13,12 +13,11 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-27 plans : 10 actif, 1 en-pause, 16 clos.
+27 plans : 9 actif, 1 en-pause, 17 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Créé | Mis à jour |
 |---|---|---|---|---|---|
 | [Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)](plans/energie-differentiel.md) | Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h) | actif | ███░░░░░░░ 27 % (9/33) | 2026-10-31 | 2026-11-01 |
-| [Réduire le temps des compilations et éviter les recompilations complètes](plans/temps-compilation.md) | Ne plus recompiler tasmota.ino.cpp ni purger .pio/build sans raison, mesurer avant de séparer les dossiers de build par env, puis montrer l'occupation mémoire et régler les partitions depuis la page build | actif | ██████████ 100 % (57/57) | 2026-11-01 | 2026-11-01 |
 | [Page dédiée « Niveau de la cuve » (jauges A, H et B), lien depuis l'encadré de la cuve](plans/jauges-cuve.md) | Afficher volume (jauge A), taux (jauge H) et tensions brute et recalculée de la sonde (cadran B) de la cuve sur une page dédiée ouverte depuis son encadré, sur la cuve et le P4 | actif | █████████░ 88 % (26/32) | 2026-10-31 | 2026-10-31 |
 | [lib_ignore pour chaque env personnel, avec garde au pre-build](plans/lib-ignore-envs.md) | Etendre a tous les envs personnels le lib_ignore valide sur la cuve, chaque liste etablie et controlee par un script avant le scan des dependances | actif | ███████░░░ 67 % (14/17) | 2026-10-31 | 2026-10-31 |
 | [Cave — envs ESP32/S3 alignés sur la carte en ligne, audit de l'env S3, carte S3 8 relais de remplacement](plans/relais-cave-s3.md) | Aligner les envs de la cave sur les broches de la carte en ligne, auditer l'env S3 et choisir une carte ESP32-S3 à 8 relais pour la remplacer | actif | ████████░░ 80 % (17/19) | 2026-10-31 | 2026-10-31 |
@@ -28,6 +27,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 | [Plan d'action de l'audit Berry (propositions P2.1 à P10.7)](plans/actions-audit-berry.md) | Mettre en œuvre, lot par lot et sur décision de l'utilisateur, les 78 propositions de l'audit Berry | actif | █████████░ 91 % (89/95) | 2026-10-22 | 2026-10-26 |
 | [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) | Ajouter l'Ethernet en option sur le maître ModBus P4, le Wi-Fi restant le défaut | actif | ░░░░░░░░░░ 0 % (0/37) | 2026-10-26 | 2026-10-26 |
 | [Suites de l'audit de l'env S3 du serveur relais de la cave](plans/audit-relais-cave-s3.md) | Rendre l'env tasmota32s3-cave-serveur-rly prêt à remplacer la carte de la cave en ligne, selon les propositions de l'audit | en-pause | ░░░░░░░░░░ 0 % (0/22) | 2026-10-31 | 2026-10-31 |
+| [Réduire le temps des compilations et éviter les recompilations complètes](plans/temps-compilation.md) | Ne plus recompiler tasmota.ino.cpp ni purger .pio/build sans raison, mesurer avant de séparer les dossiers de build par env, puis montrer l'occupation mémoire et régler les partitions depuis la page build | clos | ██████████ 100 % (57/57) | 2026-11-01 | 2026-11-02 |
 | [Modifier default_envs depuis la page Build](plans/default-envs-page.md) | Choisir sur la page Build les envs compilés par un simple pio run, sans ouvrir platformio_override.ini | clos | ██████████ 100 % (17/17) | 2026-11-01 | 2026-11-01 |
 | [Accélérer le scan des dépendances (LDF) — essai lib_ignore sur l'env de la cuve](plans/lib-ignore-cuve.md) | Réduire le temps du scan LDF et de la compilation de l'env cuve en ignorant les bibliothèques qu'il n'utilise pas, mesuré avant et après | clos | ██████████ 100 % (19/19) | 2026-10-31 | 2026-11-01 |
 | [Env S3 relais cave adapté à la carte Waveshare ESP32-S3-ETH-8DI-8RO](plans/cave-s3-waveshare.md) | Faire tourner les entrées-sorties actuelles du persist de la cave S3 sur la carte Waveshare 8DI-8RO, relais par le TCA9554 | clos | ██████████ 100 % (17/17) | 2026-10-31 | 2026-10-31 |
