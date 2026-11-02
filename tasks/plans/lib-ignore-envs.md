@@ -4,7 +4,7 @@ titre: lib_ignore pour chaque env personnel, avec garde au pre-build
 objectif: Etendre a tous les envs personnels le lib_ignore valide sur la cuve, chaque liste etablie et controlee par un script avant le scan des dependances
 statut: actif
 cree: 2026-10-31
-maj: 2026-10-31
+maj: 2026-11-02
 ---
 # lib_ignore pour chaque env personnel
 
@@ -42,9 +42,9 @@ Décisions :
 - [x] Relu par `ProjectConfig` ; garde rejouée hors build sur chaque env (aucun défaut) — preuve : 9 envs, ajouts = propositions exactement (rien en plus, rien en moins), garde OK en 5 à 7 s chacun
 
 ## A4 — Validation par carte (un build à la fois, jamais pendant un build de l'utilisateur)
-- [ ] Chaque env compile ; durée du scan relevée
+- [x] Chaque env compile ; durée du scan relevée — preuve : `/flux` de la page build, série du 2026-11-01 21:40 → 2026-11-02 04:40, 7 envs en succès (aucun échec), contrôle ✔ « aucune utilisee » sur chacun ; cuve et P4 compilés le 2026-11-01 ; durée relevée = pré-build complet (scan compris, non isolé), tableau en § Vérification
   - [x] Listes recalculées avec le script corrigé et cenv corrigé — preuve : ESPFtpServer, ESP8266SAM, mp3_shine_esp32 retirées de `commun` (FTP actif sur 7 cartes, audio I2S sur le P4), remises en propres là où ignorables ; 9 envs = calcul exactement, garde OK
-- [ ] Cartes flashées et vérifiées par l'utilisateur
+- [x] Cartes flashées et vérifiées par l'utilisateur — preuve : déclaration de l'utilisateur du 2026-11-02 (« coche la partie cartes flashées et vérifiées ») ; vu par Claude : P4 seul, `Status 2` build du 2026-11-01 04:48:18
 
 ## A5 — Bilan
 - [ ] Gains par env consignés ; commit du cenv et des plans
@@ -78,4 +78,17 @@ Builds avec les listes corrigées (page build, 2026-11-01) :
   lib_ignore (80 bibliothèques compatibles, 115 avant ; contrôle ✔ 58) : une autre conversation a lancé
   `solidifie_et_compile_berry.py` à 05:35:27, qui vide `embedded/`, 18 s avant l'échec. Ce script refuse
   désormais de tourner pendant un build. Cuve à relancer.
+- Cuve relancée : compilations réussies le 2026-11-01 (15:22 à 15:57, pré-build 3 min 40 à 10 min 51).
+
+Série des 7 autres envs (page build, compilation seule, `.pio/build` vidé par le changement du cenv) :
+
+| Env | Pré-build | Contrôle | Bibliothèques compatibles | Total |
+|---|---|---|---|---|
+| cave ESP32 | 21 min 29 | 168 s | 78 | 71 min 06 |
+| cave S3 | 9 min 36 | 50 s | 88 | 77 min 46 |
+| VR porte | 7 min 38 | 22 s | 80 | 47 min 22 |
+| différentiel | 8 min 25 | 7 s | 78 | 48 min 50 |
+| grenier | 13 min 36 | 57 s | 89 | 84 min 36 |
+| S3 serveur garage | 11 min 53 | 56 s | 80 | 56 min 40 |
+| rideau | 10 min 07 | 9 s | 80 | 32 min 30 |
 
