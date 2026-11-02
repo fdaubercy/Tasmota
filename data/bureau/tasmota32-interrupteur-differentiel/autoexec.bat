@@ -32,7 +32,7 @@ Backlog Timezone 99; TimeStd {"Week": 0, "Month": 10, "Offset": 60, "Day": 1, "H
 DeviceName Disjoncteur Différentiel PC Bureau
 
 ; Règle le hostname & Active le serveur mDNS :
-Backlog Hostname DISJONCTEUR-DIFFERENTIEL-BUREAU; SetOption55 ON;
+SetOption55 ON
 
 ; Règle les adresse IP / Masque de sous-reseau / Gateway / DNS Server
 Backlog IPAddress1 192.168.0.49; IPAddress2 192.168.0.254; IPAddress3 255.255.255.0; IPAddress4 192.168.0.254;
@@ -49,6 +49,8 @@ Backlog SerialLog 3; WebLog 3;
 
 
 ; Minuteries (relevees sur la carte le 2026-10-31) : relais allume a 08:00, coupe de 00:00 a 07:30 (Timer2 a 01:00 +/- 5 min)
+AdcParam1 34,32000,10000,15000,0
+
 Timers 1
 Timer1 {"Enable":1,"Mode":0,"Time":"08:00","Window":0,"Days":"1111111","Repeat":1,"Output":1,"Action":1}
 Timer2 {"Enable":1,"Mode":0,"Time":"01:00","Window":5,"Days":"1111111","Repeat":1,"Output":1,"Action":0}

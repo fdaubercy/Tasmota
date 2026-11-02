@@ -31,7 +31,7 @@
 var energieFonctions = module("energieFonctions")
 
 energieFonctions.DOSSIER = "/energie"
-energieFonctions.SEUIL_KO = 40                  # place libre minimale du FS avant ecriture
+energieFonctions.SEUIL_KO = 16                  # place libre minimale du FS avant ecriture
 energieFonctions.MAX_ARCHIVES = 24
 energieFonctions.MAX_MOIS = 24
 energieFonctions.MAX_PRIX = 60

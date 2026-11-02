@@ -51,7 +51,7 @@ class CONTROLE_ENERGIE : Driver
 
     def web_add_main_button()
         import webserver
-        webserver.content_send("<p></p><form action='/energie' method='get'><button>Énergie</button></form>")
+        webserver.content_send("<style>table:has(td>button){border-spacing:0;margin:0 -5px;width:calc(100% + 10px)!important}</style><p></p><form action='/energie' method='get'><button>Énergie</button></form>")
     end
 
     def web_add_handler()

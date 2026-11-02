@@ -111,7 +111,7 @@
 			"log": "info"
 		},
 		"discovery": {
-			"activation": "ON",
+			"activation": "OFF",
 			"log": "info"
 		}
 	},

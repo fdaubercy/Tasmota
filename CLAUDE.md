@@ -296,6 +296,7 @@ Prise en compte a chaud, sans redemarrer VS Code.
 - Le pre-script pose `env.Decider("content-timestamp")` et `SetOption("implicit_cache", 1)` : ~20 s au lieu de ~230 s de
   parcours SCons sans rien compiler (mesure du 2026-11-01). Limite d'`implicit_cache` : un NOUVEL en-tete qui en masque un
   autre de meme nom plus loin dans les `-I` n'est vu qu'a la modification d'un fichier de la chaine (banc `build/test_scons_cache.py`).
+- Effet d'`implicit_cache` constate le 2026-11-02 : `undefined reference to be_const_str_...` a l'edition des liens apres un NOUVEAU texte dans un module Berry solidifie, `be_string.c.o` etant repris du cache alors que `be_const_strtab_def.h` a change. Parade : hors build, renommer `.cache/.sconsign311.dblite` (rien n'est recompile a tort, seule la lecture des dependances est refaite) ; cause exacte non trouvee.
 - `firmware.elf` ne passe pas par le cache objet : repris du cache, il arrive sans `firmware.map`, et
   `pio-tools/name-firmware.py` echoue par `*** [firmware.bin]` sans message. Un retour sur un env refait donc son edition de liens.
 - Un build reecrit `platformio_override.ini` (`adapteParametresPlatformio_override`), et

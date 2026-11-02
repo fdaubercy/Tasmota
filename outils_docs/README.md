@@ -286,7 +286,7 @@ consommations **d'aujourd'hui par heure**, **du mois par jour**, des **12 dernie
 - **Prix** : saisi sur la page, avec sa date d'effet, en € TTC par kWh. Chaque consommation garde le coût du prix en
   vigueur à sa date : un nouveau prix ne touche jamais le passé. Même date = prix remplacé. Rappel au-delà de 6 mois.
 - **Fichiers de la carte**, dans `/energie/` : `etat.json` (une écriture par heure), `mois-AAAA-MM.json` (mois clos, 24
-  au plus ; les plus anciens sont effacés si le FS passe sous 40 Ko libres), `prix.json`, `courbe.bin` (copie horaire de
+  au plus ; les plus anciens sont effacés si le FS passe sous 16 Ko libres), `prix.json`, `courbe.bin` (copie horaire de
   la courbe : une coupure en perd au plus 1 h).
 - **Calibrage** : `diverses.energie.calibrage` du persist. Une minute après le démarrage, si les trois valeurs lues sont
   les défauts de la BL0942 (596 / 15187 / 251213), celles du persist sont rejouées ; sinon rien, un recalibrage manuel est
