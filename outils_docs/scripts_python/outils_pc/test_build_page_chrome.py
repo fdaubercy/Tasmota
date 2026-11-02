@@ -94,8 +94,9 @@ SCENARIO = {
 # A9 : sortie assez longue pour deborder du panneau, avertissement, erreur, puis esptool qui reecrit sa ligne
 # (dans le journal : une ligne vide puis la barre, a chaque palier ; voir build_page, ajouteSortie)
 SORTIE_A = (["Processing {env} (platform: espressif32)"] + [f"Compiling .pio/build/{{env}}/src/f{i}.cpp.o" for i in range(40)]
-            + ["src/x.cpp:1:1: warning: unused variable 'v' [-Wunused-variable]",
-               "src/y.cpp:2:2: error: 'z' was not declared in this scope", "@pause 2.5",
+            + ["\x1b[33msrc/x.cpp:1:1: warning: unused variable 'v' [-Wunused-variable]\x1b[0m",
+               "\x1b[31msrc/y.cpp:2:2: error: 'z' was not declared in this scope\x1b[0m",
+               "\x1b[1;36mgras et cyan\x1b[0m", "\x1b[32mdebut vert", "suite encore verte\x1b[0m", "@pause 2.5",
                "Writing 'C:\\x\\.pio\\build\\{env}\\firmware.bin' at 0x00010000...", "",
                "Writing at 0x00010000 [░░░░░░░░░░]  10.0% 16.00kB/160.00kB [0s] ", "",
                "Writing at 0x00020000 [█████░░░░░]  50.0% 80.00kB/160.00kB [1s] ", "",
@@ -628,19 +629,21 @@ def sonde_sortie(m):
                 f"'lancement en cours' && c.textContent.includes(\"'z' was not declared\"); }})()", 10, 0.1)
     r = cdp.js(f"""(() => {{ const c = {console}; if (!c) return {{}};
       const ligne = t => [...c.children].find(x => x.textContent.includes(t));
-      const coul = x => x ? getComputedStyle(x).color : '';
+      const coul = x => x ? getComputedStyle(x.querySelector('span') || x).color : '';
       return {{ouvert: c.closest('details').open, lignes: c.children.length, deborde: c.scrollHeight > c.clientHeight + 20,
               en_bas: c.scrollTop + c.clientHeight >= c.scrollHeight - 2, en_cours: document.getElementById('etat').textContent,
-              erreur: coul(ligne("'z' was not declared")), avert: coul(ligne('warning: unused')), normal: coul(ligne('f3.cpp.o')),
+              erreur: coul(ligne("'z' was not declared")), avert: coul(ligne('warning: unused')), normal: coul(ligne('f3.cpp.o')), gras: coul(ligne('gras et cyan')), suite: coul(ligne('suite encore verte')),
+              code: c.textContent.includes('\x1b'),
               chasse: getComputedStyle(c).fontFamily, fond: getComputedStyle(c).backgroundColor,
               processing: [...c.children].filter(x => x.textContent.startsWith('Processing')).length}}; }})()""") or {}
     verifie((r.get("ouvert"), r.get("deborde"), r.get("en_bas"), r.get("en_cours")), (True, True, True, "lancement en cours"),
             f"sortie : panneau ouvert et rempli PENDANT le pio run, defile seul tant qu'on est en bas ({r.get('lignes')} lignes)")
-    rouge, orange, normal = rgb(r.get("erreur", "")), rgb(r.get("avert", "")), rgb(r.get("normal", ""))
-    verifie((rouge[0] > 200 and rouge[1] < 140, orange[0] > 200 and 110 < orange[1] < 200 and orange[2] < 110, normal[0] < 240),
-            (True, True, True), f"sortie : erreur en rouge, avertissement en orange, le reste neutre ({rouge}, {orange}, {normal})")
-    verifie(("monospace" in r.get("chasse", "") or "Consolas" in r.get("chasse", ""), sum(rgb(r.get("fond", ""))) < 150),
-            (True, True), "sortie : chasse fixe sur fond sombre")
+    verifie({k: rgb(r.get(k, "")) for k in ("erreur", "avert", "normal", "gras", "suite")},
+            {"erreur": (205, 49, 49), "avert": (229, 229, 16), "normal": (204, 204, 204), "gras": (41, 184, 219), "suite": (13, 188, 121)},
+            "sortie : palette du terminal de VS Code (gras = vif, couleur gardee d'une ligne a l'autre)")
+    verifie(r.get("code"), False, "sortie : aucun code ANSI affiche")
+    verifie(("monospace" in r.get("chasse", "") or "Consolas" in r.get("chasse", ""), rgb(r.get("fond", ""))),
+            (True, (24, 24, 24)), "sortie : chasse fixe sur le fond du terminal de VS Code")
     verifie(r.get("processing"), 1, "sortie : rien n'est rajoute deux fois (lecture par increments)")
     cdp.js(f"(() => {{ const c = {console}; c.scrollTop = 0; c.dispatchEvent(new Event('scroll')); return true; }})()")
     attend(cdp, f"{console}.textContent.includes('Wrote 163840')", 8, 0.1)

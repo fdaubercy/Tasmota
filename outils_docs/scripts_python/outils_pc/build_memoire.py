@@ -19,6 +19,7 @@ import time
 from pathlib import Path
 
 import build_envs
+from build_progression import retire_ansi
 from build_ota_http import _commande
 from build_ota_maitre import joint_par_maitre
 
@@ -89,7 +90,7 @@ def journal_compilation(journaux, env):
     """Dernier journal REUSSI de cet env qui contient le bilan memoire (une compilation, ou un upload qui a compile)."""
     candidats = sorted(Path(journaux).glob(f"*-{env}-*.log"), key=lambda p: p.stat().st_mtime, reverse=True)
     for chemin in candidats:
-        texte = chemin.read_text(encoding="utf-8", errors="replace")
+        texte = retire_ansi(chemin.read_text(encoding="utf-8", errors="replace"))
         if _FLASH.search(texte) and "[SUCCESS]" in texte:
             return chemin, texte
     return None, ""

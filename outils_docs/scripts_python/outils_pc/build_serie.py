@@ -49,7 +49,7 @@ Evenements numerotes (modele maintenance/synchro_fork_session.Session, rejoues p
   reprise_carte  env, port, choix (continuer | passer | arret) : fin de la pause
   fin      env=None, resultat (termine | arrete), succes, echecs, passes, arretes, non_lances, fichiers_modifies
 
-Journal complet de chaque fils (sans ANSI) dans <dossier>/journaux/ ; par env, dans
+Journal complet de chaque fils (AVEC les couleurs ANSI, lues par le panneau « Sortie ») dans <dossier>/journaux/ ; par env, dans
 <dossier>/references.json, le total des .o et les objets du dernier build incremental reussi (base du %) ;
 sans total pour un env, celui du plus grand env de la meme puce, affiche « ≈ » (_total_estime).
 """
@@ -580,7 +580,8 @@ class Serie:
         """Un fils pio ; renvoie (ok, motif, extrait d'erreur, derniere etape)."""
         env = ligne.env
         args = ["run", "-e", env] + [x for c in cible.split() for x in ("-t", c)]   # « nobuild upload » : deux -t
-        environ = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", PYTHONUNBUFFERED="1")
+        environ = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", PYTHONUNBUFFERED="1",
+                       PLATFORMIO_FORCE_ANSI="true")    # couleurs du terminal ; hors empreinte du projet, pas de purge
         for heritee in ("TASMOTA_OTA_IP", "PLATFORMIO_UPLOAD_PORT", "PLATFORMIO_EXTRA_SCRIPTS"):
             environ.pop(heritee, None)                  # PLATFORMIO_* : empreinte -> purge de .pio/build
         if action in ENVOIS and ligne.methode == "com":
@@ -624,7 +625,7 @@ class Serie:
                 journal.write(note + "\n")
             for brut in proc.stdout:
                 texte = retire_ansi(brut).rstrip("\r\n")
-                journal.write(texte + "\n")
+                journal.write(brut.rstrip("\r\n") + "\n")
                 self._ajoute("ligne", env, action=action, texte=texte)
                 ev = suivi.ligne(brut)
                 if ev is not None:

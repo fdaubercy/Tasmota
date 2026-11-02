@@ -52,10 +52,10 @@ PAGE = r"""<!doctype html>
 </script>
 <style>
   :root{color-scheme:light;--fond:#f6f7f9;--carte:#fff;--bord:#ddd;--texte:#222;--doux:#666;--discret:#777;--bleu:#2563eb;--vert:#2a9d4a;--gris:#aaa;--orange:#c27400;--rouge:#c0392b;
-    --btn:#fff;--btn-bord:#888;--piste:#e9e9ea;--survol:#f0f3f8;--rouge-fond:#fdecea;--orange-fond:#fff4e0;--bleu-fond:#eef3ff;--console:#1e1e1e;--console-texte:#d8dee9;
+    --btn:#fff;--btn-bord:#888;--piste:#e9e9ea;--survol:#f0f3f8;--rouge-fond:#fdecea;--orange-fond:#fff4e0;--bleu-fond:#eef3ff;--console:#181818;--console-texte:#cccccc;
     --console-erreur:#ff6b5b;--console-avert:#f0a020;--console-discret:#8b9099}
   :root[data-theme="sombre"]{color-scheme:dark;--fond:#121417;--carte:#1d2025;--bord:#33373e;--texte:#e6e6e6;--doux:#a8adb5;--discret:#8b9099;--bleu:#5b93ff;--vert:#3fbf63;--gris:#6b7078;--orange:#f0a020;--rouge:#ff6b5b;
-    --btn:#262a30;--btn-bord:#555b64;--piste:#39393d;--survol:#23272d;--rouge-fond:#3a1d1b;--orange-fond:#3a2c12;--bleu-fond:#18233a;--console:#0b0e13;--console-texte:#d8dee9;
+    --btn:#262a30;--btn-bord:#555b64;--piste:#39393d;--survol:#23272d;--rouge-fond:#3a1d1b;--orange-fond:#3a2c12;--bleu-fond:#18233a;--console:#181818;--console-texte:#cccccc;
     --console-erreur:#ff6b5b;--console-avert:#f0a020;--console-discret:#8b9099}
   *{box-sizing:border-box}
   body{margin:0;font:14px system-ui,sans-serif;color:var(--texte);background:var(--fond)}
@@ -156,10 +156,10 @@ PAGE = r"""<!doctype html>
   details.journal pre{background:var(--console);color:var(--console-texte);padding:8px;border-radius:6px;max-height:340px;overflow:auto;margin-top:4px}
   /* panneau « Sortie » : la console reste sombre dans les deux themes (comme le terminal de VS Code) */
   details.sortie summary{cursor:pointer;font-size:12px;color:var(--bleu)}
-  .console{font:11.5px/1.45 ui-monospace,Consolas,monospace;background:var(--console);color:var(--console-texte);padding:8px;border-radius:6px;
+  .console{font:13px/1.4 Consolas,ui-monospace,monospace;background:var(--console);color:var(--console-texte);padding:8px;border-radius:6px;
     max-height:320px;overflow:auto;margin-top:4px;white-space:pre-wrap;word-break:break-word}
-  .console div{min-height:1.45em}
-  .console .e{color:var(--console-erreur)}.console .w{color:var(--console-avert)}.console .m{color:var(--console-discret)}
+  .console div{min-height:1.4em}
+  .console .m{color:var(--console-discret)}
   #recap{margin-top:10px}
   #recap .fichiers{color:var(--orange);margin-top:4px}
   .vide{color:var(--discret);font-size:13px}
@@ -902,8 +902,6 @@ function squelette(env) {
 // ouvert ou ferme lui-meme ; il reste ouvert en echec ou arret. Au rechargement, rien n'est ouvert pendant le rejeu
 // du flux : a sa fin (numero lu dans /execution), seuls les envs en cours, en echec ou arretes rouvrent le leur.
 var PROGRES = /^\s*(Writing at 0x[0-9a-f]+\b.*\d\s*%|Uploading:\s*\[.*\d\s*%)/i;
-var ERREUR = /\berror:|\bError\b|\w+Error:|\bFAILED\b|fatal error|Traceback \(most recent/;
-var AVERT = /\bwarning:|\bWarning\b|\bWARNING\b|AVERTISSEMENT|⚠/;
 
 function ouvreSortie(env) {
   var b = L && L.blocs[env], u = uiBlocs[env] || (b && squelette(env));
@@ -927,12 +925,15 @@ function ajouteSortie(b, u, texte) {
   var lignes = texte.split("\n");
   if (lignes[lignes.length - 1] === "") lignes.pop();
   lignes.forEach(function (ligne) {
-    if (!ligne.trim()) { s.vides++; return; }                        // en attente : reecriture d'esptool ou vraie ligne vide
-    var progres = PROGRES.test(ligne);
+    var nu = ansiRetire(ligne);
+    if (!s.sgr) s.sgr = {};
+    if (!nu.trim()) { s.vides++; return; }                           // en attente : reecriture d'esptool ou vraie ligne vide
+    var progres = PROGRES.test(nu);
     for (; s.vides > 0; s.vides--) if (!progres) c.appendChild(h("div", {}));
-    if (progres && s.progres) { c.lastChild.textContent = ligne; return; }
-    var classe = /^--- /.test(ligne) ? "m" : ERREUR.test(ligne) ? "e" : AVERT.test(ligne) ? "w" : null;
-    c.appendChild(h("div", classe ? {"class": classe, texte: ligne} : {texte: ligne}));
+    if (progres && s.progres) { ansiDans(c.lastChild, ligne, s.sgr); return; }
+    var div = h("div", /^--- /.test(nu) ? {"class": "m"} : {});       // « --- » : lignes de la page, pas de pio
+    ansiDans(div, ligne, s.sgr);
+    c.appendChild(div);
     s.progres = progres;
   });
   if (enBas) c.scrollTop = c.scrollHeight;
@@ -951,7 +952,7 @@ async function lisSortie(env) {
       var d = r.donnees;
       if (d.lancement !== s.lancement) {               // autre lancement (ou outil redemarre) : on repart de zero
         var relire = s.octet > 0;
-        s.lancement = d.lancement; s.octet = 0; s.progres = false; s.vides = 0; u.console.textContent = "";
+        s.lancement = d.lancement; s.octet = 0; s.progres = false; s.vides = 0; s.sgr = null; u.console.textContent = "";
         if (relire) continue;
       }
       if (d.texte) ajouteSortie(b, u, d.texte);
@@ -1176,6 +1177,7 @@ $("son").onchange = function () {
 /*JS_FICHIERS*/
 /*JS_MEMOIRE*/
 /*JS_DEFAUT*/
+/*JS_COULEURS*/
 
 async function demarre() {
   await chargeEnvs(false);
@@ -1204,3 +1206,5 @@ PAGE = (PAGE.replace("/*CSS_MEMOIRE*/", build_page_memoire.CSS).replace("<!--VUE
 import build_page_defaut                            # noqa: E402 - onglet « Envs par défaut » (plan default-envs-page)
 PAGE = (PAGE.replace("/*CSS_DEFAUT*/", build_page_defaut.CSS).replace("<!--VUE_DEFAUT-->", build_page_defaut.HTML)
         .replace("/*JS_DEFAUT*/", build_page_defaut.JS))
+import build_page_couleurs                          # noqa: E402 - couleurs du panneau « Sortie »
+PAGE = PAGE.replace("/*JS_COULEURS*/", build_page_couleurs.JS)

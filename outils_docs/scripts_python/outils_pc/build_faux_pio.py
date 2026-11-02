@@ -112,7 +112,7 @@ def main(argv):
     journalise(type="debut", pid=os.getpid(), argv=argv, env=env, cible=cible, cibles=cibles, port=port,
                ota_ip=os.environ.get("TASMOTA_OTA_IP"),
                platformio_upload_port=os.environ.get("PLATFORMIO_UPLOAD_PORT"),
-               platformio_extra_scripts=os.environ.get("PLATFORMIO_EXTRA_SCRIPTS"), pythonioencoding=os.environ.get("PYTHONIOENCODING"),
+               platformio_extra_scripts=os.environ.get("PLATFORMIO_EXTRA_SCRIPTS"), pythonioencoding=os.environ.get("PYTHONIOENCODING"), force_ansi=os.environ.get("PLATFORMIO_FORCE_ANSI"),
                pythonutf8=os.environ.get("PYTHONUTF8"), cwd=os.getcwd(), data_dir=data_dir(), t=time.time())
     if c.get("petit_fils"):
         import subprocess

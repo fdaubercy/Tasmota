@@ -168,8 +168,8 @@ def purge_journaux(dossier, jours=30, maintenant=None, supprime=os.remove):
 
 
 def journal_env(dossier, env, depuis):
-    """Texte des journaux de `env` du dernier lancement (voir journaux_env)."""
-    return "".join(f.read_text(encoding="utf-8", errors="replace") for f in journaux_env(dossier, env, depuis))
+    """Texte des journaux de `env` du dernier lancement (voir journaux_env), sans les couleurs."""
+    return "".join(build_serie.retire_ansi(f.read_text(encoding="utf-8", errors="replace")) for f in journaux_env(dossier, env, depuis))
 
 
 def sortie_env(dossier, env, depuis, octet, plafond=MAX_SORTIE):

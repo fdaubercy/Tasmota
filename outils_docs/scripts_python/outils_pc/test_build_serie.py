@@ -178,6 +178,7 @@ def test_commandes():
                        ["run", "-e", A, "-t", "uploadfs", "--upload-port", "COM12"]],
                 "commandes : compiler, upload COM, compiler+upload (un seul -t upload), buildfs, uploadfs COM")
         a = m.appels()[0]
+        verifie(a.get("force_ansi"), "true", "commandes : couleurs de pio demandees")
         verifie((a["pythonioencoding"], a["pythonutf8"], Path(a["cwd"]).resolve()),
                 ("utf-8", "1", m.racine.resolve()), "commandes : PYTHONIOENCODING, PYTHONUTF8, cwd = racine")
 
@@ -732,8 +733,8 @@ def test_journal_ecrit():
         m.lance([com(A)], {"compiler"})
         journaux = list((m.dossier / "journaux").glob("*.log"))
         texte = journaux[0].read_text(encoding="utf-8") if journaux else ""
-        verifie((len(journaux), "Compiling .pio/build/x/a.o" in texte, ESC in texte, "[SUCCESS] é" in texte),
-                (1, True, False, True), "journal_ecrit : un journal sans ANSI dans journaux/")
+        verifie((len(journaux), f"{ESC}[32mCompiling .pio/build/x/a.o{ESC}[0m" in texte, "[SUCCESS] é" in texte),
+                (1, True, True), "journal_ecrit : le journal garde les couleurs pour le panneau Sortie")
 
 
 def test_reference_o_memorisee():
