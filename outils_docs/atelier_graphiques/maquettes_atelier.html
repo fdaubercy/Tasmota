@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Atelier des graphiques — maquettes A, B, C</title>
+<!-- Maquettes du 2026-11-03 (outils_docs/atelier_graphiques/README.md). Ouvrir avec ?m=A, ?m=B ou ?m=C.
+     ECharts : echarts.min.js a cote de ce fichier (gzip -dc data/sd/js/echarts.min.js.gz), sinon jsDelivr. -->
+<script src="echarts.min.js"></script>
+<script>window.echarts || document.write('<script src="https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js"><\/script>')</script>
+<style>
+  :root{--fond:#f6f7f9;--carte:#fff;--bord:#ddd;--texte:#222;--doux:#666;--discret:#777;--bleu:#2563eb;--vert:#2a9d4a;--orange:#c27400;--rouge:#c0392b;
+    --btn:#fff;--btn-bord:#888;--piste:#e9e9ea;--survol:#f0f3f8;--bleu-fond:#eef3ff;--orange-fond:#fff4e0;--console:#181818;--console-texte:#cccccc}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px system-ui,sans-serif;color:var(--texte);background:var(--fond)}
+  main{max-width:1400px;margin:0 auto;padding:12px 16px 24px}
+  header{display:flex;align-items:baseline;gap:14px;margin-bottom:10px}
+  h1{font-size:20px;margin:0} h2{font-size:15px;margin:0 0 8px} h3{font-size:13px;margin:10px 0 6px;color:var(--doux);text-transform:uppercase;letter-spacing:.04em}
+  .doux{color:var(--doux)} .petit{font-size:12px}
+  .carte{background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:12px}
+  .btn{display:inline-block;padding:6px 12px;border:1px solid var(--btn-bord);border-radius:6px;background:var(--btn);font:inherit;cursor:pointer}
+  .btn.prim{background:var(--bleu);border-color:var(--bleu);color:#fff}
+  .pastille{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;background:var(--piste);color:var(--doux);margin-right:3px}
+  .pastille.ok{background:#e3f4e8;color:var(--vert)} .pastille.non{background:#fdecea;color:var(--rouge)} .pastille.bleu{background:var(--bleu-fond);color:var(--bleu)}
+  .ligne{display:flex;gap:8px;align-items:center;margin:5px 0}
+  label.ch{display:flex;gap:6px;align-items:center;margin:3px 0}
+  input[type=text],select{font:inherit;padding:4px 6px;border:1px solid var(--bord);border-radius:5px;background:#fff;width:100%}
+  .etiq{width:92px;flex:none;color:var(--doux);font-size:12px}
+  .code{background:var(--console);color:var(--console-texte);font:12px/1.45 Consolas,monospace;border-radius:6px;padding:8px 10px;white-space:pre;overflow:hidden}
+  .code .p{color:#7ee787} .code .c{color:#8b9099} .code .k{color:#ff7b72} .code .s{color:#a5d6ff}
+  .onglets{display:flex;gap:2px;margin-bottom:-1px}
+  .onglets span{padding:5px 12px;border:1px solid var(--bord);border-bottom:none;border-radius:6px 6px 0 0;background:var(--piste);font-size:12px}
+  .onglets span.actif{background:var(--console);color:#fff;border-color:var(--console)}
+  .g{width:100%;height:100%}
+  .vign{border:1px solid var(--bord);border-radius:7px;padding:8px;background:#fff;position:relative}
+  .vign.choisie{border:2px solid var(--bleu);padding:7px;background:var(--bleu-fond)}
+  .vign .rang{position:absolute;top:6px;left:8px;font-weight:700;color:var(--bleu)}
+  .vign .nom{font-weight:600;margin-left:18px}
+  .vign .raison{font-size:12px;color:var(--doux);margin-top:4px;min-height:32px}
+  .etapes{display:flex;gap:0;margin:4px 0 12px}
+  .etapes div{flex:1;text-align:center;padding:7px 4px;background:var(--piste);font-size:12.5px;border-right:2px solid var(--fond)}
+  .etapes div.fait{background:#e3f4e8;color:var(--vert)} .etapes div.actif{background:var(--bleu);color:#fff;font-weight:600}
+  .etapes div:first-child{border-radius:6px 0 0 6px} .etapes div:last-child{border-radius:0 6px 6px 0}
+  .arbre div{padding:2px 0 2px 0;font-size:13px} .arbre .n2{padding-left:16px} .arbre .n3{padding-left:32px}
+  .tasmota{background:#252525;color:#eaeaea;border-radius:8px;padding:10px;font-family:verdana,sans-serif}
+  .tasmota .titre{text-align:center;font-size:13px;color:#ccc} .tasmota h4{text-align:center;margin:2px 0 8px;font-size:17px}
+  .tuile{background:#1f1f1f;border:1px solid #444;border-radius:6px;padding:6px;position:relative}
+  .tuile.sel{outline:2px solid #5b93ff;outline-offset:1px}
+  .tuile .tt{font-size:12px;color:#ccc;margin-bottom:2px}
+  .poignee{position:absolute;top:4px;right:6px;color:#777;font-size:12px}
+  .palette div{padding:5px 8px;border:1px solid var(--bord);border-radius:6px;margin:4px 0;background:#fff;font-size:13px;display:flex;justify-content:space-between}
+  .avert{background:var(--orange-fond);border-left:3px solid var(--orange);padding:6px 8px;font-size:12px;border-radius:4px;margin-top:8px}
+  .seuil{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+  .modele{display:none} body[data-m=A] #A, body[data-m=B] #B, body[data-m=C] #C{display:block}
+</style>
+</head>
+<body>
+<script>document.body.dataset.m = (new URLSearchParams(location.search).get('m') || 'B').toUpperCase();</script>
+<main>
+<header><h1>Atelier des graphiques</h1><span class="doux">http://127.0.0.1:7950 · carte <b>P4 garage (serveur ModBus)</b> <span class="pastille ok">● en ligne 192.168.0.200</span> <span class="pastille bleu">ECharts 6.1.0 · historique actif</span></span>
+<span style="margin-left:auto" class="doux petit">Modèle <b id="lettre"></b></span></header>
+
+<!-- ============================ MODELE A : assistant pas a pas ============================ -->
+<section id="A" class="modele">
+  <div class="etapes"><div class="fait">1 · Carte ✓</div><div class="fait">2 · Données ✓</div><div class="fait">3 · Intention ✓</div><div class="actif">4 · Style proposé</div><div>5 · Réglages</div><div>6 · Destination</div><div>7 · Écriture</div></div>
+  <div style="display:grid;grid-template-columns:300px 1fr;gap:12px">
+    <div class="carte">
+      <h2>Votre besoin</h2>
+      <h3>Données (étape 2)</h3>
+      <div class="ligne"><span class="pastille bleu">historique</span> Volume de la cuve <span class="doux petit">L · 0–6 732</span></div>
+      <div class="ligne"><span class="pastille bleu">historique</span> Remplissage <span class="doux petit">% · 0–100</span></div>
+      <h3>Intention (étape 3)</h3>
+      <label class="ch"><input type="radio"> Suivre une évolution dans le temps</label>
+      <label class="ch"><input type="radio" checked> <b>Valeur actuelle face à un seuil</b></label>
+      <label class="ch"><input type="radio"> Comparer plusieurs mesures</label>
+      <label class="ch"><input type="radio"> Répartition / parts d'un total</label>
+      <label class="ch"><input type="radio"> Cumul par heure, jour, mois</label>
+      <label class="ch"><input type="radio"> Lien entre deux mesures</label>
+      <label class="ch"><input type="radio"> Habitudes (heure × jour)</label>
+      <h3>Ce que l'outil a déduit</h3>
+      <div class="petit doux">2 séries bornées (min et max connus), cadence 1 min, même grandeur physique (volume ↔ taux). Visible sur téléphone : oui.</div>
+    </div>
+    <div class="carte">
+      <h2>Styles proposés pour « valeur actuelle face à un seuil » <span class="doux petit">— classés, avec la raison</span></h2>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+        <div class="vign choisie"><span class="rang">1</span><div class="nom">Cadran à aiguille</div><div style="height:170px"><div class="g" id="a1"></div></div><div class="raison">Borné 0–6 732 L, zones rouge/orange lisibles d'un coup d'œil. Natif ECharts, 0 Ko de plus.</div><span class="pastille ok">page dédiée</span><span class="pastille non">accueil</span></div>
+        <div class="vign"><span class="rang">2</span><div class="nom">Liquide animé</div><div style="height:170px"><div class="g" id="a2"></div></div><div class="raison">Parle tout de suite pour une cuve. Extension liquidfill (déjà sur la cuve et le P4).</div><span class="pastille ok">page dédiée</span><span class="pastille non">accueil</span></div>
+        <div class="vign"><span class="rang">3</span><div class="nom">Demi-cercle SVG</div><div style="height:170px"><svg viewBox="0 0 200 120" class="g"><path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#e9e9ea" stroke-width="18"/><path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#2563eb" stroke-width="18" stroke-dasharray="155.8 251.3"/><text x="100" y="92" text-anchor="middle" font-size="28" font-weight="700">62 %</text><text x="100" y="114" text-anchor="middle" font-size="12" fill="#666">4 174 L</text></svg></div><div class="raison">≈ 1 Ko, sans script : seul style possible dans l'encadré de l'accueil et sur ESP32 classique.</div><span class="pastille ok">page dédiée</span><span class="pastille ok">accueil</span><span class="pastille ok">ESP32</span></div>
+        <div class="vign"><span class="rang">4</span><div class="nom">Courbe + ligne de seuil</div><div style="height:170px"><div class="g" id="a4"></div></div><div class="raison">Montre aussi l'évolution sur 24 h ; moins immédiat pour la seule valeur actuelle.</div><span class="pastille ok">page dédiée</span><span class="pastille ok">/graphiques</span></div>
+      </div>
+      <div class="avert">Écartés : <b>camembert</b> (une seule grandeur, pas de parts d'un total), <b>carte de chaleur</b> (demande « habitudes »), <b>nuage de points</b> (demande deux mesures différentes).</div>
+      <div class="ligne" style="justify-content:flex-end;margin-top:12px"><button class="btn">← Intention</button><button class="btn prim">Régler le cadran →</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ MODELE B : atelier trois colonnes ============================ -->
+<section id="B" class="modele">
+  <div style="display:grid;grid-template-columns:270px 1fr 290px;gap:12px">
+    <div class="carte">
+      <h2>Carte et données</h2>
+      <select><option>P4 garage — tasmota32p4-garage-serveur-modbus</option></select>
+      <h3>Je veux voir</h3>
+      <select><option>Une évolution dans le temps</option></select>
+      <h3>Séries</h3>
+      <div class="arbre">
+        <div><b>Historique</b> <span class="doux petit">(/histo, 9 séries)</span></div>
+        <div class="n2">sensorsCuve › niveauCuve</div>
+        <div class="n3"><label class="ch"><input type="checkbox" checked> Volume <span class="doux petit">L</span></label></div>
+        <div class="n3"><label class="ch"><input type="checkbox"> Remplissage <span class="doux petit">%</span></label></div>
+        <div class="n3"><label class="ch"><input type="checkbox"> Hauteur d'eau <span class="doux petit">cm</span></label></div>
+        <div class="n2"><label class="ch"><input type="checkbox" checked> Température de l'eau <span class="doux petit">°C</span></label></div>
+        <div class="n2"><label class="ch"><input type="checkbox"> Température ESP32 <span class="doux petit">°C</span></label></div>
+        <div><b>JSON SENSOR</b> <span class="doux petit">(instantané)</span></div>
+        <div class="n2"><label class="ch"><input type="checkbox"> POWER1 … POWER16 <span class="doux petit">état</span></label></div>
+        <div><b>Calculées</b> <span class="doux petit">+ ajouter une formule</span></div>
+        <div><b>En flash</b> <span class="doux petit">(aucune sur cette carte)</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="carte">
+        <div class="ligne" style="margin:0 0 6px"><h2 style="margin:0">Aperçu — vraies valeurs de la carte</h2><span style="margin-left:auto" class="petit"><span class="pastille bleu">PC</span><span class="pastille">téléphone</span><span class="pastille">thème sombre</span></span></div>
+        <div style="height:300px"><div class="g" id="b1"></div></div>
+      </div>
+      <div class="carte" style="margin-top:10px">
+        <h2>Styles proposés <span class="doux petit">— 2 séries d'unités différentes, évolution sur 24 h</span></h2>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+          <div class="vign choisie"><span class="rang">1</span><div class="nom">Courbes, 2 axes</div><div style="height:70px"><div class="g" id="bv1"></div></div><div class="raison">Deux unités : un axe chacune.</div></div>
+          <div class="vign"><span class="rang">2</span><div class="nom">Aire + courbe</div><div style="height:70px"><div class="g" id="bv2"></div></div><div class="raison">Le volume en masse, la température en trait.</div></div>
+          <div class="vign"><span class="rang">3</span><div class="nom">Deux graphiques liés</div><div style="height:70px"><div class="g" id="bv3"></div></div><div class="raison">Curseur synchronisé, lecture plus nette.</div></div>
+          <div class="vign"><span class="rang">4</span><div class="nom">Carte de chaleur</div><div style="height:70px"><div class="g" id="bv4"></div></div><div class="raison">Habitudes heure × jour (7 j).</div></div>
+          <div class="vign"><span class="rang">5</span><div class="nom">Nuage de points</div><div style="height:70px"><div class="g" id="bv5"></div></div><div class="raison">Volume selon température.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="carte">
+      <h2>Réglages</h2>
+      <div class="ligne"><span class="etiq">Titre</span><input type="text" value="Cuve : volume et eau"></div>
+      <div class="ligne"><span class="etiq">Volume</span><input type="text" value="Volume · L" style="width:110px"><span class="seuil" style="background:#2563eb"></span></div>
+      <div class="ligne"><span class="etiq">Température</span><input type="text" value="Eau · °C" style="width:110px"><span class="seuil" style="background:#c27400"></span></div>
+      <h3>Seuils</h3>
+      <div class="ligne petit"><span class="seuil" style="background:#c0392b"></span>Volume &lt; 1 346 L (20 %)</div>
+      <div class="ligne petit"><span class="seuil" style="background:#c27400"></span>Volume &lt; 2 693 L (40 %)</div>
+      <div class="petit doux">+ ajouter un seuil</div>
+      <h3>Période et cadence</h3>
+      <div class="ligne"><span class="etiq">Période</span><select><option>Jour (24 h glissantes)</option></select></div>
+      <div class="ligne"><span class="etiq">Direct</span><select><option>10 s</option></select></div>
+      <label class="ch petit"><input type="checkbox" checked> Zoom et déplacement</label>
+      <h3>Taille et destination</h3>
+      <div class="ligne"><span class="etiq">Largeur</span><select><option>Pleine</option></select></div>
+      <div class="ligne"><span class="etiq">Hauteur</span><select><option>300 px</option></select></div>
+      <div class="ligne"><span class="etiq">Destination</span><select><option>Page dédiée /tableau-cuve</option></select></div>
+      <div class="ligne"><span class="etiq">Accès</span><select><option>Bouton sur l'accueil</option></select></div>
+      <label class="ch petit"><input type="checkbox"> Solidifier le module (firmware à recompiler)</label>
+    </div>
+  </div>
+  <div style="margin-top:12px">
+    <div class="onglets"><span class="actif">Berry · tableauCuvePageFonctions.be (nouveau)</span><span>HTML</span><span>JS</span><span>cenv (+6 lignes)</span><span>autoexec.be (+1)</span><span>pages_graphiques.json</span></div>
+    <div class="code"><span class="c">#- tableauCuvePageFonctions.be - Page /tableau-cuve de la carte (atelier des graphiques, 2026-11-03)
+ * Genere depuis data/garage/tasmota32p4-serveur-modbus/pages_graphiques.json : modifier par l'atelier, pas a la main -#</span>
+<span class="p">+</span> <span class="k">var</span> tableauCuvePageFonctions = module(<span class="s">"tableauCuvePageFonctions"</span>)
+<span class="p">+</span> tableauCuvePageFonctions.ROUTE = <span class="s">"/tableau-cuve"</span>
+<span class="p">+</span> <span class="k">def</span> tableauCuvePageFonctions_page()
+<span class="p">+</span>     <span class="k">import</span> webserver
+<span class="p">+</span>     <span class="k">import</span> tableauCuvePageFonctions       <span class="c"># module solidifiable : il se cite par import (piege 12)</span>
+<span class="p">+</span>     webserver.content_start(<span class="s">"Cuve : volume et eau"</span>) ...</div>
+    <div class="ligne" style="justify-content:flex-end;margin-top:8px"><span class="doux petit">5 fichiers · FS : +6 Ko (place libre lue sur la carte ; chiffres de la maquette fictifs)</span><button class="btn">Voir le diff complet</button><button class="btn prim">Écrire dans le dépôt</button><button class="btn">Envoyer par la page Build ↗</button></div>
+  </div>
+</section>
+
+<!-- ============================ MODELE C : constructeur de page ============================ -->
+<section id="C" class="modele">
+  <div class="ligne" style="margin-bottom:10px"><span class="etiq">Page</span><select style="width:260px"><option>/tableau-cuve — « Cuve et garage »</option></select><button class="btn">+ Nouvelle page</button><button class="btn">+ Encadré d'accueil</button><button class="btn">Composition /graphiques</button><span style="margin-left:auto" class="petit doux">Accès : bouton sur l'accueil · module sur le FS</span></div>
+  <div style="display:grid;grid-template-columns:220px 1fr 280px;gap:12px">
+    <div class="carte palette">
+      <h2>Ajouter un graphique</h2>
+      <h3>Évolution</h3><div>Courbe <span>⤓</span></div><div>Aire <span>⤓</span></div><div>Escalier <span>⤓</span></div>
+      <h3>Valeur actuelle</h3><div>Cadran à aiguille <span>⤓</span></div><div>Liquide animé <span>⤓</span></div><div>Demi-cercle SVG <span>⤓</span></div>
+      <h3>Cumul</h3><div>Barres par jour <span>⤓</span></div><div>Barres empilées <span>⤓</span></div>
+      <h3>Répartition</h3><div>Anneau <span>⤓</span></div>
+      <h3>Habitudes · lien</h3><div>Carte de chaleur <span>⤓</span></div><div>Nuage de points <span>⤓</span></div>
+      <div class="avert">Glisser dans la page ; l'outil signale si le style convient mal aux séries.</div>
+    </div>
+    <div class="tasmota">
+      <div class="titre">Tasmota · P4 garage</div><h4>Cuve et garage</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="tuile sel"><span class="poignee">⠿ ✎</span><div class="tt">Volume de la cuve</div><div style="height:180px"><div class="g" id="c1"></div></div></div>
+        <div class="tuile"><span class="poignee">⠿ ✎</span><div class="tt">Remplissage</div><div style="height:180px"><div class="g" id="c2"></div></div></div>
+        <div class="tuile" style="grid-column:span 2"><span class="poignee">⠿ ✎</span><div class="tt">Volume et température de l'eau — 24 h</div><div style="height:170px"><div class="g" id="c3"></div></div></div>
+        <div class="tuile"><span class="poignee">⠿ ✎</span><div class="tt">Consommation par jour</div><div style="height:150px"><div class="g" id="c4"></div></div></div>
+        <div class="tuile"><span class="poignee">⠿ ✎</span><div class="tt">Pompe : heures de marche</div><div style="height:150px"><div class="g" id="c5"></div></div></div>
+      </div>
+      <div style="text-align:center;margin-top:8px"><span style="background:#1fa3ec;color:#fff;padding:6px 40px;border-radius:5px;font-size:13px">Menu principal</span></div>
+    </div>
+    <div class="carte">
+      <h2>Cadran « Volume de la cuve »</h2>
+      <div class="ligne"><span class="etiq">Série</span><select><option>niveauCuve.volume (L)</option></select></div>
+      <div class="ligne"><span class="etiq">Bornes</span><input type="text" value="0" style="width:60px"> à <input type="text" value="6732" style="width:70px"></div>
+      <h3>Zones</h3>
+      <div class="ligne petit"><span class="seuil" style="background:#c0392b"></span>0 – 20 %</div>
+      <div class="ligne petit"><span class="seuil" style="background:#c27400"></span>20 – 40 %</div>
+      <div class="ligne petit"><span class="seuil" style="background:#2563eb"></span>40 – 100 %</div>
+      <h3>Cadence</h3><div class="ligne"><span class="etiq">Direct</span><select><option>10 s</option></select></div>
+      <h3>Taille</h3><div class="ligne"><span class="etiq">Largeur</span><select><option>Demi</option></select></div>
+      <h3>Code de cette tuile</h3>
+      <div class="code" style="font-size:11px">{<span class="s">"type"</span>: <span class="s">"cadran"</span>,
+ <span class="s">"serie"</span>: <span class="s">"sensorsCuve.niveauCuve.volume"</span>,
+ <span class="s">"min"</span>: 0, <span class="s">"max"</span>: 6732,
+ <span class="s">"zones"</span>: [[0.2,<span class="s">"#c0392b"</span>],[0.4,<span class="s">"#c27400"</span>]]}</div>
+      <div class="ligne" style="margin-top:10px"><button class="btn">Diff (5 fichiers)</button><button class="btn prim">Écrire</button></div>
+    </div>
+  </div>
+</section>
+</main>
+<script>
+(function () {
+  'use strict';
+  document.getElementById('lettre').textContent = document.body.dataset.m;
+  var bleu = '#2563eb', orange = '#c27400', rouge = '#c0392b';
+  var h = [], vol = [], tmp = [];
+  for (var i = 0; i <= 96; i++) {
+    h.push(((i / 4) | 0).toString().padStart(2, '0') + ':' + ((i % 4) * 15).toString().padStart(2, '0'));
+    vol.push(Math.round(4320 - i * 1.2 - (i > 30 && i < 40 ? (i - 30) * 9 : i >= 40 ? 90 : 0)));
+    tmp.push(+(11.5 + 1.6 * Math.sin((i - 30) / 96 * 2 * Math.PI)).toFixed(2));
+  }
+  function g(id, opt, sombre) {
+    var el = document.getElementById(id);
+    if (!el || el.offsetParent === null) return;
+    opt.animation = false;
+    echarts.init(el, sombre ? 'dark' : null, {renderer: 'svg'}).setOption(opt);
+  }
+  function cadran(id, sombre, petit) {
+    g(id, {backgroundColor: 'transparent', series: [{type: 'gauge', min: 0, max: 6732, radius: '92%', center: ['50%', '58%'],
+      axisLine: {lineStyle: {width: petit ? 10 : 14, color: [[0.2, rouge], [0.4, orange], [1, bleu]]}},
+      pointer: {width: 4}, axisTick: {show: false}, splitLine: {length: 8}, axisLabel: {fontSize: 9, distance: 14, formatter: function (v) { return v % 2000 === 0 ? v : ''; }},
+      detail: {formatter: '{value} L', fontSize: 16, offsetCenter: [0, '62%'], color: sombre ? '#eee' : '#222'}, data: [{value: 4174}]}]}, sombre);
+  }
+  function liquide(id, sombre) {
+    var n = 40, d1 = [], d2 = [];
+    for (var k = 0; k <= n; k++) { d1.push([k, 0.62 + 0.025 * Math.sin(k / n * 4 * Math.PI)]); d2.push([k, 0.6 + 0.02 * Math.sin(k / n * 4 * Math.PI + 1.5)]); }
+    g(id, {backgroundColor: 'transparent', graphic: [{type: 'circle', shape: {cx: 0, cy: 0, r: 0}}],
+      xAxis: {show: false, min: 0, max: n}, yAxis: {show: false, min: 0, max: 1}, grid: {left: '14%', right: '14%', top: '6%', bottom: '6%'},
+      series: [{type: 'line', data: d1, showSymbol: false, smooth: true, lineStyle: {width: 0}, areaStyle: {color: 'rgba(37,99,235,.45)'}},
+               {type: 'line', data: d2, showSymbol: false, smooth: true, lineStyle: {width: 0}, areaStyle: {color: bleu},
+                markPoint: {symbol: 'none', label: {show: true, fontSize: 20, fontWeight: 700, color: '#fff', formatter: '62 %'}, data: [{coord: [20, 0.3]}]}}]}, sombre);
+  }
+  function courbes(id, sombre, mini, aire) {
+    g(id, {backgroundColor: 'transparent', tooltip: {trigger: 'axis'}, legend: mini ? undefined : {top: 0},
+      grid: mini ? {left: 2, right: 2, top: 4, bottom: 2} : {left: 56, right: 50, top: 30, bottom: mini ? 4 : 50},
+      dataZoom: mini ? undefined : [{type: 'slider', height: 16, bottom: 6}],
+      xAxis: {type: 'category', data: h, show: !mini, axisLabel: {interval: 15}},
+      yAxis: [{type: 'value', name: mini ? '' : 'L', min: 0, max: 5000, show: !mini}, {type: 'value', name: mini ? '' : '°C', min: 8, max: 15, show: !mini, splitLine: {show: false}}],
+      series: [{name: 'Volume (L)', type: 'line', data: vol, showSymbol: false, color: bleu, areaStyle: aire ? {opacity: .25} : undefined,
+                markLine: mini ? undefined : {symbol: 'none', label: {formatter: '{b}', position: 'insideEndTop'}, data: [{name: '40 %', yAxis: 2693, lineStyle: {color: orange}}, {name: '20 %', yAxis: 1346, lineStyle: {color: rouge}}]},
+                markArea: mini ? undefined : {silent: true, data: [[{yAxis: 0, itemStyle: {color: 'rgba(192,57,43,.07)'}}, {yAxis: 1346}]]}},
+               {name: 'Eau (°C)', type: 'line', yAxisIndex: 1, data: tmp, showSymbol: false, color: orange}]}, sombre);
+  }
+  function chaleur(id, sombre, mini) {
+    var d = [], jours = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'];
+    for (var j = 0; j < 7; j++) for (var k = 0; k < 24; k++) d.push([k, j, Math.max(0, Math.round((k > 6 && k < 9 ? 40 : k > 17 && k < 21 ? 60 : 4) * (j > 4 ? 1.4 : 1) + 6 * Math.sin(j * 3 + k)))]);
+    g(id, {backgroundColor: 'transparent', grid: mini ? {left: 2, right: 2, top: 2, bottom: 2} : {left: 34, right: 8, top: 6, bottom: 22},
+      xAxis: {type: 'category', data: Array.from({length: 24}, function (_, k) { return k + 'h'; }), show: !mini, axisLabel: {interval: 5}},
+      yAxis: {type: 'category', data: jours, show: !mini},
+      visualMap: {show: false, min: 0, max: 85, inRange: {color: sombre ? ['#1b2433', '#5b93ff', '#f0a020'] : ['#eef3ff', '#2563eb', '#c27400']}},
+      series: [{type: 'heatmap', data: d}]}, sombre);
+  }
+  // Modele A
+  cadran('a1'); liquide('a2');
+  g('a4', {grid: {left: 30, right: 6, top: 10, bottom: 18}, xAxis: {type: 'category', data: h, axisLabel: {interval: 47, fontSize: 9}}, yAxis: {type: 'value', min: 0, max: 5000, axisLabel: {fontSize: 9}},
+    series: [{type: 'line', data: vol, showSymbol: false, color: bleu, markLine: {symbol: 'none', label: {show: false}, data: [{yAxis: 2693, lineStyle: {color: orange}}, {yAxis: 1346, lineStyle: {color: rouge}}]}}]});
+  // Modele B
+  courbes('b1', false, false, false); courbes('bv1', false, true, false); courbes('bv2', false, true, true);
+  g('bv3', {grid: [{left: 2, right: 2, top: 2, height: '42%'}, {left: 2, right: 2, bottom: 2, height: '42%'}], xAxis: [{type: 'category', data: h, show: false}, {type: 'category', data: h, show: false, gridIndex: 1}],
+    yAxis: [{show: false, min: 4000}, {show: false, gridIndex: 1, min: 9}], series: [{type: 'line', data: vol, showSymbol: false, color: bleu}, {type: 'line', data: tmp, showSymbol: false, color: orange, xAxisIndex: 1, yAxisIndex: 1}]});
+  chaleur('bv4', false, true);
+  g('bv5', {grid: {left: 2, right: 2, top: 2, bottom: 2}, xAxis: {show: false, min: 9}, yAxis: {show: false, min: 4100},
+    series: [{type: 'scatter', symbolSize: 4, color: bleu, data: tmp.map(function (t, k) { return [t, vol[k]]; })}]});
+  // Modele C (theme sombre de Tasmota)
+  cadran('c1', true, true); liquide('c2', true); courbes('c3', true, false, true);
+  g('c4', {backgroundColor: 'transparent', grid: {left: 34, right: 6, top: 10, bottom: 20}, xAxis: {type: 'category', data: ['28/10', '29/10', '30/10', '31/10', '01/11', '02/11', '03/11']}, yAxis: {type: 'value', name: 'L'},
+    series: [{type: 'bar', data: [62, 48, 120, 35, 80, 96, 22], color: '#5b93ff'}]}, true);
+  chaleur('c5', true, false);
+})();
+</script>
+</body>
+</html>
