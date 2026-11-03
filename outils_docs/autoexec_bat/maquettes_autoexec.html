@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="fr" data-theme="sombre">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Éditeur autoexec.bat : maquettes</title>
+<style>
+  :root{color-scheme:dark;--fond:#121417;--carte:#1d2025;--bord:#33373e;--texte:#e6e6e6;--doux:#a8adb5;--bleu:#5b93ff;--vert:#3fbf63;--orange:#f0a020;--rouge:#ff6b5b;--btn:#262a30;--btn-bord:#555b64;--survol:#23272d;--bleu-fond:#18233a;--orange-fond:#3a2c12;--rouge-fond:#3a1d1b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fond);color:var(--texte);font:14px/1.45 system-ui,"Segoe UI",sans-serif}
+  main{max-width:1180px;margin:0 auto;padding:14px 16px 24px}
+  h1{font-size:18px;margin:0 0 8px} h2{font-size:14px;margin:0 0 8px} h3{font-size:12px;margin:12px 0 4px;color:var(--doux);text-transform:uppercase;letter-spacing:.04em}
+  .modele{display:none} body[data-m="A"] #A,body[data-m="B"] #B,body[data-m="C"] #C{display:block}
+  .titre{background:#1f2937;padding:6px 10px;border-radius:6px;margin-bottom:10px;font-weight:600}
+  .onglets{display:flex;gap:4px;border-bottom:1px solid var(--bord);margin-bottom:12px}
+  .onglets span{padding:7px 14px;border:1px solid transparent;border-bottom:0;border-radius:6px 6px 0 0;color:var(--doux)}
+  .onglets span.actif{background:var(--carte);border-color:var(--bord);color:var(--texte);font-weight:600}
+  .carte{background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:12px;margin-bottom:12px}
+  .ligne{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .droite{margin-left:auto;display:flex;gap:8px}
+  .col2{display:grid;grid-template-columns:1fr 330px;gap:12px;align-items:start}
+  button{background:var(--btn);border:1px solid var(--btn-bord);color:var(--texte);border-radius:6px;padding:5px 11px;font:inherit;cursor:pointer}
+  button.p{background:var(--bleu);border-color:var(--bleu);color:#fff} button.s{padding:1px 7px;font-size:12px}
+  select,input{background:var(--fond);color:var(--texte);border:1px solid var(--btn-bord);border-radius:5px;padding:3px 6px;font:inherit}
+  input{width:100%}
+  .doux{color:var(--doux);font-size:12px}
+  .code{font:12.5px/1.6 ui-monospace,Consolas,monospace}
+  /* editeur texte (A, C) */
+  .ed{border:1px solid var(--bord);border-radius:6px;background:var(--fond);overflow:hidden}
+  .ed .l{display:grid;grid-template-columns:34px 22px 1fr;gap:0;padding:0 8px 0 0}
+  .ed .n{color:#5b616b;text-align:right;padding-right:8px;user-select:none}
+  .ed .m{text-align:center}
+  .ed .c{white-space:pre-wrap;overflow-wrap:anywhere}
+  .ed .com{color:#7f8792}
+  .ed .l.rouge{background:var(--rouge-fond)} .ed .l.orange{background:var(--orange-fond)}
+  .r{color:var(--rouge)} .o{color:var(--orange)} .v{color:var(--vert)} .b{color:var(--bleu)}
+  .bulle{margin:2px 0 4px 56px;padding:4px 8px;border-left:3px solid var(--rouge);background:var(--rouge-fond);font:12px system-ui,sans-serif;border-radius:0 4px 4px 0}
+  .bulle.o{border-color:var(--orange);background:var(--orange-fond)}
+  .av{display:flex;gap:8px;padding:6px 8px;border-radius:6px;margin-bottom:6px;font-size:13px;align-items:baseline}
+  .av.r{background:var(--rouge-fond)} .av.o{background:var(--orange-fond)}
+  .av b{white-space:nowrap}
+  /* banque */
+  .banque .cmd{border:1px solid var(--bord);border-radius:6px;padding:6px 8px;margin-bottom:6px}
+  .banque .cmd .ligne{justify-content:space-between}
+  .banque .cmd.choisie{border-color:var(--bleu);background:var(--bleu-fond)}
+  .etiq{display:inline-block;font-size:11px;padding:0 6px;border-radius:8px;border:1px solid var(--bord);color:var(--doux)}
+  .etiq.r{border-color:var(--rouge);color:var(--rouge)} .etiq.u{border-color:var(--bleu);color:var(--bleu)}
+  .champ{display:grid;grid-template-columns:110px 1fr;gap:6px;align-items:center;margin:4px 0;font-size:13px}
+  .apercu{background:var(--fond);border:1px dashed var(--btn-bord);border-radius:6px;padding:6px 8px;margin:8px 0}
+  /* liste structuree (B) */
+  .sec{border:1px solid var(--bord);border-radius:6px;margin-bottom:8px;overflow:hidden}
+  .sec > .st{padding:7px 10px;background:var(--survol);display:flex;justify-content:space-between;font-weight:600}
+  .cl{display:grid;grid-template-columns:22px 1fr auto;gap:8px;padding:6px 10px;border-top:1px solid var(--bord);align-items:start}
+  .cl.rouge{background:var(--rouge-fond)} .cl.orange{background:var(--orange-fond)} .cl.off{opacity:.55}
+  .cl .act{display:flex;gap:4px}
+  .diff{font:12px/1.5 ui-monospace,Consolas,monospace;background:var(--fond);border:1px solid var(--bord);border-radius:6px;padding:6px 8px}
+  .diff .plus{color:var(--vert)} .diff .moins{color:var(--rouge)}
+  @media (max-width:860px){.col2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<template id="tete">
+  <h1>Assistant persist</h1>
+  <nav class="onglets"><span>Persist (créer, modifier, supprimer)</span><span class="actif">autoexec.bat</span></nav>
+  <div class="carte ligne">
+    <label>Carte <select><option>tasmota32-bureau-interrupteur-energie</option></select></label>
+    <span class="doux">data/bureau/tasmota32-interrupteur-energie/autoexec.bat · 61 lignes · 4 avertissements</span>
+    <span class="droite"><button>Annuler les modifications</button><button class="p">Enregistrer… (diff)</button></span>
+  </div>
+</template>
+
+<!-- ================= Modele A ================= -->
+<section class="modele" id="A">
+  <div class="titre">Modèle A : le fichier en texte, avertissements dans la marge, banque à droite</div>
+  <div class="t"></div>
+  <div class="col2">
+    <div class="carte">
+      <div class="ligne" style="margin-bottom:8px"><h2 style="margin:0">autoexec.bat</h2>
+        <span class="droite doux">Saisie libre : chaque ligne est analysée en direct</span></div>
+      <div class="ed code">
+        <div class="l"><span class="n">4</span><span class="m"></span><span class="c com">; Affiche la température de l'ESP32</span></div>
+        <div class="l orange"><span class="n">5</span><span class="m o">●</span><span class="c">SetOption146 ON</span></div>
+        <div class="bulle o"><b>Doublon avec le persist</b> : configGlobal.be pose déjà SetOption146 au démarrage (diverses.affichageTempESP32 = OFF). Les deux se contredisent.</div>
+        <div class="l"><span class="n">7</span><span class="m"></span><span class="c com">; Evite un reset sur appui long sur un bouton</span></div>
+        <div class="l"><span class="n">8</span><span class="m"></span><span class="c">SetOption1 OFF</span></div>
+        <div class="l"><span class="n">10</span><span class="m"></span><span class="c com">; Paramétrage du wifi et de l'IP :</span></div>
+        <div class="l rouge"><span class="n">11</span><span class="m r">●</span><span class="c">Backlog WifiPower 17; SSId1 MAISON; Password1 ••••••</span></div>
+        <div class="bulle"><b>Secret en clair</b> : Password1 dans un fichier du dépôt PUBLIC. <b>Redémarrage</b> : SSId1 fait redémarrer la carte → boucle à chaque démarrage.</div>
+        <div class="l"><span class="n">14</span><span class="m"></span><span class="c com">; Règle le nom du serveur :</span></div>
+        <div class="l rouge"><span class="n">15</span><span class="m r">●</span><span class="c">Hostname DISJONCTEUR-DIFF-BUREAU</span></div>
+        <div class="bulle"><b>Redémarrage à répétition</b> : Hostname fait toujours redémarrer la carte (CmndHostname, même valeur) → boucle. Vécu le 02/11 sur cette carte.</div>
+        <div class="l"><span class="n">17</span><span class="m"></span><span class="c com">; Paramètre le niveau des logs :</span></div>
+        <div class="l"><span class="n">18</span><span class="m"></span><span class="c">Backlog SerialLog 3; WebLog 3;</span></div>
+        <div class="l orange"><span class="n">20</span><span class="m o">●</span><span class="c">WebSesnor2 0</span></div>
+        <div class="bulle o"><b>Commande inconnue</b> : « WebSesnor2 » — vouliez-vous <u>WebSensor2</u> ? <button class="s">Corriger</button></div>
+        <div class="l"><span class="n">21</span><span class="m"></span><span class="c">AdcParam1 34,32000,10000,15000,0</span></div>
+        <div class="l"><span class="n">23</span><span class="m"></span><span class="c">Timers 1</span></div>
+        <div class="l"><span class="n">24</span><span class="m"></span><span class="c">Timer1 {"Enable":1,"Mode":0,"Time":"08:00","Window":0,"Days":"1111111","Repeat":1,"Output":1,"Action":1}</span></div>
+        <div class="l"><span class="n">25</span><span class="m"></span><span class="c">Timer2 {"Enable":1,"Mode":0,"Time":"01:00","Window":5,"Days":"1111111","Repeat":1,"Output":1,"Action":0}</span></div>
+        <div class="l"><span class="n">…</span><span class="m"></span><span class="c doux">… 9 minuteries</span></div>
+      </div>
+    </div>
+    <div class="carte banque">
+      <h2>Banque de commandes</h2>
+      <input placeholder="Chercher : minuterie, température, log, wifi…">
+      <h3>Proposées</h3>
+      <div class="cmd"><div class="ligne"><span class="code">Timer&lt;n&gt; {…}</span><button class="s">Insérer</button></div><div class="doux">Minuterie : heure, jours, relais, action</div></div>
+      <div class="cmd"><div class="ligne"><span class="code">AdcParam&lt;n&gt; …</span><button class="s">Insérer</button></div><div class="doux">Coefficients de la sonde de température (NTC)</div></div>
+      <div class="cmd"><div class="ligne"><span class="code">SerialLog &lt;0-4&gt;</span><button class="s">Insérer</button></div><div class="doux">Niveau du log série <span class="etiq">doublon persist possible</span></div></div>
+      <div class="cmd"><div class="ligne"><span class="code">Hostname &lt;nom&gt;</span><button class="s">Insérer</button></div><div class="doux"><span class="etiq r">redémarre la carte</span> à éviter ici : mettre dans le persist</div></div>
+      <h3>Ajoutées par toi</h3>
+      <div class="cmd"><div class="ligne"><span class="code">WebSensor2 0</span><button class="s">Insérer</button></div><div class="doux"><span class="etiq u">perso</span> Masque la ligne ADC de l'accueil (différentiel)</div></div>
+      <p class="doux">Une commande saisie qui n'est pas dans la banque est proposée à l'enregistrement : « Ajouter à la banque ».</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= Modele B ================= -->
+<section class="modele" id="B">
+  <div class="titre">Modèle B : une ligne = une commande, rangées par section, ajout guidé par la banque</div>
+  <div class="t"></div>
+  <div class="col2">
+    <div>
+      <div class="sec"><div class="st"><span>Wi-Fi et réseau</span><span class="doux">3 commandes · 2 avertissements</span></div>
+        <div class="cl"><span class="v">✓</span><div><span class="code">SetOption56 ON</span><div class="doux">Recherche du signal wifi le plus fort</div></div><span class="act"><button class="s">✎</button><button class="s">↑</button><button class="s">↓</button><button class="s">🗑</button></span></div>
+        <div class="cl rouge"><span class="r">●</span><div><span class="code">Backlog WifiPower 17; SSId1 MAISON; Password1 ••••••</span>
+          <div class="r" style="font-size:12px">Secret en clair (dépôt public) · SSId1 redémarre la carte à chaque démarrage</div></div><span class="act"><button class="s">✎</button><button class="s">⏸ mettre en commentaire</button></span></div>
+        <div class="cl rouge"><span class="r">●</span><div><span class="code">Hostname DISJONCTEUR-DIFF-BUREAU</span>
+          <div class="r" style="font-size:12px">Redémarrage à répétition (vécu le 02/11) — à mettre dans le persist (serveur.hostname)</div></div><span class="act"><button class="s">✎</button><button class="s">⏸ mettre en commentaire</button></span></div>
+      </div>
+      <div class="sec"><div class="st"><span>Affichage et capteurs</span><span class="doux">3 commandes · 1 avertissement</span></div>
+        <div class="cl orange"><span class="o">●</span><div><span class="code">SetOption146 ON</span><div class="o" style="font-size:12px">Doublon : le persist pose SetOption146 OFF (diverses.affichageTempESP32)</div></div><span class="act"><button class="s">✎</button><button class="s">🗑</button></span></div>
+        <div class="cl"><span class="v">✓</span><div><span class="code">AdcParam1 34,32000,10000,15000,0</span><div class="doux">Coefficients de la sonde NTC (B = 15000)</div></div><span class="act"><button class="s">✎</button><button class="s">🗑</button></span></div>
+        <div class="cl"><span class="v">✓</span><div><span class="code">WebSensor2 0</span><div class="doux">Masque la ligne ADC de l'accueil</div></div><span class="act"><button class="s">✎</button><button class="s">🗑</button></span></div>
+      </div>
+      <div class="sec"><div class="st"><span>Minuteries</span><span class="doux">12 commandes</span></div>
+        <div class="cl"><span class="v">✓</span><div><span class="code">Timer1</span> <span class="doux">08:00 · tous les jours · relais 1 · ALLUMER</span></div><span class="act"><button class="s">✎</button><button class="s">🗑</button></span></div>
+        <div class="cl"><span class="v">✓</span><div><span class="code">Timer2</span> <span class="doux">01:00 ± 5 min · tous les jours · relais 1 · ÉTEINDRE</span></div><span class="act"><button class="s">✎</button><button class="s">🗑</button></span></div>
+        <div class="cl off"><span class="doux">;</span><div><span class="code">;Backlog MqttHost 192.168.0.5; …</span><div class="doux">en commentaire (non exécutée)</div></div><span class="act"><button class="s">▶ réactiver</button></span></div>
+      </div>
+      <button>＋ Ajouter une commande</button> <button>＋ Ajouter une section (commentaire)</button>
+    </div>
+    <div class="carte banque">
+      <h2>Ajouter une commande</h2>
+      <input value="minuterie">
+      <div class="cmd choisie"><div class="ligne"><span class="code">Timer&lt;n&gt;</span><span class="etiq">banque</span></div><div class="doux">Minuterie : heure, jours, relais, action</div></div>
+      <div class="champ"><span>Numéro</span><select><option>12 (libre)</option></select></div>
+      <div class="champ"><span>Heure</span><input value="22:30"></div>
+      <div class="champ"><span>Fenêtre ±</span><input value="0 min"></div>
+      <div class="champ"><span>Jours</span><input value="L M M J V S D"></div>
+      <div class="champ"><span>Relais</span><select><option>1</option></select></div>
+      <div class="champ"><span>Action</span><select><option>Éteindre</option><option>Allumer</option><option>Basculer</option></select></div>
+      <div class="apercu code">Timer12 {"Enable":1,"Mode":0,"Time":"22:30","Window":0,"Days":"1111111","Repeat":1,"Output":1,"Action":0}</div>
+      <div class="av o" style="background:none;padding:0"><span class="v">✓</span><span class="doux">Aucun avertissement · section « Minuteries »</span></div>
+      <button class="p">Ajouter</button>
+      <p class="doux">Commande hors banque : onglet « Libre », la ligne tapée est analysée de la même façon, puis proposée à la banque.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= Modele C ================= -->
+<section class="modele" id="C">
+  <div class="titre">Modèle C : texte à gauche, analyse en liste dessous, assistant d'ajout à droite, diff et envoi en bas</div>
+  <div class="t"></div>
+  <div class="col2">
+    <div>
+      <div class="carte">
+        <h2>autoexec.bat</h2>
+        <div class="ed code">
+          <div class="l"><span class="n">5</span><span class="m o">●</span><span class="c">SetOption146 ON</span></div>
+          <div class="l"><span class="n">8</span><span class="m"></span><span class="c">SetOption1 OFF</span></div>
+          <div class="l"><span class="n">11</span><span class="m r">●</span><span class="c">Backlog WifiPower 17; SSId1 MAISON; Password1 ••••••</span></div>
+          <div class="l"><span class="n">15</span><span class="m r">●</span><span class="c">Hostname DISJONCTEUR-DIFF-BUREAU</span></div>
+          <div class="l"><span class="n">18</span><span class="m"></span><span class="c">Backlog SerialLog 3; WebLog 3;</span></div>
+          <div class="l"><span class="n">20</span><span class="m o">●</span><span class="c">WebSesnor2 0</span></div>
+          <div class="l"><span class="n">21</span><span class="m"></span><span class="c">AdcParam1 34,32000,10000,15000,0</span></div>
+          <div class="l"><span class="n">23</span><span class="m"></span><span class="c">Timers 1</span></div>
+          <div class="l"><span class="n">24</span><span class="m"></span><span class="c">Timer1 {"Enable":1,"Mode":0,"Time":"08:00",…}</span></div>
+        </div>
+      </div>
+      <div class="carte">
+        <h2>Analyse : 4 avertissements</h2>
+        <div class="av r"><b>l. 11</b><span><b>Secret en clair</b> Password1 — et SSId1 redémarre la carte à chaque démarrage</span></div>
+        <div class="av r"><b>l. 15</b><span><b>Redémarrage à répétition</b> Hostname (vécu le 02/11) — sa place : le persist</span></div>
+        <div class="av o"><b>l. 5</b><span><b>Doublon persist</b> SetOption146 : le persist pose OFF</span></div>
+        <div class="av o"><b>l. 20</b><span><b>Commande inconnue</b> WebSesnor2 → WebSensor2 ? <button class="s">Corriger</button></span></div>
+      </div>
+      <div class="carte">
+        <h2>Avant d'enregistrer</h2>
+        <div class="diff"><div class="moins">- WebSesnor2 0</div><div class="plus">+ WebSensor2 0</div><div class="plus">+ Timer12 {"Enable":1,"Time":"22:30",…,"Action":0}</div></div>
+        <div class="ligne" style="margin-top:8px"><button class="p">Écrire dans le dépôt</button><button>Puis envoyer à la carte (OTA)…</button>
+          <span class="doux">La carte l'exécute au prochain démarrage</span></div>
+      </div>
+    </div>
+    <div class="carte banque">
+      <h2>Ajouter</h2>
+      <input placeholder="Chercher dans la banque…" value="Timer">
+      <div class="cmd choisie"><div class="ligne"><span class="code">Timer&lt;n&gt;</span><span class="etiq">banque</span></div></div>
+      <div class="champ"><span>Heure</span><input value="22:30"></div>
+      <div class="champ"><span>Jours</span><input value="tous"></div>
+      <div class="champ"><span>Action</span><select><option>Éteindre</option></select></div>
+      <div class="apercu code">Timer12 {"Enable":1,…,"Time":"22:30",…,"Action":0}</div>
+      <button class="p">Insérer à la ligne 36</button>
+      <h3>Tes commandes</h3>
+      <div class="cmd"><div class="ligne"><span class="code">WebSensor2 0</span><button class="s">Insérer</button></div></div>
+    </div>
+  </div>
+</section>
+
+</main>
+<script>
+  var m = (new URLSearchParams(location.search).get("modele") || "A").toUpperCase();
+  document.body.dataset.m = m;
+  document.querySelectorAll(".t").forEach(function (t) { t.appendChild(document.getElementById("tete").content.cloneNode(true)); });
+</script>
+</body>
+</html>
