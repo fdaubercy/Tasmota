@@ -75,7 +75,7 @@ thème à droite avec filtre) ; onglet nommé **« Sauvegarde configuration »**
 - [x] A12 du plan `energie-differentiel` cochée avec renvoi à ce plan ; commit — preuve : A12 de `energie-differentiel.md` cochée avec renvoi ici ; onglet commité `6e15fc934`
 
 ## A9 — Retour au plan « energie-differentiel »
-- [ ] Reprendre `tasks/plans/energie-differentiel.md` : thermomètre (A11), A14 (outil de l'`autoexec.bat` : endroit et questions à l'utilisateur), A10 (retour au plan « jauges-cuve »)
+- [x] Reprendre `tasks/plans/energie-differentiel.md` : thermomètre (A11), A14 (outil de l'`autoexec.bat` : endroit et questions à l'utilisateur), A10 (retour au plan « jauges-cuve ») — preuve : retour fait le 2026-11-03 : A13 cochée (`faa5a0b71`), A14 : endroit et questions tranchés par l'utilisateur, consignés dans `energie-differentiel.md` ; thermomètre et A10 restent dans ce plan-là
 
 ## A11 — Les trois améliorations du projet (demande du 2026-11-03)
 - [x] Paramètres reposés au démarrage par le persist ou l'`autoexec.bat` marqués « ↻ démarrage » dans la page (survol : source et commande) — preuve : commande Tasmota de chaque paramètre tirée des définitions de decode-config (`decode_config_groupes.py`, 1er mot seulement : `influxdb_token32` → `IFX`, pas `Password`), comparée aux lignes de l'`autoexec.bat` et aux commandes de `configGlobal.be` (`build_sauvegarde::reposes`) ; page relancée : 34 marques sur le différentiel (`seriallog_level` : `autoexec.bat (SerialLog)`, `hostname` : `persist (Hostname)`) ; banc `test_build_sauvegarde_mqtt.py` VERT, témoin sans autoexec ni persist
