@@ -8,7 +8,8 @@
 //   (atelier_graphiques_description.py) ; donnees = {t: [instants epoch s], valeurs: {serie: [valeur|null par instant]}}
 //   ou serie = chemin du SENSOR ou "calc:<nom>" deja calculee ; theme = {texte, grille}.
 //   Serie ABSENTE = cle absente de valeurs, ou aucune valeur numerique : le titre est suffixe « série absente », les
-//   autres series sont tracees. Styles instantanes (cadran, anneau, radar, liquide, demi-cercle) : derniere valeur.
+//   autres series sont tracees. Styles instantanes (cadran, anneau, radar, liquide, demi-cercle) : le DERNIER point ; s'il
+//   vaut null (capteur debranche, esclave muet), la serie est absente : une valeur perimee n'est jamais montree.
 //   barres-periode : par periode (cumul heure|jour|mois, jour par defaut), somme des HAUSSES d'un compteur ; apres une
 //   baisse (remise a zero) la nouvelle valeur compte depuis zero. chaleur : moyenne de la 1re serie par heure x jour. nuage : 1re serie en x, 2e en y.
 //   Zones [[seuil 0..1, couleur]] : fractions de [min, max] (bornes des donnees si absentes) ; markArea + markLine sur les
@@ -25,6 +26,7 @@ var PagesGraphiques = (function () {
   var STYLES = ['courbe', 'aire', 'escalier', 'barres', 'barres-empilees', 'barres-periode', 'deux-axes', 'lies',
                 'cadran', 'anneau', 'chaleur', 'nuage', 'radar', 'liquide', 'demi-cercle'];
   var TEMPORELS = ['courbe', 'aire', 'escalier', 'barres', 'barres-empilees', 'deux-axes', 'lies'];
+  var INSTANTANES = ['cadran', 'anneau', 'radar', 'liquide', 'demi-cercle'];
   var PALETTE = ['#1f7fc4', '#d68a12', '#2e9e5b', '#c8402f', '#8e5cc8', '#14a3a3', '#c25a9e', '#7f8c2d'];
   var DEFAUT = PALETTE[0];
   var CADENCES = {direct: 10, jour: 300, mois: 3600};    // secondes, si le graphique n'en donne pas
@@ -45,9 +47,11 @@ var PagesGraphiques = (function () {
     var s = serie.split('.'), fin = s[s.length - 1];
     return (toutes || []).some(function (x) { return x !== serie && x.split('.').pop() === fin; }) ? s.slice(-2).join('.') : fin;
   }
-  function present(d, s) {
+  // Presente : au moins une valeur ; pour un style instantane, le dernier point lui-meme (pas une valeur du tampon)
+  function present(d, s, instantane) {
     var l = d.valeurs && Object.prototype.hasOwnProperty.call(d.valeurs, s) ? d.valeurs[s] : null;
-    return Array.isArray(l) && l.some(function (v) { return nombre(v) !== null; });
+    if (!Array.isArray(l)) return false;
+    return instantane ? l.length > 0 && nombre(l[l.length - 1]) !== null : l.some(function (v) { return nombre(v) !== null; });
   }
   function derniere(l) {
     for (var i = (l || []).length - 1; i >= 0; i--) if (nombre(l[i]) !== null) return l[i];
@@ -264,7 +268,8 @@ var PagesGraphiques = (function () {
     var d = {t: (donnees && Array.isArray(donnees.t)) ? donnees.t : [], valeurs: (donnees && donnees.valeurs) || {}};
     var th = {texte: (theme && theme.texte) || '#888', grille: (theme && theme.grille) || 'rgba(128,128,128,0.25)'};
     var series = Array.isArray(g.series) ? g.series : [];
-    var presentes = series.filter(function (s) { return present(d, s); });
+    var instantane = INSTANTANES.indexOf(g.type) >= 0;
+    var presentes = series.filter(function (s) { return present(d, s, instantane); });
     var absentes = series.filter(function (s) { return presentes.indexOf(s) < 0; });
     var o = base(g, th, absentes), s = presentes[0];
     if (g.type === 'demi-cercle') return {svg: demiCercle(g, d, th, s, o.title.text)};

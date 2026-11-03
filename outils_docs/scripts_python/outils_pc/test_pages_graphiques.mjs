@@ -203,6 +203,18 @@ const partielle = G.optionDe({type: 'courbe', titre: 'V', series: ['a.b', 'absen
 verifie(partielle.series.length === 1 && partielle.series[0].data.length === 30, 'serie absente : la serie presente reste tracee');
 const vide = G.optionDe({type: 'cadran', titre: 'V', series: ['a.b']}, {t: [], valeurs: {}}, THEME);
 verifie(vide.title.text.indexOf('série absente') > 0 && vide.series[0].type === 'gauge', 'donnees vides : cadran trace, série absente');
+// Capteur debranche en direct : le tampon garde [5, 6] puis la carte rend null -> aucune valeur perimee en instantane
+const perime = {t: [T0, T0 + 10, T0 + 20], valeurs: {'a.b': [5, 6, null]}};
+for (const s of ['cadran', 'anneau', 'radar', 'liquide', 'demi-cercle']) {
+  const o = G.optionDe({type: s, titre: 'V', series: ['a.b']}, perime, THEME);
+  const texte = o.svg !== undefined ? o.svg : o.title.text;
+  verifie(texte.indexOf('série absente') > 0 && JSON.stringify(o).indexOf('"6"') < 0 && !/>6</.test(texte) &&
+    !(o.series && o.series[0] && o.series[0].data && o.series[0].data[0] && o.series[0].data[0].value === 6),
+    s + ' : dernier point null -> série absente, 6 jamais montre', texte);
+}
+const courbePerime = G.optionDe({type: 'courbe', titre: 'V', series: ['a.b']}, perime, THEME);
+verifie(courbePerime.title.text.indexOf('série absente') < 0 &&
+  JSON.stringify(courbePerime.series[0].data.map(p => p[1])) === '[5,6,null]', 'courbe : les points precedents restent traces');
 
 // ---- 5. Lecteur de la carte (fetch simule : URL appelees, formes de /pages et /histo) -------------------
 const appels = [];
