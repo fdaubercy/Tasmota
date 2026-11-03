@@ -86,7 +86,7 @@ thème à droite avec filtre) ; onglet nommé **« Sauvegarde configuration »**
 ## A12 — Remarques de l'utilisateur du 2026-11-03 (suite)
 - [x] Purge automatique seulement si une case dédiée de l'onglet reste cochée (cochée par défaut, commune à toutes les cartes) — preuve : case sous l'historique, `POST /sauvegarde/reglages`, `build_sauvegarde::purge_auto` (fichier `reglages.json` du dossier des sauvegardes, illisible = purge active) ; banc MQTT VERT (décochée : rien d'effacé ; recochée : la purge reprend) ; mutant sans la case vu ROUGE ; sonde Chrome VERTE (case cochée par défaut, aller-retour enregistré)
 - [x] Onglet « Envs par défaut » renommé « Env par défaut (Platformio override) » — preuve : `build_page.py` (bouton), README, docstrings ; `test_build_page_defaut_chrome.py` VERT
-- [ ] Limite de la marque « ↻ démarrage » (tout `configGlobal.be` compté dès qu'un persist existe) : solutions proposées à l'utilisateur, choix en attente
+- [x] Limite de la marque « ↻ démarrage » (tout `configGlobal.be` compté dès qu'un persist existe) : solution A retenue par l'utilisateur, table commande → clé du persist — preuve : `build_sauvegarde::POSEES` + `commandes_posees` (clé vide, MQTT coupé, voie Ethernet absente : pas de marque ; niveaux de logs du profil ajoutés) ; banc MQTT VERT (une ligne par commande de `configGlobal.be`, différentiel, persist MQTT coupé et hostname vide) ; mutant sans la table vu ROUGE (3 échecs) ; différentiel 41 marques, P4 39
 
 ## Vérification
 - A1 : sorties de decode-config sur le vrai `.dmp` du différentiel (comparaison d'octets, valeurs relues).

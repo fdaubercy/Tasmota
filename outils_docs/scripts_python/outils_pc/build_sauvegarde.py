@@ -167,6 +167,84 @@ def commandes_persist(texte):
     return commandes_lignes("\n".join(textes))
 
 
+def _v(persist, chemin):
+    """Valeur du persist au chemin « a.b.c », None si un maillon manque."""
+    for cle in chemin.split("."):
+        persist = persist.get(cle) if isinstance(persist, dict) else None
+    return persist
+
+
+def _pose(persist, *chemins):
+    """Une des valeurs est remplie : testeParam de configGlobal.be ne pose rien pour ""."""
+    return any(_v(persist, c) not in (None, "") for c in chemins)
+
+
+def _mqtt_pose(p, chemin):
+    return _v(p, "serveur.mqtt.activation") == "ON" and _pose(p, chemin)
+
+
+def _eth_pose(p, chemin):
+    return _v(p, "serveur.voieReseau") == "ethernet" and _v(p, "drivers.Ethernet.activation") == "ON" and _pose(p, chemin)
+
+
+def _log_pose(p, sortie):
+    return _pose(p, f"diverses.logs.profils.{_v(p, 'diverses.logs.profil')}.{sortie}")
+
+
+# Commande normalisee posee au demarrage par data/fs/configGlobal.be (et logFonctions.appliqueProfil) -> vrai si le
+# persist de la carte la fait poser ; False : commande seulement lue. Tenue a la main d'apres configGlobal.be : le banc
+# exige une ligne par commande qu'y trouve commandes_persist, une commande absente reste marquee.
+POSEES = {
+    "SETOPTION56": lambda p: _pose(p, "serveur.wifi.selectSignalFort"),
+    "WIFIPOWER": lambda p: _pose(p, "serveur.wifi.power"),
+    "SSID": lambda p: _pose(p, "serveur.wifi.reseau1.nomReseauWifi", "serveur.wifi.reseau2.nomReseauWifi"),
+    "PASSWORD": lambda p: _pose(p, "serveur.wifi.reseau1.nomReseauWifi", "serveur.wifi.reseau2.nomReseauWifi"),
+    "AP": lambda p: _pose(p, "serveur.wifi.reseau2.nomReseauWifi"),
+    "DEVICENAME": lambda p: _pose(p, "serveur.nom"),
+    "HOSTNAME": lambda p: _pose(p, "serveur.hostname"),
+    "SETOPTION55": lambda p: _pose(p, "serveur.mDNS"),
+    "SETOPTION128": lambda p: _pose(p, "serveur.apiHTTP"),
+    "IPADDRESS": lambda p: _pose(p, *(f"serveur.IP.{c}" for c in ("IPAddress", "IPGateway", "Subnet", "DNSServer"))),
+    "ETHIPADDRESS": lambda p: _eth_pose(p, "serveur.IP.IPAddress"),
+    "ETHGATEWAY": lambda p: _eth_pose(p, "serveur.IP.IPGateway"),
+    "ETHSUBNETMASK": lambda p: _eth_pose(p, "serveur.IP.Subnet"),
+    "ETHDNSSERVER": lambda p: _eth_pose(p, "serveur.IP.DNSServer"),
+    "WIFI": lambda p: _pose(p, "serveur.voieReseau"),          # configGlobal.voieReseau ne fait rien sans voieReseau
+    "ETHERNET": lambda p: _pose(p, "serveur.voieReseau"),
+    "SETOPTION3": lambda p: _pose(p, "serveur.mqtt.activation"),
+    "MQTTHOST": lambda p: _mqtt_pose(p, "serveur.mqtt.hote"),
+    "MQTTPORT": lambda p: _mqtt_pose(p, "serveur.mqtt.port"),
+    "MQTTCLIENT": lambda p: _mqtt_pose(p, "serveur.mqtt.client"),
+    "MQTTUSER": lambda p: _mqtt_pose(p, "serveur.mqtt.utilisateur"),
+    "TOPIC": lambda p: _mqtt_pose(p, "serveur.mqtt.topic"),
+    "GROUPTOPIC": lambda p: _mqtt_pose(p, "serveur.mqtt.groupTopic1"),
+    "LATITUDE": lambda p: _pose(p, "diverses.localisation.latitude"),
+    "LONGITUDE": lambda p: _pose(p, "diverses.localisation.longitude"),
+    "TIMEZONE": lambda p: _pose(p, "diverses.fuseauHoraire.timezone"),
+    "TIMESTD": lambda p: _pose(p, "diverses.fuseauHoraire.TimeStd"),
+    "TIMEDST": lambda p: _pose(p, "diverses.fuseauHoraire.TimeDst"),
+    "SETOPTION146": lambda p: _pose(p, "diverses"),            # defaut "OFF" dans configGlobal.be : toujours pose
+    "SETOPTION141": lambda p: _pose(p, "diverses"),            # idem, defaut "OFF"
+    "TELEPERIOD": lambda p: _pose(p, "diverses"),              # idem, defaut 300
+    "SETOPTION1": lambda p: _pose(p, "diverses.eviteResetBTN"),
+    "FILELOG": lambda p: _pose(p, "diverses.logs"),            # defaut 0
+    "TEMPLATE": lambda p: _pose(p, "template"),
+    "MODULE": lambda p: _pose(p, "template"),
+    "MODULES": lambda p: False,
+    "SERIALLOG": lambda p: _log_pose(p, "serie"),               # logFonctions.SORTIES
+    "WEBLOG": lambda p: _log_pose(p, "web"),
+    "MQTTLOG": lambda p: _log_pose(p, "mqtt"),
+    "SYSLOG": lambda p: _log_pose(p, "syslog"),
+}
+ECRITES_LOGS = {"SERIALLOG": "SerialLog", "WEBLOG": "WebLog", "MQTTLOG": "MqttLog", "SYSLOG": "SysLog"}
+
+
+def commandes_posees(persist, texte_config):
+    """{commande: forme ecrite} que configGlobal.be (`texte_config`) pose au demarrage avec ce persist (dict)."""
+    commandes = dict(commandes_persist(texte_config), **ECRITES_LOGS)
+    return {n: e for n, e in commandes.items() if POSEES.get(n, lambda p: True)(persist)}
+
+
 def reposes(cles, autoexec, persist, commandes=None):
     """{cle: texte} des parametres qu'une commande de l'autoexec.bat ou du persist repose a chaque demarrage."""
     commandes = commandes if commandes is not None else decode_config.disposition()["commandes"]
@@ -191,9 +269,11 @@ def _demarrage(racine, env):
     if not d:
         return {}, {}
     lit = lambda p: p.read_text(encoding="utf-8", errors="replace") if p.is_file() else ""
-    # shortcut: tout configGlobal.be est compte des qu'il y a un persist, meme une cle vide qu'il ne pose pas ;
-    # a affiner si une marque trompe
-    persist = commandes_persist(lit(Path(racine) / CONFIG_PERSIST)) if (Path(racine) / d / "_persist.json").is_file() else {}
+    try:
+        donnees = json.loads(lit(Path(racine) / d / "_persist.json") or "{}")
+    except ValueError:
+        donnees = {}                 # persist illisible : l'autoexec de la carte ne charge rien, rien n'est repose
+    persist = commandes_posees(donnees, lit(Path(racine) / CONFIG_PERSIST)) if donnees else {}
     return commandes_lignes(lit(Path(racine) / d / "autoexec.bat")), persist
 
 

@@ -216,6 +216,19 @@ def test_reposes():
     verifie(("autoexec.bat (SerialLog)" in marques["seriallog_level"], "persist (Hostname)" in marques["hostname"]), (True, True),
             "marque : source et commande telle qu'ecrite")
     verifie(bs.reposes(["flag3"], {}, {}), {}, "temoin : sans autoexec ni persist, aucune marque")
+    # -- table POSEES : une ligne par commande de configGlobal.be, la marque suit le persist de la carte
+    config = (RACINE / bs.CONFIG_PERSIST).read_text(encoding="utf-8")
+    verifie(sorted(set(bs.commandes_persist(config)) - set(bs.POSEES)), [], "POSEES : chaque commande de configGlobal.be a sa ligne")
+    vrai = json.loads((RACINE / "data/bureau/tasmota32-interrupteur-energie/_persist.json").read_text(encoding="utf-8"))
+    posees = bs.commandes_posees(vrai, config)
+    verifie(({"HOSTNAME", "MQTTHOST", "TELEPERIOD", "SERIALLOG"} <= set(posees), {"MODULES", "WIFI", "ETHIPADDRESS"} & set(posees)),
+            (True, set()), "differentiel : hostname, MQTT, telePeriod, logs poses ; lecture seule et Ethernet non")
+    sans = json.loads(json.dumps(vrai))
+    sans["serveur"]["mqtt"]["activation"], sans["serveur"]["hostname"] = "OFF", ""
+    posees = bs.commandes_posees(sans, config)
+    verifie(({"MQTTHOST", "TOPIC", "HOSTNAME"} & set(posees), "SETOPTION3" in posees), (set(), True),
+            "MQTT coupe et hostname vide : plus marques (SetOption3 reste pose)")
+    verifie(bs.reposes(["mqtt_host", "hostname"], {}, posees), {}, "marque : rien pour un parametre que le persist ne pose pas")
 
 
 def banc():

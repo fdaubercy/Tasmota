@@ -987,7 +987,10 @@ compteurs ; voir l'onglet « Aide »). Fichiers `AAAAMMJJ-HHMMSS_<origine>.dmp` 
   valeur restaurée. Ces paramètres portent la marque **« ↻ démarrage »** ; son survol nomme la source et la commande
   (`autoexec.bat (SerialLog)`, `persist (Hostname)`). La marque vient de la commande Tasmota de chaque paramètre
   (decode-config) comparée aux lignes de l'`autoexec.bat` de la carte et aux commandes que `data/fs/configGlobal.be`
-  pose depuis le persist (`build_sauvegarde::reposes`) ; elle compte tout `configGlobal.be` dès qu'il y a un persist.
+  pose depuis le persist (`build_sauvegarde::reposes`). Une commande de `configGlobal.be` ne compte que si le persist de
+  la carte la fait poser : clé remplie, MQTT actif pour `MqttHost`/`Topic`..., voie Ethernet pour `EthIPAddress`...
+  (table `build_sauvegarde::POSEES`, tenue à la main ; le banc exige une ligne par commande de `configGlobal.be`).
+  Les niveaux de logs du profil actif (`SerialLog`, `WebLog`, `MqttLog`, `SysLog`) sont comptés aussi.
 - **Liaison** : « HTTP (adresse) » par défaut ; **« MQTT (broker) »** pour une carte que ce PC ne joint pas en HTTP.
   La carte est jointe par le broker de `user_config_override.h` et le topic de son persist au dépôt, par les commandes
   `FileDownload` / `FileUpload` de Tasmota (`build_sauvegarde_mqtt.py`) : même fichier que `/dl`, même déroulé
