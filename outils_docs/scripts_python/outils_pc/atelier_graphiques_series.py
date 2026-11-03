@@ -4,8 +4,10 @@ Lecture SEULE : trois routes de la carte (/histo?p=liste, /cm?cmnd=Status 10, /p
 RoutageRangeExtender, Sleep ni Backlog (spec §7.3). Carte muette -> repli sur le persist et graphiques.json du depot,
 valeurs simulees (deterministes, graine = chemin).
 """
+import calendar
 import json
 import random
+import time
 import urllib.parse
 from pathlib import Path
 
@@ -13,6 +15,8 @@ import build_envs
 import build_ota_http
 
 DELAI = 4
+NOM = "mesures"                           # nom de l'historique (defaut de graphiquesFonctions)
+MAX_DIRECT = 12                           # chemins par requete /pages?f=valeurs
 UNITES = (("temperature", "°C"), ("humidity", "%"), ("humidite", "%"), ("pressure", "hPa"), ("power", "W"),
           ("voltage", "V"), ("current", "A"), ("energy", "kWh"), ("taux", "%"))
 
@@ -82,36 +86,76 @@ def series(racine, env, *, get=None):
     if not ip:
         return _depot(dossier, persist, "adresse de la carte inconnue")
     try:
-        liste = _json(get(ip, "/histo?n=mesures&p=liste", DELAI))
+        liste = _json(get(ip, f"/histo?n={NOM}&p=liste", DELAI))
         sns = _json(get(ip, "/cm?cmnd=" + urllib.parse.quote("Status 10", safe=""), DELAI)).get("StatusSNS") or {}
-    except Exception as e:   # HTTPException, JSON tronque : meme repli
+        enregistrees = liste.get("series") or []
+        if not (isinstance(liste, dict) and isinstance(sns, dict) and isinstance(enregistrees, list)
+                and all(isinstance(c, str) for c in enregistrees)):
+            raise ValueError("reponse inattendue")
+    except Exception as e:                  # HTTPException, JSON tronque ou d'un autre type : meme repli
         return _depot(dossier, persist, f"carte injoignable ({e})")
     try:
         historique = bool(_json(get(ip, "/pages?f=sources", DELAI)).get("historique"))
     except Exception:                       # 404 : carte sans le moteur de pages, pas une erreur
-        historique = bool(liste.get("series"))
-    enregistrees = set(liste.get("series") or [])
+        historique = bool(enregistrees)
     affichage = _graphiques(dossier) if dossier else {}
     feuilles = _feuilles(sns)
-    chemins = list(enregistrees) + [c for c in feuilles if c not in enregistrees]
+    chemins = enregistrees + [c for c in feuilles if c not in enregistrees]
     return {"source": "carte", "motif": "", "historique": historique,
             "series": [_serie(c, affichage, c in enregistrees, feuilles.get(c)) for c in chemins]}
 
 
-def valeurs(racine, env, chemins, periode, *, get=None):
-    """{"source", "valeurs": {chemin: nombre | "ON"/"OFF" | None}}. Instantane : `periode` n'est pas lue sur la carte
-    (shortcut: pas de 4e route, l'historique sera lu par la page elle-meme)."""
+def _simule(chemins, periode, mois, nom):
+    """Memes formes que la carte ; valeurs deterministes (graine = chemin)."""
+    maintenant = int(time.time())
+
+    def un(c, k=0):
+        if ".POWER" in c.upper() or c.upper().startswith("POWER"):
+            return random.Random(f"{c}|{k}").choice(("ON", "OFF"))
+        return round(random.Random(f"{c}|{k}").uniform(10, 90), 1)
+
+    if periode == "direct":
+        return {"t": maintenant, "valeurs": {c: un(c) for c in chemins[:MAX_DIRECT]}}
+    n, pas = 24, 300
+    if periode == "jour":
+        t0 = maintenant // pas * pas - n * pas
+        return {"nom": nom, "series": list(chemins), "pas": pas, "t0": t0,
+                "valeurs": [[un(c, k) for k in range(n)] for c in chemins],
+                "tEncours": t0 + n * pas, "encours": [un(c, n) for c in chemins]}
+    debut = int(calendar.timegm(time.strptime(mois + "-01", "%Y-%m-%d"))) if mois else maintenant - n * 3600
+    lignes = []
+    for k in range(n):
+        ligne = [debut + k * 3600]
+        for c in chemins:
+            m = un(c, k)
+            ligne += [m, m, m] if isinstance(m, str) else [m - 1, m, m + 1]
+        lignes.append(ligne)
+    return {"nom": nom, "series": list(chemins), "lignes": lignes}
+
+
+def valeurs(racine, env, chemins, periode, *, get=None, nom=NOM, mois=None):
+    """Forme de la reponse de la carte, plus "source" ("carte" | "depot") que lecteurCarte ignore :
+    direct -> {"t", "valeurs": {chemin: valeur|null}} (/pages?f=valeurs, 12 chemins au plus, d'apres Status 10) ;
+    jour / mois -> JSON brut de /histo?n=<nom>&p=jour | p=mois&m=AAAA-MM (mois UTC en cours par defaut).
+    Carte muette ou reponse inattendue : memes formes, valeurs simulees."""
     get = get or build_ota_http._get
     ip = _carte(racine, env)[0]
     if ip:
         try:
-            sns = _json(get(ip, "/cm?cmnd=" + urllib.parse.quote("Status 10", safe=""), DELAI)).get("StatusSNS") or {}
-            feuilles = _feuilles(sns)
-            return {"source": "carte", "valeurs": {c: feuilles.get(c) for c in chemins}}
+            if periode == "direct":
+                sns = _json(get(ip, "/cm?cmnd=" + urllib.parse.quote("Status 10", safe=""), DELAI)).get("StatusSNS") or {}
+                f = _feuilles(sns)
+                res = {"t": int(time.time()), "valeurs": {c: f.get(c) for c in chemins[:MAX_DIRECT]}}
+            else:
+                url = f"/histo?n={urllib.parse.quote(nom)}&p={periode}"
+                if periode == "mois":
+                    mois = mois or time.strftime("%Y-%m", time.gmtime())
+                    url += "&m=" + mois
+                res = _json(get(ip, url, DELAI))
+                if not isinstance(res, dict):
+                    raise ValueError("reponse inattendue")
+            res["source"] = "carte"
+            return res
         except Exception:
             pass
-    simulees = {}
-    for c in chemins:
-        alea = random.Random(f"{c}|{periode}")
-        simulees[c] = alea.choice(("ON", "OFF")) if ".POWER" in c.upper() else round(alea.uniform(10, 90), 1)
-    return {"source": "depot", "valeurs": simulees}
+    return dict(_simule(chemins, periode, mois, nom), source="depot")
