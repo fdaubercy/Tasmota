@@ -43,6 +43,7 @@
 #      controleES8311, qui arrete l'autoexec avant l'historique et controleGarage).
 #   5. persist reel, telemetrie SANS bloc COUNTER : web_sensor du garage ne doit pas lever (fragilite
 #      de controleGarage, corrigee le 2026-10-23) ; une seule erreur journalisee, puis retour du compteur.
+#   6, 7, 8. serveur.voieReseau (2026-11-02) : ethernet, retour au wifi, ethernet sans bloc Ethernet actif.
 #
 # DEFAUTS CONNUS : pourquoi un cas "rouge aujourd'hui" n'echoue pas le banc
 #   Le comportement ATTENDU apres correction est ecrit des aujourd'hui (fonction connu()). Tant que le
@@ -97,7 +98,7 @@ if CAS == nil
     if os.path.exists(exe)    exe = string.replace(exe, "/", string.char(92))    else    exe = "lib/libesp32/berry/berry"    end
     var options = (VERBEUX ? " --verbeux" : "")
     var rouges = []
-    for n: 1 .. 5
+    for n: 1 .. 8
         # Code de sortie du cas = nombre d'echecs (0 = vert) ; un cas qui plante sort aussi en non nul
         var rc = os.system(exe + " " + CE_FICHIER + " " + SOURCES + " --cas " + str(n) + options)
         if rc != 0    rouges.push("cas " + str(n) + " rc=" + str(rc))    end
@@ -150,11 +151,16 @@ var persistCas
 if CAS == 1         persistCas = persistReel
 elif CAS == 2       persistCas = {}
 elif CAS == 3       persistCas = json.load(json.dump(persistReel))    persistCas["serveur"].remove("wifi")
+elif CAS == 6       persistCas = json.load(json.dump(persistReel))    persistCas["serveur"]["voieReseau"] = "ethernet"
+elif CAS == 7       persistCas = json.load(json.dump(persistReel))    persistCas["serveur"]["voieReseau"] = "wifi"
+                    persistCas["serveur"]["rangeExtender"]["activationAvantEthernet"] = "ON"    persistCas["serveur"]["rangeExtender"]["activation"] = "OFF"
+elif CAS == 8       persistCas = json.load(json.dump(persistReel))    persistCas["serveur"]["voieReseau"] = "ethernet"    persistCas["drivers"]["Ethernet"]["activation"] = "OFF"
 else                persistCas = persistReel
 end
 var TITRES = {1: "persist reel du P4 (reference)", 2: "persist '{}' (constat B1)", 3: "persist reel prive de serveur.wifi (constat B3)",
               4: "persist reel, codec ES8311 absent du bus I2C (adresse 0x18)",
-              5: "persist reel, telemetrie sans bloc COUNTER (compteur du garage absent)"}
+              5: "persist reel, telemetrie sans bloc COUNTER (compteur du garage absent)",
+              6: "persist reel, voie reseau ethernet", 7: "persist reel, retour a la voie wifi", 8: "voie ethernet sans bloc Ethernet actif"}
 print("")
 print(string.format("=== Cas %i : %s -- sources %s", CAS, TITRES[CAS], SOURCES))
 
@@ -201,7 +207,7 @@ var DRIVERS_ATTENDUS = ["CONTROLE_GENERAL", "CONTROLE_WEB", "CONTROLE_UDP", "CON
                         "HISTORIQUE_WEB", "CONTROLE_GARAGE"]
 var COMMANDES_ATTENDUES = ["ReglageGlobal", "ReglageLog", "ReglageModbus", "ReglageSlaveModBus", "ReglageConn16Channel",
                            "ReglageUDP", "ReglageRangeExtender", "ReglageDiscovery", "ReglageVolets", "ReglageGarage"]
-var REGLES_ATTENDUES = ["controleGeneral_System", "controleGeneral_Wifi", "controleGeneral_Mqtt", "controleGeneral_Time"]
+var REGLES_ATTENDUES = ["controleGeneral_System", "controleGeneral_Wifi", "controleGeneral_Eth", "controleGeneral_Mqtt", "controleGeneral_Time"]
 
 # Controles du demarrage de reference. 'v' = controle (cas 1) ou un compteur (temoin du cas 3).
 def controlesReference(v)
@@ -364,7 +370,7 @@ elif CAS == 4
     controle("codec ES8311 absent : les modules charges AVANT lui sont demarres (ReglageGlobal, CONTROLE_DISCOVERY)",
              tasmota.commandes.contains("ReglageGlobal") && classesDrivers().find("CONTROLE_DISCOVERY") != nil)
 
-else
+elif CAS == 5
     # web_sensor du driver garage, appele comme par le firmware (exceptions gardees par appelle())
     var garage = nil
     for d: tasmota.drivers    if classname(d) == "CONTROLE_GARAGE"    garage = d    end    end
@@ -673,6 +679,53 @@ if CAS == 1
              && nbP59["analogiques"]["actives"].find("nb") == 2 && regleAnalog && !regleParasite)
     controle("P5.9 : log de l'affichage WebUI des thermometres : 'OFF' du persist, pas '0' (lu : " + str(affichage) + ")",
              affichage != nil && string.find(affichage, "= OFF") >= 0)
+end
+
+if CAS >= 6
+    var srv = global.serveur
+    var ethernet = (CAS == 6)
+    controle("voie " + srv["voieReseau"] + " : Wi-Fi " + (ethernet ? "coupe" : "actif"), tasmota.envoyees("Wifi ") == [ethernet ? "Wifi 0" : "Wifi 1"])
+    controle("voie " + srv["voieReseau"] + " : Ethernet " + (ethernet ? "actif" : "coupe"), tasmota.envoyees("Ethernet ") == [ethernet ? "Ethernet 1" : "Ethernet 0"])
+    controle("IP Ethernet = serveur.IP en voie ethernet seulement",
+             tasmota.envoyees("EthIPAddress ") == (ethernet ? ["EthIPAddress " + srv["IP"]["IPAddress"]] : []))
+    var driverRE = classesDrivers().find("CONTROLE_RANGE_EXTENDER") != nil
+    controle("Range Extender " + (ethernet ? "desactive" : "actif"), driverRE == !ethernet && srv["rangeExtender"]["activation"] == (ethernet ? "OFF" : "ON"))
+    controle("etat d'avant le Range Extender : memorise en ethernet, efface en wifi", srv["rangeExtender"].contains("activationAvantEthernet") == ethernet)
+    if CAS == 8    controle("sans bloc Ethernet actif : retour au Wi-Fi", srv["voieReseau"] == "wifi")    end
+
+    # surveilleWifi : pas de redemarrage en Ethernet ; temoin : redemarrage en Wi-Fi
+    var cgVoie = global.controleGeneral
+    cgVoie.connected = false
+    tasmota.wifiUp = false
+    tasmota.cmds = []
+    for k: 1 .. 301    tasmota.horloge += 1000    cgVoie.surveilleWifi()    end
+    controle("sans Wi-Fi depuis 301 s : " + (ethernet ? "aucun redemarrage" : "redemarrage"), size(tasmota.envoyees("Restart")) == (ethernet ? 0 : 1))
+
+    # FTP : le meme demarrage differe par ETH#Connected que par Wifi#Connected
+    var regleEth = tasmota.regle("controleGeneral_Eth")
+    var ftpArme = def () for t: tasmota.timers if (t[2] == "demarrageFTP") return true end end return false end
+    srv["serveurFTP"] = {"activation": "ON"}
+    tasmota.remove_timer("demarrageFTP")
+    regleEth({"Disconnected": 1}, "Eth", {"ETH": {"Disconnected": 1}})
+    controle("ETH#Disconnected : FTP pas arme", !ftpArme())
+    regleEth({"Connected": 1}, "Eth", {"ETH": {"Connected": 1}})
+    controle("ETH#Connected : demarrage du FTP arme", ftpArme())
+    srv["serveurFTP"]["activation"] = "OFF"
+    tasmota.cmds = []
+    regleEth({"Connected": 1}, "Eth", {"ETH": {"Connected": 1}})
+    controle("ETH#Connected, FTP OFF : minuterie retiree, serveur coupe", !ftpArme() && size(tasmota.envoyees("UFSFTP 0")) == 1)
+
+    # La commande : etat, refus, bascule ecrite au persist et redemarrage differe
+    var voie = global.globalFonctions.reglageVoieReseau
+    controle("commande sans valeur : etat", voie("")["voieReseau"] == srv["voieReseau"])
+    controle("commande : voie inconnue refusee", voie("lora").contains("erreur"))
+    if CAS == 8
+        controle("commande : ethernet refuse sans bloc actif", voie("ethernet").contains("erreur") && srv["voieReseau"] == "wifi")
+    else
+        var autre = (ethernet ? "wifi" : "ETHERNET")
+        var r = voie(autre)
+        controle("commande : bascule memorisee, redemarrage annonce", srv["voieReseau"] == string.tolower(autre) && r.find("redemarrage") == true)
+    end
 end
 
 print(string.format("CAS_%i: %s", CAS, echecs == 0 ? "OK" : "ECHEC (" + str(echecs) + ")"))

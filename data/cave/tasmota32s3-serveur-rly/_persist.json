@@ -58,6 +58,7 @@
 		"mDNS": "ON",
 		"apiHTTP": "ON",
 		"log": "info",
+		"voieReseau": "wifi",
 		"IP": {
 			"IPAddress": "192.168.0.243",
 			"IPGateway": "192.168.0.254",
@@ -140,11 +141,11 @@
 			1,
 			1,
 			1,
-			1,
-			1,
-			1,
-			1,
-			1,
+			5600,
+			704,
+			672,
+			736,
+			5568,
 			1,
 			1,
 			1,
@@ -970,30 +971,44 @@
 			}
 		},
 		"Ethernet": {
-			"activation": "OFF",
+			"activation": "ON",
 			"name": "Bus Ethernet",
 			"environnement": {
 				"pinsEthernets": {
 					"pinsEthernet1": {
-						"activation": "OFF",
-						"nom": "ETH MDC",
-						"pin": 31,
+						"activation": "ON",
+						"nom": "ETH CS (MDC)",
+						"pin": 16,
 						"id": 1,
 						"type": 5568
 					},
 					"pinsEthernet2": {
-						"activation": "OFF",
-						"nom": "ETH Pwr",
-						"pin": 51,
-						"id": 1,
-						"type": 5536
-					},
-					"pinsEthernet3": {
-						"activation": "OFF",
-						"nom": "ETH MDIO",
-						"pin": 52,
+						"activation": "ON",
+						"nom": "ETH INT (MDIO)",
+						"pin": 12,
 						"id": 1,
 						"type": 5600
+					},
+					"pinsEthernet3": {
+						"activation": "ON",
+						"nom": "ETH MOSI",
+						"pin": 13,
+						"id": 1,
+						"type": 704
+					},
+					"pinsEthernet4": {
+						"activation": "ON",
+						"nom": "ETH MISO",
+						"pin": 14,
+						"id": 1,
+						"type": 672
+					},
+					"pinsEthernet5": {
+						"activation": "ON",
+						"nom": "ETH SCLK",
+						"pin": 15,
+						"id": 1,
+						"type": 736
 					}
 				}
 			}

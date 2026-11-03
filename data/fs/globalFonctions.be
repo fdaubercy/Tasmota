@@ -21,6 +21,21 @@ def globalFonctions_demarreFTP()
 end
 globalFonctions.demarreFTP = globalFonctions_demarreFTP
 
+# Règle le serveur FTP à chaque connexion au réseau (Wi-Fi ou Ethernet).
+# Demarrage DIFFERE (voir DELAI_DEMARRAGE_FTP_MS) ; timer nomme -> une reconnexion
+# reprogramme au lieu d'empiler plusieurs demarrages.
+def globalFonctions_regleFTP()
+	if serveur.find("serveurFTP", false)
+		tasmota.remove_timer("demarrageFTP")
+		if serveur["serveurFTP"]["activation"] == "ON"
+			tasmota.set_timer(globalFonctions.DELAI_DEMARRAGE_FTP_MS, globalFonctions.demarreFTP, "demarrageFTP")
+		else
+			tasmota.cmd("UFSFTP 0", boolMute)
+		end
+	end
+end
+globalFonctions.regleFTP = globalFonctions_regleFTP
+
 # Règles sur changement d'état lors du démarrage de Tasmota
 def globalFonctions_changementEtatDemarrage(value, trigger, msg)
     import string
@@ -50,24 +65,17 @@ def globalFonctions_changementEtatDemarrage(value, trigger, msg)
         if etatWifi.find("Connected", 0)
 			introspect.set(controleGeneral, "connected", true)
 
-			# Règle les paramètres du serveur FTP
-			if serveur.find("serveurFTP", false)
-				if serveur["serveurFTP"]["activation"] == "ON"
-					# Demarrage DIFFERE (voir DELAI_DEMARRAGE_FTP_MS) ; timer nomme -> une reconnexion
-					# Wi-Fi reprogramme au lieu d'empiler plusieurs demarrages.
-					tasmota.remove_timer("demarrageFTP")
-					tasmota.set_timer(globalFonctions.DELAI_DEMARRAGE_FTP_MS, globalFonctions.demarreFTP, "demarrageFTP")
-				else
-					tasmota.remove_timer("demarrageFTP")
-					tasmota.cmd("UFSFTP 0", boolMute)
-				end
-			end
+			globalFonctions.regleFTP()
         elif etatWifi.find("Disconnected", 0)
             introspect.set(controleGeneral, "connected", false)
         elif (msg.find("Wifi") == "OFF" || msg.find("Wifi") == "ON")
 			introspect.set(controleGeneral, "connected", (msg["Wifi"] == "OFF" ? false : true))
             logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: Wifi " + (msg["Wifi"] == "OFF" ? "désactivé" : "activé") + " !", LOG_LEVEL_DEBUG)
         end
+	# Connexion Ethernet : en voie Ethernet, Wifi#Connected ne vient jamais
+	elif (trigger == "Eth")
+		var etatEth = msg.find("ETH")
+		if (isinstance(etatEth, map) && etatEth.find("Connected", 0))	globalFonctions.regleFTP()	end
 	# Init: Se produit une fois après le redémarrage avant que le Wi-Fi et MQTT ne soient initialisés
     # Boot: Se déclenche après la connexion du Wi-Fi et de MQTT (si activé)
     # Save: Avant redemarrage de tasmota
@@ -613,6 +621,7 @@ def globalFonctions_aideReglageGlobal(sujet)
             ["afficheMemoire", "afficheMemoire", "affiche l'etat de la memoire dans les logs"],
             ["nbLogsFiles", "nbLogsFiles <n>", "regle le nombre de fichiers de logs (FileLog), sauvegarde"],
             ["ModeConnexion", "ModeConnexion [RangeExtender | WifiClassique <ssid> <mdp>]", "esclave : bascule Range Extender / Wi-Fi classique, puis redemarre"],
+            ["VoieReseau", "VoieReseau [wifi | ethernet]", "choisit la voie reseau dans le persist, puis redemarre ; sans valeur : etat"],
             ["heureReboot", "heureReboot [HH:MM | OFF]", "reboot quotidien a heure fixe, ou desactive ; sans valeur : etat"],
             ["timerRebootSansWifi", "timerRebootSansWifi [secondes | OFF]", "reboot apres N s sans Wi-Fi d'affilee, ou desactive ; sans valeur : etat"]
         ]
@@ -644,6 +653,15 @@ def globalFonctions_aideReglageGlobal(sujet)
                 "La commande (mot de passe compris) est journalisee par la console Tasmota.",
                 "Sert a l'outil outils_pc/testeur_udp.py (PROTOCOLE_MODBUS.md §9, « Commandes sans fil »).",
                 "Exemple : ReglageGlobal ModeConnexion WifiClassique MAISON motdepasse"]
+    end
+    if (sujet == "VOIERESEAU")
+        return ["Sans parametre : affiche la voie (serveur.voieReseau, wifi si la cle est absente).",
+                "ethernet : Wi-Fi coupe, IP de serveur.IP posee sur l'Ethernet, surveillance du Wi-Fi et Range Extender",
+                "        desactives. Refuse si drivers.Ethernet n'est pas actif.",
+                "wifi : Ethernet coupe, Range Extender remis dans son etat d'avant.",
+                "Ecrit dans le persist, sauve puis redemarre (2 fois si l'etat de l'Ethernet change).",
+                "Sans lien Ethernet, la carte n'est plus joignable que par sa console serie.",
+                "Exemple : ReglageGlobal VoieReseau ethernet"]
     end
     if (sujet == "AFFICHEMEMOIRE")
         return ["Parametre : aucun.",
@@ -702,6 +720,11 @@ def globalFonctions_reglageGlobal(cmd, idx, payload, payload_json)
     # Bascule Range Extender / Wi-Fi classique : reponse JSON propre, lue par l'outil testeur_udp.py
     if string.toupper(fonction) == "MODECONNEXION"
         tasmota.resp_cmnd(json.dump({"ReglageGlobal": globalFonctions.reglageModeConnexion(parametres.size() > 0 ? parametres[0] : "")}))
+        return
+    end
+
+    if string.toupper(fonction) == "VOIERESEAU"
+        tasmota.resp_cmnd(json.dump({"ReglageGlobal": globalFonctions.reglageVoieReseau(parametres.size() > 0 ? parametres[0] : "")}))
         return
     end
 
@@ -801,6 +824,38 @@ def globalFonctions_reglageModeConnexion(reste)
     return reponse
 end
 globalFonctions.reglageModeConnexion = globalFonctions_reglageModeConnexion
+
+# ReglageGlobal VoieReseau [wifi | ethernet] (2026-11-02). Ecrit serveur.voieReseau et redemarre : c'est
+# configGlobal.voieReseau qui applique le choix au demarrage. Retourne la map de reponse.
+def globalFonctions_reglageVoieReseau(reste)
+    import string
+    import persist
+
+    var actuelle = serveur.find("voieReseau", "wifi")
+    var reponse = {"voieReseau": actuelle}
+    var demande = string.tolower(string.split(str(reste), " ")[0])
+    if (demande == "" || demande == actuelle)    return reponse    end
+
+    if (demande != "wifi" && demande != "ethernet")
+        reponse["erreur"] = "voie inconnue : wifi ou ethernet"
+        return reponse
+    end
+    if (demande == "ethernet" && drivers.find("Ethernet", {}).find("activation", "OFF") != "ON")
+        reponse["erreur"] = "drivers.Ethernet n'est pas actif sur cette carte"
+        return reponse
+    end
+
+    serveur["voieReseau"] = demande
+    persist.serveur = serveur
+    persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien
+    logFonctions.log(string.format("REGLAGE_VOIE_RESEAU: %s -> %s, redemarrage !", actuelle, demande), LOG_LEVEL_INFO)
+    # Restart differe : la reponse a la commande doit partir avant le redemarrage
+    tasmota.set_timer(1000, / -> tasmota.cmd("Restart 1", boolMute), "redemarrageVoieReseau")
+    reponse["voieReseau"] = demande
+    reponse["redemarrage"] = true
+    return reponse
+end
+globalFonctions.reglageVoieReseau = globalFonctions_reglageVoieReseau
 
 # Retourne le module lors de l'importation
 return globalFonctions

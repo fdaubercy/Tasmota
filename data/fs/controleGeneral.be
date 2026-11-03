@@ -65,6 +65,7 @@ class CONTROLE_GENERAL : Driver
 	def surveilleWifi()
 		var delai = serveur["wifi"].find("timerRebootSansWifi", 0)
 		if (delai == nil || delai <= 0)		return		end
+		if (serveur.find("voieReseau") == "ethernet")		return		end		# Wi-Fi coupe volontairement
 
 		if (self.connected || tasmota.wifi().find("up", false))
 			self.debutSansWifi = nil
@@ -117,6 +118,7 @@ class CONTROLE_GENERAL : Driver
         # Ajoute les règles lancés selon l'étape de démarrage de la device tasmota
         tasmota.add_rule("System", globalFonctions.changementEtatDemarrage, "controleGeneral_System")	
         tasmota.add_rule("Wifi", globalFonctions.changementEtatDemarrage, "controleGeneral_Wifi")
+        tasmota.add_rule("Eth", globalFonctions.changementEtatDemarrage, "controleGeneral_Eth")
         tasmota.add_rule("Mqtt", def(value, trigger, msg) globalFonctions.changementEtatDemarrage(value, trigger, msg) end, "controleGeneral_Mqtt")
 		tasmota.add_rule("Time", def(value, trigger, msg) globalFonctions.changementEtatDemarrage(value, trigger, msg) end, "controleGeneral_Time")
 

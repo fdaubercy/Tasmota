@@ -39,6 +39,61 @@ def configGlobal_testeParam(paramTasmota, paramJson, typeData)
 end
 configGlobal.testeParam = configGlobal_testeParam
 
+# Voie reseau de la carte : serveur.voieReseau = "wifi" ou "ethernet" (2026-11-02) ; cle absente : rien ne change.
+# Les deux voies s'excluent, car elles portent la meme IP (serveur.IP). Appliquee a chaque demarrage : le persist
+# prime sur les Settings qu'un nouveau CFG_HOLDER remet a zero. 'Ethernet x' redemarre la carte si l'etat change.
+# En Ethernet, le Range Extender est desactive (il n'a de sens qu'en Wi-Fi) et retrouve son etat au retour en Wi-Fi.
+def configGlobal_voieReseau()
+	import persist
+
+	var voie = serveur.find("voieReseau")
+	if (voie == nil)	return	end
+	var enregistre = false
+
+	# Sans bloc Ethernet actif, le template n'a pas les broches : la carte perdrait tout reseau
+	if (voie != "wifi" && (voie != "ethernet" || drivers.find("Ethernet", {}).find("activation", "OFF") != "ON"))
+		logFonctions.log("CONTROLE_GENERAL_ERREUR: voieReseau '" + str(voie) + "' impossible (drivers.Ethernet actif ?) : retour au Wi-Fi !", LOG_LEVEL_ERREUR)
+		voie = "wifi"
+		serveur["voieReseau"] = voie
+		enregistre = true
+	end
+	var ethernet = (voie == "ethernet")
+
+	var rgx = serveur.find("rangeExtender")
+	if (isinstance(rgx, map))
+		if (ethernet && rgx.find("activation", "OFF") == "ON")
+			rgx["activationAvantEthernet"] = "ON"
+			rgx["activation"] = "OFF"
+			enregistre = true
+		elif (!ethernet && rgx.contains("activationAvantEthernet"))
+			rgx["activation"] = rgx["activationAvantEthernet"]
+			rgx.remove("activationAvantEthernet")
+			enregistre = true
+		end
+	end
+	if (enregistre)
+		persist.serveur = serveur
+		persist.save(true)		# true : modif imbriquee, save() seul n'ecrit rien
+	end
+
+	if (ethernet)
+		var ip = serveur.find("IP", {})
+		configGlobal.testeParam("EthIPAddress", ip.find("IPAddress", ""), "str")
+		configGlobal.testeParam("EthGateway", ip.find("IPGateway", ""), "str")
+		configGlobal.testeParam("EthSubnetmask", ip.find("Subnet", ""), "str")
+		configGlobal.testeParam("EthDNSServer1", ip.find("DNSServer", ""), "str")
+	end
+	if (tasmota.cmd("Wifi", boolMute).find("Wifi") != (ethernet ? "OFF" : "ON"))
+		logFonctions.log("CONTROLE_GENERAL: Voie reseau " + voie + " : " + (ethernet ? "coupe" : "active") + " le Wi-Fi !", LOG_LEVEL_INFO)
+		tasmota.cmd(ethernet ? "Wifi 0" : "Wifi 1", boolMute)
+	end
+	if (tasmota.cmd("Ethernet", boolMute).find("Ethernet") != (ethernet ? "ON" : "OFF"))
+		logFonctions.log("CONTROLE_GENERAL: Voie reseau " + voie + " : " + (ethernet ? "active" : "coupe") + " l'Ethernet, redemarrage !", LOG_LEVEL_INFO)
+		tasmota.cmd(ethernet ? "Ethernet 1" : "Ethernet 0", boolMute)
+	end
+end
+configGlobal.voieReseau = configGlobal_voieReseau
+
 # Paramétrage par tasmota.cmd à partir des paramètres enregistrés en json
 # @json = _persist.json comprenant l'ensemble des paramètres
 def configGlobal_configGlobalByJson(nbIOActivesJSON)
@@ -145,6 +200,7 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 	if configGlobal.testeParam("IPAddress4", data["IP"]["DNSServer"], "str") && data["IP"]["DNSServer"] != ""
 		logFonctions.log("CONTROLE_GENERAL: Regle l'adresse IP du serveur DNS !", LOG_LEVEL_DEBUG)
 	end
+	configGlobal.voieReseau()
 
 	# Règle le CORS (Cross Origin Resource Sharing)
 	# Pouvoir faire des requetes XmlHttpRequest sur un autre domaine

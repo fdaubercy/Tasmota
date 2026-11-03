@@ -1435,6 +1435,7 @@ commandes git d'écriture sont limitées par `liste_blanche_git_synchro.py`.
 >####    - ReglageGlobal afficheMemoire: Affiche l'utilisation des mémoires ROM, RAM & Garbage collector du module
 >####    - ReglageGlobal nbLogsFiles 14<br>
 >####    - ReglageGlobal heureReboot 03:30 | OFF : redémarrage quotidien à heure fixe, ou désactivé (sans valeur : état)
+>####    - ReglageGlobal VoieReseau wifi | ethernet : choisit la voie réseau (`serveur.voieReseau` du persist), puis redémarre. Les deux voies s'excluent et gardent l'IP de `serveur.IP` ; en Ethernet, la surveillance du Wi-Fi et le Range Extender sont désactivés. Sans lien Ethernet, la carte ne répond plus que sur sa console série (sans valeur : état)<br>
 >####    - ReglageGlobal timerRebootSansWifi 300 | OFF : redémarrage après N s sans Wi-Fi d'affilée (60 s minimum), ou désactivé<br>
 >
 >####    - ReglageLog : affiche le profil de logs actif, les sorties et le réglage de chaque module

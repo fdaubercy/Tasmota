@@ -3,7 +3,7 @@ chantier: cave-s3-waveshare
 titre: Env S3 relais cave adapté à la carte Waveshare ESP32-S3-ETH-8DI-8RO
 statut: clos
 cree: 2026-10-31
-maj: 2026-10-31
+maj: 2026-11-02
 source: concurrent-crafting-knuth.md
 objectif: Faire tourner les entrées-sorties actuelles du persist de la cave S3 sur la carte Waveshare 8DI-8RO, relais par le TCA9554
 ---
@@ -89,7 +89,9 @@ Le plan `relais-cave-s3` garde l'étape `.h` de l'ESP32 ; ses étapes `.h` et ce
 - [ ] [projet] Compiler l'env S3 (page build) une fois le build du P4 fini : prouve `USE_TCA9554` et la taille (audit P1)
 - [ ] [projet] `upload_port`/`monitor_port` = COM3, port de la cuve (audit P2) : à poser au branchement de la Waveshare
 - [ ] [projet] Câblage des capteurs de niveau (actifs) sur DI3/DI4 (COM, DGND) à valider sur la carte reçue, avant de compter sur la relance de la pompe
-- [ ] [projet] Ethernet W5500 (Wi-Fi faible à la cave) : option possible plus tard, hors « seuls les GPIO changent »
+- [x] [projet] Ethernet W5500 (Wi-Fi faible à la cave), demandé le 2026-11-02 — preuve : persist (`drivers.Ethernet` ON, INT 12, MOSI 13, MISO 14, SCLK 15, CS 16), template et `ETH_TYPE 8` du `.h`, `banc_demarrage.py` ; ni compilé ni essayé sur carte
+- [x] [projet] Voie réseau au choix (demande du 2026-11-02 : Wi-Fi prioritaire) — preuve : `ReglageGlobal VoieReseau wifi|ethernet`, `configGlobal.be::configGlobal_voieReseau`, `banc_boot.py` cas 6 à 8 verts, mutants détectés ; sur Ethernet : même IP (`serveur.IP`), `surveilleWifi` et Range Extender désactivés
+- [ ] [projet] À la réception : compiler, puis essayer `ReglageGlobal VoieReseau ethernet` sur la carte (`Status 5`, IP .243 sur le câble, retour au Wi-Fi par la console série)
 - [ ] [projet] Brochage de l'en-tête (21, 48) à confirmer à réception : aucun schéma PDF publié
 
 ## Vérification

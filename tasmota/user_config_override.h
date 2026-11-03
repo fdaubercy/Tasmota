@@ -732,11 +732,17 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
                 //   Button2 GPIO0 (BOOT), Button1 GPIO4 (DI1), Button3 GPIO5 (DI2), Switch1 GPIO6 (DI3, niveau bas),
                 //   Switch2 GPIO7 (DI4, niveau haut), AM2301 GPIO21, I2C SCL 41 / SDA 42, Led1 GPIO48 (en-tete).
                 // Relais 1-5 = CH1-CH5 sur le TCA9554 (I2C 0x20) : pas de GPIO, crees par xdrv_69 a partir de
-                // /tca9554.dat (data/cave/tasmota32s3-serveur-rly). Pris par la carte : 12-16 W5500, 17/18 RS485,
-                // 38 WS2812, 40 RTC, 45/47/48 carte TF, 46 buzzer.
+                // /tca9554.dat (data/cave/tasmota32s3-serveur-rly). Ethernet W5500 sur SPI : INT 12 (ETH MDIO),
+                // MOSI 13, MISO 14, SCLK 15, CS 16 (ETH MDC) ; RST non utilise (absent du wiki Waveshare).
+                // Pris par la carte : 17/18 RS485, 38 WS2812, 40 RTC, 45/47/48 carte TF, 46 buzzer.
                 // Les 'pin' du _persist.json doivent correspondre (voir [env:tasmota32s3-cave-serveur-rly]).
-                #define USER_TEMPLATE "{\"NAME\":\"ESP32S3 Waveshare 8DI-8RO Cave\",\"GPIO\":[33,1,1,1,32,34,160,161,1,1,1,1,1,1,1,1,1,1,1,1,1,1216,0,0,0,0,0,1,1,1,608,640,1,1,1,1,1,288],\"FLAG\":0,\"BASE\":1}"
+                #define USER_TEMPLATE "{\"NAME\":\"ESP32S3 Waveshare 8DI-8RO Cave\",\"GPIO\":[33,1,1,1,32,34,160,161,1,1,1,1,5600,704,672,736,5568,1,1,1,1,1216,0,0,0,0,0,1,1,1,608,640,1,1,1,1,1,288],\"FLAG\":0,\"BASE\":1}"
                 #define USE_TCA9554                             // [I2cDriver81] relais de la carte sur l'expandeur TCA9554
+                // USE_ETHERNET et USE_SPI viennent de FIRMWARE_TASMOTA32 (base N16R8)
+                #undef ETH_TYPE
+                #define ETH_TYPE            8                   // [EthType] W5500
+                #undef ETH_ADDRESS
+                #define ETH_ADDRESS         1                   // [EthAddress]
             #else
                 // Identique au template de la carte en ligne (relu le 2026-10-31) : capteurs de niveau sans Switch
                 #define USER_TEMPLATE "{\"NAME\":\"ESP32 Relay x8\",\"GPIO\":[33,1,1,1,32,1,1,1,1,1,1,1,1,1,34,1,1,1,1216,288,1,226,227,228,1,1,1,1,224,225,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
