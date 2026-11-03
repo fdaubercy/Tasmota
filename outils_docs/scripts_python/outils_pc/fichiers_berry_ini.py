@@ -80,11 +80,12 @@ class Ini:
         self.sections = {}      # {section: {option: Option}}, fusion de tous les fichiers
         self.ordre_cenv = []    # sections env:* du cenv dans l'ordre du fichier
 
-    def _lit(self, fichier):
+    def _lit(self, fichier, texte=None):
+        """`texte` : contenu a lire a la place du fichier (cenv en cours de calcul, atelier des graphiques)."""
         chemin = self.racine / fichier
-        if not chemin.is_file():
+        if texte is None and not chemin.is_file():
             return
-        lignes = decoupe(chemin.read_bytes().decode("utf-8", errors="surrogateescape"))
+        lignes = decoupe(texte if texte is not None else chemin.read_bytes().decode("utf-8", errors="surrogateescape"))
         self.lignes[fichier] = lignes
         section, courante = None, None
         for i, brute in enumerate(lignes):
@@ -139,10 +140,11 @@ class Ini:
         return [s[len("env:"):] for s in self.ordre_cenv]
 
 
-def lit_sections(racine):
+def lit_sections(racine, cenv=None):
+    """`cenv` : texte du cenv a lire a la place du fichier (None : le fichier)."""
     ini = Ini(racine)
     for fichier in FICHIERS_INI:
-        ini._lit(fichier)
+        ini._lit(fichier, cenv if fichier == FICHIER_CENV else None)
     return ini
 
 

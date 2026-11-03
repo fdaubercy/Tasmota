@@ -46,7 +46,7 @@ class AnnulationIncomplete(Exception):
 
 
 class Transaction:
-    """with Transaction(racine, "creation") as tr: tr.ecrit(...), tr.renomme(...), tr.copie_dossier(...)."""
+    """with Transaction(racine, "creation") as tr: tr.ecrit(...), tr.supprime(...), tr.renomme(...), tr.copie_dossier(...)."""
 
     def __init__(self, racine, nature):
         self.racine, self.nature = Path(racine), nature
@@ -79,6 +79,15 @@ class Transaction:
             copie.write_bytes(avant)
         self._etape(f"{rel} a remettre", lambda: _remplace(chemin, avant) if avant is not None else chemin.unlink(missing_ok=True))
         _remplace(chemin, octets)
+
+    def supprime(self, rel):
+        chemin = self.racine / rel
+        avant = chemin.read_bytes()
+        copie = self.dossier / rel
+        copie.parent.mkdir(parents=True, exist_ok=True)
+        copie.write_bytes(avant)
+        self._etape(f"{rel} a remettre", lambda: _remplace(chemin, avant))
+        chemin.unlink()
 
     def renomme(self, rel_src, rel_dst):
         src, dst = self.racine / rel_src, self.racine / rel_dst
