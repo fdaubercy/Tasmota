@@ -41,7 +41,8 @@ class Carte:
         self.dossiers = {"/"}
         self.ufs_path = "/"
         self.ufs_dir = 1 if carte_sd else 0
-        self.type_envoi = "aucun"                    # aucun | firmware | fichier
+        self.type_envoi = "aucun"                    # aucun | firmware | fichier | config
+        self.config = None                           # /dl (sauvegarde de configuration, .dmp) ; recue par /rs + /u2
         self.firmware = None
         self.journal = []                            # (methode, chemin, referer)
         self.coupure = coupure
@@ -116,6 +117,11 @@ class Carte:
         if url.path == "/ufsu" and methode == "POST":
             self.type_envoi = "fichier"
             return self.recoit_fichier(h, corps)
+        if url.path == "/dl" and self.config is not None:
+            return self.repond(h, self.config, "application/octet-stream")
+        if url.path == "/rs":
+            self.type_envoi = "config"               # Web.upload_file_type = UPL_SETTINGS
+            return self.repond(h, "<html>Restaurer la configuration</html>")
         if url.path == "/up":
             self.type_envoi = "firmware"
             return self.repond(h, "<html>Mise a jour</html>")
@@ -237,6 +243,10 @@ class Carte:
     def recoit_firmware(self, h, corps):
         champ, nom, contenu = self.multipart(h, corps)
         type_, self.type_envoi = self.type_envoi, "aucun"           # HandleUploadDone : UPL_NONE
+        if type_ == "config":
+            if champ != "u2" or not contenu:
+                return self.repond(h, "<b>Upload <font>Failed</font></b>")
+            self.config = contenu
         if type_ == "firmware":
             if champ != "file" or not nom or contenu[:1] not in (b"\xe9", b"\x1f"):
                 return self.repond(h, "<b>Upload <font>Failed</font></b><br>Invalid file signature")

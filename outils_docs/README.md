@@ -885,7 +885,8 @@ réseau (calibrage et compteurs ; rôle des fichiers `.drvset` : onglet « Aide 
 `Restart 99` (`Restart 1` réécrirait le fichier avec la RAM de la carte neuve) et relit le calibrage. Étape
 « Calibrage » sur la ligne de l'env. Carte injoignable ou sans ce fichier : le flash a lieu quand même, sans
 rétablissement. Échec du rétablissement : le message donne le chemin de la copie, sous
-`%LOCALAPPDATA%\outils_tasmota\build\drvset\`.
+`%LOCALAPPDATA%\outils_tasmota\build\drvset\`. La même étape prend aussi une sauvegarde de toute la configuration,
+d'origine « avant flash », visible dans l'onglet « Sauvegarde configuration ».
 
 ### Effacer puis téléverser (`erase_upload`)
 
@@ -955,6 +956,35 @@ modifie sans ouvrir le fichier ; il ne lance rien.
 - **À savoir** : enregistrer change l'empreinte du projet, donc le `pio run` suivant vide `.pio/build` (les objets
   inchangés reviennent du cache `.cache`). L'ordre des lignes n'a aucun effet : `pio run` suit l'ordre des sections
   des `.ini`, c'est pourquoi l'onglet ne propose pas de réordonner.
+
+### Onglet « Sauvegarde configuration » : sauvegarder, comparer, modifier, restaurer
+
+Une sauvegarde est le fichier `/dl` de la carte, celui de « Sauvegarder la configuration » de sa page web : ses
+Settings (Wi-Fi, MQTT, minuteries, gabarit, règles, `AdcParam`...) **et** ses fichiers `.drvset*` (calibrage,
+compteurs ; voir l'onglet « Aide »). Fichiers `AAAAMMJJ-HHMMSS_<origine>.dmp` dans `outils_docs/sauvegardes_cartes/<env>/`,
+**ignoré par git** : un `.dmp` porte les mots de passe Wi-Fi et MQTT en clair, et le dépôt est public.
+
+- **Carte** en haut, avec l'adresse de sa ligne dans l'onglet Build (méthode OTA). Un esclave derrière le Range
+  Extender est joint par le maître (`IP:port`), redirection posée et identité vérifiée d'abord, comme pour un envoi.
+- **« Sauvegarder maintenant »** : nouvelle sauvegarde « manuelle ». Une sauvegarde « avant flash » est prise seule
+  avant un envoi du firmware par câble, une « avant restauration » avant chaque restauration.
+- **Paramètres** de la sauvegarde choisie, repliés par thème, avec un filtre (nom ou valeur). Mots de passe affichés
+  `***` : laissés ainsi, ils gardent leur valeur. Une valeur changée est surlignée ; « Enregistrer la copie » écrit
+  une **nouvelle** sauvegarde « modifiée », l'originale n'est jamais réécrite. La copie est relue et comparée à
+  l'attendu : au moindre écart, rien n'est gardé.
+- **« Comparer »** : écarts avec la carte en ligne (rien n'est enregistré) ou avec une autre sauvegarde ; les
+  paramètres en écart sont mis en couleur.
+- **« Restaurer la sélection »** : écarts avec la carte affichés et confirmés, sauvegarde de la carte d'abord, envoi,
+  redémarrage, puis écarts relus. Refusée pendant un envoi de la série, et pour une sauvegarde d'une autre puce.
+- **À savoir** : au démarrage, le persist et l'`autoexec.bat` reposent leurs réglages ; ils l'emportent sur une
+  valeur restaurée.
+- **decode-config** (tasmota/decode-config) lit et écrit les paramètres. Il vit hors du dépôt et du Python de
+  PlatformIO, dans `%LOCALAPPDATA%\outils_tasmota\decode_config\` : `python outils_docs/scripts_python/outils_pc/decode_config.py`
+  l'installe (`--verifier` pour contrôler). Sans lui, sauvegarde et restauration restent possibles, pas la lecture des
+  paramètres. Une version de Tasmota plus récente que la sienne n'est lisible qu'une fois sa disposition comparée
+  (`decode_config.VERSIONS_VERIFIEES`) ; sinon la sauvegarde reste restaurable mais pas modifiable. Les textes
+  (nom d'hôte, textes des boutons...) sont écrits par l'outil lui-même : decode-config 16.0.0.0 tronque la réserve de
+  textes d'un ESP32 en les écrivant.
 
 ### Journaux, mémoire de la page, fichiers réécrits
 

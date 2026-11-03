@@ -106,7 +106,7 @@ var F = {env: "", liste: null, dossier: null, coches: {}, berryTouche: false, pr
          tout: null, vus: [], dessin: null};
 
 function montreOnglet(nom) {
-  ["build", "fichiers", "memoire", "defaut", "aide"].forEach(function (o) {     // memoire : build_page_memoire.py (A8) ; defaut : build_page_defaut.py
+  ["build", "fichiers", "memoire", "defaut", "sauvegarde", "aide"].forEach(function (o) {   // memoire : build_page_memoire.py ; defaut, sauvegarde : build_page_<nom>.py
     $("vue-" + o).hidden = o !== nom;
     $("onglet-" + o).setAttribute("aria-selected", String(o === nom));
   });
@@ -114,6 +114,7 @@ function montreOnglet(nom) {
   if (nom === "fichiers") fichiersCartes();
   if (nom === "memoire") mEnvs();
   if (nom === "defaut") dOuvre();
+  if (nom === "sauvegarde") sEnvs();
 }
 $("onglet-build").onclick = function () { montreOnglet("build"); };
 $("onglet-fichiers").onclick = function () { montreOnglet("fichiers"); };

@@ -70,6 +70,7 @@ import build_envs
 import build_memoire
 import build_partitions
 import build_drvset
+import build_sauvegarde
 import build_ota_firmware
 import build_ota_fs
 import build_ota_maitre
@@ -543,6 +544,15 @@ class Serie:
         copie = build_drvset.sauvegarde(ligne.env, ip, self.dossier) if ip else None
         self._ajoute("etape", ligne.env, action="upload", etape="Calibrage", pourcent=None,
                      detail=f"sauvegardé : {copie}" if copie else "pas de calibrage sauvegardé (carte injoignable ou sans mesure)")
+        try:                                             # config entiere, onglet Sauvegarde configuration ; jamais bloquant
+            if not ip:
+                raise ValueError("adresse inconnue")
+            fiche = build_sauvegarde.prend(self.racine, ligne.env, ip, "avant-flash", build_envs.persist_carte(self.racine, ligne.env))
+            self._ajoute("etape", ligne.env, action="upload", etape="Calibrage", pourcent=None,
+                         detail=f"configuration sauvegardée : {fiche['fichier']}")
+        except Exception as erreur:                      # noqa: BLE001 - carte injoignable, pas d'IP : le flash continue
+            self._ajoute("etape", ligne.env, action="upload", etape="Calibrage", pourcent=None,
+                         detail=f"configuration non sauvegardée : {erreur}")
         return (ip, copie) if copie else None
 
     def _attend_carte(self, ligne, precedent, fait):

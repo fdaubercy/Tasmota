@@ -57,6 +57,9 @@ HTML = r"""
       <p>La page copie ce fichier par le réseau avant l'envoi, le renvoie après, redémarre et relit le calibrage (étape « Calibrage »).
       Carte injoignable ou sans ce fichier : le flash a lieu quand même, sans rétablissement.
       Copies : <code>%LOCALAPPDATA%\outils_tasmota\build\drvset\</code>. En OTA, le file system n'est pas remplacé : rien à faire.</p>
+      <h3>Sauvegarde complète</h3>
+      <p>L'onglet « Sauvegarde configuration » garde le fichier <code>/dl</code> entier de la carte : Settings et fichiers <code>.drvset*</code> ensemble.
+      Il compare, modifie paramètre par paramètre (dans une nouvelle sauvegarde) et restaure.</p>
     </div>
   </div>
 """

@@ -158,7 +158,8 @@ OUTILS = [
     Outil(
         "build", "Build et téléversement", "Build et téléversement", GROUPES[2],
         "Compile et téléverse les cartes du parc (firmware et file system, COM ou OTA), avec suivi en direct ; "
-        "fichiers du FS un par un, mémoire et partitions, envs par défaut, calibrage gardé autour d'un flash, aide.",
+        "fichiers du FS un par un, mémoire et partitions, envs par défaut, sauvegarde de configuration, calibrage "
+        "gardé autour d'un flash, aide.",
         "Page web de build : on coche des environnements PlatformIO et des actions (compiler, téléverser le "
         "firmware, construire le file system, téléverser le file system), COM ou OTA par ligne ; les "
         "environnements passent l'un après l'autre, avec étape, pourcentage, durées et échecs en direct. "
@@ -166,6 +167,8 @@ OUTILS = [
         "selon les capacités paramétrées, relevée après chaque compilation ou par « Analyser » ; réglage de la table "
         "de partitions d'un env par curseurs (diff, puis écriture d'un CSV propre à l'env ; l'OTA de l'env reste "
         "bloquée jusqu'au prochain « Effacer puis téléverser »). "
+        "Onglet « Sauvegarde configuration » : sauvegarde /dl de chaque carte (Settings et .drvset*), paramètres par "
+        "thème, copie modifiée, comparaison et restauration. "
         "Seul paramètre ici : le port de la page (7700). Pour l'arrêter : bouton Arrêter de l'annuaire "
         "(refusé pendant un lancement), ou Ctrl+C dans son terminal s'il a été lancé ailleurs.",
         DOSSIER + "outils_pc/build_web.py",

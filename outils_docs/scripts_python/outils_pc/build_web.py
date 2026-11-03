@@ -43,6 +43,10 @@ Routes (les POST exigent l'en-tete X-Build: 1 et la meme origine) :
     POST /defaut/diff   {coches} : futur fichier, erreurs, avertissements, empreinte (rien n'est ecrit)
     POST /defaut/ecrire {coches, empreinte} : ecrit le bloc (409 pendant un lancement ou un build, si la liste est
                      refusee ou si le fichier a change depuis l'apercu)
+    GET  /sauvegardes ?env=<env> : sauvegardes de configuration de l'env, decode-config utilisable (build_sauvegarde)
+    GET  /sauvegarde  ?env=&fichier= : parametres par groupe (mots de passe masques), jeton de restauration
+    POST /sauvegarde/prendre|comparer|copier|restaurer : voir build_sauvegarde.traite_post ; une operation a la fois,
+                     409 pendant un envoi de la serie, carte muette ou refus
 """
 
 import argparse
@@ -51,6 +55,7 @@ import json
 import os
 import re
 import sys
+import threading
 import time
 from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -63,6 +68,7 @@ import build_envs
 import build_fichiers
 import build_memoire
 import build_partitions
+import build_sauvegarde
 import build_serie
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "maintenance"))
@@ -204,10 +210,21 @@ def ligne_de(donnee):
     return build_serie.Ligne(*(str(donnee.get(k) or "") for k in ("env", "methode", "port", "ip")))
 
 
+def adresse_carte(demande):
+    adresse = str(demande.get("adresse") or "").strip()
+    if not ADRESSE_CARTE.fullmatch(adresse):
+        raise ValueError("adresse de la carte attendue (IPv4, ou IPv4:port par le maître) : la saisir dans l'onglet Build")
+    return adresse
+
+
 def fabrique_gestionnaire(serie, acces, racine, dossier):
     etat = {"debut": float("inf")}                        # heure du dernier lancement accepte (inf : aucun, repli sur le dernier journal)
+    verrou_sauvegarde = threading.Lock()
 
     def traite_post(chemin, demande):
+        reponse = build_sauvegarde.traite_post(chemin, demande, serie, racine, verrou_sauvegarde, adresse_carte)
+        if reponse is not None:
+            return reponse
         if chemin == "/lancer":
             lignes, actions = demande.get("lignes"), demande.get("actions")
             if not isinstance(lignes, list) or not isinstance(actions, list):
@@ -253,10 +270,8 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
         if chemin == "/memoire/carte":
             if serie.envoi_en_cours():
                 raise RuntimeError("un envoi est en cours : lire la carte après")
-            env, adresse = str(demande.get("env") or ""), str(demande.get("adresse") or "").strip()
-            if not ADRESSE_CARTE.fullmatch(adresse):
-                raise ValueError("adresse de la carte attendue (IPv4, ou IPv4:port par le maître) : la saisir dans l'onglet Build")
-            return build_memoire.lit_carte(adresse, build_envs.persist_carte(racine, env), env)
+            env = str(demande.get("env") or "")
+            return build_memoire.lit_carte(adresse_carte(demande), build_envs.persist_carte(racine, env), env)
         if chemin == "/partitions/importer":                # lit et valide un CSV, rien n'est ecrit
             texte = demande.get("texte")
             if not isinstance(texte, str) or len(texte) > 65536:
@@ -376,6 +391,11 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                                 "jours": purge_cache_build.JOURS_DEFAUT})
                 elif url.path == "/defaut":
                     self._json(build_defaut.lit(racine))
+                elif url.path == "/sauvegardes":
+                    self._json(build_sauvegarde.liste_json(racine, params.get("env", [""])[0]))
+                elif url.path == "/sauvegarde":
+                    self._json(build_sauvegarde.parametres_json(racine, params.get("env", [""])[0],
+                                                                params.get("fichier", [""])[0]))
                 elif url.path == "/fichiers":
                     try:
                         self._json(build_fichiers.liste(racine, params.get("env", [""])[0]))

@@ -124,8 +124,10 @@ courbe de puissance 24 h conservée ; abonnement de base ; prix saisi avec date 
 - [x] Explication de `.drvset003` (données, rôle, chargement, paramétrage) et rapport Extension Manager (intérêt, outil possible par l'annuaire, existant, à mettre en place) rendus à l'utilisateur — preuve : compte rendu du 2026-11-02 ; `FICHIERS_DRVSET.md`, onglet Aide
 - [x] Banc `test_assistant_persist_generation.py` vert : bloc énergie nommé dans ses tolérances, seul reste l'écart `drivers.Ethernet` de l'autre chantier (cave) — preuve : tolérance `drivers.Ethernet.*` étendue à la cave S3 (seule carte à W5500, ON) ; `test_assistant_persist_generation.py` VERT (2026-11-03)
 
-## A12 — Onglet « Sauvegardes » de la page build
-- [ ] Modèle choisi par l'utilisateur parmi les maquettes `outils_docs/sauvegarde_config/` (A, B, C)
+## A12 — Onglet « Sauvegarde configuration » de la page build
+- [x] Modèle choisi par l'utilisateur parmi les maquettes `outils_docs/sauvegarde_config/` (A, B, C) — preuve : modèle **B** choisi le 2026-11-03
+- [x] Nom de l'onglet : « Sauvegarde configuration » plutôt que « Sauvegardes » ou « Sauvegarde drvsetXXX » (une sauvegarde `/dl` porte les Settings ET les `.drvset*`) — preuve : demande de l'utilisateur du 2026-11-03
+- [ ] Lecture des paramètres d'un `.dmp` par `decode-config` (tasmota/decode-config, LGPL-3.0, PyPI 16.0.0.0) plutôt qu'un décodeur maison : sait lire un `.dmp`, prendre un JSON modifié et écrire un nouveau `.dmp` hors ligne. Disposition de Settings inchangée depuis 15.6.0.3 (`tasmota_types.h` identique entre 16.0.0.1 et 16.0.0.2, vérifié le 2026-11-03) : `--ignore-warnings` seulement pour les versions vérifiées
 - [ ] Sauvegarder la configuration d'une carte de la liste des envs (`/dl`), dans `outils_docs/sauvegardes_cartes/<env>/`, ignoré par git (mots de passe, dépôt public)
 - [ ] Restaurer une sauvegarde sur la carte, après une nouvelle sauvegarde et la confirmation des écarts
 - [ ] Modifier une sauvegarde paramètre par paramètre et l'enregistrer dans un nouveau fichier ; mots de passe masqués ; version inconnue = restaurable mais pas éditable
@@ -135,6 +137,11 @@ courbe de puissance 24 h conservée ; abonnement de base ; prix saisi avec date 
 - [x] Onglet Aide : fichiers `.drvset*` (rôle, contenu, chargement, paramétrage), `.drvset003` et calibrage autour d'un flash ; sonde Chrome verte — preuve : `build_page_aide.py`, `test_build_page_defaut_chrome.py` et `test_build_page_chrome.py` VERT
 - [x] Explications renvoyées aussi dans `outils_docs/FICHIERS_DRVSET.md` et au README — preuve : `FICHIERS_DRVSET.md`, renvoi dans `outils_docs/README.md`
 - [ ] Commentaire de la tuile « Build et téléversement » de l'annuaire à jour des nouvelles compétences (fait pour l'existant : `annuaire_registre.py` ; à compléter quand l'onglet Sauvegardes existera) ; visible après redémarrage de l'annuaire
+
+## A14 — Outil d'édition de l'`autoexec.bat` (demande du 2026-11-03)
+- [ ] Conception à faire après A12 : Claude cherche l'endroit le plus approprié (page build, page Fichiers Berry, page à part…) puis pose ses questions à l'utilisateur (demande du 2026-11-03) ; outil pour modifier facilement ou ajouter des lignes dans l'`autoexec.bat` d'une carte
+- [ ] Analyse de chaque commande ajoutée : avertir à l'ajout de celles qui peuvent causer des redémarrages à répétition (cas vécus : boucles du différentiel, commit `b87e5cc1b`)
+- [ ] Banque de commandes ajoutables ou modifiables proposée à l'utilisateur ; chaque commande personnalisée ajoutée par l'utilisateur complète la banque
 
 ## Échanges du 2026-11-02 : Extension Manager
 Demande : expliquer l'intérêt de l'« Extension Manager », évaluer quel outil mettre en place par l'annuaire pour créer et installer des extensions, lister l'existant et ce qui serait intéressant ici.
