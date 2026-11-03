@@ -1,0 +1,2996 @@
+{
+ "styles": [
+  "courbe",
+  "aire",
+  "escalier",
+  "barres",
+  "barres-empilees",
+  "barres-periode",
+  "deux-axes",
+  "lies",
+  "cadran",
+  "anneau",
+  "chaleur",
+  "nuage",
+  "radar",
+  "liquide",
+  "demi-cercle"
+ ],
+ "cas": [
+  {
+   "nom": "valide : style courbe",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-courbe",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : style aire",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-aire",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "aire",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : style escalier",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-escalier",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "escalier",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : style barres",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-barres",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "barres",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ],
+        "periode": "jour",
+        "cumul": "jour"
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : style barres-empilees",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-barres-empilees",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "barres-empilees",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : style barres-periode",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-barres-periode",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "barres-periode",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ],
+        "periode": "jour"
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : style deux-axes",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-deux-axes",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "deux-axes",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : style lies",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-lies",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "lies",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : style cadran",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-cadran",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "cadran",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ],
+        "min": 0,
+        "max": 6732,
+        "zones": [
+         [
+          0.2,
+          "#c0392b"
+         ],
+         [
+          0.4,
+          "#c27400"
+         ]
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : style anneau",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-anneau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "anneau",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : style chaleur",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-chaleur",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "chaleur",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : style nuage",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-nuage",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "nuage",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : style radar",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-radar",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "radar",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : style liquide",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-liquide",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "liquide",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ],
+        "min": 0,
+        "max": 100
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : style demi-cercle",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-demi-cercle",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "demi-cercle",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ],
+        "min": 0,
+        "max": 100
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : tout le gabarit",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau-cuve",
+      "titre": "Page",
+      "acces": "lien",
+      "graphiques": [
+       {
+        "type": "cadran",
+        "titre": "Graphique",
+        "series": [
+         "calc:cuve.manque"
+        ],
+        "min": 0,
+        "max": 6732,
+        "zones": [
+         [
+          0.2,
+          "#c0392b"
+         ]
+        ],
+        "periode": "direct",
+        "cadence": 10,
+        "largeur": "pleine",
+        "hauteur": 180
+       }
+      ]
+     }
+    ],
+    "encadres": [
+     {
+      "id": "taux-cuve",
+      "type": "demi-cercle",
+      "serie": "capteur.mesure.taux",
+      "lien": "tableau-cuve"
+     }
+    ],
+    "calculees": {
+     "cuve.manque": {
+      "formule": "6732 - sensorsCuve.niveauCuve.volume",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : calculee historique cumulee",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "barres",
+        "titre": "Graphique",
+        "series": [
+         "calc:conso.jour"
+        ],
+        "periode": "jour",
+        "cumul": "jour"
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "conso.jour": {
+      "formule": "max(a.b, 0) * 2",
+      "nature": "historique"
+     }
+    }
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : 8 pages",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p0",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p1",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p2",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p3",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p4",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p5",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p6",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p7",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : bornes pleines (8 graphiques, 12 series)",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "invalide : version 2",
+   "description": {
+    "version": 2,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "version"
+  },
+  {
+   "nom": "invalide : id en double",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "a",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "a",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "id en double"
+  },
+  {
+   "nom": "invalide : id reserve cs",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "cs",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "id reserve"
+  },
+  {
+   "nom": "invalide : id reserve graphiques",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "graphiques",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "id reserve"
+  },
+  {
+   "nom": "invalide : id reserve histo",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "histo",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "id reserve"
+  },
+  {
+   "nom": "invalide : id reserve cuve",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "cuve",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "id reserve"
+  },
+  {
+   "nom": "invalide : id reserve energie",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "energie",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "id reserve"
+  },
+  {
+   "nom": "invalide : id reserve pages",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "pages",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "id reserve"
+  },
+  {
+   "nom": "invalide : id hors format 'Majuscule'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "Majuscule",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "id invalide"
+  },
+  {
+   "nom": "invalide : id hors format 'a b'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "a b",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "id invalide"
+  },
+  {
+   "nom": "invalide : id hors format ''",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "id invalide"
+  },
+  {
+   "nom": "invalide : id hors format 'xxxxxxxxxxxxxxxxxxxxxxxxx'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "xxxxxxxxxxxxxxxxxxxxxxxxx",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "id invalide"
+  },
+  {
+   "nom": "invalide : id hors format 'accé'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "accé",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "id invalide"
+  },
+  {
+   "nom": "invalide : style inconnu",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "camembert",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "style inconnu"
+  },
+  {
+   "nom": "invalide : 9 pages",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p0",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p1",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p2",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p3",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p4",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p5",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p6",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p7",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p8",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "pages : 9 > 8"
+  },
+  {
+   "nom": "invalide : 9 graphiques",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "graphiques : 9 > 8"
+  },
+  {
+   "nom": "invalide : 13 series",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11",
+         "a.s12"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "series : 13 > 12"
+  },
+  {
+   "nom": "invalide : plus de 8192 octets",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p0",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p1",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p2",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p3",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p4",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p5",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p6",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "p7",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       },
+       {
+        "type": "courbe",
+        "titre": "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "series": [
+         "a.s0",
+         "a.s1",
+         "a.s2",
+         "a.s3",
+         "a.s4",
+         "a.s5",
+         "a.s6",
+         "a.s7",
+         "a.s8",
+         "a.s9",
+         "a.s10",
+         "a.s11"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "taille"
+  },
+  {
+   "nom": "invalide : zone au-dessus de 1",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "cadran",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ],
+        "min": 0,
+        "max": 1,
+        "zones": [
+         [
+          1.5,
+          "#c0392b"
+         ]
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "hors [0, 1]"
+  },
+  {
+   "nom": "invalide : zone negative",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "cadran",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ],
+        "min": 0,
+        "max": 1,
+        "zones": [
+         [
+          -0.1,
+          "#c0392b"
+         ]
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "hors [0, 1]"
+  },
+  {
+   "nom": "invalide : cadran min egal max",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "cadran",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ],
+        "min": 5,
+        "max": 5
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "min >= max"
+  },
+  {
+   "nom": "invalide : cadran min superieur a max",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "cadran",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ],
+        "min": 10,
+        "max": 5
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "min >= max"
+  },
+  {
+   "nom": "invalide : formule avec eval(",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "eval(a.b)",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "invalide : formule avec point-virgule",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "a.b; a.c",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "invalide : formule avec constructor",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "a.constructor + 1",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "invalide : formule avec crochets",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "a[0]",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "invalide : formule direct sur serie d'historique (periode jour)",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "calc:x.y"
+        ],
+        "periode": "jour"
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "a.b + 1",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "nature de la formule"
+  },
+  {
+   "nom": "invalide : formule historique sur periode direct",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "calc:x.y"
+        ],
+        "periode": "direct"
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "a.b + 1",
+      "nature": "historique"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "nature de la formule"
+  },
+  {
+   "nom": "invalide : cumul sur une serie instantanee",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "calc:x.y"
+        ],
+        "periode": "direct",
+        "cumul": "jour"
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "a.b + 1",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "cumul sur une serie instantanee"
+  },
+  {
+   "nom": "invalide : calculee inconnue",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "calc:absente"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "calculee inconnue"
+  },
+  {
+   "nom": "invalide : cle inconnue",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ],
+        "couleur": "rouge"
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "cle inconnue"
+  },
+  {
+   "nom": "invalide : encadre vers une page inconnue",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "encadres": [
+     {
+      "id": "e",
+      "type": "anneau",
+      "serie": "a.b",
+      "lien": "nulle-part"
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "lien vers une page inconnue"
+  }
+ ]
+}
