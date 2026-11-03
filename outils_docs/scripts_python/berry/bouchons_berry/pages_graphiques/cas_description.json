@@ -3867,7 +3867,7 @@
    "motif": ""
   },
   {
-   "nom": "valide : doublon chaine/objet de meme chemin (aucune regle de doublon, comme deux chaines)",
+   "nom": "invalide : doublon chaine/objet de meme chemin",
    "description": {
     "version": 1,
     "pages": [
@@ -3891,8 +3891,8 @@
      }
     ]
    },
-   "valide": true,
-   "motif": ""
+   "valide": false,
+   "motif": "serie en double"
   },
   {
    "nom": "valide : libelle de 30 octets et unite de 10 octets",
@@ -4448,6 +4448,123 @@
    },
    "valide": false,
    "motif": "chemin invalide"
+  },
+  {
+   "nom": "invalide : doublon chaine/chaine de meme chemin",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "a.b",
+         "c.d",
+         "a.b"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "serie en double"
+  },
+  {
+   "nom": "invalide : doublon objet/objet de meme chemin",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "a.b",
+          "libelle": "X"
+         },
+         {
+          "chemin": "a.b",
+          "couleur": "#123456"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "serie en double"
+  },
+  {
+   "nom": "invalide : libelle null",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "a.b",
+          "libelle": null
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "libelle de 1 a 30 octets"
+  },
+  {
+   "nom": "valide : meme chemin dans deux graphiques de la page",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "A",
+        "series": [
+         "a.b"
+        ]
+       },
+       {
+        "type": "cadran",
+        "titre": "B",
+        "series": [
+         {
+          "chemin": "a.b"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
   }
  ]
 }

@@ -163,6 +163,24 @@ def sonde_series(cdp):
     chemin = cdp.js("etat.desc.pages[0].graphiques[0].series[0]")
     verifie((isinstance(chemin, str), cdp.js("document.querySelectorAll('#r-series .serie').length")), (True, 1),
             "reglages : une ligne par serie du graphique (forme chaine au depart)")
+    case = lambda c: "document.querySelector('#arbre input[data-serie=\"" + c + "\"]')"
+    cdp.js(case("DS18B20.Temperature") + ".click(); 1")
+    verifie(cdp.js("[etat.desc.pages[0].graphiques[0].series[1], document.querySelector('#r-series [data-serie-champ=unite][data-i=\"1\"]').value]"),
+            [{"chemin": "DS18B20.Temperature", "unite": "°C"}, "°C"], "serie cochee : l'unite connue (A4) ecrite, et montree dans le champ")
+    saisit(cdp, "#r-series [data-serie-champ=unite][data-i=\"1\"]", "")
+    verifie(cdp.js("etat.desc.pages[0].graphiques[0].series[1]"), "DS18B20.Temperature", "unite videe : la serie redevient la chaine")
+    taux = "sensorsCuve.niveauCuve.tauxRemplissage"
+    a4 = "etat.series.series.filter(function(s){ return s.chemin === '" + taux + "'; })[0]"
+    cdp.js("window.uniteA4 = " + a4 + ".unite; " + a4 + ".unite = 'kilowattheure'; " + case(taux) + ".click(); " + a4 + ".unite = window.uniteA4; 1")
+    verifie(cdp.js("[etat.desc.pages[0].graphiques[0].series[2], document.querySelector('#r-series [data-serie-champ=unite][data-i=\"2\"]').placeholder]"),
+            [taux, "kilowattheure"], "unite connue de plus de 10 octets : jamais tronquee, la chaine et l'unite en suggestion")
+    cdp.js("etat.desc.pages[0].graphiques[0].type = 'radar'; dessineReglages(); 1")
+    verifie(cdp.js("[].map.call(document.querySelectorAll('#r-series input[type=color]'), function(i){ return i.disabled; })"
+                   ".concat([document.querySelectorAll('#r-series [data-serie-raz]').length])"), [True, True, True, 0],
+            "radar : couleur des series grisee (style qui l'ignore)")
+    cdp.js("etat.desc.pages[0].graphiques[0].type = 'courbe'; " + case(taux) + ".click(); " + case("DS18B20.Temperature") + ".click(); 1")
+    verifie(cdp.js("JSON.stringify(etat.desc.pages[0].graphiques[0].series) + document.querySelectorAll('#r-series .serie').length"),
+            json.dumps([chemin]) + "1", "series decochees : retour a la seule serie de depart")
     palette = cdp.js("PagesGraphiques.PALETTE[0]")
     verifie(cdp.js("document.querySelector('#r-series input[type=color]').value"), palette, "couleur affichee : celle de la palette")
     saisit(cdp, "#r-series [data-serie-champ=libelle]", "Niveau")

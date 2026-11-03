@@ -5,10 +5,13 @@ Toute modification relance, apres 300 ms : l'apercu (PagesGraphiques.page, le mo
 (POST /conseil), la validation (POST /valide) puis le diff (POST /diff). « Ecrire » n'est actif que si le diff affiche
 correspond a la description du moment (meme corps que celui du diff, empreinte du serveur).
 Series du graphique : chaine (chemin) ou objet {chemin, libelle, unite, couleur} (A7b) ; un objet dont tous les reglages
-sont vides redevient la chaine. Les deux formes se lisent par cheminDe().
+sont vides redevient la chaine. Les deux formes se lisent par cheminDe(). Les reglages par serie (dessineSeries,
+nouvelleSerie) sont dans atelier_graphiques_page_series.py, ajoute a la fin de JS.
 Lecteur de l'apercu : PagesGraphiques.lecteurCarte, celui de la carte, dont les fetch (faits pendant l'appel) sont
 rediriges vers /valeurs?env= : la conversion des reponses de la carte est donc la sienne, pas une copie.
 """
+
+from atelier_graphiques_page_series import JS_SERIES
 
 JS = r"""
 'use strict';
@@ -47,7 +50,7 @@ function cheminDe(s) { return s && typeof s === 'object' ? s.chemin : s; }
 function nouveauGraphique() {
   var ss = (etat.series && etat.series.series) || [], h = etat.series && etat.series.historique;
   var s = ss.filter(function (x) { return x.historique; })[0] || ss[0];
-  var g = {type: h ? 'courbe' : 'cadran', titre: s ? s.libelle : 'Nouveau graphique', series: s ? [s.chemin] : []};
+  var g = {type: h ? 'courbe' : 'cadran', titre: s ? s.libelle : 'Nouveau graphique', series: s ? [nouvelleSerie(s.chemin)] : []};
   if (h) g.periode = 'jour';
   return g;
 }
@@ -126,7 +129,7 @@ function dessineArbre() {
 $('arbre').addEventListener('change', function (e) {
   var c = e.target.getAttribute('data-serie'), g = grapheCourant();
   if (!c || !g) return;
-  if (e.target.checked) { if (g.series.map(cheminDe).indexOf(c) < 0) g.series.push(c); }
+  if (e.target.checked) { if (g.series.map(cheminDe).indexOf(c) < 0) g.series.push(nouvelleSerie(c)); }
   else g.series = g.series.filter(function (x) { return cheminDe(x) !== c; });
   modifie(true);
 });
@@ -214,38 +217,6 @@ $('r-ajout-zone').onclick = function (e) {
   g.zones.push([g.zones.length ? 0.4 : 0.2, g.zones.length ? '#c27400' : '#c0392b']);
   modifie(true);
 };
-// Une ligne par serie : libelle, unite (l'unite connue de la carte en suggestion), couleur (celle de la palette sans reglage)
-function dessineSeries(g) {
-  $('r-series').innerHTML = g.series.map(function (s, i) {
-    var o = typeof s === 'object' ? s : {chemin: s}, connue = infoSerie(o.chemin).unite || '';
-    var champ = function (cle) { return ' data-serie-champ="' + cle + '" data-i="' + i + '"'; };
-    return '<div class="serie"><div class="petit doux" title="' + echappe(o.chemin) + '">' + echappe(o.chemin) + '</div><div class="ligne">' +
-      '<input type="text"' + champ('libelle') + ' maxlength="30" placeholder="libellé" value="' + echappe(o.libelle || '') + '">' +
-      '<input type="text" class="unite"' + champ('unite') + ' maxlength="10" placeholder="' + echappe(connue || 'unité') +
-      '" title="unité' + (connue ? ' (carte : ' + echappe(connue) + ')' : '') + '" value="' + echappe(o.unite || '') + '">' +
-      '<input type="color"' + champ('couleur') + ' value="' + echappe(o.couleur || PagesGraphiques.PALETTE[i % PagesGraphiques.PALETTE.length]) + '">' +
-      '<a href="#" data-serie-raz="' + i + '" title="couleur de la palette">✕</a></div></div>';
-  }).join('') || '<div class="petit doux">aucune : cocher une série à gauche</div>';
-}
-// Pose (ou retire si vide) un reglage de la serie i ; sans reglage, la serie redevient la chaine de son chemin
-function poseSerie(g, i, cle, v) {
-  var o = typeof g.series[i] === 'object' ? g.series[i] : {chemin: g.series[i]};
-  if (v === '') delete o[cle]; else o[cle] = v;
-  g.series[i] = Object.keys(o).length > 1 ? o : o.chemin;
-}
-$('r-series').addEventListener('input', function (e) {
-  var cle = e.target.getAttribute('data-serie-champ'), g = grapheCourant();
-  if (!cle || !g) return;
-  poseSerie(g, +e.target.getAttribute('data-i'), cle, e.target.value);
-  modifie(false);
-});
-$('r-series').addEventListener('click', function (e) {
-  var i = e.target.getAttribute('data-serie-raz'), g = grapheCourant();
-  if (i === null || !g) return;
-  e.preventDefault();
-  poseSerie(g, +i, 'couleur', '');
-  modifie(true);
-});
 function dessineReglages() {
   var g = grapheCourant(), p = pageCourante(), h = etat.series && etat.series.historique;
   dessinePages();
@@ -496,3 +467,4 @@ Promise.all([lis('/envs'), fetch('/moteur/pages_graphiques.html').then(function 
   return choisitEnv(env);
 }).catch(function (e) { message('Atelier injoignable : ' + echappe(e.message), 'rouge'); });
 """
+JS += JS_SERIES

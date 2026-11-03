@@ -284,8 +284,13 @@ def pagesGraphiquesValidation_graphique(g, ou, calc, m)
         return
     end
     if (size(series) > V.BORNES["series"])    m.push(ou + " : series : " + str(size(series)) + " > " + str(V.BORNES["series"]))    end
+    var vus = {}                        # chemins deja vus : le moteur JS range les reglages par chemin
     for x: series
         var s = isinstance(x, map) ? V.serieObjet(x, ou, m) : x
+        if (type(s) == "string")
+            if (vus.contains(s))    m.push(ou + " : serie en double " + s)    end
+            vus[s] = true
+        end
         var r = V.serie(s, calc)
         if (r[0] != nil)
             m.push(ou + " : " + r[0])

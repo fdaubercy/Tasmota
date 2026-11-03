@@ -23,7 +23,8 @@ Champs et bornes :
   Dans `graphique.series` (pas dans `encadre.serie`), un element est SOIT cette chaine, SOIT un objet
   {"chemin": <la chaine>, "libelle"?, "unite"?, "couleur"?} (formes melangeables) : chemin obligatoire, libelle texte de
   1 a 30 octets, unite texte de 1 a 10 octets, couleur "#rrggbb" ; aucune autre cle. Les regles sur les series (calculee
-  connue, nature, cumul) portent sur `chemin` quelle que soit la forme. Aucune regle de doublon, dans l'une ou l'autre forme.
+  connue, nature, cumul) portent sur `chemin` quelle que soit la forme. Un meme chemin n'apparait qu'une fois dans les
+  series d'un graphique, quelle que soit la forme (le moteur JS range les reglages par chemin).
 - min, max : nombres (pas booleens) ; si les deux sont donnes, min < max.  zones : liste de [seuil, "#rrggbb"], seuil dans [0, 1].
 - periode : defaut "direct".  cadence : entier 1..3600 (secondes).  largeur : defaut "demi".  hauteur : entier 80..600.
 - cumul : "heure"|"jour"|"mois", refuse sur une calculee de nature "direct".
@@ -240,9 +241,14 @@ def _graphique(g, ou, calculees, m):
         return
     if len(series) > BORNES["series"]:
         m.append("%s : series : %d > %d" % (ou, len(series), BORNES["series"]))
+    vus = set()
     for s in series:
         if isinstance(s, dict):
             s = _serie_objet(s, ou, m)
+        if isinstance(s, str):                  # le moteur JS range les reglages par chemin
+            if s in vus:
+                m.append("%s : serie en double %r" % (ou, s))
+            vus.add(s)
         motif, nature = _serie(s, calculees)
         if motif:
             m.append("%s : %s" % (ou, motif))
