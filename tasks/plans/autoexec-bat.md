@@ -107,6 +107,9 @@ Produit : `prepare(racine, env) -> {"adresse", "hostname_carte", "sur_carte": st
 - [ ] `outils_docs/README.md` (§ Assistant persist : onglet autoexec.bat), carte des documents de `CLAUDE.md`, tuile de l'annuaire (`annuaire_registre.py`), README des maquettes (réalisé) ; `verifie_references_docs.py` code 0
 - [ ] A14 du plan `energie-differentiel` cochée avec renvoi ici ; commit
 
+## A10 — Retour au plan d'origine « energie-differentiel »
+- [ ] Reprendre `tasks/plans/energie-differentiel.md` : A14 cochée avec renvoi ici, puis ses étapes restantes (thermomètre A11, retour au plan « jauges-cuve » A10)
+
 ## Améliorations restantes
 - [ ] [projet] Envoi par MQTT (`build_ota_mqtt`) pour une carte injoignable en HTTP
 - [ ] [projet] Commandes connues par env (gardes `USE_*` du firmware compilé), si les fausses alertes « inconnue » gênent
