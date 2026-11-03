@@ -87,5 +87,15 @@ try:
 except ValueError:
     verifie(True, "intention inconnue refusee")
 
+for nom, args in (("destination inconnue", ("seuil", [S("a")], "Page", True)),
+                  ("series pas une liste", ("seuil", "a.b", "page", True)),
+                  ("serie pas un objet", ("seuil", ["a.b"], "page", True)),
+                  ("historique pas un booleen", ("seuil", [S("a")], "page", 1))):
+    try:
+        c.propose(*args)
+        verifie(False, nom + " refusee")
+    except ValueError:
+        verifie(True, nom + " refusee")
+
 print("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s)")
 sys.exit(1 if ECHECS else 0)

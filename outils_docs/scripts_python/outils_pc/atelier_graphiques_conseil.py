@@ -6,6 +6,7 @@
 
 Chaque style de STYLES figure exactement une fois dans l'une des deux listes. 3 a 5 styles proposes, classes, SAUF :
 - destination "accueil" (SVG seul = demi-cercle) : un seul style possible, il est le seul propose ;
+- destination "graphiques" : 4 styles seulement au palier 1, donc parfois moins de 3 proposes ;
 - cas ou presque rien ne convient (ex. aucun historique et une seule serie non bornee) : on rend ce qui convient.
 
 Etapes : (1) un style est ecarte s'il est impossible (destination, historique absent, nombre de series, bornes, unites) ;
@@ -83,6 +84,12 @@ def _impossible(style, series, destination, historique):
 def propose(intention, series, destination, historique):
     if intention not in INTENTIONS:
         raise ValueError("intention inconnue : %r" % (intention,))
+    if destination not in ("page", "graphiques", "accueil"):
+        raise ValueError("destination inconnue : %r (page, graphiques ou accueil)" % (destination,))
+    if not isinstance(series, list) or not all(isinstance(s, dict) for s in series):
+        raise ValueError("series doit être une liste de séries (objets)")
+    if not isinstance(historique, bool):
+        raise ValueError("historique doit être vrai ou faux")
     ecartes, possibles = {}, {}
     for st in STYLES:
         m = _impossible(st, series, destination, historique)
