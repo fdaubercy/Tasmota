@@ -72,6 +72,8 @@ def sonde(m, capture):
     s.verifie(any(t[0] == "Réseau et Wi-Fi" for t in e["themes"]) and not any(t[1] for t in e["themes"]), True,
               "parametres : themes en francais, replies")
     s.verifie((e["fichiers"], e["secret"]), (True, False), "parametres : fichier .drvset003 cite, aucun mot de passe en clair")
+    s.verifie((cdp.js("document.getElementById('s-liaison').value"), cdp.js("document.querySelectorAll('#s-params .s-demarre').length")),
+              ("http", 0), "liaison HTTP par defaut ; env d'essai sans autoexec ni persist : aucune marque de demarrage")
 
     saisit(cdp, "#s-filtre", "CARTE-AVANT")            # valeur du seul hostname de la plus recente (le filtre cherche aussi les valeurs)
     e = etat(cdp)

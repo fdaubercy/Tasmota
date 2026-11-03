@@ -35,6 +35,8 @@ CSS = r"""
   .s-json{flex:none;padding:1px 6px;border-radius:4px;border:1px solid var(--btn-bord);background:var(--btn);color:var(--doux);
     font:11px ui-monospace,Consolas,monospace;cursor:pointer}
   .s-json[aria-pressed="true"]{color:var(--bleu);border-color:var(--bleu);background:var(--bleu-fond)}
+  .s-demarre{margin-left:6px;padding:0 5px;border-radius:8px;font-size:11px;white-space:nowrap;color:var(--orange);
+    border:1px solid var(--orange);cursor:help}
   .s-p.modif{background:var(--orange-fond)}.s-p.ecart code{color:var(--bleu);font-weight:600}
   .s-p.faux textarea{border-color:var(--rouge)}
   .s-messages div{padding:6px 10px;border-radius:6px;margin-bottom:6px;font-size:13px}
@@ -46,6 +48,8 @@ HTML = r"""
   <div id="vue-sauvegarde" role="tabpanel" aria-labelledby="onglet-sauvegarde" hidden>
     <div class="carte s-haut">
       <label>Carte <select id="s-env" aria-label="Carte sauvegardée"></select></label>
+      <label>Liaison <select id="s-liaison" aria-label="Liaison avec la carte">
+        <option value="http">HTTP (adresse)</option><option value="mqtt">MQTT (broker)</option></select></label>
       <span id="s-adresse" class="discret"></span>
       <span class="droite">
         <button id="s-prendre" class="btn p" type="button">Sauvegarder maintenant</button>
@@ -69,7 +73,12 @@ HTML = r"""
         <p class="discret" style="margin:10px 0 0">Une sauvegarde est le fichier <code>/dl</code> de la carte : ses Settings
           (Wi-Fi, MQTT, minuteries, gabarit, règles…) et ses fichiers <code>.drvset*</code> (calibrage, compteurs). Rangée
           dans <code>outils_docs/sauvegardes_cartes/</code>, ignorée par git (mots de passe en clair). Au démarrage, le persist
-          et l'<code>autoexec.bat</code> reposent leurs réglages : ils l'emportent sur une valeur restaurée.</p>
+          et l'<code>autoexec.bat</code> reposent leurs réglages : ils l'emportent sur une valeur restaurée. Ces paramètres
+          portent la marque <span class="s-demarre">↻ démarrage</span> (survol : la commande qui les repose).
+          Liaison MQTT : pour une carte que ce PC ne joint pas en HTTP, par le broker de <code>user_config_override.h</code>
+          et le topic du persist (commandes <code>FileDownload</code> / <code>FileUpload</code>, même fichier que
+          <code>/dl</code>). Les sauvegardes « avant flash » et « avant restauration » de plus de 90 jours sont effacées
+          seules, en gardant les 5 plus récentes de chaque origine ; jamais une manuelle ni une modifiée.</p>
       </div>
       <div class="carte">
         <div class="s-tete"><h2>Paramètres de la sauvegarde</h2>
@@ -94,7 +103,12 @@ function sMessages(liste) {
   zone.textContent = "";
   liste.forEach(function (m) { zone.appendChild(h("div", {"class": m[0], texte: m[1]})); });
 }
-function sAdresse() { var c = choix[S.env]; return (c && c.ip) || (parNom[S.env] && parNom[S.env].ip) || ""; }
+// Par MQTT, le serveur joint la carte par le topic de son persist : l'adresse n'est qu'un libelle
+function sMqtt() { return $("s-liaison").value === "mqtt"; }
+function sAdresse() {
+  if (sMqtt()) return "par le broker MQTT";
+  var c = choix[S.env]; return (c && c.ip) || (parNom[S.env] && parNom[S.env].ip) || "";
+}
 function sTexte(v) { return typeof v === "string" ? v : JSON.stringify(v); }
 // Hauteur du champ = son contenu : une valeur plus longue que la zone passe sur plusieurs lignes
 function sAjuste(champ) { champ.style.height = "auto"; champ.style.height = champ.scrollHeight + 2 + "px"; }
@@ -108,6 +122,7 @@ function sEnvs() {
   if (coche) { sel.value = coche.nom; sCharge(coche.nom); }
 }
 $("s-env").onchange = function () { sCharge($("s-env").value); };
+$("s-liaison").onchange = function () { sCharge(S.env, true); };
 
 async function sCharge(env, garder) {
   S.env = env;
@@ -227,8 +242,10 @@ function sParams() {
         };
         valeur.appendChild(bouton);
       }
+      var repose = (p.reposes || {})[k];
       var ligne = h("div", {"class": "s-p" + (k in S.modifs ? " modif" : "") + (k in S.ecarts ? " ecart" : "")},
-                    h("code", {texte: k}), valeur);
+                    h("span", {}, h("code", {texte: k}),
+                      repose && h("span", {"class": "s-demarre", title: repose, texte: "↻ démarrage"})), valeur);
       if (k in S.ecarts) ligne.title = "Autre valeur : " + sTexte(S.ecarts[k]);
       champ.oninput = function () {
         var v = champ.value, ok = true;
@@ -256,7 +273,7 @@ $("s-prendre").onclick = async function () {
   if (!adresse) { sMessages([["r", "Adresse de la carte inconnue : la saisir sur la ligne de l'env, onglet Build (méthode OTA)."]]); return; }
   bouton.disabled = true;
   sMessages([["v", "Sauvegarde de " + S.env + " (" + adresse + ")…"]]);
-  var r = await appel("/sauvegarde/prendre", {env: S.env, adresse: adresse}, 90000);
+  var r = await appel("/sauvegarde/prendre", {env: S.env, adresse: adresse, transport: $("s-liaison").value}, 90000);
   bouton.disabled = false;
   if (!r.ok) { sMessages([["r", "Non sauvegardée : " + (r.texte || "HTTP " + r.statut)]]); return; }
   S.fichier = r.donnees.fichier;
@@ -285,7 +302,8 @@ $("s-comparer").onclick = async function () {
   if (!autre && !adresse) { sMessages([["r", "Adresse de la carte inconnue : la saisir dans l'onglet Build."]]); return; }
   bouton.disabled = true;
   $("s-ecarts").textContent = "Comparaison…";
-  var r = await appel("/sauvegarde/comparer", {env: S.env, fichier: S.fichier, autre: autre, adresse: adresse}, 120000);
+  var r = await appel("/sauvegarde/comparer", {env: S.env, fichier: S.fichier, autre: autre, adresse: adresse,
+                                                transport: $("s-liaison").value}, 120000);
   bouton.disabled = false;
   if (!r.ok) { $("s-ecarts").textContent = ""; sMessages([["r", "Comparaison impossible : " + (r.texte || "HTTP " + r.statut)]]); return; }
   S.ecarts = {};
@@ -299,7 +317,7 @@ $("s-restaurer").onclick = async function () {
   if (!adresse) { sMessages([["r", "Adresse de la carte inconnue : la saisir sur la ligne de l'env, onglet Build (méthode OTA)."]]); return; }
   bouton.disabled = true;
   sMessages([["v", "Lecture de la carte pour les écarts…"]]);
-  var c = await appel("/sauvegarde/comparer", {env: S.env, fichier: S.fichier, adresse: adresse}, 120000);
+  var c = await appel("/sauvegarde/comparer", {env: S.env, fichier: S.fichier, adresse: adresse, transport: $("s-liaison").value}, 120000);
   if (!c.ok) { bouton.disabled = false; sMessages([["r", "Écarts illisibles : " + (c.texte || "HTTP " + c.statut)]]); return; }
   var e = c.donnees.ecarts, liste = e.slice(0, 25).map(function (x) { return "- " + x.cle + " : " + sTexte(x.b) + " → " + sTexte(x.a); });
   if (e.length > 25) liste.push("… et " + (e.length - 25) + " autres");
@@ -309,7 +327,8 @@ $("s-restaurer").onclick = async function () {
   if (!confirm("Restaurer " + S.fichier + " sur " + S.env + " (" + adresse + ") ?\n\nUne sauvegarde de la carte est prise d'abord, "
       + "puis la carte redémarre : l'état des relais peut changer (vu sur le différentiel : relais revenu ON).\n" + sEcartsTexte(e) + "\n" + liste.join("\n"))) { bouton.disabled = false; sMessages([]); return; }
   sMessages([["v", "Restauration en cours (sauvegarde d'abord, puis envoi et redémarrage de la carte)…"]]);
-  var r = await appel("/sauvegarde/restaurer", {env: S.env, fichier: S.fichier, adresse: adresse, jeton: c.donnees.jeton}, 300000);
+  var r = await appel("/sauvegarde/restaurer", {env: S.env, fichier: S.fichier, adresse: adresse, jeton: c.donnees.jeton,
+                                                   transport: $("s-liaison").value}, 300000);
   bouton.disabled = false;
   if (!r.ok) { sMessages([["r", "Restauration échouée : " + (r.texte || "HTTP " + r.statut)]]); sCharge(S.env, true); return; }
   sMessages([["v", "Restaurée. Sauvegarde d'avant : " + r.donnees.avant.fichier],

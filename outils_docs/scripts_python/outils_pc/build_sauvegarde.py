@@ -4,14 +4,18 @@ Une sauvegarde est le /dl d'une carte (settings.ino::SettingsConfigBackup : Sett
 outils_docs/sauvegardes_cartes/<env>/AAAAMMJJ-HHMMSS_<origine>.dmp avec sa fiche .json. Le dossier est ignore par git :
 un .dmp porte les mots de passe Wi-Fi et MQTT en clair, et le depot est public.
 
-  prend        /dl de la carte (esclave `IP:port` : redirection du maitre posee et identite verifiee d'abord)
+  prend        /dl de la carte (esclave `IP:port` : redirection du maitre posee et identite verifiee d'abord ;
+               `mqtt://<topic>` : par le broker, build_sauvegarde_mqtt) ; une prise automatique lance `purge`
   liste        sauvegardes d'un env, de la plus recente a la plus ancienne
   parametres   parametres d'une sauvegarde par groupe decode-config, mots de passe remplaces par ***
   copie        nouvelle sauvegarde « modifiee » ; l'originale n'est jamais reecrite (decode_config.ecrit_copie)
   compare      ecarts entre deux sauvegardes, ou entre une sauvegarde et la carte en ligne
   restaure     sauvegarde « avant restauration », puis /rs + /u2, retour de la carte, ecarts relus
   supprime     sauvegardes choisies effacees (.dmp et fiche) ; tous les noms controles avant d'en effacer un
-Le persist et l'autoexec.bat reposent leurs reglages a chaque demarrage : ils l'emportent sur une valeur restauree.
+  purge        sauvegardes automatiques (avant flash, avant restauration) de plus de GARDE_JOURS au-dela des
+               GARDE_NOMBRE plus recentes de chaque origine ; jamais une manuelle ni une modifiee
+Le persist et l'autoexec.bat reposent leurs reglages a chaque demarrage : ils l'emportent sur une valeur restauree ;
+`reposes` dit lesquels, pour les marquer dans la page.
 Banc : test_build_sauvegarde.py.
 """
 
@@ -25,6 +29,7 @@ import time
 from pathlib import Path
 
 import build_envs
+import build_sauvegarde_mqtt
 import decode_config
 from build_ota_http import _attend_retour, _get, _page_en_echec, _poste
 from build_ota_maitre import joint_par_maitre
@@ -39,6 +44,11 @@ MASQUE = "***"
 NON_EDITABLES = ("header", "settings", "config_version")
 PLATEFORME = 0xF36                   # Settings->config_version : ESP32, S3, P4... (settings.ino::SettingsConfigRestore)
 DELAI = 20.0
+MQTT = "mqtt://"                     # adresse « mqtt://<topic> » : la carte est jointe par le broker
+AUTOMATIQUES = ("avant-flash", "avant-restauration")
+GARDE_NOMBRE, GARDE_JOURS = 5, 90
+CONFIG_PERSIST = Path("data") / "fs" / "configGlobal.be"   # applique le persist au demarrage (testeParam, tasmota.cmd)
+SANS_COMMANDE = {"adc_param32": ["ADCPARAM"], "adc_param": ["ADCPARAM"]}   # decode-config ne leur donne pas de commande
 _CACHE = {}                          # (chemin, date) -> parametres decodes : decode-config prend 5 a 10 s
 
 
@@ -77,11 +87,22 @@ def _nouveau(racine, env, origine):
         time.sleep(1)
 
 
+def _mqtt():
+    """(client non connecte, MqttPassword de la carte) : broker et mot de passe de user_config_override.h."""
+    import build_ota_mqtt
+    import sniffeur_mqtt
+    return build_ota_mqtt.client_par_defaut(), sniffeur_mqtt.lit_config_broker().get("MQTT_PASS", "")
+
+
 def lit_carte(adresse, env, persist_env, joint=None):
     """/dl de la carte (bytes) ; RuntimeError si la reponse n'est pas une configuration."""
-    if ":" in adresse:               # esclave joint par le maitre
-        (joint or joint_par_maitre)(adresse, persist_env, env, lambda _: None)
-    donnees = _get(adresse, "/dl", DELAI)
+    if adresse.startswith(MQTT):
+        client, mot_de_passe = _mqtt()
+        donnees = build_sauvegarde_mqtt.lit(client, adresse[len(MQTT):], mot_de_passe)
+    else:
+        if ":" in adresse:           # esclave joint par le maitre
+            (joint or joint_par_maitre)(adresse, persist_env, env, lambda _: None)
+        donnees = _get(adresse, "/dl", DELAI)
     if len(donnees) < 4096 or not decode_config.crc_valide(donnees):
         raise RuntimeError(f"la carte {adresse} n'a pas rendu de configuration par /dl ({len(donnees)} o)")
     return donnees
@@ -91,7 +112,13 @@ def prend(racine, env, adresse, origine, persist_env=None, joint=None):
     donnees = lit_carte(adresse, env, persist_env, joint)
     chemin = _nouveau(racine, env, origine)
     chemin.write_bytes(donnees)
-    return _fiche(chemin, donnees, origine, adresse)
+    fiche = _fiche(chemin, donnees, origine, adresse)
+    if origine in AUTOMATIQUES:
+        try:
+            purge(racine, env)
+        except (OSError, ValueError):
+            pass                     # la sauvegarde est prise ; une purge manquee attendra la suivante
+    return fiche
 
 
 def liste(racine, env):
@@ -102,6 +129,67 @@ def liste(racine, env):
         except (OSError, ValueError):
             fiches.append({"fichier": chemin.name, "origine": "?", "version": "?", "editable": False})
     return [f for f in fiches if NOM.fullmatch(f.get("fichier", ""))]
+
+
+def commande(mot):
+    """Nom normalise d'une commande Tasmota, comme decode_config_groupes : SO56/SetOption56 -> SETOPTION56, Timer3 -> TIMER."""
+    m = re.fullmatch(r"([A-Za-z_]+?)(\d*)", mot)
+    if not m:
+        return None                  # I2CDriver7, %s... : pas une commande lisible
+    nom = "SETOPTION" if m.group(1).upper() == "SO" else m.group(1).upper()
+    return nom + m.group(2) if nom == "SETOPTION" else nom
+
+
+def commandes_lignes(texte):
+    """{commande normalisee: telle qu'ecrite} des lignes d'un autoexec.bat (Backlog compris, ; = commentaire en tete)."""
+    noms = {}
+    for ligne in texte.splitlines():
+        if ligne.strip().startswith(";"):
+            continue
+        for partie in ligne.split(";"):
+            mots = partie.split()
+            if mots and re.fullmatch(r"backlog\d*", mots[0], re.I):
+                mots = mots[1:]
+            if mots and (n := commande(mots[0])):
+                noms.setdefault(n, mots[0])
+    return noms
+
+
+def commandes_persist(texte):
+    """Commandes que configGlobal.be pose depuis le persist : testeParam("X"...), tasmota.cmd("X ..."), ["MqttHost", "hote"]."""
+    textes = re.findall(r'(?:testeParam|tasmota\.cmd)\((?:string\.format\()?"([^"]*)"', texte)
+    textes += re.findall(r'\[\s*"([A-Z]\w*)",\s*"\w+"\s*\]', texte)
+    return commandes_lignes("\n".join(textes))
+
+
+def reposes(cles, autoexec, persist, commandes=None):
+    """{cle: texte} des parametres qu'une commande de l'autoexec.bat ou du persist repose a chaque demarrage."""
+    commandes = commandes if commandes is not None else decode_config.disposition()["commandes"]
+    res = {}
+    for cle in cles:
+        noms = set(commandes.get(cle, [])) | set(SANS_COMMANDE.get(cle, []))
+        par = [f"{source} ({', '.join(sorted(lignes[n] for n in noms & set(lignes)))})"
+               for source, lignes in (("autoexec.bat", autoexec), ("persist", persist)) if noms & set(lignes)]
+        if par:
+            res[cle] = "reposé à chaque démarrage par " + " et ".join(par)
+    return res
+
+
+def _demarrage(racine, env):
+    """Commandes de l'autoexec.bat de la carte et du persist au depot ; vides pour une base ou un env sans dossier."""
+    import fichiers_berry_etat       # ici : fichiers_berry_ini importe build_envs (cycle, comme build_envs.persist_carte)
+
+    try:
+        d = fichiers_berry_etat.dossier_carte(env)
+    except ValueError:
+        d = None
+    if not d:
+        return {}, {}
+    lit = lambda p: p.read_text(encoding="utf-8", errors="replace") if p.is_file() else ""
+    # shortcut: tout configGlobal.be est compte des qu'il y a un persist, meme une cle vide qu'il ne pose pas ;
+    # a affiner si une marque trompe
+    persist = commandes_persist(lit(Path(racine) / CONFIG_PERSIST)) if (Path(racine) / d / "_persist.json").is_file() else {}
+    return commandes_lignes(lit(Path(racine) / d / "autoexec.bat")), persist
 
 
 def _decode(chemin):
@@ -120,7 +208,7 @@ def parametres(racine, env, fichier, groupes=None):
     chemin = _chemin(racine, env, fichier)
     v = decode_config.version(chemin.read_bytes())
     res = {"fichier": fichier, "version": decode_config.nom_version(v), "editable": decode_config.editable(v),
-           "groupes": {}, "fichiers": {}, "message": ""}
+           "groupes": {}, "fichiers": {}, "reposes": {}, "message": ""}
     try:
         valeurs = _decode(chemin)
     except (ValueError, RuntimeError) as erreur:
@@ -133,6 +221,10 @@ def parametres(racine, env, fichier, groupes=None):
             g = groupes.get(cle) or "Divers"
             res["groupes"].setdefault("Divers" if g == "*" else g, {})[cle] = _masque(cle, valeur)
     res["fichiers"] = {nom: len(base64.b64decode(d)) for nom, d in (valeurs.get("settings") or {}).items()}
+    try:
+        res["reposes"] = reposes(valeurs, *_demarrage(racine, env))
+    except (OSError, RuntimeError):
+        res["reposes"] = {}          # marques seulement : leur echec ne cache pas les parametres
     return res
 
 
@@ -166,14 +258,16 @@ def _ecarts(a, b):
     return ecarts
 
 
-def compare(racine, env, fichier, autre="", adresse="", persist_env=None, joint=None):
-    """Ecarts de `fichier` a `autre` (sauvegarde) ou a la carte en ligne (`adresse`, /dl jamais enregistre)."""
+def compare(racine, env, fichier, autre="", adresse="", persist_env=None, joint=None, carte=None):
+    """Ecarts de `fichier` a `autre` (sauvegarde) ou a la carte en ligne (`adresse`, /dl jamais enregistre ;
+    `carte` : ce /dl deja lu)."""
     a = _decode(_chemin(racine, env, fichier))
     if autre:
         return {"ecarts": _ecarts(a, _decode(_chemin(racine, env, autre)))}
+    donnees = carte or lit_carte(adresse, env, persist_env, joint)
     with tempfile.TemporaryDirectory() as t:
         carte = Path(t) / "carte.dmp"
-        carte.write_bytes(lit_carte(adresse, env, persist_env, joint))
+        carte.write_bytes(donnees)
         return {"ecarts": _ecarts(a, decode_config.decode(carte))}
 
 
@@ -193,23 +287,42 @@ def restaure(racine, env, fichier, adresse, jeton, persist_env=None, joint=None,
     if decode_config.settings(donnees)[PLATEFORME] != decode_config.settings(
             (dossier(racine, env) / avant["fichier"]).read_bytes())[PLATEFORME]:
         raise RuntimeError("sauvegarde d'une autre puce (ESP32, S3, P4...) que la carte : rien n'est envoyé")
-    _get(adresse, "/rs?", DELAI)     # page de restauration : prepare l'envoi de configuration (UPL_SETTINGS)
+    relue = None
     try:
-        statut, texte = _poste(adresse, "/u2", "u2", chemin.name, donnees, DELAI)
-    except (OSError, http.client.HTTPException):
-        statut, texte = 200, ""      # coupee en redemarrant : la relecture apres le retour juge
-    if _page_en_echec(statut, texte):
-        raise RuntimeError(f"la carte a refusé la configuration (HTTP {statut}) ; sauvegarde d'avant : {avant['fichier']}")
-    try:
-        _attend_retour(adresse, retour[0], retour[1], retour[2], 5.0)
+        if adresse.startswith(MQTT):
+            client, mot_de_passe = _mqtt()
+            build_sauvegarde_mqtt.ecrit(client, adresse[len(MQTT):], mot_de_passe, donnees, chemin.name)
+            relue = _attend_retour_mqtt(adresse, env, retour)
+        else:
+            _get(adresse, "/rs?", DELAI)     # page de restauration : prepare l'envoi de configuration (UPL_SETTINGS)
+            try:
+                statut, texte = _poste(adresse, "/u2", "u2", chemin.name, donnees, DELAI)
+            except (OSError, http.client.HTTPException):
+                statut, texte = 200, ""      # coupee en redemarrant : la relecture apres le retour juge
+            if _page_en_echec(statut, texte):
+                raise RuntimeError(f"la carte a refusé la configuration (HTTP {statut})")
+            _attend_retour(adresse, retour[0], retour[1], retour[2], 5.0)
     except RuntimeError as erreur:
         raise RuntimeError(f"{erreur} ; sauvegarde d'avant : {avant['fichier']}") from None
     ecarts = []
     try:
-        ecarts = compare(racine, env, fichier, adresse=adresse, persist_env=persist_env, joint=joint)["ecarts"]
+        ecarts = compare(racine, env, fichier, adresse=adresse, persist_env=persist_env, joint=joint, carte=relue)["ecarts"]
     except (ValueError, RuntimeError, OSError):
         pass                         # version non lisible : la restauration est faite, les ecarts ne sont pas relus
     return {"avant": avant, "ecarts": ecarts}
+
+
+def _attend_retour_mqtt(adresse, env, retour):
+    """Configuration relue par le broker apres le redemarrage (retour = delai total, attente avant, intervalle)."""
+    fin = time.monotonic() + retour[0]
+    time.sleep(retour[1])
+    while True:
+        try:
+            return lit_carte(adresse, env, None)
+        except (RuntimeError, OSError) as erreur:
+            if time.monotonic() > fin:
+                raise RuntimeError(f"la carte n'est pas revenue sur le broker en {retour[0]:.0f} s ({erreur})") from None
+        time.sleep(retour[2])
 
 
 def supprime(racine, env, fichiers):
@@ -221,6 +334,17 @@ def supprime(racine, env, fichiers):
         chemin.unlink()
         chemin.with_suffix(".json").unlink(missing_ok=True)
     return {"supprimees": [c.name for c in chemins]}
+
+
+def purge(racine, env, maintenant=None):
+    """Efface les sauvegardes automatiques trop anciennes (voir la docstring du module) -> noms effaces."""
+    limite = time.strftime("%Y%m%d-%H%M%S", time.localtime((maintenant or time.time()) - GARDE_JOURS * 86400))
+    effacees = []
+    for origine in AUTOMATIQUES:
+        noms = sorted((p.name for p in dossier(racine, env).glob(f"*_{origine}.dmp") if NOM.fullmatch(p.name)),
+                      reverse=True)
+        effacees += [n for n in noms[GARDE_NOMBRE:] if n[:15] < limite]
+    return supprime(racine, env, effacees)["supprimees"] if effacees else []
 
 
 def liste_json(racine, env):
@@ -239,6 +363,7 @@ def traite_post(chemin, demande, serie, racine, verrou, adresse_carte):
       /sauvegarde/copier     {env, fichier, modifs}          -> fiche de la copie modifiee
       /sauvegarde/restaurer  {env, fichier, adresse, jeton}  -> {avant, ecarts}
       /sauvegarde/supprimer  {env, fichiers}                 -> {supprimees}
+    `transport: "mqtt"` dans la demande : la carte est jointe par le broker (topic du persist au depot), pas par `adresse`.
     """
     operations = {"/sauvegarde/prendre", "/sauvegarde/comparer", "/sauvegarde/copier", "/sauvegarde/restaurer",
                   "/sauvegarde/supprimer"}
@@ -246,6 +371,8 @@ def traite_post(chemin, demande, serie, racine, verrou, adresse_carte):
         return None
     env, fichier = str(demande.get("env") or ""), str(demande.get("fichier") or "")
     persist = build_envs.persist_carte(racine, env)
+    if demande.get("transport") == "mqtt":
+        adresse_carte = lambda _: MQTT + build_envs.topic_carte(racine, env)
     if serie.envoi_en_cours() and chemin not in ("/sauvegarde/copier", "/sauvegarde/supprimer"):   # sans la carte
         raise RuntimeError("un envoi est en cours : réessayer après")
     # shortcut: un lancement demarre pendant une restauration n'est pas refuse ; a bloquer si cela arrive

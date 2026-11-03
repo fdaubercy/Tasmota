@@ -981,7 +981,18 @@ compteurs ; voir l'onglet « Aide »). Fichiers `AAAAMMJJ-HHMMSS_<origine>.dmp` 
 - **« Restaurer : <date · origine> »** (la sauvegarde choisie d'un clic dans l'historique ; les cases servent à supprimer) : écarts avec la carte affichés et confirmés, sauvegarde de la carte d'abord, envoi,
   redémarrage, puis écarts relus. Refusée pendant un envoi de la série, et pour une sauvegarde d'une autre puce.
 - **À savoir** : au démarrage, le persist et l'`autoexec.bat` reposent leurs réglages ; ils l'emportent sur une
-  valeur restaurée.
+  valeur restaurée. Ces paramètres portent la marque **« ↻ démarrage »** ; son survol nomme la source et la commande
+  (`autoexec.bat (SerialLog)`, `persist (Hostname)`). La marque vient de la commande Tasmota de chaque paramètre
+  (decode-config) comparée aux lignes de l'`autoexec.bat` de la carte et aux commandes que `data/fs/configGlobal.be`
+  pose depuis le persist (`build_sauvegarde::reposes`) ; elle compte tout `configGlobal.be` dès qu'il y a un persist.
+- **Liaison** : « HTTP (adresse) » par défaut ; **« MQTT (broker) »** pour une carte que ce PC ne joint pas en HTTP.
+  La carte est jointe par le broker de `user_config_override.h` et le topic de son persist au dépôt, par les commandes
+  `FileDownload` / `FileUpload` de Tasmota (`build_sauvegarde_mqtt.py`) : même fichier que `/dl`, même déroulé
+  (sauvegarde d'avant, envoi, relecture une fois la carte revenue sur le broker). Le `MqttPassword` de la carte doit
+  être le `MQTT_PASS` du `.h`. Essai réel du 2026-11-03 sur le différentiel : lecture en 2 s.
+- **Purge automatique** : à chaque sauvegarde « avant flash » ou « avant restauration », celles de ces deux origines
+  de **plus de 90 jours** sont effacées, en gardant toujours les **5 plus récentes** de chaque origine. Une sauvegarde
+  « manuelle » ou « modifiée » n'est jamais effacée seule (`build_sauvegarde::purge`).
 - **decode-config** (tasmota/decode-config) lit et écrit les paramètres. Il vit hors du dépôt et du Python de
   PlatformIO, dans `%LOCALAPPDATA%\outils_tasmota\decode_config\` : `python outils_docs/scripts_python/outils_pc/decode_config.py`
   l'installe (`--verifier` pour contrôler). Sans lui, sauvegarde et restauration restent possibles, pas la lecture des

@@ -77,10 +77,11 @@ thème à droite avec filtre) ; onglet nommé **« Sauvegarde configuration »**
 ## A9 — Retour au plan « energie-differentiel »
 - [ ] Reprendre `tasks/plans/energie-differentiel.md` : thermomètre (A11), A14 (outil de l'`autoexec.bat` : endroit et questions à l'utilisateur), A10 (retour au plan « jauges-cuve »)
 
-## Améliorations restantes
-- [ ] [projet] Marquer dans la page les paramètres reposés au démarrage par le persist ou l'`autoexec.bat` (sortie « commandes » de decode-config comparée aux lignes de l'`autoexec.bat`)
-- [ ] [projet] Restauration par MQTT pour une carte injoignable en HTTP (decode-config sait le faire)
-- [ ] [projet] Purge automatique des sauvegardes anciennes (la suppression à la main est en A10)
+## A11 — Les trois améliorations du projet (demande du 2026-11-03)
+- [x] Paramètres reposés au démarrage par le persist ou l'`autoexec.bat` marqués « ↻ démarrage » dans la page (survol : source et commande) — preuve : commande Tasmota de chaque paramètre tirée des définitions de decode-config (`decode_config_groupes.py`, 1er mot seulement : `influxdb_token32` → `IFX`, pas `Password`), comparée aux lignes de l'`autoexec.bat` et aux commandes de `configGlobal.be` (`build_sauvegarde::reposes`) ; page relancée : 34 marques sur le différentiel (`seriallog_level` : `autoexec.bat (SerialLog)`, `hostname` : `persist (Hostname)`) ; banc `test_build_sauvegarde_mqtt.py` VERT, témoin sans autoexec ni persist
+- [x] Liaison MQTT pour une carte injoignable en HTTP : prise, comparaison et restauration par `FileDownload` / `FileUpload` de type 2 (`xdrv_02_1_mqtt_file.ino`), choix « Liaison » dans le bandeau — preuve : `build_sauvegarde_mqtt.py` ; banc VERT sur carte MQTT simulée (mauvais mot de passe, MD5 faux, refus de la carte, carte muette, restauration complète relue) ; mutant sans contrôle du MD5 vu ROUGE ; vraie carte (différentiel, `mqtt://bureau/pc`) : lecture de 4 800 o en 2,1 s, CRC valide, seul écart l'état du relais. **Restauration réelle par MQTT pas essayée** (écrit sur la carte : à faire avec l'utilisateur)
+- [x] Purge automatique : sauvegardes « avant flash » et « avant restauration » de plus de 90 jours effacées au-delà des 5 plus récentes de chaque origine, à chaque prise automatique ; jamais une manuelle ni une modifiée — preuve : `build_sauvegarde::purge` ; banc VERT (rien d'effacé sous 90 jours, compte gardé, manuelle et modifiée anciennes intactes) ; mutant sans la règle des 90 jours vu ROUGE
+- [ ] Restauration réelle par MQTT sur une carte, avec l'accord de l'utilisateur
 
 ## Vérification
 - A1 : sorties de decode-config sur le vrai `.dmp` du différentiel (comparaison d'octets, valeurs relues).
