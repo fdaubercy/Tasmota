@@ -139,10 +139,14 @@ def test_mqtt(racine):
     f1 = bs.prend(racine, ENV, adresse, "manuelle")
     verifie(f1["adresse"], adresse, "MQTT prend : fiche avec l'adresse mqtt://<topic>")
     f2 = bs.copie(racine, ENV, f1["fichier"], {"hostname": "CARTE-RESTAUREE"})
+    vues, etape = [], bs._etape
+    bs._etape = lambda env, n: (vues.append((n, bs.liste_json(racine, env)["restauration"])), etape(env, n))
     res = bs.restaure(racine, ENV, f2["fichier"], adresse, bs.empreinte(racine, ENV, f2["fichier"]), retour=RETOUR)
     copie = (Path(racine) / bs.DOSSIER / ENV / f2["fichier"]).read_bytes()
     verifie((res["avant"]["origine"], res["ecarts"], carte.config), ("avant restauration", [], copie),
             "MQTT restaure : sauvegarde d'avant, copie sur la carte, aucun ecart relu")
+    verifie(([n for n, _ in vues], vues[1][1]["etape"], len(vues[1][1]["etapes"]), bs.liste_json(racine, ENV)["restauration"]),
+            ([0, 1, 2, 3], 0, 4, None), "restaure : 4 etapes suivies par la page, plus rien en cours a la fin")
     verifie(res["avant"]["fichier"] in [f["fichier"] for f in bs.liste(racine, ENV)], True, "MQTT restaure : sauvegarde d'avant gardee")
     carte.refuse = True
     try:
@@ -152,6 +156,8 @@ def test_mqtt(racine):
         message = str(erreur)
     verifie(("MD5 mismatch" in message, "sauvegarde d'avant : " in message), (True, True),
             f"MQTT restaure : refus de la carte -> erreur qui nomme la sauvegarde d'avant ({message})")
+    verifie(bs.EN_COURS, {}, "restaure en echec : plus rien en cours (la page ne suit pas une etape morte)")
+    bs._etape = etape
     carte.refuse = False
 
 
@@ -175,6 +181,21 @@ def test_purge(racine):
             and not any(d.glob("2026010[123]-120000_avant-flash.json")), True, "purge : .dmp et fiche effaces, le reste intact")
     verifie(sorted(p.name for p in d.glob("2025*.dmp")), ["20250101-120000_manuelle.dmp", "20250101-120000_modifiee.dmp"],
             "purge : manuelle et modifiee jamais effacees, meme anciennes")
+    # -- case « purge automatique » de l'onglet (cochee par defaut, commune a toutes les cartes)
+    verifie(bs.purge_auto(racine), True, "case de purge : cochee tant qu'elle n'a pas ete touchee")
+    leve(lambda: bs.pose_purge_auto(racine, "non"), ValueError, "case de purge : autre chose que vrai/faux refuse")
+    lit, bs.lit_carte = bs.lit_carte, lambda *_: dmp()
+    avant = len(list(d.glob("*_avant-flash.dmp")))
+    bs.traite_post("/sauvegarde/reglages", {"purge_auto": False}, None, racine, None, None)
+    bs.prend(racine, "tasmota32-purge", "192.168.0.99", "avant-flash")
+    verifie((bs.purge_auto(racine), len(list(d.glob("*_avant-flash.dmp")))), (False, avant + 1),
+            "case decochee : sauvegarde automatique prise, rien d'efface")
+    bs.pose_purge_auto(racine, True)
+    bs.prend(racine, "tasmota32-purge", "192.168.0.99", "avant-flash")
+    verifie(len(list(d.glob("*_avant-flash.dmp"))), bs.GARDE_NOMBRE, "case cochee : la purge reprend a la prise suivante")
+    (Path(racine) / bs.REGLAGES).write_text("[illisible", encoding="utf-8")
+    verifie(bs.purge_auto(racine), True, "reglage illisible : la purge reste active")
+    bs.lit_carte = lit
 
 
 def test_reposes():

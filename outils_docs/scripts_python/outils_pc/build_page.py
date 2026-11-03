@@ -198,7 +198,7 @@ PAGE = r"""<!doctype html>
     <button id="onglet-build" type="button" role="tab" aria-selected="true" aria-controls="vue-build">Build</button>
     <button id="onglet-fichiers" type="button" role="tab" aria-selected="false" aria-controls="vue-fichiers">Fichiers</button>
     <button id="onglet-memoire" type="button" role="tab" aria-selected="false" aria-controls="vue-memoire">Mémoire et partitions</button>
-    <button id="onglet-defaut" type="button" role="tab" aria-selected="false" aria-controls="vue-defaut">Envs par défaut</button>
+    <button id="onglet-defaut" type="button" role="tab" aria-selected="false" aria-controls="vue-defaut">Env par défaut (Platformio override)</button>
     <button id="onglet-sauvegarde" type="button" role="tab" aria-selected="false" aria-controls="vue-sauvegarde">Sauvegarde configuration</button>
     <button id="onglet-aide" type="button" role="tab" aria-selected="false" aria-controls="vue-aide">Aide</button>
   </nav>
@@ -1211,7 +1211,7 @@ PAGE = (PAGE.replace("/*CSS_FICHIERS*/", build_page_fichiers.CSS).replace("<!--V
 import build_page_memoire                           # noqa: E402 - onglet « Mémoire et partitions » (A8)
 PAGE = (PAGE.replace("/*CSS_MEMOIRE*/", build_page_memoire.CSS).replace("<!--VUE_MEMOIRE-->", build_page_memoire.HTML)
         .replace("/*JS_MEMOIRE*/", build_page_memoire.JS))
-import build_page_defaut                            # noqa: E402 - onglet « Envs par défaut » (plan default-envs-page)
+import build_page_defaut                            # noqa: E402 - onglet « Env par défaut (Platformio override) » (plan default-envs-page)
 PAGE = (PAGE.replace("/*CSS_DEFAUT*/", build_page_defaut.CSS).replace("<!--VUE_DEFAUT-->", build_page_defaut.HTML)
         .replace("/*JS_DEFAUT*/", build_page_defaut.JS))
 import build_page_sauvegarde                        # noqa: E402 - onglet « Sauvegarde configuration »

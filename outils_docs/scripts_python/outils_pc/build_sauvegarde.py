@@ -13,7 +13,8 @@ un .dmp porte les mots de passe Wi-Fi et MQTT en clair, et le depot est public.
   restaure     sauvegarde « avant restauration », puis /rs + /u2, retour de la carte, ecarts relus
   supprime     sauvegardes choisies effacees (.dmp et fiche) ; tous les noms controles avant d'en effacer un
   purge        sauvegardes automatiques (avant flash, avant restauration) de plus de GARDE_JOURS au-dela des
-               GARDE_NOMBRE plus recentes de chaque origine ; jamais une manuelle ni une modifiee
+               GARDE_NOMBRE plus recentes de chaque origine ; jamais une manuelle ni une modifiee. Seulement si la
+               case « purge automatique » de l'onglet est cochee (REGLAGES, cochee par defaut)
 Le persist et l'autoexec.bat reposent leurs reglages a chaque demarrage : ils l'emportent sur une valeur restauree ;
 `reposes` dit lesquels, pour les marquer dans la page.
 Banc : test_build_sauvegarde.py.
@@ -49,6 +50,10 @@ AUTOMATIQUES = ("avant-flash", "avant-restauration")
 GARDE_NOMBRE, GARDE_JOURS = 5, 90
 CONFIG_PERSIST = Path("data") / "fs" / "configGlobal.be"   # applique le persist au demarrage (testeParam, tasmota.cmd)
 SANS_COMMANDE = {"adc_param32": ["ADCPARAM"], "adc_param": ["ADCPARAM"]}   # decode-config ne leur donne pas de commande
+REGLAGES = DOSSIER / "reglages.json"   # {"purge_auto": bool}, commun a toutes les cartes
+ETAPES = ("Sauvegarde « avant restauration » de la carte", "Envoi de la configuration",
+          "Redémarrage de la carte, attente de son retour", "Relecture et comparaison des écarts")
+EN_COURS = {}                        # env -> {etape, etapes, debut} pendant une restauration, lu par la page
 _CACHE = {}                          # (chemin, date) -> parametres decodes : decode-config prend 5 a 10 s
 
 
@@ -113,7 +118,7 @@ def prend(racine, env, adresse, origine, persist_env=None, joint=None):
     chemin = _nouveau(racine, env, origine)
     chemin.write_bytes(donnees)
     fiche = _fiche(chemin, donnees, origine, adresse)
-    if origine in AUTOMATIQUES:
+    if origine in AUTOMATIQUES and purge_auto(racine):
         try:
             purge(racine, env)
         except (OSError, ValueError):
@@ -283,15 +288,30 @@ def restaure(racine, env, fichier, adresse, jeton, persist_env=None, joint=None,
     donnees = chemin.read_bytes()
     if jeton != empreinte(racine, env, fichier):
         raise RuntimeError("la sauvegarde a changé depuis la confirmation : relire les écarts")
+    try:
+        return _restaure(racine, env, chemin, donnees, adresse, persist_env, joint, retour)
+    finally:
+        EN_COURS.pop(env, None)
+
+
+def _etape(env, numero):
+    EN_COURS[env] = {"etape": numero, "etapes": ETAPES, "debut": EN_COURS.get(env, {}).get("debut", time.time())}
+
+
+def _restaure(racine, env, chemin, donnees, adresse, persist_env, joint, retour):
+    fichier = chemin.name
+    _etape(env, 0)
     avant = prend(racine, env, adresse, "avant-restauration", persist_env, joint)
     if decode_config.settings(donnees)[PLATEFORME] != decode_config.settings(
             (dossier(racine, env) / avant["fichier"]).read_bytes())[PLATEFORME]:
         raise RuntimeError("sauvegarde d'une autre puce (ESP32, S3, P4...) que la carte : rien n'est envoyé")
     relue = None
+    _etape(env, 1)
     try:
         if adresse.startswith(MQTT):
             client, mot_de_passe = _mqtt()
             build_sauvegarde_mqtt.ecrit(client, adresse[len(MQTT):], mot_de_passe, donnees, chemin.name)
+            _etape(env, 2)
             relue = _attend_retour_mqtt(adresse, env, retour)
         else:
             _get(adresse, "/rs?", DELAI)     # page de restauration : prepare l'envoi de configuration (UPL_SETTINGS)
@@ -301,10 +321,12 @@ def restaure(racine, env, fichier, adresse, jeton, persist_env=None, joint=None,
                 statut, texte = 200, ""      # coupee en redemarrant : la relecture apres le retour juge
             if _page_en_echec(statut, texte):
                 raise RuntimeError(f"la carte a refusé la configuration (HTTP {statut})")
+            _etape(env, 2)
             _attend_retour(adresse, retour[0], retour[1], retour[2], 5.0)
     except RuntimeError as erreur:
         raise RuntimeError(f"{erreur} ; sauvegarde d'avant : {avant['fichier']}") from None
     ecarts = []
+    _etape(env, 3)
     try:
         ecarts = compare(racine, env, fichier, adresse=adresse, persist_env=persist_env, joint=joint, carte=relue)["ecarts"]
     except (ValueError, RuntimeError, OSError):
@@ -347,8 +369,26 @@ def purge(racine, env, maintenant=None):
     return supprime(racine, env, effacees)["supprimees"] if effacees else []
 
 
+def purge_auto(racine):
+    try:
+        return json.loads((Path(racine) / REGLAGES).read_text(encoding="utf-8")).get("purge_auto", True) is not False
+    except (OSError, ValueError, AttributeError):
+        return True                  # case jamais touchee, ou fichier illisible : la purge reste active
+
+
+def pose_purge_auto(racine, valeur):
+    if not isinstance(valeur, bool):
+        raise ValueError("purge_auto attendu : vrai ou faux")
+    chemin = Path(racine) / REGLAGES
+    chemin.parent.mkdir(parents=True, exist_ok=True)
+    chemin.write_text(json.dumps({"purge_auto": valeur}), encoding="utf-8")
+    return {"purge_auto": valeur}
+
+
 def liste_json(racine, env):
-    return {"sauvegardes": liste(racine, env), "decode_config": decode_config.utilisable()}
+    """Sauvegardes de l'env, reglage de purge, et l'etape d'une restauration en cours (relue par la page)."""
+    return {"sauvegardes": liste(racine, env), "decode_config": decode_config.utilisable(),
+            "purge_auto": purge_auto(racine), "restauration": EN_COURS.get(env)}
 
 
 def parametres_json(racine, env, fichier):
@@ -363,10 +403,13 @@ def traite_post(chemin, demande, serie, racine, verrou, adresse_carte):
       /sauvegarde/copier     {env, fichier, modifs}          -> fiche de la copie modifiee
       /sauvegarde/restaurer  {env, fichier, adresse, jeton}  -> {avant, ecarts}
       /sauvegarde/supprimer  {env, fichiers}                 -> {supprimees}
+      /sauvegarde/reglages   {purge_auto}                    -> {purge_auto} (case de l'onglet, toutes les cartes)
     `transport: "mqtt"` dans la demande : la carte est jointe par le broker (topic du persist au depot), pas par `adresse`.
     """
     operations = {"/sauvegarde/prendre", "/sauvegarde/comparer", "/sauvegarde/copier", "/sauvegarde/restaurer",
                   "/sauvegarde/supprimer"}
+    if chemin == "/sauvegarde/reglages":
+        return pose_purge_auto(racine, demande.get("purge_auto"))
     if chemin not in operations:
         return None
     env, fichier = str(demande.get("env") or ""), str(demande.get("fichier") or "")

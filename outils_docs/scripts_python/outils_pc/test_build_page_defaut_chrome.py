@@ -1,4 +1,4 @@
-"""Sonde Chrome de l'onglet « Envs par défaut » de la page Build et televersement (build_page_defaut.py).
+"""Sonde Chrome de l'onglet « Env par défaut (Platformio override) » de la page Build et televersement (build_page_defaut.py).
 
 UTILISATION (a la main ; Python de PlatformIO)
     python outils_docs/scripts_python/outils_pc/test_build_page_defaut_chrome.py [--capture DOSSIER]
@@ -113,7 +113,7 @@ def sonde(m, capture):
 
 
 def principal():
-    options = argparse.ArgumentParser(description="Sonde Chrome de l'onglet Envs par défaut de la page build.")
+    options = argparse.ArgumentParser(description="Sonde Chrome de l'onglet Env par défaut (Platformio override) de la page build.")
     options.add_argument("--capture", help="dossier ou ecrire les captures PNG")
     args = options.parse_args()
     m = None

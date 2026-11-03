@@ -78,9 +78,14 @@ def textes_bruts(donnees):
     return settings(donnees)[0x17:0x17 + 699].rstrip(b"\0").split(b"\0")
 
 
+_UTILISABLE = []                     # vu utilisable une fois : garde (~1 s de sous-processus, la page relit chaque seconde)
+
+
 def utilisable():
-    return PYTHON.exists() and SCRIPT.exists() and subprocess.run(
-        [str(PYTHON), "-c", "import configargparse, requests"], capture_output=True).returncode == 0
+    if not _UTILISABLE and PYTHON.exists() and SCRIPT.exists() and subprocess.run(
+            [str(PYTHON), "-c", "import configargparse, requests"], capture_output=True).returncode == 0:
+        _UTILISABLE.append(True)
+    return bool(_UTILISABLE)
 
 
 def installe():

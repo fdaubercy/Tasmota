@@ -5,7 +5,8 @@ place des marques /*CSS_SAUVEGARDE*/, <!--VUE_SAUVEGARDE--> et /*JS_SAUVEGARDE*/
 Carte choisie en haut (adresse reprise de l'onglet Build), historique a gauche, parametres de la sauvegarde choisie a
 droite, replies par theme (groupes de decode-config). Une valeur changee est surlignee ; « Enregistrer la copie » cree
 une nouvelle sauvegarde (POST /sauvegarde/copier), l'originale n'est jamais reecrite. « Restaurer la selection » montre
-d'abord les ecarts avec la carte (POST /sauvegarde/comparer) puis les fait confirmer. Serveur : build_sauvegarde.py.
+d'abord les ecarts avec la carte (POST /sauvegarde/comparer) dans une fenetre (<dialog>) qui les fait confirmer, puis
+suit les etapes du serveur (GET /sauvegardes : `restauration`) jusqu'au resultat. Serveur : build_sauvegarde.py.
 Tout texte venu du serveur passe par textContent (fonction h de build_page).
 """
 
@@ -42,6 +43,18 @@ CSS = r"""
   .s-messages div{padding:6px 10px;border-radius:6px;margin-bottom:6px;font-size:13px}
   .s-messages .r{background:var(--rouge-fond);color:var(--rouge)}.s-messages .o{background:var(--orange-fond);color:var(--orange)}
   .s-messages .v{color:var(--vert);padding:2px 0}
+  .s-purge{display:flex;gap:6px;align-items:center;margin-top:10px;font-size:13px}
+  #s-dialogue{max-width:min(760px,94vw);border:1px solid var(--bord);border-radius:8px;background:var(--carte);color:var(--texte);padding:14px 16px}
+  #s-dialogue::backdrop{background:rgba(0,0,0,.45)}
+  #s-dialogue h2{margin:0 0 8px}
+  .s-d-table{max-height:45vh;overflow:auto;border:1px solid var(--bord);border-radius:6px;margin:8px 0}
+  .s-d-table table{width:100%;border-collapse:collapse;font-size:12px}
+  .s-d-table th{position:sticky;top:0;background:var(--carte);text-align:left;padding:5px 6px;color:var(--doux)}
+  .s-d-table td{padding:4px 6px;border-top:1px solid var(--bord);vertical-align:top;overflow-wrap:anywhere;font-family:ui-monospace,Consolas,monospace}
+  .s-d-boutons{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+  .s-avance{margin-bottom:10px}.s-avance ol{margin:6px 0 0;padding-left:22px}
+  .s-avance li{padding:2px 0;color:var(--discret)}.s-avance li.fait{color:var(--vert)}
+  .s-avance li.cours{color:var(--texte);font-weight:600}.s-avance li.echec{color:var(--rouge)}
 """
 
 HTML = r"""
@@ -57,6 +70,21 @@ HTML = r"""
       </span>
     </div>
     <div id="s-messages" class="s-messages" aria-live="polite"></div>
+    <div id="s-avance" class="carte s-avance" hidden aria-live="polite"><strong id="s-av-titre"></strong>
+      <ol id="s-av-etapes"></ol><div id="s-av-resultat" class="s-messages"></div></div>
+    <dialog id="s-dialogue" aria-labelledby="s-d-titre">
+      <h2 id="s-d-titre">Restaurer la configuration ?</h2>
+      <p id="s-d-cible"></p>
+      <div id="s-d-alerte" class="s-messages"></div>
+      <p id="s-d-nombre"></p>
+      <div id="s-d-table" class="s-d-table"><table><thead><tr><th>Paramètre</th><th>Sur la carte</th><th>Après restauration</th></tr></thead>
+        <tbody id="s-d-ecarts"></tbody></table></div>
+      <p class="discret">Une sauvegarde « avant restauration » de la carte est prise d'abord, puis la carte redémarre :
+        l'état des relais peut changer. Au démarrage, le persist et l'<code>autoexec.bat</code> reposent leurs réglages :
+        une valeur marquée <span class="s-demarre">↻ démarrage</span> sera réécrite par eux.</p>
+      <div class="s-d-boutons"><button id="s-d-non" class="btn" type="button">Annuler</button>
+        <button id="s-d-oui" class="btn o" type="button">Restaurer</button></div>
+    </dialog>
     <div class="s-corps">
       <div class="carte">
         <h2>Sauvegardes de cette carte</h2>
@@ -65,6 +93,8 @@ HTML = r"""
           <th>Date</th><th>Version</th><th>Origine</th></tr></thead>
           <tbody id="s-liste"><tr><td colspan="4" class="vide">Aucune carte choisie.</td></tr></tbody></table>
         <button id="s-supprimer" class="btn danger" type="button" hidden style="margin-top:8px">Supprimer la sélection</button>
+        <label class="s-purge" title="Sauvegardes « avant flash » et « avant restauration » de plus de 90 jours, au-delà des 5 plus récentes de chaque origine ; jamais une manuelle ni une modifiée. Réglage commun à toutes les cartes.">
+          <input id="s-purge" type="checkbox" checked> Purge automatique des anciennes sauvegardes « avant flash » et « avant restauration »</label>
         <div class="s-comparer">
           <label>Comparer <select id="s-autre" aria-label="Comparer la sélection à"></select></label>
           <button id="s-comparer" class="btn" type="button" disabled>Comparer</button>
@@ -77,8 +107,9 @@ HTML = r"""
           portent la marque <span class="s-demarre">↻ démarrage</span> (survol : la commande qui les repose).
           Liaison MQTT : pour une carte que ce PC ne joint pas en HTTP, par le broker de <code>user_config_override.h</code>
           et le topic du persist (commandes <code>FileDownload</code> / <code>FileUpload</code>, même fichier que
-          <code>/dl</code>). Les sauvegardes « avant flash » et « avant restauration » de plus de 90 jours sont effacées
-          seules, en gardant les 5 plus récentes de chaque origine ; jamais une manuelle ni une modifiée.</p>
+          <code>/dl</code>). Case « Purge automatique » cochée : à chaque nouvelle sauvegarde « avant flash » ou « avant
+          restauration », celles de plus de 90 jours sont effacées, en gardant les 5 plus récentes de chaque origine ;
+          jamais une manuelle ni une modifiée. Décochée : rien n'est effacé seul.</p>
       </div>
       <div class="carte">
         <div class="s-tete"><h2>Paramètres de la sauvegarde</h2>
@@ -132,6 +163,7 @@ async function sCharge(env, garder) {
   if (!r.ok || !r.donnees) { sMessages([["r", "Lecture impossible : " + (r.texte || "HTTP " + r.statut)]]); return; }
   if (!r.donnees.decode_config) sMessages([["o", "decode-config absent : lancer outils_pc/decode_config.py (paramètres illisibles, sauvegarde et restauration possibles)"]]);
   S.liste = r.donnees.sauvegardes;
+  $("s-purge").checked = r.donnees.purge_auto !== false;
   S.coches = {};
   if (!garder || !S.liste.some(function (f) { return f.fichier === S.fichier; })) S.fichier = S.liste.length ? S.liste[0].fichier : "";
   sListe();
@@ -312,6 +344,57 @@ $("s-comparer").onclick = async function () {
   sParams();
 };
 
+$("s-purge").onchange = async function () {
+  var c = this, voulu = c.checked;
+  var r = await appel("/sauvegarde/reglages", {purge_auto: voulu});
+  if (!r.ok) { c.checked = !voulu; sMessages([["r", "Réglage non enregistré : " + (r.texte || "HTTP " + r.statut)]]); return; }
+  sMessages([["v", voulu ? "Purge automatique active." : "Purge automatique coupée : aucune sauvegarde ne sera effacée seule."]]);
+};
+
+// Fenetre de confirmation : ecarts carte -> sauvegarde, marque des parametres reposes au demarrage. -> Promise<bool>
+function sConfirme(adresse, ecarts) {
+  var d = $("s-dialogue"), corps = $("s-d-ecarts"), reposes = (S.params && S.params.reposes) || {};
+  var choisie = S.liste.filter(function (f) { return f.fichier === S.fichier; })[0] || {};
+  $("s-d-cible").textContent = "Sauvegarde du " + (choisie.date || S.fichier) + " · " + (choisie.origine || "") + " vers "
+    + S.env + " (" + adresse + ").";
+  var alerte = $("s-d-alerte"), autreCarte = ecarts.filter(function (x) { return x.cle === "hostname"; })[0];
+  alerte.textContent = "";
+  if (autreCarte) alerte.appendChild(h("div", {"class": "r", texte: "ATTENTION : la carte jointe s'appelle « " + sTexte(autreCarte.b)
+    + " », la sauvegarde « " + sTexte(autreCarte.a) + " ». Est-ce bien la carte à restaurer ?"}));
+  $("s-d-nombre").textContent = ecarts.length ? ecarts.length + (ecarts.length > 1 ? " écarts" : " écart") + " entre la carte et la sauvegarde :"
+    : "Aucun écart : la carte porte déjà cette configuration.";
+  corps.textContent = "";
+  ecarts.forEach(function (x) {
+    corps.appendChild(h("tr", {}, h("td", {}, x.cle, reposes[x.cle] && h("span", {"class": "s-demarre", title: reposes[x.cle], texte: "↻ démarrage"})),
+                        h("td", {texte: sTexte(x.b)}), h("td", {texte: sTexte(x.a)})));
+  });
+  $("s-d-table").hidden = !ecarts.length;
+  return new Promise(function (fin) {
+    function ferme(v) { $("s-d-oui").onclick = $("s-d-non").onclick = d.oncancel = null; d.close(); fin(v); }
+    $("s-d-oui").onclick = function () { ferme(true); };
+    $("s-d-non").onclick = function () { ferme(false); };
+    d.oncancel = function (e) { e.preventDefault(); ferme(false); };   // Echap = Annuler
+    d.showModal();
+    $("s-d-non").focus();
+  });
+}
+
+// Avancement : etapes du serveur (GET /sauvegardes, cle restauration) puis le resultat, dans le meme bloc
+function sAvance(etat, resultat) {
+  if (etat) { S.etapes = etat.etapes; S.etapeVue = etat.etape; }
+  var ol = $("s-av-etapes"), zone = $("s-av-resultat"), secondes = Math.round((Date.now() - S.debutRestauration) / 1000);
+  $("s-avance").hidden = false;
+  ol.textContent = "";
+  S.etapes.forEach(function (texte, i) {
+    var classe = i < S.etapeVue || (resultat && resultat.ok) ? "fait" : i === S.etapeVue ? (resultat ? "echec" : "cours") : "";
+    ol.appendChild(h("li", {"class": classe, texte: (classe === "fait" ? "✓ " : classe === "echec" ? "✗ " : "") + texte}));
+  });
+  $("s-av-titre").textContent = (resultat ? (resultat.ok ? "Restauration terminée" : "Restauration échouée") : "Restauration en cours…")
+    + " (" + secondes + " s)";
+  zone.textContent = "";
+  ((resultat && resultat.lignes) || []).forEach(function (m) { zone.appendChild(h("div", {"class": m[0], texte: m[1]})); });
+}
+
 $("s-restaurer").onclick = async function () {
   var adresse = sAdresse(), bouton = this;
   if (!adresse) { sMessages([["r", "Adresse de la carte inconnue : la saisir sur la ligne de l'env, onglet Build (méthode OTA)."]]); return; }
@@ -319,21 +402,30 @@ $("s-restaurer").onclick = async function () {
   sMessages([["v", "Lecture de la carte pour les écarts…"]]);
   var c = await appel("/sauvegarde/comparer", {env: S.env, fichier: S.fichier, adresse: adresse, transport: $("s-liaison").value}, 120000);
   if (!c.ok) { bouton.disabled = false; sMessages([["r", "Écarts illisibles : " + (c.texte || "HTTP " + c.statut)]]); return; }
-  var e = c.donnees.ecarts, liste = e.slice(0, 25).map(function (x) { return "- " + x.cle + " : " + sTexte(x.b) + " → " + sTexte(x.a); });
-  if (e.length > 25) liste.push("… et " + (e.length - 25) + " autres");
-  var autreCarte = e.filter(function (x) { return x.cle === "hostname"; })[0];
-  if (autreCarte && !confirm("ATTENTION : la carte jointe à " + adresse + " s'appelle « " + sTexte(autreCarte.b)
-      + " », la sauvegarde « " + sTexte(autreCarte.a) + " ».\n\nEst-ce bien la carte à restaurer ?")) { bouton.disabled = false; sMessages([]); return; }
-  if (!confirm("Restaurer " + S.fichier + " sur " + S.env + " (" + adresse + ") ?\n\nUne sauvegarde de la carte est prise d'abord, "
-      + "puis la carte redémarre : l'état des relais peut changer (vu sur le différentiel : relais revenu ON).\n" + sEcartsTexte(e) + "\n" + liste.join("\n"))) { bouton.disabled = false; sMessages([]); return; }
-  sMessages([["v", "Restauration en cours (sauvegarde d'abord, puis envoi et redémarrage de la carte)…"]]);
-  var r = await appel("/sauvegarde/restaurer", {env: S.env, fichier: S.fichier, adresse: adresse, jeton: c.donnees.jeton,
+  sMessages([]);
+  if (!await sConfirme(adresse, c.donnees.ecarts)) { bouton.disabled = false; return; }
+  var env = S.env, fichier = S.fichier, fini = false;
+  S.debutRestauration = Date.now(); S.etapes = []; S.etapeVue = 0;
+  sAvance();                                       // etapes : celles du serveur, a la premiere relecture
+  var suivi = setInterval(async function () {
+    var e = await appel("/sauvegardes?env=" + encodeURIComponent(env));
+    if (!fini && e.ok && e.donnees && e.donnees.restauration) sAvance(e.donnees.restauration);
+  }, 1000);
+  var r = await appel("/sauvegarde/restaurer", {env: env, fichier: fichier, adresse: adresse, jeton: c.donnees.jeton,
                                                    transport: $("s-liaison").value}, 300000);
+  fini = true;
+  clearInterval(suivi);
   bouton.disabled = false;
-  if (!r.ok) { sMessages([["r", "Restauration échouée : " + (r.texte || "HTTP " + r.statut)]]); sCharge(S.env, true); return; }
-  sMessages([["v", "Restaurée. Sauvegarde d'avant : " + r.donnees.avant.fichier],
-             [r.donnees.ecarts.length ? "o" : "v", "Relu sur la carte après redémarrage : " + sEcartsTexte(r.donnees.ecarts)]]);
-  sCharge(S.env, true);
+  if (!r.ok) sAvance(null, {ok: false, lignes: [["r", r.texte || "HTTP " + r.statut]]});
+  else {
+    var reposes = (S.params && S.params.reposes) || {}, ecarts = r.donnees.ecarts;
+    var repris = ecarts.filter(function (x) { return reposes[x.cle]; }).map(function (x) { return x.cle; });
+    var lignes = [["v", "Sauvegarde d'avant : " + r.donnees.avant.fichier],
+                  [ecarts.length ? "o" : "v", "Relu sur la carte après redémarrage : " + sEcartsTexte(ecarts)]];
+    if (repris.length) lignes.push(["o", "Reposés au démarrage par le persist ou l'autoexec.bat (attendu) : " + repris.join(", ")]);
+    sAvance(null, {ok: true, lignes: lignes});
+  }
+  sCharge(env, true);
 };
 
 $("onglet-sauvegarde").onclick = function () { montreOnglet("sauvegarde"); };

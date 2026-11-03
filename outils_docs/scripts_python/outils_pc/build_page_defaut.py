@@ -1,4 +1,4 @@
-"""Onglet « Envs par défaut » de la page Build et televersement (plan default-envs-page, modele B retenu le 2026-11-01,
+"""Onglet « Env par défaut (Platformio override) » de la page Build et televersement (plan default-envs-page, modele B retenu le 2026-11-01,
 maquette outils_docs/default_envs/) : CSS, HTML et JS inseres dans build_page.PAGE a la place des marques /*CSS_DEFAUT*/,
 <!--VUE_DEFAUT--> et /*JS_DEFAUT*/.
 
@@ -51,7 +51,7 @@ HTML = r"""
 """
 
 JS = r"""
-// ---------- onglet « Envs par défaut » (build_page_defaut.py) ----------
+// ---------- onglet « Env par défaut (Platformio override) » (build_page_defaut.py) ----------
 var D = {coches: {}, apercu: null, numero: 0};
 
 function dListe() { return Object.keys(D.coches).filter(function (n) { return D.coches[n]; }); }

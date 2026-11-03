@@ -114,6 +114,46 @@ def sonde(m, capture):
     clic(cdp, "#s-restaurer")                              # env sans adresse : rien n'est demande a une carte
     time.sleep(0.5)
     s.verifie("Adresse de la carte inconnue" in etat(cdp)["messages"], True, "restaurer sans adresse : refuse avec le motif")
+    # -- restauration : fenetre des ecarts, avancement, resultat ; les appels qui joindraient une carte sont simules
+    cdp.js("""choix[%s] = {ip: '192.168.0.99'}; window._vrai = appel; window._restaure = 0;
+      appel = async function (u, c, d) {
+        if (u === '/sauvegarde/comparer') return {ok: true, donnees: {jeton: 'j', ecarts: [
+          {cle: 'hostname', a: 'SAUVEE', b: 'AUTRE-CARTE'}, {cle: 'tele_period', a: 300, b: 60}]}};
+        if (u === '/sauvegarde/restaurer') { window._restaure++; await new Promise(f => setTimeout(f, 2500));
+          return {ok: true, donnees: {avant: {fichier: '20261103-120000_avant-restauration.dmp'}, ecarts: []}}; }
+        const r = await window._vrai(u, c, d);
+        if (u.startsWith('/sauvegardes?') && r.donnees && window._restaure)
+          r.donnees.restauration = {etape: 2, etapes: ['un', 'deux', 'trois', 'quatre'], debut: 0};
+        return r; };""" % json.dumps(A))
+    ouvert = "document.getElementById('s-dialogue').open"
+    clic(cdp, "#s-restaurer")
+    s.attend(cdp, ouvert, 10)
+    s.verifie((cdp.js("document.querySelectorAll('#s-d-ecarts tr').length"), "ATTENTION" in cdp.js("document.getElementById('s-d-alerte').textContent")),
+              (2, True), "confirmation : fenetre avec les 2 ecarts, alerte « autre carte »")
+    clic(cdp, "#s-d-non")
+    time.sleep(0.5)
+    s.verifie((cdp.js(ouvert), cdp.js("window._restaure"), cdp.js("document.getElementById('s-avance').hidden")), (False, 0, True),
+              "confirmation : Annuler -> fenetre fermee, rien envoye")
+    clic(cdp, "#s-restaurer")
+    s.attend(cdp, ouvert, 10)
+    clic(cdp, "#s-d-oui")
+    s.attend(cdp, "document.querySelector('#s-av-etapes li.cours') !== null", 10)
+    s.verifie(cdp.js("[...document.querySelectorAll('#s-av-etapes li')].map(l => l.className)"), ["fait", "fait", "cours", ""],
+              "avancement : etapes du serveur, celle en cours en evidence")
+    s.attend(cdp, "document.getElementById('s-av-titre').textContent.includes('terminée')", 10)
+    s.verifie(("avant-restauration" in cdp.js("document.getElementById('s-av-resultat').textContent"),
+               cdp.js("[...document.querySelectorAll('#s-av-etapes li')].every(l => l.className === 'fait')")), (True, True),
+              "resultat : dans l'onglet, sauvegarde d'avant nommee, etapes faites")
+    cdp.js("appel = window._vrai")
+    # -- case « purge automatique » : cochee par defaut, enregistree par le serveur
+    reglages = Path(m.depot) / bs.REGLAGES
+    s.verifie(cdp.js("document.getElementById('s-purge').checked"), True, "purge : case cochee par defaut")
+    clic(cdp, "#s-purge")
+    s.attend(cdp, "document.getElementById('s-messages').textContent.includes('Purge automatique coupée')", 10)
+    s.verifie(bs.purge_auto(m.depot), False, "purge : case decochee -> reglage enregistre")
+    clic(cdp, "#s-purge")
+    s.attend(cdp, "document.getElementById('s-messages').textContent.includes('Purge automatique active')", 10)
+    s.verifie((bs.purge_auto(m.depot), reglages.exists()), (True, True), "purge : case recochee -> reglage enregistre")
     # -- suppression : cases de l'historique, confirmation
     s.verifie(cdp.js("document.getElementById('s-supprimer').hidden"), True, "suppression : bouton cache sans case cochee")
     cdp.js("(() => { const l = [...document.querySelectorAll('#s-liste tr.l')].find(t => t.textContent.includes('avant flash')); l.querySelector('input').click(); })()")

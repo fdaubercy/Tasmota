@@ -936,7 +936,7 @@ commande quelle que soit la cible ; même mention « FS aussi flashé » sur la 
   câble, envoi OTA) va d'abord à son terme, puis le reste du lancement est tué ; un second Ctrl+C force l'arrêt.
   L'écriture du port COM est refusée pendant un lancement de la page **et** pendant un build lancé ailleurs.
 
-### Onglet « Envs par défaut » : ce que compile un simple `pio run`
+### Onglet « Env par défaut (Platformio override) » : ce que compile un simple `pio run`
 
 Le bloc `default_envs` de `platformio_override.ini` fixe les envs compilés par un `pio run` sans `-e`. L'onglet le
 modifie sans ouvrir le fichier ; il ne lance rien.
@@ -978,8 +978,11 @@ compteurs ; voir l'onglet « Aide »). Fichiers `AAAAMMJJ-HHMMSS_<origine>.dmp` 
   fiche effacés).
 - **« Comparer »** : écarts avec la carte en ligne (rien n'est enregistré) ou avec une autre sauvegarde ; les
   paramètres en écart sont mis en couleur.
-- **« Restaurer : <date · origine> »** (la sauvegarde choisie d'un clic dans l'historique ; les cases servent à supprimer) : écarts avec la carte affichés et confirmés, sauvegarde de la carte d'abord, envoi,
-  redémarrage, puis écarts relus. Refusée pendant un envoi de la série, et pour une sauvegarde d'une autre puce.
+- **« Restaurer : <date · origine> »** (la sauvegarde choisie d'un clic dans l'historique ; les cases servent à supprimer) : une fenêtre liste les écarts
+  (paramètre, valeur sur la carte, valeur après restauration, marque « ↻ démarrage ») et alerte si le nom d'hôte de la
+  carte jointe diffère ; « Restaurer » ou « Annuler » (Échap). Puis un bloc d'avancement suit les étapes du serveur
+  (sauvegarde de la carte d'abord, envoi, redémarrage, relecture) et donne le résultat : sauvegarde d'avant, écarts
+  relus, et ceux reposés au démarrage. Refusée pendant un envoi de la série, et pour une sauvegarde d'une autre puce.
 - **À savoir** : au démarrage, le persist et l'`autoexec.bat` reposent leurs réglages ; ils l'emportent sur une
   valeur restaurée. Ces paramètres portent la marque **« ↻ démarrage »** ; son survol nomme la source et la commande
   (`autoexec.bat (SerialLog)`, `persist (Hostname)`). La marque vient de la commande Tasmota de chaque paramètre
@@ -990,7 +993,8 @@ compteurs ; voir l'onglet « Aide »). Fichiers `AAAAMMJJ-HHMMSS_<origine>.dmp` 
   `FileDownload` / `FileUpload` de Tasmota (`build_sauvegarde_mqtt.py`) : même fichier que `/dl`, même déroulé
   (sauvegarde d'avant, envoi, relecture une fois la carte revenue sur le broker). Le `MqttPassword` de la carte doit
   être le `MQTT_PASS` du `.h`. Essai réel du 2026-11-03 sur le différentiel : lecture en 2 s.
-- **Purge automatique** : à chaque sauvegarde « avant flash » ou « avant restauration », celles de ces deux origines
+- **Purge automatique** (case sous l'historique, cochée par défaut, commune à toutes les cartes, mémorisée dans
+  le fichier « reglages.json » du dossier des sauvegardes ; décochée, rien n'est effacé seul) : à chaque sauvegarde « avant flash » ou « avant restauration », celles de ces deux origines
   de **plus de 90 jours** sont effacées, en gardant toujours les **5 plus récentes** de chaque origine. Une sauvegarde
   « manuelle » ou « modifiée » n'est jamais effacée seule (`build_sauvegarde::purge`).
 - **decode-config** (tasmota/decode-config) lit et écrit les paramètres. Il vit hors du dépôt et du Python de
