@@ -344,3 +344,18 @@ gardes ; entree ecrite a la main, pas par le script.
 -   `ffbc7bc0a` [eq3 TRV] Avoid sending of empty status (#25182)
 -   `f27e40772` TasUpdater: give up on a stalled OTA after 30 s, not 300 reads (#25177)
 -   `a4703730a` Update change logs
+
+## 2026-11-03 05:00 — 8 commit(s) recupere(s) d'upstream
+
+`arendst/Tasmota:development` → `fdaubercy/Tasmota:development` (merge_type : merge local (conflits résolus))
+
+**1 commit(s) ● a lire de pres.**
+
+-   `5d1ba2c23` ESP32 web login uses own Basic auth instead Arduino (#25210)
+-   `c0907ab58` Update change logs
+-   `0f67f9455` ESP32 `UfsServe` (`UFILESYS_STATIC_SERVING`) compilation, and reject `..` in served paths (#25211)
+-   `0082f9115` Replace `new` with `malloc` (#25212)
+-   `f3100c37a` Update change logs
+-   `e6325d9e0` Use Tasmota Arduino core 3.3.12-1 from platform 2026.10
+- ● `299a3723f` `PsrMode` displaying whether PSRAM is `QIO`/`OPI` (#25213)
+-   `568220d49` Update change logs
