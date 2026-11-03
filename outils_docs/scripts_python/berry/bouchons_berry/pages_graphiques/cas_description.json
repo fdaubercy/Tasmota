@@ -2991,6 +2991,764 @@
    },
    "valide": false,
    "motif": "lien vers une page inconnue"
+  },
+  {
+   "nom": "invalide : id de page avec retour a la ligne final",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau\n",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "id invalide"
+  },
+  {
+   "nom": "invalide : serie avec retour a la ligne final",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "a.b\n"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "chemin invalide"
+  },
+  {
+   "nom": "invalide : couleur de zone avec retour a la ligne final",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "cadran",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ],
+        "min": 0,
+        "max": 1,
+        "zones": [
+         [
+          0.5,
+          "#aabbcc\n"
+         ]
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "zone mal formee"
+  },
+  {
+   "nom": "invalide : lien d'encadre liste",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "encadres": [
+     {
+      "id": "e",
+      "type": "anneau",
+      "serie": "a.b",
+      "lien": []
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "lien vers une page inconnue"
+  },
+  {
+   "nom": "invalide : types inattendus partout (sans exception)",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": 5,
+      "titre": [],
+      "acces": {},
+      "graphiques": [
+       7,
+       {
+        "type": [],
+        "titre": {},
+        "series": [
+         {},
+         3
+        ],
+        "zones": [
+         5,
+         [
+          [],
+          2
+         ]
+        ],
+        "min": "a",
+        "cadence": []
+       }
+      ]
+     },
+     3
+    ],
+    "encadres": [
+     5,
+     {
+      "id": [],
+      "type": {},
+      "serie": [],
+      "lien": {}
+     }
+    ],
+    "calculees": {
+     "x.y": 5,
+     "z": {
+      "formule": [],
+      "nature": []
+     }
+    }
+   },
+   "valide": false,
+   "motif": "id invalide"
+  },
+  {
+   "nom": "invalide : titre accentue de 55 caracteres mais plus de 60 octets",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "titre"
+  },
+  {
+   "nom": "invalide : formule '1 2'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "1 2",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "invalide : formule 'a b'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "a b",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "invalide : formule '()'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "()",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "invalide : formule '+ +'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "+ +",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "invalide : formule 'max(,)'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "max(,)",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "invalide : formule '(1,2)'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "(1,2)",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "invalide : formule '2a'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "2a",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "invalide : formule '1 +'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "1 +",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "invalide : formule 'abs(a, b)'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "abs(a, b)",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "invalide : formule 'round(a, 1)'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "round(a, 1)",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "invalide : formule 'max(a)'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "max(a)",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "invalide : formule 'min(a.b)'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "min(a.b)",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "invalide : formule '--a'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "--a",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "invalide : formule 'a\\n+ 1'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "a\n+ 1",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "formule interdite"
+  },
+  {
+   "nom": "valide : formule '-a.b'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "-a.b",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : formule 'max(a, b, 3)'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "max(a, b, 3)",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : formule 'round((a + b) / 2)'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "round((a + b) / 2)",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : formule 'a*-b'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "a*-b",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : formule 'abs(a.b)'",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "tableau",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "capteur.mesure.valeur"
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x.y": {
+      "formule": "abs(a.b)",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": true,
+   "motif": ""
   }
  ]
 }

@@ -39,7 +39,7 @@ for c in donnees["cas"]:
         verifie(bool(c["motif"]) and any(c["motif"] in x for x in motifs), "%s : refuse avec %r (motifs : %s)" % (c["nom"], c["motif"], motifs))
 for f in ("(1", "1)", "min", "a;b", "x[0]", "a.constructor", "a__b", "f(1)", "1,2", "'a'", ""):
     verifie(mod.valide_formule(f) is not None, "formule refusee : %r" % f)
-for f in ("6732 - a.b", "max(a, b) / 2", "round(abs(a.b - 1.5), 2)", "(a+b)*c"):
+for f in ("6732 - a.b", "max(a, b) / 2", "round(abs(a.b - 1.5))", "(a+b)*c"):
     verifie(mod.valide_formule(f) is None, "formule acceptee : %r" % f)
 print("%d echec(s)" % len(echecs))
 sys.exit(1 if echecs else 0)

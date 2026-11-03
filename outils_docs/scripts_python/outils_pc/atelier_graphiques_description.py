@@ -15,8 +15,8 @@ Forme (toute cle inconnue est refusee) :
 
 Champs et bornes :
 - version : entier 1.   pages : 1 a BORNES["pages"] (8) ; encadres : 0 a 8 ; calculees : 0 a 16.
-- page.id : [a-z0-9-]{1,24}, unique, hors ROUTES_RESERVEES.  page.titre : texte de 1 a 60 caracteres.  acces : defaut "bouton".
-- graphique.type : un des STYLES.  titre : 1 a 60.  series : 1 a BORNES["series"] (12) ; graphiques par page : 1 a 8.
+- page.id : [a-z0-9-]{1,24}, unique, hors ROUTES_RESERVEES.  page.titre : texte de 1 a 60 octets UTF-8.  acces : defaut "bouton".
+- graphique.type : un des STYLES.  titre : 1 a 60 octets.  series : 1 a BORNES["series"] (12) ; graphiques par page : 1 a 8.
   Une serie est un chemin du SENSOR `nom(.nom)*` ([A-Za-z_][A-Za-z0-9_]* puis segments [A-Za-z0-9_]+, sans "__",
   aucun segment constructor/prototype), ou `calc:<nom>` d'une calculee declaree. Le validateur ne sait pas si un chemin brut
   est historique : il l'accepte tel quel.
@@ -24,17 +24,22 @@ Champs et bornes :
 - periode : defaut "direct".  cadence : entier 1..3600 (secondes).  largeur : defaut "demi".  hauteur : entier 80..600.
 - cumul : "heure"|"jour"|"mois", refuse sur une calculee de nature "direct".
 - encadre : id [a-z0-9-]{1,24} unique parmi les encadres, type dans STYLES, serie (meme regle), lien facultatif = id d'une page.
-- calculee : nom au format chemin (<= 48), formule <= 200 caracteres, nature obligatoire. Une calculee "direct" est refusee dans
+- calculee : nom au format chemin (<= 48), formule <= 200 octets, nature obligatoire. Une calculee "direct" est refusee dans
   un graphique de periode jour/mois ; une "historique" dans un graphique de periode direct.
 - taille : le JSON compact (separateurs "," et ":", UTF-8) ne depasse pas BORNES["octets"] (8192) octets.
 
-Grammaire des formules (liste blanche, JAMAIS d'eval ; a relire a l'identique en Berry et en JS) : on decoupe la formule en
-jetons, en sautant les espaces ; tout caractere hors des jetons suivants la refuse.
-    nombre   \\d+(\\.\\d+)?          operateur  + - * /         parentheses ( )        virgule ,
-    chemin   [A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)*   (comme une serie ; "__" et segments constructor/prototype refuses)
-    fonction min max abs round : un chemin de ce nom DOIT etre suivi de "(" ; tout autre nom suivi de "(" est refuse.
-Controles de forme : parentheses equilibrees, formule non vide, une virgule n'est permise que dans une parenthese.
-Il n'y a pas d'analyse de la grammaire au-dela (pas de verification des operandes) : la formule est evaluee par le moteur.
+Grammaire des formules (liste blanche, JAMAIS d'eval ; reference a re-implementer a l'identique en Berry et en JS) :
+    expr    := terme (('+' | '-') terme)*
+    terme   := facteur (('*' | '/') facteur)*
+    facteur := ['-'] ( nombre | chemin | fonction '(' expr (',' expr)* ')' | '(' expr ')' )
+    nombre  := [0-9]+ ('.' [0-9]+)?                         (chiffres ASCII seulement)
+    chemin  := [A-Za-z_][A-Za-z0-9_]* ('.' [A-Za-z0-9_]+)*   ("__" et segments constructor/prototype refuses)
+    fonction := min | max | abs | round                    (un chemin de ce nom DOIT etre suivi de '(')
+Arite : abs et round exactement 1 argument ; min et max 2 arguments ou plus.
+Seuls separateurs : l'espace et la tabulation (entre jetons). Toute la formule doit etre consommee ; tout autre caractere
+la refuse. Un nom suivi de '(' qui n'est pas une fonction est refuse.
+
+Longueurs de texte (titres, formules) : mesurees en OCTETS UTF-8 (Berry compte les octets ; JS utilisera TextEncoder).
 """
 import json
 import re
@@ -47,10 +52,10 @@ pages coprocesseur discovery json sd""".split())
 MAX_ENCADRES, MAX_CALCULEES = 8, 16
 FONCTIONS = ("min", "max", "abs", "round")
 INTERDITS = ("constructor", "prototype")
-RE_ID = re.compile(r"[a-z0-9-]{1,24}$")
-RE_CHEMIN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)*$")
-RE_COULEUR = re.compile(r"#[0-9a-fA-F]{6}$")
-RE_JETON = re.compile(r"\s*(?:(\d+(?:\.\d+)?)|([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)*)|([-+*/(),]))")
+RE_ID = re.compile(r"[a-z0-9-]{1,24}")
+RE_CHEMIN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)*")
+RE_COULEUR = re.compile(r"#[0-9a-fA-F]{6}")
+RE_JETON = re.compile(r"[ 	]*(?:([0-9]+(?:\.[0-9]+)?)|([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)*)|([-+*/(),]))")
 CLES = {
     "racine": {"version", "pages", "encadres", "calculees"},
     "page": {"id", "titre", "acces", "graphiques"},
@@ -69,39 +74,92 @@ def _entier(x, bas, haut):
 
 
 def _chemin_ok(s):
-    return isinstance(s, str) and len(s) <= 96 and bool(RE_CHEMIN.match(s)) and "__" not in s \
+    return isinstance(s, str) and len(s) <= 96 and bool(RE_CHEMIN.fullmatch(s)) and "__" not in s \
         and not any(seg in INTERDITS for seg in s.split("."))
+
+
+def _octets(t):
+    return len(t.encode("utf-8", "surrogatepass"))
+
+
+def _jetons(f):
+    """Liste de (genre, texte) ou None si un caractere est hors liste blanche."""
+    out, i = [], 0
+    while f[i:].strip(" 	"):
+        m = RE_JETON.match(f, i)
+        if not m:
+            return None
+        i = m.end()
+        out.append(("n", m.group(1)) if m.group(1) else ("c", m.group(2)) if m.group(2) else ("s", m.group(3)))
+    return out
 
 
 def valide_formule(f):
     """Motif de refus d'une formule, ou None si elle est acceptee (grammaire du docstring du module)."""
-    if not isinstance(f, str) or not f.strip() or len(f) > 200:
+    if not isinstance(f, str) or not f.strip(" 	") or _octets(f) > 200:
         return "formule vide, non textuelle ou trop longue"
-    i, prof = 0, 0
-    while f[i:].strip():
-        m = RE_JETON.match(f, i)
-        if not m:
-            return "formule interdite : caractere ou mot hors liste blanche pres de %r" % f[i:i + 8].strip()
-        i = m.end()
-        nom, sym = m.group(2), m.group(3)
-        if nom:
-            if not _chemin_ok(nom):
-                return "formule interdite : chemin refuse %r" % nom
-            suit = f[i:].lstrip()[:1] == "("
-            if nom in FONCTIONS and not suit:
-                return "formule interdite : fonction %s sans parenthese" % nom
-            if suit and nom not in FONCTIONS:
-                return "formule interdite : appel de %s" % nom
-        elif sym == "(":
-            prof += 1
-        elif sym == ")":
-            prof -= 1
-            if prof < 0:
-                return "formule interdite : parenthese fermante en trop"
-        elif sym == "," and prof == 0:
-            return "formule interdite : virgule hors parenthese"
-    if prof:
-        return "formule interdite : parenthese non fermee"
+    t = _jetons(f)
+    if t is None:
+        return "formule interdite : caractere hors liste blanche"
+    pos = [0]
+
+    def suit(x):
+        return pos[0] < len(t) and t[pos[0]] == ("s", x)
+
+    def expr():
+        terme()
+        while suit("+") or suit("-"):
+            pos[0] += 1
+            terme()
+
+    def terme():
+        facteur()
+        while suit("*") or suit("/"):
+            pos[0] += 1
+            facteur()
+
+    def facteur():
+        if suit("-"):
+            pos[0] += 1
+        if pos[0] >= len(t):
+            raise ValueError("operande attendu en fin de formule")
+        genre, texte = t[pos[0]]
+        pos[0] += 1
+        if genre == "n":
+            return
+        if genre == "c":
+            if not _chemin_ok(texte):
+                raise ValueError("chemin refuse %r" % texte)
+            if texte in FONCTIONS:
+                if not suit("("):
+                    raise ValueError("fonction %s sans parenthese" % texte)
+                pos[0] += 1
+                n = 1
+                expr()
+                while suit(","):
+                    pos[0] += 1
+                    expr()
+                    n += 1
+                if not suit(")"):
+                    raise ValueError("parenthese fermante attendue")
+                pos[0] += 1
+                if (texte in ("abs", "round") and n != 1) or (texte in ("min", "max") and n < 2):
+                    raise ValueError("arite de %s : %d argument(s)" % (texte, n))
+            return
+        if (genre, texte) == ("s", "("):
+            expr()
+            if not suit(")"):
+                raise ValueError("parenthese fermante attendue")
+            pos[0] += 1
+            return
+        raise ValueError("operande attendu avant %r" % texte)
+
+    try:
+        expr()
+        if pos[0] != len(t):
+            raise ValueError("jeton inattendu %r" % (t[pos[0]][1],))
+    except ValueError as e:
+        return "formule interdite : %s" % e
     return None
 
 
@@ -129,7 +187,7 @@ def _graphique(g, ou, calculees, m):
     _cles(g, "graphique", m)
     if g.get("type") not in STYLES:
         m.append("%s : style inconnu %r" % (ou, g.get("type")))
-    if not isinstance(g.get("titre"), str) or not 1 <= len(g["titre"]) <= 60:
+    if not isinstance(g.get("titre"), str) or not 1 <= _octets(g["titre"]) <= 60:
         m.append("%s : titre de 1 a 60 caracteres" % ou)
     periode = g.get("periode", "direct")
     if periode not in ("direct", "jour", "mois"):
@@ -154,7 +212,7 @@ def _graphique(g, ou, calculees, m):
     else:
         for z in zones:
             if not (isinstance(z, list) and len(z) == 2 and _nombre(z[0]) and isinstance(z[1], str)
-                    and RE_COULEUR.match(z[1])):
+                    and RE_COULEUR.fullmatch(z[1])):
                 m.append("%s : zone mal formee %r" % (ou, z))
             elif not 0 <= z[0] <= 1:
                 m.append("%s : zone hors [0, 1] : %r" % (ou, z[0]))
@@ -177,7 +235,7 @@ def _graphique(g, ou, calculees, m):
 
 
 def _id(v, vus, ou, m):
-    if not isinstance(v, str) or not RE_ID.match(v):
+    if not isinstance(v, str) or not RE_ID.fullmatch(v):
         m.append("%s : id invalide %r (attendu [a-z0-9-]{1,24})" % (ou, v))
         return
     if v in ROUTES_RESERVEES:
@@ -225,7 +283,7 @@ def valide(d):
             continue
         _cles(p, "page", m)
         _id(p.get("id"), ids, ou, m)
-        if not isinstance(p.get("titre"), str) or not 1 <= len(p["titre"]) <= 60:
+        if not isinstance(p.get("titre"), str) or not 1 <= _octets(p["titre"]) <= 60:
             m.append("%s : titre de 1 a 60 caracteres" % ou)
         if p.get("acces", "bouton") not in ("bouton", "lien"):
             m.append("%s : acces bouton ou lien attendu" % ou)
@@ -254,9 +312,9 @@ def valide(d):
         motif, _ = _serie(e.get("serie"), calc)
         if motif:
             m.append("%s : %s" % (ou, motif))
-        if "lien" in e and e["lien"] not in ids:
+        if "lien" in e and (not isinstance(e["lien"], str) or e["lien"] not in ids):
             m.append("%s : lien vers une page inconnue %r" % (ou, e["lien"]))
-    taille = len(json.dumps(d, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+    taille = len(json.dumps(d, ensure_ascii=False, separators=(",", ":")).encode("utf-8", "surrogatepass"))
     if taille > BORNES["octets"]:
         m.append("taille : %d octets > %d" % (taille, BORNES["octets"]))
     return m
