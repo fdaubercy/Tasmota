@@ -49,13 +49,14 @@ HTML = r"""
       <span id="s-adresse" class="discret"></span>
       <span class="droite">
         <button id="s-prendre" class="btn p" type="button">Sauvegarder maintenant</button>
-        <button id="s-restaurer" class="btn o" type="button" disabled>Restaurer la sélection</button>
+        <button id="s-restaurer" class="btn o" type="button" disabled>Restaurer…</button>
       </span>
     </div>
     <div id="s-messages" class="s-messages" aria-live="polite"></div>
     <div class="s-corps">
       <div class="carte">
         <h2>Sauvegardes de cette carte</h2>
+        <p class="discret" style="margin:-4px 0 6px">Cliquer une ligne pour choisir la sauvegarde à afficher et à restaurer ; les cases servent à supprimer.</p>
         <table class="s-hist"><thead><tr><th><input id="s-toutes" type="checkbox" aria-label="Choisir toutes les sauvegardes"></th>
           <th>Date</th><th>Version</th><th>Origine</th></tr></thead>
           <tbody id="s-liste"><tr><td colspan="4" class="vide">Aucune carte choisie.</td></tr></tbody></table>
@@ -138,7 +139,9 @@ function sListe() {
     corps.appendChild(tr);
     autre.appendChild(h("option", {value: f.fichier, texte: (f.date || f.fichier) + " · " + f.origine}));
   });
-  $("s-restaurer").disabled = !S.fichier;
+  var choisie = S.liste.filter(function (f) { return f.fichier === S.fichier; })[0];
+  $("s-restaurer").disabled = !choisie;
+  $("s-restaurer").textContent = choisie ? "Restaurer : " + (choisie.date || choisie.fichier) + " · " + choisie.origine : "Restaurer…";
   $("s-comparer").disabled = !S.fichier;
   sCoches();
 }

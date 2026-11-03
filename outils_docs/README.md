@@ -978,7 +978,7 @@ compteurs ; voir l'onglet « Aide »). Fichiers `AAAAMMJJ-HHMMSS_<origine>.dmp` 
   fiche effacés).
 - **« Comparer »** : écarts avec la carte en ligne (rien n'est enregistré) ou avec une autre sauvegarde ; les
   paramètres en écart sont mis en couleur.
-- **« Restaurer la sélection »** : écarts avec la carte affichés et confirmés, sauvegarde de la carte d'abord, envoi,
+- **« Restaurer : <date · origine> »** (la sauvegarde choisie d'un clic dans l'historique ; les cases servent à supprimer) : écarts avec la carte affichés et confirmés, sauvegarde de la carte d'abord, envoi,
   redémarrage, puis écarts relus. Refusée pendant un envoi de la série, et pour une sauvegarde d'une autre puce.
 - **À savoir** : au démarrage, le persist et l'`autoexec.bat` reposent leurs réglages ; ils l'emportent sur une
   valeur restaurée.

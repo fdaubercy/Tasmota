@@ -62,6 +62,13 @@ def sonde(m, capture):
     e = etat(cdp)
     s.verifie((e["vue"], e["build"], e["env"]), (False, True, A), "onglet : vue affichee, Build masque, env choisi")
     s.verifie((e["lignes"], e["choisie"]), (["avant flash", "manuelle"], 1), "historique : plus recente d'abord, choisie")
+    s.verifie(cdp.js("document.getElementById('s-restaurer').textContent"), "Restaurer : 02/11/2026 10:00 · avant flash",
+              "restaurer : le bouton nomme la sauvegarde choisie")
+    cdp.js("[...document.querySelectorAll('#s-liste tr.l')].find(t => t.textContent.includes('manuelle')).click()")
+    s.attend(cdp, "document.getElementById('s-restaurer').textContent.includes('manuelle')", 5)
+    s.verifie(etat(cdp)["choisie"], 1, "restaurer : clic sur une autre ligne -> elle devient la sauvegarde a restaurer")
+    cdp.js("[...document.querySelectorAll('#s-liste tr.l')].find(t => t.textContent.includes('avant flash')).click()")
+    s.attend(cdp, "document.getElementById('s-restaurer').textContent.includes('avant flash')", 5)
     s.verifie(any(t[0] == "Réseau et Wi-Fi" for t in e["themes"]) and not any(t[1] for t in e["themes"]), True,
               "parametres : themes en francais, replies")
     s.verifie((e["fichiers"], e["secret"]), (True, False), "parametres : fichier .drvset003 cite, aucun mot de passe en clair")
