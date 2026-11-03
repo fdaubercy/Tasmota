@@ -61,12 +61,12 @@ thème à droite avec filtre) ; onglet nommé **« Sauvegarde configuration »**
 - [x] Sonde Chrome `outils_pc/test_build_page_sauvegarde_chrome.py` (rendu, thèmes repliés, filtre, modifié surligné, confirmation) ; bancs existants de la page build toujours verts — preuve : VERTE ; `test_build_web.py`, `test_build_ota_fs.py`, `test_build_drvset.py`, `test_build_page_defaut_chrome.py` VERTS
 
 ## A7 — Essai sur le différentiel (avec l'utilisateur)
-- [ ] Sauvegarde manuelle, comparaison à la carte (aucun écart attendu), copie modifiée relue
+- [x] Sauvegarde manuelle, comparaison à la carte (aucun écart attendu), copie modifiée relue — preuve : sur le différentiel (192.168.0.49) : `20261103-062936_manuelle.dmp`, 0 écart avec la carte (8,6 s) ; copie modifiée (hostname, `button_text`, `tele_period`) relue sans autre écart, calibrage 310/15963/124194 intact ; page Build relancée, `GET /sauvegardes` sert les sauvegardes réelles
 - [ ] Restauration de la sauvegarde d'origine sur la carte, après accord : carte revenue, calibrage 310/15963/124194 et Total relus intacts, minuteries présentes
 
 ## A8 — Documentation et clôture
-- [ ] `outils_docs/README.md` (mode d'emploi de l'onglet), carte des documents de `CLAUDE.md`, onglet Aide, texte de la tuile de l'annuaire (`annuaire_registre.py`) ; `verifie_references_docs.py` code 0
-- [ ] A12 du plan `energie-differentiel` cochée avec renvoi à ce plan ; commit
+- [x] `outils_docs/README.md` (mode d'emploi de l'onglet), carte des documents de `CLAUDE.md`, onglet Aide, texte de la tuile de l'annuaire (`annuaire_registre.py`) ; `verifie_references_docs.py` code 0 — preuve : § « Onglet « Sauvegarde configuration » » du README, carte des documents et exceptions de `CLAUDE.md`, onglet Aide, tuile `annuaire_registre.py` ; `verifie_references_docs.py` 0 défaut ; commit `6e15fc934`
+- [x] A12 du plan `energie-differentiel` cochée avec renvoi à ce plan ; commit — preuve : A12 de `energie-differentiel.md` cochée avec renvoi ici ; onglet commité `6e15fc934`
 
 ## A9 — Retour au plan « energie-differentiel »
 - [ ] Reprendre `tasks/plans/energie-differentiel.md` : thermomètre (A11), A14 (outil de l'`autoexec.bat` : endroit et questions à l'utilisateur), A10 (retour au plan « jauges-cuve »)
