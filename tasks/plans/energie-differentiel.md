@@ -136,7 +136,7 @@ courbe de puissance 24 h conservée ; abonnement de base ; prix saisi avec date 
 ## A13 — Onglet « Aide » de la page build
 - [x] Onglet Aide : fichiers `.drvset*` (rôle, contenu, chargement, paramétrage), `.drvset003` et calibrage autour d'un flash ; sonde Chrome verte — preuve : `build_page_aide.py`, `test_build_page_defaut_chrome.py` et `test_build_page_chrome.py` VERT
 - [x] Explications renvoyées aussi dans `outils_docs/FICHIERS_DRVSET.md` et au README — preuve : `FICHIERS_DRVSET.md`, renvoi dans `outils_docs/README.md`
-- [ ] Commentaire de la tuile « Build et téléversement » de l'annuaire à jour des nouvelles compétences (fait pour l'existant : `annuaire_registre.py` ; à compléter quand l'onglet Sauvegardes existera) ; visible après redémarrage de l'annuaire
+- [x] Commentaire de la tuile « Build et téléversement » de l'annuaire à jour des nouvelles compétences (fait pour l'existant : `annuaire_registre.py` ; à compléter quand l'onglet Sauvegardes existera) ; visible après redémarrage de l'annuaire — preuve : `annuaire_registre.py` : onglet « Sauvegarde configuration » complété (fenêtre des écarts, avancement, liaison MQTT, marques de démarrage, purge à case) et onglet « Env par défaut (Platformio override) » ; `test_annuaire.py` VERT ; visible au prochain redémarrage de l'annuaire
 
 ## A14 — Outil d'édition de l'`autoexec.bat` (demande du 2026-11-03)
 - [ ] Conception à faire après A12 : Claude cherche l'endroit le plus approprié (page build, page Fichiers Berry, page à part…) puis pose ses questions à l'utilisateur (demande du 2026-11-03) ; outil pour modifier facilement ou ajouter des lignes dans l'`autoexec.bat` d'une carte

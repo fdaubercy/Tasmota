@@ -168,7 +168,10 @@ OUTILS = [
         "de partitions d'un env par curseurs (diff, puis écriture d'un CSV propre à l'env ; l'OTA de l'env reste "
         "bloquée jusqu'au prochain « Effacer puis téléverser »). "
         "Onglet « Sauvegarde configuration » : sauvegarde /dl de chaque carte (Settings et .drvset*), paramètres par "
-        "thème, copie modifiée, comparaison et restauration. "
+        "thème, copie modifiée, comparaison et restauration (écarts confirmés dans une fenêtre, avancement suivi) ; "
+        "liaison HTTP ou MQTT (carte injoignable en HTTP), paramètres reposés au démarrage par le persist ou "
+        "l'autoexec.bat marqués, purge des anciennes sauvegardes automatiques (case à décocher). "
+        "Onglet « Env par défaut (Platformio override) » : ce que compile un simple pio run. "
         "Seul paramètre ici : le port de la page (7700). Pour l'arrêter : bouton Arrêter de l'annuaire "
         "(refusé pendant un lancement), ou Ctrl+C dans son terminal s'il a été lancé ailleurs.",
         DOSSIER + "outils_pc/build_web.py",
