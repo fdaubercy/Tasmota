@@ -4,6 +4,8 @@ Etat : la description en cours d'edition (schema de atelier_graphiques_descripti
 Toute modification relance, apres 300 ms : l'apercu (PagesGraphiques.page, le moteur de la carte), le conseil de style
 (POST /conseil), la validation (POST /valide) puis le diff (POST /diff). « Ecrire » n'est actif que si le diff affiche
 correspond a la description du moment (meme corps que celui du diff, empreinte du serveur).
+Series du graphique : chaine (chemin) ou objet {chemin, libelle, unite, couleur} (A7b) ; un objet dont tous les reglages
+sont vides redevient la chaine. Les deux formes se lisent par cheminDe().
 Lecteur de l'apercu : PagesGraphiques.lecteurCarte, celui de la carte, dont les fetch (faits pendant l'appel) sont
 rediriges vers /valeurs?env= : la conversion des reponses de la carte est donc la sienne, pas une copie.
 """
@@ -41,6 +43,7 @@ function envCourant() { return etat.envs.filter(function (e) { return e.nom === 
 function infoSerie(c) {
   return (etat.series && etat.series.series || []).filter(function (s) { return s.chemin === c; })[0] || {chemin: c, unite: ''};
 }
+function cheminDe(s) { return s && typeof s === 'object' ? s.chemin : s; }
 function nouveauGraphique() {
   var ss = (etat.series && etat.series.series) || [], h = etat.series && etat.series.historique;
   var s = ss.filter(function (x) { return x.historique; })[0] || ss[0];
@@ -97,7 +100,7 @@ function dessineArbre() {
   var g = grapheCourant() || {series: []}, ss = (etat.series && etat.series.series) || [], h = [];
   function ligne(s, classe) {
     return '<div class="' + classe + '"><label class="ch" title="' + echappe(s.chemin) + '"><input type="checkbox" data-serie="' +
-      echappe(s.chemin) + '"' + (g.series.indexOf(s.chemin) >= 0 ? ' checked' : '') + '> ' + echappe(s.libelle || s.chemin) +
+      echappe(s.chemin) + '"' + (g.series.map(cheminDe).indexOf(s.chemin) >= 0 ? ' checked' : '') + '> ' + echappe(s.libelle || s.chemin) +
       ' <span class="doux petit">' + echappe(s.etat ? 'état' : (s.unite || '')) + '</span></label></div>';
   }
   function groupe(titre, liste) {
@@ -123,7 +126,8 @@ function dessineArbre() {
 $('arbre').addEventListener('change', function (e) {
   var c = e.target.getAttribute('data-serie'), g = grapheCourant();
   if (!c || !g) return;
-  if (e.target.checked) { if (g.series.indexOf(c) < 0) g.series.push(c); } else g.series = g.series.filter(function (x) { return x !== c; });
+  if (e.target.checked) { if (g.series.map(cheminDe).indexOf(c) < 0) g.series.push(c); }
+  else g.series = g.series.filter(function (x) { return cheminDe(x) !== c; });
   modifie(true);
 });
 $('calc-annuler').onclick = function () { $('form-calc').classList.add('cache'); };
@@ -210,6 +214,38 @@ $('r-ajout-zone').onclick = function (e) {
   g.zones.push([g.zones.length ? 0.4 : 0.2, g.zones.length ? '#c27400' : '#c0392b']);
   modifie(true);
 };
+// Une ligne par serie : libelle, unite (l'unite connue de la carte en suggestion), couleur (celle de la palette sans reglage)
+function dessineSeries(g) {
+  $('r-series').innerHTML = g.series.map(function (s, i) {
+    var o = typeof s === 'object' ? s : {chemin: s}, connue = infoSerie(o.chemin).unite || '';
+    var champ = function (cle) { return ' data-serie-champ="' + cle + '" data-i="' + i + '"'; };
+    return '<div class="serie"><div class="petit doux" title="' + echappe(o.chemin) + '">' + echappe(o.chemin) + '</div><div class="ligne">' +
+      '<input type="text"' + champ('libelle') + ' maxlength="30" placeholder="libellé" value="' + echappe(o.libelle || '') + '">' +
+      '<input type="text" class="unite"' + champ('unite') + ' maxlength="10" placeholder="' + echappe(connue || 'unité') +
+      '" title="unité' + (connue ? ' (carte : ' + echappe(connue) + ')' : '') + '" value="' + echappe(o.unite || '') + '">' +
+      '<input type="color"' + champ('couleur') + ' value="' + echappe(o.couleur || PagesGraphiques.PALETTE[i % PagesGraphiques.PALETTE.length]) + '">' +
+      '<a href="#" data-serie-raz="' + i + '" title="couleur de la palette">✕</a></div></div>';
+  }).join('') || '<div class="petit doux">aucune : cocher une série à gauche</div>';
+}
+// Pose (ou retire si vide) un reglage de la serie i ; sans reglage, la serie redevient la chaine de son chemin
+function poseSerie(g, i, cle, v) {
+  var o = typeof g.series[i] === 'object' ? g.series[i] : {chemin: g.series[i]};
+  if (v === '') delete o[cle]; else o[cle] = v;
+  g.series[i] = Object.keys(o).length > 1 ? o : o.chemin;
+}
+$('r-series').addEventListener('input', function (e) {
+  var cle = e.target.getAttribute('data-serie-champ'), g = grapheCourant();
+  if (!cle || !g) return;
+  poseSerie(g, +e.target.getAttribute('data-i'), cle, e.target.value);
+  modifie(false);
+});
+$('r-series').addEventListener('click', function (e) {
+  var i = e.target.getAttribute('data-serie-raz'), g = grapheCourant();
+  if (i === null || !g) return;
+  e.preventDefault();
+  poseSerie(g, +i, 'couleur', '');
+  modifie(true);
+});
 function dessineReglages() {
   var g = grapheCourant(), p = pageCourante(), h = etat.series && etat.series.historique;
   dessinePages();
@@ -217,7 +253,7 @@ function dessineReglages() {
   $('r-solidifier').checked = etat.solidifier;
   ['r-page-id', 'r-page-titre', 'r-acces'].forEach(function (id) { $(id).disabled = !p; });
   ['r-titre', 'r-min', 'r-max', 'r-periode', 'r-cadence', 'r-cumul', 'r-largeur', 'r-hauteur', 'r-ajout-zone'].forEach(function (id) { $(id).disabled = !g; });
-  if (!g) { $('r-zones').innerHTML = ''; return; }
+  if (!g) { $('r-zones').innerHTML = ''; $('r-series').innerHTML = ''; return; }
   $('r-titre').value = g.titre; $('r-min').value = g.min !== undefined ? g.min : ''; $('r-max').value = g.max !== undefined ? g.max : '';
   $('r-periode').value = g.periode || 'direct'; $('r-cadence').value = g.cadence || ''; $('r-cumul').value = g.cumul || '';
   $('r-largeur').value = g.largeur || 'demi'; $('r-hauteur').value = g.hauteur || '';
@@ -227,6 +263,7 @@ function dessineReglages() {
   });
   $('ligne-cumul').classList.toggle('cache', g.type !== 'barres-periode');
   dessineZones(g);
+  dessineSeries(g);
 }
 $('ajout-graphique').onclick = function () {
   var p = pageCourante();
@@ -321,8 +358,8 @@ function bascules() {
 function demandeConseil() {
   var g = grapheCourant();
   if (!g) { $('vignettes').innerHTML = ''; return; }
-  var series = g.series.map(function (c) {
-    var s = infoSerie(c), o = {chemin: c, unite: s.unite || ''};
+  var series = g.series.map(function (x) {
+    var c = cheminDe(x), o = {chemin: c, unite: (typeof x === 'object' && x.unite) || infoSerie(c).unite || ''};
     if (g.series.length === 1 && typeof g.min === 'number' && typeof g.max === 'number') { o.min = g.min; o.max = g.max; }
     return o;
   });
@@ -335,7 +372,7 @@ function donneesDe(g) {
   var pref = etat.env + '|' + (g.periode || 'direct') + '|';
   var cle = Object.keys(dernieres).filter(function (k) {
     var lus = k.slice(pref.length).split(',');
-    return k.indexOf(pref) === 0 && g.series.every(function (s) { return lus.indexOf(s) >= 0; });
+    return k.indexOf(pref) === 0 && g.series.every(function (s) { return lus.indexOf(cheminDe(s)) >= 0; });
   })[0];
   return cle ? dernieres[cle] : null;
 }

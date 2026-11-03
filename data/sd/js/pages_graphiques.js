@@ -6,7 +6,8 @@
 // PagesGraphiques.optionDe(graphique, donnees, theme) -> option ECharts, ou {svg: "..."} pour « demi-cercle » (pure : ni
 //   DOM ni reseau, testee par test_pages_graphiques.mjs). graphique = un graphique de la description
 //   (atelier_graphiques_description.py) ; donnees = {t: [instants epoch s], valeurs: {serie: [valeur|null par instant]}}
-//   ou serie = chemin du SENSOR ou "calc:<nom>" deja calculee ; theme = {texte, grille}.
+//   ou serie = chemin du SENSOR ou "calc:<nom>" deja calculee ; theme = {texte, grille}. Serie du graphique : ce chemin ou
+//   {chemin, libelle, unite, couleur} -> legende ; infobulle, axe (si commune a ses series), valeur ; palette (sauf chaleur, radar).
 //   Serie ABSENTE = cle absente de valeurs, ou aucune valeur numerique : le titre est suffixe « série absente », les
 //   autres series sont tracees. Styles instantanes (cadran, anneau, radar, liquide, demi-cercle) : le DERNIER point ; s'il
 //   vaut null (capteur debranche, esclave muet), la serie est absente : une valeur perimee n'est jamais montree.
@@ -28,7 +29,6 @@ var PagesGraphiques = (function () {
   var TEMPORELS = ['courbe', 'aire', 'escalier', 'barres', 'barres-empilees', 'deux-axes', 'lies'];
   var INSTANTANES = ['cadran', 'anneau', 'radar', 'liquide', 'demi-cercle'];
   var PALETTE = ['#1f7fc4', '#d68a12', '#2e9e5b', '#c8402f', '#8e5cc8', '#14a3a3', '#c25a9e', '#7f8c2d'];
-  var DEFAUT = PALETTE[0];
   var CADENCES = {direct: 10, jour: 300, mois: 3600};    // secondes, si le graphique n'en donne pas
   var MAX_DIRECT = 360;
   var fmtNombre = new Intl.NumberFormat('fr-FR', {maximumFractionDigits: 2});
@@ -41,11 +41,18 @@ var PagesGraphiques = (function () {
   }
   function nombre(v) { return typeof v === 'number' && isFinite(v) ? v : null; }
   function texteNombre(v) { return v === null ? '--' : fmtNombre.format(v); }
-  // Libelle : dernier segment du chemin, ou les deux derniers si une autre serie du graphique finit de meme
-  function libelle(serie, toutes) {
+  function chemin(s) { return s && typeof s === 'object' ? s.chemin : s; }
+  function reglage(g, s) { var r = g.reglages && g.reglages[s]; return r && typeof r === 'object' ? r : {}; }
+  function unite(g, s) { var u = reglage(g, s).unite; return u ? ' ' + u : ''; }
+  function couleur(g, s, k) { return reglage(g, s).couleur || PALETTE[k % PALETTE.length]; }
+  function uniteAxe(g, l) { var u = l.map(function (s) { return unite(g, s); }); return u.length && u.every(function (x) { return x === u[0]; }) ? u[0].trim() : ''; }
+  function infobulle(x, g, s) { var u = unite(g, s); if (u) x.tooltip = {valueFormatter: function (v) { return texteNombre(nombre(Array.isArray(v) ? v[1] : v)) + u; }}; return x; }
+  // Libelle : celui de la serie, sinon dernier segment du chemin, ou les deux derniers si une autre serie sans libelle finit de meme
+  function libelle(serie, g) {
+    if (reglage(g, serie).libelle) return reglage(g, serie).libelle;
     if (serie.indexOf('calc:') === 0) return serie.slice(5);
     var s = serie.split('.'), fin = s[s.length - 1];
-    return (toutes || []).some(function (x) { return x !== serie && x.split('.').pop() === fin; }) ? s.slice(-2).join('.') : fin;
+    return g.series.some(function (x) { return x !== serie && !reglage(g, x).libelle && x.split('.').pop() === fin; }) ? s.slice(-2).join('.') : fin;
   }
   // Presente : au moins une valeur ; pour un style instantane, le dernier point lui-meme (pas une valeur du tampon)
   function present(d, s, instantane) {
@@ -53,10 +60,7 @@ var PagesGraphiques = (function () {
     if (!Array.isArray(l)) return false;
     return instantane ? l.length > 0 && nombre(l[l.length - 1]) !== null : l.some(function (v) { return nombre(v) !== null; });
   }
-  function derniere(l) {
-    for (var i = (l || []).length - 1; i >= 0; i--) if (nombre(l[i]) !== null) return l[i];
-    return null;
-  }
+  function derniere(l) { for (var i = (l || []).length - 1; i >= 0; i--) if (nombre(l[i]) !== null) return l[i]; return null; }
   function etendue(d, series) {
     var bas = Infinity, haut = -Infinity;
     series.forEach(function (s) { d.valeurs[s].forEach(function (v) { if (nombre(v) !== null) { bas = Math.min(bas, v); haut = Math.max(haut, v); } }); });
@@ -67,15 +71,9 @@ var PagesGraphiques = (function () {
     var b = [nombre(g.min) !== null ? g.min : defaut[0], nombre(g.max) !== null ? g.max : defaut[1]];
     return b[1] > b[0] ? b : [b[0], b[0] + 1];
   }
-  function zones(g) {
-    return (Array.isArray(g.zones) ? g.zones.slice() : []).sort(function (a, b) { return a[0] - b[0]; });
-  }
-  // Couleur de la zone qui contient la fraction (0..1), sinon la couleur par defaut
-  function couleurZone(g, f) {
-    var z = zones(g);
-    for (var i = 0; i < z.length; i++) if (f <= z[i][0]) return z[i][1];
-    return DEFAUT;
-  }
+  function zones(g) { return (Array.isArray(g.zones) ? g.zones.slice() : []).sort(function (a, b) { return a[0] - b[0]; }); }
+  // Couleur de la zone qui contient la fraction (0..1), sinon la couleur de la serie (ou par defaut)
+  function couleurZone(g, f, defaut) { var z = zones(g); for (var i = 0; i < z.length; i++) if (f <= z[i][0]) return z[i][1]; return defaut; }
   function fraction(v, b) { return v === null ? 0 : Math.max(0, Math.min(1, (v - b[0]) / (b[1] - b[0]))); }
   function alpha(hex, a) {
     var n = parseInt(hex.slice(1), 16);
@@ -93,9 +91,7 @@ var PagesGraphiques = (function () {
             nameTextStyle: {color: th.texte}, splitLine: {lineStyle: {color: th.grille}}};
   }
   function axeValeur(th, extra) {
-    var a = axeTexte(th);
-    a.type = 'value';
-    a.scale = true;
+    var a = Object.assign(axeTexte(th), {type: 'value', scale: true});
     a.axisLabel.formatter = function (v) { return fmtNombre.format(v); };
     return Object.assign(a, extra || {});
   }
@@ -129,7 +125,7 @@ var PagesGraphiques = (function () {
     var barres = g.type === 'barres' || g.type === 'barres-empilees';
     var b = bornes(g, etendue(d, presentes));
     o.series = presentes.map(function (s, k) {
-      var x = {name: libelle(s, g.series), type: barres ? 'bar' : 'line', color: PALETTE[k % PALETTE.length],
+      var x = {name: libelle(s, g), type: barres ? 'bar' : 'line', color: couleur(g, s, k),
                data: ms.map(function (t, i) { return [t, nombre(d.valeurs[s][i])]; })};
       if (barres) x.barMaxWidth = 14;
       else { x.showSymbol = false; x.connectNulls = false; x.lineStyle = {width: 2}; }
@@ -137,11 +133,13 @@ var PagesGraphiques = (function () {
       if (g.type === 'escalier') x.step = 'end';
       if (g.type === 'barres-empilees') x.stack = 'pile';
       if (g.type === 'deux-axes') x.yAxisIndex = k === 0 ? 0 : 1;
-      return x;
+      return infobulle(x, g, s);
     });
     if (o.series.length) seuils(g, o.series[0], b);
-    var y = {min: nombre(g.min) !== null ? g.min : undefined, max: nombre(g.max) !== null ? g.max : undefined};
-    o.yAxis = g.type === 'deux-axes' ? [axeValeur(th, y), axeValeur(th, {position: 'right', splitLine: {show: false}})] : axeValeur(th, y);
+    var y = {min: nombre(g.min) !== null ? g.min : undefined, max: nombre(g.max) !== null ? g.max : undefined,
+             name: uniteAxe(g, g.type === 'deux-axes' ? presentes.slice(0, 1) : presentes)};
+    o.yAxis = g.type === 'deux-axes' ? [axeValeur(th, y), axeValeur(th, {position: 'right', splitLine: {show: false},
+      name: uniteAxe(g, presentes.slice(1))})] : axeValeur(th, y);
     o.xAxis = axeTemps(th);
     o.grid = {left: 56, right: g.type === 'deux-axes' ? 56 : 16, top: 36, bottom: 44};
     o.tooltip = {trigger: 'axis', confine: true};
@@ -169,11 +167,11 @@ var PagesGraphiques = (function () {
         var a = nombre(v[i - 1]), b = nombre(v[i]);
         if (a !== null && b !== null) somme[rang[periodeDe(d.t[i], g.cumul || 'jour')[0]]] += b >= a ? b - a : b;
       }
-      return {name: libelle(s, g.series), type: 'bar', barMaxWidth: 24, color: PALETTE[k % PALETTE.length],
-              data: somme.map(function (x) { return Math.round(x * 1000) / 1000; })};
+      return infobulle({name: libelle(s, g), type: 'bar', barMaxWidth: 24, color: couleur(g, s, k),
+              data: somme.map(function (x) { return Math.round(x * 1000) / 1000; })}, g, s);
     });
     o.xAxis = Object.assign(axeTexte(th), {type: 'category', data: noms});
-    o.yAxis = axeValeur(th, {scale: false});
+    o.yAxis = axeValeur(th, {scale: false, name: uniteAxe(g, presentes)});
     o.grid = {left: 56, right: 16, top: 36, bottom: 44};
     o.tooltip = {trigger: 'axis', confine: true};
     o.legend = legende(th);
@@ -181,16 +179,16 @@ var PagesGraphiques = (function () {
 
   function cadran(g, d, th, o, s) {
     var v = s ? derniere(d.valeurs[s]) : null, b = bornes(g, [0, 100]);
-    var couleurs = zones(g).map(function (z) { return [z[0], z[1]]; }).concat([[1, DEFAUT]]);
+    var couleurs = zones(g).map(function (z) { return [z[0], z[1]]; }).concat([[1, couleur(g, s, 0)]]);
     var entier = b[1] - b[0] > 20;
-    o.series = [{type: 'gauge', min: b[0], max: b[1], center: ['50%', '58%'], radius: '78%', startAngle: 200, endAngle: -20,
+    o.series = [infobulle({type: 'gauge', min: b[0], max: b[1], center: ['50%', '58%'], radius: '78%', startAngle: 200, endAngle: -20,
       splitNumber: 4,
       axisLine: {lineStyle: {width: 12, color: couleurs}}, pointer: {width: 4, itemStyle: {color: th.texte}},
       axisTick: {show: false}, splitLine: {length: 12, lineStyle: {color: th.texte, width: 1}},
       axisLabel: {color: th.texte, fontSize: 10, distance: 16, formatter: function (x) { return fmtNombre.format(entier ? Math.round(x) : x); }},
       title: {show: false}, anchor: {show: false},
-      detail: {color: th.texte, fontSize: 20, offsetCenter: [0, '58%'], formatter: texteNombre(v)},
-      data: [{value: v === null ? b[0] : v, name: s ? libelle(s) : ''}]}];
+      detail: {color: th.texte, fontSize: 20, offsetCenter: [0, '58%'], formatter: texteNombre(v) + unite(g, s)},
+      data: [{value: v === null ? b[0] : v, name: s ? libelle(s, g) : ''}]}, g, s)];
   }
 
   function chaleur(g, d, th, o, s) {
@@ -216,7 +214,7 @@ var PagesGraphiques = (function () {
     o.visualMap = {min: b[0], max: b[1], calculable: false, orient: 'horizontal', left: 'center', bottom: 0, itemHeight: 120,
                    textStyle: {color: th.texte}, inRange: {color: ['#1f7fc4', '#2e9e5b', '#d68a12', '#c8402f']}};
     o.grid = {left: 72, right: 16, top: 36, bottom: 56};
-    o.series = [{type: 'heatmap', name: s ? libelle(s) : '', data: data}];
+    o.series = [{type: 'heatmap', name: s ? libelle(s, g) : '', data: data}];
   }
 
   function nuage(g, d, th, o, presentes) {
@@ -226,10 +224,10 @@ var PagesGraphiques = (function () {
       if (y && a !== null && b !== null) data.push([a, b]);
       else if (!y && a !== null) data.push([t * 1000, a]);
     });
-    o.xAxis = y ? axeValeur(th, {name: libelle(x)}) : axeTemps(th);
-    o.yAxis = axeValeur(th, {name: y ? libelle(y) : (x ? libelle(x) : '')});
+    o.xAxis = y ? axeValeur(th, {name: libelle(x, g) + unite(g, x)}) : axeTemps(th);
+    o.yAxis = axeValeur(th, {name: y ? libelle(y, g) + unite(g, y) : (x ? libelle(x, g) + unite(g, x) : '')});
     o.grid = {left: 56, right: 24, top: 44, bottom: 32};
-    o.series = [{type: 'scatter', symbolSize: 6, data: data}];
+    o.series = [{type: 'scatter', symbolSize: 6, color: couleur(g, x, 0), data: data}];
   }
 
   function radar(g, d, th, o, presentes) {
@@ -237,29 +235,29 @@ var PagesGraphiques = (function () {
     o.radar = {radius: '62%', center: ['50%', '56%'], axisName: {color: th.texte},
       splitLine: {lineStyle: {color: th.grille}}, splitArea: {show: false},
       indicator: presentes.map(function (s, k) {
-        return {name: libelle(s, g.series), min: nombre(g.min) !== null ? g.min : 0,
+        return {name: libelle(s, g), min: nombre(g.min) !== null ? g.min : 0,
                 max: nombre(g.max) !== null ? g.max : Math.max(1, Math.abs(v[k] || 0) * 1.25)};
       })};
     o.series = [{type: 'radar', data: [{name: g.titre, value: v.map(function (x) { return x === null ? 0 : x; }), areaStyle: {opacity: 0.25}}]}];
   }
 
   function liquide(g, d, th, o, s) {
-    var v = s ? derniere(d.valeurs[s]) : null, b = bornes(g, [0, 100]), f = fraction(v, b), col = couleurZone(g, f);
+    var v = s ? derniere(d.valeurs[s]) : null, b = bornes(g, [0, 100]), f = fraction(v, b), col = couleurZone(g, f, couleur(g, s, 0));
     o.series = [{type: 'liquidFill', data: [f, f], radius: '78%', center: ['50%', '56%'], color: [col],
       backgroundStyle: {color: 'rgba(127,127,127,0.15)'}, waveAnimation: false,
       outline: {borderDistance: 3, itemStyle: {borderColor: col, borderWidth: 3, shadowBlur: 0}}, itemStyle: {shadowBlur: 0},
-      label: {formatter: texteNombre(v), fontSize: 24, color: col, insideColor: '#fff'}}];
+      label: {formatter: texteNombre(v) + unite(g, s), fontSize: 24, color: col, insideColor: '#fff'}}];
   }
 
   // Demi-cercle SVG (modele H de outils_docs/jauges/catalogue_jauges.html) : sans script, lisible aussi en accueil
   function demiCercle(g, d, th, s, titre) {
-    var v = s ? derniere(d.valeurs[s]) : null, b = bornes(g, [0, 100]), f = fraction(v, b), col = couleurZone(g, f);
+    var v = s ? derniere(d.valeurs[s]) : null, b = bornes(g, [0, 100]), f = fraction(v, b), col = couleurZone(g, f, couleur(g, s, 0));
     var arc = 'd="M20 130 A80 80 0 0 1 180 130" fill="none" stroke-width="18"';
     return '<svg viewBox="0 0 200 150" role="img" aria-label="' + echappe(titre) + '" xmlns="http://www.w3.org/2000/svg">' +
       '<text x="100" y="11" text-anchor="middle" font-size="8.5" fill="' + th.texte + '">' + echappe(titre) + '</text>' +
       '<path ' + arc + ' stroke="rgba(127,127,127,0.25)"/>' +
       '<path ' + arc + ' stroke="' + col + '" pathLength="100" stroke-dasharray="' + Math.round(f * 1000) / 10 + ' 100"/>' +
-      '<text x="100" y="118" text-anchor="middle" font-size="28" fill="' + th.texte + '">' + echappe(texteNombre(v)) + '</text>' +
+      '<text x="100" y="118" text-anchor="middle" font-size="28" fill="' + th.texte + '">' + echappe(texteNombre(v) + unite(g, s)) + '</text>' +
       '<text x="20" y="147" text-anchor="middle" font-size="10" fill="' + th.texte + '">' + echappe(texteNombre(b[0])) + '</text>' +
       '<text x="180" y="147" text-anchor="middle" font-size="10" fill="' + th.texte + '">' + echappe(texteNombre(b[1])) + '</text></svg>';
   }
@@ -267,7 +265,8 @@ var PagesGraphiques = (function () {
   function optionDe(g, donnees, theme) {
     var d = {t: (donnees && Array.isArray(donnees.t)) ? donnees.t : [], valeurs: (donnees && donnees.valeurs) || {}};
     var th = {texte: (theme && theme.texte) || '#888', grille: (theme && theme.grille) || 'rgba(128,128,128,0.25)'};
-    var series = Array.isArray(g.series) ? g.series : [];
+    var reglages = {}, series = (Array.isArray(g.series) ? g.series : []).map(function (x) { reglages[chemin(x)] = x; return chemin(x); });
+    g = Object.assign({}, g, {series: series, reglages: reglages});
     var instantane = INSTANTANES.indexOf(g.type) >= 0;
     var presentes = series.filter(function (s) { return present(d, s, instantane); });
     var absentes = series.filter(function (s) { return presentes.indexOf(s) < 0; });
@@ -278,7 +277,7 @@ var PagesGraphiques = (function () {
     else if (g.type === 'cadran') cadran(g, d, th, o, s);
     else if (g.type === 'anneau') {
       o.series = [{type: 'pie', radius: ['42%', '62%'], center: ['50%', '55%'], label: {color: th.texte, formatter: '{b}\n{c}'},
-        data: presentes.map(function (x) { return {name: libelle(x, series), value: derniere(d.valeurs[x])}; })}];
+        data: presentes.map(function (x, k) { return infobulle({name: libelle(x, g), value: derniere(d.valeurs[x]), itemStyle: {color: couleur(g, x, k)}}, g, x); })}];
     } else if (g.type === 'chaleur') chaleur(g, d, th, o, s);
     else if (g.type === 'nuage') nuage(g, d, th, o, presentes);
     else if (g.type === 'radar') radar(g, d, th, o, presentes);
@@ -395,7 +394,7 @@ var PagesGraphiques = (function () {
       grille.appendChild(div);
       var periode = g.periode || 'direct', cadence = g.cadence || CADENCES[periode] || 10, cle = periode + '/' + cadence;
       var gr = groupes[cle] = groupes[cle] || {periode: periode, cadence: cadence, chemins: [], calc: [], tuiles: [], tampon: null};
-      (g.series || []).forEach(function (s) {
+      (g.series || []).map(chemin).forEach(function (s) {
         var deps = s.indexOf('calc:') === 0 ? (formules[s.slice(5)] && formules[s.slice(5)].series) || [] : [s];
         if (s.indexOf('calc:') === 0 && gr.calc.indexOf(s) < 0) gr.calc.push(s);
         deps.forEach(function (c) { if (gr.chemins.indexOf(c) < 0) gr.chemins.push(c); });
@@ -492,5 +491,5 @@ var PagesGraphiques = (function () {
     if (zone) page(zone, C, lecteurCarte(C.nomHistorique || 'mesures', C.historique));
   }
 
-  return {STYLES: STYLES, optionDe: optionDe, page: page, lecteurCarte: lecteurCarte};
+  return {STYLES: STYLES, PALETTE: PALETTE, optionDe: optionDe, page: page, lecteurCarte: lecteurCarte};
 })();

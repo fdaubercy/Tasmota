@@ -10,7 +10,8 @@ Montage : atelier_graphiques_web.py dans un processus fils (mode --serveur), dev
 que test_atelier_graphiques_web.py) ; la carte est simulee en remplacant build_ota_http._get dans ce processus (aucun
 reseau) : la cuve repond, le P4 (192.168.0.43 sans port) est muet. Detection des builds neutralisee ;
 OUTILS_TASMOTA_DOSSIER temporaire. Fenetre de 1400 px (capture comparee a modele-B.png par l'utilisateur).
-Scenario : apercu trace par le vrai moteur, styles proposes, un seuil ajoute puis change modifie le SVG de l'apercu,
+Scenario : apercu trace par le vrai moteur, styles proposes, reglages par serie (libelle -> legende, couleur -> serie
+de l'apercu, unite -> axe ; vides -> la serie redevient une chaine), un seuil ajoute puis change modifie le SVG de l'apercu,
 bascules page / telephone / theme sombre, deplacement d'une tuile, carte muette -> bandeau « valeurs simulees »,
 avertissement ECharts exclu, ecriture dans la copie, lien vers la page Build.
 """
@@ -147,6 +148,45 @@ def svg_apercu(cdp):
     return cdp.js("(document.querySelector('#apercu .pg_tuile') || {}).innerHTML || ''")
 
 
+OPTION_APERCU = ("(function(){ var t = document.querySelector('#apercu .pg_tuile'), g = t && window.echarts && echarts.getInstanceByDom(t);"
+                 " if (!g) return null; var o = g.getOption(); return [o.series[0].name, o.series[0].color, o.yAxis[0].name || '']; })()")
+
+
+def saisit(cdp, selecteur, valeur):
+    cdp.js("var i = document.querySelector(" + json.dumps(selecteur) + "); i.value = " + json.dumps(valeur) + ";"
+           " i.dispatchEvent(new Event('input', {bubbles: true})); 1")
+
+
+def sonde_series(cdp):
+    """Reglages par serie : chaque champ change l'apercu (option ECharts relue), vider revient a la forme chaine."""
+    vrai = lambda expr, d=10: bool(attend(cdp, expr, d))
+    chemin = cdp.js("etat.desc.pages[0].graphiques[0].series[0]")
+    verifie((isinstance(chemin, str), cdp.js("document.querySelectorAll('#r-series .serie').length")), (True, 1),
+            "reglages : une ligne par serie du graphique (forme chaine au depart)")
+    palette = cdp.js("PagesGraphiques.PALETTE[0]")
+    verifie(cdp.js("document.querySelector('#r-series input[type=color]').value"), palette, "couleur affichee : celle de la palette")
+    saisit(cdp, "#r-series [data-serie-champ=libelle]", "Niveau")
+    verifie(vrai("JSON.stringify(" + OPTION_APERCU + ") === " + json.dumps(json.dumps(["Niveau", palette, ""], separators=(",", ":")))),
+            True, "libelle saisi : la legende de l'apercu change")
+    saisit(cdp, "#r-series [data-serie-champ=libelle]", "")
+    verifie(vrai("etat.desc.pages[0].graphiques[0].series[0] === " + json.dumps(chemin)), True, "libelle vide : la serie redevient la chaine")
+    saisit(cdp, "#r-series input[type=color]", "#ff00aa")
+    verifie(vrai("(" + OPTION_APERCU + " || [])[1] === '#ff00aa' && /ff00aa|255,\\s*0,\\s*170/i.test(document.querySelector('#apercu .pg_tuile').innerHTML)"),
+            True, "couleur changee : la serie de l'apercu prend la couleur (option et SVG)")
+    cdp.js("document.querySelector('#r-series [data-serie-raz]').click(); 1")
+    verifie(vrai("etat.desc.pages[0].graphiques[0].series[0] === " + json.dumps(chemin) + " && (" + OPTION_APERCU + " || [])[1] === '" + palette + "'"),
+            True, "✕ : couleur de la palette, la serie redevient la chaine")
+    saisit(cdp, "#r-series [data-serie-champ=libelle]", "Volume cuve")
+    saisit(cdp, "#r-series [data-serie-champ=unite]", "L")
+    saisit(cdp, "#r-series input[type=color]", "#ff00aa")
+    verifie(vrai("JSON.stringify(" + OPTION_APERCU + ") === '[\"Volume cuve\",\"#ff00aa\",\"L\"]'"), True,
+            "libelle, unite et couleur : legende, couleur et axe de l'apercu")
+    verifie(cdp.js("etat.desc.pages[0].graphiques[0].series[0]"), {"chemin": chemin, "libelle": "Volume cuve", "unite": "L", "couleur": "#ff00aa"},
+            "description : la serie en forme objet")
+    verifie(vrai("!document.getElementById('ecrire').disabled && document.getElementById('motifs').textContent === ''", 15), True,
+            "serie en forme objet : description valide, « Ecrire » actif")
+
+
 def sonde_page(m, capture):
     cdp = m.cdp
     cdp.appel("Page.navigate", url=m.url + "?env=" + CUVE)
@@ -164,6 +204,7 @@ def sonde_page(m, capture):
     verifie(cdp.js("document.getElementById('lien-build').getAttribute('href')"),
             "http://127.0.0.1:7700/?env=" + CUVE + "#fichiers", "lien « Envoyer par la page Build »")
     verifie(cdp.js("document.getElementById('bandeau').classList.contains('cache')"), True, "carte en ligne : pas de bandeau")
+    sonde_series(cdp)
     if capture:
         time.sleep(1)
         cdp.capture(capture)

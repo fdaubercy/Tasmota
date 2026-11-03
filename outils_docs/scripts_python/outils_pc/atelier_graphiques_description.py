@@ -20,6 +20,10 @@ Champs et bornes :
   Une serie est un chemin du SENSOR `nom(.nom)*` ([A-Za-z_][A-Za-z0-9_]* puis segments [A-Za-z0-9_]+, sans "__",
   aucun segment constructor/prototype), ou `calc:<nom>` d'une calculee declaree. Le validateur ne sait pas si un chemin brut
   est historique : il l'accepte tel quel.
+  Dans `graphique.series` (pas dans `encadre.serie`), un element est SOIT cette chaine, SOIT un objet
+  {"chemin": <la chaine>, "libelle"?, "unite"?, "couleur"?} (formes melangeables) : chemin obligatoire, libelle texte de
+  1 a 30 octets, unite texte de 1 a 10 octets, couleur "#rrggbb" ; aucune autre cle. Les regles sur les series (calculee
+  connue, nature, cumul) portent sur `chemin` quelle que soit la forme. Aucune regle de doublon, dans l'une ou l'autre forme.
 - min, max : nombres (pas booleens) ; si les deux sont donnes, min < max.  zones : liste de [seuil, "#rrggbb"], seuil dans [0, 1].
 - periode : defaut "direct".  cadence : entier 1..3600 (secondes).  largeur : defaut "demi".  hauteur : entier 80..600.
 - cumul : "heure"|"jour"|"mois", refuse sur une calculee de nature "direct".
@@ -62,6 +66,7 @@ CLES = {
     "graphique": {"type", "titre", "series", "min", "max", "zones", "periode", "cadence", "largeur", "hauteur", "cumul"},
     "encadre": {"id", "type", "serie", "lien"},
     "calculee": {"formule", "nature"},
+    "serie": {"chemin", "libelle", "unite", "couleur"},
 }
 
 
@@ -175,6 +180,19 @@ def _serie(s, calculees):
     return None, None
 
 
+def _serie_objet(s, ou, m):
+    """Controle les cles de la forme objet d'une serie de graphique ; rend son chemin."""
+    _cles(s, "serie", m)
+    for cle, n in (("libelle", 30), ("unite", 10)):
+        if cle in s and not (isinstance(s[cle], str) and 1 <= _octets(s[cle]) <= n):
+            m.append("%s : %s de 1 a %d octets" % (ou, cle, n))
+    if "couleur" in s and not (isinstance(s["couleur"], str) and RE_COULEUR.fullmatch(s["couleur"])):
+        m.append("%s : couleur de serie mal formee %r" % (ou, s["couleur"]))
+    if "chemin" not in s:
+        m.append("%s : serie sans chemin" % ou)
+    return s.get("chemin")
+
+
 def _cles(obj, quoi, m):
     for k in sorted(set(obj) - CLES[quoi], key=str):
         m.append("%s : cle inconnue %r" % (quoi, k))
@@ -223,6 +241,8 @@ def _graphique(g, ou, calculees, m):
     if len(series) > BORNES["series"]:
         m.append("%s : series : %d > %d" % (ou, len(series), BORNES["series"]))
     for s in series:
+        if isinstance(s, dict):
+            s = _serie_objet(s, ou, m)
         motif, nature = _serie(s, calculees)
         if motif:
             m.append("%s : %s" % (ou, motif))

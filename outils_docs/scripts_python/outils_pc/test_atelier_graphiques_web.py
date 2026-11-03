@@ -105,6 +105,8 @@ def test_page_et_moteur(b):
     verifie((statut, "Atelier des graphiques" in page), (200, True), "GET / : la page")
     verifie("/moteur/pages_graphiques.js" in page and "/moteur/echarts.min.js" in page, True,
             "page : charge le vrai moteur et ECharts par /moteur/")
+    verifie(('id="r-series"' in page, "data-serie-champ" in page), (True, True),
+            "page : reglages par serie (libelle, unite, couleur)")
     statut, js = b.requete("GET", "/moteur/pages_graphiques.js")
     verifie((statut, "var PagesGraphiques" in js, b.entetes.get("Content-Type", "").startswith("application/javascript")),
             (200, True, True), "GET /moteur/pages_graphiques.js : le moteur du depot")
@@ -166,6 +168,13 @@ def test_conseil_valide(b):
     verifie(b.requete("POST", "/valide", {"description": description()}), (200, {"motifs": []}), "POST /valide : valide")
     statut, r = b.requete("POST", "/valide", {"description": description(ident="cs")})
     verifie((statut, any("reserve" in m for m in r["motifs"])), (200, True), "POST /valide : id de route reserve")
+    d = description(style="courbe")
+    d["pages"][0]["graphiques"][0]["series"] = [{"chemin": "sensorsCuve.niveauCuve.volume", "libelle": "Cuve", "unite": "L",
+                                                 "couleur": "#c0392b"}, "DS18B20.Temperature"]
+    verifie(b.requete("POST", "/valide", {"description": d}), (200, {"motifs": []}), "POST /valide : series objet et chaine melees")
+    d["pages"][0]["graphiques"][0]["series"][0]["couleur"] = "rouge"
+    statut, r = b.requete("POST", "/valide", {"description": d})
+    verifie((statut, any("couleur de serie" in m for m in r["motifs"])), (200, True), "POST /valide : couleur de serie mal formee")
 
 
 def test_acces(b):

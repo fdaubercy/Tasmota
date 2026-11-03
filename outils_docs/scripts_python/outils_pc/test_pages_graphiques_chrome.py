@@ -11,8 +11,10 @@ data/fs/pagesGraphiques.be::pagesGraphiques_page (style du theme sombre de Tasmo
 window.PAGE_GRAPHIQUES, puis les deux JS dans un seul <script>), avec les fichiers du depot (data/sd/...).
 /pages?f=valeurs et /histo?p=jour rendent des valeurs fixes ; ECharts et liquidfill sont servis COMPRESSES
 (data/sd/js/*.gz), comme par la carte : la page les decompresse (1er chargement) puis les relit du localStorage.
-Description : 5 graphiques (cadran, demi-cercle sur une calculee, liquide, courbe 24 h en pleine largeur, anneau dont
-une serie est absente), validee par atelier_graphiques_description.valide. Captures en 1400 et 380 px.
+Description : 5 graphiques (cadran, demi-cercle sur une calculee, liquide, courbe 24 h en pleine largeur dont la 1re serie
+est en forme objet {chemin, libelle, unite, couleur}, anneau dont une serie est absente), validee par
+atelier_graphiques_description.valide. Courbe : libelle en legende, couleur de la serie, unite sur l'axe et dans
+l'infobulle (showTip, texte affiche par ECharts). Captures en 1400 et 380 px.
 """
 
 import argparse
@@ -44,7 +46,9 @@ DESCRIPTION = {
         {"type": "demi-cercle", "titre": "Manque à remplir", "series": ["calc:cuve.manque"], "min": 0, "max": 6732, "cadence": 2},
         {"type": "liquide", "titre": "Taux de remplissage", "series": ["sensorsCuve.niveauCuve.tauxRemplissage"], "min": 0,
          "max": 1, "zones": [[0.2, "#c0392b"]], "cadence": 2},
-        {"type": "courbe", "titre": "Températures (24 h)", "series": ["DS18B20.Temperature", "ESP32.Temperature"],
+        {"type": "courbe", "titre": "Températures (24 h)", "series": [
+            {"chemin": "DS18B20.Temperature", "libelle": "Cuve", "unite": "°C", "couleur": "#ff00aa"},
+            {"chemin": "ESP32.Temperature", "unite": "°C"}],
          "periode": "jour", "largeur": "pleine", "hauteur": 260, "min": 0, "max": 60, "zones": [[0.5, "#c27400"]]},
         {"type": "anneau", "titre": "Entrées analogiques", "series": ["ANALOG.A1", "capteur.debranche"], "cadence": 2}]}],
     "calculees": {"cuve.manque": {"formule": "6732 - sensorsCuve.niveauCuve.volume", "nature": "direct"}}}
@@ -182,6 +186,9 @@ JS_ETAT = """(() => {
           hauts: t.map(e => Math.round(e.getBoundingClientRect().top)), larges: t.map(e => Math.round(e.getBoundingClientRect().width)),
           demi: (t[1] && t[1].querySelector('svg')) ? t[1].querySelector('svg').textContent.replace(/\\s/g, '') : '',
           zones: (() => { try { return echarts.getInstanceByDom(t[3]).getOption().series[0].markArea.data.length; } catch (e) { return -1; } })(),
+          courbe: (() => { try { const o = echarts.getInstanceByDom(t[3]).getOption();
+                                 return [o.series.map(s => s.name), o.series[0].color, o.yAxis[0].name, o.legend[0].data || null]; }
+                           catch (e) { return 'erreur ' + e.message; } })(),
           pageLarge: document.documentElement.scrollWidth, fenetre: window.innerWidth,
           cache: Object.keys(localStorage).sort(), msg: (document.querySelector('.pg_msg') || {}).textContent};
 })()"""
@@ -201,6 +208,14 @@ def sonde_largeur(m, largeur, capture):
             f"{largeur} px : séries réellement créées par ECharts (liquidfill chargé)")
     verifie("2732" in e["demi"], True, f"{largeur} px : demi-cercle = calculée 6732 - 4000 ({e['demi']!r})")
     verifie(e["zones"], 1, f"{largeur} px : zone de la courbe en markArea")
+    verifie(e["courbe"][:3], [["Cuve", "Temperature"], "#ff00aa", "°C"],
+            f"{largeur} px : courbe : libelle, couleur de la serie objet, unite commune sur l'axe")
+    infobulle = m.cdp.js("(() => { const t = document.querySelectorAll('#pg_page .pg_tuile')[3], g = echarts.getInstanceByDom(t);"
+                         " g.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 100});"
+                         " return new Promise(r => setTimeout(() => r(t.innerText), 400)); })()")
+    verifie(isinstance(infobulle, str) and "Cuve" in infobulle and "°C" in infobulle, True,
+            f"{largeur} px : infobulle de la courbe : libelle et unite affiches ({infobulle!r})")
+    m.cdp.js("echarts.getInstanceByDom(document.querySelectorAll('#pg_page .pg_tuile')[3]).dispatchAction({type: 'hideTip'}); 1")
     verifie(e["pageLarge"] <= e["fenetre"], True, f"{largeur} px : page {e['pageLarge']} px <= fenêtre {e['fenetre']} px")
     deux_colonnes = e["hauts"][0] == e["hauts"][1] and e["larges"][3] > e["larges"][0] * 1.5
     verifie(deux_colonnes, largeur >= 700, f"{largeur} px : {'deux colonnes, courbe en pleine largeur' if largeur >= 700 else 'une colonne'}")

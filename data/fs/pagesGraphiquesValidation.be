@@ -31,7 +31,8 @@ pagesGraphiquesValidation.CLES = {
     "page": ["id", "titre", "acces", "graphiques"],
     "graphique": ["type", "titre", "series", "min", "max", "zones", "periode", "cadence", "largeur", "hauteur", "cumul"],
     "encadre": ["id", "type", "serie", "lien"],
-    "calculee": ["formule", "nature"]
+    "calculee": ["formule", "nature"],
+    "serie": ["chemin", "libelle", "unite", "couleur"]
 }
 
 # ---- Validation (meme verdict que atelier_graphiques_description::valide) -------------------------
@@ -47,9 +48,9 @@ def pagesGraphiquesValidation_nombre(x)
 end
 pagesGraphiquesValidation.nombre = pagesGraphiquesValidation_nombre
 
-# Texte de 1 a 60 octets UTF-8 (titres)
-def pagesGraphiquesValidation_titreOk(t)
-    return type(t) == "string" && size(t) >= 1 && size(t) <= 60
+# Texte de 1 a n octets UTF-8 (n = 60 par defaut : titres)
+def pagesGraphiquesValidation_titreOk(t, n)
+    return type(t) == "string" && size(t) >= 1 && size(t) <= (n == nil ? 60 : n)
 end
 pagesGraphiquesValidation.titreOk = pagesGraphiquesValidation_titreOk
 
@@ -229,6 +230,19 @@ def pagesGraphiquesValidation_serie(s, calc)
 end
 pagesGraphiquesValidation.serie = pagesGraphiquesValidation_serie
 
+# Forme objet d'une serie de graphique {chemin, libelle?, unite?, couleur?} : motifs de ses cles, rend son chemin
+def pagesGraphiquesValidation_serieObjet(s, ou, m)
+    import pagesGraphiquesValidation
+    var V = pagesGraphiquesValidation
+    V.cles(s, "serie", m)
+    if (s.contains("libelle") && !V.titreOk(s["libelle"], 30))    m.push(ou + " : libelle de 1 a 30 octets")    end
+    if (s.contains("unite") && !V.titreOk(s["unite"], 10))    m.push(ou + " : unite de 1 a 10 octets")    end
+    if (s.contains("couleur") && !V.couleurOk(s["couleur"]))    m.push(ou + " : couleur de serie mal formee")    end
+    if (!s.contains("chemin"))    m.push(ou + " : serie sans chemin")    end
+    return s.find("chemin")
+end
+pagesGraphiquesValidation.serieObjet = pagesGraphiquesValidation_serieObjet
+
 def pagesGraphiquesValidation_graphique(g, ou, calc, m)
     import pagesGraphiquesValidation
     var V = pagesGraphiquesValidation
@@ -270,7 +284,8 @@ def pagesGraphiquesValidation_graphique(g, ou, calc, m)
         return
     end
     if (size(series) > V.BORNES["series"])    m.push(ou + " : series : " + str(size(series)) + " > " + str(V.BORNES["series"]))    end
-    for s: series
+    for x: series
+        var s = isinstance(x, map) ? V.serieObjet(x, ou, m) : x
         var r = V.serie(s, calc)
         if (r[0] != nil)
             m.push(ou + " : " + r[0])

@@ -3749,6 +3749,705 @@
    },
    "valide": true,
    "motif": ""
+  },
+  {
+   "nom": "valide : series objet (libelle, unite, couleur)",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "a.b",
+          "libelle": "Cuve",
+          "unite": "°C",
+          "couleur": "#c0392b"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : series objet et chaine melees",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "deux-axes",
+        "titre": "Graphique",
+        "series": [
+         "a.b",
+         {
+          "chemin": "c.d",
+          "unite": "%"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : serie objet sur une calculee",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "cadran",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "calc:x",
+          "libelle": "Double"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x": {
+      "formule": "a.b * 2",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : serie objet reduite au chemin",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "a.b"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : doublon chaine/objet de meme chemin (aucune regle de doublon, comme deux chaines)",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "a.b",
+         {
+          "chemin": "a.b",
+          "libelle": "Autre"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "valide : libelle de 30 octets et unite de 10 octets",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "a.b",
+          "libelle": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "unite": "ééééé"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": true,
+   "motif": ""
+  },
+  {
+   "nom": "invalide : serie objet sans chemin",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "libelle": "Cuve"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "serie sans chemin"
+  },
+  {
+   "nom": "invalide : serie objet a cle inconnue",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "a.b",
+          "nom": "Cuve"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "serie : cle inconnue"
+  },
+  {
+   "nom": "invalide : libelle de 31 octets",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "a.b",
+          "libelle": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "libelle de 1 a 30 octets"
+  },
+  {
+   "nom": "invalide : libelle accentue de 16 caracteres mais 32 octets",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "a.b",
+          "libelle": "éééééééééééééééé"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "libelle de 1 a 30 octets"
+  },
+  {
+   "nom": "invalide : libelle vide",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "a.b",
+          "libelle": ""
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "libelle de 1 a 30 octets"
+  },
+  {
+   "nom": "invalide : libelle non textuel",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "a.b",
+          "libelle": 42
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "libelle de 1 a 30 octets"
+  },
+  {
+   "nom": "invalide : unite vide",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "a.b",
+          "unite": ""
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "unite de 1 a 10 octets"
+  },
+  {
+   "nom": "invalide : unite de 11 octets",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "a.b",
+          "unite": "kilowattheu"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "unite de 1 a 10 octets"
+  },
+  {
+   "nom": "invalide : couleur de serie mal formee",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "a.b",
+          "couleur": "#12345"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "couleur de serie mal formee"
+  },
+  {
+   "nom": "invalide : couleur de serie nommee",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "a.b",
+          "couleur": "red"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "couleur de serie mal formee"
+  },
+  {
+   "nom": "invalide : couleur de serie avec retour a la ligne final",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "a.b",
+          "couleur": "#123456\n"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "couleur de serie mal formee"
+  },
+  {
+   "nom": "invalide : couleur de serie non textuelle",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "a.b",
+          "couleur": 1193046
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "couleur de serie mal formee"
+  },
+  {
+   "nom": "invalide : chemin invalide dans une serie objet",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "a..b"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "chemin invalide"
+  },
+  {
+   "nom": "invalide : chemin non textuel dans une serie objet",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": 5
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "chemin invalide"
+  },
+  {
+   "nom": "invalide : serie objet sur une calculee inconnue",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": "calc:y"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x": {
+      "formule": "a.b * 2",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "calculee inconnue"
+  },
+  {
+   "nom": "invalide : serie objet, nature direct sur periode jour",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "a.b",
+         {
+          "chemin": "calc:x"
+         }
+        ],
+        "periode": "jour"
+       }
+      ]
+     }
+    ],
+    "calculees": {
+     "x": {
+      "formule": "a.b * 2",
+      "nature": "direct"
+     }
+    }
+   },
+   "valide": false,
+   "motif": "nature de la formule"
+  },
+  {
+   "nom": "invalide : serie objet dans un encadre (forme reservee aux graphiques)",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         "a.b"
+        ]
+       }
+      ]
+     }
+    ],
+    "encadres": [
+     {
+      "id": "e1",
+      "type": "cadran",
+      "serie": {
+       "chemin": "a.b"
+      }
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "chemin invalide"
+  },
+  {
+   "nom": "invalide : serie ni chaine ni objet",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         [
+          "a.b"
+         ]
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "chemin invalide"
+  },
+  {
+   "nom": "invalide : chemin nul dans une serie objet",
+   "description": {
+    "version": 1,
+    "pages": [
+     {
+      "id": "p-series",
+      "titre": "Page",
+      "acces": "bouton",
+      "graphiques": [
+       {
+        "type": "courbe",
+        "titre": "Graphique",
+        "series": [
+         {
+          "chemin": null,
+          "libelle": "x"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "valide": false,
+   "motif": "chemin invalide"
   }
  ]
 }

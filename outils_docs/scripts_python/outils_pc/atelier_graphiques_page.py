@@ -56,6 +56,7 @@ input[type=color]{width:30px;height:24px;padding:0;border:1px solid var(--bord);
 #bandeau{margin:0 0 10px}
 .zone{display:flex;gap:6px;align-items:center;margin:4px 0;font-size:12px}
 .zone input[type=number]{width:62px}
+.serie{margin:4px 0 6px} .serie .ligne{margin:2px 0} .serie input.unite{width:64px;flex:none}
 details{font-size:12px;color:var(--doux);margin-top:8px}
 /* Apercu : cadre de la page de la carte (theme clair ou sombre de Tasmota, PC ou telephone) */
 .cadre{background:#fff;color:#222;border-radius:8px;padding:8px;margin:0 auto;font-family:verdana,sans-serif}
@@ -116,6 +117,8 @@ HTML = """<main>
   <h2>Réglages</h2>
   <div class="ligne"><span class="etiq">Titre</span><input type="text" id="r-titre"></div>
   <div class="ligne"><span class="etiq">Bornes</span><input type="number" id="r-min" placeholder="min"> à <input type="number" id="r-max" placeholder="max"></div>
+  <h3>Séries</h3>
+  <div id="r-series"></div>
   <h3>Seuils</h3>
   <div id="r-zones"></div>
   <a class="petit" href="#" id="r-ajout-zone">+ ajouter un seuil</a>

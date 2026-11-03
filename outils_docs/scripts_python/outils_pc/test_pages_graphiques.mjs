@@ -14,7 +14,8 @@
 //     une formule que valide_formule accepte, et c'est valide_formule, pas le verdict du cas, qui sert d'oracle ;
 //  3. PagesFormule.calcule : valeurs, null si une serie manque ou vaut null, division par zero -> null ;
 //  4. PagesGraphiques.optionDe : pour chaque graphique des descriptions VALIDES du fichier de cas, le type ECharts
-//     attendu de son style ; chaque style de `styles` couvert ; seuils et zones ; « série absente » dans le titre.
+//     attendu de son style ; chaque style de `styles` couvert ; seuils et zones ; « série absente » dans le titre ;
+//     series en forme objet (A7b) : libelle (legende), unite (infobulle, axes), couleur (palette remplacee), lecture par chemin.
 //  5. PagesGraphiques.lecteurCarte (fetch simule) : paquets de 12 chemins, /histo jour et mois (colonnes de seriesFichier).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -133,7 +134,7 @@ function typeRendu(o) {
 const vus = new Set();
 for (const c of CAS.cas.filter(c => c.valide)) {
   for (const p of c.description.pages) for (const g of p.graphiques) {
-    const o = G.optionDe(g, donneesDe(g.series), THEME);
+    const o = G.optionDe(g, donneesDe(g.series.map(s => s && typeof s === 'object' ? s.chemin : s)), THEME);
     vus.add(g.type);
     verifie(typeRendu(o) === TYPES[g.type], `cas « ${c.nom} » : ${g.type} -> ${TYPES[g.type]}`, typeRendu(o));
     verifie(JSON.stringify(o).indexOf('série absente') < 0, `cas « ${c.nom} » : pas de « série absente » avec toutes les series`);
@@ -141,9 +142,10 @@ for (const c of CAS.cas.filter(c => c.valide)) {
 }
 verifie(CAS.styles.every(s => vus.has(s)), 'chaque style de `styles` couvert par une description valide', CAS.styles.filter(s => !vus.has(s)));
 
+function cp0() { return {t: [T0, T0 + 1200, T0 + 2400, T0 + 3600, T0 + 4800, T0 + 6000], valeurs: {'e.kwh': [100, 101, 103, 0, 2, 5]}}; }
 // Details de rendu par style
 const opt = (type, extra, series = ['a.b', 'c.d']) => G.optionDe(Object.assign({type, titre: 'T', series}, extra || {}),
-  donneesDe(series), THEME);
+  donneesDe(series.map(s => typeof s === 'object' ? s.chemin : s)), THEME);
 verifie(!!opt('aire').series[0].areaStyle && !opt('courbe').series[0].areaStyle, 'aire : areaStyle, courbe : sans');
 verifie(!!opt('escalier').series[0].step, 'escalier : step');
 verifie(opt('barres-empilees').series.every(s => s.stack === opt('barres-empilees').series[0].stack && s.stack), 'barres empilees : meme stack');
@@ -158,8 +160,47 @@ verifie(nu.series[0].data[0][0] === 10 && nu.series[0].data[0][1] === 15, 'nuage
 const ch = opt('chaleur', {}, ['a.b']);
 verifie(ch.xAxis.data.length === 24 && ch.series[0].data.length > 0 && !!ch.visualMap, 'chaleur : 24 heures en x, visualMap');
 
+// Series en forme objet {chemin, libelle, unite, couleur} (A7b) : lues par leur chemin, melees aux chaines
+const CUVE = {chemin: 'a.b', libelle: 'Cuve', unite: '°C', couleur: '#ff00aa'};
+const ob = opt('courbe', {}, [CUVE, 'c.d']);
+const s0 = ob.series[0], s1 = ob.series[1];
+verifie(s0.name === 'Cuve' && s1.name === 'd', 'objet : libelle dans la legende, chaine : dernier segment', [s0.name, s1.name]);
+verifie(s0.color === '#ff00aa' && s1.color === Array.from(G.PALETTE)[1], 'objet : couleur posee, chaine : couleur de la palette', [s0.color, s1.color]);
+verifie(s0.data.length === 30 && s0.data[3][1] === 13, 'objet : valeurs lues par le chemin', s0.data[3]);
+verifie(!!s0.tooltip && s0.tooltip.valueFormatter(12.5) === '12,5 °C' && s0.tooltip.valueFormatter([T0, 3]) === '3 °C' &&
+  s0.tooltip.valueFormatter(null) === '-- °C' && !s1.tooltip, 'objet : unite dans l\'infobulle (chaine : infobulle par defaut)');
+verifie(!ob.yAxis.name, 'axe unique, unites differentes : pas d\'unite sur l\'axe', ob.yAxis.name);
+verifie(opt('aire', {}, [CUVE, {chemin: 'c.d', unite: '°C'}]).yAxis.name === '°C', 'axe unique, meme unite : unite sur l\'axe');
+const da2 = opt('deux-axes', {}, [CUVE, {chemin: 'c.d', unite: '%', couleur: '#00aa00'}]);
+verifie(da2.yAxis[0].name === '°C' && da2.yAxis[1].name === '%' && da2.series[1].color === '#00aa00', 'deux-axes : chaque axe avec l\'unite de sa serie',
+  da2.yAxis.map(a => a.name));
+const bp2 = G.optionDe({type: 'barres-periode', titre: 'kWh', series: [{chemin: 'e.kwh', libelle: 'Conso', unite: 'kWh', couleur: '#123456'}], cumul: 'heure'}, cp0(), THEME);
+verifie(bp2.series[0].name === 'Conso' && bp2.series[0].color === '#123456' && bp2.yAxis.name === 'kWh' &&
+  bp2.series[0].tooltip.valueFormatter(3) === '3 kWh', 'barres par periode : libelle, couleur, unite (axe et infobulle)', bp2.series[0]);
+const an = opt('anneau', {}, [CUVE, 'c.d']).series[0].data;
+verifie(an[0].name === 'Cuve' && an[0].itemStyle.color === '#ff00aa' && an[1].itemStyle.color === Array.from(G.PALETTE)[1] &&
+  an[0].tooltip.valueFormatter(4) === '4 °C', 'anneau : libelle, couleur et unite de la part', an[0]);
+const ca2 = opt('cadran', {min: 0, max: 100}, [CUVE]).series[0];
+verifie(ca2.detail.formatter === '39 °C' && ca2.data[0].name === 'Cuve' && JSON.stringify(ca2.axisLine.lineStyle.color) === '[[1,"#ff00aa"]]',
+  'cadran : unite sous l\'aiguille, libelle, couleur hors zones', ca2);
+const li2 = G.optionDe({type: 'liquide', titre: 'L', series: [CUVE], min: 0, max: 100}, {t: [T0], valeurs: {'a.b': [10]}}, THEME).series[0];
+verifie(li2.color[0] === '#ff00aa' && li2.label.formatter === '10 °C', 'liquide : couleur et unite de la serie', li2);
+const dc2 = G.optionDe({type: 'demi-cercle', titre: 'T', series: [{chemin: 'a.b', unite: '<b>', couleur: '#ff00aa'}], min: 0, max: 100},
+  {t: [T0], valeurs: {'a.b': [10]}}, THEME).svg;
+verifie(dc2.indexOf('#ff00aa') > 0 && dc2.indexOf('10 &#60;b&#62;') > 0 && dc2.indexOf('<b>') < 0, 'demi-cercle : couleur, unite echappee', dc2);
+const nu2 = opt('nuage', {}, [CUVE, {chemin: 'c.d', libelle: 'Humidite', unite: '%'}]);
+verifie(nu2.xAxis.name === 'Cuve °C' && nu2.yAxis.name === 'Humidite %' && nu2.series[0].color === '#ff00aa', 'nuage : axes nommes avec unite, couleur',
+  [nu2.xAxis.name, nu2.yAxis.name, nu2.series[0].color]);
+verifie(opt('radar', {}, [CUVE, 'c.d']).radar.indicator[0].name === 'Cuve', 'radar : libelle de l\'indicateur');
+const ho = opt('courbe', {}, [{chemin: 'DS18B20.Temperature', libelle: 'Cuve'}, 'ESP32.Temperature', 'a.Temperature']).series.map(s => s.name);
+verifie(JSON.stringify(ho) === '["Cuve","ESP32.Temperature","a.Temperature"]', 'homonymes : une serie a libelle ne compte plus', ho);
+const ho2 = opt('courbe', {}, [{chemin: 'DS18B20.Temperature', libelle: 'Cuve'}, 'ESP32.Temperature']).series.map(s => s.name);
+verifie(JSON.stringify(ho2) === '["Cuve","Temperature"]', 'homonyme a libelle : l\'autre serie garde le dernier segment', ho2);
+const ab = G.optionDe({type: 'courbe', titre: 'V', series: [CUVE, {chemin: 'absente.x', libelle: 'X'}]}, donneesDe(['a.b']), THEME);
+verifie(ab.title.text.indexOf('série absente') > 0 && ab.series.length === 1 && ab.series[0].name === 'Cuve', 'objet : serie absente reperee par son chemin');
+
 // Cumul par periode : hausses d'un compteur ; apres une remise a zero, la nouvelle valeur compte depuis zero
-const cp = {t: [T0, T0 + 1200, T0 + 2400, T0 + 3600, T0 + 4800, T0 + 6000], valeurs: {'e.kwh': [100, 101, 103, 0, 2, 5]}};
+const cp = cp0();
 const bp = G.optionDe({type: 'barres-periode', titre: 'kWh', series: ['e.kwh'], cumul: 'heure'}, cp, THEME);
 verifie(JSON.stringify(bp.series[0].data) === '[3,5]', 'barres par periode (heure) : 3 puis 5', bp.series[0].data);
 const rz = G.optionDe({type: 'barres-periode', titre: 'kWh', series: ['e.kwh'], cumul: 'heure'},
