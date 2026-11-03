@@ -1,0 +1,257 @@
+"""Sonde Chrome de la page de l'atelier des graphiques (atelier_graphiques_page.PAGE), plan A7.
+
+UTILISATION (a la main ; aucun pio, aucune carte ; Chrome tourne ~40 s)
+    "$USERPROFILE/.platformio/penv/Scripts/python.exe" outils_docs/scripts_python/outils_pc/test_atelier_graphiques_page_chrome.py
+        [--capture FICHIER.png] [--sans-temoin]
+Code de sortie 0 = vert : la vraie page passe toutes les verifications ET le temoin (la meme page avec une erreur JS
+volontaire au chargement) est detecte. Client DevTools repris de test_build_page_chrome.py.
+
+Montage : atelier_graphiques_web.py dans un processus fils (mode --serveur), devant une COPIE du depot (meme montage
+que test_atelier_graphiques_web.py) ; la carte est simulee en remplacant build_ota_http._get dans ce processus (aucun
+reseau) : la cuve repond, le P4 (192.168.0.43 sans port) est muet. Detection des builds neutralisee ;
+OUTILS_TASMOTA_DOSSIER temporaire. Fenetre de 1400 px (capture comparee a modele-B.png par l'utilisateur).
+Scenario : apercu trace par le vrai moteur, styles proposes, un seuil ajoute puis change modifie le SVG de l'apercu,
+bascules page / telephone / theme sombre, deplacement d'une tuile, carte muette -> bandeau « valeurs simulees »,
+avertissement ECharts exclu, ecriture dans la copie, lien vers la page Build.
+"""
+
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.request
+from pathlib import Path
+
+ICI = Path(__file__).resolve().parent
+sys.path.insert(0, str(ICI))
+from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre   # client DevTools stdlib
+
+ECHECS = []
+CUVE, P4 = "tasmota32s3-garage-capteurs-cuve-modbus", "tasmota32p4-garage-serveur-modbus"
+MARQUE_TEMOIN = "var gabarit = '', apercuCtrl = null"
+INJECTION_TEMOIN = "\n$('bouton-qui-n-existe-pas').onclick = null;   // TEMOIN : TypeError au chargement\n"
+SERIES = ["sensorsCuve.niveauCuve.volume", "sensorsCuve.niveauCuve.tauxRemplissage", "DS18B20.Temperature"]
+
+
+def verifie(obtenu, attendu, libelle):
+    ok = obtenu == attendu
+    print(("OK   " if ok else "KO   ") + libelle + ("" if ok else f"  (obtenu {obtenu!r}, attendu {attendu!r})"), flush=True)
+    if not ok:
+        ECHECS.append(libelle)
+    return ok
+
+
+def fausse_carte(ip, chemin, delai):
+    """Carte simulee : la cuve (IP:port) repond, le P4 ne repond pas."""
+    if ip == "192.168.0.43":
+        raise OSError("pas de reponse")
+    if "p=liste" in chemin:
+        return json.dumps({"nom": "mesures", "series": SERIES, "mois": []}).encode()
+    if "p=jour" in chemin:
+        t0 = int(time.time()) // 300 * 300 - 288 * 300
+        return json.dumps({"nom": "mesures", "series": SERIES, "pas": 300, "t0": t0,
+                           "valeurs": [[round(4300 - k * 1.5, 1) for k in range(288)], [round(0.64 - k * 0.0002, 4) for k in range(288)],
+                                       [round(11.5 + 1.6 * ((k % 144) / 144), 2) for k in range(288)]],
+                           "tEncours": t0 + 288 * 300, "encours": [3870, 0.58, 12.1]}).encode()
+    if chemin.startswith("/cm"):
+        return json.dumps({"StatusSNS": {"sensorsCuve": {"niveauCuve": {"volume": 3870, "tauxRemplissage": 0.58}},
+                                         "DS18B20": {"Temperature": 12.1}}}).encode()
+    return b'{"historique": true}'
+
+
+def mode_serveur(port, depot, temoin):
+    import atelier_graphiques_web as agw
+    import build_ota_http
+    if temoin:
+        import atelier_graphiques_page
+        assert atelier_graphiques_page.PAGE.count(MARQUE_TEMOIN) == 1, "marque du temoin introuvable dans la page"
+        atelier_graphiques_page.PAGE = atelier_graphiques_page.PAGE.replace(MARQUE_TEMOIN, INJECTION_TEMOIN + MARQUE_TEMOIN)
+    build_ota_http._get = fausse_carte
+    agw.DEPOT = Path(depot)
+    agw.builds_en_cours_defaut = lambda: []
+    sys.argv = ["atelier_graphiques_web.py", "--http", str(port), "--local", "--sans-navigateur"]
+    return agw.principal()
+
+
+class Montage:
+    def __init__(self):
+        self.t = Path(tempfile.mkdtemp(prefix="sonde_atelier_graphiques_"))
+        self.serveur = self.chrome = None
+
+    def demarre(self, temoin):
+        os.environ["OUTILS_TASMOTA_DOSSIER"] = str(self.t / "outils")
+        self.depot = monte_depot(self.t)
+        environ = dict(os.environ, PYTHONIOENCODING="utf-8")
+        self.port = port_libre()
+        self.url = f"http://127.0.0.1:{self.port}/"
+        commande = ([sys.executable, "-u", str(Path(__file__).resolve()), "--serveur", str(self.port), str(self.depot)]
+                    + (["--temoin"] if temoin else []))
+        self.serveur = subprocess.Popen(commande, env=environ, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        self._attend_http(self.url + "moteur/pages_graphiques.css", 30)
+        chrome = next((c for c in CHROMES if c.is_file()), None)
+        if chrome is None:
+            raise FileNotFoundError("chrome.exe introuvable (Program Files, LOCALAPPDATA)")
+        self.port_cdp = port_libre()
+        self.chrome = subprocess.Popen([str(chrome), "--headless=new", f"--remote-debugging-port={self.port_cdp}",
+                                        "--remote-allow-origins=*", f"--user-data-dir={self.t / 'profil'}",
+                                        "--no-first-run", "--no-default-browser-check", "--disable-extensions",
+                                        "--window-size=1400,1000", "about:blank"],
+                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        cibles = self._attend_http(f"http://127.0.0.1:{self.port_cdp}/json/list", 20)
+        page = next(c for c in json.loads(cibles) if c.get("type") == "page")
+        self.cdp = Cdp(page["webSocketDebuggerUrl"])
+        for domaine in ("Runtime.enable", "Log.enable", "Page.enable"):
+            self.cdp.appel(domaine)
+        self.cdp.appel("Emulation.setDeviceMetricsOverride", width=1400, height=1000, deviceScaleFactor=1, mobile=False)
+
+    def _attend_http(self, url, delai):
+        limite = time.monotonic() + delai
+        while time.monotonic() < limite:
+            try:
+                with urllib.request.urlopen(url, timeout=2) as r:
+                    return r.read().decode("utf-8")
+            except OSError:
+                time.sleep(0.2)
+        raise TimeoutError(f"{url} ne repond pas")
+
+    def ferme(self):
+        tue_arbre(self.chrome)
+        tue_arbre(self.serveur)
+        shutil.rmtree(self.t, ignore_errors=True)
+
+
+def monte_depot(t):
+    """Copie du depot du banc HTTP : .ini, .h, autoexec et persist utiles, fichiers du moteur."""
+    import test_atelier_graphiques_web as taw
+    depot = Path(t) / "depot"
+    depot.mkdir()
+    taw.tage.copie(depot)
+    for rel in ("tasmota/user_config_override.h", taw.tage.fbe.dossier_carte(CUVE) + "/_persist.json",
+                taw.tage.fbe.dossier_carte(P4) + "/autoexec.be", taw.tage.fbe.dossier_carte(P4) + "/_persist.json"):
+        (depot / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(taw.DEPOT / rel, depot / rel)
+    for rel in taw.SD:
+        (depot / "data/sd" / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(taw.DEPOT / "data/sd" / rel, depot / "data/sd" / rel)
+    return depot
+
+
+def svg_apercu(cdp):
+    return cdp.js("(document.querySelector('#apercu .pg_tuile') || {}).innerHTML || ''")
+
+
+def sonde_page(m, capture):
+    cdp = m.cdp
+    cdp.appel("Page.navigate", url=m.url + "?env=" + CUVE)
+    attend(cdp, "document.getElementById('relire').textContent.indexOf('lecture') < 0", 20)
+    verifie(cdp.js("document.getElementById('relire').textContent"), "● en ligne 192.168.0.43:8081",
+            "chargement : carte en ligne, adresse par le maitre")
+    verifie(cdp.js("document.getElementById('env').value"), CUVE, "?env= preselectionne la cuve")
+    verifie(bool(attend(cdp, "(document.querySelector('#apercu .pg_tuile') || {}).getAttribute && "
+                             "document.querySelector('#apercu .pg_tuile').getAttribute('data-rendu') === 'line'", 15)),
+            True, "apercu : courbe tracee par le vrai moteur (data-rendu)")
+    verifie(attend(cdp, "document.querySelectorAll('#vignettes .vign').length >= 3", 10), True, "styles proposes : 3 au moins")
+    verifie(attend(cdp, "!document.getElementById('ecrire').disabled", 15), True, "diff calcule : « Ecrire » actif")
+    verifie(cdp.js("[...document.querySelectorAll('#onglets button')].some(function(b){return b.textContent.indexOf('cenv') === 0;})"),
+            True, "onglets du code : cenv")
+    verifie(cdp.js("document.getElementById('lien-build').getAttribute('href')"),
+            "http://127.0.0.1:7700/?env=" + CUVE + "#fichiers", "lien « Envoyer par la page Build »")
+    verifie(cdp.js("document.getElementById('bandeau').classList.contains('cache')"), True, "carte en ligne : pas de bandeau")
+    if capture:
+        time.sleep(1)
+        cdp.capture(capture)
+    avant = svg_apercu(cdp)
+    cdp.js("document.getElementById('r-ajout-zone').click(); 1")
+    verifie(attend(cdp, "/c0392b|192,\\s*57,\\s*43/i.test((document.querySelector('#apercu .pg_tuile') || {}).innerHTML || '')", 10),
+            True, "seuil ajoute : sa couleur apparait dans l'apercu")
+    un = svg_apercu(cdp)
+    cdp.js("var i=document.querySelector('#r-zones input[type=number]'); i.value='70'; i.dispatchEvent(new Event('input', {bubbles: true})); 1")
+    attend(cdp, "JSON.stringify(etat.desc.pages[0].graphiques[0].zones) === '[[0.7,\"#c0392b\"]]'", 5)
+    verifie(bool(attend(cdp, "(document.querySelector('#apercu .pg_tuile') || {}).innerHTML !== " + json.dumps(un)
+                             + " && /c0392b|192,\\s*57,\\s*43/i.test(document.querySelector('#apercu .pg_tuile').innerHTML)", 10)),
+            True, "seuil change (20 -> 70 %) : le SVG de l'apercu change")
+    verifie(avant != un, True, "seuil : apercu different de celui d'avant le seuil")
+    cdp.js("document.getElementById('ajout-graphique').click(); document.querySelector('[data-mode=page]').click(); 1")
+    verifie(attend(cdp, "document.querySelectorAll('#apercu .pg_tuile').length === 2 && document.getElementById('cadre').classList.contains('page')", 10),
+            True, "bascule « page » : la grille montre les 2 graphiques")
+    cdp.js("var tt=document.querySelectorAll('#apercu .pg_tuile'), dt=new DataTransfer(); dt.setData('text/plain','1');"
+           " tt[0].dispatchEvent(new DragEvent('drop', {dataTransfer: dt, bubbles: true, cancelable: true})); 1")
+    verifie(attend(cdp, "etat.desc.pages[0].graphiques[1].zones && !etat.desc.pages[0].graphiques[0].zones", 5), True,
+            "tuile deplacee : ordre des graphiques echange")
+    cdp.js("document.getElementById('sombre').click(); 1")
+    if capture:                                       # grille du modele C (theme sombre), a cote de la capture du modele B
+        attend(cdp, "[...document.querySelectorAll('#apercu .pg_tuile')].every(function(t){return t.getAttribute('data-rendu');})"
+                    " && !document.getElementById('ecrire').disabled", 15)
+        time.sleep(1)
+        cdp.capture(str(Path(capture).with_name(Path(capture).stem + "-page.png")))
+    cdp.js("document.querySelector('[data-vue=telephone]').click(); 1")
+    verifie(attend(cdp, "document.getElementById('cadre').getBoundingClientRect().width === 380 && "
+                        "getComputedStyle(document.getElementById('cadre')).backgroundColor === 'rgb(37, 37, 37)'", 5),
+            True, "bascules telephone (380 px) et theme sombre")
+    cdp.js("document.getElementById('r-page-id').value='cs'; document.getElementById('r-page-id').dispatchEvent(new Event('input')); 1")
+    verifie(attend(cdp, "document.getElementById('motifs').textContent.indexOf('reserve') >= 0 && document.getElementById('ecrire').disabled", 10),
+            True, "adresse de page = route existante : motif affiche, « Ecrire » grise")
+    cdp.js("document.getElementById('r-page-id').value='tableau-cuve'; document.getElementById('r-page-id').dispatchEvent(new Event('input')); 1")
+    cdp.js("etat.envs.forEach(function(e){ e.exclut_echarts = true; }); dessineAlertes(); 1")
+    verifie(cdp.js("document.getElementById('alertes').textContent.indexOf('ECharts est exclu') >= 0"), True,
+            "env qui exclut ECharts : avertissement (pas un refus)")
+    cdp.js("etat.envs.forEach(function(e){ e.exclut_echarts = false; }); dessineAlertes(); window.confirm = function(){ return true; }; 1")
+    verifie(attend(cdp, "!document.getElementById('ecrire').disabled", 15), True, "adresse corrigee : « Ecrire » actif")
+    cdp.js("document.getElementById('ecrire').click(); 1")
+    verifie(attend(cdp, "document.querySelector('#message .avert.vert') !== null", 15), True, "ecriture : message de reussite")
+    rel = "data/garage/tasmota32s3-capteurs-cuve-modbus/pages_graphiques.json"
+    ecrit = json.loads((m.depot / rel).read_text(encoding="utf-8")) if (m.depot / rel).is_file() else {}
+    verifie((ecrit.get("pages") or [{}])[0].get("id"), "tableau-cuve", "ecriture : description ecrite dans la copie")
+    verifie(attend(cdp, "document.getElementById('resume').textContent.indexOf('0 fichier') === 0", 10), True,
+            "apres ecriture : plus rien a ecrire")
+    cdp.js("var s=document.getElementById('env'); s.value='" + P4 + "'; s.dispatchEvent(new Event('change')); 1")
+    verifie(attend(cdp, "!document.getElementById('bandeau').classList.contains('cache') && "
+                        "document.getElementById('relire').textContent === 'valeurs simulées'", 25),
+            True, "carte muette (P4) : bandeau « valeurs simulees »")
+    verifie(attend(cdp, "!!document.querySelector('#apercu .pg_tuile[data-rendu]')", 15), True,
+            "carte muette : l'apercu trace quand meme (valeurs simulees)")
+    verifie(cdp.erreurs(), [], "aucune erreur JS pendant toute la sonde")
+
+
+def sonde_temoin(m):
+    m.cdp.appel("Page.navigate", url=m.url)
+    time.sleep(4)
+    verifie(len(m.cdp.erreurs()) > 0, True, "TEMOIN : l'erreur JS volontaire est detectee")
+
+
+def principal():
+    options = argparse.ArgumentParser(description="Sonde Chrome de la page de l'atelier des graphiques.")
+    options.add_argument("--sans-temoin", action="store_true")
+    options.add_argument("--capture", help="capture PNG de la page a 1400 px")
+    options.add_argument("--serveur", nargs=2, metavar=("PORT", "DEPOT"), help=argparse.SUPPRESS)
+    options.add_argument("--temoin", action="store_true", help=argparse.SUPPRESS)
+    args = options.parse_args()
+    sys.stdout.reconfigure(errors="replace")        # console cp1252 : un caractere hors table ne tue pas la sonde
+    if args.serveur:
+        return mode_serveur(int(args.serveur[0]), args.serveur[1], args.temoin)
+    for temoin in ([False] if args.sans_temoin else [False, True]):
+        print(f"\n=== {'TEMOIN (erreur JS volontaire)' if temoin else 'page reelle'} ===", flush=True)
+        m = None
+        try:
+            m = Montage()
+            m.demarre(temoin)
+            sonde_temoin(m) if temoin else sonde_page(m, args.capture)
+        except FileNotFoundError as erreur:
+            print(f"BLOQUE : {erreur}")
+            return 3
+        except Exception as erreur:
+            verifie(repr(erreur), "pas d'exception de la sonde", "sonde : deroulement")
+        finally:
+            if m:
+                m.ferme()
+    print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
+    return 1 if ECHECS else 0
+
+
+if __name__ == "__main__":
+    sys.exit(principal())
