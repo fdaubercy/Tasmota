@@ -40,11 +40,15 @@ def verifie(obtenu, attendu, libelle):
     return ok
 
 
-def refuse(appel, exception, libelle):
+def refuse(appel, exception, libelle, motif=""):
     try:
         appel()
     except exception as e:
-        print("OK   " + libelle + f"  ({e})")
+        if motif in str(e):
+            print("OK   " + libelle + f"  ({e})")
+            return
+        print("KO   " + libelle + f"  (motif {motif!r} absent de : {e})")
+        ECHECS.append(libelle)
         return
     print("KO   " + libelle + "  (pas de refus)")
     ECHECS.append(libelle)
@@ -228,8 +232,10 @@ def test_empreinte_perimee(racine):
     p = age.prevoit(racine, CUVE, description(), False)
     auto = racine / fbe.dossier_carte(CUVE) / "autoexec.be"
     auto.write_bytes(auto.read_bytes() + b"# ajout\n")
+    etat = instantane(racine)
     refuse(lambda: age.ecrit(racine, CUVE, description(), False, p["empreinte"], SANS_BUILD), RuntimeError,
            "autoexec modifie apres le diff : refus")
+    meme_etat(racine, etat, "autoexec modifie : copie inchangee octet pour octet")
     refuse(lambda: age.ecrit(racine, CUVE, description("aire"), False, p["empreinte"], SANS_BUILD), RuntimeError,
            "description changee apres le diff : refus")
 
@@ -252,6 +258,73 @@ def test_exception_au_milieu(racine):
     meme_etat(racine, etat, "exception au milieu : tout est annule")
 
 
+def edite_exclusion_cuve(racine, change):
+    """Exclusion de la cuve editee « a la main » dans la copie : change(lignes de la section, indice de la ligne REF)."""
+    cenv = racine / fbi.FICHIER_CENV
+    texte = cenv.read_bytes().decode("utf-8")
+    eol = "\r\n" if "\r\n" in texte else "\n"
+    lignes = texte.split(eol)
+    debut = lignes.index(f"[env:{CUVE}]")
+    fin = next((i for i in range(debut + 1, len(lignes)) if lignes[i].startswith("[")), len(lignes))
+    i = next(i for i in range(debut, fin) if lignes[i].strip() == age.REF)
+    cenv.write_bytes(eol.join(lignes[:debut] + change(lignes[debut:fin], i - debut) + lignes[fin:]).encode("utf-8"))
+
+
+def test_exclusion_a_la_main(racine):
+    def literale(s, i):                              # les 6 chemins ecrits a la place de la liste
+        indent = s[i][:len(s[i]) - len(s[i].lstrip())]
+        return s[:i] + [indent + f for f in age.FICHIERS_MOTEUR] + s[i + 1:]
+    edite_exclusion_cuve(racine, literale)
+    etat = instantane(racine)
+    refuse(lambda: age.prevoit(racine, CUVE, description(), False), ValueError,
+           "exclusion ecrite sans la liste : refus", "introuvable")
+    meme_etat(racine, etat, "exclusion ecrite sans la liste : rien d'ecrit")
+
+
+def test_reference_sur_la_ligne_option(racine):
+    def en_tete(s, i):                               # REF sur la ligne `custom_files_exclude =`, suivie d'autres valeurs
+        o = next(k for k, l in enumerate(s) if l.split("=", 1)[0].strip() == fbe.EXCLUDE)
+        valeur = s[o].split("=", 1)[1]
+        decalage = len(s[o]) - len(valeur.lstrip())
+        s = s[:i] + s[i + 1:]
+        return s[:o] + [s[o][:decalage] + age.REF, " " * decalage + valeur.strip()] + s[o + 1:]
+    edite_exclusion_cuve(racine, en_tete)
+    etat = instantane(racine)
+    refuse(lambda: age.prevoit(racine, CUVE, description(), False), ValueError,
+           "liste sur la ligne de l'option : refus", "sur la ligne custom_files_exclude")
+    meme_etat(racine, etat, "liste sur la ligne de l'option : rien d'ecrit")
+
+
+def test_controle_refuse(racine):
+    def doublon(s, i):                               # un fichier du moteur exclu aussi a la main
+        return s[:i + 1] + [s[i].replace(age.REF, age.FICHIERS_MOTEUR[0])] + s[i + 1:]
+    edite_exclusion_cuve(racine, doublon)
+    etat = instantane(racine)
+    refuse(lambda: age.prevoit(racine, CUVE, description(), False), ValueError,
+           "moteur encore exclu apres la levee : refus du controle", "toujours exclu")
+    meme_etat(racine, etat, "controle en echec : rien d'ecrit")
+
+
+def test_annulation_suppression(racine):
+    ecrit(racine, CUVE, description())
+    etat = instantane(racine)
+    vrai, appels = fbs._remplace, []
+
+    def casse(chemin, octets):                       # ordre : autoexec, description SUPPRIMEE, puis cenv -> echec
+        if chemin.name != fbs.MARQUE:
+            appels.append(chemin.name)
+            if chemin.name == fbi.FICHIER_CENV and len(appels) == 2:
+                raise OSError("disque plein (simule)")
+        vrai(chemin, octets)
+    fbs._remplace = casse
+    try:
+        refuse(lambda: ecrit(racine, CUVE, None), OSError, "retrait : exception apres la suppression de la description")
+    finally:
+        fbs._remplace = vrai
+    verifie(appels[:2], ["autoexec.be", fbi.FICHIER_CENV], "retrait : l'echec tombe bien apres la suppression")
+    meme_etat(racine, etat, "retrait annule : description remise, tout restaure octet pour octet")
+
+
 def test_invalide(racine):
     refuse(lambda: age.prevoit(racine, CUVE, {"version": 2, "pages": []}, False), ValueError, "description invalide : refus")
     refuse(lambda: age.prevoit(racine, "tasmota32-base", description(), False), LookupError, "env de base : refus")
@@ -259,7 +332,8 @@ def test_invalide(racine):
 
 TESTS = [test_exclusions, test_premiere_page, test_deuxieme_modification, test_derniere_page, test_exclusion_heritee,
          test_sans_historique, test_liquide, test_solidifie, test_build_en_cours, test_empreinte_perimee,
-         test_exception_au_milieu, test_invalide]
+         test_exception_au_milieu, test_exclusion_a_la_main, test_reference_sur_la_ligne_option, test_controle_refuse,
+         test_annulation_suppression, test_invalide]
 
 
 if __name__ == "__main__":
