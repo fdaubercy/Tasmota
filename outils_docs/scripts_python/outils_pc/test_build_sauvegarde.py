@@ -140,6 +140,12 @@ def banc():
         leve(lambda: bs.parametres(racine, ENV, "../x.dmp"), ValueError, "nom de sauvegarde hostile refuse")
         leve(lambda: bs.liste(racine, "../.."), ValueError, "nom d'env hostile refuse")
         leve(lambda: bs.prend(racine, "..", carte.ip, "manuelle"), ValueError, "env « .. » refuse (rien hors de sauvegardes_cartes)")
+        jetable = bs.prend(racine, ENV, carte.ip, "manuelle")["fichier"]
+        leve(lambda: bs.supprime(racine, ENV, [jetable, "../x.dmp"]), ValueError, "supprime : un nom invalide dans la liste refuse")
+        verifie((Path(racine) / bs.DOSSIER / ENV / jetable).is_file(), True, "supprime : refus -> rien n'est efface")
+        verifie(bs.supprime(racine, ENV, [jetable])["supprimees"], [jetable], "supprime : sauvegarde effacee")
+        verifie(sorted(x.name for x in (Path(racine) / bs.DOSSIER / ENV).glob(jetable[:-4] + ".*")), [], "supprime : .dmp et fiche effaces")
+        leve(lambda: bs.supprime(racine, ENV, []), ValueError, "supprime : liste vide refusee")
         carte.config = b"<html>" + b"x" * 5000 + b"</html>"
         leve(lambda: bs.prend(racine, ENV, carte.ip, "manuelle"), RuntimeError, "prend : page HTML longue refusee (CRC)")
         carte.config = dmp()

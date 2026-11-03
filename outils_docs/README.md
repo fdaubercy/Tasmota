@@ -972,6 +972,10 @@ compteurs ; voir l'onglet « Aide »). Fichiers `AAAAMMJJ-HHMMSS_<origine>.dmp` 
   `***` : laissés ainsi, ils gardent leur valeur. Une valeur changée est surlignée ; « Enregistrer la copie » écrit
   une **nouvelle** sauvegarde « modifiée », l'originale n'est jamais réécrite. La copie est relue et comparée à
   l'attendu : au moindre écart, rien n'est gardé.
+- **Origine** de chaque sauvegarde : fixée par l'action qui l'a prise (« manuelle », « avant flash », « avant
+  restauration », « modifiée ») et écrite dans le nom du fichier et sa fiche `.json`.
+- **Supprimer** : cocher les sauvegardes dans l'historique, puis « Supprimer la sélection » (confirmation ; `.dmp` et
+  fiche effacés).
 - **« Comparer »** : écarts avec la carte en ligne (rien n'est enregistré) ou avec une autre sauvegarde ; les
   paramètres en écart sont mis en couleur.
 - **« Restaurer la sélection »** : écarts avec la carte affichés et confirmés, sauvegarde de la carte d'abord, envoi,

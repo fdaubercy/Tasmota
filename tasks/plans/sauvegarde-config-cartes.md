@@ -66,6 +66,7 @@ thème à droite avec filtre) ; onglet nommé **« Sauvegarde configuration »**
 
 ## A10 — Remarques de l'utilisateur du 2026-11-03
 - [x] Paramètres plus longs que leur zone affichés sur plusieurs lignes ; valeur JSON : une icône à côté du champ propose la vue formatée — preuve : champs en `textarea` à la hauteur de leur contenu (`sAjuste`), icône `{ }` sur les listes et objets (vue formatée, retour sur une ligne, pas une modification) ; sonde Chrome VERTE (`flag3` sur 199 px, icône aller-retour), capture du 2026-11-03
+- [x] Historique : cases pour choisir les sauvegardes à supprimer du dépôt (`.dmp` et fiche `.json`), suppression confirmée (demande du 2026-11-03) — preuve : case par ligne et « tout choisir », « Supprimer la sélection (n) » confirmé, `POST /sauvegarde/supprimer` (`build_sauvegarde.supprime` : tous les noms contrôlés avant d'effacer) ; banc VERT (59 contrôles : nom invalide → rien d'effacé) ; sonde Chrome VERTE
 - [ ] Relais revenu ON après la restauration (sauvegarde OFF, `PowerOnState 3`, minuteries OFF jusqu'à 08:00) : cause à trouver ; en attendant, la confirmation de la restauration prévient que l'état des relais peut changer au redémarrage
 
 ## A8 — Documentation et clôture
@@ -78,7 +79,7 @@ thème à droite avec filtre) ; onglet nommé **« Sauvegarde configuration »**
 ## Améliorations restantes
 - [ ] [projet] Marquer dans la page les paramètres reposés au démarrage par le persist ou l'`autoexec.bat` (sortie « commandes » de decode-config comparée aux lignes de l'`autoexec.bat`)
 - [ ] [projet] Restauration par MQTT pour une carte injoignable en HTTP (decode-config sait le faire)
-- [ ] [projet] Purge des sauvegardes anciennes (aucune n'est effacée pour l'instant)
+- [ ] [projet] Purge automatique des sauvegardes anciennes (la suppression à la main est en A10)
 
 ## Vérification
 - A1 : sorties de decode-config sur le vrai `.dmp` du différentiel (comparaison d'octets, valeurs relues).

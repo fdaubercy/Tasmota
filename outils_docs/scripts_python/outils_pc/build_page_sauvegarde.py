@@ -19,6 +19,7 @@ CSS = r"""
   .s-hist th{text-align:left;font-weight:600;color:var(--doux);padding:5px 6px}
   .s-hist td{padding:7px 6px;border-top:1px solid var(--bord)}
   .s-hist tr.l{cursor:pointer}.s-hist tr.l:hover{background:var(--survol)}
+  .s-hist td:first-child,.s-hist th:first-child{width:22px;padding-right:0}
   .s-hist tr.choisie{background:var(--bleu-fond);box-shadow:inset 3px 0 0 var(--bleu)}
   .s-comparer{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
   .s-tete{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
@@ -55,8 +56,10 @@ HTML = r"""
     <div class="s-corps">
       <div class="carte">
         <h2>Sauvegardes de cette carte</h2>
-        <table class="s-hist"><thead><tr><th>Date</th><th>Version</th><th>Origine</th></tr></thead>
-          <tbody id="s-liste"><tr><td colspan="3" class="vide">Aucune carte choisie.</td></tr></tbody></table>
+        <table class="s-hist"><thead><tr><th><input id="s-toutes" type="checkbox" aria-label="Choisir toutes les sauvegardes"></th>
+          <th>Date</th><th>Version</th><th>Origine</th></tr></thead>
+          <tbody id="s-liste"><tr><td colspan="4" class="vide">Aucune carte choisie.</td></tr></tbody></table>
+        <button id="s-supprimer" class="btn danger" type="button" hidden style="margin-top:8px">Supprimer la sélection</button>
         <div class="s-comparer">
           <label>Comparer <select id="s-autre" aria-label="Comparer la sélection à"></select></label>
           <button id="s-comparer" class="btn" type="button" disabled>Comparer</button>
@@ -79,7 +82,7 @@ HTML = r"""
 
 JS = r"""
 // ---------- onglet « Sauvegarde configuration » (build_page_sauvegarde.py) ----------
-var S = {env: "", fichier: "", liste: [], params: null, modifs: {}, ecarts: {}, numero: 0};
+var S = {env: "", fichier: "", liste: [], params: null, modifs: {}, ecarts: {}, numero: 0, coches: {}};
 var S_THEMES = {Wifi: "Réseau et Wi-Fi", MQTT: "MQTT", Power: "Relais et alimentation", Sensor: "Mesure et capteurs",
   Timer: "Minuteries", Rules: "Règles", Control: "Commandes et boutons", Management: "Gestion", System: "Système",
   Light: "Lumière", Serial: "Série", Display: "Affichage", Shutter: "Volets", Internal: "Interne", Rf: "RF",
@@ -113,6 +116,7 @@ async function sCharge(env, garder) {
   if (!r.ok || !r.donnees) { sMessages([["r", "Lecture impossible : " + (r.texte || "HTTP " + r.statut)]]); return; }
   if (!r.donnees.decode_config) sMessages([["o", "decode-config absent : lancer outils_pc/decode_config.py (paramètres illisibles, sauvegarde et restauration possibles)"]]);
   S.liste = r.donnees.sauvegardes;
+  S.coches = {};
   if (!garder || !S.liste.some(function (f) { return f.fichier === S.fichier; })) S.fichier = S.liste.length ? S.liste[0].fichier : "";
   sListe();
   if (S.fichier) sChoisit(S.fichier); else { S.params = null; sParams(); }
@@ -123,9 +127,12 @@ function sListe() {
   corps.textContent = "";
   autre.textContent = "";
   autre.appendChild(h("option", {value: "", texte: "à la carte en ligne"}));
-  if (!S.liste.length) corps.appendChild(h("tr", {}, h("td", {colspan: "3", "class": "vide", texte: "Aucune sauvegarde : « Sauvegarder maintenant »."})));
+  if (!S.liste.length) corps.appendChild(h("tr", {}, h("td", {colspan: "4", "class": "vide", texte: "Aucune sauvegarde : « Sauvegarder maintenant »."})));
   S.liste.forEach(function (f) {
-    var tr = h("tr", {"class": "l" + (f.fichier === S.fichier ? " choisie" : ""), title: f.fichier},
+    var c = h("input", {type: "checkbox", "aria-label": "Choisir " + f.fichier + " pour la supprimer"});
+    c.checked = !!S.coches[f.fichier];
+    c.onclick = function (e) { e.stopPropagation(); S.coches[f.fichier] = c.checked; sCoches(); };
+    var tr = h("tr", {"class": "l" + (f.fichier === S.fichier ? " choisie" : ""), title: f.fichier}, h("td", {}, c),
                h("td", {texte: f.date || f.fichier}), h("td", {texte: f.version}), h("td", {texte: f.origine}));
     tr.onclick = function () { sChoisit(f.fichier); };
     corps.appendChild(tr);
@@ -133,7 +140,32 @@ function sListe() {
   });
   $("s-restaurer").disabled = !S.fichier;
   $("s-comparer").disabled = !S.fichier;
+  sCoches();
 }
+
+function sCoches() {
+  var n = S.liste.filter(function (f) { return S.coches[f.fichier]; }).length;
+  $("s-supprimer").hidden = !n;
+  $("s-supprimer").textContent = "Supprimer la sélection (" + n + ")";
+  $("s-toutes").checked = n > 0 && n === S.liste.length;
+  $("s-toutes").indeterminate = n > 0 && n < S.liste.length;
+}
+$("s-toutes").onclick = function () {
+  var tout = this.checked;
+  S.liste.forEach(function (f) { S.coches[f.fichier] = tout; });
+  sListe();
+};
+$("s-supprimer").onclick = async function () {
+  var choisies = S.liste.filter(function (f) { return S.coches[f.fichier]; }), bouton = this;
+  if (!choisies.length || !confirm("Supprimer définitivement " + choisies.length + (choisies.length > 1 ? " sauvegardes" : " sauvegarde")
+      + " de " + S.env + " ?\n\n" + choisies.map(function (f) { return "- " + (f.date || f.fichier) + " · " + f.origine; }).join("\n"))) return;
+  bouton.disabled = true;
+  var r = await appel("/sauvegarde/supprimer", {env: S.env, fichiers: choisies.map(function (f) { return f.fichier; })});
+  bouton.disabled = false;
+  if (!r.ok) { sMessages([["r", "Rien n'est supprimé : " + (r.texte || "HTTP " + r.statut)]]); return; }
+  sMessages([["v", r.donnees.supprimees.length + (r.donnees.supprimees.length > 1 ? " sauvegardes supprimées" : " sauvegarde supprimée")]]);
+  sCharge(S.env, true);
+};
 
 async function sChoisit(fichier) {
   var numero = ++S.numero;

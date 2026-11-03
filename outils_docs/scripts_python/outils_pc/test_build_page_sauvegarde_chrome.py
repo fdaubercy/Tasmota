@@ -21,7 +21,7 @@ from test_build_sauvegarde import dmp
 A = s.A
 ETAT = """(() => { const t = id => document.getElementById(id);
   return {vue: t('vue-sauvegarde').hidden, build: t('vue-build').hidden, env: t('s-env').value,
-          lignes: [...document.querySelectorAll('#s-liste tr.l')].map(l => l.children[2].textContent),
+          lignes: [...document.querySelectorAll('#s-liste tr.l')].map(l => l.children[3].textContent),
           choisie: document.querySelectorAll('#s-liste tr.choisie').length,
           themes: [...document.querySelectorAll('#s-params .s-theme')].map(d => [d.querySelector('summary').firstChild.textContent, d.open]),
           params: [...document.querySelectorAll('#s-params .s-p')].map(p => p.querySelector('code').textContent),
@@ -105,6 +105,19 @@ def sonde(m, capture):
     clic(cdp, "#s-restaurer")                              # env sans adresse : rien n'est demande a une carte
     time.sleep(0.5)
     s.verifie("Adresse de la carte inconnue" in etat(cdp)["messages"], True, "restaurer sans adresse : refuse avec le motif")
+    # -- suppression : cases de l'historique, confirmation
+    s.verifie(cdp.js("document.getElementById('s-supprimer').hidden"), True, "suppression : bouton cache sans case cochee")
+    cdp.js("(() => { const l = [...document.querySelectorAll('#s-liste tr.l')].find(t => t.textContent.includes('avant flash')); l.querySelector('input').click(); })()")
+    s.verifie((cdp.js("document.getElementById('s-supprimer').textContent"), etat(cdp)["choisie"]),
+              ("Supprimer la sélection (1)", 1), "suppression : une case, la ligne choisie ne change pas")
+    cdp.js("window.confirm = () => true")
+    clic(cdp, "#s-supprimer")
+    s.attend(cdp, "document.getElementById('s-messages').textContent.includes('supprimée')", 20)
+    s.attend(cdp, "document.querySelectorAll('#s-liste tr.l').length === 2", 10)
+    s.verifie((sorted(p.name for p in dossier.iterdir()), "avant flash" in etat(cdp)["lignes"]),
+              (sorted(n for f in dossier.glob("*.dmp") for n in (f.name, f.with_suffix(".json").name)), False),
+              "suppression : .dmp et fiche effaces, liste relue")
+    s.verifie(any("avant-flash" in p.name for p in dossier.iterdir()), False, "suppression : plus de fichier « avant flash »")
     if capture:
         cdp.capture(Path(capture) / "build-sauvegarde.png")
     m.ouvre()

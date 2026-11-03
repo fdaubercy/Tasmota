@@ -10,6 +10,7 @@ un .dmp porte les mots de passe Wi-Fi et MQTT en clair, et le depot est public.
   copie        nouvelle sauvegarde « modifiee » ; l'originale n'est jamais reecrite (decode_config.ecrit_copie)
   compare      ecarts entre deux sauvegardes, ou entre une sauvegarde et la carte en ligne
   restaure     sauvegarde « avant restauration », puis /rs + /u2, retour de la carte, ecarts relus
+  supprime     sauvegardes choisies effacees (.dmp et fiche) ; tous les noms controles avant d'en effacer un
 Le persist et l'autoexec.bat reposent leurs reglages a chaque demarrage : ils l'emportent sur une valeur restauree.
 Banc : test_build_sauvegarde.py.
 """
@@ -211,6 +212,17 @@ def restaure(racine, env, fichier, adresse, jeton, persist_env=None, joint=None,
     return {"avant": avant, "ecarts": ecarts}
 
 
+def supprime(racine, env, fichiers):
+    """Efface les sauvegardes `fichiers` (.dmp et fiche .json) -> {supprimees}. Un nom invalide : rien n'est efface."""
+    if not isinstance(fichiers, list) or not fichiers:
+        raise ValueError("aucune sauvegarde choisie")
+    chemins = [_chemin(racine, env, str(f)) for f in dict.fromkeys(fichiers)]
+    for chemin in chemins:
+        chemin.unlink()
+        chemin.with_suffix(".json").unlink(missing_ok=True)
+    return {"supprimees": [c.name for c in chemins]}
+
+
 def liste_json(racine, env):
     return {"sauvegardes": liste(racine, env), "decode_config": decode_config.utilisable()}
 
@@ -226,13 +238,15 @@ def traite_post(chemin, demande, serie, racine, verrou, adresse_carte):
       /sauvegarde/comparer   {env, fichier, autre | adresse} -> {ecarts, jeton}
       /sauvegarde/copier     {env, fichier, modifs}          -> fiche de la copie modifiee
       /sauvegarde/restaurer  {env, fichier, adresse, jeton}  -> {avant, ecarts}
+      /sauvegarde/supprimer  {env, fichiers}                 -> {supprimees}
     """
-    operations = {"/sauvegarde/prendre", "/sauvegarde/comparer", "/sauvegarde/copier", "/sauvegarde/restaurer"}
+    operations = {"/sauvegarde/prendre", "/sauvegarde/comparer", "/sauvegarde/copier", "/sauvegarde/restaurer",
+                  "/sauvegarde/supprimer"}
     if chemin not in operations:
         return None
     env, fichier = str(demande.get("env") or ""), str(demande.get("fichier") or "")
     persist = build_envs.persist_carte(racine, env)
-    if serie.envoi_en_cours() and chemin != "/sauvegarde/copier":
+    if serie.envoi_en_cours() and chemin not in ("/sauvegarde/copier", "/sauvegarde/supprimer"):   # sans la carte
         raise RuntimeError("un envoi est en cours : réessayer après")
     # shortcut: un lancement demarre pendant une restauration n'est pas refuse ; a bloquer si cela arrive
     if not verrou.acquire(blocking=False):
@@ -240,6 +254,8 @@ def traite_post(chemin, demande, serie, racine, verrou, adresse_carte):
     try:
         if chemin == "/sauvegarde/prendre":
             return prend(racine, env, adresse_carte(demande), "manuelle", persist)
+        if chemin == "/sauvegarde/supprimer":
+            return supprime(racine, env, demande.get("fichiers"))
         if chemin == "/sauvegarde/copier":
             return copie(racine, env, fichier, demande.get("modifs"))
         if chemin == "/sauvegarde/comparer":
