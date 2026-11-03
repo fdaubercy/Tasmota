@@ -330,3 +330,17 @@ gardes ; entree ecrite a la main, pas par le script.
 -   `8eace7eeb` Fix MPR121 sizeof (#25203)
 -   `44356df05` ESP32: steady 38 kHz IR carrier (fixes #25168) (#25176)
 -   `3fd043055` Boot loop when using a literal WIFI_DEFAULT_HOSTNAME (#25205)
+
+## 2026-11-02 06:16 — 9 commit(s) recupere(s) d'upstream
+
+`arendst/Tasmota:development` → `fdaubercy/Tasmota:development` (merge_type : merge)
+
+-   `c1c6a82c6` Wireguard reconnect when a dynamic DNS `Endpoint` changes IP (#25204)
+-   `6b62acc71` WebAsync rare crash and race conditions (#25209)
+-   `e64aad63a` Fix: DisplayText [pN] command now works when followed by another '[' … (#25188)
+-   `9107ce761` Bump version v16.0.0.2
+-   `bb06e6d4b` Sync Domoticz energy total with MQTT (#25181)
+-   `47d0db889` WebServer: keep a ';' or '{' in a value saved from a settings page (#25184)
+-   `ffbc7bc0a` [eq3 TRV] Avoid sending of empty status (#25182)
+-   `f27e40772` TasUpdater: give up on a stalled OTA after 30 s, not 300 reads (#25177)
+-   `a4703730a` Update change logs
