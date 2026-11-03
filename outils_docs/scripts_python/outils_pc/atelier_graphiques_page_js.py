@@ -62,6 +62,7 @@ function choisitEnv(env) {
   $('lien-build').href = 'http://127.0.0.1:7700/?env=' + encodeURIComponent(env) + '#fichiers';
   message('');
   return Promise.all([lis('/description?env=' + encodeURIComponent(env)), litSeries()]).then(function (r) {
+    if (env !== etat.env) return;                                  // reponse d'un env quitte entre-temps
     var d = r[0];
     etat.solidifier = d.solidifie;
     etat.desc = d.description || {version: 1, pages: [nouvellePage(0)]};
@@ -69,11 +70,15 @@ function choisitEnv(env) {
       'Aucune page de graphiques sur cette carte : proposition de départ (rien n\'est écrit avant « Écrire dans le dépôt »).');
     etat.page = 0; etat.graphe = 0;
     dessine(); actualise();
-  }).catch(function (e) { message('Lecture impossible : ' + echappe(e.message), 'rouge'); });
+  }).catch(function (e) { if (env === etat.env) message('Lecture impossible : ' + echappe(e.message), 'rouge'); });
 }
 function litSeries() {
+  var env = etat.env;
   $('relire').textContent = 'lecture de la carte…'; $('relire').className = 'pastille';
-  return lis('/series?env=' + encodeURIComponent(etat.env)).then(function (s) { etat.series = s; source(s.source, s.motif); });
+  return lis('/series?env=' + encodeURIComponent(env)).then(function (s) {
+    if (env !== etat.env) return;
+    etat.series = s; source(s.source, s.motif);
+  });
 }
 function source(src, motif) {
   if (!src) return;
@@ -153,9 +158,13 @@ Object.keys(CHAMPS).forEach(function (id) {
     modifie(false);
   });
 });
-$('r-page-id').addEventListener('input', function () { pageCourante().id = this.value; dessinePages(); modifie(false); });
-$('r-page-titre').addEventListener('input', function () { pageCourante().titre = this.value; dessinePages(); modifie(false); });
-$('r-acces').addEventListener('change', function () { pageCourante().acces = this.value; modifie(false); });
+[['r-page-id', 'input', 'id'], ['r-page-titre', 'input', 'titre'], ['r-acces', 'change', 'acces']].forEach(function (c) {
+  $(c[0]).addEventListener(c[1], function () {
+    var p = pageCourante();
+    if (!p) return;
+    p[c[2]] = this.value; dessinePages(); modifie(false);
+  });
+});
 $('r-solidifier').addEventListener('change', function () { etat.solidifier = this.checked; modifie(false); });
 $('r-page').addEventListener('change', function () { etat.page = +this.value; etat.graphe = 0; modifie(true); });
 function dessinePages() {
@@ -165,10 +174,12 @@ function dessinePages() {
   }).join('');
   sel.value = v;
 }
+function approche(g, f) {
+  return typeof g.min === 'number' && typeof g.max === 'number' ? ' ≈ ' + Math.round(g.min + f * (g.max - g.min)) : '';
+}
 function dessineZones(g) {
-  var b = [g.min, g.max];
   $('r-zones').innerHTML = (g.zones || []).map(function (z, i) {
-    var abs = typeof b[0] === 'number' && typeof b[1] === 'number' ? ' ≈ ' + Math.round(b[0] + z[0] * (b[1] - b[0])) : '';
+    var abs = approche(g, z[0]);
     return '<div class="zone"><input type="color" data-zone="' + i + '" value="' + echappe(z[1]) + '">jusqu\'à <input type="number" min="0" max="100" data-zone="' +
       i + '" value="' + Math.round(z[0] * 100) + '"> %<span class="doux">' + abs + '</span><a href="#" data-retire="' + i + '">✕</a></div>';
   }).join('') || '<div class="petit doux">aucun</div>';
@@ -177,7 +188,10 @@ $('r-zones').addEventListener('input', function (e) {
   var i = e.target.getAttribute('data-zone'), g = grapheCourant();
   if (i === null || !g) return;
   if (e.target.type === 'color') g.zones[i][1] = e.target.value;
-  else g.zones[i][0] = Math.max(0, Math.min(1, (+e.target.value || 0) / 100));
+  else {
+    g.zones[i][0] = Math.max(0, Math.min(1, (+e.target.value || 0) / 100));
+    e.target.parentNode.querySelector('.doux').textContent = approche(g, g.zones[i][0]);
+  }
   modifie(false);
 });
 $('r-zones').addEventListener('click', function (e) {
@@ -201,6 +215,7 @@ function dessineReglages() {
   dessinePages();
   $('r-page-id').value = p ? p.id : ''; $('r-page-titre').value = p ? p.titre : ''; $('r-acces').value = p ? (p.acces || 'bouton') : 'bouton';
   $('r-solidifier').checked = etat.solidifier;
+  ['r-page-id', 'r-page-titre', 'r-acces'].forEach(function (id) { $(id).disabled = !p; });
   ['r-titre', 'r-min', 'r-max', 'r-periode', 'r-cadence', 'r-cumul', 'r-largeur', 'r-hauteur', 'r-ajout-zone'].forEach(function (id) { $(id).disabled = !g; });
   if (!g) { $('r-zones').innerHTML = ''; return; }
   $('r-titre').value = g.titre; $('r-min').value = g.min !== undefined ? g.min : ''; $('r-max').value = g.max !== undefined ? g.max : '';
@@ -245,14 +260,21 @@ function dessineAlertes() {
 // ---- apercu : le moteur de la carte ----
 function lecteur(chemins, periode) {
   var vrai = window.fetch, env = etat.env;
-  window.fetch = function (url) {     // lecteurCarte ne fait ses fetch que pendant cet appel : redirection limitee a lui
-    var q = String(url).split('?')[1] || '';
+  // Couplage : lecteurCarte (data/sd/js/pages_graphiques.js) lance ses fetch de facon synchrone pendant cet appel ; s'il les
+  // differait, ils partiraient tels quels (/pages, /histo) vers l'atelier, qui les refuse (404) : l'apercu dirait « Lecture impossible ».
+  window.fetch = function (url) {
+    var u = String(url), q = u.split('?')[1] || '';
+    if (!/^\/(pages\?f=valeurs&|histo\?)/.test(u)) return Promise.reject(new Error('lecture non prévue pour l’aperçu : ' + u.split('?')[0]));
     return vrai('/valeurs?env=' + encodeURIComponent(env) + '&c=' + chemins.map(encodeURIComponent).join(',') + '&' + q)
       .then(function (r) { if (env === etat.env) source(r.headers.get('X-Source')); return r; });
   };
   try {
     return PagesGraphiques.lecteurCarte('mesures', !!(etat.series && etat.series.historique))(chemins, periode)
-      .then(function (d) { dernieres[periode] = d; if (!etat.minisPleins) dessineConseil(); return d; });
+      .then(function (d) {
+        dernieres[env + '|' + periode + '|' + chemins.join(',')] = d;      // par env et par groupe de lecture
+        if (env === etat.env && !etat.minisPleins) dessineConseil();
+        return d;
+      });
   } finally { window.fetch = vrai; }
 }
 function apercu() {
@@ -279,8 +301,9 @@ function apercu() {
     t.addEventListener('dragleave', function () { t.classList.remove('survol'); });
     t.addEventListener('drop', function (e) {
       e.preventDefault();
-      var de = +e.dataTransfer.getData('text/plain');
-      if (de === j) return;
+      var de = e.dataTransfer.getData('text/plain');
+      if (!/^\d+$/.test(de) || +de >= p.graphiques.length || +de === j) return;   // depot venu d'ailleurs : ignore
+      de = +de;
       p.graphiques.splice(j, 0, p.graphiques.splice(de, 1)[0]); etat.graphe = j; modifie(true);
     });
   });
@@ -307,8 +330,17 @@ function demandeConseil() {
     .then(function (r) { etat.conseil = r; dessineConseil(); })
     .catch(function (e) { $('vignettes').innerHTML = '<div class="avert rouge">' + echappe(e.message) + '</div>'; });
 }
+// Dernieres valeurs lues pour ce graphique : celles d'un groupe de l'env courant, de sa periode, qui lit toutes ses series
+function donneesDe(g) {
+  var pref = etat.env + '|' + (g.periode || 'direct') + '|';
+  var cle = Object.keys(dernieres).filter(function (k) {
+    var lus = k.slice(pref.length).split(',');
+    return k.indexOf(pref) === 0 && g.series.every(function (s) { return lus.indexOf(s) >= 0; });
+  })[0];
+  return cle ? dernieres[cle] : null;
+}
 function mini(div, style, g) {
-  var d = dernieres[g.periode || 'direct'];
+  var d = donneesDe(g);
   if (!d || !window.echarts) return;
   var o = PagesGraphiques.optionDe(Object.assign({}, g, {type: style}), d, {texte: '#666', grille: 'rgba(128,128,128,0.2)'});
   if (o.svg !== undefined) { div.innerHTML = o.svg; return; }
@@ -324,7 +356,7 @@ function dessineConseil() {
   minis.forEach(function (c) { c.dispose(); });
   minis = [];
   if (!r || !g) return;
-  etat.minisPleins = !!dernieres[g.periode || 'direct'];      // sinon : redessinees a la premiere lecture
+  etat.minisPleins = !!donneesDe(g);      // sinon : redessinees a la premiere lecture
   $('resume-styles').textContent = '— ' + g.series.length + ' série(s), ' + $('intention').selectedOptions[0].textContent.toLowerCase();
   $('vignettes').innerHTML = r.proposes.map(function (p, i) {
     return '<div class="vign' + (p.style === g.type ? ' choisie' : '') + '" data-style="' + p.style + '"><span class="rang">' + (i + 1) +

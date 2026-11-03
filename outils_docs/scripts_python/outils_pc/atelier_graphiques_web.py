@@ -23,7 +23,7 @@ Routes (les POST exigent l'en-tete X-Atelier-Graphiques: 1 et la meme origine ; 
     POST /diff         {env, description|null, solidifier} -> {fichiers: [{chemin, avant, apres, diff, ajouts,
                        retraits}], empreinte, signaux} ; description null = derniere page retiree
     POST /ecrire       {env, description|null, solidifier, empreinte} -> {ecrits} ; 409 si build ou empreinte perimee
-Refus : 400 (saisie, motif en texte), 404 (env inconnu ou hors S3/P4), 409 (build, empreinte), 500 (inattendu).
+Refus : 400 (saisie, motif en texte ; Content-Length hors 0..MAX_CORPS ; JSON trop imbrique), 404 (env inconnu ou hors S3/P4), 409 (build, empreinte), 500 (inattendu).
 """
 
 import argparse
@@ -48,7 +48,7 @@ import fichiers_berry_ini as fbi
 
 PORT_DEFAUT = 7950
 DEPOT = Path(__file__).resolve().parents[3]
-MAX_CORPS = 64 * 1024
+MAX_CORPS = 8 * agd.BORNES["octets"]             # description (8 Ko compacte) indentee + enveloppe
 MAX_CHEMINS = agd.BORNES["graphiques"] * agd.BORNES["series"]
 JS = "application/javascript; charset=utf-8"
 MOTEUR = {"pages_graphiques.js": ("js/pages_graphiques.js", JS), "pages_graphiques_formule.js": ("js/pages_graphiques_formule.js", JS),
@@ -97,9 +97,13 @@ def description_de(racine, env):
     if not chemin.is_file():
         return {"description": None, "solidifie": solidifie, "erreur": ""}
     try:
-        return {"description": json.loads(chemin.read_text(encoding="utf-8")), "solidifie": solidifie, "erreur": ""}
-    except (OSError, ValueError) as e:
+        description = json.loads(chemin.read_text(encoding="utf-8"))
+    except (OSError, ValueError, RecursionError) as e:
         return {"description": None, "solidifie": solidifie, "erreur": f"{age.DESCRIPTION} illisible : {e}"}
+    motifs = agd.valide(description)              # editee a la main : la page repart de la proposition, motif affiche
+    if motifs:
+        return {"description": None, "solidifie": solidifie, "erreur": f"{age.DESCRIPTION} invalide : " + " ; ".join(motifs)}
+    return {"description": description, "solidifie": solidifie, "erreur": ""}
 
 
 def avec_diffs(prevu):
@@ -239,9 +243,9 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None):
                 return
             try:
                 longueur = int(self.headers.get("Content-Length", "0") or 0)
-                if longueur > MAX_CORPS:
+                if not 0 <= longueur <= MAX_CORPS:            # negatif : read(-1) lirait jusqu'a la fermeture
                     self.close_connection = True              # corps non lu : la connexion ne doit pas resservir
-                    self._envoie(413, "corps trop gros (64 Ko au plus)".encode("utf-8"))
+                    self._envoie(400, f"Content-Length hors 0..{MAX_CORPS}".encode("utf-8"))
                     return
                 demande = json.loads(self.rfile.read(longueur).decode("utf-8") or "{}")
                 if not isinstance(demande, dict):
@@ -251,8 +255,8 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None):
                 self._erreur_inattendue(erreur)
             except LookupError as erreur:
                 self._envoie(404, str(erreur).encode("utf-8"))
-            except (ValueError, TypeError) as erreur:
-                self._envoie(400, str(erreur).encode("utf-8"))
+            except (ValueError, TypeError, RecursionError) as erreur:    # RecursionError : JSON trop imbrique
+                self._envoie(400, (str(erreur) or type(erreur).__name__).encode("utf-8"))
             except RuntimeError as erreur:
                 self._envoie(409, str(erreur).encode("utf-8"))
             except Exception as erreur:

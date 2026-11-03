@@ -134,4 +134,24 @@ with tempfile.TemporaryDirectory() as t:
     verifie("esclave : adresse maitre:port", a and all(i == "192.168.0.9:8081" for i, _ in a))
     verifie("esclave : aucune ecriture", all(lecture(c) for _, c in a))
 
+    # Cache des adresses (liste_envs ~1,2 s sur le vrai depot) : relu seulement si le cenv, l'override ou le .h change
+    appels, vrai = [], ag.build_envs.liste_envs
+    ag.build_envs.liste_envs = lambda racine: appels.append(1) or vrai(racine)
+    try:
+        cenv, h = r / "platformio_tasmota_cenv.ini", r / "tasmota" / "user_config_override.h"
+        cenv.write_text(cenv.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+        ag.series(r, CUVE, get=faux_get([]))
+        ag.valeurs(r, CUVE, ["a"], "direct", get=faux_get([]))
+        ag.series(r, CUVE, get=faux_get([]))
+        verifie("cache des adresses : liste_envs une seule fois pour 3 lectures", len(appels) == 1)
+        cenv.write_text(cenv.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+        verifie("cache : cenv modifie -> adresses relues", ag.series(r, CUVE, get=faux_get([]))["source"] == "carte"
+                and len(appels) == 2)
+        h.write_text(h.read_text(encoding="utf-8").replace("192.168.0.50", "192.168.0.51"), encoding="utf-8")
+        a = []
+        ag.series(r, CUVE, get=faux_get(a))
+        verifie("cache : .h modifie -> nouvelle adresse", len(appels) == 3 and a and all(i == "192.168.0.51" for i, _ in a))
+    finally:
+        ag.build_envs.liste_envs = vrai
+
 sys.exit(1 if echecs else 0)

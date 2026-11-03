@@ -60,9 +60,36 @@ def _serie(chemin, affichage, historique, valeur=None):
             "etat": isinstance(valeur, str) or chemin.upper().startswith("POWER") or ".POWER" in chemin.upper()}
 
 
+# Adresses des envs : build_envs.liste_envs coute ~1,2 s (lecture des IP du .h), or l'apercu de l'atelier relit a chaque
+# cadence. Gardees tant que le cenv, l'override et le .h n'ont pas change (date et taille).
+# shortcut: un ipMaitre change dans le _persist.json d'un esclave n'invalide pas le cache ; relancer l'atelier.
+FICHIERS_ADRESSES = ("platformio_tasmota_cenv.ini", "platformio_override.ini", "tasmota/user_config_override.h")
+_ADRESSES = {}
+
+
+def _empreinte_adresses(racine):
+    res = []
+    for f in FICHIERS_ADRESSES:
+        try:
+            st = (racine / f).stat()
+            res.append((st.st_mtime_ns, st.st_size))
+        except OSError:
+            res.append(None)
+    return tuple(res)
+
+
+def _adresses(racine):
+    racine = Path(racine).resolve()
+    empreinte = _empreinte_adresses(racine)
+    garde = _ADRESSES.get(racine)
+    if not garde or garde[0] != empreinte:
+        garde = _ADRESSES[racine] = (empreinte, {e.nom: e.ip for e in build_envs.liste_envs(racine)})
+    return garde[1]
+
+
 def _carte(racine, env):
     """(adresse, dossier de donnees, persist) de l'env ; adresse "" si inconnue."""
-    ip = next((e.ip for e in build_envs.liste_envs(racine) if e.nom == env), "")
+    ip = _adresses(racine).get(env, "")
     persist = build_envs.persist_carte(racine, env)
     return ip, (persist.parent if persist else None), persist
 

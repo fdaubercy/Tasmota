@@ -34,6 +34,7 @@ ECHECS = []
 CUVE, P4 = "tasmota32s3-garage-capteurs-cuve-modbus", "tasmota32p4-garage-serveur-modbus"
 MARQUE_TEMOIN = "var gabarit = '', apercuCtrl = null"
 INJECTION_TEMOIN = "\n$('bouton-qui-n-existe-pas').onclick = null;   // TEMOIN : TypeError au chargement\n"
+LENTEUR_P4 = 3
 SERIES = ["sensorsCuve.niveauCuve.volume", "sensorsCuve.niveauCuve.tauxRemplissage", "DS18B20.Temperature"]
 
 
@@ -46,8 +47,9 @@ def verifie(obtenu, attendu, libelle):
 
 
 def fausse_carte(ip, chemin, delai):
-    """Carte simulee : la cuve (IP:port) repond, le P4 ne repond pas."""
+    """Carte simulee : la cuve (IP:port) repond, le P4 ne repond pas, et lentement (course au changement d'env)."""
     if ip == "192.168.0.43":
+        time.sleep(LENTEUR_P4)
         raise OSError("pas de reponse")
     if "p=liste" in chemin:
         return json.dumps({"nom": "mesures", "series": SERIES, "mois": []}).encode()
@@ -176,6 +178,14 @@ def sonde_page(m, capture):
                              + " && /c0392b|192,\\s*57,\\s*43/i.test(document.querySelector('#apercu .pg_tuile').innerHTML)", 10)),
             True, "seuil change (20 -> 70 %) : le SVG de l'apercu change")
     verifie(avant != un, True, "seuil : apercu different de celui d'avant le seuil")
+    cdp.js("['r-min', 'r-max'].forEach(function(id, k){ var i=document.getElementById(id); i.value=k ? '5000' : '3000';"
+           " i.dispatchEvent(new Event('input')); }); 1")
+    cdp.js("var i=document.querySelector('#r-zones input[type=number]'); i.value='50'; i.dispatchEvent(new Event('input', {bubbles: true})); 1")
+    verifie(cdp.js("document.querySelector('#r-zones .zone .doux').textContent"), " ≈ 4000", "seuil a 50 % de 3000..5000 : « ≈ 4000 » recalcule")
+    verifie(cdp.js("(function(){ var v = PagesGraphiques.lecteurCarte; PagesGraphiques.lecteurCarte = function(){ return function(){ return fetch('/envs'); }; };"
+                   " try { return lecteur(['a'], 'direct').then(function(){ return 'redirige'; }, function(e){ return 'refuse'; }); }"
+                   " finally { PagesGraphiques.lecteurCarte = v; } })()"), "refuse",
+            "lecteur : un fetch hors /pages?f=valeurs et /histo n'est pas redirige vers /valeurs")
     cdp.js("document.getElementById('ajout-graphique').click(); document.querySelector('[data-mode=page]').click(); 1")
     verifie(attend(cdp, "document.querySelectorAll('#apercu .pg_tuile').length === 2 && document.getElementById('cadre').classList.contains('page')", 10),
             True, "bascule « page » : la grille montre les 2 graphiques")
@@ -183,6 +193,11 @@ def sonde_page(m, capture):
            " tt[0].dispatchEvent(new DragEvent('drop', {dataTransfer: dt, bubbles: true, cancelable: true})); 1")
     verifie(attend(cdp, "etat.desc.pages[0].graphiques[1].zones && !etat.desc.pages[0].graphiques[0].zones", 5), True,
             "tuile deplacee : ordre des graphiques echange")
+    cdp.js("var tt=document.querySelectorAll('#apercu .pg_tuile'), dt=new DataTransfer(); dt.setData('text/plain','une image');"
+           " tt[1].dispatchEvent(new DragEvent('drop', {dataTransfer: dt, bubbles: true, cancelable: true})); 1")
+    time.sleep(0.5)
+    verifie(cdp.js("!!etat.desc.pages[0].graphiques[1].zones && !etat.desc.pages[0].graphiques[0].zones"), True,
+            "depot venu d'ailleurs (pas un rang de tuile) : ordre inchange")
     cdp.js("document.getElementById('sombre').click(); 1")
     if capture:                                       # grille du modele C (theme sombre), a cote de la capture du modele B
         attend(cdp, "[...document.querySelectorAll('#apercu .pg_tuile')].every(function(t){return t.getAttribute('data-rendu');})"
@@ -209,12 +224,29 @@ def sonde_page(m, capture):
     verifie((ecrit.get("pages") or [{}])[0].get("id"), "tableau-cuve", "ecriture : description ecrite dans la copie")
     verifie(attend(cdp, "document.getElementById('resume').textContent.indexOf('0 fichier') === 0", 10), True,
             "apres ecriture : plus rien a ecrire")
+    # Course : le P4 repond en LENTEUR_P4 s ; on repasse aussitot sur la cuve, sa reponse tardive ne doit rien ecraser
+    cdp.js("var s=document.getElementById('env'); s.value='" + P4 + "'; s.dispatchEvent(new Event('change'));"
+           " s.value='" + CUVE + "'; s.dispatchEvent(new Event('change')); 1")
+    attend(cdp, "etat.series && etat.series.source === 'carte' && etat.desc.pages[0].id === 'tableau-cuve'", 10)
+    verifie(attend(cdp, "performance.getEntriesByType('resource').some(function(e){ return e.name.indexOf('/series?env=" + P4 + "') >= 0; })", 30),
+            True, "course : la reponse tardive du P4 est bien arrivee")
+    time.sleep(1)
+    verifie(cdp.js("[etat.env, etat.series.source, etat.desc.pages[0].id, corpsEcriture().env, document.getElementById('relire').textContent]"),
+            [CUVE, "carte", "tableau-cuve", CUVE, "● en ligne 192.168.0.43:8081"],
+            "course : reponse tardive du P4 ignoree, etat et diff restent ceux de la cuve")
+    verifie(attend(cdp, "document.getElementById('resume').textContent.indexOf('0 fichier') === 0", 10), True,
+            "course : diff de la cuve (rien a ecrire), pas la description du P4")
+    verifie(cdp.js("Object.keys(dernieres).length > 0 && Object.keys(dernieres).every(function(k){ return k.indexOf('" + CUVE + "|') === 0; })"),
+            True, "course : donnees des vignettes rangees par env (aucune du P4)")
     cdp.js("var s=document.getElementById('env'); s.value='" + P4 + "'; s.dispatchEvent(new Event('change')); 1")
     verifie(attend(cdp, "!document.getElementById('bandeau').classList.contains('cache') && "
                         "document.getElementById('relire').textContent === 'valeurs simulées'", 25),
             True, "carte muette (P4) : bandeau « valeurs simulees »")
     verifie(attend(cdp, "!!document.querySelector('#apercu .pg_tuile[data-rendu]')", 15), True,
             "carte muette : l'apercu trace quand meme (valeurs simulees)")
+    cdp.js("document.getElementById('suppr-page').click(); 1")
+    verifie(cdp.js("['r-page-id', 'r-page-titre', 'r-acces'].map(function(id){ return document.getElementById(id).disabled; })"),
+            [True, True, True], "plus aucune page : adresse, titre et acces de page grises")
     verifie(cdp.erreurs(), [], "aucune erreur JS pendant toute la sonde")
 
 

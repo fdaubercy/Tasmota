@@ -175,6 +175,26 @@ def test_acces(b):
             403, "POST d'une autre origine -> 403")
     verifie(b.requete("POST", "/inconnu", {})[0], 404, "POST route inconnue -> 404")
     verifie(b.requete("GET", "/inconnu")[0], 404, "GET route inconnue -> 404")
+    for longueur in ("-1", "10000000"):
+        verifie(brut(b, f"POST /valide HTTP/1.1\r\nHost: x\r\nX-Atelier-Graphiques: 1\r\nContent-Length: {longueur}\r\n\r\n{{}}"),
+                400, f"POST Content-Length {longueur} -> 400 sans lire le corps")
+    profond = "[" * 30000 + "]" * 30000          # 60 Ko : sous le plafond du corps
+    verifie(brut(b, "POST /valide HTTP/1.1\r\nHost: x\r\nX-Atelier-Graphiques: 1\r\nContent-Length: "
+                    f"{len(profond)}\r\n\r\n{profond}"), 400, "POST JSON trop imbrique (RecursionError) -> 400, pas 409")
+
+
+def brut(b, requete):
+    """Statut HTTP d'une requete ecrite a la main (en-tetes que http.client refuse de forger)."""
+    with socket.create_connection(("127.0.0.1", b.port), timeout=10) as s:
+        s.sendall(requete.encode("ascii"))
+        s.shutdown(socket.SHUT_WR)
+        reponse = b""
+        while b"\r\n" not in reponse:
+            morceau = s.recv(4096)
+            if not morceau:
+                break
+            reponse += morceau
+    return int(reponse.split(b" ")[1]) if reponse else None
 
 
 def test_description_diff_ecrire(b):
@@ -214,6 +234,10 @@ def test_description_diff_ecrire(b):
     (b.racine / rel).write_text("{tronque", encoding="utf-8")
     statut, r = b.requete("GET", f"/description?env={CUVE}")
     verifie((statut, r["description"], bool(r["erreur"])), (200, None, True), "GET /description : JSON illisible signale")
+    (b.racine / rel).write_text(json.dumps(description(ident="cs")), encoding="utf-8")
+    statut, r = b.requete("GET", f"/description?env={CUVE}")
+    verifie((statut, r["description"], "reserve" in r["erreur"]), (200, None, True),
+            "GET /description : description invalide -> erreur avec le motif, proposition de depart")
 
 
 TESTS = [test_page_et_moteur, test_envs, test_series_valeurs, test_conseil_valide, test_acces, test_description_diff_ecrire]
