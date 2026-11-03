@@ -3,7 +3,7 @@ chantier: energie-differentiel
 titre: Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)
 statut: actif
 cree: 2026-10-31
-maj: 2026-11-02
+maj: 2026-11-03
 source: squishy-imagining-raven.md
 objectif: Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h)
 ---
@@ -115,10 +115,14 @@ courbe de puissance 24 h conservée ; abonnement de base ; prix saisi avec date 
 - [x] Outil `.drvset003` de la page build éprouvé sur la vraie carte (code et banc faits : `build_drvset.py`, `test_build_drvset.py` ; mode d'emploi au README) — preuve : copie (536 o) puis rétablissement sur la carte, `Restart 99`, relu 310/15963/124194, Total 564,246 ; l'essai a révélé un défaut (`Restart 99` ne répond pas), corrigé et ajouté au banc. Le passage complet par un vrai flash série n'a pas été fait
 - [x] Env et dossier renommés, le D3T n'étant pas un différentiel 30 mA — preuve : env `tasmota32-bureau-interrupteur-energie`, dossier `data/bureau/tasmota32-interrupteur-energie`
 - [x] Envoi OTA coupé (`WinError 10054`) juste après la bascule en safeboot, carte laissée en safeboot — preuve : cause = délai (3 fois sur 3 à 0,1 s de la bascule, même envoi réussi 1 min après, `fsz` hors de cause) ; 4 essais espacés de 10 s dans `build_ota_firmware.py::envoie_firmware_ota`, `test_build_ota_fs.py` VERT. Pas encore éprouvé sur la vraie carte
-- [ ] Commentaire de la section du `.h` encore à l'ancien nom (« firmware tasmota32-interrupteur-differentiel-bureau ») corrigé hors build
+- [x] Commentaire de la section du `.h` encore à l'ancien nom (« firmware tasmota32-interrupteur-differentiel-bureau ») corrigé hors build — preuve : « Options for firmware tasmota32-bureau-interrupteur-energie » dans `user_config_override.h`, et l'en-tête de l'env dans le cenv (2026-11-03)
+- [x] Tarif HC/HP essayé par l'utilisateur sur la carte — preuve : « Tarif HC/HP ==> OK » (utilisateur, 2026-11-03)
+- [x] 0 W relais ON : normal — preuve : appareil arrêté par l'utilisateur (2026-11-03)
+- [x] Noms raccourcis (le SSID du point d'accès faisait 39 caractères pour 32 permis) : nom d'hôte, `PROJECT` et client MQTT `DISJONCTEUR-DIFF-BUREAU`, SSID du Range Extender `DISJONCTEUR-DIFF-BUREAU-GATEWAY` (31 caractères) ; topic `bureau/pc` inchangé — preuve : `user_config_override.h` et `_persist.json` du différentiel (2026-11-03). Pas encore sur la carte : il faut le prochain envoi du firmware et du FS
+- [x] `banc_demarrage` vert malgré le chantier Ethernet : seul écart, la règle `Eth` ajoutée à toutes les cartes par `controleGeneral.be` — preuve : instantanés ré-enregistrés à la demande de l'utilisateur, une ligne par carte, `banc_demarrage.py` VERT (2026-11-03). Instantanés à commiter avec le chantier Ethernet
 - [x] Inventaire des `.drvset*` retenu dans un fichier — preuve : `outils_docs/FICHIERS_DRVSET.md`, `verifie_references_docs.py` 0 défaut
 - [x] Explication de `.drvset003` (données, rôle, chargement, paramétrage) et rapport Extension Manager (intérêt, outil possible par l'annuaire, existant, à mettre en place) rendus à l'utilisateur — preuve : compte rendu du 2026-11-02 ; `FICHIERS_DRVSET.md`, onglet Aide
-- [ ] Banc `test_assistant_persist_generation.py` vert : bloc énergie nommé dans ses tolérances, seul reste l'écart `drivers.Ethernet` de l'autre chantier (cave)
+- [x] Banc `test_assistant_persist_generation.py` vert : bloc énergie nommé dans ses tolérances, seul reste l'écart `drivers.Ethernet` de l'autre chantier (cave) — preuve : tolérance `drivers.Ethernet.*` étendue à la cave S3 (seule carte à W5500, ON) ; `test_assistant_persist_generation.py` VERT (2026-11-03)
 
 ## A12 — Onglet « Sauvegardes » de la page build
 - [ ] Modèle choisi par l'utilisateur parmi les maquettes `outils_docs/sauvegarde_config/` (A, B, C)

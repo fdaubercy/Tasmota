@@ -45,7 +45,7 @@
 	"serveur": {
 		"activation": "ON",
 		"nom": "Disjoncteur Différentiel PC Bureau",
-		"hostname": "DISJONCTEUR-DIFFERENTIEL-BUREAU",
+		"hostname": "DISJONCTEUR-DIFF-BUREAU",
 		"mDNS": "ON",
 		"apiHTTP": "ON",
 		"log": "info",
@@ -73,7 +73,7 @@
 			"activation": "ON",
 			"hote": "192.168.0.5",
 			"port": 1883,
-			"client": "DISJONCTEUR-DIFFERENTIEL-BUREAU",
+			"client": "DISJONCTEUR-DIFF-BUREAU",
 			"utilisateur": "fdaubercy",
 			"mdp": "Lune5676",
 			"topic": "bureau/pc",
@@ -90,7 +90,7 @@
 				"IPAddress": "192.168.4.1",
 				"Subnet": "255.255.255.0",
 				"routeNAPT": "OFF",
-				"SSID": "DISJONCTEUR-DIFFERENTIEL-BUREAU-GATEWAY",
+				"SSID": "DISJONCTEUR-DIFF-BUREAU-GATEWAY",
 				"mdp": "Lune5676"
 			}
 		},

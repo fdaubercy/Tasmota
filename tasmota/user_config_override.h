@@ -924,7 +924,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #endif
             #define USER_BACKLOG      "Backlog Module 0; Hostname VR-PORTE"
 
-        // -- Options for firmware tasmota32-interrupteur-differentiel-bureau ------
+        // -- Options for firmware tasmota32-bureau-interrupteur-energie ------
         #elif defined(FIRMWARE_ESP32_BUREAU_INTERRUPTEUR_ENERGIE)
             #undef CFG_HOLDER
             #define CFG_HOLDER  1609    // propre a cet env, incremente par le pre-script (cfg_holder.py)
@@ -962,7 +962,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
         
             // -- Project -------------------------------------
             #undef PROJECT
-                #define PROJECT           "DISJONCTEUR-DIFFERENTIEL-BUREAU"         	 // PROJECT is used as the default topic delimiter
+                #define PROJECT           "DISJONCTEUR-DIFF-BUREAU"         	 // PROJECT is used as the default topic delimiter
             #ifdef USER_TEMPLATE
                 #undef USER_TEMPLATE
             #endif
@@ -978,7 +978,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             // RgxPort tcp, 8080, 192.168.4.1, 80
             // #define USE_WIFI_RANGE_EXTENDER
             #ifdef USE_WIFI_RANGE_EXTENDER
-                #define WIFI_RGX_SSID           "DISJONCTEUR-DIFFERENTIEL-BUREAU-GATEWAY"
+                #define WIFI_RGX_SSID           "DISJONCTEUR-DIFF-BUREAU-GATEWAY"
                 #define WIFI_RGX_PASSWORD       "Lune5676"
             #endif
         
@@ -987,7 +987,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
         
             // -- Setup your own MQTT settings  ---------------
             #undef MQTT_CLIENT_ID
-                #define MQTT_CLIENT_ID "DISJONCTEUR-DIFFERENTIEL-BUREAU" // [MqttClient] Also fall back topic using last 6 characters of MAC address or use "DVES_%12X" for complete MAC address
+                #define MQTT_CLIENT_ID "DISJONCTEUR-DIFF-BUREAU" // [MqttClient] Also fall back topic using last 6 characters of MAC address or use "DVES_%12X" for complete MAC address
             #undef MQTT_TOPIC
                 #define MQTT_TOPIC "bureau/pc" // [Topic] unique MQTT device topic including (part of) device MAC address
             #undef MQTT_GRPTOPIC
@@ -1055,7 +1055,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #ifdef USER_BACKLOG
                 #undef USER_BACKLOG
             #endif
-            #define USER_BACKLOG      "Backlog Module 0; Hostname DISJONCTEUR-DIFFERENTIEL-BUREAU"
+            #define USER_BACKLOG      "Backlog Module 0; Hostname DISJONCTEUR-DIFF-BUREAU"
 
         // -- Options for firmware tasmota32s3-maitre-garage-modbus ------
         #elif defined(FIRMWARE_ESP32S3_ETAGE2_GRENIER)
