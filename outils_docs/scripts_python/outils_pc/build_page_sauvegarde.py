@@ -28,9 +28,14 @@ CSS = r"""
   .s-theme > summary .n{color:var(--discret);font-size:12px}.s-theme > summary .n.m{color:var(--orange)}
   .s-p{display:grid;grid-template-columns:minmax(140px,1fr) 2fr;gap:8px;align-items:center;padding:4px 10px;border-top:1px solid var(--bord)}
   .s-p code{font-size:12px;overflow-wrap:anywhere}
-  .s-p input{width:100%;box-sizing:border-box;font:12px ui-monospace,Consolas,monospace}
+  .s-val{display:flex;gap:6px;align-items:flex-start}
+  .s-val textarea{flex:1;min-width:0;box-sizing:border-box;font:12px/1.45 ui-monospace,Consolas,monospace;resize:vertical;
+    overflow:hidden;padding:3px 5px;white-space:pre-wrap;overflow-wrap:anywhere}
+  .s-json{flex:none;padding:1px 6px;border-radius:4px;border:1px solid var(--btn-bord);background:var(--btn);color:var(--doux);
+    font:11px ui-monospace,Consolas,monospace;cursor:pointer}
+  .s-json[aria-pressed="true"]{color:var(--bleu);border-color:var(--bleu);background:var(--bleu-fond)}
   .s-p.modif{background:var(--orange-fond)}.s-p.ecart code{color:var(--bleu);font-weight:600}
-  .s-p.faux input{border-color:var(--rouge)}
+  .s-p.faux textarea{border-color:var(--rouge)}
   .s-messages div{padding:6px 10px;border-radius:6px;margin-bottom:6px;font-size:13px}
   .s-messages .r{background:var(--rouge-fond);color:var(--rouge)}.s-messages .o{background:var(--orange-fond);color:var(--orange)}
   .s-messages .v{color:var(--vert);padding:2px 0}
@@ -87,6 +92,8 @@ function sMessages(liste) {
 }
 function sAdresse() { var c = choix[S.env]; return (c && c.ip) || (parNom[S.env] && parNom[S.env].ip) || ""; }
 function sTexte(v) { return typeof v === "string" ? v : JSON.stringify(v); }
+// Hauteur du champ = son contenu : une valeur plus longue que la zone passe sur plusieurs lignes
+function sAjuste(champ) { champ.style.height = "auto"; champ.style.height = champ.scrollHeight + 2 + "px"; }
 
 function sEnvs() {
   var sel = $("s-env");
@@ -166,13 +173,27 @@ function sParams() {
     var n = h("span", {"class": "n", texte: String(cles.length)});
     n.dataset.total = String(cles.length);
     var bloc = h("details", {"class": "s-theme"}, h("summary", {}, S_THEMES[g] || g, n));
+    bloc.ontoggle = function () { if (bloc.open) bloc.querySelectorAll("textarea").forEach(sAjuste); };
     if (filtre || cles.some(function (k) { return k in S.modifs || k in S.ecarts; })) bloc.open = true;
     cles.forEach(function (k) {
-      var origine = p.groupes[g][k], champ = h("input", {type: "text", "aria-label": k, spellcheck: "false"});
+      var origine = p.groupes[g][k], champ = h("textarea", {rows: "1", "aria-label": k, spellcheck: "false"});
       champ.value = k in S.modifs ? sTexte(S.modifs[k]) : sTexte(origine);
       champ.disabled = !p.editable;
-      var ligne = h("label", {"class": "s-p" + (k in S.modifs ? " modif" : "") + (k in S.ecarts ? " ecart" : "")},
-                    h("code", {texte: k}), champ);
+      var valeur = h("span", {"class": "s-val"}, champ);
+      if (origine !== null && typeof origine === "object") {   // liste ou objet : vue formatee a la demande
+        var bouton = h("button", {type: "button", "class": "s-json", "aria-pressed": "false", texte: "{ }",
+                                  title: "Afficher formaté", "aria-label": "Afficher " + k + " formaté"});
+        bouton.onclick = function () {
+          var formate = bouton.getAttribute("aria-pressed") !== "true";
+          try { champ.value = JSON.stringify(JSON.parse(champ.value), null, formate ? 2 : 0); } catch (e) { return; }
+          bouton.setAttribute("aria-pressed", String(formate));
+          bouton.title = formate ? "Afficher sur une ligne" : "Afficher formaté";
+          sAjuste(champ);
+        };
+        valeur.appendChild(bouton);
+      }
+      var ligne = h("div", {"class": "s-p" + (k in S.modifs ? " modif" : "") + (k in S.ecarts ? " ecart" : "")},
+                    h("code", {texte: k}), valeur);
       if (k in S.ecarts) ligne.title = "Autre valeur : " + sTexte(S.ecarts[k]);
       champ.oninput = function () {
         var v = champ.value, ok = true;
@@ -180,11 +201,13 @@ function sParams() {
         ligne.classList.toggle("faux", !ok);
         if (ok && sTexte(v) !== sTexte(origine)) S.modifs[k] = v; else delete S.modifs[k];
         ligne.classList.toggle("modif", k in S.modifs);
+        sAjuste(champ);
         sCopierEtat();
       };
       bloc.appendChild(ligne);
     });
     zone.appendChild(bloc);
+    if (bloc.open) bloc.querySelectorAll("textarea").forEach(sAjuste);
   });
   var fichiers = Object.keys(p.fichiers || {});
   if (fichiers.length) zone.appendChild(h("p", {"class": "discret", texte: "Fichiers des pilotes (non modifiables ici) : "
@@ -249,7 +272,7 @@ $("s-restaurer").onclick = async function () {
   if (autreCarte && !confirm("ATTENTION : la carte jointe à " + adresse + " s'appelle « " + sTexte(autreCarte.b)
       + " », la sauvegarde « " + sTexte(autreCarte.a) + " ».\n\nEst-ce bien la carte à restaurer ?")) { bouton.disabled = false; sMessages([]); return; }
   if (!confirm("Restaurer " + S.fichier + " sur " + S.env + " (" + adresse + ") ?\n\nUne sauvegarde de la carte est prise d'abord, "
-      + "puis la carte redémarre.\n" + sEcartsTexte(e) + "\n" + liste.join("\n"))) { bouton.disabled = false; sMessages([]); return; }
+      + "puis la carte redémarre : l'état des relais peut changer (vu sur le différentiel : relais revenu ON).\n" + sEcartsTexte(e) + "\n" + liste.join("\n"))) { bouton.disabled = false; sMessages([]); return; }
   sMessages([["v", "Restauration en cours (sauvegarde d'abord, puis envoi et redémarrage de la carte)…"]]);
   var r = await appel("/sauvegarde/restaurer", {env: S.env, fichier: S.fichier, adresse: adresse, jeton: c.donnees.jeton}, 300000);
   bouton.disabled = false;

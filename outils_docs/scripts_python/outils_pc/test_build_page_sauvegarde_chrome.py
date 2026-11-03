@@ -69,7 +69,7 @@ def sonde(m, capture):
     saisit(cdp, "#s-filtre", "CARTE-AVANT")            # valeur du seul hostname de la plus recente (le filtre cherche aussi les valeurs)
     e = etat(cdp)
     s.verifie((e["params"], [t[1] for t in e["themes"]]), (["hostname"], [True]), "filtre : un parametre, theme ouvert")
-    saisit(cdp, "#s-params .s-p input[aria-label='hostname']", "CARTE-SONDE")
+    saisit(cdp, "#s-params .s-p textarea[aria-label='hostname']", "CARTE-SONDE")
     e = etat(cdp)
     s.verifie((e["modifs"], e["copier"]), (["hostname"], "Enregistrer la copie (1 modifié)"), "modification : surlignee, bouton de copie")
     clic(cdp, "#s-copier")
@@ -87,6 +87,21 @@ def sonde(m, capture):
     e = etat(cdp)
     s.verifie((e["texte_ecarts"], e["ecarts"]), ("1 écart : hostname", ["hostname"]), "comparer : ecart annonce et surligne")
 
+    saisit(cdp, "#s-filtre", "flag3")                      # objet de 30 cles : plus long que sa zone
+    champ = "#s-params textarea[aria-label='flag3']"
+    haut = lambda: cdp.js(f"document.querySelector({json.dumps(champ)}).offsetHeight")
+    h1 = haut()
+    s.verifie(h1 > 40, True, f"valeur longue : affichee sur plusieurs lignes ({h1} px)")
+    s.verifie(cdp.js("document.querySelectorAll('#s-params .s-json').length"), 1, "valeur JSON : une icone de vue formatee")
+    clic(cdp, "#s-params .s-json")
+    time.sleep(0.3)
+    s.verifie((cdp.js(f"document.querySelector({json.dumps(champ)}).value.includes('\\n  \"')"), haut() > h1,
+               cdp.js("document.querySelectorAll('#s-params .s-p.modif').length")), (True, True, 0),
+              "icone : vue formatee, plus haute, pas une modification")
+    clic(cdp, "#s-params .s-json")
+    time.sleep(0.3)
+    s.verifie(cdp.js(f"document.querySelector({json.dumps(champ)}).value.includes('\\n')"), False, "icone : retour sur une ligne")
+    saisit(cdp, "#s-filtre", "")
     clic(cdp, "#s-restaurer")                              # env sans adresse : rien n'est demande a une carte
     time.sleep(0.5)
     s.verifie("Adresse de la carte inconnue" in etat(cdp)["messages"], True, "restaurer sans adresse : refuse avec le motif")
