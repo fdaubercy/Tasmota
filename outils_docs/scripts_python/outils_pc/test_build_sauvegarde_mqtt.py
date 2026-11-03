@@ -218,7 +218,7 @@ def test_reposes():
     verifie(bs.reposes(["flag3"], {}, {}), {}, "temoin : sans autoexec ni persist, aucune marque")
     # -- table POSEES : une ligne par commande de configGlobal.be, la marque suit le persist de la carte
     config = (RACINE / bs.CONFIG_PERSIST).read_text(encoding="utf-8")
-    verifie(sorted(set(bs.commandes_persist(config)) - set(bs.POSEES)), [], "POSEES : chaque commande de configGlobal.be a sa ligne")
+    verifie(sorted(set(bs.commandes_persist(config)) - set(bs.POSEES) - set(bs.INDEXEES)), [], "POSEES : chaque commande de configGlobal.be a sa ligne")
     vrai = json.loads((RACINE / "data/bureau/tasmota32-interrupteur-energie/_persist.json").read_text(encoding="utf-8"))
     posees = bs.commandes_posees(vrai, config)
     verifie(({"HOSTNAME", "MQTTHOST", "TELEPERIOD", "SERIALLOG"} <= set(posees), {"MODULES", "WIFI", "ETHIPADDRESS"} & set(posees)),
@@ -229,6 +229,16 @@ def test_reposes():
     verifie(({"MQTTHOST", "TOPIC", "HOSTNAME"} & set(posees), "SETOPTION3" in posees), (set(), True),
             "MQTT coupe et hostname vide : plus marques (SetOption3 reste pose)")
     verifie(bs.reposes(["mqtt_host", "hostname"], {}, posees), {}, "marque : rien pour un parametre que le persist ne pose pas")
+    sans["serveur"]["IP"] = {"IPAddress": "192.168.0.49", "IPGateway": "", "Subnet": "", "DNSServer": "192.168.0.1"}
+    sans["serveur"]["wifi"]["reseau1"] = {"nomReseauWifi": "maison", "mdpWifi": ""}
+    sans["serveur"]["wifi"]["reseau2"] = {"nomReseauWifi": "garage", "mdpWifi": "x"}
+    posees = bs.commandes_posees(sans, config)
+    verifie((posees.get("IPADDRESS"), posees.get("SSID"), posees.get("PASSWORD")), ("IPAddress1, IPAddress4", "SSId2", "Password2"),
+            "commandes numerotees : la marque nomme celles que le persist pose (Wi-Fi : nom ET mot de passe)")
+    verifie("persist (IPAddress1, IPAddress4)" in bs.reposes(["ip_address"], {}, posees)["ip_address"], True,
+            "survol de ip_address : IPAddress1 et IPAddress4 seulement")
+    sans["serveur"]["IP"] = {"IPAddress": "", "IPGateway": "", "Subnet": "", "DNSServer": ""}
+    verifie("IPADDRESS" in bs.commandes_posees(sans, config), False, "IP toutes vides : ip_address plus marque")
 
 
 def banc():

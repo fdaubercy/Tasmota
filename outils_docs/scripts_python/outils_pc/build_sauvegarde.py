@@ -197,14 +197,11 @@ def _log_pose(p, sortie):
 POSEES = {
     "SETOPTION56": lambda p: _pose(p, "serveur.wifi.selectSignalFort"),
     "WIFIPOWER": lambda p: _pose(p, "serveur.wifi.power"),
-    "SSID": lambda p: _pose(p, "serveur.wifi.reseau1.nomReseauWifi", "serveur.wifi.reseau2.nomReseauWifi"),
-    "PASSWORD": lambda p: _pose(p, "serveur.wifi.reseau1.nomReseauWifi", "serveur.wifi.reseau2.nomReseauWifi"),
-    "AP": lambda p: _pose(p, "serveur.wifi.reseau2.nomReseauWifi"),
+    "AP": lambda p: all(_pose(p, f"serveur.wifi.reseau2.{c}") for c in ("nomReseauWifi", "mdpWifi")),
     "DEVICENAME": lambda p: _pose(p, "serveur.nom"),
     "HOSTNAME": lambda p: _pose(p, "serveur.hostname"),
     "SETOPTION55": lambda p: _pose(p, "serveur.mDNS"),
     "SETOPTION128": lambda p: _pose(p, "serveur.apiHTTP"),
-    "IPADDRESS": lambda p: _pose(p, *(f"serveur.IP.{c}" for c in ("IPAddress", "IPGateway", "Subnet", "DNSServer"))),
     "ETHIPADDRESS": lambda p: _eth_pose(p, "serveur.IP.IPAddress"),
     "ETHGATEWAY": lambda p: _eth_pose(p, "serveur.IP.IPGateway"),
     "ETHSUBNETMASK": lambda p: _eth_pose(p, "serveur.IP.Subnet"),
@@ -236,13 +233,27 @@ POSEES = {
     "MQTTLOG": lambda p: _log_pose(p, "mqtt"),
     "SYSLOG": lambda p: _log_pose(p, "syslog"),
 }
+# Commandes numerotees qui reglent UN parametre de decode-config (ip_address : liste de 4) : chaque numero a sa
+# condition, la marque nomme ceux que le persist pose (« persist (IPAddress1, IPAddress4) »)
+_WIFI = lambda n: [f"serveur.wifi.reseau{n}.nomReseauWifi", f"serveur.wifi.reseau{n}.mdpWifi"]   # les deux remplis
+INDEXEES = {
+    "IPADDRESS": [(f"IPAddress{i}", [f"serveur.IP.{c}"])
+                  for i, c in enumerate(("IPAddress", "IPGateway", "Subnet", "DNSServer"), 1)],
+    "SSID": [(f"SSId{n}", _WIFI(n)) for n in (1, 2)],
+    "PASSWORD": [(f"Password{n}", _WIFI(n)) for n in (1, 2)],
+}
 ECRITES_LOGS = {"SERIALLOG": "SerialLog", "WEBLOG": "WebLog", "MQTTLOG": "MqttLog", "SYSLOG": "SysLog"}
 
 
 def commandes_posees(persist, texte_config):
     """{commande: forme ecrite} que configGlobal.be (`texte_config`) pose au demarrage avec ce persist (dict)."""
     commandes = dict(commandes_persist(texte_config), **ECRITES_LOGS)
-    return {n: e for n, e in commandes.items() if POSEES.get(n, lambda p: True)(persist)}
+    res = {n: e for n, e in commandes.items() if n not in INDEXEES and POSEES.get(n, lambda p: True)(persist)}
+    for n in set(INDEXEES) & set(commandes):
+        ecrites = [e for e, chemins in INDEXEES[n] if all(_pose(persist, c) for c in chemins)]
+        if ecrites:
+            res[n] = ", ".join(ecrites)
+    return res
 
 
 def reposes(cles, autoexec, persist, commandes=None):
