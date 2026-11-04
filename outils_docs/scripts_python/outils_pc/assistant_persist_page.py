@@ -5,9 +5,15 @@ apercu du _persist.json a droite (rafraichi par POST /apercu, anti-rebond de 300
 Etape « Bloc metier » : tableau d'elements par groupe (assistant_persist_elements), ajout, suppression, broche en liste.
 Le script est dans assistant_persist_page_js.py et assistant_persist_page_js_env.py (mode modification et suppression,
 A10) ; PAGE les assemble.
-Textes inseres par textContent uniquement. Sonde Chrome : test_assistant_persist_page_chrome.py.
+Deux onglets (plan autoexec-bat, A6) : « Persist (creer, modifier, supprimer) » (vue-persist, la page ci-dessus) et
+« autoexec.bat » (assistant_persist_page_autoexec*.py, insere aux marques /*CSS_AUTOEXEC*/, <!--VUE_AUTOEXEC-->,
+/*JS_AUTOEXEC*/).
+Textes inseres par textContent uniquement. Sondes Chrome : test_assistant_persist_page_chrome.py,
+test_assistant_persist_autoexec_chrome.py.
 """
 
+import assistant_persist_page_autoexec as _autoexec
+import assistant_persist_page_autoexec_js as _autoexec_js
 import assistant_persist_page_js as _js
 import assistant_persist_page_js_env as _env
 
@@ -61,11 +67,17 @@ HTML = r"""<!doctype html>
   summary{cursor:pointer;font-weight:600}
   .liens a{color:var(--bleu);margin-right:14px}
   .danger{border-color:var(--rouge)}
+/*CSS_AUTOEXEC*/
 </style>
 </head>
 <body>
 <main>
-  <h1>Assistant de création du persist</h1>
+  <h1>Assistant persist</h1>
+  <nav class="onglets" role="tablist" aria-label="Onglets">
+    <button id="onglet-persist" type="button" role="tab" aria-selected="true" aria-controls="vue-persist">Persist (créer, modifier, supprimer)</button>
+    <button id="onglet-autoexec" type="button" role="tab" aria-selected="false" aria-controls="vue-autoexec">autoexec.bat</button>
+  </nav>
+  <div id="vue-persist" role="tabpanel" aria-labelledby="onglet-persist">
   <div id="bandeau-erreur" class="avert rouge cache"></div>
   <div id="bandeau-modele" class="avert cache">
     <span id="texte-modele"></span>
@@ -185,12 +197,16 @@ HTML = r"""<!doctype html>
       <pre id="apercu"></pre>
     </div>
   </div>
+  </div>
+<!--VUE_AUTOEXEC-->
 </main>
 <script>
 /*JS*/
+/*JS_AUTOEXEC*/
 </script>
 </body>
 </html>
 """
 
-PAGE = HTML.replace("/*JS*/", _js.JS.replace("/*ENV*/", _env.JS))
+PAGE = (HTML.replace("/*JS*/", _js.JS.replace("/*ENV*/", _env.JS)).replace("/*CSS_AUTOEXEC*/", _autoexec.CSS)
+        .replace("<!--VUE_AUTOEXEC-->", _autoexec.HTML).replace("/*JS_AUTOEXEC*/", _autoexec_js.JS))
