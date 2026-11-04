@@ -10,6 +10,7 @@ Montage : atelier_graphiques_web.py dans un processus fils (mode --serveur), dev
 que test_atelier_graphiques_web.py) ; la carte est simulee en remplacant build_ota_http._get dans ce processus (aucun
 reseau) : la cuve repond, le P4 (192.168.0.43 sans port) est muet. Detection des builds neutralisee ;
 OUTILS_TASMOTA_DOSSIER temporaire. Fenetre de 1400 px (capture comparee a modele-B.png par l'utilisateur).
+Mode sombre de la page : temoin manuel SONDE_SANS_INTERRUPTEUR=1 (l'interrupteur ne fait plus rien -> rouge attendu).
 Scenario : apercu trace par le vrai moteur, styles proposes, reglages par serie (libelle -> legende, couleur -> serie
 de l'apercu, unite -> axe ; vides -> la serie redevient une chaine), un seuil ajoute puis change modifie le SVG de l'apercu,
 bascules page / telephone / theme sombre, deplacement d'une tuile, carte muette -> bandeau « valeurs simulees »,
@@ -73,6 +74,10 @@ def mode_serveur(port, depot, temoin):
         import atelier_graphiques_page
         assert atelier_graphiques_page.PAGE.count(MARQUE_TEMOIN) == 1, "marque du temoin introuvable dans la page"
         atelier_graphiques_page.PAGE = atelier_graphiques_page.PAGE.replace(MARQUE_TEMOIN, INJECTION_TEMOIN + MARQUE_TEMOIN)
+    if os.environ.get("SONDE_SANS_INTERRUPTEUR"):     # temoin manuel du theme : l'interrupteur ne fait plus rien
+        import atelier_graphiques_page
+        assert atelier_graphiques_page.PAGE.count(atelier_graphiques_page.THEME_INTERRUPTEUR) == 1
+        atelier_graphiques_page.PAGE = atelier_graphiques_page.PAGE.replace(atelier_graphiques_page.THEME_INTERRUPTEUR, "")
     build_ota_http._get = fausse_carte
     agw.DEPOT = Path(depot)
     agw.builds_en_cours_defaut = lambda: []
@@ -111,6 +116,7 @@ class Montage:
         for domaine in ("Runtime.enable", "Log.enable", "Page.enable"):
             self.cdp.appel(domaine)
         self.cdp.appel("Emulation.setDeviceMetricsOverride", width=1400, height=1000, deviceScaleFactor=1, mobile=False)
+        systeme(self.cdp, "light")
 
     def _attend_http(self, url, delai):
         limite = time.monotonic() + delai
@@ -142,6 +148,52 @@ def monte_depot(t):
         (depot / "data/sd" / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(taw.DEPOT / "data/sd" / rel, depot / "data/sd" / rel)
     return depot
+
+
+def systeme(cdp, valeur):
+    cdp.appel("Emulation.setEmulatedMedia", features=[{"name": "prefers-color-scheme", "value": valeur}])
+
+
+def recharge(cdp):
+    """Recharge la page et attend la carte lue, l'apercu trace et le diff pret."""
+    cdp.appel("Page.reload")
+    time.sleep(0.5)
+    attend(cdp, "document.getElementById('relire') && document.getElementById('relire').textContent.indexOf('en ligne') >= 0"
+                " && !!document.querySelector('#apercu .pg_tuile[data-rendu]') && !document.getElementById('ecrire').disabled", 25)
+
+
+def sonde_theme(m, capture):
+    """Interrupteur « Mode sombre » de la page (comme l'annuaire), independant du « thème sombre » de l'apercu."""
+    cdp = m.cdp
+    theme = "document.documentElement.getAttribute('data-theme')"
+    fonds = ("[" + theme + ", getComputedStyle(document.body).backgroundColor, getComputedStyle(document.querySelector('.carte'))"
+             ".backgroundColor, getComputedStyle(document.getElementById('r-titre')).color, document.getElementById('theme').checked]")
+    apercu = ("[document.getElementById('cadre').classList.contains('sombre'), document.getElementById('sombre').classList.contains('actif'),"
+              " getComputedStyle(document.getElementById('cadre')).backgroundColor]")
+    verifie(cdp.js(fonds), ["clair", "rgb(246, 247, 249)", "rgb(255, 255, 255)", "rgb(34, 34, 34)", False],
+            "page : mode clair par defaut (systeme clair), interrupteur decoche")
+    cdp.js("document.querySelector('label.theme').click(); 1")
+    verifie(cdp.js(fonds), ["sombre", "rgb(18, 20, 23)", "rgb(29, 32, 37)", "rgb(230, 230, 230)", True],
+            "interrupteur : page en mode sombre (fond, cartes, texte des champs)")
+    verifie(cdp.js(apercu), [False, False, "rgb(255, 255, 255)"], "mode sombre de la page : « thème sombre » de l'apercu inchange")
+    if capture:
+        time.sleep(1)
+        cdp.capture(str(Path(capture).with_name(Path(capture).stem + "-sombre.png")))
+    recharge(cdp)
+    verifie(cdp.js(fonds)[0::4], ["sombre", True], "mode sombre garde au rechargement (localStorage)")
+    cdp.js("document.getElementById('sombre').click(); 1")
+    verifie(cdp.js("[" + theme + ", document.getElementById('cadre').classList.contains('sombre')]"), ["sombre", True],
+            "« thème sombre » de l'apercu : ne change pas le mode de la page")
+    cdp.js("document.getElementById('sombre').click(); document.querySelector('label.theme').click(); 1")
+    verifie(cdp.js("[" + theme + ", localStorage.getItem('atelier-graphiques-theme')]"), ["clair", "clair"],
+            "interrupteur : retour au mode clair, memorise")
+    cdp.js("localStorage.removeItem('atelier-graphiques-theme'); 1")
+    systeme(cdp, "dark")
+    recharge(cdp)
+    verifie(cdp.js(theme), "sombre", "sans choix memorise : systeme sombre -> page sombre (comme l'annuaire)")
+    systeme(cdp, "light")
+    recharge(cdp)
+    verifie(cdp.js(theme), "clair", "sans choix memorise : systeme clair -> page claire")
 
 
 def svg_apercu(cdp):
@@ -226,6 +278,7 @@ def sonde_page(m, capture):
     if capture:
         time.sleep(1)
         cdp.capture(capture)
+    sonde_theme(m, capture)
     avant = svg_apercu(cdp)
     cdp.js("document.getElementById('r-ajout-zone').click(); 1")
     verifie(attend(cdp, "/c0392b|192,\\s*57,\\s*43/i.test((document.querySelector('#apercu .pg_tuile') || {}).innerHTML || '')", 10),
