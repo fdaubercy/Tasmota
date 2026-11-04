@@ -1,0 +1,23 @@
+{
+ "version": 1,
+ "pages": [
+  {
+   "id": "tableau",
+   "titre": "Tableau",
+   "acces": "bouton",
+   "graphiques": [
+    {
+     "type": "courbe",
+     "titre": "Hauteur d'eau",
+     "series": [
+      {
+       "chemin": "sensorsCuve.niveauCuve.hauteurEau",
+       "unite": "cm"
+      }
+     ],
+     "periode": "jour"
+    }
+   ]
+  }
+ ]
+}

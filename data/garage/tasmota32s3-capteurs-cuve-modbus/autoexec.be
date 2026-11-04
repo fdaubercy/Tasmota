@@ -19,5 +19,6 @@ if demarrage.prologue()
     demarrage.charge(["controleDiscovery"], "serveur.discovery")
     demarrage.leds()                                                        # AVANT controleCuve : couleur du niveau des son init
     demarrage.historique()                                                  # AVANT controleCuve, qui l'importe
+    demarrage.charge(["pagesGraphiques"])
     demarrage.chargeFichier("controleCuve", "modules.cuve")                 # non solidifie : depuis le LittleFS
 end
