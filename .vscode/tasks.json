@@ -227,6 +227,16 @@
             "args": ["-u", "outils_docs/scripts_python/outils_pc/assistant_persist_web.py", "--http", "7900"],
             "presentation": { "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
+        },
+        {
+            // Atelier des graphiques : pages de graphiques des cartes S3/P4 (description, autoexec, cenv).
+            // Aussi cible Custom « Atelier des graphiques (page web) ».
+            "label": "Outil : atelier des graphiques (http://127.0.0.1:7950)",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/atelier_graphiques_web.py", "--http", "7950"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
         }
     ]
 }

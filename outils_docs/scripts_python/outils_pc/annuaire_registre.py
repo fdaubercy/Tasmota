@@ -211,6 +211,18 @@ OUTILS = [
         "http",
         "Console capturée : " + CONSOLE.format("assistant_persist") + ". Sauvegardes horodatées avant création : "
         "%LOCALAPPDATA%\\outils_tasmota\\fichiers_berry\\sauvegardes\\."),
+    Outil(
+        "atelier_graphiques", "Atelier des graphiques", "Atelier des graphiques", GROUPES[2],
+        "Compose les pages de graphiques des cartes S3/P4 et écrit leur description dans le dépôt.",
+        "Page web qui choisit, carte par carte, les pages de graphiques (séries du SENSOR, formules, couleurs, "
+        "unités), les montre avec les valeurs de la carte (simulées si elle est injoignable) et écrit, après "
+        "diff, la description, l'autoexec et le cenv. Écriture refusée pendant un build. Seul paramètre ici : "
+        "le port de la page (7950). Rien n'est écrit sans « Écrire dans le dépôt » : l'arrêter à tout moment.",
+        DOSSIER + "outils_pc/atelier_graphiques_web.py",
+        [_port("http", 7950)],
+        "http",
+        "Console capturée : " + CONSOLE.format("atelier_graphiques") + ". Sauvegardes horodatées avant écriture : "
+        "%LOCALAPPDATA%\\outils_tasmota\\fichiers_berry\\sauvegardes\\."),
 ]
 
 
