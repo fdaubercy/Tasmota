@@ -284,6 +284,15 @@ verifie(/^\/histo\?n=mesures&p=mois&m=\d{4}-\d{2}$/.test(appels[3]), 'mois : moi
 verifie(JSON.stringify(mois.valeurs) === '{"a.b":[7]}', 'mois : moyenne lue dans la colonne de seriesFichier', mois.valeurs);
 const sansHisto = await G.lecteurCarte('mesures', false)(['a.b'], 'jour');
 verifie(appels.length === 4 && JSON.stringify(sansHisto) === '{"t":[],"valeurs":{}}', 'sans historique : aucune requete, series absentes');
+// Carte qui vient de demarrer : /histo repond 404 « historique inconnu » tant que l'historique n'est pas cree (~3 min)
+const reponse404 = corps => () => Promise.resolve({ok: false, status: 404, json: () => Promise.resolve(corps)});
+contexte.fetch = reponse404({erreur: 'historique inconnu', noms: []});
+const attente = await lecteur(['a.b'], 'jour').then(() => null, e => e);
+verifie(attente && attente.attente === true && attente.message === 'La carte vient de démarrer, historique en préparation',
+  '404 « historique inconnu » : message d\'attente, marque attente', attente && attente.message);
+contexte.fetch = reponse404({erreur: 'autre'});
+const autre404 = await lecteur(['a.b'], 'jour').then(() => null, e => e);
+verifie(autre404 && !autre404.attente && autre404.message === 'lecture de /histo impossible (HTTP 404)', 'autre 404 : erreur inchangee', autre404 && autre404.message);
 
 console.log(`\n${nb} verification(s), ${echecs.length} echec(s)`);
 console.log(echecs.length ? 'ROUGE : ' + echecs.slice(0, 20).join(' ; ') : 'VERT');

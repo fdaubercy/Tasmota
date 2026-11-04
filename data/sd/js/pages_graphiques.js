@@ -323,8 +323,13 @@ var PagesGraphiques = (function () {
 
   function lisJson(url) {
     return fetch(url).then(function (r) {
-      if (!r.ok) throw new Error('lecture de ' + url.split('?')[0] + ' impossible (HTTP ' + r.status + ')');
-      return r.json();
+      if (r.ok) return r.json();
+      // /histo : historique cree ~3 min apres le demarrage (404 « historique inconnu ») ; la page retente a chaque cadence
+      return (r.status === 404 ? r.json().catch(function () { return {}; }) : Promise.resolve({})).then(function (c) {
+        var attente = c && c.erreur === 'historique inconnu';
+        throw Object.assign(new Error(attente ? 'La carte vient de démarrer, historique en préparation'
+          : 'lecture de ' + url.split('?')[0] + ' impossible (HTTP ' + r.status + ')'), {attente: attente});
+      });
     });
   }
 
@@ -455,7 +460,7 @@ var PagesGraphiques = (function () {
         gr.tuiles.forEach(function (t) { t.d = d; dessine(t); });
         msg.textContent = erreurBibliotheque;
       }).catch(function (e) {
-        msg.textContent = 'Lecture impossible : ' + e.message;
+        msg.textContent = e.attente ? e.message + '…' : 'Lecture impossible : ' + e.message;
       }).then(function () { gr.enCours = false; });
     }
     function lisTout() { Object.keys(groupes).forEach(function (k) { lis(groupes[k]); }); }
