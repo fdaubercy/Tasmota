@@ -5,14 +5,17 @@ Onglet « autoexec.bat » de l'Assistant persist : la page recoit le fichier ave
 texte libre, voit le diff, puis l'ecrit. Aucun secret du fichier ne part vers la page (ni dans le texte, ni dans le
 diff) ; ils sont remis ici, cote serveur.
   lit(racine, env)       {texte (secrets en ***), empreinte, chemin (relatif), existe}
-  demasque(page, disque) chaque `***` d'une commande C reprend la k-ieme valeur de C du fichier sur disque (k = rang de
-                         ce `***` parmi les `***` de C dans la page) ; `***` sans valeur d'origine : ValueError
+  demasque(page, disque) la k-ieme apparition de C dans la page, si elle vaut `***`, reprend la valeur de la k-ieme
+                         apparition de C sur le disque ; `***` sans origine, ou apparitions de C ajoutees ou retirees
+                         alors que C a un `***` : ValueError
   diff(racine, env, page)        {diff (unifie, cote disque masque), empreinte, rouges}
   ecrit(racine, env, page, empreinte, rouges_lus, builds_en_cours)   {ecrit, chemin}, dans une Transaction("autoexec")
-Masquage : la valeur de toute commande dont le nom repond a autoexec_analyse.SECRETS, ligne en commentaire comprise ;
-le reste de la ligne est garde octet pour octet. Le nom est lu comme support_command.ino::ExecuteCommand (lettres,
+Masquage : apres le premier mot qui repond a autoexec_analyse.SECRETS (nom de commande, ou mot du corps d'une Rule, d'un
+Br, d'un commentaire), tout le reste de la partie (ligne, ou morceau de Backlog) : on masque trop plutot que pas assez ;
+le debut de la ligne est garde octet pour octet. Le nom est lu comme support_command.ino::ExecuteCommand (lettres,
 chiffres, `_`, prefixe `cmnd/x/`) ET comme autoexec_analyse.lignes (mot jusqu'a l'espace) : `Password1=x` est masque.
-Empreinte : sha256 des octets du fichier, "" s'il n'existe pas. Rouges : avertissements rouges de
+Empreinte : HMAC-sha256 des octets du fichier, cle tiree une fois par processus (un redemarrage de la page
+oblige a relire) ; "" s'il n'existe pas. Rouges : avertissements rouges de
 autoexec_analyse.analyse sur le texte DEMASQUE, avec le persist de la carte.
 Fichier recrit : BOM garde s'il y en avait un, fins de ligne du fichier (CRLF si le fichier en contient, sinon LF),
 presence ou absence de la fin de ligne finale gardee. Nouveau fichier : UTF-8 sans BOM, LF, texte tel que recu.
@@ -21,8 +24,10 @@ Banc : test_autoexec_fichier.py.
 
 import difflib
 import hashlib
+import hmac
 import json
 import re
+import secrets
 from pathlib import Path
 
 import autoexec_analyse
@@ -33,6 +38,8 @@ from build_sauvegarde import CONFIG_PERSIST
 MASQUE = "***"
 BOM = b"\xef\xbb\xbf"
 NOM = re.compile(r"[A-Za-z0-9_/]*")          # nom de commande pour le firmware (support_command.ino::ExecuteCommand)
+MOT = re.compile(r"[^\s=]+")
+_CLE = secrets.token_bytes(32)                # empreinte : HMAC, pas de recherche hors ligne d'un mot de passe faible
 
 
 def chemin(env):
@@ -46,7 +53,10 @@ def chemin(env):
 
 
 def _valeurs(ligne):
-    """[(nom ecrit, debut, fin)] des valeurs non vides des commandes a secret de la ligne, de gauche a droite."""
+    """[(nom, debut, fin)] de gauche a droite, une par partie (ligne, ou morceau de Backlog entre deux `;`) : apres le
+    premier mot a secret de la partie (nom de commande, ou mot du corps d'une Rule, d'un Br, d'un commentaire...), tout
+    le reste de la partie jusqu'a sa fin (une valeur peut contenir des espaces). fin == debut : rien a masquer, mais
+    l'apparition compte pour la remise."""
     i = len(ligne) - len(ligne.lstrip())
     if ligne[i:i + 1] == ";":                # commentaire : ses commandes sont masquees aussi
         i = len(ligne) - len(ligne.lstrip().lstrip(";").lstrip())
@@ -60,56 +70,69 @@ def _valeurs(ligne):
         morceaux = [(i, len(ligne))]
     res = []
     for debut, fin in morceaux:
-        partie = ligne[debut:fin]
-        debut += len(partie) - len(partie.lstrip())
-        m = NOM.match(ligne, debut, fin)
-        ecrit = m.group().rsplit("/", 1)[-1]
-        mot = (ligne[debut:fin].split() or [""])[0]          # lecture de autoexec_analyse.lignes
-        if autoexec_analyse.SECRETS.search(ecrit):
-            v = m.end()
-        elif autoexec_analyse.SECRETS.search(mot):
-            ecrit, v = mot, debut + len(mot)
-        else:
-            continue
-        while v < fin and (ligne[v].isspace() or ligne[v] == "="):
-            v += 1
-        f = v + len(ligne[v:fin].rstrip())
-        if f > v:
-            res.append((ecrit, v, f))
+        mots = MOT.finditer(ligne, debut, fin)
+        for mot in mots:
+            m = NOM.match(ligne, mot.start(), mot.end())     # Password1:x -> Password1, valeur :x (comme le firmware)
+            nom = m.group().rsplit("/", 1)[-1]
+            if autoexec_analyse.SECRETS.search(nom):
+                v = m.end()
+            elif autoexec_analyse.SECRETS.search(mot.group()):
+                nom, v = mot.group(), mot.end()
+            else:
+                continue
+            while v < fin and (ligne[v].isspace() or ligne[v] == "="):
+                v += 1
+            res.append((nom, v, v + len(ligne[v:fin].rstrip())))
+            break
     return res
 
 
 def masque(texte):
-    """Texte avec la valeur de chaque commande a secret remplacee par ***, tout le reste intact."""
+    """Texte avec chaque valeur a secret remplacee par ***, tout le reste intact."""
     sortie = []
     for ligne in texte.splitlines(True):
         for _, d, f in reversed(_valeurs(ligne)):
-            ligne = ligne[:d] + MASQUE + ligne[f:]
+            if f > d:
+                ligne = ligne[:d] + MASQUE + ligne[f:]
         sortie.append(ligne)
     return "".join(sortie)
 
 
+def _apparitions(lignes):
+    res = {}
+    for ligne in lignes:
+        for nom, d, f in _valeurs(ligne):
+            res.setdefault(nom.lower(), []).append(ligne[d:f])
+    return res
+
+
 def demasque(texte_page, texte_disque):
-    """Remet les valeurs d'origine a la place des *** (meme commande, ordre d'apparition) ; ValueError sinon."""
-    origines = {}
-    for ligne in texte_disque.splitlines(True):
-        for ecrit, d, f in _valeurs(ligne):
-            origines.setdefault(ecrit.lower(), []).append(ligne[d:f])
-    rangs, sortie = {}, []
-    for numero, ligne in enumerate(texte_page.splitlines(True), 1):
+    """La k-ieme apparition de C dans la page, si elle vaut ***, reprend la valeur de la k-ieme apparition de C sur le
+    disque. ValueError si C n'a pas de valeur d'origine, si le nombre d'apparitions de C a change, ou s'il resterait un
+    *** de plus que sur le disque (mot a secret ajoute devant, par exemple : *** serait ecrit tel quel)."""
+    origines, lignes = _apparitions(texte_disque.splitlines(True)), texte_page.splitlines(True)
+    page, rangs, sortie = _apparitions(lignes), {}, []
+    for numero, ligne in enumerate(lignes, 1):
         morceaux, pos = [], 0
-        for ecrit, d, f in _valeurs(ligne):
+        for nom, d, f in _valeurs(ligne):
+            cle = nom.lower()
+            k = rangs[cle] = rangs.get(cle, -1) + 1
             if ligne[d:f] != MASQUE:
                 continue                     # valeur saisie en clair : gardee telle quelle (analyse la signale)
-            cle = ecrit.lower()
-            k = rangs[cle] = rangs.get(cle, -1) + 1
-            if k >= len(origines.get(cle, [])):
-                raise ValueError(f"ligne {numero} : {ecrit} vaut *** mais le fichier n'a pas de {k + 1}e valeur "
-                                 f"d'origine pour {ecrit} : saisir la valeur")
-            morceaux += [ligne[pos:d], origines[cle][k]]
+            avant = origines.get(cle, [])
+            if avant and len(avant) != len(page[cle]):
+                raise ValueError(f"ligne {numero} : lignes portant {nom} ajoutees ou retirees : retaper la valeur ou annuler")
+            if not avant or not avant[k]:
+                raise ValueError(f"ligne {numero} : {nom} vaut *** mais le fichier n'a pas de valeur d'origine pour "
+                                 f"cette apparition : saisir la valeur")
+            morceaux += [ligne[pos:d], avant[k]]
             pos = f
         sortie.append("".join(morceaux) + ligne[pos:])
-    return "".join(sortie)
+    texte = "".join(sortie)
+    if texte.count(MASQUE) > texte_disque.count(MASQUE):
+        n = next((n for n, l in enumerate(texte.splitlines(), 1) if MASQUE in l and l not in texte_disque.splitlines()), "?")
+        raise ValueError(f"ligne {n} : *** sans valeur d'origine (ligne changee devant le secret) : retaper la valeur ou annuler")
+    return texte
 
 
 def _disque(racine, env):
@@ -131,7 +154,7 @@ def _texte(octets):
 
 
 def _empreinte(octets):
-    return "" if octets is None else hashlib.sha256(octets).hexdigest()
+    return "" if octets is None else hmac.new(_CLE, octets, hashlib.sha256).hexdigest()
 
 
 def _nouveau(texte_page, octets):
@@ -195,7 +218,7 @@ def ecrit(racine, env, texte_page, empreinte, rouges_lus, builds_en_cours):
         raise RuntimeError("autoexec.bat a change sur le disque depuis sa lecture : recharger le fichier")
     nouveau = _nouveau(texte_page, octets)
     rouges = _rouges(racine, env, nouveau)
-    if not isinstance(rouges_lus, int) or rouges_lus < rouges:
+    if isinstance(rouges_lus, bool) or not isinstance(rouges_lus, int) or rouges_lus < rouges:
         raise ValueError(f"{rouges} avertissement(s) rouge(s) : cocher « J'ai lu les {rouges} avertissements rouges »")
     with fbs.Transaction(racine, "autoexec") as tr:
         tr.ecrit(rel, _octets(nouveau, octets))

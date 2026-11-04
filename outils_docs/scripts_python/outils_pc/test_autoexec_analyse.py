@@ -100,6 +100,10 @@ def banc():
     verifie([a["type"] for a in ana("SetOption55 ON")], ["doublon"], "redemarre seulement si la valeur est 0 : ON -> pas de redemarrage")
     verifie([a["type"] for a in ana("SetOption55 OFF")], ["redemarrage", "doublon"], "SetOption55 OFF -> redemarrage")
     verifie(ana("Password1"), [], "commande sans valeur (interrogation) : rien")
+    verifie([(x["type"], x["niveau"]) for x in ana("Password1=abc") if x["type"] == "secret"], [("secret", "rouge")],
+            "Password1=x (= separe commande et valeur pour le firmware) -> secret rouge")
+    verifie(aa.lignes("Backlog Password2 = abc; WebLog=2")[0]["commandes"], [("Password2", "abc"), ("WebLog", "2")],
+            "lignes : nom et valeur separes par =")
     verifie(ana("\n; une ligne propre\nDelay 1\n"), [], "ligne propre -> aucune entree")
     verifie(resume(ana("SetOption146 ON", {"diverses": {}})), [(1, "doublon", "orange")], "persist vide : SetOption146 reste pose (defaut OFF)")
     verifie(ana("SetOption56 ON", {}), [], "persist vide : SetOption56 non pose -> pas de doublon")

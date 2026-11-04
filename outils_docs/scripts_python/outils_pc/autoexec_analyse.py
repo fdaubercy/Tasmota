@@ -40,7 +40,7 @@ def lignes(texte):
             parties = (mots[1] if len(mots) > 1 else "").split(";")
         cmds = []
         for partie in parties:
-            m = partie.split(None, 1)
+            m = re.split(r"[\s=]+", partie.strip(), maxsplit=1)     # Password1=x : = separe aussi (ExecuteCommand)
             if m and re.match(r"[A-Za-z]\w*$", m[0]):
                 cmds.append((m[0], m[1].strip() if len(m) > 1 else ""))
         res.append({"numero": numero, "brut": brut, "commentaire": commentaire, "commandes": cmds})
