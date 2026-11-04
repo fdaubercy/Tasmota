@@ -30,7 +30,7 @@ ENV = "tasmota32-bureau-interrupteur-energie"
 CARTE = "data/bureau/tasmota32-interrupteur-energie"
 NEUVE = "tasmota32-bureau-essai"                     # carte sans autoexec.bat (dossier cree dans la copie)
 UTILES = [f"{CARTE}/autoexec.bat", f"{CARTE}/_persist.json", "data/fs/configGlobal.be",
-          "outils_docs/schemas/commandes_tasmota.json"]
+          "outils_docs/schemas/commandes_tasmota.json", "outils_docs/schemas/banque_autoexec.json"]
 ECHECS = []
 AUCUN_BUILD = lambda: []
 

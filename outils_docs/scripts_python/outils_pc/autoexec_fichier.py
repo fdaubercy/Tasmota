@@ -10,6 +10,7 @@ diff) ; ils sont remis ici, cote serveur.
                          alors que C a un `***` : ValueError
   diff(racine, env, page)        {diff (unifie, cote disque masque), empreinte, rouges}
   ecrit(racine, env, page, empreinte, rouges_lus, builds_en_cours)   {ecrit, chemin}, dans une Transaction("autoexec")
+  avertissements(racine, env, texte_demasque)   la liste d'autoexec_analyse.analyse (persist de la carte, banque)
 Masquage : apres le premier mot qui repond a autoexec_analyse.SECRETS (nom de commande, ou mot du corps d'une Rule, d'un
 Br, d'un commentaire), tout le reste de la partie (ligne, ou morceau de Backlog) : on masque trop plutot que pas assez ;
 le debut de la ligne est garde octet pour octet. Le nom est lu comme support_command.ino::ExecuteCommand (lettres,
@@ -31,6 +32,7 @@ import secrets
 from pathlib import Path
 
 import autoexec_analyse
+import autoexec_banque
 import autoexec_commandes
 import fichiers_berry_sauvegarde as fbs
 from build_sauvegarde import CONFIG_PERSIST
@@ -180,8 +182,14 @@ def _octets(texte, octets):
     return (BOM if octets and octets.startswith(BOM) else b"") + texte.encode("utf-8")
 
 
-def _rouges(racine, env, texte):
-    """Nombre d'avertissements rouges du texte demasque, avec le persist de la carte (vide s'il est illisible)."""
+def texte_disque(racine, env):
+    """Texte du fichier sur le disque, en clair (CÔTÉ SERVEUR seulement : ne jamais le renvoyer a la page)."""
+    return _texte(_disque(racine, env)[1])
+
+
+def avertissements(racine, env, texte):
+    """Avertissements d'autoexec_analyse.analyse sur le texte DEMASQUE, avec le persist de la carte (vide s'il est
+    illisible), configGlobal.be et les noms de la banque. Les messages ne citent jamais une valeur."""
     racine = Path(racine)
     p = racine / chemin(env).rsplit("/", 1)[0] / "_persist.json"
     try:
@@ -190,8 +198,12 @@ def _rouges(racine, env, texte):
         persist = {}
     config = racine / CONFIG_PERSIST
     texte_config = config.read_text(encoding="utf-8") if config.is_file() else ""
-    avertissements = autoexec_analyse.analyse(texte, persist, autoexec_commandes.charge(racine), texte_config=texte_config)
-    return sum(a["niveau"] == "rouge" for a in avertissements)
+    noms = [e["nom"] for e in autoexec_banque.charge(racine)]
+    return autoexec_analyse.analyse(texte, persist, autoexec_commandes.charge(racine), noms, texte_config=texte_config)
+
+
+def _rouges(racine, env, texte):
+    return sum(a["niveau"] == "rouge" for a in avertissements(racine, env, texte))
 
 
 def lit(racine, env):

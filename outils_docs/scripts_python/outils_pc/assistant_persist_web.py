@@ -32,6 +32,8 @@ Routes (les POST exigent l'en-tete X-Assistant-Persist: 1 et la meme origine ; J
         400 aucun changement
     POST /suppression/prepare {env} -> fichiers_berry_suppression.prepare_suppression + elements (liste lisible)
     POST /suppression {env, empreinte} -> {supprime, dossier_sauvegarde, sauvegarde} ; 409 ; 404 env inconnu
+    GET  /autoexec?env=, GET /autoexec/banque, POST /autoexec/analyse|diff|ecrit|banque/ajoute : onglet « autoexec.bat »,
+        voir assistant_persist_autoexec.py (env = carte du parc ; secrets du fichier jamais envoyes)
 (+ cartes dans GET /parc : [{env, dossier, puce}])
 `reponses` = les champs de assistant_persist_generation.Reponses (puce, lieu, nom obligatoires) ; `elements` =
 {groupe: [element, ...]} et `elements_groupe` = {groupe: {reglage: valeur}} (groupes de assistant_persist_elements).
@@ -54,6 +56,7 @@ import assistant_persist_generation as gen
 import assistant_persist_modele as apm
 import assistant_persist_modification as apm2
 import assistant_persist_parc as parc
+import assistant_persist_autoexec as apx
 import assistant_persist_relue as apr
 from annuaire_outils import hote_autorise
 import fichiers_berry_creation as fbc
@@ -258,6 +261,8 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, etat_modele):
             return _traite_post(chemin, demande)
 
     def _traite_post(chemin, demande):
+        if chemin.startswith("/autoexec"):
+            return apx.post(racine, chemin, demande, builds_en_cours)
         if chemin == "/apercu":
             return apercu(racine, reponses_de(demande))
         if chemin in ("/prepare", "/creation"):
@@ -340,6 +345,9 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, etat_modele):
                     self._json({"en_cours": False})
                 elif chemin == "/parc":
                     self._json(donnees_parc(racine))
+                elif chemin.startswith("/autoexec"):
+                    requete = {k: v[0] for k, v in parse_qs(urlsplit(self.path).query).items()}
+                    self._json(apx.get(racine, chemin, requete))
                 elif chemin == "/env":
                     self._json(apm2.charge_env(racine, _env_de({"env": (parse_qs(urlsplit(self.path).query).get("nom") or [""])[0]})))
                 elif chemin == "/modele/etat":
