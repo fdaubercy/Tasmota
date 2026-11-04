@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Banc des routes /autoexec* de l'Assistant persist (plan autoexec-bat, A5) : assistant_persist_autoexec.py, atteint
+"""Banc des routes /autoexec* de l'Assistant persist (plan autoexec-bat, A5 et A7) : assistant_persist_autoexec.py, atteint
 par le vrai serveur (assistant_persist_web) sur un depot temporaire, comme test_assistant_persist_web.py.
 
 L'autoexec.bat de l'essai est ECRIT par le banc avec un mot de passe INVENTE (jamais celui du depot) : il ne doit
 figurer dans le corps d'AUCUNE reponse (texte, avertissements, diff, banque, erreurs). Temoins : des mutants du module
 (copie modifiee en dossier temporaire, banc relance avec AUTOEXEC_MUTANT=<dossier>) doivent rendre le banc ROUGE.
+Routes d'envoi (A7) : carte SIMULEE (build_ota_carte_simulee, 127.0.0.1) ; adresse et joint_par_maitre
+d'autoexec_envoi remplaces par le banc, jamais de vraie carte (la logique complete : test_autoexec_envoi.py).
 Code 0 = vert.
 
 Python de PlatformIO : <~/.platformio/penv/Scripts/python.exe> outils_docs/scripts_python/outils_pc/test_assistant_persist_autoexec.py
@@ -21,6 +23,9 @@ if os.environ.get("AUTOEXEC_MUTANT"):
     sys.path.insert(0, os.environ["AUTOEXEC_MUTANT"])
 
 import autoexec_banque as ab
+import autoexec_envoi
+import build_ota_fs
+from build_ota_carte_simulee import Carte
 import test_assistant_persist_creation as tac
 import test_assistant_persist_web as taw
 
@@ -49,7 +54,7 @@ def hostiles(b):
         corps = {"env": env, "texte": "WebLog 1\n", "empreinte": "x", "rouges_lus": 0}
         if isinstance(env, str):
             verifie(b.requete("GET", "/autoexec?env=" + env.replace("\\", "%5C"))[0], 400, f"GET env hostile {env!r} -> 400")
-        for route in ("/autoexec/analyse", "/autoexec/diff", "/autoexec/ecrit"):
+        for route in ("/autoexec/analyse", "/autoexec/diff", "/autoexec/ecrit", "/autoexec/envoi/prepare", "/autoexec/envoi"):
             verifie(b.requete("POST", route, corps)[0], 400, f"POST {route} env hostile {env!r} -> 400")
     verifie(b.requete("GET", "/autoexec")[0], 400, "GET sans env -> 400")
     for env in ("tasmota32-inconnu-x", "tasmota32s3-base-N16R8"):
@@ -77,8 +82,7 @@ def lecture(b):
     verifie(b.requete("POST", "/autoexec/diff", {"env": ENV, "texte": 5})[0], 400, "POST diff texte non chaine -> 400")
     s, d = b.requete("POST", "/autoexec/diff", {"env": ENV, "texte": g["texte"].replace("WebLog 3", "WebLog 2")})
     verifie((s, "+WebLog 2" in d["diff"], d["rouges"], d["empreinte"]), (200, True, ROUGES, g["empreinte"]), "POST diff : ligne changee, rouges comptes")
-    verifie(b.requete("GET", "/autoexec/envoi/prepare")[0], 404, "route d'envoi : pas dans A5 (404)")
-    verifie(b.requete("POST", "/autoexec/envoi", {"env": ENV})[0], 404, "POST /autoexec/envoi : pas dans A5 (404)")
+    verifie(b.requete("GET", "/autoexec/envoi/prepare")[0], 404, "GET /autoexec/envoi/prepare : route en POST seulement (404)")
     return g
 
 
@@ -116,16 +120,43 @@ def banque(b):
     verifie(b.requete("GET", "/autoexec/nulle-part")[0], 404, "route /autoexec/... inconnue -> 404")
 
 
+def envoi(b, carte):
+    hote = build_ota_fs._identite((b.racine / CARTE / "_persist.json").read_text(encoding="utf-8"))[0]
+    carte.hostname, carte.flash["/autoexec.bat"] = hote, f"Password1 {MDP}\nWebLog 1\n".encode("utf-8")
+    b.builds = ["pio"]
+    verifie(b.requete("POST", "/autoexec/envoi/prepare", {"env": ENV})[0], 409, "envoi/prepare pendant un build -> 409")
+    b.builds = []
+    s, p = b.requete("POST", "/autoexec/envoi/prepare", {"env": ENV})
+    verifie((s, p.get("hostname_carte"), p.get("ecart"), "***" in (p.get("sur_carte") or "")), (200, hote, True, True),
+            "envoi/prepare : 200, fichier de la carte masque")
+    corps = {"env": ENV, "jeton": p.get("jeton"), "rouges_lus": ROUGES, "redemarrer": False}
+    for cle, valeur in (("jeton", 5), ("jeton", None), ("redemarrer", "oui"), ("redemarrer", 1), ("rouges_lus", True)):
+        verifie(b.requete("POST", "/autoexec/envoi", dict(corps, **{cle: valeur}))[0], 400, f"envoi {cle}={valeur!r} -> 400")
+    verifie(b.requete("POST", "/autoexec/envoi", dict(corps, jeton="1-x"))[0], 409, "envoi jeton inconnu -> 409")
+    b.builds = ["pio"]
+    verifie(b.requete("POST", "/autoexec/envoi", corps)[0], 409, "envoi pendant un build -> 409")
+    b.builds = []
+    verifie(carte.requetes("/ufsu?fsz"), [], "refus : rien d'envoye a la carte")
+    s, r = b.requete("POST", "/autoexec/envoi", corps)
+    verifie((s, r.get("envoye"), carte.flash["/autoexec.bat"]), (200, True, (b.racine / CARTE / "autoexec.bat").read_bytes()),
+            "envoi : 200, la carte a le fichier du depot")
+
+
 def banc():
     with tempfile.TemporaryDirectory() as tmp:
         os.environ["OUTILS_TASMOTA_DOSSIER"] = str(Path(tmp) / "donnees")
         b = taw.Banc(tmp, racine=depot(tmp))
+        carte = Carte()
+        autoexec_envoi._adresse = lambda *_: carte.ip                   # jamais l'adresse reelle d'une carte du depot
+        autoexec_envoi.joint_par_maitre = lambda *_a, **_k: None        # 127.0.0.1:port n'a pas de maitre
         try:
             hostiles(b)
             g = lecture(b)
             ecriture(b, g)
             banque(b)
+            envoi(b, carte)
         finally:
+            carte.ferme()
             b.ferme()
     verifie(sum(MDP in r for r in taw.REPONSES_VUES), 0, f"AUCUNE des {len(taw.REPONSES_VUES)} reponses ne contient le mot de passe")
     verifie(len(taw.REPONSES_VUES) > 40, True, "le banc a bien joue ses requetes")
@@ -138,6 +169,8 @@ MUTANTS = [
      """empreinte, demande.get("rouges_lus"), lambda: [])"""),
     ("build ignore pour la banque", """demande.get("entree"), builds_en_cours)""",
      """demande.get("entree"), lambda: [])"""),
+    ("build ignore pour la preparation", "_env(racine, demande), builds_en_cours)", "_env(racine, demande), lambda: [])"),
+    ("build ignore pour l'envoi", """demande.get("redemarrer"), builds_en_cours)""", """demande.get("redemarrer"), lambda: [])"""),
     ("texte non masque", '{**l, "avertissements"', '{**l, "texte": autoexec_fichier.texte_disque(racine, env), "avertissements"'),
     ("diff du texte brut", "autoexec_fichier.diff(racine, env, texte)", "{'diff': texte, 'empreinte': '', 'rouges': 0}"),
     ("analyse sur le texte masque", "autoexec_fichier.avertissements(racine, env, autoexec_fichier.demasque(texte, disque))",
