@@ -232,9 +232,12 @@ def pagesGraphiques_valeurs()
     import string
     import pagesGraphiquesValidation
     var P = pagesGraphiques
-    var chemins = string.split(webserver.has_arg("c") ? webserver.arg("c") : "", ",")
+    var brut = (webserver.has_arg("c") ? webserver.arg("c") : "")
     var refus = nil
-    if (size(chemins) > P.MAX_CHEMINS)    refus = string.format("%i chemins demandes (%i au plus)", size(chemins), P.MAX_CHEMINS)    end
+    # Borne AVANT le decoupage : MAX_CHEMINS chemins de 96 octets et leurs virgules
+    if (size(brut) > P.MAX_CHEMINS * 97)    refus = string.format("parametre c de %i octets (%i au plus)", size(brut), P.MAX_CHEMINS * 97)    end
+    var chemins = (refus == nil ? string.split(brut, ",") : [])
+    if (refus == nil && size(chemins) > P.MAX_CHEMINS)    refus = string.format("%i chemins demandes (%i au plus)", size(chemins), P.MAX_CHEMINS)    end
     for c: chemins
         if (refus == nil && !pagesGraphiquesValidation.cheminOk(c))    refus = "chemin invalide : " + c    end
     end
@@ -275,7 +278,7 @@ def pagesGraphiques_page(id)
         end
     end
     if (page == nil)
-        logFonctions.log(string.format("PAGES_GRAPHIQUES_ERREUR: Page inconnue : %s !", id), LOG_LEVEL_ERREUR, "serveurWeb")
+        logFonctions.log(string.format("PAGES_GRAPHIQUES_ERREUR: Page inconnue : %s !", str(id)[0..23]), LOG_LEVEL_ERREUR, "serveurWeb")
         P.pageMessage("Page inconnue", id)
         return
     end

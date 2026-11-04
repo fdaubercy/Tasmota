@@ -271,6 +271,16 @@ douze.push("a.s13")
 j = size(journal)
 sortie = requete({"f": "valeurs", "c": douze.concat(",")}, "valeurs13.json")
 verifie(webserver.code == 400 && json.load(sortie).contains("erreur") && erreurs(j) == 1, "13 chemins : refus 400, erreur journalisee")
+var long = ""
+for i: 1 .. 300    long += "a.b,"    end
+j = size(journal)
+sortie = requete({"f": "valeurs", "c": long}, "valeurs_long.json")
+verifie(webserver.code == 400 && string.find(sortie, "octets") >= 0 && erreurs(j) == 1, "parametre c de 1200 octets : refus 400 avant le decoupage")
+j = size(journal)
+var x200 = ""
+for i: 1 .. 200    x200 += "x"    end
+requete({"p": x200}, "page_longue.html")
+verifie(erreurs(j) == 1 && size(journal[-1][0]) < 120, "id de page de 200 caracteres : journalise tronque")
 for c: ["a..b", "", "a.__proto", "x.constructor"]
     sortie = requete({"f": "valeurs", "c": c}, "valeurs_invalide.json")
     verifie(webserver.code == 400, "chemin invalide '" + c + "' : refus 400")
