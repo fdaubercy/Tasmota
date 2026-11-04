@@ -1,0 +1,701 @@
+{
+ "entrees": [
+  {
+   "nom": "Timer",
+   "categorie": "Minuteries",
+   "description": "Une minuterie : heure, jours, relais et action.",
+   "modele": "Timer{n} {\"Enable\":1,\"Mode\":0,\"Time\":\"{heure}\",\"Window\":0,\"Days\":\"{jours}\",\"Repeat\":1,\"Output\":{relais},\"Action\":{action}}",
+   "champs": [
+    {
+     "cle": "n",
+     "type": "nombre",
+     "libelle": "Numéro de la minuterie (1 à 16)",
+     "defaut": 1,
+     "min": 1,
+     "max": 16
+    },
+    {
+     "cle": "heure",
+     "type": "heure",
+     "libelle": "Heure",
+     "defaut": "08:00"
+    },
+    {
+     "cle": "jours",
+     "type": "jours",
+     "libelle": "Jours (dimanche en premier, 1 = actif)",
+     "defaut": "1111111"
+    },
+    {
+     "cle": "relais",
+     "type": "relais",
+     "libelle": "Relais",
+     "defaut": 1,
+     "max": 16
+    },
+    {
+     "cle": "action",
+     "type": "liste",
+     "libelle": "Action",
+     "defaut": 1,
+     "choix": [
+      {
+       "valeur": 0,
+       "libelle": "Éteindre"
+      },
+      {
+       "valeur": 1,
+       "libelle": "Allumer"
+      },
+      {
+       "valeur": 2,
+       "libelle": "Basculer"
+      },
+      {
+       "valeur": 3,
+       "libelle": "Clignoter ou règle"
+      }
+     ]
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "Timers",
+   "categorie": "Minuteries",
+   "description": "Active ou coupe toutes les minuteries.",
+   "modele": "Timers {etat}",
+   "champs": [
+    {
+     "cle": "etat",
+     "type": "liste",
+     "libelle": "État",
+     "defaut": 1,
+     "choix": [
+      {
+       "valeur": 0,
+       "libelle": "Coupées"
+      },
+      {
+       "valeur": 1,
+       "libelle": "Actives"
+      }
+     ]
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "SetOption1",
+   "categorie": "Boutons",
+   "description": "Évite un reset sur appui long sur un bouton (OFF).",
+   "modele": "SetOption1 {etat}",
+   "champs": [
+    {
+     "cle": "etat",
+     "type": "liste",
+     "libelle": "État",
+     "defaut": "OFF",
+     "choix": [
+      {
+       "valeur": "OFF",
+       "libelle": "Désactivé (OFF)"
+      },
+      {
+       "valeur": "ON",
+       "libelle": "Activé (ON)"
+      }
+     ]
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "SetOption31",
+   "categorie": "LED",
+   "description": "Coupe la LED d'état quand le Wi-Fi ou le MQTT est perdu (OFF).",
+   "modele": "SetOption31 {etat}",
+   "champs": [
+    {
+     "cle": "etat",
+     "type": "liste",
+     "libelle": "État",
+     "defaut": "OFF",
+     "choix": [
+      {
+       "valeur": "OFF",
+       "libelle": "Désactivé (OFF)"
+      },
+      {
+       "valeur": "ON",
+       "libelle": "Activé (ON)"
+      }
+     ]
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "SetOption55",
+   "categorie": "Réseau",
+   "description": "Active le mDNS (serveur de noms) : le nom d'hôte répond.",
+   "modele": "SetOption55 {etat}",
+   "champs": [
+    {
+     "cle": "etat",
+     "type": "liste",
+     "libelle": "État",
+     "defaut": "ON",
+     "choix": [
+      {
+       "valeur": "OFF",
+       "libelle": "Désactivé (OFF)"
+      },
+      {
+       "valeur": "ON",
+       "libelle": "Activé (ON)"
+      }
+     ]
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "SetOption56",
+   "categorie": "Réseau",
+   "description": "Recherche le point d'accès au signal le plus fort au démarrage.",
+   "modele": "SetOption56 {etat}",
+   "champs": [
+    {
+     "cle": "etat",
+     "type": "liste",
+     "libelle": "État",
+     "defaut": "ON",
+     "choix": [
+      {
+       "valeur": "OFF",
+       "libelle": "Désactivé (OFF)"
+      },
+      {
+       "valeur": "ON",
+       "libelle": "Activé (ON)"
+      }
+     ]
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "SetOption57",
+   "categorie": "Réseau",
+   "description": "Rescanne les réseaux Wi-Fi toutes les 44 min si le signal est faible.",
+   "modele": "SetOption57 {etat}",
+   "champs": [
+    {
+     "cle": "etat",
+     "type": "liste",
+     "libelle": "État",
+     "defaut": "ON",
+     "choix": [
+      {
+       "valeur": "OFF",
+       "libelle": "Désactivé (OFF)"
+      },
+      {
+       "valeur": "ON",
+       "libelle": "Activé (ON)"
+      }
+     ]
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "SetOption141",
+   "categorie": "Interface web",
+   "description": "Cache le modèle sur la page web.",
+   "modele": "SetOption141 {etat}",
+   "champs": [
+    {
+     "cle": "etat",
+     "type": "liste",
+     "libelle": "État",
+     "defaut": "ON",
+     "choix": [
+      {
+       "valeur": "OFF",
+       "libelle": "Désactivé (OFF)"
+      },
+      {
+       "valeur": "ON",
+       "libelle": "Activé (ON)"
+      }
+     ]
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "SetOption146",
+   "categorie": "Capteurs",
+   "description": "Affiche la température de l'ESP32.",
+   "modele": "SetOption146 {etat}",
+   "champs": [
+    {
+     "cle": "etat",
+     "type": "liste",
+     "libelle": "État",
+     "defaut": "ON",
+     "choix": [
+      {
+       "valeur": "OFF",
+       "libelle": "Désactivé (OFF)"
+      },
+      {
+       "valeur": "ON",
+       "libelle": "Activé (ON)"
+      }
+     ]
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "AdcParam",
+   "categorie": "Capteurs",
+   "description": "Réglage d'une entrée analogique (type, résistances, décalage).",
+   "modele": "AdcParam{n} {type},{a},{b},{c},{d}",
+   "champs": [
+    {
+     "cle": "n",
+     "type": "nombre",
+     "libelle": "Entrée analogique",
+     "defaut": 1,
+     "min": 1,
+     "max": 8
+    },
+    {
+     "cle": "type",
+     "type": "nombre",
+     "libelle": "Type (34 = sonde NTC, 6 = ampèremètre...)",
+     "defaut": 34,
+     "min": 0,
+     "max": 255
+    },
+    {
+     "cle": "a",
+     "type": "nombre",
+     "libelle": "Paramètre 1",
+     "defaut": 32000
+    },
+    {
+     "cle": "b",
+     "type": "nombre",
+     "libelle": "Paramètre 2",
+     "defaut": 10000
+    },
+    {
+     "cle": "c",
+     "type": "nombre",
+     "libelle": "Paramètre 3",
+     "defaut": 15000
+    },
+    {
+     "cle": "d",
+     "type": "nombre",
+     "libelle": "Paramètre 4",
+     "defaut": 0
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "WebSensor",
+   "categorie": "Interface web",
+   "description": "Affiche ou cache un capteur sur la page web.",
+   "modele": "WebSensor{n} {etat}",
+   "champs": [
+    {
+     "cle": "n",
+     "type": "nombre",
+     "libelle": "Numéro du capteur",
+     "defaut": 2,
+     "min": 0,
+     "max": 127
+    },
+    {
+     "cle": "etat",
+     "type": "liste",
+     "libelle": "Affichage",
+     "defaut": 0,
+     "choix": [
+      {
+       "valeur": 0,
+       "libelle": "Caché"
+      },
+      {
+       "valeur": 1,
+       "libelle": "Affiché"
+      }
+     ]
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "LedPower",
+   "categorie": "LED",
+   "description": "Allume ou éteint la LED d'état.",
+   "modele": "LedPower {etat}",
+   "champs": [
+    {
+     "cle": "etat",
+     "type": "liste",
+     "libelle": "État",
+     "defaut": "OFF",
+     "choix": [
+      {
+       "valeur": "OFF",
+       "libelle": "Désactivé (OFF)"
+      },
+      {
+       "valeur": "ON",
+       "libelle": "Activé (ON)"
+      }
+     ]
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "LedState",
+   "categorie": "LED",
+   "description": "Mode de la LED d'état (0 = éteinte, 6 = clignote sur réseau et MQTT...).",
+   "modele": "LedState {mode}",
+   "champs": [
+    {
+     "cle": "mode",
+     "type": "nombre",
+     "libelle": "Mode (0 à 8)",
+     "defaut": 6,
+     "min": 0,
+     "max": 8
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "SerialLog",
+   "categorie": "Journaux",
+   "description": "Niveau des journaux sur le port série.",
+   "modele": "SerialLog {niveau}",
+   "champs": [
+    {
+     "cle": "niveau",
+     "type": "nombre",
+     "libelle": "Niveau (0 à 4)",
+     "defaut": 3,
+     "min": 0,
+     "max": 4
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "WebLog",
+   "categorie": "Journaux",
+   "description": "Niveau des journaux de la page web.",
+   "modele": "WebLog {niveau}",
+   "champs": [
+    {
+     "cle": "niveau",
+     "type": "nombre",
+     "libelle": "Niveau (0 à 4)",
+     "defaut": 3,
+     "min": 0,
+     "max": 4
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "MqttLog",
+   "categorie": "Journaux",
+   "description": "Niveau des journaux publiés en MQTT.",
+   "modele": "MqttLog {niveau}",
+   "champs": [
+    {
+     "cle": "niveau",
+     "type": "nombre",
+     "libelle": "Niveau (0 à 4)",
+     "defaut": 0,
+     "min": 0,
+     "max": 4
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "SysLog",
+   "categorie": "Journaux",
+   "description": "Niveau des journaux envoyés au serveur syslog.",
+   "modele": "SysLog {niveau}",
+   "champs": [
+    {
+     "cle": "niveau",
+     "type": "nombre",
+     "libelle": "Niveau (0 à 4)",
+     "defaut": 0,
+     "min": 0,
+     "max": 4
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "Latitude",
+   "categorie": "Heure",
+   "description": "Latitude du lieu (lever et coucher du soleil des minuteries).",
+   "modele": "Latitude {valeur}",
+   "champs": [
+    {
+     "cle": "valeur",
+     "type": "nombre",
+     "libelle": "Latitude (degrés)",
+     "defaut": 50.410931,
+     "min": -90,
+     "max": 90
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "Longitude",
+   "categorie": "Heure",
+   "description": "Longitude du lieu.",
+   "modele": "Longitude {valeur}",
+   "champs": [
+    {
+     "cle": "valeur",
+     "type": "nombre",
+     "libelle": "Longitude (degrés)",
+     "defaut": 3.085796,
+     "min": -180,
+     "max": 180
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "Timezone",
+   "categorie": "Heure",
+   "description": "Fuseau horaire (99 = celui de TimeStd et TimeDst).",
+   "modele": "Timezone {valeur}",
+   "champs": [
+    {
+     "cle": "valeur",
+     "type": "nombre",
+     "libelle": "Fuseau (-13 à 14, ou 99)",
+     "defaut": 99,
+     "min": -13,
+     "max": 99
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "TimeStd",
+   "categorie": "Heure",
+   "description": "Passage à l'heure d'hiver.",
+   "modele": "TimeStd {\"Hemisphere\":{hemisphere},\"Week\":{semaine},\"Month\":{mois},\"Day\":{jour},\"Hour\":{heure},\"Offset\":{decalage}}",
+   "champs": [
+    {
+     "cle": "hemisphere",
+     "type": "liste",
+     "libelle": "Hémisphère",
+     "defaut": 0,
+     "choix": [
+      {
+       "valeur": 0,
+       "libelle": "Nord"
+      },
+      {
+       "valeur": 1,
+       "libelle": "Sud"
+      }
+     ]
+    },
+    {
+     "cle": "semaine",
+     "type": "nombre",
+     "libelle": "Semaine (0 = dernière, 1 à 4)",
+     "defaut": 0,
+     "min": 0,
+     "max": 4
+    },
+    {
+     "cle": "mois",
+     "type": "nombre",
+     "libelle": "Mois",
+     "defaut": 10,
+     "min": 1,
+     "max": 12
+    },
+    {
+     "cle": "jour",
+     "type": "nombre",
+     "libelle": "Jour (1 = dimanche à 7 = samedi)",
+     "defaut": 1,
+     "min": 1,
+     "max": 7
+    },
+    {
+     "cle": "heure",
+     "type": "nombre",
+     "libelle": "Heure",
+     "defaut": 3,
+     "min": 0,
+     "max": 23
+    },
+    {
+     "cle": "decalage",
+     "type": "nombre",
+     "libelle": "Décalage en minutes par rapport à UTC",
+     "defaut": 60,
+     "min": -780,
+     "max": 780
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "TimeDst",
+   "categorie": "Heure",
+   "description": "Passage à l'heure d'été.",
+   "modele": "TimeDst {\"Hemisphere\":{hemisphere},\"Week\":{semaine},\"Month\":{mois},\"Day\":{jour},\"Hour\":{heure},\"Offset\":{decalage}}",
+   "champs": [
+    {
+     "cle": "hemisphere",
+     "type": "liste",
+     "libelle": "Hémisphère",
+     "defaut": 0,
+     "choix": [
+      {
+       "valeur": 0,
+       "libelle": "Nord"
+      },
+      {
+       "valeur": 1,
+       "libelle": "Sud"
+      }
+     ]
+    },
+    {
+     "cle": "semaine",
+     "type": "nombre",
+     "libelle": "Semaine (0 = dernière, 1 à 4)",
+     "defaut": 0,
+     "min": 0,
+     "max": 4
+    },
+    {
+     "cle": "mois",
+     "type": "nombre",
+     "libelle": "Mois",
+     "defaut": 3,
+     "min": 1,
+     "max": 12
+    },
+    {
+     "cle": "jour",
+     "type": "nombre",
+     "libelle": "Jour (1 = dimanche à 7 = samedi)",
+     "defaut": 1,
+     "min": 1,
+     "max": 7
+    },
+    {
+     "cle": "heure",
+     "type": "nombre",
+     "libelle": "Heure",
+     "defaut": 2,
+     "min": 0,
+     "max": 23
+    },
+    {
+     "cle": "decalage",
+     "type": "nombre",
+     "libelle": "Décalage en minutes par rapport à UTC",
+     "defaut": 120,
+     "min": -780,
+     "max": 780
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  },
+  {
+   "nom": "PowerOnState",
+   "categorie": "Relais",
+   "description": "État des relais après une coupure de courant.",
+   "modele": "PowerOnState {etat}",
+   "champs": [
+    {
+     "cle": "etat",
+     "type": "liste",
+     "libelle": "État",
+     "defaut": 3,
+     "choix": [
+      {
+       "valeur": 0,
+       "libelle": "Éteints"
+      },
+      {
+       "valeur": 1,
+       "libelle": "Allumés"
+      },
+      {
+       "valeur": 2,
+       "libelle": "Inversés"
+      },
+      {
+       "valeur": 3,
+       "libelle": "Dernier état"
+      },
+      {
+       "valeur": 4,
+       "libelle": "Allumés et verrouillés"
+      },
+      {
+       "valeur": 5,
+       "libelle": "Éteints (PulseTime allumé)"
+      }
+     ]
+    }
+   ],
+   "origine": "proposee",
+   "ajoutee": "2026-11-04"
+  }
+ ]
+}
