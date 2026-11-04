@@ -149,6 +149,7 @@ def banc():
         carte = Carte()
         autoexec_envoi._adresse = lambda *_: carte.ip                   # jamais l'adresse reelle d'une carte du depot
         autoexec_envoi.joint_par_maitre = lambda *_a, **_k: None        # 127.0.0.1:port n'a pas de maitre
+        autoexec_envoi.coupe_sleep = lambda *_a, **_k: ("50", lambda: "")   # ni son Sleep (test_autoexec_envoi l'exerce)
         try:
             hostiles(b)
             g = lecture(b)

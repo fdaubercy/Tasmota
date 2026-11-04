@@ -26,6 +26,8 @@ _connexion = socket.create_connection
 
 
 def _locale(adresse, *args, **kw):
+    if adresse == ("127.0.0.2", 80):                    # « IP directe » du banc : menee a la carte simulee en service
+        adresse = ("127.0.0.1", COURANTE[0].serveur.server_address[1])
     if adresse[0] not in ("127.0.0.1", "localhost"):
         raise OSError(f"banc : connexion vers {adresse[0]} refusee (carte simulee seulement)")
     return _connexion(adresse, *args, **kw)
@@ -48,6 +50,8 @@ ESCLAVE = "tasmota32s3-garage-capteurs-cuve-modbus"
 RAPIDE = {"delai_retour": 5.0, "attente_min": 0.0, "sondage": 0.05, "delai_http": 3.0}
 ECHECS = []
 JOINTS = []
+COUPES = []                            # maitres dont le Sleep a ete coupe (adresse demandee par autoexec_envoi)
+SLEEP = [None]                         # maitre simule qui recoit les Sleep
 ADRESSE = [""]
 COURANTE = [None]                      # carte simulee en service : joint_par_maitre note ce qu'elle a deja recu
 
@@ -193,13 +197,23 @@ def refus(racine, hote):
 
 def envoi(racine, hote):
     carte = nouvelle_carte(hote)
+    prepare(racine)
+    verifie(len(carte.requetes("download=/autoexec.bat")), 1, "fichier present : lu en une requete")
+    del carte.flash["/autoexec.bat"]
+    prepare(racine)
+    verifie(len(carte.requetes("download=/autoexec.bat")) - 1, 2, "fichier absent (connexion fermee) : relu une fois avant de conclure")
+    carte.flash["/autoexec.bat"] = SUR_CARTE
     carte.echec_fichier = "autoexec.bat"
+    SLEEP[0].sleeps.clear()
     t, _ = erreur(envoie, racine, prepare(racine)["jeton"])
+    verifie((COUPES[-1:], SLEEP[0].sleeps), ([carte.ip.rsplit(":", 1)[0]], [0, 50]), "envoi en echec : Sleep 0 puis Sleep 50 remis")
     copies = sorted((fbs.dossier_sauvegardes() / "autoexec_cartes" / ENV).glob("*.bat"))
     verifie((t, [c.read_bytes() for c in copies]), ("RuntimeError", [SUR_CARTE]),
             "envoi refuse par la carte : copie de la carte sauvegardee AVANT l'envoi")
     carte.echec_fichier = None
+    SLEEP[0].sleeps.clear()
     r = envoie(racine, prepare(racine)["jeton"])
+    verifie((SLEEP[0].sleeps, r["avertissement"]), ([0, 50], ""), "envoi par le maitre : Sleep 0 le temps de l'envoi, puis remis")
     sauve = Path(r["sauvegarde"])
     verifie((r["envoye"], sauve.parent, sauve.read_bytes()), (True, fbs.dossier_sauvegardes() / "autoexec_cartes" / ENV, SUR_CARTE),
             "envoi : copie de la carte dans autoexec_cartes/<env>/")
@@ -211,13 +225,34 @@ def envoi(racine, hote):
     verifie(carte.requetes("Restart"), [("GET", "/cm?cmnd=Restart%201")], "redemarrer=True : Restart 1")
     del carte.flash["/autoexec.bat"]
     r = envoie(racine, prepare(racine)["jeton"])
-    verifie((r, carte.flash["/autoexec.bat"]), ({"envoye": True, "sauvegarde": None}, FICHIER),
+    verifie((r, carte.flash["/autoexec.bat"]), ({"envoye": True, "sauvegarde": None, "avertissement": ""}, FICHIER),
             "carte sans fichier : envoye, rien a sauvegarder")
+    carte.flash["/autoexec.bat"], n = SUR_CARTE, len(envois(carte))
+    SLEEP[0].sleeps.clear()
+    reponses = iter([[], ["pio run -e x"]])                  # le build demarre pendant la phase reseau
+    t = erreur(ae.envoie, racine, ENV, prepare(racine)["jeton"], ROUGES, False, lambda: next(reponses))[0]
+    verifie((t, len(envois(carte)), SLEEP[0].sleeps), ("RuntimeError", n, [0, 50]),
+            "build lance pendant la phase reseau : refuse juste avant l'envoi, Sleep remis")
+    carte.ferme()
+
+
+def directe(racine, hote):
+    carte = nouvelle_carte(hote)
+    carte.ip = ADRESSE[0] = "127.0.0.2"                      # sans port : IP directe (Referer attendu en consequence)
+    joints, coupes = len(JOINTS), len(COUPES)
+    r = envoie(racine, prepare(racine)["jeton"])
+    verifie((r["envoye"], carte.flash["/autoexec.bat"]), (True, FICHIER), "IP directe : envoye")
+    verifie((len(JOINTS), len(COUPES)), (joints, coupes), "IP directe : ni joint_par_maitre ni Sleep du maitre")
     carte.ferme()
 
 
 def joint(adresse, persist, env, rapporte, **_):
     JOINTS.append((adresse, len(COURANTE[0].journal)))
+
+
+def coupe(maitre, **_):
+    COUPES.append(maitre)
+    return bm.coupe_sleep(SLEEP[0].ip, delai=2.0)
 
 
 def banc():
@@ -227,9 +262,12 @@ def banc():
         hote = _identite((racine / CARTE / "_persist.json").read_text(encoding="utf-8"))[0]
         adresse(racine)
         ae._adresse = lambda *_: ADRESSE[0]
-        ae.joint_par_maitre = joint
-        for etape in (preparation, identite, injoignable, refus, envoi):
-            etape(racine, hote)
+        ae.joint_par_maitre, ae.coupe_sleep, SLEEP[0] = joint, coupe, Carte()
+        try:
+            for etape in (preparation, identite, injoignable, refus, envoi, directe):
+                etape(racine, hote)
+        finally:
+            SLEEP[0].ferme()
 
 
 SAUVE = "    sauvegarde = _sauvegarde(env, carte) if carte is not None else None\n"
@@ -239,7 +277,11 @@ MUTANTS = [
     ("build ignore", "builds = builds_en_cours()", "builds = []"),
     ("rouges ignores", "if isinstance(rouges_lus, bool) or not isinstance(rouges_lus, int) or rouges_lus < rouges:", "if False:"),
     ("sans joint_par_maitre", "joint_par_maitre(adresse, persist, env, lambda _: None)", "None"),
-    ("sauvegarde apres l'envoi", [(SAUVE, ""), ("    return {\"envoye\"", SAUVE + "    return {\"envoye\"")]),
+    ("sauvegarde apres l'envoi", [(SAUVE, ""), ("    return sauvegarde\n", SAUVE + "    return sauvegarde\n")]),
+    ("sans Sleep 0 du maitre", '        _, remet = coupe_sleep(adresse.rsplit(":", 1)[0])', "        pass"),
+    ("build non recontrole avant l'envoi", "    _builds(builds_en_cours)                       # la phase reseau a pu durer\n", ""),
+    ("HMAC non compare", "if not hmac.compare_digest(", "if False and not hmac.compare_digest("),
+    ("absent sans relecture", "for _ in range(2):", "for _ in range(1):"),
     ("fichier de la carte non masque", "autoexec_fichier.masque(", "str("),
 ]
 
