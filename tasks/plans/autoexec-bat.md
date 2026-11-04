@@ -81,7 +81,7 @@ Routes : `GET /autoexec?env=` → A3 `lit` + A2 `analyse` ; `GET /autoexec/banqu
 `POST /autoexec/diff {env, texte}` ; `POST /autoexec/ecrit {env, texte, empreinte, rouges_lus}` ;
 `POST /autoexec/banque/ajoute {entree}` ; `POST /autoexec/envoi/prepare {env}` et `POST /autoexec/envoi {env, jeton,
 rouges_lus, redemarrer}` (A7). Env contrôlé (`_env_de` : env personnel du cenv seulement).
-- [ ] Banc rouge puis vert (`test_assistant_persist_web.py`) : chaque route répond, env hostile (`..`, inconnu) → 400, aucune réponse ne contient un secret du vrai fichier, écriture pendant un build simulé → refus ; bancs existants de l'Assistant toujours verts
+- [x] Banc rouge puis vert (`test_assistant_persist_web.py`) : chaque route répond, env hostile (`..`, inconnu) → 400, aucune réponse ne contient un secret du vrai fichier, écriture pendant un build simulé → refus ; bancs existants de l'Assistant toujours verts — preuve : commits `fbf8d05dc`, `e6591573f` ; routes dans `assistant_persist_autoexec.py` (serveur à ~434 lignes : délégation), banc `test_assistant_persist_autoexec.py` VERT (90 OK, 65 réponses sans le mot de passe inventé, 7 mutants rouges) ; nom mal formé → 400, env inconnu ou base → 404 (convention LookupError) ; envoi laissé à A7 ; banque absente tolérée (témoin) ; `test_assistant_persist_web.py` : 1 KO `GET /modele/etat` dû au `modele_persist.json` non commité de l'autre conversation ; relecture : approuvée
 
 ## A6 — Onglet de la page (modèle C + ajout du A)
 Fichiers : créer `outils_pc/assistant_persist_page_autoexec.py` (CSS, HTML, JS de l'onglet) ; modifier
