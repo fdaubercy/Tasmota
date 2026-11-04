@@ -834,3 +834,17 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `test_assistant_persist_page_chrome.py`. Mode d'emploi : `outils_docs/README.md` § « Assistant persist (page web) ».
     Spec : `docs/superpowers/specs/2026-10-27-assistant-persist-design.md` ; plan : `tasks/plans/assistant-persist.md` ;
     analyse en attente de decision : `outils_docs/ANALYSE_CLES_MAC_TELEPERIOD_2026-10-27.md`.
+  - `atelier_graphiques_web.py` (+ `atelier_graphiques_page.py`, `_page_js.py`, `_page_series.py`, `_description.py`, `_series.py`,
+    `_conseil.py`, `_ecriture.py`, `build/cible_atelier_graphiques.py`) — page « Atelier des graphiques » http://127.0.0.1:7950 (2026-11-04, palier 1 ;
+    tuile de l'annuaire, groupe Maintenance, arret libre : rien n'est ecrit avant « Ecrire dans le depot » ; tache VS Code « Outil : atelier des
+    graphiques » ; cible Custom detachee, `NOM_CIBLE` atelier_graphiques ; modele B de `outils_docs/atelier_graphiques/`). Prepare les pages de graphiques d'une carte
+    S3/P4 (series de l'historique, du JSON SENSOR ou calculees ; conseil de style ; apercu par le VRAI moteur de la carte, valeurs de la carte en ligne sinon
+    persist du depot et valeurs simulees). Ecrit `data/<lieu>/<carte>/pages_graphiques.json` (valide par `_description.py::valide`), la ligne
+    `demarrage.charge(["pagesGraphiques"])` de l'autoexec et le cenv (liste `pages_graphiques` de `[berry_commun]` exclue de tout env sans page) ;
+    diff puis ecriture atomique, refusee pendant un build ou sur empreinte perimee ; `--exclusions` = application au vrai depot. Moteur cote carte :
+    `data/fs/pagesGraphiques.be` + `pagesGraphiquesValidation.be` (route `/pages?p=<id>`, `?f=valeurs`, `?f=sources`, description `/json/pages_graphiques.json`),
+    `data/sd/{html,css,js}/pages_graphiques.*` + `pages_graphiques_formule.js`. Premiere page : la cuve (`/pages?p=tableau`, courbe « Hauteur d'eau »).
+    `ReglageCuve simulation <ON|OFF|minutes>` (`cuveFonctions.be::reglageCuve`) : hauteur d'eau simulee sans sonde, RAM seulement. Bancs
+    `test_atelier_graphiques_*.py`, `test_pages_graphiques.mjs`, `test_pages_graphiques_chrome.py`, `berry/banc_pages_graphiques.py` (cas partages
+    avec le validateur Python), `build/test_cible_atelier_graphiques.py`. Mode d'emploi : `outils_docs/README.md` ; spec
+    `docs/superpowers/specs/2026-11-03-atelier-graphiques-design.md` ; plan `tasks/plans/atelier-graphiques.md`.

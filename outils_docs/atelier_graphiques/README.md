@@ -1,8 +1,8 @@
 # Atelier des graphiques — maquettes (2026-11-03)
 
-Outil PC à venir (tuile de l'annuaire) : préparer un graphique pour une carte, voir l'aperçu avec ses vraies
+Outil PC (tuile de l'annuaire, page 7950, mode d'emploi : `outils_docs/README.md` § « Atelier des graphiques ») : préparer un graphique pour une carte, voir l'aperçu avec ses vraies
 valeurs, puis écrire dans le dépôt le Berry, les gabarits et le cenv qui le font apparaître sur la carte.
-**Choix du modèle en attente, rien de réalisé.**
+**Modèle B retenu (avec la grille du modèle C), réalisé (palier 1).**
 
 - Images : `modele-A.png` (assistant pas à pas), `modele-B.png` (atelier trois colonnes),
   `modele-C.png` (constructeur de page, aperçu dans le thème de Tasmota).

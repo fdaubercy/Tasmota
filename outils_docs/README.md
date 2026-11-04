@@ -1339,6 +1339,87 @@ Dans `outils_docs/scripts_python/outils_pc/`, avec le Python du penv PlatformIO 
 `build/test_cible_assistant_persist.py`. Les bancs travaillent sur un dépôt d'essai temporaire (lecture seule des
 vrais persists) : aucun n'écrit dans le vrai dépôt ni dans le vrai dossier des sauvegardes.
 
+## Atelier des graphiques (page web)
+
+Une page qui prépare des **pages de graphiques** pour une carte S3/P4 : on choisit la carte, ses séries (courbes de
+l'historique, valeurs du JSON SENSOR, valeurs calculées), un style conseillé, et l'aperçu est tracé par **le vrai moteur
+de la carte** avec les vraies valeurs. « Écrire dans le dépôt » pose ensuite la description et ce qu'il faut pour que la
+page apparaisse sur la carte. C'est le palier 1 (page dédiée avec bouton d'accueil) ; modèle B de
+`outils_docs/atelier_graphiques/` (trois colonnes) avec la grille du modèle C.
+Conception : [spec](../docs/superpowers/specs/2026-11-03-atelier-graphiques-design.md) ; plan :
+`tasks/plans/atelier-graphiques.md`.
+
+### Lancer la page
+
+- **Tuile de l'annuaire** (http://127.0.0.1:7600), groupe « Maintenance » : « Atelier des graphiques ». Rien n'est écrit
+  avant « Écrire dans le dépôt » : on peut l'arrêter à tout moment.
+- **Tâche VS Code** : `Ctrl+Maj+P` > Run Task > « Outil : atelier des graphiques (http://127.0.0.1:7950) ».
+- **Ligne de commande** : `python outils_docs/scripts_python/outils_pc/atelier_graphiques_web.py` (`--http 7950`,
+  `--local`, `--sans-navigateur`).
+- **Cible PlatformIO** « Atelier des graphiques (page web) » dans *Project Tasks > <env> > Custom* : démarre la page
+  détachée puis rend la main. Comme toute cible, **jamais pendant un build**.
+
+Port **7950**. Depuis un autre appareil : lien à jeton de la console, comme les autres outils (`acces_web.py`).
+Le commutateur « Mode sombre » règle la page ; la case « thème sombre » de l'aperçu est indépendante (thème de la carte).
+
+### Utilisation
+
+1. **Carte** : liste des cartes S3/P4 du cenv. Séries et valeurs viennent de la carte **en ligne** ; muette ou hors
+   ligne, la page se rabat sur le persist du dépôt et sur des **valeurs simulées**, et le dit.
+2. **Séries** : par graphique, de 1 à 12, chacune une chaîne (chemin du SENSOR, ou `calc:<nom>` d'une valeur calculée) ou
+   un objet `{chemin, libelle, unite, couleur}`. Un même chemin n'apparaît qu'une fois dans un graphique.
+3. **Conseil** : l'intention (texte) croisée avec la nature des séries donne 3 à 5 styles classés avec leur raison.
+   Styles : courbe, aire, escalier, barres, barres-empilees, barres-periode, deux-axes, lies, cadran, anneau, chaleur,
+   nuage, radar, liquide, demi-cercle.
+4. **Réglages** : titre, libellés, unités, couleurs, min / max, zones de couleur, période (direct, jour, mois), cadence,
+   largeur (demi ou pleine) et hauteur ; l'aperçu montre l'effet de chaque réglage. Jusqu'à 8 pages, 8 graphiques par
+   page ; la description compacte tient en 8 Ko.
+5. **Diff** de chaque fichier touché, puis **écriture** atomique (copie horodatée).
+
+### Ce qui est écrit
+
+- `data/<lieu>/<carte>/pages_graphiques.json` : la description (validée par `atelier_graphiques_description.py::valide`) ;
+- l'`autoexec.be` de la carte : la ligne `demarrage.charge(["pagesGraphiques"])` ;
+- le cenv : la liste `pages_graphiques` de `[berry_commun]` est exclue du FS de **tous** les envs sans page ; une carte
+  qui reçoit sa première page la voit levée pour elle seule. La case « Solidifier » ajoute les 2 `.be` du moteur au
+  `custom_berry_solidify` (firmware à recompiler).
+
+Refusé pendant un build, et si l'empreinte a changé depuis « Voir le diff ». Retirer la dernière page remet le dépôt
+dans son état exclu, octet pour octet. En ligne de commande : `atelier_graphiques_ecriture.py --exclusions [--ecrit]`.
+Après écriture, lancer `berry/banc_demarrage.py` (jamais `--enregistre`).
+
+### Côté carte
+
+Le moteur est `data/fs/pagesGraphiques.be` (+ `pagesGraphiquesValidation.be`, même verdict que le validateur Python) ;
+route `/pages?p=<id>` (page), `?f=valeurs&c=` (valeurs), `?f=sources`, `?f=liquidfill.js.gz`. Gabarits dans `data/sd`
+(`html/pages_graphiques.html`, `css/pages_graphiques.css`, `js/pages_graphiques.js` et `pages_graphiques_formule.js`).
+Au démarrage seul l'index des pages reste en RAM ; les graphiques ne sont relus qu'à l'ouverture d'une page.
+
+### Envoyer sur la carte
+
+Construire le FS sur la page Build (7700), puis l'onglet « Fichiers » (envoi des fichiers choisis).
+
+### Première page : la cuve
+
+Env `tasmota32s3-garage-capteurs-cuve-modbus` : page `/pages?p=tableau`, bouton d'accueil « Tableau », courbe
+« Hauteur d'eau » (cm, 24 h).
+
+### Essayer sans sonde : `ReglageCuve simulation`
+
+`ReglageCuve simulation <ON|OFF|minutes>` (`cuveFonctions.be::reglageCuve`, relevé fabriqué par
+`cuveFonctions.be::releveSimule`) fait onduler la hauteur d'eau entre 20 et 90 % de la cuve, une ondulation par période
+donnée en minutes. **RAM seulement** : un redémarrage l'arrête. La valeur est enregistrée dans l'historique et dans
+Influx comme une vraie mesure. Fonctionne **sans ADS1115** sur le bus (le relevé suppose ±6,144 V et ajoute la lecture
+de la minute).
+
+### Bancs
+
+Dans `outils_docs/scripts_python/outils_pc/` (Python de PlatformIO) : `test_atelier_graphiques_description.py`,
+`_series.py`, `_conseil.py`, `_ecriture.py`, `_web.py`, puis la sonde Chrome `test_atelier_graphiques_page_chrome.py` ;
+`build/test_cible_atelier_graphiques.py`. Côté carte : `node outils_docs/scripts_python/outils_pc/test_pages_graphiques.mjs`,
+`test_pages_graphiques_chrome.py` et `berry/banc_pages_graphiques.py` (cas partagés avec le validateur Python :
+`berry/bouchons_berry/pages_graphiques/cas_description.json`). Commandes exactes : skill `bancs`.
+
 ## Synchro du fork (page web)
 
 La page lance les scripts de synchro (`maintenance/synchronise_fork_tasmota.py`, merge, et sa variante rebase) tels
