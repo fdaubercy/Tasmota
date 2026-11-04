@@ -1311,6 +1311,10 @@
    "quand": "toujours",
    "source": "tasmota/tasmota_xdrv_driver/xdrv_35_pwm_dimmer.ino::CmndPWMDimmerPWMs"
   },
+  "RESET": {
+   "quand": "toujours",
+   "source": "tasmota/tasmota_support/support_command.ino::CmndReset ; doc Commands.md"
+  },
   "RESTART": {
    "quand": "toujours",
    "source": "tasmota/tasmota_support/support_command.ino::CmndRestart ; doc Commands.md"
@@ -1345,7 +1349,7 @@
   },
   "SETOPTION115": {
    "quand": "toujours",
-   "source": "tasmota/tasmota_support/support_command.ino::CmndSetoptionBase"
+   "source": "tasmota/tasmota_support/support_command.ino::CmndSetoptionBase (redemarre seulement si la valeur est 0)"
   },
   "SETOPTION132": {
    "quand": "toujours",
@@ -1377,7 +1381,7 @@
   },
   "SETOPTION55": {
    "quand": "toujours",
-   "source": "tasmota/tasmota_support/support_command.ino::CmndSetoptionBase"
+   "source": "tasmota/tasmota_support/support_command.ino::CmndSetoptionBase (redemarre seulement si la valeur est 0)"
   },
   "SETOPTION68": {
    "quand": "toujours",
@@ -1439,6 +1443,14 @@
    "quand": "toujours",
    "source": "tasmota/tasmota_xdrv_driver/xdrv_16_tuyamcu_v1.ino::CmndTuyaMcu"
   },
+  "UPGRADE": {
+   "quand": "toujours",
+   "source": "tasmota/tasmota_support/support_command.ino::CmndUpgrade (ota_state_flag = 3 : OTA puis redemarrage ; relu a la main) ; doc Commands.md"
+  },
+  "UPLOAD": {
+   "quand": "toujours",
+   "source": "tasmota/tasmota_support/support_command.ino::CmndUpgrade (meme fonction qu'Upgrade ; relu a la main) ; doc Commands.md"
+  },
   "WCRTSP": {
    "quand": "toujours",
    "source": "tasmota/tasmota_xdrv_driver/xdrv_81_esp32_webcam.ino::CmndWebRtsp ; doc Commands.md"
@@ -1446,6 +1458,10 @@
   "WIFICONFIG": {
    "quand": "toujours",
    "source": "tasmota/tasmota_support/support_command.ino::CmndWifiConfig ; doc Commands.md"
+  },
+  "WIFITEST": {
+   "quand": "si-change",
+   "source": "tasmota/tasmota_support/support_command.ino::CmndWifiTest (sans effet hors du gestionnaire Wi-Fi ; redemarre une fois apres un test reussi, par support_wifi.ino ; relu a la main) ; doc Commands.md"
   },
   "ZBCONFIG": {
    "quand": "si-change",
@@ -1460,25 +1476,25 @@
   "ARTNET": "ArtNet mode, listen to UDP port 6454 and force `SetOption148 1` for autorun at restart `Stop`, `Off` or `0`: Stop ArtNet mo",
   "BH1750MTIME": "umber (`1..2`)  `30..255` = set Measurement Time value. Not persistent after reboot. _(default = `69`)_",
   "BRRESTART": "Restart the Berry VM. [read more...](https://ta",
-  "BSSID": "= `1..2` ` ` = set AP  Wi-Fi BSSID in format `11:22:33:44:55:66` and restart `1` = reset AP  Wi-Fi BSSID to fi",
+  "BSSID": "x>` = `1..2` ` ` = set AP  Wi-Fi BSSID in format `11:22:33:44:55:66` and restart `1` = reset AP  Wi-Fi BSSID to fi",
   "DEVGROUPNAME": "`0` = clear device group   name and restart ` ` = set device group   na",
   "ETHIPADDRESS": "XX` = set static IP address  *Follow any IP configuration commands with `restart 1` to apply changes*",
   "FULLTOPIC": "`1` = reset MQTT fulltopic to firmware default (`MQTT_FULLTOPIC`) and restart ` ` = set MQTT fulltopic and r",
   "GROUPTOPIC": "`1` = reset MQTT group   topic to firmware default (`MQTT_GRPTOPIC`) and restart ` ` = set MQTT group   topi",
   "HOSTNAME": "`1` = reset hostname to `MQTT_TOPIC- ` and restart ` ` = set hostname (32 char li",
   "IPADDRESS": "to set Secondary DNS server IP address  *follow IPAddress commands with `restart 1` to apply changes*",
-  "MODULE": "ys active module by name and index ` ` = switch to module   and restart `0` = switch to defined [template](T",
+  "MODULE": "splays active module by name and index ` ` = switch to module   and restart `0` = switch to defined [template](T",
   "MQTTCLIENT": "`1` = reset MQTT client to firmware config (`MQTT_CLIENT_ID`) and restart ` ` = set MQTT client and rest",
-  "MQTTHOST": "o find MQTT host `1` = reset MQTT host to firmware default (`MQTT_HOST`) and restart ` ` = set MQTT host and restar",
-  "MQTTPASSWORD": "QTT password `1` = reset MQTT password to firmware default (`MQTT_PASS`) and restart ` ` = set MQTT password and re",
+  "MQTTHOST": "NS to find MQTT host `1` = reset MQTT host to firmware default (`MQTT_HOST`) and restart ` ` = set MQTT host and restar",
+  "MQTTPASSWORD": "ar MQTT password `1` = reset MQTT password to firmware default (`MQTT_PASS`) and restart ` ` = set MQTT password and re",
   "MQTTPORT": "`1` = reset MQTT port to firmware default (`MQTT_PORT`) and restart ` ` = set MQTT port between 2",
-  "MQTTUSER": "T user name `1` = reset MQTT user name to firmware default (`MQTT_USER`) and restart ` ` = set MQTT user name and r",
+  "MQTTUSER": "MQTT user name `1` = reset MQTT user name to firmware default (`MQTT_USER`) and restart ` ` = set MQTT user name and r",
   "PALETTE": "-time rule such as ON System#Boot DO Palette xxxxx ENDON to set it back at each restart.",
   "PASSWORD": "` ` = `1..2` ` ` = set AP  Wi-Fi password and restart `1` = reset AP  Wi-Fi password to",
   "POWER": "Control the corresponding power state (also restarts PulseTime)   `0` / `off` / `fals",
-  "PREFIX": "= reset MQTT command subscription prefix to firmware default (`SUB_PREFIX`) and restart ` ` = set MQTT command subscri",
+  "PREFIX": "`1` = reset MQTT command subscription prefix to firmware default (`SUB_PREFIX`) and restart ` ` = set MQTT command subscri",
   "RESET": "`1` = reset device settings to firmware defaults and restart (see warning below) `2` = erase flas",
-  "RESTART": "`1` = restart device with configuration saved to flas",
+  "RESTART": "`1` = restart device with configuration saved to flash `2",
   "RFRAW": "ic-usage) `0` = Set iTead default firmware support and messages *(default on restart)*  `1` = set Portisch firmware suppo",
   "RULE": ">`6` = toggle one-shot detection `8` = disable stop-on-error after exception restart `9` = enable stop-on-error after exc",
   "SAVEDATA": "`0` = save parameter changes only manually, e.g. with `Restart 1` `1` = save parameter changes ever",
@@ -1501,7 +1517,7 @@
   "WEBCOLOR": "1` = Button (Blueish) `12` = Button hovered over (Darker blue-ish) `13` = Restart/Reset/Delete button (Red-ish) `14` =",
   "WIFI": "= Wi-Fi mode 802.11b/g/n  When wifi is Off it is always returned On after a restart except for a wake-up from deepsleep.",
   "WIFICONFIG": "`0` = disable Wi-Fi Manager and reboot (used with alternate AP) `2` = set [",
-  "WIFITEST": "&nbsp;&nbsp;`0` = test credentials, if successful save them in SSID slot 1, restart Tasmota &nbsp;&nbsp;`1` = test crede",
+  "WIFITEST": "&nbsp;&nbsp;`0` = test credentials, if successful save them in SSID slot 1, restart Tasmota &nbsp;&nbsp;`1` = test credentials,",
   "ZBPERMITJOIN": ">`1` = enable pairing mode for 60 seconds `99` = enable pairing until device reboots (CC2530 only) :rotating_light: Leav"
  },
  "anomalies": [

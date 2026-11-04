@@ -7,8 +7,10 @@ ici, par `charge`, le fichier fige outils_docs/schemas/commandes_tasmota.json :
   connues      {NOM: source}  noms des tables `DecodeCommand(kXxxCommands, XxxCommand[, synonymes])` du code du fork
                (macros D_CMND_/D_PRFX_ resolues, #ifdef compris : connue n'importe ou dans le fork), SetOption0..N
                (support_command.ino::SetoptionDecode), et `tasmota.add_cmd` des .be de data/fs
-  redemarrent  {NOM: {"quand": "toujours"|"si-change", "source": ...}}  `TasmotaGlobal.restart_flag = 2` dans la
-               fonction de la commande (meme rang dans le tableau de pointeurs que dans la chaine des noms)
+  redemarrent  {NOM: {"quand": "toujours"|"si-change", "source": ...}}  affectation non nulle de `restart_flag`
+               (2, 211, 210 + payload...) dans la fonction de la commande (meme rang dans le tableau de pointeurs que
+               dans la chaine des noms) ; RELUES (relues a la main) ; puis la doc : une commande connue que la doc dit
+               redemarrer (AFFIRME) sans que le code le montre entre en « toujours », « doc Commands.md seulement »
   doc          {NOM: extrait}  mentions restart/reboot de Commands.md (depot tasmota/docs), croisees avec le code
 Classement : « si-change » seulement si une condition qui entoure le redemarrage compare au reglage en place (!=,
 strcmp...) ; une condition sur l'argument seul (data_len > 0, payload valide, case d'une SetOption) laisse « toujours »,
@@ -38,6 +40,21 @@ LEXEMES = re.compile(CHAINE + r"|'(?:\\.|[^'\\\n])*'|//[^\n]*|/\*.*?\*/", re.S)
 # comparaison au reglage en place : seul cas ou la ligne ne redemarre qu'au premier passage
 COMPARE = re.compile(r"\b(?:strn?(?:case)?cmp(?:_P)?|memcmp)\s*\(|(?:Settings|TasmotaGlobal)\S*\s*!=|!=\s*\S*(?:Settings|TasmotaGlobal)")
 CONDITION = re.compile(r"\b(?:if|else|switch|case|for|while)\b|\?")
+# restart_flag non nul : 1..5 = redemarrage differe, 2 = Restart 1, 21x = Reset (support_tasmota.ino::Every250mSeconds)
+REDEMARRE = r"restart_flag\s*=\s*[1-9][^;]*;"
+# la doc dit que la commande redemarre la carte (et non « apres un redemarrage », « faire suivre de Restart 1 »)
+AFFIRME = re.compile(r"\band (?:restart|reboot)\b|forces? (?:a )?(?:restart|reboot)|causes? a (?:restart|reboot)"
+                     r"|\b(?:restart|reboot)s? (?:the )?(?:device|tasmota)\b", re.I)
+# redemarrages par une autre voie que restart_flag, relus dans le code (pris seulement si la commande est connue)
+RELUES = {
+    "UPGRADE": ("toujours", "tasmota/tasmota_support/support_command.ino::CmndUpgrade (ota_state_flag = 3 : OTA puis "
+                "redemarrage ; relu a la main)"),
+    "UPLOAD": ("toujours", "tasmota/tasmota_support/support_command.ino::CmndUpgrade (meme fonction qu'Upgrade ; relu a la "
+               "main)"),
+    "WIFITEST": ("si-change", "tasmota/tasmota_support/support_command.ino::CmndWifiTest (sans effet hors du gestionnaire "
+                 "Wi-Fi ; redemarre une fois apres un test reussi, par support_wifi.ino ; relu a la main)"),
+}
+EXCLUES = {"BRRESTART"}   # relance la machine Berry, pas la carte
 
 
 def _nom(brut):
@@ -112,9 +129,9 @@ def _conditions(corps, pos):
 
 
 def classe(corps):
-    """None, "toujours" ou "si-change" selon les `restart_flag = 2` du corps de la fonction."""
+    """None, "toujours" ou "si-change" selon les affectations non nulles de `restart_flag` du corps de la fonction."""
     quand = None
-    for m in re.finditer(r"restart_flag\s*=\s*2\s*;", corps):
+    for m in re.finditer(REDEMARRE, corps):
         conds = _conditions(corps, m.start())
         if not any(COMPARE.search(c) for c in conds):
             return "toujours"
@@ -123,7 +140,8 @@ def classe(corps):
 
 
 def _setoptions(blanc, fonctions):
-    """({SETOPTIONn: "toujours"|"si-change"}, nombre) depuis SetoptionDecode et les case de CmndSetoptionBase."""
+    """({SETOPTIONn: (quand, condition)}, nombre) depuis SetoptionDecode et les case de CmndSetoptionBase ;
+    `condition` = le `if` qui garde le redemarrage dans son case (SO55 : seulement si la valeur est 0), ou ""."""
     if "SetoptionDecode" not in fonctions or "CmndSetoptionBase" not in fonctions:
         return {}, 0
     decode = fonctions["SetoptionDecode"]
@@ -136,7 +154,7 @@ def _setoptions(blanc, fonctions):
     for i, b in enumerate(blocs):
         bloc = corps[b.end():blocs[i + 1].start() if i + 1 < len(blocs) else len(corps)]
         base, cas, compare = bases.get(int(b.group(1)), 0), [], None
-        for m in re.finditer(r"case\s+(\w+)\s*:|break\s*;|(\w+)\s*==\s*pindex|pindex\s*==\s*(\w+)|restart_flag\s*=\s*2\s*;", bloc):
+        for m in re.finditer(r"case\s+(\w+)\s*:|break\s*;|(\w+)\s*==\s*pindex|pindex\s*==\s*(\w+)|" + REDEMARRE, bloc):
             if m.group(1):
                 cas.append(m.group(1))
             elif m.group(0).startswith("break"):
@@ -144,11 +162,16 @@ def _setoptions(blanc, fonctions):
             elif m.group(2) or m.group(3):
                 compare = m.group(2) or m.group(3)
             else:
-                quand = classe("{" + bloc[:m.end()].rsplit("case", 1)[-1] + "}") if cas else "toujours"
+                segment = bloc[:m.end()].rsplit("case", 1)[-1] if cas else ""
+                quand = classe("{" + segment + "}") if cas else "toujours"
+                si = re.search(r"\bif\s*\((.*)\)", segment)
+                si = " ".join(si.group(1).split()) if si else ""
+                valeur = re.fullmatch(r"\(?(\d+)\s*==\s*XdrvMailbox\.payload\)?", si)
+                si = f"la valeur est {valeur.group(1)}" if valeur else si
                 for c in cas or [compare]:
                     n = int(c) if c and c.isdigit() else params.get(c)
                     if n is not None:
-                        res[f"SETOPTION{base + n}"] = quand
+                        res[f"SETOPTION{base + n}"] = (quand, si)
     return res, nombre
 
 
@@ -162,7 +185,7 @@ def extrait_doc(texte):
     """{NOM: extrait} des commandes de Commands.md dont la description parle de restart ou de reboot."""
     res = {}
     for nom, desc in re.findall(r'(?m)^([A-Za-z][^|<]*(?:<[^a][^>]*>)?[^|<]*)<a class="cmnd" id="[^"]*"></a>\|(.*)$', texte):
-        m = re.search(r"restart|reboot", desc, re.I)
+        m = AFFIRME.search(desc) or re.search(r"restart|reboot", desc, re.I)   # extrait autour de l'affirmation
         cle = _nom(re.sub(r"<[^>]*>|\W", "", nom))
         if m and cle not in res:
             res[cle] = re.sub(r"<[^>]*>", " ", desc[max(0, m.start() - 80):m.end() + 40]).strip()
@@ -202,8 +225,9 @@ def genere(racine, doc=None):
                              {n: v[0][1] for n, v in fonctions.items()})
     for n in range(nombre):
         connues[f"SETOPTION{n}"] = "tasmota/tasmota_support/support_command.ino::SetoptionDecode"
-    for nom, quand in so.items():
-        redemarrent[nom] = {"quand": quand, "source": "tasmota/tasmota_support/support_command.ino::CmndSetoptionBase"}
+    for nom, (quand, si) in so.items():
+        redemarrent[nom] = {"quand": quand, "source": "tasmota/tasmota_support/support_command.ino::CmndSetoptionBase"
+                            + (f" (redemarre seulement si {si})" if si else "")}
 
     def noms(expr, defines):
         """(prefixe, noms) ; la derniere case vide d'une chaine finie par « | » n'est pas une commande."""
@@ -241,10 +265,15 @@ def genere(racine, doc=None):
                     redemarrent[cle] = {"quand": "toujours" if "toujours" in quands else "si-change",
                                         "source": f"{rel(defs[0][0])}::{fn}"}
     _berry(racine, connues)
+    for nom, (quand, source) in RELUES.items():
+        if nom in connues:
+            redemarrent[nom] = {"quand": quand, "source": source}
     doc = extrait_doc(doc) if isinstance(doc, str) else dict(doc or {})
-    for nom in doc:
+    for nom, extrait in doc.items():
         if nom in redemarrent:
             redemarrent[nom] = dict(redemarrent[nom], source=redemarrent[nom]["source"] + " ; doc Commands.md")
+        elif nom in connues and nom not in EXCLUES and AFFIRME.search(extrait):
+            redemarrent[nom] = {"quand": "toujours", "source": "doc Commands.md seulement"}
     return {"connues": dict(sorted(connues.items())), "redemarrent": dict(sorted(redemarrent.items())),
             "doc": dict(sorted(doc.items())), "anomalies": anomalies}
 
