@@ -22,7 +22,7 @@ import http.server, sys
 port = int(sys.argv[sys.argv.index("--http") + 1])
 class H(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
-        self.send_response(200); self.end_headers(); self.wfile.write(b'{"en_cours": false}')
+        self.send_response(200); self.end_headers(); self.wfile.write(b'<html><head><title>Atelier des graphiques</title></head></html>')
     def log_message(self, *a): pass
 print("fausse page atelier des graphiques sur", port, flush=True)
 http.server.HTTPServer(("127.0.0.1", port), H).serve_forever()
@@ -44,7 +44,8 @@ def port_libre():
         return s.getsockname()[1]
 
 
-def test_deja_lancee():
+def test_autre_service():
+    """Un autre service qui repond 200 sur le port n'est pas pris pour l'atelier."""
     port = port_libre()
 
     class H(http.server.BaseHTTPRequestHandler):
@@ -52,6 +53,27 @@ def test_deja_lancee():
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b'{"en_cours": false}')
+
+        def log_message(self, *a):
+            pass
+
+    serveur = http.server.HTTPServer(("127.0.0.1", port), H)
+    threading.Thread(target=serveur.serve_forever, daemon=True).start()
+    try:
+        verifie(cible.repond(port), False, "autre service sur le port : pas l'atelier")
+    finally:
+        serveur.shutdown()
+        serveur.server_close()
+
+
+def test_deja_lancee():
+    port = port_libre()
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(cible.MARQUE)
 
         def log_message(self, *a):
             pass
@@ -99,7 +121,7 @@ def test_demarrage_rate():
 
 def principal():
     verifie((cible.NOM_CIBLE, cible.PORT_DEFAUT), ("atelier_graphiques", "7950"), "nom de cible et port par defaut")
-    for t in (test_deja_lancee, test_demarre_detachee, test_demarrage_rate):
+    for t in (test_autre_service, test_deja_lancee, test_demarre_detachee, test_demarrage_rate):
         try:
             t()
         except Exception as erreur:          # un test qui plante est un echec, pas un arret du banc

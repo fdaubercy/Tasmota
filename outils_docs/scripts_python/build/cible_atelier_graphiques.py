@@ -14,10 +14,11 @@ page refuserait d'ecrire le cenv pendant ce temps. Donc :
 La cible quitte avant le reste du pre-script (pas de CFG_HOLDER, pas de platformio_override.ini) et avant
 solidify-from-url.py (pas de modules.h).
 ATTENTION : c'est un `pio run`. Ne JAMAIS la lancer pendant un build : lancer alors la tache VS Code
-« Outil : Atelier des graphiques » ou le script. En ligne de commande : pio run -e <env> -t atelier_graphiques
+« Outil : atelier des graphiques (http://127.0.0.1:7950) » ou le script. En ligne de commande : pio run -e <env> -t atelier_graphiques
 Banc : test_cible_atelier_graphiques.py (sans PlatformIO, fausse page).
 """
 
+import http.client
 import os
 import subprocess
 import time
@@ -38,12 +39,15 @@ DRAPEAUX = CREATE_BREAKAWAY_FROM_JOB | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WIND
 DERNIER = None          # dernier processus demarre (pour les bancs)
 
 
+MARQUE = b"<title>Atelier des graphiques</title>"     # un autre service sur le port n'est pas l'atelier
+
+
 def repond(port, delai=1.0):
     """True si la page Atelier des graphiques repond sur 127.0.0.1:<port>."""
     try:
         with urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=delai) as r:
-            return r.status == 200
-    except OSError:
+            return r.status == 200 and MARQUE in r.read(4096)
+    except (OSError, http.client.HTTPException, ValueError):
         return False
 
 
@@ -120,8 +124,8 @@ def enregistre(env):
         dependencies=None,
         actions=[lance],
         title="Atelier des graphiques (page web)",
-        description="Atelier des graphiques de chaque env (sur le FS, exclu, solidifie) et creation d'un env a partir "
-                    "d'une carte modele ; http://127.0.0.1:7950. Ouvre la page si elle tourne deja.",
+        description="Prepare les pages de graphiques d'une carte (apercu, diff, ecriture du depot) ; "
+                    "http://127.0.0.1:7950. Ouvre la page si elle tourne deja.",
         always_build=True,
     )
 
