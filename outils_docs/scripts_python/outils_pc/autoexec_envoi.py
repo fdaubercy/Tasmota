@@ -157,6 +157,10 @@ def envoie(racine, env, jeton, rouges_lus, redemarrer, builds_en_cours):
         if echec:
             raise RuntimeError(f"{erreur} ; {echec}") from None
         raise
+    except BaseException:  # arret brutal (Ctrl+C, SystemExit) : le maitre ne doit pas rester en Sleep 0
+        if remet:
+            remet()
+        raise
     return {"envoye": True, "sauvegarde": None if sauvegarde is None else str(sauvegarde),
             "avertissement": remet() if remet else ""}
 
