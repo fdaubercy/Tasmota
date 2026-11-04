@@ -2,8 +2,9 @@
 
 UTILISATION (a la main ; aucun pio, aucune carte ; Chrome tourne ~2 x 40 s)
     python outils_docs/scripts_python/outils_pc/test_assistant_persist_autoexec_chrome.py [--sans-temoin] [--capture F.png]
-Code de sortie 0 = vert : l'onglet passe toutes les verifications ET le temoin (meme page, case « redemarrer ensuite »
-ignoree : la page envoie redemarrer=true) est detecte.
+Code de sortie 0 = vert : l'onglet passe toutes les verifications ET chaque temoin est detecte : meme page, case
+« redemarrer ensuite » ignoree (la page envoie redemarrer=true) ; meme page sans la garde qui ferme l'envoi quand le
+texte change (l'ancien fichier du depot partirait).
 
 Montage repris de test_assistant_persist_page_chrome.py : serveur dans un processus fils, depot d'essai temporaire (celui
 de test_assistant_persist_autoexec.depot, autoexec.bat ecrit ici avec un mot de passe INVENTE). Envoi : jamais de
@@ -43,7 +44,10 @@ FICHIER = ("; Essai de la sonde\nSetOption146 ON\nBacklog WifiPower 17; SSId1 Re
 JETON = "jeton-sonde"
 SUR_CARTE = "WebLog 2\nPassword1 ***\n"
 SAUVEGARDE = r"C:\essai\autoexec_cartes\copie.bat"
-TEMOIN = ('redemarrer: $("a-redemarrer").checked', "redemarrer: true")
+TEMOINS = {                                             # nom -> (texte de la page, remplacement, verification qui doit echouer)
+    "redemarrer": ('redemarrer: $("a-redemarrer").checked', "redemarrer: true", "envoi : le bouchon recoit redemarrer=False"),
+    "garde-envoi": ("if (modifie()) fermeEnvoi();", "", "envoi : texte modifie apres l'ouverture -> panneau ferme ou « Envoyer » grise"),
+}
 ENROBE = """window.__corps = []; (function () { var f = window.fetch; window.fetch = function () {
   return f.apply(this, arguments).then(function (r) { r.clone().text().then(function (t) { window.__corps.push(t); }); return r; }); }; })();"""
 
@@ -63,8 +67,9 @@ def mode_serveur(port, depot, temoin):
     autoexec_envoi.prepare, autoexec_envoi.envoie = prepare, envoie
     if temoin:
         import assistant_persist_page
-        assert assistant_persist_page.PAGE.count(TEMOIN[0]) == 1, "case a casser introuvable dans la page"
-        copie = assistant_persist_page.PAGE.replace(*TEMOIN)
+        avant, apres, _ = TEMOINS[temoin]
+        assert assistant_persist_page.PAGE.count(avant) == 1, f"texte du temoin introuvable dans la page : {avant}"
+        copie = assistant_persist_page.PAGE.replace(avant, apres)
         apw.page = lambda: copie
     apw.DEPOT = Path(depot)
     apw.builds_en_cours_defaut = lambda: []
@@ -84,7 +89,7 @@ class Montage(tpc.Montage):
         self.port = port_libre()
         self.url = f"http://127.0.0.1:{self.port}/"
         commande = ([sys.executable, "-u", str(Path(__file__).resolve()), "--serveur", str(self.port), str(self.depot)]
-                    + (["--temoin"] if temoin else []))
+                    + (["--temoin", temoin] if temoin else []))
         self.serveur = subprocess.Popen(commande, env=environ, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         self._attend_http(self.url + "execution", 20)
@@ -219,6 +224,15 @@ def sonde(m):
     recu = json.loads(m.journal.read_text(encoding="utf-8")) if m.journal.is_file() else {}
     verifie(recu.get("redemarrer"), False, "envoi : le bouchon recoit redemarrer=False")
     verifie((recu.get("jeton"), recu.get("rouges_lus"), recu.get("env")), (JETON, rouges, ENV), "envoi : jeton, rouges lus et env transmis")
+    # panneau d'envoi ouvert puis texte modifie : l'ancien fichier du depot ne doit plus pouvoir partir
+    tpc.clic(cdp, "a-envoyer")
+    attend(cdp, "document.getElementById('a-envoi-adresse').textContent.indexOf('ESSAI-SONDE') >= 0", 10)
+    tpc.clic(cdp, "a-ecart-vu")
+    verifie(js(cdp, "return document.getElementById('a-envoi-go').disabled"), False, "envoi rouvert : « Envoyer » actif")
+    js(cdp, "var t = document.getElementById('a-texte'); t.value += 'WebLog 1'; t.dispatchEvent(new Event('input', {bubbles: true}))")
+    verifie(js(cdp, "return document.getElementById('a-panneau-envoi').hidden || document.getElementById('a-envoi-go').disabled"), True,
+            TEMOINS["garde-envoi"][2])
+    tpc.clic(cdp, "a-annuler")
     # « En faire un modele » depuis la ligne Hostname
     js(cdp, f"document.querySelector('#a-avertissements [data-ligne=\"{ligne_h}\"]').click()")
     tpc.clic(cdp, "a-en-modele")
@@ -252,12 +266,12 @@ def principal():
     options.add_argument("--sans-temoin", action="store_true")
     options.add_argument("--capture", help="capture PNG de l'onglet rempli (avant l'ecriture)")
     options.add_argument("--serveur", nargs=2, metavar=("PORT", "DEPOT"), help=argparse.SUPPRESS)
-    options.add_argument("--temoin", action="store_true", help=argparse.SUPPRESS)
+    options.add_argument("--temoin", choices=sorted(TEMOINS), help=argparse.SUPPRESS)
     args = options.parse_args()
     if args.serveur:
         return mode_serveur(int(args.serveur[0]), args.serveur[1], args.temoin)
-    for temoin in ([False] if args.sans_temoin else [False, True]):
-        print(f"\n=== {'TEMOIN (case redemarrer ignoree)' if temoin else 'page reelle'} ===", flush=True)
+    for temoin in [None] + ([] if args.sans_temoin else sorted(TEMOINS)):
+        print(f"\n=== {'TEMOIN ' + temoin if temoin else 'page reelle'} ===", flush=True)
         m, avant = None, len(ECHECS)
         try:
             m = Montage()
@@ -275,7 +289,7 @@ def principal():
         if temoin:
             vus = ECHECS[avant:]
             del ECHECS[avant:]
-            verifie("envoi : le bouchon recoit redemarrer=False" in vus, True, "TEMOIN : redemarrer=true envoye est detecte")
+            verifie(TEMOINS[temoin][2] in vus, True, f"TEMOIN {temoin} : detecte ({TEMOINS[temoin][2]})")
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0
 

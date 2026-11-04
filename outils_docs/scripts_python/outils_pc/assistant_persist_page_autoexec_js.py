@@ -115,6 +115,8 @@ function corrige(n, ecrit, par) {
   ta.value = l.join("\n"); ta.setSelectionRange(d, f); aChange();
 }
 function aChange() {
+  X.numero++;                                          // une analyse partie avant cette frappe ne s'applique plus
+  if (modifie()) fermeEnvoi();                         // l'envoi part du fichier du DEPOT : jamais avec un texte non ecrit
   dessineMarge(); majTete(); majInsertion();
   clearTimeout(X.minuteur); X.minuteur = setTimeout(analyse, 400);
 }
@@ -176,6 +178,7 @@ async function ecrit() {
 }
 
 // ---- Envoi a la carte ----
+function fermeEnvoi() { $("a-panneau-envoi").hidden = true; X.prep = null; majEnvoyer(); }
 function majEnvoyer() { $("a-envoi-go").disabled = !(X.prep && (!X.prep.ecart || $("a-ecart-vu").checked)); }
 async function prepareEnvoi() {
   var z = vide($("a-envoi-retours")), n = rouges();
@@ -183,7 +186,8 @@ async function prepareEnvoi() {
   $("a-redemarrer").checked = false; $("a-ecart-vu").checked = false; $("a-envoi-rouges-lus").checked = false;
   $("a-envoi-rouges").hidden = !n; $("a-envoi-rouges-texte").textContent = "J'ai lu les " + n + " avertissements rouges";
   $("a-envoi-adresse").textContent = "Lecture de la carte…"; majEnvoyer();
-  var r = await api("/autoexec/envoi/prepare", {env: X.env});
+  var env = X.env, r = await api("/autoexec/envoi/prepare", {env: env});
+  if (env !== X.env || modifie() || $("a-panneau-envoi").hidden) return;     // carte changee, texte modifie ou panneau ferme entre-temps
   if (!r.ok || !r.donnees) { $("a-envoi-adresse").textContent = ""; message(z, "avert rouge", r.texte); return; }
   X.prep = r.donnees;
   $("a-envoi-adresse").textContent = "Carte " + X.prep.hostname_carte + " à l'adresse " + X.prep.adresse + " (identité vérifiée).";
@@ -344,7 +348,7 @@ $("a-ecrire").onclick = ecrit;
 $("a-envoyer").onclick = prepareEnvoi;
 $("a-ecart-vu").onchange = majEnvoyer;
 $("a-envoi-go").onclick = envoie;
-$("a-envoi-annule").onclick = function () { $("a-panneau-envoi").hidden = true; X.prep = null; };
+$("a-envoi-annule").onclick = fermeEnvoi;
 $("a-recherche").addEventListener("input", cherche);
 $("a-champs").addEventListener("input", litChamps);
 $("a-champs").addEventListener("change", litChamps);
