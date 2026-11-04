@@ -212,7 +212,8 @@ cuveFonctions.aideReglageCuve = def(sujet)
         return ["Parametre : ON (une ondulation par 60 min), une periode en minutes (1 a 1440), ou OFF.",
                 "Effet : sans sonde branchee, chaque releve du niveau utilise une tension fabriquee : la hauteur",
                 "        d'eau ondule entre 20 % et 90 % de la cuve ; SENSOR, historique, ruban et maitre ModBus",
-                "        la recoivent comme une vraie mesure. Exige le capteur de niveau actif et l'ADS1115 initialise.",
+                "        la recoivent comme une vraie mesure. Exige le capteur de niveau actif ; ADS1115 absent du bus :",
+                "        plage +/-6,144 V supposee et releve chaque minute pose par la commande.",
                 "Sauvegarde : aucune, en RAM seulement : un redemarrage revient a la mesure reelle.",
                 "Exemple : ReglageCuve simulation 30"]
     end
@@ -332,9 +333,16 @@ cuveFonctions.reglageCuve = def(cmd, idx, payload, payload_json)
             cuveFonctions.log("REGLAGE_CUVE: simulation du capteur de niveau arretee, retour a la mesure reelle !", LOG_LEVEL_INFO)
         elif (minutes < 1 || minutes > 1440)
             cuveFonctions.log("REGLAGE_CUVE_ERREUR: simulation : periode " + str(parametres[0]) + " invalide (ON, OFF ou 1 a 1440 min) !", LOG_LEVEL_ERREUR)
-        elif (cuveFonctions.capteurNiveau() == nil || cuveFonctions.voltageMax <= 0)
-            cuveFonctions.log("REGLAGE_CUVE_ERREUR: simulation impossible : capteur de niveau inactif ou ADS1115 non initialise !", LOG_LEVEL_ERREUR)
+        elif (cuveFonctions.capteurNiveau() == nil)
+            cuveFonctions.log("REGLAGE_CUVE_ERREUR: simulation impossible : capteur de niveau (analogique1) inactif !", LOG_LEVEL_ERREUR)
         else
+            # ADS1115 absent du bus : controleCuve.init n'a lu aucune plage ni pose la tache de releve -> les deux ici
+            if (cuveFonctions.voltageMax <= 0)
+                cuveFonctions.voltageMax = 6144
+                tasmota.remove_cron("majNiveauCuve")
+                tasmota.add_cron("*/60 * * * * *", /-> cuveFonctions.changementEtatCapteur("", "ADS1115", "", "cuve", ""), "majNiveauCuve")
+                cuveFonctions.log("REGLAGE_CUVE: ADS1115 absent : plage +/-6,144 V supposee et releve chaque minute pose pour la simulation !", LOG_LEVEL_INFO)
+            end
             cuveFonctions.simulation = minutes
             cuveFonctions.log(string.format("REGLAGE_CUVE: simulation du capteur de niveau, une ondulation par %d min (jusqu'au redemarrage) !", minutes), LOG_LEVEL_INFO)
             cuveFonctions.changementEtatCapteur("", "ADS1115", "", "cuve", "")
