@@ -133,7 +133,7 @@ def banc():
 
 MUTANTS = [
     ("env hostile accepte", 'if not isinstance(valeur, str) or not NOM_ENV.fullmatch(valeur) or ".." in valeur:', "if False:"),
-    ("env inconnu non refuse", "raise LookupError(", "return valeur  # "),
+    ("env inconnu non refuse", "raise LookupError(f\"{valeur}", "return valeur  # "),
     ("build ignore a l'ecriture", """empreinte, demande.get("rouges_lus"), builds_en_cours)""",
      """empreinte, demande.get("rouges_lus"), lambda: [])"""),
     ("build ignore pour la banque", """demande.get("entree"), builds_en_cours)""",

@@ -198,7 +198,10 @@ def avertissements(racine, env, texte):
         persist = {}
     config = racine / CONFIG_PERSIST
     texte_config = config.read_text(encoding="utf-8") if config.is_file() else ""
-    noms = [e["nom"] for e in autoexec_banque.charge(racine)]
+    try:  # banque absente ou invalide : seulement des oranges en plus, jamais un refus d'editer
+        noms = [e["nom"] for e in autoexec_banque.charge(racine)]
+    except ValueError:
+        noms = []
     return autoexec_analyse.analyse(texte, persist, autoexec_commandes.charge(racine), noms, texte_config=texte_config)
 
 

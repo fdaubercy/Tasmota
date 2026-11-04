@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Routes /autoexec* de l'Assistant persist (plan autoexec-bat, A5) ; assistant_persist_web.py ne fait que deleguer.
 Les exceptions sont celles du serveur : ValueError -> 400, LookupError -> 404, RuntimeError -> 409.
-  GET  /autoexec?env=             {texte (secrets en ***), empreinte, chemin, existe, avertissements, lignes}
+  GET  /autoexec?env=             {texte (secrets en ***), empreinte, chemin, existe, avertissements, lignes (du texte masque)}
   GET  /autoexec/banque           la banque de commandes (autoexec_banque.charge)
   POST /autoexec/analyse          {env, texte}                                -> {avertissements}
   POST /autoexec/diff             {env, texte}                                -> autoexec_fichier.diff

@@ -229,6 +229,8 @@ def banc():
         remise()
         refus(racine)
         carte_neuve(racine)
+        (racine / "outils_docs/schemas/banque_autoexec.json").unlink()
+        verifie(af.diff(racine, ENV, af.lit(racine, ENV)["texte"])["rouges"] >= 0, True, "banque absente : diff possible")
     verifie((RACINE / CARTE / "autoexec.bat").read_bytes().count(b"\r\n") > 0, True, "vrai depot : fichier non touche (toujours CRLF)")
 
 
@@ -252,6 +254,7 @@ MUTANTS = [
     ("BOM perdu", "(BOM if octets and octets.startswith(BOM) else b\"\")", 'b""'),
     ("fin de ligne finale non gardee", "elif not fin and texte.endswith", "elif False and texte.endswith"),
     ("Password1=x non masque", 'ligne[v] == "="', "False"),
+    ("banque absente refusee", "    except ValueError:\n        noms = []", "    except KeyError:\n        noms = []"),
 ]
 
 
