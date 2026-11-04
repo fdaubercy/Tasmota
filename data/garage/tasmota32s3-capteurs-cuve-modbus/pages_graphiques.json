@@ -12,7 +12,8 @@
      "series": [
       {
        "chemin": "sensorsCuve.niveauCuve.hauteurEau",
-       "unite": "cm"
+       "unite": "cm",
+       "libelle": "Hauteur d'eau"
       }
      ],
      "periode": "jour"
