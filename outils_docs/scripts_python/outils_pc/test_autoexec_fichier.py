@@ -140,7 +140,10 @@ def masquage():
             ("Backlog Rule1 ON x DO WebPassword secretS ENDON; Rule1 1\n", "Backlog Rule1 ON x DO WebPassword ***; Rule1 1\n",
              "corps de Rule dans un Backlog"),
             ('Br persist.password = "secretB"\n', "Br persist.password = ***\n", "Br"),
-            (";Rule1 ON x DO Password1:secretC\n", ";Rule1 ON x DO Password1***\n", "corps de Rule en commentaire")]:
+            (";Rule1 ON x DO Password1:secretC\n", ";Rule1 ON x DO Password1***\n", "corps de Rule en commentaire"),
+            ('Br persist.x = {"password":"ZZZ"}\n', 'Br persist.x = {"password***\n', "JSON colle au mot a secret"),
+            ("Br f(apikey:xyz) + 1\n", "Br f(apikey***\n", "valeur collee apres :"),
+            ("Br x.token=xyz\n", "Br x.token=***\n", "token=xyz colle")]:
         verifie(af.masque(disque), attendu, f"{libelle} : masque apres le mot a secret")
         verifie(af.demasque(af.masque(disque), disque), disque, f"{libelle} : remis")
 
@@ -168,6 +171,9 @@ def remise():
     leve(lambda: af.demasque(af.masque(disque).replace("ON x", "ON token"), disque), ValueError,
          "mot a secret ajoute devant un *** : refus (*** ne serait pas remis)")
     verifie(af.demasque("; note *** gardee\n", "; note *** gardee\n"), "; note *** gardee\n", "*** deja dans le fichier : garde")
+    disque = "; note *** gardee\nRule1 ON x DO MqttPassword m1 ENDON\n"
+    leve(lambda: af.demasque("Rule1 ON token DO MqttPassword ***\n", disque), ValueError,
+         "*** litteral ailleurs sur le disque, *** non remis : refus (critere par ligne)")
     verifie(af.demasque("Password1 neuf\nMqttPassword ***\n", "Password1 a\nMqttPassword m\n"), "Password1 neuf\nMqttPassword m\n",
             "valeur saisie en clair : gardee telle quelle")
     leve(lambda: af.demasque("Password1 ***\nPassword2 ***\n", "Password1 a\n"), ValueError, "*** sans valeur d'origine : refus")
@@ -231,7 +237,10 @@ MUTANTS = [
     ("remise par k-ieme ***", "            k = rangs[cle] = rangs.get(cle, -1) + 1\n            if ligne[d:f] != MASQUE:\n                continue",
      "            if ligne[d:f] != MASQUE:\n                continue\n            k = rangs[cle] = rangs.get(cle, -1) + 1"),
     ("masquage des corps retire", "for mot in mots:", "for mot in list(mots)[:1]:"),
-    ("*** restant non refuse", "if texte.count(MASQUE) > texte_disque.count(MASQUE):", "if False:"),
+    ("*** restant non refuse", "if MASQUE in l and l not in connues:", "if False:"),
+    ("*** restant compte sur tout le fichier", "if MASQUE in l and l not in connues:",
+     "if texte.count(MASQUE) > texte_disque.count(MASQUE):"),
+    ("valeur collee au mot a secret non masquee", "mot.start() + autoexec_analyse.SECRETS.search(mot.group()).end()", "mot.end()"),
     ("empreinte sha256 brute", "hmac.new(_CLE, octets, hashlib.sha256)", "hashlib.sha256(octets)"),
     ("rouges_lus booleen accepte", "isinstance(rouges_lus, bool) or ", ""),
     ("masquage des commentaires retire", 'if ligne[i:i + 1] == ";":', 'if ligne[i:i + 1] == ";":\n        return []\n    if False:'),

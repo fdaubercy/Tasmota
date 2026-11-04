@@ -76,8 +76,9 @@ def _valeurs(ligne):
             nom = m.group().rsplit("/", 1)[-1]
             if autoexec_analyse.SECRETS.search(nom):
                 v = m.end()
-            elif autoexec_analyse.SECRETS.search(mot.group()):
-                nom, v = mot.group(), mot.end()
+            elif autoexec_analyse.SECRETS.search(mot.group()):     # {"password":"x"} : masque des la fin du mot a secret
+                v = mot.start() + autoexec_analyse.SECRETS.search(mot.group()).end()
+                nom = ligne[mot.start():v]                         # sans la valeur collee : meme cle sur disque et page
             else:
                 continue
             while v < fin and (ligne[v].isspace() or ligne[v] == "="):
@@ -108,8 +109,9 @@ def _apparitions(lignes):
 
 def demasque(texte_page, texte_disque):
     """La k-ieme apparition de C dans la page, si elle vaut ***, reprend la valeur de la k-ieme apparition de C sur le
-    disque. ValueError si C n'a pas de valeur d'origine, si le nombre d'apparitions de C a change, ou s'il resterait un
-    *** de plus que sur le disque (mot a secret ajoute devant, par exemple : *** serait ecrit tel quel)."""
+    disque. ValueError si C n'a pas de valeur d'origine, si le nombre d'apparitions de C a change, ou si une ligne
+    garderait un *** sans exister telle quelle sur le disque (mot a secret ajoute devant, par exemple : *** serait ecrit
+    tel quel ; une ligne du disque qui contenait deja *** passe)."""
     origines, lignes = _apparitions(texte_disque.splitlines(True)), texte_page.splitlines(True)
     page, rangs, sortie = _apparitions(lignes), {}, []
     for numero, ligne in enumerate(lignes, 1):
@@ -129,9 +131,10 @@ def demasque(texte_page, texte_disque):
             pos = f
         sortie.append("".join(morceaux) + ligne[pos:])
     texte = "".join(sortie)
-    if texte.count(MASQUE) > texte_disque.count(MASQUE):
-        n = next((n for n, l in enumerate(texte.splitlines(), 1) if MASQUE in l and l not in texte_disque.splitlines()), "?")
-        raise ValueError(f"ligne {n} : *** sans valeur d'origine (ligne changee devant le secret) : retaper la valeur ou annuler")
+    connues = set(texte_disque.splitlines())
+    for n, l in enumerate(texte.splitlines(), 1):
+        if MASQUE in l and l not in connues:
+            raise ValueError(f"ligne {n} : *** sans valeur d'origine (ligne changee devant le secret) : retaper la valeur ou annuler")
     return texte
 
 
