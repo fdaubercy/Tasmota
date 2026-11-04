@@ -3,6 +3,7 @@ var cuveFonctions = module("/cuveFonctions")
 
 cuveFonctions.sensorsCuve = {"valeursAnalogiques": {"valeurCapteurHauteur": 0}, "niveauCuve": {"hauteurEau": 0, "tauxRemplissage": 0, "volume": 0}}
 cuveFonctions.voltageMax = 0.00         # voltageMax admissible par l'ADS1115 selon la plage de mesure paramétrée
+cuveFonctions.simulation = nil          # ReglageCuve simulation : periode en minutes, nil = mesure reelle (RAM seulement)
 
 cuveFonctions.log = def(msg, levelDebug)
     logFonctions.log(msg, levelDebug, "cuve")
@@ -60,6 +61,22 @@ cuveFonctions.versMv = def(brut)
     var b = int(brut)
     if (b < 0)    b = 0    end
     return tasmota.scale_int(b, 0, 32767, 0, cuveFonctions.voltageMax)
+end
+
+# Releve ADS1115 fabrique pour essayer sans sonde (ReglageCuve simulation, 2026-11-04) : la hauteur d'eau ondule
+# entre 20 % et 90 % de la cuve, une ondulation par 'simulation' minutes. nil si le capteur de niveau est inactif
+# ou la plage de l'ADS1115 inconnue (voltageMax, pose par controleCuve.init).
+cuveFonctions.releveSimule = def()
+    import math
+    import string
+    var ana = cuveFonctions.capteurNiveau()
+    if (ana == nil || cuveFonctions.voltageMax <= 0)    return nil    end
+    var hauteur = modules["cuve"].find("dimensions", {}).find("hauteur", 100)
+    var cm = hauteur * (0.55 + 0.35 * math.sin(2 * math.pi * tasmota.millis() / (cuveFonctions.simulation * 60000.0)))
+    var brut = int(cm * ana.find("conversion_mV_cm", 1.0) * 32767 / cuveFonctions.voltageMax)
+    var releve = {"A0": 0, "A1": 0, "A2": 0, "A3": 0}
+    releve[string.format("A%d", ana["id"] - 1)] = (brut > 32767 ? 32767 : brut)
+    return releve
 end
 
 # true si la lecture 'mV' de la voie 'cleA' de l'ADS1115 est une mesure, selon le pilote i2c_ads1115
@@ -168,7 +185,8 @@ cuveFonctions.aideReglageCuve = def(sujet)
             ["etalonnageCapteur", "etalonnageCapteur <ON|OFF>", "mesure rapprochee du niveau pendant 10 min"],
             ["hauteurCuve", "hauteurCuve <cm>", "regle la hauteur de la cuve"],
             ["largeurCuve", "largeurCuve <cm>", "regle la largeur de la cuve"],
-            ["longueurCuve", "longueurCuve <cm>", "regle la longueur de la cuve"]
+            ["longueurCuve", "longueurCuve <cm>", "regle la longueur de la cuve"],
+            ["simulation", "simulation <ON|OFF|minutes>", "fait onduler la hauteur d'eau sans sonde (essais)"]
         ]
     end
     sujet = string.toupper(sujet)
@@ -189,6 +207,14 @@ cuveFonctions.aideReglageCuve = def(sujet)
                 "        Les 3 dimensions servent au calcul du volume ; la reponse les rappelle.",
                 "Exemple : Backlog ReglageCuve hauteurCuve 110; ReglageCuve largeurCuve 180;",
                 "          ReglageCuve longueurCuve 340"]
+    end
+    if (sujet == "SIMULATION")
+        return ["Parametre : ON (une ondulation par 60 min), une periode en minutes (1 a 1440), ou OFF.",
+                "Effet : sans sonde branchee, chaque releve du niveau utilise une tension fabriquee : la hauteur",
+                "        d'eau ondule entre 20 % et 90 % de la cuve ; SENSOR, historique, ruban et maitre ModBus",
+                "        la recoivent comme une vraie mesure. Exige le capteur de niveau actif et l'ADS1115 initialise.",
+                "Sauvegarde : aucune, en RAM seulement : un redemarrage revient a la mesure reelle.",
+                "Exemple : ReglageCuve simulation 30"]
     end
     return nil
 end
@@ -297,14 +323,31 @@ cuveFonctions.reglageCuve = def(cmd, idx, payload, payload_json)
     # Reglage longueur de Cuve
     elif string.toupper(fonction) == "LONGUEURCUVE"
         cuveFonctions.regleDimension("longueur", parametres.size() > 0 ? parametres[0] : "")
+    # Simulation du capteur de niveau (essais sans sonde) : ON = 60 min, <minutes> = periode, OFF = mesure reelle
+    elif string.toupper(fonction) == "SIMULATION"
+        var p = (parametres.size() > 0 ? string.toupper(parametres[0]) : "ON")
+        var minutes = (p == "ON" ? 60 : int(p))
+        if (p == "OFF" || p == "0")
+            cuveFonctions.simulation = nil
+            cuveFonctions.log("REGLAGE_CUVE: simulation du capteur de niveau arretee, retour a la mesure reelle !", LOG_LEVEL_INFO)
+        elif (minutes < 1 || minutes > 1440)
+            cuveFonctions.log("REGLAGE_CUVE_ERREUR: simulation : periode " + str(parametres[0]) + " invalide (ON, OFF ou 1 a 1440 min) !", LOG_LEVEL_ERREUR)
+        elif (cuveFonctions.capteurNiveau() == nil || cuveFonctions.voltageMax <= 0)
+            cuveFonctions.log("REGLAGE_CUVE_ERREUR: simulation impossible : capteur de niveau inactif ou ADS1115 non initialise !", LOG_LEVEL_ERREUR)
+        else
+            cuveFonctions.simulation = minutes
+            cuveFonctions.log(string.format("REGLAGE_CUVE: simulation du capteur de niveau, une ondulation par %d min (jusqu'au redemarrage) !", minutes), LOG_LEVEL_INFO)
+            cuveFonctions.changementEtatCapteur("", "ADS1115", "", "cuve", "")
+        end
     end
 
     # Commande réussie
     # Réponse à la commande
-    reponse_cmnd = string.format("ReglageCuve: reglage=%s, largeurCuve=%dcm, longueurCuve=%dcm, hauteurCuve=%dcm",
-                                            modules["cuve"]["reglage"], modules["cuve"]["dimensions"].find("largeur", 100), 
-                                            modules["cuve"]["dimensions"].find("longueur", 100), 
-                                            modules["cuve"]["dimensions"].find("hauteur", 100))
+    reponse_cmnd = string.format("ReglageCuve: reglage=%s, largeurCuve=%dcm, longueurCuve=%dcm, hauteurCuve=%dcm, simulation=%s",
+                                            modules["cuve"]["reglage"], modules["cuve"]["dimensions"].find("largeur", 100),
+                                            modules["cuve"]["dimensions"].find("longueur", 100),
+                                            modules["cuve"]["dimensions"].find("hauteur", 100),
+                                            cuveFonctions.simulation != nil ? str(cuveFonctions.simulation) + "min" : "OFF")
     tasmota.resp_cmnd(json.dump(reponse_cmnd))
 end
 
@@ -502,6 +545,13 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
         msg.insert("ADS1115", controleGeneral.lectureSensors().find(trigger))
     end
 
+    # Simulation : le releve fabrique remplace celui de l'ADS1115 et passe pour une mesure valide
+    var simule = (cuveFonctions.simulation != nil ? cuveFonctions.releveSimule() : nil)
+    if (simule != nil)
+        msg = {"ADS1115": simule}
+        cuveFonctions.log("CUVE_SIMULATION: releve fabrique " + str(simule), LOG_LEVEL_DEBUG)
+    end
+
     # ADS1115 absent des capteurs (I2C en defaut) : pas de mesure, donc pas de noteMesure ;
     # l'erreur de mesure viendra de la fraicheur (niveauEnErreur), sans exception a chaque cron
     if (!isinstance(msg, map) || !isinstance(msg.find("ADS1115"), map))
@@ -535,7 +585,7 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
                 if (msg["ADS1115"].contains(cleA))
                     import modbusFonctions
                     var mVlu = cuveFonctions.versMv(msg["ADS1115"][cleA])
-                    if (cuveFonctions.lectureValide(cleA, mVlu, msg["ADS1115"]))
+                    if (simule != nil || cuveFonctions.lectureValide(cleA, mVlu, msg["ADS1115"]))
                         modbusFonctions.noteMesure(int(analogiques[cleAna]["type"]) + int(analogiques[cleAna]["id"]) - 1)
                         # La tension de la sonde servie au maitre est fraiche avec la mesure dont elle est tiree
                         if (entree != nil && sonde != nil)
