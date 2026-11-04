@@ -89,6 +89,29 @@ def banc():
     secret["champs"][0]["defaut"] = ""
     verifie(ab.valide_entree(secret)["champs"][0]["defaut"], "", "secret SANS defaut : accepte")
 
+    backlog = dict(PERSO, nom="Backlog libre", modele="Backlog {cmd}",
+                   champs=[{"cle": "cmd", "type": "texte", "libelle": "Commandes", "defaut": "MqttPassword abc"}])
+    leve(lambda: ab.valide_entree(backlog), ValueError, "refus : defaut secret cache dans un Backlog {cmd}")
+    leve(lambda: ab.valide_entree(dict(backlog, modele="{cmd}")), ValueError, "refus : defaut secret, modele {cmd}")
+    leve(lambda: ab.valide_entree(dict(backlog, modele="Backlog Power 1; {cmd}")), ValueError, "refus : defaut secret apres un ;")
+    backlog["champs"][0]["defaut"] = "Power 1"
+    verifie(ab.valide_entree(backlog)["nom"], "Backlog libre", "Backlog {cmd} a defaut sans secret : accepte")
+    verifie(ab.a_secret("Backlog Power 1; Password1"), False, "a_secret : nom a secret sans valeur")
+    mauvais = copy.deepcopy(PERSO)
+    mauvais["champs"][1] = {"cle": "etat", "type": "liste", "libelle": "Etat", "defaut": "a", "choix": ["a", "b\nPower 1"]}
+    leve(lambda: ab.valide_entree(mauvais), ValueError, "refus : choix avec saut de ligne")
+    mauvais["champs"][1]["choix"] = [{"valeur": "a", "libelle": "x\ry"}]
+    leve(lambda: ab.valide_entree(mauvais), ValueError, "refus : libelle de choix avec retour chariot")
+    mauvais["champs"][1]["choix"] = [{"valeur": "a\nb", "libelle": "x"}]
+    leve(lambda: ab.valide_entree(mauvais), ValueError, "refus : valeur de choix avec saut de ligne")
+    verifie(ab.rend(PERSO, {"n": 12.0}), "Timer12 ", "nombre entier venu du JSON en float : 12")
+    verifie(ab.rend(PERSO, {"n": 1e1}), "Timer10 ", "nombre 1e1 : 10")
+    for objet in (None, [], "texte", 3):
+        leve(lambda: ab.valide_entree(objet), ValueError, f"valide_entree({objet!r}) : ValueError")
+        leve(lambda: ab.rend(objet, {}), ValueError, f"rend({objet!r}) : ValueError")
+        leve(lambda: ab.ajoute(".", objet, lambda: []), ValueError, f"ajoute({objet!r}) : ValueError")
+    verifie(par_nom["Latitude"]["champs"][0]["defaut"] + par_nom["Longitude"]["champs"][0]["defaut"], "", "Latitude et Longitude sans defaut")
+
     # --- banque initiale
     connues = ac.charge(RACINE)["connues"]
     noms = [e["nom"].casefold() for e in banque]
@@ -101,7 +124,8 @@ def banc():
         if aa.SECRETS.search(mot):
             verifie(all(not ch.get("defaut") for ch in e["champs"]), True, f"banque : {e['nom']} sans defaut secret")
         try:
-            ligne = ab.rend(e, {})
+            ligne = ab.rend(e, {c["cle"]: 0 for c in e["champs"] if c["defaut"] in (None, "")})
+            verifie(ab.a_secret(ligne), False, f"banque : {e['nom']} sans secret dans la ligne rendue")
             json.loads(ligne.split(" ", 1)[1]) if '{"' in e["modele"] else None
             verifie(True, True, f"banque : {e['nom']} rend par defauts")
         except Exception as erreur:
@@ -153,7 +177,7 @@ MUTANTS = [
     ("minutes de l'heure non verifiees", "[0-5]\\d", "\\d\\d"),
     ("doublon de nom accepte", "if nom in {e[\"nom\"].casefold() for e in existantes}:", "if False:"),
     ("doublon insensible a la casse perdu", "nom = entree[\"nom\"].casefold()", "nom = entree[\"nom\"]"),
-    ("defaut secret accepte", "if aa.SECRETS.search(e[\"modele\"]) and any", "if False and any"),
+    ("defaut secret accepte", "if (aa.SECRETS.search(e[\"modele\"]) and defauts) or a_secret(ligne) or any(a_secret(d) for d in defauts.values()):", "if False:"),
     ("build indetectable ignore", "if builds is None:", "if False:"),
     ("build en cours ignore", "    if builds:", "    if False:"),
     ("origine non forcee", 'dict(entree, origine="perso"', "dict(entree"),
@@ -161,6 +185,10 @@ MUTANTS = [
     ("bornes du nombre ignorees", "if not (haut is None or n <= haut) or not (bas is None or n >= bas):", "if False:"),
     ("entree sans champ acceptee", "or not champs:", ":"),
     ("saut de ligne dans un texte accepte", '"\\n" in texte or "\\r" in texte', "False"),
+    ("defaut secret de la ligne rendue accepte", "or a_secret(ligne) or any(a_secret(d) for d in defauts.values())", ""),
+    ("choix : saut de ligne accepte", '"\\n" in str(v) or "\\r" in str(v)', "False"),
+    ("entier du JSON en float", "int(n) if n == int(n) else n", "n"),
+    ("ajoute : non-dict", "    if not isinstance(entree, dict):\n        raise ValueError(\"entrée invalide : un objet est attendu\")\n    builds", "    builds"),
     ("choix non verifie", "if texte not in valeurs:", "if False:"),
 ]
 

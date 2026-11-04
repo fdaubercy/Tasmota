@@ -479,7 +479,7 @@
      "cle": "valeur",
      "type": "nombre",
      "libelle": "Latitude (degrés)",
-     "defaut": 50.410931,
+     "defaut": "",
      "min": -90,
      "max": 90
     }
@@ -497,7 +497,7 @@
      "cle": "valeur",
      "type": "nombre",
      "libelle": "Longitude (degrés)",
-     "defaut": 3.085796,
+     "defaut": "",
      "min": -180,
      "max": 180
     }

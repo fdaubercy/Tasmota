@@ -10,7 +10,9 @@ Entree : nom, categorie, description, modele (« Timer{n} {...} » : {cle} = cha
 choix?, min?, max?}], origine (proposee|perso), ajoutee (AAAA-MM-JJ). Au moins un champ ; chaque {cle} du modele est un
 champ et chaque champ sert dans le modele (les accolades du JSON, `{"Enable"`, ne sont pas des champs).
 Types de champ (valeur de la page : nombre ou texte, les deux acceptes) :
-  texte   une ligne (ni saut de ligne ni retour chariot : un texte ne peut pas ajouter une commande), insere tel quel
+  texte   une ligne (ni saut de ligne ni retour chariot : un texte ne peut pas ajouter une commande), insere tel quel ;
+          meme regle pour les `choix` d'une liste (valeur et libelle : texte ou nombre, une ligne). `;` permis : c'est
+          le separateur d'un Backlog, voulu
   nombre  entier ou decimal, dans min/max s'ils sont donnes ; booleen refuse
   liste   une valeur de `choix` (textes, ou [{valeur, libelle}] : Action d'un Timer 0=Eteindre 1=Allumer 2=Basculer
           3=Clignoter ou Regle si USE_RULES, xdrv_09_timers.ino)
@@ -18,7 +20,9 @@ Types de champ (valeur de la page : nombre ou texte, les deux acceptes) :
   jours   7 caracteres 0/1, dimanche en premier (« SMTWTFS », xdrv_09_timers.ino : 0 ou - = inactif, autre = actif ;
           seuls 0 et 1 sont acceptes ici)
   relais  entier >= 1 (Output d'un Timer : 1..16, borne haute laissee a `max` du champ)
-Secrets : une entree dont le modele repond a autoexec_analyse.SECRETS ne peut pas porter de valeur par defaut (la
+Secrets : une entree dont le modele repond a autoexec_analyse.SECRETS ne peut pas porter de valeur par defaut, et
+aucun defaut (seul, ou dans la ligne rendue avec les defauts : `Backlog {cmd}`) ne peut former une commande a secret
+suivie d'une valeur (`a_secret`) (la
 banque est versionnee ; le secret se saisit dans la page, qui le masque). Banc : test_autoexec_banque.py.
 """
 
@@ -49,12 +53,23 @@ def _nombre(valeur, champ):
         raise ValueError(f"{champ['libelle']} : « {valeur} » n'est pas un nombre") from None
     if n != n or n in (float("inf"), float("-inf")):
         raise ValueError(f"{champ['libelle']} : « {valeur} » n'est pas un nombre")
-    return int(n) if n == int(n) and "." not in str(valeur) else n
+    return int(n) if n == int(n) else n          # 12.0 et 1e3 (JSON) s'ecrivent 12 et 1000
 
 
 def _borne(n, champ, bas, haut):
     if not (haut is None or n <= haut) or not (bas is None or n >= bas):
         raise ValueError(f"{champ['libelle']} : {n} hors de {bas if bas is not None else '…'} à {haut if haut is not None else '…'}")
+
+
+def a_secret(ligne):
+    """Vrai si une commande de la ligne (Backlog compris, parties separees par `;`) a un nom a secret suivi d'une valeur."""
+    for partie in ligne.split(";"):
+        mots = partie.split()
+        if mots and aa.BACKLOG.fullmatch(mots[0]):
+            mots = mots[1:]
+        if len(mots) > 1 and aa.SECRETS.search(mots[0].rsplit("/", 1)[-1]):
+            return True
+    return False
 
 
 def _valeur(champ, brut):
@@ -88,6 +103,8 @@ def _valeur(champ, brut):
 
 def rend(entree, valeurs):
     """Ligne produite : chaque {cle} du modele remplacee par la valeur validee (celle de `valeurs`, sinon le defaut)."""
+    if not isinstance(entree, dict) or not isinstance(entree.get("champs"), list) or not isinstance(valeurs, dict):
+        raise ValueError("entrée ou valeurs invalides : des objets sont attendus")
     par_cle = {}
     for champ in entree["champs"]:
         brut = valeurs.get(champ["cle"], champ.get("defaut"))
@@ -120,6 +137,9 @@ def _champ(c):
         for ch in c["choix"]:
             if not (isinstance(ch, str) or (isinstance(ch, dict) and set(ch) == {"valeur", "libelle"})):
                 raise ValueError(f"{c['cle']} : choix invalide {ch!r}")
+            for v in (ch.values() if isinstance(ch, dict) else [ch]):
+                if isinstance(v, bool) or not isinstance(v, (str, int, float)) or "\n" in str(v) or "\r" in str(v):
+                    raise ValueError(f"{c['cle']} : choix invalide {ch!r} (texte ou nombre, pas de saut de ligne)")
     elif "choix" in c:
         raise ValueError(f"{c['cle']} : des choix seulement pour une liste")
     for cle in ("min", "max"):
@@ -161,7 +181,9 @@ def valide_entree(entree):
     except ValueError:
         raise ValueError("ajoutee : une date AAAA-MM-JJ réelle") from None
     e["ajoutee"] = entree["ajoutee"]
-    if aa.SECRETS.search(e["modele"]) and any(c["defaut"] not in (None, "") for c in e["champs"]):
+    defauts = {c["cle"]: str(c["defaut"]) for c in e["champs"] if c["defaut"] not in (None, "")}
+    ligne = CHAMP.sub(lambda m: defauts.get(m.group(1), ""), e["modele"])
+    if (aa.SECRETS.search(e["modele"]) and defauts) or a_secret(ligne) or any(a_secret(d) for d in defauts.values()):
         raise ValueError("une commande à secret n'a pas de valeur par défaut : le secret se saisit dans la page")
     return e
 
@@ -187,6 +209,8 @@ def charge(racine):
 
 
 def ajoute(racine, entree, builds_en_cours):
+    if not isinstance(entree, dict):
+        raise ValueError("entrée invalide : un objet est attendu")
     builds = builds_en_cours()
     if builds is None:
         raise RuntimeError("impossible de savoir si un build tourne : ecriture refusee")
