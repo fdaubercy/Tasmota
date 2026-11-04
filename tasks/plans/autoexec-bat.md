@@ -4,7 +4,7 @@ titre: Onglet « autoexec.bat » de l'Assistant persist (modèle C)
 objectif: Modifier ou ajouter des lignes à l'autoexec.bat d'une carte depuis l'Assistant persist, avec banque de commandes, avertissements (boucle de redémarrage, doublon persist, secret, commande inconnue) et envoi proposé à la carte
 statut: actif
 cree: 2026-11-03
-maj: 2026-11-03
+maj: 2026-11-04
 ---
 # Onglet « autoexec.bat » de l'Assistant persist
 
@@ -71,8 +71,8 @@ Produit : `charge(racine) -> list[entree]` ; `rend(entree, valeurs: dict) -> str
 Entrée : `{"nom", "categorie", "description", "modele": "Timer{n} {...}", "champs": [{"cle", "type":
 "texte"|"nombre"|"liste"|"heure"|"jours"|"relais", "libelle", "defaut", "choix"?, "min"?, "max"?}], "origine":
 "proposee"|"perso", "ajoutee": "AAAA-MM-JJ"}`.
-- [ ] Banc rouge : `rend(Timer, {n: 12, heure: "22:30", jours: "1111111", relais: 1, action: 0})` = la ligne `Timer12 {"Enable":1,"Mode":0,"Time":"22:30","Window":0,"Days":"1111111","Repeat":1,"Output":1,"Action":0}` ; heure `25:00` → ValueError ; entrée perso sans champ, nom en double, valeur par défaut secrète (motif `SECRETS`) → refus ; `ajoute` écrit en transaction, relu par `charge`
-- [ ] Banque initiale : commandes de l'`autoexec.bat` du différentiel + SetOption (1, 55, 56, 57, 141, 146), Timer/Timers, AdcParam, WebSensor, LedPower/LedState/SetOption31, SerialLog/WebLog/MqttLog/SysLog, Latitude/Longitude, Timezone/TimeStd/TimeDst, PowerOnState ; chaque nom présent dans A1 `connues` (vérifié par le banc) ; banc vert
+- [x] Banc rouge : `rend(Timer, {n: 12, heure: "22:30", jours: "1111111", relais: 1, action: 0})` = la ligne `Timer12 {"Enable":1,"Mode":0,"Time":"22:30","Window":0,"Days":"1111111","Repeat":1,"Output":1,"Action":0}` ; heure `25:00` → ValueError ; entrée perso sans champ, nom en double, valeur par défaut secrète (motif `SECRETS`) → refus ; `ajoute` écrit en transaction, relu par `charge` — preuve : 884aed670 + 66fef3d01, test_autoexec_banque.py 222 OK, 17 temoins rouges, VERT ; re-revue sans reserve
+- [x] Banque initiale : commandes de l'`autoexec.bat` du différentiel + SetOption (1, 55, 56, 57, 141, 146), Timer/Timers, AdcParam, WebSensor, LedPower/LedState/SetOption31, SerialLog/WebLog/MqttLog/SysLog, Latitude/Longitude, Timezone/TimeStd/TimeDst, PowerOnState ; chaque nom présent dans A1 `connues` (vérifié par le banc) ; banc vert — preuve : outils_docs/schemas/banque_autoexec.json (24 entrees, Latitude/Longitude vides), noms verifies dans connues par le banc
 
 ## A5 — Routes de l'Assistant
 Fichiers : modifier `outils_pc/assistant_persist_web.py` (`fabrique_gestionnaire._traite_post`, `do_GET`, docstring des routes),
