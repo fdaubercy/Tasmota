@@ -96,13 +96,13 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
 - [x] Bancs verts — preuve : `test_atelier_graphiques_televerse.py` « 0 echec(s) : VERT » relancé par le contrôleur ; sonde Chrome 2 passes vertes (rapport A6)
 
 ## A7 — Page Build : arrivée depuis l'atelier
-- [ ] Banc rouge (`test_build_web.py`, `test_build_page_fichiers_chrome.py`) : `depuis=atelier` → env sélectionné,
+- [x] Banc rouge (`test_build_web.py`, `test_build_page_fichiers_chrome.py`) : `depuis=atelier` → env sélectionné,
   onglet « Fichiers », bandeau exact de la spec §5, `buildfs` lancé par `POST /lancer` (en-têtes habituels), à la fin
   de l'image : cochés exactement les fichiers de la liste, « Redémarrer » selon le paramètre, **aucun envoi** ;
   fichier de la liste absent de l'image → signalé ; paramètres hostiles → ignorés avec message, rien de lancé ;
-  build en cours → attente puis lancement (flux `/flux`)
-- [ ] Code dans `build_page_fichiers.py` (ou module neuf) ; exception de `build_page.py` au CLAUDE.md mise à jour si
-  ce fichier grossit
+  build en cours → attente puis lancement (flux `/flux`) — preuve : RED bandeau absent / KeyError (rapport A7), puis 5 KO de plus sur le rejeu du flux (tour 1)
+- [x] Code dans `build_page_fichiers.py` (ou module neuf) ; exception de `build_page.py` au CLAUDE.md mise à jour si
+  ce fichier grossit — preuve : 7ff3780cb, 2f18bc820 (`build_page_atelier.py` neuf ; `build_page.py` reste à 1223 lignes)
 - [ ] Bancs verts (`test_build_*.py` concernés + sondes Chrome)
 
 ## A8 — Documentation
