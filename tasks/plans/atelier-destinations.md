@@ -4,7 +4,7 @@ titre: Atelier des graphiques — destination « Graphiques » et bouton « Tél
 objectif: Poser un graphique de l'atelier sur une page dédiée, sur /graphiques ou sur une nouvelle page, puis l'envoyer à la carte par la page Build qui prépare tout et attend le clic Envoyer
 statut: actif
 cree: 2026-11-04
-maj: 2026-11-05
+maj: 2026-11-06
 ---
 # Atelier des graphiques — destination « Graphiques » et bouton « Téléverser »
 
@@ -112,8 +112,8 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
   un banc est ajouté ; `verifie_references_docs.py` sans défaut — preuve : 550ddfd2c ; `verifie_references_docs.py` : 19 document(s), 0 defaut(s)
 
 ## A9 — Validation sur les cartes
-- [ ] Place du FS mesurée sur les 6 cartes à historique avec les fichiers du moteur (blocs de 4 Ko) ; arrêt et
-  question à l'utilisateur sous 10 % libres (spec §7.10)
+- [x] Place du FS mesurée sur les 6 cartes à historique avec les fichiers du moteur (blocs de 4 Ko) ; arrêt et
+  question à l'utilisateur sous 10 % libres (spec §7.10) — preuve : mesure du 2026-11-06, seuil non atteint. Calcul depuis le dépôt, moteur compris (17 blocs, 4 fichiers), sur 2896 blocs : cave 93,8 %, grenier 94,0 %, P4 93,4 %, S3 serveur 93,6 %, cuve 93,0 %, rideau 94,0 % libres. Lu sur carte (`UfsFree`) : P4 91,6 % (environ 91,1 % après ajout du moteur, s'il n'y est pas encore), cuve 90,9 %. Cave, grenier et rideau muets : calcul seul, sans leurs fichiers `/histo`. L'env S3 serveur a la même adresse que le P4 : rien de lu sur lui
 - [ ] P4 : composition existante intacte + un graphique atelier (style hors des 4) envoyé par « Téléverser » ;
   `/graphiques` sous Chrome sans exception JS, capture ; journal web sans `_ERREUR`
 - [ ] Cuve : modification d'une page dédiée envoyée par « Téléverser » (redémarrage non coché), effet constaté
