@@ -85,7 +85,8 @@ graphiquesFonctions.FICHIER_REGLAGES = REGLAGES_P4
 
 # ---- 1. Envoi d'ECharts compresse par morceaux -------------------------------------------------
 print("1. /graphiques?f=echarts.js.gz")
-verifie(size(graphiquesFonctions.FICHIERS) == 1, "un seul fichier servi : echarts.js.gz (uPlot retire)")
+verifie(size(graphiquesFonctions.FICHIERS) == 3 && graphiquesFonctions.FICHIERS.contains("echarts.js.gz") && !graphiquesFonctions.FICHIERS.contains("uplot.js"),
+        "fichiers servis : echarts.js.gz et les 2 scripts du moteur des pages (uPlot retire)")
 graphiquesFonctions.FICHIERS["echarts.js.gz"][0] = "data/sd/js/echarts.min.js.gz"
 webserver.raz({"f": "echarts.js.gz"})
 webserver.sortie = open(SORTIE + "/echarts_recu.js.gz", "wb")
@@ -93,6 +94,21 @@ graphiquesFonctions.route()
 webserver.sortie.close()
 verifie(webserver.code == 200 && webserver.mime == "application/octet-stream", "echarts.js.gz : 200 application/octet-stream")
 verifie(webserver.envois >= 100 && webserver.ferme, "echarts.js.gz : envoye en morceaux de 2 Ko (" + str(webserver.envois) + "), reponse fermee")
+def lisTexte(chemin)
+    var f = open(chemin, "r")
+    var t = f.read()
+    f.close()
+    return t
+end
+for nom: ["pages_graphiques_formule.js", "pages_graphiques.js"]
+    graphiquesFonctions.FICHIERS[nom][0] = "data/sd/js/" + nom
+    webserver.raz({"f": nom})
+    webserver.sortie = open(SORTIE + "/moteur_recu.js", "wb")
+    graphiquesFonctions.route()
+    webserver.sortie.close()
+    verifie(webserver.code == 200 && webserver.mime == "text/javascript" && lisTexte(SORTIE + "/moteur_recu.js") == lisTexte("data/sd/js/" + nom),
+            nom + " : 200 text/javascript, contenu identique au fichier du depot")
+end
 webserver.raz({"f": "uplot.js"})
 webserver.sortie = open(SORTIE + "/ancien.txt", "wb")
 graphiquesFonctions.route()
@@ -504,6 +520,7 @@ ecrisFichier(RACINE + "/sd/html/graphiques.html", "<!--HTML-->")
 ecrisFichier(RACINE + "/sd/js/graphiques.js", "//JS_PRINCIPAL")
 ecrisFichier(RACINE + "/sd/js/graphiques_trace.js", "//JS_TRACE")
 ecrisFichier(RACINE + "/sd/js/graphiques_edition.js", "//JS_EDITION")
+ecrisFichier(RACINE + "/sd/js/graphiques_moteur.js", "//JS_MOTEUR")
 var racineGestion = gestionFileFolder.racine
 gestionFileFolder.racine = RACINE
 path.racine = RACINE
@@ -526,11 +543,13 @@ verifie(c6 != nil && isinstance(c6["graphiques"], list) && size(c6["graphiques"]
 var d6 = string.find(pageC, "window.GRAPHIQUES=")
 var pt = string.find(pageC, "//JS_TRACE")
 var pe = string.find(pageC, "//JS_EDITION")
+var pm = string.find(pageC, "//JS_MOTEUR")
 var pp = string.find(pageC, "//JS_PRINCIPAL")
-verifie(d6 >= 0 && pt > d6 && pe > pt && pp > pe, "page : graphiques_trace.js, puis graphiques_edition.js, puis graphiques.js, apres la configuration")
+verifie(d6 >= 0 && pt > d6 && pe > pt && pm > pe && pp > pm, "page : graphiques_trace.js, graphiques_edition.js, graphiques_moteur.js, puis graphiques.js, apres la configuration")
 # Fichiers d'edition et de trace absents : la page est servie quand meme
 os.remove(RACINE + "/sd/js/graphiques_trace.js")
 os.remove(RACINE + "/sd/js/graphiques_edition.js")
+os.remove(RACINE + "/sd/js/graphiques_moteur.js")
 var pageSans = textePage("page6_sans.html")
 verifie(string.find(pageSans, "EXCEPTION") != 0 && string.find(pageSans, "//JS_PRINCIPAL") > 0 && string.find(pageSans, "//JS_EDITION") < 0 && webserver.termine,
         "scripts de trace et d'edition absents : page servie, graphiques.js present")

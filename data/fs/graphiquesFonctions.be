@@ -15,7 +15,9 @@
  * 500 : ecriture impossible). Rien n'est ecrit si la composition est invalide.
  *
  * Gabarit de la page : /sd/html/graphiques.html et /sd/css/graphiques.css ; logique : /sd/js/graphiques_trace.js,
- * /sd/js/graphiques_edition.js puis /sd/js/graphiques.js (envoyes dans cet ordre ; un script absent est ignore).
+ * /sd/js/graphiques_edition.js, /sd/js/graphiques_moteur.js puis /sd/js/graphiques.js (envoyes dans cet ordre ; un script
+ * absent est ignore). Les graphiques "moteur": "pages" sont traces par le moteur des pages (graphiques_moteur.js), que
+ * la page demande par f=pages_graphiques_formule.js puis f=pages_graphiques.js seulement si la composition en contient un.
  *
  * Reglages facultatifs de la page, dans /json/graphiques.json de la carte (source data/<lieu>/<carte>/graphiques.json),
  * lu a l'ouverture de la page seulement : rien en RAM le reste du temps, contrairement au persist (2026-10-18).
@@ -52,7 +54,9 @@ var graphiquesFonctions = module("graphiquesFonctions")
 
 # Fichiers servis : nom demande (f=) -> [chemin sur le LittleFS, type MIME]
 graphiquesFonctions.FICHIERS = {
-    "echarts.js.gz": ["/sd/js/echarts.min.js.gz", "application/octet-stream"]
+    "echarts.js.gz": ["/sd/js/echarts.min.js.gz", "application/octet-stream"],
+    "pages_graphiques_formule.js": ["/sd/js/pages_graphiques_formule.js", "text/javascript"],     # moteur des pages : graphiques_moteur.js
+    "pages_graphiques.js": ["/sd/js/pages_graphiques.js", "text/javascript"]                      # le demande au premier graphique atelier
 }
 graphiquesFonctions.MORCEAU = 2048      # octets lus et envoyes a la fois : borne la RAM
 graphiquesFonctions.FICHIER_REGLAGES = "/json/graphiques.json"      # reglages de la page (affichage, groupes)
@@ -216,7 +220,7 @@ def graphiquesFonctions_page()
     webserver.content_send("<script>window.GRAPHIQUES=" + string.replace(json.dump(config), "</", "<\\/") + ";</script><script>")
     # trace, edition puis page : un script absent (fichier pas encore televerse) ne casse pas la page
     import path
-    for js: ["/sd/js/graphiques_trace.js", "/sd/js/graphiques_edition.js"]
+    for js: ["/sd/js/graphiques_trace.js", "/sd/js/graphiques_edition.js", "/sd/js/graphiques_moteur.js"]
         if (path.exists(js))
             gestionFileFolder.readFileByLineAndContentSend(js)
             webserver.content_send("\n")

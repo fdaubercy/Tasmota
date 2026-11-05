@@ -28,7 +28,7 @@ CUVE, BUREAU, PORTE = ("tasmota32s3-garage-capteurs-cuve-modbus", "tasmota32-bur
                        "tasmota32-rdc-vr-porte")
 AUTOEXEC_PORTE = "import demarrage\nif demarrage.prologue()\n    demarrage.charge([\"controleWeb\"])\nend\n"
 NOMS = {Path(f).name for f in age.FICHIERS_MOTEUR}
-MOTEUR = {"pages_graphiques.js", "pages_graphiques_formule.js", "pagesGraphiquesValidation.be"}   # liste pages_graphiques_moteur
+MOTEUR = {"pages_graphiques.js", "pages_graphiques_formule.js", "pagesGraphiquesValidation.be", "graphiques_moteur.js"}   # liste pages_graphiques_moteur
 PAGE = NOMS - MOTEUR                                  # liste pages_graphiques : un env a historique l'exclut sans page
 HISTO_ON = '{"diverses": {"historique": {"activation": "ON"}}}'
 HISTORIQUES = {CUVE, "tasmota32s3-garage-rideau-garage-modbus", "tasmota32p4-garage-serveur-modbus",

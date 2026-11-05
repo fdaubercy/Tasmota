@@ -47,7 +47,7 @@ REF_MOTEUR = "${berry_commun." + LISTE_MOTEUR + "}"
 LISTES = ((LISTE, REF), (LISTE_MOTEUR, REF_MOTEUR))
 PAGE_FICHIERS = ("data/fs/pagesGraphiques.be", "data/sd/html/pages_graphiques.html", "data/sd/css/pages_graphiques.css")
 MOTEUR_FICHIERS = ("data/fs/pagesGraphiquesValidation.be", "data/sd/js/pages_graphiques_formule.js",
-                   "data/sd/js/pages_graphiques.js")
+                   "data/sd/js/pages_graphiques.js", "data/sd/js/graphiques_moteur.js")
 FICHIERS_MOTEUR = PAGE_FICHIERS + MOTEUR_FICHIERS
 SOLIDES = ("data/fs/pagesGraphiques.be", "data/fs/pagesGraphiquesValidation.be")
 NOMS_PAGE = {Path(f).name for f in PAGE_FICHIERS}    # le build exclut par nom de fichier (post_esp32.py)

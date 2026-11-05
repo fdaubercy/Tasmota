@@ -1,7 +1,7 @@
 // graphiques.js - Page /graphiques des cartes ESP32-S3 et P4 (data/fs/graphiquesFonctions.be), 2026-10-18
 // Trace l'historique de la carte (/histo, data/fs/historiqueFonctions.be) avec ECharts 6, en temps reel, dans une
-// page COMPOSABLE (A9, 2026-10-19) : graphiques_trace.js dessine un graphique, graphiques_edition.js edite la
-// composition ; tous deux sont envoyes avant ce fichier. La carte pose window.GRAPHIQUES :
+// page COMPOSABLE (A9, 2026-10-19) : graphiques_trace.js dessine un graphique, graphiques_edition.js edite la composition,
+// graphiques_moteur.js trace les graphiques « moteur pages » (A3) ; envoyes avant ce fichier. La carte pose window.GRAPHIQUES :
 //   - bibliotheque     : cle versionnee du cache localStorage d'ECharts ('echarts-6.1.0') ;
 //   - nom              : nom de l'historique ('mesures') ;
 //   - graphiques       : composition enregistree (graphiques.json), ou null = composition par defaut ;
@@ -21,10 +21,9 @@
 // toutes les « rafraichissement » secondes (mois en cours : 15 min). Rien n'est lu quand l'onglet est cache.
 // ECharts (1,1 Mo) est envoye COMPRESSE par la carte (Berry ne peut pas poser Content-Encoding) : la page le
 // decompresse (DecompressionStream) et le garde dans le localStorage, redemande seulement au changement de version.
-// Toute lecture ou ecriture du localStorage est sous try/catch : sans stockage, la page marche sans rien retenir.
 (function () {
   'use strict';
-  var G = window.GRAPHIQUES || {}, T = window.GraphiquesTrace;
+  var G = window.GRAPHIQUES || {}, T = window.GraphiquesTrace, M = window.GraphiquesMoteur || {};
   var AFFICHAGE = G.affichage || {}, GROUPES = G.groupes || {}, COMPTEURS = G.compteurs || {};
   var ESCLAVES = G.esclaves || {};
   var PERIODE = Math.max(1, +G.rafraichissement || 60) * 1000, PERIODE_MOIS = 15 * 60000;
@@ -226,8 +225,7 @@
 
   // Une courbe : valeurs multipliees par le facteur (ex. taux 0-1 -> %), null conserve
   function courbe(nom, type, moy, min, max, k) {
-    var a = AFFICHAGE[nom] || {};
-    var f = (typeof a.facteur === 'number') ? a.facteur : 1;
+    var a = AFFICHAGE[nom] || {}, f = (typeof a.facteur === 'number') ? a.facteur : 1;
     var echelle = function (v) { return (v === null || v === undefined) ? null : v * f; };
     var rang = etat.series.indexOf(nom);
     return {nom: nom, legende: legendeDe(nom), unite: uniteDe(nom), type: type,
@@ -253,6 +251,7 @@
   // Composition explicite (pour l'edition et l'enregistrement) : les groupes deviennent des listes de series
   function explicite(composition) {
     return composition.map(function (g) {
+      if (g.moteur) return copie(g);                    // graphique « moteur pages » : renvoye tel quel
       var e = {titre: g.titre, periode: g.periode, type: g.type, series: g.series};
       if (g.prefixes) {
         e.series = etat.series.filter(function (n) { return dansPrefixes(n, g.prefixes); })
@@ -282,6 +281,7 @@
     var zone = $('g_graphiques');
     zone.innerHTML = '';
     etat.composition.forEach(function (g) {
+      if (g.moteur === 'pages' && M.bloc) return blocs.push(M.bloc(g, zone));     // trace par graphiques_moteur.js
       var b = {def: g, periode: g.periode || 'jour', graphique: null, courbes: [], x: [], absentes: []};
       b.zone = document.createElement('div');
       b.zone.className = 'g_bloc';
@@ -317,6 +317,7 @@
 
   // Assemble un bloc : historique de sa periode + valeurs directes posterieures (si la periode suit l'heure)
   function compose(b) {
+    if (b.atelier) return M.compose(b, etat);
     var d = etat.donnees[cleLecture(b.periode)];
     if (!d) return;
     var fin = d.x.length ? d.x[d.x.length - 1] : -Infinity;
@@ -418,8 +419,7 @@
   }
 
   function demarreDirect() {
-    clearInterval(minuteurDirect);
-    minuteurDirect = null;
+    clearInterval(minuteurDirect); minuteurDirect = null;
     var c = cadenceDirect();
     if (c > 0) {
       lisDirect();

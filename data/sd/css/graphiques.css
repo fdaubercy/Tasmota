@@ -4,6 +4,7 @@
 #g_barre{display:flex;flex-wrap:wrap}
 #g_barre select,#g_barre button{width:auto;max-width:100%;margin:0 8px 8px 0;padding:0 12px}
 .g_trace{width:min(1000px,calc(100vw - 40px));height:340px}
+.g_atelier{width:min(1000px,calc(100vw - 40px));margin:16px 0 4px}
 .g_entete{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:16px 0 4px}
 .g_entete h3{margin:0}
 .g_entete select{width:auto;padding:0 8px}

@@ -38,6 +38,7 @@ window.GraphiquesEdition = function (api) {
   function relit() {
     var cartes = panneau.querySelectorAll('.g_ed_graphique');
     brouillon = Array.prototype.map.call(cartes, function (carte) {
+      if (carte._atelier) return carte._atelier;                  // graphique « moteur pages » : renvoye intact
       var g = {titre: carte.querySelector('.g_ed_titre').value.trim(), periode: carte.querySelector('.g_ed_periode').value,
                type: carte.querySelector('.g_ed_type').value};
       if (carte.querySelector('.g_ed_autres').checked) {
@@ -62,6 +63,7 @@ window.GraphiquesEdition = function (api) {
     if (c.length > MAX_GRAPHIQUES) return 'Au plus ' + MAX_GRAPHIQUES + ' graphiques.';
     for (var i = 0; i < c.length; i++) {
       var g = c[i], nom = '« ' + (g.titre || 'sans titre') + ' » : ';
+      if (g.moteur) continue;                                      // valide par la carte (pagesGraphiquesValidation)
       if (!g.titre || octets(g.titre) > MAX_TITRE) return 'Graphique ' + (i + 1) + ' : titre de 1 à ' + MAX_TITRE + ' caractères.';
       if (g.series !== 'autres' && g.series.length === 0) return nom + 'cocher au moins une série, ou « toutes les autres ».';
       if (g.series !== 'autres' && g.series.length > MAX_SERIES) return nom + 'au plus ' + MAX_SERIES + ' séries.';
@@ -74,13 +76,16 @@ window.GraphiquesEdition = function (api) {
     var carte = el('fieldset', {'class': 'g_ed_graphique'});
     carte.appendChild(el('legend', {}, 'Graphique ' + (i + 1)));
     var ligne = el('div', {'class': 'g_ed_ligne'});
+    if (g.moteur) ligne.appendChild(el('strong', {}, g.titre || ''));
     var titre = el('input', {'class': 'g_ed_titre', type: 'text', maxlength: String(MAX_TITRE), placeholder: 'Titre'});
     titre.value = g.titre || '';
-    ligne.appendChild(titre);
-    ligne.appendChild(liste(api.TYPES, api.TYPES.map(function (t) { return NOMS_TYPES[t]; }), g.type || 'courbe', 'g_ed_type'));
     var periodes = api.periodes();
     if (periodes.indexOf(g.periode) < 0 && g.periode) periodes.push(g.periode);
-    ligne.appendChild(liste(periodes, periodes.map(api.libellePeriode), g.periode || 'jour', 'g_ed_periode'));
+    if (!g.moteur) {
+      ligne.appendChild(titre);
+      ligne.appendChild(liste(api.TYPES, api.TYPES.map(function (t) { return NOMS_TYPES[t]; }), g.type || 'courbe', 'g_ed_type'));
+      ligne.appendChild(liste(periodes, periodes.map(api.libellePeriode), g.periode || 'jour', 'g_ed_periode'));
+    }
     [['g_ed_monter', '▲', 'Monter', i === 0], ['g_ed_descendre', '▼', 'Descendre', i === n - 1],
      ['g_ed_supprimer', '✕', 'Supprimer ce graphique', false]].forEach(function (b) {
       var bt = el('button', {'class': b[0], type: 'button', title: b[2]}, b[1]);
@@ -89,6 +94,11 @@ window.GraphiquesEdition = function (api) {
       ligne.appendChild(bt);
     });
     carte.appendChild(ligne);
+    if (g.moteur) {                                                // se deplace et se retire, ne se modifie pas ici
+      carte._atelier = g;
+      carte.appendChild(el('p', {'class': 'g_ed_atelier'}, "Graphique « " + g.type + " » : réglages dans l'atelier"));
+      return carte;
+    }
 
     var autres = el('input', {'class': 'g_ed_autres', type: 'checkbox'});
     autres.checked = g.series === 'autres';

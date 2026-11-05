@@ -141,6 +141,15 @@ COMPOSITIONS = {
         {"titre": "Escalier", "periode": "2026-09", "type": "escalier", "series": [{"chemin": TAUX}]}],
     "retablir": [{"titre": "Seul", "periode": "jour", "type": "courbe", "series": [{"chemin": "DS18B20.Temperature"}]}],
 }
+# Graphiques de « forme atelier » (moteur des pages dediees) au milieu des graphiques actuels (A3)
+MESURES_T = {"titre": "Mesures", "periode": "jour", "type": "courbe", "series": [{"chemin": "DS18B20.Temperature"}]}
+CADRAN = {"moteur": "pages", "type": "cadran", "titre": "Cadran atelier", "periode": "direct", "min": 0, "max": 100,
+          "zones": [[0.5, "#2e9e5b"], [1, "#c8402f"]], "series": [{"chemin": TAUX, "libelle": "Taux", "unite": "%"}]}
+COURBE = {"moteur": "pages", "type": "courbe", "titre": "Courbe atelier", "periode": "jour", "largeur": "pleine",
+          "series": ["DS18B20.Temperature", "calc:double"],
+          "calculees": {"double": {"nature": "historique", "formule": "DS18B20.Temperature * 2"}}}
+COMPOSITIONS["atelier"] = COMPOSITIONS["atelier_mention"] = COMPOSITIONS["atelier_edition"] = [MESURES_T, CADRAN, COURBE]
+RACINE_JS = Path(__file__).resolve().parents[3] / "data/sd/js"
 # Clics simules, une fois la page tracee (attribut data-graphiques-pret)
 AIDE_ACTIONS = ("function attends(f){var i=setInterval(function(){if(document.documentElement.getAttribute('data-graphiques-pret'))"
                 "{clearInterval(i);f();}},50);}function clic(id){document.getElementById(id).click();}"
@@ -153,6 +162,10 @@ ACTIONS = {
                "d.querySelector('.g_ed_serie[data-chemin=\"DS18B20.Temperature\"] input').checked=true;"
                "clic('g_ed_enregistrer');});",
     "retablir": "attends(function(){clic('g_modifier');clic('g_ed_retablir');});",
+    "atelier_mention": "attends(function(){clic('g_modifier');});",
+    "atelier_edition": "attends(function(){clic('g_modifier');var c=document.querySelectorAll('.g_ed_graphique');"
+                       "c[1].querySelector('.g_ed_monter').click();document.querySelectorAll('.g_ed_graphique')[2]"
+                       ".querySelector('.g_ed_supprimer').click();clic('g_ed_enregistrer');});",
     "refus": "attends(function(){clic('g_modifier');clic('g_ed_enregistrer');});",
     "injoignable": "attends(function(){clic('g_modifier');clic('g_ed_enregistrer');});",
     "invalide": "attends(function(){clic('g_modifier');document.querySelector('.g_ed_titre').value='';clic('g_ed_enregistrer');});",
@@ -205,6 +218,8 @@ def serveur(scenario, page, echarts_gz):
             u = urlparse(self.path)
             q = dict(parse_qsl(u.query))
             requetes.append((self.path, self.headers.get("Referer")))
+            if u.path == "/graphiques" and q.get("f") in ("pages_graphiques.js", "pages_graphiques_formule.js"):
+                return self.envoie(200, "text/javascript", (RACINE_JS / (q["f"])).read_bytes())
             if u.path == "/graphiques" and q.get("f") == "echarts.js.gz":
                 if scenario == "sans_echarts":
                     return self.envoie(404, "text/plain", "absent")
@@ -212,6 +227,9 @@ def serveur(scenario, page, echarts_gz):
             if u.path == "/graphiques":
                 corps = page
                 injecte = ""
+                if scenario.startswith("atelier"):     # toute exception JS est notee sur <html>
+                    injecte += ("addEventListener('error',function(e){document.documentElement.setAttribute('data-erreur-js',e.message)});"
+                                "addEventListener('unhandledrejection',function(e){document.documentElement.setAttribute('data-erreur-js',String(e.reason))});")
                 if scenario in CADENCE:
                     injecte += "localStorage.setItem('graphiques-direct', '%s');" % CADENCE[scenario]
                 if scenario == "rafraichi":       # relecture chaque seconde au lieu de 60 s
@@ -290,10 +308,13 @@ def lis_dom(dom):
                            "legende": json.loads(a.get("legende", "[]")), "fin": int(a.get("fin", "0")),
                            "points": int(a.get("points", "0")), "echelles": json.loads(a.get("echelles", "{}")),
                            "derniers": json.loads(a.get("derniers", "{}")), "axe_x": json.loads(a.get("axe-x", "null"))})
+    tuiles = [{k: html.unescape(v) for k, v in re.findall(r'data-([a-z-]+)="([^"]*)"', a)}
+              for a in re.findall(r'<div class="g_atelier"([^>]*)>', d)]
     edition = trouve(r'<div id="g_edition"([^>]*)>') or ""
     modifier = trouve(r'<button id="g_modifier"([^>]*)>') or ""
     grafana = trouve(r'<button id="g_grafana"([^>]*)>') or ""
-    return {"graphiques": graphiques, "nb": len(graphiques), "entetes": entetes, "notes": notes,
+    return {"tuiles": tuiles, "erreur_js": trouve(r'data-erreur-js="([^"]*)"'), "cartes_atelier": d.count("g_ed_atelier"),
+            "graphiques": graphiques, "nb": len(graphiques), "entetes": entetes, "notes": notes,
             "canvas": d.count("<canvas"),
             "titre": graphiques[0]["titre"] if graphiques else "",
             "legendes": [g["legende"] for g in graphiques],
@@ -334,7 +355,23 @@ ATTENDUS = {
         ("échelle Y de valeurs positives qui partent de 0 : pas sous zéro", lambda d, r, t, e: d["echelles"][0]["mV"][0] == 0 and d["echelles"][1]["cm"][0] == 0),
         ("un axe Y par unité (Mesures : °C et mV, l'entrée ModBus partageant l'axe mV)", lambda d, r, t, e: sorted(d["echelles"][0]) == sorted(["°C", "mV"])),
         ("boutons Grafana et « Modifier » visibles, aucun message", lambda d, r, t, e: d["grafana"] and d["modifier"] and not d["edition"] and d["message"] == ""),
+        ("aucun graphique atelier : le moteur des pages n'est jamais demandé", lambda d, r, t, e: not any("pages_graphiques" in p for p, _ in r)),
         ("Referer de la page sur chaque /histo (exigé par Tasmota)", lambda d, r, t, e: all(ref and ref.endswith("/graphiques") for p, ref in r if p.startswith("/histo"))),
+    ],
+    "atelier": [
+        ("graphique actuel rendu comme avant (courbe ECharts, libellé et unité du persist), seul dans g_trace", lambda d, r, t, e: d["nb"] == 1 and d["series"] == [["Température de l'eau (°C)"]] and d["graphiques"][0]["rendu"] == ["line"]),
+        ("cadran atelier tracé par le moteur des pages (jauge ECharts, titre sans « série absente »)", lambda d, r, t, e: [(x["style"], x["rendu"], x["titre"]) for x in d["tuiles"] if x["style"] == "cadran"] == [("cadran", "gauge", "Cadran atelier")]),
+        ("courbe atelier avec valeur calc: tracée (titre sans « série absente »)", lambda d, r, t, e: [(x["rendu"], x["titre"]) for x in d["tuiles"] if x["style"] == "courbe"] == [("line", "Courbe atelier")]),
+        ("aucune exception JS", lambda d, r, t, e: d["erreur_js"] is None),
+        ("moteur des pages demandé une fois (script + formule), historique relu sans /pages", lambda d, r, t, e: sum("f=pages_graphiques" in p for p, _ in r) == 2 and not any(p.startswith("/pages") for p, _ in r)),
+        ("une seule lecture de p=jour, directe lue pour le cadran", lambda d, r, t, e: nb_lectures(r, "p=jour") == 1 and nb_direct(r) >= 1),
+    ],
+    "atelier_mention": [
+        ("édition : les 2 graphiques atelier portent la mention, sans titre ni série modifiables", lambda d, r, t, e: d["edition"] and d["cartes_atelier"] == 2 and d["msg_edition"] == "" and d["erreur_js"] is None),
+    ],
+    "atelier_edition": [
+        ("tuile atelier montée puis une autre retirée : le POST renvoie le cadran intact, toutes clés comprises", lambda d, r, t, e: e == [[CADRAN, MESURES_T]]),
+        ("page redessinée : cadran seul en tuile atelier, « Mesures » en ECharts actuel, aucune exception", lambda d, r, t, e: [x["style"] for x in d["tuiles"]] == ["cadran"] and d["nb"] == 1 and d["erreur_js"] is None),
     ],
     "cache": [
         ("2 affichages, ECharts demandé une seule fois (localStorage)", lambda d, r, t, e: d["nb"] == 2 and sum("f=echarts" in p for p, _ in r) == 1),
