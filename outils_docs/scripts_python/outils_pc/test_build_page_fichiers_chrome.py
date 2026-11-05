@@ -216,6 +216,118 @@ def sonde_onglet(m, capture):
     s.verifie(cdp.erreurs(), [], "fin : aucune erreur JS")
 
 
+# A7 (atelier-destinations) : arrivee par le lien de l'Atelier des graphiques. fetch est enrobe AVANT le script de
+# la page (le buildfs part au chargement) : POST /lancer captures (en-tetes compris), reponses simulees, rien ne part.
+BANDEAU = ("Fichiers sélectionnés automatiquement par l'Atelier des graphiques, pour téléverser un graphique nouveau ou "
+           "modifié. Vérifiez puis cliquez sur « Envoyer ».")
+ENROBE = """(() => { window.__corps = []; const cfg = CFG, vrai = window.fetch.bind(window);
+  window.fetch = async (url, o) => { o = o || {};
+    if (String(url) === "/lancer") {
+      window.__corps.push({corps: JSON.parse(o.body), entetes: o.headers || {}, methode: o.method});
+      const r = cfg.lancer.length ? cfg.lancer.shift() : {statut: 200, texte: '{"ok": true}'};
+      return new Response(r.texte, {status: r.statut}); }
+    if (String(url) === "/execution" && cfg.execution) return new Response(JSON.stringify(cfg.execution), {status: 200});
+    return vrai(url, o); }; })()"""
+ETAT_AT = f"""(() => {{ const t = id => document.getElementById(id);
+  return {{fichiers: t('vue-fichiers').hidden, carte: !!(t('f-carte-{A}') || {{}}).checked, bandeau: t('f-atelier').hidden,
+          texte: t('f-atelier-texte').textContent, notes: [...document.querySelectorAll('#f-atelier-notes li')].map(l => l.textContent),
+          panier: [...document.querySelectorAll('#f-panier li .chemin')].map(x => x.textContent), restart: t('f-restart').checked,
+          berry_off: t('f-berry').disabled, search: location.search, corps: window.__corps || []}}; }})()"""
+BUILDFS = [{"type": "debut", "env": None, "lignes": [{"env": A, "methode": "com", "port": "", "ip": ""}], "actions": ["buildfs"]},
+           {"type": "etape", "env": A, "action": "buildfs", "etape": "Construction du FS", "pourcent": None},
+           {"type": "fin_env", "env": A, "resultat": "succes", "statuts": {"buildfs": "succes"}},
+           {"type": "fin", "resultat": "succes", "succes": [A], "echecs": []}]
+FIN_AUTRE = [{"type": "fin", "resultat": "succes", "succes": [B], "echecs": []}]
+ATTENDU_LANCER = {"lignes": [{"env": A, "methode": "com", "port": "", "ip": ""}], "actions": ["buildfs"], "onglet": "fichiers"}
+
+
+def arrive(m, requete, execution=None, lancer=()):
+    """Ouvre la page par le lien de l'atelier (`requete` = chaine de requete), fetch enrobe ; renvoie l'etat."""
+    cfg = json.dumps({"execution": execution, "lancer": list(lancer)})
+    ident = m.cdp.appel("Page.addScriptToEvaluateOnNewDocument", source=ENROBE.replace("CFG", cfg))["identifier"]
+    m.cdp.appel("Page.navigate", url=m.url + "?" + requete)
+    time.sleep(2.5)
+    m.cdp.appel("Page.removeScriptToEvaluateOnNewDocument", identifier=ident)
+    return etat_at(m.cdp)
+
+
+def etat_at(cdp):
+    time.sleep(0.3)
+    return cdp.js(ETAT_AT)
+
+
+def lien(fichiers, redemarrer="1", env=A):
+    from urllib.parse import quote
+    return f"env={quote(env, safe='')}&depuis=atelier&fichiers={quote(fichiers, safe='')}&redemarrer={quote(redemarrer, safe='')}"
+
+
+def envois(e):
+    return [c for c in e["corps"] if c["corps"].get("actions") != ["buildfs"]]
+
+
+def sonde_atelier(m):
+    cdp = m.cdp
+    # nominal : buildfs au chargement, rien de coche avant la fin, puis exactement la liste
+    e = arrive(m, lien("autoexec.be,json/graphiques.json,sd/js/absent.js"))
+    s.verifie((e["fichiers"], e["carte"], e["bandeau"], e["texte"]), (False, True, False, BANDEAU),
+              "atelier : onglet Fichiers, carte de l'env choisie, bandeau exact de la spec")
+    s.verifie([(c["corps"], c["entetes"].get("X-Build"), c["methode"]) for c in e["corps"]], [(ATTENDU_LANCER, "1", "POST")],
+              "atelier : un seul POST /lancer buildfs de l'env, en-tete X-Build, onglet fichiers")
+    s.verifie((e["panier"], e["restart"]), ([], False), "atelier : rien de coche avant la fin de l'image (ancienne image ignoree)")
+    s.verifie(e["search"], f"?env={A}", "atelier : depuis/fichiers/redemarrer retires de l'URL une fois le lancement accepte")
+    s.injecte(cdp, BUILDFS)
+    s.attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 5)
+    e = etat_at(cdp)
+    s.verifie((e["panier"], e["restart"], e["berry_off"]), (["autoexec.be", "json/graphiques.json"], True, True),
+              "atelier : image prete -> cochees exactement les fichiers presents de la liste, Redemarrer coche (redemarrer=1)")
+    s.verifie(any("sd/js/absent.js" in n and "absent" in n for n in e["notes"]), True, "atelier : fichier absent de l'image signale")
+    s.injecte(cdp, FIN_AUTRE)
+    e = etat_at(cdp)
+    s.verifie((len(e["corps"]), envois(e)), (1, []), "atelier : aucun envoi, et une autre fin ne relance rien")
+    cdp.appel("Page.reload")
+    time.sleep(2.5)
+    e = etat_at(cdp)
+    s.verifie((e["corps"], e["bandeau"], e["search"]), ([], True, f"?env={A}"), "atelier : rechargement -> aucun buildfs relance")
+
+    # parametres hostiles : rien de lance, message
+    for env in ("tasmota32", "../x", "tasmota32-inconnu"):
+        e = arrive(m, lien("autoexec.be", env=env))
+        s.verifie((e["corps"], e["texte"], any(env in n for n in e["notes"])), ([], "", True),
+                  f"hostile : env {env!r} (amont, invalide ou inconnu) -> aucun POST, message, pas de bandeau de selection")
+    hostiles = ["../x", "/abs.be", "C:\\w.be", "sd/../y", "a\\b"]
+    e = arrive(m, lien(",".join(hostiles), redemarrer="oui"))
+    s.verifie((e["corps"], e["panier"], e["restart"]), ([], [], False), "hostile : chemins tous refuses -> aucun POST, rien coche")
+    s.verifie([any(h in n for n in e["notes"]) for h in hostiles] + [any("oui" in n for n in e["notes"])], [True] * 6,
+              "hostile : chaque chemin refuse et la valeur de redemarrer signales")
+    e = arrive(m, lien("", redemarrer="0"))
+    s.verifie((e["corps"], any("aucun fichier" in n for n in e["notes"])), ([], True), "hostile : liste vide -> aucun POST, message")
+
+    # build deja en cours : attente de sa fin (flux), puis un seul buildfs ; chemin refuse signale, Redemarrer non coche
+    e = arrive(m, lien("autoexec.be,../z", redemarrer="0"), execution={"en_cours": True, "numero": 0, "pause": None})
+    s.verifie((e["corps"], e["texte"], any("en cours" in n for n in e["notes"])), ([], BANDEAU, True),
+              "en cours : aucun POST pendant le lancement en cours, attente dite")
+    s.injecte(cdp, FIN_AUTRE)
+    e = etat_at(cdp)
+    s.verifie([c["corps"] for c in e["corps"]], [ATTENDU_LANCER], "en cours : fin du lancement -> buildfs lance, une fois")
+    s.injecte(cdp, BUILDFS)
+    s.attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 5)
+    e = etat_at(cdp)
+    s.verifie((e["panier"], e["restart"], any("../z" in n for n in e["notes"]), envois(e)), (["autoexec.be"], False, True, []),
+              "en cours : coche a la fin, Redemarrer non coche (0), chemin refuse signale, aucun envoi")
+
+    # build externe (refus 409) : nouvel essai par minuterie ; buildfs en echec -> rien coche
+    e = arrive(m, lien("autoexec.be"), lancer=[{"statut": 409, "texte": "un build est déjà en cours (pio run -e x (VS Code))"}])
+    s.verifie((len(e["corps"]), any("VS Code" in n for n in e["notes"])), (1, True), "externe : refus affiche")
+    s.attend(cdp, "window.__corps.length >= 2", 9)
+    e = etat_at(cdp)
+    s.verifie([c["corps"] for c in e["corps"]], [ATTENDU_LANCER] * 2, "externe : nouvel essai seul, accepte")
+    s.injecte(cdp, BUILDFS[:2] + [{"type": "fin_env", "env": A, "resultat": "echec", "statuts": {"buildfs": "echec"}},
+                                  {"type": "fin", "resultat": "termine", "succes": [], "echecs": [A]}])
+    e = etat_at(cdp)
+    s.verifie((e["panier"], any("échec" in n for n in e["notes"])), ([], True), "externe : buildfs en echec -> rien coche, dit")
+    s.verifie(cdp.erreurs(), [], "atelier : aucune erreur JS")
+
+
 def principal():
     options = argparse.ArgumentParser(description="Sonde Chrome de l'onglet Fichiers de la page build.")
     options.add_argument("--capture", help="dossier ou ecrire les captures PNG")
@@ -226,6 +338,7 @@ def principal():
         m.demarre(False)
         fabrique_image(m.depot / ".pio" / "build" / A / "littlefs.bin", IMAGE)
         sonde_onglet(m, args.capture)
+        sonde_atelier(m)
     except FileNotFoundError as erreur:
         print(f"BLOQUE : {erreur}")
         return 3

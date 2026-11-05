@@ -1197,7 +1197,7 @@ async function demarre() {
   }
   ecoute();
 }
-demarre();
+demarre().then(arriveeAtelier);      // lien de l'Atelier des graphiques : build_page_atelier.py
 </script>
 </body>
 </html>

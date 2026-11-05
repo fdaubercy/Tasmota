@@ -58,6 +58,9 @@ HTML = r"""
         du maître:port (redirection posée et nom d'hôte vérifié avant l'envoi).</p>
     </aside>
     <section class="f-droite">
+      <div id="f-atelier" class="carte" aria-live="polite" hidden>
+        <p id="f-atelier-texte" class="avert" style="margin:0"></p><ul id="f-atelier-notes" class="discret"></ul>
+      </div>
       <div class="carte">
         <div class="f-tete">
           <button id="f-preparer" class="btn" type="button" disabled
@@ -179,6 +182,7 @@ async function chargeListe() {
   Object.keys(F.coches).forEach(function (k) { if (!presents[k]) delete F.coches[k]; });   // image reconstruite
   if (F.dossier !== null && !(F.dossier in F.liste.dossiers)) F.dossier = null;
   majFichiers();
+  atelierListe();                                         // arrivee depuis l'atelier : coche a l'image neuve
 }
 
 function cocheFichier(chemin, oui) { if (oui) F.coches[chemin] = true; else delete F.coches[chemin]; }
@@ -299,7 +303,8 @@ function refusFichiers(r) {
   $("f-refus").appendChild(ul);
 }
 
-$("f-preparer").onclick = async function () {
+// « Préparer la liste » (et l'arrivee depuis l'atelier) : buildfs de la carte choisie ; renvoie la reponse.
+async function preparerListe() {
   $("f-refus").textContent = "";
   F.prepa = true;
   majBoutonsFichiers();
@@ -307,7 +312,9 @@ $("f-preparer").onclick = async function () {
   if (r.ok) enCours = true;
   else { F.prepa = false; refusFichiers(r); }
   majBoutonsFichiers();
-};
+  return r;
+}
+$("f-preparer").onclick = preparerListe;
 
 $("f-envoyer").onclick = async function () {
   var c = choix[F.env];
@@ -346,6 +353,7 @@ function fichiersEvenement(e, rejeu) {
   if (e.type === "fin") {
     if (F.suivi && F.suivi.statut === "encours") F.suivi.statut = "arrete";
     if (F.prepa) { F.prepa = false; if (F.suivi && F.suivi.genre === "prepa") chargeListe(); }
+    if (!rejeu) atelierFin();                             // build_page_atelier.py
     majBoutonsFichiers();
   }
   if (e.type === "ligne" || F.dessin) return;
@@ -372,3 +380,6 @@ function dessineSuiviFichiers() {
 
 try { var ongletLu = localStorage.getItem("build-onglet"); if (ongletLu === "fichiers" || ongletLu === "memoire" || ongletLu === "aide") montreOnglet(ongletLu); } catch (e) {}
 """
+
+import build_page_atelier                            # noqa: E402 - arrivee depuis l'Atelier des graphiques (A7)
+JS += build_page_atelier.JS

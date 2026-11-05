@@ -162,6 +162,8 @@ ATTENDUS_PAGE = {
     "les routes": ['"/envs"', '"/execution"', '"/flux?depuis=0"', '"/journal?env="', '"/sortie?env="', '"/lancer"',
                    '"/port"', '"/arreter"', '"/continuer"'],
     "le bouton de lancement": ["l'un après l'autre"],
+    "l'arrivee depuis l'atelier (A7, spec atelier-destinations 5)": ["Fichiers sélectionnés automatiquement par l'Atelier des "
+        "graphiques, pour téléverser un graphique nouveau ou modifié. Vérifiez puis cliquez sur « Envoyer »."],
     "les deux arrets": ["Arrêter après cet env", "Arrêt immédiat", "data/&lt;lieu&gt;/&lt;carte&gt;"],
     "les mentions": ["repartira de zéro", "le file system (persist compris) sera aussi flashé",
                      "valable pour ce lancement seulement"],
@@ -181,6 +183,7 @@ def test_page_contient(b):
     statut, texte = b.requete("GET", "/")
     verifie((statut, manques_page(texte)), (200, []), "page_contient : actions, familles, X-Build, routes, mentions")
     verifie(texte == build_web.page(), True, "page_contient : GET / sert build_page.PAGE")
+    verifie(b.requete("GET", "/?env=x&depuis=atelier&fichiers=..%2Fa")[1] == texte, True, "page_contient : lien de l'atelier -> meme page")
     # temoin : la page provisoire ne doit PAS passer le controle (sinon il ne mesure rien)
     verifie(len(manques_page(build_web.PAGE_PROVISOIRE)) > 10, True, "page_contient : temoin, page provisoire refusee")
 
