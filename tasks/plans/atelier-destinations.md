@@ -71,14 +71,14 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
 - [x] Bancs verts (`banc_graphiques.py`, `test_pages_graphiques.mjs`, `test_pages_graphiques_chrome.py`) — preuve : `BANC_GRAPHIQUES: OK` relancé par le contrôleur le 2026-11-05 (0 ECHEC) ; les deux autres verts (rapport A3)
 
 ## A4 — Atelier : écriture vers `/graphiques` et composition de la carte
-- [ ] Banc rouge (`test_atelier_graphiques_ecriture.py`, `_web.py`) : destination `graphiques` → seule la clé
+- [x] Banc rouge (`test_atelier_graphiques_ecriture.py`, `_web.py`) : destination `graphiques` → seule la clé
   `graphiques` de `data/<lieu>/<carte>/graphiques.json` change (autres clés et forme du texte gardées) ; graphique
   ajouté en forme atelier `"moteur": "pages"` ; retrait d'un graphique ; empreinte périmée → 409 ; carte sans
-  historique → 400
-- [ ] Lecture de la composition de la carte en ligne, comparaison normalisée (clés triées) avec le dépôt, réponse
+  historique → 400 — preuve : RED module puis route absents (rapport A4), banc neuf `test_atelier_graphiques_graphiques.py`
+- [x] Lecture de la composition de la carte en ligne, comparaison normalisée (clés triées) avec le dépôt, réponse
   `{identique | differente (diff) | non_verifiee}` ; « Partir de la version de la carte » recopie sa composition
-  (validée par le validateur du dépôt, sinon indisponible avec le motif) avant l'ajout (spec §4.3, §7.6)
-- [ ] Bancs verts
+  (validée par le validateur du dépôt, sinon indisponible avec le motif) avant l'ajout (spec §4.3, §7.6) — preuve : 447a404f8, 8d358540b (banc hermétique, retrait sur dépôt invalide) ; `GET /composition?env=`, `destination: graphiques` dans `/diff` et `/ecrire`
+- [x] Bancs verts — preuve : `graphiques` et `web` « 0 echec(s) : VERT » relancés par le contrôleur le 2026-11-05 ; `ecriture`, `description` verts (rapport A4)
 
 ## A5 — Atelier : menu « Page » et choix carte/dépôt dans la page
 - [ ] Banc rouge (`test_atelier_graphiques_page_chrome.py`) : menu = pages dédiées, « Graphiques (/graphiques) »
