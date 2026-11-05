@@ -229,9 +229,16 @@ ENROBE = """(() => { window.__corps = []; const cfg = CFG, vrai = window.fetch.b
       const r = cfg.lancer.length ? cfg.lancer.shift() : {statut: 200, texte: '{"ok": true}'};
       if (!r.statut) throw new TypeError("coupure simulee");              // appel() : statut 0, comme un delai depasse
       return new Response(r.texte, {status: r.statut}); }
-    if (String(url) === "/execution" && cfg.execution.length) { const x = cfg.execution.shift();   // null = panne
-      return x === null ? new Response("panne", {status: 500}) : new Response(JSON.stringify(x), {status: 200}); }
-    return vrai(url, o); }; })()"""
+    if (String(url) === "/execution" && cfg.execution.length) { const x = cfg.execution.shift();   // null = panne, {} = vrai serveur
+      if (x && x.delai) await new Promise(f => setTimeout(f, x.delai));
+      if (x === null) return new Response("panne", {status: 500});
+      if (x.en_cours !== undefined) return new Response(JSON.stringify(x), {status: 200}); }
+    return vrai(url, o); };
+  if (cfg.fluxDelai) { const VS = window.EventSource;                     // flux ouvert en retard : ordre force
+    window.EventSource = function (u) { const moi = this; this.readyState = 0;
+      setTimeout(() => { const r = new VS(u); r.onmessage = m => moi.onmessage && moi.onmessage(m); r.onerror = e => moi.onerror && moi.onerror(e);
+        r.onopen = e => moi.onopen && moi.onopen(e); }, cfg.fluxDelai); };
+    window.EventSource.CLOSED = 2; } })()"""
 ETAT_AT = f"""(() => {{ const t = id => document.getElementById(id);
   return {{fichiers: t('vue-fichiers').hidden, carte: !!(t('f-carte-{A}') || {{}}).checked, bandeau: t('f-atelier').hidden,
           texte: t('f-atelier-texte').textContent, notes: [...document.querySelectorAll('#f-atelier-notes li')].map(l => l.textContent),
@@ -245,17 +252,17 @@ FIN_AUTRE = [{"type": "fin", "resultat": "succes", "succes": [B], "echecs": []}]
 ATTENDU_LANCER = {"lignes": [{"env": A, "methode": "com", "port": "", "ip": ""}], "actions": ["buildfs"], "onglet": "fichiers"}
 
 
-def arrive(m, requete, execution=(), lancer=(), sans_enrobe=False):
+def arrive(m, requete, execution=(), lancer=(), sans_enrobe=False, flux_delai=0, attente=2.5):
     """Ouvre la page par le lien de l'atelier (`requete` = chaine de requete), fetch enrobe ; renvoie l'etat.
     `execution`, `lancer` : reponses simulees, une par appel, puis le vrai serveur (/lancer : 200 simule)."""
     if sans_enrobe:                                     # vrai /lancer : le faux pio du montage tourne
         m.cdp.appel("Page.navigate", url=m.url + "?" + requete)
         time.sleep(2.5)
         return etat_at(m.cdp)
-    cfg = json.dumps({"execution": list(execution), "lancer": list(lancer)})
+    cfg = json.dumps({"execution": list(execution), "lancer": list(lancer), "fluxDelai": flux_delai})
     ident = m.cdp.appel("Page.addScriptToEvaluateOnNewDocument", source=ENROBE.replace("CFG", cfg))["identifier"]
     m.cdp.appel("Page.navigate", url=m.url + "?" + requete)
-    time.sleep(2.5)
+    time.sleep(attente)
     m.cdp.appel("Page.removeScriptToEvaluateOnNewDocument", identifier=ident)
     return etat_at(m.cdp)
 
@@ -336,6 +343,14 @@ def sonde_atelier(m):
     s.verifie((e["panier"], any("échec" in n for n in e["notes"])), ([], True), "externe : buildfs en echec -> rien coche, dit")
     sonde_historique(m)
     s.verifie(cdp.erreurs(), [], "atelier : aucune erreur JS")
+    # A2, en dernier (serveur coupe = erreurs reseau au journal de Chrome) : outil redemarre, aucun evenement ensuite
+    arrive(m, lien("autoexec.be"))
+    s.injecte(cdp, BUILDFS[:1])                          # debut en direct : sans lui, la fin de l'historique rejoue laisse enCours a faux
+    m.redemarre_serveur()
+    s.attend(cdp, "!AT", 20)
+    e = etat_at(cdp)
+    s.verifie((any("a redémarré" in n for n in e["notes"]), e["texte"], cdp.js("[AT, F.prepa, $('f-preparer').disabled, $('f-preparer').textContent]")),
+              (True, "", [None, False, False, "Préparer la liste"]), "redemarrage : outil relance sans evenement -> abandon dit, bouton libre")
 
 
 def poste(m, corps):
@@ -357,13 +372,49 @@ def sonde_historique(m):
     e = etat_at(cdp)
     s.verifie((e["panier"], e["restart"], e["search"]), (["autoexec.be", "json/graphiques.json"], True, f"?env={A}"),
               "historique : vrai buildfs apres un lancement rejoue -> fichiers coches, Redemarrer coche")
-    # /execution en panne au chargement : tout l'historique arrive comme du direct, l'ancien `fin` ne coche rien
-    e = arrive(m, lien("autoexec.be"), execution=[None])
-    s.verifie((len(e["corps"]), e["panier"], e["texte"]), (1, [], BANDEAU),
-              "rejeu : /execution en panne -> un buildfs, ancien fin (rejoue en direct) ne coche rien")
+    # /execution en panne au chargement, ordres forces. Flux AVANT la relecture : l'ancien `fin` arrive en direct,
+    # hors de tout rejeu, et ne doit ni abandonner ni cocher (tue le mutant sans `AT.n0 === undefined`).
+    e = arrive(m, lien("autoexec.be"), execution=[None, {"delai": 1500}])
+    s.verifie((len(e["corps"]), e["panier"], e["texte"], cdp.js("dernierN > 0 && AT.etat")), (1, [], BANDEAU, "prepa"),
+              "ordre : flux avant la relecture -> ancien fin ignore, un buildfs, rien coche")
     s.injecte(cdp, BUILDFS)
     s.attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 5)
-    s.verifie(etat_at(cdp)["panier"], ["autoexec.be"], "rejeu : fin de NOTRE buildfs -> coche")
+    s.verifie(etat_at(cdp)["panier"], ["autoexec.be"], "ordre : flux avant la relecture -> fin de NOTRE buildfs, coche")
+    # Flux APRES le POST : F.prepa est deja vrai quand l'historique arrive (tue le mutant sans `rejeuJusqua = numero`)
+    e = arrive(m, lien("autoexec.be"), execution=[None], flux_delai=1200)
+    s.verifie((len(e["corps"]), e["panier"], cdp.js("dernierN > 0 && AT.etat")), (1, [], "prepa"),
+              "ordre : flux apres le POST -> historique pris pour un rejeu, rien coche depuis l'ancien fin")
+    s.injecte(cdp, BUILDFS)
+    s.attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 5)
+    s.verifie(etat_at(cdp)["panier"], ["autoexec.be"], "ordre : flux apres le POST -> fin de NOTRE buildfs, coche")
+    # A1 : autre carte choisie pendant la relecture de /execution : jamais de buildfs sur la mauvaise carte
+    arrive(m, lien("autoexec.be"), execution=[{}, {"delai": 1500}], attente=0.8)
+    cdp.js(f"choisitCarte('{B}'); true")
+    time.sleep(1.5)
+    e = etat_at(cdp)
+    s.verifie((e["corps"], any("Autre carte" in n for n in e["notes"]), e["texte"]), ([], True, ""),
+              "carte : changee pendant /execution -> aucun buildfs, abandon dit, bandeau de selection retire")
+    # S1 : le `fin` double la reponse « en cours » de /execution : la page ne reste pas bloquee, un seul buildfs ensuite
+    arrive(m, lien("autoexec.be"), execution=[{}, {"delai": 1500, "en_cours": True, "numero": 0, "pause": None}], attente=0.8)
+    s.injecte(cdp, FIN_AUTRE)
+    s.attend(cdp, "window.__corps.length >= 1", 9)
+    e = etat_at(cdp)
+    s.verifie(([c["corps"] for c in e["corps"]], sum("en cours" in n for n in e["notes"])), ([ATTENDU_LANCER], 1),
+              "fin doublee : nouvel essai seul -> un buildfs, attente dite une fois")
+    # /fichiers en panne apres NOTRE buildfs : liste illisible dite, aucun fichier declare absent a tort
+    arrive(m, lien("autoexec.be"))
+    cdp.js("""(() => { const v = window.fetch; window.fetch = (u, o) => String(u).startsWith("/fichiers") ?
+      Promise.resolve(new Response("panne", {status: 500})) : v(u, o); return true; })()""")
+    s.injecte(cdp, BUILDFS)
+    e = etat_at(cdp)
+    s.verifie((e["panier"], any("illisible" in n for n in e["notes"]), any("Absent" in n for n in e["notes"])), ([], True, False),
+              "liste : /fichiers en panne apres le buildfs -> illisible dit, pas « absent »")
+    # A2 : renumerotation du flux (outil redemarre) pendant NOTRE buildfs : abandon dit, bandeau retire
+    arrive(m, lien("autoexec.be"))
+    s.injecte(cdp, [{"n": 1, "type": "debut", "env": None, "lignes": [{"env": B, "methode": "com", "port": "COM13", "ip": ""}], "actions": ["compiler"]}])
+    e = etat_at(cdp)
+    s.verifie((any("a redémarré" in n for n in e["notes"]), e["texte"], cdp.js("[AT, F.prepa]")), (True, "", [None, False]),
+              "redemarrage : flux renumerote -> abandon dit, F.prepa remis a faux")
     # fin d'un autre lancement a la place du notre : abandon dit, jamais muet
     e = arrive(m, lien("autoexec.be"))
     s.injecte(cdp, [{"type": "debut", "env": None, "lignes": [{"env": B, "methode": "com", "port": "COM13", "ip": ""}],

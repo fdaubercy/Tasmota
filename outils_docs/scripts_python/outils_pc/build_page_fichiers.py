@@ -44,6 +44,7 @@ CSS = r"""
   .f-recent{color:var(--orange)}
   .f-panier{list-style:none;margin:0;padding:0;font-size:12.5px;max-height:260px;overflow:auto}
   .f-panier li{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-top:1px solid var(--bord)}
+  #f-atelier-texte:empty{display:none}
   .f-journal{font:11.5px/1.45 ui-monospace,Consolas,monospace;color:var(--doux);max-height:220px;overflow:auto;margin:6px 0 0;padding-left:22px}
   @media (max-width:1000px){.f-trois{grid-template-columns:1fr}}
   @media (max-width:820px){.f-grille{grid-template-columns:1fr}}
@@ -163,7 +164,7 @@ function fichiersCartes() {
 }
 
 function choisitCarte(nom) {
-  F.env = nom; F.liste = null; F.dossier = null; F.coches = {}; F.berryTouche = false;
+  F.env = nom; F.liste = null; F.dossier = null; F.coches = Object.create(null); F.berryTouche = false;
   $("f-refus").textContent = "";
   fichiersCartes();
   majFichiers();
@@ -353,7 +354,7 @@ function fichiersEvenement(e, rejeu) {
   if (e.type === "fin") {
     if (F.suivi && F.suivi.statut === "encours") F.suivi.statut = "arrete";
     if (!rejeu && F.prepa) { F.prepa = false; if (F.suivi && F.suivi.genre === "prepa") chargeListe(); }   // rejeu : ancien lancement
-    if (!rejeu) atelierFin(e);                            // build_page_atelier.py
+    if (!rejeu) atelierFin();                             // build_page_atelier.py
     majBoutonsFichiers();
   }
   if (e.type === "ligne" || F.dessin) return;

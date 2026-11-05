@@ -720,7 +720,7 @@ function activeRang(b, r) {
 
 function traite(e) {
   if (typeof e.n === "number") {
-    if (e.n === 1 && dernierN > 1) { dernierN = 0; rejeuJusqua = 0; }   // outil redemarre : numerotation repartie de 1
+    if (e.n === 1 && dernierN > 1) { dernierN = 0; rejeuJusqua = 0; atelierRedemarrage(); }   // outil redemarre : numerotation repartie de 1
     if (e.n <= dernierN) return;          // deja vu (reprise du flux)
     dernierN = e.n;
   }
@@ -1108,7 +1108,7 @@ function dessineRecap() {
 async function verifieExecution() {
   var r = await appel("/execution");
   if (!r.ok || !r.donnees || r.donnees.en_cours || !enCours) return;
-  enCours = false;
+  enCours = false; atelierRedemarrage();
   if (L && !L.fin) {
     L.ordre.forEach(function (env) { var b = L.blocs[env]; if (b.statut === "encours" || b.statut === "attente") { b.statut = "arrete"; planifie(env); } });
     L.bandeaux.push({genre: "avertissement", env: "", titre: "Lancement interrompu",

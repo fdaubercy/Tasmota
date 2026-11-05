@@ -13,8 +13,10 @@ lancement de la page) : nouvel essai toutes les 5 s, 1 h au plus. Rechargement :
 d'un autre build reprend l'attente ; pas apres : un rechargement ne relance jamais le buildfs). Limite : un
 rechargement pendant le buildfs perd la selection automatique (cocher a la main, ou rouvrir le lien de l'atelier).
 Historique rejoue par /flux?depuis=0 : `F.prepa` n'est touche qu'hors rejeu, et /execution est relu juste avant le
-POST (numero `n0`) : un `fin` numerote jusqu'a `n0` est d'un ancien lancement, meme si /execution a echoue au
-chargement. Un `fin` posterieur qui n'est pas celui de notre buildfs abandonne avec un message, jamais en silence.
+POST : l'historique pas encore recu passe alors en rejeu, meme si /execution a echoue au chargement. `AT.n0` n'est pose
+qu'une fois cette relecture faite : un `fin` arrive avant ne peut pas etre le notre. Un `fin` hors rejeu qui n'est pas
+celui de notre buildfs abandonne avec un message, jamais en silence. Outil redemarre sous la page (flux renumerote, ou
+`fin` jamais recu d'apres /execution a la reconnexion) : abandon dit, voir atelierRedemarrage.
 Insere a la fin du JS de build_page_fichiers.py ; arriveeAtelier est appelee par demarre() de build_page.
 """
 
@@ -24,7 +26,13 @@ var AT = null;          // {env, liste, redemarrer, etat: attend | prepa | coche
 var AT_BANDEAU = "Fichiers sélectionnés automatiquement par l'Atelier des graphiques, pour téléverser un graphique nouveau ou modifié. Vérifiez puis cliquez sur « Envoyer ».";
 
 function atNote(t) { $("f-atelier").hidden = false; $("f-atelier-notes").appendChild(h("li", {texte: t})); }
-function atAbandon(t) { atNote(t); AT = null; }
+function atAbandon(t) { $("f-atelier-texte").textContent = ""; atNote(t); AT = null; }   // le bandeau de selection ne vaut plus
+// Outil redemarre sous la page : notre buildfs n'enverra jamais son `fin`, ni « Préparer la liste » le sien
+function atelierRedemarrage() {
+  F.prepa = false;
+  if (AT) atAbandon("L'outil a redémarré : sélection automatique abandonnée, relancez depuis l'atelier.");
+  majBoutonsFichiers();
+}
 // Chemin de l'image (build_fichiers.liste) : relatif, segments non vides, ni . ni .., ni \ ni lecteur ni controle
 function atCheminSur(c) {
   return c.length <= 200 && !/[\\:\x00-\x1f]/.test(c) && c.split("/").every(function (p) { return p && p !== "." && p !== ".."; });
@@ -66,12 +74,16 @@ async function atLance() {
   // /execution a echoue au chargement : le reste de l'historique passe alors en rejeu).
   var x = await appel("/execution");
   if (!AT) return;
+  if (F.env !== AT.env) return atAbandon("Autre carte choisie : sélection automatique abandonnée.");
   if (!x.ok || !x.donnees || typeof x.donnees.numero !== "number")
     return atAbandon("État du serveur illisible (/execution : " + (x.texte || x.statut) + ") : sélection automatique abandonnée, cliquer « Préparer la liste ».");
   if (x.donnees.numero > dernierN && x.donnees.numero > rejeuJusqua) rejeuJusqua = x.donnees.numero;
   if (x.donnees.en_cours) {
-    AT.etat = "attend"; enCours = true;
-    return atNote("Un lancement est en cours : la construction du FS de " + AT.env + " partira à sa fin.");
+    AT.etat = "attend";
+    AT.minuterie = setTimeout(atLance, 5000);          // son `fin` a pu doubler cette reponse : ne pas dependre de lui
+    if (!AT.attenteDite) atNote("Un lancement est en cours : la construction du FS de " + AT.env + " partira à sa fin.");
+    AT.attenteDite = true;
+    return;
   }
   AT.n0 = x.donnees.numero;
   var r = await preparerListe();
@@ -90,10 +102,10 @@ async function atLance() {
 }
 
 // Fin d'un lancement (flux, hors rejeu ; appelee par fichiersEvenement)
-function atelierFin(e) {
+function atelierFin() {
   if (!AT) return;
   if (AT.etat === "attend") { if (!enCours && !AT.minuterie) atLance(); return; }
-  if (AT.etat !== "prepa" || AT.n0 === undefined || (typeof e.n === "number" && e.n <= AT.n0)) return;   // d'avant notre buildfs
+  if (AT.n0 === undefined || AT.etat !== "prepa") return;                       // d'avant notre buildfs
   if (!F.suivi || F.suivi.genre !== "prepa")
     return atAbandon("Un autre lancement s'est terminé à la place de la construction du FS demandée : sélection " +
                      "automatique abandonnée, cliquer « Préparer la liste ».");
@@ -105,6 +117,8 @@ function atelierFin(e) {
 function atelierListe() {
   if (!AT || AT.etat !== "cocher") return;
   if (F.env !== AT.env) return atAbandon("Autre carte choisie : sélection automatique abandonnée.");
+  if (!F.liste.fichiers.length)                        // /fichiers en panne, image illisible : rien ne prouve une absence
+    return atAbandon("Liste de l'image du FS illisible (" + (F.liste.erreur || "aucun fichier") + ") : rien n'est coché.");
   var presents = Object.create(null), absents = [];    // « constructor » n'est pas un fichier present
   F.liste.fichiers.forEach(function (f) { presents[f.chemin] = true; });
   F.coches = Object.create(null); F.dossier = null;
