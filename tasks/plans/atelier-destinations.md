@@ -103,7 +103,7 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
   build en cours → attente puis lancement (flux `/flux`) — preuve : RED bandeau absent / KeyError (rapport A7), puis 5 KO de plus sur le rejeu du flux (tour 1)
 - [x] Code dans `build_page_fichiers.py` (ou module neuf) ; exception de `build_page.py` au CLAUDE.md mise à jour si
   ce fichier grossit — preuve : 7ff3780cb, 2f18bc820 (`build_page_atelier.py` neuf ; `build_page.py` reste à 1223 lignes)
-- [ ] Bancs verts (`test_build_*.py` concernés + sondes Chrome)
+- [x] Bancs verts (`test_build_*.py` concernés + sondes Chrome) — preuve : 50e49d156 ; `test_build_web.py` VERT (140 OK) ; `test_build_page_fichiers_chrome.py` 2 passes, 73 OK, seul KO « telephone » préexistant accepté (code 1) ; `test_build_page_chrome.py` 3 passes, 100 OK, même KO préexistant ; mutants M1, M3, M5, M6 tués, M2 survit
 
 ## A8 — Documentation
 - [ ] `outils_docs/README.md` § « Atelier des graphiques » : menu Page, destination Graphiques, composition carte /
