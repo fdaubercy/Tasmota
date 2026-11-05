@@ -4,7 +4,7 @@ titre: Atelier des graphiques — destination « Graphiques » et bouton « Tél
 objectif: Poser un graphique de l'atelier sur une page dédiée, sur /graphiques ou sur une nouvelle page, puis l'envoyer à la carte par la page Build qui prépare tout et attend le clic Envoyer
 statut: actif
 cree: 2026-11-04
-maj: 2026-11-04
+maj: 2026-11-05
 ---
 # Atelier des graphiques — destination « Graphiques » et bouton « Téléverser »
 
@@ -44,13 +44,13 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
 5. Carte sans historique : « Graphiques » absent du menu ; carte hors ligne : bandeaux « non vérifiée » (§4.3, §7.2).
 
 ## A1 — Cenv : liste `pages_graphiques_moteur` et écriture de l'atelier
-- [ ] Banc rouge (`test_atelier_graphiques_ecriture.py`) : un env à historique sans page n'exclut plus
+- [x] Banc rouge (`test_atelier_graphiques_ecriture.py`) : un env à historique sans page n'exclut plus
   `pages_graphiques_moteur` ; un env sans historique ni page l'exclut ; première page dédiée d'un env sans historique
-  → les deux exclusions levées ; dernière page retirée → état exclu octet pour octet (spec §7.3)
-- [ ] `platformio_tasmota_cenv.ini` : scission une fois (`pages_graphiques_moteur` = `pages_graphiques.js`,
+  → les deux exclusions levées ; dernière page retirée → état exclu octet pour octet (spec §7.3) — preuve : 14 échecs avant le code (rapport A1), `test_historique_sans_page`
+- [x] `platformio_tasmota_cenv.ini` : scission une fois (`pages_graphiques_moteur` = `pages_graphiques.js`,
   `pages_graphiques_formule.js`, `pagesGraphiquesValidation.be` ; `pages_graphiques` = le reste), exclusion par env
-  selon la règle ; `atelier_graphiques_ecriture.py` gère les deux listes (`_exclut`, `_leve`, `_retire`, `_controle`)
-- [ ] Banc vert, `--exclusions` sur le vrai dépôt sans écart, `berry/banc_demarrage.py` vert
+  selon la règle ; `atelier_graphiques_ecriture.py` gère les deux listes (`_exclut`, `_leve`, `_retire`, `_controle`) — preuve : 3edb8792e, 3a683093d
+- [x] Banc vert, `--exclusions` sur le vrai dépôt sans écart, `berry/banc_demarrage.py` vert — preuve : banc « 0 echec(s) : VERT », `--exclusions` « rien a faire », 4 références de banc_demarrage (ligne `sources` seule) mises à jour dans 3edb8792e
 
 ## A2 — Carte : validation des graphiques « moteur pages » dans `/graphiques`
 - [ ] Banc rouge (`berry/banc_graphiques.py` + `.be`) : composition mixte acceptée ; graphique `"moteur": "pages"`
