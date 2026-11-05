@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { SousAgent, Tache } from '../types'
+import type { Action, SousAgent, Tache } from '../types'
 
 // Volet « Sous-agents » : un bloc par sous-agent de la conversation (tache en cours, pourcentage tire de sa liste
 // TodoWrite, duree, outils appeles). Le pourcentage n'existe que si l'agent tient sa liste : chaque lancement recoit
@@ -12,6 +12,8 @@ const TITRE = 'Sous-agents'
 const GARDE_FINI_MS = 60_000 // un agent fini reste affiche (grise) une minute
 const SONDE_MS = 2_000
 const FINIS = ['completed', 'failed', 'killed']
+const JOURNAL = 8 // actions gardees par agent
+const LARGEUR_TEXTE = 110
 
 export const CONSIGNE =
   "[Suivi de progression] Si l'outil TodoWrite t'est disponible : dès le début, découpe ton travail en 3 à 10 " +
@@ -40,6 +42,36 @@ export function duree(ms: number): string {
 export function barre(pct: number, largeur = 20): string {
   const plein = Math.round((pct / 100) * largeur)
   return '█'.repeat(plein) + '░'.repeat(largeur - plein)
+}
+
+export function court(s: string, n = LARGEUR_TEXTE): string {
+  const un = s.replace(/\s+/g, ' ').trim()
+  return un.length > n ? un.slice(0, n - 1) + '…' : un
+}
+
+// Fin de chemin lisible : les deux derniers elements (« outils_pc/build_page.py »).
+function finChemin(c: string): string {
+  return c.replace(/\\/g, '/').split('/').filter(Boolean).slice(-2).join('/')
+}
+
+// Le detail d'un appel d'outil, tel qu'on veut le lire sous l'agent : la description ou la commande d'un shell, le
+// fichier lu ou ecrit, le motif cherche, l'adresse, la skill, le sous-agent lance...
+export function detail(tool: string, args: Record<string, unknown>): string {
+  const s = (k: string) => (typeof args[k] === 'string' ? (args[k] as string) : '')
+  if (tool === 'Bash' || tool === 'PowerShell') return s('description') || s('command')
+  if (s('file_path') || s('notebook_path')) return finChemin(s('file_path') || s('notebook_path'))
+  if (tool === 'Grep') return s('pattern') + (s('path') ? ' dans ' + finChemin(s('path')) : '')
+  if (tool === 'Glob') return s('pattern')
+  if (tool === 'Agent') return s('description')
+  if (tool === 'Skill') return s('skill')
+  if (tool === 'SendMessage') return s('summary') || s('to')
+  return s('description') || s('url') || s('query') || s('pattern') || s('command') || ''
+}
+
+// Ajoute une action au journal (les JOURNAL dernieres) ou met a jour celle de meme id.
+export function note(journal: Action[] | undefined, action: Action): Action[] {
+  const l = journal ?? []
+  return l.some(x => x.id === action.id) ? l.map(x => (x.id === action.id ? action : x)) : [...l, action].slice(-JOURNAL)
 }
 
 // Agents a montrer : en cours, ou finis depuis moins d'une minute ; les en-cours d'abord.
@@ -115,14 +147,41 @@ export const register: Register = on => {
         if (info) await suit($, id, info.description, info.type)
       }
       const taches = e.tool === 'TodoWrite' ? e.todos : undefined
+      const action: Action | undefined =
+        e.tool === 'TodoWrite'
+          ? undefined
+          : { id: e.tool_use_id ?? String(Math.random()), genre: 'outil', texte: court(`${e.tool} · ${detail(e.tool, e as unknown as Record<string, unknown>)}`), etat: 'cours' }
       await update($, agents, l =>
         l.map(a =>
-          a.id === id ? { ...a, outils: a.outils + 1, dernierOutil: e.tool, ...(taches ? { taches } : {}) } : a,
+          a.id === id
+            ? { ...a, outils: a.outils + 1, dernierOutil: e.tool, ...(taches ? { taches } : {}), ...(action ? { journal: note(a.journal, action) } : {}) }
+            : a,
         ),
       )
+      const r = await next(e)
+      if (action) {
+        const fin: Action = { ...action, etat: r.deny !== undefined || ('isError' in r && r.isError) ? 'erreur' : 'ok' }
+        await update($, agents, l => l.map(a => (a.id === id ? { ...a, journal: note(a.journal, fin) } : a)))
+      }
+      return r
     }
     return next(e)
   }).catch(($, e, next) => next(e)) // un incident du mod ne bloque jamais l'action suivie
+
+  // Remarques : le texte qu'un sous-agent ecrit entre deux outils (fin de chaque pas de son tour).
+  on('turn.step', async function* ($, e, next) {
+    const r = yield* next(e)
+    const id = e.agentId
+    if (id !== undefined && r.answer.trim()) {
+      try {
+        const action: Action = { id: `${e.turnId}:${e.index}`, genre: 'remarque', texte: court(r.answer), etat: 'ok' }
+        await update($, agents, l => l.map(a => (a.id === id ? { ...a, journal: note(a.journal, action) } : a)))
+      } catch {
+        // le suivi ne doit jamais gener le tour de l'agent
+      }
+    }
+    return r
+  })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Text } = $.ui.resolve(e)
@@ -160,6 +219,18 @@ export const register: Register = on => {
                   <Text dimColor={t.status !== 'in_progress'}>
                     {'    '}
                     {t.status === 'completed' ? '☑' : t.status === 'in_progress' ? '▸' : '☐'} {t.content}
+                  </Text>
+                ))}
+              {!fini && (a.journal?.length ?? 0) > 0 && <Text dimColor>{'  Activité :'}</Text>}
+              {!fini &&
+                a.journal?.map(x => (
+                  <Text
+                    dimColor={x.etat === 'ok' && x.genre === 'outil'}
+                    italic={x.genre === 'remarque'}
+                    color={x.etat === 'erreur' ? 'error' : x.etat === 'cours' ? 'suggestion' : undefined}
+                  >
+                    {'    '}
+                    {x.genre === 'remarque' ? '💬' : x.etat === 'cours' ? '⏵' : x.etat === 'erreur' ? '✗' : '✓'} {x.texte}
                   </Text>
                 ))}
             </Box>

@@ -1,7 +1,7 @@
 {
   "name": "suivi-sous-agents",
-  "version": "0.1.0",
-  "description": "Volet de suivi des sous-agents de la conversation : tache en cours, pourcentage d'apres leur liste de taches, duree, outils appeles.",
+  "version": "0.2.0",
+  "description": "Volet de suivi des sous-agents de la conversation : tache en cours, pourcentage d'apres leur liste de taches, duree, journal des outils et remarques de chaque agent en cours.",
   "types": "./types/index.d.ts",
   "author": { "name": "fdaubercy" }
 }

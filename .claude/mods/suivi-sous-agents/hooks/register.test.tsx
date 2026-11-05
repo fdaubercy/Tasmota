@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { barre, duree, pourcentage, visibles } from './register'
+import { barre, court, detail, duree, note, pourcentage, visibles } from './register'
 
 const PANE = {
   plugin: 'suivi-sous-agents',
@@ -28,6 +28,23 @@ test('fonctions pures : pourcentage, durée, barre, visibles', async () => {
   expect(visibles([a('fini', 2_000), a('vieux', 0), a('actif')], 61_000).map(x => x.id)).toEqual(['actif', 'fini'])
 })
 
+test("journal : détail d'un outil, actions bornées et mises à jour", async () => {
+  expect(detail('Bash', { command: 'ls -la', description: 'Liste les fichiers' })).toBe('Liste les fichiers')
+  expect(detail('Bash', { command: 'git status' })).toBe('git status')
+  expect(detail('Read', { file_path: 'C:\\depot\\outils_pc\\build_page.py' })).toBe('outils_pc/build_page.py')
+  expect(detail('Grep', { pattern: 'def liste', path: '/a/b/outils_pc' })).toBe('def liste dans b/outils_pc')
+  expect(detail('Skill', { skill: 'bancs' })).toBe('bancs')
+  expect(detail('Inconnu', {})).toBe('')
+  expect(court('a   b\n c')).toBe('a b c')
+  expect(court('x'.repeat(200)).length).toBe(110)
+  let j = undefined as ReturnType<typeof note> | undefined
+  for (let i = 0; i < 10; i++) j = note(j, { id: String(i), genre: 'outil', texte: 't' + i, etat: 'cours' })
+  expect(j!.map(x => x.id)).toEqual(['2', '3', '4', '5', '6', '7', '8', '9'])
+  j = note(j, { id: '5', genre: 'outil', texte: 't5', etat: 'erreur' })
+  expect(j.find(x => x.id === '5')?.etat).toBe('erreur')
+  expect(j.length).toBe(8)
+})
+
 test('un sous-agent lancé reçoit la consigne, ses outils et sa liste de tâches sont suivis', async ($, on) => {
   let prompt = ''
   let ouvert = 0
@@ -43,7 +60,7 @@ test('un sous-agent lancé reçoit la consigne, ses outils et sa liste de tâche
     prompt = e.prompt
     return { model: 'sonnet', agentId: 'a1' }
   })
-  on('tool.call', () => ({ result: {} }))
+  on('tool.call', (_, e) => (e.tool === 'Bash' && 'command' in e && e.command === 'false' ? { result: {}, isError: true } : { result: {} }))
 
   await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
   await $.agent.spawn({
@@ -66,11 +83,15 @@ test('un sous-agent lancé reçoit la consigne, ses outils et sa liste de tâche
     ],
   })
   await $.tool.call({ tool: 'Bash', command: 'ls' }) // fil principal : pas compté
+  await $.tool.call({ tool: 'Bash', command: 'false', description: 'Lance le banc', agentId: 'a1' })
 
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
     expect((await ui.find({ type: 'Text', text: /Implémenter A7/ }))?.text).toBe('● Implémenter A7')
-    expect((await ui.find({ type: 'Text', text: /outils/ }))?.text).toContain('2 outils')
+    expect((await ui.find({ type: 'Text', text: /outils/ }))?.text).toContain('3 outils')
+    expect((await ui.find({ type: 'Text', text: /Read · x/ }))?.text).toBe('    ✓ Read · x')
+    expect((await ui.find({ type: 'Text', text: /Lance le banc/ }))?.text).toBe('    ✗ Bash · Lance le banc')
+    expect(await ui.find({ type: 'Text', text: /TodoWrite/ })).toBe(undefined)
     expect((await ui.find({ type: 'Text', text: /%/ }))?.text).toContain('25 % (1/4)')
     expect((await ui.find({ type: 'Text', text: /▸ Écrit le code/ }))?.text).toBe('  ▸ Écrit le code')
     await ui.unmount()
