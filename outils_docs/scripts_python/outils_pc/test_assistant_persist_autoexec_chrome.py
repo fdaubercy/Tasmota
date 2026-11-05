@@ -37,7 +37,7 @@ verifie = tpc.verifie
 ENV = "tasmota32-bureau-interrupteur-energie"
 CARTE = "data/bureau/tasmota32-interrupteur-energie"
 MDP = "INVENTE_sonde_77"
-FICHIER = ("; Essai de la sonde\nSetOption146 ON\nBacklog WifiPower 17; SSId1 ReseauInvente; Password1 " + MDP +
+FICHIER = ("; Essai de la sonde\nSetOption146 ON\nBacklog WifiPower 17; WebLog 2; SSId1 ReseauInvente; Password1 " + MDP +
            "\nHostname DISJONCTEUR-ESSAI\nWebSesnor2 0\nPulseTime1 50\nTimers 1\n"
            'Timer1 {"Enable":1,"Mode":0,"Time":"08:00","Window":0,"Days":"1111111","Repeat":1,"Output":1,"Action":1}\n'
            ";MqttPassword " + MDP + "\n")
@@ -46,6 +46,11 @@ SUR_CARTE = "WebLog 2\nPassword1 ***\n"
 SAUVEGARDE = r"C:\essai\autoexec_cartes\copie.bat"
 TEMOINS = {                                             # nom -> (texte de la page, remplacement, verification qui doit echouer)
     "redemarrer": ('redemarrer: $("a-redemarrer").checked', "redemarrer: true", "envoi : le bouchon recoit redemarrer=False"),
+    "backlog-entiere": ("if (!reste.length) return null;", "return null;", "A11 : Backlog : seul le segment de la commande part"),
+    "ligne-decalee": ("l.splice(n - 1, 1); appliqueLignes(l, n);", "l.splice(n, 1); appliqueLignes(l, n);", "A11 : « Supprimer la ligne N » retire cette ligne, rien d'autre"),
+    "sans-achange": ("aChange(); clearTimeout(X.minuteur); analyse();", "", "A11 : « Remplacer » ferme le panneau d'envoi"),
+    "perso-direct": ('if (ligne && existantes(nomsDe(ligne)).length) $("a-existe").scrollIntoView({block: "center"}); else insere();', "insere();",
+                     "A11 : « Inserer » de Tes commandes : le choix d'abord, rien d'insere"),
     "garde-envoi": ("if (modifie()) fermeEnvoi();", "", "envoi : texte modifie apres l'ouverture -> panneau ferme ou « Envoyer » grise"),
 }
 ENROBE = """window.__corps = []; (function () { var f = window.fetch; window.fetch = function () {
@@ -136,6 +141,7 @@ def sonde(m):
     verifie(attend(cdp, "document.getElementById('a-texte').value.indexOf('Hostname') >= 0", 10), True, "carte choisie : texte charge")
     verifie(js(cdp, "var v = document.getElementById('a-texte').value; return [v.indexOf('***') >= 0, v.split('***').length - 1]"), [True, 2],
             "texte : les 2 secrets en ***")
+    verifie(js(cdp, "return document.getElementById('a-supprimer').disabled"), True, "suppression : grisee tant qu'aucune ligne n'est visee")
     lu = json.loads(m.get("/autoexec?env=" + ENV))
     avs = lu["avertissements"]
     attendu_points = sorted({a["ligne"] for a in avs})
@@ -252,13 +258,117 @@ def sonde(m):
     tpc.clic(cdp, "a-annuler")
     verifie(js(cdp, "return document.getElementById('a-texte').value.indexOf('Timer2') >= 0 && document.getElementById('a-annuler').disabled"), True,
             "« Annuler les modifications » : texte du depot remis")
+    refus = sonde_lignes(cdp, f)
     time.sleep(1)
     verifie(js(cdp, f"return document.documentElement.outerHTML.indexOf({json.dumps(MDP)}) < 0 && document.getElementById('a-texte').value.indexOf({json.dumps(MDP)}) < 0"),
             True, "secret : absent du DOM et du texte")
     verifie(js(cdp, f"return [window.__corps.length > 5, window.__corps.some(function(t){{return t.indexOf({json.dumps(MDP)}) >= 0}})]"), [True, False],
             "secret : absent de toutes les reponses lues par la page")
     attendues = [e for e in cdp.erreurs() if e.startswith("journal Chrome") and "/autoexec/ecrit" in e and "400" in e]
-    verifie([e for e in cdp.erreurs() if e not in attendues], [], "aucune erreur JS (hors le 400 de l'ecriture refusee)")
+    verifie([e for e in cdp.erreurs() if e not in attendues and e not in refus], [], "aucune erreur JS (hors le 400 de l'ecriture refusee et du secret en trop)")
+
+
+def valeur(cdp, ident="a-texte"):
+    return js(cdp, f"return document.getElementById({json.dumps(ident)}).value")
+
+
+def choisit_banque(cdp, nom):
+    tpc.saisit(cdp, "a-recherche", nom)
+    verifie(attend(cdp, f"!!document.querySelector('#a-resultats [data-nom=\"{nom}\"]')", 5), True, f"A11 : {nom} dans la banque")
+    js(cdp, f"document.querySelector('#a-resultats [data-nom=\"{nom}\"]').click()")
+    return js(cdp, "return document.getElementById('a-apercu').textContent")
+
+
+def autre_valeur(cdp):
+    """SetOption146 choisie avec OFF : la ligne du fichier dit ON, le remplacement change donc vraiment le texte."""
+    choisit_banque(cdp, "SetOption146")
+    tpc.saisit(cdp, "a-c-etat", "OFF", "change")
+    return js(cdp, "return document.getElementById('a-apercu').textContent")
+
+
+def ouvre_envoi(cdp):
+    tpc.clic(cdp, "a-envoyer")
+    verifie(attend(cdp, "document.getElementById('a-envoi-adresse').textContent.indexOf('ESSAI-SONDE') >= 0", 10), True, "A11 : panneau d'envoi ouvert")
+
+
+def sonde_lignes(cdp, f):
+    """Commande deja presente (remplacer, enlever), suppression d'une ligne ; le texte de depart est celui du depot."""
+    depart = valeur(cdp)
+    lignes = depart.split("\n")
+    nouvelle = autre_valeur(cdp)
+    num = lignes.index("SetOption146 ON") + 1
+    verifie(js(cdp, "return [document.getElementById('a-existe').hidden, document.getElementById('a-inserer').textContent.indexOf('quand même') >= 0]"), [False, True],
+            "A11 : commande deja presente -> choix proposes, « Inserer quand meme » garde")
+    verifie(js(cdp, "return document.getElementById('a-existe-texte').textContent").find(f"ligne {num}") >= 0, True, "A11 : le choix dit la ligne existante")
+    tpc.clic(cdp, "a-remplacer")
+    apres = valeur(cdp).split("\n")
+    verifie((apres[num - 1], len(apres), sum(l.startswith("SetOption146") for l in apres)), (nouvelle, len(lignes), 1), "A11 : « Remplacer » : la ligne prend la nouvelle valeur")
+    tpc.clic(cdp, "a-annuler")
+    tpc.clic(cdp, "a-enlever")
+    verifie(valeur(cdp).split("\n"), lignes[:num - 1] + lignes[num:], "A11 : « Enlever l'existante » : seule cette ligne part")
+    verifie(js(cdp, "return [document.getElementById('a-existe').hidden, document.getElementById('a-inserer').textContent.indexOf('quand même') < 0]"), [True, True],
+            "A11 : commande enlevee -> « Inserer » normal")
+    tpc.clic(cdp, "a-annuler")
+    # commande qui se repete volontairement (Delay, Publish...) : insertion possible
+    tpc.saisit(cdp, "a-c-etat", "OFF", "change")
+    tpc.clic(cdp, "a-inserer")
+    verifie(sum(l.startswith("SetOption146") for l in valeur(cdp).split("\n")), 2, "A11 : « Inserer quand meme » : deux lignes")
+    tpc.clic(cdp, "a-annuler")
+    # le bouton de « Tes commandes » (Hostname, deja dans le fichier) : le choix d'abord
+    js(cdp, "document.querySelector('#a-perso button').click()")
+    verifie((valeur(cdp), js(cdp, "return document.getElementById('a-existe').hidden")), (depart, False), "A11 : « Inserer » de Tes commandes : le choix d'abord, rien d'insere")
+    # chaque chemin ferme le panneau d'envoi : c'est le fichier du DEPOT qui part
+    ouvre_envoi(cdp)
+    autre_valeur(cdp)
+    tpc.clic(cdp, "a-remplacer")
+    verifie(js(cdp, "return document.getElementById('a-panneau-envoi').hidden"), True, "A11 : « Remplacer » ferme le panneau d'envoi")
+    tpc.clic(cdp, "a-annuler")
+    # supprimer une ligne : celle du secret en commentaire, visee par un clic sur son avertissement
+    num = next(i for i, l in enumerate(lignes, 1) if l.startswith(";MqttPassword"))
+    js(cdp, f"document.querySelector('#a-avertissements [data-ligne=\"{num}\"]').click()")
+    verifie(js(cdp, "return document.getElementById('a-supprimer').textContent"), f"Supprimer la ligne {num}", "A11 : le bouton nomme la ligne visee")
+    ouvre_envoi(cdp)
+    tpc.clic(cdp, "a-supprimer")
+    verifie(valeur(cdp).split("\n"), lignes[:num - 1] + lignes[num:], "A11 : « Supprimer la ligne N » retire cette ligne, rien d'autre")
+    verifie(js(cdp, "return document.getElementById('a-panneau-envoi').hidden"), True, "A11 : « Supprimer » ferme le panneau d'envoi")
+    tpc.clic(cdp, "a-enregistrer")
+    verifie(attend(cdp, "document.getElementById('a-diff').textContent.indexOf('-;MqttPassword ***') >= 0", 10), True, "A11 : ligne a secret retiree : diff sans valeur")
+    tpc.clic(cdp, "a-annuler")
+    # enlever un doublon du persist depuis la liste
+    bouton = "document.querySelector('#a-avertissements [data-enleve]')"
+    verifie(attend(cdp, f"!!{bouton}", 5), True, "A11 : « Enlever » sur un doublon du persist")
+    cmd, num = js(cdp, f"var b = {bouton}; return [b.getAttribute('data-enleve'), +b.closest('[data-ligne]').getAttribute('data-ligne')]")
+    ouvre_envoi(cdp)
+    js(cdp, f"{bouton}.click()")
+    verifie(cmd.lower() in valeur(cdp).split("\n")[num - 1].lower(), False, f"A11 : doublon {cmd} enleve de sa ligne")
+    verifie(valeur(cdp).split("\n")[:num - 1], lignes[:num - 1], "A11 : doublon : les lignes d'avant intactes")
+    verifie(js(cdp, f"var b = {bouton}; return !b || b.disabled"), True, "A11 : numeros perimes : « Enlever » inactif jusqu'a la prochaine analyse")
+    verifie(js(cdp, "return document.getElementById('a-panneau-envoi').hidden"), True, "A11 : « Enlever » ferme le panneau d'envoi")
+    tpc.clic(cdp, "a-annuler")
+    # apparitions d'un secret changees : refus du serveur, affiche (seul endroit ou un 400 est attendu)
+    avant_refus = len(cdp.erreurs())
+    tpc.saisit(cdp, "a-texte", depart + "Password1 ***\n")
+    tpc.clic(cdp, "a-enregistrer")
+    verifie(attend(cdp, "document.getElementById('a-retours').textContent.indexOf('ajoutees ou retirees') >= 0", 10), True,
+            "A11 : apparitions d'un secret changees : refus affiche au diff")
+    time.sleep(0.8)                                     # l'analyse a la frappe (400 ms) refuse aussi : dans la fenetre toleree
+    refus = cdp.erreurs()[avant_refus:]
+    tpc.clic(cdp, "a-annuler")
+    # commande dans une Backlog : seul son segment part, le secret voisin revient a l'ecriture
+    nouvelle = choisit_banque(cdp, "WebLog")
+    num = next(i for i, l in enumerate(lignes, 1) if "WifiPower" in l)
+    tpc.clic(cdp, "a-remplacer")
+    apres = valeur(cdp).split("\n")
+    verifie(apres[num - 1:num + 1], ["Backlog WifiPower 17; SSId1 ReseauInvente; Password1 ***", nouvelle], "A11 : Backlog : seul le segment de la commande part")
+    tpc.clic(cdp, "a-enregistrer")
+    verifie(attend(cdp, "!document.getElementById('a-ecrire').disabled", 10), True, "A11 : Backlog : diff pret")
+    js(cdp, "document.getElementById('a-rouges-lus').click()")
+    tpc.clic(cdp, "a-ecrire")
+    verifie(attend(cdp, "!!document.getElementById('a-ecrit-ok')", 10), True, "A11 : Backlog : ecriture acceptee")
+    ecrit = f.read_text(encoding="utf-8")
+    verifie((f"SSId1 ReseauInvente; Password1 {MDP}" in ecrit, "WebLog 2" in ecrit, nouvelle in ecrit, "***" in ecrit), (True, False, True, False),
+            "A11 : Backlog : fichier ecrit, secret remis cote serveur")
+    return refus
 
 
 def principal():

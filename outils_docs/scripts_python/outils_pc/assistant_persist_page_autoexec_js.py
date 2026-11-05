@@ -12,6 +12,8 @@ enferme dans une fonction : aucun nom ne deborde sur l'onglet Persist).
 Textes du serveur par textContent (el) ou attribut title, jamais innerHTML.
 """
 
+from assistant_persist_page_autoexec_lignes_js import JS as LIGNES
+
 JS = r"""
 // ---- Onglets ----
 function montreOnglet(nom) {
@@ -69,6 +71,7 @@ function dessineListe() {
       b.onclick = function (ev) { ev.stopPropagation(); corrige(a.ligne, ecrit[1], a.correction); };
       s.appendChild(b);
     } else if (a.correction) s.appendChild(el("span", {"class": "discret"}, " — " + a.correction));
+    if (a.commande) boutonEnlever(a, s);
     d.appendChild(s);
     d.onclick = function () { vaLigne(a.ligne); };
     d.onkeydown = function (ev) { if (ev.target === d && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); vaLigne(a.ligne); } };
@@ -107,7 +110,7 @@ function majCurseur() {                              // seulement sur un geste d
   if (document.activeElement === $("a-texte")) X.ligneIns = ligneCurseur() + 1;
   majInsertion();
 }
-function majInsertion() { $("a-inserer").textContent = "Insérer à la ligne " + ligneIns(); majProposition(); }
+function majInsertion() { majProposition(); majLignes(); }
 function corrige(n, ecrit, par) {
   var l = texte().split("\n"), re = new RegExp("(^|[\\s;])" + ecrit.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?=$|[\\s=;])");
   var ta = $("a-texte"), d = ta.selectionStart, f = ta.selectionEnd;
@@ -117,6 +120,7 @@ function corrige(n, ecrit, par) {
 function aChange() {
   X.numero++;                                          // une analyse partie avant cette frappe ne s'applique plus
   if (modifie()) fermeEnvoi();                         // l'envoi part du fichier du DEPOT : jamais avec un texte non ecrit
+  document.querySelectorAll("[data-enleve]").forEach(function (b) { b.disabled = true; });   // numeros perimes jusqu'a la prochaine analyse
   dessineMarge(); majTete(); majInsertion();
   clearTimeout(X.minuteur); X.minuteur = setTimeout(analyse, 400);
 }
@@ -250,7 +254,7 @@ function carteCommande(e, perso) {
   l.appendChild(el("span", {"class": "code"}, perso ? r.ligne || e.modele : nomAffiche(e)));
   if (perso) {
     var b = el("button", {"class": "btn s", type: "button"}, "Insérer");
-    b.onclick = function (ev) { ev.stopPropagation(); choisit(e); if (!rendu(e, X.valeurs).erreur) insere(); };
+    b.onclick = function (ev) { ev.stopPropagation(); choisit(e); insereOuMontre(); };
     l.appendChild(b);
   } else l.appendChild(el("span", {"class": "etiq" + (e.origine === "perso" ? " u" : "")}, e.origine === "perso" ? "perso" : e.categorie));
   d.appendChild(l);
@@ -306,6 +310,7 @@ function apercu() {
   var r = rendu(X.choisie, X.valeurs);
   $("a-apercu").textContent = r.ligne || ""; $("a-ajout-erreur").textContent = r.erreur || "";
   $("a-inserer").disabled = !!r.erreur;
+  majLignes();
 }
 function insere() {
   var r = rendu(X.choisie, X.valeurs), l = texte().split("\n"), n = ligneIns();
@@ -439,4 +444,4 @@ $("m-champs").addEventListener("input", function (ev) {
 });
 """
 
-JS = JS.replace("/*JS_AUTOEXEC_MODELE*/", MODELE)
+JS = JS.replace("/*JS_AUTOEXEC_MODELE*/", MODELE + LIGNES)

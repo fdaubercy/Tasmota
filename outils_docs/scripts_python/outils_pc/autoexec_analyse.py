@@ -93,14 +93,16 @@ def _casse(ecrit, cible):
 
 
 def analyse(texte, persist, commandes, banque_noms=(), texte_config=None):
-    """Avertissements du fichier : [{ligne, type, niveau, message, correction}], dans l'ordre des lignes."""
+    """Avertissements du fichier : [{ligne, type, niveau, message, correction, commande}], dans l'ordre des lignes
+    (commande : nom a enlever par le bouton de la page, doublon et redemarrage seulement ; sinon None)."""
     connues = set(commandes["connues"]) | set(banque_noms)
     redemarrent = commandes["redemarrent"]
     posees = None
     res = []
 
-    def ajoute(l, type_, niveau, message, correction=None):
-        res.append({"ligne": l["numero"], "type": type_, "niveau": niveau, "message": message, "correction": correction})
+    def ajoute(l, type_, niveau, message, correction=None, cmd=None):
+        res.append({"ligne": l["numero"], "type": type_, "niveau": niveau, "message": message, "correction": correction,
+                    "commande": cmd})
 
     for l in lignes(texte):
         if not l["commentaire"] and len(l["brut"].encode("utf-8")) > LIMITE:
@@ -118,9 +120,9 @@ def analyse(texte, persist, commandes, banque_noms=(), texte_config=None):
             if nom in redemarrent and not _sans_effet(redemarrent[nom], valeur):
                 if redemarrent[nom]["quand"] == "toujours":
                     ajoute(l, "redemarrage", "rouge", f"{ecrit} redemarre la carte a chaque demarrage : boucle de redemarrage.",
-                           "Retirer la ligne ; regler cette valeur autrement (persist, console).")
+                           "Retirer la ligne ; regler cette valeur autrement (persist, console).", ecrit)
                 else:
-                    ajoute(l, "redemarrage", "orange", f"{ecrit} redemarre la carte quand sa valeur change.")
+                    ajoute(l, "redemarrage", "orange", f"{ecrit} redemarre la carte quand sa valeur change.", None, ecrit)
             if posees is None:
                 posees = commandes_posees(persist or {}, texte_config if texte_config is not None else _texte_config())
             if nom in posees:
@@ -133,7 +135,7 @@ def analyse(texte, persist, commandes, banque_noms=(), texte_config=None):
                     else:
                         cle_txt = ""
                     ajoute(l, "doublon", "orange", f"{ecrit} est deja reposee a chaque demarrage par le persist{cle_txt}.",
-                           "Retirer la ligne, ou changer le persist.")
+                           "Retirer la ligne, ou changer le persist.", ecrit)
             if nom not in connues and ecrit.upper() not in connues and re.match(r"[A-Za-z]", ecrit):
                 chiffres = "" if nom.startswith("SETOPTION") else (re.search(r"\d+$", ecrit) or [""])[0]
                 proche = difflib.get_close_matches(nom, sorted(connues), 1)

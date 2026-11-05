@@ -52,6 +52,7 @@ CSS = r"""
   .a-ajout h3{font-size:12px;margin:14px 0 4px;color:var(--doux);text-transform:uppercase;letter-spacing:.04em}
   .a-editeur{border-top:1px solid var(--bord);margin-top:12px;padding-top:6px}
   .m-ch{border:1px solid var(--bord);border-radius:6px;padding:4px 6px;margin:6px 0}
+  #a-existe-texte{overflow-wrap:anywhere}
   .a-comparaison{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 """
 
@@ -70,6 +71,8 @@ HTML = r"""
           <h2>autoexec.bat</h2>
           <div class="a-ed"><div class="a-marge" id="a-marge"></div><textarea id="a-texte" wrap="off" spellcheck="false"
             aria-label="Contenu de autoexec.bat" disabled></textarea></div>
+          <div class="a-actions"><button class="btn" id="a-supprimer" type="button" disabled>Supprimer la ligne</button>
+            <span class="discret">celle du curseur, ou de l'avertissement cliqué</span></div>
         </div>
         <div class="carte">
           <h2 id="a-titre-analyse">Analyse</h2>
@@ -116,6 +119,9 @@ HTML = r"""
           <div class="a-apercu code" id="a-apercu"></div>
           <div class="erreur" id="a-ajout-erreur"></div>
           <button class="btn p" id="a-inserer" type="button">Insérer</button>
+          <div id="a-existe" class="avert" hidden><span id="a-existe-texte"></span>
+            <div class="a-actions"><button class="btn p" id="a-remplacer" type="button">Remplacer par la nouvelle</button>
+              <button class="btn" id="a-enlever" type="button">Enlever l'existante</button></div></div>
         </div>
         <h3>Tes commandes</h3>
         <div id="a-perso"></div>

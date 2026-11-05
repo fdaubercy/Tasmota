@@ -44,11 +44,13 @@ def noms_secrets():
 
 def banc():
     texte = (CARTE / "autoexec.bat").read_text(encoding="utf-8")
+    if "SetOption146" not in texte:     # le vrai fichier evolue (retiree par l'onglet le 2026-11-05) : le cas reste teste
+        texte = "SetOption146 ON\n" + texte
     persist = json.loads((CARTE / "_persist.json").read_text(encoding="utf-8"))
     commandes = autoexec_commandes.charge(RACINE)
     cfg = (RACINE / aa.CONFIG_PERSIST).read_text(encoding="utf-8")
     ls = aa.lignes(texte)
-    num = lambda debut: next(l["numero"] for l in ls if l["brut"].startswith(debut))
+    num = lambda debut: next((l["numero"] for l in ls if l["brut"].startswith(debut)), 0)
     ana = lambda t, p=persist: aa.analyse(t, p, commandes, texte_config=cfg)
 
     # lignes()
@@ -72,6 +74,8 @@ def banc():
             "reel : SetOption146 -> doublon orange")
     verifie(any("diverses.affichageTempESP32" in a["message"] and '"ON"' in a["message"] for a in d), True,
             "reel : doublon nomme la cle du persist et sa valeur")
+    verifie([a["commande"] for a in d if "SetOption146" in a["message"]], ["SetOption146"], "doublon : porte le nom de sa commande (bouton Enlever)")
+    verifie({a["commande"] for a in par_type("secret")}, {None}, "secret : pas de commande a enlever depuis la liste")
     verifie([a for a in res if a["type"] not in ("secret", "doublon")], [],
             "reel : ni redemarrage ni inconnue ni longueur (AdcParam1, WebSensor2 0, Timer, Backlog)")
     verifie({a["ligne"] for a in d} <= {num("SetOption146"), num("SetOption1 "), num("SetOption56"), num("SetOption55"),
