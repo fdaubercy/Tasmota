@@ -150,7 +150,8 @@ def _assure_liste(racine, lignes):
             continue
         i = _fin_section(ini, lignes, "berry_commun")
         cle = f"{liste} =  "
-        lignes = lignes[:i + 1] + list(commentaire) + [cle + fichiers[0]] +             [" " * len(cle) + f for f in fichiers[1:]] + lignes[i + 1:]
+        lignes = (lignes[:i + 1] + list(commentaire) + [cle + fichiers[0]] +
+                  [" " * len(cle) + f for f in fichiers[1:]] + lignes[i + 1:])
     return lignes
 
 
