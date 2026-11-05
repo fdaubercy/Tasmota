@@ -28,6 +28,11 @@ CUVE, BUREAU, PORTE = ("tasmota32s3-garage-capteurs-cuve-modbus", "tasmota32-bur
                        "tasmota32-rdc-vr-porte")
 AUTOEXEC_PORTE = "import demarrage\nif demarrage.prologue()\n    demarrage.charge([\"controleWeb\"])\nend\n"
 NOMS = {Path(f).name for f in age.FICHIERS_MOTEUR}
+MOTEUR = {"pages_graphiques.js", "pages_graphiques_formule.js", "pagesGraphiquesValidation.be"}   # liste pages_graphiques_moteur
+PAGE = NOMS - MOTEUR                                  # liste pages_graphiques : un env a historique l'exclut sans page
+HISTO_ON = '{"diverses": {"historique": {"activation": "ON"}}}'
+HISTORIQUES = {CUVE, "tasmota32s3-garage-rideau-garage-modbus", "tasmota32p4-garage-serveur-modbus",
+               "tasmota32s3-garage-serveur-modbus", "tasmota32s3-cave-serveur-rly", "tasmota32s3-etage2-grenier"}
 SANS_BUILD = lambda: []
 ECHECS = []
 
@@ -66,7 +71,12 @@ def copie(dossier):
     for env in (CUVE, BUREAU):
         d = racine / fbe.dossier_carte(env)
         d.mkdir(parents=True)
-        shutil.copy2(DEPOT / fbe.dossier_carte(env) / "autoexec.be", d / "autoexec.be")
+        texte = (DEPOT / fbe.dossier_carte(env) / "autoexec.be").read_bytes().decode("utf-8")
+        (d / "autoexec.be").write_bytes(age._autoexec(texte, False).encode("utf-8"))   # la cuve du depot porte deja sa page
+    for env in HISTORIQUES | {BUREAU}:                  # critere de l'exclusion : historique ON dans le persist
+        d = racine / fbe.dossier_carte(env)
+        d.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(DEPOT / fbe.dossier_carte(env) / "_persist.json", d / "_persist.json")
     d = racine / fbe.dossier_carte(PORTE)
     d.mkdir(parents=True)
     (d / "autoexec.be").write_bytes(AUTOEXEC_PORTE.encode("utf-8"))
@@ -114,10 +124,14 @@ def relu_par_platformio(racine, env, option):
 
 def test_exclusions(racine):
     envs = [e["nom"] for e in fbe.envs_proposes(racine)]
-    verifie([e for e in envs if exclus(racine, e) != NOMS], [], "exclusions : les 6 fichiers exclus de tous les envs ESP32")
+    attendu = lambda e: PAGE if e in HISTORIQUES else NOMS
+    verifie([e for e in envs if exclus(racine, e) != attendu(e)], [], "exclusions : 6 fichiers exclus, le moteur reste aux envs a historique")
+    verifie(exclus(racine, CUVE), PAGE, "exclusions : la cuve (historique ON) n'exclut pas le moteur")
+    verifie(exclus(racine, BUREAU), NOMS, "exclusions : le differentiel (sans historique) exclut tout")
     verifie(age.prevoit_exclusions(racine)["fichiers"], [], "exclusions : une 2e passe ne change rien")
-    for env in (CUVE, PORTE, "tasmota32-base"):
+    for env in (PORTE, "tasmota32-base"):
         verifie(NOMS <= relu_par_platformio(racine, env, fbe.EXCLUDE), True, f"exclusions relues par PlatformIO : {env}")
+    verifie(relu_par_platformio(racine, CUVE, fbe.EXCLUDE) & NOMS, PAGE, "exclusions relues par PlatformIO : cuve = page seule")
 
 
 def test_premiere_page(racine):
@@ -132,10 +146,11 @@ def test_premiere_page(racine):
     verifie(exclus(racine, CUVE), set(), "1re page : la cuve embarque le moteur")
     verifie(exclus(racine, BUREAU), NOMS, "1re page : le differentiel l'exclut toujours")
     verifie(exclus(racine, PORTE), NOMS, "1re page : la porte l'exclut toujours")
+    verifie(exclus(racine, "tasmota32s3-garage-rideau-garage-modbus"), PAGE, "1re page : le rideau (historique) garde le moteur")
     verifie(relu_par_platformio(racine, CUVE, fbe.EXCLUDE) & NOMS, set(), "1re page relue par PlatformIO : cuve sans exclusion")
     verifie(NOMS <= relu_par_platformio(racine, BUREAU, fbe.EXCLUDE), True, "1re page relue par PlatformIO : differentiel exclu")
-    verifie(NOMS <= relu_par_platformio(racine, "tasmota32s3-garage-rideau-garage-modbus", fbe.EXCLUDE), True,
-            "1re page relue par PlatformIO : rideau exclu")
+    verifie(relu_par_platformio(racine, "tasmota32s3-garage-rideau-garage-modbus", fbe.EXCLUDE) & NOMS, PAGE,
+            "1re page relue par PlatformIO : rideau = page seule")
     lignes = (racine / dossier / "autoexec.be").read_text(encoding="utf-8").splitlines()
     i = next(k for k, l in enumerate(lignes) if l.strip().startswith("demarrage.historique()"))
     verifie(lignes[i + 1], "    " + age.LIGNE_AUTOEXEC, "1re page : ligne d'autoexec juste apres historique()")
@@ -173,6 +188,25 @@ def test_exclusion_heritee(racine):
             "exclusion heritee relue par PlatformIO : moteur leve, page_cuve toujours exclue")
     ecrit(racine, PORTE, None)
     meme_etat(racine, etat, "exclusion heritee : retrait octet pour octet")
+
+
+def test_historique_sans_page(racine):
+    """Spec 7.3 : l'historique ON suffit a garder le moteur ; sans lui, tout est exclu ; la page leve tout."""
+    (racine / fbe.dossier_carte(PORTE) / "_persist.json").write_text(HISTO_ON, encoding="utf-8")
+    p = age.prevoit_exclusions(racine)
+    verifie([f["chemin"] for f in p["fichiers"]], [fbi.FICHIER_CENV], "historique ON sur la porte : le cenv se corrige")
+    age.ecrit_exclusions(racine, p["empreinte"], SANS_BUILD)
+    verifie((exclus(racine, PORTE), exclus(racine, "tasmota32-base")), (PAGE, NOMS), "porte (historique, base exclut tout) : page seule")
+    verifie(NOMS & relu_par_platformio(racine, PORTE, fbe.EXCLUDE), PAGE, "porte relue par PlatformIO : page seule")
+    etat = instantane(racine)
+    ecrit(racine, PORTE, description())
+    verifie(exclus(racine, PORTE), set(), "historique + 1re page : les deux exclusions levees")
+    ecrit(racine, PORTE, None)
+    meme_etat(racine, etat, "historique, derniere page retiree : retour octet pour octet")
+    (racine / fbe.dossier_carte(PORTE) / "_persist.json").unlink()
+    p = age.prevoit_exclusions(racine)
+    age.ecrit_exclusions(racine, p["empreinte"], SANS_BUILD)
+    verifie(exclus(racine, PORTE), NOMS, "historique ON retire : la porte exclut a nouveau tout")
 
 
 def test_sans_historique(racine):
@@ -331,7 +365,7 @@ def test_invalide(racine):
 
 
 TESTS = [test_exclusions, test_premiere_page, test_deuxieme_modification, test_derniere_page, test_exclusion_heritee,
-         test_sans_historique, test_liquide, test_solidifie, test_build_en_cours, test_empreinte_perimee,
+         test_sans_historique, test_historique_sans_page, test_liquide, test_solidifie, test_build_en_cours, test_empreinte_perimee,
          test_exception_au_milieu, test_exclusion_a_la_main, test_reference_sur_la_ligne_option, test_controle_refuse,
          test_annulation_suppression, test_invalide]
 

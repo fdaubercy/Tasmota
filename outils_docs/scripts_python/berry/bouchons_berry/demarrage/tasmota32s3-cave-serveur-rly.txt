@@ -6,6 +6,6 @@ commandes (8) : AcquittePompe, EtatPompe, ReglageDiscovery, ReglageGlobal, Regla
 crons (1) : majHistorique
 minuteries (1) : demarrageDiffere
 compiles (1) : /controlePompeVideCave.bec
-sources (1) : /autoexec.be
+sources (2) : /autoexec.be, /pagesGraphiquesValidation.be
 globales (18) : LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controlePompeVideCave:instance, controleUDP_multicast:instance, controleUDP_unicast:instance, diverses:instance, gpio:module, light:module, modules:instance, persist:instance, serveur:instance, wire1:instance, wire2:instance
 erreurs (0) : 

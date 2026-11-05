@@ -6,6 +6,6 @@ commandes (15) : DIMMER, HSBCOLOR, RUBANESCLAVE, ReglageConn16Channel, ReglageDi
 crons (3) : conn16channels_sondage_Conn16channel1, majHistorique, majLogGarage
 minuteries (2) : coprocesseur, demarrageDiffere
 compiles (2) : /controleGarage.bec, /garageFonctions.bec
-sources (1) : /autoexec.be
+sources (2) : /autoexec.be, /pagesGraphiquesValidation.be
 globales (23) : .historiqueFonctions:instance, LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatModbusFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controleGarage:instance, controleUDP_multicast:instance, controleUDP_unicast:instance, controleVRoulant:instance, diverses:instance, fsMqttRecepteur:instance, garageFonctions:nil, gpio:module, light:module, modules:instance, persist:instance, serveur:instance, wire1:instance, wire2:instance
 erreurs (0) : 
