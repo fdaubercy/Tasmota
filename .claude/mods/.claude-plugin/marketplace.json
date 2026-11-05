@@ -16,6 +16,11 @@
       "name": "suivi-plan",
       "source": "./suivi-plan",
       "description": "Suivi des plans de travail (tasks/plans/) : recopie des plans valides, plan actif dans chaque conversation, ligne d avancement, commande /suivi."
+    },
+    {
+      "name": "suivi-sous-agents",
+      "source": "./suivi-sous-agents",
+      "description": "Volet de suivi des sous-agents de la conversation : tache en cours, pourcentage d'apres leur liste de taches, duree, outils appeles."
     }
   ]
 }
