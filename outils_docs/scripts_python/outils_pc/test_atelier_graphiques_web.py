@@ -56,7 +56,7 @@ class Banc:
         for rel in SD:
             (self.racine / "data/sd" / rel).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(DEPOT / "data/sd" / rel, self.racine / "data/sd" / rel)
-        self.builds, self.morte, self.appels = [], False, []
+        self.builds, self.morte, self.appels, self.composition = [], False, [], None
         with socket.socket() as s:
             s.bind(("127.0.0.1", 0))
             self.port = s.getsockname()[1]
@@ -75,6 +75,8 @@ class Banc:
         if "p=jour" in chemin:
             return json.dumps({"nom": "mesures", "series": ["sensorsCuve.niveauCuve.volume"], "pas": 300, "t0": 0,
                                "valeurs": [[4100, 4174]]}).encode()
+        if chemin == "/json/graphiques.json":
+            return json.dumps({"affichage": {}, **({} if self.composition is None else {"graphiques": self.composition})}).encode()
         if chemin.startswith("/cm"):
             return json.dumps(SNS).encode()
         return b'{"historique": true}'
@@ -249,7 +251,60 @@ def test_description_diff_ecrire(b):
             "GET /description : description invalide -> erreur avec le motif, proposition de depart")
 
 
-TESTS = [test_page_et_moteur, test_envs, test_series_valeurs, test_conseil_valide, test_acces, test_description_diff_ecrire]
+def atelier_g(titre="Volume"):
+    return {"moteur": "pages", "type": "courbe", "titre": titre, "periode": "jour",
+            "series": [{"chemin": "sensorsCuve.niveauCuve.volume", "libelle": "Vol"}]}
+
+
+def test_destination_graphiques(b):
+    rel = tage.fbe.dossier_carte(CUVE) + "/graphiques.json"
+    fichier = b.racine / rel
+    base = json.dumps({"affichage": {"a.b": {"libelle": "A"}}, "groupes": {"G": ["a"]}}, indent=chr(9)) + chr(10)
+    fichier.write_text(base, encoding="utf-8")
+    corps = {"env": CUVE, "destination": "graphiques", "operation": "ajoute", "graphique": atelier_g()}
+    statut, e = b.requete("GET", f"/composition?env={CUVE}")
+    verifie((statut, e["etat"], e["historique"]), (200, "identique", True), "GET /composition : carte sans composition = depot")
+    b.composition = [atelier_g("Sur la carte")]
+    statut, e = b.requete("GET", f"/composition?env={CUVE}")
+    verifie((statut, e["etat"], bool(e["diff"]), e["carte_valide"]), (200, "differente", True, True), "GET /composition : differente + diff")
+    b.morte = True
+    statut, e = b.requete("GET", f"/composition?env={CUVE}")
+    verifie((statut, e["etat"], bool(e["motif"])), (200, "non_verifiee", True), "GET /composition : carte hors ligne -> non verifiee")
+    b.morte = False
+    verifie(b.requete("GET", "/composition?env=inconnu")[0], 404, "GET /composition : env inconnu -> 404")
+    statut, r = b.requete("POST", "/diff", corps)
+    verifie((statut, "choisir base" in r), (400, True), "POST /diff graphiques : carte differente sans choix -> 400")
+    corps["base"] = "carte"
+    statut, d = b.requete("POST", "/diff", corps)
+    f = d["fichiers"][0]
+    verifie((statut, f["chemin"], f["ajouts"] > 0, fichier.read_text(encoding="utf-8")), (200, rel, True, base), "POST /diff graphiques : diff, rien d'ecrit")
+    b.builds = ["pio run"]
+    statut, r = b.requete("POST", "/ecrire", dict(corps, empreinte=d["empreinte"]))
+    verifie((statut, fichier.read_text(encoding="utf-8")), (409, base), "POST /ecrire graphiques pendant un build -> 409")
+    b.builds = []
+    statut, r = b.requete("POST", "/ecrire", dict(corps, empreinte="perimee"))
+    verifie(statut, 409, "POST /ecrire graphiques empreinte perimee -> 409")
+    statut, r = b.requete("POST", "/ecrire", dict(corps, empreinte=d["empreinte"]))
+    ecrit = json.loads(fichier.read_text(encoding="utf-8"))
+    verifie((statut, r["ecrits"], [g["titre"] for g in ecrit["graphiques"]], ecrit["groupes"]), (200, [rel], ["Sur la carte", "Volume"], {"G": ["a"]}),
+            "POST /ecrire graphiques : base carte + ajout, autres cles gardees")
+    b.composition = None
+    statut, r = b.requete("POST", "/diff", {"env": CUVE, "destination": "graphiques", "operation": "retire", "index": 0})
+    verifie(statut, 400, "POST /diff graphiques : carte sans composition mais depot avec -> choix exige (400)")
+    statut, r = b.requete("POST", "/diff", {"env": CUVE, "destination": "graphiques", "operation": "retire", "index": 0, "base": "depot"})
+    verifie(statut, 200, "POST /diff graphiques : retrait, base depot")
+    statut, r = b.requete("POST", "/diff", {"env": BUREAU, "destination": "graphiques", "operation": "ajoute", "graphique": atelier_g()})
+    verifie(statut, 404, "POST /diff graphiques : ESP32 classique -> 404")
+    b.composition = None
+    statut, r = b.requete("POST", "/diff", {"env": CUVE, "destination": "inconnue"})
+    verifie(statut, 400, "POST /diff : destination inconnue -> 400")
+    b.composition = [atelier_g("X")] * 9
+    statut, r = b.requete("POST", "/diff", dict(corps, base="carte"))
+    verifie((statut, "indisponible" in r), (400, True), "POST /diff graphiques base=carte invalide (9 graphiques) -> 400, motif")
+
+
+TESTS = [test_page_et_moteur, test_envs, test_series_valeurs, test_conseil_valide, test_acces, test_description_diff_ecrire,
+         test_destination_graphiques]
 
 
 if __name__ == "__main__":

@@ -18,11 +18,15 @@ Routes (les POST exigent l'en-tete X-Atelier-Graphiques: 1 et la meme origine ; 
                        y ajoute les parametres d'URL du lecteur de la carte (paquets de 12 chemins en direct)
     GET  /description  ?env= : {description (null si aucune), solidifie, erreur}
     GET  /moteur/<nom> fichiers du moteur de data/sd (liste fermee MOTEUR) ; ECharts et liquidfill decompresses
+    GET  /composition  ?env= : composition /graphiques de la carte en ligne (lecture seule) comparee au depot :
+                       {etat: identique|differente|non_verifiee, motif, diff, depot, carte, carte_valide, carte_motifs, historique}
     POST /conseil      {intention, series, destination, historique} -> atelier_graphiques_conseil.propose
     POST /valide       {description} -> {motifs}
     POST /diff         {env, description|null, solidifier} -> {fichiers: [{chemin, avant, apres, diff, ajouts,
                        retraits}], empreinte, signaux} ; description null = derniere page retiree
     POST /ecrire       {env, description|null, solidifier, empreinte} -> {ecrits} ; 409 si build ou empreinte perimee
+    Destination « graphiques » (A4) : /diff et /ecrire avec "destination": "graphiques" et {env, operation: ajoute|remplace|retire,
+                       graphique, index, base: depot|carte[, empreinte]} : cle `graphiques` de graphiques.json (atelier_graphiques_graphiques)
 Refus : 400 (saisie, motif en texte ; Content-Length hors 0..MAX_CORPS ; JSON trop imbrique), 404 (env inconnu ou hors S3/P4), 409 (build, empreinte), 500 (inattendu).
 """
 
@@ -41,6 +45,7 @@ import acces_web
 import atelier_graphiques_conseil as agc
 import atelier_graphiques_description as agd
 import atelier_graphiques_ecriture as age
+import atelier_graphiques_graphiques as agg
 import atelier_graphiques_series as ags
 import build_envs
 import fichiers_berry_etat as fbe
@@ -152,12 +157,28 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None):
             raise ValueError("solidifier : vrai ou faux attendu")
         return env, desc, solidifier
 
+    def graphiques(demande):
+        """Demande de la destination « graphiques » : (env, demande sans env ni destination)."""
+        return env_atelier(racine, demande.get("env")), {k: v for k, v in demande.items() if k not in ("env", "destination", "empreinte")}
+
     def traite_post(chemin, demande):
         if chemin == "/conseil":
             return agc.propose(demande.get("intention"), demande.get("series"), demande.get("destination"),
                                demande.get("historique"))
         if chemin == "/valide":
             return {"motifs": agd.valide(demande.get("description"))}
+        if chemin in ("/diff", "/ecrire") and demande.get("destination", "pages") not in ("pages", "graphiques"):
+            raise ValueError("destination : pages ou graphiques attendu")
+        if chemin == "/diff" and demande.get("destination") == "graphiques":
+            with verrou:
+                env, d = graphiques(demande)
+                return avec_diffs(agg.prevoit(racine, env, d, get=get))
+        if chemin == "/ecrire" and demande.get("destination") == "graphiques":
+            if not isinstance(demande.get("empreinte"), str):
+                raise ValueError("empreinte : chaine attendue")
+            with verrou:
+                env, d = graphiques(demande)
+                return {"ecrits": agg.ecrit(racine, env, d, demande["empreinte"], builds_en_cours, get=get)}
         if chemin == "/diff":
             with verrou:
                 return avec_diffs(age.prevoit(racine, *corps_ecriture(demande)))
@@ -215,6 +236,8 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None):
                     chemins, periode, mois, nom = parametres_valeurs(params)
                     v = ags.valeurs(racine, e, chemins, periode, get=_muette if muettes.get(e) else get, nom=nom, mois=mois)
                     self._json(v, entetes=[("X-Source", v["source"])])
+                elif url.path == "/composition":
+                    self._json(agg.etat_carte(racine, env(), get=get))
                 elif url.path == "/description":
                     self._json(description_de(racine, env()))
                 elif url.path.startswith("/moteur/"):
