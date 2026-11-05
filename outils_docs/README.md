@@ -1320,6 +1320,55 @@ page 7800). `/suppression/prepare` affiche le panneau des éléments retirés : 
 define, `default_envs` et `data_dir` de `platformio_override.ini`, dossier renommé en `...-sauvegarde`. Il faut cocher
 « J'ai vérifié ces éléments » avant que « Supprimer » (`/suppression`) s'active.
 
+### Onglet « autoexec.bat »
+
+Deuxième onglet de la page : modifier l'`autoexec.bat` d'une carte du parc, ou y ajouter des lignes, sans en connaître
+la syntaxe. Le fichier s'exécute **à chaque démarrage** de la carte. Choisir la carte en haut ; rien n'est écrit avant
+« Écrire dans le dépôt », rien n'est envoyé avant « Envoyer ».
+
+- **Le texte, à gauche**, se modifie librement. Les mots de passe y sont remplacés par `***` : la page ne les reçoit
+  jamais, le serveur les remet à l'écriture. Retirer ou ajouter une ligne portant une commande à `***`, alors qu'il en
+  reste une autre de la même commande, est refusé au diff (message explicite) : retaper la valeur ou annuler.
+- **« Supprimer la ligne N »**, sous le texte : la ligne du curseur, ou celle de l'avertissement cliqué.
+- **Les avertissements**, sous le texte et en points dans la marge (survol = détail, clic sur la liste = la ligne) :
+
+  | Niveau | Avertissement | Ce qu'il faut faire |
+  |---|---|---|
+  | Rouge | Redémarrage à répétition (`Hostname`…) | Retirer la ligne, régler la valeur autrement (bouton « Enlever ») |
+  | Rouge | Secret en clair, même en commentaire | Le dépôt est public : garder la valeur hors du fichier |
+  | Orange | Redémarrage si la valeur change | Vérifier (bouton « Enlever ») |
+  | Orange | Doublon : le persist repose déjà la commande au démarrage | Retirer la ligne (bouton « Enlever ») ou changer le persist |
+  | Orange | Commande inconnue | « Corriger » propose la plus proche |
+  | Orange | Ligne de plus de 510 octets : le firmware la tronque | Couper la ligne |
+
+  Les rouges demandent de cocher « J'ai lu les N avertissements rouges » à l'écriture et à l'envoi.
+- **« Ajouter », à droite** : chercher dans la banque (`outils_docs/schemas/banque_autoexec.json`), remplir le
+  formulaire, vérifier l'aperçu, insérer sous la ligne du curseur. « Nouveau modèle… » et « En faire un modèle »
+  ajoutent une commande à la banque (« Tes commandes »).
+- **Si la commande est déjà dans le fichier** : la page donne sa ligne et propose « Remplacer par la nouvelle » ou
+  « Enlever l'existante » ; « Insérer quand même » reste possible pour une commande qui se répète (`Delay`, `Publish`).
+  Dans une `Backlog`, seule la commande visée part ; une `Backlog` vidée disparaît. Les alias (`SO146`) ne sont pas
+  reconnus à cet endroit. Une ligne en commentaire ne compte pas.
+- **« Enregistrer… (diff) »** montre les changements, puis **« Écrire dans le dépôt »** écrit le fichier (refusé pendant un
+  build, ou si le fichier a changé sur le disque depuis sa lecture ; copie dans
+  `%LOCALAPPDATA%\outils_tasmota\fichiers_berry\sauvegardes\`). Le fichier n'est pas commité : à faire à la main.
+- **« Puis envoyer à la carte (OTA)… »** envoie **le fichier du dépôt** en HTTP par le Wi-Fi (`/ufsu`), sans toucher au
+  firmware ni au persist. Grisé tant qu'une modification n'est pas écrite. La page lit d'abord la carte (`Status 5`) et
+  refuse si son nom d'hôte diffère du `serveur.hostname` du persist du dépôt. Elle montre le fichier de la carte s'il
+  diffère et demande de cocher son remplacement ; la copie de l'ancien fichier part dans `autoexec_cartes\<env>\` du
+  même dossier. « Redémarrer la carte ensuite » est décochée : sinon la carte l'exécute au prochain démarrage. Pour une
+  carte derrière le maître (cuve, rideau), le maître passe en `Sleep 0` le temps de l'envoi.
+
+Autres voies : un envoi série de la page Build écrit aussi ce fichier, mais il réécrit tout le système de fichiers,
+persist compris. Pas d'envoi par MQTT pour l'instant (amélioration du plan). Un refus « répond X à Status 5, pas Y »
+veut dire que la carte n'a pas encore reçu le persist du dépôt : l'envoyer depuis la page Build, puis réessayer.
+
+Si Tasmota évolue, régénérer la liste des commandes : `autoexec_commandes.py --verifier` (écarts), `--generer` (mise à jour de
+`outils_docs/schemas/commandes_tasmota.json`). Conception : [spec](../docs/superpowers/specs/2026-11-03-onglet-autoexec-bat-design.md) ;
+plan : `tasks/plans/autoexec-bat.md`. Bancs : `test_autoexec_analyse.py`, `test_autoexec_banque.py`,
+`test_autoexec_commandes.py`, `test_autoexec_envoi.py`, `test_autoexec_fichier.py`, `test_assistant_persist_autoexec.py`, sonde
+`test_assistant_persist_autoexec_chrome.py`.
+
 ### Limites connues
 
 - L'éditeur ne règle que **activation, nom, broche et type**. `idModBus`, `virtuel`, `channel`, `nbLeds` se

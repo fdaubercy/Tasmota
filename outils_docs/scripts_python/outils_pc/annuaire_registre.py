@@ -200,12 +200,14 @@ OUTILS = [
         "platformio_tasmota_cenv.ini.bak et tasmota/user_config_override.h.bak."),
     Outil(
         "assistant_persist", "Assistant persist", "Assistant persist", GROUPES[2],
-        "Crée une nouvelle carte : pose des questions, produit le persist, l'autoexec et les sections du cenv et du .h.",
+        "Crée, modifie ou supprime une carte (persist, autoexec, cenv, .h) ; onglet pour éditer et envoyer son autoexec.bat.",
         "Page web en cinq étapes (carte, réseau, fonctions, bloc métier, vérification) : aperçu du _persist.json en "
         "direct, mots de passe recopiés du parc par le serveur (jamais affichés), diff avant écriture, création "
         "atomique du dossier data/, de la section du cenv et de celle de user_config_override.h, refusée pendant un "
-        "build. Seul paramètre ici : le port de la page (7900). Rien n'est écrit sans « Créer l'env » : "
-        "l'arrêter à tout moment.",
+        "build. Onglet « autoexec.bat » : texte avec avertissements (redémarrage à répétition, doublon du persist, "
+        "secret, commande inconnue), banque de commandes, remplacement d'une commande déjà présente, suppression de "
+        "ligne, diff, écriture au dépôt puis envoi HTTP à la carte, identité vérifiée. Seul paramètre ici : le port "
+        "de la page (7900). Rien n'est écrit sans « Créer l'env » ou « Écrire dans le dépôt » : l'arrêter à tout moment.",
         DOSSIER + "outils_pc/assistant_persist_web.py",
         [_port("http", 7900)],
         "http",

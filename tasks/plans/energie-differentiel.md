@@ -3,7 +3,7 @@ chantier: energie-differentiel
 titre: Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)
 statut: actif
 cree: 2026-10-31
-maj: 2026-11-03
+maj: 2026-11-05
 source: squishy-imagining-raven.md
 objectif: Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h)
 ---
@@ -140,9 +140,9 @@ courbe de puissance 24 h conservée ; abonnement de base ; prix saisi avec date 
 
 ## A14 — Outil d'édition de l'`autoexec.bat` (demande du 2026-11-03)
 - [x] Conception à faire après A12 : Claude cherche l'endroit le plus approprié (page build, page Fichiers Berry, page à part…) puis pose ses questions à l'utilisateur (demande du 2026-11-03) ; outil pour modifier facilement ou ajouter des lignes dans l'`autoexec.bat` d'une carte — preuve : réponses de l'utilisateur du 2026-11-03 : **nouvel onglet de l'Assistant persist (7900)** ; après « Enregistrer », fichier du dépôt écrit (diff confirmé) **puis envoi proposé** à la carte en OTA (moteur de l'onglet Fichiers de la page build) ; avertissements : **redémarrage à répétition** (liste tirée du code Tasmota, `restart_flag = 2` : 24 fichiers, `CmndHostname` sans condition, + cas vécus), **doublon avec le persist** (`build_sauvegarde::POSEES`), **secret en clair** (dépôt public), **commande inconnue** ; **banque de commandes dans un fichier JSON du dépôt** (valeurs secrètes masquées)
-- [ ] Spec et plan détaillés de l'onglet (brainstorming puis plan suivi), avant tout code — en cours : maquettes `outils_docs/autoexec_bat/` (modèle C + ajout du A retenus), spec `docs/superpowers/specs/2026-11-03-onglet-autoexec-bat-design.md` relue par un constructeur ; rouges = confirmation explicite, commandes perso = modèle à champs, redémarrages tirés de la doc et du code de Tasmota ; spec validée le 2026-11-03 ; plan de réalisation : `tasks/plans/autoexec-bat.md`
-- [ ] Analyse de chaque commande ajoutée : avertir à l'ajout de celles qui peuvent causer des redémarrages à répétition (cas vécus : boucles du différentiel, commit `b87e5cc1b`)
-- [ ] Banque de commandes ajoutables ou modifiables proposée à l'utilisateur ; chaque commande personnalisée ajoutée par l'utilisateur complète la banque
+- [x] Spec et plan détaillés de l'onglet (brainstorming puis plan suivi), avant tout code — en cours : maquettes `outils_docs/autoexec_bat/` (modèle C + ajout du A retenus), spec `docs/superpowers/specs/2026-11-03-onglet-autoexec-bat-design.md` relue par un constructeur ; rouges = confirmation explicite, commandes perso = modèle à champs, redémarrages tirés de la doc et du code de Tasmota ; spec validée le 2026-11-03 ; plan de réalisation : `tasks/plans/autoexec-bat.md` — preuve : réalisé par `tasks/plans/autoexec-bat.md` (A1 à A9, A11)
+- [x] Analyse de chaque commande ajoutée : avertir à l'ajout de celles qui peuvent causer des redémarrages à répétition (cas vécus : boucles du différentiel, commit `b87e5cc1b`) — preuve : `autoexec_analyse.py::analyse`, plan `tasks/plans/autoexec-bat.md` A1, A2
+- [x] Banque de commandes ajoutables ou modifiables proposée à l'utilisateur ; chaque commande personnalisée ajoutée par l'utilisateur complète la banque — preuve : `outils_docs/schemas/banque_autoexec.json`, plan `tasks/plans/autoexec-bat.md` A4
 
 ## Échanges du 2026-11-02 : Extension Manager
 Demande : expliquer l'intérêt de l'« Extension Manager », évaluer quel outil mettre en place par l'annuaire pour créer et installer des extensions, lister l'existant et ce qui serait intéressant ici.

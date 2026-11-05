@@ -834,6 +834,13 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `test_assistant_persist_page_chrome.py`. Mode d'emploi : `outils_docs/README.md` § « Assistant persist (page web) ».
     Spec : `docs/superpowers/specs/2026-10-27-assistant-persist-design.md` ; plan : `tasks/plans/assistant-persist.md` ;
     analyse en attente de decision : `outils_docs/ANALYSE_CLES_MAC_TELEPERIOD_2026-10-27.md`.
+    Onglet « autoexec.bat » (2026-11-05, modele C de `outils_docs/autoexec_bat/`) : `assistant_persist_autoexec.py` (routes),
+    `autoexec_fichier.py` (lecture masquee, diff, ecriture), `autoexec_analyse.py` (avertissements), `autoexec_commandes.py`
+    (fige `outils_docs/schemas/commandes_tasmota.json` ; `--verifier`, `--generer`), `autoexec_banque.py`
+    (`outils_docs/schemas/banque_autoexec.json`), `autoexec_envoi.py` (HTTP `/ufsu`, nom d'hote de la carte = persist du depot, sinon
+    refus), page `assistant_persist_page_autoexec.py`, `_autoexec_js.py`, `_autoexec_lignes_js.py` (commande deja presente,
+    suppression de ligne). Mode d'emploi : `outils_docs/README.md` § « Onglet « autoexec.bat » » ; spec
+    `docs/superpowers/specs/2026-11-03-onglet-autoexec-bat-design.md` ; plan `tasks/plans/autoexec-bat.md`.
   - `atelier_graphiques_web.py` (+ `atelier_graphiques_page.py`, `_page_js.py`, `_page_series.py`, `_description.py`, `_series.py`,
     `_conseil.py`, `_ecriture.py`, `build/cible_atelier_graphiques.py`) — page « Atelier des graphiques » http://127.0.0.1:7950 (2026-11-04, palier 1 ;
     tuile de l'annuaire, groupe Maintenance, arret libre : rien n'est ecrit avant « Ecrire dans le depot » ; tache VS Code « Outil : atelier des

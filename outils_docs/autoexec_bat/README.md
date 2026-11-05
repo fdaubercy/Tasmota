@@ -1,8 +1,8 @@
 # Onglet « autoexec.bat » de l'Assistant persist : maquettes
 
 Demande du 2026-11-03 (plan `tasks/plans/energie-differentiel.md`, A14) : modifier facilement ou ajouter des lignes dans
-l'`autoexec.bat` d'une carte, avec une banque de commandes. **Modèle C retenu** (avec un ajout du A : clic sur un avertissement → sa ligne, survol du point de marge). Rien n'est
-réalisé.
+l'`autoexec.bat` d'une carte, avec une banque de commandes. **Modèle C retenu** (avec un ajout du A : clic sur un avertissement → sa ligne, survol du point de marge). **Réalisé** le 2026-11-05 : mode
+d'emploi dans `outils_docs/README.md`, § « Onglet « autoexec.bat » ».
 
 - `modele-A.png` : le fichier en texte libre, avertissements dans la marge sous la ligne, banque à droite (« Insérer »).
 - `modele-B.png` : une ligne = une commande, rangées par section (titres tirés des commentaires) ; ajout guidé par un
