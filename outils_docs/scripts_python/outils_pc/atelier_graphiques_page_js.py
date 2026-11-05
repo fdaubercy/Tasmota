@@ -6,11 +6,13 @@ Toute modification relance, apres 300 ms : l'apercu (PagesGraphiques.page, le mo
 correspond a la description du moment (meme corps que celui du diff, empreinte du serveur).
 Series du graphique : chaine (chemin) ou objet {chemin, libelle, unite, couleur} (A7b) ; un objet dont tous les reglages
 sont vides redevient la chaine. Les deux formes se lisent par cheminDe(). Les reglages par serie (dessineSeries,
-nouvelleSerie) sont dans atelier_graphiques_page_series.py, ajoute a la fin de JS.
+nouvelleSerie) sont dans atelier_graphiques_page_series.py, le menu « Page » et la destination « Graphiques » (A5) dans
+atelier_graphiques_page_destination.py, ajoutes a la fin de JS.
 Lecteur de l'apercu : PagesGraphiques.lecteurCarte, celui de la carte, dont les fetch (faits pendant l'appel) sont
 rediriges vers /valeurs?env= : la conversion des reponses de la carte est donc la sienne, pas une copie.
 """
 
+from atelier_graphiques_page_destination import JS_DEST
 from atelier_graphiques_page_series import JS_SERIES
 
 JS = r"""
@@ -23,7 +25,7 @@ var NOMS = {'courbe': 'Courbe', 'aire': 'Aire', 'escalier': 'Escalier', 'barres'
   'barres-periode': 'Barres par période', 'deux-axes': 'Courbes, 2 axes', 'lies': 'Graphiques liés', 'cadran': 'Cadran à aiguille',
   'anneau': 'Anneau', 'chaleur': 'Carte de chaleur', 'nuage': 'Nuage de points', 'radar': 'Radar', 'liquide': 'Liquide animé',
   'demi-cercle': 'Demi-cercle SVG'};
-var etat = {envs: [], env: '', series: null, desc: null, page: 0, graphe: 0, solidifier: false, mode: 'graphique',
+var etat = {envs: [], env: '', series: null, dest: 'pages', compo: null, base: null, desc: null, page: 0, graphe: 0, solidifier: false, mode: 'graphique',
   vue: 'pc', sombre: false, conseil: null, motifs: [], diff: null, diffSig: '', onglet: '', source: ''};
 var gabarit = '', apercuCtrl = null, minis = [], dernieres = {}, minuterie = null;
 
@@ -56,18 +58,19 @@ function nouveauGraphique() {
 }
 function nouvellePage(n) { return {id: 'tableau' + (n ? '-' + (n + 1) : ''), titre: 'Tableau', acces: 'bouton', graphiques: [nouveauGraphique()]}; }
 function corpsEcriture() {
+  if (etat.dest === 'graphiques') return corpsGraphiques();
   return {env: etat.env, description: etat.desc.pages.length ? etat.desc : null, solidifier: etat.solidifier};
 }
 
 // ---- carte et donnees (colonne de gauche) ----
 function choisitEnv(env) {
-  etat.env = env;
+  etat.env = env; etat.dest = 'pages'; etat.compo = null; etat.base = null;
   dernieres = {};
   history.replaceState(null, '', '?env=' + encodeURIComponent(env));
   $('nom-carte').textContent = env;
   $('lien-build').href = 'http://127.0.0.1:7700/?env=' + encodeURIComponent(env) + '#fichiers';
   message('');
-  return Promise.all([lis('/description?env=' + encodeURIComponent(env)), litSeries()]).then(function (r) {
+  return Promise.all([lis('/description?env=' + encodeURIComponent(env)), litSeries(), chargeCompo()]).then(function (r) {
     if (env !== etat.env) return;                                  // reponse d'un env quitte entre-temps
     var d = r[0];
     etat.solidifier = d.solidifie;
@@ -173,14 +176,6 @@ Object.keys(CHAMPS).forEach(function (id) {
   });
 });
 $('r-solidifier').addEventListener('change', function () { etat.solidifier = this.checked; modifie(false); });
-$('r-page').addEventListener('change', function () { etat.page = +this.value; etat.graphe = 0; modifie(true); });
-function dessinePages() {
-  var sel = $('r-page'), v = etat.page;
-  sel.innerHTML = etat.desc.pages.map(function (p, i) {
-    return '<option value="' + i + '">/' + echappe(p.id) + ' — « ' + echappe(p.titre) + ' »</option>';
-  }).join('');
-  sel.value = v;
-}
 function approche(g, f) {
   return typeof g.min === 'number' && typeof g.max === 'number' ? ' ≈ ' + Math.round(g.min + f * (g.max - g.min)) : '';
 }
@@ -241,9 +236,6 @@ $('ajout-graphique').onclick = function () {
   if (!p) return;
   p.graphiques.push(nouveauGraphique()); etat.graphe = p.graphiques.length - 1; modifie(true);
 };
-$('nouvelle-page').onclick = function () {
-  etat.desc.pages.push(nouvellePage(etat.desc.pages.length)); etat.page = etat.desc.pages.length - 1; etat.graphe = 0; modifie(true);
-};
 $('suppr-graphique').onclick = function () {
   var p = pageCourante();
   if (!p || !p.graphiques.length) return;
@@ -294,7 +286,7 @@ function apercu() {
   $('titre-apercu').textContent = etat.mode === 'page' ? 'Aperçu — page /' + (p ? p.id : '') : 'Aperçu — ' + (etat.source === 'carte' ? 'vraies valeurs de la carte' : 'valeurs simulées');
   $('apercu').innerHTML = gabarit;
   var zone = $('apercu').querySelector('#pg_page');
-  if (!p || !g) { zone.innerHTML = '<p class="pg_msg">Aucun graphique : « + Graphique » ou « + Page ».</p>'; return; }
+  if (!p || !g) { zone.innerHTML = '<p class="pg_msg">Aucun graphique : « + Graphique » ou le menu « Page ».</p>'; return; }
   var gs = etat.mode === 'page' ? p.graphiques : [Object.assign({}, g, {largeur: 'pleine'})];
   apercuCtrl = PagesGraphiques.page(zone, {page: {id: p.id, titre: p.titre, graphiques: gs}, calculees: etat.desc.calculees || {}}, lecteur);
   zone.querySelectorAll('.pg_tuile').forEach(function (t, i) {
@@ -384,6 +376,10 @@ $('intention').addEventListener('change', demandeConseil);
 
 // ---- validation, diff et ecriture ----
 function verifieEtDiff() {
+  if (etat.dest === 'graphiques' && attendChoix()) {
+    etat.diff = null; dessineCode(); $('motifs').innerHTML = '';
+    $('resume').textContent = 'choisir la version de départ de la composition : rien n\'est écrit'; return;
+  }
   var sig = JSON.stringify(corpsEcriture()), corps = JSON.parse(sig);     // copie figee : la saisie continue pendant les requetes
   var validation = corps.description ? poste('/valide', {description: corps.description}) : Promise.resolve({motifs: []});
   validation.then(function (r) {
@@ -438,12 +434,12 @@ $('ecrire').onclick = function () {
   poste('/ecrire', Object.assign({empreinte: d.empreinte}, corps)).then(function (r) {
     message('Écrit : ' + r.ecrits.map(echappe).join(', ') + (d.signaux.length ? '<br>À faire : ' + d.signaux.map(echappe).join(' ; ') : '') +
       '<br>Puis « Envoyer par la page Build ↗ » (onglet Fichiers) pour la carte.', 'vert');
-    verifieEtDiff();
+    apresEcriture();
   }).catch(function (e) { message('Rien n\'est écrit : ' + echappe(e.message), 'rouge'); verifieEtDiff(); });
 };
 
 // ---- orchestration ----
-function dessine() { dessineArbre(); dessineReglages(); dessineAlertes(); }
+function dessine() { dessineArbre(); dessineReglages(); dessineAlertes(); dessineDestination(); }
 function modifie(structure) {
   etat.diff = null; dessineCode();
   if (structure) dessine(); else dessineAlertes();
@@ -467,4 +463,4 @@ Promise.all([lis('/envs'), fetch('/moteur/pages_graphiques.html').then(function 
   return choisitEnv(env);
 }).catch(function (e) { message('Atelier injoignable : ' + echappe(e.message), 'rouge'); });
 """
-JS += JS_SERIES
+JS += JS_SERIES + JS_DEST

@@ -11,6 +11,9 @@ que test_atelier_graphiques_web.py) ; la carte est simulee en remplacant build_o
 reseau) : la cuve repond, le P4 (192.168.0.43 sans port) est muet. Detection des builds neutralisee ;
 OUTILS_TASMOTA_DOSSIER temporaire. Fenetre de 1400 px (capture comparee a modele-B.png par l'utilisateur).
 Mode sombre de la page : temoin manuel SONDE_SANS_INTERRUPTEUR=1 (l'interrupteur ne fait plus rien -> rouge attendu).
+Destination « Graphiques » (A5, sonde_destination) : menu « Page » avec et sans historique, « + Page » retire, champs de page
+masques, composition de la carte differente (diff, deux choix, perte dite, rien d'ecrit sans choix), non verifiee (bandeau),
+choix « carte » indisponible (grise, motif), Diff et Ecrire vers graphiques.json de la copie.
 Scenario : apercu trace par le vrai moteur, styles proposes, reglages par serie (libelle -> legende, couleur -> serie
 de l'apercu, unite -> axe ; vides -> la serie redevient une chaine), un seuil ajoute puis change modifie le SVG de l'apercu,
 bascules page / telephone / theme sombre, deplacement d'une tuile, carte muette -> bandeau « valeurs simulees »,
@@ -61,6 +64,12 @@ def fausse_carte(ip, chemin, delai):
                            "valeurs": [[round(4300 - k * 1.5, 1) for k in range(288)], [round(0.64 - k * 0.0002, 4) for k in range(288)],
                                        [round(11.5 + 1.6 * ((k % 144) / 144), 2) for k in range(288)]],
                            "tEncours": t0 + 288 * 300, "encours": [3870, 0.58, 12.1]}).encode()
+    if chemin.startswith("/json/graphiques.json"):             # composition /graphiques de la carte, pilotee par la sonde (A5)
+        f = Path(os.environ["OUTILS_TASMOTA_DOSSIER"]) / "carte_graphiques.json"
+        if f.is_file():
+            if f.read_bytes() == b"HORSLIGNE":
+                raise OSError("carte hors ligne")
+            return f.read_bytes()
     if chemin.startswith("/cm"):
         return json.dumps({"StatusSNS": {"sensorsCuve": {"niveauCuve": {"volume": 3870, "tauxRemplissage": 0.58}},
                                          "DS18B20": {"Temperature": 12.1}}}).encode()
@@ -362,6 +371,147 @@ def sonde_page(m, capture):
     verifie(cdp.erreurs(), [], "aucune erreur JS pendant toute la sonde")
 
 
+COMPO_DEPOT = [{"titre": "Cuve", "type": "courbe", "series": ["sensorsCuve.niveauCuve.volume"]}]
+COMPO_CARTE = [{"titre": "Cuve", "type": "aire", "series": ["sensorsCuve.niveauCuve.volume"]},
+               {"titre": "Temperature", "type": "courbe", "series": ["DS18B20.Temperature"]}]
+CACHES = "['r-page-id', 'r-page-titre', 'r-acces', 'r-solidifier'].map(function(id){ return document.getElementById(id).offsetParent === null; })"
+REL_GRAPH = "data/garage/tasmota32s3-capteurs-cuve-modbus/graphiques.json"
+
+
+def pose_depot(m, composition):
+    f = m.depot / REL_GRAPH
+    f.parent.mkdir(parents=True, exist_ok=True)
+    d = json.loads(f.read_text(encoding="utf-8")) if f.is_file() else {"affichage": {"x.y": {"libelle": "garde"}}}
+    d.pop("graphiques", None)
+    if composition is not None:
+        d["graphiques"] = composition
+    f.write_text(json.dumps(d, indent="\t") + "\n", encoding="utf-8")
+
+
+def pose_carte(m, composition):
+    """composition : une liste, ou 'HORSLIGNE'."""
+    f = m.t / "outils" / "carte_graphiques.json"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_bytes(b"HORSLIGNE" if composition == "HORSLIGNE" else json.dumps({"graphiques": composition}).encode())
+
+
+def historique(m, actif):
+    f = m.depot / "data/garage/tasmota32s3-capteurs-cuve-modbus/_persist.json"
+    ancien, nouveau = ('"activation": "ON"', '"activation": "OFF"') if not actif else ('"activation": "OFF"', '"activation": "ON"')
+    f.write_text(f.read_text(encoding="utf-8").replace(ancien, nouveau, 1), encoding="utf-8")
+
+
+def ouvre(cdp, url):
+    cdp.appel("Page.navigate", url=url)
+    attend(cdp, "document.getElementById('relire') && document.getElementById('relire').textContent.indexOf('lecture') < 0"
+                " && !!etat.desc && !!document.querySelector('#apercu .pg_tuile[data-rendu]')", 25)
+    cdp.js("window.confirm = function(){ return true; }; 1")
+    time.sleep(0.3)
+
+
+def choisit_page(cdp, valeur):
+    cdp.js("var s = document.getElementById('r-page'); s.value = " + json.dumps(valeur) + "; s.dispatchEvent(new Event('change')); 1")
+
+
+def sonde_destination(m, capture):
+    cdp = m.cdp
+    url = m.url + "?env=" + CUVE
+    options = "[].map.call(document.querySelectorAll('#r-page option'), function(o){ return o.value + '|' + o.textContent; })"
+    # 1. menu avec historique : pages dediees, Graphiques, Autre ; plus de « + Page »
+    pose_depot(m, COMPO_DEPOT)
+    pose_carte(m, COMPO_DEPOT)
+    ouvre(cdp, url)
+    verifie(cdp.js(options), ["0|/tableau-cuve — « Tableau »", "graphiques|Graphiques (/graphiques)", "autre|Autre… (nouvelle page)"],
+            "menu Page avec historique : page dediee, Graphiques (/graphiques), Autre… (nouvelle page)")
+    verifie(cdp.js("[!!document.getElementById('nouvelle-page'), [].some.call(document.querySelectorAll('button'), function(b){ return b.textContent === '+ Page'; })]"),
+            [False, False], "bouton « + Page » retire")
+    verifie(cdp.js(CACHES), [False] * 4, "page dediee : adresse, titre, acces et solidifier visibles")
+    # 2. Autre… : nouvelle page dediee, comme l'ancien « + Page »
+    choisit_page(cdp, "autre")
+    verifie(cdp.js("[etat.desc.pages.length, etat.page, etat.dest, document.getElementById('r-page-id').value, document.getElementById('r-page').value]"),
+            [2, 1, "pages", "tableau-2", "1"], "Autre… : nouvelle page dediee creee et choisie")
+    choisit_page(cdp, "0")
+    # 3. Graphiques, composition identique : champs de page masques, Diff vers graphiques.json
+    choisit_page(cdp, "graphiques")
+    verifie(cdp.js(CACHES + ".concat(document.getElementById('suppr-page').offsetParent === null)"), [True] * 5,
+            "destination Graphiques : adresse, titre de page, acces, solidifier (et « Retirer la page ») masques")
+    verifie(bool(attend(cdp, "!document.getElementById('ecrire').disabled", 15)), True, "composition identique : diff pret, « Ecrire » actif")
+    verifie(cdp.js("[etat.diff.fichiers.map(function(f){ return f.chemin; }), document.getElementById('destination').textContent]"),
+            [[REL_GRAPH], "Composition de la carte identique à celle du dépôt."], "Diff vers /graphiques : graphiques.json seul")
+    cdp.js("window.confirm = function(){ return true; }; document.getElementById('ecrire').click(); 1")
+    verifie(attend(cdp, "document.querySelector('#message .avert.vert') !== null", 15), True, "ecriture vers /graphiques : message de reussite")
+    ecrit = json.loads((m.depot / REL_GRAPH).read_text(encoding="utf-8"))
+    g = ecrit.get("graphiques", [])
+    verifie((len(g), g[0] if g else None, g[-1].get("moteur"), g[-1].get("type"), g[-1].get("series"), sorted(k for k in ecrit if k != "graphiques")),
+            (2, COMPO_DEPOT[0], "pages", "courbe", ["sensorsCuve.niveauCuve.volume"], ["affichage"]),
+            "graphiques.json de la copie : graphique en forme atelier ajoute, existant et autres cles intacts")
+    verifie(cdp.js("etat.diff"), None, "apres ecriture : pas de second diff (l'ajout serait double)")
+    # 4. composition differente : diff + deux choix, perte dite, rien d'ecrit sans choix
+    pose_depot(m, COMPO_DEPOT)
+    pose_carte(m, COMPO_CARTE)
+    ouvre(cdp, url)
+    choisit_page(cdp, "graphiques")
+    verifie(bool(attend(cdp, "document.querySelectorAll('#destination input[name=base]').length === 2", 10)), True, "composition differente : deux choix")
+    verifie(cdp.js("[].map.call(document.querySelectorAll('#destination label'), function(l){ return l.textContent.trim(); })"),
+            ["Partir de la version de la carte", "Garder celle du dépôt"], "libelles des deux choix")
+    verifie(cdp.js("document.getElementById('destination').textContent.indexOf('changements faits sur la carte seront perdus à l\\'envoi') >= 0"), True,
+            "« Garder celle du dépôt » dit la perte des changements de la carte")
+    verifie(cdp.js("var d = document.querySelector('#destination pre'); !!d && d.textContent.indexOf('+++ carte') >= 0 && d.querySelectorAll('.p').length > 0"), True,
+            "diff depot -> carte affiche")
+    time.sleep(0.8)
+    verifie(cdp.js("[document.getElementById('ecrire').disabled, etat.diff, document.getElementById('resume').textContent]"),
+            [True, None, "choisir la version de départ de la composition : rien n'est écrit"], "sans choix : pas de diff, pas d'ecriture")
+    if capture:
+        cdp.js("document.getElementById('destination').scrollIntoView({block: 'center'}); 1")
+        time.sleep(0.8)
+        cdp.capture(str(Path(capture).with_name(Path(capture).stem + "-destination.png")))
+        cdp.js("document.querySelector('label.theme').click(); 1")
+        time.sleep(0.8)
+        cdp.capture(str(Path(capture).with_name(Path(capture).stem + "-destination-sombre.png")))
+        cdp.js("document.querySelector('label.theme').click(); 1")
+    cdp.js("document.querySelector('#destination input[value=depot]').click(); 1")
+    verifie(bool(attend(cdp, "!document.getElementById('ecrire').disabled", 15)), True, "choix « depot » : diff pret")
+    cdp.js("document.getElementById('ecrire').click(); 1")
+    attend(cdp, "document.querySelector('#message .avert.vert') !== null", 15)
+    g = json.loads((m.depot / REL_GRAPH).read_text(encoding="utf-8")).get("graphiques", [])
+    verifie([x.get("type") for x in g], ["courbe", "courbe"], "base depot : composition du depot + le graphique (celle de la carte perdue)")
+    # 5. base carte : la composition de la carte est recopiee avant l'ajout
+    pose_depot(m, COMPO_DEPOT)
+    ouvre(cdp, url)
+    choisit_page(cdp, "graphiques")
+    attend(cdp, "document.querySelectorAll('#destination input[name=base]').length === 2", 10)
+    cdp.js("document.querySelector('#destination input[value=carte]').click(); 1")
+    verifie(bool(attend(cdp, "!document.getElementById('ecrire').disabled", 15)), True, "choix « carte » : diff pret")
+    cdp.js("document.getElementById('ecrire').click(); 1")
+    attend(cdp, "document.querySelector('#message .avert.vert') !== null", 15)
+    g = json.loads((m.depot / REL_GRAPH).read_text(encoding="utf-8")).get("graphiques", [])
+    verifie([x.get("type") for x in g], ["aire", "courbe", "courbe"], "base carte : composition de la carte recopiee, puis le graphique")
+    # 6. choix « carte » indisponible (composition de la carte invalide) : grise, motif affiche
+    pose_depot(m, COMPO_DEPOT)
+    pose_carte(m, [{"moteur": "pages", "titre": "X", "type": "nimporte", "series": ["a.b"]}])
+    ouvre(cdp, url)
+    choisit_page(cdp, "graphiques")
+    attend(cdp, "document.querySelectorAll('#destination input[name=base]').length === 2", 10)
+    verifie(cdp.js("[document.querySelector('#destination input[value=carte]').disabled, document.querySelector('#destination input[value=depot]').disabled,"
+                   " document.getElementById('destination').textContent.indexOf('Indisponible : ') >= 0 && etat.compo.carte_motifs.length > 0]"),
+            [True, False, True], "composition de la carte invalide : « Partir de la version de la carte » grise, motif affiche")
+    # 7. carte hors ligne : bandeau « non verifiee » avec le motif
+    pose_carte(m, "HORSLIGNE")
+    ouvre(cdp, url)
+    choisit_page(cdp, "graphiques")
+    verifie(bool(attend(cdp, "document.querySelector('#destination .avert') !== null", 10)), True, "carte hors ligne : bandeau")
+    verifie(cdp.js("var t = document.getElementById('destination').textContent; [t.indexOf('Composition de la carte non vérifiée') >= 0, t.indexOf('carte hors ligne') >= 0,"
+                   " document.querySelectorAll('#destination input').length]"), [True, True, 0], "bandeau « non verifiee » avec son motif, sans choix")
+    verifie(bool(attend(cdp, "!document.getElementById('ecrire').disabled", 15)), True, "carte hors ligne : l'ecriture depuis le depot reste possible")
+    # 8. sans historique : « Graphiques » absent du menu
+    pose_carte(m, COMPO_DEPOT)
+    historique(m, False)
+    ouvre(cdp, url)
+    verifie(cdp.js(options), ["0|/tableau-cuve — « Tableau »", "autre|Autre… (nouvelle page)"], "menu Page sans historique : pas de Graphiques")
+    historique(m, True)
+    verifie(cdp.erreurs(), [], "destination : aucune erreur JS")
+
+
 def sonde_temoin(m):
     m.cdp.appel("Page.navigate", url=m.url)
     time.sleep(4)
@@ -384,7 +534,7 @@ def principal():
         try:
             m = Montage()
             m.demarre(temoin)
-            sonde_temoin(m) if temoin else sonde_page(m, args.capture)
+            sonde_temoin(m) if temoin else (sonde_page(m, args.capture), sonde_destination(m, args.capture))
         except FileNotFoundError as erreur:
             print(f"BLOQUE : {erreur}")
             return 3

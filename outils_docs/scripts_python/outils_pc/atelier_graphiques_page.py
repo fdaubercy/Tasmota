@@ -86,6 +86,7 @@ details{font-size:12px;color:var(--doux);margin-top:8px}
 #apercu #pg_page{width:auto}
 .cadre.page .pg_tuile{cursor:grab} .pg_tuile.sel{outline:2px solid #5b93ff;outline-offset:1px}
 .pg_tuile.survol{outline:2px dashed #5b93ff}
+#destination .code{max-height:160px;border-radius:6px;margin:6px 0}
 .bascules button{margin-left:2px}
 .bascules button.actif{background:var(--bleu-fond);color:var(--bleu)}
 .actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:8px;flex-wrap:wrap}
@@ -154,13 +155,14 @@ HTML = """<main>
     <option value="180">180 px</option><option value="240">240 px</option><option value="300">300 px</option>
     <option value="400">400 px</option><option value="500">500 px</option></select></div>
   <div class="ligne"><span class="etiq">Page</span><select id="r-page"></select></div>
-  <div class="ligne"><span class="etiq">Adresse</span><input type="text" id="r-page-id" title="/&lt;adresse&gt; sur la carte : a-z, 0-9, tirets"></div>
-  <div class="ligne"><span class="etiq">Titre page</span><input type="text" id="r-page-titre"></div>
-  <div class="ligne"><span class="etiq">Accès</span><select id="r-acces"><option value="bouton">Bouton sur l'accueil</option>
+  <div class="ligne champ-page"><span class="etiq">Adresse</span><input type="text" id="r-page-id" title="/&lt;adresse&gt; sur la carte : a-z, 0-9, tirets"></div>
+  <div class="ligne champ-page"><span class="etiq">Titre page</span><input type="text" id="r-page-titre"></div>
+  <div class="ligne champ-page"><span class="etiq">Accès</span><select id="r-acces"><option value="bouton">Bouton sur l'accueil</option>
     <option value="lien">Lien depuis un encadré</option></select></div>
-  <label class="ch petit"><input type="checkbox" id="r-solidifier"> Solidifier le module (firmware à recompiler)</label>
+  <label class="ch petit champ-page"><input type="checkbox" id="r-solidifier"> Solidifier le module (firmware à recompiler)</label>
+  <div id="destination"></div>
   <div class="ligne" style="flex-wrap:wrap;margin-top:10px"><button class="btn mini" id="ajout-graphique">+ Graphique</button>
-    <button class="btn mini" id="nouvelle-page">+ Page</button><button class="btn mini" id="suppr-graphique">Retirer le graphique</button>
+    <button class="btn mini" id="suppr-graphique">Retirer le graphique</button>
     <button class="btn mini" id="suppr-page">Retirer la page</button></div>
   <div id="alertes"></div>
   <div id="motifs"></div>
