@@ -136,9 +136,16 @@ def test_forme_actuelle_intacte(racine):
     comp = json.loads(fichier(racine).read_text(encoding="utf-8"))["graphiques"]
     verifie(comp[:2], [ACTUEL, {"titre": "P", "type": "barres", "series": "autres"}], "forme actuelle : graphiques existants intacts")
     verifie(len(comp), 3, "forme actuelle : le graphique atelier est ajoute apres")
-    ecrit(racine, {"operation": "remplace", "index": 2, "graphique": atelier("Autre")})
+    ecrit(racine, {"operation": "remplace", "index": 2, "graphique": atelier("Autre"), "attendu": comp[2]})
     comp = json.loads(fichier(racine).read_text(encoding="utf-8"))["graphiques"]
-    verifie((comp[2]["titre"], len(comp)), ("Autre", 3), "remplace : le graphique est remplace en place")
+    verifie((comp[2]["titre"], len(comp)), ("Autre", 3), "remplace : temoin identique, le graphique est remplace en place")
+    avant = fichier(racine).read_bytes()
+    refuse(lambda: agg.prevoit(racine, CUVE, {"operation": "remplace", "index": 2, "graphique": atelier("X")}), ValueError,
+           "remplace sans temoin : refus", "attendu")
+    refuse(lambda: agg.prevoit(racine, CUVE, {"operation": "remplace", "index": 2, "graphique": atelier("X"), "attendu": atelier("Autre", type="aire")}),
+           RuntimeError, "remplace avec un autre graphique a ce rang : refus (409)", "a change")
+    verifie(fichier(racine).read_bytes(), avant, "remplace refuse : fichier inchange")
+    verifie(agg.index_ecrit(racine, CUVE, {"operation": "ajoute"})[0], 2, "index_ecrit : rang du dernier graphique")
 
 
 def test_retire(racine):

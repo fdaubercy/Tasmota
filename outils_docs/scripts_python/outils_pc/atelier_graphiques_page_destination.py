@@ -17,7 +17,7 @@ function dessinePages() {
   var sel = $('r-page'), v = etat.dest === 'graphiques' ? 'graphiques' : etat.page;
   sel.innerHTML = etat.desc.pages.map(function (p, i) {
     return '<option value="' + i + '">/' + echappe(p.id) + ' — « ' + echappe(p.titre) + ' »</option>';
-  }).join('') + (etat.compo && etat.compo.historique ? '<option value="graphiques">Graphiques (/graphiques)</option>' : '') +
+  }).join('') + (etat.dest === 'graphiques' || (etat.compo && etat.compo.historique) ? '<option value="graphiques">Graphiques (/graphiques)</option>' : '') +
     '<option value="autre">Autre… (nouvelle page)</option>';
   sel.value = v;
 }
@@ -34,13 +34,15 @@ $('r-page').addEventListener('change', function () {
 // Corps de /diff et /ecrire pour /graphiques : le graphique edite est ajoute (forme atelier, « moteur » pose par le serveur)
 function corpsGraphiques() {
   var c = etat.compo, x = etat.indexEcrit, o = {env: etat.env, destination: 'graphiques', operation: 'ajoute', graphique: grapheCourant()};
-  if (x && x.cle === cleEcrit()) { o.operation = 'remplace'; o.index = x.index; o.base = 'depot'; return o; }   // le depot porte deja ce graphique
+  if (x && x.cle === cleEcrit()) { o.operation = 'remplace'; o.index = x.index; o.attendu = x.attendu; o.base = 'depot'; return o; }   // le depot porte deja ce graphique
   if (c && c.etat === 'differente' && etat.base) o.base = etat.base;
   return o;
 }
 function attendChoix() { return !!(etat.compo && etat.compo.etat === 'differente' && !etat.base); }
 // Graphique deja ecrit pour cette carte, cette page et ce graphique : les ecritures suivantes le REMPLACENT (jamais de doublon)
 function cleEcrit() { return etat.env + '|' + etat.page + '|' + etat.graphe; }
+// Un changement qui deplace ou retire des graphiques de la page rend le rang retenu douteux : on l'oublie (retour a « ajoute »)
+function oublieEcrit() { etat.indexEcrit = null; }
 function oubliIndex(e) {
   if (!etat.indexEcrit || !/^index/.test(e.message)) return false;
   etat.indexEcrit = null;
@@ -50,10 +52,15 @@ function oubliIndex(e) {
 }
 function apresEcriture(r) {
   if (etat.dest !== 'graphiques') { verifieEtDiff(); return; }
-  if (typeof r.index === 'number') { etat.indexEcrit = {cle: cleEcrit(), index: r.index}; etat.base = 'depot'; }
+  if (typeof r.index === 'number') { etat.indexEcrit = {cle: cleEcrit(), index: r.index, attendu: r.graphique}; etat.base = 'depot'; }
   // pas de nouveau diff avant une modification
   etat.diff = null; dessineCode();
-  chargeCompo().then(dessineDestination);
+  var avant = etat.compo && etat.compo.carte;
+  chargeCompo().then(function () {
+    // la carte a change pendant ce temps (autre composition que celle connue) : le choix carte/depot est redemande
+    if (etat.compo && JSON.stringify(etat.compo.carte) !== JSON.stringify(avant)) { etat.indexEcrit = null; etat.base = null; }
+    dessineDestination();
+  });
   $('resume').textContent = 'écrit dans le dépôt : modifier le graphique pour écrire à nouveau';
 }
 function dessineDestination() {

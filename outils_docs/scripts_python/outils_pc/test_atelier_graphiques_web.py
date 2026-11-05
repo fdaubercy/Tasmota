@@ -292,6 +292,7 @@ def test_destination_graphiques(b):
     ecrit = json.loads(fichier.read_text(encoding="utf-8"))
     verifie((statut, r["ecrits"], r["index"], [g["titre"] for g in ecrit["graphiques"]], ecrit["groupes"]), (200, [rel], 1, ["Sur la carte", "Volume"], {"G": ["a"]}),
             "POST /ecrire graphiques : base carte + ajout, autres cles gardees")
+    verifie(r["graphique"], ecrit["graphiques"][1], "POST /ecrire graphiques : le graphique ecrit est rendu (temoin `attendu`)")
     b.composition = None
     statut, r = b.requete("POST", "/diff", {"env": CUVE, "destination": "graphiques", "operation": "retire", "index": 0})
     verifie(statut, 400, "POST /diff graphiques : carte sans composition mais depot avec -> choix exige (400)")

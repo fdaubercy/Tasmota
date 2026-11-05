@@ -371,6 +371,7 @@ def sonde_page(m, capture):
     verifie(cdp.erreurs(), [], "aucune erreur JS pendant toute la sonde")
 
 
+ERREURS_ATTENDUES = []        # journal Chrome du seul scenario qui provoque un refus de /diff (409) ; rempli par ce scenario
 COMPO_DEPOT = [{"titre": "Cuve", "type": "courbe", "series": ["sensorsCuve.niveauCuve.volume"]}]
 COMPO_CARTE = [{"titre": "Cuve", "type": "aire", "series": ["sensorsCuve.niveauCuve.volume"]},
                {"titre": "Temperature", "type": "courbe", "series": ["DS18B20.Temperature"]}]
@@ -515,14 +516,38 @@ def sonde_destination(m, capture):
     attend(cdp, "document.querySelector('#message .avert.vert') !== null && etat.diff === null", 10)
     g = json.loads((m.depot / REL_GRAPH).read_text(encoding="utf-8")).get("graphiques", [])
     verifie([x.get("titre") for x in g], ["Cuve", "Titre change"], "ecrire, modifier, reecrire : le graphique une seule fois, modifie")
-    pose_depot(m, COMPO_DEPOT)                       # le graphique disparait du depot : l'index n'existe plus
+    pose_depot(m, COMPO_DEPOT + [{"moteur": "pages", "titre": "Autre", "type": "courbe", "series": ["sensorsCuve.niveauCuve.volume"]}])
+    n0 = len(cdp.erreurs())                          # le graphique du depot a ce rang a change : 409 attendu, ce scenario seulement
     saisit(cdp, "#r-titre", "Encore")
     verifie(bool(attend(cdp, "etat.indexEcrit === null && document.getElementById('message').textContent.indexOf('sera ajouté de nouveau') >= 0", 15)),
             True, "index disparu : retour a « ajoute », signale")
     verifie(bool(attend(cdp, "!document.getElementById('ecrire').disabled && corpsEcriture().operation === 'ajoute'", 15)), True,
             "apres l'oubli : diff « ajoute » pret")
+    ERREURS_ATTENDUES.extend(e for e in cdp.erreurs()[n0:] if "/diff" in e and "409" in e)
     choisit_page(cdp, "autre")
     verifie(cdp.js("etat.indexEcrit"), None, "choisir « Autre… » : index oublie")
+    # 6c. ecrire, retirer le graphique, en ajouter un autre, ecrire : les deux graphiques sont dans la composition
+    pose_depot(m, COMPO_DEPOT)
+    ouvre(cdp, url)
+    choisit_page(cdp, "graphiques")
+    attend(cdp, "!document.getElementById('ecrire').disabled", 15)
+    cdp.js("document.getElementById('ecrire').click(); 1")
+    attend(cdp, "etat.indexEcrit", 10)
+    cdp.js("document.getElementById('suppr-graphique').click(); document.getElementById('ajout-graphique').click(); 1")
+    verifie(cdp.js("etat.indexEcrit"), None, "retirer / ajouter un graphique : index oublie")
+    saisit(cdp, "#r-titre", "Second")
+    verifie(bool(attend(cdp, "!document.getElementById('ecrire').disabled && corpsEcriture().operation === 'ajoute'", 15)), True, "second graphique : « ajoute »")
+    cdp.js("document.getElementById('ecrire').click(); 1")
+    attend(cdp, "etat.indexEcrit && etat.indexEcrit.index === 2", 10)
+    g = json.loads((m.depot / REL_GRAPH).read_text(encoding="utf-8")).get("graphiques", [])
+    verifie([x.get("titre") for x in g], ["Cuve", "volume", "Second"], "retirer puis ajouter : les deux graphiques ecrits, aucun ecrase")
+    # 6d. carte hors ligne alors que la destination est Graphiques : l'option reste dans le menu
+    pose_carte(m, "HORSLIGNE")
+    cdp.js("chargeCompo().then(function(){ etat.compo = null; dessinePages(); }); 1")
+    time.sleep(0.5)
+    verifie(cdp.js("[document.getElementById('r-page').value, document.getElementById('r-page').selectedOptions.length]"), ["graphiques", 1],
+            "compo inconnue pendant la destination Graphiques : option conservee, select jamais vide")
+    pose_carte(m, COMPO_DEPOT)
     # 7. carte hors ligne : bandeau « non verifiee » avec le motif
     pose_carte(m, "HORSLIGNE")
     ouvre(cdp, url)
@@ -537,8 +562,7 @@ def sonde_destination(m, capture):
     ouvre(cdp, url)
     verifie(cdp.js(options), ["0|/tableau-cuve — « Tableau »", "autre|Autre… (nouvelle page)"], "menu Page sans historique : pas de Graphiques")
     historique(m, True)
-    # le 400 de /diff du scenario « index disparu » est attendu (journal Chrome) ; toute autre erreur est un echec
-    verifie([e for e in cdp.erreurs() if "400 (Bad Request)" not in e or "/diff" not in e], [], "destination : aucune erreur JS")
+    verifie([e for e in cdp.erreurs() if e not in ERREURS_ATTENDUES], [], "destination : aucune erreur JS (hors le refus attendu du scenario « index change »)")
 
 
 def sonde_temoin(m):

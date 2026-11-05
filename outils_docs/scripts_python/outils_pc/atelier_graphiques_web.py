@@ -179,7 +179,8 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None):
             with verrou:
                 env, d = graphiques(demande)
                 ecrits = agg.ecrit(racine, env, d, demande["empreinte"], builds_en_cours, get=get)
-                return {"ecrits": ecrits, "index": agg.index_ecrit(racine, env, d)}
+                rang, ecrit = agg.index_ecrit(racine, env, d)
+                return {"ecrits": ecrits, "index": rang, "graphique": ecrit}
         if chemin == "/diff":
             with verrou:
                 return avec_diffs(age.prevoit(racine, *corps_ecriture(demande)))

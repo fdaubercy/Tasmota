@@ -152,6 +152,11 @@ def _calcule(racine, env, demande, get):
     else:
         if not isinstance(g, dict) or g.get("moteur", "pages") != "pages":
             raise ValueError("graphique : objet de forme atelier attendu (\"moteur\": \"pages\")")
+        if op == "remplace":                  # le rang ne suffit pas : le graphique ecrit a ce rang doit etre celui que la page croit
+            if not isinstance(demande.get("attendu"), dict):
+                raise ValueError("remplace : `attendu` (le graphique tel qu'il a ete ecrit) obligatoire")
+            if _norme(comp[index]) != _norme(demande["attendu"]):
+                raise RuntimeError("index : le graphique a ce rang a change depuis son ecriture, rien n'est remplace")
         comp[index] = {"moteur": "pages", **{k: v for k, v in g.items() if k != "moteur"}}
         motifs += motifs_graphique(comp[index], index + 1)       # seul le graphique ecrit est valide
         if g.get("type") == "liquide" and age.LIQUIDFILL in {
@@ -176,10 +181,11 @@ def prevoit(racine, env, demande, *, get=None):
 
 
 def index_ecrit(racine, env, demande):
-    """Rang du graphique que `demande` vient d'ecrire dans la composition (None pour un retrait) : la page le retient pour « remplace »."""
-    if demande.get("operation") == "remplace":
-        return demande.get("index")
-    return len(_depot(racine, env)[3] or []) - 1 if demande.get("operation") == "ajoute" else None
+    """(rang, graphique) que `demande` vient d'ecrire dans la composition, (None, None) pour un retrait : la page les retient,
+    le graphique comme temoin `attendu` d'un futur « remplace »."""
+    comp = _depot(racine, env)[3] or []
+    rang = demande.get("index") if demande.get("operation") == "remplace" else len(comp) - 1 if demande.get("operation") == "ajoute" else None
+    return (rang, comp[rang]) if rang is not None and 0 <= rang < len(comp) else (None, None)
 
 
 def ecrit(racine, env, demande, empreinte_lue, builds_en_cours, *, get=None):

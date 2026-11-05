@@ -232,18 +232,20 @@ function dessineReglages() {
   dessineSeries(g);
 }
 $('ajout-graphique').onclick = function () {
+  oublieEcrit();
   var p = pageCourante();
   if (!p) return;
   p.graphiques.push(nouveauGraphique()); etat.graphe = p.graphiques.length - 1; modifie(true);
 };
 $('suppr-graphique').onclick = function () {
+  oublieEcrit();
   var p = pageCourante();
   if (!p || !p.graphiques.length) return;
   p.graphiques.splice(etat.graphe, 1); etat.graphe = Math.max(0, etat.graphe - 1); modifie(true);
 };
 $('suppr-page').onclick = function () {
   if (!pageCourante()) return;
-  etat.desc.pages.splice(etat.page, 1); etat.page = Math.max(0, etat.page - 1); etat.graphe = 0;
+  oublieEcrit(); etat.desc.pages.splice(etat.page, 1); etat.page = Math.max(0, etat.page - 1); etat.graphe = 0;
   if (!etat.desc.pages.length) message('Plus aucune page : l\'écriture retire le moteur de cette carte (ligne d\'autoexec, listes du cenv).');
   modifie(true);
 };
@@ -303,7 +305,7 @@ function apercu() {
       e.preventDefault();
       var de = e.dataTransfer.getData('text/plain');
       if (!/^\d+$/.test(de) || +de >= p.graphiques.length || +de === j) return;   // depot venu d'ailleurs : ignore
-      de = +de;
+      de = +de; oublieEcrit();
       p.graphiques.splice(j, 0, p.graphiques.splice(de, 1)[0]); etat.graphe = j; modifie(true);
     });
   });
