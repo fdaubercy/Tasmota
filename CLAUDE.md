@@ -134,7 +134,7 @@ c'est **voulu** (decide le 2026-10-04 : « laisse ce test comme il est »). Ne p
 decouper : c'est UN fichier a televerser sur chaque carte, qui se prepare et s'explique
 seul au chargement ; le scinder imposerait deux televersements par carte.
 
-`outils_docs/scripts_python/outils_pc/build_page.py` fait **1215 lignes**, et c'est **voulu**
+`outils_docs/scripts_python/outils_pc/build_page.py` fait **1223 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
 vague de corrections finale du meme jour ; 935 le 2026-10-25 avec le panneau « Sortie » et « Effacer puis
 televerser » ; 1038 le meme jour avec la pause « rebranchez la carte » et les panneaux refermes ; 1053 avec
@@ -152,7 +152,8 @@ Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plut
 `build_serie.py` fait **816 lignes** (+9 le 2026-11-03 : sauvegarde « avant flash » de la configuration ; +18 le 2026-11-02 : sauvegarde et retablissement de `/.drvset003` autour d'un flash serie ; +14 le 2026-11-01 : table de partitions de l'env ; +19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; +11 le 2026-10-27 : data_dir pose avant pio ; +3 le meme jour : identite de l'image du FS ; +7 le meme jour : duree des zones d'envoi memorisee, A13 ; +6 le 2026-10-28 : OTA par le maitre, A11 ; +9 le meme jour : Sleep 0 du maitre pendant l'envoi ; +30 le 2026-10-29 : action « fichiers » de l'onglet Fichiers ; +16 le meme jour : transport MQTT (A16) ; execution en serie des `pio run` : verrous, arret immediat, attente
 d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
 verrou), et ses bancs `test_build_serie.py` (**1215**), `test_build_page_chrome.py` (**1103**),
-`test_build_ota_fs.py` (**802**), `test_build_web.py` (**794**), ainsi que `test_annuaire.py` (**523**,
+`test_build_ota_fs.py` (**802**), `test_build_web.py` (**797**), `test_atelier_graphiques_page_chrome.py` (**648**, sonde de la page de l'atelier,
+decision du 2026-11-05), ainsi que `test_annuaire.py` (**523**,
 banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
 compteur.
 
@@ -463,6 +464,9 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   `test_rs485_pc.py` n'est pas un banc, `--reel` = reseau).
 - `.claude/agents/relecteur-berry.md` — sous-agent de relecture des `.be` modifies avant commit : syntaxe,
   charte des logs, RAM, regles du depot, bancs Berry lances. Ne modifie rien.
+- `.claude/agents/relecteur-pages-web.md` — sous-agent de relecture des pages web (pages des outils PC generees par Python,
+  pages servies par les cartes `data/sd`) avant commit : securite (XSS, anti-CSRF, SSRF), etat de la page, JS valide, mode sombre,
+  sondes Chrome hermetiques. Ne modifie rien.
 - `.claude/commands/commite.md`, `.claude/commands/fin-de-session.md` — commandes `/commite`,
   `/fin-de-session` ; `.claude/skills/logs-cartes/` — skill de lecture des logs.
 - `tasks/export-session-*.md` — mini-exports de passation ecrits par `/fin-de-session`.
@@ -473,6 +477,11 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   ni reseau. Banc hors depot (hote simule). Modifier le mod = monter `version` dans `plugin.json`, puis
   `claude.cmd plugin marketplace update mods-tasmota` et `claude.cmd plugin update meteo-contexte@mods-tasmota`.
   Installation : `/plugin marketplace add <depot>/.claude/mods` puis `/plugin install meteo-contexte@mods-tasmota`.
+- `.claude/mods/suivi-sous-agents/` — mod, portee UTILISATEUR (installe pour tous les projets, pas seulement ce depot) : volet
+  de progression des sous-agents (tache en cours, % d'apres leur liste TodoWrite, duree). Une consigne TodoWrite est ajoutee a chaque lancement de
+  sous-agent ; le volet montre aussi le journal des outils et les remarques de chaque agent en cours. Commande `/sous-agents` (rouvre le volet).
+  Banc : `claude plugin test .claude/mods/suivi-sous-agents`. Mise a jour comme `meteo-contexte` : monter `version` dans `plugin.json`, puis
+  `claude.cmd plugin marketplace update mods-tasmota` et `claude.cmd plugin update suivi-sous-agents@mods-tasmota`.
 - `.claude/mods/suivi-plan/` — mod : recopie le plan valide (ExitPlanMode) dans `tasks/plans/`, ligne
   d'avancement (`$.ui.status`), resume du plan actif injecte a chaque conversation, `/suivi`, fichier signal
   `%USERPROFILE%\.claude\suivi-plan\signal.json` qui ouvre la vue. Parseur partage avec l'extension :
@@ -785,6 +794,9 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     (topics `fsmqtt/<topic du persist>/ordre|morceau|etat|lu`, fichier temporaire + MD5, effacement = formatage
     `path.format`, bloquant : watchdog de 5 s ; SOLIDIFIE dans `berry_commun.socle`, charge par l'autoexec du P4 et de la cuve). Bancs `berry/banc_fsmqtt.py` (mutants),
     `test_build_ota_mqtt.py` (carte MQTT simulee).
+    Arrivee depuis l'atelier des graphiques (2026-11-05, plan `tasks/plans/atelier-destinations.md` A7) : `?env=&depuis=atelier&fichiers=&redemarrer=`,
+    code dans le module neuf `build_page_atelier.py` (JS seul, ajoute a la fin de celui de `build_page_fichiers.py`) : bandeau, `buildfs` lance seul, fichiers
+    coches a la fin, rien d'envoye ; sonde `test_build_page_fichiers_chrome.py::sonde_atelier`.
     Mode d'emploi : `outils_docs/README.md` § « Build et televersement (page web) » (onglet : « Onglet « Fichiers » :
     envoyer quelques fichiers du FS »). Spec :
     `docs/superpowers/specs/2026-10-24-page-build-televersement-design.md` ; plan :
@@ -847,7 +859,9 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     graphiques » ; cible Custom detachee, `NOM_CIBLE` atelier_graphiques ; modele B de `outils_docs/atelier_graphiques/`). Prepare les pages de graphiques d'une carte
     S3/P4 (series de l'historique, du JSON SENSOR ou calculees ; conseil de style ; apercu par le VRAI moteur de la carte, valeurs de la carte en ligne sinon
     persist du depot et valeurs simulees). Ecrit `data/<lieu>/<carte>/pages_graphiques.json` (valide par `_description.py::valide`), la ligne
-    `demarrage.charge(["pagesGraphiques"])` de l'autoexec et le cenv (liste `pages_graphiques` de `[berry_commun]` exclue de tout env sans page) ;
+    `demarrage.charge(["pagesGraphiques"])` de l'autoexec et le cenv : deux listes de `[berry_commun]`, `pages_graphiques` (gabarit, `.be` du moteur ; exclue de tout env sans page)
+    et `pages_graphiques_moteur` (`pagesGraphiquesValidation.be`, `pages_graphiques.js`, `pages_graphiques_formule.js` ; exclue des envs sans historique ET sans page : suit
+    l'historique ou une page dediee) ;
     diff puis ecriture atomique, refusee pendant un build ou sur empreinte perimee ; `--exclusions` = application au vrai depot. Moteur cote carte :
     `data/fs/pagesGraphiques.be` + `pagesGraphiquesValidation.be` (route `/pages?p=<id>`, `?f=valeurs`, `?f=sources`, description `/json/pages_graphiques.json`),
     `data/sd/{html,css,js}/pages_graphiques.*` + `pages_graphiques_formule.js`. Premiere page : la cuve (`/pages?p=tableau`, courbe « Hauteur d'eau »).
@@ -855,3 +869,10 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `test_atelier_graphiques_*.py`, `test_pages_graphiques.mjs`, `test_pages_graphiques_chrome.py`, `berry/banc_pages_graphiques.py` (cas partages
     avec le validateur Python), `build/test_cible_atelier_graphiques.py`. Mode d'emploi : `outils_docs/README.md` ; spec
     `docs/superpowers/specs/2026-11-03-atelier-graphiques-design.md` ; plan `tasks/plans/atelier-graphiques.md`.
+    **Destination « Graphiques » et bouton « Televerser »** (2026-11-05, spec `docs/superpowers/specs/2026-11-04-atelier-destinations-televersement-design.md`,
+    plan `tasks/plans/atelier-destinations.md`) : menu « Page » (pages dediees, « Graphiques (/graphiques) » si l'historique est actif, « Autre… »). Modules neufs :
+    `atelier_graphiques_graphiques.py` (ecriture de la cle `graphiques` de `graphiques.json`, graphiques `"moteur": "pages"` ; composition de la carte comparee au depot,
+    choix `base=carte|depot`, jamais d'ecrasement implicite), `atelier_graphiques_televerse.py` (liste des fichiers a envoyer, URL de la page Build),
+    `atelier_graphiques_page_destination.py` et `atelier_graphiques_page_televerse.py` (JS de la page). Bancs `test_atelier_graphiques_graphiques.py`
+    et `test_atelier_graphiques_televerse.py`. Cote carte : `data/sd/js/graphiques_moteur.js` (trace d'un graphique `moteur` par `PagesGraphiques.optionDe`) ;
+    `graphiquesFonctions.be::valideComposition` accepte `"moteur": "pages"` (valide par `pagesGraphiquesValidation.be`). Mode d'emploi : `outils_docs/README.md`.

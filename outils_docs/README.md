@@ -826,6 +826,35 @@ Le formatage bloque la carte : s'il dépasse les 5 s du watchdog de la boucle, e
 sans autoexec ni Berry : la reprendre en HTTP (cet onglet) ou par câble. Idem si elle redémarre entre les deux. Bancs :
 `berry/banc_fsmqtt.py` (module), `outils_pc/test_build_ota_mqtt.py` (PC) ; aucun essai sur carte à ce jour.
 
+#### Arrivée depuis l'atelier des graphiques
+
+Le bouton « Téléverser » de l'atelier des graphiques (voir « Atelier des graphiques ») ouvre la page à l'adresse
+`/?env=<env>&depuis=atelier&fichiers=<chemins séparés par des virgules>&redemarrer=<0|1>`. Le code est dans
+`build_page_atelier.py::arriveeAtelier` (JS de la page, branché sur l'onglet Fichiers). Déroulé :
+
+1. La page sélectionne l'env, bascule sur l'onglet « Fichiers » et affiche un **bandeau** : « Fichiers sélectionnés
+   automatiquement par l'Atelier des graphiques, pour téléverser un graphique nouveau ou modifié. Vérifiez puis cliquez
+   sur « Envoyer ». »
+2. Elle lance seule la **construction du FS** de l'env (le `buildfs` de « Préparer la liste », par `POST /lancer` avec ses
+   en-têtes habituels : un lien ouvert par un tiers ne peut lancer que cela, qui ne touche aucune carte).
+3. À la fin réussie de **ce** `buildfs`, elle relit la liste et **coche exactement les fichiers de la liste** présents dans
+   l'image neuve. « Redémarrer » est coché si `redemarrer=1`.
+4. Elle **n'envoie rien** : l'utilisateur vérifie la sélection puis clique « Envoyer ».
+
+Cas limites :
+
+- **Fichier absent de l'image** : jamais ignoré en silence, le bandeau écrit « Absent de l'image du FS, non coché : ... ».
+- **Paramètres hostiles ou invalides** : env inconnu, absent des cartes envoyables en OTA ou de l'amont, chemin avec `..`,
+  absolu, `\`, `:` ou caractère de contrôle, liste vide ou de plus de 1 Ko, `redemarrer` autre que 0 ou 1. Chacun est
+  signalé par un message, rien n'est coché, et pour un env refusé ou une liste sans chemin valide **aucun `pio` ne part**.
+- **Build déjà en cours** : si c'est un lancement de la page, rien n'est envoyé ; le `buildfs` part à la fin du build en
+  cours (flux `/flux`). Si le serveur refuse parce qu'un build tourne **hors de la page**, nouvel essai **toutes les 5 s,
+  1 h au plus**, avec un message. Toute autre réponse 409 abandonne avec un message.
+- **Changement de carte** avant la fin, ou **redémarrage de l'outil** (flux coupé) : la sélection automatique est
+  **abandonnée avec un message**. Un `buildfs` en échec ou arrêté ne coche rien et le dit.
+- **Rechargement de la page** : l'adresse est ramenée à `?env=<env>` dès que le `buildfs` est accepté, donc un rechargement
+  ne relance jamais la construction ; pendant l'attente d'un autre build, il reprend l'attente sans doublon.
+
 ### Onglet « Mémoire et partitions » : occupation et table de chaque env
 
 L'onglet s'ouvre sur l'env coché dans l'onglet Build (sinon la première carte) ; la liste en haut en choisit un autre
@@ -1393,10 +1422,12 @@ vrais persists) : aucun n'écrit dans le vrai dépôt ni dans le vrai dossier de
 Une page qui prépare des **pages de graphiques** pour une carte S3/P4 : on choisit la carte, ses séries (courbes de
 l'historique, valeurs du JSON SENSOR, valeurs calculées), un style conseillé, et l'aperçu est tracé par **le vrai moteur
 de la carte** avec les vraies valeurs. « Écrire dans le dépôt » pose ensuite la description et ce qu'il faut pour que la
-page apparaisse sur la carte. C'est le palier 1 (page dédiée avec bouton d'accueil) ; modèle B de
+page apparaisse sur la carte. C'est le palier 1 (page dédiée avec bouton d'accueil), complété le 2026-11-05 par la
+destination « Graphiques » et le bouton « Téléverser » ; modèle B de
 `outils_docs/atelier_graphiques/` (trois colonnes) avec la grille du modèle C.
-Conception : [spec](../docs/superpowers/specs/2026-11-03-atelier-graphiques-design.md) ; plan :
-`tasks/plans/atelier-graphiques.md`.
+Conception : [spec](../docs/superpowers/specs/2026-11-03-atelier-graphiques-design.md) et
+[spec destinations](../docs/superpowers/specs/2026-11-04-atelier-destinations-televersement-design.md) ; plans :
+`tasks/plans/atelier-graphiques.md`, `tasks/plans/atelier-destinations.md`.
 
 ### Lancer la page
 
@@ -1444,9 +1475,69 @@ route `/pages?p=<id>` (page), `?f=valeurs&c=` (valeurs), `?f=sources`, `?f=liqui
 (`html/pages_graphiques.html`, `css/pages_graphiques.css`, `js/pages_graphiques.js` et `pages_graphiques_formule.js`).
 Au démarrage seul l'index des pages reste en RAM ; les graphiques ne sont relus qu'à l'ouverture d'une page.
 
-### Envoyer sur la carte
+### Le menu « Page » : où poser le graphique
 
-Construire le FS sur la page Build (7700), puis l'onglet « Fichiers » (envoi des fichiers choisis).
+Le menu **Page** de la colonne de réglages propose, dans cet ordre :
+
+- les **pages dédiées** déjà décrites pour la carte (`/pages?p=<id>`) ;
+- **« Graphiques (/graphiques) »**, la page composable existante de la carte, **seulement si l'historique de la carte
+  est actif** (`diverses.historique.activation` = ON dans son persist du dépôt) : sans historique, `/graphiques`
+  n'existe pas sur elle ;
+- **« Autre… (nouvelle page) »**, qui remplace l'ancien bouton « + Page » : crée une page dédiée (champs « Adresse » et
+  « Titre page », mêmes règles).
+
+Avec la destination « Graphiques », les champs sans objet sont **masqués** : « Adresse », « Titre page », « Accès » et la
+case « Solidifier » (ainsi que « Retirer la page »). Les autres réglages restent. Le graphique est écrit dans la clé
+`graphiques` de `data/<lieu>/<carte>/graphiques.json` avec `"moteur": "pages"` : `/graphiques` le valide et le trace avec
+le même moteur que les pages dédiées, donc **tous les styles de l'atelier** y sont disponibles, pas seulement ses
+4 types d'origine. Les autres clés du fichier (`affichage`, `groupes`...) et les graphiques déjà là ne sont pas touchés ;
+8 graphiques au plus, corps compact de 8 Ko au plus. Une **réécriture** du même graphique le **remplace** (la page retient
+son rang et vérifie qu'il n'a pas changé entre-temps) : jamais de doublon.
+
+**Composition de la carte comparée au dépôt.** La composition a pu être modifiée **sur la carte** (mode édition de
+`/graphiques`) depuis le dernier envoi. Avant d'écrire, l'atelier relit `/json/graphiques.json` sur la carte en ligne
+(lecture seule, `atelier_graphiques_graphiques.py::etat_carte`) et compare les deux JSON normalisés :
+
+- **identique** : une mention discrète, rien à décider ;
+- **différente** : bandeau, diff dépôt vers carte, et un choix obligatoire (rien n'est écrit et « Écrire » reste grisé
+  tant qu'il n'est pas fait) :
+  - **« Partir de la version de la carte »** : ses graphiques sont recopiés dans le dépôt avant d'y ajouter le
+    nouveau. Ce que ce choix fait perdre : **les graphiques écrits dans le dépôt et pas encore téléversés**. Indisponible
+    (avec le motif) si la composition de la carte n'est pas valide pour le validateur du dépôt ;
+  - **« Garder celle du dépôt »** : ce que ce choix fait perdre : **les changements faits sur la carte**, écrasés à
+    l'envoi ;
+- **non vérifiée** (carte hors ligne, muette, ou fichier absent chez elle) : bandeau « Composition de la carte non
+  vérifiée » avec son motif. L'écriture reste possible, mais sans garantie sur ce que la carte porte.
+
+Une composition de la carte modifiée entre « Voir le diff » et l'écriture fait refuser l'écriture (empreinte périmée).
+
+Deux limites propres à la destination « Graphiques » :
+
+- le style **`liquide`** est **refusé** sur une carte dont le FS n'embarque pas `echarts-liquidfill.min.js.gz`
+  (exclu de son env) ; la page le dit à l'écriture ;
+- le réglage **`largeur: demi`** reste **sans effet** sur `/graphiques` (décision : c'est `/graphiques` qui fait la mise en
+  page de ses tuiles). Sur la carte, en **mode édition**, un graphique de l'atelier se **déplace et se retire**, mais ses
+  réglages (série, style, titre...) ne s'éditent **que dans l'atelier** ; la tuile le dit.
+
+### Envoyer sur la carte : le bouton « Téléverser »
+
+Après une **écriture réussie** dans le dépôt, le bouton **« Téléverser »** apparaît à côté de « Écrire dans le dépôt »
+(il disparaît à la modification suivante, et se perd au rechargement de la page). Un clic ouvre la page Build dans un
+nouvel onglet : `http://127.0.0.1:7700/?env=<env>&depuis=atelier&fichiers=<liste>&redemarrer=<0|1>`. La liste, calculée
+par `atelier_graphiques_televerse.py::plan`, contient les chemins **tels qu'ils sont dans l'image du FS** :
+
+- toujours le fichier de description écrit (`pages_graphiques.json` ou `graphiques.json`) ;
+- `autoexec.be` s'il a été écrit ;
+- les fichiers du **moteur** qui viennent d'entrer dans le FS de l'env (exclusion levée dans le cenv), et, si la carte
+  est en ligne, ceux dont elle manque (`Br import path path.exists(...)`, par `/cm?cmnd=`, lecture seule). Carte hors
+  ligne ou réponse illisible : seule la première règle s'applique, et la note le dit. Un fichier toujours exclu n'est
+  jamais proposé ;
+- `redemarrer=1` si `autoexec.be` change ou si l'index des pages dédiées change (id, titre, accès) ; `0` pour un simple
+  réglage de graphique, et toujours `0` pour la destination « Graphiques ».
+
+Rien n'est envoyé par l'atelier. Si la page Build ne tourne pas (sondée au clic par `GET /build_actif`), aucun onglet
+ne s'ouvre : un message rouge propose de la lancer par l'annuaire. Pour l'arrivée côté Build, voir « Arrivée depuis
+l'atelier des graphiques » dans la page Build.
 
 ### Première page : la cuve
 
@@ -1464,7 +1555,8 @@ de la minute).
 ### Bancs
 
 Dans `outils_docs/scripts_python/outils_pc/` (Python de PlatformIO) : `test_atelier_graphiques_description.py`,
-`_series.py`, `_conseil.py`, `_ecriture.py`, `_web.py`, puis la sonde Chrome `test_atelier_graphiques_page_chrome.py` ;
+`_series.py`, `_conseil.py`, `_ecriture.py`, `_graphiques.py` (destination « Graphiques », composition de la carte),
+`_televerse.py` (liste du bouton « Téléverser »), `_web.py`, puis la sonde Chrome `test_atelier_graphiques_page_chrome.py` ;
 `build/test_cible_atelier_graphiques.py`. Côté carte : `node outils_docs/scripts_python/outils_pc/test_pages_graphiques.mjs`,
 `test_pages_graphiques_chrome.py` et `berry/banc_pages_graphiques.py` (cas partagés avec le validateur Python :
 `berry/bouchons_berry/pages_graphiques/cas_description.json`). Commandes exactes : skill `bancs`.
