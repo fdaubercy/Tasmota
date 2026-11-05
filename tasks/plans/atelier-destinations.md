@@ -81,11 +81,11 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
 - [x] Bancs verts — preuve : `graphiques` et `web` « 0 echec(s) : VERT » relancés par le contrôleur le 2026-11-05 ; `ecriture`, `description` verts (rapport A4)
 
 ## A5 — Atelier : menu « Page » et choix carte/dépôt dans la page
-- [ ] Banc rouge (`test_atelier_graphiques_page_chrome.py`) : menu = pages dédiées, « Graphiques (/graphiques) »
+- [x] Banc rouge (`test_atelier_graphiques_page_chrome.py`) : menu = pages dédiées, « Graphiques (/graphiques) »
   (si historique), « Autre… (nouvelle page) » ; bouton « + Page » retiré ; destination Graphiques → Adresse, Titre page,
-  Accès, Solidifier masqués ; composition différente → diff et les deux choix, « Garder celle du dépôt » dit la perte
-- [ ] Module JS neuf de l'atelier (le 470 lignes ne grossit pas au-delà de 500) ; mode sombre respecté
-- [ ] Sonde verte, captures clair et sombre relues
+  Accès, Solidifier masqués ; composition différente → diff et les deux choix, « Garder celle du dépôt » dit la perte — preuve : 23 échecs avant le code (rapport A5)
+- [x] Module JS neuf de l'atelier (le 470 lignes ne grossit pas au-delà de 500) ; mode sombre respecté — preuve : ae57e9415, 139c4eeee, fbbdd4b44 (`atelier_graphiques_page_destination.py` ; réécriture en « remplace » avec témoin `attendu`, 409 si le graphique a changé)
+- [x] Sonde verte, captures clair et sombre relues — preuve : 2 passes vertes après le tour 2 ; `.superpowers/sdd/atelier-destinations/a5-destination.png`, `a5-destination-sombre.png`
 
 ## A6 — Atelier : bouton « Téléverser »
 - [ ] Banc rouge : liste des fichiers calculée (description touchée ; `autoexec.be` si modifié ; fichiers du moteur
