@@ -66,6 +66,39 @@ def ajoute(g, **plus):
     return {"operation": "ajoute", "graphique": g, **plus}
 
 
+APPELS_RESEAU = []
+
+
+def bouchon_get(ip, chemin, delai):
+    """Remplace build_ota_http._get : aucune connexion reelle, la carte « ne repond pas »."""
+    APPELS_RESEAU.append((ip, chemin))
+    raise OSError("bouchon : aucun reseau dans ce banc")
+
+
+agg.build_ota_http._get = bouchon_get
+
+
+def test_hermetique(racine):
+    prepare(racine)
+    APPELS_RESEAU.clear()
+    e = agg.etat_carte(racine, CUVE)
+    verifie((e["etat"], len(APPELS_RESEAU), {c for _, c in APPELS_RESEAU}), ("non_verifiee", 1, {"/json/graphiques.json"}),
+            "sans get injecte : le bouchon intercepte l'appel, rien ne sort vers la vraie carte")
+    verifie(agg.build_ota_http._get is bouchon_get, True, "build_ota_http._get est bien le bouchon")
+
+
+def test_retrait_malgre_depot_invalide(racine):
+    prepare(racine, [ACTUEL, atelier(type="nimporte")])
+    ecrit(racine, {"operation": "retire", "index": 1})
+    verifie(json.loads(fichier(racine).read_text(encoding="utf-8"))["graphiques"], [ACTUEL], "retrait du graphique fautif accepte")
+    prepare(racine, [ACTUEL, atelier(type="nimporte")])
+    ecrit(racine, ajoute(atelier("N")))
+    verifie(len(json.loads(fichier(racine).read_text(encoding="utf-8"))["graphiques"]), 3, "ajout accepte : seul le graphique ajoute est valide")
+    prepare(racine, [ACTUEL] * 8)
+    ecrit(racine, {"operation": "retire", "index": 0})
+    verifie(len(json.loads(fichier(racine).read_text(encoding="utf-8"))["graphiques"]), 7, "retrait accepte dans les bornes")
+
+
 def test_ajout_garde_le_reste(racine):
     prepare(racine)
     avant = fichier(racine).read_bytes()
@@ -223,7 +256,7 @@ def test_carte_change_entre_diff_et_ecriture(racine):
            "composition de la carte changee depuis le diff : refus", "modifies")
 
 
-TESTS = [test_ajout_garde_le_reste, test_ajout_sans_moteur_et_calculees, test_quatre_styles_communs_en_forme_atelier,
+TESTS = [test_hermetique, test_retrait_malgre_depot_invalide, test_ajout_garde_le_reste, test_ajout_sans_moteur_et_calculees, test_quatre_styles_communs_en_forme_atelier,
          test_forme_actuelle_intacte, test_retire, test_fichier_absent, test_refus, test_liquide, test_empreinte_et_build,
          test_etat_carte, test_partir_de_la_carte, test_carte_change_entre_diff_et_ecriture]
 

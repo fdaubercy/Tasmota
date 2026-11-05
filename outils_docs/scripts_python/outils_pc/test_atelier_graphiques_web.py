@@ -271,6 +271,10 @@ def test_destination_graphiques(b):
     statut, e = b.requete("GET", f"/composition?env={CUVE}")
     verifie((statut, e["etat"], bool(e["motif"])), (200, "non_verifiee", True), "GET /composition : carte hors ligne -> non verifiee")
     b.morte = False
+    fichier.write_text("{tronque", encoding="utf-8")
+    statut, r = b.requete("GET", f"/composition?env={CUVE}")
+    verifie((statut, "illisible" in r), (400, True), "GET /composition : graphiques.json du depot illisible -> 400 avec motif")
+    fichier.write_text(base, encoding="utf-8")
     verifie(b.requete("GET", "/composition?env=inconnu")[0], 404, "GET /composition : env inconnu -> 404")
     statut, r = b.requete("POST", "/diff", corps)
     verifie((statut, "choisir base" in r), (400, True), "POST /diff graphiques : carte differente sans choix -> 400")

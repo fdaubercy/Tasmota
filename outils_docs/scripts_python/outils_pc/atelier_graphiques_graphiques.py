@@ -41,18 +41,24 @@ def motifs_graphique(g, numero=1):
     return [m.replace("page 1 graphique 1", f"graphique {numero}") for m in agd.valide(d)]
 
 
+def motifs_bornes(c):
+    """Bornes de la carte seules : nombre de graphiques et taille du corps compact."""
+    m = [f"composition : {len(c)} graphiques > {MAX_GRAPHIQUES}"] if len(c) > MAX_GRAPHIQUES else []
+    if len(json.dumps(c, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) > MAX_CORPS:
+        m.append(f"composition : plus de {MAX_CORPS} octets")
+    return m
+
+
 def motifs_composition(c):
-    """Bornes de la carte et validation des graphiques de forme atelier ; ceux de forme actuelle sont laisses a la carte."""
+    """Bornes et validation des graphiques de forme atelier ; ceux de forme actuelle sont laisses a la carte."""
     if not isinstance(c, list) or not c:
         return ["composition : liste non vide attendue"]
-    m = [f"composition : {len(c)} graphiques > {MAX_GRAPHIQUES}"] if len(c) > MAX_GRAPHIQUES else []
+    m = motifs_bornes(c)
     for i, g in enumerate(c, 1):
         if not isinstance(g, dict):
             m.append(f"graphique {i} : objet attendu")
         elif "moteur" in g:
             m += motifs_graphique(g, i)
-    if len(json.dumps(c, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) > MAX_CORPS:
-        m.append(f"composition : plus de {MAX_CORPS} octets")
     return m
 
 
@@ -140,16 +146,18 @@ def _calcule(racine, env, demande, get):
         comp.append(None)
     elif not isinstance(index, int) or isinstance(index, bool) or not 0 <= index < len(comp):
         raise ValueError(f"index : entier entre 0 et {len(comp) - 1} attendu" if comp else "index : aucune composition")
+    motifs = []
     if op == "retire":
         del comp[index]
     else:
         if not isinstance(g, dict) or g.get("moteur", "pages") != "pages":
             raise ValueError("graphique : objet de forme atelier attendu (\"moteur\": \"pages\")")
         comp[index] = {"moteur": "pages", **{k: v for k, v in g.items() if k != "moteur"}}
+        motifs += motifs_graphique(comp[index], index + 1)       # seul le graphique ecrit est valide
         if g.get("type") == "liquide" and age.LIQUIDFILL in {
                 Path(x.chemin).name for x in fbi.resout(fbi.lit_sections(racine), env, fbe.EXCLUDE)}:
             raise ValueError(f"style liquide refuse sur {env} : {age.LIQUIDFILL} est exclu de son FS (liste page_cuve)")
-    motifs = motifs_composition(comp) if comp else []
+    motifs += motifs_bornes(comp)                       # un retrait n'est refuse que s'il fait depasser les bornes
     if motifs:
         raise ValueError("composition invalide : " + " ; ".join(motifs))
     if comp:
