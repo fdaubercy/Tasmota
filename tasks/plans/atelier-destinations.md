@@ -53,11 +53,11 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
 - [x] Banc vert, `--exclusions` sur le vrai dépôt sans écart, `berry/banc_demarrage.py` vert — preuve : banc « 0 echec(s) : VERT », `--exclusions` « rien a faire », 4 références de banc_demarrage (ligne `sources` seule) mises à jour dans 3edb8792e
 
 ## A2 — Carte : validation des graphiques « moteur pages » dans `/graphiques`
-- [ ] Banc rouge (`berry/banc_graphiques.py` + `.be`) : composition mixte acceptée ; graphique `"moteur": "pages"`
-  invalide refusé avec le motif du validateur des pages ; compositions existantes du banc acceptées à l'identique
-- [ ] `graphiquesFonctions::valideComposition` : forme atelier validée par `pagesGraphiquesValidation` (chargé le temps
-  de la validation, puis relâché) et recopiée telle que validée ; forme actuelle inchangée
-- [ ] Banc vert ; `verifie_berry.py` sans erreur ni écart de charte
+- [x] Banc rouge (`berry/banc_graphiques.py` + `.be`) : composition mixte acceptée ; graphique `"moteur": "pages"`
+  invalide refusé avec le motif du validateur des pages ; compositions existantes du banc acceptées à l'identique — preuve : 2 ECHEC avant le code (rapport A2)
+- [x] `graphiquesFonctions::valideComposition` : forme atelier validée par `pagesGraphiquesValidation` (chargé le temps
+  de la validation, puis relâché) et recopiée telle que validée ; forme actuelle inchangée — preuve : 4c33b1ab6, e81cb8286, aace5733e ; écart : validateur gardé par `import` (Berry ne décharge pas un module), décision du 2026-11-05
+- [x] Banc vert ; `verifie_berry.py` sans erreur ni écart de charte — preuve : `BANC_GRAPHIQUES: OK` (Chrome compris), `BANC_PAGES_GRAPHIQUES: OK`, verifie_berry 0 erreur
 
 ## A3 — Carte : tracé et mode édition des graphiques « moteur pages »
 - [ ] Banc rouge (sonde Chrome de `banc_graphiques.py`, ou sonde dédiée sur le modèle de `test_pages_graphiques_chrome.py`) :
