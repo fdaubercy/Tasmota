@@ -11,7 +11,8 @@
 // 'mois' : le mois en cours (moyenne horaire). Largeur 'demi' ignoree : la page /graphiques est en une colonne.
 window.GraphiquesMoteur = (function () {
   'use strict';
-  var chargement = null;
+  var chargement = null, liquide = null;
+  var G = window.GRAPHIQUES || {}, CLE_LIQUIDE = G.extension || 'liquidfill-3.1.0';
 
   function atelier(g) { return !!g && g.moteur === 'pages'; }
 
@@ -31,6 +32,23 @@ window.GraphiquesMoteur = (function () {
       });
     }, Promise.resolve());
     return chargement;
+  }
+
+  // Extension liquidfill (style « liquide »), comme pages_graphiques.js : localStorage versionne, sinon la carte (gzip)
+  function extension() {
+    liquide = liquide || new Promise(function (ok) {
+      var t = null;
+      try { t = localStorage.getItem(CLE_LIQUIDE); } catch (e) { t = null; }
+      ok(t || fetch('/graphiques?f=liquidfill.js.gz').then(function (r) {
+        if (!r.ok) throw new Error('le module liquidfill est absent de la carte (HTTP ' + r.status + ')');
+        if (typeof DecompressionStream === 'undefined' || !r.body) throw new Error('navigateur trop ancien pour décompresser liquidfill');
+        return new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).text();
+      }).then(function (texte) {
+        try { localStorage.setItem(CLE_LIQUIDE, texte); } catch (e) { /* redemande a la carte */ }
+        return texte;
+      }));
+    }).then(script);
+    return liquide;
   }
 
   function bloc(g, zone) {
@@ -95,7 +113,7 @@ window.GraphiquesMoteur = (function () {
   }
 
   function compose(b, etat) {
-    moteur().then(function () { trace(b, etat); }).catch(function (e) { b.zone.textContent = b.def.titre + ' : ' + e.message; });
+    moteur().then(function () { return b.def.type === 'liquide' ? extension() : null; }).then(function () { trace(b, etat); }).catch(function (e) { b.zone.textContent = b.def.titre + ' : ' + e.message; });
   }
 
   return {atelier: atelier, bloc: bloc, compose: compose};

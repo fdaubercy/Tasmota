@@ -149,6 +149,9 @@ COURBE = {"moteur": "pages", "type": "courbe", "titre": "Courbe atelier", "perio
           "series": ["DS18B20.Temperature", "calc:double"],
           "calculees": {"double": {"nature": "historique", "formule": "DS18B20.Temperature * 2"}}}
 COMPOSITIONS["atelier"] = COMPOSITIONS["atelier_mention"] = COMPOSITIONS["atelier_edition"] = [MESURES_T, CADRAN, COURBE]
+LIQUIDE = {"moteur": "pages", "type": "liquide", "titre": "Liquide atelier", "periode": "direct", "min": 0, "max": 100,
+           "series": [{"chemin": TAUX, "libelle": "Taux", "unite": "%"}]}
+COMPOSITIONS["atelier_liquide"] = COMPOSITIONS["atelier_liquide_absent"] = [LIQUIDE]
 RACINE_JS = Path(__file__).resolve().parents[3] / "data/sd/js"
 # Clics simules, une fois la page tracee (attribut data-graphiques-pret)
 AIDE_ACTIONS = ("function attends(f){var i=setInterval(function(){if(document.documentElement.getAttribute('data-graphiques-pret'))"
@@ -220,6 +223,10 @@ def serveur(scenario, page, echarts_gz):
             requetes.append((self.path, self.headers.get("Referer")))
             if u.path == "/graphiques" and q.get("f") in ("pages_graphiques.js", "pages_graphiques_formule.js"):
                 return self.envoie(200, "text/javascript", (RACINE_JS / (q["f"])).read_bytes())
+            if u.path == "/graphiques" and q.get("f") == "liquidfill.js.gz":
+                if scenario == "atelier_liquide_absent":
+                    return self.envoie(404, "text/plain", "absent")
+                return self.envoie(200, "application/octet-stream", (RACINE_JS / "echarts-liquidfill.min.js.gz").read_bytes())
             if u.path == "/graphiques" and q.get("f") == "echarts.js.gz":
                 if scenario == "sans_echarts":
                     return self.envoie(404, "text/plain", "absent")
@@ -308,12 +315,13 @@ def lis_dom(dom):
                            "legende": json.loads(a.get("legende", "[]")), "fin": int(a.get("fin", "0")),
                            "points": int(a.get("points", "0")), "echelles": json.loads(a.get("echelles", "{}")),
                            "derniers": json.loads(a.get("derniers", "{}")), "axe_x": json.loads(a.get("axe-x", "null"))})
+    texte_atelier = html.unescape(trouve(r'<div class="g_atelier"[^>]*>([^<]*)</div>') or "")
     tuiles = [{k: html.unescape(v) for k, v in re.findall(r'data-([a-z-]+)="([^"]*)"', a)}
               for a in re.findall(r'<div class="g_atelier"([^>]*)>', d)]
     edition = trouve(r'<div id="g_edition"([^>]*)>') or ""
     modifier = trouve(r'<button id="g_modifier"([^>]*)>') or ""
     grafana = trouve(r'<button id="g_grafana"([^>]*)>') or ""
-    return {"tuiles": tuiles, "erreur_js": trouve(r'data-erreur-js="([^"]*)"'), "cartes_atelier": d.count("g_ed_atelier"),
+    return {"texte_atelier": texte_atelier, "tuiles": tuiles, "erreur_js": trouve(r'data-erreur-js="([^"]*)"'), "cartes_atelier": d.count("g_ed_atelier"),
             "graphiques": graphiques, "nb": len(graphiques), "entetes": entetes, "notes": notes,
             "canvas": d.count("<canvas"),
             "titre": graphiques[0]["titre"] if graphiques else "",
@@ -365,6 +373,12 @@ ATTENDUS = {
         ("aucune exception JS", lambda d, r, t, e: d["erreur_js"] is None),
         ("moteur des pages demandé une fois (script + formule), historique relu sans /pages", lambda d, r, t, e: sum("f=pages_graphiques" in p for p, _ in r) == 2 and not any(p.startswith("/pages") for p, _ in r)),
         ("une seule lecture de p=jour, directe lue pour le cadran", lambda d, r, t, e: nb_lectures(r, "p=jour") == 1 and nb_direct(r) >= 1),
+    ],
+    "atelier_liquide": [
+        ("graphique liquide atelier tracé (extension liquidfill demandée à la carte une fois), aucune exception JS", lambda d, r, t, e: [(x["style"], x["rendu"], x["titre"]) for x in d["tuiles"]] == [("liquide", "liquidFill", "Liquide atelier")] and sum("f=liquidfill" in p for p, _ in r) == 1 and d["erreur_js"] is None),
+    ],
+    "atelier_liquide_absent": [
+        ("liquidfill absent de la carte : message lisible dans la tuile, aucune exception JS", lambda d, r, t, e: "liquidfill est absent de la carte (HTTP 404)" in d["texte_atelier"] and d["erreur_js"] is None),
     ],
     "atelier_mention": [
         ("édition : les 2 graphiques atelier portent la mention, sans titre ni série modifiables", lambda d, r, t, e: d["edition"] and d["cartes_atelier"] == 2 and d["msg_edition"] == "" and d["erreur_js"] is None),

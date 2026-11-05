@@ -56,8 +56,10 @@ var graphiquesFonctions = module("graphiquesFonctions")
 graphiquesFonctions.FICHIERS = {
     "echarts.js.gz": ["/sd/js/echarts.min.js.gz", "application/octet-stream"],
     "pages_graphiques_formule.js": ["/sd/js/pages_graphiques_formule.js", "text/javascript"],     # moteur des pages : graphiques_moteur.js
-    "pages_graphiques.js": ["/sd/js/pages_graphiques.js", "text/javascript"]                      # le demande au premier graphique atelier
+    "pages_graphiques.js": ["/sd/js/pages_graphiques.js", "text/javascript"],                     # le demande au premier graphique atelier
+    "liquidfill.js.gz": ["/sd/js/echarts-liquidfill.min.js.gz", "application/octet-stream"]      # style « liquide » (= pagesGraphiques.FICHIER_LIQUIDFILL)
 }
+graphiquesFonctions.VERSION_EXTENSION = "liquidfill-3.1.0"      # cle du cache localStorage de liquidfill (= pagesGraphiques.VERSION_EXTENSION)
 graphiquesFonctions.MORCEAU = 2048      # octets lus et envoyes a la fois : borne la RAM
 graphiquesFonctions.FICHIER_REGLAGES = "/json/graphiques.json"      # reglages de la page (affichage, groupes)
 graphiquesFonctions.VERSION_BIBLIOTHEQUE = "echarts-6.1.0"     # cle du cache localStorage : a changer avec le fichier
@@ -203,7 +205,7 @@ def graphiquesFonctions_page()
     var config = {"bibliotheque": graphiquesFonctions.VERSION_BIBLIOTHEQUE, "nom": (size(noms) > 0 ? noms[0] : "mesures"),
                   "affichage": carte(reglages, "affichage"), "groupes": carte(reglages, "groupes"),
                   "grafana": graphiquesFonctions.urlGrafana(historique), "compteurs": carte(historique, "compteurs"),
-                  "esclaves": graphiquesFonctions.nomsEsclaves(),
+                  "esclaves": graphiquesFonctions.nomsEsclaves(), "extension": graphiquesFonctions.VERSION_EXTENSION,
                   "rafraichissement": graphiquesFonctions.periode(reglages.find("rafraichissement")),
                   "direct": graphiquesFonctions.cadenceDirect(reglages.find("direct")),
                   "graphiques": (isinstance(reglages.find("graphiques"), list) ? reglages.find("graphiques") : nil)}

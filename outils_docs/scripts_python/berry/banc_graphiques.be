@@ -85,7 +85,7 @@ graphiquesFonctions.FICHIER_REGLAGES = REGLAGES_P4
 
 # ---- 1. Envoi d'ECharts compresse par morceaux -------------------------------------------------
 print("1. /graphiques?f=echarts.js.gz")
-verifie(size(graphiquesFonctions.FICHIERS) == 3 && graphiquesFonctions.FICHIERS.contains("echarts.js.gz") && !graphiquesFonctions.FICHIERS.contains("uplot.js"),
+verifie(size(graphiquesFonctions.FICHIERS) == 4 && graphiquesFonctions.FICHIERS.contains("echarts.js.gz") && !graphiquesFonctions.FICHIERS.contains("uplot.js"),
         "fichiers servis : echarts.js.gz et les 2 scripts du moteur des pages (uPlot retire)")
 graphiquesFonctions.FICHIERS["echarts.js.gz"][0] = "data/sd/js/echarts.min.js.gz"
 webserver.raz({"f": "echarts.js.gz"})
