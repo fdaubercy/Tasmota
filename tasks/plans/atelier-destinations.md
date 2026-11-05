@@ -106,10 +106,10 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
 - [x] Bancs verts (`test_build_*.py` concernés + sondes Chrome) — preuve : 50e49d156 ; `test_build_web.py` VERT (140 OK) ; `test_build_page_fichiers_chrome.py` 2 passes, 73 OK, seul KO « telephone » préexistant accepté (code 1) ; `test_build_page_chrome.py` 3 passes, 100 OK, même KO préexistant ; mutants M1, M3, M5, M6 tués, M2 survit
 
 ## A8 — Documentation
-- [ ] `outils_docs/README.md` § « Atelier des graphiques » : menu Page, destination Graphiques, composition carte /
-  dépôt, bouton Téléverser ; § page Build : arrivée depuis l'atelier
-- [ ] `CLAUDE.md` (carte des documents : atelier, page Build, listes du cenv) ; `.claude/skills/bancs/SKILL.md` si
-  un banc est ajouté ; `verifie_references_docs.py` sans défaut
+- [x] `outils_docs/README.md` § « Atelier des graphiques » : menu Page, destination Graphiques, composition carte /
+  dépôt, bouton Téléverser ; § page Build : arrivée depuis l'atelier — preuve : 550ddfd2c (README : sections « Le menu Page », « Envoyer sur la carte : le bouton Téléverser », « Arrivée depuis l'atelier des graphiques »)
+- [x] `CLAUDE.md` (carte des documents : atelier, page Build, listes du cenv) ; `.claude/skills/bancs/SKILL.md` si
+  un banc est ajouté ; `verifie_references_docs.py` sans défaut — preuve : 550ddfd2c ; `verifie_references_docs.py` : 19 document(s), 0 defaut(s)
 
 ## A9 — Validation sur les cartes
 - [ ] Place du FS mesurée sur les 6 cartes à historique avec les fichiers du moteur (blocs de 4 Ko) ; arrêt et
