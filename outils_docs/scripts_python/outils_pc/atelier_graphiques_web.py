@@ -18,6 +18,7 @@ Routes (les POST exigent l'en-tete X-Atelier-Graphiques: 1 et la meme origine ; 
                        y ajoute les parametres d'URL du lecteur de la carte (paquets de 12 chemins en direct)
     GET  /description  ?env= : {description (null si aucune), solidifie, erreur}
     GET  /moteur/<nom> fichiers du moteur de data/sd (liste fermee MOTEUR) ; ECharts et liquidfill decompresses
+    GET  /build_actif  {actif} : la page Build (127.0.0.1:7700) repond-elle ? (sondee au clic de « Televerser », delai 1 s)
     GET  /composition  ?env= : composition /graphiques de la carte en ligne (lecture seule) comparee au depot :
                        {etat: identique|differente|non_verifiee, motif, diff, depot, carte, carte_valide, carte_motifs, historique}
     POST /conseil      {intention, series, destination, historique} -> atelier_graphiques_conseil.propose
@@ -25,7 +26,7 @@ Routes (les POST exigent l'en-tete X-Atelier-Graphiques: 1 et la meme origine ; 
     POST /diff         {env, description|null, solidifier} -> {fichiers: [{chemin, avant, apres, diff, ajouts,
                        retraits}], empreinte, signaux} ; description null = derniere page retiree
     POST /ecrire       {env, description|null, solidifier, empreinte} -> {ecrits, televerser} ; 409 si build ou empreinte perimee.
-                       `televerser` (null si rien n'est ecrit) : {fichiers, redemarrer, verification, notes, url, build_actif, message}
+                       `televerser` (null si rien n'est ecrit) : {fichiers, redemarrer, verification, notes, url} ou {erreur}
                        (A6 : atelier_graphiques_televerse ; url = page Build http://127.0.0.1:7700/?env=&depuis=atelier&fichiers=&redemarrer=)
     Destination « graphiques » (A4) : /diff et /ecrire avec "destination": "graphiques" et {env, operation: ajoute|remplace|retire,
                        graphique, index, base: depot|carte[, empreinte]} : cle `graphiques` de graphiques.json (atelier_graphiques_graphiques)
@@ -167,7 +168,12 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None, sonde_build=
 
     def televerser(env, destination, ecrits, avant):
         """Liste a televerser et lien de la page Build (None si rien n'a ete ecrit) ; ne depasse jamais une lecture de la carte."""
-        return agt.plan(racine, env, destination, ecrits, avant, get=get or build_ota_http._get, sonde=sonde_build or agt.build_actif) if ecrits else None
+        if not ecrits:
+            return None
+        try:
+            return agt.plan(racine, env, destination, ecrits, avant, get=get or build_ota_http._get)
+        except Exception as e:                    # les fichiers sont deja ecrits : /ecrire reste 200
+            return {"erreur": f"liste a televerser non calculee : {type(e).__name__} : {e}"}
 
     def traite_post(chemin, demande):
         if chemin == "/conseil":
@@ -250,6 +256,8 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None, sonde_build=
                     chemins, periode, mois, nom = parametres_valeurs(params)
                     v = ags.valeurs(racine, e, chemins, periode, get=_muette if muettes.get(e) else get, nom=nom, mois=mois)
                     self._json(v, entetes=[("X-Source", v["source"])])
+                elif url.path == "/build_actif":
+                    self._json({"actif": bool((sonde_build or agt.build_actif)())})
                 elif url.path == "/composition":
                     self._json(agg.etat_carte(racine, env(), get=get))
                 elif url.path == "/description":

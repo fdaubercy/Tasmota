@@ -584,7 +584,8 @@ def sonde_televerse(m):
     verifie(bool(attend(cdp, "!(" + cache + ")", 15)), True, "Televerser : bouton present apres l'ecriture")
     verifie(cdp.js("document.getElementById('tv-info').textContent.indexOf('fichier(s) à téléverser') > 0"), True,
             "Televerser : nombre de fichiers affiche")
-    cdp.js("document.getElementById('televerser').click(); 1")
+    cdp.js("document.getElementById('televerser').click(); 1")       # sonde la page Build au clic (GET /build_actif)
+    attend(cdp, "window.ouverts.length > 0", 10)
     ouverts = cdp.js("window.ouverts")
     voulu = {"env": [CUVE], "depuis": ["atelier"], "redemarrer": ["0"]}
     from urllib.parse import parse_qs, urlsplit
@@ -597,10 +598,11 @@ def sonde_televerse(m):
     saisit(cdp, "#r-titre", "Autre titre")
     verifie(bool(attend(cdp, cache, 5)), True, "Televerser : masque de nouveau a la modification suivante")
     attend(cdp, "!document.getElementById('ecrire').disabled", 15)
-    arret.write_text("x")                                  # page Build arretee (port 7700 muet)
     cdp.js("document.getElementById('ecrire').click(); 1")
     attend(cdp, "!(" + cache + ")", 15)
+    arret.write_text("x")                                  # page Build arretee APRES l'ecriture : seule la sonde au clic le voit
     cdp.js("window.ouverts = []; document.getElementById('televerser').click(); 1")
+    attend(cdp, "document.getElementById('message').textContent.indexOf('annuaire') >= 0", 10)
     verifie((cdp.js("window.ouverts.length"), cdp.js("document.getElementById('message').textContent.indexOf('annuaire') >= 0")), (0, True),
             "Televerser : page Build arretee -> message « lancer par l'annuaire », pas d'onglet")
     arret.unlink(missing_ok=True)

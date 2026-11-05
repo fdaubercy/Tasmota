@@ -28,15 +28,21 @@ TOUS = {agt.nom_fs(f) for f in age.FICHIERS_MOTEUR}
 
 class Carte:
     """get injecte : repond aux `Br path.exists("/<fs>")` selon `presents` ; `morte` = hors ligne."""
-    def __init__(self, presents=(), morte=False):
-        self.presents, self.morte, self.appels = set(presents), morte, []
+    def __init__(self, presents=(), morte=False, reponse=None, leve=None):
+        self.presents, self.morte, self.appels, self.reponse, self.leve = set(presents), morte, [], reponse, leve
 
     def __call__(self, ip, chemin, delai):
         self.appels.append(chemin)
+        if self.leve:
+            raise self.leve
         if self.morte:
             raise OSError("pas de reponse")
         cmnd = urllib.parse.unquote(chemin.split("cmnd=", 1)[1])
-        m = re.fullmatch(r'Br import path path\.exists\("/([^"]+)"\)', cmnd)
+        if self.reponse is not None:
+            return self.reponse
+        m = re.fullmatch(r'Br \(def\(\) import path return path\.exists\("/([^"]+)"\) end\)\(\)', cmnd)
+        if re.fullmatch(r'Br import path path\.exists\("/([^"]+)"\)', cmnd):
+            return b'{"Br":"nil"}'                         # comme la vraie carte (mesure du 2026-11-05) : pas de valeur
         assert m, f"commande inattendue (ecriture ?) : {cmnd!r}"
         return json.dumps({"Br": "true" if m.group(1) in self.presents else "false"}).encode()
 
@@ -47,8 +53,8 @@ def ecrit_pages(racine, env, desc, solidifier=False):
     return avant, age.ecrit(racine, env, desc, solidifier, prevu["empreinte"], tage.SANS_BUILD, )
 
 
-def plan(racine, env, destination, ecrits, avant, carte, actif=True):
-    return agt.plan(racine, env, destination, ecrits, avant, get=carte, sonde=lambda: actif)
+def plan(racine, env, destination, ecrits, avant, carte):
+    return agt.plan(racine, env, destination, ecrits, avant, get=carte)
 
 
 def depot(t):
@@ -130,9 +136,59 @@ def test_url_et_build(t):
     verifie((" " in u, "/" in q.query), (False, False), "URL : valeurs encodees")
     racine = depot(t)
     avant, ecrits = ecrit_pages(racine, BUREAU, tage.description())
-    p = plan(racine, BUREAU, "pages", ecrits, avant, Carte(), actif=False)
-    verifie((p["build_actif"], "annuaire" in p["message"]), (False, True), "page Build arretee : message « lancer par l'annuaire »")
     verifie(agt.build_actif(1), False, "sonde reelle : port 1 muet")
+
+
+def test_forme_de_commande(t):
+    """Le bouchon repond comme la vraie carte : l'ancienne forme (sans fonction) rend "nil" -> verification impossible, jamais « absent »."""
+    c = Carte(presents=["autoexec.be"])
+    verifie((agt.existe_sur_carte("x", "autoexec.be", c), agt.existe_sur_carte("x", "absent.xyz", c)), (True, False),
+            "existe_sur_carte : \"true\" / \"false\" en chaines")
+    verifie(agt.existe_sur_carte("x", "a", Carte(reponse=b'{"Br": true}')), True, "existe_sur_carte : booleen accepte")
+    for brut in (b'{"Br":"nil"}', b'{"Br":"erreur"}', b'[1]', b'{}'):
+        try:
+            agt.existe_sur_carte("x", "a", Carte(reponse=brut))
+            verifie(True, False, f"existe_sur_carte : {brut!r} -> verification impossible")
+        except ValueError:
+            verifie(True, True, f"existe_sur_carte : {brut!r} -> verification impossible")
+    ancienne = urllib.parse.quote('Br import path path.exists("/autoexec.be")', safe="")
+    verifie(Carte(presents=["autoexec.be"])("x", "/cm?cmnd=" + ancienne, 4), b'{"Br":"nil"}', "bouchon : l'ancienne forme rend nil, comme la carte")
+    racine = cuve_avec_page(t)
+    avant, ecrits = ecrit_pages(racine, CUVE, tage.description(titre="Autre"))
+    p = plan(racine, CUVE, "pages", ecrits, avant, Carte(reponse=b'{"Br":"nil"}'))
+    verifie((p["fichiers"], p["verification"]), (["pages_graphiques.json"], "hors_ligne"), "reponse nil : non verifie, rien declare absent")
+
+
+def test_erreurs_carte(t):
+    import http.client
+    racine = cuve_avec_page(t)
+    avant, ecrits = ecrit_pages(racine, CUVE, tage.description(titre="Autre"))
+    for nom, carte in (("HTTPException", Carte(leve=http.client.BadStatusLine("x"))), ("JSON liste", Carte(reponse=b"[]")),
+                       ("JSON invalide", Carte(reponse=b"pas du json"))):
+        p = plan(racine, CUVE, "pages", ecrits, avant, carte)
+        verifie((p["fichiers"], p["verification"], bool(p["notes"])), (["pages_graphiques.json"], "hors_ligne", True),
+                f"carte en erreur ({nom}) : traitee hors ligne avec note, pas d'exception")
+
+
+def test_redemarrer(t):
+    racine = cuve_avec_page(t)
+    carte = Carte(presents=TOUS)
+    avant, ecrits = ecrit_pages(racine, CUVE, tage.description(titre="Autre"))
+    d = tage.description()
+    d["pages"][0]["acces"] = "lien"
+    avant, ecrits = ecrit_pages(racine, CUVE, d)
+    verifie(plan(racine, CUVE, "pages", ecrits, avant, carte)["redemarrer"], 1, "acces d'une page existante change : redemarrer=1")
+    d["pages"][0]["titre"] = "Nouveau titre"
+    avant, ecrits = ecrit_pages(racine, CUVE, d)
+    verifie(plan(racine, CUVE, "pages", ecrits, avant, carte)["redemarrer"], 1, "titre d'une page existante change : redemarrer=1")
+    d["pages"][0]["graphiques"][0]["titre"] = "Reglage"
+    avant, ecrits = ecrit_pages(racine, CUVE, d)
+    verifie(plan(racine, CUVE, "pages", ecrits, avant, carte)["redemarrer"], 0, "reglage d'un graphique seul : redemarrer=0")
+    auto = racine / tage.fbe.dossier_carte(CUVE) / "autoexec.be"
+    avant = agt.etat_avant(racine, CUVE)
+    auto.write_bytes(auto.read_bytes() + b"-- modif\n")
+    rel = tage.fbe.dossier_carte(CUVE) + "/autoexec.be"
+    verifie(plan(racine, CUVE, "pages", [rel], avant, carte)["redemarrer"], 1, "autoexec seul modifie : redemarrer=1")
 
 
 def test_nom_fs(t):
@@ -145,7 +201,7 @@ def test_nom_fs(t):
 
 
 TESTS = [test_description_seule, test_premiere_page, test_absent_de_la_carte, test_hors_ligne, test_graphiques, test_url_et_build,
-         test_nom_fs]
+         test_nom_fs, test_forme_de_commande, test_erreurs_carte, test_redemarrer]
 
 if __name__ == "__main__":
     for test in TESTS:

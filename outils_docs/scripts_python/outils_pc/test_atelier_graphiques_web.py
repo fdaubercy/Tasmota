@@ -229,8 +229,8 @@ def test_description_diff_ecrire(b):
     statut, r = b.requete("POST", "/ecrire", dict(corps, empreinte=d["empreinte"]))
     verifie((statut, rel in r["ecrits"], (b.racine / rel).exists()), (200, True, True), "POST /ecrire : ecrit")
     t = r["televerser"]
-    verifie(("pages_graphiques.json" in t["fichiers"], t["url"].startswith("http://127.0.0.1:7700/?env="), t["build_actif"], t["message"]),
-            (True, True, True, ""), "POST /ecrire : `televerser` (fichiers, URL de la page Build)")
+    verifie(("pages_graphiques.json" in t["fichiers"], t["url"].startswith("http://127.0.0.1:7700/?env=")),
+            (True, True), "POST /ecrire : `televerser` (fichiers, URL de la page Build)")
     statut, r = b.requete("GET", f"/description?env={CUVE}")
     verifie((statut, r["description"]), (200, description()), "GET /description : relue du depot")
     statut, r = b.requete("POST", "/diff", corps)
@@ -311,8 +311,26 @@ def test_destination_graphiques(b):
     verifie((statut, "indisponible" in r), (400, True), "POST /diff graphiques base=carte invalide (9 graphiques) -> 400, motif")
 
 
+def test_televerser_robuste(b):
+    corps = {"env": CUVE, "description": description(), "solidifier": False}
+    b.build_actif = True
+    verifie(b.requete("GET", "/build_actif"), (200, {"actif": True}), "GET /build_actif : page Build qui repond")
+    b.build_actif = False
+    verifie(b.requete("GET", "/build_actif"), (200, {"actif": False}), "GET /build_actif : page Build muette")
+    b.build_actif = True
+    # le calcul de la liste ne doit jamais faire echouer /ecrire (fichiers deja ecrits) : 200 + erreur lisible
+    reel, agw.agt.plan = agw.agt.plan, lambda *a, **k: 1 / 0
+    try:
+        statut, r = b.requete("POST", "/diff", dict(corps, description=description()))
+        statut, r = b.requete("POST", "/ecrire", dict(corps, description=description(), empreinte=r["empreinte"]))
+    finally:
+        agw.agt.plan = reel
+    verifie((statut, bool(r.get("ecrits")), "ZeroDivisionError" in r["televerser"]["erreur"]), (200, True, True),
+            "POST /ecrire : liste a televerser en erreur -> 200, fichiers ecrits, erreur lisible")
+
+
 TESTS = [test_page_et_moteur, test_envs, test_series_valeurs, test_conseil_valide, test_acces, test_description_diff_ecrire,
-         test_destination_graphiques]
+         test_destination_graphiques, test_televerser_robuste]
 
 
 if __name__ == "__main__":

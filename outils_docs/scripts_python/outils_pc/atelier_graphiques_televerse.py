@@ -19,7 +19,6 @@ import fichiers_berry_ini as fbi
 
 PORT_BUILD = 7700
 URL_BUILD = f"http://127.0.0.1:{PORT_BUILD}/"
-MESSAGE_BUILD = "La page Build ne repond pas : lancer la page Build par l'annuaire (http://127.0.0.1:7600), puis cliquer de nouveau."
 
 
 def nom_fs(rel):
@@ -49,15 +48,20 @@ def etat_avant(racine, env):
 
 
 def existe_sur_carte(ip, fs, get):
-    """True / False ; OSError / ValueError si la carte ne repond pas ou repond autre chose."""
-    cmnd = urllib.parse.quote(f'Br import path path.exists("/{fs}")', safe="")
-    reponse = json.loads(get(ip, "/cm?cmnd=" + cmnd, ags.DELAI).decode("utf-8", "replace")).get("Br")
-    if str(reponse).lower() not in ("true", "false"):
-        raise ValueError(f"reponse inattendue : {reponse!r}")
-    return str(reponse).lower() == "true"
+    """True / False ; ValueError si la reponse n'est ni "true" ni "false" (nil, erreur : verification impossible, jamais « absent »).
+    `Br import path path.exists(..)` rend "nil" (pas de valeur) : la forme avec fonction rend la valeur, en chaine (mesure sur la cuve)."""
+    cmnd = urllib.parse.quote(f'Br (def() import path return path.exists("/{fs}") end)()', safe="")
+    corps = json.loads(get(ip, "/cm?cmnd=" + cmnd, ags.DELAI).decode("utf-8", "replace"))
+    reponse = corps.get("Br") if isinstance(corps, dict) else None
+    if reponse is True or reponse is False:
+        return reponse
+    if reponse in ("true", "false"):
+        return reponse == "true"
+    raise ValueError(f"reponse inattendue : {reponse!r}")
 
 
 def build_actif(port=PORT_BUILD):
+    """La page Build repond-elle ? (sondee au clic du bouton, par GET /build_actif de l'atelier)"""
     try:
         with socket.create_connection(("127.0.0.1", port), timeout=1):
             return True
@@ -70,8 +74,8 @@ def url(env, fichiers, redemarrer):
     return URL_BUILD + "?" + q
 
 
-def plan(racine, env, destination, ecrits, avant, *, get, sonde=build_actif):
-    """{fichiers, redemarrer, verification: carte|hors_ligne, notes, url, build_actif, message}. `ecrits` : chemins du depot."""
+def plan(racine, env, destination, ecrits, avant, *, get):
+    """{fichiers, redemarrer, verification: carte|hors_ligne, notes, url}. `ecrits` : chemins du depot."""
     racine, dossier = Path(racine), fbe.dossier_carte(env)
     ecrits = [e.replace("\\", "/") for e in ecrits]
     fichiers, notes = [], []
@@ -94,7 +98,7 @@ def plan(racine, env, destination, ecrits, avant, *, get, sonde=build_actif):
                 try:
                     if not existe_sur_carte(ip, fs, get):
                         fichiers.append(fs)
-                except (OSError, ValueError):           # HTTPException est une OSError ; le reste = hors ligne
+                except Exception:                       # hors ligne, HTTPException, JSON ou reponse inattendus : non verifie
                     verifie = False
         if not verifie:
             notes.append("carte hors ligne ou adresse inconnue : presence des fichiers du moteur non verifiee"
@@ -104,6 +108,5 @@ def plan(racine, env, destination, ecrits, avant, *, get, sonde=build_actif):
         verification = "carte"
     fichiers = list(dict.fromkeys(fichiers))
     redemarrer = int(dossier + "/autoexec.be" in ecrits or _index(racine, env) != avant["index"])
-    actif = sonde()
     return {"fichiers": fichiers, "redemarrer": redemarrer, "verification": verification, "notes": notes,
-            "url": url(env, fichiers, redemarrer), "build_actif": actif, "message": "" if actif else MESSAGE_BUILD}
+            "url": url(env, fichiers, redemarrer)}
