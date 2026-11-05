@@ -88,6 +88,8 @@ def mode_serveur(port, depot, temoin):
         assert atelier_graphiques_page.PAGE.count(atelier_graphiques_page.THEME_INTERRUPTEUR) == 1
         atelier_graphiques_page.PAGE = atelier_graphiques_page.PAGE.replace(atelier_graphiques_page.THEME_INTERRUPTEUR, "")
     build_ota_http._get = fausse_carte
+    import atelier_graphiques_televerse as agt     # page Build simulee : active sauf si le fichier-temoin « build_arrete » existe
+    agt.build_actif = lambda port=agt.PORT_BUILD: not (Path(os.environ["OUTILS_TASMOTA_DOSSIER"]) / "build_arrete").exists()
     agw.DEPOT = Path(depot)
     agw.builds_en_cours_defaut = lambda: []
     sys.argv = ["atelier_graphiques_web.py", "--http", str(port), "--local", "--sans-navigateur"]
@@ -565,6 +567,46 @@ def sonde_destination(m, capture):
     verifie([e for e in cdp.erreurs() if e not in ERREURS_ATTENDUES], [], "destination : aucune erreur JS (hors le refus attendu du scenario « index change »)")
 
 
+def sonde_televerse(m):
+    """Bouton « Televerser » (A6) : absent avant l'ecriture, present apres, masque a la modification suivante ; ouvre l'URL de
+    la page Build (window.open intercepte) ; page Build arretee -> message, aucun onglet."""
+    cdp = m.cdp
+    pose_carte(m, COMPO_DEPOT)
+    arret = m.t / "outils" / "build_arrete"
+    arret.unlink(missing_ok=True)
+    ouvre(cdp, m.url + "?env=" + CUVE)
+    cdp.js("window.ouverts = []; window.open = function(u, c){ window.ouverts.push([u, c]); return null; }; 1")
+    cache = "document.getElementById('televerser').offsetParent === null"
+    verifie(cdp.js(cache), True, "Televerser : bouton absent avant l'ecriture")
+    saisit(cdp, "#r-titre", "Titre televerse")
+    attend(cdp, "!document.getElementById('ecrire').disabled", 15)
+    cdp.js("document.getElementById('ecrire').click(); 1")
+    verifie(bool(attend(cdp, "!(" + cache + ")", 15)), True, "Televerser : bouton present apres l'ecriture")
+    verifie(cdp.js("document.getElementById('tv-info').textContent.indexOf('fichier(s) à téléverser') > 0"), True,
+            "Televerser : nombre de fichiers affiche")
+    cdp.js("document.getElementById('televerser').click(); 1")
+    ouverts = cdp.js("window.ouverts")
+    voulu = {"env": [CUVE], "depuis": ["atelier"], "redemarrer": ["0"]}
+    from urllib.parse import parse_qs, urlsplit
+    u = urlsplit(ouverts[0][0]) if ouverts else None
+    q = parse_qs(u.query) if u else {}
+    fichiers = q.get("fichiers", [""])[0].split(",")
+    verifie((len(ouverts), ouverts[0][1] if ouverts else None, u and u.netloc, {k: q.get(k) for k in voulu}), (1, "_blank", "127.0.0.1:7700", voulu),
+            "Televerser : window.open(_blank) sur la page Build, env, depuis=atelier, redemarrer=0")
+    verifie("pages_graphiques.json" in fichiers, True, "Televerser : pages_graphiques.json dans fichiers=")
+    saisit(cdp, "#r-titre", "Autre titre")
+    verifie(bool(attend(cdp, cache, 5)), True, "Televerser : masque de nouveau a la modification suivante")
+    attend(cdp, "!document.getElementById('ecrire').disabled", 15)
+    arret.write_text("x")                                  # page Build arretee (port 7700 muet)
+    cdp.js("document.getElementById('ecrire').click(); 1")
+    attend(cdp, "!(" + cache + ")", 15)
+    cdp.js("window.ouverts = []; document.getElementById('televerser').click(); 1")
+    verifie((cdp.js("window.ouverts.length"), cdp.js("document.getElementById('message').textContent.indexOf('annuaire') >= 0")), (0, True),
+            "Televerser : page Build arretee -> message « lancer par l'annuaire », pas d'onglet")
+    arret.unlink(missing_ok=True)
+    verifie([e for e in cdp.erreurs() if e not in ERREURS_ATTENDUES], [], "Televerser : aucune erreur JS")
+
+
 def sonde_temoin(m):
     m.cdp.appel("Page.navigate", url=m.url)
     time.sleep(4)
@@ -587,7 +629,7 @@ def principal():
         try:
             m = Montage()
             m.demarre(temoin)
-            sonde_temoin(m) if temoin else (sonde_page(m, args.capture), sonde_destination(m, args.capture))
+            sonde_temoin(m) if temoin else (sonde_page(m, args.capture), sonde_destination(m, args.capture), sonde_televerse(m))
         except FileNotFoundError as erreur:
             print(f"BLOQUE : {erreur}")
             return 3

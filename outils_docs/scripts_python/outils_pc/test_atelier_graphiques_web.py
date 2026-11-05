@@ -56,13 +56,13 @@ class Banc:
         for rel in SD:
             (self.racine / "data/sd" / rel).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(DEPOT / "data/sd" / rel, self.racine / "data/sd" / rel)
-        self.builds, self.morte, self.appels, self.composition = [], False, [], None
+        self.builds, self.morte, self.appels, self.composition, self.build_actif = [], False, [], None, True
         with socket.socket() as s:
             s.bind(("127.0.0.1", 0))
             self.port = s.getsockname()[1]
         acces = acces_web.Acces(self.port, True, "Atelier des graphiques")
         self.serveur = ThreadingHTTPServer(("127.0.0.1", self.port),
-                                           agw.fabrique_gestionnaire(acces, self.racine, lambda: self.builds, get=self.get))
+                                           agw.fabrique_gestionnaire(acces, self.racine, lambda: self.builds, get=self.get, sonde_build=lambda: self.build_actif))
         self.serveur.daemon_threads = True
         threading.Thread(target=self.serveur.serve_forever, daemon=True).start()
 
@@ -228,6 +228,9 @@ def test_description_diff_ecrire(b):
     verifie((statut, (b.racine / rel).exists()), (409, False), "POST /ecrire empreinte perimee -> 409, rien d'ecrit")
     statut, r = b.requete("POST", "/ecrire", dict(corps, empreinte=d["empreinte"]))
     verifie((statut, rel in r["ecrits"], (b.racine / rel).exists()), (200, True, True), "POST /ecrire : ecrit")
+    t = r["televerser"]
+    verifie(("pages_graphiques.json" in t["fichiers"], t["url"].startswith("http://127.0.0.1:7700/?env="), t["build_actif"], t["message"]),
+            (True, True, True, ""), "POST /ecrire : `televerser` (fichiers, URL de la page Build)")
     statut, r = b.requete("GET", f"/description?env={CUVE}")
     verifie((statut, r["description"]), (200, description()), "GET /description : relue du depot")
     statut, r = b.requete("POST", "/diff", corps)

@@ -24,7 +24,9 @@ Routes (les POST exigent l'en-tete X-Atelier-Graphiques: 1 et la meme origine ; 
     POST /valide       {description} -> {motifs}
     POST /diff         {env, description|null, solidifier} -> {fichiers: [{chemin, avant, apres, diff, ajouts,
                        retraits}], empreinte, signaux} ; description null = derniere page retiree
-    POST /ecrire       {env, description|null, solidifier, empreinte} -> {ecrits} ; 409 si build ou empreinte perimee
+    POST /ecrire       {env, description|null, solidifier, empreinte} -> {ecrits, televerser} ; 409 si build ou empreinte perimee.
+                       `televerser` (null si rien n'est ecrit) : {fichiers, redemarrer, verification, notes, url, build_actif, message}
+                       (A6 : atelier_graphiques_televerse ; url = page Build http://127.0.0.1:7700/?env=&depuis=atelier&fichiers=&redemarrer=)
     Destination « graphiques » (A4) : /diff et /ecrire avec "destination": "graphiques" et {env, operation: ajoute|remplace|retire,
                        graphique, index, base: depot|carte[, empreinte]} : cle `graphiques` de graphiques.json (atelier_graphiques_graphiques)
 Refus : 400 (saisie, motif en texte ; Content-Length hors 0..MAX_CORPS ; JSON trop imbrique), 404 (env inconnu ou hors S3/P4), 409 (build, empreinte), 500 (inattendu).
@@ -47,7 +49,9 @@ import atelier_graphiques_description as agd
 import atelier_graphiques_ecriture as age
 import atelier_graphiques_graphiques as agg
 import atelier_graphiques_series as ags
+import atelier_graphiques_televerse as agt
 import build_envs
+import build_ota_http
 import fichiers_berry_etat as fbe
 import fichiers_berry_ini as fbi
 
@@ -144,7 +148,7 @@ def _muette(ip, chemin, delai):
     raise OSError("carte muette a la derniere lecture des series")
 
 
-def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None):
+def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None, sonde_build=None):
     verrou = threading.Lock()
     muettes = {}                                  # env -> True : series lues au depot, ne pas attendre la carte
 
@@ -160,6 +164,10 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None):
     def graphiques(demande):
         """Demande de la destination « graphiques » : (env, demande sans env ni destination)."""
         return env_atelier(racine, demande.get("env")), {k: v for k, v in demande.items() if k not in ("env", "destination", "empreinte")}
+
+    def televerser(env, destination, ecrits, avant):
+        """Liste a televerser et lien de la page Build (None si rien n'a ete ecrit) ; ne depasse jamais une lecture de la carte."""
+        return agt.plan(racine, env, destination, ecrits, avant, get=get or build_ota_http._get, sonde=sonde_build or agt.build_actif) if ecrits else None
 
     def traite_post(chemin, demande):
         if chemin == "/conseil":
@@ -178,9 +186,10 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None):
                 raise ValueError("empreinte : chaine attendue")
             with verrou:
                 env, d = graphiques(demande)
+                avant = agt.etat_avant(racine, env)
                 ecrits = agg.ecrit(racine, env, d, demande["empreinte"], builds_en_cours, get=get)
                 rang, ecrit = agg.index_ecrit(racine, env, d)
-                return {"ecrits": ecrits, "index": rang, "graphique": ecrit}
+                return {"ecrits": ecrits, "index": rang, "graphique": ecrit, "televerser": televerser(env, "graphiques", ecrits, avant)}
         if chemin == "/diff":
             with verrou:
                 return avec_diffs(age.prevoit(racine, *corps_ecriture(demande)))
@@ -189,7 +198,10 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None):
             if not isinstance(empreinte, str):
                 raise ValueError("empreinte : chaine attendue")
             with verrou:                          # verification de l'empreinte et ecriture, d'un seul tenant
-                return {"ecrits": age.ecrit(racine, *corps_ecriture(demande), empreinte, builds_en_cours)}
+                corps = corps_ecriture(demande)
+                avant = agt.etat_avant(racine, corps[0])
+                ecrits = age.ecrit(racine, *corps, empreinte, builds_en_cours)
+                return {"ecrits": ecrits, "televerser": televerser(corps[0], "pages", ecrits, avant)}
         raise LookupError(chemin)
 
     class Gestionnaire(BaseHTTPRequestHandler):

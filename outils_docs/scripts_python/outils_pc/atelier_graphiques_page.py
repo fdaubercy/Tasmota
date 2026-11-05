@@ -174,6 +174,7 @@ HTML = """<main>
   <div class="actions"><span class="doux petit" id="resume"></span>
     <button class="btn" id="voir-diff">Voir le diff complet</button>
     <button class="btn prim" id="ecrire" disabled>Écrire dans le dépôt</button>
+    <button class="btn prim cache" id="televerser">Téléverser ↗</button><span class="doux petit" id="tv-info"></span>
     <a class="btn" id="lien-build" target="_blank" rel="noopener" href="http://127.0.0.1:7700/">Envoyer par la page Build ↗</a></div>
   <div id="message"></div>
 </div>

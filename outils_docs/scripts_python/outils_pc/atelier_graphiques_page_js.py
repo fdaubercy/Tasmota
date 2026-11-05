@@ -14,6 +14,7 @@ rediriges vers /valeurs?env= : la conversion des reponses de la carte est donc l
 
 from atelier_graphiques_page_destination import JS_DEST
 from atelier_graphiques_page_series import JS_SERIES
+from atelier_graphiques_page_televerse import JS_TV
 
 JS = r"""
 'use strict';
@@ -64,7 +65,7 @@ function corpsEcriture() {
 
 // ---- carte et donnees (colonne de gauche) ----
 function choisitEnv(env) {
-  etat.env = env; etat.dest = 'pages'; etat.compo = null; etat.base = null; etat.indexEcrit = null;
+  etat.env = env; etat.dest = 'pages'; etat.compo = null; etat.base = null; etat.indexEcrit = null; televerseCache();
   dernieres = {};
   history.replaceState(null, '', '?env=' + encodeURIComponent(env));
   $('nom-carte').textContent = env;
@@ -437,14 +438,14 @@ $('ecrire').onclick = function () {
   poste('/ecrire', Object.assign({empreinte: d.empreinte}, corps)).then(function (r) {
     message('Écrit : ' + r.ecrits.map(echappe).join(', ') + (d.signaux.length ? '<br>À faire : ' + d.signaux.map(echappe).join(' ; ') : '') +
       '<br>Puis « Envoyer par la page Build ↗ » (onglet Fichiers) pour la carte.', 'vert');
-    apresEcriture(r);
+    apresEcriture(r); televerse(r.televerser);
   }).catch(function (e) { message('Rien n\'est écrit : ' + echappe(e.message), 'rouge'); verifieEtDiff(); });
 };
 
 // ---- orchestration ----
 function dessine() { dessineArbre(); dessineReglages(); dessineAlertes(); dessineDestination(); }
 function modifie(structure) {
-  etat.diff = null; dessineCode();
+  etat.diff = null; televerseCache(); dessineCode();
   if (structure) dessine(); else dessineAlertes();
   actualise();
 }
@@ -466,4 +467,4 @@ Promise.all([lis('/envs'), fetch('/moteur/pages_graphiques.html').then(function 
   return choisitEnv(env);
 }).catch(function (e) { message('Atelier injoignable : ' + echappe(e.message), 'rouge'); });
 """
-JS += JS_SERIES + JS_DEST
+JS += JS_SERIES + JS_DEST + JS_TV
