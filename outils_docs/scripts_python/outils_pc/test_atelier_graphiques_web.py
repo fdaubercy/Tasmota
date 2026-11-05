@@ -290,7 +290,7 @@ def test_destination_graphiques(b):
     verifie(statut, 409, "POST /ecrire graphiques empreinte perimee -> 409")
     statut, r = b.requete("POST", "/ecrire", dict(corps, empreinte=d["empreinte"]))
     ecrit = json.loads(fichier.read_text(encoding="utf-8"))
-    verifie((statut, r["ecrits"], [g["titre"] for g in ecrit["graphiques"]], ecrit["groupes"]), (200, [rel], ["Sur la carte", "Volume"], {"G": ["a"]}),
+    verifie((statut, r["ecrits"], r["index"], [g["titre"] for g in ecrit["graphiques"]], ecrit["groupes"]), (200, [rel], 1, ["Sur la carte", "Volume"], {"G": ["a"]}),
             "POST /ecrire graphiques : base carte + ajout, autres cles gardees")
     b.composition = None
     statut, r = b.requete("POST", "/diff", {"env": CUVE, "destination": "graphiques", "operation": "retire", "index": 0})

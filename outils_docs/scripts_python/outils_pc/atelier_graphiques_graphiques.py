@@ -175,6 +175,13 @@ def prevoit(racine, env, demande, *, get=None):
     return {"fichiers": age._fichiers(lus, apres), "signaux": signaux, "empreinte": age._empreinte(lus, [env, demande])}
 
 
+def index_ecrit(racine, env, demande):
+    """Rang du graphique que `demande` vient d'ecrire dans la composition (None pour un retrait) : la page le retient pour « remplace »."""
+    if demande.get("operation") == "remplace":
+        return demande.get("index")
+    return len(_depot(racine, env)[3] or []) - 1 if demande.get("operation") == "ajoute" else None
+
+
 def ecrit(racine, env, demande, empreinte_lue, builds_en_cours, *, get=None):
     """Chemins ecrits. RuntimeError : build, ou depot / composition de la carte / demande changes depuis le diff."""
     age._refuse_build(builds_en_cours)

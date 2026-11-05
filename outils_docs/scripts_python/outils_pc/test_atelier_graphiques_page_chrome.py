@@ -433,6 +433,9 @@ def sonde_destination(m, capture):
     choisit_page(cdp, "0")
     # 3. Graphiques, composition identique : champs de page masques, Diff vers graphiques.json
     choisit_page(cdp, "graphiques")
+    verifie(cdp.js("var s = document.getElementById('r-page'), c = document.createElement('canvas').getContext('2d'); c.font = getComputedStyle(s).font;"
+                   " c.measureText('Graphiques (/graphiques)').width + 40 <= s.clientWidth"), True,
+            "select Page : « Graphiques (/graphiques) » entier, non tronque")
     verifie(cdp.js(CACHES + ".concat(document.getElementById('suppr-page').offsetParent === null)"), [True] * 5,
             "destination Graphiques : adresse, titre de page, acces, solidifier (et « Retirer la page ») masques")
     verifie(bool(attend(cdp, "!document.getElementById('ecrire').disabled", 15)), True, "composition identique : diff pret, « Ecrire » actif")
@@ -454,6 +457,8 @@ def sonde_destination(m, capture):
     verifie(bool(attend(cdp, "document.querySelectorAll('#destination input[name=base]').length === 2", 10)), True, "composition differente : deux choix")
     verifie(cdp.js("[].map.call(document.querySelectorAll('#destination label'), function(l){ return l.textContent.trim(); })"),
             ["Partir de la version de la carte", "Garder celle du dépôt"], "libelles des deux choix")
+    verifie(cdp.js("document.getElementById('destination').textContent.indexOf('graphiques écrits dans le dépôt et pas encore téléversés seront perdus') >= 0"), True,
+            "« Partir de la version de la carte » dit que les graphiques non televerses seront perdus")
     verifie(cdp.js("document.getElementById('destination').textContent.indexOf('changements faits sur la carte seront perdus à l\\'envoi') >= 0"), True,
             "« Garder celle du dépôt » dit la perte des changements de la carte")
     verifie(cdp.js("var d = document.querySelector('#destination pre'); !!d && d.textContent.indexOf('+++ carte') >= 0 && d.querySelectorAll('.p').length > 0"), True,
@@ -495,6 +500,29 @@ def sonde_destination(m, capture):
     verifie(cdp.js("[document.querySelector('#destination input[value=carte]').disabled, document.querySelector('#destination input[value=depot]').disabled,"
                    " document.getElementById('destination').textContent.indexOf('Indisponible : ') >= 0 && etat.compo.carte_motifs.length > 0]"),
             [True, False, True], "composition de la carte invalide : « Partir de la version de la carte » grise, motif affiche")
+    # 6b. ecrire, modifier, reecrire : le graphique n'est qu'une fois dans graphiques.json, modifie ; index oublie -> « ajoute » signale
+    pose_depot(m, COMPO_DEPOT)
+    pose_carte(m, COMPO_DEPOT)
+    ouvre(cdp, url)
+    choisit_page(cdp, "graphiques")
+    attend(cdp, "!document.getElementById('ecrire').disabled", 15)
+    cdp.js("document.getElementById('ecrire').click(); 1")
+    verifie(bool(attend(cdp, "etat.indexEcrit && etat.indexEcrit.index === 1", 10)), True, "ecriture : index du graphique ecrit retenu")
+    saisit(cdp, "#r-titre", "Titre change")
+    verifie(bool(attend(cdp, "!document.getElementById('ecrire').disabled", 15)), True, "apres modification : diff pret")
+    verifie(cdp.js("[corpsEcriture().operation, corpsEcriture().index]"), ["remplace", 1], "reecriture : operation remplace a l'index retenu")
+    cdp.js("document.getElementById('ecrire').click(); 1")
+    attend(cdp, "document.querySelector('#message .avert.vert') !== null && etat.diff === null", 10)
+    g = json.loads((m.depot / REL_GRAPH).read_text(encoding="utf-8")).get("graphiques", [])
+    verifie([x.get("titre") for x in g], ["Cuve", "Titre change"], "ecrire, modifier, reecrire : le graphique une seule fois, modifie")
+    pose_depot(m, COMPO_DEPOT)                       # le graphique disparait du depot : l'index n'existe plus
+    saisit(cdp, "#r-titre", "Encore")
+    verifie(bool(attend(cdp, "etat.indexEcrit === null && document.getElementById('message').textContent.indexOf('sera ajouté de nouveau') >= 0", 15)),
+            True, "index disparu : retour a « ajoute », signale")
+    verifie(bool(attend(cdp, "!document.getElementById('ecrire').disabled && corpsEcriture().operation === 'ajoute'", 15)), True,
+            "apres l'oubli : diff « ajoute » pret")
+    choisit_page(cdp, "autre")
+    verifie(cdp.js("etat.indexEcrit"), None, "choisir « Autre… » : index oublie")
     # 7. carte hors ligne : bandeau « non verifiee » avec le motif
     pose_carte(m, "HORSLIGNE")
     ouvre(cdp, url)
@@ -509,7 +537,8 @@ def sonde_destination(m, capture):
     ouvre(cdp, url)
     verifie(cdp.js(options), ["0|/tableau-cuve — « Tableau »", "autre|Autre… (nouvelle page)"], "menu Page sans historique : pas de Graphiques")
     historique(m, True)
-    verifie(cdp.erreurs(), [], "destination : aucune erreur JS")
+    # le 400 de /diff du scenario « index disparu » est attendu (journal Chrome) ; toute autre erreur est un echec
+    verifie([e for e in cdp.erreurs() if "400 (Bad Request)" not in e or "/diff" not in e], [], "destination : aucune erreur JS")
 
 
 def sonde_temoin(m):

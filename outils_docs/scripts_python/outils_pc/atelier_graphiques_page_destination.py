@@ -25,7 +25,7 @@ $('r-page').addEventListener('change', function () {
   if (this.value === 'graphiques') etat.dest = 'graphiques';
   else {
     etat.dest = 'pages';
-    if (this.value === 'autre') { etat.desc.pages.push(nouvellePage(etat.desc.pages.length)); etat.page = etat.desc.pages.length - 1; }
+    if (this.value === 'autre') { etat.indexEcrit = null; etat.desc.pages.push(nouvellePage(etat.desc.pages.length)); etat.page = etat.desc.pages.length - 1; }
     else etat.page = +this.value;
     etat.graphe = 0;
   }
@@ -33,14 +33,25 @@ $('r-page').addEventListener('change', function () {
 });
 // Corps de /diff et /ecrire pour /graphiques : le graphique edite est ajoute (forme atelier, « moteur » pose par le serveur)
 function corpsGraphiques() {
-  var c = etat.compo, o = {env: etat.env, destination: 'graphiques', operation: 'ajoute', graphique: grapheCourant()};
+  var c = etat.compo, x = etat.indexEcrit, o = {env: etat.env, destination: 'graphiques', operation: 'ajoute', graphique: grapheCourant()};
+  if (x && x.cle === cleEcrit()) { o.operation = 'remplace'; o.index = x.index; o.base = 'depot'; return o; }   // le depot porte deja ce graphique
   if (c && c.etat === 'differente' && etat.base) o.base = etat.base;
   return o;
 }
 function attendChoix() { return !!(etat.compo && etat.compo.etat === 'differente' && !etat.base); }
-function apresEcriture() {
+// Graphique deja ecrit pour cette carte, cette page et ce graphique : les ecritures suivantes le REMPLACENT (jamais de doublon)
+function cleEcrit() { return etat.env + '|' + etat.page + '|' + etat.graphe; }
+function oubliIndex(e) {
+  if (!etat.indexEcrit || !/^index/.test(e.message)) return false;
+  etat.indexEcrit = null;
+  message('Le graphique écrit n\'existe plus dans la composition : il sera ajouté de nouveau.', '');
+  verifieEtDiff();
+  return true;
+}
+function apresEcriture(r) {
   if (etat.dest !== 'graphiques') { verifieEtDiff(); return; }
-  // le depot porte desormais le graphique : pas de nouveau diff avant une modification (un second « ajoute » le doublerait)
+  if (typeof r.index === 'number') { etat.indexEcrit = {cle: cleEcrit(), index: r.index}; etat.base = 'depot'; }
+  // pas de nouveau diff avant une modification
   etat.diff = null; dessineCode();
   chargeCompo().then(dessineDestination);
   $('resume').textContent = 'écrit dans le dépôt : modifier le graphique pour écrire à nouveau';
@@ -59,6 +70,7 @@ function dessineDestination() {
     h = '<div class="avert"><b>La composition de /graphiques a changé sur la carte</b> depuis le dernier envoi (diff dépôt → carte).</div>' +
       '<pre class="code">' + c.diff.split('\n').map(ligneDiff).join('\n') + '</pre>' +
       radio('carte', 'Partir de la version de la carte', !c.carte_valide) +
+      '<div class="petit" style="color:var(--rouge)">Les graphiques écrits dans le dépôt et pas encore téléversés seront perdus.</div>' +
       (c.carte_valide ? '' : '<div class="petit doux">Indisponible : ' + c.carte_motifs.map(echappe).join(' ; ') + '</div>') +
       radio('depot', 'Garder celle du dépôt') +
       '<div class="petit" style="color:var(--rouge)">Les changements faits sur la carte seront perdus à l\'envoi.</div>' +
@@ -68,6 +80,6 @@ function dessineDestination() {
 }
 $('destination').addEventListener('change', function (e) {
   if (e.target.name !== 'base') return;
-  etat.base = e.target.value; dessineDestination(); modifie(false);
+  etat.base = e.target.value; etat.indexEcrit = null; dessineDestination(); modifie(false);
 });
 """

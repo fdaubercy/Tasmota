@@ -50,7 +50,7 @@ input[type=text],input[type=number],select{font:inherit;padding:4px 6px;border:1
 input:disabled,select:disabled{opacity:.55;cursor:default} ::placeholder{color:var(--doux);opacity:.8}
 input[type=color]{width:30px;height:24px;padding:0;border:1px solid var(--bord);border-radius:4px;flex:none;background:var(--champ)}
 .etiq{width:92px;flex:none;color:var(--doux);font-size:12px}
-.colonnes{display:grid;grid-template-columns:270px minmax(0,1fr) 290px;gap:12px;align-items:start}
+.colonnes{display:grid;grid-template-columns:270px minmax(0,1fr) 330px;gap:12px;align-items:start}
 .arbre div{padding:1px 0;font-size:13px} .arbre .n2{padding-left:16px;color:var(--doux);font-size:12px}
 .arbre .n3{padding-left:28px} .arbre .gr{margin-top:6px}
 .arbre a{color:var(--bleu);cursor:pointer;font-size:12px}

@@ -25,7 +25,7 @@ var NOMS = {'courbe': 'Courbe', 'aire': 'Aire', 'escalier': 'Escalier', 'barres'
   'barres-periode': 'Barres par période', 'deux-axes': 'Courbes, 2 axes', 'lies': 'Graphiques liés', 'cadran': 'Cadran à aiguille',
   'anneau': 'Anneau', 'chaleur': 'Carte de chaleur', 'nuage': 'Nuage de points', 'radar': 'Radar', 'liquide': 'Liquide animé',
   'demi-cercle': 'Demi-cercle SVG'};
-var etat = {envs: [], env: '', series: null, dest: 'pages', compo: null, base: null, desc: null, page: 0, graphe: 0, solidifier: false, mode: 'graphique',
+var etat = {envs: [], env: '', series: null, dest: 'pages', compo: null, base: null, indexEcrit: null, desc: null, page: 0, graphe: 0, solidifier: false, mode: 'graphique',
   vue: 'pc', sombre: false, conseil: null, motifs: [], diff: null, diffSig: '', onglet: '', source: ''};
 var gabarit = '', apercuCtrl = null, minis = [], dernieres = {}, minuterie = null;
 
@@ -64,7 +64,7 @@ function corpsEcriture() {
 
 // ---- carte et donnees (colonne de gauche) ----
 function choisitEnv(env) {
-  etat.env = env; etat.dest = 'pages'; etat.compo = null; etat.base = null;
+  etat.env = env; etat.dest = 'pages'; etat.compo = null; etat.base = null; etat.indexEcrit = null;
   dernieres = {};
   history.replaceState(null, '', '?env=' + encodeURIComponent(env));
   $('nom-carte').textContent = env;
@@ -392,6 +392,7 @@ function verifieEtDiff() {
       etat.diff = d; etat.diffSig = sig; dessineCode();
     });
   }).catch(function (e) {
+    if (oubliIndex(e)) return;
     etat.diff = null; dessineCode();
     $('motifs').innerHTML = '<div class="avert rouge">Refusé : ' + echappe(e.message) + '</div>';
   });
@@ -434,7 +435,7 @@ $('ecrire').onclick = function () {
   poste('/ecrire', Object.assign({empreinte: d.empreinte}, corps)).then(function (r) {
     message('Écrit : ' + r.ecrits.map(echappe).join(', ') + (d.signaux.length ? '<br>À faire : ' + d.signaux.map(echappe).join(' ; ') : '') +
       '<br>Puis « Envoyer par la page Build ↗ » (onglet Fichiers) pour la carte.', 'vert');
-    apresEcriture();
+    apresEcriture(r);
   }).catch(function (e) { message('Rien n\'est écrit : ' + echappe(e.message), 'rouge'); verifieEtDiff(); });
 };
 
