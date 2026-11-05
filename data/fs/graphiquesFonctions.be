@@ -281,9 +281,10 @@ def graphiquesFonctions_valideComposition(c)
             if (g["moteur"] != "pages")    return [nil, nom + " : moteur inconnu"]    end
             import pagesGraphiquesValidation
             var sans = {}
-            for k: g.keys()    if (k != "moteur")    sans[k] = g[k]    end    end
+            for k: g.keys()    if (k != "moteur" && k != "calculees")    sans[k] = g[k]    end    end
             var motifs = []
-            pagesGraphiquesValidation.graphique(sans, nom, {}, motifs)    # sans calculees : calc:<nom> refuse
+            var calc = pagesGraphiquesValidation.calculees(g.find("calculees", {}), motifs)
+            pagesGraphiquesValidation.graphique(sans, nom, calc, motifs)
             if (size(motifs) > 0)    return [nil, motifs[0]]    end
             propre.push(g)
             continue

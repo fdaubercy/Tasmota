@@ -444,6 +444,17 @@ refuse(compo([atelier({"series": []})]), "atelier : series vide refusee")
 refuse(compo([atelier({"min": 5, "max": 1})]), "atelier : min >= max refuse")
 refuse(compo([atelier({"series": ["calc:inconnue"]})]), "atelier : calculee inconnue refusee")
 refuse(compo([atelier({"moteur": "autre"})]), "moteur autre que pages refuse")
+# Valeurs calculees portees par le graphique atelier (cle "calculees", schema de la racine d'une description de pages)
+var CALC = {"x": {"nature": "historique", "formule": "a.b + c.d"}}
+ecrisFichier(COPIE, ORIGINAL)
+r = poste(compo([atelier({"series": ["calc:x"], "calculees": CALC})]))
+ecrit = (fichierEstOrigine() ? {} : json.load(lisFichier(COPIE)))
+verifie(r[2] == nil && r[0] == 200 && isinstance(ecrit.find("graphiques"), list) && ecrit["graphiques"][0]["calculees"]["x"]["nature"] == "historique",
+        "atelier : serie calc:x avec calculees qui definit x acceptee, calculees recopiees" + (r[2] != nil ? " (" + r[2] + ")" : ""))
+ecrisFichier(COPIE, ORIGINAL)
+r = poste(compo([atelier({"series": ["calc:x"]})]))
+verifie(r[0] == 400 && fichierEstOrigine() && string.find(str(r[1].find("erreur")), "calculee inconnue") >= 0, "atelier : serie calc:x sans calculees refusee avec le motif")
+refuse(compo([atelier({"series": ["calc:x"], "calculees": {"x": {"nature": "historique", "formule": "a.b +"}}})]), "atelier : calculees invalide refusee")
 ecrisFichier(COPIE, ORIGINAL)
 r = poste(compo([atelier({"min": 5, "max": 1})]))
 verifie(r[0] == 400 && type(r[1].find("erreur")) == "string" && string.find(r[1]["erreur"], "min >= max") >= 0 && string.find(r[1]["erreur"], "Graphique 1") >= 0,

@@ -318,16 +318,10 @@ def pagesGraphiquesValidation_id(v, vus, ou, m)
 end
 pagesGraphiquesValidation.id = pagesGraphiquesValidation_id
 
-# Liste des motifs de refus de la description d (vide = valide)
-def pagesGraphiquesValidation_valide(d)
+# Valide une table de valeurs calculees (racine d'une description, ou graphique de forme atelier) : motifs dans m, rend la table utilisable
+def pagesGraphiquesValidation_calculees(calc, m)
     import pagesGraphiquesValidation
-    import json
     var V = pagesGraphiquesValidation
-    if (!isinstance(d, map))    return ["description : objet attendu"]    end
-    var m = []
-    V.cles(d, "racine", m)
-    if (!V.nombre(d.find("version")) || d["version"] != 1)    m.push("version : doit valoir 1")    end
-    var calc = d.find("calculees", {})
     if (!isinstance(calc, map) || size(calc) > V.BORNES["calculees"])
         m.push("calculees : objet de " + str(V.BORNES["calculees"]) + " entrees au plus")
         calc = {}
@@ -344,6 +338,20 @@ def pagesGraphiquesValidation_valide(d)
         var motif = V.valideFormule(c.find("formule"))
         if (motif != nil)    m.push("calculee " + nom + " : " + motif)    end
     end
+    return calc
+end
+pagesGraphiquesValidation.calculees = pagesGraphiquesValidation_calculees
+
+# Liste des motifs de refus de la description d (vide = valide)
+def pagesGraphiquesValidation_valide(d)
+    import pagesGraphiquesValidation
+    import json
+    var V = pagesGraphiquesValidation
+    if (!isinstance(d, map))    return ["description : objet attendu"]    end
+    var m = []
+    V.cles(d, "racine", m)
+    if (!V.nombre(d.find("version")) || d["version"] != 1)    m.push("version : doit valoir 1")    end
+    var calc = V.calculees(d.find("calculees", {}), m)
     var pages = d.find("pages")
     var ids = {}
     if (!isinstance(pages, list) || size(pages) == 0)
