@@ -276,6 +276,18 @@ def graphiquesFonctions_valideComposition(c)
         var g = c[i]
         var nom = "Graphique " + str(i + 1)
         if (!isinstance(g, map))    return [nil, nom + " : doit etre un objet"]    end
+        if (g.contains("moteur"))
+            # Forme atelier : schema des pages dediees, valide par pagesGraphiquesValidation (importe ici, a la demande)
+            if (g["moteur"] != "pages")    return [nil, nom + " : moteur inconnu"]    end
+            import pagesGraphiquesValidation
+            var sans = {}
+            for k: g.keys()    if (k != "moteur")    sans[k] = g[k]    end    end
+            var motifs = []
+            pagesGraphiquesValidation.graphique(sans, nom, {}, motifs)    # sans calculees : calc:<nom> refuse
+            if (size(motifs) > 0)    return [nil, motifs[0]]    end
+            propre.push(g)
+            continue
+        end
         var titre = g.find("titre")
         if (type(titre) != "string")    return [nil, nom + " : titre absent"]    end
         titre = G.rogne(titre)

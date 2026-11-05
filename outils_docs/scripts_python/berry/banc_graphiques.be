@@ -420,6 +420,35 @@ refuse(avec("series", [{"type": "courbe"}]), "serie sans chemin")
 refuse(avec("series", [""]), "chemin vide")
 refuse(compo(["pas une map"]), "graphique pas une map")
 
+# A2 (atelier-destinations) : graphique "moteur": "pages" valide par pagesGraphiquesValidation, recopie tel que valide
+sys.path().push(SOURCES)    # le vrai validateur des pages (derriere les bouchons dans le chemin ; les autres modules sont deja importes)
+def atelier(extra)
+    var m = {"moteur": "pages", "type": "deux-axes", "titre": "Atelier", "periode": "jour", "largeur": "pleine", "hauteur": 200,
+             "series": [{"chemin": "a.b", "libelle": "Un", "unite": "V", "couleur": "#ff0000"}, "c.d"]}
+    if (extra != nil)    for k: extra.keys()    m[k] = extra[k]    end    end
+    return m
+end
+ecrisFichier(COPIE, ORIGINAL)
+var mixte = [valide[0], atelier(nil), valide[2]]
+r = poste(compo(mixte))
+ecrit = (fichierEstOrigine() ? {} : json.load(lisFichier(COPIE)))
+g = ecrit.find("graphiques")
+verifie(r[2] == nil && r[0] == 200 && isinstance(g, list) && size(g) == 3, "composition mixte (forme actuelle + atelier) : 200, 3 graphiques" + (r[2] != nil ? " (" + r[2] + ")" : ""))
+if (isinstance(g, list) && size(g) == 3)
+    verifie(size(g[1]) == size(atelier(nil)) && g[1]["moteur"] == "pages" && g[1]["type"] == "deux-axes" && g[1]["hauteur"] == 200 && g[1]["series"][0]["libelle"] == "Un" && g[1]["series"][0]["couleur"] == "#ff0000" && g[1]["series"][1] == "c.d", "graphique atelier recopie tel que valide (moteur compris)")
+    verifie(g[0]["titre"] == "Cuve" && !g[0].contains("moteur") && g[2]["series"] == "autres", "formes actuelles de la composition mixte inchangees")
+end
+refuse(compo([atelier({"type": "camembert"})]), "atelier : style inconnu refuse")
+refuse(compo([atelier({"inconnue": 1})]), "atelier : cle inconnue refusee (pas ecartee)")
+refuse(compo([atelier({"series": []})]), "atelier : series vide refusee")
+refuse(compo([atelier({"min": 5, "max": 1})]), "atelier : min >= max refuse")
+refuse(compo([atelier({"series": ["calc:inconnue"]})]), "atelier : calculee inconnue refusee")
+refuse(compo([atelier({"moteur": "autre"})]), "moteur autre que pages refuse")
+ecrisFichier(COPIE, ORIGINAL)
+r = poste(compo([atelier({"min": 5, "max": 1})]))
+verifie(r[0] == 400 && type(r[1].find("erreur")) == "string" && string.find(r[1]["erreur"], "min >= max") >= 0 && string.find(r[1]["erreur"], "Graphique 1") >= 0,
+        "atelier invalide : motif du validateur repris dans l'erreur" + (r[1] != nil ? " (" + str(r[1].find("erreur")) + ")" : ""))
+
 # Acces non privilegie
 webserver.privilegie = false
 r = poste(compo(valide))
