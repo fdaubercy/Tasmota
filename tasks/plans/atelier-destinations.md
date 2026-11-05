@@ -118,6 +118,12 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
   `/graphiques` sous Chrome sans exception JS, capture ; journal web sans `_ERREUR`
 - [ ] Cuve : modification d'une page dédiée envoyée par « Téléverser » (redémarrage non coché), effet constaté
 
+## A10 — Retour au plan précédent non terminé
+- [ ] Plan `tasks/plans/atelier-graphiques.md` (palier 1 clos, A13 restante) : A11 cochée « remplacée par
+  atelier-destinations », renvoi vérifié ; ce plan-ci passé en `statut: clos`, index régénéré
+- [ ] Conversation rattachée de nouveau à `atelier-graphiques` (`/suivi suivre atelier-graphiques`) ; prochaine action
+  proposée à l'utilisateur : A13 (palier 4, ESP32 classiques, à détailler au début du palier)
+
 ## Améliorations restantes
 - [ ] [projet] Proposer un agent `.claude/agents/` de relecture des pages web générées si la même relecture revient
 
