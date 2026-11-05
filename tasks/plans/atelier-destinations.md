@@ -125,7 +125,7 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
   proposée à l'utilisateur : A13 (palier 4, ESP32 classiques, à détailler au début du palier)
 
 ## Améliorations restantes
-- [ ] [projet] Proposer un agent `.claude/agents/` de relecture des pages web générées si la même relecture revient
+- [x] [projet] Proposer un agent `.claude/agents/` de relecture des pages web générées si la même relecture revient — preuve : `.claude/agents/relecteur-pages-web.md` (demande de l'utilisateur du 2026-11-05 ; contrôles tirés des défauts trouvés en A4–A6) ; ligne de la carte des documents du CLAUDE.md en A8
 
 ## Vérification
 Chaque étape se coche sur preuve (sortie de banc, commit, capture). Le plan est clos quand A9 est vue sur le P4 et la
