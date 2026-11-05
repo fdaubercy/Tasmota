@@ -60,15 +60,15 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
 - [x] Banc vert ; `verifie_berry.py` sans erreur ni écart de charte — preuve : `BANC_GRAPHIQUES: OK` (Chrome compris), `BANC_PAGES_GRAPHIQUES: OK`, verifie_berry 0 erreur
 
 ## A3 — Carte : tracé et mode édition des graphiques « moteur pages »
-- [ ] Banc rouge (sonde Chrome de `banc_graphiques.py`, ou sonde dédiée sur le modèle de `test_pages_graphiques_chrome.py`) :
+- [x] Banc rouge (sonde Chrome de `banc_graphiques.py`, ou sonde dédiée sur le modèle de `test_pages_graphiques_chrome.py`) :
   composition mixte → les graphiques actuels rendus comme avant (attendus inchangés), un graphique « cadran » et une
   « courbe » forme atelier tracés par le moteur, aucune exception JS ; en mode édition, tuile atelier déplaçable et
-  retirable, réglages non éditables avec la mention « réglages dans l'atelier »
-- [ ] `data/sd/js/graphiques_moteur.js` : données `/histo` (jour, mois, `?p=direct`) mises à la forme `{t, valeurs}`,
+  retirable, réglages non éditables avec la mention « réglages dans l'atelier » — preuve : 8 échecs sur les 8 nouveaux attendus avant le code (rapport A3)
+- [x] `data/sd/js/graphiques_moteur.js` : données `/histo` (jour, mois, `?p=direct`) mises à la forme `{t, valeurs}`,
   `calc:` par `PagesFormule`, appel `PagesGraphiques.optionDe` ; chargement de `pages_graphiques.js` et
   `pages_graphiques_formule.js` par la page `/graphiques` seulement si un graphique atelier est présent ;
-  `graphiques.js` et `graphiques_edition.js` : point d'accroche minimal (aucune ligne nette pour `graphiques.js`)
-- [ ] Bancs verts (`banc_graphiques.py`, `test_pages_graphiques.mjs`, `test_pages_graphiques_chrome.py`)
+  `graphiques.js` et `graphiques_edition.js` : point d'accroche minimal (aucune ligne nette pour `graphiques.js`) — preuve : 3802c1269, 1563ae8c7 (style liquide : liquidfill servi par `/graphiques?f=`) ; `graphiques.js` 500 lignes
+- [x] Bancs verts (`banc_graphiques.py`, `test_pages_graphiques.mjs`, `test_pages_graphiques_chrome.py`) — preuve : `BANC_GRAPHIQUES: OK` relancé par le contrôleur le 2026-11-05 (0 ECHEC) ; les deux autres verts (rapport A3)
 
 ## A4 — Atelier : écriture vers `/graphiques` et composition de la carte
 - [ ] Banc rouge (`test_atelier_graphiques_ecriture.py`, `_web.py`) : destination `graphiques` → seule la clé
