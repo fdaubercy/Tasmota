@@ -15,7 +15,9 @@ import argparse
 import json
 import sys
 import time
+import urllib.request
 from pathlib import Path
+from urllib.parse import quote
 
 import test_build_page_chrome as s
 from test_build_ota_fs import fabrique_image
@@ -225,8 +227,10 @@ ENROBE = """(() => { window.__corps = []; const cfg = CFG, vrai = window.fetch.b
     if (String(url) === "/lancer") {
       window.__corps.push({corps: JSON.parse(o.body), entetes: o.headers || {}, methode: o.method});
       const r = cfg.lancer.length ? cfg.lancer.shift() : {statut: 200, texte: '{"ok": true}'};
+      if (!r.statut) throw new TypeError("coupure simulee");              // appel() : statut 0, comme un delai depasse
       return new Response(r.texte, {status: r.statut}); }
-    if (String(url) === "/execution" && cfg.execution) return new Response(JSON.stringify(cfg.execution), {status: 200});
+    if (String(url) === "/execution" && cfg.execution.length) { const x = cfg.execution.shift();   // null = panne
+      return x === null ? new Response("panne", {status: 500}) : new Response(JSON.stringify(x), {status: 200}); }
     return vrai(url, o); }; })()"""
 ETAT_AT = f"""(() => {{ const t = id => document.getElementById(id);
   return {{fichiers: t('vue-fichiers').hidden, carte: !!(t('f-carte-{A}') || {{}}).checked, bandeau: t('f-atelier').hidden,
@@ -241,9 +245,14 @@ FIN_AUTRE = [{"type": "fin", "resultat": "succes", "succes": [B], "echecs": []}]
 ATTENDU_LANCER = {"lignes": [{"env": A, "methode": "com", "port": "", "ip": ""}], "actions": ["buildfs"], "onglet": "fichiers"}
 
 
-def arrive(m, requete, execution=None, lancer=()):
-    """Ouvre la page par le lien de l'atelier (`requete` = chaine de requete), fetch enrobe ; renvoie l'etat."""
-    cfg = json.dumps({"execution": execution, "lancer": list(lancer)})
+def arrive(m, requete, execution=(), lancer=(), sans_enrobe=False):
+    """Ouvre la page par le lien de l'atelier (`requete` = chaine de requete), fetch enrobe ; renvoie l'etat.
+    `execution`, `lancer` : reponses simulees, une par appel, puis le vrai serveur (/lancer : 200 simule)."""
+    if sans_enrobe:                                     # vrai /lancer : le faux pio du montage tourne
+        m.cdp.appel("Page.navigate", url=m.url + "?" + requete)
+        time.sleep(2.5)
+        return etat_at(m.cdp)
+    cfg = json.dumps({"execution": list(execution), "lancer": list(lancer)})
     ident = m.cdp.appel("Page.addScriptToEvaluateOnNewDocument", source=ENROBE.replace("CFG", cfg))["identifier"]
     m.cdp.appel("Page.navigate", url=m.url + "?" + requete)
     time.sleep(2.5)
@@ -257,7 +266,6 @@ def etat_at(cdp):
 
 
 def lien(fichiers, redemarrer="1", env=A):
-    from urllib.parse import quote
     return f"env={quote(env, safe='')}&depuis=atelier&fichiers={quote(fichiers, safe='')}&redemarrer={quote(redemarrer, safe='')}"
 
 
@@ -268,7 +276,7 @@ def envois(e):
 def sonde_atelier(m):
     cdp = m.cdp
     # nominal : buildfs au chargement, rien de coche avant la fin, puis exactement la liste
-    e = arrive(m, lien("autoexec.be,json/graphiques.json,sd/js/absent.js"))
+    e = arrive(m, lien("autoexec.be,json/graphiques.json,sd/js/absent.js,constructor"))
     s.verifie((e["fichiers"], e["carte"], e["bandeau"], e["texte"]), (False, True, False, BANDEAU),
               "atelier : onglet Fichiers, carte de l'env choisie, bandeau exact de la spec")
     s.verifie([(c["corps"], c["entetes"].get("X-Build"), c["methode"]) for c in e["corps"]], [(ATTENDU_LANCER, "1", "POST")],
@@ -280,7 +288,8 @@ def sonde_atelier(m):
     e = etat_at(cdp)
     s.verifie((e["panier"], e["restart"], e["berry_off"]), (["autoexec.be", "json/graphiques.json"], True, True),
               "atelier : image prete -> cochees exactement les fichiers presents de la liste, Redemarrer coche (redemarrer=1)")
-    s.verifie(any("sd/js/absent.js" in n and "absent" in n for n in e["notes"]), True, "atelier : fichier absent de l'image signale")
+    s.verifie([any(x in n and "Absent" in n for n in e["notes"]) for x in ("sd/js/absent.js", "constructor")], [True, True],
+              "atelier : fichiers absents de l'image signales (« constructor » compris, pas pris pour present)")
     s.injecte(cdp, FIN_AUTRE)
     e = etat_at(cdp)
     s.verifie((len(e["corps"]), envois(e)), (1, []), "atelier : aucun envoi, et une autre fin ne relance rien")
@@ -303,7 +312,7 @@ def sonde_atelier(m):
     s.verifie((e["corps"], any("aucun fichier" in n for n in e["notes"])), ([], True), "hostile : liste vide -> aucun POST, message")
 
     # build deja en cours : attente de sa fin (flux), puis un seul buildfs ; chemin refuse signale, Redemarrer non coche
-    e = arrive(m, lien("autoexec.be,../z", redemarrer="0"), execution={"en_cours": True, "numero": 0, "pause": None})
+    e = arrive(m, lien("autoexec.be,../z", redemarrer="0"), execution=[{"en_cours": True, "numero": 0, "pause": None}])
     s.verifie((e["corps"], e["texte"], any("en cours" in n for n in e["notes"])), ([], BANDEAU, True),
               "en cours : aucun POST pendant le lancement en cours, attente dite")
     s.injecte(cdp, FIN_AUTRE)
@@ -325,7 +334,47 @@ def sonde_atelier(m):
                                   {"type": "fin", "resultat": "termine", "succes": [], "echecs": [A]}])
     e = etat_at(cdp)
     s.verifie((e["panier"], any("échec" in n for n in e["notes"])), ([], True), "externe : buildfs en echec -> rien coche, dit")
+    sonde_historique(m)
     s.verifie(cdp.erreurs(), [], "atelier : aucune erreur JS")
+
+
+def poste(m, corps):
+    requete = urllib.request.Request(m.url + "lancer", data=json.dumps(corps).encode("utf-8"), method="POST",
+                                     headers={"X-Build": "1", "Content-Type": "application/json"})
+    with urllib.request.urlopen(requete, timeout=10) as r:
+        return r.status
+
+
+def sonde_historique(m):
+    """Correction tour 1 (B1) : le serveur a deja un lancement dans son flux, rejoue a l'ouverture de la page."""
+    cdp = m.cdp
+    s.verifie(poste(m, ATTENDU_LANCER), 200, "historique : vrai buildfs prealable (faux pio)")
+    limite = time.monotonic() + 30
+    while time.monotonic() < limite and json.loads(urllib.request.urlopen(m.url + "execution", timeout=5).read())["en_cours"]:
+        time.sleep(0.3)
+    e = arrive(m, lien("autoexec.be,json/graphiques.json"), sans_enrobe=True)
+    s.attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 20)
+    e = etat_at(cdp)
+    s.verifie((e["panier"], e["restart"], e["search"]), (["autoexec.be", "json/graphiques.json"], True, f"?env={A}"),
+              "historique : vrai buildfs apres un lancement rejoue -> fichiers coches, Redemarrer coche")
+    # /execution en panne au chargement : tout l'historique arrive comme du direct, l'ancien `fin` ne coche rien
+    e = arrive(m, lien("autoexec.be"), execution=[None])
+    s.verifie((len(e["corps"]), e["panier"], e["texte"]), (1, [], BANDEAU),
+              "rejeu : /execution en panne -> un buildfs, ancien fin (rejoue en direct) ne coche rien")
+    s.injecte(cdp, BUILDFS)
+    s.attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 5)
+    s.verifie(etat_at(cdp)["panier"], ["autoexec.be"], "rejeu : fin de NOTRE buildfs -> coche")
+    # fin d'un autre lancement a la place du notre : abandon dit, jamais muet
+    e = arrive(m, lien("autoexec.be"))
+    s.injecte(cdp, [{"type": "debut", "env": None, "lignes": [{"env": B, "methode": "com", "port": "COM13", "ip": ""}],
+                     "actions": ["compiler"]}] + FIN_AUTRE)
+    e = etat_at(cdp)
+    s.verifie((e["panier"], any("autre lancement" in n for n in e["notes"])), ([], True), "rejeu : fin non reconnue -> abandon dit")
+    # delai depasse sur POST /lancer : resultat incertain, pas « refuse »
+    e = arrive(m, lien("autoexec.be"), lancer=[{"statut": 0, "texte": ""}])
+    refus = cdp.js("document.getElementById('f-refus').textContent")
+    s.verifie((len(e["corps"]), any("incertain" in n for n in e["notes"]), "incertain" in refus, "refusé" in refus, e["search"]),
+              (1, True, True, False, f"?env={A}"), "delai : resultat incertain dit (pas « refuse »), URL nettoyee")
 
 
 def principal():

@@ -299,7 +299,7 @@ function refusFichiers(r) {
   var ul = h("ul", {});
   (r.texte || ("HTTP " + r.statut)).split(" ; ").forEach(function (m) { ul.appendChild(h("li", {texte: m})); });
   $("f-refus").textContent = "";
-  $("f-refus").appendChild(h("div", {texte: "Lancement refusé :"}));
+  $("f-refus").appendChild(h("div", {texte: r.statut ? "Lancement refusé :" : "Résultat incertain (le serveur a peut-être lancé) :"}));
   $("f-refus").appendChild(ul);
 }
 
@@ -339,7 +339,7 @@ function fichiersEvenement(e, rejeu) {
   if (e.type === "debut" && e.env === null) {
     var acts = e.actions || [], l0 = (e.lignes || [])[0] || {};
     var genre = acts.length === 1 && acts[0] === "fichiers" ? "envoi" :
-                F.prepa && acts.length === 1 && acts[0] === "buildfs" && l0.env === F.env ? "prepa" : "";
+                !rejeu && F.prepa && acts.length === 1 && acts[0] === "buildfs" && l0.env === F.env ? "prepa" : "";
     F.suivi = genre ? {genre: genre, env: l0.env, etape: "", pourcent: null, journal: [], statut: "encours"} : null;
   } else if (s && e.env === s.env) {
     if (e.type === "etape") {
@@ -352,8 +352,8 @@ function fichiersEvenement(e, rejeu) {
   }
   if (e.type === "fin") {
     if (F.suivi && F.suivi.statut === "encours") F.suivi.statut = "arrete";
-    if (F.prepa) { F.prepa = false; if (F.suivi && F.suivi.genre === "prepa") chargeListe(); }
-    if (!rejeu) atelierFin();                             // build_page_atelier.py
+    if (!rejeu && F.prepa) { F.prepa = false; if (F.suivi && F.suivi.genre === "prepa") chargeListe(); }   // rejeu : ancien lancement
+    if (!rejeu) atelierFin(e);                            // build_page_atelier.py
     majBoutonsFichiers();
   }
   if (e.type === "ligne" || F.dessin) return;

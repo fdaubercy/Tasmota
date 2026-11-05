@@ -12,12 +12,15 @@ lancement de la page) : nouvel essai toutes les 5 s, 1 h au plus. Rechargement :
 `redemarrer` sont retires de l'URL des que le buildfs est ACCEPTE (pas avant : un rechargement pendant l'attente
 d'un autre build reprend l'attente ; pas apres : un rechargement ne relance jamais le buildfs). Limite : un
 rechargement pendant le buildfs perd la selection automatique (cocher a la main, ou rouvrir le lien de l'atelier).
+Historique rejoue par /flux?depuis=0 : `F.prepa` n'est touche qu'hors rejeu, et /execution est relu juste avant le
+POST (numero `n0`) : un `fin` numerote jusqu'a `n0` est d'un ancien lancement, meme si /execution a echoue au
+chargement. Un `fin` posterieur qui n'est pas celui de notre buildfs abandonne avec un message, jamais en silence.
 Insere a la fin du JS de build_page_fichiers.py ; arriveeAtelier est appelee par demarre() de build_page.
 """
 
 JS = r"""
 // ---------- arrivee depuis l'Atelier des graphiques (A7, build_page_atelier.py) ----------
-var AT = null;          // {env, liste, redemarrer, etat: attend | prepa | cocher, essais, minuterie}
+var AT = null;          // {env, liste, redemarrer, etat: attend | prepa | cocher, essais, minuterie, n0}
 var AT_BANDEAU = "Fichiers sélectionnés automatiquement par l'Atelier des graphiques, pour téléverser un graphique nouveau ou modifié. Vérifiez puis cliquez sur « Envoyer ».";
 
 function atNote(t) { $("f-atelier").hidden = false; $("f-atelier-notes").appendChild(h("li", {texte: t})); }
@@ -58,10 +61,26 @@ async function atLance() {
   if (!AT) return;
   AT.minuterie = null;
   if (F.env !== AT.env) return atAbandon("Autre carte choisie : sélection automatique abandonnée.");
-  AT.etat = "prepa";
+  AT.etat = "prepa"; AT.n0 = undefined;
+  // Numero du flux avant NOTRE buildfs : un `fin` jusque-la est d'un ancien lancement (historique rejoue, meme si
+  // /execution a echoue au chargement : le reste de l'historique passe alors en rejeu).
+  var x = await appel("/execution");
+  if (!AT) return;
+  if (!x.ok || !x.donnees || typeof x.donnees.numero !== "number")
+    return atAbandon("État du serveur illisible (/execution : " + (x.texte || x.statut) + ") : sélection automatique abandonnée, cliquer « Préparer la liste ».");
+  if (x.donnees.numero > dernierN && x.donnees.numero > rejeuJusqua) rejeuJusqua = x.donnees.numero;
+  if (x.donnees.en_cours) {
+    AT.etat = "attend"; enCours = true;
+    return atNote("Un lancement est en cours : la construction du FS de " + AT.env + " partira à sa fin.");
+  }
+  AT.n0 = x.donnees.numero;
   var r = await preparerListe();
   if (!AT) return;
-  if (r.ok) { history.replaceState(null, "", location.pathname + "?env=" + encodeURIComponent(AT.env)); return; }
+  if (r.ok || !r.statut) history.replaceState(null, "", location.pathname + "?env=" + encodeURIComponent(AT.env));
+  if (r.ok) return;
+  if (!r.statut)                                       // delai depasse : le serveur a peut-etre lance
+    return atAbandon("Pas de réponse du serveur à la construction du FS (" + r.texte + ") : résultat incertain, " +
+                     "rien ne sera coché automatiquement ; suivre le lancement puis cocher à la main.");
   AT.etat = "attend";
   if (!/déjà en cours|réessayer/.test(r.texte || "")) return atAbandon("Construction du FS refusée : rien ne sera coché.");
   if (enCours) return atNote("Un lancement est en cours : la construction du FS partira à sa fin.");
@@ -71,10 +90,13 @@ async function atLance() {
 }
 
 // Fin d'un lancement (flux, hors rejeu ; appelee par fichiersEvenement)
-function atelierFin() {
+function atelierFin(e) {
   if (!AT) return;
   if (AT.etat === "attend") { if (!enCours && !AT.minuterie) atLance(); return; }
-  if (AT.etat !== "prepa" || !F.suivi || F.suivi.genre !== "prepa") return;     // pas la fin de notre buildfs
+  if (AT.etat !== "prepa" || AT.n0 === undefined || (typeof e.n === "number" && e.n <= AT.n0)) return;   // d'avant notre buildfs
+  if (!F.suivi || F.suivi.genre !== "prepa")
+    return atAbandon("Un autre lancement s'est terminé à la place de la construction du FS demandée : sélection " +
+                     "automatique abandonnée, cliquer « Préparer la liste ».");
   if (F.suivi.statut === "succes") AT.etat = "cocher";                          // chargeListe (relance) puis atelierListe
   else atAbandon("Construction du FS en échec ou arrêtée : rien n'est coché.");
 }
@@ -83,9 +105,9 @@ function atelierFin() {
 function atelierListe() {
   if (!AT || AT.etat !== "cocher") return;
   if (F.env !== AT.env) return atAbandon("Autre carte choisie : sélection automatique abandonnée.");
-  var presents = {}, absents = [];
+  var presents = Object.create(null), absents = [];    // « constructor » n'est pas un fichier present
   F.liste.fichiers.forEach(function (f) { presents[f.chemin] = true; });
-  F.coches = {}; F.dossier = null;
+  F.coches = Object.create(null); F.dossier = null;
   AT.liste.forEach(function (c) { if (presents[c]) F.coches[c] = true; else absents.push(c); });
   if (absents.length) atNote("Absent de l'image du FS, non coché : " + absents.join(", "));
   $("f-restart").checked = AT.redemarrer;
