@@ -88,12 +88,12 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
 - [x] Sonde verte, captures clair et sombre relues — preuve : 2 passes vertes après le tour 2 ; `.superpowers/sdd/atelier-destinations/a5-destination.png`, `a5-destination-sombre.png`
 
 ## A6 — Atelier : bouton « Téléverser »
-- [ ] Banc rouge : liste des fichiers calculée (description touchée ; `autoexec.be` si modifié ; fichiers du moteur
+- [x] Banc rouge : liste des fichiers calculée (description touchée ; `autoexec.be` si modifié ; fichiers du moteur
   entrés dans le FS de l'env, plus ceux absents de la carte en ligne, spec §7.2) ; drapeau « redémarrer » selon §7.8 ;
   URL `http://127.0.0.1:7700/?env=&depuis=atelier&fichiers=&redemarrer=` ; page Build arrêtée → message « lancer la
-  page Build par l'annuaire »
-- [ ] Bouton visible seulement après une écriture réussie ; ouvre un nouvel onglet ; chemins dans le FS de la carte
-- [ ] Bancs verts
+  page Build par l'annuaire » — preuve : `test_atelier_graphiques_televerse.py` (dont `test_forme_de_commande` : rouge avec l'ancienne forme `Br`, mesurée « nil » sur la cuve)
+- [x] Bouton visible seulement après une écriture réussie ; ouvre un nouvel onglet ; chemins dans le FS de la carte — preuve : 254cf34c7, e6b015fbe (page Build sondée au clic par `GET /build_actif`)
+- [x] Bancs verts — preuve : `test_atelier_graphiques_televerse.py` « 0 echec(s) : VERT » relancé par le contrôleur ; sonde Chrome 2 passes vertes (rapport A6)
 
 ## A7 — Page Build : arrivée depuis l'atelier
 - [ ] Banc rouge (`test_build_web.py`, `test_build_page_fichiers_chrome.py`) : `depuis=atelier` → env sélectionné,
