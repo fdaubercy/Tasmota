@@ -5,7 +5,7 @@ Ce que l'atelier ecrit pour UNE carte (env du cenv, pas une base) :
   - `data/<lieu>/<carte>/pages_graphiques.json` : la description, validee par `atelier_graphiques_description.valide` ;
   - son `autoexec.be` : la ligne LIGNE_AUTOEXEC (toujours `demarrage.charge`, l'init du module pose le driver), juste
     apres `demarrage.historique()` s'il existe, sinon en fin du bloc `if demarrage.prologue()` ;
-  - le cenv : les 6 fichiers du moteur (liste `pages_graphiques` de [berry_commun]) sont exclus du FS de TOUS les envs
+  - le cenv : les 7 fichiers du moteur (listes `pages_graphiques` et `pages_graphiques_moteur` de [berry_commun]) sont exclus du FS de TOUS les envs
     ESP32 (regle du 2026-10-31) sauf ceux qui ont une page. Une carte qui porte la ligne d'autoexec est « installee ».
 Exclusion (`_exclut`) : `${berry_commun.pages_graphiques}` en fin de l'option custom_files_exclude qui donne la valeur de
 l'env (la sienne, ou celle de sa base : ses cartes en heritent), creee dans l'env s'il n'en a aucune.
@@ -16,7 +16,7 @@ valeur ajoutee plus tard a la base ne la suit pas (c'est dit par MARQUE).
 custom_files_exclude_solidified = ON (sinon les .be resteraient aussi sur le FS) ; signale « firmware a recompiler ».
 Derniere page retiree (description None) : blocs MARQUE et lignes du solidify retires, ligne d'autoexec et description
 retirees, puis `_exclut` : l'etat exclu est retrouve octet pour octet.
-Apres chaque calcul, `_controle` relit le cenv obtenu : chaque carte installee embarque les 6 fichiers, tout autre env
+Apres chaque calcul, `_controle` relit le cenv obtenu : chaque carte installee embarque les 7 fichiers, tout autre env
 les exclut tous ; sinon refus (option tenue par une reference `${env:...}`, fichiers listes a la main...).
 Style `liquide` sur un env qui exclut echarts-liquidfill.min.js.gz (liste page_cuve) : refuse (palier 1).
 

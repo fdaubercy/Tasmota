@@ -1451,7 +1451,7 @@ Le commutateur « Mode sombre » règle la page ; la case « thème sombre » de
 3. **Conseil** : l'intention (texte) croisée avec la nature des séries donne 3 à 5 styles classés avec leur raison.
    Styles : courbe, aire, escalier, barres, barres-empilees, barres-periode, deux-axes, lies, cadran, anneau, chaleur,
    nuage, radar, liquide, demi-cercle.
-4. **Réglages** : titre, libellés, unités, couleurs, min / max, zones de couleur, période (direct, jour, mois), cadence,
+4. **Réglages** : titre, libellés, unités, couleurs, min / max, zones de couleur, période (direct, jour, mois), cadence (sans effet sous `/graphiques` : la cadence y est celle de la liste « Direct » de la page),
    largeur (demi ou pleine) et hauteur ; l'aperçu montre l'effet de chaque réglage. Jusqu'à 8 pages, 8 graphiques par
    page ; la description compacte tient en 8 Ko.
 5. **Diff** de chaque fichier touché, puis **écriture** atomique (copie horodatée).
@@ -1529,7 +1529,7 @@ par `atelier_graphiques_televerse.py::plan`, contient les chemins **tels qu'ils 
 - toujours le fichier de description écrit (`pages_graphiques.json` ou `graphiques.json`) ;
 - `autoexec.be` s'il a été écrit ;
 - les fichiers du **moteur** qui viennent d'entrer dans le FS de l'env (exclusion levée dans le cenv), et, si la carte
-  est en ligne, ceux dont elle manque (`Br import path path.exists(...)`, par `/cm?cmnd=`, lecture seule). Carte hors
+  est en ligne, ceux dont elle manque (`Br (def() import path return path.exists("/...") end)()`, par `/cm?cmnd=`, lecture seule ; la forme sans fonction rend `nil`). Destination « Graphiques » : sonde du firmware (`graphiquesFonctions.FICHIERS` doit contenir `pages_graphiques.js`) ; firmware d'avant, aucun bouton et le message « compilez et envoyez le firmware et le FS par la page Build » ; moteur absent de la carte, `graphiques.js` et `graphiques_edition.js` sont joints aussi. À l'envoi partiel, un `.json` de la racine de l'image (hors persist) est posé dans `json/`, comme le fait `gestionFileFolder.be` au démarrage. Sous « Graphiques », la page liste les graphiques de la composition : « Modifier » (remplace au même rang, avec témoin) et « Retirer » pour la forme atelier, lecture seule pour la forme actuelle. Carte hors
   ligne ou réponse illisible : seule la première règle s'applique, et la note le dit. Un fichier toujours exclu n'est
   jamais proposé ;
 - `redemarrer=1` si `autoexec.be` change ou si l'index des pages dédiées change (id, titre, accès) ; `0` pour un simple

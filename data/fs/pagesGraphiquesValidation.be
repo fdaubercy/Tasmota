@@ -2,7 +2,7 @@
  * pagesGraphiquesValidation.be - Validation de la description des pages de graphiques (atelier des graphiques, 2026-11-03)
  *
  * Module de fonctions SANS driver, importe par pagesGraphiques.be (lisDescription, valeurs) : separe du moteur pour
- * que chaque fichier reste sous 500 lignes. Embarque et solidifie (ou non) TOUJOURS avec pagesGraphiques.
+ * que chaque fichier reste sous 500 lignes. Liste `pages_graphiques_moteur` du cenv : embarque aussi par une carte a historique SANS page dediee (graphiques `"moteur": "pages"` de /graphiques, valideComposition), exclu des autres.
  *
  * valide(d) rend la liste des motifs de refus (vide = valide), avec le MEME verdict que
  * outils_docs/scripts_python/outils_pc/atelier_graphiques_description.py::valide, dont le docstring est la reference

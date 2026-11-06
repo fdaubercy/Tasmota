@@ -77,7 +77,7 @@ perdus.
 ### 4.3 Composition de la carte et du dépôt
 
 La composition peut avoir été modifiée **sur la carte** (mode édition) depuis le dernier envoi. Avant d'écrire
-vers « Graphiques », l'atelier lit la composition de la carte en ligne (`/json/graphiques.json`) :
+vers « Graphiques », l'atelier lit la composition de la carte en ligne par `/ufsu?dir=0&download=/json/graphiques.json` (mesure du 2026-11-06 : `/json/graphiques.json` répond 404, la page n'est pas servie ainsi), après `path.exists` (`/ufsu` ne répond pas pour un fichier absent : composition vide) :
 - identique à celle du dépôt → rien à signaler ;
 - différente → l'atelier l'affiche en diff et propose « Partir de la version de la carte » (recopiée dans le dépôt
   avant d'y ajouter le graphique) ou « Garder celle du dépôt » (les changements faits sur la carte seront perdus à
@@ -133,7 +133,7 @@ Choix faits sans l'utilisateur, à vérifier par lui :
    le cenv), **plus**, si la carte est en ligne, ceux du moteur qu'elle n'a pas (`Br path.exists`, déjà en usage dans
    l'atelier pour la lecture de la carte). Carte hors ligne : seulement la première règle, et le bandeau le dit.
 3. **Listes du cenv** : `pages_graphiques` est scindée une fois, à la main, en `pages_graphiques_moteur`
-   (`pages_graphiques.js`, `pages_graphiques_formule.js`, `pagesGraphiquesValidation.be`) et `pages_graphiques`
+   (`pages_graphiques.js`, `pages_graphiques_formule.js`, `graphiques_moteur.js`, `pagesGraphiquesValidation.be`) et `pages_graphiques`
    (le reste). `pages_graphiques_moteur` est exclue des envs **sans historique et sans page dédiée** ;
    `pages_graphiques` garde sa règle. L'atelier gère les deux listes avec la même logique d'exclusion levée/remise
    (retirer la dernière page remet l'état exclu octet pour octet, comme aujourd'hui). `pagesGraphiquesValidation.be`

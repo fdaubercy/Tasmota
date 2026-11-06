@@ -152,7 +152,7 @@ Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plut
 `build_serie.py` fait **816 lignes** (+9 le 2026-11-03 : sauvegarde « avant flash » de la configuration ; +18 le 2026-11-02 : sauvegarde et retablissement de `/.drvset003` autour d'un flash serie ; +14 le 2026-11-01 : table de partitions de l'env ; +19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; +11 le 2026-10-27 : data_dir pose avant pio ; +3 le meme jour : identite de l'image du FS ; +7 le meme jour : duree des zones d'envoi memorisee, A13 ; +6 le 2026-10-28 : OTA par le maitre, A11 ; +9 le meme jour : Sleep 0 du maitre pendant l'envoi ; +30 le 2026-10-29 : action « fichiers » de l'onglet Fichiers ; +16 le meme jour : transport MQTT (A16) ; execution en serie des `pio run` : verrous, arret immediat, attente
 d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
 verrou), et ses bancs `test_build_serie.py` (**1215**), `test_build_page_chrome.py` (**1103**),
-`test_build_ota_fs.py` (**802**), `test_build_web.py` (**797**), `test_atelier_graphiques_page_chrome.py` (**648**, sonde de la page de l'atelier,
+`test_build_ota_fs.py` (**847**), `test_build_web.py` (**797**), `test_atelier_graphiques_page_chrome.py` (**729**, sonde de la page de l'atelier,
 decision du 2026-11-05), ainsi que `test_annuaire.py` (**523**,
 banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
 compteur.
@@ -860,7 +860,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     S3/P4 (series de l'historique, du JSON SENSOR ou calculees ; conseil de style ; apercu par le VRAI moteur de la carte, valeurs de la carte en ligne sinon
     persist du depot et valeurs simulees). Ecrit `data/<lieu>/<carte>/pages_graphiques.json` (valide par `_description.py::valide`), la ligne
     `demarrage.charge(["pagesGraphiques"])` de l'autoexec et le cenv : deux listes de `[berry_commun]`, `pages_graphiques` (gabarit, `.be` du moteur ; exclue de tout env sans page)
-    et `pages_graphiques_moteur` (`pagesGraphiquesValidation.be`, `pages_graphiques.js`, `pages_graphiques_formule.js` ; exclue des envs sans historique ET sans page : suit
+    et `pages_graphiques_moteur` (`pagesGraphiquesValidation.be`, `pages_graphiques.js`, `pages_graphiques_formule.js`, `graphiques_moteur.js` ; exclue des envs sans historique ET sans page : suit
     l'historique ou une page dediee) ;
     diff puis ecriture atomique, refusee pendant un build ou sur empreinte perimee ; `--exclusions` = application au vrai depot. Moteur cote carte :
     `data/fs/pagesGraphiques.be` + `pagesGraphiquesValidation.be` (route `/pages?p=<id>`, `?f=valeurs`, `?f=sources`, description `/json/pages_graphiques.json`),
