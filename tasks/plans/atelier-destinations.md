@@ -123,7 +123,7 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
 - [x] Page de l'atelier : graphiques de /graphiques listés (modifier, retirer) ; `calculees` citées jointes au graphique ;
   série hors historique signalée ; message neutre carte/dépôt ; pas de doublon après rechargement — preuve : 4b7508fb1 ; `test_atelier_graphiques_page_chrome.py` : 6 passes vertes de suite, témoin compris
 - [x] Mineurs (réels `%g` dans la comparaison, `s.chemin || s`, solidifiés dans la liste, documents périmés) ; bancs verts,
-  test de bout en bout atelier → image → envoi — preuve : 5e1c9421f, 2c79ec1d4, 467d2ba37, dcd443245 ; bancs de `.superpowers/sdd/atelier-destinations/task-11-report.md` ; seul KO : « téléphone » de `test_build_page_fichiers_chrome.py`, préexistant
+  test de bout en bout atelier → image → envoi — preuve : 5e1c9421f, 2c79ec1d4, 467d2ba37, dcd443245, e981ef3b6 (relecture ciblée) ; bancs de `.superpowers/sdd/atelier-destinations/task-11-report.md` ; seul KO : « téléphone » de `test_build_page_fichiers_chrome.py`, préexistant
 
 ## A9 — Validation sur les cartes
 - [x] Place du FS mesurée sur les 6 cartes à historique avec les fichiers du moteur (blocs de 4 Ko) ; arrêt et
