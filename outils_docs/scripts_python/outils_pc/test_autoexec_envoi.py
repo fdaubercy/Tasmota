@@ -247,6 +247,21 @@ def directe(racine, hote):
     carte.ferme()
 
 
+class ClientFiltre(tm.Client):
+    """Client MQTT simule qui tient son contrat : ne livre que les topics abonnes, compte ses `ferme`."""
+
+    def __init__(self, carte):
+        super().__init__(carte)
+        self.fermes = 0
+
+    def recoit(self):
+        m = super().recoit()
+        return m if m is not None and m.topic in self.abonnements else None    # sans abonnement, le message se perd
+
+    def ferme(self):
+        self.fermes += 1
+
+
 class CarteMqtt(tm.Carte):
     """Carte MQTT simulee (test_build_ota_mqtt.Carte) qui repond aussi a `cmnd/<topic>/Status 5` ; `sans_fsmqtt` : le
     module Berry n'est pas charge (aucune reponse sur fsmqtt/...)."""
@@ -264,8 +279,9 @@ class CarteMqtt(tm.Carte):
             return
         if topic == f"cmnd/{self.topic}/Status":
             self.status.append(payload)
-            self.client.boite.put(tm.Message(f"stat/{self.topic}/STATUS5",
-                                             json.dumps({"StatusNET": {"Hostname": self.hote}}).encode()))
+            if f"stat/{self.topic}/STATUS5" in self.client.abonnements:        # un broker ne publie qu'aux abonnes
+                self.client.boite.put(tm.Message(f"stat/{self.topic}/STATUS5",
+                                                 json.dumps({"StatusNET": {"Hostname": self.hote}}).encode()))
         elif topic.startswith("fsmqtt/") and self.sans_fsmqtt:
             return
         elif topic == tm.BASE + "ordre" and json.loads(payload)["op"] == "lit" and json.loads(payload)["chemin"] not in self.fs:
@@ -281,7 +297,13 @@ def mqtt(racine, hote):
     ADRESSE[0] = ""                                           # toute voie HTTP echouerait : l'adresse IP n'entre pas en jeu
     ae.REGLAGES_MQTT.update({"delai": 1.0, "attente_morceau": 0.2, "delai_retour": 1.0})
     carte = CarteMqtt(hote, topic)
-    ae.CLIENT = lambda: tm.Client(carte)
+    clients = []
+
+    def fabrique():
+        clients.append(ClientFiltre(carte))
+        return clients[-1]
+
+    ae.CLIENT = fabrique
 
     def prep(transport="mqtt"):
         return ae.prepare(racine, ENV, lambda: [], transport=transport)
@@ -295,6 +317,7 @@ def mqtt(racine, hote):
             "mqtt prepare : adresse mqtt:<topic>, transport, nom d'hote, ecart, sans adresse IP")
     verifie((MDP in json.dumps(r), r["sur_carte"].count("***"), "WebLog 2" in r["sur_carte"]), (False, 1, True),
             "mqtt prepare : fichier de la carte rendu MASQUE")
+    verifie([c.fermes for c in clients], [1], "mqtt prepare : le client MQTT est ferme (Canal.ferme)")
     verifie((carte.status, carte.ordres), ([b"5"], ["abandon", "lit"]),
             "mqtt prepare : Status 5, module sonde, fichier lu ; rien d'envoye")
     for faux in ("ftp", None, 5, "MQTT"):
@@ -364,6 +387,7 @@ def mqtt(racine, hote):
     del carte.fs["/autoexec.bat"]
     r = env(prep()["jeton"])
     verifie((r["sauvegarde"], carte.fs["/autoexec.bat"]), (None, FICHIER), "mqtt carte sans fichier : envoye, rien a sauvegarder")
+    verifie(sorted(set(c.fermes for c in clients)), [1], f"mqtt : chacun des {len(clients)} clients ouverts (prepare, refus, envoi) est ferme une fois")
 
 
 def joint(adresse, persist, env, rapporte, **_):
@@ -403,6 +427,8 @@ MUTANTS = [
     ("HMAC non compare", "if not hmac.compare_digest(", "if False and not hmac.compare_digest("),
     ("absent sans relecture", "for _ in range(2):", "for _ in range(1):"),
     ("identite MQTT retiree", "        _controle_hote(hote, persist, adresse, env)\n        try:\n            canal.ordre", "        try:\n            canal.ordre"),
+    ("abonnement STATUS5 retire", '        canal.client.abonne([f"stat/{topic}/STATUS5"])', "        pass"),
+    ("Canal.ferme retire", "    finally:\n        canal.ferme()\n", "    finally:\n        pass\n"),
     ("jeton sans le transport", "json.dumps([instant, env, adresse, *empreintes, transport])", "json.dumps([instant, env, adresse, *empreintes])"),
     ("fichier de la carte non masque", "autoexec_fichier.masque(", "str("),
 ]

@@ -29,7 +29,7 @@ $("onglet-autoexec").onclick = function () { montreOnglet("autoexec"); };
 var ongletAutoexec = (function () {
 var LH = 20, TYPES = {secret: "Secret en clair", doublon: "Doublon persist", inconnue: "Commande inconnue", longueur: "Ligne trop longue"};
 var X = {env: "", lu: null, avert: [], banque: null, choisie: null, valeurs: {}, numero: 0, minuteur: null, diff: null,
-  texteDiff: null, ligneIns: 0, prep: null, proposition: null, ouvert: false};
+  texteDiff: null, ligneIns: 0, prep: null, nPrep: 0, proposition: null, ouvert: false};
 var M = {champs: []};
 
 function texte() { return $("a-texte").value; }
@@ -187,13 +187,13 @@ function majEnvoyer() { $("a-envoi-go").disabled = !(X.prep && (!X.prep.ecart ||
 function voie() { return $("a-t-mqtt").checked ? "mqtt" : "http"; }
 function ouvreEnvoi() { $("a-t-http").checked = true; prepareEnvoi(); }     // HTTP a chaque ouverture
 async function prepareEnvoi() {
-  var z = vide($("a-envoi-retours")), n = rouges();
+  var z = vide($("a-envoi-retours")), n = rouges(), g = ++X.nPrep;       // generation : une reponse d'une preparation depassee est ignoree
   X.prep = null; $("a-panneau-envoi").hidden = false; $("a-ecart").hidden = true;
   $("a-redemarrer").checked = false; $("a-ecart-vu").checked = false; $("a-envoi-rouges-lus").checked = false;
   $("a-envoi-rouges").hidden = !n; $("a-envoi-rouges-texte").textContent = "J'ai lu les " + n + " avertissements rouges";
   $("a-envoi-adresse").textContent = "Lecture de la carte…"; majEnvoyer();
   var env = X.env, transport = voie(), r = await api("/autoexec/envoi/prepare", {env: env, transport: transport});
-  if (env !== X.env || transport !== voie() || modifie() || $("a-panneau-envoi").hidden) return;     // carte ou voie changee, texte modifie ou panneau ferme entre-temps
+  if (g !== X.nPrep || env !== X.env || modifie() || $("a-panneau-envoi").hidden) return;     // preparation depassee (voie, carte), texte modifie ou panneau ferme entre-temps
   if (!r.ok || !r.donnees) { $("a-envoi-adresse").textContent = ""; message(z, "avert rouge", r.texte); return; }
   X.prep = r.donnees;
   $("a-envoi-adresse").textContent = "Carte " + X.prep.hostname_carte + (transport === "mqtt" ? " par MQTT (" + X.prep.adresse.slice(5) + ")" : " à l'adresse " + X.prep.adresse) + " (identité vérifiée).";

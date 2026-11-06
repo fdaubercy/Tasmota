@@ -53,6 +53,7 @@ TEMOINS = {                                             # nom -> (texte de la pa
                      "A11 : « Inserer » de Tes commandes : le choix d'abord, rien d'insere"),
     "transport-ecran": ("transport: X.prep.transport", "transport: voie()", "envoi : la voie de la preparation est celle transmise a l'envoi"),
     "voie-ignoree": ('{env: env, transport: transport}', "{env: env}", "voie MQTT : la preparation recoit transport=mqtt"),
+    "generation": ("g !== X.nPrep || env !== X.env", "env !== X.env", "voie MQTT : aller-retour de voie, la reponse perimee M1 est ignoree"),
     "garde-envoi": ("if (modifie()) fermeEnvoi();", "", "envoi : texte modifie apres l'ouverture -> panneau ferme ou « Envoyer » grise"),
 }
 ENROBE = """window.__corps = []; (function () { var f = window.fetch; window.fetch = function () {
@@ -69,6 +70,12 @@ def mode_serveur(port, depot, temoin):
     def prepare(racine, env, builds_en_cours, *, transport="http"):
         vues = json.loads(preparations.read_text(encoding="utf-8")) if preparations.is_file() else []
         preparations.write_text(json.dumps(vues + [transport]), encoding="utf-8")
+        lent = preparations.parent / "lent.flag"
+        if transport == "mqtt" and lent.is_file():            # la preparation M1 du scenario d'aller-retour : lente, puis perimee
+            lent.unlink()
+            time.sleep(2.5)
+            return {"adresse": "mqtt:essai/sonde", "hostname_carte": "PERIMEE-M1", "sur_carte": SUR_CARTE, "ecart": True,
+                    "jeton": "jeton-perime", "transport": transport}
         return {"adresse": "mqtt:essai/sonde" if transport == "mqtt" else "127.0.0.1:9", "hostname_carte": "ESSAI-SONDE", "sur_carte": SUR_CARTE,
                 "ecart": True, "jeton": JETON, "transport": transport}
 
@@ -256,6 +263,23 @@ def sonde(m):
     verifie(attend(cdp, "!!document.getElementById('a-envoi-ok')", 10), True, "voie MQTT : reussite affichee")
     recu = json.loads(m.journal.read_text(encoding="utf-8"))
     verifie(recu.get("transport"), "mqtt", "envoi : la voie de la preparation est celle transmise a l'envoi")
+    # aller-retour de voie : M1 (lente) revient apres M2 avec la meme voie, elle ne doit rien ecraser
+    (m.journal.parent / "lent.flag").write_text("1", encoding="utf-8")
+    tpc.clic(cdp, "a-envoyer")
+    attend(cdp, "document.getElementById('a-envoi-adresse').textContent.indexOf('ESSAI-SONDE') >= 0", 10)
+    tpc.clic(cdp, "a-t-mqtt")                                  # M1 : part, reste en attente 2,5 s
+    tpc.clic(cdp, "a-t-http")                                  # H
+    tpc.clic(cdp, "a-t-mqtt")                                  # M2 : rapide
+    verifie(attend(cdp, "document.getElementById('a-envoi-adresse').textContent.indexOf('par MQTT (essai/sonde)') >= 0", 10), True,
+            "voie MQTT : aller-retour, la preparation M2 est affichee")
+    time.sleep(3.5)                                            # M1 revient
+    tpc.clic(cdp, "a-ecart-vu")
+    tpc.clic(cdp, "a-envoi-rouges-lus")
+    tpc.clic(cdp, "a-envoi-go")
+    verifie(attend(cdp, "!!document.getElementById('a-envoi-ok')", 10), True, "voie MQTT : aller-retour, envoi de la preparation M2")
+    recu = json.loads(m.journal.read_text(encoding="utf-8"))
+    verifie([js(cdp, "return document.getElementById('a-envoi-adresse').textContent.indexOf('PERIMEE') < 0"), recu.get("jeton"), recu.get("transport")],
+            [True, JETON, "mqtt"], TEMOINS["generation"][2])
     # panneau d'envoi ouvert puis texte modifie : l'ancien fichier du depot ne doit plus pouvoir partir
     tpc.clic(cdp, "a-envoyer")
     attend(cdp, "document.getElementById('a-envoi-adresse').textContent.indexOf('ESSAI-SONDE') >= 0", 10)
