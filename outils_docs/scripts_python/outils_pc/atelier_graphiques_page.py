@@ -39,6 +39,7 @@ h3{font-size:13px;margin:12px 0 6px;color:var(--doux);text-transform:uppercase;l
 .btn.prim{background:var(--bleu);border-color:var(--bleu);color:#fff} .btn:disabled{opacity:.45;cursor:default}
 :root[data-theme="sombre"] .btn.prim{background:#2f6fe0;border-color:#2f6fe0}   /* blanc lisible (~4,6:1) */
 .btn.mini{padding:2px 8px;font-size:12px}
+#compo-liste ul.compo{list-style:none;margin:4px 0;padding:0;font-size:12px} #compo-liste li{padding:2px 0} #compo-liste .sel{font-weight:600}
 .pastille{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;background:var(--piste);color:var(--doux);
   margin-right:3px;border:0;font-family:inherit}
 .pastille.ok{background:var(--vert-fond);color:var(--vert)} .pastille.non{background:var(--rouge-fond);color:var(--rouge)}
@@ -161,6 +162,7 @@ HTML = """<main>
     <option value="lien">Lien depuis un encadré</option></select></div>
   <label class="ch petit champ-page"><input type="checkbox" id="r-solidifier"> Solidifier le module (firmware à recompiler)</label>
   <div id="destination"></div>
+  <div id="compo-liste"></div>
   <div class="ligne" style="flex-wrap:wrap;margin-top:10px"><button class="btn mini" id="ajout-graphique">+ Graphique</button>
     <button class="btn mini" id="suppr-graphique">Retirer le graphique</button>
     <button class="btn mini" id="suppr-page">Retirer la page</button></div>

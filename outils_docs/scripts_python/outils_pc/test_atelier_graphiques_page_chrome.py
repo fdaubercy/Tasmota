@@ -28,6 +28,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -64,12 +65,19 @@ def fausse_carte(ip, chemin, delai):
                            "valeurs": [[round(4300 - k * 1.5, 1) for k in range(288)], [round(0.64 - k * 0.0002, 4) for k in range(288)],
                                        [round(11.5 + 1.6 * ((k % 144) / 144), 2) for k in range(288)]],
                            "tEncours": t0 + 288 * 300, "encours": [3870, 0.58, 12.1]}).encode()
-    if chemin.startswith("/json/graphiques.json"):             # composition /graphiques de la carte, pilotee par la sonde (A5)
-        f = Path(os.environ["OUTILS_TASMOTA_DOSSIER"]) / "carte_graphiques.json"
-        if f.is_file():
-            if f.read_bytes() == b"HORSLIGNE":
-                raise OSError("carte hors ligne")
-            return f.read_bytes()
+    dossier = Path(os.environ["OUTILS_TASMOTA_DOSSIER"])
+    f = dossier / "carte_graphiques.json"
+    cmnd = urllib.parse.unquote(chemin.split("cmnd=", 1)[1]) if chemin.startswith("/cm?") else ""
+    if chemin.startswith("/json/graphiques.json"):             # comme la vraie carte (mesure du 2026-11-06) : 404
+        raise OSError("HTTP 404")
+    if 'path.exists("/json/graphiques.json")' in cmnd or chemin.startswith("/ufsu?dir=0&download=/json/graphiques.json"):
+        if f.is_file() and f.read_bytes() == b"HORSLIGNE":      # composition /graphiques de la carte, pilotee par la sonde (A5)
+            raise OSError("carte hors ligne")
+        if cmnd:
+            return json.dumps({"Br": "true" if f.is_file() else "false"}).encode()
+        return f.read_bytes()
+    if "graphiquesFonctions" in cmnd:                          # sonde du firmware (A11) : le fichier-temoin « firmware_ancien » le vieillit
+        return json.dumps({"Br": "false" if (dossier / "firmware_ancien").exists() else "true"}).encode()
     if chemin.startswith("/cm"):
         return json.dumps({"StatusSNS": {"sensorsCuve": {"niveauCuve": {"volume": 3870, "tauxRemplissage": 0.58}},
                                          "DS18B20": {"Temperature": 12.1}}}).encode()
@@ -88,7 +96,7 @@ def mode_serveur(port, depot, temoin):
         assert atelier_graphiques_page.PAGE.count(atelier_graphiques_page.THEME_INTERRUPTEUR) == 1
         atelier_graphiques_page.PAGE = atelier_graphiques_page.PAGE.replace(atelier_graphiques_page.THEME_INTERRUPTEUR, "")
     build_ota_http._get = fausse_carte
-    import atelier_graphiques_televerse as agt     # page Build simulee : active sauf si le fichier-temoin « build_arrete » existe
+    import atelier_graphiques_televerse as agt   # page Build simulee : active sauf si le fichier-temoin « build_arrete » existe
     agt.build_actif = lambda port=agt.PORT_BUILD: not (Path(os.environ["OUTILS_TASMOTA_DOSSIER"]) / "build_arrete").exists()
     agw.DEPOT = Path(depot)
     agw.builds_en_cours_defaut = lambda: []
@@ -567,6 +575,77 @@ def sonde_destination(m, capture):
     verifie([e for e in cdp.erreurs() if e not in ERREURS_ATTENDUES], [], "destination : aucune erreur JS (hors le refus attendu du scenario « index change »)")
 
 
+def sonde_compo(m):
+    """A11 : liste des graphiques de /graphiques (modifier, retirer), `calculees` jointes, serie sans historique, texte neutre,
+    firmware d'avant la fonction."""
+    cdp = m.cdp
+    url = m.url + "?env=" + CUVE
+    calc = {"moteur": "pages", "type": "courbe", "titre": "Calc", "periode": "jour", "series": ["sensorsCuve.niveauCuve.volume", "calc:double"],
+            "calculees": {"double": {"nature": "historique", "formule": "sensorsCuve.niveauCuve.volume * 2"}}}
+    compo = COMPO_DEPOT + [calc]
+    pose_depot(m, compo)
+    pose_carte(m, compo)
+    ouvre(cdp, url)
+    choisit_page(cdp, "graphiques")
+    attend(cdp, "document.querySelectorAll('#compo-liste li').length === 2", 10)
+    verifie(cdp.js("[].map.call(document.querySelectorAll('#compo-liste li'), function(l){ return [l.textContent.indexOf('lecture seule') >= 0,"
+                   " l.querySelectorAll('button').length]; })"), [[True, 0], [False, 2]],
+            "liste : forme actuelle en lecture seule, forme atelier avec Modifier et Retirer")
+    verifie(cdp.js("document.getElementById('compo-liste').textContent.indexOf('sera ajouté comme nouveau') >= 0"), True,
+            "sans Modifier : la page dit que le graphique sera un nouveau graphique")
+    cdp.js("document.querySelector('#compo-liste [data-compo=modifier]').click(); 1")
+    verifie(cdp.js("[corpsEcriture().operation, corpsEcriture().index, Object.keys(corpsEcriture().graphique.calculees || {}), etat.desc.calculees.double.nature]"),
+            ["remplace", 1, ["double"], "historique"], "Modifier : remplace au rang 1, `calculees` citees jointes")
+    cdp.js("etat.desc.calculees.autre = {nature: 'historique', formule: 'sensorsCuve.niveauCuve.volume * 3'}; 1")
+    verifie(cdp.js("Object.keys(corpsEcriture().graphique.calculees)"), ["double"], "calculees non citees : pas jointes")
+    saisit(cdp, "#r-titre", "Calc modifie")
+    verifie(bool(attend(cdp, "!document.getElementById('ecrire').disabled", 15)), True, "Modifier : diff pret")
+    cdp.js("document.getElementById('ecrire').click(); 1")
+    attend(cdp, "document.querySelector('#message .avert.vert') !== null", 15)
+    g = json.loads((m.depot / REL_GRAPH).read_text(encoding="utf-8")).get("graphiques", [])
+    verifie(([x.get("titre") for x in g], sorted(g[-1].get("calculees", {}))), (["Cuve", "Calc modifie"], ["double"]),
+            "reecriture apres Modifier : pas de doublon, calculees gardees")
+    # serie sans historique : avertissement, pas un refus
+    cdp.js("grapheCourant().series.push('inconnu.sansHisto'); dessineAlertes(); 1")
+    verifie(cdp.js("document.getElementById('alertes').textContent.indexOf(\"absente de /graphiques : pas d'historique\") >= 0"), True,
+            "serie sans historique signalee")
+    # Retirer
+    pose_depot(m, compo)
+    pose_carte(m, compo)
+    ouvre(cdp, url)
+    choisit_page(cdp, "graphiques")
+    attend(cdp, "document.querySelectorAll('#compo-liste [data-compo=retirer]').length === 1", 10)
+    attend(cdp, "!document.getElementById('ecrire').disabled", 15)     # le diff du menu est revenu : clic au rythme d'un humain
+    cdp.js("document.querySelector('#compo-liste [data-compo=retirer]').click(); 1")
+    attend(cdp, "document.querySelector('#message .avert.vert') !== null", 15)
+    g = json.loads((m.depot / REL_GRAPH).read_text(encoding="utf-8")).get("graphiques", [])
+    verifie([x.get("titre") for x in g], ["Cuve"], "Retirer : le graphique atelier est retire du depot")
+    verifie(cdp.js("document.getElementById('motifs').textContent"), "", "Retirer : aucun refus affiche")
+    verifie(bool(attend(cdp, "!document.getElementById('televerser').classList.contains('cache')", 10)), True, "Retirer : bouton Televerser propose")
+    # composition differente : texte neutre
+    pose_depot(m, COMPO_DEPOT)
+    pose_carte(m, COMPO_CARTE)
+    ouvre(cdp, url)
+    choisit_page(cdp, "graphiques")
+    attend(cdp, "document.querySelectorAll('#destination input[name=base]').length === 2", 10)
+    verifie(cdp.js("document.getElementById('destination').textContent.indexOf('diffère entre la carte et le dépôt : changée sur la carte, ou écriture pas encore téléversée') >= 0"),
+            True, "composition differente : texte neutre")
+    # firmware d'avant la fonction
+    pose_depot(m, COMPO_DEPOT)
+    pose_carte(m, COMPO_DEPOT)
+    ancien = m.t / "outils" / "firmware_ancien"
+    ancien.write_text("x")
+    ouvre(cdp, url)
+    choisit_page(cdp, "graphiques")
+    attend(cdp, "!document.getElementById('ecrire').disabled", 15)
+    cdp.js("document.getElementById('ecrire').click(); 1")
+    attend(cdp, "document.getElementById('tv-info').textContent.indexOf('antérieur') >= 0", 15)
+    verifie(cdp.js("[document.getElementById('televerser').offsetParent === null, document.getElementById('tv-info').textContent.indexOf('compilez et envoyez le firmware') >= 0]"),
+            [True, True], "firmware d'avant : message rouge, pas de bouton Televerser")
+    ancien.unlink()
+    verifie([e for e in cdp.erreurs() if e not in ERREURS_ATTENDUES], [], "compo : aucune erreur JS")
+
+
 def sonde_televerse(m):
     """Bouton « Televerser » (A6) : absent avant l'ecriture, present apres, masque a la modification suivante ; ouvre l'URL de
     la page Build (window.open intercepte) ; page Build arretee -> message, aucun onglet."""
@@ -611,7 +690,9 @@ def sonde_televerse(m):
 
 def sonde_temoin(m):
     m.cdp.appel("Page.navigate", url=m.url)
-    time.sleep(4)
+    fin = time.time() + 30           # 4 s fixes ne suffisaient pas sur une machine chargee (rouge du 2026-11-06)
+    while not m.cdp.erreurs() and time.time() < fin:
+        time.sleep(0.5)
     verifie(len(m.cdp.erreurs()) > 0, True, "TEMOIN : l'erreur JS volontaire est detectee")
 
 
@@ -631,7 +712,7 @@ def principal():
         try:
             m = Montage()
             m.demarre(temoin)
-            sonde_temoin(m) if temoin else (sonde_page(m, args.capture), sonde_destination(m, args.capture), sonde_televerse(m))
+            sonde_temoin(m) if temoin else (sonde_page(m, args.capture), sonde_destination(m, args.capture), sonde_compo(m), sonde_televerse(m))
         except FileNotFoundError as erreur:
             print(f"BLOQUE : {erreur}")
             return 3

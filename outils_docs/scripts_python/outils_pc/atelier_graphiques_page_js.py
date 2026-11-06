@@ -7,11 +7,13 @@ correspond a la description du moment (meme corps que celui du diff, empreinte d
 Series du graphique : chaine (chemin) ou objet {chemin, libelle, unite, couleur} (A7b) ; un objet dont tous les reglages
 sont vides redevient la chaine. Les deux formes se lisent par cheminDe(). Les reglages par serie (dessineSeries,
 nouvelleSerie) sont dans atelier_graphiques_page_series.py, le menu « Page » et la destination « Graphiques » (A5) dans
-atelier_graphiques_page_destination.py, ajoutes a la fin de JS.
+atelier_graphiques_page_destination.py, la liste des graphiques de /graphiques (modifier, retirer ; A11) dans
+atelier_graphiques_page_compo.py, ajoutes a la fin de JS.
 Lecteur de l'apercu : PagesGraphiques.lecteurCarte, celui de la carte, dont les fetch (faits pendant l'appel) sont
 rediriges vers /valeurs?env= : la conversion des reponses de la carte est donc la sienne, pas une copie.
 """
 
+from atelier_graphiques_page_compo import JS_COMPO
 from atelier_graphiques_page_destination import JS_DEST
 from atelier_graphiques_page_series import JS_SERIES
 from atelier_graphiques_page_televerse import JS_TV
@@ -255,6 +257,7 @@ function dessineAlertes() {
   etat.desc.pages.forEach(function (p) { p.graphiques.forEach(function (g) { types[g.type] = true; }); });
   if (e.exclut_echarts && Object.keys(types).some(function (t) { return t !== 'demi-cercle'; }))
     h.push('ECharts est exclu du FS de ' + echappe(e.nom) + ' : sur la carte, seuls les demi-cercles s\'afficheront (l\'écriture reste possible).');
+  h = h.concat(alertesGraphiques());
   if (e.exclut_liquidfill && types.liquide)
     h.push('liquidfill est exclu du FS de ' + echappe(e.nom) + ' : le style « liquide » sera refusé à l\'écriture.');
   $('alertes').innerHTML = h.map(function (t) { return '<div class="avert">' + t + '</div>'; }).join('');
@@ -467,4 +470,4 @@ Promise.all([lis('/envs'), fetch('/moteur/pages_graphiques.html').then(function 
   return choisitEnv(env);
 }).catch(function (e) { message('Atelier injoignable : ' + echappe(e.message), 'rouge'); });
 """
-JS += JS_SERIES + JS_DEST + JS_TV
+JS += JS_SERIES + JS_DEST + JS_COMPO + JS_TV

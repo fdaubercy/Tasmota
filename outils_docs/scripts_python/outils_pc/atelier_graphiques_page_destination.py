@@ -33,10 +33,24 @@ $('r-page').addEventListener('change', function () {
 });
 // Corps de /diff et /ecrire pour /graphiques : le graphique edite est ajoute (forme atelier, « moteur » pose par le serveur)
 function corpsGraphiques() {
-  var c = etat.compo, x = etat.indexEcrit, o = {env: etat.env, destination: 'graphiques', operation: 'ajoute', graphique: grapheCourant()};
-  if (x && x.cle === cleEcrit()) { o.operation = 'remplace'; o.index = x.index; o.attendu = x.attendu; o.base = 'depot'; return o; }   // le depot porte deja ce graphique
+  var c = etat.compo, x = etat.indexEcrit, g = copie(grapheCourant()), cc = calculeesCitees(g);
+  if (Object.keys(cc).length) g.calculees = cc;                  // le graphique emporte les formules qu'il cite (les autres ne partent pas)
+  var o = {env: etat.env, destination: 'graphiques', operation: 'ajoute', graphique: g};
+  if (x && x.cle === cleEcrit()) { o.operation = 'remplace'; o.index = x.index; o.attendu = x.attendu; o.base = x.base || 'depot'; return o; }   // le depot (ou la carte choisie) porte deja ce graphique
   if (c && c.etat === 'differente' && etat.base) o.base = etat.base;
   return o;
+}
+// `calculees` de la description que citent les series du graphique (calc:<nom>)
+function calculeesCitees(g) {
+  var tout = (etat.desc && etat.desc.calculees) || {}, r = {};
+  (g.series || []).forEach(function (s) { var c = cheminDe(s); if (/^calc:/.test(c) && tout[c.slice(5)]) r[c.slice(5)] = tout[c.slice(5)]; });
+  return r;
+}
+// Series sans historique : /graphiques ne trace que l'historique (avertissement, pas un refus)
+function alertesGraphiques() {
+  var g = etat.dest === 'graphiques' ? grapheCourant() : null;
+  return !g ? [] : (g.series || []).map(cheminDe).filter(function (c) { return !/^calc:/.test(c) && !infoSerie(c).historique; })
+    .map(function (c) { return '« ' + echappe(c) + ' » : absente de /graphiques : pas d\'historique.'; });
 }
 function attendChoix() { return !!(etat.compo && etat.compo.etat === 'differente' && !etat.base); }
 // Graphique deja ecrit pour cette carte, cette page et ce graphique : les ecritures suivantes le REMPLACENT (jamais de doublon)
@@ -74,7 +88,7 @@ function dessineDestination() {
     var radio = function (v, texte, off) {
       return '<label class="ch"><input type="radio" name="base" value="' + v + '"' + (etat.base === v ? ' checked' : '') + (off ? ' disabled' : '') + '> ' + texte + '</label>';
     };
-    h = '<div class="avert"><b>La composition de /graphiques a changé sur la carte</b> depuis le dernier envoi (diff dépôt → carte).</div>' +
+    h = '<div class="avert"><b>La composition de /graphiques diffère entre la carte et le dépôt : changée sur la carte, ou écriture pas encore téléversée.</b> (diff dépôt → carte)</div>' +
       '<pre class="code">' + c.diff.split('\n').map(ligneDiff).join('\n') + '</pre>' +
       radio('carte', 'Partir de la version de la carte', !c.carte_valide) +
       '<div class="petit" style="color:var(--rouge)">Les graphiques écrits dans le dépôt et pas encore téléversés seront perdus.</div>' +
@@ -84,6 +98,7 @@ function dessineDestination() {
       (etat.base ? '' : '<div class="petit doux">Sans choix, rien n\'est écrit.</div>');
   } else if (g && c && c.etat === 'identique') h = '<div class="petit doux">Composition de la carte identique à celle du dépôt.</div>';
   $('destination').innerHTML = h;
+  dessineCompo();
 }
 $('destination').addEventListener('change', function (e) {
   if (e.target.name !== 'base') return;
