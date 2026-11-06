@@ -112,18 +112,18 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
   un banc est ajouté ; `verifie_references_docs.py` sans défaut — preuve : 550ddfd2c ; `verifie_references_docs.py` : 19 document(s), 0 defaut(s)
 
 ## A11 — Raccords de bout en bout (relecture finale du 2026-11-06, avant les cartes)
-- [ ] Lecture de la composition de la carte par `/ufsu?dir=0&download=/json/graphiques.json` (mesuré sur la cuve :
+- [x] Lecture de la composition de la carte par `/ufsu?dir=0&download=/json/graphiques.json` (mesuré sur la cuve :
   `/json/graphiques.json` = 404, `/ufsu` = 200) ; fichier absent de la carte vu par `path.exists` (`/ufsu` ne répond pas) ;
-  fausse carte du banc conforme à la vraie (404 sur l'ancienne adresse) ; spec §4.3 corrigée
-- [ ] Envoi de quelques fichiers (HTTP et MQTT) : un `.json` de la racine de l'image hors persist va dans `json/`, comme
-  le ferait `gestionFileFolder.be` au démarrage (sinon sans effet, et écrasant la carte au démarrage suivant)
-- [ ] Firmware d'avant le chantier détecté (`graphiquesFonctions` est solidifié) : pas de bouton « Téléverser » vers
+  fausse carte du banc conforme à la vraie (404 sur l'ancienne adresse) ; spec §4.3 corrigée — preuve : 5e1c9421f, dcd443245 ; `test_atelier_graphiques_graphiques.py` et `_web.py` : 0 echec
+- [x] Envoi de quelques fichiers (HTTP et MQTT) : un `.json` de la racine de l'image hors persist va dans `json/`, comme
+  le ferait `gestionFileFolder.be` au démarrage (sinon sans effet, et écrasant la carte au démarrage suivant) — preuve : 653672a5b ; `test_build_ota_fs.py` et `test_build_ota_mqtt.py` VERT ; `test_atelier_destinations_bout_en_bout.py` : `/json/graphiques.json` écrit
+- [x] Firmware d'avant le chantier détecté (`graphiquesFonctions` est solidifié) : pas de bouton « Téléverser » vers
   /graphiques, message « firmware à recompiler » ; `graphiques.js` et `graphiques_edition.js` joints si le moteur manque ;
-  `graphiques.js` : un graphique atelier sans moteur ne vide plus toute la page
-- [ ] Page de l'atelier : graphiques de /graphiques listés (modifier, retirer) ; `calculees` citées jointes au graphique ;
-  série hors historique signalée ; message neutre carte/dépôt ; pas de doublon après rechargement
-- [ ] Mineurs (réels `%g` dans la comparaison, `s.chemin || s`, solidifiés dans la liste, documents périmés) ; bancs verts,
-  test de bout en bout atelier → image → envoi
+  `graphiques.js` : un graphique atelier sans moteur ne vide plus toute la page — preuve : 2c79ec1d4, 467d2ba37 ; sonde sur la cuve (firmware du 2026-11-01) : `{"Br":"false"}` ; `banc_graphiques.py` : scénario `atelier_sans_moteur` OK
+- [x] Page de l'atelier : graphiques de /graphiques listés (modifier, retirer) ; `calculees` citées jointes au graphique ;
+  série hors historique signalée ; message neutre carte/dépôt ; pas de doublon après rechargement — preuve : 4b7508fb1 ; `test_atelier_graphiques_page_chrome.py` : 6 passes vertes de suite, témoin compris
+- [x] Mineurs (réels `%g` dans la comparaison, `s.chemin || s`, solidifiés dans la liste, documents périmés) ; bancs verts,
+  test de bout en bout atelier → image → envoi — preuve : 5e1c9421f, 2c79ec1d4, 467d2ba37, dcd443245 ; bancs de `.superpowers/sdd/atelier-destinations/task-11-report.md` ; seul KO : « téléphone » de `test_build_page_fichiers_chrome.py`, préexistant
 
 ## A9 — Validation sur les cartes
 - [x] Place du FS mesurée sur les 6 cartes à historique avec les fichiers du moteur (blocs de 4 Ko) ; arrêt et
