@@ -39,6 +39,10 @@ $('compo-liste').addEventListener('click', function (e) {
 // Charge le graphique n° i dans l'editeur : `calculees` rangees dans la description (renommees si le nom est pris par une autre formule)
 function modifieGraphique(i) {
   var liste = composeListee(), attendu = copie(liste[i]), g = copie(liste[i]);
+  etat.desc.pages.forEach(function (q) {     // une seule copie : Modifier n° 1, n° 2, n° 1 ne doit pas en laisser 3, qu'une page dediee emporterait
+    var k = q.graphiques.indexOf(etat.copieCompo);
+    if (k >= 0) q.graphiques.splice(k, 1);
+  });
   if (!etat.desc.pages.length) { etat.desc.pages.push(nouvellePage(0)); etat.page = 0; pageCourante().graphiques = []; }
   var p = pageCourante(), cc = g.calculees || {}, tout = etat.desc.calculees = etat.desc.calculees || {};
   delete g.moteur; delete g.calculees;
@@ -50,7 +54,7 @@ function modifieGraphique(i) {
       return cheminDe(s) !== 'calc:' + nom ? s : (typeof s === 'object' ? Object.assign({}, s, {chemin: 'calc:' + n}) : 'calc:' + n);
     });
   });
-  p.graphiques.push(g); etat.graphe = p.graphiques.length - 1;
+  p.graphiques.push(g); etat.copieCompo = g; etat.graphe = p.graphiques.length - 1;
   etat.indexEcrit = {cle: cleEcrit(), index: i, attendu: attendu, base: baseListee()};
   modifie(true);
 }

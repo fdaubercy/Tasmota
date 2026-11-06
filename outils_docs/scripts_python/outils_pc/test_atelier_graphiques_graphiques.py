@@ -260,6 +260,8 @@ def test_norme_reels(racine):
     prepare(racine, [a])
     verifie(agg.etat_carte(racine, CUVE, get=carte([b]))["etat"], "identique", "1234.5678 (depot) et 1234.57 (carte) : identiques")
     verifie(agg.etat_carte(racine, CUVE, get=carte([dict(atelier(), seuil=1235.0)]))["etat"], "differente", "temoin : 1235.0 differe")
+    prepare(racine, [dict(atelier(), seuil=5.0)])
+    verifie(agg.etat_carte(racine, CUVE, get=carte([dict(atelier(), seuil=5)]))["etat"], "identique", "5.0 (depot) et 5 (carte) : identiques")
 
 
 def test_partir_de_la_carte(racine):

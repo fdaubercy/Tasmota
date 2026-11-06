@@ -596,6 +596,9 @@ def sonde_compo(m):
     cdp.js("document.querySelector('#compo-liste [data-compo=modifier]').click(); 1")
     verifie(cdp.js("[corpsEcriture().operation, corpsEcriture().index, Object.keys(corpsEcriture().graphique.calculees || {}), etat.desc.calculees.double.nature]"),
             ["remplace", 1, ["double"], "historique"], "Modifier : remplace au rang 1, `calculees` citees jointes")
+    n = cdp.js("pageCourante().graphiques.length")
+    cdp.js("document.querySelector('#compo-liste [data-compo=modifier]').click(); 1")
+    verifie(cdp.js("pageCourante().graphiques.length"), n, "Modifier encore : une seule copie dans la page editee")
     cdp.js("etat.desc.calculees.autre = {nature: 'historique', formule: 'sensorsCuve.niveauCuve.volume * 3'}; 1")
     verifie(cdp.js("Object.keys(corpsEcriture().graphique.calculees)"), ["double"], "calculees non citees : pas jointes")
     saisit(cdp, "#r-titre", "Calc modifie")

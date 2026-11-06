@@ -64,9 +64,10 @@ def motifs_composition(c):
 
 
 def _arrondi(x):
-    """Berry (json.dump) arrondit les reels a 6 chiffres (%g) : la carte rend 1234.57 pour 1234.5678."""
+    """Berry (json.dump) arrondit les reels a 6 chiffres (%g) : la carte rend 1234.57 pour 1234.5678. 5.0 et 5 : meme nombre."""
     if isinstance(x, float):
-        return float("%g" % x)
+        v = float("%g" % x)
+        return int(v) if v.is_integer() else v
     if isinstance(x, list):
         return [_arrondi(v) for v in x]
     return {k: _arrondi(v) for k, v in x.items()} if isinstance(x, dict) else x
