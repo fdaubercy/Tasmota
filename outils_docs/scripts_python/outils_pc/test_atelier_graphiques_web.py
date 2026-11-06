@@ -15,6 +15,7 @@ import socket
 import sys
 import tempfile
 import threading
+import urllib.parse
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
@@ -75,7 +76,11 @@ class Banc:
         if "p=jour" in chemin:
             return json.dumps({"nom": "mesures", "series": ["sensorsCuve.niveauCuve.volume"], "pas": 300, "t0": 0,
                                "valeurs": [[4100, 4174]]}).encode()
+        if chemin.startswith("/cm?") and ("path.exists" in urllib.parse.unquote(chemin) or "graphiquesFonctions" in urllib.parse.unquote(chemin)):
+            return b'{"Br":"true"}'
         if chemin == "/json/graphiques.json":
+            raise OSError("HTTP 404")                   # mesure sur la vraie carte, 2026-11-06
+        if chemin == "/ufsu?dir=0&download=/json/graphiques.json":
             return json.dumps({"affichage": {}, **({} if self.composition is None else {"graphiques": self.composition})}).encode()
         if chemin.startswith("/cm"):
             return json.dumps(SNS).encode()
@@ -299,7 +304,7 @@ def test_destination_graphiques(b):
     b.composition = None
     statut, r = b.requete("POST", "/diff", {"env": CUVE, "destination": "graphiques", "operation": "retire", "index": 0})
     verifie(statut, 400, "POST /diff graphiques : carte sans composition mais depot avec -> choix exige (400)")
-    statut, r = b.requete("POST", "/diff", {"env": CUVE, "destination": "graphiques", "operation": "retire", "index": 0, "base": "depot"})
+    statut, r = b.requete("POST", "/diff", {"env": CUVE, "destination": "graphiques", "operation": "retire", "index": 0, "base": "depot", "attendu": json.loads(fichier.read_text(encoding="utf-8"))["graphiques"][0]})
     verifie(statut, 200, "POST /diff graphiques : retrait, base depot")
     statut, r = b.requete("POST", "/diff", {"env": BUREAU, "destination": "graphiques", "operation": "ajoute", "graphique": atelier_g()})
     verifie(statut, 404, "POST /diff graphiques : ESP32 classique -> 404")

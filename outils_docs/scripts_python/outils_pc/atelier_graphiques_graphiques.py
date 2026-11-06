@@ -7,8 +7,8 @@ cle facultative `calculees` propre au graphique), meme pour les 4 styles communs
 presents sont recopies tels quels. Fichier absent : la carte lit {} (graphiquesFonctions::lisReglages), donc un fichier
 minimal {"graphiques": [...]} est cree.
 
-Demande : {operation: ajoute|remplace|retire, graphique, index, base: depot|carte}.
-Composition de la carte (spec §4.3, §7.6) : `etat_carte` lit /json/graphiques.json en LECTURE SEULE et compare la cle
+Demande : {operation: ajoute|remplace|retire, graphique, index, attendu (remplace, retire), base: depot|carte}.
+Composition de la carte (spec §4.3, §7.6) : `etat_carte` lit /json/graphiques.json (par /ufsu, apres path.exists) en LECTURE SEULE et compare la cle
 `graphiques` au depot (JSON relu, cles triees). Composition differente : `base` est OBLIGATOIRE (depot = garder celle du
 depot, la carte la perdra a l'envoi ; carte = partir de celle de la carte, validee ici). Jamais d'ecrasement implicite.
 Refus : ValueError (400), LookupError (404), RuntimeError (409 : build, empreinte perimee).
@@ -21,6 +21,7 @@ from pathlib import Path
 import atelier_graphiques_description as agd
 import atelier_graphiques_ecriture as age
 import atelier_graphiques_series as ags
+import atelier_graphiques_televerse as agt
 import build_ota_http
 import fichiers_berry_etat as fbe
 import fichiers_berry_ini as fbi
@@ -62,8 +63,17 @@ def motifs_composition(c):
     return m
 
 
+def _arrondi(x):
+    """Berry (json.dump) arrondit les reels a 6 chiffres (%g) : la carte rend 1234.57 pour 1234.5678."""
+    if isinstance(x, float):
+        return float("%g" % x)
+    if isinstance(x, list):
+        return [_arrondi(v) for v in x]
+    return {k: _arrondi(v) for k, v in x.items()} if isinstance(x, dict) else x
+
+
 def _norme(c):
-    return json.dumps(c, sort_keys=True, ensure_ascii=False, indent=1)
+    return json.dumps(_arrondi(c), sort_keys=True, ensure_ascii=False, indent=1)
 
 
 def _depot(racine, env):
@@ -91,7 +101,10 @@ def etat_carte(racine, env, *, get=None):
         res["motif"] = "composition de la carte non verifiee (adresse de la carte inconnue)"
         return res
     try:
-        lu = json.loads((get or build_ota_http._get)(ip, "/json/graphiques.json", ags.DELAI).decode("utf-8", "replace"))
+        get = get or build_ota_http._get
+        # /json/graphiques.json repond 404 (mesure du 2026-11-06) : le contenu passe par /ufsu, qui ne repond pas pour un fichier absent
+        lu = ({} if not agt.existe_sur_carte(ip, "json/graphiques.json", get) else
+              json.loads(get(ip, "/ufsu?dir=0&download=/json/graphiques.json", ags.DELAI).decode("utf-8", "replace")))
         if not isinstance(lu, dict):
             raise ValueError("reponse inattendue")
     except Exception as e:                  # hors ligne, 404, JSON tronque : meme verdict, jamais d'ecriture
@@ -147,16 +160,16 @@ def _calcule(racine, env, demande, get):
     elif not isinstance(index, int) or isinstance(index, bool) or not 0 <= index < len(comp):
         raise ValueError(f"index : entier entre 0 et {len(comp) - 1} attendu" if comp else "index : aucune composition")
     motifs = []
+    if op != "ajoute":                    # le rang ne suffit pas : le graphique a ce rang doit etre celui que la page croit (A11)
+        if not isinstance(demande.get("attendu"), dict):
+            raise ValueError(f"{op} : `attendu` (le graphique tel que la page le connait) obligatoire")
+        if _norme(comp[index]) != _norme(demande["attendu"]):
+            raise RuntimeError("index : le graphique a ce rang a change depuis son ecriture, rien n'est remplace ni retire")
     if op == "retire":
         del comp[index]
     else:
         if not isinstance(g, dict) or g.get("moteur", "pages") != "pages":
             raise ValueError("graphique : objet de forme atelier attendu (\"moteur\": \"pages\")")
-        if op == "remplace":                  # le rang ne suffit pas : le graphique ecrit a ce rang doit etre celui que la page croit
-            if not isinstance(demande.get("attendu"), dict):
-                raise ValueError("remplace : `attendu` (le graphique tel qu'il a ete ecrit) obligatoire")
-            if _norme(comp[index]) != _norme(demande["attendu"]):
-                raise RuntimeError("index : le graphique a ce rang a change depuis son ecriture, rien n'est remplace")
         comp[index] = {"moteur": "pages", **{k: v for k, v in g.items() if k != "moteur"}}
         motifs += motifs_graphique(comp[index], index + 1)       # seul le graphique ecrit est valide
         if g.get("type") == "liquide" and age.LIQUIDFILL in {
