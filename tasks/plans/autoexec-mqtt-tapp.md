@@ -32,7 +32,7 @@ Règles : rien n'est écrit sur une vraie carte sans geste ou accord de l'utilis
 - [x] Onglet : choix « Wi-Fi (HTTP) / MQTT » dans le panneau d'envoi, HTTP par défaut, changer de voie relance la préparation ; sonde Chrome verte, témoin sur le transport transmis — preuve : test_assistant_persist_autoexec_chrome.py VERT (806 OK, temoins transport-ecran et voie-ignoree detectes) ; commits 16c1a9e74 + 2dcc05b54 (ronde 1 : banc MQTT filtre/ferme, generation de preparation)
 
 ## A2 — fsMqtt sur le rideau
-- [ ] `demarrage.charge(["fsMqtt"])` dans `data/garage/tasmota32s3-rideau-garage-modbus/autoexec.be`, comme la cuve ; `banc_demarrage` : instantané du rideau mis à jour et relu, seul écart attendu ; agent `relecteur-berry`
+- [ ] `demarrage.charge(["fsMqtt"])` dans `data/garage/tasmota32s3-rideau-garage-modbus/autoexec.be`, comme la cuve ; `banc_demarrage` : instantané du rideau mis à jour et relu, seul écart attendu ; agent `relecteur-berry` — preuve : banc_demarrage.py VERT sur les 6 cartes ; écart relu avant enregistrement : règle `Mqtt#Connected` et globale `fsMqttRecepteur`, rien d'autre ; relecteur-berry : rien de bloquant (fsMqtt dans le socle du rideau, topic `garage/rideau` au persist) ; pas encore essayé sur la carte (A10)
 
 ## A3 — Commandes par carte : les gardes dans le fichier figé
 - [ ] Banc rouge (`test_autoexec_commandes.py`) : `gardes["ZBSEND"]` porte `USE_ZIGBEE`, `gardes["I2CSCAN"]` `USE_I2C` (garde à l'intérieur d'une table) ; une commande définie dans deux branches a deux chemins ; `HOSTNAME` sans garde ; `--verifier` voit un écart

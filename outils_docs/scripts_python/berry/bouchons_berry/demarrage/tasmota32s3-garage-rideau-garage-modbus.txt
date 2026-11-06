@@ -1,11 +1,11 @@
 carte : tasmota32s3-garage-rideau-garage-modbus
 exception : aucune
 drivers (8) : CONTROLE_DISCOVERY, CONTROLE_GENERAL, CONTROLE_MODBUS, CONTROLE_RIDEAU, CONTROLE_UDP, CONTROLE_UDP, CONTROLE_WEB, HISTORIQUE_WEB
-regles (15) : Eth, ModbusReceived, ModbusReceivedUDP, Mqtt, Mqtt, Switch1#Action, Switch2#Action, System, System, System, System, System, Time, Wifi, Wifi
+regles (16) : Eth, ModbusReceived, ModbusReceivedUDP, Mqtt, Mqtt, Mqtt#Connected, Switch1#Action, Switch2#Action, System, System, System, System, System, Time, Wifi, Wifi
 commandes (5) : ReglageDiscovery, ReglageGlobal, ReglageLog, ReglageModbus, ReglageUDP
 crons (1) : majHistorique
 minuteries (1) : demarrageDiffere
 compiles (0) : 
 sources (3) : /autoexec.be, /controleRideau.be, /pagesGraphiquesValidation.be
-globales (18) : LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatModbusFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controleUDP_multicast:instance, controleUDP_unicast:instance, diverses:instance, gpio:module, light:module, modules:instance, persist:instance, serveur:instance, wire1:instance, wire2:instance
+globales (19) : LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatModbusFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controleUDP_multicast:instance, controleUDP_unicast:instance, diverses:instance, fsMqttRecepteur:instance, gpio:module, light:module, modules:instance, persist:instance, serveur:instance, wire1:instance, wire2:instance
 erreurs (0) : 
