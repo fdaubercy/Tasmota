@@ -317,6 +317,8 @@ def principal():
     args = options.parse_args()
     acces = acces_web.Acces(args.http, args.local, "Atelier des graphiques")
     try:
+        # File de 5 par defaut : la page lance plus de 8 requetes d'un coup, l'acceptation peut prendre 0,3 s chacune, Windows refuse le surplus (script du moteur perdu)
+        ThreadingHTTPServer.request_queue_size = 128
         serveur = ThreadingHTTPServer((acces.hote, args.http), fabrique_gestionnaire(acces, DEPOT, builds_en_cours_defaut))
     except OSError as erreur:
         print(f"ERREUR : port {args.http} indisponible ({erreur}). L'outil tourne peut-etre deja.")
