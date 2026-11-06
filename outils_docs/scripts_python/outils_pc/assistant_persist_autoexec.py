@@ -7,8 +7,8 @@ Les exceptions sont celles du serveur : ValueError -> 400, LookupError -> 404, R
   POST /autoexec/diff             {env, texte}                                -> autoexec_fichier.diff
   POST /autoexec/ecrit            {env, texte, empreinte, rouges_lus}         -> autoexec_fichier.ecrit
   POST /autoexec/banque/ajoute    {entree}                                    -> la banque a jour
-  POST /autoexec/envoi/prepare    {env}                                       -> autoexec_envoi.prepare (sur_carte masque)
-  POST /autoexec/envoi            {env, jeton, rouges_lus, redemarrer}        -> autoexec_envoi.envoie
+  POST /autoexec/envoi/prepare    {env, transport=http|mqtt}                 -> autoexec_envoi.prepare (sur_carte masque)
+  POST /autoexec/envoi            {env, jeton, rouges_lus, redemarrer, transport} -> autoexec_envoi.envoie
 Env : une carte du parc seulement (assistant_persist_modification.cartes) ; nom mal forme -> 400, inconnu ou base -> 404.
 L'analyse se fait sur le texte DEMASQUE cote serveur ; aucune reponse ne porte une valeur a secret (les messages
 d'avertissement ne citent que le nom de la commande). Banc : test_assistant_persist_autoexec.py (logique d'envoi :
@@ -58,10 +58,11 @@ def post(racine, chemin, demande, builds_en_cours):
         autoexec_banque.ajoute(racine, demande.get("entree"), builds_en_cours)
         return autoexec_banque.charge(racine)
     if chemin == "/autoexec/envoi/prepare":
-        return autoexec_envoi.prepare(racine, _env(racine, demande), builds_en_cours)
+        return autoexec_envoi.prepare(racine, _env(racine, demande), builds_en_cours,
+                                      transport=demande.get("transport", "http"))
     if chemin == "/autoexec/envoi":
         return autoexec_envoi.envoie(racine, _env(racine, demande), demande.get("jeton"), demande.get("rouges_lus"),
-                                     demande.get("redemarrer"), builds_en_cours)
+                                     demande.get("redemarrer"), builds_en_cours, transport=demande.get("transport", "http"))
     if chemin not in ("/autoexec/analyse", "/autoexec/diff", "/autoexec/ecrit"):
         raise LookupError(chemin)
     env, texte = _env(racine, demande), _texte(demande)

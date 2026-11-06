@@ -40,6 +40,7 @@ import build_envs
 import build_ota_maitre as bm
 import fichiers_berry_sauvegarde as fbs
 import test_assistant_persist_autoexec as taa
+import test_build_ota_mqtt as tm
 from build_ota_carte_simulee import Carte
 from build_ota_fs import _identite
 
@@ -104,7 +105,7 @@ def adresse(racine):
 def preparation(racine, hote):
     carte = nouvelle_carte(hote)
     r = prepare(racine)
-    verifie(sorted(r), ["adresse", "ecart", "hostname_carte", "jeton", "sur_carte"], "prepare : les clefs du contrat")
+    verifie(sorted(r), ["adresse", "ecart", "hostname_carte", "jeton", "sur_carte", "transport"], "prepare : les clefs du contrat")
     verifie((r["adresse"], r["hostname_carte"], r["ecart"]), (carte.ip, hote, True), "prepare : adresse, nom d'hote, ecart vu")
     verifie((MDP in json.dumps(r), r["sur_carte"].count("***"), "WebLog 2" in r["sur_carte"]), (False, 1, True),
             "prepare : fichier de la carte rendu MASQUE")
@@ -246,6 +247,125 @@ def directe(racine, hote):
     carte.ferme()
 
 
+class CarteMqtt(tm.Carte):
+    """Carte MQTT simulee (test_build_ota_mqtt.Carte) qui repond aussi a `cmnd/<topic>/Status 5` ; `sans_fsmqtt` : le
+    module Berry n'est pas charge (aucune reponse sur fsmqtt/...)."""
+
+    def __init__(self, hote, topic, fichier=SUR_CARTE):
+        fs = {"/_persist.json": tm.ANCIEN}
+        if fichier is not None:
+            fs["/autoexec.bat"] = fichier
+        super().__init__(fs)
+        self.hote, self.topic, self.status, self.sans_fsmqtt = hote, topic, [], False
+        tm.BASE = f"fsmqtt/{topic}/"
+
+    def recoit(self, topic, payload):
+        if self.muette:
+            return
+        if topic == f"cmnd/{self.topic}/Status":
+            self.status.append(payload)
+            self.client.boite.put(tm.Message(f"stat/{self.topic}/STATUS5",
+                                             json.dumps({"StatusNET": {"Hostname": self.hote}}).encode()))
+        elif topic.startswith("fsmqtt/") and self.sans_fsmqtt:
+            return
+        elif topic == tm.BASE + "ordre" and json.loads(payload)["op"] == "lit" and json.loads(payload)["chemin"] not in self.fs:
+            o = json.loads(payload)
+            self.ordres.append("lit")
+            self.repond(o, False, erreur="fichier absent : " + o["chemin"])
+        else:
+            super().recoit(topic, payload)
+
+
+def mqtt(racine, hote):
+    topic = _identite((racine / CARTE / "_persist.json").read_text(encoding="utf-8"))[1]
+    ADRESSE[0] = ""                                           # toute voie HTTP echouerait : l'adresse IP n'entre pas en jeu
+    ae.REGLAGES_MQTT.update({"delai": 1.0, "attente_morceau": 0.2, "delai_retour": 1.0})
+    carte = CarteMqtt(hote, topic)
+    ae.CLIENT = lambda: tm.Client(carte)
+
+    def prep(transport="mqtt"):
+        return ae.prepare(racine, ENV, lambda: [], transport=transport)
+
+    def env(jeton, redemarrer=False, builds=(), transport="mqtt"):
+        return ae.envoie(racine, ENV, jeton, ROUGES, redemarrer, lambda: list(builds), transport=transport)
+
+    r = prep()
+    verifie(sorted(r), ["adresse", "ecart", "hostname_carte", "jeton", "sur_carte", "transport"], "mqtt prepare : les clefs du contrat")
+    verifie((r["adresse"], r["transport"], r["hostname_carte"], r["ecart"]), (f"mqtt:{topic}", "mqtt", hote, True),
+            "mqtt prepare : adresse mqtt:<topic>, transport, nom d'hote, ecart, sans adresse IP")
+    verifie((MDP in json.dumps(r), r["sur_carte"].count("***"), "WebLog 2" in r["sur_carte"]), (False, 1, True),
+            "mqtt prepare : fichier de la carte rendu MASQUE")
+    verifie((carte.status, carte.ordres), ([b"5"], ["abandon", "lit"]),
+            "mqtt prepare : Status 5, module sonde, fichier lu ; rien d'envoye")
+    for faux in ("ftp", None, 5, "MQTT"):
+        verifie(erreur(ae.prepare, racine, ENV, lambda: [], transport=faux)[0], "ValueError", f"prepare, transport {faux!r} -> ValueError")
+        verifie(erreur(ae.envoie, racine, ENV, r["jeton"], ROUGES, False, lambda: [], transport=faux)[0], "ValueError",
+                f"envoie, transport {faux!r} -> ValueError")
+    del carte.fs["/autoexec.bat"]
+    r2 = prep()
+    verifie((r2["sur_carte"], r2["ecart"]), (None, True), "mqtt prepare : fichier absent de la carte -> sur_carte None")
+    carte.fs["/autoexec.bat"] = FICHIER
+    verifie(prep()["ecart"], False, "mqtt prepare : fichier identique -> pas d'ecart")
+    carte.fs["/autoexec.bat"] = SUR_CARTE
+
+    # refus : rien n'est envoye
+    jeton = prep()["jeton"]
+    carte.hote = "AUTRE-CARTE"
+    t, msg = erreur(prep)
+    verifie((t, "AUTRE-CARTE" in msg, "rien n'a ete envoye" in msg), ("RuntimeError", True, True),
+            "mqtt identite : nom d'hote different -> prepare refuse")
+    n = len(carte.ordres)
+    verifie(erreur(env, jeton)[0], "RuntimeError", "mqtt identite : nom d'hote different -> envoi refuse")
+    verifie("debut" in carte.ordres[n:], False, "mqtt identite : rien d'envoye")
+    carte.hote = hote
+    carte.muette = True
+    t, msg = erreur(prep)
+    verifie((t, "Status 5" in msg), ("RuntimeError", True), "mqtt carte muette : refus, message sur Status 5")
+    carte.muette = False
+    carte.sans_fsmqtt = True
+    t, msg = erreur(prep)
+    verifie((t, "fsMqtt.be" in msg, "rien n'a ete envoye" in msg), ("RuntimeError", True, True),
+            "mqtt fsMqtt absent : refus, message qui le dit")
+    carte.sans_fsmqtt = False
+    verifie((carte.fs["/autoexec.bat"], erreur(prep)[0]), (SUR_CARTE, None), "mqtt refus : la carte n'a pas change, prepare accepte a son retour")
+    n = len(carte.ordres)
+    verifie((erreur(env, jeton, builds=["pio run -e x"])[0], len(carte.ordres)), ("RuntimeError", n),
+            "mqtt envoi, build en cours -> refus avant tout ordre")
+
+    # jeton et transport
+    depot = (racine / CARTE / "autoexec.bat").read_bytes()
+    faux = ae._signe(int(ae._maintenant()), ENV, f"mqtt:{topic}", depot, SUR_CARTE, "http")
+    verifie(erreur(env, faux)[0], "RuntimeError", "mqtt : jeton signe pour le transport http -> refus")
+    jeton = prep()["jeton"]
+    verifie(erreur(ae.envoie, racine, ENV, jeton, ROUGES, False, lambda: [], transport="http")[0], "RuntimeError",
+            "http : jeton d'une preparation mqtt -> refus")
+    carte.fs["/autoexec.bat"] = SUR_CARTE + b"WebLog 4\n"
+    verifie(erreur(env, jeton)[0], "RuntimeError", "mqtt : fichier de la carte change depuis prepare -> refus")
+    carte.fs["/autoexec.bat"] = SUR_CARTE
+    verifie("debut" in carte.ordres, False, "mqtt refus : aucun envoi")
+
+    # envoi
+    carte.corrompt = True                                     # la carte refuse le fichier (MD5) : la copie existe deja
+    t, _ = erreur(env, prep()["jeton"])
+    copies = sorted((fbs.dossier_sauvegardes() / "autoexec_cartes" / ENV).glob("*.bat"))
+    carte.corrompt = False
+    verifie((t, [c.read_bytes() for c in copies][-1:]), ("RuntimeError", [SUR_CARTE]),
+            "mqtt envoi refuse par la carte : copie de la carte sauvegardee AVANT l'envoi")
+    carte.ordres.clear()
+    r = env(prep()["jeton"])
+    verifie((r["envoye"], carte.fs["/autoexec.bat"]), (True, FICHIER), "mqtt envoi : la carte a les octets du depot")
+    verifie((Path(r["sauvegarde"]).read_bytes(), r["avertissement"]), (SUR_CARTE, ""), "mqtt envoi : copie de la carte rendue")
+    verifie(carte.fs["/_persist.json"], tm.ANCIEN, "mqtt envoi : persist de la carte intact")
+    verifie([o for o in carte.ordres if o in ("redemarre", "berry", "recharge", "efface")], [], "mqtt redemarrer=False : aucun redemarre")
+    carte.fs["/autoexec.bat"] = SUR_CARTE
+    carte.ordres.clear()
+    env(prep()["jeton"], redemarrer=True)
+    verifie(("redemarre" in carte.ordres, carte.fs["/autoexec.bat"]), (True, FICHIER), "mqtt redemarrer=True : redemarre")
+    del carte.fs["/autoexec.bat"]
+    r = env(prep()["jeton"])
+    verifie((r["sauvegarde"], carte.fs["/autoexec.bat"]), (None, FICHIER), "mqtt carte sans fichier : envoye, rien a sauvegarder")
+
+
 def joint(adresse, persist, env, rapporte, **_):
     JOINTS.append((adresse, len(COURANTE[0].journal)))
 
@@ -264,7 +384,7 @@ def banc():
         ae._adresse = lambda *_: ADRESSE[0]
         ae.joint_par_maitre, ae.coupe_sleep, SLEEP[0] = joint, coupe, Carte()
         try:
-            for etape in (preparation, identite, injoignable, refus, envoi, directe):
+            for etape in (preparation, identite, injoignable, refus, envoi, directe, mqtt):
                 etape(racine, hote)
         finally:
             SLEEP[0].ferme()
@@ -282,6 +402,8 @@ MUTANTS = [
     ("build non recontrole avant l'envoi", "    _builds(builds_en_cours)                       # la phase reseau a pu durer\n", ""),
     ("HMAC non compare", "if not hmac.compare_digest(", "if False and not hmac.compare_digest("),
     ("absent sans relecture", "for _ in range(2):", "for _ in range(1):"),
+    ("identite MQTT retiree", "        _controle_hote(hote, persist, adresse, env)\n        try:\n            canal.ordre", "        try:\n            canal.ordre"),
+    ("jeton sans le transport", "json.dumps([instant, env, adresse, *empreintes, transport])", "json.dumps([instant, env, adresse, *empreintes])"),
     ("fichier de la carte non masque", "autoexec_fichier.masque(", "str("),
 ]
 

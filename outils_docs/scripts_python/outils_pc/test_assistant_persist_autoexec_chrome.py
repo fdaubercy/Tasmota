@@ -51,6 +51,8 @@ TEMOINS = {                                             # nom -> (texte de la pa
     "sans-achange": ("aChange(); clearTimeout(X.minuteur); analyse();", "", "A11 : « Remplacer » ferme le panneau d'envoi"),
     "perso-direct": ('if (ligne && existantes(nomsDe(ligne)).length) $("a-existe").scrollIntoView({block: "center"}); else insere();', "insere();",
                      "A11 : « Inserer » de Tes commandes : le choix d'abord, rien d'insere"),
+    "transport-ecran": ("transport: X.prep.transport", "transport: voie()", "envoi : la voie de la preparation est celle transmise a l'envoi"),
+    "voie-ignoree": ('{env: env, transport: transport}', "{env: env}", "voie MQTT : la preparation recoit transport=mqtt"),
     "garde-envoi": ("if (modifie()) fermeEnvoi();", "", "envoi : texte modifie apres l'ouverture -> panneau ferme ou « Envoyer » grise"),
 }
 ENROBE = """window.__corps = []; (function () { var f = window.fetch; window.fetch = function () {
@@ -62,11 +64,17 @@ def mode_serveur(port, depot, temoin):
     import autoexec_envoi
     journal = Path(depot).parent / "envoi.json"
 
-    def prepare(racine, env, builds_en_cours):
-        return {"adresse": "127.0.0.1:9", "hostname_carte": "ESSAI-SONDE", "sur_carte": SUR_CARTE, "ecart": True, "jeton": JETON}
+    preparations = Path(depot).parent / "preparations.json"
 
-    def envoie(racine, env, jeton, rouges_lus, redemarrer, builds_en_cours):
-        journal.write_text(json.dumps({"env": env, "jeton": jeton, "rouges_lus": rouges_lus, "redemarrer": redemarrer}), encoding="utf-8")
+    def prepare(racine, env, builds_en_cours, *, transport="http"):
+        vues = json.loads(preparations.read_text(encoding="utf-8")) if preparations.is_file() else []
+        preparations.write_text(json.dumps(vues + [transport]), encoding="utf-8")
+        return {"adresse": "mqtt:essai/sonde" if transport == "mqtt" else "127.0.0.1:9", "hostname_carte": "ESSAI-SONDE", "sur_carte": SUR_CARTE,
+                "ecart": True, "jeton": JETON, "transport": transport}
+
+    def envoie(racine, env, jeton, rouges_lus, redemarrer, builds_en_cours, *, transport="http"):
+        journal.write_text(json.dumps({"env": env, "jeton": jeton, "rouges_lus": rouges_lus, "redemarrer": redemarrer,
+                                       "transport": transport}), encoding="utf-8")
         return {"envoye": True, "sauvegarde": SAUVEGARDE, "avertissement": "avertissement du bouchon"}
 
     autoexec_envoi.prepare, autoexec_envoi.envoie = prepare, envoie
@@ -212,7 +220,7 @@ def sonde(m):
     verifie(attend(cdp, "!!document.getElementById('a-ecrit-ok')", 10), True, "ecriture avec la case : acceptee")
     ecrit = f.read_bytes().decode("utf-8")
     verifie((ligne_t in ecrit, MDP in ecrit, ecrit.count(MDP), "***" in ecrit), (True, True, 2, False), "fichier ecrit : minuterie, secrets remis cote serveur")
-    verifie(attend(cdp, "!document.getElementById('a-envoyer').disabled", 10), True, "apres ecriture : « Envoyer a la carte (OTA)… » actif")
+    verifie(attend(cdp, "!document.getElementById('a-envoyer').disabled", 10), True, "apres ecriture : « Puis envoyer a la carte… » actif")
     # envoi (bouchons)
     rouges = sum(a["niveau"] == "rouge" for a in json.loads(m.get("/autoexec?env=" + ENV))["avertissements"])
     tpc.clic(cdp, "a-envoyer")
@@ -230,6 +238,24 @@ def sonde(m):
     recu = json.loads(m.journal.read_text(encoding="utf-8")) if m.journal.is_file() else {}
     verifie(recu.get("redemarrer"), False, "envoi : le bouchon recoit redemarrer=False")
     verifie((recu.get("jeton"), recu.get("rouges_lus"), recu.get("env")), (JETON, rouges, ENV), "envoi : jeton, rouges lus et env transmis")
+    verifie(recu.get("transport"), "http", "envoi : HTTP par defaut")
+    # voie MQTT : changer de voie relance la preparation, l'envoi part avec la voie preparee
+    prepas = lambda: json.loads((m.journal.parent / "preparations.json").read_text(encoding="utf-8"))
+    n_prep = len(prepas())
+    tpc.clic(cdp, "a-envoyer")
+    attend(cdp, "document.getElementById('a-envoi-adresse').textContent.indexOf('ESSAI-SONDE') >= 0", 10)
+    verifie(js(cdp, "return document.getElementById('a-t-http').checked"), True, "envoi rouvert : voie HTTP cochee")
+    tpc.clic(cdp, "a-t-mqtt")
+    verifie(attend(cdp, "document.getElementById('a-envoi-adresse').textContent.indexOf('par MQTT (essai/sonde)') >= 0", 10), True,
+            "voie MQTT : preparation relancee, topic affiche")
+    verifie(prepas()[n_prep:], ["http", "mqtt"], "voie MQTT : la preparation recoit transport=mqtt")
+    js(cdp, "document.getElementById('a-t-http').checked = true")      # l'ecran dit HTTP sans relancer : l'envoi suit la preparation
+    tpc.clic(cdp, "a-ecart-vu")
+    tpc.clic(cdp, "a-envoi-rouges-lus")
+    tpc.clic(cdp, "a-envoi-go")
+    verifie(attend(cdp, "!!document.getElementById('a-envoi-ok')", 10), True, "voie MQTT : reussite affichee")
+    recu = json.loads(m.journal.read_text(encoding="utf-8"))
+    verifie(recu.get("transport"), "mqtt", "envoi : la voie de la preparation est celle transmise a l'envoi")
     # panneau d'envoi ouvert puis texte modifie : l'ancien fichier du depot ne doit plus pouvoir partir
     tpc.clic(cdp, "a-envoyer")
     attend(cdp, "document.getElementById('a-envoi-adresse').textContent.indexOf('ESSAI-SONDE') >= 0", 10)

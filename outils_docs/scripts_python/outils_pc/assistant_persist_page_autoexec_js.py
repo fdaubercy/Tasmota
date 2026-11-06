@@ -6,7 +6,7 @@ enferme dans une fonction : aucun nom ne deborde sur l'onglet Persist).
   - analyse relancee a la frappe (anti-rebond 400 ms, reponses perimees ignorees) ; marge et liste re-dessinees ;
   - « Ecrire dans le depot » : sur le texte du dernier diff, avec l'empreinte de la lecture et rouges_lus = N si la
     case est cochee, 0 sinon (le serveur refuse et dit pourquoi) ;
-  - « Envoyer a la carte (OTA)… » : seulement sans modification non ecrite (le serveur envoie le fichier du DEPOT) ;
+  - « Puis envoyer a la carte… » (voie Wi-Fi HTTP, ou MQTT au choix : changer de voie relance la preparation) : seulement sans modification non ecrite (le serveur envoie le fichier du DEPOT) ;
     prepare -> fichier de la carte montre s'il differe (case pour le remplacer), « redemarrer ensuite » decochee ;
   - la ligne inseree est rendue ici (miroir d'autoexec_banque.rend) ; un modele ajoute est valide par le serveur.
 Textes du serveur par textContent (el) ou attribut title, jamais innerHTML.
@@ -178,23 +178,25 @@ async function ecrit() {
     rouges_lus: $("a-rouges-lus").checked ? X.diff.rouges : 0});
   if (!r.ok || !r.donnees) { message(z, "avert rouge", r.texte, "a-ecrit-erreur"); majTete(); return; }
   await charge(env);
-  message($("a-retours"), "ok", "Écrit dans le dépôt : " + r.donnees.chemin + ". La carte l'exécutera une fois envoyé : « Puis envoyer à la carte (OTA)… ».", "a-ecrit-ok");
+  message($("a-retours"), "ok", "Écrit dans le dépôt : " + r.donnees.chemin + ". La carte l'exécutera une fois envoyé : « Puis envoyer à la carte… ».", "a-ecrit-ok");
 }
 
 // ---- Envoi a la carte ----
 function fermeEnvoi() { $("a-panneau-envoi").hidden = true; X.prep = null; majEnvoyer(); }
 function majEnvoyer() { $("a-envoi-go").disabled = !(X.prep && (!X.prep.ecart || $("a-ecart-vu").checked)); }
+function voie() { return $("a-t-mqtt").checked ? "mqtt" : "http"; }
+function ouvreEnvoi() { $("a-t-http").checked = true; prepareEnvoi(); }     // HTTP a chaque ouverture
 async function prepareEnvoi() {
   var z = vide($("a-envoi-retours")), n = rouges();
   X.prep = null; $("a-panneau-envoi").hidden = false; $("a-ecart").hidden = true;
   $("a-redemarrer").checked = false; $("a-ecart-vu").checked = false; $("a-envoi-rouges-lus").checked = false;
   $("a-envoi-rouges").hidden = !n; $("a-envoi-rouges-texte").textContent = "J'ai lu les " + n + " avertissements rouges";
   $("a-envoi-adresse").textContent = "Lecture de la carte…"; majEnvoyer();
-  var env = X.env, r = await api("/autoexec/envoi/prepare", {env: env});
-  if (env !== X.env || modifie() || $("a-panneau-envoi").hidden) return;     // carte changee, texte modifie ou panneau ferme entre-temps
+  var env = X.env, transport = voie(), r = await api("/autoexec/envoi/prepare", {env: env, transport: transport});
+  if (env !== X.env || transport !== voie() || modifie() || $("a-panneau-envoi").hidden) return;     // carte ou voie changee, texte modifie ou panneau ferme entre-temps
   if (!r.ok || !r.donnees) { $("a-envoi-adresse").textContent = ""; message(z, "avert rouge", r.texte); return; }
   X.prep = r.donnees;
-  $("a-envoi-adresse").textContent = "Carte " + X.prep.hostname_carte + " à l'adresse " + X.prep.adresse + " (identité vérifiée).";
+  $("a-envoi-adresse").textContent = "Carte " + X.prep.hostname_carte + (transport === "mqtt" ? " par MQTT (" + X.prep.adresse.slice(5) + ")" : " à l'adresse " + X.prep.adresse) + " (identité vérifiée).";
   $("a-ecart").hidden = !X.prep.ecart;
   $("a-sur-carte").textContent = X.prep.sur_carte === null ? "(aucun autoexec.bat sur la carte)" : X.prep.sur_carte;
   $("a-sur-depot").textContent = X.lu.texte;
@@ -203,7 +205,8 @@ async function prepareEnvoi() {
 async function envoie() {
   $("a-envoi-go").disabled = true;
   var z = vide($("a-envoi-retours")), r = await api("/autoexec/envoi", {env: X.env, jeton: X.prep.jeton,
-    rouges_lus: $("a-envoi-rouges-lus").checked ? rouges() : 0, redemarrer: $("a-redemarrer").checked});
+    rouges_lus: $("a-envoi-rouges-lus").checked ? rouges() : 0, redemarrer: $("a-redemarrer").checked,
+    transport: X.prep.transport});
   if (!r.ok || !r.donnees) { message(z, "avert rouge", r.texte); majEnvoyer(); return; }
   message(z, "ok", "Envoyé à la carte." + (r.donnees.sauvegarde ? " Copie de l'ancien fichier de la carte : " + r.donnees.sauvegarde : ""), "a-envoi-ok");
   if (r.donnees.avertissement) message(z, "avert", r.donnees.avertissement);
@@ -350,7 +353,8 @@ $("a-env").onchange = function () {
 $("a-annuler").onclick = annule;
 $("a-enregistrer").onclick = voirDiff;
 $("a-ecrire").onclick = ecrit;
-$("a-envoyer").onclick = prepareEnvoi;
+$("a-envoyer").onclick = ouvreEnvoi;
+$("a-t-http").onchange = $("a-t-mqtt").onchange = prepareEnvoi;
 $("a-ecart-vu").onchange = majEnvoyer;
 $("a-envoi-go").onclick = envoie;
 $("a-envoi-annule").onclick = fermeEnvoi;

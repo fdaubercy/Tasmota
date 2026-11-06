@@ -5,7 +5,7 @@ le script (assistant_persist_page_autoexec_js.JS) a la place de /*JS_AUTOEXEC*/.
 
 En haut la carte, le chemin, les comptes, « Annuler les modifications », « Enregistrer… (diff) » ; a gauche le texte
 libre et sa marge (numeros, points colores), dessous la liste des avertissements, puis le diff, « Ecrire dans le
-depot » et « Envoyer a la carte (OTA)… » ; a droite l'ajout guide (banque, formulaire, apercu, insertion), « Tes
+depot » et « Puis envoyer a la carte… » ; a droite l'ajout guide (banque, formulaire, apercu, insertion), « Tes
 commandes » et l'editeur de modele. Routes : assistant_persist_autoexec.py. Sonde : test_assistant_persist_autoexec_chrome.py.
 """
 
@@ -84,12 +84,15 @@ HTML = r"""
           <div class="a-diff" id="a-diff"></div>
           <p id="a-ligne-rouges" hidden><label><input type="checkbox" id="a-rouges-lus"> <span id="a-rouges-texte"></span></label></p>
           <div class="a-actions"><button class="btn p" id="a-ecrire" type="button" disabled>Écrire dans le dépôt</button>
-            <button class="btn" id="a-envoyer" type="button" disabled>Puis envoyer à la carte (OTA)…</button>
+            <button class="btn" id="a-envoyer" type="button" disabled>Puis envoyer à la carte…</button>
             <span class="discret" id="a-envoi-aide"></span></div>
           <div id="a-retours"></div>
         </div>
         <div class="carte" id="a-panneau-envoi" hidden>
-          <h2>Envoi à la carte (OTA)</h2>
+          <h2>Envoi à la carte</h2>
+          <p id="a-voie"><label><input type="radio" name="a-transport" id="a-t-http" value="http" checked> Wi-Fi (HTTP)</label>
+            <label><input type="radio" name="a-transport" id="a-t-mqtt" value="mqtt"> MQTT</label>
+            <span class="discret">— MQTT pour une carte derrière un maître (sans adresse IP)</span></p>
           <p id="a-envoi-adresse"></p>
           <div id="a-ecart" hidden>
             <p class="avert">Le fichier de la carte diffère de celui du dépôt : il sera remplacé (une copie est gardée sur ce PC).</p>

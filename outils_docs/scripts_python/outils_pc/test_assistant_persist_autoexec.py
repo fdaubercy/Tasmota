@@ -142,6 +142,25 @@ def envoi(b, carte):
             "envoi : 200, la carte a le fichier du depot")
 
 
+def transport(b):
+    """La route transmet le transport demande (defaut http) ; un transport inconnu -> 400."""
+    vus = []
+    prepare, envoie = autoexec_envoi.prepare, autoexec_envoi.envoie
+    autoexec_envoi.prepare = lambda *a, **k: vus.append(("prepare", k.get("transport"))) or {"jeton": "x"}
+    autoexec_envoi.envoie = lambda *a, **k: vus.append(("envoie", k.get("transport"))) or {"envoye": True}
+    try:
+        corps = {"env": ENV, "jeton": "x", "rouges_lus": 0, "redemarrer": False}
+        for route in ("/autoexec/envoi/prepare", "/autoexec/envoi"):
+            for demande in (corps, dict(corps, transport="mqtt"), dict(corps, transport="http")):
+                verifie(b.requete("POST", route, demande)[0], 200, f"{route} transport {demande.get('transport')!r} -> 200")
+        verifie(vus, [(o, t) for o in ("prepare", "envoie") for t in ("http", "mqtt", "http")], "routes : le transport demande est transmis (http par defaut)")
+    finally:
+        autoexec_envoi.prepare, autoexec_envoi.envoie = prepare, envoie
+    for route in ("/autoexec/envoi/prepare", "/autoexec/envoi"):
+        for faux in ("ftp", None, 5, ["mqtt"]):
+            verifie(b.requete("POST", route, dict(corps, transport=faux))[0], 400, f"{route} transport {faux!r} -> 400")
+
+
 def banc():
     with tempfile.TemporaryDirectory() as tmp:
         os.environ["OUTILS_TASMOTA_DOSSIER"] = str(Path(tmp) / "donnees")
@@ -156,6 +175,7 @@ def banc():
             ecriture(b, g)
             banque(b)
             envoi(b, carte)
+            transport(b)
         finally:
             carte.ferme()
             b.ferme()
@@ -170,8 +190,11 @@ MUTANTS = [
      """empreinte, demande.get("rouges_lus"), lambda: [])"""),
     ("build ignore pour la banque", """demande.get("entree"), builds_en_cours)""",
      """demande.get("entree"), lambda: [])"""),
-    ("build ignore pour la preparation", "_env(racine, demande), builds_en_cours)", "_env(racine, demande), lambda: [])"),
-    ("build ignore pour l'envoi", """demande.get("redemarrer"), builds_en_cours)""", """demande.get("redemarrer"), lambda: [])"""),
+    ("build ignore pour la preparation", "_env(racine, demande), builds_en_cours,", "_env(racine, demande), lambda: [],"),
+    ("build ignore pour l'envoi", """demande.get("redemarrer"), builds_en_cours,""", """demande.get("redemarrer"), lambda: [],"""),
+    ("transport ignore par la route de preparation", """builds_en_cours,
+                                      transport=demande.get("transport", "http"))""", "builds_en_cours)"),
+    ("transport ignore par la route d'envoi", """builds_en_cours, transport=demande.get("transport", "http"))""", "builds_en_cours)"),
     ("texte non masque", '{**l, "avertissements"', '{**l, "texte": autoexec_fichier.texte_disque(racine, env), "avertissements"'),
     ("diff du texte brut", "autoexec_fichier.diff(racine, env, texte)", "{'diff': texte, 'empreinte': '', 'rouges': 0}"),
     ("analyse sur le texte masque", "autoexec_fichier.avertissements(racine, env, autoexec_fichier.demasque(texte, disque))",
