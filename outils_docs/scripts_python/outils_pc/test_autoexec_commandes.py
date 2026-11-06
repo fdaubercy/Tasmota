@@ -16,6 +16,9 @@ from pathlib import Path
 import autoexec_commandes as ac
 
 RACINE = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(RACINE / "outils_docs" / "scripts_python" / "build"))
+import lecture_gardes as lg  # noqa: E402 - contrat avec l'etape A4 : les chemins s'evaluent tels quels
+
 ECHECS = []
 
 
@@ -112,6 +115,207 @@ def faux_depot(dossier):
     return dossier
 
 
+# Gardes : fichiers a part, `regles` compte les connues et les anomalies du depot de base.
+INO_GARDES = r'''
+#ifdef USE_SIMPLE
+#define XDRV_98 98
+const char kSimpleCommands[] PROGMEM = D_PRFX_ESSAI "|Simple";
+#endif
+const char kDansCommands[] PROGMEM = "|Libre|"
+#ifdef USE_LIGNE
+  "Gardee|"
+#endif
+  "Apres";
+#if   defined(USE_A)  &&  defined(USE_B)
+const char kComboCommands[] PROGMEM = "|Combo";
+#endif
+#ifndef USE_N
+const char kNonCommands[] PROGMEM = "|Negatif";
+#endif
+const char kBrCommands[] PROGMEM = "|"
+#ifdef USE_E
+  "BrancheSi|"
+#else
+  "BrancheSinon|"
+#endif
+#if defined(E1)
+  "EtapeUn|"
+#elif defined(E2)
+  "EtapeDeux|"
+#else
+  "EtapeTrois|"
+#endif
+  "FinBr";
+#define USE_LOCALE
+#ifdef USE_LOCALE
+const char kLocaleCommands[] PROGMEM = "|Locale";
+#endif
+#ifdef USE_Z2
+#ifdef USE_LOCALE
+const char kLocale2Commands[] PROGMEM = "|LocaleGardee";
+#endif
+#endif
+#ifdef USE_EXT
+#if USE_VAL > 2
+const char kNicheCommands[] PROGMEM = "|Niche|"
+#ifdef USE_LIGNE2
+  "NicheLigne"
+#endif
+  ;
+#endif
+#endif
+const char kDoubleCommands[] PROGMEM = "|"
+#ifdef USE_D
+  "Double|"
+#else
+  "Double|"
+#endif
+  "Fin";
+#ifdef USE_W
+const char kBisCommands[] PROGMEM = "|Bis|BisSi";
+#else
+const char kBisCommands[] PROGMEM = "|Bis|BisSinon";
+#endif
+#ifdef USE_M
+const char kMemeCommands[] PROGMEM = "|Meme|SeulSi";
+#else
+const char kMemeCommands[] PROGMEM = "|Meme|" D_CMND_INCONNUE "|SeulSinon";
+#endif
+const char kMixteCommands[] PROGMEM = "|Mi"
+#ifdef USE_X
+  "xte|ApresMixte"
+#endif
+  ;
+#ifdef USE_PRF
+const char kPrefixeCommands[] PROGMEM = "Pf|" "|Xy|"
+#ifdef USE_PL
+  "Ligne"
+#endif
+  ;
+#endif
+#ifdef USE_Q
+const char kPartageCommands[] PROGMEM = "|Partagee|DeuxFois";
+#endif
+#ifdef USE_B2
+const char kBerryCommands[] PROGMEM = "|EnBerry";
+#endif
+#ifdef USE_SO
+const char kSoCommands[] PROGMEM = "|SO77|SetOption78";
+#endif
+bool Xdrv98(uint32_t function) {
+  DecodeCommand(kSimpleCommands, SimpleCommand);
+  DecodeCommand(kDansCommands, DansCommand);
+  DecodeCommand(kComboCommands, ComboCommand);
+  DecodeCommand(kNonCommands, NonCommand);
+  DecodeCommand(kBrCommands, BrCommand);
+  DecodeCommand(kLocaleCommands, LocaleCommand);
+  DecodeCommand(kLocale2Commands, Locale2Command);
+  DecodeCommand(kNicheCommands, NicheCommand);
+  DecodeCommand(kDoubleCommands, DoubleCommand);
+  DecodeCommand(kBisCommands, BisCommand);
+  DecodeCommand(kMemeCommands, MemeCommand);
+  DecodeCommand(kMixteCommands, MixteCommand);
+  DecodeCommand(kPrefixeCommands, PrefixeCommand);
+  DecodeCommand(kPartageCommands, PartageCommand);
+  DecodeCommand(kBerryCommands, BerryCommand);
+  DecodeCommand(kSoCommands, SoCommand);
+  DecodeCommand(kIncCommands, IncCommand);
+  DecodeCommand(kIncGardeCommands, IncGardeCommand);
+}
+'''
+INO_AUTRE_DRIVER = r'''
+#ifdef USE_P
+const char kPCommands[] PROGMEM = "|Partagee";
+#endif
+const char kLibreCommands[] PROGMEM = "|DeuxFois";
+void Autre(void) { DecodeCommand(kPCommands, PCommand); DecodeCommand(kLibreCommands, LibreCommand); }
+'''
+INO_NON_INCLUSION = r'''
+#ifndef USE_N2
+#define XSNS_96 96
+const char kPasCommands[] PROGMEM = "|PasInclusion";
+#endif
+void Pas(void) { DecodeCommand(kPasCommands, PasCommand); }
+'''
+H_INCLUSION = r'''
+#ifndef _GARDES_H_
+#define _GARDES_H_
+const char kIncCommands[] PROGMEM = "|Incluse";
+#ifdef USE_I
+const char kIncGardeCommands[] PROGMEM = "|InclusGarde";
+#endif
+#endif
+'''
+INO_NON_FERME = r'''
+#ifdef USE_D2
+const char kDesCommands[] PROGMEM = "|Desequilibre";
+void Des(void) { DecodeCommand(kDesCommands, DesCommand); }
+'''
+INO_ENDIF_EN_TROP = r'''
+#endif
+#ifdef USE_D3
+const char kTropCommands[] PROGMEM = "|EnTrop";
+#endif
+void Trop(void) { DecodeCommand(kTropCommands, TropCommand); }
+'''
+ATTENDU_GARDES = {
+    # depot de base : garde dans la table, deux branches
+    "TOPIC": [["defined(USE_RIEN)"]], "DEUX": [["defined(USE_RIEN)"]],
+    "TROIS": [["!(defined(USE_RIEN))"], ["defined(USE_RIEN)"]],
+    "ESSIMPLE": [["defined(USE_SIMPLE)"]],                     # le #define XDRV qui suit n'en fait pas une garde d'inclusion
+    "GARDEE": [["defined(USE_LIGNE)"]],
+    "COMBO": [["defined(USE_A) && defined(USE_B)"]],           # espaces normalises
+    "NEGATIF": [["!defined(USE_N)"]],
+    "BRANCHESI": [["defined(USE_E)"]], "BRANCHESINON": [["!(defined(USE_E))"]],
+    "ETAPEUN": [["defined(E1)"]], "ETAPEDEUX": [["!(defined(E1))", "defined(E2)"]],
+    "ETAPETROIS": [["!(defined(E1))", "!(defined(E2))"]],
+    "NICHE": [["defined(USE_EXT)", "USE_VAL > 2"]],
+    "NICHELIGNE": [["defined(USE_EXT)", "USE_VAL > 2", "defined(USE_LIGNE2)"]],
+    "DOUBLE": [["!(defined(USE_D))"], ["defined(USE_D)"]],
+    "BIS": [["!(defined(USE_W))"], ["defined(USE_W)"]], "BISSI": [["defined(USE_W)"]],
+    # 2e emplacement illisible : sa garde de table vaut pour tous les noms, jamais de garde inventee
+    "MEME": [["!(defined(USE_M))"], ["defined(USE_M)"]], "SEULSI": [["!(defined(USE_M))"], ["defined(USE_M)"]],
+    "APRESMIXTE": [["defined(USE_X)"]],                        # MIXTE, a cheval sur deux piles : garde de la table, donc aucune
+    "PF": [["defined(USE_PRF)"]], "PFXY": [["defined(USE_PRF)"]], "PFLIGNE": [["defined(USE_PRF)", "defined(USE_PL)"]],
+    "PARTAGEE": [["defined(USE_P)"], ["defined(USE_Q)"]],      # deux drivers ; DEUXFOIS : une presence libre, aucune cle
+    "PASINCLUSION": [["!defined(USE_N2)"]],
+    "INCLUSGARDE": [["defined(USE_I)"]],                       # INCLUSE : garde d'inclusion du .h, aucune cle
+    "LOCALEGARDEE": [["defined(USE_Z2)"]],                     # USE_LOCALE, pose par un .ino : condition retiree ; LOCALE : aucune cle
+}
+
+
+def fichiers_gardes(dossier):
+    for nom, texte in (("xdrv_98_gardes.ino", INO_GARDES), ("xdrv_97_autre.ino", INO_AUTRE_DRIVER), ("xsns_96_pas.ino", INO_NON_INCLUSION),
+                       ("xdrv_95_ferme.ino", INO_NON_FERME), ("xdrv_94_trop.ino", INO_ENDIF_EN_TROP), ("include/gardes.h", H_INCLUSION)):
+        (dossier / "tasmota" / nom).write_text(texte, encoding="utf-8")
+    (dossier / "data" / "fs" / "gardes.be").write_text("tasmota.add_cmd('EnBerry', def () end)\n", encoding="utf-8")
+    return dossier
+
+
+def regles_gardes():
+    with tempfile.TemporaryDirectory() as t:
+        d = ac.genere(fichiers_gardes(faux_depot(Path(t))))
+        g, c = d.get("gardes", {}), d["connues"]
+        for nom in sorted(set(g) | set(ATTENDU_GARDES)):
+            verifie(g.get(nom), ATTENDU_GARDES.get(nom), f"gardes {nom}")
+        # chacune : connue, mais sans garde (toujours compilee, Berry, SetOption, #if desequilibres, a cheval sur deux piles)
+        for nom in ("HOSTNAME", "LIBRE", "APRES", "FIN", "FINBR", "MIXTE", "DEUXFOIS", "INCLUSE", "LOCALE", "ENBERRY", "SETOPTION77",
+                    "SETOPTION78", "DESEQUILIBRE", "ENTROP"):
+            verifie((nom in c, nom in g), (True, False), f"connue sans garde : {nom}")
+        verifie("BISSINON" in c or "BISSINON" in g, False, "2e definition d'une table : nom hors de connues (limite existante), pas de garde")
+        verifie(list(g), sorted(g), "gardes triees")
+        fige = Path(t) / "fige.json"
+        fige.write_text(json.dumps(d), encoding="utf-8")
+        verifie(ac.verifie(Path(t), fige=fige), [], "gardes : fige conforme -> aucun ecart")
+        d["gardes"] = {k: v for k, v in d.get("gardes", {}).items() if k != "GARDEE"}
+        fige.write_text(json.dumps(d), encoding="utf-8")
+        verifie(len(ac.verifie(Path(t), fige=fige)), 1, "gardes : cle retiree du fige -> 1 ecart")
+    ctx = lg.Contexte({"USE_A": None}, definies=set())
+    for expr, attendu in (("defined(USE_A)", True), ("!defined(USE_A)", False), ("!(defined(USE_A))", False), ("!(!defined(USE_A))", True),
+                          ("defined(USE_B)", False), ("!(defined(USE_B))", True), ("defined(USE_A) && defined(USE_B)", False)):
+        verifie(lg.evalue(expr, ctx, {}), attendu, f"lecture_gardes.evalue {expr}")
+
+
 def regles():
     with tempfile.TemporaryDirectory() as t:
         d = ac.genere(faux_depot(Path(t)))
@@ -158,6 +362,17 @@ def reel():
     verifie(r.get("WIFITEST", {}).get("quand"), "si-change", "WIFITEST : une fois, en gestionnaire Wi-Fi seulement")
     for nom in ("SETOPTION55", "SETOPTION115"):
         verifie("seulement si la valeur est 0" in r.get(nom, {}).get("source", ""), True, f"{nom} : condition dans la source")
+    g = d.get("gardes", {})
+    verifie(bool(g.get("ZBSEND")) and all("defined(USE_ZIGBEE)" in ch for ch in g["ZBSEND"]), True, "ZBSEND gardee par USE_ZIGBEE")
+    verifie(bool(g.get("I2CSCAN")) and all("defined(USE_I2C)" in ch for ch in g["I2CSCAN"]), True, "I2CSCAN gardee par USE_I2C (dans la table)")
+    for nom in ("RESTART", "UPGRADE", "SETOPTION146", "REGLAGELOG"):
+        verifie(nom in g, False, f"{nom} sans garde")
+    # le plan attendait HOSTNAME sans garde ; support_command.ino la range sous #ifndef FIRMWARE_MINIMAL, vraie sur toutes nos cartes
+    verifie(g.get("HOSTNAME"), [["!defined(FIRMWARE_MINIMAL)"]], "HOSTNAME : seule la garde du firmware minimal")
+    verifie(lg.evalue(g["HOSTNAME"][0][0], lg.Contexte({}), {}) if "HOSTNAME" in g else None, True, "HOSTNAME : garde vraie hors firmware minimal")
+    for macro in ("USE_MQTT_FILE", "USE_I2S_MP3", "USE_TIMEPROP"):   # le preprocesseur de A4 les croirait absentes : FileUpload, I2SPlay en fausse alerte
+        verifie(any(macro in x for v in g.values() for ch in v for x in ch), False, f"aucune condition sur {macro} (posee par un .ino)")
+    verifie(set(g) <= set(c), True, "gardes : que des commandes connues")
     verifie(ac.verifie(RACINE), [], "fige conforme au code du fork")
     brut = json.loads((RACINE / ac.FIGE).read_text(encoding="utf-8"))
     with tempfile.TemporaryDirectory() as t:
@@ -169,6 +384,11 @@ def reel():
         brut["redemarrent"]["HOSTNAME"]["quand"] = "si-change"
         ampute.write_text(json.dumps(brut), encoding="utf-8")
         verifie(len(ac.verifie(RACINE, fige=ampute)), 2, "temoin : fige faux (source, classement) -> 2 ecarts")
+        brut["connues"]["TIMER"] = c["TIMER"]
+        brut["redemarrent"]["HOSTNAME"]["quand"] = "toujours"
+        brut.get("gardes", {}).pop("ZBSEND", None)
+        ampute.write_text(json.dumps(brut), encoding="utf-8")
+        verifie(len(ac.verifie(RACINE, fige=ampute)), 1, "temoin : --verifier voit une garde retiree -> 1 ecart")
 
 
 MUTANTS = {   # regle de protection -> (texte du module, mutation, resultat faux attendu sur le faux depot)
@@ -181,7 +401,23 @@ MUTANTS = {   # regle de protection -> (texte du module, mutation, resultat faux
                                          'lignes.append("" if d else ligne)', lambda d: bool(d["anomalies"])),
     "doc seule ignoree": ("elif nom in connues and nom not in EXCLUES", "elif False",
                           lambda d: "SYNONYME" not in d["redemarrent"]),
-    "verifie muet": ("    return ecarts\n", "    return []\n", None),
+    "verifie muet": ("    return ecarts\n", "    return []\n", ("connues", "UN")),
+    "gardes : #else non inverse": ('prec.append(f"!({cour})")', "prec.append(cour)",
+                                   lambda d: d["gardes"]["TROIS"] == [["defined(USE_RIEN)"]]),
+    "gardes : garde de ligne ignoree": ("piles_nom.pop() if len(piles_nom) == 1 else table", "table", lambda d: "TOPIC" not in d["gardes"]),
+    "gardes : chemins d'une table non reunis": ("res.setdefault(nom, set()).add(chemin)", "res[nom] = {chemin}",
+                                                lambda d: len(d["gardes"]["DOUBLE"]) == 1),
+    "gardes : chemins de deux tables non reunis": ("chemins.setdefault(nom, set()).update(ch)", "chemins[nom] = ch",
+                                                   lambda d: "DEUXFOIS" in d["gardes"] and len(d["gardes"]["PARTAGEE"]) == 1),
+    "gardes : macro d'un .ino gardee": ('if not locales & set(re.findall(r"\\w+", c))', "", lambda d: "LOCALE" in d["gardes"]),
+    "gardes : presence libre oubliee": (" and () not in ch", "", lambda d: "DEUXFOIS" in d["gardes"]),
+    "gardes : garde d'inclusion gardee": ("pile[-1][1] = None", "pass", lambda d: "INCLUSE" in d["gardes"]),
+    "gardes : emplacement illisible ignore": ("res[n].add(table)", "pass", lambda d: d["gardes"]["SEULSI"] == [["defined(USE_M)"]]),
+    "gardes : homonyme Berry garde": (" and n not in berry", "", lambda d: "ENBERRY" in d["gardes"]),
+    "gardes : SetOption gardee": (' and not re.fullmatch(r"SETOPTION\\d*", n)', "", lambda d: "SETOPTION77" in d["gardes"]),
+    "gardes : #if non ferme lu quand meme": ("return res if equilibre and not pile else [()] * len(res)", "return res", lambda d: "DESEQUILIBRE" in d["gardes"]),
+    "gardes : verifie ne les compare pas": ('for cle in ("connues", "redemarrent", "gardes"):', 'for cle in ("connues", "redemarrent"):',
+                                            ("gardes", "TOPIC")),
 }
 
 
@@ -196,10 +432,10 @@ def temoins():
             spec = importlib.util.spec_from_file_location("autoexec_mutant", copie)
             mutant = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mutant)
-            depot = faux_depot(Path(t) / "depot")
+            depot = fichiers_gardes(faux_depot(Path(t) / "depot"))
             d = mutant.genere(depot, doc=DOC)
-            if faux is None:                          # verifie : un fige ampute doit donner un ecart
-                del d["connues"]["UN"]
+            if isinstance(faux, tuple):               # verifie : un fige ampute doit donner un ecart
+                del d[faux[0]][faux[1]]
                 (Path(t) / "fige.json").write_text(json.dumps(d), encoding="utf-8")
                 faux = lambda d: mutant.verifie(depot, fige=Path(t) / "fige.json") == []
             verifie(faux(d), True, f"temoin {libelle} : le mutant donne un resultat faux")
@@ -207,6 +443,7 @@ def temoins():
 
 if __name__ == "__main__":
     regles()
+    regles_gardes()
     temoins()
     reel()
     print("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s)")

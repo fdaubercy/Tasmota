@@ -1472,6 +1472,5516 @@
    "source": "tasmota/tasmota_xdrv_driver/xdrv_23_zigbee_A_impl.ino::CmndZbReset"
   }
  },
+ "gardes": {
+  "ADCGPIO": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "ADCPARAM": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "ADD": [
+   [
+    "defined(USE_RULES)",
+    "!defined(USE_SCRIPT)"
+   ]
+  ],
+  "ALEXACTRANGE": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "ALTITUDE": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "AMPRES": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "AP": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "ARTNET": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_LIGHT_ARTNET)"
+   ]
+  ],
+  "ARTNETAUTORUN": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "ARTNETCONFIG": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_LIGHT_ARTNET)"
+   ]
+  ],
+  "BACKLOG": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "BATTERYPERCENTAGE": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "BAUDRATE": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "BH1750MTIME": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_BH1750)"
+   ]
+  ],
+  "BH1750RESOLUTION": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_BH1750)"
+   ]
+  ],
+  "BLEADDRFILTER": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "BLEADV": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "BLEALIAS": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "BLECONNTIMEOUT": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "BLEDEBUG": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "BLEDETAILS": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "BLEDEVICES": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "BLEENABLEUNSAVED": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "BLEFILTERNAMES": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "BLEMAXAGE": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "BLEMINRSSILEVEL": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "BLEMODE": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "BLENAME": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "BLEOP": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "BLEPAIR": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "BLEPERIOD": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "BLESCAN": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "BLINKCOUNT": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "BLINKTIME": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "BR": [
+   [
+    "defined(USE_BERRY)"
+   ]
+  ],
+  "BRIPRESET": [
+   [
+    "defined(USE_PWM_DIMMER)",
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "BRRESTART": [
+   [
+    "defined(USE_BERRY)"
+   ]
+  ],
+  "BSSID": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "BUTTONDEBOUNCE": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "BUTTONRETAIN": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "BUTTONTOPIC": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "BUZZER": [
+   [
+    "defined(USE_BUZZER)"
+   ]
+  ],
+  "BUZZERACTIVE": [
+   [
+    "defined(USE_BUZZER)"
+   ]
+  ],
+  "BUZZERPWM": [
+   [
+    "defined(USE_BUZZER)"
+   ]
+  ],
+  "CALCRES": [
+   [
+    "defined(USE_RULES)",
+    "!defined(USE_SCRIPT)"
+   ]
+  ],
+  "CAN": [
+   [
+    "defined(USE_SPI)",
+    "defined(USE_CANSNIFFER)"
+   ]
+  ],
+  "CANSEND": [
+   [
+    "defined(USE_SPI)",
+    "defined(USE_CANSNIFFER)"
+   ]
+  ],
+  "CCS811BASELINE": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_CCS811_V2)"
+   ]
+  ],
+  "CCS811FWAPP": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_CCS811_V2)"
+   ]
+  ],
+  "CCS811HW": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_CCS811_V2)"
+   ]
+  ],
+  "CFGXOR": [
+   [
+    "defined(USE_WEBSERVER)"
+   ]
+  ],
+  "CHANNEL": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "CHANNELREMAP": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "CLIENTRESET": [
+   [
+    "defined(USE_TASMOTA_CLIENT)"
+   ]
+  ],
+  "CLIENTSEND": [
+   [
+    "defined(USE_TASMOTA_CLIENT)"
+   ]
+  ],
+  "CLIMATEMODESET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "COLOR": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "CONTROLLERMODESET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "CORS": [
+   [
+    "defined(USE_WEBSERVER)",
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(USE_CORS)"
+   ]
+  ],
+  "COUNTER": [
+   [
+    "defined(USE_COUNTER)"
+   ]
+  ],
+  "COUNTERDEBOUNCE": [
+   [
+    "defined(USE_COUNTER)"
+   ]
+  ],
+  "COUNTERDEBOUNCEHIGH": [
+   [
+    "defined(USE_COUNTER)"
+   ]
+  ],
+  "COUNTERDEBOUNCELOW": [
+   [
+    "defined(USE_COUNTER)"
+   ]
+  ],
+  "COUNTERTYPE": [
+   [
+    "defined(USE_COUNTER)"
+   ]
+  ],
+  "CPUFREQUENCY": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "CT": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "CTRANGE": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "CTRDUTYCYCLEREAD": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "CURRENTCAL": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "CURRENTHIGH": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_ENERGY_MARGIN_DETECTION)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "CURRENTLOW": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_ENERGY_MARGIN_DETECTION)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "CURRENTSET": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "DALI": [
+   [
+    "defined(USE_DALI)"
+   ]
+  ],
+  "DALIBIND": [
+   [
+    "defined(USE_DALI)"
+   ]
+  ],
+  "DALIBS": [
+   [
+    "defined(USE_DALI)"
+   ]
+  ],
+  "DALICHANNELS": [
+   [
+    "defined(USE_DALI)",
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "DALIDEVICE": [
+   [
+    "defined(USE_DALI)"
+   ]
+  ],
+  "DALIDEVICESCAN": [
+   [
+    "defined(USE_DALI)"
+   ]
+  ],
+  "DALIDIMMER": [
+   [
+    "defined(USE_DALI)"
+   ]
+  ],
+  "DALIGEAR": [
+   [
+    "defined(USE_DALI)"
+   ]
+  ],
+  "DALIGROUP": [
+   [
+    "defined(USE_DALI)"
+   ]
+  ],
+  "DALIGROUPSLIDERS": [
+   [
+    "defined(USE_DALI)"
+   ]
+  ],
+  "DALILIGHT": [
+   [
+    "defined(USE_DALI)",
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "DALIPOWER": [
+   [
+    "defined(USE_DALI)"
+   ]
+  ],
+  "DALIQUERY": [
+   [
+    "defined(USE_DALI)"
+   ]
+  ],
+  "DALIRETRY": [
+   [
+    "defined(USE_DALI)",
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "DALISCAN": [
+   [
+    "defined(USE_DALI)"
+   ]
+  ],
+  "DALISEND": [
+   [
+    "defined(USE_DALI)"
+   ]
+  ],
+  "DALITARGET": [
+   [
+    "defined(USE_DALI)",
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "DEEPSLEEPTIME": [
+   [
+    "defined(USE_DEEPSLEEP)"
+   ]
+  ],
+  "DELAY": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "DEVGROUPNAME": [
+   [
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(USE_DEVICE_GROUPS)"
+   ]
+  ],
+  "DEVGROUPSEND": [
+   [
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(USE_DEVICE_GROUPS)",
+    "defined(USE_DEVICE_GROUPS_SEND)"
+   ]
+  ],
+  "DEVGROUPSHARE": [
+   [
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(USE_DEVICE_GROUPS)"
+   ]
+  ],
+  "DEVGROUPSTATUS": [
+   [
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(USE_DEVICE_GROUPS)"
+   ]
+  ],
+  "DEVGROUPTIE": [
+   [
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(USE_DEVICE_GROUPS)"
+   ]
+  ],
+  "DEVICENAME": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "DHTDELAY": [
+   [
+    "defined(USE_DHT)"
+   ]
+  ],
+  "DIAGNOSTICMODESET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "DIMMERRANGE": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "DIMMERSTEP": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "DISCOVER": [
+   [
+    "defined(USE_TASMOTA_DISCOVERY)"
+   ]
+  ],
+  "DISCOVERBUTTON": [
+   [
+    "defined(USE_TASMOTA_DISCOVERY)"
+   ]
+  ],
+  "DISCOVEROFF": [
+   [
+    "defined(USE_TASMOTA_DISCOVERY)"
+   ]
+  ],
+  "DISCOVERSWITCH": [
+   [
+    "defined(USE_TASMOTA_DISCOVERY)"
+   ]
+  ],
+  "DISPLAY": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYADDRESS": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYBATCH": [
+   [
+    "defined(USE_DISPLAY)",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "DISPLAYBLINKRATE": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYCLEAR": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYCLOCK": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYCOLS": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYDIMMER": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYFLOAT": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYFLOATNC": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYFONT": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYHEIGHT": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYINVERT": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYLEVEL": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYMODE": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYMODEL": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYNUMBER": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYNUMBERNC": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYRAW": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYREFRESH": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYREINIT": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYROTATE": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYROWS": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYSCROLLDELAY": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYSCROLLTEXT": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYSEVENSEGTEXT": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYSEVENSEGTEXTNC": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYSIZE": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYTEXT": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYTEXTNC": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYTYPE": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DISPLAYWIDTH": [
+   [
+    "defined(USE_DISPLAY)"
+   ]
+  ],
+  "DNSTIMEOUT": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "DRIVER": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "DRVTEXT": [
+   [
+    "defined(USE_DRV_FILE_DEMO)"
+   ],
+   [
+    "defined(USE_DRV_FILE_JSON_DEMO)"
+   ]
+  ],
+  "DS18ALIAS": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_DS18x20)",
+    "defined(DS18x20_USE_ID_ALIAS)"
+   ],
+   [
+    "defined(USE_DS18x20)",
+    "defined(DS18x20_USE_ID_ALIAS)"
+   ]
+  ],
+  "DS18RESCAN": [
+   [
+    "defined(USE_DS18x20)",
+    "defined(DS18x20_USE_ID_ALIAS)"
+   ]
+  ],
+  "DS18RETRYREAD": [
+   [
+    "defined(USE_DS18x20)",
+    "defined(DS18x20_USE_ID_ALIAS)"
+   ]
+  ],
+  "DSPLINE": [
+   [
+    "defined(USE_DISPLAY_TM1621_SONOFF)"
+   ]
+  ],
+  "DSPSPEED": [
+   [
+    "defined(USE_DISPLAY_TM1621_SONOFF)"
+   ]
+  ],
+  "DSPTEST": [
+   [
+    "defined(USE_DISPLAY_TM1621_SONOFF)",
+    "defined(TM1621_DEBUG)"
+   ]
+  ],
+  "DZIDX": [
+   [
+    "defined(USE_DOMOTICZ)",
+    "!defined(USE_UFILESYS)"
+   ],
+   [
+    "defined(USE_DOMOTICZ)",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "DZKEYIDX": [
+   [
+    "defined(USE_DOMOTICZ)",
+    "!defined(USE_UFILESYS)"
+   ],
+   [
+    "defined(USE_DOMOTICZ)",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "DZSEND": [
+   [
+    "defined(USE_DOMOTICZ)",
+    "!defined(USE_UFILESYS)"
+   ],
+   [
+    "defined(USE_DOMOTICZ)",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "DZSENSORIDX": [
+   [
+    "defined(USE_DOMOTICZ)",
+    "!defined(USE_UFILESYS)"
+   ],
+   [
+    "defined(USE_DOMOTICZ)",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "DZSWITCHIDX": [
+   [
+    "defined(USE_DOMOTICZ)",
+    "!defined(USE_UFILESYS)"
+   ],
+   [
+    "defined(USE_DOMOTICZ)",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "DZUPDATETIMER": [
+   [
+    "defined(USE_DOMOTICZ)",
+    "!defined(USE_UFILESYS)"
+   ],
+   [
+    "defined(USE_DOMOTICZ)",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "EMULATION": [
+   [
+    "defined(USE_WEBSERVER)",
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(USE_EMULATION)"
+   ]
+  ],
+  "ENABLEOUTPUTSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "ENERGYCOLS": [
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "ENERGYCONFIG": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "ENERGYDISPLAY": [
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "ENERGYEXPORT": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "ENERGYEXPORTACTIVE": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "ENERGYRES": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "ENERGYTODAY": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "ENERGYTOTAL": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "ENERGYUSAGE": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "ENERGYYESTERDAY": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "ETHADDRESS": [
+   [
+    "defined(CONFIG_ETH_ENABLED)",
+    "defined(USE_ETHERNET)"
+   ]
+  ],
+  "ETHCLOCKMODE": [
+   [
+    "defined(CONFIG_ETH_ENABLED)",
+    "defined(USE_ETHERNET)"
+   ]
+  ],
+  "ETHDNSSERVER": [
+   [
+    "defined(CONFIG_ETH_ENABLED)",
+    "defined(USE_ETHERNET)"
+   ]
+  ],
+  "ETHERNET": [
+   [
+    "defined(CONFIG_ETH_ENABLED)",
+    "defined(USE_ETHERNET)"
+   ]
+  ],
+  "ETHGATEWAY": [
+   [
+    "defined(CONFIG_ETH_ENABLED)",
+    "defined(USE_ETHERNET)"
+   ]
+  ],
+  "ETHIPADDRESS": [
+   [
+    "defined(CONFIG_ETH_ENABLED)",
+    "defined(USE_ETHERNET)"
+   ]
+  ],
+  "ETHSUBNETMASK": [
+   [
+    "defined(CONFIG_ETH_ENABLED)",
+    "defined(USE_ETHERNET)"
+   ]
+  ],
+  "ETHTYPE": [
+   [
+    "defined(CONFIG_ETH_ENABLED)",
+    "defined(USE_ETHERNET)"
+   ]
+  ],
+  "EVENT": [
+   [
+    "!defined(USE_RULES)",
+    "!defined(USE_SCRIPT)"
+   ],
+   [
+    "defined(USE_RULES)",
+    "!defined(USE_SCRIPT)"
+   ]
+  ],
+  "EXCEPTION": [
+   [
+    "defined(DEBUG_THEO)"
+   ]
+  ],
+  "EXSCHLOCK": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_EXS_DIMMER)",
+    "defined(EXS_MCU_CMNDS)"
+   ]
+  ],
+  "EXSDIMM": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_EXS_DIMMER)",
+    "defined(EXS_MCU_CMNDS)"
+   ]
+  ],
+  "EXSDIMMS": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_EXS_DIMMER)",
+    "defined(EXS_MCU_CMNDS)"
+   ]
+  ],
+  "EXSDIMMTBL": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_EXS_DIMMER)",
+    "defined(EXS_MCU_CMNDS)"
+   ]
+  ],
+  "EXSDIMMVAL": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_EXS_DIMMER)",
+    "defined(EXS_MCU_CMNDS)"
+   ]
+  ],
+  "EXSSTATE": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_EXS_DIMMER)",
+    "defined(EXS_MCU_CMNDS)"
+   ]
+  ],
+  "FADE": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "FANSPEED": [
+   [
+    "defined(USE_SONOFF_IFAN)"
+   ]
+  ],
+  "FILEDOWNLOAD": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "FILELOG": [
+   [
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "FILEUPLOAD": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "FN": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "FPCOUNT": [
+   [
+    "defined(USE_AS608)"
+   ]
+  ],
+  "FPDELETE": [
+   [
+    "defined(USE_AS608)"
+   ]
+  ],
+  "FPENROLL": [
+   [
+    "defined(USE_AS608)"
+   ]
+  ],
+  "FRAMERASE": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_FM24CXX)"
+   ]
+  ],
+  "FRAMINFO": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_FM24CXX)"
+   ]
+  ],
+  "FRAMREAD": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_FM24CXX)"
+   ]
+  ],
+  "FRAMREADFORMAT": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_FM24CXX)"
+   ]
+  ],
+  "FRAMREADSTRING": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_FM24CXX)"
+   ]
+  ],
+  "FRAMWRITE": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_FM24CXX)"
+   ]
+  ],
+  "FRAMWRITESTRING": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_FM24CXX)"
+   ]
+  ],
+  "FREQRES": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "FREQUENCYCAL": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "FREQUENCYSET": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "FRIENDLYNAME": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "FULLTOPIC": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "GAUGE": [
+   [
+    "defined(USE_VID6608)"
+   ]
+  ],
+  "GAUGEPERCENT": [
+   [
+    "defined(USE_VID6608)"
+   ]
+  ],
+  "GAUGESET": [
+   [
+    "defined(USE_VID6608)"
+   ]
+  ],
+  "GAUGEZERO": [
+   [
+    "defined(USE_VID6608)"
+   ]
+  ],
+  "GLOBALHUM": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "GLOBALPRESS": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "GLOBALTEMP": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "GM861DUMP": [
+   [
+    "defined(USE_GM861)"
+   ]
+  ],
+  "GM861RESET": [
+   [
+    "defined(USE_GM861)"
+   ]
+  ],
+  "GM861SAVE": [
+   [
+    "defined(USE_GM861)"
+   ]
+  ],
+  "GM861ZONE": [
+   [
+    "defined(USE_GM861)"
+   ]
+  ],
+  "GPIO": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "GPIOREAD": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "GPIOS": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "GROUPTOPIC": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "GVPORT": [
+   [
+    "defined(USE_GPIO_VIEWER)"
+   ]
+  ],
+  "GVSAMPLING": [
+   [
+    "defined(USE_GPIO_VIEWER)"
+   ]
+  ],
+  "GVURL": [
+   [
+    "defined(USE_GPIO_VIEWER)"
+   ]
+  ],
+  "GVVIEWER": [
+   [
+    "defined(USE_GPIO_VIEWER)"
+   ]
+  ],
+  "HDMIADDR": [
+   [
+    "defined(USE_HDMI_CEC)"
+   ]
+  ],
+  "HDMISEND": [
+   [
+    "defined(USE_HDMI_CEC)"
+   ]
+  ],
+  "HDMISENDRAW": [
+   [
+    "defined(USE_HDMI_CEC)"
+   ]
+  ],
+  "HDMITYPE": [
+   [
+    "defined(USE_HDMI_CEC)"
+   ]
+  ],
+  "HM10AT": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_HM10)"
+   ]
+  ],
+  "HM10AUTO": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_HM10)"
+   ]
+  ],
+  "HM10BAUD": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_HM10)"
+   ]
+  ],
+  "HM10BEACON": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_HM10)"
+   ]
+  ],
+  "HM10BLOCK": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_HM10)"
+   ]
+  ],
+  "HM10OPTION": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_HM10)"
+   ]
+  ],
+  "HM10PAGE": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_HM10)"
+   ]
+  ],
+  "HM10PERIOD": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_HM10)"
+   ]
+  ],
+  "HM10SCAN": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_HM10)"
+   ]
+  ],
+  "HM10TIME": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_HM10)"
+   ]
+  ],
+  "HOSTED": [
+   [
+    "defined(CONFIG_ESP_WIFI_REMOTE_ENABLED)",
+    "__has_include(\"esp_hosted.h\")",
+    "!defined(FIRMWARE_SAFEBOOT)"
+   ]
+  ],
+  "HOSTEDLOAD": [
+   [
+    "defined(CONFIG_ESP_WIFI_REMOTE_ENABLED)",
+    "__has_include(\"esp_hosted.h\")",
+    "!defined(FIRMWARE_SAFEBOOT)"
+   ]
+  ],
+  "HOSTEDOTA": [
+   [
+    "defined(CONFIG_ESP_WIFI_REMOTE_ENABLED)",
+    "__has_include(\"esp_hosted.h\")",
+    "!defined(FIRMWARE_SAFEBOOT)"
+   ]
+  ],
+  "HOSTNAME": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "HOTPLUG": [
+   [
+    "defined(USE_HOTPLUG)"
+   ]
+  ],
+  "HUMOFFSET": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "HUMRES": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "HVACMODBUS": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HVACMODBUSADDRESS": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HVACMODBUSBAUDRATE": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HVACMODBUSCONFIG": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HVACPROBERUNSTATE": [
+   [
+    "defined(USE_MIEL_HVAC)",
+    "defined(MIEL_HVAC_DEBUG)"
+   ]
+  ],
+  "HVACREMOTETEMP": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HVACREMOTETEMPCLEARTIME": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HVACREQUEST": [
+   [
+    "defined(USE_MIEL_HVAC)",
+    "defined(MIEL_HVAC_DEBUG)"
+   ]
+  ],
+  "HVACSENDCOMMAND": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HVACSETAIRDIRECTION": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HVACSETECONOCOOL": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HVACSETFANSPEED": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HVACSETHAMODE": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HVACSETMODE": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HVACSETNIGHTMODE": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HVACSETPROHIBIT": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HVACSETPURIFY": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HVACSETSWINGH": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HVACSETSWINGV": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HVACSETTEMP": [
+   [
+    "defined(USE_MIEL_HVAC)"
+   ]
+  ],
+  "HWDUMP": [
+   [
+    "defined(USE_HWDUMP)"
+   ]
+  ],
+  "I2CCLOCK": [
+   [
+    "defined(USE_I2C)"
+   ]
+  ],
+  "I2CDRIVER": [
+   [
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(USE_I2C)"
+   ]
+  ],
+  "I2CREAD": [
+   [
+    "defined(USE_I2C)"
+   ]
+  ],
+  "I2CSCAN": [
+   [
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(USE_I2C)"
+   ]
+  ],
+  "I2CSTRETCH": [
+   [
+    "defined(USE_I2C)"
+   ]
+  ],
+  "I2CWRITE": [
+   [
+    "defined(USE_I2C)"
+   ]
+  ],
+  "I2SBRIDGE": [
+   [
+    "defined(USE_I2S_AUDIO) && ESP_IDF_VERSION_MAJOR >= 5",
+    "defined(USE_I2S_BRIDGE)"
+   ]
+  ],
+  "I2SCONFIG": [
+   [
+    "defined(USE_I2S_AUDIO) && ESP_IDF_VERSION_MAJOR >= 5"
+   ]
+  ],
+  "I2SGAIN": [
+   [
+    "defined(USE_I2S_AUDIO) && ESP_IDF_VERSION_MAJOR >= 5"
+   ]
+  ],
+  "I2SLOOP": [
+   [
+    "defined(USE_I2S_AUDIO) && ESP_IDF_VERSION_MAJOR >= 5"
+   ]
+  ],
+  "I2SMIC": [
+   [
+    "defined(USE_I2S_AUDIO) && ESP_IDF_VERSION_MAJOR >= 5"
+   ]
+  ],
+  "I2SPAUSE": [
+   [
+    "defined(USE_I2S_AUDIO) && ESP_IDF_VERSION_MAJOR >= 5"
+   ]
+  ],
+  "I2SPLAY": [
+   [
+    "defined(USE_I2S_AUDIO) && ESP_IDF_VERSION_MAJOR >= 5"
+   ]
+  ],
+  "I2SREC": [
+   [
+    "defined(USE_I2S_AUDIO) && ESP_IDF_VERSION_MAJOR >= 5"
+   ]
+  ],
+  "I2SRTTTL": [
+   [
+    "defined(USE_I2S_AUDIO) && ESP_IDF_VERSION_MAJOR >= 5"
+   ]
+  ],
+  "I2SSAY": [
+   [
+    "defined(USE_I2S_AUDIO) && ESP_IDF_VERSION_MAJOR >= 5"
+   ]
+  ],
+  "I2SSTOP": [
+   [
+    "defined(USE_I2S_AUDIO) && ESP_IDF_VERSION_MAJOR >= 5"
+   ]
+  ],
+  "I2SSTREAM": [
+   [
+    "defined(USE_I2S_AUDIO) && ESP_IDF_VERSION_MAJOR >= 5",
+    "defined(USE_SHINE) && defined(MP3_MIC_STREAM)"
+   ]
+  ],
+  "I2STIME": [
+   [
+    "defined(USE_I2S_AUDIO) && ESP_IDF_VERSION_MAJOR >= 5"
+   ]
+  ],
+  "I2SWR": [
+   [
+    "defined(USE_I2S_AUDIO) && ESP_IDF_VERSION_MAJOR >= 5"
+   ]
+  ],
+  "IBEACON": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31"
+   ]
+  ],
+  "IBEACONCLEAR": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31"
+   ]
+  ],
+  "IBEACONONLYALIASED": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31"
+   ]
+  ],
+  "IBEACONPERIOD": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31"
+   ]
+  ],
+  "IBEACONTIMEOUT": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31"
+   ]
+  ],
+  "IF": [
+   [
+    "defined(USE_RULES)",
+    "!defined(USE_SCRIPT)"
+   ]
+  ],
+  "IFX": [
+   [
+    "defined(USE_INFLUXDB)"
+   ]
+  ],
+  "IFXBUCKET": [
+   [
+    "defined(USE_INFLUXDB)"
+   ]
+  ],
+  "IFXDATABASE": [
+   [
+    "defined(USE_INFLUXDB)"
+   ]
+  ],
+  "IFXFEED": [
+   [
+    "defined(USE_INFLUXDB)"
+   ]
+  ],
+  "IFXHOST": [
+   [
+    "defined(USE_INFLUXDB)"
+   ]
+  ],
+  "IFXLOG": [
+   [
+    "defined(USE_INFLUXDB)"
+   ]
+  ],
+  "IFXORG": [
+   [
+    "defined(USE_INFLUXDB)"
+   ]
+  ],
+  "IFXPASSWORD": [
+   [
+    "defined(USE_INFLUXDB)"
+   ]
+  ],
+  "IFXPERIOD": [
+   [
+    "defined(USE_INFLUXDB)"
+   ]
+  ],
+  "IFXPORT": [
+   [
+    "defined(USE_INFLUXDB)"
+   ]
+  ],
+  "IFXRP": [
+   [
+    "defined(USE_INFLUXDB)"
+   ]
+  ],
+  "IFXSENSOR": [
+   [
+    "defined(USE_INFLUXDB)"
+   ]
+  ],
+  "IFXTOKEN": [
+   [
+    "defined(USE_INFLUXDB)"
+   ]
+  ],
+  "IFXUSER": [
+   [
+    "defined(USE_INFLUXDB)"
+   ]
+  ],
+  "INFO": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "INFORETAIN": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "INPUTSWITCHSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "INPUTSWITCHUSE": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "INTERLOCK": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "IPADDRESS": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "IRHVAC": [
+   [
+    "defined(USE_IR_REMOTE_FULL)"
+   ]
+  ],
+  "IRSEND": [
+   [
+    "defined(USE_IR_REMOTE) && !defined(USE_IR_REMOTE_FULL)"
+   ],
+   [
+    "defined(USE_IR_REMOTE_FULL)"
+   ]
+  ],
+  "JSON": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "JSONPP": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "KEELOQSENDBUTTON": [
+   [
+    "defined(USE_KEELOQ)"
+   ]
+  ],
+  "KEELOQSENDRAW": [
+   [
+    "defined(USE_KEELOQ)"
+   ]
+  ],
+  "KEELOQSET": [
+   [
+    "defined(USE_KEELOQ)"
+   ]
+  ],
+  "KNXTX_BYTE": [
+   [
+    "defined(USE_KNX)"
+   ]
+  ],
+  "KNXTX_CMND": [
+   [
+    "defined(USE_KNX)"
+   ]
+  ],
+  "KNXTX_DOUBLE": [
+   [
+    "defined(USE_KNX)"
+   ]
+  ],
+  "KNXTX_FLOAT": [
+   [
+    "defined(USE_KNX)"
+   ]
+  ],
+  "KNXTX_SCENE": [
+   [
+    "defined(USE_KNX)"
+   ]
+  ],
+  "KNXTX_VAL": [
+   [
+    "defined(USE_KNX)"
+   ]
+  ],
+  "KNX_CB": [
+   [
+    "defined(USE_KNX)"
+   ]
+  ],
+  "KNX_ENABLED": [
+   [
+    "defined(USE_KNX)"
+   ]
+  ],
+  "KNX_ENHANCED": [
+   [
+    "defined(USE_KNX)"
+   ]
+  ],
+  "KNX_GA": [
+   [
+    "defined(USE_KNX)"
+   ]
+  ],
+  "KNX_PA": [
+   [
+    "defined(USE_KNX)"
+   ]
+  ],
+  "L1MUSICSYNC": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_SONOFF_L1)"
+   ]
+  ],
+  "LATITUDE": [
+   [
+    "defined(USE_TIMERS)",
+    "defined(USE_SUNRISE)"
+   ]
+  ],
+  "LD2402_AUTOGAIN": [
+   [
+    "defined(USE_LD2402)"
+   ]
+  ],
+  "LD2402_AUTOUPDATE": [
+   [
+    "defined(USE_LD2402)"
+   ]
+  ],
+  "LD2402_FOLLOW": [
+   [
+    "defined(USE_LD2402)",
+    "defined(LD2402_INCLUDE_FOLLOW)"
+   ]
+  ],
+  "LD2402_HELP": [
+   [
+    "defined(USE_LD2402)",
+    "defined(LD2402_INCLUDE_HELP)"
+   ]
+  ],
+  "LD2402_MODE": [
+   [
+    "defined(USE_LD2402)"
+   ]
+  ],
+  "LD2402_REREAD": [
+   [
+    "defined(USE_LD2402)"
+   ]
+  ],
+  "LD2402_SAVE": [
+   [
+    "defined(USE_LD2402)"
+   ]
+  ],
+  "LD2402_SETCOMMON": [
+   [
+    "defined(USE_LD2402)"
+   ]
+  ],
+  "LD2402_SETMICRO": [
+   [
+    "defined(USE_LD2402)"
+   ]
+  ],
+  "LD2402_SETMOTION": [
+   [
+    "defined(USE_LD2402)"
+   ]
+  ],
+  "LD2402_STATUS": [
+   [
+    "defined(USE_LD2402)"
+   ]
+  ],
+  "LD2410DURATION": [
+   [
+    "defined(USE_LD2410)"
+   ]
+  ],
+  "LD2410ENGINEERINGEND": [
+   [
+    "defined(USE_LD2410)"
+   ]
+  ],
+  "LD2410ENGINEERINGSTART": [
+   [
+    "defined(USE_LD2410)"
+   ]
+  ],
+  "LD2410GET": [
+   [
+    "defined(USE_LD2410)"
+   ]
+  ],
+  "LD2410MOVINGSENS": [
+   [
+    "defined(USE_LD2410)"
+   ]
+  ],
+  "LD2410STATICSENS": [
+   [
+    "defined(USE_LD2410)"
+   ]
+  ],
+  "LD2410S_AUTOUPDATE": [
+   [
+    "defined(USE_LD2410S)"
+   ]
+  ],
+  "LD2410S_FOLLOW": [
+   [
+    "defined(USE_LD2410S)"
+   ]
+  ],
+  "LD2410S_HELP": [
+   [
+    "defined(USE_LD2410S)"
+   ]
+  ],
+  "LD2410S_OUT_MODE": [
+   [
+    "defined(USE_LD2410S)"
+   ]
+  ],
+  "LD2410S_PARAMETERS": [
+   [
+    "defined(USE_LD2410S)"
+   ]
+  ],
+  "LD2410S_REREAD": [
+   [
+    "defined(USE_LD2410S)"
+   ]
+  ],
+  "LD2410S_SETCOMMON": [
+   [
+    "defined(USE_LD2410S)"
+   ]
+  ],
+  "LD2410S_SETHOLD": [
+   [
+    "defined(USE_LD2410S)"
+   ]
+  ],
+  "LD2410S_SETTRIGGER": [
+   [
+    "defined(USE_LD2410S)"
+   ]
+  ],
+  "LDO": [
+   [
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(SOC_GP_LDO_SUPPORTED)"
+   ]
+  ],
+  "LED": [
+   [
+    "defined(ESP8266) || defined(USE_WS2812_FORCE_NEOPIXELBUS)",
+    "defined(USE_LIGHT)"
+   ],
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "LEDMASK": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "LEDPOWER": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "LEDPWMMODE": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "LEDPWMOFF": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "LEDPWMON": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "LEDSTATE": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "LEDTABLE": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "LOGHOST": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "LOGPORT": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "LONGITUDE": [
+   [
+    "defined(USE_TIMERS)",
+    "defined(USE_SUNRISE)"
+   ]
+  ],
+  "LORACOMMAND": [
+   [
+    "defined(USE_SPI)",
+    "defined(USE_SPI_LORA)"
+   ]
+  ],
+  "LORACONFIG": [
+   [
+    "defined(USE_SPI)",
+    "defined(USE_SPI_LORA)"
+   ]
+  ],
+  "LORAINIT": [
+   [
+    "defined(USE_SPI)",
+    "defined(USE_SPI_LORA)"
+   ]
+  ],
+  "LORAOPTION": [
+   [
+    "defined(USE_SPI)",
+    "defined(USE_SPI_LORA)"
+   ]
+  ],
+  "LORASEND": [
+   [
+    "defined(USE_SPI)",
+    "defined(USE_SPI_LORA)"
+   ]
+  ],
+  "LORAWAN": [
+   [
+    "defined(USE_SPI_LORA)",
+    "defined(USE_LORAWAN_BRIDGE)"
+   ]
+  ],
+  "LORAWANAPPKEY": [
+   [
+    "defined(USE_SPI_LORA)",
+    "defined(USE_LORAWAN_BRIDGE)"
+   ]
+  ],
+  "LORAWANBRIDGE": [
+   [
+    "defined(USE_SPI_LORA)",
+    "defined(USE_LORAWAN_BRIDGE)"
+   ]
+  ],
+  "LORAWANDECODER": [
+   [
+    "defined(USE_SPI_LORA)",
+    "defined(USE_LORAWAN_BRIDGE)"
+   ]
+  ],
+  "LORAWANNAME": [
+   [
+    "defined(USE_SPI_LORA)",
+    "defined(USE_LORAWAN_BRIDGE)"
+   ]
+  ],
+  "LORAWANNODE": [
+   [
+    "defined(USE_SPI_LORA)",
+    "defined(USE_LORAWAN_BRIDGE)"
+   ]
+  ],
+  "LORAWANSEND": [
+   [
+    "defined(USE_SPI_LORA)",
+    "defined(USE_LORAWAN_BRIDGE)"
+   ]
+  ],
+  "MAGICSWITCHPULSE": [
+   [
+    "defined(USE_MAGIC_SWITCH)"
+   ]
+  ],
+  "MAGICSWITCHWINDOW": [
+   [
+    "defined(USE_MAGIC_SWITCH)"
+   ]
+  ],
+  "MARBELLA": [
+   [
+    "defined(USE_SPI)",
+    "defined(USE_TFA_MARBELLA)"
+   ]
+  ],
+  "MAXENERGY": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_ENERGY_MARGIN_DETECTION)",
+    "defined(USE_ENERGY_POWER_LIMIT)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "MAXENERGYSTART": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_ENERGY_MARGIN_DETECTION)",
+    "defined(USE_ENERGY_POWER_LIMIT)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "MAXPOWER": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_ENERGY_MARGIN_DETECTION)",
+    "defined(USE_ENERGY_POWER_LIMIT)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "MAXPOWERHOLD": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_ENERGY_MARGIN_DETECTION)",
+    "defined(USE_ENERGY_POWER_LIMIT)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "MAXPOWERWINDOW": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_ENERGY_MARGIN_DETECTION)",
+    "defined(USE_ENERGY_POWER_LIMIT)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "MEM": [
+   [
+    "defined(USE_RULES)",
+    "!defined(USE_SCRIPT)"
+   ]
+  ],
+  "MESHBROKER": [
+   [
+    "defined(USE_TASMESH)"
+   ]
+  ],
+  "MESHCHANNEL": [
+   [
+    "defined(USE_TASMESH)"
+   ]
+  ],
+  "MESHINTERVAL": [
+   [
+    "defined(USE_TASMESH)"
+   ]
+  ],
+  "MESHNODE": [
+   [
+    "defined(USE_TASMESH)"
+   ]
+  ],
+  "MESHPEER": [
+   [
+    "defined(USE_TASMESH)"
+   ]
+  ],
+  "MI32BATTERY": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31",
+    "defined(USE_MI_ESP32)"
+   ]
+  ],
+  "MI32BLOCK": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31",
+    "defined(USE_MI_ESP32)"
+   ]
+  ],
+  "MI32CFG": [
+   [
+    "defined(USE_MI_ESP32)"
+   ]
+  ],
+  "MI32KEY": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31",
+    "defined(USE_MI_ESP32)"
+   ],
+   [
+    "defined(USE_MI_ESP32)"
+   ]
+  ],
+  "MI32KEYS": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31",
+    "defined(USE_MI_ESP32)"
+   ]
+  ],
+  "MI32NAME": [
+   [
+    "defined(USE_MI_ESP32)"
+   ]
+  ],
+  "MI32OPTION": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31",
+    "defined(USE_MI_ESP32)"
+   ],
+   [
+    "defined(USE_MI_ESP32)"
+   ]
+  ],
+  "MI32PAGE": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31",
+    "defined(USE_MI_ESP32)"
+   ]
+  ],
+  "MI32PERIOD": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31",
+    "defined(USE_MI_ESP32)"
+   ]
+  ],
+  "MI32TIME": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31",
+    "defined(USE_MI_ESP32)"
+   ]
+  ],
+  "MI32TOPIC": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31",
+    "defined(USE_MI_ESP32)"
+   ]
+  ],
+  "MI32UNIT": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31",
+    "defined(USE_MI_ESP32)"
+   ]
+  ],
+  "MODBUSBAUDRATE": [
+   [
+    "defined(USE_MODBUS_BRIDGE)",
+    "!defined(USE_MODBUS_BRIDGE_TCP)"
+   ],
+   [
+    "defined(USE_MODBUS_BRIDGE)",
+    "defined(USE_MODBUS_BRIDGE_TCP)"
+   ]
+  ],
+  "MODBUSSEND": [
+   [
+    "defined(USE_MODBUS_BRIDGE)",
+    "!defined(USE_MODBUS_BRIDGE_TCP)"
+   ],
+   [
+    "defined(USE_MODBUS_BRIDGE)",
+    "defined(USE_MODBUS_BRIDGE_TCP)"
+   ]
+  ],
+  "MODBUSSERIALCONFIG": [
+   [
+    "defined(USE_MODBUS_BRIDGE)",
+    "!defined(USE_MODBUS_BRIDGE_TCP)"
+   ],
+   [
+    "defined(USE_MODBUS_BRIDGE)",
+    "defined(USE_MODBUS_BRIDGE_TCP)"
+   ]
+  ],
+  "MODBUSSERIALTIMEOUT": [
+   [
+    "defined(USE_MODBUS_BRIDGE)",
+    "!defined(USE_MODBUS_BRIDGE_TCP)"
+   ],
+   [
+    "defined(USE_MODBUS_BRIDGE)",
+    "defined(USE_MODBUS_BRIDGE_TCP)"
+   ]
+  ],
+  "MODULE": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "MODULEADDRESS": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "MODULES": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "MOTORMIS": [
+   [
+    "defined(USE_A4988_STEPPER)"
+   ]
+  ],
+  "MOTORMOVE": [
+   [
+    "defined(USE_A4988_STEPPER)"
+   ]
+  ],
+  "MOTORROTATE": [
+   [
+    "defined(USE_A4988_STEPPER)"
+   ]
+  ],
+  "MOTORRPM": [
+   [
+    "defined(USE_A4988_STEPPER)"
+   ]
+  ],
+  "MOTORSPR": [
+   [
+    "defined(USE_A4988_STEPPER)"
+   ]
+  ],
+  "MOTORTURN": [
+   [
+    "defined(USE_A4988_STEPPER)"
+   ]
+  ],
+  "MQTTCLIENT": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "MQTTDETACHRELAY": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "MQTTFINGERPRINT": [
+   [
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(USE_MQTT_TLS)"
+   ]
+  ],
+  "MQTTHOST": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "MQTTJSONONLY": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "MQTTKEEPALIVE": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "MQTTLOG": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "MQTTNORETAIN": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "MQTTPASSWORD": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "MQTTPORT": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "MQTTRETRY": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "MQTTTIMEOUT": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "MQTTTLS": [
+   [
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(USE_MQTT_TLS)"
+   ]
+  ],
+  "MQTTTLSFINGERPRINT": [
+   [
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(USE_MQTT_TLS)"
+   ]
+  ],
+  "MQTTUSER": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "MQTTWIFITIMEOUT": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "MULT": [
+   [
+    "defined(USE_RULES)",
+    "!defined(USE_SCRIPT)"
+   ]
+  ],
+  "MULTIPWM": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "NPBIT": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPBITL": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPBOOST": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPCHLORINE": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPCLRES": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPCONTROL": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPESCAPE": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPEXEC": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPFILTRATION": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPFILTRATIONMODE": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPFILTRATIONSPEED": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPGPERH": [
+   [
+    "defined(USE_NEOPOOL)",
+    "defined(NEOPOOL_EMULATE_GPERH)"
+   ]
+  ],
+  "NPHYDROLYSIS": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPIONIZATION": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPIONRES": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPLIGHT": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPONERROR": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPPH": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPPHMAX": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPPHMIN": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPPHRES": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPREAD": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPREADL": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPREADLSB": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPREADMSB": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPREDOX": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPRESULT": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPSAVE": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPSETOPTION": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPSO": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPTELEPERIOD": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPTIME": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPWRITE": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPWRITEL": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPWRITELSB": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NPWRITEMSB": [
+   [
+    "defined(USE_NEOPOOL)"
+   ]
+  ],
+  "NTPSERVER": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "OT_BLOR": [
+   [
+    "defined(USE_OPENTHERM)"
+   ]
+  ],
+  "OT_CH": [
+   [
+    "defined(USE_OPENTHERM)"
+   ]
+  ],
+  "OT_DHW": [
+   [
+    "defined(USE_OPENTHERM)"
+   ]
+  ],
+  "OT_FLAGS": [
+   [
+    "defined(USE_OPENTHERM)"
+   ]
+  ],
+  "OT_SAVE_SETPOINTS": [
+   [
+    "defined(USE_OPENTHERM)"
+   ]
+  ],
+  "OT_TBOILER": [
+   [
+    "defined(USE_OPENTHERM)"
+   ]
+  ],
+  "OT_TWATER": [
+   [
+    "defined(USE_OPENTHERM)"
+   ]
+  ],
+  "OUTPUTRELAYSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "PALETTE": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_LIGHT_PALETTE)"
+   ]
+  ],
+  "PASSWORD": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PDCURRENT": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_AP33772S)"
+   ]
+  ],
+  "PDOUTPUT": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_AP33772S)"
+   ]
+  ],
+  "PDVOLTAGE": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_AP33772S)"
+   ]
+  ],
+  "PERFLEVELAUTOTUNE": [
+   [
+    "defined(USE_THERMOSTAT)",
+    "defined(USE_PI_AUTOTUNING)"
+   ]
+  ],
+  "PIDAUTO": [
+   [
+    "defined(USE_PID)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PIDDSMOOTH": [
+   [
+    "defined(USE_PID)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PIDINITINT": [
+   [
+    "defined(USE_PID)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PIDMANUALPOWER": [
+   [
+    "defined(USE_PID)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PIDMAXINTERVAL": [
+   [
+    "defined(USE_PID)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PIDPB": [
+   [
+    "defined(USE_PID)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PIDPV": [
+   [
+    "defined(USE_PID)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PIDSHUTDOWN": [
+   [
+    "defined(USE_PID)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PIDSP": [
+   [
+    "defined(USE_PID)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PIDTD": [
+   [
+    "defined(USE_PID)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PIDTI": [
+   [
+    "defined(USE_PID)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PIDUPDATESECS": [
+   [
+    "defined(USE_PID)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PING": [
+   [
+    "defined(USE_PING)"
+   ]
+  ],
+  "PIPSOLARBAUDRATE": [
+   [
+    "defined(USE_PIPSOLAR)"
+   ]
+  ],
+  "PIPSOLARCUSTOM": [
+   [
+    "defined(USE_PIPSOLAR)"
+   ]
+  ],
+  "PIPSOLARDAT": [
+   [
+    "defined(USE_PIPSOLAR)"
+   ]
+  ],
+  "PIPSOLARPOLLVALUES": [
+   [
+    "defined(USE_PIPSOLAR)"
+   ]
+  ],
+  "PIPSOLARQED": [
+   [
+    "defined(USE_PIPSOLAR)"
+   ]
+  ],
+  "PIPSOLARQEH": [
+   [
+    "defined(USE_PIPSOLAR)"
+   ]
+  ],
+  "PIPSOLARQEM": [
+   [
+    "defined(USE_PIPSOLAR)"
+   ]
+  ],
+  "PIPSOLARQET": [
+   [
+    "defined(USE_PIPSOLAR)"
+   ]
+  ],
+  "PIPSOLARQEY": [
+   [
+    "defined(USE_PIPSOLAR)"
+   ]
+  ],
+  "PIPSOLARQFLAG": [
+   [
+    "defined(USE_PIPSOLAR)"
+   ]
+  ],
+  "PIPSOLARQPIRI": [
+   [
+    "defined(USE_PIPSOLAR)"
+   ]
+  ],
+  "PIPSOLARQT": [
+   [
+    "defined(USE_PIPSOLAR)"
+   ]
+  ],
+  "PIPSOLARSERIALCONFIG": [
+   [
+    "defined(USE_PIPSOLAR)"
+   ]
+  ],
+  "PIXELS": [
+   [
+    "defined(ESP8266) || defined(USE_WS2812_FORCE_NEOPIXELBUS)",
+    "defined(USE_LIGHT)"
+   ],
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "PIXELTYPE": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "POWER": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "POWERCAL": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "POWERDELTA": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_ENERGY_MARGIN_DETECTION)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "POWERHIGH": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_ENERGY_MARGIN_DETECTION)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "POWERLOCK": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "POWERLOW": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_ENERGY_MARGIN_DETECTION)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "POWERONFADE": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "POWERONSTATE": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "POWERRETAIN": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "POWERSET": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "PREFIX": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PRESSRES": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PROPBANDSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "PUBLISH": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PULSETIME": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PWM": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PWMCT": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "PWMDIMMERPWMS": [
+   [
+    "defined(USE_PWM_DIMMER)",
+    "defined(USE_LIGHT)",
+    "defined(USE_DEVICE_GROUPS)"
+   ]
+  ],
+  "PWMFREQUENCY": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "PWMRANGE": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "RC522RESET": [
+   [
+    "defined(USE_SPI)",
+    "defined(USE_RC522)"
+   ]
+  ],
+  "RC522STATUS": [
+   [
+    "defined(USE_SPI)",
+    "defined(USE_RC522)"
+   ]
+  ],
+  "RC522WATCHDOG": [
+   [
+    "defined(USE_SPI)",
+    "defined(USE_RC522)"
+   ]
+  ],
+  "RESET": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "RFCODE": [
+   [
+    "defined(USE_SONOFF_RF)"
+   ]
+  ],
+  "RFHIGH": [
+   [
+    "defined(USE_SONOFF_RF)"
+   ]
+  ],
+  "RFHOST": [
+   [
+    "defined(USE_SONOFF_RF)"
+   ]
+  ],
+  "RFKEY": [
+   [
+    "defined(USE_SONOFF_RF)"
+   ]
+  ],
+  "RFLOW": [
+   [
+    "defined(USE_SONOFF_RF)"
+   ]
+  ],
+  "RFPROTOCOL": [
+   [
+    "defined(USE_RC_SWITCH)"
+   ]
+  ],
+  "RFRAW": [
+   [
+    "defined(USE_SONOFF_RF)"
+   ]
+  ],
+  "RFSEND": [
+   [
+    "defined(USE_RC_SWITCH)"
+   ]
+  ],
+  "RFSYNC": [
+   [
+    "defined(USE_SONOFF_RF)"
+   ]
+  ],
+  "RFTIMEOUT": [
+   [
+    "defined(USE_RC_SWITCH)"
+   ],
+   [
+    "defined(USE_SONOFF_RF)"
+   ]
+  ],
+  "RGBWWTABLE": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "RGXADDRESS": [
+   [
+    "defined(USE_WIFI_RANGE_EXTENDER)"
+   ]
+  ],
+  "RGXCLIENTS": [
+   [
+    "defined(USE_WIFI_RANGE_EXTENDER)"
+   ]
+  ],
+  "RGXNAPT": [
+   [
+    "defined(USE_WIFI_RANGE_EXTENDER)",
+    "defined(USE_WIFI_RANGE_EXTENDER_NAPT)"
+   ]
+  ],
+  "RGXPASSWORD": [
+   [
+    "defined(USE_WIFI_RANGE_EXTENDER)"
+   ]
+  ],
+  "RGXPORT": [
+   [
+    "defined(USE_WIFI_RANGE_EXTENDER)",
+    "defined(USE_WIFI_RANGE_EXTENDER_NAPT)"
+   ]
+  ],
+  "RGXSSID": [
+   [
+    "defined(USE_WIFI_RANGE_EXTENDER)"
+   ]
+  ],
+  "RGXSTATE": [
+   [
+    "defined(USE_WIFI_RANGE_EXTENDER)"
+   ]
+  ],
+  "RGXSUBNET": [
+   [
+    "defined(USE_WIFI_RANGE_EXTENDER)"
+   ]
+  ],
+  "ROTATION": [
+   [
+    "defined(ESP8266) || defined(USE_WS2812_FORCE_NEOPIXELBUS)",
+    "defined(USE_LIGHT)"
+   ],
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "RTCNTPSERVER": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_RTC_CHIPS)",
+    "defined(RTC_NTP_SERVER)"
+   ]
+  ],
+  "RULE": [
+   [
+    "defined(USE_RULES)",
+    "!defined(USE_SCRIPT)"
+   ]
+  ],
+  "RULETIMER": [
+   [
+    "defined(USE_RULES)",
+    "!defined(USE_SCRIPT)"
+   ]
+  ],
+  "SAVEDATA": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "SBAUDRATE": [
+   [
+    "defined(USE_SERIAL_BRIDGE)"
+   ]
+  ],
+  "SCALE": [
+   [
+    "defined(USE_RULES)",
+    "!defined(USE_SCRIPT)"
+   ]
+  ],
+  "SCD30ALT": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD30)"
+   ]
+  ],
+  "SCD30AUTO": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD30)"
+   ]
+  ],
+  "SCD30CAL": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD30)"
+   ]
+  ],
+  "SCD30INT": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD30)"
+   ]
+  ],
+  "SCD30PRES": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD30)"
+   ]
+  ],
+  "SCD30TOFF": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD30)"
+   ]
+  ],
+  "SCD40ALT": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD40)"
+   ]
+  ],
+  "SCD40AUTO": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD40)"
+   ]
+  ],
+  "SCD40CAL": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD40)"
+   ]
+  ],
+  "SCD40FACT": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD40)"
+   ]
+  ],
+  "SCD40PERS": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD40)"
+   ]
+  ],
+  "SCD40PRES": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD40)"
+   ]
+  ],
+  "SCD40REIN": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD40)"
+   ]
+  ],
+  "SCD40SING": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD40)"
+   ]
+  ],
+  "SCD40SRHT": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD40)"
+   ]
+  ],
+  "SCD40STLP": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD40)"
+   ]
+  ],
+  "SCD40STOP": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD40)"
+   ]
+  ],
+  "SCD40STRT": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD40)"
+   ]
+  ],
+  "SCD40TEST": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD40)"
+   ]
+  ],
+  "SCD40TOFF": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SCD40)"
+   ]
+  ],
+  "SEEENCCOLOR": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SEESAW_ENCODER)"
+   ]
+  ],
+  "SEEENCSET": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SEESAW_ENCODER)"
+   ]
+  ],
+  "SEN6X": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SEN6X)"
+   ]
+  ],
+  "SEN6XALT": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SEN6X)"
+   ]
+  ],
+  "SEN6XCAL": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SEN6X)"
+   ]
+  ],
+  "SEN6XCLEAN": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SEN6X)"
+   ]
+  ],
+  "SEN6XHEAT": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SEN6X)"
+   ]
+  ],
+  "SEN6XNOXTUNE": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SEN6X)"
+   ]
+  ],
+  "SEN6XPRES": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SEN6X)"
+   ]
+  ],
+  "SEN6XTEMPACC": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SEN6X)"
+   ]
+  ],
+  "SEN6XTEMPOFF": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SEN6X)"
+   ]
+  ],
+  "SEN6XVOCSTATE": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SEN6X)"
+   ]
+  ],
+  "SEN6XVOCTUNE": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_SEN6X)"
+   ]
+  ],
+  "SENDMAIL": [
+   [
+    "defined(USE_WEBSERVER)",
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(USE_SENDMAIL)"
+   ]
+  ],
+  "SENSOR": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "SENSORINPUTSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "SENSORRETAIN": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "SEQUENCEOFFSET": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_DGR_LIGHT_SEQUENCE)"
+   ]
+  ],
+  "SERIALBUFFER": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "SERIALCONFIG": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "SERIALDELIMITER": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "SERIALSEND": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "SETSENSOR": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "SHDLEADINGEDGE": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_SHELLY_DIMMER)",
+    "defined(SHELLY_CMDS)"
+   ]
+  ],
+  "SHDWARMUPBRIGHTNESS": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_SHELLY_DIMMER)",
+    "defined(SHELLY_CMDS)"
+   ]
+  ],
+  "SHDWARMUPTIME": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_SHELLY_DIMMER)",
+    "defined(SHELLY_CMDS)"
+   ]
+  ],
+  "SHIFT595DEVICECOUNT": [
+   [
+    "defined(USE_SHIFT595)"
+   ]
+  ],
+  "SHOWHEAP": [
+   [
+    "defined(ESP8266)",
+    "defined(UMM_INLINE_METRICS)"
+   ]
+  ],
+  "SHUTTERBUTTON": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERCALIBRATION": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERCHANGE": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERCLOSE": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERCLOSEDURATION": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERCLOSEENDSTOPTIME": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERFREQUENCY": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERINVERT": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERINVERTWEBBUTTONS": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERLOCK": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERMODE": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERMOTORDELAY": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERMOTORSTOP": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTEROPEN": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTEROPENDURATION": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTEROPENENDSTOPTIME": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERPOSITION": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERPWMRANGE": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERRELAY": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERSETCLOSE": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERSETHALFWAY": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERSETOPEN": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERSETPOSITION": [
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERSETUP": [
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERSTOP": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERSTOPCLOSE": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERSTOPOPEN": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERSTOPPOSITION": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERSTOPRELAY": [
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERSTOPTOGGLE": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERSTOPTOGGLEDIR": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERTILT": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERTILTCHANGE": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERTILTCONFIG": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERTOGGLE": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERTOGGLEDIR": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)"
+   ],
+   [
+    "defined(USE_SHUTTER)"
+   ]
+  ],
+  "SHUTTERUNITTEST": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_SHUTTER)",
+    "defined(SHUTTER_UNITTEST)"
+   ],
+   [
+    "defined(USE_SHUTTER)",
+    "defined(SHUTTER_UNITTEST)"
+   ]
+  ],
+  "SLEEP": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "SPEED": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "SPEEDUNIT": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "SSERIALBUFFER": [
+   [
+    "defined(USE_SERIAL_BRIDGE)"
+   ]
+  ],
+  "SSERIALCONFIG": [
+   [
+    "defined(USE_SERIAL_BRIDGE)"
+   ]
+  ],
+  "SSERIALMODE": [
+   [
+    "defined(USE_SERIAL_BRIDGE)"
+   ]
+  ],
+  "SSERIALSEND": [
+   [
+    "defined(USE_SERIAL_BRIDGE)"
+   ]
+  ],
+  "SSID": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "SSPMDISPLAY": [
+   [
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_SONOFF_SPM)"
+   ]
+  ],
+  "SSPMDUMP": [
+   [
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_SONOFF_SPM)"
+   ]
+  ],
+  "SSPMENERGY": [
+   [
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_SONOFF_SPM)"
+   ]
+  ],
+  "SSPMENERGYTOTAL": [
+   [
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_SONOFF_SPM)"
+   ]
+  ],
+  "SSPMENERGYYESTERDAY": [
+   [
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_SONOFF_SPM)"
+   ]
+  ],
+  "SSPMHISTORY": [
+   [
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_SONOFF_SPM)"
+   ]
+  ],
+  "SSPMIAMHERE": [
+   [
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_SONOFF_SPM)"
+   ]
+  ],
+  "SSPMLOG": [
+   [
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_SONOFF_SPM)"
+   ]
+  ],
+  "SSPMMAP": [
+   [
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_SONOFF_SPM)"
+   ]
+  ],
+  "SSPMOVERLOAD": [
+   [
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_SONOFF_SPM)"
+   ]
+  ],
+  "SSPMPOWERONSTATE": [
+   [
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_SONOFF_SPM)"
+   ]
+  ],
+  "SSPMRESET": [
+   [
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_SONOFF_SPM)"
+   ]
+  ],
+  "SSPMSCAN": [
+   [
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_SONOFF_SPM)"
+   ]
+  ],
+  "SSPMSEND": [
+   [
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_SONOFF_SPM)"
+   ]
+  ],
+  "SSPMSIMULATE": [
+   [
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_SONOFF_SPM)",
+    "defined(SSPM_SIMULATE)"
+   ]
+  ],
+  "STATE": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "STATEEMERGENCYSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "STATERETAIN": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "STATETEXT": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "STATUS": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "STATUSRETAIN": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "STCC": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_STCC4)"
+   ]
+  ],
+  "STCCCAL": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_STCC4)"
+   ]
+  ],
+  "STCCPRES": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_STCC4)"
+   ]
+  ],
+  "STCCRESET": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_STCC4)"
+   ]
+  ],
+  "STCCRHT": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_STCC4)"
+   ]
+  ],
+  "STEPPIXELS": [
+   [
+    "defined(ESP8266) || defined(USE_WS2812_FORCE_NEOPIXELBUS)",
+    "defined(USE_LIGHT)"
+   ],
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "SUB": [
+   [
+    "defined(USE_RULES)",
+    "!defined(USE_SCRIPT)"
+   ]
+  ],
+  "SUBSCRIBE": [
+   [
+    "defined(USE_RULES)",
+    "!defined(USE_SCRIPT)"
+   ]
+  ],
+  "SUNRISE": [
+   [
+    "defined(USE_TIMERS)",
+    "defined(USE_SUNRISE)"
+   ]
+  ],
+  "SWITCHDEBOUNCE": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "SWITCHMODE": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "SWITCHRETAIN": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "SWITCHTEXT": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "SWITCHTOPIC": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "SYSLOG": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "TARIFF": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "TCPBAUDRATE": [
+   [
+    "defined(USE_TCP_BRIDGE)"
+   ]
+  ],
+  "TCPCONFIG": [
+   [
+    "defined(USE_TCP_BRIDGE)"
+   ]
+  ],
+  "TCPCONNECT": [
+   [
+    "defined(USE_TCP_BRIDGE)"
+   ]
+  ],
+  "TCPSTART": [
+   [
+    "defined(USE_TCP_BRIDGE)"
+   ]
+  ],
+  "TELEPERIOD": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "TELNET": [
+   [
+    "defined(USE_TELNET)"
+   ]
+  ],
+  "TELNETBUFFER": [
+   [
+    "defined(USE_TELNET)"
+   ]
+  ],
+  "TELNETCOLOR": [
+   [
+    "defined(USE_TELNET)"
+   ]
+  ],
+  "TEMPANTIWINDUPRESETSET": [
+   [
+    "defined(USE_THERMOSTAT)",
+    "!(defined(USE_PI_AUTOTUNING))"
+   ],
+   [
+    "defined(USE_THERMOSTAT)",
+    "defined(USE_PI_AUTOTUNING)"
+   ]
+  ],
+  "TEMPFORMATSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TEMPFROSTPROTECTSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TEMPHYSTSET": [
+   [
+    "defined(USE_THERMOSTAT)",
+    "!(defined(USE_PI_AUTOTUNING))"
+   ],
+   [
+    "defined(USE_THERMOSTAT)",
+    "defined(USE_PI_AUTOTUNING)"
+   ]
+  ],
+  "TEMPLATE": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "TEMPMEASUREDGRDREAD": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TEMPMEASUREDSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TEMPOFFSET": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "TEMPRAMPUPPIACCERRSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TEMPRES": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "TEMPRUPDELTINSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TEMPRUPDELTOUTSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TEMPTARGETSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TERATERM": [
+   [
+    "defined(USE_XYZMODEM)"
+   ]
+  ],
+  "THERMOSTATMODESET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TIME": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "TIMEALLOWRAMPUPSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TIMEDPOWER": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "TIMEDST": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "TIMEMANUALTOAUTOSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TIMEMAXACTIONSET": [
+   [
+    "defined(USE_THERMOSTAT)",
+    "!(defined(USE_PI_AUTOTUNING))"
+   ],
+   [
+    "defined(USE_THERMOSTAT)",
+    "defined(USE_PI_AUTOTUNING)"
+   ]
+  ],
+  "TIMEMINACTIONSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TIMEMINTURNOFFACTIONSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TIMEPICYCLESET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TIMEPIINTEGRREAD": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TIMEPIPROPORTREAD": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TIMEPROPSETCYCLETIME": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "TIMEPROPSETDEADTIME": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "TIMEPROPSETFALLBACKPOWER": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "TIMEPROPSETMAXUPDATEINTERVAL": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "TIMEPROPSETOUTPUTINVERT": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "TIMEPROP_SETPOWER_": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "TIMER": [
+   [
+    "defined(USE_TIMERS)"
+   ]
+  ],
+  "TIMERAMPUPCYCLESET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TIMERAMPUPMAXSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TIMERESETSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TIMERS": [
+   [
+    "defined(USE_TIMERS)"
+   ]
+  ],
+  "TIMESENSLOSTSET": [
+   [
+    "defined(USE_THERMOSTAT)"
+   ]
+  ],
+  "TIMESTD": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "TIMEZONE": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "TLSKEY": [
+   [
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(USE_MQTT_TLS) && defined(USE_MQTT_CLIENT_CERT)"
+   ]
+  ],
+  "TMCHATID": [
+   [
+    "defined(USE_TELEGRAM)"
+   ]
+  ],
+  "TMFINGERPRINT": [
+   [
+    "defined(USE_TELEGRAM)"
+   ]
+  ],
+  "TMPOLL": [
+   [
+    "defined(USE_TELEGRAM)"
+   ]
+  ],
+  "TMSEND": [
+   [
+    "defined(USE_TELEGRAM)"
+   ]
+  ],
+  "TMSTATE": [
+   [
+    "defined(USE_TELEGRAM)"
+   ]
+  ],
+  "TMTOKEN": [
+   [
+    "defined(USE_TELEGRAM)"
+   ]
+  ],
+  "TOPIC": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "TOUCHCAL": [
+   [
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(SOC_TOUCH_VERSION_1) || defined(SOC_TOUCH_VERSION_2)"
+   ]
+  ],
+  "TOUCHTHRES": [
+   [
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(SOC_TOUCH_VERSION_1) || defined(SOC_TOUCH_VERSION_2)"
+   ]
+  ],
+  "TRV": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3"
+   ]
+  ],
+  "TRVALIASASTOPIC": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3"
+   ]
+  ],
+  "TRVDEVLIST": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3"
+   ]
+  ],
+  "TRVHIDEFAILEDPOLL": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3"
+   ]
+  ],
+  "TRVMINRSSI": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3"
+   ]
+  ],
+  "TRVONLYALIASED": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3"
+   ]
+  ],
+  "TRVPERIOD": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3"
+   ]
+  ],
+  "TRVRESET": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3"
+   ]
+  ],
+  "TRVRETRIES": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3"
+   ]
+  ],
+  "TRVSCAN": [
+   [
+    "CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C5 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32S3"
+   ]
+  ],
+  "TUYADIMDELAY": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_TUYA_MCU_V2)"
+   ]
+  ],
+  "TUYAENUM": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_TUYA_MCU)"
+   ],
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_TUYA_MCU_V2)"
+   ]
+  ],
+  "TUYAENUMLIST": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_TUYA_MCU)"
+   ],
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_TUYA_MCU_V2)"
+   ]
+  ],
+  "TUYAMCU": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_TUYA_MCU)"
+   ],
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_TUYA_MCU_V2)"
+   ]
+  ],
+  "TUYAMCUBOOL": [
+   [
+    "defined(USE_TUYAMCUBR)"
+   ]
+  ],
+  "TUYAMCUENUM": [
+   [
+    "defined(USE_TUYAMCUBR)"
+   ]
+  ],
+  "TUYAMCUVALUE": [
+   [
+    "defined(USE_TUYAMCUBR)"
+   ]
+  ],
+  "TUYARGB": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_TUYA_MCU)"
+   ],
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_TUYA_MCU_V2)"
+   ]
+  ],
+  "TUYASEND": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_TUYA_MCU)"
+   ],
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_TUYA_MCU_V2)"
+   ]
+  ],
+  "TUYATEMPSETRES": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_TUYA_MCU)"
+   ],
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_TUYA_MCU_V2)"
+   ]
+  ],
+  "TWAISEND": [
+   [
+    "!CONFIG_IDF_TARGET_ESP32C5 && !CONFIG_IDF_TARGET_ESP32S31",
+    "defined(USE_ESP32_TWAI)",
+    "SOC_TWAI_SUPPORTED"
+   ]
+  ],
+  "UFS": [
+   [
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "UFSDELETE": [
+   [
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "UFSFREE": [
+   [
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "UFSFTP": [
+   [
+    "defined(USE_UFILESYS)",
+    "defined(USE_FTP)"
+   ]
+  ],
+  "UFSLIST": [
+   [
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "UFSRENAME": [
+   [
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "UFSRUN": [
+   [
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "UFSSERVE": [
+   [
+    "defined(USE_UFILESYS)",
+    "defined(UFILESYS_STATIC_SERVING)"
+   ]
+  ],
+  "UFSSIZE": [
+   [
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "UFSTYPE": [
+   [
+    "defined(USE_UFILESYS)"
+   ]
+  ],
+  "UNDOCA": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "UNSUBSCRIBE": [
+   [
+    "defined(USE_RULES)",
+    "!defined(USE_SCRIPT)"
+   ]
+  ],
+  "VAR": [
+   [
+    "defined(USE_RULES)",
+    "!defined(USE_SCRIPT)"
+   ]
+  ],
+  "VIRTUALCT": [
+   [
+    "defined(USE_LIGHT)",
+    "defined(USE_LIGHT_VIRTUAL_CT)"
+   ]
+  ],
+  "VOLTAGECAL": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "VOLTAGEHIGH": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_ENERGY_MARGIN_DETECTION)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "VOLTAGELOW": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)",
+    "defined(USE_ENERGY_MARGIN_DETECTION)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "VOLTAGESET": [
+   [
+    "defined(ESP8266)",
+    "defined(USE_ENERGY_SENSOR)"
+   ],
+   [
+    "defined(USE_ENERGY_SENSOR)"
+   ]
+  ],
+  "VOLTRES": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WAKEUP": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "WAKEUPDURATION": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "WATTRES": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WC": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCAEC": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCAECDSP": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCAECVALUE": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCAELEVEL": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCAGC": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCAGCGAIN": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCAPPENDPIC": [
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCAUTH": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCAWB": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCAWBGAIN": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCBERRYFRAMES": [
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCBPC": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCBRIGHTNESS": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCCLOCK": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCCOLORBAR": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCCONFIG": [
+   [
+    "defined(USE_CSI_WEBCAM)"
+   ]
+  ],
+  "WCCONTRAST": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCCONVERTFRAME": [
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)",
+    "defined(USE_WEBCAM_MOTION)"
+   ]
+  ],
+  "WCDCW": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCFEATURE": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCFLIP": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCGAINCEILING": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCGAMMACORRECT": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCGETFRAME": [
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCGETMOTIONPIXELS": [
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)",
+    "defined(USE_WEBCAM_MOTION)"
+   ]
+  ],
+  "WCGETPICSTORE": [
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCINIT": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCINTERRUPT": [
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCLENSCORRECT": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCMENUVIDEODISABLE": [
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCMIRROR": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCPOWEROFF": [
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCQUALITY": [
+   [
+    "defined(USE_CSI_WEBCAM)"
+   ]
+  ],
+  "WCRES": [
+   [
+    "defined(USE_CSI_WEBCAM)"
+   ]
+  ],
+  "WCRESOLUTION": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCRTSP": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)",
+    "defined(ENABLE_RTSPSERVER)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)",
+    "defined(ENABLE_RTSPSERVER)"
+   ]
+  ],
+  "WCSATURATION": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCSAVEPIC": [
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCSESSION": [
+   [
+    "defined(USE_CSI_WEBCAM)"
+   ]
+  ],
+  "WCSETDEFAULTS": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCSETMOTIONDETECT": [
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)",
+    "defined(USE_WEBCAM_MOTION)"
+   ]
+  ],
+  "WCSETOPTIONS": [
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCSETPICTURE": [
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)",
+    "defined(USE_WEBCAM_MOTION)"
+   ]
+  ],
+  "WCSPECIALEFFECT": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCSTARTTASK": [
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCSTATS": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCSTATUS": [
+   [
+    "defined(USE_CSI_WEBCAM)"
+   ]
+  ],
+  "WCSTOP": [
+   [
+    "defined(USE_CSI_WEBCAM)"
+   ]
+  ],
+  "WCSTOPTASK": [
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCSTREAM": [
+   [
+    "defined(USE_CSI_WEBCAM)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCWBMODE": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WCWINDOW": [
+   [
+    "defined(USE_CSI_WEBCAM)"
+   ]
+  ],
+  "WCWPC": [
+   [
+    "defined(USE_WEBCAM)",
+    "!defined(USE_WEBCAM_V2)"
+   ],
+   [
+    "defined(USE_WEBCAM)",
+    "defined(USE_WEBCAM_V2)"
+   ]
+  ],
+  "WEBBUTTON": [
+   [
+    "defined(USE_WEBSERVER)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WEBCANVAS": [
+   [
+    "defined(USE_WEBSERVER)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WEBCOLOR": [
+   [
+    "defined(USE_WEBSERVER)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WEBGETCONFIG": [
+   [
+    "defined(USE_WEBSERVER)",
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(USE_WEBGETCONFIG)"
+   ]
+  ],
+  "WEBLOG": [
+   [
+    "defined(USE_WEBSERVER)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WEBPASSWORD": [
+   [
+    "defined(USE_WEBSERVER)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WEBQUERY": [
+   [
+    "defined(USE_WEBSERVER)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WEBREFRESH": [
+   [
+    "defined(USE_WEBSERVER)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WEBRUN": [
+   [
+    "defined(USE_WEBSERVER)",
+    "!defined(FIRMWARE_MINIMAL)",
+    "defined(USE_WEBRUN)"
+   ]
+  ],
+  "WEBSEND": [
+   [
+    "defined(USE_WEBSERVER)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WEBSENSOR": [
+   [
+    "defined(USE_WEBSERVER)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WEBSERVER": [
+   [
+    "defined(USE_WEBSERVER)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WEBTIME": [
+   [
+    "defined(USE_WEBSERVER)",
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WEIGHTRES": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WGCONNECT": [
+   [
+    "defined(USE_WIREGUARD)"
+   ]
+  ],
+  "WGSTOP": [
+   [
+    "defined(USE_WIREGUARD)"
+   ]
+  ],
+  "WHITE": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "WHITEBLEND": [
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "WIDTH": [
+   [
+    "defined(ESP8266) || defined(USE_WS2812_FORCE_NEOPIXELBUS)",
+    "defined(USE_LIGHT)"
+   ],
+   [
+    "defined(USE_LIGHT)"
+   ]
+  ],
+  "WIEALLRESET": [
+   [
+    "defined(USE_WIEGAND)"
+   ]
+  ],
+  "WIEBITTIME": [
+   [
+    "defined(USE_WIEGAND)"
+   ]
+  ],
+  "WIEINTERBITTIME": [
+   [
+    "defined(USE_WIEGAND)"
+   ]
+  ],
+  "WIESEND": [
+   [
+    "defined(USE_WIEGAND)"
+   ]
+  ],
+  "WIETAG": [
+   [
+    "defined(USE_WIEGAND)"
+   ]
+  ],
+  "WIETAGGAP": [
+   [
+    "defined(USE_WIEGAND)"
+   ]
+  ],
+  "WIETAGSIZE": [
+   [
+    "defined(USE_WIEGAND)"
+   ]
+  ],
+  "WIETIMERESET": [
+   [
+    "defined(USE_WIEGAND)"
+   ]
+  ],
+  "WIFI": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WIFICONFIG": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WIFIPOWER": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WIFISCAN": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WIFITEST": [
+   [
+    "!defined(FIRMWARE_MINIMAL)"
+   ]
+  ],
+  "WIPER": [
+   [
+    "defined(USE_I2C)",
+    "defined(USE_DS3502)"
+   ]
+  ],
+  "XRECEIVE": [
+   [
+    "defined(USE_XYZMODEM)"
+   ]
+  ],
+  "XSEND": [
+   [
+    "defined(USE_XYZMODEM)"
+   ]
+  ],
+  "ZBATTRDUMP": [
+   [
+    "defined(USE_ZIGBEE)",
+    "defined(ZIGBEE_DOC)"
+   ]
+  ],
+  "ZBBIND": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBBINDSTATE": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBCIE": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBCONFIG": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBDATA": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBDEVICETOPIC": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBEMULATION": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBENDPOINTSUFFIX": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBENDPOINTTOPIC": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBENROLL": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBEZSPRECEIVE": [
+   [
+    "defined(USE_ZIGBEE)",
+    "defined(USE_ZIGBEE_EZSP)"
+   ]
+  ],
+  "ZBEZSPSEND": [
+   [
+    "defined(USE_ZIGBEE)",
+    "defined(USE_ZIGBEE_EZSP)"
+   ]
+  ],
+  "ZBFORGET": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBINFO": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBLEAVE": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBLIGHT": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBLISTEN": [
+   [
+    "defined(USE_ZIGBEE)",
+    "defined(USE_ZIGBEE_EZSP)"
+   ]
+  ],
+  "ZBLOAD": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBLOADDUMP": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBMAP": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBMODELID": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBNAME": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBNAMEKEY": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBNAMETOPIC": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBNOAUTOBIND": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBNOAUTOQUERY": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBNOPREFIX": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBOCCUPANCY": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBOMITDEVICE": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBPERMITJOIN": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBPING": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBPROBE": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBRECEIVEDTOPIC": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBRESET": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBRESTORE": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBSAVE": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBSCAN": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBSEND": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBSTATUS": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBUNBIND": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBUNLOAD": [
+   [
+    "defined(USE_ZIGBEE)"
+   ]
+  ],
+  "ZBZNPRECEIVE": [
+   [
+    "defined(USE_ZIGBEE)",
+    "defined(USE_ZIGBEE_ZNP)"
+   ]
+  ],
+  "ZBZNPSEND": [
+   [
+    "defined(USE_ZIGBEE)",
+    "defined(USE_ZIGBEE_ZNP)"
+   ]
+  ],
+  "ZCDIMMERGATETIME": [
+   [
+    "defined(USE_AC_ZERO_CROSS_DIMMER)"
+   ]
+  ],
+  "ZCDIMMERSET": [
+   [
+    "defined(USE_AC_ZERO_CROSS_DIMMER)"
+   ]
+  ]
+ },
  "doc": {
   "ARTNET": "ArtNet mode, listen to UDP port 6454 and force `SetOption148 1` for autorun at restart `Stop`, `Off` or `0`: Stop ArtNet mo",
   "BH1750MTIME": "umber (`1..2`)  `30..255` = set Measurement Time value. Not persistent after reboot. _(default = `69`)_",

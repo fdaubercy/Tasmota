@@ -11,6 +11,12 @@ ici, par `charge`, le fichier fige outils_docs/schemas/commandes_tasmota.json :
                (2, 211, 210 + payload...) dans la fonction de la commande (meme rang dans le tableau de pointeurs que
                dans la chaine des noms) ; RELUES (relues a la main) ; puis la doc : une commande connue que la doc dit
                redemarrer (AFFIRME) sans que le code le montre entre en « toujours », « doc Commands.md seulement »
+  gardes       {NOM: [chemin, ...]}  conditions du preprocesseur sous lesquelles la commande est compilee (plan autoexec-mqtt-tapp,
+               A3) ; chemin = [condition, ...] autour de la table et de sa ligne, telle que lecture_gardes.evalue la lit :
+               #ifdef X -> defined(X), #ifndef X -> !defined(X), #else -> !(E), #elif F -> !(E) puis F. Un chemin par presence
+               du nom (tables, fichiers, branches). Pas de cle = aucune garde connue, donc aucune alerte possible : commande
+               toujours compilee, Berry, SetOption. Dans le doute, moins de garde (voir _chemins_table) ; condition sur une
+               macro posee hors des en-tetes que lit le preprocesseur de l'env : retiree (voir genere)
   doc          {NOM: extrait}  mentions restart/reboot de Commands.md (depot tasmota/docs), croisees avec le code
 Classement : « si-change » seulement si une condition qui entoure le redemarrage compare au reglage en place (!=,
 strcmp...) ; une condition sur l'argument seul (data_len > 0, payload valide, case d'une SetOption) laisse « toujours »,
@@ -29,12 +35,14 @@ import json
 import re
 import sys
 import urllib.request
+from functools import lru_cache
 from pathlib import Path
 
 from build_sauvegarde import commande
 
 FIGE = Path("outils_docs/schemas/commandes_tasmota.json")
 URL_DOC = "https://raw.githubusercontent.com/tasmota/docs/master/docs/Commands.md"
+TABLE = r"char\s+(\w+)\s*\[\s*\]\s*(?:PROGMEM\s*)?=\s*([^;{]*);"
 CHAINE = r'"(?:\\.|[^"\\\n])*"'
 LEXEMES = re.compile(CHAINE + r"|'(?:\\.|[^'\\\n])*'|//[^\n]*|/\*.*?\*/", re.S)
 # comparaison au reglage en place : seul cas ou la ligne ne redemarre qu'au premier passage
@@ -79,18 +87,18 @@ def _premiere_branche(code):
 
 
 def _lit(fichier):
-    """(code, code1, blanc, defines) : commentaires et directives retires ; `code1` = premiere branche des #if ;
-    `blanc` = code aux chaines videes (accolades)."""
+    """(code, code1, blanc, defines, brut) : commentaires et directives retires ; `code1` = premiere branche des #if ;
+    `blanc` = code aux chaines videes (accolades) ; `brut` = directives gardees, memes lignes que `code`."""
     texte = fichier.read_text(encoding="utf-8", errors="replace").replace("\\\r\n", " ").replace("\\\n", " ")
     code = LEXEMES.sub(lambda m: m.group(0) if m.group(0)[0] in "\"'" else " ", texte)
     jeton = "(?:" + CHAINE + r"|\w+\b)"   # \b : un mot ne se coupe pas (retour arriere exponentiel sinon)
     defines = {}
     for k, v in re.findall(r"(?m)^[ \t]*#[ \t]*define[ \t]+(\w+)[ \t]+(" + jeton + r"(?:[ \t]*" + jeton + r")*)[ \t]*$", code):
         defines.setdefault(k, v)
-    code1 = _premiere_branche(code)
+    code1, brut = _premiere_branche(code), code
     code = re.sub(r"(?m)^[ \t]*#.*$", "", code)
     blanc = re.sub(CHAINE + r"|'(?:\\.|[^'\\\n])*'", lambda m: m.group(0)[0] + " " * (len(m.group(0)) - 2) + m.group(0)[0], code)
-    return code, code1, blanc, defines
+    return code, code1, blanc, defines, brut
 
 
 def _chaine(expr, locales, globales, pile=()):
@@ -101,6 +109,71 @@ def _chaine(expr, locales, globales, pile=()):
             res += lit[1:-1].replace('\\"', '"')
         elif ident not in pile:
             res += _chaine(locales.get(ident) if ident in locales else globales[ident], locales, globales, pile + (ident,))
+    return res
+
+
+@lru_cache(maxsize=None)
+def _piles(brut):
+    """Conditions autour de chaque ligne de `brut`, du dehors vers le dedans (voir l'en-tete pour leur ecriture). `#ifndef X`
+    suivi de `#define X` (garde d'inclusion) n'est pas une condition. #if desequilibres (#if dans une chaine brute) : aucune
+    condition sur tout le fichier, une pile fausse donnerait une fausse garde."""
+    pile, res, equilibre, attente = [], [], True, None      # pile : [[negations des branches passees, condition en cours], ...]
+    for ligne in brut.split("\n"):
+        d = re.match(r"[ \t]*#[ \t]*(\w+)(.*)", ligne)
+        mot, reste = (d.group(1), " ".join(d.group(2).split())) if d else ("", "")
+        if mot in ("elif", "else", "endif") and not pile:
+            equilibre = False
+        elif mot in ("if", "ifdef", "ifndef"):
+            pile.append([[], {"if": reste, "ifdef": f"defined({reste})", "ifndef": f"!defined({reste})"}[mot]])
+        elif mot == "endif":
+            pile.pop()
+        elif mot in ("elif", "else"):
+            prec, cour = pile[-1]
+            if cour:
+                prec.append(f"!({cour})")
+            pile[-1][1] = reste if mot == "elif" else None
+        elif mot == "define" and attente and reste.split()[:1] == [attente]:
+            pile[-1][1] = None
+        if d:
+            attente = reste if mot == "ifndef" else None
+        res.append(tuple(c for prec, cour in pile for c in prec + ([cour] if cour else [])))
+    return res if equilibre and not pile else [()] * len(res)
+
+
+def _chemins_table(nommes, emplacements, lit):
+    """{NOM: {chemin}} d'une table, `emplacements` = [(match de TABLE dans code, code, piles)], `nommes` = ses noms en lecture
+    globale, `lit` = valeur d'une ligne. Le prefixe (1er champ) s'applique a chaque nom. Dans le doute, moins de garde, jamais une
+    garde inventee : nom a cheval sur deux piles, prefixe seul, nom qu'aucune ligne n'apporte ou emplacement illisible -> garde
+    de la table seule."""
+    res, tables = {n: set() for n in nommes}, set()
+    for m, code, piles in emplacements:
+        table = piles[code.count("\n", 0, m.start())]
+        tables.add(table)
+        champs = [[]]                                       # [[(morceau, pile de sa ligne), ...], ...] : un par case de la chaine
+        try:
+            for i, ligne in enumerate(m.group(2).split("\n"), code.count("\n", 0, m.start(2))):
+                for j, bout in enumerate(lit(ligne).split("|")):
+                    if j:
+                        champs.append([])
+                    if bout:
+                        champs[-1].append((bout, piles[i]))
+        except (KeyError, TypeError):
+            for n in nommes:
+                res[n].add(table)
+            continue
+        prefixe, champs = "".join(b for b, _ in champs[0]), champs[1:]
+        if champs and not champs[-1]:                       # comme `noms` : la case vide finale n'est pas une commande
+            champs.pop()
+        for champ in champs:
+            brut = prefixe + "".join(b for b, _ in champ)
+            if brut:
+                piles_nom = {p for _, p in champ}
+                chemin = piles_nom.pop() if len(piles_nom) == 1 else table
+                nom = _nom(brut)
+                res.setdefault(nom, set()).add(chemin)
+    for chemins in res.values():
+        if not chemins:
+            chemins.update(tables)
     return res
 
 
@@ -176,9 +249,13 @@ def _setoptions(blanc, fonctions):
 
 
 def _berry(racine, connues):
+    """Ajoute les `add_cmd` des .be a `connues` ; rend leurs noms (un homonyme C y garde sa source C)."""
+    noms = set()
     for be in sorted((racine / "data" / "fs").glob("*.be")):
         for nom in re.findall(r"""tasmota\.add_cmd\(\s*['"](\w+)['"]""", be.read_text(encoding="utf-8", errors="replace")):
+            noms.add(_nom(nom))
             connues.setdefault(_nom(nom), be.relative_to(racine).as_posix())
+    return noms
 
 
 def extrait_doc(texte):
@@ -202,11 +279,13 @@ def genere(racine, doc=None):
     for f in sorted(lus, key=lambda f: f.name != "i18n.h"):
         for k, v in lus[f][3].items():
             globales.setdefault(k, v)
-    tables, tables1, pointeurs, synonymes, fonctions = {}, {}, {}, {}, {}
-    for f, (code, code1, blanc, _) in lus.items():
+    tables, tables1, pointeurs, synonymes, fonctions, lieux = {}, {}, {}, {}, {}, {}
+    for f, (code, code1, blanc, _, _) in lus.items():
         for dico, texte in ((tables, code), (tables1, code1)):
-            for m in re.finditer(r"char\s+(\w+)\s*\[\s*\]\s*(?:PROGMEM\s*)?=\s*([^;{]*);", texte):
+            for m in re.finditer(TABLE, texte):
                 dico.setdefault((f, m.group(1)), m.group(2))
+        for m in re.finditer(TABLE, code):                    # tous les emplacements d'un nom : branches #if/#else
+            lieux.setdefault(m.group(1), {}).setdefault(f, []).append(m)
         for m in re.finditer(r"\(\s*\*\s*(?:const\s+)?(\w+)\s*\[\s*\]\s*\)\s*\(\s*void\s*\)\s*(?:PROGMEM\s*)?=\s*\{([^}]*)\}", code1):
             pointeurs.setdefault((f, m.group(1)), [p.strip().lstrip("&").split("::")[-1] for p in m.group(2).split(",") if p.strip()])
         for m in re.finditer(r"SO_SYNONYMS\(\s*(\w+)\s*,([^)]*)\)", code):
@@ -221,7 +300,8 @@ def genere(racine, doc=None):
 
     rel = lambda f: f.relative_to(racine).as_posix()
     connues, redemarrent, anomalies = {}, {}, []
-    so, nombre = _setoptions("\n".join(b for c, c1, b, d in lus.values() if "SO32_49Index" in b),
+    chemins = {}
+    so, nombre = _setoptions("\n".join(v[2] for v in lus.values() if "SO32_49Index" in v[2]),
                              {n: v[0][1] for n, v in fonctions.items()})
     for n in range(nombre):
         connues[f"SETOPTION{n}"] = "tasmota/tasmota_support/support_command.ino::SetoptionDecode"
@@ -234,7 +314,7 @@ def genere(racine, doc=None):
         prefixe, *res = _chaine(expr, defines, globales).split("|")
         return prefixe, res[:-1] if res and not res[-1] else res
 
-    for f, (code, code1, blanc, defines) in lus.items():
+    for f, (code, code1, blanc, defines, _) in lus.items():
         for t, p, s in re.findall(r"DecodeCommand\(\s*(?:\w+::)?(\w+)\s*,\s*(?:\w+::)?(\w+)\s*(?:,\s*(\w+)\s*)?\)", code):
             ptrs = trouve(pointeurs, f, p)
             try:
@@ -246,6 +326,11 @@ def genere(racine, doc=None):
             for brut in tous:                         # toutes les branches des #ifdef : connue n'importe ou
                 if prefixe + brut:
                     connues.setdefault(_nom(prefixe + brut), f"{rel(f)}::{t}")
+            ici = lieux[t] if f not in lieux[t] else {f: lieux[t][f]}   # table d'un autre fichier : comme `trouve`, tous ses emplacements
+            emplacements = [(m, lus[g][0], _piles(lus[g][4])) for g, ms in ici.items() for m in ms]
+            for nom, ch in _chemins_table({_nom(prefixe + b) for b in tous if prefixe + b}, emplacements,
+                                          lambda ligne: _chaine(ligne, defines, globales)).items():
+                chemins.setdefault(nom, set()).update(ch)
             syn = synonymes.get(s, [])
             if ptrs is None or len(rangs) - len(syn) != len(ptrs):
                 anomalies.append(f"{rel(f)}::{t} : {len(rangs) - len(syn)} noms pour {len(ptrs or [])} fonctions")
@@ -264,7 +349,14 @@ def genere(racine, doc=None):
                 if quands and cle not in redemarrent:
                     redemarrent[cle] = {"quand": "toujours" if "toujours" in quands else "si-change",
                                         "source": f"{rel(defs[0][0])}::{fn}"}
-    _berry(racine, connues)
+    berry = _berry(racine, connues)
+    # une macro posee par un .ino (USE_MQTT_FILE, USE_I2S_MP3...) ou tasmota_globals.h (USE_TIMEPROP) echappe au preprocesseur de
+    # verifie_lib_ignore::defines_env, qui la croirait absente (fausse alerte « non compilee ») : sa condition est retiree
+    locales = {m for f, v in lus.items() if f.suffix != ".h" or f.name == "tasmota_globals.h"
+               for m in re.findall(r"(?m)^[ \t]*#[ \t]*define[ \t]+(\w+)", v[4])}
+    chemins = {n: {tuple(c for c in chemin if not locales & set(re.findall(r"\w+", c))) for chemin in ch} for n, ch in chemins.items()}
+    gardes = {n: [list(c) for c in sorted(ch)] for n, ch in sorted(chemins.items())
+              if n in connues and () not in ch and n not in berry and not re.fullmatch(r"SETOPTION\d*", n)}
     for nom, (quand, source) in RELUES.items():
         if nom in connues:
             redemarrent[nom] = {"quand": quand, "source": source}
@@ -274,7 +366,7 @@ def genere(racine, doc=None):
             redemarrent[nom] = dict(redemarrent[nom], source=redemarrent[nom]["source"] + " ; doc Commands.md")
         elif nom in connues and nom not in EXCLUES and AFFIRME.search(extrait):
             redemarrent[nom] = {"quand": "toujours", "source": "doc Commands.md seulement"}
-    return {"connues": dict(sorted(connues.items())), "redemarrent": dict(sorted(redemarrent.items())),
+    return {"connues": dict(sorted(connues.items())), "redemarrent": dict(sorted(redemarrent.items())), "gardes": gardes,
             "doc": dict(sorted(doc.items())), "anomalies": anomalies}
 
 
@@ -288,7 +380,7 @@ def verifie(racine, fige=None):
     fige = json.loads(Path(fige or Path(racine) / FIGE).read_text(encoding="utf-8"))
     code = genere(racine, doc=fige.get("doc", {}))
     ecarts = []
-    for cle in ("connues", "redemarrent"):
+    for cle in ("connues", "redemarrent", "gardes"):
         a, b = fige.get(cle, {}), code[cle]
         for nom in sorted(set(a) | set(b)):
             if a.get(nom) != b.get(nom):
@@ -313,7 +405,7 @@ def main():
             source = {"url": URL_DOC, "date": datetime.date.today().isoformat()}
         res = dict(genere(racine, doc=doc), doc_source=source)
         (racine / FIGE).write_text(json.dumps(res, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
-        print(f"{FIGE} : {len(res['connues'])} connues, {len(res['redemarrent'])} redemarrent, "
+        print(f"{FIGE} : {len(res['connues'])} connues, {len(res['redemarrent'])} redemarrent, {len(res['gardes'])} gardees, "
               f"{len(res['doc'])} mentions de la doc, {len(res['anomalies'])} anomalie(s)")
     if a.verifier:
         ecarts = verifie(racine)
