@@ -153,7 +153,7 @@ Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plut
 d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
 verrou), et ses bancs `test_build_serie.py` (**1215**), `test_build_page_chrome.py` (**1103**),
 `test_build_ota_fs.py` (**847**), `test_build_web.py` (**797**), `test_atelier_graphiques_page_chrome.py` (**732**, sonde de la page de l'atelier,
-decision du 2026-11-05), ainsi que `test_annuaire.py` (**523**,
+decision du 2026-11-05), `berry/banc_graphiques.py` (**561**, banc de la page /graphiques, decision du 2026-11-06), ainsi que `test_annuaire.py` (**523**,
 banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
 compteur.
 
