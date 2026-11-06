@@ -1473,16 +1473,6 @@
   }
  },
  "gardes": {
-  "ADCGPIO": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "ADCPARAM": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "ADD": [
    [
     "defined(USE_RULES)",
@@ -1492,21 +1482,6 @@
   "ALEXACTRANGE": [
    [
     "defined(USE_LIGHT)"
-   ]
-  ],
-  "ALTITUDE": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "AMPRES": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "AP": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "ARTNET": [
@@ -1524,21 +1499,6 @@
    [
     "defined(USE_LIGHT)",
     "defined(USE_LIGHT_ARTNET)"
-   ]
-  ],
-  "BACKLOG": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "BATTERYPERCENTAGE": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "BAUDRATE": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "BH1750MTIME": [
@@ -1655,16 +1615,6 @@
     "defined(USE_UFILESYS)"
    ]
   ],
-  "BLINKCOUNT": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "BLINKTIME": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "BR": [
    [
     "defined(USE_BERRY)"
@@ -1679,26 +1629,6 @@
   "BRRESTART": [
    [
     "defined(USE_BERRY)"
-   ]
-  ],
-  "BSSID": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "BUTTONDEBOUNCE": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "BUTTONRETAIN": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "BUTTONTOPIC": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "BUZZER": [
@@ -1795,7 +1725,6 @@
   "CORS": [
    [
     "defined(USE_WEBSERVER)",
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(USE_CORS)"
    ]
   ],
@@ -1822,11 +1751,6 @@
   "COUNTERTYPE": [
    [
     "defined(USE_COUNTER)"
-   ]
-  ],
-  "CPUFREQUENCY": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "CT": [
@@ -1976,45 +1900,30 @@
     "defined(USE_DEEPSLEEP)"
    ]
   ],
-  "DELAY": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "DEVGROUPNAME": [
    [
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(USE_DEVICE_GROUPS)"
    ]
   ],
   "DEVGROUPSEND": [
    [
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(USE_DEVICE_GROUPS)",
     "defined(USE_DEVICE_GROUPS_SEND)"
    ]
   ],
   "DEVGROUPSHARE": [
    [
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(USE_DEVICE_GROUPS)"
    ]
   ],
   "DEVGROUPSTATUS": [
    [
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(USE_DEVICE_GROUPS)"
    ]
   ],
   "DEVGROUPTIE": [
    [
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(USE_DEVICE_GROUPS)"
-   ]
-  ],
-  "DEVICENAME": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "DHTDELAY": [
@@ -2218,16 +2127,6 @@
     "defined(USE_DISPLAY)"
    ]
   ],
-  "DNSTIMEOUT": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "DRIVER": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "DRVTEXT": [
    [
     "defined(USE_DRV_FILE_DEMO)"
@@ -2338,7 +2237,6 @@
   "EMULATION": [
    [
     "defined(USE_WEBSERVER)",
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(USE_EMULATION)"
    ]
   ],
@@ -2382,11 +2280,6 @@
    ],
    [
     "defined(USE_ENERGY_SENSOR)"
-   ]
-  ],
-  "ENERGYRES": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "ENERGYTODAY": [
@@ -2540,25 +2433,9 @@
     "defined(USE_SONOFF_IFAN)"
    ]
   ],
-  "FILEDOWNLOAD": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "FILELOG": [
    [
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(USE_UFILESYS)"
-   ]
-  ],
-  "FILEUPLOAD": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "FN": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "FPCOUNT": [
@@ -2618,11 +2495,6 @@
     "defined(USE_FM24CXX)"
    ]
   ],
-  "FREQRES": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "FREQUENCYCAL": [
    [
     "defined(ESP8266)",
@@ -2639,16 +2511,6 @@
    ],
    [
     "defined(USE_ENERGY_SENSOR)"
-   ]
-  ],
-  "FRIENDLYNAME": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "FULLTOPIC": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "GAUGE": [
@@ -2671,21 +2533,6 @@
     "defined(USE_VID6608)"
    ]
   ],
-  "GLOBALHUM": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "GLOBALPRESS": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "GLOBALTEMP": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "GM861DUMP": [
    [
     "defined(USE_GM861)"
@@ -2704,26 +2551,6 @@
   "GM861ZONE": [
    [
     "defined(USE_GM861)"
-   ]
-  ],
-  "GPIO": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "GPIOREAD": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "GPIOS": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "GROUPTOPIC": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "GVPORT": [
@@ -2829,42 +2656,24 @@
   "HOSTED": [
    [
     "defined(CONFIG_ESP_WIFI_REMOTE_ENABLED)",
-    "__has_include(\"esp_hosted.h\")",
-    "!defined(FIRMWARE_SAFEBOOT)"
+    "__has_include(\"esp_hosted.h\")"
    ]
   ],
   "HOSTEDLOAD": [
    [
     "defined(CONFIG_ESP_WIFI_REMOTE_ENABLED)",
-    "__has_include(\"esp_hosted.h\")",
-    "!defined(FIRMWARE_SAFEBOOT)"
+    "__has_include(\"esp_hosted.h\")"
    ]
   ],
   "HOSTEDOTA": [
    [
     "defined(CONFIG_ESP_WIFI_REMOTE_ENABLED)",
-    "__has_include(\"esp_hosted.h\")",
-    "!defined(FIRMWARE_SAFEBOOT)"
-   ]
-  ],
-  "HOSTNAME": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
+    "__has_include(\"esp_hosted.h\")"
    ]
   ],
   "HOTPLUG": [
    [
     "defined(USE_HOTPLUG)"
-   ]
-  ],
-  "HUMOFFSET": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "HUMRES": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "HVACMODBUS": [
@@ -2981,7 +2790,6 @@
   ],
   "I2CDRIVER": [
    [
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(USE_I2C)"
    ]
   ],
@@ -2992,7 +2800,6 @@
   ],
   "I2CSCAN": [
    [
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(USE_I2C)"
    ]
   ],
@@ -3179,16 +2986,6 @@
     "defined(USE_INFLUXDB)"
    ]
   ],
-  "INFO": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "INFORETAIN": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "INPUTSWITCHSET": [
    [
     "defined(USE_THERMOSTAT)"
@@ -3197,16 +2994,6 @@
   "INPUTSWITCHUSE": [
    [
     "defined(USE_THERMOSTAT)"
-   ]
-  ],
-  "INTERLOCK": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "IPADDRESS": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "IRHVAC": [
@@ -3220,16 +3007,6 @@
    ],
    [
     "defined(USE_IR_REMOTE_FULL)"
-   ]
-  ],
-  "JSON": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "JSONPP": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "KEELOQSENDBUTTON": [
@@ -3448,7 +3225,6 @@
   ],
   "LDO": [
    [
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(SOC_GP_LDO_SUPPORTED)"
    ]
   ],
@@ -3461,49 +3237,9 @@
     "defined(USE_LIGHT)"
    ]
   ],
-  "LEDMASK": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "LEDPOWER": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "LEDPWMMODE": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "LEDPWMOFF": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "LEDPWMON": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "LEDSTATE": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "LEDTABLE": [
    [
     "defined(USE_LIGHT)"
-   ]
-  ],
-  "LOGHOST": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "LOGPORT": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "LONGITUDE": [
@@ -3802,11 +3538,6 @@
     "defined(USE_MODBUS_BRIDGE_TCP)"
    ]
   ],
-  "MODULE": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "MODULEADDRESS": [
    [
     "defined(ESP8266)",
@@ -3814,11 +3545,6 @@
    ],
    [
     "defined(USE_ENERGY_SENSOR)"
-   ]
-  ],
-  "MODULES": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "MOTORMIS": [
@@ -3851,87 +3577,19 @@
     "defined(USE_A4988_STEPPER)"
    ]
   ],
-  "MQTTCLIENT": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "MQTTDETACHRELAY": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "MQTTFINGERPRINT": [
    [
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(USE_MQTT_TLS)"
-   ]
-  ],
-  "MQTTHOST": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "MQTTJSONONLY": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "MQTTKEEPALIVE": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "MQTTLOG": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "MQTTNORETAIN": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "MQTTPASSWORD": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "MQTTPORT": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "MQTTRETRY": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "MQTTTIMEOUT": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "MQTTTLS": [
    [
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(USE_MQTT_TLS)"
    ]
   ],
   "MQTTTLSFINGERPRINT": [
    [
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(USE_MQTT_TLS)"
-   ]
-  ],
-  "MQTTUSER": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "MQTTWIFITIMEOUT": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "MULT": [
@@ -4126,11 +3784,6 @@
     "defined(USE_NEOPOOL)"
    ]
   ],
-  "NTPSERVER": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "OT_BLOR": [
    [
     "defined(USE_OPENTHERM)"
@@ -4177,11 +3830,6 @@
     "defined(USE_LIGHT_PALETTE)"
    ]
   ],
-  "PASSWORD": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "PDCURRENT": [
    [
     "defined(USE_I2C)",
@@ -4208,74 +3856,62 @@
   ],
   "PIDAUTO": [
    [
-    "defined(USE_PID)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_PID)"
    ]
   ],
   "PIDDSMOOTH": [
    [
-    "defined(USE_PID)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_PID)"
    ]
   ],
   "PIDINITINT": [
    [
-    "defined(USE_PID)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_PID)"
    ]
   ],
   "PIDMANUALPOWER": [
    [
-    "defined(USE_PID)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_PID)"
    ]
   ],
   "PIDMAXINTERVAL": [
    [
-    "defined(USE_PID)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_PID)"
    ]
   ],
   "PIDPB": [
    [
-    "defined(USE_PID)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_PID)"
    ]
   ],
   "PIDPV": [
    [
-    "defined(USE_PID)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_PID)"
    ]
   ],
   "PIDSHUTDOWN": [
    [
-    "defined(USE_PID)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_PID)"
    ]
   ],
   "PIDSP": [
    [
-    "defined(USE_PID)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_PID)"
    ]
   ],
   "PIDTD": [
    [
-    "defined(USE_PID)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_PID)"
    ]
   ],
   "PIDTI": [
    [
-    "defined(USE_PID)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_PID)"
    ]
   ],
   "PIDUPDATESECS": [
    [
-    "defined(USE_PID)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_PID)"
    ]
   ],
   "PING": [
@@ -4362,11 +3998,6 @@
     "defined(USE_LIGHT)"
    ]
   ],
-  "POWER": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "POWERCAL": [
    [
     "defined(ESP8266)",
@@ -4396,11 +4027,6 @@
     "defined(USE_ENERGY_SENSOR)"
    ]
   ],
-  "POWERLOCK": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "POWERLOW": [
    [
     "defined(ESP8266)",
@@ -4416,16 +4042,6 @@
     "defined(USE_LIGHT)"
    ]
   ],
-  "POWERONSTATE": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "POWERRETAIN": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "POWERSET": [
    [
     "defined(ESP8266)",
@@ -4435,34 +4051,9 @@
     "defined(USE_ENERGY_SENSOR)"
    ]
   ],
-  "PREFIX": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "PRESSRES": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "PROPBANDSET": [
    [
     "defined(USE_THERMOSTAT)"
-   ]
-  ],
-  "PUBLISH": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "PULSETIME": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "PWM": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "PWMCT": [
@@ -4475,16 +4066,6 @@
     "defined(USE_PWM_DIMMER)",
     "defined(USE_LIGHT)",
     "defined(USE_DEVICE_GROUPS)"
-   ]
-  ],
-  "PWMFREQUENCY": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "PWMRANGE": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "RC522RESET": [
@@ -4503,11 +4084,6 @@
    [
     "defined(USE_SPI)",
     "defined(USE_RC522)"
-   ]
-  ],
-  "RESET": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "RFCODE": [
@@ -4636,11 +4212,6 @@
    [
     "defined(USE_RULES)",
     "!defined(USE_SCRIPT)"
-   ]
-  ],
-  "SAVEDATA": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "SBAUDRATE": [
@@ -4855,13 +4426,7 @@
   "SENDMAIL": [
    [
     "defined(USE_WEBSERVER)",
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(USE_SENDMAIL)"
-   ]
-  ],
-  "SENSOR": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "SENSORINPUTSET": [
@@ -4869,40 +4434,10 @@
     "defined(USE_THERMOSTAT)"
    ]
   ],
-  "SENSORRETAIN": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "SEQUENCEOFFSET": [
    [
     "defined(USE_LIGHT)",
     "defined(USE_DGR_LIGHT_SEQUENCE)"
-   ]
-  ],
-  "SERIALBUFFER": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "SERIALCONFIG": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "SERIALDELIMITER": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "SERIALSEND": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "SETSENSOR": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "SHDLEADINGEDGE": [
@@ -5260,19 +4795,9 @@
     "defined(SHUTTER_UNITTEST)"
    ]
   ],
-  "SLEEP": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "SPEED": [
    [
     "defined(USE_LIGHT)"
-   ]
-  ],
-  "SPEEDUNIT": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "SSERIALBUFFER": [
@@ -5293,11 +4818,6 @@
   "SSERIALSEND": [
    [
     "defined(USE_SERIAL_BRIDGE)"
-   ]
-  ],
-  "SSID": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "SSPMDISPLAY": [
@@ -5391,34 +4911,9 @@
     "defined(SSPM_SIMULATE)"
    ]
   ],
-  "STATE": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "STATEEMERGENCYSET": [
    [
     "defined(USE_THERMOSTAT)"
-   ]
-  ],
-  "STATERETAIN": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "STATETEXT": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "STATUS": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "STATUSRETAIN": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "STCC": [
@@ -5478,36 +4973,6 @@
     "defined(USE_SUNRISE)"
    ]
   ],
-  "SWITCHDEBOUNCE": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "SWITCHMODE": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "SWITCHRETAIN": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "SWITCHTEXT": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "SWITCHTOPIC": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "SYSLOG": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "TARIFF": [
    [
     "defined(ESP8266)",
@@ -5535,11 +5000,6 @@
   "TCPSTART": [
    [
     "defined(USE_TCP_BRIDGE)"
-   ]
-  ],
-  "TELEPERIOD": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "TELNET": [
@@ -5587,11 +5047,6 @@
     "defined(USE_PI_AUTOTUNING)"
    ]
   ],
-  "TEMPLATE": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "TEMPMEASUREDGRDREAD": [
    [
     "defined(USE_THERMOSTAT)"
@@ -5602,19 +5057,9 @@
     "defined(USE_THERMOSTAT)"
    ]
   ],
-  "TEMPOFFSET": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "TEMPRAMPUPPIACCERRSET": [
    [
     "defined(USE_THERMOSTAT)"
-   ]
-  ],
-  "TEMPRES": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "TEMPRUPDELTINSET": [
@@ -5642,24 +5087,9 @@
     "defined(USE_THERMOSTAT)"
    ]
   ],
-  "TIME": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "TIMEALLOWRAMPUPSET": [
    [
     "defined(USE_THERMOSTAT)"
-   ]
-  ],
-  "TIMEDPOWER": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "TIMEDST": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "TIMEMANUALTOAUTOSET": [
@@ -5702,36 +5132,6 @@
     "defined(USE_THERMOSTAT)"
    ]
   ],
-  "TIMEPROPSETCYCLETIME": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "TIMEPROPSETDEADTIME": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "TIMEPROPSETFALLBACKPOWER": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "TIMEPROPSETMAXUPDATEINTERVAL": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "TIMEPROPSETOUTPUTINVERT": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "TIMEPROP_SETPOWER_": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "TIMER": [
    [
     "defined(USE_TIMERS)"
@@ -5762,19 +5162,8 @@
     "defined(USE_THERMOSTAT)"
    ]
   ],
-  "TIMESTD": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "TIMEZONE": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "TLSKEY": [
    [
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(USE_MQTT_TLS) && defined(USE_MQTT_CLIENT_CERT)"
    ]
   ],
@@ -5808,20 +5197,13 @@
     "defined(USE_TELEGRAM)"
    ]
   ],
-  "TOPIC": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "TOUCHCAL": [
    [
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(SOC_TOUCH_VERSION_1) || defined(SOC_TOUCH_VERSION_2)"
    ]
   ],
   "TOUCHTHRES": [
    [
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(SOC_TOUCH_VERSION_1) || defined(SOC_TOUCH_VERSION_2)"
    ]
   ],
@@ -6076,11 +5458,6 @@
     "defined(USE_ENERGY_SENSOR)"
    ]
   ],
-  "VOLTRES": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
   "WAKEUP": [
    [
     "defined(USE_LIGHT)"
@@ -6089,11 +5466,6 @@
   "WAKEUPDURATION": [
    [
     "defined(USE_LIGHT)"
-   ]
-  ],
-  "WATTRES": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "WC": [
@@ -6552,87 +5924,69 @@
   ],
   "WEBBUTTON": [
    [
-    "defined(USE_WEBSERVER)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_WEBSERVER)"
    ]
   ],
   "WEBCANVAS": [
    [
-    "defined(USE_WEBSERVER)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_WEBSERVER)"
    ]
   ],
   "WEBCOLOR": [
    [
-    "defined(USE_WEBSERVER)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_WEBSERVER)"
    ]
   ],
   "WEBGETCONFIG": [
    [
     "defined(USE_WEBSERVER)",
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(USE_WEBGETCONFIG)"
    ]
   ],
   "WEBLOG": [
    [
-    "defined(USE_WEBSERVER)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_WEBSERVER)"
    ]
   ],
   "WEBPASSWORD": [
    [
-    "defined(USE_WEBSERVER)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_WEBSERVER)"
    ]
   ],
   "WEBQUERY": [
    [
-    "defined(USE_WEBSERVER)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_WEBSERVER)"
    ]
   ],
   "WEBREFRESH": [
    [
-    "defined(USE_WEBSERVER)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_WEBSERVER)"
    ]
   ],
   "WEBRUN": [
    [
     "defined(USE_WEBSERVER)",
-    "!defined(FIRMWARE_MINIMAL)",
     "defined(USE_WEBRUN)"
    ]
   ],
   "WEBSEND": [
    [
-    "defined(USE_WEBSERVER)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_WEBSERVER)"
    ]
   ],
   "WEBSENSOR": [
    [
-    "defined(USE_WEBSERVER)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_WEBSERVER)"
    ]
   ],
   "WEBSERVER": [
    [
-    "defined(USE_WEBSERVER)",
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_WEBSERVER)"
    ]
   ],
   "WEBTIME": [
    [
-    "defined(USE_WEBSERVER)",
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "WEIGHTRES": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
+    "defined(USE_WEBSERVER)"
    ]
   ],
   "WGCONNECT": [
@@ -6702,31 +6056,6 @@
   "WIETIMERESET": [
    [
     "defined(USE_WIEGAND)"
-   ]
-  ],
-  "WIFI": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "WIFICONFIG": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "WIFIPOWER": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "WIFISCAN": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
-   ]
-  ],
-  "WIFITEST": [
-   [
-    "!defined(FIRMWARE_MINIMAL)"
    ]
   ],
   "WIPER": [

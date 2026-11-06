@@ -150,6 +150,9 @@ const char kBrCommands[] PROGMEM = "|"
 #ifdef USE_LOCALE
 const char kLocaleCommands[] PROGMEM = "|Locale";
 #endif
+#ifndef FIRMWARE_MINIMAL
+const char kMinCommands[] PROGMEM = "|HorsMinimal";
+#endif
 #ifdef USE_Z2
 #ifdef USE_LOCALE
 const char kLocale2Commands[] PROGMEM = "|LocaleGardee";
@@ -210,6 +213,7 @@ bool Xdrv98(uint32_t function) {
   DecodeCommand(kBrCommands, BrCommand);
   DecodeCommand(kLocaleCommands, LocaleCommand);
   DecodeCommand(kLocale2Commands, Locale2Command);
+  DecodeCommand(kMinCommands, MinCommand);
   DecodeCommand(kNicheCommands, NicheCommand);
   DecodeCommand(kDoubleCommands, DoubleCommand);
   DecodeCommand(kBisCommands, BisCommand);
@@ -299,7 +303,7 @@ def regles_gardes():
         for nom in sorted(set(g) | set(ATTENDU_GARDES)):
             verifie(g.get(nom), ATTENDU_GARDES.get(nom), f"gardes {nom}")
         # chacune : connue, mais sans garde (toujours compilee, Berry, SetOption, #if desequilibres, a cheval sur deux piles)
-        for nom in ("HOSTNAME", "LIBRE", "APRES", "FIN", "FINBR", "MIXTE", "DEUXFOIS", "INCLUSE", "LOCALE", "ENBERRY", "SETOPTION77",
+        for nom in ("HOSTNAME", "LIBRE", "APRES", "FIN", "FINBR", "MIXTE", "DEUXFOIS", "INCLUSE", "LOCALE", "HORSMINIMAL", "ENBERRY", "SETOPTION77",
                     "SETOPTION78", "DESEQUILIBRE", "ENTROP"):
             verifie((nom in c, nom in g), (True, False), f"connue sans garde : {nom}")
         verifie("BISSINON" in c or "BISSINON" in g, False, "2e definition d'une table : nom hors de connues (limite existante), pas de garde")
@@ -365,11 +369,9 @@ def reel():
     g = d.get("gardes", {})
     verifie(bool(g.get("ZBSEND")) and all("defined(USE_ZIGBEE)" in ch for ch in g["ZBSEND"]), True, "ZBSEND gardee par USE_ZIGBEE")
     verifie(bool(g.get("I2CSCAN")) and all("defined(USE_I2C)" in ch for ch in g["I2CSCAN"]), True, "I2CSCAN gardee par USE_I2C (dans la table)")
-    for nom in ("RESTART", "UPGRADE", "SETOPTION146", "REGLAGELOG"):
+    for nom in ("HOSTNAME", "RESTART", "UPGRADE", "SETOPTION146", "REGLAGELOG"):
         verifie(nom in g, False, f"{nom} sans garde")
-    # le plan attendait HOSTNAME sans garde ; support_command.ino la range sous #ifndef FIRMWARE_MINIMAL, vraie sur toutes nos cartes
-    verifie(g.get("HOSTNAME"), [["!defined(FIRMWARE_MINIMAL)"]], "HOSTNAME : seule la garde du firmware minimal")
-    verifie(lg.evalue(g["HOSTNAME"][0][0], lg.Contexte({}), {}) if "HOSTNAME" in g else None, True, "HOSTNAME : garde vraie hors firmware minimal")
+    verifie([n for n, v in g.items() if not v or [] in v], [], "aucune garde vide (A4 alerterait a coup sur)")
     for macro in ("USE_MQTT_FILE", "USE_I2S_MP3", "USE_TIMEPROP"):   # le preprocesseur de A4 les croirait absentes : FileUpload, I2SPlay en fausse alerte
         verifie(any(macro in x for v in g.values() for ch in v for x in ch), False, f"aucune condition sur {macro} (posee par un .ino)")
     verifie(set(g) <= set(c), True, "gardes : que des commandes connues")
@@ -410,6 +412,7 @@ MUTANTS = {   # regle de protection -> (texte du module, mutation, resultat faux
     "gardes : chemins de deux tables non reunis": ("chemins.setdefault(nom, set()).update(ch)", "chemins[nom] = ch",
                                                    lambda d: "DEUXFOIS" in d["gardes"] and len(d["gardes"]["PARTAGEE"]) == 1),
     "gardes : macro d'un .ino gardee": ('if not locales & set(re.findall(r"\\w+", c))', "", lambda d: "LOCALE" in d["gardes"]),
+    "gardes : firmware minimal garde": ('locales |= {"FIRMWARE_MINIMAL", "FIRMWARE_SAFEBOOT"}', "pass", lambda d: "HORSMINIMAL" in d["gardes"]),
     "gardes : presence libre oubliee": (" and () not in ch", "", lambda d: "DEUXFOIS" in d["gardes"]),
     "gardes : garde d'inclusion gardee": ("pile[-1][1] = None", "pass", lambda d: "INCLUSE" in d["gardes"]),
     "gardes : emplacement illisible ignore": ("res[n].add(table)", "pass", lambda d: d["gardes"]["SEULSI"] == [["defined(USE_M)"]]),

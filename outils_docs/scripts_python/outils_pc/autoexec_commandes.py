@@ -16,7 +16,8 @@ ici, par `charge`, le fichier fige outils_docs/schemas/commandes_tasmota.json :
                #ifdef X -> defined(X), #ifndef X -> !defined(X), #else -> !(E), #elif F -> !(E) puis F. Un chemin par presence
                du nom (tables, fichiers, branches). Pas de cle = aucune garde connue, donc aucune alerte possible : commande
                toujours compilee, Berry, SetOption. Dans le doute, moins de garde (voir _chemins_table) ; condition sur une
-               macro posee hors des en-tetes que lit le preprocesseur de l'env : retiree (voir genere)
+               macro posee hors des en-tetes que lit le preprocesseur de l'env, ou firmware intermediaire
+               (FIRMWARE_MINIMAL, FIRMWARE_SAFEBOOT) : retiree (voir genere)
   doc          {NOM: extrait}  mentions restart/reboot de Commands.md (depot tasmota/docs), croisees avec le code
 Classement : « si-change » seulement si une condition qui entoure le redemarrage compare au reglage en place (!=,
 strcmp...) ; une condition sur l'argument seul (data_len > 0, payload valide, case d'une SetOption) laisse « toujours »,
@@ -354,6 +355,7 @@ def genere(racine, doc=None):
     # verifie_lib_ignore::defines_env, qui la croirait absente (fausse alerte « non compilee ») : sa condition est retiree
     locales = {m for f, v in lus.items() if f.suffix != ".h" or f.name == "tasmota_globals.h"
                for m in re.findall(r"(?m)^[ \t]*#[ \t]*define[ \t]+(\w+)", v[4])}
+    locales |= {"FIRMWARE_MINIMAL", "FIRMWARE_SAFEBOOT"}    # firmwares intermediaires d'OTA, aucune carte du parc : rien a apprendre a A4
     chemins = {n: {tuple(c for c in chemin if not locales & set(re.findall(r"\w+", c))) for chemin in ch} for n, ch in chemins.items()}
     gardes = {n: [list(c) for c in sorted(ch)] for n, ch in sorted(chemins.items())
               if n in connues and () not in ch and n not in berry and not re.fullmatch(r"SETOPTION\d*", n)}
