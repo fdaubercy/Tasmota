@@ -166,6 +166,29 @@ def test_ota_fs_partiel():
             carte.ferme()
 
 
+def test_ota_fs_json_racine():
+    """A11 C2 : envoi PARTIEL, un *.json de la racine de l'image (hors persist) part dans json/, comme le fait
+    gestionFileFolder.be au demarrage ; persist et sous-dossiers inchanges ; envoi complet inchange."""
+    image = {"graphiques.json": b'{"graphiques":[]}', "pages_graphiques.json": b"{}", "_persist.json": NOUVEAU_PERSIST,
+             "sd/js/x.js": b"1", "autoexec.be": b"print(1)"}
+    for fichiers, attendu in ((["graphiques.json", "_persist.json", "sd/js/x.js", "pages_graphiques.json"],
+                               ["/_persist.json", "/json/graphiques.json", "/json/pages_graphiques.json", "/sd/js/x.js"]),
+                              (None, ["/_persist.json", "/autoexec.be", "/graphiques.json", "/pages_graphiques.json", "/sd/js/x.js"])):
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t) / "littlefs_data"
+            for rel, contenu in image.items():
+                (d / rel).parent.mkdir(parents=True, exist_ok=True)
+                (d / rel).write_bytes(contenu)
+            (Path(t) / "persist").mkdir()
+            carte = Carte()
+            bo.envoie_fs_ota("tasmota32-essai", carte.ip, d, Path(t) / "persist", lambda r: None, fichiers=fichiers, **RAPIDE)
+            verifie(sorted(carte.flash), sorted(attendu), f"ota_fs_json_racine {fichiers is not None} : chemins ecrits sur la carte")
+            if fichiers:
+                mk = [urllib.parse.unquote(c.split("cmnd=", 1)[1]) for _, c in carte.requetes("path.mkdir")]
+                verifie(any('mkdir("/json")' in m for m in mk), True, "ota_fs_json_racine : dossier json cree")
+            carte.ferme()
+
+
 def test_ota_fs_sauvegarde():
     with tempfile.TemporaryDirectory() as t:
         carte = Carte()
@@ -801,7 +824,7 @@ def test_par_maitre():
 
 
 def principal():
-    for test in (test_identite_image, test_par_maitre, test_coupe_sleep, test_maitre_lent,test_ota_firmware_deja_en_safeboot, test_ota_fs_ordre, test_ota_fs_partiel, test_ota_fs_sauvegarde, test_ota_fs_persist_injoignable,
+    for test in (test_identite_image, test_par_maitre, test_coupe_sleep, test_maitre_lent,test_ota_firmware_deja_en_safeboot, test_ota_fs_ordre, test_ota_fs_partiel, test_ota_fs_json_racine, test_ota_fs_sauvegarde, test_ota_fs_persist_injoignable,
                  test_ota_fs_relecture_differente, test_ota_fs_sous_dossiers, test_ota_fs_referer,
                  test_ota_fs_echec_ufsu, test_ota_fs_pas_de_retour, test_ota_fs_attente_retour,
                  test_ota_fs_persist_reformate, test_ota_fs_progression, test_ota_fs_progression_octets,

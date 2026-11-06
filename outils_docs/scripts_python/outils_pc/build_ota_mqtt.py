@@ -26,7 +26,7 @@ import threading
 import time
 from pathlib import Path
 
-from build_ota_fs import PERSIST, _inventaire, _sauvegarde
+from build_ota_fs import PERSIST, _inventaire, _sauvegarde, chemin_carte
 from build_ota_http import ETAPE_BERRY, ETAPE_ENVOI, ETAPE_RECHARGEMENT, ETAPE_REDEMARRAGE, ETAPE_SAUVEGARDE
 
 ETAPE_CONNEXION_MQTT = "Connexion MQTT"
@@ -186,6 +186,7 @@ def envoie_fs_mqtt(env, topic, dossier_fs, sauvegardes, rapporte, *, fichiers=No
     if effacer and fichiers is not None:
         raise RuntimeError(f"{ETAPE_EFFACEMENT} : effacer le FS demande d'envoyer l'image ENTIÈRE (persist compris) ; "
                            "rien n'a été envoyé")
+    partiel = fichiers is not None
     fichiers, _ = _inventaire(dossier_fs, fichiers)
     if effacer:                 # apres un formatage, plus de persist d'origine a preserver : le poser d'abord
         fichiers = [PERSIST] + [f for f in fichiers if f != PERSIST]
@@ -228,7 +229,7 @@ def envoie_fs_mqtt(env, topic, dossier_fs, sauvegardes, rapporte, *, fichiers=No
                     rapporte({"etape": ETAPE_ENVOI, "pourcent": pourcent, "detail": detail})
 
             donnees = (dossier_fs / rel).read_bytes()
-            canal.envoie(ETAPE_ENVOI, "/" + rel, donnees, progression, fenetre, attente_morceau, delai)
+            canal.envoie(ETAPE_ENVOI, "/" + chemin_carte(rel, partiel), donnees, progression, fenetre, attente_morceau, delai)
             faits += len(donnees)
         rapporte({"etape": ETAPE_ENVOI, "pourcent": 100, "detail": f"{len(fichiers)}/{len(fichiers)} /{fichiers[-1]}"
                   if fichiers else "aucun fichier"})

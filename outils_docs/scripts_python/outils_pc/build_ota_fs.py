@@ -133,6 +133,15 @@ def extrait_image(image, dossier):
     return len(contenus)
 
 
+def chemin_carte(rel, partiel):
+    """Chemin d'un fichier de l'image sur la carte. Envoi PARTIEL : un *.json de la racine, hors persist, part dans json/
+    (ce que fait gestionFileFolder.be au demarrage ; poses a la racine il ne serviraient a rien et seraient deplaces
+    par-dessus la version envoyee). Envoi complet : inchange."""
+    if partiel and "/" not in rel and rel.endswith(".json") and rel != PERSIST:
+        return "json/" + rel
+    return rel
+
+
 def _inventaire(dossier_fs, choix=None):
     """Fichiers relatifs (posix) a envoyer, persist en dernier, et dossiers a creer (parent d'abord).
 
@@ -152,12 +161,13 @@ def _inventaire(dossier_fs, choix=None):
     # Persist en dernier : un echec en cours de route laisse a la carte son persist d'origine.
     fichiers = [f for f in fichiers if f != PERSIST] + ([PERSIST] if PERSIST in fichiers else [])
     # Chemin ecrit par Tasmota : <dossier courant> + "/" + <nom>, soit "//nom" a la racine.
-    trop_longs = [f for f in fichiers if len(("/" if "/" in f else "//") + f) > LONGUEUR_MAX]
+    cibles = [chemin_carte(f, choix is not None) for f in fichiers]
+    trop_longs = [f for f in cibles if len(("/" if "/" in f else "//") + f) > LONGUEUR_MAX]
     if trop_longs:
         raise RuntimeError(f"{ETAPE_ENVOI} : chemin trop long pour Tasmota ({LONGUEUR_MAX} caractères) : "
                            + ", ".join(trop_longs))
     dossiers = set()
-    for f in fichiers:
+    for f in cibles:
         parties = f.split("/")[:-1]
         dossiers.update("/" + "/".join(parties[:i]) for i in range(1, len(parties) + 1))
     return fichiers, sorted(dossiers, key=lambda d: (d.count("/"), d))
@@ -187,9 +197,11 @@ def envoie_fs_ota(env, ip, dossier_fs, sauvegardes, rapporte, *, delai_retour=90
     repart avec la carte) ; sinon `recharger_berry` -> BrRestart (machine Berry neuve, autoexec rejoue).
     """
     dossier_fs, sauvegardes = Path(dossier_fs), Path(sauvegardes)
+    fichiers_choisis = fichiers
     fichiers, dossiers = _inventaire(dossier_fs, fichiers)
     erreurs_reseau = (OSError, http.client.HTTPException)
     avec_persist = PERSIST in fichiers
+    partiel = fichiers_choisis is not None
     copie = None
     sauve = ""                                 # suffixe des messages d'erreur : ou retrouver le persist d'avant
 
@@ -228,7 +240,7 @@ def envoie_fs_ota(env, ip, dossier_fs, sauvegardes, rapporte, *, delai_retour=90
         for i, rel in enumerate(fichiers, 1):
             en_cours = rel
             detail = f"{i}/{len(fichiers)} {rel}"
-            parent, _, nom = rel.rpartition("/")
+            parent, _, nom = chemin_carte(rel, partiel).rpartition("/")
             rapporte({"etape": etape, "pourcent": faits * 100 // total, "detail": detail})      # fichier annonce avant
 
             def progression(envoyes, _taille, detail=detail, faits=faits):

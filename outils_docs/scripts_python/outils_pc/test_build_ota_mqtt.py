@@ -206,6 +206,19 @@ def test_refus_et_absences():
         verifie(("JSON valide" in r, carte.ordres.count("debut")), (True, 0), "persist de la carte illisible : rien envoye")
 
 
+def test_json_racine():
+    """A11 C2 : envoi partiel, un *.json de la racine (hors persist) part dans /json/ ; envoi complet inchange."""
+    img = {"graphiques.json": b"{}", "_persist.json": IMAGE["_persist.json"], "sd/js/x.js": b"1"}
+    with tempfile.TemporaryDirectory() as t:
+        carte = Carte({"/_persist.json": ANCIEN})
+        r, _ = envoie(carte, image(t, img), Path(t) / "s", fichiers=["graphiques.json", "sd/js/x.js"], redemarrer=False)
+        verifie((r, sorted(carte.fs)), ("ok", ["/_persist.json", "/json/graphiques.json", "/sd/js/x.js"]),
+                "json racine, envoi partiel : /json/graphiques.json, sous-dossier inchange")
+        carte = Carte({"/_persist.json": ANCIEN})
+        r, _ = envoie(carte, image(t, img), Path(t) / "s", redemarrer=False)
+        verifie(sorted(carte.fs), ["/_persist.json", "/graphiques.json", "/sd/js/x.js"], "json racine, envoi complet inchange")
+
+
 def test_options_et_effacement():
     with tempfile.TemporaryDirectory() as t:
         carte = Carte()
@@ -232,7 +245,7 @@ def test_options_et_effacement():
 
 
 def principal():
-    for test in (test_envoi_complet, test_perte_et_fenetre, test_refus_et_absences, test_options_et_effacement):
+    for test in (test_envoi_complet, test_perte_et_fenetre, test_refus_et_absences, test_json_racine, test_options_et_effacement):
         try:
             test()
         except Exception as erreur:
