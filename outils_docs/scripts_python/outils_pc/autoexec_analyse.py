@@ -8,6 +8,7 @@ l'appelant passe le persist de la carte et le resultat de `autoexec_commandes.ch
   secret       rouge, mot de passe en clair, y compris dans une ligne en commentaire ; la valeur n'est jamais citee
   doublon      orange, la commande est deja reposee au demarrage par data/fs/configGlobal.be d'apres le persist
   inconnue     orange, avec la commande la plus proche (difflib)
+  absente      orange, la commande n'est pas compilee pour la carte : toutes ses gardes sont fausses (A4)
   longueur     orange, plus de 510 octets : le firmware tronque (xdrv_50_filesystem.ino::UfsExecuteCommandFileLoop)
 Un commentaire n'est analyse que pour les secrets. Banc : test_autoexec_analyse.py.
 """
@@ -82,6 +83,13 @@ def _sans_effet(redemarre, valeur):
     return bool(m) and v.isdigit() and v != m.group(1)
 
 
+def _raison(chemin):
+    """Premiere condition fausse du chemin : `defined(X)` -> « X non defini », `!defined(X)` -> « X defini »."""
+    cond = next(c for c, v in chemin if v is False).strip()
+    m = re.fullmatch(r"(!?)\s*defined\s*\(?\s*(\w+)\s*\)?", cond)
+    return cond if not m else f"{m.group(2)} {'defini' if m.group(1) else 'non defini'}"
+
+
 def _casse(ecrit, cible):
     """Cible (MAJUSCULES) ecrite avec la casse de l'utilisateur : WebSesnor -> WebSensor, WEBSESNOR -> WEBSENSOR."""
     if ecrit.isupper():
@@ -92,9 +100,11 @@ def _casse(ecrit, cible):
     return "".join(res)
 
 
-def analyse(texte, persist, commandes, banque_noms=(), texte_config=None):
+def analyse(texte, persist, commandes, banque_noms=(), texte_config=None, gardes_env=None):
     """Avertissements du fichier : [{ligne, type, niveau, message, correction, commande}], dans l'ordre des lignes
-    (commande : nom a enlever par le bouton de la page, doublon et redemarrage seulement ; sinon None)."""
+    (commande : nom a enlever par le bouton de la page, doublon, redemarrage et absente ; sinon None).
+    gardes_env : `nom -> [chemin, ...]` d'autoexec_gardes.etat (chemin = [(condition, vrai|faux|None)]) ; None = pas
+    d'alerte `absente`. Alerte seulement si TOUS les chemins ont une condition FAUSSE ; incertain (None) ne compte pas."""
     connues = set(commandes["connues"]) | set(banque_noms)
     redemarrent = commandes["redemarrent"]
     posees = None
@@ -115,6 +125,10 @@ def analyse(texte, persist, commandes, banque_noms=(), texte_config=None):
             if l["commentaire"]:
                 continue
             nom = commande(ecrit) or ecrit.upper()
+            chemins = gardes_env and (gardes_env(nom) or gardes_env(ecrit.upper()))
+            if chemins and all(any(v is False for _, v in ch) for ch in chemins):
+                ajoute(l, "absente", "orange", f"{ecrit} n'est pas compilee pour cette carte ({_raison(chemins[0])}).",
+                       "Retirer la ligne, ou compiler la carte avec cette option (user_config_override.h).", ecrit)
             if not valeur:
                 continue             # sans argument, une commande interroge : ni redemarrage ni reglage pose
             if nom in redemarrent and not _sans_effet(redemarrent[nom], valeur):

@@ -10,7 +10,8 @@ diff) ; ils sont remis ici, cote serveur.
                          alors que C a un `***` : ValueError
   diff(racine, env, page)        {diff (unifie, cote disque masque), empreinte, rouges}
   ecrit(racine, env, page, empreinte, rouges_lus, builds_en_cours)   {ecrit, chemin}, dans une Transaction("autoexec")
-  avertissements(racine, env, texte_demasque)   la liste d'autoexec_analyse.analyse (persist de la carte, banque)
+  avertissements(racine, env, texte_demasque)   la liste d'autoexec_analyse.analyse (persist de la carte, banque,
+                         gardes de compilation de l'env par autoexec_gardes) ; carte_verifiee(racine, env) : ces gardes sont lues
 Masquage : apres le premier mot qui repond a autoexec_analyse.SECRETS (nom de commande, ou mot du corps d'une Rule, d'un
 Br, d'un commentaire), tout le reste de la partie (ligne, ou morceau de Backlog) : on masque trop plutot que pas assez ;
 le debut de la ligne est garde octet pour octet. Le nom est lu comme support_command.ino::ExecuteCommand (lettres,
@@ -34,6 +35,7 @@ from pathlib import Path
 import autoexec_analyse
 import autoexec_banque
 import autoexec_commandes
+import autoexec_gardes
 import fichiers_berry_sauvegarde as fbs
 from build_sauvegarde import CONFIG_PERSIST
 
@@ -202,7 +204,13 @@ def avertissements(racine, env, texte):
         noms = [e["nom"] for e in autoexec_banque.charge(racine)]
     except ValueError:
         noms = []
-    return autoexec_analyse.analyse(texte, persist, autoexec_commandes.charge(racine), noms, texte_config=texte_config)
+    return autoexec_analyse.analyse(texte, persist, autoexec_commandes.charge(racine), noms, texte_config=texte_config,
+                                    gardes_env=autoexec_gardes.etat(racine, env))
+
+
+def carte_verifiee(racine, env):
+    """Faux si le preprocesseur manque : l'analyse ne peut pas dire qu'une commande est absente de la carte."""
+    return autoexec_gardes.etat(racine, env) is not None
 
 
 def _rouges(racine, env, texte):

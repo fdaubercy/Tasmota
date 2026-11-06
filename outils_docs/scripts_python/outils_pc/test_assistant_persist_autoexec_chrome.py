@@ -85,6 +85,10 @@ def mode_serveur(port, depot, temoin):
         return {"envoye": True, "sauvegarde": SAUVEGARDE, "avertissement": "avertissement du bouchon"}
 
     autoexec_envoi.prepare, autoexec_envoi.envoie = prepare, envoie
+    import autoexec_gardes
+    sans_gardes = Path(depot).parent / "sans_gardes.flag"       # A4 : gardes de la carte factices (ZbSend absente), ou indisponibles
+    autoexec_gardes.etat = lambda racine, env: None if sans_gardes.is_file() else (
+        lambda nom: [[("defined(USE_ZIGBEE)", False)]] if nom == "ZBSEND" else None)
     if temoin:
         import assistant_persist_page
         avant, apres, _ = TEMOINS[temoin]
@@ -170,6 +174,22 @@ def sonde(m):
     verifie(js(cdp, "return Array.from(document.querySelectorAll('#a-marge .p.rouge')).map(function(e){return +e.parentNode.getAttribute('data-ligne')})"),
             rouges_lignes, "marge : point rouge sur les lignes a avertissement rouge")
     verifie(js(cdp, "return document.getElementById('a-titre-analyse').textContent"), f"Analyse : {len(avs)} avertissements", "liste : titre avec le compte")
+    # A4 : alerte « absente » et ligne discrete quand la verification par carte manque
+    original = js(cdp, "return document.getElementById('a-texte').value")
+    verifie(js(cdp, "return document.getElementById('a-avertissements').textContent.indexOf('Vérification par carte indisponible') < 0"), True,
+            "absente : gardes disponibles -> pas de ligne « indisponible »")
+    tpc.saisit(cdp, "a-texte", original + "ZbSend 1\n")
+    verifie(attend(cdp, "Array.from(document.querySelectorAll('#a-avertissements .a-av')).some(function(e){return e.textContent.indexOf('Commande absente') >= 0 && e.textContent.indexOf('USE_ZIGBEE non defini') >= 0 && e.className.indexOf('o') >= 0})", 10),
+            True, "absente : libelle « Commande absente », raison, orange")
+    (m.journal.parent / "sans_gardes.flag").write_text("1", encoding="utf-8")
+    tpc.saisit(cdp, "a-texte", original + "ZbSend 2\n")
+    verifie(attend(cdp, "document.getElementById('a-avertissements').textContent.split('Vérification par carte indisponible').length === 2", 10),
+            True, "indisponible : la ligne discrete apparait une seule fois")
+    verifie(js(cdp, "return document.getElementById('a-avertissements').textContent.indexOf('Commande absente') < 0"), True,
+            "indisponible : plus aucune alerte « absente »")
+    (m.journal.parent / "sans_gardes.flag").unlink()
+    tpc.saisit(cdp, "a-texte", original)
+    verifie(attend(cdp, f"document.querySelectorAll('#a-avertissements [data-ligne]').length === {len(avs)}", 10), True, "absente : texte d'origine retabli, liste d'origine")
     verifie(js(cdp, "return document.getElementById('a-info').textContent.indexOf('" + CARTE + "/autoexec.bat') >= 0 && "
                     "document.getElementById('a-info').textContent.indexOf('9 lignes') >= 0"), True, "en-tete : chemin et nombre de lignes")
     premier = avs[0]

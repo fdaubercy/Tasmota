@@ -112,6 +112,36 @@ def banc():
     verifie(resume(ana("SetOption146 ON", {"diverses": {}})), [(1, "doublon", "orange")], "persist vide : SetOption146 reste pose (defaut OFF)")
     verifie(ana("SetOption56 ON", {}), [], "persist vide : SetOption56 non pose -> pas de doublon")
     verifie(resume(ana("SetOption56 ON")), [(1, "doublon", "orange")], "persist rempli : SetOption56 -> doublon")
+
+    # absente (A4) : gardes factices, nom -> chemins [(condition, vrai|faux|None)]
+    G = {"ZBSEND": [[("defined(USE_ZIGBEE)", False)]],
+         "TOUTFAUX": [[("defined(A)", False)], [("!defined(B)", False)], [("N > 3", False)]],
+         "UNVRAI": [[("defined(A)", False)], [("defined(B)", True)]],
+         "INCERT": [[("defined(C)", None)]],
+         "MIXTE": [[("defined(A)", False)], [("defined(B)", None)]],
+         "NEG": [[("!defined(USE_X)", False)]],
+         "EXPR": [[("N > 3", False)]],
+         "I2CSCAN": [[("defined(USE_I2C)", False)]]}
+    ab = lambda t: [(a["ligne"], a["message"], a["commande"]) for a in aa.analyse(t, persist, commandes, banque_noms=list(G),
+                                                                                  texte_config=cfg, gardes_env=G.get) if a["type"] == "absente"]
+    msg = lambda nom, raison: f"{nom} n'est pas compilee pour cette carte ({raison})."
+    verifie(ab("ZbSend 1"), [(1, msg("ZbSend", "USE_ZIGBEE non defini"), "ZbSend")], "absente : ZbSend, tous les chemins faux -> alerte")
+    verifie([a["niveau"] for a in aa.analyse("ZbSend 1", persist, commandes, gardes_env=G.get) if a["type"] == "absente"], ["orange"], "absente : orange")
+    verifie(ab("ZbSend"), [(1, msg("ZbSend", "USE_ZIGBEE non defini"), "ZbSend")], "absente : meme sans argument")
+    verifie(ab("zbsend 1")[0][0], 1, "absente : casse libre")
+    verifie([x[0] for x in ab("Delay 1\nBacklog Delay 1; ZbSend 1")], [2], "absente : dans un Backlog, une seule alerte")
+    verifie(ab("; ZbSend 1"), [], "absente : commentaire -> rien")
+    verifie(aa.analyse("ZbSend 1", persist, commandes, gardes_env=None) == aa.analyse("ZbSend 1", persist, commandes), True,
+            "absente : gardes_env None -> comportement d'avant")
+    verifie([a["type"] for a in aa.analyse("ZbSend 1", persist, commandes)], [], "absente : sans gardes_env, aucune alerte")
+    verifie(ab("UnVrai 1"), [], "absente : un chemin vrai sur deux -> rien")
+    verifie(ab("Incert 1"), [], "absente : garde incertaine -> rien")
+    verifie(ab("Mixte 1"), [], "absente : un chemin faux, un incertain -> rien")
+    verifie([x[1] for x in ab("ToutFaux 1")], [msg("ToutFaux", "A non defini")], "absente : raison = premiere condition fausse du premier chemin")
+    verifie([x[1] for x in ab("Neg 1")], [msg("Neg", "USE_X defini")], "absente : !defined(X) -> X defini")
+    verifie([x[1] for x in ab("Expr 1")], [msg("Expr", "N > 3")], "absente : autre condition -> l'expression")
+    verifie([x[1] for x in ab("I2CScan")], [msg("I2CScan", "USE_I2C non defini")], "absente : recherche par le nom en majuscules")
+    verifie(ab("Br print(1)\nSetOption146 ON\nSansGarde 1\nDelay 1"), [], "absente : Berry, SetOption, sans garde, Delay -> rien")
     verifie(noms_secrets(), True, "SECRETS : noms a secret")
 
 
@@ -122,6 +152,8 @@ MUTANTS = [
     ("commentaire analyse en entier", "if l[\"commentaire\"]:\n                continue", "if False:\n                continue"),
     ("limite 511", "> LIMITE:", "> LIMITE + 1:"),
     ("condition sur la valeur ignoree", "return bool(m) and", "return False and"),
+    ("absente : any au lieu de all", "all(any(v is False for _, v in ch) for ch in chemins)", "any(any(v is False for _, v in ch) for ch in chemins)"),
+    ("absente : incertain traite comme faux", "any(v is False for _, v in ch)", "any(v is not True for _, v in ch)"),
     ("casse perdue", "if ecrit.isupper():", "if True:"),
 ]
 

@@ -65,7 +65,8 @@ def hostiles(b):
 def lecture(b):
     s, g = b.requete("GET", "/autoexec?env=" + ENV)
     verifie(s, 200, "GET /autoexec : 200")
-    verifie(sorted(g), ["avertissements", "chemin", "empreinte", "existe", "lignes", "texte"], "GET /autoexec : les clefs du contrat")
+    verifie(sorted(g), ["avertissements", "chemin", "empreinte", "existe", "lignes", "texte", "verification_carte"], "GET /autoexec : les clefs du contrat")
+    verifie(g["verification_carte"], False, "GET /autoexec : depot d'essai sans preprocesseur -> verification_carte faux")
     verifie((g["existe"], g["chemin"], MDP in g["texte"], g["texte"].count("***")), (True, f"{CARTE}/autoexec.bat", False, 2),
             "GET /autoexec : fichier lu, secrets en ***")
     verifie([a["ligne"] for a in g["avertissements"] if a["type"] == "secret"], [1, 4], "GET /autoexec : 2 secrets en clair signales (lignes 1 et 4)")
@@ -74,7 +75,8 @@ def lecture(b):
     s, banque = b.requete("GET", "/autoexec/banque")
     verifie((s, banque), (200, ab.charge(b.racine)), "GET /autoexec/banque : la banque")
     s, a = b.requete("POST", "/autoexec/analyse", {"env": ENV, "texte": g["texte"]})
-    verifie((s, a), (200, {"avertissements": g["avertissements"]}), "POST analyse : meme resultat, sur le texte demasque")
+    verifie((s, a), (200, {"avertissements": g["avertissements"], "verification_carte": False}),
+            "POST analyse : meme resultat, sur le texte demasque, avec verification_carte")
     s, a = b.requete("POST", "/autoexec/analyse", {"env": ENV, "texte": g["texte"] + "Hostname x\n"})
     verifie(sum(x["niveau"] == "rouge" for x in a["avertissements"]), ROUGES + 1, "POST analyse : une boucle de redemarrage de plus")
     verifie(b.requete("POST", "/autoexec/analyse", {"env": ENV, "texte": "Password2 ***\n"})[0], 400, "POST analyse : *** sans origine -> 400")

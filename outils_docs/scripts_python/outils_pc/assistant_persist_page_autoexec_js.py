@@ -27,7 +27,7 @@ $("onglet-persist").onclick = function () { montreOnglet("persist"); };
 $("onglet-autoexec").onclick = function () { montreOnglet("autoexec"); };
 
 var ongletAutoexec = (function () {
-var LH = 20, TYPES = {secret: "Secret en clair", doublon: "Doublon persist", inconnue: "Commande inconnue", longueur: "Ligne trop longue"};
+var LH = 20, TYPES = {secret: "Secret en clair", doublon: "Doublon persist", inconnue: "Commande inconnue", longueur: "Ligne trop longue", absente: "Commande absente"};
 var X = {env: "", lu: null, avert: [], banque: null, choisie: null, valeurs: {}, numero: 0, minuteur: null, diff: null,
   texteDiff: null, ligneIns: 0, prep: null, nPrep: 0, proposition: null, ouvert: false};
 var M = {champs: []};
@@ -58,6 +58,7 @@ function libelle(a) {
 function dessineListe() {
   var z = vide($("a-avertissements"));
   $("a-titre-analyse").textContent = "Analyse : " + pluriel(X.avert.length, "avertissement", "avertissements");
+  if (X.carte === false) message(z, "discret", "Vérification par carte indisponible.");
   if (X.lu && !X.avert.length) message(z, "discret", "Aucun avertissement.");
   X.avert.forEach(function (a) {
     var d = el("div", {"class": "a-av " + (a.niveau === "rouge" ? "r" : "o"), "data-ligne": a.ligne, role: "button", tabindex: "0"}), s = el("span");
@@ -128,7 +129,7 @@ async function analyse() {
   var n = ++X.numero, env = X.env, r = await api("/autoexec/analyse", {env: env, texte: texte()}), z = $("a-erreur-analyse");
   if (n !== X.numero || env !== X.env) return;
   if (!r.ok || !r.donnees) { z.textContent = r.texte; z.hidden = false; return; }
-  z.hidden = true; X.avert = r.donnees.avertissements; dessine();
+  z.hidden = true; X.avert = r.donnees.avertissements; X.carte = r.donnees.verification_carte; dessine();
 }
 
 // ---- Carte ----
@@ -140,7 +141,7 @@ async function charge(env) {
     var r = await api("/autoexec?env=" + encodeURIComponent(env));
     if (env !== X.env) return;
     if (!r.ok || !r.donnees) { $("a-erreur").textContent = r.texte; $("a-erreur").hidden = false; }
-    else { X.lu = r.donnees; X.avert = X.lu.avertissements; $("a-texte").value = X.lu.texte; $("a-texte").disabled = false; }
+    else { X.lu = r.donnees; X.avert = X.lu.avertissements; X.carte = X.lu.verification_carte; $("a-texte").value = X.lu.texte; $("a-texte").disabled = false; }
   }
   dessine();
 }

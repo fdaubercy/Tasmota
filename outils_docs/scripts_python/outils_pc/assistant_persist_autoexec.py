@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Routes /autoexec* de l'Assistant persist (plan autoexec-bat, A5 et A7) ; assistant_persist_web.py ne fait que deleguer.
 Les exceptions sont celles du serveur : ValueError -> 400, LookupError -> 404, RuntimeError -> 409.
-  GET  /autoexec?env=             {texte (secrets en ***), empreinte, chemin, existe, avertissements, lignes (du texte masque)}
+  GET  /autoexec?env=             {texte (secrets en ***), empreinte, chemin, existe, avertissements, verification_carte, lignes (du texte masque)}
   GET  /autoexec/banque           la banque de commandes (autoexec_banque.charge)
-  POST /autoexec/analyse          {env, texte}                                -> {avertissements}
+  POST /autoexec/analyse          {env, texte}                                -> {avertissements, verification_carte}
   POST /autoexec/diff             {env, texte}                                -> autoexec_fichier.diff
   POST /autoexec/ecrit            {env, texte, empreinte, rouges_lus}         -> autoexec_fichier.ecrit
   POST /autoexec/banque/ajoute    {entree}                                    -> la banque a jour
@@ -47,7 +47,7 @@ def get(racine, chemin, requete):
         env = _env(racine, requete)
         l = autoexec_fichier.lit(racine, env)
         return {**l, "avertissements": autoexec_fichier.avertissements(racine, env, autoexec_fichier.texte_disque(racine, env)),
-                "lignes": autoexec_analyse.lignes(l["texte"])}
+                "verification_carte": autoexec_fichier.carte_verifiee(racine, env), "lignes": autoexec_analyse.lignes(l["texte"])}
     if chemin == "/autoexec/banque":
         return autoexec_banque.charge(racine)
     raise LookupError(chemin)
@@ -74,4 +74,5 @@ def post(racine, chemin, demande, builds_en_cours):
             raise ValueError("empreinte : chaine attendue (recharger le fichier)")
         return autoexec_fichier.ecrit(racine, env, texte, empreinte, demande.get("rouges_lus"), builds_en_cours)
     disque = autoexec_fichier.texte_disque(racine, env)
-    return {"avertissements": autoexec_fichier.avertissements(racine, env, autoexec_fichier.demasque(texte, disque))}
+    return {"avertissements": autoexec_fichier.avertissements(racine, env, autoexec_fichier.demasque(texte, disque)),
+            "verification_carte": autoexec_fichier.carte_verifiee(racine, env)}
