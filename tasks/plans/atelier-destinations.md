@@ -111,9 +111,24 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
 - [x] `CLAUDE.md` (carte des documents : atelier, page Build, listes du cenv) ; `.claude/skills/bancs/SKILL.md` si
   un banc est ajouté ; `verifie_references_docs.py` sans défaut — preuve : 550ddfd2c ; `verifie_references_docs.py` : 19 document(s), 0 defaut(s)
 
+## A11 — Raccords de bout en bout (relecture finale du 2026-11-06, avant les cartes)
+- [ ] Lecture de la composition de la carte par `/ufsu?dir=0&download=/json/graphiques.json` (mesuré sur la cuve :
+  `/json/graphiques.json` = 404, `/ufsu` = 200) ; fichier absent de la carte vu par `path.exists` (`/ufsu` ne répond pas) ;
+  fausse carte du banc conforme à la vraie (404 sur l'ancienne adresse) ; spec §4.3 corrigée
+- [ ] Envoi de quelques fichiers (HTTP et MQTT) : un `.json` de la racine de l'image hors persist va dans `json/`, comme
+  le ferait `gestionFileFolder.be` au démarrage (sinon sans effet, et écrasant la carte au démarrage suivant)
+- [ ] Firmware d'avant le chantier détecté (`graphiquesFonctions` est solidifié) : pas de bouton « Téléverser » vers
+  /graphiques, message « firmware à recompiler » ; `graphiques.js` et `graphiques_edition.js` joints si le moteur manque ;
+  `graphiques.js` : un graphique atelier sans moteur ne vide plus toute la page
+- [ ] Page de l'atelier : graphiques de /graphiques listés (modifier, retirer) ; `calculees` citées jointes au graphique ;
+  série hors historique signalée ; message neutre carte/dépôt ; pas de doublon après rechargement
+- [ ] Mineurs (réels `%g` dans la comparaison, `s.chemin || s`, solidifiés dans la liste, documents périmés) ; bancs verts,
+  test de bout en bout atelier → image → envoi
+
 ## A9 — Validation sur les cartes
 - [x] Place du FS mesurée sur les 6 cartes à historique avec les fichiers du moteur (blocs de 4 Ko) ; arrêt et
   question à l'utilisateur sous 10 % libres (spec §7.10) — preuve : mesure du 2026-11-06, seuil non atteint. Calcul depuis le dépôt, moteur compris (17 blocs, 4 fichiers), sur 2896 blocs : cave 93,8 %, grenier 94,0 %, P4 93,4 %, S3 serveur 93,6 %, cuve 93,0 %, rideau 94,0 % libres. Lu sur carte (`UfsFree`) : P4 91,6 % (environ 91,1 % après ajout du moteur, s'il n'y est pas encore), cuve 90,9 %. Cave, grenier et rideau muets : calcul seul, sans leurs fichiers `/histo`. L'env S3 serveur a la même adresse que le P4 : rien de lu sur lui
+- [ ] P4 et cuve : firmware et FS du chantier compilés et envoyés par la page Build (`Status 2` relu après)
 - [ ] P4 : composition existante intacte + un graphique atelier (style hors des 4) envoyé par « Téléverser » ;
   `/graphiques` sous Chrome sans exception JS, capture ; journal web sans `_ERREUR`
 - [ ] Cuve : modification d'une page dédiée envoyée par « Téléverser » (redémarrage non coché), effet constaté
