@@ -102,6 +102,13 @@ def _lit(fichier):
     return code, code1, blanc, defines, brut
 
 
+class _Tolerantes(dict):
+    """Macros pour une lecture tolerante de `_chaine` : un identifiant inconnu vaut la chaine vide."""
+
+    def __missing__(self, cle):
+        return ""
+
+
 def _chaine(expr, locales, globales, pile=()):
     """Valeur d'une concatenation C de litteraux et de macros ; KeyError si une macro est inconnue."""
     res = ""
@@ -116,13 +123,13 @@ def _chaine(expr, locales, globales, pile=()):
 @lru_cache(maxsize=None)
 def _piles(brut):
     """Conditions autour de chaque ligne de `brut`, du dehors vers le dedans (voir l'en-tete pour leur ecriture). `#ifndef X`
-    suivi de `#define X` (garde d'inclusion) n'est pas une condition. #if desequilibres (#if dans une chaine brute) : aucune
-    condition sur tout le fichier, une pile fausse donnerait une fausse garde."""
+    suivi de `#define X` (garde d'inclusion) n'est pas une condition. #if desequilibres (#if dans une chaine brute) ou #elifdef,
+    non lu : aucune condition sur tout le fichier, une pile fausse donnerait une fausse garde."""
     pile, res, equilibre, attente = [], [], True, None      # pile : [[negations des branches passees, condition en cours], ...]
     for ligne in brut.split("\n"):
         d = re.match(r"[ \t]*#[ \t]*(\w+)(.*)", ligne)
         mot, reste = (d.group(1), " ".join(d.group(2).split())) if d else ("", "")
-        if mot in ("elif", "else", "endif") and not pile:
+        if mot in ("elif", "else", "endif") and not pile or mot in ("elifdef", "elifndef"):
             equilibre = False
         elif mot in ("if", "ifdef", "ifndef"):
             pile.append([[], {"if": reste, "ifdef": f"defined({reste})", "ifndef": f"!defined({reste})"}[mot]])
@@ -141,16 +148,16 @@ def _piles(brut):
     return res if equilibre and not pile else [()] * len(res)
 
 
-def _chemins_table(nommes, emplacements, lit):
+def _chemins_table(nommes, emplacements, lit, sans_prefixe=False):
     """{NOM: {chemin}} d'une table, `emplacements` = [(match de TABLE dans code, code, piles)], `nommes` = ses noms en lecture
-    globale, `lit` = valeur d'une ligne. Le prefixe (1er champ) s'applique a chaque nom. Dans le doute, moins de garde, jamais une
-    garde inventee : nom a cheval sur deux piles, prefixe seul, nom qu'aucune ligne n'apporte ou emplacement illisible -> garde
-    de la table seule."""
+    globale, `lit` = valeur d'une ligne. Le prefixe (1er champ) s'applique a chaque nom ; `sans_prefixe` : le 1er champ est un nom.
+    Dans le doute, moins de garde, jamais une garde inventee : nom a cheval sur deux piles, prefixe seul, nom qu'aucune ligne
+    n'apporte ou emplacement illisible -> garde de la table seule."""
     res, tables = {n: set() for n in nommes}, set()
     for m, code, piles in emplacements:
         table = piles[code.count("\n", 0, m.start())]
         tables.add(table)
-        champs = [[]]                                       # [[(morceau, pile de sa ligne), ...], ...] : un par case de la chaine
+        champs = [[], []] if sans_prefixe else [[]]         # [[(morceau, pile de sa ligne), ...], ...] : un par case de la chaine
         try:
             for i, ligne in enumerate(m.group(2).split("\n"), code.count("\n", 0, m.start(2))):
                 for j, bout in enumerate(lit(ligne).split("|")):
@@ -315,7 +322,17 @@ def genere(racine, doc=None):
         prefixe, *res = _chaine(expr, defines, globales).split("|")
         return prefixe, res[:-1] if res and not res[-1] else res
 
+    def emplacements(f, t):
+        ici = lieux.get(t, {})                                # table d'un autre fichier : comme `trouve`, tous ses emplacements
+        return [(m, lus[g][0], _piles(lus[g][4])) for g, ms in ({f: ici[f]} if f in ici else ici).items() for m in ms]
+
+    tolerantes = _Tolerantes(globales)
     for f, (code, code1, blanc, defines, _) in lus.items():
+        tolere = lambda ligne: _chaine(ligne, defines, tolerantes)
+        # table lue hors DecodeCommand (kScriptCommands du scripter) : un chemin de plus pour les noms connus, ne peut qu'oter une alerte
+        for t in re.findall(r"\bGetCommandCode\(\s*[^,]*,[^,]*,[^,]*,\s*(?:\w+::)?(\w+)\s*\)", code):
+            for nom, ch in _chemins_table(set(), emplacements(f, t), tolere, sans_prefixe=True).items():
+                chemins.setdefault(nom, set()).update(ch)
         for t, p, s in re.findall(r"DecodeCommand\(\s*(?:\w+::)?(\w+)\s*,\s*(?:\w+::)?(\w+)\s*(?:,\s*(\w+)\s*)?\)", code):
             ptrs = trouve(pointeurs, f, p)
             try:
@@ -323,13 +340,15 @@ def genere(racine, doc=None):
                 tous = noms(trouve(tables, f, t), defines)[1]
             except (KeyError, TypeError) as e:
                 anomalies.append(f"{rel(f)}::{t} illisible ({e})")
+                # table illisible, ou du seul #else : ses noms ne sont pas sus, chaque fragment perd sa garde
+                for sans_prefixe in (False, True):
+                    for nom in _chemins_table(set(), emplacements(f, t), tolere, sans_prefixe):
+                        chemins.setdefault(nom, set()).add(())
                 continue
             for brut in tous:                         # toutes les branches des #ifdef : connue n'importe ou
                 if prefixe + brut:
                     connues.setdefault(_nom(prefixe + brut), f"{rel(f)}::{t}")
-            ici = lieux[t] if f not in lieux[t] else {f: lieux[t][f]}   # table d'un autre fichier : comme `trouve`, tous ses emplacements
-            emplacements = [(m, lus[g][0], _piles(lus[g][4])) for g, ms in ici.items() for m in ms]
-            for nom, ch in _chemins_table({_nom(prefixe + b) for b in tous if prefixe + b}, emplacements,
+            for nom, ch in _chemins_table({_nom(prefixe + b) for b in tous if prefixe + b}, emplacements(f, t),
                                           lambda ligne: _chaine(ligne, defines, globales)).items():
                 chemins.setdefault(nom, set()).update(ch)
             syn = synonymes.get(s, [])

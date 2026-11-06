@@ -9,6 +9,7 @@ Python de PlatformIO : <~/.platformio/penv/Scripts/python.exe> outils_docs/scrip
 """
 import importlib.util
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -158,6 +159,32 @@ const char kMinCommands[] PROGMEM = "|HorsMinimal";
 const char kLocale2Commands[] PROGMEM = "|LocaleGardee";
 #endif
 #endif
+#ifdef USE_RG
+const char kRegleCommands[] PROGMEM = "|Abonne|SeulRegle|AbonneB";
+#endif
+#ifdef USE_SC
+const char kScrCommands[] PROGMEM = "Scr|Abonne|" D_CMND_MACRO_INCONNUE "|SeulScript";
+#endif
+#ifdef USE_SD
+const char kScr2Commands[] PROGMEM = "AbonneB|Autre";
+#endif
+void Scr(void) {
+  int c = GetCommandCode(command, sizeof(command), XdrvMailbox.topic + 1, kScrCommands);
+  if (GetCommandCode(command, sizeof(command), topic, kScr2Commands) >= 0) { f(x, y); }
+}
+const char kIllisibleCommands[] PROGMEM = "|FragA|" D_CMND_MACRO_INCONNUE "|FragB";
+const char kIllPrefCommands[] PROGMEM = "Pq|FragC|" D_CMND_MACRO_INCONNUE;
+#ifdef USE_H
+const char kGardeHCommands[] PROGMEM = "|FragA|FragB|HorsIllisible";
+const char kGardePqCommands[] PROGMEM = "Pq|FragC";
+#endif
+#ifdef USE_J
+#else
+const char kSeulSinonCommands[] PROGMEM = "|SinonSeul";
+#endif
+#ifdef USE_K
+const char kGardeKCommands[] PROGMEM = "|SinonSeul|HorsSinon";
+#endif
 #ifdef USE_EXT
 #if USE_VAL > 2
 const char kNicheCommands[] PROGMEM = "|Niche|"
@@ -205,27 +232,7 @@ const char kBerryCommands[] PROGMEM = "|EnBerry";
 #ifdef USE_SO
 const char kSoCommands[] PROGMEM = "|SO77|SetOption78";
 #endif
-bool Xdrv98(uint32_t function) {
-  DecodeCommand(kSimpleCommands, SimpleCommand);
-  DecodeCommand(kDansCommands, DansCommand);
-  DecodeCommand(kComboCommands, ComboCommand);
-  DecodeCommand(kNonCommands, NonCommand);
-  DecodeCommand(kBrCommands, BrCommand);
-  DecodeCommand(kLocaleCommands, LocaleCommand);
-  DecodeCommand(kLocale2Commands, Locale2Command);
-  DecodeCommand(kMinCommands, MinCommand);
-  DecodeCommand(kNicheCommands, NicheCommand);
-  DecodeCommand(kDoubleCommands, DoubleCommand);
-  DecodeCommand(kBisCommands, BisCommand);
-  DecodeCommand(kMemeCommands, MemeCommand);
-  DecodeCommand(kMixteCommands, MixteCommand);
-  DecodeCommand(kPrefixeCommands, PrefixeCommand);
-  DecodeCommand(kPartageCommands, PartageCommand);
-  DecodeCommand(kBerryCommands, BerryCommand);
-  DecodeCommand(kSoCommands, SoCommand);
-  DecodeCommand(kIncCommands, IncCommand);
-  DecodeCommand(kIncGardeCommands, IncGardeCommand);
-}
+void Inc(void) { DecodeCommand(kIncCommands, IncCommand); DecodeCommand(kIncGardeCommands, IncGardeCommand); }
 '''
 INO_AUTRE_DRIVER = r'''
 #ifdef USE_P
@@ -249,6 +256,16 @@ const char kIncCommands[] PROGMEM = "|Incluse";
 const char kIncGardeCommands[] PROGMEM = "|InclusGarde";
 #endif
 #endif
+'''
+INO_ELIFDEF = r'''
+const char kEfCommands[] PROGMEM = "|"
+#ifdef USE_F1
+  "EfUn|"
+#elifdef USE_F2
+  "EfDeux|"
+#endif
+  "EfFin";
+void Ef(void) { DecodeCommand(kEfCommands, EfCommand); }
 '''
 INO_NON_FERME = r'''
 #ifdef USE_D2
@@ -285,12 +302,23 @@ ATTENDU_GARDES = {
     "PASINCLUSION": [["!defined(USE_N2)"]],
     "INCLUSGARDE": [["defined(USE_I)"]],                       # INCLUSE : garde d'inclusion du .h, aucune cle
     "LOCALEGARDEE": [["defined(USE_Z2)"]],                     # USE_LOCALE, pose par un .ino : condition retiree ; LOCALE : aucune cle
+    # table lue par GetCommandCode : un chemin de plus, sans prefixe, macro inconnue toleree ; SEULSCRIPT n'est pas une commande connue
+    "ABONNE": [["defined(USE_RG)"], ["defined(USE_SC)"]], "ABONNEB": [["defined(USE_RG)"], ["defined(USE_SD)"]],
+    "SEULREGLE": [["defined(USE_RG)"]],
+    # FRAGA, FRAGB, PQFRAGC : aussi dans une table illisible ; SINONSEUL : aussi dans une table du seul #else ; aucune cle
+    "HORSILLISIBLE": [["defined(USE_H)"]], "HORSSINON": [["defined(USE_K)"]],
 }
 
 
+def avec_decode(texte):
+    """Le texte, plus un DecodeCommand par table ; kScr* restent lues par le seul GetCommandCode."""
+    tables = sorted(t for t in set(re.findall(r"char (k\w+)\[", texte)) if not t.startswith("kScr"))
+    return texte + "bool Xdrv98(uint32_t function) {\n" + "".join(f"  DecodeCommand({t}, {t[1:]});\n" for t in tables) + "}\n"
+
+
 def fichiers_gardes(dossier):
-    for nom, texte in (("xdrv_98_gardes.ino", INO_GARDES), ("xdrv_97_autre.ino", INO_AUTRE_DRIVER), ("xsns_96_pas.ino", INO_NON_INCLUSION),
-                       ("xdrv_95_ferme.ino", INO_NON_FERME), ("xdrv_94_trop.ino", INO_ENDIF_EN_TROP), ("include/gardes.h", H_INCLUSION)):
+    for nom, texte in (("xdrv_98_gardes.ino", avec_decode(INO_GARDES)), ("xdrv_97_autre.ino", INO_AUTRE_DRIVER), ("xsns_96_pas.ino", INO_NON_INCLUSION),
+                       ("xdrv_95_ferme.ino", INO_NON_FERME), ("xdrv_93_ef.ino", INO_ELIFDEF), ("xdrv_94_trop.ino", INO_ENDIF_EN_TROP), ("include/gardes.h", H_INCLUSION)):
         (dossier / "tasmota" / nom).write_text(texte, encoding="utf-8")
     (dossier / "data" / "fs" / "gardes.be").write_text("tasmota.add_cmd('EnBerry', def () end)\n", encoding="utf-8")
     return dossier
@@ -304,9 +332,10 @@ def regles_gardes():
             verifie(g.get(nom), ATTENDU_GARDES.get(nom), f"gardes {nom}")
         # chacune : connue, mais sans garde (toujours compilee, Berry, SetOption, #if desequilibres, a cheval sur deux piles)
         for nom in ("HOSTNAME", "LIBRE", "APRES", "FIN", "FINBR", "MIXTE", "DEUXFOIS", "INCLUSE", "LOCALE", "HORSMINIMAL", "ENBERRY", "SETOPTION77",
-                    "SETOPTION78", "DESEQUILIBRE", "ENTROP"):
+                    "SETOPTION78", "DESEQUILIBRE", "ENTROP", "FRAGA", "FRAGB", "PQFRAGC", "SINONSEUL", "EFUN", "EFDEUX", "EFFIN"):
             verifie((nom in c, nom in g), (True, False), f"connue sans garde : {nom}")
-        verifie("BISSINON" in c or "BISSINON" in g, False, "2e definition d'une table : nom hors de connues (limite existante), pas de garde")
+        verifie(("SEULSCRIPT" in c, "SEULSCRIPT" in g, "AUTRE" in c, "SCR" in c), (False,) * 4, "table de GetCommandCode : connues inchangees")
+        verifie("BISSINON" in c or "BISSINON" in g, False,"2e definition d'une table : nom hors de connues (limite existante), pas de garde")
         verifie(list(g), sorted(g), "gardes triees")
         fige = Path(t) / "fige.json"
         fige.write_text(json.dumps(d), encoding="utf-8")
@@ -372,6 +401,8 @@ def reel():
     for nom in ("HOSTNAME", "RESTART", "UPGRADE", "SETOPTION146", "REGLAGELOG"):
         verifie(nom in g, False, f"{nom} sans garde")
     verifie([n for n, v in g.items() if not v or [] in v], [], "aucune garde vide (A4 alerterait a coup sur)")
+    for nom in ("SUBSCRIBE", "UNSUBSCRIBE"):                   # aussi dans kScriptCommands, lue par GetCommandCode (xdrv_10_scripter.ino)
+        verifie(nom not in g or any("defined(USE_SCRIPT)" in ch for ch in g[nom]), True, f"{nom} : chemin par USE_SCRIPT, ou pas de cle")
     for macro in ("USE_MQTT_FILE", "USE_I2S_MP3", "USE_TIMEPROP"):   # le preprocesseur de A4 les croirait absentes : FileUpload, I2SPlay en fausse alerte
         verifie(any(macro in x for v in g.values() for ch in v for x in ch), False, f"aucune condition sur {macro} (posee par un .ino)")
     verifie(set(g) <= set(c), True, "gardes : que des commandes connues")
@@ -409,10 +440,13 @@ MUTANTS = {   # regle de protection -> (texte du module, mutation, resultat faux
     "gardes : garde de ligne ignoree": ("piles_nom.pop() if len(piles_nom) == 1 else table", "table", lambda d: "TOPIC" not in d["gardes"]),
     "gardes : chemins d'une table non reunis": ("res.setdefault(nom, set()).add(chemin)", "res[nom] = {chemin}",
                                                 lambda d: len(d["gardes"]["DOUBLE"]) == 1),
-    "gardes : chemins de deux tables non reunis": ("chemins.setdefault(nom, set()).update(ch)", "chemins[nom] = ch",
+    "gardes : chemins de deux tables non reunis": ("globales)).items():\n                chemins.setdefault(nom, set()).update(ch)", "globales)).items():\n                chemins[nom] = ch",
                                                    lambda d: "DEUXFOIS" in d["gardes"] and len(d["gardes"]["PARTAGEE"]) == 1),
     "gardes : macro d'un .ino gardee": ('if not locales & set(re.findall(r"\\w+", c))', "", lambda d: "LOCALE" in d["gardes"]),
     "gardes : firmware minimal garde": ('locales |= {"FIRMWARE_MINIMAL", "FIRMWARE_SAFEBOOT"}', "pass", lambda d: "HORSMINIMAL" in d["gardes"]),
+    "gardes : table de GetCommandCode ignoree": (r'r"\bGetCommandCode\(', r'r"\bGetCommandCodeX\(', lambda d: d["gardes"].get("ABONNE") == [["defined(USE_RG)"]]),
+    "gardes : table illisible sans chemin": ("chemins.setdefault(nom, set()).add(())", "pass", lambda d: "FRAGA" in d["gardes"] and "SINONSEUL" in d["gardes"]),
+    "gardes : #elifdef ignore": (' or mot in ("elifdef", "elifndef")', "", lambda d: d["gardes"].get("EFDEUX") == [["defined(USE_F1)"]]),
     "gardes : presence libre oubliee": (" and () not in ch", "", lambda d: "DEUXFOIS" in d["gardes"]),
     "gardes : garde d'inclusion gardee": ("pile[-1][1] = None", "pass", lambda d: "INCLUSE" in d["gardes"]),
     "gardes : emplacement illisible ignore": ("res[n].add(table)", "pass", lambda d: d["gardes"]["SEULSI"] == [["defined(USE_M)"]]),

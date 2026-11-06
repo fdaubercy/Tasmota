@@ -1731,6 +1731,10 @@
   "COUNTER": [
    [
     "defined(USE_COUNTER)"
+   ],
+   [
+    "defined(USE_DISPLAY)",
+    "defined(USE_DISPLAY_MODES1TO5)"
    ]
   ],
   "COUNTERDEBOUNCE": [
@@ -4965,6 +4969,10 @@
    [
     "defined(USE_RULES)",
     "!defined(USE_SCRIPT)"
+   ],
+   [
+    "defined(USE_SCRIPT)",
+    "!defined(USE_RULES)"
    ]
   ],
   "SUNRISE": [
@@ -5406,6 +5414,10 @@
    [
     "defined(USE_RULES)",
     "!defined(USE_SCRIPT)"
+   ],
+   [
+    "defined(USE_SCRIPT)",
+    "!defined(USE_RULES)"
    ]
   ],
   "VAR": [
