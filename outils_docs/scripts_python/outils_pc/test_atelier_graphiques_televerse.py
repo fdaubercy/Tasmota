@@ -24,12 +24,15 @@ import test_atelier_graphiques_ecriture as tage
 verifie, ECHECS = tage.verifie, tage.ECHECS
 CUVE, BUREAU = tage.CUVE, tage.BUREAU
 TOUS = {agt.nom_fs(f) for f in age.FICHIERS_MOTEUR}
+SONDE = 'Br (def() import graphiquesFonctions return graphiquesFonctions.FICHIERS.contains("pages_graphiques.js") end)()'
+EXTRA = ["sd/js/graphiques.js", "sd/js/graphiques_edition.js"]      # page /graphiques, jointe quand le moteur manque
 
 
 class Carte:
     """get injecte : repond aux `Br path.exists("/<fs>")` selon `presents` ; `morte` = hors ligne."""
-    def __init__(self, presents=(), morte=False, reponse=None, leve=None):
+    def __init__(self, presents=(), morte=False, reponse=None, leve=None, firmware=True, sonde=None):
         self.presents, self.morte, self.appels, self.reponse, self.leve = set(presents), morte, [], reponse, leve
+        self.firmware, self.sonde = firmware, sonde             # sonde : corps force pour la sonde du firmware (A11)
 
     def __call__(self, ip, chemin, delai):
         self.appels.append(chemin)
@@ -40,6 +43,8 @@ class Carte:
         cmnd = urllib.parse.unquote(chemin.split("cmnd=", 1)[1])
         if self.reponse is not None:
             return self.reponse
+        if cmnd == SONDE:                                # firmware d'avant le chantier : graphiquesFonctions solidifie sans le fichier
+            return self.sonde if self.sonde is not None else json.dumps({"Br": "true" if self.firmware else "false"}).encode()
         m = re.fullmatch(r'Br \(def\(\) import path return path\.exists\("/([^"]+)"\) end\)\(\)', cmnd)
         if re.fullmatch(r'Br import path path\.exists\("/([^"]+)"\)', cmnd):
             return b'{"Br":"nil"}'                         # comme la vraie carte (mesure du 2026-11-05) : pas de valeur
@@ -123,8 +128,33 @@ def test_graphiques(t):
     avant = agt.etat_avant(racine, CUVE)
     ecrits = agg.ecrit(racine, CUVE, d, agg.prevoit(racine, CUVE, d, get=muette)["empreinte"], tage.SANS_BUILD, get=muette)
     p = plan(racine, CUVE, "graphiques", ecrits, avant, Carte(presents=TOUS - {"sd/js/graphiques_moteur.js"}))
-    verifie((p["fichiers"], p["redemarrer"]), (["graphiques.json", "sd/js/graphiques_moteur.js"], 0),
-            "destination graphiques : graphiques.json + moteur absent de la carte, redemarrer=0")
+    verifie((p["fichiers"], p["redemarrer"]), (["graphiques.json", "sd/js/graphiques_moteur.js"] + EXTRA, 0),
+            "destination graphiques : graphiques.json + moteur absent de la carte + graphiques.js et graphiques_edition.js, redemarrer=0")
+    p = plan(racine, CUVE, "graphiques", ecrits, avant, Carte(presents=TOUS))
+    verifie((p["fichiers"], p.get("firmware_requis")), (["graphiques.json"], False), "moteur present : ni moteur ni page /graphiques joints")
+    c = Carte(presents=TOUS, firmware=False)
+    p = plan(racine, CUVE, "graphiques", ecrits, avant, c)
+    verifie((p.get("firmware_requis"), p.get("url"), SONDE in [urllib.parse.unquote(a.split("cmnd=", 1)[-1]) for a in c.appels]),
+            (True, None, True), "firmware d'avant (FICHIERS sans pages_graphiques.js) : firmware_requis, pas d'URL")
+    for corps in (b'{"Br":"nil"}', b'{"Br":"erreur"}'):
+        p = plan(racine, CUVE, "graphiques", ecrits, avant, Carte(presents=TOUS, sonde=corps))
+        verifie((p.get("firmware_requis"), bool(p.get("url")), any("firmware" in n for n in p["notes"])), (False, True, True),
+                f"sonde illisible {corps!r} : non verifie, note visible, bouton garde")
+    p = plan(racine, CUVE, "graphiques", ecrits, avant, Carte(morte=True))
+    verifie((p.get("firmware_requis"), bool(p.get("url")), p["verification"]), (False, True, "hors_ligne"), "carte hors ligne : non verifie, bouton garde")
+    p = plan(racine, CUVE, "pages", ecrits, avant, Carte(presents=TOUS, firmware=False))
+    verifie(p.get("firmware_requis"), False, "destination pages : la sonde du firmware n'a pas lieu d'etre")
+
+
+def test_solidifies_non_listes(t):
+    """M5 : un fichier solidifie dont l'env retire le source du FS (custom_files_exclude_solidified = ON) n'est jamais liste."""
+    racine = depot(t)
+    avant = agt.etat_avant(racine, CUVE)
+    ecrits = age.ecrit(racine, CUVE, tage.description(), True, age.prevoit(racine, CUVE, tage.description(), True)["empreinte"], tage.SANS_BUILD)
+    ecrits = [e for e in ecrits]
+    p = plan(racine, CUVE, "pages", ecrits, avant, Carte(presents=TOUS - {"pagesGraphiques.be", "pagesGraphiquesValidation.be"}))
+    verifie(sorted(set(p["fichiers"]) & {"pagesGraphiques.be", "pagesGraphiquesValidation.be"}), [],
+            "solidifies (exclude_solidified ON) : absents de la liste meme si la carte ne les a pas")
 
 
 def test_url_et_build(t):
@@ -200,7 +230,7 @@ def test_nom_fs(t):
         verifie(True, True, "nom_fs : refuse hors data")
 
 
-TESTS = [test_description_seule, test_premiere_page, test_absent_de_la_carte, test_hors_ligne, test_graphiques, test_url_et_build,
+TESTS = [test_description_seule, test_premiere_page, test_absent_de_la_carte, test_hors_ligne, test_graphiques, test_solidifies_non_listes, test_url_et_build,
          test_nom_fs, test_forme_de_commande, test_erreurs_carte, test_redemarrer]
 
 if __name__ == "__main__":
