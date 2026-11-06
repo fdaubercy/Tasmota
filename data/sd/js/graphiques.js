@@ -269,7 +269,7 @@
       return !etat.composition.some(function (o) {
         if (o === g) return false;
         if (o.prefixes) return dansPrefixes(n, o.prefixes);
-        return Array.isArray(o.series) && o.series.some(function (s) { return s.chemin === n; });
+        return Array.isArray(o.series) && o.series.some(function (s) { return (s.chemin || s) === n; });
       });
     }).map(function (n) { return {chemin: n}; });
   }
@@ -281,7 +281,7 @@
     var zone = $('g_graphiques');
     zone.innerHTML = '';
     etat.composition.forEach(function (g) {
-      if (g.moteur === 'pages' && M.bloc) return blocs.push(M.bloc(g, zone));     // trace par graphiques_moteur.js
+      if (g.moteur === 'pages') return M.bloc && blocs.push(M.bloc(g, zone));     // trace par graphiques_moteur.js ; absent : ignore, les autres restent traces
       var b = {def: g, periode: g.periode || 'jour', graphique: null, courbes: [], x: [], absentes: []};
       b.zone = document.createElement('div');
       b.zone.className = 'g_bloc';

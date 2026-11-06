@@ -148,7 +148,7 @@ CADRAN = {"moteur": "pages", "type": "cadran", "titre": "Cadran atelier", "perio
 COURBE = {"moteur": "pages", "type": "courbe", "titre": "Courbe atelier", "periode": "jour", "largeur": "pleine",
           "series": ["DS18B20.Temperature", "calc:double"],
           "calculees": {"double": {"nature": "historique", "formule": "DS18B20.Temperature * 2"}}}
-COMPOSITIONS["atelier"] = COMPOSITIONS["atelier_mention"] = COMPOSITIONS["atelier_edition"] = [MESURES_T, CADRAN, COURBE]
+COMPOSITIONS["atelier"] = COMPOSITIONS["atelier_mention"] = COMPOSITIONS["atelier_edition"] = COMPOSITIONS["atelier_sans_moteur"] = [MESURES_T, CADRAN, COURBE]
 LIQUIDE = {"moteur": "pages", "type": "liquide", "titre": "Liquide atelier", "periode": "direct", "min": 0, "max": 100,
            "series": [{"chemin": TAUX, "libelle": "Taux", "unite": "%"}]}
 COMPOSITIONS["atelier_liquide"] = COMPOSITIONS["atelier_liquide_absent"] = [LIQUIDE]
@@ -233,6 +233,10 @@ def serveur(scenario, page, echarts_gz):
                 return self.envoie(200, "application/octet-stream", echarts_gz)
             if u.path == "/graphiques":
                 corps = page
+                if scenario == "atelier_sans_moteur":      # carte dont graphiques_moteur.js n'est pas (encore) sur le FS : la page ne l'inline pas
+                    moteur = (RACINE_JS / "graphiques_moteur.js").read_bytes()
+                    assert moteur.strip() in corps, "moteur introuvable dans la page du banc"
+                    corps = corps.replace(moteur.strip(), b"")
                 injecte = ""
                 if scenario.startswith("atelier"):     # toute exception JS est notee sur <html>
                     injecte += ("addEventListener('error',function(e){document.documentElement.setAttribute('data-erreur-js',e.message)});"
@@ -379,6 +383,9 @@ ATTENDUS = {
     ],
     "atelier_liquide_absent": [
         ("liquidfill absent de la carte : message lisible dans la tuile, aucune exception JS", lambda d, r, t, e: "liquidfill est absent de la carte (HTTP 404)" in d["texte_atelier"] and d["erreur_js"] is None),
+    ],
+    "atelier_sans_moteur": [
+        ("moteur des pages absent (carte a FS ancien) : le graphique actuel reste trace, les 2 atelier sont ignores, aucune exception JS", lambda d, r, t, e: d["nb"] == 1 and d["series"] == [["Température de l'eau (°C)"]] and d["tuiles"] == [] and d["erreur_js"] is None),
     ],
     "atelier_mention": [
         ("édition : les 2 graphiques atelier portent la mention, sans titre ni série modifiables", lambda d, r, t, e: d["edition"] and d["cartes_atelier"] == 2 and d["msg_edition"] == "" and d["erreur_js"] is None),
