@@ -2,6 +2,53 @@
 #@ solidify:gestionFileFolder
 var gestionFileFolder = module("gestionFileFolder")
 
+# Déplace un fichier sans jamais le perdre : copie dans un temporaire du dossier d'arrivée, taille vérifiée (un FS plein
+# tronque sans erreur), remplacement, puis seulement suppression de l'original. true si déplacé ; sinon tout reste en place.
+def gestionFileFolder_deplaceFichier(source, destination)
+    import path
+    import string
+    var temporaire = destination + ".tmp"
+    var entree, sortie, relu
+    try
+        entree = open(source, 'r')
+        sortie = open(temporaire, 'w')
+        var taille = entree.size()
+        var morceau = entree.readbytes(2048)
+        while size(morceau) > 0
+            sortie.write(morceau)
+            tasmota.yield()
+            morceau = entree.readbytes(2048)
+        end
+        entree.close()    entree = nil
+        sortie.close()    sortie = nil
+
+        relu = open(temporaire, 'r')
+        var ecrits = relu.size()
+        relu.close()    relu = nil
+        if ecrits != taille
+            raise "io_error", string.format("%i octets ecrits sur %i (FS plein ?)", ecrits, taille)
+        end
+
+        if path.exists(destination)
+            logFonctions.log(string.format("REPARTITION_FICHIERS: %s remplace la version en place !", destination), LOG_LEVEL_INFO)
+            path.remove(destination)
+        end
+        if !path.rename(temporaire, destination)
+            raise "io_error", "renommage refuse"
+        end
+        path.remove(source)
+        return true
+    except .. as error, message
+        if entree != nil    entree.close()    end
+        if sortie != nil    sortie.close()    end
+        if relu != nil    relu.close()    end
+        path.remove(temporaire)
+        logFonctions.log(string.format("REPARTITION_FICHIERS_ERREUR: %s non deplace, l'original reste en place : %s -> %s !", source, error, message), LOG_LEVEL_ERREUR)
+        return false
+    end
+end
+gestionFileFolder.deplaceFichier = gestionFileFolder_deplaceFichier
+
 # Liste les fichiers présent dans le système de fichier et réparti les fichiers dont le nom est précédé de "SD_"
 # dans la carte SD
 def gestionFileFolder_listeEtRepartitLesFichiers()
@@ -16,27 +63,13 @@ def gestionFileFolder_listeEtRepartitLesFichiers()
     # Crée le dossier pour stocker les json
     for nb:0 .. listFile.size() - 1
         var nameFile = listFile[nb]
-        var filePath = ""
 
         if (string.find(nameFile, ".json") > -1 && string.find(nameFile, "_persist.json") == -1)
             path.mkdir("/json")
-            filePath = "/json/" + nameFile
+            gestionFileFolder.deplaceFichier("/" + nameFile, "/json/" + nameFile)
         end
 
         tasmota.yield()
-
-        if (string.find(nameFile, ".json") > -1 && string.find(nameFile, "_persist.json") == -1)
-            var file = open(nameFile, 'r')
-            var temp = file.read()
-            file.close()
-
-            # Et supprime le fichier d'origine
-            path.remove(nameFile)
-
-            var fileDest = open(filePath, 'w')
-            fileDest.write(temp)
-            fileDest.close()
-        end
     end
 
     # Crée le dossier html sur carte SD si elle est utilisée
@@ -59,18 +92,8 @@ def gestionFileFolder_listeEtRepartitLesFichiers()
 
             tasmota.yield()
 
-            # Recopie le contenu du fichier dans le fichier de destination
-            if string.find(nameFile, ".html") > -1 || (string.find(nameFile, ".js") > -1 && string.find(nameFile, ".json") == -1) || string.find(nameFile, ".css") > -1
-                var file = open(nameFile, 'r')
-                var temp = file.read()
-                file.close()
-
-                # Et supprime le fichier d'origine
-                path.remove(nameFile)
-
-                var fileDest = open(filePath, 'w')
-                fileDest.write(temp)
-                fileDest.close()
+            if filePath != ""
+                gestionFileFolder.deplaceFichier("/" + nameFile, filePath)
             end
         end
     # Crée le dossier 'sd', puis recommence la répartition. mkdir en échec (LittleFS plein) : on s'arrête là,
@@ -82,35 +105,21 @@ def gestionFileFolder_listeEtRepartitLesFichiers()
         logFonctions.log("REPARTITION_FICHIERS_ERREUR: creation du dossier '/sd' impossible (LittleFS plein ?), fichiers web laisses a la racine !", LOG_LEVEL_ERREUR)
     end
 
-    # Crée le dossier '.extensions' pour stocker les extensions tapp
-    if path.exists("/.extensions")
+    # Range les extensions de la racine dans '.extensions' (créé au besoin). Une extension déjà lancée depuis la racine à ce
+    # démarrage (tapp.be passe avant l'autoexec) repart de '.extensions' au démarrage suivant.
+    if !path.exists("/.extensions") && !path.mkdir("/.extensions")
+        logFonctions.log("REPARTITION_FICHIERS_ERREUR: creation du dossier '/.extensions' impossible (LittleFS plein ?), extensions laissees a la racine !", LOG_LEVEL_ERREUR)
+    else
         listFile = path.listdir("/")
 
         for nb:0 .. listFile.size() - 1
             var nameFile = listFile[nb]
 
-            # Si extension '.tapp'
-            var filePath = ""
-            if string.find(nameFile, ".tapp") > -1
-                path.mkdir("/.extensions")
-                filePath = "/.extensions/" + nameFile
-
+            if string.endswith(nameFile, ".tapp")
+                gestionFileFolder.deplaceFichier("/" + nameFile, "/.extensions/" + nameFile)
                 tasmota.yield()
-
-                # Recopie le contenu du fichier dans le fichier de destination
-                var file = open(nameFile, 'r')
-                var temp = file.read()
-                file.close()
-
-                # Et supprime le fichier d'origine
-                path.remove("/" + nameFile)
-
-                var fileDest = open(filePath, 'w')
-                fileDest.write(temp)
-                fileDest.close()
             end
         end
-    else path.mkdir("/.extensions")
     end
 end
 gestionFileFolder.listeEtRepartitLesFichiers = gestionFileFolder_listeEtRepartitLesFichiers
