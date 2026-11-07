@@ -70,7 +70,7 @@ Règles : rien n'est écrit sur une vraie carte sans geste ou accord de l'utilis
 - [ ] Reprendre `tasks/plans/autoexec-bat.md` : son A10 (retour à `tasks/plans/energie-differentiel.md` : thermomètre A11, retour au plan « jauges-cuve » A10), après le compte rendu de ce plan à l'utilisateur
 
 ## Améliorations restantes
-- [ ] [projet] Corriger le déplacement des `.tapp` dans `data/fs/gestionFileFolder.be`, si l'utilisateur le décide : la condition n'est pas inversée (retard d'un démarrage), mais la source est supprimée avant l'écriture de la copie, un homonyme est écrasé, et tout nom contenant `.tapp` est pris (`EXTENSIONS_TAPP.md` § 8)
+- [x] [projet] Corriger le déplacement des `.tapp` dans `data/fs/gestionFileFolder.be` (décidé par l'utilisateur le 2026-11-07) : `deplaceFichier` copie, vérifie la taille, puis supprime l'original, aussi pour `.json`, `.html`, `.js`, `.css` ; noms finis par `.tapp` seulement — preuve : banc_repartition_fichiers.py VERT (rouge sur l'ancien code, 7 témoins), banc_demarrage VERT, banc_boot OK, solidifie_et_compile_berry rc 0, relecteur-berry sans bloquant ; effet seulement avec un firmware recompilé, non essayé sur carte
 - [ ] [projet] L'analyse à la frappe reste bloquée pendant un envoi réel (`/autoexec/envoi` garde le verrou général de `assistant_persist_web.py`)
 - [ ] [projet] Commandes Berry par carte (modules réellement chargés), et alias `SO146` reconnus dans le choix remplacer/enlever
 - [ ] [projet] Marquer dans la banque les commandes non compilées pour la carte choisie

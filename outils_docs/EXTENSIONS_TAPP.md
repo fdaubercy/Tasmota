@@ -308,39 +308,30 @@ Le nom d'hôte de la carte est à vérifier avant tout envoi (identité), comme 
 5. **Une extension fautive se relance à chaque démarrage** (§ 2.3) et `SetOption153` ne l'arrête pas ; pour la
    neutraliser sans carte accessible en série : la renommer en `.tapp_` (via `/ufsd` ou `Br import path path.rename(...)`, non essayé sur carte).
 6. **`import` tardif impossible** (§ 2.3) : tout fichier de l'archive s'importe pendant `autoexec.be`.
-7. **Défaut signalé de `gestionFileFolder.be`** : voir § 8.
+7. **`.tapp` déposé à la racine** : rangé dans `/.extensions/` au démarrage, et remplace un homonyme, voir § 8.
 
-## 8. Défaut signalé : `gestionFileFolder.be` et les `.tapp` de la racine
+## 8. Un `.tapp` déposé à la racine : `gestionFileFolder.be`
 
-Décision de l'utilisateur : **signalé ici, non corrigé**. Fichier : `data/fs/gestionFileFolder.be`,
-fonction `gestionFileFolder_listeEtRepartitLesFichiers`, dernière partie.
+Corrigé le 2026-11-07 à la demande de l'utilisateur. **Effet seulement avec un firmware recompilé** : le module est
+solidifié dans le socle ; une carte qui tourne encore sur un ancien firmware garde l'ancien comportement, décrit à la fin.
 
-Lecture exacte du code :
+`data/fs/gestionFileFolder.be::gestionFileFolder_listeEtRepartitLesFichiers`, à chaque démarrage (appelé par le prologue) :
 
-```
-si /.extensions existe
-    pour chaque fichier de "/" dont le nom CONTIENT ".tapp"
-        mkdir /.extensions (déjà là) ; lit le fichier ; le SUPPRIME de "/" ; l'écrit dans /.extensions/<nom>
-sinon  mkdir /.extensions
-```
+- `/.extensions` est créé s'il manque, et les `.tapp` de la racine y sont rangés **au même démarrage**. Seuls les noms
+  **finis par** `.tapp` sont pris : `x.tapp_`, `mon.tapp.bak` restent à leur place.
+- Le fichier a déjà été lancé depuis `/` à ce démarrage (`tapp.be::autoexec_dir`, avant le prologue) : ce démarrage-là,
+  il tourne sans figurer dans `/ext` (§ 2.4). Il repart de `/.extensions/` au démarrage suivant.
+- Un fichier de même nom dans `/.extensions/` **est remplacé** : déposer une nouvelle version à la racine sert de mise à
+  jour. Le journal le dit (`REPARTITION_FICHIERS: ... remplace la version en place`, niveau `info`).
 
-Ce que cela donne, pour un `.tapp` déposé à la racine :
+`gestionFileFolder_deplaceFichier` déplace sans perdre : copie par morceaux de 2 Ko dans `<destination>.tmp`, taille relue
+et comparée (un FS plein tronque), remplacement, **puis** suppression de l'original. Une panne laisse l'original et
+l'ancienne version en place, retire le temporaire et journalise `REPARTITION_FICHIERS_ERREUR` ; le déplacement est retenté
+au démarrage suivant. Les `.json`, `.html`, `.js` et `.css` passent par la même fonction. Banc sur FS en mémoire :
+`outils_docs/scripts_python/berry/banc_repartition_fichiers.py`. **Non essayé sur un vrai LittleFS.**
 
-- **Premier démarrage où `/.extensions` n'existe pas** : le dossier est créé vide ; le `.tapp` **reste à la racine**. La
-  condition n'est donc pas « inversée », comme le supposait le plan de ce chantier : elle retarde le déplacement **d'un
-  démarrage** (le `mkdir` de la branche vraie est redondant). Le fichier reste exécuté depuis `/` (`autoexec_dir("/")`),
-  mais ne figure pas dans `/ext` (§ 2.4).
-- **Démarrage suivant** : le dossier existe, le fichier est déplacé, mais **après** son lancement de ce démarrage (le
-  prologue vient après les extensions) ; il tourne depuis `/.extensions/` à partir du démarrage d'après.
-- Trois défauts réels, indépendants de la condition :
-  1. la copie **supprime la source avant d'écrire la destination** : si l'écriture échoue (FS plein, coupure), l'extension est perdue ;
-  2. un fichier déjà présent sous le même nom dans `/.extensions/` est **écrasé** sans avertissement ;
-  3. le critère `string.find(nameFile, ".tapp") > -1` attrape tout nom qui contient `.tapp` n'importe où (par exemple
-     `x.tapp_`, `mon.tapp.bak`), pas seulement les extensions.
-- Le fichier est lu par `file.read()` en mode `'r'` puis réécrit en chaîne : pour un binaire (une archive ZIP) Berry
-  conserve les octets nuls dans ses chaînes, donc c'est probablement sans perte, mais **non essayé sur carte**.
-
-Par ailleurs, la copie se fait sans `path.exists` du doublon et sans journal : aucun message ne signale le déplacement.
+Avec un firmware antérieur : l'original était supprimé **avant** l'écriture (FS plein ou coupure : fichier perdu), le
+`.tapp` restait à la racine jusqu'au démarrage suivant si `/.extensions` manquait, et tout nom contenant `.tapp` était pris.
 
 ## 9. Ce qui reste à essayer (A10) et où écrire le résultat
 
@@ -352,7 +343,7 @@ Par ailleurs, la copie se fait sans `path.exists` du doublon et sans journal : a
 | Gabarit A : `fsMqtt` chargé par minuterie ; sans la minuterie, ce qui casse (`logFonctions` absent ?) | _à remplir_ |
 | Gabarit B : `unload_extension` retire driver, commande et règle ; l'`import` d'un fichier de l'archive après chargement échoue | _à remplir_ |
 | `/ufsu` écrit dans `/.extensions/` par `build_ota_fs.py` ; MQTT `fsMqtt` aussi (binaire, MD5) | _à remplir_ |
-| Déplacement des `.tapp` de la racine : délai d'un démarrage, intégrité de l'archive copiée | _à remplir_ |
+| Déplacement des `.tapp` de la racine sur un firmware recompilé : rangé au même démarrage, archive identique, panne de FS plein | _à remplir_ |
 | Entrée ZIP avec `/` dans son nom (§ 2.1) | _à remplir_ |
 | Consommation de tas d'une extension A et B (mesure `tasmota.memory()` avant/après) | _à remplir_ |
 | Une extension fautive et `SetOption153` (§ 2.3) | _à remplir_ |
