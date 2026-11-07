@@ -225,6 +225,17 @@ OUTILS = [
         "http",
         "Console capturée : " + CONSOLE.format("atelier_graphiques") + ". Sauvegardes horodatées avant écriture : "
         "%LOCALAPPDATA%\\outils_tasmota\\fichiers_berry\\sauvegardes\\."),
+    Outil(
+        "fabrique_tapp", "Fabrique d'extensions", "Fabrique d'extensions", GROUPES[2],
+        "Crée une extension .tapp depuis un modèle, la vérifie, la fabrique et l'envoie à une carte.",
+        "Page web qui guide en quatre étapes : un dossier data/extensions/<nom>/ créé depuis un modèle, le manifeste, "
+        "le contrôle (noms, manifeste, compilation Berry) et la fabrication du .tapp, puis l'envoi par HTTP ou MQTT vers "
+        "/.extensions/ d'une carte, nom d'hôte vérifié, refusé pendant un build. Seul paramètre ici : le port de la page "
+        "(7980). Rien n'est écrit ni envoyé sans un geste dans la page, aucune source n'est supprimée : l'arrêter à tout moment.",
+        DOSSIER + "outils_pc/tapp_web.py",
+        [_port("http", 7980)],
+        "http",
+        "Console capturée : " + CONSOLE.format("fabrique_tapp") + ". Sources et archives : data/extensions/."),
 ]
 
 

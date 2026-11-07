@@ -701,6 +701,9 @@ cible_assistant_persist.enregistre(env)
 # CIBLE ATELIER DES GRAPHIQUES (meme menu Custom) : pages de graphiques des cartes S3/P4
 import cible_atelier_graphiques
 cible_atelier_graphiques.enregistre(env)
+# CIBLE FABRIQUE D'EXTENSIONS (meme menu Custom) : creer, verifier, fabriquer et envoyer un .tapp
+import cible_tapp
+cible_tapp.enregistre(env)
 
 # Cibles qui ne sont PAS des builds : ne pas incrementer CFG_HOLDER, ne pas reecrire
 # platformio_override.ini ni copier d'image FS (bloc suivant).
@@ -720,7 +723,7 @@ cible_atelier_graphiques.enregistre(env)
 CIBLES_HORS_BUILD = (cible_pont_serie.NOM_CIBLE, cible_sniffeur_mqtt.NOM_CIBLE, cible_syslog_tasmota.NOM_CIBLE,
                      cible_sniffeur_modbus.NOM_CIBLE, cible_testeur_udp.NOM_CIBLE, cible_synchro_fork.NOM_CIBLE,
                      cible_annuaire.NOM_CIBLE, cible_build_web.NOM_CIBLE, cible_fichiers_berry.NOM_CIBLE,
-                     cible_assistant_persist.NOM_CIBLE, cible_atelier_graphiques.NOM_CIBLE, "__idedata")
+                     cible_assistant_persist.NOM_CIBLE, cible_atelier_graphiques.NOM_CIBLE, cible_tapp.NOM_CIBLE, "__idedata")
 hors_build = any(cible in COMMAND_LINE_TARGETS for cible in CIBLES_HORS_BUILD)
 
 # ============================================================

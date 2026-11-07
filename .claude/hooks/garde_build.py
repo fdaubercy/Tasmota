@@ -33,7 +33,7 @@ AFFECTATION = re.compile(r'^\$?[A-Za-z_][A-Za-z0-9_:]*=')
 # sans le depot dans son chemin) ; build/test_garde_build.py verifie que la liste reste alignee.
 CIBLES_OUTILS = frozenset({'pont_serie', 'sniffeur_mqtt', 'syslog_tasmota', 'sniffeur_modbus', 'sniffeur_i2c', 'testeur_udp',
                            'synchro_fork', 'annuaire', 'build_web', 'fichiers_berry', 'assistant_persist',
-                           'atelier_graphiques'})
+                           'atelier_graphiques', 'fabrique_tapp'})
 PIO_RUN = re.compile(r'(?:platformio|pio)(?:\.exe)?"?(?:\s+-c\s+\S+)?\s+run\b', re.I)
 # -t X, --target X, --target=X, et la forme collee -tX (click l'accepte) ; idem pour l'env
 CIBLE_PIO = re.compile(r'\s(?:-t|--target)(?:[\s=]+"?|"?(?=[^\s=-]))([^\s"]+)')

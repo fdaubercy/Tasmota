@@ -237,6 +237,16 @@
             "args": ["-u", "outils_docs/scripts_python/outils_pc/atelier_graphiques_web.py", "--http", "7950"],
             "presentation": { "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
+        },
+        {
+            // Fabrique d'extensions : creer, verifier, fabriquer et envoyer un .tapp.
+            // Aussi cible Custom « Fabrique d'extensions (page web) ».
+            "label": "Outil : fabrique d'extensions (http://127.0.0.1:7980)",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/tapp_web.py", "--http", "7980"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
         }
     ]
 }
