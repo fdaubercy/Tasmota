@@ -47,6 +47,9 @@ def faux_depot(tmp, contenu="a"):
 def banc():
     appels = []
     vrai_calcule = ag._calcule
+    FAMILLES = ["platformio.ini", "platformio_override.ini", "platformio_tasmota32.ini", "platformio_tasmota_env32.ini",
+                "platformio_tasmota_cenv.ini", "tasmota/my_user_config.h", "tasmota/include/tasmota_configurations_ESP32.h",
+                "boards/esp32s3.json", "outils_docs/schemas/commandes_tasmota.json", "tasmota/user_config_override.h"]
 
     def calcule(racine, env):
         appels.append(env)
@@ -64,11 +67,26 @@ def banc():
             faux_depot(tmp, "b")
             ag.etat(tmp, "e")
             verifie(len(appels), 2, "cache : empreinte changee (user_config_override.h) -> nouveau calcul")
-            (Path(tmp) / "platformio_tasmota_cenv.ini").write_text("y", encoding="utf-8")
+            (Path(tmp) / "platformio_tasmota_cenv.ini").write_text("yy", encoding="utf-8")
             ag.etat(tmp, "e")
             verifie(len(appels), 3, "cache : empreinte changee (cenv) -> nouveau calcul")
             ag.etat(tmp, "autre")
             verifie(len(appels), 4, "cache : un autre env -> son propre calcul")
+            for f in FAMILLES:                       # chaque famille de fichiers touchee = nouveau calcul
+                q = Path(tmp) / f
+                q.parent.mkdir(parents=True, exist_ok=True)
+                q.write_text("1", encoding="utf-8")
+                ag.etat(tmp, "fam")
+                avant = len(appels)
+                ag.etat(tmp, "fam")
+                q.write_text("22", encoding="utf-8")
+                ag.etat(tmp, "fam")
+                verifie((len(appels) - avant), 1, f"cache : {f} modifie -> un nouveau calcul (et un seul)")
+            avant = len(appels)
+            for i in range(5):
+                (Path(tmp) / "platformio.ini").write_text("x" * (3 + i), encoding="utf-8")
+                ag.etat(tmp, "fam")
+            verifie(len([k for k in ag._CACHE if k[:2] == (tmp, "fam")]), 1, "cache : une seule entree par (racine, env) apres 5 empreintes")
             appels.clear()
             verifie([ag.etat(tmp, "boom") for _ in range(20)] == [None] * 20, True, "defaut : exception -> None, jamais d'exception")
             verifie(len(appels), 1, "defaut : le None est aussi mis en cache (pas de sous-processus a chaque frappe)")
@@ -112,6 +130,11 @@ def banc():
                    for p in ch for c, v in p if v is False and "USE_" not in c
                    and re.search(r"CONFIG_IDF_TARGET|SOC_|__has_include|ESP_IDF_VERSION", c)]
         verifie(fausses, [], f"reel : {env[-22:]} : aucune alerte portee par la seule condition CONFIG_IDF_TARGET, SOC_, __has_include, ESP_IDF_VERSION")
+    sans_faux = [n for n, ch in commandes["gardes"].items() if any(all(v is not False for _, v in p) for p in g(n))]
+    incertaines = [n for n in sans_faux if any(v is None for p in g(n) for _, v in p)]
+    verifie(len(incertaines) > 0, True, f"reel : {len(incertaines)} commandes ont une condition incertaine (None) sur le bureau")
+    verifie([n for n in sans_faux if any(a["type"] == "absente" for a in ana(n + " 1"))], [],
+            "reel : une commande avec un chemin sans condition fausse (dont incertain) n'est jamais alertee")
     debut = time.perf_counter()
     for _ in range(20):
         ag.etat(RACINE, ENV)
@@ -129,23 +152,33 @@ def banc():
     verifie(len(sous), 0, "temps : aucun sous-processus une fois le cache pose")
 
 
+# (nom, ancien, nouveau, extrait du libelle KO qui doit le tuer)
 MUTANTS = [
-    ("sans cache", "if cle not in _CACHE:", "if True:"),
-    ("empreinte sans le .h", 'FICHIERS = ("platformio_tasmota_cenv.ini", "tasmota/user_config_override.h")', 'FICHIERS = ("platformio_tasmota_cenv.ini",)'),
-    ("exception non rattrapee", "except Exception as e:", "except KeyboardInterrupt as e:"),
-    ("incertain compte faux", "evalue(c, ctx, {})", "bool(evalue(c, ctx, {}))"),
+    ("sans cache", "if cle not in _CACHE:", "if True:", "cache : un seul calcul"),
+    ("empreinte sans le .h", '("tasmota", "user_config_override.h"),', "", "user_config_override.h modifie"),
+    ("empreinte sans my_user_config.h", '("tasmota", "my_user_config.h"),', "", "my_user_config.h modifie"),
+    ("empreinte sans platformio.ini", '(("", "platformio.ini"), ', '(', "platformio.ini modifie"),
+    ("empreinte par le seul nom (ni mtime ni taille)", '|{st.st_mtime_ns}|{st.st_size}', '', "boards/esp32s3.json modifie"),
+    ("cache sans purge des anciennes empreintes", "del _CACHE[ancienne]", "pass", "une seule entree par (racine, env)"),
+    ("exception non rattrapee", "except Exception as e:", "except KeyboardInterrupt as e:", "exception"),
+    ("incertain compte faux", "evalue(c, ctx, {})", "bool(evalue(c, ctx, {}))", "condition incertaine"),
 ]
 
 
 def temoins():
     source = (ICI / "autoexec_gardes.py").read_text(encoding="utf-8")
-    for nom, ancien, nouveau in MUTANTS:
+    chemin = os.pathsep.join([str(ICI), str(ICI.parent / "build")])      # le mutant, copie ailleurs, importe quand meme les voisins
+    for nom, ancien, nouveau, tueur in MUTANTS:
         verifie(ancien in source, True, f"mutant {nom} : motif present")
         with tempfile.TemporaryDirectory() as tmp:
             (Path(tmp) / "autoexec_gardes.py").write_text(source.replace(ancien, nouveau, 1), encoding="utf-8")
             p = subprocess.run([sys.executable, str(Path(__file__).resolve())], capture_output=True, text=True, encoding="utf-8",
-                               env=dict(os.environ, AUTOEXEC_MUTANT=tmp, PYTHONIOENCODING="utf-8", PYTHONPATH=str(ICI)))
-        verifie(p.returncode != 0, True, f"temoin rouge : mutant {nom}")
+                               env=dict(os.environ, AUTOEXEC_MUTANT=tmp, PYTHONIOENCODING="utf-8", PYTHONPATH=chemin))
+        ko = [l[5:].split("  (obtenu")[0] for l in p.stdout.splitlines() if l.startswith("KO   ")]
+        print(f"     mutant {nom} : KO obtenus = {ko}")
+        plante = "Traceback" in p.stderr and tueur == "exception"          # exception non rattrapee : le banc plante, sans KO
+        verifie(p.returncode != 0 and (any(tueur in l for l in ko) or plante), True, f"temoin rouge : mutant {nom} tue par « {tueur} »")
+        verifie(not any("preprocesseur disponible" in l for l in ko), True, f"temoin {nom} : pas rouge par accident (fils importe ses voisins)")
 
 
 if __name__ == "__main__":
