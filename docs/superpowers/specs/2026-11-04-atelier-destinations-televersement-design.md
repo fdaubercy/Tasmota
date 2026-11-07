@@ -117,7 +117,9 @@ vers « Graphiques », l'atelier lit la composition de la carte en ligne par `/u
 - Place du FS mesurée sur les 6 cartes à historique après ajout des JS du moteur (blocs de 4 Ko, leçon du
   2026-11-02).
 - Validation sur une vraie carte (journal web sans `_ERREUR`) avant de cocher : la cuve, et une carte dont
-  `/graphiques` a déjà une composition (P4).
+  `/graphiques` a déjà une composition (P4). Mesuré le 2026-11-07 : le P4 n'en avait pas, il affichait la composition par
+  défaut ; le premier graphique de l'atelier faisait donc disparaître « Mesures » et « Cuve ». Décision de l'utilisateur :
+  ces graphiques automatiques restent tant que la composition ne contient que des graphiques de l'atelier.
 
 ## 7. Décisions du rédacteur (relecture constructeur du 2026-11-04)
 

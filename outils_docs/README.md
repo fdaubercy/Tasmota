@@ -1474,6 +1474,8 @@ Le moteur est `data/fs/pagesGraphiques.be` (+ `pagesGraphiquesValidation.be`, m�
 route `/pages?p=<id>` (page), `?f=valeurs&c=` (valeurs), `?f=sources`, `?f=liquidfill.js.gz`. Gabarits dans `data/sd`
 (`html/pages_graphiques.html`, `css/pages_graphiques.css`, `js/pages_graphiques.js` et `pages_graphiques_formule.js`).
 Au démarrage seul l'index des pages reste en RAM ; les graphiques ne sont relus qu'à l'ouverture d'une page.
+`?f=valeurs` applique les mêmes filtres que le Direct de `/graphiques` (`historiqueFonctions.ajouteFiltre`) : une mesure en
+erreur ou un esclave muet donne `null`, pas un faux 0.
 
 ### Le menu « Page » : où poser le graphique
 
@@ -1493,6 +1495,12 @@ le même moteur que les pages dédiées, donc **tous les styles de l'atelier** y
 4 types d'origine. Les autres clés du fichier (`affichage`, `groupes`...) et les graphiques déjà là ne sont pas touchés ;
 8 graphiques au plus, corps compact de 8 Ko au plus. Une **réécriture** du même graphique le **remplace** (la page retient
 son rang et vérifie qu'il n'a pas changé entre-temps) : jamais de doublon.
+
+**Tant que la composition ne contient que des graphiques de l'atelier, `/graphiques` garde ses graphiques automatiques**
+(« Mesures » et un par groupe) et y ajoute ceux de l'atelier (décision du 2026-11-07). Une tuile de l'atelier ne retire pas
+sa série de « Mesures ». « Enregistrer » depuis le mode édition rend tout explicite : la composition ne contient alors plus
+seulement des graphiques de l'atelier, et ce qui a été retiré reste retiré. Retirer tous les graphiques automatiques demande
+donc d'en garder au moins un qui ne vient pas de l'atelier.
 
 **Composition de la carte comparée au dépôt.** La composition a pu être modifiée **sur la carte** (mode édition de
 `/graphiques`) depuis le dernier envoi. Avant d'écrire, l'atelier relit `/json/graphiques.json` sur la carte en ligne

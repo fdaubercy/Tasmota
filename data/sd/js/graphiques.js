@@ -267,7 +267,7 @@
     if (Array.isArray(g.series)) return g.series;
     return noms.filter(function (n) {           // 'autres' : placees dans aucun autre graphique
       return !etat.composition.some(function (o) {
-        if (o === g) return false;
+        if (o === g || o.moteur) return false;    // une tuile d'atelier ne retire pas sa serie de « Mesures »
         if (o.prefixes) return dansPrefixes(n, o.prefixes);
         return Array.isArray(o.series) && o.series.some(function (s) { return (s.chemin || s) === n; });
       });
@@ -305,8 +305,7 @@
       b.choix.value = b.periode;
       b.choix.onchange = function () { b.periode = b.choix.value; affiche([b]); };
       entete.appendChild(b.titreEl); entete.appendChild(b.choix);
-      b.noteEl = document.createElement('p');
-      b.noteEl.className = 'g_note';
+      b.noteEl = document.createElement('p'); b.noteEl.className = 'g_note';
       b.trace = document.createElement('div');
       b.trace.className = 'g_trace';
       b.zone.appendChild(entete); b.zone.appendChild(b.noteEl); b.zone.appendChild(b.trace);
@@ -368,10 +367,11 @@
     T.expose(b, etat.masquees);
   }
 
-  // Nouvelle composition (null = par defaut) : blocs recrees puis dessines
+  // Nouvelle composition (null = par defaut ; seulement des graphiques de l'atelier = ajoutes aux groupes automatiques) : blocs recrees puis dessines
   function applique(composition) {
     etat.composition = Array.isArray(composition) ? copie(composition) : compositionDefaut();
     etat.estDefaut = !Array.isArray(composition);
+    if (etat.composition.length && etat.composition.every(function (g) { return g.moteur; })) etat.composition = compositionDefaut().concat(etat.composition);
     construitBlocs();
     return affiche(blocs);
   }

@@ -152,6 +152,7 @@ COMPOSITIONS["atelier"] = COMPOSITIONS["atelier_mention"] = COMPOSITIONS["atelie
 LIQUIDE = {"moteur": "pages", "type": "liquide", "titre": "Liquide atelier", "periode": "direct", "min": 0, "max": 100,
            "series": [{"chemin": TAUX, "libelle": "Taux", "unite": "%"}]}
 COMPOSITIONS["atelier_liquide"] = COMPOSITIONS["atelier_liquide_absent"] = [LIQUIDE]
+COMPOSITIONS["atelier_seul"] = [CADRAN]
 RACINE_JS = Path(__file__).resolve().parents[3] / "data/sd/js"
 # Clics simules, une fois la page tracee (attribut data-graphiques-pret)
 AIDE_ACTIONS = ("function attends(f){var i=setInterval(function(){if(document.documentElement.getAttribute('data-graphiques-pret'))"
@@ -286,10 +287,16 @@ def serveur(scenario, page, echarts_gz):
     return srv, requetes, envois
 
 
-def rend(navigateur, url, profil):
-    r = subprocess.run([navigateur, "--headless=new", "--disable-gpu", "--no-first-run", "--lang=fr-FR",
-                        f"--user-data-dir={profil}", "--virtual-time-budget=8000", "--dump-dom", url],
-                       capture_output=True, timeout=90)
+def rend(navigateur, url, profil, essai=1):
+    try:
+        r = subprocess.run([navigateur, "--headless=new", "--disable-gpu", "--no-first-run", "--lang=fr-FR",
+                            f"--user-data-dir={profil}", "--virtual-time-budget=8000", "--dump-dom", url],
+                           capture_output=True, timeout=90)
+    except subprocess.TimeoutExpired:      # memoire saturee : meme reprise que banc_cuve_page.py::rend
+        if essai == 2:
+            raise
+        print("  (Chrome n'a pas rendu la main en 90 s : nouvel essai, une seule fois)")
+        return rend(navigateur, url, profil, 2)
     return r.stdout.decode("utf-8", "replace")
 
 
@@ -377,6 +384,9 @@ ATTENDUS = {
         ("aucune exception JS", lambda d, r, t, e: d["erreur_js"] is None),
         ("moteur des pages demandé une fois (script + formule), historique relu sans /pages", lambda d, r, t, e: sum("f=pages_graphiques" in p for p, _ in r) == 2 and not any(p.startswith("/pages") for p, _ in r)),
         ("une seule lecture de p=jour, directe lue pour le cadran", lambda d, r, t, e: nb_lectures(r, "p=jour") == 1 and nb_direct(r) >= 1),
+    ],
+    "atelier_seul": [
+        ("composition d'atelier seul : « Mesures » et « Cuve » restent, le cadran s'y ajoute, aucune exception", lambda d, r, t, e: d["entetes"] == ["Mesures", "Cuve"] and d["series"][0] == MESURES_P4 and [x["style"] for x in d["tuiles"]] == ["cadran"] and d["erreur_js"] is None),
     ],
     "atelier_liquide": [
         ("graphique liquide atelier tracé (extension liquidfill demandée à la carte une fois), aucune exception JS", lambda d, r, t, e: [(x["style"], x["rendu"], x["titre"]) for x in d["tuiles"]] == [("liquide", "liquidFill", "Liquide atelier")] and sum("f=liquidfill" in p for p, _ in r) == 1 and d["erreur_js"] is None),
