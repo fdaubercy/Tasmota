@@ -263,6 +263,27 @@ var v = json.load(sortie)
 verifie(webserver.code == 200 && v != nil && v["t"] == 1792230900 && v["valeurs"]["DS18B20.Temperature"] == 21.5
         && v["valeurs"].contains("absent.x") && v["valeurs"]["absent.x"] == nil && v["valeurs"]["sensorsCuve.niveauCuve"] == nil
         && v["valeurs"]["sensorsCuve.niveauCuve.etat"] == "OK", "valeurs : feuille lue, chemin absent -> null, objet -> null")
+# Filtres de l'historique (meme contrat que historiqueFonctions.valeursDirectes) : mesure en erreur -> null, pas un faux 0
+var fh = open(SORTIE + "/modules/historiqueFonctions.be", "w")
+fh.write('var m = module("historiqueFonctions")\nm.filtres = []\nreturn m\n')
+fh.close()
+import historiqueFonctions as histoBouchon
+global.historiqueFonctions = histoBouchon
+histoBouchon.filtres.push(def (chemins, valeurs)
+    for i: 0 .. size(chemins) - 1
+        if (chemins[i] == "DS18B20.Temperature")    valeurs[i] = nil    end
+    end
+end)
+sortie = requete({"f": "valeurs", "c": "DS18B20.Temperature,sensorsCuve.niveauCuve.volume"}, "valeurs_filtre.json")
+v = json.load(sortie)
+verifie(webserver.code == 200 && v["valeurs"].contains("DS18B20.Temperature") && v["valeurs"]["DS18B20.Temperature"] == nil
+        && v["valeurs"]["sensorsCuve.niveauCuve.volume"] == 4174, "filtre de l'historique : mesure filtree -> null, les autres intactes")
+histoBouchon.filtres.push(def (chemins, valeurs)    raise "value_error", "filtre casse"    end)
+var jFiltre = size(journal)
+sortie = requete({"f": "valeurs", "c": "sensorsCuve.niveauCuve.volume"}, "valeurs_filtre2.json")
+v = json.load(sortie)
+verifie(webserver.code == 200 && v["valeurs"]["sensorsCuve.niveauCuve.volume"] == 4174 && erreurs(jFiltre) == 1, "filtre qui leve : journalise, les valeurs partent quand meme")
+global.historiqueFonctions = nil
 var douze = []
 for i: 1 .. 12    douze.push("a.s" + str(i))    end
 sortie = requete({"f": "valeurs", "c": douze.concat(",")}, "valeurs12.json")

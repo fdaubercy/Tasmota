@@ -248,12 +248,24 @@ def pagesGraphiques_valeurs()
     end
     var texte = tasmota.read_sensors()
     var capteurs = (type(texte) == "string" ? json.load(texte) : nil)
-    var valeurs = {}
+    var liste = []
     for c: chemins
         var v = capteurs
         for seg: string.split(c, ".")    v = (isinstance(v, map) ? v.find(seg) : nil)    end
-        valeurs[c] = ((isinstance(v, map) || isinstance(v, list)) ? nil : v)
+        liste.push((isinstance(v, map) || isinstance(v, list)) ? nil : v)
     end
+    # Memes filtres que le Direct de /graphiques : une mesure en erreur ou un esclave muet donne null, pas un faux 0.
+    # Une exception est journalisee, les valeurs partent quand meme (comme historiqueFonctions.valeursDirectes).
+    if (P.historique())
+        try
+            import historiqueFonctions
+            for f: historiqueFonctions.filtres    f(chemins, liste)    end
+        except .. as erreur, message
+            logFonctions.log(string.format("PAGES_GRAPHIQUES_ERREUR: Filtre -> %s %s !", erreur, message), LOG_LEVEL_ERREUR, "serveurWeb")
+        end
+    end
+    var valeurs = {}
+    for i: 0 .. size(chemins) - 1    valeurs[chemins[i]] = liste[i]    end
     P.repondJson(200, {"t": tasmota.rtc()["utc"], "valeurs": valeurs})
 end
 pagesGraphiques.valeurs = pagesGraphiques_valeurs
