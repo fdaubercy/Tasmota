@@ -14,6 +14,7 @@ dependre du temps de reponse du serveur. Les 4xx du journal Chrome sont les refu
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -34,10 +35,13 @@ TEMOINS = {                  # nom -> (texte de la page, remplacement, verificat
     "geste-saute": ('$("e-go").disabled = !(S.prep && $("e-vu").checked);', '$("e-go").disabled = !S.prep;', "geste : « Envoyer » grise tant que la case n'est pas cochee"),
     "redemarrage-force": ("redemarrer: redemarre", "redemarrer: true", "envoi : sans redemarrage par defaut"),
     "prep-apres-manifeste": ("annulePrep(); chargeListe(); verifie();", "chargeListe(); verifie();", "manifeste enregistre : la preparation tombe"),
+    "lecture-sans-geste": ('if (voie() === "http") prepare();', 'prepare(); if (false) {}', "fabriquer en MQTT : pas de lecture de la carte sans geste"),
+    "envoi-echoue": ('if (S.prep === p) annulePrep(); return; }', 'return; }', "envoi refuse : la preparation tombe"),
     "voie-a-l-ecran": ("transport: p.transport", "transport: voie()", "perimee : l'envoi part par la voie preparee"),
 }
-ENROBE = """window.__corps = []; window.__retenir = false; window.__lache = null;
+ENROBE = """window.__corps = []; window.__retenir = false; window.__lache = null; window.__prepares = 0;
 (function () { var f = window.fetch; window.fetch = function (u) {
+  if (String(u).indexOf('/envoi/prepare') >= 0) window.__prepares++;
   var p = f.apply(this, arguments).then(function (r) { r.clone().text().then(function (t) { window.__corps.push(t); }); return r; });
   if (window.__retenir && String(u).indexOf('/envoi/prepare') >= 0) { window.__retenir = false;
     return new Promise(function (ok) { window.__lache = function () { p.then(ok); }; }); }
@@ -87,6 +91,7 @@ class Montage(tpc.Montage):
     def demarre(self, temoin):
         import test_assistant_persist_autoexec as taa
         self.depot = taa.depot(self.t)
+        shutil.rmtree(Path(self.depot) / "data" / "extensions", ignore_errors=True)   # les exemples du depot (A8) : la sonde part d'une page vide
         self.journal = self.t / "envoi.json"
         environ = dict(os.environ, OUTILS_TASMOTA_DOSSIER=str(self.t / "outils"), PYTHONIOENCODING="utf-8")
         self.port = port_libre()
@@ -215,6 +220,20 @@ def sonde(m):
     verifie(attend(cdp, "!document.getElementById('e-panneau').hidden && document.getElementById('e-etat').textContent.indexOf('adresse') >= 0", 15), True, "voie changee : nouvelle preparation")
     verifie(cdp.js("document.getElementById('e-vu').checked"), False, "voie changee : la case est a recocher")
     clic(cdp, "e-mqtt")
+    attend(cdp, "!document.getElementById('e-panneau').hidden && document.getElementById('e-etat').textContent.indexOf('par MQTT') >= 0", 15)
+    # fabriquer en MQTT : pas de lecture sans geste (elle annulerait un transfert en cours), puis « Lire la carte »
+    lues = cdp.js("window.__prepares")
+    clic(cdp, "t-go")
+    verifie(attend(cdp, "document.getElementById('e-etat').textContent.indexOf('Lire la carte') >= 0", 20) and cache(cdp, "e-panneau")
+            and cdp.js("window.__prepares") == lues, True, "fabriquer en MQTT : pas de lecture de la carte sans geste")
+    clic(cdp, "e-lire")
+    verifie(attend(cdp, "!document.getElementById('e-panneau').hidden && document.getElementById('e-etat').textContent.indexOf('par MQTT') >= 0", 15), True, "« Lire la carte » : la preparation repart")
+    # envoi refuse (jeton perime) : la preparation tombe, « Lire la carte » la refait
+    cdp.js("S.prep.jeton = 'perime'")
+    clic(cdp, "e-vu")
+    clic(cdp, "e-go")
+    verifie(attend(cdp, "document.getElementById('e-retour').textContent.indexOf('Lire la carte') >= 0", 15) and cdp.js("S.prep === null && document.getElementById('e-go').disabled"), True, "envoi refuse : la preparation tombe")
+    clic(cdp, "e-lire")
     attend(cdp, "!document.getElementById('e-panneau').hidden && document.getElementById('e-etat').textContent.indexOf('par MQTT') >= 0", 15)
     clic(cdp, "e-vu")
     # l'ecran change de voie sans evenement : l'envoi garde la voie preparee

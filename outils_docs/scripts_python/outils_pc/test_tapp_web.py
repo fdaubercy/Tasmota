@@ -173,6 +173,7 @@ def creation(s, racine):
     verifie((st, "existe" in str(msg)), (409, True), "creer sur un dossier existant : refus")
     verifie(((base / "ext_a" / "autoexec.be").read_text(encoding="utf-8"), (base / "ext_a" / "mon_ext.be").exists()), ("# mon travail\n", False), "creer sur un dossier existant : rien d'ecrase")
     verifie(s.requete("POST", "/creer", {"nom": "EXT_A", "gabarit": "A"})[0], 409, "creer : meme nom a la casse pres -> refus (Windows)")
+    verifie(s.requete("GET", "/extension?nom=EXT_A")[0], 404, "lecture : meme nom a la casse pres -> refus (Windows)")
     (base / "ext_a" / "autoexec.be").write_text(ts.GABARITS["A"]["fichiers"]["autoexec.be"], encoding="utf-8", newline="")
     (base / "orphelin.tapp").write_bytes(b"ancien")
     verifie((s.requete("POST", "/creer", {"nom": "orphelin", "gabarit": "A"})[0], (base / "orphelin").exists()), (409, False), "creer : un .tapp de meme nom existe -> refus, il serait ecrase a la fabrication")
@@ -413,6 +414,7 @@ MUTANTS = [
     ("tapp_sources.py", "liste blanche retiree", "if not isinstance(nom, str) or not RE_NOM.fullmatch(nom):", "if not isinstance(nom, str):", "creer, nom hostile 'a b' -> 400"),
     ("tapp_sources.py", "noms reserves retires", "if RESERVES.fullmatch(nom):", "if False:", "creer, nom hostile 'CON' -> 400"),
     ("tapp_sources.py", "dossier resolu non controle", "if cible.parent != base:", "if False:", "jonction vers l'exterieur : lecture refusee"),
+    ("tapp_sources.py", "casse non controlee", "if not d.is_dir() or d.name != nom:", "if not d.is_dir():", "lecture : meme nom a la casse pres -> refus (Windows)"),
     ("tapp_sources.py", "ecrasement a la creation", "os.mkdir(d)", "os.makedirs(d, exist_ok=True)", "creer sur un dossier existant : refus"),
     ("tapp_sources.py", "cles inconnues perdues", "nouveau = dict(existant_lu)", "nouveau = {}", "manifeste : 4 champs ecrits, cle inconnue conservee"),
     ("tapp_sources.py", "manifeste illisible ecrase", 'raise ValueError(f"{MANIFESTE} illisible (', 'existant_lu = {}\n                if False:\n                    raise ValueError(f"{MANIFESTE} illisible (', "manifeste illisible : refus, jamais ecrase, dit quoi faire"),

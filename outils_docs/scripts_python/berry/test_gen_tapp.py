@@ -92,6 +92,7 @@ def t_refus(mod, r):
         ("nom trop long", lambda d: ecrit(d, "a" * 62 + ".be", "var a = 1\n"), "65 octets"),
         ("nom non ASCII", lambda d: ecrit(d, "café.be", "var a = 1\n"), "non ASCII"),
         ("Berry ne compile pas", lambda d: ecrit(d, "autoexec.be", "def f(\nprint(1)\n"), "autoexec.be"),
+        ("nom du framework nu", lambda d: ecrit(d, "autoexec.be", "def f() return LOG_LEVEL_INFO end\n"), "avant /autoexec.be"),
     ]
     for lib, abime, motif in cas:
         with tempfile.TemporaryDirectory() as tmp:
@@ -216,6 +217,7 @@ MUTANTS = [
     ("ZIP_DEFLATED", lambda s: s.replace("zipfile.ZIP_STORED", "zipfile.ZIP_DEFLATED"), ["format"], "firmware : compression 0"),
     ("verification Berry retiree", lambda s: s.replace("AVERTISSEMENTS[:] = _controle_berry(", "AVERTISSEMENTS[:] = [] and _controle_berry("),
      ["refus"], "refus : Berry ne compile pas"),
+    ("noms du framework declares", lambda s: s.replace("sans=GLOBALES_DU_FRAMEWORK", "sans=()"), ["refus"], "refus : nom du framework nu"),
     ("controle du sous-dossier retire", lambda s: s.replace("if (dossier / nom).is_dir():", "if False:"), ["refus"], "refus : sous-dossier"),
     ("ecriture non atomique",
      lambda s: s.replace('fd, tmp = tempfile.mkstemp(suffix=".tmp", prefix=sortie.name, dir=sortie.parent)',

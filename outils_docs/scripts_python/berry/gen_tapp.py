@@ -30,6 +30,10 @@ NOM_MAX = 64  # ZipReadFS.cpp : filename_size > 64 refuse
 DATE_FIXE = (1980, 1, 1, 0, 0, 0)  # octets identiques pour une meme source
 AVERTISSEMENTS = []  # avertissements de charte du dernier construit(), non bloquants (le CLI les affiche)
 ENTIER = re.compile(r"^(0[xX][0-9a-fA-F]+|\d+)$")  # ce que int() de Berry lit dans read_extension_manifest
+# Globales de solidify_all_python.be posees par le framework, donc absentes quand la carte compile l'extension (avant
+# /autoexec.be) : un tel nom refuse la compilation, meme dans une fonction differee (be_parser.c::singlevaraux).
+GLOBALES_DU_FRAMEWORK = ("drivers", "serveur", "diverses", "modules", "boolMute", "controleGeneral", "controleWeb", "controleLedTemoin",
+                         "LOG_LEVEL_ERREUR", "LOG_LEVEL_INFO", "LOG_LEVEL_DEBUG", "LOG_LEVEL_DEBUG_PLUS", "logFonctions")
 
 
 def _controle_nom(nom):
@@ -71,13 +75,15 @@ def _controle_berry(dossier, fichiers_be):
         berry = verifie_berry.trouve_berry(racine)
         sortie = io.StringIO()
         with contextlib.redirect_stdout(sortie):
-            rc = verifie_berry.verifie(racine, berry, fichiers_be)
+            rc = verifie_berry.verifie(racine, berry, fichiers_be, sans=GLOBALES_DU_FRAMEWORK)
     except SystemExit as e:
         raise ValueError(f"verification Berry impossible : {e.code}")
     lignes = sortie.getvalue().splitlines()
     if rc != 0:
         erreurs = [l for l in lignes if ": erreur:" in l] or lignes
-        raise ValueError("Berry ne compile pas :\n" + "\n".join(erreurs))
+        conseil = ("\nUn nom du framework n'existe pas encore quand la carte compile l'extension, avant /autoexec.be : "
+                   "ecrire global.LOG_LEVEL_INFO, et importer logFonctions dans la fonction.") if "undeclared" in "".join(erreurs) else ""
+        raise ValueError("Berry ne compile pas :\n" + "\n".join(erreurs) + conseil)
     return [l for l in lignes if ": avertissement:" in l]
 
 

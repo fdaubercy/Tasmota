@@ -65,7 +65,7 @@ HTML = """<main>
     <div id="c-retour"></div>
   </section>
   <section class="carte petit doux"><h2>À savoir</h2>
-    <p>Une extension se lance <b>avant</b> <span class="chemin">/autoexec.be</span> : <span class="chemin">logFonctions</span> et <span class="chemin">LOG_LEVEL_*</span> n'existent pas encore pendant son chargement (d'où la minuterie du premier modèle).</p>
+    <p>Une extension se lance <b>avant</b> <span class="chemin">/autoexec.be</span> : <span class="chemin">logFonctions</span> et <span class="chemin">LOG_LEVEL_*</span> n'existent pas encore pendant sa compilation ni son chargement : écrire <span class="chemin">global.LOG_LEVEL_INFO</span>, sinon elle ne se lance pas (d'où la minuterie du premier modèle).</p>
     <p>Un <span class="chemin">.tapp</span> envoyé à une carte n'est pas dans son image : il disparaît au prochain formatage du FS ou flash série.</p>
     <p>Tout est expliqué dans <span class="chemin">outils_docs/EXTENSIONS_TAPP.md</span>.</p>
   </section>
@@ -91,7 +91,7 @@ HTML = """<main>
   </section>
   <section class="carte"><h2>4. Envoyer à une carte</h2>
     <label class="champ"><span>Carte</span><select id="e-carte"></select></label>
-    <div class="ligne"><label><input type="radio" name="e-voie" id="e-http" checked> Wi-Fi (HTTP)</label><label><input type="radio" name="e-voie" id="e-mqtt"> MQTT</label></div>
+    <div class="ligne"><label><input type="radio" name="e-voie" id="e-http" checked> Wi-Fi (HTTP)</label><label><input type="radio" name="e-voie" id="e-mqtt"> MQTT</label><button class="btn" id="e-lire" type="button">Lire la carte</button></div>
     <p class="doux petit">MQTT : pour les esclaves derrière le point d'accès de leur maître ; la carte doit avoir chargé fsMqtt.</p>
     <p id="e-etat"></p>
     <div id="e-panneau" hidden>
@@ -203,7 +203,9 @@ async function fabrique() {
   if (!r.ok) { message($("t-retour"), "rouge", r.texte + "\nCorrige puis clique à nouveau : l'ancien .tapp, s'il existe, reste en place."); return; }
   message($("t-retour"), "ok", "Fabriqué : " + r.donnees.tapp.chemin + " (" + r.donnees.tapp.taille + " octets). Étape suivante : choisir une carte.");
   chargeListe(); verifie();
-  prepare();
+  // MQTT : lire la carte ouvre un echange avec fsMqtt, qui annulerait un transfert en cours : jamais sans geste
+  if (voie() === "http") prepare();
+  else { annulePrep(); if ($("e-carte").value) $("e-etat").textContent = "Archive refaite : clique sur « Lire la carte » pour préparer l'envoi par MQTT."; }
 }
 
 // ---- Envoi ----
@@ -215,7 +217,7 @@ function annulePrep() {
   majEnvoyer();
 }
 var SUR_CARTE = {absent: "Aucun fichier de ce nom sur la carte.", identique: "La carte a déjà ce fichier, identique.",
-  different: "Un fichier de ce nom est sur la carte, différent : il sera remplacé.", inconnu: "Présence d'un fichier de ce nom non lue (trop long par MQTT) : s'il existe, il sera remplacé."};
+  different: "Un fichier de ce nom est sur la carte, différent : il sera remplacé.", inconnu: "Présence d'un fichier de ce nom non lue : s'il existe, il sera remplacé."};
 async function prepare() {
   annulePrep();
   vide($("e-retour"));
@@ -240,7 +242,7 @@ async function envoie() {
   var z = vide($("e-retour"));
   z.appendChild(el("p", "doux", "Envoi en cours…"));
   var r = await api("/envoi", {nom: p.nom, env: p.env, jeton: p.jeton, transport: p.transport, confirme: true, redemarrer: redemarre});
-  if (!r.ok) { message(z, "rouge", r.texte); majEnvoyer(); return; }
+  if (!r.ok) { message(z, "rouge", r.texte + "\nClique sur « Lire la carte » pour préparer à nouveau l'envoi."); if (S.prep === p) annulePrep(); return; }
   message(z, "ok", "Envoyé à " + p.hote + " : " + r.donnees.chemin + ". " + (redemarre ? "La carte a redémarré." : "L'extension se lancera au démarrage suivant, ou par la page /ext de la carte."));
   if (r.donnees.avertissement) z.appendChild(el("p", "msg", r.donnees.avertissement));
   if (S.prep === p) annulePrep();
@@ -256,6 +258,7 @@ $("m-go").onclick = enregistre;
 $("v-go").onclick = verifie;
 $("t-go").onclick = fabrique;
 $("e-carte").onchange = $("e-http").onchange = $("e-mqtt").onchange = prepare;
+$("e-lire").onclick = prepare;
 $("e-vu").onchange = majEnvoyer;
 $("e-go").onclick = envoie;
 chargeListe();

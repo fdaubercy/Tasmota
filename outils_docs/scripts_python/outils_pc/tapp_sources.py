@@ -42,12 +42,13 @@ _AUTOEXEC_A = r"""# Extension sans .be embarque : le module est solidifie dans l
 # Differe apres /autoexec.be : le prologue de demarrage.be pose LOG_LEVEL_* et le persist dont logFonctions a besoin.
 do
   tasmota.set_timer(1000, def ()
+    import global                 # LOG_LEVEL_* lus a l execution : a la compilation, avant /autoexec.be, ces noms n existent pas
     import logFonctions
     try
       import fsMqtt
-      logFonctions.log("EXT_FSMQTT: module charge par l'extension !", LOG_LEVEL_INFO)
+      logFonctions.log("EXT_FSMQTT: module charge par l'extension !", global.LOG_LEVEL_INFO)
     except .. as e, m
-      logFonctions.log(f"EXT_FSMQTT_ERREUR: chargement impossible : {e} - {m} !", LOG_LEVEL_ERREUR)
+      logFonctions.log(f"EXT_FSMQTT_ERREUR: chargement impossible : {e} - {m} !", global.LOG_LEVEL_ERREUR)
     end
   end)
 end
@@ -74,8 +75,9 @@ class Mon_ext
   end
 
   def connecte()
+    import global                 # pas de LOG_LEVEL_* nu : le fichier est compile avant /autoexec.be
     import logFonctions
-    logFonctions.log("MON_EXT: MQTT connecte !", LOG_LEVEL_INFO)
+    logFonctions.log("MON_EXT: MQTT connecte !", global.LOG_LEVEL_INFO)
   end
 
   def every_second()
@@ -128,7 +130,8 @@ def dossier(racine, nom):
 
 def existant(racine, nom):
     d = dossier(racine, nom)
-    if not d.is_dir():
+    # Autre casse : Windows trouve le dossier, la carte, sensible a la casse, recevrait un second fichier
+    if not d.is_dir() or d.name != nom:
         raise LookupError(f"pas d'extension {nom} dans {DOSSIER}")
     return d
 

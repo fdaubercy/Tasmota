@@ -129,9 +129,9 @@ def ecrit_preambule(globs: list) -> Path:
     return chemin
 
 
-def verifie(racine: Path, berry: Path, fichiers: list, charte: bool = True) -> int:
-    """Une passe : erreurs (fichier:ligne: erreur: message), puis avertissements de charte."""
-    preambule = ecrit_preambule(lit_globs(racine))
+def verifie(racine: Path, berry: Path, fichiers: list, charte: bool = True, sans=()) -> int:
+    """Une passe : erreurs (fichier:ligne: erreur: message), puis avertissements de charte. `sans` : globales non declarees."""
+    preambule = ecrit_preambule([n for n in lit_globs(racine) if n not in sans])
     relatifs = [str(f.relative_to(racine) if f.is_relative_to(racine) else f).replace("\\", "/")
                 for f in fichiers]
     r = subprocess.run([str(berry), str(preambule)] + relatifs, cwd=str(racine),

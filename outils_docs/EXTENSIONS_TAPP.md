@@ -156,6 +156,14 @@ extension fautive qui plante au démarrage n'est pas arrêtée par `SetOption153
   appelé depuis `/autoexec.be`, donc **après** les extensions. Une extension qui en a besoin **différera son travail**
   par `tasmota.set_timer`. L'événement `autoexec` et `BrLoad("autoexec.be")` s'exécutent dans le même tick
   (`xdrv_52_9_berry.ino`), donc une minuterie de 1000 ms passe après le prologue. **Non essayé sur carte.**
+- **Compilation avant le prologue** : différer ne suffit pas. Le fichier entier est compilé au chargement, et un nom sans
+  déclaration refuse la compilation **même dans une fonction jamais appelée** (`be_parser.c::singlevaraux` rend `ETVOID`, puis
+  « `'LOG_LEVEL_INFO' undeclared` », firmware compris : `comp_set_named_gbl` et `comp_set_strict` de `xdrv_52_9_berry.ino`
+  ne changent rien ; reproduit par `berry.exe -g -s`, banc `berry/banc_tapp_fsmqtt.py`). L'extension ne se lancerait pas du
+  tout. Écrire donc `import global` puis `global.LOG_LEVEL_INFO`, et `import logFonctions` **dans** la fonction. Même chose
+  pour `serveur`, `diverses`, `modules`, `drivers`, `boolMute`, `controleGeneral`… : `gen_tapp.py` les refuse
+  (`gen_tapp.py::GLOBALES_DU_FRAMEWORK`), alors que `verifie_berry.py` seul les accepte, car il les déclare d'avance pour
+  les modules chargés après le prologue.
 - **Module solidifié** : si ses fonctions retrouvent leur module par un nom global, un `import` sous `do … end` ne
   suffit pas (la globale n'existe pas) ; voir le commentaire de `demarrage.be::demarrage_importe` pour la parade
   (`global.setmember`). `fsMqtt` n'est pas concerné (`fsMqtt_init` reçoit le module en argument).
@@ -180,12 +188,13 @@ Dossier `ext_a/` (nom d'archive libre) :
 # Differe apres /autoexec.be : le prologue de demarrage.be pose LOG_LEVEL_* et le persist dont logFonctions a besoin.
 do
   tasmota.set_timer(1000, def ()
+    import global                 # LOG_LEVEL_* lus a l execution : a la compilation, avant /autoexec.be, ces noms n existent pas
     import logFonctions
     try
       import fsMqtt
-      logFonctions.log("EXT_FSMQTT: module charge par l'extension !", LOG_LEVEL_INFO)
+      logFonctions.log("EXT_FSMQTT: module charge par l'extension !", global.LOG_LEVEL_INFO)
     except .. as e, m
-      logFonctions.log(f"EXT_FSMQTT_ERREUR: chargement impossible : {e} - {m} !", LOG_LEVEL_ERREUR)
+      logFonctions.log(f"EXT_FSMQTT_ERREUR: chargement impossible : {e} - {m} !", global.LOG_LEVEL_ERREUR)
     end
   end)
 end
@@ -218,8 +227,9 @@ class Mon_ext
   end
 
   def connecte()
+    import global                 # pas de LOG_LEVEL_* nu : le fichier est compile avant /autoexec.be
     import logFonctions
-    logFonctions.log("MON_EXT: MQTT connecte !", LOG_LEVEL_INFO)
+    logFonctions.log("MON_EXT: MQTT connecte !", global.LOG_LEVEL_INFO)
   end
 
   def every_second()
@@ -268,12 +278,13 @@ PYTHONIOENCODING=utf-8 ~/.platformio/penv/Scripts/python.exe outils_docs/scripts
 
 `gen_tapp.py::construit` exige `autoexec.be` et un `manifest.json` valide (`name` non vide, `version`/`min_tasmota`
 entiers ou `0x…`), refuse sous-dossiers, noms non ASCII, `#` dans un nom, noms de plus de 64 octets ; vérifie la syntaxe
-de chaque `.be` avec le moteur de `verifie_berry.py` ; écrit en `ZIP_STORED`, date fixe, atomiquement. Code de sortie 0 =
-construit, 1 = refus (motif sur stderr, ancien `.tapp` intact).
+de chaque `.be` avec le moteur de `verifie_berry.py`, sans déclarer d'avance les noms du framework (§ 5.1) ; écrit en
+`ZIP_STORED`, date fixe, atomiquement. Code de sortie 0 = construit, 1 = refus (motif sur stderr, ancien `.tapp` intact).
 
-**Les deux gabarits ci-dessus ont été passés à ce script le 2026-11-07, dans un dossier temporaire hors dépôt** :
-gabarit A, 2 fichiers, 958 octets, code 0 ; gabarit B, 3 fichiers, 1688 octets, code 0. Cela prouve la **syntaxe Berry**
-et le **format** ; cela ne prouve pas le comportement sur carte.
+**L'exemple du gabarit A, `data/extensions/fsMqtt/`, a son banc** (`berry/banc_tapp_fsmqtt.py`, `berry.exe -g -s` comme le
+firmware) : chargement sans `LOG_LEVEL_*` ni `logFonctions`, aucune globale créée, minuterie, échec journalisé, vrai
+`fsMqtt` abonné, archive reproductible. Le `.tapp` n'est pas versionné (`data/extensions/.gitignore`) : il se refait à
+l'identique. Cela prouve la **syntaxe Berry** et le **format** ; cela ne prouve pas le comportement sur carte.
 
 ## 6. Envoi sur une carte
 
@@ -290,7 +301,8 @@ Le nom d'hôte de la carte est à vérifier avant tout envoi (identité), comme 
 
 ## 7. Pièges
 
-1. **Ordre avant `/autoexec.be`** (§ 2.3, § 5.1) : `logFonctions`, `LOG_LEVEL_*`, `persist.serveur`… absents au chargement.
+1. **Ordre avant `/autoexec.be`** (§ 2.3, § 5.1) : `logFonctions`, `LOG_LEVEL_*`, `persist.serveur`… absents au chargement,
+   donc **à la compilation** : un `LOG_LEVEL_INFO` nu empêche l'extension de se lancer, minuterie ou pas (§ 5.1).
    `fsMqtt_init` lit `persist` (module natif, présent) et appelle `logFonctions.log` seulement sur son chemin d'erreur
    (`serveur.mqtt.topic` absent), où `LOG_LEVEL_ERREUR` n'existe pas encore : l'erreur levée à ce moment-là est **peut-être**
    l'échec de la globale manquante plutôt que le message prévu (non essayé sur carte). D'où la minuterie du gabarit A.
