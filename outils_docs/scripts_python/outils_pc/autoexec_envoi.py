@@ -23,6 +23,8 @@ joint le broker par la sortie NAPT de son maitre). Topic = serveur.mqtt.topic du
 identite par `cmnd/<topic>/Status 5` -> `stat/<topic>/STATUS5` (meme comparaison au nom d'hote) ; le module fsMqtt.be doit
 repondre ; fichier de la carte lu par Canal.lit (« fichier absent » = None) ; envoi par build_ota_mqtt.envoie_fs_mqtt. Le
 transport entre dans le jeton. `CLIENT` et `REGLAGES_MQTT` : le banc y pose son faux client et des delais courts.
+Reutilise par tapp_envoi.py (meme identite, meme jeton, meme voie) : controle_builds, controle_transport, adresse_de, lit_carte,
+signe, instant_du_jeton, avec_sleep_coupe, pousse.
 Banc : test_autoexec_envoi.py.
 """
 
@@ -83,8 +85,8 @@ def _adresse_requise(racine, env):
     return adresse
 
 
-def _carte(racine, env, adresse):
-    """(nom d'hote, octets de l'autoexec.bat de la carte ou None) ; RuntimeError, rien envoye, sinon."""
+def _carte(racine, env, adresse, chemin, illisible):
+    """(nom d'hote, octets du fichier `chemin` de la carte ou None) ; RuntimeError, rien envoye, sinon. Voir lit_carte."""
     persist = build_envs.persist_carte(racine, env)
     if not persist:
         raise RuntimeError(f"pas de _persist.json de {env} au depot : identite de la carte non controlable, rien n'a ete envoye")
@@ -98,14 +100,18 @@ def _carte(racine, env, adresse):
         hote = ""
     _controle_hote(hote, persist, adresse, env)
     carte = None
+    if chemin is None:
+        return hote, None
     for _ in range(2):                             # une connexion coupee par le relais ne doit pas faire croire a l'absence
         try:
-            carte = _get(adresse, "/ufsu?dir=0&download=/" + FICHIER, DELAI)
+            carte = _get(adresse, "/ufsu?dir=0&download=" + chemin, DELAI)
             break
         except http.client.RemoteDisconnected:     # Tasmota ferme sans repondre quand le fichier n'existe pas
             pass
         except ERREURS_RESEAU as erreur:
-            raise RuntimeError(f"autoexec.bat de {adresse} illisible ({erreur}) : rien n'a ete envoye") from None
+            if illisible is not None:
+                return hote, illisible
+            raise RuntimeError(f"{chemin[1:]} de {adresse} illisible ({erreur}) : rien n'a ete envoye") from None
     return hote, carte
 
 
@@ -126,8 +132,8 @@ def _topic(racine, env):
     return topic
 
 
-def _carte_mqtt(racine, env, topic):
-    """Comme _carte, par MQTT : (nom d'hote, octets de l'autoexec.bat de la carte ou None) ; RuntimeError, rien envoye, sinon."""
+def _carte_mqtt(racine, env, topic, chemin, illisible):
+    """Comme _carte, par MQTT : (nom d'hote, octets du fichier `chemin` de la carte ou None) ; RuntimeError, rien envoye, sinon."""
     persist = build_envs.persist_carte(racine, env)
     delai, adresse = REGLAGES_MQTT.get("delai", 15.0), f"mqtt:{topic}"
     try:
@@ -152,12 +158,16 @@ def _carte_mqtt(racine, env, topic):
         except RuntimeError:
             raise RuntimeError(f"aucune reponse de fsMqtt.be sur fsmqtt/{topic} : carte hors ligne, ou fsMqtt.be pas charge "
                                "par son autoexec ; rien n'a ete envoye") from None
+        if chemin is None:
+            return hote, None
         try:
-            return hote, canal.lit("Lecture de l'autoexec.bat", "/" + FICHIER, delai)
+            return hote, canal.lit(f"Lecture de {chemin[1:]}", chemin, delai)
         except RuntimeError as erreur:
             if "fichier absent" in str(erreur):
                 return hote, None
-            raise RuntimeError(f"autoexec.bat de {adresse} illisible ({erreur}) : rien n'a ete envoye") from None
+            if illisible is not None:
+                return hote, illisible
+            raise RuntimeError(f"{chemin[1:]} de {adresse} illisible ({erreur}) : rien n'a ete envoye") from None
     finally:
         canal.ferme()
 
@@ -166,6 +176,9 @@ def _signe(instant, env, adresse, depot, carte, transport="http"):
     empreintes = [hashlib.sha256(o).hexdigest() if o is not None else None for o in (depot, carte)]
     message = json.dumps([instant, env, adresse, *empreintes, transport]).encode("utf-8")
     return f"{instant}-{hmac.new(_CLE, message, hashlib.sha256).hexdigest()}"
+
+
+signe, controle_builds = _signe, _builds
 
 
 def _sauvegarde(env, octets):
@@ -180,23 +193,69 @@ def _sauvegarde(env, octets):
     return chemin
 
 
-def _transport(transport):
+def controle_transport(transport):
     if transport not in TRANSPORTS:
         raise ValueError("transport : « http » ou « mqtt » attendu")
 
 
-def _lit_carte(racine, env, adresse, transport):
+def lit_carte(racine, env, adresse, transport, chemin="/" + FICHIER, illisible=None):
+    """Identite de la carte controlee, puis (nom d'hote, octets de `chemin` ou None si absent). `chemin` None : identite seule ;
+    `illisible` : rendu a la place des octets si la lecture echoue, au lieu d'un refus."""
     if transport == "mqtt":
-        return _carte_mqtt(racine, env, adresse.partition(":")[2])
-    return _carte(racine, env, adresse)
+        return _carte_mqtt(racine, env, adresse.partition(":")[2], chemin, illisible)
+    return _carte(racine, env, adresse, chemin, illisible)
+
+
+def adresse_de(racine, env, transport):
+    return f"mqtt:{_topic(racine, env)}" if transport == "mqtt" else _adresse_requise(racine, env)
+
+
+def instant_du_jeton(jeton):
+    """L'instant de signature d'un jeton de moins de VALIDITE secondes ; RuntimeError sinon."""
+    debut = jeton.partition("-")[0]
+    instant = int(debut) if debut.isascii() and debut.isdigit() else -1
+    if not 0 <= _maintenant() - instant <= VALIDITE:
+        raise RuntimeError("jeton perime (plus de 10 minutes) ou inconnu : relancer la preparation")
+    return instant
+
+
+def avec_sleep_coupe(adresse, transport, appel):
+    """Lance appel(), le maitre d'un esclave `IP:port` en Sleep 0 (docstring du module) : (resultat, avertissement de la remise)."""
+    remet = None
+    if transport == "http" and ":" in adresse:
+        _, remet = coupe_sleep(adresse.rsplit(":", 1)[0])
+    try:
+        resultat = appel()
+    except Exception as erreur:
+        echec = remet() if remet else ""
+        if echec:
+            raise RuntimeError(f"{erreur} ; {echec}") from None
+        raise
+    except BaseException:  # arret brutal (Ctrl+C, SystemExit) : le maitre ne doit pas rester en Sleep 0
+        if remet:
+            remet()
+        raise
+    return resultat, remet() if remet else ""
+
+
+def pousse(env, adresse, transport, dossier, fichier, redemarrer):
+    """Envoie le seul `fichier` (relatif a `dossier`) par la voie choisie ; persist ni sauvegarde, ni relu, ni recharge."""
+    sauvegardes = fbs.dossier_sauvegardes() / "autoexec_cartes" / env
+    if transport == "mqtt":
+        build_ota_mqtt.envoie_fs_mqtt(env, adresse.partition(":")[2], dossier, sauvegardes, lambda _: None,
+                                      fichiers=[fichier], redemarrer=redemarrer, recharger_berry=False, client=CLIENT(),
+                                      **REGLAGES_MQTT)
+    else:
+        build_ota_fs.envoie_fs_ota(env, adresse, dossier, sauvegardes, lambda _: None, fichiers=[fichier],
+                                   redemarrer=redemarrer, **{"delai_http": DELAI, **REGLAGES_ENVOI})
 
 
 def prepare(racine, env, builds_en_cours, *, transport="http"):
-    _transport(transport)
+    controle_transport(transport)
     _builds(builds_en_cours)
     depot = _depot(racine, env)
-    adresse = f"mqtt:{_topic(racine, env)}" if transport == "mqtt" else _adresse_requise(racine, env)
-    hote, carte = _lit_carte(racine, env, adresse, transport)
+    adresse = adresse_de(racine, env, transport)
+    hote, carte = lit_carte(racine, env, adresse, transport)
     sur_carte = None
     if carte is not None:
         sur_carte = autoexec_fichier.masque(carte.decode("utf-8", "replace").lstrip("﻿").replace("\r\n", "\n"))
@@ -205,7 +264,7 @@ def prepare(racine, env, builds_en_cours, *, transport="http"):
 
 
 def envoie(racine, env, jeton, rouges_lus, redemarrer, builds_en_cours, *, transport="http"):
-    _transport(transport)
+    controle_transport(transport)
     if not isinstance(redemarrer, bool):
         raise ValueError("redemarrer : vrai ou faux attendu")
     if not isinstance(jeton, str):
@@ -216,32 +275,16 @@ def envoie(racine, env, jeton, rouges_lus, redemarrer, builds_en_cours, *, trans
     rouges = sum(a["niveau"] == "rouge" for a in autoexec_fichier.avertissements(racine, env, texte))
     if isinstance(rouges_lus, bool) or not isinstance(rouges_lus, int) or rouges_lus < rouges:
         raise ValueError(f"{rouges} avertissement(s) rouge(s) : cocher « J'ai lu les {rouges} avertissements rouges »")
-    debut = jeton.partition("-")[0]
-    instant = int(debut) if debut.isascii() and debut.isdigit() else -1
-    if not 0 <= _maintenant() - instant <= VALIDITE:
-        raise RuntimeError("jeton perime (plus de 10 minutes) ou inconnu : relancer la preparation")
-    adresse = f"mqtt:{_topic(racine, env)}" if transport == "mqtt" else _adresse_requise(racine, env)
-    remet = None
-    if transport == "http" and ":" in adresse:
-        _, remet = coupe_sleep(adresse.rsplit(":", 1)[0])
-    try:
-        sauvegarde = _envoie(racine, env, jeton, instant, redemarrer, builds_en_cours, depot, adresse, transport)
-    except Exception as erreur:
-        echec = remet() if remet else ""
-        if echec:
-            raise RuntimeError(f"{erreur} ; {echec}") from None
-        raise
-    except BaseException:  # arret brutal (Ctrl+C, SystemExit) : le maitre ne doit pas rester en Sleep 0
-        if remet:
-            remet()
-        raise
-    return {"envoye": True, "sauvegarde": None if sauvegarde is None else str(sauvegarde),
-            "avertissement": remet() if remet else ""}
+    instant = instant_du_jeton(jeton)
+    adresse = adresse_de(racine, env, transport)
+    sauvegarde, avertissement = avec_sleep_coupe(adresse, transport, lambda: _envoie(
+        racine, env, jeton, instant, redemarrer, builds_en_cours, depot, adresse, transport))
+    return {"envoye": True, "sauvegarde": None if sauvegarde is None else str(sauvegarde), "avertissement": avertissement}
 
 
 def _envoie(racine, env, jeton, instant, redemarrer, builds_en_cours, depot, adresse, transport):
     """Suite d'envoie une fois le Sleep du maitre coupe : rend le chemin de la copie de la carte (None si absente)."""
-    carte = _lit_carte(racine, env, adresse, transport)[1]
+    carte = lit_carte(racine, env, adresse, transport)[1]
     if not hmac.compare_digest(jeton.encode("utf-8"), _signe(instant, env, adresse, depot, carte, transport).encode("utf-8")):
         raise RuntimeError("le fichier du depot, celui de la carte, l'adresse ou le transport ont change depuis la preparation : "
                            "relancer la preparation")
@@ -249,12 +292,5 @@ def _envoie(racine, env, jeton, instant, redemarrer, builds_en_cours, depot, adr
     sauvegarde = _sauvegarde(env, carte) if carte is not None else None
     with tempfile.TemporaryDirectory(prefix=f"autoexec-{env}-", ignore_cleanup_errors=True) as dossier:
         (Path(dossier) / FICHIER).write_bytes(depot)
-        sauvegardes = fbs.dossier_sauvegardes() / "autoexec_cartes" / env
-        if transport == "mqtt":
-            build_ota_mqtt.envoie_fs_mqtt(env, adresse.partition(":")[2], dossier, sauvegardes, lambda _: None,
-                                          fichiers=[FICHIER], redemarrer=redemarrer, recharger_berry=False, client=CLIENT(),
-                                          **REGLAGES_MQTT)
-        else:
-            build_ota_fs.envoie_fs_ota(env, adresse, dossier, sauvegardes, lambda _: None, fichiers=[FICHIER],
-                                       redemarrer=redemarrer, **{"delai_http": DELAI, **REGLAGES_ENVOI})
+        pousse(env, adresse, transport, dossier, FICHIER, redemarrer)
     return sauvegarde

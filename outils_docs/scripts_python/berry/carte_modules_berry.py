@@ -327,7 +327,7 @@ def collecte(racine):
     dossiers = {}
     for lieu in sorted(os.listdir(os.path.join(racine, "data"))):
         base = os.path.join(racine, "data", lieu)
-        if lieu == "fs" or not os.path.isdir(base):
+        if lieu in ("fs", "extensions") or not os.path.isdir(base):     # data/extensions/<nom>/ a un autoexec.be, mais c'est une extension
             continue
         for carte in sorted(os.listdir(base)):
             d = os.path.join(base, carte)
