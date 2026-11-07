@@ -128,7 +128,7 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
 ## A9 — Validation sur les cartes
 - [x] Place du FS mesurée sur les 6 cartes à historique avec les fichiers du moteur (blocs de 4 Ko) ; arrêt et
   question à l'utilisateur sous 10 % libres (spec §7.10) — preuve : mesure du 2026-11-06, seuil non atteint. Calcul depuis le dépôt, moteur compris (17 blocs, 4 fichiers), sur 2896 blocs : cave 93,8 %, grenier 94,0 %, P4 93,4 %, S3 serveur 93,6 %, cuve 93,0 %, rideau 94,0 % libres. Lu sur carte (`UfsFree`) : P4 91,6 % (environ 91,1 % après ajout du moteur, s'il n'y est pas encore), cuve 90,9 %. Cave, grenier et rideau muets : calcul seul, sans leurs fichiers `/histo`. L'env S3 serveur a la même adresse que le P4 : rien de lu sur lui
-- [ ] P4 et cuve : firmware et FS du chantier compilés et envoyés par la page Build (`Status 2` relu après)
+- [x] P4 et cuve : firmware et FS du chantier compilés et envoyés par la page Build (`Status 2` relu après) — preuve : `Status 2` du 2026-11-07, P4 `2026-11-06T19:20:23`, cuve `2026-11-06T20:23:06` ; sonde `FICHIERS.contains` = true et `graphiques_moteur.js` présent sur les deux ; `/graphiques?f=pages_graphiques.js` = 200 text/javascript
 - [ ] P4 : composition existante intacte + un graphique atelier (style hors des 4) envoyé par « Téléverser » ;
   `/graphiques` sous Chrome sans exception JS, capture ; journal web sans `_ERREUR`
 - [ ] Cuve : modification d'une page dédiée envoyée par « Téléverser » (redémarrage non coché), effet constaté
