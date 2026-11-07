@@ -1368,9 +1368,17 @@ la syntaxe. Le fichier s'exécute **à chaque démarrage** de la carte. Choisir 
   | Orange | Redémarrage si la valeur change | Vérifier (bouton « Enlever ») |
   | Orange | Doublon : le persist repose déjà la commande au démarrage | Retirer la ligne (bouton « Enlever ») ou changer le persist |
   | Orange | Commande inconnue | « Corriger » propose la plus proche |
+  | Orange | Commande absente : pas compilée pour cette carte (`USE_…` non défini dans son env) | Retirer la ligne, ou compiler la fonction dans le firmware de la carte |
   | Orange | Ligne de plus de 510 octets : le firmware la tronque | Couper la ligne |
 
   Les rouges demandent de cocher « J'ai lu les N avertissements rouges » à l'écriture et à l'envoi.
+
+  « Commande absente » ne sort que si c'est **certain** : les macros de l'env sont lues sans compiler (quelques secondes au
+  premier passage, puis en mémoire tant que le cenv et `user_config_override.h` ne changent pas), et une garde que la lecture ne
+  tranche pas ne donne rien. Une commande définie à plusieurs endroits du firmware (`Subscribe` : règles ou script)
+  n'est signalée que si **tous** sont exclus. Si la lecture échoue, une ligne discrète « Vérification par carte
+  indisponible » s'affiche et aucune alerte n'est donnée. Limite : les commandes BLE et MI32 ne sont jamais signalées
+  (leurs gardes passent par des macros que la lecture ne pose pas) ; les commandes Berry et `SetOption` ne sont pas concernées.
 - **« Ajouter », à droite** : chercher dans la banque (`outils_docs/schemas/banque_autoexec.json`), remplir le
   formulaire, vérifier l'aperçu, insérer sous la ligne du curseur. « Nouveau modèle… » et « En faire un modèle »
   ajoutent une commande à la banque (« Tes commandes »).
@@ -1381,21 +1389,32 @@ la syntaxe. Le fichier s'exécute **à chaque démarrage** de la carte. Choisir 
 - **« Enregistrer… (diff) »** montre les changements, puis **« Écrire dans le dépôt »** écrit le fichier (refusé pendant un
   build, ou si le fichier a changé sur le disque depuis sa lecture ; copie dans
   `%LOCALAPPDATA%\outils_tasmota\fichiers_berry\sauvegardes\`). Le fichier n'est pas commité : à faire à la main.
-- **« Puis envoyer à la carte (OTA)… »** envoie **le fichier du dépôt** en HTTP par le Wi-Fi (`/ufsu`), sans toucher au
-  firmware ni au persist. Grisé tant qu'une modification n'est pas écrite. La page lit d'abord la carte (`Status 5`) et
+- **« Puis envoyer à la carte (OTA)… »** envoie **le fichier du dépôt**, sans toucher au firmware ni au persist, par l'une
+  des deux voies choisies dans le panneau : **Wi-Fi (HTTP)**, par défaut (`/ufsu`), ou **MQTT**, pour une carte sans
+  adresse IP joignable (esclave derrière son maître). Changer de voie relance la lecture de la carte. Grisé tant qu'une
+  modification n'est pas écrite. La page lit d'abord la carte (`Status 5`) et
   refuse si son nom d'hôte diffère du `serveur.hostname` du persist du dépôt. Elle montre le fichier de la carte s'il
   diffère et demande de cocher son remplacement ; la copie de l'ancien fichier part dans `autoexec_cartes\<env>\` du
   même dossier. « Redémarrer la carte ensuite » est décochée : sinon la carte l'exécute au prochain démarrage. Pour une
   carte derrière le maître (cuve, rideau), le maître passe en `Sleep 0` le temps de l'envoi.
 
+**Voie MQTT** : broker du dépôt (celui de `user_config_override.h`), topic lu dans `serveur.mqtt.topic` du persist du
+dépôt, identité par `cmnd/<topic>/Status 5`, fichier transmis par le module `fsMqtt` de la carte (`fsmqtt/<topic>/…`, contrôle
+MD5). La carte doit avoir chargé `fsMqtt` : c'est le cas du P4, de la cuve et du rideau (ligne `demarrage.charge(["fsMqtt"])`
+de leur autoexec ; le rideau ne l'a qu'après l'envoi de son nouveau FS). Sinon : refus « aucune réponse de fsMqtt.be ». Une
+carte qui n'a pas d'autoexec chargeant `fsMqtt` peut le recevoir par l'extension `fsMqtt.tapp` (voir « Fabrique
+d'extensions »). Si l'`autoexec.bat` de la carte ne peut pas être relu par MQTT, rien n'est envoyé (fichier absent : envoi
+normal).
+
 Autres voies : un envoi série de la page Build écrit aussi ce fichier, mais il réécrit tout le système de fichiers,
-persist compris. Pas d'envoi par MQTT pour l'instant (amélioration du plan). Un refus « répond X à Status 5, pas Y »
+persist compris. Un refus « répond X à Status 5, pas Y »
 veut dire que la carte n'a pas encore reçu le persist du dépôt : l'envoyer depuis la page Build, puis réessayer.
 
 Si Tasmota évolue, régénérer la liste des commandes : `autoexec_commandes.py --verifier` (écarts), `--generer` (mise à jour de
 `outils_docs/schemas/commandes_tasmota.json`). Conception : [spec](../docs/superpowers/specs/2026-11-03-onglet-autoexec-bat-design.md) ;
-plan : `tasks/plans/autoexec-bat.md`. Bancs : `test_autoexec_analyse.py`, `test_autoexec_banque.py`,
-`test_autoexec_commandes.py`, `test_autoexec_envoi.py`, `test_autoexec_fichier.py`, `test_assistant_persist_autoexec.py`, sonde
+plans : `tasks/plans/autoexec-bat.md`, `tasks/plans/autoexec-mqtt-tapp.md` (voie MQTT, alerte « absente »). Bancs :
+`test_autoexec_analyse.py`, `test_autoexec_banque.py`, `test_autoexec_commandes.py`, `test_autoexec_envoi.py`,
+`test_autoexec_fichier.py`, `test_autoexec_gardes.py`, `test_assistant_persist_autoexec.py`, sonde
 `test_assistant_persist_autoexec_chrome.py`.
 
 ### Limites connues
@@ -1416,6 +1435,37 @@ Dans `outils_docs/scripts_python/outils_pc/`, avec le Python du penv PlatformIO 
 `_texte.py`, `_delta.py`, `_modification.py` (lent : plusieurs minutes, rejeu du parc), `_web.py`, et la sonde Chrome `test_assistant_persist_page_chrome.py` ; cible Custom :
 `build/test_cible_assistant_persist.py`. Les bancs travaillent sur un dépôt d'essai temporaire (lecture seule des
 vrais persists) : aucun n'écrit dans le vrai dépôt ni dans le vrai dossier des sauvegardes.
+
+## Fabrique d'extensions (page web)
+
+Page http://127.0.0.1:7980 pour fabriquer une extension Tasmota (`.tapp`) et l'envoyer à une carte. Ce qu'est une
+extension, quand s'en servir et ses pièges : [EXTENSIONS_TAPP.md](EXTENSIONS_TAPP.md). Lancement : tuile « Fabrique
+d'extensions » de l'annuaire (groupe Maintenance), tâche VS Code « Outil : fabrique d'extensions », ou cible Custom
+« Fabrique d'extensions (page web) » (`build/cible_tapp.py`, page démarrée détachée ; `pio run` : jamais pendant un build).
+Arrêt libre : rien n'est écrit ni envoyé sans un geste dans la page, aucune source n'est supprimée.
+
+Quatre étapes :
+
+1. **Créer depuis un modèle** : un dossier `data/extensions/<nom>/` (31 caractères au plus, lettres sans accent,
+   chiffres, `-` et `_`). Modèle A : charger un module déjà dans le firmware (exemple : `fsMqtt`) ; modèle B : un module
+   embarqué, qu'on peut arrêter depuis `/ext`. Un dossier existant n'est jamais écrasé.
+2. **Manifeste** : nom, version, description, `min_tasmota` ; les autres clés du fichier sont gardées.
+3. **Vérifier puis fabriquer** : noms des fichiers, manifeste, compilation Berry (avec la charte des logs en
+   avertissements), point par point. « Fabriquer le .tapp » écrit `data/extensions/<nom>.tapp` à côté du dossier (archive
+   sans compression, comme l'exige le firmware ; non versionnée). En ligne de commande : `berry/gen_tapp.py <dossier>`.
+   **Piège** : l'extension est compilée par la carte avant `/autoexec.be`, quand `LOG_LEVEL_*` et `logFonctions`
+   n'existent pas encore. Un `LOG_LEVEL_INFO` nu empêche l'extension de se lancer : écrire `global.LOG_LEVEL_INFO`, et
+   `import logFonctions` dans la fonction. La vérification le refuse en le disant.
+4. **Envoyer à une carte** : choisir la carte et la voie (Wi-Fi HTTP ou MQTT, comme l'onglet « autoexec.bat »), vers
+   `/.extensions/<nom>.tapp`. Nom d'hôte de la carte comparé au persist du dépôt, refus pendant un build, case à cocher
+   avant « Envoyer », pas de redémarrage par défaut (l'extension se lance au démarrage suivant, ou par `/ext`). En MQTT,
+   la carte n'est lue qu'au clic sur « Lire la carte » : une lecture ouvre un échange avec `fsMqtt`, qui annulerait un
+   transfert en cours.
+
+Un `.tapp` envoyé n'est pas dans l'image du FS : un formatage ou un flash série l'efface. **Non essayé sur carte à ce
+jour** (plan `tasks/plans/autoexec-mqtt-tapp.md`, A10). Bancs (`outils_pc/`, Python de PlatformIO) : `test_tapp_web.py`,
+`test_tapp_envoi.py`, sonde Chrome `test_tapp_page_chrome.py` ; `berry/test_gen_tapp.py`, `berry/banc_tapp_fsmqtt.py`
+(l'exemple) ; cible : `build/test_cible_tapp.py`.
 
 ## Atelier des graphiques (page web)
 

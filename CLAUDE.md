@@ -560,6 +560,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   `custom_files_exclude` de tous les autres envs (regle : une page ne part que sur les cartes qui s'en servent).
   Banc `berry/banc_cuve_page.py`. Mode d'emploi : `outils_docs/README.md`.
 - Page `/energie` du differentiel (2026-11-02, plan `tasks/plans/energie-differentiel.md`) : kWh et couts par heure, jour, mois gardes en flash, courbe de puissance 24 h ; `data/fs/energieFonctions.be` + `controleEnergie.be` (SOLIDIFIES, charges par l'autoexec, garde `diverses.energie`), `data/sd/{html,css,js}/energie.*` et `energieTarifs.*` (sous-page de Configuration : tarifs Base ou HC/HP) ; liste `page_energie` de `[berry_commun]` exclue de tous les autres envs. Banc `berry/banc_energie.py`. Mode d'emploi : `outils_docs/README.md`.
+- `outils_docs/EXTENSIONS_TAPP.md` — extensions Tasmota `.tapp` (2026-11-07) : format, cycle de vie, cas d'utilisation, gabarits
+  A et B, envoi sur une carte, pieges (compilation avant `/autoexec.be`, formatage, image du FS). Essais sur carte : § 9, a faire (A10).
 - `outils_docs/FICHIERS_DRVSET.md` — inventaire des fichiers `.drvset*`/`.snsset*` du firmware : role, contenu, chargement, sauvegarde, effacement (2026-11-02).
 - `outils_docs/sauvegarde_config/` — maquettes de l'onglet « Sauvegardes » de la page build (2026-11-02) : `modele-A.png` a `modele-C.png`, code `maquettes_sauvegarde.html`, contraintes `README.md`. Choix en attente, rien de realise.
 - `outils_docs/SOLIDIFICATION_BERRY.md` — mecanisme, verification (§5), parametres, 13 pieges.
@@ -603,7 +605,11 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `berry_custom/src/embedded`, dont le build a besoin, incident du 2026-11-01),
     `nomme_fonctions_berry.py` (fonctions anonymes -> nommees), `carte_modules_berry.py`
     (-> `outils_docs/CARTE_MODULES_BERRY.md`, sortie deterministe : ni date ni ordre de hachage), `genere_schema_persist.py`
-    (-> `outils_docs/schemas/persist.schema.json`), `gen_tapp.py`, et les bancs
+    (-> `outils_docs/schemas/persist.schema.json`), `gen_tapp.py` (dossier -> `.tapp` sans compression ; refuse un nom du
+    framework nu, `LOG_LEVEL_*` compris, car la carte compile l'extension avant `/autoexec.be` ; banc `test_gen_tapp.py` ;
+    exemple `data/extensions/fsMqtt/`, banc `banc_tapp_fsmqtt.{py,be}` sous `berry.exe -g -s` ; doc `outils_docs/EXTENSIONS_TAPP.md`),
+    `banc_repartition_fichiers.{py,be}` (`gestionFileFolder.be::listeEtRepartitLesFichiers` : un fichier deplace au demarrage
+    n'est jamais perdu, `.tapp` vers `/.extensions/`), et les bancs
     `banc_test_modbus.{py,be}`, `banc_leds.{py,be}` (ruban AUTO/MANUEL, bouton, LED du dev-kit),
     `banc_veille_drivers.be` (veille des drivers inactifs sur LittleFS neuf, `bouchons_berry/veille/`),
     `banc_boot.{py,be}` (autoexec ENTIER du P4 sur faux firmware `bouchons_berry/boot/` : persist reel, `{}`,
@@ -635,7 +641,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     plan `tasks/plans/assistant-synchro-fork.md`. **Exceptions a la regle du meme dossier** : `outils_pc/build_web.py` importe
     `maintenance/purge_cache_build.py` (bouton de purge de la page build), et
     `synchro_fork_web.py` importe `outils_pc/acces_web.py` et `outils_pc/build_serie.py` (detection
-    d'un build en cours) par un `sys.path` explicite.
+    d'un build en cours) par un `sys.path` explicite ; de meme `outils_pc/autoexec_gardes.py` importe
+    `build/verifie_lib_ignore.py` (macros d'un env), et `outils_pc/tapp_sources.py` importe `berry/gen_tapp.py`.
   - `sauvegarde/` — `genere_sauvegarde_tasmota.py`, `restaure_sauvegarde_tasmota.py` et leur
     interface Tk `interface_sauvegarde_restauration_tasmota.py`.
   - `reseau/` — petits outils autonomes : `comm_udp_*.py`, `envoi_message_udp.py`,
@@ -849,10 +856,19 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     Onglet « autoexec.bat » (2026-11-05, modele C de `outils_docs/autoexec_bat/`) : `assistant_persist_autoexec.py` (routes),
     `autoexec_fichier.py` (lecture masquee, diff, ecriture), `autoexec_analyse.py` (avertissements), `autoexec_commandes.py`
     (fige `outils_docs/schemas/commandes_tasmota.json` ; `--verifier`, `--generer`), `autoexec_banque.py`
-    (`outils_docs/schemas/banque_autoexec.json`), `autoexec_envoi.py` (HTTP `/ufsu`, nom d'hote de la carte = persist du depot, sinon
-    refus), page `assistant_persist_page_autoexec.py`, `_autoexec_js.py`, `_autoexec_lignes_js.py` (commande deja presente,
+    (`outils_docs/schemas/banque_autoexec.json`), `autoexec_envoi.py` (HTTP `/ufsu` ou MQTT par `fsMqtt` de la carte,
+    `build_ota_mqtt.py` ; nom d'hote de la carte = persist du depot, sinon refus ; verrou par carte), `autoexec_gardes.py`
+    (alerte orange « absente » : commande dont TOUTES les gardes `USE_*` sont fausses pour l'env, cle `gardes` de
+    `commandes_tasmota.json` ; calcul dans un processus fils, cache par env), page `assistant_persist_page_autoexec.py`, `_autoexec_js.py`, `_autoexec_lignes_js.py` (commande deja presente,
     suppression de ligne). Mode d'emploi : `outils_docs/README.md` § « Onglet « autoexec.bat » » ; spec
-    `docs/superpowers/specs/2026-11-03-onglet-autoexec-bat-design.md` ; plan `tasks/plans/autoexec-bat.md`.
+    `docs/superpowers/specs/2026-11-03-onglet-autoexec-bat-design.md` ; plans `tasks/plans/autoexec-bat.md`, `tasks/plans/autoexec-mqtt-tapp.md`.
+  - `tapp_web.py` (+ `tapp_page.py`, `tapp_sources.py`, `tapp_envoi.py`, `build/cible_tapp.py`) — page « Fabrique d'extensions »
+    http://127.0.0.1:7980 (2026-11-07 ; tuile de l'annuaire, groupe Maintenance, arret libre ; tache VS Code ; cible Custom detachee,
+    `NOM_CIBLE` fabrique_tapp). Sources dans `data/extensions/<nom>/` (gabarits A et B de `outils_docs/EXTENSIONS_TAPP.md`), manifeste,
+    controle et fabrication par `berry/gen_tapp.py`, `.tapp` a cote du dossier (ignore par git) ; envoi HTTP ou MQTT vers
+    `/.extensions/<nom>.tapp` par `autoexec_envoi.py` (identite, refus pendant un build, geste explicite ; en MQTT, lecture de la
+    carte au seul clic « Lire la carte »). Bancs `test_tapp_web.py`, `test_tapp_envoi.py`, sonde `test_tapp_page_chrome.py`,
+    `build/test_cible_tapp.py`. Mode d'emploi : `outils_docs/README.md` § « Fabrique d'extensions (page web) ». Non essaye sur carte (A10).
   - `atelier_graphiques_web.py` (+ `atelier_graphiques_page.py`, `_page_js.py`, `_page_series.py`, `_description.py`, `_series.py`,
     `_conseil.py`, `_ecriture.py`, `build/cible_atelier_graphiques.py`) — page « Atelier des graphiques » http://127.0.0.1:7950 (2026-11-04, palier 1 ;
     tuile de l'annuaire, groupe Maintenance, arret libre : rien n'est ecrit avant « Ecrire dans le depot » ; tache VS Code « Outil : atelier des
