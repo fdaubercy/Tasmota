@@ -290,7 +290,7 @@ class CONTROLE_MODBUS : Driver
 
             # Pré-traitement de la trame reçue
             var code = self.reponseModBus["FunctionCode"]
-            self.reponseModBus["FunctionName"] = (isinstance(code, int) && code >= 0 && code < size(tabFonctionsName)) ? tabFonctionsName[code] : "UNDEFINED"
+            self.reponseModBus["FunctionName"] = (type(code) == "int" && code >= 0 && code < size(tabFonctionsName)) ? tabFonctionsName[code] : "UNDEFINED"
             self.reponseModBus["DeviceAddress"] = int(self.reponseModBus["DeviceAddress"])
             # self.reponseModBus["Values"] = []
             if (type(self.reponseModBus["Values"]) == "int")

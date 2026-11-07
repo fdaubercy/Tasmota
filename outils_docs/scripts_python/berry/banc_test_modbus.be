@@ -1906,6 +1906,21 @@ controleModbus.CONTROLE_MODBUS.recupereReponseModBusUDP(FauxControle31(), rep31(
 verifie("controleModbus (maitre) : la reponse est laissee au driver, message toujours en vol", 4,
         modbusFonctions.etat()["enVol"] != nil ? modbusFonctions.etat()["enVol"]["tid"] : nil)
 
+# --- T8 : cote esclave, une commande recue par l'UDP garde le nom de sa fonction. Sans lui, executeCmdModbus ne la
+# traite pas et le maitre ne recoit jamais de reponse (isinstance(x, int) est toujours faux en Berry, incident du 2026-11-07)
+raz31()
+var sauveExec32 = modbusFonctions.executeCmdModbus
+var sauveId32 = drivers["ModBus"]["id"]
+var noms32 = []
+modbusFonctions.executeCmdModbus = def (m) noms32.push(m["FunctionName"]) end
+drivers["ModBus"]["id"] = 2
+for code32: [3, 5, 99]
+  controleModbus.CONTROLE_MODBUS.recupereReponseModBusUDP(FauxControle31(), {"DeviceAddress": 2, "FunctionCode": code32, "Values": [], "Erreur": 0}, "ModbusReceivedUDP", {})
+end
+modbusFonctions.executeCmdModbus = sauveExec32
+drivers["ModBus"]["id"] = sauveId32
+verifie("controleModbus (esclave) : nom de la fonction connu, code hors table -> UNDEFINED", "LECTURE_REGISTRES_HOLDER|ECRITURE_COIL_UNIQUE|UNDEFINED", noms32.concat("|"))
+
 raz31()
 gff31.fichiers = {}
 modules = sauveModules31
