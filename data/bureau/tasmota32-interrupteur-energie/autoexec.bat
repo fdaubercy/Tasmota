@@ -3,14 +3,12 @@
 
 ; Paramétrage du module de Volet Roulant de porte d'entrée
 ; Affiche la température de l'ESP32
-SetOption146 ON
 
 ; Evite un reset sur appui long sur un bouton
 SetOption1 OFF
 
 ; Paramétrage du wifi et de l'IP :
 ;Backlog WifiPower 17; SSId1 MAISON; Password1 obdormisti-pervigile%.-ficiendus;
-
 
 ; Recherche du signal wifi le plus fort :
 SetOption56 ON
