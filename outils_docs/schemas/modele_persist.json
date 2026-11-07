@@ -2,7 +2,14 @@
 	"version": 1,
 	"socle": {
 		"diverses": {
-			"energie": {"activation": "OFF", "calibrage": {"PowerCal": 596, "VoltageCal": 15187, "CurrentCal": 251213}},
+			"energie": {
+				"activation": "OFF",
+				"calibrage": {
+					"PowerCal": 596,
+					"VoltageCal": 15187,
+					"CurrentCal": 251213
+				}
+			},
 			"historique": {
 				"activation": "ON",
 				"pasMinutes": 5,
@@ -976,7 +983,9 @@
 				"            #define USER_BACKLOG      \"Backlog Hostname {{hostname}}\"",
 				""
 			],
-			"ajouts": {}
+			"ajouts": {
+				"serveur.voieReseau": "wifi"
+			}
 		},
 		"ESP32P4": {
 			"gpio": 55,
@@ -2409,5 +2418,7 @@
 		"custom_files_upload     =   ${env:{{base}}.custom_files_upload}",
 		"                            {{dossier}}"
 	],
-	"a_completer": []
+	"a_completer": [
+		"serveur.voieReseau"
+	]
 }
