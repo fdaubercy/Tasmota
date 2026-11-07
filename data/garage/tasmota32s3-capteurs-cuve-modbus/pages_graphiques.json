@@ -14,9 +14,20 @@
        "chemin": "sensorsCuve.niveauCuve.hauteurEau",
        "unite": "cm",
        "libelle": "Hauteur d'eau"
+      },
+      {
+       "chemin": "sensorsCuve.niveauCuve.tauxRemplissage",
+       "unite": "%",
+       "libelle": "Taux"
+      },
+      {
+       "chemin": "sensorsCuve.niveauCuve.volume",
+       "unite": "L",
+       "libelle": "Volume"
       }
      ],
-     "periode": "jour"
+     "periode": "jour",
+     "cadence": 10
     }
    ]
   }
