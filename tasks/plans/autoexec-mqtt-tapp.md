@@ -56,7 +56,7 @@ Règles : rien n'est écrit sur une vraie carte sans geste ou accord de l'utilis
 - [ ] Tuile `annuaire_registre.py` (groupe Maintenance), tâche VS Code, cible Custom détachée `build/cible_tapp.py` et sa liste `CIBLES_OUTILS` ; banc `test_tapp_web.py`, sonde Chrome (Python de PlatformIO, dépôt temporaire) ; agent `relecteur-pages-web`
 
 ## A8 — Exemple `fsMqtt.tapp`
-- [ ] `data/extensions/fsMqtt/` (manifeste, `autoexec.be` de 3 lignes : `import fsMqtt` sous `do ... end`, `tasmota.add_extension`) ; banc Berry sur bouchons : charge sans globale créée, et sans `logFonctions` déjà initialisé ; archive produite par le script ; non embarqué dans une image
+- [ ] `data/extensions/fsMqtt/` (manifeste, `autoexec.be` du gabarit A de `EXTENSIONS_TAPP.md` : `import fsMqtt` différé par minuterie, sans `add_extension` car `fsMqtt` n'a pas d'`unload`) ; banc Berry sur bouchons : charge sans globale créée, et sans `logFonctions` déjà initialisé ; archive produite par le script ; non embarqué dans une image
 
 ## A9 — Documentation et clôture
 - [ ] `outils_docs/README.md` (voie MQTT de l'onglet, alerte « absente », fabrique d'extensions), carte des documents de `CLAUDE.md` (exceptions d'import `sys.path` vers `build/`), maquettes non requises ; `verifie_references_docs.py` sans défaut, `test_annuaire.py` et `build/test_garde_build.py` VERTS
@@ -64,13 +64,14 @@ Règles : rien n'est écrit sur une vraie carte sans geste ou accord de l'utilis
 
 ## A10 — Essai réel (avec l'utilisateur)
 - [ ] Après accord : FS du rideau envoyé par la page Build, `fsmqtt/garage/rideau/etat` lu au démarrage, `autoexec.bat` envoyé par MQTT sur une carte choisie par l'utilisateur et relu identique, sans redémarrage
-- [ ] Après accord : `fsMqtt.tapp` installé sur une carte de test, vu dans `/ext`, arrêté, relancé ; ordre avant le prologue constaté dans les journaux, tas mesuré avant et après ; résultat consigné dans `EXTENSIONS_TAPP.md`
+- [ ] Après accord : `fsMqtt.tapp` installé sur une carte de test, vu dans `/ext` (« Stopped » attendu, voir `EXTENSIONS_TAPP.md`), réception MQTT constatée ; un `.tapp` du gabarit B arrêté et relancé ; les essais du § 9 du document ; ordre avant le prologue constaté dans les journaux, tas mesuré avant et après ; résultat consigné dans `EXTENSIONS_TAPP.md`
 
 ## A11 — Retour au plan antérieur « autoexec-bat »
 - [ ] Reprendre `tasks/plans/autoexec-bat.md` : son A10 (retour à `tasks/plans/energie-differentiel.md` : thermomètre A11, retour au plan « jauges-cuve » A10), après le compte rendu de ce plan à l'utilisateur
 
 ## Améliorations restantes
-- [ ] [projet] Corriger le déplacement des `.tapp` dans `data/fs/gestionFileFolder.be` (condition qui semble inversée), si l'utilisateur le décide
+- [ ] [projet] Corriger le déplacement des `.tapp` dans `data/fs/gestionFileFolder.be`, si l'utilisateur le décide : la condition n'est pas inversée (retard d'un démarrage), mais la source est supprimée avant l'écriture de la copie, un homonyme est écrasé, et tout nom contenant `.tapp` est pris (`EXTENSIONS_TAPP.md` § 8)
+- [ ] [projet] L'analyse à la frappe reste bloquée pendant un envoi réel (`/autoexec/envoi` garde le verrou général de `assistant_persist_web.py`)
 - [ ] [projet] Commandes Berry par carte (modules réellement chargés), et alias `SO146` reconnus dans le choix remplacer/enlever
 - [ ] [projet] Marquer dans la banque les commandes non compilées pour la carte choisie
 - [ ] [projet] Dépôt d'extensions local pour la boutique de `/ext` (`OtaUrl`)

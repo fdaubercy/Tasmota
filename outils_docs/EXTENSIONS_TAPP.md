@@ -297,8 +297,8 @@ Le nom d'hôte de la carte est à vérifier avant tout envoi (identité), comme 
 2. **Formatage du FS** : l'ordre `efface` de `fsMqtt.be::efface` fait `path.format(true)` ; `/.extensions/` disparaît avec le
    reste, comme tout fichier non rejoué. La page Build envoie ensuite l'image complète (`build_ota_mqtt.py::envoie_fs_mqtt`,
    `effacer=True`) : une extension absente de l'image est perdue.
-3. **Envoi de l'image du FS** : l'énoncé de départ disait que l'envoi d'image « ignore `/.extensions/` ». **Ce n'est pas
-   ce que dit le code** : `build_ota_fs.py::extrait_image` parcourt toute l'image (`fs.walk("/")`) et `_inventaire` tout le
+3. **Envoi de l'image du FS** : il n'ignore pas `/.extensions/`, contrairement à ce que supposait le plan de ce chantier :
+   `build_ota_fs.py::extrait_image` parcourt toute l'image (`fs.walk("/")`) et `_inventaire` tout le
    dossier (`rglob("*")`, dossiers cachés compris) ; rien ne filtre `.extensions`. Le vrai piège est **en amont**, dans la
    construction de l'image : `post_esp32.py::esp32_build_filesystem` ne met dans l'image que ce que liste
    `custom_files_upload`, à plat (un `.tapp` listé atterrit à la racine, pas dans `/.extensions/`). Sans entrée dans cette
@@ -327,7 +327,7 @@ sinon  mkdir /.extensions
 Ce que cela donne, pour un `.tapp` déposé à la racine :
 
 - **Premier démarrage où `/.extensions` n'existe pas** : le dossier est créé vide ; le `.tapp` **reste à la racine**. La
-  condition n'est donc pas « inversée » comme le supposait la fiche de départ : elle retarde le déplacement **d'un
+  condition n'est donc pas « inversée », comme le supposait le plan de ce chantier : elle retarde le déplacement **d'un
   démarrage** (le `mkdir` de la branche vraie est redondant). Le fichier reste exécuté depuis `/` (`autoexec_dir("/")`),
   mais ne figure pas dans `/ext` (§ 2.4).
 - **Démarrage suivant** : le dossier existe, le fichier est déplacé, mais **après** son lancement de ce démarrage (le
