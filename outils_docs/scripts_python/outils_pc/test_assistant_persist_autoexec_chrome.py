@@ -70,12 +70,14 @@ def mode_serveur(port, depot, temoin):
     def prepare(racine, env, builds_en_cours, *, transport="http"):
         vues = json.loads(preparations.read_text(encoding="utf-8")) if preparations.is_file() else []
         preparations.write_text(json.dumps(vues + [transport]), encoding="utf-8")
-        lent = preparations.parent / "lent.flag"
-        if transport == "mqtt" and lent.is_file():            # la preparation M1 du scenario d'aller-retour : lente, puis perimee
-            lent.unlink()
-            time.sleep(2.5)
+        perimee, lent = preparations.parent / "perimee.flag", preparations.parent / "lent.flag"
+        if transport == "mqtt" and perimee.is_file():         # M1 du scenario d'aller-retour : la page retient cette reponse
+            perimee.unlink()
             return {"adresse": "mqtt:essai/sonde", "hostname_carte": "PERIMEE-M1", "sur_carte": SUR_CARTE, "ecart": True,
                     "jeton": "jeton-perime", "transport": transport}
+        if transport == "mqtt" and lent.is_file():            # carte lente : l'analyse ne doit pas attendre derriere elle
+            lent.unlink()
+            time.sleep(2.5)
         return {"adresse": "mqtt:essai/sonde" if transport == "mqtt" else "127.0.0.1:9", "hostname_carte": "ESSAI-SONDE", "sur_carte": SUR_CARTE,
                 "ecart": True, "jeton": JETON, "transport": transport}
 
@@ -283,16 +285,35 @@ def sonde(m):
     verifie(attend(cdp, "!!document.getElementById('a-envoi-ok')", 10), True, "voie MQTT : reussite affichee")
     recu = json.loads(m.journal.read_text(encoding="utf-8"))
     verifie(recu.get("transport"), "mqtt", "envoi : la voie de la preparation est celle transmise a l'envoi")
-    # aller-retour de voie : M1 (lente) revient apres M2 avec la meme voie, elle ne doit rien ecraser
+    # carte lente : une lecture qui dure n'arrete pas les autres POST de la page (analyse a la frappe)
+    def consomme(nom):
+        drapeau, limite = m.journal.parent / nom, time.monotonic() + 5
+        while drapeau.exists() and time.monotonic() < limite:
+            time.sleep(0.02)
+        return not drapeau.exists()
     (m.journal.parent / "lent.flag").write_text("1", encoding="utf-8")
     tpc.clic(cdp, "a-envoyer")
     attend(cdp, "document.getElementById('a-envoi-adresse').textContent.indexOf('ESSAI-SONDE') >= 0", 10)
-    tpc.clic(cdp, "a-t-mqtt")                                  # M1 : part, reste en attente 2,5 s
+    tpc.clic(cdp, "a-t-mqtt")
+    verifie(consomme("lent.flag"), True, "carte lente : la lecture a commence")
+    js(cdp, "window.__fini = false; fetch('/autoexec/analyse', {method: 'POST', headers: {'X-Assistant-Persist': '1', 'Content-Type': 'application/json'}, "
+            "body: '{}'}).then(function () { window.__fini = true; }); return true")
+    verifie(attend(cdp, "window.__fini === true", 1.5), True, "carte lente : l'analyse repond sans attendre la fin de la lecture")
+    attend(cdp, "document.getElementById('a-envoi-adresse').textContent.indexOf('par MQTT (essai/sonde)') >= 0", 10)
+    # aller-retour de voie : la page retient 2,5 s la reponse de M1, qui revient donc apres M2 : elle ne doit rien ecraser
+    (m.journal.parent / "perimee.flag").write_text("1", encoding="utf-8")
+    tpc.clic(cdp, "a-envoyer")
+    attend(cdp, "document.getElementById('a-envoi-adresse').textContent.indexOf('ESSAI-SONDE') >= 0", 10)
+    js(cdp, "var f = window.fetch, tenu = false; window.fetch = function (u, o) { var p = f.apply(this, arguments);"
+            " if (tenu || String(u).indexOf('/autoexec/envoi/prepare') < 0 || String(o && o.body).indexOf('mqtt') < 0) return p;"
+            " tenu = true; return p.then(function (r) { return new Promise(function (ok) { setTimeout(function () { ok(r); }, 2500); }); }); }; return true")
+    tpc.clic(cdp, "a-t-mqtt")                                  # M1 : sa reponse est retenue par la page
+    verifie(consomme("perimee.flag"), True, "voie MQTT : aller-retour, M1 a atteint le serveur")
     tpc.clic(cdp, "a-t-http")                                  # H
     tpc.clic(cdp, "a-t-mqtt")                                  # M2 : rapide
-    verifie(attend(cdp, "document.getElementById('a-envoi-adresse').textContent.indexOf('par MQTT (essai/sonde)') >= 0", 10), True,
-            "voie MQTT : aller-retour, la preparation M2 est affichee")
-    time.sleep(3.5)                                            # M1 revient
+    verifie(attend(cdp, "document.getElementById('a-envoi-adresse').textContent.indexOf('ESSAI-SONDE par MQTT (essai/sonde)') >= 0", 2), True,
+            "voie MQTT : aller-retour, la preparation M2 est affichee avant le retour de M1")
+    time.sleep(3)                                              # M1 revient
     tpc.clic(cdp, "a-ecart-vu")
     tpc.clic(cdp, "a-envoi-rouges-lus")
     tpc.clic(cdp, "a-envoi-go")
