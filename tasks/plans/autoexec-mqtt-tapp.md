@@ -3,7 +3,7 @@ chantier: autoexec-mqtt-tapp
 titre: Envoi MQTT de l'autoexec.bat, commandes par carte, extensions .tapp (document, script, page)
 statut: actif
 cree: 2026-11-05
-maj: 2026-11-06
+maj: 2026-11-07
 source: squishy-imagining-raven.md
 objectif: Envoyer l'autoexec.bat par MQTT, signaler une commande non compilée pour la carte, et savoir fabriquer un .tapp (document, script, page de l'annuaire)
 ---
@@ -47,8 +47,8 @@ Règles : rien n'est écrit sur une vraie carte sans geste ou accord de l'utilis
 - [ ] `outils_docs/EXTENSIONS_TAPP.md` : caractéristiques (format, manifeste, cycle de vie, emplacement, activation, RAM), intérêts et limites, cas d'utilisation, processus de codage pas à pas avec gabarits (module déjà solidifié ; module embarqué avec `unload()`), règles du dépôt (charte des logs, `do ... end` pour ne pas créer de globale), envoi sur une carte, pièges : ordre avant `/autoexec.be`, formatage, envoi d'image qui ignore `/.extensions/`, défaut signalé de `data/fs/gestionFileFolder.be`. Chaque fait renvoie à sa source en `fichier::fonction` ; ce qui n'a pas été essayé sur carte est marqué comme tel
 
 ## A6 — Script de construction
-- [ ] Banc rouge `test_gen_tapp.py` : archive en ZIP_STORED et à plat (relue par `zipfile`, comparée à `Wifi_Heap_Sticker.tapp` pour la forme), `manifest.json` invalide ou sans `name`, `autoexec.be` absent, sous-dossier, nom trop long, Berry qui ne compile pas → refus avec motif, rien d'écrit ; témoin sur `ZIP_DEFLATED`
-- [ ] `berry/gen_tapp.py` réécrit, sans question ni colorama : `gen_tapp.py <dossier> [--sortie x.tapp]`, fonction `construit` réutilisable, syntaxe vérifiée par le moteur de `verifie_berry.py`, code de sortie 0 ou 1
+- [x] Banc rouge `test_gen_tapp.py` : archive en ZIP_STORED et à plat (relue par `zipfile`, comparée à `Wifi_Heap_Sticker.tapp` pour la forme), `manifest.json` invalide ou sans `name`, `autoexec.be` absent, sous-dossier, nom trop long, Berry qui ne compile pas → refus avec motif, rien d'écrit ; témoin sur `ZIP_DEFLATED` — preuve : rouge d'abord (ancien gen_tapp.py : SyntaxError a l'import, aucune fonction `construit`) ; test_gen_tapp.py VERT (69 OK : 12 refus x 3 controles, en-tetes locaux relus octet par octet, forme de Wifi_Heap_Sticker.tapp, octets reproductibles, atomicite, 4 temoins rouges dont ZIP_DEFLATED) ; commit voir rapport task-A6-report.md
+- [x] `berry/gen_tapp.py` réécrit, sans question ni colorama : `gen_tapp.py <dossier> [--sortie x.tapp]`, fonction `construit` réutilisable, syntaxe vérifiée par le moteur de `verifie_berry.py`, code de sortie 0 ou 1 — preuve : outils_docs/scripts_python/berry/gen_tapp.py (138 lignes) : `construit(dossier, sortie=None) -> Path`, ZIP_STORED a plat date fixe, ecriture atomique, syntaxe par verifie_berry.verifie, CLI code 0/1 ; test_gen_tapp.py VERT ; Wifi_Heap_Sticker reconstruit avec les memes contenus
 
 ## A7 — Page « Fabrique d'extensions » dans l'annuaire
 - [ ] Serveur et page `outils_pc/tapp_web.py` + `tapp_page.py`, port 7980, `acces_web.py`, sources dans `data/extensions/<nom>/` : créer depuis un gabarit (deux modèles de A5), formulaire du manifeste (nom, version, description, `min_tasmota`), fichiers listés, contrôle en direct, « Fabriquer » → `.tapp` à côté du dossier ; noms hostiles refusés ; pas de suppression de source

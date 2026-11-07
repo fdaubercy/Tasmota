@@ -1,94 +1,138 @@
-import os
-import sys
+"""Construit une extension Tasmota .tapp a partir d'un dossier.
+
+Usage : gen_tapp.py <dossier> [--sortie x.tapp]
+
+Le dossier doit contenir, A PLAT (aucun sous-dossier), `autoexec.be` et un `manifest.json`
+valide dont la cle `name` est non vide. Sortie par defaut : `<dossier>.tapp` a cote du dossier.
+Chaque `.be` est compile par le moteur de `verifie_berry.py` : une archive non verifiee ne part pas.
+Aucune question, aucune dependance hors bibliotheque standard. Code de sortie 0 = construit,
+1 = refus (motif sur stderr, rien d'ecrit, un ancien .tapp reste intact).
+
+Format impose par le firmware (lib/libesp32/Zip-readonly-FS/src/ZipReadFS.cpp::ZipArchive::parse) :
+ZIP_STORED, drapeaux a 0, taille compressee = taille d'origine, nom de 64 octets au plus ;
+le firmware ignore tout ce qui suit le nom (champ supplementaire) et coupe le nom a '#'.
+"""
 import argparse
-import os.path
-import zipfile 
-import shutil
-from colorama import Fore, Back, Style
+import contextlib
+import io
+import json
+import os
+import re
+import sys
+import tempfile
+import zipfile
+from pathlib import Path
 
-parser = argparse.ArgumentParser(prog='gen_tapp', description='Génère le fichier *.tapp', epilog='A bientôt !')
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import verifie_berry  # noqa: E402
 
-parser.add_argument('-d', '--dossier', type=str, help='Dossier contenant les scripts berry à zipper & l\'archive *.tapp')
-parser.add_argument('-v', '--verbose', help='Augmente le niveau de logs', action='store_true')
-args = parser.parse_args()
+NOM_MAX = 64  # ZipReadFS.cpp : filename_size > 64 refuse
+DATE_FIXE = (1980, 1, 1, 0, 0, 0)  # octets identiques pour une meme source
+AVERTISSEMENTS = []  # avertissements de charte du dernier construit(), non bloquants (le CLI les affiche)
+ENTIER = re.compile(r"^(0[xX][0-9a-fA-F]+|\d+)$")  # ce que int() de Berry lit dans read_extension_manifest
 
-def main():
-    # Le dossier contenant les scripts berry à zipper
-    # if (args.dossier):
-    #     folder = args.dossier
-    # else:   
-    #     folder = "raw"
-    #     print(Fore.YELLOW + f"Le dossier de localisation des fichiers compressés par défaut est: '{folder}'")
-        
-    # Détermine le nom de l'archive
+
+def _controle_nom(nom):
     try:
-        file_name = input(Fore.WHITE + "Entrez le nom de l'archive à créer (optionnel): ")
-        try:
-            if file_name == '':
-                raise ValueError('No name provided')
-            # print(f"Next year, you'll be {age + 1}.")
-        except ValueError as e:
-            file_name = 'archive.tapp'
-            
-            # Corrige le nom si nécessaire
-            if not file_name.endswith(('.tapp')):
-                file_name += '.tapp'
-                
-            print(Fore.YELLOW + f"Vous n'avez pas renseigné le nom de l'archive, le nom par défaut '{file_name}' sera utilisé.")
-    except Exception as outer_error:
-        print(f"Erreur: {outer_error}")
-        
-    # Corrige le nom si nécessaire
-    if not file_name.endswith(('.tapp')):
-        file_name += '.tapp'
-    
-    # # L'archive 'tapp' à créer dans le dossier 'raw'
-    # file_name = os.path.normpath(os.path.join(folder, file_name))
-    
-    # # On crée le dossier s'il n'existe pas
-    # if not os.path.exists(folder):
-    #     os.makedirs(folder)
-    #     print(Fore.YELLOW + f"Le dossier '{folder}' n'existait pas, il a été créé.")
-    
-    # Supprime le fichier / dossier indiqué
-    if os.path.exists(file_name):
-        os.remove(file_name)
-        
-    # Détermine le dossier contenant les fichiers à zipper
+        octets = nom.encode("ascii")
+    except UnicodeEncodeError:
+        raise ValueError(f"{nom} : nom non ASCII")
+    if len(octets) > NOM_MAX:
+        raise ValueError(f"{nom} : nom de {len(octets)} octets, le firmware refuse plus de {NOM_MAX}")
+    if "#" in nom:
+        raise ValueError(f"{nom} : '#' interdit dans un nom (le firmware coupe le nom a '#')")
+
+
+def _controle_manifest(chemin):
     try:
-        folder_origine = input(Fore.WHITE + "Entrez le chemin relatif des dossiers à compresser: ")
-        try:
-            if folder_origine == '':
-                raise ValueError('No name provided')
+        m = json.loads(chemin.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        raise ValueError(f"manifest.json invalide : {e}")
+    if not isinstance(m, dict):
+        raise ValueError("manifest.json invalide : un objet JSON est attendu")
+    if not isinstance(m.get("name"), str) or not m["name"].strip():
+        raise ValueError("manifest.json : 'name' absent ou vide")
+    for cle in ("version", "min_tasmota"):
+        v = m.get(cle, 0)
+        if isinstance(v, bool) or not (isinstance(v, int) or (isinstance(v, str) and ENTIER.match(v))):
+            raise ValueError(f"manifest.json : '{cle}' doit etre un entier ou une chaine '0x...' (obtenu {v!r})")
 
-        except ValueError as e:
-            print(Fore.RED + f"Vous n'avez pas renseigné le chemin du dossier contenant les fichiers à compresser.")
-            return
-    except Exception as outer_error:
-        print(Fore.RED + f"Erreur: {outer_error}")
-        return
-    
-    # Le dossier de création de l'archive est celui des fichiers à zipper
-    folder = folder_origine
-    file_name = os.path.normpath(os.path.join(folder, file_name))
-        
-    # Crée le fichier zip
-    with zipfile.ZipFile(file_name, "w", zipfile.ZIP_DEFLATED) as zfile:
-        # Liste les fichiers dans le dossier 'raw'
-        for root, _, files in os.walk(folder):
-            for file in files:
-                # Evite le fichier d'archive lui même
-                if file.endswith(('.tapp')):
-                    continue
-            
-                # Ajoute le fichier au zip
-                filename = os.path.join(root, file)
-                zfile.write(filename, os.path.relpath(filename, folder))
-    print(Fore.GREEN + f"La création du fichier '{file_name}' dans le dossier '{os.path.normpath(folder + "/")}' s'est terminée avec succès.")
 
-    # Ouvre le 'Zip' pour tester son contenu
-    if args.verbose:
-        with zipfile.ZipFile(file_name, 'r') as zipArchive:
-            print(Fore.GREEN + f"Il contient les fichier suivants: '{zipArchive.namelist()}'")
-    
-if __name__ == '__main__': main()
+def _controle_berry(dossier, fichiers_be):
+    if not fichiers_be:
+        return []
+    try:
+        racine = verifie_berry.trouve_racine()
+        berry = verifie_berry.trouve_berry(racine)
+        sortie = io.StringIO()
+        with contextlib.redirect_stdout(sortie):
+            rc = verifie_berry.verifie(racine, berry, fichiers_be)
+    except SystemExit as e:
+        raise ValueError(f"verification Berry impossible : {e.code}")
+    lignes = sortie.getvalue().splitlines()
+    if rc != 0:
+        erreurs = [l for l in lignes if ": erreur:" in l] or lignes
+        raise ValueError("Berry ne compile pas :\n" + "\n".join(erreurs))
+    return [l for l in lignes if ": avertissement:" in l]
+
+
+def construit(dossier, sortie=None):
+    """Ecrit le .tapp et rend son chemin ; ValueError (motif en francais) sinon. Rien d'imprime."""
+    dossier = Path(dossier).resolve()
+    if not dossier.is_dir():
+        raise ValueError(f"{dossier} : dossier introuvable")
+    sortie = Path(sortie).resolve() if sortie else dossier.parent / (dossier.name + ".tapp")
+    if sortie.suffix != ".tapp":
+        raise ValueError(f"{sortie.name} : la sortie doit se terminer par .tapp")
+    if dossier in sortie.parents:
+        raise ValueError(f"{sortie} : la sortie ne doit pas etre dans le dossier source")
+
+    noms = sorted(e.name for e in os.scandir(dossier))
+    for nom in noms:
+        if (dossier / nom).is_dir():
+            raise ValueError(f"{nom} : sous-dossier interdit, l'archive est a plat")
+        _controle_nom(nom)
+    if "autoexec.be" not in noms:
+        raise ValueError("autoexec.be absent du dossier")
+    if "manifest.json" not in noms:
+        raise ValueError("manifest.json absent du dossier")
+    _controle_manifest(dossier / "manifest.json")
+    AVERTISSEMENTS[:] = _controle_berry(dossier, [dossier / n for n in noms if n.endswith(".be")])
+
+    # ecriture atomique : un echec laisse l'ancien .tapp et aucun temporaire
+    fd, tmp = tempfile.mkstemp(suffix=".tmp", prefix=sortie.name, dir=sortie.parent)
+    try:
+        with os.fdopen(fd, "wb") as f, zipfile.ZipFile(f, "w", zipfile.ZIP_STORED) as z:
+            for nom in noms:
+                info = zipfile.ZipInfo(nom, DATE_FIXE)
+                info.compress_type = zipfile.ZIP_STORED
+                info.external_attr = 0o644 << 16
+                z.writestr(info, (dossier / nom).read_bytes())
+        os.replace(tmp, sortie)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+        raise
+    return sortie
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(prog="gen_tapp", description=__doc__.split("\n")[0])
+    p.add_argument("dossier")
+    p.add_argument("--sortie", help="chemin du .tapp (defaut : <dossier>.tapp a cote du dossier)")
+    a = p.parse_args(argv)
+    try:
+        chemin = construit(a.dossier, a.sortie)
+    except (ValueError, OSError) as e:
+        print(f"REFUS : {e}", file=sys.stderr)
+        return 1
+    with zipfile.ZipFile(chemin) as z:
+        n = len(z.namelist())
+    for l in AVERTISSEMENTS:
+        print(l, file=sys.stderr)
+    print(f"{chemin} : {n} fichier(s), {chemin.stat().st_size} octets")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
