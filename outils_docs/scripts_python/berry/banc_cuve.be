@@ -669,6 +669,12 @@ if ctrl != nil
     cuveFonctions.sensorsCuve["valeursAnalogiques"].remove("tensionSonde_V")
     verifie(niv["colorWs2812"] == cuveFonctions.couleurTeinte(59, 255) && niv["colorWs2812"] == "FFFA00" && niv["classeErreur"] == "", "web_sensor : couleur de l'encadre = teinte 59 a saturation 255 (FFFA00), pas de classe d'erreur")
     verifie(size(gestionFileFolder.envois) == 2 && string.find(gestionFileFolder.envois[1][1]["sensors->DS18B20->Temperature"], "12.3") == 0, "web_sensor : thermometre 12.34 -> '12.3' (une decimale tronquee)")
+    # taux affiche sans decimale : sur la carte (reel 32 bits), 0.30 * 100 s'affichait 30.000002%
+    mesures()["niveauCuve"]["tauxRemplissage"] = 0.625
+    gestionFileFolder.envois = []
+    ctrl.web_sensor()
+    verifie(gestionFileFolder.envois[0][1]["sensorsCuve->niveauCuve->tauxRemplissage"] == "63%", "web_sensor : taux 0.625 -> '63%' (entier arrondi, sans decimale)")
+    mesures()["niveauCuve"]["tauxRemplissage"] = 0.5
     # web_sensor : sonde absente
     controleGeneral.capteurs = {}
     gestionFileFolder.envois = []
