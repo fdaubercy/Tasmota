@@ -31,7 +31,7 @@ import sys
 from pathlib import Path
 
 DURABLES = ["CLAUDE.md", "outils_docs/README.md", "outils_docs/SOLIDIFICATION_BERRY.md",
-            "outils_docs/PROTOCOLE_MODBUS.md", "outils_docs/CARTE_MODULES_BERRY.md"]
+            "outils_docs/PROTOCOLE_MODBUS.md", "outils_docs/CARTE_MODULES_BERRY.md", "outils_docs/EXTENSIONS_TAPP.md"]
 DURABLES_MOTIFS = [".claude/skills/**/*.md", ".claude/agents/*.md", ".claude/commands/*.md"]
 EXT = r"(?:be|py|ino|h|c|cpp|ini|json|csv|md|js|html|css|sh|ps1|mjs|txt)"
 RE_LIGNE = re.compile(r"([\w./\\-]+\." + EXT + r"):(\d+(?:-\d+)?)\b")
