@@ -543,6 +543,9 @@ def sonde_destination(m, capture):
     attend(cdp, "!document.getElementById('ecrire').disabled", 15)
     cdp.js("document.getElementById('ecrire').click(); 1")
     attend(cdp, "etat.indexEcrit", 10)
+    verifie(cdp.js("(function () { var c = etat.compo, x = etat.indexEcrit; etat.compo = Object.assign({}, c, {etat: 'identique'}); etat.indexEcrit = null;"
+                   " var b = corpsEcriture().base; etat.compo = c; etat.indexEcrit = x; return b; })()"), "depot",
+            "apres ecriture, composition pas encore relue : base depot envoyee")
     cdp.js("document.getElementById('suppr-graphique').click(); document.getElementById('ajout-graphique').click(); 1")
     verifie(cdp.js("etat.indexEcrit"), None, "retirer / ajouter un graphique : index oublie")
     saisit(cdp, "#r-titre", "Second")

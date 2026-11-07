@@ -37,7 +37,8 @@ function corpsGraphiques() {
   if (Object.keys(cc).length) g.calculees = cc;                  // le graphique emporte les formules qu'il cite (les autres ne partent pas)
   var o = {env: etat.env, destination: 'graphiques', operation: 'ajoute', graphique: g};
   if (x && x.cle === cleEcrit()) { o.operation = 'remplace'; o.index = x.index; o.attendu = x.attendu; o.base = x.base || 'depot'; return o; }   // le depot (ou la carte choisie) porte deja ce graphique
-  if (c && c.etat === 'differente' && etat.base) o.base = etat.base;
+  // 'depot' sans attendre la composition relue : juste apres une ecriture, le serveur voit deja l'ecart et la page pas encore
+  if (etat.base === 'depot' || (c && c.etat === 'differente' && etat.base)) o.base = etat.base;
   return o;
 }
 // `calculees` de la description que citent les series du graphique (calc:<nom>)
