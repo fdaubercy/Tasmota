@@ -204,7 +204,7 @@ class CAPTEURS_CUVE : Driver
 
             # Calcul le pourcentage d'eau dans la cuve & le volume disponible
             variablesRemplacement.insert("sensorsCuve->tauxRemplissage->titre", "Taux de remplissage: ")
-            variablesRemplacement.insert("sensorsCuve->niveauCuve->tauxRemplissage", (erreurNiveau ? vide : str(cuveFonctions.sensorsCuve["niveauCuve"]["tauxRemplissage"] * 100)) + "%")
+            variablesRemplacement.insert("sensorsCuve->niveauCuve->tauxRemplissage", (erreurNiveau ? vide : str(int(cuveFonctions.sensorsCuve["niveauCuve"]["tauxRemplissage"] * 100 + 0.5))) + "%")
             variablesRemplacement.insert("sensorsCuve->volume->titre", "Volume disponible: ")
             variablesRemplacement.insert("sensorsCuve->niveauCuve->volume", (erreurNiveau ? vide : str(cuveFonctions.sensorsCuve["niveauCuve"]["volume"])) + "L")
 

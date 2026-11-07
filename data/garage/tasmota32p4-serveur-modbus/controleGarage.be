@@ -185,7 +185,7 @@ class CONTROLE_GARAGE : Driver
                             var pourcentageEau = int(hauteurEau / real(hauteur) * 100) / 100.00 
 
                             variablesRemplacement.insert("sensorsCuve->tauxRemplissage->titre", "Taux de remplissage: ")
-                            variablesRemplacement.insert("sensorsCuve->niveauCuve->tauxRemplissage", (erreur ? vide : str(pourcentageEau * 100)) + "%")
+                            variablesRemplacement.insert("sensorsCuve->niveauCuve->tauxRemplissage", (erreur ? vide : str(int(pourcentageEau * 100 + 0.5))) + "%")
 
                             var volume =  int(hauteur * largeur * longueur * pourcentageEau / 1000)    # en litres
 
