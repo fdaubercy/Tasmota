@@ -1,0 +1,25 @@
+{
+ "version": 1,
+ "pages": [
+  {
+   "id": "tableau",
+   "titre": "Tableau",
+   "acces": "bouton",
+   "graphiques": [
+    {
+     "type": "cadran",
+     "titre": "Température de l'eau",
+     "series": [
+      {
+       "chemin": "sensorsCuve.niveauCuve.volume",
+       "unite": "L"
+      }
+     ],
+     "periode": "jour",
+     "min": 0,
+     "max": 10000
+    }
+   ]
+  }
+ ]
+}
