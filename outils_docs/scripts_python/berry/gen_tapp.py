@@ -48,6 +48,11 @@ def _controle_manifest(chemin):
         m = json.loads(chemin.read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
         raise ValueError(f"manifest.json invalide : {e}")
+    controle_manifeste(m)
+
+
+def controle_manifeste(m):
+    """Regles du manifeste sur l'objet deja lu ; ValueError sinon (aussi pour le formulaire de la Fabrique d'extensions)."""
     if not isinstance(m, dict):
         raise ValueError("manifest.json invalide : un objet JSON est attendu")
     if not isinstance(m.get("name"), str) or not m["name"].strip():
@@ -76,6 +81,49 @@ def _controle_berry(dossier, fichiers_be):
     return [l for l in lignes if ": avertissement:" in l]
 
 
+def _controle_noms(dossier, noms):
+    for nom in noms:
+        if (dossier / nom).is_dir():
+            raise ValueError(f"{nom} : sous-dossier interdit, l'archive est a plat")
+        _controle_nom(nom)
+
+
+def _controle_present(noms, requis):
+    if requis not in noms:
+        raise ValueError(f"{requis} absent du dossier")
+
+
+def controle(dossier):
+    """Les controles de construit sans rien ecrire, tous menes (affichage point par point de la Fabrique d'extensions).
+
+    Rend (points, avertissements de charte) ; points = [{"point", "motif"}], motif None = bon. Comme construit, non
+    reentrant (redirect_stdout, preambule partage de verifie_berry) : l'appelant concurrent tient un verrou.
+    """
+    dossier = Path(dossier).resolve()
+    noms = sorted(e.name for e in os.scandir(dossier))
+    points = []
+
+    def essai(point, appel, *args):
+        try:
+            resultat = appel(*args)
+        except (ValueError, OSError) as e:
+            points.append({"point": point, "motif": str(e)})
+            return None
+        points.append({"point": point, "motif": None})
+        return resultat
+
+    def manifeste():
+        _controle_present(noms, "manifest.json")
+        _controle_manifest(dossier / "manifest.json")
+
+    essai("Noms des fichiers", _controle_noms, dossier, noms)
+    essai("autoexec.be", _controle_present, noms, "autoexec.be")
+    essai("manifest.json", manifeste)
+    avertissements = essai("Compilation Berry", _controle_berry, dossier,
+                           [dossier / n for n in noms if n.endswith(".be") and (dossier / n).is_file()])
+    return points, avertissements or []
+
+
 def construit(dossier, sortie=None):
     """Ecrit le .tapp et rend son chemin ; ValueError (motif en francais) sinon. Rien d'imprime."""
     dossier = Path(dossier).resolve()
@@ -88,14 +136,9 @@ def construit(dossier, sortie=None):
         raise ValueError(f"{sortie} : la sortie ne doit pas etre dans le dossier source")
 
     noms = sorted(e.name for e in os.scandir(dossier))
-    for nom in noms:
-        if (dossier / nom).is_dir():
-            raise ValueError(f"{nom} : sous-dossier interdit, l'archive est a plat")
-        _controle_nom(nom)
-    if "autoexec.be" not in noms:
-        raise ValueError("autoexec.be absent du dossier")
-    if "manifest.json" not in noms:
-        raise ValueError("manifest.json absent du dossier")
+    _controle_noms(dossier, noms)
+    _controle_present(noms, "autoexec.be")
+    _controle_present(noms, "manifest.json")
     _controle_manifest(dossier / "manifest.json")
     AVERTISSEMENTS[:] = _controle_berry(dossier, [dossier / n for n in noms if n.endswith(".be")])
 

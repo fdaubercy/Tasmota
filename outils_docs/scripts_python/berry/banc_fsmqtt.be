@@ -114,6 +114,11 @@ for e: etats()    if e["op"] == "morceau"    acc.push(e["octets"])    end    end
 verifie(acc == [1896, 3792, 4000], "envoi : accuse cumule par morceau " + str(acc))
 verifie(dernier()["op"] == "fin" && dernier()["ok"] && dernier()["octets"] == 4000, "envoi : fin acceptee, taille rendue")
 
+# --- extension (.tapp) : dossier cache, chemin au plus long (49 caracteres) accepte par la Fabrique d'extensions
+var chemin_ext = "/.extensions/" + string.format("%031d", 0) + ".tapp"
+envoie(chemin_ext, donnees(100), 1896)
+verifie(size(chemin_ext) == 49 && FS["fichiers"].find(chemin_ext) == donnees(100) && FS["dossiers"].contains("/.extensions"), "extension : fichier sous /.extensions/, dossier cree, 49 caracteres")
+
 # --- morceau perdu puis renvoye, morceau en double
 mqtt.publies = []
 d = donnees(3000)
