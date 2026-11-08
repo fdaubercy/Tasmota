@@ -33,7 +33,7 @@ SONDE = "/energie?f=description"
 MOTIF_FIRMWARE = "firmware d'avant la page Energie pilotee par description : compilez et envoyez le firmware du differentiel par la page Build"
 
 
-RE_MOIS = re.compile(r"\d{4}-(0[1-9]|1[0-2])")
+RE_MOIS = re.compile(r"[0-9]{4}-(0[1-9]|1[0-2])")     # \d accepterait les chiffres non ASCII
 FORMES = ("donnees", "direct", "mois")             # liste fermee des lectures relayees par l'apercu
 
 
@@ -219,7 +219,9 @@ def apercu(racine, env, f, m=None, *, get=None, muette=False, maintenant=None):
     if ip:
         chemin = f"/energie?f={f}" + (f"&m={m}" if f == "mois" else "")
         try:
-            return 200, (get or build_ota_http._get)(ip, chemin, ags.DELAI), "carte"
+            corps = (get or build_ota_http._get)(ip, chemin, ags.DELAI)
+            json.loads(corps)                         # ancien firmware : page HTML en 200 -> simulee
+            return 200, corps, "carte"
         except Exception as e:
             code = _code(e)
             if code in (400, 404):                    # reponse de la carte : un mois absent n'est pas une panne

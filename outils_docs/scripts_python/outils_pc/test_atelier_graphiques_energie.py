@@ -185,10 +185,12 @@ def test_apercu(racine):
     verifie(ageg.apercu(racine, BUREAU, "direct", get=g), (200, b'{"p":1}', "carte"), "apercu : direct relaye")
     verifie(ageg.apercu(racine, BUREAU, "mois", "2026-10", get=g), (200, b'{"d":[1],"de":[2]}', "carte"), "apercu : mois relaye")
     verifie(ageg.apercu(racine, BUREAU, "mois", "2020-01", get=g), (404, b'{"erreur":"absent"}', "carte"), "apercu : 404 d'un mois absent relaye (pas de simulation)")
-    for f, m in (("tarifs", None), ("../x", None), ("mois", None), ("mois", "2026-13"), ("mois", "2026-1"), ("mois", "2026-10&x=1"), ("mois", "../etc")):
+    for f, m in (("tarifs", None), ("../x", None), ("mois", None), ("mois", "2026-13"), ("mois", "2026-1"), ("mois", "2026-10&x=1"), ("mois", "../etc"), ("mois", "٢٠٢٦-10")):
         refuse(lambda: ageg.apercu(racine, BUREAU, f, m, get=g), ValueError, f"apercu : f={f!r} m={m!r} refuse (400)")
     refuse(lambda: ageg.apercu(racine, CUVE, "direct", get=g), LookupError, "apercu : env sans page Energie -> 404")
     verifie(ageg.apercu(racine, BUREAU, "direct", muette=True, get=g)[2], "simulee", "apercu : carte muette (marquee) -> simulee, sans requete")
+    vieux = lambda ip, chemin, delai: HTML          # ancien firmware : la page HTML en 200 pour tout ?f=
+    verifie(ageg.apercu(racine, BUREAU, "donnees", get=vieux)[2], "simulee", "apercu : ancien firmware (HTML en 200) -> simulee, pas de HTML sous type JSON")
     s, corps, src = ageg.apercu(racine, BUREAU, "direct", get=hors_ligne)
     d = json.loads(corps)
     verifie((s, src, {k: type(d[k]) for k in REF_DIRECT}, all(k in d for k in REF_DIRECT_PLUS)), (200, "simulee", REF_DIRECT, True), "apercu : direct simule = formes du banc Berry")
