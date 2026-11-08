@@ -12,7 +12,7 @@ JS_TV = r"""
 function televerseCache() { etat.tv = null; $('televerser').classList.add('cache'); $('tv-info').textContent = ''; }
 function televerse(t) {
   etat.tv = t || null;
-  $('televerser').classList.toggle('cache', !t || !!t.erreur || !!t.firmware_requis);
+  $('televerser').classList.toggle('cache', !t || !!t.erreur || !!t.firmware_requis || !t.fichiers.length);   // vide : la page Build construirait le FS pour rien
   $('tv-info').style.color = t && t.firmware_requis ? 'var(--rouge)' : '';
   $('tv-info').textContent = t && t.firmware_requis ? 'Le firmware de cette carte est antérieur à cette fonction : compilez et envoyez le firmware et le FS par la page Build.'
     : t && t.erreur ? 'Écrit, mais ' + t.erreur : t ? t.fichiers.length + ' fichier(s) à téléverser' + (t.redemarrer ? ' · redémarrage nécessaire' : '')

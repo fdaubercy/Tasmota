@@ -3,8 +3,9 @@
 La liste vient de `.pio/build/<env>/littlefs.bin`, l'image ecrite par le dernier buildfs (bouton « Preparer
 la liste ») : memes fichiers et memes chemins que l'OTA complete du FS. Le `jeton` (date de l'image en ns) part
 avec l'envoi : build_serie refuse d'envoyer si l'image a ete reconstruite depuis la liste. Date « dans le
-depot » d'un fichier : la plus recente des sources de meme nom (dossier de la carte, `custom_files_upload` de
-l'env) ; aucune carte n'est contactee.
+depot » d'un fichier : la plus recente des sources de meme nom (dossier de la carte, `data/sd`, `data/json`,
+`custom_files_upload` de l'env) ; aucune carte n'est contactee. Plus recente que l'image (`plus_recent`) : la page
+demande confirmation avant d'envoyer ce fichier (image a reconstruire).
 """
 
 import tempfile
@@ -27,8 +28,8 @@ def jeton(chemin):
 
 
 def sources(racine, env):
-    """{nom de fichier: [fichiers du depot de ce nom]} : dossier de la carte (tout), `custom_files_upload` de
-    l'env (fichiers, et premier niveau des dossiers : copy_fs_image les copie a plat)."""
+    """{nom de fichier: [fichiers du depot de ce nom]} : dossier de la carte (tout), `data/sd` et `data/json` (tout),
+    `custom_files_upload` de l'env (fichiers, et premier niveau des dossiers : copy_fs_image les copie a plat)."""
     racine, trouves = Path(racine), []
     try:
         dossier = fbe.dossier_carte(env)
@@ -36,6 +37,9 @@ def sources(racine, env):
         dossier = None
     if dossier and (racine / dossier).is_dir():
         trouves += [p for p in (racine / dossier).rglob("*") if p.is_file()]
+    for commun in ("sd", "json"):                     # copies dans l'image par le pre-script (copy_fs_image) : sd/…, json/…
+        if (racine / "data" / commun).is_dir():
+            trouves += [p for p in (racine / "data" / commun).rglob("*") if p.is_file()]
     try:
         entrees = fbi.resout(fbi.lit_sections(racine), env, fbe.UPLOAD)
     except (OSError, ValueError, KeyError):

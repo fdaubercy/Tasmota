@@ -6,7 +6,8 @@ parametres ne font que preremplir : la page choisit la carte dans l'onglet « Fi
 le buildfs de l'env par le meme chemin que « Preparer la liste » (POST /lancer, X-Build), puis, a la fin REUSSIE de
 cette image, coche exactement les fichiers de la liste presents dans l'image et « Redemarrer » selon le parametre.
 Rien n'est envoye : l'utilisateur clique « Envoyer ». Env qui n'est pas une carte OTA, chemin hostile (`..`, absolu,
-`\\`, lecteur), liste vide : ignores avec un message ; aucun buildfs sans fichier valide.
+`\\`, lecteur) : ignores avec un message ; des chemins donnes mais tous refuses : aucun buildfs. Liste VIDE (lien
+« Envoyer par la page Build » de l'atelier, A12 du 2026-11-08) : buildfs lance, rien coche, bandeau « cochez les fichiers ».
 Lancement de la page en cours : le buildfs part a son `fin` (flux /flux). Build lance ailleurs (refus 409 sans
 lancement de la page) : nouvel essai toutes les 5 s, 1 h au plus. Rechargement : `depuis`, `fichiers` et
 `redemarrer` sont retires de l'URL des que le buildfs est ACCEPTE (pas avant : un rechargement pendant l'attente
@@ -24,6 +25,7 @@ JS = r"""
 // ---------- arrivee depuis l'Atelier des graphiques (A7, build_page_atelier.py) ----------
 var AT = null;          // {env, liste, redemarrer, etat: attend | prepa | cocher, essais, minuterie, n0}
 var AT_BANDEAU = "Fichiers sélectionnés automatiquement par l'Atelier des graphiques, pour téléverser un graphique nouveau ou modifié. Vérifiez puis cliquez sur « Envoyer ».";
+var AT_BANDEAU_SEUL = "Image du FS reconstruite à la demande de l'Atelier des graphiques : cochez les fichiers à envoyer, puis cliquez sur « Envoyer ».";
 
 function atNote(t) { $("f-atelier").hidden = false; $("f-atelier-notes").appendChild(h("li", {texte: t})); }
 function atAbandon(t) { $("f-atelier-texte").textContent = ""; atNote(t); AT = null; }   // le bandeau de selection ne vaut plus
@@ -57,9 +59,10 @@ function arriveeAtelier() {
   if (r !== "0" && r !== "1")
     atNote("Paramètre redemarrer ignoré (" + (r === null ? "absent" : "« " + r + " »") + ", attendu 0 ou 1) : « Redémarrer » non coché.");
   choisitCarte(env);
-  if (!liste.length) return atNote("Lien de l'Atelier des graphiques : aucun fichier valide à sélectionner, rien n'est lancé.");
+  if (!liste.length && p.get("fichiers"))            // des chemins donnes (trop longs ou tous refuses) : rien n'est lance
+    return atNote("Lien de l'Atelier des graphiques : aucun fichier valide à sélectionner, rien n'est lancé.");
   AT = {env: env, liste: liste, redemarrer: r === "1", etat: "attend", essais: 0, minuterie: null};
-  $("f-atelier-texte").textContent = AT_BANDEAU;
+  $("f-atelier-texte").textContent = liste.length ? AT_BANDEAU : AT_BANDEAU_SEUL;     // liste vide : construire seulement (A12)
   $("f-atelier").hidden = false;
   if (enCours) atNote("Un lancement est en cours : la construction du FS de " + env + " partira à sa fin.");
   else atLance();

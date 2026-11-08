@@ -71,7 +71,7 @@ function choisitEnv(env) {
   dernieres = {};
   history.replaceState(null, '', '?env=' + encodeURIComponent(env));
   $('nom-carte').textContent = env;
-  $('lien-build').href = 'http://127.0.0.1:7700/?env=' + encodeURIComponent(env) + '#fichiers';
+  $('lien-build').href = 'http://127.0.0.1:7700/?env=' + encodeURIComponent(env) + '&depuis=atelier&fichiers=&redemarrer=0';   // la page Build construit le FS, rien coche (A12)
   message('');
   return Promise.all([lis('/description?env=' + encodeURIComponent(env)), litSeries(), chargeCompo()]).then(function (r) {
     if (env !== etat.env) return;                                  // reponse d'un env quitte entre-temps

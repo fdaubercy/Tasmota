@@ -788,6 +788,8 @@ file system. Onglet **Fichiers**, en haut de la page (l'onglet ouvert est retenu
    - **Redémarrer la carte** (`Restart 1`, puis attente de son retour) : recharge aussi Berry, l'autre case est
      alors grisée. Sans aucune des deux, les fichiers sont seulement écrits.
 5. **Envoyer N fichiers**. Le bouton dit pourquoi il est grisé (carte, adresse, liste, fichiers, lancement en cours).
+   Si un fichier à envoyer est « dépôt plus récent que l'image », une **confirmation** le nomme : il partirait dans son
+   ancienne version (Annuler, puis « Préparer la liste »). Les fichiers de `data/sd` et `data/json` comptent aussi.
 
 Déroulé côté serveur (`build_ota_fs.py::envoie_fs_ota` avec `fichiers=`) :
 
@@ -830,7 +832,9 @@ sans autoexec ni Berry : la reprendre en HTTP (cet onglet) ou par câble. Idem s
 
 Le bouton « Téléverser » de l'atelier des graphiques (voir « Atelier des graphiques ») ouvre la page à l'adresse
 `/?env=<env>&depuis=atelier&fichiers=<chemins séparés par des virgules>&redemarrer=<0|1>`. Le code est dans
-`build_page_atelier.py::arriveeAtelier` (JS de la page, branché sur l'onglet Fichiers). Déroulé :
+`build_page_atelier.py::arriveeAtelier` (JS de la page, branché sur l'onglet Fichiers). Avec une liste **vide**
+(`fichiers=`, lien « Envoyer par la page Build ↗ » de l'atelier, toujours visible), la page choisit la carte et construit
+l'image sans rien cocher : bandeau « cochez les fichiers à envoyer ». Déroulé avec une liste :
 
 1. La page sélectionne l'env, bascule sur l'onglet « Fichiers » et affiche un **bandeau** : « Fichiers sélectionnés
    automatiquement par l'Atelier des graphiques, pour téléverser un graphique nouveau ou modifié. Vérifiez puis cliquez

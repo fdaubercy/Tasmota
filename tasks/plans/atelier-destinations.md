@@ -4,7 +4,7 @@ titre: Atelier des graphiques — destination « Graphiques » et bouton « Tél
 objectif: Poser un graphique de l'atelier sur une page dédiée, sur /graphiques ou sur une nouvelle page, puis l'envoyer à la carte par la page Build qui prépare tout et attend le clic Envoyer
 statut: actif
 cree: 2026-11-04
-maj: 2026-11-06
+maj: 2026-11-08
 ---
 # Atelier des graphiques — destination « Graphiques » et bouton « Téléverser »
 
@@ -129,9 +129,33 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
 - [x] Place du FS mesurée sur les 6 cartes à historique avec les fichiers du moteur (blocs de 4 Ko) ; arrêt et
   question à l'utilisateur sous 10 % libres (spec §7.10) — preuve : mesure du 2026-11-06, seuil non atteint. Calcul depuis le dépôt, moteur compris (17 blocs, 4 fichiers), sur 2896 blocs : cave 93,8 %, grenier 94,0 %, P4 93,4 %, S3 serveur 93,6 %, cuve 93,0 %, rideau 94,0 % libres. Lu sur carte (`UfsFree`) : P4 91,6 % (environ 91,1 % après ajout du moteur, s'il n'y est pas encore), cuve 90,9 %. Cave, grenier et rideau muets : calcul seul, sans leurs fichiers `/histo`. L'env S3 serveur a la même adresse que le P4 : rien de lu sur lui
 - [x] P4 et cuve : firmware et FS du chantier compilés et envoyés par la page Build (`Status 2` relu après) — preuve : `Status 2` du 2026-11-07, P4 `2026-11-06T19:20:23`, cuve `2026-11-06T20:23:06` ; sonde `FICHIERS.contains` = true et `graphiques_moteur.js` présent sur les deux ; `/graphiques?f=pages_graphiques.js` = 200 text/javascript
-- [ ] P4 : composition existante intacte + un graphique atelier (style hors des 4) envoyé par « Téléverser » ;
-  `/graphiques` sous Chrome sans exception JS, capture ; journal web sans `_ERREUR`
+- [x] P4 : composition existante intacte + un graphique atelier (style hors des 4) envoyé par « Téléverser » — preuve : 2026-11-08, capture Chrome ci-dessous ;
+  `/graphiques` sous Chrome sans exception JS, capture ; journal web sans `_ERREUR` — détail : P4 sans composition
+  (décision : graphiques automatiques gardés, a92c7d8de) ; cadran « Volume cuve » écrit par l'atelier dans `graphiques.json`, envoyé
+  en MQTT (journal `20261108-055527-…-fichiers-mqtt.log`, `fin ok` 1005 o) ; `/graphiques` sous Chrome : Mesures + Cuve + cadran,
+  0 erreur JS (capture `p4_graphiques3.png`) ; atelier `/composition` = « identique » carte/dépôt ; `/cs` 05:56:01–05:57:30 sans `_ERREUR`
 - [ ] Cuve : modification d'une page dédiée envoyée par « Téléverser » (redémarrage non coché), effet constaté
+
+## A12 — Lien « Envoyer par la page Build » réparé (essai A9 du 2026-11-08)
+Constat : le lien `?env=<env>#fichiers` de l'atelier ne choisissait pas la carte dans l'onglet Fichiers ni ne
+construisait le FS ; l'image de 05:54 (avec le cadran) est repartie après le retrait. Décision de l'utilisateur : le réparer.
+Fichiers : `atelier_graphiques_page_js.py::choisitEnv`, `build_page_atelier.py::arriveeAtelier`, sondes Chrome.
+- [x] Sondes rouges : lien de l'atelier = `?env=&depuis=atelier&fichiers=&redemarrer=0` ; arrivée sans fichier = — preuve : sonde Fichiers rouge « liste vide : carte choisie, un buildfs lance » (obtenu [] , '')
+  carte choisie + buildfs lancé + rien coché (sonde `test_build_page_fichiers_chrome.py::sonde_atelier`)
+- [x] Code : lien de l'atelier ; `arriveeAtelier` : liste VIDE = construire seulement (bandeau « cochez les fichiers ») ; — preuve : sondes Fichiers et atelier vertes sur ces cas
+  liste non vide mais tout refusé = rien lancé, comme avant ; sondes vertes ; relecteur-pages-web : bouton « Téléverser » masqué si
+  sa liste est vide (sinon buildfs pour rien), sonde atelier rouge puis VERTE
+- [ ] Commit
+
+## A13 — Image du FS plus ancienne que le dépôt : avertir avant l'envoi
+Constat : `plus_recent` n'était qu'une ligne orange par fichier, et absent pour `sd/…` et `json/…` (sources non recensées).
+Fichiers : `build_fichiers.py::sources`, `build_page_fichiers.py` (« Envoyer »), `test_build_fichiers.py`, sonde Chrome.
+- [x] Banc rouge : fichier `data/sd/js/x.js` plus récent que l'image -> `plus_recent` vrai pour `sd/js/x.js` — preuve : test_build_fichiers.py ROUGE (obtenu False, False, False)
+- [x] `sources` recense `data/sd` et `data/json` (chemin dans l'image `sd/…`, `json/…`) ; banc vert — preuve : test_build_fichiers.py VERT, bout_en_bout VERT
+- [x] « Envoyer » : un fichier coché `plus_recent` -> confirmation « image plus ancienne que le dépôt : préparer la — preuve : sonde Fichiers rouge puis verte (« perime : … refusee -> rien lance »)
+  liste » (Annuler = rien n'est envoyé) ; sonde Chrome verte. Échec restant de la sonde, PRÉEXISTANT et mesuré : « téléphone :
+  pas de défilement horizontal » (onglets Sauvegarde/Aide à 521 px pour 390, même sans ce changement)
+- [ ] Commit (commun avec A12)
 
 ## A10 — Retour au plan précédent non terminé
 - [ ] Plan `tasks/plans/atelier-graphiques.md` (palier 1 clos, A13 restante) : A11 cochée « remplacée par

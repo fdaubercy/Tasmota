@@ -76,6 +76,24 @@ def test_liste():
                 "liste : date du depot trouvee pour chaque fichier (carte, json/, custom_files_upload)")
 
 
+def test_sd_json():
+    """data/sd et data/json, copies dans l'image par le pre-script (sd/…, json/…) : leur date de depot compte aussi."""
+    with tempfile.TemporaryDirectory() as t:
+        racine, image = depot(t)
+        sd = racine / "data" / "sd" / "js" / "x.js"
+        js = racine / "data" / "json" / "y.json"
+        for p in (sd, js):
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_bytes(b"1")
+        fabrique_image(image, {"_persist.json": persist("CARTE-ESSAI"), "sd/js/x.js": b"1", "json/y.json": b"1"})
+        vieux = image.stat().st_mtime - 3600
+        os.utime(image, (vieux, vieux))
+        os.utime(js, (vieux - 60, vieux - 60))                            # plus ancien que l'image
+        r = {f["chemin"]: f for f in bf.liste(racine, ENV)["fichiers"]}
+        verifie((r["sd/js/x.js"]["plus_recent"], r["json/y.json"]["plus_recent"], bool(r["json/y.json"]["depot"])),
+                (True, False, True), "sd_json : data/sd plus recent que l'image signale, data/json date mais pas plus recent")
+
+
 def test_cas_limites():
     with tempfile.TemporaryDirectory() as t:
         racine, image = depot(t, hote_image="AUTRE-CARTE")
@@ -97,7 +115,7 @@ def test_cas_limites():
 
 
 def principal():
-    for test in (test_liste, test_cas_limites):
+    for test in (test_liste, test_sd_json, test_cas_limites):
         try:
             test()
         except Exception as erreur:                  # un test qui plante ne masque pas les suivants

@@ -13,6 +13,7 @@ erreur volontaire detectee) est celui de test_build_page_chrome.py, meme client 
 
 import argparse
 import json
+import os
 import sys
 import time
 import urllib.request
@@ -111,6 +112,15 @@ def sonde_onglet(m, capture):
 
     # envoi : corps de POST /lancer (intercepte, rien ne part)
     cdp.js(INTERCEPTE)
+    # A13 : autoexec.be du depot plus recent que l'image (principal) -> confirmation ; refusee = rien ne part
+    cdp.js("(() => { window.__msgs = []; window.confirm = m => (window.__msgs.push(m), false); return true; })()")
+    clic(cdp, "#f-envoyer")
+    time.sleep(0.3)
+    msgs = cdp.js("window.__msgs")
+    s.verifie((len(cdp.js("window.__corps")), len(msgs), "autoexec.be" in "".join(msgs), "_persist.json" in "".join(msgs),
+               "plus ancienne que le dépôt" in "".join(msgs)), (0, 1, True, False, True),
+              "perime : fichier coche plus recent au depot -> confirmation qui le nomme (seul), refusee -> rien lance")
+    cdp.js("window.confirm = m => (window.__msgs.push(m), true)")
     clic(cdp, "#f-envoyer")
     time.sleep(0.3)
     corps = cdp.js("window.__corps")[-1]
@@ -222,6 +232,8 @@ def sonde_onglet(m, capture):
 # la page (le buildfs part au chargement) : POST /lancer captures (en-tetes compris), reponses simulees, rien ne part.
 BANDEAU = ("Fichiers sélectionnés automatiquement par l'Atelier des graphiques, pour téléverser un graphique nouveau ou "
            "modifié. Vérifiez puis cliquez sur « Envoyer ».")
+BANDEAU_SEUL = ("Image du FS reconstruite à la demande de l'Atelier des graphiques : cochez les fichiers à envoyer, "
+                "puis cliquez sur « Envoyer ».")
 ENROBE = """(() => { window.__corps = []; const cfg = CFG, vrai = window.fetch.bind(window);
   window.fetch = async (url, o) => { o = o || {};
     if (String(url) === "/lancer") {
@@ -315,8 +327,15 @@ def sonde_atelier(m):
     s.verifie((e["corps"], e["panier"], e["restart"]), ([], [], False), "hostile : chemins tous refuses -> aucun POST, rien coche")
     s.verifie([any(h in n for n in e["notes"]) for h in hostiles] + [any("oui" in n for n in e["notes"])], [True] * 6,
               "hostile : chaque chemin refuse et la valeur de redemarrer signales")
+    # A12 : liste VIDE (lien « Envoyer par la page Build » de l'atelier) -> construire l'image seulement, rien coche
     e = arrive(m, lien("", redemarrer="0"))
-    s.verifie((e["corps"], any("aucun fichier" in n for n in e["notes"])), ([], True), "hostile : liste vide -> aucun POST, message")
+    s.verifie(([c["corps"] for c in e["corps"]], e["carte"], e["texte"]), ([ATTENDU_LANCER], True, BANDEAU_SEUL),
+              "liste vide : carte choisie, un buildfs lance, bandeau « cochez les fichiers »")
+    s.injecte(cdp, BUILDFS)
+    s.attend(cdp, "!AT", 5)
+    e = etat_at(cdp)
+    s.verifie((e["panier"], e["restart"], envois(e), e["texte"]), ([], False, [], BANDEAU_SEUL),
+              "liste vide : image prete -> rien coche, aucun envoi, bandeau garde")
 
     # build deja en cours : attente de sa fin (flux), puis un seul buildfs ; chemin refuse signale, Redemarrer non coche
     e = arrive(m, lien("autoexec.be,../z", redemarrer="0"), execution=[{"en_cours": True, "numero": 0, "pause": None}])
@@ -436,7 +455,13 @@ def principal():
     try:
         m = s.Montage()
         m.demarre(False)
-        fabrique_image(m.depot / ".pio" / "build" / A / "littlefs.bin", IMAGE)
+        image = m.depot / ".pio" / "build" / A / "littlefs.bin"
+        fabrique_image(image, IMAGE)
+        vieux = image.stat().st_mtime - 3600
+        os.utime(image, (vieux, vieux))
+        source = m.depot / "data" / "essai" / A / "autoexec.be"     # custom_files_upload de A : plus recent que l'image (A13)
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_bytes(b"print(1)")
         sonde_onglet(m, args.capture)
         sonde_atelier(m)
     except FileNotFoundError as erreur:

@@ -323,6 +323,10 @@ $("f-envoyer").onclick = async function () {
       "fsMqtt.be compris, puis les " + aEnvoyer().length + " fichiers de l'image sont envoyés par MQTT.\n\nLe persist de la " +
       "carte est sauvegardé avant. Si la carte redémarre entre les deux, elle repart sans Berry : la reprendre en HTTP " +
       "(onglet Fichiers) ou par câble.\n\nContinuer ?")) return;
+  var perimes = aEnvoyer().filter(function (f) { return f.plus_recent; }).map(function (f) { return f.chemin; });
+  if (perimes.length && !confirm("L'image du FS est plus ancienne que le dépôt pour : " + perimes.join(", ") + ".\n\nCes " +
+      "fichiers partiraient dans leur ANCIENNE version. Annuler, puis « Préparer la liste » pour reconstruire l'image.\n\n" +
+      "Envoyer quand même ?")) return;
   $("f-refus").textContent = "";
   $("f-envoyer").disabled = true;
   var r = await appel("/lancer", {lignes: [{env: F.env, methode: "ota", port: "", ip: c.ip.trim()}], actions: ["fichiers"],

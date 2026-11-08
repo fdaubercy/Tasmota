@@ -291,7 +291,8 @@ def sonde_page(m, capture):
     verifie(cdp.js("[...document.querySelectorAll('#onglets button')].some(function(b){return b.textContent.indexOf('cenv') === 0;})"),
             True, "onglets du code : cenv")
     verifie(cdp.js("document.getElementById('lien-build').getAttribute('href')"),
-            "http://127.0.0.1:7700/?env=" + CUVE + "#fichiers", "lien « Envoyer par la page Build »")
+            "http://127.0.0.1:7700/?env=" + CUVE + "&depuis=atelier&fichiers=&redemarrer=0",
+            "lien « Envoyer par la page Build » : arrivee de l'atelier sans fichier (la page Build construit le FS, A12)")
     verifie(cdp.js("document.getElementById('bandeau').classList.contains('cache')"), True, "carte en ligne : pas de bandeau")
     sonde_series(cdp)
     if capture:
@@ -663,6 +664,10 @@ def sonde_televerse(m):
     cdp.js("window.ouverts = []; window.open = function(u, c){ window.ouverts.push([u, c]); return null; }; 1")
     cache = "document.getElementById('televerser').offsetParent === null"
     verifie(cdp.js(cache), True, "Televerser : bouton absent avant l'ecriture")
+    cdp.js("televerse({fichiers: [], redemarrer: 0, notes: [], url: 'http://127.0.0.1:7700/?depuis=atelier&fichiers='}); 1")
+    verifie((cdp.js(cache), cdp.js("document.getElementById('tv-info').textContent.indexOf('0 fichier') === 0")), (True, True),
+            "Televerser : liste vide -> pas de bouton (la page Build construirait le FS pour rien, A12), « 0 fichier » dit")
+    cdp.js("televerseCache(); 1")
     saisit(cdp, "#r-titre", "Titre televerse")
     attend(cdp, "!document.getElementById('ecrire').disabled", 15)
     cdp.js("document.getElementById('ecrire').click(); 1")
