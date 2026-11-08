@@ -145,7 +145,7 @@ Fichiers : `atelier_graphiques_page_js.py::choisitEnv`, `build_page_atelier.py::
 - [x] Code : lien de l'atelier ; `arriveeAtelier` : liste VIDE = construire seulement (bandeau « cochez les fichiers ») ; — preuve : sondes Fichiers et atelier vertes sur ces cas
   liste non vide mais tout refusé = rien lancé, comme avant ; sondes vertes ; relecteur-pages-web : bouton « Téléverser » masqué si
   sa liste est vide (sinon buildfs pour rien), sonde atelier rouge puis VERTE
-- [ ] Commit
+- [x] Commit — preuve : b6c893263
 
 ## A13 — Image du FS plus ancienne que le dépôt : avertir avant l'envoi
 Constat : `plus_recent` n'était qu'une ligne orange par fichier, et absent pour `sd/…` et `json/…` (sources non recensées).
@@ -155,7 +155,7 @@ Fichiers : `build_fichiers.py::sources`, `build_page_fichiers.py` (« Envoyer »
 - [x] « Envoyer » : un fichier coché `plus_recent` -> confirmation « image plus ancienne que le dépôt : préparer la — preuve : sonde Fichiers rouge puis verte (« perime : … refusee -> rien lance »)
   liste » (Annuler = rien n'est envoyé) ; sonde Chrome verte. Échec restant de la sonde, PRÉEXISTANT et mesuré : « téléphone :
   pas de défilement horizontal » (onglets Sauvegarde/Aide à 521 px pour 390, même sans ce changement)
-- [ ] Commit (commun avec A12)
+- [x] Commit (commun avec A12) — preuve : b6c893263
 
 ## A10 — Retour au plan précédent non terminé
 - [ ] Plan `tasks/plans/atelier-graphiques.md` (palier 1 clos, A13 restante) : A11 cochée « remplacée par
