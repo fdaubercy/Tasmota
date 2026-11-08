@@ -36,7 +36,9 @@ var verifiePages = verifieEtDiff, corpsPages = corpsEcriture, litSeriesPages = l
 choisitEnv = function (env) {
   var e = etat.envs.filter(function (x) { return x.nom === env; })[0];
   document.body.classList.toggle('energie', !!(e && e.energie));
-  return e && e.energie ? energieCharge(env) : choisitEnvPages(env);
+  if (e && e.energie) return energieCharge(env);
+  $('energie-ed').textContent = ''; etat.en = null;        // rien de la page Energie ne survit sur une carte « pages »
+  return choisitEnvPages(env);
 };
 dessine = function () { return enc() ? energieDessine() : dessinePagesFn(); };
 dessineAlertes = function () { return enc() ? energieAlertes() : alertesPages(); };
@@ -136,6 +138,7 @@ function energieListe() {
 }
 $('energie-ed').addEventListener('click', function (ev) {
   var a = ev.target.getAttribute && ev.target.getAttribute('data-act'), li = ev.target.closest && ev.target.closest('li'), l = etat.desc && etat.desc.elements;
+  if (!l) return;
   if (ev.target.id === 'en-ajout') {
     l.push({type: 'valeur', titre: 'Puissance', source: {direct: 'Power'}, unite: 'W', couleur: '#4a9eda', largeur: 'demi', hauteur: 'petite'});
     etat.en.sel = l.length - 1; return modifie(true);
@@ -280,6 +283,7 @@ function energieAlertes() {
 // -- validation (celle de la carte) puis diff du serveur --
 function energieVerifie() {
   if (attendChoix()) { etat.diff = null; dessineCode(); $('motifs').textContent = ''; $('resume').textContent = 'choisir la version de départ : rien n\'est écrit'; return; }
+  if (!etat.desc) return;
   var sig = JSON.stringify(corpsEcriture()), corps = JSON.parse(sig), z = $('motifs');
   etat.motifs = Energie.valide(etat.desc);
   z.textContent = '';

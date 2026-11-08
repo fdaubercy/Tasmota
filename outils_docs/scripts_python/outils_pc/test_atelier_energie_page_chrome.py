@@ -177,9 +177,9 @@ def js_champ(cdp, selecteur, valeur, evenement="input"):
            + "; i.dispatchEvent(new Event(" + json.dumps(evenement) + ", {bubbles: true})); 1")
 
 
-def erreurs(cdp):
-    """Erreurs de la page, sans le journal Chrome des 404 de f=mois : c'est le signal « archive absente » que la page doit traiter."""
-    return [e for e in cdp.erreurs() if not ("f=mois" in e and "404" in e)]
+def erreurs(cdp, mois_404=False):
+    """Erreurs de la page ; `mois_404` ecarte le journal Chrome des 404 de f=mois, seulement dans le scenario qui attend un mois sans archive."""
+    return [e for e in cdp.erreurs() if not (mois_404 and "f=mois" in e and "404" in e)]
 
 
 def clic(cdp, selecteur):
@@ -249,7 +249,7 @@ def sonde_edition(m, capture):
     attend_apercu(cdp)
     if capture:
         cdp.capture(capture)
-    verifie(erreurs(cdp), [], "edition : aucune erreur JS (hors les 404 attendus de f=mois)")
+    verifie(erreurs(cdp, True), [], "edition : aucune erreur JS (hors les 404 attendus de f=mois)")
 
 
 def sonde_ecriture(m):
@@ -314,6 +314,23 @@ def carte_comme_depot(m):
         f.write_bytes(m.fichier.read_bytes())
 
 
+def sonde_quitte(m):
+    """Differentiel -> cuve : plus rien de la page Energie (liste, formulaire, etat), menu « Page » de la cuve, aucune erreur."""
+    cdp = m.cdp
+    carte_comme_depot(m)
+    ouvre(m)
+    n0 = len(cdp.erreurs())
+    cdp.js("var s = document.getElementById('env'); s.value = " + json.dumps(CUVE) + "; s.dispatchEvent(new Event('change')); 1")
+    attend(cdp, "etat.dest === 'pages' && !!etat.desc && !!etat.desc.pages && document.getElementById('relire').textContent.indexOf('lecture') < 0", 25)
+    verifie(cdp.js("[document.getElementById('energie-ed').children.length, etat.en === null || etat.en === undefined, document.body.classList.contains('energie')]"),
+            [0, True, False], "differentiel -> cuve : #energie-ed vide, etat Energie oublie, mode Energie retire")
+    verifie(cdp.js("Array.from(document.querySelectorAll('#r-page option')).map(function(o){ return o.textContent.indexOf('Énergie') >= 0; }).some(Boolean)"),
+            False, "differentiel -> cuve : menu « Page » de la cuve retabli")
+    cdp.js("var b = document.getElementById('en-ajout'); if (b) b.click(); 1")
+    time.sleep(0.5)
+    verifie(cdp.erreurs()[n0:], [], "differentiel -> cuve : aucune erreur JS, meme apres un clic residuel sur « + Element »")
+
+
 def sonde_mobile(m):
     cdp = m.cdp
     carte_comme_depot(m)
@@ -342,7 +359,7 @@ def sonde_sombre(m):
 
 
 SONDES = {"edition": sonde_edition, "ecriture": sonde_ecriture, "firmware": sonde_firmware, "difference": sonde_difference,
-          "mobile": sonde_mobile, "sombre": sonde_sombre}
+          "quitte": sonde_quitte, "mobile": sonde_mobile, "sombre": sonde_sombre}
 
 
 def sonde_temoin(m):
