@@ -64,7 +64,7 @@ sonde Chrome pendant un build (garde bloquante dans la commande, leçon du 2026-
   `f=direct` garde `p i f hz` et ajoute `Voltage`, `Today`… présents, omet les absents
 - [x] `energieFonctions_route` + `envoieDirect` modifiés, deux fonctions `envoieDescription()`, `envoieMois(m)` (piège 12 :
   `import energieFonctions` dans chaque fonction) ; banc vert ; `banc_energie.py` toujours vert ; `verifie_berry.py` sans écart — preuve : banc_energie_routes.py VERT, banc_energie.py COMPLET OK, verifie_berry 0 erreur 0 avertissement
-- [ ] Relecture `relecteur-berry` (tas : aucun fichier lu en entier) ; commit `feat(energie): routes description, mois et direct elargi`
+- [x] Relecture `relecteur-berry` (tas : aucun fichier lu en entier) — preuve : relecteur-berry « aucun défaut réel », relecture de tâche Approved, commit 30a2da910 ; commit `feat(energie): routes description, mois et direct elargi`
 
 ## A3 — Rendu piloté par la description (`energie.js`, `energie.html`, `energie.css`)
 - [ ] Banc node rouge `test_energie_rendu.mjs` : `Energie.valide` rend les mêmes verdicts que Python sur `cas_energie.json` ;
