@@ -177,9 +177,11 @@ def js_champ(cdp, selecteur, valeur, evenement="input"):
            + "; i.dispatchEvent(new Event(" + json.dumps(evenement) + ", {bubbles: true})); 1")
 
 
-def erreurs(cdp, mois_404=False):
-    """Erreurs de la page ; `mois_404` ecarte le journal Chrome des 404 de f=mois, seulement dans le scenario qui attend un mois sans archive."""
-    return [e for e in cdp.erreurs() if not (mois_404 and "f=mois" in e and "404" in e)]
+def erreurs(cdp):
+    """Erreurs de la page, hors les 404 de f=mois d'un mois FIXE de la description affichee : archive absente, attendu (spec, « A surveiller » 2).
+    Le scenario d'ecriture laisse un mois fixe 2020-01 dans le depot copie : les scenarios suivants le redemandent."""
+    fixes = cdp.js("etat.desc && etat.desc.elements ? etat.desc.elements.map(function(e){ return e.source && e.source.mois; }).filter(Boolean) : []") or []
+    return [e for e in cdp.erreurs() if not ("f=mois" in e and "404" in e and any("m=" + f + " " in e + " " for f in fixes))]
 
 
 def clic(cdp, selecteur):
@@ -249,7 +251,7 @@ def sonde_edition(m, capture):
     attend_apercu(cdp)
     if capture:
         cdp.capture(capture)
-    verifie(erreurs(cdp, True), [], "edition : aucune erreur JS (hors les 404 attendus de f=mois)")
+    verifie(erreurs(cdp), [], "edition : aucune erreur JS (hors les 404 attendus de f=mois)")
 
 
 def sonde_ecriture(m):
