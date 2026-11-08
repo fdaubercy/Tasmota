@@ -343,5 +343,16 @@ def diversFonctions_traiteAide(commande, payload, fnAide, verifieInconnue)
 end
 diversFonctions.traiteAide = diversFonctions_traiteAide
 
+# Adresse IPv4 de la carte sur le reseau local (2026-11-08, voie Ethernet) : celle de la STA si elle est posee,
+# sinon celle de l'Ethernet ; "" si aucune. Wi-Fi coupe, tasmota.wifi() rend 0.0.0.0 (et Status 5 aussi).
+# tasmota.eth() n'a de cle "ip" qu'avec USE_ETHERNET et une IP posee (xdrv_52_3_berry_tasmota.ino::l_eth).
+# Lue par udpFonctions (multicast du maitre, esclaves), rangeExtenderFonctions et discoveryFonctions.
+def diversFonctions_ipLAN()
+	var ip = str(tasmota.wifi().find("ip", ""))
+	if (ip == "" || ip == "0.0.0.0" || ip == "nil")	ip = str(tasmota.eth().find("ip", ""))	end
+	return ((ip == "0.0.0.0" || ip == "nil") ? "" : ip)
+end
+diversFonctions.ipLAN = diversFonctions_ipLAN
+
 # Retourne le module lors de l'importation
 return diversFonctions

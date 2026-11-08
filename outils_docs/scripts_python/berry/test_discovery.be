@@ -86,6 +86,8 @@ class TasmotaStub
   def is_network_up() return self.reseauCoupe != true end
   var ipSta                            # section 18 : IP de la STA rendue par tasmota.wifi()
   def wifi() return {"ip": (self.ipSta != nil ? self.ipSta : "192.168.4.2"), "up": true} end
+  var ipEth                            # section 28 : IP de tasmota.eth(), nil = pas d'IP (cle absente, comme l_eth)
+  def eth() return self.ipEth != nil ? {"up": true, "ip": self.ipEth} : {"up": false} end
   var horloge                          # section 20 : tasmota.millis() (cache de udpFonctions.esclavesBox)
   def millis() return self.horloge != nil ? self.horloge : 0 end
   def add_rule(a, b, c) end              # controleRangeExtender (section 14)
@@ -1610,6 +1612,60 @@ uni27.every_100ms()
 verifie("trame ModBus suivante : la commande precedente n'est pas rejouee", "['Power1 ON']", str(tasmota.cmds))
 verifie("map remplie remplacee au tick suivant", true, uni27.paramMSG != map27)
 etatUDP["udpReception"] = sauveRecep
+
+print("")
+print("=== 28. Voie Ethernet : IP du LAN, multicast du maitre, fiche publiee sur ETH#Connected (2026-11-08) ===")
+# Wi-Fi coupe, tasmota.wifi() et Status 5 rendent 0.0.0.0 : l'IP de la carte est celle de tasmota.eth()
+# (diversFonctions.ipLAN). Avant : multicast du maitre jamais emis, fiche jamais publiee en voie Ethernet.
+import diversFonctions
+tasmota.ipSta = "192.168.0.43"
+tasmota.ipEth = "192.168.0.44"
+verifie("ipLAN : la STA d'abord", "192.168.0.43", diversFonctions.ipLAN())
+tasmota.ipSta = "0.0.0.0"
+verifie("ipLAN : STA en 0.0.0.0 -> l'Ethernet", "192.168.0.44", diversFonctions.ipLAN())
+tasmota.ipEth = nil
+verifie("ipLAN : ni STA ni Ethernet -> vide", "", diversFonctions.ipLAN())
+tasmota.ipEth = "192.168.0.44"
+# Maitre sans point d'acces, esclave sur la box : multicast par le cable
+serveur["udp"]["id"] = 0
+drivers["ModBus"]["id"] = 0
+serveur["adresseMAC"] = "AA:AA:AA:AA:AA:00"
+serveur["rangeExtender"] = {"activation": "OFF", "id": 0}
+etatUDP["socketsEmission"] = {}
+ficheBox("192.168.0.6", GROUPE, "Online")
+verifie("maitre en Ethernet, esclave sur la box : multicast par l'IP Ethernet", "192.168.0.44", emissions20("E1"))
+# Esclave : socket liee a son IP Ethernet
+serveur["udp"]["id"] = 2
+drivers["ModBus"]["id"] = 2
+liaisons = []
+udpFonctions.envoiUDP("UniCast", "192.168.0.43", "E2")
+verifie("esclave en Ethernet : socket liee a l'IP Ethernet", "192.168.0.44", str(dernier()[0]))
+# Fiche de decouverte
+serveur = {"adresseMAC": MAC_CUVE, "nom": "Capteurs de Cuve", "IP": {"IPAddress": "0.0.0.0"}, "hostname": "CAPTEURS-CUVE",
+           "udp": {"id": 2, "activation": "ON", "debug": "ON"},
+           "rangeExtender": {"activation": "OFF", "id": 2, "debug": "ON"},
+           "mqtt": {"topic": "jardin/cuve", "groupTopic1": "tasmotas/garage"}, "discovery": {"debug": "ON"}}
+drivers = {"ModBus": {"activation": "ON", "id": 2, "typeComm": {"Serial": "OFF", "UDP": "ON", "TCP": "OFF", "MQTT": "OFF"}}}
+diverses = {"telePeriod": 300, "fuseauHoraire": {"typeReglageHeure": "UDP"}}
+tasmota.statusNet = {"IPAddress": "0.0.0.0", "Mac": MAC_CUVE, "Hostname": "CAPTEURS-CUVE"}
+gestionFileFolder.fichiers = {}
+verifie("ETH#Connected : sans exception", "OK",
+        essaie(def () discoveryFonctions.changementEtatDemarrage({"Connected": 1}, "Eth", {"ETH": {"Connected": 1}}) end))
+verifie("... fiche publiee avec l'IP Ethernet (pas 0.0.0.0)", "192.168.0.44", champ(table(), CLE_CUVE + "/esclave2/IPAddress"))
+verifie("... et sous ModBus.UDP", "192.168.0.44", champ(table(), CLE_CUVE + "/esclave2/ModBus/UDP/IPAddress"))
+tasmota.statusNet = {"IPAddress": "0.0.0.0", "Mac": "00:00:00:00:00:00", "Hostname": "CAPTEURS-CUVE"}
+gestionFileFolder.fichiers = {}
+discoveryFonctions.changementEtatDemarrage({"Connected": 1}, "Eth", {"ETH": {"Connected": 1}})
+verifie("MAC nulle de Status 5 : adresseMAC gardee", MAC_CUVE, serveur["adresseMAC"])
+verifie("... fiche sous la cle gardee, avec sa MAC", MAC_CUVE, champ(table(), CLE_CUVE + "/esclave2/adresseMAC"))
+gestionFileFolder.fichiers = {}
+verifie("ETH#Disconnected : rien publie, sans exception", "OK/nil",
+        essaie(def () discoveryFonctions.changementEtatDemarrage({"Disconnected": 1}, "Eth", {"ETH": {"Disconnected": 1}}) end) +
+        "/" + str(gestionFileFolder.fichiers.find("/json/discovery.json")))
+verifie("regle Wifi sur un JSON STATE (cle Wifi, pas WIFI) : sans exception", "OK",
+        essaie(def () discoveryFonctions.changementEtatDemarrage({"AP": 1}, "Wifi", {"Wifi": {"AP": 1, "SSId": "box"}}) end))
+tasmota.ipEth = nil
+tasmota.ipSta = nil
 
 print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))

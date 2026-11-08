@@ -306,6 +306,13 @@ def controlesPremieresSecondes()
     controle("System#Boot pose controleGeneral.booted", cg.booted == true)
     connu("MAC", "System#Boot : adresse MAC (Status 5) relevee dans serveur.adresseMAC", global.serveur.find("adresseMAC") == tasmota.mac,
           "adresseMAC reste '" + str(global.serveur.find("adresseMAC")) + "' : map.insert ne remplace pas la cle vide du persist")
+    # P4 Wi-Fi coupe (voie Ethernet) : Status 5 lit la MAC du coprocesseur C6, peut-etre nulle (2026-11-08)
+    import globalFonctions
+    var macReelle = tasmota.mac
+    tasmota.mac = "00:00:00:00:00:00"
+    globalFonctions.changementEtatDemarrage({"Boot": 1}, "System", {"System": {"Boot": 1}})
+    controle("System#Boot, MAC nulle de Status 5 : adresseMAC gardee", global.serveur.find("adresseMAC") == macReelle)
+    tasmota.mac = macReelle
 
     for d: tasmota.drivers.copy()
         if introspect.get(d, "web_add_handler") != nil    tasmota.appelle(classname(d) + ".web_add_handler", /-> d.web_add_handler(), [])    end

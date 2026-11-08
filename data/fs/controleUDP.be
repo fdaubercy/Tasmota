@@ -24,7 +24,7 @@ API des messages UDP
         * 1 à 254 = esclaves
         * 255 = broadcast
 
-    - Les communicationsUDP sont réalisées uniquement sur l'IP Wifi principale (pas celle du point d'acces RangeExtender : 192.168.4.1)
+    - Les communicationsUDP sont réalisées sur l'IP du LAN (STA, sinon Ethernet : diversFonctions.ipLAN), ou par le point d'acces RangeExtender
 
     - Principes de fonctionnement:
         * Les communications UDP MultiCast sont principalement utilisées
@@ -32,7 +32,8 @@ API des messages UDP
                     Le Maitre commande tous les esclaves par communication MultiCast
                     Les esclaves répondent par communication UniCast
 
-        * Dès la connection wifi établie: #Wifi#Connected
+        * Au demarrage : regle System#Boot (posee a la connexion MQTT, Wi-Fi OU Ethernet), et secours sans MQTT
+          (udpFonctions.secoursSansMqtt) ; aucune regle Wifi (relu le 2026-11-08)
             . Les esclaves (id > 0) se connectent d'abord au Maitre RangeExtender (AP 2) pour synchroniser leur horloge par NTP et/ou synchroniser leur DS3231
             . Les esclaves (id > 0) enregistrent leurs paramètres dans '/json/discovery.json': OK
             . Les esclaves (id > 0) envoient leurs paramètres par UDP MultiCast au Maitre (fonction 'ReglageUDP forceEnvoiParams ON') / TelePeriod: OK

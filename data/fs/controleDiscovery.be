@@ -44,6 +44,8 @@ class CONTROLE_DISCOVERY : Driver
         # Ajoute les règles lancés selon l'étape de démarrage de la device tasmota
         # tasmota.add_rule("System", discoveryFonctions.changementEtatDemarrage, "controleDiscovery_System")	
         tasmota.add_rule("Wifi", def(value, trigger, msg) discoveryFonctions.changementEtatDemarrage(value, trigger, msg) end, "controleDiscovery_Wifi")
+        # Voie Ethernet (2026-11-08) : Wifi#Connected ne vient jamais, la fiche est publiee sur ETH#Connected
+        tasmota.add_rule("Eth", def(value, trigger, msg) discoveryFonctions.changementEtatDemarrage(value, trigger, msg) end, "controleDiscovery_Eth")
         tasmota.add_rule("Mqtt", def(value, trigger, msg) discoveryFonctions.changementEtatDemarrage(value, trigger, msg) end, "controleDiscovery_Mqtt")
 		# tasmota.add_rule("Time", def(value, trigger, msg) discoveryFonctions.changementEtatDemarrage(value, trigger, msg) end, "controleDiscovery_Time")
 

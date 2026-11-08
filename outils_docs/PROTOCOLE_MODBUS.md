@@ -1009,7 +1009,7 @@ precompiles (`CONFIG_LWIP_IPV4_NAPT=y`, `LWIP_HOOK_IP4_ROUTE_SRC`, identiques S3
 
 *Corrections.* **C7 code le 2026-10-21** (`udpFonctions.be::ouvreEcoute`, `udpFonctions.be::secoursSansMqtt`,
 banc `test_discovery.be` section 21 ; a flasher). **C1, C2, C6 APPLIQUEES le 2026-10-17** (accord de l'utilisateur) dans
-`udpFonctions.envoiUDP` / `ipSTA` / `emet` / `lireUDP` ; format du log `ENVOI_MSG_UDP: Donnees ...`
+`udpFonctions.envoiUDP` / `diversFonctions.ipLAN` (ex-`ipSTA`, 2026-11-08) / `emet` / `lireUDP` ; format du log `ENVOI_MSG_UDP: Donnees ...`
 inchange (lu par le testeur), interface choisie dans une ligne `detail` a part. Banc
 `test_discovery.be` §18 : 158/158 ; sur l'ancien `udpFonctions.be`, 7 echecs, tous en §18 (C1/C2/C6) ;
 `banc_test_modbus` 238/238 ; `solidifie_et_compile_berry.py udpFonctions.be` : rc 0. **C3, C4, C5

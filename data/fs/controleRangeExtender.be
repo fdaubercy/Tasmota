@@ -12,7 +12,7 @@
     - Les logs du RangeExtender se règlent avec la commande centrale ReglageLog (cible "rangeExtender").
 
     - Principes de fonctionnement:
-        * Dès la connection wifi établie: #Wifi#Connected
+        * Au demarrage : regles System#Boot (posee a la connexion MQTT, Wi-Fi OU Ethernet) et Time ; aucune regle Wifi (relu le 2026-11-08)
             . Les esclaves (id > 0) se connectent d'abord sur le reseau Wifi du Maitre RangeExtender (AP 2) pour synchroniser leur horloge
 -#
 

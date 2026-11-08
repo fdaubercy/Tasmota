@@ -285,6 +285,7 @@ def rangeExtenderFonctions_afficheMiroirLedsEsclaves()
     import webserver
     import string
     import ledsPanelFonctions
+    import diversFonctions
 
     if (serveur.find("rangeExtender", {}).find("id", 99) != 0)    return    end
     if (!isinstance(drivers.find("ModBus", nil), map) || drivers["ModBus"].find("activation", "OFF") != "ON")    return    end
@@ -292,7 +293,7 @@ def rangeExtenderFonctions_afficheMiroirLedsEsclaves()
 
     # Adresse par laquelle le navigateur a joint le maitre (IP ou nom .local), sans le port
     var hote = webserver.header("Host")
-    hote = (hote != nil ? string.split(hote, ":")[0] : tasmota.wifi().find("ip", ""))
+    hote = (hote != nil ? string.split(hote, ":")[0] : diversFonctions.ipLAN())       # ipLAN : aussi en voie Ethernet
 
     var fiches = nil        # discovery.json lu une seule fois, et seulement si un ruban est a montrer
     var affiches = {}       # id ModBus des esclaves deja affiches

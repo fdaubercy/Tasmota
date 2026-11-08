@@ -517,6 +517,7 @@ udpFonctions.secoursSansMqtt = udpFonctions_secoursSansMqtt
 # Cette fonction gère l'envoi de messages UDP en unicast et multicast
 def udpFonctions_envoiUDP(typeComm, ipDestinataire, message)
 	import string
+	import diversFonctions
 
 	# Reseau pas encore monte (2026-10-11) : creer la socket avant que la pile TCP/IP soit prete
 	# plante l'ESP32 (LoadProhibited dans sys_mbox_post <- lwip_socket <- NetworkUdp::begin).
@@ -548,6 +549,8 @@ def udpFonctions_envoiUDP(typeComm, ipDestinataire, message)
     #     elle ne peut plus capter un datagramme entrant pendant sa courte vie (udp.c:267).
     #   * Multicast aussi en Wi-Fi classique (correction C4 ; avant : seulement si activation ON). Un
     #     esclave sur la box n'atteint le maitre que si la box relaie le multicast entre clients Wi-Fi.
+    #   * Voie Ethernet (2026-11-08) : "STA" ci-dessus = IP du LAN (diversFonctions.ipLAN) : la STA si elle est
+    #     posee, sinon l'Ethernet. Avant, Wi-Fi coupe, le multicast du maitre n'etait jamais emis par le cable.
     var esclave = (serveur["udp"].find("id", 0) > 0)
     var mode = string.toupper(str(typeComm))
     var interfaces = [""]       # IP locales d'emission, une socket par entree ("" = toutes) ; [] = rien a emettre
@@ -555,12 +558,12 @@ def udpFonctions_envoiUDP(typeComm, ipDestinataire, message)
     var port = nil
     if (mode == "UNICAST")
         port = udpFonctions.etat()["port"][0]
-        if (esclave)    interfaces = [udpFonctions.ipSTA()]    end
+        if (esclave)    interfaces = [diversFonctions.ipLAN()]    end
     elif (mode == "MULTICAST")
         port = udpFonctions.etat()["port"][1]
         ipDest = "224.3.0.1"
         if (esclave)
-            interfaces = [udpFonctions.ipSTA()]
+            interfaces = [diversFonctions.ipLAN()]
         elif (ipDestinataire != nil && ipDestinataire != "")
             interfaces = [ipDestinataire]
         else
@@ -599,14 +602,6 @@ def udpFonctions_envoiUDP(typeComm, ipDestinataire, message)
 end
 udpFonctions.envoiUDP = udpFonctions_envoiUDP
 
-# Adresse IPv4 de la STA de la carte (sa liaison Wi-Fi cliente), "" si inconnue (2026-10-17).
-def udpFonctions_ipSTA()
-    var w = tasmota.wifi()
-    var ip = (isinstance(w, map) ? str(w.find("ip", "")) : "")
-    return ((ip == "0.0.0.0" || ip == "nil") ? "" : ip)
-end
-udpFonctions.ipSTA = udpFonctions_ipSTA
-
 # Adresse du point d'acces Range Extender de la carte, lue dans le persist ; "" si le Range Extender est
 # inactif (2026-10-17, correction C3 : remplace le "192.168.4.1" ecrit en dur). Sert au multicast du maitre.
 def udpFonctions_ipAP()
@@ -623,11 +618,12 @@ udpFonctions.ipAP = udpFonctions_ipAP
 # Liste vide : rien a emettre. Mesure de l'essai 2 (Wi-Fi classique) : la box relaie le multicast entre
 # clients Wi-Fi, mais celui du maitre partait par son seul point d'acces et n'atteignait pas l'esclave.
 def udpFonctions_interfacesMulticastMaitre()
+    import diversFonctions
     var liste = []
     var ap = udpFonctions.ipAP()
     if (ap != "")    liste.push(ap)    end
     if (udpFonctions.esclavesBox())
-        var sta = udpFonctions.ipSTA()
+        var sta = diversFonctions.ipLAN()
         if (sta != "" && sta != ap)    liste.push(sta)    end
     end
     return liste
@@ -646,6 +642,7 @@ def udpFonctions_esclavesBox()
     import re
     import string
     import gestionFileFolder
+    import diversFonctions
 
     var etat = udpFonctions.etat()
     var date = path.last_modified("/json/discovery.json")
@@ -661,7 +658,7 @@ def udpFonctions_esclavesBox()
             var monGroupe = serveur.find("mqtt", {}).find("groupTopic1", "")
             var ap = udpFonctions.ipAP()
             var reseauAP = (ap != "" ? udpFonctions.reseau24(ap) : "")
-            var sta = udpFonctions.ipSTA()
+            var sta = diversFonctions.ipLAN()
             var reseauBox = (udpFonctions.estIPv4(sta) ? udpFonctions.reseau24(sta) : "")
             if (reseauBox == reseauAP)    table = {}    end      # STA inconnue, ou meme reseau que l'AP
             var pattern = re.compile('^esclave[0-9]+$')

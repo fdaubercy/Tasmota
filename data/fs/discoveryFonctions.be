@@ -227,6 +227,7 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
     import json
     import mqtt
     import gestionFileFolder
+    import diversFonctions
 
     # Test
     discoveryFonctions.log("DISCOVERY_CHGT_ETAT_DEMARRAGE: -------------------- Discovery changementEtatDemarrage -------------------", LOG_LEVEL_DEBUG_PLUS)
@@ -242,18 +243,25 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
 
     tasmota.yield()
 
-    # Lorsque la connexion Wi-Fi est change
-    if (trigger == "Wifi")
-        if msg["WIFI"].find("Connected", 0)
+    # Lorsque la connexion Wi-Fi, ou Ethernet (2026-11-08 : en voie Ethernet, Wifi#Connected ne vient jamais), est etablie.
+    # find et non msg["WIFI"] : la regle Wifi recoit aussi tout JSON portant une cle 'Wifi' (telemetrie STATE...).
+    if (trigger == "Wifi" || trigger == "Eth")
+        var etatReseau = msg.find(trigger == "Wifi" ? "WIFI" : "ETH")
+        if (isinstance(etatReseau, map) && etatReseau.find("Connected", 0))
             var boolJsonModifie = false
 
-            # Enregistre adresse MAC en json persist
+            # Enregistre adresse MAC en json persist ; jamais une MAC nulle (P4 Wi-Fi coupe : Status 5 lit celle
+            # du coprocesseur C6) : la carte changerait de cle dans la decouverte
             var status = tasmota.cmd("Status 5", boolMute)
-            if (serveur.find("adresseMAC", "00:00:00:00:00:00") != status["StatusNET"]["Mac"])
-                serveur["adresseMAC"] = tasmota.cmd("Status 5", boolMute)["StatusNET"]["Mac"]
+            var mac = status["StatusNET"]["Mac"]
+            if (mac != "00:00:00:00:00:00" && serveur.find("adresseMAC", "00:00:00:00:00:00") != mac)
+                serveur["adresseMAC"] = mac
                 persist.serveur = serveur
                 persist.save()
             end
+            # IP du LAN : StatusNET.IPAddress vaut 0.0.0.0 Wi-Fi coupe
+            var ipLocale = diversFonctions.ipLAN()
+            if (ipLocale == "")    ipLocale = status["StatusNET"]["IPAddress"]    end
 
             # Prépare le json à envoyer aux autres modules pour les fonction Discovery
             var data = {}
@@ -274,8 +282,8 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
 
             tasmota.yield()
 
-            jsonData[item].insert("IPAddress", status["StatusNET"]["IPAddress"])
-            jsonData[item].insert("adresseMAC", status["StatusNET"]["Mac"])
+            jsonData[item].insert("IPAddress", ipLocale)
+            jsonData[item].insert("adresseMAC", serveur.find("adresseMAC", mac))
             jsonData[item].insert("host", status["StatusNET"]["Hostname"] + ".local")
             jsonData[item].insert("topic", serveur["mqtt"]["topic"])
             # Groupe MQTT (2026-09-30) : la decouverte ecoute TOUT le broker (toutes les pieces).
@@ -321,13 +329,13 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
 
                     jsonData[item]["ModBus"]["TCP"].insert("activation", drivers["ModBus"]["typeComm"].find("TCP", "OFF"))
                     jsonData[item]["ModBus"]["TCP"].insert("port", 502)
-                    jsonData[item]["ModBus"]["TCP"].insert("IPAddress", status["StatusNET"]["IPAddress"])
+                    jsonData[item]["ModBus"]["TCP"].insert("IPAddress", ipLocale)
                 end
 
                 if (drivers["ModBus"]["typeComm"].find("UDP", "OFF") == "ON")
                     jsonData[item]["ModBus"].insert("UDP", {})
                     jsonData[item]["ModBus"]["UDP"].insert("activation", drivers["ModBus"]["typeComm"].find("UDP", "OFF"))
-                    jsonData[item]["ModBus"]["UDP"].insert("IPAddress", status["StatusNET"]["IPAddress"])
+                    jsonData[item]["ModBus"]["UDP"].insert("IPAddress", ipLocale)
                 end
 
                 if (drivers["ModBus"]["typeComm"].find("MQTT", "OFF") == "ON")
@@ -372,7 +380,6 @@ def discoveryFonctions_changementEtatDemarrage(value, trigger, msg)
             except .. as error, message
                 discoveryFonctions.log(string.format("DISCOVERY_CHGT_ETAT_DEMARRAGE_ERREUR: %s --> %s", error, message), LOG_LEVEL_ERREUR)
             end
-        elif msg["WIFI"].find("Disonnected", 0)
         end
     # Se déclenche après la connexion MQTT (si activé)
     elif (trigger == "Mqtt")
