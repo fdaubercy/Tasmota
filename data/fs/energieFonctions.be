@@ -31,6 +31,9 @@
 var energieFonctions = module("energieFonctions")
 
 energieFonctions.DOSSIER = "/energie"
+energieFonctions.DESCRIPTION = "/json/energie_page.json"   # ecrit par l'atelier des graphiques, jamais lu par Berry (relaye tel quel)
+energieFonctions.DESCRIPTION_MAX = 4096                    # octets du fichier ; au-dela, refus sans lecture
+energieFonctions.CHAMPS_DIRECT = ["Voltage", "ApparentPower", "ReactivePower", "Today", "Yesterday", "Total"]
 energieFonctions.SEUIL_KO = 16                  # place libre minimale du FS avant ecriture
 energieFonctions.MAX_ARCHIVES = 24
 energieFonctions.MAX_MOIS = 24
@@ -455,17 +458,67 @@ def energieFonctions_envoieDonnees(courbe)
 end
 energieFonctions.envoieDonnees = energieFonctions_envoieDonnees
 
-# Reponse JSON de f=direct : les valeurs instantanees
+# Reponse JSON de f=direct : les valeurs instantanees (p i f hz) puis les champs ENERGY presents sous leur nom Tasmota
 def energieFonctions_envoieDirect()
     import json
     import webserver
     import energieFonctions
     var m = energieFonctions.mesure()
     if (m == nil)    m = {}    end
-    webserver.content_send(json.dump({"p": m.find("Power"), "i": m.find("Current"), "f": m.find("Factor"), "hz": m.find("Frequency")}))
+    var r = {"p": m.find("Power"), "i": m.find("Current"), "f": m.find("Factor"), "hz": m.find("Frequency")}
+    for cle: energieFonctions.CHAMPS_DIRECT
+        if (m.contains(cle))    r[cle] = m[cle]    end
+    end
+    webserver.content_send(json.dump(r))
     webserver.content_close()
 end
 energieFonctions.envoieDirect = energieFonctions_envoieDirect
+
+# Relaie un fichier JSON ligne par ligne (jamais lu en entier : tas). max > 0 : taille brute maximale, 413 au-dela sans lecture.
+# Codes : 200 relaye, 404 absent, 413 trop gros.
+def energieFonctions_relaie(chemin, max)
+    import webserver
+    import gestionFileFolder
+    var taille = -1
+    try
+        var f = open(chemin, "r")
+        taille = f.size()
+        f.close()
+    except ..
+    end
+    var code = (taille < 0 ? 404 : ((max > 0 && taille > max) ? 413 : 200))
+    webserver.content_open(code, "application/json")
+    if (code == 200)
+        gestionFileFolder.readFileByLineAndContentSend(chemin)
+    else
+        webserver.content_send(code == 404 ? "{\"erreur\":\"absent\"}" : "{\"erreur\":\"trop gros\"}")
+    end
+    webserver.content_close()
+    return code
+end
+energieFonctions.relaie = energieFonctions_relaie
+
+# Reponse de f=description : le fichier de l'atelier, tel quel (200), 404 s'il manque, 413 au-dela de DESCRIPTION_MAX
+def energieFonctions_envoieDescription()
+    import energieFonctions
+    return energieFonctions.relaie(energieFonctions.DESCRIPTION, energieFonctions.DESCRIPTION_MAX)
+end
+energieFonctions.envoieDescription = energieFonctions_envoieDescription
+
+# Reponse de f=mois&m=AAAA-MM : l'archive du mois (200), 404 si purgee, 400 si 'm' n'est pas strictement AAAA-MM
+def energieFonctions_envoieMois(m)
+    import re
+    import webserver
+    import energieFonctions
+    if (type(m) != "string" || re.match("^[0-9][0-9][0-9][0-9]-(0[1-9]|1[0-2])$", m) == nil)
+        webserver.content_open(400, "application/json")
+        webserver.content_send("{\"erreur\":\"mois invalide\"}")
+        webserver.content_close()
+        return 400
+    end
+    return energieFonctions.relaie(energieFonctions.DOSSIER + "/mois-" + m + ".json", 0)
+end
+energieFonctions.envoieMois = energieFonctions_envoieMois
 
 # Page 'nom' (gabarit et script du meme nom), le bouton de retour en bas
 def energieFonctions_page(nom, bouton)
@@ -486,7 +539,7 @@ def energieFonctions_page(nom, bouton)
 end
 energieFonctions.page = energieFonctions_page
 
-# Route GET /energie : f=donnees, f=direct, f=tarifs (sous-page de Configuration), sinon la page. courbe : le bytes du driver
+# Route GET /energie : f=donnees, f=direct, f=description, f=mois, f=tarifs (sous-page de Configuration), sinon la page. courbe : le bytes du driver
 def energieFonctions_route(courbe)
     import webserver
     import energieFonctions
@@ -502,6 +555,10 @@ def energieFonctions_route(courbe)
             energieFonctions.envoieDonnees(courbe)
         elif (f == "direct")
             energieFonctions.envoieDirect()
+        elif (f == "description")
+            energieFonctions.envoieDescription()
+        elif (f == "mois")
+            energieFonctions.envoieMois(webserver.has_arg("m") ? webserver.arg("m") : "")
         elif (f == "tarifs")
             energieFonctions.page("energieTarifs", webserver.BUTTON_CONFIGURATION)
         else

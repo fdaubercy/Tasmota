@@ -58,12 +58,12 @@ sonde Chrome pendant un build (garde bloquante dans la commande, leçon du 2026-
 - [x] Commit `feat(atelier): schema de la page Energie du differentiel` — preuve : 2f1001497
 
 ## A2 — Carte : routes de lecture d'`energieFonctions` (firmware)
-- [ ] Banc Berry rouge `banc_energie_routes.be` + `.py` (berry.exe, faux `webserver`, comme `banc_energie`) :
+- [x] Banc Berry rouge `banc_energie_routes.be` + `.py` (berry.exe, faux `webserver`, comme `banc_energie`) : — preuve : rouge sur le module d'avant (HEAD), 42 verifications vertes apres, 11 temoins rouges (banc_energie_routes.py)
   `f=description` relaie le fichier tel quel / 404 sans fichier / refus sans lecture au-delà de 4 096 o ;
   `f=mois&m=2026-10` relaie `mois-2026-10.json` / 404 / `m=../x` et `m=2026-13` → 400 ;
   `f=direct` garde `p i f hz` et ajoute `Voltage`, `Today`… présents, omet les absents
-- [ ] `energieFonctions_route` + `envoieDirect` modifiés, deux fonctions `envoieDescription()`, `envoieMois(m)` (piège 12 :
-  `import energieFonctions` dans chaque fonction) ; banc vert ; `banc_energie.py` toujours vert ; `verifie_berry.py` sans écart
+- [x] `energieFonctions_route` + `envoieDirect` modifiés, deux fonctions `envoieDescription()`, `envoieMois(m)` (piège 12 :
+  `import energieFonctions` dans chaque fonction) ; banc vert ; `banc_energie.py` toujours vert ; `verifie_berry.py` sans écart — preuve : banc_energie_routes.py VERT, banc_energie.py COMPLET OK, verifie_berry 0 erreur 0 avertissement
 - [ ] Relecture `relecteur-berry` (tas : aucun fichier lu en entier) ; commit `feat(energie): routes description, mois et direct elargi`
 
 ## A3 — Rendu piloté par la description (`energie.js`, `energie.html`, `energie.css`)
