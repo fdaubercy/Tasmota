@@ -98,7 +98,7 @@ sonde Chrome pendant un build (garde bloquante dans la commande, leçon du 2026-
   « carte / dépôt » avant toute modification (spec §4.3) ; 390 px sans défilement ; aucune erreur JS
 - [x] — preuve : `atelier_graphiques_page_energie.py` (299 lignes, ajouté par `atelier_graphiques_page.py`, `atelier_graphiques_page_js.py` inchangé à 473) ; sonde verte, `test_atelier_graphiques_page_chrome.py` vert (voir rapport). Module JS écrit (ajouté au script de la page comme `atelier_graphiques_page_compo.py`), styles restreints, réglage
   hauteur, choix du mois fixe/relatif ; sonde verte ; `test_atelier_graphiques_page_chrome.py` toujours vert
-- [ ] Relecture `relecteur-pages-web` (reste à faire, lancée par l'orchestrateur après le commit) ; commit `feat(atelier): page Energie du differentiel dans l'atelier` (fait, voir `git log`)
+- [x] Relecture `relecteur-pages-web` ; commit `feat(atelier): page Energie du differentiel dans l'atelier` — preuve : 8583a5890 relu (tâche + `relecteur-pages-web` : fuite d'état différentiel → cuve), corrigé par e2529cac0, 0b2cd36d7, 5759015bd, re-relecture Approved ; passes entières 2026-11-08 : `test_atelier_energie_page_chrome.py` 41 OK (mutants `vol`, `archive` rouges), `test_atelier_graphiques_page_chrome.py` 116 OK, 10 bancs `test_atelier_*.py` hors Chrome verts
 
 ## A6 — Documentation
 - [ ] `outils_docs/README.md` (atelier : destination Énergie ; page /energie : description et repli), carte des
