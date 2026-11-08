@@ -78,16 +78,16 @@ sonde Chrome pendant un build (garde bloquante dans la commande, leçon du 2026-
 - [x] Taille de `energie.js` + `.html` + `.css` notée (cible ≤ 20 Ko) ; commit `feat(energie): page Energie pilotee par sa description` — preuve : 20467 o au total apres le tour 2 (cible 20480, marge 13 o), commit feat(energie): page Energie pilotee par sa description ;
 
 ## A4 — Atelier, serveur : destination « energie » (`atelier_graphiques_energie.py`)
-- [ ] Banc rouge `test_atelier_graphiques_energie.py` (dépôt copié, carte simulée par `get`) :
+- [x] Banc rouge `test_atelier_graphiques_energie.py` (dépôt copié, carte simulée par `get`) : — preuve : rouge ModuleNotFoundError (module absent), puis vert ; 4 temoins rouges (firmware, build, cartes, compact) (test_atelier_graphiques_energie.py)
   `cartes()` inclut le différentiel (FS avec `page_energie`), pas `tasmota32-vr-porte` ; `etat_carte` : description de la
   carte lue, 404 → `None`, page HTML en 200 → `firmware_requis` (« À surveiller » 3) ; `prevoit`/`ecrit` : empreinte,
   refus pendant un build, description invalide refusée ; `plan` : `energie_page.json`, `sd/js/energie.js`,
   `sd/html/energie.html`, `sd/css/energie.css`, `redemarrer` 0, `url` avec `depuis=atelier` ; `catalogue` : sources flash
   et total, champs `direct` de `Status 10` (carte muette → liste de la spec §2), styles de `TYPES`
-- [ ] Module écrit ; `atelier_graphiques_web.py` : `cartes()` élargi, routes `/diff` `/ecrire` `/composition` pour
+- [x] Module écrit ; `atelier_graphiques_web.py` : `cartes()` élargi, routes `/diff` `/ecrire` `/composition` pour — preuve : banc energie 59 OK / 0 echec ; bancs web, ecriture, graphiques, televerse, series, description, conseil verts (atelier_graphiques_energie.py, atelier_graphiques_web.py)
   `destination: "energie"`, `MOTEUR` + `energie.js`/`.html`/`.css`, `/series` du différentiel = `catalogue` ; banc vert ;
   bancs existants de l'atelier verts (`test_atelier_graphiques_*.py`, bout en bout)
-- [ ] Commit `feat(atelier): destination Energie du differentiel, cote serveur`
+- [x] Commit `feat(atelier): destination Energie du differentiel, cote serveur` — preuve : commit feat(atelier): destination Energie du differentiel, cote serveur (git log -1 --format=%h sur ce commit)
 
 ## A5 — Atelier, page : menu « Énergie (/energie) » (`atelier_graphiques_page_energie.py`)
 - [ ] Sonde Chrome rouge `test_atelier_energie_page_chrome.py` (atelier sur dépôt copié, carte simulée) : différentiel

@@ -30,6 +30,9 @@ Routes (les POST exigent l'en-tete X-Atelier-Graphiques: 1 et la meme origine ; 
                        (A6 : atelier_graphiques_televerse ; url = page Build http://127.0.0.1:7700/?env=&depuis=atelier&fichiers=&redemarrer=)
     Destination « graphiques » (A4) : /diff et /ecrire avec "destination": "graphiques" et {env, operation: ajoute|remplace|retire,
                        graphique, index, base: depot|carte[, empreinte]} : cle `graphiques` de graphiques.json (atelier_graphiques_graphiques)
+    Destination « energie » (plan energie-atelier A4) : carte Energie = env dont le FS embarque energie.js (le differentiel) ; /diff et /ecrire avec
+                       "destination": "energie" et {env, description, empreinte} : energie_page.json compact (atelier_graphiques_energie). Pour une telle
+                       carte, /series = catalogue des sources et des styles, /composition = carte comparee au depot (+ firmware_requis), /description = depot
 Refus : 400 (saisie, motif en texte ; Content-Length hors 0..MAX_CORPS ; JSON trop imbrique), 404 (env inconnu ou hors S3/P4), 409 (build, empreinte), 500 (inattendu).
 """
 
@@ -47,6 +50,7 @@ from urllib.parse import parse_qs, urlsplit
 import acces_web
 import atelier_graphiques_conseil as agc
 import atelier_graphiques_description as agd
+import atelier_graphiques_energie as ageg
 import atelier_graphiques_ecriture as age
 import atelier_graphiques_graphiques as agg
 import atelier_graphiques_series as ags
@@ -64,6 +68,8 @@ JS = "application/javascript; charset=utf-8"
 MOTEUR = {"pages_graphiques.js": ("js/pages_graphiques.js", JS), "pages_graphiques_formule.js": ("js/pages_graphiques_formule.js", JS),
           "pages_graphiques.html": ("html/pages_graphiques.html", "text/html; charset=utf-8"),
           "pages_graphiques.css": ("css/pages_graphiques.css", "text/css; charset=utf-8"),
+          "energie.js": ("js/energie.js", JS), "energie.html": ("html/energie.html", "text/html; charset=utf-8"),
+          "energie.css": ("css/energie.css", "text/css; charset=utf-8"),
           "echarts.min.js": ("js/echarts.min.js.gz", JS), "echarts-liquidfill.min.js": ("js/echarts-liquidfill.min.js.gz", JS)}
 ECHARTS, LIQUIDFILL = "echarts.min.js.gz", age.LIQUIDFILL
 RE_MOIS = re.compile(r"\d{4}-(0[1-9]|1[0-2])")
@@ -76,10 +82,10 @@ def builds_en_cours_defaut():
 
 
 def cartes(racine):
-    """Noms des cartes S3/P4 du cenv (« Mes cartes »), dans l'ordre du fichier ; rapide (cenv seul)."""
+    """Noms des cartes S3/P4 du cenv (« Mes cartes ») et des cartes Energie (FS avec energie.js : le differentiel), dans l'ordre du fichier ; rapide (cenv seul)."""
     ini = fbi.lit_sections(racine)
     return ini, [e["nom"] for e in fbe.envs_proposes(racine) if e["famille"] == "cartes"
-                 and any(s.startswith(("env:tasmota32s3", "env:tasmota32p4")) for s in ini.chaine(e["nom"]))]
+                 and (any(s.startswith(("env:tasmota32s3", "env:tasmota32p4")) for s in ini.chaine(e["nom"])) or ageg.page_energie(ini, e["nom"]))]
 
 
 def envs(racine):
@@ -90,17 +96,21 @@ def envs(racine):
     for nom in noms:
         exclus = {Path(x.chemin).name for x in fbi.resout(ini, nom, fbe.EXCLUDE)}
         res.append({"nom": nom, "ip": ips.get(nom, ""), "exclut_echarts": ECHARTS in exclus,
-                    "exclut_liquidfill": LIQUIDFILL in exclus})
+                    "exclut_liquidfill": LIQUIDFILL in exclus, "energie": ageg.page_energie(ini, nom)})
     return res
 
 
-def env_atelier(racine, env):
-    if env not in cartes(racine)[1]:
-        raise LookupError(f"env inconnu ou hors cartes S3/P4 : {env!r}")
+def env_atelier(racine, env, energie=None):
+    """Env accepte ; `energie` True / False : carte Energie (differentiel) exigee / exclue (pages et graphiques), None : l'une ou l'autre."""
+    ini, noms = cartes(racine)
+    if env not in noms or (energie is not None and ageg.page_energie(ini, env) != energie):
+        raise LookupError(f"env inconnu ou hors cartes S3/P4{' (ou Energie)' if energie is None else ''} : {env!r}")
     return env
 
 
 def description_de(racine, env):
+    if ageg.page_energie(fbi.lit_sections(racine), env):
+        return {**ageg.description_de(racine, env), "solidifie": False}
     chemin = Path(racine) / fbe.dossier_carte(env) / age.DESCRIPTION
     ini = fbi.lit_sections(racine)
     solidifie = {Path(f).name for f in age.SOLIDES} <= {Path(x.chemin).name for x in fbi.resout(ini, env, fbe.SOLIDIFY)}
@@ -154,7 +164,7 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None, sonde_build=
     muettes = {}                                  # env -> True : series lues au depot, ne pas attendre la carte
 
     def corps_ecriture(demande):
-        env = env_atelier(racine, demande.get("env"))
+        env = env_atelier(racine, demande.get("env"), False)
         desc, solidifier = demande.get("description"), demande.get("solidifier")
         if desc is not None and not isinstance(desc, dict):
             raise ValueError("description : objet ou null attendu")
@@ -164,7 +174,7 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None, sonde_build=
 
     def graphiques(demande):
         """Demande de la destination « graphiques » : (env, demande sans env ni destination)."""
-        return env_atelier(racine, demande.get("env")), {k: v for k, v in demande.items() if k not in ("env", "destination", "empreinte")}
+        return env_atelier(racine, demande.get("env"), False), {k: v for k, v in demande.items() if k not in ("env", "destination", "empreinte")}
 
     def televerser(env, destination, ecrits, avant):
         """Liste a televerser et lien de la page Build (None si rien n'a ete ecrit) ; ne depasse jamais une lecture de la carte."""
@@ -175,14 +185,30 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None, sonde_build=
         except Exception as e:                    # les fichiers sont deja ecrits : /ecrire reste 200
             return {"erreur": f"liste a televerser non calculee : {type(e).__name__} : {e}"}
 
+    def energie_plan(env):
+        try:
+            return ageg.plan(racine, env, get=get)
+        except Exception as e:                    # fichier deja ecrit : /ecrire reste 200
+            return {"erreur": f"liste a televerser non calculee : {type(e).__name__} : {e}"}
+
     def traite_post(chemin, demande):
         if chemin == "/conseil":
             return agc.propose(demande.get("intention"), demande.get("series"), demande.get("destination"),
                                demande.get("historique"))
         if chemin == "/valide":
             return {"motifs": agd.valide(demande.get("description"))}
-        if chemin in ("/diff", "/ecrire") and demande.get("destination", "pages") not in ("pages", "graphiques"):
-            raise ValueError("destination : pages ou graphiques attendu")
+        if chemin in ("/diff", "/ecrire") and demande.get("destination", "pages") not in ("pages", "graphiques", "energie"):
+            raise ValueError("destination : pages, graphiques ou energie attendu")
+        if chemin in ("/diff", "/ecrire") and demande.get("destination") == "energie":
+            env = env_atelier(racine, demande.get("env"), True)
+            if chemin == "/diff":
+                with verrou:
+                    return avec_diffs(ageg.prevoit(racine, env, demande.get("description")))
+            if not isinstance(demande.get("empreinte"), str):
+                raise ValueError("empreinte : chaine attendue")
+            with verrou:
+                ecrits = ageg.ecrit(racine, env, demande.get("description"), demande["empreinte"], builds_en_cours)
+                return {"ecrits": ecrits, "televerser": energie_plan(env) if ecrits else None}
         if chemin == "/diff" and demande.get("destination") == "graphiques":
             with verrou:
                 env, d = graphiques(demande)
@@ -248,6 +274,8 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None, sonde_build=
                     self._json({"envs": envs(racine)})
                 elif url.path == "/series":
                     e = env()
+                    if ageg.page_energie(fbi.lit_sections(racine), e):
+                        return self._json(ageg.catalogue(racine, e, get=get))
                     s = ags.series(racine, e, get=get)
                     muettes[e] = s["source"] != "carte"
                     self._json(s)
@@ -259,7 +287,9 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None, sonde_build=
                 elif url.path == "/build_actif":
                     self._json({"actif": bool((sonde_build or agt.build_actif)())})
                 elif url.path == "/composition":
-                    self._json(agg.etat_carte(racine, env(), get=get))
+                    e = env()
+                    self._json(ageg.composition(racine, e, get=get) if ageg.page_energie(fbi.lit_sections(racine), e)
+                               else agg.etat_carte(racine, e, get=get))
                 elif url.path == "/description":
                     self._json(description_de(racine, env()))
                 elif url.path.startswith("/moteur/"):

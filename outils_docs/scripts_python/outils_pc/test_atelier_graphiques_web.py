@@ -131,7 +131,7 @@ def test_envs(b):
     statut, r = b.requete("GET", "/envs")
     noms = {e["nom"]: e for e in r["envs"]}
     verifie((statut, CUVE in noms, P4 in noms, RIDEAU in noms), (200, True, True, True), "GET /envs : cartes S3 et P4")
-    verifie((BUREAU in noms, "tasmota32s3-base-N16R8" in noms), (False, False), "GET /envs : ni ESP32 classique ni base")
+    verifie((BUREAU in noms, noms[BUREAU]["energie"], "tasmota32s3-base-N16R8" in noms, tage.PORTE in noms), (True, True, False, False), "GET /envs : le differentiel (carte Energie), ni base ni autre ESP32 classique")
     verifie((noms[CUVE]["exclut_echarts"], noms[CUVE]["exclut_liquidfill"]), (False, False), "cuve : ECharts et liquidfill")
     verifie(noms[RIDEAU]["exclut_liquidfill"], True, "rideau : liquidfill exclu")
     verifie(noms[CUVE]["ip"], "192.168.0.43:8081", "cuve : adresse par le maitre")
@@ -141,7 +141,7 @@ def test_series_valeurs(b):
     statut, s = b.requete("GET", f"/series?env={CUVE}")
     verifie((statut, s["source"], s["series"][0]["chemin"]), (200, "carte", "sensorsCuve.niveauCuve.volume"),
             "GET /series : carte en ligne")
-    verifie(b.requete("GET", f"/series?env={BUREAU}")[0], 404, "GET /series : ESP32 classique -> 404")
+    verifie(b.requete("GET", f"/series?env={tage.PORTE}")[0], 404, "GET /series : ESP32 classique sans page Energie -> 404")
     verifie(b.requete("GET", "/series?env=tasmota32s3-nulle-part")[0], 404, "GET /series : env inconnu -> 404")
     statut, v = b.requete("GET", f"/valeurs?env={CUVE}&c=sensorsCuve.niveauCuve.volume,absente&f=valeurs")
     verifie((statut, v["valeurs"], b.entetes.get("X-Source")),
