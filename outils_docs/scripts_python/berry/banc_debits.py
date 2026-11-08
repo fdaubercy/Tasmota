@@ -32,11 +32,16 @@ MUTANTS = [
     ("nom non echappe", '"<", "&lt;"', '"<", "<"'),
     ("espaces doubles gardes", 'while string.find(texte, "  ") >= 0', 'while false'),
     ("imprecis non signale", "if debitsFonctions.imprecis(d[i])    imprecis.push(i + 1)    end", ""),
-    ("ecran non ecrit apres la mesure", '    debitsFonctions.releve = {"t": t, "c": c}\n    debitsFonctions.ecran()','    debitsFonctions.releve = {"t": t, "c": c}'),
+    ("ecran non ecrit apres la mesure", "    var e = tasmota.millis()\n    debitsFonctions.ecran()\n", "    var e = tasmota.millis()\n"),
     ("barre en valeur absolue", "int(q * 100 / max + 0.5)", "int(q * 100 / 5 + 0.5)"),
     ("imprecis non colore", 'debitsFonctions.imprecis(q) ? "imprecis" : "normal"', '"normal"'),
     ("voie a l'arret affichee normale", 'if (q <= 0)    return ["0.00 L/min", "arrêt", 0, "arret"]    end', ''),
     ("ecran sans test d'affichage", 'if (!display.started())', 'if (false)'),
+    ("seuil muet en 1/10 de min", "* 60000\n", "* 6000\n"),
+    ("serie a 0 jamais remise a zero", "            debitsFonctions.zero[i] = nil\n", ""),
+    ("erreur muet a chaque mesure", "if (muet && !debitsFonctions.muets[i])", "if (muet)"),
+    ("Muets absent du JSON", "if debitsFonctions.muets[i]    muets.push(i + 1)    end", ""),
+    ("muet du persist non valide", '|| m < 1)    m = debitsFonctions.MUET_DEFAUT', '|| false)    m = debitsFonctions.MUET_DEFAUT'),
 ]
 
 

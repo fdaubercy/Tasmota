@@ -183,6 +183,50 @@ verifie("ecran non demarre : erreur journalisee", !debitsFonctions.demarreEcran(
 global.ECRAN_DEMARRE = true
 verifie("ecran pret : HASPmota demarre sur /json/pages.jsonl", debitsFonctions.demarreEcran() && global.HASP_DEMARRE == "/json/pages.jsonl")
 
+print("--- capteur muet (10 min a 0 L/min)")
+debitsFonctions.zero = [nil, nil, nil, nil, nil, nil]
+debitsFonctions.muets = [false, false, false, false, false, false]
+global.JOURNAL = []
+var dm = [0.0, 1.0, nil, 0.0, 0.0, 0.0]
+debitsFonctions.suitMuets(dm, 0)
+debitsFonctions.suitMuets(dm, 599999)
+verifie("0 L/min depuis 9 min 59 s : pas muet", debitsFonctions.muets == [false, false, false, false, false, false] && erreurs() == 0)
+debitsFonctions.suitMuets(dm, 600000)
+verifie("0 L/min depuis 10 min : voies 1, 4, 5, 6 muettes, voie 2 (1 L/min) et 3 (sans mesure) non", debitsFonctions.muets == [true, false, false, true, true, true])
+verifie("une erreur par voie au passage", erreurs() == 4)
+debitsFonctions.suitMuets(dm, 700000)
+verifie("toujours muettes : pas de nouvelle erreur", erreurs() == 4 && debitsFonctions.muets[0])
+debitsFonctions.suitMuets([0.5, 1.0, nil, 0.0, 0.0, 0.0], 710000)
+verifie("une impulsion revient : voie 1 de nouveau normale", !debitsFonctions.muets[0] && debitsFonctions.muets[3])
+debitsFonctions.suitMuets(dm, 720000)
+debitsFonctions.suitMuets(dm, 1319999)
+verifie("nouvelle serie a 0 : le compte repart de zero", !debitsFonctions.muets[0])
+debitsFonctions.suitMuets(dm, 1320000)
+verifie("nouvelle serie a 0 depuis 10 min : voie 1 muette, une erreur de plus", debitsFonctions.muets[0] && erreurs() == 5)
+debitsFonctions.debits = dm
+var jm = json.load("{" + debitsFonctions.json()[1..] + "}")
+verifie("JSON SENSOR : Muets = [1, 4, 5, 6]", jm["DEBITS"]["Muets"] == [1, 4, 5, 6])
+verifie("page : voie muette signalee", string.find(debitsFonctions.lignesWeb()[0], "capteur muet") >= 0 && string.find(debitsFonctions.lignesWeb()[1], "muet") < 0)
+debitsFonctions.ecran()
+verifie("ecran : voie muette en rouge, « muet »", global.p1b13.text_color == "#FF6B6B" && global.p1b14.text == "muet" && global.p1b23.text_color == "#E8EDF2")
+global.modules["debits"]["muet"] = 1
+debitsFonctions.zero = [nil, nil, nil, nil, nil, nil]
+debitsFonctions.muets = [false, false, false, false, false, false]
+debitsFonctions.suitMuets(dm, 0)
+debitsFonctions.suitMuets(dm, 60000)
+verifie("persist muet = 1 : muette apres 1 min", debitsFonctions.muets[0])
+for faux: [0, -5, "dix"]
+    global.modules["debits"]["muet"] = faux
+    debitsFonctions.zero = [nil, nil, nil, nil, nil, nil]
+    debitsFonctions.muets = [false, false, false, false, false, false]
+    debitsFonctions.suitMuets(dm, 0)
+    debitsFonctions.suitMuets(dm, 60000)
+    verifie("persist muet = " + str(faux) + " : ignore, defaut 10 min", !debitsFonctions.muets[0])
+end
+global.modules["debits"].remove("muet")
+debitsFonctions.zero = [nil, nil, nil, nil, nil, nil]
+debitsFonctions.muets = [false, false, false, false, false, false]
+
 print("--- ReglageDebits")
 # Bloc debits du vrai persist de la carte : nom et K dans environnement.debitmetres et compteurs
 global.modules["debits"] = json.load(lis(CARTE + "_persist.json"))["modules"]["debits"]
@@ -224,6 +268,8 @@ r("ReglageDebits", 0, "fenetre 15", nil)
 var rep = json.load(global.REPONSE)
 verifie("fenetre 15 : ecrite, reponse coherente", debitsFonctions.fenetre() == 15 && rep["ReglageDebits"]["fenetre"] == 15
         && rep["ReglageDebits"]["voies"][1]["nom"] == "Salle de bain")
+verifie("reponse : etat muet des voies et duree de l'ecran (ecran_ms)", rep["ReglageDebits"].contains("muets") && rep["ReglageDebits"].contains("ecran_ms"))
+verifie("mesure : duree d'ecriture de l'ecran relevee", type(debitsFonctions.ecranMs) == "int")
 
 print("--- driver controleDebits")
 global.CMDS = []

@@ -104,9 +104,10 @@ sans impulsions.
 - [x] Débit mesuré entre 0 et 1 L/min (hors plage du capteur) affiché « < 1 » sur l'écran et la page web, et signalé comme tel dans le JSON — preuve : `debitsFonctions.be::debitsFonctions_imprecis` (écran « <1 », page « < 1 : imprécis », JSON `Imprecis`) ; banc 45 vérifications OK, 18 témoins rouges, VERT (2026-11-08)
 - [ ] Page web de la carte : 6 lignes nommées (`web_sensor`) ; lignes natives des compteurs bruts et du `FlowRateMeter` jugées sur la vraie page (gardées ou masquées), avec l'utilisateur
 - [ ] Durée d'une mise à jour de l'écran mesurée sur carte (`tasmota.millis()` autour de l'écriture), consignée ; fréquence SPI du `display.ini` à essayer si l'écran est lent
-- [ ] Message « capteur muet » si une voie ne donne plus d'impulsion (débit 0 prolongé, délai au choix de l'utilisateur)
+- [x] Message « capteur muet » si une voie ne donne plus d'impulsion : **10 min** à 0 L/min (utilisateur, 2026-11-08 ; persist `modules.debits.muet` en min, facultatif) — preuve : `debitsFonctions.be::debitsFonctions_suitMuets` (erreur `CAPTEUR_MUET_ERREUR` au passage seulement, une impulsion remet la voie à l'état normal, une voie sans mesure ne compte pas), écran rouge « muet », page « capteur muet ? », JSON `Muets`, `ReglageDebits` → `muets` ; `muet` du persist hors limites (0, négatif, texte) ignoré ; banc 72 vérifications OK, 24 témoins rouges, VERT ; relu par `relecteur-berry`. Limite : un départ fermé plus de 10 min est aussi signalé
 
 ## A6 — Essai de charge sur banc
+- [x] Script de l'essai prêt : `outils_docs/scripts_python/outils_pc/essai_charge_debits.py` (générateur piloté par HTTP : `PwmFrequency f` global, 2 à 50 000 Hz d'après `support_pwm.ino::CmndPwmfrequency`, Pwm1-6 à 50 % ; carte testée lue par `Status 10` et `ReglageDebits` → `ecran_ms` ; montage dans son en-tête) — preuve : `--test` VERT (7 cas : écart, voie absente, compteur repassé à zéro, impulsion parasite à 0 Hz)
 - [ ] Générateur : second ESP32 en `PwmFrequency` sur 6 sorties câblées aux entrées de la carte (fait AVANT l'achat des 5 autres capteurs)
 - [ ] Paliers 11, 55, 275 Hz (1, 5 et 25 L/min), puis 1 000 et 2 000 Hz par voie : impulsions comptées contre envoyées (écart < 0,5 %)
 - [ ] À chaque palier : durée de mise à jour de l'écran ≤ 1,1 × la référence sans impulsions ; seuil réel relevé
@@ -122,7 +123,7 @@ sans impulsions.
 
 ## Améliorations restantes
 - [ ] [projet] Carte porteuse PCB pour la nourrice (skill `pcb-tasmota`)
-- [ ] [projet] Historique et page `/graphiques` des 6 débits (S3 : framework existant)
+- [ ] [projet] Historique et page `/graphiques` des 6 débits : plan `tasks/plans/historique-debits.md` (en pause, à valider)
 - [ ] [projet] Assistant persist : reprendre `page_cuve`, `page_energie`, `pages_graphiques`, `pages_graphiques_moteur` dans le `custom_files_exclude` d'un env créé (oubli constaté le 2026-11-08)
 - [ ] [projet] Vidéo guidée du réglage de l'équilibrage (guide `outils_docs/chauffage/EQUILIBRAGE_CHAUFFAGE_NOURRICE.md`), si l'utilisateur la demande
 - [ ] [projet] Lire la PAC (EKHBRD probable, photo du 2026-11-08) : passerelle RTD-W en Modbus RS485 ou pont P1P2MQTT, lecture seule ; pas de voie X10A prouvee (guide § 2.1 ter)

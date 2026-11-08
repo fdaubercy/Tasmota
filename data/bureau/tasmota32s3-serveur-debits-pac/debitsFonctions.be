@@ -19,6 +19,10 @@ debitsFonctions.CLE_FLOWRATE = ["Débit", "Flowrate"]    # D_FLOWRATEMETER_NAME 
 
 debitsFonctions.debits = [nil, nil, nil, nil, nil, nil]   # L/min, nil = voie sans mesure
 debitsFonctions.releve = nil                             # {"t": ms, "c": [4 compteurs]} de la mesure precedente
+debitsFonctions.MUET_DEFAUT = 10                         # min a 0 L/min avant « capteur muet » (decision du 2026-11-08)
+debitsFonctions.zero = [nil, nil, nil, nil, nil, nil]     # ms de la 1re mesure a 0 L/min de la serie en cours, par voie
+debitsFonctions.muets = [false, false, false, false, false, false]
+debitsFonctions.ecranMs = nil                            # ms de la derniere ecriture de l'ecran (ReglageDebits)
 
 # Log du module sous le seuil `general` (ReglageLog general <niveau>) ; niveau = constante LOG_LEVEL_*
 def debitsFonctions_log(msg, niveau)
@@ -114,12 +118,42 @@ def debitsFonctions_mesure()
     # Premiere mesure : pas de releve precedent, les voies 3-6 restent sans mesure
     debitsFonctions.debits = debitsFonctions.calcule(rates, r != nil ? r["c"] : nil, c, r != nil ? t - r["t"] : 0, ks)
     debitsFonctions.releve = {"t": t, "c": c}
+    debitsFonctions.suitMuets(debitsFonctions.debits, t)
+    var e = tasmota.millis()
     debitsFonctions.ecran()
+    debitsFonctions.ecranMs = tasmota.millis() - e    # duree d'une ecriture de l'ecran (plan A5, essai de charge A6)
     if logFonctions.actif(LOG_LEVEL_DEBUG_PLUS)
         debitsFonctions.log("MESURE_DEBITS: rates=" + str(rates) + " compteurs=" + str(c) + " debits=" + str(debitsFonctions.debits), LOG_LEVEL_DEBUG_PLUS)
     end
 end
 debitsFonctions.mesure = debitsFonctions_mesure
+
+# Capteur muet : voie mesuree a 0 L/min sans interruption depuis `muet` min (persist modules.debits.muet, defaut 10) ;
+# une impulsion la remet a l'etat normal, une voie sans mesure (nil) ne change rien. Erreur journalisee au passage seulement.
+# shortcut: un robinet ferme plus de 10 min est aussi signale muet ; le distinguer demanderait un capteur de temperature
+def debitsFonctions_suitMuets(d, t)
+    import debitsFonctions
+    var m = (modules.contains("debits") ? modules["debits"].find("muet", debitsFonctions.MUET_DEFAUT) : debitsFonctions.MUET_DEFAUT)
+    # persist edite a la main : 0, negatif ou texte rendrait toute voie a l'arret muette, ou ferait lever mesure()
+    if ((type(m) != "int" && type(m) != "real") || m < 1)    m = debitsFonctions.MUET_DEFAUT    end
+    var seuil = m * 60000
+    for i: 0 .. debitsFonctions.NB_VOIES - 1
+        if (d[i] == nil)    continue    end
+        if (d[i] > 0)
+            debitsFonctions.zero[i] = nil
+        elif (debitsFonctions.zero[i] == nil)
+            debitsFonctions.zero[i] = t
+        end
+        var muet = debitsFonctions.zero[i] != nil && t - debitsFonctions.zero[i] >= seuil
+        if (muet && !debitsFonctions.muets[i])
+            debitsFonctions.log("CAPTEUR_MUET_ERREUR: voie " + str(i + 1) + " (" + debitsFonctions.voie(i)["nom"] + ") sans impulsion depuis " + str(seuil / 60000) + " min : capteur, cable ou depart ferme !", LOG_LEVEL_ERREUR)
+        elif (!muet && debitsFonctions.muets[i])
+            debitsFonctions.log("CAPTEUR_MUET: voie " + str(i + 1) + " de nouveau mesuree !", LOG_LEVEL_DEBUG)
+        end
+        debitsFonctions.muets[i] = muet
+    end
+end
+debitsFonctions.suitMuets = debitsFonctions_suitMuets
 
 # Debit hors de la plage du capteur (YF-B2 : 1 a 25 L/min) mais non nul : valeur imprecise
 def debitsFonctions_imprecis(q)
@@ -128,19 +162,21 @@ end
 debitsFonctions.imprecis = debitsFonctions_imprecis
 
 # Bloc DEBITS du JSON SENSOR : D1 a D6 et Total en L/min, null = voie sans mesure ;
-# Imprecis = numeros des voies entre 0 et 1 L/min
+# Imprecis = numeros des voies entre 0 et 1 L/min ; Muets = numeros des voies a 0 depuis `muet` min
 def debitsFonctions_json()
     import debitsFonctions
     import string
     var d = debitsFonctions.debits
     var s = ',"DEBITS":{'
     var imprecis = []
+    var muets = []
     for i: 0 .. size(d) - 1
         s += string.format('"D%d":%s,', i + 1, d[i] == nil ? "null" : string.format("%.2f", d[i]))
         if debitsFonctions.imprecis(d[i])    imprecis.push(i + 1)    end
+        if debitsFonctions.muets[i]    muets.push(i + 1)    end
     end
     var tot = debitsFonctions.total(d)
-    return s + '"Total":' + (tot == nil ? "null" : string.format("%.2f", tot)) + ',"Imprecis":' + str(imprecis) + "}"
+    return s + '"Total":' + (tot == nil ? "null" : string.format("%.2f", tot)) + ',"Imprecis":' + str(imprecis) + ',"Muets":' + str(muets) + "}"
 end
 debitsFonctions.json = debitsFonctions_json
 
@@ -156,6 +192,8 @@ def debitsFonctions_lignesWeb()
         var v
         if (q == nil)
             v = "-,--"
+        elif debitsFonctions.muets[i]
+            v = "0.00 L/min (capteur muet ?)"
         elif debitsFonctions.imprecis(q)
             v = string.format("%.2f L/min (&lt; 1 : imprécis)", q)    # sous la plage du YF-B2 (1-25 L/min)
         else
@@ -174,13 +212,14 @@ debitsFonctions.lignesWeb = debitsFonctions_lignesWeb
 # Ecran TFT (LVGL, HASPmota) : page /json/pages.jsonl du dossier de la carte (modele B de outils_docs/chauffage/ecran/),
 # rangee dans /json/ au demarrage par gestionFileFolder ; voie n = objets p1b<10n+1> nom, +2 barre, +3 debit, +4 part
 debitsFonctions.PAGES = "/json/pages.jsonl"
-debitsFonctions.COULEURS = {"normal": "#E8EDF2", "imprecis": "#F2B84B", "arret": "#6C7A89", "absent": "#FF6B6B"}
+debitsFonctions.COULEURS = {"normal": "#E8EDF2", "imprecis": "#F2B84B", "arret": "#6C7A89", "absent": "#FF6B6B", "muet": "#FF6B6B"}
 
 # Affichage d'une voie : [debit, part, barre 0-100 (relative a la plus forte voie), etat]
-def debitsFonctions_etatVoie(q, tot, max)
+def debitsFonctions_etatVoie(q, tot, max, muet)
     import debitsFonctions
     import string
     if (q == nil)    return ["-,--", "absent", 0, "absent"]    end
+    if (muet)    return ["0.00 L/min", "muet", 0, "muet"]    end
     if (q <= 0)    return ["0.00 L/min", "arrêt", 0, "arret"]    end
     var part = (tot != nil && tot > 0) ? string.format("%d %%", int(q * 100 / tot + 0.5)) : ""
     return [string.format("%.2f L/min", q), part, max > 0 ? int(q * 100 / max + 0.5) : 0,
@@ -202,7 +241,7 @@ def debitsFonctions_ecran()
     end
     var c = debitsFonctions.COULEURS
     for i: 0 .. debitsFonctions.NB_VOIES - 1
-        var e = debitsFonctions.etatVoie(d[i], tot, max)
+        var e = debitsFonctions.etatVoie(d[i], tot, max, debitsFonctions.muets[i])
         var v = debitsFonctions.voie(i)
         var b = 10 * (i + 1)
         var nom = global.("p1b" + str(b + 1))
@@ -355,7 +394,8 @@ def debitsFonctions_reglageDebits(cmd, idx, payload, payload_json)
 
     var voies = []
     for n: 0 .. debitsFonctions.NB_VOIES - 1    voies.push(debitsFonctions.voie(n))    end
-    tasmota.resp_cmnd(json.dump({"ReglageDebits": {"fenetre": debitsFonctions.fenetre(), "voies": voies, "debits": debitsFonctions.debits}}))
+    tasmota.resp_cmnd(json.dump({"ReglageDebits": {"fenetre": debitsFonctions.fenetre(), "voies": voies, "debits": debitsFonctions.debits,
+                                                      "muets": debitsFonctions.muets, "ecran_ms": debitsFonctions.ecranMs}}))
 end
 debitsFonctions.reglageDebits = debitsFonctions_reglageDebits
 
