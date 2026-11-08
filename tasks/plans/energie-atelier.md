@@ -67,15 +67,15 @@ sonde Chrome pendant un build (garde bloquante dans la commande, leçon du 2026-
 - [x] Relecture `relecteur-berry` (tas : aucun fichier lu en entier) — preuve : relecteur-berry « aucun défaut réel », relecture de tâche Approved, commit 30a2da910 ; commit `feat(energie): routes description, mois et direct elargi`
 
 ## A3 — Rendu piloté par la description (`energie.js`, `energie.html`, `energie.css`)
-- [ ] Banc node rouge `test_energie_rendu.mjs` : `Energie.valide` rend les mêmes verdicts que Python sur `cas_energie.json` ;
+- [x] Banc node rouge `test_energie_rendu.mjs` : `Energie.valide` rend les mêmes verdicts que Python sur `cas_energie.json` ; — preuve : test_energie_rendu.mjs, 0 echec sur 121 verifications (114 cas + DEFAUT + bornes 4096/4097 octets contre Python), 4 temoins mutants rouges (bun, node absent du PATH) ; `trace` juge par Chrome seul ;
   `trace` sur un faux DOM minimal ou jsdom absent : à défaut, banc Chrome seul (au choix de l'implémenteur, à dire)
-- [ ] `energie.js` réécrit (repli `DEFAUT` + ligne de motif ; « À surveiller » 1, 2, 4), gabarit vide dans `energie.html`,
+- [x] `energie.js` réécrit (repli `DEFAUT` + ligne de motif ; « À surveiller » 1, 2, 4), gabarit vide dans `energie.html`, — preuve : energie.js 18256 o, energie.html 388 o, energie.css 1697 o ; banc node vert, banc Chrome vert ;
   grille 2 colonnes, hauteurs petite/moyenne/grande et une colonne sous 600 px dans `energie.css`
-- [ ] `banc_energie.py` (rendu Chrome) vert SANS description (la page d'aujourd'hui : mêmes `data-valeurs`, totaux, tuiles) ;
+- [x] `banc_energie.py` (rendu Chrome) vert SANS description (la page d'aujourd'hui : mêmes `data-valeurs`, totaux, tuiles) ; — preuve : banc_energie.py BANC_ENERGIE_COMPLET OK (157 verifications Berry + rendu Chrome sans description, cout du mois sur les 30 jours de novembre) ; banc_energie_description.py OK (14 temoins mutants + 390 px dans un cadre, rouges) ;
   ajout de cas : description modifiée (ordre, couleur, hauteur, mois `decalage` 1), description de 5 000 o → repli dit,
   `f=mois` 404 → « archive effacée », graphique « an » avec l'année la plus ancienne marquée partielle, `total` → titre
   « kWh · € », 390 px sans défilement (« À surveiller » 5)
-- [ ] Taille de `energie.js` + `.html` + `.css` notée (cible ≤ 20 Ko) ; commit `feat(energie): page Energie pilotee par sa description`
+- [x] Taille de `energie.js` + `.html` + `.css` notée (cible ≤ 20 Ko) ; commit `feat(energie): page Energie pilotee par sa description` — preuve : 20341 o au total (cible 20480), commit feat(energie): page Energie pilotee par sa description ;
 
 ## A4 — Atelier, serveur : destination « energie » (`atelier_graphiques_energie.py`)
 - [ ] Banc rouge `test_atelier_graphiques_energie.py` (dépôt copié, carte simulée par `get`) :

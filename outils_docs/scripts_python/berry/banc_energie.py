@@ -78,14 +78,15 @@ def partie_berry(tmp):
     return ok, json.loads((d / "donnees.json").read_text(encoding="utf-8"))
 
 
-def page_html(js_modifie=None, nom="energie"):
+def page_html(js_modifie=None, nom="energie", css_modifie=None):
     sd = RACINE / "data/sd"
     js = js_modifie if js_modifie is not None else (sd / f"js/{nom}.js").read_text(encoding="utf-8")
-    return ("<!doctype html><meta charset='utf-8'><body style='width:320px'><style>" + (sd / "css/energie.css").read_text(encoding="utf-8")
+    return ("<!doctype html><meta charset='utf-8'><body style='width:320px'><style>" + (css_modifie if css_modifie is not None else (sd / "css/energie.css").read_text(encoding="utf-8"))
             + "</style>" + (sd / f"html/{nom}.html").read_text(encoding="utf-8") + "<script>" + js + "</script>")
 
 
-def serveur(page, donnees, direct):
+def serveur(page, donnees, direct, description=None, mois=None):
+    """description : texte servi par f=description (None = 404) ; mois : {AAAA-MM: objet} servi par f=mois (absent = 404)."""
     posts = []
 
     class Gestion(BaseHTTPRequestHandler):
@@ -104,11 +105,18 @@ def serveur(page, donnees, direct):
             u = urlparse(self.path)
             q = dict(parse_qsl(u.query))
             if u.path == "/capture":
-                return self.envoie(200, "text/html; charset=utf-8", "<!doctype html><body style='margin:0'><iframe src='/energie' width='340' height='1300' style='border:0'></iframe>")
+                return self.envoie(200, "text/html; charset=utf-8", "<!doctype html><body style='margin:0'><iframe id='f' src='/energie' width='" + q.get("w", "340") + "' height='1300' style='border:0'></iframe>"
+                                  "<script>setTimeout(function(){var f=document.getElementById('f'),d=f.contentDocument;document.body.setAttribute('data-mesure',"
+                                  "d.documentElement.scrollWidth+'/'+f.contentWindow.innerWidth+'/'+getComputedStyle(d.getElementById('e_grille')).gridTemplateColumns.split(' ').length)},1500)</script>")
             if u.path != "/energie":
                 return self.envoie(404, "text/plain", "?")
             if q.get("f") == "donnees":
                 return self.envoie(200, "application/json", json.dumps(donnees))
+            if q.get("f") == "description":
+                return self.envoie(404, "text/plain", "?") if description is None else self.envoie(200, "application/json", description)
+            if q.get("f") == "mois":
+                m = (mois or {}).get(q.get("m"))
+                return self.envoie(404, "text/plain", "?") if m is None else self.envoie(200, "application/json", json.dumps(m))
             if q.get("f") == "direct":
                 return self.envoie(200, "application/json", json.dumps(direct))
             self.envoie(200, "text/html; charset=utf-8", page)
@@ -139,8 +147,8 @@ def juge(nom, attendu, obtenu):
     return ok
 
 
-def scenario(nav, tmp, nom, page, donnees, direct):
-    srv, posts = serveur(page, donnees, direct)
+def scenario(nav, tmp, nom, page, donnees, direct, **kw):
+    srv, posts = serveur(page, donnees, direct, **kw)
     dom = rend(nav, f"http://127.0.0.1:{srv.server_address[1]}/energie", str(tmp / f"profil_{nom}"))
     srv.shutdown()
     return re.sub(r"<script\b[^>]*>.*?</script>", "", dom, flags=re.S), posts
@@ -167,17 +175,17 @@ def partie_rendu(nav, tmp, base, garde):
     direct = {"p": 750, "i": 3.25, "f": 0.87, "hz": 50}
     print("--- Rendu : donnees completes")
     dom, _ = scenario(nav, tmp, "normal", page_html(), d, direct)
-    ok &= juge("barres des heures = heures servies", e["h"], json.loads(attribut(dom, "e_h", "data-valeurs") or "null"))
-    ok &= juge("novembre : 30 jours", e["d"][:30], json.loads(attribut(dom, "e_d", "data-valeurs") or "null"))
-    ok &= juge("12 derniers mois seulement", [m[1] for m in e["a"][-12:]], json.loads(attribut(dom, "e_a", "data-valeurs") or "null"))
-    ok &= juge("courbe = points servis", d["courbe"], json.loads(attribut(dom, "e_c", "data-valeurs") or "null"))
-    ok &= juge("total du jour (Wh)", str(sum(e["h"])), attribut(dom, "e_totalH", "data-wh"))
-    ok &= juge("cout du mois (dix-milliemes)", str(sum(e["de"])), attribut(dom, "e_totalD", "data-euros"))
-    ok &= juge("puissance", "750", texte(dom, "e_p"))
-    ok &= juge("courant : 3 decimales comme la carte", "3,250", texte(dom, "e_i"))
-    ok &= juge("facteur", "0,87", texte(dom, "e_f"))
-    ok &= juge("arc du facteur", "87 100", attribut(dom, "e_arc", "stroke-dasharray"))
-    ok &= juge("frequence : entiere comme la carte", "50", texte(dom, "e_hz"))
+    ok &= juge("barres des heures = heures servies", e["h"], json.loads(attribut(dom, "e_g4", "data-valeurs") or "null"))
+    ok &= juge("novembre : 30 jours", e["d"][:30], json.loads(attribut(dom, "e_g5", "data-valeurs") or "null"))
+    ok &= juge("12 derniers mois seulement", [m[1] for m in e["a"][-12:]], json.loads(attribut(dom, "e_g6", "data-valeurs") or "null"))
+    ok &= juge("courbe = points servis", d["courbe"], json.loads(attribut(dom, "e_g7", "data-valeurs") or "null"))
+    ok &= juge("total du jour (Wh)", str(sum(e["h"])), attribut(dom, "e_t4", "data-wh"))
+    ok &= juge("cout du mois (dix-milliemes, les 30 jours de novembre : la page ne somme plus le 31e)", str(sum(e["de"][:30])), attribut(dom, "e_t5", "data-euros"))
+    ok &= juge("puissance", "750", texte(dom, "e_v0"))
+    ok &= juge("courant : 3 decimales comme la carte", "3,250", texte(dom, "e_v1"))
+    ok &= juge("facteur", "0,87", texte(dom, "e_v2"))
+    ok &= juge("arc du facteur", "87 100", attribut(dom, "e_a2", "stroke-dasharray"))
+    ok &= juge("frequence : entiere comme la carte", "50", texte(dom, "e_v3"))
     ok &= juge("prix absent de la page", None, texte(dom, "e_prixActuel"))
     ok &= juge("formulaire absent de la page", False, "id=\"e_form\"" in dom)
     ok &= juge("endroit du prix indique", True, "Tarifs de l'électricité" in html.unescape(dom) and "/energie?f=tarifs" in dom)
@@ -191,11 +199,11 @@ def partie_rendu(nav, tmp, base, garde):
     petit["etat"]["he"][7] = 4
     petit["courbe"] = [None] * 287 + [12]
     dom, _ = scenario(nav, tmp, "petit", page_html(), petit, {"p": 0, "i": 0, "f": 0, "hz": 50})
-    ok &= juge("total en Wh et euros fins", "2 Wh · 0,0004 €", texte(dom, "e_totalH"))
-    ok &= juge("courant nul", "0,000", texte(dom, "e_i"))
-    ok &= juge("puissance comme l'accueil", "0", texte(dom, "e_p"))
-    ok &= juge("facteur comme l'accueil", "0,00", texte(dom, "e_f"))
-    ok &= juge("frequence comme l'accueil", "50", texte(dom, "e_hz"))
+    ok &= juge("total en Wh et euros fins", "2 Wh · 0,0004 €", texte(dom, "e_t4"))
+    ok &= juge("courant nul", "0,000", texte(dom, "e_v1"))
+    ok &= juge("puissance comme l'accueil", "0", texte(dom, "e_v0"))
+    ok &= juge("facteur comme l'accueil", "0,00", texte(dom, "e_v2"))
+    ok &= juge("frequence comme l'accueil", "50", texte(dom, "e_v3"))
     ok &= juge("point isole dessine", True, bool(re.search(r"class=.e_ligne. d=.M320\.0 [0-9.]+h0", dom)))
 
     print("--- Rendu : heure en cours ajoutee, comme « Energie aujourd'hui » de l'accueil")
@@ -209,12 +217,12 @@ def partie_rendu(nav, tmp, base, garde):
     c["j"] = "2026-11-02"
     cours["wCourant"] = c["w"] + 150
     dom, _ = scenario(nav, tmp, "cours", page_html(), cours, direct)
-    ok &= juge("barre de l'heure en cours", 150, (json.loads(attribut(dom, "e_h", "data-valeurs") or "[0]*24") + [0] * 24)[11])
-    ok &= juge("total du jour = Today", "450", attribut(dom, "e_totalH", "data-wh"))
-    ok &= juge("total du mois", "450", attribut(dom, "e_totalD", "data-wh"))
+    ok &= juge("barre de l'heure en cours", 150, (json.loads(attribut(dom, "e_g4", "data-valeurs") or "[0]*24") + [0] * 24)[11])
+    ok &= juge("total du jour = Today", "450", attribut(dom, "e_t4", "data-wh"))
+    ok &= juge("total du mois", "450", attribut(dom, "e_t5", "data-wh"))
     cours["wCourant"] = c["w"] - 5
     dom, _ = scenario(nav, tmp, "cours2", page_html(), cours, direct)
-    ok &= juge("compteur en baisse : rien ajoute", "300", attribut(dom, "e_totalH", "data-wh"))
+    ok &= juge("compteur en baisse : rien ajoute", "300", attribut(dom, "e_t4", "data-wh"))
 
     print("--- Rendu : prix de plus de 6 mois")
     vieux = complet(base)
@@ -228,14 +236,14 @@ def partie_rendu(nav, tmp, base, garde):
     dom, _ = scenario(nav, tmp, "neuf", page_html(), neuf, {"p": None, "i": None, "f": None, "hz": None})
     ok &= juge("message", True, "Aucun relevé" in (texte(dom, "e_msg") or ""))
     ok &= juge("sans prix", "Aucun prix saisi : les coûts ne sont pas calculés.", texte(dom, "e_rappel"))
-    ok &= juge("mesure absente", "--", texte(dom, "e_p"))
+    ok &= juge("mesure absente", "--", texte(dom, "e_v0"))
 
     print("--- Rendu : heure en cours en heures creuses")
     hc = json.loads(json.dumps(cours))
     hc["prix"] = [["2026-01-01", 2000, 1000, 1 << 11]]
     hc["wCourant"] = c["w"] + 150
     dom, _ = scenario(nav, tmp, "cours_hc", page_html(), hc, direct)
-    ok &= juge("cout de l'heure en cours au tarif HC", str(sum(c["he"]) + 150 * 1000 // 1000), attribut(dom, "e_totalH", "data-euros"))
+    ok &= juge("cout de l'heure en cours au tarif HC", str(sum(c["he"]) + 150 * 1000 // 1000), attribut(dom, "e_t4", "data-euros"))
 
     print("--- Rendu : sous-page des tarifs")
     t = {"aujourdhui": "2026-11-02", "etat": None, "courbe": [], "prix": [["2026-01-01", 1500], ["2026-11-01", 2000, 1000, 0xC0003F], ["2027-01-01", 2500]]}
@@ -254,9 +262,9 @@ def partie_rendu(nav, tmp, base, garde):
 
     print("--- Temoin du rendu (doit etre rouge)")
     js = (RACINE / "data/sd/js/energie.js").read_text(encoding="utf-8")
-    assert "barres('e_h', e.h," in js
-    dom, _ = scenario(nav, tmp, "temoin", page_html(js.replace("barres('e_h', e.h,", "barres('e_h', e.he,")), d, direct)
-    rouge = json.loads(attribut(dom, "e_h", "data-valeurs") or "null") != e["h"]
+    assert "r.W = e.h; r.E = e.he;" in js
+    dom, _ = scenario(nav, tmp, "temoin", page_html(js.replace("r.W = e.h; r.E = e.he;", "r.W = e.he; r.E = e.he;")), d, direct)
+    rouge = json.loads(attribut(dom, "e_g4", "data-valeurs") or "null") != e["h"]
     print(f"  {'OK   ' if rouge else 'ECHEC'} barres des euros au lieu des kWh")
     ok &= rouge
 
