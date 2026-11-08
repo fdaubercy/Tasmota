@@ -79,8 +79,8 @@ def _source(s, type, ou, m):
         m.append("%s : source : une seule des cles direct, total, flash" % ou)
         return None
     genre = genres[0]
-    permis = SOURCES_PAR_TYPE.get(type, ("flash",))
-    if type in TYPES and genre not in permis:
+    permis = SOURCES_PAR_TYPE.get(type, ("flash",)) if isinstance(type, str) else ("flash",)
+    if isinstance(type, str) and type in TYPES and genre not in permis:
         m.append("%s : source %s impossible pour le type %s" % (ou, genre, type))
     autres = {"direct": set(), "total": {"grandeur"}, "flash": {"grandeur", "mois", "decalage", "nombre"}}[genre]
     for k in sorted(set(s) - {genre} - autres, key=str):
