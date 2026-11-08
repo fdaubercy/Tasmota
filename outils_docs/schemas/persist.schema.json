@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Persist des cartes ESP32 (fork Tasmota)",
-  "description": "Genere par outils_docs/scripts_python/berry/genere_schema_persist.py a partir de 8 persists. Cle `required` si presente dans >= 50 % des exemplaires du parent et au moins 2, sauf blocs optionnels (OPTIONNELS du script). Ne pas editer a la main : regenerer.",
+  "description": "Genere par outils_docs/scripts_python/berry/genere_schema_persist.py a partir de 9 persists. Cle `required` si presente dans >= 50 % des exemplaires du parent et au moins 2, sauf blocs optionnels (OPTIONNELS du script). Ne pas editer a la main : regenerer.",
   "type": "object",
   "properties": {
     "diverses": {
@@ -9,6 +9,44 @@
       "properties": {
         "cmdMute": {
           "type": "boolean"
+        },
+        "energie": {
+          "type": "object",
+          "properties": {
+            "activation": {
+              "type": "string",
+              "description": "ON ou OFF : active ou non ce bloc.",
+              "enum": [
+                "ON",
+                "OFF"
+              ]
+            },
+            "calibrage": {
+              "type": "object",
+              "properties": {
+                "PowerCal": {
+                  "type": "integer"
+                },
+                "VoltageCal": {
+                  "type": "integer"
+                },
+                "CurrentCal": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "PowerCal",
+                "VoltageCal",
+                "CurrentCal"
+              ],
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "activation",
+            "calibrage"
+          ],
+          "additionalProperties": true
         },
         "typeESP": {
           "type": "string"
@@ -730,6 +768,9 @@
             "log"
           ],
           "additionalProperties": true
+        },
+        "voieReseau": {
+          "type": "string"
         },
         "coprocesseur": {
           "type": "object",
@@ -1582,108 +1623,109 @@
                       "ON",
                       "OFF"
                     ]
-                  },
-                  "compteur1": {
-                    "type": "object",
-                    "properties": {
-                      "activation": {
-                        "type": "string",
-                        "description": "ON ou OFF : active ou non ce bloc.",
-                        "enum": [
-                          "ON",
-                          "OFF"
-                        ]
-                      },
-                      "nom": {
-                        "type": "string"
-                      },
-                      "id": {
-                        "type": "integer",
-                        "description": "Identifiant ModBus / reseau de la carte."
-                      },
-                      "pin": {
-                        "type": "integer",
-                        "description": "Numero de GPIO (-1 = non affecte)."
-                      },
-                      "type": {
-                        "type": "integer"
-                      },
-                      "virtuel": {
-                        "type": "string",
-                        "enum": [
-                          "ON",
-                          "OFF"
-                        ]
-                      },
-                      "SwitchMode": {
-                        "type": "integer"
-                      },
-                      "value": {
-                        "type": "integer"
-                      },
-                      "relaisLie": {
-                        "type": "object",
-                        "description": "Relais commandes par cet element (globalFonctions.be) : chaque id de `ids` recoit l'ordre `type` apres `delai` secondes. `type` et `delai` sont requis des que `ids` n'est pas vide.",
-                        "properties": {
-                          "modules": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "ids": {
-                            "type": "array",
-                            "items": {
-                              "type": "integer"
-                            }
-                          },
-                          "type": {
+                  }
+                },
+                "required": [
+                  "affichageWebSensor"
+                ],
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "activation": {
+                      "type": "string",
+                      "description": "ON ou OFF : active ou non ce bloc.",
+                      "enum": [
+                        "ON",
+                        "OFF"
+                      ]
+                    },
+                    "nom": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer",
+                      "description": "Identifiant ModBus / reseau de la carte."
+                    },
+                    "pin": {
+                      "type": "integer",
+                      "description": "Numero de GPIO (-1 = non affecte)."
+                    },
+                    "type": {
+                      "type": "integer"
+                    },
+                    "virtuel": {
+                      "type": "string",
+                      "enum": [
+                        "ON",
+                        "OFF"
+                      ]
+                    },
+                    "SwitchMode": {
+                      "type": "integer"
+                    },
+                    "value": {
+                      "type": "integer"
+                    },
+                    "relaisLie": {
+                      "type": "object",
+                      "description": "Relais commandes par cet element (globalFonctions.be) : chaque id de `ids` recoit l'ordre `type` apres `delai` secondes. `type` et `delai` sont requis des que `ids` n'est pas vide.",
+                      "properties": {
+                        "modules": {
+                          "type": "array",
+                          "items": {
                             "type": "string"
-                          },
-                          "delai": {
+                          }
+                        },
+                        "ids": {
+                          "type": "array",
+                          "items": {
                             "type": "integer"
+                          }
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "delai": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "ids"
+                      ],
+                      "if": {
+                        "properties": {
+                          "ids": {
+                            "minItems": 1
                           }
                         },
                         "required": [
                           "ids"
-                        ],
-                        "if": {
-                          "properties": {
-                            "ids": {
-                              "minItems": 1
-                            }
-                          },
-                          "required": [
-                            "ids"
-                          ]
-                        },
-                        "then": {
-                          "required": [
-                            "type",
-                            "delai"
-                          ]
-                        }
+                        ]
+                      },
+                      "then": {
+                        "required": [
+                          "type",
+                          "delai"
+                        ]
                       }
                     },
-                    "required": [
-                      "activation",
-                      "nom",
-                      "id",
-                      "pin",
-                      "type",
-                      "virtuel",
-                      "SwitchMode",
-                      "value",
-                      "relaisLie"
-                    ],
-                    "additionalProperties": true
-                  }
-                },
-                "required": [
-                  "affichageWebSensor",
-                  "compteur1"
-                ],
-                "additionalProperties": true
+                    "k": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "activation",
+                    "nom",
+                    "id",
+                    "pin",
+                    "type",
+                    "virtuel",
+                    "SwitchMode",
+                    "value",
+                    "relaisLie"
+                  ],
+                  "additionalProperties": true
+                }
               },
               "thermometres": {
                 "type": "object",
@@ -1798,6 +1840,74 @@
                       "limites",
                       "relaisLie"
                     ],
+                    "additionalProperties": true
+                  }
+                },
+                "additionalProperties": true
+              },
+              "debitmetres": {
+                "type": "object",
+                "properties": {
+                  "debitmetre1": {
+                    "type": "object",
+                    "properties": {
+                      "activation": {
+                        "type": "string",
+                        "description": "ON ou OFF : active ou non ce bloc.",
+                        "enum": [
+                          "ON",
+                          "OFF"
+                        ]
+                      },
+                      "nom": {
+                        "type": "string"
+                      },
+                      "k": {
+                        "type": "number"
+                      },
+                      "pin": {
+                        "type": "integer",
+                        "description": "Numero de GPIO (-1 = non affecte)."
+                      },
+                      "id": {
+                        "type": "integer",
+                        "description": "Identifiant ModBus / reseau de la carte."
+                      },
+                      "type": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": true
+                  },
+                  "debitmetre2": {
+                    "type": "object",
+                    "properties": {
+                      "activation": {
+                        "type": "string",
+                        "description": "ON ou OFF : active ou non ce bloc.",
+                        "enum": [
+                          "ON",
+                          "OFF"
+                        ]
+                      },
+                      "nom": {
+                        "type": "string"
+                      },
+                      "k": {
+                        "type": "number"
+                      },
+                      "pin": {
+                        "type": "integer",
+                        "description": "Numero de GPIO (-1 = non affecte)."
+                      },
+                      "id": {
+                        "type": "integer",
+                        "description": "Identifiant ModBus / reseau de la carte."
+                      },
+                      "type": {
+                        "type": "integer"
+                      }
+                    },
                     "additionalProperties": true
                   }
                 },
@@ -2167,44 +2277,41 @@
               "properties": {
                 "pinsEcrans": {
                   "type": "object",
-                  "patternProperties": {
-                    "^pinsEcran\\d*$": {
-                      "type": "object",
-                      "properties": {
-                        "activation": {
-                          "type": "string",
-                          "description": "ON ou OFF : active ou non ce bloc.",
-                          "enum": [
-                            "ON",
-                            "OFF"
-                          ]
-                        },
-                        "nom": {
-                          "type": "string"
-                        },
-                        "pin": {
-                          "type": "integer",
-                          "description": "Numero de GPIO (-1 = non affecte)."
-                        },
-                        "id": {
-                          "type": "integer",
-                          "description": "Identifiant ModBus / reseau de la carte."
-                        },
-                        "type": {
-                          "type": "integer"
-                        }
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "activation": {
+                        "type": "string",
+                        "description": "ON ou OFF : active ou non ce bloc.",
+                        "enum": [
+                          "ON",
+                          "OFF"
+                        ]
                       },
-                      "required": [
-                        "activation",
-                        "nom",
-                        "pin",
-                        "id",
-                        "type"
-                      ],
-                      "additionalProperties": true
-                    }
-                  },
-                  "additionalProperties": true
+                      "nom": {
+                        "type": "string"
+                      },
+                      "pin": {
+                        "type": "integer",
+                        "description": "Numero de GPIO (-1 = non affecte)."
+                      },
+                      "id": {
+                        "type": "integer",
+                        "description": "Identifiant ModBus / reseau de la carte."
+                      },
+                      "type": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "activation",
+                      "nom",
+                      "pin",
+                      "id",
+                      "type"
+                    ],
+                    "additionalProperties": true
+                  }
                 },
                 "relais": {
                   "type": "object",
@@ -2547,6 +2654,12 @@
                       "type": "integer"
                     }
                   },
+                  "required": [
+                    "activation",
+                    "name",
+                    "adresseI2C",
+                    "I2CDriver"
+                  ],
                   "additionalProperties": true
                 }
               },
@@ -3150,119 +3263,41 @@
               "properties": {
                 "pinsEthernets": {
                   "type": "object",
-                  "properties": {
-                    "pinsEthernet1": {
-                      "type": "object",
-                      "properties": {
-                        "activation": {
-                          "type": "string",
-                          "description": "ON ou OFF : active ou non ce bloc.",
-                          "enum": [
-                            "ON",
-                            "OFF"
-                          ]
-                        },
-                        "nom": {
-                          "type": "string"
-                        },
-                        "pin": {
-                          "type": "integer",
-                          "description": "Numero de GPIO (-1 = non affecte)."
-                        },
-                        "id": {
-                          "type": "integer",
-                          "description": "Identifiant ModBus / reseau de la carte."
-                        },
-                        "type": {
-                          "type": "integer"
-                        }
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "activation": {
+                        "type": "string",
+                        "description": "ON ou OFF : active ou non ce bloc.",
+                        "enum": [
+                          "ON",
+                          "OFF"
+                        ]
                       },
-                      "required": [
-                        "activation",
-                        "nom",
-                        "pin",
-                        "id",
-                        "type"
-                      ],
-                      "additionalProperties": true
+                      "nom": {
+                        "type": "string"
+                      },
+                      "pin": {
+                        "type": "integer",
+                        "description": "Numero de GPIO (-1 = non affecte)."
+                      },
+                      "id": {
+                        "type": "integer",
+                        "description": "Identifiant ModBus / reseau de la carte."
+                      },
+                      "type": {
+                        "type": "integer"
+                      }
                     },
-                    "pinsEthernet2": {
-                      "type": "object",
-                      "properties": {
-                        "activation": {
-                          "type": "string",
-                          "description": "ON ou OFF : active ou non ce bloc.",
-                          "enum": [
-                            "ON",
-                            "OFF"
-                          ]
-                        },
-                        "nom": {
-                          "type": "string"
-                        },
-                        "pin": {
-                          "type": "integer",
-                          "description": "Numero de GPIO (-1 = non affecte)."
-                        },
-                        "id": {
-                          "type": "integer",
-                          "description": "Identifiant ModBus / reseau de la carte."
-                        },
-                        "type": {
-                          "type": "integer"
-                        }
-                      },
-                      "required": [
-                        "activation",
-                        "nom",
-                        "pin",
-                        "id",
-                        "type"
-                      ],
-                      "additionalProperties": true
-                    },
-                    "pinsEthernet3": {
-                      "type": "object",
-                      "properties": {
-                        "activation": {
-                          "type": "string",
-                          "description": "ON ou OFF : active ou non ce bloc.",
-                          "enum": [
-                            "ON",
-                            "OFF"
-                          ]
-                        },
-                        "nom": {
-                          "type": "string"
-                        },
-                        "pin": {
-                          "type": "integer",
-                          "description": "Numero de GPIO (-1 = non affecte)."
-                        },
-                        "id": {
-                          "type": "integer",
-                          "description": "Identifiant ModBus / reseau de la carte."
-                        },
-                        "type": {
-                          "type": "integer"
-                        }
-                      },
-                      "required": [
-                        "activation",
-                        "nom",
-                        "pin",
-                        "id",
-                        "type"
-                      ],
-                      "additionalProperties": true
-                    }
-                  },
-                  "required": [
-                    "pinsEthernet1",
-                    "pinsEthernet2",
-                    "pinsEthernet3"
-                  ],
-                  "additionalProperties": true
+                    "required": [
+                      "activation",
+                      "nom",
+                      "pin",
+                      "id",
+                      "type"
+                    ],
+                    "additionalProperties": true
+                  }
                 }
               },
               "additionalProperties": true
