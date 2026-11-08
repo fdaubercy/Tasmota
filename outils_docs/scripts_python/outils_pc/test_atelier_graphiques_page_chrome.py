@@ -163,7 +163,7 @@ def monte_depot(t):
                 taw.tage.fbe.dossier_carte(P4) + "/autoexec.be", taw.tage.fbe.dossier_carte(P4) + "/_persist.json"):
         (depot / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(taw.DEPOT / rel, depot / rel)
-    for rel in taw.SD:
+    for rel in taw.SD + ("js/energie.js", "css/energie.css"):      # la page charge aussi le rendu de la page Energie (A5)
         (depot / "data/sd" / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(taw.DEPOT / "data/sd" / rel, depot / "data/sd" / rel)
     return depot

@@ -6,6 +6,7 @@ de maquettes_atelier.html. L'apercu charge le VRAI moteur de la carte (data/sd, 
 liquidfill sont poses avant lui, il ne charge donc rien lui-meme.
 """
 
+from atelier_graphiques_page_energie import JS_ENERGIE
 from atelier_graphiques_page_js import JS
 
 CSS = """
@@ -91,6 +92,15 @@ details{font-size:12px;color:var(--doux);margin-top:8px}
 .bascules button{margin-left:2px}
 .bascules button.actif{background:var(--bleu-fond);color:var(--bleu)}
 .actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:8px;flex-wrap:wrap}
+/* Page Energie du differentiel (atelier_graphiques_page_energie.py) : les reglages des pages de graphiques s'effacent */
+.seul-energie{display:none} body.energie .seul-energie{display:block} body.energie .hors-energie{display:none!important}
+.en-liste{list-style:none;margin:6px 0;padding:0;font-size:13px} .en-liste li{display:flex;gap:4px;align-items:center;padding:2px 0}
+.en-liste .lib{flex:1;min-width:0;cursor:pointer;overflow-wrap:anywhere} .en-liste li.sel .lib{font-weight:600;color:var(--bleu)}
+.en-forme{margin-top:8px;padding-top:6px;border-top:1px solid var(--bord)}
+/* Grille de l'apercu Energie : celle de #e_grille sur la carte (energie.css), sous un autre id pour que energie.js ne se lance pas seul */
+#a_grille{display:grid;grid-template-columns:1fr 1fr;gap:8px} .cadre.telephone #a_grille{grid-template-columns:1fr}
+@media (max-width:900px){.colonnes{grid-template-columns:minmax(0,1fr)} .cadre.telephone{width:auto;max-width:380px} .tete-apercu{flex-wrap:wrap}
+  #a_grille{grid-template-columns:1fr}}
 """
 
 HTML = """<main>
@@ -105,10 +115,11 @@ HTML = """<main>
 <div class="carte">
   <h2>Carte et données</h2>
   <select id="env" aria-label="Carte"></select>
-  <h3>Je veux voir</h3>
-  <select id="intention" aria-label="Intention"></select>
-  <h3>Séries</h3>
-  <div class="arbre" id="arbre"></div>
+  <h3 class="hors-energie">Je veux voir</h3>
+  <select id="intention" class="hors-energie" aria-label="Intention"></select>
+  <h3 class="hors-energie">Séries</h3>
+  <div class="arbre hors-energie" id="arbre"></div>
+  <div class="petit doux seul-energie" id="en-gauche">Page /energie du différentiel : les sources sont celles du bloc ENERGY de la carte (liste par défaut si elle ne répond pas).</div>
   <div id="form-calc" class="cache">
     <div class="ligne"><span class="etiq">Nom</span><input type="text" id="calc-nom" placeholder="cuve.manque"></div>
     <div class="ligne"><span class="etiq">Formule</span><input type="text" id="calc-formule" placeholder="6732 - sensorsCuve.niveauCuve.volume"></div>
@@ -119,15 +130,15 @@ HTML = """<main>
 </div>
 <div>
   <div class="carte">
-    <div class="ligne" style="margin:0 0 6px"><h2 style="margin:0" id="titre-apercu">Aperçu</h2>
+    <div class="ligne tete-apercu" style="margin:0 0 6px"><h2 style="margin:0" id="titre-apercu">Aperçu</h2>
       <span class="bascules" style="margin-left:auto">
-        <button class="pastille" data-mode="graphique">graphique</button><button class="pastille" data-mode="page">page</button>
+        <button class="pastille hors-energie" data-mode="graphique">graphique</button><button class="pastille hors-energie" data-mode="page">page</button>
         <button class="pastille" data-vue="pc">PC</button><button class="pastille" data-vue="telephone">téléphone</button>
         <button class="pastille" id="sombre">thème sombre</button></span></div>
     <div id="cadre" class="cadre"><div class="tete"><div id="tete-carte"></div><h4 id="tete-titre"></h4></div>
       <div id="apercu"></div><div class="menu"><span>Menu principal</span></div></div>
   </div>
-  <div class="carte" style="margin-top:10px">
+  <div class="carte hors-energie" style="margin-top:10px">
     <h2>Styles proposés <span class="doux petit" id="resume-styles"></span></h2>
     <div class="vignettes" id="vignettes"></div>
     <details id="ecartes"><summary>Styles écartés</summary><div id="liste-ecartes"></div></details>
@@ -135,6 +146,7 @@ HTML = """<main>
 </div>
 <div class="carte">
   <h2>Réglages</h2>
+  <div class="hors-energie">
   <div class="ligne"><span class="etiq">Titre</span><input type="text" id="r-titre"></div>
   <div class="ligne"><span class="etiq">Bornes</span><input type="number" id="r-min" placeholder="min"> à <input type="number" id="r-max" placeholder="max"></div>
   <h3>Séries</h3>
@@ -155,7 +167,10 @@ HTML = """<main>
   <div class="ligne"><span class="etiq">Hauteur</span><select id="r-hauteur"><option value="">par défaut (260 px)</option>
     <option value="180">180 px</option><option value="240">240 px</option><option value="300">300 px</option>
     <option value="400">400 px</option><option value="500">500 px</option></select></div>
+  </div>
   <div class="ligne"><span class="etiq">Page</span><select id="r-page"></select></div>
+  <div id="energie-ed"></div>
+  <div class="hors-energie">
   <div class="ligne champ-page"><span class="etiq">Adresse</span><input type="text" id="r-page-id" title="/&lt;adresse&gt; sur la carte : a-z, 0-9, tirets"></div>
   <div class="ligne champ-page"><span class="etiq">Titre page</span><input type="text" id="r-page-titre"></div>
   <div class="ligne champ-page"><span class="etiq">Accès</span><select id="r-acces"><option value="bouton">Bouton sur l'accueil</option>
@@ -166,6 +181,7 @@ HTML = """<main>
   <div class="ligne" style="flex-wrap:wrap;margin-top:10px"><button class="btn mini" id="ajout-graphique">+ Graphique</button>
     <button class="btn mini" id="suppr-graphique">Retirer le graphique</button>
     <button class="btn mini" id="suppr-page">Retirer la page</button></div>
+  </div>
   <div id="alertes"></div>
   <div id="motifs"></div>
 </div>
@@ -194,8 +210,8 @@ THEME_INTERRUPTEUR = ("<script>(function () { var c = document.getElementById('t
                       " try { localStorage.setItem('atelier-graphiques-theme', t); } catch (e) {} }; })();</script>")
 
 MOTEUR = "".join(f'<script src="/moteur/{nom}"></script>' for nom in
-                 ("echarts.min.js", "echarts-liquidfill.min.js", "pages_graphiques_formule.js", "pages_graphiques.js"))
+                 ("echarts.min.js", "echarts-liquidfill.min.js", "pages_graphiques_formule.js", "pages_graphiques.js", "energie.js"))
 
 PAGE = ("<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"utf-8\"><title>Atelier des graphiques</title><link rel=\"icon\" href=\"data:,\">"
-        + THEME_TETE + "<link rel=\"stylesheet\" href=\"/moteur/pages_graphiques.css\"><style>" + CSS + "</style>" + MOTEUR
-        + "</head><body>" + HTML + THEME_INTERRUPTEUR + "<script>" + JS + "</script></body></html>")
+        + THEME_TETE + "<link rel=\"stylesheet\" href=\"/moteur/pages_graphiques.css\"><link rel=\"stylesheet\" href=\"/moteur/energie.css\"><style>" + CSS + "</style>" + MOTEUR
+        + "</head><body>" + HTML + THEME_INTERRUPTEUR + "<script>" + JS + JS_ENERGIE + "</script></body></html>")

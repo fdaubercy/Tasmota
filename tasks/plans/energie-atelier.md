@@ -90,15 +90,15 @@ sonde Chrome pendant un build (garde bloquante dans la commande, leçon du 2026-
 - [x] Commit `feat(atelier): destination Energie du differentiel, cote serveur` — preuve : commit ec9d49c54 feat(atelier): destination Energie du differentiel, cote serveur ; tour 1 : 404/413 lus sur HTTPError et route /energie/<env> d'apercu, 8 bancs de l'atelier verts, 7 temoins rouges (d18c1be6c) ; relecture : HTML d'ancien firmware simule, mois ASCII (590e4d01e, 88 verifications)
 
 ## A5 — Atelier, page : menu « Énergie (/energie) » (`atelier_graphiques_page_energie.py`)
-- [ ] Sonde Chrome rouge `test_atelier_energie_page_chrome.py` (atelier sur dépôt copié, carte simulée) : différentiel
+- [x] — preuve : `test_atelier_energie_page_chrome.py` vue rouge d'abord (mutant `--mutant absent` : module JS non chargé, 5 KO sur le menu, les réglages masqués, le départ, l'aperçu), puis verte (edition, ecriture, firmware, difference, mobile, sombre : tous OK, témoin JS détecté) ; mutants `archive` et `mobile` rouges. Sonde Chrome rouge `test_atelier_energie_page_chrome.py` (atelier sur dépôt copié, carte simulée) : différentiel
   choisi → menu « Énergie (/energie) » seul ; description de départ = `DEFAUT` (8 éléments dans la grille) ; ajout d'un
   demi-cercle sur `Power`, couleur changée, hauteur « grande », déplacé en tête ; graphique « jour » mois précédent puis
   mois fixe sans archive → avertissement ; aperçu tracé par `energie.js` (SVG présent) ; « Écrire » puis « Téléverser »
   (liste des 4 fichiers) ; carte à l'ancien firmware → pas de bouton, message ; description de la carte ≠ dépôt → choix
   « carte / dépôt » avant toute modification (spec §4.3) ; 390 px sans défilement ; aucune erreur JS
-- [ ] Module JS écrit (ajouté au script de la page comme `atelier_graphiques_page_compo.py`), styles restreints, réglage
+- [x] — preuve : `atelier_graphiques_page_energie.py` (299 lignes, ajouté par `atelier_graphiques_page.py`, `atelier_graphiques_page_js.py` inchangé à 473) ; sonde verte, `test_atelier_graphiques_page_chrome.py` vert (voir rapport). Module JS écrit (ajouté au script de la page comme `atelier_graphiques_page_compo.py`), styles restreints, réglage
   hauteur, choix du mois fixe/relatif ; sonde verte ; `test_atelier_graphiques_page_chrome.py` toujours vert
-- [ ] Relecture `relecteur-pages-web` ; commit `feat(atelier): page Energie du differentiel dans l'atelier`
+- [ ] Relecture `relecteur-pages-web` (reste à faire, lancée par l'orchestrateur après le commit) ; commit `feat(atelier): page Energie du differentiel dans l'atelier` (fait, voir `git log`)
 
 ## A6 — Documentation
 - [ ] `outils_docs/README.md` (atelier : destination Énergie ; page /energie : description et repli), carte des
