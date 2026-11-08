@@ -1,11 +1,11 @@
 // Banc node de la validation de la page /energie (plan energie-atelier A3).
 //
-// UTILISATION (depuis la racine du depot)
-//     node outils_docs/scripts_python/outils_pc/test_energie_rendu.mjs [--js FICHIER]
+// UTILISATION (depuis la racine du depot ; node ou bun, PYTHON = l'interpreteur Python si `python` n'est pas dans le PATH)
+//     node outils_docs/scripts_python/outils_pc/test_energie_rendu.mjs [--js FICHIER]      (ou : bun <meme chemin>)
 // Code de sortie 0 = vert. --js : charge energie.js depuis FICHIER (temoin sur une copie), sinon data/sd/js/energie.js.
 //
 // Verifie : Energie.valide rend, sur CHAQUE cas de cas_energie.json, le meme verdict que le validateur Python (liste vide si
-// le motif est vide, sinon non vide et contenant le motif) ; Energie.DEFAUT = la description « defaut » du fichier de cas.
+// le motif est vide, sinon non vide et contenant le motif) ; Energie.DEFAUT = le DEFAUT de atelier_energie_description.py (exporte par Python) ; bornes 4096/4097 octets.
 // Ne teste PAS trace() : pas de DOM ici, elle est jugee par la sonde Chrome (berry/banc_energie.py).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -34,10 +34,15 @@ if (E && E.valide) {
     const ok = c.motif === '' ? m.length === 0 : m.length > 0 && m.some(x => x.includes(c.motif));
     verifie(ok, 'cas « ' + c.nom + ' »', {motif: c.motif, obtenu: m});
   }
-  const defaut = CAS.find(c => c.nom === 'defaut').description;
-  verifie(deepEgal(E.DEFAUT, defaut), 'DEFAUT = cas « defaut »');
   verifie(E.valide(E.DEFAUT).length === 0, 'DEFAUT est valide');
 
+  const pyDefaut = spawnSync(process.env.PYTHON || 'python', ['-c', `import json,sys
+sys.path.insert(0, 'outils_docs/scripts_python/outils_pc')
+from atelier_energie_description import DEFAUT
+print(json.dumps(DEFAUT, ensure_ascii=False))`], {encoding: 'utf8', env: {...process.env, PYTHONIOENCODING: 'utf-8'}});
+  let defautPy = null;
+  try { defautPy = JSON.parse(pyDefaut.stdout); } catch (e) { /* signale ci-dessous */ }
+  verifie(defautPy !== null && deepEgal(E.DEFAUT, defautPy), 'DEFAUT = DEFAUT de atelier_energie_description.py', pyDefaut.stderr);
   // Borne des octets : 4 096 acceptes, 4 097 refuses, comptes en octets UTF-8 (titres accentues = 2 octets le caractere), verdict de Python en oracle.
   const octets = d => new TextEncoder().encode(JSON.stringify(d)).length;
   const fabrique = cible => {      // 16 jauges aux titres de 40 caracteres, dont n accentues (2 octets) : chaque octet en plus est un accent de plus

@@ -13,7 +13,7 @@
 		return o;
 	}
 	function large(t, ti, s, x) { x.largeur = 'pleine'; x.hauteur = 'moyenne'; return el(t, ti, s, x); }
-	// = DEFAUT de atelier_energie_description.py (compare par test_energie_rendu.mjs)
+	// = DEFAUT de atelier_energie_description.py (banc node)
 	var DEFAUT = {version: 1, elements: [
 		el('valeur', 'Puissance', {direct: 'Power'}, {unite: 'W'}),
 		el('valeur', 'Courant', {direct: 'Current'}, {unite: 'A'}),
@@ -88,7 +88,7 @@
 	}
 
 	function nombre(v, d) { return v.toFixed(d).replace('.', ','); }
-	// 2 Wh par jour (releve du 2026-11-02) : d'ou les Wh et les euros fins
+	// 2 Wh par jour (2026-11-02) : d'ou les Wh et les euros fins
 	function energie(wh) { return wh < 1000 ? wh + ' Wh' : nombre(wh / 1000, 2) + ' kWh'; }
 	function euros(e) { return e > 0 ? nombre(e / 10000, e < 100 ? 4 : 2) + ' €' : '—'; }
 	function echappe(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/["']/g, '&quot;'); }
@@ -224,7 +224,7 @@
 		desc.elements.forEach(function (e, i) { if (e.source.direct) tuile(z(zone, 'e_el' + i), i, e, don, dir); });
 	}
 
-	// don.archives[AAAA-MM] = {d, de} ou code HTTP d'echec
+	// don.archives[AAAA-MM] = {d, de} ou code HTTP
 	function archives(base, desc, don) {
 		var e = don.etat, mois = {};
 		don.archives = {};
@@ -244,7 +244,7 @@
 	function note(t) { $('e_note').textContent = t; }
 	function ign(m) { note('Description ignorée : ' + m + '.'); return DEFAUT; }
 
-	// Un element mal forme est ignore seul ; une erreur d'ensemble ecarte tout (DEFAUT et la raison)
+	// Element mal forme : ignore seul ; erreur d'ensemble : DEFAUT
 	function lisDescription() {
 		return fetch(url + '?f=description').then(function (r) {
 			if (r.status == 404) { note('Description absente : disposition par défaut.'); return DEFAUT; }
@@ -267,7 +267,6 @@
 		}).catch(function () { return ign('lecture impossible'); });
 	}
 
-	// Le prix se regle dans Configuration (energieTarifs.*)
 	function prix(liste, jour) {
 		var actuel = null, r = $('e_rappel');
 		liste.forEach(function (p) { if (p[0] <= jour) actuel = p; });
@@ -276,7 +275,7 @@
 		if (!r.hidden) r.textContent = actuel ? 'Le prix a plus de 6 mois : vérifiez votre tarif.' : 'Aucun prix saisi : les coûts ne sont pas calculés.';
 	}
 
-	// Heure en cours (pas encore en flash) ajoutee, comme l'accueil
+	// Heure en cours (pas en flash) ajoutee, comme l'accueil
 	function enCours(e, wh, liste) {
 		var delta = wh === null ? 0 : wh - e.w;
 		if (!(delta > 0) || e.a.length == 0) return;
@@ -288,22 +287,28 @@
 		a[1] += delta; a[2] += cout;
 	}
 
-	function donnees() {
+	function lisDonnees() {
 		return fetch(url + '?f=donnees').then(function (r) { if (!r.ok) throw r.status; return r.json(); }).then(function (o) {
 			prix(o.prix, o.aujourdhui);
 			don = o;
-			if (!o.etat) { $('e_msg').textContent = "Aucun relevé pour l'instant : le premier est noté dans les 5 minutes suivant la mise à l'heure."; return; }
-			$('e_msg').textContent = '';
-			enCours(o.etat, o.wCourant, o.prix);
-			return archives(url, desc, o);
-		}).catch(function (x) { $('e_msg').textContent = 'Lecture des relevés impossible (' + x + ').'; }).then(function () { trace(zone, desc, don, dir); });
+			$('e_msg').textContent = o.etat ? '' : "Aucun relevé pour l'instant : le premier est noté dans les 5 minutes suivant la mise à l'heure.";
+			if (o.etat) enCours(o.etat, o.wCourant, o.prix);
+		}).catch(function (x) { $('e_msg').textContent = 'Lecture des relevés impossible (' + x + ').'; });
 	}
 
 	function lisDirect() {
-		return fetch(url + '?f=direct').then(function (r) { return r.json(); }).then(function (o) { dir = o; direct(zone, desc, don, dir); }).catch(function () {});
+		return fetch(url + '?f=direct').then(function (r) { return r.json(); }).then(function (o) { dir = o; }).catch(function () {});
 	}
 
-	lisDescription().then(function (d) { desc = d; trace(zone, desc, don, dir); return donnees(); }).then(lisDirect);
-	setInterval(lisDirect, 10000);
-	setInterval(donnees, 300000);
+	// Requetes en parallele, mois, UN trace ; data-pret a la fin, meme en echec
+	function rafraichit(premier) {
+		return Promise.all([premier ? lisDescription() : desc, lisDonnees(), lisDirect()]).then(function (r) {
+			desc = r[0];
+			return archives(url, desc, don);
+		}).then(function () { trace(zone, desc, don, dir); }).catch(function () {}).then(function () { document.body.dataset.pret = 1; });
+	}
+
+	rafraichit(true);
+	setInterval(function () { lisDirect().then(function () { direct(zone, desc, don, dir); }); }, 10000);
+	setInterval(rafraichit, 300000);
 })();

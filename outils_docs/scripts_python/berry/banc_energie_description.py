@@ -45,14 +45,20 @@ def note(dom):
     return B.texte(dom, "e_note")
 
 
-def largeur_390(nav, tmp, donnees, description):
-    """Page dans un cadre de 390 px (Chrome sans fenetre ne descend pas sous 500 px) : (defilement, largeur du cadre, colonnes)."""
-    srv, _ = B.serveur(B.page_html(), donnees, DIRECT, description=description)
-    r = subprocess.run([nav, "--headless=new", "--disable-gpu", "--no-first-run", "--lang=fr-FR", f"--user-data-dir={tmp / 'profil_390'}",
+def mesure_390(nav, tmp, nom, donnees, description, css=None):
+    """Page au corps NON contraint dans un cadre de 390 px (Chrome sans fenetre ne descend pas sous 500 px), mesuree quand data-pret est pose :
+    (scrollWidth, largeur du cadre, colonnes) ; None si la mesure n'a pas eu lieu."""
+    srv, _ = B.serveur(B.page_html(css_modifie=css, corps="margin:0"), donnees, DIRECT, description=description)
+    r = subprocess.run([nav, "--headless=new", "--disable-gpu", "--no-first-run", "--lang=fr-FR", f"--user-data-dir={tmp / ('profil_' + nom)}",
                         f"--virtual-time-budget={BUDGET_MS}", "--dump-dom", f"http://127.0.0.1:{srv.server_address[1]}/capture?w=390"], capture_output=True, timeout=DELAI_S)
     srv.shutdown()
     m = re.search(r'data-mesure="(\d+)/(\d+)/(\d+)"', r.stdout.decode("utf-8", "replace"))
     return tuple(int(x) for x in m.groups()) if m else None
+
+
+DESC_390 = desc(el("valeur", "M" * 40, {"direct": "Power"}, unite="W"), el("cadran", "Facteur", {"direct": "Factor"}, min=0, max=1),
+                el("barres", "Heures", {"flash": "heure", "grandeur": "kWh"}, largeur="pleine", hauteur="moyenne"),
+                el("courbe", "Puissance", {"flash": "minutes"}, largeur="pleine", hauteur="grande"))
 
 
 def partie(nav, tmp):
@@ -126,12 +132,11 @@ def partie(nav, tmp):
     ok &= B.juge("Today present (3 decimales)", "1,234", B.texte(dom, "e_v2"))
 
     print("--- Telephone 390 px")
-    longue = el("valeur", "M" * 40, {"direct": "Power"}, unite="W")
-    mesure = largeur_390(nav, tmp, d, desc(longue, el("cadran", "Facteur", {"direct": "Factor"}, min=0, max=1),
-                                           el("barres", "Heures", {"flash": "heure", "grandeur": "kWh"}, largeur="pleine", hauteur="moyenne")))
-    ok &= B.juge("fenetre de 390 px", 390, mesure and mesure[1])
+    mesure = mesure_390(nav, tmp, "390", d, DESC_390)
+    ok &= B.juge("mesure faite apres data-pret", True, mesure is not None)
+    ok &= B.juge("cadre de 390 px", 390, mesure and mesure[1])
     ok &= B.juge("une colonne", 1, mesure and mesure[2])
-    ok &= B.juge("aucun defilement horizontal", True, bool(mesure) and mesure[0] <= mesure[1])
+    ok &= B.juge("aucun defilement horizontal (scrollWidth <= largeur)", True, bool(mesure) and mesure[0] <= mesure[1])
     return ok
 
 
@@ -180,14 +185,16 @@ def temoins(nav, tmp):
         print(f"  {'OK   ' if rouge else 'ECHEC'} {nom}")
         ok &= rouge
     css = (B.RACINE / "data/sd/css/energie.css").read_text(encoding="utf-8")
-    assert "max-width:599px" in css
-    srv, _ = B.serveur(B.page_html(css_modifie=css.replace("max-width:599px", "max-width:1px")), d, DIRECT, description=desc(el("valeur", "P", {"direct": "Power"})))
-    r = subprocess.run([nav, "--headless=new", "--disable-gpu", "--no-first-run", "--lang=fr-FR", f"--user-data-dir={tmp / 'profil_t390'}",
-                        f"--virtual-time-budget={BUDGET_MS}", "--dump-dom", f"http://127.0.0.1:{srv.server_address[1]}/capture?w=390"], capture_output=True, timeout=DELAI_S)
-    srv.shutdown()
-    m = re.search(r'data-mesure="\d+/\d+/(\d+)"', r.stdout.decode("utf-8", "replace"))
-    rouge = bool(m) and m.group(1) != "1"
-    print(f"  {'OK   ' if rouge else 'ECHEC'} une colonne sous 600 px retiree")
+    rouge = True
+    for nom, avant, apres, juge in [
+            ("une colonne sous 600 px retiree", "max-width:599px", "max-width:1px", lambda m: m[2] == 1),
+            ("largeur fixe de 500 px sur les elements", ".e_el{min-width:0;overflow-wrap:anywhere}", ".e_el{width:500px}", lambda m: m[0] <= m[1]),
+            ("min-width:0 et retour a la ligne retires", ".e_el{min-width:0;overflow-wrap:anywhere}", ".e_el{}", lambda m: m[0] <= m[1])]:
+        assert avant in css, nom
+        m = mesure_390(nav, tmp, "t390", d, DESC_390, css=css.replace(avant, apres))
+        r = m is not None and not juge(m)
+        print(f"  {'OK   ' if r else 'ECHEC'} {nom} : {m}")
+        rouge &= r
     return ok and rouge
 
 

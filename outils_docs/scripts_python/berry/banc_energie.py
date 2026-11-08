@@ -78,10 +78,10 @@ def partie_berry(tmp):
     return ok, json.loads((d / "donnees.json").read_text(encoding="utf-8"))
 
 
-def page_html(js_modifie=None, nom="energie", css_modifie=None):
+def page_html(js_modifie=None, nom="energie", css_modifie=None, corps="width:320px"):
     sd = RACINE / "data/sd"
     js = js_modifie if js_modifie is not None else (sd / f"js/{nom}.js").read_text(encoding="utf-8")
-    return ("<!doctype html><meta charset='utf-8'><body style='width:320px'><style>" + (css_modifie if css_modifie is not None else (sd / "css/energie.css").read_text(encoding="utf-8"))
+    return ("<!doctype html><meta charset='utf-8'><body style='" + corps + "'><style>" + (css_modifie if css_modifie is not None else (sd / "css/energie.css").read_text(encoding="utf-8"))
             + "</style>" + (sd / f"html/{nom}.html").read_text(encoding="utf-8") + "<script>" + js + "</script>")
 
 
@@ -106,8 +106,8 @@ def serveur(page, donnees, direct, description=None, mois=None):
             q = dict(parse_qsl(u.query))
             if u.path == "/capture":
                 return self.envoie(200, "text/html; charset=utf-8", "<!doctype html><body style='margin:0'><iframe id='f' src='/energie' width='" + q.get("w", "340") + "' height='1300' style='border:0'></iframe>"
-                                  "<script>setTimeout(function(){var f=document.getElementById('f'),d=f.contentDocument;document.body.setAttribute('data-mesure',"
-                                  "d.documentElement.scrollWidth+'/'+f.contentWindow.innerWidth+'/'+getComputedStyle(d.getElementById('e_grille')).gridTemplateColumns.split(' ').length)},1500)</script>")
+                                  "<script>var m=setInterval(function(){var f=document.getElementById('f'),d=f.contentDocument;if(d&&d.body&&d.body.dataset.pret){clearInterval(m);document.body.setAttribute('data-mesure',"
+                                  "d.documentElement.scrollWidth+'/'+f.contentWindow.innerWidth+'/'+getComputedStyle(d.getElementById('e_grille')).gridTemplateColumns.split(' ').length)}},100)</script>")
             if u.path != "/energie":
                 return self.envoie(404, "text/plain", "?")
             if q.get("f") == "donnees":
