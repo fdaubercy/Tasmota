@@ -312,7 +312,13 @@ boolean FtpServer::processCommand () {
       Serial.println (F("-> client disconnected from dataserver"));
       #endif
     }
-  	dataIp = WiFi.localIP ();	  
+#ifdef ESP32
+    // IP of the control connection: also right over Ethernet, where WiFi.localIP() is 0.0.0.0
+    dataIp = client.localIP ();
+    if (dataIp.type () != IPv4) { dataIp = WiFi.localIP (); }   // PASV only carries IPv4
+#else
+  	dataIp = WiFi.localIP ();
+#endif
   	dataPort = FTP_DATA_PORT_PASV;
     #ifdef FTP_DEBUG
   	Serial.println (F("-> connection management set to passive"));

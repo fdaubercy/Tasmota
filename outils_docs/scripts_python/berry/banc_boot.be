@@ -728,5 +728,56 @@ if CAS >= 6
     end
 end
 
+# Repli automatique sur le Wi-Fi si l'Ethernet tombe (plan voie-reseau-ethernet, A5). Passe par every_second.
+if CAS == 6 || CAS == 7
+    var cgR = global.controleGeneral
+    var srvR = global.serveur
+    var regleEthR = tasmota.regle("controleGeneral_Eth")
+    var reinit = def ()
+        cgR.ethLien = nil  cgR.debutSansEth = nil  cgR.repliWifi = false  cgR.debutLienEth = nil
+        cgR.debutSansWifi = nil  cgR.connected = false  cgR.mqttConnected = false  tasmota.wifiUp = false  tasmota.cmds = []
+    end
+    var avance = def (s) for k: 1 .. s    tasmota.horloge += 1000    cgR.every_second()    end end
+    var wifi1 = def () return size(tasmota.envoyees("Wifi 1")) end
+    var redemarrages = def () return size(tasmota.envoyees("Restart")) end
+    var lien = def (ok) regleEthR({}, "Eth", {"ETH": {(ok ? "Connected" : "Disconnected"): 1}}) end
+    if CAS == 6
+        srvR["voieReseau"] = "ethernet"
+        reinit()    avance(59)
+        controle("repli : pas de Wi-Fi avant 60 s sans lien Ethernet", wifi1() == 0)
+        avance(2)
+        controle("repli : Wifi 1 apres 60 s sans lien, voieReseau inchangee", wifi1() == 1 && srvR["voieReseau"] == "ethernet")
+        avance(10)
+        controle("repli : Wifi 1 envoye une seule fois", wifi1() == 1 && redemarrages() == 0)
+        tasmota.cmds = []    avance(301)
+        controle("repli sans Wi-Fi non plus : redemarrage par surveilleWifi", redemarrages() >= 1)
+
+        reinit()    avance(61)    tasmota.cmds = []    lien(true)    avance(29)
+        controle("retour : pas de redemarrage avant 30 s de lien stable", redemarrages() == 0)
+        avance(2)
+        controle("retour : Restart 1 apres 30 s de lien stable", tasmota.envoyees("Restart") == ["Restart 1"])
+
+        reinit()    avance(61)    tasmota.cmds = []    lien(true)    avance(10)    lien(false)    avance(25)
+        controle("retour : lien instable, pas de redemarrage", redemarrages() == 0)
+
+        reinit()    lien(true)    avance(100)    lien(false)    avance(30)    lien(true)    avance(100)
+        controle("coupure de 30 s du lien : pas de repli", wifi1() == 0)
+
+        reinit()    lien(true)    avance(100)    lien(false)    avance(61)
+        controle("cable retire apres un lien : repli apres 60 s", wifi1() == 1 && srvR["voieReseau"] == "ethernet")
+
+        reinit()    cgR.mqttConnected = true    avance(120)
+        controle("aucun evenement mais MQTT connecte sans Wi-Fi : lien admis, pas de repli", wifi1() == 0)
+
+        reinit()    srvR["delaiRepliWifi"] = 0    avance(120)
+        controle("delaiRepliWifi 0 : jamais de repli", wifi1() == 0)
+        srvR.remove("delaiRepliWifi")
+    else
+        srvR["voieReseau"] = "wifi"
+        reinit()    tasmota.wifiUp = true    avance(120)
+        controle("voie wifi : jamais de repli", wifi1() == 0)
+    end
+end
+
 print(string.format("CAS_%i: %s", CAS, echecs == 0 ? "OK" : "ECHEC (" + str(echecs) + ")"))
 os.exit(echecs > 250 ? 250 : echecs)

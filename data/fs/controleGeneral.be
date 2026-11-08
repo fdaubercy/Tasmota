@@ -45,6 +45,10 @@ class CONTROLE_GENERAL : Driver
 	var flagTimestampInitialized
 	var relances					# Relances de securite en cours, par relai : {"<module>_<id>": nb}
 	var debutSansWifi				# tasmota.millis() du debut de la coupure Wi-Fi en cours, nil si connecte
+	var ethLien						# lien Ethernet d'apres ETH#Connected/Disconnected (globalFonctions), nil = aucun evenement recu
+	var debutSansEth				# tasmota.millis() du debut de l'absence de lien Ethernet, nil si lien
+	var repliWifi					# vrai apres le repli sur le Wi-Fi (voie Ethernet sans lien), jusqu'au redemarrage
+	var debutLienEth				# pendant le repli : tasmota.millis() du retour du lien, nil si absent
 
 	# Lance par le cron "heureReboot" (diverses.heureReboot, arme a Time#Initialized par globalFonctions)
 	def heureReboot()
@@ -65,7 +69,7 @@ class CONTROLE_GENERAL : Driver
 	def surveilleWifi()
 		var delai = serveur["wifi"].find("timerRebootSansWifi", 0)
 		if (delai == nil || delai <= 0)		return		end
-		if (serveur.find("voieReseau") == "ethernet")		return		end		# Wi-Fi coupe volontairement
+		if (serveur.find("voieReseau") == "ethernet" && !self.repliWifi)		return		end		# Wi-Fi coupe volontairement
 
 		if (self.connected || tasmota.wifi().find("up", false))
 			self.debutSansWifi = nil
@@ -79,6 +83,45 @@ class CONTROLE_GENERAL : Driver
 			logFonctions.log(string.format("CONTROLE_GENERAL_ERREUR: Reboot du module : Wi-Fi coupé depuis %i s !", delai), LOG_LEVEL_ERREUR)
 			self.debutSansWifi = nil
 			tasmota.cmd("Restart 1", boolMute)
+		end
+	end
+
+	# Voie Ethernet : repli sur le Wi-Fi apres serveur.delaiRepliWifi secondes sans lien (defaut 60, 0 = jamais).
+	# Le lien vient des evenements ETH#Connected/Disconnected, PAS de tasmota.eth()["up"] : en IP fixe, il reste
+	# vrai sans cable. Aucun evenement recu (perdu au demarrage) mais MQTT connecte Wi-Fi coupe = le lien existe :
+	# un faux repli mettrait deux interfaces sur la meme IP. 'voieReseau' n'est jamais reecrite, 'Ethernet 0'
+	# jamais envoye (il redemarrerait). Pendant le repli, surveilleWifi redemarre si le Wi-Fi manque aussi ;
+	# au retour du lien stable depuis 30 s, Restart 1 rend la voie Ethernet seule.
+	def surveilleEthernet()
+		if (serveur.find("voieReseau") != "ethernet")		return		end
+		var delai = serveur.find("delaiRepliWifi", 60)
+		if (delai == nil || delai <= 0)		return		end
+
+		if (self.ethLien == nil && self.mqttConnected && !tasmota.wifi().find("up", false))	self.ethLien = true	end
+
+		if self.repliWifi
+			if !self.ethLien
+				self.debutLienEth = nil
+			elif (self.debutLienEth == nil)
+				self.debutLienEth = tasmota.millis()
+			elif (tasmota.millis() - self.debutLienEth >= 30000)
+				logFonctions.log("CONTROLE_GENERAL: Lien Ethernet revenu : redémarrage pour quitter le repli Wi-Fi !", LOG_LEVEL_INFO)
+				self.debutLienEth = nil
+				tasmota.cmd("Restart 1", boolMute)
+			end
+			return
+		end
+
+		if self.ethLien
+			self.debutSansEth = nil
+		elif (self.debutSansEth == nil)
+			self.debutSansEth = tasmota.millis()
+		elif (tasmota.millis() - self.debutSansEth >= delai * 1000)
+			import string				# ici seulement : surveilleEthernet tourne chaque seconde
+			logFonctions.log(string.format("CONTROLE_GENERAL_ERREUR: Pas de lien Ethernet depuis %i s : repli sur le Wi-Fi !", delai), LOG_LEVEL_ERREUR)
+			self.repliWifi = true
+			self.debutSansEth = nil
+			tasmota.cmd("Wifi 1", boolMute)
 		end
 	end
 
@@ -107,6 +150,10 @@ class CONTROLE_GENERAL : Driver
 		self.flagTimestampInitialized = false
 		self.relances = {}
 		self.debutSansWifi = nil
+		self.ethLien = nil
+		self.debutSansEth = nil
+		self.repliWifi = false
+		self.debutLienEth = nil
 
 		# Les sensors sont lus A LA DEMANDE par lectureSensors() (plus a l'init ni chaque seconde)
 		self.sensors = {}
@@ -359,6 +406,7 @@ class CONTROLE_GENERAL : Driver
 		import string
 
 		self.surveilleWifi()
+		self.surveilleEthernet()
 
 		# Cas normal (MQTT connecte) : rien a detecter -> AUCUNE lecture des sensors.
 		# La reference est oubliee pour repartir d'un etat frais a la prochaine coupure

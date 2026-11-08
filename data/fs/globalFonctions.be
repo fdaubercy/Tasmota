@@ -75,7 +75,15 @@ def globalFonctions_changementEtatDemarrage(value, trigger, msg)
 	# Connexion Ethernet : en voie Ethernet, Wifi#Connected ne vient jamais
 	elif (trigger == "Eth")
 		var etatEth = msg.find("ETH")
-		if (isinstance(etatEth, map) && etatEth.find("Connected", 0))	globalFonctions.regleFTP()	end
+		if !isinstance(etatEth, map)	etatEth = {}	end
+		if etatEth.find("Connected", 0)
+			introspect.set(controleGeneral, "ethLien", true)		# lu par controleGeneral.surveilleEthernet (repli Wi-Fi)
+			logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: Lien Ethernet établi !", LOG_LEVEL_INFO)
+			globalFonctions.regleFTP()
+		elif etatEth.find("Disconnected", 0)
+			introspect.set(controleGeneral, "ethLien", false)
+			logFonctions.log("GLOBAL_CHGT_ETAT_DEMARRAGE: Lien Ethernet perdu !", LOG_LEVEL_INFO)
+		end
 	# Init: Se produit une fois après le redémarrage avant que le Wi-Fi et MQTT ne soient initialisés
     # Boot: Se déclenche après la connexion du Wi-Fi et de MQTT (si activé)
     # Save: Avant redemarrage de tasmota
