@@ -49,11 +49,11 @@ sonde Chrome pendant un build (garde bloquante dans la commande, leçon du 2026-
 5. Téléphone 390 px → une colonne, aucun défilement horizontal (A3 et A5).
 
 ## A1 — Schéma et validation de la description (`atelier_energie_description.py`)
-- [ ] Écrire `cas_energie.json` : `DEFAUT` valide ; un cas valide par type et par source (dont `decalage`, `mois` fixe,
+- [x] Écrire `cas_energie.json` — preuve : 80 cas (outils_docs/scripts_python/outils_pc/cas_energie.json), tous verts au banc : `DEFAUT` valide ; un cas valide par type et par source (dont `decalage`, `mois` fixe,
   `nombre`, `total`) ; invalides : version ≠ 1, 17 éléments, plus de 4 096 octets, type inconnu, `direct` hors
   `CHAMPS_DIRECT`, `flash` inconnu, `minutes` avec `grandeur`, `mois` et `decalage` ensemble, `decalage` 24, `nombre` 25,
   couleur `rouge`, titre de 41 caractères, `hauteur` `xl`, cadran sans `min`/`max` ou `min ≥ max`, `total` sur une valeur
-- [ ] Banc rouge `test_atelier_energie_description.py` (module absent), puis module écrit, banc vert (chaque cas : `[]` ou
+- [x] Banc rouge `test_atelier_energie_description.py` — preuve : rouge ModuleNotFoundError, puis 0 echec(s) sur 95 verifications, temoin 16 -> 17 rouge (2 echecs) ; (module absent), puis module écrit, banc vert (chaque cas : `[]` ou
   un motif qui contient `motif`) ; témoin : copie mutée (borne 16 → 17) → rouge
 - [ ] Commit `feat(atelier): schema de la page Energie du differentiel`
 
