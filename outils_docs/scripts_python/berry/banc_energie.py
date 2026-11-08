@@ -151,6 +151,8 @@ def scenario(nav, tmp, nom, page, donnees, direct, **kw):
     srv, posts = serveur(page, donnees, direct, **kw)
     dom = rend(nav, f"http://127.0.0.1:{srv.server_address[1]}/energie", str(tmp / f"profil_{nom}"))
     srv.shutdown()
+    if 'id="e_grille"' in dom and 'data-pret="1"' not in dom:      # delai maximal = budget de temps virtuel de rend() ; au-dela, echec net
+        raise SystemExit(f"ECHEC : scenario « {nom} » : page non prete (data-pret absent du DOM apres le budget)")
     return re.sub(r"<script\b[^>]*>.*?</script>", "", dom, flags=re.S), posts
 
 

@@ -75,7 +75,7 @@ sonde Chrome pendant un build (garde bloquante dans la commande, leçon du 2026-
   ajout de cas : description modifiée (ordre, couleur, hauteur, mois `decalage` 1), description de 5 000 o → repli dit,
   `f=mois` 404 → « archive effacée », graphique « an » avec l'année la plus ancienne marquée partielle, `total` → titre
   « kWh · € », 390 px sans défilement (« À surveiller » 5)
-- [x] Taille de `energie.js` + `.html` + `.css` notée (cible ≤ 20 Ko) ; commit `feat(energie): page Energie pilotee par sa description` — preuve : 20438 o au total (cible 20480), commit feat(energie): page Energie pilotee par sa description ;
+- [x] Taille de `energie.js` + `.html` + `.css` notée (cible ≤ 20 Ko) ; commit `feat(energie): page Energie pilotee par sa description` — preuve : 20467 o au total apres le tour 2 (cible 20480, marge 13 o), commit feat(energie): page Energie pilotee par sa description ;
 
 ## A4 — Atelier, serveur : destination « energie » (`atelier_graphiques_energie.py`)
 - [ ] Banc rouge `test_atelier_graphiques_energie.py` (dépôt copié, carte simulée par `get`) :

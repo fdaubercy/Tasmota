@@ -244,7 +244,7 @@
 	function note(t) { $('e_note').textContent = t; }
 	function ign(m) { note('Description ignorée : ' + m + '.'); return DEFAUT; }
 
-	// Element mal forme : ignore seul ; erreur d'ensemble : DEFAUT
+	// Element mal forme : ignore ; erreur d'ensemble : DEFAUT
 	function lisDescription() {
 		return fetch(url + '?f=description').then(function (r) {
 			if (r.status == 404) { note('Description absente : disposition par défaut.'); return DEFAUT; }
@@ -300,7 +300,7 @@
 		return fetch(url + '?f=direct').then(function (r) { return r.json(); }).then(function (o) { dir = o; }).catch(function () {});
 	}
 
-	// Requetes en parallele, mois, UN trace ; data-pret a la fin, meme en echec
+	// Requetes en parallele, mois, UN trace, puis data-pret
 	function rafraichit(premier) {
 		return Promise.all([premier ? lisDescription() : desc, lisDonnees(), lisDirect()]).then(function (r) {
 			desc = r[0];
@@ -309,6 +309,6 @@
 	}
 
 	rafraichit(true);
-	setInterval(function () { lisDirect().then(function () { direct(zone, desc, don, dir); }); }, 10000);
+	setInterval(function () { if (document.body.dataset.pret) lisDirect().then(function () { direct(zone, desc, don, dir); }).catch(function () {}); }, 10000);
 	setInterval(rafraichit, 300000);
 })();
