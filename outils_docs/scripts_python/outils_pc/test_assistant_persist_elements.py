@@ -72,9 +72,9 @@ def test_gabarits(modele):
     verifie(tuple(g), ape.GROUPES_ELEMENTS, "gabarits : un par groupe, dans l'ordre de GROUPES_ELEMENTS")
     socle = {"activation", "nom", "id", "pin", "type", "virtuel", "relaisLie"}
     # un relais du parc n'a jamais de relaisLie (rapport A7 : ecart au brief, qui le met au socle)
-    sans = {"relais": {"relaisLie"}, "pinsTechniques": {"relaisLie", "virtuel"}}       # absents de ces groupes du parc
+    sans = {"relais": {"relaisLie"}, "pinsTechniques": {"relaisLie", "virtuel"}, "debitmetres": {"relaisLie", "virtuel"}}       # absents de ces groupes du parc
     verifie([x for x in g if not (socle - sans.get(x, set())) <= set(g[x])], [],
-            "gabarits : le socle activation, nom, id, pin, type, virtuel, relaisLie (relais sans relaisLie, pinsTechniques sans les deux)")
+            "gabarits : le socle activation, nom, id, pin, type, virtuel, relaisLie (relais sans relaisLie, pinsTechniques et debitmetres sans les deux)")
     verifie(sorted({"afficheWeb", "value", "etat", "timer", "publishMQTT", "timestamp", "idModBus"} - set(g["relais"])), [],
             "gabarits : le relais porte afficheWeb, value, etat, timer, publishMQTT, timestamp, idModBus")
     opt = modele["metier"]["elements"]["relais"]["optionnelles"]
@@ -82,7 +82,7 @@ def test_gabarits(modele):
     verifie({x: ape.singulier(modele, x) for x in g},
             {"boutons": "bouton", "interrupteurs": "interrupteur", "relais": "relai", "capteurs": "capteur",
              "compteurs": "compteur", "thermometres": "thermometre", "analogiques": "analogique",
-             "pinsTechniques": "pinTechnique"},
+             "pinsTechniques": "pinTechnique", "debitmetres": "debitmetre"},
             "singuliers lus dans le parc (relais -> relai)")
     g["relais"]["nom"] = "touche"
     verifie(ape.gabarits_elements(modele)["relais"]["nom"] != "touche", True, "gabarits : une copie (le modele n'est pas modifie)")

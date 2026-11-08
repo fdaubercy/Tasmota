@@ -47,6 +47,8 @@ chaque synchronisation avec l'amont, et risque de décaler les réglages déjà 
 
 - Débits 1 et 2 : `FlowRateMeter`, sans écrire de code (débit instantané, cumul du jour, étalonnage par
   `Sensor96 1 <facteur × 1000>` et `Sensor96 2 <facteur × 1000>` ; unité L/min ou m³/h par `Sensor96 0 0|1`).
+  **Retenu (2026-11-08)** : le module Berry de la carte force `Sensor96 0 0` et un calibrage neutre (1000), et applique
+  le facteur K de chaque voie, réglé par `ReglageDebits k <voie> <K>` : un seul étalonnage pour les 6 voies.
 - Débits 3 à 6 : les **compteurs** de Tasmota (`Counter1` à `Counter4`). Il y en a 4 au maximum
   (`tasmota/include/tasmota.h:74`, `MAX_COUNTERS = 4`), chacun déclenché par interruption
   (`xsns_01_counter.ino:177`, `attachInterruptArg`).
@@ -236,6 +238,88 @@ Avec un YF-S201 à 0,5 L/min : 3,75 Hz, donc ≈ 2,7 % d'erreur. C'est acceptabl
 
 1. **Référence ou type de sortie des 6 débitmètres** : impulsions, tension/courant, ou mécaniques ?
 2. **Où doit être l'affichage** : à la nourrice, sur le P4, sur une page web seulement ?
+
+---
+
+## 7 bis. Décisions prises le 2026-11-08 (réponses aux questions du § 7)
+
+| Sujet | Décision | Raison |
+|---|---|---|
+| Capteur | Débitmètre à effet Hall G1/2, 1-25 L/min, modèle probable **YF-B2** (référence à lire sur l'étiquette) | Fiche : `outils_docs/Electronique/Debitmetre YF-B2/YF-B2_fiche_technique.pdf` |
+| Caractéristiques (fiche) | F = 11 × Q (± 3 %), 5-15 V, 15 mA, liquide ≤ 120 °C, électronique 0-80 °C, ≤ 1,75 MPa, **sortie haute > 4,7 V sous 5 V** | 11 Hz à 1 L/min, 275 Hz à 25 L/min : sous la limite de 1 000 Hz |
+| Plage | Validée : radiateurs ≥ 1 400 W, PAC air-eau (ΔT ≈ 5 K) → ≈ 1,4 à 1,9 L/min pour le plus petit | Le radiateur ne rend que 500-650 W avec de l'eau à 45-50 °C ; débit imposé par la pompe |
+| Variante | **V1 : un seul ESP32-S3** (2 `FlowRateMeter` + 4 compteurs + Berry) | V2 sans objet (impulsions), V3 inutilement complexe |
+| Puce | **ESP32-S3**, pas de P4 | Besoin très en dessous du S3 ; Wi-Fi du P4 par coprocesseur C6 (soucis connus) |
+| Affichage | **OLED 128×64 SSD1306** + page web ; pas d'affichage sur le P4 | Pilote universel + `SSD1306_128x64_display.ini` ; ≈ 110 ms par trame à 100 kHz |
+| Identité | Bureau, « Serveur Débits de PAC », 192.168.0.50, topic `chauffage/pac/debits` | IP absente du dépôt, sans réponse au ping le 2026-11-08 |
+
+Point de vigilance PAC : les 6 turbines ajoutent une perte de charge non chiffrée par la fiche ; relever le débit
+de la PAC avant et après la pose (une PAC se met en défaut sous son débit minimal).
+
+---
+
+## 7 ter. Choix du matériel (recherche du 2026-11-08)
+
+### Critère déterminant
+
+Les 6 voies doivent arriver sur des **broches reliées directement à l'ESP32** (interruption à chaque impulsion).
+Les cartes « industrielles » qui font passer leurs entrées par un expandeur I2C (PCF8574 sans ligne d'interruption,
+cas des KinCony) ne peuvent pas compter. Aucun kit ne fait l'adaptation 5 V → 3,3 V des capteurs.
+
+### Kits comparés
+
+| Kit | Écran | Tactile | Boîtier | Bornier à vis | 6 entrées directes | PSRAM | Prix relevé |
+|---|---|---|---|---|---|---|---|
+| **A. DevKitC-1 N16R8 + bornier DIN DNDINS3 + OLED SSD1306** (retenu) | OLED 0,96″ 128×64 | Non | ✅ rail DIN (DNDINS3) | ✅ 3,96 mm | ✅ | ✅ 8 Mo | DevKitC ≈ 11 £ ; autres non relevés |
+| B. Heltec WiFi Kit 32 V3 | OLED 0,96″ intégré | Non | Non | Non | ✅ probable | Probablement aucune (S3FN8, à vérifier) | ≈ 13 $ à 23 $ |
+| C. diymore MINI ESP32-S3-N16R8 + OLED | OLED 0,96″ intégré | Non | Non | Non | ? (brochage non publié) | ✅ | Non relevé |
+| D. Seeed XIAO ESP32S3 + carte d'extension | OLED 0,96″ sur l'extension | Non | Non | Non (Grove) | ⚠️ trop peu de broches | ✅ | XIAO ≈ 9,55 € + extension ≈ 17 à 30 € |
+| E. KinCony KC868-A16v3 | SSD1306 intégré | Non | ✅ rail DIN | ✅ | ⚠️ 16 entrées par expandeur I2C ; 6 broches directes détournables (GPIO 47, 48, 38, 39, 40, 41, d'après le forum) | ? | 55 à 75 $ (revendeur tiers) |
+| F. M5Stack CoreS3 | LCD 2″ (pas OLED) | ✅ | ✅ | Non (Grove) | ❌ ≈ 4 broches | ✅ | ≈ 57,60 £ HT |
+| G. LilyGO T-Display-S3 | LCD 1,9″ (pas OLED) | En option | Coque ≈ 7 € (pas pour la version tactile) | Non | ✅ probable | ✅ | 15 à 23 $ |
+
+### Matériel retenu (option A)
+
+| Pièce | Où l'acheter | Remarque |
+|---|---|---|
+| ESP32-S3-DevKitC-1 **N16R8** (44 broches) | [amazon.fr, diymore lot de 2](https://www.amazon.fr/diymore-DevKitC-1-dexpansion-d%C3%A9veloppement-connectable/dp/B0FKBLR2KF) · [recherche amazon.fr](https://www.amazon.fr/s?k=ESP32-S3+N16R8+DevKitC-1) · [recherche AliExpress](https://fr.aliexpress.com/w/wholesale-esp32-s3-n16r8-devkitc-1.html) | Même carte que le parc |
+| Bornier rail DIN **Eletechsup DNDINS3** (toutes les broches, 3,96 mm, coque 95 × 61 × 35 mm) | [fabricant](https://eletechsup.com/products/dndins3-esp32-s3-din-rail-mounting-expansion-board-all-pinout-3-96-screw-terminal-module-usb-otg-n16r8-n8r8-for-wi-fi-bluetooth-le) · [amazon.com](https://www.amazon.com/eletechsup-ESP32-S3-DevKitC-1-Expansion-Terminals-Bluetooth/dp/B0GCXMCQ1T) · [AliExpress](https://www.aliexpress.com/item/1005008046317499.html) | Vérifier la largeur de la carte S3 (25,4 ou 28 mm) avant commande |
+| OLED 0,96″ 128×64 **SSD1306 I2C** (0x3C) | [amazon.fr IZOKEE lot de 3](https://www.amazon.fr/IZOKEE-Affichage-Afficheur-Raspberry-Microcontr%C3%B4leur/dp/B076PDVFQD) · [amazon.fr DollaTek lot de 2](https://www.amazon.fr/DollaTek-SSD1306-embases-Broches-Arduino/dp/B07QJWHVDH) · [recherche AliExpress](https://fr.aliexpress.com/w/wholesale-oled-0.96-ssd1306-i2c.html) | 3,3 à 5 V |
+| 6 débitmètres YF-B2 | AliExpress (annonce de l'utilisateur) | En acheter 1 d'abord : banc de charge (plan A6) avant les 5 autres |
+| Adaptation 5 V → 3,3 V (6 voies) | Composants courants | Voir ci-dessous |
+| Alimentation 5 V rail DIN | — | 6 capteurs × 15 mA + S3 + OLED : < 500 mA |
+
+Les prix Amazon et AliExpress ne sont pas lisibles par une requête automatique : à relever sur les annonces.
+Les sites Funduino et OpenELAB refusent aussi les requêtes automatiques (code 429) ; leurs liens n'ont pas pu être vérifiés.
+
+### Proposition d'adaptation du signal (à valider)
+
+La résistance de rappel interne du capteur (vers son 5 V) n'est pas donnée par la fiche : un simple pont diviseur
+donnerait un niveau haut qui dépend de cette valeur inconnue. Proposition indépendante de cette valeur, par voie :
+
+```
+capteur (fil jaune) ──|◄── GPIO        diode Schottky BAT85 (cathode côté capteur)
+                            │
+                  4,7 kΩ ── 3,3 V      rappel vers le 3,3 V de l'ESP32
+                            │
+                     1 nF ── GND       filtre des parasites (τ ≈ 5 µs, sans effet à 275 Hz)
+```
+
+Capteur à l'état haut (5 V) : la diode est bloquée, la broche voit 3,3 V par la résistance. Capteur à l'état bas
+(≈ 0,2 V) : la diode conduit, la broche voit ≈ 0,5 V (< 0,8 V, seuil bas de l'ESP32), courant ≈ 0,6 mA (le capteur
+en accepte 10). Alternative déjà documentée dans le dépôt : convertisseur de niveau à 2N7000
+(`outils_docs/Electronique/convertisseur tension 2N7000.jpg`).
+
+### Proposition de brochage (à valider)
+
+Broches choisies hors démarrage (0, 3, 45, 46), hors PSRAM octale (35, 36, 37), hors USB (19, 20) et console (43, 44),
+hors LED RGB de la DevKitC (48). I2C sur les broches du parc (cuve, cave : SCL 8, SDA 9).
+
+| Fonction | GPIO |
+|---|---|
+| Débit 1 et 2 (`FlowRateMeter` 1-2) | 4, 5 |
+| Débit 3 à 6 (`Counter` 1-4) | 6, 7, 15, 16 |
+| I2C SCL / SDA (OLED) | 8 / 9 |
 
 ---
 

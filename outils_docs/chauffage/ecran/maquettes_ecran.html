@@ -1,0 +1,93 @@
+<!doctype html>
+<!-- Maquettes de la page HASPmota de l'ecran 480x320 (plan debitmetres-chauffage, A5).
+     Ouvrir maquettes_ecran.html#A, #B ou #C ; les PNG modele-A/B/C.png en sont les captures. -->
+<html lang="fr"><head><meta charset="utf-8"><title>Maquettes écran débits</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 480px; height: 320px; background: #10161e; color: #e8edf2;
+         font: 15px "Montserrat", "Segoe UI", sans-serif; overflow: hidden; }
+  .modele { display: none; width: 480px; height: 320px; padding: 8px; }
+  .modele:target, .modele.actif { display: block; }
+  .titre { display: flex; justify-content: space-between; align-items: center; height: 30px;
+           padding: 0 6px; font-size: 16px; color: #9fb3c8; }
+  .titre b { color: #e8edf2; font-size: 17px; }
+  .muet { color: #ff6b6b; } .imprecis { color: #f2b84b; } .arret { color: #6c7a89; }
+  /* A : tuiles */
+  .tuiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; height: 232px; }
+  .tuile { background: #1b2632; border-radius: 10px; padding: 8px 10px; display: flex;
+           flex-direction: column; justify-content: space-between; border-left: 5px solid #3fa7ff; }
+  .tuile .nom { font-size: 14px; color: #9fb3c8; }
+  .tuile .val { font-size: 32px; font-weight: 600; }
+  .tuile .val small { font-size: 13px; color: #9fb3c8; font-weight: 400; }
+  .tuile .part { font-size: 13px; color: #9fb3c8; }
+  .tuile.i { border-left-color: #f2b84b; } .tuile.a { border-left-color: #4a5664; } .tuile.m { border-left-color: #ff6b6b; }
+  .pied { display: flex; justify-content: space-between; align-items: center; height: 34px; margin-top: 8px;
+          padding: 0 10px; background: #1b2632; border-radius: 10px; font-size: 16px; }
+  .bouton { background: #2b6cb0; color: #fff; border-radius: 8px; padding: 4px 14px; font-size: 14px; }
+  /* B : liste avec barres */
+  .ligne { display: grid; grid-template-columns: 110px 1fr 92px 46px; align-items: center; gap: 8px;
+           height: 37px; padding: 0 6px; border-bottom: 1px solid #1f2b38; }
+  .barre { height: 16px; background: #1f2b38; border-radius: 8px; overflow: hidden; }
+  .barre i { display: block; height: 100%; background: #3fa7ff; border-radius: 8px; }
+  .barre i.i { background: #f2b84b; }
+  .ligne .val { text-align: right; font-size: 18px; font-weight: 600; }
+  .ligne .val small { font-size: 12px; color: #9fb3c8; font-weight: 400; }
+  .ligne .part { text-align: right; color: #9fb3c8; font-size: 13px; }
+  /* C : arcs */
+  .arcs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 8px; height: 238px; }
+  .arc { text-align: center; position: relative; }
+  .arc svg { width: 120px; height: 84px; display: block; margin: 0 auto; }
+  .arc .val { position: absolute; top: 40px; left: 0; right: 0; font-size: 22px; font-weight: 600; }
+  .arc .nom { font-size: 13px; color: #9fb3c8; margin-top: -2px; }
+</style></head><body>
+
+<!-- A : 6 tuiles + total -->
+<div class="modele" id="A">
+  <div class="titre"><b>Débits nourrice</b><span>mesure il y a 4 s</span></div>
+  <div class="tuiles">
+    <div class="tuile"><span class="nom">Salon</span><span class="val">2.35 <small>L/min</small></span><span class="part">29 %</span></div>
+    <div class="tuile"><span class="nom">Cuisine</span><span class="val">1.80 <small>L/min</small></span><span class="part">22 %</span></div>
+    <div class="tuile i"><span class="nom">Salle de bain</span><span class="val imprecis">0.65 <small>L/min</small></span><span class="part imprecis">8 % · imprécis</span></div>
+    <div class="tuile"><span class="nom">Chambre 1</span><span class="val">3.10 <small>L/min</small></span><span class="part">38 %</span></div>
+    <div class="tuile a"><span class="nom">Chambre 2</span><span class="val arret">0.00 <small>L/min</small></span><span class="part">arrêt</span></div>
+    <div class="tuile m"><span class="nom">Bureau</span><span class="val muet">-,--</span><span class="part muet">capteur muet</span></div>
+  </div>
+  <div class="pied"><span>Total <b>7.90 L/min</b> · 474 L/h</span><span class="bouton">Détails</span></div>
+</div>
+
+<!-- B : liste avec barres de part du total -->
+<div class="modele" id="B">
+  <div class="titre"><b>Débits nourrice</b><span>Total <b style="color:#3fa7ff">7.90 L/min</b></span></div>
+  <div class="ligne"><span>Salon</span><span class="barre"><i style="width:76%"></i></span><span class="val">2.35 <small>L/min</small></span><span class="part">29 %</span></div>
+  <div class="ligne"><span>Cuisine</span><span class="barre"><i style="width:58%"></i></span><span class="val">1.80 <small>L/min</small></span><span class="part">22 %</span></div>
+  <div class="ligne"><span class="imprecis">Salle de bain</span><span class="barre"><i class="i" style="width:21%"></i></span><span class="val imprecis">0.65 <small>L/min</small></span><span class="part imprecis">8 %</span></div>
+  <div class="ligne"><span>Chambre 1</span><span class="barre"><i style="width:100%"></i></span><span class="val">3.10 <small>L/min</small></span><span class="part">38 %</span></div>
+  <div class="ligne"><span class="arret">Chambre 2</span><span class="barre"><i style="width:0"></i></span><span class="val arret">0.00 <small>L/min</small></span><span class="part arret">arrêt</span></div>
+  <div class="ligne"><span class="muet">Bureau</span><span class="barre"></span><span class="val muet">-,--</span><span class="part muet">muet</span></div>
+  <div class="pied" style="margin-top:6px"><span class="imprecis" style="font-size:13px">orange : &lt; 1 L/min, mesure imprécise</span><span class="bouton">Détails</span></div>
+</div>
+
+<!-- C : 6 arcs (jauges), echelle 0 a 5 L/min -->
+<div class="modele" id="C">
+  <div class="titre"><b>Débits nourrice</b><span>Total <b style="color:#3fa7ff">7.90 L/min</b> · 0 à 5 L/min</span></div>
+  <div class="arcs" id="arcs"></div>
+  <div class="pied" style="margin-top:2px"><span style="font-size:13px">mesure il y a 4 s</span><span class="bouton">Détails</span></div>
+</div>
+
+<script>
+  // Arcs du modele C : 240 degres, valeur sur 0..5 L/min
+  const voies = [["Salon", 2.35, ""], ["Cuisine", 1.80, ""], ["Salle de bain", 0.65, "imprecis"],
+                 ["Chambre 1", 3.10, ""], ["Chambre 2", 0, "arret"], ["Bureau", null, "muet"]];
+  const coul = {"": "#3fa7ff", imprecis: "#f2b84b", arret: "#4a5664", muet: "#ff6b6b"};
+  const pt = (a, r) => [60 + r * Math.cos(a), 60 + r * Math.sin(a)];
+  const arc = (f, r) => { const a0 = Math.PI * 5 / 6, a1 = a0 + f * Math.PI * 4 / 3;
+    const [x0, y0] = pt(a0, r), [x1, y1] = pt(a1, r);
+    return `M${x0} ${y0} A${r} ${r} 0 ${f > 0.75 ? 1 : 0} 1 ${x1} ${y1}`; };
+  document.getElementById("arcs").innerHTML = voies.map(([n, v, c]) => `<div class="arc">
+    <svg viewBox="0 6 120 84"><path d="${arc(1, 48)}" stroke="#1f2b38" stroke-width="11" fill="none" stroke-linecap="round"/>
+    ${v ? `<path d="${arc(Math.min(v / 5, 1), 48)}" stroke="${coul[c]}" stroke-width="11" fill="none" stroke-linecap="round"/>` : ""}</svg>
+    <div class="val ${c}">${v == null ? "-,--" : v.toFixed(2)}</div>
+    <div class="nom ${c}">${n}${c == "muet" ? " · muet" : c == "imprecis" ? " · imprécis" : ""}</div></div>`).join("");
+  const m = document.getElementById(location.hash.slice(1) || "A"); if (m) m.classList.add("actif");
+</script>
+</body></html>

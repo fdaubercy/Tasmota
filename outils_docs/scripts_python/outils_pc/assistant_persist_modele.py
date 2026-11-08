@@ -157,7 +157,7 @@ def chemins_modele(modele):
     for bloc in modele.get("blocs", []):
         res |= _pointes(bloc.get("actif", {})) | _pointes(bloc.get("inactif", {}))
     res |= chemins(modele.get("metier", {}).get("gabarit", {}), ("modules", "*"))
-    # groupe d'elements hors gabarit (pinsTechniques) : decrit par metier.elements, ecrit seulement s'il a un contenu
+    # groupe d'elements hors gabarit (pinsTechniques, debitmetres) : decrit par metier.elements, ecrit seulement s'il a un contenu
     res |= {("modules", "*", "environnement", g) for g in modele.get("metier", {}).get("elements", {})}
     return res
 

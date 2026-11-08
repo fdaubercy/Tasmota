@@ -1,0 +1,76 @@
+r"""Banc du module debits (carte Serveur Debits de PAC) : banc_debits.be, puis temoins sur des copies du module.
+
+    python outils_docs/scripts_python/berry/banc_debits.py
+
+Code de sortie 0 si tout est vert. Ne teste pas la vraie carte : ni les interruptions des compteurs, ni le pilote
+FlowRateMeter, ni la RAM, ni le rendu de la page (essai de charge A6 du plan debitmetres-chauffage).
+"""
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+RACINE = Path(__file__).resolve().parents[3]
+BERRY = RACINE / "lib/libesp32/berry/berry.exe"
+BANC = "outils_docs/scripts_python/berry/banc_debits.be"
+MODULE = RACINE / "data/bureau/tasmota32s3-serveur-debits-pac/debitsFonctions.be"
+
+# Chaque mutant doit rendre le banc rouge : (nom, texte du module, remplacement)
+MUTANTS = [
+    ("facteur du FlowRateMeter faux", "debitsFonctions.HZ_PAR_RATE = 0.12", "debitsFonctions.HZ_PAR_RATE = 0.1"),
+    ("compteur remis a zero compte", " || b < a)", ")"),
+    ("duree prise en ms", "* 1000 / ms /", "/ ms /"),
+    ("cle francaise oubliee", '["Débit", "Flowrate"]', '["Flowrate"]'),
+    ("Rate seul ignore", "rates = [rates]", "rates = nil"),
+    ("K de la voie ignore", "/ ks[i + 2]", "/ ks[0]"),
+    # (pas de temoin « voie 7 acceptee » : la voie 7 n'a pas d'entree au persist, regleVoie la refuse aussi)
+    ("K nul accepte", "if (k == nil || k < 0.1 || k > 1000)", "if (k == nil || k > 1000)"),
+    ("persist non sauve", "    persist.save(true)   # true : modif imbriquee", "    # true : modif imbriquee"),
+    ("voie sans mesure a 0", 'd[i] == nil ? "null"', 'd[i] == nil ? "0"'),
+    ("virgule francaise ignoree", 's = string.replace(str(s), ",", ".")', 's = str(s)'),
+    ("texte non numerique accepte", 'if (s[i] < "0" || s[i] > "9")    return nil    end', ''),
+    ("nom non echappe", '"<", "&lt;"', '"<", "<"'),
+    ("espaces doubles gardes", 'while string.find(texte, "  ") >= 0', 'while false'),
+    ("imprecis non signale", "if debitsFonctions.imprecis(d[i])    imprecis.push(i + 1)    end", ""),
+    ("ecran non ecrit apres la mesure", '    debitsFonctions.releve = {"t": t, "c": c}\n    debitsFonctions.ecran()','    debitsFonctions.releve = {"t": t, "c": c}'),
+    ("barre en valeur absolue", "int(q * 100 / max + 0.5)", "int(q * 100 / 5 + 0.5)"),
+    ("imprecis non colore", 'debitsFonctions.imprecis(q) ? "imprecis" : "normal"', '"normal"'),
+    ("voie a l'arret affichee normale", 'if (q <= 0)    return ["0.00 L/min", "arrêt", 0, "arret"]    end', ''),
+    ("ecran sans test d'affichage", 'if (!display.started())', 'if (false)'),
+]
+
+
+def lance_berry(dossier, module=None):
+    args = [str(BERRY), BANC, str(dossier)] + ([str(module)] if module else [])
+    r = subprocess.run(args, cwd=RACINE, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
+    return r.stdout + r.stderr
+
+
+def main():
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        (tmp / "banc").mkdir()
+        sortie = lance_berry(tmp / "banc")
+        print("\n".join(l for l in sortie.splitlines() if not l.startswith("  OK")))
+        print(f"  ({sum(l.startswith('  OK') for l in sortie.splitlines())} verifications OK)")
+        ok = "BANC_DEBITS: OK" in sortie
+        texte = MODULE.read_text(encoding="utf-8")
+        print("--- Temoins (chaque mutant doit etre rouge)")
+        for i, (nom, avant, apres) in enumerate(MUTANTS):
+            if texte.count(avant) != 1:
+                print(f"  ECHEC temoin « {nom} » : texte absent ou ambigu dans le module")
+                ok = False
+                continue
+            d = tmp / f"mutant{i}"
+            d.mkdir()
+            copie = d / "mutant.be"
+            copie.write_text(texte.replace(avant, apres), encoding="utf-8")
+            rouge = "BANC_DEBITS: OK" not in lance_berry(d, copie)
+            print(f"  {'OK   ' if rouge else 'ECHEC'} {nom}")
+            ok = ok and rouge
+    print("BANC_DEBITS (enveloppe):", "VERT" if ok else "ROUGE")
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

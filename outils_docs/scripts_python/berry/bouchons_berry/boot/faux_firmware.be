@@ -150,8 +150,10 @@ class FICHIER_BANC
         return ligne
     end
     def readbytes(n)
-        var r = self.read()
+        # avance de n octets seulement : read() irait en fin de fichier et perdrait la suite (gestionFileFolder lit par 2048)
+        var r = self.contenu[self.pos ..]
         if n != nil && n < size(r)    r = r[0 .. n - 1]    end
+        self.pos += size(r)
         var b = bytes()
         for i: 0 .. size(r) - 1    b.add(string.byte(r[i]), 1)    end
         return b

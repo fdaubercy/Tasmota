@@ -1,0 +1,52 @@
+# Driver du module metier debits : 6 debitmetres de la nourrice de chauffage ; la logique est dans debitsFonctions.be.
+# Charge depuis le LittleFS par demarrage.chargeFichier("controleDebits", "modules.debits"), seulement
+# si modules.debits.activation vaut "ON" ; debitsFonctions est compile avant.
+# Logs : charte du CLAUDE.md (logFonctions.log, sans cible : seuil `general`).
+
+class CONTROLE_Debits : Driver
+    var secondes        # secondes depuis la derniere mesure
+
+    def init()
+        import debitsFonctions
+        self.secondes = 0
+        # Un seul etalonnage par voie, le K du persist : FlowRateMeter en L/min, calibrage neutre (voir debitsFonctions)
+        tasmota.cmd("Sensor96 0 0", boolMute)
+        tasmota.cmd("Sensor96 1 1000", boolMute)
+        tasmota.cmd("Sensor96 2 1000", boolMute)
+        tasmota.add_cmd("ReglageDebits", debitsFonctions.reglageDebits)
+        debitsFonctions.demarreEcran()
+        debitsFonctions.log("CONTROLE_DEBITS: module debits charge, mesure toutes les " + str(debitsFonctions.fenetre()) + " s !", LOG_LEVEL_INFO)
+    end
+
+    # Mesure toutes les `fenetre` secondes (callback frequent : jamais de log info ici)
+    def every_second()
+        import debitsFonctions
+        self.secondes += 1
+        if (self.secondes < debitsFonctions.fenetre())    return    end
+        self.secondes = 0
+        try
+            debitsFonctions.mesure()
+        except .. as e, m
+            debitsFonctions.log("CONTROLE_DEBITS_ERREUR: mesure impossible : " + str(e) + " " + str(m) + " !", LOG_LEVEL_ERREUR)
+        end
+    end
+
+    # Lignes de la page d'accueil : un depart par ligne, debit et part du total
+    def web_sensor()
+        import debitsFonctions
+        for l: debitsFonctions.lignesWeb()    tasmota.web_send(l)    end
+    end
+
+    # Telemetrie (JSON SENSOR) : bloc DEBITS
+    def json_append()
+        import debitsFonctions
+        tasmota.response_append(debitsFonctions.json())
+    end
+end
+
+# Active le driver du module
+controleDebits = CONTROLE_Debits()
+tasmota.add_driver(controleDebits)
+
+# Valeur du fichier charge (controle P3.3 de banc_demarrage : un controleXxx.be finit par son return)
+return controleDebits

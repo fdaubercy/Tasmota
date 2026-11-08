@@ -1,0 +1,41 @@
+{"page":1,"comment":"Debits nourrice : liste avec barres (modele B) ; textes et couleurs ecrits par debitsFonctions.ecran()"}
+{"page":1,"id":0,"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}
+{"page":1,"id":1,"obj":"label","x":14,"y":8,"w":220,"h":28,"text":"Débits nourrice","text_font":24,"text_color":"#E8EDF2"}
+{"page":1,"id":2,"obj":"label","x":236,"y":10,"w":230,"h":26,"text":"Total -,--","text_font":24,"text_color":"#3FA7FF","align":2}
+{"page":1,"id":11,"obj":"label","x":14,"y":50,"w":114,"h":24,"text":"Départ 1","text_font":16,"text_color":"#E8EDF2"}
+{"page":1,"id":12,"obj":"bar","x":132,"y":52,"w":150,"h":16,"min":0,"max":100,"val":0,"radius":8,"bg_color":"#1F2B38","radius10":8,"bg_color10":"#3FA7FF"}
+{"page":1,"id":13,"obj":"label","x":286,"y":47,"w":122,"h":28,"text":"-,--","text_font":24,"text_color":"#E8EDF2","align":2}
+{"page":1,"id":14,"obj":"label","x":410,"y":51,"w":60,"h":22,"text":"","text_font":16,"text_color":"#9FB3C8","align":2}
+{"page":1,"id":21,"obj":"label","x":14,"y":87,"w":114,"h":24,"text":"Départ 2","text_font":16,"text_color":"#E8EDF2"}
+{"page":1,"id":22,"obj":"bar","x":132,"y":89,"w":150,"h":16,"min":0,"max":100,"val":0,"radius":8,"bg_color":"#1F2B38","radius10":8,"bg_color10":"#3FA7FF"}
+{"page":1,"id":23,"obj":"label","x":286,"y":84,"w":122,"h":28,"text":"-,--","text_font":24,"text_color":"#E8EDF2","align":2}
+{"page":1,"id":24,"obj":"label","x":410,"y":88,"w":60,"h":22,"text":"","text_font":16,"text_color":"#9FB3C8","align":2}
+{"page":1,"id":31,"obj":"label","x":14,"y":124,"w":114,"h":24,"text":"Départ 3","text_font":16,"text_color":"#E8EDF2"}
+{"page":1,"id":32,"obj":"bar","x":132,"y":126,"w":150,"h":16,"min":0,"max":100,"val":0,"radius":8,"bg_color":"#1F2B38","radius10":8,"bg_color10":"#3FA7FF"}
+{"page":1,"id":33,"obj":"label","x":286,"y":121,"w":122,"h":28,"text":"-,--","text_font":24,"text_color":"#E8EDF2","align":2}
+{"page":1,"id":34,"obj":"label","x":410,"y":125,"w":60,"h":22,"text":"","text_font":16,"text_color":"#9FB3C8","align":2}
+{"page":1,"id":41,"obj":"label","x":14,"y":161,"w":114,"h":24,"text":"Départ 4","text_font":16,"text_color":"#E8EDF2"}
+{"page":1,"id":42,"obj":"bar","x":132,"y":163,"w":150,"h":16,"min":0,"max":100,"val":0,"radius":8,"bg_color":"#1F2B38","radius10":8,"bg_color10":"#3FA7FF"}
+{"page":1,"id":43,"obj":"label","x":286,"y":158,"w":122,"h":28,"text":"-,--","text_font":24,"text_color":"#E8EDF2","align":2}
+{"page":1,"id":44,"obj":"label","x":410,"y":162,"w":60,"h":22,"text":"","text_font":16,"text_color":"#9FB3C8","align":2}
+{"page":1,"id":51,"obj":"label","x":14,"y":198,"w":114,"h":24,"text":"Départ 5","text_font":16,"text_color":"#E8EDF2"}
+{"page":1,"id":52,"obj":"bar","x":132,"y":200,"w":150,"h":16,"min":0,"max":100,"val":0,"radius":8,"bg_color":"#1F2B38","radius10":8,"bg_color10":"#3FA7FF"}
+{"page":1,"id":53,"obj":"label","x":286,"y":195,"w":122,"h":28,"text":"-,--","text_font":24,"text_color":"#E8EDF2","align":2}
+{"page":1,"id":54,"obj":"label","x":410,"y":199,"w":60,"h":22,"text":"","text_font":16,"text_color":"#9FB3C8","align":2}
+{"page":1,"id":61,"obj":"label","x":14,"y":235,"w":114,"h":24,"text":"Départ 6","text_font":16,"text_color":"#E8EDF2"}
+{"page":1,"id":62,"obj":"bar","x":132,"y":237,"w":150,"h":16,"min":0,"max":100,"val":0,"radius":8,"bg_color":"#1F2B38","radius10":8,"bg_color10":"#3FA7FF"}
+{"page":1,"id":63,"obj":"label","x":286,"y":232,"w":122,"h":28,"text":"-,--","text_font":24,"text_color":"#E8EDF2","align":2}
+{"page":1,"id":64,"obj":"label","x":410,"y":236,"w":60,"h":22,"text":"","text_font":16,"text_color":"#9FB3C8","align":2}
+{"page":1,"id":90,"obj":"label","x":14,"y":284,"w":330,"h":22,"text":"orange : < 1 L/min, mesure imprécise","text_font":16,"text_color":"#F2B84B"}
+{"page":1,"id":91,"obj":"btn","x":362,"y":272,"w":106,"h":40,"text":"Détails","text_font":16,"bg_color":"#2B6CB0","radius":8,"action":"p2"}
+{"page":2,"comment":"Details : K de chaque voie et fenetre de mesure"}
+{"page":2,"id":0,"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}
+{"page":2,"id":1,"obj":"label","x":14,"y":8,"w":452,"h":28,"text":"Détails des mesures","text_font":24,"text_color":"#E8EDF2"}
+{"page":2,"id":11,"obj":"label","x":14,"y":46,"w":452,"h":24,"text":"Départ 1","text_font":16,"text_color":"#E8EDF2"}
+{"page":2,"id":21,"obj":"label","x":14,"y":80,"w":452,"h":24,"text":"Départ 2","text_font":16,"text_color":"#E8EDF2"}
+{"page":2,"id":31,"obj":"label","x":14,"y":114,"w":452,"h":24,"text":"Départ 3","text_font":16,"text_color":"#E8EDF2"}
+{"page":2,"id":41,"obj":"label","x":14,"y":148,"w":452,"h":24,"text":"Départ 4","text_font":16,"text_color":"#E8EDF2"}
+{"page":2,"id":51,"obj":"label","x":14,"y":182,"w":452,"h":24,"text":"Départ 5","text_font":16,"text_color":"#E8EDF2"}
+{"page":2,"id":61,"obj":"label","x":14,"y":216,"w":452,"h":24,"text":"Départ 6","text_font":16,"text_color":"#E8EDF2"}
+{"page":2,"id":90,"obj":"label","x":14,"y":284,"w":330,"h":22,"text":"","text_font":16,"text_color":"#9FB3C8"}
+{"page":2,"id":91,"obj":"btn","x":362,"y":272,"w":106,"h":40,"text":"Retour","text_font":16,"bg_color":"#2B6CB0","radius":8,"action":"p1"}

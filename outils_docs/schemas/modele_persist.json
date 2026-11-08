@@ -2315,7 +2315,9 @@
 				"groupe": {
 					"affichageWebSensor": "OFF"
 				},
-				"optionnelles": {}
+				"optionnelles": {
+					"k": 11.0
+				}
 			},
 			"thermometres": {
 				"singulier": "thermometre",
@@ -2389,6 +2391,19 @@
 					"pin": -1,
 					"id": 1,
 					"type": 0
+				},
+				"groupe": {},
+				"optionnelles": {}
+			},
+			"debitmetres": {
+				"singulier": "debitmetre",
+				"gabarit": {
+					"activation": "ON",
+					"nom": "Debit 1",
+					"k": 11.0,
+					"pin": -1,
+					"id": 1,
+					"type": 8992
 				},
 				"groupe": {},
 				"optionnelles": {}

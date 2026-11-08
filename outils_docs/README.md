@@ -1281,9 +1281,10 @@ Port **7900**. Depuis un autre appareil : lien à jeton affiché dans la console
 
 1. **Questions** : identité de la carte (puce, lieu, nom, topic, IP), réseau, fonctions à activer.
 2. **Entrées et sorties du bloc métier** : un éditeur par groupe (boutons, interrupteurs, relais, capteurs, compteurs,
-   thermomètres, analogiques, `pinsTechniques`). Les broches proposées sont celles de la puce d'après `data/fs/configGlobal.be`.
+   thermomètres, analogiques, `pinsTechniques`, `debitmetres`). Les broches proposées sont celles de la puce d'après `data/fs/configGlobal.be`.
    `pinsTechniques` porte les broches du gabarit qui ne sont ni relais ni capteurs (UART de la BL0942 et 2e bobine du
-   relais bistable du différentiel) ; vide, le groupe n'est pas écrit. Un élément relu garde sa clé (`analogique5`,
+   relais bistable du différentiel) ; `debitmetres` porte les `FlowRateMeter` et leur facteur `k` (carte Serveur Débits de
+   PAC) ; vide, un de ces deux groupes n'est pas écrit. Un élément relu garde sa clé (`analogique5`,
    `rxBL0942`) ; un élément ajouté prend le premier numéro libre.
    La page **refuse** une broche en double, une broche déjà prise par ModBus, I2C ou LEDs, ou hors plage.
    Un élément **OFF** n'est pas contrôlé : il n'occupe pas sa broche.

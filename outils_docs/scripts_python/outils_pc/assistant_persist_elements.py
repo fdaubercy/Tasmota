@@ -1,11 +1,12 @@
 """Entrees/sorties du bloc metier (assistant de creation du persist, spec 2026-10-27 decision 4, action A7).
 
-Un bloc metier porte, dans modules.<principal>.environnement, huit GROUPES d'elements : boutons, interrupteurs, relais,
+Un bloc metier porte, dans modules.<principal>.environnement, neuf GROUPES d'elements : boutons, interrupteurs, relais,
 capteurs, compteurs, thermometres, analogiques, pinsTechniques (broches du gabarit qui ne sont ni relais ni capteurs :
-UART de la BL0942 et 2e bobine du relais bistable du differentiel). Un element est un objet {activation, nom, id, pin,
+UART de la BL0942 et 2e bobine du relais bistable du differentiel), debitmetres (FlowRateMeter, avec leur facteur k :
+carte Serveur Debits de PAC). Un element est un objet {activation, nom, id, pin,
 type, virtuel, relaisLie, ...} range sous une cle : celle du persist relu, gardee dans CLE (analogique5 de la cuve,
 rxBL0942 du differentiel), sinon <singulier><N> (N = rang de l'element, a partir de 1, ou le suivant libre). Un groupe
-absent du gabarit n'est ecrit que s'il a un contenu (pinsTechniques). Le groupe
+absent du gabarit n'est ecrit que s'il a un contenu (pinsTechniques, debitmetres). Le groupe
 porte aussi ses propres reglages (analogiques : activation, name, valeurMin, valeurMax ; compteurs et thermometres :
 affichageWebSensor). Le modele les decrit dans metier.elements :
   metier.elements.<groupe> = {singulier, gabarit (element neuf), optionnelles ({cle: defaut} des cles que le parc
@@ -34,7 +35,7 @@ from collections import Counter
 from pathlib import Path
 
 GROUPES_ELEMENTS = ("boutons", "interrupteurs", "relais", "capteurs", "compteurs", "thermometres", "analogiques",
-                    "pinsTechniques")
+                    "pinsTechniques", "debitmetres")
 CLE = "_cle"                                    # cle d'origine d'un element relu, retiree a l'ecriture (applique)
 CLE_VALIDE = re.compile(r"[A-Za-z][A-Za-z0-9_]*$")
 RACINE = Path(__file__).resolve().parents[3]
@@ -178,7 +179,7 @@ def applique(modele, obj, r):
         else:
             contenu = {k: v for k, v in ancien.items() if isinstance(v, dict)}
         if groupe not in env and not contenu and not reglages:
-            continue                                     # groupe hors gabarit et vide (pinsTechniques) : pas ecrit
+            continue                                     # groupe hors gabarit et vide (pinsTechniques, debitmetres) : pas ecrit
         env[groupe] = dict(copy.deepcopy(reglages), **contenu)
 
 
