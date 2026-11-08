@@ -87,7 +87,7 @@ sonde Chrome pendant un build (garde bloquante dans la commande, leçon du 2026-
 - [x] Module écrit ; `atelier_graphiques_web.py` : `cartes()` élargi, routes `/diff` `/ecrire` `/composition` pour — preuve : banc energie 59 OK / 0 echec ; bancs web, ecriture, graphiques, televerse, series, description, conseil verts (atelier_graphiques_energie.py, atelier_graphiques_web.py)
   `destination: "energie"`, `MOTEUR` + `energie.js`/`.html`/`.css`, `/series` du différentiel = `catalogue` ; banc vert ;
   bancs existants de l'atelier verts (`test_atelier_graphiques_*.py`, bout en bout)
-- [x] Commit `feat(atelier): destination Energie du differentiel, cote serveur` — preuve : commit ec9d49c54 feat(atelier): destination Energie du differentiel, cote serveur ; tour 1 : 404/413 lus sur HTTPError et route /energie/<env> d'apercu, 8 bancs de l'atelier verts, 7 temoins rouges
+- [x] Commit `feat(atelier): destination Energie du differentiel, cote serveur` — preuve : commit ec9d49c54 feat(atelier): destination Energie du differentiel, cote serveur ; tour 1 : 404/413 lus sur HTTPError et route /energie/<env> d'apercu, 8 bancs de l'atelier verts, 7 temoins rouges (d18c1be6c) ; relecture : HTML d'ancien firmware simule, mois ASCII (590e4d01e, 88 verifications)
 
 ## A5 — Atelier, page : menu « Énergie (/energie) » (`atelier_graphiques_page_energie.py`)
 - [ ] Sonde Chrome rouge `test_atelier_energie_page_chrome.py` (atelier sur dépôt copié, carte simulée) : différentiel
