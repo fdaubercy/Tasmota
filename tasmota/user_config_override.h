@@ -706,6 +706,8 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
         // Une seule section pour les deux cartes de la cave : l'ESP32 actuel et son remplacant
         // ESP32-S3 N16R8 ont la MEME identite (IP, topic, client MQTT). Seul le template differe.
         #if defined(FIRMWARE_ESP32_CAVE_SERVEUR_RLY) || defined(FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY)
+            #undef CFG_HOLDER
+            #define CFG_HOLDER  1609    // propre a cet env, incremente par le pre-script (cfg_holder.py)
             // -- CODE_IMAGE_STR is the name shown between brackets on the 
             //    Information page or in INFO MQTT messages
             #ifdef CODE_IMAGE_STR
