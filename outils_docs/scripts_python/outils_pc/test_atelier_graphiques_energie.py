@@ -10,7 +10,10 @@ import json
 import os
 import shutil
 import sys
+import datetime
+import io
 import tempfile
+import urllib.error
 import urllib.parse
 from pathlib import Path
 
@@ -49,7 +52,7 @@ def carte(mode="json", description=None, energy=ENERGY, mort=False):
             raise OSError("pas de reponse")
         if chemin == "/energie?f=description":
             if mode in ("404", "413"):
-                raise OSError("HTTP " + mode)
+                raise urllib.error.HTTPError("http://" + ip + chemin, int(mode), "Not Found", {}, None)    # ce que leve urlopen en production
             return HTML if mode == "html" else compact(description if description is not None else desc())
         if chemin.startswith("/cm?") and urllib.parse.unquote(chemin.split("cmnd=", 1)[1]) == "Status 10":
             return json.dumps({"StatusSNS": {"Time": "x", "ENERGY": energy} if energy is not None else {"Time": "x"}}).encode()
@@ -153,6 +156,56 @@ def test_catalogue(racine):
     verifie({"flash": "minutes"} in c["sources"], True, "catalogue : minutes sans grandeur")
 
 
+NOW = int(datetime.datetime(2026, 11, 8, 12).timestamp())    # midi, heure locale
+REF_DONNEES = {"aujourdhui": str, "etat": dict, "wCourant": int, "prix": list, "courbe": list}      # banc_energie.py / envoieDonnees
+REF_ETAT = {"w": int, "u": int, "l": int, "j": str, "h": list, "he": list, "m": str, "d": list, "de": list, "a": list}
+REF_DIRECT = {"p": int, "i": float, "f": float, "hz": int}                                          # banc_energie.py : direct
+REF_DIRECT_PLUS = ("Voltage", "ApparentPower", "ReactivePower", "Today", "Yesterday", "Total")      # energieFonctions.CHAMPS_DIRECT
+
+
+def hors_ligne(ip, chemin, delai):
+    raise OSError("pas de reponse")
+
+
+def table(reponses):
+    """`get` de l'apercu : chemin -> octets, ou code HTTP (HTTPError avec son corps)."""
+    def get(ip, chemin, delai):
+        r = reponses[chemin]
+        if isinstance(r, int):
+            raise urllib.error.HTTPError("http://" + ip + chemin, r, "x", {}, io.BytesIO(b'{"erreur":"absent"}'))
+        return r
+    return get
+
+
+def test_apercu(racine):
+    rel = {"/energie?f=donnees": b'{"aujourdhui":"2026-11-08"}', "/energie?f=direct": b'{"p":1}', "/energie?f=mois&m=2026-10": b'{"d":[1],"de":[2]}',
+           "/energie?f=mois&m=2020-01": 404}
+    g = table(rel)
+    verifie(ageg.apercu(racine, BUREAU, "donnees", get=g), (200, b'{"aujourdhui":"2026-11-08"}', "carte"), "apercu : donnees relayees telles quelles")
+    verifie(ageg.apercu(racine, BUREAU, "direct", get=g), (200, b'{"p":1}', "carte"), "apercu : direct relaye")
+    verifie(ageg.apercu(racine, BUREAU, "mois", "2026-10", get=g), (200, b'{"d":[1],"de":[2]}', "carte"), "apercu : mois relaye")
+    verifie(ageg.apercu(racine, BUREAU, "mois", "2020-01", get=g), (404, b'{"erreur":"absent"}', "carte"), "apercu : 404 d'un mois absent relaye (pas de simulation)")
+    for f, m in (("tarifs", None), ("../x", None), ("mois", None), ("mois", "2026-13"), ("mois", "2026-1"), ("mois", "2026-10&x=1"), ("mois", "../etc")):
+        refuse(lambda: ageg.apercu(racine, BUREAU, f, m, get=g), ValueError, f"apercu : f={f!r} m={m!r} refuse (400)")
+    refuse(lambda: ageg.apercu(racine, CUVE, "direct", get=g), LookupError, "apercu : env sans page Energie -> 404")
+    verifie(ageg.apercu(racine, BUREAU, "direct", muette=True, get=g)[2], "simulee", "apercu : carte muette (marquee) -> simulee, sans requete")
+    s, corps, src = ageg.apercu(racine, BUREAU, "direct", get=hors_ligne)
+    d = json.loads(corps)
+    verifie((s, src, {k: type(d[k]) for k in REF_DIRECT}, all(k in d for k in REF_DIRECT_PLUS)), (200, "simulee", REF_DIRECT, True), "apercu : direct simule = formes du banc Berry")
+    s, corps, src = ageg.apercu(racine, BUREAU, "donnees", get=hors_ligne, maintenant=NOW)
+    d = json.loads(corps)
+    verifie({k: type(d[k]) for k in REF_DONNEES}, REF_DONNEES, "apercu : donnees simulees, cles et types de envoieDonnees")
+    e = d["etat"]
+    verifie(({k: type(e[k]) for k in REF_ETAT}, len(e["h"]), len(e["he"]), len(e["d"]), len(e["de"]), len(d["courbe"])), (REF_ETAT, 24, 24, 31, 31, 288), "apercu : etat simule, tailles de la carte")
+    verifie((all(isinstance(x, int) for x in e["h"] + e["he"] + e["d"] + e["de"]), all(x is None or isinstance(x, int) for x in d["courbe"]),
+             all(isinstance(a[0], str) and isinstance(a[1], int) and isinstance(a[2], int) for a in e["a"]), e["a"][-1][0], d["aujourdhui"], d["prix"][0][1]),
+            (True, True, True, "2026-10", "2026-11-08", 2000), "apercu : entiers (Wh, dix-milliemes), courbe int|null, archives [mois, Wh, euros], dernier mois clos")
+    for m, attendu in (("2026-10", 200), ("2024-11", 200), ("2024-10", 404), ("2026-12", 404), ("2026-11", 200)):
+        s, corps, _ = ageg.apercu(racine, BUREAU, "mois", m, get=hors_ligne, maintenant=NOW)
+        d = json.loads(corps)
+        verifie((s, sorted(d) if s == 200 else d, len(d.get("d", [0] * 31)) if s == 200 else 31), (attendu, ["d", "de"] if attendu == 200 else {"erreur": "absent"}, 31), f"apercu : mois simule {m} -> {attendu}")
+
+
 class BancEnergie(tagw.Banc):
     def __init__(self, t):
         super().__init__(t)
@@ -215,6 +268,15 @@ def test_web(b):
     verifie((statut, r["etat"], r["carte"]), (200, "differente", None), "GET /composition energie : carte sans description, depot avec -> differente")
     statut, r = b.requete("GET", f"/description?env={BUREAU}")
     verifie((statut, r["description"]["elements"][0]["titre"]), (200, "Autre titre"), "GET /description energie : celle du depot")
+    b.mode, b.morte = "json", True
+    statut, r = b.requete("GET", f"/energie/{BUREAU}?f=direct")
+    verifie((statut, b.entetes.get("X-Source"), "p" in r), (200, "simulee", True), "GET /energie/<env> : carte hors ligne -> simulee, X-Source")
+    b.morte = False
+    statut, r = b.requete("GET", f"/energie/{BUREAU}?f=mois&m=2026-1")
+    verifie(statut, 400, "GET /energie/<env> : mois invalide -> 400")
+    verifie(b.requete("GET", f"/energie/{BUREAU}?f=tarifs")[0], 400, "GET /energie/<env> : f hors liste -> 400")
+    verifie(b.requete("GET", f"/energie/{CUVE}?f=direct")[0], 404, "GET /energie/<cuve> : env non Energie -> 404")
+    verifie(b.requete("GET", "/energie/..%2Fplatformio.ini?f=direct")[0], 404, "GET /energie/<chemin libre> -> 404")
     for destination in ("pages", "graphiques"):
         statut, r = b.requete("POST", "/diff", {"env": BUREAU, "destination": destination, "description": tagw.description(), "solidifier": False,
                                                  "operation": "ajoute", "graphique": tagw.atelier_g()})
@@ -223,7 +285,7 @@ def test_web(b):
 
 
 if __name__ == "__main__":
-    for test in (test_cartes, test_etat_carte, test_ecriture, test_plan, test_catalogue):
+    for test in (test_cartes, test_etat_carte, test_ecriture, test_plan, test_catalogue, test_apercu):
         print(f"--- {test.__name__}")
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")

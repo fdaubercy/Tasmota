@@ -11,8 +11,11 @@ Lecture de la carte en LECTURE SEULE (`/energie?f=description`, `Status 10`), pa
 Refus : ValueError (400), LookupError (404), RuntimeError (409 : build, empreinte perimee).
 """
 
+import datetime
 import difflib
 import json
+import re
+import time
 from pathlib import Path
 
 import atelier_energie_description as aed
@@ -28,6 +31,27 @@ PAGE = ("data/sd/js/energie.js", "data/sd/html/energie.html", "data/sd/css/energ
 NOM_PAGE = Path(PAGE[0]).name
 SONDE = "/energie?f=description"
 MOTIF_FIRMWARE = "firmware d'avant la page Energie pilotee par description : compilez et envoyez le firmware du differentiel par la page Build"
+
+
+RE_MOIS = re.compile(r"\d{4}-(0[1-9]|1[0-2])")
+FORMES = ("donnees", "direct", "mois")             # liste fermee des lectures relayees par l'apercu
+
+
+def _code(e):
+    """Code HTTP d'une exception de `get` : HTTPError (code), sinon « HTTP 404 » / « HTTP Error 404 » dans le texte ; None sinon."""
+    code = getattr(e, "code", None)
+    if isinstance(code, int):
+        return code
+    m = re.search(r"HTTP(?: Error)? (\d{3})", str(e))
+    return int(m.group(1)) if m else None
+
+
+def _adresse(racine, env):
+    """(adresse, erreur) : jamais d'exception (persist ou .h illisible -> erreur lisible)."""
+    try:
+        return ags._carte(racine, env)[0], ""
+    except Exception as e:
+        return "", f"adresse de la carte illisible ({type(e).__name__} : {e})"
 
 
 def page_energie(ini, env):
@@ -61,17 +85,17 @@ def description_de(racine, env):
 
 def etat_carte(racine, env, *, get=None):
     """{description (None : absente, refusee ou non lue), firmware_requis, motif} ; lecture seule."""
-    ip = ags._carte(racine, env)[0]
+    ip, erreur = _adresse(racine, env)
     res = {"description": None, "firmware_requis": False, "motif": ""}
     if not ip:
-        res["motif"] = "description de la carte non verifiee (adresse de la carte inconnue)"
+        res["motif"] = "description de la carte non verifiee (" + (erreur or "adresse de la carte inconnue") + ")"
         return res
     try:
         corps = (get or build_ota_http._get)(ip, SONDE, ags.DELAI)
     except Exception as e:                  # hors ligne, 404 (aucune description), 413 (trop grosse)
-        texte = str(e)
-        if "HTTP 404" not in texte:
-            res["motif"] = "description de la carte trop grosse (HTTP 413)" if "HTTP 413" in texte else f"description de la carte non verifiee ({texte})"
+        code = _code(e)
+        if code != 404:
+            res["motif"] = "description de la carte trop grosse (HTTP 413)" if code == 413 else f"description de la carte non verifiee ({e})"
         return res
     try:
         d = json.loads(corps.decode("utf-8"))
@@ -143,7 +167,7 @@ def catalogue(racine, env, *, get=None):
     origine « defaut »), les totaux et les echelles en flash."""
     _env(racine, env)
     champs, origine = aed.CHAMPS_DIRECT, "defaut"
-    ip = ags._carte(racine, env)[0]
+    ip = _adresse(racine, env)[0]
     if ip:
         try:
             sns = json.loads((get or build_ota_http._get)(ip, "/cm?cmnd=Status%2010", ags.DELAI).decode("utf-8", "replace")).get("StatusSNS") or {}
@@ -156,3 +180,50 @@ def catalogue(racine, env, *, get=None):
     sources = [{"direct": c} for c in champs] + [{"total": p, "grandeur": g} for p in ("jour", "mois", "an") for g in grandeurs] + \
               [{"flash": "minutes"}] + [{"flash": p, "grandeur": g} for p in ("heure", "jour", "mois", "an") for g in grandeurs]
     return {"sources": sources, "styles": list(aed.TYPES), "origine": origine}
+
+
+def _simule(f, m, maintenant):
+    """(statut, objet) aux formes EXACTES de energieFonctions (envoieDonnees, envoieDirect, envoieMois) ; valeurs deterministes."""
+    jour = datetime.date.fromtimestamp(maintenant)
+    mois_courant = jour.strftime("%Y-%m")
+    if f == "direct":
+        return 200, {"p": 750, "i": 3.25, "f": 0.87, "hz": 50, "Voltage": 230, "ApparentPower": 862, "ReactivePower": 424,
+                     "Today": 3.1, "Yesterday": 4.2, "Total": 1234.5}
+    if f == "mois":
+        n = int(m[:4]) * 12 + int(m[5:]) - 1
+        ecart = jour.year * 12 + jour.month - 1 - n
+        if not 0 <= ecart <= 24:                       # futur, ou archive purgee (24 mois au plus)
+            return 404, {"erreur": "absent"}
+        return 200, {"d": [1000 * (i % 7 + 1) for i in range(31)], "de": [200 * (i % 7 + 1) for i in range(31)]}
+    annees = [(jour.year * 12 + jour.month - 1 - k) for k in range(12, 0, -1)]
+    archives = [["%04d-%02d" % (a // 12, a % 12 + 1), 90000 + 1000 * k, 18000 + 200 * k] for k, a in enumerate(annees)]
+    h = [100 + i for i in range(24)]
+    he = [20 + i for i in range(24)]
+    wh = 9000
+    etat = {"w": wh, "u": maintenant, "l": maintenant, "j": jour.isoformat(), "h": h, "he": he, "m": mois_courant,
+            "d": [1000 * (i + 1) for i in range(31)], "de": [200 * (i + 1) for i in range(31)], "a": archives}
+    return 200, {"aujourdhui": jour.isoformat(), "etat": etat, "wCourant": wh, "prix": [["2025-01-01", 2000]],
+                 "courbe": [None] * 100 + [200 + (i * 37) % 900 for i in range(188)]}
+
+
+def apercu(racine, env, f, m=None, *, get=None, muette=False, maintenant=None):
+    """(statut, corps bytes, source) d'une lecture de l'apercu : `/energie?f=donnees|direct|mois[&m=AAAA-MM]` de la carte, relayee telle quelle
+    (statut compris : 404 d'un mois absent), sinon valeurs SIMULEES (carte muette, adresse inconnue, hors ligne). source : carte | simulee.
+    LookupError : env sans page Energie (404) ; ValueError : f hors liste ou mois mal forme (400). Aucune autre URL n'est relayee."""
+    _env(racine, env)
+    if f not in FORMES:
+        raise ValueError(f"f : {' | '.join(FORMES)} attendu")
+    if f == "mois" and not (isinstance(m, str) and RE_MOIS.fullmatch(m)):
+        raise ValueError("m : mois AAAA-MM attendu")
+    ip = "" if muette else _adresse(racine, env)[0]
+    if ip:
+        chemin = f"/energie?f={f}" + (f"&m={m}" if f == "mois" else "")
+        try:
+            return 200, (get or build_ota_http._get)(ip, chemin, ags.DELAI), "carte"
+        except Exception as e:
+            code = _code(e)
+            if code in (400, 404):                    # reponse de la carte : un mois absent n'est pas une panne
+                corps = e.read() if hasattr(e, "read") and getattr(e, "fp", None) is not None else b""
+                return code, corps or b'{"erreur":"absent"}', "carte"
+    statut, objet = _simule(f, m, int(maintenant if maintenant is not None else time.time()))
+    return statut, json.dumps(objet).encode("utf-8"), "simulee"

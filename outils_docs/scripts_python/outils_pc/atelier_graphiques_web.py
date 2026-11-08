@@ -17,6 +17,8 @@ Routes (les POST exigent l'en-tete X-Atelier-Graphiques: 1 et la meme origine ; 
                        (/pages?f=valeurs, /histo) ; en-tete X-Source: carte|depot. Le DERNIER c l'emporte : la page
                        y ajoute les parametres d'URL du lecteur de la carte (paquets de 12 chemins en direct)
     GET  /description  ?env= : {description (null si aucune), solidifie, erreur}
+    GET  /energie/<env> ?f=donnees|direct|mois[&m=AAAA-MM] : apercu Energie, lecture de la carte relayee telle quelle (statut compris), sinon valeurs
+                       simulees aux formes de la carte ; X-Source: carte|simulee. 404 : env sans page Energie ; 400 : f ou m invalide
     GET  /moteur/<nom> fichiers du moteur de data/sd (liste fermee MOTEUR) ; ECharts et liquidfill decompresses
     GET  /build_actif  {actif} : la page Build (127.0.0.1:7700) repond-elle ? (sondee au clic de « Televerser », delai 1 s)
     GET  /composition  ?env= : composition /graphiques de la carte en ligne (lecture seule) comparee au depot :
@@ -45,7 +47,7 @@ import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 import acces_web
 import atelier_graphiques_conseil as agc
@@ -275,7 +277,9 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None, sonde_build=
                 elif url.path == "/series":
                     e = env()
                     if ageg.page_energie(fbi.lit_sections(racine), e):
-                        return self._json(ageg.catalogue(racine, e, get=get))
+                        c = ageg.catalogue(racine, e, get=get)
+                        muettes[e] = c["origine"] != "carte"
+                        return self._json(c)
                     s = ags.series(racine, e, get=get)
                     muettes[e] = s["source"] != "carte"
                     self._json(s)
@@ -292,6 +296,11 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None, sonde_build=
                                else agg.etat_carte(racine, e, get=get))
                 elif url.path == "/description":
                     self._json(description_de(racine, env()))
+                elif url.path.startswith("/energie/"):          # apercu Energie : l'env est dans le chemin (Energie.archives ajoute ?f=)
+                    e = env_atelier(racine, unquote(url.path[len("/energie/"):]), True)
+                    statut, corps, source = ageg.apercu(racine, e, params.get("f", [""])[-1], params.get("m", [None])[-1], get=get,
+                                                        muette=bool(muettes.get(e)))
+                    self._envoie(statut, corps, "application/json", [("X-Source", source)])
                 elif url.path.startswith("/moteur/"):
                     self._moteur(url.path[len("/moteur/"):])
                 else:
