@@ -545,6 +545,12 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   HORS persist (le persist est en RAM en permanence) ; `diverses.historique.grafana` reste au persist ; sans historique actif, la cle `.grafana` donne un bouton
   « Historique (Grafana) » sur l'accueil (`controleWeb.boutonGrafana`, solidifie, toutes les cartes). Mode d'emploi : `outils_docs/README.md` § « Les graphiques
   des mesures » ; banc `berry/banc_graphiques.py` (+ `.be`, `banc_historique.be`, `bouchons_berry/graphiques/` et `historique/`) ; plan `tasks/plans/graphiques-web.md`.
+- `outils_docs/Schémas de branchement - Attribution des PINS des modules/<lieu>/<env>/Brochage GPIO - <env>.xlsx` — un
+  classeur par carte (2026-11-08) : image de la carte, une ligne Excel par broche (cases fusionnees A:B / D:E, Arial,
+  pointilles), usages tires du `_persist.json` (blocs actifs) puis COMPLETES A LA MAIN ; cartes a borniers : colonnes a
+  texte vertical. Generateurs `outils_pc/genere_brochage_excel.py` (cartes `CARTES` : S3 DevKitC-1, DevKitC V4, P4) et
+  `genere_brochage_horizontal.py` (ESP32 Relay x8, Waveshare 8DI-8RO), par Excel (pywin32, Python systeme) ; ne
+  reecrivent jamais un classeur existant. Banc `outils_pc/test_genere_brochage.py`.
 - `outils_docs/jauges/` — catalogue de 8 jauges pour afficher une mesure de capteur (2026-10-31) : images
   `jauge-A.png` a `jauge-H.png`, code `catalogue_jauges.html`, fiche `README.md`. **Choix retenu : A (liquide
   anime ECharts) ou H (demi-cercle SVG)**. Un gabarit `webSensor*.html` n'execute aucun script (zone remplacee
