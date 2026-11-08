@@ -2,10 +2,11 @@
 
 UTILISATION (a la main ; aucun pio, aucune carte, aucun envoi ; Chrome tourne ~1 min)
     "$USERPROFILE/.platformio/penv/Scripts/python.exe" outils_docs/scripts_python/outils_pc/test_atelier_energie_page_chrome.py
-        [--capture FICHIER.png] [--sans-temoin] [--mutant archive|mobile|absent]
+        [--capture FICHIER.png] [--sans-temoin] [--mutant archive|mobile|absent|vol]
 Code de sortie 0 = vert : la vraie page passe tout ET le temoin (erreur JS volontaire au chargement) est detecte.
 `--mutant` = copie MUTEE de la page, qui doit sortir ROUGE : `archive` (l'avertissement « mois fixe sans archive » ne se declenche
-plus, A5 « a surveiller » 2), `mobile` (la regle 390 px est retiree, « a surveiller » 5), `absent` (le module JS de la page n'est pas charge : etat de depart du TDD).
+plus, A5 « a surveiller » 2), `mobile` (la regle 390 px est retiree, « a surveiller » 5), `absent` (le module JS de la page n'est pas charge : etat de depart du TDD),
+`vol` (l'apercu en vol ne verifie plus que la page Energie est toujours la : TypeError en quittant le differentiel).
 
 Montage : atelier_graphiques_web.py dans un processus fils devant une COPIE du depot (celle du banc test_atelier_graphiques_energie) ;
 la carte est simulee en remplacant build_ota_http._get dans ce processus (aucun reseau) : `/energie?f=description` rend le fichier
@@ -34,6 +35,8 @@ MARQUE_TEMOIN = "var gabarit = '', apercuCtrl = null"
 INJECTION_TEMOIN = "\n$('bouton-qui-n-existe-pas').onclick = null;   // TEMOIN : TypeError au chargement\n"
 MUTANTS = {"archive": ("etat.en.archives[m] === 404", "etat.en.archives[m] === 405"),
            "absent": (None, ""),
+           "vol": [("if (en !== etat.en || jeton !== en.jeton", "if (jeton !== etat.en.jeton"),
+                   ("if (en === etat.en && jeton === en.jeton)", "if (jeton === etat.en.jeton)")],
            "mobile": ("@media (max-width:900px){.colonnes", "@media (max-width:1px){.colonnes")}
 HTML = b"<!DOCTYPE html><html><body>Energie</body></html>"
 ENERGY = {"Power": 1200, "Current": 5.2, "Factor": 0.98, "Voltage": 230, "Today": 3.1, "Total": 1234.5}
@@ -71,12 +74,13 @@ def mode_serveur(port, depot, mutant, temoin):
         assert atelier_graphiques_page.PAGE.count(MARQUE_TEMOIN) == 1
         atelier_graphiques_page.PAGE = atelier_graphiques_page.PAGE.replace(MARQUE_TEMOIN, INJECTION_TEMOIN + MARQUE_TEMOIN)
     if mutant:
-        ancien, nouveau = MUTANTS[mutant]
-        if ancien is None:             # module de la page absent : la sonde doit etre rouge (TDD)
-            from atelier_graphiques_page_energie import JS_ENERGIE
-            ancien = JS_ENERGIE
-        assert atelier_graphiques_page.PAGE.count(ancien) == 1, "marque du mutant introuvable dans la page"
-        atelier_graphiques_page.PAGE = atelier_graphiques_page.PAGE.replace(ancien, nouveau)
+        paires = MUTANTS[mutant] if isinstance(MUTANTS[mutant], list) else [MUTANTS[mutant]]
+        for ancien, nouveau in paires:
+            if ancien is None:             # module de la page absent : la sonde doit etre rouge (TDD)
+                from atelier_graphiques_page_energie import JS_ENERGIE
+                ancien = JS_ENERGIE
+            assert atelier_graphiques_page.PAGE.count(ancien) == 1, "marque du mutant introuvable dans la page"
+            atelier_graphiques_page.PAGE = atelier_graphiques_page.PAGE.replace(ancien, nouveau)
     build_ota_http._get = fausse_carte
     agt.build_actif = lambda port=agt.PORT_BUILD: True
     agw.DEPOT = Path(depot)
@@ -177,11 +181,15 @@ def js_champ(cdp, selecteur, valeur, evenement="input"):
            + "; i.dispatchEvent(new Event(" + json.dumps(evenement) + ", {bubbles: true})); 1")
 
 
-def erreurs(cdp):
+def mois_fixes(cdp):
+    return cdp.js("etat.desc && etat.desc.elements ? etat.desc.elements.map(function(e){ return e.source && e.source.mois; }).filter(Boolean) : []") or []
+
+
+def erreurs(cdp, fixes=None, depuis=0):
     """Erreurs de la page, hors les 404 de f=mois d'un mois FIXE de la description affichee : archive absente, attendu (spec, « A surveiller » 2).
     Le scenario d'ecriture laisse un mois fixe 2020-01 dans le depot copie : les scenarios suivants le redemandent."""
-    fixes = cdp.js("etat.desc && etat.desc.elements ? etat.desc.elements.map(function(e){ return e.source && e.source.mois; }).filter(Boolean) : []") or []
-    return [e for e in cdp.erreurs() if not ("f=mois" in e and "404" in e and any("m=" + f + " " in e + " " for f in fixes))]
+    fixes = mois_fixes(cdp) if fixes is None else fixes
+    return [e for e in cdp.erreurs()[depuis:] if not ("f=mois" in e and "404" in e and any("m=" + f + " " in e + " " for f in fixes))]
 
 
 def clic(cdp, selecteur):
@@ -321,8 +329,9 @@ def sonde_quitte(m):
     cdp = m.cdp
     carte_comme_depot(m)
     ouvre(m)
-    n0 = len(cdp.erreurs())
-    cdp.js("var s = document.getElementById('env'); s.value = " + json.dumps(CUVE) + "; s.dispatchEvent(new Event('change')); 1")
+    n0, fixes = len(cdp.erreurs()), mois_fixes(cdp)
+    # apercu relance (lecture f=donnees en vol) puis bascule dans le meme tour : sa reponse arrive avec etat.en remis a null
+    cdp.js("etat.en.don = null; apercu(); var s = document.getElementById('env'); s.value = " + json.dumps(CUVE) + "; s.dispatchEvent(new Event('change')); 1")
     attend(cdp, "etat.dest === 'pages' && !!etat.desc && !!etat.desc.pages && document.getElementById('relire').textContent.indexOf('lecture') < 0", 25)
     verifie(cdp.js("[document.getElementById('energie-ed').children.length, etat.en === null || etat.en === undefined, document.body.classList.contains('energie')]"),
             [0, True, False], "differentiel -> cuve : #energie-ed vide, etat Energie oublie, mode Energie retire")
@@ -330,7 +339,7 @@ def sonde_quitte(m):
             False, "differentiel -> cuve : menu « Page » de la cuve retabli")
     cdp.js("var b = document.getElementById('en-ajout'); if (b) b.click(); 1")
     time.sleep(0.5)
-    verifie(cdp.erreurs()[n0:], [], "differentiel -> cuve : aucune erreur JS, meme apres un clic residuel sur « + Element »")
+    verifie(erreurs(cdp, fixes, n0), [], "differentiel -> cuve : aucune erreur JS (apercu en vol compris), meme apres un clic residuel sur « + Element »")
 
 
 def sonde_mobile(m):

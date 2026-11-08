@@ -242,24 +242,24 @@ function lisEnergie(env, url) {
   });
 }
 function energieApercu() {
-  var p = $('cadre'), env = etat.env, jeton = ++etat.en.jeton, base = '/energie/' + encodeURIComponent(env), d = etat.desc;
+  var p = $('cadre'), env = etat.env, en = etat.en, jeton = ++en.jeton, base = '/energie/' + encodeURIComponent(env), d = etat.desc;
   p.className = 'cadre' + (etat.vue === 'telephone' ? ' telephone' : '') + (etat.sombre ? ' sombre' : '');
   $('tete-carte').textContent = 'Tasmota · ' + env; $('tete-titre').textContent = '';
   $('titre-apercu').textContent = 'Aperçu — page /energie (' + (etat.source === 'carte' ? 'vraies valeurs de la carte' : 'valeurs simulées') + ')';
   if (!d) { $('apercu').textContent = 'Choisir d\'abord la version de départ (carte ou dépôt).'; return; }
   if (Energie.valide(d).length) return;                      // description en cours de saisie : l'apercu garde le dernier rendu, les motifs sont affiches
-  var lit = etat.en.don ? Promise.resolve() : Promise.all([lisEnergie(env, base + '?f=donnees'), lisEnergie(env, base + '?f=direct')]).then(function (r) {
-    etat.en.don = r[0]; etat.en.dir = r[1];
+  var lit = en.don ? Promise.resolve() : Promise.all([lisEnergie(env, base + '?f=donnees'), lisEnergie(env, base + '?f=direct')]).then(function (r) {
+    en.don = r[0]; en.dir = r[1];
   });
-  lit.then(function () { return Energie.archives(base, d, etat.en.don); }).then(function () {
-    if (jeton !== etat.en.jeton || env !== etat.env) return;
+  lit.then(function () { return Energie.archives(base, d, en.don); }).then(function () {
+    if (en !== etat.en || jeton !== en.jeton || env !== etat.env) return;   // carte changee pendant la lecture : etat.en remis a null ou neuf
     var zone = $('apercu'), g = creeEl('div', {id: 'a_grille'}), w = creeEl('div', {id: 'e_zone'});
     zone.textContent = ''; w.appendChild(g); zone.appendChild(w);
-    Energie.trace(g, copie(d), etat.en.don, etat.en.dir);
-    etat.en.archives = etat.en.don.archives || {};
+    Energie.trace(g, copie(d), en.don, en.dir);
+    en.archives = en.don.archives || {};
     g.setAttribute('data-pret', '1');
     energieAlertes();
-  }).catch(function (e) { if (jeton === etat.en.jeton) $('apercu').textContent = 'Lecture impossible : ' + e.message; });
+  }).catch(function (e) { if (en === etat.en && jeton === en.jeton) $('apercu').textContent = 'Lecture impossible : ' + e.message; });
 }
 // Mois d'un graphique « jour » (meme calcul que energie.js::cible) ; null tant que la carte n'a rendu aucun releve
 function moisDe(s) {
