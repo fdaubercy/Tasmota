@@ -15,7 +15,7 @@ Tout texte venu du serveur passe par textContent (fonction h de build_page).
 
 CSS = r"""
   [hidden]{display:none!important}
-  .onglets{display:flex;gap:4px;border-bottom:1px solid var(--bord);margin:0 0 12px}
+  .onglets{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--bord);margin:0 0 12px}
   .onglets button{font:inherit;font-size:13.5px;padding:7px 14px;border:1px solid transparent;border-bottom:0;border-radius:6px 6px 0 0;
     background:none;color:var(--doux);cursor:pointer;margin-bottom:-1px}
   .onglets button[aria-selected="true"]{background:var(--carte);border-color:var(--bord);color:var(--texte);font-weight:600}
