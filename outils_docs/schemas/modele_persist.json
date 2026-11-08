@@ -2433,7 +2433,5 @@
 		"custom_files_upload     =   ${env:{{base}}.custom_files_upload}",
 		"                            {{dossier}}"
 	],
-	"a_completer": [
-		"serveur.voieReseau"
-	]
+	"a_completer": []
 }
