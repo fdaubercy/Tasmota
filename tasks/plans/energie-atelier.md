@@ -55,7 +55,7 @@ sonde Chrome pendant un build (garde bloquante dans la commande, leçon du 2026-
   couleur `rouge`, titre de 41 caractères, `hauteur` `xl`, cadran sans `min`/`max` ou `min ≥ max`, `total` sur une valeur
 - [x] Banc rouge `test_atelier_energie_description.py` — preuve : rouge ModuleNotFoundError, puis 0 echec(s) sur 95 verifications, temoin 16 -> 17 rouge (2 echecs) ; (module absent), puis module écrit, banc vert (chaque cas : `[]` ou
   un motif qui contient `motif`) ; témoin : copie mutée (borne 16 → 17) → rouge
-- [ ] Commit `feat(atelier): schema de la page Energie du differentiel`
+- [x] Commit `feat(atelier): schema de la page Energie du differentiel` — preuve : 2f1001497
 
 ## A2 — Carte : routes de lecture d'`energieFonctions` (firmware)
 - [ ] Banc Berry rouge `banc_energie_routes.be` + `.py` (berry.exe, faux `webserver`, comme `banc_energie`) :
