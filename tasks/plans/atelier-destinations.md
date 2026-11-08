@@ -2,7 +2,7 @@
 chantier: atelier-destinations
 titre: Atelier des graphiques — destination « Graphiques » et bouton « Téléverser »
 objectif: Poser un graphique de l'atelier sur une page dédiée, sur /graphiques ou sur une nouvelle page, puis l'envoyer à la carte par la page Build qui prépare tout et attend le clic Envoyer
-statut: actif
+statut: clos
 cree: 2026-11-04
 maj: 2026-11-08
 ---
@@ -134,7 +134,7 @@ la page Build construit le FS, coche, affiche le bandeau et n'envoie rien.
   (décision : graphiques automatiques gardés, a92c7d8de) ; cadran « Volume cuve » écrit par l'atelier dans `graphiques.json`, envoyé
   en MQTT (journal `20261108-055527-…-fichiers-mqtt.log`, `fin ok` 1005 o) ; `/graphiques` sous Chrome : Mesures + Cuve + cadran,
   0 erreur JS (capture `p4_graphiques3.png`) ; atelier `/composition` = « identique » carte/dépôt ; `/cs` 05:56:01–05:57:30 sans `_ERREUR`
-- [ ] Cuve : modification d'une page dédiée envoyée par « Téléverser » (redémarrage non coché), effet constaté
+- [x] Cuve : modification d'une page dédiée envoyée par « Téléverser » (redémarrage non coché), effet constaté — preuve : effet constaté par l'utilisateur le 2026-11-08 (« l'essai sur la cuve a marché »), puis page `tableau` retirée par l'atelier ; autoexec.be de la cuve = dépôt (1888 o, même MD5), envoyé par le maître 192.168.0.43:8081 avec `BrRestart` ; même parcours vu sur le P4 (page `tableau`, 05:41). Après un `BrRestart`, `/pages` reste enregistrée (réponse vide) jusqu'au `Restart 1`
 
 ## A12 — Lien « Envoyer par la page Build » réparé (essai A9 du 2026-11-08)
 Constat : le lien `?env=<env>#fichiers` de l'atelier ne choisissait pas la carte dans l'onglet Fichiers ni ne
@@ -158,7 +158,7 @@ Fichiers : `build_fichiers.py::sources`, `build_page_fichiers.py` (« Envoyer »
 - [x] Commit (commun avec A12) — preuve : b6c893263
 
 ## A10 — Retour au plan précédent non terminé
-- [ ] Plan `tasks/plans/atelier-graphiques.md` (palier 1 clos, A13 restante) : A11 cochée « remplacée par
+- [x] Plan `tasks/plans/atelier-graphiques.md` (palier 1 clos, A13 restante) : A11 cochée « remplacée par — preuve : atelier-graphiques.md § « Actions retirées » (A11 -> ce plan), amélioration « agent de relecture » cochée ; statut clos ici
   atelier-destinations », renvoi vérifié ; ce plan-ci passé en `statut: clos`, index régénéré
 - [ ] Conversation rattachée de nouveau à `atelier-graphiques` (`/suivi suivre atelier-graphiques`) ; prochaine action
   proposée à l'utilisateur : A13 (palier 4, ESP32 classiques, à détailler au début du palier)

@@ -4,7 +4,7 @@ titre: Atelier des graphiques (page 7950) et moteur commun des pages de graphiqu
 objectif: Préparer sur le PC un graphique pour une carte, le voir avec ses vraies valeurs, puis écrire dans le dépôt la description qui le fait apparaître sur la carte, sans Berry écrit à la main
 statut: actif
 cree: 2026-11-03
-maj: 2026-11-04
+maj: 2026-11-08
 ---
 # Atelier des graphiques
 
@@ -207,8 +207,8 @@ A11 (palier 2, `/graphiques` étendue) : remplacée par le plan `tasks/plans/ate
 l'utilisateur le 2026-11-04 (trop de contraintes).
 
 ## Améliorations restantes
-- [ ] [projet] Après le palier 1 : proposer de formaliser un agent `.claude/agents/` de relecture des pages web générées si
-  la même relecture revient
+- [x] [projet] Après le palier 1 : proposer de formaliser un agent `.claude/agents/` de relecture des pages web générées si
+  la même relecture revient — preuve : `.claude/agents/relecteur-pages-web.md` (2026-11-05, plan atelier-destinations)
 
 ## Vérification
 Chaque action se coche sur preuve (sortie de banc, commit, capture). Le palier 1 est clos quand A9 est vue sur la vraie carte.
