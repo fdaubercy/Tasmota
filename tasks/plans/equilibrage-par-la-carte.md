@@ -47,7 +47,7 @@ Décisions de conception (à contester avant le feu vert) :
 - [x] Banc Berry de la route (`banc_debits.py` ou banc voisin, faux `webserver`) : JSON (valeurs, noms, capteur muet), préfixe de la page (`</` échappé), refus sans accès privilégié, fichier absent → erreur ; témoins rouges lus — preuve : `banc_debits.py` VERT, 96 vérifications (f=debits, page, CARTE échappé, 404, exception d'envoi, mesures illisibles → 500), 7 témoins de la page rouges
 - [x] Sonde Chrome hermétique (faux serveur local qui sert la page et un faux `?f=debits`) : lecture, suivi direct, page à 360 px ; hors carte : aucun bouton — preuve : `outils_docs/scripts_python/outils_pc/test_equilibrage_page_chrome.py` VERT (18 vérifications, 360 px, polices Google bloquées) ; témoin : page sans sa lecture au chargement → 8 KO
 - [x] `verifie_berry.py` sans erreur ni écart ; agents `relecteur-berry` et `relecteur-pages-web`, remarques traitées — preuve : `verifie_berry.py` 0 erreur 0 écart ; `relecteur-berry` : prêt, 1 point (JSON calculé avant d'ouvrir la réponse) corrigé ; `relecteur-pages-web` : 4 points corrigés (une lecture à la fois et délai de 5 s ; sonde : estimateur, erreurs par phase, largeur hors carte, docstring)
-- [ ] Commit et push
+- [x] Commit et push — preuve : `1e9b6c9cf` (deplacement seul, par erreur) puis `9719c6ac0` (13 fichiers), pousses
 
 ## A5 — Sur la carte (avec le matériel)
 - [ ] FS envoyé par la page Build ; bouton « Équilibrage » de l'accueil ouvert depuis le téléphone ; « Lire les débits » = valeurs de l'accueil ; suivi direct ; tas mesuré avant et après la première ouverture
