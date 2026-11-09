@@ -2166,10 +2166,28 @@ modbusFonctions.surveilleRubans = modbusFonctions_surveilleRubans
 # Esclave, lecture groupee (drivers.ModBus.lectureGroupee ON, 2026-11-09) : une requete 0x04 de 'n' valeurs uint32
 # (Count = 2n registres) servie EN ENTIER : la valeur i est celle de l'analogique ou du compteur actif de registre
 # StartAddress + i (type + id - 1, tous modules), la sentinelle si sa mesure n'est pas fraiche. Requete invalide
-# (Count impair, plus de 40 registres, registre sans appareil) : code d'erreur pose dans paramMSG["Erreur"],
-# journalise, rien n'est emis - jamais les zeros de l'ancien chemin. Retourne true : la requete est traitee.
+# (Count impair, plus de 40 registres, trou dans la plage) : code d'erreur pose dans paramMSG["Erreur"],
+# journalise, rien n'est emis - jamais les zeros de l'ancien chemin. Retourne true : la requete est traitee ;
+# false, sans rien faire, si StartAddress n'est ni une analogique ni un compteur actif (ex. DHT22 1216, deux
+# floats = Count 4 envoye par le maitre) : l'ancien chemin de executeCmdModbus la sert comme avant.
 def modbusFonctions_sertGroupe(paramMSG, n)
     import string
+
+    # Registre -> appareil, en un seul parcours (meme parcours que executeCmdModbus)
+    var appareils = {}
+    for cle: modules.keys()
+        if (type(modules[cle]) != "instance" || modules[cle].find("activation", "OFF") != "ON")    continue    end
+        for famille: ["analogiques", "compteurs"]
+            var liste = modules[cle]["environnement"].find(famille)
+            if (type(liste) != "instance")    continue    end
+            for numCapteur: liste.keys()
+                var a = liste[numCapteur]
+                if (type(a) == "instance" && a.find("activation", "OFF") == "ON")    appareils[a["type"] + a["id"] - 1] = a    end
+            end
+        end
+    end
+    var registre = int(paramMSG["StartAddress"])
+    if (!appareils.contains(registre))    return false    end
 
     var nbRegistres = int(paramMSG["Count"])
     var erreur = nil
@@ -2177,24 +2195,7 @@ def modbusFonctions_sertGroupe(paramMSG, n)
     elif (nbRegistres > 40)      erreur = "tomanydata"         # meme plafond que prepareTrame
     end
 
-    # Registre -> appareil, en un seul parcours (meme parcours que executeCmdModbus)
-    var appareils = {}
-    if (erreur == nil)
-        for cle: modules.keys()
-            if (type(modules[cle]) != "instance" || modules[cle].find("activation", "OFF") != "ON")    continue    end
-            for famille: ["analogiques", "compteurs"]
-                var liste = modules[cle]["environnement"].find(famille)
-                if (type(liste) != "instance")    continue    end
-                for numCapteur: liste.keys()
-                    var a = liste[numCapteur]
-                    if (type(a) == "instance" && a.find("activation", "OFF") == "ON")    appareils[a["type"] + a["id"] - 1] = a    end
-                end
-            end
-        end
-    end
-
     var valeurs = []
-    var registre = int(paramMSG["StartAddress"])
     for i: 0 .. n - 1
         if (erreur != nil)    break    end
         var a = appareils.find(registre + i)
@@ -2244,9 +2245,11 @@ def modbusFonctions_executeCmdModbus(paramMSG)
     if (paramMSG["DeviceAddress"] != drivers["ModBus"]["id"])   return false    end
 
     # Lecture groupee (cle de l'esclave) : plusieurs valeurs servies en entier, ou refusees (voir sertGroupe).
-    # Sans la cle, ou pour une seule valeur, le chemin d'avant (ci-dessous) est inchange.
-    if (drivers["ModBus"].find("lectureGroupee", "OFF") == "ON" && paramMSG["FunctionName"] == "LECTURE_REGISTRES_ENTREES" && int(paramMSG["Count"]) / 2 > 1)
-        return modbusFonctions.sertGroupe(paramMSG, int(paramMSG["Count"]) / 2)
+    # Sans la cle, pour une seule valeur, ou hors analogiques et compteurs (thermometres), le chemin d'avant
+    # (ci-dessous) est inchange.
+    if (drivers["ModBus"].find("lectureGroupee", "OFF") == "ON" && paramMSG["FunctionName"] == "LECTURE_REGISTRES_ENTREES" && int(paramMSG["Count"]) / 2 > 1 &&
+        modbusFonctions.sertGroupe(paramMSG, int(paramMSG["Count"]) / 2))
+        return true
     end
 
     #-

@@ -2121,7 +2121,8 @@ drivers = {"ModBus": {"activation": "ON", "id": 1, "activationReponseCMD": "ON",
 diverses = {"telePeriod": 300}                        # limite generale : 900 s
 var ana36 = {}
 for i: 1 .. 7    ana36["analogique" + str(i)] = {"activation": "ON", "type": 4704, "id": i, "value": 1000 + i, "nom": "Debit " + str(i)}    end
-modules = {"debits": {"activation": "ON", "environnement": {"analogiques": ana36}}}
+modules = {"debits": {"activation": "ON", "environnement": {"analogiques": ana36,
+    "thermometres": {"thermometre1": {"activation": "ON", "type": 1216, "id": 1, "value": 21.5, "Humidity": 55.0, "nom": "DHT22"}}}}}
 var reponses36 = []
 vraiEnvoi = modbusFonctions.envoiMsgModbus
 modbusFonctions.envoiMsgModbus = def (t, typeMsg, id) reponses36.push(modbusFonctions.prepareTrame(t, typeMsg).tohex()) end
@@ -2141,6 +2142,10 @@ verifie("(a) cle absente, 14 registres : reponse d'avant", "1/[1001]/0/01041C000
 drivers["ModBus"]["lectureGroupee"] = "ON"
 # (a') cle ON, requete d'UNE valeur (Count 2, le cas du garage) : reponse d'avant
 verifie("(a') cle ON, 1 valeur : reponse d'avant", "1/[1002]/0/010404000003EA7AFB", sert36(lit36(4705, 2)))
+# (a'') cle ON, DHT22 (1216, 2 floats = Count 4, envoye par demandeLecture du maitre) : pas une analogique ni un compteur,
+# l'ancien chemin le sert comme avant (reference captee sur le code du commit 010d29581)
+modbusFonctions.noteMesure(1216)
+verifie("(a'') cle ON, DHT22 Count 4 : reponse d'avant", "1/[21.5, 55]/0/01040841AC0000425C00005991", sert36(lit36(1216, 4)))
 # (b) cle ON : les 7 valeurs dans l'ordre des registres
 var r36 = lit36(4704, 14)
 var s36 = sert36(r36)
