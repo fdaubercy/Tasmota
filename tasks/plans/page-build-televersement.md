@@ -578,7 +578,7 @@ en dernier, n'est pas parti. Vider tout le FS est écarté : `/.settings`, `/.dr
 - [x] `build_ota_fs.py` : étape « Comparaison avec la carte » (listage + `UfsFree`, octets comparés quand les tailles
   sont égales), bilan de place avant l'envoi, suppression juste avant le remplacement quand la place manque. — preuve : `build_ota_fs.py::_compare_carte`, `_tailles`, `_libre`, `_blocs`, suppression dans `envoie_fs_ota` ; `build_ota_http.py::_raison`
 - [x] Doc : `outils_docs/README.md` (envoi du FS par OTA) ; bancs voisins (`test_build_web`, `test_build_serie`) verts. — preuve : README § « OTA du file system », étapes 3 et 4 ; CLAUDE.md (taille du banc, 925) ; `verifie_references_docs.py` 0 défaut ; test_build_serie, test_build_web, test_build_drvset, test_build_sauvegarde (59 OK), test_autoexec_envoi (121 OK), test_tapp_envoi (129 OK), test_atelier_destinations_bout_en_bout (4 OK) VERTS
-- [ ] Essai réel : FS du différentiel par OTA, fichiers identiques sautés, envoi complet.
+- [x] Essai réel : FS du différentiel par OTA, fichiers identiques sautés, envoi complet. — preuve : 2026-11-09 11:40, page 7700 « réussi · 3 min 08 s », « Comparaison avec la carte 8,1 s », « Envoi des fichiers 5,3 s » (27 s avant l'A17) ; syslog : 4 fichiers recus (nbIOActives.json, energie.css, energie.js, _persist.json), les autres sautes ; avertissement « persist relu » = reecriture de Berry au redemarrage (listes vides et drivers inactifs retires), attendu
 
 ## Améliorations restantes
 

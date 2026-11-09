@@ -111,7 +111,7 @@ sonde Chrome pendant un build (garde bloquante dans la commande, leçon du 2026-
   sauf après sauvegarde de `/energie/` (le différentiel a `custom_files_upload` : un upload série réécrit tout le FS et perd
   `etat.json`, `mois-*.json`, `courbe.bin`). Description écrite avec l'ancien firmware : pas de bouton Téléverser, envoyer les 4
   fichiers (`energie_page.json`, `sd/js/energie.js`, `sd/html/energie.html`, `sd/css/energie.css`) par l'onglet Fichiers.
-- [ ] Sans description : page identique à la capture d'avant ; journal web sans `_ERREUR`
+- [x] Sans description : page identique à la capture d'avant ; journal web sans `_ERREUR` — preuve : 2026-11-09 11:44, capture `energie_apres_A7_v2.png` du scratchpad : 4 tuiles, heure, mois par jour, 12 mois, puissance 24 h comme avant ; deux defauts vus a la premiere capture (apostrophe en guillemet, graphiques bridés par le max-height des tuiles) corriges par 9b6c8cb7b ; ecarts voulus par la spec : ligne « Description absente » (§ repli) et bleu #4a9eda ; journal web : 0 `_ERREUR`, aucun FRC ; tas 60 Ko, UfsFree 36 Ko
 - [ ] Atelier : modification réelle (ajout, couleur, hauteur, mois précédent), « Téléverser », effet constaté sur la carte
 - [ ] Après : tas page fermée / ouverte, `UfsFree` ≥ 16 Ko (spec §4.4), notés en preuve
 
