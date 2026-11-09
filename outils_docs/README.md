@@ -1622,7 +1622,7 @@ embarque `energie.js`). L'atelier reprend la disposition de la page `/energie` e
    exigé avant toute modification (jamais d'écrasement implicite).
 2. **Éditer** la liste d'éléments : type (`valeur`, `cadran`, `demi-cercle`, `barres`, `courbe`, `aire`, `escalier`), source
    (champ « direct » de ENERGY, total jour/mois/an, ou historique flash minutes/heure/jour/mois/an en kWh ou euros), titre,
-   unité, couleur, largeur (demi/pleine), hauteur, min/max des jauges, rang. Échelle de temps d'un graphique « jour » : mois
+   unité, couleur, largeur (demi/pleine), hauteur, min/max des jauges ; ajout (16 au plus), retrait, place dans la liste (en tête, monter, descendre). Échelle de temps d'un graphique « jour » : mois
    relatif (décalage 0 à 23) ou **mois fixe** (`AAAA-MM`) ; si l'archive de ce mois a été purgée, l'atelier le signale avant
    l'écriture. L'aperçu est tracé par le vrai `energie.js`, avec les données de la carte en ligne, sinon des valeurs simulées.
 3. **Écrire dans le dépôt** (diff puis écriture atomique, refusée pendant un build ou sur empreinte périmée) : seul
