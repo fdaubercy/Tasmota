@@ -219,8 +219,18 @@ while tasmota.declenche("fsmqtt_lit") end
 relu = bytes()
 for p: mqtt.publies    if p[0] == BASE + "lu"    relu = relu + p[1][4 ..]    end    end
 verifie(relu == d && dernier()["op"] == "lit" && dernier()["ok"] && dernier()["octets"] == 10000, "lit : 10 000 o en 2 lots, identiques")
+def niveaux_refus()                             # niveaux des lignes « lit refusé » du journal (l'ordre recu est aussi journalise)
+    var r = []
+    for l: JOURNAL    if string.find(l[0], "lit refusé") >= 0    r.push(l[1])    end    end
+    return r
+end
+JOURNAL.clear()
 ordre({"op": "lit", "chemin": "/absent.json"})
-verifie(!dernier()["ok"], "lit : fichier absent -> refuse")
+verifie(!dernier()["ok"] && string.find(dernier()["erreur"], "fichier absent") >= 0, "lit : fichier absent -> refuse, motif lu par le PC")
+verifie(niveaux_refus() == [LOG_LEVEL_DEBUG], "lit : fichier absent journalise en debug (cas normal avant un premier envoi)")
+JOURNAL.clear()
+ordre({"op": "lit", "chemin": "../hors.json"})
+verifie(!dernier()["ok"] && niveaux_refus() == [LOG_LEVEL_ERREUR], "lit : chemin refuse journalise en erreur")
 
 # --- rechargement, Berry, redemarrage
 global.serveur = nil

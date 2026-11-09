@@ -53,8 +53,8 @@ class FsMqttRecepteur
         mqtt.publish(self.base + "etat", json.dump(r))
     end
 
-    def refuse(id, op, erreur)
-        self.log("FS_MQTT: " + op + " refusé : " + erreur + " !", LOG_LEVEL_ERREUR)
+    def refuse(id, op, erreur, niveau)
+        self.log("FS_MQTT: " + op + " refusé : " + erreur + " !", niveau != nil ? niveau : LOG_LEVEL_ERREUR)
         self.repond(id, op, false, {"erreur": erreur})
     end
 
@@ -203,7 +203,9 @@ class FsMqttRecepteur
         import crypto
         if self.lecture != nil    return self.refuse(id, "lit", "lecture déjà en cours")    end
         if !self.chemin_valide(c) || !path.exists(c) || path.isdir(c)
-            return self.refuse(id, "lit", "fichier absent : " + str(c))
+            # absent d'un chemin valide : cas normal (le PC lit avant un premier envoi), pas une erreur a traiter
+            var normal = self.chemin_valide(c) && !path.exists(c)
+            return self.refuse(id, "lit", "fichier absent : " + str(c), normal ? LOG_LEVEL_DEBUG : LOG_LEVEL_ERREUR)
         end
         self.lecture = {"id": id, "chemin": c, "f": open(c, "r"), "hache": crypto.MD5(), "position": 0}
         self.lot_lit()
