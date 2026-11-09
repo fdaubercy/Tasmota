@@ -134,6 +134,12 @@ c'est **voulu** (decide le 2026-10-04 : « laisse ce test comme il est »). Ne p
 decouper : c'est UN fichier a televerser sur chaque carte, qui se prepare et s'explique
 seul au chargement ; le scinder imposerait deux televersements par carte.
 
+`data/fs/energieFonctions.be` fait **598 lignes**, et c'est **voulu** (decide le 2026-11-09 : exception plutot
+qu'un decoupage ; 531 lignes avant le palier 4 de l'atelier, +57 pour les routes de lecture `f=description`, `f=mois`,
+`f=direct`, +10 pour le relais par morceaux). Module SOLIDIFIE du differentiel (sans PSRAM) : comptage, stockage et
+routes de la page `/energie` restent ensemble (spec `2026-11-08-atelier-energie-differentiel-design.md` §6.3) ; un
+second module solidifie ajouterait une entree de `custom_berry_solidify` et de l'autoexec pour rien.
+
 `outils_docs/scripts_python/outils_pc/build_page.py` fait **1223 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
 vague de corrections finale du meme jour ; 935 le 2026-10-25 avec le panneau « Sortie » et « Effacer puis
