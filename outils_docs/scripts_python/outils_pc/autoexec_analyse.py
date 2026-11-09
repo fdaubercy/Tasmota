@@ -8,7 +8,8 @@ l'appelant passe le persist de la carte et le resultat de `autoexec_commandes.ch
   secret       rouge, mot de passe en clair, y compris dans une ligne en commentaire ; la valeur n'est jamais citee
   doublon      orange, la commande est deja reposee au demarrage par data/fs/configGlobal.be d'apres le persist
   inconnue     orange, avec la commande la plus proche (difflib)
-  absente      orange, la commande n'est pas compilee pour la carte : toutes ses gardes sont fausses (A4)
+  absente      orange, la commande n'est pas compilee pour la carte : toutes ses gardes sont fausses (A4) ; ou commande Berry
+               dont AUCUN module declarant n'est charge par l'autoexec.be de la carte (autoexec_berry.py, memes couleur et type)
   longueur     orange, plus de 510 octets : le firmware tronque (xdrv_50_filesystem.ino::UfsExecuteCommandFileLoop)
 Un commentaire n'est analyse que pour les secrets. Banc : test_autoexec_analyse.py.
 """
@@ -100,11 +101,27 @@ def _casse(ecrit, cible):
     return "".join(res)
 
 
-def analyse(texte, persist, commandes, banque_noms=(), texte_config=None, gardes_env=None):
+def absente(ecrit, nom, commandes, gardes_env=None, berry_env=None):
+    """(message, correction) si la commande n'existe pas sur la carte, sinon None. Firmware : toutes les gardes fausses ;
+    Berry : aucun module declarant charge (une commande Berry de meme nom qu'une commande C existe toujours : ignoree)."""
+    chemins = gardes_env and (gardes_env(nom) or gardes_env(ecrit.upper()))
+    if chemins and all(any(v is False for _, v in ch) for ch in chemins):
+        return (f"{ecrit} n'est pas compilee pour cette carte ({_raison(chemins[0])}).",
+                "Retirer la ligne, ou compiler la carte avec cette option (user_config_override.h).")
+    modules = berry_env and (berry_env.get(nom) or berry_env.get(ecrit.upper()))
+    source = commandes["connues"].get(nom) if isinstance(commandes["connues"], dict) else None
+    if modules and not str(source or "").startswith("tasmota/"):
+        return (f"{ecrit} est une commande Berry du module {', '.join(modules)}, que l'autoexec.be de cette carte ne charge pas.",
+                "Retirer la ligne, ou charger le module dans l'autoexec.be de la carte.")
+    return None
+
+
+def analyse(texte, persist, commandes, banque_noms=(), texte_config=None, gardes_env=None, berry_env=None):
     """Avertissements du fichier : [{ligne, type, niveau, message, correction, commande}], dans l'ordre des lignes
     (commande : nom a enlever par le bouton de la page, doublon, redemarrage et absente ; sinon None).
     gardes_env : `nom -> [chemin, ...]` d'autoexec_gardes.etat (chemin = [(condition, vrai|faux|None)]) ; None = pas
-    d'alerte `absente`. Alerte seulement si TOUS les chemins ont une condition FAUSSE ; incertain (None) ne compte pas."""
+    d'alerte `absente`. Alerte seulement si TOUS les chemins ont une condition FAUSSE ; incertain (None) ne compte pas.
+    berry_env : `NOM -> [modules]` d'autoexec_berry.non_chargees ; None = pas d'alerte Berry."""
     connues = set(commandes["connues"]) | set(banque_noms)
     redemarrent = commandes["redemarrent"]
     posees = None
@@ -125,10 +142,9 @@ def analyse(texte, persist, commandes, banque_noms=(), texte_config=None, gardes
             if l["commentaire"]:
                 continue
             nom = commande(ecrit) or ecrit.upper()
-            chemins = gardes_env and (gardes_env(nom) or gardes_env(ecrit.upper()))
-            if chemins and all(any(v is False for _, v in ch) for ch in chemins):
-                ajoute(l, "absente", "orange", f"{ecrit} n'est pas compilee pour cette carte ({_raison(chemins[0])}).",
-                       "Retirer la ligne, ou compiler la carte avec cette option (user_config_override.h).", ecrit)
+            a = absente(ecrit, nom, commandes, gardes_env, berry_env)
+            if a:
+                ajoute(l, "absente", "orange", a[0], a[1], ecrit)
             if not valeur:
                 continue             # sans argument, une commande interroge : ni redemarrage ni reglage pose
             if nom in redemarrent and not _sans_effet(redemarrent[nom], valeur):

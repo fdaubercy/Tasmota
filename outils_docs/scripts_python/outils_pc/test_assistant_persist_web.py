@@ -353,6 +353,45 @@ def test_erreur_inattendue(b):
     b.builds = []
 
 
+def test_analyse_pendant_envoi(b):
+    """L'analyse a la frappe ne lit ni n'ecrit rien : elle ne doit pas attendre un envoi qui tient le verrou general."""
+    libere, entre = threading.Event(), threading.Event()
+    reelle = apw.apx.post
+
+    def bouchon(racine, chemin, demande, builds):
+        if chemin == "/autoexec/envoi":
+            entre.set()
+            libere.wait(20)
+            return {"envoye": True}
+        return {"avertissements": [], "chemin": chemin}
+
+    apw.apx.post = bouchon
+    try:
+        envoi = threading.Thread(target=b.requete, args=("POST", "/autoexec/envoi", {"env": "x"}), daemon=True)
+        envoi.start()
+        entre.wait(5)
+        c = http.client.HTTPConnection("127.0.0.1", b.port, timeout=3)
+        try:
+            c.request("POST", "/autoexec/analyse", body=b'{"env": "x", "texte": ""}', headers={"X-Assistant-Persist": "1"})
+            statut = c.getresponse().status
+        except OSError as erreur:                   # delai depasse : l'analyse attendait le verrou de l'envoi
+            statut = repr(erreur)
+        finally:
+            c.close()
+        verifie((entre.is_set(), statut), (True, 200), "analyse a la frappe : repond pendant un envoi en cours")
+        libere.set()
+        envoi.join(10)
+        c = http.client.HTTPConnection("127.0.0.1", b.port, timeout=5)
+        try:                                        # temoin : une ecriture attend toujours, puis passe
+            c.request("POST", "/autoexec/ecrit", body=b'{"env": "x"}', headers={"X-Assistant-Persist": "1"})
+            verifie(c.getresponse().status, 200, "ecriture apres l'envoi : servie (verrou rendu)")
+        finally:
+            c.close()
+    finally:
+        libere.set()
+        apw.apx.post = reelle
+
+
 def valeurs_reelles():
     """Tous les mots de passe distincts du vrai parc (lecture seule), pour les chercher dans les reponses."""
     res = set(tac.secrets_reels())
@@ -365,7 +404,7 @@ def valeurs_reelles():
 
 
 def principal():
-    for test in (test_get, test_hote, test_demarrage_robuste, test_post_securite, test_broches_illisibles, test_apercu, test_prepare_creation, test_modification_suppression, test_content_length, test_interrompues, test_erreur_inattendue):
+    for test in (test_get, test_hote, test_demarrage_robuste, test_post_securite, test_broches_illisibles, test_apercu, test_prepare_creation, test_modification_suppression, test_content_length, test_interrompues, test_erreur_inattendue, test_analyse_pendant_envoi):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier
             b = Banc(t)

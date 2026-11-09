@@ -142,6 +142,9 @@ def banc():
     verifie([x[1] for x in ab("Expr 1")], [msg("Expr", "N > 3")], "absente : autre condition -> l'expression")
     verifie([x[1] for x in ab("I2CScan")], [msg("I2CScan", "USE_I2C non defini")], "absente : recherche par le nom en majuscules")
     verifie(ab("Br print(1)\nSetOption146 ON\nSansGarde 1\nDelay 1"), [], "absente : Berry, SetOption, sans garde, Delay -> rien")
+    verifie([x["type"] for x in ana("SO146 ON")], [x["type"] for x in ana("SetOption146 ON")], "alias : SO146 se lit comme SetOption146 (doublon)")
+    verifie([x["type"] for x in ana("SO146 ON")], ["doublon"], "alias : SO146 -> doublon du persist, pas inconnue")
+    verifie([x["type"] for x in ana("SO9999 1")], ["inconnue"], "alias : SO9999 reste inconnue (temoin negatif)")
     verifie(noms_secrets(), True, "SECRETS : noms a secret")
 
 

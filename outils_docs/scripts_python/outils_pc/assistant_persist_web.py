@@ -7,7 +7,8 @@ UTILISATION
 
 Rien n'est ecrit sans « Creer l'env » : couper la page ne laisse rien a moitie fait. Toute creation est refusee
 pendant un build. Les POST passent un par un (verrou) : deux creations simultanees ne s'ecrasent pas, la seconde
-voit son empreinte perimee ; seule la preparation d'un envoi, qui lit la carte sans rien ecrire, y echappe (verrou_carte).
+voit son empreinte perimee ; y echappent la preparation d'un envoi, qui lit la carte sans rien ecrire (verrou_carte),
+et l'analyse a la frappe de l'autoexec.bat, qui n'ecrit rien (verrou_analyse : elle n'attend pas un envoi en cours).
 Les mots de passe ne sortent JAMAIS du serveur : l'apercu est calcule avec
 secrets=None ("***"), le diff et les refus d'assistant_persist_creation sont masques.
 
@@ -255,9 +256,12 @@ def apercu(racine, r):
 
 
 def fabrique_gestionnaire(acces, racine, builds_en_cours, etat_modele):
-    verrou, verrou_carte = threading.Lock(), threading.Lock()
+    verrou, verrou_carte, verrou_analyse = threading.Lock(), threading.Lock(), threading.Lock()
 
     def traite_post(chemin, demande):
+        if chemin == "/autoexec/analyse":             # n'ecrit rien : n'attend ni un envoi ni une ecriture
+            with verrou_analyse:                      # une analyse a la fois (chacune peut lancer le preprocesseur)
+                return _traite_post(chemin, demande)
         if chemin == "/autoexec/envoi/prepare":       # lit la carte (plusieurs secondes), n'ecrit rien : l'analyse a la frappe n'attend pas
             with verrou_carte:                        # une lecture a la fois : fsMqtt n'a qu'un canal par carte
                 return _traite_post(chemin, demande)

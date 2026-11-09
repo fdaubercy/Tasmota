@@ -122,6 +122,31 @@ def banque(b):
     verifie(b.requete("GET", "/autoexec/nulle-part")[0], 404, "route /autoexec/... inconnue -> 404")
 
 
+def marques(b):
+    import autoexec_berry
+    import autoexec_gardes
+    b.requete("POST", "/autoexec/banque/ajoute", {"entree": {"nom": "ReglageEssai", "categorie": "Perso", "description": "Berry.",
+              "modele": "ReglageEssai {v}", "champs": [{"cle": "v", "type": "texte", "libelle": "V", "defaut": "x"}]}})
+    s, r = b.requete("GET", "/autoexec/marques?env=" + ENV)
+    verifie((s, r), (200, {"marques": {}}), "marques : depot d'essai sans preprocesseur ni modules Berry -> rien de marque")
+    avant = (autoexec_gardes.etat, autoexec_berry.non_chargees)
+    try:
+        autoexec_gardes.etat = lambda racine, env: lambda nom: ({"LATITUDE": [[("defined(USE_GPS)", False)]], "WEBLOG": [[("defined(X)", None)]]}).get(nom)
+        autoexec_berry.non_chargees = lambda racine, env: {"REGLAGEESSAI": ["controleEssai"]}
+        s, r = b.requete("GET", "/autoexec/marques?env=" + ENV)
+        verifie((s, sorted(r["marques"]), r["marques"].get("Latitude")), (200, ["Latitude", "ReglageEssai"],
+                "Latitude n'est pas compilee pour cette carte (USE_GPS non defini)."), "marques : gardes fausses et module Berry non charge -> marques, garde incertaine -> non")
+        verifie("controleEssai" in r["marques"]["ReglageEssai"], True, "marques : la raison Berry nomme le module")
+    finally:
+        autoexec_gardes.etat, autoexec_berry.non_chargees = avant
+    ajout = b.requete("POST", "/autoexec/banque/ajoute", {"entree": {"nom": "Accolade", "categorie": "Perso", "description": "Modele sans lettre en tete.",
+                      "modele": "{v}", "champs": [{"cle": "v", "type": "texte", "libelle": "V", "defaut": "Power 1"}]}})[0]
+    s, r = b.requete("GET", "/autoexec/marques?env=" + ENV)
+    verifie((ajout, s, isinstance(r, dict) and "Accolade" in r.get("marques", {})), (200, 200, False), "marques : entree au modele sans lettre en tete -> ignoree, pas d'erreur")
+    verifie(b.requete("GET", "/autoexec/marques")[0], 400, "marques sans env -> 400")
+    verifie(b.requete("GET", "/autoexec/marques?env=tasmota32-inconnu-x")[0], 404, "marques env inconnu -> 404")
+
+
 def envoi(b, carte):
     hote = build_ota_fs._identite((b.racine / CARTE / "_persist.json").read_text(encoding="utf-8"))[0]
     carte.hostname, carte.flash["/autoexec.bat"] = hote, f"Password1 {MDP}\nWebLog 1\n".encode("utf-8")
@@ -176,6 +201,7 @@ def banc():
             g = lecture(b)
             ecriture(b, g)
             banque(b)
+            marques(b)
             envoi(b, carte)
             transport(b)
         finally:
@@ -197,6 +223,7 @@ MUTANTS = [
     ("transport ignore par la route de preparation", """builds_en_cours,
                                       transport=demande.get("transport", "http"))""", "builds_en_cours)"),
     ("transport ignore par la route d'envoi", """builds_en_cours, transport=demande.get("transport", "http"))""", "builds_en_cours)"),
+    ("marques sans verification d'env", "_env(racine, requete))}", "requete.get('env'))}"),
     ("texte non masque", '{**l, "avertissements"', '{**l, "texte": autoexec_fichier.texte_disque(racine, env), "avertissements"'),
     ("diff du texte brut", "autoexec_fichier.diff(racine, env, texte)", "{'diff': texte, 'empreinte': '', 'rouges': 0}"),
     ("analyse sur le texte masque", "autoexec_fichier.avertissements(racine, env, autoexec_fichier.demasque(texte, disque))",

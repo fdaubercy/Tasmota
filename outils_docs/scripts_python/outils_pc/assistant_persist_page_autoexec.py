@@ -41,6 +41,7 @@ CSS = r"""
   .a-ajout input[type=text],.a-ajout input[type=number],.a-ajout input[type=time],.a-ajout select{width:100%}
   .a-cmd{border:1px solid var(--bord);border-radius:6px;padding:6px 8px;margin-top:6px;cursor:pointer}
   .a-cmd.choisie{border-color:var(--bleu);background:var(--bleu-fond)}
+  .a-cmd.indispo{border-style:dashed;color:var(--doux)}
   .a-l{display:flex;justify-content:space-between;gap:8px;align-items:center}
   .a-l .code{overflow-wrap:anywhere}
   .etiq{display:inline-block;font-size:11px;padding:0 6px;border-radius:8px;border:1px solid var(--bord);color:var(--doux);white-space:nowrap}

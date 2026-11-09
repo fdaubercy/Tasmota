@@ -54,6 +54,8 @@ TEMOINS = {                                             # nom -> (texte de la pa
     "transport-ecran": ("transport: X.prep.transport", "transport: voie()", "envoi : la voie de la preparation est celle transmise a l'envoi"),
     "voie-ignoree": ('{env: env, transport: transport}', "{env: env}", "voie MQTT : la preparation recoit transport=mqtt"),
     "generation": ("g !== X.nPrep || env !== X.env", "env !== X.env", "voie MQTT : aller-retour de voie, la reponse perimee M1 est ignoree"),
+    "alias-so": ('return /^so\d+$/.test(n) ? "setoption" + n.slice(2) : n;', "return n;", "alias : SO146 du fichier reconnu comme SetOption146 (choix propose)"),
+    "sans-marque": ('d.className += " indispo";', "", "banque marquee : Latitude (USE_GPS faux) grisee"),
     "garde-envoi": ("if (modifie()) fermeEnvoi();", "", "envoi : texte modifie apres l'ouverture -> panneau ferme ou « Envoyer » grise"),
 }
 ENROBE = """window.__corps = []; (function () { var f = window.fetch; window.fetch = function () {
@@ -90,7 +92,8 @@ def mode_serveur(port, depot, temoin):
     import autoexec_gardes
     sans_gardes = Path(depot).parent / "sans_gardes.flag"       # A4 : gardes de la carte factices (ZbSend absente), ou indisponibles
     autoexec_gardes.etat = lambda racine, env: None if sans_gardes.is_file() else (
-        lambda nom: [[("defined(USE_ZIGBEE)", False)]] if nom == "ZBSEND" else None)
+        lambda nom: [[("defined(USE_ZIGBEE)", False)]] if nom == "ZBSEND" else
+        [[("defined(USE_GPS)", False)]] if nom == "LATITUDE" else None)      # Latitude : entree de la banque, marquee B
     if temoin:
         import assistant_persist_page
         avant, apres, _ = TEMOINS[temoin]
@@ -192,6 +195,16 @@ def sonde(m):
     (m.journal.parent / "sans_gardes.flag").unlink()
     tpc.saisit(cdp, "a-texte", original)
     verifie(attend(cdp, f"document.querySelectorAll('#a-avertissements [data-ligne]').length === {len(avs)}", 10), True, "absente : texte d'origine retabli, liste d'origine")
+    # B : une commande de la banque non compilee pour la carte est marquee (infobulle), mais reste selectionnable
+    tpc.saisit(cdp, "a-recherche", "Latitude")
+    verifie(attend(cdp, "!!document.querySelector('#a-resultats [data-nom=\"Latitude\"].indispo')", 10), True, "banque marquee : Latitude (USE_GPS faux) grisee")
+    verifie(js(cdp, "return document.querySelector('#a-resultats [data-nom=\"Latitude\"]').title"),
+            "Latitude n'est pas compilee pour cette carte (USE_GPS non defini).", "banque marquee : l'infobulle donne la raison")
+    js(cdp, "document.querySelector('#a-resultats [data-nom=\"Latitude\"]').click()")
+    verifie(js(cdp, "return document.getElementById('a-choisie').textContent"), "Latitude", "banque marquee : reste selectionnable")
+    tpc.saisit(cdp, "a-recherche", "WebLog")
+    verifie(attend(cdp, "!!document.querySelector('#a-resultats [data-nom=\"WebLog\"]')", 10), True, "banque marquee : WebLog dans la liste")
+    verifie(js(cdp, "return document.querySelector('#a-resultats [data-nom=\"WebLog\"]').classList.contains('indispo')"), False, "banque marquee : WebLog (garde absente) non marquee")
     verifie(js(cdp, "return document.getElementById('a-info').textContent.indexOf('" + CARTE + "/autoexec.bat') >= 0 && "
                     "document.getElementById('a-info').textContent.indexOf('9 lignes') >= 0"), True, "en-tete : chemin et nombre de lignes")
     premier = avs[0]
@@ -388,6 +401,15 @@ def sonde_lignes(cdp, f):
     lignes = depart.split("\n")
     nouvelle = autre_valeur(cdp)
     num = lignes.index("SetOption146 ON") + 1
+    # alias : SO146 dans le fichier est la meme commande que SetOption146 de la banque
+    tpc.saisit(cdp, "a-texte", depart.replace("SetOption146 ON", "SO146 ON"))
+    autre_valeur(cdp)
+    verifie(js(cdp, "return document.getElementById('a-existe').hidden"), False, "alias : SO146 du fichier reconnu comme SetOption146 (choix propose)")
+    tpc.clic(cdp, "a-remplacer")
+    apres = valeur(cdp).split(chr(10))
+    verifie((apres[num - 1], len(apres)), (nouvelle, len(lignes)), "alias : « Remplacer » remplace la ligne SO146")
+    tpc.clic(cdp, "a-annuler")
+    autre_valeur(cdp)
     verifie(js(cdp, "return [document.getElementById('a-existe').hidden, document.getElementById('a-inserer').textContent.indexOf('quand même') >= 0]"), [False, True],
             "A11 : commande deja presente -> choix proposes, « Inserer quand meme » garde")
     verifie(js(cdp, "return document.getElementById('a-existe-texte').textContent").find(f"ligne {num}") >= 0, True, "A11 : le choix dit la ligne existante")

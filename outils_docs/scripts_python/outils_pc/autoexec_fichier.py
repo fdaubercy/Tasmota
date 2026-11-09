@@ -34,6 +34,7 @@ from pathlib import Path
 
 import autoexec_analyse
 import autoexec_banque
+import autoexec_berry
 import autoexec_commandes
 import autoexec_gardes
 import fichiers_berry_sauvegarde as fbs
@@ -205,7 +206,23 @@ def avertissements(racine, env, texte):
     except ValueError:
         noms = []
     return autoexec_analyse.analyse(texte, persist, autoexec_commandes.charge(racine), noms, texte_config=texte_config,
-                                    gardes_env=autoexec_gardes.etat(racine, env))
+                                    gardes_env=autoexec_gardes.etat(racine, env), berry_env=autoexec_berry.non_chargees(racine, env))
+
+
+def marques_banque(racine, env):
+    """{nom d'entree de la banque: raison} des commandes qui declencheraient l'alerte « absente » sur cette carte (memes
+    calculs que l'analyse : gardes du firmware, modules Berry non charges) ; vide si rien n'est verifiable."""
+    gardes, berry, commandes = autoexec_gardes.etat(racine, env), autoexec_berry.non_chargees(racine, env), autoexec_commandes.charge(racine)
+    res = {}
+    for e in autoexec_banque.charge(racine):
+        m = re.match(r"[A-Za-z]\w*", e["modele"])               # « Timer{n} ... » -> Timer
+        if not m:                                               # modele qui commence par un champ : commande inconnue d'avance
+            continue
+        ecrit = m[0]
+        a =autoexec_analyse.absente(ecrit, autoexec_analyse.commande(ecrit) or ecrit.upper(), commandes, gardes, berry)
+        if a:
+            res[e["nom"]] = a[0]
+    return res
 
 
 def carte_verifiee(racine, env):

@@ -6,7 +6,7 @@ Insere dans la meme fonction que assistant_persist_page_autoexec_js.JS (il se se
   - toute modification passe par appliqueLignes -> aChange : le panneau d'envoi se ferme (c'est le DEPOT qui part) ;
   - « Inserer quand meme » reste possible : certaines commandes se repetent (Delay, Publish...) ; le bouton de « Tes
     commandes », lui, montre d'abord le choix ;
-  - shortcut : les alias (SO146 = SetOption146, Power = Power1) ne sont pas reconnus, a ajouter si un fichier en porte.
+  - alias : SO<n> = SetOption<n> (seul prefixe court du firmware, support_command.ino) ; Power = Power1 n'est pas reconnu.
 Sonde : test_assistant_persist_autoexec_chrome.py.
 """
 
@@ -18,7 +18,10 @@ function decoupe(l) {
   var m = /^(backlog\d*)(?:\s+(.*))?$/i.exec(c);
   return {mot: m ? m[1] : "", parties: (m ? (m[2] || "").split(";") : [c]).map(function (p) { return p.trim(); }).filter(Boolean)};
 }
-function nomCmd(p) { var m = /^([A-Za-z]\w*)(?=$|[\s=])/.exec(p); return m ? m[1].toLowerCase() : ""; }
+function nomCmd(p) {                                   // SO146 = SetOption146 (support_command.ino : D_CMND_SO, renomme en SetOption)
+  var m = /^([A-Za-z]\w*)(?=$|[\s=])/.exec(p), n = m ? m[1].toLowerCase() : "";
+  return /^so\d+$/.test(n) ? "setoption" + n.slice(2) : n;
+}
 function nomsDe(l) { var d = decoupe(l); return d ? d.parties.map(nomCmd).filter(Boolean) : []; }
 function sansCmds(l, noms) {                           // la ligne sans ces commandes ; null s'il n'en reste rien
   var d = decoupe(l);

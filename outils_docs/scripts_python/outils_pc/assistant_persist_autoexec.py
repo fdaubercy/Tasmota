@@ -3,6 +3,7 @@
 Les exceptions sont celles du serveur : ValueError -> 400, LookupError -> 404, RuntimeError -> 409.
   GET  /autoexec?env=             {texte (secrets en ***), empreinte, chemin, existe, avertissements, verification_carte, lignes (du texte masque)}
   GET  /autoexec/banque           la banque de commandes (autoexec_banque.charge)
+  GET  /autoexec/marques?env=     {marques: {nom d'entree: raison}} : commandes de la banque absentes de la carte (autoexec_fichier.marques_banque)
   POST /autoexec/analyse          {env, texte}                                -> {avertissements, verification_carte}
   POST /autoexec/diff             {env, texte}                                -> autoexec_fichier.diff
   POST /autoexec/ecrit            {env, texte, empreinte, rouges_lus}         -> autoexec_fichier.ecrit
@@ -50,6 +51,8 @@ def get(racine, chemin, requete):
                 "verification_carte": autoexec_fichier.carte_verifiee(racine, env), "lignes": autoexec_analyse.lignes(l["texte"])}
     if chemin == "/autoexec/banque":
         return autoexec_banque.charge(racine)
+    if chemin == "/autoexec/marques":
+        return {"marques": autoexec_fichier.marques_banque(racine, _env(racine, requete))}
     raise LookupError(chemin)
 
 

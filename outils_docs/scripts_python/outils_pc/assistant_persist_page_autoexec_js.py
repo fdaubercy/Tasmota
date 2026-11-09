@@ -28,7 +28,7 @@ $("onglet-autoexec").onclick = function () { montreOnglet("autoexec"); };
 
 var ongletAutoexec = (function () {
 var LH = 20, TYPES = {secret: "Secret en clair", doublon: "Doublon persist", inconnue: "Commande inconnue", longueur: "Ligne trop longue", absente: "Commande absente"};
-var X = {env: "", lu: null, avert: [], banque: null, choisie: null, valeurs: {}, numero: 0, minuteur: null, diff: null,
+var X = {env: "", marques: {}, lu: null, avert: [], banque: null, choisie: null, valeurs: {}, numero: 0, minuteur: null, diff: null,
   texteDiff: null, ligneIns: 0, prep: null, nPrep: 0, proposition: null, ouvert: false};
 var M = {champs: []};
 
@@ -134,7 +134,7 @@ async function analyse() {
 
 // ---- Carte ----
 async function charge(env) {
-  X.env = env; X.lu = null; X.avert = []; X.ligneIns = 0; X.numero++; clearTimeout(X.minuteur);
+  X.env = env; X.lu = null; X.avert = []; X.marques = {}; X.ligneIns = 0; X.numero++; clearTimeout(X.minuteur);
   fermeDiff(); $("a-panneau-envoi").hidden = true; $("a-erreur").hidden = true; $("a-erreur-analyse").hidden = true;
   $("a-texte").value = ""; $("a-texte").disabled = true;
   if (env) {
@@ -143,7 +143,14 @@ async function charge(env) {
     if (!r.ok || !r.donnees) { $("a-erreur").textContent = r.texte; $("a-erreur").hidden = false; }
     else { X.lu = r.donnees; X.avert = X.lu.avertissements; X.carte = X.lu.verification_carte; $("a-texte").value = X.lu.texte; $("a-texte").disabled = false; }
   }
-  dessine();
+  dessine(); cherche(); dessinePerso();
+  if (env) chargeMarques(env);
+}
+async function chargeMarques(env) {                    // commandes de la banque absentes de la carte ; rien si la verification est indisponible
+  var r = await api("/autoexec/marques?env=" + encodeURIComponent(env));
+  if (env !== X.env) return;
+  X.marques = r.ok && r.donnees && r.donnees.marques ? r.donnees.marques : {};
+  cherche(); dessinePerso();
 }
 function annule() {
   if (!X.lu) return;
@@ -262,7 +269,9 @@ function carteCommande(e, perso) {
     l.appendChild(b);
   } else l.appendChild(el("span", {"class": "etiq" + (e.origine === "perso" ? " u" : "")}, e.origine === "perso" ? "perso" : e.categorie));
   d.appendChild(l);
-  if (!perso) d.appendChild(el("div", {"class": "discret"}, e.description));
+  var absente = X.marques[e.nom];                      // marquage, pas interdiction : la carte reste selectionnable
+  if (absente) { d.className += " indispo"; d.title = absente; }
+  if (!perso) d.appendChild(el("div", {"class": "discret"}, (absente ? "Absente de cette carte : " + absente + " " : "") + e.description));
   d.onclick = function () { choisit(e); };
   d.onkeydown = function (ev) { if (ev.target === d && ev.key === "Enter") choisit(e); };
   return d;
@@ -433,6 +442,7 @@ async function enregistreModele() {
   if (!r.ok || !Array.isArray(r.donnees)) { message(z, "avert rouge", r.texte); return; }
   X.banque = r.donnees; $("a-editeur").hidden = true;
   cherche(); dessinePerso(); majProposition();
+  if (X.env) chargeMarques(X.env);              // la nouvelle entree peut etre absente de cette carte
 }
 $("a-en-modele").onclick = function () { ouvreEditeur(X.proposition); };
 $("a-nouveau-modele").onclick = function () { ouvreEditeur(null); };
