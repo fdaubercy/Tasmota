@@ -5,5 +5,6 @@ mqtt.abonnes = {}
 mqtt.connecte = true
 mqtt.publish = def (topic, payload, retain) mqtt.publies.push([topic, payload]) end
 mqtt.subscribe = def (topic, f) mqtt.abonnes[topic] = f end
+mqtt.unsubscribe = def (topic) mqtt.abonnes.remove(topic) end
 mqtt.connected = def () return mqtt.connecte end
 return mqtt

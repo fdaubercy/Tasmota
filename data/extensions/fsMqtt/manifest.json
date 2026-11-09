@@ -1,6 +1,6 @@
 {
   "name": "Reception FS MQTT",
-  "version": "0x1B0B0700",
+  "version": "0x1A0B0900",
   "description": "Charge le module solidifie fsMqtt sur une carte dont l'autoexec ne le charge pas",
   "min_tasmota": "0x0F010001"
 }
