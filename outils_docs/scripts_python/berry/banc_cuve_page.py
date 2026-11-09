@@ -17,7 +17,9 @@ CE QU'IL FAIT
    (chemin, MIME), page /cuve (ordre css / html / window.CUVE / cuve.js, volumeMax, '</' echappe), dimensions par
    defaut, routes /cuve du maitre P4 (vrai CONTROLE_GARAGE, persist reel) et de la cuve. La page est generee par le
    VRAI cuvePageFonctions.page().
-2. Compare octet par octet l'extension recue et data/sd/js/echarts-liquidfill.min.js.gz.
+2. Compare octet par octet l'extension recue et data/sd/js/echarts-liquidfill.min.js.gz. Verifie que les cles de
+   cache localStorage d'ECharts et de liquidfill sont les memes dans graphiquesFonctions, cuvePageFonctions,
+   pagesGraphiques et les 4 chargeurs (cuve.js, graphiques.js, graphiques_moteur.js, pages_graphiques.js).
 3. Sert cette page, les VRAIS ECharts (/graphiques?f=echarts.js.gz) et extension (/cuve?f=liquidfill.js.gz) et un
    /histo simule par scenario (un serveur par scenario, port libre, 127.0.0.1), la rend dans Chrome sans interface
    et juge ce que la page expose : data-volume et data-taux de #c_jauges, message #c_msg, SVG d'ECharts dessine
@@ -58,6 +60,49 @@ from pathlib import Path
 from urllib.parse import parse_qsl, urlparse
 
 BUDGET_MS = 6000       # temps virtuel de Chrome (voir l'en-tete)
+# Le chargeur d'ECharts et de liquidfill existe en 4 copies (factorisation reportee au prochain flash de ces cartes,
+# decision du 2026-11-09) : leurs cles de cache localStorage doivent rester les memes, sinon deux pages s'effacent
+# le cache a tour de role et ECharts (~2 Mo) est retelecharge a chaque passage de l'une a l'autre.
+CHARGEURS = ("cuve.js", "graphiques.js", "graphiques_moteur.js", "pages_graphiques.js")
+MODULES_CLES = {"VERSION_BIBLIOTHEQUE": ("graphiquesFonctions", "pagesGraphiques"),
+                "VERSION_EXTENSION": ("graphiquesFonctions", "cuvePageFonctions", "pagesGraphiques")}
+PREFIXES = {"VERSION_BIBLIOTHEQUE": "echarts-", "VERSION_EXTENSION": "liquidfill-"}
+
+
+def verifie_cles_cache(sources: Path) -> int:
+    """Cles de cache : une valeur par bibliotheque dans les modules Berry qui la donnent aux pages, prefixe de purge
+    des scripts, cles versionnees ecrites en dur dans les 4 chargeurs. Retourne le nombre d'echecs."""
+    echecs = 0
+
+    def note(ok, description, lu):
+        nonlocal echecs
+        print(("  OK     " if ok else "  ECHEC  ") + description + ("" if ok else f"\n         lu : {lu}"))
+        echecs += 0 if ok else 1
+
+    def lis(chemin):
+        return chemin.read_text(encoding="utf-8") if chemin.exists() else None
+
+    js = {nom: lis(sources / "sd/js" / nom) for nom in CHARGEURS}
+    note(all(t is not None for t in js.values()), "les 4 chargeurs d'ECharts sont presents",
+         [n for n, t in js.items() if t is None])
+    for constante, modules in MODULES_CLES.items():
+        prefixe = PREFIXES[constante]
+        valeurs = {}
+        for m in modules:
+            t = lis(sources / "fs" / f"{m}.be") or ""
+            trouve = re.search(rf'\.{constante}\s*=\s*"([^"]*)"', t)
+            valeurs[m] = trouve.group(1) if trouve else None
+        distinctes = set(valeurs.values())
+        cle = valeurs[modules[0]]      # reference = premier module (message stable d'un lancement a l'autre)
+        note(len(distinctes) == 1 and cle is not None and cle.startswith(prefixe),
+             f"{constante} identique dans {', '.join(modules)}, prefixe de purge '{prefixe}'", valeurs)
+        # Toute cle versionnee ecrite en dur dans un chargeur (defaut, commentaire) = la constante
+        en_dur = {f"{n}:{v}" for n, t in js.items() for v in re.findall(rf"'({prefixe}[0-9][^']*)'", t or "")
+                  if v != cle}
+        note(not en_dur, f"cles '{prefixe}<version>' ecrites en dur dans les chargeurs = {cle}", sorted(en_dur))
+    sans_purge = [n for n, t in js.items() if t and "echarts.js.gz" in t and "'echarts-'" not in t]
+    note(not sans_purge, "chaque chargeur d'ECharts purge les anciennes versions par le prefixe 'echarts-'", sans_purge)
+    return echecs
 DELAI_S = 60           # delai reel maximal d'un rendu (un nouvel essai si depasse : voir rend)
 
 
@@ -289,6 +334,11 @@ def main() -> int:
     identique = recu.exists() and recu.read_bytes() == (sources / "sd/js/echarts-liquidfill.min.js.gz").read_bytes()
     print(("  OK     " if identique else "  ECHEC  ") + "extension recue identique au fichier du depot (octet par octet)")
     if not identique:
+        print("BANC_CUVE_PAGE: ECHEC")
+        return 1
+
+    print("\n=== Cles de cache d'ECharts et de liquidfill (4 copies du chargeur)")
+    if verifie_cles_cache(sources):
         print("BANC_CUVE_PAGE: ECHEC")
         return 1
 
