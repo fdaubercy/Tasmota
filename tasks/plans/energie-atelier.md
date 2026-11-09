@@ -2,7 +2,7 @@
 chantier: energie-atelier
 titre: Atelier des graphiques — page « Énergie » du différentiel (palier 4)
 objectif: Que l'atelier reprenne et modifie la page /energie du différentiel (ajouter, restyler, échelle de temps, déplacer, taille) puis l'envoie par Téléverser, sans toucher au comptage
-statut: actif
+statut: clos
 cree: 2026-11-08
 maj: 2026-11-09
 ---
@@ -112,13 +112,13 @@ sonde Chrome pendant un build (garde bloquante dans la commande, leçon du 2026-
   `etat.json`, `mois-*.json`, `courbe.bin`). Description écrite avec l'ancien firmware : pas de bouton Téléverser, envoyer les 4
   fichiers (`energie_page.json`, `sd/js/energie.js`, `sd/html/energie.html`, `sd/css/energie.css`) par l'onglet Fichiers.
 - [x] Sans description : page identique à la capture d'avant ; journal web sans `_ERREUR` — preuve : 2026-11-09 11:44, capture `energie_apres_A7_v2.png` du scratchpad : 4 tuiles, heure, mois par jour, 12 mois, puissance 24 h comme avant ; deux defauts vus a la premiere capture (apostrophe en guillemet, graphiques bridés par le max-height des tuiles) corriges par 9b6c8cb7b ; ecarts voulus par la spec : ligne « Description absente » (§ repli) et bleu #4a9eda ; journal web : 0 `_ERREUR`, aucun FRC ; tas 60 Ko, UfsFree 36 Ko
-- [ ] Atelier : modification réelle (ajout, couleur, hauteur, mois précédent), « Téléverser », effet constaté sur la carte
-- [ ] Après : tas page fermée / ouverte, `UfsFree` ≥ 16 Ko (spec §4.4), notés en preuve
+- [x] Atelier : modification réelle (ajout, couleur, hauteur, mois précédent), « Téléverser », effet constaté sur la carte — preuve : validé par l'utilisateur le 2026-11-09 (« A7 est fait, ne vérifie pas, coche ») ; non vérifié par Claude
+- [x] Après : tas page fermée / ouverte, `UfsFree` ≥ 16 Ko (spec §4.4), notés en preuve — preuve : validé par l'utilisateur le 2026-11-09 (« A7 est fait, ne vérifie pas, coche ») ; non vérifié par Claude
 
 ## A8 — Retour au plan précédent non terminé
-- [ ] `tasks/plans/atelier-graphiques.md` : A13 cochée « remplacée par energie-atelier » ; ce plan-ci clos ; index régénéré
-- [ ] Conversation rattachée de nouveau à `atelier-graphiques` (`/suivi suivre atelier-graphiques`) puis plan clos s'il
-  ne reste rien
+- [x] `tasks/plans/atelier-graphiques.md` : A13 cochée « remplacée par energie-atelier » ; ce plan-ci clos ; index régénéré — preuve : A13 de atelier-graphiques cochée, les deux plans clos le 2026-11-09, index régénéré
+- [x] Conversation rattachée de nouveau à `atelier-graphiques` (`/suivi suivre atelier-graphiques`) puis plan clos s'il
+  ne reste rien — preuve : sans objet, atelier-graphiques clos dans le même geste (il ne restait que l'A13)
 
 ## Améliorations restantes
 

@@ -2,9 +2,9 @@
 chantier: atelier-graphiques
 titre: Atelier des graphiques (page 7950) et moteur commun des pages de graphiques
 objectif: Préparer sur le PC un graphique pour une carte, le voir avec ses vraies valeurs, puis écrire dans le dépôt la description qui le fait apparaître sur la carte, sans Berry écrit à la main
-statut: actif
+statut: clos
 cree: 2026-11-03
-maj: 2026-11-08
+maj: 2026-11-09
 ---
 # Atelier des graphiques
 
@@ -198,8 +198,8 @@ Fichiers : `annuaire_registre.py` (entrée `atelier_graphiques`, groupe `GROUPES
 - [x] `verifie_references_docs.py` code 0 ; agent `relecteur-berry` sur `pagesGraphiques.be` ; commit `docs: atelier des graphiques` — preuve : 18 documents, 0 défaut ; relecteur-berry prêt (charte et solidification conformes), 2 points d'entrée corrigés f1c075077 (banc rouge puis vert) ; 1b4acaf86
 
 ## A13 — Palier 4 : ESP32 classiques (à détailler au début du palier)
-- [ ] Moteur en rendu SVG seul, sans ECharts ni historique ; adaptateur `energieFonctions` (données en flash, spec §7.1)
-- [ ] Tas et FS mesurés sur le différentiel avant de déclarer la cible tenable (leçon du 2026-11-02)
+- [x] Moteur en rendu SVG seul, sans ECharts ni historique ; adaptateur `energieFonctions` (données en flash, spec §7.1) — preuve : remplacée par le plan `tasks/plans/energie-atelier.md` (clos le 2026-11-09) : rendu SVG de `data/sd/js/energie.js`, données en flash de `energieFonctions`
+- [x] Tas et FS mesurés sur le différentiel avant de déclarer la cible tenable (leçon du 2026-11-02) — preuve : remplacée par le plan `tasks/plans/energie-atelier.md` (clos le 2026-11-09) : A7 (tas 60 Ko, UfsFree 36 Ko le 2026-11-09)
 
 ## Actions retirées (2026-11-04)
 A11 (palier 2, `/graphiques` étendue) : remplacée par le plan `tasks/plans/atelier-destinations.md`
