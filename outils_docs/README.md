@@ -1634,6 +1634,14 @@ embarque `energie.js`). L'atelier reprend la disposition de la page `/energie` e
 qu'après un firmware recompilé et envoyé **par la page Build**. Sur une carte à l'ancien firmware (`f=description` rend la page
 HTML en 200), « Téléverser » est bloqué avec le message du firmware requis.
 
+**Ne jamais envoyer ce firmware par le port série.** Le différentiel a `custom_files_upload` : un upload série réécrit TOUT
+le FS, donc `/energie/etat.json`, `mois-*.json` et `courbe.bin` (jusqu'à 24 mois d'archives) seraient perdus. Procédure :
+firmware par OTA (ligne OTA de la page Build ; l'OTA du firmware n'écrit que la partition applicative, `build_ota_firmware.py`,
+le FS est une autre partition), puis les 4 fichiers par « Téléverser » ou par l'onglet Fichiers ; jamais d'upload série sauf
+après sauvegarde de `/energie/`. Si la description a été écrite quand la carte avait l'ancien firmware, « Écrire » n'a plus
+rien à écrire et le bouton « Téléverser » n'apparaît pas : envoyer les 4 fichiers (`energie_page.json`, `sd/js/energie.js`,
+`sd/html/energie.html`, `sd/css/energie.css`) par l'onglet Fichiers de la page Build.
+
 Limites (validées par `atelier_energie_description.py::valide` et `Energie.valide`, mêmes cas dans
 `outils_pc/cas_energie.json`) : 16 éléments, 4 096 octets de description, titres de 40 caractères, couleur `#rrggbb`.
 Conception : [spec](../docs/superpowers/specs/2026-11-08-atelier-energie-differentiel-design.md) ; plan
