@@ -1,0 +1,11 @@
+carte : tasmota32s3-bureau-serveur-debits-pac
+exception : aucune
+drivers (4) : CONTROLE_Debits, CONTROLE_GENERAL, CONTROLE_WEB, HISTORIQUE_WEB
+regles (11) : Eth, Mqtt, Mqtt#Connected, System, System, Tele#COUNTER#C, Tele#COUNTER#C, Tele#COUNTER#C, Tele#COUNTER#C, Time, Wifi
+commandes (3) : ReglageDebits, ReglageGlobal, ReglageLog
+crons (1) : majHistorique
+minuteries (1) : demarrageDiffere
+compiles (2) : /controleDebits.bec, /debitsFonctions.bec
+sources (2) : /autoexec.be, /pagesGraphiquesValidation.be
+globales (38) : LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, boolMute:bool, controleDebits:instance, debitsFonctions:nil, debitsFonctions_aideReglageDebits:nil, debitsFonctions_appliqueVeille:nil, debitsFonctions_calcule:nil, debitsFonctions_demarreEcran:nil, debitsFonctions_ecran:nil, debitsFonctions_entree:nil, debitsFonctions_etatVoie:nil, debitsFonctions_fenetre:nil, debitsFonctions_imprecis:nil, debitsFonctions_json:nil, debitsFonctions_lignesWeb:nil, debitsFonctions_log:nil, debitsFonctions_mesure:nil, debitsFonctions_nombre:nil, debitsFonctions_rates:nil, debitsFonctions_reglageDebits:nil, debitsFonctions_regleVoie:nil, debitsFonctions_suitMuets:nil, debitsFonctions_total:nil, debitsFonctions_veille:nil, debitsFonctions_voie:nil, diverses:instance, fsMqttRecepteur:instance, gpio:module, light:module, modules:instance, persist:instance, serveur:instance, wire1:instance, wire2:instance
+erreurs (0) : 

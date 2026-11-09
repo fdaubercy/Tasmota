@@ -1,11 +1,11 @@
 r"""Enveloppe du banc d'equivalence du demarrage (banc_demarrage.be), audit Berry P4.2 (2026-10-25).
 
-Fait tourner l'autoexec.be ENTIER de chacune des 6 cartes maintenues sur le faux firmware de banc_boot et
+Fait tourner l'autoexec.be ENTIER de chacune des 7 cartes maintenues sur le faux firmware de banc_boot et
 compare son INSTANTANE (drivers, regles, commandes, crons, minuteries, fichiers compiles, globales, erreurs)
 a la reference enregistree dans bouchons_berry/demarrage/<env>.txt. Une refonte de l'autoexec (module
 'demarrage' commun) doit rendre les memes instantanes ; un ecart voulu se relit puis s'enregistre.
 
-    python outils_docs/scripts_python/berry/banc_demarrage.py                 # compare les 6 cartes
+    python outils_docs/scripts_python/berry/banc_demarrage.py                 # compare les 7 cartes
     python outils_docs/scripts_python/berry/banc_demarrage.py --enregistre    # (re)ecrit les references
     python outils_docs/scripts_python/berry/banc_demarrage.py --carte <env>   # une seule carte
     python outils_docs/scripts_python/berry/banc_demarrage.py --sources <copie de data/fs>
@@ -37,6 +37,7 @@ CARTES = {
     "tasmota32s3-cave-serveur-rly": "data/cave/tasmota32s3-serveur-rly",
     "tasmota32-bureau-interrupteur-energie": "data/bureau/tasmota32-interrupteur-energie",
     "tasmota32s3-etage2-grenier": "data/etage2/tasmota32s3-grenier",
+    "tasmota32s3-bureau-serveur-debits-pac": "data/bureau/tasmota32s3-serveur-debits-pac",
 }
 
 

@@ -4,7 +4,7 @@ titre: Historique et page /graphiques des 6 débits de la nourrice
 objectif: Garder en flash l'historique des 6 débits et du total, et les voir en courbes sur la page /graphiques de la carte
 statut: actif
 cree: 2026-11-08
-maj: 2026-11-08
+maj: 2026-11-09
 ---
 # Historique et page /graphiques des 6 débits de la nourrice
 
@@ -30,7 +30,7 @@ série `Débit.Rate` du FlowRateMeter (liste) doit être exclue explicitement.
 
 ## A1 — Décisions
 - [x] Pas de relevé (`pasMinutes`, défaut 5) et durée affichée (`dureeHeures`, défaut 24) choisis par l'utilisateur — preuve : réponse du 2026-11-08 « 5 min, 24 h » = valeurs déjà au persist de la carte (`diverses.historique`)
-- [ ] Séries : D1 à D6 et Total ; libellés : `graphiquesFonctions` ne lit pas les noms des départs, il prend `affichage.<chemin>.libelle` de `graphiques.json` (sinon le chemin `DEBITS.D1`) ⇒ libellés = noms des départs du persist, à refaire si un départ est renommé — preuve : accord de l'utilisateur du 2026-11-08 (« oui ») ; `graphiques.json` de la carte : `affichage` D1-D6 (« Debit 1 » à « Debit 6 », L/min) et Total
+- [x] Séries : D1 à D6 et Total ; libellés : `graphiquesFonctions` ne lit pas les noms des départs, il prend `affichage.<chemin>.libelle` de `graphiques.json` (sinon le chemin `DEBITS.D1`) ⇒ libellés = noms des départs du persist, à refaire si un départ est renommé — preuve : accord de l'utilisateur du 2026-11-08 (« oui ») ; `graphiques.json` de la carte : `affichage` D1-D6 (« Debit 1 » à « Debit 6 », L/min) et Total
 
 ## A2 — Activation sur la carte
 - [x] **Accord demandé** avant de toucher au persist : `diverses.historique.activation` ON (et les réglages de A1) — preuve : accord du 2026-11-08, `_persist.json` `diverses.historique.activation` = ON (pas 5 min, 24 h inchangés)

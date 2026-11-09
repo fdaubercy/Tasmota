@@ -86,7 +86,7 @@ sans impulsions.
 - [x] `display.ini` (copie de `tasmota/displaydesc/SSD1306_128x64_display.ini`) dans le dossier de la carte, embarqué sur le FS — preuve : `data/bureau/tasmota32s3-serveur-debits-pac/display.ini` ; lu en `/display.ini` (`xdsp_17_universal.ino:63`)
 - [x] Modèle de GPIO : `FlowRateMeter` 1-2, `Counter` 1-4 ; I2C SDA/SCL — preuve : posé au démarrage depuis le persist (`configModules.be:125`, fonction = `type + id - 1`) ; `USER_TEMPLATE` du `.h` vide comme prévu par l'assistant
 - [x] Compilation par la page Build (:7700), SUCCESS lu en fin de journal — preuve : journal `20261108-075514-tasmota32s3-bureau-serveur-debits-pac-compiler.log`, `[SUCCESS] Took 14055.04 seconds`, RAM 22,9 %, Flash 70,8 % (2 829 879 o)
-- [ ] `banc_demarrage.py` relancé, instantané de la nouvelle carte enregistré (sans travail d'une autre session en cours) — `--dossier` VERT le 2026-11-08 (3 drivers, 0 erreur) ; carte pas encore dans CARTES ni enregistrée
+- [x] `banc_demarrage.py` relancé, instantané de la nouvelle carte enregistré (sans travail d'une autre session en cours) — preuve : carte ajoutée à `banc_demarrage.py::CARTES`, référence `bouchons_berry/demarrage/tasmota32s3-bureau-serveur-debits-pac.txt` enregistrée le 2026-11-09 sur une copie de `data/fs` du commit (`--sources`, l'autre session modifiait `fsMqtt.be`) : 4 drivers dont `HISTORIQUE_WEB`, 3 commandes, cron `majHistorique`, exception aucune, 0 erreur ; `--carte` VERT aussi sur le `data/fs` de travail
 
 ## A4 — Module Berry des débits
 - [x] `controleDebits.be` + `debitsFonctions.be` dans le dossier de la carte, sur le patron de la cuve ; bloc persist `debits` (nom des 6 départs, K par voie, fenêtre en s) — preuve : `debitsFonctions.be::debitsFonctions_entree` et `debitsFonctions_voie` : nom et K lus dans l'entrée qui porte la broche (décision du 2026-11-08 : `environnement.debitmetres.debitmetre1-2`, ex-`pinsTechniques`, et `environnement.compteurs.compteur1-4`, clé `k` ajoutée au `_persist.json` du dépôt), `fenetre` dans le bloc `debits` (défaut 10 s) ; banc « ReglageDebits » sur le vrai persist de la carte, 56 vérifications OK, 19 témoins rouges ; `banc_demarrage.py --dossier … --env …` VERT (0 erreur)
@@ -124,7 +124,7 @@ sans impulsions.
 
 ## Améliorations restantes
 - [ ] [projet] Carte porteuse PCB pour la nourrice (skill `pcb-tasmota`)
-- [ ] [projet] Historique et page `/graphiques` des 6 débits : plan `tasks/plans/historique-debits.md` (en pause, à valider)
+- [ ] [projet] Historique et page `/graphiques` des 6 débits : plan `tasks/plans/historique-debits.md` (actif : A1 à A3 faits, historique activé et compilé le 2026-11-08, commit `c8c21131f` ; reste l'essai sur la carte, A4)
 - [ ] [projet] Assistant persist : reprendre `page_cuve`, `page_energie`, `pages_graphiques`, `pages_graphiques_moteur` dans le `custom_files_exclude` d'un env créé (oubli constaté le 2026-11-08)
 - [x] [projet] Guide animé du réglage de l'équilibrage (demandé le 2026-11-09, format retenu : **page HTML animée pas à pas**, lisible sur téléphone devant la nourrice), d'après `outils_docs/chauffage/EQUILIBRAGE_CHAUFFAGE_NOURRICE.md` — preuve : `outils_docs/chauffage/equilibrage_pas_a_pas.html` (10 étapes, schéma animé, calculateur), publié https://claude.ai/artifact/6oyWDPZEAhjo5btUxs6BL7 ; rendu Chrome pas encore vérifié (build P4 en cours)
 - [ ] [projet] Lire la PAC (EKHBRD probable, photo du 2026-11-08) : passerelle RTD-W en Modbus RS485 ou pont P1P2MQTT, lecture seule ; pas de voie X10A prouvee (guide § 2.1 ter)
