@@ -4,7 +4,7 @@ titre: Page web « Build et téléversement » (port 7700, tuile de l'annuaire)
 objectif: Compiler et téléverser en série (COM ou OTA) les envs cochés depuis une page web, avec progression en direct
 statut: actif
 cree: 2026-10-24
-maj: 2026-10-30
+maj: 2026-11-09
 ---
 # Page web « Build et téléversement » — plan d'implémentation
 
@@ -563,7 +563,26 @@ le verrou d'envoi de `build_serie.py` (jamais pendant un build ni un autre envoi
   par l'utilisateur le 2026-10-30 (« tu peux également cocher la dernière étape de A15 ») ; `/autoexec.be` des deux
   cartes identique au dépôt (MD5 56637B4E…, E60F6778…), voir l'essai A16 du même jour.
 
+## A17 — OTA du FS sur une carte à l'étroit : place vérifiée, fichiers identiques sautés, remplacement (demande du 2026-11-09)
+
+Cas réel du 2026-11-09 (différentiel, 320 Ko de FS) : envoi arrêté sur `sd/js/jsParam.js` (36 991 o), 32 Ko libres ;
+Tasmota refuse tout fichier plus gros que la place libre, même s'il en remplace un existant (`xdrv_01_9_webserver.ino`,
+« Fichier trop grand », erreur 9) ; les 4 fichiers restants étaient identiques à ceux de la carte ; le persist, envoyé
+en dernier, n'est pas parti. Vider tout le FS est écarté : `/.settings`, `/.drvset003` et `/energie/` n'ont pas de copie.
+
+- [x] Carte simulée (`build_ota_carte_simulee.py`) : capacité du FS en blocs de 4 Ko, `UfsFree`, listage d'un dossier
+  avec les tailles (forme `UFS_FORM_SDC_DIRb`), `ufsd?delete=`, refus « Fichier trop grand » au-delà de la place libre. — preuve : `Carte.capacite`, `Carte.libre`, `UfsFree`, lignes `<pre><a href='ufsd?download=…'>` au format réel (expression vérifiée sur deux pages /ufsd téléchargées du différentiel : chemins et tailles exacts, fichiers cachés compris), `delete=`, « Fichier trop grand », `Carte.recus`
+- [x] Banc (`test_build_ota_fs.py`) rouge puis vert : fichiers identiques sautés (aucun POST) ; place insuffisante
+  refusée AVANT tout envoi (rien d'écrit) ; fichier plus gros que la place libre : l'ancien supprimé juste avant, puis
+  envoyé ; le persist n'est jamais supprimé avant son remplacement ; raison d'un refus lisible (texte après « Échoué »). — preuve : `test_build_ota_fs.py::test_ota_fs_place`, 8 KO avant le code, puis VERT (159 OK) ; déroulés attendus des tests d'ordre complétés de l'étape « comparaison »
+- [x] `build_ota_fs.py` : étape « Comparaison avec la carte » (listage + `UfsFree`, octets comparés quand les tailles
+  sont égales), bilan de place avant l'envoi, suppression juste avant le remplacement quand la place manque. — preuve : `build_ota_fs.py::_compare_carte`, `_tailles`, `_libre`, `_blocs`, suppression dans `envoie_fs_ota` ; `build_ota_http.py::_raison`
+- [x] Doc : `outils_docs/README.md` (envoi du FS par OTA) ; bancs voisins (`test_build_web`, `test_build_serie`) verts. — preuve : README § « OTA du file system », étapes 3 et 4 ; CLAUDE.md (taille du banc, 925) ; `verifie_references_docs.py` 0 défaut ; test_build_serie, test_build_web, test_build_drvset, test_build_sauvegarde (59 OK), test_autoexec_envoi (121 OK), test_tapp_envoi (129 OK), test_atelier_destinations_bout_en_bout (4 OK) VERTS
+- [ ] Essai réel : FS du différentiel par OTA, fichiers identiques sautés, envoi complet.
+
 ## Améliorations restantes
+
+- [ ] [projet] OTA du FS par MQTT (`build_ota_mqtt.py`) : mêmes parades que l'A17 (place, fichiers identiques).
 
 - [x] [projet] Refuser dès la fin du pré-build un module solidifié vide (cas réel du 2026-10-26 : `demarrage.be` sans
   `#@ solidify:demarrage`, P4 et rideau en échec d'édition des liens après 1 h ; ligne ajoutée avec l'accord de

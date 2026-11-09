@@ -18,7 +18,10 @@ xdrv_01_9_webserver.ino) :
     sans safeboot il repond « none ». Un POST /u2 sur l'appli en cours (partition unique) echoue.
     `safeboot_reel` : en safeboot, toute commande repond « Unknown » et la page d'accueil porte <h3>SAFEBOOT</h3>
     (le vrai safeboot de la cuve, 2026-10-28) ;
-  - Sleep / Sleep <n> -> {"Sleep":{"<n>":{"Active":"<n>"}}} (forme du maitre P4), valeurs posees dans `sleeps`.
+  - Sleep / Sleep <n> -> {"Sleep":{"<n>":{"Active":"<n>"}}} (forme du maitre P4), valeurs posees dans `sleeps` ;
+  - `capacite` (octets, None = illimitee) : FS en blocs de 4 Ko ; UfsFree -> Ko libres ; POST /ufsu refuse au-dela de la
+    place libre (« Fichier trop grand », upload_error 9, meme pour un fichier qui en remplace un autre) ; GET /ufsd liste
+    le dossier courant (lignes UFS_FORM_SDC_DIRb : chemin, date, taille) ; `delete=<chemin>` supprime (xdrv_50_filesystem).
 Aucune vraie carte n'est contactee.
 """
 
@@ -66,6 +69,8 @@ class Carte:
         self.nom = "Capteurs de Cuve"                # DeviceName, titre de la page d'accueil
         self.sleep = 50                              # Sleep (commande, sans effet ici)
         self.sleeps = []                             # valeurs posees par « Sleep <n> »
+        self.capacite = None                         # taille du FS en octets (None = illimitee)
+        self.recus = []                              # chemins ecrits par POST /ufsu, dans l'ordre
         carte = self
 
         class Gestion(BaseHTTPRequestHandler):
@@ -88,6 +93,12 @@ class Carte:
 
     def fs(self):
         return self.sd if self.ufs_dir == 1 else self.flash
+
+    def libre(self):
+        """Octets libres de la flash (blocs de 4 Ko entiers par fichier)."""
+        if self.capacite is None:
+            return 1 << 30
+        return self.capacite - sum(-(-len(v) // 4096) * 4096 for v in self.flash.values())
 
     @staticmethod
     def repond(h, corps, type_="text/html; charset=utf-8"):
@@ -116,7 +127,7 @@ class Carte:
             return self.repertoire(h, args)
         if url.path == "/ufsu" and methode == "POST":
             self.type_envoi = "fichier"
-            return self.recoit_fichier(h, corps)
+            return self.recoit_fichier(h, corps, int(args.get("fsz") or 0))
         if url.path == "/dl" and self.config is not None:
             return self.repond(h, self.config, "application/octet-stream")
         if url.path == "/rs":
@@ -151,6 +162,8 @@ class Carte:
             version = "15.0.1(safeboot)" if self.mode == "safeboot" else "15.0.1(tasmota)"
             return self.repond(h, json.dumps({"StatusFWR": {"Version": version, "BuildDateTime": self.compilation,
                                                             "Boot": 31, "Core": "3_1_3"}}), "application/json")
+        if cmnd == "UfsFree":
+            return self.repond(h, json.dumps({"UfsFree": self.libre() // 1024}), "application/json")
         if cmnd == "Status":
             return self.repond(h, '{"Status":{"Module":0}}', "application/json")
         if cmnd == "Status 5":
@@ -209,6 +222,8 @@ class Carte:
         self.ufs_path = "/"
         if "dir" in args:
             self.ufs_dir = int(re.match(r"\d*", args["dir"]).group(0) or 0)   # atoi
+        if "delete" in args:
+            self.fs().pop(args["delete"], None)
         if "download" in args:
             chemin = args["download"]
             if chemin in self.dossiers:
@@ -217,7 +232,12 @@ class Carte:
                 return self.repond(h, self.fs()[chemin], "application/octet-stream")
             else:
                 return                               # fichier absent : connexion fermee
-        return self.repond(h, "<html>Gestion du systeme de fichiers</html>")
+        ppe = "" if self.ufs_path == "/" else urllib.parse.quote(self.ufs_path, safe="")
+        lignes = "".join(f"<pre><a href='ufsd?download={ppe}/{urllib.parse.quote(n)}' file='{n}'>{n}</a> "
+                         f"2026-11-09T09:47:20 {len(v):8d}  </pre>"
+                         for n, v in sorted((c.rpartition("/")[2], v) for c, v in self.fs().items()
+                                            if c.rpartition("/")[0] == self.ufs_path.rstrip("/")))
+        return self.repond(h, "<html>Gestion du systeme de fichiers" + lignes + "</html>")
 
     @staticmethod
     def multipart(h, corps):
@@ -229,15 +249,18 @@ class Carte:
                 return m.group(1).decode(), m.group(2).decode(), contenu[:-2]
         return None, None, b""
 
-    def recoit_fichier(self, h, corps):
+    def recoit_fichier(self, h, corps, fsz=0):
         champ, nom, contenu = self.multipart(h, corps)
         chemin = (self.ufs_path.rstrip("/") + "/" + nom) if nom else ""
         if champ != "ufsu" or not nom or str(PurePosixPath(chemin).parent) not in self.dossiers \
                 or nom == self.echec_fichier:
             return self.repond(h, "<b>Upload <font>Failed</font></b>")
+        if fsz > self.libre() // 1024 * 1024:       # xdrv_01_9_webserver : upload_size > UfsFree() * 1024
+            return self.repond(h, "<b>Upload <font>Failed</font></b><br><br>Fichier trop grand")
         if chemin == "/_persist.json" and self.altere_persist:
             contenu = contenu + b" "
         self.fs()[chemin] = contenu
+        self.recus.append(chemin)
         return self.repond(h, "<b>Upload <font>Successful</font></b>")
 
     def recoit_firmware(self, h, corps):

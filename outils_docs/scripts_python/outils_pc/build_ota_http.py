@@ -22,6 +22,7 @@ ETAPE_CONNEXION = "Connexion par le maître"
 ETAPE_TELEVERSEMENT = "Téléversement"
 ETAPE_SAFEBOOT = "Bascule en safeboot"
 ETAPE_SAUVEGARDE = "Sauvegarde du persist"
+ETAPE_COMPARAISON = "Comparaison avec la carte"
 ETAPE_DOSSIERS = "Création des dossiers"
 ETAPE_ENVOI = "Envoi des fichiers"
 ETAPE_RELECTURE = "Relecture du persist"
@@ -124,3 +125,9 @@ def _page_safeboot(ip, delai):
 def _resume(texte):
     """Texte d'une page Tasmota sans balises, raccourci (pour un message d'erreur)."""
     return re.sub(r"\s+", " ", re.sub(r"<[^>]*>", " ", texte)).strip()[:200]
+
+
+def _raison(texte):
+    """Raison d'un refus : le texte a partir du mot d'echec (« Échoué Fichier trop grand »), pas l'en-tete de la page."""
+    positions = [texte.find(mot) for mot in ECHECS_PAGE if mot in texte]
+    return _resume(texte[min(positions):] if positions else texte)[:120]

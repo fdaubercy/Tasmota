@@ -29,14 +29,16 @@ littlefs-python pour lire l'image (present dans le penv de PlatformIO, qui s'en 
 
 import http.client
 import json
+import re
 import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from build_ota_http import (ETAPE_BERRY, ETAPE_DOSSIERS, ETAPE_ENVOI, ETAPE_IMAGE, ETAPE_RECHARGEMENT,
-                            ETAPE_REDEMARRAGE, ETAPE_RELECTURE, ETAPE_SAUVEGARDE, ETAPE_VERIFICATION,
-                            _attend_retour, _commande, _get, _page_en_echec, _poste, _resume)
+from build_ota_http import (ETAPE_BERRY, ETAPE_COMPARAISON, ETAPE_DOSSIERS, ETAPE_ENVOI, ETAPE_IMAGE,
+                            ETAPE_RECHARGEMENT, ETAPE_REDEMARRAGE, ETAPE_RELECTURE, ETAPE_SAUVEGARDE,
+                            ETAPE_VERIFICATION, _attend_retour, _commande, _get, _page_en_echec, _poste, _raison,
+                            _resume)
 
 PERSIST = "_persist.json"
 # Spec, choix 10.5 : sans ce rechargement, l'evenement System#Save du Restart recopie les globales
@@ -51,6 +53,8 @@ LONGUEUR_MAX = 49                    # UFS_FILENAME_SIZE - 1 (xdrv_50_filesystem
 BLOC_IMAGE = 4096
 REGLAGES_IMAGE = {"block_size": BLOC_IMAGE, "read_size": 1, "prog_size": 1, "cache_size": BLOC_IMAGE,
                   "lookahead_size": 32, "block_cycles": 500, "name_max": 64}
+# Ligne d'un fichier dans la page /ufsd (UFS_FORM_SDC_DIRb de xdrv_50_filesystem.ino) : chemin, date (vide si inconnue), taille.
+LIGNE_LISTE = re.compile(r"<a href='ufsd\?download=([^']+)' file='[^']*'>[^<]*</a>[^<\d]*(?:\d{4}-[\d-]+T[\d:]+)?\s+(\d+)")
 
 
 # -- file system --------------------------------------------------------------------------------------
@@ -173,6 +177,69 @@ def _inventaire(dossier_fs, choix=None):
     return fichiers, sorted(dossiers, key=lambda d: (d.count("/"), d))
 
 
+def _blocs(n):
+    """Place prise par un fichier de n octets : blocs de 4 Ko entiers (estimation, metadonnees de LittleFS non comptees)."""
+    return -(-n // BLOC_IMAGE) * BLOC_IMAGE
+
+
+def _libre(ip, delai):
+    """Octets libres de la flash (UfsFree, en Ko : le seuil que Tasmota applique a un envoi), None si illisible."""
+    try:
+        return int(json.loads(_commande(ip, "UfsFree", delai))["UfsFree"]) * 1024
+    except (ValueError, KeyError, TypeError):
+        return None
+
+
+def _tailles(ip, dossiers, delai):
+    """{chemin sur la carte: taille} des fichiers de / et des `dossiers`. Dossier absent : Tasmota ferme sans repondre."""
+    tailles = {}
+    for d in ["/"] + [x for x in dossiers if x != "/"]:
+        try:
+            page = _get(ip, "/ufsd?dir=0&download=" + urllib.parse.quote(d, safe=""), delai)   # %2F : lisible au journal
+        except (OSError, http.client.HTTPException):
+            continue
+        for chemin, taille in LIGNE_LISTE.findall(page.decode("utf-8", "replace")):
+            tailles[urllib.parse.unquote(chemin)] = int(taille)
+    return tailles
+
+
+def _compare_carte(ip, dossier_fs, fichiers, dossiers, partiel, ancien_persist, delai, rapporte):
+    """Etape « Comparaison avec la carte » (A17), AVANT toute ecriture -> (fichiers a envoyer, tailles sur la carte, libre).
+
+    Meme taille sur la carte : fichier telecharge et compare (le persist : a la sauvegarde deja lue), identique -> saute.
+    Bilan de place en blocs : les nouveaux moins ceux qu'ils remplacent ; plus que la place libre -> refus.
+    """
+    rapporte({"etape": ETAPE_COMPARAISON, "pourcent": None, "detail": f"place et fichiers de {ip}"})
+    libre = _libre(ip, delai)
+    if libre is None:
+        raise RuntimeError(f"{ETAPE_COMPARAISON} : place libre illisible (UfsFree) ; rien n'a été envoyé")
+    tailles = _tailles(ip, dossiers, delai)
+    a_envoyer = []
+    for rel in fichiers:
+        cible = "/" + chemin_carte(rel, partiel)
+        donnees = (dossier_fs / rel).read_bytes()
+        if tailles.get(cible) == len(donnees):
+            if rel == PERSIST:
+                sur_carte = ancien_persist
+            else:
+                try:
+                    sur_carte = _get(ip, "/ufsu?dir=0&download=" + urllib.parse.quote(cible, safe=""), delai)
+                except (OSError, http.client.HTTPException):
+                    sur_carte = None
+            if sur_carte == donnees:
+                continue
+        a_envoyer.append(rel)
+    besoin = sum(_blocs((dossier_fs / rel).stat().st_size) - _blocs(tailles.get("/" + chemin_carte(rel, partiel), 0))
+                 for rel in a_envoyer)
+    if besoin > libre:
+        raise RuntimeError(f"{ETAPE_COMPARAISON} : place insuffisante sur la carte : {libre // 1024} Ko libres, il en "
+                           f"faudrait {-(-besoin // 1024)} ; rien n'a été envoyé")
+    rapporte({"etape": ETAPE_COMPARAISON, "pourcent": 100,
+              "detail": f"{len(fichiers) - len(a_envoyer)} identique(s) sauté(s), {len(a_envoyer)} à envoyer ; "
+                        f"{libre // 1024} Ko libres, environ {(libre - besoin) // 1024} Ko après"})
+    return a_envoyer, tailles, libre
+
+
 def _telecharge_persist(ip, delai):
     return _get(ip, "/ufsu?dir=0&download=/" + PERSIST, delai)
 
@@ -202,7 +269,7 @@ def envoie_fs_ota(env, ip, dossier_fs, sauvegardes, rapporte, *, delai_retour=90
     erreurs_reseau = (OSError, http.client.HTTPException)
     avec_persist = PERSIST in fichiers
     partiel = fichiers_choisis is not None
-    copie = None
+    copie = ancien = None
     sauve = ""                                 # suffixe des messages d'erreur : ou retrouver le persist d'avant
 
     # 2. persist de la carte : sans lui, rien n'est envoye
@@ -223,9 +290,11 @@ def envoie_fs_ota(env, ip, dossier_fs, sauvegardes, rapporte, *, delai_retour=90
         copie = _sauvegarde(env, ancien, sauvegardes)
         sauve = f" ; sauvegarde du persist : {copie}"
 
-    # 3. dossiers puis fichiers
-    etape, en_cours = ETAPE_DOSSIERS, ""
+    # 3. dossiers puis fichiers, apres la comparaison avec la carte (fichiers identiques sautes, place verifiee)
+    etape, en_cours = ETAPE_COMPARAISON, ""
     try:
+        fichiers, tailles, libre = _compare_carte(ip, dossier_fs, fichiers, dossiers, partiel, ancien, delai_http, rapporte)
+        etape = ETAPE_DOSSIERS
         for i, dossier in enumerate(dossiers, 1):
             en_cours = dossier
             rapporte({"etape": etape, "pourcent": i * 100 // len(dossiers), "detail": dossier})
@@ -249,12 +318,26 @@ def envoie_fs_ota(env, ip, dossier_fs, sauvegardes, rapporte, *, delai_retour=90
                     dernier[0] = pourcent
                     rapporte({"etape": etape, "pourcent": pourcent, "detail": detail})
 
+            donnees = (dossier_fs / rel).read_bytes()
+            cible = "/" + chemin_carte(rel, partiel)
+            ancienne, supprime = tailles.get(cible), ""
+            # Tasmota refuse un fichier plus gros que UfsFree, meme s'il en remplace un : l'ancien est supprime juste
+            # avant (jamais le persist : sans lui la carte repartirait sans configuration Berry).
+            if len(donnees) > libre - BLOC_IMAGE:      # estimation proche du seuil : la carte est relue
+                libre = _libre(ip, delai_http) or 0
+                if len(donnees) > libre and ancienne is not None and rel != PERSIST:
+                    _get(ip, "/ufsd?dir=0&delete=" + urllib.parse.quote(cible), delai_http)
+                    ancienne, supprime = None, f" ; l'ancien {rel} a été supprimé de la carte et n'est pas remplacé"
+                    libre = _libre(ip, delai_http) or 0
+                if len(donnees) > libre:
+                    raise RuntimeError(f"{etape} : place insuffisante pour {rel} ({len(donnees)} octets, {libre // 1024} Ko "
+                                       f"libres){supprime}{sauve}")
             # dossier courant de la carte : / puis <parent> (sur un dossier, download= ne telecharge pas)
             _get(ip, "/ufsd?dir=0" + (f"&download=/{urllib.parse.quote(parent)}" if parent else ""), delai_http)
-            donnees = (dossier_fs / rel).read_bytes()
             statut, texte = _poste(ip, f"/ufsu?fsz={len(donnees)}", "ufsu", nom, donnees, delai_http, progression)
             if _page_en_echec(statut, texte):
-                raise RuntimeError(f"{etape} : {rel} refusé par la carte (HTTP {statut}) : {_resume(texte)}{sauve}")
+                raise RuntimeError(f"{etape} : {rel} refusé par la carte (HTTP {statut}) : {_raison(texte)}{supprime}{sauve}")
+            libre -= _blocs(len(donnees)) - _blocs(ancienne or 0)
             faits += len(donnees)
         rapporte({"etape": etape, "pourcent": 100, "detail": f"{len(fichiers)}/{len(fichiers)} {fichiers[-1]}"
                   if fichiers else "aucun fichier"})

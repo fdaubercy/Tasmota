@@ -816,11 +816,21 @@ est rempli par `post_esp32.py` après chaque édition des liens du firmware, n'e
    l'étape affiche « identité non contrôlée » ;
 2. **sauvegarde du `_persist.json` de la carte** dans `%LOCALAPPDATA%\outils_tasmota\build\persist\<env>-<horodatage>.json`.
    Impossible à télécharger, ou pas du JSON valide : **rien n'est envoyé**, l'env est en échec ;
-3. envoi des fichiers, sous-dossiers compris ;
-4. relecture du `_persist.json` de la carte, comparé octet pour octet à celui envoyé (différent : env en échec,
+3. **comparaison avec la carte**, avant toute écriture : place libre (`UfsFree`) et taille de chaque fichier déjà
+   présent (pages `/ufsd` des dossiers concernés). Un fichier de même taille est relu et comparé octet pour octet :
+   **identique, il n'est pas renvoyé**. Bilan de place, en blocs de 4 Ko : les nouveaux fichiers moins ceux qu'ils
+   remplacent. S'il dépasse la place libre, **rien n'est envoyé** et le motif donne les Ko libres et les Ko nécessaires.
+   Le FS n'est jamais vidé : `/.settings` (réglages Tasmota), `/.drvset*` (calibrages) et les données des modules
+   (`/energie/`…) n'ont pas de copie au dépôt ;
+4. envoi des fichiers, sous-dossiers compris, `_persist.json` en dernier. Tasmota refuse un fichier plus gros que sa
+   place libre, même s'il en remplace un (« Fichier trop grand ») : dans ce cas l'ancien est **supprimé juste avant**
+   d'envoyer le nouveau. Jamais le persist : s'il ne tient pas, l'env est en échec et le persist de la carte reste
+   intact. Un refus de la carte affiche sa raison (le texte qui suit « Échoué »). Cas réel du 2026-11-09 : différentiel
+   (FS de 320 Ko), arrêt sur `jsParam.js` (37 Ko pour 32 Ko libres) alors que les 4 derniers fichiers étaient identiques ;
+5. relecture du `_persist.json` de la carte, comparé octet pour octet à celui envoyé (différent : env en échec,
    **pas de restauration automatique**, le chemin de la sauvegarde est affiché) ;
-5. rechargement des globales Berry (`Br import persist …`) ;
-6. `Restart 1`, attente du retour de la carte (90 s), relecture du persist. Si le persist relu après le
+6. rechargement des globales Berry (`Br import persist …`) ;
+7. `Restart 1`, attente du retour de la carte (90 s), relecture du persist. Si le persist relu après le
    redémarrage diffère de celui envoyé, un **avertissement** est affiché avec le chemin de la sauvegarde (l'env
    n'échoue pas : les fichiers sont déjà envoyés et la carte est revenue) ; carte non revenue : env en échec.
 

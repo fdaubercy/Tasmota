@@ -104,6 +104,8 @@ def genre(methode, chemin):
     cmnd = urllib.parse.unquote(chemin.split("cmnd=", 1)[1]) if "cmnd=" in chemin else ""
     if "download=/_persist.json" in chemin:
         return "persist"
+    if "download=%2F" in chemin or cmnd == "UfsFree":
+        return "comparaison"
     if "path.mkdir" in cmnd:
         return "dossier"
     if chemin.startswith(("/ufsd", "/ufsu")):
@@ -125,7 +127,7 @@ def test_ota_fs_ordre():
         erreur, _, _ = envoie_fs(carte, t)
         verifie(erreur, None, "ota_fs_ordre : envoi sans erreur")
         verifie(compacte([genre(m, c) for m, c in carte.requetes()]),
-                ["persist", "dossier", "envoi", "persist", "rechargement", "restart", "status", "persist"],
+                ["persist", "comparaison", "dossier", "envoi", "persist", "rechargement", "restart", "status", "persist"],
                 "ota_fs_ordre : sauvegarde -> dossiers -> envois -> relecture -> Br -> Restart 1 -> Status -> relecture")
         br = [urllib.parse.unquote(c.split("cmnd=", 1)[1]) for _, c in carte.requetes("cmnd=Br%20import%20persist")]
         verifie(br, [BR_RECHARGE], "ota_fs_ordre : commande Berry exacte de la spec (choix 10.5), URL-encodee")
@@ -137,12 +139,12 @@ def test_ota_fs_partiel():
     """Onglet « Fichiers » (A15, choix 24) : seuls les fichiers choisis partent ; persist non choisi -> ni sauvegarde,
     ni relecture, ni rechargement ; options apres envoi respectees."""
     cas = [  # (fichiers, options, deroule attendu)
-        (["json/graphiques.json", "autoexec.be"], {}, ["dossier", "envoi", "restart", "status"]),
-        (["autoexec.be"], {"redemarrer": False, "recharger_berry": True}, ["envoi", "brrestart"]),
-        (["autoexec.be"], {"redemarrer": False}, ["envoi"]),
+        (["json/graphiques.json", "autoexec.be"], {}, ["comparaison", "dossier", "envoi", "restart", "status"]),
+        (["autoexec.be"], {"redemarrer": False, "recharger_berry": True}, ["comparaison", "envoi", "brrestart"]),
+        (["autoexec.be"], {"redemarrer": False}, ["comparaison", "envoi"]),
         (["_persist.json", "autoexec.be"], {"redemarrer": False, "recharger_berry": True},
-         ["persist", "envoi", "persist", "rechargement", "brrestart"]),
-        (["_persist.json"], {}, ["persist", "envoi", "persist", "rechargement", "restart", "status", "persist"]),
+         ["persist", "comparaison", "envoi", "persist", "rechargement", "brrestart"]),
+        (["_persist.json"], {}, ["persist", "comparaison", "envoi", "persist", "rechargement", "restart", "status", "persist"]),
     ]
     for fichiers, options, attendu in cas:
         with tempfile.TemporaryDirectory() as t:
@@ -823,8 +825,84 @@ def test_par_maitre():
         esclave.ferme()
 
 
+def envoie_dossier(carte, t, fichiers, **options):
+    """envoie_fs_ota d'un littlefs_data fait de `fichiers` ({chemin relatif: octets}) -> (erreur ou None, rapports)."""
+    d = Path(t) / "data_place"
+    for rel, contenu in fichiers.items():
+        (d / rel).parent.mkdir(parents=True, exist_ok=True)
+        (d / rel).write_bytes(contenu)
+    sauvegardes = Path(t) / "persist_place"
+    sauvegardes.mkdir(exist_ok=True)
+    rapports = []
+    try:
+        bo.envoie_fs_ota("tasmota32-essai", carte.ip, d, sauvegardes, rapports.append, **{**RAPIDE, **options})
+        return None, rapports
+    except RuntimeError as erreur:
+        return str(erreur), rapports
+
+
+def test_ota_fs_place():
+    """A17 : fichiers identiques sautes, place verifiee avant tout envoi, ancien supprime juste avant son remplacement."""
+    # 1. identiques : rien n'est renvoye, les autres partent
+    with tempfile.TemporaryDirectory() as t:
+        carte = Carte()
+        carte.dossiers |= {"/sd", "/sd/js"}
+        carte.flash.update({"/autoexec.be": b"print(1)", "/sd/js/a.js": b"x" * 300, "/sd/js/b.js": b"y" * 300})
+        erreur, rapports = envoie_dossier(carte, t, {"autoexec.be": b"print(1)", "sd/js/a.js": b"x" * 300,
+                                                     "sd/js/b.js": b"z" * 300, "_persist.json": NOUVEAU_PERSIST})
+        verifie(erreur, None, "ota_fs_place identiques : envoi sans erreur")
+        verifie(carte.recus, ["/sd/js/b.js", "/_persist.json"],
+                "ota_fs_place identiques : seuls les fichiers differents partent (meme taille, octets differents compris)")
+        verifie(any("2 identique" in str(r.get("detail")) for r in rapports), True,
+                "ota_fs_place identiques : le bilan dit combien de fichiers sont sautes")
+        carte.ferme()
+    # 2. place insuffisante : refus avant toute ecriture
+    with tempfile.TemporaryDirectory() as t:
+        carte = Carte()
+        carte.capacite = 3 * 4096                     # persist (1 bloc) -> 8 Ko libres
+        erreur, _ = envoie_dossier(carte, t, {"sd/js/gros.js": b"g" * 9000, "_persist.json": NOUVEAU_PERSIST})
+        verifie((erreur or "").startswith("Comparaison avec la carte : place insuffisante"), True,
+                "ota_fs_place insuffisante : refus a la comparaison")
+        verifie(("8 Ko libres" in (erreur or ""), "rien n'a été envoyé" in (erreur or "")), (True, True),
+                "ota_fs_place insuffisante : message chiffre, rien d'envoye")
+        verifie((carte.recus, [c for m, c in carte.requetes() if "mkdir" in c or "delete=" in c]), ([], []),
+                "ota_fs_place insuffisante : ni fichier, ni dossier, ni suppression")
+        carte.ferme()
+    # 3. remplacement d'un fichier plus gros que la place libre : l'ancien est supprime juste avant
+    with tempfile.TemporaryDirectory() as t:
+        carte = Carte()
+        carte.dossiers |= {"/sd", "/sd/js"}
+        carte.flash["/sd/js/gros.js"] = b"a" * 9000   # 3 blocs
+        carte.capacite = 6 * 4096                     # 6 - 3 - 1 (persist) = 2 blocs libres (8 Ko)
+        erreur, _ = envoie_dossier(carte, t, {"sd/js/gros.js": b"b" * 9500, "_persist.json": NOUVEAU_PERSIST})
+        verifie(erreur, None, "ota_fs_place remplacement : envoi sans erreur (sans la suppression : « Fichier trop grand »)")
+        ordre = [c for m, c in carte.requetes() if "delete=" in c or m == "POST"]
+        verifie(["delete" if "delete=" in c else "post" for c in ordre][:2], ["delete", "post"],
+                "ota_fs_place remplacement : suppression juste avant l'envoi du fichier")
+        verifie(urllib.parse.unquote(ordre[0].split("delete=", 1)[1]) if ordre else None, "/sd/js/gros.js",
+                "ota_fs_place remplacement : c'est l'ancien gros.js qui est supprime")
+        verifie((carte.flash.get("/sd/js/gros.js"), carte.flash["/_persist.json"]), (b"b" * 9500, NOUVEAU_PERSIST),
+                "ota_fs_place remplacement : nouveau fichier et persist ecrits")
+        carte.ferme()
+    # 4. le persist n'est jamais supprime avant son remplacement
+    with tempfile.TemporaryDirectory() as t:
+        gros_persist = b'{"x": "' + b"p" * 9000 + b'"}'
+        carte = Carte(persist=b'{"x": "' + b"q" * 8990 + b'"}')
+        carte.capacite = 4 * 4096                     # persist 3 blocs -> 4 Ko libres
+        erreur, _ = envoie_dossier(carte, t, {"_persist.json": gros_persist})
+        verifie(("_persist.json" in (erreur or ""), "place" in (erreur or "")), (True, True),
+                "ota_fs_place persist : refus, le persist ne tient pas")
+        verifie([c for _, c in carte.requetes("delete=")], [], "ota_fs_place persist : jamais supprime")
+        verifie(carte.flash["/_persist.json"].startswith(b'{"x": "q'), True, "ota_fs_place persist : celui de la carte est intact")
+        carte.ferme()
+    # 5. raison d'un refus : le texte apres « Echoue », pas le debut de la page
+    page = ("<html><head><script>var x=null;eb=s=>document.getElementById(s);</script></head><body>Disjoncteur"
+            "<div><b>Envoi <font color='#f00'>Échoué</font></b><br><br>Fichier trop grand</div><p>Menu</p></body></html>")
+    verifie(bh._raison(page).startswith("Échoué Fichier trop grand"), True, "ota_fs_place raison : texte apres « Échoué »")
+
+
 def principal():
-    for test in (test_identite_image, test_par_maitre, test_coupe_sleep, test_maitre_lent,test_ota_firmware_deja_en_safeboot, test_ota_fs_ordre, test_ota_fs_partiel, test_ota_fs_json_racine, test_ota_fs_sauvegarde, test_ota_fs_persist_injoignable,
+    for test in (test_ota_fs_place, test_identite_image, test_par_maitre, test_coupe_sleep, test_maitre_lent,test_ota_firmware_deja_en_safeboot, test_ota_fs_ordre, test_ota_fs_partiel, test_ota_fs_json_racine, test_ota_fs_sauvegarde, test_ota_fs_persist_injoignable,
                  test_ota_fs_relecture_differente, test_ota_fs_sous_dossiers, test_ota_fs_referer,
                  test_ota_fs_echec_ufsu, test_ota_fs_pas_de_retour, test_ota_fs_attente_retour,
                  test_ota_fs_persist_reformate, test_ota_fs_progression, test_ota_fs_progression_octets,
