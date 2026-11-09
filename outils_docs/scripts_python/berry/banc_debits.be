@@ -31,10 +31,10 @@ ecris(SORTIE + "/modules/persist.be", "import global\nvar p = module('persist')\
 ecris(SORTIE + "/modules/diversFonctions.be", "var d = module('diversFonctions')\nd.traiteAide = def (c, p, f, v) return false end\nreturn d\n")
 ecris(SORTIE + "/modules/debitsFonctions.be", lis(SOURCE))
 ecris(SORTIE + "/modules/equilibragePage.be", lis(SOURCE_PAGE))
-ecris(SORTIE + "/modules/path.be", "import global\nvar p = module('path')\np.exists = def (f) return (f == '/json/pages.jsonl' && global.PAGE_PRESENTE) || (f == '/sd/html/equilibrage.html' && global.PAGE_EQ) end\nreturn p\n")
+ecris(SORTIE + "/modules/path.be", "import global\nimport os\nvar p = module('path')\np.exists = def (f) return (f == '/json/pages.jsonl' && global.PAGE_PRESENTE) || (f == '/sd/html/equilibrage.html' && global.PAGE_EQ) || (f == '/sd/js/equilibrage_carte.js' && global.CODE_EQ) || (f == global.REGLAGES_BANC && os.path.exists(f)) end\nreturn p\n")
 # Faux serveur web : reponse gardee dans global.HTTP (code, type, corps, fermee) ; routes et arguments de la requete
-ecris(SORTIE + "/modules/webserver.be", "import global\nvar w = module('webserver')\nw.HTTP_GET = 1\n"
-      "w.on = def (p, f, m) global.ROUTES[p] = f end\nw.check_privileged_access = def () return global.PRIVILEGIE end\n"
+ecris(SORTIE + "/modules/webserver.be", "import global\nvar w = module('webserver')\nw.HTTP_GET = 1\nw.HTTP_POST = 2\nw.header = def (n) return global.ENTETES.find(n) end\n"
+      "w.on = def (p, f, m) global.ROUTES[p + ':' + str(m)] = f end\nw.check_privileged_access = def () return global.PRIVILEGIE end\n"
       "w.has_arg = def (n) return global.ARGS.contains(n) end\nw.arg = def (n) return global.ARGS[n] end\n"
       "w.content_open = def (c, t) global.HTTP = {'code': c, 'type': t, 'corps': '', 'fermee': false} end\n"
       "w.content_send = def (t) if global.HTTP == nil global.ACCUEIL += t else global.HTTP['corps'] += t end end\n"
@@ -314,6 +314,10 @@ verifie("mesure : duree d'ecriture de l'ecran relevee", type(debitsFonctions.ecr
 
 print("--- page /equilibrage")
 import equilibragePage
+global.ENTETES = {"Referer": "http://192.168.0.50/"}
+global.CODE_EQ = true
+global.REGLAGES_BANC = SORTIE + "/equilibrage.json"
+equilibragePage.REGLAGES = global.REGLAGES_BANC
 global.ROUTES = {}
 global.ACCUEIL = ""
 global.HTTP = nil
@@ -355,7 +359,15 @@ var deb = string.find(corps, "window.CARTE=") + 13
 var carte = json.load(corps[deb .. string.find(corps, ";</script>") - 1])
 verifie("page : CARTE = noms, fenetre, nom de la carte", carte != nil && size(carte["noms"]) == 6 && carte["fenetre"] == debitsFonctions.fenetre()
         && carte["nom"] == "SERVEUR-DEBITS-PAC")
+verifie("page : code du mode carte ajoute apres le fichier, dans un script",
+        string.find(corps, "[fichier /sd/html/equilibrage.html]<script>[fichier /sd/js/equilibrage_carte.js]</script>") > 0)
 verifie("page : aucune erreur", erreurs() == 0)
+global.CODE_EQ = false
+equilibragePage.route()
+verifie("code du mode carte absent : page servie quand meme, erreur journalisee", global.HTTP["code"] == 200 && global.HTTP["fermee"]
+        && string.find(global.HTTP["corps"], "[fichier /sd/html/equilibrage.html]") > 0 && erreurs() == 1)
+global.CODE_EQ = true
+global.JOURNAL = []
 global.PAGE_EQ = false
 equilibragePage.route()
 verifie("page absente du LittleFS : 404 et erreur journalisee", global.HTTP["code"] == 404 && global.HTTP["fermee"] && erreurs() == 1)
@@ -366,6 +378,59 @@ equilibragePage.route()
 verifie("lecture du fichier en echec : reponse fermee, erreur journalisee", global.HTTP["fermee"] && erreurs() == 1)
 global.LECTURE_CASSE = false
 global.modules["debits"]["environnement"]["debitmetres"]["debitmetre1"]["nom"] = "Debit 1"
+
+print("--- favori (sans Referer) et reglages gardes sur la carte")
+global.ENTETES = {}
+global.PRIVILEGIE = false
+global.ARGS = {}
+equilibragePage.route()
+corps = global.HTTP["corps"]
+verifie("sans Referer : page de relais qui se recharge, sans aucune donnee", global.HTTP["code"] == 200 && global.HTTP["fermee"]
+        && string.find(corps, "location.replace('/equilibrage?r=1')") > 0 && string.find(corps, "window.CARTE") < 0 && string.find(corps, "Debit") < 0)
+global.ARGS = {"r": "1"}
+equilibragePage.route()
+corps = global.HTTP["corps"]
+verifie("sans Referer apres le relais (?r=1) : lien seul, pas de rechargement en boucle", global.HTTP["code"] == 200
+        && string.find(corps, "location.replace") < 0 && string.find(corps, "href='/equilibrage'") > 0)
+global.ARGS = {}
+global.ENTETES = {"Referer": "http://192.168.0.50/equilibrage"}
+global.HTTP = nil
+equilibragePage.route()
+verifie("avec Referer refuse : rien n'est envoye (acces privilegie)", global.HTTP == nil)
+global.PRIVILEGIE = true
+global.ARGS = {"f": "reglages"}
+equilibragePage.route()
+verifie("f=reglages sans fichier : {}", global.HTTP["code"] == 200 && global.HTTP["corps"] == "{}")
+def poste(texte)
+    global.HTTP = nil
+    global.ARGS = (texte == nil ? {} : {"reglages": texte})
+    equilibragePage.enregistre()
+end
+global.JOURNAL = []
+poste('{"p1":"1400","r1-type":"f4","t-aller":"55,5","pac":""}')
+verifie("POST valide : 200, fichier ecrit, aucune erreur", global.HTTP["code"] == 200 && os.path.exists(global.REGLAGES_BANC) && erreurs() == 0)
+global.ARGS = {"f": "reglages"}
+equilibragePage.route()
+var lu = json.load(global.HTTP["corps"])
+verifie("f=reglages : valeurs relues", lu["p1"] == "1400" && lu["r1-type"] == "f4" && lu["t-aller"] == "55,5" && lu["pac"] == "")
+var refus = [['{"x":"1"}', "champ inconnu"], ['{"p1":"<b>"}', "caractere"], ['{"p1":14}', "valeur nombre"],
+             ['[1]', "pas un objet"], ['{"p1":"1234567890123"}', "valeur trop longue"], [nil, "parametre absent"]]
+var gros = '{"p1":"'
+for i: 1 .. 2100    gros += "1"    end
+refus.push([gros + '"}', "trop gros"])
+for c: refus
+    global.JOURNAL = []
+    poste(c[0])
+    verifie("POST refuse (" + c[1] + ") : 400 et erreur journalisee", global.HTTP["code"] == 400 && global.HTTP["fermee"] && erreurs() == 1)
+end
+global.ARGS = {"f": "reglages"}
+equilibragePage.route()
+verifie("reglages refuses : fichier inchange", json.load(global.HTTP["corps"])["p1"] == "1400")
+global.PRIVILEGIE = false
+poste('{"p1":"999"}')
+verifie("POST sans acces privilegie : rien n'est envoye ni ecrit", global.HTTP == nil)
+global.PRIVILEGIE = true
+global.ENTETES = {"Referer": "http://192.168.0.50/"}
 global.HTTP = nil
 
 print("--- driver controleDebits")
@@ -374,10 +439,13 @@ var pilote = compile(lis(CARTE + "controleDebits.be"))()
 verifie("driver enregistre et commande ajoutee", size(global.DRIVERS) == 1 && global.COMMANDES.contains("ReglageDebits"))
 verifie("calibrage du FlowRateMeter neutralise", global.CMDS == ["Sensor96 0 0", "Sensor96 1 1000", "Sensor96 2 1000"])
 pilote.web_add_handler()
-verifie("route /equilibrage declaree", global.ROUTES.contains("/equilibrage"))
+verifie("route /equilibrage declaree en GET et en POST", global.ROUTES.contains("/equilibrage:1") && global.ROUTES.contains("/equilibrage:2"))
 global.ARGS = {"f": "debits"}
-global.ROUTES["/equilibrage"]()
+global.ROUTES["/equilibrage:1"]()
 verifie("route /equilibrage : servie par equilibragePage", global.HTTP != nil && global.HTTP["type"] == "application/json")
+global.ARGS = {"reglages": '{"p2":"1500"}'}
+global.ROUTES["/equilibrage:2"]()
+verifie("POST /equilibrage : enregistre par equilibragePage", global.HTTP["code"] == 200)
 global.HTTP = nil
 global.ACCUEIL = ""
 pilote.web_add_main_button()

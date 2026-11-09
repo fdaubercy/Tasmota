@@ -51,11 +51,21 @@ Décisions de conception (à contester avant le feu vert) :
 
 ## A5 — Sur la carte (avec le matériel)
 - [ ] FS envoyé par la page Build ; bouton « Équilibrage » de l'accueil ouvert depuis le téléphone ; « Lire les débits » = valeurs de l'accueil ; suivi direct ; tas mesuré avant et après la première ouverture
+- [ ] Favori du téléphone vers `/equilibrage` : la page s'ouvre (relais) ; « Garder les puissances sur la carte » puis rechargement depuis un autre appareil : puissances retrouvées ; schéma sur les débits réels en suivi direct
+
+## A6 — Améliorations : schéma réel, réglages sur la carte, favori (demande du 2026-11-09)
+- [x] Code du mode carte sorti de la page dans `equilibrage_carte.js` (dossier de la carte, rangé dans `/sd/js/`), ajouté par la route après le fichier ; l'artifact n'en porte rien — preuve : `equilibragePage.be::equilibragePage_envoiePage` (CODE, erreur journalisée s'il manque) ; `banc_debits.py` : code ajouté dans un script, code absent → page servie et 1 erreur
+- [x] Schéma animé sur les débits réels pendant « Suivre en direct », couleur et rapport selon les cibles du calculateur ; retour à l'illustration de l'étape au décochage — preuve : `equilibrage_carte.js::montreReel`, `majSchema(q, ouvertures, cibles)` ; sonde Chrome : texte « Débits réels », valeur du départ 1 sur le schéma = débit lu, retour à l'étape ; témoins rouges
+- [x] Réglages de l'estimateur et puissances gardés sur la carte : `GET /equilibrage?f=reglages`, `POST /equilibrage` (champs connus seulement, valeurs ≤ 12 caractères parmi chiffres, lettres, `.,-`, 2 Ko au plus), `/json/equilibrage.json` hors persist ; relus au chargement — preuve : `equilibragePage.be::equilibragePage_valide`, `_enregistre`, `_lisReglages` ; `banc_debits.py` : POST valide relu, 7 refus (400 + erreur, fichier inchangé), POST sans accès privilégié → rien ; sonde : réglages relus, 46 champs envoyés par le bouton ; témoins rouges
+- [x] Favori sans Referer : page de relais sans donnée qui se recharge, puis contrôle d'accès habituel — preuve : `equilibragePage.be::equilibragePage_envoieRelais` ; `banc_debits.py` : relais sans `window.CARTE` ni nom de départ, Referer refusé → rien ; mutant « favori sans relais » rouge ; sonde : 1 relais puis la page
+- [x] `banc_demarrage.py --carte` : écart relu (+6 fonctions, `envoieDebits` retirée), référence ré-enregistrée sur une copie de `data/fs` du commit — preuve : `--carte tasmota32s3-bureau-serveur-debits-pac` VERT
+- [x] `relecteur-berry` et `relecteur-pages-web`, remarques traitées ; README, `CLAUDE.md`, artifact republié — preuve : les deux « prêt » ; corrigés : relais en boucle sans Referer (`?r=1` : lien seul au 2e passage, mutant rouge), case « Suivre » restaurée par le navigateur (`planifie` après la 1re lecture, non sondé), fichier fermé si l'écriture échoue ; POST sans Referer refusé par Tasmota (`xdrv_01_9_webserver.ino::HttpCheckPriviledgedAccess`) ; `banc_debits.py` 114 vérifications VERT, 13 mutants de la page rouges ; sonde 28 vérifications VERT, 4 mutants du js rouges ; README § débits, `CLAUDE.md`, `verifie_references_docs.py` 0 défaut ; artifact version 4
+- [ ] Commit et push
 
 ## Améliorations restantes
-- [ ] [projet] Schéma animé alimenté par les débits réels pendant le suivi direct
-- [ ] [projet] Puissances des radiateurs gardées sur la carte (aujourd'hui dans le navigateur du téléphone)
-- [ ] [projet] Signet du téléphone vers /equilibrage : refusé sans Referer par l'accès privilégié ; passer par l'accueil, ou alléger le contrôle pour cette page en lecture seule
+- [x] [projet] Schéma animé alimenté par les débits réels pendant le suivi direct — preuve : A6
+- [x] [projet] Puissances des radiateurs gardées sur la carte (aujourd'hui dans le navigateur du téléphone) — preuve : A6
+- [x] [projet] Signet du téléphone vers /equilibrage : refusé sans Referer par l'accès privilégié ; passer par l'accueil, ou alléger le contrôle pour cette page en lecture seule — preuve : A6 (relais : le contrôle reste entier)
 
 ## Vérification
 - PC : banc Berry vert avec témoins, sonde Chrome verte, `banc_demarrage.py --carte tasmota32s3-bureau-serveur-debits-pac` vert.

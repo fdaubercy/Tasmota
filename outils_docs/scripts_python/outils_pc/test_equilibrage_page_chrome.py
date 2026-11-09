@@ -34,6 +34,8 @@ sys.path.insert(0, str(ICI))
 from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre   # client DevTools stdlib
 
 PAGE = RACINE / "data/bureau/tasmota32s3-serveur-debits-pac/equilibrage.html"
+CODE = RACINE / "data/bureau/tasmota32s3-serveur-debits-pac/equilibrage_carte.js"
+RELAIS = "location.replace('/equilibrage?r=1')"      # comme equilibragePage.be::equilibragePage_envoieRelais (favori sans Referer)
 TETE = "<!doctype html><html lang='fr'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'>"
 CARTE = {"noms": ["Salon </script>", "Cuisine", "Chambre", "Bureau", "Bain", "Entrée"], "fenetre": 2, "nom": "SERVEUR-DEBITS-PAC"}
 ECHECS = []
@@ -50,6 +52,8 @@ def verifie(obtenu, attendu, libelle):
 class Carte(BaseHTTPRequestHandler):
     lectures = 0
     en_panne = False
+    relais = 0                   # pages de relais servies (requete sans Referer)
+    reglages = {"r1-type": "f3", "r1-e": "8", "p1": "700"}     # reglages gardes sur la carte
 
     def log_message(self, format, *args):
         pass
@@ -75,13 +79,23 @@ class Carte(BaseHTTPRequestHandler):
                                          "muets": [False, True, False, False, False, False],
                                          "imprecis": [False, False, False, True, False, False], "fenetre": 2, "age_s": 3}),
                         "application/json")
+        elif url.path == "/equilibrage" and q.get("f") == "reglages":
+            self.envoie(200, json.dumps(Carte.reglages), "application/json")
+        elif url.path == "/equilibrage" and not self.headers.get("Referer"):
+            Carte.relais += 1
+            self.envoie(200, "<!doctype html><meta charset='utf-8'><script>" + RELAIS + "</script>", "text/html")
         elif url.path == "/equilibrage":
-            self.envoie(200, TETE + "<script>window.CARTE=" + json.dumps(CARTE).replace("</", "<\\/") + ";</script>" + fichier,
-                        "text/html")
+            self.envoie(200, TETE + "<script>window.CARTE=" + json.dumps(CARTE).replace("</", "<\\/") + ";</script>" + fichier
+                        + "<script>" + CODE.read_text(encoding="utf-8") + "</script>", "text/html")
         elif url.path == "/seul":
             self.envoie(200, TETE + fichier, "text/html")
         else:
             self.envoie(404, "inconnu", "text/plain")
+
+    def do_POST(self):
+        corps = self.rfile.read(int(self.headers.get("Content-Length", 0))).decode("utf-8")
+        Carte.reglages = json.loads(urllib.parse.parse_qs(corps)["reglages"][0])
+        self.envoie(200, '{"ok": true}', "application/json")
 
 
 class Serveur(ThreadingHTTPServer):
@@ -149,7 +163,10 @@ def sonde(m, capture):
     verifie(attend(m.cdp, "document.getElementById('m1') && document.getElementById('m1').value === '3,50'", 10), True,
             "lecture faite au chargement : départ 1 = 3,50 (1re lecture)")
     e = m.cdp.js(JS_ETAT)
+    verifie(Carte.relais, 1, "ouverture sans Referer (favori) : page de relais, puis la page")
     verifie(e["zone"], True, "zone de la carte visible (bouton, case, état)")
+    g = m.cdp.js("['r1-type', 'r1-e', 'p1'].map(id => document.getElementById(id).value)")
+    verifie(g, ["f3", "8", "700"], "réglages gardés sur la carte relus au chargement (type, éléments, puissance)")
     verifie(e["m"], ["3,50", "0,00", "", "0,40", "3,00", "4,10"], "6 débits remplis, voie sans mesure vide")
     verifie(e["labelM1"], "Départ 1 (Salon </script>) : débit mesuré (L/min)", "nom du départ repris, texte brut (pas de HTML)")
     verifie(e["legende1"], "Radiateur 1 — Salon </script>", "nom repris dans l'estimateur")
@@ -168,6 +185,10 @@ def sonde(m, capture):
     verifie(Carte.lectures - avant >= 3, True, f"suivi en direct : lecture au clic puis toutes les 2 s ({Carte.lectures - avant} lectures)")
     verifie(m.cdp.js("document.getElementById('m1').value") == f"{2.5 + Carte.lectures:.2f}".replace(".", ","), True,
             "suivi en direct : valeurs mises à jour")
+    sch = m.cdp.js("[document.getElementById('schema-texte').textContent,"
+                   " document.querySelector('#schema text[y=\"170\"]').textContent, document.getElementById('m1').value]")
+    verifie(sch[0].startswith("Débits réels") and sch[1] == f"{float(sch[2].replace(',', '.')):.1f}".replace(".", ","), True,
+            f"suivi en direct : schéma sur les débits réels ({sch!r})")
     m.cdp.js("Object.defineProperty(document, 'hidden', {configurable: true, get: () => true});"
              " document.dispatchEvent(new Event('visibilitychange')); 1")
     avant = Carte.lectures
@@ -177,7 +198,9 @@ def sonde(m, capture):
     time.sleep(1)
     verifie(Carte.lectures > avant, True, "onglet de nouveau visible : lecture reprise")
     m.cdp.js("document.getElementById('suivre').click(); 1")
-    erreurs = [x for x in m.cdp.erreurs() if "fonts.g" not in x and "favicon" not in x]
+    verifie(m.cdp.js("document.getElementById('schema-texte').textContent").startswith("Débits réels"), False,
+            "suivi arrêté : retour à l'illustration de l'étape")
+    erreurs =[x for x in m.cdp.erreurs() if "fonts.g" not in x and "favicon" not in x]
     verifie(erreurs, [], "mode carte : aucune erreur dans la console (hors polices bloquées)")
 
     # Estimateur : radiateur 1 en fonte 4 colonnes, 600 mm, 10 éléments = 90 W x 10 ; « Reporter » remplit le calculateur
@@ -194,6 +217,10 @@ def sonde(m, capture):
     verifie((e["p1"], e["p2"]), ("900", "1320"), "« Reporter » : puissances catalogue dans le calculateur (900 W, 1 320 W)")
     q = float(e["q"].split()[0].replace(",", "."))      # PAC vide : total mesuré à cet instant
     attendu = f"{q * 900 / 9975:.1f}".replace(".", ",") + " L/min"     # 900 + 1320 + 1650 + 1815 + 1980 + 2310 W
+    m.cdp.js("[...document.querySelectorAll('#carte-zone button')].find(b => b.textContent.startsWith('Garder')).click(); 1")
+    attend(m.cdp, "document.getElementById('carte-etat').textContent.includes('gardés sur la carte')", 5)
+    verifie((Carte.reglages.get("r1-type"), Carte.reglages.get("r1-e"), Carte.reglages.get("p1"), len(Carte.reglages)),
+            ("f4", "10", "900", 46), "« Garder les puissances sur la carte » : 46 champs envoyés (radiateur 1 compris)")
     verifie(e["cible1"], attendu, f"« Reporter » : calcul refait (cible du départ 1 = {q} x 900 / 9 975 W)")
 
     Carte.en_panne = True

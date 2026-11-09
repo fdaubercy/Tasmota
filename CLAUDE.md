@@ -578,7 +578,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   6 voies (2 `FlowRateMeter` groupe `debitmetres`, 4 `Counter` groupe `compteurs` ; `nom` et `k` dans l'entree de chaque voie),
   bloc `DEBITS` du JSON SENSOR, ecran TFT ILI9488 par HASPmota (`pages.jsonl`), capteur muet, veille de l'ecran, commande `ReglageDebits` ;
   historique et `/graphiques` (plan `tasks/plans/historique-debits.md`). Bancs `berry/banc_debits.py`, `banc_demarrage.py`, essai de charge
-  `outils_pc/essai_charge_debits.py`. Guide d'equilibrage `outils_docs/chauffage/` (texte) ; page animee `equilibrage.html` du dossier de la carte, servie en `/equilibrage` (plan `tasks/plans/equilibrage-par-la-carte.md`). Mode d'emploi : `outils_docs/README.md`.
+  `outils_pc/essai_charge_debits.py`. Guide d'equilibrage `outils_docs/chauffage/` (texte) ; page animee `equilibrage.html` du dossier de la carte, servie en `/equilibrage` par `equilibragePage.be` avec le code du mode carte `equilibrage_carte.js` (debits en direct, reglages gardes dans `/json/equilibrage.json`, relais pour un favori sans Referer ; plan `tasks/plans/equilibrage-par-la-carte.md`). Mode d'emploi : `outils_docs/README.md`.
 - `outils_docs/EXTENSIONS_TAPP.md` — extensions Tasmota `.tapp` (2026-11-07) : format, cycle de vie, cas d'utilisation, gabarits
   A et B, envoi sur une carte, pieges (compilation avant `/autoexec.be`, formatage, image du FS). Essais sur carte : § 9, a faire (A10).
 - `outils_docs/FICHIERS_DRVSET.md` — inventaire des fichiers `.drvset*`/`.snsset*` du firmware : role, contenu, chargement, sauvegarde, effacement (2026-11-02).

@@ -238,13 +238,13 @@ function etat(q, cible) {
   return r > 1.1 ? "var(--trop)" : r < 0.9 ? "var(--peu)" : "var(--bon)";
 }
 let debits = OUVERT.slice(), montrerRapports = false;
-function majSchema(q, ouvertures) {
+function majSchema(q, ouvertures, cibles = CIBLE) {   // cibles : celles du calculateur en suivi direct
   debits = q;
   q.forEach((v, i) => {
     const d = departs[i];
-    d.radiateur.style.stroke = etat(v, CIBLE[i]);
+    d.radiateur.style.stroke = etat(v, cibles[i]);
     d.valeur.textContent = v > 0 ? v.toFixed(1).replace(".", ",") : "0";   // unité dans la légende : place comptée
-    d.rapport.textContent = montrerRapports && v > 0 ? "× " + (v / CIBLE[i]).toFixed(2).replace(".", ",") : "";
+    d.rapport.textContent = montrerRapports && v > 0 && cibles[i] > 0 ? "× " + (v / cibles[i]).toFixed(2).replace(".", ",") : "";
     dessineVanne(d, i, ouvertures ? ouvertures[i] : (v > 0 ? 1 : 0.15));
   });
 }
@@ -325,7 +325,7 @@ for (let i = 0; i < 6; i++) champ(document.getElementById("champs-p"), "p" + (i 
 for (let i = 0; i < 6; i++) champ(document.getElementById("champs-m"), "m" + (i + 1), "Départ " + (i + 1) + " : débit mesuré (L/min)", EXEMPLE.m[i]);
 // Page servie par la carte des débits (/equilibrage) : window.CARTE = {noms, fenetre, nom} ; absent hors carte
 const CARTE = window.CARTE && Array.isArray(window.CARTE.noms) ? window.CARTE : null;
-let NOMS = [], ETATS = [];          // noms des départs et mention « muet » / « imprécis », lus sur la carte
+let NOMS = [], ETATS = [], CIBLES_CALC = [];   // noms, mentions « muet » / « imprécis », cibles du calculateur (equilibrage_carte.js)
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const pac = document.getElementById("pac");
 pac.value = lit("pac", CARTE ? "" : EXEMPLE.pac);
@@ -342,6 +342,7 @@ function calcule() {
     const r = m !== null && sM > 0 && part > 0 ? (m / sM) / part : null;   // part mesurée / part cible : juste même si la pompe varie
     return { i, part, cible, m, r };
   });
+  CIBLES_CALC = lignes.map(l => l.cible);
   const ordre = lignes.filter(l => l.r !== null && l.r > 1.1).sort((a, b) => b.r - a.r);
   const rang = new Map(ordre.map((l, k) => [l.i, k + 1]));
   const f = (v, n) => v === null ? "–" : v.toFixed(n).replace(".", ",");
@@ -354,56 +355,6 @@ function calcule() {
   conseil.textContent = ordre.length
     ? `Régler d'abord le départ ${ordre[0].i + 1}, puis ${ordre.slice(1).map(l => l.i + 1).join(", ") || "aucun autre"}. Le départ ${faible.i + 1} (le plus défavorisé) reste ouvert à fond.`
     : "Tous les départs sont à leur part cible à 10 % près : l'équilibrage est fait.";
-}
-
-// ---- Lecture des débits sur la carte (mode carte seulement) ----
-const etatCarte = document.getElementById("carte-etat"), suivre = document.getElementById("suivre");
-let minuterie = null;
-function nommeDeparts(noms) {
-  NOMS = noms.map(n => String(n || ""));
-  NOMS.forEach((n, k) => {
-    const lm = document.querySelector(`label[for="m${k + 1}"]`), lp = document.querySelector(`label[for="p${k + 1}"]`);
-    if (lm && n) lm.firstChild.textContent = `Départ ${k + 1} (${n}) : débit mesuré (L/min)`;
-    if (lp && n) lp.firstChild.textContent = `Radiateur ${k + 1} (${n}) : puissance (W)`;
-    const lg = document.querySelectorAll("#radiateurs legend")[k];
-    if (lg && n) lg.textContent = `Radiateur ${k + 1} — ${n}`;
-  });
-}
-let enCours = false;       // une lecture à la fois : une réponse tardive n'écrase pas une plus récente
-async function lireCarte() {
-  if (enCours) return;
-  enCours = true;
-  try {
-    const r = await fetch("/equilibrage?f=debits", { cache: "no-store", signal: AbortSignal.timeout(5000) });
-    if (!r.ok) throw new Error("réponse " + r.status);
-    const j = await r.json();
-    if (!Array.isArray(j.debits) || j.debits.length !== 6) throw new Error("mesures illisibles");
-    nommeDeparts(Array.isArray(j.noms) ? j.noms : []);
-    ETATS = j.debits.map((q, k) => j.muets && j.muets[k] ? "muet ?" : j.imprecis && j.imprecis[k] ? "imprécis" : "");
-    j.debits.forEach((q, k) => { document.getElementById("m" + (k + 1)).value = typeof q === "number" ? q.toFixed(2).replace(".", ",") : ""; });
-    calcule();
-    const age = typeof j.age_s === "number" ? `mesure d'il y a ${Math.round(j.age_s)} s` : "aucune mesure encore";
-    const alertes = ETATS.map((e, k) => e ? `départ ${k + 1} ${e}` : "").filter(Boolean).join(", ");
-    etatCarte.textContent = `Lu à ${new Date().toLocaleTimeString("fr-FR")}, ${age}` + (alertes ? ` ; ${alertes}` : "") + ".";
-  } catch (e) {
-    const cause = e.name === "TimeoutError" ? "pas de réponse en 5 s" : e.message;
-    etatCarte.textContent = "Lecture impossible : " + cause + ". Les valeurs affichées sont les dernières lues.";
-  } finally {
-    enCours = false;
-  }
-}
-function planifie() {
-  clearInterval(minuterie); minuterie = null;
-  if (suivre.checked && !document.hidden) {
-    minuterie = setInterval(lireCarte, Math.max(2, Number(CARTE.fenetre) || 10) * 1000);
-  }
-}
-if (CARTE) {
-  document.getElementById("carte-zone").hidden = false;
-  document.getElementById("calc-note").textContent = "Débits lus sur la carte ; puissances à saisir, ou reportées de l'estimateur. Vos saisies restent dans ce navigateur.";
-  document.getElementById("lire").addEventListener("click", lireCarte);
-  suivre.addEventListener("change", () => { planifie(); if (suivre.checked) lireCarte(); });
-  document.addEventListener("visibilitychange", () => { planifie(); if (suivre.checked && !document.hidden) lireCarte(); });
 }
 
 // ---- Estimateur : puissance à ΔT 50 K (norme EN 442 : eau 75/65 °C, pièce 20 °C) d'après le type et les dimensions ----
@@ -494,7 +445,6 @@ document.getElementById("reporter").addEventListener("click", () => {
 
 estime();
 calcule();
-if (CARTE) { nommeDeparts(CARTE.noms); lireCarte(); }   // page ouverte depuis la carte : ses noms et ses débits d'emblée
 depuisAncre();
 requestAnimationFrame(anime);
 </script>

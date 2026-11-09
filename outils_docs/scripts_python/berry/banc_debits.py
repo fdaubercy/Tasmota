@@ -52,12 +52,18 @@ MUTANTS = [
 
 # Temoins de la page /equilibrage (equilibragePage.be), meme regle
 MUTANTS_PAGE = [
-    ("acces privilegie ignore", "if (!webserver.check_privileged_access())    return nil    end", ""),
+    ("acces privilegie ignore", "if (!webserver.check_privileged_access())    return nil    end\n    var f =", "var f ="),
+    ("POST sans acces privilegie", "if (!webserver.check_privileged_access())    return nil    end\n    var verdict", "var verdict"),
+    ("favori sans relais", 'if (webserver.header("Referer") == nil)    return equilibragePage.envoieRelais()    end', ""),
+    ("relais en boucle sans Referer", '(webserver.has_arg("r") ? "" : ', '(false ? "" : '),
+    ("champ inconnu accepte", 'if (champs.find(cle) == nil)    return [nil, "champ inconnu : " + str(cle)]    end', ""),
+    ("caractere refuse accepte", 'return [nil, "caractere refuse pour " + cle]', "continue"),
+    ("code du mode carte oublie", "            gestionFileFolder.readFileByLineAndContentSend(equilibragePage.CODE)\n", ""),
     ("</ non echappe dans window.CARTE", 'string.replace(json.dump(carte), "</", "<\\\\/")', "json.dump(carte)"),
     ("page absente non signalee", "if (!path.exists(equilibragePage.PAGE))", "if (false)"),
     ("reponse laissee ouverte apres une exception", "if (ouverte)    webserver.content_close()    end", ""),
     ("age de la mesure en ms", "(tasmota.millis() - r[\"t\"]) / 1000", "(tasmota.millis() - r[\"t\"])"),
-    ("mesures illisibles : reponse jamais envoyee", "        texte = json.dump(equilibragePage.debits())", "        texte = nil"),
+    ("mesures illisibles : reponse jamais envoyee", "        texte = json.dump(calcul())", "        texte = nil"),
     ("debit imprecis non signale", "for q: d    imprecis.push(debitsFonctions.imprecis(q))    end", ""),
 ]
 

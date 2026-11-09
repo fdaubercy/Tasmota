@@ -35,11 +35,18 @@ class CONTROLE_Debits : Driver
     def web_add_handler()
         import webserver
         webserver.on("/equilibrage", / -> self.pageEquilibrage(), webserver.HTTP_GET)
+        webserver.on("/equilibrage", / -> self.enregistreEquilibrage(), webserver.HTTP_POST)
     end
 
     def pageEquilibrage()
         import equilibragePage
         equilibragePage.route()
+    end
+
+    # Reglages de l'estimateur de la page (puissances des radiateurs) gardes sur la carte
+    def enregistreEquilibrage()
+        import equilibragePage
+        equilibragePage.enregistre()
     end
 
     def web_add_main_button()
