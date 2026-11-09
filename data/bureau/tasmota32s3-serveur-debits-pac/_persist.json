@@ -110,14 +110,14 @@
 			"groupTopic3": ""
 		},
 		"rangeExtender": {
-			"activation": "OFF",
+			"activation": "ON",
 			"id": 0,
 			"log": "info",
 			"ipMaitre": "",
 			"AP": {
 				"IPAddress": "192.168.4.1",
 				"Subnet": "255.255.255.0",
-				"routeNAPT": "OFF",
+				"routeNAPT": "ON",
 				"SSID": "SERVEUR-DEBITS-PAC-GATEWAY",
 				"mdp": "Lune5676"
 			}
@@ -128,7 +128,7 @@
 			"mdp": "Lune5676"
 		},
 		"udp": {
-			"activation": "OFF",
+			"activation": "ON",
 			"id": 0,
 			"log": "info",
 			"port": 2000
