@@ -17,7 +17,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ███████░░░ 66 % (32/48) | 16 étapes, 4 améliorations | 2026-11-08 | 2026-11-09 |
+| [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ██████░░░░ 59 % (34/54) | 20 étapes, 4 améliorations | 2026-11-08 | 2026-11-09 |
 | [Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)](plans/energie-differentiel.md) | Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h) | actif | █████████░ 93 % (68/70) | 2 étapes, 1 amélioration | 2026-10-31 | 2026-11-09 |
 | [Page d'équilibrage de la nourrice servie par la carte des débits, débits lus en direct](plans/equilibrage-par-la-carte.md) | Ouvrir le guide d'équilibrage depuis la carte des débits et y lire les 6 débits mesurés, sans les taper à la main | actif | ████████░░ 83 % (20/22) | 2 étapes | 2026-11-09 | 2026-11-09 |
 | [Historique et page /graphiques des 6 débits de la nourrice](plans/historique-debits.md) | Garder en flash l'historique des 6 débits et du total, et les voir en courbes sur la page /graphiques de la carte | actif | ████████░░ 75 % (8/10) | 2 étapes, 1 amélioration | 2026-11-08 | 2026-11-09 |
@@ -57,13 +57,14 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) — 66 %
+#### [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) — 59 %
 
 - A2 — Matériel et câblage : Niveaux mesurés à réception sur une voie montée (haut ≈ 3,3 V, bas < 0,8 V)
 - A2 — Matériel et câblage : Largeur de la carte S3 achetée compatible avec le bornier DNDINS3 (25,4 ou 28 mm, 44 broches)
 - A2 — Matériel et câblage : Recherche d'un module tout-en-un vendu en ligne (demande du 2026-11-09) : ESP32-S3 (N16R8 de préférence) + écran tactile intégré + GPIO accessibles pour les 6 débitmètres (au moins 6 entrées libres hors broches de l'écran, de la PSRAM et du démarrage), alimentation 5 V ; comparatif (référence, prix, broches libres, pilote d'écran pris en charge par Tasmota/HASPmota, boîtier) contre la solution actuelle S3 DevKit + ILI9488 séparés, choix laissé à l'utilisateur
 - A2 — Matériel et câblage : PAC = **Daikin Altherma haute température** (utilisateur, 2026-11-08 ; photo : 1re génération grise, `EKHBRD` + `EKHTS` + `ERRQ`/`ERSQ` probable, guide § 2.1 ter) : modèle exact lu sur la plaque ; débit minimal de la notice (12 L/min sur Altherma 3 H HT, 20 L/min sur ETBH/ETBX16) et ΔT réglé (radiateurs : 10 K fixe, 8 K si `[2-0C]` = 2 ; la pompe module son débit pour le tenir). Plage du capteur à reconfirmer : part de chaque radiateur × débit minimal de la PAC ≥ 1 L/min (≈ 1,7 L/min pour 1 400 W sur ~10 kW) ; seul un robinet thermostatique qui ferme passe sous le seuil (guide `outils_docs/chauffage/EQUILIBRAGE_CHAUFFAGE_NOURRICE.md`, § 2.1 bis)
 - A2 — Matériel et câblage : Facteur K confirmé à réception (référence lue sur l'étiquette ; volume connu passé dans un capteur : impulsions / litres × 60)
+- A3 — Création de l'env de la carte : Sur la carte, après envoi du FS : `SERVEUR-DEBITS-PAC-GATEWAY` visible, un téléphone connecté dessus atteint Internet (NAPT) et la page de la carte en 192.168.4.1 ; MQTT et page d'accueil toujours joignables par le Wi-Fi maison ; tas mesuré avant et après
 - A5 — Affichage sur l'écran TFT et page web : Page web de la carte : 6 lignes nommées (`web_sensor`) ; lignes natives des compteurs bruts et du `FlowRateMeter` jugées sur la vraie page (gardées ou masquées), avec l'utilisateur
 - A5 — Affichage sur l'écran TFT et page web : Durée d'une mise à jour de l'écran mesurée sur carte (`tasmota.millis()` autour de l'écriture), consignée ; fréquence SPI du `display.ini` à essayer si l'écran est lent
 - A6 — Essai de charge sur banc : Générateur : second ESP32 en `PwmFrequency` sur 6 sorties câblées aux entrées de la carte (fait AVANT l'achat des 5 autres capteurs)
@@ -75,6 +76,9 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A7 — Pose, étalonnage et documentation : Débit de la PAC relevé APRÈS la pose : au-dessus de son minimum constructeur, aucun défaut de débit sur une semaine
 - A7 — Pose, étalonnage et documentation : Contrôle de cohérence : somme des 6 débits contre le débit de la PAC, K corrigé par `ReglageDebits` si besoin
 - A7 — Pose, étalonnage et documentation : Commit par `/commite`
+- A8 — Étude : deux S3, acquisition et affichage séparés (demande du 2026-11-09) : Décisions de l'utilisateur : une ou deux cartes ; emplacement de l'écran et distance à la nourrice ; liaison retenue ; module d'affichage (§ 7 quater). Deux cartes = retour sur la décision « pas de liaison vers un maître » du 2026-11-08
+- A8 — Étude : deux S3, acquisition et affichage séparés (demande du 2026-11-09) : Si deux cartes avec ModBus : cadence la plus courte du relevé du maître mesurée sans encombrer sa file, échelle des registres des débits choisie (uint32, centièmes de L/min, registre `4704 + id - 1`)
+- A8 — Étude : deux S3, acquisition et affichage séparés (demande du 2026-11-09) : Si deux cartes : rôles fixés (affichage = maître id 0, acquisition = esclave id 1) et plan de réalisation écrit à part (persists des deux cartes, code d'écran déplacé, essai de la liaison coupée : « inconnu » affiché)
 - Amélioration [projet] : Carte porteuse PCB pour la nourrice (skill `pcb-tasmota`)
 - Amélioration [projet] : Historique et page `/graphiques` des 6 débits : plan `tasks/plans/historique-debits.md` (actif : A1 à A3 faits, historique activé et compilé le 2026-11-08, commit `c8c21131f` ; reste l'essai sur la carte, A4)
 - Amélioration [projet] : Lire la PAC (EKHBRD probable, photo du 2026-11-08) : passerelle RTD-W en Modbus RS485 ou pont P1P2MQTT, lecture seule ; pas de voie X10A prouvee (guide § 2.1 ter)
@@ -84,7 +88,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 - A10 — Retour au plan « jauges-cuve » : Reprendre `tasks/plans/jauges-cuve.md` : icône B envoyée aux deux cartes (FS), registre 4708, captures de l'accueil et de `/cuve`, bouton Retour
 - A11 — Remarques de l'utilisateur du 2026-11-02 (soir) : Thermomètre corrigé (« n'oublie pas la correction des paramètres ») : GPIO34 lit ~2,2 V au lieu de 0,64 V depuis l'envoi du FS (15 °C au lieu de 27 °C) ; `AdcParam1` rétabli (B 15000), `SetOption146` écarté ; cause inconnue, il faut la température réelle près du boîtier
-- Amélioration [projet] : Étendre la page Énergie aux autres cartes à bloc `ENERGY` (module déjà générique)
+- Amélioration [projet] : Étendre la page Énergie aux autres cartes à bloc `ENERGY` (module déjà générique) : aucune autre carte n'en a l'usage au 2026-11-09 (décision : mode d'emploi seul) ; marche à suivre dans `outils_docs/README.md` § « Poser la page sur une autre carte », compteur à plusieurs voies couvert par `banc_energie.be` ; à cocher à la pose sur une vraie carte
 
 #### [Page d'équilibrage de la nourrice servie par la carte des débits, débits lus en direct](plans/equilibrage-par-la-carte.md) — 83 %
 

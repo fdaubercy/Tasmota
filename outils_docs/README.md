@@ -310,6 +310,20 @@ consommations **d'aujourd'hui par heure**, **du mois par jour**, des **12 dernie
   `banc_energie_description.py` (page pilotée par sa description, rendu Chrome) et
   `outils_pc/test_energie_rendu.mjs` (validation JS = Python). Conception :
   `docs/superpowers/specs/2026-10-31-page-energie-differentiel-design.md`.
+- **Poser la page sur une autre carte** (aucune autre carte du parc n'en a l'usage au 2026-11-09). Le module ne lit que le
+  bloc `ENERGY` du JSON SENSOR : il vaut pour tout capteur d'énergie MONOPHASÉ, à une seule voie. Un compteur à plusieurs
+  voies ou phases (`Total` en liste) n'est pas compté : la page s'affiche, avec un compteur illisible et rien d'écrit en
+  flash (banc `banc_energie.be`, « plusieurs voies »). La protection du calibrage ne joue que pour une BL0942 ; avec une
+  autre puce, ou sans `calibrage` au persist, elle ne fait rien. Pour une nouvelle carte, dans cet ordre :
+  1. `platformio_tasmota_cenv.ini`, section de l'env : retirer `${berry_commun.page_energie}` de son `custom_files_exclude`
+     (ou de celui de la base dont il hérite, en le redéfinissant) ; ajouter `data/fs/energieFonctions.be` et
+     `data/fs/controleEnergie.be` à son `custom_berry_solidify`, comme l'env `tasmota32-bureau-interrupteur-energie`.
+  2. `autoexec.be` de la carte : `demarrage.charge(["controleEnergie"], "diverses.energie")`, après `controleWeb`.
+  3. `_persist.json` de la carte : `"energie": {"activation": "ON"}` sous `diverses` (plus `calibrage` pour une BL0942).
+  4. `banc_demarrage.py` (instantané de la carte relu, seul écart attendu), puis compilation et envoi du firmware ET du
+     FS par la page Build : le module est solidifié, un envoi du FS seul ne suffit pas.
+  5. Sur la carte : bouton **Énergie** sur l'accueil, `/energie` affiche la puissance ; la première note horaire apparaît au
+     changement d'heure suivant. Saisir un prix dans Configuration > « Tarifs de l'électricité ».
 
 ## Les jauges du niveau de la cuve (page `/cuve`, cuve et P4)
 

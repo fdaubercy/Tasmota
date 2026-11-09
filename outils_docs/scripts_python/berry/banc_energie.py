@@ -31,6 +31,8 @@ MODULE = RACINE / "data/fs/energieFonctions.be"
 # Chaque mutant doit rendre le banc rouge : (nom, texte du module, remplacement)
 MUTANTS = [
     ("baisse du compteur comptee", "delta < 0 ||", "false ||"),
+    ("compteur a plusieurs voies lu", 'if (type(total) != "int" && type(total) != "real")    return false    end\n    energieFonctions.purge()',
+     "energieFonctions.purge()"),
     ("compteur retabli compte", "real(delta) > real(energieFonctions.PUISSANCE_MAX_W) * (ecoule + 3600) / 3600", "false"),
     ("purge du plus recent", "archives[i] < archives[ancien]", "archives[i] > archives[ancien]"),
     ("prix futur applique", "p[0] <= jour", "true"),

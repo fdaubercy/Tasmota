@@ -445,6 +445,11 @@ verifie("donnees : compteur illisible", nil, donnees["wCourant"])
 global.CAPTEURS = '{"ENERGY":{"Total":1234.567}}'
 E.route(courbe)
 verifie("donnees : compteur en Wh entiers", 1234567, json.load(global.REPONSE)["wCourant"])
+# Autre carte que le differentiel : compteur a plusieurs voies (Total en liste) -> illisible, rien n'est compte ni ecrit
+global.CAPTEURS = '{"ENERGY":{"Total":[1.5,2.5],"Power":[10,20]}}'
+E.route(courbe)
+verifie("plusieurs voies : compteur illisible", nil, json.load(global.REPONSE)["wCourant"])
+verifie("plusieurs voies : aucune note", false, E.releve(E.mesure(), {"utc": 1762000000, "local": 1762003600}))
 global.CAPTEURS = "{}"
 E.route(courbe)
 verifie("donnees : heure", 400, donnees["etat"]["h"][11])
