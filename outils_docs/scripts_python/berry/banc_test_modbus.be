@@ -2110,6 +2110,92 @@ drivers = sauveDrivers
 serveur = sauveServeur
 
 print("")
+print("=== 36. Lecture groupee de l'esclave : 7 valeurs uint32 en une requete 0x04 (2026-11-09) ===")
+# Carte d'acquisition des debits (esclave id 1) : 6 debits + 1 mot d'etats aux registres 4704 a 4710, relus par le
+# maitre en UNE requete 0x04 de 14 registres. Avant : executeCmdModbus ne remplissait qu'une valeur et prepareTrame
+# completait par des zeros ([v, 0, 0, 0, 0, 0, 0]). Cle drivers.ModBus.lectureGroupee : garage inchange sans elle.
+sauveDrivers = drivers
+sauveModules = modules
+sauveDiverses = diverses
+drivers = {"ModBus": {"activation": "ON", "id": 1, "activationReponseCMD": "ON", "typeComm": {"Serial":"ON"}, "environnement": {}}}
+diverses = {"telePeriod": 300}                        # limite generale : 900 s
+var ana36 = {}
+for i: 1 .. 7    ana36["analogique" + str(i)] = {"activation": "ON", "type": 4704, "id": i, "value": 1000 + i, "nom": "Debit " + str(i)}    end
+modules = {"debits": {"activation": "ON", "environnement": {"analogiques": ana36}}}
+var reponses36 = []
+vraiEnvoi = modbusFonctions.envoiMsgModbus
+modbusFonctions.envoiMsgModbus = def (t, typeMsg, id) reponses36.push(modbusFonctions.prepareTrame(t, typeMsg).tohex()) end
+var lit36 = def (sa, nb) return {"DeviceAddress": 1, "FunctionCode": 4, "FunctionName": "LECTURE_REGISTRES_ENTREES", "StartAddress": sa, "Count": nb, "Values": []} end
+# Lance une requete, rend "<nb de reponses>/<Values>/<Erreur>/<derniere reponse hexa>"
+var sert36 = def (r)
+  reponses36.clear()
+  essaie(def () modbusFonctions.executeCmdModbus(r) end)
+  return str(size(reponses36)) + "/" + str(r["Values"]) + "/" + str(r.find("Erreur")) + "/" + (size(reponses36) > 0 ? reponses36[-1] : "")
+end
+var etM36 = modbusFonctions.etat()
+etM36["mesures"] = {}  etM36["sansMesure"] = {}
+tasmota.ms = 100000                                   # grace du demarrage passee
+for i: 0 .. 6    modbusFonctions.noteMesure(4704 + i)    end
+# (a) cle absente : reponse d'avant, octet pour octet (reference captee sur le code du commit 010d29581)
+verifie("(a) cle absente, 14 registres : reponse d'avant", "1/[1001]/0/01041C000003E9000000000000000000000000000000000000000000000000FFF3", sert36(lit36(4704, 14)))
+drivers["ModBus"]["lectureGroupee"] = "ON"
+# (a') cle ON, requete d'UNE valeur (Count 2, le cas du garage) : reponse d'avant
+verifie("(a') cle ON, 1 valeur : reponse d'avant", "1/[1002]/0/010404000003EA7AFB", sert36(lit36(4705, 2)))
+# (b) cle ON : les 7 valeurs dans l'ordre des registres
+var r36 = lit36(4704, 14)
+var s36 = sert36(r36)
+verifie("(b) cle ON : 7 valeurs dans l'ordre", "1/[1001, 1002, 1003, 1004, 1005, 1006, 1007]/uint32/7",
+        string.split(s36, "/")[0] + "/" + str(r36["Values"]) + "/" + str(r36.find("type")) + "/" + str(r36["Count"]))
+verifie("(b) trame : 28 octets de donnees, sans zero ajoute", "1C000003E9000003EA000003EB000003EC000003ED000003EE000003EF",
+        size(reponses36) > 0 ? reponses36[0][4 .. size(reponses36[0]) - 5] : "")
+verifie("(b) temoin autre esclave (DeviceAddress 2) : aucune reponse", "0",
+        string.split(sert36({"DeviceAddress": 2, "FunctionCode": 4, "FunctionName": "LECTURE_REGISTRES_ENTREES", "StartAddress": 4704, "Count": 14, "Values": []}), "/")[0])
+# (c) une voie non fraiche (registre 4706) : sentinelle a sa place seulement
+tasmota.ms = 100000 + 900001                          # toutes les mesures depassent 900 s...
+for i: [0, 1, 3, 4, 5, 6]    modbusFonctions.noteMesure(4704 + i)    end       # ... sauf la voie 3, renouvelees
+r36 = lit36(4704, 14)
+sert36(r36)
+verifie("(c) voie 3 non fraiche : sentinelle a sa place seulement", "[1001, 1002, 2147483647, 1004, 1005, 1006, 1007]", str(r36["Values"]))
+# (d) registre 4711 dans la plage (4705 + 7 valeurs) : exception, aucune valeur
+journal.clear()
+r36 = lit36(4705, 14)
+verifie("(d) 4711 sans appareil : exception wrongstartaddress, rien emis", "0/[]/4/", sert36(r36))
+verifie("(d) refus journalise en erreur", true, journalise("SERT_GROUPE"))
+# (e) Count impair, plus de 40 registres : exception
+verifie("(e) Count 13 (impair) : exception wrongnbRegistres, rien emis", "0/[]/6/", sert36(lit36(4704, 13)))
+verifie("(e) Count 42 (> 40 registres) : exception tomanydata, rien emis", "0/[]/8/", sert36(lit36(4704, 42)))
+# (f) declareMesure : registre hors du delai de grace, limite propre
+etM36["mesures"] = {}  etM36["sansMesure"] = {}
+tasmota.ms = 1000                                     # demarrage : la grace court
+essaie(def () modbusFonctions.declareMesure(4704, 20000) end)
+verifie("(f) declare, sans mesure : sentinelle meme pendant la grace", "false/true",
+        str(essaie(def () return modbusFonctions.mesureFraiche(4704) end)) + "/" + str(essaie(def () return modbusFonctions.mesureFraiche(4705) end)))
+r36 = lit36(4704, 14)
+sert36(r36)
+verifie("(f) requete groupee : sentinelle a la voie declaree, grace pour les autres", "[2147483647, 1002, 1003, 1004, 1005, 1006, 1007]", str(r36["Values"]))
+modbusFonctions.noteMesure(4704)
+tasmota.ms = 1000 + 19999
+verifie("(f) temoin : mesure vieille de 19 999 ms -> fraiche", true, essaie(def () return modbusFonctions.mesureFraiche(4704) end))
+tasmota.ms = 1000 + 20001
+verifie("(f) mesure vieille de 20 001 ms -> sentinelle", false, essaie(def () return modbusFonctions.mesureFraiche(4704) end))
+# ReglageModbus lectureGroupee : ON/OFF/1/0 sauves, valeur invalide refusee
+import persist
+var nbSave36 = persist.nb_save
+drivers["ModBus"].remove("lectureGroupee")
+essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "lectureGroupee 1", nil) end)
+verifie("ReglageModbus lectureGroupee 1 -> ON sauve", "ON/1", str(drivers["ModBus"].find("lectureGroupee")) + "/" + str(persist.nb_save - nbSave36))
+essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "lectureGroupee peutetre", nil) end)
+verifie("temoin valeur invalide : inchange, rien sauve", "ON/1", str(drivers["ModBus"].find("lectureGroupee")) + "/" + str(persist.nb_save - nbSave36))
+essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "LectureGroupee off", nil) end)
+verifie("ReglageModbus LectureGroupee off -> OFF sauve", "OFF/2", str(drivers["ModBus"].find("lectureGroupee")) + "/" + str(persist.nb_save - nbSave36))
+modbusFonctions.envoiMsgModbus = vraiEnvoi
+etM36["mesures"] = {}  etM36["sansMesure"] = {}  etM36["limites"] = {}
+tasmota.ms = 0
+modules = sauveModules
+drivers = sauveDrivers
+diverses = sauveDiverses
+
+print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
       total, total - echecs - bugs_connus, bugs_connus, echecs))
 print(echecs == 0 ? "BANC_MODBUS: OK" : "BANC_MODBUS: ECHEC")

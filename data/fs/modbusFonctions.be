@@ -55,6 +55,7 @@ def modbusFonctions_etat()
             "busMuet": nil,             # maitre : {"adresse", "ms", "autres"} tant que la carte 16 relais ne repond plus (noteBusMuet)
             "derniereReponseSerie": 0,  # maitre : millis de la derniere reponse appariee par la voie serie (noteBusActif)
             "mesures": {},              # esclave : registre (type + id - 1) -> millis de la derniere mesure (noteMesure)
+            "limites": {},              # esclave : registre -> limite de fraicheur propre en ms, sans delai de grace (declareMesure)
             "sansMesure": {},           # esclave : registre -> true tant que le capteur est signale sans mesure
             "rubansPousses": {},        # esclave : registre du ruban WS2812 -> dernier [h, s, b, animation] pousse (surveilleRubans)
             "routesFiches": {},         # maitre : {"t": millis, "voies": {adr: "UDP"}, "ips": {adr: ip}} lus dans discovery.json (voieDe)
@@ -250,6 +251,7 @@ def modbusFonctions_aideReglageModbus(sujet)
             ["VerifieConn16channels", "VerifieConn16channels [corrige] [<carte>]", "retrouve l'ID et le debit de la carte 16 relais, compare au persist, corrige"],
             ["ActivationReponseCMD", "ActivationReponseCMD <ON|OFF|1|0>", "(des)active la reponse de l'esclave aux commandes ModBus"],
             ["RelaisPushMQTT", "RelaisPushMQTT [ON|OFF|1|0]", "maitre : recopie en MQTT les push UDP des esclaves (observation)"],
+            ["LectureGroupee", "LectureGroupee [ON|OFF|1|0]", "esclave : sert une lecture 0x04 de plusieurs valeurs en entier"],
             ["VoieCommandes", "VoieCommandes [Serial|UDP]", "esclave : voie par laquelle il veut ses commandes, annoncee au maitre"],
             ["ImAlive", "ImAlive <ON|OFF|1|0>", "INTERNE : force le maitre a connecter ses clients ModBus TCP"]
         ]
@@ -316,6 +318,14 @@ def modbusFonctions_aideReglageModbus(sujet)
                 "Sert a observer les push depuis le reseau maison (sniffeur ModBus, Node-RED) : les",
                 "esclaves sont derriere le point d'acces du maitre, leur multicast n'en sort pas.",
                 "Exemple : ReglageModbus RelaisPushMQTT ON"]
+    elif (sujet == "LECTUREGROUPEE")
+        return ["Parametre : ON ou 1 = active ; OFF ou 0 = desactive ; absent = affiche l'etat.",
+                "Effet : sauve drivers.ModBus.lectureGroupee (OFF par defaut). Esclave seulement (id > 0).",
+                "ON : une lecture 0x04 de plusieurs valeurs uint32 (Count = 2 x n registres) est servie en",
+                "entier, valeur i = registre StartAddress + i (analogiques et compteurs actifs), sentinelle",
+                "si la mesure n'est pas fraiche ; Count impair, plus de 40 registres ou registre sans",
+                "appareil : refus journalise, aucune reponse. OFF : chemin d'avant (une valeur).",
+                "Exemple : ReglageModbus LectureGroupee ON"]
     elif (sujet == "VOIECOMMANDES")
         return ["Parametre : Serial ou UDP ; absent = affiche la voie actuelle.",
                 "Effet : sauve drivers.ModBus.voieCommandes, la recopie dans la fiche locale de",
@@ -471,6 +481,18 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
         end
         reponse_cmnd += string.format("relaisPushMQTT=%s, ", drivers["ModBus"].find("relaisPushMQTT", "OFF"))
         if (drivers["ModBus"].find("id", 99) != 0)    reponse_cmnd += "sans effet hors maitre (id 0), "    end
+    # Esclave : (des)active la lecture groupee 0x04 (voir sertGroupe) ; sans parametre, lit l'etat
+    elif (string.toupper(fonction) == string.toupper("LectureGroupee"))
+        var valeur = (parametres.size() > 0 ? string.toupper(parametres[0]) : "")
+        valeur = (valeur == "1" ? "ON" : (valeur == "0" ? "OFF" : valeur))
+        if (valeur == "ON" || valeur == "OFF")
+            drivers["ModBus"]["lectureGroupee"] = valeur
+            persist.save(true)
+        elif (valeur != "")
+            reponse_cmnd += "erreur=parametre ON, OFF, 1 ou 0, "
+        end
+        reponse_cmnd += string.format("lectureGroupee=%s, ", drivers["ModBus"].find("lectureGroupee", "OFF"))
+        if (drivers["ModBus"].find("id", 99) == 0)    reponse_cmnd += "sans effet sur le maitre (id 0), "    end
     # Esclave : voie de ses commandes, annoncee au maitre par sa fiche discovery (voir reglageVoieCommandes)
     elif (string.toupper(fonction) == string.toupper("VoieCommandes"))
         reponse_cmnd += modbusFonctions.reglageVoieCommandes(parametres) + ", "
@@ -2141,6 +2163,66 @@ def modbusFonctions_surveilleRubans()
 end
 modbusFonctions.surveilleRubans = modbusFonctions_surveilleRubans
 
+# Esclave, lecture groupee (drivers.ModBus.lectureGroupee ON, 2026-11-09) : une requete 0x04 de 'n' valeurs uint32
+# (Count = 2n registres) servie EN ENTIER : la valeur i est celle de l'analogique ou du compteur actif de registre
+# StartAddress + i (type + id - 1, tous modules), la sentinelle si sa mesure n'est pas fraiche. Requete invalide
+# (Count impair, plus de 40 registres, registre sans appareil) : code d'erreur pose dans paramMSG["Erreur"],
+# journalise, rien n'est emis - jamais les zeros de l'ancien chemin. Retourne true : la requete est traitee.
+def modbusFonctions_sertGroupe(paramMSG, n)
+    import string
+
+    var nbRegistres = int(paramMSG["Count"])
+    var erreur = nil
+    if (nbRegistres % 2 != 0)    erreur = "wrongnbRegistres"
+    elif (nbRegistres > 40)      erreur = "tomanydata"         # meme plafond que prepareTrame
+    end
+
+    # Registre -> appareil, en un seul parcours (meme parcours que executeCmdModbus)
+    var appareils = {}
+    if (erreur == nil)
+        for cle: modules.keys()
+            if (type(modules[cle]) != "instance" || modules[cle].find("activation", "OFF") != "ON")    continue    end
+            for famille: ["analogiques", "compteurs"]
+                var liste = modules[cle]["environnement"].find(famille)
+                if (type(liste) != "instance")    continue    end
+                for numCapteur: liste.keys()
+                    var a = liste[numCapteur]
+                    if (type(a) == "instance" && a.find("activation", "OFF") == "ON")    appareils[a["type"] + a["id"] - 1] = a    end
+                end
+            end
+        end
+    end
+
+    var valeurs = []
+    var registre = int(paramMSG["StartAddress"])
+    for i: 0 .. n - 1
+        if (erreur != nil)    break    end
+        var a = appareils.find(registre + i)
+        if (a == nil)
+            erreur = "wrongstartaddress"
+            registre += i
+            break
+        end
+        var frais = modbusFonctions.signaleMesure(registre + i, a.find("nom", str(registre + i)), modbusFonctions.mesureFraiche(registre + i))
+        valeurs.push(frais ? int(real(a.find("value", 0.00))) : modbusFonctions.SENTINELLE_UINT32)
+    end
+
+    if (erreur != nil)
+        paramMSG["Erreur"] = modbusFonctions.tabErreur[erreur]
+        modbusFonctions.log(string.format("SERT_GROUPE: lecture groupee refusee (%s, registre %i, Count %i), rien n'est emis !", erreur, registre, nbRegistres), LOG_LEVEL_ERREUR)
+        return true
+    end
+
+    paramMSG["type"] = "uint32"
+    paramMSG["Count"] = n
+    paramMSG["Values"] = valeurs
+    if logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, "modbus")    modbusFonctions.log(string.format("SERT_GROUPE: registres %i a %i = %s", registre, registre + n - 1, str(valeurs)), LOG_LEVEL_DEBUG_PLUS)    end
+    tasmota.yield()
+    modbusFonctions.envoiMsgModbus(paramMSG, "Reponse", registre)
+    return true
+end
+modbusFonctions.sertGroupe = modbusFonctions_sertGroupe
+
 # Fonction chargée d'éxécuter la commande ModBus
 # Prépare la réponse pour l'envoyer au maitre
 def modbusFonctions_executeCmdModbus(paramMSG)
@@ -2160,6 +2242,12 @@ def modbusFonctions_executeCmdModbus(paramMSG)
 
     # Poursuit si l'id du module esclave correspond à celui de la trame ==> N'execute pas la commande
     if (paramMSG["DeviceAddress"] != drivers["ModBus"]["id"])   return false    end
+
+    # Lecture groupee (cle de l'esclave) : plusieurs valeurs servies en entier, ou refusees (voir sertGroupe).
+    # Sans la cle, ou pour une seule valeur, le chemin d'avant (ci-dessous) est inchange.
+    if (drivers["ModBus"].find("lectureGroupee", "OFF") == "ON" && paramMSG["FunctionName"] == "LECTURE_REGISTRES_ENTREES" && int(paramMSG["Count"]) / 2 > 1)
+        return modbusFonctions.sertGroupe(paramMSG, int(paramMSG["Count"]) / 2)
+    end
 
     #-
         Fonction 0x02 ==> Lecture des entrées discrètes (Read Discrete Inputs) : ex=Récupérer l'état de boutons, capteurs, contacts, interrupteurs.
@@ -3194,11 +3282,21 @@ def modbusFonctions_limiteFraicheur()
 end
 modbusFonctions.limiteFraicheur = modbusFonctions_limiteFraicheur
 
-# Esclave : true si le capteur a une mesure fraiche (ou si le delai de grace du demarrage court).
+# Esclave : le registre 'adresse' a sa propre limite de fraicheur (ms) et sort du delai de grace : il vaut la
+# sentinelle jusqu'a sa premiere mesure (2026-11-09 : debits, limite = 2 fenetres ; la limite generale tiree
+# de TelePeriod est trop lache, et la grace servirait la 'value' du persist comme une mesure).
+def modbusFonctions_declareMesure(adresse, limite_ms)
+    modbusFonctions.etat()["limites"][int(adresse)] = int(limite_ms)
+end
+modbusFonctions.declareMesure = modbusFonctions_declareMesure
+
+# Esclave : true si le capteur a une mesure fraiche (ou si le delai de grace du demarrage court, registre
+# non declare par declareMesure).
 def modbusFonctions_mesureFraiche(adresse)
+    var limite = modbusFonctions.etat()["limites"].find(int(adresse))
     var t = modbusFonctions.etat()["mesures"].find(int(adresse))
-    if (t == nil)    return !tasmota.time_reached(modbusFonctions.GRACE_DEMARRAGE_S * 1000)    end
-    return !tasmota.time_reached(t + modbusFonctions.limiteFraicheur())
+    if (t == nil)    return limite == nil && !tasmota.time_reached(modbusFonctions.GRACE_DEMARRAGE_S * 1000)    end
+    return !tasmota.time_reached(t + (limite != nil ? limite : modbusFonctions.limiteFraicheur()))
 end
 modbusFonctions.mesureFraiche = modbusFonctions_mesureFraiche
 
@@ -3219,7 +3317,7 @@ def modbusFonctions_signaleMesure(adresse, nom, frais)
     if (!frais && !signales.find(int(adresse), false))
         signales[int(adresse)] = true
         modbusFonctions.log(string.format("CAPTEUR_SANS_MESURE: '%s' (registre %i) : aucune mesure depuis %i s (capteur absent ou defaillant), le maitre recoit la sentinelle",
-                            str(nom), int(adresse), modbusFonctions.limiteFraicheur() / 1000), LOG_LEVEL_ERREUR)
+                            str(nom), int(adresse), modbusFonctions.etat()["limites"].find(int(adresse), modbusFonctions.limiteFraicheur()) / 1000), LOG_LEVEL_ERREUR)
     elif (frais && signales.find(int(adresse), false))
         signales.remove(int(adresse))
         modbusFonctions.log(string.format("CAPTEUR_SANS_MESURE: '%s' (registre %i) : mesure de nouveau disponible", str(nom), int(adresse)), LOG_LEVEL_INFO)
