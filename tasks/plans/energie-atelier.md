@@ -4,7 +4,7 @@ titre: Atelier des graphiques — page « Énergie » du différentiel (palier 4
 objectif: Que l'atelier reprenne et modifie la page /energie du différentiel (ajouter, restyler, échelle de temps, déplacer, taille) puis l'envoie par Téléverser, sans toucher au comptage
 statut: actif
 cree: 2026-11-08
-maj: 2026-11-08
+maj: 2026-11-09
 ---
 # Atelier des graphiques — page « Énergie » du différentiel
 
@@ -106,7 +106,7 @@ sonde Chrome pendant un build (garde bloquante dans la commande, leçon du 2026-
 
 ## A7 — Validation sur le différentiel
 - [x] Avant : `Status 4` (tas), `UfsFree`, `/energie` capturée (page d'aujourd'hui) — preuve : 2026-11-09 04:44, 192.168.0.49 (DISJONCTEUR-DIFFERENTIEL-BUREAU, MAC A0:DD:6C:3B:06:88), firmware du 2026-11-02T23:26 (ancien), `Heap` 60 Ko, `UfsFree` 44 Ko ; capture `energie_avant_A7.png` du scratchpad de la session (4 tuiles, heure, mois par jour, 12 mois, puissance 24 h ; un seul mois compté : aucun mois archivé)
-- [ ] L'utilisateur compile et envoie le firmware puis le FS par la page Build ; `Status 2` relu (date de build > commit A2).
+- [x] L'utilisateur compile et envoie le firmware puis le FS par la page Build ; `Status 2` relu (date de build > commit A2) — preuve : 2026-11-09, `Status 2` BuildDateTime 2026-11-09T08:07:39 (OTA par safeboot, syslog 09:22:02 « Successful 2616576 bytes ») ; CFG_HOLDER 1609 -> 1610 : reglages remis a l'usine puis 4 redemarrages rapides (SetOption36 -> no_autoexec, Berry coupe) ; FS envoye par OTA (arret sur jsParam.js, « File too large » : 32 Ko libres, fichiers restants identiques), puis `_persist.json` par l'onglet Fichiers ; apres Restart : Berry actif, `/energie` 200, AdcParam1 repose, aucun FRC, donnees /energie intactes.
   Firmware par OTA (ligne OTA de la page Build), puis les 4 fichiers par Téléverser ou l'onglet Fichiers ; jamais d'upload série
   sauf après sauvegarde de `/energie/` (le différentiel a `custom_files_upload` : un upload série réécrit tout le FS et perd
   `etat.json`, `mois-*.json`, `courbe.bin`). Description écrite avec l'ancien firmware : pas de bouton Téléverser, envoyer les 4
