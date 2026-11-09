@@ -9,7 +9,7 @@
 			}
 		},
 		"historique": {
-			"activation": "OFF",
+			"activation": "ON",
 			"pasMinutes": 5,
 			"dureeHeures": 24,
 			"moisConserves": 24,

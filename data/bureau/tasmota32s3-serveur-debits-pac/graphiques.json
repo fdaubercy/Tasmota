@@ -1,1 +1,45 @@
-{"affichage": {}, "groupes": {}}
+{
+ "affichage": {
+  "DEBITS.D1": {
+   "libelle": "Debit 1",
+   "unite": "L/min"
+  },
+  "DEBITS.D2": {
+   "libelle": "Debit 2",
+   "unite": "L/min"
+  },
+  "DEBITS.D3": {
+   "libelle": "Debit 3",
+   "unite": "L/min"
+  },
+  "DEBITS.D4": {
+   "libelle": "Debit 4",
+   "unite": "L/min"
+  },
+  "DEBITS.D5": {
+   "libelle": "Debit 5",
+   "unite": "L/min"
+  },
+  "DEBITS.D6": {
+   "libelle": "Debit 6",
+   "unite": "L/min"
+  },
+  "DEBITS.Total": {
+   "libelle": "Total",
+   "unite": "L/min"
+  }
+ },
+ "groupes": {
+  "Débits par départ": [
+   "DEBITS.D1",
+   "DEBITS.D2",
+   "DEBITS.D3",
+   "DEBITS.D4",
+   "DEBITS.D5",
+   "DEBITS.D6"
+  ],
+  "Débit total": [
+   "DEBITS.Total"
+  ]
+ }
+}

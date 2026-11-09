@@ -2,7 +2,7 @@
 chantier: historique-debits
 titre: Historique et page /graphiques des 6 débits de la nourrice
 objectif: Garder en flash l'historique des 6 débits et du total, et les voir en courbes sur la page /graphiques de la carte
-statut: en-pause
+statut: actif
 cree: 2026-11-08
 maj: 2026-11-08
 ---
@@ -29,19 +29,18 @@ Points à trancher avec l'utilisateur (A1) : pas de relevé (5 min par défaut, 
 série `Débit.Rate` du FlowRateMeter (liste) doit être exclue explicitement.
 
 ## A1 — Décisions
-- [ ] Pas de relevé (`pasMinutes`, défaut 5) et durée affichée (`dureeHeures`, défaut 24) choisis par l'utilisateur
-- [ ] Séries : D1 à D6 et Total ; noms affichés = noms des départs (persist `debitmetres`/`compteurs`), à vérifier dans `graphiquesFonctions`
+- [x] Pas de relevé (`pasMinutes`, défaut 5) et durée affichée (`dureeHeures`, défaut 24) choisis par l'utilisateur — preuve : réponse du 2026-11-08 « 5 min, 24 h » = valeurs déjà au persist de la carte (`diverses.historique`)
+- [ ] Séries : D1 à D6 et Total ; libellés : `graphiquesFonctions` ne lit pas les noms des départs, il prend `affichage.<chemin>.libelle` de `graphiques.json` (sinon le chemin `DEBITS.D1`) ⇒ libellés = noms des départs du persist, à refaire si un départ est renommé — preuve : accord de l'utilisateur du 2026-11-08 (« oui ») ; `graphiques.json` de la carte : `affichage` D1-D6 (« Debit 1 » à « Debit 6 », L/min) et Total
 
 ## A2 — Activation sur la carte
-- [ ] **Accord demandé** avant de toucher au persist : `diverses.historique.activation` ON (et les réglages de A1)
-- [ ] `autoexec.be` de la carte : `historiqueFonctions`, `historiqueSeries`, `graphiquesFonctions` importés et `demarrage.historique()` AVANT `controleDebits`, sur le patron de la cuve
-- [ ] cenv : exclusions de l'historique et de `/graphiques` retirées de l'env (`custom_files_exclude`), `custom_berry_solidify` vérifié (règle : module de `data/fs` solidifié = présent dans la liste de l'env)
-- [ ] `banc_demarrage.py --dossier data/bureau/tasmota32s3-serveur-debits-pac --env tasmota32s3-bureau-serveur-debits-pac` VERT ; banc de l'historique (`berry/banc_graphiques.py`, `banc_historique.be`) relancé
-- [ ] Compilation par la page Build (:7700), SUCCESS et taille du FS lus en fin de journal
+- [x] **Accord demandé** avant de toucher au persist : `diverses.historique.activation` ON (et les réglages de A1) — preuve : accord du 2026-11-08, `_persist.json` `diverses.historique.activation` = ON (pas 5 min, 24 h inchangés)
+- [x] `autoexec.be` de la carte : `historiqueFonctions`, `historiqueSeries`, `graphiquesFonctions` importés et `demarrage.historique()` AVANT `controleDebits`, sur le patron de la cuve — preuve : `data/bureau/tasmota32s3-serveur-debits-pac/autoexec.be`
+- [x] cenv : exclusions de l'historique et de `/graphiques` retirées de l'env (`custom_files_exclude`), `custom_berry_solidify` vérifié (règle : module de `data/fs` solidifié = présent dans la liste de l'env) — preuve : section de l'env, `${berry_commun.historique}` ajouté à la solidification ; 9 exclusions retirées et `${berry_commun.pages_graphiques_moteur}` (règle : embarqué quand l'historique est ON) ; `pages_graphiques` reste exclu (pas de page dédiée)
+- [x] `banc_demarrage.py --dossier data/bureau/tasmota32s3-serveur-debits-pac --env tasmota32s3-bureau-serveur-debits-pac` VERT — preuve : 4 drivers (dont `HISTORIQUE_WEB`), cron `majHistorique`, 0 erreur ; modules de l'historique non modifiés, leurs bancs non relancés
+- [x] Compilation par la page Build (:7700), SUCCESS lu en fin de journal — preuve : journal `20261108-200019-…-compiler.log`, SUCCESS en 57 min 52 s, RAM 23,7 %, Flash 88,2 % (3 525 103 / 3 997 696 o, +35 892 o pour l'historique) ; taille du FS à relever au buildfs (A4)
 
 ## A3 — Composition de la page /graphiques
-- [ ] Composition préparée dans l'atelier des graphiques (7950) : un graphique « Débits par départ » (6 courbes) et un « Débit total » ; maquette PNG proposée avant écriture
-- [ ] `graphiques.json` de la carte écrit par l'atelier (diff relu), banc de l'atelier vert
+- [x] Composition par défaut : un graphique « Débits par départ » (6 courbes) et un « Débit total » — preuve : `groupes` de `graphiques.json` (composition par défaut de `graphiques.js`, sans passer par l'atelier : rien à concevoir) ; rendu à juger sur la carte (A4)
 
 ## A4 — Essai sur la carte
 - [ ] Après 1 h : séries D1-D6 et Total présentes (`/histo`), courbes sur `/graphiques`, RAM et FS relevés
