@@ -1,7 +1,7 @@
 ---
 chantier: autoexec-mqtt-tapp
 titre: Envoi MQTT de l'autoexec.bat, commandes par carte, extensions .tapp (document, script, page)
-statut: actif
+statut: clos
 cree: 2026-11-05
 maj: 2026-11-09
 source: squishy-imagining-raven.md
@@ -67,7 +67,7 @@ Règles : rien n'est écrit sur une vraie carte sans geste ou accord de l'utilis
 - [x] Après accord : `fsMqtt.tapp` installé sur une carte de test, vu dans `/ext` (« Stopped » attendu, voir `EXTENSIONS_TAPP.md`), réception MQTT constatée ; un `.tapp` du gabarit B arrêté et relancé ; les essais du § 9 du document ; ordre avant le prologue constaté dans les journaux, tas mesuré avant et après ; résultat consigné dans `EXTENSIONS_TAPP.md` — partiel : `fsMqtt.tapp` (1102 o) envoyé par MQTT dans `/.extensions/` de la cuve le 2026-11-09, sans redémarrage, relu identique ; vu dans `/ext` (Stopped, Auto-run ON, v27.11.7.0 ; boutique en erreur -2, sans rapport) ; Restart 1 : TAP à 0,419 s avant autoexec.be à 2,161 s, EXT_FSMQTT à 2,168 s, sans _ERREUR liée ; tas 197 Ko avant / 207 Ko après (non isolé) ; consigné au § 9 d'EXTENSIONS_TAPP.md ; clic « Stopped » à 02:39:37 : autoexec de l'archive relancé (EXT_FSMQTT au syslog), bouton resté « Stopped » (pas d'add_extension, extension_manager.be::run_stop_ext) : arrêt sans objet pour le gabarit A. Gabarit A corrigé le même jour : version 0x1A0B0900, `add_extension` + `unload()` (envoi abandonné, lecture fermée, désabonnements, règle et minuteries retirées), banc_tapp_fsmqtt VERT (21 contrôles, 13 mutants rouges chacun sur son contrôle), relecteur-berry sans bloquant ; archive de 2303 o renvoyée à la cuve, relue identique ; cycle par `Br` : arrêter → `/ext` Stopped et fsMqtt muet, relancer → Running et fsMqtt répond ; syslog de la cuve sans `_ERREUR` liée. Reste : un `.tapp` du gabarit B et les autres lignes du § 9 ; cochée à la demande de l'utilisateur le 2026-11-09, gabarit B et autres lignes du § 9 non essayés
 
 ## A11 — Retour au plan antérieur « autoexec-bat »
-- [ ] Reprendre `tasks/plans/autoexec-bat.md` : son A10 (retour à `tasks/plans/energie-differentiel.md` : thermomètre A11, retour au plan « jauges-cuve » A10), après le compte rendu de ce plan à l'utilisateur
+- [x] Reprendre `tasks/plans/autoexec-bat.md` : son A10 (retour à `tasks/plans/energie-differentiel.md` : thermomètre A11, retour au plan « jauges-cuve » A10), après le compte rendu de ce plan à l'utilisateur — preuve : compte rendu fait à l'utilisateur, qui demande le 2026-11-09 de clore ce plan et de revenir à `tasks/plans/autoexec-bat.md`
 
 ## Améliorations restantes
 - [x] [projet] Corriger le déplacement des `.tapp` dans `data/fs/gestionFileFolder.be` (décidé par l'utilisateur le 2026-11-07) : `deplaceFichier` copie, vérifie la taille, puis supprime l'original, aussi pour `.json`, `.html`, `.js`, `.css` ; noms finis par `.tapp` seulement — preuve : banc_repartition_fichiers.py VERT (rouge sur l'ancien code, 7 témoins), banc_demarrage VERT, banc_boot OK, solidifie_et_compile_berry rc 0, relecteur-berry sans bloquant ; effet seulement avec un firmware recompilé, non essayé sur carte

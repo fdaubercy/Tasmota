@@ -4,7 +4,7 @@ titre: Onglet « autoexec.bat » de l'Assistant persist (modèle C)
 objectif: Modifier ou ajouter des lignes à l'autoexec.bat d'une carte depuis l'Assistant persist, avec banque de commandes, avertissements (boucle de redémarrage, doublon persist, secret, commande inconnue) et envoi proposé à la carte
 statut: actif
 cree: 2026-11-03
-maj: 2026-11-07
+maj: 2026-11-09
 ---
 # Onglet « autoexec.bat » de l'Assistant persist
 
@@ -115,7 +115,7 @@ Produit : `prepare(racine, env) -> {"adresse", "hostname_carte", "sur_carte": st
 - [ ] Reprendre `tasks/plans/energie-differentiel.md` : A14 cochée avec renvoi ici, puis ses étapes restantes (thermomètre A11, retour au plan « jauges-cuve » A10)
 
 ## Améliorations restantes
-- [x] [projet] Envoi par MQTT (`build_ota_mqtt`) pour une carte injoignable en HTTP — preuve : fait par le plan `tasks/plans/autoexec-mqtt-tapp.md` A1 (commits 16c1a9e74, 2dcc05b54, ebcd460e3, eeb4a8306), test_autoexec_envoi.py et sonde test_assistant_persist_autoexec_chrome.py VERTS ; essai sur carte : A10 de ce plan-la
+- [x] [projet] Envoi par MQTT (`build_ota_mqtt`) pour une carte injoignable en HTTP — preuve : fait par le plan `tasks/plans/autoexec-mqtt-tapp.md` A1 (commits 16c1a9e74, 2dcc05b54, ebcd460e3, eeb4a8306), test_autoexec_envoi.py et sonde test_assistant_persist_autoexec_chrome.py VERTS ; essai sur carte : A10 de ce plan-la — fait le 2026-11-09 sur la cuve (autoexec.bat d'un commentaire envoyé par MQTT, relu identique, effacé par UfsDelete) ; plan autoexec-mqtt-tapp clos le même jour
 - [x] [projet] Commandes connues par env (gardes `USE_*` du firmware compilé), si les fausses alertes « inconnue » gênent — preuve : fait par `tasks/plans/autoexec-mqtt-tapp.md` A3 et A4 (alerte orange « absente », seulement si toutes les gardes sont fausses ; commits bb60907ce a d21cfea27, 367c5389f, 9a74435e2), test_autoexec_commandes.py, test_autoexec_gardes.py, test_autoexec_analyse.py VERTS
 
 ## Vérification
