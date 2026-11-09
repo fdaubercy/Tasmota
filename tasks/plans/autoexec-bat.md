@@ -2,7 +2,7 @@
 chantier: autoexec-bat
 titre: Onglet « autoexec.bat » de l'Assistant persist (modèle C)
 objectif: Modifier ou ajouter des lignes à l'autoexec.bat d'une carte depuis l'Assistant persist, avec banque de commandes, avertissements (boucle de redémarrage, doublon persist, secret, commande inconnue) et envoi proposé à la carte
-statut: actif
+statut: clos
 cree: 2026-11-03
 maj: 2026-11-09
 ---
@@ -112,7 +112,7 @@ Produit : `prepare(racine, env) -> {"adresse", "hostname_carte", "sur_carte": st
 - [x] A14 du plan `energie-differentiel` cochée avec renvoi ici ; commit — preuve : A14 cochée dans `tasks/plans/energie-differentiel.md`, avec renvoi ici
 
 ## A10 — Retour au plan d'origine « energie-differentiel »
-- [ ] Reprendre `tasks/plans/energie-differentiel.md` : A14 cochée avec renvoi ici, puis ses étapes restantes (thermomètre A11, retour au plan « jauges-cuve » A10)
+- [x] Reprendre `tasks/plans/energie-differentiel.md` : A14 cochée avec renvoi ici, puis ses étapes restantes (thermomètre A11, retour au plan « jauges-cuve » A10) — preuve : accord de l'utilisateur le 2026-11-09 pour clore ce plan et reprendre `energie-differentiel`
 
 ## Améliorations restantes
 - [x] [projet] Envoi par MQTT (`build_ota_mqtt`) pour une carte injoignable en HTTP — preuve : fait par le plan `tasks/plans/autoexec-mqtt-tapp.md` A1 (commits 16c1a9e74, 2dcc05b54, ebcd460e3, eeb4a8306), test_autoexec_envoi.py et sonde test_assistant_persist_autoexec_chrome.py VERTS ; essai sur carte : A10 de ce plan-la — fait le 2026-11-09 sur la cuve (autoexec.bat d'un commentaire envoyé par MQTT, relu identique, effacé par UfsDelete) ; plan autoexec-mqtt-tapp clos le même jour

@@ -3,7 +3,7 @@ chantier: energie-differentiel
 titre: Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)
 statut: actif
 cree: 2026-10-31
-maj: 2026-11-05
+maj: 2026-11-09
 source: squishy-imagining-raven.md
 objectif: Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h)
 ---
@@ -156,7 +156,7 @@ Demande : expliquer l'intérêt de l'« Extension Manager », évaluer quel outi
 
 ## Améliorations restantes
 - [ ] [projet] Étendre la page Énergie aux autres cartes à bloc `ENERGY` (module déjà générique)
-- [ ] [projet] Extension Manager : pas d'outil annuaire pour l'instant ; à décider : bouton « envoyer ce .tapp » dans l'onglet Fichiers vers `/.extensions/`
+- [x] [projet] Extension Manager : pas d'outil annuaire pour l'instant ; à décider : bouton « envoyer ce .tapp » dans l'onglet Fichiers vers `/.extensions/` — preuve : fait par `tasks/plans/autoexec-mqtt-tapp.md` (clos le 2026-11-09) : page « Fabrique d'extensions » de l'annuaire (création, fabrication, envoi HTTP ou MQTT vers `/.extensions/`, boutique locale de `/ext`), `fsMqtt.tapp` essayé sur la cuve
 - [x] [projet] Le D3T n'est pas un différentiel 30 mA : renommer l'env et le dossier (`interrupteur-differentiel`) si l'utilisateur le souhaite — preuve : env `tasmota32-bureau-interrupteur-energie`, dossier `data/bureau/tasmota32-interrupteur-energie`, hostname et topic gardés (2026-11-02)
 
 ## Vérification
