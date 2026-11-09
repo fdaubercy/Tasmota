@@ -22,7 +22,7 @@
 body { background: var(--fond); color: var(--texte); font: 16px/1.5 var(--corps); }
 .page { max-width: 760px; margin: 0 auto; padding-block: 16px 40px;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  display: grid; gap: 16px; }
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 h1, h2 { font-family: var(--titre); font-weight: 700; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.1; }
 h1 { font-size: 2rem; } h2 { font-size: 1.55rem; }
 .etiquette { font: 600 .78rem/1 var(--corps); text-transform: uppercase; letter-spacing: .08em; color: var(--cuivre); }
@@ -57,6 +57,13 @@ th:first-child, td:first-child { text-align: left; }
 th { font: 600 .78rem var(--corps); text-transform: uppercase; letter-spacing: .06em; color: var(--doux); }
 td.trop { color: var(--trop); font-weight: 600; } td.peu { color: var(--peu); font-weight: 600; } td.bon { color: var(--bon); font-weight: 600; }
 .note { font-size: .82rem; color: var(--doux); margin: 0; }
+.radiateurs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.radiateurs fieldset { border: 1px solid var(--trait); border-radius: 8px; padding: 10px; margin: 0; display: grid; gap: 8px; min-width: 0; }
+.radiateurs legend { font: 700 1rem var(--titre); padding: 0 4px; }
+.radiateurs .ligne { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.calc select { font: 400 .95rem var(--corps); padding: 8px; border-radius: 6px; border: 1px solid var(--trait); background: var(--fond); color: var(--texte); width: 100%; box-sizing: border-box; }
+.calc select:focus-visible { outline: 3px solid var(--froid); outline-offset: 2px; }
+.calc label[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
@@ -78,6 +85,7 @@ td.trop { color: var(--trop); font-weight: 600; } td.peu { color: var(--peu); fo
       <span style="--c: var(--trop)">trop d'eau</span>
       <span style="--c: var(--peu)">pas assez</span>
       <span style="--c: var(--doux)">à l'arrêt</span>
+      <span style="--c: transparent">débits en L/min</span>
     </div>
     <p class="note" id="schema-texte"></p>
   </section>
@@ -89,7 +97,22 @@ td.trop { color: var(--trop); font-weight: 600; } td.peu { color: var(--peu); fo
     <button type="button" id="suivant" class="suivant">Suivant →</button>
   </div>
 
-  <section class="carte calc" aria-labelledby="calc-titre">
+  <section class="carte calc" aria-labelledby="estim-titre" id="estimateur">
+    <span class="etiquette">Estimateur</span>
+    <h2 id="estim-titre">La puissance de mes radiateurs</h2>
+    <p class="note">Sans plaque ni notice : choisir le type, mesurer la hauteur et la longueur (ou compter les éléments). Valeurs moyennes du marché, justes à 15 % près environ ; pour les débits cibles, seul le <b>rapport</b> entre les radiateurs compte.</p>
+    <div class="champs">
+      <label for="t-aller">Eau au départ (°C)<input id="t-aller" inputmode="decimal" value="55"></label>
+      <label for="t-retour">Eau au retour (°C)<input id="t-retour" inputmode="decimal" value="45"></label>
+      <label for="t-piece">Pièce (°C)<input id="t-piece" inputmode="decimal" value="20"></label>
+    </div>
+    <div class="radiateurs" id="radiateurs"></div>
+    <div class="tableau"><table id="estimation"></table></div>
+    <p class="note" id="estim-note"></p>
+    <div class="nav"><button type="button" class="suivant" id="reporter">Reporter ces puissances dans le calculateur ↓</button></div>
+  </section>
+
+  <section class="carte calc" aria-labelledby="calc-titre" id="calculateur">
     <span class="etiquette">Calculateur</span>
     <h2 id="calc-titre">Mes débits cibles et l'ordre de réglage</h2>
     <p class="note">Rempli avec l'exemple du guide (chiffres fictifs) : remplacez-les par les vôtres. Vos saisies restent dans ce navigateur.</p>
@@ -127,7 +150,7 @@ const ETAPES = [
       <div class="formule">Cible du radiateur i = débit PAC × puissance i ÷ somme des puissances</div>
       <p>Avec une pompe à débit variable (Daikin Altherma), suivre plutôt la <b>part</b> de chaque départ :</p>
       <div class="formule">Part mesurée = débit du départ ÷ somme des 6 débits relevés au même moment</div>
-      <p>Le calculateur en bas de page fait ces deux calculs.</p>` },
+      <p>Le calculateur en bas de page fait ces deux calculs. Puissances inconnues ? L'<b>estimateur</b>, juste au-dessus, les tire du type et des dimensions de chaque radiateur.</p>` },
   { id: "a", code: "A", titre: "Tout ouvrir", debits: OUVERT, schema: "Tout est ouvert : les départs proches (1, 2) prennent trop d'eau, les éloignés (5, 6) manquent.",
     html: `<ul><li>Têtes thermostatiques <b>au maximum</b> (ou retirées).</li>
       <li>Tés de réglage des radiateurs <b>ouverts à fond</b>.</li>
@@ -208,7 +231,7 @@ function majSchema(q, ouvertures) {
   q.forEach((v, i) => {
     const d = departs[i];
     d.radiateur.style.stroke = etat(v, CIBLE[i]);
-    d.valeur.textContent = v > 0 ? v.toFixed(1).replace(".", ",") + " L/min" : "0";
+    d.valeur.textContent = v > 0 ? v.toFixed(1).replace(".", ",") : "0";   // unité dans la légende : place comptée
     d.rapport.textContent = montrerRapports && v > 0 ? "× " + (v / CIBLE[i]).toFixed(2).replace(".", ",") : "";
     dessineVanne(d, i, ouvertures ? ouvertures[i] : (v > 0 ? 1 : 0.15));
   });
@@ -316,6 +339,93 @@ function calcule() {
     : "Tous les départs sont à leur part cible à 10 % près : l'équilibrage est fait.";
 }
 
+// ---- Estimateur : puissance à ΔT 50 K (norme EN 442 : eau 75/65 °C, pièce 20 °C) d'après le type et les dimensions ----
+// Valeurs moyennes des catalogues pour 600 mm de haut : W par mètre de longueur (acier) ou W par élément (fonte, alu).
+// shortcut: hauteur ramenée à 600 mm par (H/600)^0,8 et exposant n = 1,3 pour tous les types ; à ± 15 % près, suffit au
+// partage des débits (seul le rapport compte) ; prendre le catalogue du fabricant si la puissance réelle importe.
+const TYPES = {
+  a22: { libelle: "Acier à panneaux, type 22", mode: "longueur", w600: 1650 },
+  a21: { libelle: "Acier à panneaux, type 21", mode: "longueur", w600: 1300 },
+  a11: { libelle: "Acier à panneaux, type 11", mode: "longueur", w600: 950 },
+  a10: { libelle: "Acier à panneaux, type 10 (sans ailettes)", mode: "longueur", w600: 560 },
+  a33: { libelle: "Acier à panneaux, type 33", mode: "longueur", w600: 2350 },
+  f2: { libelle: "Fonte, 2 colonnes", mode: "elements", w600: 50 },
+  f3: { libelle: "Fonte, 3 colonnes", mode: "elements", w600: 70 },
+  f4: { libelle: "Fonte, 4 colonnes", mode: "elements", w600: 90 },
+  alu: { libelle: "Aluminium", mode: "elements", w600: 120 },
+  connu: { libelle: "Puissance connue (plaque, notice)", mode: "connu" },
+};
+const N_EMISSION = 1.3;
+const DEFAUT_RAD = [["a22", 600, 800], ["a22", 600, 800], ["a22", 600, 1000], ["a22", 600, 1100], ["a22", 600, 1200], ["a22", 600, 1400]];
+const zoneRad = document.getElementById("radiateurs");
+function champRad(parent, id, texte, valeur, attrs) {
+  const l = document.createElement("label"); l.htmlFor = id; l.textContent = texte;
+  const i = document.createElement(attrs && attrs.options ? "select" : "input"); i.id = id;
+  if (attrs && attrs.options) for (const [v, t] of attrs.options) { const o = document.createElement("option"); o.value = v; o.textContent = t; i.appendChild(o); }
+  else i.inputMode = "decimal";
+  i.value = lit(id, String(valeur));
+  if (attrs && attrs.options && !i.value) i.value = String(valeur);   // valeur gardée devenue inconnue : défaut
+  i.addEventListener("input", () => { ecrit(id, i.value); estime(); });
+  l.appendChild(i); parent.appendChild(l);
+  return l;
+}
+const rads = DEFAUT_RAD.map(([type, h, lng], k) => {
+  const n = k + 1, f = document.createElement("fieldset"), lg = document.createElement("legend");
+  lg.textContent = "Radiateur " + n; f.appendChild(lg);
+  champRad(f, "r" + n + "-type", "Type", type, { options: Object.entries(TYPES).map(([c, t]) => [c, t.libelle]) });
+  const ligne = document.createElement("div"); ligne.className = "ligne"; f.appendChild(ligne);
+  const r = {
+    h: champRad(ligne, "r" + n + "-h", "Hauteur (mm)", h),
+    l: champRad(ligne, "r" + n + "-l", "Longueur (mm)", lng),
+    e: champRad(ligne, "r" + n + "-e", "Éléments", 10),
+    p: champRad(ligne, "r" + n + "-p", "Puissance (W)", 1500),
+    dt: champRad(ligne, "r" + n + "-dt", "Donnée pour", "50", { options: [["50", "ΔT 50 K (75/65 °C)"], ["60", "ΔT 60 K (90/70 °C)"]] }),
+  };
+  zoneRad.appendChild(f);
+  return r;
+});
+const val = id => nombre(document.getElementById(id).value);
+const dans = (v, min, max) => v !== null && v >= min && v <= max ? v : null;
+let puissances50 = [];
+function estime() {
+  const ta = val("t-aller"), tr = val("t-retour"), tp = val("t-piece");
+  const dT = ta !== null && tr !== null && tp !== null ? (ta + tr) / 2 - tp : null;
+  const facteur = dT !== null && dT > 0 ? Math.pow(dT / 50, N_EMISSION) : null;
+  puissances50 = rads.map((r, k) => {
+    const n = k + 1, t = TYPES[document.getElementById("r" + n + "-type").value] || TYPES.a22;
+    r.h.hidden = t.mode === "connu"; r.l.hidden = t.mode !== "longueur"; r.e.hidden = t.mode !== "elements";
+    r.p.hidden = r.dt.hidden = t.mode !== "connu";
+    if (t.mode === "connu") {
+      const p = dans(val("r" + n + "-p"), 50, 10000), dtc = Number(document.getElementById("r" + n + "-dt").value);
+      return p === null ? null : p * Math.pow(50 / dtc, N_EMISSION);
+    }
+    const h = dans(val("r" + n + "-h"), 150, 2200);
+    const q = t.mode === "longueur" ? dans(val("r" + n + "-l"), 200, 3500) / 1000 : dans(val("r" + n + "-e"), 1, 60);
+    return h === null || !q ? null : t.w600 * Math.pow(h / 600, 0.8) * q;
+  });
+  const somme = puissances50.reduce((s, p) => s + (p || 0), 0);
+  const f = v => v === null ? "–" : Math.round(v).toLocaleString("fr-FR");
+  document.getElementById("estimation").innerHTML = "<thead><tr><th>Radiateur</th><th>Catalogue (ΔT 50 K)</th><th>Avec la PAC</th><th>Part</th></tr></thead><tbody>" +
+    puissances50.map((p, k) => `<tr><td>${k + 1}</td><td>${f(p)} W</td><td>${facteur === null || p === null ? "–" : f(p * facteur) + " W"}</td><td>${p === null || !somme ? "–" : (p / somme * 100).toFixed(1).replace(".", ",") + " %"}</td></tr>`).join("") +
+    `</tbody><tfoot><tr><td>Total</td><td>${f(somme)} W</td><td>${facteur === null ? "–" : f(somme * facteur) + " W"}</td><td>100 %</td></tr></tfoot>`;
+  document.getElementById("estim-note").textContent = facteur === null
+    ? "Températures à corriger : l'eau doit être plus chaude que la pièce."
+    : `Eau à ${((ta + tr) / 2).toFixed(1).replace(".", ",")} °C en moyenne, pièce à ${tp} °C : les radiateurs rendent ${Math.round(facteur * 100)} % de leur puissance catalogue. ` +
+      "Une case vide ou hors limites donne « – » et le radiateur n'est pas reporté.";
+  document.getElementById("reporter").disabled = puissances50.some(p => p === null);
+}
+["t-aller", "t-retour", "t-piece"].forEach(id => {
+  const i = document.getElementById(id); i.value = lit(id, i.value);
+  i.addEventListener("input", () => { ecrit(id, i.value); estime(); });
+});
+document.getElementById("reporter").addEventListener("click", () => {
+  // puissances catalogue : même rapport qu'avec la PAC (même exposant pour tous), donc mêmes débits cibles
+  puissances50.forEach((p, k) => { const i = document.getElementById("p" + (k + 1)); i.value = String(Math.round(p)); ecrit(i.id, i.value); });
+  calcule();
+  document.getElementById("calculateur").scrollIntoView({ behavior: calme.matches ? "auto" : "smooth" });
+});
+
+estime();
 calcule();
 depuisAncre();
 requestAnimationFrame(anime);
