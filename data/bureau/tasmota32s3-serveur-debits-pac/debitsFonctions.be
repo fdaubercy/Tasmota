@@ -62,6 +62,8 @@ def debitsFonctions_appliqueVeille()
         haspmota.dimming_state = 100
         import display
         display.dimmer(display.dimmer())
+        # meme evenement que la sortie de veille d'auto_dimming, pour une regle hasp#p0b0#idle
+        tasmota.defer(def () tasmota.publish_rule('{"hasp":{"p0b0":{"idle":"off"}}}') end)
     end
 end
 debitsFonctions.appliqueVeille = debitsFonctions_appliqueVeille

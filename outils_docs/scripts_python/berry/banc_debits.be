@@ -65,6 +65,7 @@ fauxTasmota.response_append = def (t) global.REPONSE = t end
 fauxTasmota.add_driver = def (d) global.DRIVERS.push(d) end
 fauxTasmota.add_cmd = def (n, f) global.COMMANDES[n] = f end
 fauxTasmota.publish_rule = def (r) global.REGLES.push(r) end
+fauxTasmota.defer = def (f) f() end
 global.REGLES = []
 global.tasmota = fauxTasmota
 # Objets HASPmota (pages.jsonl) : attributs gardes dans une map, comme les membres virtuels de lvh_obj
@@ -279,10 +280,15 @@ class FauxVoile def stop() global.VOILE_RETIRE = true end end
 haspmota.dimmed_panel = FauxVoile()
 global.DIM = 80
 global.DIM_APPLIQUE = nil
+global.REGLES = []
 r("ReglageDebits", 0, "veille 0", nil)
 verifie("veille 0 (jamais) acceptee", haspmota.dimming_time == 0 && erreurs() == 0)
 verifie("veille 0 sur ecran assombri : voile retire, luminosite des reglages rendue",
         global.VOILE_RETIRE && haspmota.dimmed_panel == nil && haspmota.dimming_state == 100 && global.DIM_APPLIQUE == 80)
+verifie("veille 0 sur ecran assombri : evenement de sortie de veille publie", global.REGLES == ['{"hasp":{"p0b0":{"idle":"off"}}}'])
+global.REGLES = []
+r("ReglageDebits", 0, "veille 0", nil)
+verifie("veille 0 sur ecran allume : aucun evenement", global.REGLES == [])
 r("ReglageDebits", 0, "veille 121", nil)
 r("ReglageDebits", 0, "veille abc", nil)
 r("ReglageDebits", 0, "veille 2.5", nil)

@@ -45,6 +45,7 @@ MUTANTS = [
     ("veille sans borne haute", "if (v < 0 || v > 120)", "if (v < 0)"),
     ("veille non appliquee apres reglage", "            persist.save(true)\n            debitsFonctions.appliqueVeille()\n", "            persist.save(true)\n"),
     ("veille 0 laisse l'ecran assombri", "if (v == 0 && haspmota.dimming_state < 100)", "if (false)"),
+    ("sortie de veille non publiee", "        tasmota.defer(def () tasmota.publish_rule(", "        tasmota.defer(def () print("),
     ("veille non appliquee au demarrage", "        debitsFonctions.ecran()\n        debitsFonctions.appliqueVeille()\n", "        debitsFonctions.ecran()\n"),
 ]
 
