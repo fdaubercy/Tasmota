@@ -198,6 +198,10 @@ class CONTROLE_GARAGE : Driver
 
                             var value = tasmota.scale_int(int(anaJson["value"]), 0, 32767, 0, 6144)
                             variablesRemplacement.insert("sensorsCuve->valeursAnalogiques->valeurCapteurHauteur", str(value) + "mV")
+                            # Ligne du gabarit partage ajoutee pour le P4 (2026-10-31) : ce maitre gele ne recoit pas
+                            # la tension recalculee de la cuve (registre 4708), « -,-- » au lieu des #...# en clair
+                            variablesRemplacement.insert("sensorsCuve->tensionSonde->titre", "Tension sonde (recalculée) : ")
+                            variablesRemplacement.insert("sensorsCuve->valeursAnalogiques->tensionSonde", "-,--V")
 
                             # Convertit la valeur (en V) vers une valeur en cm
                             # Coefficient de conversion: 30mV/cm

@@ -673,12 +673,12 @@
 						"idModBus": 5
 					},
 					"analogique3": {
-						"activation": "OFF",
-						"nom": "Analogique 3",
+						"activation": "ON",
+						"nom": "Pleine échelle ADS1115 de la cuve (mV)",
 						"id": 3,
 						"pin": -1,
 						"type": 4704,
-						"virtuel": "I2C_ADS1115",
+						"virtuel": "ModBus_TasmotaSlaveModBus1",
 						"value": 0,
 						"limites": [],
 						"relaisLie": {
@@ -688,7 +688,8 @@
 						},
 						"publishMQTT": {
 							"topic": []
-						}
+						},
+						"idModBus": 6
 					},
 					"analogique4": {
 						"activation": "OFF",

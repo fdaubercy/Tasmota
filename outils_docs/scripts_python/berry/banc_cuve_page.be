@@ -65,6 +65,9 @@ class TASMOTA_BOUCHON
     def add_driver(d) pilotes.push(d) end
     def add_rule() end
     def cmd(c, muet) return nil end
+    var reponse                                       # dernier response_append (json_append du P4, 4c)
+    def response_append(s) self.reponse = s end
+    def scale_int(v, a, b, c, d) return b == a ? c : int((v - a) * (d - c) / (b - a) + c) end   # comme bouchons_berry/boot/faux_firmware.be
 end
 tasmota = TASMOTA_BOUCHON()
 var journal = []
@@ -266,6 +269,29 @@ a2["etatConstate"] = "valide"
 a2["activation"] = "OFF"
 verifie(p4.tensionSonde() == nil, "entree desactivee -> nil")
 a2["activation"] = "ON"
+
+print("4c. Pleine echelle de l'ADS1115 recue de la cuve (CONTROLE_GARAGE.pleineEchelle, registre 4709, 2026-11-09)")
+var a3 = ana["analogique3"]
+verifie(a3["idModBus"] == 6 && a3["activation"] == "ON" && a3["virtuel"] == "ModBus_TasmotaSlaveModBus1", "(controle) persist reel : analogique3 = idModBus 6 de l'esclave cuve")
+verifie(p4.pleineEchelle() == 6144, "jamais relevee (value 0) -> 6144 mV, plage posee par Tasmota a la detection")
+a3["value"] = 4096
+a3["etatConstate"] = "valide"
+verifie(p4.pleineEchelle() == 4096, "4096 mV recus (Sensor12 S1) -> 4096")
+ana["analogique1"]["idModBus"] = 1
+ana["analogique1"]["etatConstate"] = "valide"
+ana["analogique1"]["value"] = 16384
+p4.json_append()
+var envoye = tasmota.reponse
+verifie(envoye != nil && string.find(envoye,"\"valeurCapteurHauteur\": 2048") > 0, "json_append : brute 16384 sur +/-4,096 V -> 2048 mV (et non 3072 avec 6144 en dur)")
+a3["etatConstate"] = "defaillant"
+verifie(p4.pleineEchelle() == 6144, "sentinelle de l'esclave (defaillant) -> 6144, pas l'ancienne valeur")
+a3["etatConstate"] = "valide"
+a3["value"] = 5000
+verifie(p4.pleineEchelle() == 6144, "5000 mV : pas une plage de l'ADS1115 -> 6144")
+a3["value"] = 4096
+a3["activation"] = "OFF"
+verifie(p4.pleineEchelle() == 6144, "entree desactivee -> 6144")
+a3["activation"] = "ON"
 
 print("5. Route /cuve de la cuve (CAPTEURS_CUVE : methodes isolees de controleCuve.be)")
 var texteCuve = lisFichier("data/garage/tasmota32s3-capteurs-cuve-modbus/controleCuve.be")

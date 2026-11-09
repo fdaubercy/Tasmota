@@ -3,7 +3,7 @@ chantier: jauges-cuve
 titre: Page dédiée « Niveau de la cuve » (jauges A, H et B), lien depuis l'encadré de la cuve
 statut: actif
 cree: 2026-10-31
-maj: 2026-10-31
+maj: 2026-11-09
 source: squishy-imagining-raven.md
 objectif: Afficher volume (jauge A), taux (jauge H) et tensions brute et recalculée de la sonde (cadran B) de la cuve sur une page dédiée ouverte depuis son encadré, sur la cuve et le P4
 ---
@@ -111,8 +111,8 @@ Choix de conception (minimum pour un essai) :
 - [x] `PROTOCOLE_MODBUS.md` : registre 4708 de la cuve documenté — preuve : `PROTOCOLE_MODBUS.md` § sentinelle : paragraphe « Valeur calculée servie par l'esclave »
 
 ## Améliorations restantes
-- [ ] [projet] Pleine échelle de l'ADS1115 : Tasmota remet ±6,144 V à chaque détection (`Ads1115Detect`) et le P4 suppose 6 144 mV en dur ; si `Sensor12 S1` est un jour posé, le P4 se trompe d'un facteur 1,5 (exploration du 2026-10-31)
-- [ ] [projet] Ancien maître S3 gelé : son `controleGarage.be` ne remplit pas les 2 nouvelles lignes du gabarit partagé (`#…#` en clair s'il est rallumé)
+- [x] [projet] Pleine échelle de l'ADS1115 : Tasmota remet ±6,144 V à chaque détection (`Ads1115Detect`) et le P4 suppose 6 144 mV en dur ; si `Sensor12 S1` est un jour posé, le P4 se trompe d'un facteur 1,5 (exploration du 2026-10-31) — preuve : la cuve sert sa plage au registre 4709 (`cuveFonctions.be`, `analogique6` `Calcul_pleineEchelle`), le P4 la lit (`controleGarage.be::CONTROLE_GARAGE.pleineEchelle`, `analogique3` `idModBus 6`, repli 6144) ; `banc_cuve.py` 156 contrôles 0 échec (témoin : 2 échecs), `banc_cuve_page.py` OK (témoin `json_append` à 6144 : 1 échec) ; pas encore envoyé sur les cartes
+- [x] [projet] Ancien maître S3 gelé : son `controleGarage.be` ne remplit pas les 2 nouvelles lignes du gabarit partagé (`#…#` en clair s'il est rallumé) — preuve : 2 clés `tensionSonde` remplies par « -,--V » dans `tasmota32s3-serveur-modbus/controleGarage.be` ; contrôle statique : plus aucune clé du gabarit sans valeur hors `classeErreur`/`colorWs2812` (attributs)
 - [ ] [projet] Factoriser le chargeur ECharts commun à `graphiques.js` et `cuve.js` si l'essai est adopté
 - [ ] [projet] Le P4 ne borne pas le taux à 0..100 % et n'a pas le correctif de troncature de la cuve (`controleGarage.be`, constaté à l'exploration)
 - [ ] [projet] Ancien maître S3 (`tasmota32s3-serveur-modbus`) : il partage l'encadré, le lien y mènera à une page absente

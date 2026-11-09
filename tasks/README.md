@@ -22,11 +22,11 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 | [Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)](plans/energie-differentiel.md) | Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h) | actif | ██████████ 100 % (69/70) | 1 étape | 2026-10-31 | 2026-11-09 |
 | [Page d'équilibrage de la nourrice servie par la carte des débits, débits lus en direct](plans/equilibrage-par-la-carte.md) | Ouvrir le guide d'équilibrage depuis la carte des débits et y lire les 6 débits mesurés, sans les taper à la main | actif | ████████░░ 83 % (20/22) | 2 étapes | 2026-11-09 | 2026-11-09 |
 | [Historique et page /graphiques des 6 débits de la nourrice](plans/historique-debits.md) | Garder en flash l'historique des 6 débits et du total, et les voir en courbes sur la page /graphiques de la carte | actif | ████████░░ 75 % (8/10) | 2 étapes, 1 amélioration | 2026-11-08 | 2026-11-09 |
+| [Page dédiée « Niveau de la cuve » (jauges A, H et B), lien depuis l'encadré de la cuve](plans/jauges-cuve.md) | Afficher volume (jauge A), taux (jauge H) et tensions brute et recalculée de la sonde (cadran B) de la cuve sur une page dédiée ouverte depuis son encadré, sur la cuve et le P4 | actif | ██████████ 98 % (31/32) | 1 étape, 3 améliorations | 2026-10-31 | 2026-11-09 |
 | [Page web « Build et téléversement » (port 7700, tuile de l'annuaire)](plans/page-build-televersement.md) | Compiler et téléverser en série (COM ou OTA) les envs cochés depuis une page web, avec progression en direct | actif | ██████████ 100 % (89/89) | 2 améliorations | 2026-10-24 | 2026-11-09 |
 | [Voie Ethernet complète — FTP, UDP, esclaves par le point d'accès, repli sur le Wi-Fi](plans/voie-reseau-ethernet.md) | Qu'une carte en voie Ethernet garde tous ses services et ses esclaves, et ne devienne jamais injoignable si le câble tombe | actif | █████░░░░░ 47 % (18/33) | 15 étapes, 1 amélioration | 2026-11-02 | 2026-11-08 |
 | [Onglet « Sauvegarde configuration » de la page build (modèle B)](plans/sauvegarde-config-cartes.md) | Sauvegarder, comparer, modifier paramètre par paramètre et restaurer la configuration (/dl : Settings + .drvset*) de chaque carte depuis la page build | actif | ██████████ 100 % (33/33) | — | 2026-11-03 | 2026-11-03 |
 | [Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2](plans/ruban-cuve.md) | Piloter le ruban WS2812 de la cuve en AUTO/MANUEL (bouton et ModBus) et préparer la carte cuve v0.2 | actif | ████████░░ 77 % (23/31) | 8 étapes, 2 améliorations | 2026-10-18 | 2026-11-02 |
-| [Page dédiée « Niveau de la cuve » (jauges A, H et B), lien depuis l'encadré de la cuve](plans/jauges-cuve.md) | Afficher volume (jauge A), taux (jauge H) et tensions brute et recalculée de la sonde (cadran B) de la cuve sur une page dédiée ouverte depuis son encadré, sur la cuve et le P4 | actif | ██████████ 98 % (31/32) | 1 étape, 5 améliorations | 2026-10-31 | 2026-10-31 |
 | [Cave — envs ESP32/S3 alignés sur la carte en ligne, audit de l'env S3, carte S3 8 relais de remplacement](plans/relais-cave-s3.md) | Aligner les envs de la cave sur les broches de la carte en ligne, auditer l'env S3 et choisir une carte ESP32-S3 à 8 relais pour la remplacer | actif | ████████░░ 80 % (17/19) | 2 étapes, 3 améliorations | 2026-10-31 | 2026-10-31 |
 | [Sniffeur I2C (ESP32-S3 dédié + outil PC de l'annuaire)](plans/sniffeur-i2c.md) | Voir en direct le trafic I2C de n'importe quelle carte du parc, décodé jusqu'au registre, et lire ou écrire un registre par la carte ou au banc | actif | ███████░░░ 72 % (33/43) | 10 étapes, 1 amélioration | 2026-10-31 | 2026-10-31 |
 | [Plan d'action de l'audit Berry (propositions P2.1 à P10.7)](plans/actions-audit-berry.md) | Mettre en œuvre, lot par lot et sur décision de l'utilisateur, les 78 propositions de l'audit Berry | actif | █████████░ 91 % (89/95) | 6 étapes, 1 amélioration | 2026-10-22 | 2026-10-26 |
@@ -120,6 +120,13 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A4 — Essai sur la carte : Après un redémarrage : historique conservé, aucune erreur au journal (`ReglageLog` / syslog)
 - Amélioration [projet] : Envoi vers Influx/Grafana du Pi (bouton « Historique (Grafana) » : clé `grafana` du persist)
 
+#### [Page dédiée « Niveau de la cuve » (jauges A, H et B), lien depuis l'encadré de la cuve](plans/jauges-cuve.md) — 98 %
+
+- A6 — Build et essai sur les cartes : Relevé ModBus 4708 vu au sniffeur ou dans le log du P4 (valeur = tension de la sonde de la cuve en mV) — bloqué : ADS1115 débranché avec la sonde (`I2CScan` : « No devices found » sur la cuve, 2026-11-09) ; sans lui `cuveFonctions.montageSonde` rend nil, la tension recalculée reste « -,-- » sur la cuve même, en simulation comprise. À refaire sonde et ADS1115 rebranchés
+- Amélioration [projet] : Factoriser le chargeur ECharts commun à `graphiques.js` et `cuve.js` si l'essai est adopté
+- Amélioration [projet] : Le P4 ne borne pas le taux à 0..100 % et n'a pas le correctif de troncature de la cuve (`controleGarage.be`, constaté à l'exploration)
+- Amélioration [projet] : Ancien maître S3 (`tasmota32s3-serveur-modbus`) : il partage l'encadré, le lien y mènera à une page absente
+
 #### [Page web « Build et téléversement » (port 7700, tuile de l'annuaire)](plans/page-build-televersement.md) — 100 %
 
 - Amélioration [projet] : OTA du FS par MQTT (`build_ota_mqtt.py`) : mêmes parades que l'A17 (place, fichiers identiques).
@@ -156,15 +163,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A5 — Avant de commander la carte : Export de fabrication (Gerber, BOM, CPL pour JLCPCB)
 - Amélioration [projet] : Cuve : PSRAM détectée un démarrage sur deux le 2026-10-14 (même firmware) ; cause non établie (câble, alimentation ou module). La surveiller au prochain démarrage par le pont série. Le 2026-10-31 : un seul défaut avec le blocage ci-dessous (bloquée = `HDW:` SANS « (PSRAM) », le code s'exécute depuis la PSRAM : PsrMax 5376 Ko = 8 Mo − programme) ; config OPI correcte ; 25/25 démarrages avec PSRAM les 24-25/10 ; hypothèse non prouvée : les 2 USB-C branchés le 14/10. Surveillance : syslog journalisé par l'annuaire (`%TEMP%\syslog_tasmota.log`), une ligne `HDW:` sans « (PSRAM) » = récidive.
 - Amélioration [projet] : Cuve : cause du blocage après `HDW:` à la suite du flash du 2026-10-15 non établie. Même défaut que la PSRAM ci-dessus (voir sa ligne).
-
-#### [Page dédiée « Niveau de la cuve » (jauges A, H et B), lien depuis l'encadré de la cuve](plans/jauges-cuve.md) — 98 %
-
-- A6 — Build et essai sur les cartes : Relevé ModBus 4708 vu au sniffeur ou dans le log du P4 (valeur = tension de la sonde de la cuve en mV) — bloqué : ADS1115 débranché avec la sonde (`I2CScan` : « No devices found » sur la cuve, 2026-11-09) ; sans lui `cuveFonctions.montageSonde` rend nil, la tension recalculée reste « -,-- » sur la cuve même, en simulation comprise. À refaire sonde et ADS1115 rebranchés
-- Amélioration [projet] : Pleine échelle de l'ADS1115 : Tasmota remet ±6,144 V à chaque détection (`Ads1115Detect`) et le P4 suppose 6 144 mV en dur ; si `Sensor12 S1` est un jour posé, le P4 se trompe d'un facteur 1,5 (exploration du 2026-10-31)
-- Amélioration [projet] : Ancien maître S3 gelé : son `controleGarage.be` ne remplit pas les 2 nouvelles lignes du gabarit partagé (`#…#` en clair s'il est rallumé)
-- Amélioration [projet] : Factoriser le chargeur ECharts commun à `graphiques.js` et `cuve.js` si l'essai est adopté
-- Amélioration [projet] : Le P4 ne borne pas le taux à 0..100 % et n'a pas le correctif de troncature de la cuve (`controleGarage.be`, constaté à l'exploration)
-- Amélioration [projet] : Ancien maître S3 (`tasmota32s3-serveur-modbus`) : il partage l'encadré, le lien y mènera à une page absente
 
 #### [Cave — envs ESP32/S3 alignés sur la carte en ligne, audit de l'env S3, carte S3 8 relais de remplacement](plans/relais-cave-s3.md) — 80 %
 

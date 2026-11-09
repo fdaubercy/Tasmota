@@ -644,6 +644,17 @@ maitre P4 la lit par son `analogique2` (`virtuel ModBus_TasmotaSlaveModBus1`, `i
 l'accueil, le JSON SENSOR (`sensorsCuve.valeursAnalogiques.tensionSonde_V`) et la page `/cuve`. Le sniffeur nomme le
 registre d'apres le persist du maitre. Seuls les virtuels `I2C_ADS1115` sont des voies de l'ADS1115 dans le releve
 de la cuve.
+
+**Pleine echelle de l'ADS1115 de la cuve (2026-11-09).** Tasmota remet l'ADS1115 a +/-6,144 V a chaque detection
+(`Ads1115Detect`), mais `Sensor12 S<n>` peut changer la plage, et la valeur brute d'une voie n'a de sens qu'avec elle.
+La cuve declare donc `analogique6` (`virtuel Calcul_pleineEchelle`, id 6 -> **registre 4709**) :
+`cuveFonctions.changementEtatCapteur` y ecrit `voltageMax` (lu dans `Sensor12`) en mV entiers et note sa fraicheur
+apres une lecture valide. Le maitre P4 la lit par son `analogique3` (`idModBus 6`) ;
+`controleGarage.be::CONTROLE_GARAGE.pleineEchelle` la rend si c'est une plage de l'ADS1115 (256 a 6144 mV) et que la
+mesure n'est pas en erreur, sinon 6144 : un esclave pas encore mis a jour ne fausse rien. Elle remplace le 6144 en
+dur de la conversion de la hauteur brute (encadre de l'accueil et `valeurCapteurHauteur` du JSON SENSOR). Bancs :
+`banc_cuve.be` (temoin : valeur non ecrite -> 2 echecs), `banc_cuve_page.be` section 4c (temoin : 6144 en dur dans
+`json_append` -> 1 echec).
 - **Limite** : un contact sec (0x02) coupe ressemble a un contact ouvert ; seule une resistance de fin
   de ligne le rendrait detectable.
 - Bancs : `banc_test_modbus.be` §26 (temoin : esclave sans sentinelle -> 2 echecs),

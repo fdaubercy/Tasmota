@@ -87,6 +87,22 @@ class CONTROLE_GARAGE : Driver
         return nil
     end
 
+    # Pleine echelle de l'ADS1115 de la cuve, servie par ModBus (entree analogique idModBus 6 = registre 4709 de la
+    # cuve, mV, 2026-11-09) : convertit la valeur brute de la voie de niveau. 6144 mV (plage que Tasmota pose a la
+    # detection) si l'entree manque, n'a jamais ete relevee, est en erreur de mesure ou n'est pas une plage de l'ADS1115.
+    def pleineEchelle()
+        import string
+        import garageFonctions
+        for anaJson: modules["garage"]["environnement"].find("analogiques", {})
+            if (isinstance(anaJson, map) && anaJson.find("activation", "OFF") == "ON" && anaJson.find("idModBus") == 6 &&
+                string.find(str(anaJson.find("virtuel", "")), "ModBus_TasmotaSlaveModBus") > -1)
+                var mV = int(anaJson.find("value", 0))
+                return (garageFonctions.mesureEnErreur(anaJson) || [256, 512, 1024, 2048, 4096, 6144].find(mV) == nil ? 6144 : mV)
+            end
+        end
+        return 6144
+    end
+
     # Page /cuve : jauges du volume et du taux de la cuve (data/fs/cuvePageFonctions.be, importe a la premiere requete)
     def web_add_handler()
         import webserver
@@ -161,7 +177,7 @@ class CONTROLE_GARAGE : Driver
                             var vide = "-,--"
                             variablesRemplacement.insert("sensorsCuve->valeurCapteurHauteur->titre", "Tension brute (ADS1115) : ")
 
-                            var value = tasmota.scale_int(int(anaJson["value"]), 0, 32767, 0, 6144)
+                            var value = tasmota.scale_int(int(anaJson["value"]), 0, 32767, 0, self.pleineEchelle())
                             variablesRemplacement.insert("sensorsCuve->valeursAnalogiques->valeurCapteurHauteur", (erreur ? vide : str(value)) + "mV")
                             # Tension de la sonde recalculee par la cuve et servie par ModBus (tensionSonde)
                             var tension = self.tensionSonde()
@@ -368,7 +384,7 @@ class CONTROLE_GARAGE : Driver
                     if (string.find(anaJson["virtuel"], "ModBus_TasmotaSlaveModBus") > -1)
                         if (anaJson["idModBus"] == 1)
                             # "sensorsCuve": {"valeursAnalogiques":{"valeurCapteurHauteur":616},"niveauCuve":{"tauxRemplissage":0.17,"hauteurEau":19,"volume":1144}}
-                            var value = tasmota.scale_int(int(anaJson["value"]), 0, 32767, 0, 6144)
+                            var value = tasmota.scale_int(int(anaJson["value"]), 0, 32767, 0, self.pleineEchelle())
                             var hauteurEau = value / anaJson.find("conversion_mV_cm", 1.0)
 
                             # Calcul le pourcentage d'eau dans la cuve & le volume disponible
@@ -382,7 +398,7 @@ class CONTROLE_GARAGE : Driver
 
                             var tension = self.tensionSonde()
                             tasmota.response_append(string.format(", \"sensorsCuve\": {\"valeursAnalogiques\": {\"valeurCapteurHauteur\": %i%s}, \"niveauCuve\":{\"tauxRemplissage\": %.2f, \"hauteurEau\": %i, \"volume\": %i}}",
-                                                                                tasmota.scale_int(int(anaJson["value"]), 0, 32767, 0, 6144),
+                                                                                value,
                                                                                 (tension != nil ? string.format(", \"tensionSonde_V\": %.2f", tension) : ""),
                                                                                 real(pourcentageEau), int(hauteurEau), volume))
                         end

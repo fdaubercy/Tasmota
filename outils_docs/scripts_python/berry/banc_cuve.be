@@ -142,6 +142,7 @@ var LONG = CUVE["dimensions"]["longueur"]
 var CONV = ANA0["conversion_mV_cm"]
 var VMAX = 6144                                   # plage +-6.144 V de l'ADS1115 (Sensor12 Range) : int, comme au demarrage
 var ADRESSE = ANA0["type"] + ANA0["id"] - 1       # adresse de la sentinelle ModBus : 4704
+var PLEINE = 4709                                  # analogique6 du persist reel (Calcul_pleineEchelle, id 6), notee avec le niveau
 
 import cuveFonctions
 
@@ -429,11 +430,11 @@ verifie(size(modbusFonctions.notes) == 0, "lecture ADS1115 a 2 voies seulement (
 print("9. Fraicheur de la mesure (sentinelle ModBus) et validite du pilote")
 remetNormal()
 releve(0)
-verifie(modbusFonctions.notes == [ADRESSE], "lecture 0 : c'est une mesure, noteMesure(" + str(ADRESSE) + ") appele (presence de la cle, pas sa valeur)")
+verifie(modbusFonctions.notes == [ADRESSE, PLEINE], "lecture 0 : c'est une mesure, noteMesure(" + str(ADRESSE) + ") appele (presence de la cle, pas sa valeur)")
 remetNormal()
 global.i2c_ads1115 = nil
 releve(5000)
-verifie(modbusFonctions.notes == [ADRESSE], "pilote i2c_ads1115 absent : lecture acceptee")
+verifie(modbusFonctions.notes == [ADRESSE, PLEINE], "pilote i2c_ads1115 absent : lecture acceptee")
 class FauxAds : Driver
     var valide, vues
     def init(v) self.valide = v self.vues = [] end
@@ -449,7 +450,7 @@ verifie(mesures()["niveauCuve"]["hauteurEau"] > 0, "lecture jugee invalide : le 
 remetNormal()
 global.i2c_ads1115 = FauxAds(true)
 releve(5000)
-verifie(modbusFonctions.notes == [ADRESSE], "pilote : mesureValide = true -> noteMesure appele")
+verifie(modbusFonctions.notes == [ADRESSE, PLEINE], "pilote : mesureValide = true -> noteMesure appele")
 # N1, second site (2026-10-24, relecture) : le mV passe a mesureValide etait lui aussi converti sans borne,
 # un releve negatif y arrivait en PLEINE echelle -> une lecture parasite pouvait etre jugee valide
 remetNormal()
@@ -485,8 +486,28 @@ verifie(proche(mesures()["valeursAnalogiques"].find("tensionSonde_V", -1), mvSon
 # Servie au maitre par ModBus : analogique5 du persist reel (virtuel Calcul_tensionSonde, id 5 -> registre 4708)
 var e5 = cuveFonctions.entreeTensionSonde()
 verifie(e5 != nil && e5["value"] == int(mvSonde * 3.4 + 0.5), "ModBus : analogique5.value = tension de la sonde en mV entiers (" + str(e5 != nil ? e5["value"] : nil) + ")")
-verifie(modbusFonctions.notes == [ADRESSE, 4708], "ModBus : fraicheur notee sur 4704 (niveau) ET 4708 (tension de la sonde) : " + str(modbusFonctions.notes))
+verifie(modbusFonctions.notes == [ADRESSE, 4708, PLEINE], "ModBus : fraicheur notee sur 4704 (niveau), 4708 (tension de la sonde) et 4709 (pleine echelle) : " + str(modbusFonctions.notes))
 verifie(ANA0["value"] != e5["value"], "la boucle du releve ne prend plus analogique5 pour une voie de l'ADS1115 (vraie cle, virtuels I2C_ADS1115 seuls)")
+# Pleine echelle servie au maitre (analogique6, Calcul_pleineEchelle -> 4709, 2026-11-09) : le P4 ne suppose plus 6144 mV
+var e6 = cuveFonctions.entreeCalcul("Calcul_pleineEchelle")
+verifie(e6 != nil && e6["id"] == 6 && e6["value"] == 6144, "ModBus : analogique6.value = pleine echelle de l'ADS1115 (6144 mV)")
+remetNormal()
+e6 = cuveFonctions.entreeCalcul("Calcul_pleineEchelle")      # remet recharge le persist
+cuveFonctions.voltageMax = 4096                 # Sensor12 S1 (+/-4,096 V)
+releve(16000)
+verifie(e6["value"] == 4096 && modbusFonctions.notes[-1] == PLEINE, "Sensor12 S1 : analogique6.value suit voltageMax (4096 mV), notee fraiche")
+remetNormal()
+e6 = cuveFonctions.entreeCalcul("Calcul_pleineEchelle")      # remet recharge le persist
+cuveFonctions.voltageMax = 0                    # plage pas encore lue (controleCuve.init)
+e6["value"] = 1
+releve(16000)
+verifie(e6["value"] == 1 && modbusFonctions.notes.find(PLEINE) == nil, "plage inconnue (voltageMax 0) : pleine echelle ni ecrite ni notee fraiche (sentinelle chez le maitre)")
+remetNormal()
+e6 = cuveFonctions.entreeCalcul("Calcul_pleineEchelle")
+e6["activation"] = "OFF"
+releve(16000)
+verifie(modbusFonctions.notes.find(PLEINE) == nil, "analogique6 desactivee : pas de note 4709")
+e6["activation"] = "ON"
 remetNormal()
 global.i2c_ads1115 = FauxAdsMontage({"montage": "shunt", "Rshunt": 150, "pleineEchelle_V": 3.0})
 releve(16000)
@@ -543,7 +564,7 @@ verifie(size(ledsFonctions.erreurs) == 0, "ledsFonctions inactif : l'erreur ne l
 # ================================================================================================
 print("12. Commandes ReglageCuve / ReglageAna : aide, dimensions, reponse")
 var liste = cuveFonctions.aideReglageCuve(nil)
-verifie(size(liste) == 4 && liste[0][0] == "etalonnageCapteur" && size(liste[1]) == 3, "aideReglageCuve(nil) : 4 commandes [nom, syntaxe, resume]")
+verifie(size(liste) == 5 && liste[0][0] == "etalonnageCapteur" && liste[4][0] == "simulation" && size(liste[1]) == 3, "aideReglageCuve(nil) : 5 commandes [nom, syntaxe, resume], simulation comprise (8c9c99dae)")
 verifie(cuveFonctions.aideReglageCuve("hauteurcuve") != nil && cuveFonctions.aideReglageCuve("LARGEURCUVE") != nil && cuveFonctions.aideReglageCuve("zzz") == nil, "aide par sujet : insensible a la casse, nil si inconnu")
 verifie(size(cuveFonctions.aideReglageAna(nil)) == 5 && cuveFonctions.aideReglageAna("voltagemax") != nil && cuveFonctions.aideReglageAna("zzz") == nil, "aideReglageAna : 5 commandes, sujet voltageMax, inconnu -> nil")
 remetNormal()
@@ -554,7 +575,7 @@ verifie(CUVE["dimensions"]["hauteur"] == 120 && persist.nb_save == 1, "hauteurCu
 cuveFonctions.reglageCuve("ReglageCuve", 0, "largeurCuve 200", nil)
 cuveFonctions.reglageCuve("ReglageCuve", 0, "longueurCuve 300", nil)
 verifie(CUVE["dimensions"]["largeur"] == 200 && CUVE["dimensions"]["longueur"] == 300, "largeurCuve et longueurCuve memorisees")
-verifie(tasmota.reponses[size(tasmota.reponses) - 1] == json.dump("ReglageCuve: reglage=OFF, largeurCuve=200cm, longueurCuve=300cm, hauteurCuve=120cm"), "reponse : rappelle reglage et les 3 dimensions")
+verifie(tasmota.reponses[size(tasmota.reponses) - 1] == json.dump("ReglageCuve: reglage=OFF, largeurCuve=200cm, longueurCuve=300cm, hauteurCuve=120cm, simulation=OFF"), "reponse : rappelle reglage, les 3 dimensions et la simulation")
 cuveFonctions.reglageCuve("ReglageCuve", 0, "hauteurCuve 12.7", nil)
 verifie(CUVE["dimensions"]["hauteur"] == 12, "hauteurCuve 12.7 : partie entiere retenue (12)")
 cuveFonctions.reglageCuve("ReglageCuve", 0, "hauteurCuve", nil)

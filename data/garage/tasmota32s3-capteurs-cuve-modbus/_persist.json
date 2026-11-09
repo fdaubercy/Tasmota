@@ -239,6 +239,15 @@
 						"type": 4704,
 						"virtuel": "Calcul_tensionSonde",
 						"value": 0
+					},
+					"analogique6": {
+						"activation": "ON",
+						"nom": "Pleine échelle ADS1115 (mV)",
+						"id": 6,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "Calcul_pleineEchelle",
+						"value": 0
 					}
 				},
 				"capteurs": {

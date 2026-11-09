@@ -107,14 +107,18 @@ cuveFonctions.montageSonde = def()
     return {"rapport": rapport, "entreeMax_V": m["pleineEchelle_V"], "sondeMax_V": m["pleineEchelle_V"] * rapport}
 end
 
-# Entree analogique qui sert la tension de la sonde au maitre par ModBus (virtuel "Calcul_tensionSonde", 2026-10-31) :
-# registre type + id - 1 (4708 pour l'id 5), valeur en mV entiers. nil si le persist n'en a pas (ou desactivee).
-cuveFonctions.entreeTensionSonde = def()
+# Entree analogique calculee servie au maitre par ModBus (registre type + id - 1), d'apres son virtuel :
+#   "Calcul_tensionSonde"  : tension de la sonde en mV entiers (id 5 -> 4708, 2026-10-31)
+#   "Calcul_pleineEchelle" : pleine echelle de l'ADS1115 en mV (voltageMax, lue dans Sensor12 ; id 6 -> 4709, 2026-11-09),
+#                            pour que le maitre convertisse la valeur brute de la voie sans supposer 6 144 mV
+# nil si le persist n'en a pas (ou desactivee).
+cuveFonctions.entreeCalcul = def(virtuel)
     for e: modules["cuve"]["environnement"].find("analogiques", {})
-        if (isinstance(e, map) && e.find("activation", "OFF") == "ON" && e.find("virtuel") == "Calcul_tensionSonde")    return e    end
+        if (isinstance(e, map) && e.find("activation", "OFF") == "ON" && e.find("virtuel") == virtuel)    return e    end
     end
     return nil
 end
+cuveFonctions.entreeTensionSonde = def()    return cuveFonctions.entreeCalcul("Calcul_tensionSonde")    end
 
 # Le relais WS2812 du module (ruban), ou nil s'il n'est pas actif
 cuveFonctions.relaisRuban = def()
@@ -578,6 +582,7 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
         # par ModBus, aurait ete ecrasee par la voie A4).
         var sonde = cuveFonctions.montageSonde()               # une fois par releve (montage : boucle E24, petites maps)
         var entree = cuveFonctions.entreeTensionSonde()
+        var pleine = cuveFonctions.entreeCalcul("Calcul_pleineEchelle")
         for cleAna: analogiques.keys()
             tasmota.yield()
             if type(analogiques[cleAna]) != "instance"   continue    end
@@ -598,6 +603,11 @@ cuveFonctions.changementEtatCapteur = def(value, trigger, msg, moduleCapteur, cl
                         # La tension de la sonde servie au maitre est fraiche avec la mesure dont elle est tiree
                         if (entree != nil && sonde != nil)
                             modbusFonctions.noteMesure(int(entree["type"]) + int(entree["id"]) - 1)
+                        end
+                        # ... comme la pleine echelle avec laquelle le maitre convertit la valeur brute de la voie
+                        if (pleine != nil && cuveFonctions.voltageMax > 0)
+                            pleine["value"] = int(cuveFonctions.voltageMax)
+                            modbusFonctions.noteMesure(int(pleine["type"]) + int(pleine["id"]) - 1)
                         end
                     end
                 end
