@@ -60,7 +60,7 @@ Décisions de conception (à contester avant le feu vert) :
 - [x] Favori sans Referer : page de relais sans donnée qui se recharge, puis contrôle d'accès habituel — preuve : `equilibragePage.be::equilibragePage_envoieRelais` ; `banc_debits.py` : relais sans `window.CARTE` ni nom de départ, Referer refusé → rien ; mutant « favori sans relais » rouge ; sonde : 1 relais puis la page
 - [x] `banc_demarrage.py --carte` : écart relu (+6 fonctions, `envoieDebits` retirée), référence ré-enregistrée sur une copie de `data/fs` du commit — preuve : `--carte tasmota32s3-bureau-serveur-debits-pac` VERT
 - [x] `relecteur-berry` et `relecteur-pages-web`, remarques traitées ; README, `CLAUDE.md`, artifact republié — preuve : les deux « prêt » ; corrigés : relais en boucle sans Referer (`?r=1` : lien seul au 2e passage, mutant rouge), case « Suivre » restaurée par le navigateur (`planifie` après la 1re lecture, non sondé), fichier fermé si l'écriture échoue ; POST sans Referer refusé par Tasmota (`xdrv_01_9_webserver.ino::HttpCheckPriviledgedAccess`) ; `banc_debits.py` 114 vérifications VERT, 13 mutants de la page rouges ; sonde 28 vérifications VERT, 4 mutants du js rouges ; README § débits, `CLAUDE.md`, `verifie_references_docs.py` 0 défaut ; artifact version 4
-- [ ] Commit et push
+- [x] Commit et push — preuve : `80c70122e` (13 fichiers) puis `b91a4bf58` (index des plans rétabli), poussés
 
 ## Améliorations restantes
 - [x] [projet] Schéma animé alimenté par les débits réels pendant le suivi direct — preuve : A6

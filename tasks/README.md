@@ -19,7 +19,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 |---|---|---|---|---|---|---|
 | [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ███████░░░ 66 % (32/48) | 16 étapes, 4 améliorations | 2026-11-08 | 2026-11-09 |
 | [Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)](plans/energie-differentiel.md) | Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h) | actif | █████████░ 93 % (68/70) | 2 étapes, 1 amélioration | 2026-10-31 | 2026-11-09 |
-| [Page d'équilibrage de la nourrice servie par la carte des débits, débits lus en direct](plans/equilibrage-par-la-carte.md) | Ouvrir le guide d'équilibrage depuis la carte des débits et y lire les 6 débits mesurés, sans les taper à la main | actif | ████████░░ 81 % (19/22) | 3 étapes | 2026-11-09 | 2026-11-09 |
+| [Page d'équilibrage de la nourrice servie par la carte des débits, débits lus en direct](plans/equilibrage-par-la-carte.md) | Ouvrir le guide d'équilibrage depuis la carte des débits et y lire les 6 débits mesurés, sans les taper à la main | actif | ████████░░ 83 % (20/22) | 2 étapes | 2026-11-09 | 2026-11-09 |
 | [Historique et page /graphiques des 6 débits de la nourrice](plans/historique-debits.md) | Garder en flash l'historique des 6 débits et du total, et les voir en courbes sur la page /graphiques de la carte | actif | ████████░░ 75 % (8/10) | 2 étapes, 1 amélioration | 2026-11-08 | 2026-11-09 |
 | [Page web « Build et téléversement » (port 7700, tuile de l'annuaire)](plans/page-build-televersement.md) | Compiler et téléverser en série (COM ou OTA) les envs cochés depuis une page web, avec progression en direct | actif | ██████████ 100 % (89/89) | 2 améliorations | 2026-10-24 | 2026-11-09 |
 | [Voie Ethernet complète — FTP, UDP, esclaves par le point d'accès, repli sur le Wi-Fi](plans/voie-reseau-ethernet.md) | Qu'une carte en voie Ethernet garde tous ses services et ses esclaves, et ne devienne jamais injoignable si le câble tombe | actif | █████░░░░░ 47 % (18/33) | 15 étapes, 1 amélioration | 2026-11-02 | 2026-11-08 |
@@ -86,11 +86,10 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A11 — Remarques de l'utilisateur du 2026-11-02 (soir) : Thermomètre corrigé (« n'oublie pas la correction des paramètres ») : GPIO34 lit ~2,2 V au lieu de 0,64 V depuis l'envoi du FS (15 °C au lieu de 27 °C) ; `AdcParam1` rétabli (B 15000), `SetOption146` écarté ; cause inconnue, il faut la température réelle près du boîtier
 - Amélioration [projet] : Étendre la page Énergie aux autres cartes à bloc `ENERGY` (module déjà générique)
 
-#### [Page d'équilibrage de la nourrice servie par la carte des débits, débits lus en direct](plans/equilibrage-par-la-carte.md) — 81 %
+#### [Page d'équilibrage de la nourrice servie par la carte des débits, débits lus en direct](plans/equilibrage-par-la-carte.md) — 83 %
 
 - A5 — Sur la carte (avec le matériel) : FS envoyé par la page Build ; bouton « Équilibrage » de l'accueil ouvert depuis le téléphone ; « Lire les débits » = valeurs de l'accueil ; suivi direct ; tas mesuré avant et après la première ouverture
 - A5 — Sur la carte (avec le matériel) : Favori du téléphone vers `/equilibrage` : la page s'ouvre (relais) ; « Garder les puissances sur la carte » puis rechargement depuis un autre appareil : puissances retrouvées ; schéma sur les débits réels en suivi direct
-- A6 — Améliorations : schéma réel, réglages sur la carte, favori (demande du 2026-11-09) : Commit et push
 
 #### [Historique et page /graphiques des 6 débits de la nourrice](plans/historique-debits.md) — 75 %
 
