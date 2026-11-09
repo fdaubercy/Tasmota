@@ -252,6 +252,7 @@ def modbusFonctions_aideReglageModbus(sujet)
             ["ActivationReponseCMD", "ActivationReponseCMD <ON|OFF|1|0>", "(des)active la reponse de l'esclave aux commandes ModBus"],
             ["RelaisPushMQTT", "RelaisPushMQTT [ON|OFF|1|0]", "maitre : recopie en MQTT les push UDP des esclaves (observation)"],
             ["LectureGroupee", "LectureGroupee [ON|OFF|1|0]", "esclave : sert une lecture 0x04 de plusieurs valeurs en entier"],
+            ["PeriodeReleve", "PeriodeReleve [<s>]", "maitre : periode du releve des esclaves (5 a 300 s, defaut 30)"],
             ["VoieCommandes", "VoieCommandes [Serial|UDP]", "esclave : voie par laquelle il veut ses commandes, annoncee au maitre"],
             ["ImAlive", "ImAlive <ON|OFF|1|0>", "INTERNE : force le maitre a connecter ses clients ModBus TCP"]
         ]
@@ -326,6 +327,14 @@ def modbusFonctions_aideReglageModbus(sujet)
                 "si la mesure n'est pas fraiche ; Count impair, plus de 40 registres ou registre sans",
                 "appareil : refus journalise, aucune reponse. OFF : chemin d'avant (une valeur).",
                 "Exemple : ReglageModbus LectureGroupee ON"]
+    elif (sujet == "PERIODERELEVE")
+        return ["Parametre : <s> entier de 5 a 300 ; absent = affiche la valeur.",
+                "Effet : sauve drivers.ModBus.periodeReleve (30 s par defaut). Maitre seulement (id 0).",
+                "Periode du releve des esclaves TasmotaSlaveModBus ; le chien de garde declare muet un",
+                "esclave sans contact depuis 3 periodes. Pris en compte au redemarrage (cron arme au Boot).",
+                "Cron '*/s' des secondes : choisir un diviseur de 60 (5, 10, 15, 20, 30) ; au-dela de",
+                "59 s, le releve passe une fois par minute.",
+                "Exemple : ReglageModbus PeriodeReleve 10"]
     elif (sujet == "VOIECOMMANDES")
         return ["Parametre : Serial ou UDP ; absent = affiche la voie actuelle.",
                 "Effet : sauve drivers.ModBus.voieCommandes, la recopie dans la fiche locale de",
@@ -493,6 +502,17 @@ def modbusFonctions_reglageModbus(cmd, idx, payload, payload_json)
         end
         reponse_cmnd += string.format("lectureGroupee=%s, ", drivers["ModBus"].find("lectureGroupee", "OFF"))
         if (drivers["ModBus"].find("id", 99) == 0)    reponse_cmnd += "sans effet sur le maitre (id 0), "    end
+    # Maitre : periode du releve des esclaves (modBus_TasmotaSlaveModBus.periodeReleve) ; sans parametre, lit la valeur
+    elif (string.toupper(fonction) == string.toupper("PeriodeReleve"))
+        var valeur = (parametres.size() > 0 ? parametres[0] : "")
+        if (valeur != "" && str(int(valeur)) == valeur && int(valeur) >= 5 && int(valeur) <= 300)
+            drivers["ModBus"]["periodeReleve"] = int(valeur)
+            persist.save(true)
+        elif (valeur != "")
+            reponse_cmnd += "erreur=parametre entier de 5 a 300 (s), "
+        end
+        reponse_cmnd += string.format("periodeReleve=%s s (pris en compte au redemarrage), ", str(drivers["ModBus"].find("periodeReleve", 30)))
+        if (drivers["ModBus"].find("id", 99) != 0)    reponse_cmnd += "sans effet hors maitre (id 0), "    end
     # Esclave : voie de ses commandes, annoncee au maitre par sa fiche discovery (voir reglageVoieCommandes)
     elif (string.toupper(fonction) == string.toupper("VoieCommandes"))
         reponse_cmnd += modbusFonctions.reglageVoieCommandes(parametres) + ", "

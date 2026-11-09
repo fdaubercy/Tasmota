@@ -20,6 +20,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
     var dataJson
     var derniersContacts                # chien de garde : id esclave -> heure du dernier contact
     var esclavesMuets                   # chien de garde : id esclave -> true tant qu'il est muet
+    var groupesRejetes                  # lecture groupee : nom d'esclave -> true tant que son mot d'etats n'a pas le bit 12
     var texteHold                       # bouton du ruban : libelle de l'appui long (StateText4)
     var pasDefileRuban                  # bouton du ruban : crans du defilement en cours (garde-fou)
 
@@ -651,6 +652,49 @@ class MODBUS_TASMOTA_SLAVE : Driver
         tasmota.response_append(", \"TasmotaSlaveModBus\":" + json.dump(self.dataJson["TasmotaSlaveModBus"]))
     end
 
+    # Lecture groupee (2026-11-09, cle drivers.ModBus.environnement.TasmotaSlaveModBus.<nom>.lectureGroupee ON) : une
+    # reponse 0x04 ou un push 0x10 de PLUSIEURS analogiques (registres 4704 a 4735) devient une liste de sous-reponses
+    # d'une valeur, registre StartAddress + i. Le dernier mot du groupe est le mot d'etats : sans son bit 12 (esclave
+    # d'avant la modification, qui repond [v, 0, 0...]), tout le groupe vaut la sentinelle -> 'defaillant', rien range.
+    # Une sentinelle en derniere position porte le bit 12 : seul le mot d'etats passe alors 'defaillant'.
+    # Rend nil si le message n'est pas un groupe (esclave sans cle : jamais), qui suit alors le chemin d'avant.
+    def eclateGroupe(msg, nomEsclave)
+        import string
+        import modbusFonctions
+
+        try
+            var esclave = drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"].find(nomEsclave)
+            if (type(esclave) != "instance" || esclave.find("lectureGroupee", "OFF") != "ON")    return nil    end
+            var sa = int(msg.find("StartAddress", 0))
+            if (sa < 4704 || sa >= 4736 || !isinstance(msg.find("Values"), list))    return nil    end
+
+            var vals = msg["Values"]
+            if (msg["FunctionName"] == "ECRITURE_REGISTRES_HOLDER")    vals = modbusFonctions.motsVersValeurs(vals, "uint32")      # push : registres bruts
+            elif (msg["FunctionName"] != "LECTURE_REGISTRES_ENTREES")    return nil
+            end
+            if (size(vals) < 2)    return nil    end
+
+            var servi = (vals[-1] != nil && (int(vals[-1]) & 0x1000) != 0)
+            if (self.groupesRejetes == nil)    self.groupesRejetes = {}    end
+            if (!servi)
+                # Erreur au premier rejet seulement : le releve repasse toutes les periodeReleve() s
+                logFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_GROUPE: %s, registres %i a %i : mot d'etats sans bit 12 (esclave pas a jour ?) -> groupe rejete, entrees 'defaillant'",
+                                  nomEsclave, sa, sa + size(vals) - 1), self.groupesRejetes.find(nomEsclave, false) ? LOG_LEVEL_DEBUG : LOG_LEVEL_ERREUR, "slaveModbus")
+            end
+            self.groupesRejetes[nomEsclave] = !servi
+
+            var sous = []
+            for i: 0 .. size(vals) - 1
+                sous.push({"DeviceAddress": msg.find("DeviceAddress"), "FunctionCode": 0x04, "StartAddress": sa + i, "Count": 1, "type": "uint32",
+                           "Values": [servi ? vals[i] : modbusFonctions.SENTINELLE_UINT32], "SousReponse": true})
+            end
+            return sous
+        except .. as erreur, message
+            logFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_GROUPE_ERREUR: %s -> %s", erreur, message), LOG_LEVEL_ERREUR, "slaveModbus")
+        end
+        return nil
+    end
+
     # Pour le maitre ModBus: A chaque réception d'une trame ModBus de la part d'un esclave TasmotaSlaveModBus
     # Modifie en persist json: la valeur de la device en fonction du message ModBus recu.
     # L'enregistre dans 'dataJson["TasmotaSlaveModBus"]'
@@ -703,8 +747,10 @@ class MODBUS_TASMOTA_SLAVE : Driver
         # et la vraie requete serait perdue au lieu d'etre renvoyee par le timeout.
         # Une TELEMETRIE spontanee, elle, porte deja son propre StartAddress (lu dans la
         # trame par decrypteMSG) : on la traite normalement, mais elle n'acquitte rien.
-        var estReponseEnVol = modbusFonctions.apparieReponse(msg)
-        if (!estReponseEnVol && !msg.find("Automatique", false))    return    end
+        # Sous-reponse d'un groupe (eclateGroupe) : deja appariee par le message entier, n'acquitte rien.
+        var sousReponse = msg.find("SousReponse", false)
+        var estReponseEnVol = !sousReponse && modbusFonctions.apparieReponse(msg)
+        if (!estReponseEnVol && !msg.find("Automatique", false) && !sousReponse)    return    end
 
         # Chien de garde : une reponse appariee ou un push = l'esclave est vivant
         self.noteContact(int(value))
@@ -722,6 +768,19 @@ class MODBUS_TASMOTA_SLAVE : Driver
             # Acquitte le message en vol (reponse recue) -> pompe le suivant
             if (estReponseEnVol)    modbusFonctions.termineEnVol(true)    end
 
+            return
+        end
+
+        # Lecture groupee (2026-11-09) : reponse ou push de plusieurs analogiques d'un esclave a cle ON -> une
+        # sous-reponse par registre, traitee par le chemin ci-dessous ; le message entier est acquitte ici, une fois.
+        var sousReponses = self.eclateGroupe(msg, nameTasmotaSlaveModBus)
+        if (sousReponses != nil)
+            for s: sousReponses
+                var m = {}
+                m[string.split(trigger, "#")[0]] = s
+                self.recupereReponseModBus(value, trigger, m)
+            end
+            if (estReponseEnVol)    modbusFonctions.termineEnVol(true)    end
             return
         end
 
@@ -1241,6 +1300,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
         var nb = 0
         var esclaves = drivers["ModBus"]["environnement"].find("TasmotaSlaveModBus", {})
         var sondes = {}         # esclaves muets deja sondes pendant ce cycle (audit G3)
+        var groupes = {}        # lecture groupee : id esclave -> ses analogiques
 
         for cleModule: modules.keys()
             if (type(modules[cleModule]) != "instance")    continue    end
@@ -1261,31 +1321,74 @@ class MODBUS_TASMOTA_SLAVE : Driver
                     var esclave = esclaves.find(string.split(virtuel, "_")[1])
                     if (type(esclave) != "instance" || esclave.find("activation", "OFF") != "ON")    continue    end
 
-                    var trame = self.demandeLecture(device, famille, int(esclave["id"]))
-                    # Esclave declare muet (par la file : abandons de suite, ou par le chien de
-                    # garde) : UNE seule sonde par cycle, pas tous ses appareils (audit G3).
-                    var muet = modbusFonctions.estMuet(int(esclave["id"])) ||
-                               (self.esclavesMuets != nil && self.esclavesMuets.find(int(esclave["id"]), false))
-                    if (trame != nil && muet)
-                        if (sondes.find(int(esclave["id"]), false))    continue    end
-                        sondes[int(esclave["id"])] = true
+                    var id = int(esclave["id"])
+                    # Lecture groupee (2026-11-09) : les analogiques d'un esclave a cle ON partent ensemble, apres la boucle
+                    if (famille == "analogiques" && device.find("type") == 4704 && esclave.find("lectureGroupee", "OFF") == "ON")
+                        if (groupes.find(id) == nil)    groupes[id] = []    end
+                        groupes[id].push(device)
+                        continue
                     end
-                    if (trame != nil)
-                        modbusFonctions.envoiMsgModbus(trame, "Commande", trame["StartAddress"])
-                        nb += 1
-                    end
+                    nb += self.placeDemande(self.demandeLecture(device, famille, id), id, sondes)
                     tasmota.yield()
                 end
             end
+        end
+        for id: groupes.keys()
+            for trame: self.demandeGroupee(groupes[id], id)    nb += self.placeDemande(trame, id, sondes)    end
         end
 
         self.log(string.format("MODBUS_TASMOTA_SLAVE_RELEVE: %i demande(s) de lecture placee(s) dans la file", nb), LOG_LEVEL_DEBUG)
         return nb
     end
 
-    # Periode du releve des esclaves, en secondes (cron). Le chien de garde declare muet un
-    # esclave sans contact depuis plus de 3 periodes (3 releves manques).
-    def periodeReleve() return 30 end
+    # Place une demande du releve dans la file. Esclave declare muet (par la file : abandons de suite, ou par
+    # le chien de garde) : UNE seule sonde par cycle, pas tous ses appareils (audit G3). Rend 1 si placee, 0 sinon.
+    def placeDemande(trame, idEsclave, sondes)
+        import modbusFonctions
+
+        if (trame == nil)    return 0    end
+        if (modbusFonctions.estMuet(idEsclave) || (self.esclavesMuets != nil && self.esclavesMuets.find(idEsclave, false)))
+            if (sondes.find(idEsclave, false))    return 0    end
+            sondes[idEsclave] = true
+        end
+        modbusFonctions.envoiMsgModbus(trame, "Commande", trame["StartAddress"])
+        return 1
+    end
+
+    # Lecture groupee (2026-11-09) : UNE requete 0x04 uint32 pour les analogiques (4704) d'un esclave a cle ON,
+    # StartAddress = 4704 + min(idModBus) - 1, Count = nombre de valeurs ; la reponse est repartie par eclateGroupe.
+    # L'esclave ne repond pas a une plage qui contient un registre sans appareil : idModBus non consecutifs, en
+    # double, ou plus de 20 valeurs (40 registres) -> repli sur une demande par appareil. Rend la liste des trames.
+    def demandeGroupee(devices, idEsclave)
+        import string
+
+        var ids = {}
+        var mini = nil
+        var maxi = nil
+        for d: devices
+            var n = int(d["idModBus"])
+            ids[n] = true
+            if (mini == nil || n < mini)    mini = n    end
+            if (maxi == nil || n > maxi)    maxi = n    end
+        end
+        var nb = size(devices)
+        if (nb > 1 && nb <= 20 && size(ids) == nb && maxi - mini + 1 == nb)
+            return [{"DeviceAddress": idEsclave, "FunctionCode": 0x04, "StartAddress": 4704 + mini - 1, "type": "uint32", "Count": nb, "Values": 0}]
+        end
+        if (nb > 1)    self.log(string.format("MODBUS_TASMOTA_SLAVE_RELEVE: esclave ID=%i : idModBus des analogiques non consecutifs (%i a %i pour %i) -> une demande par appareil", idEsclave, mini, maxi, nb), LOG_LEVEL_DEBUG)    end
+        var trames = []
+        for d: devices    trames.push(self.demandeLecture(d, "analogiques", idEsclave))    end
+        return trames
+    end
+
+    # Periode du releve des esclaves, en secondes (cron), cle drivers.ModBus.periodeReleve (defaut 30, bornee 5 a
+    # 300, 2026-11-09). Le chien de garde declare muet un esclave sans contact depuis plus de 3 periodes.
+    # shortcut: le cron "*/p" du champ des secondes ne tient la periode que pour un diviseur de 60 (au-dela de 59 s,
+    # une fois par minute) ; passer a un timer si une periode plus longue sert un jour.
+    def periodeReleve()
+        var p = int(drivers["ModBus"].find("periodeReleve", 30))
+        return p < 5 ? 5 : (p > 300 ? 300 : p)
+    end
 
     # Chien de garde (2026-09-29) : un esclave est vivant tant qu'il repond a une requete
     # (appariee) ou qu'il pousse un etat. Appele par recupereReponseModBus.

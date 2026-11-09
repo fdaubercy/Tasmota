@@ -2201,6 +2201,140 @@ drivers = sauveDrivers
 diverses = sauveDiverses
 
 print("")
+print("=== 37. Lecture groupee du maitre : une requete 0x04, 7 valeurs reparties (2026-11-09) ===")
+# Carte d'affichage des debits (maitre) : 7 analogiques virtuelles idModBus 1 a 7 de l'esclave d'acquisition (id 1),
+# relues en UNE requete 0x04 (4704, Count 7, uint32) et reparties registre par registre. Avant : une requete par
+# appareil et seule Values[0] lue. Cle par esclave TasmotaSlaveModBus<n>.lectureGroupee : garage inchange sans elle.
+sauveDrivers = drivers
+sauveModules = modules
+sauveServeur = serveur
+var sauveMaitre = maitre
+serveur = {"udp": {"activation": "ON"}, "tcp": {"activation": "OFF"}, "mqtt": {"topic": "ecran"}}
+drivers = {"ModBus": {"activation": "ON", "id": 0, "typeComm": {"Serial":"ON", "TCP":"OFF", "UDP":"ON"},
+           "environnement": {"TasmotaSlaveModBus": {"debug": "OFF",
+               "TasmotaSlaveModBus1": {"activation": "ON", "id": 1, "name": "debits"}}}}}
+var esclave37 = drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"]["TasmotaSlaveModBus1"]
+def appareils37()
+  var ana = {}
+  for i: 1 .. 7    ana["analogique" + str(i)] = {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus1", "type": 4704, "idModBus": i, "id": i, "value": 0, "nom": "Debit " + str(i)}    end
+  return {"ecran": {"activation": "ON", "environnement": {"analogiques": ana,
+    "thermometres": {"thermometre1": {"activation": "ON", "virtuel": "ModBus_TasmotaSlaveModBus1", "type": 1216, "idModBus": 1, "id": 1, "value": 0.0, "Humidity": 0.0}}}}}
+end
+modules = appareils37()
+var ana37 = def (i) return modules["ecran"]["environnement"]["analogiques"]["analogique" + str(i)] end
+# "<value>:<etatConstate>" des 7 entrees, dans l'ordre
+var resume37 = def ()
+  var l = []
+  for i: 1 .. 7    l.push(str(ana37(i)["value"]) + ":" + str(ana37(i).find("etatConstate")))    end
+  return l.concat(" ")
+end
+var envoyes37 = []
+vraiEnvoi = modbusFonctions.envoiMsgModbus
+modbusFonctions.envoiMsgModbus = def (t, typeMsg, id) envoyes37.push(string.format("%i/%i/%i/%s/%i", t["DeviceAddress"], t["FunctionCode"], t["StartAddress"], t["type"], t["Count"])) end
+var m37 = MaitreReleve()
+# (a) cle absente : une demande par appareil (7 analogiques + le DHT22)
+m37.releveEsclaves()
+verifie("(a) sans cle : une demande par appareil", "8/true/true",
+        str(size(envoyes37)) + "/" + str(envoyes37.find("1/4/4710/uint32/1") != nil) + "/" + str(envoyes37.find("1/4/1216/float/2") != nil))
+# (b) cle ON : UNE demande 0x04 pour les 7 analogiques, le DHT22 garde la sienne
+esclave37["lectureGroupee"] = "ON"
+envoyes37 = []
+essaie(def () m37.releveEsclaves() end)
+verifie("(b) cle ON : 4704 Count 7 uint32 + DHT22 inchange", "2/true/true",
+        str(size(envoyes37)) + "/" + str(envoyes37.find("1/4/4704/uint32/7") != nil) + "/" + str(envoyes37.find("1/4/1216/float/2") != nil))
+var devs37 = []
+for i: 1 .. 7    devs37.push(ana37(i))    end
+verifie("(b) trame groupee : 14 registres a partir de 0x1260", trameAvecCrc("01041260000E"),
+        essaie(def () return modbusFonctions.prepareTrame(m37.demandeGroupee(devs37, 1)[0], "Commande").tohex() end))
+# (b') trou dans les idModBus (1, 2, 4) : repli sur une demande par appareil
+verifie("(b') trou 1-2-4 : 3 demandes individuelles", "3/1",
+        essaie(def () var t = m37.demandeGroupee([ana37(1), ana37(2), ana37(4)], 1) return str(size(t)) + "/" + str(t[0]["Count"]) end))
+verifie("(b') temoin 2-3 consecutifs : une demande 4705 Count 2", "1/4705/2",
+        essaie(def () var t = m37.demandeGroupee([ana37(3), ana37(2)], 1) return str(size(t)) + "/" + str(t[0]["StartAddress"]) + "/" + str(t[0]["Count"]) end))
+modbusFonctions.envoiMsgModbus = vraiEnvoi
+# Reponses, comme la regle 'ModbusReceived...#DeviceAddress==1' les passe au handler
+maitre = MaitreStub()
+maitre.dataJson["TasmotaSlaveModBus"]["TasmotaSlaveModBus1"] = {}
+var nbTermine37 = 0
+var vraiTermine37 = modbusFonctions.termineEnVol
+modbusFonctions.termineEnVol = def (ok) nbTermine37 += 1 return vraiTermine37(ok) end
+var lit37 = def (vals)
+  modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 1, "FunctionCode": 4, "StartAddress": 4704, "Count": 7, "type": "uint32"}}
+  recoit(1, "ModbusReceived", {"DeviceAddress": 1, "FunctionCode": 4, "Values": vals})
+end
+# (c) reponse de 7 valeurs (mot d'etats 0x1000 : bit 12, groupe servi)
+tasmota.horloge = 1234
+lit37([101, 102, 103, 104, 105, 106, 0x1000])
+verifie("(c) 7 valeurs reparties, etat valide", "101:valide 102:valide 103:valide 104:valide 105:valide 106:valide 4096:valide", resume37())
+verifie("(c) constateA pose sur les 7 entrees", "1234/1234", str(ana37(1).find("constateA")) + "/" + str(ana37(7).find("constateA")))
+verifie("(c) dataJson ANALOG A3 et A7", "103/4096",
+        essaie(def () var a = maitre.dataJson["TasmotaSlaveModBus"]["TasmotaSlaveModBus1"]["ANALOG"] return str(a["A3"]) + "/" + str(a["A7"]) end))
+verifie("(c) requete acquittee UNE fois", "nil/1", str(modbusFonctions.etat()["enVol"]) + "/" + str(nbTermine37))
+# (c') temoin cle ON, reponse DHT22 (2 floats) : chemin d'avant, pas d'eclatement
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 1, "FunctionCode": 4, "StartAddress": 1216, "Count": 2, "type": "float"}}
+recoit(1, "ModbusReceived", {"DeviceAddress": 1, "FunctionCode": 4, "Values": [21.5, 55.0]})
+var th37 = modules["ecran"]["environnement"]["thermometres"]["thermometre1"]
+verifie("(c') temoin DHT22 : temperature et humidite", "21.5/55/101", str(th37["value"]) + "/" + str(th37["Humidity"]) + "/" + str(ana37(1)["value"]))
+# (d) sentinelle en 3e position : seule l'entree 3 passe 'defaillant', sa valeur est gardee
+lit37([201, 202, 0x7FFFFFFF, 204, 205, 206, 0x1000])
+verifie("(d) sentinelle en 3e position", "201:valide 202:valide 103:defaillant 204:valide 205:valide 206:valide 4096:valide", resume37())
+# (e) bit 12 absent (esclave d'avant la modification : [v, 0, 0, ...]) : tout le groupe 'defaillant', rien range
+journal.clear()
+lit37([301, 0, 0, 0, 0, 0, 0])
+verifie("(e) bit 12 absent : 7 entrees defaillant, valeurs gardees",
+        "201:defaillant 202:defaillant 103:defaillant 204:defaillant 205:defaillant 206:defaillant 4096:defaillant", resume37())
+verifie("(e) groupe rejete journalise en erreur, requete acquittee", "true/nil",
+        str(journalise("MODBUS_TASMOTA_SLAVE_GROUPE")) + "/" + str(modbusFonctions.etat()["enVol"]))
+# (f) push 0x10 de 14 registres, tel que pousseEtat l'emet, decode par lireMsgModbus
+modules = appareils37()
+drivers["ModBus"]["id"] = 1
+modbusFonctions.etat()["seqPush"] = 0
+udpStub.envois = []
+modbusFonctions.pousseEtat(4704, "uint32", [401, 402, 403, 404, 405, 406, 0x1000])
+var push37 = size(udpStub.envois) > 0 ? string.split(udpStub.envois[0][2], " ") : ["", "", ""]
+drivers["ModBus"]["id"] = 0
+modbusFonctions.etat()["derniersSeq"] = {}
+modbusFonctions.etat()["enVol"] = nil
+var recoitPush37 = def (seq)
+  tasmota.publie = nil
+  modbusFonctions.lireMsgModbus("ModbusReceivedUDP", {"Trame": bytes(push37[2]), "Info": {}, "Automatique": true, "Seq": seq})
+  if (tasmota.publie == nil)    return false    end
+  recoit(1, "ModbusReceivedUDP", json.load(str(tasmota.publie))["ModbusReceivedUDP"])
+  return true
+end
+nbTermine37 = 0
+verifie("(f) push de 37 octets publie", "37/true", str(size(bytes(push37[2]))) + "/" + str(recoitPush37(int(push37[1]))))
+verifie("(f) push : 7 valeurs reparties, etat valide", "401:valide 402:valide 403:valide 404:valide 405:valide 406:valide 4096:valide", resume37())
+verifie("(f) push : rien acquitte", 0, nbTermine37)
+# (g) push rejoue (meme seq) : ecarte par accepteSeq, aucune valeur touchee
+ana37(1)["value"] = 999
+verifie("(g) push rejoue : ecarte, valeur inchangee", "false/999", str(recoitPush37(int(push37[1]))) + "/" + str(ana37(1)["value"]))
+verifie("(g) temoin push suivant (seq + 1) : accepte", "true/401", str(recoitPush37(int(push37[1]) + 1)) + "/" + str(ana37(1)["value"]))
+modbusFonctions.termineEnVol = vraiTermine37
+modbusFonctions.etat()["enVol"] = nil
+# (h) periode du releve : drivers.ModBus.periodeReleve, bornee 5 a 300
+drivers["ModBus"]["periodeReleve"] = 10
+verifie("(h) periodeReleve 10 -> 10", 10, essaie(def () return m37.periodeReleve() end))
+drivers["ModBus"].remove("periodeReleve")
+verifie("(h) periodeReleve absente -> 30", 30, essaie(def () return m37.periodeReleve() end))
+drivers["ModBus"]["periodeReleve"] = 2
+verifie("(h) periodeReleve 2 -> 5", 5, essaie(def () return m37.periodeReleve() end))
+drivers["ModBus"]["periodeReleve"] = 1000
+verifie("(h) periodeReleve 1000 -> 300", 300, essaie(def () return m37.periodeReleve() end))
+drivers["ModBus"].remove("periodeReleve")
+var nbSave37 = persist.nb_save
+essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "periodeReleve 10", nil) end)
+verifie("(h) ReglageModbus periodeReleve 10 -> 10 sauve", "10/1", str(drivers["ModBus"].find("periodeReleve")) + "/" + str(persist.nb_save - nbSave37))
+essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "PeriodeReleve 2", nil) end)
+essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "periodeReleve abc", nil) end)
+verifie("(h) temoin 2 et abc refuses : inchange, rien sauve", "10/1", str(drivers["ModBus"].find("periodeReleve")) + "/" + str(persist.nb_save - nbSave37))
+maitre = sauveMaitre
+tasmota.horloge = 0
+modules = sauveModules
+drivers = sauveDrivers
+serveur = sauveServeur
+
+print("")
 print(string.format("=== BILAN : %i tests, %i PASS, %i bug(s) connu(s), %i echec(s) inattendu(s) ===",
       total, total - echecs - bugs_connus, bugs_connus, echecs))
 print(echecs == 0 ? "BANC_MODBUS: OK" : "BANC_MODBUS: ECHEC")
