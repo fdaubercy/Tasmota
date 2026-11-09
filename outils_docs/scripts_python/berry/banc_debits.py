@@ -42,6 +42,9 @@ MUTANTS = [
     ("erreur muet a chaque mesure", "if (muet && !debitsFonctions.muets[i])", "if (muet)"),
     ("Muets absent du JSON", "if debitsFonctions.muets[i]    muets.push(i + 1)    end", ""),
     ("muet du persist non valide", '|| m < 1)    m = debitsFonctions.MUET_DEFAUT', '|| false)    m = debitsFonctions.MUET_DEFAUT'),
+    ("veille sans borne haute", "if (v < 0 || v > 120)", "if (v < 0)"),
+    ("veille non appliquee apres reglage", "            persist.save(true)\n            debitsFonctions.appliqueVeille()\n", "            persist.save(true)\n"),
+    ("veille non appliquee au demarrage", "        debitsFonctions.ecran()\n        debitsFonctions.appliqueVeille()\n", "        debitsFonctions.ecran()\n"),
 ]
 
 

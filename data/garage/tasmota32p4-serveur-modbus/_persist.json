@@ -940,17 +940,15 @@
 						"pin": 3,
 						"id": 1,
 						"type": 11008
-					}
-				},
-				"relais": {
-					"relai1": {
+					},
+					"pinsEcran9": {
 						"activation": "OFF",
 						"nom": "Rétro Ecl",
 						"pin": 4,
 						"id": 1,
 						"type": 992
 					},
-					"relai2": {
+					"pinsEcran10": {
 						"activation": "OFF",
 						"nom": "Display Rst",
 						"pin": 6,

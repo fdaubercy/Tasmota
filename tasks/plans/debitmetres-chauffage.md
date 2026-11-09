@@ -3,7 +3,7 @@ chantier: debitmetres-chauffage
 titre: Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web
 statut: actif
 cree: 2026-11-08
-maj: 2026-11-08
+maj: 2026-11-09
 source: graceful-orbiting-pudding.md
 objectif: Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran
 ---
@@ -102,6 +102,7 @@ sans impulsions.
 - [x] Compilation sur la nouvelle base (LVGL + HASPmota, ~+530 Ko : flash attendue ~86 %), SUCCESS lu en fin de journal — preuve : journal de la page Build du 2026-11-08, `[SUCCESS] Took 5782.80 seconds`, RAM 23.7 %, Flash 87.3 % (3 489 211 / 3 997 696 o) ; FlowRateMeterIR (0x40374f34) et CounterIsrArg en IRAM malgre les 3 avertissements IRAM_ATTR de xsns_96 (nm du firmware.elf)
 - [x] Page HASPmota `pages.jsonl` : maquettes PNG proposées (`outils_docs/chauffage/ecran/modele-A|B|C.png`), **modèle B retenu** (utilisateur, 2026-11-08 : liste avec barres) ; page 1 = nom, barre relative à la plus forte voie, débit, part, total ; page 2 « Détails » = K de chaque voie et fenêtre. Objets écrits directement par `debitsFonctions.be::debitsFonctions_ecran` (couleur selon l'état : imprécis, arrêt, absent — impossible par `text_rule`), HASPmota démarré sur `/json/pages.jsonl` par `debitsFonctions_demarreEcran` — preuve : `banc_debits.py` 54 vérifications OK, 20 témoins rouges, VERT ; `verifie_berry.py` 0 erreur 0 avertissement. Rendu LVGL réel non vu (à juger sur carte)
 - [x] Débit mesuré entre 0 et 1 L/min (hors plage du capteur) affiché « < 1 » sur l'écran et la page web, et signalé comme tel dans le JSON — preuve : `debitsFonctions.be::debitsFonctions_imprecis` (écran « <1 », page « < 1 : imprécis », JSON `Imprecis`) ; banc 45 vérifications OK, 18 témoins rouges, VERT (2026-11-08)
+- [x] Veille de l'écran réglable par l'utilisateur (demande du 2026-11-09) : `ReglageDebits veille <min>` (0 à 120, 0 = jamais, défaut 5), persist `modules.debits.veille`, appliquée à HASPmota sans redémarrer (`haspmota.dimming_time`) ; luminosité à 25 % puis écran éteint 30 s plus tard, un toucher le rallume — preuve : `debitsFonctions.be::debitsFonctions_veille`, `debitsFonctions_appliqueVeille` ; banc 78 vérifications OK, 27 témoins rouges, VERT. Rendu réel à voir sur la carte
 - [ ] Page web de la carte : 6 lignes nommées (`web_sensor`) ; lignes natives des compteurs bruts et du `FlowRateMeter` jugées sur la vraie page (gardées ou masquées), avec l'utilisateur
 - [ ] Durée d'une mise à jour de l'écran mesurée sur carte (`tasmota.millis()` autour de l'écriture), consignée ; fréquence SPI du `display.ini` à essayer si l'écran est lent
 - [x] Message « capteur muet » si une voie ne donne plus d'impulsion : **10 min** à 0 L/min (utilisateur, 2026-11-08 ; persist `modules.debits.muet` en min, facultatif) — preuve : `debitsFonctions.be::debitsFonctions_suitMuets` (erreur `CAPTEUR_MUET_ERREUR` au passage seulement, une impulsion remet la voie à l'état normal, une voie sans mesure ne compte pas), écran rouge « muet », page « capteur muet ? », JSON `Muets`, `ReglageDebits` → `muets` ; `muet` du persist hors limites (0, négatif, texte) ignoré ; banc 72 vérifications OK, 24 témoins rouges, VERT ; relu par `relecteur-berry`. Limite : un départ fermé plus de 10 min est aussi signalé
@@ -125,9 +126,9 @@ sans impulsions.
 - [ ] [projet] Carte porteuse PCB pour la nourrice (skill `pcb-tasmota`)
 - [ ] [projet] Historique et page `/graphiques` des 6 débits : plan `tasks/plans/historique-debits.md` (en pause, à valider)
 - [ ] [projet] Assistant persist : reprendre `page_cuve`, `page_energie`, `pages_graphiques`, `pages_graphiques_moteur` dans le `custom_files_exclude` d'un env créé (oubli constaté le 2026-11-08)
-- [ ] [projet] Vidéo guidée du réglage de l'équilibrage (guide `outils_docs/chauffage/EQUILIBRAGE_CHAUFFAGE_NOURRICE.md`), si l'utilisateur la demande
+- [x] [projet] Guide animé du réglage de l'équilibrage (demandé le 2026-11-09, format retenu : **page HTML animée pas à pas**, lisible sur téléphone devant la nourrice), d'après `outils_docs/chauffage/EQUILIBRAGE_CHAUFFAGE_NOURRICE.md` — preuve : `outils_docs/chauffage/equilibrage_pas_a_pas.html` (10 étapes, schéma animé, calculateur), publié https://claude.ai/artifact/6oyWDPZEAhjo5btUxs6BL7 ; rendu Chrome pas encore vérifié (build P4 en cours)
 - [ ] [projet] Lire la PAC (EKHBRD probable, photo du 2026-11-08) : passerelle RTD-W en Modbus RS485 ou pont P1P2MQTT, lecture seule ; pas de voie X10A prouvee (guide § 2.1 ter)
-- [ ] [projet] Bloc `drivers.ecran` du P4 (et modèle de l'assistant persist à vérifier) : rétroéclairage et reset rangés dans `relais`, lus comme de vrais relais par `configDevicesByRules` dès que l'écran est activé (`key_error - timestamp`, constaté le 2026-11-08 sur la carte des débits) ; les mettre dans `pinsEcrans`
+- [x] [projet] Bloc `drivers.ecran` du P4 : rétroéclairage et reset rangés dans `relais`, lus comme de vrais relais par `configDevicesByRules` (`key_error - timestamp`, constaté le 2026-11-08) — décision de l'utilisateur (2026-11-09) : extinction après inactivité par la **veille de HASPmota** (`dimming_time`, `lv_haspmota.be::auto_dimming`, qui exige la broche en type rétroéclairage 992 et non un relais Tasmota) ; preuve : P4 `pinsEcran9` (992) et `pinsEcran10` (1024), groupe `relais` retiré ; les 7 autres persists et le modèle de l'assistant gardent ce groupe désactivé (à aligner quand leur écran sera activé)
 - [ ] [projet] Températures départ et retour (DS18B20) pour la puissance par radiateur : P (W) ≈ 1,16 × Q (L/h) × ΔT (K)
 
 ## Vérification

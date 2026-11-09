@@ -13,6 +13,7 @@ var debitsFonctions = module("debitsFonctions")
 debitsFonctions.NB_VOIES = 6
 debitsFonctions.K_DEFAUT = 11.0           # YF-B2 : F (Hz) = 11 x Q (L/min)
 debitsFonctions.FENETRE_DEFAUT = 10       # s entre deux mesures
+debitsFonctions.VEILLE_DEFAUT = 5         # min sans toucher l'ecran avant sa mise en veille (0 = jamais)
 # FlowRateMeter a calibrage 1000 : Rate = (1e6 / 60 / 2) / periode_us x 1000 = f / 0,12 (xsns_96 FlowRateMeterGetValue)
 debitsFonctions.HZ_PAR_RATE = 0.12
 debitsFonctions.CLE_FLOWRATE = ["Débit", "Flowrate"]    # D_FLOWRATEMETER_NAME : fr_FR.h, en_GB.h
@@ -37,6 +38,25 @@ def debitsFonctions_fenetre()
     return modules.contains("debits") ? modules["debits"].find("fenetre", debitsFonctions.FENETRE_DEFAUT) : debitsFonctions.FENETRE_DEFAUT
 end
 debitsFonctions.fenetre = debitsFonctions_fenetre
+
+# Minutes sans toucher l'ecran avant sa mise en veille (HASPmota : 25 % puis eteint 30 s plus tard), 0 = jamais ;
+# persist modules.debits.veille, valeur hors 0..120 ignoree (persist edite a la main)
+def debitsFonctions_veille()
+    import debitsFonctions
+    var v = modules.contains("debits") ? modules["debits"].find("veille", debitsFonctions.VEILLE_DEFAUT) : debitsFonctions.VEILLE_DEFAUT
+    return (type(v) == "int" && v >= 0 && v <= 120) ? v : debitsFonctions.VEILLE_DEFAUT
+end
+debitsFonctions.veille = debitsFonctions_veille
+
+# Applique la veille a HASPmota (lu a chaque passage de haspmota.auto_dimming) ; rien sans ecran demarre
+def debitsFonctions_appliqueVeille()
+    import global
+    import debitsFonctions
+    if (global.p1b13 == nil)    return    end
+    import haspmota
+    haspmota.dimming_time = debitsFonctions.veille()
+end
+debitsFonctions.appliqueVeille = debitsFonctions_appliqueVeille
 
 # Entree du persist qui porte la broche, le nom et le K de la voie i (0 a 5), nil si absente :
 # voies 1-2 = environnement.debitmetres.debitmetre1-2 (FlowRateMeter), voies 3-6 = environnement.compteurs.compteur1-4
@@ -277,6 +297,7 @@ def debitsFonctions_demarreEcran()
         import haspmota
         haspmota.start(debitsFonctions.PAGES)
         debitsFonctions.ecran()
+        debitsFonctions.appliqueVeille()
         return true
     except .. as e, m
         debitsFonctions.log("ECRAN_DEBITS_ERREUR: HASPmota non demarre : " + str(e) + " " + str(m) + " !", LOG_LEVEL_ERREUR)
@@ -292,7 +313,8 @@ def debitsFonctions_aideReglageDebits(sujet)
         return [
             ["k", "k <voie 1-6> <Hz par L/min>", "facteur du debitmetre (YF-B2 : 11)"],
             ["nom", "nom <voie 1-6> <texte>", "nom du depart affiche"],
-            ["fenetre", "fenetre <s>", "duree de mesure, 2 a 60 s"]
+            ["fenetre", "fenetre <s>", "duree de mesure, 2 a 60 s"],
+            ["veille", "veille <min>", "ecran mis en veille apres <min> sans toucher, 0 = jamais"]
         ]
     end
     sujet = string.toupper(sujet)
@@ -311,6 +333,12 @@ def debitsFonctions_aideReglageDebits(sujet)
         return ["Parametre : duree en s (2 a 60) entre deux mesures ; plus longue = plus precise aux petits debits.",
                 "Sauvegarde : modules debits fenetre (persist.save).",
                 "Exemple : ReglageDebits fenetre 10"]
+    end
+    if (sujet == "VEILLE")
+        return ["Parametre : minutes (0 a 120) sans toucher l'ecran avant sa mise en veille ; 0 = jamais.",
+                "Effet : luminosite a 25 %, puis ecran eteint 30 s plus tard ; un toucher le rallume. Applique sans redemarrer.",
+                "Sauvegarde : modules debits veille (persist.save).",
+                "Exemple : ReglageDebits veille 5"]
     end
     return nil
 end
@@ -349,6 +377,7 @@ debitsFonctions.regleVoie = debitsFonctions_regleVoie
     ReglageDebits k 1 11            => K de la voie 1
     ReglageDebits nom 2 Chambre 1   => nom de la voie 2
     ReglageDebits fenetre 10        => mesure toutes les 10 s
+    ReglageDebits veille 5          => ecran en veille apres 5 min sans toucher (0 = jamais)
     ReglageDebits                   => reglages et debits actuels
 -#
 def debitsFonctions_reglageDebits(cmd, idx, payload, payload_json)
@@ -390,11 +419,21 @@ def debitsFonctions_reglageDebits(cmd, idx, payload, payload_json)
             modules["debits"]["fenetre"] = s
             persist.save(true)
         end
+    elif (f == "VEILLE")
+        var v = (n != nil && n == int(n) ? int(n) : -1)
+        if (v < 0 || v > 120)
+            debitsFonctions.log("REGLAGE_DEBITS_ERREUR: veille '" + (size(p) > 1 ? p[1] : "") + "' refusee : 0 a 120 min attendu !", LOG_LEVEL_ERREUR)
+        else
+            if (!modules.contains("debits"))    modules["debits"] = {}    end
+            modules["debits"]["veille"] = v
+            persist.save(true)
+            debitsFonctions.appliqueVeille()
+        end
     end
 
     var voies = []
     for n: 0 .. debitsFonctions.NB_VOIES - 1    voies.push(debitsFonctions.voie(n))    end
-    tasmota.resp_cmnd(json.dump({"ReglageDebits": {"fenetre": debitsFonctions.fenetre(), "voies": voies, "debits": debitsFonctions.debits,
+    tasmota.resp_cmnd(json.dump({"ReglageDebits": {"fenetre": debitsFonctions.fenetre(), "veille": debitsFonctions.veille(), "voies": voies, "debits": debitsFonctions.debits,
                                                       "muets": debitsFonctions.muets, "ecran_ms": debitsFonctions.ecranMs}}))
 end
 debitsFonctions.reglageDebits = debitsFonctions_reglageDebits

@@ -1,0 +1,322 @@
+<title>Équilibrer la nourrice</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@500&display=swap">
+<!-- Guide animé du réglage de l'équilibrage (plan debitmetres-chauffage, demandé le 2026-11-09).
+     Source : outils_docs/chauffage/EQUILIBRAGE_CHAUFFAGE_NOURRICE.md (le texte fait foi en cas d'écart). -->
+<style>
+/* Mise en page : une étape par écran, schéma animé de la nourrice au-dessus du texte, calculateur en bas */
+:root {
+  --fond: #eef1f4; --carte: #ffffff; --texte: #1d2733; --doux: #5b6878; --trait: #d5dbe2;
+  --cuivre: #b0622a; --chaud: #d2452f; --froid: #2f6fd2; --bon: #2e8b57; --trop: #d98a1c; --peu: #4a78c8;
+  --titre: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --corps: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --chiffre: "JetBrains Mono", "Consolas", monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --fond: #141a21; --carte: #1c242e; --texte: #e3e8ee; --doux: #9aa7b6; --trait: #2e3946;
+  --cuivre: #d98a4f; --chaud: #ef6a54; --froid: #5b93ee; --bon: #4cb37a; --trop: #f0a845; --peu: #7aa0e6; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --fond: #141a21; --carte: #1c242e; --texte: #e3e8ee; --doux: #9aa7b6; --trait: #2e3946;
+  --cuivre: #d98a4f; --chaud: #ef6a54; --froid: #5b93ee; --bon: #4cb37a; --trop: #f0a845; --peu: #7aa0e6; color-scheme: dark }
+body { background: var(--fond); color: var(--texte); font: 16px/1.5 var(--corps); }
+.page { max-width: 760px; margin: 0 auto; padding-block: 16px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 16px; }
+h1, h2 { font-family: var(--titre); font-weight: 700; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.1; }
+h1 { font-size: 2rem; } h2 { font-size: 1.55rem; }
+.etiquette { font: 600 .78rem/1 var(--corps); text-transform: uppercase; letter-spacing: .08em; color: var(--cuivre); }
+.carte { background: var(--carte); border: 1px solid var(--trait); border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.entete { display: grid; gap: 6px; }
+.entete p { margin: 0; color: var(--doux); }
+.frise { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 0; list-style: none; }
+.frise button { font: 600 .85rem var(--titre); letter-spacing: .04em; min-width: 2.3rem; padding: 6px 8px; border-radius: 6px;
+  border: 1px solid var(--trait); background: var(--carte); color: var(--doux); cursor: pointer; }
+.frise button[aria-current="step"] { background: var(--cuivre); border-color: var(--cuivre); color: #fff; }
+.frise button:focus-visible, .nav button:focus-visible, input:focus-visible { outline: 3px solid var(--froid); outline-offset: 2px; }
+svg { width: 100%; height: auto; display: block; }
+.legende { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .82rem; color: var(--doux); }
+.legende span::before { content: ""; display: inline-block; width: .7em; height: .7em; border-radius: 2px; margin-right: .35em; background: var(--c); vertical-align: -.05em; }
+.etape h2 { display: flex; gap: 10px; align-items: baseline; }
+.etape h2 b { font-family: var(--chiffre); font-weight: 500; font-size: 1rem; color: var(--cuivre); }
+.etape ul, .etape ol { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.etape p { margin: 0; }
+.attention { border-left: 4px solid var(--trop); padding: 8px 12px; background: color-mix(in srgb, var(--trop) 10%, var(--carte)); border-radius: 0 6px 6px 0; }
+.formule { font-family: var(--chiffre); font-size: .9rem; background: var(--fond); border-radius: 6px; padding: 10px 12px; overflow-x: auto; }
+.nav { display: flex; justify-content: space-between; gap: 10px; }
+.nav button { font: 600 1rem var(--corps); padding: 10px 16px; border-radius: 8px; border: 1px solid var(--trait); background: var(--carte); color: var(--texte); cursor: pointer; min-height: 44px; }
+.nav button.suivant { background: var(--cuivre); border-color: var(--cuivre); color: #fff; }
+.nav button:disabled { opacity: .4; cursor: default; }
+.calc .champs { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.calc label { display: grid; gap: 4px; font-size: .85rem; color: var(--doux); }
+.calc input { font: 500 1rem var(--chiffre); padding: 8px; border-radius: 6px; border: 1px solid var(--trait); background: var(--fond); color: var(--texte); width: 100%; box-sizing: border-box; }
+.tableau { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: .92rem; }
+th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--trait); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font: 600 .78rem var(--corps); text-transform: uppercase; letter-spacing: .06em; color: var(--doux); }
+td.trop { color: var(--trop); font-weight: 600; } td.peu { color: var(--peu); font-weight: 600; } td.bon { color: var(--bon); font-weight: 600; }
+.note { font-size: .82rem; color: var(--doux); margin: 0; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="page">
+  <header class="entete">
+    <span class="etiquette">PAC · nourrice · 6 radiateurs</span>
+    <h1>Équilibrer la nourrice, pas à pas</h1>
+    <p>Une étape par écran. Le schéma montre ce que fait l'eau à chaque étape ; le calculateur en bas donne les débits cibles et l'ordre de réglage.</p>
+  </header>
+
+  <nav aria-label="Étapes"><ol class="frise" id="frise"></ol></nav>
+
+  <section class="carte" aria-label="Schéma de la nourrice">
+    <svg id="schema" viewBox="0 0 360 230" role="img" aria-labelledby="schema-titre">
+      <title id="schema-titre">Nourrice : départ chaud en haut, retour froid en bas, 6 départs vers les radiateurs</title>
+    </svg>
+    <div class="legende">
+      <span style="--c: var(--bon)">à sa cible (± 10 %)</span>
+      <span style="--c: var(--trop)">trop d'eau</span>
+      <span style="--c: var(--peu)">pas assez</span>
+      <span style="--c: var(--doux)">à l'arrêt</span>
+    </div>
+    <p class="note" id="schema-texte"></p>
+  </section>
+
+  <article class="carte etape" id="etape" aria-live="polite"></article>
+
+  <div class="nav">
+    <button type="button" id="precedent">← Précédent</button>
+    <button type="button" id="suivant" class="suivant">Suivant →</button>
+  </div>
+
+  <section class="carte calc" aria-labelledby="calc-titre">
+    <span class="etiquette">Calculateur</span>
+    <h2 id="calc-titre">Mes débits cibles et l'ordre de réglage</h2>
+    <p class="note">Rempli avec l'exemple du guide (chiffres fictifs) : remplacez-les par les vôtres. Vos saisies restent dans ce navigateur.</p>
+    <div class="champs">
+      <label for="pac">Débit de la PAC (L/min)<input id="pac" inputmode="decimal" value="20"></label>
+    </div>
+    <div class="champs" id="champs-p"></div>
+    <div class="champs" id="champs-m"></div>
+    <div class="tableau"><table id="resultat"></table></div>
+    <p class="note" id="conseil"></p>
+  </section>
+</div>
+
+<script>
+// ---- Données de l'exemple du guide (§ 4) : PAC à 20 L/min, 6 radiateurs ----
+const CIBLE = [2.7, 2.7, 3.1, 3.5, 3.8, 4.2];
+const OUVERT = [4.9, 3.8, 3.4, 3.2, 2.6, 2.1];     // vannes ouvertes à fond : le plus proche boit le plus
+const ARRET = [0, 0, 0, 0, 0, 0];
+
+// Chaque étape : code, titre, texte, débits du schéma (ou "reglage" = animation de l'étape C)
+const ETAPES = [
+  { id: "comprendre", code: "0", titre: "Comprendre l'installation", debits: OUVERT, schema: "L'eau prend le chemin le plus facile : le départ le plus proche reçoit trop, le plus éloigné pas assez.",
+    html: `<ul><li>La <b>PAC</b> chauffe l'eau ; son circulateur la fait tourner. Elle exige un <b>débit minimal</b>.</li>
+      <li>La <b>nourrice</b> répartit l'eau : un départ et un retour par radiateur. C'est <b>le bon endroit pour équilibrer</b>.</li>
+      <li>Le <b>débitmètre-vanne</b> de chaque départ affiche et règle le débit (L/min).</li>
+      <li>La <b>tête thermostatique</b> règle la pièce ; elle n'équilibre pas. Le <b>té de réglage</b> du radiateur reste ouvert à fond.</li></ul>` },
+  { id: "preparer", code: "P", titre: "Préparer, installation à l'arrêt", debits: ARRET, schema: "PAC et circulateur arrêtés : aucun débit.",
+    html: `<ol><li><b>Pression</b> à froid : 1 à 1,5 bar (la notice de la PAC prime). Trop bas : compléter.</li>
+      <li><b>Purger</b> chaque radiateur, du plus bas au plus haut, jusqu'à de l'eau sans bulles. Relire la pression.</li>
+      <li>Nettoyer le <b>filtre / pot à boues</b> de la PAC.</li>
+      <li>Désactiver eau chaude, modes éco, nuit, vacances et thermostat d'ambiance : il faut <b>une chauffe continue</b>.</li></ol>
+      <p class="attention">Ne jamais purger en marche : on aspire de l'air au lieu d'en chasser.</p>` },
+  { id: "calculer", code: "∑", titre: "Calculer le débit cible", debits: CIBLE, cible: true, schema: "Les débits visés : chaque radiateur reçoit sa part du débit de la PAC.",
+    html: `<p>On partage le débit de la PAC <b>au prorata des puissances</b> des radiateurs :</p>
+      <div class="formule">Cible du radiateur i = débit PAC × puissance i ÷ somme des puissances</div>
+      <p>Avec une pompe à débit variable (Daikin Altherma), suivre plutôt la <b>part</b> de chaque départ :</p>
+      <div class="formule">Part mesurée = débit du départ ÷ somme des 6 débits relevés au même moment</div>
+      <p>Le calculateur en bas de page fait ces deux calculs.</p>` },
+  { id: "a", code: "A", titre: "Tout ouvrir", debits: OUVERT, schema: "Tout est ouvert : les départs proches (1, 2) prennent trop d'eau, les éloignés (5, 6) manquent.",
+    html: `<ul><li>Têtes thermostatiques <b>au maximum</b> (ou retirées).</li>
+      <li>Tés de réglage des radiateurs <b>ouverts à fond</b>.</li>
+      <li>Vannes des <b>6 départs de la nourrice ouvertes à fond</b>.</li>
+      <li>PAC en chauffe <b>20 à 30 minutes</b> pour que tout se stabilise.</li></ul>` },
+  { id: "b", code: "B", titre: "Relever l'état de départ", debits: OUVERT, rapports: true, schema: "Rapport mesuré ÷ cible sous chaque départ : on règlera du plus grand au plus petit.",
+    html: `<ul><li>Noter le débit de chaque départ, vannes ouvertes.</li>
+      <li>Calculer le <b>rapport mesuré ÷ cible</b> (ou part mesurée ÷ part cible avec une pompe à débit variable).</li>
+      <li>Si la PAC affiche son débit, la somme des 6 doit en être proche.</li></ul>` },
+  { id: "c", code: "C", titre: "Régler, du plus gourmand au moins gourmand", debits: "reglage", schema: "Le départ au plus grand rapport se ferme par petits gestes ; les autres reçoivent l'eau libérée.",
+    html: `<ol><li>Prendre le départ au <b>plus grand rapport</b> (souvent le plus proche).</li>
+      <li>Le fermer de <b>1/8 à 1/4 de tour</b>, attendre <b>1 à 2 minutes</b>, relire.</li>
+      <li>S'arrêter à sa cible <b>± 10 %</b>, passer au suivant.</li>
+      <li>Le départ le plus défavorisé <b>reste ouvert à fond</b>.</li>
+      <li><b>Refaire 2 ou 3 passes</b> : freiner un départ envoie un peu plus d'eau aux autres.</li></ol>
+      <p class="attention">Tous sous leur cible alors que tout est ouvert ? Le circulateur ne pousse pas assez, ou boues, air, filtre : voir l'arbre de dépannage du guide (§ 7).</p>` },
+  { id: "d", code: "D", titre: "Vérifier la PAC", debits: CIBLE, schema: "Débit total = somme des 6 départs : il doit rester au-dessus du minimum de la PAC.",
+    html: `<ul><li>Débit total <b>au-dessus du débit minimal</b> de la PAC (notice). Sinon, rouvrir toutes les vannes <b>dans la même proportion</b>.</li>
+      <li>Aucune alarme « débit » ou « ΔT » sur la PAC.</li></ul>` },
+  { id: "e", code: "E", titre: "Vérifier les températures, après 1 heure", debits: CIBLE, schema: "Écarts aller − retour voisins sur les 6 radiateurs : l'équilibrage est bon.",
+    html: `<ul><li>Sur chaque radiateur, températures <b>aller</b> et <b>retour</b> (thermomètre infrarouge ou à pince).</li>
+      <li>Les écarts doivent être <b>voisins</b> d'un radiateur à l'autre (<b>± 2 K</b>).</li>
+      <li>Écart beaucoup plus grand : il manque d'eau, lui en redonner un peu ; plus petit : il en a trop.</li></ul>` },
+  { id: "f", code: "F", titre: "Fixer et remettre en service", debits: CIBLE, schema: "Réglages bloqués : la répartition ne bougera plus.",
+    html: `<ul><li>Serrer les <b>bagues mémoire</b> des vannes et <b>noter</b> les réglages (tableau du guide, § 2.2).</li>
+      <li>Remettre les têtes thermostatiques (position 3 ≈ 20 °C).</li>
+      <li>Réactiver eau chaude, modes éco et thermostat.</li></ul>` },
+  { id: "g", code: "G", titre: "Régler le confort sur quelques jours", debits: CIBLE, schema: "Le confort se règle à la PAC, plus jamais à la nourrice.",
+    html: `<ul><li>Toutes les pièces trop froides ou trop chaudes : modifier la <b>courbe de chauffe</b> (loi d'eau) de la PAC.</li>
+      <li>Une seule pièce trop chaude : baisser sa tête thermostatique ; trop froide : vérifier qu'elle atteint sa cible, puis lui donner un peu plus de débit.</li>
+      <li>Refaire un contrôle rapide au début de chaque hiver.</li></ul>
+      <p class="attention">À ne pas faire : fermer une vanne de la nourrice pour baisser une pièce, fermer plusieurs départs en même temps, régler par temps doux quand la PAC s'arrête souvent.</p>` },
+];
+
+// ---- Schéma SVG de la nourrice ----
+const NS = "http://www.w3.org/2000/svg";
+const svg = document.getElementById("schema");
+const X = i => 45 + i * 54;
+function el(nom, attrs, parent) {
+  const e = document.createElementNS(NS, nom);
+  // couleurs et police par style : var() n'est pas fiable dans un attribut de présentation SVG
+  for (const k in attrs) ["fill", "stroke", "font-family"].includes(k) ? e.style.setProperty(k, attrs[k]) : e.setAttribute(k, attrs[k]);
+  (parent || svg).appendChild(e);
+  return e;
+}
+el("text", { x: 8, y: 22, "font-size": 11, fill: "var(--chaud)", "font-family": "var(--corps)" }).textContent = "départ chaud";
+el("text", { x: 8, y: 222, "font-size": 11, fill: "var(--froid)", "font-family": "var(--corps)" }).textContent = "retour";
+el("rect", { x: 20, y: 28, width: 320, height: 10, rx: 3, fill: "var(--chaud)" });
+el("rect", { x: 20, y: 196, width: 320, height: 10, rx: 3, fill: "var(--froid)" });
+const departs = [];
+for (let i = 0; i < 6; i++) {
+  const x = X(i), g = el("g", {});
+  el("line", { x1: x - 8, y1: 38, x2: x - 8, y2: 104, stroke: "var(--trait)", "stroke-width": 5 }, g);
+  el("line", { x1: x + 8, y1: 150, x2: x + 8, y2: 196, stroke: "var(--trait)", "stroke-width": 5 }, g);
+  const flux = [el("line", { x1: x - 8, y1: 38, x2: x - 8, y2: 104, stroke: "var(--chaud)", "stroke-width": 3, "stroke-dasharray": "4 7", fill: "none" }, g),
+                el("line", { x1: x + 8, y1: 150, x2: x + 8, y2: 196, stroke: "var(--froid)", "stroke-width": 3, "stroke-dasharray": "4 7", fill: "none" }, g)];
+  // vanne : deux triangles (papillon) qui s'aplatissent quand elle se ferme
+  const vanne = el("path", { d: "", fill: "var(--cuivre)" }, g);
+  const radiateur = el("rect", { x: x - 18, y: 104, width: 36, height: 46, rx: 4, fill: "var(--carte)", stroke: "var(--doux)", "stroke-width": 2 }, g);
+  for (let k = -12; k <= 12; k += 8) el("line", { x1: x + k, y1: 110, x2: x + k, y2: 144, stroke: "var(--trait)", "stroke-width": 2 }, g);
+  el("text", { x: x, y: 101, "text-anchor": "middle", "font-size": 10, fill: "var(--doux)", "font-family": "var(--corps)" }, g).textContent = "R" + (i + 1);
+  const valeur = el("text", { x: x, y: 170, "text-anchor": "middle", "font-size": 10.5, fill: "var(--texte)", "font-family": "var(--chiffre)" }, g);
+  const rapport = el("text", { x: x, y: 183, "text-anchor": "middle", "font-size": 9.5, fill: "var(--doux)", "font-family": "var(--chiffre)" }, g);
+  departs.push({ flux, vanne, radiateur, valeur, rapport, decalage: 0 });
+}
+function dessineVanne(d, i, ouverture) {
+  const x = X(i) - 8, y = 66, h = 3 + 7 * ouverture;
+  d.vanne.setAttribute("d", `M${x - 7} ${y - h} L${x + 7} ${y + h} L${x + 7} ${y - h} L${x - 7} ${y + h} Z`);
+}
+function etat(q, cible) {
+  if (q <= 0) return "var(--doux)";
+  const r = q / cible;
+  return r > 1.1 ? "var(--trop)" : r < 0.9 ? "var(--peu)" : "var(--bon)";
+}
+let debits = OUVERT.slice(), montrerRapports = false;
+function majSchema(q, ouvertures) {
+  debits = q;
+  q.forEach((v, i) => {
+    const d = departs[i];
+    d.radiateur.style.stroke = etat(v, CIBLE[i]);
+    d.valeur.textContent = v > 0 ? v.toFixed(1).replace(".", ",") + " L/min" : "0";
+    d.rapport.textContent = montrerRapports && v > 0 ? "× " + (v / CIBLE[i]).toFixed(2).replace(".", ",") : "";
+    dessineVanne(d, i, ouvertures ? ouvertures[i] : (v > 0 ? 1 : 0.15));
+  });
+}
+// Écoulement : les tirets avancent d'autant plus vite que le débit est grand
+const calme = matchMedia("(prefers-reduced-motion: reduce)");
+let dernier = 0;
+function anime(t) {
+  const dt = dernier ? Math.min(t - dernier, 100) : 0; dernier = t;
+  if (!calme.matches) departs.forEach((d, i) => {
+    d.decalage -= debits[i] * dt * 0.012;
+    d.flux.forEach(f => f.setAttribute("stroke-dashoffset", d.decalage.toFixed(1)));
+  });
+  if (reglage) avanceReglage(t);
+  requestAnimationFrame(anime);
+}
+
+// Étape C : le départ au plus grand rapport se ferme, puis le suivant ; 3 passes, puis on recommence
+let reglage = null;
+function avanceReglage(t) {
+  if (!reglage.debut) reglage.debut = t;
+  const DUREE = 14000, f = ((t - reglage.debut) % DUREE) / DUREE;
+  const avance = Math.min(1, f / 0.85);
+  // chaque départ trop gourmand (1, 2, 3) rejoint sa cible à son tour ; l'eau libérée va aux autres
+  const ordre = [0, 1, 2], q = OUVERT.slice(), ouv = [1, 1, 1, 1, 1, 1];
+  ordre.forEach((j, k) => {
+    const p = Math.min(1, Math.max(0, avance * ordre.length - k));
+    q[j] = OUVERT[j] + (CIBLE[j] - OUVERT[j]) * p;
+    ouv[j] = 1 - 0.55 * p * (OUVERT[j] - CIBLE[j]) / OUVERT[j] * 2.2;
+  });
+  const libere = OUVERT.reduce((s, v, i) => s + v, 0) - q.slice(0, 3).reduce((s, v) => s + v, 0) - OUVERT.slice(3).reduce((s, v) => s + v, 0);
+  const besoin = [3, 4, 5].map(i => Math.max(0, CIBLE[i] - OUVERT[i])), total = besoin.reduce((s, v) => s + v, 0);
+  [3, 4, 5].forEach((i, k) => { q[i] = OUVERT[i] + libere * besoin[k] / total; });
+  majSchema(q, ouv);
+}
+
+// ---- Étapes : frise, contenu, navigation par l'ancre ----
+const frise = document.getElementById("frise"), zone = document.getElementById("etape");
+ETAPES.forEach((e, i) => {
+  const li = document.createElement("li"), b = document.createElement("button");
+  b.type = "button"; b.textContent = e.code; b.title = e.titre; b.setAttribute("aria-label", "Étape " + e.code + " : " + e.titre);
+  b.addEventListener("click", () => va(i));
+  li.appendChild(b); frise.appendChild(li);
+});
+let courante = 0;
+function montre(i) {
+  courante = i;
+  const e = ETAPES[i];
+  zone.innerHTML = `<span class="etiquette">Étape ${i + 1} sur ${ETAPES.length}</span><h2><b>${e.code}</b>${e.titre}</h2>${e.html}`;
+  frise.querySelectorAll("button").forEach((b, k) => k === i ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current"));
+  document.getElementById("schema-texte").textContent = e.schema;
+  montrerRapports = !!e.rapports;
+  reglage = e.debits === "reglage" ? { debut: 0 } : null;
+  if (!reglage) majSchema(e.debits.slice(), e.cible ? [0.5, 0.62, 0.8, 0.92, 1, 1] : null);
+  document.getElementById("precedent").disabled = i === 0;
+  document.getElementById("suivant").disabled = i === ETAPES.length - 1;
+}
+function va(i) { location.hash = ETAPES[i].id; }
+function depuisAncre() {
+  const i = ETAPES.findIndex(e => "#" + e.id === location.hash);
+  montre(i < 0 ? 0 : i);
+}
+document.getElementById("precedent").addEventListener("click", () => courante > 0 && va(courante - 1));
+document.getElementById("suivant").addEventListener("click", () => courante < ETAPES.length - 1 && va(courante + 1));
+addEventListener("hashchange", depuisAncre);
+
+// ---- Calculateur : cibles au prorata des puissances, rapport mesuré / cible, ordre de réglage ----
+const EXEMPLE = { pac: "20", p: ["1400", "1400", "1600", "1800", "2000", "2200"], m: OUVERT.map(String) };
+function lit(cle, defaut) { try { const v = localStorage.getItem(cle); return v === null ? defaut : v; } catch { return defaut; } }
+function ecrit(cle, v) { try { localStorage.setItem(cle, v); } catch { /* navigateur sans stockage : rien n'est gardé */ } }
+function champ(parent, id, texte, valeur) {
+  const l = document.createElement("label"); l.htmlFor = id; l.textContent = texte;
+  const i = document.createElement("input"); i.id = id; i.inputMode = "decimal"; i.value = lit(id, valeur);
+  i.addEventListener("input", () => { ecrit(id, i.value); calcule(); });
+  l.appendChild(i); parent.appendChild(l);
+}
+const nombre = s => { const v = parseFloat(String(s).replace(",", ".")); return isFinite(v) && v >= 0 ? v : null; };
+for (let i = 0; i < 6; i++) champ(document.getElementById("champs-p"), "p" + (i + 1), "Radiateur " + (i + 1) + " : puissance (W)", EXEMPLE.p[i]);
+for (let i = 0; i < 6; i++) champ(document.getElementById("champs-m"), "m" + (i + 1), "Départ " + (i + 1) + " : débit mesuré (L/min)", EXEMPLE.m[i]);
+const pac = document.getElementById("pac");
+pac.value = lit("pac", EXEMPLE.pac);
+pac.addEventListener("input", () => { ecrit("pac", pac.value); calcule(); });
+function calcule() {
+  const Q = nombre(pac.value), P = [], M = [];
+  for (let i = 1; i <= 6; i++) { P.push(nombre(document.getElementById("p" + i).value)); M.push(nombre(document.getElementById("m" + i).value)); }
+  const sP = P.reduce((s, v) => s + (v || 0), 0), sM = M.reduce((s, v) => s + (v || 0), 0);
+  const t = document.getElementById("resultat"), conseil = document.getElementById("conseil");
+  if (!Q || !sP) { t.innerHTML = ""; conseil.textContent = "Saisir le débit de la PAC et au moins une puissance."; return; }
+  const lignes = P.map((p, i) => {
+    const part = (p || 0) / sP, cible = Q * part, m = M[i];
+    const r = m !== null && sM > 0 && part > 0 ? (m / sM) / part : null;   // part mesurée / part cible : juste même si la pompe varie
+    return { i, part, cible, m, r };
+  });
+  const ordre = lignes.filter(l => l.r !== null && l.r > 1.1).sort((a, b) => b.r - a.r);
+  const rang = new Map(ordre.map((l, k) => [l.i, k + 1]));
+  const f = (v, n) => v === null ? "–" : v.toFixed(n).replace(".", ",");
+  t.innerHTML = "<thead><tr><th>Départ</th><th>Part cible</th><th>Cible</th><th>Mesuré</th><th>Rapport</th><th>Ordre</th></tr></thead><tbody>" +
+    lignes.map(l => {
+      const c = l.r === null ? "" : l.r > 1.1 ? "trop" : l.r < 0.9 ? "peu" : "bon";
+      return `<tr><td>${l.i + 1}</td><td>${f(l.part * 100, 1)} %</td><td>${f(l.cible, 1)} L/min</td><td>${f(l.m, 1)}</td><td class="${c}">${l.r === null ? "–" : "× " + f(l.r, 2)}</td><td>${rang.get(l.i) || ""}</td></tr>`;
+    }).join("") + `</tbody><tfoot><tr><td>Total</td><td>100 %</td><td>${f(Q, 1)} L/min</td><td>${f(sM, 1)}</td><td></td><td></td></tr></tfoot>`;
+  const faible = lignes.filter(l => l.r !== null).sort((a, b) => a.r - b.r)[0];
+  conseil.textContent = ordre.length
+    ? `Régler d'abord le départ ${ordre[0].i + 1}, puis ${ordre.slice(1).map(l => l.i + 1).join(", ") || "aucun autre"}. Le départ ${faible.i + 1} (le plus défavorisé) reste ouvert à fond.`
+    : "Tous les départs sont à leur part cible à 10 % près : l'équilibrage est fait.";
+}
+
+calcule();
+depuisAncre();
+requestAnimationFrame(anime);
+</script>

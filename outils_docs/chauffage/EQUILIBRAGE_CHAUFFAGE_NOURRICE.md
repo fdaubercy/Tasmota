@@ -332,7 +332,7 @@ flowchart TD
 
 ## 8. Avec les débitmètres électroniques du projet
 
-- Les 6 débits s'afficheront sur l'écran OLED de la carte « Serveur Débits de PAC » et sur sa page web : **plus
+- Les 6 débits s'afficheront sur l'écran tactile (TFT 480×320) de la carte « Serveur Débits de PAC » et sur sa page web : **plus
   besoin de lire les petits débitmètres de la nourrice**, et la mesure tient compte des variations.
 - **Avant de poser les capteurs**, relever le débit de la PAC : les 6 turbines ajoutent de la résistance, et le débit
   total ne doit pas passer sous le minimum de la PAC.

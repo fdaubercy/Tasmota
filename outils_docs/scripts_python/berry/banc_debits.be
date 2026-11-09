@@ -182,6 +182,8 @@ global.PAGE_PRESENTE = true
 verifie("ecran non demarre : erreur journalisee", !debitsFonctions.demarreEcran() && global.HASP_DEMARRE == nil && erreurs() == 1)
 global.ECRAN_DEMARRE = true
 verifie("ecran pret : HASPmota demarre sur /json/pages.jsonl", debitsFonctions.demarreEcran() && global.HASP_DEMARRE == "/json/pages.jsonl")
+import haspmota
+verifie("ecran pret : veille de 5 min par defaut appliquee a HASPmota", haspmota.dimming_time == 5)
 
 print("--- capteur muet (10 min a 0 L/min)")
 debitsFonctions.zero = [nil, nil, nil, nil, nil, nil]
@@ -268,6 +270,20 @@ r("ReglageDebits", 0, "fenetre 15", nil)
 var rep = json.load(global.REPONSE)
 verifie("fenetre 15 : ecrite, reponse coherente", debitsFonctions.fenetre() == 15 && rep["ReglageDebits"]["fenetre"] == 15
         && rep["ReglageDebits"]["voies"][1]["nom"] == "Salle de bain")
+global.JOURNAL = []
+r("ReglageDebits", 0, "veille 10", nil)
+verifie("veille 10 : ecrite au persist et appliquee a HASPmota", global.modules["debits"]["veille"] == 10 && haspmota.dimming_time == 10)
+r("ReglageDebits", 0, "veille 0", nil)
+verifie("veille 0 (jamais) acceptee", haspmota.dimming_time == 0 && erreurs() == 0)
+r("ReglageDebits", 0, "veille 121", nil)
+r("ReglageDebits", 0, "veille abc", nil)
+r("ReglageDebits", 0, "veille 2.5", nil)
+verifie("veille 121, abc, 2.5 : refusees, rien change", erreurs() == 3 && global.modules["debits"]["veille"] == 0)
+rep = json.load(global.REPONSE)
+verifie("reponse : veille", rep["ReglageDebits"]["veille"] == 0)
+global.modules["debits"]["veille"] = "dix"
+verifie("veille illisible au persist : defaut 5", debitsFonctions.veille() == 5)
+global.modules["debits"].remove("veille")
 verifie("reponse : etat muet des voies et duree de l'ecran (ecran_ms)", rep["ReglageDebits"].contains("muets") && rep["ReglageDebits"].contains("ecran_ms"))
 verifie("mesure : duree d'ecriture de l'ecran relevee", type(debitsFonctions.ecranMs) == "int")
 
