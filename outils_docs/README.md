@@ -295,9 +295,20 @@ consommations **d'aujourd'hui par heure**, **du mois par jour**, des **12 dernie
 - **Calibrage** : `diverses.energie.calibrage` du persist. Une minute après le démarrage, si les trois valeurs lues sont
   les défauts de la BL0942 (596 / 15187 / 251213), celles du persist sont rejouées ; sinon rien, un recalibrage manuel est
   respecté. Le compteur `Total` n'est PAS rétabli seul : avant un flash, le relever, puis `EnergyTotal <Wh>`.
+- **Disposition pilotée par une description** (2026-11-08, palier 4 de l'atelier) : si `/json/energie_page.json` existe, la page
+  se dessine d'après elle (`data/sd/js/energie.js`, `Energie.valide` puis `Energie.trace`) ; la carte la relaie sans jamais la
+  parser (`/energie?f=description`, 404 si absente). **Repli** : description absente, au-delà de 4 096 octets, tronquée ou
+  refusée par `Energie.valide` = la page d'avant, plus une ligne « Description ignorée : <motif> ». Un élément mal formé est
+  ignoré seul, avec sa ligne. Un graphique « jour » sur un mois fixe dont l'archive a été purgée reste vide (« archive
+  effacée ») sans arrêter la page ; un champ absent du bloc ENERGY donne une tuile « -- ». Routes de lecture ajoutées :
+  `f=description`, `f=mois&m=AAAA-MM` (JSON `{"d","de"}`, 404 si pas d'archive, 400 si mois illisible) et `f=direct` élargi
+  (puissance, courant, facteur, fréquence et les autres champs ENERGY sous leur nom Tasmota). Comptage et stockage inchangés.
+  La description s'écrit par l'atelier (voir « Atelier des graphiques > Destination Énergie »), pas à la main.
 - **Code** : `data/fs/energieFonctions.be`, `data/fs/controleEnergie.be`, `data/sd/{html,css,js}/energie.*`, sur le seul
-  différentiel (liste `page_energie` de `[berry_commun]`, exclue des autres envs). Banc :
-  `outils_docs/scripts_python/berry/banc_energie.py`. Conception :
+  différentiel (liste `page_energie` de `[berry_commun]`, exclue des autres envs). Bancs :
+  `outils_docs/scripts_python/berry/banc_energie.py` (page d'avant), `banc_energie_routes.py` (routes de lecture),
+  `banc_energie_description.py` (page pilotée par sa description, rendu Chrome) et
+  `outils_pc/test_energie_rendu.mjs` (validation JS = Python). Conception :
   `docs/superpowers/specs/2026-10-31-page-energie-differentiel-design.md`.
 
 ## Les jauges du niveau de la cuve (page `/cuve`, cuve et P4)
@@ -1602,6 +1613,32 @@ Rien n'est envoyé par l'atelier. Si la page Build ne tourne pas (sondée au cli
 ne s'ouvre : un message rouge propose de la lancer par l'annuaire. Pour l'arrivée côté Build, voir « Arrivée depuis
 l'atelier des graphiques » dans la page Build.
 
+### Destination « Énergie (/energie) » : la page du différentiel
+
+Le menu **Page** propose « Énergie (/energie) » pour la carte `tasmota32-bureau-interrupteur-energie` (toute carte dont le FS
+embarque `energie.js`). L'atelier reprend la disposition de la page `/energie` et la modifie sans toucher au comptage.
+
+1. **Choisir** la carte différentiel. Si la description de la carte diffère de celle du dépôt, le choix « carte / dépôt » est
+   exigé avant toute modification (jamais d'écrasement implicite).
+2. **Éditer** la liste d'éléments : type (`valeur`, `cadran`, `demi-cercle`, `barres`, `courbe`, `aire`, `escalier`), source
+   (champ « direct » de ENERGY, total jour/mois/an, ou historique flash minutes/heure/jour/mois/an en kWh ou euros), titre,
+   unité, couleur, largeur (demi/pleine), hauteur, min/max des jauges, rang. Échelle de temps d'un graphique « jour » : mois
+   relatif (décalage 0 à 23) ou **mois fixe** (`AAAA-MM`) ; si l'archive de ce mois a été purgée, l'atelier le signale avant
+   l'écriture. L'aperçu est tracé par le vrai `energie.js`, avec les données de la carte en ligne, sinon des valeurs simulées.
+3. **Écrire dans le dépôt** (diff puis écriture atomique, refusée pendant un build ou sur empreinte périmée) : seul
+   `data/<lieu>/<carte>/energie_page.json` est écrit, en JSON compact ; la carte le déplace vers `/json/` au démarrage.
+4. **Téléverser** : ouvre la page Build avec les 4 fichiers (`energie_page.json`, `energie.js`, `energie.html`,
+   `energie.css`), `redemarrer=0`. Rien n'est envoyé par l'atelier.
+
+**Firmware à recompiler une fois.** `energieFonctions.be` est solidifié : les routes `f=description` et `f=mois` n'existent
+qu'après un firmware recompilé et envoyé **par la page Build**. Sur une carte à l'ancien firmware (`f=description` rend la page
+HTML en 200), « Téléverser » est bloqué avec le message du firmware requis.
+
+Limites (validées par `atelier_energie_description.py::valide` et `Energie.valide`, mêmes cas dans
+`outils_pc/cas_energie.json`) : 16 éléments, 4 096 octets de description, titres de 40 caractères, couleur `#rrggbb`.
+Conception : [spec](../docs/superpowers/specs/2026-11-08-atelier-energie-differentiel-design.md) ; plan
+`tasks/plans/energie-atelier.md`.
+
 ### Première page : la cuve
 
 Env `tasmota32s3-garage-capteurs-cuve-modbus` : page `/pages?p=tableau`, bouton d'accueil « Tableau », courbe
@@ -1620,7 +1657,9 @@ de la minute).
 Dans `outils_docs/scripts_python/outils_pc/` (Python de PlatformIO) : `test_atelier_graphiques_description.py`,
 `_series.py`, `_conseil.py`, `_ecriture.py`, `_graphiques.py` (destination « Graphiques », composition de la carte),
 `_televerse.py` (liste du bouton « Téléverser »), `_web.py`, puis la sonde Chrome `test_atelier_graphiques_page_chrome.py` ;
-`build/test_cible_atelier_graphiques.py`. Côté carte : `node outils_docs/scripts_python/outils_pc/test_pages_graphiques.mjs`,
+`build/test_cible_atelier_graphiques.py`. Destination Énergie : `test_atelier_energie_description.py`,
+`test_atelier_graphiques_energie.py`, sonde Chrome `test_atelier_energie_page_chrome.py` (mutants `absent`, `archive`,
+`mobile`, `vol`). Côté carte : `node outils_docs/scripts_python/outils_pc/test_pages_graphiques.mjs`,
 `test_pages_graphiques_chrome.py` et `berry/banc_pages_graphiques.py` (cas partagés avec le validateur Python :
 `berry/bouchons_berry/pages_graphiques/cas_description.json`). Commandes exactes : skill `bancs`.
 

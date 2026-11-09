@@ -101,8 +101,8 @@ sonde Chrome pendant un build (garde bloquante dans la commande, leçon du 2026-
 - [x] Relecture `relecteur-pages-web` ; commit `feat(atelier): page Energie du differentiel dans l'atelier` — preuve : 8583a5890 relu (tâche + `relecteur-pages-web` : fuite d'état différentiel → cuve), corrigé par e2529cac0, 0b2cd36d7, 5759015bd, re-relecture Approved ; passes entières 2026-11-08 : `test_atelier_energie_page_chrome.py` 41 OK (mutants `vol`, `archive` rouges), `test_atelier_graphiques_page_chrome.py` 116 OK, 10 bancs `test_atelier_*.py` hors Chrome verts
 
 ## A6 — Documentation
-- [ ] `outils_docs/README.md` (atelier : destination Énergie ; page /energie : description et repli), carte des
-  documents du `CLAUDE.md`, skill `bancs` (nouveaux bancs) ; `verifie_references_docs.py` code 0 ; commit `docs: …`
+- [x] `outils_docs/README.md` (atelier : destination Énergie ; page /energie : description et repli), carte des
+  documents du `CLAUDE.md`, skill `bancs` (nouveaux bancs) ; `verifie_references_docs.py` code 0 ; commit `docs: …` — preuve : `verifie_references_docs.py` code 0 (0 défaut) ; README § Destination Énergie + § page Énergie, puce CLAUDE.md complétée, 2 lignes du skill `bancs` (commit docs: de l'A6)
 
 ## A7 — Validation sur le différentiel
 - [ ] Avant : `Status 4` (tas), `UfsFree`, `/energie` capturée (page d'aujourd'hui)
