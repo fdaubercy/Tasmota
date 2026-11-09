@@ -2,10 +2,11 @@
 
 UTILISATION (a la main ; aucun pio, aucune carte, aucun envoi ; Chrome tourne ~1 min)
     "$USERPROFILE/.platformio/penv/Scripts/python.exe" outils_docs/scripts_python/outils_pc/test_atelier_energie_page_chrome.py
-        [--capture FICHIER.png] [--sans-temoin] [--mutant archive|mobile|absent|vol]
+        [--capture FICHIER.png] [--sans-temoin] [--mutant archive|mobile|absent|vol|mois0]
 Code de sortie 0 = vert : la vraie page passe tout ET le temoin (erreur JS volontaire au chargement) est detecte.
 `--mutant` = copie MUTEE de la page, qui doit sortir ROUGE : `archive` (l'avertissement « mois fixe sans archive » ne se declenche
 plus, A5 « a surveiller » 2), `mobile` (la regle 390 px est retiree, « a surveiller » 5), `absent` (le module JS de la page n'est pas charge : etat de depart du TDD),
+`mois0` (passer en « fixe » invente le mois precedent au lieu du plus recent de etat.a),
 `vol` (l'apercu en vol ne verifie plus que la page Energie est toujours la : TypeError en quittant le differentiel).
 
 Montage : atelier_graphiques_web.py dans un processus fils devant une COPIE du depot (celle du banc test_atelier_graphiques_energie) ;
@@ -35,6 +36,8 @@ MARQUE_TEMOIN = "var gabarit = '', apercuCtrl = null"
 INJECTION_TEMOIN = "\n$('bouton-qui-n-existe-pas').onclick = null;   // TEMOIN : TypeError au chargement\n"
 MUTANTS = {"archive": ("etat.en.archives[m] === 404", "etat.en.archives[m] === 405"),
            "absent": (None, ""),
+           "mois0": ("return a.map(function (x) { return x[0]; }).sort().pop() || '';",
+                     "var d = new Date(); d.setMonth(d.getMonth() - 1); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2);"),
            "vol": [("if (en !== etat.en || jeton !== en.jeton", "if (jeton !== etat.en.jeton"),
                    ("if (en === etat.en && jeton === en.jeton)", "if (jeton === etat.en.jeton)")],
            "mobile": ("@media (max-width:900px){.colonnes", "@media (max-width:1px){.colonnes")}
@@ -252,6 +255,21 @@ def sonde_edition(m, capture):
     verifie((len(liste) > 1, liste == sorted(liste, reverse=True)), (True, True), "mois fixe : mois archives de la carte, les plus recents en tete")
     js_champ(cdp, "#en-mois", liste[-1], "change")
     verifie(cdp.js("var e = etat.desc.elements[etat.en.sel]; e.source.mois"), liste[-1], "source : mois choisi dans la liste")
+    # carte sans aucun mois archive : passer en « fixe » n'invente pas de mois
+    cdp.js("window._a = etat.en.don.etat.a; etat.en.don.etat.a = []; 1")
+    js_champ(cdp, "#en-mois-mode", "relatif", "change")
+    attend(cdp, "!document.getElementById('en-mois')", 5)
+    js_champ(cdp, "#en-mois-mode", "fixe", "change")
+    attend(cdp, "!!document.getElementById('en-mois')", 5)
+    verifie(cdp.js("var s = document.getElementById('en-mois'); [s.options.length, s.options[0].textContent, s.options[0].disabled, "
+                   "etat.desc.elements[etat.en.sel].source.mois, document.getElementById('ecrire').disabled]"),
+            [1, "aucun mois archivé", True, "", True], "aucun mois archive : option « aucun mois archivé » desactivee, rien d'invente, Ecrire grise")
+    cdp.js("etat.en.don.etat.a = window._a; 1")
+    js_champ(cdp, "#en-mois-mode", "relatif", "change")
+    attend(cdp, "!document.getElementById('en-mois')", 5)
+    js_champ(cdp, "#en-mois-mode", "fixe", "change")
+    attend(cdp, "!!document.getElementById('en-mois')", 5)
+    verifie(cdp.js("etat.desc.elements[etat.en.sel].source.mois"), liste[0], "passage en « fixe » : le mois archive le plus recent")
     # mois hors liste (description deja ecrite, archive purgee) : garde et signale, jamais perdu en silence
     cdp.js("etat.desc.elements[etat.en.sel].source.mois = '2020-01'; modifie(true); 1")
     attend(cdp, "document.querySelector('#en-mois option[value=\"2020-01\"]')", 5)

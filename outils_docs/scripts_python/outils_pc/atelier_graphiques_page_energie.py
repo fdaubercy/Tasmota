@@ -241,7 +241,8 @@ function selectMois(courant) {
   if (!courant && a.length === 0) s.options[0].disabled = true;
   return s;
 }
-function mois0() { var d = new Date(); d.setMonth(d.getMonth() - 1); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2); }
+// Mois propose en passant en « fixe » : le plus recent de etat.a ; aucun archive -> '' (« aucun mois archivé », Ecrire grise par la validation)
+function mois0() { var a = (etat.en.don && etat.en.don.etat && etat.en.don.etat.a) || []; return a.map(function (x) { return x[0]; }).sort().pop() || ''; }
 
 // -- apercu : Energie.trace de la carte sur #a_grille --
 function lisEnergie(env, url) {
