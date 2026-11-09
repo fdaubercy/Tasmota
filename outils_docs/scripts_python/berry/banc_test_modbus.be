@@ -2236,6 +2236,17 @@ var m37 = MaitreReleve()
 m37.releveEsclaves()
 verifie("(a) sans cle : une demande par appareil", "8/true/true",
         str(size(envoyes37)) + "/" + str(envoyes37.find("1/4/4710/uint32/1") != nil) + "/" + str(envoyes37.find("1/4/1216/float/2") != nil))
+# (a') temoin garage : esclave SANS cle, reponse de 7 valeurs puis push 0x10 de 14 registres -> seule l'entree du
+# registre StartAddress est rangee (Values[0]), rien n'est eclate, les 6 autres ne changent pas
+maitre = MaitreStub()
+modbusFonctions.etat()["enVol"] = {"paramMSG": {"DeviceAddress": 1, "FunctionCode": 4, "StartAddress": 4704, "Count": 7, "type": "uint32"}}
+recoit(1, "ModbusReceived", {"DeviceAddress": 1, "FunctionCode": 4, "Values": [11, 12, 13, 14, 15, 16, 0x1000]})
+verifie("(a') sans cle, reponse de 7 valeurs : Values[0] seule rangee", "11:valide 0:nil 0:nil 0:nil 0:nil 0:nil 0:nil", resume37())
+modbusFonctions.etat()["enVol"] = nil
+recoit(1, "ModbusReceivedUDP", {"DeviceAddress": 1, "FunctionCode": 0x10, "FunctionName": "ECRITURE_REGISTRES_HOLDER", "StartAddress": 4704, "Count": 14,
+                                "Values": [0, 21, 0, 22, 0, 23, 0, 24, 0, 25, 0, 26, 0, 0x1000], "Automatique": true})
+verifie("(a') sans cle, push de 14 registres : Values[0] seule rangee", "21:valide 0:nil 0:nil 0:nil 0:nil 0:nil 0:nil", resume37())
+modules = appareils37()
 # (b) cle ON : UNE demande 0x04 pour les 7 analogiques, le DHT22 garde la sienne
 esclave37["lectureGroupee"] = "ON"
 envoyes37 = []
@@ -2321,6 +2332,18 @@ drivers["ModBus"]["periodeReleve"] = 2
 verifie("(h) periodeReleve 2 -> 5", 5, essaie(def () return m37.periodeReleve() end))
 drivers["ModBus"]["periodeReleve"] = 1000
 verifie("(h) periodeReleve 1000 -> 300", 300, essaie(def () return m37.periodeReleve() end))
+drivers["ModBus"].remove("periodeReleve")
+# (h') periode changee apres l'armement du cron (Boot, 30 s) : le chien de garde garde 3 x la periode ARMEE (90 s),
+# sinon il declarerait muets tous les esclaves a chaque passage (cron toujours a 30 s, seuil 15 s)
+essaie(def () m37.changementEtatDemarrage(nil, "System", {"System": {"Boot": 1}}) end)
+drivers["ModBus"]["periodeReleve"] = 5
+m37.derniersContacts = {1: 1000}
+m37.esclavesMuets = {}
+tasmota.horloge = 1000 + 40
+verifie("(h') periode 5 apres armement a 30 : contact vieux de 40 s, pas muet", 0, essaie(def () return m37.verifieChienDeGarde() end))
+m37.esclavesMuets = {}
+tasmota.horloge = 1000 + 91
+verifie("(h') temoin : vieux de 91 s > 3 x 30 -> muet, 8 appareils inconnu", 8, essaie(def () return m37.verifieChienDeGarde() end))
 drivers["ModBus"].remove("periodeReleve")
 var nbSave37 = persist.nb_save
 essaie(def () modbusFonctions.reglageModbus("ReglageModbus", 1, "periodeReleve 10", nil) end)

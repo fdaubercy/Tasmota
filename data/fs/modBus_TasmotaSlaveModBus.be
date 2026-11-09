@@ -21,6 +21,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
     var derniersContacts                # chien de garde : id esclave -> heure du dernier contact
     var esclavesMuets                   # chien de garde : id esclave -> true tant qu'il est muet
     var groupesRejetes                  # lecture groupee : nom d'esclave -> true tant que son mot d'etats n'a pas le bit 12
+    var periodeArmee                    # periode (s) du cron du releve, figee a l'armement (Boot) : seuil du chien de garde
     var texteHold                       # bouton du ruban : libelle de l'appui long (StateText4)
     var pasDefileRuban                  # bouton du ruban : crans du defilement en cours (garde-fou)
 
@@ -1246,8 +1247,10 @@ class MODBUS_TASMOTA_SLAVE : Driver
                 # modbusFonctions.armeTimer). Premier releve a la prochaine demi-minute.
                 if (drivers["ModBus"].find("id", 99) == 0)
                     tasmota.remove_cron("releve_TasmotaSlaveModBus")
-                    tasmota.add_cron(string.format("*/%i * * * * *", self.periodeReleve()), def() self.releveEsclaves() self.verifieChienDeGarde() end, "releve_TasmotaSlaveModBus")
-                    self.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: Releve des esclaves + chien de garde armes (toutes les %i s)", self.periodeReleve()), LOG_LEVEL_INFO)
+                    # Periode figee ici : un ReglageModbus PeriodeReleve a chaud ne desaccorde pas le chien de garde du cron
+                    self.periodeArmee = self.periodeReleve()
+                    tasmota.add_cron(string.format("*/%i * * * * *", self.periodeArmee), def() self.releveEsclaves() self.verifieChienDeGarde() end, "releve_TasmotaSlaveModBus")
+                    self.log(string.format("MODBUS_TASMOTA_SLAVE_CHGT_ETAT_DEMARRAGE: Releve des esclaves + chien de garde armes (toutes les %i s)", self.periodeArmee), LOG_LEVEL_INFO)
                 end
             end
         end
@@ -1446,7 +1449,7 @@ class MODBUS_TASMOTA_SLAVE : Driver
                 self.derniersContacts[id] = maintenant
                 continue
             end
-            if (self.esclavesMuets.find(id, false) || maintenant - dernier <= 3 * self.periodeReleve())    continue    end
+            if (self.esclavesMuets.find(id, false) || maintenant - dernier <= 3 * (self.periodeArmee != nil ? self.periodeArmee : self.periodeReleve()))    continue    end
 
             self.esclavesMuets[id] = true
             logFonctions.log(string.format("MODBUS_TASMOTA_SLAVE_CHIEN_DE_GARDE: esclave %s (ID=%i) muet depuis %i s -> etats constates passes a 'inconnu'",
