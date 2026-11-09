@@ -4,6 +4,8 @@
 > (collecteur) qui alimente **6 radiateurs** (≥ 1 400 W chacun), un **débitmètre-vanne de réglage par départ**.
 > Les débitmètres électroniques du projet (`tasks/plans/debitmetres-chauffage.md`) afficheront les 6 débits.
 > Les schémas `mermaid` s'affichent sur GitHub, ou dans VS Code avec une extension d'aperçu mermaid.
+> Version animée pas à pas, avec estimateur des puissances et calculateur des débits cibles :
+> `data/bureau/tasmota32s3-serveur-debits-pac/equilibrage.html`, servie par la carte des débits en `/equilibrage`.
 
 ## En bref
 

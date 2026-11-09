@@ -64,6 +64,14 @@ td.trop { color: var(--trop); font-weight: 600; } td.peu { color: var(--peu); fo
 .calc select { font: 400 .95rem var(--corps); padding: 8px; border-radius: 6px; border: 1px solid var(--trait); background: var(--fond); color: var(--texte); width: 100%; box-sizing: border-box; }
 .calc select:focus-visible { outline: 3px solid var(--froid); outline-offset: 2px; }
 .calc label[hidden] { display: none; }
+.carte-zone { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 10px; border-radius: 8px; background: color-mix(in srgb, var(--froid) 10%, var(--carte)); }
+.carte-zone[hidden] { display: none; }
+.carte-zone .note { flex-basis: 100%; }
+.lire { font: 600 1rem var(--corps); padding: 10px 16px; min-height: 44px; border-radius: 8px; border: 1px solid var(--froid); background: var(--froid); color: #fff; cursor: pointer; }
+.lire:focus-visible, .calc .case input:focus-visible { outline: 3px solid var(--cuivre); outline-offset: 2px; }
+.calc .case { display: flex; align-items: center; gap: 8px; font-size: .95rem; min-height: 44px; cursor: pointer; }
+.calc .case input { width: 20px; margin: 0; height: 20px; }
+td small { color: var(--trop); font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
@@ -89,9 +97,7 @@ td.trop { color: var(--trop); font-weight: 600; } td.peu { color: var(--peu); fo
     </div>
     <p class="note" id="schema-texte"></p>
   </section>
-
   <article class="carte etape" id="etape" aria-live="polite"></article>
-
   <div class="nav">
     <button type="button" id="precedent">← Précédent</button>
     <button type="button" id="suivant" class="suivant">Suivant →</button>
@@ -115,10 +121,16 @@ td.trop { color: var(--trop); font-weight: 600; } td.peu { color: var(--peu); fo
   <section class="carte calc" aria-labelledby="calc-titre" id="calculateur">
     <span class="etiquette">Calculateur</span>
     <h2 id="calc-titre">Mes débits cibles et l'ordre de réglage</h2>
-    <p class="note">Rempli avec l'exemple du guide (chiffres fictifs) : remplacez-les par les vôtres. Vos saisies restent dans ce navigateur.</p>
+    <p class="note" id="calc-note">Rempli avec l'exemple du guide (chiffres fictifs) : remplacez-les par les vôtres. Vos saisies restent dans ce navigateur.</p>
+    <div class="carte-zone" id="carte-zone" hidden>
+      <button type="button" class="lire" id="lire">Lire les débits de la carte</button>
+      <label class="case"><input type="checkbox" id="suivre"> Suivre en direct</label>
+      <p class="note" id="carte-etat" aria-live="polite"></p>
+    </div>
     <div class="champs">
       <label for="pac">Débit de la PAC (L/min)<input id="pac" inputmode="decimal" value="20"></label>
     </div>
+    <p class="note">Laissé vide : le total mesuré des 6 départs.</p>
     <div class="champs" id="champs-p"></div>
     <div class="champs" id="champs-m"></div>
     <div class="tableau"><table id="resultat"></table></div>
@@ -311,15 +323,20 @@ function champ(parent, id, texte, valeur) {
 const nombre = s => { const v = parseFloat(String(s).replace(",", ".")); return isFinite(v) && v >= 0 ? v : null; };
 for (let i = 0; i < 6; i++) champ(document.getElementById("champs-p"), "p" + (i + 1), "Radiateur " + (i + 1) + " : puissance (W)", EXEMPLE.p[i]);
 for (let i = 0; i < 6; i++) champ(document.getElementById("champs-m"), "m" + (i + 1), "Départ " + (i + 1) + " : débit mesuré (L/min)", EXEMPLE.m[i]);
+// Page servie par la carte des débits (/equilibrage) : window.CARTE = {noms, fenetre, nom} ; absent hors carte
+const CARTE = window.CARTE && Array.isArray(window.CARTE.noms) ? window.CARTE : null;
+let NOMS = [], ETATS = [];          // noms des départs et mention « muet » / « imprécis », lus sur la carte
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const pac = document.getElementById("pac");
-pac.value = lit("pac", EXEMPLE.pac);
+pac.value = lit("pac", CARTE ? "" : EXEMPLE.pac);
 pac.addEventListener("input", () => { ecrit("pac", pac.value); calcule(); });
 function calcule() {
-  const Q = nombre(pac.value), P = [], M = [];
+  const P = [], M = [];
   for (let i = 1; i <= 6; i++) { P.push(nombre(document.getElementById("p" + i).value)); M.push(nombre(document.getElementById("m" + i).value)); }
   const sP = P.reduce((s, v) => s + (v || 0), 0), sM = M.reduce((s, v) => s + (v || 0), 0);
+  const Q = nombre(pac.value) ?? (sM > 0 ? sM : null);    // vide : le total mesuré des 6 départs
   const t = document.getElementById("resultat"), conseil = document.getElementById("conseil");
-  if (!Q || !sP) { t.innerHTML = ""; conseil.textContent = "Saisir le débit de la PAC et au moins une puissance."; return; }
+  if (!Q || !sP) { t.innerHTML = ""; conseil.textContent = "Saisir le débit de la PAC (ou les débits mesurés) et au moins une puissance."; return; }
   const lignes = P.map((p, i) => {
     const part = (p || 0) / sP, cible = Q * part, m = M[i];
     const r = m !== null && sM > 0 && part > 0 ? (m / sM) / part : null;   // part mesurée / part cible : juste même si la pompe varie
@@ -331,12 +348,62 @@ function calcule() {
   t.innerHTML = "<thead><tr><th>Départ</th><th>Part cible</th><th>Cible</th><th>Mesuré</th><th>Rapport</th><th>Ordre</th></tr></thead><tbody>" +
     lignes.map(l => {
       const c = l.r === null ? "" : l.r > 1.1 ? "trop" : l.r < 0.9 ? "peu" : "bon";
-      return `<tr><td>${l.i + 1}</td><td>${f(l.part * 100, 1)} %</td><td>${f(l.cible, 1)} L/min</td><td>${f(l.m, 1)}</td><td class="${c}">${l.r === null ? "–" : "× " + f(l.r, 2)}</td><td>${rang.get(l.i) || ""}</td></tr>`;
+      return `<tr><td>${l.i + 1}${NOMS[l.i] ? " " + esc(NOMS[l.i]) : ""}</td><td>${f(l.part * 100, 1)} %</td><td>${f(l.cible, 1)} L/min</td><td>${f(l.m, 1)}${ETATS[l.i] ? " <small>" + ETATS[l.i] + "</small>" : ""}</td><td class="${c}">${l.r === null ? "–" : "× " + f(l.r, 2)}</td><td>${rang.get(l.i) || ""}</td></tr>`;
     }).join("") + `</tbody><tfoot><tr><td>Total</td><td>100 %</td><td>${f(Q, 1)} L/min</td><td>${f(sM, 1)}</td><td></td><td></td></tr></tfoot>`;
   const faible = lignes.filter(l => l.r !== null).sort((a, b) => a.r - b.r)[0];
   conseil.textContent = ordre.length
     ? `Régler d'abord le départ ${ordre[0].i + 1}, puis ${ordre.slice(1).map(l => l.i + 1).join(", ") || "aucun autre"}. Le départ ${faible.i + 1} (le plus défavorisé) reste ouvert à fond.`
     : "Tous les départs sont à leur part cible à 10 % près : l'équilibrage est fait.";
+}
+
+// ---- Lecture des débits sur la carte (mode carte seulement) ----
+const etatCarte = document.getElementById("carte-etat"), suivre = document.getElementById("suivre");
+let minuterie = null;
+function nommeDeparts(noms) {
+  NOMS = noms.map(n => String(n || ""));
+  NOMS.forEach((n, k) => {
+    const lm = document.querySelector(`label[for="m${k + 1}"]`), lp = document.querySelector(`label[for="p${k + 1}"]`);
+    if (lm && n) lm.firstChild.textContent = `Départ ${k + 1} (${n}) : débit mesuré (L/min)`;
+    if (lp && n) lp.firstChild.textContent = `Radiateur ${k + 1} (${n}) : puissance (W)`;
+    const lg = document.querySelectorAll("#radiateurs legend")[k];
+    if (lg && n) lg.textContent = `Radiateur ${k + 1} — ${n}`;
+  });
+}
+let enCours = false;       // une lecture à la fois : une réponse tardive n'écrase pas une plus récente
+async function lireCarte() {
+  if (enCours) return;
+  enCours = true;
+  try {
+    const r = await fetch("/equilibrage?f=debits", { cache: "no-store", signal: AbortSignal.timeout(5000) });
+    if (!r.ok) throw new Error("réponse " + r.status);
+    const j = await r.json();
+    if (!Array.isArray(j.debits) || j.debits.length !== 6) throw new Error("mesures illisibles");
+    nommeDeparts(Array.isArray(j.noms) ? j.noms : []);
+    ETATS = j.debits.map((q, k) => j.muets && j.muets[k] ? "muet ?" : j.imprecis && j.imprecis[k] ? "imprécis" : "");
+    j.debits.forEach((q, k) => { document.getElementById("m" + (k + 1)).value = typeof q === "number" ? q.toFixed(2).replace(".", ",") : ""; });
+    calcule();
+    const age = typeof j.age_s === "number" ? `mesure d'il y a ${Math.round(j.age_s)} s` : "aucune mesure encore";
+    const alertes = ETATS.map((e, k) => e ? `départ ${k + 1} ${e}` : "").filter(Boolean).join(", ");
+    etatCarte.textContent = `Lu à ${new Date().toLocaleTimeString("fr-FR")}, ${age}` + (alertes ? ` ; ${alertes}` : "") + ".";
+  } catch (e) {
+    const cause = e.name === "TimeoutError" ? "pas de réponse en 5 s" : e.message;
+    etatCarte.textContent = "Lecture impossible : " + cause + ". Les valeurs affichées sont les dernières lues.";
+  } finally {
+    enCours = false;
+  }
+}
+function planifie() {
+  clearInterval(minuterie); minuterie = null;
+  if (suivre.checked && !document.hidden) {
+    minuterie = setInterval(lireCarte, Math.max(2, Number(CARTE.fenetre) || 10) * 1000);
+  }
+}
+if (CARTE) {
+  document.getElementById("carte-zone").hidden = false;
+  document.getElementById("calc-note").textContent = "Débits lus sur la carte ; puissances à saisir, ou reportées de l'estimateur. Vos saisies restent dans ce navigateur.";
+  document.getElementById("lire").addEventListener("click", lireCarte);
+  suivre.addEventListener("change", () => { planifie(); if (suivre.checked) lireCarte(); });
+  document.addEventListener("visibilitychange", () => { planifie(); if (suivre.checked && !document.hidden) lireCarte(); });
 }
 
 // ---- Estimateur : puissance à ΔT 50 K (norme EN 442 : eau 75/65 °C, pièce 20 °C) d'après le type et les dimensions ----
@@ -427,6 +494,7 @@ document.getElementById("reporter").addEventListener("click", () => {
 
 estime();
 calcule();
+if (CARTE) { nommeDeparts(CARTE.noms); lireCarte(); }   // page ouverte depuis la carte : ses noms et ses débits d'emblée
 depuisAncre();
 requestAnimationFrame(anime);
 </script>

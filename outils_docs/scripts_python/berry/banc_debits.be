@@ -11,6 +11,7 @@ import os
 var SORTIE = global._argv[1]
 var CARTE = "data/bureau/tasmota32s3-serveur-debits-pac/"
 var SOURCE = size(global._argv) > 2 ? global._argv[2] : CARTE + "debitsFonctions.be"
+var SOURCE_PAGE = size(global._argv) > 3 ? global._argv[3] : CARTE + "equilibragePage.be"   # temoin de la page
 
 def lis(chemin)
     var f = open(chemin, "r")
@@ -29,7 +30,17 @@ os.mkdir(SORTIE + "/modules")
 ecris(SORTIE + "/modules/persist.be", "import global\nvar p = module('persist')\np.save = def (x) global.SAUVES += 1 end\nreturn p\n")
 ecris(SORTIE + "/modules/diversFonctions.be", "var d = module('diversFonctions')\nd.traiteAide = def (c, p, f, v) return false end\nreturn d\n")
 ecris(SORTIE + "/modules/debitsFonctions.be", lis(SOURCE))
-ecris(SORTIE + "/modules/path.be", "import global\nvar p = module('path')\np.exists = def (f) return f == '/json/pages.jsonl' && global.PAGE_PRESENTE end\nreturn p\n")
+ecris(SORTIE + "/modules/equilibragePage.be", lis(SOURCE_PAGE))
+ecris(SORTIE + "/modules/path.be", "import global\nvar p = module('path')\np.exists = def (f) return (f == '/json/pages.jsonl' && global.PAGE_PRESENTE) || (f == '/sd/html/equilibrage.html' && global.PAGE_EQ) end\nreturn p\n")
+# Faux serveur web : reponse gardee dans global.HTTP (code, type, corps, fermee) ; routes et arguments de la requete
+ecris(SORTIE + "/modules/webserver.be", "import global\nvar w = module('webserver')\nw.HTTP_GET = 1\n"
+      "w.on = def (p, f, m) global.ROUTES[p] = f end\nw.check_privileged_access = def () return global.PRIVILEGIE end\n"
+      "w.has_arg = def (n) return global.ARGS.contains(n) end\nw.arg = def (n) return global.ARGS[n] end\n"
+      "w.content_open = def (c, t) global.HTTP = {'code': c, 'type': t, 'corps': '', 'fermee': false} end\n"
+      "w.content_send = def (t) if global.HTTP == nil global.ACCUEIL += t else global.HTTP['corps'] += t end end\n"
+      "w.content_close = def () global.HTTP['fermee'] = true end\nreturn w\n")
+ecris(SORTIE + "/modules/gestionFileFolder.be", "import global\nvar g = module('gestionFileFolder')\n"
+      "g.readFileByLineAndContentSend = def (c) if global.LECTURE_CASSE raise 'io_error', 'lecture' end import webserver webserver.content_send('[fichier ' + c + ']') end\nreturn g\n")
 ecris(SORTIE + "/modules/display.be", "import global\nvar d = module('display')\nd.started = def () return global.ECRAN_DEMARRE end\nd.dimmer = def (v, s) if v == nil return global.DIM end global.DIM_APPLIQUE = v end\nreturn d\n")
 ecris(SORTIE + "/modules/haspmota.be", "import global\nvar h = module('haspmota')\nh.start = def (f) global.HASP_DEMARRE = f global.creeObjets() end\nh.dimming_state = 100\nh.dimmed_panel = nil\nreturn h\n")
 sys.path().push(SORTIE + "/modules")
@@ -59,7 +70,7 @@ var fauxTasmota = module("tasmota")
 fauxTasmota.millis = def () return global.MS end
 fauxTasmota.read_sensors = def () return global.CAPTEURS end
 fauxTasmota.resp_cmnd = def (r) global.REPONSE = r end
-fauxTasmota.cmd = def (c, m) global.CMDS.push(c) return {} end
+fauxTasmota.cmd = def (c, m) global.CMDS.push(c) return c == "Hostname" ? {"Hostname": "SERVEUR-DEBITS-PAC"} : {} end
 fauxTasmota.web_send = def (t) global.WEB.push(t) end
 fauxTasmota.response_append = def (t) global.REPONSE = t end
 fauxTasmota.add_driver = def (d) global.DRIVERS.push(d) end
@@ -301,11 +312,76 @@ global.modules["debits"].remove("veille")
 verifie("reponse : etat muet des voies et duree de l'ecran (ecran_ms)", rep["ReglageDebits"].contains("muets") && rep["ReglageDebits"].contains("ecran_ms"))
 verifie("mesure : duree d'ecriture de l'ecran relevee", type(debitsFonctions.ecranMs) == "int")
 
+print("--- page /equilibrage")
+import equilibragePage
+global.ROUTES = {}
+global.ACCUEIL = ""
+global.HTTP = nil
+global.ARGS = {}
+global.PRIVILEGIE = false
+global.PAGE_EQ = true
+equilibragePage.route()
+verifie("sans acces privilegie : rien n'est envoye", global.HTTP == nil)
+global.PRIVILEGIE = true
+global.ARGS = {"f": "debits"}
+global.MS = 300000
+debitsFonctions.debits = [2.5, 0.0, nil, 0.4, 3.0, 4.1]
+debitsFonctions.muets = [false, true, false, false, false, false]
+debitsFonctions.releve = {"t": 290000, "c": [0, 0, 0, 0]}
+global.modules["debits"]["environnement"]["debitmetres"]["debitmetre1"]["nom"] = "Salon </script>"
+equilibragePage.route()
+var j = json.load(global.HTTP["corps"])
+verifie("f=debits : JSON ferme, 6 debits (voie sans mesure = null)", global.HTTP["type"] == "application/json" && global.HTTP["fermee"]
+        && j["debits"][0] == 2.5 && j["debits"][2] == nil && size(j["debits"]) == 6)
+verifie("f=debits : total, noms des departs, capteur muet", proche(j["total"], 10.0) && j["noms"][0] == "Salon </script>" && j["noms"][1] == "Salle de bain"
+        && j["muets"][1] == true && j["muets"][0] == false)
+verifie("f=debits : debit imprecis (< 1 L/min) signale, voie a 0 non", j["imprecis"][3] == true && j["imprecis"][1] == false && j["imprecis"][2] == false)
+verifie("f=debits : fenetre et age de la mesure (s)", j["fenetre"] == debitsFonctions.fenetre() && j["age_s"] == 10)
+var garde = debitsFonctions.debits
+debitsFonctions.debits = nil                # mesures illisibles : debits() leve
+global.JOURNAL = []
+equilibragePage.route()
+verifie("f=debits en echec : 500 ferme, erreur journalisee", global.HTTP["code"] == 500 && global.HTTP["fermee"] && erreurs() == 1)
+debitsFonctions.debits = garde
+global.ARGS = {}
+global.JOURNAL = []
+equilibragePage.route()
+var corps = global.HTTP["corps"]
+verifie("page : HTML ferme, doctype et charset en tete", global.HTTP["type"] == "text/html" && global.HTTP["fermee"]
+        && string.find(corps, "<!doctype html>") == 0 && string.find(corps, "charset='utf-8'") > 0)
+verifie("page : window.CARTE avant le fichier, '</' echappe", string.find(corps, "window.CARTE=") > 0 && string.find(corps, "Salon <\\/script>") > 0
+        && string.find(corps, "Salon </script>") < 0 && string.find(corps, "window.CARTE=") < string.find(corps, "[fichier /sd/html/equilibrage.html]"))
+var deb = string.find(corps, "window.CARTE=") + 13
+var carte = json.load(corps[deb .. string.find(corps, ";</script>") - 1])
+verifie("page : CARTE = noms, fenetre, nom de la carte", carte != nil && size(carte["noms"]) == 6 && carte["fenetre"] == debitsFonctions.fenetre()
+        && carte["nom"] == "SERVEUR-DEBITS-PAC")
+verifie("page : aucune erreur", erreurs() == 0)
+global.PAGE_EQ = false
+equilibragePage.route()
+verifie("page absente du LittleFS : 404 et erreur journalisee", global.HTTP["code"] == 404 && global.HTTP["fermee"] && erreurs() == 1)
+global.PAGE_EQ = true
+global.LECTURE_CASSE = true
+global.JOURNAL = []
+equilibragePage.route()
+verifie("lecture du fichier en echec : reponse fermee, erreur journalisee", global.HTTP["fermee"] && erreurs() == 1)
+global.LECTURE_CASSE = false
+global.modules["debits"]["environnement"]["debitmetres"]["debitmetre1"]["nom"] = "Debit 1"
+global.HTTP = nil
+
 print("--- driver controleDebits")
 global.CMDS = []
 var pilote = compile(lis(CARTE + "controleDebits.be"))()
 verifie("driver enregistre et commande ajoutee", size(global.DRIVERS) == 1 && global.COMMANDES.contains("ReglageDebits"))
 verifie("calibrage du FlowRateMeter neutralise", global.CMDS == ["Sensor96 0 0", "Sensor96 1 1000", "Sensor96 2 1000"])
+pilote.web_add_handler()
+verifie("route /equilibrage declaree", global.ROUTES.contains("/equilibrage"))
+global.ARGS = {"f": "debits"}
+global.ROUTES["/equilibrage"]()
+verifie("route /equilibrage : servie par equilibragePage", global.HTTP != nil && global.HTTP["type"] == "application/json")
+global.HTTP = nil
+global.ACCUEIL = ""
+pilote.web_add_main_button()
+verifie("bouton d'accueil « Équilibrage » vers /equilibrage", string.find(global.ACCUEIL, "action='/equilibrage'") > 0 && string.find(global.ACCUEIL, "Équilibrage") > 0)
 global.COMPTEURS = [0, 0, 0, 0]
 global.MS = 100000
 debitsFonctions.releve = nil

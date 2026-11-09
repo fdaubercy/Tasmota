@@ -31,6 +31,22 @@ class CONTROLE_Debits : Driver
         end
     end
 
+    # Page /equilibrage : guide d'equilibrage et debits en direct (equilibragePage.be, importe a la premiere requete)
+    def web_add_handler()
+        import webserver
+        webserver.on("/equilibrage", / -> self.pageEquilibrage(), webserver.HTTP_GET)
+    end
+
+    def pageEquilibrage()
+        import equilibragePage
+        equilibragePage.route()
+    end
+
+    def web_add_main_button()
+        import webserver
+        webserver.content_send("<p></p><form action='/equilibrage' method='get'><button>Équilibrage</button></form>")
+    end
+
     # Lignes de la page d'accueil : un depart par ligne, debit et part du total
     def web_sensor()
         import debitsFonctions

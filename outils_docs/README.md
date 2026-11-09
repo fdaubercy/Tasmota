@@ -380,7 +380,9 @@ son JSON SENSOR. Plan `tasks/plans/debitmetres-chauffage.md`, analyse `outils_do
   `python outils_docs/scripts_python/outils_pc/essai_charge_debits.py --generateur <ip> --carte <ip>` compte ce que la
   carte a reçu à chaque palier (écart < 0,5 % attendu) ; montage et câblage dans sa docstring (`--help`).
 - **Équilibrer la nourrice** : guide `outils_docs/chauffage/EQUILIBRAGE_CHAUFFAGE_NOURRICE.md`, et sa version animée pas
-  à pas avec calculateur des débits cibles, `outils_docs/chauffage/equilibrage_pas_a_pas.html` (à ouvrir sur un téléphone).
+  à pas (estimateur des puissances, calculateur des débits cibles), `data/bureau/tasmota32s3-serveur-debits-pac/equilibrage.html` :
+  servie par la carte (bouton « Équilibrage » de l'accueil, `/equilibrage`, débits lus sur la carte), ou ouverte seule
+  sur un téléphone ou un PC (débits tapés à la main).
 - **Vérifier** : bancs hors carte `python outils_docs/scripts_python/berry/banc_debits.py` (calcul, JSON, écran, capteur
   muet, réglages, veille ; témoins) et `banc_demarrage.py --carte tasmota32s3-bureau-serveur-debits-pac` (code 0 = vert).
 

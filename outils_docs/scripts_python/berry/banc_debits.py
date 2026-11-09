@@ -14,6 +14,7 @@ RACINE = Path(__file__).resolve().parents[3]
 BERRY = RACINE / "lib/libesp32/berry/berry.exe"
 BANC = "outils_docs/scripts_python/berry/banc_debits.be"
 MODULE = RACINE / "data/bureau/tasmota32s3-serveur-debits-pac/debitsFonctions.be"
+PAGE = RACINE / "data/bureau/tasmota32s3-serveur-debits-pac/equilibragePage.be"
 
 # Chaque mutant doit rendre le banc rouge : (nom, texte du module, remplacement)
 MUTANTS = [
@@ -49,9 +50,20 @@ MUTANTS = [
     ("veille non appliquee au demarrage", "        debitsFonctions.ecran()\n        debitsFonctions.appliqueVeille()\n", "        debitsFonctions.ecran()\n"),
 ]
 
+# Temoins de la page /equilibrage (equilibragePage.be), meme regle
+MUTANTS_PAGE = [
+    ("acces privilegie ignore", "if (!webserver.check_privileged_access())    return nil    end", ""),
+    ("</ non echappe dans window.CARTE", 'string.replace(json.dump(carte), "</", "<\\\\/")', "json.dump(carte)"),
+    ("page absente non signalee", "if (!path.exists(equilibragePage.PAGE))", "if (false)"),
+    ("reponse laissee ouverte apres une exception", "if (ouverte)    webserver.content_close()    end", ""),
+    ("age de la mesure en ms", "(tasmota.millis() - r[\"t\"]) / 1000", "(tasmota.millis() - r[\"t\"])"),
+    ("mesures illisibles : reponse jamais envoyee", "        texte = json.dump(equilibragePage.debits())", "        texte = nil"),
+    ("debit imprecis non signale", "for q: d    imprecis.push(debitsFonctions.imprecis(q))    end", ""),
+]
 
-def lance_berry(dossier, module=None):
-    args = [str(BERRY), BANC, str(dossier)] + ([str(module)] if module else [])
+
+def lance_berry(dossier, module=None, page=None):
+    args = [str(BERRY), BANC, str(dossier)] + ([str(module or MODULE), str(page)] if page else [str(module)] if module else [])
     r = subprocess.run(args, cwd=RACINE, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
     return r.stdout + r.stderr
 
@@ -77,6 +89,19 @@ def main():
             copie.write_text(texte.replace(avant, apres), encoding="utf-8")
             rouge = "BANC_DEBITS: OK" not in lance_berry(d, copie)
             print(f"  {'OK   ' if rouge else 'ECHEC'} {nom}")
+            ok = ok and rouge
+        page = PAGE.read_text(encoding="utf-8")
+        for i, (nom, avant, apres) in enumerate(MUTANTS_PAGE):
+            if page.count(avant) != 1:
+                print(f"  ECHEC temoin « {nom} » : texte absent ou ambigu dans la page")
+                ok = False
+                continue
+            d = tmp / f"page{i}"
+            d.mkdir()
+            copie = d / "mutant.be"
+            copie.write_text(page.replace(avant, apres), encoding="utf-8")
+            rouge = "BANC_DEBITS: OK" not in lance_berry(d, page=copie)
+            print(f"  {'OK   ' if rouge else 'ECHEC'} page : {nom}")
             ok = ok and rouge
     print("BANC_DEBITS (enveloppe):", "VERT" if ok else "ROUGE")
     return 0 if ok else 1
