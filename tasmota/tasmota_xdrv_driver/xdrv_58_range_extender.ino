@@ -406,6 +406,16 @@ void rngxSetup()
 
   err = esp_netif_dhcps_stop(esp_netif_AP);
   err = esp_netif_get_dns_info(esp_netif_STA, ESP_NETIF_DNS_MAIN, &ip_dns);
+  // Fork : DNS principal en IPv6 (P4 en double pile) -> le DHCP de l'AP n'offre que u_addr.ip4, soit les 4 premiers
+  // octets de l'IPv6 (253.15.0.238 pour fd0f:ee:b0::1, constate le 2026-11-09) : offrir le DNS IPv4 de la carte
+  if ((ESP_OK != err) || (ESP_IPADDR_TYPE_V4 != ip_dns.ip.type) || (0 == ip_dns.ip.u_addr.ip4.addr)) {
+    esp_netif_ip_info_t ip_sta;
+    uint32_t dns4 = Settings->ipv4_address[3];   // DNS IPv4 releve a la connexion (support_wifi.ino::WifiCheckIp)
+    if ((0 == dns4) && (ESP_OK == esp_netif_get_ip_info(esp_netif_STA, &ip_sta))) { dns4 = ip_sta.gw.addr; }
+    AddLog(LOG_LEVEL_INFO, PSTR("RGX: DNS principal non IPv4 (type %d), DNS offert aux esclaves %_I"), ip_dns.ip.type, dns4);
+    ip_dns.ip.type = ESP_IPADDR_TYPE_V4;
+    ip_dns.ip.u_addr.ip4.addr = dns4;
+  }
   err = esp_netif_set_dns_info(esp_netif_AP, ESP_NETIF_DNS_MAIN, &ip_dns);
   dhcps_offer_t opt_val = OFFER_DNS; // supply a dns server via dhcps
   err = esp_netif_dhcps_option(esp_netif_AP, ESP_NETIF_OP_SET, ESP_NETIF_DOMAIN_NAME_SERVER, &opt_val, 1);
