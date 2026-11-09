@@ -53,6 +53,8 @@ def carte(mode="json", description=None, energy=ENERGY, mort=False):
         if chemin == "/energie?f=description":
             if mode in ("404", "413"):
                 raise urllib.error.HTTPError("http://" + ip + chemin, int(mode), "Not Found", {}, None)    # ce que leve urlopen en production
+            if mode in ("vide", "tronque"):
+                return b"" if mode == "vide" else compact(desc())[:20]
             return HTML if mode == "html" else compact(description if description is not None else desc())
         if chemin.startswith("/cm?") and urllib.parse.unquote(chemin.split("cmnd=", 1)[1]) == "Status 10":
             return json.dumps({"StatusSNS": {"Time": "x", "ENERGY": energy} if energy is not None else {"Time": "x"}}).encode()
@@ -86,6 +88,10 @@ def test_etat_carte(racine):
     r = ageg.etat_carte(racine, BUREAU, get=carte("html"))
     verifie((r["description"], r["firmware_requis"], "firmware" in r["motif"]), (None, True, True),
             "etat_carte : la page HTML en 200 = ancien firmware (firmware_requis)")
+    for mode in ("vide", "tronque"):
+        r = ageg.etat_carte(racine, BUREAU, get=carte(mode))
+        verifie((r["description"], r["firmware_requis"], "illisible" in r["motif"]), (None, False, True),
+                "etat_carte : description " + mode + " sur la carte = illisible, Televerser reste permis")
     r = ageg.etat_carte(racine, BUREAU, get=carte(mort=True))
     verifie((r["description"], r["firmware_requis"], bool(r["motif"])), (None, False, True), "etat_carte : carte muette = non verifie, pas d'accusation du firmware")
     r = ageg.etat_carte(racine, BUREAU, get=carte("413"))

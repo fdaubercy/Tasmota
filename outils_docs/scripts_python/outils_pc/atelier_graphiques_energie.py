@@ -100,7 +100,10 @@ def etat_carte(racine, env, *, get=None):
     try:
         d = json.loads(corps.decode("utf-8"))
     except (ValueError, RecursionError):
-        res["firmware_requis"], res["motif"] = True, MOTIF_FIRMWARE
+        if corps.lstrip().startswith(b"<"):           # l'ancien firmware rend la page HTML ; vide ou tronque = a renvoyer
+            res["firmware_requis"], res["motif"] = True, MOTIF_FIRMWARE
+        else:
+            res["motif"] = "description de la carte illisible (vide ou tronquee) : renvoyez-la par Televerser"
         return res
     motifs = aed.valide(d)
     if motifs:
