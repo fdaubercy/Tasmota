@@ -52,6 +52,8 @@ n'a pas de Wi-Fi intégré (coprocesseur C6 par esp-hosted : OTA du C6 bloquée 
 vécues sur le P4 du garage), coûte plus cher, et ses atouts (Ethernet, écran MIPI) ne servent pas ici. Le S3 a
 le même framework Berry (historique, `/graphiques`).
 
+**Deux cartes (décision du 2026-11-09)** : l'écran quitte la carte des débits pour une carte d'affichage (maître ModBus et Range Extender id 0) ; la carte des débits devient esclave id 1, sans écran, sans LVGL. Réalisation, essais du réseau et mesure de l'écran : plan `tasks/plans/debits-deux-cartes.md` (étapes retirées d'ici le 2026-11-09 : essai du point d'accès sur la carte des débits, durée de mise à jour de l'écran, écran pendant l'essai de charge, cadence du relevé et rôles). La décision « pas de liaison vers un maître » du 2026-11-08 est remplacée.
+
 Patrons à réutiliser (rien à réinventer) :
 - module de carte : `data/garage/tasmota32s3-capteurs-cuve-modbus/controleCuve.be` + `cuveFonctions.be`
   (commande `ReglageCuve` par `tasmota.add_cmd`, aide via `diversFonctions.traiteAide`) ;
@@ -76,7 +78,7 @@ sans impulsions.
 - [x] Brochage validé par l'utilisateur (proposition § 7 ter : `FlowRateMeter` GPIO 4-5, `Counter` GPIO 6, 7, 15, 16, I2C SCL 8 / SDA 9 comme le parc) — preuve : « ok on y va » de l'utilisateur, 2026-11-08
 - [x] Brochage écrit dans le persist et le modèle de GPIO de la carte (A3) — preuve : `data/bureau/tasmota32s3-serveur-debits-pac/_persist.json`, `modules.debits.environnement` (compteurs 1-4 GPIO 6, 7, 15, 16 type 352 ; pinsTechniques 1-2 GPIO 4, 5 type 8992) ; drivers.I2C SDA 9 / SCL 8
 - [ ] Largeur de la carte S3 achetée compatible avec le bornier DNDINS3 (25,4 ou 28 mm, 44 broches)
-- [ ] Recherche d'un module tout-en-un vendu en ligne (demande du 2026-11-09) : ESP32-S3 (N16R8 de préférence) + écran tactile intégré + GPIO accessibles pour les 6 débitmètres (au moins 6 entrées libres hors broches de l'écran, de la PSRAM et du démarrage), alimentation 5 V ; comparatif (référence, prix, broches libres, pilote d'écran pris en charge par Tasmota/HASPmota, boîtier) contre la solution actuelle S3 DevKit + ILI9488 séparés, choix laissé à l'utilisateur
+- [ ] Recherche d'un module tout-en-un vendu en ligne (demande du 2026-11-09) : ESP32-S3 (N16R8 de préférence) + écran tactile intégré + GPIO accessibles pour les 6 débitmètres (au moins 6 entrées libres hors broches de l'écran, de la PSRAM et du démarrage), alimentation 5 V ; comparatif (référence, prix, broches libres, pilote d'écran pris en charge par Tasmota/HASPmota, boîtier) contre la solution actuelle S3 DevKit + ILI9488 séparés, choix laissé à l'utilisateur — preuve : § 7 quater de `outils_docs/ANALYSE_DEBITMETRES_CHAUFFAGE_2026-11-08.md` (6 modules comparés, 3 écartés, prise en charge Tasmota lue dans `tasmota/displaydesc/` et `uDisplay_touch.cpp`) ; choix de l'utilisateur en attente
 - [x] Fiche technique ajoutée au dépôt — preuve : `outils_docs/Electronique/Debitmetre YF-B2/YF-B2_fiche_technique.pdf` (page 4 : F = 11 × Q, 1-25 L/min)
 - [ ] PAC = **Daikin Altherma haute température** (utilisateur, 2026-11-08 ; photo : 1re génération grise, `EKHBRD` + `EKHTS` + `ERRQ`/`ERSQ` probable, guide § 2.1 ter) : modèle exact lu sur la plaque ; débit minimal de la notice (12 L/min sur Altherma 3 H HT, 20 L/min sur ETBH/ETBX16) et ΔT réglé (radiateurs : 10 K fixe, 8 K si `[2-0C]` = 2 ; la pompe module son débit pour le tenir). Plage du capteur à reconfirmer : part de chaque radiateur × débit minimal de la PAC ≥ 1 L/min (≈ 1,7 L/min pour 1 400 W sur ~10 kW) ; seul un robinet thermostatique qui ferme passe sous le seuil (guide `outils_docs/chauffage/EQUILIBRAGE_CHAUFFAGE_NOURRICE.md`, § 2.1 bis)
 - [ ] Facteur K confirmé à réception (référence lue sur l'étiquette ; volume connu passé dans un capteur : impulsions / litres × 60)
@@ -89,7 +91,6 @@ sans impulsions.
 - [x] Compilation par la page Build (:7700), SUCCESS lu en fin de journal — preuve : journal `20261108-075514-tasmota32s3-bureau-serveur-debits-pac-compiler.log`, `[SUCCESS] Took 14055.04 seconds`, RAM 22,9 %, Flash 70,8 % (2 829 879 o)
 - [x] `banc_demarrage.py` relancé, instantané de la nouvelle carte enregistré (sans travail d'une autre session en cours) — preuve : carte ajoutée à `banc_demarrage.py::CARTES`, référence `bouchons_berry/demarrage/tasmota32s3-bureau-serveur-debits-pac.txt` enregistrée le 2026-11-09 sur une copie de `data/fs` du commit (`--sources`, l'autre session modifiait `fsMqtt.be`) : 4 drivers dont `HISTORIQUE_WEB`, 3 commandes, cron `majHistorique`, exception aucune, 0 erreur ; `--carte` VERT aussi sur le `data/fs` de travail
 - [x] Range Extender activé (demande du 2026-11-09) : carte maître (id 0), point d'accès `SERVEUR-DEBITS-PAC-GATEWAY` avec NAPT (`USE_WIFI_RANGE_EXTENDER` déjà dans la section du `.h`) ; persist `serveur.rangeExtender.activation`, `AP.routeNAPT` et `serveur.udp.activation` à ON (l'UDP est forcé par `controleRangeExtender.be::init`, sinon redémarrage au 1er démarrage) ; autoexec : `udpFonctions`, `controleUDP`, `controleRangeExtender` comme sur le P4 — preuve : `banc_demarrage.py --carte` : +`CONTROLE_RANGE_EXTENDER`, +2 `CONTROLE_UDP`, +`ReglageRangeExtender`, `RoutageRangeExtender`, `ReglageUDP`, 0 erreur, aucun redémarrage ; référence ré-enregistrée sur une copie de `data/fs` du commit ; `banc_debits.py` et `test_assistant_persist_generation.py` (rejeu du parc) VERT
-- [ ] Sur la carte, après envoi du FS : `SERVEUR-DEBITS-PAC-GATEWAY` visible, un téléphone connecté dessus atteint Internet (NAPT) et la page de la carte en 192.168.4.1 ; MQTT et page d'accueil toujours joignables par le Wi-Fi maison ; tas mesuré avant et après
 
 ## A4 — Module Berry des débits
 - [x] `controleDebits.be` + `debitsFonctions.be` dans le dossier de la carte, sur le patron de la cuve ; bloc persist `debits` (nom des 6 départs, K par voie, fenêtre en s) — preuve : `debitsFonctions.be::debitsFonctions_entree` et `debitsFonctions_voie` : nom et K lus dans l'entrée qui porte la broche (décision du 2026-11-08 : `environnement.debitmetres.debitmetre1-2`, ex-`pinsTechniques`, et `environnement.compteurs.compteur1-4`, clé `k` ajoutée au `_persist.json` du dépôt), `fenetre` dans le bloc `debits` (défaut 10 s) ; banc « ReglageDebits » sur le vrai persist de la carte, 56 vérifications OK, 19 témoins rouges ; `banc_demarrage.py --dossier … --env …` VERT (0 erreur)
@@ -107,14 +108,12 @@ sans impulsions.
 - [x] Débit mesuré entre 0 et 1 L/min (hors plage du capteur) affiché « < 1 » sur l'écran et la page web, et signalé comme tel dans le JSON — preuve : `debitsFonctions.be::debitsFonctions_imprecis` (écran « <1 », page « < 1 : imprécis », JSON `Imprecis`) ; banc 45 vérifications OK, 18 témoins rouges, VERT (2026-11-08)
 - [x] Veille de l'écran réglable par l'utilisateur (demande du 2026-11-09) : `ReglageDebits veille <min>` (0 à 120, 0 = jamais, défaut 5), persist `modules.debits.veille`, appliquée à HASPmota sans redémarrer (`haspmota.dimming_time`) ; luminosité à 25 % puis écran éteint 30 s plus tard, un toucher le rallume — preuve : `debitsFonctions.be::debitsFonctions_veille`, `debitsFonctions_appliqueVeille` ; banc 78 vérifications OK, 27 témoins rouges, VERT. Rendu réel à voir sur la carte
 - [ ] Page web de la carte : 6 lignes nommées (`web_sensor`) ; lignes natives des compteurs bruts et du `FlowRateMeter` jugées sur la vraie page (gardées ou masquées), avec l'utilisateur
-- [ ] Durée d'une mise à jour de l'écran mesurée sur carte (`tasmota.millis()` autour de l'écriture), consignée ; fréquence SPI du `display.ini` à essayer si l'écran est lent
 - [x] Message « capteur muet » si une voie ne donne plus d'impulsion : **10 min** à 0 L/min (utilisateur, 2026-11-08 ; persist `modules.debits.muet` en min, facultatif) — preuve : `debitsFonctions.be::debitsFonctions_suitMuets` (erreur `CAPTEUR_MUET_ERREUR` au passage seulement, une impulsion remet la voie à l'état normal, une voie sans mesure ne compte pas), écran rouge « muet », page « capteur muet ? », JSON `Muets`, `ReglageDebits` → `muets` ; `muet` du persist hors limites (0, négatif, texte) ignoré ; banc 72 vérifications OK, 24 témoins rouges, VERT ; relu par `relecteur-berry`. Limite : un départ fermé plus de 10 min est aussi signalé
 
 ## A6 — Essai de charge sur banc
 - [x] Script de l'essai prêt : `outils_docs/scripts_python/outils_pc/essai_charge_debits.py` (générateur piloté par HTTP : `PwmFrequency f` global, 2 à 50 000 Hz d'après `support_pwm.ino::CmndPwmfrequency`, Pwm1-6 à 50 % ; carte testée lue par `Status 10` et `ReglageDebits` → `ecran_ms` ; montage dans son en-tête) — preuve : `--test` VERT (7 cas : écart, voie absente, compteur repassé à zéro, impulsion parasite à 0 Hz)
 - [ ] Générateur : second ESP32 en `PwmFrequency` sur 6 sorties câblées aux entrées de la carte (fait AVANT l'achat des 5 autres capteurs)
 - [ ] Paliers 11, 55, 275 Hz (1, 5 et 25 L/min), puis 1 000 et 2 000 Hz par voie : impulsions comptées contre envoyées (écart < 0,5 %)
-- [ ] À chaque palier : durée de mise à jour de l'écran ≤ 1,1 × la référence sans impulsions ; seuil réel relevé
 - [ ] Résultats reportés au § 6 ter de l'analyse (estimation remplacée par la mesure)
 
 ## A7 — Pose, étalonnage et documentation
@@ -124,6 +123,11 @@ sans impulsions.
 - [ ] Contrôle de cohérence : somme des 6 débits contre le débit de la PAC, K corrigé par `ReglageDebits` si besoin
 - [x] Mode d'emploi dans `outils_docs/README.md` et carte des documents du `CLAUDE.md` mis à jour — preuve : section « Les débits de la nourrice de chauffage » de `outils_docs/README.md` et entrée de la carte des documents du `CLAUDE.md` (2026-11-09, avant la pose : à compléter par l'étalonnage réel) ; `verifie_references_docs.py` 0 défaut
 - [ ] Commit par `/commite`
+
+## A8 — Étude : deux S3, acquisition et affichage séparés (demande du 2026-11-09)
+- [x] Étude de faisabilité écrite : obstacles chiffrés (broches, temps processeur), avantages et inconvénients, liaisons comparées (ModBus RTU RS485, ModBus UDP, Range Extender, série TTL, MQTT, I2C, ESP-NOW) — preuve : § 7 quinquies de `outils_docs/ANALYSE_DEBITMETRES_CHAUFFAGE_2026-11-08.md` (2026-11-09)
+- [x] Décisions de l'utilisateur : deux cartes ; écran près de la nourrice ; relevé RS485 (XY-017) + push UDP ; affichage = S3 DevKitC-1 + ILI9488, maître ModBus et Range Extender id 0 ; acquisition = esclave id 1 — preuve : § 2 de `docs/superpowers/specs/2026-11-09-debits-deux-cartes-design.md`, conception approuvée par l'utilisateur le 2026-11-09
+- [ ] Réalisation par le plan `tasks/plans/debits-deux-cartes.md` (lecture groupée, push UDP, carte d'affichage, mise en service) ; à sa clôture, revenir ici : A2 (niveaux, K à réception), A5 (page web de l'acquisition), A6 (essai de charge), A7 (pose et étalonnage)
 
 ## Améliorations restantes
 - [ ] [projet] Carte porteuse PCB pour la nourrice (skill `pcb-tasmota`)
@@ -136,6 +140,6 @@ sans impulsions.
 
 ## Vérification
 - Banc PC : `banc_debits.py` vert, avec témoin négatif lu ; `banc_demarrage.py` vert.
-- Sur carte : 6 débits présents dans `Status 10` (JSON SENSOR), sur la page web et sur l'écran OLED.
+- Sur carte : 6 débits présents dans `Status 10` (JSON SENSOR) et sur la page web de la carte des débits ; l'écran est vérifié par le plan `debits-deux-cartes`.
 - Charge : A6 mesuré, pas estimé ; aucune impulsion perdue jusqu'à 1 000 Hz par voie.
 - Réel : somme des 6 débits cohérente avec le débit de la PAC, circuit chaud ; PAC sans défaut de débit.

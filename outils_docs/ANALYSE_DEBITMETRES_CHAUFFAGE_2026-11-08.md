@@ -323,6 +323,126 @@ hors LED RGB de la DevKitC (48). I2C sur les broches du parc (cuve, cave : SCL 8
 
 ---
 
+## 7 quater. Modules tout-en-un ESP32-S3 + écran tactile (recherche du 2026-11-09)
+
+Demande : un module vendu en ligne qui réunit l'ESP32-S3 (N16R8 de préférence), un écran tactile et au moins
+6 broches libres reliées directement à l'ESP32 (comptage par interruption, critère du § 7 ter), alimenté en 5 V,
+comparé à la solution en cours (S3 DevKit + ILI9488 séparés). Le choix reste à l'utilisateur.
+
+**Commun à tous les modules** : aucun n'a de bornier à vis ni l'adaptation 5 V → 3,3 V des capteurs. La petite
+carte d'adaptation (BAT85 + 4,7 kΩ + 1 nF par voie, § 7 ter) et ses borniers restent nécessaires dans tous les cas.
+
+Prise en charge par Tasmota : lue dans le dépôt (`tasmota/displaydesc/*.ini`, `lib/lib_display/UDisplay/src/uDisplay_touch.cpp`).
+Prix : relevés sur des revendeurs et des sites de référence ; les pages Amazon et AliExpress ne se lisent pas par
+une requête automatique, donc prix à confirmer sur l'annonce (frais de port compris).
+
+| Module | Écran | Tactile | Puce | Broches libres pour les 6 voies | Forme des connecteurs | Alim. 5 V | Boîtier | Dimensions | Prix relevé | Tasmota |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **Solution en cours** : DevKitC-1 + ILI9488 3,5″ SPI + bornier DNDINS3 | 3,5″ 480×320, ILI9488 SPI | Résistif XPT2046 | N16R8 | ✅ 6 sur ≈ 20 restantes (4, 5, 6, 7, 15, 16) | Bornier à vis 3,96 mm | ✅ | Rail DIN pour le S3 ; écran à loger à part (9 fils SPI) | DNDINS3 95 × 61 × 35 mm + l'écran | DevKit ≈ 11 £ ; écran et bornier non relevés | ✅ compilé (plan A5) |
+| **Elecrow CrowPanel Advance 3,5″** | 3,5″ IPS 480×320, ILI9488 | Capacitif (adresse 0x5D, celle du GT911) | N16R8 | ⚠️ 6 à 7 : 17, 18, 1, 2, puis 9, 10, 3 si l'interrupteur IO45 coupe le micro | HY2.0 4 broches (type Grove) + en-tête du module sans fil (forme non précisée par le wiki) ; 43, 44 sur le connecteur d'alimentation | ✅ XH2.54 4 broches ou USB-C | Acrylique en option | 101,4 × 63,3 × 15,8 mm (avec boîtier) | ≈ 38 € sans boîtier, ≈ 44 $ avec | ✅ ILI9488 et GT911 (descripteur à adapter aux broches ; interface SPI ou parallèle à confirmer) |
+| **M5Stack CoreS3** | 2″ IPS 320×240, ILI9342C | Capacitif FT6336U | N16R8 (PSRAM quad) | ✅ 8 : 8, 9 (port B), 17, 18 (port C), 5, 6, 7, 10 (M-Bus) | Grove HY2.0 4 broches + M-Bus 2×15 au pas de 2,54 mm au dos (module de prototypage ou base DIN M5) | ✅ USB-C ; 9-24 V par la base DIN | ✅ intégré | 54 × 54 × 16 mm | 60 à 77 € TTC (Europe) | ✅ `M5stack_CoreS3_ILI9342_320x240_display.ini`, pilotes Berry `tasmota/berry/drivers/M5CoreS3.be` et `AXP2102_M5CoreS3.be` |
+| **Sunton ESP32-8048S043C** | 4,3″ IPS 800×480, ST7262 RGB | Capacitif GT911 | N16R8 | ⚠️ 6 tout juste : 17, 18 + 11, 12, 13 (carte SD alors inutilisable) + 43 ou 44 (console série perdue) | JST 1,25 mm 4 broches (P1 à P4) | ✅ USB-C ou P1 | Non (modèle imprimable 3D sur Printables) | Non relevées | ≈ 22 à 40 $ | ✅ `ST7262_rgb16_display.ini` (GT911 compris) |
+| **Espressif ESP32-S3-BOX-3** + dock | 2,4″ 320×240, ILI9342 SPI | Capacitif | N16R16 | ✅ probable : 16 broches annoncées sur les 2 Pmod du dock (numéros non vérifiés) | 2 Pmod femelles 2×6 au pas de 2,54 mm | ✅ USB-C du dock | ✅ intégré | Non relevées | ≈ 50 $ | ✅ `esp32_s3_sbox_display.ini` (à vérifier sur le BOX-3) |
+| **LilyGO T-Display-S3 Touch** | 1,9″ 170×320, ST7789 parallèle 8 bits | Capacitif CST816 (broches 16, 17, 18, 21) | N16R8 | ✅ 7 : 1, 2, 3, 10, 11, 12, 13 | 2 rangées de 12 broches au pas de 2,54 mm | ✅ USB-C ou broche 5 V | Coque ≈ 7 € pour la version sans tactile seulement | 60,8 × 25,5 mm | 15 à 25 $ | ✅ `ST7789_Lilygo_S3_display.ini`, CST816S |
+| **Guition JC3248W535** | 3,5″ IPS 320×480, AXS15231B QSPI | Capacitif intégré à l'AXS15231B (0x3B) | N16R8 | ✅ 8 : 6, 7, 9, 14, 15, 16 (P2), 17, 18 (P3/P4) | JST 1,25 mm 8 et 4 broches + SH 1,0 mm (Qwiic) | ✅ USB-C ou +5 V de P1 | Fourni selon done.land, non selon atomic14 : à lire sur l'annonce | 94,5 × 62 mm | 11 à 18 $ | ❌ aucun descripteur AXS15231B ; le QSPI de uDisplay date du 2026-10-18 (#25156, AMOLED SH8601/CO5300) et le tactile AXS15231B n'est pas géré |
+
+Écartés :
+- **Guition JC4827W543** (4,3″ 480×272, NV3041A QSPI) : module N4R8, 4 Mo de flash ; le firmware LVGL de la carte
+  fait 3,49 Mo (plan A5), il ne tient pas avec l'OTA. Pas de descripteur NV3041A non plus.
+- **Waveshare ESP32-S3-Touch-LCD-4.3B** : ses entrées isolées passent par l'expandeur I2C CH422G, elles ne comptent pas.
+- **Guition ESP32-4848S040** (4″ 480×480, boîtier mural 86) : relais sur GPIO 1, 2, 40, aucun brochage libre publié.
+
+Correction du § 7 ter : le CoreS3 n'a pas « ≈ 4 broches ». Les ports B et C en donnent 4, le M-Bus du dos 4 de plus
+(5, 6, 7, 10), d'après la documentation M5Stack.
+
+Lecture :
+- Le seul module qui garde le pilote déjà compilé (ILI9488) est l'**Elecrow Advance 3,5″** : même résolution, donc
+  la page HASPmota du modèle B sans retouche, mais 6 voies seulement en coupant le micro, sur des connecteurs Grove.
+- Le plus large en broches et le mieux fini est le **CoreS3** (8 broches, boîtier, Tasmota prêt), avec un écran de
+  2″ : la page HASPmota est à redessiner en 320×240.
+- Le **JC3248W535** a le meilleur rapport broches/prix, mais demande d'écrire et d'essayer un descripteur QSPI et
+  un pilote tactile : un chantier à part entière.
+
+Sources : [espboards ESP32-8048S043](https://www.espboards.dev/esp32/cyd-esp32-8048s043/),
+[M5Stack CoreS3](https://docs.m5stack.com/en/core/CoreS3),
+[cnx-software CoreS3](https://www.cnx-software.com/2023/05/05/60-m5stack-cores3-esp32-s3-iot-controller-comes-with-2-inch-display-vga-camera-multiple-sensors/?amp=1),
+[RS CoreS3](https://ie.rs-online.com/web/p/development-tool-accessories/0839059),
+[Elecrow wiki Advance 3,5″](https://www.elecrow.com/wiki/CrowPanel_Advance_3.5-HMI_ESP32_AI_Display.html),
+[openelab Advance 3,5″](https://openelab.com/products/elecrow-crowpanel-advance-3-5-hmi-esp32-s3-ai-touch-screen),
+[bitsandparts Advance 3,5″](https://www.bitsandparts.nl/en/esp32-s3-display-crowpanel-advance-3-5-inch-ips-touch-screen-elecrow-p1933583),
+[done.land JC3248W535](https://done.land/components/microcontroller/families/esp/esp32/developmentboards/esp32-s3/guitionjc3248w535/),
+[atomic14 JC3248W535](https://www.atomic14.com/esp32/boards/guition-jc3248w535/),
+[atomic14 JC4827W543](https://www.atomic14.com/esp32/boards/guition-jc4827w543/),
+[espboards T-Display-S3](https://www.espboards.dev/esp32/lilygo-t-display-s3/),
+[espboards ESP32-S3-BOX](https://www.espboards.dev/esp32/esp32s3box/),
+[esp-box BOX-3](https://github.com/espressif/esp-box/blob/master/docs/hardware_overview/esp32_s3_box_3/hardware_overview_for_box_3.md),
+[Waveshare 4.3B](https://docs.waveshare.com/ESP32-S3-Touch-LCD-4.3B),
+[Printables boîtier 8048S043C](https://www.printables.com/model/350540-sunton-esp32s3-8048s043c-43-screen-case).
+
+---
+
+## 7 quinquies. Deux ESP32-S3 : acquisition d'un côté, affichage de l'autre (étude du 2026-11-09)
+
+Idée de l'utilisateur : un S3 « acquisition » à la nourrice (6 voies, adaptation 5 V → 3,3 V, sans écran) envoie
+les débits à un S3 « affichage » (par exemple un module tout-en-un du § 7 quater). Cela reviendrait sur la
+décision du 2026-11-08 « pas de liaison vers un maître » (§ 7 bis) : à trancher par l'utilisateur.
+
+### Les deux obstacles visés, chiffrés
+
+- **Broches libres.** Avec la solution en cours (DevKitC-1 + ILI9488 séparé), il n'y a pas d'obstacle : il reste
+  ≈ 20 broches après les 6 voies et l'écran. L'obstacle n'existe qu'avec un module tout-en-un : 6 broches tout
+  juste sur l'Elecrow Advance 3,5″ ou le Sunton 8048S043C (§ 7 quater). Deux cartes le lèvent entièrement :
+  l'affichage n'a plus besoin d'aucune broche libre, n'importe quel module du § 7 quater convient.
+- **Temps processeur.** À 25 L/min (275 Hz par voie), les 6 voies prennent moins de 1 % d'un cœur (§ 6 bis) ;
+  la limite retenue est 1 000 Hz par voie (§ 6 ter). Les interruptions passent devant l'écran : c'est
+  l'affichage qui ralentit, pas le comptage. Les routines d'interruption de `FlowRateMeter` et `Counter` sont en
+  IRAM (vérifié au plan A5 par `nm` sur le firmware), donc les écritures en flash ne les retardent pas. Le temps
+  processeur ne justifie donc pas à lui seul deux cartes ; l'essai de charge (plan A6) le confirmera ou non.
+
+Le gain réel est ailleurs : isolement de l'acquisition, et liberté pour l'affichage.
+
+### Avantages et inconvénients
+
+| Avantages | Inconvénients |
+|---|---|
+| L'acquisition ne s'arrête pas quand l'affichage redémarre, plante ou reçoit une mise à jour OTA (le firmware LVGL est le plus gros et le plus souvent touché) | Deux cartes, deux alimentations, deux firmwares, deux persists à maintenir |
+| Firmware d'acquisition sans LVGL ni HASPmota : 70,8 % de la flash mesuré avant l'écran (plan A3) contre 87,3 % avec (plan A5) ; OTA large, RAM libre pour l'historique | Une liaison à câbler ou un réseau dont dépend l'affichage ; il faut gérer « pas de nouvelles » (afficher « inconnu », jamais une vieille valeur) |
+| L'écran se pose où on veut (séjour, couloir), pas forcément à la nourrice | Latence : de 1 s à 30 s selon la liaison (voir ci-dessous) |
+| N'importe quel module d'affichage, même sans broche libre ; un affichage peut servir à d'autres cartes plus tard | Coût : un second S3 et, pour une liaison filaire, deux transceivers |
+| La carte d'acquisition reste simple à mettre au point sur banc (plan A6), sans écran à l'arrêt | Le code d'écran déjà écrit (`debitsFonctions.be::debitsFonctions_ecran`) doit changer de carte et lire des valeurs reçues |
+
+### Méthode de transmission
+
+Volume à transmettre : 6 débits, le total et l'état de chaque voie (normal, imprécis, muet), soit une trentaine
+d'octets par instantané. Une fois par seconde, c'est négligeable pour toutes les liaisons. Le principe du dépôt
+s'applique (`PROTOCOLE_MODBUS.md` § 9) : envoyer un **instantané complet**, jamais une différence ; une perte est
+réparée par le suivant.
+
+| Liaison | Distance | Latence | Code existant | Verdict |
+|---|---|---|---|---|
+| **ModBus RTU sur RS485** | jusqu'à ~1 km, câble à paire torsadée | relevé du maître toutes les 30 s par défaut (`modBus_TasmotaSlaveModBus.be::releveEsclaves`), à accélérer pour un écran | ✅ servi tel quel : une valeur calculée en Berry est publiée par un appareil analogique actif au registre `4704 + id - 1` (`PROTOCOLE_MODBUS.md` § 9, cas de la tension de la sonde de la cuve lue par le P4) | ✅ **le plus robuste** : ni Wi-Fi ni broker ; 2 transceivers (≈ 1 € chacun) et 2 broches par carte |
+| **ModBus UDP** sur le Wi-Fi maison (push de l'esclave) | portée du Wi-Fi | ≈ 1 s si l'esclave pousse | ✅ transport, enveloppe `ModbusPushUDP`, garde de fraîcheur ; ⚠️ les analogiques ne poussent pas aujourd'hui (« trop variables », § 9) : un push des 6 débits est à ajouter | ✅ **le meilleur si aucun câble n'est possible** |
+| **Range Extender** | portée du point d'accès de la carte maître | idem ModBus UDP | ✅ | ⚠️ c'est une topologie, pas un protocole : utile seulement si l'affichage est hors de portée de la box. Le maître serait alors l'**affichage** (il consomme), la carte d'acquisition devenant esclave id 1 : le persist du 2026-11-09 (acquisition maître id 0) serait à inverser. Pièges connus : NAPT, multicast invisible du PC |
+| **Série TTL directe** (UART, 2 fils + masse) | < 2 m sans transceiver | 1 s | ⚠️ module Berry `serial` disponible, mais aucun protocole maison : une ligne JSON par seconde à écrire des deux côtés | ✅ si les deux cartes sont dans le même coffret ; au-delà, passer en RS485 |
+| **MQTT** | portée du Wi-Fi | `TelePeriod` (10 s au mieux) ou publication Berry à la seconde | ✅ côté acquisition rien à écrire (bloc `DEBITS` du JSON SENSOR) ; abonnement Berry côté affichage | ⚠️ tout dépend du broker : broker en panne = plus d'affichage (et plantages déjà vécus, mémoire du projet) |
+| **I2C** | ~1 m | | ❌ Tasmota ne sait pas faire d'un ESP32 un esclave I2C (§ 4) | ❌ |
+| **ESP-NOW** | portée radio, sans box | < 100 ms | ❌ seulement dans TasMesh (`xdrv_57_1_tasmesh_support.ino`), qui relaie MQTT ; aucune API Berry générale | ❌ hors de l'existant |
+
+### Proposition (à valider)
+
+Le choix dépend d'abord de **la distance entre la nourrice et l'écran** :
+- écran à côté de la nourrice ou dans le même coffret : une seule carte suffit (solution en cours) ; deux cartes
+  ne se justifient que pour un module tout-en-un sans broches libres, liées alors en **série TTL** ou en **RS485** ;
+- écran ailleurs, câble possible : **ModBus RTU sur RS485**, relevé accéléré à 1 ou 2 s (le plus robuste, code servi) ;
+- écran ailleurs, sans câble : **ModBus UDP** par le Wi-Fi maison, avec un push des 6 débits à ajouter ; le Range
+  Extender seulement si la box ne couvre pas l'un des deux emplacements.
+
+À vérifier avant de retenir le RS485 ou l'UDP : la cadence la plus courte que tient le relevé du maître sans
+encombrer sa file (`PROTOCOLE_MODBUS.md` § 5 et § 9), et l'échelle des registres (débit en centièmes de L/min dans
+un uint32).
+
+---
+
 ## 8. Ce qui n'est pas vérifié
 
 - Le calcul du débit sur les compteurs est à écrire en Berry et à valider sur banc puis sur carte.

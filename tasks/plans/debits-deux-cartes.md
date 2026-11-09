@@ -1,0 +1,103 @@
+---
+chantier: debits-deux-cartes
+titre: Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître
+objectif: Faire passer les 6 débits de la carte d'acquisition (esclave ModBus id 1) à une carte d'affichage (maître id 0) par une lecture groupée RS485 et un push UDP, sans rien changer au garage
+statut: actif
+cree: 2026-11-09
+maj: 2026-11-09
+---
+# Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître
+
+## Contexte
+Conception approuvée par l'utilisateur le 2026-11-09 : `docs/superpowers/specs/2026-11-09-debits-deux-cartes-design.md`
+(à lire avant toute action : décisions § 2, protocole § 5, persists § 7). Étude : § 7 quinquies de
+`outils_docs/ANALYSE_DEBITMETRES_CHAUFFAGE_2026-11-08.md`. Plan d'origine : `tasks/plans/debitmetres-chauffage.md`.
+
+Architecture : l'acquisition (`data/bureau/tasmota32s3-serveur-debits-pac`) sert 7 valeurs uint32 aux registres 4704 à
+4710 (6 débits en centièmes de L/min, puis un mot d'états) et les pousse en UDP à chaque fin de fenêtre ; l'affichage
+(nouvel env `tasmota32s3-bureau-ecran-debits-pac`) les relit en une requête 0x04 toutes les 10 s par RS485 (XY-017,
+GPIO 17/18, 19 200 bauds 8N1) et les répartit sur 7 entrées analogiques virtuelles, lues par son code d'écran.
+Affichage = maître ModBus et Range Extender id 0 (point d'accès `SERVEUR-DEBITS-PAC-GATEWAY`, IP 192.168.0.51, topic
+`chauffage/pac/ecran`) ; acquisition = esclave id 1, Range Extender ON id 1, DHCP, `timerRebootSansWifi` 0.
+
+Contraintes globales (de la conception) :
+- garage identique : sans les clés neuves, mêmes requêtes et mêmes trames qu'avant, octet pour octet ;
+- clés neuves (noms retenus par ce plan) : `drivers.ModBus.lectureGroupee` (esclave, `"ON"` / absente),
+  `drivers.ModBus.environnement.TasmotaSlaveModBus<n>.lectureGroupee` (maître, par esclave),
+  `drivers.ModBus.periodeReleve` (maître, s, défaut 30, bornée 5 à 300), `modules.debits.modbus` (acquisition,
+  `"ON"` = écrit les 7 registres et pousse) ; sous-commandes `ReglageModbus lectureGroupee|periodeReleve`
+  sur le modèle de `relaisPushMQTT` (`modbusFonctions.be::modbusFonctions_reglageModbus`) ;
+- mot d'états (registre 4710) : bit i (0-5) voie i+1 muette, bit 6+i voie i+1 imprécise (0 < q < 1),
+  **bit 12 toujours à 1** (« groupe servi », choix de ce plan : un esclave d'avant la modification répond 0 dans ce
+  mot, le maître rejette alors tout le groupe au lieu d'afficher des zéros) ;
+- sentinelle `modbusFonctions.SENTINELLE_UINT32` (0x7FFFFFFF) ; débit = `int(q * 100 + 0.5)` ;
+- fraîcheur des 7 registres : 2 × fenêtre (ms), hors délai de grâce `GRACE_DEMARRAGE_S` ;
+- logs : charte du `CLAUDE.md` (`logFonctions.log`, préfixe `NOM_MAJ_SNAKE:`, pas d'`info` dans `every_second`) ;
+- `data/fs/*.be`, `user_config_override.h` et les `_persist.json` nommés par la conception : accord donné (2026-11-09) ;
+  tout autre fichier de `data/fs` : demander ; compilations et FS par la page Build (:7700) seulement ;
+- `modbusFonctions.be`, `modBus_TasmotaSlaveModBus.be`, `udpFonctions.be` sont SOLIDIFIÉS (`berry_commun.modbus`,
+  `berry_commun.socle`) : `banc_demarrage.py` après toute modification de `custom_berry_solidify`.
+
+À surveiller (aucun banc ne le couvre tout seul ; chaque ligne a sa vérification dans l'action qui la porte) :
+1. Maître à jour face à un esclave d'avant la modification : réponse `[v, 0, 0, …]` → doit donner « inconnu », jamais
+   « 0 L/min » (bit 12, A2) ; déployer l'acquisition AVANT l'affichage (A6).
+2. Fenêtre changée par `ReglageDebits` sur l'acquisition sans la recopier sur l'affichage → « inconnu » entre deux
+   mesures : l'écran doit le dire (message « fenêtre ? » dans le journal du maître, A4).
+3. Requête groupée hors limites (Count impair, plus de 40 registres, registre sans appareil) → exception ModBus, pas
+   de zéros (A1).
+4. Push en double ou en retard → ignoré par `accepteSeq`, pas de recul de la valeur affichée (A2).
+5. Redémarrage de l'affichage → l'acquisition se reconnecte seule, sans redémarrer (`timerRebootSansWifi` 0), compte
+   sans trou (A6).
+
+## A1 — Esclave : fraîcheur propre et lecture groupée (`data/fs/modbusFonctions.be`)
+- [ ] Banc rouge d'abord : section « 36. Lecture groupée de l'esclave » de `outils_docs/scripts_python/berry/banc_test_modbus.be` (style `verifie(nom, attendu, obtenu)`), 7 analogiques actives 4704-4710 dans un module de test : (a) clé absente, requête 4704 de 14 registres → mêmes `Values` qu'avant la modification (référence captée sur le code du commit, témoin du défaut `[v, 0, 0, 0, 0, 0, 0]`) ; (b) clé `"ON"` → 7 valeurs dans l'ordre des registres ; (c) une voie non fraîche → sentinelle à sa place seulement ; (d) 4711 dans la plage → exception `wrongstartaddress`, aucune valeur ; (e) Count impair ou > 40 registres → exception ; (f) `declareMesure(4704, 20000)` sans mesure → sentinelle même pendant la grâce ; après `noteMesure` + 20 001 ms → sentinelle
+- [ ] `modbusFonctions_declareMesure(adresse, limite_ms)` : retire le registre du délai de grâce et lui donne sa limite ; `modbusFonctions_mesureFraiche(adresse)` lit `etat()["limites"]` avant `limiteFraicheur()`
+- [ ] `modbusFonctions_sertGroupe(paramMSG, n) -> bool` (true = requête traitée), appelée en tête de `modbusFonctions_executeCmdModbus` si `drivers.ModBus.lectureGroupee == "ON"`, `LECTURE_REGISTRES_ENTREES` et `n = Count / 2 > 1` : registre `StartAddress + i` cherché parmi les analogiques et compteurs actifs de tous les modules (même parcours que `executeCmdModbus`), sentinelle si non frais, exception sinon ; l'ancien chemin n'est pas modifié
+- [ ] `ReglageModbus lectureGroupee ON|OFF` et son aide
+- [ ] `banc_test_modbus.py` VERT en entier (nombre de vérifications avant/après noté), `verifie_berry.py data/fs/modbusFonctions.be` 0 erreur 0 écart
+
+## A2 — Maître : lecture groupée, répartition, période (`data/fs/modBus_TasmotaSlaveModBus.be`)
+- [ ] Banc rouge d'abord : section « 37. Lecture groupée du maître » : (a) esclave sans clé → `releveEsclaves()` place une demande par appareil (témoin : « 4 demandes » de la section existante inchangé) ; (b) clé ON, 7 analogiques `idModBus` 1-7 → UNE demande 0x04 `StartAddress 4704`, `Count 7`, uint32 ; (c) réponse de 7 valeurs → `value`, `etatConstate "valide"`, `constateA` posés sur les 7 entrées ; (d) sentinelle en 3e position → seule l'entrée 3 passe `defaillant` ; (e) bit 12 absent du mot d'états → les 7 entrées `defaillant`, log `erreur` ; (f) push 0x10 de 14 registres → mêmes effets que (c) ; (g) push rejoué (même `seq`) → ignoré ; (h) `drivers.ModBus.periodeReleve` 10 → `periodeReleve()` 10, absente → 30, 2 → 5
+- [ ] `demandeGroupee(devices, idEsclave)` : une trame pour les analogiques 4704 d'idModBus consécutifs d'un esclave à clé ON (trou dans la suite = repli sur une demande par appareil, log `debug`), appelée par `releveEsclaves`
+- [ ] `eclateGroupe(msg)` en tête de `recupereReponseModBus` : réponse ou push de plus d'une valeur d'un esclave à clé ON → conversion `motsVersValeurs(..., "uint32")` pour un push, contrôle du bit 12, puis une sous-réponse d'une valeur par registre traitée par le chemin existant (sentinelle, `etatConstate`, `dataJson`) ; un esclave sans clé ne passe jamais par là
+- [ ] `periodeReleve()` lit `drivers.ModBus.periodeReleve` (bornes 5 à 300) ; `ReglageModbus periodeReleve <s>` et son aide ; chien de garde inchangé (3 × période)
+- [ ] `banc_test_modbus.py` VERT en entier, `verifie_berry.py` 0 erreur 0 écart ; `banc_demarrage.py` VERT sur les 6 cartes maintenues (aucune clé neuve dans leurs persists)
+
+## A3 — Acquisition : 7 registres et push (`data/bureau/tasmota32s3-serveur-debits-pac/`)
+- [ ] Banc rouge d'abord, `outils_docs/scripts_python/berry/banc_debits.be` : `modules.debits.modbus "ON"` → après `mesure()`, analogique1 = `int(q * 100 + 0.5)` (1,234 L/min → 123), voie `nil` → `SENTINELLE_UINT32`, analogique7 = bits muets/imprécis + bit 12, `noteMesure` appelé pour 4704-4710, UN appel `pousseEtat(4704, "uint32", [7 valeurs])` ; clé absente → ni écriture ni push (témoin)
+- [ ] `debitsFonctions_publieModbus(d)` appelée par `debitsFonctions_mesure` après `debitsFonctions_suitMuets` ; `declareMesure(4704 + i, 2 * fenetre * 1000)` au premier appel et à chaque changement de fenêtre
+- [ ] Persist de l'acquisition : `analogiques` ON, `analogique1-7` actives (`pin` -1, `type` 4704, `virtuel` `Calcul_debit1-6` et `Calcul_etatsDebits`), `modules.debits.modbus` ON ; `drivers.ModBus` ON id 1, Serial ON, UDP ON, `voieCommandes` Serial, `lectureGroupee` ON, RX 17 / TX 18 (types série de la cuve 3232/3200) ; `serveur.rangeExtender.id` 1, `ipMaitre` 192.168.0.51, `reseau1` = `SERVEUR-DEBITS-PAC-GATEWAY` (mot de passe recopié, jamais affiché) ; `timerRebootSansWifi` 0 ; `drivers.ecran` OFF
+- [ ] Autoexec : `udpFonctions`, `controleUDP`, puis la pile `berry_commun.modbus` dans l'ordre de la cuve ; cenv : `extends = env:tasmota32s3-base-N16R8-sans-ecran`, `${berry_commun.modbus}` dans `custom_berry_solidify`, `pages.jsonl` et `display.ini` exclus ; section `#elif` du `.h` : `WIFI_IP_ADDRESS "0.0.0.0"`, `STA_SSID1` = point d'accès de l'affichage, `WIFI_RGX_SSID` propre (`ACQUISITION-DEBITS-PAC-GATEWAY`), `USE_ILI9488` retiré
+- [ ] `banc_debits.py` VERT, `banc_demarrage.py --carte` VERT (référence réenregistrée sur une copie de `data/fs` du commit), `test_assistant_persist_generation.py` (rejeu du parc) VERT
+
+## A4 — Carte d'affichage : env, persist, code d'écran
+- [ ] Env créé par l'assistant persist (:7900, `POST /creation`) sur le modèle de l'acquisition actuelle (écran ILI9488, base `tasmota32s3-base-N16R8`) : `tasmota32s3-bureau-ecran-debits-pac`, dossier `data/bureau/tasmota32s3-ecran-debits-pac`, nom « Écran Débits de PAC », IP 192.168.0.51, topic `chauffage/pac/ecran` ; diff relu ; exclusions `page_cuve`, `page_energie`, `pages_graphiques`, `pages_graphiques_moteur` vérifiées
+- [ ] Persist de l'affichage : `serveur.rangeExtender` ON id 0, AP `SERVEUR-DEBITS-PAC-GATEWAY` + NAPT (mot de passe recopié côté serveur) ; `drivers.ModBus` ON id 0, Serial ON, UDP ON, RX 17 / TX 18, `periodeReleve` 10, `TasmotaSlaveModBus1` ON id 1 `lectureGroupee` ON ; 7 analogiques `virtuel` `ModBus_TasmotaSlaveModBus1`, `idModBus` 1-7, `type` 4704, `nom` des 6 départs ; `drivers.ecran` de l'acquisition d'aujourd'hui ; bloc `ecranDebits` : `fenetre` 10, `veille` 5
+- [ ] Banc rouge d'abord `outils_docs/scripts_python/berry/banc_ecran_debits.py` (+ `.be`, bouchons de `banc_debits`) : 12 345 → 123,45 L/min ; `etatConstate` ≠ `valide` ou `constateA` plus vieux que 2 × fenêtre → « inconnu » ; bits muets/imprécis rendus comme sur l'acquisition ; total « partiel » si une voie inconnue, « inconnu » si toutes ; message `ECRAN_DEBITS: fenetre ?` en `debug` quand toutes les voies passent inconnues ensemble
+- [ ] `ecranDebitsFonctions.be` + `controleEcranDebits.be` dans le dossier de l'affichage : rendu repris de `debitsFonctions_ecran`, `debitsFonctions_demarreEcran`, `debitsFonctions_appliqueVeille` et `pages.jsonl` (modèle B), alimenté par les 7 entrées ; `ReglageEcranDebits fenetre|veille` et son aide ; section `#elif` du `.h` (pont ModBus et Range Extender comme le P4, `USE_ILI9488`)
+- [ ] `banc_ecran_debits.py` VERT ; `banc_demarrage.py` : carte ajoutée à `CARTES`, référence enregistrée ; `verifie_berry.py` 0 erreur 0 écart
+
+## A5 — Outils et documentation
+- [ ] `outils_pc/decodeur_modbus.py` : persist du maître choisi (P4 par défaut, affichage en option) ; une réponse 0x04 groupée et un push de 14 registres nommés registre par registre (débit 1 … débit 6, états avec ses bits) ; `test_sniffeur_modbus.py` VERT avec un cas groupé
+- [ ] `outils_docs/PROTOCOLE_MODBUS.md` : sous-section « Lecture groupée et push multi-valeurs (2026-11-09) » (clés, bit 12, défaut `Count` > 1 de l'ancien chemin) ; `outils_docs/README.md` § des débits (deux cartes, accès `192.168.0.51:8080/equilibrage`) ; carte des documents du `CLAUDE.md` ; `verifie_references_docs.py` 0 défaut
+- [ ] Relecture par `relecteur-berry` des `.be` modifiés, remarques traitées
+
+## A6 — Mise en service sur les deux cartes (avec l'utilisateur)
+- [ ] Compilation des deux envs par la page Build, SUCCESS lu en fin de journal, flash de l'acquisition < 80 % ; acquisition flashée en premier (USB, « Effacer puis téléverser »), puis l'affichage
+- [ ] RS485 seul (Wi-Fi de l'acquisition coupé) : les 6 débits sur l'écran au rythme du relevé ; push seul (câble débranché) : écran à jour ≤ 2 s après la fin d'une fenêtre ; les deux coupés : « inconnu » après 2 fenêtres
+- [ ] Affichage redémarré : l'acquisition revient seule sur le point d'accès, aucun redémarrage de sa part, compteurs continus ; tas des deux cartes mesuré avant et après une heure
+- [ ] Téléphone sur `SERVEUR-DEBITS-PAC-GATEWAY` : Internet par le NAPT ; page d'équilibrage par `http://192.168.0.51:8080/equilibrage` depuis le Wi-Fi maison ; MQTT des deux cartes reçu
+- [ ] Garage : grille ModBus repassée (`testeur_udp`, onglet « Grille ModBus ») après le prochain flash d'une carte du garage, aucun écart
+- [ ] Commit par `/commite`
+
+## A7 — Retour au plan « debitmetres-chauffage »
+- [ ] Cocher l'étape « Réalisation par le plan `tasks/plans/debits-deux-cartes.md` » de l'action A8 de `tasks/plans/debitmetres-chauffage.md` (preuve : commit de A6), passer ce plan en `statut: clos`, puis reprendre `debitmetres-chauffage` où il attend : A2 (niveaux mesurés, K confirmé à réception, PAC), A5 (page web de la carte des débits), A6 (essai de charge, sur l'acquisition sans écran), A7 (pose et étalonnage)
+
+## Améliorations restantes
+- [ ] [projet] Fenêtre de mesure transmise par l'acquisition (évite la recopie à la main sur l'affichage)
+- [ ] [projet] Défaut de l'ancien chemin `Count` > 1 (`[v, 0, …]`) corrigé pour toutes les cartes, avec la grille du garage
+
+## Vérification
+- Bancs : `banc_test_modbus.py`, `banc_debits.py`, `banc_ecran_debits.py`, `banc_demarrage.py`, `test_sniffeur_modbus.py` VERT, témoins rouges lus.
+- Sur cartes : A6 entier, mesuré, pas estimé.
+- Garage : aucune clé neuve dans ses persists ; grille ModBus sans écart.
