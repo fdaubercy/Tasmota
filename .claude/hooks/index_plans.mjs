@@ -24,19 +24,34 @@ export function lignes(dossierPlans) {
                     || String(y.a.meta.maj).localeCompare(String(x.a.meta.maj)) || x.nom.localeCompare(y.nom))
 }
 
+// Ce qui reste d'un plan : etapes et ameliorations non cochees (vide = plan entierement realise).
+function restes(a) {
+  const etapes = a.actions.flatMap(act => act.etapes.filter(e => !e.fait).map(e => `${act.id} — ${act.titre} : ${e.texte}`))
+  const amelio = a.ameliorations.filter(x => !x.fait).map(x => `Amélioration [${x.portee}] : ${x.texte}`)
+  return { etapes, amelio }
+}
+const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? "s" : ""}`
+
 export function bloc(dossierPlans) {
   const plans = lignes(dossierPlans)
   const r = [DEBUT, "",
     `${plans.length} plans : ` + ["actif", "en-pause", "clos"]
       .map(s => `${plans.filter(p => p.a.meta.statut === s).length} ${s}`).join(", ") + ".", "",
-    "| Plan | Objectif principal | Statut | Avancement | Créé | Mis à jour |",
-    "|---|---|---|---|---|---|"]
+    "| Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |",
+    "|---|---|---|---|---|---|---|"]
+  const notes = []
   for (const { nom, a } of plans) {
     const m = a.meta
     const avance = a.global == null ? "—" : `${barre(a.global)} ${a.global} % (${a.fait}/${a.total})`
+    const { etapes, amelio } = restes(a)
+    const reste = [etapes.length && pluriel(etapes.length, "étape"), amelio.length && pluriel(amelio.length, "amélioration")]
+      .filter(Boolean).join(", ")
     r.push(`| [${cellule(a.titre || nom)}](plans/${nom}) | ${cellule(m.objectif) || "_à renseigner (clé `objectif:`)_"} ` +
-           `| ${cellule(m.statut) || "?"} | ${avance} | ${cellule(m.cree) || "—"} | ${cellule(m.maj) || "—"} |`)
+           `| ${cellule(m.statut) || "?"} | ${avance} | ${reste || "—"} | ${cellule(m.cree) || "—"} | ${cellule(m.maj) || "—"} |`)
+    if (reste) notes.push("", `#### [${cellule(a.titre || nom)}](plans/${nom}) — ${a.global ?? "?"} %`, "",
+                          ...[...etapes, ...amelio].map(s => `- ${cellule(s)}`))
   }
+  if (notes.length) r.push("", "### Points restants des plans non terminés", ...notes)
   r.push("", FIN)
   return r.join("\n")
 }
