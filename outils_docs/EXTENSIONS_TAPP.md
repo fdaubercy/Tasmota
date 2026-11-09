@@ -182,7 +182,7 @@ Dossier `ext_a/` (nom d'archive libre) :
 }
 ```
 
-`autoexec.be` (copie de `data/extensions/fsMqtt/autoexec.be`)
+`autoexec.be`
 ```berry
 # Extension sans .be embarque : le module est solidifie dans le firmware, l'extension ne fait que le charger.
 # Differe apres /autoexec.be : le prologue de demarrage.be pose LOG_LEVEL_* et le persist dont logFonctions a besoin.
@@ -326,9 +326,9 @@ l'identique. Cela prouve la **syntaxe Berry** et le **format** ; cela ne prouve 
 
 | Voie | État dans le code | Essai sur carte |
 |---|---|---|
-| Page `/ext` de la carte : boutons Run / Stop / Auto-run / Uninstall | `extension_manager.be::page_extensions_ctl` ; **ne reçoit pas de fichier** (sa boutique télécharge depuis un dépôt `…/extensions/`) | sans objet pour déposer un fichier |
+| Page `/ext` de la carte : boutons Run / Stop / Auto-run / Uninstall | `extension_manager.be::page_extensions_ctl` ; **ne reçoit pas de fichier** (sa boutique télécharge depuis un dépôt `…/extensions/`, déduit de l'`OtaUrl` par `extension_manager.be::load_manifest`) ; dépôt local : la page « Fabrique d'extensions » sert nos `.tapp` à jour (`outils_docs/scripts_python/outils_pc/tapp_sources.py::depot`) | Run / Stop / Uninstall essayés sur la cuve (§ 9) ; boutique locale **non essayée sur carte** |
 | HTTP `/ufsu` (page « Gestionnaire de fichiers » de Tasmota) | écrit dans le « dossier courant » `ufs_path` + `/` + nom (`tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino::UfsUploadFileOpen`) ; `outils_docs/scripts_python/outils_pc/build_ota_fs.py::envoie_fs_ota` fixe déjà ce dossier (`/ufsd?dir=0&download=/<dossier>`) et crée les dossiers par `Br import path path.mkdir` : la même méthode atteint `/.extensions/` | **non essayé sur carte** (A10) |
-| MQTT, module `fsMqtt` | `data/fs/fsMqtt.be::chemin_valide` accepte `/.extensions/x.tapp` (absolu, sans `..`, ≤ 49 caractères) ; l'ordre `debut` crée le dossier parent manquant ; taille ≤ 1 Mo (`TAILLE_MAX`) ; contrôle MD5 ; envoi : `build_ota_mqtt.py::envoie_fs_mqtt(fichiers=…)` | **non essayé sur carte** (A10) |
+| MQTT, module `fsMqtt` | `data/fs/fsMqtt.be::chemin_valide` accepte `/.extensions/x.tapp` (absolu, sans `..`, ≤ 49 caractères) ; l'ordre `debut` crée le dossier parent manquant ; taille ≤ 1 Mo (`TAILLE_MAX`) ; contrôle MD5 ; envoi : `build_ota_mqtt.py::envoie_fs_mqtt(fichiers=…)` | **essayé** sur la cuve le 2026-11-09 : 1102, 1976 puis 2303 o, relus identiques (§ 9) |
 | Dépôt à la racine (`/x.tapp`) | lancé tel quel au prochain démarrage (`autoexec_dir("/")`), puis déplacé dans `/.extensions/` par `gestionFileFolder` (§ 8) | **non essayé sur carte** |
 | Image du FS (`custom_files_upload`) | `pio-tools/post_esp32.py::esp32_build_filesystem` copie les fichiers listés **à la racine de l'image** ; un dossier listé est fusionné dans la racine (`copytree`) ; voir § 7 | non essayé |
 

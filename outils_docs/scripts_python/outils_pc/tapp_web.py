@@ -18,6 +18,11 @@ Routes (les POST exigent l'en-tete X-Fabrique-Tapp: 1 et la meme origine ; clien
     POST /fabrique       {nom} -> {tapp, avertissements}
     POST /envoi/prepare  {nom, env, transport} -> tapp_envoi.prepare
     POST /envoi          {nom, env, jeton, confirme, redemarrer, transport} -> tapp_envoi.envoie
+Boutique locale de /ext, PUBLIQUE (une carte n'a pas de jeton), lecture seule, .tapp fabriques et a jour seulement :
+    GET  /extensions/extensions.jsonl      une ligne JSON par extension (tapp_sources.depot)
+    GET  /extensions/tapp/<nom>.tapp       l'archive ; tout autre chemin sous /extensions/ : 404
+    Une carte la lit si son OtaUrl vaut http://<ce PC>:7980/... (extension_manager.be::load_manifest en deduit l'hote) ;
+    elle revient au depot officiel si la page ne tourne pas. Ce meme OtaUrl sert a Upgrade par URL : a poser carte par carte.
 Refus : 400 (saisie), 404 (extension ou carte inconnue), 403 (acces), 409 (build, jamais d'ecrasement, Fabriquer d'abord, identite, carte muette), 500 (inattendu).
 Verrous : VERROU de tapp_sources pour le controle et la fabrication ; un verrou PAR CARTE pour ses lectures et envois, qui durent des
 secondes et ne bloquent donc ni le controle ni la fabrication ni une autre carte. Risque restant : un envoi MQTT de l'onglet autoexec de
@@ -117,8 +122,22 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
                 self._texte(500, f"erreur inattendue : {type(erreur).__name__} : {erreur}")
 
         def do_GET(self):
-            if self._admis():
+            chemin = urlsplit(self.path).path
+            if chemin.startswith("/extensions/"):          # boutique de /ext : une carte n'a pas de jeton -> public, lecture seule
+                self._boutique(chemin)
+            elif self._admis():
                 self._erreurs(self._get)
+
+        def _boutique(self, chemin):
+            """Seulement des .tapp fabriques et a jour (ts.depot, ts.archive) ; tout le reste, nom hostile compris : 404."""
+            if chemin == "/extensions/extensions.jsonl":
+                return self._envoie(200, ts.depot(racine).encode("utf-8"), "text/plain; charset=utf-8")
+            nom = chemin[len("/extensions/tapp/"):-len(".tapp")] if chemin.startswith("/extensions/tapp/") and chemin.endswith(".tapp") else ""
+            try:
+                octets = ts.archive(racine, nom)
+            except (ValueError, LookupError, RuntimeError, OSError):
+                return self._envoie(404, b"introuvable")
+            self._envoie(200, octets, "application/octet-stream")
 
         def _get(self):
             url = urlsplit(self.path)

@@ -33,24 +33,52 @@ VERROU = threading.Lock()
 
 _MANIFESTE_A = r"""{
   "name": "Reception FS MQTT",
-  "version": "0x1B0B0700",
+  "version": "0x1A0B0900",
   "description": "Charge le module solidifie fsMqtt sur une carte dont l'autoexec ne le charge pas",
   "min_tasmota": "0x0F010001"
 }
 """
 _AUTOEXEC_A = r"""# Extension sans .be embarque : le module est solidifie dans le firmware, l'extension ne fait que le charger.
 # Differe apres /autoexec.be : le prologue de demarrage.be pose LOG_LEVEL_* et le persist dont logFonctions a besoin.
+# add_extension : /ext affiche « Running » ; « Stop » et « Uninstall » appellent unload(), qui coupe la reception
+# SEULEMENT si l'extension l'a lancee : celle de l'autoexec de la carte n'est jamais touchee (le module reste en flash).
 do
+  class EXT_FSMQTT
+    var proprietaire                          # vrai si le recepteur a ete cree par l'extension
+    def unload()
+      import global
+      import mqtt
+      tasmota.remove_timer("ext_fsmqtt")      # Stop dans la premiere seconde : le recepteur ne doit pas renaitre
+      var r = global.contains("fsMqttRecepteur") ? global.fsMqttRecepteur : nil
+      if r == nil || !self.proprietaire    return    end
+      if r.lecture != nil    r.lecture["f"].close()    r.lecture = nil    end   # lecture en cours : fichier ferme
+      r.abandonne()                           # envoi en cours : /fsmqtt.tmp efface
+      mqtt.unsubscribe(r.base + "ordre")
+      mqtt.unsubscribe(r.base + "morceau")
+      tasmota.remove_rule("Mqtt#Connected", "fsmqtt_pret")
+      tasmota.remove_timer("fsmqtt_lit")
+      global.fsMqttRecepteur = nil
+      self.proprietaire = false
+    end
+  end
+  var ext = EXT_FSMQTT()
+  tasmota.add_extension(ext)                  # chemin = tasmota.wd, valide pendant ce chargement seulement
+
   tasmota.set_timer(1000, def ()
     import global                 # LOG_LEVEL_* lus a l execution : a la compilation, avant /autoexec.be, ces noms n existent pas
     import logFonctions
     try
+      var deja = global.contains("fsMqttRecepteur") && global.fsMqttRecepteur != nil   # lance par l'autoexec
+      ext.proprietaire = !deja                # avant init : un recepteur a moitie cree reste coupe par unload()
       import fsMqtt
-      logFonctions.log("EXT_FSMQTT: module charge par l'extension !", global.LOG_LEVEL_INFO)
+      # relance apres « Stop » : 'import' ne rappelle pas init() (module en cache), le recepteur est recree ici
+      if !global.contains("fsMqttRecepteur") || global.fsMqttRecepteur == nil    fsMqtt.init(fsMqtt)    end
+      logFonctions.log(deja ? "EXT_FSMQTT: reception deja lancee par l'autoexec, l'extension n'y touchera pas !"
+                            : "EXT_FSMQTT: module charge par l'extension !", global.LOG_LEVEL_INFO)
     except .. as e, m
       logFonctions.log(f"EXT_FSMQTT_ERREUR: chargement impossible : {e} - {m} !", global.LOG_LEVEL_ERREUR)
     end
-  end)
+  end, "ext_fsmqtt")
 end
 """
 _MANIFESTE_B = r"""{
@@ -252,6 +280,24 @@ def fabrique(racine, nom):
         gen_tapp.construit(d)
         avertissements = list(gen_tapp.AVERTISSEMENTS)
     return {"tapp": _fiche(racine, nom, d), "avertissements": avertissements}
+
+
+def depot(racine):
+    """Boutique locale de /ext : une ligne JSON par .tapp fabrique et a jour, au format lu par la carte
+    (extension_manager.be::manifest_decode : name, file, version obligatoires). Un manifeste illisible : extension omise."""
+    lignes = []
+    for e in liste(racine)["extensions"]:
+        if not e["tapp"]["a_jour"]:
+            continue
+        try:
+            m = json.loads((existant(racine, e["nom"]) / MANIFESTE).read_text(encoding="utf-8"))
+        except (OSError, ValueError, LookupError):
+            continue
+        if not isinstance(m, dict) or not m.get("name") or m.get("version") in (None, ""):
+            continue
+        lignes.append(json.dumps({"name": str(m["name"]), "file": f"{e['nom']}.tapp", "version": str(m["version"]),
+                                  "description": str(m.get("description") or ""), "author": "fork Tasmota"}, ensure_ascii=False))
+    return "".join(ligne + "\n" for ligne in lignes)
 
 
 def archive(racine, nom):

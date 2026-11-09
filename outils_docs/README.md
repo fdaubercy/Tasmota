@@ -1430,6 +1430,7 @@ la syntaxe. Le fichier s'exécute **à chaque démarrage** de la carte. Choisir 
   | Orange | Doublon : le persist repose déjà la commande au démarrage | Retirer la ligne (bouton « Enlever ») ou changer le persist |
   | Orange | Commande inconnue | « Corriger » propose la plus proche |
   | Orange | Commande absente : pas compilée pour cette carte (`USE_…` non défini dans son env) | Retirer la ligne, ou compiler la fonction dans le firmware de la carte |
+  | Orange | Commande absente (Berry) : `ReglageXxx` d'un module que l'`autoexec.be` de la carte ne charge pas | Retirer la ligne, ou charger le module dans l'`autoexec.be` |
   | Orange | Ligne de plus de 510 octets : le firmware la tronque | Couper la ligne |
 
   Les rouges demandent de cocher « J'ai lu les N avertissements rouges » à l'écriture et à l'envoi.
@@ -1439,14 +1440,23 @@ la syntaxe. Le fichier s'exécute **à chaque démarrage** de la carte. Choisir 
   tranche pas ne donne rien. Une commande définie à plusieurs endroits du firmware (`Subscribe` : règles ou script)
   n'est signalée que si **tous** sont exclus. Si la lecture échoue, une ligne discrète « Vérification par carte
   indisponible » s'affiche et aucune alerte n'est donnée. Limite : les commandes BLE et MI32 ne sont jamais signalées
-  (leurs gardes passent par des macros que la lecture ne pose pas) ; les commandes Berry et `SetOption` ne sont pas concernées.
+  (leurs gardes passent par des macros que la lecture ne pose pas) ; les `SetOption` ne sont pas concernées.
+
+  Pour les commandes Berry (`tasmota.add_cmd` dans `data/fs` ou le dossier de la carte), même règle de certitude : l'alerte ne
+  sort que si **aucun** des modules qui la déclarent n'est chargé par l'`autoexec.be` (nom entre guillemets ou après `import`,
+  module importé par un module chargé, `demarrage.leds()`, `demarrage.historique()`). Un nom cité dans un commentaire ou chargé
+  sous une condition `OFF` du persist compte comme chargé : on se trompe du côté du silence. `autoexec.be` absent, vide ou de
+  forme non comprise : aucune alerte. Une commande Berry qui porte le nom d'une commande du firmware (`Dimmer`) n'est jamais
+  signalée (code `autoexec_berry.py`, banc `test_autoexec_berry.py`).
 - **« Ajouter », à droite** : chercher dans la banque (`outils_docs/schemas/banque_autoexec.json`), remplir le
-  formulaire, vérifier l'aperçu, insérer sous la ligne du curseur. « Nouveau modèle… » et « En faire un modèle »
+  formulaire, vérifier l'aperçu, insérer sous la ligne du curseur. Une commande qui déclencherait l'alerte « absente »
+  pour la carte choisie (non compilée, ou module Berry non chargé) est **en pointillés**, avec la raison en infobulle et sous
+  son titre ; elle reste sélectionnable. Sans vérification possible (préprocesseur indisponible), rien n'est marqué. « Nouveau modèle… » et « En faire un modèle »
   ajoutent une commande à la banque (« Tes commandes »).
 - **Si la commande est déjà dans le fichier** : la page donne sa ligne et propose « Remplacer par la nouvelle » ou
   « Enlever l'existante » ; « Insérer quand même » reste possible pour une commande qui se répète (`Delay`, `Publish`).
-  Dans une `Backlog`, seule la commande visée part ; une `Backlog` vidée disparaît. Les alias (`SO146`) ne sont pas
-  reconnus à cet endroit. Une ligne en commentaire ne compte pas.
+  Dans une `Backlog`, seule la commande visée part ; une `Backlog` vidée disparaît. `SO146` et `SetOption146` sont la
+  même commande (seul alias court du firmware) ; les autres alias (`Power` = `Power1`) ne sont pas reconnus à cet endroit. Une ligne en commentaire ne compte pas.
 - **« Enregistrer… (diff) »** montre les changements, puis **« Écrire dans le dépôt »** écrit le fichier (refusé pendant un
   build, ou si le fichier a changé sur le disque depuis sa lecture ; copie dans
   `%LOCALAPPDATA%\outils_tasmota\fichiers_berry\sauvegardes\`). Le fichier n'est pas commité : à faire à la main.
@@ -1522,9 +1532,17 @@ Quatre étapes :
    avant « Envoyer », pas de redémarrage par défaut (l'extension se lance au démarrage suivant, ou par `/ext`). En MQTT,
    la carte n'est lue qu'au clic sur « Lire la carte » : une lecture ouvre un échange avec `fsMqtt`, qui annulerait un
    transfert en cours.
+5. **Boutique locale de `/ext`** : tant que la page tourne, elle sert les `.tapp` fabriqués et à jour comme un dépôt
+   d'extensions (`/extensions/extensions.jsonl` et `/extensions/tapp/<nom>.tapp`, publics car une carte n'a pas de jeton,
+   lecture seule). Une carte les propose dans sa boutique (`/ext`, « Online Store ») si son `OtaUrl` pointe sur ce PC,
+   par exemple `OtaUrl http://192.168.0.3:7980/` : la carte en déduit `http://192.168.0.3:7980/extensions/`. Elle revient
+   au dépôt officiel si la page ne répond pas ; sinon, seules nos extensions y figurent. **Attention** : `OtaUrl` sert
+   aussi à `Upgrade` par URL, qui ne trouverait plus le firmware officiel sur cette carte. À poser carte par carte, à la
+   main ; la page doit écouter sur le réseau (pas `--local`), et le pare-feu Windows autoriser Python sur le réseau privé.
 
-Un `.tapp` envoyé n'est pas dans l'image du FS : un formatage ou un flash série l'efface. **Non essayé sur carte à ce
-jour** (plan `tasks/plans/autoexec-mqtt-tapp.md`, A10). Bancs (`outils_pc/`, Python de PlatformIO) : `test_tapp_web.py`,
+Un `.tapp` envoyé n'est pas dans l'image du FS : un formatage ou un flash série l'efface. Envoi MQTT, chargement avant
+`/autoexec.be`, Running/Stop et désinstallation **essayés sur la cuve le 2026-11-09** (`EXTENSIONS_TAPP.md` § 9) ; la
+boutique locale et l'envoi HTTP ne l'ont pas encore été (plan `tasks/plans/autoexec-mqtt-tapp.md`). Bancs (`outils_pc/`, Python de PlatformIO) : `test_tapp_web.py`,
 `test_tapp_envoi.py`, sonde Chrome `test_tapp_page_chrome.py` ; `berry/test_gen_tapp.py`, `berry/banc_tapp_fsmqtt.py`
 (l'exemple) ; cible : `build/test_cible_tapp.py`.
 

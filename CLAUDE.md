@@ -878,7 +878,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     (`outils_docs/schemas/banque_autoexec.json`), `autoexec_envoi.py` (HTTP `/ufsu` ou MQTT par `fsMqtt` de la carte,
     `build_ota_mqtt.py` ; nom d'hote de la carte = persist du depot, sinon refus ; verrou par carte), `autoexec_gardes.py`
     (alerte orange « absente » : commande dont TOUTES les gardes `USE_*` sont fausses pour l'env, cle `gardes` de
-    `commandes_tasmota.json` ; calcul dans un processus fils, cache par env), page `assistant_persist_page_autoexec.py`, `_autoexec_js.py`, `_autoexec_lignes_js.py` (commande deja presente,
+    `commandes_tasmota.json` ; calcul dans un processus fils, cache par env), `autoexec_berry.py` (même alerte pour une commande
+    Berry dont l'`autoexec.be` de la carte ne charge pas le module ; banque marquée par `GET /autoexec/marques`), page `assistant_persist_page_autoexec.py`, `_autoexec_js.py`, `_autoexec_lignes_js.py` (commande deja presente,
     suppression de ligne). Mode d'emploi : `outils_docs/README.md` § « Onglet « autoexec.bat » » ; spec
     `docs/superpowers/specs/2026-11-03-onglet-autoexec-bat-design.md` ; plans `tasks/plans/autoexec-bat.md`, `tasks/plans/autoexec-mqtt-tapp.md`.
   - `tapp_web.py` (+ `tapp_page.py`, `tapp_sources.py`, `tapp_envoi.py`, `build/cible_tapp.py`) — page « Fabrique d'extensions »
@@ -886,7 +887,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `NOM_CIBLE` fabrique_tapp). Sources dans `data/extensions/<nom>/` (gabarits A et B de `outils_docs/EXTENSIONS_TAPP.md`), manifeste,
     controle et fabrication par `berry/gen_tapp.py`, `.tapp` a cote du dossier (ignore par git) ; envoi HTTP ou MQTT vers
     `/.extensions/<nom>.tapp` par `autoexec_envoi.py` (identite, refus pendant un build, geste explicite ; en MQTT, lecture de la
-    carte au seul clic « Lire la carte »). Bancs `test_tapp_web.py`, `test_tapp_envoi.py`, sonde `test_tapp_page_chrome.py`,
+    carte au seul clic « Lire la carte ») ; boutique locale de `/ext` (`GET /extensions/...`, publique, `tapp_sources.py::depot`) pour une carte dont
+    l'`OtaUrl` pointe sur ce PC. Bancs `test_tapp_web.py`, `test_tapp_envoi.py`, sonde `test_tapp_page_chrome.py`,
     `build/test_cible_tapp.py`. Mode d'emploi : `outils_docs/README.md` § « Fabrique d'extensions (page web) ». Non essaye sur carte (A10).
   - `atelier_graphiques_web.py` (+ `atelier_graphiques_page.py`, `_page_js.py`, `_page_series.py`, `_description.py`, `_series.py`,
     `_conseil.py`, `_ecriture.py`, `build/cible_atelier_graphiques.py`) — page « Atelier des graphiques » http://127.0.0.1:7950 (2026-11-04, palier 1 ;

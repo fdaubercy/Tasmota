@@ -306,6 +306,39 @@ def fabrication(s, racine):
     verifie(next(x["tapp"]["existe"] for x in r["extensions"] if x["nom"] == "ext_a"), True, "liste : l'etat du .tapp")
 
 
+def boutique(s, racine):
+    """Depot local de la boutique de /ext (extension_manager.be::load_manifest, install_from_store) : une carte n'a pas
+    de jeton, ces deux routes en lecture seule sont donc publiques ; elles ne servent que des .tapp fabriques et a jour."""
+    tapp = Path(racine) / "data" / "extensions" / "ext_a.tapp"
+    futur = max(e.stat().st_mtime_ns for e in os.scandir(tapp.with_suffix(""))) + 20_000_000_000
+    os.utime(tapp, ns=(futur, futur))               # l'etape precedente laisse un manifeste date du futur
+    vrai = acces_web.est_local
+    acces_web.est_local = lambda _: False           # la carte est un autre appareil du reseau, sans jeton ni cookie
+    try:
+        st, texte, _ = s.brut("GET", "/extensions/extensions.jsonl?a=esp32&v=0x10000002", None, {})
+        lignes = [json.loads(l) for l in texte.splitlines() if l.strip()] if st == 200 else []
+        a = next((l for l in lignes if l.get("file") == "ext_a.tapp"), {})
+        verifie((st, sorted(a), a.get("name"), a.get("version")), (200, ["author", "description", "file", "name", "version"], "Autre", "1"),
+                "boutique : liste JSONL publique, une ligne par .tapp a jour, champs de manifest_decode")
+        c = http.client.HTTPConnection("127.0.0.1", s.port, timeout=10)
+        c.request("GET", "/extensions/tapp/ext_a.tapp")
+        r = c.getresponse()
+        verifie((r.status, r.read() == tapp.read_bytes()), (200, True), "boutique : archive telechargee sans jeton, identique")
+        c.close()
+        for chemin in ("/extensions/tapp/..%2Fext_a.tapp", "/extensions/tapp/CON.tapp", "/extensions/tapp/ext_a", "/extensions/tapp/absent.tapp",
+                       "/extensions/../extensions"):
+            verifie(s.brut("GET", chemin, None, {})[0], 404, f"boutique : {chemin} -> 404")
+        verifie(s.brut("GET", "/extensions", None, {})[0], 403, "boutique : le reste de la page exige toujours le jeton")
+        t = tapp.stat().st_mtime_ns
+        os.utime(tapp, ns=(10**18, 10**18))              # 2001 : sources plus recentes que l'archive
+        st, texte, _ = s.brut("GET", "/extensions/extensions.jsonl", None, {})
+        verifie(("ext_a.tapp" in texte, s.brut("GET", "/extensions/tapp/ext_a.tapp", None, {})[0]), (False, 404),
+                "boutique : .tapp perime ni liste ni servi")
+        os.utime(tapp, ns=(t, t))
+    finally:
+        acces_web.est_local = vrai
+
+
 def un_seul_a_la_fois(racine):
     """gen_tapp n'est pas reentrant (redirect_stdout, AVERTISSEMENTS, preambule partage) : controle et construction un par un."""
     vraie_c, vraie_f = gen_tapp.controle, gen_tapp.construit
@@ -400,6 +433,7 @@ def banc():
         try:
             for etape in (etat_vide, gabarits, noms_hostiles, creation, jonction, manifeste, controle, fabrication):
                 etape(s, racine)
+            boutique(s, racine)
             pas_une_carte(racine)
             un_seul_a_la_fois(racine)
             surface(s)
@@ -426,6 +460,8 @@ MUTANTS = [
     ("tapp_web.py", "origine non controlee", ' or not acces.origine_autorisee(self)', "", "POST d'une autre origine -> 403"),
     ("tapp_web.py", "Host non controle", "if not hote_autorise(self, acces.port):", "if False:", "GET, Host etranger (DNS rebinding) -> 403"),
     ("tapp_web.py", "jeton non controle", "if not acces.controle(self):", "if False:", "autre appareil sans jeton -> 403"),
+    ("tapp_sources.py", "boutique sans controle de fraicheur", 'if not e["tapp"]["a_jour"]:', "if False:", "boutique : .tapp perime ni liste ni servi"),
+    ("tapp_web.py", "boutique : toute la page publique", "elif self._admis():", "elif True:", "boutique : le reste de la page exige toujours le jeton"),
 ]
 
 
