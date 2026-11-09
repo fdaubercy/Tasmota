@@ -30,8 +30,8 @@ ecris(SORTIE + "/modules/persist.be", "import global\nvar p = module('persist')\
 ecris(SORTIE + "/modules/diversFonctions.be", "var d = module('diversFonctions')\nd.traiteAide = def (c, p, f, v) return false end\nreturn d\n")
 ecris(SORTIE + "/modules/debitsFonctions.be", lis(SOURCE))
 ecris(SORTIE + "/modules/path.be", "import global\nvar p = module('path')\np.exists = def (f) return f == '/json/pages.jsonl' && global.PAGE_PRESENTE end\nreturn p\n")
-ecris(SORTIE + "/modules/display.be", "import global\nvar d = module('display')\nd.started = def () return global.ECRAN_DEMARRE end\nreturn d\n")
-ecris(SORTIE + "/modules/haspmota.be", "import global\nvar h = module('haspmota')\nh.start = def (f) global.HASP_DEMARRE = f global.creeObjets() end\nreturn h\n")
+ecris(SORTIE + "/modules/display.be", "import global\nvar d = module('display')\nd.started = def () return global.ECRAN_DEMARRE end\nd.dimmer = def (v, s) if v == nil return global.DIM end global.DIM_APPLIQUE = v end\nreturn d\n")
+ecris(SORTIE + "/modules/haspmota.be", "import global\nvar h = module('haspmota')\nh.start = def (f) global.HASP_DEMARRE = f global.creeObjets() end\nh.dimming_state = 100\nh.dimmed_panel = nil\nreturn h\n")
 sys.path().push(SORTIE + "/modules")
 
 global.JOURNAL = []
@@ -273,8 +273,16 @@ verifie("fenetre 15 : ecrite, reponse coherente", debitsFonctions.fenetre() == 1
 global.JOURNAL = []
 r("ReglageDebits", 0, "veille 10", nil)
 verifie("veille 10 : ecrite au persist et appliquee a HASPmota", global.modules["debits"]["veille"] == 10 && haspmota.dimming_time == 10)
+haspmota.dimming_state = 25
+global.VOILE_RETIRE = false
+class FauxVoile def stop() global.VOILE_RETIRE = true end end
+haspmota.dimmed_panel = FauxVoile()
+global.DIM = 80
+global.DIM_APPLIQUE = nil
 r("ReglageDebits", 0, "veille 0", nil)
 verifie("veille 0 (jamais) acceptee", haspmota.dimming_time == 0 && erreurs() == 0)
+verifie("veille 0 sur ecran assombri : voile retire, luminosite des reglages rendue",
+        global.VOILE_RETIRE && haspmota.dimmed_panel == nil && haspmota.dimming_state == 100 && global.DIM_APPLIQUE == 80)
 r("ReglageDebits", 0, "veille 121", nil)
 r("ReglageDebits", 0, "veille abc", nil)
 r("ReglageDebits", 0, "veille 2.5", nil)

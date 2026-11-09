@@ -54,7 +54,15 @@ def debitsFonctions_appliqueVeille()
     import debitsFonctions
     if (global.p1b13 == nil)    return    end
     import haspmota
-    haspmota.dimming_time = debitsFonctions.veille()
+    var v = debitsFonctions.veille()
+    haspmota.dimming_time = v
+    # A 0, auto_dimming sort d'emblee et ne rallume plus : un ecran deja assombri resterait noir
+    if (v == 0 && haspmota.dimming_state < 100)
+        if (haspmota.dimmed_panel != nil)    haspmota.dimmed_panel.stop()    haspmota.dimmed_panel = nil    end
+        haspmota.dimming_state = 100
+        import display
+        display.dimmer(display.dimmer())
+    end
 end
 debitsFonctions.appliqueVeille = debitsFonctions_appliqueVeille
 
