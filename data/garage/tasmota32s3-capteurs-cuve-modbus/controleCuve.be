@@ -175,6 +175,7 @@ class CAPTEURS_CUVE : Driver
 
             # Parcours les entrées analogiques
             variablesRemplacement.insert("drivers->nom", modules["cuve"]["environnement"]["analogiques"]["name"])
+            variablesRemplacement.insert("masqueJauges", "")        # lien vers /cuve affiche (style vide)
             for cle: modules["cuve"]["environnement"]["analogiques"].keys()
                 var anaJson = modules["cuve"]["environnement"]["analogiques"][cle]
                 if type(anaJson) != "instance"  continue    end

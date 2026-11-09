@@ -103,6 +103,21 @@ class CONTROLE_GARAGE : Driver
         return 6144
     end
 
+    # Niveau de la cuve d'apres la valeur brute de sa voie, memes calculs que la cuve (cuveFonctions.changementEtatCapteur,
+    # 2026-11-09) : {mV, hauteurEau (cm), taux (0..1), volume (L)}. Pourcentage ENTIER, multiplie avant de diviser (h / H * 100
+    # rendait 52 pour 53 %), borne a 0..100 % (sonde au-dessus de la cuve) ; hauteur de cuve <= 0 : taux et volume a 0.
+    def niveauCuve(anaJson)
+        var mV = tasmota.scale_int(int(anaJson.find("value", 0)), 0, 32767, 0, self.pleineEchelle())
+        var hauteurEau = mV / anaJson.find("conversion_mV_cm", 1.0)
+        var dim = anaJson.find("dimensions", {})
+        var hauteur = dim.find("hauteur", 100)    # en cm
+        var pourcent = (hauteur > 0 ? int(hauteurEau * 100 / real(hauteur)) : 0)
+        if (pourcent > 100)    pourcent = 100    elif (pourcent < 0)    pourcent = 0    end
+        var taux = pourcent / 100.00
+        return {"mV": mV, "hauteurEau": hauteurEau, "taux": taux,
+                "volume": int(hauteur * dim.find("largeur", 100) * dim.find("longueur", 100) * taux / 1000)}
+    end
+
     # Page /cuve : jauges du volume et du taux de la cuve (data/fs/cuvePageFonctions.be, importe a la premiere requete)
     def web_add_handler()
         import webserver
@@ -160,6 +175,7 @@ class CONTROLE_GARAGE : Driver
 
             # Parcours les entrées analogiques
             variablesRemplacement.insert("drivers->nom", modules["garage"]["environnement"]["analogiques"]["name"])
+            variablesRemplacement.insert("masqueJauges", "")        # lien vers /cuve affiche (style vide)
             for cle: modules["garage"]["environnement"]["analogiques"].keys()
                 var anaJson = modules["garage"]["environnement"]["analogiques"][cle]
                 if type(anaJson) != "instance"  continue    end
@@ -177,7 +193,8 @@ class CONTROLE_GARAGE : Driver
                             var vide = "-,--"
                             variablesRemplacement.insert("sensorsCuve->valeurCapteurHauteur->titre", "Tension brute (ADS1115) : ")
 
-                            var value = tasmota.scale_int(int(anaJson["value"]), 0, 32767, 0, self.pleineEchelle())
+                            var n = self.niveauCuve(anaJson)
+                            var value = n["mV"]
                             variablesRemplacement.insert("sensorsCuve->valeursAnalogiques->valeurCapteurHauteur", (erreur ? vide : str(value)) + "mV")
                             # Tension de la sonde recalculee par la cuve et servie par ModBus (tensionSonde)
                             var tension = self.tensionSonde()
@@ -188,23 +205,16 @@ class CONTROLE_GARAGE : Driver
                             # Coefficient de conversion: 30mV/cm
                             variablesRemplacement.insert("sensorsCuve->hauteurEau->titre", "Hauteur Eau: ")
 
-                            var hauteurEau = value / anaJson.find("conversion_mV_cm", 1.0)
+                            var hauteurEau = n["hauteurEau"]
                             variablesRemplacement.insert("sensorsCuve->niveauCuve->hauteurEau", (erreur ? vide : str(hauteurEau)) + "cm")
 
                             garageFonctions.log(string.format("WEBSERVER_GARAGE: %s = %imV", anaJson["nom"], real(value)), LOG_LEVEL_DEBUG)
 
-                            # Calcul le pourcentage d'eau dans la cuve & le volume disponible
-                            var hauteur = anaJson.find("dimensions", {}).find("hauteur", 100)    # en cm
-                            var largeur = anaJson.find("dimensions", {}).find("largeur", 100)    # en cm
-                            var longueur = anaJson.find("dimensions", {}).find("longueur", 100)    # en cm
-
-                            var pourcentageEau = int(hauteurEau / real(hauteur) * 100) / 100.00 
-
+                            var pourcentageEau = n["taux"]
                             variablesRemplacement.insert("sensorsCuve->tauxRemplissage->titre", "Taux de remplissage: ")
                             variablesRemplacement.insert("sensorsCuve->niveauCuve->tauxRemplissage", (erreur ? vide : str(int(pourcentageEau * 100 + 0.5))) + "%")
 
-                            var volume =  int(hauteur * largeur * longueur * pourcentageEau / 1000)    # en litres
-
+                            var volume = n["volume"]
                             variablesRemplacement.insert("sensorsCuve->volume->titre", "Volume disponible: ")	
                             variablesRemplacement.insert("sensorsCuve->niveauCuve->volume", (erreur ? vide : str(volume)) + "L")	
 
@@ -384,17 +394,11 @@ class CONTROLE_GARAGE : Driver
                     if (string.find(anaJson["virtuel"], "ModBus_TasmotaSlaveModBus") > -1)
                         if (anaJson["idModBus"] == 1)
                             # "sensorsCuve": {"valeursAnalogiques":{"valeurCapteurHauteur":616},"niveauCuve":{"tauxRemplissage":0.17,"hauteurEau":19,"volume":1144}}
-                            var value = tasmota.scale_int(int(anaJson["value"]), 0, 32767, 0, self.pleineEchelle())
-                            var hauteurEau = value / anaJson.find("conversion_mV_cm", 1.0)
-
-                            # Calcul le pourcentage d'eau dans la cuve & le volume disponible
-                            var hauteur = anaJson.find("dimensions", {}).find("hauteur", 100)    # en cm
-                            var largeur = anaJson.find("dimensions", {}).find("largeur", 100)    # en cm
-                            var longueur = anaJson.find("dimensions", {}).find("longueur", 100)    # en cm
-
-                            var pourcentageEau = int(hauteurEau / real(hauteur) * 100) / 100.00 
-
-                            var volume =  int(hauteur * largeur * longueur * pourcentageEau / 1000)    # en litres
+                            var n = self.niveauCuve(anaJson)
+                            var value = n["mV"]
+                            var hauteurEau = n["hauteurEau"]
+                            var pourcentageEau = n["taux"]
+                            var volume = n["volume"]
 
                             var tension = self.tensionSonde()
                             tasmota.response_append(string.format(", \"sensorsCuve\": {\"valeursAnalogiques\": {\"valeurCapteurHauteur\": %i%s}, \"niveauCuve\":{\"tauxRemplissage\": %.2f, \"hauteurEau\": %i, \"volume\": %i}}",

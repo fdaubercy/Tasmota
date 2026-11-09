@@ -183,6 +183,7 @@ class CONTROLE_GARAGE : Driver
 
             # Parcours les entrées analogiques
             variablesRemplacement.insert("drivers->nom", modules["garage"]["environnement"]["analogiques"]["name"])
+            variablesRemplacement.insert("masqueJauges", "display:none")        # pas de route /cuve sur ce maitre gele : icone du lien masquee
             for cle: modules["garage"]["environnement"]["analogiques"].keys()
                 var anaJson = modules["garage"]["environnement"]["analogiques"][cle]
                 if type(anaJson) != "instance"  continue    end

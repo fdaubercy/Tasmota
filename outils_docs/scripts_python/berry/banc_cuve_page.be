@@ -293,6 +293,23 @@ a3["activation"] = "OFF"
 verifie(p4.pleineEchelle() == 6144, "entree desactivee -> 6144")
 a3["activation"] = "ON"
 
+print("4d. Taux du P4 : pourcentage entier et borne a 0..100 % comme la cuve (CONTROLE_GARAGE.niveauCuve, 2026-11-09)")
+var a1 = ana["analogique1"]
+a1["dimensions"] = {"hauteur": 100, "largeur": 100, "longueur": 100}
+verifie(a1["conversion_mV_cm"] == 31 && p4.pleineEchelle() == 4096, "(controle) 31 mV/cm du persist, pleine echelle 4096 mV recue")
+a1["value"] = 13144                                 # 13144 x 4096 / 32767 = 1643 mV ; 1643 / 31 = 53 cm
+var nv = p4.niveauCuve(a1)
+verifie(nv["mV"] == 1643 && nv["hauteurEau"] == 53 && nv["taux"] > 0.5299 && nv["taux"] < 0.5301 && nv["volume"] == 530,
+        "53 cm sur 100 : 53 %, 530 L (53 / 100.0 * 100 tronquait a 52 %, cas de l'audit T1 de la cuve) : " + str(nv))
+p4.json_append()
+verifie(string.find(tasmota.reponse, "\"tauxRemplissage\": 0.53") > 0 && string.find(tasmota.reponse, "\"volume\": 530") > 0, "json_append : taux 0.53, volume 530 L")
+a1["value"] = 32767                                 # 4096 mV -> 132 cm sur une cuve de 100 cm
+nv = p4.niveauCuve(a1)
+verifie(nv["hauteurEau"] == 132 && nv["taux"] == 1.0 && nv["volume"] == 1000, "sonde au-dessus de la cuve (132 cm sur 100) : borne a 100 %, 1000 L : " + str(nv))
+a1["dimensions"] = {"hauteur": 0, "largeur": 100, "longueur": 100}
+nv = p4.niveauCuve(a1)
+verifie(nv["taux"] == 0 && nv["volume"] == 0, "hauteur de cuve 0 (persist edite a la main) : 0 %, 0 L, sans division par zero")
+
 print("5. Route /cuve de la cuve (CAPTEURS_CUVE : methodes isolees de controleCuve.be)")
 var texteCuve = lisFichier("data/garage/tasmota32s3-capteurs-cuve-modbus/controleCuve.be")
 var debM = string.find(texteCuve, "    def web_add_handler()")
