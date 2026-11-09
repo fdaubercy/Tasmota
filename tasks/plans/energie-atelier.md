@@ -105,7 +105,7 @@ sonde Chrome pendant un build (garde bloquante dans la commande, leçon du 2026-
   documents du `CLAUDE.md`, skill `bancs` (nouveaux bancs) ; `verifie_references_docs.py` code 0 ; commit `docs: …` — preuve : `verifie_references_docs.py` code 0 (0 défaut) ; README § Destination Énergie + § page Énergie, puce CLAUDE.md complétée, 2 lignes du skill `bancs` (commit docs: de l'A6)
 
 ## A7 — Validation sur le différentiel
-- [ ] Avant : `Status 4` (tas), `UfsFree`, `/energie` capturée (page d'aujourd'hui)
+- [x] Avant : `Status 4` (tas), `UfsFree`, `/energie` capturée (page d'aujourd'hui) — preuve : 2026-11-09 04:44, 192.168.0.49 (DISJONCTEUR-DIFFERENTIEL-BUREAU, MAC A0:DD:6C:3B:06:88), firmware du 2026-11-02T23:26 (ancien), `Heap` 60 Ko, `UfsFree` 44 Ko ; capture `energie_avant_A7.png` du scratchpad de la session (4 tuiles, heure, mois par jour, 12 mois, puissance 24 h ; un seul mois compté : aucun mois archivé)
 - [ ] L'utilisateur compile et envoie le firmware puis le FS par la page Build ; `Status 2` relu (date de build > commit A2).
   Firmware par OTA (ligne OTA de la page Build), puis les 4 fichiers par Téléverser ou l'onglet Fichiers ; jamais d'upload série
   sauf après sauvegarde de `/energie/` (le différentiel a `custom_files_upload` : un upload série réécrit tout le FS et perd
