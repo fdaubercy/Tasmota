@@ -27,8 +27,8 @@ ecris(SORTIE + "/modules/webserver.be", "import global\nvar w = module('webserve
     "w.has_arg = def (a) return global.ARGS.contains(a) end\n"
     "w.arg = def (a) return global.ARGS[a] end\n"
     "w.content_open = def (c, m) global.CODE = c global.TYPE = m global.REPONSE = '' end\n"
-    "w.content_send = def (t) global.REPONSE += t end\n"
-    "w.content_close = def () end\n"
+    "w.content_send = def (t) if global.CASSE raise 'io_error', 'casse' end global.APPELS.push(size(t)) global.REPONSE += t end\n"
+    "w.content_close = def () global.FERMES += 1 end\n"
     "w.content_start = def (t) global.PAGE = true end\n"
     "w.content_send_style = def () end\n"
     "w.content_button = def (b) end\n"
@@ -47,7 +47,10 @@ global.ARGS = {}
 global.CODE = 0
 global.TYPE = ""
 global.REPONSE = ""
-global.LUS = []
+global.APPELS = []
+global.FERMES = 0
+global.CASSE = false
+global.LOGS = []
 global.CAPTEURS = "{}"
 global.PAGE = false
 global.boolMute = true
@@ -57,7 +60,7 @@ global.LOG_LEVEL_INFO = 2
 global.LOG_LEVEL_DEBUG = 3
 global.LOG_LEVEL_DEBUG_PLUS = 4
 var fauxLog = module("logFonctions")
-fauxLog.log = def (m, n, c) end
+fauxLog.log = def (m, n, c) global.LOGS.push(str(n) + " " + m) end
 global.logFonctions = fauxLog
 var tasmota = module("tasmota")
 tasmota.yield = def () end
@@ -82,7 +85,9 @@ def verifie(nom, attendu, obtenu)
 end
 def appelle(args)
     global.ARGS = args
-    global.LUS = []
+    global.APPELS = []
+    global.FERMES = 0
+    global.LOGS = []
     E.route(bytes())
 end
 
@@ -106,8 +111,35 @@ verifie("4096 octets : accepte", 200, global.CODE)
 ecris(E.DESCRIPTION, pile + " ")
 appelle({"f": "description"})
 verifie("4097 octets : 413", 413, global.CODE)
-verifie("4097 octets : fichier jamais lu", 0, size(global.LUS))
+verifie("4097 octets : fichier jamais lu", 1, size(global.APPELS))
+verifie("4097 octets : 413 journalise", true, size(global.LOGS) == 1 && string.find(global.LOGS[0], "ENERGIE") >= 0)
 verifie("4097 octets : corps d'erreur", "trop gros", json.load(global.REPONSE)["erreur"])
+
+# morceaux : une description de ~4000 octets sur UNE ligne, relayee par morceaux de 512 octets au plus
+var gros = "{\"x\":\""
+while (size(gros) < 4000)    gros += "abcdefghij"    end
+gros += "\"}"
+ecris(E.DESCRIPTION, gros)
+appelle({"f": "description"})
+verifie("gros : 200", 200, global.CODE)
+verifie("gros : octet pour octet", gros, global.REPONSE)
+var maxi = 0
+for n: global.APPELS    if n > maxi    maxi = n    end    end
+verifie("gros : aucun content_send au-dela de 512", true, maxi <= 512 && size(global.APPELS) > 2)
+verifie("gros : fermee une fois", 1, global.FERMES)
+# fichier vide : 200, corps vide
+ecris(E.DESCRIPTION, "")
+appelle({"f": "description"})
+verifie("vide : 200", 200, global.CODE)
+verifie("vide : corps vide", "", global.REPONSE)
+verifie("vide : fermee", 1, global.FERMES)
+# exception pendant l'envoi : content_close appele, ligne _ERREUR
+ecris(E.DESCRIPTION, DESC)
+global.CASSE = true
+appelle({"f": "description"})
+global.CASSE = false
+verifie("exception : content_close appele", 1, global.FERMES)
+verifie("exception : ligne _ERREUR", true, size(global.LOGS) == 1 && string.find(global.LOGS[0], "ENERGIE_ERREUR") >= 0 && global.LOGS[0][0] == "1")
 
 # ---- f=mois
 ecris(E.DOSSIER + "/mois-2026-10.json", '{"d":[1,2],"de":[3,4]}')
@@ -119,7 +151,7 @@ verifie("mois purge : 404", 404, global.CODE)
 for m: ["../x", "2026-13", "2026-00", "2026-1", "26-10-01", "2026-10x", "x2026-10", "", "2026-10/../a", "20261010"]
     appelle({"f": "mois", "m": m})
     verifie("mois '" + m + "' : 400", 400, global.CODE)
-    verifie("mois '" + m + "' : rien lu", 0, size(global.LUS))
+    verifie("mois '" + m + "' : rien lu", 1, size(global.APPELS))
 end
 appelle({"f": "mois"})
 verifie("mois sans m : 400", 400, global.CODE)

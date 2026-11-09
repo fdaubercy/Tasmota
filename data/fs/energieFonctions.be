@@ -474,25 +474,35 @@ def energieFonctions_envoieDirect()
 end
 energieFonctions.envoieDirect = energieFonctions_envoieDirect
 
-# Relaie un fichier JSON ligne par ligne (jamais lu en entier : tas). max > 0 : taille brute maximale, 413 au-dela sans lecture.
-# Codes : 200 relaye, 404 absent, 413 trop gros.
+# Relaie un fichier JSON par morceaux de 512 o (jamais lu en entier : tas ; readline() recopierait une ligne de 4 Ko deux fois).
+# max > 0 : taille brute maximale, 413 au-dela sans lecture. Codes : 200 relaye, 404 absent, 413 trop gros.
 def energieFonctions_relaie(chemin, max)
     import webserver
-    import gestionFileFolder
+    var f = nil
     var taille = -1
     try
-        var f = open(chemin, "r")
+        f = open(chemin, "r")
         taille = f.size()
-        f.close()
     except ..
     end
     var code = (taille < 0 ? 404 : ((max > 0 && taille > max) ? 413 : 200))
     webserver.content_open(code, "application/json")
-    if (code == 200)
-        gestionFileFolder.readFileByLineAndContentSend(chemin)
-    else
-        webserver.content_send(code == 404 ? "{\"erreur\":\"absent\"}" : "{\"erreur\":\"trop gros\"}")
+    try
+        if (code == 200)
+            var m = f.read(512)
+            while (size(m) > 0)
+                webserver.content_send(m)
+                tasmota.yield()
+                m = f.read(512)
+            end
+        else
+            logFonctions.log("ENERGIE: " + chemin + " non relaye (" + str(code) + ") !", code == 404 ? LOG_LEVEL_DEBUG : LOG_LEVEL_ERREUR)
+            webserver.content_send(code == 404 ? "{\"erreur\":\"absent\"}" : "{\"erreur\":\"trop gros\"}")
+        end
+    except .. as erreur, message
+        logFonctions.log("ENERGIE_ERREUR: Relais de " + chemin + " : " + str(erreur) + " " + str(message) + " !", LOG_LEVEL_ERREUR)
     end
+    if (f != nil)    f.close()    end
     webserver.content_close()
     return code
 end
