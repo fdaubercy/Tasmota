@@ -48,6 +48,7 @@ DIFF, CAVE1, CAVE3, GRENIER, P4, CUVE_, RIDEAU_ = ("tasmota32-interrupteur-energ
                                                  "tasmota32s3-serveur-rly", "tasmota32s3-grenier",
                                                  "tasmota32p4-serveur-modbus", "tasmota32s3-capteurs-cuve-modbus",
                                                  "tasmota32s3-rideau-garage-modbus")
+DEBITS = "tasmota32s3-serveur-debits-pac"
 TOLERANCES = [
     ("diverses.energie.*", None, "bloc de la page Energie : absent des cartes plus anciennes (lu par .find), ON sur la seule carte qui mesure l'energie"),
     # -- famille 3 : bloc metier ecrit a la main
@@ -63,6 +64,10 @@ TOLERANCES = [
      "broches I2C a OFF quand I2C est OFF (le bloc i2c inactif ne pose que drivers.I2C.activation)"),
     # -- famille 4 : reglages propres a une carte
     ("diverses.historique.grafana", (CAVE3, GRENIER, RIDEAU_), "cle absente de ces S3 (ajoutee au parc apres eux)"),
+    ("serveur.voieReseau", (GRENIER, CUVE_, RIDEAU_), "cle absente de ces S3 (ajoutee au parc apres eux) ; absente = Wi-Fi (configGlobal.voieReseau)"),
+    ("drivers.ecran.activation", (DEBITS,), "seule carte a ecran actif (OFF sur une carte generee)"),
+    ("drivers.ecran.environnement.relais.*", (P4, DEBITS),
+     "retroeclairage et Rst de l'ecran passes dans pinsEcrans (2026-11-09) ; les autres cartes gardent le groupe OFF"),
     ("serveur.rangeExtender.AP.routeNAPT", (CAVE3, GRENIER), "le role maitre ne tranche pas : cave S3 et grenier a OFF, P4 a ON"),
     # -- famille 5 : blocs absents d'un vieux persist
     ("drivers.I2S.*", (DIFF,), "bloc absent du vieux persist du differentiel (OFF sur une carte generee)"),
@@ -190,11 +195,22 @@ def test_autoexec_cuve(modele):
     verifie("import demarrage" in texte and "if demarrage.prologue()" in texte, True, "autoexec_cuve : prologue")
 
 
+# Pages propres a une ou deux cartes : exclues de tout env cree (regle du 2026-10-31), ecrites ici en clair
+PAGES = {"${berry_commun.page_cuve}", "${berry_commun.page_energie}", "${berry_commun.pages_graphiques}"}
+
+
 def test_listes_cuve(modele):
     l = gen.listes_cenv(modele, _reponses_cuve(modele))
     attendu_exclude = {"data/fs/vrFonctions.be", "data/fs/loRaWanFonctions.be", "data/fs/controleVoletRoulants.be",
                        "data/fs/controleLoRaWan.be", "data/fs/controleES8311.be", "data/fs/controleCoprocesseur.be"}
-    verifie(set(l["exclude"]), attendu_exclude, "listes_cuve : exclude = celui du cenv de la cuve")
+    # + pages des autres cartes, toujours exclues d'un env cree (la vraie cuve a repris page_cuve a la main)
+    attendu_exclude |= PAGES
+    verifie(set(l["exclude"]), attendu_exclude, "listes_cuve : exclude = celui du cenv de la cuve + pages des autres cartes")
+    sans = gen.listes_cenv(modele, _nouvelle(blocs=[]))["exclude"]
+    verifie("${berry_commun.pages_graphiques_moteur}" in sans, True, "listes : moteur des pages exclu sans historique")
+    avec = gen.listes_cenv(modele, _nouvelle(blocs=["historique"]))["exclude"]
+    verifie("${berry_commun.pages_graphiques_moteur}" in avec, False, "listes : moteur des pages garde avec l'historique")
+    verifie(PAGES <= set(avec), True, "listes : pages des autres cartes exclues meme avec l'historique")
     verifie(l["solidify"][0], "${berry_commun.socle}", "listes_cuve : socle en tete")
     verifie({"${berry_commun.modbus}", "${berry_commun.historique}", "data/fs/ledsFonctions.be",
              "data/fs/controleLeds.be"} <= set(l["solidify"]), True, "listes_cuve : modbus, historique, leds solidifies")

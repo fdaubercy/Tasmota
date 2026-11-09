@@ -1929,7 +1929,8 @@
 				"data/sd/js/graphiques_trace.js",
 				"data/sd/js/graphiques_edition.js",
 				"data/sd/html/graphiques.html",
-				"data/sd/css/graphiques.css"
+				"data/sd/css/graphiques.css",
+				"${berry_commun.pages_graphiques_moteur}"
 			],
 			"autoexec": [
 				{

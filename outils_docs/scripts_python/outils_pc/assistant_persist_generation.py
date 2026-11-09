@@ -11,7 +11,8 @@ Fonctions PURES (rien n'est ecrit) : `variables` lit le parc (maitre, passerelle
                                         (groupe, rang) ; entrees consecutives de meme appel, meme condition et meme
                                         groupe fusionnees (modules dedoublonnes) ; une ligne vide entre les groupes.
   - listes_cenv(modele, r)              solidify = ${berry_commun.socle} + solidify des blocs coches ; exclude =
-                                        exclude_si_inactif des blocs non coches, sauf les fichiers d'un bloc coche.
+                                        PAGES_AUTRES_CARTES, puis exclude_si_inactif des blocs non coches, sauf
+                                        les fichiers d'un bloc coche.
                                         Les modules metier ne vont dans aucune liste (spec §5.6).
   - coherence(...)                      refus (liste de messages) : voir sa docstring.
 IDENTITE : les champs vides de Reponses prennent les valeurs de fichiers_berry_creation.identite_par_defaut ;
@@ -326,10 +327,15 @@ def _fichiers_bloc(b):
     return set(b["solidify"]) | set(b["exclude_si_inactif"])
 
 
+# Pages propres a une ou deux cartes (regle du 2026-10-31) : exclues de tout env cree ; la carte qui s'en sert
+# retire la ligne (pages_graphiques : l'atelier des graphiques le fait). Le moteur suit le bloc historique.
+PAGES_AUTRES_CARTES = ("${berry_commun.page_cuve}", "${berry_commun.page_energie}", "${berry_commun.pages_graphiques}")
+
+
 def listes_cenv(modele, r):
     """{"solidify": [...], "exclude": [...]} de la section cenv (voir l'en-tete)."""
     coches = set(blocs_coches(modele, r))
-    solidify, requis, exclude = ["${berry_commun.socle}"], set(), []
+    solidify, requis, exclude = ["${berry_commun.socle}"], set(), list(PAGES_AUTRES_CARTES)
     for b, coche in _blocs_permis(modele, r):
         if coche:
             solidify += [f for f in b["solidify"] if f not in solidify]
