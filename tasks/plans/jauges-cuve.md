@@ -73,7 +73,7 @@ Choix de conception (minimum pour un essai) :
 ## A3 — Page web (HTML, CSS, JS)
 - [x] `cuve.html` + `cuve.css` : jauge A (litres) et jauge H (%), état « mesure indisponible » et « historique pas encore prêt (404) » — preuve : `banc_cuve_page.py` OK (61 contrôles, 8 scénarios Chrome : normal, valeurs null -> « Mesure indisponible », 404 -> « Historique pas encore démarré »)
 - [x] `cuve.js` : chargement ECharts (même URL et clé de cache que `/graphiques`) puis liquidfill ; lecture `/histo?n=mesures&p=direct` toutes les 10 s ; séries trouvées par suffixe `niveauCuve.volume` / `niveauCuve.tauxRemplissage` ; seuils 20 % / 40 % ; valeurs tracées exposées en attributs `data-` pour la sonde — preuve : `banc_cuve_page.py` : volume/taux tracés = valeurs servies, chemin du P4 préfixé trouvé par suffixe, extension absente -> taux gardé ; témoin (`* 100` retiré dans une copie) -> ECHEC (6), code 1
-- [ ] Bouton « Retour » vers l'accueil
+- [x] Bouton « Retour » vers l'accueil — preuve : posé dès le premier commit (`c0869ea2a`) par `cuvePageFonctions.be::cuvePageFonctions_page` (`webserver.content_button(webserver.BUTTON_MAIN)`), contrôlé par `banc_cuve_page.be` (« bouton Menu principal ») ; sur le P4 en ligne le 2026-11-09, `GET /cuve` (200, 16 984 o) finit par `<form action='.'>` + `<button>Menu principal</button>` sous les jauges. Cuve non relue (derrière le NAPT du P4), même module solidifié
 
 ## A4 — Lien depuis l'encadré
 - [x] `<a href='/cuve'>` dans le `<legend>` de `webSensorNiveauCuve.html` — preuve : `data/sd/html/webSensorNiveauCuve.html` (lien « (jauges) » dans la légende, aucune cellule ajoutée) ; rendu à vérifier en A6
