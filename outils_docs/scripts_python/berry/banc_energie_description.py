@@ -98,6 +98,9 @@ def partie(nav, tmp):
     ok &= B.juge("archive effacee dite", True, "archive effacée" in dom)
     ok &= B.juge("la page continue (tuile tracee)", "750", B.texte(dom, "e_v1"))
     ok &= B.juge("aucune ligne de repli", None, note(dom) or None)
+    dom = rendu(nav, tmp, "reseau", d, desc(
+        el("barres", "Aout", {"flash": "jour", "grandeur": "kWh", "mois": "2026-08"}, largeur="pleine", hauteur="moyenne")), mois={"2026-08": "coupe"})
+    ok &= B.juge("erreur reseau : lecture impossible, pas archive effacee", (True, False), ("lecture impossible" in dom, "archive effacée" in dom))
 
     print("--- An : la plus ancienne annee, partielle, est marquee")
     an = B.complet(BASE)

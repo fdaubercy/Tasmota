@@ -116,6 +116,9 @@ def serveur(page, donnees, direct, description=None, mois=None):
                 return self.envoie(404, "text/plain", "?") if description is None else self.envoie(200, "application/json", description)
             if q.get("f") == "mois":
                 m = (mois or {}).get(q.get("m"))
+                if m == "coupe":                      # erreur reseau (pas un 404) : connexion coupee sans reponse
+                    self.request.shutdown(2)
+                    return
                 return self.envoie(404, "text/plain", "?") if m is None else self.envoie(200, "application/json", json.dumps(m))
             if q.get("f") == "direct":
                 return self.envoie(200, "application/json", json.dumps(direct))

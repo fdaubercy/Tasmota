@@ -117,7 +117,7 @@
 		} else if (f == 'jour') {
 			var c = cible(e, s), ar = don.archives && don.archives[c], nb = new Date(+c.slice(0, 4), +c.slice(5, 7), 0).getDate();
 			if (c == e.m) ar = {d: e.d, de: e.de};
-			if (!ar || typeof ar == 'number') { r.W = []; r.E = []; r.vide = ar && ar != 404 ? 'lecture impossible (' + ar + ')' : 'archive effacée'; }
+			if (!ar || typeof ar == 'number') { r.W = []; r.E = []; r.vide = ar == 404 ? 'archive effacée' : 'lecture impossible' + (ar ? ' (' + ar + ')' : ''); }
 			else { r.W = ar.d.slice(0, nb); r.E = ar.de.slice(0, nb); }
 			for (i = 1; i <= r.W.length; i++) r.et.push(String(i));
 		} else if (f == 'mois') {
@@ -168,7 +168,7 @@
 			if (p === null) { ferme(); return; }       // h0 : point isole visible
 			if (st == 'barres') {
 				var hb = p / max * (bas - HAUT);
-				o += "<rect fill='" + c + "' x='" + (i * l + 1).toFixed(1) + "' y='" + (bas - hb).toFixed(1) + "' width='" + Math.max(l - 2, 1).toFixed(1) + "' height='" + hb.toFixed(1) + "'><title>" + echappe(s.et[i] || '') + (i === s.part ? ' (année partielle)' : '') + ' : ' + fmt(p) + '</title></rect>';
+				o += "<rect fill='" + c + "' x='" + (i * l + 1).toFixed(1) + "' y='" + (bas - hb).toFixed(1) + "' width='" + Math.max(l - 2, 1).toFixed(1) + "' height='" + hb.toFixed(1) + "'><title>" + echappe(s.et[i] || '') + (i === s.part ? ' (année partielle)' : '') + ' : ' + echappe(fmt(p)) + '</title></rect>';
 			} else run.push([X(i).toFixed(1), Y(p)]);
 		});
 		ferme();
