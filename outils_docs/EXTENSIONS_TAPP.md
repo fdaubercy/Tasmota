@@ -186,15 +186,17 @@ Dossier `ext_a/` (nom d'archive libre) :
 ```berry
 # Extension sans .be embarque : le module est solidifie dans le firmware, l'extension ne fait que le charger.
 # Differe apres /autoexec.be : le prologue de demarrage.be pose LOG_LEVEL_* et le persist dont logFonctions a besoin.
-# add_extension : /ext affiche « Running » ; « Stop » appelle unload(), qui coupe la reception (le module reste en flash).
+# add_extension : /ext affiche « Running » ; « Stop » et « Uninstall » appellent unload(), qui coupe la reception
+# SEULEMENT si l'extension l'a lancee : celle de l'autoexec de la carte n'est jamais touchee (le module reste en flash).
 do
   class EXT_FSMQTT
+    var proprietaire                          # vrai si le recepteur a ete cree par l'extension
     def unload()
       import global
       import mqtt
       tasmota.remove_timer("ext_fsmqtt")      # Stop dans la premiere seconde : le recepteur ne doit pas renaitre
       var r = global.contains("fsMqttRecepteur") ? global.fsMqttRecepteur : nil
-      if r == nil    return    end
+      if r == nil || !self.proprietaire    return    end
       if r.lecture != nil    r.lecture["f"].close()    r.lecture = nil    end   # lecture en cours : fichier ferme
       r.abandonne()                           # envoi en cours : /fsmqtt.tmp efface
       mqtt.unsubscribe(r.base + "ordre")
@@ -202,18 +204,23 @@ do
       tasmota.remove_rule("Mqtt#Connected", "fsmqtt_pret")
       tasmota.remove_timer("fsmqtt_lit")
       global.fsMqttRecepteur = nil
+      self.proprietaire = false
     end
   end
-  tasmota.add_extension(EXT_FSMQTT())   # chemin = tasmota.wd, valide pendant ce chargement seulement
+  var ext = EXT_FSMQTT()
+  tasmota.add_extension(ext)                  # chemin = tasmota.wd, valide pendant ce chargement seulement
 
   tasmota.set_timer(1000, def ()
     import global                 # LOG_LEVEL_* lus a l execution : a la compilation, avant /autoexec.be, ces noms n existent pas
     import logFonctions
     try
+      var deja = global.contains("fsMqttRecepteur") && global.fsMqttRecepteur != nil   # lance par l'autoexec
+      ext.proprietaire = !deja                # avant init : un recepteur a moitie cree reste coupe par unload()
       import fsMqtt
       # relance apres « Stop » : 'import' ne rappelle pas init() (module en cache), le recepteur est recree ici
       if !global.contains("fsMqttRecepteur") || global.fsMqttRecepteur == nil    fsMqtt.init(fsMqtt)    end
-      logFonctions.log("EXT_FSMQTT: module charge par l'extension !", global.LOG_LEVEL_INFO)
+      logFonctions.log(deja ? "EXT_FSMQTT: reception deja lancee par l'autoexec, l'extension n'y touchera pas !"
+                            : "EXT_FSMQTT: module charge par l'extension !", global.LOG_LEVEL_INFO)
     except .. as e, m
       logFonctions.log(f"EXT_FSMQTT_ERREUR: chargement impossible : {e} - {m} !", global.LOG_LEVEL_ERREUR)
     end
@@ -225,8 +232,10 @@ end
 `tasmota.unload_extension`, qui appelle `unload()` puis retire l'instance (`tasmota_class.be::unload_extension`). Ici,
 `unload()` coupe la réception : envoi en cours abandonné (`/fsmqtt.tmp` effacé), lecture en cours fermée,
 minuterie de chargement `ext_fsmqtt` retirée, désabonnement de `ordre` et `morceau`, retrait de la règle `fsmqtt_pret` et de la
-minuterie `fsmqtt_lit`, oubli de `global.fsMqttRecepteur`. Le module reste en flash. Sur une carte dont l'autoexec
-charge aussi `fsMqtt`, « Stop » coupe donc la réception de cette carte jusqu'à la relance ou au redémarrage.
+minuterie `fsmqtt_lit`, oubli de `global.fsMqttRecepteur`. Le module reste en flash. Seulement si l'extension a
+lancé la réception (`proprietaire`) : sur une carte dont l'autoexec charge déjà `fsMqtt`, « Stop » et « Uninstall »
+(`extension_manager.be::delete_ext`, qui arrête l'extension avant d'effacer l'archive) n'y touchent pas. Avant cette
+règle, une désinstallation sur la cuve avait coupé sa réception jusqu'au redémarrage (2026-11-09, § 9).
 La relance (« Stopped », `extension_manager.be::run_stop_ext` → `tasmota.load`) rejoue l'`autoexec.be` de l'archive ;
 `import fsMqtt` étant en cache, `init` n'est pas rappelé : la minuterie recrée le récepteur par `fsMqtt.init(fsMqtt)`.
 Le `class` déclaré dans `do ... end` reste local au bloc (banc : aucune globale créée).
@@ -378,7 +387,7 @@ Avec un firmware antérieur : l'original était supprimé **avant** l'écriture 
 
 | Fait à essayer sur carte | Résultat |
 |---|---|
-| Un `.tapp` posé dans `/.extensions/` est lancé avant `/autoexec.be`, une extension sans `add_extension` s'affiche « Stopped » | **Confirmé** le 2026-11-09, cuve (CAPTEURS-CUVE, Tasmota 16.0.0.2), journal web après `Restart 1` : `00:00:00.419 TAP: Loaded Tasmota App '/.extensions/fsMqtt.tapp'` puis `00:00:02.161 BRY: Successfully loaded 'autoexec.be'`. Avant le redémarrage, `/ext` affichait « Reception FS MQTT », « Stopped », « Auto-run: ON ». La version affichée, v27.11.7.0, vient d'une erreur du manifeste (`0x1B0B0700`). À 02:39:37, un clic sur « Stopped » a relancé l'`autoexec.be` de l'archive : la ligne `EXT_FSMQTT: module charge par l'extension !` est réapparue dans le syslog. Le bouton est pourtant resté sur « Stopped », relu par GET `/ext`. C'est le comportement attendu : ce bouton appelle `tasmota.load` (`extension_manager.be::run_stop_ext`), mais l'état « Running » n'existe que si l'extension figure dans `tasmota._ext`, donc après un `add_extension`. Une extension du gabarit A ne se relance donc qu'en entier et ne s'arrête jamais : il n'y a rien à décharger. **Gabarit A corrigé le même jour** (version 0x1A0B0900, `add_extension` et `unload()`, § 5.2) puis renvoyé à la cuve par MQTT (1976 o, relu identique). Cycle piloté par `Br` sur MQTT, avec le bouton relu dans `/ext` à chaque étape : `tasmota.load` → « Running » ; `tasmota.unload_extension` → « Stopped », et `fsMqtt` ne répond plus à un ordre ; nouveau `tasmota.load` → « Running », et `fsMqtt` répond de nouveau (`{"op":"pret","version":2}` puis `abandon` acquitté). Un ordre est resté sans réponse juste après le premier lancement. Je ne l'ai pas reproduit (un rechargement suivi d'un ordre a bien été acquitté). Le broker refusait aussi, par moments, des connexions à la même heure |
+| Un `.tapp` posé dans `/.extensions/` est lancé avant `/autoexec.be`, une extension sans `add_extension` s'affiche « Stopped » | **Confirmé** le 2026-11-09, cuve (CAPTEURS-CUVE, Tasmota 16.0.0.2), journal web après `Restart 1` : `00:00:00.419 TAP: Loaded Tasmota App '/.extensions/fsMqtt.tapp'` puis `00:00:02.161 BRY: Successfully loaded 'autoexec.be'`. Avant le redémarrage, `/ext` affichait « Reception FS MQTT », « Stopped », « Auto-run: ON ». La version affichée, v27.11.7.0, vient d'une erreur du manifeste (`0x1B0B0700`). À 02:39:37, un clic sur « Stopped » a relancé l'`autoexec.be` de l'archive : la ligne `EXT_FSMQTT: module charge par l'extension !` est réapparue dans le syslog. Le bouton est pourtant resté sur « Stopped », relu par GET `/ext`. C'est le comportement attendu : ce bouton appelle `tasmota.load` (`extension_manager.be::run_stop_ext`), mais l'état « Running » n'existe que si l'extension figure dans `tasmota._ext`, donc après un `add_extension`. Une extension du gabarit A ne se relance donc qu'en entier et ne s'arrête jamais : il n'y a rien à décharger. **Gabarit A corrigé le même jour** (version 0x1A0B0900, `add_extension` et `unload()`, § 5.2) puis renvoyé à la cuve par MQTT (1976 o, relu identique). Cycle piloté par `Br` sur MQTT, avec le bouton relu dans `/ext` à chaque étape : `tasmota.load` → « Running » ; `tasmota.unload_extension` → « Stopped », et `fsMqtt` ne répond plus à un ordre ; nouveau `tasmota.load` → « Running », et `fsMqtt` répond de nouveau (`{"op":"pret","version":2}` puis `abandon` acquitté). Un ordre est resté sans réponse juste après le premier lancement. Je ne l'ai pas reproduit (un rechargement suivi d'un ordre a bien été acquitté). Le broker refusait aussi, par moments, des connexions à la même heure. **Désinstallation (« Uninstall ») vers 03:08 :** `delete_ext` arrête l'extension avant d'effacer l'archive, et l'ancien `unload()` a coupé la réception lancée par l'autoexec de la cuve. Constaté à 04:31 : `global.fsMqttRecepteur` à nil, plus aucun abonnement `fsmqtt/` dans `mqtt.topics`, plus de règle `fsmqtt_pret`, pas de `pret` à la reconnexion MQTT. Réception rétablie par `fsMqtt.init(fsMqtt)` via `Br`. Corrigé : `unload()` ne coupe plus que la réception lancée par l'extension (`proprietaire`, banc). **Pas encore essayé sur carte** |
 | Gabarit A : `fsMqtt` chargé par minuterie ; sans la minuterie, ce qui casse (`logFonctions` absent ?) | **Avec minuterie : confirmé** le 2026-11-09 sur la cuve. La minuterie de 1 s, armée à 0,419 s, s'est déclenchée après l'autoexec : `00:00:02.168 EXT_FSMQTT: module charge par l'extension !`, puis `fsmqtt/jardin/cuve/etat = {"op":"pret","version":2}`, sans `_ERREUR` liée à l'extension. **Sans minuterie : pas essayé.** La cuve charge aussi `fsMqtt` par son autoexec : l'essai prouve l'ordre de chargement, pas l'utilité de l'extension |
 | Gabarit B : `unload_extension` retire driver, commande et règle ; l'`import` d'un fichier de l'archive après chargement échoue | _à remplir_ |
 | `/ufsu` écrit dans `/.extensions/` par `build_ota_fs.py` ; MQTT `fsMqtt` aussi (binaire, MD5) | **MQTT confirmé** le 2026-11-09 : `fsMqtt.tapp` (1102 o) envoyé à la cuve par `tapp_envoi.envoie`, puis relu identique depuis `/.extensions/fsMqtt.tapp`. **`/ufsu` (HTTP) : pas essayé** |

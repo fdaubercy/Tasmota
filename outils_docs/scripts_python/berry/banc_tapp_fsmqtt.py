@@ -25,13 +25,14 @@ MUTANTS = [
     ("minuterie trop courte", [("set_timer(1000", "set_timer(10")]),
     ("echec non rattrape", [("except .. as e, m\n", "except .. as e, m\n      raise e, m\n")]),
     ("module non charge", [("import fsMqtt\n", "import fsMqttAbsent\n")]),
-    ("sans add_extension", [("  tasmota.add_extension(EXT_FSMQTT())", "  EXT_FSMQTT()")]),
+    ("sans add_extension", [("  tasmota.add_extension(ext)", "  # retire")]),
     ("Stop sans desabonnement", [('      mqtt.unsubscribe(r.base + "ordre")\n', "")]),
     ("Stop garde la regle", [('      tasmota.remove_rule("Mqtt#Connected", "fsmqtt_pret")\n', "")]),
     ("Stop sans abandon du transfert", [("      r.abandonne()", "      # retire")]),
     ("Stop sans fermer la lecture", [('r.lecture["f"].close()    ', "")]),
     ("Stop garde la minuterie de chargement", [('      tasmota.remove_timer("ext_fsmqtt")', "      # retire")]),
-    ("relance sans recepteur",[("    fsMqtt.init(fsMqtt)    end", "    end")]),
+    ("Stop coupe la reception de l'autoexec", [("      ext.proprietaire = !deja ", "      ext.proprietaire = true ")]),
+    ("relance sans recepteur", [("    fsMqtt.init(fsMqtt)    end", "    end")]),
 ]
 
 

@@ -130,6 +130,15 @@ if size(tasmota.extensions) == 1 && introspect.contains(tasmota.extensions[0], "
     verifie(sortie == nil && !journal_contient("_ERREUR"), "relance : sans erreur (" + str(sortie) + ")")
     verifie(mqtt.abonnes.contains("fsmqtt/garage/rideau/ordre") && mqtt.abonnes.contains("fsmqtt/garage/rideau/morceau"),
             "relance : reabonne a ordre et morceau")
+    # --- carte dont l'autoexec a deja lance la reception : Stop et Uninstall (delete_ext -> unload) n'y touchent pas
+    tasmota.extensions.clear()
+    tasmota.minuteries.clear()
+    var avant_recepteur = global.fsMqttRecepteur
+    compile(source())()
+    declenche(tasmota.minuteries[0])
+    tasmota.extensions[0].unload()
+    verifie(global.fsMqttRecepteur != nil && global.fsMqttRecepteur == avant_recepteur && mqtt.abonnes.contains("fsmqtt/garage/rideau/ordre"),
+            "reception lancee par l'autoexec : Stop de l'extension ne la coupe pas")
 end
 
 print("BANC_TAPP_FSMQTT: " + (echecs == 0 ? "OK" : "ECHEC"))
