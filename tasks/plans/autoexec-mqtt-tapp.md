@@ -3,7 +3,7 @@ chantier: autoexec-mqtt-tapp
 titre: Envoi MQTT de l'autoexec.bat, commandes par carte, extensions .tapp (document, script, page)
 statut: actif
 cree: 2026-11-05
-maj: 2026-11-07
+maj: 2026-11-09
 source: squishy-imagining-raven.md
 objectif: Envoyer l'autoexec.bat par MQTT, signaler une commande non compilée pour la carte, et savoir fabriquer un .tapp (document, script, page de l'annuaire)
 ---
@@ -32,7 +32,7 @@ Règles : rien n'est écrit sur une vraie carte sans geste ou accord de l'utilis
 - [x] Onglet : choix « Wi-Fi (HTTP) / MQTT » dans le panneau d'envoi, HTTP par défaut, changer de voie relance la préparation ; sonde Chrome verte, témoin sur le transport transmis — preuve : test_assistant_persist_autoexec_chrome.py VERT (9 témoins détectés, dont transport-ecran, voie-ignoree et generation, ce dernier fiable seulement depuis eeb4a8306 : verrou général des POST, raté 3 fois sur 3 sur 2dcc05b54) ; commits 16c1a9e74 + 2dcc05b54 + eeb4a8306 (la lecture d'une carte ne bloque plus l'analyse)
 
 ## A2 — fsMqtt sur le rideau
-- [ ] `demarrage.charge(["fsMqtt"])` dans `data/garage/tasmota32s3-rideau-garage-modbus/autoexec.be`, comme la cuve ; `banc_demarrage` : instantané du rideau mis à jour et relu, seul écart attendu ; agent `relecteur-berry` — preuve : banc_demarrage.py VERT sur les 6 cartes ; écart relu avant enregistrement : règle `Mqtt#Connected` et globale `fsMqttRecepteur`, rien d'autre ; relecteur-berry : rien de bloquant (fsMqtt dans le socle du rideau, topic `garage/rideau` au persist) ; pas encore essayé sur la carte (A10)
+- [x] `demarrage.charge(["fsMqtt"])` dans `data/garage/tasmota32s3-rideau-garage-modbus/autoexec.be`, comme la cuve ; `banc_demarrage` : instantané du rideau mis à jour et relu, seul écart attendu ; agent `relecteur-berry` — preuve : banc_demarrage.py VERT sur les 6 cartes ; écart relu avant enregistrement : règle `Mqtt#Connected` et globale `fsMqttRecepteur`, rien d'autre ; relecteur-berry : rien de bloquant (fsMqtt dans le socle du rideau, topic `garage/rideau` au persist) ; commit c7ecb23ce ; pas encore essayé sur la carte (A10)
 
 ## A3 — Commandes par carte : les gardes dans le fichier figé
 - [x] Banc rouge (`test_autoexec_commandes.py`) : `gardes["ZBSEND"]` porte `USE_ZIGBEE`, `gardes["I2CSCAN"]` `USE_I2C` (garde à l'intérieur d'une table) ; une commande définie dans deux branches a deux chemins ; `HOSTNAME` sans garde ; `--verifier` voit un écart — preuve : rouge d'abord (28 KO puis KeyError 'gardes'), puis VERT 162 OK dont 16 témoins de gardes rouges, commits bb60907ce + b39bb94b1 + e987df4bb (ronde 1 : tables de `GetCommandCode`, table illisible, `#elifdef`, rouge d'abord : 19 KO) ; `HOSTNAME` absent de `gardes` : sa garde réelle `!defined(FIRMWARE_MINIMAL)` (support_command.ino::kTasmotaCommands) est retirée, aucune carte du parc n'étant un firmware intermédiaire
@@ -63,8 +63,8 @@ Règles : rien n'est écrit sur une vraie carte sans geste ou accord de l'utilis
 - [x] Améliorations du plan `autoexec-bat` cochées avec renvoi ici ; ses A10 et le retour à `energie-differentiel` restent ouverts — preuve : tasks/plans/autoexec-bat.md, 2 ameliorations [x] avec renvoi a A1, A3, A4 de ce plan ; son A10 reste [ ]
 
 ## A10 — Essai réel (avec l'utilisateur)
-- [ ] Après accord : FS du rideau envoyé par la page Build, `fsmqtt/garage/rideau/etat` lu au démarrage, `autoexec.bat` envoyé par MQTT sur une carte choisie par l'utilisateur et relu identique, sans redémarrage
-- [ ] Après accord : `fsMqtt.tapp` installé sur une carte de test, vu dans `/ext` (« Stopped » attendu, voir `EXTENSIONS_TAPP.md`), réception MQTT constatée ; un `.tapp` du gabarit B arrêté et relancé ; les essais du § 9 du document ; ordre avant le prologue constaté dans les journaux, tas mesuré avant et après ; résultat consigné dans `EXTENSIONS_TAPP.md`
+- [ ] Après accord : FS du rideau envoyé par la page Build, `fsmqtt/garage/rideau/etat` lu au démarrage, `autoexec.bat` envoyé par MQTT sur une carte choisie par l'utilisateur et relu identique, sans redémarrage — partiel : `autoexec.bat` d'un commentaire envoyé par MQTT à la cuve (jardin/cuve, CAPTEURS-CUVE) le 2026-11-09, 1,4 s, relu identique (82 o), sans redémarrage, puis effacé par `UfsDelete` (Done, relu absent) ; reste le FS du rideau
+- [x] Après accord : `fsMqtt.tapp` installé sur une carte de test, vu dans `/ext` (« Stopped » attendu, voir `EXTENSIONS_TAPP.md`), réception MQTT constatée ; un `.tapp` du gabarit B arrêté et relancé ; les essais du § 9 du document ; ordre avant le prologue constaté dans les journaux, tas mesuré avant et après ; résultat consigné dans `EXTENSIONS_TAPP.md` — partiel : `fsMqtt.tapp` (1102 o) envoyé par MQTT dans `/.extensions/` de la cuve le 2026-11-09, sans redémarrage, relu identique ; vu dans `/ext` (Stopped, Auto-run ON, v27.11.7.0 ; boutique en erreur -2, sans rapport) ; Restart 1 : TAP à 0,419 s avant autoexec.be à 2,161 s, EXT_FSMQTT à 2,168 s, sans _ERREUR liée ; tas 197 Ko avant / 207 Ko après (non isolé) ; consigné au § 9 d'EXTENSIONS_TAPP.md ; clic « Stopped » à 02:39:37 : autoexec de l'archive relancé (EXT_FSMQTT au syslog), bouton resté « Stopped » (pas d'add_extension, extension_manager.be::run_stop_ext) : arrêt sans objet pour le gabarit A
 
 ## A11 — Retour au plan antérieur « autoexec-bat »
 - [ ] Reprendre `tasks/plans/autoexec-bat.md` : son A10 (retour à `tasks/plans/energie-differentiel.md` : thermomètre A11, retour au plan « jauges-cuve » A10), après le compte rendu de ce plan à l'utilisateur
