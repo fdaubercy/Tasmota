@@ -341,6 +341,51 @@ pont diviseur. Rouge sous 20 %, orange sous 40 %, bleu au-delà.
 
 <hr></hr>
 
+## Les débits de la nourrice de chauffage (carte Serveur Débits PAC)
+
+Carte ESP32-S3 `tasmota32s3-bureau-serveur-debits-pac` (dossier `data/bureau/tasmota32s3-serveur-debits-pac/`), à la
+nourrice de la PAC : elle mesure le débit des **6 départs de radiateur** par leurs débitmètres à impulsions (YF-B2,
+K = 11 Hz par L/min) et l'affiche sur un **écran tactile TFT 480×320** (ILI9488 + XPT2046), sur sa page web et dans
+son JSON SENSOR. Plan `tasks/plans/debitmetres-chauffage.md`, analyse `outils_docs/ANALYSE_DEBITMETRES_CHAUFFAGE_2026-11-08.md`.
+**Pas encore essayée sur une carte réelle** (2026-11-09).
+
+- **Voies** : voies 1-2 = `FlowRateMeter` de Tasmota (GPIO4, GPIO5 ; groupe `debitmetres` du persist, entrées
+  `debitmetre1-2`) ; voies 3-6 = compteurs `Counter1-4` (GPIO6, 7, 15, 16 ; groupe `compteurs`), débit calculé en Berry
+  sur une fenêtre glissante (10 s par défaut). Nom et K de chaque voie dans son entrée du persist (`nom`, `k`).
+- **Sorties** : bloc `DEBITS` du JSON SENSOR (`D1` à `D6` et `Total` en L/min, `Imprecis` = voies entre 0 et 1 L/min, sous
+  la plage du YF-B2 (1 à 25 L/min), en orange sur l'écran ; `Muets`) ; une ligne par départ sur la page d'accueil ; écran : page 1 = 6 barres, débit
+  et part du total, page 2 = K de chaque voie (bouton « Détails »). Description de l'écran : `pages.jsonl` de la carte,
+  lancée par le module (`haspmota.start("/json/pages.jsonl")`).
+- **Capteur muet** : une voie à 0 L/min pendant 10 min (`modules.debits.muet`, en min) est signalée « muet » en rouge sur
+  l'écran, « capteur muet ? » sur la page, et par `CAPTEUR_MUET_ERREUR` au journal (au passage seulement). Un départ
+  fermé plus de 10 min est donc signalé lui aussi.
+- **Veille de l'écran** : après `modules.debits.veille` minutes sans toucher (5 par défaut, 0 = jamais), luminosité à
+  25 %, puis écran éteint 30 s plus tard ; un toucher le rallume. Le rétroéclairage doit être la broche `BACKLIGHT`
+  (type 992, GPIO40 dans le bloc `drivers.ecran`), pas un relais.
+- **Réglages**, tous gardés au persist :
+
+  | Commande | Effet |
+  |---|---|
+  | `ReglageDebits` | état : fenêtre, veille, voies (nom, K), débits, capteurs muets, durée de la dernière écriture de l'écran (`ecran_ms`) |
+  | `ReglageDebits k <voie> <Hz par L/min>` | facteur K d'une voie (0,1 à 1000). Étalonnage : K corrigé = K × débit affiché ÷ débit réel |
+  | `ReglageDebits nom <voie> <texte>` | nom du départ (24 caractères au plus), repris par l'écran et la page |
+  | `ReglageDebits fenetre <s>` | durée de mesure, 2 à 60 s ; plus longue = plus précise aux petits débits |
+  | `ReglageDebits veille <min>` | veille de l'écran, 0 à 120 min, appliquée sans redémarrer |
+  | `ReglageDebits aide [sujet]` | aide de la commande |
+
+- **Historique** : actif (relevé toutes les 5 min, 24 h affichées) ; courbes des 6 débits et du total sur `/graphiques`,
+  libellés et groupes dans `graphiques.json` de la carte (libellés à refaire si un départ est renommé). Voir
+  « Les graphiques des mesures ».
+- **Essai de charge** (avant la pose) : un second ESP32 sous Tasmota standard envoie des impulsions sur les 6 entrées ;
+  `python outils_docs/scripts_python/outils_pc/essai_charge_debits.py --generateur <ip> --carte <ip>` compte ce que la
+  carte a reçu à chaque palier (écart < 0,5 % attendu) ; montage et câblage dans sa docstring (`--help`).
+- **Équilibrer la nourrice** : guide `outils_docs/chauffage/EQUILIBRAGE_CHAUFFAGE_NOURRICE.md`, et sa version animée pas
+  à pas avec calculateur des débits cibles, `outils_docs/chauffage/equilibrage_pas_a_pas.html` (à ouvrir sur un téléphone).
+- **Vérifier** : bancs hors carte `python outils_docs/scripts_python/berry/banc_debits.py` (calcul, JSON, écran, capteur
+  muet, réglages, veille ; témoins) et `banc_demarrage.py --carte tasmota32s3-bureau-serveur-debits-pac` (code 0 = vert).
+
+<hr></hr>
+
 ## Inclinaison d'un volet ou d'une trappe (MPU6050)
 
 Un MPU6050 fixé sur une trappe (ou un volet) qui pivote autour d'une charnière horizontale donne son angle réel :

@@ -119,7 +119,7 @@ sans impulsions.
 - [ ] Pose sur la nourrice, 6 voies affichées et nommées
 - [ ] Débit de la PAC relevé APRÈS la pose : au-dessus de son minimum constructeur, aucun défaut de débit sur une semaine
 - [ ] Contrôle de cohérence : somme des 6 débits contre le débit de la PAC, K corrigé par `ReglageDebits` si besoin
-- [ ] Mode d'emploi dans `outils_docs/README.md` et carte des documents du `CLAUDE.md` mis à jour
+- [x] Mode d'emploi dans `outils_docs/README.md` et carte des documents du `CLAUDE.md` mis à jour — preuve : section « Les débits de la nourrice de chauffage » de `outils_docs/README.md` et entrée de la carte des documents du `CLAUDE.md` (2026-11-09, avant la pose : à compléter par l'étalonnage réel) ; `verifie_references_docs.py` 0 défaut
 - [ ] Commit par `/commite`
 
 ## Améliorations restantes
