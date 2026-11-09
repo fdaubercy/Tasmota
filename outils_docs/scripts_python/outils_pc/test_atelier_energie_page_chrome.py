@@ -247,16 +247,21 @@ def sonde_edition(m, capture):
     verifie(cdp.js("document.getElementById('alertes').textContent.indexOf('archive') >= 0"), False, "mois precedent : archive presente, pas d'avertissement")
     js_champ(cdp, "#en-mois-mode", "fixe", "change")
     attend(cdp, "!!document.getElementById('en-mois')", 5)
-    js_champ(cdp, "#en-mois", "2020-01")
+    verifie(cdp.js("document.getElementById('en-mois').tagName"), "SELECT", "mois fixe : une liste, plus une saisie au clavier")
+    liste = cdp.js("Array.from(document.querySelectorAll('#en-mois option')).map(function(o){ return o.value; })")
+    verifie((len(liste) > 1, liste == sorted(liste, reverse=True)), (True, True), "mois fixe : mois archives de la carte, les plus recents en tete")
+    js_champ(cdp, "#en-mois", liste[-1], "change")
+    verifie(cdp.js("var e = etat.desc.elements[etat.en.sel]; e.source.mois"), liste[-1], "source : mois choisi dans la liste")
+    # mois hors liste (description deja ecrite, archive purgee) : garde et signale, jamais perdu en silence
+    cdp.js("etat.desc.elements[etat.en.sel].source.mois = '2020-01'; modifie(true); 1")
+    attend(cdp, "document.querySelector('#en-mois option[value=\"2020-01\"]')", 5)
+    verifie(cdp.js("var s = document.getElementById('en-mois'); [s.value, s.options[s.selectedIndex].textContent]"), ["2020-01", "2020-01 (pas dans la liste)"],
+            "mois fixe hors liste : conserve et signale")
     attend_apercu(cdp)
     verifie(bool(attend(cdp, "document.getElementById('alertes').textContent.indexOf('2020-01') >= 0", 10)), True,
             "mois fixe sans archive (f=mois en 404) : avertissement avant l'ecriture")
-    verifie(cdp.js("var e = etat.desc.elements[etat.en.sel]; e.source.mois"), "2020-01", "source : mois fixe 2020-01")
-    js_champ(cdp, "#en-mois", "2020-13")
-    verifie(bool(attend(cdp, "document.getElementById('motifs').textContent.indexOf('mois AAAA-MM') >= 0 && document.getElementById('ecrire').disabled", 10)), True,
-            "mois mal forme : motif de la carte, Ecrire grise")
-    js_champ(cdp, "#en-mois", "2020-01")
-    attend_apercu(cdp)
+    verifie(cdp.js("var e = etat.desc.elements[etat.en.sel]; e.source.mois"), "2020-01", "source : mois fixe 2020-01 inchange")
+    # (le cas « mois mal forme » n'est plus atteignable au clavier : la liste ne propose que des AAAA-MM)
     if capture:
         cdp.capture(capture)
     verifie(erreurs(cdp), [], "edition : aucune erreur JS (hors les 404 attendus de f=mois)")

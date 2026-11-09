@@ -221,7 +221,7 @@ function energieForme(e) {
       if (v === 'fixe') el.source.mois = mois0();
     }, true);
     if (mode === 'relatif') champ(f, 'en-decalage', 'Il y a', saisie('number', e.source.decalage, {min: 0, max: 23}), function (el, v) { nombreOu(el.source, 'decalage', v); });
-    if (mode === 'fixe') champ(f, 'en-mois', 'Mois fixe', saisie('text', e.source.mois, {placeholder: 'AAAA-MM', maxlength: 7}), function (el, v) { el.source.mois = v; });
+    if (mode === 'fixe') champ(f, 'en-mois', 'Mois fixe', selectMois(e.source.mois), function (el, v) { el.source.mois = v; });
   }
   if (e.source.flash === 'mois') champ(f, 'en-nombre', 'Nombre', saisie('number', e.source.nombre, {min: 1, max: 24, placeholder: '12'}),
     function (el, v) { nombreOu(el.source, 'nombre', v); });
@@ -230,6 +230,16 @@ function energieForme(e) {
     champ(f, 'en-total', 'Total', c, function (el, v) { if (v) el.total = true; else delete el.total; });
   }
   return f;
+}
+// Mois archives de la carte (etat.a, plus recent en tete) ; le mois deja decrit hors liste est GARDE et signale
+function selectMois(courant) {
+  var a = (etat.en.don && etat.en.don.etat && etat.en.don.etat.a) || [], m = a.map(function (x) { return [x[0], x[0]]; });
+  if (courant && !m.some(function (x) { return x[0] === courant; })) m.push([courant, courant + ' (pas dans la liste)']);
+  m.sort(function (x, y) { return x[0] < y[0] ? 1 : -1; });
+  if (!m.length) m = [['', 'aucun mois archivé']];
+  var s = select(m.map(function (x) { return x[0]; }), courant || '', m.map(function (x) { return x[1]; }));
+  if (!courant && a.length === 0) s.options[0].disabled = true;
+  return s;
 }
 function mois0() { var d = new Date(); d.setMonth(d.getMonth() - 1); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2); }
 
