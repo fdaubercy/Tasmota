@@ -100,7 +100,7 @@ courbe de puissance 24 h conservée ; abonnement de base ; prix saisi avec date 
 - [x] Relecture `relecteur-berry` des `.be` modifiés ; commit — preuve : relecture du 2026-11-02 sans défaut bloquant, 3 points mineurs corrigés (etat.json abîmé mis de côté, date contrôlée, fermeture de réponse) ; `banc_energie.py` COMPLET OK ; commit de ce même jour
 
 ## A10 — Retour au plan « jauges-cuve »
-- [ ] Reprendre `tasks/plans/jauges-cuve.md` : icône B envoyée aux deux cartes (FS), registre 4708, captures de l'accueil et de `/cuve`, bouton Retour
+- [x] Reprendre `tasks/plans/jauges-cuve.md` : icône B envoyée aux deux cartes (FS), registre 4708, captures de l'accueil et de `/cuve`, bouton Retour — preuve : plan `jauges-cuve` repris le 2026-11-09 à la demande de l'utilisateur et rattaché à la conversation ; ses étapes restantes (A3 bouton Retour, A6 build et essai) s'y suivent
 
 ## A11 — Remarques de l'utilisateur du 2026-11-02 (soir)
 - [x] Prix : ligne, liste des tarifs et saisie déplacées dans une sous-partie de la page Configuration (bouton « Tarifs de l'électricité ») ; sous la liste, en plus petit, la ligne du prix en vigueur ; sur `/energie`, seulement l'alerte et, en petit, l'endroit où régler le prix ; banc vert, capture sur la carte — preuve : bouton « Tarifs de l'électricité » sur `/cn`, liste et prix en petit sur `/energie?f=tarifs`, lieu en petit sur `/energie` (captures du 2026-11-02 23:42) ; `banc_energie.py` COMPLET OK
