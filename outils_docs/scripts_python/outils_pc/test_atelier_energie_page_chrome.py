@@ -216,6 +216,10 @@ def sonde_edition(m, capture):
     verifie(cdp.js("JSON.stringify(etat.desc) === JSON.stringify(Energie.DEFAUT)"), True, "depart = Energie.DEFAUT (le depot n'a pas de fichier)")
     verifie(cdp.js("document.querySelectorAll('#a_grille svg').length > 0"), True, "apercu trace par energie.js (SVG present)")
     verifie(cdp.js("document.getElementById('e_grille')"), None, "aucun element e_grille : energie.js ne s'est pas lance seul")
+    verifie(cdp.js("document.querySelector('#a_grille h3').firstChild.textContent.trim()"), "Aujourd'hui par heure",
+            "titre avec apostrophe rendu tel quel (pas « Aujourd\"hui »)")
+    verifie(cdp.js("var r = document.querySelector('#a_grille .e_graphe').getBoundingClientRect(); r.width > 0 && Math.abs(r.height / r.width - 90 / 320) < 0.02"),
+            True, "graphique « moyenne » : hauteur = largeur x 90/320 (pas bride par le max-height des tuiles)")
     # un demi-cercle sur Power, couleur, hauteur grande, en tete
     clic(cdp, "#en-ajout")
     attend(cdp, "!!document.getElementById('en-type')", 5)

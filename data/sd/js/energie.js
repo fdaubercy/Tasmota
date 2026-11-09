@@ -91,7 +91,7 @@
 	// 2 Wh par jour (2026-11-02) : d'ou les Wh et les euros fins
 	function energie(wh) { return wh < 1000 ? wh + ' Wh' : nombre(wh / 1000, 2) + ' kWh'; }
 	function euros(e) { return e > 0 ? nombre(e / 10000, e < 100 ? 4 : 2) + ' €' : '—'; }
-	function echappe(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/["']/g, '&quot;'); }
+	function echappe(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 	function col(l, i) { return l.map(function (m) { return m[i]; }); }
 	function txt(x, y, t, a) { return "<text class='e_txt' x='" + x + "' y='" + y + "'" + (a ? " text-anchor='" + a + "'" : '') + '>' + t + '</text>'; }
 	function somme(l) { return l.reduce(function (a, b) { return a + b; }, 0); }

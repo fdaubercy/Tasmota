@@ -11,8 +11,8 @@
 .e_pleine{grid-column:1/-1}
 .e_tuile.e_h_moyenne{min-height:100px}
 .e_tuile.e_h_grande{min-height:150px}
-.e_h_moyenne svg{max-height:80px}
-.e_h_grande svg{max-height:130px}
+.e_tuile.e_h_moyenne svg{max-height:80px}
+.e_tuile.e_h_grande svg{max-height:130px}
 .e_cadran.e_dem{fill:#fff}
 .e_aire{opacity:0.35;stroke:none}
 #e_note{white-space:pre-line;font-size:0.8em;opacity:0.8}
