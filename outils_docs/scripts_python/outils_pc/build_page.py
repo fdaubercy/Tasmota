@@ -168,6 +168,7 @@ PAGE = r"""<!doctype html>
 /*CSS_DEFAUT*/
 /*CSS_SAUVEGARDE*/
 /*CSS_AIDE*/
+/*CSS_LIEUX*/
   @media (max-width:820px){.disposition{grid-template-columns:1fr}.commandes{position:static}}
   @media (max-width:520px){
     main{padding:8px 16px 30px}
@@ -380,6 +381,7 @@ function construitListe(donnees) {
   ui = {};
   FAMILLES.forEach(function (f) {
     var membres = envs.filter(function (e) { return e.famille === f[0]; });
+    if (f[0] === "cartes" && lieuxGroupes(liste, membres, donnees)) return;     // Lieu ou Puce : build_page_lieux.py
     if (!membres.length) return;
     var compte = h("span", {"class": "compte"});
     var fam = h("details", {"class": "famille", "data-famille": f[0]}, h("summary", {}, f[1], compte));
@@ -497,6 +499,7 @@ function majComptes() {
     var n = d._compte[1].filter(function (e) { return choix[e.nom].coche; }).length;
     d._compte[0].textContent = "(" + d._compte[1].length + (n ? " · " + n + " coché" + (n > 1 ? "s" : "") : "") + ")";
   });
+  lieuxMaj();                               // filtre par nom, cases des groupes de lieu ou de puce
 }
 
 function envsCoches() { return envs.filter(function (e) { return choix[e.nom].coche; }); }
@@ -1185,6 +1188,7 @@ $("son").onchange = function () {
 /*JS_MEMOIRE*/
 /*JS_DEFAUT*/
 /*JS_SAUVEGARDE*/
+/*JS_LIEUX*/
 /*JS_COULEURS*/
 
 async function demarre() {
@@ -1221,3 +1225,5 @@ import build_page_aide                              # noqa: E402 - onglet « Aid
 PAGE = PAGE.replace("/*CSS_AIDE*/", build_page_aide.CSS).replace("<!--VUE_AIDE-->", build_page_aide.HTML)
 import build_page_couleurs                          # noqa: E402 - couleurs du panneau « Sortie »
 PAGE = PAGE.replace("/*JS_COULEURS*/", build_page_couleurs.JS)
+import build_page_lieux                             # noqa: E402 - bascule « Classer par » Famille / Lieu / Puce (modele D)
+PAGE = PAGE.replace("/*CSS_LIEUX*/", build_page_lieux.CSS).replace("/*JS_LIEUX*/", build_page_lieux.JS)
