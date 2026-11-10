@@ -183,6 +183,9 @@ def sonde(m, capture):
     verifie(cdp.js(f"""(() => {{ const l = document.querySelector('.env[data-env="{CAVE}"]');
       return [l.querySelector('.champ').value, l.querySelector('.methode button:nth-child(2)').getAttribute('aria-pressed')]; }})()"""),
             ["192.168.0.77", "true"], "IP saisie puis Famille -> Lieu -> Famille : IP et OTA intactes")
+    filtre(cdp, "SONDE-BASE")                     # Famille aussi, sans casse : seule la famille des bases reste
+    verifie([g["nom"] for g in groupes(cdp)], ["Mes bases"], "Famille + filtre « SONDE-BASE » : seule « Mes bases » visible")
+    filtre(cdp, "")
 
     # vigilance 5 : rechargement par chargeEnvs(true) en Lieu -> toujours Lieu, ouverture recalculee
     bascule(cdp, "lieu")
