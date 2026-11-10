@@ -131,6 +131,7 @@ def test_envs(b):
     statut, r = b.requete("GET", "/envs")
     noms = {e["nom"]: e for e in r["envs"]}
     verifie((statut, CUVE in noms, P4 in noms, RIDEAU in noms), (200, True, True, True), "GET /envs : cartes S3 et P4")
+    verifie((noms[P4]["lieu"], len(r.get("lieux", []))), ("garage", 6), "GET /envs : lieu des cartes et 6 lieux")
     verifie((BUREAU in noms, noms[BUREAU]["energie"], "tasmota32s3-base-N16R8" in noms, tage.PORTE in noms), (True, True, False, False), "GET /envs : le differentiel (carte Energie), ni base ni autre ESP32 classique")
     verifie((noms[CUVE]["exclut_echarts"], noms[CUVE]["exclut_liquidfill"]), (False, False), "cuve : ECharts et liquidfill")
     verifie(noms[RIDEAU]["exclut_liquidfill"], True, "rideau : liquidfill exclu")

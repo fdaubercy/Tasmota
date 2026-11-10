@@ -48,6 +48,7 @@ import fichiers_berry_ini as fbi
 import fichiers_berry_renommage as fbr
 import fichiers_berry_sauvegarde as fbs
 import fichiers_berry_suppression as fbx
+import lieux
 
 PORT_DEFAUT = 7800
 DEPOT = Path(__file__).resolve().parents[3]
@@ -173,7 +174,7 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
                 elif url.path == "/execution":
                     self._json({"en_cours": False})
                 elif url.path == "/envs":
-                    self._json({"envs": fbe.envs_proposes(racine)})
+                    self._json({"envs": [{**e, "lieu": lieux.lieu(e["nom"]) if e["famille"] == "cartes" else None} for e in fbe.envs_proposes(racine)], **lieux.pour_page()})
                 elif url.path == "/etat":
                     self._json(fbe.etat_env(racine, params.get("env", [""])[0]))
                 elif url.path == "/build":

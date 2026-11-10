@@ -36,6 +36,7 @@ import assistant_persist_generation as gen
 import assistant_persist_modele as apm
 import assistant_persist_parc as parc
 import assistant_persist_texte as texte
+import lieux
 import fichiers_berry_coprocesseur as fbcp
 import fichiers_berry_creation as fbc
 import fichiers_berry_etat as fbe
@@ -55,7 +56,7 @@ def cartes(racine):
             continue
         dossier = fbe.dossier_carte(e["nom"])
         if (Path(racine) / dossier / "_persist.json").is_file():
-            res.append({"env": e["nom"], "dossier": dossier, "puce": PUCES.get(e["nom"].split("-")[0], "")})
+            res.append({"env": e["nom"], "lieu": lieux.lieu(e["nom"]), "dossier": dossier, "puce": PUCES.get(e["nom"].split("-")[0], "")})
     return res
 
 

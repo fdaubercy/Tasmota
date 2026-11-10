@@ -141,6 +141,9 @@ def test_routes_locales(b):
     verifie((statut, sorted(noms)), (200, sorted([A, B, "tasmota32-essai-base"])),
             "routes_locales : GET /envs liste les envs (famille bases comprise)")
     env_a = next((e for e in donnees["envs"] if e["nom"] == A), {})
+    # faux depot sans carte du garage : A est une carte, son lieu = 2e segment
+    verifie((env_a.get("lieu"), env_a.get("puce"), len(donnees.get("lieux", []))), ("essai", "ESP32", 6), "routes_locales : /envs porte lieu, puce et lieux")
+    verifie(next(e for e in donnees["envs"] if e["nom"] == "tasmota32-essai-base")["lieu"], None, "routes_locales : lieu null sur une base")
     verifie((env_a.get("port"), env_a.get("famille"), env_a.get("fs_avec_firmware")), ("COM12", "cartes", True),
             "routes_locales : champs de Env (fs_avec_firmware compris)")
     verifie(donnees["derniers"], {}, "routes_locales : derniers choix vides au depart")

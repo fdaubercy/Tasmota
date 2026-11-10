@@ -36,7 +36,7 @@ Routes (les POST exigent l'en-tete X-Assistant-Persist: 1 et la meme origine ; J
     POST /suppression {env, empreinte} -> {supprime, dossier_sauvegarde, sauvegarde} ; 409 ; 404 env inconnu
     GET  /autoexec?env=, GET /autoexec/banque, POST /autoexec/analyse|diff|ecrit|banque/ajoute : onglet « autoexec.bat »,
         voir assistant_persist_autoexec.py (env = carte du parc ; secrets du fichier jamais envoyes)
-(+ cartes dans GET /parc : [{env, dossier, puce}])
+(+ cartes dans GET /parc : [{env, lieu, dossier, puce}], + lieux)
 `reponses` = les champs de assistant_persist_generation.Reponses (puce, lieu, nom obligatoires) ; `elements` =
 {groupe: [element, ...]} et `elements_groupe` = {groupe: {reglage: valeur}} (groupes de assistant_persist_elements).
 """
@@ -57,6 +57,7 @@ import assistant_persist_elements as ape
 import assistant_persist_generation as gen
 import assistant_persist_modele as apm
 import assistant_persist_modification as apm2
+import lieux
 import assistant_persist_parc as parc
 import assistant_persist_autoexec as apx
 import assistant_persist_relue as apr
@@ -195,7 +196,7 @@ def donnees_parc(racine):
             "base_defaut": {p: parc.base_par_defaut(racine, p) for p in parc.PREFIXES},
             "maitres": parc.maitres(racine), "ids_pris": {str(i): d for i, d in parc.ids_pris(racine).items()},
             "id_libre": parc.id_libre(racine), "reseaux": parc.reseaux(racine), "blocs": blocs, "erreur_modele": erreur,
-            "broches": broches, "erreur_broches": erreurs_broches, "cartes": apm2.cartes(racine),
+            "broches": broches, "erreur_broches": erreurs_broches, "cartes": apm2.cartes(racine), **lieux.pour_page(),
             "groupes": [{"id": g, "singulier": ape.singulier(modele, g), "gabarit": ape.gabarits_elements(modele)[g]}
                         for g in ape.GROUPES_ELEMENTS] if modele else []}
 

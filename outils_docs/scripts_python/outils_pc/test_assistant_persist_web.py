@@ -91,11 +91,12 @@ def test_get(b):
     reel = apm.ecarts(tac.RACINE, apm.charge_modele(tac.RACINE))
     verifie(reel["disparues"], [], "VRAI parc : aucune cle disparue (le bandeau ne reste pas affiche en permanence)")
     verifie(sorted(p), sorted(["puces", "bases", "base_defaut", "maitres", "ids_pris", "id_libre", "reseaux", "blocs", "erreur_modele",
-                                      "broches", "erreur_broches", "groupes", "cartes"]),
+                                      "broches", "erreur_broches", "groupes", "cartes", "lieux"]),
             "GET /parc : les clefs du contrat")
     verifie(([g["id"] for g in p["groupes"]], p["broches"]["ESP32S3"][-1], "relai" in [g["singulier"] for g in p["groupes"]]),
             (["boutons", "interrupteurs", "relais", "capteurs", "compteurs", "thermometres", "analogiques", "pinsTechniques", "debitmetres"], 48, True),
             "GET /parc : groupes d'elements (gabarit, singulier) et broches de chaque puce")
+    verifie(({c["env"]: c["lieu"] for c in p["cartes"]}.get(tac.MAITRE), len(p["lieux"])), ("garage", 6), "GET /parc : lieu des cartes et 6 lieux")
     verifie(p["puces"], ["ESP32", "ESP32S3", "ESP32P4"], "GET /parc : puces")
     verifie("tasmota32s3-base-N16R8" in p["bases"]["ESP32S3"], True, "GET /parc : bases par puce")
     verifie(p["base_defaut"]["ESP32S3"] in p["bases"]["ESP32S3"], True, "GET /parc : base par defaut parmi les bases")
@@ -229,8 +230,8 @@ def test_modification_suppression(b):
     _, p = b.requete("POST", "/prepare", {"reponses": reponses()})
     b.requete("POST", "/creation", {"reponses": reponses(), "empreinte": p["empreinte"]})
     cartes = b.requete("GET", "/parc")[1].get("cartes", [])
-    verifie((tac.ENV in [c["env"] for c in cartes], sorted(cartes[0]) if cartes else None), (True, ["dossier", "env", "puce"]),
-            "GET /parc : cartes (env, dossier, puce)")
+    verifie((tac.ENV in [c["env"] for c in cartes], sorted(cartes[0]) if cartes else None), (True, ["dossier", "env", "lieu", "puce"]),
+            "GET /parc : cartes (env, lieu, dossier, puce)")
     statut, e = b.requete("GET", "/env?nom=" + tac.ENV)
     verifie((statut, e.get("env") if isinstance(e, dict) else e, sorted(e.get("reponses", {})) == sorted(reponses()) if isinstance(e, dict) else None),
             (200, tac.ENV, True), "GET /env : reponses relues de la carte")

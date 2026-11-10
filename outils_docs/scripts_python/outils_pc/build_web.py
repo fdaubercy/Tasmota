@@ -70,6 +70,7 @@ import build_memoire
 import build_partitions
 import build_sauvegarde
 import build_serie
+import lieux
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "maintenance"))
 import purge_cache_build                                  # noqa: E402 - seul import hors de outils_pc/
@@ -113,8 +114,9 @@ def ecrit_derniers(dossier, lignes, actions):
 def liste_envs_json(racine, dossier):
     # fs_avec_firmware (annonce « le FS sera aussi flashe ») vient des .ini, pas de la presence de
     # littlefs.bin : post_esp32 le reconstruit a chaque compilation, meme apres une purge (spec, choix 9).
-    envs = [asdict(env) for env in build_envs.liste_envs(racine)]
-    return {"envs": envs, "derniers": lit_derniers(dossier)}
+    envs = [{**asdict(env), "puce": lieux.puce(env.nom), "lieu": lieux.lieu(env.nom) if env.famille == "cartes" else None}
+            for env in build_envs.liste_envs(racine)]
+    return {"envs": envs, "derniers": lit_derniers(dossier), **lieux.pour_page()}
 
 
 def journaux_env(dossier, env, depuis):

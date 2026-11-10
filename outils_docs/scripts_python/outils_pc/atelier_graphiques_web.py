@@ -61,6 +61,7 @@ import build_envs
 import build_ota_http
 import fichiers_berry_etat as fbe
 import fichiers_berry_ini as fbi
+import lieux
 
 PORT_DEFAUT = 7950
 DEPOT = Path(__file__).resolve().parents[3]
@@ -97,7 +98,7 @@ def envs(racine):
     res = []
     for nom in noms:
         exclus = {Path(x.chemin).name for x in fbi.resout(ini, nom, fbe.EXCLUDE)}
-        res.append({"nom": nom, "ip": ips.get(nom, ""), "exclut_echarts": ECHARTS in exclus,
+        res.append({"nom": nom, "lieu": lieux.lieu(nom), "ip": ips.get(nom, ""), "exclut_echarts": ECHARTS in exclus,
                     "exclut_liquidfill": LIQUIDFILL in exclus, "energie": ageg.page_energie(ini, nom)})
     return res
 
@@ -273,7 +274,7 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None, sonde_build=
                     import atelier_graphiques_page
                     self._envoie(200, atelier_graphiques_page.PAGE.encode("utf-8"), "text/html; charset=utf-8")
                 elif url.path == "/envs":
-                    self._json({"envs": envs(racine)})
+                    self._json({"envs": envs(racine), **lieux.pour_page()})
                 elif url.path == "/series":
                     e = env()
                     if ageg.page_energie(fbi.lit_sections(racine), e):

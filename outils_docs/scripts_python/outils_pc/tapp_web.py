@@ -40,6 +40,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import acces_web
 from annuaire_outils import hote_autorise
+import lieux
 import tapp_envoi
 import tapp_sources as ts
 
@@ -150,7 +151,7 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
             elif url.path == "/extension":
                 self._json(ts.detail(racine, parse_qs(url.query, keep_blank_values=True).get("nom", [None])[0]))
             elif url.path == "/cartes":
-                self._json({"cartes": [{"env": e} for e in tapp_envoi.cartes(racine)]})
+                self._json({"cartes": [{"env": e, "lieu": lieux.lieu(e)} for e in tapp_envoi.cartes(racine)], **lieux.pour_page()})
             else:
                 self._envoie(404, b"introuvable")
 

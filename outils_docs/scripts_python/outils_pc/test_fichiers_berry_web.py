@@ -74,7 +74,7 @@ def test_get(b):
     verifie("127.0.0.1" in page, False, "page : aucune adresse en dur (lien vers la page build d'apres l'hote)")
     verifie(b.requete("GET", "/execution"), (200, {"en_cours": False}), "GET /execution (lu par la cible)")
     statut, envs = b.requete("GET", "/envs")
-    verifie((statut, {"nom": RIDEAU, "famille": "cartes"} in envs["envs"]), (200, True), "GET /envs : le rideau")
+    verifie((statut, {"nom": RIDEAU, "famille": "cartes", "lieu": "garage"} in envs["envs"], len(envs.get("lieux", []))), (200, True, 6), "GET /envs : le rideau, son lieu et les 6 lieux")
     statut, etat = b.requete("GET", f"/etat?env={RIDEAU}")
     f = {x["chemin"]: x for x in etat["fichiers"]}
     verifie((statut, f["data/garage/tasmota32s3-rideau-garage-modbus/controleRideau.be"]["etat"]), (200, "solidifie"),

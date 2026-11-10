@@ -405,7 +405,9 @@ def surface(s):
 def cartes(s):
     st, r = s.requete("GET", "/cartes")
     verifie((st, taa.ENV in [c["env"] for c in r["cartes"]]), (200, True), "GET /cartes : les cartes du parc")
-    verifie(all(sorted(c) == ["env"] for c in r["cartes"]), True, "GET /cartes : le nom de l'env, rien d'autre")
+    verifie(all(sorted(c) == ["env", "lieu"] for c in r["cartes"]), True, "GET /cartes : le nom de l'env et son lieu, rien d'autre")
+    # faux depot : on prend la carte qu'il a, son lieu = 2e segment de l'env
+    verifie(({c["env"]: c["lieu"] for c in r["cartes"]}.get(taa.ENV), len(r.get("lieux", []))), (taa.ENV.split("-")[1], 6), "GET /cartes : lieu de la carte et 6 lieux")
 
 
 def pas_une_carte(racine):
