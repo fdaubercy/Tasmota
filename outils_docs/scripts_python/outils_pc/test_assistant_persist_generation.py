@@ -47,10 +47,10 @@ EXCLUES = {
 }
 
 # (motif fnmatch du chemin reduit, cartes (noms de dossier) ou None = toutes, raison). Ruling 8 : familles 2 a 5.
-DIFF, CAVE1, CAVE3, GRENIER, P4, CUVE_, RIDEAU_ = ("tasmota32-interrupteur-energie", "tasmota32-serveur-rly",
-                                                 "tasmota32s3-serveur-rly", "tasmota32s3-grenier",
-                                                 "tasmota32p4-serveur-modbus", "tasmota32s3-capteurs-cuve-modbus",
-                                                 "tasmota32s3-rideau-garage-modbus")
+DIFF, CAVE1, CAVE3, GRENIER, P4, CUVE_, RIDEAU_, ECRAN_ = ("tasmota32-interrupteur-energie", "tasmota32-serveur-rly",
+                                                         "tasmota32s3-serveur-rly", "tasmota32s3-grenier",
+                                                         "tasmota32p4-serveur-modbus", "tasmota32s3-capteurs-cuve-modbus",
+                                                         "tasmota32s3-rideau-garage-modbus", "tasmota32s3-ecran-debits-pac")
 TOLERANCES = [
     ("diverses.energie.*", None, "bloc de la page Energie : absent des cartes plus anciennes (lu par .find), ON sur la seule carte qui mesure l'energie"),
     # -- famille 3 : bloc metier ecrit a la main
@@ -67,8 +67,9 @@ TOLERANCES = [
     # -- famille 4 : reglages propres a une carte
     ("diverses.historique.grafana", (CAVE3, GRENIER, RIDEAU_), "cle absente de ces S3 (ajoutee au parc apres eux)"),
     ("serveur.voieReseau", (GRENIER, CUVE_, RIDEAU_), "cle absente de ces S3 (ajoutee au parc apres eux) ; absente = Wi-Fi (configGlobal.voieReseau)"),
-    ("drivers.ecran.environnement.relais.*", (P4,),
+    ("drivers.ecran.environnement.relais.*", (P4, ECRAN_),
      "retroeclairage et Rst de l'ecran passes dans pinsEcrans (2026-11-09) ; les autres cartes gardent le groupe OFF"),
+    ("drivers.ecran.activation", (ECRAN_,), "carte d'affichage des debits (plan debits-deux-cartes, A4) : l'ecran est ON, OFF sur une carte generee"),
     ("serveur.rangeExtender.AP.routeNAPT", (CAVE3, GRENIER), "le role maitre ne tranche pas : cave S3 et grenier a OFF, P4 a ON"),
     # -- famille 5 : blocs absents d'un vieux persist
     ("drivers.I2S.*", (DIFF,), "bloc absent du vieux persist du differentiel (OFF sur une carte generee)"),
