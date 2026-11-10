@@ -25,6 +25,7 @@ CSS = r"""
   .f-trois{display:grid;grid-template-columns:170px minmax(0,1fr) 240px;gap:10px;align-items:start}
   .f-tete{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .f-carte{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:8px;padding:7px 4px;border-top:1px solid var(--bord)}
+  .f-lieu{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--doux);padding:8px 4px 3px}
   .f-carte.coche{background:var(--bleu-fond)}
   .f-carte input[type=radio]{margin:2px 0 0;width:15px;height:15px}
   .f-carte .nom{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;overflow-wrap:anywhere;cursor:pointer}
@@ -144,8 +145,19 @@ function fichiersCartes() {
   zone.textContent = "";
   var cartes = envs.filter(function (e) { return e.famille === "cartes" && e.ota_possible; });
   if (!cartes.length) { zone.appendChild(h("div", {"class": "vide", texte: "Aucune carte envoyable par le réseau."})); return; }
-  cartes.forEach(function (e) {
-    var c = choix[e.nom];
+  // intertitres de lieu (modele F) : ordre de la table (lieuxTable, build_page_lieux.py), puis les codes bruts hors table
+  var libelles = {}, ordre = lieuxTable.map(function (l) { libelles[l[0]] = l[1]; return l[0]; });
+  cartes.forEach(function (e) { if (ordre.indexOf(e.lieu || "") < 0) ordre.push(e.lieu || ""); });
+  var rangees = [];
+  ordre.forEach(function (k) {
+    var groupe = cartes.filter(function (e) { return (e.lieu || "") === k; });
+    if (!groupe.length) return;
+    rangees.push({titre: (libelles[k] || k || "Autres") + " · " + groupe.length});
+    groupe.forEach(function (e) { rangees.push({env: e}); });
+  });
+  rangees.forEach(function (rg) {
+    if (!rg.env) { zone.appendChild(h("div", {"class": "f-lieu", texte: rg.titre})); return; }
+    var e = rg.env, c = choix[e.nom];
     var radio = h("input", {type: "radio", name: "f-carte", id: "f-carte-" + e.nom, value: e.nom});
     radio.checked = F.env === e.nom;
     radio.onchange = function () { choisitCarte(e.nom); };

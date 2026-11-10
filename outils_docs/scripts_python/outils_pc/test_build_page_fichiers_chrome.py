@@ -447,6 +447,22 @@ def sonde_historique(m):
               (1, True, True, False, f"?env={A}"), "delai : resultat incertain dit (pas « refuse »), URL nettoyee")
 
 
+def sonde_lieux(m):
+    """Intertitres de lieu (modele F) : ordre de la table, code brut hors table en dernier, cartes dessous."""
+    cdp = m.cdp
+    m.ouvre()
+    clic(cdp, "#onglet-fichiers")
+    titres = "[...document.querySelectorAll('#f-cartes .f-lieu')].map(x => x.textContent)"
+    s.verifie(etat(cdp) and cdp.js(titres), ["sonde · 3"], "lieux : les 3 cartes du depot d'essai, lieu hors table -> code brut")
+    # lieux simules sur les envs de la page : un par groupe, un hors table (jardin) qui doit passer APRES la table
+    cdp.js(f"""(() => {{ const l = {{'{A}': 'jardin', '{B}': 'cave', '{s.C}': 'etage2'}};
+      envs.forEach(e => {{ if (l[e.nom]) e.lieu = l[e.nom]; }}); fichiersCartes(); return true; }})()""")
+    s.verifie(cdp.js(titres), ["2e étage · 1", "Cave · 1", "jardin · 1"], "lieux : ordre de la table, code brut en dernier, effectif de chaque groupe")
+    s.verifie(cdp.js("[...document.querySelector('#f-cartes').children].map(x => x.className.split(' ')[0])"),
+              ["f-lieu", "f-carte", "f-lieu", "f-carte", "f-lieu", "f-carte"], "lieux : une carte sous chaque intertitre")
+    s.verifie(cdp.js("getComputedStyle(document.querySelector('.f-lieu')).textTransform"), "uppercase", "lieux : intertitre en capitales par le CSS")
+
+
 def principal():
     options = argparse.ArgumentParser(description="Sonde Chrome de l'onglet Fichiers de la page build.")
     options.add_argument("--capture", help="dossier ou ecrire les captures PNG")
@@ -463,6 +479,7 @@ def principal():
         source.parent.mkdir(parents=True, exist_ok=True)
         source.write_bytes(b"print(1)")
         sonde_onglet(m, args.capture)
+        sonde_lieux(m)
         sonde_atelier(m)
     except FileNotFoundError as erreur:
         print(f"BLOQUE : {erreur}")
