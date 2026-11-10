@@ -14,6 +14,7 @@ class CONTROLE_Debits : Driver
         tasmota.cmd("Sensor96 1 1000", boolMute)
         tasmota.cmd("Sensor96 2 1000", boolMute)
         tasmota.add_cmd("ReglageDebits", debitsFonctions.reglageDebits)
+        if (modules["debits"].find("modbus", "OFF") == "ON")    debitsFonctions.declareModbus()    end   # registres non frais avant la 1re mesure
         debitsFonctions.demarreEcran()
         debitsFonctions.log("CONTROLE_DEBITS: module debits charge, mesure toutes les " + str(debitsFonctions.fenetre()) + " s !", LOG_LEVEL_INFO)
     end

@@ -2225,7 +2225,9 @@ def modbusFonctions_sertGroupe(paramMSG, n)
             break
         end
         var frais = modbusFonctions.signaleMesure(registre + i, a.find("nom", str(registre + i)), modbusFonctions.mesureFraiche(registre + i))
-        valeurs.push(frais ? int(real(a.find("value", 0.00))) : modbusFonctions.SENTINELLE_UINT32)
+        # Un int servi tel quel : en float 32 bits, real(0x7FFFFFFF) = 2^31 deborde l'int32 (sentinelle faussee)
+        var v = a.find("value", 0)
+        valeurs.push(frais ? (type(v) == "int" ? v : int(real(v))) : modbusFonctions.SENTINELLE_UINT32)
     end
 
     if (erreur != nil)

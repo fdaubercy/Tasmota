@@ -303,6 +303,17 @@ verifie("cle modbus OFF : ni ecriture ni push", global.MB["notes"] == [] && glob
 global.modules["debits"] = {"activation": "ON"}
 debitsFonctions.zero = [nil, nil, nil, nil, nil, nil]
 debitsFonctions.muets = [false, false, false, false, false, false]
+# Vrai persist : la fraicheur est declaree sur 4704 + rang du virtuel et notee sur type + id - 1 ; les deux doivent coincider
+var anaP = json.load(lis(CARTE + "_persist.json"))["modules"]["debits"]["environnement"]["analogiques"]
+var alignes = anaP.find("activation") == "ON"
+var nbVirtuels = 0
+for i: 0 .. 6
+    var e = anaP.find("analogique" + str(i + 1), {})
+    alignes = alignes && e.find("activation") == "ON" && e.find("type") == 4704 && e.find("id") == i + 1 && e.find("virtuel") == VIRT[i]
+end
+for e: anaP    if (isinstance(e, map) && e.find("activation") == "ON" && VIRT.find(e.find("virtuel")) != nil)    nbVirtuels += 1    end    end
+verifie("vrai persist : analogique1-7 actives, type 4704, id 1 a 7 dans l'ordre des virtuels (type + id - 1 = 4704 + rang)",
+        alignes && nbVirtuels == 7)
 
 print("--- ReglageDebits")
 # Bloc debits du vrai persist de la carte : nom et K dans environnement.debitmetres et compteurs
@@ -498,8 +509,13 @@ global.HTTP = nil
 
 print("--- driver controleDebits")
 global.CMDS = []
+global.MB = {"notes": [], "limites": [], "push": []}
+debitsFonctions.fenetreModbus = nil                      # carte qui demarre : aucune limite declaree
 var pilote = compile(lis(CARTE + "controleDebits.be"))()
 verifie("driver enregistre et commande ajoutee", size(global.DRIVERS) == 1 && global.COMMANDES.contains("ReglageDebits"))
+# Sans limite declaree, la grace du demarrage servirait la 'value' du persist (vieux debits) comme une mesure fraiche
+verifie("modbus ON : limites declarees au chargement, avant toute mesure (2 fenetres de 15 s)", global.MB["notes"] == [] && global.MB["push"] == []
+        && global.MB["limites"] == [[4704, 30000], [4705, 30000], [4706, 30000], [4707, 30000], [4708, 30000], [4709, 30000], [4710, 30000]])
 verifie("calibrage du FlowRateMeter neutralise", global.CMDS == ["Sensor96 0 0", "Sensor96 1 1000", "Sensor96 2 1000"])
 pilote.web_add_handler()
 verifie("route /equilibrage declaree en GET et en POST", global.ROUTES.contains("/equilibrage:1") && global.ROUTES.contains("/equilibrage:2"))

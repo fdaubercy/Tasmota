@@ -2155,6 +2155,15 @@ verifie("(b) trame : 28 octets de donnees, sans zero ajoute", "1C000003E9000003E
         size(reponses36) > 0 ? reponses36[0][4 .. size(reponses36[0]) - 5] : "")
 verifie("(b) temoin autre esclave (DeviceAddress 2) : aucune reponse", "0",
         string.split(sert36({"DeviceAddress": 2, "FunctionCode": 4, "FunctionName": "LECTURE_REGISTRES_ENTREES", "StartAddress": 4704, "Count": 14, "Values": []}), "/")[0])
+# (b') value entiere servie telle quelle : en float 32 bits (carte), real(0x7FFFFFFF) = 2^31 deborde l'int32 ; un real
+# reste tronque comme avant
+ana36["analogique2"]["value"] = modbusFonctions.SENTINELLE_UINT32
+ana36["analogique3"]["value"] = 1003.7
+r36 = lit36(4704, 14)
+sert36(r36)
+verifie("(b') value = sentinelle fraiche : servie 0x7FFFFFFF exactement ; value 1003.7 -> 1003", "[1001, 2147483647, 1003, 1004, 1005, 1006, 1007]", str(r36["Values"]))
+ana36["analogique2"]["value"] = 1002
+ana36["analogique3"]["value"] = 1003
 # (c) une voie non fraiche (registre 4706) : sentinelle a sa place seulement
 tasmota.ms = 100000 + 900001                          # toutes les mesures depassent 900 s...
 for i: [0, 1, 3, 4, 5, 6]    modbusFonctions.noteMesure(4704 + i)    end       # ... sauf la voie 3, renouvelees

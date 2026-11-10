@@ -206,12 +206,7 @@ def debitsFonctions_publieModbus(d)
         if debitsFonctions.imprecis(d[i])    etats |= 1 << (6 + i)    end
     end
     valeurs.push(etats)
-    # Fraicheur = 2 fenetres, hors delai de grace ; redeclaree quand ReglageDebits change la fenetre
-    var f = debitsFonctions.fenetre()
-    if (f != debitsFonctions.fenetreModbus)
-        for i: 0 .. size(valeurs) - 1    modbusFonctions.declareMesure(debitsFonctions.REGISTRE_MODBUS + i, 2 * f * 1000)    end
-        debitsFonctions.fenetreModbus = f
-    end
+    debitsFonctions.declareModbus()
     for e: modules["debits"].find("environnement", {}).find("analogiques", {})
         if (!isinstance(e, map) || e.find("activation", "OFF") != "ON")    continue    end
         var i = debitsFonctions.VIRTUELS_MODBUS.find(e.find("virtuel"))
@@ -222,6 +217,20 @@ def debitsFonctions_publieModbus(d)
     modbusFonctions.pousseEtat(debitsFonctions.REGISTRE_MODBUS, "uint32", valeurs)
 end
 debitsFonctions.publieModbus = debitsFonctions_publieModbus
+
+# Fraicheur des 7 registres = 2 fenetres, hors delai de grace. Declaree des le chargement (controleDebits) : sinon la grace
+# servirait la 'value' du persist (derniers debits sauves) comme une mesure jusqu'a la 1re fenetre. Redeclaree a chaque
+# mesure si ReglageDebits a change la fenetre.
+def debitsFonctions_declareModbus()
+    import debitsFonctions
+    import modbusFonctions
+    var f = debitsFonctions.fenetre()
+    if (f != debitsFonctions.fenetreModbus)
+        for i: 0 .. size(debitsFonctions.VIRTUELS_MODBUS) - 1    modbusFonctions.declareMesure(debitsFonctions.REGISTRE_MODBUS + i, 2 * f * 1000)    end
+        debitsFonctions.fenetreModbus = f
+    end
+end
+debitsFonctions.declareModbus = debitsFonctions_declareModbus
 
 # Debit hors de la plage du capteur (YF-B2 : 1 a 25 L/min) mais non nul : valeur imprecise
 def debitsFonctions_imprecis(q)
