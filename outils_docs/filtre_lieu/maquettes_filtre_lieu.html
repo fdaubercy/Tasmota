@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="fr" data-theme="sombre">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Filtre par lieu : maquettes</title>
+<style>
+  /* Variables et composants recopies de build_page.py (theme sombre) ; rien n'est ecrit par cette page. */
+  :root{color-scheme:dark;--fond:#121417;--carte:#1d2025;--bord:#33373e;--texte:#e6e6e6;--doux:#a8adb5;--discret:#8b9099;--bleu:#5b93ff;
+    --bleu-fond:#18233a;--survol:#23272d;--btn:#262a30;--btn-bord:#555b64;--orange:#f0a020;--rouge:#ff6b5b;--vert:#3fb96b}
+  :root[data-theme="clair"]{color-scheme:light;--fond:#f6f7f9;--carte:#fff;--bord:#ddd;--texte:#222;--doux:#666;--discret:#777;--bleu:#2563eb;
+    --bleu-fond:#eef3ff;--survol:#f0f3f8;--btn:#fff;--btn-bord:#888;--orange:#c27400;--rouge:#c0392b;--vert:#2a9d4a}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px system-ui,sans-serif;color:var(--texte);background:var(--fond)}
+  main{max-width:1200px;margin:0 auto;padding:12px 16px 24px}
+  h1{font-size:20px;margin:6px 0 10px} h2{font-size:15px;margin:0 0 8px} h3{font-size:13px;margin:0 0 6px;color:var(--doux)}
+  .bandeau-maquette{background:#3b4252;color:#fff;padding:7px 16px;font-size:13px;font-weight:600}
+  .onglets{display:flex;gap:4px;border-bottom:1px solid var(--bord);margin-bottom:12px}
+  .onglets span{padding:7px 14px;border:1px solid transparent;border-bottom:0;border-radius:6px 6px 0 0;color:var(--doux)}
+  .onglets span.actif{background:var(--carte);border-color:var(--bord);color:var(--texte);font-weight:600;margin-bottom:-1px}
+  .carte{background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:10px 12px}
+  .disposition{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:12px;align-items:start}
+  .pile{display:flex;flex-direction:column;gap:8px}
+  .discret{color:var(--discret);font-size:12px}
+  .btn{display:inline-block;padding:6px 12px;border-radius:6px;border:1px solid var(--btn-bord);background:var(--btn);color:var(--texte);font:inherit;font-size:13px}
+  .btn.p{background:var(--bleu);color:#fff;border-color:var(--bleu);font-weight:600}
+  .famille{background:var(--carte);border:1px solid var(--bord);border-radius:8px;margin-bottom:10px;overflow:hidden}
+  .famille > .sum{display:flex;gap:8px;align-items:center;padding:9px 12px;font-weight:600}
+  .famille > .sum::before{content:"";border:5px solid transparent;border-left-color:var(--doux);transform:rotate(90deg);margin:0 2px 0 4px}
+  .famille.ferme > .sum::before{transform:none}
+  .compte{font-weight:400;color:var(--discret);font-size:12px}
+  .sous > .sum{display:flex;gap:8px;align-items:center;padding:7px 12px 7px 22px;border-top:1px solid var(--bord);font-size:13px;color:var(--doux);font-weight:600}
+  .sous > .sum input{width:15px;height:15px;margin:0}
+  .sous .env{padding-left:34px}
+  .env{display:grid;grid-template-columns:auto minmax(0,1fr) auto 9.5em;gap:10px;align-items:center;padding:6px 12px;border-top:1px solid var(--bord)}
+  .env.coche{background:var(--bleu-fond)}
+  .env input[type=checkbox]{width:16px;height:16px;margin:0}
+  .nom{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;overflow-wrap:anywhere}
+  .lien{font:11px system-ui;color:var(--bleu);margin-left:6px}
+  .methode{display:inline-flex;border:1px solid var(--btn-bord);border-radius:5px;overflow:hidden}
+  .methode span{font-size:12px;padding:2px 9px;color:var(--doux)} .methode span.on{background:var(--bleu);color:#fff}
+  .champ{font:13px system-ui;padding:3px 6px;background:var(--btn);color:var(--texte);border:1px solid var(--btn-bord);border-radius:4px;width:100%}
+  .pastille{font:11px system-ui;color:var(--doux);border:1px solid var(--bord);border-radius:10px;padding:0 7px;margin-left:6px}
+  /* Filtre par lieu */
+  .puces{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
+  .puce{border:1px solid var(--btn-bord);background:var(--btn);border-radius:16px;padding:4px 11px;font-size:13px;color:var(--texte);white-space:nowrap}
+  .puce b{font-weight:400;color:var(--discret);font-size:12px;margin-left:4px}
+  .puce.on{background:var(--bleu);border-color:var(--bleu);color:#fff} .puce.on b{color:#dbe6ff}
+  .puce .sel{display:inline-block;min-width:16px;text-align:center;margin-left:5px;font-size:11px;border-radius:8px;background:var(--bleu-fond);color:var(--bleu);padding:0 4px}
+  .puce.on .sel{background:#fff3;color:#fff}
+  .recherche{font:13px system-ui;padding:5px 9px;background:var(--btn);color:var(--texte);border:1px solid var(--btn-bord);border-radius:6px;width:210px}
+  .masques{font-size:12px;color:var(--orange);border-left:3px solid var(--orange);padding:3px 8px;margin:6px 12px 8px}
+  .seg{display:inline-flex;border:1px solid var(--btn-bord);border-radius:6px;overflow:hidden}
+  .seg span{padding:5px 12px;font-size:13px;color:var(--doux)} .seg span.on{background:var(--bleu);color:#fff;font-weight:600}
+  .barre{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  /* Plan de la maison */
+  .plan{display:grid;grid-template-columns:150px 1fr 150px;gap:10px;align-items:stretch;margin-bottom:10px}
+  .maison{display:flex;flex-direction:column;gap:0;position:relative;padding-top:38px}
+  .toit{position:absolute;top:0;left:0;right:0;height:40px;background:linear-gradient(to top right,transparent 49.5%,var(--bord) 50%,transparent 51%) left/50% 100% no-repeat,
+        linear-gradient(to top left,transparent 49.5%,var(--bord) 50%,transparent 51%) right/50% 100% no-repeat}
+  .zone{border:1px solid var(--bord);background:var(--carte);padding:8px 10px;display:flex;flex-direction:column;gap:3px;min-height:58px}
+  .maison .zone{border-radius:0;margin-top:-1px} .maison .zone.sous-sol{border-style:dashed;background:var(--fond)}
+  .annexe{display:flex;flex-direction:column;gap:10px;justify-content:flex-end}
+  .annexe .zone{border-radius:8px}
+  .zone .lieu{font-weight:600} .zone .n{font-size:12px;color:var(--discret)}
+  .zone.on{border-color:var(--bleu);box-shadow:inset 0 0 0 2px var(--bleu);background:var(--bleu-fond)}
+  .zone.vide{opacity:.45}
+  .badge{display:inline-block;font-size:11px;border-radius:8px;padding:0 6px;background:var(--bleu);color:#fff;margin-left:4px}
+  .sol{height:3px;background:var(--doux);margin:0 -10px;grid-column:1/-1}
+  /* Onglet Fichiers */
+  .f-grille{display:grid;grid-template-columns:270px minmax(0,1fr);gap:12px;align-items:start}
+  .f-carte{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:8px;padding:7px 4px;border-top:1px solid var(--bord)}
+  .f-carte.coche{background:var(--bleu-fond)}
+  .f-carte input[type=radio]{margin:2px 0 0;width:15px;height:15px}
+  .f-carte .champ{display:block;margin-top:4px;font-size:12.5px}
+  .intertitre{font-size:11.5px;font-weight:600;color:var(--doux);text-transform:uppercase;letter-spacing:.04em;padding:9px 4px 4px;border-top:1px solid var(--bord)}
+  .tuiles{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+  .tuile{border:1px solid var(--bord);border-radius:6px;padding:6px 8px;font-size:13px;background:var(--btn)} .tuile b{display:block;font-weight:400;font-size:11px;color:var(--discret)}
+  .tuile.on{border-color:var(--bleu);background:var(--bleu-fond)}
+  .faux{border:1px dashed var(--bord);border-radius:8px;padding:30px;color:var(--discret);text-align:center}
+  /* Autres pages */
+  .grille-pages{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  select{font:13px system-ui;background:var(--btn);color:var(--texte);border:1px solid var(--btn-bord);border-radius:6px;padding:3px;width:100%}
+  select optgroup{color:var(--doux)} select option{color:var(--texte)}
+  .non{display:grid;grid-template-columns:200px 1fr;gap:4px 12px;font-size:13px} .non b{font-weight:600}
+</style>
+</head>
+<body>
+<div class="bandeau-maquette" id="bandeau"></div>
+<main id="vue"></main>
+<script>
+"use strict";
+// Cartes reelles (liste_envs du 2026-11-10). Lieu = 2e segment du nom (transform_name), sauf la piscine (ESP8266, sans dossier).
+// Libelles et ordre des lieux : SUPPOSES, a confirmer par l'utilisateur.
+var LIEUX = [["etage2", "2e étage"], ["rdc", "Rez-de-chaussée"], ["cave", "Cave"], ["garage", "Garage"], ["bureau", "Bureau"], ["exterieur", "Extérieur"]];
+var CARTES = [ // nom, lieu, methode, champ, coche
+  ["tasmota-pompe-piscine", "exterieur", "OTA", "192.168.0.40", 0],
+  ["tasmota32-cave-serveur-rly", "cave", "COM", "COM11", 0],
+  ["tasmota32s3-cave-serveur-rly", "cave", "COM", "COM3", 1],
+  ["tasmota32-rdc-vr-porte", "rdc", "OTA", "192.168.0.46", 1],
+  ["tasmota32-bureau-interrupteur-energie", "bureau", "COM", "COM34", 1],
+  ["tasmota32s3-bureau-serveur-debits-pac", "bureau", "OTA", "192.168.0.51:8080", 1],
+  ["tasmota32s3-etage2-grenier", "etage2", "COM", "COM32", 1],
+  ["tasmota32p4-garage-serveur-modbus", "garage", "COM", "COM4", 1],
+  ["tasmota32s3-garage-serveur-modbus", "garage", "COM", "COM11", 0],
+  ["tasmota32s3-garage-capteurs-cuve-modbus", "garage", "OTA", "192.168.0.43:8081", 1],
+  ["tasmota32s3-garage-rideau-garage-modbus", "garage", "OTA", "192.168.0.43:8082", 1]
+];
+var TITRES = {
+  A: "Build, modèle A : rangée de puces de lieu au-dessus de la liste (filtre)",
+  B: "Build, modèle B : « Mes cartes » découpé en sous-groupes par lieu",
+  C: "Build, modèle C : plan de la maison cliquable au-dessus de la liste",
+  D: "Build, modèle D : bascule « Classer par » Famille / Lieu / Puce",
+  E: "Fichiers, modèle E : puces de lieu au-dessus de la liste des cartes",
+  F: "Fichiers, modèle F : intertitres de lieu dans la liste",
+  G: "Fichiers, modèle G : tuiles de lieu, puis les cartes du lieu",
+  H: "Autres pages : listes déroulantes groupées par lieu (optgroup)",
+  I: "Autres pages : puces de lieu + liste déroulante réduite"
+};
+var m = (location.search.match(/m=([A-I])/) || [0, "A"])[1];
+if (/t=clair/.test(location.search)) document.documentElement.dataset.theme = "clair";
+
+function libelle(l) { return LIEUX.filter(function (x) { return x[0] === l; })[0][1]; }
+function deLieu(l) { return CARTES.filter(function (c) { return c[1] === l; }); }
+function nbCoches(cs) { return cs.filter(function (c) { return c[4]; }).length; }
+function ligne(c) {
+  return '<div class="env' + (c[4] ? " coche" : "") + '"><input type="checkbox"' + (c[4] ? " checked" : "") + '>' +
+    '<span class="nom">' + c[0] + '<a class="lien">fichiers</a></span>' +
+    '<span class="methode"><span' + (c[2] === "COM" ? ' class="on"' : "") + '>COM</span><span' + (c[2] === "OTA" ? ' class="on"' : "") + '>OTA</span></span>' +
+    '<input class="champ" value="' + c[3] + '"></div>';
+}
+function famille(titre, contenu, compte, ferme) {
+  return '<div class="famille' + (ferme ? " ferme" : "") + '"><div class="sum">' + titre + ' <span class="compte">' + compte + '</span></div>' + (contenu || "") + '</div>';
+}
+function bases() { return famille("Mes bases", "", "(6)", 1) + famille("Tasmota (amont)", "", "(105)", 1); }
+function commandes() {
+  return '<aside class="carte pile"><h2>Actions</h2>' +
+    ["Compiler", "Téléverser le firmware", "Effacer puis téléverser", "Construire le FS", "Téléverser le FS"].map(function (a, i) {
+      return '<label><input type="checkbox"' + (i < 2 ? " checked" : "") + '> ' + a + '</label>';
+    }).join("") + '<button class="btn p">Lancer (8 envs)</button></aside>';
+}
+function page(onglet, corps) {
+  var o = ["Build", "Fichiers", "Mémoire et partitions", "Sauvegarde configuration", "Env par défaut (Platformio override)", "Aide"];
+  return '<h1>Build et téléversement</h1><div class="onglets">' + o.map(function (x) { return '<span' + (x === onglet ? ' class="actif"' : "") + '>' + x + '</span>'; }).join("") + '</div>' + corps;
+}
+function puces(choisis, avecSel) {
+  var tous = '<span class="puce' + (choisis.length ? "" : " on") + '">Tous<b>' + CARTES.length + '</b></span>';
+  return tous + LIEUX.map(function (l) {
+    var cs = deLieu(l[0]), n = nbCoches(cs);
+    return '<span class="puce' + (choisis.indexOf(l[0]) >= 0 ? " on" : "") + '">' + l[1] + '<b>' + cs.length + '</b>' +
+      (avecSel && n ? '<span class="sel">' + n + ' ✓</span>' : "") + '</span>';
+  }).join("");
+}
+
+function modeleA() {
+  var cs = deLieu("garage");
+  var liste = '<div class="puces">' + puces(["garage"], true) + '<input class="recherche" placeholder="Filtrer par nom…"></div>' +
+    famille("Mes cartes", cs.map(ligne).join("") + '<div class="masques">4 envs cochés hors filtre restent cochés (cave, rez-de-chaussée, bureau, 2e étage) : ils partiront au lancement.</div>',
+      "(4 sur 11 · Garage · 8 cochés)") + bases();
+  return page("Build", '<div class="disposition"><section>' + liste + '</section>' + commandes() + '</div>');
+}
+function modeleB() {
+  var sous = LIEUX.map(function (l, i) {
+    var cs = deLieu(l[0]), n = nbCoches(cs), tout = n === cs.length;
+    var ouvert = l[0] === "garage" || l[0] === "bureau";
+    return '<div class="sous' + (ouvert ? "" : " ferme") + '"><div class="sum"><input type="checkbox"' + (tout ? " checked" : "") + (n && !tout ? ' class="moitie"' : "") +
+      '>' + (ouvert ? "▾ " : "▸ ") + l[1] + ' <span class="compte">(' + cs.length + (n ? " · " + n + " cochés" : "") + ')</span></div>' + (ouvert ? cs.map(ligne).join("") : "") + '</div>';
+  }).join("");
+  return page("Build", '<div class="disposition"><section>' + famille("Mes cartes", sous, "(11 · 8 cochés)") + bases() + '</section>' + commandes() + '</div>' +
+    '<p class="discret">La case d\'un lieu coche ou décoche toutes ses cartes ; à moitié cochée (orange) si une partie seulement l\'est.</p>');
+}
+function zone(l, on) {
+  var cs = deLieu(l), n = nbCoches(cs);
+  return '<div class="zone' + (on ? " on" : "") + (l === "cave" ? " sous-sol" : "") + '"><span class="lieu">' + libelle(l) + (n ? '<span class="badge">' + n + ' ✓</span>' : "") + '</span>' +
+    '<span class="n">' + cs.length + ' carte' + (cs.length > 1 ? "s" : "") + '</span></div>';
+}
+function modeleC() {
+  var plan = '<div class="carte" style="margin-bottom:10px"><h3>Cliquer une pièce pour filtrer (Ctrl+clic : plusieurs) — plan SUPPOSÉ, à corriger</h3><div class="plan">' +
+    '<div class="annexe">' + zone("exterieur") + '</div>' +
+    '<div class="maison"><div class="toit"></div>' + zone("etage2") + zone("rdc") + zone("cave") + '</div>' +
+    '<div class="annexe">' + zone("bureau") + zone("garage", 1) + '</div></div></div>';
+  var liste = famille("Mes cartes", deLieu("garage").map(ligne).join(""), "(4 sur 11 · Garage · 8 cochés)") + bases();
+  return page("Build", '<div class="disposition"><section>' + plan + liste + '</section>' + commandes() + '</div>');
+}
+function modeleD() {
+  var barre = '<div class="barre"><span class="discret">Classer par</span><span class="seg"><span>Famille</span><span class="on">Lieu</span><span>Puce</span></span>' +
+    '<input class="recherche" placeholder="Filtrer par nom…"><span class="discret">Mes bases et l\'amont restent en bas.</span></div>';
+  var groupes = LIEUX.map(function (l) {
+    var cs = deLieu(l[0]), n = nbCoches(cs), ferme = !n, tout = n === cs.length;  // ouvert s'il contient un coche (choix du 2026-11-10)
+    var c = '<input type="checkbox"' + (tout ? " checked" : "") + (n && !tout ? ' class="moitie"' : "") + ' style="width:15px;height:15px;margin:0">';
+    return famille(c + l[1], ferme ? "" : cs.map(ligne).join(""), "(" + cs.length + (n ? " · " + n + " cochés" : "") + ")", ferme);
+  }).join("");
+  return page("Build", '<div class="disposition"><section>' + barre + groupes + bases() + '</section>' + commandes() + '</div>');
+}
+function fCarte(c, sel) {
+  return '<div class="f-carte' + (sel ? " coche" : "") + '"><input type="radio" name="r"' + (sel ? " checked" : "") + '><div><span class="nom">' + c[0] + '</span>' +
+    '<input class="champ" value="' + (c[2] === "OTA" ? c[3] : "") + '" placeholder="IP à saisir"></div></div>';
+}
+function fichiers(gauche) {
+  return page("Fichiers", '<div class="f-grille"><section class="carte"><h2>Carte destinataire</h2>' + gauche + '</section>' +
+    '<section class="faux">Dossiers · Fichiers de l\'image · À envoyer (inchangés)</section></div>');
+}
+function modeleE() {
+  return fichiers('<div class="puces" style="gap:4px">' + puces(["garage"]).replace(/class="puce/g, 'style="font-size:12px;padding:3px 8px" class="puce') + '</div>' +
+    deLieu("garage").map(function (c, i) { return fCarte(c, i === 2); }).join(""));
+}
+function modeleF() {
+  return fichiers(LIEUX.map(function (l) {
+    return '<div class="intertitre">' + l[1] + ' · ' + deLieu(l[0]).length + '</div>' + deLieu(l[0]).map(function (c) { return fCarte(c, c[0] === "tasmota32s3-garage-capteurs-cuve-modbus"); }).join("");
+  }).join("").replace('class="intertitre"', 'class="intertitre" style="border-top:0;padding-top:0"'));
+}
+function modeleG() {
+  var t = '<div class="tuiles">' + LIEUX.map(function (l) {
+    return '<div class="tuile' + (l[0] === "garage" ? " on" : "") + '">' + l[1] + '<b>' + deLieu(l[0]).length + ' carte(s)</b></div>';
+  }).join("") + '</div>';
+  return fichiers(t + deLieu("garage").map(function (c, i) { return fCarte(c, i === 2); }).join(""));
+}
+function selectLieux(taille, choisi, cartes) {
+  return '<select size="' + taille + '">' + LIEUX.map(function (l) {
+    var cs = deLieu(l[0]).filter(function (c) { return !cartes || cartes.indexOf(c[0]) >= 0; });
+    if (!cs.length) return "";
+    return '<optgroup label="' + l[1] + '">' + cs.map(function (c) { return '<option' + (c[0] === choisi ? " selected" : "") + '>' + c[0] + '</option>'; }).join("") + '</optgroup>';
+  }).join("") + '</select>';
+}
+var S3P4 = ["tasmota32s3-cave-serveur-rly", "tasmota32s3-bureau-serveur-debits-pac", "tasmota32s3-etage2-grenier", "tasmota32p4-garage-serveur-modbus",
+            "tasmota32s3-garage-serveur-modbus", "tasmota32s3-garage-capteurs-cuve-modbus", "tasmota32s3-garage-rideau-garage-modbus"];
+var PAGES = [["Build · Mémoire et partitions", "m-env", "+ groupe « Mes bases » en bas"], ["Build · Sauvegarde configuration", "s-env", ""],
+  ["Fichiers Berry par env (7800)", "env", "+ « Mes bases » ; idem pour carte modèle et base"], ["Assistant persist (7900)", "f-env", "lieu lu dans « dossier » ; idem onglet autoexec.bat"],
+  ["Atelier des graphiques (7950)", "env", "S3 et P4 seulement"], ["Fabrique d'extensions (7980)", "e-carte", ""]];
+function nonConcernees() {
+  return '<div class="carte" style="margin-top:12px"><h2>Pages laissées telles quelles</h2><div class="non">' +
+    '<b>Syslog (7200)</b><span>liste des hôtes (SERVEUR-GARAGE…) : pas de lieu sans table hôte → lieu ; le filtre texte suffit.</span>' +
+    '<b>Sniffeur MQTT (7100)</b><span>l\'arbre des topics groupe déjà, et les topics ne suivent pas les dossiers (cuve = jardin/cuve).</span>' +
+    '<b>Sniffeur I2C (7350)</b><span>liste déjà triée par lieu (data/&lt;lieu&gt;/&lt;carte&gt;).</span>' +
+    '<b>ModBus, UDP, pont série, synchro</b><span>ports COM, ids ModBus ou git : pas de carte à choisir.</span></div></div>';
+}
+function modeleH() {
+  return '<h1>Autres pages de l\'annuaire</h1><p class="discret">Même liste déroulante qu\'aujourd\'hui, groupée par lieu. Montrée ouverte pour la lecture.</p><div class="grille-pages">' +
+    PAGES.map(function (p, i) {
+      var cartes = i === 4 ? S3P4 : null;
+      return '<div class="carte"><h3>' + p[0] + '</h3>' + selectLieux(cartes ? 13 : 17, "tasmota32s3-garage-capteurs-cuve-modbus", cartes) +
+        (p[2] ? '<div class="discret" style="margin-top:6px">' + p[2] + '</div>' : "") + '</div>';
+    }).join("") + '</div>' + nonConcernees();
+}
+function modeleI() {
+  return '<h1>Autres pages de l\'annuaire</h1><p class="discret">Les puces réduisent la liste déroulante ; « Tous » la remet entière. Le lieu choisi pourrait suivre d\'une page à l\'autre (question).</p><div class="grille-pages">' +
+    PAGES.slice(2).map(function (p, i) {
+      var opts = deLieu("garage").map(function (c) { return '<option' + (c[0].indexOf("cuve") > 0 ? " selected" : "") + '>' + c[0] + '</option>'; }).join("");
+      return '<div class="carte"><h3>' + p[0] + '</h3><div class="puces" style="gap:4px;margin-bottom:6px">' +
+        puces(["garage"]).replace(/class="puce/g, 'style="font-size:11.5px;padding:2px 7px" class="puce') + '</div><select>' + opts + '</select></div>';
+    }).join("") + '</div>' + nonConcernees();
+}
+document.getElementById("bandeau").textContent = TITRES[m] + " (maquette, rien n'est écrit)";
+document.getElementById("vue").innerHTML = {A: modeleA, B: modeleB, C: modeleC, D: modeleD, E: modeleE, F: modeleF, G: modeleG, H: modeleH, I: modeleI}[m]();
+document.querySelectorAll("input.moitie").forEach(function (c) { c.indeterminate = true; });
+</script>
+</body>
+</html>
