@@ -78,8 +78,8 @@
 		"apiHTTP": "ON",
 		"log": "info",
 		"IP": {
-			"IPAddress": "192.168.0.50",
-			"IPGateway": "192.168.0.254",
+			"IPAddress": "0.0.0.0",
+			"IPGateway": "192.168.4.1",
 			"Subnet": "255.255.255.0",
 			"DNSServer": "192.168.0.254"
 		},
@@ -87,10 +87,10 @@
 			"power": 17,
 			"selectSignalFort": "OFF",
 			"reScanBy44": "ON",
-			"timerRebootSansWifi": 300,
+			"timerRebootSansWifi": 0,
 			"reseau1": {
-				"nomReseauWifi": "MAISON",
-				"mdpWifi": "obdormisti-pervigile%.-ficiendus"
+				"nomReseauWifi": "SERVEUR-DEBITS-PAC-GATEWAY",
+				"mdpWifi": "Lune5676"
 			},
 			"reseau2": {
 				"nomReseauWifi": "MAISON",
@@ -111,14 +111,14 @@
 		},
 		"rangeExtender": {
 			"activation": "ON",
-			"id": 0,
+			"id": 1,
 			"log": "info",
-			"ipMaitre": "",
+			"ipMaitre": "192.168.0.51",
 			"AP": {
 				"IPAddress": "192.168.4.1",
 				"Subnet": "255.255.255.0",
 				"routeNAPT": "ON",
-				"SSID": "SERVEUR-DEBITS-PAC-GATEWAY",
+				"SSID": "ACQUISITION-DEBITS-PAC-GATEWAY",
 				"mdp": "Lune5676"
 			}
 		},
@@ -129,7 +129,7 @@
 		},
 		"udp": {
 			"activation": "ON",
-			"id": 0,
+			"id": 1,
 			"log": "info",
 			"port": 2000
 		},
@@ -196,6 +196,7 @@
 			"activation": "ON",
 			"reglage": "OFF",
 			"log": "info",
+			"modbus": "ON",
 			"logs": {
 				"nbLogsFiles": 15,
 				"fileLogName": "/logs/debits.log",
@@ -206,17 +207,125 @@
 				"interrupteurs": {},
 				"relais": {},
 				"analogiques": {
-					"activation": "OFF",
+					"activation": "ON",
 					"name": "Capteurs analogiques",
 					"valeurMin": 0,
 					"valeurMax": 0,
 					"analogique1": {
-						"activation": "OFF",
-						"nom": "Ana 1",
+						"activation": "ON",
+						"nom": "Debit 1",
 						"id": 1,
 						"pin": -1,
 						"type": 4704,
-						"virtuel": "OFF",
+						"virtuel": "Calcul_debit1",
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF"
+						},
+						"publishMQTT": {
+							"topic": []
+						}
+					},
+					"analogique2": {
+						"activation": "ON",
+						"nom": "Debit 2",
+						"id": 2,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "Calcul_debit2",
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF"
+						},
+						"publishMQTT": {
+							"topic": []
+						}
+					},
+					"analogique3": {
+						"activation": "ON",
+						"nom": "Debit 3",
+						"id": 3,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "Calcul_debit3",
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF"
+						},
+						"publishMQTT": {
+							"topic": []
+						}
+					},
+					"analogique4": {
+						"activation": "ON",
+						"nom": "Debit 4",
+						"id": 4,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "Calcul_debit4",
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF"
+						},
+						"publishMQTT": {
+							"topic": []
+						}
+					},
+					"analogique5": {
+						"activation": "ON",
+						"nom": "Debit 5",
+						"id": 5,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "Calcul_debit5",
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF"
+						},
+						"publishMQTT": {
+							"topic": []
+						}
+					},
+					"analogique6": {
+						"activation": "ON",
+						"nom": "Debit 6",
+						"id": 6,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "Calcul_debit6",
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF"
+						},
+						"publishMQTT": {
+							"topic": []
+						}
+					},
+					"analogique7": {
+						"activation": "ON",
+						"nom": "Etats des debits",
+						"id": 7,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "Calcul_etatsDebits",
 						"value": 0,
 						"limites": [],
 						"relaisLie": {
@@ -452,7 +561,7 @@
 			}
 		},
 		"ecran": {
-			"activation": "ON",
+			"activation": "OFF",
 			"name": "Ecran TFT ILI9488 480x320 (SPI) + tactile XPT2046",
 			"environnement": {
 				"pinsEcrans": {
@@ -684,9 +793,9 @@
 			}
 		},
 		"ModBus": {
-			"activation": "OFF",
+			"activation": "ON",
 			"name": "ModBus RS485",
-			"id": 0,
+			"id": 1,
 			"debit": 19200,
 			"mode": "8N1",
 			"timeoutReponse": 5000,
@@ -695,28 +804,29 @@
 			"log": "info",
 			"activationReponseCMD": "ON",
 			"relaisPushMQTT": "OFF",
+			"lectureGroupee": "ON",
 			"typeComm": {
-				"Serial": "OFF",
-				"UDP": "OFF",
+				"Serial": "ON",
+				"UDP": "ON",
 				"MQTT": "OFF",
 				"TCP": "OFF"
 			},
 			"environnement": {
 				"pinsModBus": {
 					"RX": {
-						"activation": "OFF",
-						"nom": "ModBr Rx",
-						"pin": 4,
+						"activation": "ON",
+						"nom": "Série Rx",
+						"pin": 17,
 						"id": 1,
-						"type": 9440,
+						"type": 3232,
 						"virtuel": "OFF"
 					},
 					"TX": {
-						"activation": "OFF",
-						"nom": "ModBr Tx",
-						"pin": 5,
+						"activation": "ON",
+						"nom": "Série Tx",
+						"pin": 18,
 						"id": 1,
-						"type": 9408,
+						"type": 3200,
 						"virtuel": "OFF"
 					}
 				},

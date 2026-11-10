@@ -41,6 +41,9 @@ RIDEAU = "data/garage/tasmota32s3-rideau-garage-modbus"
 EXCLUES = {
     "data/garage/tasmota32s3-serveur-modbus": "ancien maitre S3 du garage : id 0, Range Extender ON, ipMaitre renseigne et "
                                              "NAPT OFF, aucun role ne le decrit (Ruling 9)",
+    "data/bureau/tasmota32s3-serveur-debits-pac": "acquisition des debits, esclave id 1 de la carte d'affichage (plan "
+                                                  "debits-deux-cartes, A3) : son reseau1 SERVEUR-DEBITS-PAC-GATEWAY (choix de "
+                                                  "l'utilisateur) n'est pas <HOSTNAME d'un maitre du parc>-GATEWAY, regle du role esclave",
 }
 
 # (motif fnmatch du chemin reduit, cartes (noms de dossier) ou None = toutes, raison). Ruling 8 : familles 2 a 5.
@@ -48,7 +51,6 @@ DIFF, CAVE1, CAVE3, GRENIER, P4, CUVE_, RIDEAU_ = ("tasmota32-interrupteur-energ
                                                  "tasmota32s3-serveur-rly", "tasmota32s3-grenier",
                                                  "tasmota32p4-serveur-modbus", "tasmota32s3-capteurs-cuve-modbus",
                                                  "tasmota32s3-rideau-garage-modbus")
-DEBITS = "tasmota32s3-serveur-debits-pac"
 TOLERANCES = [
     ("diverses.energie.*", None, "bloc de la page Energie : absent des cartes plus anciennes (lu par .find), ON sur la seule carte qui mesure l'energie"),
     # -- famille 3 : bloc metier ecrit a la main
@@ -65,8 +67,7 @@ TOLERANCES = [
     # -- famille 4 : reglages propres a une carte
     ("diverses.historique.grafana", (CAVE3, GRENIER, RIDEAU_), "cle absente de ces S3 (ajoutee au parc apres eux)"),
     ("serveur.voieReseau", (GRENIER, CUVE_, RIDEAU_), "cle absente de ces S3 (ajoutee au parc apres eux) ; absente = Wi-Fi (configGlobal.voieReseau)"),
-    ("drivers.ecran.activation", (DEBITS,), "seule carte a ecran actif (OFF sur une carte generee)"),
-    ("drivers.ecran.environnement.relais.*", (P4, DEBITS),
+    ("drivers.ecran.environnement.relais.*", (P4,),
      "retroeclairage et Rst de l'ecran passes dans pinsEcrans (2026-11-09) ; les autres cartes gardent le groupe OFF"),
     ("serveur.rangeExtender.AP.routeNAPT", (CAVE3, GRENIER), "le role maitre ne tranche pas : cave S3 et grenier a OFF, P4 a ON"),
     # -- famille 5 : blocs absents d'un vieux persist

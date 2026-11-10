@@ -47,7 +47,19 @@ MUTANTS = [
     ("veille non appliquee apres reglage", "            persist.save(true)\n            debitsFonctions.appliqueVeille()\n", "            persist.save(true)\n"),
     ("veille 0 laisse l'ecran assombri", "if (v == 0 && haspmota.dimming_state < 100)", "if (false)"),
     ("sortie de veille non publiee", "        tasmota.defer(def () tasmota.publish_rule(", "        tasmota.defer(def () print("),
-    ("veille non appliquee au demarrage", "        debitsFonctions.ecran()\n        debitsFonctions.appliqueVeille()\n", "        debitsFonctions.ecran()\n"),
+    # ModBus (A3 du plan debits-deux-cartes)
+    ("bit 12 du mot d'etats oublie", "var etats = debitsFonctions.BIT_GROUPE", "var etats = 0"),
+    ("debit tronque au lieu d'arrondi", "int(d[i] * 100 + 0.5)", "int(d[i] * 100)"),
+    ("voie sans mesure servie a 0", "d[i] == nil ? modbusFonctions.SENTINELLE_UINT32", "d[i] == nil ? 0"),
+    ("muet absent du mot d'etats", "if debitsFonctions.muets[i]    etats |= 1 << i    end", ""),
+    ("imprecis absent du mot d'etats", "etats |= 1 << (6 + i)", "etats |= 0"),
+    ("cle modbus ignoree", 'if (modules["debits"].find("modbus", "OFF") == "ON")    debitsFonctions.publieModbus', "if (true)    debitsFonctions.publieModbus"),
+    ("fenetre changee non redeclaree", "if (f != debitsFonctions.fenetreModbus)", "if (debitsFonctions.fenetreModbus == nil)"),
+    ("fraicheur d'une seule fenetre", "2 * f * 1000", "f * 1000"),
+    ("fraicheur non notee", "        modbusFonctions.noteMesure(int(e[\"type\"]) + int(e[\"id\"]) - 1)\n", ""),
+    ("push absent", "    modbusFonctions.pousseEtat(debitsFonctions.REGISTRE_MODBUS, \"uint32\", valeurs)\n", ""),
+    ("valeur ecrite dans la mauvaise entree", "e[\"value\"] = valeurs[i]", "e[\"value\"] = valeurs[6 - i]"),
+    ("veille non appliquee au demarrage","        debitsFonctions.ecran()\n        debitsFonctions.appliqueVeille()\n", "        debitsFonctions.ecran()\n"),
 ]
 
 # Temoins de la page /equilibrage (equilibragePage.be), meme regle

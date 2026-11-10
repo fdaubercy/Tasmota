@@ -2005,16 +2005,16 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
 
             // -- Wi-Fi ---------------------------------------
             #undef WIFI_IP_ADDRESS
-                #define WIFI_IP_ADDRESS        "192.168.0.50"         // [IpAddress1] Set to 0.0.0.0 for using DHCP or enter a static IP address
+                #define WIFI_IP_ADDRESS        "0.0.0.0"         // [IpAddress1] DHCP du point d'acces de la carte d'affichage (plan debits-deux-cartes, A3)
             #undef WIFI_GATEWAY
-                #define WIFI_GATEWAY           "192.168.0.254"      // [IpAddress2] If not using DHCP set Gateway IP address
+                #define WIFI_GATEWAY           "192.168.4.1"      // [IpAddress2] If not using DHCP set Gateway IP address
             #undef WIFI_DNS
                 #define WIFI_DNS               "192.168.0.254"      // [IpAddress4] If not using DHCP set DNS1 IP address (might be equal to WIFI_GATEWAY)
 
             #undef STA_SSID1
-                #define STA_SSID1              "MAISON"                // [Ssid1] Wi-Fi SSID
+                #define STA_SSID1              "SERVEUR-DEBITS-PAC-GATEWAY"                // [Ssid1] point d'acces de la carte d'affichage (maitre id 0)
             #undef STA_PASS1
-                #define STA_PASS1              "obdormisti-pervigile%.-ficiendus"                // [Password1] Wi-Fi password
+                #define STA_PASS1              "Lune5676"                // [Password1] Wi-Fi password
             #undef STA_SSID2
                 #define STA_SSID2              "MAISON"                // [Ssid2] Optional alternate AP Wi-Fi SSID
             #undef STA_PASS2
@@ -2027,7 +2027,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             // RgxPort tcp, 8080, 192.168.4.1, 80
             #define USE_WIFI_RANGE_EXTENDER
             #ifdef USE_WIFI_RANGE_EXTENDER
-                #define WIFI_RGX_SSID           "SERVEUR-DEBITS-PAC-GATEWAY"
+                #define WIFI_RGX_SSID           "ACQUISITION-DEBITS-PAC-GATEWAY"
                 #define WIFI_RGX_PASSWORD       "Lune5676"
             #endif
 
@@ -2051,11 +2051,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
 
             // -- Optional modules ----------------------------
 
-            // -- Ecran TFT ILI9488 480x320 (SPI) + tactile XPT2046 --
-            // Bloc commun USE_ILI9488 plus bas (SPI, LVGL, pilote universel, USE_UNIVERSAL_TOUCH) ; LVGL et HASPmota
-            // viennent aussi de FIRMWARE_LVGL (env de base tasmota32s3-base-N16R8). Descripteur : display.ini du
-            // dossier de la carte (copie de ILI9488_XPT2046_display.ini, tactile par le script :UTI = GPIO TS_SPI_CS du modele)
-            #define USE_ILI9488
+            // -- Pas d'ecran : il est sur la carte d'affichage (plan debits-deux-cartes, A3 : USE_ILI9488 retire, base sans LVGL)
 
             // -- Debitmetres a impulsions -------------------
             // 2 voies par le pilote FlowRateMeter (GPIO 4, 5), 4 par Counter1-4 (GPIO 6, 7, 15, 16) + Berry

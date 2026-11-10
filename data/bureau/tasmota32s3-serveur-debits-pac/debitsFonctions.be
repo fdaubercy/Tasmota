@@ -149,6 +149,7 @@ def debitsFonctions_mesure()
     debitsFonctions.debits = debitsFonctions.calcule(rates, r != nil ? r["c"] : nil, c, r != nil ? t - r["t"] : 0, ks)
     debitsFonctions.releve = {"t": t, "c": c}
     debitsFonctions.suitMuets(debitsFonctions.debits, t)
+    if (modules["debits"].find("modbus", "OFF") == "ON")    debitsFonctions.publieModbus(debitsFonctions.debits)    end
     var e = tasmota.millis()
     debitsFonctions.ecran()
     debitsFonctions.ecranMs = tasmota.millis() - e    # duree d'une ecriture de l'ecran (plan A5, essai de charge A6)
@@ -184,6 +185,43 @@ def debitsFonctions_suitMuets(d, t)
     end
 end
 debitsFonctions.suitMuets = debitsFonctions_suitMuets
+
+# Esclave ModBus de la carte d'affichage (modules.debits.modbus ON, spec docs/superpowers/specs/2026-11-09-debits-deux-cartes-design.md
+# § 5.1 et 5.3) : registres 4704 a 4710 = entrees analogiques virtuelles Calcul_debit1 a 6 (1/100 L/min) et Calcul_etatsDebits
+debitsFonctions.REGISTRE_MODBUS = 4704
+debitsFonctions.VIRTUELS_MODBUS = ["Calcul_debit1", "Calcul_debit2", "Calcul_debit3", "Calcul_debit4", "Calcul_debit5", "Calcul_debit6", "Calcul_etatsDebits"]
+debitsFonctions.BIT_GROUPE = 4096                        # bit 12 du mot d'etats : un esclave d'avant la modification y repond 0
+debitsFonctions.fenetreModbus = nil                      # fenetre (s) des limites de fraicheur declarees a modbusFonctions
+
+# Ecrit les 6 debits (sentinelle si sans mesure) et le mot d'etats (bit i : voie i+1 muette, bit 6+i : imprecise, bit 12 : groupe
+# servi) dans la 'value' des entrees, note leur fraicheur, puis les pousse au maitre en UN push UDP. Appelee par mesure().
+def debitsFonctions_publieModbus(d)
+    import debitsFonctions
+    import modbusFonctions
+    var valeurs = []
+    var etats = debitsFonctions.BIT_GROUPE
+    for i: 0 .. debitsFonctions.NB_VOIES - 1
+        valeurs.push(d[i] == nil ? modbusFonctions.SENTINELLE_UINT32 : int(d[i] * 100 + 0.5))
+        if debitsFonctions.muets[i]    etats |= 1 << i    end
+        if debitsFonctions.imprecis(d[i])    etats |= 1 << (6 + i)    end
+    end
+    valeurs.push(etats)
+    # Fraicheur = 2 fenetres, hors delai de grace ; redeclaree quand ReglageDebits change la fenetre
+    var f = debitsFonctions.fenetre()
+    if (f != debitsFonctions.fenetreModbus)
+        for i: 0 .. size(valeurs) - 1    modbusFonctions.declareMesure(debitsFonctions.REGISTRE_MODBUS + i, 2 * f * 1000)    end
+        debitsFonctions.fenetreModbus = f
+    end
+    for e: modules["debits"].find("environnement", {}).find("analogiques", {})
+        if (!isinstance(e, map) || e.find("activation", "OFF") != "ON")    continue    end
+        var i = debitsFonctions.VIRTUELS_MODBUS.find(e.find("virtuel"))
+        if (i == nil)    continue    end
+        e["value"] = valeurs[i]
+        modbusFonctions.noteMesure(int(e["type"]) + int(e["id"]) - 1)
+    end
+    modbusFonctions.pousseEtat(debitsFonctions.REGISTRE_MODBUS, "uint32", valeurs)
+end
+debitsFonctions.publieModbus = debitsFonctions_publieModbus
 
 # Debit hors de la plage du capteur (YF-B2 : 1 a 25 L/min) mais non nul : valeur imprecise
 def debitsFonctions_imprecis(q)

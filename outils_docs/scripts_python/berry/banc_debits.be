@@ -42,10 +42,15 @@ ecris(SORTIE + "/modules/webserver.be", "import global\nvar w = module('webserve
 ecris(SORTIE + "/modules/gestionFileFolder.be", "import global\nvar g = module('gestionFileFolder')\n"
       "g.readFileByLineAndContentSend = def (c) if global.LECTURE_CASSE raise 'io_error', 'lecture' end import webserver webserver.content_send('[fichier ' + c + ']') end\nreturn g\n")
 ecris(SORTIE + "/modules/display.be", "import global\nvar d = module('display')\nd.started = def () return global.ECRAN_DEMARRE end\nd.dimmer = def (v, s) if v == nil return global.DIM end global.DIM_APPLIQUE = v end\nreturn d\n")
-ecris(SORTIE + "/modules/haspmota.be", "import global\nvar h = module('haspmota')\nh.start = def (f) global.HASP_DEMARRE = f global.creeObjets() end\nh.dimming_state = 100\nh.dimmed_panel = nil\nreturn h\n")
+# Faux modbusFonctions (solidifie sur la carte) : appels gardes dans global.MB
+ecris(SORTIE + "/modules/modbusFonctions.be", "import global\nvar m = module('modbusFonctions')\nm.SENTINELLE_UINT32 = 0x7FFFFFFF\n"
+      "m.noteMesure = def (a) global.MB['notes'].push(a) end\nm.declareMesure = def (a, l) global.MB['limites'].push([a, l]) end\n"
+      "m.pousseEtat = def (s, t, v) global.MB['push'].push([s, t, v]) return nil end\nreturn m\n")
+ecris(SORTIE + "/modules/haspmota.be","import global\nvar h = module('haspmota')\nh.start = def (f) global.HASP_DEMARRE = f global.creeObjets() end\nh.dimming_state = 100\nh.dimmed_panel = nil\nreturn h\n")
 sys.path().push(SORTIE + "/modules")
 
 global.JOURNAL = []
+global.MB = {"notes": [], "limites": [], "push": []}
 global.SAUVES = 0
 global.LOG_LEVEL_ERREUR = 1
 global.LOG_LEVEL_INFO = 2
@@ -238,6 +243,64 @@ for faux: [0, -5, "dix"]
     verifie("persist muet = " + str(faux) + " : ignore, defaut 10 min", !debitsFonctions.muets[0])
 end
 global.modules["debits"].remove("muet")
+debitsFonctions.zero = [nil, nil, nil, nil, nil, nil]
+debitsFonctions.muets = [false, false, false, false, false, false]
+
+print("--- ModBus : 7 registres 4704-4710 et push (modules.debits.modbus ON)")
+var S = 0x7FFFFFFF
+verifie("cle modbus absente (mesures ci-dessus) : ni ecriture, ni fraicheur, ni push",
+        global.MB["notes"] == [] && global.MB["limites"] == [] && global.MB["push"] == [])
+# Entrees du persist, cles dans le desordre : la valeur va a l'entree de son virtuel, registre type + id - 1
+var VIRT = ["Calcul_debit1", "Calcul_debit2", "Calcul_debit3", "Calcul_debit4", "Calcul_debit5", "Calcul_debit6", "Calcul_etatsDebits"]
+var anas = {"activation": "ON"}
+for i: [6, 2, 0, 5, 1, 4, 3]
+    anas["analogique" + str(i + 1)] = {"activation": "ON", "nom": "Ana", "id": i + 1, "pin": -1, "type": 4704, "virtuel": VIRT[i], "value": 0}
+end
+def valeursAna()
+    var v = []
+    for i: 0 .. 6    v.push(anas["analogique" + str(i + 1)]["value"])    end
+    return v
+end
+global.modules["debits"] = {"activation": "ON", "modbus": "ON", "environnement": {"analogiques": anas}}
+debitsFonctions.releve = nil
+# 1,234 L/min (Rate 113,1167) et 0,5 L/min (Rate 45,8333 : 49,9999 centiemes, l'arrondi donne 50)
+global.CAPTEURS = '{"Débit":{"Rate":[113.11667,45.83333]}}'
+global.COMPTEURS = [0, 100, nil, 500]
+global.MS = 1000000
+global.JOURNAL = []
+debitsFonctions.mesure()
+verifie("1re mesure : 1,234 -> 123, 0,5 -> 50, voies 3-6 sans mesure -> sentinelle ; etats = imprecis 2 + bit 12",
+        valeursAna() == [123, 50, S, S, S, S, 4096 + 128])
+var notes = size(global.MB["notes"]) == 7
+for a: 4704 .. 4710    notes = notes && global.MB["notes"].find(a) != nil    end
+verifie("noteMesure pour 4704 a 4710", notes)
+verifie("UN push : pousseEtat(4704, uint32, 7 valeurs dans l'ordre des voies)", global.MB["push"] == [[4704, "uint32", [123, 50, S, S, S, S, 4224]]])
+verifie("fraicheur declaree : 2 fenetres (20 s) pour 4704 a 4710", global.MB["limites"] == [[4704, 20000], [4705, 20000], [4706, 20000],
+        [4707, 20000], [4708, 20000], [4709, 20000], [4710, 20000]])
+var infos = 0
+for l: global.JOURNAL    if (l[1] == global.LOG_LEVEL_INFO)    infos += 1    end    end
+verifie("mesure ModBus : ni erreur ni info dans le callback (every_second)", erreurs() == 0 && infos == 0)
+# 2e mesure : voie 3 a 2 L/min, voie 4 a 0 et muette, voie 5 sans compteur, voie 6 a 0,5 L/min (imprecise)
+global.COMPTEURS = [220, 100, nil, 555]
+global.MS = 1010000
+debitsFonctions.zero = [nil, nil, nil, 1010000 - 600000, nil, nil]
+debitsFonctions.mesure()
+var etats = 4096 + (1 << 3) + (1 << 7) + (1 << 11)
+verifie("2e mesure : 200, 0, sentinelle, 50 ; etats = muet 4 + imprecis 2 et 6 + bit 12 (" + str(etats) + ")",
+        valeursAna() == [123, 50, 200, 0, S, 50, etats])
+verifie("2e mesure : un push de plus, memes valeurs", size(global.MB["push"]) == 2 && global.MB["push"][1][2] == valeursAna())
+verifie("fenetre inchangee : fraicheur non redeclaree", size(global.MB["limites"]) == 7)
+global.modules["debits"]["fenetre"] = 15
+global.MS = 1025000
+debitsFonctions.mesure()
+verifie("fenetre passee a 15 s : fraicheur redeclaree a 30 s pour les 7 registres", size(global.MB["limites"]) == 14
+        && global.MB["limites"][7] == [4704, 30000] && global.MB["limites"][13] == [4710, 30000])
+global.MB = {"notes": [], "limites": [], "push": []}
+global.modules["debits"]["modbus"] = "OFF"
+global.MS = 1040000
+debitsFonctions.mesure()
+verifie("cle modbus OFF : ni ecriture ni push", global.MB["notes"] == [] && global.MB["push"] == [])
+global.modules["debits"] = {"activation": "ON"}
 debitsFonctions.zero = [nil, nil, nil, nil, nil, nil]
 debitsFonctions.muets = [false, false, false, false, false, false]
 
