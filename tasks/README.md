@@ -13,10 +13,11 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-38 plans : 14 actif, 1 en-pause, 23 clos.
+39 plans : 15 actif, 1 en-pause, 23 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
+| [Classement des cartes par lieu dans les pages des outils PC](plans/classement-par-lieu.md) | Retrouver les cartes par emplacement dans la maison sur la page Build (bascule Famille/Lieu/Puce, intertitres de l'onglet Fichiers) et dans les listes de carte des autres pages | actif | ░░░░░░░░░░ 0 % (0/21) | 21 étapes, 2 améliorations | 2026-11-10 | 2026-11-10 |
 | [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ███████░░░ 68 % (35/50) | 15 étapes, 4 améliorations | 2026-11-08 | 2026-11-09 |
 | [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) | Faire passer les 6 débits de la carte d'acquisition (esclave ModBus id 1) à une carte d'affichage (maître id 0) par une lecture groupée RS485 et un push UDP, sans rien changer au garage | actif | ████░░░░░░ 43 % (15/30) | 15 étapes, 2 améliorations | 2026-11-09 | 2026-11-09 |
 | [Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)](plans/energie-differentiel.md) | Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h) | actif | ██████████ 100 % (69/70) | 1 étape | 2026-10-31 | 2026-11-09 |
@@ -57,6 +58,32 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 | [Suivi des plans de travail (extension VS Code + mod)](plans/suivi-plan.md) | Suivre l'avancement des plans en % dans une vue VS Code à droite, partagée entre conversations et postes | clos | ██████████ 100 % (23/23) | 5 améliorations | 2026-10-18 | 2026-10-18 |
 
 ### Points restants des plans non terminés
+
+#### [Classement des cartes par lieu dans les pages des outils PC](plans/classement-par-lieu.md) — 0 %
+
+- A1 — Module `lieux.py` et son banc : Écrire `test_lieux.py` (style `test_build_envs.py` : `verifie(obtenu, attendu, libelle)`, code de sortie) :
+- A1 — Module `lieux.py` et son banc : Le lancer avant le module : échec à l'import attendu.
+- A1 — Module `lieux.py` et son banc : Écrire `lieux.py` ; banc vert (`python test_lieux.py`, sortie 0).
+- A1 — Module `lieux.py` et son banc : Commit `feat(lieux): table des lieux et puces tirees du nom d'env, banc test_lieux`.
+- A2 — Les serveurs servent `lieu` et `lieux` : Pour chaque route : ajouter au banc l'assertion « une carte du garage a `lieu == "garage"` et la réponse a
+- A2 — Les serveurs servent `lieu` et `lieux` : Ajouter les champs (une ligne par route, par `lieux.lieu` / `lieux.pour_page`) ; les 5 bancs verts.
+- A2 — Les serveurs servent `lieu` et `lieux` : Commit `feat(lieux): lieu de chaque carte dans les reponses des pages 7700 a 7980`.
+- A3 — Onglet Build : modèle D : Écrire la sonde, rouge d'abord, avec ces vérifications :
+- A3 — Onglet Build : modèle D : Écrire `build_page_lieux.py` et le branchement ; sonde verte ; `test_build_page_chrome.py` toujours vert.
+- A3 — Onglet Build : modèle D : Capture d'écran claire et sombre en Lieu, comparée à `outils_docs/filtre_lieu/modele-D.png`.
+- A3 — Onglet Build : modèle D : Commit `feat(build): bascule Classer par famille, lieu ou puce dans l'onglet Build`.
+- A4 — Onglet Fichiers : modèle F : Ajouter à la sonde, rouge d'abord : intertitres « 2E ÉTAGE · 1 » … dans l'ordre de la table, « Autres » en
+- A4 — Onglet Fichiers : modèle F : Insérer les intertitres (`textContent`, couleur `--doux`) ; sonde verte.
+- A4 — Onglet Fichiers : modèle F : Commit `feat(build): intertitres de lieu dans la liste des cartes de l'onglet Fichiers`.
+- A5 — Listes déroulantes : modèle H : Pour chaque liste, ajouter à sa sonde, rouge d'abord : premier `optgroup` « 2e étage » (ou le premier lieu
+- A5 — Listes déroulantes : modèle H : Remplacer chaque remplissage par `remplitParLieu` ; les 6 sondes vertes.
+- A5 — Listes déroulantes : modèle H : Commit `feat(lieux): listes de cartes groupees par lieu sur les pages 7700 a 7980`.
+- A6 — Documentation, relecture, essai réel : `outils_docs/README.md` : une ligne par page concernée, aux sections existantes ; `outils_docs/filtre_lieu/README.md` :
+- A6 — Documentation, relecture, essai réel : Agent `relecteur-pages-web` sur les commits de A3 à A5 ; corriger ce qu'il confirme.
+- A6 — Documentation, relecture, essai réel : Essai réel : page Build sur :7700 dans Chrome, bascule Lieu, les 11 vraies cartes rangées comme la maquette D,
+- A6 — Documentation, relecture, essai réel : Commit `docs(lieux): mode d'emploi et carte des documents du classement par lieu`.
+- Amélioration [projet] : Lieu transmis d'une page à l'autre depuis l'annuaire (écarté de cette version, spec §2).
+- Amélioration [projet] : Table hôte → lieu pour le syslog et le sniffeur MQTT, si le besoin revient.
 
 #### [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) — 68 %
 
