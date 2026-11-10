@@ -37,7 +37,8 @@ custom_files_upload     = no_files
 build_flags             = -DFIRMWARE_POMPE_PISCINE
 """
 LIEUX = ["2e étage", "Rez-de-chaussée", "Cave", "Garage", "Bureau", "Extérieur", "jardin"]
-BOUCHON = "function lieuxGroupes() { return false; }\nfunction lieuxMaj() {}\n"    # temoin : branchements vides
+BOUCHON = ("function lieuxGroupes() { return false; }\nfunction lieuxMaj() {}\n"         # temoin : branchements vides
+           "function lieuxOuverts() { return {}; }\nfunction lieuxRestaure() {}\n")
 verifie = t.verifie
 
 JS_GROUPES = """(() => [...document.querySelectorAll('#liste > details')].filter(d => !d.hidden).map(d => {
@@ -146,7 +147,11 @@ def sonde(m, capture):
 
     clic_reel(cdp, case)                          # garage tout decoche
     t.coche(cdp, f"#env-{BUREAU}")
+    cdp.js("document.querySelector('details[data-groupe=garage]').open = false")      # replie a la main avant le filtre
     filtre(cdp, "cuve")
+    verifie(cdp.js(f"""[document.querySelector('details[data-groupe=garage]').open,
+      document.querySelector('.env[data-env="{CUVE}"]').getBoundingClientRect().height > 0]"""), [True, True],
+            "filtre « cuve » en Lieu : groupe Garage ouvert, ligne de la cuve a l'ecran")
     verifie([g["nom"] for g in groupes(cdp)], ["Garage"], "filtre « cuve » : seul le groupe du garage reste visible")
     verifie(cdp.js(f"[...document.querySelectorAll('details[data-groupe=garage] .env')].map(l => !l.hidden)"),
             [False, False, True, False], "filtre « cuve » : seule la ligne de la cuve visible")
@@ -172,6 +177,8 @@ def sonde(m, capture):
     t.coche(cdp, 'input[name=action][value="compiler"]', False)
     filtre(cdp, "")
     verifie(cdp.js("document.querySelector('.l-masques').hidden"), True, "filtre vide : avertissement retire")
+    verifie(cdp.js("document.querySelector('details[data-groupe=garage]').open"), False,
+            "filtre vide : ouverture d'avant le filtre rendue (Garage replie)")
 
     # vigilance 2 : IP saisie, Famille -> Lieu -> Famille, IP intacte
     cdp.js(f"""(() => {{ const l = document.querySelector('.env[data-env="{CAVE}"]');
@@ -187,13 +194,20 @@ def sonde(m, capture):
     verifie([g["nom"] for g in groupes(cdp)], ["Mes bases"], "Famille + filtre « SONDE-BASE » : seule « Mes bases » visible")
     filtre(cdp, "")
 
-    # vigilance 5 : rechargement par chargeEnvs(true) en Lieu -> toujours Lieu, ouverture recalculee
+    # amont et un sous-groupe ouverts a la main en Famille : la bascule Lieu les garde
+    cdp.js("document.querySelector('details[data-famille=amont]').open = true; "
+           "document.querySelector('details[data-sous-groupe=esp32]').open = true")
     bascule(cdp, "lieu")
+    verifie(cdp.js("[document.querySelector('details[data-famille=amont]').open, "
+                   "document.querySelector('details[data-sous-groupe=esp32]').open]"), [True, True],
+            "amont et sous-groupe ESP32 ouverts a la main, bascule Lieu : toujours ouverts")
+
+    # vigilance 5 : rechargement par chargeEnvs(true) en Lieu -> toujours Lieu, ouverture gardee
     cdp.js("document.querySelector('details[data-groupe=rdc]').open = true")
     cdp.js("chargeEnvs(true)")
     verifie((cdp.js("document.querySelector('.l-barre button[data-classement=lieu]').getAttribute('aria-pressed')"),
-             [g["ouvert"] for g in groupes(cdp)][:4]), ("true", [True, False, False, True]),
-            "chargeEnvs(true) en Lieu : toujours Lieu, regle d'ouverture recalculee (Rez-de-chaussee refermee)")
+             [g["ouvert"] for g in groupes(cdp)][:4]), ("true", [True, True, False, True]),
+            "chargeEnvs(true) en Lieu : toujours Lieu, Rez-de-chaussee ouvert a la main reste ouvert")
 
     ouvre(m)
     verifie([g["nom"] for g in groupes(cdp)][:len(LIEUX)], LIEUX, "page rechargee : toujours en Lieu (localStorage)")

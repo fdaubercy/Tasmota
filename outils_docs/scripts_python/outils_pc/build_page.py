@@ -602,15 +602,9 @@ async function chargeEnvs(rafraichir) {
       if (c && ancien && c.port === ancien.port && e.ecrivable) c.port = e.port;
     });
   }
-  var ouverts = {};
-  document.querySelectorAll("details[data-famille], details[data-sous-groupe]").forEach(function (d) {
-    ouverts[d.getAttribute("data-famille") || d.getAttribute("data-sous-groupe")] = d.open;
-  });
+  var ouverts = lieuxOuverts();             // familles, sous-groupes et groupes de lieu ou de puce (build_page_lieux.py)
   construitListe(r.donnees);
-  document.querySelectorAll("details[data-famille], details[data-sous-groupe]").forEach(function (d) {
-    var k = d.getAttribute("data-famille") || d.getAttribute("data-sous-groupe");
-    if (k in ouverts) d.open = ouverts[k] || d.open;
-  });
+  lieuxRestaure(ouverts);
 }
 
 document.querySelectorAll("input[name=action]").forEach(function (i) {

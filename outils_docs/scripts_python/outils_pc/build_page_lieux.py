@@ -1,11 +1,15 @@
 """Onglet Build de la page build_web.py : bascule « Classer par » Famille / Lieu / Puce (modele D).
 
 Spec docs/superpowers/specs/2026-11-10-classement-par-lieu-design.md §5 ; maquette outils_docs/filtre_lieu/modele-D.png.
-Insere dans build_page.PAGE par les marques /*CSS_LIEUX*/ et /*JS_LIEUX*/. Deux branchements dans build_page.py :
+Insere dans build_page.PAGE par les marques /*CSS_LIEUX*/ et /*JS_LIEUX*/. Trois branchements dans build_page.py :
   - construitListe appelle lieuxGroupes(liste, membres, donnees) pour la famille « cartes » : en Lieu ou Puce, les
-    cartes vont dans un details.famille par groupe (attribut data-groupe, pas data-famille : chargeEnvs ne restaure
-    pas leur ouverture, la regle « ouvert s'il contient un coche » est recalculee a chaque dessin) ;
-  - majComptes appelle lieuxMaj : filtre par nom, etat des cases d'en-tete, avertissement des coches masques.
+    cartes vont dans un details.famille par groupe (attribut data-groupe) ;
+  - majComptes appelle lieuxMaj : filtre par nom, etat des cases d'en-tete, avertissement des coches masques ;
+  - chargeEnvs garde l'ouverture par lieuxOuverts / lieuxRestaure.
+Ouverture (decision du 2026-11-10) : la regle « ouvert s'il contient un coche » ne vaut qu'au premier dessin d'un
+groupe dans la visite ; ensuite l'ouverture de chaque details (famille, sous-groupe, groupe de lieu ou de puce) est
+gardee dans `lieuxMemo`, a travers chargeEnvs et les bascules. Un filtre non vide ouvre en Lieu ou Puce les groupes qui
+gardent une ligne visible ; le filtre vide rend l'ouverture d'avant le filtre.
 La bascule redessine par construitListe : cases, COM/OTA, port et IP vivent dans `choix`, qui survit.
 L'ordre de `envs` n'est jamais touche : envsCoches() et donc POST /lancer restent identiques.
 Classement garde dans localStorage (cle build.classement) ; le filtre texte ne l'est pas.
@@ -25,7 +29,7 @@ JS = r"""
 // ---------- classement Famille / Lieu / Puce de l'onglet Build (build_page_lieux.py) ----------
 var CLASSEMENTS = [["famille", "Famille"], ["lieu", "Lieu"], ["puce", "Puce"]];
 var ORDRE_PUCES = ["ESP32", "ESP32-S3", "ESP32-P4", "ESP8266"];
-var classement = "famille", lieuxTable = [], lieuxCases = [];
+var classement = "famille", lieuxTable = [], lieuxCases = [], lieuxMemo = {}, lieuxAvantFiltre = null;
 try {
   var classementLu = localStorage.getItem("build.classement");
   if (CLASSEMENTS.some(function (c) { return c[0] === classementLu; })) classement = classementLu;
@@ -42,7 +46,13 @@ var lieuxBarre = (function () {
   });
   var filtre = h("input", {"class": "l-filtre", type: "search", placeholder: "Filtrer par nom…", autocomplete: "off",
                            spellcheck: "false", "aria-label": "Filtrer les environnements par nom"});
-  filtre.oninput = lieuxMaj;
+  filtre.oninput = function () {
+    var actif = !!filtre.value.trim();
+    if (actif && !lieuxAvantFiltre) lieuxAvantFiltre = Object.assign({}, lieuxOuverts());
+    lieuxMaj();
+    if (actif) lieuxOuvreFiltre();
+    else if (lieuxAvantFiltre) { lieuxRestaure(lieuxAvantFiltre, true); lieuxAvantFiltre = null; }
+  };
   var astuce = h("span", {"class": "discret", texte: "Mes bases et l'amont restent en bas."});
   var masques = h("div", {"class": "l-masques", role: "status", hidden: "hidden"});
   var liste = $("liste"), colonne = h("div", {"class": "l-colonne"});
@@ -56,8 +66,32 @@ var lieuxBarre = (function () {
 function lieuxClasse(c) {
   classement = c;
   try { localStorage.setItem("build.classement", c); } catch (e) {}
-  if (envs.length) construitListe({envs: envs, lieux: lieuxTable});
-  else lieuxMaj();
+  if (!envs.length) return lieuxMaj();
+  var ouverts = lieuxOuverts();
+  construitListe({envs: envs, lieux: lieuxTable});
+  lieuxRestaure(ouverts);
+  if (lieuxBarre.filtre.value.trim()) lieuxOuvreFiltre();
+}
+
+// Memoire d'ouverture de la visite : chaque details de la liste, par sa cle (famille, sous-groupe ou groupe).
+function lieuxCle(d) {
+  return d.getAttribute("data-famille") || d.getAttribute("data-sous-groupe") || "groupe:" + d.getAttribute("data-groupe");
+}
+function lieuxOuverts() {
+  document.querySelectorAll("#liste details").forEach(function (d) { lieuxMemo[lieuxCle(d)] = d.open; });
+  return lieuxMemo;
+}
+// exact : rendre l'etat tel quel (filtre vide) ; sinon comme chargeEnvs avant : un details reste ouvert s'il l'etait
+// ou si le dessin l'ouvre (coche).
+function lieuxRestaure(o, exact) {
+  document.querySelectorAll("#liste details").forEach(function (d) {
+    var k = lieuxCle(d);
+    if (k in o) d.open = exact ? o[k] : o[k] || d.open;
+  });
+}
+function lieuxOuvreFiltre() {
+  if (classement === "famille") return;
+  document.querySelectorAll("#liste details[data-groupe]").forEach(function (d) { if (!d.hidden) d.open = true; });
 }
 
 function lieuVisible(e) {
