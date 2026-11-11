@@ -1,6 +1,6 @@
 /* Page de reglage des durees des volets (/volets), plan visuel-reglage-volets A6.
  * window.VOLETS_REGLAGE = vrPages.facade() + "etat" (vrPages.be::route) ; etat relu par GET /volets?f=etat
- * (vrReglage.be::etatPage) toutes les 500 ms pendant un reglage, 3 s sinon ; ordres par POST /volets (action, id).
+ * (vrReglage.be::etatPage) toutes les 500 ms pendant un reglage, 3 s sinon ; ordres par POST /volets (action, id ; appui : etape affichee, 409 si elle a change).
  * L'affichage suit TOUJOURS l'etat relu, jamais le seul code de reponse d'un POST (un 500 peut suivre un ordre pris).
  * Carte injoignable : etat et resultat masques (jamais presentes comme a jour). Texte de la carte : textContent seul. */
 (function () {
@@ -16,6 +16,7 @@
 		'l\'un ou l\'autre des deux boutons du volet, peu importe lequel (▼ fait aussi monter à l\'étape de montée), ou « Étape suivante » de cette page'];
 	var DUREES = [['Montée', 'tempsMontee'], ['Descente', 'tempsDescente']];
 	var CHEMIN = 'drivers.voletRoulants.environnement.VRs.';
+	var POSITION = "La position affichée du volet peut être fausse jusqu'à son prochain arrêt en butée ou recalage.";
 
 	function $(id) { return document.getElementById(id); }
 	function texte(id, t) { $(id).textContent = t || ''; }
@@ -52,7 +53,8 @@
 		texte('rv_chrono', vu && course ? 'Chronomètre : ' + sec((E.chrono_ms || 0) / 1000) : '');
 		texte('rv_question', !vu || !course ? '' : (et === 'montee' ? 'Le volet monte-t-il ? Sinon, Annuler.' : 'Le volet descend-il ? Sinon, Annuler.')
 			+ (chrono ? ' La carte ne commande pas la porte : arrêtez-la vous-même si besoin.' : ''));
-		texte('rv_cause', vu && !actif ? CAUSES[E.cause] : '');
+		var sortie = vu && !actif && connu && !chrono && (et === 'annule' || et === 'delai' || et === 'refus');   // moteur arrete hors butee
+		texte('rv_cause', [vu && !actif ? CAUSES[E.cause] : '', sortie ? POSITION : ''].filter(Boolean).join(' '));
 		var fini = vu && et === 'fini' && !!E.mesures;
 		montre('rv_resultat', fini);
 		if (fini) resultat();
@@ -83,10 +85,12 @@
 		envoi = true;
 		texte('rv_note', '');
 		rendu();
-		fetch('/volets', {method: 'POST', body: new URLSearchParams({action: action, id: $('rv_volet').value}), signal: ctl.signal})
+		var corps = {action: action, id: $('rv_volet').value};
+		if (action === 'appui') corps.etape = E.etape || '';     // temoin : la carte refuse (409) si l'etape a change depuis l'affichage
+		fetch('/volets', {method: 'POST', body: new URLSearchParams(corps), signal: ctl.signal})
 			.then(function (r) {
 				return r.json().then(function (o) {
-					if (!r.ok) texte('rv_note', (o.message || 'Erreur') + ' (réponse ' + r.status + ') : état relu ci-dessus.');
+					if (!r.ok && r.status !== 409) texte('rv_note', (o.message || 'Erreur') + ' (réponse ' + r.status + ') : état relu ci-dessus.');
 					else if (!o.ok) texte('rv_note', o.message);
 				}, function () { texte('rv_note', 'Réponse illisible de la carte (' + r.status + ') : état relu ci-dessus.'); });
 			}, function () { texte('rv_note', 'Ordre sans réponse : il a pu être pris ou non, état relu ci-dessus.'); })

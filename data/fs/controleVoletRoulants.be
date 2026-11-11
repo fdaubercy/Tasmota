@@ -165,17 +165,17 @@ def controleVoletRoulants_init(m)
     import vrFonctions
     global.vrFonctions = vrFonctions
 
+    import string
+    var pilote = nil
     if (drivers["voletRoulants"].find("activation", "OFF") == "ON")
         for cle: drivers["voletRoulants"]["environnement"]["VRs"].keys()
-            import string
-
             if type(drivers["voletRoulants"]["environnement"]["VRs"][cle]) != "instance"   continue    end
 
             try
                 if (drivers["voletRoulants"]["environnement"]["VRs"][cle].find("activation", "OFF") == "ON")
-                    global.controleVRoulant = m.CONTROLE_VR()
-                    tasmota.add_driver(global.controleVRoulant)
-                    global.controleVRoulant.web_add_handler()
+                    pilote = m.CONTROLE_VR()
+                    global.controleVRoulant = pilote
+                    tasmota.add_driver(pilote)
 
                     logFonctions.log("CONTROLE_VR: Driver activé !", LOG_LEVEL_DEBUG, "volets")
 
@@ -184,6 +184,14 @@ def controleVoletRoulants_init(m)
             except .. as error, message
                 logFonctions.log(string.format("CONTROLE_VR_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR, "volets")
             end
+        end
+    end
+    # Routes hors de la boucle : un echec ici ne doit jamais poser un driver de plus pour le volet actif suivant
+    if (pilote != nil)
+        try
+            pilote.web_add_handler()
+        except .. as error, message
+            logFonctions.log(string.format("CONTROLE_VR_ERREUR: Routes /volets : %s -> %s", error, message), LOG_LEVEL_ERREUR, "volets")
         end
     end
     return m

@@ -1,7 +1,7 @@
 // volets.js - Facade des volets sous leurs curseurs, sur la page d'accueil de Tasmota (2026-11-11)
 // Envoye par data/fs/vrPages.be::accueil apres <div id='vf'> et window.VOLETS (vrPages.be::facade) ; spec
 // docs/superpowers/specs/2026-11-11-visuel-volets-reglage-durees-design.md (§3, §4) ; plan visuel-reglage-volets, A5.
-// Insere tel quel dans un element script de la page : IIFE, seule globale window.Volets, aucun chevron dans le texte.
+// Insere tel quel dans un element script de la page : IIFE, seule globale window.Volets, aucun chevron ouvrant suivi de « / » ou de « ! » dans le texte.
 // Position : curseur s27<id> (lu a chaque image : Tasmota le change par .value, sans evenement), inverse si 'inverse' vaut 1 ;
 // trappe a MPU6050 actif : angle de la balise data-vi de la ligne d'inclinaison. Poursuite : le dessin rejoint la derniere
 // valeur lue a la vitesse du volet, sans la depasser (retard d'au plus un rafraichissement). Bancs : test_volets.mjs, test_volets_chrome.py.
@@ -21,7 +21,7 @@
   // Angle (degres) -> % d'ouverture, comme vrFonctions.be::positionReelle (sans le 100 - p de ShutterInvert) ; null sans angle
   function ouvertureAngle(angle, incl) {
     if (angle === '' || angle == null || !incl || incl.ouvert == incl.ferme) return null;
-    var a = Number(angle);
+    var a = Number(String(angle).replace(',', '.'));      // web_send_decimal : virgule du firmware fr_FR ('47,0')
     if (isNaN(a)) return null;
     return borne((a - incl.ferme) * 100 / (incl.ouvert - incl.ferme));
   }
@@ -151,7 +151,7 @@
     if (mob.getAttribute('data-rouge') !== bloque) {
       mob.setAttribute('data-rouge', bloque);
       mob.style.fill = bloque ? ROUGE : '';
-      v.pct.style.fill = v.cause.style.fill = bloque ? ROUGE : '';
+      v.pct.style.fill = v.cause.style.fill = bloque ? 'var(--c_txtwrn, ' + ROUGE + ')' : '';
       v.cause.textContent = bloque ? ' ' + (bloque == 'bloque' ? 'bloqué' : bloque) : '';
     }
     if (v.g.getAttribute('data-ouverture') !== String(n)) {
@@ -162,7 +162,7 @@
 
   // Position reelle lue d'une ouverture : [% d'ouverture, cause de blocage] ou null (ni angle, ni curseur)
   function lit(v) {
-    var o = v.o, b = o.inclinaison ? document.querySelector("[data-vi='" + o.id + "']") : null;   // table des capteurs remplacee a chaque rafraichissement
+    var o = v.o, b = o.inclinaison && Number.isInteger(o.id) ? document.querySelector("[data-vi='" + o.id + "']") : null;   // table remplacee a chaque rafraichissement
     var a = b ? ouvertureAngle(b.getAttribute('data-angle'), o.inclinaison) : null, bloque = b ? b.getAttribute('data-bloque') || '' : '';
     if (a != null) return [a, bloque];
     var c = document.getElementById('s27' + o.id);
@@ -177,6 +177,7 @@
     table.parentNode.insertBefore(vf, table.nextSibling);
     var svg = dessine(vf, facade), avant = null;
     function image() {
+      requestAnimationFrame(image);                       // en tete : une exception de lit ou pose n'arrete pas l'animation
       var t = performance.now(), dt = avant == null ? 0 : t - avant;
       avant = t;
       svg.volets.forEach(function (v) {
@@ -185,7 +186,6 @@
         v.dessinee = poursuit(v.dessinee, l[0], dt, v.o);
         pose(v, v.dessinee, l[1]);
       });
-      requestAnimationFrame(image);
     }
     image();
     return svg;

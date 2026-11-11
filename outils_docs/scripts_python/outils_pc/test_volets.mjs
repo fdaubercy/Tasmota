@@ -43,6 +43,7 @@ verifie(V.ouverture(0, 1), 100, 'ouverture(0, 1) = 100 (porte de garage ouverte,
 const incl = {ouvert: 85, ferme: 3};
 verifie(V.ouvertureAngle(44, incl), 50, 'ouvertureAngle(44, {85, 3}) = 50');
 verifie(V.ouvertureAngle('44.0', incl), 50, "ouvertureAngle('44.0') : angle lu dans data-angle");
+verifie(V.ouvertureAngle('47,0', incl), (47 - 3) * 100 / 82, "ouvertureAngle('47,0') : virgule de web_send_decimal (firmware fr_FR)");
 verifie(V.ouvertureAngle(-10, incl), 0, 'ouvertureAngle bornee a 0');
 verifie(V.ouvertureAngle(120, incl), 100, 'ouvertureAngle bornee a 100');
 verifie(V.ouvertureAngle(44, {ouvert: 3, ferme: 85}), 50, 'ouvertureAngle, montage inverse (ouvert < ferme) : 44 -> 50');

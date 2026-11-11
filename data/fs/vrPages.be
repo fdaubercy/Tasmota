@@ -14,7 +14,9 @@
  * bouton()  : bouton « Réglage des volets » de la page de configuration. Rien sans facade.
  * route()   : GET /volets (page de reglage ; ?f=etat : vrReglage.etatPage() en JSON) ; ordre() : POST /volets
  *             (action = debut | appui | annuler, id) -> {"ok", "message", "etat"} ; 400 si action inconnue, 500 JSON sur
- *             exception. Les deux derriere webserver.check_privileged_access() (Referer qui designe la carte).
+ *             exception ; appui : temoin etape = etape affichee par la page, 409 sans appui s'il differe de l'etape courante.
+ *             Les deux derriere webserver.check_privileged_access() (Referer qui designe la carte). Facade testee par
+ *             active() (bon marche) ; facade() seulement pour l'accueil et la page entiere.
  * Page : /sd/css/reglageVolets.css, /sd/html/reglageVolets.html, window.VOLETS_REGLAGE (facade() + "etat"), /sd/js/reglageVolets.js.
  *
  * SOLIDIFIE sur les envs a facade : aucun etat dans le module (sa table est en lecture seule, piege 12).
@@ -25,13 +27,21 @@ var vrPages = module("vrPages")
 
 vrPages.RAFRAICHISSEMENT = 2345         # WebRefresh par defaut de Tasmota (ms)
 
+# Facade active, sans la construire (routes lues toutes les 500 ms) : meme test que CONTROLE_VR.facade
+def vrPages_active()
+    var volets = drivers.find("voletRoulants")
+    var f = (type(volets) == "instance" ? volets.find("facade") : nil)
+    return type(f) == "instance" && f.find("activation", "OFF") == "ON"
+end
+vrPages.active = vrPages_active
+
 # Facade decrite dans le persist (voir l'en-tete), nil si inactive
 def vrPages_facade()
     import vrFonctions
     import vrPages
-    var volets = drivers.find("voletRoulants")
-    var f = (type(volets) == "instance" ? volets.find("facade") : nil)
-    if (type(f) != "instance" || f.find("activation", "OFF") != "ON")    return nil    end
+    if (!vrPages.active())    return nil    end
+    var volets = drivers["voletRoulants"]
+    var f = volets["facade"]
 
     var ouvertures = []
     for vr: volets.find("environnement", {}).find("VRs", {})
@@ -53,11 +63,11 @@ def vrPages_facade()
 end
 vrPages.facade = vrPages_facade
 
-# Chaine JSON sans « </ » (jamais de fermeture de balise dans un <script>)
+# Chaine JSON sans aucun « < » (ni fermeture de balise, ni « <!-- » dans un <script>) : echappement unicode u003c, relu « < » par le JS
 def vrPages_json(v)
     import json
     import string
-    return string.replace(json.dump(v), "</", "<\\/")
+    return string.replace(json.dump(v), "<", "\\u003c")
 end
 vrPages.json = vrPages_json
 
@@ -93,7 +103,7 @@ vrPages.accueil = vrPages_accueil
 def vrPages_bouton()
     import webserver
     import vrPages
-    if (vrPages.facade() == nil)    return    end
+    if (!vrPages.active())    return    end
     webserver.content_send("<p></p><form action='/volets' method='get'><button>Réglage des volets</button></form>")
 end
 vrPages.bouton = vrPages_bouton
@@ -108,8 +118,7 @@ def vrPages_route()
     if (!webserver.check_privileged_access())    return nil    end
 
     try
-        var f = vrPages.facade()
-        if (f == nil)
+        if (!vrPages.active())
             vrPages.envoie(404, {"ok": false, "message": "Façade inactive"})
             return
         end
@@ -117,6 +126,7 @@ def vrPages_route()
             vrPages.envoie(200, vrReglage.etatPage())
             return
         end
+        var f = vrPages.facade()
         f["etat"] = vrReglage.etatPage()
         vrFonctions.log("VR_PAGES: Page de réglage demandée !", LOG_LEVEL_DEBUG)
         webserver.content_start("Réglage des volets")
@@ -150,7 +160,7 @@ def vrPages_ordre()
 
     var ouverte = false         # reponse ouverte : a fermer aussi apres une exception (posee juste avant l'ouverture)
     try
-        if (vrPages.facade() == nil)
+        if (!vrPages.active())
             ouverte = true
             vrPages.envoie(404, {"ok": false, "message": "Façade inactive"})
             return
@@ -162,7 +172,13 @@ def vrPages_ordre()
         if (action == "debut")
             r = vrReglage.debut(id)
         elif (action == "appui")
-            r = vrReglage.appui(id, "page")
+            var courante = vrReglage.etatPage()["etape"]
+            if ((webserver.has_arg("etape") ? webserver.arg("etape") : nil) != (courante == nil ? "" : courante))
+                code = 409              # temoin absent ou perime : l'appui viserait une autre etape (moteur)
+                r = [false, "L'étape a changé : état relu"]
+            else
+                r = vrReglage.appui(id, "page")
+            end
         elif (action == "annuler")
             vrReglage.annule("annule")
             r = [true, vrReglage.etatPage().find("message", "")]

@@ -198,8 +198,8 @@ var r = vrReglage.debut(1)
 verifie(r[0], "debut accepte : " + str(r[1]))
 var o = ordres()
 verifie(tasmota.lectures == 1, "debut : direction lue dans le JSON des capteurs")
-verifie(size(o) == 7 && o[0] == "ShutterOpenDuration1 120" && o[1] == "ShutterCloseDuration1 120" && o[2] == "ShutterButton1 0" && o[6] == "ShutterSetClose1",
-        "debut : course allongee, boutons du volet retires, position fermee")
+verifie(size(o) == 7 && o[0] == "ShutterOpenDuration1 130" && o[1] == "ShutterCloseDuration1 130" && o[2] == "ShutterButton1 0" && o[6] == "ShutterSetClose1",
+        "debut : course allongee a 130 s (au-dela du delai de 120 s), boutons du volet retires, position fermee")
 verifie(size(o) == 7 && memes(o[3..5], ["ShutterButton2 3 up 0", "ShutterButton2 4 down 0", "ShutterButton3 5 toggle 0"]), "debut : boutons des autres volets renvoyes (Button1)")
 verifie(vrFonctions.enReglage(1) && !vrFonctions.enReglage(2), "enReglage(1) vrai, (2) faux")
 e = vrReglage.etatPage()
@@ -253,6 +253,19 @@ appuie(5, 30000)
 attente()
 verifie(courses() == ["ShutterSetClose3", "ShutterOpen3", "ShutterStop3", "ShutterSetOpen3", "ShutterClose3", "ShutterStop3", "ShutterSetClose3"], "toggle : sens impose par l'etape")
 verifie(vr3["tempsMontee"] == 14 && vr3["tempsDescente"] == 13 && etape() == "fini", "toggle : durees 14 et 13 ecrites")
+
+print("3b. Exception apres l'ecriture du persist (recalage) : sortie fini quand meme, une erreur")
+reinit()
+vrReglage.debut(1)
+page(1, 1000)
+page(1, 15000)
+page(1, 17000)
+tasmota.surCmd = def (c) if c == "ShutterMotorStop"    raise "io_error", "panne simulee"    end end
+nbErr = erreurs()
+try    page(1, 30000)    except .. as x, y    print("  (exception sortie de appui : " + str(x) + ")")    end
+tasmota.surCmd = nil
+verifie(etape() == "fini" && !vrReglage.etatPage()["actif"] && vr1["tempsDescente"] == 13, "exception apres l'ecriture : etape fini, inactif, durees ecrites")
+verifie(erreurs() == nbErr + 1 && nbTimers("vrReglage_delai") == 0 && !aRegle(1), "exception apres l'ecriture : une erreur, delai et regle retires")
 
 print("4. inverse 1 : ordres croises")
 reinit()
@@ -349,6 +362,18 @@ tasmota.cmds = []
 verifie(!vrReglage.debut(2)[0] && size(tasmota.cmds) == 0, "second reglage pendant un premier : refus, aucune commande")
 verifie(vrFonctions.enReglage(1) && vrReglage.etatPage()["id"] == 1, "le premier reglage continue")
 
+vrReglage.annule("annule")
+reinit()
+vrFonctions.suiviInclinaison(1)["arret"] = T - 500             # ShutterMotorStop 500 ms + 100 : debut permis a T + 100
+r = vrReglage.debut(1)
+verifie(!r[0] && r[1] == "Le volet vient de s'arrêter : réessayez dans une seconde" && size(ordres()) == 0 && vrReglage.etat() == nil, "arret il y a 500 ms : refus, aucun ordre")
+tasmota.horloge = T + 100
+verifie(vrReglage.debut(1)[0], "arret il y a 600 ms : accepte")
+vrReglage.annule("annule")
+reinit()
+vrReglage.debut(1)
+tasmota.cmds = []
+
 print("11. Bouton d'un autre volet : non consomme")
 verifie(!vrReglage.bouton(idx(3, 0, 1)) && !vrReglage.bouton(idx(4, 1, 0)), "boutons 3 et 4 (volet 2) : non consommes")
 verifie(etape() == "pret" && size(ordres()) == 0, "aucune etape, aucun ordre")
@@ -379,6 +404,9 @@ page(1, 1000)
 config = appelsConfig
 vrReglage.annule("annule")
 verifie(size(tasmota.cmds) == 0 && appelsConfig == config && etape() == "annule", "chrono annule : aucune commande, pas de configVRByJson")
+vrReglage.debut(1)
+declenche("vrReglage_delai")
+verifie(etape() == "delai" && string.find(vrReglage.etatPage()["message"], "arrêté") < 0, "chrono : delai sans « volet arrêté » (aucun ordre envoye)")
 
 print("13. Arret inattendu en montee (sens inverse du MPU) : annule, cause rendue, rien d'ecrit")
 reinit()
@@ -488,7 +516,7 @@ gestionFileFolder.readFileByLineAndContentSend = def (chemin) webserver.content_
 vr1["facade"] = {"type": "porte", "place": 3}
 vr2["facade"] = {"type": "fenetre", "place": 1}
 vr3["facade"] = {"type": "trappe", "place": 2}
-vr1["nom"] = "Volet </b>porte"
+vr1["nom"] = "Volet <b>porte</b> <!--"
 import controleVoletRoulants            # driver importe SANS facade : il ne doit rien enregistrer
 var pilote = global.controleVRoulant
 verifie(pilote != nil && size(tasmota.pilotes) == 1, "driver instancie par import (init)")
@@ -506,6 +534,13 @@ vrPages.accueil()
 vrPages.bouton()
 verifie(size(webserver.envoye) == 0, "facade inactive : rien dans l'accueil, pas de bouton")
 voletsMoteur["facade"] = {"activation": "ON", "toit": "deuxPans"}
+var onOrig = webserver.on
+webserver.on = def (c, f, m) raise "io_error", "routes refusees" end
+var nbPilotes = size(tasmota.pilotes)
+nbErr = erreurs()
+controleVoletRoulants.init(controleVoletRoulants)        # 3 volets actifs, routes en echec
+webserver.on = onOrig
+verifie(size(tasmota.pilotes) == nbPilotes + 1 && erreurs() == nbErr + 1, "init : routes en echec -> un seul driver de plus, une erreur")
 vr3["capteursPosition"] = {"activation": "ON", "inclinaison": {"activation": "ON", "angleOuvert": 80, "angleFerme": 5}}
 var f = vrPages.facade()
 verifie(f != nil && f["toit"] == "deuxPans" && f["rafraichissement"] == 1500 && size(f["ouvertures"]) == 3, "facade : toit, WebRefresh 1500, 3 ouvertures")
@@ -528,7 +563,8 @@ webserver.raz()
 vrPages.accueil()
 var t = webserver.texte()
 verifie(string.find(t, "<div id='vf'></div><script>window.VOLETS=") == 0 && string.find(t, "[/sd/js/volets.js]") > 0 && t[-9..] == "</script>", "accueil : div, donnees, volets.js, fermeture")
-verifie(string.find(t, "Volet </b>porte") < 0 && string.find(t, "<\\/b>") > 0, "accueil : « </ » echappe dans le JSON")
+var jv = t[string.find(t, "VOLETS=") + 7 .. string.find(t, ";</script>") - 1]
+verifie(string.find(jv, "<") < 0 && json.load(jv)["ouvertures"][2]["nom"] == "Volet <b>porte</b> <!--", "accueil : tout « < » echappe dans le JSON, nom relu intact")
 webserver.raz()
 pilote.web_add_main_button()
 verifie(webserver.texte() == t, "driver : web_add_main_button envoie l'accueil")
@@ -551,14 +587,16 @@ verifie(!vrFonctions.enReglage(1), "acces refuse : aucun reglage commence")
 webserver.privilegie = true
 
 # GET ?f=etat
+tasmota.cmds = []
 webserver.raz({"f": "etat"})
 vrPages.route()
 verifie(webserver.code == 200 && webserver.mime == "application/json" && webserver.ferme && json.load(webserver.texte())["actif"] == false, "?f=etat : etatPage en JSON, reglage inactif")
 # POST debut, appui
-def poste(action, id)
+def poste(action, id, etape)
     var a = {}
     if action != nil    a["action"] = action    end
     if id != nil    a["id"] = id    end
+    if etape != nil    a["etape"] = etape    end
     webserver.raz(a)
     vrPages.ordre()
     return webserver.code == nil ? nil : [webserver.code, json.load(webserver.texte())]
@@ -567,10 +605,18 @@ tasmota.horloge = T + 1000
 var r = poste("debut", "1")
 verifie(r[0] == 200 && r[1]["ok"] == true && r[1]["etat"]["actif"] && r[1]["etat"]["etape"] == "pret" && webserver.ferme, "POST debut : ok, etape pret")
 tasmota.horloge = T + 5000
-r = poste("appui", "1")
+webserver.raz()
+vrPages.bouton()
+verifie(tasmota.cmds.find("WebRefresh") == nil && size(webserver.envoye) == 1, "?f=etat, POST et bouton : facade testee sans etre construite (aucun WebRefresh)")
+r = poste("appui", "1", "pret")
 verifie(r[0] == 200 && r[1]["ok"] == true && r[1]["etat"]["etape"] == "montee", "POST appui : montee")
 tasmota.horloge = T + 19000
-r = poste("appui", "1")
+tasmota.cmds = []
+r = poste("appui", "1", "pret")
+verifie(r[0] == 409 && r[1]["ok"] == false && r[1]["message"] == "L'étape a changé : état relu" && r[1]["etat"]["etape"] == "montee" && size(ordres()) == 0,
+        "POST appui, etape affichee perimee (pret) : 409, etat relu joint, aucun ordre")
+verifie(poste("appui", "1")[0] == 409 && etape() == "montee", "POST appui sans temoin : 409")
+r = poste("appui", "1", "montee")
 verifie(r[1]["etat"]["etape"] == "haut", "POST appui : haut")
 webserver.raz({"f": "etat"})
 vrPages.route()

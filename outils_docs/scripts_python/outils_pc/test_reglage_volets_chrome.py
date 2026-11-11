@@ -13,8 +13,9 @@ sonde ; POST /volets est note (action, id), applique l'etat suivant de la file e
 Scenarios : 2 boutons par les clics (POST, textes de chaque etape, chronometre, resultat avec MPU6050 et valeurs a
 recopier), cadence de lecture (500 ms en reglage, 3 s sinon), carte injoignable (connexion coupee, puis carte lente :
 message, rien de l'etat ni du resultat), 500 apres « debut » alors que l'etat dit « pret », 1 bouton, aucun bouton,
-porte de garage en chronometre, arrets (sens inverse, bloque, arret, delai, refus), nom de volet avec balise (texte),
-mode sombre lisible, largeur de 320 px, aucune erreur de la console.
+porte de garage en chronometre, arrets (sens inverse, bloque, arret, delai, refus ; position peut-etre fausse), nom de
+volet avec balise (texte), temoin d'etape (409 : message, etat relu), note visible carte injoignable, mode sombre lisible,
+largeur de 320 px, aucune erreur de la console (« Failed to load resource » tolere pendant les pannes voulues seulement).
 """
 
 import argparse
@@ -79,6 +80,8 @@ class CarteReglage(BaseHTTPRequestHandler):
     code_post = 200
     refus = None         # message d'un ordre refuse par la carte (200, ok faux, etat inchange)
     panne = None         # None, "coupe" (connexion fermee sans reponse) ou "lente" (6 s sans reponse)
+    temoins = []         # etape envoyee avec chaque appui (temoin, vrPages.be::ordre)
+    conflit = None       # etat pris par la carte juste avant l'appui suivant (bouton physique) : temoin perime -> 409
 
     def log_message(self, format, *args):
         pass
@@ -114,7 +117,7 @@ class CarteReglage(BaseHTTPRequestHandler):
             return
         d = dict(CarteReglage.facade, etat=CarteReglage.etat)
         self._envoie(200, "text/html; charset=utf-8", TETE + "<style>" + self._fichier("css/reglageVolets.css") + "</style>"
-                     + self._fichier("html/reglageVolets.html") + "<script>window.VOLETS_REGLAGE=" + json.dumps(d).replace("</", "<\\/")
+                     + self._fichier("html/reglageVolets.html") + "<script>window.VOLETS_REGLAGE=" + json.dumps(d).replace("<", "\\u003c")
                      + ";</script><script>" + self._fichier("js/reglageVolets.js") + "</script>" + PIED)
 
     def do_POST(self):
@@ -122,6 +125,13 @@ class CarteReglage(BaseHTTPRequestHandler):
         CarteReglage.posts.append((champs.get("action", [""])[0], champs.get("id", [""])[0]))
         if self._panne():
             return
+        if champs.get("action") == ["appui"]:          # comme vrPages.be::ordre : temoin absent ou perime -> 409, rien d'applique
+            CarteReglage.temoins.append(champs.get("etape", [None])[0])
+            if CarteReglage.conflit:
+                CarteReglage.etat, CarteReglage.conflit = CarteReglage.conflit, None
+            if CarteReglage.temoins[-1] != (CarteReglage.etat.get("etape") or ""):
+                return self._envoie(409, "application/json", json.dumps({"ok": False, "message": "L'étape a changé : état relu",
+                                                                         "etat": CarteReglage.etat}))
         if CarteReglage.refus:
             return self._envoie(200, "application/json", json.dumps({"ok": False, "message": CarteReglage.refus, "etat": CarteReglage.etat}))
         if CarteReglage.file:
@@ -171,7 +181,7 @@ def attend_post(n, delai=4.0):
 
 def ouvre(m, facade, e, largeur=360):
     CarteReglage.facade, CarteReglage.etat, CarteReglage.file, CarteReglage.code_post, CarteReglage.panne = FACADES[facade], e, [], 200, None
-    CarteReglage.refus = None
+    CarteReglage.refus = CarteReglage.conflit = None
     m.cdp.appel("Emulation.setDeviceMetricsOverride", width=largeur, height=900, deviceScaleFactor=1, mobile=True)
     m.cdp.appel("Page.navigate", url="about:blank")
     time.sleep(0.2)
@@ -184,12 +194,22 @@ def lectures_pendant(secondes):
     return CarteReglage.lectures - avant
 
 
+TOLEREES = set()         # indices de m.cdp.erreurs() toleres : « Failed to load resource » des pannes voulues seulement
+
+
+def tolere(m, n0):
+    """Fin d'une panne voulue (coupure, carte lente, 500, 409) : ses « Failed to load resource » (apparus depuis n0) toleres."""
+    time.sleep(1)                            # journal de Chrome asynchrone
+    TOLEREES.update(i for i, x in enumerate(m.cdp.erreurs()) if i >= n0 and "Failed to load resource" in x)
+
+
 def capture(m, dossier, nom):
     if dossier:
         time.sleep(0.3)
         m.cdp.capture(str(Path(dossier) / nom))
 
 
+FAUSSE = "La position affichée du volet peut être fausse jusqu'à son prochain arrêt en butée ou recalage."
 QUESTION = {"montee": "Le volet monte-t-il ? Sinon, Annuler.", "descente": "Le volet descend-il ? Sinon, Annuler."}
 
 
@@ -268,6 +288,7 @@ def sonde_deux_boutons(m, dossier):
     sonde_320(m)
 
     # Carte injoignable (connexion coupee) : message, plus aucun resultat ; puis retour
+    n0 = len(m.cdp.erreurs())
     CarteReglage.panne = "coupe"
     p = attend_page(m, lambda p: p.get("injoignable"), 8)
     verifie(["injoignable" in p.get("injoignable", ""), p.get("resultat"), p.get("recopie"), p.get("etape"), p.get("message")],
@@ -276,18 +297,21 @@ def sonde_deux_boutons(m, dossier):
     CarteReglage.panne = None
     p = attend_page(m, lambda p: p.get("resultat") and not p.get("injoignable"), 8)
     verifie([bool(p.get("resultat")), p.get("injoignable")], [True, ""], "injoignable : carte revenue, état relu et affiché")
+    tolere(m, n0)
 
 
 def sonde_lente_et_500(m):
     # Carte lente pendant une montee : la lecture abandonne, message, ni chronometre ni question
     ouvre(m, "rdc", etat("montee", chrono_ms=1500))
     attend_page(m, lambda p: p.get("question"))
+    n0 = len(m.cdp.erreurs())
     CarteReglage.panne = "lente"
     p = attend_page(m, lambda p: p.get("injoignable"), 9)
     verifie([bool(p.get("injoignable")), p.get("chrono"), p.get("question"), p.get("etape"), p.get("annuler")], [True, "", "", "", True],
             "injoignable (carte lente) : message, ni chronomètre ni question, « Annuler » reste")
     CarteReglage.panne = None
     attend_page(m, lambda p: not p.get("injoignable"), 10)
+    tolere(m, n0)
 
     # Ordre refuse par la carte (volet qui roule) : la raison est affichee, rien ne change
     ouvre(m, "rdc", REPOS)
@@ -299,6 +323,7 @@ def sonde_lente_et_500(m):
 
     # 500 apres « debut » alors que l'ordre a ete pris : la page montre l'etat relu (pret)
     CarteReglage.posts.clear()
+    n0 = len(m.cdp.erreurs())
     CarteReglage.code_post = 500
     CarteReglage.file = [etat("pret")]
     clic(m, "rv_debut")
@@ -306,6 +331,7 @@ def sonde_lente_et_500(m):
     p = attend_page(m, lambda p: p.get("suivant"))
     verifie([MESSAGES["pret"][0] in p.get("message", ""), p.get("suivant"), p.get("annuler"), p.get("debut")], [True, "Étape suivante", True, False],
             "500 après debut, état « pret » : la page montre « pret »")
+    tolere(m, n0)
     CarteReglage.code_post = 200
     CarteReglage.file = [etat("annule", message="Réglage annulé : rien n'a été écrit.")]
     clic(m, "rv_annuler")
@@ -313,6 +339,34 @@ def sonde_lente_et_500(m):
     p = attend_page(m, lambda p: p.get("debut"))
     verifie([p.get("debut"), p.get("annuler"), "rien n'a été écrit" in p.get("message", ""), p.get("resultat")], [True, False, True, ""],
             "annulé : message de la carte, aucun résultat")
+
+
+def sonde_temoin_et_note(m):
+    # Bouton physique appuye juste avant le clic : l'etape affichee (pret) est perimee, la carte repond 409 sans appui
+    ouvre(m, "rdc", etat("pret"))
+    attend_page(m, lambda p: p.get("suivant"))
+    n0, nb = len(m.cdp.erreurs()), len(CarteReglage.posts)
+    CarteReglage.conflit = etat("montee", chrono_ms=1500)
+    CarteReglage.file = [etat("haut", mesures={"tempsMontee": 24})]
+    clic(m, "rv_suivant")
+    verifie([attend_post(nb + 1), CarteReglage.temoins[-1:]], [("appui", "2"), ["pret"]], "témoin : appui envoyé avec l'étape affichée (pret)")
+    p = attend_page(m, lambda p: p.get("note") and MESSAGES["montee"][0] in p.get("message", ""))
+    verifie([p.get("note"), MESSAGES["montee"][0] in p.get("message", ""), len(CarteReglage.file)], ["L'étape a changé : état relu", True, 1],
+            "témoin périmé : 409, message de la carte affiché, état relu (montée), aucun appui appliqué")
+    tolere(m, n0)
+    # Carte injoignable : « Annuler » sans reponse, la note reste visible (hors du bloc masque)
+    ouvre(m, "rdc", etat("montee", chrono_ms=1500))
+    attend_page(m, lambda p: p.get("question"))
+    n0 = len(m.cdp.erreurs())
+    CarteReglage.panne = "coupe"
+    attend_page(m, lambda p: p.get("injoignable"), 8)
+    clic(m, "rv_annuler")
+    p = attend_page(m, lambda p: p.get("note"), 8)
+    verifie([bool(p.get("injoignable")), "Ordre sans réponse" in p.get("note", "")], [True, True],
+            "injoignable : « Annuler » sans réponse, la note est visible")
+    CarteReglage.panne = None
+    attend_page(m, lambda p: not p.get("injoignable"), 8)
+    tolere(m, n0)
 
 
 def sonde_un_bouton_et_arrets(m):
@@ -331,12 +385,13 @@ def sonde_un_bouton_et_arrets(m):
         CarteReglage.etat = etat("annule", id_=1, cle="VR1", cause=cause, mesures={"tempsMontee": 24},
                                  message=f"Le volet s'est arrêté sans appui ({cause}) : rien n'a été écrit.")
         p = attend_page(m, lambda p: mot in p.get("cause", ""))
-        verifie([mot in p.get("cause", ""), explication in p.get("cause", ""), p.get("resultat"), p.get("debut")], [True, True, "", True],
-                f"arrêt « {cause} » : cause « {mot} » expliquée, aucun résultat")
+        verifie([mot in p.get("cause", ""), explication in p.get("cause", ""), p.get("resultat"), p.get("debut"), FAUSSE in p.get("cause", "")],
+                [True, True, "", True, True], f"arrêt « {cause} » : cause « {mot} » expliquée, aucun résultat, position peut-être fausse")
     for et, mot in (("delai", "120 s"), ("refus", "2 s")):
         CarteReglage.etat = etat(et, id_=1, cle="VR1", message="rien n'a été écrit")
         p = attend_page(m, lambda p: mot in p.get("etape", "") + p.get("cause", ""))
-        verifie([mot in p.get("etape", "") + p.get("cause", ""), p.get("resultat")], [True, ""], f"étape {et} : « {mot} » expliqué, aucun résultat")
+        verifie([mot in p.get("etape", "") + p.get("cause", ""), p.get("resultat"), FAUSSE in p.get("cause", "")], [True, "", True],
+                f"étape {et} : « {mot} » expliqué, aucun résultat, position peut-être fausse")
 
 
 def sonde_chrono(m, dossier):
@@ -350,6 +405,9 @@ def sonde_chrono(m, dossier):
     etats = [etat(e, id_=1, type_="chrono", cle="VR1", chrono_ms=1500 if e in ("montee", "descente") else 0) for e in ("pret", "montee", "haut", "descente")]
     parcours(m, "chrono", etats, ["Départ", "Arrivée", "Départ", "Arrivée"], True)
     verifie("vous-même" in lit(m).get("question", ""), True, "chrono : en descente, la question rappelle d'arrêter la porte soi-même")
+    CarteReglage.etat = etat("annule", id_=1, type_="chrono", cle="VR1", message="Réglage annulé : rien n'a été écrit.")
+    p = attend_page(m, lambda p: p.get("debut"))
+    verifie([p.get("debut"), FAUSSE in p.get("cause", "")], [True, False], "chrono annulé : pas d'avertissement de position (aucun ordre au moteur)")
 
 
 def contraste(c1, c2):
@@ -396,10 +454,11 @@ def principal():
         m = Montage(CarteReglage, "sonde_reglage_volets_")
         sonde_deux_boutons(m, args.capture)
         sonde_lente_et_500(m)
+        sonde_temoin_et_note(m)
         sonde_un_bouton_et_arrets(m)
         sonde_chrono(m, args.capture)
-        erreurs = [x for x in m.cdp.erreurs() if "favicon.ico" not in x and "Failed to load resource" not in x]
-        verifie(erreurs, [], "aucune erreur dans la console (hors ressources refusées par la carte simulée)")
+        erreurs = [x for i, x in enumerate(m.cdp.erreurs()) if "favicon.ico" not in x and i not in TOLEREES]
+        verifie(erreurs, [], "aucune erreur dans la console (hors pannes voulues : coupure, carte lente, 500, 409)")
     except FileNotFoundError as erreur:
         print(f"BLOQUE : {erreur}")
         return 3

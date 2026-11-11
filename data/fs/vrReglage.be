@@ -28,7 +28,7 @@
  *   Berry quand ShutterInvert vaut 1).
  * - Durees ecrites en secondes entieres arrondies (configVRByJson les pose avec le type int).
  * - Refus de commencer : reglage deja actif, volet inconnu ou inactif, volet qui roule (Direction lue dans le JSON des
- *   capteurs, tasmota.read_sensors). JAMAIS par ShutterPosition<id> sans argument : xdrv_27_esp32_shutter.ino::
+ *   capteurs, tasmota.read_sensors), volet arrete depuis moins de ShutterMotorStop + 100 ms (moteur). JAMAIS par ShutterPosition<id> sans argument : xdrv_27_esp32_shutter.ino::
  *   CmndShutterPosition garde target_position et relance le moteur si la cible differe de la position reelle.
  * - Fins de course et MPU6050 : vrFonctions.enReglage(id) neutralise le recalage et l'arret en butee ; le blocage et le
  *   sens inverse coupent toujours le moteur. Un arret que le reglage n'a pas demande (regle Shutter<id>#Direction 0,
@@ -45,7 +45,7 @@
 var vrReglage = module("vrReglage")
 
 vrReglage.DELAI_MS = 120000             # attente maximale de l'appui suivant, a chaque etape
-vrReglage.COURSE_MAX = 120              # course autorisee pendant la mesure (s)
+vrReglage.COURSE_MAX = 130              # course autorisee pendant la mesure (s) : au-dela du delai, Tasmota ne coupe pas avant lui
 vrReglage.MESURE_MIN_MS = 2000          # mesure plus courte : refusee
 vrReglage.REBOND_MS = 1000              # appui plus proche du precedent : ignore
 # Texte de chaque etape en cours : [moteur, chrono] ; %i = duree de la montee
@@ -112,6 +112,14 @@ def vrReglage_debut(id)
         vrFonctions.log(string.format("VR_REGLAGE: Volet %i absent du JSON des capteurs : direction non verifiee !", id), LOG_LEVEL_DEBUG)
     elif (position.find("Direction", 0) != 0)
         return [false, "Le volet roule : attendez qu'il soit arrêté en bas."]
+    end
+    # ShutterSetClose juste apres un arret : ShutterWaitForMotorStart reentrerait dans loop() (meme calcul que commandeArret)
+    var arret = vrFonctions.suiviInclinaison(id).find("arret")
+    if (!chrono && arret != nil)
+        var ms = tasmota.cmd("ShutterMotorStop", boolMute)
+        if (tasmota.millis() - arret < (isinstance(ms, map) ? ms.find("ShutterMotorStop", 500) : 500) + 100)
+            return [false, "Le volet vient de s'arrêter : réessayez dans une seconde"]
+        end
     end
 
     var vrs = drivers["voletRoulants"]["environnement"]["VRs"]
@@ -206,8 +214,12 @@ def vrReglage_appui(id, source)
             vr["tempsDescente"] = duree
             persist.drivers = drivers
             persist.save(true)
-            if (moteur)    vrFonctions.commandeArret(id, vrFonctions.commandeSens(id, "posFerme"))    end
-            vrFonctions.log(string.format("VR_REGLAGE: Volet %i : tempsMontee %i s, tempsDescente %i s ecrits dans le persist !", id, vr["tempsMontee"], duree), LOG_LEVEL_INFO)
+            try                                              # persist ecrit : la sortie "fini" doit suivre quoi qu'il arrive
+                if (moteur)    vrFonctions.commandeArret(id, vrFonctions.commandeSens(id, "posFerme"))    end
+                vrFonctions.log(string.format("VR_REGLAGE: Volet %i : tempsMontee %i s, tempsDescente %i s ecrits dans le persist !", id, vr["tempsMontee"], duree), LOG_LEVEL_INFO)
+            except .. as erreur, message
+                vrFonctions.log(string.format("VR_REGLAGE_ERREUR: Volet %i, recalage apres l'ecriture : %s -> %s", id, erreur, message), LOG_LEVEL_ERREUR)
+            end
             vrReglage.sortie("fini", string.format("Durées écrites dans le persist de la carte : montée %i s, descente %i s.", vr["tempsMontee"], duree), nil)
             return [true, r["message"]]
         end
@@ -232,7 +244,8 @@ def vrReglage_annule(motif)
     var delai = motif == "delai"
     vrFonctions.log(string.format("VR_REGLAGE: Volet %i, reglage %s en %s : rien d'ecrit !", r["id"], delai ? "sans appui depuis 120 s" : "annule", r["etape"]),
                     delai ? LOG_LEVEL_ERREUR : LOG_LEVEL_INFO)
-    vrReglage.sortie(delai ? "delai" : "annule", delai ? "Pas d'appui depuis 120 s : volet arrêté, rien n'a été écrit." : "Réglage annulé : rien n'a été écrit.", nil)
+    vrReglage.sortie(delai ? "delai" : "annule", !delai ? "Réglage annulé : rien n'a été écrit." :
+                     (r["type"] == "moteur" ? "Pas d'appui depuis 120 s : volet arrêté, rien n'a été écrit." : "Pas d'appui depuis 120 s : rien n'a été écrit."), nil)
 end
 vrReglage.annule = vrReglage_annule
 

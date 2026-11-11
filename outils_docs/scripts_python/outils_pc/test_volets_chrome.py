@@ -15,7 +15,8 @@ Tasmota (aucun evenement). window.VOLETS des 3 cartes : forme de vrPages.be::fac
 Scenarios : position lue (inverse 0 et 1), poursuite entre deux valeurs (intermediaire, puis arret SANS depassement de la
 derniere valeur), curseur tire a la main (le dessin rejoint la valeur et y reste quand Tasmota la renvoie),
 dessin place apres la table des curseurs, aucun s271 -> rien, trappe a MPU6050 (angle, retour au curseur, rouge « sens
-inverse » et « bloqué »), echelle du 2e etage, aucune erreur dans la console.
+inverse » et « bloqué », texte en --c_txtwrn, angle a virgule du firmware fr_FR, id non entier sans selecteur), echelle du
+2e etage, animation vivante apres une exception dans une image, aucune erreur dans la console.
 """
 
 import argparse
@@ -37,6 +38,7 @@ sys.path.insert(0, str(ICI))
 from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre   # client DevTools stdlib
 
 ECHECS = []
+PANNE = "panne simulee de la sonde"      # exception injectee dans une image (sonde_garage), seule erreur toleree
 R = 1000                     # WebRefresh annonce par les pages de la sonde (ms), sans effet sur la poursuite
 INCL = {"ouvert": 85, "ferme": 3}
 PAGES = {
@@ -53,7 +55,7 @@ PAGES = {
         {1: 0}),
 }
 TETE = ("<!DOCTYPE html><html lang='fr'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'/>"
-        "<title>Accueil</title><style>:root{--c_bg:#252525;--c_txt:#eaeaea;--c_ttl:#eaeaea;--c_btn:#1fa3ec;--c_btntxt:#faffff}"
+        "<title>Accueil</title><style>:root{--c_bg:#252525;--c_txt:#eaeaea;--c_txtwrn:#ff5661;--c_ttl:#eaeaea;--c_btn:#1fa3ec;--c_btntxt:#faffff}"
         "div,input{padding:5px;font-size:1em;}body{text-align:center;font-family:verdana,sans-serif;background:var(--c_bg);}"
         "td{padding:0px;}button{border:0;border-radius:0.3rem;background:var(--c_btn);color:var(--c_btntxt);line-height:2.4rem;"
         "font-size:1.2rem;width:100%;}</style><script>function lc(){}</script></head><body>"
@@ -80,7 +82,7 @@ def page(nom, js):
         f"onchange='lc(\"u\",{n},value)'></div></td><td style='width:15%'><button>&#9650;</button></td></tr>"
         for n, v in sorted(valeurs.items())) + "</table>")
     entre = "<div id='entre'><button>Autre bouton</button></div>"          # ajouts d'autres drivers avant celui des volets
-    return (TETE + curseurs + entre + "<div id='vf'></div><script>window.VOLETS=" + json.dumps(facade).replace("</", "<\\/")
+    return (TETE + curseurs + entre + "<div id='vf'></div><script>window.VOLETS=" + json.dumps(facade).replace("<", "\\u003c")
             + ";</script><script>" + js.read_text(encoding="utf-8") + "</script>" + PIED)
 
 
@@ -218,12 +220,12 @@ def sonde_rdc(m, capture):
     time.sleep(0.5)
     verifie(ouv(m, 1)[0], "80", "rdc : curseur tiré : dessin à 80 % et y reste quand Tasmota renvoie 80")
     # Trappe a MPU6050 (3 s de course) : l'angle et non le curseur (s273 = 0)
-    balise(m, "44.0", "")
+    balise(m, "44,0", "")            # virgule : web_send_decimal du firmware fr_FR
     time.sleep(0.5)
     milieu = int(ouv(m, 3)[0])
     verifie(1 <= milieu <= 49, True, f"rdc : trappe à MPU : poursuite vers l'angle ({milieu} % à 0,5 s)")
     time.sleep(1.5)
-    verifie(ouv(m, 3)[:2], ["50", "50 %"], "rdc : trappe à MPU : 44° -> 50 % (curseur à 0)")
+    verifie(ouv(m, 3)[:2], ["50", "50 %"], "rdc : trappe à MPU : '44,0' (virgule) -> 50 % (curseur à 0)")
     balise(m, "", "")
     time.sleep(2.0)
     verifie(ouv(m, 3)[0], "0", "rdc : trappe sans angle (capteur muet) : retour au curseur, 0 %")
@@ -231,6 +233,8 @@ def sonde_rdc(m, capture):
     time.sleep(2.0)
     o = ouv(m, 3)
     verifie([o[0], "sens inverse" in o[2], o[3]], ["50", True, "rgb(224, 69, 58)"], "rdc : trappe « sens inverse » : panneau rouge et texte")
+    verifie(m.cdp.js("getComputedStyle(document.querySelector(\"#vf svg g[data-id='3']\").nextElementSibling.querySelector('.vf_pct')).fill"),
+            "rgb(255, 86, 97)", "rdc : texte « sens inverse » en --c_txtwrn de Tasmota")
     if capture:
         m.cdp.capture(str(Path(capture) / "facade_rdc_trappe_sens_inverse.png"))
     balise(m, "44.0", "bloque")
@@ -240,15 +244,24 @@ def sonde_rdc(m, capture):
     time.sleep(0.2)
     o = ouv(m, 3)
     verifie(["bloq" in o[2] or "sens" in o[2], o[3] == "rgb(224, 69, 58)"], [False, False], "rdc : blocage levé : plus de rouge")
+    # Identifiant non entier : aucun sélecteur [data-vi] construit (il lèverait à chaque image)
+    n0 = len(m.cdp.erreurs())
+    f = {"toit": "aucun", "ouvertures": [dict(PAGES["rdc"][0]["ouvertures"][1], id="1']")]}
+    verifie(m.cdp.js("Volets.demarre(" + json.dumps(f) + ") ? 1 : 0"), 1, "rdc : demarre avec un id non entier")
+    time.sleep(0.5)
+    verifie(m.cdp.erreurs()[n0:], [], "rdc : id non entier : aucune erreur (pas de sélecteur construit)")
 
 
 def sonde_garage(m, capture):
     verifie(bool(m.ouvre("garage")), True, "garage : page chargée")
     time.sleep(0.3)
     verifie(ouv(m, 1)[:2], ["70", "70 %"], "garage (inverse 1) : curseur à 30 -> porte ouverte à 70 %")
+    # Une exception dans une image (lecture du curseur) n'arrête pas l'animation : erreur attendue, ignorée en fin de sonde
+    m.cdp.js("(() => { const g = document.getElementById.bind(document); let n = 0;"
+             " document.getElementById = id => { if (id === 's271' && !n++) throw new Error('" + PANNE + "'); return g(id); }; return 1; })()")
     pose(m, 1, 0)
     time.sleep(1.5)
-    verifie(ouv(m, 1)[0], "100", "garage (inverse 1) : curseur à 0 -> porte ouverte à 100 %")
+    verifie(ouv(m, 1)[0], "100", "garage (inverse 1) : curseur à 0 -> porte ouverte à 100 % (animation vivante après une exception dans une image)")
     pose(m, 1, 60)
     time.sleep(2.0)
     if capture:
@@ -290,7 +303,7 @@ def principal():
         time.sleep(0.3)
         verifie(m.cdp.js("[document.getElementById('vf').childElementCount, document.querySelectorAll('svg').length,"
                          " typeof window.Volets.demarre]"), [0, 0, "function"], "aucun s271 : rien n'est dessiné")
-        verifie([x for x in m.cdp.erreurs() if "favicon.ico" not in x], [], "aucune erreur dans la console")
+        verifie([x for x in m.cdp.erreurs() if "favicon.ico" not in x and PANNE not in x], [], "aucune erreur dans la console")
     except FileNotFoundError as erreur:
         print(f"BLOQUE : {erreur}")
         return 3

@@ -117,7 +117,8 @@ et rien n'est envoyé à la page. Le modèle `outils_docs/schemas/modele_persist
 1. L'utilisateur amène le volet en **butée basse** (fermé) par une commande habituelle.
 2. Page « Configuration » -> bouton « Réglage des volets » -> page de réglage : il choisit le volet et clique sur
    « Régler les durées ». La carte allonge provisoirement la course autorisée (`ShutterOpenDuration` et
-   `ShutterCloseDuration` à 120 s) pour que le moteur ne s'arrête pas avant la vraie butée.
+   `ShutterCloseDuration` à 130 s, délai de 120 s par étape : Tasmota ne coupe jamais le moteur avant le délai) pour que
+   le moteur ne s'arrête pas avant la vraie butée.
 3. Un appui sur un bouton du volet (le bouton unique, l'un ou l'autre des deux boutons, ou le bouton de la page de
    réglage) : le volet **monte**, la carte lance le chronomètre.
 4. Un appui à l'arrivée en haut : la carte arrête le volet et retient `tempsMontee`.
