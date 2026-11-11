@@ -35,7 +35,7 @@ l'apprend au premier envoi d'une trame qui n'est pas 0x05/0x06 ; --echo oui | no
 Usage (Python de PlatformIO, qui fournit pyserial) :
     %USERPROFILE%\.platformio\penv\Scripts\python.exe outils_docs/scripts_python/outils_pc/sniffeur_modbus.py
     options : --port auto|COM12|loop://|aucun  --debit 19200  --http 7300  --silence 0.02  --delai 1.0
-              --echo auto|oui|non  --journal fichier.log  --historique 5000  --persist <persist du maitre>
+              --echo auto|oui|non  --journal fichier.log  --historique 5000  --persist p4|affichage|<persist du maitre>
               --udp oui|non  --udp-groupe 224.3.0.1  --udp-port 4000  --udp-interface <ip locale>
               --mqtt oui|non  --mqtt-hote <broker>  --mqtt-port 1883  --mqtt-utilisateur  --mqtt-mdp
               --local (127.0.0.1 seulement)  --sans-navigateur
@@ -449,8 +449,9 @@ def main():
     options.add_argument("--udp-interface", dest="udp_interface", default="0.0.0.0",
                          help="IP locale de la carte reseau des modules (defaut : celle du systeme)")
     ecoute_udp.options_relais(options)
-    options.add_argument("--persist", default=dm.PERSIST_MAITRE,
-                         help="_persist.json du maitre : adresses des esclaves et appareils (decodage metier)")
+    options.add_argument("--persist", default=dm.PERSIST_MAITRE, type=dm.chemin_persist,
+                         help="maitre du bus : p4 (defaut, garage), affichage (debits de la nourrice) ou chemin "
+                              "d'un _persist.json : adresses des esclaves et appareils (decodage metier)")
     acces_web.ajoute_options(options)
     args = options.parse_args()
     if not 0 < args.http < 65536 or args.historique < 0 or args.silence <= 0 or args.delai <= 0:

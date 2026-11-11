@@ -23,6 +23,9 @@ import struct
 
 RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 PERSIST_MAITRE = os.path.join(RACINE, "data", "garage", "tasmota32p4-serveur-modbus", "_persist.json")
+PERSIST_AFFICHAGE = os.path.join(RACINE, "data", "bureau", "tasmota32s3-ecran-debits-pac", "_persist.json")
+# Maitres du parc, par nom court (--persist du sniffeur) : P4 du garage par defaut, affichage des debits en option
+PERSISTS = {"p4": PERSIST_MAITRE, "affichage": PERSIST_AFFICHAGE}
 TEMPLATE_GPIO = os.path.join(RACINE, "tasmota", "include", "tasmota_template.h")
 
 FONCTIONS = {1: "Read Coils", 2: "Read Discrete Inputs", 3: "Read Holding Registers",
@@ -106,6 +109,11 @@ def charge_types_gpio(chemin=TEMPLATE_GPIO):
         return dict(TYPES_DEFAUT)
 
 
+def chemin_persist(nom):
+    """Nom court d'un maitre (PERSISTS) ou chemin d'un _persist.json -> chemin."""
+    return PERSISTS.get(nom, nom)
+
+
 def lit_bus(chemin=PERSIST_MAITRE):
     """{debit, mode} du bus selon le persist du maitre (drivers.ModBus) ; debit 19200 par defaut."""
     try:
@@ -132,9 +140,9 @@ def charge_carte(chemin=PERSIST_MAITRE):
         for nom_module, fiche in modules.items():
             if isinstance(fiche, dict) and isinstance(fiche.get("id"), int):
                 e = {"id": fiche["id"], "nom": fiche.get("name", nom_module), "driver": driver,
-                     "module": nom_module, "appareils": {}}
+                     "module": nom_module, "appareils": {}, "lectureGroupee": fiche.get("lectureGroupee") == "ON"}
                 esclaves[fiche["id"]] = par_module[nom_module] = e
-    for module in d.get("modules", {}).values():
+    for nom_metier, module in d.get("modules", {}).items():
         if not isinstance(module, dict):
             continue
         for famille, appareils in module.get("environnement", {}).items():
@@ -147,7 +155,7 @@ def charge_carte(chemin=PERSIST_MAITRE):
                 if e is None:
                     continue
                 reg = a["idModBus"] if e["driver"] == "conn16" else a["type"] + a["idModBus"] - 1
-                e["appareils"][reg] = {"cle": cle, "nom": a.get("nom", cle), "famille": famille,
+                e["appareils"][reg] = {"cle": cle, "nom": a.get("nom", cle), "famille": famille, "module": nom_metier,
                                        "type": a["type"], "idModBus": a["idModBus"],
                                        "switchMode": a.get("SwitchMode") or 1, "activation": a.get("activation", "OFF"),
                                        # POWERn du maitre = 'id' de la fiche relai (relaiN -> POWERN, WS2812 compris)
@@ -315,6 +323,40 @@ def _hsb(mots):
     return texte + (f", {_mode(mots[4])}" if len(mots) >= 5 else "")
 
 
+# Lecture groupee et push multi-valeurs (2026-11-09, PROTOCOLE_MODBUS.md) : la valeur k (uint32, 2 registres)
+# va a l'appareil du maitre de registre reg + k. Semantique des debits si l'appareil est du module ecranDebits
+# (carte d'affichage) : idModBus 1-6 = debit en centiemes de L/min, 7 = mot d'etats.
+MODULE_DEBITS = "ecranDebits"
+
+
+def _etats_debits(v):
+    """Mot d'etats de l'acquisition : bit i voie i+1 muette, bit 6+i imprecise, bit 12 groupe servi."""
+    muettes = [f"voie {i + 1} muette" for i in range(6) if v >> i & 1]
+    imprecises = [f"voie {i + 1} imprecise" for i in range(6) if v >> (6 + i) & 1]
+    servi = ("groupe servi (bit 12)" if v >> 12 & 1
+             else "bit 12 a 0 : esclave d'avant la lecture groupee, groupe rejete par le maitre")
+    return f"0x{v:04X} : " + ", ".join([servi] + (muettes + imprecises or ["toutes les voies normales"]))
+
+
+def _groupe(e, reg, regs):
+    """Plusieurs uint32 a partir de reg -> texte valeur par valeur ; nomme aussi chaque registre (champ metier)."""
+    textes = []
+    for k in range(len(regs) // 2):
+        a = e["appareils"].get(reg + k)
+        v = regs[2 * k][1] << 16 | regs[2 * k + 1][1]
+        debits = a is not None and a.get("module") == MODULE_DEBITS
+        if debits and a["idModBus"] == 7:
+            nom, texte = "etats", _etats_debits(v)
+        elif debits:
+            nom = f"debit {a['idModBus']}"
+            texte = SANS_MESURE + " [0x7FFFFFFF]" if v == SENTINELLE_UINT32 else f"{v / 100:.2f} L/min"
+        else:
+            nom, texte = f"registre {reg + k}", SANS_MESURE + " [0x7FFFFFFF]" if v == SENTINELLE_UINT32 else str(v)
+        regs[2 * k][2]["metier"], regs[2 * k + 1][2]["metier"] = f"{nom}, poids fort", f"{nom}, poids faible"
+        textes.append(f"{nom}" + (f" '{a['nom']}'" if a else "") + f" = {texte}")
+    return f"{len(regs) // 2} valeurs : " + " ; ".join(textes)
+
+
 def _maitre(a):
     """' (POWERn du maitre)' : PowerN du decodage est le numero du relai SUR L'ESCLAVE, pas sur le
     maitre (garage : 'Relai 2' = Power2 du rideau = POWER3 du maitre, POWER1 etant la WS2812)."""
@@ -340,7 +382,12 @@ def _esp32(e, fc, nat, d, reg, regs, types):
         return f"{desc} : bit {int(actif)} -> {etat} (SwitchMode {mode})"
     if fc == 4:
         if nat == "requete":
+            nb = d[2] << 8 | d[3]
+            if base in ENTIERS32 and nb > 2:
+                return f"lecture groupee de {nb // 2} valeurs uint32 a partir de : {desc}"
             return f"demande la valeur de : {desc}"
+        if base in ENTIERS32 and len(regs) > 2:
+            return f"lecture groupee, {_groupe(e, reg, regs)}"
         brut = bytes(b for _, mot, _ in regs for b in (mot >> 8, mot & 0xFF))
         if base in FLOTTANTS:
             vals = [struct.unpack(">f", brut[i:i + 4])[0] for i in range(0, len(brut) - 3, 4)]
@@ -382,6 +429,8 @@ def _esp32(e, fc, nat, d, reg, regs, types):
             return f"commande de couleur du maitre : {desc} <- {_hsb(mots)}{_maitre(a)}"
         if base == 1376 and len(mots) >= 4:         # push de l'esclave (surveilleRubans), animation comprise
             return f"PUSH esclave -> maitre (enveloppe UDP 'ModbusPushUDP <seq> <hexa>') : {desc} = {_hsb(mots)}"
+        if base in ENTIERS32 and len(mots) > 2:
+            return f"PUSH esclave -> maitre (enveloppe UDP 'ModbusPushUDP <seq> <hexa>') : {_groupe(e, reg, regs)}"
         brut = bytes(b for m in mots for b in (m >> 8, m & 0xFF))
         if base in FLOTTANTS and len(brut) >= 4:
             v = ", ".join(_flottant(struct.unpack('>f', brut[i:i + 4])[0]) for i in range(0, len(brut) - 3, 4))

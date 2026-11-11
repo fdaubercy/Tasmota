@@ -173,6 +173,50 @@ def test_decodeur():
     verifie("absente" in decode("09 03 00 01 00 01")["metier"], True, "TEMOIN : adresse hors persist")
 
 
+def persist_affichage_de_test():
+    """Maitre de la carte d'affichage des debits : esclave id 1 (acquisition), 7 analogiques 4704 a 4710."""
+    ana = {f"analogique{k}": dict(nom=f"Depart {k}" if k < 7 else "Etats", type=4704, id=k, idModBus=k,
+                                  virtuel="ModBus_TasmotaSlaveModBus1", activation="ON") for k in range(1, 8)}
+    d = {"drivers": {"ModBus": {"environnement": {"TasmotaSlaveModBus": {"TasmotaSlaveModBus1": {
+            "id": 1, "name": "Acquisition", "lectureGroupee": "ON"}}}}},
+         "modules": {"ecranDebits": {"environnement": {"analogiques": ana}}}}
+    chemin = os.path.join(tempfile.mkdtemp(prefix="banc_sniffeur_"), "_persist.json")
+    with open(chemin, "w", encoding="utf-8") as f:
+        json.dump(d, f)
+    return chemin
+
+
+def test_groupe_debits():
+    """Lecture groupee et push de 7 uint32 (2026-11-09) : debits 1-6 en L/min x100, puis le mot d'etats."""
+    vraie = dm.charge_carte(dm.chemin_persist("affichage"))
+    verifie((vraie.get(1, {}).get("lectureGroupee"), sorted(vraie.get(1, {}).get("appareils", {}))),
+            (True, list(range(4704, 4711))), "vrai persist de l'affichage : esclave 1 groupe, 4704 a 4710")
+    verifie(dm.chemin_persist("p4"), dm.PERSIST_MAITRE, "persist p4 = maitre du garage")
+    carte = dm.charge_carte(persist_affichage_de_test())
+    valeurs = "".join(f"{v:08X}" for v in (1234, 50, dm.SENTINELLE_UINT32, 0, 7, 1, 0x1000 | 0b10 | (1 << 7)))
+    r = dm.decode(c("01 04 1C " + valeurs), c("01 04 12 60 00 0E"), carte, TYPES)
+    m = r["metier"]
+    verifie(all(t in m for t in ("debit 1 'Depart 1' = 12.34 L/min", "debit 2 'Depart 2' = 0.50 L/min",
+                                 "debit 3 'Depart 3' = SANS MESURE", "debit 6 'Depart 6' = 0.01 L/min")), True,
+            "groupe 0x04 : 6 debits en L/min, sentinelle sur la voie 3 seule")
+    verifie(all(t in m for t in ("groupe servi", "voie 2 muette", "voie 2 imprecise")), True, "groupe 0x04 : bits d'etats nommes")
+    verifie([x["metier"] for x in r["champs"] if x["champ"].startswith("Registre 47")][:3],
+            ["debit 1, poids fort", "debit 1, poids faible", "debit 2, poids fort"], "groupe 0x04 : chaque registre nomme")
+    verifie("lecture groupee de 7 valeurs" in dm.decode(c("01 04 12 60 00 0E"), None, carte, TYPES)["metier"], True,
+            "groupe 0x04 : requete de 14 registres")
+    push = dm.hx(c("01 10 12 60 00 0E 1C " + valeurs)).replace(" ", "")
+    f, _, ident, _ = eu.fiche(f"ModbusPushUDP 9 {push}", "192.168.4.2", carte, TYPES, {}, 0)
+    verifie((ident, "PUSH" in f["texte"], "debit 1 'Depart 1' = 12.34 L/min" in f["texte"], "groupe servi" in f["texte"]),
+            (1, True, True, True), "push UDP de 14 registres reparti en 7 valeurs")
+    sans12 = valeurs[:-8] + "00000000"
+    verifie("bit 12 a 0" in dm.decode(c("01 04 1C " + sans12), c("01 04 12 60 00 0E"), carte, TYPES)["metier"], True,
+            "TEMOIN : mot d'etats sans bit 12 = groupe rejete par le maitre")
+    r = decode("02 04 1C " + valeurs, "02 04 12 60 00 0E")["metier"]
+    verifie(("L/min" in r, "12340" in r or "1234" in r), (False, True), "TEMOIN : groupe hors debits (cuve) en brut")
+    verifie(decode("02 04 04 00 00 30 39", "02 04 12 60 00 02")["metier"].endswith(": 12345"), True,
+            "TEMOIN : cuve Count 2 inchangee")
+
+
 def test_fuzz():
     random.seed(1)
     for _ in range(20000):
@@ -497,7 +541,7 @@ def test_acces_reseau():
 
 
 def main():
-    for groupe in (test_crc_et_cli, test_decodeur, test_fuzz, test_surveillance, test_emulation, test_variation,
+    for groupe in (test_crc_et_cli, test_decodeur, test_groupe_debits, test_fuzz, test_surveillance, test_emulation, test_variation,
                    test_sniffeur_et_debit, test_udp, test_relais_mqtt, test_acces_reseau):
         avant = len(RESULTATS["ko"])
         try:
