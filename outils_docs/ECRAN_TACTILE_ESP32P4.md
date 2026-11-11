@@ -41,7 +41,8 @@ sdkconfig/LVGL tips » (ouverte le 2026-02-13, réponses du 2026-08-09, dont s-h
 - Solution trouvée : tampons LVGL en PSRAM **et** `:B,<hauteur>,01` (ex. `:B,600,01`) : ~120 Ko de RAM interne
   rendus, défilement fluide (diff joint à la discussion). Exige le correctif de `DSIPanel::pushColors` publié dans la
   discussion (attendre la fin du DMA précédent : réessai sur `ESP_ERR_INVALID_STATE`), sinon bandes non mises à jour.
-  Ces deux modifications ne sont pas dans l'amont au 2026-11-11 (à vérifier à chaque synchro du fork).
+  Le correctif de `pushColors` est DÉJÀ dans l'amont (`uDisplay_DSI_panel.cpp::DSIPanel::pushColors`, réessai jusqu'à
+  300 fois) ; le passage des tampons LVGL en PSRAM n'a pas été vérifié dans le code (à regarder avant un essai).
 - Bluetooth gourmand en mémoire : le couper aide. Réglages LVGL suggérés (`tasmota_lv_conf.h`) :
   `LV_DRAW_LAYER_SIMPLE_BUF_SIZE`, `LV_IMG_CACHE_DEF_SIZE_PSRAM`, `LV_OBJ_STYLE_CACHE`.
 
@@ -111,5 +112,5 @@ Deux voies DSI à faible risque, toutes deux sur le contrôleur déjà décrit d
 
 Une dalle Waveshare sur le kit actuel demande d'écrire une description sur un pilote marqué « WIP ». Dans tous les
 cas : ajouter l'affichage à l'env P4 (`FIRMWARE_LVGL` ou les `USE_*`), mesurer la RAM interne libre, et prévoir les
-correctifs de la discussion #24448. L'écran RGB de l'ESP32-S3-Touch-LCD-7B (écran des débits du bureau) reste la voie
+réglages de la discussion #24448 (tampons LVGL en PSRAM). L'écran RGB de l'ESP32-S3-Touch-LCD-7B (écran des débits du bureau) reste la voie
 déjà maîtrisée dans ce dépôt.
