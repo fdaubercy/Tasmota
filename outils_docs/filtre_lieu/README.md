@@ -36,3 +36,25 @@ configuration), Fichiers Berry par env (7800), Assistant persist (7900, onglet a
 graphiques (7950), Fabrique d'extensions (7980). Laissées telles quelles : onglet « Env par défaut » (classé par puce
 comme le fichier), syslog (hôtes sans lieu), sniffeur MQTT (topics hors dossiers : la cuve publie en `jardin/cuve`),
 sniffeur I2C (déjà trié par lieu), sniffeur ModBus, testeur UDP, pont série, synchro du fork.
+
+## Suite (2026-11-11) : lieu partagé depuis l'annuaire, syslog et sniffeur MQTT
+
+`maquettes_lieu_suite.html` (`?m=J` à `?m=O`, `&t=clair`), images `modele-J.png` à `modele-O.png`. **Choix retenus le
+2026-11-11 : J pour l'annuaire, mise en avant à l'arrivée (rien n'est caché), M pour le syslog, N et O pour le
+sniffeur MQTT.** Rien de réalisé.
+
+| Modèle | Où | Principe |
+|---|---|---|
+| J | Annuaire | Puces « Lieu de travail » ; chaque « Ouvrir ↗ » porte `?lieu=` ; bandeau « Lieu : Garage » sur la page ouverte |
+| K | Annuaire | Une fiche par lieu : ses cartes, et un lien direct vers chaque outil pour CETTE carte (`?env=`) |
+| L | Syslog | Barre des modules (noms d'hôte) rangée sous l'intertitre de leur lieu ; liste « module » groupée |
+| M | Syslog | Puces de lieu (filtre, lignes et erreurs par lieu) ; étiquette de lieu sur chaque ligne |
+| N | Sniffeur MQTT | Arborescence des topics rangée par lieu, l'env de chaque topic entre parenthèses |
+| O | Sniffeur MQTT | Puces de lieu (filtre d'affichage) ; étiquette de lieu sur chaque message |
+
+Conception commune : la table hôte → lieu et topic → lieu n'est PAS tenue à la main. Le `_persist.json` de chaque carte
+porte `serveur.hostname` (le « module » du syslog) et `serveur.mqtt.topic` ; le nom d'env donne le lieu (`lieux.py`). Le
+topic ne dit rien du lieu (la cuve publie en `jardin/cuve`, le différentiel en `bureau/pc`). Cartes sans persist
+(`tasmota32-rdc-vr-porte`, `tasmota-pompe-piscine`) : IP de `user_config_override.h` (le syslog nomme un hôte inconnu
+par son IP), à vérifier. Hôte ou topic inconnu du dépôt : groupe « Autres ». Deux cartes peuvent partager un nom d'hôte
+(`SERVEUR-RLY-CAVE`, `SERVEUR-GARAGE`) : même lieu dans les deux cas.

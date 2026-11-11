@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="fr" data-theme="sombre">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Lieu partagé : maquettes</title>
+<style>
+  /* Suite de maquettes_filtre_lieu.html (modeles J a O) ; rien n'est ecrit ni envoye par cette page. */
+  :root{color-scheme:dark;--fond:#121417;--carte:#1d2025;--bord:#33373e;--texte:#e6e6e6;--doux:#a8adb5;--discret:#8b9099;--bleu:#5b93ff;
+    --bleu-fond:#18233a;--btn:#262a30;--btn-bord:#555b64;--orange:#f0a020;--rouge:#ff6b5b;--vert:#3fb96b}
+  :root[data-theme="clair"]{color-scheme:light;--fond:#f6f7f9;--carte:#fff;--bord:#ddd;--texte:#222;--doux:#666;--discret:#777;--bleu:#2563eb;
+    --bleu-fond:#eef3ff;--btn:#fff;--btn-bord:#888;--orange:#c27400;--rouge:#c0392b;--vert:#2a9d4a}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px system-ui,sans-serif;color:var(--texte);background:var(--fond)}
+  main{max-width:1200px;margin:0 auto;padding:12px 16px 24px}
+  h1{font-size:20px;margin:6px 0 10px} h2{font-size:15px;margin:0 0 8px} h3{font-size:13px;margin:0 0 6px;color:var(--doux)}
+  .bandeau-maquette{background:#3b4252;color:#fff;padding:7px 16px;font-size:13px;font-weight:600}
+  .carte{background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:10px 12px}
+  .discret{color:var(--discret);font-size:12px}
+  .btn{display:inline-block;padding:5px 11px;border-radius:6px;border:1px solid var(--btn-bord);background:var(--btn);color:var(--texte);font-size:13px;white-space:nowrap}
+  .btn.p{background:var(--bleu);color:#fff;border-color:var(--bleu);font-weight:600}
+  .puces{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
+  .puce{border:1px solid var(--btn-bord);background:var(--btn);border-radius:16px;padding:4px 11px;font-size:13px;white-space:nowrap}
+  .puce b{font-weight:400;color:var(--discret);font-size:12px;margin-left:4px}
+  .puce.on{background:var(--bleu);border-color:var(--bleu);color:#fff} .puce.on b{color:#dbe6ff}
+  .puce .err{color:var(--rouge);font-size:11px;margin-left:4px} .puce.on .err{color:#ffd0c8}
+  .groupe{font-size:11px;text-transform:uppercase;color:var(--discret);margin:14px 0 6px;letter-spacing:.04em}
+  .tuiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .tuile{background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+  .tuile h3{color:var(--texte);font-size:14px;margin:0;display:flex;align-items:center;gap:6px}
+  .pastille{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--discret)} .pastille.marche{background:var(--vert)}
+  .tuile p{margin:0;font-size:12.5px;color:var(--doux)} .meta{font-size:12px;color:var(--discret)}
+  .lieu-url{font:11.5px ui-monospace,Consolas,monospace;color:var(--bleu)}
+  .arrivee{border-left:3px solid var(--bleu);background:var(--bleu-fond);padding:6px 10px;font-size:13px;margin-bottom:10px;display:flex;gap:10px;align-items:center}
+  .arrivee .x{margin-left:auto;color:var(--bleu);font-size:12.5px}
+  .deux{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;align-items:start}
+  .effets{display:grid;grid-template-columns:150px 1fr;gap:5px 10px;font-size:12.5px} .effets b{font-weight:600}
+  .fiche{background:var(--carte);border:1px solid var(--bord);border-radius:8px;margin-bottom:10px;overflow:hidden}
+  .fiche > .t{display:flex;gap:8px;align-items:baseline;padding:8px 12px;font-weight:600;border-bottom:1px solid var(--bord)}
+  .fiche .c{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 12px;border-top:1px solid var(--bord)}
+  .fiche .c:first-of-type{border-top:0}
+  .nom{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;overflow-wrap:anywhere}
+  .liens a{font-size:12px;color:var(--bleu);margin-left:10px;text-decoration:none}
+  .liens a.off{color:var(--discret)}
+  .ferme > .c{display:none}
+  /* Syslog et sniffeur MQTT : leur theme propre (style terminal de VS Code) */
+  .term{background:#1e1e1e;color:#d4d4d4;border:1px solid #333;border-radius:6px;overflow:hidden;font:12.5px Consolas,ui-monospace,monospace}
+  .term .barre{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:6px 8px;background:#252526;border-bottom:1px solid #333;font:13px system-ui}
+  .term select,.term input{background:#3c3c3c;color:#d4d4d4;border:1px solid #555;padding:2px 4px;font:13px system-ui}
+  .term button{background:#0e639c;color:#fff;border:0;padding:3px 9px;font:13px system-ui}
+  .term .mods{display:flex;flex-wrap:wrap;gap:6px;padding:5px 8px;background:#202020;border-bottom:1px solid #333;font:12.5px system-ui;align-items:center}
+  .mod{background:#2d2d30;border:1px solid #444;border-radius:3px;padding:2px 6px} .mod .n{color:#9d9d9d} .mod .e{color:#f14c4c}
+  .mod.on{border-color:#29b8db}
+  .lgr{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#9d9d9d;margin-left:6px}
+  .lgr:first-child{margin-left:0}
+  .sep{width:1px;align-self:stretch;background:#444;margin:0 2px}
+  .term .lignes{padding:3px 8px;min-height:180px}
+  .l{white-space:pre-wrap;padding:1px 0;border-bottom:1px solid #2a2a2a}
+  .t{color:#808080} .md{color:#29b8db} .c2{color:#c586c0} .s3{color:#f14c4c} .s7{color:#9d9d9d}
+  .tag{display:inline-block;min-width:74px;font:11px system-ui;color:#9cdcfe;background:#26323b;border-radius:3px;padding:0 5px;margin-right:6px;text-align:center}
+  .tag.autre{color:#9d9d9d;background:#2d2d30}
+  .tpuces{display:flex;flex-wrap:wrap;gap:6px;padding:5px 8px;background:#202020;border-bottom:1px solid #333;font:12.5px system-ui}
+  .tp{background:#2d2d30;border:1px solid #444;border-radius:12px;padding:2px 10px} .tp.on{background:#0e639c;border-color:#0e639c;color:#fff}
+  .tp .n{color:#9d9d9d;margin-left:4px} .tp.on .n{color:#cde}
+  .arbre{padding:6px 10px;font:12.5px Consolas,monospace}
+  .arbre .r{padding:1px 0} .arbre .i1{padding-left:16px} .arbre .i2{padding-left:32px} .arbre .i3{padding-left:48px}
+  .arbre .lieu{font:600 12.5px system-ui;color:#dcdcaa} .arbre .n{color:#9d9d9d}
+  .arbre .fl{color:#808080;display:inline-block;width:12px}
+  .note{font-size:12.5px;color:var(--doux);margin-top:10px;line-height:1.45}
+  .note b{color:var(--texte)}
+</style>
+</head>
+<body>
+<div class="bandeau-maquette" id="bandeau"></div>
+<main id="vue"></main>
+<script>
+"use strict";
+// Table des lieux de lieux.py ; identite de chaque carte lue dans son _persist.json (serveur.hostname, serveur.mqtt.topic)
+// le 2026-11-11. Sans persist (vr-porte, piscine) : IP de user_config_override.h, SUPPOSEE ici.
+var LIEUX = [["etage2", "2e étage"], ["rdc", "Rez-de-chaussée"], ["cave", "Cave"], ["garage", "Garage"], ["bureau", "Bureau"], ["exterieur", "Extérieur"]];
+var CARTES = [ // env, lieu, nom d'hote (syslog), topic MQTT
+  ["tasmota32s3-etage2-grenier", "etage2", "SERVEUR-GRENIER-2EME", "etage2/grenier"],
+  ["tasmota32-rdc-vr-porte", "rdc", "192.168.0.46", "rdc/vr-porte"],
+  ["tasmota32-cave-serveur-rly", "cave", "SERVEUR-RLY-CAVE", "cave/serveur-rly-cave-v2"],
+  ["tasmota32s3-cave-serveur-rly", "cave", "SERVEUR-RLY-CAVE", "cave/serveur-rly-cave-v2"],
+  ["tasmota32p4-garage-serveur-modbus", "garage", "SERVEUR-GARAGE", "garage"],
+  ["tasmota32s3-garage-serveur-modbus", "garage", "SERVEUR-GARAGE", "garage/niveau"],
+  ["tasmota32s3-garage-capteurs-cuve-modbus", "garage", "CAPTEURS-CUVE", "jardin/cuve"],
+  ["tasmota32s3-garage-rideau-garage-modbus", "garage", "RIDEAU-GARAGE", "garage/rideau"],
+  ["tasmota32-bureau-interrupteur-energie", "bureau", "DISJONCTEUR-DIFF-BUREAU", "bureau/pc"],
+  ["tasmota32s3-bureau-serveur-debits-pac", "bureau", "SERVEUR-DEBITS-PAC", "chauffage/pac/debits"],
+  ["tasmota32s3-bureau-ecran-debits-pac", "bureau", "ECRAN-DEBITS-PAC", "chauffage/pac/ecran"],
+  ["tasmota-pompe-piscine", "exterieur", "192.168.0.40", "piscine/pompe"]
+];
+var OUTILS = [
+  ["Bus et cartes", [["Pont série", "Ports COM des cartes, partagés en TCP", 0], ["Sniffeur ModBus", "Trames du bus RS485 en direct", 0],
+                     ["Sniffeur I2C", "Trafic d'un bus I2C", 0], ["Testeur UDP", "Maître et esclave, essais jugés", 0]]],
+  ["Réseau et journaux", [["Sniffeur MQTT", "Messages du broker, commandes", 1, "7100"], ["Serveur syslog", "Journaux des cartes", 1, "7200"]]],
+  ["Maintenance", [["Build et téléversement", "Compiler et envoyer plusieurs cartes", 1, "7700"], ["Fichiers Berry par env", "FS, exclus, solidifiés", 1, "7800"],
+                   ["Assistant persist", "Créer ou modifier une carte", 0, "7900"], ["Atelier des graphiques", "Pages de graphiques S3/P4", 0, "7950"],
+                   ["Fabrique d'extensions", "Extensions .tapp", 0, "7980"], ["Synchro du fork", "Rattraper l'amont", 0]]]
+];
+var TITRES = {
+  J: "Annuaire, modèle J : un lieu de travail choisi dans l'annuaire, porté par chaque « Ouvrir »",
+  K: "Annuaire, modèle K : une fiche par lieu, ses cartes et un lien direct vers chaque outil",
+  L: "Syslog, modèle L : la barre des modules rangée par lieu",
+  M: "Syslog, modèle M : puces de lieu (filtre) et étiquette de lieu sur chaque ligne",
+  N: "Sniffeur MQTT, modèle N : arborescence des topics rangée par lieu",
+  O: "Sniffeur MQTT, modèle O : puces de lieu (filtre) et étiquette de lieu sur chaque message"
+};
+var m = (location.search.match(/m=([J-O])/) || [0, "J"])[1];
+if (/t=clair/.test(location.search)) document.documentElement.dataset.theme = "clair";
+function libelle(l) { return (LIEUX.filter(function (x) { return x[0] === l; })[0] || [l, l])[1]; }
+function deLieu(l) { return CARTES.filter(function (c) { return c[1] === l; }); }
+function hotes(l) { var v = []; deLieu(l).forEach(function (c) { if (v.indexOf(c[2]) < 0) v.push(c[2]); }); return v; }
+
+function puces(choisi, compte, erreurs) {
+  return '<div class="puces"><span class="discret" style="margin-right:4px">Lieu de travail</span><span class="puce' + (choisi ? "" : " on") + '">Tous</span>' +
+    LIEUX.map(function (l) {
+      return '<span class="puce' + (l[0] === choisi ? " on" : "") + '">' + l[1] + '<b>' + compte(l[0]) + '</b>' +
+        (erreurs && erreurs[l[0]] ? '<span class="err">' + erreurs[l[0]] + ' err.</span>' : "") + '</span>';
+    }).join("") + '</div>';
+}
+function tuile(o, lieu) {
+  var url = o[3] ? "127.0.0.1:" + o[3] + "/" + (lieu && o[2] ? "?lieu=" + lieu : "") : "";
+  return '<div class="tuile"><h3><span class="pastille' + (o[2] ? " marche" : "") + '"></span>' + o[0] + '</h3><p>' + o[1] + '</p>' +
+    (o[2] ? '<div class="meta">:' + o[3] + ' · depuis 08:12</div><div><span class="btn p">Ouvrir ↗</span> <span class="btn">Arrêter</span></div>' +
+            (url ? '<div class="lieu-url">' + url + '</div>' : "")
+          : '<div class="meta">' + (o[3] ? ":" + o[3] : "") + '</div><div><span class="btn p">Lancer</span></div>') + '</div>';
+}
+function annuaire(lieu) {
+  return OUTILS.map(function (g) { return '<div class="groupe">' + g[0] + '</div><div class="tuiles">' + g[1].map(function (o) { return tuile(o, lieu); }).join("") + '</div>'; }).join("");
+}
+
+function modeleJ() {
+  var gauche = '<h1>Annuaire des outils</h1>' + puces("garage", function (l) { return deLieu(l).length; }) + annuaire("garage");
+  var droite = '<h2>À l\'arrivée sur une page ouverte depuis l\'annuaire</h2>' +
+    '<div class="arrivee">Lieu : <b>Garage</b> <span class="discret">(depuis l\'annuaire)</span><span class="x">Tous les lieux ✕</span></div>' +
+    '<div class="carte effets">' +
+    '<b>Build</b><span>Classement Lieu, groupe Garage seul ouvert ; rien n\'est coché ni décoché.</span>' +
+    '<b>Onglet Fichiers</b><span>Intertitre Garage en tête, 1re carte du garage choisie.</span>' +
+    '<b>Listes de carte</b><span>1re carte du garage présélectionnée (7800, 7900, 7950, 7980) ; les autres lieux restent dans la liste.</span>' +
+    '<b>Syslog</b><span>Seules les lignes des cartes du garage (SERVEUR-GARAGE, CAPTEURS-CUVE, RIDEAU-GARAGE).</span>' +
+    '<b>Sniffeur MQTT</b><span>Seuls les messages des topics du garage (garage, garage/niveau, jardin/cuve, garage/rideau).</span>' +
+    '<b>Liens entre pages</b><span>Le lien « fichiers » de la page Build et « Envoyer par la page Build » de l\'atelier gardent ?lieu=.</span>' +
+    '</div><p class="note">Le lieu choisi est retenu par l\'annuaire (navigateur) ; « Tous » rend les pages telles qu\'aujourd\'hui. ' +
+    'Une page ouverte à la main, sans <b>?lieu=</b>, ne change pas.</p>';
+  return '<div class="deux"><div>' + gauche + '</div><div style="padding-top:42px">' + droite + '</div></div>';
+}
+
+function modeleK() {
+  var liens = ["Build", "Fichiers Berry", "Logs", "MQTT", "Persist"];
+  var fiches = LIEUX.map(function (l) {
+    var cs = deLieu(l[0]), ouvert = l[0] === "garage" || l[0] === "bureau";
+    return '<div class="fiche' + (ouvert ? "" : " ferme") + '"><div class="t">' + (ouvert ? "▾ " : "▸ ") + l[1] + ' <span class="discret">' + cs.length + ' carte' + (cs.length > 1 ? "s" : "") + '</span></div>' +
+      cs.map(function (c) {
+        return '<div class="c"><span class="nom">' + c[0] + '</span><span class="liens">' + liens.map(function (x) {
+          var off = (x === "Persist" && c[2].indexOf("192.") === 0) || ((x === "Fichiers Berry" || x === "Persist") && c[0] === "tasmota-pompe-piscine");
+          return '<a class="' + (off ? "off" : "") + '">' + x + '</a>';
+        }).join("") + '</span></div>';
+      }).join("") + '</div>';
+  }).join("");
+  return '<h1>Annuaire des outils</h1><div class="deux"><div><div class="groupe" style="margin-top:0">Cartes par lieu</div>' + fiches + '</div>' +
+    '<div><div class="groupe" style="margin-top:0">Outils</div>' + annuaire("").replace(/<div class="tuiles">/g, '<div class="tuiles" style="grid-template-columns:1fr 1fr">') +
+    '<p class="note">Chaque lien ouvre l\'outil sur <b>cette carte</b> (?env=), démarré s\'il ne tourne pas. « Logs » et « MQTT » filtrent sur son nom d\'hôte et son topic. ' +
+    'Grisé : l\'outil n\'a rien pour cette carte (pas de persist, pas de dossier).</p></div></div>';
+}
+
+function ligneSys(h, t, sev, cat, txt, tag) {
+  var c = CARTES.filter(function (x) { return x[2] === h; })[0];
+  return '<div class="l">' + (tag ? '<span class="tag' + (c ? "" : " autre") + '">' + (c ? libelle(c[1]) : "Autres") + '</span>' : "") +
+    '<span class="t">' + t + ' </span><span class="md">' + h + ' </span><span class="c2">' + cat + ' </span><span class="' + sev + '">' + txt + '</span></div>';
+}
+var LIGNES = [
+  ["SERVEUR-GARAGE", "08:41:02", "s6", "BRY:", "MODBUS: Esclave 2 connecté !"],
+  ["CAPTEURS-CUVE", "08:41:03", "s6", "BRY:", "CUVE: Hauteur 112 cm, 4 380 L"],
+  ["SERVEUR-DEBITS-PAC", "08:41:03", "s7", "BRY:", "DEBITS: voie 3 : 6,2 L/min"],
+  ["RIDEAU-GARAGE", "08:41:04", "s3", "BRY:", "RIDEAU_ERREUR: fin de course haut absente"],
+  ["SERVEUR-RLY-CAVE", "08:41:05", "s6", "MQT:", "stat/cave/serveur-rly-cave-v2/POWER3 = ON"],
+  ["tasmota-4F2A1C", "08:41:06", "s6", "WIF:", "Connecté à MAISON-ETAGE"],
+  ["SERVEUR-GARAGE", "08:41:07", "s7", "BRY:", "MODBUS: trame 01 04 00 00 00 07"]
+];
+function syslog(barreMods, puces, tag, filtreLieu) {
+  var ls = LIGNES.filter(function (x) {
+    if (!filtreLieu) return true;
+    var c = CARTES.filter(function (y) { return y[2] === x[0]; })[0]; return c && c[1] === filtreLieu;
+  });
+  return '<div class="term"><div class="barre"><span>● connecté</span><select><option>' + (m === "L" ? "Tous les modules" : "Tous les modules") + '</option></select>' +
+    '<label><input type="checkbox" checked> erreurs</label><label><input type="checkbox" checked> info</label><label><input type="checkbox" checked> debug</label>' +
+    '<input placeholder="filtre (texte, module, categorie BRY:...)" style="flex:1;min-width:160px"><button>Pause</button><button>Effacer</button><span style="color:#9d9d9d">' + ls.length + ' lignes</span></div>' +
+    (puces || "") + barreMods + '<div class="lignes">' + ls.map(function (x) { return ligneSys(x[0], x[1], x[2], x[3], x[4], tag); }).join("") + '</div></div>';
+}
+function mod(h, n, e, on) { return '<span class="mod' + (on ? " on" : "") + '">' + h + ' <span class="n">' + n + '</span>' + (e ? ' <span class="e">' + e + '</span>' : "") + '</span>'; }
+
+function modeleL() {
+  var nb = {"SERVEUR-GARAGE": [412, 0], "CAPTEURS-CUVE": [198, 0], "RIDEAU-GARAGE": [57, 3], "SERVEUR-DEBITS-PAC": [233, 0], "ECRAN-DEBITS-PAC": [41, 0],
+            "DISJONCTEUR-DIFF-BUREAU": [88, 0], "SERVEUR-RLY-CAVE": [120, 1], "SERVEUR-GRENIER-2EME": [64, 0]};
+  var barre = '<div class="mods">' + LIEUX.map(function (l) {
+    var hs = hotes(l[0]).filter(function (h) { return nb[h]; });
+    return hs.length ? '<span class="lgr">' + l[1] + '</span>' + hs.map(function (h) { return mod(h, nb[h][0], nb[h][1]); }).join("") + '<span class="sep"></span>' : "";
+  }).join("") + '<span class="lgr">Autres</span>' + mod("tasmota-4F2A1C", 12, 0) + '</div>';
+  var sel = '<h3 style="margin-top:14px">Liste « module » de la barre : un groupe par lieu</h3><div class="term" style="width:320px"><div style="padding:6px 8px;font:13px system-ui;line-height:1.55">' +
+    'Tous les modules<br>' + LIEUX.map(function (l) { var hs = hotes(l[0]); return hs.length ? '<span style="color:#9d9d9d">' + l[1] + '</span><br>' + hs.map(function (h) { return '&nbsp;&nbsp;&nbsp;' + h + '<br>'; }).join("") : ""; }).join("") +
+    '<span style="color:#9d9d9d">Autres</span><br>&nbsp;&nbsp;&nbsp;tasmota-4F2A1C</div></div>';
+  return '<h1>Serveur syslog</h1>' + syslog(barre, "", false) + '<div class="deux" style="margin-top:6px"><div>' + sel + '</div><div><p class="note">' +
+    'Les modules vus restent des boutons cliquables (filtre sur un module), rangés sous l\'intertitre de leur lieu. Le lieu d\'un nom d\'hôte vient du persist de la carte ' +
+    '(<b>serveur.hostname</b>) ; un hôte inconnu du dépôt va dans <b>Autres</b>. Le fil des lignes ne change pas.</p></div></div>';
+}
+
+function modeleM() {
+  var cpt = {etage2: [64, 0], rdc: [0, 0], cave: [120, 1], garage: [667, 3], bureau: [362, 0], exterieur: [0, 0]};
+  var p = '<div class="tpuces"><span style="color:#9d9d9d">Lieu</span><span class="tp">Tous<span class="n">1 225</span></span>' + LIEUX.map(function (l) {
+    return '<span class="tp' + (l[0] === "garage" ? " on" : "") + '">' + l[1] + '<span class="n">' + cpt[l[0]][0] + '</span>' + (cpt[l[0]][1] ? ' <span style="color:#f14c4c">' + cpt[l[0]][1] + ' err.</span>' : "") + '</span>';
+  }).join("") + '<span class="tp">Autres<span class="n">12</span></span></div>';
+  var barre = '<div class="mods">' + mod("SERVEUR-GARAGE", 412, 0) + mod("CAPTEURS-CUVE", 198, 0) + mod("RIDEAU-GARAGE", 57, 3) + '</div>';
+  return '<h1>Serveur syslog</h1>' + syslog(barre, p, true, "garage") + '<p class="note">Une puce par lieu, avec le nombre de lignes et d\'erreurs reçues : ' +
+    'un clic ne garde que les cartes du lieu (la barre des modules se réduit à elles). Chaque ligne porte l\'étiquette de son lieu. ' +
+    'Avec <b>?lieu=garage</b> (venu de l\'annuaire), la page s\'ouvre sur la puce Garage. Ici, la puce Garage est choisie.</p>';
+}
+
+function mqtt(entete, corps) {
+  return '<div class="term"><div class="barre"><select><option>broker maison (192.168.0.10)</option></select><span>● connecté</span>' +
+    '<input placeholder="filtre d\'affichage (texte)" style="flex:1;min-width:160px"><select><option>topic + payload</option></select><button>Pause</button></div>' + entete + corps + '</div>';
+}
+function modeleN() {
+  var arbre = '<div class="arbre">' + LIEUX.map(function (l) {
+    var cs = deLieu(l[0]), topics = []; cs.forEach(function (c) { if (topics.indexOf(c[3]) < 0) topics.push(c[3]); });
+    var ouvert = l[0] === "garage";
+    return '<div class="r"><span class="fl">' + (ouvert ? "▾" : "▸") + '</span><span class="lieu">' + l[1] + '</span> <span class="n">' + topics.length + ' topic' + (topics.length > 1 ? "s" : "") + '</span></div>' +
+      (ouvert ? topics.map(function (t) {
+        return '<div class="r i1"><span class="fl">▾</span>' + t + ' <span class="n">(' + CARTES.filter(function (c) { return c[3] === t; })[0][0] + ')</span></div>' +
+          '<div class="r i2"><span class="fl"></span>tele/' + t + '/SENSOR <span class="n">· 214</span></div><div class="r i2"><span class="fl"></span>tele/' + t + '/STATE <span class="n">· 36</span></div>' +
+          '<div class="r i2"><span class="fl"></span>stat/' + t + '/RESULT <span class="n">· 9</span></div>';
+      }).join("") : "");
+  }).join("") + '<div class="r"><span class="fl">▸</span><span class="lieu">Autres</span> <span class="n">zigbee2mqtt, owntracks… 3 topics</span></div></div>';
+  var h = '<div class="tpuces"><span class="tp">Messages</span><span class="tp">Audit discovery</span><span class="tp">Connexions LWT</span><span class="tp">Logs par carte</span><span class="tp">Commande</span><span class="tp on">Arborescence</span></div>';
+  return '<h1>Sniffeur MQTT</h1>' + mqtt(h, arbre) + '<p class="note">Premier niveau de l\'arborescence = le lieu, puis le topic de chaque carte avec son env entre parenthèses ' +
+    '(la cuve publie en <b>jardin/cuve</b> mais se range au Garage, d\'après son persist). Clic sur un topic : filtre comme aujourd\'hui. ' +
+    'Les listes « module » des panneaux Logs et Commande sont groupées par lieu de la même façon (modèle H).</p>';
+}
+function modeleO() {
+  var msgs = [["garage", "08:42:10", "tele/garage/SENSOR", '{"Time":"2026-11-11T08:42:10","MODBUS":{"Esclaves":3}}'],
+              ["garage", "08:42:11", "tele/jardin/cuve/SENSOR", '{"CUVE":{"Hauteur":112,"Volume":4380}}'],
+              ["garage", "08:42:12", "stat/garage/rideau/RESULT", '{"Shutter1":{"Position":100}}'],
+              ["garage", "08:42:14", "tele/garage/niveau/STATE", '{"Uptime":"0T03:12:44","Heap":118}']];
+  var p = '<div class="tpuces"><span style="color:#9d9d9d">Lieu</span><span class="tp">Tous<span class="n">2 412</span></span>' + LIEUX.map(function (l) {
+    var n = {etage2: 210, rdc: 0, cave: 388, garage: 1104, bureau: 690, exterieur: 0}[l[0]];
+    return '<span class="tp' + (l[0] === "garage" ? " on" : "") + '">' + l[1] + '<span class="n">' + n + '</span></span>';
+  }).join("") + '<span class="tp">Autres<span class="n">20</span></span></div>';
+  var corps = '<div class="lignes">' + msgs.map(function (x) {
+    return '<div class="l"><span class="tag">' + libelle(x[0]) + '</span><span class="t">' + x[1] + ' </span><span class="md">' + x[2] + ' </span>' + x[3] + '</div>';
+  }).join("") + '</div>';
+  return '<h1>Sniffeur MQTT</h1>' + mqtt(p, corps) + '<p class="note">Une puce par lieu avec le nombre de messages reçus ; un clic ne garde que les topics des cartes du lieu ' +
+    '(s\'ajoute au filtre texte). Chaque message porte l\'étiquette de son lieu. Avec <b>?lieu=garage</b>, la page s\'ouvre sur la puce Garage. ' +
+    'Les abonnements au broker ne changent pas : le filtre ne joue que sur l\'affichage.</p>';
+}
+
+document.getElementById("bandeau").textContent = "Maquette " + m + " · " + TITRES[m] + " · rien n'est écrit ni envoyé";
+document.title = "Maquette " + m + " : lieu partagé";
+document.getElementById("vue").innerHTML = {J: modeleJ, K: modeleK, L: modeleL, M: modeleM, N: modeleN, O: modeleO}[m]();
+</script>
+</body>
+</html>
