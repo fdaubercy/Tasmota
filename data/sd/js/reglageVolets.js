@@ -73,8 +73,8 @@
 			.then(function () {
 				clearTimeout(t);
 				if (mien !== n) return;
+				minuterie = setTimeout(lire, joint && E.actif ? 500 : 3000);     // avant rendu : une erreur d'affichage n'arrete pas la lecture
 				rendu();
-				minuterie = setTimeout(lire, joint && E.actif ? 500 : 3000);
 			}).catch(function () {});
 	}
 

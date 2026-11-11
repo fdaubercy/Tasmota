@@ -77,6 +77,7 @@ class CarteReglage(BaseHTTPRequestHandler):
     posts = []           # (action, id) recus
     lectures = 0         # GET ?f=etat recus
     code_post = 200
+    refus = None         # message d'un ordre refuse par la carte (200, ok faux, etat inchange)
     panne = None         # None, "coupe" (connexion fermee sans reponse) ou "lente" (6 s sans reponse)
 
     def log_message(self, format, *args):
@@ -121,6 +122,8 @@ class CarteReglage(BaseHTTPRequestHandler):
         CarteReglage.posts.append((champs.get("action", [""])[0], champs.get("id", [""])[0]))
         if self._panne():
             return
+        if CarteReglage.refus:
+            return self._envoie(200, "application/json", json.dumps({"ok": False, "message": CarteReglage.refus, "etat": CarteReglage.etat}))
         if CarteReglage.file:
             CarteReglage.etat = CarteReglage.file.pop(0)
         if CarteReglage.code_post == 500:
@@ -137,7 +140,7 @@ LIT = """(() => { const t = id => { const e = document.getElementById(id); retur
     aide: [...document.querySelectorAll('#rv [data-rv]')].filter(e => e.offsetParent !== null).map(e => e.getAttribute('data-rv')),
     aideTexte: [...document.querySelectorAll('#rv [data-rv]')].filter(e => e.offsetParent !== null).map(e => e.textContent).join(' '),
     debut: vu('#rv_debut'), suivant: vu('#rv_suivant') ? document.getElementById('rv_suivant').textContent.trim() : null,
-    annuler: vu('#rv_annuler'), volet: (document.getElementById('rv_volet') || {}).value,
+    annuler: vu('#rv_annuler'), libre: !(document.getElementById('rv_debut') || {}).disabled, volet: (document.getElementById('rv_volet') || {}).value,
     choixBloque: !!(document.getElementById('rv_volet') || {}).disabled}; })()"""
 
 
@@ -168,6 +171,7 @@ def attend_post(n, delai=4.0):
 
 def ouvre(m, facade, e, largeur=360):
     CarteReglage.facade, CarteReglage.etat, CarteReglage.file, CarteReglage.code_post, CarteReglage.panne = FACADES[facade], e, [], 200, None
+    CarteReglage.refus = None
     m.cdp.appel("Emulation.setDeviceMetricsOverride", width=largeur, height=900, deviceScaleFactor=1, mobile=True)
     m.cdp.appel("Page.navigate", url="about:blank")
     time.sleep(0.2)
@@ -285,8 +289,15 @@ def sonde_lente_et_500(m):
     CarteReglage.panne = None
     attend_page(m, lambda p: not p.get("injoignable"), 10)
 
-    # 500 apres « debut » alors que l'ordre a ete pris : la page montre l'etat relu (pret)
+    # Ordre refuse par la carte (volet qui roule) : la raison est affichee, rien ne change
     ouvre(m, "rdc", REPOS)
+    CarteReglage.refus = "Le volet roule : attendez qu'il soit arrêté en bas."
+    clic(m, "rv_debut")
+    p = attend_page(m, lambda p: p.get("note") and p.get("libre"))     # boutons rendus a la fin de l'envoi
+    verifie([CarteReglage.refus in p.get("note", ""), p.get("debut"), p.get("suivant")], [True, True, None], "debut refusé : raison de la carte affichée")
+    CarteReglage.refus = None
+
+    # 500 apres « debut » alors que l'ordre a ete pris : la page montre l'etat relu (pret)
     CarteReglage.posts.clear()
     CarteReglage.code_post = 500
     CarteReglage.file = [etat("pret")]

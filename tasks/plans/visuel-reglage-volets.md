@@ -220,7 +220,7 @@ l'envoi du FS ; durées du MPU6050 à côté quand `mpu` les porte ; cause d'un 
   aucun résultat affiché) ; mode sombre lisible ; Chrome arrêté à la fin — preuve : `test_reglage_volets_chrome.py` (405 lignes, `Montage` d'A5
   repris avec un gestionnaire et un profil `sonde_reglage_volets_*`), ROUGE sans les fichiers : 59 échecs ; aussi cadence 500 ms / 3 s, carte lente,
   500 après `debut` -> `pret`, aucun bouton, `bloque`/`arret`/`delai`/`refus`, nom à balise en texte, 320 px
-- [x] Écrire les trois fichiers ; sonde verte ; témoin : page sans l'avertissement « Sinon, Annuler » -> rouge — preuve : sonde VERT (75 OK), code 0 ;
+- [x] Écrire les trois fichiers ; sonde verte ; témoin : page sans l'avertissement « Sinon, Annuler » -> rouge — preuve : sonde VERT (76 OK, dont l'ordre refusé ; lecture replanifiée avant l'affichage), code 0 ;
   témoin (`reglageVolets.js` sans « Sinon, Annuler ») : ROUGE 6 échecs, tous « question du sens » ; `test_volets_chrome.py` VERT ; `banc_reglage_volets`,
   `banc_boot`, `banc_demarrage` verts après l'ajout des 3 fichiers à `volets_pages` ; 0 Chrome `sonde_*` restant
 - [ ] Commit `feat(volets): page de reglage des durees`
