@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Maquettes écran débits 7B</title>
+<!-- Maquettes de la page principale de la carte d'affichage des débits (Waveshare ESP32-S3-Touch-LCD-7B, 1024 x 600).
+     ?m=A, B, C ou D : une seule maquette, à la taille de l'écran (rendu PNG par Chrome sans tête). Sans paramètre : les quatre.
+     Chaque élément a son équivalent HASPmota (label, bar, arc, btn, line) et LVGL (lv.label, lv.bar, lv.arc, lv.chart). -->
+<style>
+  :root { --fond:#10161E; --carte:#17202B; --piste:#1F2B38; --texte:#E8EDF2; --gris:#9FB3C8; --bleu:#3FA7FF;
+          --orange:#FFA53F; --rouge:#FF5A5A; --vert:#3FD08A; --sombre:#5B6B7C; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:#0A0E13; font-family:"Segoe UI", Roboto, Arial, sans-serif; color:var(--texte); }
+  .ecran { width:1024px; height:600px; background:var(--fond); position:relative; overflow:hidden; margin:0 auto 24px; }
+  .entete { position:absolute; left:0; right:0; top:0; height:64px; display:flex; align-items:center; padding:0 24px; gap:18px; }
+  .titre { font-size:28px; font-weight:600; }
+  .total { margin-left:auto; font-size:30px; color:var(--bleu); font-weight:600; }
+  .liaison { font-size:16px; color:var(--gris); display:flex; align-items:center; gap:8px; }
+  .pastille { width:12px; height:12px; border-radius:6px; background:var(--vert); display:inline-block; }
+  .pied { position:absolute; left:0; right:0; bottom:0; height:56px; display:flex; gap:12px; padding:0 24px 12px; align-items:flex-end; }
+  .btn { height:44px; padding:0 22px; border-radius:22px; background:var(--piste); color:var(--texte); font-size:18px;
+         display:flex; align-items:center; }
+  .btn.actif { background:var(--bleu); color:#06121F; font-weight:600; }
+  .imprecis { color:var(--orange) !important; }
+  .muet { color:var(--rouge) !important; }
+  .inconnu { color:var(--sombre) !important; }
+  .legende { position:absolute; right:24px; bottom:22px; font-size:14px; color:var(--gris); }
+  .legende b { font-weight:400; }
+
+  /* A : six lignes à barre */
+  .A .ligne { position:absolute; left:24px; right:24px; height:64px; display:flex; align-items:center; gap:18px; }
+  .A .nom { width:170px; font-size:24px; }
+  .A .barre { flex:1; height:26px; border-radius:13px; background:var(--piste); overflow:hidden; }
+  .A .barre i { display:block; height:100%; border-radius:13px; background:var(--bleu); }
+  .A .val { width:150px; text-align:right; font-size:36px; font-weight:600; }
+  .A .unite { font-size:18px; color:var(--gris); font-weight:400; }
+  .A .part { width:70px; text-align:right; font-size:18px; color:var(--gris); }
+
+  /* B : six tuiles */
+  .B .tuile { position:absolute; width:312px; height:226px; border-radius:18px; background:var(--carte); padding:18px 20px; }
+  .B .tuile .nom { font-size:22px; color:var(--gris); }
+  .B .tuile .val { font-size:72px; font-weight:600; margin-top:14px; line-height:1; }
+  .B .tuile .unite { font-size:22px; color:var(--gris); font-weight:400; }
+  .B .tuile .barre { position:absolute; left:20px; right:20px; bottom:42px; height:14px; border-radius:7px; background:var(--piste); overflow:hidden; }
+  .B .tuile .barre i { display:block; height:100%; background:var(--bleu); border-radius:7px; }
+  .B .tuile .etat { position:absolute; left:20px; bottom:12px; font-size:16px; color:var(--gris); }
+  .B .tuile.t-imprecis { box-shadow: inset 0 0 0 3px var(--orange); }
+  .B .tuile.t-muet { box-shadow: inset 0 0 0 3px var(--rouge); }
+
+  /* C : six arcs */
+  .C .jauge { position:absolute; width:320px; height:250px; text-align:center; }
+  .C svg { width:220px; height:180px; display:block; margin:0 auto; }
+  .C .val { position:absolute; left:0; right:0; top:78px; font-size:44px; font-weight:600; }
+  .C .unite { position:absolute; left:0; right:0; top:130px; font-size:18px; color:var(--gris); }
+  .C .nom { font-size:22px; margin-top:-14px; }
+
+  /* D : lignes compactes + courbe */
+  .D .ligne { position:absolute; left:24px; width:400px; height:66px; display:flex; align-items:center; gap:12px; }
+  .D .puce { width:14px; height:14px; border-radius:7px; }
+  .D .nom { width:150px; font-size:22px; }
+  .D .val { flex:1; text-align:right; font-size:34px; font-weight:600; }
+  .D .unite { font-size:16px; color:var(--gris); font-weight:400; }
+  .D .graphe { position:absolute; left:448px; top:76px; width:552px; height:440px; border-radius:16px; background:var(--carte); }
+</style>
+</head>
+<body>
+
+<!-- ======================= A : six lignes à barre ======================= -->
+<div class="ecran A" data-m="A">
+  <div class="entete"><span class="titre">Débits nourrice</span><span class="liaison"><span class="pastille"></span>relevé il y a 4 s</span>
+    <span class="total">Total 17,9 L/min</span></div>
+  <div class="ligne" style="top:76px"><span class="nom">Débit 1</span><span class="barre"><i style="width:42%"></i></span><span class="val">4,20 <span class="unite">L/min</span></span><span class="part">23 %</span></div>
+  <div class="ligne" style="top:146px"><span class="nom">Débit 2</span><span class="barre"><i style="width:38%"></i></span><span class="val">3,80 <span class="unite">L/min</span></span><span class="part">21 %</span></div>
+  <div class="ligne" style="top:216px"><span class="nom">Débit 3</span><span class="barre"><i style="width:6%;background:var(--orange)"></i></span><span class="val imprecis">0,60 <span class="unite">L/min</span></span><span class="part">3 %</span></div>
+  <div class="ligne" style="top:286px"><span class="nom">Débit 4</span><span class="barre"><i style="width:51%"></i></span><span class="val">5,10 <span class="unite">L/min</span></span><span class="part">28 %</span></div>
+  <div class="ligne" style="top:356px"><span class="nom muet">Débit 5</span><span class="barre"><i style="width:0"></i></span><span class="val muet">muet</span><span class="part"></span></div>
+  <div class="ligne" style="top:426px"><span class="nom">Débit 6</span><span class="barre"><i style="width:42%"></i></span><span class="val">4,20 <span class="unite">L/min</span></span><span class="part">23 %</span></div>
+  <div class="pied"><span class="btn actif">Débits</span><span class="btn">Courbes</span><span class="btn">Réglages</span></div>
+  <div class="legende">A · six lignes à barre</div>
+</div>
+
+<!-- ======================= B : six tuiles ======================= -->
+<div class="ecran B" data-m="B">
+  <div class="entete"><span class="titre">Débits nourrice</span><span class="liaison"><span class="pastille"></span>relevé il y a 4 s</span>
+    <span class="total">Total 17,9 L/min</span></div>
+  <div class="tuile" style="left:24px;top:68px"><div class="nom">Débit 1</div><div class="val">4,20 <span class="unite">L/min</span></div><div class="barre"><i style="width:42%"></i></div><div class="etat">23 % du total</div></div>
+  <div class="tuile" style="left:356px;top:68px"><div class="nom">Débit 2</div><div class="val">3,80 <span class="unite">L/min</span></div><div class="barre"><i style="width:38%"></i></div><div class="etat">21 % du total</div></div>
+  <div class="tuile t-imprecis" style="left:688px;top:68px"><div class="nom">Débit 3</div><div class="val imprecis">0,60 <span class="unite">L/min</span></div><div class="barre"><i style="width:6%;background:var(--orange)"></i></div><div class="etat imprecis">imprécis (&lt; 1 L/min)</div></div>
+  <div class="tuile" style="left:24px;top:306px"><div class="nom">Débit 4</div><div class="val">5,10 <span class="unite">L/min</span></div><div class="barre"><i style="width:51%"></i></div><div class="etat">28 % du total</div></div>
+  <div class="tuile t-muet" style="left:356px;top:306px"><div class="nom">Débit 5</div><div class="val muet">muet</div><div class="barre"><i style="width:0"></i></div><div class="etat muet">0 L/min depuis 12 min</div></div>
+  <div class="tuile" style="left:688px;top:306px"><div class="nom">Débit 6</div><div class="val inconnu">-,--</div><div class="barre"><i style="width:0"></i></div><div class="etat inconnu">inconnu (pas de relevé)</div></div>
+  <div class="legende" style="bottom:4px">B · six tuiles (appui long sur une tuile : courbe de la voie)</div>
+</div>
+
+<!-- ======================= C : six arcs ======================= -->
+<div class="ecran C" data-m="C">
+  <div class="entete"><span class="titre">Débits nourrice</span><span class="liaison"><span class="pastille"></span>relevé il y a 4 s</span>
+    <span class="total">Total 17,9 L/min</span></div>
+  <div id="arcs"></div>
+  <div class="pied"><span class="btn actif">Débits</span><span class="btn">Courbes</span><span class="btn">Réglages</span></div>
+  <div class="legende">C · six arcs (0 à 10 L/min)</div>
+</div>
+
+<!-- ======================= D : lignes + courbe ======================= -->
+<div class="ecran D" data-m="D">
+  <div class="entete"><span class="titre">Débits nourrice</span><span class="liaison"><span class="pastille"></span>relevé il y a 4 s</span>
+    <span class="total">Total 17,9 L/min</span></div>
+  <div id="lignesD"></div>
+  <div class="graphe"><svg id="courbe" width="552" height="440"></svg></div>
+  <div class="pied"><span class="btn actif">Débits</span><span class="btn">Réglages</span></div>
+  <div class="legende">D · valeurs + courbe des 30 dernières minutes (LVGL : lv.chart)</div>
+</div>
+
+<script>
+// Données communes : 6 voies, état normal / imprécis / muet / inconnu
+var V = [[4.2, ""], [3.8, ""], [0.6, "imprecis"], [5.1, ""], [0, "muet"], [4.2, ""]];
+var COUL = ["#3FA7FF", "#3FD08A", "#FFA53F", "#C084FC", "#FF5A5A", "#F5D04A"];
+function fr(x) { return x.toFixed(2).replace(".", ","); }
+
+// C : arcs SVG de 270 degrés
+var arcs = document.getElementById("arcs"), h = "";
+function arc(cx, cy, r, a0, a1) {
+  var p = function (a) { var t = (a - 90) * Math.PI / 180; return [cx + r * Math.cos(t), cy + r * Math.sin(t)]; };
+  var s = p(a0), e = p(a1), grand = (a1 - a0) > 180 ? 1 : 0;
+  return "M" + s[0] + " " + s[1] + " A" + r + " " + r + " 0 " + grand + " 1 " + e[0] + " " + e[1];
+}
+V.forEach(function (v, i) {
+  var x = 24 + (i % 3) * 328, y = 66 + Math.floor(i / 3) * 236, f = Math.min(v[0] / 10, 1);
+  var c = v[1] == "imprecis" ? "#FFA53F" : (v[1] == "muet" ? "#FF5A5A" : "#3FA7FF");
+  h += '<div class="jauge" style="left:' + x + 'px;top:' + y + 'px"><svg viewBox="0 0 220 180">'
+     + '<path d="' + arc(110, 100, 80, -135, 135) + '" stroke="#1F2B38" stroke-width="18" fill="none" stroke-linecap="round"/>'
+     + (f > 0 ? '<path d="' + arc(110, 100, 80, -135, -135 + 270 * f) + '" stroke="' + c + '" stroke-width="18" fill="none" stroke-linecap="round"/>' : "")
+     + '</svg><div class="val ' + v[1] + '">' + (v[1] == "muet" ? "muet" : fr(v[0])) + '</div><div class="unite">L/min</div>'
+     + '<div class="nom ' + v[1] + '">Débit ' + (i + 1) + '</div></div>';
+});
+arcs.innerHTML = h;
+
+// D : lignes compactes + courbe des 30 dernières minutes
+var l = "";
+V.forEach(function (v, i) {
+  l += '<div class="ligne" style="top:' + (76 + i * 72) + 'px"><span class="puce" style="background:' + COUL[i] + '"></span>'
+     + '<span class="nom ' + v[1] + '">Débit ' + (i + 1) + '</span><span class="val ' + v[1] + '">'
+     + (v[1] == "muet" ? "muet" : fr(v[0]) + ' <span class="unite">L/min</span>') + '</span></div>';
+});
+document.getElementById("lignesD").innerHTML = l;
+var svg = document.getElementById("courbe"), s = "";
+for (var g = 0; g <= 5; g++) {
+  var gy = 30 + g * 70;
+  s += '<line x1="48" y1="' + gy + '" x2="536" y2="' + gy + '" stroke="#1F2B38"/>'
+     + '<text x="40" y="' + (gy + 5) + '" fill="#9FB3C8" font-size="13" text-anchor="end">' + (10 - g * 2) + '</text>';
+}
+["-30 min", "-20", "-10", "maint."].forEach(function (t, k) {
+  s += '<text x="' + (48 + k * 162) + '" y="410" fill="#9FB3C8" font-size="13" text-anchor="' + (k == 0 ? "start" : (k == 3 ? "end" : "middle")) + '">' + t + '</text>';
+});
+V.forEach(function (v, i) {
+  var pts = [];
+  for (var k = 0; k <= 60; k++) {
+    var val = v[1] == "muet" ? Math.max(0, 2.5 - k * 0.12) : v[0] + 0.35 * Math.sin(k / 6 + i);
+    pts.push((48 + k * 8.13).toFixed(1) + "," + (380 - Math.max(0, val) * 35).toFixed(1));
+  }
+  s += '<polyline points="' + pts.join(" ") + '" fill="none" stroke="' + COUL[i] + '" stroke-width="2.5"/>';
+});
+svg.innerHTML = s;
+
+// ?m=X : une seule maquette, collée en haut à gauche (capture 1024 x 600)
+var m = new URLSearchParams(location.search).get("m");
+if (m) {
+  document.querySelectorAll(".ecran").forEach(function (e) { if (e.dataset.m != m) e.remove(); else e.style.margin = "0"; });
+  document.body.style.background = "#10161E";
+}
+</script>
+</body>
+</html>
