@@ -106,8 +106,9 @@ Fiche : `outils_docs/Schémas de branchement - Attribution des PINS des modules/
 - [ ] Interface HASPmota : `pages.jsonl` redessiné en 1024 × 600 selon la maquette retenue, `ecranDebitsFonctions` adapté ; banc VERT
 - [ ] Interface LVGL pur en Berry (même maquette, objets LVGL, courbe possible par `lv.chart`) ; banc VERT
 - [ ] Choix à la compilation entre les deux interfaces (mécanisme retenu par l'utilisateur), un seul jeu de fichiers envoyé sur le FS ; `banc_demarrage` des deux variantes
-- [ ] Classeurs de brochage : celui de l'acquisition mis à jour (écran retiré, broches libérées, RS485 17/18), celui de l'affichage créé pour le 7B (GPIO utilisés, libres, EXIO)
+- [x] Classeurs de brochage : celui de l'acquisition mis à jour (écran retiré, broches libérées, RS485 17/18), celui de l'affichage créé pour le 7B (GPIO utilisés, libres, EXIO) — preuve : acquisition `outils_docs/Schémas de branchement - Attribution des PINS des modules/bureau/tasmota32s3-serveur-debits-pac/Brochage GPIO - …xlsx` mis à jour par Excel (10 cellules : GPIO9-14 et 21 de l'ancien écran ILI9488/XPT2046 passés à « libre », GPIO17/18 « libre » -> ModBus RS485 Rx/Tx, reste inchangé, sauvegarde avant dans le scratchpad) ; affichage `…/bureau/tasmota32s3-ecran-debits-pac/Brochage GPIO - tasmota32s3-ecran-debits-pac.xlsx` créé par `outils_pc/genere_brochage_7b.py` (tableau de 35 GPIO + tableau EXIO0-7, pas d'image : le zip constructeur n'a que le plan de cotes) ; `test_genere_brochage.py` VERT (4 contrôles 7B ajoutés)
 - [ ] Essai sur la carte (avec A6) : image, couleurs, tactile, rétroéclairage, stabilité avec le Wi-Fi, relevé RS485
+- [ ] Vérifier sur la carte, avec l'utilisateur : le sens du PWM de luminosité (registre 0x05 de l'expandeur, clé persist de l'inversion à corriger au besoin), l'adresse 0x5D du tactile GT911, les couleurs de la dalle
 
 ## Améliorations restantes
 - [ ] [projet] Rétroéclairage gradué automatiquement par une mesure de lumière (ADC de l'expandeur ou GPIO6)

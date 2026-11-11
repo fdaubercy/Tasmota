@@ -45,6 +45,13 @@ verifie("masse", texte_broche("GND", u, S3), ("Masse", "gnd", False))
 PERSIST["modules"]["m"]["env"]["c1"]["activation"] = "ON"
 verifie("temoin : compteur ON -> conflit sur GPIO4", len(usages_persist(PERSIST, NOMS, S3)[4]), 2)
 
+# classeur du 7B : une ligne par GPIO sans doublon, GPIO6 seule libre, dalle RGB, EXIO5 a 0 (USB)
+from genere_brochage_7b import GPIO as G7, EXIO as E7
+verifie("7B : GPIO uniques", len({g[0] for g in G7}), len(G7))
+verifie("7B : GPIO6 seule libre", [g[0] for g in G7 if g[3] == "libre"], [6])
+verifie("7B : 20 broches de dalle RGB", sum(1 for g in G7 if g[3] == "ecran"), 20)
+verifie("7B : 8 EXIO, EXIO5 a 0", ([e[0] for e in E7], [e[2] for e in E7 if e[0] == 5]), (list(range(8)), [0]))
+
 for e in erreurs:
     print("ROUGE", e)
 print("VERT" if not erreurs else f"{len(erreurs)} echec(s)")
