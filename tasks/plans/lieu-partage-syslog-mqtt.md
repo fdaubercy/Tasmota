@@ -162,17 +162,17 @@ Fichiers : `syslog_tasmota.py` (route `GET /lieux`), `syslog_tasmota_web.py` (pu
 
 Interfaces consommées : `pour_page_identites(RACINE)`, `lieuDeHote`, `lieuDemande`, `bandeauLieu`.
 
-- [ ] Banc d'accès : `GET /lieux` répond 200 en JSON depuis ce PC, avec la même protection que `/modules` depuis un
-  autre appareil (rouge d'abord).
-- [ ] Sonde neuve, rouge d'abord : vrai `syslog_tasmota.py` sur un port UDP et un port HTTP libres (`--port`, `--http`,
+- [x] Banc d'accès : `GET /lieux` répond 200 en JSON depuis ce PC, avec la même protection que `/modules` depuis un
+  autre appareil (rouge d'abord). — preuve : test_syslog_acces.py rouge (404 sur /lieux) puis VERT deux fois, 403 sans jeton depuis le réseau.
+- [x] Sonde neuve, rouge d'abord : vrai `syslog_tasmota.py` sur un port UDP et un port HTTP libres (`--port`, `--http`,
   `--local`), datagrammes RFC5424 envoyés par la sonde à 127.0.0.1 : `CAPTEURS-CUVE` (info), `RIDEAU-GARAGE` (sévérité 3),
   `SERVEUR-GRENIER-2EME`, `tasmota-4F2A1C`. Puces : Garage 2 lignes et 1 erreur, 2e étage 1, Autres 1 ; étiquettes
   « Garage », « Autres » en tête des lignes ; clic Garage → 2 lignes, barre des modules réduite au garage ; filtre texte
   combiné ; `?lieu=garage` → puce Garage active dès l'ouverture, bandeau ; ouverture sans paramètre après celle-ci →
   Tous (vigilance 5) ; hôte `<b>x</b>` → aucune balise créée. Hôte inconnu reconnu par l'IP : la sonde ne pouvant pas
-  émettre depuis `192.168.0.46`, ce cas reste au banc Node de A1.
-- [ ] Écrire ; banc d'accès et sonde verts.
-- [ ] Commit `feat(syslog): lignes rangees et filtrees par lieu`.
+  émettre depuis `192.168.0.46`, ce cas reste au banc Node de A1. — preuve : test_syslog_page_chrome.py VERT deux fois ; témoin sans /lieux et témoin sans le filtre de lieu échouent.
+- [x] Écrire ; banc d'accès et sonde verts. — preuve : banc d'accès et sonde verts (deux passages chacun).
+- [x] Commit `feat(syslog): lignes rangees et filtrees par lieu`. — preuve : commit de A5.
 
 ## A6 — Sniffeur MQTT : modèles N et O
 

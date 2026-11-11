@@ -221,6 +221,9 @@ def fabrique_gestionnaire(serveur, acces):
                 with serveur.verrou:
                     corps = json.dumps(list(serveur.modules.values()))
                 self._envoie(200, corps.encode("utf-8"), "application/json")
+            elif chemin == "/lieux":                # table des lieux + identites des cartes du depot (lecture seule)
+                import lieux
+                self._envoie(200, json.dumps(lieux.pour_page_identites(RACINE)).encode("utf-8"), "application/json")
             elif chemin == "/flux":
                 self.send_response(200)
                 self.send_header("Content-Type", "text/event-stream")

@@ -135,7 +135,7 @@ def cas_acces(outil, ip):
                     (ip, port)))
     nom = f"jeton_{port}"
     # -- autre appareil : refus
-    for chemin in ("/", "/etat", "/modules"):
+    for chemin in ("/", "/etat", "/modules", "/lieux"):
         res.append((f"reseau : GET {chemin} sans jeton refuse", requete(ip, port, chemin)[0], 403))
     res.append(("reseau : flux SSE sans jeton refuse", lit_flux(ip, port, {}, "x", 3)[0], 403))
     res.append(("reseau : mauvais jeton refuse", requete(ip, port, "/?jeton=faux")[0], 403))
@@ -152,6 +152,9 @@ def cas_acces(outil, ip):
     res.append(("reseau : page avec le cookie", (statut, b"Syslog Tasmota" in corps), (200, True)))
     statut, _, corps = requete(ip, port, "/etat", avec)
     res.append(("reseau : /etat avec le cookie", (statut, f'"127.0.0.1:{outil.udp}"'.encode() in corps), (200, True)))
+    statut, _, corps = requete(ip, port, "/lieux", avec)
+    res.append(("reseau : /lieux avec le cookie (JSON : lieux et cartes)",
+                (statut, b'"lieux"' in corps and b'"cartes"' in corps), (200, True)))
     res.append(("reseau : POST -> 501 (le syslog n'a aucune route POST)",
                 requete(ip, port, "/", dict(avec, Origin=f"http://{ip}:{port}"), "POST")[0], 501))
     # -- message syslog -> flux SSE (reseau, avec cookie) et /modules (ce PC), journal
@@ -170,6 +173,9 @@ def cas_acces(outil, ip):
     except OSError:
         journal = ""
     res.append(("journal temporaire : message ecrit", marque in journal, True))
+    statut, entetes, corps = requete("127.0.0.1", port, "/lieux")
+    res.append(("ce PC : /lieux sans jeton, JSON", (statut, entetes.get("Content-Type"), b'"garage"' in corps),
+                (200, "application/json", True)))
     # -- ce PC : inchange
     statut, _, corps = requete("127.0.0.1", port, "/")
     res.append(("ce PC : page sans jeton", (statut, b"Syslog Tasmota" in corps), (200, True)))
