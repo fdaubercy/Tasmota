@@ -3235,7 +3235,9 @@ def modbusFonctions_pousseEtat(StartAddress, typeValeur, valeurs)
     modbusFonctions.etat()["seqPush"] = seq
 
     import udpFonctions
-    modbusFonctions.log(string.format("POUSSE_ETAT: registre %i = %s -> maitre (UDP, seq %i) : %s", StartAddress, str(valeurs), seq, trame.tohex()), LOG_LEVEL_DEBUG)
+    if logFonctions.actif(LOG_LEVEL_DEBUG, "modbus")      # tohex a chaque mesure : construit seulement si lu
+        modbusFonctions.log(string.format("POUSSE_ETAT: registre %i = %s -> maitre (UDP, seq %i) : %s", StartAddress, str(valeurs), seq, trame.tohex()), LOG_LEVEL_DEBUG)
+    end
     udpFonctions.envoiUDP("MultiCast", "", string.format("ModbusPushUDP %i %s", seq, trame.tohex()))
     return trame
 end

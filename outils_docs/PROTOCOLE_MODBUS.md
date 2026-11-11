@@ -1076,3 +1076,64 @@ coute un ruban mal colore, pas une porte de garage.
 - Voie de **secours** (UDP puis serie pour un meme esclave) : exigerait un dedoublonnage par
   `tid` cote esclave. Non retenu.
 - Sniffeur ModBus PC : ne voit plus que la carte 16 relais une fois les esclaves en UDP.
+
+### Lecture groupée et push multi-valeurs (2026-11-09)
+
+Premier usage : les débits de la nourrice de chauffage, sur deux cartes (conception
+`docs/superpowers/specs/2026-11-09-debits-deux-cartes-design.md`, plan `tasks/plans/debits-deux-cartes.md`).
+L'acquisition (`tasmota32s3-bureau-serveur-debits-pac`, esclave id 1) sert 7 valeurs uint32 aux registres 4704 à
+4710 : débits des voies 1 à 6 en centièmes de L/min, puis un mot d'états. L'affichage
+(`tasmota32s3-bureau-ecran-debits-pac`, maître id 0) les relit en UNE requête 0x04 et reçoit leur push en UDP.
+
+**Activation par le persist, garage inchangé.** Sans les clés ci-dessous, une carte envoie et sert les mêmes trames
+qu'avant, octet pour octet (témoins de `banc_test_modbus.be`). Aucun persist du garage ne les porte.
+
+| Carte | Clé | Effet |
+|---|---|---|
+| Esclave | `drivers.ModBus.lectureGroupee` `"ON"` (`ReglageModbus LectureGroupee ON`, esclave seulement) | sert en entier une requête 0x04 de plusieurs valeurs |
+| Maître | `drivers.ModBus.environnement.TasmotaSlaveModBus.<nom>.lectureGroupee` `"ON"` (persist seulement) | relit les analogiques de cet esclave en une requête et répartit réponse et push |
+| Maître | `drivers.ModBus.periodeReleve`, en s (`ReglageModbus PeriodeReleve <s>`, maître seulement) | période du relevé des esclaves, défaut 30, bornée 5 à 300, prise en compte au redémarrage ; l'affichage la pose à 10 |
+| Acquisition | `modules.debits.modbus` `"ON"` | écrit les 7 registres et pousse à chaque fin de fenêtre |
+
+**Requête.** `modBus_TasmotaSlaveModBus.be::demandeGroupee` : une requête 0x04 uint32, `StartAddress` = 4704 +
+plus petit `idModBus` − 1, une valeur par analogique du maître (14 registres pour 7 valeurs). Si les `idModBus` ne
+sont pas consécutifs, en double, ou plus de 20 : repli sur une requête par appareil.
+
+**Réponse de l'esclave.** `modbusFonctions.be::sertGroupe` : la valeur i est celle de l'analogique ou du compteur
+actif de registre `StartAddress + i` (type + id − 1), ou la sentinelle `0x7FFFFFFF` (`SENTINELLE_UINT32`) si sa
+mesure n'est pas fraîche. Fraîcheur propre à un registre : `modbusFonctions.be::declareMesure` (limite en ms) et
+`modbusFonctions.be::noteMesure` (à chaque mesure) ; l'acquisition déclare 2 × fenêtre pour ses 7 registres, exclus du
+délai de grâce du démarrage. **Refus silencieux** : `Count` impair, plus de 40 registres ou registre sans appareil
+dans la plage → code d'erreur journalisé, aucune réponse (le maître constate un délai dépassé). Jamais de zéros.
+
+**Défaut de l'ancien chemin, laissé en place.** Sans la clé, `modbusFonctions.be::executeCmdModbus` accepte une
+requête de plusieurs valeurs mais n'en remplit qu'une, et `modbusFonctions.be::prepareTrame` complète par des zéros
+(`[v, 0, 0, …]`). Le garage n'envoie jamais `Count` > 1 : la correction pour toutes les cartes reste une amélioration
+du plan, à faire avec la grille du garage.
+
+**Mot d'états (dernière valeur du groupe).** Bit i (0 à 5) : voie i + 1 muette ; bit 6 + i : voie i + 1 imprécise
+(0 < q < 1 L/min) ; **bit 12 toujours à 1** (« groupe servi »). Un esclave d'avant la modification répond 0 dans ce
+mot : `modBus_TasmotaSlaveModBus.be::eclateGroupe` rejette alors tout le groupe (entrées « defaillant », erreur
+journalisée au premier rejet), au lieu de ranger des zéros. Une sentinelle en dernière position porte le bit 12 :
+seul le mot d'états passe « defaillant ».
+
+**Répartition.** `eclateGroupe` découpe la réponse 0x04 ou le push 0x10 en sous-réponses d'une valeur, registre
+`StartAddress + i`, traitées comme avant par `recupereReponseModBus` ; la sentinelle est lue valeur par valeur.
+
+**Push.** `modbusFonctions.be::pousseEtat(4704, "uint32", [7 valeurs])` : trame 0x10 de 14 registres (37 octets)
+dans l'enveloppe `ModbusPushUDP <seq> <hexa>`, en multicast sur le réseau du point d'accès de l'affichage. Le maître
+l'accepte comme les autres push (`accepteSeq` : un double ou un retard est ignoré). Pas d'accusé : une perte est
+réparée par la mesure suivante ou le relevé.
+
+**Sniffeur.** `sniffeur_modbus.py --persist affichage` décode la requête, la réponse et le push registre par registre
+(`decodeur_modbus.py::_groupe` : « debit 1 » à « debit 6 » en L/min, « etats » avec ses bits nommés, bit 12 absent
+signalé) ; défaut `--persist p4`, le maître du garage.
+
+**Limites connues.**
+- La fenêtre de mesure de l'acquisition n'est pas transmise : `ReglageEcranDebits fenetre` sur l'affichage doit
+  reprendre celle de `ReglageDebits fenetre`, sinon les voies passent « inconnu » entre deux mesures (message
+  « fenetre ? » dans le journal de l'affichage).
+- `periodeReleve` est appliquée par un cron `*/p` des secondes : exacte seulement si p divise 60.
+- Déployer l'acquisition avant l'affichage (un maître à jour face à un esclave d'avant affiche « inconnu »).
+- L'assistant persist (:7900) refuse de modifier l'acquisition (« esclave sans maitre du parc ») : son point d'accès
+  ne suit pas le nom `<HOSTNAME du maître>-GATEWAY`. Modifier son persist à la main.
