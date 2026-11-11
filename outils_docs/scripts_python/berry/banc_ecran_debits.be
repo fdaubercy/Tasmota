@@ -136,17 +136,33 @@ for i: 1 .. 7
 end
 verifie("analogique1-7 actives, type 4704, id et idModBus 1 a 7, virtuel de l'esclave 1", aligne)
 var mb = persist["drivers"]["ModBus"]
-verifie("maitre : id 0, RS485 17/18, 19200 8N1, periodeReleve 10, Serial et UDP", mb["id"] == 0 && mb["debit"] == 19200 && mb["mode"] == "8N1"
-        && mb["environnement"]["pinsModBus"]["RX"]["pin"] == 17 && mb["environnement"]["pinsModBus"]["TX"]["pin"] == 18
+verifie("maitre : id 0, RS485 du Waveshare 7B (RX 16, TX 15), 19200 8N1, periodeReleve 10, Serial et UDP", mb["id"] == 0 && mb["debit"] == 19200 && mb["mode"] == "8N1"
+        && mb["environnement"]["pinsModBus"]["RX"]["pin"] == 16 && mb["environnement"]["pinsModBus"]["TX"]["pin"] == 15
         && mb["periodeReleve"] == 10 && mb["typeComm"]["Serial"] == "ON" && mb["typeComm"]["UDP"] == "ON")
 var esc = mb["environnement"]["TasmotaSlaveModBus"]["TasmotaSlaveModBus1"]
 verifie("esclave 1 : actif, id 1, lectureGroupee ON", esc["activation"] == "ON" && esc["id"] == 1 && esc["lectureGroupee"] == "ON")
 var re = persist["serveur"]["rangeExtender"]
 verifie("Range Extender maitre id 0, point d'acces SERVEUR-DEBITS-PAC-GATEWAY, NAPT", re["activation"] == "ON" && re["id"] == 0
         && re["AP"]["SSID"] == "SERVEUR-DEBITS-PAC-GATEWAY" && re["AP"]["routeNAPT"] == "ON")
-verifie("ecran : Option A3 GPIO 21, SPI 10/11/12/13, DC 14, XPT2046 CS 41, retroeclairage 40, reset 42",
-        persist["drivers"]["ecran"]["activation"] == "ON" && persist["drivers"]["ecran"]["environnement"]["pinsEcrans"]["pinsEcran1"]["pin"] == 21
-        && persist["drivers"]["ecran"]["environnement"]["pinsEcrans"]["pinsEcran7"]["pin"] == 41 && persist["drivers"]["ecran"]["environnement"]["pinsEcrans"]["pinsEcran10"]["pin"] == 42)
+# Waveshare ESP32-S3-Touch-LCD-7B : la dalle RGB prend presque tout (broches dans display.ini, pas dans le template) ;
+# restent a la carte GPIO6, l'I2C 8/9 (tactile GT911, expandeur 0x24) et le RS485 16/15
+var i2c = persist["drivers"]["I2C"]
+verifie("I2C du 7B actif : SDA 8, SCL 9", i2c["activation"] == "ON"
+        && i2c["environnement"]["pinsI2Cs"]["pinsI2C1"]["pin"] == 8 && i2c["environnement"]["pinsI2Cs"]["pinsI2C1"]["type"] == 640
+        && i2c["environnement"]["pinsI2Cs"]["pinsI2C2"]["pin"] == 9 && i2c["environnement"]["pinsI2Cs"]["pinsI2C2"]["type"] == 608)
+var LIBRES_7B = [6, 8, 9, 15, 16]
+var horsCarte = []
+def brochesActives(o, chemin, actif)
+    if !isinstance(o, map)    return    end
+    var a = actif && o.find("activation", "ON") != "OFF"
+    var p = o.find("pin")
+    if a && type(p) == "int" && p >= 0 && LIBRES_7B.find(p) == nil    horsCarte.push(chemin + "=" + str(p))    end
+    for k: o.keys()    brochesActives(o[k], chemin + "." + k, a)    end
+end
+brochesActives(persist["drivers"], "drivers", true)
+brochesActives(persist["modules"], "modules", true)
+verifie("aucune broche active hors de GPIO 6, 8, 9, 15, 16 (les autres sont a la dalle du 7B) : " + str(horsCarte), size(horsCarte) == 0)
+verifie("ecran actif (ST7262 1024x600 par display.ini)", persist["drivers"]["ecran"]["activation"] == "ON")
 
 import ecranDebitsFonctions
 print("--- lecture des entrees")

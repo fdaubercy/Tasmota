@@ -67,6 +67,11 @@ Registres (démo `io_extension.h`) : `0x02` mode (0xFF = toutes en sortie), `0x0
 Écriture Berry prévue (à valider sur la carte) : `wire.write(0x24, 0x02, 0xFF, 1)` puis `wire.write(0x24, 0x03, 0x5E, 1)`
 (EXIO1, 2, 3, 4, 6 à 1, EXIO5 à 0). Sans ce pilote, l'écran reste noir même si Tasmota initialise la dalle.
 
+Moment de l'écriture : dans `preinit.be`, avant l'initialisation de l'écran. Ordre lu dans `tasmota/tasmota.ino` : `GpioInit()`
+(démarre l'I2C, `support_tasmota.ino`), puis `BerryInit()` (exécute `preinit.be`), puis `XdrvXsnsCall(FUNC_PRE_INIT)`, où
+`xdrv_13_display.ino` appelle `DisplayInitDriver()`. Après l'autoexec, il serait trop tard : le GT911 serait initialisé en reset et
+la dalle sans alimentation. À vérifier sur la carte : l'adresse 0x5D du GT911 dépend du niveau de GPIO4 pendant son reset.
+
 ## 4. Ébauche du `display.ini` (descripteur uDisplay de Tasmota)
 
 Ordre lu par `lib/lib_display/UDisplay/src/uDisplay.cpp` (interface RGB) : DE, VSYNC, HSYNC, PCLK, rétroéclairage, puis les
@@ -135,15 +140,17 @@ Corrections à la conversation Gemini du 2026-11-10 :
 - Luminosité automatique par une photorésistance sur GPIO6 (ADC) ou sur l'ADC de l'expandeur.
 - Une page « Réglages » tactile : fenêtre, veille, luminosité (`ReglageEcranDebits`), sans passer par la console.
 
-## 8. Questions ouvertes
+## 8. Décisions (2026-11-11) et questions ouvertes
 
-1. Alimentation 5 V près de la nourrice : bloc USB-C dédié, ou 5 V partagé avec la carte d'acquisition ?
-2. Montage : paysage ou portrait, boîtier ou encastrement, distance jusqu'à l'acquisition (longueur du câble RS485) ?
-3. Veille : extinction complète ou gradation ? Après combien de minutes (aujourd'hui 5) ?
-4. Tactile : simple changement de page, ou aussi réglages depuis l'écran ?
-5. GPIO6 : réservé (luminosité automatique, buzzer d'alarme, LED) ou laissé libre ?
-6. Choix HASPmota / LVGL à la compilation : par une option du cenv qui sélectionne les fichiers envoyés (recommandé), par deux
-   envs distincts, ou par une constante de la section `.h` lue par Berry ? (trois maquettes de mise en œuvre seront proposées)
+Décidé par l'utilisateur :
+
+1. Alimentation : bloc USB-C 5 V dédié, près de la nourrice.
+2. Veille : gradation (10 % après 5 min) puis extinction (30 min), réveil au toucher, par le PWM de l'expandeur.
+3. Tactile : changement de page et page « Réglages » (fenêtre, veille, luminosité).
+4. Choix HASPmota / LVGL : option `custom_interface_ecran = haspmota|lvgl` dans la section de l'env du cenv ; seuls les
+   fichiers de l'interface choisie partent sur le FS.
+
+Encore ouvert : montage (paysage ou portrait, boîtier, longueur du câble RS485) et usage de GPIO6 (laissé libre en attendant).
 
 ## 9. Où changer les noms des voies
 

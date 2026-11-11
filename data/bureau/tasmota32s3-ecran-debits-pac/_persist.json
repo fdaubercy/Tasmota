@@ -397,13 +397,13 @@
 			"environnement": {
 				"leds": {
 					"ledLink": {
-						"activation": "ON",
-						"pin": 38,
+						"activation": "OFF",
+						"pin": -1,
 						"type": 544
 					},
 					"led1": {
-						"activation": "ON",
-						"pin": 39,
+						"activation": "OFF",
+						"pin": -1,
 						"id": 1,
 						"type": 288
 					},
@@ -503,98 +503,42 @@
 		},
 		"ecran": {
 			"activation": "ON",
-			"name": "Ecran TFT ILI9488 480x320 (SPI) + tactile XPT2046",
+			"name": "Ecran Waveshare ESP32-S3-Touch-LCD-7B : ST7262 1024x600 RGB 16 bits + tactile GT911 (I2C 0x5D)",
 			"environnement": {
 				"pinsEcrans": {
 					"pinsEcran1": {
-						"activation": "ON",
-						"nom": "Option A",
-						"pin": 21,
-						"id": 3,
-						"type": 6208
-					},
-					"pinsEcran2": {
-						"activation": "ON",
-						"nom": "SPI CS",
-						"pin": 10,
-						"id": 1,
-						"type": 768
-					},
-					"pinsEcran3": {
-						"activation": "ON",
-						"nom": "SPI Clk",
-						"pin": 12,
-						"id": 1,
-						"type": 736
-					},
-					"pinsEcran4": {
-						"activation": "ON",
-						"nom": "SPI MISO",
-						"pin": 13,
-						"id": 1,
-						"type": 672
-					},
-					"pinsEcran5": {
-						"activation": "ON",
-						"nom": "SPI MOSI",
-						"pin": 11,
-						"id": 1,
-						"type": 704
-					},
-					"pinsEcran6": {
-						"activation": "ON",
-						"nom": "SPI DC",
-						"pin": 14,
-						"id": 1,
-						"type": 800
-					},
-					"pinsEcran7": {
-						"activation": "ON",
-						"nom": "TS SPI CS (XPT2046)",
-						"pin": 41,
-						"id": 1,
-						"type": 10944
-					},
-					"pinsEcran8": {
 						"activation": "OFF",
-						"nom": "TS IRQ",
+						"nom": "Dalle RGB : broches dans display.ini (DE 5, VSYNC 3, HSYNC 46, PCLK 7, donnees 0-2, 10, 14, 17, 18, 21, 38-42, 45, 47, 48)",
 						"pin": -1,
 						"id": 1,
-						"type": 11008
+						"type": 0
 					},
-					"pinsEcran9": {
-						"activation": "ON",
-						"nom": "Retroeclairage",
-						"pin": 40,
+					"pinsEcran2": {
+						"activation": "OFF",
+						"nom": "Tactile GT911 INT : dans display.ini (:UTI)",
+						"pin": 4,
 						"id": 1,
-						"type": 992
-					},
-					"pinsEcran10": {
-						"activation": "ON",
-						"nom": "Display Rst",
-						"pin": 42,
-						"id": 1,
-						"type": 1024
+						"type": 0
 					}
 				}
 			}
 		},
 		"I2C": {
-			"activation": "OFF",
+			"activation": "ON",
 			"name": "Bus I2C",
 			"environnement": {
 				"pinsI2Cs": {
 					"pinsI2C1": {
 						"activation": "ON",
 						"nom": "I2C SDa",
-						"pin": 9,
+						"pin": 8,
 						"id": 1,
 						"type": 640
 					},
 					"pinsI2C2": {
 						"activation": "ON",
 						"nom": "I2C SCl",
-						"pin": 8,
+						"pin": 9,
 						"id": 1,
 						"type": 608
 					}
@@ -757,7 +701,7 @@
 					"RX": {
 						"activation": "ON",
 						"nom": "ModBr Rx",
-						"pin": 17,
+						"pin": 16,
 						"id": 1,
 						"type": 9440,
 						"virtuel": "OFF"
@@ -765,7 +709,7 @@
 					"TX": {
 						"activation": "ON",
 						"nom": "ModBr Tx",
-						"pin": 18,
+						"pin": 15,
 						"id": 1,
 						"type": 9408,
 						"virtuel": "OFF"
