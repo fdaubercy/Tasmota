@@ -605,6 +605,9 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   d'emploi : `outils_docs/README.md`.
 - `outils_docs/EXTENSIONS_TAPP.md` — extensions Tasmota `.tapp` (2026-11-07) : format, cycle de vie, cas d'utilisation, gabarits
   A et B, envoi sur une carte, pieges (compilation avant `/autoexec.be`, formatage, image du FS). Essais sur carte : § 9, a faire (A10).
+- `outils_docs/MODELES_ESP.md` — puces Espressif (ESP32, S2, S3, C2 a C61, H2 a H21, P4, S31, E22, ESP8266/8285/8089) au
+  2026-11-11 : processeur, memoire et PSRAM, competences, montages a plusieurs ESP sur un typon, compatibilite Tasmota lue
+  dans les envs ; P4 v1.x / v3.x (P4R3) et comment les distinguer ; modele Tasmota du Waveshare 8DI-8RO.
 - `outils_docs/FICHIERS_DRVSET.md` — inventaire des fichiers `.drvset*`/`.snsset*` du firmware : role, contenu, chargement, sauvegarde, effacement (2026-11-02).
 - `outils_docs/sauvegarde_config/` — maquettes de l'onglet « Sauvegardes » de la page build (2026-11-02) : `modele-A.png` a `modele-C.png`, code `maquettes_sauvegarde.html`, contraintes `README.md`. Choix en attente, rien de realise.
 - `outils_docs/SOLIDIFICATION_BERRY.md` — mecanisme, verification (§5), parametres, 13 pieges.
