@@ -139,6 +139,7 @@ Interfaces consommées : `lieuDemande`, `bandeauLieu` (A1) ; `lieuxTable`, `clas
 - [x] Écrire ; sonde verte ; `test_build_page_chrome.py`, `test_build_page_fichiers_chrome.py`,
   `test_build_page_memoire_chrome.py`, `test_build_page_sauvegarde_chrome.py` verts. — preuve : sondes lieux, chrome, fichiers, memoire, sauvegarde : code de sortie 0
 - [x] Commit `feat(build): lieu venu de l'annuaire mis en avant dans la page Build`. — preuve : commit feat(build) A3 (SHA dans task-3-report.md)
+
 ## A4 — Arrivée sur les pages 7800, 7900, 7950, 7980
 
 Fichiers : `fichiers_berry_page.py` (`chargeEnvs`, 1er appel seulement), `assistant_persist_page_js_env.py` (bandeau),

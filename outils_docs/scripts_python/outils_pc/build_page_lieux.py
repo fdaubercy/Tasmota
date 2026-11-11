@@ -111,7 +111,7 @@ function lieuxArrivee() {
   var libelle = lieuxTable.filter(function (l) { return l[0] === lieuxInitial; })[0][1];
   classement = "lieu";
   lieuxOuvre = true;                            // le groupe du lieu s'ouvre au premier dessin seulement
-  bandeauLieu(lieuxBarre.colonne, libelle, function () { lieuxClasse(classementMemo, true); });
+  bandeauLieu(lieuxBarre.colonne, libelle, function () { lieuxInitial = lieuxFichiers = null; lieuxClasse(classementMemo, true); });
 }
 // Premiere carte du lieu d'arrivee (cochee de preference), ou null : choix initial des onglets Fichiers, Memoire, Sauvegardes.
 function lieuxPremiere(cartes) {

@@ -293,6 +293,8 @@ def sonde_arrivee(m):
              cdp.js("location.search"), cdp.js("document.getElementById('m-env').value")),
             ("famille", "famille", 0, "", P4),
             "croix : classement Famille, bandeau retire, adresse sans lieu, #m-env inchangee")
+    verifie(cdp.js("[lieuxInitial, lieuxFichiers]"), [None, None],
+            "croix : lieu oublie, Fichiers et Sauvegardes ne choisiront plus la carte du lieu")
     ouvre_url(m, "")
     verifie((classement_actif(), cdp.js("document.querySelectorAll('.bandeau-lieu').length")), ("famille", 0),
             "reouverture sans parametre : Famille, pas de bandeau (vigilance 5)")
@@ -316,7 +318,7 @@ def sonde_arrivee(m):
     espion = cdp.appel("Page.addScriptToEvaluateOnNewDocument", source=ESPION)
     ouvre_url(m, f"?env={RIDEAU}&depuis=atelier&fichiers=&redemarrer=0&lieu=cave")
     time.sleep(1)
-    verifie([u for u in cdp.js("window.__f") if u.startswith("/fichiers?env=")], [f"/fichiers?env={RIDEAU}"],
+    verifie(sorted({u for u in cdp.js("window.__f") if u.startswith("/fichiers?env=")}), [f"/fichiers?env={RIDEAU}"],  # la meme carte peut etre relue (course avec chargeEnvs)
             "?env= + ?lieu=cave : la liste lue est celle de ?env=, aucune carte de la cave interrogee")
     cdp.appel("Page.removeScriptToEvaluateOnNewDocument", identifier=espion["identifier"])
     verifie(cdp.js("document.querySelector('input[name=f-carte]:checked')?.value"), RIDEAU,
