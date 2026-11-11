@@ -181,8 +181,8 @@ Interfaces consommées : `lieux.JS` (`remplitParLieu`), `lieu` et `lieux` des r�
 - [x] Commit `docs(lieux): mode d'emploi et carte des documents du classement par lieu`. — preuve : 4142445d2
 
 ## Améliorations restantes
-- [ ] [projet] Lieu transmis d'une page à l'autre depuis l'annuaire (écarté de cette version, spec §2).
-- [ ] [projet] Table hôte → lieu pour le syslog et le sniffeur MQTT, si le besoin revient.
+- [x] [projet] Lieu transmis d'une page à l'autre depuis l'annuaire (écarté de cette version, spec §2). — preuve : plan `lieu-partage-syslog-mqtt` (clos le 2026-11-11), commits 335e4493b à 12dcee5b3
+- [x] [projet] Table hôte → lieu pour le syslog et le sniffeur MQTT, si le besoin revient. — preuve : plan `lieu-partage-syslog-mqtt` (clos le 2026-11-11), commits 335e4493b à 12dcee5b3
 
 ## Vérification
 Bancs : `test_lieux.py`, les 5 bancs web de A2, `test_build_page_lieux_chrome.py`, et les sondes de A4 et A5, tous à

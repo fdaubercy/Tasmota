@@ -2,7 +2,7 @@
 chantier: lieu-partage-syslog-mqtt
 titre: Lieu partagé depuis l'annuaire, lieu dans le syslog et le sniffeur MQTT
 objectif: Choisir un lieu une fois dans l'annuaire et le retrouver dans les pages ouvertes, et ranger par lieu les lignes du syslog et les messages du sniffeur MQTT
-statut: actif
+statut: clos
 cree: 2026-11-11
 maj: 2026-11-11
 ---
@@ -64,9 +64,10 @@ dans `build_page_lieux.py`). Choix de l'utilisateur du 2026-11-11 : J, mise en a
 Plan d'origine de ce chantier, clos le 2026-11-11 : [tasks/plans/classement-par-lieu.md](classement-par-lieu.md)
 (spec `docs/superpowers/specs/2026-11-10-classement-par-lieu-design.md`).
 
-- [ ] Rouvrir le plan précédent dans la vue de droite : taper `/suivi suivre classement-par-lieu` (la conversation suit
+- [x] Rouvrir le plan précédent dans la vue de droite : taper `/suivi suivre classement-par-lieu` (la conversation suit
   alors ce plan, qui reste clos et inchangé) ; revenir à celui-ci : `/suivi suivre lieu-partage-syslog-mqtt`. À cocher
-  quand l'aller-retour a été fait une fois et que la vue a basculé dans les deux sens.
+  quand l'aller-retour a été fait une fois et que la vue a basculé dans les deux sens. — preuve : coché sur demande de l'utilisateur le
+  2026-11-11 (`/suivi` montre ce plan dans cette conversation).
 
 ## A1 — `lieux.py` : identités des cartes et fonctions JS communes
 
