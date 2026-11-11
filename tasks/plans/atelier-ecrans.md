@@ -98,6 +98,10 @@ Plan d'origine de ce chantier : [tasks/plans/debits-deux-cartes.md](debits-deux-
 ## A9 — Ressources sous `/sd`
 - [ ] Liste des ressources utiles (fonds, icônes, polices ajoutées) proposée à l'utilisateur, choix fait ; règle de
   rangement des images dans `data/fs/gestionFileFolder.be::listeEtRepartitLesFichiers` (accord pour `data/fs`)
+- [ ] Import d'une police nouvelle depuis la page (demande du 2026-11-11) : liens vers les sites de polices et de
+  conversion de la skill `lvgl-haspmota` (`references/polices.md`, « Trouver et importer une police nouvelle ») ; fichier
+  `.ttf` ou `.bin` déposé par l'utilisateur, licence et couverture Latin-1 contrôlées, tailles proposées, rangé sous
+  `/sd/polices/` et ajouté au catalogue
 
 ## A10 — Documentation, relecture, essai réel
 - [ ] `outils_docs/README.md` (mode d'emploi), carte des documents du `CLAUDE.md`, `verifie_references_docs.py` 0 défaut
