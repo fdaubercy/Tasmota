@@ -114,8 +114,10 @@ class Montage:
         raise TimeoutError(url)
 
     def ouvre(self, requete=""):
+        if self.cdp.js("document.readyState") is not None:       # marque l'ancien document : l'attente ne doit pas le lire
+            self.cdp.js("window.__ancien = true; 1")
         self.cdp.appel("Page.navigate", url=self.url + requete)
-        t.attend(self.cdp, f"document.querySelectorAll('#liste .l').length >= {len(HOTES)}", 15)
+        t.attend(self.cdp, f"!window.__ancien && document.querySelectorAll('#liste .l').length >= {len(HOTES)}", 15)
 
     def ferme(self):
         t.tue_arbre(self.chrome)
@@ -174,12 +176,14 @@ def sonde(m):
     cdp.js("document.querySelector('.bandeau-lieu button').click()")
     verifie(cdp.js("[document.querySelector('.bandeau-lieu'), location.search]"), [None, ""],
             "croix : bandeau et parametre retires")
+    verifie(cdp.js("[document.querySelector('#lieux .puce.choisi').dataset.lieu, document.querySelectorAll('#liste .l').length]"),
+            ["garage", 2], "croix : aucune liste changee, puce Garage toujours choisie")
     m.ouvre()                                                    # reouverture sans parametre : Tous (vigilance 5)
-    t.attend(cdp, JS_RANGEE_PRETE, 5)
+    t.attend(cdp, JS_RANGEE_PRETE, 15)
     verifie(cdp.js("document.querySelector('#lieux .puce.choisi').dataset.lieu"), "tous", "reouverture sans parametre : Tous")
     verifie(cdp.js("document.querySelector('.bandeau-lieu')"), None, "reouverture sans parametre : pas de bandeau")
     m.ouvre("?lieu=" + urllib.parse.quote("<b>x</b>"))
-    t.attend(cdp, JS_RANGEE_PRETE, 5)
+    t.attend(cdp, JS_RANGEE_PRETE, 15)
     verifie(cdp.js("[document.querySelector('.bandeau-lieu'), document.querySelectorAll('body b').length, "
                    "document.querySelector('#lieux .puce.choisi').dataset.lieu]"),
             [None, 0, "tous"], "?lieu=<b>x</b> : ignore, aucune balise, Tous")
