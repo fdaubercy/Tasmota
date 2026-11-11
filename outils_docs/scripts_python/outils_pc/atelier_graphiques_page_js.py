@@ -468,7 +468,7 @@ Promise.all([lis('/envs'), fetch('/moteur/pages_graphiques.html').then(function 
   if (!env) { message('Aucune carte S3/P4 dans le cenv.', 'rouge'); return; }
   var lieu = lieuDemande(r[0].lieux), carte = null;       // ?lieu= : 1re carte du lieu si ?env= n'en dit rien
   if (lieu) {
-    var bandeau = bandeauLieu(document.querySelector('main'), r[0].lieux.filter(function (l) { return l[0] === lieu; })[0][1], function () {});
+    var bandeau = bandeauLieu(document.querySelector('main'), libelleLieu(r[0].lieux, lieu), function () {});
     carte = etat.envs.filter(function (e) { return e.lieu === lieu; })[0];
     if (!carte) bandeau.appendChild(document.createTextNode(' · aucune carte de ce lieu ici'));
     else if (env !== voulu) env = carte.nom;

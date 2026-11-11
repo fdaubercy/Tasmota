@@ -216,7 +216,7 @@ async function chargeEnvs() {
     lieuVu = true;
     var lieu = lieuDemande(r.donnees.lieux);
     if (lieu) {
-      bandeauLieu(document.querySelector("main"), r.donnees.lieux.filter(function (l) { return l[0] === lieu; })[0][1], function () {});
+      bandeauLieu(document.querySelector("main"), libelleLieu(r.donnees.lieux, lieu), function () {});
       var premiere = cartes.filter(function (e) { return e.lieu === lieu; })[0];
       if (premiere && !voulu) $("env").value = premiere.nom;
     }

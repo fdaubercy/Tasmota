@@ -150,7 +150,7 @@ function testeur(){const f=filtre.value;if(!f)return ()=>true;
   const fl=f.toLowerCase(),ok=s=>re?re.test(s):s.toLowerCase().includes(fl);
   return m=>m.note?ok(m.texte):(champ.value==='topic'?ok(m.topic):champ.value==='payload'?ok(m.payload):ok(m.topic)||ok(m.payload));}
 function visible(m,t){if(m.note)return notes.checked&&t(m);if(m.retain&&!retenus.checked)return false;
-  if(lieuChoisi&&codeLieu(m)!==lieuChoisi)return false;
+  if(P.choisi&&codeLieu(m)!==P.choisi)return false;
   if(sansRepet.checked&&m.repete)return false;return t(m);}
 function aplatit(o,pre,sortie){  // {"a":{"b":1}} -> {"a.b":"1"}
   if(o!==null&&typeof o==='object'){for(const k of Object.keys(o))aplatit(o[k],pre?pre+'.'+k:k,sortie);}else sortie[pre||'(valeur)']=JSON.stringify(o);return sortie;}
@@ -268,14 +268,14 @@ $('payloadPub').addEventListener('keydown',e=>{if(e.key==='Enter')publie();});
 $('pause').onclick=()=>{enPause=!enPause;$('pause').textContent=enPause?'Reprendre':'Pause';
   if(!enPause){const t=testeur();for(const m of attente)if(visible(m,t))liste.appendChild(ligne(m));attente=[];
     if(suivre.checked)liste.scrollTop=liste.scrollHeight;}compte();};
-$('effacer').onclick=()=>{msgs=[];attente=[];liste.innerHTML='';recompte();compte();};
+$('effacer').onclick=()=>{msgs=[];attente=[];liste.innerHTML='';P.efface();compte();};
 for(const [el,c] of [[filtre,'filtre'],[champ,'champ']]){el.value=lit(c,el.value);
   el.addEventListener('input',()=>{ecrit(c,el.value);clearTimeout(minuteur);minuteur=setTimeout(redessine,200);});}
 for(const [el,c] of [[regex,'regex'],[retenus,'retenus'],[notes,'notes'],[sansRepet,'sansRepet']]){el.checked=lit(c,el.checked?'1':'0')==='1';
   el.addEventListener('change',()=>{ecrit(c,el.checked?'1':'0');redessine();});}
 $('formatPub').value=lit('formatPub',$('formatPub').value);$('formatPub').addEventListener('change',()=>ecrit('formatPub',$('formatPub').value));
 $('topicPub').value=lit('topicPub','');
-function videTout(){msgs=[];attente=[];liste.innerHTML='';disco={};evLwt=[];stats=Object.create(null);dernier=Object.create(null);recompte();compte();planifiePanneaux();}
+function videTout(){msgs=[];attente=[];liste.innerHTML='';disco={};evLwt=[];stats=Object.create(null);dernier=Object.create(null);P.efface();compte();planifiePanneaux();}
 function connecte(){const es=new EventSource('/flux');
   es.onopen=()=>{$('eWeb').textContent='sniffeur';$('pWeb').style.background='#23d18b';videTout();};
   es.addEventListener('reset',videTout);

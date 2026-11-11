@@ -110,7 +110,7 @@ Par page :
 ## 6. Syslog : modèle M
 
 - Une rangée de puces entre la barre et la barre des modules : `Lieu`, `Tous`, une puce par lieu de la table, puis
-  `Autres`. Chaque puce : nombre de lignes reçues depuis l'ouverture de la page, et nombre d'erreurs (sévérité 3 ou
+  `Autres`. Chaque puce : nombre de lignes reçues depuis l'ouverture de la page ou le dernier « Effacer », pause comprise (comptes tenus par clé, module|IP ou topic, jamais décrémentés), et nombre d'erreurs (sévérité 3 ou
   moins) en rouge s'il y en a. Lieu sans ligne : puce affichée, compteur 0.
 - Un clic choisit le lieu (un seul à la fois, `Tous` = sans filtre). Le lieu choisi n'est PAS mémorisé d'une visite à
   l'autre : une page ouverte sans `?lieu=` démarre sur `Tous`, pour qu'aucune erreur d'une autre carte ne soit masquée

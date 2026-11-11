@@ -134,6 +134,10 @@ def filtre(cdp, valeur):
     cdp.js(f"(() => {{ const f = document.getElementById('filtre'); f.value = '{valeur}'; f.dispatchEvent(new Event('input')); }})()")
 
 
+def attend_puce(cdp, code, n, delai=5):
+    return t.attend(cdp, f"document.querySelector('#lieux .puce[data-lieu={code}] .n').textContent === '{n}'", delai) is True
+
+
 def nb_lignes(cdp, n, delai=5):
     return t.attend(cdp, f"document.querySelectorAll('#liste .l').length === {n}", delai) is True
 
@@ -166,6 +170,24 @@ def sonde(m):
     m.envoie("SERVEUR-GRENIER-2EME", 6, "BRY: direct")           # ligne recue en direct : comptee sans rechargement
     verifie(t.attend(cdp, "document.querySelector('#lieux .puce[data-lieu=etage2] .n').textContent === '2'", 5), True,
             "ligne en direct : puce 2e etage a 2")
+    # -- compteurs : lignes recues pendant la pause comptees tout de suite, jamais deux fois ; tampon vide puis /lieux
+    #    relu : comptes gardes (ils viennent des cles, pas du tampon) ; Effacer remet tout a zero
+    cdp.js("document.getElementById('pause').click()")
+    m.envoie("SERVEUR-GRENIER-2EME", 6, "BRY: en pause")
+    verifie(attend_puce(cdp, "etage2", 3), True, "pause : ligne comptee a la reception (puce 2e etage a 3)")
+    cdp.js("document.getElementById('pause').click()")
+    time.sleep(0.6)
+    verifie(attend_puce(cdp, "etage2", 3, 1), True, "reprise : la ligne en attente n'est pas comptee deux fois")
+    cdp.js("lignes.length = 0; fetch('/lieux').then(r => r.json()).then(d => P.recoit(d, document.body))")
+    time.sleep(0.6)
+    p = {c: n for c, n, _, _ in cdp.js(JS_PUCES)}
+    verifie((p["tous"], p["garage"], p["etage2"], p["autres"]), (str(len(HOTES) + 2), "2", "3", "2"),
+            "tampon vide puis /lieux relu : comptes gardes")
+    cdp.js("document.getElementById('effacer').click()")
+    verifie(attend_puce(cdp, "tous", 0), True, "Effacer : puce Tous a 0")
+    verifie(sum(int(n) for _, n, _, _ in cdp.js(JS_PUCES)), 0, "Effacer : toutes les puces a 0")
+    m.envoie("SERVEUR-GRENIER-2EME", 6, "BRY: apres effacer")
+    verifie(attend_puce(cdp, "etage2", 1), True, "apres Effacer : le compte repart de 1")
     clique(cdp, "")
     m.ouvre("?lieu=garage")
     t.attend(cdp, "document.querySelector('.bandeau-lieu')", 5)

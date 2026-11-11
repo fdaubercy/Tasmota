@@ -55,6 +55,51 @@ verifie(charge('').lieuDemande(lieux), null, 'sans parametre');
   verifie(b.retire, true, 'bandeau retire');
   verifie(ferme, 1, 'surFermeture appele');
 }
+// libelleLieu
+{
+  const L = [['cave', 'Cave'], ['garage', 'Garage']];
+  const g = charge('');
+  const lib = new Function(JS + '; return libelleLieu;')();
+  verifie(lib(L, 'cave'), 'Cave', 'libelle connu');
+  verifie(lib(L, 'jardin'), 'jardin', 'libelle : code inconnu = le code');
+  verifie(lib(L, 'autres'), 'Autres', 'libelle : autres');
+  verifie(lib(L, ''), 'Autres', 'libelle : vide');
+  verifie(lib(L, null), 'Autres', 'libelle : null');
+}
+// pucesLieu avec un faux DOM : comptes par cle, jamais decrementes, recalcules d'apres les cles, efface remet a zero
+{
+  const el = () => { const e = { children: [], dataset: {}, textContent: '', classes: new Set(),
+    classList: { toggle(c, v) { v ? e.classes.add(c) : e.classes.delete(c); } },
+    append(...x) { x.forEach(c => e.children.push(c)); }, appendChild(c) { e.children.push(c); return c; },
+    replaceChildren(...x) { e.children = x; } }; return e; };
+  const doc = { createElement: () => el() };
+  const f = new Function('document', 'location', JS + '; return {pucesLieu, lieuDeHote};')(doc, { search: '' });
+  const cont = el();
+  let redessins = 0;
+  const P = f.pucesLieu(cont, { erreurs: true, surChoix: () => redessins++ });
+  const cartes = [{ lieu: 'cave', hote: 'CAVE', ip: '' }, { lieu: 'garage', hote: 'RIDEAU', ip: '' }];
+  const cle = (m) => m, calc = (m) => (c) => f.lieuDeHote(m, '', c);
+  const n = (code) => String(P.puces[code].n.textContent);
+  // avant /lieux : tout est compte, sous « autres »
+  P.compte('CAVE|', calc('CAVE'), false); P.compte('CAVE|', calc('CAVE'), true); P.compte('RIDEAU|', calc('RIDEAU'), false);
+  P.recoit({ cartes, lieux: [['cave', 'Cave'], ['garage', 'Garage']] }, null);
+  verifie(n(''), '3', 'lignes avant /lieux comptees (Tous)');
+  verifie(n('cave'), '2', 'lieu cave recalcule de la cle');
+  verifie(n('garage'), '1', 'lieu garage');
+  verifie(P.puces[''].e.textContent, ' 1 err', 'erreurs comptees');
+  verifie(redessins, 1, 'surChoix appele par recoit');
+  P.compte('CAVE|', calc('CAVE'), false);
+  verifie(n('cave'), '3', 'compte apres /lieux');
+  verifie(P.code('CAVE|', calc('CAVE')), 'cave', 'code d une cle');
+  verifie(P.code('X|', calc('X')), 'autres', 'cle inconnue : autres');
+  P.puces['cave'].bouton.onclick();
+  verifie(P.choisi, 'cave', 'clic = choisi');
+  P.puces['cave'].bouton.onclick();
+  verifie(P.choisi, '', 'second clic = Tous');
+  verifie(P.puces['cave'].bouton.dataset.lieu + P.puces[''].bouton.dataset.lieu, 'cavetous', 'data-lieu');
+  P.efface();
+  verifie(n('') + n('cave'), '00', 'efface remet a zero');
+}
 verifie(/innerHTML/.test(JS), false, 'sans innerHTML');
 console.log(echecs ? `ROUGE : ${echecs} echec(s)` : 'VERT');
 process.exit(echecs ? 1 : 0);

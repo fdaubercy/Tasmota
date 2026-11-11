@@ -8,8 +8,7 @@ lieuDemande, bandeauLieu) : lieux.JS, inserees juste avant ce JS.
                 (les abonnements au broker ne bougent pas), combine au filtre texte ; non memorise
     Etiquette   lieu en tete de chaque message
     ?lieu=      premier chargement seulement, bandeau ; la croix ne change aucune liste
-    Panneaux    sniffeur_mqtt_panneaux.py (arborescence par lieu, listes groupees) lit lieux, codeLieuTopic,
-                libelleLieu, envParTopic
+    Panneaux    sniffeur_mqtt_panneaux.py (arborescence par lieu, listes groupees) lit P (P.lieux, P.libelle), codeLieuTopic, envParTopic
 """
 
 CSS = """
@@ -22,35 +21,16 @@ CSS = """
 """
 
 JS = r"""
-// Lieu d'un message : cache borne par topic (les topics viennent du reseau), lieuDeTopic ne parcourt les cartes qu'une fois par topic.
-let cartes=[],lieux=[],lieuChoisi='',cacheLieu=new Map(),nbLieu={},puces={},envParTopic=new Map();
-function codeLieuTopic(topic,nu){const cle=(nu?'n:':'m:')+topic;let c=cacheLieu.get(cle);
-  if(c===undefined){c=lieuDeTopic(topic,cartes,nu);if(!lieux.some(x=>x[0]===c))c='autres';
-    if(cacheLieu.size>5000)cacheLieu.clear();cacheLieu.set(cle,c);}
-  return c;}
+// Lieu d'un message : puces et comptes par topic dans lieux.JS (pucesLieu), comptes tenus des la reception (pause comprise).
+const envParTopic=new Map();
+const P=pucesLieu($('lieux'),{erreurs:false,surChoix:()=>redessine()});
+function codeLieuTopic(topic,nu){return P.code((nu?'n:':'m:')+topic,c=>lieuDeTopic(topic,c,nu));}
 const codeLieu=m=>codeLieuTopic(m.topic,false);
-const libelleLieu=c=>(lieux.find(x=>x[0]===c)||[0,'Autres'])[1];
-function etiqLieu(m){return lieux.length?'<span class="lieu">'+echappe(libelleLieu(codeLieu(m)))+'</span> ':'';}
-function majPuce(code){const p=puces[code];if(p)p.n.textContent=nbLieu[code]||0;}
-function compteLieu(m){if(!lieux.length||m.note)return;
-  for(const code of ['',codeLieu(m)]){nbLieu[code]=(nbLieu[code]||0)+1;majPuce(code);}}
-function recompte(){nbLieu={};Object.keys(puces).forEach(majPuce);msgs.forEach(compteLieu);}
-function choisitLieu(code){lieuChoisi=code;
-  for(const k in puces)puces[k].bouton.classList.toggle('choisi',k===code);
-  redessine();}
-function dessinePuces(){const bloc=$('lieux'),tete=document.createElement('span');
-  tete.className='gris';tete.textContent='Lieu';bloc.replaceChildren(tete);puces={};
-  for(const [code,libelle] of [['','Tous'],...lieux,['autres','Autres']]){
-    const b=document.createElement('button'),n=document.createElement('span');
-    b.type='button';b.className='puce';b.dataset.lieu=code||'tous';n.className='n';
-    b.append(libelle+' ',n);b.onclick=()=>choisitLieu(code===lieuChoisi?'':code);
-    bloc.appendChild(b);puces[code]={bouton:b,n};}}
-fetch('/lieux').then(r=>r.json()).then(d=>{cartes=d.cartes;lieux=d.lieux;cacheLieu.clear();
-  for(const c of cartes)if(c.topic){const l=envParTopic.get(c.topic);envParTopic.set(c.topic,l?l+', '+c.env:c.env);}
-  dessinePuces();recompte();
-  const demande=lieuDemande(lieux);                      // ?lieu= : premier chargement seulement, jamais memorise
-  if(demande){bandeauLieu(document.body,libelleLieu(demande),()=>choisitLieu(''));choisitLieu(demande);}
-  else choisitLieu(lieuChoisi);
+function etiqLieu(m){return P.lieux.length?'<span class="lieu">'+echappe(P.libelle(codeLieu(m)))+'</span> ':'';}
+function compteLieu(m){if(!m.note)P.compte('m:'+m.topic,c=>lieuDeTopic(m.topic,c,false),false);}
+fetch('/lieux').then(r=>r.json()).then(d=>{
+  for(const c of d.cartes)if(c.topic){const l=envParTopic.get(c.topic);envParTopic.set(c.topic,l?l+', '+c.env:c.env);}
+  P.recoit(d,document.body);
   if(window.dessinePanneaux)dessinePanneaux();
 }).catch(()=>{});                                         // echec : pas de puces, page d'avant
 """

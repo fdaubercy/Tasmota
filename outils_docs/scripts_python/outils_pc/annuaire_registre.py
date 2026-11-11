@@ -316,7 +316,7 @@ def en_json(racine=None):
     racine = Path(racine) if racine else Path(__file__).resolve().parents[3]
     nombres = {}
     try:
-        for c in lieux.identites(racine):
+        for c in (x for x in lieux.identites(racine) if not x.get("sauvegarde")):
             nombres[c["lieu"]] = nombres.get(c["lieu"], 0) + 1
     except Exception:                                 # cenv illisible : compteurs a 0, l'annuaire reste utilisable
         nombres = {}

@@ -257,7 +257,7 @@ async function chargeCartes() {
   if (!lieuVu) {                                        // ?lieu= : bandeau seul, la carte d'un envoi se choisit a la main
     lieuVu = true;
     var lieu = lieuDemande(r.donnees.lieux);
-    if (lieu) bandeauLieu(document.querySelector("main"), r.donnees.lieux.filter(function (l) { return l[0] === lieu; })[0][1], function () {});
+    if (lieu) bandeauLieu(document.querySelector("main"), libelleLieu(r.donnees.lieux, lieu), function () {});
   }
   s.insertBefore(o, s.firstChild); s.value = avant;
   if (s.selectedIndex < 0) s.value = "";                // carte disparue : retour sur « (choisir une carte) »

@@ -33,8 +33,8 @@ function modules(){  // [{tp, dn, ft, pre:[cmnd,stat,tele], hn, mac}] tries par 
   return l.sort((a,b)=>a.dn.localeCompare(b.dn));}
 function nomModule(tp){const m=modules().find(x=>x.tp===tp);return m?m.dn:'';}
 function remplitSelect(sel,options,vide){const v=sel.value;
-  if(lieux.length){   // groupes par lieu ; valeurs inchangees (topics nus), libelles posees apres coup (textContent)
-    remplitParLieu(sel,options.map(([val])=>({nom:val,lieu:codeLieuTopic(val,true)==='autres'?'Autres':codeLieuTopic(val,true)})),lieux,'');
+  if(P.lieux.length){   // groupes par lieu ; valeurs inchangees (topics nus), libelles posees apres coup (textContent)
+    remplitParLieu(sel,options.map(([val])=>({nom:val,lieu:codeLieuTopic(val,true)==='autres'?'Autres':codeLieuTopic(val,true)})),P.lieux,'');
     const txt=new Map(options);for(const o of sel.options)o.textContent=txt.get(o.value);
     if(vide)sel.insertBefore(new Option(vide,''),sel.firstChild);}
   else{sel.innerHTML='';if(vide)sel.add(new Option(vide,''));for(const [val,txt] of options)sel.add(new Option(txt,val));}
@@ -173,7 +173,7 @@ function cmdReponse(m){if(!cmdEnCours||m.retain||!m.topic.startsWith(cmdEnCours.
 const arbreOuvert=new Set();
 function dessineArbre(){const racine={enfants:Object.create(null),n:0,nbTopics:0};   // Object.create(null) : un segment 'constructor' reste un segment
   for(const [topic,s] of Object.entries(stats)){let noeud=racine;racine.n+=s.n;racine.nbTopics++;const parts=topic.split('/');
-    const code=lieux.length?codeLieuTopic(topic,false):'',chaine=code?[code].concat(parts):parts,d=code?1:0;   // 1er niveau = le lieu
+    const code=P.lieux.length?codeLieuTopic(topic,false):'',chaine=code?[code].concat(parts):parts,d=code?1:0;   // 1er niveau = le lieu
     chaine.forEach((p,i)=>{const j=i-d;   // j : rang dans le topic ; un topic de carte = topic sans son 1er segment (tele, stat, cmnd)
       noeud=noeud.enfants[p]??={enfants:Object.create(null),n:0,nbTopics:0,chemin:chaine.slice(0,i+1).join('/'),
         env:j>=1?envParTopic.get(parts.slice(1,j+1).join('/')):undefined};noeud.n+=s.n;noeud.nbTopics++;});
@@ -183,14 +183,14 @@ function dessineArbre(){const racine={enfants:Object.create(null),n:0,nbTopics:0
   if(!racine.nbTopics)h+='<div class="vide">aucun message recu</div>';
   const envDe=e=>e.env?' <span class="env">('+echappe(e.env)+')</span>':'';
   function rend(noeud,niveauLieu){let s='';
-    const noms=niveauLieu?lieux.map(x=>x[0]).concat('autres').filter(c=>c in noeud.enfants):Object.keys(noeud.enfants).sort((a,b)=>a.localeCompare(b));
+    const noms=niveauLieu?P.lieux.map(x=>x[0]).concat('autres').filter(c=>c in noeud.enfants):Object.keys(noeud.enfants).sort((a,b)=>a.localeCompare(b));
     for(const nom of noms){const e=noeud.enfants[nom],sous=Object.keys(e.enfants).length;
       if(e.feuille){const f=e.feuille;s+='<div class="feuille" data-topic="'+echappe(e.topic)+'" title="'+echappe(e.topic)+'">'+(f.retain?'<span class="r">R</span>':'')+
         '<span class="tp">'+echappe(nom||'(vide)')+'</span>'+envDe(e)+' <span class="nb">('+f.n+', '+f.t+')</span> '+echappe(String(f.payload).slice(0,200))+'</div>';}
-      if(sous)s+='<details data-chemin="'+echappe(e.chemin)+'"'+(arbreOuvert.has(e.chemin)?' open':'')+'><summary><span class="tp">'+echappe(niveauLieu?libelleLieu(nom):nom||'(vide)')+
+      if(sous)s+='<details data-chemin="'+echappe(e.chemin)+'"'+(arbreOuvert.has(e.chemin)?' open':'')+'><summary><span class="tp">'+echappe(niveauLieu?P.libelle(nom):nom||'(vide)')+
         '</span>'+(niveauLieu?'':'/')+envDe(e)+' <span class="nb">'+e.nbTopics+' topics, '+e.n+' messages</span></summary>'+rend(e,false)+'</details>';}
     return s;}
-  sec.innerHTML=h+rend(racine,lieux.length>0);pan.scrollTop=defil;
+  sec.innerHTML=h+rend(racine,P.lieux.length>0);pan.scrollTop=defil;
   for(const d of sec.querySelectorAll('details'))d.addEventListener('toggle',()=>{if(d.open)arbreOuvert.add(d.dataset.chemin);else arbreOuvert.delete(d.dataset.chemin);});
   for(const f of sec.querySelectorAll('.feuille'))f.onclick=()=>{const t=f.dataset.topic;filtre.value=t;champ.value='topic';regex.checked=false;
     ecrit('filtre',t);ecrit('champ','topic');ecrit('regex','0');$('topicPub').value=t;redessine();};}

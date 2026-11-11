@@ -122,7 +122,7 @@ def sonde(m):
     sys.path.insert(0, str(ICI))
     import lieux
     codes = [c for c, _ in lieux.LIEUX]
-    garage = sum(1 for c in lieux.identites(ICI.parents[2]) if c["lieu"] == "garage")
+    garage = sum(1 for c in lieux.identites(ICI.parents[2]) if c["lieu"] == "garage" and not c.get("sauvegarde"))
     m.ouvre()
     rangee = cdp.js(JS_RANGEE)
     noms = [r[0] for r in rangee] if isinstance(rangee, list) else rangee

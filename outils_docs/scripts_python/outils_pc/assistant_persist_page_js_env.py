@@ -41,7 +41,7 @@ function dessineListeEnv() {
   if (!lieuVu) {                                  // ?lieu= : bandeau seul, aucune carte n'est choisie (geste de l'utilisateur)
     lieuVu = true;
     var lieu = lieuDemande(parc.lieux);
-    if (lieu) bandeauLieu(document.querySelector("main"), parc.lieux.filter(function (l) { return l[0] === lieu; })[0][1], function () {});
+    if (lieu) bandeauLieu(document.querySelector("main"), libelleLieu(parc.lieux, lieu), function () {});
   }
   var choisi = $("f-env").value;
   remplitCartes($("f-env"), parc.cartes, "(nouvel env)", modif || choisi, parc.lieux);

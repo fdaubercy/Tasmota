@@ -25,26 +25,48 @@ def pour_page():
     return {"lieux": [list(x) for x in LIEUX]}
 
 
-def identites(racine):
-    """Une identite par carte (famille « cartes ») : env, lieu, nom d'hote et topic du persist du depot, IP propre."""
-    import build_envs                                 # ici : fichiers_berry_etat importe build_envs (cycle)
+def _serveur(chemin):
+    """Bloc `serveur` d'un persist, au format actuel (`serveur`) ou ancien (`parametres.serveur`) ; {} sinon."""
     import json
 
+    try:
+        d = json.loads(chemin.read_text(encoding="utf-8"))
+        s = d.get("serveur") or (d.get("parametres") or {}).get("serveur") or {}
+    except (OSError, ValueError, AttributeError):
+        return {}
+    return s if isinstance(s, dict) else {}
+
+
+def _identite(env, lieu_, serveur, ip, **plus):
+    mqtt = serveur.get("mqtt")
+    return {"env": env, "lieu": lieu_, "hote": str(serveur.get("hostname") or ""),
+            "topic": str(mqtt.get("topic") or "") if isinstance(mqtt, dict) else "", "ip": ip, **plus}
+
+
+def identites(racine):
+    """Une identite par carte (famille « cartes ») : env, lieu, nom d'hote et topic du persist du depot, IP propre.
+    Puis, marquees `sauvegarde: True`, celles des dossiers data/<lieu>/<nom>-sauvegarde/ (carte qui tourne encore
+    l'ancien code, donc l'ancien topic) : ne sont PAS des cartes en plus, a ne pas compter."""
+    import build_envs                                 # ici : fichiers_berry_etat importe build_envs (cycle)
+    from pathlib import Path
+
     res = []
+    noms = set()
     for e in build_envs.liste_envs(racine):
         if e.famille != "cartes":
             continue
-        serveur = {}
+        noms.add(e.nom)
         chemin = build_envs.persist_carte(racine, e.nom)
-        try:
-            serveur = json.loads(chemin.read_text(encoding="utf-8")).get("serveur") or {} if chemin else {}
-        except (OSError, ValueError, AttributeError):
-            serveur = {}
-        mqtt = serveur.get("mqtt") if isinstance(serveur, dict) else None
-        res.append({"env": e.nom, "lieu": lieu(e.nom),
-                    "hote": str(serveur.get("hostname") or "") if isinstance(serveur, dict) else "",
-                    "topic": str(mqtt.get("topic") or "") if isinstance(mqtt, dict) else "",
-                    "ip": e.ip if e.ip_source == "h" else ""})
+        res.append(_identite(e.nom, lieu(e.nom), _serveur(chemin) if chemin else {}, e.ip if e.ip_source == "h" else ""))
+    vus = {(i["hote"], i["topic"]) for i in res}
+    for chemin in sorted((Path(racine) / "data").glob("*/*-sauvegarde/_persist.json")):
+        dossier, lieu_ = chemin.parent.name, chemin.parent.parent.name
+        morceaux = dossier[:-len("-sauvegarde")].split("-")
+        env = "-".join([morceaux[0], lieu_] + morceaux[1:])
+        i = _identite(env if env in noms else dossier, lieu_, _serveur(chemin), "", sauvegarde=True)
+        if (i["hote"], i["topic"]) not in vus:
+            vus.add((i["hote"], i["topic"]))
+            res.append(i)
     return res
 
 
@@ -120,5 +142,86 @@ function bandeauLieu(parent, libelle, surFermeture) {
   b.appendChild(x);
   parent.insertBefore(b, parent.firstChild);
   return b;
+}
+function libelleLieu(lieux, code) {
+  const l = lieux.find(x => x[0] === code);
+  return l ? l[1] : (code && code !== 'autres' ? code : 'Autres');
+}
+
+// Puces Tous / lieux / Autres d'une page de flux (syslog, sniffeur MQTT). opts : erreurs (compte aussi les erreurs),
+// surChoix() (redessin de la page). Les comptes sont tenus PAR CLE (module|ip, topic) des la reception, pause comprise,
+// et jamais decrementes ; un lieu = la somme de ses cles, recalculee quand /lieux arrive.
+function pucesLieu(conteneur, opts) {
+  const MAXC = 5000;
+  const P = {cartes: [], lieux: [], choisi: '', puces: {}};
+  let cles = new Map(), tot = {}, hors = {};
+  const ajoute = (t, c, n, e) => { const x = t[c] || (t[c] = {n: 0, e: 0}); x.n += n; x.e += e; };
+  const maj = code => {
+    const p = P.puces[code], c = tot[code] || {n: 0, e: 0};
+    if (!p) return;
+    p.n.textContent = c.n;
+    if (p.e) p.e.textContent = c.e ? ' ' + c.e + ' err' : '';
+  };
+  const codeDe = e => {
+    const c = e.calcule(P.cartes);
+    return P.lieux.some(x => x[0] === c) ? c : 'autres';
+  };
+  const ent = (cle, calcule) => {
+    let e = cles.get(cle);
+    if (!e) {
+      e = {n: 0, e: 0, code: undefined, calcule, hors: cles.size >= MAXC};
+      // shortcut: 5000 cles retenues (les cles viennent du reseau), au-dela le compte va au lieu du moment sans etre retenu
+      // (non recalcule a l'arrivee de /lieux) ; a ameliorer si une page voit plus de 5000 modules ou topics distincts.
+      if (!e.hors) cles.set(cle, e);
+    }
+    if (e.code === undefined) e.code = codeDe(e);
+    return e;
+  };
+  P.libelle = code => libelleLieu(P.lieux, code);
+  P.code = (cle, calcule) => ent(cle, calcule).code;
+  P.compte = (cle, calcule, erreur) => {
+    const e = ent(cle, calcule), x = erreur ? 1 : 0;
+    e.n++; e.e += x;
+    if (e.hors) ajoute(hors, e.code, 1, x);
+    ajoute(tot, e.code, 1, x); ajoute(tot, '', 1, x);
+    maj(e.code); maj('');
+  };
+  P.efface = () => { cles = new Map(); tot = {}; hors = {}; Object.keys(P.puces).forEach(maj); };
+  P.choisit = code => {
+    P.choisi = code;
+    for (const k in P.puces) P.puces[k].bouton.classList.toggle('choisi', k === code);
+    opts.surChoix();
+  };
+  const dessine = () => {
+    const tete = document.createElement('span');
+    tete.className = 'gris'; tete.textContent = 'Lieu';
+    conteneur.replaceChildren(tete); P.puces = {};
+    for (const [code, libelle] of [['', 'Tous'], ...P.lieux, ['autres', 'Autres']]) {
+      const b = document.createElement('button'), n = document.createElement('span');
+      const e = opts.erreurs ? document.createElement('span') : null;
+      b.type = 'button'; b.className = 'puce'; b.dataset.lieu = code || 'tous'; n.className = 'n';
+      b.append(libelle + ' ', n);
+      if (e) { e.className = 'e'; b.append(e); }
+      b.onclick = () => P.choisit(code === P.choisi ? '' : code);
+      conteneur.appendChild(b); P.puces[code] = {bouton: b, n, e};
+    }
+  };
+  // Reponse de GET /lieux : table et cartes, comptes recalcules d'apres les cles (pas d'apres le tampon), puces,
+  // puis ?lieu= (premier chargement seulement, jamais memorise) : bandeau dans `parent` et choix.
+  P.recoit = (d, parent) => {
+    P.cartes = d.cartes; P.lieux = d.lieux;
+    const anciennes = cles;
+    cles = new Map(); tot = {};
+    anciennes.forEach((e, cle) => {
+      e.code = codeDe(e); cles.set(cle, e);
+      ajoute(tot, e.code, e.n, e.e); ajoute(tot, '', e.n, e.e);
+    });
+    for (const c in hors) { ajoute(tot, c, hors[c].n, hors[c].e); ajoute(tot, '', hors[c].n, hors[c].e); }
+    dessine(); Object.keys(P.puces).forEach(maj);
+    const demande = lieuDemande(P.lieux);
+    if (demande) { bandeauLieu(parent, P.libelle(demande), () => P.choisit('')); P.choisit(demande); }
+    else P.choisit(P.choisi);
+  };
+  return P;
 }
 """

@@ -108,7 +108,7 @@ function lieuxArrivee() {
   lieuxVu = true;
   lieuxInitial = lieuxFichiers = lieuDemande(lieuxTable);
   if (!lieuxInitial) return;
-  var libelle = lieuxTable.filter(function (l) { return l[0] === lieuxInitial; })[0][1];
+  var libelle = libelleLieu(lieuxTable, lieuxInitial);
   classement = "lieu";
   lieuxOuvre = true;                            // le groupe du lieu s'ouvre au premier dessin seulement
   bandeauLieu(lieuxBarre.colonne, libelle, function () { lieuxInitial = lieuxFichiers = null; lieuxClasse(classementMemo, true); });
