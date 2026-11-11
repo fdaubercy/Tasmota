@@ -2,7 +2,7 @@
 
 Maquettes du 2026-11-11 pour la page principale de la carte d'affichage `tasmota32s3-bureau-ecran-debits-pac` (Waveshare
 ESP32-S3-Touch-LCD-7B, 1024 × 600, tactile). Plan `tasks/plans/debits-deux-cartes.md`, action A8 ; fiche du module :
-`outils_docs/Schémas de branchement - Attribution des PINS des modules/bureau/tasmota32s3-bureau-ecran-debits-pac/WAVESHARE_ESP32-S3-Touch-LCD-7B.md`.
+`outils_docs/Schémas de branchement - Attribution des PINS des modules/bureau/tasmota32s3-ecran-debits-pac/WAVESHARE_ESP32-S3-Touch-LCD-7B.md`.
 
 - Images : `modele-A.png` à `modele-D.png` (taille réelle de l'écran).
 - Code : `maquettes_ecran_7B.html`, à ouvrir dans un navigateur (`?m=A` pour une seule maquette). Rendu des images :

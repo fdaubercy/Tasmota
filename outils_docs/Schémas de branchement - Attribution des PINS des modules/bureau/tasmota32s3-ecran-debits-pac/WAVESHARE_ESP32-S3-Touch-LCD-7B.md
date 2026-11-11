@@ -64,8 +64,14 @@ Registres (démo `io_extension.h`) : `0x02` mode (0xFF = toutes en sortie), `0x0
 | 5 | USB (0) ou CAN (1) | 0 |
 | 6 | Alimentation de la dalle (LCD_VDD_EN) | 1 |
 
-Écriture Berry prévue (à valider sur la carte) : `wire.write(0x24, 0x02, 0xFF, 1)` puis `wire.write(0x24, 0x03, 0x5E, 1)`
-(EXIO1, 2, 3, 4, 6 à 1, EXIO5 à 0). Sans ce pilote, l'écran reste noir même si Tasmota initialise la dalle.
+Écriture faite par `preinit.be` de la carte (`data/bureau/tasmota32s3-ecran-debits-pac/`, banc `berry/banc_preinit_7b.py`) :
+`0x02 ← 0xFF`, puis `0x03 ← 0xDD` (tactile en reset), GPIO4 (INT) à 0, puis `0x03 ← 0xDF` : toutes les sorties à 1 comme la
+démo, sauf EXIO5 (USB). Délais de la démo : 100, 100 et 200 ms. Sans ce pilote, l'écran reste noir même si Tasmota
+initialise la dalle. Chaque écriture est contrôlée (pas d'ACK : erreur au journal). `BrRestart` ou « Restart VM » rejouent
+`preinit.be` : écran coupé et tactile réinitialisé pendant 400 ms, sans autre effet.
+
+PWM (registre 0x05) : la démo plafonne la valeur à 97 « pour ne pas éteindre l'écran » (`io_extension.cpp::IO_EXTENSION_Pwm_Output`) ;
+le registre serait donc inversé (valeur haute = écran sombre). À vérifier sur la carte avant d'écrire la veille.
 
 Moment de l'écriture : dans `preinit.be`, avant l'initialisation de l'écran. Ordre lu dans `tasmota/tasmota.ino` : `GpioInit()`
 (démarre l'I2C, `support_tasmota.ino`), puis `BerryInit()` (exécute `preinit.be`), puis `XdrvXsnsCall(FUNC_PRE_INIT)`, où

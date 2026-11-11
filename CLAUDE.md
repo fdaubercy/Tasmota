@@ -587,12 +587,12 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   centiemes de L/min, mot d'etats, bit 12 toujours a 1) et push UDP (`modules.debits.modbus`). Affichage
   `tasmota32s3-bureau-ecran-debits-pac` (maitre ModBus et Range Extender id 0, IP 192.168.0.51) sur un Waveshare
   ESP32-S3-Touch-LCD-7B (1024x600 RGB, GT911, RS485 16/15 ; fiche `WAVESHARE_ESP32-S3-Touch-LCD-7B.md` et docs constructeur dans
-  `outils_docs/Schémas de branchement - Attribution des PINS des modules/bureau/tasmota32s3-bureau-ecran-debits-pac/`, A8 en cours : expandeur I2C 0x24 par `preinit.be`, HASPmota ou LVGL au choix du cenv) :
+  `outils_docs/Schémas de branchement - Attribution des PINS des modules/bureau/tasmota32s3-ecran-debits-pac/`, A8 en cours : expandeur I2C 0x24 par `preinit.be`, HASPmota ou LVGL au choix du cenv) :
   `ecranDebitsFonctions.be` + `controleEcranDebits.be` du dossier de la carte, veille, commande `ReglageEcranDebits`. Lecture
   groupee et push multi-valeurs : `modbusFonctions.be::sertGroupe`, `modBus_TasmotaSlaveModBus.be::demandeGroupee` et
   `::eclateGroupe`, cles `drivers.ModBus.lectureGroupee`, `drivers.ModBus.periodeReleve` (`PROTOCOLE_MODBUS.md` § 9). Sniffeur :
   `sniffeur_modbus.py --persist affichage`. Historique et `/graphiques` (plan `tasks/plans/historique-debits.md`). Bancs
-  `berry/banc_debits.py`, `banc_ecran_debits.py`, `banc_test_modbus.py`, `banc_demarrage.py`, `outils_pc/test_sniffeur_modbus.py`,
+  `berry/banc_debits.py`, `banc_ecran_debits.py`, `banc_preinit_7b.py` (expandeur 0x24 du 7B), `banc_test_modbus.py`, `banc_demarrage.py`, `outils_pc/test_sniffeur_modbus.py`,
   essai de charge `outils_pc/essai_charge_debits.py`. Guide d'equilibrage `outils_docs/chauffage/` (texte) ; page animee
   `equilibrage.html` du dossier de l'acquisition, servie en `/equilibrage` par `equilibragePage.be` (joignable par
   `http://192.168.0.51:8080/equilibrage`) avec le code du mode carte `equilibrage_carte.js` (debits en direct, reglages gardes

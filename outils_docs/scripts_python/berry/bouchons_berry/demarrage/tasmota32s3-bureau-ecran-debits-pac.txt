@@ -6,6 +6,6 @@ commandes (8) : ReglageEcranDebits, ReglageGlobal, ReglageLog, ReglageModbus, Re
 crons (0) : 
 minuteries (1) : demarrageDiffere
 compiles (2) : /controleEcranDebits.bec, /ecranDebitsFonctions.bec
-sources (1) : /autoexec.be
+sources (2) : /autoexec.be, /preinit.be
 globales (37) : LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controleEcranDebits:instance, controleUDP_multicast:instance, controleUDP_unicast:instance, diverses:instance, ecranDebitsFonctions:nil, ecranDebitsFonctions_aideReglageEcranDebits:nil, ecranDebitsFonctions_appliqueVeille:nil, ecranDebitsFonctions_debits:nil, ecranDebitsFonctions_demarreEcran:nil, ecranDebitsFonctions_ecran:nil, ecranDebitsFonctions_entier:nil, ecranDebitsFonctions_entree:nil, ecranDebitsFonctions_etatVoie:nil, ecranDebitsFonctions_etats:nil, ecranDebitsFonctions_fenetre:nil, ecranDebitsFonctions_imprecis:nil, ecranDebitsFonctions_log:nil, ecranDebitsFonctions_reglageEcranDebits:nil, ecranDebitsFonctions_suitFenetre:nil, ecranDebitsFonctions_total:nil, ecranDebitsFonctions_valeur:nil, ecranDebitsFonctions_veille:nil, fsMqttRecepteur:instance, gpio:module, light:module, modules:instance, persist:instance, serveur:instance, wire1:instance, wire2:instance
 erreurs (0) : 
