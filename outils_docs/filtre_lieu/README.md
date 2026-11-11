@@ -4,7 +4,11 @@
 téléversement » (onglets Build et Fichiers) et sur les autres pages de l'annuaire qui font choisir une carte.
 
 **Choix retenus le 2026-11-10 : D pour l'onglet Build, F pour l'onglet Fichiers, H pour les autres pages ; lieux,
-ordre et piscine en « Extérieur » validés tels que dans la maquette.** Rien de réalisé.
+ordre et piscine en « Extérieur » validés tels que dans la maquette.** Réalisé le 2026-11-11 (plan
+`tasks/plans/classement-par-lieu.md`, spec `docs/superpowers/specs/2026-11-10-classement-par-lieu-design.md`) :
+table des lieux et `remplitParLieu` dans `outils_pc/lieux.py` (banc `test_lieux.py`), modèle D dans
+`outils_pc/build_page_lieux.py` (sonde `test_build_page_lieux_chrome.py`), modèle F dans
+`build_page_fichiers.py::fichiersCartes`, modèle H dans les listes de carte des pages 7700 à 7980.
 
 - `maquettes_filtre_lieu.html` : 9 modèles (`?m=A` à `?m=I`, `&t=clair` pour le thème clair), avec les vraies cartes.
   Rien n'est écrit.

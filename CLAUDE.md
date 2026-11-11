@@ -140,7 +140,7 @@ qu'un decoupage ; 531 lignes avant le palier 4 de l'atelier, +57 pour les routes
 routes de la page `/energie` restent ensemble (spec `2026-11-08-atelier-energie-differentiel-design.md` §6.3) ; un
 second module solidifie ajouterait une entree de `custom_berry_solidify` et de l'autoexec pour rien.
 
-`outils_docs/scripts_python/outils_pc/build_page.py` fait **1223 lignes**, et c'est **voulu**
+`outils_docs/scripts_python/outils_pc/build_page.py` fait **1226 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
 vague de corrections finale du meme jour ; 935 le 2026-10-25 avec le panneau « Sortie » et « Effacer puis
 televerser » ; 1038 le meme jour avec la pause « rebranchez la carte » et les panneaux refermes ; 1053 avec
@@ -150,7 +150,7 @@ deja le FS ; 1131 le meme jour avec les sons de fin de lancement et de pause ; 1
 branchement de l'onglet « Fichiers », dont le code vit dans `build_page_fichiers.py` ; 1154 le 2026-10-31 avec
 les durees en heures au-dela de 60 min ; 1162 le 2026-11-01 avec le branchement de l'onglet « Mémoire et partitions », dont
 le code vit dans `build_page_memoire.py` ; 1169 le meme jour avec le branchement de l'onglet « Env par défaut (Platformio override) », dont le
-code vit dans `build_page_defaut.py` ; 1206 le meme jour avec le bouton de purge du cache et le resume memoire de chaque env ; 1210 le 2026-11-02 avec les couleurs du panneau « Sortie », dont le code vit dans `build_page_couleurs.py` ; 1215 le meme jour avec le branchement de l'onglet « Aide », dont le texte vit dans `build_page_aide.py` ; 1223 le 2026-11-03 avec le branchement de l'onglet « Sauvegarde configuration », dont le code vit dans `build_page_sauvegarde.py` ; 1223 encore le 2026-11-10 avec le branchement de la bascule « Classer par », dont le code vit dans `build_page_lieux.py` (qui reprend aussi la memoire d'ouverture de `chargeEnvs`)). C'est la page
+code vit dans `build_page_defaut.py` ; 1206 le meme jour avec le bouton de purge du cache et le resume memoire de chaque env ; 1210 le 2026-11-02 avec les couleurs du panneau « Sortie », dont le code vit dans `build_page_couleurs.py` ; 1215 le meme jour avec le branchement de l'onglet « Aide », dont le texte vit dans `build_page_aide.py` ; 1223 le 2026-11-03 avec le branchement de l'onglet « Sauvegarde configuration », dont le code vit dans `build_page_sauvegarde.py` ; 1223 encore le 2026-11-10 avec le branchement de la bascule « Classer par », dont le code vit dans `build_page_lieux.py` (qui reprend aussi la memoire d'ouverture de `chargeEnvs`) ; 1226 le 2026-11-11 avec le branchement de `lieux.JS`, commun aux listes de cartes). C'est la page
 unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule constante
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
@@ -557,6 +557,12 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   texte vertical. Generateurs `outils_pc/genere_brochage_excel.py` (cartes `CARTES` : S3 DevKitC-1, DevKitC V4, P4) et
   `genere_brochage_horizontal.py` (ESP32 Relay x8, Waveshare 8DI-8RO), par Excel (pywin32, Python systeme) ; ne
   reecrivent jamais un classeur existant. Banc `outils_pc/test_genere_brochage.py`.
+- Classement des cartes par lieu (2026-11-11, plan `tasks/plans/classement-par-lieu.md`, maquettes `outils_docs/filtre_lieu/`) :
+  `outils_pc/lieux.py` = SEULE table des lieux (2e segment du nom d'env, exception de la piscine), `puce()`, et le JS
+  `remplitParLieu` (listes `<optgroup>` des pages 7700 a 7980) ; banc `test_lieux.py`. Les routes `/envs`, `/parc`, `/cartes`
+  ajoutent `lieu` (et `puce` pour la page Build) et `lieux`. Bascule « Classer par » de l'onglet Build : `build_page_lieux.py`,
+  sonde `test_build_page_lieux_chrome.py` ; intertitres de l'onglet Fichiers : `build_page_fichiers.py::fichiersCartes`.
+  Nouveau lieu : une ligne dans `lieux.LIEUX`, rien d'autre.
 - `outils_docs/jauges/` — catalogue de 8 jauges pour afficher une mesure de capteur (2026-10-31) : images
   `jauge-A.png` a `jauge-H.png`, code `catalogue_jauges.html`, fiche `README.md`. **Choix retenu : A (liquide
   anime ECharts) ou H (demi-cercle SVG)**. Un gabarit `webSensor*.html` n'execute aucun script (zone remplacee

@@ -721,6 +721,12 @@ Conception : [spec](../docs/superpowers/specs/2026-10-24-page-build-televersemen
 - **Classement** : *Mes cartes* (envs de `platformio_tasmota_cenv.ini`), *Mes bases* (`tasmota32-base`,
   `tasmota32s3-base-N16R8`, `tasmota32p4-base-*`) et *Tasmota (amont)*, replié par défaut, en sous-groupes
   (safeboot, ESP32, langues, ESP8266).
+- **Classer par** Famille / Lieu / Puce (barre au-dessus de la liste) : en Lieu, les cartes sont rangées par
+  emplacement dans la maison (2e segment du nom d'env, table de `outils_pc/lieux.py`), en Puce par ESP32, ESP32-S3,
+  ESP32-P4, ESP8266 ; « Mes bases » et l'amont restent en dessous. La case d'un groupe coche ou décoche ses cartes
+  visibles ; un groupe s'ouvre à l'arrivée s'il contient une carte cochée. Le classement est retenu par le navigateur
+  et ne change rien à ce qui est coché ni à ce qui part. **Filtrer par nom** réduit la liste ; un env coché caché par
+  le filtre est signalé en orange, il part quand même au lancement.
 - **Cinq actions**, combinables, appliquées à tous les envs cochés : compiler, téléverser le firmware, effacer puis
   téléverser (voir plus bas), construire le file system, téléverser le file system. Dans un env, l'ordre est
   toujours compiler, téléverser (ou effacer puis téléverser), construire le FS, téléverser le FS, en ne lançant que
@@ -861,7 +867,8 @@ Pour remplacer un ou deux fichiers sur une carte (un `.be` corrigé, un gabarit,
 file system. Onglet **Fichiers**, en haut de la page (l'onglet ouvert est retenu au rechargement). Deux transports :
 **HTTP** (adresse de la carte) ou **MQTT** (par le broker, voir plus bas).
 
-1. **Carte destinataire** (colonne de gauche) : les envs « Mes cartes » envoyables en OTA. L'adresse et sa
+1. **Carte destinataire** (colonne de gauche) : les envs « Mes cartes » envoyables en OTA, sous un intertitre par
+   lieu (« GARAGE · 3 »). L'adresse et sa
    provenance sont celles de l'onglet Build (IP fixe de `user_config_override.h`, ou `IP du maître:port` pour un
    esclave du range extender) ; une adresse saisie ici vaut aussi pour l'onglet Build, pour ce lancement seulement.
 2. **Préparer la liste** : construit l'image du FS de la carte (`pio run -t buildfs`, comme « Construire le file
@@ -948,8 +955,8 @@ Cas limites :
 
 ### Onglet « Mémoire et partitions » : occupation et table de chaque env
 
-L'onglet s'ouvre sur l'env coché dans l'onglet Build (sinon la première carte) ; la liste en haut en choisit un autre
-sans toucher aux cases.
+L'onglet s'ouvre sur l'env coché dans l'onglet Build (sinon la première carte) ; la liste en haut (cartes groupées par
+lieu, bases en dernier) en choisit un autre sans toucher aux cases.
 
 - **Occupation** : une jauge par partition de la flash et par zone RAM du journal (DIRAM, IRAM, RTC, LP RAM...),
   orange à 85 %, rouge à 95 %. Elle est relevée seule après chaque compilation réussie ; « Analyser » relit le dernier
@@ -1084,7 +1091,7 @@ Settings (Wi-Fi, MQTT, minuteries, gabarit, règles, `AdcParam`...) **et** ses f
 compteurs ; voir l'onglet « Aide »). Fichiers `AAAAMMJJ-HHMMSS_<origine>.dmp` dans `outils_docs/sauvegardes_cartes/<env>/`,
 **ignoré par git** : un `.dmp` porte les mots de passe Wi-Fi et MQTT en clair, et le dépôt est public.
 
-- **Carte** en haut, avec l'adresse de sa ligne dans l'onglet Build (méthode OTA). Un esclave derrière le Range
+- **Carte** en haut (liste groupée par lieu), avec l'adresse de sa ligne dans l'onglet Build (méthode OTA). Un esclave derrière le Range
   Extender est joint par le maître (`IP:port`), redirection posée et identité vérifiée d'abord, comme pour un envoi.
 - **« Sauvegarder maintenant »** : nouvelle sauvegarde « manuelle ». Une sauvegarde « avant flash » est prise seule
   avant un envoi du firmware par câble, une « avant restauration » avant chaque restauration.
@@ -1187,6 +1194,9 @@ Une page pour décider, carte par carte, ce que devient chaque fichier Berry : *
 `custom_files_exclude`, `custom_berry_solidify`) à la place d'une édition à la main, et crée un nouvel env à partir
 d'une carte existante, renomme ou supprime un env. Conception : [spec](../docs/superpowers/specs/2026-10-25-page-fichiers-berry-design.md) ;
 plans : `tasks/plans/fichiers-berry-env.md`, `tasks/plans/fichiers-berry-suppression.md`.
+
+Les listes de cartes (env affiché, carte modèle d'une création) sont groupées par lieu de la maison, « Mes bases » en
+dernier (table de `outils_pc/lieux.py`, commune aux pages des outils).
 
 ### Lancer la page
 
@@ -1349,6 +1359,9 @@ viennent d'un **modèle** (`outils_docs/schemas/modele_persist.json`) qui se met
 Le moteur d'écriture est celui de « Fichiers Berry par env » (créer un env), sans changement de comportement.
 Conception : [spec](../docs/superpowers/specs/2026-10-27-assistant-persist-design.md) ; plan :
 `tasks/plans/assistant-persist.md`.
+
+Les listes de cartes du parc (env à modifier, carte de l'onglet autoexec.bat) sont groupées par lieu de la maison
+(`outils_pc/lieux.py`).
 
 ### Lancer la page
 
@@ -1544,7 +1557,8 @@ Page http://127.0.0.1:7980 pour fabriquer une extension Tasmota (`.tapp`) et l'e
 extension, quand s'en servir et ses pièges : [EXTENSIONS_TAPP.md](EXTENSIONS_TAPP.md). Lancement : tuile « Fabrique
 d'extensions » de l'annuaire (groupe Maintenance), tâche VS Code « Outil : fabrique d'extensions », ou cible Custom
 « Fabrique d'extensions (page web) » (`build/cible_tapp.py`, page démarrée détachée ; `pio run` : jamais pendant un build).
-Arrêt libre : rien n'est écrit ni envoyé sans un geste dans la page, aucune source n'est supprimée.
+Arrêt libre : rien n'est écrit ni envoyé sans un geste dans la page, aucune source n'est supprimée. La liste des
+cartes destinataires est groupée par lieu de la maison (`outils_pc/lieux.py`).
 
 Quatre étapes :
 
@@ -1588,6 +1602,9 @@ destination « Graphiques » et le bouton « Téléverser » ; modèle B de
 Conception : [spec](../docs/superpowers/specs/2026-11-03-atelier-graphiques-design.md) et
 [spec destinations](../docs/superpowers/specs/2026-11-04-atelier-destinations-televersement-design.md) ; plans :
 `tasks/plans/atelier-graphiques.md`, `tasks/plans/atelier-destinations.md`.
+
+La liste des cartes S3/P4 est groupée par lieu de la maison (`outils_pc/lieux.py`) ; la carte du différentiel y est
+rangée en Bureau.
 
 ### Lancer la page
 
