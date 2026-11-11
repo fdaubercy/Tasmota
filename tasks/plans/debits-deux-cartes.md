@@ -93,7 +93,22 @@ Contraintes globales (de la conception) :
 ## A7 — Retour au plan « debitmetres-chauffage »
 - [ ] Cocher l'étape « Réalisation par le plan `tasks/plans/debits-deux-cartes.md` » de l'action A8 de `tasks/plans/debitmetres-chauffage.md` (preuve : commit de A6), passer ce plan en `statut: clos`, puis reprendre `debitmetres-chauffage` où il attend : A2 (niveaux mesurés, K confirmé à réception, PAC), A5 (page web de la carte des débits), A6 (essai de charge, sur l'acquisition sans écran), A7 (pose et étalonnage)
 
+## A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600)
+Fiche : `outils_docs/Schémas de branchement - Attribution des PINS des modules/bureau/tasmota32s3-bureau-ecran-debits-pac/WAVESHARE_ESP32-S3-Touch-LCD-7B.md` (GPIO utilisés et libres, expandeur 0x24, `display.ini`, HASPmota / LVGL, corrections à la conversation Gemini). Décisions du 2026-11-11 : modèle 7B, RS485 intégré (RX 16 / TX 15, plus de XY-017 côté affichage), HASPmota ET LVGL pur prévus, choix de l'un ou l'autre à la compilation.
+- [x] Lire la conversation Gemini et télécharger la documentation Waveshare dans le dossier du module — preuve : `doc-waveshare-7B/` (schéma, plan 3D, ST7262, GT911, CH422G, TJA1051, WROOM-1) et fiche ci-dessus ; démo Arduino lue (registres de l'expandeur, timings RGB)
+- [ ] Questions à l'utilisateur (fiche § « Questions ») : alimentation 5 V près de la nourrice, orientation et boîtier, veille (extinction ou gradation PWM), usage du tactile, usage de GPIO6, mécanisme de choix HASPmota / LVGL à la compilation
+- [ ] Persist de l'affichage pour le 7B : RS485 RX 16 / TX 15, I2C SDA 8 / SCL 9, `drivers.ecran` RGB 1024 × 600 (broches de la fiche, rétroéclairage par l'expandeur), tactile GT911 INT 4 ; `banc_ecran_debits` adapté (témoin rouge sur l'ancien brochage)
+- [ ] Section `#elif` du `.h` et section du cenv : plus d'`USE_ILI9488` ni de SPI, écran universel RGB + tactile universel, base N16R8 avec LVGL ; nouveau `display.ini` 7B (fiche § 4) ; `banc_demarrage` et rejeu du parc VERT
+- [ ] Pilote Berry de l'expandeur 0x24 (mode, alimentation de la dalle, rétroéclairage, reset du tactile, PWM de luminosité pour la veille) chargé avant l'écran ; banc avec bus I2C simulé
+- [ ] Maquettes : 3 à 4 interfaces 1024 × 600 proposées en images (comme `outils_docs/jauges/`), choix de l'utilisateur
+- [ ] Interface HASPmota : `pages.jsonl` redessiné en 1024 × 600 selon la maquette retenue, `ecranDebitsFonctions` adapté ; banc VERT
+- [ ] Interface LVGL pur en Berry (même maquette, objets LVGL, courbe possible par `lv.chart`) ; banc VERT
+- [ ] Choix à la compilation entre les deux interfaces (mécanisme retenu par l'utilisateur), un seul jeu de fichiers envoyé sur le FS ; `banc_demarrage` des deux variantes
+- [ ] Classeurs de brochage : celui de l'acquisition mis à jour (écran retiré, broches libérées, RS485 17/18), celui de l'affichage créé pour le 7B (GPIO utilisés, libres, EXIO)
+- [ ] Essai sur la carte (avec A6) : image, couleurs, tactile, rétroéclairage, stabilité avec le Wi-Fi, relevé RS485
+
 ## Améliorations restantes
+- [ ] [projet] Rétroéclairage gradué automatiquement par une mesure de lumière (ADC de l'expandeur ou GPIO6)
 - [ ] [projet] Fenêtre de mesure transmise par l'acquisition (évite la recopie à la main sur l'affichage)
 - [ ] [projet] Défaut de l'ancien chemin `Count` > 1 (`[v, 0, …]`) corrigé pour toutes les cartes, avec la grille du garage
 
