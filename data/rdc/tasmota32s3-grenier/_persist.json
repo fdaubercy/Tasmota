@@ -1065,6 +1065,10 @@
 			"activation": "ON",
 			"name": "Volets roulants (porte d'entrée, cuisine, trappe du grenier)",
 			"mode": 1,
+			"facade": {
+				"activation": "ON",
+				"toit": "deuxPans"
+			},
 			"log": "info",
 			"environnement": {
 				"VRs": {
@@ -1073,6 +1077,7 @@
 						"nom": "Volet porte d'entrée",
 						"id": 1,
 						"inverse": 0,
+						"facade": {"type": "porte", "place": 3},
 						"etat": "STOPPED",
 						"position": 0,
 						"relais1": 1,
@@ -1144,6 +1149,7 @@
 						"nom": "Volet cuisine",
 						"id": 2,
 						"inverse": 0,
+						"facade": {"type": "fenetre", "place": 1},
 						"etat": "STOPPED",
 						"position": 0,
 						"relais1": 3,
@@ -1215,6 +1221,7 @@
 						"nom": "Trappe du grenier",
 						"id": 3,
 						"inverse": 0,
+						"facade": {"type": "trappe", "place": 2},
 						"etat": "STOPPED",
 						"position": 0,
 						"relais1": 5,

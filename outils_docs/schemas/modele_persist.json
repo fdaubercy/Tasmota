@@ -577,6 +577,10 @@
 				"activation": "OFF",
 				"name": "Driver Volet Roulant",
 				"mode": 3,
+				"facade": {
+					"activation": "OFF",
+					"toit": "deuxPans"
+				},
 				"log": "info",
 				"environnement": {
 					"VRs": {
@@ -585,6 +589,7 @@
 							"nom": "Volet Roulant Garage",
 							"id": 1,
 							"inverse": 1,
+							"facade": {"type": "fenetre", "place": 1},
 							"etat": "STOPPED",
 							"position": 0,
 							"relais1": 2,

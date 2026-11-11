@@ -101,7 +101,7 @@ Produit : `vrFonctions.commandeSens(id, sens) -> string` (sens `"ouvre"`, `"ferm
   et la balise de `ligneWebInclinaison` (section 9 du banc ajustée à la nouvelle ligne) — preuve : vrFonctions.be : configBoutons, commandeSens, enReglage, gardes et balise data-vi ; verifie_berry.py : 0 erreur, 0 avertissement de charte
 - [x] `python outils_docs/scripts_python/berry/banc_inclinaison.py` : `BANC_INCLINAISON: OK`, sections 1 à 18 inchangées — preuve : sortie « BANC_INCLINAISON: OK », sections 1 a 19 vertes
 - [x] Témoin : copie de `data/fs` sans la garde de `changementEtatCapteur` -> section 19 rouge — preuve : copie mutee (garde de changementEtatCapteur retiree) : « ECHEC pendant un reglage : changementEtatCapteur n'envoie rien », copie intacte OK
-- [ ] Commit `refactor(volets): sens physique, boutons et garde du reglage dans vrFonctions`
+- [x] Commit `refactor(volets): sens physique, boutons et garde du reglage dans vrFonctions` — preuve : 9dd679373, relecture approuvée
 
 ## A2 — Décrire les façades dans les persists, le modèle et le schéma
 Fichiers : `data/rdc/tasmota32s3-grenier/_persist.json`, `data/etage2/tasmota32s3-grenier/_persist.json`,
@@ -110,9 +110,9 @@ Fichiers : `data/rdc/tasmota32s3-grenier/_persist.json`, `data/etage2/tasmota32s
 Valeurs : grenier du RDC `toit` `deuxPans`, VR2 cuisine `fenetre` place 1, VR3 trappe `trappe` place 2, VR1 porte `porte`
 place 3 ; P4 du garage `toit` `unPan`, VR1 `garage` place 1 ; 2e étage `toit` `aucun`, VR1 `trappeEchelle` place 1. Modèle :
 bloc `facade` à `"activation": "OFF"`, `toit` `deuxPans`, VR1 `fenetre` place 1.
-- [ ] Éditer le TEXTE des persists (tabulations et ordre gardés, script dans le scratchpad qui vérifie chaque remplacement
-  puis relit le JSON), jamais de réécriture par `json.dump`
-- [ ] `python outils_docs/scripts_python/berry/genere_schema_persist.py` puis contrôle des persists : 0 erreur
+- [x] Éditer le TEXTE des persists (tabulations et ordre gardés, script dans le scratchpad qui vérifie chaque remplacement
+  puis relit le JSON), jamais de réécriture par `json.dump` — preuve : éditées en texte (script, 4 fichiers, 25 lignes ajoutées, 0 retirée), JSON relu : 3 persists et modèle portent les valeurs de la fiche
+- [x] `python outils_docs/scripts_python/berry/genere_schema_persist.py` puis contrôle des persists : 0 erreur — preuve : genere_schema_persist.py puis --valide : 0 erreur sur tous les persists, schéma +37 lignes
 - [ ] Commit `feat(volets): facade decrite dans les persists des cartes a volets`
 
 ## A3 — Module du mode réglage `vrReglage.be` et son banc

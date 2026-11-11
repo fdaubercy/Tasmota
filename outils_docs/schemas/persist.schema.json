@@ -3618,6 +3618,22 @@
                         ],
                         "additionalProperties": true
                       },
+                      "facade": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string"
+                          },
+                          "place": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "place"
+                        ],
+                        "additionalProperties": true
+                      },
                       "inverse": {
                         "type": "integer"
                       }
@@ -3641,6 +3657,27 @@
                   }
                 }
               },
+              "additionalProperties": true
+            },
+            "facade": {
+              "type": "object",
+              "properties": {
+                "activation": {
+                  "type": "string",
+                  "description": "ON ou OFF : active ou non ce bloc.",
+                  "enum": [
+                    "ON",
+                    "OFF"
+                  ]
+                },
+                "toit": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "activation",
+                "toit"
+              ],
               "additionalProperties": true
             }
           },

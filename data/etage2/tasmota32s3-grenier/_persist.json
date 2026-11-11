@@ -849,6 +849,10 @@
 			"activation": "ON",
 			"name": "Driver Trappe de Grenier 2eme",
 			"mode": 1,
+			"facade": {
+				"activation": "ON",
+				"toit": "aucun"
+			},
 			"log": "info",
 			"environnement": {
 				"VRs": {
@@ -856,6 +860,7 @@
 						"activation": "ON",
 						"nom": "Trappe de Grenier 2eme",
 						"id": 1,
+						"facade": {"type": "trappeEchelle", "place": 1},
 						"etat": "STOPPED",
 						"position": 0,
 						"relais1": 2,
