@@ -359,3 +359,49 @@ gardes ; entree ecrite a la main, pas par le script.
 -   `e6325d9e0` Use Tasmota Arduino core 3.3.12-1 from platform 2026.10
 - ● `299a3723f` `PsrMode` displaying whether PSRAM is `QIO`/`OPI` (#25213)
 -   `568220d49` Update change logs
+
+## 2026-11-11 15:57 — 39 commit(s) recupere(s) d'upstream
+
+`arendst/Tasmota:development` → `fdaubercy/Tasmota:development` (merge_type : merge)
+
+**8 commit(s) ● a lire de pres.**
+
+-   `ae505736e` Fix ESP32 trigger crash with `Restart -1` (#25223)
+- ● `39f19c232` MiEL HVAC Modbus: mirror total energy to holding register 40027 (#25214)
+- ● `ffeb60be8` Fix missing NUL terminator for stored ModbusBridgeSend command data (#25218)
+- ● `39146bb7b` Security fix GHSA-cv25-hx2j-hh52
+-   `a281cece5` Update change logs
+-   `760d69bb0` Refactor JPEG size retrieval function (#25226)
+-   `b7994b52c` Fix comments for offsets and sizes (#25229)
+-   `5459f95f9` Add BME680 IAQ (air quality index) to BMP sensor driver (#25175)
+-   `3d125d273` Update change logs
+- ● `1cb7ebcaf` Fix security issue
+- ● `e97e1e4f7` Fix security issue
+-   `1c6465883` Fix typo in snprintf_P function call
+-   `0c38835c2` Reduce max number of ZCDimmer PWM channels to 5 due to allocated persistent data size (#25222)
+-   `355e2593f` Update Italian language (#25235)
+-   `9b4e7305f` Fix TuyaV1 and TuyaV2 out-of-bounds accessing `tuya_fnid_map[]` (#25222)
+- ● `4676a03eb` Matter event EpochTimestamp sent as seconds instead of milliseconds, using new Berry `tasmota.rtc_utc_ms()` (#25234)
+-   `18d80cbac` Update change logs
+-   `10dfe09c7` Modify __wrap_delay for LTO compatibility (#25237)
+-   `0cdf7e1af` Clarify text_pool
+-   `05dbdf048` Remove support for migration from versions below v9.1
+-   `9c3a28740` Fix ArgV() OOB results
+-   `8f5299996` Fix function `subStr()` possible buffer overflow
+- ● `43d9409e6` MiEL HVAC Modbus: full register table and more FC03 mirror registers (#25240)
+-   `18f9d1708` OpenTherm: retry a command 3 times before marking it as not supported (#25236)
+-   `12539b666` Fix linker error by commenting timezone variable (#25242)
+-   `ccab57256` Update macOS runner to use latest version
+-   `a9efd584a` Update Arduino esp8266 Tasmota core (#25097)
+-   `3cf4a0440` Update change logs
+-   `f9cf3a974` TM1621: Sonoff POWCT template comment has its LED as Led1 (288), as in xnrg_19 (#25243)
+-   `8e680a396` Revert "Update Arduino esp8266 Tasmota core (#25097)"
+-   `9bb943faf` Reapply "Update Arduino esp8266 Tasmota core (#25097)"
+-   `c4d5b5cab` Remove PROGMEM from HTML color name externs (#25245)
+-   `fca67914f` Refactor script: use upload port when get flash size (#25247)
+-   `179264f48` Remove support for versions below v9.1
+-   `35d71e0b5` Partition Wizard: keep data partitions placed after the file system (#25241)
+- ● `074191bdd` Berry strlib: reject decimal integer overflow before it happens (#25249)
+-   `099f97d4c` Remove support for versions below v9.1
+-   `e163e4d40` Remove support for versions below v9.1
+-   `3f9983d10` Fix possible webcolor buffer OoB
