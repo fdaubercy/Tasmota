@@ -315,8 +315,11 @@ def en_json(racine=None):
     import lieux                                      # ici : lieux importe fichiers_berry_etat (cycle)
     racine = Path(racine) if racine else Path(__file__).resolve().parents[3]
     nombres = {}
-    for c in lieux.identites(racine):
-        nombres[c["lieu"]] = nombres.get(c["lieu"], 0) + 1
+    try:
+        for c in lieux.identites(racine):
+            nombres[c["lieu"]] = nombres.get(c["lieu"], 0) + 1
+    except Exception:                                 # cenv illisible : compteurs a 0, l'annuaire reste utilisable
+        nombres = {}
     outils = []
     for o in OUTILS:
         outils.append({"id": o.id, "nom_acces": o.nom_acces, "nom": o.nom, "groupe": o.groupe,
