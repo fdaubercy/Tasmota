@@ -139,7 +139,7 @@
 			"log": "info"
 		},
 		"discovery": {
-			"activation": "OFF",
+			"activation": "ON",
 			"log": "info"
 		},
 		"voieReseau": "wifi"

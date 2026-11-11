@@ -78,7 +78,8 @@ def ecranDebitsFonctions_valeur(n, now)
     var e = ecranDebitsFonctions.entree(n)
     if (e == nil || e.find("etatConstate") != "valide")    return nil    end
     var t = e.find("constateA")
-    if (type(t) != "int" || now - t > 2 * ecranDebitsFonctions.fenetre())    return nil    end
+    # t > now : releve sauve par un persist.save avant le redemarrage, lu avant l'heure NTP
+    if (type(t) != "int" || t > now || now - t > 2 * ecranDebitsFonctions.fenetre())    return nil    end
     var v = e.find("value")
     return (type(v) == "int" && v >= 0 && v != modbusFonctions.SENTINELLE_UINT32) ? v : nil
 end

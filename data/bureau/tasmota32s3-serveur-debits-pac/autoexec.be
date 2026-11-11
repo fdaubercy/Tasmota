@@ -16,6 +16,7 @@ if demarrage.prologue()
     demarrage.charge(["fsMqtt"])                                            # fichiers du FS recus par MQTT (page Build 7700)
     demarrage.charge(["controleUDP"], "serveur.udp")                        # push des debits au maitre ; exige par le RangeExtender
     demarrage.charge(["controleModbus"])                                    # ouvre le port serie RS485 (GPIO 17/18)
+    demarrage.charge(["controleDiscovery"], "serveur.discovery")            # fiche ImAlive au maitre : son RoutageRangeExtender (:8080) en depend
     demarrage.charge(["controleRangeExtender"], "serveur.rangeExtender")   # esclave (id 1) derriere SERVEUR-DEBITS-PAC-GATEWAY, point d'acces propre
     demarrage.historique()                                                  # historique des debits et page /graphiques (diverses.historique)
     demarrage.chargeFichier("controleDebits", "modules.debits")

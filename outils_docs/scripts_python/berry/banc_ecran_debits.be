@@ -165,6 +165,8 @@ verifie("mesure vieille de plus de 2 fenetres (21 s) : inconnu", ecranDebitsFonc
 global.modules["ecranDebits"]["fenetre"] = 30
 verifie("fenetre 30 s : 21 s de vieillesse reste valide", ecranDebitsFonctions.debits(global.T)[0] != nil)
 global.modules["ecranDebits"]["fenetre"] = 10
+pose(1, 12345, -60)
+verifie("releve date apres maintenant (persist.save d'avant le redemarrage, heure NTP pas encore la) : inconnu", ecranDebitsFonctions.debits(global.T)[0] == nil)
 pose(1, 0x7FFFFFFF, 0)
 verifie("sentinelle 0x7FFFFFFF : inconnu, jamais 21 474 836 L/min", ecranDebitsFonctions.debits(global.T)[0] == nil)
 efface()

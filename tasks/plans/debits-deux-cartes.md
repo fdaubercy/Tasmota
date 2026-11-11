@@ -4,7 +4,7 @@ titre: Débits de la nourrice sur deux cartes, acquisition esclave et affichage 
 objectif: Faire passer les 6 débits de la carte d'acquisition (esclave ModBus id 1) à une carte d'affichage (maître id 0) par une lecture groupée RS485 et un push UDP, sans rien changer au garage
 statut: actif
 cree: 2026-11-09
-maj: 2026-11-10
+maj: 2026-11-11
 ---
 # Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître
 
