@@ -11,8 +11,9 @@ Montage : un serveur HTTP local (thread) joue la carte. Chaque page imite l'accu
 des curseurs s27<n> (xdrv_01_9_webserver.ino, bloc USE_SHUTTER), puis l'ajout de data/fs/vrPages.be::accueil tel quel
 (div vf, window.VOLETS, volets.js dans son propre script), puis un bouton. Les curseurs sont changes par .value, comme
 Tasmota (aucun evenement). window.VOLETS des 3 cartes : forme de vrPages.be::facade, 'inverse' comme Tasmota l'applique
-(1 par defaut : garage et 2e etage, 0 au grenier du RDC) ; rafraichissement de 1000 ms pour une sonde breve.
-Scenarios : position lue (inverse 0 et 1), mouvement entre deux valeurs, arret de l'extrapolation, curseur tire a la main,
+(1 par defaut : garage et 2e etage, 0 au grenier du RDC) ; durees de course courtes (3 a 5 s) pour une sonde breve.
+Scenarios : position lue (inverse 0 et 1), poursuite entre deux valeurs (intermediaire, puis arret SANS depassement de la
+derniere valeur), curseur tire a la main (le dessin rejoint la valeur et y reste quand Tasmota la renvoie),
 dessin place apres la table des curseurs, aucun s271 -> rien, trappe a MPU6050 (angle, retour au curseur, rouge « sens
 inverse » et « bloqué »), echelle du 2e etage, aucune erreur dans la console.
 """
@@ -36,19 +37,19 @@ sys.path.insert(0, str(ICI))
 from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre   # client DevTools stdlib
 
 ECHECS = []
-R = 1000                     # rafraichissement des pages de la sonde (ms) : extrapolation arretee apres 1,5 s
+R = 1000                     # WebRefresh annonce par les pages de la sonde (ms), sans effet sur la poursuite
 INCL = {"ouvert": 85, "ferme": 3}
 PAGES = {
     "rdc": ({"toit": "deuxPans", "rafraichissement": R, "ouvertures": [
         {"id": 2, "nom": "Volet cuisine", "type": "fenetre", "place": 1, "inverse": 0, "tempsMontee": 5, "tempsDescente": 5, "inclinaison": None},
-        {"id": 3, "nom": "Trappe du grenier", "type": "trappe", "place": 2, "inverse": 0, "tempsMontee": 15, "tempsDescente": 15, "inclinaison": INCL},
-        {"id": 1, "nom": "Volet porte d'entrée", "type": "porte", "place": 3, "inverse": 0, "tempsMontee": 15, "tempsDescente": 15, "inclinaison": None}]},
+        {"id": 3, "nom": "Trappe du grenier", "type": "trappe", "place": 2, "inverse": 0, "tempsMontee": 3, "tempsDescente": 3, "inclinaison": INCL},
+        {"id": 1, "nom": "Volet porte d'entrée", "type": "porte", "place": 3, "inverse": 0, "tempsMontee": 5, "tempsDescente": 5, "inclinaison": None}]},
         {1: 30, 2: 40, 3: 0}),
     "garage": ({"toit": "unPan", "rafraichissement": R, "ouvertures": [
-        {"id": 1, "nom": "Volet Roulant Garage", "type": "garage", "place": 1, "inverse": 1, "tempsMontee": 15, "tempsDescente": 15, "inclinaison": None}]},
+        {"id": 1, "nom": "Volet Roulant Garage", "type": "garage", "place": 1, "inverse": 1, "tempsMontee": 3, "tempsDescente": 3, "inclinaison": None}]},
         {1: 30}),
     "etage2": ({"toit": "aucun", "rafraichissement": R, "ouvertures": [
-        {"id": 1, "nom": "Trappe de Grenier 2eme", "type": "trappeEchelle", "place": 1, "inverse": 1, "tempsMontee": 15, "tempsDescente": 15, "inclinaison": None}]},
+        {"id": 1, "nom": "Trappe de Grenier 2eme", "type": "trappeEchelle", "place": 1, "inverse": 1, "tempsMontee": 3, "tempsDescente": 3, "inclinaison": None}]},
         {1: 0}),
 }
 TETE = ("<!DOCTYPE html><html lang='fr'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'/>"
@@ -84,7 +85,7 @@ def page(nom, js):
 
 
 class Carte(BaseHTTPRequestHandler):
-    js = None
+    js: Path | None = None
 
     def log_message(self, format, *args):
         pass
@@ -112,31 +113,35 @@ class Montage:
     def __init__(self):
         self.t = Path(tempfile.mkdtemp(prefix="sonde_volets_"))
         self.chrome = self.http = None
-        self.port = port_libre()
-        self.http = Serveur(("127.0.0.1", self.port), Carte)
-        threading.Thread(target=self.http.serve_forever, daemon=True).start()
-        chrome = next((c for c in CHROMES if c.is_file()), None)
-        if chrome is None:
-            raise FileNotFoundError("chrome.exe introuvable (Program Files, LOCALAPPDATA)")
-        port_cdp = port_libre()
-        self.chrome = subprocess.Popen([str(chrome), "--headless=new", f"--remote-debugging-port={port_cdp}",
-                                        "--remote-allow-origins=*", f"--user-data-dir={self.t / 'profil'}",
-                                        "--no-first-run", "--no-default-browser-check", "--disable-extensions",
-                                        "--window-size=480,900", "about:blank"],
-                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        limite = time.monotonic() + 20
-        while True:
-            try:
-                with urllib.request.urlopen(f"http://127.0.0.1:{port_cdp}/json/list", timeout=2) as r:
-                    cibles = json.loads(r.read().decode("utf-8"))
-                break
-            except OSError:
-                if time.monotonic() > limite:
-                    raise
-                time.sleep(0.2)
-        self.cdp = Cdp(next(c for c in cibles if c.get("type") == "page")["webSocketDebuggerUrl"])
-        for domaine in ("Runtime.enable", "Log.enable", "Page.enable"):
-            self.cdp.appel(domaine)
+        try:                     # echec en cours de montage (CDP muet, aucune cible) : Chrome et serveur arretes ici
+            self.port = port_libre()
+            self.http = Serveur(("127.0.0.1", self.port), Carte)
+            threading.Thread(target=self.http.serve_forever, daemon=True).start()
+            chrome = next((c for c in CHROMES if c.is_file()), None)
+            if chrome is None:
+                raise FileNotFoundError("chrome.exe introuvable (Program Files, LOCALAPPDATA)")
+            port_cdp = port_libre()
+            self.chrome = subprocess.Popen([str(chrome), "--headless=new", f"--remote-debugging-port={port_cdp}",
+                                            "--remote-allow-origins=*", f"--user-data-dir={self.t / 'profil'}",
+                                            "--no-first-run", "--no-default-browser-check", "--disable-extensions",
+                                            "--window-size=480,900", "about:blank"],
+                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            limite = time.monotonic() + 20
+            while True:
+                try:
+                    with urllib.request.urlopen(f"http://127.0.0.1:{port_cdp}/json/list", timeout=2) as r:
+                        cibles = json.loads(r.read().decode("utf-8"))
+                    break
+                except OSError:
+                    if time.monotonic() > limite:
+                        raise
+                    time.sleep(0.2)
+            self.cdp = Cdp(next(c for c in cibles if c.get("type") == "page")["webSocketDebuggerUrl"])
+            for domaine in ("Runtime.enable", "Log.enable", "Page.enable"):
+                self.cdp.appel(domaine)
+        except BaseException:
+            self.ferme()
+            raise
 
     def ouvre(self, nom):
         self.cdp.appel("Page.navigate", url=f"http://127.0.0.1:{self.port}/{nom}")
@@ -174,6 +179,13 @@ def balise(m, angle, bloque):
              f"<span data-vi='3' data-angle='{angle}' data-bloque='{bloque}'></span></td></tr></table>\"; 1")
 
 
+def max_pendant(m, id_, secondes):
+    """Plus grande data-ouverture de l'ouverture id_, relevee toutes les 20 ms pendant 'secondes' (dans la page)."""
+    return m.cdp.js("new Promise(r => { const g = document.querySelector(\"#vf svg g[data-id='" + str(id_) + "']\"); let x = 0;"
+                    " const n = setInterval(() => { x = Math.max(x, +g.getAttribute('data-ouverture')); }, 20);"
+                    f" setTimeout(() => {{ clearInterval(n); r(x); }}, {int(secondes * 1000)}); }})")
+
+
 def sonde_rdc(m, capture):
     verifie(bool(m.ouvre("rdc")), True, "rdc : page chargée")
     time.sleep(0.3)
@@ -183,37 +195,39 @@ def sonde_rdc(m, capture):
     verifie(place, [True, True, "entre", True], "rdc : dessin placé juste après la table des curseurs, de la largeur de la colonne (padding du div)")
     verifie(m.cdp.js("[...document.querySelectorAll('#vf svg g[data-id]')].map(g => g.getAttribute('data-id'))"), ["2", "3", "1"],
             "rdc : ouvertures de gauche à droite (place) : cuisine, trappe, porte")
-    verifie(ouv(m, 1)[:2], ["30", "30 %"], "rdc (inverse 0) : porte à 30 % (curseur à 30), chiffre = data-ouverture")
+    verifie(ouv(m, 1)[:2], ["30", "30 %"], "rdc (inverse 0) : porte à 30 % dès le chargement (curseur à 30), chiffre = data-ouverture")
     verifie(ouv(m, 2)[:2], ["40", "40 %"], "rdc (inverse 0) : cuisine à 40 %")
     if capture:
         m.cdp.capture(str(Path(capture) / "facade_rdc.png"))
-    # Mouvement : 40 -> 50 a 5 s de course ; extrapolation (+20 %/s) puis arret 1,5 s apres la derniere valeur
-    pose(m, 2, 50)
+    # Poursuite : 40 -> 80 a 5 s de course (20 %/s) : intermediaire, puis arrivee sur 80 sans jamais la depasser
+    pose(m, 2, 80)
     time.sleep(0.5)
     milieu = int(ouv(m, 2)[0])
-    verifie(55 <= milieu <= 80, True, f"rdc : mouvement 40 -> 50, extrapolé 0,5 s plus tard ({milieu} %, entre 55 et 80)")
-    time.sleep(1.4)
-    verifie(ouv(m, 2)[:2], ["50", "50 %"], "rdc : arrêt de l'extrapolation, retour à la dernière position reçue")
-    time.sleep(0.5)
-    verifie(ouv(m, 2)[0], "50", "rdc : reste à 50 %")
-    # Curseur tire a la main sur 80 : le dessin reste a la position reelle (30) tant qu'aucune autre valeur n'arrive
+    verifie(41 <= milieu <= 79, True, f"rdc : poursuite 40 -> 80, intermédiaire 0,5 s plus tard ({milieu} %)")
+    verifie(max_pendant(m, 2, 3.0), 80, "rdc : poursuite : jamais au-delà de la dernière valeur (80) pendant 3 s")
+    verifie(ouv(m, 2)[:2], ["80", "80 %"], "rdc : arrivée sur 80 %, puis immobile")
+    # Curseur tire a la main sur 80 : le dessin rejoint 80 et y reste quand Tasmota renvoie 80 (course finie avant le rafraichissement)
     m.cdp.js("(() => { const c = document.getElementById('s271'); c.value = '80'; c.dispatchEvent(new Event('input'));"
              " c.dispatchEvent(new Event('change')); return 1; })()")
-    time.sleep(1.0)
-    verifie(ouv(m, 1)[0], "30", "rdc : curseur tiré sur 80 : le dessin reste à 30 %")
-    pose(m, 1, 35)
-    time.sleep(0.2)
-    suite = int(ouv(m, 1)[0])
-    verifie(35 <= suite <= 45, True, f"rdc : position réelle 35 renvoyée : le dessin la suit ({suite} %)")
-    # Trappe a MPU6050 : l'angle et non le curseur (s273 = 0)
+    time.sleep(0.5)
+    milieu = int(ouv(m, 1)[0])
+    verifie(31 <= milieu <= 79, True, f"rdc : curseur tiré sur 80 : le dessin le rejoint ({milieu} % à 0,5 s)")
+    time.sleep(2.5)
+    pose(m, 1, 80)
+    time.sleep(0.5)
+    verifie(ouv(m, 1)[0], "80", "rdc : curseur tiré : dessin à 80 % et y reste quand Tasmota renvoie 80")
+    # Trappe a MPU6050 (3 s de course) : l'angle et non le curseur (s273 = 0)
     balise(m, "44.0", "")
-    time.sleep(1.8)
+    time.sleep(0.5)
+    milieu = int(ouv(m, 3)[0])
+    verifie(1 <= milieu <= 49, True, f"rdc : trappe à MPU : poursuite vers l'angle ({milieu} % à 0,5 s)")
+    time.sleep(1.5)
     verifie(ouv(m, 3)[:2], ["50", "50 %"], "rdc : trappe à MPU : 44° -> 50 % (curseur à 0)")
     balise(m, "", "")
-    time.sleep(0.3)
+    time.sleep(2.0)
     verifie(ouv(m, 3)[0], "0", "rdc : trappe sans angle (capteur muet) : retour au curseur, 0 %")
     balise(m, "44.0", "sens inverse")
-    time.sleep(1.8)
+    time.sleep(2.0)
     o = ouv(m, 3)
     verifie([o[0], "sens inverse" in o[2], o[3]], ["50", True, "rgb(224, 69, 58)"], "rdc : trappe « sens inverse » : panneau rouge et texte")
     if capture:
@@ -232,10 +246,10 @@ def sonde_garage(m, capture):
     time.sleep(0.3)
     verifie(ouv(m, 1)[:2], ["70", "70 %"], "garage (inverse 1) : curseur à 30 -> porte ouverte à 70 %")
     pose(m, 1, 0)
-    time.sleep(1.8)
+    time.sleep(1.5)
     verifie(ouv(m, 1)[0], "100", "garage (inverse 1) : curseur à 0 -> porte ouverte à 100 %")
     pose(m, 1, 60)
-    time.sleep(1.8)
+    time.sleep(2.0)
     if capture:
         m.cdp.capture(str(Path(capture) / "facade_garage.png"))
 
@@ -247,11 +261,11 @@ def sonde_etage2(m, capture):
     barreaux = m.cdp.js("document.querySelectorAll(\"#vf svg g[data-id='1'] g line\").length")
     verifie(barreaux >= 6, True, f"etage2 : échelle descendue jusqu'à l'escalier ({barreaux} traits)")
     pose(m, 1, 100)
-    time.sleep(1.8)
+    time.sleep(3.5)
     verifie([ouv(m, 1)[0], m.cdp.js("document.querySelectorAll(\"#vf svg g[data-id='1'] g line\").length")], ["0", 0],
             "etage2 : trappe fermée : échelle rentrée")
     pose(m, 1, 30)
-    time.sleep(1.8)
+    time.sleep(2.5)
     if capture:
         m.cdp.capture(str(Path(capture) / "facade_etage2.png"))
 

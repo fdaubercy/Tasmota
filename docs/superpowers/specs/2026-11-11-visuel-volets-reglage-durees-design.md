@@ -83,11 +83,14 @@ le MPU6050 passe l'ouverture en rouge, avec « bloqué » ou « sens inverse »,
 
 ### 4.2 Mouvement fluide
 
-Entre deux valeurs reçues, le dessin avance seul à la vitesse du volet, déduite de `tempsMontee` / `tempsDescente`
-(100 % en `tempsMontee` secondes), dans le sens de la dernière variation ; il se recale sur chaque valeur reçue et
-s'arrête quand la valeur ne change plus. Décision de Claude, à garder sauf meilleure idée du constructeur : pas
-d'extrapolation au-delà de 0 et 100 %, et arrêt de l'extrapolation si aucune valeur nouvelle n'arrive dans 1,5 fois
-l'intervalle de rafraîchissement.
+Poursuite (décision de Claude après relecture du 2026-11-11, elle remplace l'extrapolation d'abord prévue) : la cible
+est la dernière valeur lue (curseur converti en % d'ouverture, ou angle du MPU6050 pour une trappe) ; le dessin la
+rejoint à la vitesse du volet, `100 / tempsMontee` %/s quand il monte, `100 / tempsDescente` %/s quand il descend, sans
+jamais la dépasser, puis s'arrête. Au chargement de la page, il prend la cible directement. Le dessin a donc au plus un
+rafraîchissement de retard sur la position réelle, mais ne montre jamais une position que le volet n'a pas atteinte.
+Raisons : l'extrapolation dépassait la position finale à chaque fin de course (jusqu'à 1,5 rafraîchissement), et Tasmota
+n'envoie une valeur que si elle diffère de la dernière envoyée (`Web.shutter_slider`), ce qui rendait faux tout
+traitement à part d'un curseur tiré à la main : la poursuite le traite comme une valeur ordinaire.
 
 ### 4.3 Description de la façade dans le persist
 

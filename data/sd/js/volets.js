@@ -3,8 +3,8 @@
 // docs/superpowers/specs/2026-11-11-visuel-volets-reglage-durees-design.md (§3, §4) ; plan visuel-reglage-volets, A5.
 // Insere tel quel dans un element script de la page : IIFE, seule globale window.Volets, aucun chevron dans le texte.
 // Position : curseur s27<id> (lu a chaque image : Tasmota le change par .value, sans evenement), inverse si 'inverse' vaut 1 ;
-// trappe a MPU6050 actif : angle de la balise data-vi de la ligne d'inclinaison. Entre deux valeurs, avance a la vitesse du
-// volet ; arret de l'extrapolation 1,5 x rafraichissement apres la derniere valeur. Bancs : test_volets.mjs, test_volets_chrome.py.
+// trappe a MPU6050 actif : angle de la balise data-vi de la ligne d'inclinaison. Poursuite : le dessin rejoint la derniere
+// valeur lue a la vitesse du volet, sans la depasser (retard d'au plus un rafraichissement). Bancs : test_volets.mjs, test_volets_chrome.py.
 (function () {
   var NS = 'http://www.w3.org/2000/svg';
   var ROUGE = '#e0453a';
@@ -26,12 +26,13 @@
     return borne((a - incl.ferme) * 100 / (incl.ouvert - incl.ferme));
   }
 
-  // Position extrapolee : suivi {valeur (%), t (ms), sens (-1, 0, 1)} ; au-dela de 1,5 x rafraichissement, la position recue
-  function avance(suivi, maintenant, o, rafraichissement) {
-    var dt = maintenant - suivi.t;
-    var duree = suivi.sens > 0 ? o.tempsMontee : o.tempsDescente;
-    if (!suivi.sens || !(duree > 0) || dt <= 0 || dt > 1.5 * (rafraichissement || 2345)) return borne(suivi.valeur);
-    return borne(suivi.valeur + suivi.sens * dt / 10 / duree);       // 100 % en 'duree' s : dt ms * 100 / (1000 * duree)
+  // Poursuite : de 'dessinee' vers 'cible' (%) en dt ms, a 100 / tempsMontee %/s en montee, 100 / tempsDescente en descente,
+  // sans jamais depasser la cible ; premiere lecture (dessinee nulle) ou duree inconnue : la cible directement
+  function poursuit(dessinee, cible, dt, o) {
+    var d = cible - dessinee, duree = d > 0 ? o.tempsMontee : o.tempsDescente;
+    if (dessinee == null || !(duree > 0)) return borne(cible);
+    var pas = (dt > 0 ? dt : 0) / 10 / duree;                         // 100 % en 'duree' s : dt ms * 100 / (1000 * duree)
+    return borne(Math.abs(d) <= pas ? cible : dessinee + (d > 0 ? pas : -pas));
   }
 
   function el(parent, nom, attributs) {
@@ -159,14 +160,13 @@
     }
   }
 
-  // Lecture de la position reelle d'une ouverture : [cle de la valeur brute, % d'ouverture, cause de blocage] ou null
+  // Position reelle lue d'une ouverture : [% d'ouverture, cause de blocage] ou null (ni angle, ni curseur)
   function lit(v) {
     var o = v.o, b = o.inclinaison ? document.querySelector("[data-vi='" + o.id + "']") : null;   // table des capteurs remplacee a chaque rafraichissement
     var a = b ? ouvertureAngle(b.getAttribute('data-angle'), o.inclinaison) : null, bloque = b ? b.getAttribute('data-bloque') || '' : '';
-    if (a != null) return ['a' + a, a, bloque];
+    if (a != null) return [a, bloque];
     var c = document.getElementById('s27' + o.id);
-    if (!c || c.value === v.vise) return v.cle ? [v.cle, v.suivi.valeur, bloque] : null;       // curseur tire a la main : ignore
-    return ['s' + c.value, ouverture(c.value, o.inverse), bloque];
+    return c ? [ouverture(c.value, o.inverse), bloque] : null;
   }
 
   // Insere le dessin juste apres la table des curseurs (#s271) et l'anime ; rien sans #s271
@@ -175,23 +175,15 @@
     if (!table || !facade || !facade.ouvertures || !facade.ouvertures.length) return null;
     var vf = document.getElementById('vf') || document.createElement('div');
     table.parentNode.insertBefore(vf, table.nextSibling);
-    var svg = dessine(vf, facade), R = facade.rafraichissement;
-    svg.volets.forEach(function (v) {
-      var c = document.getElementById('s27' + v.o.id);
-      var tire = function () { v.vise = c.value; };
-      if (c) { c.addEventListener('input', tire); c.addEventListener('change', tire); }
-    });
+    var svg = dessine(vf, facade), avant = null;
     function image() {
-      var t = performance.now();
+      var t = performance.now(), dt = avant == null ? 0 : t - avant;
+      avant = t;
       svg.volets.forEach(function (v) {
         var l = lit(v);
-        if (l && l[0] !== v.cle) {
-          if (l[0].charAt(0) == 's' && v.cle) v.vise = undefined;
-          var d = v.suivi ? l[1] - v.suivi.valeur : 0;          // moins de 1 % : bruit de l'angle du MPU6050, pas une course
-          v.suivi = {valeur: l[1], t: t, sens: Math.abs(d) < 1 ? 0 : Math.sign(d)};
-          v.cle = l[0];
-        }
-        pose(v, v.suivi ? avance(v.suivi, t, v.o, R) : 0, l ? l[2] : '');
+        if (!l) return;
+        v.dessinee = poursuit(v.dessinee, l[0], dt, v.o);
+        pose(v, v.dessinee, l[1]);
       });
       requestAnimationFrame(image);
     }
@@ -199,7 +191,7 @@
     return svg;
   }
 
-  window.Volets = {ouverture: ouverture, ouvertureAngle: ouvertureAngle, avance: avance, dessine: dessine, demarre: demarre};
+  window.Volets = {ouverture: ouverture, ouvertureAngle: ouvertureAngle, poursuit: poursuit, dessine: dessine, demarre: demarre};
   if (typeof document !== 'undefined' && window.VOLETS) {
     try { demarre(window.VOLETS); } catch (e) { if (window.console) console.error('volets.js : ' + e.message); }
   }

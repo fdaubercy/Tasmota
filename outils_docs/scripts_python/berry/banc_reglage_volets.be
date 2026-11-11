@@ -519,6 +519,10 @@ tasmota.refresh = 1500
 vr2["activation"] = "OFF"
 verifie(size(vrPages.facade()["ouvertures"]) == 2, "volet inactif : sans dessin")
 vr2["activation"] = "ON"
+vr1.remove("inverse")         # cle absente : 1, comme vrFonctions.inverse et ShutterInvert (configVRByJson)
+o = vrPages.facade()["ouvertures"]
+verifie(o[2]["id"] == 1 && o[2]["inverse"] == 1 && o[0]["inverse"] == 0, "inverse absent : 1 ; inverse 0 : 0")
+vr1["inverse"] = 0
 
 webserver.raz()
 vrPages.accueil()

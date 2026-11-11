@@ -40,7 +40,7 @@ def vrPages_facade()
         if (type(place) != "instance")    continue    end
         var incl = vrFonctions.inclinaison(vr)
         var o = {"id": vr.find("id"), "nom": vr.find("nom", "Volet"), "type": place.find("type"), "place": place.find("place", 0),
-                 "inverse": vr.find("inverse", 0), "tempsMontee": vr.find("tempsMontee", 0), "tempsDescente": vr.find("tempsDescente", 0),
+                 "inverse": vrFonctions.inverse(vr.find("id")), "tempsMontee": vr.find("tempsMontee", 0), "tempsDescente": vr.find("tempsDescente", 0),
                  "inclinaison": (incl != nil ? {"ouvert": incl.find("angleOuvert", 85), "ferme": incl.find("angleFerme", 3)} : nil)}
         var i = size(ouvertures)
         while (i > 0 && ouvertures[i - 1]["place"] > o["place"])    i -= 1    end     # insertion : trie par place

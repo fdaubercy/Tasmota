@@ -5,8 +5,8 @@
 // Code de sortie 0 = vert. --js : charge volets.js depuis FICHIER (temoin sur une copie), sinon data/sd/js/volets.js.
 //
 // Verifie : ouverture (inversion du curseur), ouvertureAngle (comme vrFonctions.be::positionReelle, sans le 100 - p de
-// ShutterInvert), avance (extrapolation a la vitesse du volet, bornee, arretee apres 1,5 x rafraichissement : rend alors la
-// position recue). Ne teste PAS le dessin ni la boucle (DOM) : sonde Chrome test_volets_chrome.py.
+// ShutterInvert), poursuit (le dessin rejoint la derniere valeur lue a la vitesse du volet, sans la depasser, borne a
+// [0, 100]). Ne teste PAS le dessin ni la boucle (DOM) : sonde Chrome test_volets_chrome.py.
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -29,9 +29,9 @@ try {
   process.exit(1);
 }
 const V = fenetre.Volets;
-verifie(!!V && ['ouverture', 'ouvertureAngle', 'avance', 'dessine', 'demarre'].every(f => typeof V[f] === 'function'), true,
-  'window.Volets porte ouverture, ouvertureAngle, avance, dessine, demarre (et rien ne casse sans document)');
-if (!V) process.exit(1);
+verifie(!!V && ['ouverture', 'ouvertureAngle', 'poursuit', 'dessine', 'demarre'].every(f => typeof V[f] === 'function'), true,
+  'window.Volets porte ouverture, ouvertureAngle, poursuit, dessine, demarre (et rien ne casse sans document)');
+if (echecs.length) process.exit(1);      // API absente : rien d'autre a verifier
 
 // Curseur -> % d'ouverture
 verifie(V.ouverture(30, 0), 30, 'ouverture(30, 0) = 30');
@@ -50,29 +50,32 @@ verifie(V.ouvertureAngle(80, {ouvert: 3, ferme: 85}), (80 - 85) * 100 / (3 - 85)
 verifie(V.ouvertureAngle('', incl), null, "ouvertureAngle('') = null (capteur muet : retour au curseur)");
 verifie(V.ouvertureAngle(44, {ouvert: 3, ferme: 3}), null, 'ouvertureAngle avec ouvert = ferme : null');
 
-// Extrapolation : course de 15 s, rafraichissement 2000 ms (arret apres 3000 ms sans valeur nouvelle)
+// Poursuite : le dessin rejoint la derniere valeur lue a la vitesse du volet, sans la depasser
 const o = {tempsMontee: 15, tempsDescente: 15};
-const R = 2000;
-verifie(V.avance({valeur: 20, t: 1000, sens: 1}, 2500, o, R), 30, 'avance : +10 % en 1,5 s a 15 s de course');
-verifie(V.avance({valeur: 95, t: 1000, sens: 1}, 2500, o, R), 100, 'avance : bornee a 100');
-verifie(V.avance({valeur: 5, t: 1000, sens: -1}, 2500, o, R), 0, 'avance : bornee a 0');
-verifie(V.avance({valeur: 50, t: 1000, sens: -1}, 2500, o, R), 40, 'avance : sens de la derniere variation (fermeture)');
-verifie(V.avance({valeur: 50, t: 1000, sens: -1}, 2500, {tempsMontee: 15, tempsDescente: 30}, R), 45,
-  'avance : fermeture a la vitesse de tempsDescente');
-verifie(V.avance({valeur: 20, t: 1000, sens: 1}, 3999, o, R) > 39.9, true, 'avance : extrapole encore juste avant 1,5 x R');
-verifie(V.avance({valeur: 20, t: 1000, sens: 1}, 4001, o, R), 20, 'avance : 1,5 x R sans valeur nouvelle -> position recue');
-verifie(V.avance({valeur: 20, t: 1000, sens: 1}, 9000, o, R), 20, 'avance : reste figee sur la position recue');
-verifie(V.avance({valeur: 20, t: 1000, sens: 0}, 2500, o, R), 20, 'avance : sens 0 -> immobile');
-verifie(V.avance({valeur: 20, t: 1000, sens: 1}, 2500, {tempsMontee: 0, tempsDescente: 0}, R), 20, 'avance : duree 0 -> pas d\'extrapolation');
-verifie(V.avance({valeur: 20, t: 1000, sens: 1}, 4001, o), 20 + 100 * 3.001 / 15, 'avance : rafraichissement absent -> 2345 ms (4001 ms < 1,5 x 2345)');
-verifie(V.avance({valeur: 20, t: 1000, sens: 1}, 4600, o), 20, 'avance : rafraichissement absent -> arret apres 3517 ms');
+verifie(V.poursuit(20, 80, 1500, o), 30, 'poursuit : +10 % en 1,5 s a 15 s de course');
+verifie(V.poursuit(20, 25, 1500, o), 25, 'poursuit : rejoint la cible sans la depasser (montee)');
+verifie(V.poursuit(50, 48, 1500, o), 48, 'poursuit : rejoint la cible sans la depasser (descente)');
+verifie(V.poursuit(50, 0, 1500, o), 40, 'poursuit : -10 % en 1,5 s en descente');
+verifie(V.poursuit(50, 0, 1500, {tempsMontee: 15, tempsDescente: 30}), 45, 'poursuit : descente a la vitesse de tempsDescente');
+verifie(V.poursuit(50, 100, 1500, {tempsMontee: 30, tempsDescente: 15}), 55, 'poursuit : montee a la vitesse de tempsMontee');
+verifie(V.poursuit(30, 30, 1500, o), 30, 'poursuit : cible atteinte -> immobile');
+verifie(V.poursuit(30, 30, 0, o), 30, 'poursuit : dt 0 -> immobile');
+verifie(V.poursuit(30, 80, 0, o), 30, 'poursuit : dt 0 -> pas de saut');
+verifie(V.poursuit(null, 64, 16, o), 64, 'poursuit : premiere lecture -> la cible directement');
+verifie(V.poursuit(undefined, 64, 16, o), 64, 'poursuit : dessin non initialise -> la cible directement');
+verifie(V.poursuit(20, 80, 1500, {tempsMontee: 0, tempsDescente: 0}), 80, 'poursuit : duree 0 -> la cible directement');
+verifie(V.poursuit(20, 150, 99999, o), 100, 'poursuit : bornee a 100');
+verifie(V.poursuit(20, -50, 99999, o), 0, 'poursuit : bornee a 0');
+let p = 0;
+for (let k = 0; k < 600; k++) p = V.poursuit(p, 37, 16, o);      // 600 images de 16 ms : 9,6 s, plus que les 5,6 s du trajet
+verifie(p, 37, 'poursuit image par image : arrive sur la cible et y reste (jamais au-dela)');
+let q = 0, max = 0;
+for (let k = 0; k < 100; k++) { q = V.poursuit(q, 37, 16, o); max = Math.max(max, q); }
+verifie(max <= 37, true, 'poursuit image par image : jamais au-dela de la cible pendant le trajet');
 
-// Deux volets independants : le suivi de l'un ne change pas l'autre
-const a = {valeur: 10, t: 0, sens: 1}, b = {valeur: 80, t: 0, sens: -1};
-const pa = V.avance(a, 1500, o, R), pb = V.avance(b, 1500, {tempsMontee: 30, tempsDescente: 30}, R);
-verifie(pa, 20, 'deux volets : le 1er ouvre a sa vitesse');
-verifie(pb, 75, 'deux volets : le 2e ferme a la sienne');
-verifie(JSON.stringify([a, b]), JSON.stringify([{valeur: 10, t: 0, sens: 1}, {valeur: 80, t: 0, sens: -1}]), 'avance ne modifie pas le suivi');
+// Deux volets independants : chacun a sa vitesse
+verifie(V.poursuit(10, 100, 1500, o), 20, 'deux volets : le 1er ouvre a sa vitesse');
+verifie(V.poursuit(80, 0, 1500, {tempsMontee: 30, tempsDescente: 30}), 75, 'deux volets : le 2e ferme a la sienne');
 
 console.log(echecs.length ? echecs.length + ' echec(s) sur ' + nb + ' verification(s)' : '0 echec(s) sur ' + nb + ' verifications');
 process.exit(echecs.length ? 1 : 0);

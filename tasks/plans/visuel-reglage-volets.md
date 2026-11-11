@@ -60,8 +60,9 @@ interface pour le rendu.
 - Porte de garage (`drivers.voletRoulants.mode == 3`) : type `chrono`, aucune commande envoyée au volet, ni suspension de
   bouton, ni course allongée ; seuls les clics « Départ » / « Arrivée » de la page font avancer.
 - Le dessin lit `eb('s27<n>').value` à chaque image (`requestAnimationFrame`) ; ouverture = `inverse == 1 ? 100 - v : v`.
-  Extrapolation à `100 / tempsMontee` %/s en ouverture, `100 / tempsDescente` en fermeture, bornée à [0, 100], coupée si
-  aucune valeur nouvelle depuis `1,5 × WebRefresh` ms (`WebRefresh` lu par Berry et passé à la page).
+  Poursuite (spec §4.2, décidée après la relecture d'A5, remplace l'extrapolation) : le dessin rejoint la dernière valeur lue
+  à `100 / tempsMontee` %/s en montée, `100 / tempsDescente` en descente, sans la dépasser, puis s'arrête ; au chargement, il
+  prend la valeur lue. Retard d'au plus un rafraîchissement. `inverse` absent du persist : 1 (`vrFonctions.inverse`).
 
 **Contraintes globales** (valent pour chaque action) :
 - Accord de l'utilisateur AVANT toute écriture dans `data/fs/*.be` et dans un `_persist.json` (demandé une fois en A1, pour
@@ -82,8 +83,9 @@ interface pour le rendu.
 3. Carte redémarrée ou injoignable pendant la page de réglage : la page dit « carte injoignable », ne montre jamais un
    résultat qu'elle n'a pas reçu (A6, scénario « injoignable »).
 4. Volet déjà en course au clic « Régler les durées » : refus, rien de modifié (A3, test « en course »).
-5. Curseur de la page d'accueil tiré à la main : le dessin ignore la valeur visée tant que Tasmota n'a pas renvoyé une
-   position réelle différente (A5, scénario « curseur tiré »).
+5. Curseur de la page d'accueil tiré à la main : la valeur visée est une cible comme une autre, le dessin la rejoint à la
+   vitesse du volet et y reste quand Tasmota la renvoie (A5, scénario « curseur tiré » ; d'abord « ignorée », abandonné à
+   la relecture : Tasmota ne renvoie pas une valeur égale à la dernière envoyée).
 
 ## A1 — Préparer vrFonctions : sens physique, boutons, neutralisation
 Fichiers : `data/fs/vrFonctions.be`, `outils_docs/scripts_python/berry/banc_inclinaison.be` (section 19).
@@ -179,8 +181,8 @@ Produit :
 ## A5 — Le dessin de la façade `volets.js`
 Fichiers : `data/sd/js/volets.js` (neuf), `outils_docs/scripts_python/outils_pc/test_volets.mjs` (neuf, Node, chargé par
 `vm` comme `test_energie_rendu.mjs`), `outils_docs/scripts_python/outils_pc/test_volets_chrome.py` (neuf, sonde).
-Produit (sur `window.Volets`) : `ouverture(valeur, inverse) -> 0..100` ; `ouvertureAngle(angle, incl) -> 0..100` ; `avance(suivi, maintenant, o) -> 0..100` (suivi
-`{valeur, t, sens}`, o = ouverture de `window.VOLETS`) ; `dessine(conteneur, facade) -> SVGElement` ; `demarre(facade)` (insère
+Produit (sur `window.Volets`) : `ouverture(valeur, inverse) -> 0..100` ; `ouvertureAngle(angle, incl) -> 0..100` ; `poursuit(dessinee, cible, dt, o) -> 0..100` (dt en ms,
+o = ouverture de `window.VOLETS` ; remplace `avance(suivi, maintenant, o)` après la relecture) ; `dessine(conteneur, facade) -> SVGElement` ; `demarre(facade)` (insère
 le dessin juste après la table qui contient `#s271`, boucle `requestAnimationFrame`). Chaque ouverture dessinée porte
 `data-id` et `data-ouverture` (entier) ; le pourcentage affiché à côté est le même entier.
 Rendu : celui des maquettes (`maquette_rdc_porte_cuisine.html`, `maquette_garage.html`, `maquette_trappes_rdc_2e.html`), couleurs
@@ -188,15 +190,19 @@ du thème sombre de Tasmota (`var(--c_bg)`, `var(--c_txt)`), largeur 100 % de la
 - [x] `test_volets.mjs` d'abord : `ouverture(30, 0) == 30`, `ouverture(30, 1) == 70` ; `avance` à 15 s de course : +10 % en
   1,5 s, borné à 100, figé après `1,5 × rafraichissement` sans valeur nouvelle, sens de la dernière variation ; deux volets
   indépendants ; `ouvertureAngle(44, {ouvert: 85, ferme: 3})` = 50 (bornée à 0 et 100, montage inversé `ouvert` < `ferme`) ;
-  rouge sans le fichier — preuve : sans `data/sd/js/volets.js`, `KO chargement ... ENOENT`, code 1
-- [x] Écrire `volets.js` ; `node outils_docs/scripts_python/outils_pc/test_volets.mjs` : code 0 — preuve : « 0 echec(s) sur 28 verifications », code 0 ; `volets.js` 206 lignes, ajouté à `volets_pages` du cenv (embarqué par les 3 envs à façade seulement, exclu des 14 autres envs à FS, résolu par `fichiers_berry_ini.resout`) ; `banc_boot.py` BANC_BOOT: OK, `banc_reglage_volets.py` OK, `banc_demarrage.py` VERT
+  rouge sans le fichier — preuve : sans `data/sd/js/volets.js`, `KO chargement ... ENOENT`, code 1 ; correction 1 (poursuite) :
+  `poursuit` rejoint sans dépasser, vitesses montée/descente, immobile une fois atteinte, première lecture directe, bornée ;
+  rouge sur le `volets.js` à extrapolation (`V.poursuit is not a function`), témoin qui dépasse : 4 KO
+- [x] Écrire `volets.js` ; `node outils_docs/scripts_python/outils_pc/test_volets.mjs` : code 0 — preuve : « 0 echec(s) sur 28 verifications », code 0 ; après correction 1 : « 0 echec(s) sur 31 verifications » ; `volets.js` 198 lignes, ajouté à `volets_pages` du cenv (embarqué par les 3 envs à façade seulement, exclu des 14 autres envs à FS, résolu par `fichiers_berry_ini.resout`) ; `banc_boot.py` BANC_BOOT: OK, `banc_reglage_volets.py` OK, `banc_demarrage.py` VERT
 - [x] Sonde Chrome écrite : page statique qui imite l'accueil de Tasmota (table de curseurs `s271`..`s273`, `window.VOLETS` des
-  3 cartes), scénarios : position lue (`inverse` 0 et 1), mouvement entre deux valeurs (`data-ouverture` intermédiaire),
-  arrêt de l'extrapolation, curseur tiré (événement `input` puis `change` sur 80 : le dessin reste à la position réelle tant
-  qu'aucune autre valeur n'arrive), dessin placé après la table des curseurs, aucun `s271` -> rien ; trappe à MPU : le dessin
+  3 cartes), scénarios : position lue (`inverse` 0 et 1), poursuite entre deux valeurs (`data-ouverture` intermédiaire),
+  jamais au-delà de la dernière valeur, curseur tiré (événement `input` puis `change` sur 80 : le dessin rejoint 80 et y reste
+  quand Tasmota renvoie 80), dessin placé après la table des curseurs, aucun `s271` -> rien ; trappe à MPU : le dessin
   suit `data-angle` et non le curseur, retour au curseur sans balise, ouverture rouge « sens inverse » avec `data-bloque` ;
-  Chrome arrêté à la fin — preuve : `test_volets_chrome.py` (pages rdc, garage, etage2, sans ; `--js`, `--capture`), Chrome tué par `tue_arbre` puis par son profil `sonde_volets_*` dans `Montage.ferme` (finally)
-- [x] Sonde verte ; témoin : `volets.js` sans l'inversion -> scénario `inverse` 1 rouge ; aucun Chrome `sonde_*` restant — preuve : sonde VERT (25 OK), code 0 ; témoin (`return borne(v)`) : ROUGE 5 échecs, tous `inverse 1` (garage, etage2), node : 3 KO `ouverture(.., 1)` ; `Get-CimInstance` : 0 chrome `sonde_*` après chaque passage
+  Chrome arrêté à la fin — preuve : `test_volets_chrome.py` (pages rdc, garage, etage2, sans ; `--js`, `--capture`), Chrome tué par `tue_arbre` puis par son profil `sonde_volets_*` dans `Montage.ferme` (finally, et dans le constructeur s'il
+  échoue après le lancement de Chrome : panne de CDP simulée, 0 Chrome du profil restant)
+- [x] Sonde verte ; témoin : `volets.js` sans l'inversion -> scénario `inverse` 1 rouge ; aucun Chrome `sonde_*` restant — preuve : sonde VERT (25 OK), code 0 ; après correction 1 : VERT (26 OK), rouge (5) sur le `volets.js` à extrapolation, témoin
+  qui dépasse la cible : 1 KO « jamais au-delà de la dernière valeur (80) » (82) ; témoin (`return borne(v)`) : ROUGE 5 échecs, tous `inverse 1` (garage, etage2), node : 3 KO `ouverture(.., 1)` ; `Get-CimInstance` : 0 chrome `sonde_*` après chaque passage
 - [ ] Commit `feat(volets): dessin de la facade sur la page d'accueil`
 
 ## A6 — La page de réglage
