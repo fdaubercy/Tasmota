@@ -113,7 +113,7 @@ bloc `facade` à `"activation": "OFF"`, `toit` `deuxPans`, VR1 `fenetre` place 1
 - [x] Éditer le TEXTE des persists (tabulations et ordre gardés, script dans le scratchpad qui vérifie chaque remplacement
   puis relit le JSON), jamais de réécriture par `json.dump` — preuve : éditées en texte (script, 4 fichiers, 25 lignes ajoutées, 0 retirée), JSON relu : 3 persists et modèle portent les valeurs de la fiche
 - [x] `python outils_docs/scripts_python/berry/genere_schema_persist.py` puis contrôle des persists : 0 erreur — preuve : genere_schema_persist.py puis --valide : 0 erreur sur tous les persists, schéma +37 lignes
-- [ ] Commit `feat(volets): facade decrite dans les persists des cartes a volets`
+- [x] Commit `feat(volets): facade decrite dans les persists des cartes a volets` — preuve : 30c747e28, relecture approuvée, schéma régénéré sans changement, persists 0 erreur
 
 ## A3 — Module du mode réglage `vrReglage.be` et son banc
 Fichiers : `data/fs/vrReglage.be` (neuf), `outils_docs/scripts_python/berry/banc_reglage_volets.be` et `.py` (neufs, sur
@@ -135,7 +135,7 @@ Ordres envoyés (type `moteur`) : au début `ShutterOpenDuration<id> 120`, `Shut
 (`persist.drivers = drivers`, `persist.save(true)`), `commandeArret(id, commandeSens(id, "posFerme"))`, `configVRByJson()`.
 Annulation ou délai : `ShutterStop<id>` si `montee` ou `descente`, `configVRByJson()`, rien d'écrit. Type `chrono` : aucun
 de ces ordres, sauf `configVRByJson()` après l'écriture.
-- [ ] Banc écrit d'abord, un groupe par cas : déroulé complet 2 boutons (ordres exacts dans l'ordre, durées 14 et 13 s
+- [x] Banc écrit d'abord, un groupe par cas : déroulé complet 2 boutons (ordres exacts dans l'ordre, durées 14 et 13 s
   écrites, `save` appelé une fois) ; bouton unique `toggle` (même déroulé, sens imposé : `ShutterOpen` puis `ShutterClose`
   quoi que dise la fonction du bouton) ; `inverse` 1 (ordres croisés) ; annulation en montée (stop, rien d'écrit,
   `configVRByJson` rappelé) ; délai de 120 s (timer déclenché : stop, étape `delai`, une erreur au journal) ; rebond (deux
@@ -143,11 +143,11 @@ de ces ordres, sauf `configVRByJson()` après l'écriture.
   aucun ordre) ; second réglage pendant un premier : refus ; bouton d'un autre volet : non consommé ; chrono du garage
   (mode 3 : aucun ordre `Shutter*` ni `Power*`, durées écrites) ; arrêt inattendu en montée (règle Direction 0 jouée sans
   ordre du réglage, `suivi["cause"]` = « sens inverse ») : étape `annule`, cause rendue, rien d'écrit, règle retirée ;
-  durées du MPU rendues dans `mpu` quand `suivi["durees"]` les porte ; lancé sans le module : rouge
-- [ ] Écrire `vrReglage.be` (en-tête de fichier : rôle, états, décisions de la section Contexte, bogue de `ShutterButton<x> 0`)
-- [ ] `python outils_docs/scripts_python/berry/banc_reglage_volets.py` : `BANC_REGLAGE_VOLETS: OK`
-- [ ] Témoin : copie de `data/fs` où `appui` suit la fonction du bouton au lieu de l'étape -> groupe « toggle » rouge
-- [ ] `verifie_berry.py data/fs/vrReglage.be` : syntaxe OK, aucun écart de charte
+  durées du MPU rendues dans `mpu` quand `suivi["durees"]` les porte ; lancé sans le module : rouge — preuve : banc_reglage_volets.be, 16 groupes (75 contrôles, + arrêt rapporté en retard, exception au début) ; sans le module : `import_error: module 'vrReglage' not found`, rc=1
+- [x] Écrire `vrReglage.be` (en-tête de fichier : rôle, états, décisions de la section Contexte, bogue de `ShutterButton<x> 0`)
+- [x] `python outils_docs/scripts_python/berry/banc_reglage_volets.py` : `BANC_REGLAGE_VOLETS: OK` — preuve : 75 ok, rc=0 ; banc_inclinaison.py reste OK
+- [x] Témoin : copie de `data/fs` où `appui` suit la fonction du bouton au lieu de l'étape -> groupe « toggle » rouge — preuve : intacte OK ; mutée ECHEC (2) : « toggle : sens impose par l'etape » et « montee : ShutterOpen1 » (bouton down en montée)
+- [x] `verifie_berry.py data/fs/vrReglage.be` : syntaxe OK, aucun écart de charte — preuve : 0 erreur, 0 avertissement de charte
 - [ ] Commit `feat(volets): mode reglage des durees (vrReglage) et son banc`
 
 ## A4 — Branchement dans le driver, pages côté carte, livraison par le cenv

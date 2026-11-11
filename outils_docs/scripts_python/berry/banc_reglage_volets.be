@@ -1,0 +1,416 @@
+# Banc de test Berry du mode reglage des durees des volets (data/fs/vrReglage.be, 2026-11-11).
+# -----------------------------------------------------------------------------------------------
+# Charge le VRAI vrReglage.be et le VRAI vrFonctions.be sous des globaux bouchonnes : Shutter de Tasmota simule
+# (liste tasmota.cmds, reponse de ShutterPosition<id> programmable, regles et timers declenches a la main), horloge
+# simulee (tasmota.horloge, en ms).
+#
+# Lancer via son enveloppe Python (deduit racine + berry.exe, code de sortie) :
+#     python outils_docs/scripts_python/berry/banc_reglage_volets.py [dossier_sources]
+# Ou directement, DEPUIS LA RACINE DU DEPOT :
+#     lib/libesp32/berry/berry.exe outils_docs/scripts_python/berry/banc_reglage_volets.be [dossier_sources]
+#
+# dossier_sources (defaut data/fs) : pour eprouver une copie (temoin mute) sans toucher a data/fs.
+# Copier data/fs EN ENTIER, et passer la copie INTACTE avant la copie mutee (lecon du 2026-10-06).
+# Portee : la machine du mode (etapes, ordres envoyes et leur ordre, ecriture du persist, gardes). Ne teste NI le vrai
+# Shutter, NI les vrais boutons, NI le moteur. Derniere ligne : BANC_REGLAGE_VOLETS: OK|ECHEC.
+import global
+import sys
+import string
+var SOURCES = size(global._argv) > 1 ? global._argv[1] : "data/fs"
+sys.path().push(SOURCES)
+sys.path().push("outils_docs/scripts_python/berry/bouchons_berry")
+
+var LOG_LEVEL_ERREUR = 1
+var LOG_LEVEL_INFO = 2
+var LOG_LEVEL_DEBUG = 3
+var LOG_LEVEL_DEBUG_PLUS = 4
+var boolMute = true
+var journal = []                      # [message, niveau]
+class LogStub
+    def log(m, n, c) journal.push([str(m), n]) end
+    def actif(n, c) return true end
+end
+var logFonctions = LogStub()
+
+class TasmotaStub
+    var cmds, timers, regles, directions, horloge, surCmd, doublons
+    def init() self.cmds = [] self.timers = [] self.regles = {} self.directions = {} self.horloge = 0 self.doublons = 0 end
+    def millis(d) return self.horloge + (d == nil ? 0 : d) end
+    def time_reached(t) return self.horloge >= t end
+    def cmd(c, m)
+        self.cmds.push(c)
+        if self.surCmd != nil    self.surCmd(c)    end
+        if c == "ShutterMotorStop"    return {"ShutterMotorStop": 500}    end
+        if string.find(c, "ShutterPosition") == 0 && string.find(c, " ") < 0
+            var id = int(c[15..])
+            return {"Shutter" + str(id): {"Position": 0, "Direction": self.directions.find(id, 0), "Target": 0, "Tilt": 0}}
+        end
+        return {}
+    end
+    # Le vrai set_timer AJOUTE sans dedoublonner (tasmota_class.be) : un doublon d'id est compte
+    def set_timer(d, f, id)
+        for t: self.timers    if t[0] == id    self.doublons += 1    end    end
+        self.timers.push([id, f, d])
+    end
+    def remove_timer(id)
+        var i = 0
+        while i < size(self.timers)
+            if self.timers[i][0] == id    self.timers.remove(i)    else    i += 1    end
+        end
+    end
+    def add_rule(pat, f, id) self.regles[pat + "|" + str(id)] = f end
+    def remove_rule(pat, id) self.regles.remove(pat + "|" + str(id)) end
+    def yield() end
+end
+var tasmota = TasmotaStub()
+
+def bp(id, fonction) return {"activation": "ON", "id": id, "function": fonction, "mqtt": "OFF"} end
+var vr1 = {"activation": "ON", "nom": "Volet porte", "id": 1, "inverse": 0, "relais1": 1, "tempsMontee": 15, "tempsDescente": 16,
+           "boutons": {"bouton1": {"activation": "OFF", "id": -1, "function": "toggle", "mqtt": "OFF"}, "bouton2": bp(1, "up"), "bouton3": bp(2, "down")}}
+var vr2 = {"activation": "ON", "nom": "Volet cuisine", "id": 2, "inverse": 0, "relais1": 3, "tempsMontee": 15, "tempsDescente": 16,
+           "boutons": {"bouton2": bp(3, "up"), "bouton3": bp(4, "down")}}
+var vr3 = {"activation": "ON", "nom": "Trappe", "id": 3, "inverse": 0, "relais1": 5, "tempsMontee": 15, "tempsDescente": 16,
+           "boutons": {"bouton1": bp(5, "toggle")}}
+var voletsMoteur = {"activation": "ON", "mode": 1, "environnement": {"VRs": {"VR1": vr1, "VR2": vr2, "VR3": vr3}}}
+var drivers = {"voletRoulants": voletsMoteur}
+var persist = {}
+var serveur = {"mqtt": {"topic": "grenier"}}
+
+import vrFonctions
+import vrReglage
+import persist as persistBouchon
+import configGlobal
+
+var params = []                       # [commande, valeur] passes a configGlobal.testeParam (durees remises)
+configGlobal.testeParam = def (c, v, t) params.push([c, v]) return false end
+var appelsConfig = 0
+var configOrig = vrFonctions.configVRByJson
+vrFonctions.configVRByJson = def () appelsConfig += 1 configOrig() end
+
+var echecs = 0
+def verifie(c, nom)
+    print((c ? "  ok   " : "  ECHEC ") + nom)
+    if !c    echecs += 1    end
+end
+var T = 0                             # origine du groupe en cours (ms)
+def reinit()
+    vrFonctions.etat().remove("reglage")
+    vrFonctions.etat().remove("inclinaison")
+    drivers["voletRoulants"] = voletsMoteur
+    tasmota.cmds = []
+    tasmota.timers = []
+    tasmota.regles = {}
+    tasmota.directions = {}
+    tasmota.surCmd = nil
+    tasmota.doublons = 0
+    tasmota.horloge += 1000000
+    T = tasmota.horloge
+    for vr: [vr1, vr2, vr3]
+        vr["activation"] = "ON"
+        vr["inverse"] = 0
+        vr["tempsMontee"] = 15
+        vr["tempsDescente"] = 16
+    end
+    params.clear()
+end
+def idx(n, etat, ancien) return (etat << 16) | (ancien << 8) | (n - 1) end
+def appuie(n, t) tasmota.horloge = T + t return vrReglage.bouton(idx(n, 0, 1)) end
+def page(id, t) tasmota.horloge = T + t return vrReglage.appui(id, "page") end
+def regle(id, valeur)
+    var f = tasmota.regles.find(string.format("Shutter%i#Direction|vrReglage_Direction", id))
+    if f != nil    f(valeur, string.format("Shutter%i#Direction", id), {})    end
+end
+def aRegle(id) return tasmota.regles.contains(string.format("Shutter%i#Direction|vrReglage_Direction", id)) end
+def nbTimers(id)
+    var n = 0
+    for t: tasmota.timers    if t[0] == id    n += 1    end    end
+    return n
+end
+def declenche(prefixe)
+    var a = []
+    var i = 0
+    while i < size(tasmota.timers)
+        if string.find(tasmota.timers[i][0], prefixe) == 0    a.push(tasmota.timers[i][1])    tasmota.timers.remove(i)    else    i += 1    end
+    end
+    for f: a    f()    end
+    return size(a)
+end
+def attente() declenche("vrShutter") end              # recalages differes par commandeArret (ShutterMotorStop)
+# Ordres envoyes, sans les lectures (ShutterMotorStop, ShutterPosition<id> sans argument)
+def ordres()
+    var l = []
+    for c: tasmota.cmds
+        if c == "ShutterMotorStop" || (string.find(c, "ShutterPosition") == 0 && string.find(c, " ") < 0)    continue    end
+        l.push(c)
+    end
+    return l
+end
+# Ordres de course et de recalage seuls (ni durees, ni boutons, ni Interlock)
+def courses()
+    var l = []
+    for c: ordres()
+        for p: ["ShutterOpen", "ShutterClose", "ShutterSetOpen", "ShutterSetClose", "ShutterStop", "ShutterToggle"]
+            if string.find(c, p) == 0 && string.find(c, "Duration") < 0    l.push(c)    break    end
+        end
+    end
+    return l
+end
+def memes(a, b)
+    if size(a) != size(b)    return false    end
+    for x: a    if b.find(x) == nil    return false    end    end
+    return true
+end
+def param(nom)
+    var r = nil
+    for p: params    if p[0] == nom    r = p[1]    end    end
+    return r
+end
+def erreurs()
+    var n = 0
+    for l: journal    if l[1] == LOG_LEVEL_ERREUR    n += 1    end    end
+    return n
+end
+def etape() return vrReglage.etatPage()["etape"] end
+
+print("1. Aucun reglage encore : etatPage minimal, bouton non consomme")
+var e = vrReglage.etatPage()
+verifie(!e["actif"] && e.find("etape") == nil, "etatPage : actif faux, etape nil")
+verifie(!vrReglage.bouton(idx(1, 0, 1)), "bouton : non consomme")
+
+print("2. Deroule complet, 2 boutons (up 1, down 2) : ordres exacts, durees 14 et 13 s, un seul save")
+reinit()
+tasmota.surCmd = def (c) if c == "ShutterStop1"    regle(1, 0)    end end   # arret rapporte pendant la commande
+var r = vrReglage.debut(1)
+verifie(r[0], "debut accepte : " + str(r[1]))
+var o = ordres()
+verifie(tasmota.cmds[0] == "ShutterPosition1", "debut : position lue avant tout ordre")
+verifie(size(o) == 7 && o[0] == "ShutterOpenDuration1 120" && o[1] == "ShutterCloseDuration1 120" && o[2] == "ShutterButton1 0" && o[6] == "ShutterSetClose1",
+        "debut : course allongee, boutons du volet retires, position fermee")
+verifie(size(o) == 7 && memes(o[3..5], ["ShutterButton2 3 up 0", "ShutterButton2 4 down 0", "ShutterButton3 5 toggle 0"]), "debut : boutons des autres volets renvoyes (Button1)")
+verifie(vrFonctions.enReglage(1) && !vrFonctions.enReglage(2), "enReglage(1) vrai, (2) faux")
+e = vrReglage.etatPage()
+verifie(e["actif"] && e["etape"] == "pret" && e["id"] == 1 && e["cle"] == "VR1" && e["nom"] == "Volet porte" && e["type"] == "moteur", "etatPage : pret, VR1, nom, moteur")
+verifie(memes(e["boutons"], [1, 2]) && e["avant"]["tempsMontee"] == 15 && e["avant"]["tempsDescente"] == 16, "etatPage : boutons 1 et 2, durees d'avant 15 et 16")
+verifie(e["mesures"].find("tempsMontee") == nil && e["chrono_ms"] == 0 && e["mpu"] == nil, "etatPage : ni mesure, ni chrono, ni MPU")
+verifie(nbTimers("vrReglage_delai") == 1 && aRegle(1), "delai arme, regle d'arret posee")
+tasmota.cmds = []
+verifie(appuie(2, 1000), "appui du bouton down a l'etape de montee : consomme")
+verifie(ordres() == ["ShutterOpen1"] && etape() == "montee", "montee : ShutterOpen1 (sens impose par l'etape)")
+tasmota.horloge = T + 6000
+verifie(vrReglage.etatPage()["chrono_ms"] == 5000, "chrono 5 s en montee")
+verifie(vrReglage.bouton(idx(2, 1, 0)) && etape() == "montee", "relache du bouton : consomme, pas d'etape")
+tasmota.cmds = []
+appuie(1, 15400)
+verifie(ordres() == ["ShutterStop1"] && etape() == "haut", "haut : ShutterStop1, arret rapporte aussitot sans annuler")
+verifie(vrFonctions.suiviInclinaison(1).find("arret") == T + 15400, "haut : suivi arret pose (recalage differe)")
+attente()
+verifie(ordres() == ["ShutterStop1", "ShutterSetOpen1"], "haut : position ouverte recalee apres ShutterMotorStop")
+verifie(vrReglage.etatPage()["mesures"]["tempsMontee"] == 14, "tempsMontee : 14,4 s -> 14")
+tasmota.cmds = []
+appuie(2, 17000)
+verifie(ordres() == ["ShutterClose1"] && etape() == "descente", "descente : ShutterClose1")
+tasmota.cmds = []
+params.clear()
+var sauves = persistBouchon.nb_save
+var config = appelsConfig
+appuie(1, 29600)
+o = ordres()
+verifie(size(o) > 0 && o[0] == "ShutterStop1" && o.find("ShutterSetClose1") == nil, "fini : ShutterStop1 d'abord, recalage differe")
+verifie(vr1["tempsMontee"] == 14 && vr1["tempsDescente"] == 13 && type(vr1["tempsDescente"]) == "int", "durees 14 et 13 (12,6 s) ecrites, entieres")
+verifie(persistBouchon.nb_save == sauves + 1 && persistBouchon.drivers == drivers, "persist.drivers = drivers, save une fois")
+verifie(appelsConfig == config + 1 && param("ShutterOpenDuration1") == 14 && param("ShutterCloseDuration1") == 13, "configVRByJson : durees remises (14, 13)")
+verifie(o.find("ShutterButton1 1 up 0") != nil && o.find("ShutterButton1 2 down 0") != nil, "configVRByJson : boutons du volet remis")
+attente()
+verifie(ordres()[-1] == "ShutterSetClose1", "fini : position fermee recalee apres ShutterMotorStop")
+e = vrReglage.etatPage()
+verifie(!e["actif"] && e["etape"] == "fini" && e["mesures"]["tempsDescente"] == 13 && !vrFonctions.enReglage(1), "etatPage : fini, inactif, mesures gardees")
+verifie(nbTimers("vrReglage_delai") == 0 && !aRegle(1) && tasmota.doublons == 0, "sortie : delai et regle retires, jamais deux delais")
+verifie(!vrReglage.bouton(idx(1, 0, 1)), "apres la sortie : bouton non consomme")
+
+print("3. Bouton unique toggle : meme deroule, ShutterOpen puis ShutterClose quoi que dise le bouton")
+reinit()
+vrReglage.debut(3)
+verifie(memes(vrReglage.etatPage()["boutons"], [5]), "boutons du volet : [5]")
+appuie(5, 1000)
+appuie(5, 15000)
+attente()
+appuie(5, 17000)
+appuie(5, 30000)
+attente()
+verifie(courses() == ["ShutterSetClose3", "ShutterOpen3", "ShutterStop3", "ShutterSetOpen3", "ShutterClose3", "ShutterStop3", "ShutterSetClose3"], "toggle : sens impose par l'etape")
+verifie(vr3["tempsMontee"] == 14 && vr3["tempsDescente"] == 13 && etape() == "fini", "toggle : durees 14 et 13 ecrites")
+
+print("4. inverse 1 : ordres croises")
+reinit()
+vr3["inverse"] = 1
+vrReglage.debut(3)
+page(3, 1000)
+page(3, 15000)
+attente()
+page(3, 17000)
+page(3, 30000)
+attente()
+verifie(courses() == ["ShutterSetOpen3", "ShutterClose3", "ShutterStop3", "ShutterSetClose3", "ShutterOpen3", "ShutterStop3", "ShutterSetOpen3"], "inverse 1 : ouvre = ShutterClose, posFerme = ShutterSetOpen")
+
+print("5. Annulation en montee : stop, rien d'ecrit, configVRByJson rappele")
+reinit()
+vrReglage.debut(1)
+page(1, 1000)
+tasmota.cmds = []
+sauves = persistBouchon.nb_save
+config = appelsConfig
+vrReglage.annule("annule")
+o = ordres()
+verifie(size(o) > 0 && o[0] == "ShutterStop1", "annulation : ShutterStop1")
+verifie(persistBouchon.nb_save == sauves && vr1["tempsMontee"] == 15 && vr1["tempsDescente"] == 16, "annulation : rien d'ecrit")
+verifie(appelsConfig == config + 1 && o.find("ShutterButton1 1 up 0") != nil, "annulation : configVRByJson rappele (boutons remis)")
+verifie(etape() == "annule" && !vrReglage.etatPage()["actif"] && !aRegle(1) && nbTimers("vrReglage_delai") == 0, "annulation : etape annule, regle et delai retires")
+reinit()
+vrReglage.debut(1)
+tasmota.cmds = []
+vrReglage.annule("annule")
+verifie(ordres().find("ShutterStop1") == nil && etape() == "annule", "annulation avant la montee : aucun ShutterStop")
+
+print("6. Delai de 120 s : stop, etape delai, une erreur au journal")
+reinit()
+vrReglage.debut(1)
+page(1, 1000)
+verifie(nbTimers("vrReglage_delai") == 1 && tasmota.timers[-1][2] == 120000 && tasmota.doublons == 0, "delai rearme a 120 s, sans doublon")
+tasmota.cmds = []
+var nbErr = erreurs()
+sauves = persistBouchon.nb_save
+config = appelsConfig
+verifie(declenche("vrReglage_delai") == 1, "timer du delai declenche")
+verifie(ordres()[0] == "ShutterStop1" && etape() == "delai" && !vrReglage.etatPage()["actif"], "delai : ShutterStop1, etape delai")
+verifie(erreurs() == nbErr + 1 && persistBouchon.nb_save == sauves && appelsConfig == config + 1, "delai : une erreur, rien d'ecrit, configVRByJson")
+verifie(!aRegle(1), "delai : regle retiree")
+
+print("7. Rebond : deux appuis a 300 ms -> une seule etape")
+reinit()
+vrReglage.debut(1)
+tasmota.cmds = []
+verifie(page(1, 1000)[0], "1er appui (page) accepte")
+verifie(appuie(1, 1300), "2e appui (bouton, 300 ms apres) : consomme")
+verifie(courses() == ["ShutterOpen1"] && etape() == "montee", "une seule etape : montee")
+verifie(!page(1, 1600)[0] && etape() == "montee", "3e appui 600 ms apres le 1er : ignore")
+vrReglage.annule("annule")
+
+print("8. Mesure de 1,5 s : refusee, rien d'ecrit")
+reinit()
+vrReglage.debut(1)
+page(1, 1000)
+tasmota.cmds = []
+sauves = persistBouchon.nb_save
+config = appelsConfig
+r = page(1, 2500)
+verifie(!r[0] && etape() == "refus" && !vrReglage.etatPage()["actif"], "1,5 s : refus, sortie du mode")
+verifie(ordres()[0] == "ShutterStop1" && persistBouchon.nb_save == sauves && vr1["tempsMontee"] == 15 && appelsConfig == config + 1, "1,5 s : stop, rien d'ecrit, configVRByJson")
+
+print("9. En course : ShutterPosition repond Direction 1 -> refus, aucun ordre")
+reinit()
+tasmota.directions[1] = 1
+r = vrReglage.debut(1)
+verifie(!r[0] && size(ordres()) == 0 && tasmota.cmds == ["ShutterPosition1"], "en course : refus, seule la lecture de la position")
+verifie(vrFonctions.etat().find("reglage") == nil && size(tasmota.timers) == 0 && size(tasmota.regles) == 0, "en course : rien de modifie")
+
+print("10. Refus du debut : volet inconnu, inactif, reglage deja actif")
+reinit()
+verifie(!vrReglage.debut(9)[0] && size(tasmota.cmds) == 0, "volet 9 inconnu : refus, aucune commande")
+vr2["activation"] = "OFF"
+verifie(!vrReglage.debut(2)[0] && size(tasmota.cmds) == 0, "volet inactif : refus, aucune commande")
+vr2["activation"] = "ON"
+vrReglage.debut(1)
+tasmota.cmds = []
+verifie(!vrReglage.debut(2)[0] && size(tasmota.cmds) == 0, "second reglage pendant un premier : refus, aucune commande")
+verifie(vrFonctions.enReglage(1) && vrReglage.etatPage()["id"] == 1, "le premier reglage continue")
+
+print("11. Bouton d'un autre volet : non consomme")
+verifie(!vrReglage.bouton(idx(3, 0, 1)) && !vrReglage.bouton(idx(4, 1, 0)), "boutons 3 et 4 (volet 2) : non consommes")
+verifie(etape() == "pret" && size(ordres()) == 0, "aucune etape, aucun ordre")
+verifie(!vrReglage.appui(2, "page")[0], "appui sur un autre volet : refuse")
+vrReglage.annule("annule")
+
+print("12. Chrono du garage (mode 3) : aucun ordre Shutter* ni Power*, durees ecrites")
+reinit()
+var garage = {"activation": "ON", "nom": "Porte du garage", "id": 1, "inverse": 1, "relais1": 1, "tempsMontee": 20, "tempsDescente": 20, "boutons": {}}
+drivers["voletRoulants"] = {"activation": "ON", "mode": 3, "environnement": {"VRs": {"VR1": garage}}}
+verifie(vrReglage.debut(1)[0] && vrReglage.etatPage()["type"] == "chrono" && size(vrReglage.etatPage()["boutons"]) == 0, "debut : type chrono, aucun bouton")
+verifie(size(tasmota.cmds) == 0 && size(tasmota.regles) == 0, "debut : aucune commande, aucune regle")
+verifie(!vrReglage.appui(1, "bouton")[0] && etape() == "pret", "appui 'bouton' refuse")
+sauves = persistBouchon.nb_save
+config = appelsConfig
+page(1, 1000)
+page(1, 19000)
+page(1, 21000)
+page(1, 38000)
+var pilote = false
+for c: tasmota.cmds    if string.find(c, "Shutter") == 0 || string.find(c, "Power") == 0    pilote = true    end    end
+verifie(!pilote && etape() == "fini", "chrono : aucun Shutter* ni Power*, fini")
+verifie(garage["tempsMontee"] == 18 && garage["tempsDescente"] == 17 && persistBouchon.nb_save == sauves + 1 && appelsConfig == config + 1, "chrono : 18 et 17 ecrits, save et configVRByJson une fois")
+reinit()
+drivers["voletRoulants"] = {"activation": "ON", "mode": 3, "environnement": {"VRs": {"VR1": garage}}}
+vrReglage.debut(1)
+page(1, 1000)
+config = appelsConfig
+vrReglage.annule("annule")
+verifie(size(tasmota.cmds) == 0 && appelsConfig == config && etape() == "annule", "chrono annule : aucune commande, pas de configVRByJson")
+
+print("13. Arret inattendu en montee (sens inverse du MPU) : annule, cause rendue, rien d'ecrit")
+reinit()
+vrReglage.debut(1)
+page(1, 1000)
+regle(1, 1)
+verifie(etape() == "montee", "Direction 1 : rien")
+var suivi = vrFonctions.suiviInclinaison(1)
+suivi["bloque"] = true
+suivi["cause"] = "sens inverse"
+tasmota.cmds = []
+sauves = persistBouchon.nb_save
+config = appelsConfig
+nbErr = erreurs()
+regle(1, 0)
+e = vrReglage.etatPage()
+verifie(e["etape"] == "annule" && e["cause"] == "sens inverse" && !e["actif"], "Direction 0 subie : annule, cause sens inverse")
+verifie(persistBouchon.nb_save == sauves && vr1["tempsMontee"] == 15 && appelsConfig == config + 1 && erreurs() == nbErr + 1, "rien d'ecrit, configVRByJson, une erreur")
+verifie(!aRegle(1) && ordres().find("ShutterStop1") == nil, "regle retiree, aucun ShutterStop (moteur deja coupe)")
+
+print("14. Arret rapporte en retard puis arret subi en descente : cause bloque ; sans MPU : arret")
+reinit()
+vrReglage.debut(1)
+page(1, 1000)
+page(1, 15000)
+regle(1, 0)                                         # arret de la montee, rapporte apres la commande
+verifie(etape() == "haut", "arret de la montee rapporte en retard : sans effet")
+page(1, 17000)
+suivi = vrFonctions.suiviInclinaison(1)
+suivi["bloque"] = true
+suivi["cause"] = "blocage"
+regle(1, 0)
+verifie(etape() == "annule" && vrReglage.etatPage()["cause"] == "bloque", "arret subi en descente : annule, cause bloque")
+reinit()
+vrReglage.debut(1)
+page(1, 1000)
+regle(1, 0)
+verifie(etape() == "annule" && vrReglage.etatPage()["cause"] == "arret", "arret subi sans MPU : cause arret")
+
+print("15. Durees du MPU : videes au debut, rendues dans mpu")
+reinit()
+vrFonctions.suiviInclinaison(1)["durees"] = {"ouverture": 9.0}
+vrReglage.debut(1)
+verifie(vrFonctions.suiviInclinaison(1).find("durees") == nil && vrReglage.etatPage()["mpu"] == nil, "debut : durees du MPU videes, mpu nil")
+vrFonctions.suiviInclinaison(1)["durees"] = {"ouverture": 14.2}
+e = vrReglage.etatPage()
+verifie(e["mpu"] != nil && e["mpu"]["tempsMontee"] == 14.2 && e["mpu"].find("tempsDescente") == nil, "mpu : tempsMontee 14,2, tempsDescente nil")
+vrReglage.annule("annule")
+
+print("16. Exception pendant le debut : boutons remis, erreur au journal")
+reinit()
+tasmota.surCmd = def (c) if c == "ShutterButton1 0"    raise "io_error", "panne simulee"    end end
+config = appelsConfig
+nbErr = erreurs()
+r = vrReglage.debut(1)
+tasmota.surCmd = nil
+verifie(!r[0] && !vrFonctions.enReglage(1) && appelsConfig == config + 1 && erreurs() == nbErr + 1, "exception : refus, configVRByJson, une erreur")
+verifie(!aRegle(1) && nbTimers("vrReglage_delai") == 0, "exception : ni regle ni delai")
+
+print(echecs == 0 ? "BANC_REGLAGE_VOLETS: OK" : "BANC_REGLAGE_VOLETS: ECHEC (" + str(echecs) + ")")
