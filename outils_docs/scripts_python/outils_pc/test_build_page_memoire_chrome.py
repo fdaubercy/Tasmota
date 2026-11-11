@@ -256,6 +256,15 @@ def sonde_resume(m, capture=None):
     s.attend(cdp, "document.getElementById('m-sur-carte').textContent.includes('muette')", 5)
     s.verifie(cdp.js("document.querySelectorAll('#m-sur-carte .m-zone').length"), 0, "lire sur la carte : carte muette, message sans jauge")
     cdp.js("appel = window.vraiAppel")
+    # A5 (modele H) : lieux simules sur les donnees de la page (le depot d'essai n'a que des cartes « sonde »), puis
+    # remplissage par la fonction de production mEnvs ; un lieu hors table (jardin) passe apres la table, avant « Mes bases »
+    cdp.js(f"""(() => {{ const l = {{'{A}': 'jardin', '{s.B}': 'etage2', '{s.C}': 'garage'}};
+      envs.forEach(x => {{ if (l[x.nom]) x.lieu = l[x.nom]; }}); document.getElementById('m-env').textContent = ''; mEnvs(); return 1; }})()""")
+    s.verifie(cdp.js("[...document.querySelectorAll('#m-env optgroup')].map(g => g.label)"), ["2e étage", "Garage", "jardin", "Mes bases"],
+              "liste par lieu : 2e étage, Garage, code brut hors table, puis Mes bases en dernier")
+    s.verifie(cdp.js(f"document.querySelector('#m-env option[value=\"{s.C}\"]').parentNode.label"), "Garage", "liste par lieu : la carte garage sous Garage")
+    cdp.js(f"(() => {{ const c = document.getElementById('m-env'); c.value = '{s.B}'; mEnvs(); return 1; }})()")
+    s.verifie(cdp.js("document.getElementById('m-env').value"), s.B, "liste par lieu : valeur choisie gardee apres un nouvel appel de mEnvs")
     s.verifie(cdp.erreurs(), [], "resume : aucune erreur JavaScript")
 
 

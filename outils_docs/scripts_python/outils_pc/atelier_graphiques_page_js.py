@@ -462,7 +462,7 @@ $('intention').innerHTML = INTENTIONS.map(function (i) { return '<option value="
 bascules();
 Promise.all([lis('/envs'), fetch('/moteur/pages_graphiques.html').then(function (r) { return r.text(); })]).then(function (r) {
   etat.envs = r[0].envs; gabarit = r[1];
-  $('env').innerHTML = etat.envs.map(function (e) { return '<option>' + echappe(e.nom) + '</option>'; }).join('');
+  remplitParLieu($('env'), etat.envs, r[0].lieux, '', []);
   var voulu = new URLSearchParams(location.search).get('env');
   var env = etat.envs.some(function (e) { return e.nom === voulu; }) ? voulu : (etat.envs[0] || {}).nom;
   if (!env) { message('Aucune carte S3/P4 dans le cenv.', 'rouge'); return; }

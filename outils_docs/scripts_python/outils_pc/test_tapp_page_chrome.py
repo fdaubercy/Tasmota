@@ -144,6 +144,13 @@ def sonde(m):
     verifie(attend(cdp, "document.querySelectorAll('#c-gabarits input').length === 2", 10), True, "premiere ouverture : les 2 modeles proposes")
     verifie((cache(cdp, "fiche"), "EXTENSIONS_TAPP.md" in cdp.js("document.body.textContent")), (True, True), "premiere ouverture : pas de fiche, le document nomme")
     verifie(attend(cdp, f"document.getElementById('e-carte').querySelector('option[value=\"{env}\"]') !== null", 10), True, "cartes : la liste est remplie")
+    # A5 (modele H) : cartes groupees par lieu, option de tete gardee, valeur gardee apres rechargement de la liste
+    verifie(cdp.js("[...document.querySelectorAll('#e-carte optgroup')].map(g => g.label)[0]"), "2e étage", "cartes par lieu : premier groupe = 2e étage")
+    verifie(cdp.js(f"document.querySelector('#e-carte option[value=\"{env}\"]').parentNode.label"), "Bureau", "cartes par lieu : la carte bureau sous Bureau")
+    verifie(cdp.js("document.getElementById('e-carte').firstChild.value"), "", "cartes par lieu : option de tete « (choisir une carte) » gardee")
+    cdp.js(f"document.getElementById('e-carte').value = '{env}'; chargeCartes(); 1")
+    verifie(attend(cdp, f"document.getElementById('e-carte').value === '{env}'", 10), True, "cartes par lieu : valeur gardee apres rechargement de la liste")
+    cdp.js("document.getElementById('e-carte').value = ''; 1")
     # 2. creation : nom refuse, puis accepte
     saisit(cdp, "c-nom", "../mauvais")
     clic(cdp, "c-go")

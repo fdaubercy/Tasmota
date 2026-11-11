@@ -160,6 +160,7 @@ function h(balise, attrs) {
   }
   return e;
 }
+/*JS_LIEUX_COMMUN*/
 function vide(e) { while (e.firstChild) e.removeChild(e.firstChild); return e; }
 
 // Appel HTTP qui ne leve jamais : {ok, statut, donnees, texte}. Les POST portent X-Fichiers-Berry: 1.
@@ -195,17 +196,18 @@ async function chargeEnvs() {
   var r = await appel("/envs");
   if (!r.ok) { $("statut").textContent = r.texte; return; }
   envs = r.donnees.envs;
-  [["env", null], ["c-modele", "cartes"], ["c-base", "bases"]].forEach(function (s) {
-    var sel = vide($(s[0]));
-    [["cartes", "Mes cartes"], ["bases", "Mes bases"]].forEach(function (fam) {
-      if (s[1] && s[1] !== fam[0]) return;
-      var g = h("optgroup", {label: fam[1]});
-      envs.filter(function (e) { return e.famille === fam[0]; }).forEach(function (e) {
-        g.appendChild(h("option", {value: e.nom, texte: e.nom}));
-      });
-      sel.appendChild(g);
-    });
-  });
+  var avant = $("env").value;
+  var cartes = envs.filter(function (e) { return e.famille === "cartes"; });
+  var bases = envs.filter(function (e) { return e.famille === "bases"; });
+  // #env et c-modele : cartes par lieu puis « Mes bases » ; c-base : bases seules (lieux.py)
+  remplitParLieu($("env"), cartes, r.donnees.lieux, avant, bases);
+  remplitParLieu($("c-modele"), cartes, r.donnees.lieux, $("c-modele").value, []);
+  var sb = $("c-base"), pris = sb.value;
+  vide(sb);
+  var g = h("optgroup", {label: "Mes bases"});
+  bases.forEach(function (e) { g.appendChild(h("option", {value: e.nom, texte: e.nom})); });
+  sb.appendChild(g);
+  if (pris) sb.value = pris;
   var demande = new URLSearchParams(location.search).get("env");
   if (demande && envs.some(function (e) { return e.nom === demande; })) $("env").value = demande;
 }
@@ -477,4 +479,6 @@ chargeInterrompues();
 
 import fichiers_berry_page_envs as _envs     # panneaux Renommer / Supprimer (spec §9, §10)
 
-PAGE = PAGE.replace("<!--PANNEAUX_ENVS-->", _envs.HTML).replace("/*JS_ENVS*/", _envs.JS)
+import lieux                                 # noqa: E402 - remplitParLieu (listes par lieu)
+
+PAGE = PAGE.replace("/*JS_LIEUX_COMMUN*/", lieux.JS).replace("<!--PANNEAUX_ENVS-->", _envs.HTML).replace("/*JS_ENVS*/", _envs.JS)

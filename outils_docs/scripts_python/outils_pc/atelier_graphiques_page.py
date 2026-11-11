@@ -8,6 +8,7 @@ liquidfill sont poses avant lui, il ne charge donc rien lui-meme.
 
 from atelier_graphiques_page_energie import JS_ENERGIE
 from atelier_graphiques_page_js import JS
+import lieux
 
 CSS = """
 /* Theme de la PAGE (interrupteur « Mode sombre », comme l'annuaire) ; l'apercu .cadre garde ses couleurs : il simule la carte */
@@ -214,4 +215,4 @@ MOTEUR = "".join(f'<script src="/moteur/{nom}"></script>' for nom in
 
 PAGE = ("<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"utf-8\"><title>Atelier des graphiques</title><link rel=\"icon\" href=\"data:,\">"
         + THEME_TETE + "<link rel=\"stylesheet\" href=\"/moteur/pages_graphiques.css\"><link rel=\"stylesheet\" href=\"/moteur/energie.css\"><style>" + CSS + "</style>" + MOTEUR
-        + "</head><body>" + HTML + THEME_INTERRUPTEUR + "<script>" + JS + JS_ENERGIE + "</script></body></html>")
+        + "</head><body>" + HTML + THEME_INTERRUPTEUR + "<script>" + lieux.JS + JS + JS_ENERGIE + "</script></body></html>")

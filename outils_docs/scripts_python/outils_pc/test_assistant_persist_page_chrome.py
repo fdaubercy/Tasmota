@@ -318,6 +318,13 @@ def sonde_modification(m):
     cdp = m.cdp
     verifie(cdp.js("(function(){var o=document.getElementById('f-env').options;return o.length>1&&o[0].value===''})()"), True,
             "liste Env : « (nouvel env) » puis les cartes")
+    # A5 (modele H) : #f-env par lieu, valeur gardee apres un nouveau dessin
+    g = cdp.js("[...document.querySelectorAll('#f-env optgroup')].map(x => x.label)")
+    verifie((g[:1], cdp.js("document.querySelector('#f-env option[value=\"" + ENV + "\"]').parentNode.label")), (["2e étage"], "Garage"),
+            "liste Env par lieu : 2e étage en tete, la carte creee sous Garage")
+    cdp.js("document.getElementById('f-env').value = '" + ENV + "'; dessineListeEnv(); 1")
+    verifie(cdp.js("document.getElementById('f-env').value"), ENV, "liste Env par lieu : valeur gardee apres un nouveau dessin")
+    verifie(cdp.js("document.getElementById('f-env').firstChild.value"), "", "liste Env par lieu : « (nouvel env) » reste en tete")
     # diff_reactive_apres_creation : on reste sur l'env cree, en mode modification, et un parametre change reactive le diff
     verifie(attend(cdp, "document.getElementById('f-lieu').disabled && document.getElementById('f-env').value === '" + ENV + "'", 10),
             True, "apres creation : page en mode modification sur l'env cree (lieu grise)")

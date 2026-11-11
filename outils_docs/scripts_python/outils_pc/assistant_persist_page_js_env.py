@@ -10,6 +10,13 @@ Aucun mot de passe n'est lu ni envoye par la page : le serveur les recopie lui-m
 """
 
 JS = r"""
+/*JS_LIEUX_COMMUN*/
+// Liste de cartes par lieu (lieux.py) avec une option de tete (valeur "") ; les cartes du parc portent `env`, pas `nom`.
+function remplitCartes(select, cartes, premier, choisi, lieux) {
+  remplitParLieu(select, cartes.map(function (c) { return {nom: c.env, lieu: c.lieu}; }), lieux, choisi, []);
+  select.insertBefore(el("option", {value: ""}, premier), select.firstChild);
+  select.value = choisi || "";
+}
 // ---- Mode modification (A10) ----
 var FIGES = ["f-lieu", "f-nom", "f-puce", "f-base"], prepSuppr = null;
 function prefixe() { return {ESP32: "tasmota32", ESP32S3: "tasmota32s3", ESP32P4: "tasmota32p4"}[E.puce]; }
@@ -30,7 +37,7 @@ function majLibelle() {
 }
 function dessineListeEnv() {
   var choisi = $("f-env").value;
-  remplit($("f-env"), [["", "(nouvel env)"]].concat(parc.cartes.map(function (c) { return [c.env, c.env]; })), modif || choisi);
+  remplitCartes($("f-env"), parc.cartes, "(nouvel env)", modif || choisi, parc.lieux);
 }
 function griseFiges(g) { FIGES.forEach(function (i) { $(i).disabled = g; }); }
 function quitteModif() {

@@ -140,6 +140,16 @@ def sonde_page(m):
             "incoherent : « Appliquer » sur l'etat affiche met le nettoyage en attente")
     cdp.js("attente = {}; dessine(); 1")
     verifie(cdp.js("document.getElementById('env').value"), RIDEAU, "?env= preselectionne l'env")
+    # A5 (modele H) : listes par lieu, « Mes bases » en dernier, valeur gardee apres rechargement de la liste
+    groupes = "[...document.querySelectorAll('#%s optgroup')].map(g => g.label)"
+    g = cdp.js(groupes % "env")
+    verifie((g[0], g[-1], "Mes cartes" in g), ("2e étage", "Mes bases", False), "listes par lieu : #env, 1er groupe = 2e étage, bases en dernier")
+    verifie(cdp.js("document.querySelector('#env option[value=\"" + RIDEAU + "\"]').parentNode.label"), "Garage", "listes par lieu : le rideau sous Garage")
+    verifie(cdp.js(groupes % "c-modele")[-1] != "Mes bases", True, "listes par lieu : c-modele sans bases")
+    verifie(cdp.js(groupes % "c-base"), ["Mes bases"], "listes par lieu : c-base inchangee")
+    cdp.js("chargeEnvs(); 1")
+    verifie(attend(cdp, "document.querySelectorAll('#env optgroup').length > 0", 10) and cdp.js("document.getElementById('env').value"),
+            RIDEAU, "listes par lieu : valeur gardee apres rechargement")
     verifie(cdp.js("(function(){var b=document.querySelector('[data-retirer=\"" + DISPARU + "\"]'); if(!b) return 'absent';"
                    " b.click(); return document.querySelector('[data-attente=\"" + DISPARU + "\"]') ? 'en attente' : 'non';})()"),
             "en attente", "disparu : « retirer la ligne » le met en attente")

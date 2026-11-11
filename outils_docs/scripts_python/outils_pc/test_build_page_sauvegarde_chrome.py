@@ -167,6 +167,15 @@ def sonde(m, capture):
               (sorted(n for f in dossier.glob("*.dmp") for n in (f.name, f.with_suffix(".json").name)), False),
               "suppression : .dmp et fiche effaces, liste relue")
     s.verifie(any("avant-flash" in p.name for p in dossier.iterdir()), False, "suppression : plus de fichier « avant flash »")
+    # A5 (modele H) : lieux simules sur les donnees de la page (depot d'essai : cartes « sonde » seulement), puis remplissage
+    # par la fonction de production sEnvs ; le lieu hors table (jardin) passe apres la table
+    cdp.js(f"""(() => {{ const l = {{'{A}': 'jardin', '{s.B}': 'etage2', '{s.C}': 'garage'}};
+      envs.forEach(x => {{ if (l[x.nom]) x.lieu = l[x.nom]; }}); document.getElementById('s-env').textContent = ''; sEnvs(); return 1; }})()""")
+    s.verifie(cdp.js("[...document.querySelectorAll('#s-env optgroup')].map(g => g.label)"), ["2e étage", "Garage", "jardin"],
+              "liste par lieu : 2e étage, Garage, puis le code brut hors table")
+    s.verifie(cdp.js(f"document.querySelector('#s-env option[value=\"{s.C}\"]').parentNode.label"), "Garage", "liste par lieu : la carte garage sous Garage")
+    cdp.js(f"(() => {{ document.getElementById('s-env').value = '{s.B}'; sEnvs(); return 1; }})()")
+    s.verifie(cdp.js("document.getElementById('s-env').value"), s.B, "liste par lieu : valeur choisie gardee apres un nouvel appel de sEnvs")
     if capture:
         cdp.capture(Path(capture) / "build-sauvegarde.png")
     m.ouvre()

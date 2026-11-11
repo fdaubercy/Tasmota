@@ -156,7 +156,8 @@ function mEnvs() {
   var sel = $("m-env");
   if (!envs.length || sel.options.length) return;
   var candidats = envs.filter(function (e) { return e.famille === "cartes" || e.famille === "bases"; });
-  candidats.forEach(function (e) { sel.appendChild(h("option", {value: e.nom, texte: e.nom})); });
+  remplitParLieu(sel, candidats.filter(function (e) { return e.famille === "cartes"; }), lieuxTable, "",
+    candidats.filter(function (e) { return e.famille === "bases"; }));       // cartes par lieu, bases en dernier groupe
   var coche = candidats.filter(function (e) { return choix[e.nom] && choix[e.nom].coche; })[0]
     || candidats.filter(function (e) { return e.famille === "cartes"; })[0] || candidats[0];
   if (!coche) return;

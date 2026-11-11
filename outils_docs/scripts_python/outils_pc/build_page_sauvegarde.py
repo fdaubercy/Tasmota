@@ -148,7 +148,7 @@ function sEnvs() {
   var sel = $("s-env");
   if (!envs.length || sel.options.length) return;
   var cartes = envs.filter(function (e) { return e.famille === "cartes"; });
-  cartes.forEach(function (e) { sel.appendChild(h("option", {value: e.nom, texte: e.nom})); });
+  remplitParLieu(sel, cartes, lieuxTable, "", []);
   var coche = cartes.filter(function (e) { return choix[e.nom] && choix[e.nom].coche; })[0] || cartes[0];
   if (coche) { sel.value = coche.nom; sCharge(coche.nom); }
 }

@@ -283,6 +283,11 @@ def sonde_page(m, capture):
     verifie(cdp.js("document.getElementById('relire').textContent"), "● en ligne 192.168.0.43:8081",
             "chargement : carte en ligne, adresse par le maitre")
     verifie(cdp.js("document.getElementById('env').value"), CUVE, "?env= preselectionne la cuve")
+    # A5 (modele H) : #env groupe par lieu (le premier lieu present vient en tete), la cuve sous Garage, valeur gardee
+    g = cdp.js("[...document.querySelectorAll('#env optgroup')].map(x => x.label)")
+    verifie((g[:1] == ["2e étage"] or g[:1] == ["Rez-de-chaussée"] or g[:1] == ["Cave"] or g[:1] == ["Garage"], "Garage" in g), (True, True),
+            "liste par lieu : #env groupe, premier lieu present en tete, Garage present")
+    verifie(cdp.js("document.querySelector('#env option[value=\"" + CUVE + "\"]').parentNode.label"), "Garage", "liste par lieu : la cuve sous Garage")
     verifie(bool(attend(cdp, "(document.querySelector('#apercu .pg_tuile') || {}).getAttribute && "
                              "document.querySelector('#apercu .pg_tuile').getAttribute('data-rendu') === 'line'", 15)),
             True, "apercu : courbe tracee par le vrai moteur (data-rendu)")

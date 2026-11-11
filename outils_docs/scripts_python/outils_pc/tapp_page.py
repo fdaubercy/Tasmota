@@ -5,6 +5,7 @@ Deux compteurs de generation : S.nSel (extension affichee) et S.nPrep (preparati
 preparation perimee (autre voie, autre carte, nouvelle fabrication, autre extension) ne peut pas partir.
 Sonde : test_tapp_page_chrome.py.
 """
+import lieux
 
 CSS = """
 :root{color-scheme:light;--fond:#f6f7f9;--carte:#fff;--bord:#ddd;--texte:#222;--doux:#666;--bleu:#2563eb;--vert:#1e7e3a;
@@ -248,10 +249,11 @@ async function envoie() {
   if (S.prep === p) annulePrep();
 }
 async function chargeCartes() {
-  var r = await api("/cartes"), s = vide($("e-carte")), o = el("option", "", "(choisir une carte)");
+  var r = await api("/cartes"), avant = $("e-carte").value, s = vide($("e-carte")), o = el("option", "", "(choisir une carte)");
   o.value = ""; s.appendChild(o);
   if (!r.ok) { message($("e-retour"), "rouge", r.texte); return; }
-  r.donnees.cartes.forEach(function (c) { var x = el("option", "", c.env); x.value = c.env; s.appendChild(x); });
+  remplitParLieu(s, r.donnees.cartes.map(function (c) { return {nom: c.env, lieu: c.lieu}; }), r.donnees.lieux, avant, []);
+  s.insertBefore(o, s.firstChild); s.value = avant;
 }
 $("c-go").onclick = cree;
 $("m-go").onclick = enregistre;
@@ -277,4 +279,4 @@ THEME_INTERRUPTEUR = ("<script>(function () { var c = document.getElementById('t
 
 PAGE = ("<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
         "<title>Fabrique d'extensions</title><link rel=\"icon\" href=\"data:,\">" + THEME_TETE + "<style>" + CSS + "</style></head><body>"
-        + HTML + THEME_INTERRUPTEUR + "<script>" + JS + "</script></body></html>")
+        + HTML + THEME_INTERRUPTEUR + "<script>" + lieux.JS + JS + "</script></body></html>")

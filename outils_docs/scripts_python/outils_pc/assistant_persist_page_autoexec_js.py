@@ -377,9 +377,9 @@ fermeDiff();
 return async function () {                            // ouverture de l'onglet : liste des cartes et banque, une fois
   if (X.ouvert) return;
   X.ouvert = true;
-  var cartes = parc && parc.cartes;
-  if (!cartes) { var r = await api("/parc"); cartes = r.ok && r.donnees ? r.donnees.cartes : []; }
-  remplit($("a-env"), [["", "(choisir une carte)"]].concat(cartes.map(function (c) { return [c.env, c.env]; })), "");
+  var p = parc;                                       // jamais d'affectation de `parc` ici : le script de la page le teste (page.js demarre)
+  if (!p) { var r = await api("/parc"); p = r.ok && r.donnees ? r.donnees : {cartes: [], lieux: []}; }
+  remplitCartes($("a-env"), p.cartes, "(choisir une carte)", "", p.lieux);
   dessine(); chargeBanque();
 };
 })();

@@ -1182,6 +1182,7 @@ $("son").onchange = function () {
 /*JS_MEMOIRE*/
 /*JS_DEFAUT*/
 /*JS_SAUVEGARDE*/
+/*JS_LIEUX_COMMUN*/
 /*JS_LIEUX*/
 /*JS_COULEURS*/
 
@@ -1221,3 +1222,5 @@ import build_page_couleurs                          # noqa: E402 - couleurs du p
 PAGE = PAGE.replace("/*JS_COULEURS*/", build_page_couleurs.JS)
 import build_page_lieux                             # noqa: E402 - bascule « Classer par » Famille / Lieu / Puce (modele D)
 PAGE = PAGE.replace("/*CSS_LIEUX*/", build_page_lieux.CSS).replace("/*JS_LIEUX*/", build_page_lieux.JS)
+import lieux                                    # noqa: E402 - remplitParLieu, commun aux listes de cartes (memoire, sauvegarde)
+PAGE = PAGE.replace("/*JS_LIEUX_COMMUN*/", lieux.JS)

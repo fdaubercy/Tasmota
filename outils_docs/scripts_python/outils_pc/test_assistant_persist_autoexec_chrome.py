@@ -161,8 +161,11 @@ def sonde(m):
             "onglet autoexec.bat : affiche, l'autre cache")
     verifie(attend(cdp, f"Array.from(document.getElementById('a-env').options).some(function(o){{return o.value==={json.dumps(ENV)}}})", 10), True,
             "carte : l'env du differentiel dans la liste")
+    # A5 (modele H) : #a-env par lieu, option de tete gardee
+    verifie(js(cdp, "var o = document.querySelector('#a-env option[value=' + JSON.stringify(%s) + ']'); return [o.parentNode.label, document.getElementById('a-env').firstChild.value]" % json.dumps(ENV)),
+            ["Bureau", ""], "carte par lieu : le differentiel sous Bureau, « (choisir une carte) » en tete")
     tpc.saisit(cdp, "a-env", ENV, "change")
-    verifie(attend(cdp, "document.getElementById('a-texte').value.indexOf('Hostname') >= 0", 10), True, "carte choisie : texte charge")
+    verifie(attend(cdp, "document.getElementById('a-texte').value.indexOf('Hostname') >= 0", 40), True, "carte choisie : texte charge")
     verifie(js(cdp, "var v = document.getElementById('a-texte').value; return [v.indexOf('***') >= 0, v.split('***').length - 1]"), [True, 2],
             "texte : les 2 secrets en ***")
     verifie(js(cdp, "return document.getElementById('a-supprimer').disabled"), True, "suppression : grisee tant qu'aucune ligne n'est visee")

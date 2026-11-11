@@ -15,6 +15,7 @@ test_assistant_persist_autoexec_chrome.py.
 import assistant_persist_page_autoexec as _autoexec
 import assistant_persist_page_autoexec_js as _autoexec_js
 import assistant_persist_page_js as _js
+import lieux
 import assistant_persist_page_js_env as _env
 
 HTML = r"""<!doctype html>
@@ -208,5 +209,5 @@ HTML = r"""<!doctype html>
 </html>
 """
 
-PAGE = (HTML.replace("/*JS*/", _js.JS.replace("/*ENV*/", _env.JS)).replace("/*CSS_AUTOEXEC*/", _autoexec.CSS)
+PAGE = (HTML.replace("/*JS*/", _js.JS.replace("/*ENV*/", _env.JS.replace("/*JS_LIEUX_COMMUN*/", lieux.JS))).replace("/*CSS_AUTOEXEC*/", _autoexec.CSS)
         .replace("<!--VUE_AUTOEXEC-->", _autoexec.HTML).replace("/*JS_AUTOEXEC*/", _autoexec_js.JS))
