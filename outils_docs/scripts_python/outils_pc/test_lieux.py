@@ -71,6 +71,20 @@ with tempfile.TemporaryDirectory() as tmp:
     finally:
         be.persist_carte = vrai
 verifie(all(i["hote"] == "1234" and i["topic"] == "56" for i in faux_ids if not i.get("sauvegarde")) and bool(faux_ids), True, "identites : hostname et topic numeriques en chaine")
+# sauvegardes d'essai (depot temporaire, cartes actives du vrai depot) : -sauvegarde-3 lu ; topic qui prolonge
+# celui d'une carte active (garage/niveau) ecarte, sinon il volerait ses messages
+with tempfile.TemporaryDirectory() as tmp:
+    for d, topic in (("garage/tasmota32-vieux-sauvegarde-2", "garage/niveau/vieux"), ("bureau/tasmota32-ancien-sauvegarde-3", "bureau/ancien")):
+        (Path(tmp) / "data" / d).mkdir(parents=True)
+        (Path(tmp) / "data" / d / "_persist.json").write_text(json.dumps({"serveur": {"hostname": "X", "mqtt": {"topic": topic}}}), encoding="utf-8")
+    vl, vp = be.liste_envs, be.persist_carte
+    be.liste_envs, be.persist_carte = (lambda r: vl(RACINE)), (lambda r, n: vp(RACINE, n))
+    try:
+        sauv = {i["topic"]: i for i in lieux.identites(tmp) if i.get("sauvegarde")}
+    finally:
+        be.liste_envs, be.persist_carte = vl, vp
+verifie(("bureau/ancien" in sauv, sauv.get("bureau/ancien", {}).get("lieu")), (True, "bureau"), "sauvegarde -sauvegarde-3 lue, lieu du dossier")
+verifie("garage/niveau/vieux" in sauv, False, "sauvegarde dont le topic prolonge une carte active : ecartee")
 for f in ("lieuDeHote(", "lieuDeTopic(", "lieuDemande(", "bandeauLieu("):
     verifie("function " + f in lieux.JS, True, "JS " + f)
 

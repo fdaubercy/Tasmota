@@ -59,11 +59,16 @@ def identites(racine):
         chemin = build_envs.persist_carte(racine, e.nom)
         res.append(_identite(e.nom, lieu(e.nom), _serveur(chemin) if chemin else {}, e.ip if e.ip_source == "h" else ""))
     vus = {(i["hote"], i["topic"]) for i in res}
-    for chemin in sorted((Path(racine) / "data").glob("*/*-sauvegarde/_persist.json")):
+    actifs = [i["topic"].lower() + "/" for i in res if i["topic"]]
+    # -sauvegarde, -sauvegarde-2... (fichiers_berry_suppression::dossier_libre)
+    for chemin in sorted((Path(racine) / "data").glob("*/*-sauvegarde*/_persist.json")):
         dossier, lieu_ = chemin.parent.name, chemin.parent.parent.name
-        morceaux = dossier[:-len("-sauvegarde")].split("-")
+        morceaux = dossier.rsplit("-sauvegarde", 1)[0].split("-")
         env = "-".join([morceaux[0], lieu_] + morceaux[1:])
         i = _identite(env if env in noms else dossier, lieu_, _serveur(chemin), "", sauvegarde=True)
+        # un topic qui prolonge celui d'une carte active lui volerait ses messages (lieuDeTopic : le plus long gagne)
+        if any((i["topic"].lower() + "/").startswith(a) for a in actifs):
+            continue
         if (i["hote"], i["topic"]) not in vus:
             vus.add((i["hote"], i["topic"]))
             res.append(i)
