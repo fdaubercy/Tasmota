@@ -143,6 +143,9 @@
 
   // Pose une ouverture a p % ; 'bloque' : '', 'bloque' ou 'sens inverse' (MPU6050)
   function pose(v, p, bloque) {
+    if (v.p === p && v.b === bloque) return;              // immobile : DOM inchange (accueil ouvert des jours sur une tablette)
+    v.p = p;
+    v.b = bloque;
     var n = Math.round(p), mob = v.pose(p / 100);
     if (mob.getAttribute('data-rouge') !== bloque) {
       mob.setAttribute('data-rouge', bloque);

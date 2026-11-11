@@ -189,7 +189,7 @@ du thème sombre de Tasmota (`var(--c_bg)`, `var(--c_txt)`), largeur 100 % de la
   1,5 s, borné à 100, figé après `1,5 × rafraichissement` sans valeur nouvelle, sens de la dernière variation ; deux volets
   indépendants ; `ouvertureAngle(44, {ouvert: 85, ferme: 3})` = 50 (bornée à 0 et 100, montage inversé `ouvert` < `ferme`) ;
   rouge sans le fichier — preuve : sans `data/sd/js/volets.js`, `KO chargement ... ENOENT`, code 1
-- [x] Écrire `volets.js` ; `node outils_docs/scripts_python/outils_pc/test_volets.mjs` : code 0 — preuve : « 0 echec(s) sur 28 verifications », code 0 ; `volets.js` 203 lignes, ajouté à `volets_pages` du cenv (embarqué par les 3 envs à façade seulement, exclu des 14 autres envs à FS, résolu par `fichiers_berry_ini.resout`) ; `banc_boot.py` BANC_BOOT: OK, `banc_reglage_volets.py` OK, `banc_demarrage.py` VERT
+- [x] Écrire `volets.js` ; `node outils_docs/scripts_python/outils_pc/test_volets.mjs` : code 0 — preuve : « 0 echec(s) sur 28 verifications », code 0 ; `volets.js` 206 lignes, ajouté à `volets_pages` du cenv (embarqué par les 3 envs à façade seulement, exclu des 14 autres envs à FS, résolu par `fichiers_berry_ini.resout`) ; `banc_boot.py` BANC_BOOT: OK, `banc_reglage_volets.py` OK, `banc_demarrage.py` VERT
 - [x] Sonde Chrome écrite : page statique qui imite l'accueil de Tasmota (table de curseurs `s271`..`s273`, `window.VOLETS` des
   3 cartes), scénarios : position lue (`inverse` 0 et 1), mouvement entre deux valeurs (`data-ouverture` intermédiaire),
   arrêt de l'extrapolation, curseur tiré (événement `input` puis `change` sur 80 : le dessin reste à la position réelle tant
