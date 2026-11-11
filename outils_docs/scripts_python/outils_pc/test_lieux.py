@@ -40,5 +40,16 @@ verifie(len(lieux.pour_page()["lieux"]), 6, "6 lieux")
 verifie("function remplitParLieu(" in lieux.JS, True, "JS fonction")
 verifie("innerHTML" in lieux.JS, False, "JS sans innerHTML")
 
+ids = lieux.identites(RACINE)
+verifie([i["env"] for i in ids], cartes, "identites : les cartes, dans l'ordre")
+verifie({"env": "tasmota32s3-garage-capteurs-cuve-modbus", "lieu": "garage", "hote": "CAPTEURS-CUVE", "topic": "jardin/cuve", "ip": ""} in ids,
+        True, "identite de la cuve (esclave : ip vide)")
+verifie(all(i["lieu"] in codes for i in ids), True, "identites : lieux dans la table")
+verifie([i["hote"] for i in ids if i["env"] == "tasmota-pompe-piscine"], [""], "piscine sans hote")
+verifie(lieux.pour_page_identites(RACINE)["lieux"][0], ["etage2", "2e étage"], "pour_page_identites : premier lieu")
+verifie(lieux.pour_page_identites(RACINE)["cartes"], ids, "pour_page_identites : cartes")
+for f in ("lieuDeHote(", "lieuDeTopic(", "lieuDemande(", "bandeauLieu("):
+    verifie("function " + f in lieux.JS, True, "JS " + f)
+
 print("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s)")
 sys.exit(1 if ECHECS else 0)

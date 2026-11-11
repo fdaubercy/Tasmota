@@ -25,6 +25,34 @@ def pour_page():
     return {"lieux": [list(x) for x in LIEUX]}
 
 
+def identites(racine):
+    """Une identite par carte (famille « cartes ») : env, lieu, nom d'hote et topic du persist du depot, IP propre."""
+    import build_envs                                 # ici : fichiers_berry_etat importe build_envs (cycle)
+    import json
+
+    res = []
+    for e in build_envs.liste_envs(racine):
+        if e.famille != "cartes":
+            continue
+        serveur = {}
+        chemin = build_envs.persist_carte(racine, e.nom)
+        try:
+            serveur = json.loads(chemin.read_text(encoding="utf-8")).get("serveur") or {} if chemin else {}
+        except (OSError, ValueError, AttributeError):
+            serveur = {}
+        mqtt = serveur.get("mqtt") if isinstance(serveur, dict) else None
+        res.append({"env": e.nom, "lieu": lieu(e.nom),
+                    "hote": serveur.get("hostname") or "" if isinstance(serveur, dict) else "",
+                    "topic": mqtt.get("topic") or "" if isinstance(mqtt, dict) else "",
+                    "ip": e.ip if e.ip_source == "h" else ""})
+    return res
+
+
+def pour_page_identites(racine):
+    """Reponse de GET /lieux : la table et les identites des cartes."""
+    return {**pour_page(), "cartes": identites(racine)}
+
+
 JS = r"""
 function remplitParLieu(select, cartes, lieux, choisi, bases) {
   while (select.firstChild) select.removeChild(select.firstChild);
@@ -50,5 +78,47 @@ function remplitParLieu(select, cartes, lieux, choisi, bases) {
   if (bases && bases.length) groupe('Mes bases', bases);
   if (choisi) select.value = choisi;
   if (select.selectedIndex < 0) select.selectedIndex = 0;   // valeur disparue (env supprime) : premiere option, jamais une liste vide
+}
+
+function lieuDeHote(module, ipSource, cartes) {
+  const m = String(module || '').toLowerCase();
+  const parNom = cartes.find(c => c.hote && c.hote.toLowerCase() === m);
+  if (parNom) return parNom.lieu;
+  const parIp = ipSource ? cartes.find(c => c.ip && c.ip === ipSource) : null;
+  return parIp ? parIp.lieu : null;
+}
+
+function lieuDeTopic(topic, cartes, nu) {
+  const reste = nu ? String(topic || '') : String(topic || '').split('/').slice(1).join('/');
+  let meilleure = null;
+  cartes.forEach(c => {
+    if (!c.topic) return;
+    if ((reste === c.topic || reste.indexOf(c.topic + '/') === 0) && (!meilleure || c.topic.length > meilleure.topic.length)) meilleure = c;
+  });
+  return meilleure ? meilleure.lieu : null;
+}
+
+function lieuDemande(lieux) {
+  const v = new URLSearchParams(location.search).get('lieu');
+  return v && lieux.some(l => l[0] === v) ? v : null;
+}
+
+function bandeauLieu(parent, libelle, surFermeture) {
+  const b = document.createElement('div');
+  b.className = 'bandeau-lieu';
+  b.appendChild(document.createTextNode('Lieu : ' + libelle + ' (depuis l’annuaire) · '));
+  const x = document.createElement('button');
+  x.type = 'button';
+  x.textContent = 'Tous les lieux ✕';
+  x.onclick = () => {
+    const u = new URL(location.href);
+    u.searchParams.delete('lieu');
+    history.replaceState(null, '', u.pathname + u.search + u.hash);
+    b.remove();
+    surFermeture();
+  };
+  b.appendChild(x);
+  parent.insertBefore(b, parent.firstChild);
+  return b;
 }
 """
