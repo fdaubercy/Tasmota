@@ -984,7 +984,10 @@
 				""
 			],
 			"ajouts": {
-				"serveur.voieReseau": "wifi"
+				"serveur.voieReseau": "wifi",
+				"drivers.ModBus.environnement.TasmotaSlaveModBus.TasmotaSlaveModBus1.lectureGroupee": "OFF",
+				"drivers.ModBus.lectureGroupee": "OFF",
+				"drivers.ModBus.periodeReleve": 30
 			}
 		},
 		"ESP32P4": {
@@ -2123,7 +2126,10 @@
 			}
 		},
 		"cles_propres": [
-			"dimensions"
+			"dimensions",
+			"fenetre",
+			"modbus",
+			"veille"
 		],
 		"controle": [
 			"# Driver du module metier {{metier}} : squelette genere par l'assistant de creation du persist, a completer.",

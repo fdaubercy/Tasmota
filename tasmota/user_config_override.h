@@ -2200,11 +2200,11 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
 
             // -- Optional modules ----------------------------
 
-            // -- Ecran TFT ILI9488 480x320 (SPI) + tactile XPT2046 (plan debits-deux-cartes, A4) --
-            // Bloc commun USE_ILI9488 plus bas (SPI, LVGL, pilote universel, USE_UNIVERSAL_TOUCH) ; LVGL et HASPmota
-            // viennent aussi de FIRMWARE_LVGL (env de base tasmota32s3-base-N16R8). Descripteur : display.ini du
-            // dossier de la carte (tactile par le script :UTI = GPIO TS_SPI_CS du modele)
-            #define USE_ILI9488
+            // -- Ecran Waveshare ESP32-S3-Touch-LCD-7B : ST7262 1024x600 RGB 16 bits + tactile GT911 (plan debits-deux-cartes, A8) --
+            // Rien a definir ici : FIRMWARE_LVGL (env de base tasmota32s3-base-N16R8) apporte LVGL, HASPmota, le pilote universel
+            // (USE_UNIVERSAL_DISPLAY), le tactile par script (USE_UNIVERSAL_TOUCH, :UTI GT911) et l'I2C. Broches de la dalle dans
+            // display.ini du dossier de la carte ; alimentation, retroeclairage et reset du tactile par l'expandeur I2C 0x24.
+            // USE_ILI9488 retire le 2026-11-11 : il ajoutait le SPI de l'ancien ecran.
 
             // -- LCD I2C -----------------------
             //#define USE_I2C             // I2C using library wire (+10k code, 0k2 mem, 124 iram)
@@ -2233,7 +2233,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #undef USE_HDMI_CEC                              // Add support for HDMI CEC bus (+7k code, 1456 bytes IRAM)
 
             // -- Serial sensors ------------------------------
-            #define USE_MODBUS                               // Maitre ModBus RS485 (GPIO 17/18, module a direction automatique) vers la carte d'acquisition des debits
+            #define USE_MODBUS                               // Maitre ModBus RS485 (GPIO RX 16 / TX 15, SP3485 integre au 7B) vers la carte d'acquisition des debits
             // #define USE_TASMOTA_CLIENT                       // Add support for Arduino Uno/Pro Mini via serial interface including flashing (+2k6 code, 64 mem)
                                                             // GPIO4=Slave TX / GPIO5=Slave RX
 

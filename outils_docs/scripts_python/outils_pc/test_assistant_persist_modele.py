@@ -43,8 +43,8 @@ def _valeur(donnees, chemin):
 def test_couverture_parc(modele):
     e = apm.ecarts(RACINE, modele)
     verifie(e["nouvelles"], {}, "couverture_parc : tout chemin du parc est dans le modele")
-    verifie(e["illisibles"], [], "couverture_parc : les 9 persists du depot sont lisibles")
-    verifie(len([p for p in apm.persists_du_depot(RACINE) if p[1] is not None]), 9, "couverture_parc : 9 persists lus")
+    verifie(e["illisibles"], [], "couverture_parc : les 10 persists du depot sont lisibles")
+    verifie(len([p for p in apm.persists_du_depot(RACINE) if p[1] is not None]), 10, "couverture_parc : 10 persists lus")
 
 
 def test_aucun_secret(modele):
@@ -105,7 +105,7 @@ def test_puces(modele):
 
 
 def test_temoin_couverture(modele):
-    """Temoin (regle 7) : sans drivers.voletRoulants, la couverture DOIT echouer et nommer les 8 cartes qui l'ont."""
+    """Temoin (regle 7) : sans drivers.voletRoulants, la couverture DOIT echouer et nommer les 9 cartes qui l'ont."""
     m = copy.deepcopy(modele)
     del m["socle"]["drivers"]["voletRoulants"]
     for b in m["blocs"]:
@@ -115,8 +115,8 @@ def test_temoin_couverture(modele):
     nouv = apm.ecarts(RACINE, m)["nouvelles"]
     vr = {c: v for c, v in nouv.items() if c.startswith("drivers.voletRoulants")}
     verifie(bool(vr) and len(vr) == len(nouv), True, "temoin_couverture : seuls les chemins des volets manquent")
-    verifie(sorted({len(v) for v in vr.values()}) == [8] if vr else False, True,
-            "temoin_couverture : chaque chemin manquant nomme les 8 cartes")
+    verifie(sorted({len(v) for v in vr.values()}) == [9] if vr else False, True,
+            "temoin_couverture : chaque chemin manquant nomme les 9 cartes")
 
 
 def test_temoin_cle_metier_nouvelle(modele):
