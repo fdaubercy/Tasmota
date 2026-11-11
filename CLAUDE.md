@@ -563,6 +563,11 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   ajoutent `lieu` (et `puce` pour la page Build) et `lieux`. Bascule « Classer par » de l'onglet Build : `build_page_lieux.py`,
   sonde `test_build_page_lieux_chrome.py` ; intertitres de l'onglet Fichiers : `build_page_fichiers.py::fichiersCartes`.
   Nouveau lieu : une ligne dans `lieux.LIEUX`, rien d'autre.
+  Lieu partage (2026-11-11, plan `tasks/plans/lieu-partage-syslog-mqtt.md`) : `lieux.py::identites` et `::pour_page_identites` (hote, topic
+  et IP propre de chaque carte -> lieu, lus dans les persist) ; fonctions JS communes `lieuDeHote`, `lieuDeTopic`, `lieuDemande`,
+  `bandeauLieu` (banc `test_lieux_js.mjs`). Puces « Lieu de travail » de l'annuaire : `annuaire_page_lieux.py` ; `?lieu=` mis en avant
+  sur les pages 7700 a 7980 ; routes `GET /lieux` du syslog et du sniffeur MQTT (`sniffeur_mqtt_lieux.py`, `sniffeur_mqtt_panneaux.py`).
+  Sondes `test_annuaire_lieux_chrome.py`, `test_syslog_page_chrome.py`, `test_sniffeur_mqtt_page_chrome.py`.
 - `outils_docs/jauges/` — catalogue de 8 jauges pour afficher une mesure de capteur (2026-10-31) : images
   `jauge-A.png` a `jauge-H.png`, code `catalogue_jauges.html`, fiche `README.md`. **Choix retenu : A (liquide
   anime ECharts) ou H (demi-cercle SVG)**. Un gabarit `webSensor*.html` n'execute aucun script (zone remplacee

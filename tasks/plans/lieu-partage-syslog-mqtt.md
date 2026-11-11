@@ -196,10 +196,10 @@ Interfaces consommées : `pour_page_identites`, `lieuDeTopic` (avec `nu` pour le
 
 ## A7 — Documentation, relecture, essai réel
 
-- [ ] `outils_docs/README.md` : une phrase par page (annuaire, syslog, sniffeur MQTT, arrivée avec `?lieu=` dans la
+- [x] `outils_docs/README.md` : une phrase par page (annuaire, syslog, sniffeur MQTT, arrivée avec `?lieu=` dans la
   section Build) ; `outils_docs/filtre_lieu/README.md` : suite réalisée ; `CLAUDE.md` (carte des documents, entrée du
   classement par lieu) : `identites`, `annuaire_page_lieux.py`, les trois sondes neuves ;
-  `maintenance/verifie_references_docs.py` → code 0.
+  `maintenance/verifie_references_docs.py` → code 0. — preuve : verifie_references_docs.py code 0
 - [ ] Agent `relecteur-pages-web` sur les commits de A1 à A6 ; corriger ce qu'il confirme.
 - [ ] Essai réel, sans rien envoyer : annuaire, syslog et sniffeur MQTT sur le vrai dépôt (ports libres), lignes et
   messages réels s'il y en a ; un lien de l'annuaire en Garage ouvre la page Build en Lieu, groupe Garage ouvert.

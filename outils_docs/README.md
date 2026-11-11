@@ -730,6 +730,26 @@ répond comme un sniffeur : une carte Tasmota branchée en USB est écartée. Le
 
 <hr></hr>
 
+## Lieu de travail : annuaire, syslog et sniffeur MQTT
+
+Le lieu (garage, cave, bureau...) vient de la seule table `outils_pc/lieux.py`. Les noms d'hôte, les topics et les adresses IP
+des cartes sont lus dans les `_persist.json` du dépôt (`lieux.py::identites`), jamais saisis à la main.
+
+- **Annuaire (7600)** : la rangée de puces « Lieu de travail » (Tous, puis un lieu par puce) ajoute `?lieu=<code>` au lien
+  « Ouvrir » des outils qui s'en servent (Build, Fichiers Berry, Assistant persist, Atelier des graphiques, Fabrique d'extensions,
+  syslog, sniffeur MQTT). Rien n'est caché ni arrêté ; le choix est retenu par le navigateur.
+- **Syslog (7200)** : des puces de lieu (Tous, un par lieu, Autres) comptent les lignes et les erreurs de chaque lieu et filtrent
+  la liste, la barre et la liste des modules. Chaque ligne porte l'étiquette de son lieu, tiré du nom d'hôte (casse ignorée) puis,
+  à défaut, de l'IP de l'émetteur ; un hôte inconnu va dans « Autres ». Le lieu choisi n'est pas mémorisé d'une visite à l'autre.
+- **Sniffeur MQTT (7100)** : mêmes puces et même étiquette sur les messages (lieu tiré du topic de la carte), sans toucher aux
+  abonnements. L'arborescence des topics est rangée par lieu, l'env de la carte entre parenthèses sur son nœud ; les listes de
+  cartes des panneaux « Logs » et « Commande » sont groupées par lieu. Le lieu choisi n'est pas mémorisé.
+- **Arrivée avec `?lieu=`** : la page ouverte met le lieu en avant une seule fois, avec un bandeau « Lieu : X (depuis l'annuaire) »
+  et une croix « Tous les lieux ». La croix retire le paramètre et le bandeau, sans rien changer d'autre. Un code inconnu est ignoré.
+  Pour la page Build, voir « Arrivée avec `?lieu=` » plus bas.
+
+<hr></hr>
+
 ## Build et téléversement (page web)
 
 Une page pour compiler et téléverser plusieurs cartes d'un seul écran, sans éditer les `.ini` :
@@ -764,6 +784,10 @@ Conception : [spec](../docs/superpowers/specs/2026-10-24-page-build-televersemen
   visibles ; un groupe s'ouvre à l'arrivée s'il contient une carte cochée. Le classement est retenu par le navigateur
   et ne change rien à ce qui est coché ni à ce qui part. **Filtrer par nom** réduit la liste ; un env coché caché par
   le filtre est signalé en orange, il part quand même au lancement.
+- **Arrivée avec `?lieu=`** (lien de l'annuaire) : la page passe en classement Lieu pour cette visite seulement (le classement
+  retenu par le navigateur n'est pas réécrit), ouvre le groupe du lieu, affiche le bandeau « Lieu : X (depuis l'annuaire) » et
+  ne coche rien. La croix du bandeau rend le classement retenu. Les onglets Fichiers, Mémoire et Sauvegardes choisissent
+  la première carte du lieu si rien n'est déjà choisi.
 - **Cinq actions**, combinables, appliquées à tous les envs cochés : compiler, téléverser le firmware, effacer puis
   téléverser (voir plus bas), construire le file system, téléverser le file system. Dans un env, l'ordre est
   toujours compiler, téléverser (ou effacer puis téléverser), construire le FS, téléverser le FS, en ne lançant que
@@ -1233,7 +1257,8 @@ d'une carte existante, renomme ou supprime un env. Conception : [spec](../docs/s
 plans : `tasks/plans/fichiers-berry-env.md`, `tasks/plans/fichiers-berry-suppression.md`.
 
 Les listes de cartes (env affiché, carte modèle d'une création) sont groupées par lieu de la maison, « Mes bases » en
-dernier (table de `outils_pc/lieux.py`, commune aux pages des outils).
+dernier (table de `outils_pc/lieux.py`, commune aux pages des outils). Ouverte avec `?lieu=` (lien de l'annuaire), la page choisit
+la première carte du lieu (sauf si `?env=` est donné) et affiche le bandeau du lieu, sans rien cocher.
 
 ### Lancer la page
 

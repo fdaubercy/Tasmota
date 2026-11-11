@@ -41,7 +41,9 @@ sniffeur I2C (déjà trié par lieu), sniffeur ModBus, testeur UDP, pont série,
 
 `maquettes_lieu_suite.html` (`?m=J` à `?m=O`, `&t=clair`), images `modele-J.png` à `modele-O.png`. **Choix retenus le
 2026-11-11 : J pour l'annuaire, mise en avant à l'arrivée (rien n'est caché), M pour le syslog, N et O pour le
-sniffeur MQTT.** Rien de réalisé.
+sniffeur MQTT.** Réalisé le 2026-11-11 (plan `tasks/plans/lieu-partage-syslog-mqtt.md`, spec
+`docs/superpowers/specs/2026-11-11-lieu-partage-syslog-mqtt-design.md`). J : `annuaire_page_lieux.py` ; M : `syslog_tasmota_web.py` ;
+N et O : `sniffeur_mqtt_lieux.py` et `sniffeur_mqtt_panneaux.py` ; table hôte, topic et IP vers lieu : `lieux.py::identites`.
 
 | Modèle | Où | Principe |
 |---|---|---|
