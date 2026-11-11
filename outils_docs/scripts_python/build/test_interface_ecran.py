@@ -48,9 +48,13 @@ custom_interface_ecran_lvgl = {CARTE}/ecranLvgl.be
 
 
 class FauxEnv(dict):
-    def __init__(self, config, pioenv):
+    def __init__(self, config, pioenv, dossier=""):
         super().__init__(PIOENV=pioenv)
-        self.config, self.sortie = config, None
+        self.config, self.sortie, self.dossier = config, None, dossier
+
+    def subst(self, chaine):
+        assert chaine == "$PROJECT_DATA_DIR", chaine
+        return self.dossier
 
     def GetProjectConfig(self):
         return self.config
@@ -167,11 +171,16 @@ def essais(module):
 
         # Image du buildfs : post-action retire_exclus apres le choix haspmota
         config, chemin = config_temporaire(dossier, "custom_interface_ecran = haspmota\n" + INTERFACES)
-        env = FauxEnv(config, "carte")
+        source = os.path.join(dossier, "carte")              # data_dir de l'env : fichiers de la racine de l'image
+        env = FauxEnv(config, "carte", source)
         lance(module, env)
         fichiers = {"autoexec.be": b"import ecranHaspmota", "ecranHaspmota.be": b"h" * 5000, "pages.jsonl": b"{}",
                     "ecranLvgl.be": b"l" * 3000, "_persist.json": b"{\"a\": 1}", "sd/js/pages.js": b"js",
                     "sd/ecranLvgl.be": b"sous-dossier : hors regle de post_esp32"}
+        for rel, contenu in fichiers.items():
+            os.makedirs(os.path.dirname(os.path.join(source, rel)), exist_ok=True)
+            with open(os.path.join(source, rel), "wb") as f:
+                f.write(contenu)
         bin_ = os.path.join(dossier, "littlefs.bin")
         with open(bin_, "wb") as f:
             f.write(image(fichiers))
@@ -186,6 +195,12 @@ def essais(module):
         taille = os.path.getsize(bin_)
         verifie(module.retire_de_image(bin_, {"absent.be"}), [], "rien a retirer : image laissee telle quelle")
         verifie(os.path.getsize(bin_), taille, "rien a retirer : taille inchangee")
+        # Aucun fichier exclu dans le dossier source : l'image n'est pas ouverte (ici illisible, aucune exception)
+        os.remove(os.path.join(source, "ecranLvgl.be"))
+        with open(bin_, "wb") as f:
+            f.write(b"pas une image")
+        verifie(module.retire_exclus([bin_], [], env), None, "aucun exclu a la racine du dossier : image pas ouverte")
+        verifie(open(bin_, "rb").read(), b"pas une image", "aucun exclu a la racine du dossier : octets inchanges")
 
         # Depot reel, lecture seule (config en memoire)
         from platformio.project.config import ProjectConfig
@@ -195,7 +210,8 @@ def essais(module):
                 ("haspmota", [f"{CARTE}/ecranLvgl.be"]), "depot : affichage des debits en haspmota, ecranLvgl.be exclu")
         lance(module, env)
         verifie(env.sortie, None, "depot : affichage, le build continue")
-        env = FauxEnv(reel, "tasmota32s3-bureau-serveur-debits-pac")
+        env = FauxEnv(reel, "tasmota32s3-bureau-serveur-debits-pac",
+                      os.path.join(DEPOT, "data", "bureau", "tasmota32s3-serveur-debits-pac"))
         with open(bin_, "wb") as f:
             f.write(image({"pages.jsonl": b"{}", "display.ini": b":H", "autoexec.be": b"x"}))
         module.retire_exclus([bin_], [], env)
@@ -220,7 +236,8 @@ def main():
                ("valeur inconnue toleree", [("        env.Exit(1)\n        return\n    if choix", "        return\n    if choix")]),
                ("rien retire de l'image", [("for n in retires:\n        fs.remove(n)", "for n in []:\n        fs.remove(n)")]),
                ("version disque non gardee", [("fs = monte(version)", "fs = monte(0)")]),
-               ("autres interfaces ignorees", [("if nom != choix", "if nom == choix")]))
+               ("autres interfaces ignorees", [("if nom != choix", "if nom == choix")]),
+               ("image ouverte sans exclu dans le dossier", [("    if not noms:\n        return None\n    for n", "    for n")]))
     print("\n== Mutants (chacun doit etre rouge) ==")
     vivants = []
     for nom, remplacements in mutants:

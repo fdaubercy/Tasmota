@@ -105,7 +105,13 @@ def retire_exclus(target, source, env):
         brut = env.GetProjectOption("custom_files_exclude")
     except Exception:                                   # noqa: BLE001 - option absente
         return None
-    noms = {os.path.basename(l.strip()) for l in brut.splitlines() if l.strip()}
+    # Seuls les fichiers du dossier source de l'image (les copies de data/fs y sont deja filtrees) : sans eux, l'image
+    # n'est pas ouverte, et un env sans fichier exclu dans son dossier garde son buildfs d'avant
+    dossier = env.subst("$PROJECT_DATA_DIR")
+    noms = {n for n in (os.path.basename(l.strip()) for l in brut.splitlines() if l.strip())
+            if os.path.isfile(os.path.join(dossier, n))}
+    if not noms:
+        return None
     for n in retire_de_image(str(target[0]), noms):
         print(f"  → Liste noire (custom_files_exclude), retire de l'image du FS : {n}")
     return None
