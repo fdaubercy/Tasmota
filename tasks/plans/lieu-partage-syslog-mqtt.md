@@ -89,19 +89,19 @@ Interfaces produites :
     `textContent`) avec un bouton « Tous les lieux ✕ » qui retire `lieu` de l'adresse, retire le bandeau, appelle
     `surFermeture()`. Rend l'élément. Style : à la charge de chaque page (classe `bandeau-lieu`).
 
-- [ ] Ajouter à `test_lieux.py`, rouge d'abord : `identites(RACINE)` contient la cuve
+- [x] Ajouter à `test_lieux.py`, rouge d'abord : `identites(RACINE)` contient la cuve
   `{"env": "tasmota32s3-garage-capteurs-cuve-modbus", "lieu": "garage", "hote": "CAPTEURS-CUVE", "topic": "jardin/cuve", "ip": ""}`
   (esclave : `ip_source` ≠ `h`) ; toutes les cartes ont `lieu` dans la table ; `tasmota-pompe-piscine` a `hote == ""` ;
-  `pour_page_identites(RACINE)["lieux"][0] == ["etage2", "2e étage"]`.
-- [ ] Écrire `test_lieux_js.mjs` (Node, sans DOM : évalue `lieux.JS` lu par `python -c "import lieux; print(lieux.JS)"`
+  `pour_page_identites(RACINE)["lieux"][0] == ["etage2", "2e étage"]`. — preuve : commit 52a21d1ee, test_lieux.py VERT (temoin : ip sans filtre ip_source -> ECHEC cuve)
+- [x] Écrire `test_lieux_js.mjs` (Node, sans DOM : évalue `lieux.JS` lu par `python -c "import lieux; print(lieux.JS)"`
   ou extrait du fichier), rouge d'abord, avec une table de 5 cartes copiée du dépôt (grenier, P4 `garage`, S3 `garage/niveau`,
   cuve `jardin/cuve`, rideau `garage/rideau`, porte `rdc` avec `hote` "" et `ip` `192.168.0.46`) : vigilances 1, 2, 4 ;
   `lieuDeTopic("stat/jardin/cuve/RESULT")` → `garage` ; `lieuDeTopic("garage/rideau", cartes, true)` → `garage` ;
   `lieuDeTopic("zigbee2mqtt/bridge/state")` → `null`. `lieuDemande` testé avec un faux `location` global :
-  `?lieu=cave` → `cave`, `?lieu=inconnu` et `?lieu=%3Cb%3Ex` → `null` (vigilance 3). Code de sortie 1 sur échec.
-- [ ] Écrire `identites`, `pour_page_identites` et les quatre fonctions JS ; `test_lieux.py` et `test_lieux_js.mjs` verts ;
-  sondes qui insèrent `lieux.JS` toujours vertes : `test_fichiers_berry_page_chrome.py`, `test_tapp_page_chrome.py`.
-- [ ] Commit `feat(lieux): identites des cartes et fonctions communes du lieu partage`.
+  `?lieu=cave` → `cave`, `?lieu=inconnu` et `?lieu=%3Cb%3Ex` → `null` (vigilance 3). Code de sortie 1 sur échec. — preuve : commit 52a21d1ee, test_lieux_js.mjs VERT (temoins : prefixe sans / et casse -> ECHEC)
+- [x] Écrire `identites`, `pour_page_identites` et les quatre fonctions JS ; `test_lieux.py` et `test_lieux_js.mjs` verts ;
+  sondes qui insèrent `lieux.JS` toujours vertes : `test_fichiers_berry_page_chrome.py`, `test_tapp_page_chrome.py`. — preuve : commit 52a21d1ee, test_lieux.py et test_lieux_js.mjs VERT, sondes test_fichiers_berry_page_chrome.py et test_tapp_page_chrome.py VERT
+- [x] Commit `feat(lieux): identites des cartes et fonctions communes du lieu partage`. — preuve : commit 52a21d1ee
 
 ## A2 — Annuaire : modèle J
 
