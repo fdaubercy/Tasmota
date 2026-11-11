@@ -203,7 +203,7 @@ verifie("barre : la plus forte (voie 5, 200 L/min) a 100, voie 1 a 62", global.p
 verifie("voie 2 muette (bit 1) : « 0.00 L/min », rouge, « muet »", global.p1b23.text == "0.00 L/min" && global.p1b23.text_color == "#FF6B6B" && global.p1b24.text == "muet")
 verifie("voie 3 imprecise (bit 8) : orange, debit et barre", global.p1b33.text_color == "#F2B84B" && global.p1b32.bg_color10 == "#F2B84B")
 verifie("voie 4 a 0 : « arrêt », grise", global.p1b43.text == "0.00 L/min" && global.p1b44.text == "arrêt" && global.p1b43.text_color == "#6C7A89")
-verifie("nom des departs lu du persist", global.p1b11.text == "Départ 1" && global.p1b61.text == "Départ 6")
+verifie("nom des departs lu du persist", global.p1b11.text == "Débit 1" && global.p1b61.text == "Débit 6")
 verifie("total de 6 voies valides : somme sans « partiel »", texte(2) == "Total 324.02 L/min")
 pose(6, 7, 99)
 ecranDebitsFonctions.ecran()
@@ -212,7 +212,7 @@ verifie("une voie inconnue : total des autres marque « partiel »", texte(2) ==
 for i: 1 .. 6    pose(i, 100, 99)    end
 ecranDebitsFonctions.ecran()
 verifie("toutes inconnues : « Total inconnu »", texte(2) == "Total inconnu" && global.p1b13.text == "inconnu")
-verifie("page Details : etat de chaque voie et fenetre", global.p2b11.text == "1. Départ 1 : inconnu" && global.p2b90.text == "Fenêtre attendue : 10 s (inconnu au-delà de 20 s)")
+verifie("page Details : etat de chaque voie et fenetre", global.p2b11.text == "1. Débit 1 : inconnu" && global.p2b90.text == "Fenêtre attendue : 10 s (inconnu au-delà de 20 s)")
 
 print("--- ecriture seulement si ca change")
 poseTout([100, 200, 300, 400, 500, 600], 4096, 0)

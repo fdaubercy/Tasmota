@@ -214,7 +214,7 @@
 					"valeurMax": 0,
 					"analogique1": {
 						"activation": "ON",
-						"nom": "Départ 1",
+						"nom": "Débit 1",
 						"id": 1,
 						"pin": -1,
 						"type": 4704,
@@ -233,7 +233,7 @@
 					},
 					"analogique2": {
 						"activation": "ON",
-						"nom": "Départ 2",
+						"nom": "Débit 2",
 						"id": 2,
 						"pin": -1,
 						"type": 4704,
@@ -252,7 +252,7 @@
 					},
 					"analogique3": {
 						"activation": "ON",
-						"nom": "Départ 3",
+						"nom": "Débit 3",
 						"id": 3,
 						"pin": -1,
 						"type": 4704,
@@ -271,7 +271,7 @@
 					},
 					"analogique4": {
 						"activation": "ON",
-						"nom": "Départ 4",
+						"nom": "Débit 4",
 						"id": 4,
 						"pin": -1,
 						"type": 4704,
@@ -290,7 +290,7 @@
 					},
 					"analogique5": {
 						"activation": "ON",
-						"nom": "Départ 5",
+						"nom": "Débit 5",
 						"id": 5,
 						"pin": -1,
 						"type": 4704,
@@ -309,7 +309,7 @@
 					},
 					"analogique6": {
 						"activation": "ON",
-						"nom": "Départ 6",
+						"nom": "Débit 6",
 						"id": 6,
 						"pin": -1,
 						"type": 4704,
