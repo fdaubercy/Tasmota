@@ -1,23 +1,58 @@
 # Fonctions du module metier ecranDebits : carte d'AFFICHAGE des 6 debits de la nourrice de chauffage
-# (plan tasks/plans/debits-deux-cartes.md A4, spec docs/superpowers/specs/2026-11-09-debits-deux-cartes-design.md § 6).
+# (plan tasks/plans/debits-deux-cartes.md A4 et A8, spec docs/superpowers/specs/2026-11-09-debits-deux-cartes-design.md § 6).
 # La mesure est faite par la carte d'acquisition (esclave ModBus id 1) : ses 7 valeurs (6 debits en centiemes de L/min,
 # puis un mot d'etats) arrivent par le releve groupe ou par le push UDP et sont rangees par modBus_TasmotaSlaveModBus
 # dans les 7 entrees analogiques virtuelles `modules.ecranDebits.environnement.analogiques` (value, etatConstate,
-# constateA en secondes). Ce module ne fait que les LIRE et les montrer sur l'ecran TFT (HASPmota, pages.jsonl du dossier).
+# constateA en secondes). Ce module les LIT, en tire un MODELE D'ECRAN independant de la bibliotheque graphique, garde
+# l'historique de la courbe (par ecranFonctions). Le DESSIN est fait par une INTERFACE (voir l'API ci-dessous). Le GENERIQUE d'ecran
+# (choix de l'interface, veille, luminosite par l'expandeur 0x24, historique circulaire) est dans ecranFonctions.be, solidifiable.
 # Mot d'etats (analogique7) : bit i (0 a 5) = voie i+1 muette, bit 6+i = voie i+1 imprecise, bit 12 = groupe servi.
 # Une voie est « inconnue » si sa valeur n'est pas fraiche : etatConstate different de « valide », sentinelle, ou
 # constateA plus vieux que 2 fenetres (modules.ecranDebits.fenetre, a recopier a la main si on change celle de l'acquisition).
 # Compile en .bec par demarrage.compile(["ecranDebitsFonctions"], "modules.ecranDebits"), importe par controleEcranDebits.be.
 # Logs : charte du CLAUDE.md (logFonctions.log, sans cible : seuil `general`).
+#
+# ===== API d'une INTERFACE d'ecran (ecranHaspmota.be + pages.jsonl, ou ecranLvgl.be ; une seule sur le FS) =====
+# Waveshare ESP32-S3-Touch-LCD-7B, 1024 x 600, tactile GT911 ; maquettes outils_docs/ecran_debits_7B/ (modele-A, modele-D).
+# controleEcranDebits charge l'interface presente sur le FS par ecranFonctions.charge(["ecranHaspmota", "ecranLvgl"]) (la
+# premiere presente) et la confie a ecranDebitsFonctions.demarreEcran(module). Un module d'interface (module(...), fonctions nommees, pas de fonction anonyme) rend :
+#   demarre()        -> true si l'ecran est pret, objets crees ; false sinon, erreur DEJA journalisee. Appele une fois.
+#   affiche(modele)  -> ecrit le modele sur l'ecran. Appele CHAQUE SECONDE (l'age du releve change) : n'ecrire sur un objet
+#                       que ce qui a change depuis la derniere fois (cache par objet et attribut), jamais tout.
+# Pages : 1 « Debits » (modele A : nom, barre, debit + unite, part du total), 2 « Courbes » (modele D : puce de la couleur
+# de la serie, nom, debit + unite ; courbe des 30 dernieres minutes des 6 voies), 3 « Reglages » (fenetre, veille, luminosite,
+# chacun avec un bouton - et un bouton +). Commun a toutes : en-tete (titre « Débits nourrice », pastille de liaison, texte du
+# releve, total a droite) et pied de page tactile « Débits » / « Courbes » / « Réglages », bouton de la page courante en bleu.
+# Boutons - / + : ecranDebitsFonctions.ajuste(cle, pas) ; cle "fenetre" pas 1, "veille" pas 1, "luminosite" pas 10.
+# Veille, luminosite et voile anti-clic du reveil sont faits par ecranFonctions (lv.disp().get_inactive_time()) : rien a faire
+# dans l'interface.
+# Modele (ecranDebitsFonctions.modele(now)), une map :
+#   "voies"      : 6 maps {"nom", "debit" (texte sans unite : "4,20", "-,--", "muet"), "unite" ("L/min" ou ""),
+#                  "part" ("23 %", "arrêt" ou ""), "barre" (0-100, relative a la plus forte voie), "etat"}
+#                  etat : "normal", "imprecis", "muet", "arret", "inconnu" ; couleur = COULEURS[etat]
+#   "total"      : texte ("Total 17,9 L/min", "Total 17,9 L/min (partiel)", "Total inconnu")
+#   "age"        : secondes depuis le dernier releve ModBus (nil : jamais) ; "releve" : son texte ("relevé il y a 4 s")
+#   "liaison"    : cle de COULEURS de la pastille ("vert" a moins de 2 fenetres, "muet" au-dela, "inconnu" sans releve)
+#   "historique" : 6 listes de ecranFonctions.HISTO_POINTS entiers en centiemes de L/min, du plus vieux au plus recent, nil = inconnu
+#                  (lv.CHART_POINT_NONE) ; un point toutes les 30 s ; couleur de la voie i = SERIES[i]
+#   "points"     : nombre de points ajoutes depuis le demarrage (pousser seulement les nouveaux, set_next_value)
+#   "courbeMax"  : haut de l'axe des debits, en centiemes (multiple de 2 L/min, 10 L/min au moins)
+#   "reglages"   : textes {"fenetre": "10 s", "veille": "5 min" ou "jamais", "luminosite": "80 %"}
+# Ressources : rendu SANS image (formes, couleurs, polices embarquees robotocondensed). Aucune image ni ressource ne s'ajoute
+# sans l'accord de l'utilisateur ; si une est retenue, elle va dans /sd/<type>/ sur la carte (data/sd/<type>/ au depot), comme
+# /sd/html, /sd/js, /sd/css. L'image du FS est plate : gestionFileFolder.listeEtRepartitLesFichiers range au demarrage par
+# extension, et tout nom contenant ".json" part en /json/ (pages.jsonl est lu en /json/pages.jsonl).
 var ecranDebitsFonctions = module("ecranDebitsFonctions")
 
 ecranDebitsFonctions.NB_VOIES = 6
-ecranDebitsFonctions.FENETRE_DEFAUT = 10   # s entre deux mesures de l'acquisition
-ecranDebitsFonctions.VEILLE_DEFAUT = 5     # min sans toucher l'ecran avant sa mise en veille (0 = jamais)
-ecranDebitsFonctions.PAGES = "/json/pages.jsonl"
-ecranDebitsFonctions.COULEURS = {"normal": "#E8EDF2", "imprecis": "#F2B84B", "arret": "#6C7A89", "inconnu": "#FF6B6B", "muet": "#FF6B6B"}
-ecranDebitsFonctions.dernier = nil         # contenu deja ecrit sur l'ecran (nil = objets neufs : tout ecrire)
+# Reglage propre aux debits (modules.ecranDebits.fenetre) : [minimum, maximum, defaut, unite] ; veille, extinction et luminosite
+# sont ceux de ecranFonctions.BORNES
+ecranDebitsFonctions.BORNES = {"fenetre": [2, 60, 10, "s"]}
+ecranDebitsFonctions.COULEURS = {"normal": "#E8EDF2", "imprecis": "#FFA53F", "muet": "#FF5A5A", "inconnu": "#5B6B7C",
+                                 "arret": "#9FB3C8", "bleu": "#3FA7FF", "vert": "#3FD08A"}
+ecranDebitsFonctions.SERIES = ["#3FA7FF", "#3FD08A", "#FFA53F", "#C084FC", "#FF5A5A", "#F5D04A"]
 ecranDebitsFonctions.toutesInconnues = true   # vrai au demarrage : le premier « tout inconnu » n'est pas un message
+ecranDebitsFonctions.courbeMax = 1000      # haut de l'axe de la courbe, en centiemes
 
 # Log du module sous le seuil `general` (ReglageLog general <niveau>) ; niveau = constante LOG_LEVEL_*
 def ecranDebitsFonctions_log(msg, niveau)
@@ -25,42 +60,32 @@ def ecranDebitsFonctions_log(msg, niveau)
 end
 ecranDebitsFonctions.log = ecranDebitsFonctions_log
 
-# Reglages du module, valeurs par defaut si le persist ne les porte pas (ou si la valeur est illisible)
-def ecranDebitsFonctions_fenetre()
+# Bornes du reglage `cle` : celles des debits (fenetre), sinon celles de ecranFonctions (veille, extinction, luminosite) ; nil si inconnu
+def ecranDebitsFonctions_bornes(cle)
+    import ecranFonctions
     import ecranDebitsFonctions
-    var v = modules.contains("ecranDebits") ? modules["ecranDebits"].find("fenetre", ecranDebitsFonctions.FENETRE_DEFAUT) : ecranDebitsFonctions.FENETRE_DEFAUT
-    return (type(v) == "int" && v >= 2 && v <= 60) ? v : ecranDebitsFonctions.FENETRE_DEFAUT
+    var b = ecranDebitsFonctions.BORNES.find(cle)
+    return b != nil ? b : ecranFonctions.BORNES.find(cle)
 end
-ecranDebitsFonctions.fenetre = ecranDebitsFonctions_fenetre
+ecranDebitsFonctions.bornes = ecranDebitsFonctions_bornes
 
-# Minutes sans toucher l'ecran avant sa mise en veille (HASPmota : 25 % puis eteint 30 s plus tard), 0 = jamais ;
-# persist modules.ecranDebits.veille, valeur hors 0..120 ignoree (persist edite a la main)
-def ecranDebitsFonctions_veille()
+# Reglage `cle` du persist (modules.ecranDebits), valeur par defaut si absent ou illisible
+def ecranDebitsFonctions_reglage(cle)
+    import ecranFonctions
     import ecranDebitsFonctions
-    var v = modules.contains("ecranDebits") ? modules["ecranDebits"].find("veille", ecranDebitsFonctions.VEILLE_DEFAUT) : ecranDebitsFonctions.VEILLE_DEFAUT
-    return (type(v) == "int" && v >= 0 && v <= 120) ? v : ecranDebitsFonctions.VEILLE_DEFAUT
+    return ecranFonctions.reglage(cle, ecranDebitsFonctions.bornes(cle))
 end
-ecranDebitsFonctions.veille = ecranDebitsFonctions_veille
+ecranDebitsFonctions.reglage = ecranDebitsFonctions_reglage
 
-# Applique la veille a HASPmota (lu a chaque passage de haspmota.auto_dimming) ; rien sans ecran demarre
-def ecranDebitsFonctions_appliqueVeille()
-    import global
+# Bouton - / + de la page Reglages : valeur actuelle + pas, ramenee dans les bornes, puis ecrite au persist
+def ecranDebitsFonctions_ajuste(cle, pas)
+    import ecranFonctions
     import ecranDebitsFonctions
-    if (global.p1b13 == nil)    return    end
-    import haspmota
-    var v = ecranDebitsFonctions.veille()
-    haspmota.dimming_time = v
-    # A 0, auto_dimming sort d'emblee et ne rallume plus : un ecran deja assombri resterait noir
-    if (v == 0 && haspmota.dimming_state < 100)
-        if (haspmota.dimmed_panel != nil)    haspmota.dimmed_panel.stop()    haspmota.dimmed_panel = nil    end
-        haspmota.dimming_state = 100
-        import display
-        display.dimmer(display.dimmer())
-        # meme evenement que la sortie de veille d'auto_dimming, pour une regle hasp#p0b0#idle
-        tasmota.defer(def () tasmota.publish_rule('{"hasp":{"p0b0":{"idle":"off"}}}') end)
-    end
+    var b = ecranDebitsFonctions.bornes(cle)
+    var n = ecranDebitsFonctions.reglage(cle) + pas
+    return ecranFonctions.regle(cle, n < b[0] ? b[0] : (n > b[1] ? b[1] : n), b)
 end
-ecranDebitsFonctions.appliqueVeille = ecranDebitsFonctions_appliqueVeille
+ecranDebitsFonctions.ajuste = ecranDebitsFonctions_ajuste
 
 # Entree analogique virtuelle n (1 a 7) du persist, nil si absente ou inactive
 def ecranDebitsFonctions_entree(n)
@@ -79,11 +104,24 @@ def ecranDebitsFonctions_valeur(n, now)
     if (e == nil || e.find("etatConstate") != "valide")    return nil    end
     var t = e.find("constateA")
     # t > now : releve sauve par un persist.save avant le redemarrage, lu avant l'heure NTP
-    if (type(t) != "int" || t > now || now - t > 2 * ecranDebitsFonctions.fenetre())    return nil    end
+    if (type(t) != "int" || t > now || now - t > 2 * ecranDebitsFonctions.reglage("fenetre"))    return nil    end
     var v = e.find("value")
     return (type(v) == "int" && v >= 0 && v != modbusFonctions.SENTINELLE_UINT32) ? v : nil
 end
 ecranDebitsFonctions.valeur = ecranDebitsFonctions_valeur
+
+# Secondes depuis le plus recent releve ModBus des 7 entrees (constateA), nil si aucun
+def ecranDebitsFonctions_age(now)
+    import ecranDebitsFonctions
+    var t = nil
+    for i: 1 .. ecranDebitsFonctions.NB_VOIES + 1
+        var e = ecranDebitsFonctions.entree(i)
+        var c = e == nil ? nil : e.find("constateA")
+        if (type(c) == "int" && c <= now && (t == nil || c > t))    t = c    end
+    end
+    return t == nil ? nil : now - t
+end
+ecranDebitsFonctions.age = ecranDebitsFonctions_age
 
 # Les 6 debits en L/min (nil = inconnu)
 def ecranDebitsFonctions_debits(now)
@@ -128,14 +166,23 @@ def ecranDebitsFonctions_imprecis(q)
 end
 ecranDebitsFonctions.imprecis = ecranDebitsFonctions_imprecis
 
-# Affichage d'une voie : [debit, part, barre 0-100 (relative a la plus forte voie), etat]
+# Nombre a virgule (affichage en francais) : 4.2 -> "4,20" (decimales = format, ex. "%.2f")
+def ecranDebitsFonctions_virgule(q, fmt)
+    import string
+    return string.tr(string.format(fmt, q), ".", ",")
+end
+ecranDebitsFonctions.virgule = ecranDebitsFonctions_virgule
+
+# Affichage d'une voie : {"debit", "unite", "part", "barre" (0-100, relative a la plus forte voie), "etat"}
 def ecranDebitsFonctions_etatVoie(q, tot, max, muet, imprecis)
     import string
-    if (q == nil)    return ["inconnu", "", 0, "inconnu"]    end
-    if (muet)    return ["0.00 L/min", "muet", 0, "muet"]    end
-    if (q <= 0)    return ["0.00 L/min", "arrêt", 0, "arret"]    end
+    import ecranDebitsFonctions
+    if (q == nil)    return {"debit": "-,--", "unite": "L/min", "part": "", "barre": 0, "etat": "inconnu"}    end
+    if (muet)    return {"debit": "muet", "unite": "", "part": "", "barre": 0, "etat": "muet"}    end
+    if (q <= 0)    return {"debit": "0,00", "unite": "L/min", "part": "arrêt", "barre": 0, "etat": "arret"}    end
     var part = (tot != nil && tot > 0) ? string.format("%d %%", int(q * 100 / tot + 0.5)) : ""
-    return [string.format("%.2f L/min", q), part, max > 0 ? int(q * 100 / max + 0.5) : 0, imprecis ? "imprecis" : "normal"]
+    return {"debit": ecranDebitsFonctions.virgule(q, "%.2f"), "unite": "L/min", "part": part,
+            "barre": max > 0 ? int(q * 100 / max + 0.5) : 0, "etat": imprecis ? "imprecis" : "normal"}
 end
 ecranDebitsFonctions.etatVoie = ecranDebitsFonctions_etatVoie
 
@@ -146,23 +193,26 @@ def ecranDebitsFonctions_suitFenetre(d)
     var toutes = ecranDebitsFonctions.total(d)[1] == 0
     if (toutes && !ecranDebitsFonctions.toutesInconnues)
         ecranDebitsFonctions.log("ECRAN_DEBITS: fenetre ? les 6 voies sont devenues inconnues ensemble, la fenetre de l'acquisition est-elle bien de " +
-                                 str(ecranDebitsFonctions.fenetre()) + " s (ReglageEcranDebits fenetre) ?", LOG_LEVEL_DEBUG)
+                                 str(ecranDebitsFonctions.reglage("fenetre")) + " s (ReglageEcranDebits fenetre) ?", LOG_LEVEL_DEBUG)
     end
     ecranDebitsFonctions.toutesInconnues = toutes
 end
 ecranDebitsFonctions.suitFenetre = ecranDebitsFonctions_suitFenetre
 
-# Ecran TFT (LVGL, HASPmota) : page /json/pages.jsonl du dossier de la carte (modele B de outils_docs/chauffage/ecran/),
-# rangee dans /json/ au demarrage par gestionFileFolder ; voie n = objets p1b<10n+1> nom, +2 barre, +3 debit, +4 part.
-# Appelee chaque seconde : l'ecran n'est reecrit que si un texte a change (nom, debit, etat, total, fenetre).
-def ecranDebitsFonctions_ecran()
+# Modele d'ecran (voir l'API en tete) a l'instant `now` ; met aussi a jour l'historique et le message « fenetre ? »
+def ecranDebitsFonctions_modele(now)
+    import ecranFonctions
     import ecranDebitsFonctions
-    import global
     import string
-    var now = tasmota.rtc()["local"]
     var d = ecranDebitsFonctions.debits(now)
     ecranDebitsFonctions.suitFenetre(d)
-    if (global.p1b13 == nil)    return    end
+    var cent = []
+    for q: d    cent.push(q == nil ? nil : int(q * 100 + 0.5))    end
+    if (ecranFonctions.echantillonne(cent))
+        # haut de l'axe : multiple de 2 L/min, 10 L/min au moins
+        var hm = ((ecranFonctions.histoMax() + 199) / 200) * 200
+        ecranDebitsFonctions.courbeMax = hm < 1000 ? 1000 : hm
+    end
     var w = ecranDebitsFonctions.etats(now)
     var tt = ecranDebitsFonctions.total(d)
     var tot = tt[0]
@@ -170,64 +220,47 @@ def ecranDebitsFonctions_ecran()
     for q: d
         if (q != nil && q > max)    max = q    end
     end
-    var f = ecranDebitsFonctions.fenetre()
     var voies = []
     for i: 0 .. ecranDebitsFonctions.NB_VOIES - 1
         var imp = w["frais"] ? w["imprecis"][i] : ecranDebitsFonctions.imprecis(d[i])
+        var v = ecranDebitsFonctions.etatVoie(d[i], tot, max, w["muets"][i], imp)
         var ent = ecranDebitsFonctions.entree(i + 1)
-        voies.push([ent == nil ? "Départ " + str(i + 1) : str(ent.find("nom", "Départ " + str(i + 1))),
-                    ecranDebitsFonctions.etatVoie(d[i], tot, max, w["muets"][i], imp)])
+        v["nom"] = ent == nil ? "Débit " + str(i + 1) : str(ent.find("nom", "Débit " + str(i + 1)))
+        voies.push(v)
     end
     var total = "Total inconnu"
-    if (tot != nil)    total = string.format("Total %.2f L/min", tot) + (tt[1] < ecranDebitsFonctions.NB_VOIES ? " (partiel)" : "")    end
-    var bas = "Fenêtre attendue : " + str(f) + " s (inconnu au-delà de " + str(2 * f) + " s)"
-    var cle = str([voies, total, bas])
-    if (cle == ecranDebitsFonctions.dernier)    return    end
-    ecranDebitsFonctions.dernier = cle
-    var c = ecranDebitsFonctions.COULEURS
-    for i: 0 .. ecranDebitsFonctions.NB_VOIES - 1
-        var e = voies[i][1]
-        var b = 10 * (i + 1)
-        var nom = global.("p1b" + str(b + 1))
-        nom.text = voies[i][0]
-        nom.text_color = c[e[3]]
-        var barre = global.("p1b" + str(b + 2))
-        barre.val = e[2]
-        barre.bg_color10 = (e[3] == "imprecis" ? c["imprecis"] : "#3FA7FF")
-        var debit = global.("p1b" + str(b + 3))
-        debit.text = e[0]
-        debit.text_color = c[e[3]]
-        global.("p1b" + str(b + 4)).text = e[1]
-        if (global.("p2b" + str(b + 1)) != nil)
-            global.("p2b" + str(b + 1)).text = string.format("%d. %s : %s", i + 1, voies[i][0], e[3])
-        end
+    if (tot != nil)    total = "Total " + ecranDebitsFonctions.virgule(tot, "%.1f") + " L/min" + (tt[1] < ecranDebitsFonctions.NB_VOIES ? " (partiel)" : "")    end
+    var age = ecranDebitsFonctions.age(now)
+    var releve = "aucun relevé"
+    var liaison = "inconnu"
+    if (age != nil)
+        releve = age < 120 ? string.format("relevé il y a %d s", age) : string.format("relevé il y a %d min", age / 60)
+        liaison = age <= 2 * ecranDebitsFonctions.reglage("fenetre") ? "vert" : "muet"
     end
-    global.p1b2.text = total
-    if (global.p2b90 != nil)    global.p2b90.text = bas    end
+    var veille = ecranDebitsFonctions.reglage("veille")
+    return {"voies": voies, "total": total, "age": age, "releve": releve, "liaison": liaison,
+            "historique": ecranFonctions.histo, "points": ecranFonctions.points, "courbeMax": ecranDebitsFonctions.courbeMax,
+            "reglages": {"fenetre": str(ecranDebitsFonctions.reglage("fenetre")) + " s", "veille": veille == 0 ? "jamais" : str(veille) + " min",
+                         "luminosite": str(ecranDebitsFonctions.reglage("luminosite")) + " %"}}
+end
+ecranDebitsFonctions.modele = ecranDebitsFonctions_modele
+
+# Appelee chaque seconde par le driver : modele calcule (historique, message « fenetre ? ») meme sans ecran, puis affiche
+def ecranDebitsFonctions_ecran()
+    import ecranFonctions
+    import ecranDebitsFonctions
+    var m = ecranDebitsFonctions.modele(tasmota.rtc()["local"])
+    if (ecranFonctions.interface != nil)    ecranFonctions.interface.affiche(m)    end
 end
 ecranDebitsFonctions.ecran = ecranDebitsFonctions_ecran
 
-# Demarre HASPmota sur la page de la carte (appele par controleEcranDebits.init) ; sans ecran ou sans page, rien
-def ecranDebitsFonctions_demarreEcran()
+# Demarre l'interface choisie par controleEcranDebits (module ecranHaspmota ou ecranLvgl) et la remplit ; nil ou echec : pas d'ecran
+def ecranDebitsFonctions_demarreEcran(itf)
+    import ecranFonctions
     import ecranDebitsFonctions
-    import path
-    if (!path.exists(ecranDebitsFonctions.PAGES))    return false    end
-    try
-        import display
-        if (!display.started())
-            ecranDebitsFonctions.log("ECRAN_DEBITS_ERREUR: ecran non demarre (display.ini, GPIO de drivers.ecran) !", LOG_LEVEL_ERREUR)
-            return false
-        end
-        import haspmota
-        haspmota.start(ecranDebitsFonctions.PAGES)
-        ecranDebitsFonctions.dernier = nil    # objets neufs : tout reecrire
-        ecranDebitsFonctions.ecran()
-        ecranDebitsFonctions.appliqueVeille()
-        return true
-    except .. as e, m
-        ecranDebitsFonctions.log("ECRAN_DEBITS_ERREUR: HASPmota non demarre : " + str(e) + " " + str(m) + " !", LOG_LEVEL_ERREUR)
-    end
-    return false
+    if (!ecranFonctions.demarre(itf))    return false    end
+    ecranDebitsFonctions.ecran()
+    return true
 end
 ecranDebitsFonctions.demarreEcran = ecranDebitsFonctions_demarreEcran
 
@@ -237,21 +270,35 @@ def ecranDebitsFonctions_aideReglageEcranDebits(sujet)
     if (sujet == nil)
         return [
             ["fenetre", "fenetre <s>", "fenetre de mesure de l'acquisition, 2 a 60 s (inconnu au-dela de 2 fenetres)"],
-            ["veille", "veille <min>", "ecran mis en veille apres <min> sans toucher, 0 = jamais"]
+            ["veille", "veille <min>", "ecran a 10 % apres <min> sans toucher, 0 = jamais"],
+            ["extinction", "extinction <min>", "ecran eteint <min> apres la gradation, 0 = jamais"],
+            ["luminosite", "luminosite <%>", "luminosite en service, 10 a 100 %"],
+            ["pwmInverse", "pwmInverse ON|OFF", "sens du PWM du retroeclairage (ON : valeur haute = sombre)"]
         ]
     end
     sujet = string.toupper(sujet)
     if (sujet == "FENETRE")
         return ["Parametre : duree en s (2 a 60), la meme que ReglageDebits fenetre sur la carte d'acquisition.",
                 "Effet : une voie sans nouvelle mesure depuis plus de 2 fenetres est affichee « inconnu ». A recopier a la main.",
-                "Sauvegarde : modules ecranDebits fenetre (persist.save).",
-                "Exemple : ReglageEcranDebits fenetre 10"]
+                "Sauvegarde : modules ecranDebits fenetre (persist.save).", "Exemple : ReglageEcranDebits fenetre 10"]
     end
     if (sujet == "VEILLE")
-        return ["Parametre : minutes (0 a 120) sans toucher l'ecran avant sa mise en veille ; 0 = jamais.",
-                "Effet : luminosite a 25 %, puis ecran eteint 30 s plus tard ; un toucher le rallume. Applique sans redemarrer.",
-                "Sauvegarde : modules ecranDebits veille (persist.save).",
-                "Exemple : ReglageEcranDebits veille 5"]
+        return ["Parametre : minutes (0 a 120) sans toucher l'ecran avant la gradation a 10 % ; 0 = jamais.",
+                "Effet : puis ecran eteint apres `extinction` minutes ; un toucher le rallume (sans actionner le bouton touche).",
+                "Sauvegarde : modules ecranDebits veille (persist.save).", "Exemple : ReglageEcranDebits veille 5"]
+    end
+    if (sujet == "EXTINCTION")
+        return ["Parametre : minutes (0 a 240) a 10 % avant d'eteindre l'ecran ; 0 = reste a 10 %.",
+                "Sauvegarde : modules ecranDebits extinction (persist.save).", "Exemple : ReglageEcranDebits extinction 30"]
+    end
+    if (sujet == "LUMINOSITE")
+        return ["Parametre : pourcentage (10 a 100), applique sans redemarrer ; aussi par la page Reglages de l'ecran.",
+                "Sauvegarde : modules ecranDebits luminosite (persist.save).", "Exemple : ReglageEcranDebits luminosite 80"]
+    end
+    if (sujet == "PWMINVERSE")
+        return ["Parametre : ON (defaut, d'apres la demo Waveshare : valeur haute du registre = ecran sombre) ou OFF.",
+                "Effet : a changer si l'ecran s'assombrit quand la luminosite monte.",
+                "Sauvegarde : modules ecranDebits pwmInverse (persist.save).", "Exemple : ReglageEcranDebits pwmInverse OFF"]
     end
     return nil
 end
@@ -269,42 +316,44 @@ end
 ecranDebitsFonctions.entier = ecranDebitsFonctions_entier
 
 #- Exemples :
-    ReglageEcranDebits fenetre 10   => une voie est « inconnue » apres 20 s sans nouvelle mesure
-    ReglageEcranDebits veille 5     => ecran en veille apres 5 min sans toucher (0 = jamais)
-    ReglageEcranDebits              => reglages actuels
+    ReglageEcranDebits fenetre 10      => une voie est « inconnue » apres 20 s sans nouvelle mesure
+    ReglageEcranDebits veille 5        => ecran a 10 % apres 5 min sans toucher (0 = jamais)
+    ReglageEcranDebits extinction 30   => eteint 30 min apres la gradation (0 = jamais)
+    ReglageEcranDebits luminosite 80   => luminosite en service
+    ReglageEcranDebits pwmInverse OFF  => sens du PWM du retroeclairage
+    ReglageEcranDebits                 => reglages actuels
 -#
 def ecranDebitsFonctions_reglageEcranDebits(cmd, idx, payload, payload_json)
     import string
     import json
     import persist
     import diversFonctions
+    import ecranFonctions
     import ecranDebitsFonctions
     if diversFonctions.traiteAide("ReglageEcranDebits", payload, ecranDebitsFonctions.aideReglageEcranDebits, true)    return    end
 
     var texte = string.tr(str(payload), "	", " ")
     while string.find(texte, "  ") >= 0    texte = string.replace(texte, "  ", " ")    end
     var p = string.split(texte, " ", 2)
-    var f = string.toupper(p[0])
-    var n = (size(p) > 1 ? ecranDebitsFonctions.entier(p[1]) : nil)
-    if (f == "FENETRE")
-        if (n == nil || n < 2 || n > 60)
-            ecranDebitsFonctions.log("REGLAGE_ECRAN_DEBITS_ERREUR: fenetre '" + (size(p) > 1 ? p[1] : "") + "' refusee : 2 a 60 s attendu !", LOG_LEVEL_ERREUR)
+    var cle = string.tolower(p[0])
+    var arg = size(p) > 1 ? p[1] : ""
+    var b = ecranDebitsFonctions.bornes(cle)
+    if (b != nil && !ecranFonctions.regle(cle, ecranDebitsFonctions.entier(arg), b))
+        ecranDebitsFonctions.log("REGLAGE_ECRAN_DEBITS_ERREUR: " + cle + " '" + arg + "' refuse : " + str(b[0]) + " a " + str(b[1]) + " " + b[3] + " attendu !", LOG_LEVEL_ERREUR)
+    elif (cle == "pwminverse")
+        arg = string.toupper(arg)
+        if (arg != "ON" && arg != "OFF")
+            ecranDebitsFonctions.log("REGLAGE_ECRAN_DEBITS_ERREUR: pwmInverse '" + arg + "' refuse : ON ou OFF attendu !", LOG_LEVEL_ERREUR)
         else
             if (!modules.contains("ecranDebits"))    modules["ecranDebits"] = {}    end
-            modules["ecranDebits"]["fenetre"] = n
-            persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien
-        end
-    elif (f == "VEILLE")
-        if (n == nil || n > 120)
-            ecranDebitsFonctions.log("REGLAGE_ECRAN_DEBITS_ERREUR: veille '" + (size(p) > 1 ? p[1] : "") + "' refusee : 0 a 120 min attendu !", LOG_LEVEL_ERREUR)
-        else
-            if (!modules.contains("ecranDebits"))    modules["ecranDebits"] = {}    end
-            modules["ecranDebits"]["veille"] = n
+            modules["ecranDebits"]["pwmInverse"] = arg
             persist.save(true)
-            ecranDebitsFonctions.appliqueVeille()
+            ecranFonctions.etatVeille = nil
         end
     end
-    tasmota.resp_cmnd(json.dump({"ReglageEcranDebits": {"fenetre": ecranDebitsFonctions.fenetre(), "veille": ecranDebitsFonctions.veille()}}))
+    var r = {"pwmInverse": ecranFonctions.pwmInverse() ? "ON" : "OFF", "fenetre": ecranDebitsFonctions.reglage("fenetre")}
+    for k: ecranFonctions.BORNES.keys()    r[k] = ecranDebitsFonctions.reglage(k)    end
+    tasmota.resp_cmnd(json.dump({"ReglageEcranDebits": r}))
 end
 ecranDebitsFonctions.reglageEcranDebits = ecranDebitsFonctions_reglageEcranDebits
 

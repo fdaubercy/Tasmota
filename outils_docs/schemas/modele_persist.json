@@ -2127,8 +2127,11 @@
 		},
 		"cles_propres": [
 			"dimensions",
+			"extinction",
 			"fenetre",
+			"luminosite",
 			"modbus",
+			"pwmInverse",
 			"veille"
 		],
 		"controle": [

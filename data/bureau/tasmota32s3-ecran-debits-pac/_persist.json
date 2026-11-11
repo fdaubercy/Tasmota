@@ -198,6 +198,9 @@
 			"log": "info",
 			"fenetre": 10,
 			"veille": 5,
+			"extinction": 30,
+			"luminosite": 80,
+			"pwmInverse": "ON",
 			"logs": {
 				"nbLogsFiles": 15,
 				"fileLogName": "/logs/ecranDebits.log",
