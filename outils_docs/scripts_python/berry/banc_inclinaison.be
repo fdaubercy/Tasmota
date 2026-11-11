@@ -279,7 +279,7 @@ incline(mpu, 47)
 vrFonctions.releveInclinaison(vr1)
 var lues = mpu.lectures
 var ligne = vrFonctions.ligneWebInclinaison(vr1)
-verifie(string.find(ligne, "{s}Trappe : inclinaison{m}47.0") == 0 && string.find(ligne, "(entre){e}") > 0, "ligne : nom, angle 47.0, etat")
+verifie(string.find(ligne, "{s}Trappe : inclinaison{m}47.0") == 0 && string.find(ligne, "(entre)<span data-vi='1' data-angle='47.0'") > 0, "ligne : nom, angle 47.0, etat")
 verifie(mpu.lectures == lues, "la ligne web ne lit pas le bus")
 mpu.accel = nil
 vrFonctions.releveInclinaison(vr1)
@@ -624,5 +624,100 @@ vrFonctions.configVRByJson()
 verifie(interlocks() == ["Interlock 2,3", "Interlock ON"], "1 volet : Interlock 2,3 puis Interlock ON, comme avant")
 drivers["voletRoulants"] = vrsAvant
 configGlobal.testeParam = testeParamAvant
+
+print("19. Reglage des durees (2026-11-11) : commandeSens, configBoutons, enReglage et gardes")
+vr1["inverse"] = 1
+verifie(vrFonctions.commandeSens(1, "ouvre") == "ShutterClose1" && vrFonctions.commandeSens(1, "ferme") == "ShutterOpen1"
+        && vrFonctions.commandeSens(1, "posOuvert") == "ShutterSetClose1" && vrFonctions.commandeSens(1, "posFerme") == "ShutterSetOpen1", "commandeSens inverse 1 : croisee")
+vr1["inverse"] = 0
+verifie(vrFonctions.commandeSens(1, "ouvre") == "ShutterOpen1" && vrFonctions.commandeSens(1, "ferme") == "ShutterClose1"
+        && vrFonctions.commandeSens(1, "posOuvert") == "ShutterSetOpen1" && vrFonctions.commandeSens(1, "posFerme") == "ShutterSetClose1", "commandeSens inverse 0 : directe")
+vr1.remove("inverse")
+def boutons()
+    var l = []
+    for c: tasmota.cmds    if string.find(c, "ShutterButton") == 0    l.push(c)    end    end
+    return l
+end
+var vrB = {"activation": "ON", "id": 1, "relais1": 1, "tempsMontee": 15, "tempsDescente": 15,
+           "boutons": {"b1": {"activation": "ON", "id": 2, "function": "toggle", "mqtt": "ON"}, "b2": {"activation": "OFF", "id": 4, "function": "up", "mqtt": "OFF"}, "b3": {"activation": "ON", "id": 3, "function": "down", "mqtt": "OFF"}}}
+var attenduB = ["ShutterButton1 2 toggle 1", "ShutterButton1 3 down 0"]
+drivers["voletRoulants"] = {"activation": "ON", "mode": 1, "environnement": {"VRs": {"VR1": vrB}}}
+var testeParam19 = configGlobal.testeParam
+configGlobal.testeParam = def (c, v, t) return false end
+tasmota.cmds = []
+vrFonctions.configVRByJson()
+verifie(boutons() == attenduB, "configVRByJson : les ShutterButton d'avant (liste comparee)")
+tasmota.cmds = []
+vrFonctions.configBoutons(vrB)
+verifie(boutons() == attenduB, "configBoutons(vr) : les memes ShutterButton")
+configGlobal.testeParam = testeParam19
+drivers["voletRoulants"] = vrsAvant
+
+verifie(!vrFonctions.enReglage(1), "enReglage : faux sans la cle 'reglage'")
+vrFonctions.etat()["reglage"] = {"actif": false, "id": 1}
+verifie(!vrFonctions.enReglage(1), "enReglage : faux si actif est faux")
+vrFonctions.etat()["reglage"] = {"actif": true, "id": 2}
+verifie(!vrFonctions.enReglage(1), "enReglage : faux pour un autre volet")
+vrFonctions.etat()["reglage"] = {"actif": true, "id": 1}
+verifie(vrFonctions.enReglage(1) && !vrFonctions.enReglage(2), "enReglage : vrai pour le volet en reglage seulement")
+
+tasmota.cmds = []
+vrFonctions.changementEtatCapteur("ON", "Switch1", {}, 1, "ouverture")
+attente()
+verifie(size(pilotage()) == 0, "pendant un reglage : changementEtatCapteur n'envoie rien")
+
+inclinaison["activation"] = "ON"
+inclinaison["angleOuvert"] = 85
+inclinaison["angleFerme"] = 3
+inclinaison["marge"] = 3
+capteurs["capteurOuvert"] = "Inclinaison"
+capteurs["capteurFerme"] = "Inclinaison"
+var s19 = vrFonctions.suiviInclinaison(1)
+s19["enCourse"] = true
+s19["sens"] = 1
+s19["etat"] = "entre"
+s19["debut"] = ["ferme", tasmota.millis() - 4000]
+s19.remove("durees")
+tasmota.cmds = []
+incline(mpu, 90)
+vrFonctions.releveInclinaison(vr1)
+attente()
+verifie(size(pilotage()) == 0, "pendant un reglage : releveInclinaison ne coupe pas en butee et ne recale pas")
+verifie(s19["enCourse"] && s19["etat"] == "ouvert", "pendant un reglage : la course continue, l'etat suit l'angle")
+verifie(s19.find("durees") != nil && proche(s19["durees"].find("ouverture", -1), 4.0), "pendant un reglage : duree butee a butee notee (4 s)")
+
+inclinaison["positionReelle"] = "ON"
+s19["enCourse"] = false
+s19.remove("position")
+tasmota.cmds = []
+vrFonctions.positionReelle(vr1, 40)
+attente()
+verifie(size(pilotage()) == 0, "pendant un reglage : positionReelle n'envoie rien")
+inclinaison.remove("positionReelle")
+
+s19["enCourse"] = true
+s19["sens"] = 1
+s19["depart"] = 50
+tasmota.cmds = []
+verifie(vrFonctions.verifieSens(vr1, 40), "pendant un reglage : verifieSens detecte encore le sens inverse")
+verifie(pilotage() == ["ShutterStop1"], "pendant un reglage : verifieSens coupe toujours le moteur")
+s19["bloque"] = false
+s19.remove("cause")
+s19.remove("depart")
+
+s19["angle"] = 47.0
+s19["etat"] = "entre"
+var l19 = vrFonctions.ligneWebInclinaison(vr1)
+verifie(string.find(l19, "<span data-vi='1' data-angle='47.0' data-bloque=''></span>{e}") > 0 && string.find(l19, "(entre)") > 0, "ligneWebInclinaison : balise data-vi, angle, non bloque")
+s19["bloque"] = true
+s19["cause"] = "blocage"
+verifie(string.find(vrFonctions.ligneWebInclinaison(vr1), "data-bloque='bloque'></span>{e}") > 0, "ligneWebInclinaison : data-bloque = bloque")
+s19["cause"] = "sens inverse"
+verifie(string.find(vrFonctions.ligneWebInclinaison(vr1), "data-bloque='sens inverse'></span>{e}") > 0, "ligneWebInclinaison : data-bloque = sens inverse")
+s19["bloque"] = false
+s19.remove("cause")
+s19["angle"] = nil
+verifie(string.find(vrFonctions.ligneWebInclinaison(vr1), "data-angle=''") > 0, "ligneWebInclinaison : sans angle lu, data-angle vide")
+vrFonctions.etat().remove("reglage")
 
 print(echecs == 0 ? "BANC_INCLINAISON: OK" : "BANC_INCLINAISON: ECHEC (" + str(echecs) + ")")

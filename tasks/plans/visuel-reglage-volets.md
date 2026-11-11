@@ -92,15 +92,15 @@ Produit : `vrFonctions.commandeSens(id, sens) -> string` (sens `"ouvre"`, `"ferm
 `vrFonctions.configBoutons(vr)` (boucle des `ShutterButton` sortie de `configVRByJson`, qui l'appelle),
 `vrFonctions.enReglage(id) -> bool` (vrai si `vrFonctions.etat().find("reglage")` est actif pour cet id) ;
 `ligneWebInclinaison` complétée de la balise `data-vi` (voir Contexte).
-- [ ] Demander l'accord de l'utilisateur pour les écritures du plan dans `data/fs/*.be` et les trois `_persist.json`
-- [ ] Section 19 du banc, écrite d'abord : `commandeSens` pour `inverse` 0 et 1 (4 sens), `configVRByJson` envoie toujours
+- [x] Demander l'accord de l'utilisateur pour les écritures du plan dans `data/fs/*.be` et les trois `_persist.json` — preuve : accord « Oui, pour tout le plan » donné le 2026-11-11 dans la conversation
+- [x] Section 19 du banc, écrite d'abord : `commandeSens` pour `inverse` 0 et 1 (4 sens), `configVRByJson` envoie toujours
   les mêmes `ShutterButton` qu'avant (liste comparée) ; pendant un réglage, `changementEtatCapteur` n'envoie rien, `releveInclinaison` n'arrête pas en
   butée et ne recale pas mais note la durée butée à butée, `positionReelle` n'envoie rien, `verifieSens` coupe toujours le
-  moteur ; `ligneWebInclinaison` porte `data-vi`, `data-angle` et `data-bloque` ; lancée sur `data/fs` actuel : rouge
-- [ ] Écrire les trois fonctions, faire passer `changementEtatCapteur` par `commandeSens`, ajouter les gardes `enReglage`
-  et la balise de `ligneWebInclinaison` (section 9 du banc ajustée à la nouvelle ligne)
-- [ ] `python outils_docs/scripts_python/berry/banc_inclinaison.py` : `BANC_INCLINAISON: OK`, sections 1 à 18 inchangées
-- [ ] Témoin : copie de `data/fs` sans la garde de `changementEtatCapteur` -> section 19 rouge
+  moteur ; `ligneWebInclinaison` porte `data-vi`, `data-angle` et `data-bloque` ; lancée sur `data/fs` actuel : rouge — preuve : section 19 lancee sur data/fs avant ecriture : « attribute_error: module 'vrFonctions' has no member 'commandeSens' » (rouge)
+- [x] Écrire les trois fonctions, faire passer `changementEtatCapteur` par `commandeSens`, ajouter les gardes `enReglage`
+  et la balise de `ligneWebInclinaison` (section 9 du banc ajustée à la nouvelle ligne) — preuve : vrFonctions.be : configBoutons, commandeSens, enReglage, gardes et balise data-vi ; verifie_berry.py : 0 erreur, 0 avertissement de charte
+- [x] `python outils_docs/scripts_python/berry/banc_inclinaison.py` : `BANC_INCLINAISON: OK`, sections 1 à 18 inchangées — preuve : sortie « BANC_INCLINAISON: OK », sections 1 a 19 vertes
+- [x] Témoin : copie de `data/fs` sans la garde de `changementEtatCapteur` -> section 19 rouge — preuve : copie mutee (garde de changementEtatCapteur retiree) : « ECHEC pendant un reglage : changementEtatCapteur n'envoie rien », copie intacte OK
 - [ ] Commit `refactor(volets): sens physique, boutons et garde du reglage dans vrFonctions`
 
 ## A2 — Décrire les façades dans les persists, le modèle et le schéma

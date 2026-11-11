@@ -184,15 +184,7 @@ def vrFonctions_configVRByJson()
                     end
 
                     # Paramètres les commandes par boutons choisies
-                    for cleBTN: vrJSON["environnement"]["VRs"][cle]["boutons"].keys()
-                        if (vrJSON["environnement"]["VRs"][cle]["boutons"][cleBTN].find("activation", "OFF") == "ON" && vrJSON["environnement"]["VRs"][cle]["boutons"][cleBTN].find("id", -1) != -1)
-                            vrFonctions.log(string.format("CONFIG_VR2: Paramètre le BP %i pour la fonction '%s' !", vrJSON["environnement"]["VRs"][cle]["boutons"][cleBTN]["id"], vrJSON["environnement"]["VRs"][cle]["boutons"][cleBTN]["function"]), LOG_LEVEL_DEBUG)
-                            tasmota.cmd(string.format("ShutterButton%i %i %s %i", 
-                                                                    vrJSON["environnement"]["VRs"][cle]["id"], vrJSON["environnement"]["VRs"][cle]["boutons"][cleBTN]["id"], 
-                                                                    vrJSON["environnement"]["VRs"][cle]["boutons"][cleBTN]["function"], 
-                                                                    (vrJSON["environnement"]["VRs"][cle]["boutons"][cleBTN]["mqtt"] == "ON" ? 1 : 0), boolMute))
-                        end
-                    end
+                    vrFonctions.configBoutons(vrJSON["environnement"]["VRs"][cle])
                 end
             except .. as error, message
                 vrFonctions.log(string.format("CONFIG_VR2_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
@@ -259,6 +251,37 @@ def vrFonctions_changementEtatDemarrage(value, trigger, msg)
 end
 vrFonctions.changementEtatDemarrage = vrFonctions_changementEtatDemarrage
 
+# ShutterButton de chaque bouton actif du bloc VR 'vr' (sortie de configVRByJson, reutilisee par le mode reglage)
+def vrFonctions_configBoutons(vr)
+    import string
+    for cleBTN: vr["boutons"].keys()
+        var b = vr["boutons"][cleBTN]
+        if (b.find("activation", "OFF") == "ON" && b.find("id", -1) != -1)
+            vrFonctions.log(string.format("CONFIG_VR2: Paramètre le BP %i pour la fonction '%s' !", b["id"], b["function"]), LOG_LEVEL_DEBUG)
+            tasmota.cmd(string.format("ShutterButton%i %i %s %i", vr["id"], b["id"], b["function"], (b["mqtt"] == "ON" ? 1 : 0)), boolMute)
+        end
+    end
+end
+vrFonctions.configBoutons = vrFonctions_configBoutons
+
+# Commande de course ou de recalage pour un SENS PHYSIQUE ("ouvre", "ferme", "posOuvert", "posFerme") : Tasmota inverse
+# l'ordre d'une commande Berry quand ShutterInvert vaut 1 (cle 'inverse', 1 par defaut), d'ou le croisement.
+def vrFonctions_commandeSens(id, sens)
+    import string
+    var inv = vrFonctions.inverse(id) == 1
+    var noms = {"ouvre": ["ShutterClose", "ShutterOpen"], "ferme": ["ShutterOpen", "ShutterClose"],
+                "posOuvert": ["ShutterSetClose", "ShutterSetOpen"], "posFerme": ["ShutterSetOpen", "ShutterSetClose"]}
+    return string.format("%s%i", noms[sens][inv ? 0 : 1], id)
+end
+vrFonctions.commandeSens = vrFonctions_commandeSens
+
+# Vrai si le mode reglage des durees est actif pour ce volet (etat pose par vrReglage)
+def vrFonctions_enReglage(id)
+    var r = vrFonctions.etat().find("reglage")
+    return isinstance(r, map) && r.find("actif", false) && r.find("id") == id
+end
+vrFonctions.enReglage = vrFonctions_enReglage
+
 # Règles sur changement d'état des capteurs
 def vrFonctions_changementEtatCapteur(value, trigger, msg, numRideau, etatRideau)
     import string
@@ -287,14 +310,14 @@ def vrFonctions_changementEtatCapteur(value, trigger, msg, numRideau, etatRideau
     # Croisement VOULU si 'inverse' vaut 1 (defaut) : configVRByJson pose ShutterInvert 1, et Tasmota (ESP32) applique alors
     # 100 - position a ShutterSetClose/Open. ShutterSetClose = volet ouvert : ne pas « corriger ». Avec 'inverse' 0 : direct.
     var vrJSON = drivers["voletRoulants"]
-    var inverse = vrFonctions.inverse(numRideau) == 1
+    if (vrFonctions.enReglage(numRideau))    return    end          # le mode reglage mesure : fins de course neutralisees
     if (etatRideau == "ouverture" && value == "ON")
         # On force l'affichage de l'état 'ouvert' du rideau
-        vrFonctions.commandeArret(numRideau, string.format(inverse ? "ShutterSetClose%i" : "ShutterSetOpen%i", numRideau))
+        vrFonctions.commandeArret(numRideau, vrFonctions.commandeSens(numRideau, "posOuvert"))
         vrFonctions.log(string.format("VR_GESTION_CAPTEURS: Force l'affichage du volet %i en ouverture !", numRideau), LOG_LEVEL_DEBUG)
     elif (etatRideau == "fermeture" && value == "ON")
         # On force l'affichage de l'état 'fermé' du rideau
-        vrFonctions.commandeArret(numRideau, string.format(inverse ? "ShutterSetOpen%i" : "ShutterSetClose%i", numRideau))
+        vrFonctions.commandeArret(numRideau, vrFonctions.commandeSens(numRideau, "posFerme"))
         vrFonctions.log(string.format("VR_GESTION_CAPTEURS: Force l'affichage du volet %i en fermeture !", numRideau), LOG_LEVEL_DEBUG)
     end
 
@@ -588,7 +611,8 @@ def vrFonctions_releveInclinaison(vr)
     end
     # Arret en butee : en course vers une butee designee et l'atteint (ou y est deja). ShutterStop AVANT le
     # recalage : il coupe le moteur sur-le-champ, alors que ShutterSetOpen/Close ne fait que remettre 'direction' a 0.
-    var arret = designe && suivi["enCourse"] && etat == cible
+    var reglage = vrFonctions.enReglage(id)         # reglage des durees : on mesure, jamais d'arret en butee ni de recalage
+    var arret = !reglage && designe && suivi["enCourse"] && etat == cible
     if (arret)
         suivi["enCourse"] = false                   # chaine de 250 ms coupee ; Shutter<n>#Direction 0 suivra
         suivi["etat"] = etat                        # AVANT ShutterStop : un Direction 0 synchrone ne recale pas une 2e fois
@@ -601,7 +625,7 @@ def vrFonctions_releveInclinaison(vr)
 
     suivi["etat"] = etat
     vrFonctions.log(string.format("VR_INCLINAISON: Volet %i %s (%.1f degres) !", id, etat, angle), LOG_LEVEL_DEBUG)
-    if (designe)
+    if (designe && !reglage)
         vrFonctions.changementEtatCapteur("ON", nom, {nom: "ON"}, id, etat == "ouvert" ? "ouverture" : "fermeture")
     end
     return angle
@@ -708,9 +732,12 @@ def vrFonctions_ligneWebInclinaison(vr)
     import string
     var suivi = vrFonctions.suiviInclinaison(vr["id"])
     var nom = vr.find("nom", "Volet " + str(vr["id"]))
-    if (suivi.find("angle") == nil)    return string.format("{s}%s : inclinaison{m}capteur muet ou pas encore lu{e}", nom)    end
+    # Balise lue par volets.js (dessin de la trappe) : angle et cause de blocage ('' si non bloque)
+    var cause = suivi.find("bloque", false) ? (suivi.find("cause") == "sens inverse" ? "sens inverse" : "bloque") : ""
+    var balise = string.format("<span data-vi='%i' data-angle='%s' data-bloque='%s'></span>", vr["id"], suivi.find("angle") == nil ? "" : string.format("%.1f", suivi["angle"]), cause)
+    if (suivi.find("angle") == nil)    return string.format("{s}%s : inclinaison{m}capteur muet ou pas encore lu%s{e}", nom, balise)    end
     var bloque = suivi.find("bloque", false) ? " &ndash; <b>BLOQU&Eacute;</b>" + (suivi.find("cause") == "sens inverse" ? " (sens inverse)" : "") : ""
-    return string.format("{s}%s : inclinaison{m}%.1f &deg; (%s)%s{e}", nom, suivi["angle"], str(suivi["etat"]), bloque)
+    return string.format("{s}%s : inclinaison{m}%.1f &deg; (%s)%s%s{e}", nom, suivi["angle"], str(suivi["etat"]), bloque, balise)
 end
 vrFonctions.ligneWebInclinaison = vrFonctions_ligneWebInclinaison
 
@@ -754,7 +781,7 @@ def vrFonctions_positionReelle(vr, angle)
     var suivi = vrFonctions.suiviInclinaison(vr["id"])
     var ouvert = incl.find("angleOuvert", 85)
     var ferme = incl.find("angleFerme", 3)
-    if (suivi["enCourse"] || ouvert == ferme)    return    end
+    if (suivi["enCourse"] || ouvert == ferme || vrFonctions.enReglage(vr["id"]))    return    end
     var pct = (angle - ferme) * 100.0 / (ouvert - ferme)
     var position = int((pct < 0 ? 0 : (pct > 100 ? 100 : pct)) + 0.5)
     if (vrFonctions.inverse(vr["id"]) == 1)    position = 100 - position    end     # ShutterInvert 1 : 100 - % d'ouverture
