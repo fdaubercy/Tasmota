@@ -2,9 +2,9 @@
 chantier: classement-par-lieu
 titre: Classement des cartes par lieu dans les pages des outils PC
 objectif: Retrouver les cartes par emplacement dans la maison sur la page Build (bascule Famille/Lieu/Puce, intertitres de l'onglet Fichiers) et dans les listes de carte des autres pages
-statut: actif
+statut: clos
 cree: 2026-11-10
-maj: 2026-11-10
+maj: 2026-11-11
 ---
 # Classement des cartes par lieu — plan de mise en œuvre
 
@@ -172,13 +172,13 @@ Interfaces consommées : `lieux.JS` (`remplitParLieu`), `lieu` et `lieux` des r�
 
 ## A6 — Documentation, relecture, essai réel
 
-- [ ] `outils_docs/README.md` : une ligne par page concernée, aux sections existantes ; `outils_docs/filtre_lieu/README.md` :
+- [x] `outils_docs/README.md` : une ligne par page concernée, aux sections existantes ; `outils_docs/filtre_lieu/README.md` : — preuve : 4142445d2 ; verifie_references_docs.py code 0
   « réalisé » et les fichiers ; `CLAUDE.md` (carte des documents) : `lieux.py`, `build_page_lieux.py`, la sonde ;
   `python outils_docs/scripts_python/maintenance/verifie_references_docs.py` → code 0.
 - [x] Agent `relecteur-pages-web` sur les commits de A3 à A5 ; corriger ce qu'il confirme. — preuve : relecture sans bloquant ; défaut « liste vide si la carte choisie a disparu » corrigé en fd96dbdad (rouge puis vert) ; mineur lieuxTable vérifié sans défaut (posée par construitListe avant mEnvs/sEnvs)
 - [x] Essai réel : page Build sur :7700 dans Chrome, bascule Lieu, les 11 vraies cartes rangées comme la maquette D, — preuve : 2026-11-11, 5 vraies pages sur le dépôt réel (Chrome sans fenêtre) : 12 cartes en 6 lieux, 8 cochés identiques avant/après Lieu et Puce, intertitres Fichiers, listes 7800/7900/7950/7980 groupées ; capture reel-build-lieu.png du scratchpad conforme au modèle D
   rien coché ni décoché par la bascule ; une liste de chaque autre page vue groupée.
-- [ ] Commit `docs(lieux): mode d'emploi et carte des documents du classement par lieu`.
+- [x] Commit `docs(lieux): mode d'emploi et carte des documents du classement par lieu`. — preuve : 4142445d2
 
 ## Améliorations restantes
 - [ ] [projet] Lieu transmis d'une page à l'autre depuis l'annuaire (écarté de cette version, spec §2).
