@@ -17,6 +17,9 @@ ecranFonctions.HISTO_POINTS = 60     # points par serie de l'historique (30 min 
 ecranFonctions.HISTO_PAS = 30000     # ms entre deux points
 # Expandeur d'E/S 0x24 (fiche du 7B § 3) : registre 0x03 = sorties, 0x05 = PWM du retroeclairage. ALLUME = sorties posees par
 # preinit.be ; ETEINT = les memes avec EXIO2 (bit 2, retroeclairage) a 0 : alimentation de la dalle (EXIO6) et resets intacts.
+ecranFonctions.DELAI_SAUVE = 3000    # ms sans appui avant d'ecrire le persist
+ecranFonctions.ID_SAUVE = "ecranFonctions_sauve"
+ecranFonctions.REESSAI = 10000       # ms entre deux essais d'ecriture de la luminosite quand l'expandeur ne repond pas
 ecranFonctions.EXPANDEUR = 0x24
 ecranFonctions.ALLUME = 0xDF
 ecranFonctions.ETEINT = 0xDB
@@ -25,13 +28,15 @@ ecranFonctions.ETEINT = 0xDB
 #   bloc       : nom du bloc modules.<bloc> du persist qui porte les reglages (nil : valeurs par defaut)
 #   interface  : module d'interface demarre (nil : pas d'ecran)
 #   etatVeille : luminosite appliquee : 100 allume, GRADATION, 0 eteint ; nil = a (re)ecrire
+#   panne      : vrai tant que l'ecriture I2C de la luminosite echoue (une erreur au premier echec, un message debug au retablissement)
+#   reessaiA   : tasmota.millis() du dernier echec I2C (nouvel essai toutes les REESSAI ms) ; nil = pas d'echec en cours
 #   voile      : objet LVGL transparent qui avale le toucher du reveil
 #   histo      : liste de series, chacune de HISTO_POINTS valeurs (nil = inconnu), du plus vieux au plus recent
 #   histoA     : tasmota.millis() du dernier point ; points : nombre de points ajoutes depuis le demarrage
 def ecranFonctions_etat()
     import global
     if !global.contains(".ecranFonctions")
-        global.(".ecranFonctions") = {"bloc": nil, "interface": nil, "etatVeille": nil, "voile": nil, "histo": nil, "histoA": nil, "points": 0}
+        global.(".ecranFonctions") = {"bloc": nil, "interface": nil, "etatVeille": nil, "panne": false, "reessaiA": nil, "voile": nil, "histo": nil, "histoA": nil, "points": 0}
     end
     return global.(".ecranFonctions")
 end
@@ -48,7 +53,7 @@ ecranFonctions.member = ecranFonctions_member
 def ecranFonctions_setmember(nom, valeur)
     import ecranFonctions
     var etat = ecranFonctions.etat()
-    if !etat.contains(nom)    return false    end     # nom inconnu : erreur, comme une table figee
+    if !etat.contains(nom)    raise "attribute_error", "ecranFonctions n'a pas de " + str(nom)    end   # nom inconnu : erreur, comme une table figee
     etat[nom] = valeur
 end
 ecranFonctions.setmember = ecranFonctions_setmember
@@ -77,15 +82,29 @@ def ecranFonctions_reglage(cle, bornes)
 end
 ecranFonctions.reglage = ecranFonctions_reglage
 
-# Ecrit le reglage `cle` (bornes verifiees) au persist ; la luminosite sera reappliquee au prochain suitVeille. false si refuse.
-def ecranFonctions_regle(cle, n, bornes)
+# Ecriture du persist apres DELAI_SAUVE ms sans nouvel appui (rappel du timer d'identifiant ID_SAUVE)
+def ecranFonctions_sauve()
+    import persist
+    persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien
+end
+ecranFonctions.sauve = ecranFonctions_sauve
+
+# Ecrit le reglage `cle` (bornes verifiees) ; la luminosite sera reappliquee au prochain suitVeille. false si refuse.
+# differe : applique en RAM tout de suite mais n'ecrit le persist qu'apres DELAI_SAUVE ms sans nouvel appel (boutons - / +,
+# un appui = un appel) ; sinon ecriture immediate (commande, geste unique).
+def ecranFonctions_regle(cle, n, bornes, differe)
     import persist
     import ecranFonctions
     var b = bornes != nil ? bornes : ecranFonctions.BORNES.find(cle)
     if (b == nil || type(n) != "int" || n < b[0] || n > b[1] || ecranFonctions.bloc == nil)    return false    end
     if (!modules.contains(ecranFonctions.bloc))    modules[ecranFonctions.bloc] = {}    end
     modules[ecranFonctions.bloc][cle] = n
-    persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien
+    if (differe)
+        tasmota.remove_timer(ecranFonctions.ID_SAUVE)
+        tasmota.set_timer(ecranFonctions.DELAI_SAUVE, ecranFonctions.sauve, ecranFonctions.ID_SAUVE)
+    else
+        persist.save(true)
+    end
     ecranFonctions.etatVeille = nil
     return true
 end
@@ -112,7 +131,6 @@ def ecranFonctions_lumiere(pct)
         r = r < 5 ? 5 : (r > 97 ? 97 : r)
         ok = w.write(x, 0x05, r * 255 / 100, 1) && w.write(x, 0x03, ecranFonctions.ALLUME, 1)
     end
-    if (!ok)    ecranFonctions.log("ECRAN_ERREUR: expandeur 0x24 absent ou sans ACK, luminosite " + str(pct) + " % non appliquee !", LOG_LEVEL_ERREUR)    end
     return ok
 end
 ecranFonctions.lumiere = ecranFonctions_lumiere
@@ -157,7 +175,8 @@ end
 ecranFonctions.poseVoile = ecranFonctions_poseVoile
 
 # Veille (appelee tous les 250 ms, callback frequent : pas de log info) : apres `veille` min sans toucher, GRADATION %, puis
-# eteint `extinction` min plus tard (0 = jamais eteint) ; un toucher rend la luminosite reglee. I2C ecrit aux seuls changements.
+# eteint `extinction` min plus tard (0 = jamais eteint) ; un toucher rend la luminosite reglee. I2C ecrit aux seuls changements ;
+# en cas d'echec (expandeur muet au demarrage) l'etat reste a (re)ecrire : nouvel essai toutes les REESSAI ms, une erreur au premier echec.
 def ecranFonctions_suitVeille()
     import ecranFonctions
     var v = ecranFonctions.reglage("veille") * 60000
@@ -166,8 +185,24 @@ def ecranFonctions_suitVeille()
     var cible = 100
     if (v > 0 && ms >= v)    cible = (x > 0 && ms >= v + x) ? 0 : ecranFonctions.GRADATION    end
     if (cible == ecranFonctions.etatVeille)    return    end
-    ecranFonctions.etatVeille = cible   # meme en cas d'echec : pas une erreur I2C tous les 250 ms
-    ecranFonctions.lumiere(cible == 100 ? ecranFonctions.reglage("luminosite") : cible)
+    var t = tasmota.millis()
+    var a = ecranFonctions.reessaiA
+    if (a != nil && t >= a && t - a < ecranFonctions.REESSAI)    return    end
+    var pct = cible == 100 ? ecranFonctions.reglage("luminosite") : cible
+    if (ecranFonctions.lumiere(pct))
+        ecranFonctions.etatVeille = cible
+        ecranFonctions.reessaiA = nil
+        if (ecranFonctions.panne)
+            ecranFonctions.panne = false
+            ecranFonctions.log("ECRAN: retabli, expandeur 0x24 joint, luminosite " + str(pct) + " % appliquee !", LOG_LEVEL_DEBUG)
+        end
+    else
+        ecranFonctions.reessaiA = t
+        if (!ecranFonctions.panne)
+            ecranFonctions.panne = true
+            ecranFonctions.log("ECRAN_ERREUR: expandeur 0x24 absent ou sans ACK, luminosite " + str(pct) + " % non appliquee, nouvel essai toutes les 10 s !", LOG_LEVEL_ERREUR)
+        end
+    end
     if (ecranFonctions.interface != nil)    ecranFonctions.poseVoile(cible < 100)    end
 end
 ecranFonctions.suitVeille = ecranFonctions_suitVeille

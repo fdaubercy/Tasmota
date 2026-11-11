@@ -85,10 +85,22 @@ MUTANTS_GENERIQUE = [
     ("veille 0 assombrit quand meme", "if (v > 0 && ms >= v)", "if (ms >= v)"),
     ("extinction 0 eteint quand meme", "(x > 0 && ms >= v + x)", "(ms >= v + x)"),
     ("I2C ecrit a chaque appel", "    if (cible == ecranFonctions.etatVeille)    return    end\n", ""),
-    ("erreur I2C repetee tous les 250 ms",
-     "    ecranFonctions.etatVeille = cible   # meme en cas d'echec : pas une erreur I2C tous les 250 ms\n"
-     '    ecranFonctions.lumiere(cible == 100 ? ecranFonctions.reglage("luminosite") : cible)',
-     '    if (ecranFonctions.lumiere(cible == 100 ? ecranFonctions.reglage("luminosite") : cible))    ecranFonctions.etatVeille = cible    end'),
+    ("erreur I2C repetee a chaque essai", "        if (!ecranFonctions.panne)\n            ecranFonctions.panne = true\n", "        if (true)\n            ecranFonctions.panne = true\n"),
+    ("echec I2C jamais reessaye (etat memorise quand meme)", "    if (ecranFonctions.lumiere(pct))\n", "    ecranFonctions.etatVeille = cible\n    if (ecranFonctions.lumiere(pct))\n"),
+    ("reessai a chaque tic de 250 ms", "    if (a != nil && t >= a && t - a < ecranFonctions.REESSAI)    return    end\n", ""),
+    ("reessai jamais temporise (delai 0)", "ecranFonctions.REESSAI = 10000", "ecranFonctions.REESSAI = 0"),
+    ("retablissement I2C en erreur", 'luminosite " + str(pct) + " % appliquee !", LOG_LEVEL_DEBUG)', 'luminosite " + str(pct) + " % appliquee !", LOG_LEVEL_ERREUR)'),
+    ("retablissement I2C en info", 'luminosite " + str(pct) + " % appliquee !", LOG_LEVEL_DEBUG)', 'luminosite " + str(pct) + " % appliquee !", LOG_LEVEL_INFO)'),
+    ("panne jamais effacee", "            ecranFonctions.panne = false\n", ""),
+    ("echec I2C sans erreur", 'nouvel essai toutes les 10 s !", LOG_LEVEL_ERREUR)', 'nouvel essai toutes les 10 s !", LOG_LEVEL_DEBUG)'),
+    ("persist ecrit a chaque appui", "        tasmota.remove_timer(ecranFonctions.ID_SAUVE)\n        tasmota.set_timer(ecranFonctions.DELAI_SAUVE, ecranFonctions.sauve, ecranFonctions.ID_SAUVE)\n    else\n        persist.save(true)\n    end",
+     "        persist.save(true)\n    else\n        persist.save(true)\n    end"),
+    ("timer empile a chaque appui (sans remove_timer)", "        tasmota.remove_timer(ecranFonctions.ID_SAUVE)\n", ""),
+    ("delai du persist trop court (1 s)", "ecranFonctions.DELAI_SAUVE = 3000", "ecranFonctions.DELAI_SAUVE = 1000"),
+    ("timer sans identifiant fixe", "ecranFonctions.sauve, ecranFonctions.ID_SAUVE)", "ecranFonctions.sauve, str(tasmota.millis()))"),
+    ("commande differee (ecriture jamais faite)", "    else\n        persist.save(true)\n    end", "    else\n        0\n    end"),
+    ("rappel du timer sans ecriture", "    import persist\n    persist.save(true)   # true : modif imbriquee, save() seul n'ecrit rien\nend", "    import persist\nend"),
+    ("nom d'etat inconnu ignore en silence", 'raise "attribute_error", "ecranFonctions n\'a pas de " + str(nom)', "return false"),
     ("voile jamais pose", "ecranFonctions.poseVoile(cible < 100)", "ecranFonctions.poseVoile(false)"),
     ("voile hors de layer_sys", "lv.obj(lv.layer_sys())", "lv.obj(nil)"),
     ("voile non cliquable", "            p.set_clickable(true)\n", ""),
@@ -129,16 +141,27 @@ MUTANTS_DRIVER = [
     ("bloc du persist non pose", '        ecranFonctions.bloc = "ecranDebits"    # reglages de l\'ecran : modules.ecranDebits du persist\n', ""),
     ("interface non chargee", '            ecranDebitsFonctions.demarreEcran(ecranFonctions.charge(["ecranHaspmota", "ecranLvgl"]))\n', ""),
     ("LVGL prioritaire quand les deux sont la", '["ecranHaspmota", "ecranLvgl"]', '["ecranLvgl", "ecranHaspmota"]'),
-    ("ecran non rafraichi chaque seconde", "            ecranDebitsFonctions.ecran()\n        except", "            0\n        except"),
-    ("log info dans every_second", "            ecranDebitsFonctions.ecran()\n        except",
-     "            ecranDebitsFonctions.ecran()\n            ecranDebitsFonctions.log('ECRAN_DEBITS: tic !', LOG_LEVEL_INFO)\n        except"),
+    ("ecran non rafraichi chaque seconde", "            ecranDebitsFonctions.ecran()\n            self.retabli", "            0\n            self.retabli"),
+    ("log info dans every_second", "            ecranDebitsFonctions.ecran()\n            self.retabli",
+     "            ecranDebitsFonctions.ecran()\n            ecranDebitsFonctions.log('ECRAN_DEBITS: tic !', LOG_LEVEL_INFO)\n            self.retabli"),
+    ("every_250ms sans try", "        try\n            ecranFonctions.suitVeille()", "        if true\n            ecranFonctions.suitVeille()"),
+    ("erreur du driver a chaque tic", "        if (self.echecs.find(cle) == msg)    return    end\n", ""),
+    ("message change ignore (erreur memorisee une fois)", "        self.echecs[cle] = msg\n", ""),
+    # pas « 0 && f(...) » en instruction : le berry.exe des bancs boucle dessus (constate le 2026-11-11)
+    ("retablissement jamais signale", 'ecranDebitsFonctions.log("CONTROLE_ECRAN_DEBITS: " + texte + " retabli !", LOG_LEVEL_DEBUG)', "0"),
+    ("retablissement en erreur", 'texte + " retabli !", LOG_LEVEL_DEBUG)', 'texte + " retabli !", LOG_LEVEL_ERREUR)'),
+    ("retablissement repete a chaque tic", "        self.echecs.remove(cle)\n", ""),
     ("veille non suivie", "        ecranFonctions.suitVeille()\n", ""),
 ]
 
 
 def lance_berry(dossier, module="-", driver="-", interface="-", generique="-"):
     args = [str(BERRY), BANC, str(dossier), str(module), str(driver), str(interface), str(generique)]
-    r = subprocess.run(args, cwd=RACINE, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
+    try:
+        r = subprocess.run(args, cwd=RACINE, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120,
+                           stdin=subprocess.DEVNULL)
+    except subprocess.TimeoutExpired:
+        return "BLOQUE : berry.exe arrete apres 120 s"    # jamais le mot du vert : un mutant qui boucle compte rouge
     return r.stdout + r.stderr
 
 

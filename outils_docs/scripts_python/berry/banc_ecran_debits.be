@@ -67,6 +67,7 @@ global.T = 1000000                       # tasmota.rtc()["local"] : secondes ; m
 global.REPONSE = nil
 global.DRIVERS = []
 global.COMMANDES = {}
+global.TIMERS = {}                       # tasmota.set_timer : identifiant -> [delai ms, fonction]
 global.REGLES = []                       # [declencheur, fonction, id] de tasmota.add_rule
 global.I2C = []                          # ecritures sur l'expandeur : [adresse, registre, valeur]
 global.EXPANDEUR = true                  # false : wire_scan(0x24) rend nil
@@ -83,6 +84,9 @@ fauxTasmota.resp_cmnd = def (r) global.REPONSE = r end
 fauxTasmota.add_driver = def (d) global.DRIVERS.push(d) end
 fauxTasmota.add_cmd = def (n, f) global.COMMANDES[n] = f end
 fauxTasmota.add_rule = def (p, f, id) global.REGLES.push([p, f, id]) end
+# comme tasmota_class.be::set_timer, un second appel du meme identifiant EMPILE un timer (cle id, id+"+", ...) ; remove_timer les retire tous
+fauxTasmota.set_timer = def (ms, f, id) var k = id  while global.TIMERS.contains(k)  k = str(k) + "+"  end  global.TIMERS[k] = [ms, f] end
+fauxTasmota.remove_timer = def (id) var k = id  while global.TIMERS.contains(k)  global.TIMERS.remove(k)  k = str(k) + "+"  end end
 fauxTasmota.wire_scan = def (a) return (a == 0x24 && global.EXPANDEUR) ? FauxBus() : nil end
 global.tasmota = fauxTasmota
 class FauxDisp    def get_inactive_time()    return global.INACTIF    end    end
@@ -161,6 +165,11 @@ end
 def infos()
     var n = 0
     for l: global.JOURNAL    if (l[1] == global.LOG_LEVEL_INFO)    n += 1    end    end
+    return n
+end
+def retablies()
+    var n = 0
+    for l: global.JOURNAL    if (l[1] == global.LOG_LEVEL_DEBUG && string.find(l[0], "ECRAN: retabli") == 0)    n += 1    end    end
     return n
 end
 def fenetreInconnue()
@@ -431,7 +440,11 @@ ch = global.p2b70._lv_obj
 print("--- boutons - / + de la page Reglages")
 global.SAUVES = 0
 ecranHaspmota.bouton("up", "hasp#p3b24#event")
-verifie("fenetre + : 11 s, sauvee", edf.reglage("fenetre") == 11 && global.SAUVES == 1)
+verifie("fenetre + : 11 s en RAM tout de suite, ecriture du persist differee de 3 s (un seul timer d'identifiant fixe)",
+        edf.reglage("fenetre") == 11 && global.SAUVES == 0 && size(global.TIMERS) == 1 && global.TIMERS.find("ecranFonctions_sauve")[0] == 3000)
+global.TIMERS["ecranFonctions_sauve"][1]()
+verifie("3 s sans nouvel appui : persist.save, le timer est consomme", global.SAUVES == 1 && edf.reglage("fenetre") == 11)
+global.TIMERS = {}
 ecranHaspmota.bouton("down", "hasp#p3b24#event")
 verifie("appui (down) sans relache : rien", edf.reglage("fenetre") == 11)
 ecranHaspmota.bouton("up", "hasp#p3b22#event")
@@ -439,8 +452,12 @@ ecranHaspmota.bouton("up", "hasp#p3b44#event")
 edf.ecran()
 verifie("fenetre - puis luminosite + : 10 s, 90 %, ecrits sur la page Reglages", edf.reglage("fenetre") == 10 && edf.reglage("luminosite") == 90
         && texte("p3b23") == "10 s" && texte("p3b43") == "90 %")
+global.SAUVES = 0
 for k: 1 .. 12    ecranHaspmota.bouton("up", "hasp#p3b42#event")    end
-verifie("luminosite - 12 fois : bornee a 10 %", edf.reglage("luminosite") == 10)
+verifie("luminosite - 12 fois : bornee a 10 %, AUCUNE ecriture du persist pendant les appuis, un seul timer", edf.reglage("luminosite") == 10 && global.SAUVES == 0 && size(global.TIMERS) == 1)
+global.TIMERS["ecranFonctions_sauve"][1]()
+verifie("puis une seule ecriture pour les 12 appuis", global.SAUVES == 1)
+global.TIMERS = {}
 ecranHaspmota.bouton("up", "hasp#p3b44#event")
 ecranHaspmota.bouton("up", "hasp#p3b44#event")
 ecranHaspmota.bouton("up", "hasp#p3b34#event")
@@ -512,12 +529,36 @@ global.JOURNAL = []
 ecf.suitVeille()
 ecf.suitVeille()
 verifie("expandeur absent : une erreur, pas une a chaque appel", erreurs() == 1)
+global.I2C = []
+global.T += 9
+ecf.suitVeille()
+verifie("expandeur absent : pas de nouvel essai avant 10 s", size(global.I2C) == 0 && erreurs() == 1)
 global.EXPANDEUR = true
+global.T += 1
+global.I2C = []
+ecf.suitVeille()
+verifie("10 s apres : nouvel essai, luminosite appliquee (0x05 = 51), etat memorise, retablissement en debug seulement, pas d'autre erreur",
+        global.I2C == [[0x24, 5, 51], [0x24, 3, 0xDF]] && ecf.etatVeille == 100 && erreurs() == 1 && infos() == 0 && retablies() == 1)
+global.I2C = []
+ecf.suitVeille()
+verifie("applique : plus d'ecriture", size(global.I2C) == 0)
 global.ACK = false
 global.INACTIF = 5 * 60000
 ecf.suitVeille()
-verifie("pas d'ACK : erreur journalisee", erreurs() == 2)
+verifie("pas d'ACK : erreur journalisee", erreurs() == 2 && ecf.etatVeille == 100)
+global.I2C = []
+global.T += 5
+ecf.suitVeille()
+ecf.suitVeille()
+verifie("sans ACK : pas de nouvel essai avant 10 s (pas une ecriture a chaque tic)", size(global.I2C) == 0)
+global.T += 5
+ecf.suitVeille()
+verifie("toujours sans ACK, 10 s apres : nouvel essai (ecriture tentee), muet (une erreur par panne)",
+        size(global.I2C) > 0 && erreurs() == 2 && ecf.etatVeille == 100)
 global.ACK = true
+global.T += 10
+ecf.suitVeille()
+verifie("ACK rendu : gradation appliquee, retablissement signale", ecf.etatVeille == 10 && retablies() == 2 && erreurs() == 2)
 global.INACTIF = 0
 ecf.suitVeille()
 var itf = ecf.interface
@@ -530,12 +571,13 @@ ecf.interface = itf
 global.INACTIF = 0
 
 print("--- ReglageEcranDebits")
+global.TIMERS = {}
 var r = edf.reglageEcranDebits
 global.JOURNAL = []
 global.SAUVES = 0
 r("ReglageEcranDebits", 0, "fenetre 15", nil)
 var rep = json.load(global.REPONSE)["ReglageEcranDebits"]
-verifie("fenetre 15 : ecrite au persist, sauvee, reponse avec les 5 reglages", edf.reglage("fenetre") == 15 && global.SAUVES == 1
+verifie("fenetre 15 : ecrite au persist, sauvee tout de suite (geste unique, pas de timer), reponse avec les 5 reglages", edf.reglage("fenetre") == 15 && global.SAUVES == 1 && size(global.TIMERS) == 0
         && rep["fenetre"] == 15 && rep["veille"] == 5 && rep["extinction"] == 30 && rep["luminosite"] == 80 && rep["pwmInverse"] == "ON" && size(rep) == 5)
 r("ReglageEcranDebits", 0, "fenetre 1", nil)
 r("ReglageEcranDebits", 0, "fenetre 61", nil)
@@ -645,5 +687,47 @@ global.JOURNAL = []
 pilote.every_250ms()
 verifie("every_250ms : veille suivie (gradation), aucun log", global.I2C == [[0x24, 5, 229], [0x24, 3, 0xDF]] && size(global.JOURNAL) == 0)
 global.INACTIF = 0
+
+print("--- persist edite a la main : une ligne d'erreur par changement de message, pas par tic")
+var sain = global.modules["ecranDebits"]
+global.modules["ecranDebits"] = 12            # pas une map
+global.JOURNAL = []
+for k: 1 .. 4    pilote.every_250ms()    end
+verifie("every_250ms : 4 tics sur un persist illisible, une seule erreur (le callback ne leve plus)", erreurs() == 1)
+for k: 1 .. 4    pilote.every_second()    end
+verifie("every_second : 4 tics, une seule erreur de plus (message propre a l'ecran)", erreurs() == 2)
+global.modules["ecranDebits"] = "texte"
+pilote.every_second()
+verifie("every_second : le message change (autre type de persist) : une nouvelle ligne", erreurs() == 3)
+global.modules["ecranDebits"] = sain
+global.JOURNAL = []
+pilote.every_second()
+pilote.every_250ms()
+verifie("persist remis : une ligne debug « retabli » par callback, aucune erreur ni info", erreurs() == 0 && infos() == 0 && size(global.JOURNAL) == 2 && global.JOURNAL[0][1] == global.LOG_LEVEL_DEBUG)
+pilote.every_second()
+pilote.every_250ms()
+verifie("puis le silence", size(global.JOURNAL) == 2)
+
+print("--- mineurs")
+var leve = false
+try    ecf.setmember("inexistant", 1)    except ..    leve = true    end
+verifie("ecranFonctions : ecrire un nom d'etat inconnu leve une exception (plus d'echec silencieux)", leve)
+verifie("ecranFonctions : un nom connu s'ecrit toujours", (def () ecf.points = 7 return ecf.points == 7 end)())
+ecf.points = 0
+var bloc0 = ecf.bloc
+ecf.bloc = "autreBloc"
+global.modules["autreBloc"] = {}
+global.JOURNAL = []
+r("ReglageEcranDebits", 0, "pwmInverse OFF", nil)
+verifie("pwmInverse : ecrit dans le bloc de ecranFonctions.bloc, pas dans « ecranDebits » en dur", global.modules["autreBloc"].find("pwmInverse") == "OFF"
+        && global.modules["ecranDebits"].find("pwmInverse") == "ON" && erreurs() == 0)
+global.modules.remove("autreBloc")
+ecf.bloc = bloc0
+var sauve = global.modules["ecranDebits"]
+global.modules.remove("ecranDebits")
+verifie("entree : persist sans le bloc ecranDebits (ou sans environnement) : nil, sans exception", edf.entree(1) == nil)
+global.modules["ecranDebits"] = {}
+verifie("entree : bloc sans environnement : nil", edf.entree(1) == nil)
+global.modules["ecranDebits"] = sauve
 
 print(ok ? "BANC_ECRAN_DEBITS: OK" : "BANC_ECRAN_DEBITS: ECHEC")

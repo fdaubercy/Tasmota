@@ -5,7 +5,7 @@
 # Objets : page 0 (sur toutes les pages) p0b1 titre, p0b2 pastille, p0b3 releve, p0b4 total, p0b91-93 pied de page ;
 # page 1 voie n : p1b<10n+1> nom, +2 barre, +3 debit, +4 unite, +5 part ; page 2 voie n : +1 puce, +2 nom, +3 debit, +4 unite,
 # p2b70 courbe, p2b71 haut de l'axe ; page 3 : p3b<k>3 valeur, p3b<k>2 bouton -, p3b<k>4 bouton + (k = 2 fenetre, 3 veille,
-# 4 luminosite). Le chart HASPmota n'a que 2 series natives (_ser1, _ser2 sur l'axe secondaire, laissees vides) : les 6 courbes
+# 4 luminosite). Le chart HASPmota n'a que 2 series natives (_ser1 sur l'axe primaire, seule _ser2 sur le secondaire ; lv_haspmota.be::lvh_chart::post_init, laissees vides) : les 6 courbes
 # sont ajoutees sur l'objet LVGL dessous (_lv_obj.add_series). Sans image (consigne de l'en-tete de ecranDebitsFonctions).
 # Logs : charte du CLAUDE.md (ecranDebitsFonctions.log, seuil `general`).
 var ecranHaspmota = module("ecranHaspmota")

@@ -77,20 +77,22 @@ def ecranDebitsFonctions_reglage(cle)
 end
 ecranDebitsFonctions.reglage = ecranDebitsFonctions_reglage
 
-# Bouton - / + de la page Reglages : valeur actuelle + pas, ramenee dans les bornes, puis ecrite au persist
+# Bouton - / + de la page Reglages : valeur actuelle + pas, ramenee dans les bornes, appliquee tout de suite, persist ecrit 3 s apres le dernier appui
 def ecranDebitsFonctions_ajuste(cle, pas)
     import ecranFonctions
     import ecranDebitsFonctions
     var b = ecranDebitsFonctions.bornes(cle)
     var n = ecranDebitsFonctions.reglage(cle) + pas
-    return ecranFonctions.regle(cle, n < b[0] ? b[0] : (n > b[1] ? b[1] : n), b)
+    return ecranFonctions.regle(cle, n < b[0] ? b[0] : (n > b[1] ? b[1] : n), b, true)
 end
 ecranDebitsFonctions.ajuste = ecranDebitsFonctions_ajuste
 
 # Entree analogique virtuelle n (1 a 7) du persist, nil si absente ou inactive
 def ecranDebitsFonctions_entree(n)
-    var ana = modules.find("ecranDebits", {}).find("environnement", {}).find("analogiques", {})
-    var e = ana.find("analogique" + str(n))
+    var ed = modules.find("ecranDebits")
+    var env = ed == nil ? nil : ed.find("environnement")
+    var ana = env == nil ? nil : env.find("analogiques")
+    var e = ana == nil ? nil : ana.find("analogique" + str(n))
     return (isinstance(e, map) && e.find("activation", "OFF") == "ON") ? e : nil
 end
 ecranDebitsFonctions.entree = ecranDebitsFonctions_entree
@@ -345,8 +347,9 @@ def ecranDebitsFonctions_reglageEcranDebits(cmd, idx, payload, payload_json)
         if (arg != "ON" && arg != "OFF")
             ecranDebitsFonctions.log("REGLAGE_ECRAN_DEBITS_ERREUR: pwmInverse '" + arg + "' refuse : ON ou OFF attendu !", LOG_LEVEL_ERREUR)
         else
-            if (!modules.contains("ecranDebits"))    modules["ecranDebits"] = {}    end
-            modules["ecranDebits"]["pwmInverse"] = arg
+            var bl = ecranFonctions.bloc
+            if (!modules.contains(bl))    modules[bl] = {}    end
+            modules[bl]["pwmInverse"] = arg
             persist.save(true)
             ecranFonctions.etatVeille = nil
         end
