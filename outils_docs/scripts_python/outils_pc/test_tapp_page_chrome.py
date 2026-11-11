@@ -286,8 +286,9 @@ def sonde_lieu(m):
     import test_assistant_persist_autoexec as taa
     cdp = m.cdp
     def ouvre(q):
+        cdp.js("window.__ancien = true; 1")   # marque l'ancien document : l'attente ne peut pas etre satisfaite par lui
         cdp.appel("Page.navigate", url=m.url + q)
-        attend(cdp, f"!!document.getElementById('e-carte') && !!document.getElementById('e-carte').querySelector('option[value=\"{taa.ENV}\"]')", 15)
+        attend(cdp, f"!window.__ancien && !!document.getElementById('e-carte') && !!document.getElementById('e-carte').querySelector('option[value=\"{taa.ENV}\"]')", 15)
     avant = len(cdp.erreurs())                      # les 400/409 voulus de la sonde precedente restent dans le journal
     bandeaux = lambda: cdp.js("document.querySelectorAll('.bandeau-lieu').length")
     ouvre("")

@@ -259,7 +259,8 @@ def sonde_renommer_supprimer(m):
 def sonde_lieu(m):
     """A4 du plan lieu-partage-syslog-mqtt : ?lieu= choisit la 1re carte du lieu au premier chargement seulement."""
     cdp = m.cdp
-    ouvre = lambda q: (cdp.appel("Page.navigate", url=m.url + q), attend(cdp, "document.getElementById('env').options.length > 1 && !!etat", 15))
+    ouvre = lambda q: (cdp.js("window.__ancien = true; 1"), cdp.appel("Page.navigate", url=m.url + q),   # marque : l'attente ne lit pas l'ancien document
+                       attend(cdp, "!window.__ancien && document.getElementById('env').options.length > 1 && !!etat", 15))
     env = lambda: cdp.js("document.getElementById('env').value")
     bandeaux = lambda: cdp.js("document.querySelectorAll('.bandeau-lieu').length")
     ouvre("")

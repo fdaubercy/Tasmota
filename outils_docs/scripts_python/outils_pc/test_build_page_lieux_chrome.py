@@ -237,9 +237,9 @@ ESPION = "window.__f = []; const o = window.fetch; window.fetch = (u, ...a) => {
 
 
 def ouvre_url(m, suffixe):
+    m.cdp.js("window.__ancien = true; 1")   # marque l'ancien document : l'attente ne peut pas etre satisfaite par lui
     m.cdp.appel("Page.navigate", url=m.url + suffixe)
-    time.sleep(2.5)
-    t.attend(m.cdp, "document.querySelectorAll('#liste .env').length", 15)
+    t.attend(m.cdp, "!window.__ancien && document.querySelectorAll('#liste .env').length", 15)
 
 
 def etat_page(cdp):

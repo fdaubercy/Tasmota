@@ -406,8 +406,9 @@ def sonde_lieu(m):
     """A4 du plan lieu-partage-syslog-mqtt : ?lieu= pose le bandeau seul, #f-env et #a-env restent sur leur option de tete."""
     cdp = m.cdp
     def ouvre(q):
+        cdp.js("window.__ancien = true; 1")   # marque l'ancien document : l'attente ne peut pas etre satisfaite par lui
         cdp.appel("Page.navigate", url=m.url + q)
-        attend(cdp, "document.getElementById('f-env') && document.getElementById('f-env').options.length > 1 && document.getElementById('a-env').options.length > 1", 15)
+        attend(cdp, "!window.__ancien && document.getElementById('f-env') && document.getElementById('f-env').options.length > 1 && document.getElementById('a-env').options.length > 1", 15)
     bandeaux = lambda: cdp.js("document.querySelectorAll('.bandeau-lieu').length")
     ouvre("")
     verifie(bandeaux(), 0, "sans ?lieu= : aucun bandeau")
