@@ -203,7 +203,7 @@ du thème sombre de Tasmota (`var(--c_bg)`, `var(--c_txt)`), largeur 100 % de la
   échoue après le lancement de Chrome : panne de CDP simulée, 0 Chrome du profil restant)
 - [x] Sonde verte ; témoin : `volets.js` sans l'inversion -> scénario `inverse` 1 rouge ; aucun Chrome `sonde_*` restant — preuve : sonde VERT (25 OK), code 0 ; après correction 1 : VERT (26 OK), rouge (5) sur le `volets.js` à extrapolation, témoin
   qui dépasse la cible : 1 KO « jamais au-delà de la dernière valeur (80) » (82) ; témoin (`return borne(v)`) : ROUGE 5 échecs, tous `inverse 1` (garage, etage2), node : 3 KO `ouverture(.., 1)` ; `Get-CimInstance` : 0 chrome `sonde_*` après chaque passage
-- [ ] Commit `feat(volets): dessin de la facade sur la page d'accueil`
+- [x] Commit `feat(volets): dessin de la facade sur la page d'accueil` — preuve : 4044f1dd7, b70c9fd1e, puis correction f3a0fbda2 (poursuite, sonde sans orphelin, inverse par défaut), relectures approuvées
 
 ## A6 — La page de réglage
 Fichiers : `data/sd/html/reglageVolets.html`, `data/sd/js/reglageVolets.js`, `data/sd/css/reglageVolets.css` (neufs),
@@ -215,10 +215,14 @@ bouton « Annuler » ; résultat : durées mesurées et précédentes, et les va
 (`drivers.voletRoulants.environnement.VRs.<cle>.tempsMontee` et `tempsDescente`), avec l'avertissement du flash série et de
 l'envoi du FS ; durées du MPU6050 à côté quand `mpu` les porte ; cause d'un arrêt inattendu (« bloqué », « sens inverse »,
 « arrêt »). Lecture de `?f=etat` toutes les 500 ms pendant un réglage, 3 s sinon ; ordres par POST `/volets`.
-- [ ] Sonde écrite d'abord, serveur simulé qui joue `etatPage()` : textes de chaque étape pour 1 bouton, 2 boutons, chrono ;
+- [x] Sonde écrite d'abord, serveur simulé qui joue `etatPage()` : textes de chaque étape pour 1 bouton, 2 boutons, chrono ;
   POST envoyés (`action`, `id`) ; résultat et valeurs à recopier ; durées du MPU affichées ; arrêt « sens inverse » expliqué ; scénario « injoignable » (le serveur ne répond plus : message,
-  aucun résultat affiché) ; mode sombre lisible ; Chrome arrêté à la fin
-- [ ] Écrire les trois fichiers ; sonde verte ; témoin : page sans l'avertissement « Sinon, Annuler » -> rouge
+  aucun résultat affiché) ; mode sombre lisible ; Chrome arrêté à la fin — preuve : `test_reglage_volets_chrome.py` (405 lignes, `Montage` d'A5
+  repris avec un gestionnaire et un profil `sonde_reglage_volets_*`), ROUGE sans les fichiers : 59 échecs ; aussi cadence 500 ms / 3 s, carte lente,
+  500 après `debut` -> `pret`, aucun bouton, `bloque`/`arret`/`delai`/`refus`, nom à balise en texte, 320 px
+- [x] Écrire les trois fichiers ; sonde verte ; témoin : page sans l'avertissement « Sinon, Annuler » -> rouge — preuve : sonde VERT (75 OK), code 0 ;
+  témoin (`reglageVolets.js` sans « Sinon, Annuler ») : ROUGE 6 échecs, tous « question du sens » ; `test_volets_chrome.py` VERT ; `banc_reglage_volets`,
+  `banc_boot`, `banc_demarrage` verts après l'ajout des 3 fichiers à `volets_pages` ; 0 Chrome `sonde_*` restant
 - [ ] Commit `feat(volets): page de reglage des durees`
 
 ## A7 — Relectures, documentation, compilation

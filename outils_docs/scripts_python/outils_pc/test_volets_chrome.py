@@ -110,12 +110,13 @@ class Serveur(ThreadingHTTPServer):
 
 
 class Montage:
-    def __init__(self):
-        self.t = Path(tempfile.mkdtemp(prefix="sonde_volets_"))
+    def __init__(self, gestionnaire=None, prefixe="sonde_volets_"):
+        """gestionnaire, prefixe : serveur et profil d'une autre sonde (test_reglage_volets_chrome.py)."""
+        self.t = Path(tempfile.mkdtemp(prefix=prefixe))
         self.chrome = self.http = None
         try:                     # echec en cours de montage (CDP muet, aucune cible) : Chrome et serveur arretes ici
             self.port = port_libre()
-            self.http = Serveur(("127.0.0.1", self.port), Carte)
+            self.http = Serveur(("127.0.0.1", self.port), gestionnaire or Carte)
             threading.Thread(target=self.http.serve_forever, daemon=True).start()
             chrome = next((c for c in CHROMES if c.is_file()), None)
             if chrome is None:

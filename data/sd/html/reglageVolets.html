@@ -1,0 +1,68 @@
+<!-- Page de reglage des durees des volets (/volets) : assemblee par data/fs/vrPages.be::route, logique dans /sd/js/reglageVolets.js -->
+<div id='rv'>
+<p><label for='rv_volet'><b>Volet à régler</b></label><select id='rv_volet'></select></p>
+<p id='rv_injoignable' class='rv_alerte' hidden>Carte injoignable : l'état du réglage n'est plus connu, rien n'est affiché tant qu'il n'a pas été relu. La page réessaie seule. Si la carte a redémarré, le réglage en cours est perdu sans rien écrire.</p>
+
+<div id='rv_vivant'>
+<div id='rv_etat'>
+<p id='rv_etape'></p>
+<p id='rv_message'></p>
+<p id='rv_chrono'></p>
+<p id='rv_question' class='rv_alerte'></p>
+<p id='rv_cause' class='rv_alerte'></p>
+</div>
+<div id='rv_resultat' hidden>
+<h3>Résultat</h3>
+<table id='rv_durees'></table>
+<p>Ces durées sont en service sur la carte. Recopiez-les dans <code>data/&lt;lieu&gt;/&lt;carte&gt;/_persist.json</code> du dépôt :</p>
+<pre id='rv_recopie'></pre>
+<p class='rv_alerte'>Un flash série ou un envoi du FS remet les durées du dépôt sur la carte : recopiez ces valeurs avant.</p>
+</div>
+<p id='rv_note'></p>
+</div>
+<p><button id='rv_debut'>Régler les durées</button></p>
+<p><button id='rv_suivant' hidden>Étape suivante</button></p>
+<p><button id='rv_annuler' class='bred' hidden>Annuler</button></p>
+
+<h3>Préparation</h3>
+<p id='rv_preparation'>Amenez d'abord le volet en bas, fermé (en butée basse), par une commande habituelle, et attendez qu'il soit arrêté. Cliquez ensuite « Régler les durées » : rien ne bouge à ce moment-là, la carte attend le premier appui.</p>
+
+<div data-rv='inconnu'>
+<h3>Déroulé</h3>
+<p>La marche à suivre de ce volet s'affiche ici dès le clic sur « Régler les durées ».</p>
+<ul>
+<li>Volet à moteur : quatre appuis, sur un bouton du volet ou sur « Étape suivante ». Le volet monte, s'arrête en haut, descend, s'arrête en bas ; la carte chronomètre chaque course.</li>
+<li>Porte de garage à impulsions : la carte ne commande rien. Vous lancez la porte comme d'habitude et cliquez « Départ » puis « Arrivée » à chaque course.</li>
+</ul>
+</div>
+
+<div data-rv='moteur' hidden>
+<h3>Déroulé</h3>
+<p>Chaque appui sur <span id='rv_appui'></span> fait passer à l'étape suivante. Le sens est imposé par l'étape, pas par le bouton. Le temps du réglage, les boutons de ce volet ne servent qu'aux étapes ; ils retrouvent leur rôle à la fin.</p>
+<ol>
+<li>1er appui : le volet monte et le chronomètre part. Vérifiez qu'il monte bien.</li>
+<li>2e appui, quand le volet arrive en haut : la carte l'arrête et retient la durée de montée.</li>
+<li>3e appui : le volet descend et le chronomètre repart. Vérifiez qu'il descend bien.</li>
+<li>4e appui, quand le volet arrive en bas : la carte l'arrête et retient la durée de descente.</li>
+</ol>
+<h3>Annulation et délai</h3>
+<p>« Annuler » arrête le moteur s'il tourne et remet les durées et les boutons d'avant : rien n'est écrit. Sans appui pendant 120 s à une étape, la carte arrête le volet et sort du réglage sans rien écrire. Un appui moins d'une seconde après le précédent est ignoré ; une course mesurée en moins de 2 s est refusée.</p>
+</div>
+
+<div data-rv='chrono' hidden>
+<h3>Déroulé (porte de garage)</h3>
+<p>La carte ne commande pas la porte : elle chronomètre seulement. Lancez la porte comme d'habitude (télécommande, curseur, bouton) ; ses commandes gardent leur effet normal.</p>
+<ol>
+<li>Lancez la porte vers le haut, puis cliquez « Départ ».</li>
+<li>Cliquez « Arrivée » quand la porte est en haut : la durée de montée est retenue.</li>
+<li>Lancez la porte vers le bas, puis cliquez « Départ ».</li>
+<li>Cliquez « Arrivée » quand la porte est en bas : la durée de descente est retenue.</li>
+</ol>
+<h3>Annulation et délai</h3>
+<p>« Annuler » ou 120 s sans clic à une étape : la carte sort du réglage sans rien écrire, mais n'arrête pas la porte. Si elle part dans le mauvais sens, arrêtez-la vous-même avec sa commande habituelle. Un clic moins d'une seconde après le précédent est ignoré ; une course mesurée en moins de 2 s est refusée.</p>
+</div>
+
+<h3>À la fin</h3>
+<p>Les deux durées, arrondies à la seconde, sont écrites dans le persist de la carte et mises en service. Elles sont affichées plus haut avec les valeurs à recopier dans le persist du dépôt.</p>
+
+</div>

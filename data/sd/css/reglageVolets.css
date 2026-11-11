@@ -1,0 +1,22 @@
+/* /volets : reglageVolets.html, reglageVolets.js ; couleurs de Tasmota (variables --c_*), lisible en theme sombre */
+#rv{text-align:left;max-width:calc(100vw - 24px)}
+#rv [hidden]{display:none!important}
+#rv div{padding:0}
+#rv h3{margin:14px 0 4px;font-size:1em}
+#rv p:empty{display:none}
+#rv ol,#rv ul{margin:4px 0;padding-left:1.4em}
+#rv li{margin:3px 0}
+#rv p,#rv li,#rv pre{overflow-wrap:anywhere}
+.rv_alerte{color:var(--c_txtwrn);font-weight:bold}
+#rv_injoignable{border:2px solid var(--c_txtwrn);border-radius:0.3rem;padding:6px}
+#rv #rv_etat{border:1px solid rgba(127,127,127,0.5);border-radius:0.3rem;padding:4px 8px;margin:10px 0}
+#rv_etat:not(:has(p:not(:empty))){display:none}
+#rv_etape{font-weight:bold}
+#rv_chrono{font-size:1.6em;text-align:center;font-variant-numeric:tabular-nums}
+#rv_durees{width:100%;border-collapse:collapse;table-layout:fixed;font-size:0.9em}
+#rv_durees th,#rv_durees td{padding:3px 2px;text-align:right;border-bottom:1px solid rgba(127,127,127,0.4)}
+#rv_durees th:first-child,#rv_durees td:first-child{text-align:left;width:22%}
+#rv_durees th{font-size:0.85em}
+#rv_recopie{white-space:pre-wrap;background:var(--c_csl);color:var(--c_csltxt);padding:6px;border-radius:0.3rem;font-size:0.85em}
+#rv code{overflow-wrap:anywhere}
+#rv_note{font-style:italic}
