@@ -145,15 +145,15 @@ Interfaces consommées : `lieuDemande`, `bandeauLieu` (A1) ; `lieuxTable`, `clas
 Fichiers : `fichiers_berry_page.py` (`chargeEnvs`, 1er appel seulement), `assistant_persist_page_js_env.py` (bandeau),
 `atelier_graphiques_page_js.py` (choix initial), `tapp_page.py` (bandeau) ; leurs sondes.
 
-- [ ] Ajouter à chaque sonde, rouge d'abord, une ouverture en `?lieu=garage` : 7800 `#env` = 1re carte du garage,
+- [x] Ajouter à chaque sonde, rouge d'abord, une ouverture en `?lieu=garage` : 7800 `#env` = 1re carte du garage,
   puis `chargeEnvs()` rappelé avec une autre carte choisie → choix gardé (le lieu ne rejoue pas), `?env=` + `?lieu=`
   → `?env=` gagne ; 7900 `#f-env` et `#a-env` sur leur option de tête, bandeau présent ; 7950 `#env` = 1re carte S3/P4 du
   garage, et `?lieu=rdc` (aucune S3/P4) → liste comme sans paramètre + bandeau « aucune carte de ce lieu ici » ; 7980
   `#e-carte` sur « (choisir une carte) », bandeau ; une page en `?lieu=%3Cb%3Ex` → aucun bandeau, aucun `<b>` créé
-  (vigilance 3).
-- [ ] Écrire ; les 4 sondes vertes (7900 : si `test_assistant_persist_page_chrome.py` reste bloquée par
-  `modele_persist.json` d'une autre session, vérifier le bandeau par la sonde autoexec et le noter dans la preuve).
-- [ ] Commit `feat(lieux): lieu venu de l'annuaire sur les pages 7800 a 7980`.
+  (vigilance 3). — preuve : sonde_lieu ajoutée aux 4 sondes ; témoin négatif (lieuDemande neutralisé) : KO sur bandeau, 1re carte, croix de chaque page.
+- [x] Écrire ; les 4 sondes vertes (7900 : si `test_assistant_persist_page_chrome.py` reste bloquée par
+  `modele_persist.json` d'une autre session, vérifier le bandeau par la sonde autoexec et le noter dans la preuve). — preuve : 7800, 7950, 7980 VERT sur 2 passages ; 7900 sonde_lieu verte (placée avant sonde_page), le reste BLOQUE comme avant (mêmes 6 KO + BLOQUE modele_persist, avant/après identiques).
+- [x] Commit `feat(lieux): lieu venu de l'annuaire sur les pages 7800 a 7980`. — preuve : git log (commit de cette action).
 
 ## A5 — Syslog : modèle M
 

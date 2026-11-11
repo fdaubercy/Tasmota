@@ -256,6 +256,33 @@ def sonde_renommer_supprimer(m):
     verifie(cdp.erreurs(), [], "aucune erreur JS pendant toute la sonde")
 
 
+def sonde_lieu(m):
+    """A4 du plan lieu-partage-syslog-mqtt : ?lieu= choisit la 1re carte du lieu au premier chargement seulement."""
+    cdp = m.cdp
+    ouvre = lambda q: (cdp.appel("Page.navigate", url=m.url + q), attend(cdp, "document.getElementById('env').options.length > 1 && !!etat", 15))
+    env = lambda: cdp.js("document.getElementById('env').value")
+    bandeaux = lambda: cdp.js("document.querySelectorAll('.bandeau-lieu').length")
+    ouvre("")
+    garage = cdp.js("document.querySelector('#env optgroup[label=Garage] option').value")
+    verifie((bandeaux(), env() != garage), (0, True), "sans ?lieu= : aucun bandeau, carte de tete inchangee")
+    ouvre("?lieu=garage")
+    verifie((env(), bandeaux()), (garage, 1), "?lieu=garage : #env = 1re carte du garage, bandeau present")
+    cdp.js("var s = document.getElementById('env'); s.value = " + json.dumps(RIDEAU) + "; 1")
+    cdp.js("chargeEnvs(); 1")
+    time.sleep(1)
+    verifie(env(), RIDEAU, "chargeEnvs() rappele : le choix de l'utilisateur est garde, le lieu ne rejoue pas")
+    ouvre("?env=" + BASE + "&lieu=garage")
+    verifie(env(), BASE, "?env= + ?lieu=garage : ?env= gagne")
+    ouvre("?lieu=inconnu")
+    verifie((bandeaux(), env() != garage), (0, True), "?lieu=inconnu : ignore, aucun bandeau")
+    ouvre("?lieu=%3Cb%3Ex%3C%2Fb%3E")
+    verifie(cdp.js("document.querySelectorAll('.bandeau-lieu').length + [].filter.call(document.querySelectorAll('main b'), function (b) { return b.textContent === 'x'; }).length"), 0, "?lieu=<b>x</b> : aucun bandeau, aucune balise creee")
+    ouvre("?lieu=garage")
+    cdp.js("document.querySelector('.bandeau-lieu button').click(); 1")
+    verifie((bandeaux(), env(), cdp.js("location.search")), (0, garage, ""), "croix : bandeau retire, adresse sans lieu, carte inchangee")
+    verifie(cdp.erreurs(), [], "arrivee par lieu : aucune erreur JS")
+
+
 def sonde_temoin(m):
     m.cdp.appel("Page.navigate", url=m.url)
     time.sleep(3)
@@ -276,7 +303,7 @@ def principal():
         try:
             m = Montage()
             m.demarre(temoin)
-            sonde_temoin(m) if temoin else sonde_page(m)
+            sonde_temoin(m) if temoin else (sonde_page(m), sonde_lieu(m))
         except FileNotFoundError as erreur:
             print(f"BLOQUE : {erreur}")
             return 3

@@ -281,6 +281,29 @@ def sonde(m):
     verifie(erreurs, [], "aucune erreur JS (hors les 400 et 409 voulus du scenario)")
 
 
+def sonde_lieu(m):
+    """A4 du plan lieu-partage-syslog-mqtt : ?lieu= pose le bandeau seul, #e-carte reste sur « (choisir une carte) »."""
+    import test_assistant_persist_autoexec as taa
+    cdp = m.cdp
+    def ouvre(q):
+        cdp.appel("Page.navigate", url=m.url + q)
+        attend(cdp, f"!!document.getElementById('e-carte') && !!document.getElementById('e-carte').querySelector('option[value=\"{taa.ENV}\"]')", 15)
+    avant = len(cdp.erreurs())                      # les 400/409 voulus de la sonde precedente restent dans le journal
+    bandeaux = lambda: cdp.js("document.querySelectorAll('.bandeau-lieu').length")
+    ouvre("")
+    verifie(bandeaux(), 0, "sans ?lieu= : aucun bandeau")
+    ouvre("?lieu=garage")
+    verifie((bandeaux(), cdp.js("document.getElementById('e-carte').value"), cdp.js("document.getElementById('e-carte').selectedIndex")), (1, "", 0),
+            "?lieu=garage : bandeau present, #e-carte sur « (choisir une carte) »")
+    verifie(cdp.js("document.querySelector('.bandeau-lieu')?.firstChild.textContent"), "Lieu : Garage (depuis l’annuaire) · ", "?lieu=garage : bandeau « Lieu : Garage »")
+    cdp.js("document.querySelector('.bandeau-lieu button').click(); 1")
+    verifie((bandeaux(), cdp.js("location.search")), (0, ""), "croix : bandeau retire, adresse sans lieu")
+    ouvre("?lieu=%3Cb%3Ex%3C%2Fb%3E")
+    verifie(cdp.js("document.querySelectorAll('.bandeau-lieu').length + [].filter.call(document.querySelectorAll('main b'), function (b) { return b.textContent === 'x'; }).length"),
+            0, "?lieu=<b>x</b> : aucun bandeau, aucune balise creee")
+    verifie(cdp.erreurs()[avant:], [], "arrivee par lieu : aucune erreur JS")
+
+
 def principal():
     options = argparse.ArgumentParser(description="Sonde Chrome de la Fabrique d'extensions.")
     options.add_argument("--sans-temoin", action="store_true")
@@ -296,6 +319,8 @@ def principal():
             m = Montage()
             m.demarre(temoin)
             sonde(m)
+            if not temoin:
+                sonde_lieu(m)
         except FileNotFoundError as erreur:
             print(f"BLOQUE : {erreur}")
             return 3

@@ -466,6 +466,13 @@ Promise.all([lis('/envs'), fetch('/moteur/pages_graphiques.html').then(function 
   var voulu = new URLSearchParams(location.search).get('env');
   var env = etat.envs.some(function (e) { return e.nom === voulu; }) ? voulu : (etat.envs[0] || {}).nom;
   if (!env) { message('Aucune carte S3/P4 dans le cenv.', 'rouge'); return; }
+  var lieu = lieuDemande(r[0].lieux), carte = null;       // ?lieu= : 1re carte du lieu si ?env= n'en dit rien
+  if (lieu) {
+    var bandeau = bandeauLieu(document.querySelector('main'), r[0].lieux.filter(function (l) { return l[0] === lieu; })[0][1], function () {});
+    carte = etat.envs.filter(function (e) { return e.lieu === lieu; })[0];
+    if (!carte) bandeau.appendChild(document.createTextNode(' · aucune carte de ce lieu ici'));
+    else if (env !== voulu) env = carte.nom;
+  }
   $('env').value = env;
   return choisitEnv(env);
 }).catch(function (e) { message('Atelier injoignable : ' + echappe(e.message), 'rouge'); });

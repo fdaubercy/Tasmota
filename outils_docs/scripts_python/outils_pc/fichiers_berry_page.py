@@ -192,6 +192,7 @@ function etatsPossibles(f) {
 function etatAffiche(f) { return attente[f.chemin] ? attente[f.chemin].etat : f.etat; }
 function parChemin(c) { return etat.fichiers.filter(function (f) { return f.chemin === c; })[0]; }
 
+var lieuVu = false;
 async function chargeEnvs() {
   var r = await appel("/envs");
   if (!r.ok) { $("statut").textContent = r.texte; return; }
@@ -209,7 +210,17 @@ async function chargeEnvs() {
   sb.appendChild(g);
   if (pris) sb.value = pris;
   var demande = new URLSearchParams(location.search).get("env");
-  if (demande && envs.some(function (e) { return e.nom === demande; })) $("env").value = demande;
+  var voulu = demande && envs.some(function (e) { return e.nom === demande; });
+  if (voulu) $("env").value = demande;
+  if (!lieuVu) {                                  // ?lieu= : au premier chargement seulement, ?env= gagne, rien n'est coche
+    lieuVu = true;
+    var lieu = lieuDemande(r.donnees.lieux);
+    if (lieu) {
+      bandeauLieu(document.querySelector("main"), r.donnees.lieux.filter(function (l) { return l[0] === lieu; })[0][1], function () {});
+      var premiere = cartes.filter(function (e) { return e.lieu === lieu; })[0];
+      if (premiere && !voulu) $("env").value = premiere.nom;
+    }
+  }
 }
 
 async function chargeEtat() {

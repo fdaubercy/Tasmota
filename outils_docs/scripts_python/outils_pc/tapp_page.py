@@ -248,11 +248,17 @@ async function envoie() {
   if (r.donnees.avertissement) z.appendChild(el("p", "msg", r.donnees.avertissement));
   if (S.prep === p) annulePrep();
 }
+var lieuVu = false;
 async function chargeCartes() {
   var r = await api("/cartes"), avant = $("e-carte").value, s = vide($("e-carte")), o = el("option", "", "(choisir une carte)");
   o.value = ""; s.appendChild(o);
   if (!r.ok) { message($("e-retour"), "rouge", r.texte); return; }
   remplitParLieu(s, r.donnees.cartes.map(function (c) { return {nom: c.env, lieu: c.lieu}; }), r.donnees.lieux, avant, []);
+  if (!lieuVu) {                                        // ?lieu= : bandeau seul, la carte d'un envoi se choisit a la main
+    lieuVu = true;
+    var lieu = lieuDemande(r.donnees.lieux);
+    if (lieu) bandeauLieu(document.querySelector("main"), r.donnees.lieux.filter(function (l) { return l[0] === lieu; })[0][1], function () {});
+  }
   s.insertBefore(o, s.firstChild); s.value = avant;
   if (s.selectedIndex < 0) s.value = "";                // carte disparue : retour sur « (choisir une carte) »
 }

@@ -402,6 +402,27 @@ def sonde_modification(m):
     verifie(visible(cdp, "panneau-suppr"), False, "suppression : panneau referme")
 
 
+def sonde_lieu(m):
+    """A4 du plan lieu-partage-syslog-mqtt : ?lieu= pose le bandeau seul, #f-env et #a-env restent sur leur option de tete."""
+    cdp = m.cdp
+    def ouvre(q):
+        cdp.appel("Page.navigate", url=m.url + q)
+        attend(cdp, "document.getElementById('f-env') && document.getElementById('f-env').options.length > 1 && document.getElementById('a-env').options.length > 1", 15)
+    bandeaux = lambda: cdp.js("document.querySelectorAll('.bandeau-lieu').length")
+    ouvre("")
+    verifie(bandeaux(), 0, "sans ?lieu= : aucun bandeau")
+    ouvre("?lieu=garage")
+    verifie(cdp.js("document.querySelector('.bandeau-lieu')?.firstChild.textContent"), "Lieu : Garage (depuis l’annuaire) · ", "?lieu=garage : bandeau « Lieu : Garage »")
+    verifie(cdp.js("[document.getElementById('f-env').value, document.getElementById('a-env').value, document.getElementById('creer').textContent]"),
+            ["", "", "Créer l'env"], "?lieu=garage : #f-env et #a-env sur leur option de tete, mode creation")
+    cdp.js("document.querySelector('.bandeau-lieu button').click(); 1")
+    verifie((bandeaux(), cdp.js("location.search")), (0, ""), "croix : bandeau retire, adresse sans lieu")
+    ouvre("?lieu=%3Cb%3Ex%3C%2Fb%3E")
+    verifie(cdp.js("document.querySelectorAll('.bandeau-lieu').length + [].filter.call(document.querySelectorAll('main b'), function (b) { return b.textContent === 'x'; }).length"),
+            0, "?lieu=<b>x</b> : aucun bandeau, aucune balise creee")
+    verifie(cdp.erreurs(), [], "arrivee par lieu : aucune erreur JS")
+
+
 def sonde_temoin(m):
     m.cdp.appel("Page.navigate", url=m.url)
     time.sleep(3)
@@ -422,7 +443,7 @@ def principal():
         try:
             m = Montage()
             m.demarre(temoin)
-            sonde_temoin(m) if temoin else sonde_page(m)
+            sonde_temoin(m) if temoin else (sonde_lieu(m), sonde_page(m))
         except FileNotFoundError as erreur:
             print(f"BLOQUE : {erreur}")
             return 3

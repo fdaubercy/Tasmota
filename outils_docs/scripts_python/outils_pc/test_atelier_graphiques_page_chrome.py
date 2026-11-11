@@ -704,6 +704,34 @@ def sonde_televerse(m):
     verifie([e for e in cdp.erreurs() if e not in ERREURS_ATTENDUES], [], "Televerser : aucune erreur JS")
 
 
+def sonde_lieu(m):
+    """A4 du plan lieu-partage-syslog-mqtt : ?lieu= choisit la 1re carte S3/P4 du lieu, sauf si ?env= parle."""
+    cdp = m.cdp
+    avant = len(cdp.erreurs())                      # les 400/409 voulus des sondes precedentes restent dans le journal
+    bandeaux = lambda: cdp.js("document.querySelectorAll('.bandeau-lieu').length")
+    env = lambda: cdp.js("document.getElementById('env').value")
+    ouvre(cdp, m.url)
+    sans = env()
+    garage = cdp.js("document.querySelector('#env optgroup[label=Garage] option').value")
+    verifie(bandeaux(), 0, "sans ?lieu= : aucun bandeau")
+    ouvre(cdp, m.url + "?lieu=garage")
+    verifie((env(), bandeaux()), (garage, 1), "?lieu=garage : #env = 1re carte S3/P4 du garage, bandeau present")
+    autre = P4 if garage == CUVE else CUVE
+    ouvre(cdp, m.url + "?lieu=garage&env=" + autre)
+    verifie(env(), autre, "?env= + ?lieu=garage : ?env= gagne")
+    ouvre(cdp, m.url + "?lieu=rdc")
+    verifie((env(), bandeaux(), cdp.js("document.querySelector('.bandeau-lieu')?.textContent.indexOf('aucune carte de ce lieu ici') > 0")),
+            (sans, 1, True), "?lieu=rdc : liste comme sans parametre, bandeau « aucune carte de ce lieu ici »")
+    ouvre(cdp, m.url + "?lieu=%3Cb%3Ex%3C%2Fb%3E")
+    verifie((bandeaux(), env(), cdp.js("[].filter.call(document.querySelectorAll('main b'), function (b) { return b.textContent === 'x'; }).length")),
+            (0, sans, 0), "?lieu=<b>x</b> : aucun bandeau, aucune balise creee")
+    ouvre(cdp, m.url + "?lieu=garage")
+    cdp.js("document.querySelector('.bandeau-lieu button').click(); 1")
+    verifie((bandeaux(), env(), cdp.js("new URLSearchParams(location.search).has('lieu')")), (0, garage, False), "croix : bandeau retire, adresse sans lieu, carte inchangee")
+    # le 400 de /diff vient de la carte P4 du depot d'essai (sans page a ecrire), pas de ?lieu= : meme chose avec ?env=
+    verifie([e for e in cdp.erreurs()[avant:] if "/diff" not in e], [], "arrivee par lieu : aucune erreur JS")
+
+
 def sonde_temoin(m):
     m.cdp.appel("Page.navigate", url=m.url)
     fin = time.time() + 30           # 4 s fixes ne suffisaient pas sur une machine chargee (rouge du 2026-11-06)
@@ -728,7 +756,7 @@ def principal():
         try:
             m = Montage()
             m.demarre(temoin)
-            sonde_temoin(m) if temoin else (sonde_page(m, args.capture), sonde_destination(m, args.capture), sonde_compo(m), sonde_televerse(m))
+            sonde_temoin(m) if temoin else (sonde_page(m, args.capture), sonde_destination(m, args.capture), sonde_compo(m), sonde_televerse(m), sonde_lieu(m))
         except FileNotFoundError as erreur:
             print(f"BLOQUE : {erreur}")
             return 3
