@@ -203,7 +203,7 @@ Interfaces consommées : `pour_page_identites`, `lieuDeTopic` (avec `nu` pour le
 - [x] Agent `relecteur-pages-web` sur les commits de A1 à A6 ; corriger ce qu'il confirme. — preuve : relecture (opus) 0 critique,
   4 importants corrigés par 7c8a98eb7 et 4305d2bcb (croix du syslog et du MQTT -> « Tous », défilement vers le groupe, sondes
   isolées du dossier de présence, comptes de CLAUDE.md), spec et mode d'emploi alignés ae206af67 ; sondes syslog, MQTT, Build lieux 2 passages verts
-- [ ] Essai réel, sans rien envoyer : annuaire, syslog et sniffeur MQTT sur le vrai dépôt (ports libres), lignes et
+- [x] Essai réel, sans rien envoyer : annuaire, syslog et sniffeur MQTT sur le vrai dépôt (ports libres), lignes et
   messages réels s'il y en a ; un lien de l'annuaire en Garage ouvre la page Build en Lieu, groupe Garage ouvert. — preuve :
   annuaire 12 envs en 6 lieux, liens `?lieu=garage` ; Build : bandeau, seul Garage ouvert et visible ; syslog sur UDP 514 :
   11 lignes réelles (Cave 8, Bureau 2, Autres 1) ; MQTT : 74 messages réels, Garage 4 étiquetés, « Autres » = WLED,

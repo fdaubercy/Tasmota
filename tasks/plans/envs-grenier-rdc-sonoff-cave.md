@@ -1,10 +1,10 @@
 ---
 chantier: envs-grenier-rdc-sonoff-cave
 titre: Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3
-objectif: Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP32 de la porte de la cave, et préparer le retour en production de la cave S3
+objectif: Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff
 statut: actif
 cree: 2026-11-11
-maj: 2026-11-11
+maj: 2026-11-11 (2e demande : écran, range extender de la cave, porte de cave esclave)
 ---
 # Deux envs : serveur du grenier du RDC et Sonoff de la porte de la cave ; cave S3
 
@@ -49,6 +49,25 @@ volet est donc « carte + numéro » : `cmnd/rdc/grenier/ShutterPosition1 50`, `
 (`tasmota/discovery/<MAC>`) les publie comme deux volets de la même carte. Shutter1 = porte d'entrée, Shutter2 = cuisine,
 nommés dans le persist et par `FriendlyName`. Si un nom lisible est voulu dans le topic, une commande Berry d'alias
 (`cmnd/rdc/grenier/VoletPorte 50`) est possible en plus.
+
+Deuxième demande de l'utilisateur (2026-11-11) :
+- Ajouter le même écran que celui acheté pour les débits (Waveshare ESP32-S3-Touch-LCD-7B, 1024 × 600) au serveur relais
+  de la cave ; l'écran est côté serveur (maître range extender), PAS sur le module de la porte de la cave (A9).
+- Activer le range extender maître sur la cave S3 (A10).
+- Faire du module de la porte de la cave un esclave de ce range extender, pour le lien bidirectionnel sur les lampes que
+  chacun commande ; évaluer d'abord si ce petit module le permet (A11).
+- Décision après évaluation (2026-11-11) : le module de la porte (.45) RESTE sur le Wi-Fi de la maison (pas d'esclave
+  du range extender) ; lien en MQTT par Rules, avec un garde-fou contre la boucle d'écho (A11).
+
+Relevé du module de la porte de la cave (2026-11-11, lecture seule HTTP de 192.168.0.45) : ce n'est PAS un ESP32 mais un
+**ESP8285**, flash 1 Mo (programme 620 Ko, 380 Ko libres), tas libre 21 Ko, **Tasmota 12.0.2** (2022), `CfgHolder` 4617.
+Hôte `PORTE-CAVE`, topic `cave/lumiere`, client MQTT `PORTE-CAVE`, broker 192.168.0.5, syslog vers 192.168.0.3, Wi-Fi
+`SSId1` MAISON (`SSId2` vide). Template « Contacteur Cave » (BASE 2) : bouton GPIO0, Switch2 GPIO3 (contact de porte),
+relais 1 GPIO12 (« Lumière de Cave »), relais 2 GPIO4 (« Porte de Cave »), LED GPIO13. `UfsSize` inconnue : pas de système
+de fichiers, donc ni Berry, ni `autoexec.bat`. Rule1 (576 car., 242 libres) : bouton -> `POWER1 TOGGLE` ; `Power1` ->
+`Publish cmnd/cave/serveur-rly-cave/POWER3 ON|OFF` et `stat/cave/lumiere/RESULT` ; porte ouverte (`Switch2#state=1`) ->
+`POWER1 ON`, `POWER2 ON`, minuterie de 900 s qui éteint `POWER1` ; porte fermée -> les deux éteints. Le lien vers le
+serveur passe donc aujourd'hui par MQTT, dans le sens porte -> serveur ; le sens retour reste à relever côté serveur (A11).
 
 ## A0 — Retour au plan d'origine
 
@@ -101,7 +120,8 @@ Plan d'origine : [tasks/plans/lieu-partage-syslog-mqtt.md](lieu-partage-syslog-m
 - [ ] Vérifier que l'env `tasmota32s3-cave-serveur-rly` porte bien .243 et `cave/serveur-rly-cave-v2` (section commune
   `FIRMWARE_ESP32_CAVE_SERVEUR_RLY || FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY` du `.h` et `_persist.json` du dossier S3).
 - [ ] Reprendre les améliorations restantes du plan `cave-s3-waveshare` (compilation, port COM, câblage DI3/DI4,
-  essai Ethernet, en-tête 21/48) à la réception de la carte.
+  essai Ethernet, en-tête 21/48) à la réception de la carte. Attention : en maître range extender (A10), la cave a besoin
+  de son Wi-Fi pour le point d'accès ; l'essai Ethernet ne doit pas le couper (même remarque que pour le grenier du RDC).
 
 ## A7 — Retour en production de la cave S3
 - [ ] Le jour du remplacement, sur ordre de l'utilisateur : passer l'identité de la cave S3 à 192.168.0.48 et
@@ -111,25 +131,117 @@ Plan d'origine : [tasks/plans/lieu-partage-syslog-mqtt.md](lieu-partage-syslog-m
 - [ ] Contrôle : Node-RED, Telegram et le Sonoff .45 (A8) voient la cave comme avant ; `lieux.py` range ses messages
   en Cave sans passer par le dossier `-sauvegarde`.
 
-## A8 — Sonoff ESP32 de la porte de la cave, lumières de la cave (192.168.0.45)
-- [ ] Analyse en lecture seule : `Status 0`, `Module`, `Template`, `Rules`, `SetOption` utiles, place du système de
-  fichiers (`UfsSize`, `UfsFree`), version ; modèle exact du Sonoff. Rien n'est écrit sur la carte.
-- [ ] Créer son env (proposition : `tasmota32-cave-sonoff-porte`, lieu Cave), SANS Berry : section du cenv (taille de
-  flash et partitions du Sonoff, aucun module Berry ni `custom_berry_solidify`), section `#elif` du `.h` avec l'identité
-  relevée sur la carte (IP .45, hôte, topic, client, template), dossier `data/cave/tasmota32-sonoff-porte` réduit à
-  l'`autoexec.bat` (pas de `_persist.json` : la carte ne lit pas le persist) ; nom et contenu validés par
-  l'utilisateur. `lieux.py` le range en Cave par son IP (syslog), comme les cartes sans persist.
-- [ ] Compilation par la page Build ; taille du FS de l'image comparée à la place libre relevée sur la carte.
-- [ ] Recenser comment il échange avec le serveur relais de la cave par MQTT pour allumer et éteindre les 2 lumières
-  (topics, règles des deux côtés).
-- [ ] Proposer un `autoexec.bat` (pas de Berry : place trop faible) : réglages seulement, sans aucune commande qui
-  redémarre la carte (`Module`, `Template`, `Gpio`, `Hostname`, `Topic`, `SetOption` à redémarrage, `Restart`…), pour
-  éviter une boucle de redémarrage ; décision de l'utilisateur avant tout envoi.
-- [ ] Prévoir la bascule de ce lien au retour en production de la cave (A7) si le topic change entre-temps.
+## A8 — Sonoff ESP8285 de la porte de la cave, lumières de la cave (192.168.0.45)
+- [x] Analyse en lecture seule (Status 0, Template, Rules, UfsSize) — preuve : relevé HTTP du 2026-11-11 recopié au Contexte
+  (ESP8285, 1 Mo, Tasmota 12.0.2, `UfsSize` inconnue, Rule1). Rien n'a été écrit sur la carte. Le modèle commercial
+  exact reste à lire sur le boîtier (BASE 2 = famille Sonoff Dual).
+- [ ] Créer un env de BASE `tasmota-base-esp8285` (demande de l'utilisateur du 2026-11-11 : d'autres Sonoff du parc ont
+  la même puce et seront paramétrés plus tard), sur le modèle de nom de `tasmota32-base` / `tasmota32s3-base-N16R8` :
+  `extends = env:tasmota`, carte PlatformIO `esp8285` (1 Mo, flash en DOUT), réglages communs aux Sonoff ESP8285 seulement ;
+  bloc de commentaire en tête comme les autres bases. La pompe de piscine (`tasmota-pompe-piscine`, Sonoff S2X, `extends =
+  env:tasmota`) n'est PAS rebasculée sans vérifier sa puce (`Status 2` / `Status 4`).
+- [ ] Créer son env (proposition : `tasmota-cave-sonoff-porte`, lieu Cave), SANS Berry : `extends =
+  env:tasmota-base-esp8285` (et non `tasmota32`), sans système de fichiers ni `custom_files_upload` ; section `#elif` du `.h` avec l'identité relevée sur la
+  carte (IP .45, hôte, topic, client, template) ; nom et contenu validés par l'utilisateur. Pas de dossier `data/` (ni
+  persist, ni `autoexec.bat` : pas de FS sur 1 Mo). Classement par `lieux.py` : par l'IP .45 tant qu'il est sur le Wi-Fi
+  maison (il y reste, décision du 2026-11-11).
+- [ ] Compilation par la page Build : taille de l'image comparée aux 1 Mo (une mise à jour depuis 12.0.2 sur 1 Mo passe
+  par `tasmota-minimal`, en deux temps : à ne faire qu'avec l'accord de l'utilisateur, la carte en service n'en a pas besoin).
+- [ ] Relever le sens retour côté serveur : ce que la cave S3 (et l'ancienne carte en service) fait de
+  `cmnd/cave/serveur-rly-cave/POWER3`, et ce qu'elle envoie au Sonoff (`cave/lumiere`).
+- [ ] Réglages du Sonoff par `Backlog` et `Rule` en console seulement (pas d'`autoexec.bat` possible), proposés puis
+  validés par l'utilisateur ; garder de la place dans Rule1 (242 car. libres) ou passer à Rule2.
+
+## A9 — Écran Waveshare 7B pour le serveur relais de la cave
+Contrainte matérielle : le 7B (ESP32-S3-Touch-LCD-7B) est une carte complète, avec son propre S3 et une dalle RGB
+parallèle (une vingtaine de broches). La 8DI-8RO de la cave n'a que GPIO21 et GPIO48 de libres : elle ne peut pas piloter
+cette dalle. « L'écran sur le serveur de la cave » veut donc dire un 7B posé à côté du serveur, avec son propre env,
+qui affiche et commande ce que porte le serveur (relais, lumières, température, pompe).
+- [ ] Faire trancher par l'utilisateur le lien entre le 7B et le serveur de la cave. Proposition de Claude : esclave du
+  range extender de la cave (A10, Wi-Fi sur son point d'accès) avec la pile Berry d'esclave (ModBus UDP, push, `ImAlive`),
+  comme les débits mais dans l'autre sens (là-bas, l'écran est le maître). Autres voies : ModBus série sur le RS485 17/18
+  de la cave (le 7B a un RS485 sur 16/15), ou MQTT seul.
+- [ ] Env du 7B (proposition : `tasmota32s3-cave-ecran`, dossier `data/cave/tasmota32s3-ecran`) créé à partir de
+  `tasmota32s3-bureau-ecran-debits-pac` (même carte : expandeur I2C 0x24, `preinit.be`, `custom_interface_ecran`) ;
+  identité validée par l'utilisateur, IP du range extender (0.0.0.0, adresse `<ipMaitre>:<8080 + id - 1>`).
+- [ ] Dépend du plan `debits-deux-cartes` A8 : le code d'écran générique (`ecranFonctions`, veille, luminosité, polices)
+  n'y est pas encore validé sur carte ni solidifié. Reprendre ce module tel quel ; ne pas le recopier dans ce plan.
+- [ ] Maquette des vues de la cave (lumières, relais, température et humidité, pompe) proposée puis validée par
+  l'utilisateur (skill `lvgl-haspmota`), interface HASPmota ou LVGL selon le choix fait pour les débits.
+- [ ] Boutons physiques du serveur de la cave remplacés par ceux de l'écran ? (idée de l'utilisateur, 2026-11-11). À
+  trancher avec lui, entrée DI par entrée DI. Réserve de Claude : l'écran est une autre carte, reliée par le réseau ;
+  s'il tombe, on ne commande plus rien sur place. Garder au moins un bouton physique pour la pompe de la cave et pour
+  la lumière ; les entrées DI libérées restent câblables plus tard. Si des boutons sont retirés : persist et brochage
+  de la cave mis à jour, `banc_demarrage.py`.
+- [ ] `banc_demarrage.py`, `verifie_berry.py`, agent `relecteur-berry`, compilation par la page Build ; essai sur carte.
+
+## A10 — Range extender maître sur la cave S3
+Déjà en place dans le dépôt (relevé du 2026-11-11) : `USE_WIFI_RANGE_EXTENDER` et `WIFI_RGX_SSID
+"SERVEUR-RLY-CAVE-GATEWAY"` dans la section cave du `.h` ; bloc `rangeExtender` du persist S3 (`activation: ON`, `id: 0`,
+AP 192.168.4.1/24). Mais `routeNAPT: OFF` : sans NAPT, un esclave n'atteint ni le broker (192.168.0.5) ni le syslog.
+- [ ] Passer `rangeExtender.AP.routeNAPT` à `ON` dans le `_persist.json` du dossier S3 (accord de l'utilisateur, diff
+  montré), en reprenant les réglages du P4 du garage ; vérifier que la section du `.h` active aussi le NAPT
+  (`USE_WIFI_RANGE_EXTENDER_NAPT` ou équivalent du P4).
+- [ ] Ports d'accès aux esclaves : `<ip cave>:<8080 + id - 1>` par `RoutageRangeExtender` ; id réservé pour l'écran 7B
+  si A9 retient le range extender, noté dans le persist et dans `discovery`. Le Sonoff de la porte n'en fait plus partie
+  (décision du 2026-11-11) : sans l'écran, A10 n'a plus d'objet.
+- [ ] Le point d'accès exige le Wi-Fi : la voie Ethernet (A6, améliorations) ne doit pas le couper.
+- [ ] `banc_demarrage.py` ; compilation par la page Build ; essai sur carte (AP visible, NAPT : un client du point
+  d'accès joint le broker), d'abord avec l'identité d'essai .243, avant le retour en production (A7).
+
+## A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho
+Évaluation (2026-11-11) : la pile d'esclave de ce dépôt (ModBus UDP, push, `ImAlive`, discovery) est du Berry, ~400 Ko de
+sources : IMPOSSIBLE sur l'ESP8285 (pas de Berry, 1 Mo, 21 Ko de tas). Voies natives : (1) MQTT + Rules, retenue ;
+(2) `WebSend`, bloquant si l'autre carte ne répond pas ; (3) Device Groups, multicast. Décision de l'utilisateur : le .45
+reste sur le Wi-Fi MAISON (92 %, -54 dBm), lien en MQTT par Rules.
+
+Aujourd'hui, les deux sens existent déjà, sans garde : la Rule1 du Sonoff publie `cmnd/cave/serveur-rly-cave/POWER3` à
+chaque `Power1#State`, et le serveur S3 publie `cmnd/cave/lumiere/POWER1` à chaque changement de son relais id 3
+(`publishMQTT` de `relais.relai1` « LED Machines » dans le persist, appliqué par `controleGeneral.be`, bloc « emission
+d'un message MQTT »). Dans l'amont, `Power<n>#State` ne part que sur un VRAI changement
+(`xdrv_10_system_events.ino::SystemEventsEvery50msPowerDimmerEvent` compare l'ancien et le nouvel état bit à bit) : un
+aller-retour s'arrête donc de lui-même. La boucle reste possible quand les deux côtés changent en même temps dans des
+sens opposés (oscillation ON/OFF entretenue par la latence du broker), ou si un côté republie sans changement.
+
+Garde-fou retenu, identique des deux côtés, en Rules seulement (`USE_RULES` existe sur l'ESP8285 et sur la cave :
+section cave du `.h`, avec `USE_EXPRESSION`) :
+- les ordres de l'autre carte arrivent par un `Event`, jamais par un `POWER` direct ;
+- `Var1` garde le dernier état reçu de l'autre carte ;
+- un changement n'est renvoyé que s'il diffère de `Var1`. Un état appliqué sur ordre de l'autre carte est donc égal à
+  `Var1` et ne repart pas.
+
+```
+Sonoff (Rule2) :
+ON Event#lumSrv DO Backlog Var1 %value%; Power1 %value% ENDON
+ON Power1#State!=%var1% DO Backlog Var1 %value%; Publish cmnd/<topic cave>/Event lumPorte=%value% ENDON
+Serveur de la cave (Rule1) :
+ON Event#lumPorte DO Backlog Var1 %value%; Power3 %value% ENDON
+ON Power3#State!=%var1% DO Backlog Var1 %value%; Publish cmnd/cave/lumiere/Event lumSrv=%value% ENDON
+```
+Croisement (les deux changent en même temps) : chacun applique l'ordre de l'autre sans le renvoyer, donc pas
+d'oscillation. Au pire, les deux lampes restent un temps dans des états différents, jusqu'à l'action suivante.
+
+- [ ] Faire valider le garde-fou et la table des relais (Sonoff : `POWER1` lumière, `POWER2` porte ; serveur : `POWER3`
+  lumière de la cave), et dire si `POWER2` doit aussi être relayé.
+- [ ] Vérifier sur le Tasmota 12.0.2 du Sonoff qu'un déclencheur compare bien à `%var1%` (`Power1#State!=%var1%`) :
+  essai en console, sans brancher l'autre côté (`Var1 1`, `Power1 1` -> aucune publication ; `Power1 0` -> une).
+- [ ] Sonoff : retirer de la Rule1 les deux règles `Power1#State` qui publient `POWER3` (la Rule1 garde le bouton, la
+  porte et la minuterie) et poser la Rule2 ci-dessus. Commandes proposées puis lancées en console avec l'accord de
+  l'utilisateur, sans `Restart`.
+- [ ] Serveur de la cave : retirer le `publishMQTT` de `relais.relai1` du `_persist.json` du dossier S3 (sinon le Berry
+  publie en double, hors garde-fou ; accord de l'utilisateur, diff montré) et poser la Rule1 ci-dessus par l'`autoexec.bat`
+  de la carte (fichier du dossier S3, sans commande qui redémarre). Topic en vigueur : `cave/serveur-rly-cave-v2`
+  pendant les essais en .243, `cave/serveur-rly-cave` après A7 (cette bascule remplace l'ancienne étape « prévoir la
+  bascule au retour en production »).
+- [ ] Essai, avec preuve dans le sniffeur MQTT (:7100) : allumage depuis la porte, depuis la cave (bouton, puis écran si
+  A9) et depuis la porte qui s'ouvre ; une seule publication par action, aucune en retour ; double appui rapide des deux
+  côtés à la fois : pas d'oscillation.
 
 ## Améliorations restantes
 - [ ] [projet] Ethernet W5500 de la carte du grenier du RDC (`ReglageGlobal VoieReseau ethernet`) si un câble arrive au grenier.
 - [ ] [projet] Alias Berry lisible par volet (`VoletPorte`, `VoletCuisine`) si l'utilisateur le veut (A4).
+- [ ] [projet] Resynchroniser les deux lampes de la cave à la reconnexion MQTT d'une des cartes (`Mqtt#Connected`).
+  Aujourd'hui, un ordre perdu pendant une coupure du broker n'est jamais rattrapé.
 
 ## Vérification
 `test_lieux.py`, `banc_demarrage.py`, `verifie_berry.py`, compilation par la page Build ; essais sur carte à la réception.

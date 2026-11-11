@@ -13,13 +13,14 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-41 plans : 16 actif, 1 en-pause, 24 clos.
+42 plans : 17 actif, 1 en-pause, 24 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
+| [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff | actif | ░░░░░░░░░░ 1 % (1/42) | 41 étapes, 3 améliorations | 2026-11-11 | 2026-11-11 (2e demande : écran, range extender de la cave, porte de cave esclave) |
 | [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ░░░░░░░░░░ 0 % (0/20) | 20 étapes, 2 améliorations | 2026-11-11 | 2026-11-11 |
 | [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) | Faire passer les 6 débits de la carte d'acquisition (esclave ModBus id 1) à une carte d'affichage (maître id 0) par une lecture groupée RS485 et un push UDP, sans rien changer au garage | actif | ██████░░░░ 62 % (33/49) | 16 étapes, 3 améliorations | 2026-11-09 | 2026-11-11 |
-| [Lieu partagé depuis l'annuaire, lieu dans le syslog et le sniffeur MQTT](plans/lieu-partage-syslog-mqtt.md) | Choisir un lieu une fois dans l'annuaire et le retrouver dans les pages ouvertes, et ranger par lieu les lignes du syslog et les messages du sniffeur MQTT | actif | ████████░░ 78 % (22/26) | 4 étapes | 2026-11-11 | 2026-11-11 |
+| [Lieu partagé depuis l'annuaire, lieu dans le syslog et le sniffeur MQTT](plans/lieu-partage-syslog-mqtt.md) | Choisir un lieu une fois dans l'annuaire et le retrouver dans les pages ouvertes, et ranger par lieu les lignes du syslog et les messages du sniffeur MQTT | actif | █████████░ 88 % (25/26) | 1 étape, 1 amélioration | 2026-11-11 | 2026-11-11 |
 | [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ███████░░░ 68 % (35/50) | 15 étapes, 4 améliorations | 2026-11-08 | 2026-11-09 |
 | [Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)](plans/energie-differentiel.md) | Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h) | actif | ██████████ 100 % (69/70) | 1 étape | 2026-10-31 | 2026-11-09 |
 | [Page d'équilibrage de la nourrice servie par la carte des débits, débits lus en direct](plans/equilibrage-par-la-carte.md) | Ouvrir le guide d'équilibrage depuis la carte des débits et y lire les 6 débits mesurés, sans les taper à la main | actif | ████████░░ 83 % (20/22) | 2 étapes | 2026-11-09 | 2026-11-09 |
@@ -60,6 +61,53 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 | [Suivi des plans de travail (extension VS Code + mod)](plans/suivi-plan.md) | Suivre l'avancement des plans en % dans une vue VS Code à droite, partagée entre conversations et postes | clos | ██████████ 100 % (23/23) | 5 améliorations | 2026-10-18 | 2026-10-18 |
 
 ### Points restants des plans non terminés
+
+#### [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — 1 %
+
+- A0 — Retour au plan d'origine : Ouvrir une nouvelle conversation et y taper `/suivi suivre envs-grenier-rdc-sonoff-cave` ; pour revoir le plan d'origine :
+- A1 — Identité et création de l'env du grenier du RDC : Valider avec l'utilisateur le nom d'env, le dossier, l'IP (vérifier qu'aucun appareil ne répond sur 192.168.0.44)
+- A1 — Identité et création de l'env du grenier du RDC : Créer l'env à partir de la carte modèle `tasmota32s3-cave-serveur-rly` (même carte) par la page « Fichiers Berry
+- A1 — Identité et création de l'env du grenier du RDC : `lieux.py` range la carte en « Rez-de-chaussée » (`test_lieux.py`).
+- A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22 : Persist : MQTT actif ; ModBus maître (`drivers.ModBus`) ; range extender maître ; ModBus UDP ; bloc des volets
+- A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22 : Cenv : `custom_berry_solidify` (socle + modules ModBus, UDP, range extender, volets), `custom_files_exclude`
+- A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22 : Autoexec : ordre de chargement (un module importé par un `controleXxx` compilé avant lui) ; chaque import existe
+- A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22 : `banc_demarrage.py` : instantané du nouvel env enregistré ; `verifie_berry.py` vert ; agent `relecteur-berry`.
+- A3 — Brochage et volets : Relais CH1-CH4 par le TCA9554 (`tca9554.dat` du dossier de la carte), interverrouillage montée/descente par volet.
+- A3 — Brochage et volets : Boutons DI1-DI4, DHT22 sur GPIO21 ; classeur `Brochage GPIO - tasmota32s3-rdc-grenier.xlsx` par
+- A3 — Brochage et volets : Durées d'ouverture et de fermeture du volet de la porte reprises du Sonoff Dual R3 (lecture seule de .46 :
+- A4 — Identification des volets sur MQTT : Faire valider par l'utilisateur la réponse du Contexte (volets natifs Shutter1/Shutter2 sous `rdc/grenier`, noms,
+- A4 — Identification des volets sur MQTT : Recenser ce qui vise `volet/entree` aujourd'hui (Node-RED du Pi, Alexa, Home Assistant) et la liste des
+- A5 — Compilation et mise en service : Compilation par la page Build (:7700), SUCCESS lu en fin de journal, taille de l'image et du FS.
+- A5 — Compilation et mise en service : À la réception de la carte : flash série, `Status 5`, volets en marche à vide (relais seuls), puis moteur recâblé.
+- A5 — Compilation et mise en service : Sonoff Dual R3 (.46) éteint et retiré ; automatisations basculées ; env `tasmota32-rdc-vr-porte` gardé ou
+- A6 — Cave S3 : identité d'essai : Vérifier que l'env `tasmota32s3-cave-serveur-rly` porte bien .243 et `cave/serveur-rly-cave-v2` (section commune
+- A6 — Cave S3 : identité d'essai : Reprendre les améliorations restantes du plan `cave-s3-waveshare` (compilation, port COM, câblage DI3/DI4,
+- A7 — Retour en production de la cave S3 : Le jour du remplacement, sur ordre de l'utilisateur : passer l'identité de la cave S3 à 192.168.0.48 et
+- A7 — Retour en production de la cave S3 : Ancienne carte ESP32 éteinte AVANT la mise sous tension de la S3 (même IP, même client MQTT).
+- A7 — Retour en production de la cave S3 : Contrôle : Node-RED, Telegram et le Sonoff .45 (A8) voient la cave comme avant ; `lieux.py` range ses messages
+- A8 — Sonoff ESP8285 de la porte de la cave, lumières de la cave (192.168.0.45) : Créer un env de BASE `tasmota-base-esp8285` (demande de l'utilisateur du 2026-11-11 : d'autres Sonoff du parc ont
+- A8 — Sonoff ESP8285 de la porte de la cave, lumières de la cave (192.168.0.45) : Créer son env (proposition : `tasmota-cave-sonoff-porte`, lieu Cave), SANS Berry : `extends =
+- A8 — Sonoff ESP8285 de la porte de la cave, lumières de la cave (192.168.0.45) : Compilation par la page Build : taille de l'image comparée aux 1 Mo (une mise à jour depuis 12.0.2 sur 1 Mo passe
+- A8 — Sonoff ESP8285 de la porte de la cave, lumières de la cave (192.168.0.45) : Relever le sens retour côté serveur : ce que la cave S3 (et l'ancienne carte en service) fait de
+- A8 — Sonoff ESP8285 de la porte de la cave, lumières de la cave (192.168.0.45) : Réglages du Sonoff par `Backlog` et `Rule` en console seulement (pas d'`autoexec.bat` possible), proposés puis
+- A9 — Écran Waveshare 7B pour le serveur relais de la cave : Faire trancher par l'utilisateur le lien entre le 7B et le serveur de la cave. Proposition de Claude : esclave du
+- A9 — Écran Waveshare 7B pour le serveur relais de la cave : Env du 7B (proposition : `tasmota32s3-cave-ecran`, dossier `data/cave/tasmota32s3-ecran`) créé à partir de
+- A9 — Écran Waveshare 7B pour le serveur relais de la cave : Dépend du plan `debits-deux-cartes` A8 : le code d'écran générique (`ecranFonctions`, veille, luminosité, polices)
+- A9 — Écran Waveshare 7B pour le serveur relais de la cave : Maquette des vues de la cave (lumières, relais, température et humidité, pompe) proposée puis validée par
+- A9 — Écran Waveshare 7B pour le serveur relais de la cave : Boutons physiques du serveur de la cave remplacés par ceux de l'écran ? (idée de l'utilisateur, 2026-11-11). À
+- A9 — Écran Waveshare 7B pour le serveur relais de la cave : `banc_demarrage.py`, `verifie_berry.py`, agent `relecteur-berry`, compilation par la page Build ; essai sur carte.
+- A10 — Range extender maître sur la cave S3 : Passer `rangeExtender.AP.routeNAPT` à `ON` dans le `_persist.json` du dossier S3 (accord de l'utilisateur, diff
+- A10 — Range extender maître sur la cave S3 : Ports d'accès aux esclaves : `<ip cave>:<8080 + id - 1>` par `RoutageRangeExtender` ; id réservé pour l'écran 7B
+- A10 — Range extender maître sur la cave S3 : Le point d'accès exige le Wi-Fi : la voie Ethernet (A6, améliorations) ne doit pas le couper.
+- A10 — Range extender maître sur la cave S3 : `banc_demarrage.py` ; compilation par la page Build ; essai sur carte (AP visible, NAPT : un client du point
+- A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho : Faire valider le garde-fou et la table des relais (Sonoff : `POWER1` lumière, `POWER2` porte ; serveur : `POWER3`
+- A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho : Vérifier sur le Tasmota 12.0.2 du Sonoff qu'un déclencheur compare bien à `%var1%` (`Power1#State!=%var1%`) :
+- A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho : Sonoff : retirer de la Rule1 les deux règles `Power1#State` qui publient `POWER3` (la Rule1 garde le bouton, la
+- A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho : Serveur de la cave : retirer le `publishMQTT` de `relais.relai1` du `_persist.json` du dossier S3 (sinon le Berry
+- A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho : Essai, avec preuve dans le sniffeur MQTT (:7100) : allumage depuis la porte, depuis la cave (bouton, puis écran si
+- Amélioration [projet] : Ethernet W5500 de la carte du grenier du RDC (`ReglageGlobal VoieReseau ethernet`) si un câble arrive au grenier.
+- Amélioration [projet] : Alias Berry lisible par volet (`VoletPorte`, `VoletCuisine`) si l'utilisateur le veut (A4).
+- Amélioration [projet] : Resynchroniser les deux lampes de la cave à la reconnexion MQTT d'une des cartes (`Mqtt#Connected`).
 
 #### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 0 %
 
@@ -108,12 +156,10 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - Amélioration [projet] : Fenêtre de mesure transmise par l'acquisition (évite la recopie à la main sur l'affichage)
 - Amélioration [projet] : Défaut de l'ancien chemin `Count` > 1 (`[v, 0, …]`) corrigé pour toutes les cartes, avec la grille du garage
 
-#### [Lieu partagé depuis l'annuaire, lieu dans le syslog et le sniffeur MQTT](plans/lieu-partage-syslog-mqtt.md) — 78 %
+#### [Lieu partagé depuis l'annuaire, lieu dans le syslog et le sniffeur MQTT](plans/lieu-partage-syslog-mqtt.md) — 88 %
 
 - A0 — Plan précédent : classement par lieu : Rouvrir le plan précédent dans la vue de droite : taper `/suivi suivre classement-par-lieu` (la conversation suit
-- A7 — Documentation, relecture, essai réel : Agent `relecteur-pages-web` sur les commits de A1 à A6 ; corriger ce qu'il confirme.
-- A7 — Documentation, relecture, essai réel : Essai réel, sans rien envoyer : annuaire, syslog et sniffeur MQTT sur le vrai dépôt (ports libres), lignes et
-- A7 — Documentation, relecture, essai réel : Commit `docs(lieux): mode d'emploi du lieu partage, du syslog et du sniffeur MQTT`.
+- Amélioration [projet] : Marque d'ancien document (`window.__ancien`) dans les sondes 7700, 7800, 7900, 7980 après navigation.
 
 #### [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) — 68 %
 
