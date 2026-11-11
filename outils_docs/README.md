@@ -589,6 +589,65 @@ une trappe bougée à la main n'y apparaît qu'à la prochaine manœuvre. « cap
 faux bus I2C et une horloge simulée (garde d'activation, angles, hystérésis, recalage, suivi pendant la course, pannes,
 apprentissage, blocage, ligne web). Code de sortie 0 = vert. Ne teste ni le vrai bus, ni le vrai Shutter, ni le capteur physique.
 
+## Visuel des volets et réglage de leurs durées (cartes à volets)
+
+Deux ajouts au driver des volets (`data/fs/controleVoletRoulants.be`), sur les cartes dont le persist décrit une façade : le grenier du RDC, le P4 du garage et le grenier du 2e étage. Le rideau du garage n'en a pas (c'est le P4 qui pilote la porte). Spec : `docs/superpowers/specs/2026-11-11-visuel-volets-reglage-durees-design.md` ; plan : `tasks/plans/visuel-reglage-volets.md`. Maquettes : `outils_docs/volets_visuels/`.
+
+### La façade sous les curseurs
+
+Sur la page d'accueil, sous les curseurs des volets, un dessin de la façade (`data/sd/js/volets.js`, inséré par `data/fs/vrPages.be::accueil`). Chaque ouverture porte son pourcentage d'ouverture (100 % = ouvert). Le dessin ne commande rien : les curseurs et boutons natifs restent les seules commandes.
+
+- Il lit la valeur du curseur `s27<n>` que Tasmota met déjà à jour à chaque rafraîchissement : aucune requête de plus. Sur un volet `inverse 1`, le curseur affiche l'inverse du dessin (porte ouverte : curseur à 0, dessin à 100 %). C'est voulu, le dessin montre la position physique.
+- Il rejoint la dernière valeur lue à la vitesse du volet (`100 / tempsMontee` %/s en montée, `100 / tempsDescente` en descente), sans la dépasser. Il a donc au plus un rafraîchissement de retard et ne montre jamais une position non atteinte.
+- Trappe avec MPU6050 actif : le dessin suit l'angle mesuré (balise `data-vi` de la ligne d'inclinaison, `vrFonctions.be::ligneWebInclinaison`), converti comme `positionReelle`. Capteur muet : retour au curseur. Un blocage ou un sens inverse détecté passe l'ouverture en rouge avec « bloqué » ou « sens inverse ».
+- Types d'ouverture : `fenetre`, `porte`, `garage` (tablier à lames), `trappe` (panneau qui se baisse), `trappeEchelle` (panneau, puis échelle posée sur un escalier fixe).
+
+### Décrire la façade dans le persist
+
+Dans le bloc `drivers.voletRoulants` :
+
+```json
+"facade": { "activation": "ON", "toit": "deuxPans" },
+...
+"VR1": { "activation": "ON", "inverse": 0, "facade": { "type": "fenetre", "place": 1 }, ... }
+```
+
+- `facade.activation` : `"ON"` pour dessiner. `"OFF"` ou bloc absent : rien n'est dessiné, rien n'est envoyé à la page, et le module `vrPages` n'est pas chargé.
+- `facade.toit` : `deuxPans`, `unPan` ou `aucun` (plafond vu de face, sans maison).
+- `facade` de chaque VR : `type` (`fenetre`, `porte`, `garage`, `trappe`, `trappeEchelle`) et `place`, rang de gauche à droite. Un VR actif sans cette clé n'est pas dessiné.
+- Modèle : `outils_docs/schemas/modele_persist.json`. Exemples : `data/rdc/tasmota32s3-grenier/_persist.json`, `data/garage/tasmota32p4-serveur-modbus/_persist.json`, `data/etage2/tasmota32s3-grenier/_persist.json`.
+
+Les fichiers de la page ne partent que sur les cartes à volets : liste `volets_pages` de `[berry_commun]` dans `platformio_tasmota_cenv.ini` (`vrReglage.be`, `vrPages.be`, `volets.js`, `reglageVolets.html`, `.js`, `.css`), exclue des autres envs. `vrFonctions`, `vrReglage` et `vrPages` sont solidifiés sur les envs à façade : firmware à recompiler par la page Build.
+
+### Régler les durées pas à pas
+
+Page « Configuration » -> bouton **Réglage des volets** (`/volets`, `data/fs/vrReglage.be` et `vrPages.be::route`). Les explications sont aussi sur la page.
+
+1. Préparation : amener le volet en butée basse (fermé) par une commande habituelle. Un seul volet à la fois ; refus si un réglage est déjà en cours, si le volet roule, ou s'il vient de s'arrêter (moins de `ShutterMotorStop` + 100 ms).
+2. Choisir le volet, cliquer « Régler les durées ». La carte suspend les boutons natifs de ce volet (les autres gardent les leurs) et autorise une course de 130 s.
+3. Un appui : le volet monte, le chronomètre part. Un appui à l'arrivée en haut : arrêt, `tempsMontee` retenu. Un appui : il descend. Un appui à l'arrivée en bas : arrêt, `tempsDescente` retenu.
+4. La carte écrit les deux durées (secondes entières) dans son persist, remet les durées et boutons normaux, recale la position (ouvert après la montée, fermé après la descente) et affiche le résultat.
+
+Un appui peut venir du bouton unique, de l'un ou l'autre des deux boutons du volet, ou du bouton « Étape suivante » de la page. Le sens est imposé par l'étape, jamais par la fonction du bouton. Un second appui moins de 1 s après le premier est ignoré. La page demande à chaque départ si le volet va dans le bon sens ; sinon, « Annuler ». Le bouton envoie l'étape qu'il affiche : si l'étape a changé entre-temps (appui physique), la carte répond 409 et la page se resynchronise.
+
+- Annuler : le moteur est arrêté s'il tourne, rien n'est écrit, durées et boutons d'avant remis.
+- Délai : 120 s sans appui, même sortie sans rien écrire. Une mesure de moins de 2 s est refusée.
+- Fins de course et MPU6050 : leur recalage et l'arrêt en butée sont coupés pendant la mesure. Le MPU6050 reste garde-fou : un blocage ou un sens inverse coupe le moteur, le réglage s'arrête sans rien écrire et la page donne la cause. S'il a mesuré la course, sa durée s'affiche à côté de la vôtre ; la vôtre est écrite.
+- Porte du garage (`mode` 3) : chronomètre seul. La carte ne commande rien. Porte fermée, lancer la porte comme d'habitude (télécommande, curseur) et cliquer « Départ », puis « Arrivée » quand elle est en haut ; même chose pour la descente.
+- Un redémarrage pendant le mode le perd sans rien écrire.
+
+### Recopier les durées dans le dépôt
+
+Les durées sont écrites dans le persist **de la carte**. Un flash série ou un envoi du FS remet celles du dépôt. La page affiche, en fin de réglage, les deux lignes à recopier dans `data/<lieu>/<carte>/_persist.json` (`drivers.voletRoulants.environnement.VRs.<VR>.tempsMontee` et `tempsDescente`).
+
+### Bancs
+
+- Berry : `python outils_docs/scripts_python/berry/banc_reglage_volets.py` (déroulé complet, annulation, délai, bouton unique en `toggle`, porte en chronomètre ; code 0 = vert) et `python outils_docs/scripts_python/berry/banc_inclinaison.py`.
+- Dessin : `node outils_docs/scripts_python/outils_pc/test_volets.mjs` (fonctions pures), puis les sondes Chrome avec le Python de PlatformIO :
+  `%USERPROFILE%\.platformio\penv\Scripts\python.exe outils_docs/scripts_python/outils_pc/test_volets_chrome.py` et `.../test_reglage_volets_chrome.py`. Elles arrêtent leur Chrome en fin d'usage ; jamais pendant un build.
+- Démarrage des cartes à façade : `python outils_docs/scripts_python/berry/banc_demarrage.py`.
+- Ces bancs ne remplacent pas l'essai sur carte (vrai Shutter, vrais boutons, moteur).
+
 <hr></hr>
 
 ## Firmware du coprocesseur Wi-Fi des P4 (ESP32-C6)
