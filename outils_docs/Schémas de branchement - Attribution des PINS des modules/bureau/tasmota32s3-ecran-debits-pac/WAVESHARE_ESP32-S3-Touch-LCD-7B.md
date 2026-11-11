@@ -155,6 +155,14 @@ Décidé par l'utilisateur :
 3. Tactile : changement de page et page « Réglages » (fenêtre, veille, luminosité).
 4. Choix HASPmota / LVGL : option `custom_interface_ecran = haspmota|lvgl` dans la section de l'env du cenv ; seuls les
    fichiers de l'interface choisie partent sur le FS.
+5. Polices (2026-11-11) : les tailles 12, 16 et 24 de Roboto Condensed restent compilées (`tasmota_lv_conf.h`) ; les autres (20,
+   28, 32, 36) viennent de `RobotoCondensed-Regular.ttf` (copie de `lib/libesp32_lvgl/LVGL_assets/fonts/roboto/ttf/`, licence
+   `OFL.txt` du même dossier, non copiée sur la flash), rendue par FreeType. Le fichier part à plat du dossier de la carte, `ecranFonctions.rangePolices` le range au démarrage
+   dans `/sd/polices/` par `gestionFileFolder.deplaceFichier` (sur la carte SD si elle est montée, sinon dans `/sd` de la flash) ;
+   `pages.jsonl` le cite en `"text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36"`. Il sert aux deux interfaces : il n'est
+   dans aucune liste `custom_interface_ecran_*`. **Essai sur carte à faire AVEC et SANS carte SD** : chemin vu par LVGL
+   (`lvbe_fopen` -> `lv_zip_ufsp`), RAM et PSRAM prises par FreeType (4 tailles), rendu des chiffres. Une police introuvable
+   ne plante pas : `lv.load_freetype_font` rend nil et HASPmota garde la police du thème (texte trop petit).
 
 Encore ouvert : montage (paysage ou portrait, boîtier, longueur du câble RS485) et usage de GPIO6 (laissé libre en attendant).
 

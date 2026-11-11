@@ -8,6 +8,8 @@ Code de sortie 0 si tout est vert. Ne teste pas la vraie carte : ni le releve Mo
 plan debits-deux-cartes, A6 et A8). Les entrees analogiques sont posees a la main comme les range modBus_TasmotaSlaveModBus
 (banc_test_modbus.py couvre le releve groupe et la repartition du push).
 """
+import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -22,6 +24,8 @@ DRIVER = CARTE / "controleEcranDebits.be"
 INTERFACE = CARTE / "ecranHaspmota.be"
 GENERIQUE = CARTE / "ecranFonctions.be"
 VERT = "BANC_ECRAN_DEBITS: OK"
+PAGES = CARTE / "pages.jsonl"
+CONF_LV = RACINE / "tasmota/lvgl_berry/tasmota_lv_conf.h"
 
 # Chaque mutant doit rendre le banc rouge : (nom, texte du module, remplacement). Module des debits ecranDebitsFonctions.be :
 MUTANTS = [
@@ -68,6 +72,11 @@ MUTANTS = [
 ]
 # Temoins du generique d'ecran ecranFonctions.be
 MUTANTS_GENERIQUE = [
+    ("polices jamais rangees au demarrage", "    ecranFonctions.rangePolices()                # avant l'interface", "    # avant l'interface"),
+    ("polices rangees hors de /sd/polices", 'ecranFonctions.POLICES = "/sd/polices/"', 'ecranFonctions.POLICES = "/polices/"'),
+    ("dossier des polices jamais cree", "            path.mkdir(ecranFonctions.POLICES[0 .. -2])\n", ""),
+    ("/sd jamais cree (carte sans SD)", '            path.mkdir("/sd")\n', ""),
+    ("tous les fichiers de la racine pris pour des polices", 'string.endswith(n, ".ttf", true)', "true"),
     ("reglage illisible accepte", 'return (type(v) == "int" && v >= b[0] && v <= b[1]) ? v : b[2]', "return v"),
     ("reglage hors bornes accepte", "v >= b[0] && v <= b[1]", "true"),
     ("bloc du persist ignore", "return (b != nil && modules.contains(b)) ? modules[b] : {}", "return {}"),
@@ -165,6 +174,45 @@ def lance_berry(dossier, module="-", driver="-", interface="-", generique="-"):
     return r.stdout + r.stderr
 
 
+def fautes_polices(pages, conf, carte):
+    """Fautes de police de pages.jsonl : chaque text_font est soit une taille de robotocondensed COMPILEE
+    (`#define ROBOTOCONDENSED_REGULAR_<n>_LATIN1 1` de tasmota_lv_conf.h, sinon parse_font de HASPmota cherche roboto.ttf a la
+    racine et garde la police du theme), soit "A:sd/polices/<nom>.ttf-<n>" dont la TTF est dans le dossier de la carte (rangee
+    au demarrage par ecranFonctions.rangePolices ; sans / apres A: : lvbe_fopen l'ajoute)."""
+    compilees = {int(n) for n in re.findall(r"^#define ROBOTOCONDENSED_REGULAR_(\d+)_LATIN1\s+1\b", conf, re.M)}
+    fautes = []
+    for i, l in enumerate(pages.splitlines(), 1):
+        f = json.loads(l).get("text_font") if l.strip() else None
+        if isinstance(f, int) and f not in compilees:
+            fautes.append(f"ligne {i} : taille {f} non compilee")
+        elif isinstance(f, str):
+            m = re.fullmatch(r"A:sd/polices/([^/]+\.ttf)-(\d+)", f)
+            if not (m and (carte / m.group(1)).is_file()):
+                fautes.append(f"ligne {i} : {f} (forme ou TTF absente du dossier de la carte)")
+    return fautes
+
+
+def controle_polices(tmp):
+    pages = PAGES.read_text(encoding="utf-8")
+    conf = CONF_LV.read_text(encoding="utf-8", errors="replace")
+    fautes = fautes_polices(pages, conf, CARTE)
+    ttf = sum('"text_font":"A:sd/polices/' in l for l in pages.splitlines())
+    print(f"--- polices de pages.jsonl : {ttf} objets en TTF, fautes : {fautes or 'aucune'}")
+    ok = not fautes and ttf > 0
+    (tmp / "sans_ttf").mkdir()
+    for nom, args in [
+        ("taille 36 pretendue compilee", (pages.replace('"A:sd/polices/RobotoCondensed-Regular.ttf-36"', "36"), conf, CARTE)),
+        ("chemin A:/sd/ (double / dans lv_zip_ufsp)", (pages.replace('"A:sd/polices/', '"A:/sd/polices/'), conf, CARTE)),
+        ("TTF absente du dossier de la carte", (pages, conf, tmp / "sans_ttf")),
+        ("taille 24 non compilee (tasmota_lv_conf.h relu)", (pages, conf.replace("ROBOTOCONDENSED_REGULAR_24_LATIN1  1",
+                                                                                  "ROBOTOCONDENSED_REGULAR_24_LATIN1  0"), CARTE)),
+    ]:
+        rouge = bool(fautes_polices(*args))
+        print(f"  {'OK   ' if rouge else 'ECHEC'} polices : {nom}")
+        ok = ok and rouge
+    return ok
+
+
 def temoins(tmp, source, mutants, genre, lance):
     texte = source.read_text(encoding="utf-8").replace("\r\n", "\n")
     ok = True
@@ -191,6 +239,7 @@ def main():
         print("\n".join(l for l in sortie.splitlines() if not l.startswith("  OK")))
         print(f"  ({sum(l.startswith('  OK') for l in sortie.splitlines())} verifications OK)")
         ok = VERT in sortie
+        ok = controle_polices(tmp) and ok
         print("--- Temoins (chaque mutant doit etre rouge)")
         ok = temoins(tmp, MODULE, MUTANTS, "module", lambda d, c: lance_berry(d, c)) and ok
         ok = temoins(tmp, DRIVER, MUTANTS_DRIVER, "driver", lambda d, c: lance_berry(d, "-", c)) and ok

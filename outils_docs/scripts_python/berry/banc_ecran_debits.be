@@ -42,7 +42,15 @@ ecris(SORTIE + "/modules/ecranFonctions.be", lis(GENERIQUE))
 # demarrage.importeUn : meme code que data/fs/demarrage.be (import par le nom)
 ecris(SORTIE + "/modules/demarrage.be", "var d = module('demarrage')\nd.importeUn = def (nom) return compile('return (def () import ' + nom + ' as _m return _m end)()')() end\nreturn d\n")
 ecris(SORTIE + "/modules/ecranLvgl.be", "import global\nvar m = module('ecranLvgl')\nm.demarre = def () global.LVGL_DEMARRE = true return true end\nm.affiche = def (x) global.LVGL_AFFICHE = x end\nreturn m\n")
-ecris(SORTIE + "/modules/path.be", "import global\nvar p = module('path')\np.exists = def (f) return global.FICHIERS.find(f) != nil end\nreturn p\n")
+# path : exists, listdir("/") (fichiers a la racine), mkdir refuse si le parent manque ou si le dossier existe (comme LittleFS)
+ecris(SORTIE + "/modules/path.be", "import global\nimport string\nvar p = module('path')\np.exists = def (f) return global.FICHIERS.find(f) != nil end\n" +
+      "p.listdir = def (d) var r = [] for f: global.FICHIERS if string.find(f, '/', 1) < 0 r.push(f[1 ..]) end end return r end\n" +
+      "p.mkdir = def (d) var n = string.split(d, '/')[-1] var parent = d[0 .. -(size(n) + 2)]\n" +
+      "  if global.DOSSIERS.find(d) != nil || (size(parent) > 0 && global.DOSSIERS.find(parent) == nil) return false end global.DOSSIERS.push(d) return true end\nreturn p\n")
+# gestionFileFolder.deplaceFichier : refuse (false, original garde) si la source manque ou si le dossier de destination n'existe pas
+ecris(SORTIE + "/modules/gestionFileFolder.be", "import global\nimport string\nvar g = module('gestionFileFolder')\n" +
+      "g.deplaceFichier = def (s, d) var i = global.FICHIERS.find(s) var n = string.split(d, '/')[-1]\n" +
+      "  if i == nil || global.DOSSIERS.find(d[0 .. -(size(n) + 2)]) == nil return false end global.FICHIERS[i] = d global.DEPLACES.push([s, d]) return true end\nreturn g\n")
 ecris(SORTIE + "/modules/display.be", "import global\nvar d = module('display')\nd.started = def () return global.ECRAN_DEMARRE end\nreturn d\n")
 ecris(SORTIE + "/modules/modbusFonctions.be", "var m = module('modbusFonctions')\nm.SENTINELLE_UINT32 = 0x7FFFFFFF\nreturn m\n")
 ecris(SORTIE + "/modules/haspmota.be", "import global\nvar h = module('haspmota')\nh.start = def (f) global.HASP_DEMARRE = f global.creeObjets() end\nh.lvh_page_cur_idx = 1\nreturn h\n")
@@ -74,6 +82,8 @@ global.EXPANDEUR = true                  # false : wire_scan(0x24) rend nil
 global.ACK = true                        # false : write rend false (pas d'ACK)
 global.INACTIF = 0                       # ms sans toucher l'ecran (lv.disp().get_inactive_time())
 global.FICHIERS = []                     # fichiers presents sur le FS (path.exists)
+global.DOSSIERS = []                     # dossiers presents (path.mkdir) ; "/sd" = carte SD montee
+global.DEPLACES = []                     # [source, destination] de gestionFileFolder.deplaceFichier
 class FauxBus
     def write(a, r, v, n)    global.I2C.push([a, r, v])    return global.ACK    end
 end
@@ -656,6 +666,25 @@ def chargeDriver()
     ecf.interface = nil
     return compile(lis(CONTROLE))()
 end
+print("--- polices TTF rangees sous /sd/polices au demarrage")
+global.FICHIERS = ["/RobotoCondensed-Regular.ttf", "/autoexec.be", "/json/pages.jsonl"]
+global.JOURNAL = []
+ecf.rangePolices()
+verifie("police rangee : une ligne info", infos() == 1 && erreurs() == 0)
+verifie("sans carte SD : /sd puis /sd/polices crees, la TTF deplacee, rien d'autre", global.DOSSIERS == ["/sd", "/sd/polices"]
+        && global.DEPLACES == [["/RobotoCondensed-Regular.ttf", "/sd/polices/RobotoCondensed-Regular.ttf"]]
+        && global.FICHIERS == ["/sd/polices/RobotoCondensed-Regular.ttf", "/autoexec.be", "/json/pages.jsonl"])
+global.DEPLACES = []
+ecf.rangePolices()
+verifie("deja rangee : rien a deplacer au demarrage suivant", size(global.DEPLACES) == 0)
+global.DOSSIERS = ["/sd"]
+global.FICHIERS = ["/RobotoCondensed-Regular.ttf", "/json/pages.jsonl", "/ecranHaspmota.bec"]
+chargeDriver()
+verifie("carte SD montee (/sd existe) : rangee par le chargement de l'interface, avant HASPmota", global.DOSSIERS == ["/sd", "/sd/polices"]
+        && global.DEPLACES == [["/RobotoCondensed-Regular.ttf", "/sd/polices/RobotoCondensed-Regular.ttf"]] && global.HASP_DEMARRE != nil)
+global.DOSSIERS = []
+global.DEPLACES = []
+
 global.FICHIERS = ["/json/pages.jsonl", "/ecranHaspmota.bec"]
 var pilote = chargeDriver()
 verifie("ecranHaspmota.bec seul : HASPmota demarre, commande declaree, driver ajoute, bloc ecranDebits", ecf.bloc == "ecranDebits" && size(global.DRIVERS) == 1 && global.COMMANDES.contains("ReglageEcranDebits")

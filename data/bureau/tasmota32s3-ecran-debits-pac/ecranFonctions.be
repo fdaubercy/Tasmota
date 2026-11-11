@@ -15,11 +15,14 @@ ecranFonctions.BORNES = {"veille": [0, 120, 5, "min"], "extinction": [0, 240, 30
 ecranFonctions.GRADATION = 10        # % de luminosite apres `veille` minutes sans toucher
 ecranFonctions.HISTO_POINTS = 60     # points par serie de l'historique (30 min a un point toutes les 30 s)
 ecranFonctions.HISTO_PAS = 30000     # ms entre deux points
-# Expandeur d'E/S 0x24 (fiche du 7B § 3) : registre 0x03 = sorties, 0x05 = PWM du retroeclairage. ALLUME = sorties posees par
-# preinit.be ; ETEINT = les memes avec EXIO2 (bit 2, retroeclairage) a 0 : alimentation de la dalle (EXIO6) et resets intacts.
 ecranFonctions.DELAI_SAUVE = 3000    # ms sans appui avant d'ecrire le persist
 ecranFonctions.ID_SAUVE = "ecranFonctions_sauve"
 ecranFonctions.REESSAI = 10000       # ms entre deux essais d'ecriture de la luminosite quand l'expandeur ne repond pas
+# Polices TTF (FreeType) : posees a plat a la racine du FS par le dossier de la carte, rangees ici au demarrage ; pages.jsonl les
+# cite en "A:sd/polices/<nom>.ttf-<taille>" (sans / de tete : lvbe_fopen l'ajoute, lv_zip_ufsp lit alors /sd/polices/<nom>)
+ecranFonctions.POLICES = "/sd/polices/"
+# Expandeur d'E/S 0x24 (fiche du 7B § 3) : registre 0x03 = sorties, 0x05 = PWM du retroeclairage. ALLUME = sorties posees par
+# preinit.be ; ETEINT = les memes avec EXIO2 (bit 2, retroeclairage) a 0 : alimentation de la dalle (EXIO6) et resets intacts.
 ecranFonctions.EXPANDEUR = 0x24
 ecranFonctions.ALLUME = 0xDF
 ecranFonctions.ETEINT = 0xDB
@@ -207,12 +210,32 @@ def ecranFonctions_suitVeille()
 end
 ecranFonctions.suitVeille = ecranFonctions_suitVeille
 
+# Range les .ttf de la racine du FS dans POLICES par gestionFileFolder.deplaceFichier (copie verifiee, original garde en cas
+# d'echec) : carte SD si elle est montee en /sd, sinon dossier /sd de la flash. Une version neuve remplace l'ancienne.
+def ecranFonctions_rangePolices()
+    import path
+    import string
+    import gestionFileFolder
+    import ecranFonctions
+    for n: path.listdir("/")
+        if string.endswith(n, ".ttf", true)
+            path.mkdir("/sd")
+            path.mkdir(ecranFonctions.POLICES[0 .. -2])
+            if gestionFileFolder.deplaceFichier("/" + n, ecranFonctions.POLICES + n)    # echec : journalise par deplaceFichier
+                ecranFonctions.log("ECRAN: police " + n + " rangee dans " + ecranFonctions.POLICES + " !", LOG_LEVEL_INFO)
+            end
+        end
+    end
+end
+ecranFonctions.rangePolices = ecranFonctions_rangePolices
+
 # Module d'interface present sur le FS, le premier de `noms` (["ecranHaspmota", "ecranLvgl"]) dont le .bec ou le .be existe ;
 # plusieurs : le premier, ligne info ; aucun : erreur, nil (la carte reste vivante, sans ecran)
 def ecranFonctions_charge(noms)
     import path
     import demarrage
     import ecranFonctions
+    ecranFonctions.rangePolices()                # avant l'interface : HASPmota charge ses polices en lisant pages.jsonl
     var presents = []
     for n: noms
         if (path.exists("/" + n + ".bec") || path.exists("/" + n + ".be"))    presents.push(n)    end
