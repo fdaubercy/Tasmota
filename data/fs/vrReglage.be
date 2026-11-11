@@ -27,10 +27,13 @@
  * - Sens physique : tout ordre de course ou de recalage passe par vrFonctions.commandeSens (Tasmota inverse un ordre
  *   Berry quand ShutterInvert vaut 1).
  * - Durees ecrites en secondes entieres arrondies (configVRByJson les pose avec le type int).
- * - Refus de commencer : reglage deja actif, volet inconnu ou inactif, volet qui roule (Direction de ShutterPosition<id>).
+ * - Refus de commencer : reglage deja actif, volet inconnu ou inactif, volet qui roule (Direction lue dans le JSON des
+ *   capteurs, tasmota.read_sensors). JAMAIS par ShutterPosition<id> sans argument : xdrv_27_esp32_shutter.ino::
+ *   CmndShutterPosition garde target_position et relance le moteur si la cible differe de la position reelle.
  * - Fins de course et MPU6050 : vrFonctions.enReglage(id) neutralise le recalage et l'arret en butee ; le blocage et le
  *   sens inverse coupent toujours le moteur. Un arret que le reglage n'a pas demande (regle Shutter<id>#Direction 0,
- *   posee le temps du mode) l'arrete sans rien ecrire, cause « bloque », « sens inverse » ou « arret ».
+ *   posee le temps du mode) l'arrete sans rien ecrire, cause « bloque », « sens inverse » ou « arret ». Un Direction 0
+ *   ne compte qu'apres un Direction non nul de la MEME course (un 0 rapporte avant le vrai depart est ignore).
  * - Porte de garage (mode 3, type chrono) : aucun ordre au volet, ni suspension de bouton, ni course allongee, ni
  *   regle ; seuls les clics de la page (appui(id, "page")) font avancer ; configVRByJson apres l'ecriture seulement.
  *
@@ -93,6 +96,7 @@ vrReglage.sortie = vrReglage_sortie
 
 # Commence le reglage du volet 'id' : [true, message] ou [false, raison du refus]
 def vrReglage_debut(id)
+    import json
     import string
     import vrFonctions
     import vrReglage
@@ -101,10 +105,13 @@ def vrReglage_debut(id)
     var vr = vrFonctions.trouveVolet(id)
     if (vr == nil || vr.find("activation", "OFF") != "ON")    return [false, string.format("Volet %s inconnu ou inactif.", str(id))]    end
     var chrono = drivers["voletRoulants"].find("mode") == 3
-    if (!chrono)
-        var p = tasmota.cmd(string.format("ShutterPosition%i", id), boolMute)
-        var position = isinstance(p, map) ? p.find("Shutter" + str(id)) : nil
-        if (isinstance(position, map) && position.find("Direction", 0) != 0)    return [false, "Le volet roule : attendez qu'il soit arrêté en bas."]    end
+    # Direction sans effet de bord : JSON des capteurs (FUNC_JSON_APPEND du Shutter) ; absent ou illisible -> pas de refus
+    var capteurs = json.load(str(tasmota.read_sensors()))
+    var position = isinstance(capteurs, map) ? capteurs.find("Shutter" + str(id)) : nil
+    if (!isinstance(position, map))
+        vrFonctions.log(string.format("VR_REGLAGE: Volet %i absent du JSON des capteurs : direction non verifiee !", id), LOG_LEVEL_DEBUG)
+    elif (position.find("Direction", 0) != 0)
+        return [false, "Le volet roule : attendez qu'il soit arrêté en bas."]
     end
 
     var vrs = drivers["voletRoulants"]["environnement"]["VRs"]
@@ -119,7 +126,7 @@ def vrReglage_debut(id)
     r = {"actif": true, "id": id, "cle": cle, "nom": vr.find("nom", cle), "type": chrono ? "chrono" : "moteur", "etape": "pret",
          "mesures": {}, "avant": {"tempsMontee": vr.find("tempsMontee"), "tempsDescente": vr.find("tempsDescente")},
          "boutons": boutons, "cause": nil, "message": vrReglage.MESSAGES["pret"][chrono ? 1 : 0],
-         "t0": nil, "dernier": nil, "monArret": false}
+         "t0": nil, "dernier": nil, "monArret": false, "parti": false}
     vrFonctions.etat()["reglage"] = r
     vrFonctions.suiviInclinaison(id).remove("durees")          # durees du MPU6050 : celles de CE reglage seulement
     try
@@ -164,9 +171,15 @@ def vrReglage_appui(id, source)
 
     if (etape == "pret" || etape == "haut")                  # depart d'une course
         r["monArret"] = false
+        r["parti"] = false                                   # Direction non nul pas encore vu pour cette course
         r["t0"] = maintenant
         r["etape"] = etape == "pret" ? "montee" : "descente"
-        if (moteur)    tasmota.cmd(vrFonctions.commandeSens(id, etape == "pret" ? "ouvre" : "ferme"), boolMute)    end
+        if (moteur)
+            # recalage differe encore en attente : parti en pleine course, il remettrait 'direction' a 0
+            tasmota.remove_timer("vr" + vrFonctions.commandeSens(id, "posOuvert"))
+            tasmota.remove_timer("vr" + vrFonctions.commandeSens(id, "posFerme"))
+            tasmota.cmd(vrFonctions.commandeSens(id, etape == "pret" ? "ouvre" : "ferme"), boolMute)
+        end
         r["message"] = vrReglage.MESSAGES[r["etape"]][moteur ? 0 : 1]
     else                                                     # arrivee : montee -> haut, descente -> fini
         var ms = maintenant - r["t0"]
@@ -229,8 +242,11 @@ def vrReglage_direction(value, trigger, msg)
     import vrFonctions
     import vrReglage
     var r = vrReglage.etat()
-    if (r == nil || !r["actif"] || value != 0 || r["monArret"])    return    end
-    if (r["etape"] != "montee" && r["etape"] != "descente")    return    end
+    if (r == nil || !r["actif"] || (r["etape"] != "montee" && r["etape"] != "descente"))    return    end
+    if (isinstance(value, map))    for cle: value.keys()    value = value[cle]    break    end    end     # comme changementDirection
+    if (value == nil)    return    end
+    if (int(value) != 0)    r["parti"] = true    return    end
+    if (r["monArret"] || !r["parti"])    return    end       # notre arret, ou 0 rapporte avant le vrai depart
     var suivi = vrFonctions.suiviInclinaison(r["id"])
     var cause = suivi.find("bloque", false) ? (suivi.find("cause") == "sens inverse" ? "sens inverse" : "bloque") : "arret"
     vrFonctions.log(string.format("VR_REGLAGE: Volet %i arrete en %s sans appui (%s) : reglage abandonne, rien d'ecrit !", r["id"], r["etape"], cause), LOG_LEVEL_ERREUR)

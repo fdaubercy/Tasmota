@@ -33,19 +33,25 @@ end
 var logFonctions = LogStub()
 
 class TasmotaStub
-    var cmds, timers, regles, directions, horloge, surCmd, doublons
-    def init() self.cmds = [] self.timers = [] self.regles = {} self.directions = {} self.horloge = 0 self.doublons = 0 end
+    var cmds, timers, regles, directions, horloge, surCmd, doublons, capteurs, lectures, positions
+    def init() self.cmds = [] self.timers = [] self.regles = {} self.directions = {} self.horloge = 0 self.doublons = 0 self.lectures = 0 self.positions = 0 end
     def millis(d) return self.horloge + (d == nil ? 0 : d) end
     def time_reached(t) return self.horloge >= t end
     def cmd(c, m)
         self.cmds.push(c)
         if self.surCmd != nil    self.surCmd(c)    end
         if c == "ShutterMotorStop"    return {"ShutterMotorStop": 500}    end
-        if string.find(c, "ShutterPosition") == 0 && string.find(c, " ") < 0
-            var id = int(c[15..])
-            return {"Shutter" + str(id): {"Position": 0, "Direction": self.directions.find(id, 0), "Target": 0, "Tilt": 0}}
-        end
+        if string.find(c, "ShutterPosition") == 0    self.positions += 1    end      # relance le moteur : jamais envoye
         return {}
+    end
+    # JSON des capteurs (FUNC_JSON_APPEND du Shutter) ; 'capteurs' force un texte (absent, illisible)
+    def read_sensors()
+        import json
+        self.lectures += 1
+        if self.capteurs != nil    return self.capteurs    end
+        var j = {"Time": "2026-11-11T12:00:00"}
+        for id: self.directions.keys()    j["Shutter" + str(id)] = {"Position": 0, "Direction": self.directions[id], "Target": 0, "Tilt": 0}    end
+        return json.dump(j)
     end
     # Le vrai set_timer AJOUTE sans dedoublonner (tasmota_class.be) : un doublon d'id est compte
     def set_timer(d, f, id)
@@ -102,6 +108,8 @@ def reinit()
     tasmota.regles = {}
     tasmota.directions = {}
     tasmota.surCmd = nil
+    tasmota.capteurs = nil
+    tasmota.lectures = 0
     tasmota.doublons = 0
     tasmota.horloge += 1000000
     T = tasmota.horloge
@@ -183,7 +191,7 @@ tasmota.surCmd = def (c) if c == "ShutterStop1"    regle(1, 0)    end end   # ar
 var r = vrReglage.debut(1)
 verifie(r[0], "debut accepte : " + str(r[1]))
 var o = ordres()
-verifie(tasmota.cmds[0] == "ShutterPosition1", "debut : position lue avant tout ordre")
+verifie(tasmota.lectures == 1, "debut : direction lue dans le JSON des capteurs")
 verifie(size(o) == 7 && o[0] == "ShutterOpenDuration1 120" && o[1] == "ShutterCloseDuration1 120" && o[2] == "ShutterButton1 0" && o[6] == "ShutterSetClose1",
         "debut : course allongee, boutons du volet retires, position fermee")
 verifie(size(o) == 7 && memes(o[3..5], ["ShutterButton2 3 up 0", "ShutterButton2 4 down 0", "ShutterButton3 5 toggle 0"]), "debut : boutons des autres volets renvoyes (Button1)")
@@ -306,12 +314,23 @@ r = page(1, 2500)
 verifie(!r[0] && etape() == "refus" && !vrReglage.etatPage()["actif"], "1,5 s : refus, sortie du mode")
 verifie(ordres()[0] == "ShutterStop1" && persistBouchon.nb_save == sauves && vr1["tempsMontee"] == 15 && appelsConfig == config + 1, "1,5 s : stop, rien d'ecrit, configVRByJson")
 
-print("9. En course : ShutterPosition repond Direction 1 -> refus, aucun ordre")
+print("9. En course : le JSON des capteurs donne Direction 1 -> refus, aucun ordre ; JSON absent ou illisible : accepte")
 reinit()
 tasmota.directions[1] = 1
 r = vrReglage.debut(1)
-verifie(!r[0] && size(ordres()) == 0 && tasmota.cmds == ["ShutterPosition1"], "en course : refus, seule la lecture de la position")
+verifie(!r[0] && size(tasmota.cmds) == 0 && tasmota.lectures == 1, "en course : refus, aucune commande")
 verifie(vrFonctions.etat().find("reglage") == nil && size(tasmota.timers) == 0 && size(tasmota.regles) == 0, "en course : rien de modifie")
+tasmota.directions[1] = 0
+verifie(vrReglage.debut(1)[0], "Direction 0 : accepte")
+vrReglage.annule("annule")
+reinit()
+tasmota.capteurs = "{}"
+verifie(vrReglage.debut(1)[0], "Shutter1 absent du JSON : accepte")
+vrReglage.annule("annule")
+reinit()
+tasmota.capteurs = "pas du json"
+verifie(vrReglage.debut(1)[0], "JSON illisible : accepte")
+vrReglage.annule("annule")
 
 print("10. Refus du debut : volet inconnu, inactif, reglage deja actif")
 reinit()
@@ -385,13 +404,54 @@ page(1, 17000)
 suivi = vrFonctions.suiviInclinaison(1)
 suivi["bloque"] = true
 suivi["cause"] = "blocage"
+regle(1, -1)
 regle(1, 0)
 verifie(etape() == "annule" && vrReglage.etatPage()["cause"] == "bloque", "arret subi en descente : annule, cause bloque")
 reinit()
 vrReglage.debut(1)
 page(1, 1000)
+regle(1, 1)
 regle(1, 0)
 verifie(etape() == "annule" && vrReglage.etatPage()["cause"] == "arret", "arret subi sans MPU : cause arret")
+
+print("14b. Direction 0 avant le vrai depart : ignore ; valeur passee en map : meme traitement")
+reinit()
+vrReglage.debut(1)
+page(1, 1000)
+regle(1, 0)
+verifie(etape() == "montee" && vrReglage.etatPage()["actif"], "Direction 0 avant tout Direction 1 : ignore")
+regle(1, 1)
+regle(1, 0)
+verifie(etape() == "annule" && vrReglage.etatPage()["cause"] == "arret", "Direction 1 puis 0 : arret subi")
+reinit()
+vrReglage.debut(1)
+page(1, 1000)
+regle(1, {"Direction": 0})
+verifie(etape() == "montee", "map Direction 0 avant le depart : ignore")
+regle(1, {"Direction": 1})
+regle(1, {"Direction": 0})
+verifie(etape() == "annule" && vrReglage.etatPage()["cause"] == "arret", "map Direction 1 puis 0 : arret subi")
+reinit()
+vrReglage.debut(1)
+page(1, 1000)
+regle(1, 1)
+page(1, 15000)
+regle(1, 0)                                         # notre arret de la montee
+page(1, 17000)
+regle(1, 0)                                         # 0 rapporte avant le vrai depart de la descente
+verifie(etape() == "descente", "descente : Direction 0 avant son depart ignore (indicateur remis au depart)")
+vrReglage.annule("annule")
+
+print("14c. Depart d'une course : recalage differe encore en attente retire")
+reinit()
+vrReglage.debut(1)
+page(1, 1000)
+page(1, 15000)
+verifie(nbTimers("vrShutterSetOpen1") == 1, "haut : recalage ShutterSetOpen1 en attente")
+page(1, 17000)
+verifie(nbTimers("vrShutterSetOpen1") == 0 && nbTimers("vrShutterSetClose1") == 0, "depart de la descente : recalage retire")
+verifie(courses().find("ShutterSetOpen1") == nil, "aucun ShutterSetOpen1 envoye")
+vrReglage.annule("annule")
 
 print("15. Durees du MPU : videes au debut, rendues dans mpu")
 reinit()
@@ -413,4 +473,5 @@ tasmota.surCmd = nil
 verifie(!r[0] && !vrFonctions.enReglage(1) && appelsConfig == config + 1 && erreurs() == nbErr + 1, "exception : refus, configVRByJson, une erreur")
 verifie(!aRegle(1) && nbTimers("vrReglage_delai") == 0, "exception : ni regle ni delai")
 
+verifie(tasmota.positions == 0, "aucun ShutterPosition envoye par le module, de tout le banc")
 print(echecs == 0 ? "BANC_REGLAGE_VOLETS: OK" : "BANC_REGLAGE_VOLETS: ECHEC (" + str(echecs) + ")")
