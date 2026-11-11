@@ -150,6 +150,11 @@ def sonde(m):
     verifie(cdp.js("document.getElementById('e-carte').firstChild.value"), "", "cartes par lieu : option de tete « (choisir une carte) » gardee")
     cdp.js(f"document.getElementById('e-carte').value = '{env}'; chargeCartes(); 1")
     verifie(attend(cdp, f"document.getElementById('e-carte').value === '{env}'", 10), True, "cartes par lieu : valeur gardee apres rechargement de la liste")
+    # carte choisie qui a disparu du cenv (relecture du 2026-11-11) : retour sur « (choisir une carte) », jamais une liste vide
+    cdp.js("var s = document.getElementById('e-carte'), o = document.createElement('option'); o.value = 'disparue'; s.appendChild(o);"
+           " s.value = 'disparue'; chargeCartes(); 1")
+    verifie((attend(cdp, "!document.querySelector('#e-carte option[value=\"disparue\"]')", 10),
+             cdp.js("document.getElementById('e-carte').selectedIndex")), (True, 0), "cartes par lieu : carte disparue -> option de tete")
     cdp.js("document.getElementById('e-carte').value = ''; 1")
     # 2. creation : nom refuse, puis accepte
     saisit(cdp, "c-nom", "../mauvais")

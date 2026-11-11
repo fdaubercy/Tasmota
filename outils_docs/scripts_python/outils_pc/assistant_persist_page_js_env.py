@@ -16,6 +16,7 @@ function remplitCartes(select, cartes, premier, choisi, lieux) {
   remplitParLieu(select, cartes.map(function (c) { return {nom: c.env, lieu: c.lieu}; }), lieux, choisi, []);
   select.insertBefore(el("option", {value: ""}, premier), select.firstChild);
   select.value = choisi || "";
+  if (select.selectedIndex < 0) select.value = "";      // env disparu : retour sur l'option de tete
 }
 // ---- Mode modification (A10) ----
 var FIGES = ["f-lieu", "f-nom", "f-puce", "f-base"], prepSuppr = null;

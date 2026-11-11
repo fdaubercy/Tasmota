@@ -254,6 +254,7 @@ async function chargeCartes() {
   if (!r.ok) { message($("e-retour"), "rouge", r.texte); return; }
   remplitParLieu(s, r.donnees.cartes.map(function (c) { return {nom: c.env, lieu: c.lieu}; }), r.donnees.lieux, avant, []);
   s.insertBefore(o, s.firstChild); s.value = avant;
+  if (s.selectedIndex < 0) s.value = "";                // carte disparue : retour sur « (choisir une carte) »
 }
 $("c-go").onclick = cree;
 $("m-go").onclick = enregistre;

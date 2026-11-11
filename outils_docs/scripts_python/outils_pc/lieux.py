@@ -49,5 +49,6 @@ function remplitParLieu(select, cartes, lieux, choisi, bases) {
   autres.forEach(code => groupe(code, cartes.filter(c => c.lieu === code)));
   if (bases && bases.length) groupe('Mes bases', bases);
   if (choisi) select.value = choisi;
+  if (select.selectedIndex < 0) select.selectedIndex = 0;   // valeur disparue (env supprime) : premiere option, jamais une liste vide
 }
 """

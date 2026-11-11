@@ -20,7 +20,7 @@ def verifie(obtenu, attendu, libelle):
 envs = be.liste_envs(RACINE)
 codes = {c for c, _ in lieux.LIEUX}
 cartes = [e.nom for e in envs if e.famille == "cartes"]
-verifie(len(cartes), 11, "11 cartes reelles")
+verifie(len(cartes) >= 11, True, "au moins les 11 cartes du 2026-11-10")      # le parc grandit (12 le 2026-11-11)
 for n in cartes:
     verifie(lieux.lieu(n) in codes, True, f"lieu de {n} dans la table")
 for n in [e.nom for e in envs if e.famille == "bases"]:

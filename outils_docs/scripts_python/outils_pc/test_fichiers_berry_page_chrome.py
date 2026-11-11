@@ -147,9 +147,17 @@ def sonde_page(m):
     verifie(cdp.js("document.querySelector('#env option[value=\"" + RIDEAU + "\"]').parentNode.label"), "Garage", "listes par lieu : le rideau sous Garage")
     verifie(cdp.js(groupes % "c-modele")[-1] != "Mes bases", True, "listes par lieu : c-modele sans bases")
     verifie(cdp.js(groupes % "c-base"), ["Mes bases"], "listes par lieu : c-base inchangee")
-    cdp.js("chargeEnvs(); 1")
-    verifie(attend(cdp, "document.querySelectorAll('#env optgroup').length > 0", 10) and cdp.js("document.getElementById('env').value"),
+    # fin de CHAQUE chargeEnvs attendue (window.finEnvs) : deux appels croises se rattrapent et masquent un defaut
+    cdp.js("window.finEnvs = false; chargeEnvs().then(function () { window.finEnvs = true; }); 1")
+    verifie(attend(cdp, "window.finEnvs", 10) and cdp.js("document.getElementById('env').value"),
             RIDEAU, "listes par lieu : valeur gardee apres rechargement")
+    # env choisi puis supprime (relecture du 2026-11-11) : retour sur la premiere carte, jamais une liste vide
+    cdp.js("window.urlSonde = location.href; history.replaceState(null, '', location.pathname);"   # sans ?env=, que chargeEnvs reapplique
+           " var s = document.getElementById('env'), o = document.createElement('option'); o.value = 'disparu'; s.appendChild(o);"
+           " s.value = 'disparu'; window.finEnvs = false; chargeEnvs().then(function () { window.finEnvs = true; }); 1")
+    verifie((attend(cdp, "window.finEnvs", 10),
+             cdp.js("document.getElementById('env').selectedIndex")), (True, 0), "listes par lieu : env disparu -> premiere carte")
+    cdp.js("history.replaceState(null, '', window.urlSonde); document.getElementById('env').value = '" + RIDEAU + "'; 1")
     verifie(cdp.js("(function(){var b=document.querySelector('[data-retirer=\"" + DISPARU + "\"]'); if(!b) return 'absent';"
                    " b.click(); return document.querySelector('[data-attente=\"" + DISPARU + "\"]') ? 'en attente' : 'non';})()"),
             "en attente", "disparu : « retirer la ligne » le met en attente")
