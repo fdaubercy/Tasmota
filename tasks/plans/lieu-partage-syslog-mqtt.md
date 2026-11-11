@@ -211,11 +211,11 @@ Interfaces consommées : `pour_page_identites`, `lieuDeTopic` (avec `nu` pour le
 - [x] Commit `docs(lieux): mode d'emploi du lieu partage, du syslog et du sniffeur MQTT`. — preuve : 71fd48088
 
 ## Améliorations restantes
-- [ ] [projet] Bloc des puces (cache borné, compteurs, choisitLieu) recopié entre syslog et sniffeur MQTT : un `pucesLieu` commun dans `lieux.JS`.
-- [ ] [projet] Libellé du lieu recalculé à l'identique dans 5 pages : un `libelleLieu(lieux, code)` dans `lieux.JS`.
-- [ ] [projet] Compteurs du syslog et du MQTT : depuis l'ouverture, mais recalculés sur le seul tampon après « Effacer » ou `/lieux`.
+- [x] [projet] Bloc des puces (cache borné, compteurs, choisitLieu) recopié entre syslog et sniffeur MQTT : un `pucesLieu` commun dans `lieux.JS`. — preuve : ba83b4926, lieux.pucesLieu, test_lieux_js.mjs (faux DOM), sondes syslog et MQTT vertes
+- [x] [projet] Libellé du lieu recalculé à l'identique dans 5 pages : un `libelleLieu(lieux, code)` dans `lieux.JS`. — preuve : ba83b4926, lieux.libelleLieu dans les 5 pages, test_lieux_js.mjs
+- [x] [projet] Compteurs du syslog et du MQTT : depuis l'ouverture, mais recalculés sur le seul tampon après « Effacer » ou `/lieux`. — preuve : ba83b4926, comptes par cle, sondes syslog et MQTT (pause, tampon vide puis /lieux, Effacer ; temoins negatifs rouges)
 - [ ] [projet] Marque d'ancien document (`window.__ancien`) dans les sondes 7700, 7800, 7900, 7980 après navigation.
-- [ ] [projet] La cave publie en `cave/serveur-rly-cave` alors que son persist dit `cave/serveur-rly-cave-v2` (ancien code) : ses messages MQTT vont dans « Autres ».
+- [x] [projet] La cave publie en `cave/serveur-rly-cave` alors que son persist dit `cave/serveur-rly-cave-v2` (ancien code) : ses messages MQTT vont dans « Autres ». — preuve : ba83b4926, lieux.identites lit les dossiers *-sauvegarde (marque sauvegarde: True), test_lieux.py (topic cave/serveur-rly-cave, cartes de l annuaire non doublees)
 
 ## Vérification
 Bancs : `test_lieux.py`, `node test_lieux_js.mjs`, `test_annuaire*.py`, `test_syslog_acces.py`,
