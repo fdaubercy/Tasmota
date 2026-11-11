@@ -74,7 +74,7 @@ serveur passe donc aujourd'hui par MQTT, dans le sens porte -> serveur ; le sens
 Plan d'origine : [tasks/plans/lieu-partage-syslog-mqtt.md](lieu-partage-syslog-mqtt.md), lui-même suite de
 [tasks/plans/classement-par-lieu.md](classement-par-lieu.md).
 
-- [ ] Ouvrir une nouvelle conversation et y taper `/suivi suivre envs-grenier-rdc-sonoff-cave` ; pour revoir le plan d'origine :
+- [x] Ouvrir une nouvelle conversation et y taper `/suivi suivre envs-grenier-rdc-sonoff-cave` ; pour revoir le plan d'origine :
   `/suivi suivre lieu-partage-syslog-mqtt`, puis revenir par `/suivi suivre envs-grenier-rdc-sonoff-cave`. À cocher quand
   l'aller-retour a été fait une fois et que la vue a basculé dans les deux sens.
 

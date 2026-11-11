@@ -13,14 +13,13 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-42 plans : 17 actif, 1 en-pause, 24 clos.
+42 plans : 16 actif, 1 en-pause, 25 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff | actif | ░░░░░░░░░░ 1 % (1/42) | 41 étapes, 3 améliorations | 2026-11-11 | 2026-11-11 (2e demande : écran, range extender de la cave, porte de cave esclave) |
+| [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff | actif | █░░░░░░░░░ 10 % (2/42) | 40 étapes, 3 améliorations | 2026-11-11 | 2026-11-11 (2e demande : écran, range extender de la cave, porte de cave esclave) |
 | [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ░░░░░░░░░░ 0 % (0/20) | 20 étapes, 2 améliorations | 2026-11-11 | 2026-11-11 |
 | [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) | Faire passer les 6 débits de la carte d'acquisition (esclave ModBus id 1) à une carte d'affichage (maître id 0) par une lecture groupée RS485 et un push UDP, sans rien changer au garage | actif | ██████░░░░ 62 % (33/49) | 16 étapes, 3 améliorations | 2026-11-09 | 2026-11-11 |
-| [Lieu partagé depuis l'annuaire, lieu dans le syslog et le sniffeur MQTT](plans/lieu-partage-syslog-mqtt.md) | Choisir un lieu une fois dans l'annuaire et le retrouver dans les pages ouvertes, et ranger par lieu les lignes du syslog et les messages du sniffeur MQTT | actif | █████████░ 88 % (25/26) | 1 étape, 1 amélioration | 2026-11-11 | 2026-11-11 |
 | [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ███████░░░ 68 % (35/50) | 15 étapes, 4 améliorations | 2026-11-08 | 2026-11-09 |
 | [Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)](plans/energie-differentiel.md) | Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h) | actif | ██████████ 100 % (69/70) | 1 étape | 2026-10-31 | 2026-11-09 |
 | [Page d'équilibrage de la nourrice servie par la carte des débits, débits lus en direct](plans/equilibrage-par-la-carte.md) | Ouvrir le guide d'équilibrage depuis la carte des débits et y lire les 6 débits mesurés, sans les taper à la main | actif | ████████░░ 83 % (20/22) | 2 étapes | 2026-11-09 | 2026-11-09 |
@@ -35,7 +34,8 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 | [Plan d'action de l'audit Berry (propositions P2.1 à P10.7)](plans/actions-audit-berry.md) | Mettre en œuvre, lot par lot et sur décision de l'utilisateur, les 78 propositions de l'audit Berry | actif | █████████░ 91 % (89/95) | 6 étapes, 1 amélioration | 2026-10-22 | 2026-10-26 |
 | [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) | Ajouter l'Ethernet en option sur le maître ModBus P4, le Wi-Fi restant le défaut | actif | ░░░░░░░░░░ 0 % (0/37) | 37 étapes, 1 amélioration | 2026-10-26 | 2026-10-26 |
 | [Suites de l'audit de l'env S3 du serveur relais de la cave](plans/audit-relais-cave-s3.md) | Rendre l'env tasmota32s3-cave-serveur-rly prêt à remplacer la carte de la cave en ligne, selon les propositions de l'audit | en-pause | ░░░░░░░░░░ 0 % (0/22) | 22 étapes, 2 améliorations | 2026-10-31 | 2026-10-31 |
-| [Classement des cartes par lieu dans les pages des outils PC](plans/classement-par-lieu.md) | Retrouver les cartes par emplacement dans la maison sur la page Build (bascule Famille/Lieu/Puce, intertitres de l'onglet Fichiers) et dans les listes de carte des autres pages | clos | ██████████ 100 % (21/21) | 2 améliorations | 2026-11-10 | 2026-11-11 |
+| [Classement des cartes par lieu dans les pages des outils PC](plans/classement-par-lieu.md) | Retrouver les cartes par emplacement dans la maison sur la page Build (bascule Famille/Lieu/Puce, intertitres de l'onglet Fichiers) et dans les listes de carte des autres pages | clos | ██████████ 100 % (21/21) | — | 2026-11-10 | 2026-11-11 |
+| [Lieu partagé depuis l'annuaire, lieu dans le syslog et le sniffeur MQTT](plans/lieu-partage-syslog-mqtt.md) | Choisir un lieu une fois dans l'annuaire et le retrouver dans les pages ouvertes, et ranger par lieu les lignes du syslog et les messages du sniffeur MQTT | clos | ██████████ 100 % (26/26) | — | 2026-11-11 | 2026-11-11 |
 | [Atelier des graphiques (page 7950) et moteur commun des pages de graphiques](plans/atelier-graphiques.md) | Préparer sur le PC un graphique pour une carte, le voir avec ses vraies valeurs, puis écrire dans le dépôt la description qui le fait apparaître sur la carte, sans Berry écrit à la main | clos | ██████████ 100 % (39/39) | — | 2026-11-03 | 2026-11-09 |
 | [Onglet « autoexec.bat » de l'Assistant persist (modèle C)](plans/autoexec-bat.md) | Modifier ou ajouter des lignes à l'autoexec.bat d'une carte depuis l'Assistant persist, avec banque de commandes, avertissements (boucle de redémarrage, doublon persist, secret, commande inconnue) et envoi proposé à la carte | clos | ██████████ 100 % (21/21) | — | 2026-11-03 | 2026-11-09 |
 | [Envoi MQTT de l'autoexec.bat, commandes par carte, extensions .tapp (document, script, page)](plans/autoexec-mqtt-tapp.md) | Envoyer l'autoexec.bat par MQTT, signaler une commande non compilée pour la carte, et savoir fabriquer un .tapp (document, script, page de l'annuaire) | clos | ██████████ 100 % (21/21) | — | 2026-11-05 | 2026-11-09 |
@@ -62,9 +62,8 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — 1 %
+#### [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — 10 %
 
-- A0 — Retour au plan d'origine : Ouvrir une nouvelle conversation et y taper `/suivi suivre envs-grenier-rdc-sonoff-cave` ; pour revoir le plan d'origine :
 - A1 — Identité et création de l'env du grenier du RDC : Valider avec l'utilisateur le nom d'env, le dossier, l'IP (vérifier qu'aucun appareil ne répond sur 192.168.0.44)
 - A1 — Identité et création de l'env du grenier du RDC : Créer l'env à partir de la carte modèle `tasmota32s3-cave-serveur-rly` (même carte) par la page « Fichiers Berry
 - A1 — Identité et création de l'env du grenier du RDC : `lieux.py` range la carte en « Rez-de-chaussée » (`test_lieux.py`).
@@ -155,11 +154,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - Amélioration [projet] : Rétroéclairage gradué automatiquement par une mesure de lumière (ADC de l'expandeur ou GPIO6)
 - Amélioration [projet] : Fenêtre de mesure transmise par l'acquisition (évite la recopie à la main sur l'affichage)
 - Amélioration [projet] : Défaut de l'ancien chemin `Count` > 1 (`[v, 0, …]`) corrigé pour toutes les cartes, avec la grille du garage
-
-#### [Lieu partagé depuis l'annuaire, lieu dans le syslog et le sniffeur MQTT](plans/lieu-partage-syslog-mqtt.md) — 88 %
-
-- A0 — Plan précédent : classement par lieu : Rouvrir le plan précédent dans la vue de droite : taper `/suivi suivre classement-par-lieu` (la conversation suit
-- Amélioration [projet] : Marque d'ancien document (`window.__ancien`) dans les sondes 7700, 7800, 7900, 7980 après navigation.
 
 #### [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) — 68 %
 
@@ -339,11 +333,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A6 — Allègement de l'env (P7, P9, P11) : Persist nettoyé : `TasmotaSlaveModBus2`, `diverses.historique.grafana`, `ledPower`
 - Amélioration [projet] : Vérifier si un 2e « maître » (id 0) perturbe la table discovery du P4
 - Amélioration [projet] : Réduire la partition FS (11,3 Mo) pour la cave si l'écriture de l'image gêne
-
-#### [Classement des cartes par lieu dans les pages des outils PC](plans/classement-par-lieu.md) — 100 %
-
-- Amélioration [projet] : Lieu transmis d'une page à l'autre depuis l'annuaire (écarté de cette version, spec §2).
-- Amélioration [projet] : Table hôte → lieu pour le syslog et le sniffeur MQTT, si le besoin revient.
 
 #### [Atelier des graphiques — destination « Graphiques » et bouton « Téléverser »](plans/atelier-destinations.md) — 96 %
 
