@@ -609,6 +609,10 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
 - `outils_docs/MODELES_ESP.md` — puces Espressif (ESP32, S2, S3, C2 a C61, H2 a H21, P4, S31, E22, ESP8266/8285/8089) au
   2026-11-11 : processeur, memoire et PSRAM, competences, montages a plusieurs ESP sur un typon, compatibilite Tasmota lue
   dans les envs ; P4 v1.x / v3.x (P4R3) et comment les distinguer ; modele Tasmota du Waveshare 8DI-8RO.
+- `outils_docs/ECRAN_TACTILE_ESP32P4.md` — ecran tactile MIPI-DSI sur ESP32-P4 (recherche du 2026-11-11, rien d'essaye) :
+  pilote uDisplay `DSI` (WIP), descriptions `EK79007_P4ev_DSI.ini` et `JD9165_DSI.ini`, envs P4 SANS affichage (pas de
+  `FIRMWARE_LVGL`), RAM interne et correctifs de la discussion arendst #24448, Waveshare ESP32-P4-WIFI6-Touch-LCD-7B (EK79007
+  + GT911, ecarts a l'`.ini` Espressif), dalles DSI du kit du garage, kits P4 avec ecran ou relais (aucun P4 a 8 relais).
 - `outils_docs/FICHIERS_DRVSET.md` — inventaire des fichiers `.drvset*`/`.snsset*` du firmware : role, contenu, chargement, sauvegarde, effacement (2026-11-02).
 - `outils_docs/sauvegarde_config/` — maquettes de l'onglet « Sauvegardes » de la page build (2026-11-02) : `modele-A.png` a `modele-C.png`, code `maquettes_sauvegarde.html`, contraintes `README.md`. Choix en attente, rien de realise.
 - `outils_docs/SOLIDIFICATION_BERRY.md` — mecanisme, verification (§5), parametres, 13 pieges.
