@@ -49,7 +49,7 @@ fetch('/lieux').then(r=>r.json()).then(d=>{cartes=d.cartes;lieux=d.lieux;cacheLi
   for(const c of cartes)if(c.topic){const l=envParTopic.get(c.topic);envParTopic.set(c.topic,l?l+', '+c.env:c.env);}
   dessinePuces();recompte();
   const demande=lieuDemande(lieux);                      // ?lieu= : premier chargement seulement, jamais memorise
-  if(demande){bandeauLieu(document.body,libelleLieu(demande),()=>{});choisitLieu(demande);}
+  if(demande){bandeauLieu(document.body,libelleLieu(demande),()=>choisitLieu(''));choisitLieu(demande);}
   else choisitLieu(lieuChoisi);
   if(window.dessinePanneaux)dessinePanneaux();
 }).catch(()=>{});                                         // echec : pas de puces, page d'avant

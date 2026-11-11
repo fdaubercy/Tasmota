@@ -42,8 +42,8 @@ def identites(racine):
             serveur = {}
         mqtt = serveur.get("mqtt") if isinstance(serveur, dict) else None
         res.append({"env": e.nom, "lieu": lieu(e.nom),
-                    "hote": serveur.get("hostname") or "" if isinstance(serveur, dict) else "",
-                    "topic": mqtt.get("topic") or "" if isinstance(mqtt, dict) else "",
+                    "hote": str(serveur.get("hostname") or "") if isinstance(serveur, dict) else "",
+                    "topic": str(mqtt.get("topic") or "") if isinstance(mqtt, dict) else "",
                     "ip": e.ip if e.ip_source == "h" else ""})
     return res
 

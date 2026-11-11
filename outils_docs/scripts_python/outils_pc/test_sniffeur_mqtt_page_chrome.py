@@ -88,7 +88,7 @@ class Montage:
         commande = ([sys.executable, "-u", str(Path(__file__).resolve()), "--serveur"]
                     + (["--sans-lieux"] if self.sans_lieux else []) + ["--", str(self.t), str(self.http)])
         self.serveur = subprocess.Popen(commande, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+                                        env={**os.environ, "PYTHONIOENCODING": "utf-8", "OUTILS_TASMOTA_DOSSIER": str(self.t)},
                                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         self._attend(self.url + "etat", 20)
         for topic, payload in DEPART:
@@ -246,8 +246,9 @@ def sonde(m):
     n = cdp.js(JS_NB)
     cdp.js("document.querySelector('.bandeau-lieu button').click()")
     verifie(cdp.js("[document.querySelector('.bandeau-lieu'), location.search]"), [None, ""], "croix : bandeau et parametre retires")
-    verifie(cdp.js("[document.querySelector('#lieux .puce.choisi').dataset.lieu, " + JS_NB + "]"), ["garage", n],
-            "croix : aucune liste changee, puce Garage toujours choisie")
+    verifie(t.attend(cdp, "document.querySelector('#lieux .puce.choisi').dataset.lieu === 'tous' && "
+                          + JS_NB + " > " + str(n), 5) is True,
+            True, "croix : puce Tous choisie, plus de messages qu'avec Garage")
     m.ouvre(attendus=1)                                          # reouverture sans parametre : Tous (vigilance 5)
     t.attend(cdp, JS_RANGEE_PRETE, 15)
     verifie(cdp.js("document.querySelector('#lieux .puce.choisi').dataset.lieu"), "tous", "reouverture sans parametre : Tous")

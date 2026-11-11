@@ -147,7 +147,8 @@ function fichiersCartes() {
   if (!cartes.length) { zone.appendChild(h("div", {"class": "vide", texte: "Aucune carte envoyable par le réseau."})); return; }
   // arrivee avec ?lieu= : 1re carte du lieu, une fois, onglet visible, si rien n'est choisi et sans ?env= (celui de l'atelier gagne)
   if (lieuxFichiers && !$("vue-fichiers").hidden) {
-    var premiere = F.env || new URLSearchParams(location.search).get("env") ? null : lieuxPremiere(cartes);
+    var demande = new URLSearchParams(location.search).get("env");   // seul un ?env= connu l'emporte
+    var premiere = F.env || (demande && cartes.some(function (e) { return e.nom === demande; })) ? null : lieuxPremiere(cartes);
     lieuxFichiers = null;
     if (premiere) return choisitCarte(premiere.nom);
   }

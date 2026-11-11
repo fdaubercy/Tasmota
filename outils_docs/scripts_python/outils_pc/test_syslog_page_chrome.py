@@ -67,7 +67,7 @@ class Montage:
         commande = ([sys.executable, "-u", str(Path(__file__).resolve()), "--serveur"]
                     + (["--sans-lieux"] if self.sans_lieux else []) + ["--"] + args)
         self.serveur = subprocess.Popen(commande, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+                                        env={**os.environ, "PYTHONIOENCODING": "utf-8", "OUTILS_TASMOTA_DOSSIER": str(self.t)},
                                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         self._attend(self.url + "etat", 20)
         for hote, sev, texte in HOTES:
@@ -176,8 +176,10 @@ def sonde(m):
     cdp.js("document.querySelector('.bandeau-lieu button').click()")
     verifie(cdp.js("[document.querySelector('.bandeau-lieu'), location.search]"), [None, ""],
             "croix : bandeau et parametre retires")
-    verifie(cdp.js("[document.querySelector('#lieux .puce.choisi').dataset.lieu, document.querySelectorAll('#liste .l').length]"),
-            ["garage", 2], "croix : aucune liste changee, puce Garage toujours choisie")
+    verifie(t.attend(cdp, "document.querySelector('#lieux .puce.choisi').dataset.lieu === 'tous' && "
+                          "document.querySelectorAll('#liste .l').length === Number(document.querySelector('#lieux .puce[data-lieu=tous] .n').textContent) && "
+                          "document.querySelectorAll('#liste .l').length > 2", 5) is True,
+            True, "croix : puce Tous choisie, toutes les lignes affichees")
     m.ouvre()                                                    # reouverture sans parametre : Tous (vigilance 5)
     t.attend(cdp, JS_RANGEE_PRETE, 15)
     verifie(cdp.js("document.querySelector('#lieux .puce.choisi').dataset.lieu"), "tous", "reouverture sans parametre : Tous")

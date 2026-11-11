@@ -268,6 +268,11 @@ def sonde_arrivee(m):
     sans = etat_page(cdp)
     verifie(cdp.js("document.querySelectorAll('.bandeau-lieu').length"), 0, "sans ?lieu= : aucun bandeau")
 
+    cdp.appel("Emulation.setDeviceMetricsOverride", width=1000, height=300, deviceScaleFactor=1, mobile=False)   # fenetre basse : sans defilement, Garage est sous le pli
+    ouvre_url(m, "?lieu=garage")
+    verifie(cdp.js("(r => r.top >= 0 && r.top < innerHeight)(document.querySelector('details[data-groupe=garage]').getBoundingClientRect())"),
+            True, "?lieu=garage : le groupe Garage est amene dans la fenetre (fenetre de 300 px)")
+    cdp.appel("Emulation.clearDeviceMetricsOverride")
     ouvre_url(m, "?lieu=garage")
     verifie((classement_actif(), memo()), ("lieu", "famille"), "?lieu=garage : classement Lieu affiche, memorise intact (famille)")
     verifie([(g["nom"], g["ouvert"]) for g in groupes(cdp) if g["groupe"]][:7],
@@ -284,6 +289,16 @@ def sonde_arrivee(m):
     cdp.js("document.getElementById('onglet-memoire').click()")
     t.attend(cdp, "document.getElementById('m-env').value", 10)
     verifie(cdp.js("document.getElementById('m-env').value"), P4, "#m-env : 1re carte du garage")
+
+    # ?env= inconnu : ne bloque pas le lieu (seul un ?env= qui correspond a une carte l'emporte)
+    ouvre_url(m, "?env=inconnu&lieu=garage")
+    cdp.js("document.getElementById('onglet-fichiers').click()")
+    t.attend(cdp, "document.querySelector('input[name=f-carte]:checked')?.value", 10)
+    verifie(cdp.js("document.querySelector('input[name=f-carte]:checked')?.value"), P4,
+            "?env=inconnu&lieu=garage : 1re carte du garage choisie")
+    ouvre_url(m, "?lieu=garage")
+    cdp.js("document.getElementById('onglet-fichiers').click()")
+    t.attend(cdp, "document.querySelector('input[name=f-carte]:checked')?.value", 10)
 
     # la croix : classement memorise, bandeau retire, adresse sans lieu, #m-env inchangee
     cdp.js("document.getElementById('onglet-build').click()")

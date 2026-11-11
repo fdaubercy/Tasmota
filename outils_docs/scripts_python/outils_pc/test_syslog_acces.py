@@ -81,7 +81,7 @@ class Outil:
                     "--http", str(self.http), "--journal", self.journal, "--sans-navigateur"]
         if local:
             commande.append("--local")
-        env = dict(os.environ, PYTHONUTF8="1", PYTHONPATH=ICI)
+        env = dict(os.environ, PYTHONUTF8="1", PYTHONPATH=ICI, OUTILS_TASMOTA_DOSSIER=self.dossier)
         self.proc = subprocess.Popen(commande, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env,
                                      text=True, encoding="utf-8", errors="replace")
         self.lignes, self.file = [], queue.Queue()

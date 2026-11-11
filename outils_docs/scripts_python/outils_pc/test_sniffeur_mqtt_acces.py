@@ -80,6 +80,7 @@ def refus(ip, port, cookie_faux):
 
 def principal():
     dossier = tempfile.mkdtemp(prefix="banc_sniffeur_mqtt_")
+    os.environ["OUTILS_TASMOTA_DOSSIER"] = dossier             # jamais de fiche dans le vrai dossier de l'annuaire
     serveur, acces, port = monte(dossier)
     favori = {"nom": "banc", "filtre": "tele/", "champ": "topic"}
     try:

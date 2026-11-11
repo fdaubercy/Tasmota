@@ -48,6 +48,18 @@ verifie(all(i["lieu"] in codes for i in ids), True, "identites : lieux dans la t
 verifie([i["hote"] for i in ids if i["env"] == "tasmota-pompe-piscine"], [""], "piscine sans hote")
 verifie(lieux.pour_page_identites(RACINE)["lieux"][0], ["etage2", "2e étage"], "pour_page_identites : premier lieu")
 verifie(lieux.pour_page_identites(RACINE)["cartes"], ids, "pour_page_identites : cartes")
+# hostname et topic non textuels : convertis en chaine (toLowerCase() cote JS ne doit jamais lever), persist d'essai temporaire
+import json, tempfile
+with tempfile.TemporaryDirectory() as tmp:
+    faux = Path(tmp) / "_persist.json"
+    faux.write_text(json.dumps({"serveur": {"hostname": 1234, "mqtt": {"topic": 56}}}), encoding="utf-8")
+    vrai = be.persist_carte
+    be.persist_carte = lambda racine, nom: faux
+    try:
+        faux_ids = lieux.identites(RACINE)
+    finally:
+        be.persist_carte = vrai
+verifie(all(i["hote"] == "1234" and i["topic"] == "56" for i in faux_ids) and bool(faux_ids), True, "identites : hostname et topic numeriques en chaine")
 for f in ("lieuDeHote(", "lieuDeTopic(", "lieuDemande(", "bandeauLieu("):
     verifie("function " + f in lieux.JS, True, "JS " + f)
 

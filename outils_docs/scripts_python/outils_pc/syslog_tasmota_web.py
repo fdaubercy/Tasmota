@@ -171,7 +171,7 @@ fetch("/lieux").then(r => r.json()).then(d => {
   dessinePuces(); recompte();
   const demande = lieuDemande(lieux);                  // ?lieu= : premier chargement seulement, jamais memorise
   if (demande) {
-    bandeauLieu(document.body, libelleLieu(demande), () => {});
+    bandeauLieu(document.body, libelleLieu(demande), () => choisitLieu(""));
     choisitLieu(demande);
   } else choisitLieu(lieuChoisi);
 }).catch(() => {});                                     // echec : pas de puces, page d'avant

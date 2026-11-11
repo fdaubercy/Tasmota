@@ -123,6 +123,7 @@ function lieuxPremiere(cartes) {
 function lieuxGroupes(liste, membres, donnees) {
   lieuxTable = donnees.lieux || lieuxTable;
   lieuxCases = [];
+  var versLieu = null;                          // groupe du lieu d'arrivee, amene dans la fenetre apres le dessin
   lieuxArrivee();
   if (classement === "famille") return false;
   var parLieu = classement === "lieu";
@@ -138,6 +139,7 @@ function lieuxGroupes(liste, membres, donnees) {
     var compte = h("span", {"class": "compte"});
     var det = h("details", {"class": "famille", "data-groupe": k}, h("summary", {}, caseG, h("span", {texte: libelles[k] || k || "Autres"}), compte));
     det.open = (lieuxOuvre && k === lieuxInitial) || groupe.some(function (e) { return choix[e.nom].coche; });
+    if (lieuxOuvre && k === lieuxInitial) versLieu = det;
     caseG.onchange = function () {
       groupe.filter(lieuVisible).forEach(function (e) { choix[e.nom].coche = caseG.checked; ui[e.nom].caseEnv.checked = caseG.checked; });
       majTout();
@@ -148,6 +150,7 @@ function lieuxGroupes(liste, membres, donnees) {
     liste.appendChild(det);
   });
   lieuxOuvre = false;
+  if (versLieu) versLieu.scrollIntoView({block: "start"});
   return true;
 }
 
