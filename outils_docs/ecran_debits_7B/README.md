@@ -18,4 +18,8 @@ ESP32-S3-Touch-LCD-7B, 1024 × 600, tactile). Plan `tasks/plans/debits-deux-cart
 | D | Valeurs à gauche, courbe des 30 dernières minutes à droite | `chart` : 2 séries natives ; les 6 demandent l'objet LVGL dessous (`_lv_obj.add_series`) | `lv.chart`, 6 séries |
 
 Toutes gardent un pied de page tactile : « Débits », « Courbes » (A, C), « Réglages » (fenêtre, veille, luminosité). B ouvre
-la courbe d'une voie par appui long sur sa tuile. Choix en attente.
+la courbe d'une voie par appui long sur sa tuile.
+
+**Choix de l'utilisateur (2026-11-11) : A et D, avec bascule sur l'écran.** Deux pages, « Débits » (A, six lignes à barre)
+et « Courbes » (D, valeurs et courbe des 30 dernières minutes), choisies par les boutons du pied de page, plus la page
+« Réglages ». À réaliser dans les deux interfaces (HASPmota et LVGL pur), sélectionnées à la compilation.
