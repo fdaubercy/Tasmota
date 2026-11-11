@@ -38,6 +38,7 @@ CARTES = {
     "tasmota32-bureau-interrupteur-energie": "data/bureau/tasmota32-interrupteur-energie",
     "tasmota32s3-etage2-grenier": "data/etage2/tasmota32s3-grenier",
     "tasmota32s3-bureau-serveur-debits-pac": "data/bureau/tasmota32s3-serveur-debits-pac",
+    "tasmota32s3-bureau-ecran-debits-pac": "data/bureau/tasmota32s3-ecran-debits-pac",
 }
 
 
