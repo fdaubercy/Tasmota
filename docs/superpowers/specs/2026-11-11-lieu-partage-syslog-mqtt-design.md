@@ -88,6 +88,9 @@ liste plus tard (7800 rappelle `chargeEnvs` après une création, un renommage, 
 `lieu` de l'adresse (`history.replaceState`) et le bandeau, sans rechargement. Il ne change AUCUNE liste ni carte
 choisie (revenir en arrière relancerait `choisitEnv` de l'atelier ou `chargeEtat` de 7800 et pourrait perdre un travail
 non écrit) ; seule exception, la page Build revient à son classement mémorisé (dessin seulement, l'état vit dans `choix`).
+Deuxième exception (décidée le 2026-11-11 à la relecture finale) : sur le syslog et le sniffeur MQTT, « ✕ » remet la puce
+« Tous », comme son libellé l'annonce ; un filtre d'affichage ne fait perdre aucun travail, et il ne doit pas masquer les
+lignes d'une autre carte à l'insu de l'utilisateur (§6).
 Décision de Claude, relevée par la relecture.
 
 Par page :

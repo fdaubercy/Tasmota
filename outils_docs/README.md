@@ -745,7 +745,8 @@ des cartes sont lus dans les `_persist.json` du dépôt (`lieux.py::identites`),
   abonnements. L'arborescence des topics est rangée par lieu, l'env de la carte entre parenthèses sur son nœud ; les listes de
   cartes des panneaux « Logs » et « Commande » sont groupées par lieu. Le lieu choisi n'est pas mémorisé.
 - **Arrivée avec `?lieu=`** : la page ouverte met le lieu en avant une seule fois, avec un bandeau « Lieu : X (depuis l'annuaire) »
-  et une croix « Tous les lieux ». La croix retire le paramètre et le bandeau, sans rien changer d'autre. Un code inconnu est ignoré.
+  et une croix « Tous les lieux ». La croix retire le paramètre et le bandeau ; sur le syslog et le sniffeur MQTT,
+  elle remet aussi la puce « Tous ». Ailleurs, elle ne change aucune liste. Un code inconnu est ignoré.
   Pour la page Build, voir « Arrivée avec `?lieu=` » plus bas.
 
 <hr></hr>
