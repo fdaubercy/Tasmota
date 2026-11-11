@@ -325,6 +325,9 @@ def fabrique_gestionnaire(sniffeur, acces):
                 self._json(sniffeur.config.liste_publique())
             elif url.path == "/favoris":
                 self._json(sniffeur.config.favoris())
+            elif url.path == "/lieux":            # table des lieux + identites des cartes du depot (lecture seule)
+                import lieux
+                self._json(lieux.pour_page_identites(RACINE))
             elif url.path == "/logs":
                 module = parse_qs(url.query).get("module", [None])[0]
                 self._json(sniffeur.lignes_logs(module))

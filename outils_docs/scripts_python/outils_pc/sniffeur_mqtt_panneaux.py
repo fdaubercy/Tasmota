@@ -9,7 +9,9 @@ effaceRetenu, redessine. La page appelle dessinePanneaux() (registres modifies) 
     Connexions (LWT) (re)connexions par module, intervalles, chronologie
     Logs carte       stat/<topic>/LOGGING (MqttLog 2 ou 3 sur la carte) : historique du sniffeur + direct
     Commande         cmnd/<topic>/<Commande> selon le FullTopic du module ; reponses stat/<topic>/... 5 s
-    Arborescence     topics recus en arbre, compteurs ; clic = filtre sur ce topic
+    Arborescence     topics recus en arbre, compteurs ; clic = filtre sur ce topic ; 1er niveau = le lieu
+                     (sniffeur_mqtt_lieux.py), l'env d'une carte entre parentheses
+Les listes « module » (Logs, Commande) sont groupees par lieu (<optgroup>).
 """
 
 JS = r"""
@@ -30,8 +32,13 @@ function modules(){  // [{tp, dn, ft, pre:[cmnd,stat,tele], hn, mac}] tries par 
     l.push({tp:e.tp,dn:e.dn||e.tp,ft:e.ft||'%prefix%/%topic%/',pre:Array.isArray(e.tpx)&&e.tpx.length>=2?e.tpx:['cmnd','stat','tele'],hn:e.hn||'',mac:e.mac});
   return l.sort((a,b)=>a.dn.localeCompare(b.dn));}
 function nomModule(tp){const m=modules().find(x=>x.tp===tp);return m?m.dn:'';}
-function remplitSelect(sel,options,vide){const v=sel.value;sel.innerHTML='';if(vide)sel.add(new Option(vide,''));
-  for(const [val,txt] of options)sel.add(new Option(txt,val));if([...sel.options].some(o=>o.value===v))sel.value=v;}
+function remplitSelect(sel,options,vide){const v=sel.value;
+  if(lieux.length){   // groupes par lieu ; valeurs inchangees (topics nus), libelles posees apres coup (textContent)
+    remplitParLieu(sel,options.map(([val])=>({nom:val,lieu:codeLieuTopic(val,true)==='autres'?'Autres':codeLieuTopic(val,true)})),lieux,'');
+    const txt=new Map(options);for(const o of sel.options)o.textContent=txt.get(o.value);
+    if(vide)sel.insertBefore(new Option(vide,''),sel.firstChild);}
+  else{sel.innerHTML='';if(vide)sel.add(new Option(vide,''));for(const [val,txt] of options)sel.add(new Option(txt,val));}
+  sel.value=[...sel.options].some(o=>o.value===v)?v:(vide?'':(sel.options[0]?sel.options[0].value:''));}
 function majModules(){const l=modules().map(m=>[m.tp,m.dn+' ('+m.tp+')']);
   if(ouverte('secCmd'))remplitSelect($('cmdModule'),l,'topic libre...');
   if(ouverte('secLogs')){const connus=new Set(l.map(x=>x[0]));
@@ -166,19 +173,24 @@ function cmdReponse(m){if(!cmdEnCours||m.retain||!m.topic.startsWith(cmdEnCours.
 const arbreOuvert=new Set();
 function dessineArbre(){const racine={enfants:Object.create(null),n:0,nbTopics:0};   // Object.create(null) : un segment 'constructor' reste un segment
   for(const [topic,s] of Object.entries(stats)){let noeud=racine;racine.n+=s.n;racine.nbTopics++;const parts=topic.split('/');
-    parts.forEach((p,i)=>{noeud=noeud.enfants[p]??={enfants:Object.create(null),n:0,nbTopics:0,chemin:parts.slice(0,i+1).join('/')};noeud.n+=s.n;noeud.nbTopics++;});
+    const code=lieux.length?codeLieuTopic(topic,false):'',chaine=code?[code].concat(parts):parts,d=code?1:0;   // 1er niveau = le lieu
+    chaine.forEach((p,i)=>{const j=i-d;   // j : rang dans le topic ; un topic de carte = topic sans son 1er segment (tele, stat, cmnd)
+      noeud=noeud.enfants[p]??={enfants:Object.create(null),n:0,nbTopics:0,chemin:chaine.slice(0,i+1).join('/'),
+        env:j>=1?envParTopic.get(parts.slice(1,j+1).join('/')):undefined};noeud.n+=s.n;noeud.nbTopics++;});
     noeud.feuille=s;noeud.topic=topic;}
   const sec=$('secArbre'),pan=$('panneau'),defil=pan.scrollTop;
   let h='<h3>Arborescence : '+racine.nbTopics+' topics, '+racine.n+' messages depuis l\'ouverture de la page (clic sur un topic = filtre)</h3>';
   if(!racine.nbTopics)h+='<div class="vide">aucun message recu</div>';
-  function rend(noeud){let s='';
-    for(const nom of Object.keys(noeud.enfants).sort((a,b)=>a.localeCompare(b))){const e=noeud.enfants[nom],sous=Object.keys(e.enfants).length;
+  const envDe=e=>e.env?' <span class="env">('+echappe(e.env)+')</span>':'';
+  function rend(noeud,niveauLieu){let s='';
+    const noms=niveauLieu?lieux.map(x=>x[0]).concat('autres').filter(c=>c in noeud.enfants):Object.keys(noeud.enfants).sort((a,b)=>a.localeCompare(b));
+    for(const nom of noms){const e=noeud.enfants[nom],sous=Object.keys(e.enfants).length;
       if(e.feuille){const f=e.feuille;s+='<div class="feuille" data-topic="'+echappe(e.topic)+'" title="'+echappe(e.topic)+'">'+(f.retain?'<span class="r">R</span>':'')+
-        '<span class="tp">'+echappe(nom||'(vide)')+'</span> <span class="nb">('+f.n+', '+f.t+')</span> '+echappe(String(f.payload).slice(0,200))+'</div>';}
-      if(sous)s+='<details data-chemin="'+echappe(e.chemin)+'"'+(arbreOuvert.has(e.chemin)?' open':'')+'><summary><span class="tp">'+echappe(nom||'(vide)')+
-        '</span>/ <span class="nb">'+e.nbTopics+' topics, '+e.n+' messages</span></summary>'+rend(e)+'</details>';}
+        '<span class="tp">'+echappe(nom||'(vide)')+'</span>'+envDe(e)+' <span class="nb">('+f.n+', '+f.t+')</span> '+echappe(String(f.payload).slice(0,200))+'</div>';}
+      if(sous)s+='<details data-chemin="'+echappe(e.chemin)+'"'+(arbreOuvert.has(e.chemin)?' open':'')+'><summary><span class="tp">'+echappe(niveauLieu?libelleLieu(nom):nom||'(vide)')+
+        '</span>'+(niveauLieu?'':'/')+envDe(e)+' <span class="nb">'+e.nbTopics+' topics, '+e.n+' messages</span></summary>'+rend(e,false)+'</details>';}
     return s;}
-  sec.innerHTML=h+rend(racine);pan.scrollTop=defil;
+  sec.innerHTML=h+rend(racine,lieux.length>0);pan.scrollTop=defil;
   for(const d of sec.querySelectorAll('details'))d.addEventListener('toggle',()=>{if(d.open)arbreOuvert.add(d.dataset.chemin);else arbreOuvert.delete(d.dataset.chemin);});
   for(const f of sec.querySelectorAll('.feuille'))f.onclick=()=>{const t=f.dataset.topic;filtre.value=t;champ.value='topic';regex.checked=false;
     ecrit('filtre',t);ecrit('champ','topic');ecrit('regex','0');$('topicPub').value=t;redessine();};}

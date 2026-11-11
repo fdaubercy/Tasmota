@@ -93,6 +93,10 @@ def principal():
                         dict(local, Origin=f"http://evil.example:{port}", Host=f"evil.example:{port}"), favori)[0],
                 403, "ce PC : origine etrangere refusee meme si Host concorde (DNS rebinding)")
 
+        statut, entetes, corps = requete("127.0.0.1", port, chemin="/lieux")
+        verifie((statut, entetes.get("Content-Type"), '"garage"' in corps, '"cartes"' in corps),
+                (200, "application/json", True, True), "ce PC : GET /lieux sans jeton, JSON (lieux et cartes)")
+
         # -- mots de passe : aucun GET ne doit les renvoyer
         sorties = "".join(requete("127.0.0.1", port, chemin=c)[2] for c in ("/brokers", "/etat", "/flux", "/"))
         verifie(SECRET in sorties, False, "GET /brokers, /etat, /flux, / : aucun mot de passe de broker")
@@ -105,6 +109,7 @@ def principal():
             verifie(requete(ip, port)[0], 403, f"autre appareil ({ip}) : GET / sans jeton refuse")
             verifie(requete(ip, port, chemin="/flux")[0], 403, "autre appareil : flux SSE sans jeton refuse")
             verifie(requete(ip, port, chemin="/?jeton=faux")[0], 403, "autre appareil : mauvais jeton refuse")
+            verifie(requete(ip, port, chemin="/lieux")[0], 403, "autre appareil : GET /lieux sans jeton refuse")
             statut, entetes, _ = requete(ip, port, chemin=f"/?jeton={acces.jeton}")
             verifie(statut, 303, "autre appareil : ?jeton= valide -> 303")
             verifie(entetes.get("Location"), "/", "... vers / sans jeton")
@@ -124,6 +129,8 @@ def principal():
                     403, "autre appareil : POST d'une origine etrangere refuse")
             verifie(requete(ip, port, "POST", "/favoris", dict(reseau, **{"X-Sniffeur": "0"}), favori)[0], 403,
                     "autre appareil : POST sans X-Sniffeur refuse")
+            statut, _, corps = requete(ip, port, chemin="/lieux", entetes=avec)
+            verifie((statut, '"lieux"' in corps and '"cartes"' in corps), (200, True), "autre appareil : /lieux avec le cookie")
             sorties = "".join(requete(ip, port, chemin=c, entetes=avec)[2] for c in ("/brokers", "/etat", "/flux"))
             verifie(SECRET in sorties, False, "autre appareil : aucun mot de passe de broker renvoye")
             cookie_faux = f"{acces.cookie}=faux"

@@ -183,16 +183,16 @@ créer `test_sniffeur_mqtt_page_chrome.py`.
 Interfaces consommées : `pour_page_identites`, `lieuDeTopic` (avec `nu` pour les listes), `remplitParLieu`,
 `lieuDemande`, `bandeauLieu`.
 
-- [ ] Banc d'accès : `GET /lieux` comme en A5 (rouge d'abord).
-- [ ] Sonde neuve, rouge d'abord : vrai serveur sans broker joignable (hôte de broker sur un port fermé), messages
+- [x] Banc d'accès : `GET /lieux` comme en A5 (rouge d'abord). — preuve : test_sniffeur_mqtt_acces.py rouge (404 sur /lieux) puis VERT apres la route
+- [x] Sonde neuve, rouge d'abord : vrai serveur sans broker joignable (hôte de broker sur un port fermé), messages
   injectés par `Sniffeur.recu` dans un mode serveur de la sonde (comme `--serveur` des autres sondes) : `tele/jardin/cuve/SENSOR`,
   `stat/garage/rideau/RESULT`, `tele/etage2/grenier/STATE`, `zigbee2mqtt/bridge/state`. Puces : Garage 2, 2e étage 1,
   Autres 1 ; étiquettes ; clic Garage → 2 messages, abonnements (`/etat`) inchangés ; arborescence : 1er niveau
   `2e étage`, `Garage`, `Autres` dans cet ordre, `jardin/cuve` sous Garage avec son env ; `#logModule` et `#cmdModule` ont
   un `optgroup` Garage ; `?lieu=garage` → puce active, bandeau ; réouverture sans paramètre → Tous ; topic `<b>x</b>` →
-  aucune balise.
-- [ ] Écrire ; banc d'accès, sonde et `test_build_ota_mqtt.py` (client MQTT partagé) verts.
-- [ ] Commit `feat(sniffeur-mqtt): messages et arborescence ranges par lieu`.
+  aucune balise. — preuve : test_sniffeur_mqtt_page_chrome.py rouge d'abord (rangee de puces absente), puis 39 verifications vertes ; temoin (sans fetch /lieux) echoue ; 3 mutants rouges (ligne de filtre, echappement de l'arbre, cle d'ouverture sans lieu)
+- [x] Écrire ; banc d'accès, sonde et `test_build_ota_mqtt.py` (client MQTT partagé) verts. — preuve : acces, sonde (2 passages verts consecutifs, temoin compris) et test_build_ota_mqtt.py VERT
+- [x] Commit `feat(sniffeur-mqtt): messages et arborescence ranges par lieu`. — preuve : commit feat(sniffeur-mqtt) (voir git log)
 
 ## A7 — Documentation, relecture, essai réel
 

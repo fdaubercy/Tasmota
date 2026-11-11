@@ -17,8 +17,12 @@ depuis un autre appareil, chaque requete exige en plus le jeton (cookie pose par
 
 Ce fichier : barres Broker / abonnements / filtre / publication et liste des messages (differences avec
 le message precedent du meme topic, favoris, export). Les panneaux (audit discovery, connexions LWT,
-logs par carte, commande Tasmota, arborescence) sont dans sniffeur_mqtt_panneaux.py.
+logs par carte, commande Tasmota, arborescence) sont dans sniffeur_mqtt_panneaux.py. Lieu des messages
+(puces, etiquettes, ?lieu=) : sniffeur_mqtt_lieux.py, route GET /lieux de sniffeur_mqtt.py.
 """
+
+import lieux
+import sniffeur_mqtt_lieux
 
 PAGE = r"""<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><title>Sniffeur MQTT</title>
@@ -56,7 +60,7 @@ PAGE = r"""<!doctype html>
  .lg-tag{color:#29b8db}.lg-berry{color:#d670d6}.lg-err{color:#f14c4c}.lg-t{color:#808080}
  details{margin-left:14px} summary{cursor:pointer} .feuille{margin-left:28px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .feuille:hover{background:#2a2d2e} .nb{color:#808080}
-</style></head><body>
+/*LIEUX_CSS*/</style></head><body>
 <div class="barre">
  <span class="gris">Broker :</span>
  <select id="brokerSel" title="brokers parametres (memorises hors depot : %APPDATA%\sniffeur_mqtt\config.json)"></select>
@@ -105,6 +109,7 @@ PAGE = r"""<!doctype html>
  <button id="exporter" title="telecharger les messages affiches (filtres)">Exporter</button>
  <span class="gris" id="compteur"></span>
 </div>
+<div class="barre" id="lieux"></div>
 <div class="barre">
  <span class="gris">Panneaux :</span>
  <button id="btAudit" title="fiches tasmota/discovery/MAC/role : plusieurs roles sous une MAC, id/nom/topic incoherents">Audit discovery</button>
@@ -145,6 +150,7 @@ function testeur(){const f=filtre.value;if(!f)return ()=>true;
   const fl=f.toLowerCase(),ok=s=>re?re.test(s):s.toLowerCase().includes(fl);
   return m=>m.note?ok(m.texte):(champ.value==='topic'?ok(m.topic):champ.value==='payload'?ok(m.payload):ok(m.topic)||ok(m.payload));}
 function visible(m,t){if(m.note)return notes.checked&&t(m);if(m.retain&&!retenus.checked)return false;
+  if(lieuChoisi&&codeLieu(m)!==lieuChoisi)return false;
   if(sansRepet.checked&&m.repete)return false;return t(m);}
 function aplatit(o,pre,sortie){  // {"a":{"b":1}} -> {"a.b":"1"}
   if(o!==null&&typeof o==='object'){for(const k of Object.keys(o))aplatit(o[k],pre?pre+'.'+k:k,sortie);}else sortie[pre||'(valeur)']=JSON.stringify(o);return sortie;}
@@ -162,7 +168,7 @@ function ligne(m){const d=document.createElement('div');
   else{const cls=m.hex?'hx':(m.topic.endsWith('/LWT')?(m.payload==='Online'?'lwtOn':m.payload==='Offline'?'lwtOff':'p'):'p');
     p='<span class="'+cls+'">'+echappe(m.payload)+(m.tronque?' ... (tronque)':'')+'</span>';}
   const change=m.prec!==undefined&&!m.repete;
-  d.innerHTML='<span class="t">'+m.t+'</span> '+(m.retain?'<span class="r" title="message retenu">R</span>':'')+
+  d.innerHTML='<span class="t">'+m.t+'</span> '+etiqLieu(m)+(m.retain?'<span class="r" title="message retenu">R</span>':'')+
     (change?'<span class="d" title="different du message precedent de ce topic (cliquer pour voir)">&Delta;</span>':'')+
     (m.retain&&m.taille?'<button class="ef" title="effacer ce message retenu du broker (publication vide retenue)">effacer</button>':'')+
     '<span class="tp" title="reprendre ce topic pour publier">'+echappe(m.topic)+'</span> '+p;
@@ -181,7 +187,7 @@ function ajoute(m){
   if(!m.note){m.prec=dernier[m.topic];m.repete=m.prec!==undefined&&m.prec===m.payload;dernier[m.topic]=m.payload;
     const s=stats[m.topic]??={n:0};s.n++;s.t=m.t;s.payload=m.payload;s.retain=m.retain;
     if(!topics.has(m.topic)&&topics.size<2000){topics.add(m.topic);const o=document.createElement('option');o.value=m.topic;$('topicsVus').appendChild(o);}
-    if(window.surMessage)surMessage(m);}
+    compteLieu(m);if(window.surMessage)surMessage(m);}
   msgs.push(m);if(msgs.length>MAX)msgs.splice(0,msgs.length-MAX);
   if(enPause){attente.push(m);compte();return;}
   if(visible(m,testeur())){liste.appendChild(ligne(m));while(liste.childElementCount>MAX)liste.removeChild(liste.firstChild);
@@ -262,14 +268,14 @@ $('payloadPub').addEventListener('keydown',e=>{if(e.key==='Enter')publie();});
 $('pause').onclick=()=>{enPause=!enPause;$('pause').textContent=enPause?'Reprendre':'Pause';
   if(!enPause){const t=testeur();for(const m of attente)if(visible(m,t))liste.appendChild(ligne(m));attente=[];
     if(suivre.checked)liste.scrollTop=liste.scrollHeight;}compte();};
-$('effacer').onclick=()=>{msgs=[];attente=[];liste.innerHTML='';compte();};
+$('effacer').onclick=()=>{msgs=[];attente=[];liste.innerHTML='';recompte();compte();};
 for(const [el,c] of [[filtre,'filtre'],[champ,'champ']]){el.value=lit(c,el.value);
   el.addEventListener('input',()=>{ecrit(c,el.value);clearTimeout(minuteur);minuteur=setTimeout(redessine,200);});}
 for(const [el,c] of [[regex,'regex'],[retenus,'retenus'],[notes,'notes'],[sansRepet,'sansRepet']]){el.checked=lit(c,el.checked?'1':'0')==='1';
   el.addEventListener('change',()=>{ecrit(c,el.checked?'1':'0');redessine();});}
 $('formatPub').value=lit('formatPub',$('formatPub').value);$('formatPub').addEventListener('change',()=>ecrit('formatPub',$('formatPub').value));
 $('topicPub').value=lit('topicPub','');
-function videTout(){msgs=[];attente=[];liste.innerHTML='';disco={};evLwt=[];stats=Object.create(null);dernier=Object.create(null);compte();planifiePanneaux();}
+function videTout(){msgs=[];attente=[];liste.innerHTML='';disco={};evLwt=[];stats=Object.create(null);dernier=Object.create(null);recompte();compte();planifiePanneaux();}
 function connecte(){const es=new EventSource('/flux');
   es.onopen=()=>{$('eWeb').textContent='sniffeur';$('pWeb').style.background='#23d18b';videTout();};
   es.addEventListener('reset',videTout);
@@ -280,8 +286,9 @@ function connecte(){const es=new EventSource('/flux');
   es.addEventListener('etat',e=>appliqueEtat(JSON.parse(e.data)));
   es.onerror=()=>{$('eWeb').textContent='sniffeur injoignable';$('pWeb').style.background='#f14c4c';};}
 setInterval(()=>{if(etat.connecte!==undefined)fetch('/etat').then(r=>r.json()).then(appliqueEtat).catch(()=>{});},5000);
+/*LIEUX_JS*/
 chargeBrokers();chargeFavoris();connecte();
 </script>
 <script src="/panneaux.js"></script>
 </body></html>
-"""
+""".replace("/*LIEUX_CSS*/", sniffeur_mqtt_lieux.CSS).replace("/*LIEUX_JS*/", lieux.JS + sniffeur_mqtt_lieux.JS)
