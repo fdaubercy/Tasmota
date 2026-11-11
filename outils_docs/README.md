@@ -359,9 +359,42 @@ pont diviseur. Rouge sous 20 %, orange sous 40 %, bleu au-delà.
 
 Carte ESP32-S3 `tasmota32s3-bureau-serveur-debits-pac` (dossier `data/bureau/tasmota32s3-serveur-debits-pac/`), à la
 nourrice de la PAC : elle mesure le débit des **6 départs de radiateur** par leurs débitmètres à impulsions (YF-B2,
-K = 11 Hz par L/min) et l'affiche sur un **écran tactile TFT 480×320** (ILI9488 + XPT2046), sur sa page web et dans
-son JSON SENSOR. Plan `tasks/plans/debitmetres-chauffage.md`, analyse `outils_docs/ANALYSE_DEBITMETRES_CHAUFFAGE_2026-11-08.md`.
-**Pas encore essayée sur une carte réelle** (2026-11-09).
+K = 11 Hz par L/min) et les publie sur sa page web, dans son JSON SENSOR et par ModBus. L'écran est sur une seconde
+carte, la carte d'affichage (ci-dessous). Plans `tasks/plans/debitmetres-chauffage.md` et `tasks/plans/debits-deux-cartes.md`,
+analyse `outils_docs/ANALYSE_DEBITMETRES_CHAUFFAGE_2026-11-08.md`. **Pas encore essayées sur des cartes réelles** (2026-11-11).
+
+**Deux cartes depuis le 2026-11-09** : l'acquisition compte et calcule, la carte d'affichage montre les débits sur son écran.
+
+- **Acquisition** `tasmota32s3-bureau-serveur-debits-pac` : esclave ModBus id 1, Range Extender id 1, derrière le point
+  d'accès de l'affichage (`SERVEUR-DEBITS-PAC-GATEWAY`), sans écran (`drivers.ecran` OFF). Elle sert les 6 débits et un
+  mot d'états aux registres 4704 à 4710 (`modules.debits.modbus` ON) et les pousse en UDP à chaque fin de fenêtre. Sa
+  page et sa page d'équilibrage se joignent depuis le Wi-Fi maison par le relais de l'affichage :
+  `http://192.168.0.51:8080/` et `http://192.168.0.51:8080/equilibrage`.
+- **Affichage** `tasmota32s3-bureau-ecran-debits-pac` (dossier `data/bureau/tasmota32s3-ecran-debits-pac/`, IP
+  192.168.0.51, topic `chauffage/pac/ecran`) : module Waveshare ESP32-S3-Touch-LCD-7B (écran 7″ 1024 × 600, tactile
+  GT911, RS485 intégré), maître ModBus et Range Extender id 0 (`ecranDebitsFonctions.be`, `controleEcranDebits.be`). Il
+  relit les 7 valeurs en une requête toutes les 10 s par RS485 (RX GPIO16, TX GPIO15, 19 200 bauds) et reçoit le push.
+  Une voie sans nouvelles depuis 2 fenêtres est affichée « inconnu ». Brochage, expandeur d'E/S, `display.ini` et choix
+  HASPmota ou LVGL : fiche `WAVESHARE_ESP32-S3-Touch-LCD-7B.md` du dossier de la carte dans
+  `outils_docs/Schémas de branchement - Attribution des PINS des modules/bureau/` (plan `debits-deux-cartes`, A8, en cours).
+- **Réglages de l'affichage** : `ReglageEcranDebits fenetre <s>` (la même que `ReglageDebits fenetre` sur
+  l'acquisition, à recopier à la main), `ReglageEcranDebits veille <min>`.
+- **Réglages ModBus** : `ReglageModbus PeriodeReleve <s>` sur l'affichage (5 à 300 s, 10 posé ; exacte si elle divise
+  60 ; prise en compte au redémarrage) ; `ReglageModbus LectureGroupee ON` sur l'acquisition. Détail du protocole :
+  `PROTOCOLE_MODBUS.md` § « Lecture groupée et push multi-valeurs ».
+- **Déploiement** : flasher l'acquisition AVANT l'affichage.
+- **Sniffeur** sur le bus des débits : `sniffeur_modbus.py --persist affichage`.
+
+**Où changer les noms des voies.**
+- Affichage : `data/bureau/tasmota32s3-ecran-debits-pac/_persist.json`, `modules.ecranDebits.environnement.analogiques`,
+  `analogique1` à `analogique6`, champ `nom` (« Débit 1 » à « Débit 6 » aujourd'hui), relu par `ecranDebitsFonctions.be`
+  à chaque rafraîchissement. Libellés affichés avant le premier rafraîchissement : `pages.jsonl` du même dossier.
+- Acquisition : `data/bureau/tasmota32s3-serveur-debits-pac/_persist.json`, `modules.debits.environnement.debitmetres`
+  (voies 1-2) et `compteurs` (voies 3-6), champ `nom` : JSON SENSOR, historique, page d'équilibrage. Les `nom` de
+  `analogique1` à `analogique7` du même module sont les libellés des registres servis au maître.
+- Sur une carte en service : modifier le persist, l'envoyer (page Build, onglet Fichiers), puis `Restart 1`.
+
+**L'acquisition en détail :**
 
 - **Voies** : voies 1-2 = `FlowRateMeter` de Tasmota (GPIO4, GPIO5 ; groupe `debitmetres` du persist, entrées
   `debitmetre1-2`) ; voies 3-6 = compteurs `Counter1-4` (GPIO6, 7, 15, 16 ; groupe `compteurs`), débit calculé en Berry
@@ -373,9 +406,9 @@ son JSON SENSOR. Plan `tasks/plans/debitmetres-chauffage.md`, analyse `outils_do
 - **Capteur muet** : une voie à 0 L/min pendant 10 min (`modules.debits.muet`, en min) est signalée « muet » en rouge sur
   l'écran, « capteur muet ? » sur la page, et par `CAPTEUR_MUET_ERREUR` au journal (au passage seulement). Un départ
   fermé plus de 10 min est donc signalé lui aussi.
-- **Veille de l'écran** : après `modules.debits.veille` minutes sans toucher (5 par défaut, 0 = jamais), luminosité à
-  25 %, puis écran éteint 30 s plus tard ; un toucher le rallume. Le rétroéclairage doit être la broche `BACKLIGHT`
-  (type 992, GPIO40 dans le bloc `drivers.ecran`), pas un relais.
+- **Écran** : le code d'écran de `debitsFonctions.be` (pages, veille `modules.debits.veille`) ne sert plus depuis que
+  l'écran est sur la carte d'affichage (`drivers.ecran` OFF sur l'acquisition). Veille de l'écran : `ReglageEcranDebits
+  veille` sur l'affichage.
 - **Réglages**, tous gardés au persist :
 
   | Commande | Effet |

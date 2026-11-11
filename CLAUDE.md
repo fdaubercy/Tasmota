@@ -579,12 +579,25 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   Banc `berry/banc_cuve_page.py`. Mode d'emploi : `outils_docs/README.md`.
 - Page `/energie` du differentiel (2026-11-02, plan `tasks/plans/energie-differentiel.md`) : kWh et couts par heure, jour, mois gardes en flash, courbe de puissance 24 h ; `data/fs/energieFonctions.be` + `controleEnergie.be` (SOLIDIFIES, charges par l'autoexec, garde `diverses.energie`), `data/sd/{html,css,js}/energie.*` et `energieTarifs.*` (sous-page de Configuration : tarifs Base ou HC/HP) ; liste `page_energie` de `[berry_commun]` exclue de tous les autres envs. Banc `berry/banc_energie.py`. Mode d'emploi : `outils_docs/README.md`.
   Depuis le 2026-11-08 (palier 4 de l'atelier, spec `docs/superpowers/specs/2026-11-08-atelier-energie-differentiel-design.md`, plan `tasks/plans/energie-atelier.md`) la page se dessine d'apres `/json/energie_page.json` (routes `f=description`, `f=mois`, `f=direct` elargi ; repli sur la page d'avant si absente ou refusee ; 16 elements, 4096 o) ; ecrite par la destination « Energie » de l'atelier (`outils_pc/atelier_energie_description.py`, `atelier_graphiques_energie.py`, `atelier_graphiques_page_energie.py`, `cas_energie.json`) ; `energieFonctions` etant solidifie, firmware a recompiler une fois par la page Build. Bancs `berry/banc_energie_routes.py`, `banc_energie_description.py`, `outils_pc/test_energie_rendu.mjs`, `test_atelier_energie_description.py`, `test_atelier_graphiques_energie.py`, sonde `test_atelier_energie_page_chrome.py`.
-- Carte des debits de la nourrice de chauffage (2026-11-08, plan `tasks/plans/debitmetres-chauffage.md`, pas encore essayee sur carte) :
-  env `tasmota32s3-bureau-serveur-debits-pac`, module `debitsFonctions.be` + `controleDebits.be` du DOSSIER de la carte (pas `data/fs`),
-  6 voies (2 `FlowRateMeter` groupe `debitmetres`, 4 `Counter` groupe `compteurs` ; `nom` et `k` dans l'entree de chaque voie),
-  bloc `DEBITS` du JSON SENSOR, ecran TFT ILI9488 par HASPmota (`pages.jsonl`), capteur muet, veille de l'ecran, commande `ReglageDebits` ;
-  historique et `/graphiques` (plan `tasks/plans/historique-debits.md`). Bancs `berry/banc_debits.py`, `banc_demarrage.py`, essai de charge
-  `outils_pc/essai_charge_debits.py`. Guide d'equilibrage `outils_docs/chauffage/` (texte) ; page animee `equilibrage.html` du dossier de la carte, servie en `/equilibrage` par `equilibragePage.be` avec le code du mode carte `equilibrage_carte.js` (debits en direct, reglages gardes dans `/json/equilibrage.json`, relais pour un favori sans Referer ; plan `tasks/plans/equilibrage-par-la-carte.md`). Mode d'emploi : `outils_docs/README.md`.
+- Debits de la nourrice de chauffage sur DEUX cartes (2026-11-09, plans `tasks/plans/debitmetres-chauffage.md` et
+  `tasks/plans/debits-deux-cartes.md`, spec `docs/superpowers/specs/2026-11-09-debits-deux-cartes-design.md`, pas encore essayees sur carte). Acquisition `tasmota32s3-bureau-serveur-debits-pac`
+  (esclave ModBus id 1, Range Extender id 1, sans ecran) : `debitsFonctions.be` + `controleDebits.be` du DOSSIER de la carte
+  (pas `data/fs`), 6 voies (2 `FlowRateMeter` groupe `debitmetres`, 4 `Counter` groupe `compteurs` ; `nom` et `k` dans l'entree
+  de chaque voie), bloc `DEBITS` du JSON SENSOR, capteur muet, commande `ReglageDebits` ; registres 4704 a 4710 (6 debits en
+  centiemes de L/min, mot d'etats, bit 12 toujours a 1) et push UDP (`modules.debits.modbus`). Affichage
+  `tasmota32s3-bureau-ecran-debits-pac` (maitre ModBus et Range Extender id 0, IP 192.168.0.51) sur un Waveshare
+  ESP32-S3-Touch-LCD-7B (1024x600 RGB, GT911, RS485 16/15 ; fiche `WAVESHARE_ESP32-S3-Touch-LCD-7B.md` et docs constructeur dans
+  `outils_docs/Schémas de branchement - Attribution des PINS des modules/bureau/tasmota32s3-bureau-ecran-debits-pac/`, A8 en cours : expandeur I2C 0x24 par `preinit.be`, HASPmota ou LVGL au choix du cenv) :
+  `ecranDebitsFonctions.be` + `controleEcranDebits.be` du dossier de la carte, veille, commande `ReglageEcranDebits`. Lecture
+  groupee et push multi-valeurs : `modbusFonctions.be::sertGroupe`, `modBus_TasmotaSlaveModBus.be::demandeGroupee` et
+  `::eclateGroupe`, cles `drivers.ModBus.lectureGroupee`, `drivers.ModBus.periodeReleve` (`PROTOCOLE_MODBUS.md` § 9). Sniffeur :
+  `sniffeur_modbus.py --persist affichage`. Historique et `/graphiques` (plan `tasks/plans/historique-debits.md`). Bancs
+  `berry/banc_debits.py`, `banc_ecran_debits.py`, `banc_test_modbus.py`, `banc_demarrage.py`, `outils_pc/test_sniffeur_modbus.py`,
+  essai de charge `outils_pc/essai_charge_debits.py`. Guide d'equilibrage `outils_docs/chauffage/` (texte) ; page animee
+  `equilibrage.html` du dossier de l'acquisition, servie en `/equilibrage` par `equilibragePage.be` (joignable par
+  `http://192.168.0.51:8080/equilibrage`) avec le code du mode carte `equilibrage_carte.js` (debits en direct, reglages gardes
+  dans `/json/equilibrage.json`, relais pour un favori sans Referer ; plan `tasks/plans/equilibrage-par-la-carte.md`). Mode
+  d'emploi : `outils_docs/README.md`.
 - `outils_docs/EXTENSIONS_TAPP.md` — extensions Tasmota `.tapp` (2026-11-07) : format, cycle de vie, cas d'utilisation, gabarits
   A et B, envoi sur une carte, pieges (compilation avant `/autoexec.be`, formatage, image du FS). Essais sur carte : § 9, a faire (A10).
 - `outils_docs/FICHIERS_DRVSET.md` — inventaire des fichiers `.drvset*`/`.snsset*` du firmware : role, contenu, chargement, sauvegarde, effacement (2026-11-02).
