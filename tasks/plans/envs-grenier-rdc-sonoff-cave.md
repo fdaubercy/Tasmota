@@ -79,20 +79,34 @@ Plan d'origine : [tasks/plans/lieu-partage-syslog-mqtt.md](lieu-partage-syslog-m
   l'aller-retour a été fait une fois et que la vue a basculé dans les deux sens.
 
 ## A1 — Identité et création de l'env du grenier du RDC
-- [ ] Valider avec l'utilisateur le nom d'env, le dossier, l'IP (vérifier qu'aucun appareil ne répond sur 192.168.0.44)
+- [x] Valider avec l'utilisateur le nom d'env, le dossier, l'IP (vérifier qu'aucun appareil ne répond sur 192.168.0.44) — preuve : 2026-11-11, .44 sans réponse (ping 100 % perdus, HTTP 000, absente de l'ARP, absente du dépôt) ; identité et brochage du Contexte validés tels quels par l'utilisateur
   et le brochage proposés au Contexte.
-- [ ] Créer l'env à partir de la carte modèle `tasmota32s3-cave-serveur-rly` (même carte) par la page « Fichiers Berry
-  par env » (7800, création d'env) ou l'assistant persist (7900) : section du cenv, dossier `data/rdc/tasmota32s3-grenier`,
+- [x] Créer l'env à partir de la carte modèle `tasmota32s3-cave-serveur-rly` (même carte) par la page « Fichiers Berry par env » — preuve : moteur `fichiers_berry_creation.cree` (diff lu, empreinte dff8be29…, aucun refus), copie de sécurité `%LOCALAPPDATA%\outils_tasmota\fichiers_berry\sauvegardes\20261111-160453-258612-creation` ; section `[env:tasmota32s3-rdc-grenier]` du cenv, dossier `data/rdc/tasmota32s3-grenier`, section `FIRMWARE_ESP32S3_RDC_GRENIER` du `.h`
+  (7800, création d'env) ou l'assistant persist (7900) : section du cenv, dossier `data/rdc/tasmota32s3-grenier`,
   section `#elif defined(FIRMWARE_ESP32S3_RDC_GRENIER)` du `.h` (accord de l'utilisateur donné par sa demande du
-  2026-11-11) ; identité remplacée (hôte, topic, client, IP, point d'accès).
-- [ ] `lieux.py` range la carte en « Rez-de-chaussée » (`test_lieux.py`).
+  2026-11-11) ; identité remplacée (hôte, topic, client, IP, point d'accès). Repris à la main après la création : les
+  deux conditions internes `FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY` du `.h` (branche S3 seule gardée, FTP gardé ; #if/#endif
+  15/15) ; base **sans écran** (`tasmota32s3-base-N16R8-sans-ecran`, `${lib_inutiles.sans_ecran}`, pile de 24 Ko dans le
+  `.h`), car l'écran sera une AUTRE carte ESP32, comme pour les débitmètres (décision de l'utilisateur du 2026-11-11).
+- [x] `lieux.py` range la carte en « Rez-de-chaussée » (`test_lieux.py`) — preuve : `lieux.lieu('tasmota32s3-rdc-grenier')` = `rdc` ; `lieux.identites` : hôte SERVEUR-GRENIER-RDC, topic rdc/grenier, IP 192.168.0.44 ; `test_lieux.py` VERT (code 0)
 
 ## A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22
 - [ ] Persist : MQTT actif ; ModBus maître (`drivers.ModBus`) ; range extender maître ; ModBus UDP ; bloc des volets
   (2 volets) ; capteur AM2301/DHT22. Partir des blocs des cartes qui les ont déjà (P4 du garage pour ModBus et range
   extender maître, `tasmota32-rdc-vr-porte` pour les volets, cave S3 pour l'AM2301 et le TCA9554).
+- [ ] Écran déporté (décision de l'utilisateur du 2026-11-11) : l'écran sera une autre carte ESP32, comme pour les
+  débitmètres (`tasmota32s3-bureau-ecran-debits-pac` et son acquisition) ; les deux cartes communiquent par leurs range
+  extenders, tous deux activés. Ici, configuration SEULEMENT, aucun GPIO d'écran : préparer le persist pour accueillir
+  cette carte (id réservé dans le range extender et dans ModBus, lecture groupée et push multi-valeurs comme
+  `drivers.ModBus.lectureGroupee` des débits). Rôle de chaque carte à trancher avec l'utilisateur : aux débits, l'écran
+  est le maître (id 0) et l'acquisition l'esclave (id 1) ; ici, le grenier est déjà prévu maître.
 - [ ] Cenv : `custom_berry_solidify` (socle + modules ModBus, UDP, range extender, volets), `custom_files_exclude`
   (rien de la cave : pompe, LoRaWAN, ES8311, coprocesseur, pages cuve et énergie), `custom_files_upload`, `lib_ignore`.
+  La création a recopié la liste noire de la cave, qui EXCLUT `modbusFonctions`, `vrFonctions`, `controleModbus`,
+  `controleVoletRoulants`, `modBus_*` : à retirer de la liste. Le dossier de la carte contient encore
+  `controlePompeVideCave.be` (pompe de la cave) : à retirer, avec son chargement dans l'autoexec.
+- [ ] `.h` : retirer le `#undef USE_SHUTTER` recopié de la cave (les volets en ont besoin) et relire les commentaires
+  hérités de la cave (animation LED, MQTT « V2 »).
 - [ ] Autoexec : ordre de chargement (un module importé par un `controleXxx` compilé avant lui) ; chaque import existe
   dans l'image de l'env.
 - [ ] `banc_demarrage.py` : instantané du nouvel env enregistré ; `verifie_berry.py` vert ; agent `relecteur-berry`.

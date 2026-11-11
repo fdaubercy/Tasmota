@@ -17,7 +17,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff | actif | █░░░░░░░░░ 10 % (2/42) | 40 étapes, 3 améliorations | 2026-11-11 | 2026-11-11 (2e demande : écran, range extender de la cave, porte de cave esclave) |
+| [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff | actif | ██░░░░░░░░ 18 % (5/44) | 39 étapes, 3 améliorations | 2026-11-11 | 2026-11-11 (2e demande : écran, range extender de la cave, porte de cave esclave) |
 | [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ░░░░░░░░░░ 0 % (0/20) | 20 étapes, 2 améliorations | 2026-11-11 | 2026-11-11 |
 | [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) | Faire passer les 6 débits de la carte d'acquisition (esclave ModBus id 1) à une carte d'affichage (maître id 0) par une lecture groupée RS485 et un push UDP, sans rien changer au garage | actif | ██████░░░░ 62 % (33/49) | 16 étapes, 3 améliorations | 2026-11-09 | 2026-11-11 |
 | [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ███████░░░ 68 % (35/50) | 15 étapes, 4 améliorations | 2026-11-08 | 2026-11-09 |
@@ -62,13 +62,12 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — 10 %
+#### [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — 18 %
 
-- A1 — Identité et création de l'env du grenier du RDC : Valider avec l'utilisateur le nom d'env, le dossier, l'IP (vérifier qu'aucun appareil ne répond sur 192.168.0.44)
-- A1 — Identité et création de l'env du grenier du RDC : Créer l'env à partir de la carte modèle `tasmota32s3-cave-serveur-rly` (même carte) par la page « Fichiers Berry
-- A1 — Identité et création de l'env du grenier du RDC : `lieux.py` range la carte en « Rez-de-chaussée » (`test_lieux.py`).
 - A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22 : Persist : MQTT actif ; ModBus maître (`drivers.ModBus`) ; range extender maître ; ModBus UDP ; bloc des volets
+- A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22 : Écran déporté (décision de l'utilisateur du 2026-11-11) : l'écran sera une autre carte ESP32, comme pour les
 - A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22 : Cenv : `custom_berry_solidify` (socle + modules ModBus, UDP, range extender, volets), `custom_files_exclude`
+- A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22 : `.h` : retirer le `#undef USE_SHUTTER` recopié de la cave (les volets en ont besoin) et relire les commentaires
 - A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22 : Autoexec : ordre de chargement (un module importé par un `controleXxx` compilé avant lui) ; chaque import existe
 - A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22 : `banc_demarrage.py` : instantané du nouvel env enregistré ; `verifie_berry.py` vert ; agent `relecteur-berry`.
 - A3 — Brochage et volets : Relais CH1-CH4 par le TCA9554 (`tca9554.dat` du dossier de la carte), interverrouillage montée/descente par volet.
