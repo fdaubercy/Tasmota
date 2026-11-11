@@ -17,7 +17,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff | actif | ██░░░░░░░░ 18 % (5/44) | 39 étapes, 3 améliorations | 2026-11-11 | 2026-11-11 (2e demande : écran, range extender de la cave, porte de cave esclave) |
+| [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff | actif | ███░░░░░░░ 26 % (12/48) | 36 étapes, 3 améliorations | 2026-11-11 | 2026-11-11 (2e demande : écran, range extender de la cave, porte de cave esclave) |
 | [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ░░░░░░░░░░ 0 % (0/20) | 20 étapes, 2 améliorations | 2026-11-11 | 2026-11-11 |
 | [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) | Faire passer les 6 débits de la carte d'acquisition (esclave ModBus id 1) à une carte d'affichage (maître id 0) par une lecture groupée RS485 et un push UDP, sans rien changer au garage | actif | ██████░░░░ 62 % (33/49) | 16 étapes, 3 améliorations | 2026-11-09 | 2026-11-11 |
 | [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ███████░░░ 68 % (35/50) | 15 étapes, 4 améliorations | 2026-11-08 | 2026-11-09 |
@@ -62,22 +62,16 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — 18 %
+#### [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — 26 %
 
-- A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22 : Persist : MQTT actif ; ModBus maître (`drivers.ModBus`) ; range extender maître ; ModBus UDP ; bloc des volets
-- A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22 : Écran déporté (décision de l'utilisateur du 2026-11-11) : l'écran sera une autre carte ESP32, comme pour les
-- A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22 : Cenv : `custom_berry_solidify` (socle + modules ModBus, UDP, range extender, volets), `custom_files_exclude`
-- A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22 : `.h` : retirer le `#undef USE_SHUTTER` recopié de la cave (les volets en ont besoin) et relire les commentaires
-- A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22 : Autoexec : ordre de chargement (un module importé par un `controleXxx` compilé avant lui) ; chaque import existe
-- A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22 : `banc_demarrage.py` : instantané du nouvel env enregistré ; `verifie_berry.py` vert ; agent `relecteur-berry`.
-- A3 — Brochage et volets : Relais CH1-CH4 par le TCA9554 (`tca9554.dat` du dossier de la carte), interverrouillage montée/descente par volet.
+- A3 — Brochage et volets : Relais CH1-CH4 par le TCA9554 (`tca9554.dat` du dossier de la carte), interverrouillage montée/descente par volet. Fait en A2 sur le papier (CH1-CH6, `Interlock 1,2 3,4 5,6` corrigé dans `vrFonctions.be`) : à cocher après l'essai à vide sur la carte.
 - A3 — Brochage et volets : Boutons DI1-DI4, DHT22 sur GPIO21 ; classeur `Brochage GPIO - tasmota32s3-rdc-grenier.xlsx` par
 - A3 — Brochage et volets : Durées d'ouverture et de fermeture du volet de la porte reprises du Sonoff Dual R3 (lecture seule de .46 :
 - A4 — Identification des volets sur MQTT : Faire valider par l'utilisateur la réponse du Contexte (volets natifs Shutter1/Shutter2 sous `rdc/grenier`, noms,
 - A4 — Identification des volets sur MQTT : Recenser ce qui vise `volet/entree` aujourd'hui (Node-RED du Pi, Alexa, Home Assistant) et la liste des
 - A5 — Compilation et mise en service : Compilation par la page Build (:7700), SUCCESS lu en fin de journal, taille de l'image et du FS.
 - A5 — Compilation et mise en service : À la réception de la carte : flash série, `Status 5`, volets en marche à vide (relais seuls), puis moteur recâblé.
-- A5 — Compilation et mise en service : Sonoff Dual R3 (.46) éteint et retiré ; automatisations basculées ; env `tasmota32-rdc-vr-porte` gardé ou
+- A5 — Compilation et mise en service : Sonoff Dual R3 (.46) éteint et retiré AVANT la mise sous tension du grenier (même IP .46) ; automatisations basculées ; env `tasmota32-rdc-vr-porte` gardé ou
 - A6 — Cave S3 : identité d'essai : Vérifier que l'env `tasmota32s3-cave-serveur-rly` porte bien .243 et `cave/serveur-rly-cave-v2` (section commune
 - A6 — Cave S3 : identité d'essai : Reprendre les améliorations restantes du plan `cave-s3-waveshare` (compilation, port COM, câblage DI3/DI4,
 - A7 — Retour en production de la cave S3 : Le jour du remplacement, sur ordre de l'utilisateur : passer l'identité de la cave S3 à 192.168.0.48 et
@@ -103,6 +97,9 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho : Sonoff : retirer de la Rule1 les deux règles `Power1#State` qui publient `POWER3` (la Rule1 garde le bouton, la
 - A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho : Serveur de la cave : retirer le `publishMQTT` de `relais.relai1` du `_persist.json` du dossier S3 (sinon le Berry
 - A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho : Essai, avec preuve dans le sniffeur MQTT (:7100) : allumage depuis la porte, depuis la cave (bouton, puis écran si
+- A12 — Visuel des volets sur la page d'accueil (toutes les cartes à volets) : Spec écrite (docs/superpowers/specs/) puis plan : code commun dans `data/fs` (accord de l'utilisateur
+- A12 — Visuel des volets sur la page d'accueil (toutes les cartes à volets) : Réalisation, banc, sonde Chrome (arrêter ses Chrome ensuite), essai sur carte.
+- A13 — Réglage des durées de montée et de descente par les boutons : Spec, plan, réalisation dans `vrFonctions.be` (accord de l'utilisateur), bancs, essai sur carte.
 - Amélioration [projet] : Ethernet W5500 de la carte du grenier du RDC (`ReglageGlobal VoieReseau ethernet`) si un câble arrive au grenier.
 - Amélioration [projet] : Alias Berry lisible par volet (`VoletPorte`, `VoletCuisine`) si l'utilisateur le veut (A4).
 - Amélioration [projet] : Resynchroniser les deux lampes de la cave à la reconnexion MQTT d'une des cartes (`Mqtt#Connected`).

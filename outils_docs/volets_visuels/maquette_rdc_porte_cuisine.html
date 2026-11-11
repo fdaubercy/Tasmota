@@ -1,0 +1,71 @@
+<style>
+  .tas{background:#252525;color:#eaeaea;border-radius:6px;padding:12px 10px;font-family:verdana,sans-serif;max-width:420px;margin:0 auto}
+  .tas table{width:100%;border-collapse:collapse}
+  .tas td{padding:2px 3px}
+  .tas .bt{background:#1fa3ec;color:#fff;border:0;border-radius:.3rem;width:100%;line-height:2.4rem;font-size:1.1rem;cursor:pointer}
+  .tas .lib{text-align:center;font-size:12px}
+  .tas input[type=range]{width:100%}
+  .zone{display:flex;justify-content:center;padding:12px 0 2px}
+  .note{max-width:420px;margin:14px auto 0;font-size:14px}
+</style>
+
+<h2>Façade, v2 : fenêtre de la cuisine à gauche, porte à droite</h2>
+<p class="subtitle">Les boutons ▼ ▲ de chaque ligne pilotent leur volet (course complète en 20 s) ; un nouvel appui pendant le
+mouvement l'arrête, comme les boutons de la carte. Le curseur se déplace aussi pendant le mouvement.</p>
+
+<div class="tas">
+  <table>
+    <tr><td style="width:15%"><button class="bt" onclick="cmd(0,-1)">▼</button></td>
+        <td><div class="lib">Volet porte<br><input type="range" id="s1" min="0" max="100" value="100"></div></td>
+        <td style="width:15%"><button class="bt" onclick="cmd(0,1)">▲</button></td></tr>
+    <tr><td><button class="bt" onclick="cmd(1,-1)">▼</button></td>
+        <td><div class="lib">Volet cuisine<br><input type="range" id="s2" min="0" max="100" value="100"></div></td>
+        <td><button class="bt" onclick="cmd(1,1)">▲</button></td></tr>
+  </table>
+  <div class="zone">
+    <svg width="300" height="190" viewBox="0 0 300 190">
+      <defs><pattern id="lames" width="10" height="8" patternUnits="userSpaceOnUse">
+        <rect width="10" height="8" fill="#9aa3ab"/><rect y="6.5" width="10" height="1.5" fill="#6f777e"/></pattern></defs>
+      <polygon points="10,62 150,8 290,62" fill="#9c4b3a"/>
+      <rect x="20" y="62" width="260" height="124" fill="#d8cbb0"/>
+      <!-- fenetre de la cuisine, a gauche -->
+      <rect x="44" y="80" width="80" height="62" fill="#bfe3f7" stroke="#eee" stroke-width="3"/>
+      <line x1="84" y1="80" x2="84" y2="142" stroke="#eee" stroke-width="3"/>
+      <rect x="40" y="72" width="88" height="9" fill="#6b6b6b"/>
+      <clipPath id="c2"><rect x="44" y="81" width="80" height="61"/></clipPath>
+      <g clip-path="url(#c2)"><g id="t2" data-h="61" data-y="81"><rect x="44" y="0" width="80" height="61" fill="url(#lames)"/></g></g>
+      <text x="84" y="158" font-size="11" fill="#333" text-anchor="middle">cuisine <tspan id="p2">100 %</tspan></text>
+      <!-- porte d'entree, a droite -->
+      <rect x="180" y="80" width="64" height="106" fill="#8a5a3b" stroke="#eee" stroke-width="3"/>
+      <rect x="190" y="90" width="44" height="40" fill="#bfe3f7"/>
+      <circle cx="236" cy="138" r="3.5" fill="#e0c060"/>
+      <rect x="176" y="72" width="72" height="9" fill="#6b6b6b"/>
+      <clipPath id="c1"><rect x="180" y="81" width="64" height="105"/></clipPath>
+      <g clip-path="url(#c1)"><g id="t1" data-h="105" data-y="81"><rect x="180" y="0" width="64" height="105" fill="url(#lames)"/></g></g>
+      <text x="212" y="66" font-size="11" fill="#333" text-anchor="middle">porte <tspan id="p1">100 %</tspan></text>
+    </svg>
+  </div>
+</div>
+<p class="note">Dis-moi si c'est bien ce que tu voulais, et ce que tu changerais (couleurs, taille, libellés, pourcentages sur l'image ou non).</p>
+
+<script>
+(function(){
+  var COURSE = 20, v = [{pos:100, sens:0}, {pos:100, sens:0}];
+  window.cmd = function(i, s){ v[i].sens = v[i].sens ? 0 : s; };   // un appui pendant le mouvement arrete
+  function rendu(){
+    for (var i = 0; i < 2; i++) {
+      var g = document.getElementById('t' + (i + 1)), h = +g.dataset.h, y = +g.dataset.y;
+      g.setAttribute('transform', 'translate(0,' + (y - h * v[i].pos / 100) + ')');
+      document.getElementById('s' + (i + 1)).value = v[i].pos;
+      document.getElementById('p' + (i + 1)).textContent = Math.round(v[i].pos) + ' %';
+    }
+  }
+  var dernier = performance.now();
+  function pas(t){
+    var dt = (t - dernier) / 1000; dernier = t;
+    v.forEach(function(o){ if (o.sens) { o.pos = Math.max(0, Math.min(100, o.pos + o.sens * 100 * dt / COURSE)); if (o.pos <= 0 || o.pos >= 100) o.sens = 0; } });
+    rendu(); requestAnimationFrame(pas);
+  }
+  rendu(); requestAnimationFrame(pas);
+})();
+</script>

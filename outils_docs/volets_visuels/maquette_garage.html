@@ -1,0 +1,51 @@
+<style>
+  .tas{background:#252525;color:#eaeaea;border-radius:6px;padding:12px 10px;font-family:verdana,sans-serif;max-width:420px;margin:0 auto}
+  .tas table{width:100%;border-collapse:collapse}
+  .tas td{padding:2px 3px}
+  .tas .bt{background:#1fa3ec;color:#fff;border:0;border-radius:.3rem;width:100%;line-height:2.4rem;font-size:1.1rem;cursor:pointer}
+  .tas .lib{text-align:center;font-size:12px}
+  .tas input[type=range]{width:100%}
+  .zone{display:flex;justify-content:center;padding:12px 0 2px}
+</style>
+
+<h2>Garage, v2 : toit à un seul pan, légèrement incliné vers la droite</h2>
+<p class="subtitle">Une seule ouverture : la porte de garage, avec le même tablier à lames, plus large. ▼ ▲ pilotent la simulation (course 20 s).</p>
+
+<div class="tas">
+  <table>
+    <tr><td style="width:15%"><button class="bt" onclick="cmd(-1)">▼</button></td>
+        <td><div class="lib">Volet Roulant Garage<br><input type="range" id="s1" min="0" max="100" value="0"></div></td>
+        <td style="width:15%"><button class="bt" onclick="cmd(1)">▲</button></td></tr>
+  </table>
+  <div class="zone">
+    <svg width="300" height="190" viewBox="0 0 300 190">
+      <defs><pattern id="lamesG" width="12" height="10" patternUnits="userSpaceOnUse">
+        <rect width="12" height="10" fill="#b4bcc3"/><rect y="8" width="12" height="2" fill="#7d858c"/></pattern></defs>
+      <polygon points="20,44 280,60 280,186 20,186" fill="#d8cbb0"/><polygon points="6,36 294,54 294,63 6,45" fill="#6e6e6e"/>
+      
+      <rect x="62" y="84" width="176" height="102" fill="#3a3a3a" stroke="#eee" stroke-width="3"/>
+      <rect x="56" y="74" width="188" height="11" fill="#6b6b6b"/>
+      <clipPath id="c1"><rect x="62" y="85" width="176" height="101"/></clipPath>
+      <g clip-path="url(#c1)"><g id="t1" data-h="101" data-y="85"><rect x="62" y="0" width="176" height="101" fill="url(#lamesG)"/></g></g>
+      <text x="150" y="70" font-size="11" fill="#333" text-anchor="middle">garage <tspan id="p1">0 %</tspan></text>
+    </svg>
+  </div>
+</div>
+
+<script>
+(function(){
+  var COURSE = 20, o = {pos:0, sens:0};
+  window.cmd = function(s){ o.sens = o.sens ? 0 : s; };
+  var dernier = performance.now();
+  function pas(t){
+    var dt = (t - dernier) / 1000; dernier = t;
+    if (o.sens) { o.pos = Math.max(0, Math.min(100, o.pos + o.sens * 100 * dt / COURSE)); if (o.pos <= 0 || o.pos >= 100) o.sens = 0; }
+    var g = document.getElementById('t1');
+    g.setAttribute('transform', 'translate(0,' + (+g.dataset.y - +g.dataset.h * o.pos / 100) + ')');
+    document.getElementById('s1').value = o.pos;
+    document.getElementById('p1').textContent = Math.round(o.pos) + ' %';
+    requestAnimationFrame(pas);
+  }
+  requestAnimationFrame(pas);
+})();
+</script>

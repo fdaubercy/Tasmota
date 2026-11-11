@@ -90,29 +90,34 @@ Plan d'origine : [tasks/plans/lieu-partage-syslog-mqtt.md](lieu-partage-syslog-m
   `.h`), car l'écran sera une AUTRE carte ESP32, comme pour les débitmètres (décision de l'utilisateur du 2026-11-11).
 - [x] `lieux.py` range la carte en « Rez-de-chaussée » (`test_lieux.py`) — preuve : `lieux.lieu('tasmota32s3-rdc-grenier')` = `rdc` ; `lieux.identites` : hôte SERVEUR-GRENIER-RDC, topic rdc/grenier, IP 192.168.0.44 ; `test_lieux.py` VERT (code 0)
 
+Décisions de l'utilisateur pendant A2 (2026-11-11) : le grenier du RDC prend l'IP du volet de la porte,
+**192.168.0.46** (et non plus .44 : `.h` et persist corrigés), et se connecte aux mêmes réseaux que lui (`STA_SSID1`
+MAISON puis `STA_SSID2` « Relai Wifi 2.4G KuWFi », réseaux communs du `.h` ; le persist copié de la cave avait « Relai
+Wifi Cave » puis MAISON). Le Sonoff Dual R3 (.46) doit donc être éteint AVANT la mise sous tension du grenier (A5).
+
 ## A2 — Fonctions de la carte : MQTT, ModBus, range extender, ModBus UDP, volets, DHT22
-- [ ] Persist : MQTT actif ; ModBus maître (`drivers.ModBus`) ; range extender maître ; ModBus UDP ; bloc des volets
+- [x] Persist : MQTT actif ; ModBus maître (`drivers.ModBus`) ; range extender maître ; ModBus UDP ; bloc des volets — preuve : `data/rdc/tasmota32s3-grenier/_persist.json` (MQTT, ModBus maître Serial+UDP, range extender id 0 + routeNAPT ON, UDP, 3 volets : porte DI1/DI2, cuisine DI3/DI4, trappe DI5 toggle + fins de course DI6/DI7, `inverse` 0, AM2301 GPIO21, Ethernet OFF, pompe retirée) ; `genere_schema_persist.py --valide` : 11 persists à 0 erreur
   (2 volets) ; capteur AM2301/DHT22. Partir des blocs des cartes qui les ont déjà (P4 du garage pour ModBus et range
   extender maître, `tasmota32-rdc-vr-porte` pour les volets, cave S3 pour l'AM2301 et le TCA9554).
-- [ ] Écran déporté (décision de l'utilisateur du 2026-11-11) : l'écran sera une autre carte ESP32, comme pour les
+- [x] Écran déporté (décision de l'utilisateur du 2026-11-11) : l'écran sera une autre carte ESP32, comme pour les — preuve : grenier MAÎTRE (choix de l'utilisateur), esclave `TasmotaSlaveModBus1` id 1 « ECRAN-GRENIER-RDC (carte à venir) » inactif dans `drivers.ModBus` ; côté range extender rien à déclarer (l'esclave se présente par ImAlive)
   débitmètres (`tasmota32s3-bureau-ecran-debits-pac` et son acquisition) ; les deux cartes communiquent par leurs range
   extenders, tous deux activés. Ici, configuration SEULEMENT, aucun GPIO d'écran : préparer le persist pour accueillir
   cette carte (id réservé dans le range extender et dans ModBus, lecture groupée et push multi-valeurs comme
   `drivers.ModBus.lectureGroupee` des débits). Rôle de chaque carte à trancher avec l'utilisateur : aux débits, l'écran
   est le maître (id 0) et l'acquisition l'esclave (id 1) ; ici, le grenier est déjà prévu maître.
-- [ ] Cenv : `custom_berry_solidify` (socle + modules ModBus, UDP, range extender, volets), `custom_files_exclude`
+- [x] Cenv : `custom_berry_solidify` (socle + modules ModBus, UDP, range extender, volets), `custom_files_exclude` — preuve : `[env:tasmota32s3-rdc-grenier]` (socle + modbus + historique + leds + vrFonctions + controleVoletRoulants ; liste noire réduite) ; `controlePompeVideCave.be` supprimé ; liste `lib_inutiles.sans_mpu6050` pour les 8 autres envs (USE_MPU6050 des 2 greniers) ; banc_demarrage VERT
   (rien de la cave : pompe, LoRaWAN, ES8311, coprocesseur, pages cuve et énergie), `custom_files_upload`, `lib_ignore`.
   La création a recopié la liste noire de la cave, qui EXCLUT `modbusFonctions`, `vrFonctions`, `controleModbus`,
   `controleVoletRoulants`, `modBus_*` : à retirer de la liste. Le dossier de la carte contient encore
   `controlePompeVideCave.be` (pompe de la cave) : à retirer, avec son chargement dans l'autoexec.
-- [ ] `.h` : retirer le `#undef USE_SHUTTER` recopié de la cave (les volets en ont besoin) et relire les commentaires
+- [x] `.h` : retirer le `#undef USE_SHUTTER` recopié de la cave (les volets en ont besoin) et relire les commentaires — preuve : section `FIRMWARE_ESP32S3_RDC_GRENIER` : `#define USE_SHUTTER`, USER_TEMPLATE identique au template du persist (vérifié par script), `USE_MPU6050` (ici et au 2e étage), commentaires corrigés
   hérités de la cave (animation LED, MQTT « V2 »).
-- [ ] Autoexec : ordre de chargement (un module importé par un `controleXxx` compilé avant lui) ; chaque import existe
+- [x] Autoexec : ordre de chargement (un module importé par un `controleXxx` compilé avant lui) ; chaque import existe — preuve : ordre du P4 (`fsMqtt` compris), relu par l'agent relecteur-berry (aucun défaut bloquant) ; banc_demarrage VERT
   dans l'image de l'env.
-- [ ] `banc_demarrage.py` : instantané du nouvel env enregistré ; `verifie_berry.py` vert ; agent `relecteur-berry`.
+- [x] `banc_demarrage.py` : instantané du nouvel env enregistré ; `verifie_berry.py` vert ; agent `relecteur-berry`. — preuve : `bouchons_berry/demarrage/tasmota32s3-rdc-grenier.txt`, banc VERT (9 cartes) ; verifie_berry 0 erreur ; relecteur-berry sans défaut bloquant ; `banc_inclinaison.be` sections 17-18 (inverse 0, Interlock unique) vertes, rouges avec l'ancien vrFonctions.be
 
 ## A3 — Brochage et volets
-- [ ] Relais CH1-CH4 par le TCA9554 (`tca9554.dat` du dossier de la carte), interverrouillage montée/descente par volet.
+- [ ] Relais CH1-CH4 par le TCA9554 (`tca9554.dat` du dossier de la carte), interverrouillage montée/descente par volet. Fait en A2 sur le papier (CH1-CH6, `Interlock 1,2 3,4 5,6` corrigé dans `vrFonctions.be`) : à cocher après l'essai à vide sur la carte.
 - [ ] Boutons DI1-DI4, DHT22 sur GPIO21 ; classeur `Brochage GPIO - tasmota32s3-rdc-grenier.xlsx` par
   `genere_brochage_horizontal.py` (Waveshare 8DI-8RO déjà connue), complété à la main.
 - [ ] Durées d'ouverture et de fermeture du volet de la porte reprises du Sonoff Dual R3 (lecture seule de .46 :
@@ -127,7 +132,7 @@ Plan d'origine : [tasks/plans/lieu-partage-syslog-mqtt.md](lieu-partage-syslog-m
 ## A5 — Compilation et mise en service
 - [ ] Compilation par la page Build (:7700), SUCCESS lu en fin de journal, taille de l'image et du FS.
 - [ ] À la réception de la carte : flash série, `Status 5`, volets en marche à vide (relais seuls), puis moteur recâblé.
-- [ ] Sonoff Dual R3 (.46) éteint et retiré ; automatisations basculées ; env `tasmota32-rdc-vr-porte` gardé ou
+- [ ] Sonoff Dual R3 (.46) éteint et retiré AVANT la mise sous tension du grenier (même IP .46) ; automatisations basculées ; env `tasmota32-rdc-vr-porte` gardé ou
   supprimé selon l'utilisateur.
 
 ## A6 — Cave S3 : identité d'essai
@@ -250,6 +255,35 @@ d'oscillation. Au pire, les deux lampes restent un temps dans des états différ
 - [ ] Essai, avec preuve dans le sniffeur MQTT (:7100) : allumage depuis la porte, depuis la cave (bouton, puis écran si
   A9) et depuis la porte qui s'ouvre ; une seule publication par action, aucune en retour ; double appui rapide des deux
   côtés à la fois : pas d'oscillation.
+
+## A12 — Visuel des volets sur la page d'accueil (toutes les cartes à volets)
+Demande de l'utilisateur (2026-11-11) : sous les curseurs natifs des volets, une façade dessinée où le tablier de
+chaque ouverture bouge EN DIRECT pendant la course, avec son pourcentage, pour voir à distance que le volet a obéi.
+Maquettes validées (scratchpad de la conversation, serveur de maquettes) : grenier du RDC = maison à deux pans,
+fenêtre de la cuisine à gauche, trappe au milieu (panneau qui se baisse face à nous), porte d'entrée à droite ;
+garage (P4 et rideau, même porte) = toit à un seul pan légèrement incliné vers la droite, grande porte à lames ;
+grenier du 2e étage = trappe de face sous le plafond, panneau puis échelle qui descend et repose sur un escalier en
+bois fixe (gauche vers droite). Le curseur natif est déjà mis à jour à chaque rafraîchissement
+(`xdrv_01_9_webserver.ino`, `eb('s27<n>').value=`) : le dessin le lit, sans requête de plus.
+- [ ] Spec écrite (docs/superpowers/specs/) puis plan : code commun dans `data/fs` (accord de l'utilisateur
+  nécessaire), description de la façade par carte dans le persist (type et place de chaque ouverture, toit).
+- [ ] Réalisation, banc, sonde Chrome (arrêter ses Chrome ensuite), essai sur carte.
+
+## A13 — Réglage des durées de montée et de descente par les boutons
+Demande de l'utilisateur (2026-11-11) : `tempsMontee` / `tempsDescente` se règlent aujourd'hui à la main dans le
+persist (réappliqués à chaque démarrage par `vrFonctions_configVRByJson`). Il faut un mode de réglage simple, pour
+TOUS les volets, avec les boutons existants : simple appui pour les volets à un seul bouton ; appui sur l'un ou
+l'autre bouton pour les volets à deux boutons ; ou les boutons de la page web. Pas de réglage par les butées (fins
+de course, inclinomètre) : idée abandonnée par l'utilisateur. La durée mesurée est écrite dans le persist.
+  Déroulé validé par l'utilisateur (2026-11-11) : (1) volet amené en butée basse ; (2) page « Configuration » ->
+  réglage des volets : choix du volet, « Régler les durées » ; la course autorisée est allongée provisoirement (120 s) ;
+  (3) un appui sur l'un de ses boutons (bouton unique, l'un des deux, ou ▲ de la page) : le volet monte, chronomètre
+  lancé ; (4) un appui à l'arrivée en haut : arrêt, `tempsMontee` retenu ; (5) idem en descente -> `tempsDescente` ;
+  (6) durées écrites dans le persist, durées normales remises, sortie du mode, résultat affiché. Garde-fous validés :
+  sans second appui avant la course maximale, arrêt et rien n'est enregistré ; bouton « Annuler » qui sort sans rien
+  changer. Les explications pas à pas destinées à l'utilisateur doivent figurer SUR la page de réglage.
+- [x] Concevoir avec l'utilisateur : entrée et sortie du mode, déroulé d'une mesure, retour visible, garde-fous — preuve : déroulé et garde-fous ci-dessus, validés par l'utilisateur le 2026-11-11
+- [ ] Spec, plan, réalisation dans `vrFonctions.be` (accord de l'utilisateur), bancs, essai sur carte.
 
 ## Améliorations restantes
 - [ ] [projet] Ethernet W5500 de la carte du grenier du RDC (`ReglageGlobal VoieReseau ethernet`) si un câble arrive au grenier.

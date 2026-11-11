@@ -1,0 +1,11 @@
+carte : tasmota32s3-rdc-grenier
+exception : aucune
+drivers (10) : CONTROLE_DISCOVERY, CONTROLE_GENERAL, CONTROLE_LEDS, CONTROLE_MODBUS, CONTROLE_RANGE_EXTENDER, CONTROLE_UDP, CONTROLE_UDP, CONTROLE_VR, CONTROLE_WEB, HISTORIQUE_WEB
+regles (30) : Button1#Action, Button2#Action, Button3#Action, Button4#Action, Button5#Action, Eth, Eth, ModbusReceivedUDP, Mqtt, Mqtt, Mqtt#Connected, Shutter1#Direction, Shutter2#Direction, Shutter3#Direction, Switch1#Action, Switch1#Action, Switch2#Action, Switch2#Action, System, System, System, System, System, System, Tele#AM2301#Humidity, Tele#AM2301#Temperature, Time, Time, Wifi, Wifi
+commandes (8) : ReglageDiscovery, ReglageGlobal, ReglageLog, ReglageModbus, ReglageRangeExtender, ReglageUDP, ReglageVolets, RoutageRangeExtender
+crons (1) : majHistorique
+minuteries (1) : demarrageDiffere
+compiles (0) : 
+sources (2) : /autoexec.be, /pagesGraphiquesValidation.be
+globales (19) : LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controleUDP_multicast:instance, controleUDP_unicast:instance, controleVRoulant:instance, diverses:instance, fsMqttRecepteur:instance, gpio:module, light:module, modules:instance, persist:instance, serveur:instance, wire1:instance, wire2:instance
+erreurs (0) : 

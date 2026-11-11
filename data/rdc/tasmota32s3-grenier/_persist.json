@@ -60,7 +60,7 @@
 		"log": "info",
 		"voieReseau": "wifi",
 		"IP": {
-			"IPAddress": "192.168.0.44",
+			"IPAddress": "192.168.0.46",
 			"IPGateway": "192.168.0.254",
 			"Subnet": "255.255.255.0",
 			"DNSServer": "192.168.0.254"
@@ -71,11 +71,11 @@
 			"reScanBy44": "ON",
 			"timerRebootSansWifi": 300,
 			"reseau1": {
-					"nomReseauWifi": "Relai Wifi Cave",
+					"nomReseauWifi": "MAISON",
 					"mdpWifi": "obdormisti-pervigile%.-ficiendus"
 			},
 			"reseau2": {
-					"nomReseauWifi": "MAISON",
+					"nomReseauWifi": "Relai Wifi 2.4G KuWFi",
 					"mdpWifi": "obdormisti-pervigile%.-ficiendus"
 			}
 		},
@@ -99,7 +99,7 @@
 			"AP": {
 				"IPAddress": "192.168.4.1",
 				"Subnet": "255.255.255.0",
-				"routeNAPT": "OFF",
+				"routeNAPT": "ON",
 				"SSID": "SERVEUR-GRENIER-RDC-GATEWAY",
 				"mdp": "Lune5676"
 			}
@@ -129,25 +129,25 @@
 		"BASE": 1,
 		"NAME": "Serveur grenier RDC",
 		"GPIO": [
-			33,
+			1,
 			1,
 			1,
 			1,
 			32,
+			33,
 			34,
+			35,
+			36,
 			160,
 			161,
-			1,
-			1,
-			1,
 			1,
 			5600,
 			704,
 			672,
 			736,
 			5568,
-			1,
-			1,
+			9408,
+			9440,
 			1,
 			1,
 			1216,
@@ -156,7 +156,7 @@
 			0,
 			0,
 			0,
-			1,
+			1377,
 			1,
 			1,
 			608,
@@ -172,16 +172,16 @@
 	},
 	"modules": {
 		"activation": "ON",
-		"pompeVideCave": {
-			"name": "Gestion de la pompe vide-cave",
+		"volets": {
+			"name": "Volets roulants (Shutter1 porte d'entrée, Shutter2 cuisine, Shutter3 trappe du grenier)",
 			"activation": "ON",
 			"reglage": "OFF",
-			"log": "detail",
+			"log": "info",
 			"environnement": {
 				"boutons": {
 					"bouton1": {
 						"activation": "ON",
-						"nom": "Pompe Cave",
+						"nom": "Volet porte - montée (DI1)",
 						"id": 1,
 						"pin": 4,
 						"type": 32,
@@ -189,38 +189,96 @@
 						"SwitchMode": 2,
 						"etat": "OFF",
 						"relaisLie": {
-							"modules": ["pompeVideCave"],
-							"ids": [1],
-							"type": "Switch",
-							"delai": 0
+							"modules": [],
+							"ids": [],
+							"type": "Switch"
 						}
 					},
 					"bouton2": {
 						"activation": "ON",
-						"nom": "Bouton 2",
+						"nom": "Volet porte - descente (DI2)",
 						"id": 2,
-						"pin": 0,
+						"pin": 5,
 						"type": 32,
 						"virtuel": "OFF",
 						"SwitchMode": 2,
 						"etat": "OFF",
 						"relaisLie": {
-							"modules": ["pompeVideCave"],
-							"ids": [1],
-							"type": "Switch",
-							"delai": 0
+							"modules": [],
+							"ids": [],
+							"type": "Switch"
+						}
+					},
+					"bouton3": {
+						"activation": "ON",
+						"nom": "Volet cuisine - montée (DI3)",
+						"id": 3,
+						"pin": 6,
+						"type": 32,
+						"virtuel": "OFF",
+						"SwitchMode": 2,
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "Switch"
+						}
+					},
+					"bouton4": {
+						"activation": "ON",
+						"nom": "Volet cuisine - descente (DI4)",
+						"id": 4,
+						"pin": 7,
+						"type": 32,
+						"virtuel": "OFF",
+						"SwitchMode": 2,
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "Switch"
+						}
+					},
+					"bouton5": {
+						"activation": "ON",
+						"nom": "Trappe du grenier - ouverture/fermeture (DI5)",
+						"id": 5,
+						"pin": 8,
+						"type": 32,
+						"virtuel": "OFF",
+						"SwitchMode": 2,
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "Switch"
 						}
 					}
 				},
 				"interrupteurs": {
 					"interrupteur1": {
-						"activation": "OFF",
-						"nom": "Interrupteur 1",
-						"id": -1,
-						"pin": -1,
+						"activation": "ON",
+						"nom": "Trappe ouverte (DI6)",
+						"id": 1,
+						"pin": 9,
 						"type": 160,
 						"virtuel": "OFF",
-						"SwitchMode": 1,
+						"SwitchMode": 2,
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF"
+						}
+					},
+					"interrupteur2": {
+						"activation": "ON",
+						"nom": "Trappe fermee (DI7)",
+						"id": 2,
+						"pin": 10,
+						"type": 160,
+						"virtuel": "OFF",
+						"SwitchMode": 2,
 						"etat": "OFF",
 						"relaisLie": {
 							"modules": [],
@@ -232,31 +290,127 @@
 				"relais": {
 					"relai1": {
 						"activation": "ON",
-						"nom": "Pompe Vide-Cave",
-						"afficheWeb": "ON",
+						"nom": "Volet porte - montée (CH1)",
+						"afficheWeb": "OFF",
 						"pin": -1,
 						"id": 1,
 						"type": 224,
 						"virtuel": "I2C_TCA9554",
 						"value": 0,
 						"etat": "OFF",
-						"timer": 120,
-						"relance": {
-							"capteur": "capteur2",
-							"pause": 10,
-							"maxRelances": 3,
-							"topicAlerte": "tele/cave/serveur-rly-cave-v2/ALERTE_POMPE"
-						},
-						"alerte": "",
+						"timer": 0,
 						"publishMQTT": {
 							"topic": []
 						},
 						"timestamp": {
 							"ON": 0,
 							"OFF": 0,
-							"delai": 0,
-							"nbCyclesJour": 0,
-							"jourCycles": -1
+							"delai": 0
+						},
+						"idModBus": -1
+					},
+					"relai2": {
+						"activation": "ON",
+						"nom": "Volet porte - descente (CH2)",
+						"afficheWeb": "OFF",
+						"pin": -1,
+						"id": 2,
+						"type": 224,
+						"virtuel": "I2C_TCA9554",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": -1
+					},
+					"relai3": {
+						"activation": "ON",
+						"nom": "Volet cuisine - montée (CH3)",
+						"afficheWeb": "OFF",
+						"pin": -1,
+						"id": 3,
+						"type": 224,
+						"virtuel": "I2C_TCA9554",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": -1
+					},
+					"relai4": {
+						"activation": "ON",
+						"nom": "Volet cuisine - descente (CH4)",
+						"afficheWeb": "OFF",
+						"pin": -1,
+						"id": 4,
+						"type": 224,
+						"virtuel": "I2C_TCA9554",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": -1
+					},
+					"relai5": {
+						"activation": "ON",
+						"nom": "Trappe du grenier - ouverture (CH5)",
+						"afficheWeb": "OFF",
+						"pin": -1,
+						"id": 5,
+						"type": 224,
+						"virtuel": "I2C_TCA9554",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": -1
+					},
+					"relai6": {
+						"activation": "ON",
+						"nom": "Trappe du grenier - fermeture (CH6)",
+						"afficheWeb": "OFF",
+						"pin": -1,
+						"id": 6,
+						"type": 224,
+						"virtuel": "I2C_TCA9554",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
 						},
 						"idModBus": -1
 					}
@@ -272,7 +426,7 @@
 						"id": 1,
 						"pin": -1,
 						"type": 4704,
-						"virtuel": "I2C_ADS1115",
+						"virtuel": "OFF",
 						"value": 0,
 						"limites": [],
 						"relaisLie": {
@@ -283,43 +437,10 @@
 						"publishMQTT": {
 							"topic": []
 						},
-						"idModBus": 1
+						"idModBus": -1
 					}
 				},
-				"capteurs": {
-					"capteur1": {
-						"activation": "ON",
-						"nom": "Capteur de niveau bas de la cave",
-						"id": 1,
-						"pin": 6,
-						"type": 160,
-						"virtuel": "OFF",
-						"SwitchMode": 1,
-						"etat": "OFF",
-						"relaisLie": {
-							"modules": ["pompeVideCave"],
-							"ids": [1],
-							"type": "OFF",
-							"delai": 0
-						}
-					},
-					"capteur2": {
-						"activation": "ON",
-						"nom": "Capteur de niveau haut de la cave",
-						"id": 2,
-						"pin": 7,
-						"type": 160,
-						"virtuel": "OFF",
-						"SwitchMode": 1,
-						"etat": "OFF",
-						"relaisLie": {
-							"modules": ["pompeVideCave"],
-							"ids": [1],
-							"type": "ON",
-							"delai": 0
-						}
-					}
-				},
+				"capteurs": {},
 				"compteurs": {
 					"affichageWebSensor": "OFF",
 					"compteur1": {
@@ -342,8 +463,8 @@
 					"affichageWebSensor": "OFF",
 					"thermometre1": {
 						"activation": "OFF",
-						"nom": "T° 1",
-						"serialNumber": "041600F6FBFF",
+						"nom": "Thermo 1",
+						"serialNumber": "",
 						"type": 1312,
 						"virtuel": "OFF",
 						"pin": -1,
@@ -355,74 +476,20 @@
 							"ids": [],
 							"type": "ON/OFF"
 						},
-						"idModBus": 1
+						"idModBus": -1
 					}
 				}
 			}
-        },
+		},
 		"Thermo-Hygrometre": {
-			"name": "Thermomètre Cave",
+			"name": "Température et humidité du grenier (DHT22)",
 			"activation": "ON",
 			"reglage": "OFF",
-			"log": "detail",
+			"log": "info",
 			"environnement": {
-				"boutons": {
-					"bouton1": {
-						"activation": "OFF",
-						"nom": "Bouton 1",
-						"id": 1,
-						"pin": -1,
-						"type": 32,
-						"virtuel": "OFF",
-						"SwitchMode": 2,
-						"etat": "OFF",
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "Switch"
-						}
-					}
-				},
-				"interrupteurs": {
-					"interrupteur1": {
-						"activation": "OFF",
-						"nom": "Interrupteur 1",
-						"id": -1,
-						"pin": -1,
-						"type": 160,
-						"virtuel": "OFF",
-						"SwitchMode": 1,
-						"etat": "OFF",
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF"
-						}
-					}
-				},
-				"relais": {
-					"relai1": {
-						"activation": "ON",
-						"nom": "Ventilation Cave",
-						"afficheWeb": "ON",
-						"pin": -1,
-						"id": 2,
-						"type": 224,
-						"virtuel": "I2C_TCA9554",
-						"value": 0,
-						"etat": "OFF",
-						"timer": 120,
-						"publishMQTT": {
-							"topic": [""]
-						},
-						"timestamp": {
-							"ON": 0,
-							"OFF": 0,
-							"delai": 0
-						},
-						"idModBus": -1
-					}
-				},
+				"boutons": {},
+				"interrupteurs": {},
+				"relais": {},
 				"analogiques": {
 					"activation": "OFF",
 					"name": "",
@@ -434,7 +501,7 @@
 						"id": 1,
 						"pin": -1,
 						"type": 4704,
-						"virtuel": "I2C_ADS1115",
+						"virtuel": "OFF",
 						"value": 0,
 						"limites": [],
 						"relaisLie": {
@@ -445,26 +512,10 @@
 						"publishMQTT": {
 							"topic": []
 						},
-						"idModBus": 1
+						"idModBus": -1
 					}
 				},
-				"capteurs": {
-					"capteur1": {
-						"activation": "OFF",
-						"nom": "Capteur 1",
-						"id": 1,
-						"pin": -1,
-						"type": 160,
-						"virtuel": "OFF",
-						"SwitchMode": 1,
-						"etat": "OFF",
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF"
-						}
-					}
-				},
+				"capteurs": {},
 				"compteurs": {
 					"affichageWebSensor": "OFF",
 					"compteur1": {
@@ -487,83 +538,46 @@
 					"affichageWebSensor": "ON",
 					"thermometre1": {
 						"activation": "ON",
-						"nom": "Thermomètre Cave",
+						"nom": "Grenier RDC",
 						"serialNumber": "",
 						"type": 1216,
 						"virtuel": "OFF",
 						"pin": 21,
 						"id": 1,
-						"value": 67.4,
-						"limites": [
-							50,
-							75
-						],
+						"value": 0,
+						"limites": [],
 						"relaisLie": {
-							"modules": ["Thermo-Hygrometre"],
-							"ids": [2],
-							"type": "ON/OFF",
-							"delai": 0
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF"
 						},
 						"idModBus": -1
 					}
 				}
 			}
-        },
+		},
 		"autres": {
-			"name": "Autres modules",
+			"name": "Relais libres CH7-CH8",
 			"activation": "ON",
 			"reglage": "OFF",
-			"log": "detail",
+			"log": "info",
 			"environnement": {
-				"boutons": {
-					"bouton1": {
-						"activation": "ON",
-						"nom": "Bouton 3",
-						"id": 3,
-						"pin": 5,
-						"type": 32,
-						"virtuel": "OFF",
-						"SwitchMode": 2,
-						"etat": "OFF",
-						"relaisLie": {
-							"modules": ["autres"],
-							"ids": [3],
-							"type": "Switch",
-							"delai": 0
-						}
-					}
-				},
-				"interrupteurs": {
-					"interrupteur1": {
-						"activation": "OFF",
-						"nom": "Interrupteur 1",
-						"id": -1,
-						"pin": -1,
-						"type": 160,
-						"virtuel": "OFF",
-						"SwitchMode": 1,
-						"etat": "OFF",
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF"
-						}
-					}
-				},
+				"boutons": {},
+				"interrupteurs": {},
 				"relais": {
 					"relai1": {
-						"activation": "ON",
-						"nom": "LED Machines",
+						"activation": "OFF",
+						"nom": "Relais CH7 (libre)",
 						"afficheWeb": "ON",
 						"pin": -1,
-						"id": 3,
+						"id": 7,
 						"type": 224,
 						"virtuel": "I2C_TCA9554",
 						"value": 0,
 						"etat": "OFF",
 						"timer": 0,
 						"publishMQTT": {
-							"topic": ["cmnd/cave/lumiere/POWER1"]
+							"topic": []
 						},
 						"timestamp": {
 							"ON": 0,
@@ -573,39 +587,18 @@
 						"idModBus": -1
 					},
 					"relai2": {
-						"activation": "ON",
-						"nom": "Pompe Cuve",
+						"activation": "OFF",
+						"nom": "Relais CH8 (libre)",
 						"afficheWeb": "ON",
 						"pin": -1,
-						"id": 4,
+						"id": 8,
 						"type": 224,
 						"virtuel": "I2C_TCA9554",
 						"value": 0,
 						"etat": "OFF",
 						"timer": 0,
 						"publishMQTT": {
-							"topic": [""]
-						},
-						"timestamp": {
-							"ON": 0,
-							"OFF": 0,
-							"delai": 0
-						},
-						"idModBus": -1
-					},
-					"relai3": {
-						"activation": "ON",
-						"nom": "Lavage",
-						"afficheWeb": "ON",
-						"pin": -1,
-						"id": 5,
-						"type": 224,
-						"virtuel": "I2C_TCA9554",
-						"value": 0,
-						"etat": "OFF",
-						"timer": 0,
-						"publishMQTT": {
-							"topic": [""]
+							"topic": []
 						},
 						"timestamp": {
 							"ON": 0,
@@ -626,7 +619,7 @@
 						"id": 1,
 						"pin": -1,
 						"type": 4704,
-						"virtuel": "I2C_ADS1115",
+						"virtuel": "OFF",
 						"value": 0,
 						"limites": [],
 						"relaisLie": {
@@ -637,26 +630,10 @@
 						"publishMQTT": {
 							"topic": []
 						},
-						"idModBus": 1
+						"idModBus": -1
 					}
 				},
-				"capteurs": {
-					"capteur1": {
-						"activation": "OFF",
-						"nom": "Capteur 1",
-						"id": 1,
-						"pin": -1,
-						"type": 160,
-						"virtuel": "OFF",
-						"SwitchMode": 1,
-						"etat": "OFF",
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF"
-						}
-					}
-				},
+				"capteurs": {},
 				"compteurs": {
 					"affichageWebSensor": "OFF",
 					"compteur1": {
@@ -679,8 +656,8 @@
 					"affichageWebSensor": "OFF",
 					"thermometre1": {
 						"activation": "OFF",
-						"nom": "T° 1",
-						"serialNumber": "041600F6FBFF",
+						"nom": "Thermo 1",
+						"serialNumber": "",
 						"type": 1312,
 						"virtuel": "OFF",
 						"pin": -1,
@@ -692,12 +669,12 @@
 							"ids": [],
 							"type": "ON/OFF"
 						},
-						"idModBus": 1
+						"idModBus": -1
 					}
 				}
 			}
-        }
-    },
+		}
+	},
 	"drivers": {
 		"leds": {
 			"activation": "ON",
@@ -720,7 +697,7 @@
 						"type": 288
 					},
 					"ledRGB": {
-						"activation": "OFF",
+						"activation": "ON",
 						"pin": 38,
 						"id": 1,
 						"type": 1377,
@@ -971,40 +948,40 @@
 			}
 		},
 		"Ethernet": {
-			"activation": "ON",
+			"activation": "OFF",
 			"name": "Bus Ethernet",
 			"environnement": {
 				"pinsEthernets": {
 					"pinsEthernet1": {
-						"activation": "ON",
+						"activation": "OFF",
 						"nom": "ETH CS (MDC)",
 						"pin": 16,
 						"id": 1,
 						"type": 5568
 					},
 					"pinsEthernet2": {
-						"activation": "ON",
+						"activation": "OFF",
 						"nom": "ETH INT (MDIO)",
 						"pin": 12,
 						"id": 1,
 						"type": 5600
 					},
 					"pinsEthernet3": {
-						"activation": "ON",
+						"activation": "OFF",
 						"nom": "ETH MOSI",
 						"pin": 13,
 						"id": 1,
 						"type": 704
 					},
 					"pinsEthernet4": {
-						"activation": "ON",
+						"activation": "OFF",
 						"nom": "ETH MISO",
 						"pin": 14,
 						"id": 1,
 						"type": 672
 					},
 					"pinsEthernet5": {
-						"activation": "ON",
+						"activation": "OFF",
 						"nom": "ETH SCLK",
 						"pin": 15,
 						"id": 1,
@@ -1014,7 +991,7 @@
 			}
 		},
 		"ModBus": {
-			"activation": "OFF",
+			"activation": "ON",
 			"name": "ModBus RS485",
 			"id": 0,
 			"debit": 19200,
@@ -1026,25 +1003,25 @@
 			"activationReponseCMD": "ON",
 			"relaisPushMQTT": "OFF",
 			"typeComm": {
-				"Serial": "OFF",
-				"UDP": "OFF",
+				"Serial": "ON",
+				"UDP": "ON",
 				"MQTT": "OFF",
 				"TCP": "OFF"
 			},
 			"environnement": {
 				"pinsModBus": {
 					"RX": {
-						"activation": "OFF",
+						"activation": "ON",
 						"nom": "ModBr Rx",
-						"pin": 4,
+						"pin": 18,
 						"id": 1,
 						"type": 9440,
 						"virtuel": "OFF"
 					},
 					"TX": {
-						"activation": "OFF",
+						"activation": "ON",
 						"nom": "ModBr Tx",
-						"pin": 5,
+						"pin": 17,
 						"id": 1,
 						"type": 9408,
 						"virtuel": "OFF"
@@ -1063,13 +1040,9 @@
 					"log": "info",
 					"TasmotaSlaveModBus1": {
 						"activation": "OFF",
-						"name": "Capteurs Cuve ModBus",
-						"id": 2
-					},
-					"TasmotaSlaveModBus2": {
-						"activation": "OFF",
-						"name": "Rideau Garage ModBus",
-						"id": 3
+						"name": "ECRAN-GRENIER-RDC (carte à venir)",
+						"id": 1,
+						"lectureGroupee": "OFF"
 					}
 				}
 			}
@@ -1089,23 +1062,166 @@
 			"environnement": {}
 		},
 		"voletRoulants": {
-			"activation": "OFF",
-			"name": "Volet roulant",
+			"activation": "ON",
+			"name": "Volets roulants (porte d'entrée, cuisine, trappe du grenier)",
 			"mode": 1,
 			"log": "info",
 			"environnement": {
 				"VRs": {
 					"VR1": {
-						"activation": "OFF",
-						"nom": "Volet",
+						"activation": "ON",
+						"nom": "Volet porte d'entrée",
 						"id": 1,
+						"inverse": 0,
 						"etat": "STOPPED",
 						"position": 0,
-						"relais1": 2,
+						"relais1": 1,
 						"boutons": {
 							"bouton1": {
 								"activation": "OFF",
+								"id": -1,
+								"function": "toggle",
+								"mqtt": "OFF"
+							},
+							"bouton2": {
+								"activation": "ON",
 								"id": 1,
+								"function": "up",
+								"mqtt": "OFF"
+							},
+							"bouton3": {
+								"activation": "ON",
+								"id": 2,
+								"function": "down",
+								"mqtt": "OFF"
+							},
+							"bouton4": {
+								"activation": "OFF",
+								"id": -1,
+								"function": "updown",
+								"mqtt": "OFF"
+							}
+						},
+						"capteursPosition": {
+							"activation": "OFF",
+							"capteurOuvert": "",
+							"capteurFerme": "",
+							"inclinaison": {
+								"activation": "OFF",
+								"adresse": 104,
+								"axes": "YZ",
+								"angleOuvert": 85.0,
+								"angleFerme": 3.0,
+								"marge": 3,
+								"blocage": 5,
+								"blocageDegres": 1,
+								"sensInverse": 3,
+								"surveillance": 0,
+								"positionReelle": "OFF"
+							}
+						},
+						"activationSiOuvert": {
+							"activation": "OFF",
+							"tabRelais": [],
+							"tabEtatRelais": []
+						},
+						"activationSiFerme": {
+							"activation": "OFF",
+							"tabRelais": [],
+							"tabEtatRelais": []
+						},
+						"tempsMontee": 15,
+						"tempsDescente": 15,
+						"led_temoin": {
+							"activation": "OFF",
+							"nom": "LED état volet",
+							"pin": -1,
+							"intervalle": 500
+						}
+					},
+					"VR2": {
+						"activation": "ON",
+						"nom": "Volet cuisine",
+						"id": 2,
+						"inverse": 0,
+						"etat": "STOPPED",
+						"position": 0,
+						"relais1": 3,
+						"boutons": {
+							"bouton1": {
+								"activation": "OFF",
+								"id": -1,
+								"function": "toggle",
+								"mqtt": "OFF"
+							},
+							"bouton2": {
+								"activation": "ON",
+								"id": 3,
+								"function": "up",
+								"mqtt": "OFF"
+							},
+							"bouton3": {
+								"activation": "ON",
+								"id": 4,
+								"function": "down",
+								"mqtt": "OFF"
+							},
+							"bouton4": {
+								"activation": "OFF",
+								"id": -1,
+								"function": "updown",
+								"mqtt": "OFF"
+							}
+						},
+						"capteursPosition": {
+							"activation": "OFF",
+							"capteurOuvert": "",
+							"capteurFerme": "",
+							"inclinaison": {
+								"activation": "OFF",
+								"adresse": 104,
+								"axes": "YZ",
+								"angleOuvert": 85.0,
+								"angleFerme": 3.0,
+								"marge": 3,
+								"blocage": 5,
+								"blocageDegres": 1,
+								"sensInverse": 3,
+								"surveillance": 0,
+								"positionReelle": "OFF"
+							}
+						},
+						"activationSiOuvert": {
+							"activation": "OFF",
+							"tabRelais": [],
+							"tabEtatRelais": []
+						},
+						"activationSiFerme": {
+							"activation": "OFF",
+							"tabRelais": [],
+							"tabEtatRelais": []
+						},
+						"tempsMontee": 15,
+						"tempsDescente": 15,
+						"led_temoin": {
+							"activation": "OFF",
+							"nom": "LED état volet",
+							"pin": -1,
+							"intervalle": 500
+						}
+					},
+					"VR3": {
+						"activation": "ON",
+						"nom": "Trappe du grenier",
+						"id": 3,
+						"inverse": 0,
+						"etat": "STOPPED",
+						"position": 0,
+						"relais1": 5,
+						"boutons": {
+							"bouton1": {
+								"activation": "ON",
+								"id": 5,
 								"function": "toggle",
 								"mqtt": "OFF"
 							},
@@ -1147,25 +1263,21 @@
 							}
 						},
 						"activationSiOuvert": {
-							"activation": "ON",
+							"activation": "OFF",
 							"tabRelais": [],
 							"tabEtatRelais": []
 						},
 						"activationSiFerme": {
-							"activation": "ON",
-							"tabRelais": [
-								1
-							],
-							"tabEtatRelais": [
-								1
-							]
+							"activation": "OFF",
+							"tabRelais": [],
+							"tabEtatRelais": []
 						},
 						"tempsMontee": 15,
 						"tempsDescente": 15,
 						"led_temoin": {
-							"activation": "ON",
-							"nom": "LED état Trappe",
-							"pin": 39,
+							"activation": "OFF",
+							"nom": "LED état volet",
+							"pin": -1,
 							"intervalle": 500
 						}
 					}

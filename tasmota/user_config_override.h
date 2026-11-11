@@ -912,10 +912,12 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             // puis 33-48, 33-37 = PSRAM octale -> 0). Relais CH1-CH8 sur le TCA9554 (I2C 0x20, SCL 41 / SDA 42) :
             // pas de GPIO, crees par xdrv_69 a partir de /tca9554.dat (data/rdc/tasmota32s3-grenier). Ethernet W5500
             // sur SPI : INT 12, MOSI 13, MISO 14, SCLK 15, CS 16. Pris par la carte : 17/18 RS485, 38 WS2812, 40 RTC,
-            // 45/47/48 carte TF, 46 buzzer. Template repris TEL QUEL de la cave S3 a la creation (2026-11-11) :
-            // boutons des volets sur DI1-DI4 (GPIO4-7), DHT22 GPIO21 et relais CH1-CH4 a poser en A3 du plan
-            // envs-grenier-rdc-sonoff-cave. Les 'pin' du _persist.json doivent correspondre.
-            #define USER_TEMPLATE "{\"NAME\":\"Serveur grenier RDC\",\"GPIO\":[33,1,1,1,32,34,160,161,1,1,1,1,5600,704,672,736,5568,1,1,1,1,1216,0,0,0,0,0,1,1,1,608,640,1,1,1,1,1,288],\"FLAG\":0,\"BASE\":1}"
+            // 45/47/48 carte TF, 46 buzzer. Template (2026-11-11, plan envs-grenier-rdc-sonoff-cave, A2) : Button1-5 sur
+            // DI1-DI5 (GPIO4-8 : porte montee, porte descente, cuisine montee, cuisine descente, trappe du grenier ;
+            // lies aux volets par ShutterButton), ModBr Tx 17 / Rx 18 (RS485), AM2301 GPIO21, WS2812 2 GPIO38 (voyant d'etat, ledsFonctions),
+            // Led1 GPIO48 (repris de la cave). Relais des volets CH1-CH6 dans tca9554.dat. Identique au template du
+            // _persist.json, dont les 'pin' doivent correspondre.
+            #define USER_TEMPLATE "{\"NAME\":\"Serveur grenier RDC\",\"GPIO\":[1,1,1,1,32,33,34,35,36,160,161,1,5600,704,672,736,5568,9408,9440,1,1,1216,0,0,0,0,0,1377,1,1,608,640,1,1,1,1,1,288],\"FLAG\":0,\"BASE\":1}"
             #define USE_TCA9554                             // [I2cDriver81] relais de la carte sur l'expandeur TCA9554
             // USE_ETHERNET et USE_SPI viennent de FIRMWARE_TASMOTA32 (base N16R8)
             #undef ETH_TYPE
@@ -933,10 +935,11 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #define MODULE USER_MODULE                       // Set template enabled by default
 
             // -- Berry : framework d'animation LED retire (2026-09-27) ----------
-            // Aucune LED adressable sur la cave ("0 WS2812 activés" au boot). Defini pour TOUS les
+            // La seule LED adressable de la carte (WS2812 GPIO38) est pilotee par ledsFonctions (classe Leds), sans le
+            // framework d'animation. Defini pour TOUS les
             // modules dans la partie commune (USE_BERRY_ANIMATION[_DSL], plus haut) et charge d'office
             // par le code d'init amont (xdrv_52_7_berry_embedded.ino : import animation/animation_dsl)
-            // -> ~94k + ~98k de flash pour rien (flash de la cave a 92,6 %), + un peu de RAM Berry.
+            // -> ~94k + ~98k de flash pour rien (mesure sur la cave, meme carte), + un peu de RAM Berry.
             // Retrait a la COMPILATION : un test des LED dans l'init amont entrerait en conflit a
             // chaque synchronisation du fork.
             #ifdef USE_BERRY_ANIMATION_DSL
@@ -946,13 +949,13 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
                 #undef USE_BERRY_ANIMATION
             #endif
 
-            // -- Serveur FTP : garde (ESP32-S3 N16R8, PSRAM 8 Mo : viable, contrairement a l'ancienne carte ESP32 de la cave)
+            // -- Serveur FTP : garde (ESP32-S3 N16R8, PSRAM 8 Mo : viable)
 
             // -- Wi-Fi ---------------------------------------
             #ifdef WIFI_IP_ADDRESS
                 #undef WIFI_IP_ADDRESS
             #endif
-            #define WIFI_IP_ADDRESS         "192.168.0.44"               // [IpAddress1] Set to 0.0.0.0 for using DHCP or enter a static IP address
+            #define WIFI_IP_ADDRESS         "192.168.0.46"               // [IpAddress1] Set to 0.0.0.0 for using DHCP or enter a static IP address
 
             // -- Setup your own RANGE EXTENDER settings  -----
             // Les autres paramètres du RangeExtender sont gérés par la partie 'Post-process compile options' en fin de fichier
@@ -970,9 +973,8 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #ifdef MQTT_CLIENT_ID
                 #undef MQTT_CLIENT_ID
             #endif
-            // V2 (2026-09-27) : identiques a mqtt.client/topic du _persist.json de la cave. CFG_HOLDER
-            // change a chaque build -> ces valeurs reviennent a chaque flash ; differentes du persist,
-            // Berry les corrigeait par 'Topic', qui REDEMARRE Tasmota. A garder synchronises.
+            // Identiques a serveur.mqtt.client/topic du _persist.json de la carte : differentes, Berry les
+            // corrigerait par 'Topic', qui REDEMARRE Tasmota, a chaque flash qui recharge CFG_HOLDER. A garder synchronises.
             #define MQTT_CLIENT_ID          "SERVEUR-GRENIER-RDC" // [MqttClient] Also fall back topic using last 6 characters of MAC address or use "DVES_%12X" for complete MAC address
             #ifdef MQTT_TOPIC
                 #undef MQTT_TOPIC
@@ -992,7 +994,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #define EMULATION               EMUL_NONE // [Emulation] Select Belkin WeMo (single relay/light) or Hue Bridge emulation (multi relay/light) (EMUL_NONE, EMUL_WEMO or EMUL_HUE)
         
             // -- Optional modules ----------------------------
-            #undef USE_SHUTTER // Add Shutter support for up to 4 shutter with different motortypes (+11k code)
+            #define USE_SHUTTER // Add Shutter support for up to 4 shutter with different motortypes (+11k code)
         
             // -- Internal Analog input -----------------------
             #undef USE_ADC_VCC // Display Vcc in Power status. Disable for use as Analog input on selected devices
@@ -1004,9 +1006,13 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             //#define USE_DISPLAY_SH1106  // [DisplayModel 7] [I2cDriver6] Enable SH1106 Oled 128x64 display (I2C addresses 0x3C and 0x3D)
             //#define USE_GRAPH           // Enable line charts with displays
             //#define NUM_GRAPHS 4        // Max 16
-        
+
             // -- I2C sensors ---------------------------------
-        
+            // Inclinometre de la trappe (2026-11-11) : pilote C du MPU6050 compile (JSON SENSOR a chaque TelePeriod). La lecture
+            // rapide en course reste celle de vrFonctions.be (Berry, 250 ms), allumee par capteursPosition.inclinaison.activation
+            // du persist (OFF par defaut). Bibliotheque 'MPU6050 I2C' retiree du lib_ignore de cet env (liste sans_mpu6050).
+            #define USE_MPU6050                             // [I2cDriver25] Enable MPU6050 sensor (I2C address 0x68 AD0 low or 0x69 AD0 high) (+3K3 of code and 188 Bytes of RAM)
+
             // -- One wire sensors ----------------------------
             #undef USE_HDMI_CEC // Add support for HDMI CEC bus (+7k code, 1456 bytes IRAM)
 
@@ -1022,7 +1028,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
                 // USER_RULE3 "<Any rule3 data>"                                    // Add rule3 data saved at initial firmware load or when command reset is executed
                 #define USE_VIEW_RULE_MEMS_AND_VARS                                 // Enable viewing of rule memories and variables in the web UI (+0k7 code)
             #endif
-        
+
             // -- Rules or Script  ----------------------------
             #ifdef USER_BACKLOG
                 #undef USER_BACKLOG
@@ -1329,6 +1335,10 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
                     //#define USE_MCP230xx_ADDR 0x20                  // Enable MCP23008/MCP23017 I2C Address to use (Must be within range 0x20 through 0x26 - set according to your wired setup)
                     #undef USE_DS1624                                 // [I2cDriver42] Enable DS1624, DS1621 temperature sensor (I2C addresses 0x48 - 0x4F) (+1k2 code)
             #endif
+            // Inclinometre de la trappe (2026-11-11) : pilote C du MPU6050 compile (JSON SENSOR a chaque TelePeriod). La lecture
+            // rapide en course reste celle de vrFonctions.be (Berry, 250 ms), allumee par capteursPosition.inclinaison.activation
+            // du persist (OFF par defaut). Bibliotheque 'MPU6050 I2C' retiree du lib_ignore de cet env (liste sans_mpu6050).
+            #define USE_MPU6050                             // [I2cDriver25] Enable MPU6050 sensor (I2C address 0x68 AD0 low or 0x69 AD0 high) (+3K3 of code and 188 Bytes of RAM)
 
             // -- Optional light modules ----------------------
             #define USE_LIGHT                                // Add support for light control

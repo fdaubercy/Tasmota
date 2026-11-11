@@ -584,6 +584,7 @@
 							"activation": "OFF",
 							"nom": "Volet Roulant Garage",
 							"id": 1,
+							"inverse": 1,
 							"etat": "STOPPED",
 							"position": 0,
 							"relais1": 2,

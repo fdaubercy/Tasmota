@@ -563,4 +563,66 @@ tasmota.remove_timer("vrSurveillance1")
 inclinaison.remove("surveillance")
 inclinaison.remove("positionReelle")
 
+print("17. Cle 'inverse' 0 (2026-11-11) : ni croisement des butees, ni 100 - %")
+vr1["inverse"] = 0
+inclinaison["positionReelle"] = "ON"
+tasmota.cmds = []
+incline(mpu, 20)
+vrFonctions.changementDirection(-1, "Shutter1#Direction", {}, 1)
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+attente()
+verifie(positions() == ["ShutterSetPosition1 21"], "inverse 0, arret a 20 degres (21 % ouvert) : ShutterSetPosition1 21")
+tasmota.cmds = []
+vrFonctions.changementEtatCapteur("ON", "Switch1", {}, 1, "ouverture")
+attente()
+verifie(shutterSet() == ["ShutterSetOpen1"], "inverse 0, butee ouverte : ShutterSetOpen1 (pas de croisement)")
+tasmota.cmds = []
+vrFonctions.changementEtatCapteur("ON", "Switch2", {}, 1, "fermeture")
+attente()
+verifie(shutterSet() == ["ShutterSetClose1"], "inverse 0, butee fermee : ShutterSetClose1")
+vr1.remove("inverse")
+tasmota.cmds = []
+vrFonctions.changementEtatCapteur("ON", "Switch1", {}, 1, "ouverture")
+attente()
+verifie(shutterSet() == ["ShutterSetClose1"], "sans la cle (defaut 1), butee ouverte : ShutterSetClose1 (croisement voulu)")
+inclinaison.remove("positionReelle")
+
+print("18. configVRByJson : UN seul Interlock pour tous les volets, ShutterInvert d'apres 'inverse'")
+import configGlobal
+var testeParamAvant = configGlobal.testeParam
+var params = []
+configGlobal.testeParam = def (c, v, t) params.push([c, v]) return false end
+var vrsAvant = drivers["voletRoulants"]
+var unVolet = def (id, relais, inv)
+    var vr = {"activation": "ON", "id": id, "relais1": relais, "tempsMontee": 15, "tempsDescente": 15, "boutons": {}}
+    if inv != nil    vr["inverse"] = inv    end
+    return vr
+end
+drivers["voletRoulants"] = {"activation": "ON", "mode": 1, "environnement": {"VRs": {"VR1": unVolet(1, 1, 0), "VR2": unVolet(2, 3, nil), "VR3": unVolet(3, 5, 0)}}}
+def interlocks()
+    var l = []
+    for c: tasmota.cmds    if string.find(c, "Interlock") == 0    l.push(c)    end    end
+    return l
+end
+def invert(id)
+    for p: params    if p[0] == "ShutterInvert" + str(id)    return p[1]    end    end
+    return nil
+end
+tasmota.cmds = []
+vrFonctions.configVRByJson()
+var il = interlocks()
+verifie(size(il) == 2 && il[1] == "Interlock ON", "3 volets : 2 commandes, la 2e Interlock ON")
+verifie(size(il) == 2 && string.find(il[0], "Interlock ") == 0 && size(string.split(il[0], " ")) == 4, "3 volets : les 3 paires dans UNE commande")
+var paires = size(il) == 2 ? string.split(il[0], " ") : []
+var attendu = {"1,2": false, "3,4": false, "5,6": false}
+for p: paires    if attendu.contains(p)    attendu[p] = true    end    end
+verifie(attendu["1,2"] && attendu["3,4"] && attendu["5,6"], "3 volets : Interlock 1,2 3,4 5,6 (dans un ordre quelconque)")
+verifie(invert(1) == 0 && invert(2) == 1 && invert(3) == 0, "ShutterInvert : 0, 1 (sans la cle), 0")
+drivers["voletRoulants"] = {"activation": "ON", "mode": 1, "environnement": {"VRs": {"VR1": unVolet(1, 2, nil)}}}
+tasmota.cmds = []
+vrFonctions.configVRByJson()
+verifie(interlocks() == ["Interlock 2,3", "Interlock ON"], "1 volet : Interlock 2,3 puis Interlock ON, comme avant")
+drivers["voletRoulants"] = vrsAvant
+configGlobal.testeParam = testeParamAvant
+
 print(echecs == 0 ? "BANC_INCLINAISON: OK" : "BANC_INCLINAISON: ECHEC (" + str(echecs) + ")")

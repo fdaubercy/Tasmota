@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Persist des cartes ESP32 (fork Tasmota)",
-  "description": "Genere par outils_docs/scripts_python/berry/genere_schema_persist.py a partir de 9 persists. Cle `required` si presente dans >= 50 % des exemplaires du parent et au moins 2, sauf blocs optionnels (OPTIONNELS du script). Ne pas editer a la main : regenerer.",
+  "description": "Genere par outils_docs/scripts_python/berry/genere_schema_persist.py a partir de 11 persists. Cle `required` si presente dans >= 50 % des exemplaires du parent et au moins 2, sauf blocs optionnels (OPTIONNELS du script). Ne pas editer a la main : regenerer.",
   "type": "object",
   "properties": {
     "diverses": {
@@ -896,111 +896,108 @@
             "properties": {
               "boutons": {
                 "type": "object",
-                "patternProperties": {
-                  "^bouton\\d*$": {
-                    "type": "object",
-                    "properties": {
-                      "activation": {
-                        "type": "string",
-                        "description": "ON ou OFF : active ou non ce bloc.",
-                        "enum": [
-                          "ON",
-                          "OFF"
-                        ]
-                      },
-                      "nom": {
-                        "type": "string"
-                      },
-                      "id": {
-                        "type": "integer",
-                        "description": "Identifiant ModBus / reseau de la carte."
-                      },
-                      "pin": {
-                        "type": "integer",
-                        "description": "Numero de GPIO (-1 = non affecte)."
-                      },
-                      "type": {
-                        "type": "integer"
-                      },
-                      "virtuel": {
-                        "type": "string",
-                        "enum": [
-                          "ON",
-                          "OFF"
-                        ]
-                      },
-                      "SwitchMode": {
-                        "type": "integer"
-                      },
-                      "etat": {
-                        "type": "string",
-                        "enum": [
-                          "ON",
-                          "OFF"
-                        ]
-                      },
-                      "relaisLie": {
-                        "type": "object",
-                        "description": "Relais commandes par cet element (globalFonctions.be) : chaque id de `ids` recoit l'ordre `type` apres `delai` secondes. `type` et `delai` sont requis des que `ids` n'est pas vide.",
-                        "properties": {
-                          "modules": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "ids": {
-                            "type": "array",
-                            "items": {
-                              "type": "integer"
-                            }
-                          },
-                          "type": {
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "activation": {
+                      "type": "string",
+                      "description": "ON ou OFF : active ou non ce bloc.",
+                      "enum": [
+                        "ON",
+                        "OFF"
+                      ]
+                    },
+                    "nom": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer",
+                      "description": "Identifiant ModBus / reseau de la carte."
+                    },
+                    "pin": {
+                      "type": "integer",
+                      "description": "Numero de GPIO (-1 = non affecte)."
+                    },
+                    "type": {
+                      "type": "integer"
+                    },
+                    "virtuel": {
+                      "type": "string",
+                      "enum": [
+                        "ON",
+                        "OFF"
+                      ]
+                    },
+                    "SwitchMode": {
+                      "type": "integer"
+                    },
+                    "etat": {
+                      "type": "string",
+                      "enum": [
+                        "ON",
+                        "OFF"
+                      ]
+                    },
+                    "relaisLie": {
+                      "type": "object",
+                      "description": "Relais commandes par cet element (globalFonctions.be) : chaque id de `ids` recoit l'ordre `type` apres `delai` secondes. `type` et `delai` sont requis des que `ids` n'est pas vide.",
+                      "properties": {
+                        "modules": {
+                          "type": "array",
+                          "items": {
                             "type": "string"
-                          },
-                          "delai": {
+                          }
+                        },
+                        "ids": {
+                          "type": "array",
+                          "items": {
                             "type": "integer"
+                          }
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "delai": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "ids"
+                      ],
+                      "if": {
+                        "properties": {
+                          "ids": {
+                            "minItems": 1
                           }
                         },
                         "required": [
                           "ids"
-                        ],
-                        "if": {
-                          "properties": {
-                            "ids": {
-                              "minItems": 1
-                            }
-                          },
-                          "required": [
-                            "ids"
-                          ]
-                        },
-                        "then": {
-                          "required": [
-                            "type",
-                            "delai"
-                          ]
-                        }
+                        ]
                       },
-                      "typeAction": {
-                        "type": "string"
+                      "then": {
+                        "required": [
+                          "type",
+                          "delai"
+                        ]
                       }
                     },
-                    "required": [
-                      "activation",
-                      "nom",
-                      "id",
-                      "pin",
-                      "type",
-                      "virtuel",
-                      "SwitchMode",
-                      "etat",
-                      "relaisLie"
-                    ],
-                    "additionalProperties": true
-                  }
-                },
-                "additionalProperties": true
+                    "typeAction": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "activation",
+                    "nom",
+                    "id",
+                    "pin",
+                    "type",
+                    "virtuel",
+                    "SwitchMode",
+                    "etat",
+                    "relaisLie"
+                  ],
+                  "additionalProperties": true
+                }
               },
               "interrupteurs": {
                 "type": "object",
@@ -1916,6 +1913,21 @@
             },
             "additionalProperties": true
           },
+          "fenetre": {
+            "type": "integer"
+          },
+          "veille": {
+            "type": "integer"
+          },
+          "extinction": {
+            "type": "integer"
+          },
+          "luminosite": {
+            "type": "integer"
+          },
+          "pwmInverse": {
+            "type": "string"
+          },
           "logs": {
             "type": "object",
             "properties": {
@@ -1938,6 +1950,9 @@
               "fileLogSize_Ko"
             ],
             "additionalProperties": true
+          },
+          "modbus": {
+            "type": "string"
           },
           "dimensions": {
             "type": "object",
@@ -2963,6 +2978,13 @@
                         "id": {
                           "type": "integer",
                           "description": "Identifiant ModBus / reseau de la carte."
+                        },
+                        "lectureGroupee": {
+                          "type": "string",
+                          "enum": [
+                            "ON",
+                            "OFF"
+                          ]
                         }
                       },
                       "required": [
@@ -2977,6 +2999,12 @@
                 }
               },
               "additionalProperties": true
+            },
+            "periodeReleve": {
+              "type": "integer"
+            },
+            "lectureGroupee": {
+              "type": "string"
             }
           },
           "required": [
@@ -3344,276 +3372,273 @@
               "properties": {
                 "VRs": {
                   "type": "object",
-                  "properties": {
-                    "VR1": {
-                      "type": "object",
-                      "properties": {
-                        "activation": {
-                          "type": "string",
-                          "description": "ON ou OFF : active ou non ce bloc.",
-                          "enum": [
-                            "ON",
-                            "OFF"
-                          ]
-                        },
-                        "nom": {
-                          "type": "string"
-                        },
-                        "id": {
-                          "type": "integer",
-                          "description": "Identifiant ModBus / reseau de la carte."
-                        },
-                        "etat": {
-                          "type": "string"
-                        },
-                        "position": {
-                          "type": "integer"
-                        },
-                        "relais1": {
-                          "type": "integer"
-                        },
-                        "boutons": {
-                          "type": "object",
-                          "patternProperties": {
-                            "^bouton\\d*$": {
-                              "type": "object",
-                              "properties": {
-                                "activation": {
-                                  "type": "string",
-                                  "description": "ON ou OFF : active ou non ce bloc.",
-                                  "enum": [
-                                    "ON",
-                                    "OFF"
-                                  ]
-                                },
-                                "id": {
-                                  "type": "integer",
-                                  "description": "Identifiant ModBus / reseau de la carte."
-                                },
-                                "function": {
-                                  "type": "string"
-                                },
-                                "mqtt": {
-                                  "type": "string",
-                                  "enum": [
-                                    "ON",
-                                    "OFF"
-                                  ]
-                                }
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "activation": {
+                        "type": "string",
+                        "description": "ON ou OFF : active ou non ce bloc.",
+                        "enum": [
+                          "ON",
+                          "OFF"
+                        ]
+                      },
+                      "nom": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "integer",
+                        "description": "Identifiant ModBus / reseau de la carte."
+                      },
+                      "etat": {
+                        "type": "string"
+                      },
+                      "position": {
+                        "type": "integer"
+                      },
+                      "relais1": {
+                        "type": "integer"
+                      },
+                      "boutons": {
+                        "type": "object",
+                        "patternProperties": {
+                          "^bouton\\d*$": {
+                            "type": "object",
+                            "properties": {
+                              "activation": {
+                                "type": "string",
+                                "description": "ON ou OFF : active ou non ce bloc.",
+                                "enum": [
+                                  "ON",
+                                  "OFF"
+                                ]
                               },
-                              "required": [
-                                "activation",
-                                "id",
-                                "function",
-                                "mqtt"
-                              ],
-                              "additionalProperties": true
-                            }
-                          },
-                          "additionalProperties": true
-                        },
-                        "capteursPosition": {
-                          "type": "object",
-                          "properties": {
-                            "activation": {
-                              "type": "string",
-                              "description": "ON ou OFF : active ou non ce bloc.",
-                              "enum": [
-                                "ON",
-                                "OFF"
-                              ]
-                            },
-                            "capteurOuvert": {
-                              "type": "string"
-                            },
-                            "capteurFerme": {
-                              "type": "string"
-                            },
-                            "inclinaison": {
-                              "type": "object",
-                              "properties": {
-                                "activation": {
-                                  "type": "string",
-                                  "description": "ON ou OFF : active ou non ce bloc.",
-                                  "enum": [
-                                    "ON",
-                                    "OFF"
-                                  ]
-                                },
-                                "adresse": {
-                                  "type": "integer"
-                                },
-                                "axes": {
-                                  "type": "string"
-                                },
-                                "angleOuvert": {
-                                  "type": "number"
-                                },
-                                "angleFerme": {
-                                  "type": "number"
-                                },
-                                "marge": {
-                                  "type": "integer"
-                                },
-                                "blocage": {
-                                  "type": "integer"
-                                },
-                                "blocageDegres": {
-                                  "type": "integer"
-                                },
-                                "sensInverse": {
-                                  "type": "integer"
-                                },
-                                "surveillance": {
-                                  "type": "integer"
-                                },
-                                "positionReelle": {
-                                  "type": "string",
-                                  "enum": [
-                                    "ON",
-                                    "OFF"
-                                  ]
-                                }
+                              "id": {
+                                "type": "integer",
+                                "description": "Identifiant ModBus / reseau de la carte."
                               },
-                              "required": [
-                                "activation",
-                                "adresse",
-                                "axes",
-                                "angleOuvert",
-                                "angleFerme",
-                                "marge",
-                                "blocage",
-                                "blocageDegres",
-                                "sensInverse",
-                                "surveillance",
-                                "positionReelle"
-                              ],
-                              "additionalProperties": true
-                            }
-                          },
-                          "required": [
-                            "activation",
-                            "capteurOuvert",
-                            "capteurFerme",
-                            "inclinaison"
-                          ],
-                          "additionalProperties": true
-                        },
-                        "activationSiOuvert": {
-                          "type": "object",
-                          "properties": {
-                            "activation": {
-                              "type": "string",
-                              "description": "ON ou OFF : active ou non ce bloc.",
-                              "enum": [
-                                "ON",
-                                "OFF"
-                              ]
-                            },
-                            "tabRelais": {
-                              "type": "array"
-                            },
-                            "tabEtatRelais": {
-                              "type": "array"
-                            }
-                          },
-                          "required": [
-                            "activation",
-                            "tabRelais",
-                            "tabEtatRelais"
-                          ],
-                          "additionalProperties": true
-                        },
-                        "activationSiFerme": {
-                          "type": "object",
-                          "properties": {
-                            "activation": {
-                              "type": "string",
-                              "description": "ON ou OFF : active ou non ce bloc.",
-                              "enum": [
-                                "ON",
-                                "OFF"
-                              ]
-                            },
-                            "tabRelais": {
-                              "type": "array",
-                              "items": {
-                                "type": "integer"
+                              "function": {
+                                "type": "string"
+                              },
+                              "mqtt": {
+                                "type": "string",
+                                "enum": [
+                                  "ON",
+                                  "OFF"
+                                ]
                               }
                             },
-                            "tabEtatRelais": {
-                              "type": "array",
-                              "items": {
-                                "type": "integer"
-                              }
-                            }
+                            "required": [
+                              "activation",
+                              "id",
+                              "function",
+                              "mqtt"
+                            ],
+                            "additionalProperties": true
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "capteursPosition": {
+                        "type": "object",
+                        "properties": {
+                          "activation": {
+                            "type": "string",
+                            "description": "ON ou OFF : active ou non ce bloc.",
+                            "enum": [
+                              "ON",
+                              "OFF"
+                            ]
                           },
-                          "required": [
-                            "activation",
-                            "tabRelais",
-                            "tabEtatRelais"
-                          ],
-                          "additionalProperties": true
-                        },
-                        "tempsMontee": {
-                          "type": "integer"
-                        },
-                        "tempsDescente": {
-                          "type": "integer"
-                        },
-                        "led_temoin": {
-                          "type": "object",
-                          "properties": {
-                            "activation": {
-                              "type": "string",
-                              "description": "ON ou OFF : active ou non ce bloc.",
-                              "enum": [
-                                "ON",
-                                "OFF"
-                              ]
+                          "capteurOuvert": {
+                            "type": "string"
+                          },
+                          "capteurFerme": {
+                            "type": "string"
+                          },
+                          "inclinaison": {
+                            "type": "object",
+                            "properties": {
+                              "activation": {
+                                "type": "string",
+                                "description": "ON ou OFF : active ou non ce bloc.",
+                                "enum": [
+                                  "ON",
+                                  "OFF"
+                                ]
+                              },
+                              "adresse": {
+                                "type": "integer"
+                              },
+                              "axes": {
+                                "type": "string"
+                              },
+                              "angleOuvert": {
+                                "type": "number"
+                              },
+                              "angleFerme": {
+                                "type": "number"
+                              },
+                              "marge": {
+                                "type": "integer"
+                              },
+                              "blocage": {
+                                "type": "integer"
+                              },
+                              "blocageDegres": {
+                                "type": "integer"
+                              },
+                              "sensInverse": {
+                                "type": "integer"
+                              },
+                              "surveillance": {
+                                "type": "integer"
+                              },
+                              "positionReelle": {
+                                "type": "string",
+                                "enum": [
+                                  "ON",
+                                  "OFF"
+                                ]
+                              }
                             },
-                            "nom": {
-                              "type": "string"
-                            },
-                            "pin": {
-                              "type": "integer",
-                              "description": "Numero de GPIO (-1 = non affecte)."
-                            },
-                            "intervalle": {
+                            "required": [
+                              "activation",
+                              "adresse",
+                              "axes",
+                              "angleOuvert",
+                              "angleFerme",
+                              "marge",
+                              "blocage",
+                              "blocageDegres",
+                              "sensInverse",
+                              "surveillance",
+                              "positionReelle"
+                            ],
+                            "additionalProperties": true
+                          }
+                        },
+                        "required": [
+                          "activation",
+                          "capteurOuvert",
+                          "capteurFerme",
+                          "inclinaison"
+                        ],
+                        "additionalProperties": true
+                      },
+                      "activationSiOuvert": {
+                        "type": "object",
+                        "properties": {
+                          "activation": {
+                            "type": "string",
+                            "description": "ON ou OFF : active ou non ce bloc.",
+                            "enum": [
+                              "ON",
+                              "OFF"
+                            ]
+                          },
+                          "tabRelais": {
+                            "type": "array"
+                          },
+                          "tabEtatRelais": {
+                            "type": "array"
+                          }
+                        },
+                        "required": [
+                          "activation",
+                          "tabRelais",
+                          "tabEtatRelais"
+                        ],
+                        "additionalProperties": true
+                      },
+                      "activationSiFerme": {
+                        "type": "object",
+                        "properties": {
+                          "activation": {
+                            "type": "string",
+                            "description": "ON ou OFF : active ou non ce bloc.",
+                            "enum": [
+                              "ON",
+                              "OFF"
+                            ]
+                          },
+                          "tabRelais": {
+                            "type": "array",
+                            "items": {
                               "type": "integer"
                             }
                           },
-                          "required": [
-                            "activation",
-                            "nom",
-                            "pin",
-                            "intervalle"
-                          ],
-                          "additionalProperties": true
-                        }
+                          "tabEtatRelais": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "required": [
+                          "activation",
+                          "tabRelais",
+                          "tabEtatRelais"
+                        ],
+                        "additionalProperties": true
                       },
-                      "required": [
-                        "activation",
-                        "nom",
-                        "id",
-                        "etat",
-                        "position",
-                        "relais1",
-                        "boutons",
-                        "capteursPosition",
-                        "activationSiOuvert",
-                        "activationSiFerme",
-                        "tempsMontee",
-                        "tempsDescente",
-                        "led_temoin"
-                      ],
-                      "additionalProperties": true
-                    }
-                  },
-                  "required": [
-                    "VR1"
-                  ],
-                  "additionalProperties": true
+                      "tempsMontee": {
+                        "type": "integer"
+                      },
+                      "tempsDescente": {
+                        "type": "integer"
+                      },
+                      "led_temoin": {
+                        "type": "object",
+                        "properties": {
+                          "activation": {
+                            "type": "string",
+                            "description": "ON ou OFF : active ou non ce bloc.",
+                            "enum": [
+                              "ON",
+                              "OFF"
+                            ]
+                          },
+                          "nom": {
+                            "type": "string"
+                          },
+                          "pin": {
+                            "type": "integer",
+                            "description": "Numero de GPIO (-1 = non affecte)."
+                          },
+                          "intervalle": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "activation",
+                          "nom",
+                          "pin",
+                          "intervalle"
+                        ],
+                        "additionalProperties": true
+                      },
+                      "inverse": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "activation",
+                      "nom",
+                      "id",
+                      "etat",
+                      "position",
+                      "relais1",
+                      "boutons",
+                      "capteursPosition",
+                      "activationSiOuvert",
+                      "activationSiFerme",
+                      "tempsMontee",
+                      "tempsDescente",
+                      "led_temoin"
+                    ],
+                    "additionalProperties": true
+                  }
                 }
               },
               "additionalProperties": true

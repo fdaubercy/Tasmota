@@ -107,6 +107,17 @@ def vrFonctions_reglageVolets(cmd, idx, payload, payload_json)
 end
 vrFonctions.reglageVolets = vrFonctions_reglageVolets
 
+# Valeur de ShutterInvert du volet d'id 'id' : cle 'inverse' de son bloc VR, 1 par defaut (cartes d'avant la cle)
+def vrFonctions_inverse(id)
+    var vrs = drivers["voletRoulants"].find("environnement", {}).find("VRs", {})
+    for cle: vrs.keys()
+        var vr = vrs[cle]
+        if (type(vr) == "instance" && vr.find("id") == id)    return vr.find("inverse", 1)    end
+    end
+    return 1
+end
+vrFonctions.inverse = vrFonctions_inverse
+
 def vrFonctions_configVRByJson()
     import string
     import configGlobal
@@ -131,6 +142,9 @@ def vrFonctions_configVRByJson()
         end 
 
         # Paramètre chaque volet roulant
+        # Interlock : UNE seule commande pour tous les volets, apres la boucle. Chaque 'Interlock a,b' remet a zero
+        # TOUS les groupes (support_command.ino::CmndInterlock) : un envoi par volet ne protegeait que le dernier.
+        var groupesInterlock = []
         for cle: vrJSON["environnement"]["VRs"].keys()
             if type(vrJSON["environnement"]["VRs"][cle]) != "instance"   continue    end
 
@@ -146,17 +160,18 @@ def vrFonctions_configVRByJson()
                         if (configGlobal.testeParam(string.format("PulseTime%i", vrJSON["environnement"]["VRs"][cle]["relais1"]), 5, "int"))
                             vrFonctions.log(string.format("CONFIG_VR2: Paramètre le délai de bascule du 1er relai du volet roulant %i: 5s !", vrJSON["environnement"]["VRs"][cle]["id"]), LOG_LEVEL_DEBUG)
                         end
-                    # Paramètre l'Interlock entre le relai1 et le suivant
+                    # Interlock entre le relai1 et le suivant : groupe retenu, envoye apres la boucle
                     elif (vrJSON["mode"] == 1)
-                        tasmota.cmd(string.format("Interlock %i,%i", vrJSON['environnement']['VRs'][cle]['relais1'], vrJSON['environnement']['VRs'][cle]['relais1'] + 1), boolMute)
-                        tasmota.cmd("Interlock ON", boolMute)
+                        groupesInterlock.push(string.format("%i,%i", vrJSON['environnement']['VRs'][cle]['relais1'], vrJSON['environnement']['VRs'][cle]['relais1'] + 1))
                     end
 
                     # Paramétre l'aspect et l'ordre des boutons de VR sur webUI
                     if (configGlobal.testeParam(string.format("ShutterInvertWebButtons%i", vrJSON["environnement"]["VRs"][cle]["id"]), 0, "int"))
                         vrFonctions.log(string.format("CONFIG_VR2: Paramètre les icones par défaut du volet roulant %i !", vrJSON["environnement"]["VRs"][cle]["id"]), LOG_LEVEL_DEBUG)
                     end
-                    if (configGlobal.testeParam(string.format("ShutterInvert%i", vrJSON["environnement"]["VRs"][cle]["id"]), 1, "int"))
+                    # 'inverse' (1 par defaut = comportement d'avant) : ShutterInvert 1 inverse AUSSI les appuis de bouton
+                    # (xdrv_27_esp32_shutter.ino::CmndShutterPosition n'en exclut que serie, page web et commande web)
+                    if (configGlobal.testeParam(string.format("ShutterInvert%i", vrJSON["environnement"]["VRs"][cle]["id"]), vrFonctions.inverse(vrJSON["environnement"]["VRs"][cle]["id"]), "int"))
                         vrFonctions.log(string.format("CONFIG_VR2: Paramètre la représentation numérique de l'état du volet roulant %i !", vrJSON["environnement"]["VRs"][cle]["id"]), LOG_LEVEL_DEBUG)
                     end
 
@@ -181,8 +196,13 @@ def vrFonctions_configVRByJson()
                 end
             except .. as error, message
                 vrFonctions.log(string.format("CONFIG_VR2_ERREUR: %s -> %s", error, message), LOG_LEVEL_ERREUR)
-            end  
-        end              
+            end
+        end
+        if (groupesInterlock.size() > 0)
+            tasmota.cmd("Interlock " + groupesInterlock.concat(" "), boolMute)
+            tasmota.cmd("Interlock ON", boolMute)
+            vrFonctions.log(string.format("CONFIG_VR: Interlock %s !", groupesInterlock.concat(" ")), LOG_LEVEL_DEBUG)
+        end
     end
 end
 vrFonctions.configVRByJson = vrFonctions_configVRByJson
@@ -264,16 +284,17 @@ def vrFonctions_changementEtatCapteur(value, trigger, msg, numRideau, etatRideau
 	tasmota.yield()
 
     # Modifie l'état du rideau en fonction du capteur déclenché
-    # Croisement VOULU : configVRByJson pose ShutterInvert 1, et Tasmota (ESP32) applique alors
-    # 100 - position a ShutterSetClose/Open. ShutterSetClose = volet ouvert : ne pas « corriger ».
+    # Croisement VOULU si 'inverse' vaut 1 (defaut) : configVRByJson pose ShutterInvert 1, et Tasmota (ESP32) applique alors
+    # 100 - position a ShutterSetClose/Open. ShutterSetClose = volet ouvert : ne pas « corriger ». Avec 'inverse' 0 : direct.
     var vrJSON = drivers["voletRoulants"]
+    var inverse = vrFonctions.inverse(numRideau) == 1
     if (etatRideau == "ouverture" && value == "ON")
         # On force l'affichage de l'état 'ouvert' du rideau
-        vrFonctions.commandeArret(numRideau, string.format("ShutterSetClose%i", numRideau))
+        vrFonctions.commandeArret(numRideau, string.format(inverse ? "ShutterSetClose%i" : "ShutterSetOpen%i", numRideau))
         vrFonctions.log(string.format("VR_GESTION_CAPTEURS: Force l'affichage du volet %i en ouverture !", numRideau), LOG_LEVEL_DEBUG)
     elif (etatRideau == "fermeture" && value == "ON")
         # On force l'affichage de l'état 'fermé' du rideau
-        vrFonctions.commandeArret(numRideau, string.format("ShutterSetOpen%i", numRideau))
+        vrFonctions.commandeArret(numRideau, string.format(inverse ? "ShutterSetOpen%i" : "ShutterSetClose%i", numRideau))
         vrFonctions.log(string.format("VR_GESTION_CAPTEURS: Force l'affichage du volet %i en fermeture !", numRideau), LOG_LEVEL_DEBUG)
     end
 
@@ -735,7 +756,8 @@ def vrFonctions_positionReelle(vr, angle)
     var ferme = incl.find("angleFerme", 3)
     if (suivi["enCourse"] || ouvert == ferme)    return    end
     var pct = (angle - ferme) * 100.0 / (ouvert - ferme)
-    var position = 100 - int((pct < 0 ? 0 : (pct > 100 ? 100 : pct)) + 0.5)
+    var position = int((pct < 0 ? 0 : (pct > 100 ? 100 : pct)) + 0.5)
+    if (vrFonctions.inverse(vr["id"]) == 1)    position = 100 - position    end     # ShutterInvert 1 : 100 - % d'ouverture
     if (suivi.find("position") != nil && math.abs(position - suivi["position"]) < 2)    return    end
     suivi["position"] = position
     vrFonctions.commandeArret(vr["id"], string.format("ShutterSetPosition%i %i", vr["id"], position))

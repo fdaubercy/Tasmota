@@ -1,0 +1,128 @@
+<style>
+  .tas{background:#252525;color:#eaeaea;border-radius:6px;padding:12px 10px;font-family:verdana,sans-serif}
+  .tas table{width:100%;border-collapse:collapse}
+  .tas td{padding:2px 3px}
+  .tas .bt{background:#1fa3ec;color:#fff;border:0;border-radius:.3rem;width:100%;line-height:2.4rem;font-size:1.1rem;cursor:pointer}
+  .tas .lib{text-align:center;font-size:12px}
+  .tas input[type=range]{width:100%}
+  .zone{display:flex;justify-content:center;padding:12px 0 2px}
+  .deux{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px}
+  h3{margin:6px 0}
+</style>
+
+<h2>Trappes, v6 : échelle depuis le haut de la trappe, devant le panneau</h2>
+<p class="subtitle">Volets : ▼ ▲ (un appui pendant le mouvement arrête). Trappes : bouton unique ⇅ (ouvre ou ferme à l'inverse du dernier sens). Les trappes se baissent face à nous.</p>
+
+<div class="deux">
+<div>
+<h3>Grenier du RDC : fenêtre, trappe, porte</h3>
+<div class="tas">
+  <table>
+    <tr><td style="width:15%"><button class="bt" onclick="cmd(0,-1)">▼</button></td>
+        <td><div class="lib">Volet porte<br><input type="range" id="s0" min="0" max="100"></div></td>
+        <td style="width:15%"><button class="bt" onclick="cmd(0,1)">▲</button></td></tr>
+    <tr><td><button class="bt" onclick="cmd(1,-1)">▼</button></td>
+        <td><div class="lib">Volet cuisine<br><input type="range" id="s1" min="0" max="100"></div></td>
+        <td><button class="bt" onclick="cmd(1,1)">▲</button></td></tr>
+    <tr><td></td>
+        <td><div class="lib">Trappe grenier<br><input type="range" id="s2" min="0" max="100"></div></td>
+        <td><button class="bt" onclick="bascule(2)">⇅</button></td></tr>
+  </table>
+  <div class="zone">
+    <svg width="360" height="200" viewBox="0 0 360 200">
+      <defs><pattern id="lames" width="10" height="8" patternUnits="userSpaceOnUse">
+        <rect width="10" height="8" fill="#9aa3ab"/><rect y="6.5" width="10" height="1.5" fill="#6f777e"/></pattern></defs>
+      <polygon points="10,66 180,8 350,66" fill="#9c4b3a"/>
+      <rect x="20" y="66" width="320" height="130" fill="#d8cbb0"/>
+      <!-- plancher du grenier et ouverture de la trappe -->
+      <rect x="20" y="66" width="320" height="6" fill="#c9b79c"/>
+      <rect x="150" y="66" width="60" height="6" fill="#2a2420"/>
+      <polygon id="pan2" points="150,72 210,72 210,72 150,72" fill="#a8916f" stroke="#7a6548"/>
+      <text x="180" y="62" font-size="10" fill="#eee" text-anchor="middle">trappe <tspan id="p2"></tspan></text>
+      <!-- fenetre de la cuisine, a gauche -->
+      <rect x="40" y="86" width="80" height="62" fill="#bfe3f7" stroke="#eee" stroke-width="3"/>
+      <line x1="80" y1="86" x2="80" y2="148" stroke="#eee" stroke-width="3"/>
+      <rect x="36" y="78" width="88" height="9" fill="#6b6b6b"/>
+      <clipPath id="c1"><rect x="40" y="87" width="80" height="61"/></clipPath>
+      <g clip-path="url(#c1)"><g id="t1" data-h="61" data-y="87"><rect x="40" y="0" width="80" height="61" fill="url(#lames)"/></g></g>
+      <text x="80" y="164" font-size="11" fill="#333" text-anchor="middle">cuisine <tspan id="p1"></tspan></text>
+      <!-- porte d'entree, a droite -->
+      <rect x="250" y="88" width="64" height="108" fill="#8a5a3b" stroke="#eee" stroke-width="3"/>
+      <rect x="260" y="98" width="44" height="40" fill="#bfe3f7"/>
+      <circle cx="306" cy="146" r="3.5" fill="#e0c060"/>
+      <rect x="246" y="80" width="72" height="9" fill="#6b6b6b"/>
+      <clipPath id="c0"><rect x="250" y="89" width="64" height="107"/></clipPath>
+      <g clip-path="url(#c0)"><g id="t0" data-h="107" data-y="89"><rect x="250" y="0" width="64" height="107" fill="url(#lames)"/></g></g>
+      <text x="282" y="190" font-size="11" fill="#eee" text-anchor="middle">porte <tspan id="p0"></tspan></text>
+    </svg>
+  </div>
+</div>
+</div>
+
+<div>
+<h3>Grenier du 2e étage : trappe, échelle et escalier en bois</h3>
+<div class="tas">
+  <table>
+    <tr><td style="width:15%"></td>
+        <td><div class="lib">Trappe de Grenier 2eme<br><input type="range" id="s3" min="0" max="100"></div></td>
+        <td style="width:15%"><button class="bt" onclick="bascule(3)">⇅</button></td></tr>
+  </table>
+  <div class="zone">
+    <svg width="240" height="200" viewBox="0 0 240 200">
+      <rect x="0" y="0" width="240" height="30" fill="#e8e1d4"/>
+      <rect x="0" y="30" width="240" height="8" fill="#c9b79c"/>
+      <rect x="80" y="30" width="80" height="8" fill="#2a2420"/>
+      <rect x="0" y="38" width="240" height="162" fill="#3b3631"/>
+      <rect x="0" y="192" width="240" height="8" fill="#777"/>
+      <!-- escalier en bois fixe : descend de la gauche (haut) vers la droite (sol) -->
+      <polygon points="0,100 24,100 24,109 48,109 48,118 72,118 72,127 96,127 96,136 120,136 120,145 144,145 144,154 168,154 168,163 192,163 192,172 216,172 216,181 240,181 240,192 0,192" fill="#8a5a3b" stroke="#5e3c26"/>
+      <line x1="0" y1="96" x2="240" y2="177" stroke="#6b4429" stroke-width="3"/>
+      <polygon id="pan3" points="80,38 160,38 160,38 80,38" fill="#a8916f" stroke="#7a6548"/>
+      <g id="ech3"></g>
+      <text x="120" y="20" font-size="11" fill="#555" text-anchor="middle">trappe <tspan id="p3"></tspan></text>
+    </svg>
+  </div>
+</div>
+</div>
+</div>
+
+<script>
+(function(){
+  var v = [{pos:100,sens:0,c:20},{pos:70,sens:0,c:20},{pos:0,sens:0,c:12,der:-1},{pos:0,sens:0,c:12,der:-1}];
+  window.cmd = function(i, s){ v[i].sens = v[i].sens ? 0 : s; };
+  window.bascule = function(i){ var o = v[i]; if (o.sens) { o.sens = 0; } else { o.sens = -o.der; o.der = o.sens; } };
+  var NS = 'http://www.w3.org/2000/svg';
+  function ligne(g, x1, y1, x2, y2, w){ var l = document.createElementNS(NS, 'line');
+    l.setAttribute('x1', x1); l.setAttribute('y1', y1); l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+    l.setAttribute('stroke', '#ddd'); l.setAttribute('stroke-width', w); g.appendChild(l); }
+  function rendu(){
+    for (var i = 0; i < 2; i++) {
+      var g = document.getElementById('t' + i);
+      g.setAttribute('transform', 'translate(0,' + (+g.dataset.y - +g.dataset.h * v[i].pos / 100) + ')');
+    }
+    // trappe du RDC : panneau qui se baisse face a nous (hauteur vue = longueur x sin(angle))
+    var h2 = 40 * Math.sin(Math.PI / 2 * v[2].pos / 100);
+    document.getElementById('pan2').setAttribute('points', '150,72 210,72 ' + (212) + ',' + (72 + h2) + ' 148,' + (72 + h2));
+    // trappe du 2e : panneau puis echelle qui descend dans le meme sens
+    var f = v[3].pos / 100, h3 = 70 * Math.sin(Math.PI / 2 * Math.min(1, f * 1.6));
+    document.getElementById('pan3').setAttribute('points', '80,38 160,38 ' + (164) + ',' + (38 + h3) + ' 76,' + (38 + h3));
+    var e = document.getElementById('ech3'); while (e.firstChild) e.removeChild(e.firstChild);
+    // echelle : descend de la trappe et vient reposer sur les marches de l'escalier (pied gauche plus haut)
+    var g = Math.max(0, f - 0.4) / 0.6, haut = 38;   // part du haut de la trappe, dessinee devant le panneau
+    var piedG = haut + (127 - haut) * g, piedD = haut + (154 - haut) * g;   // marches sous x=92 et x=148
+    if (g > 0) { ligne(e, 95, haut, 92, piedG, 3); ligne(e, 145, haut, 148, piedD, 3);
+      for (var y = haut + 12; y < Math.min(piedG, piedD); y += 14) ligne(e, 94, y, 146, y, 2); }
+    for (var k = 0; k < 4; k++) {
+      document.getElementById('s' + k).value = v[k].pos;
+      document.getElementById('p' + k).textContent = Math.round(v[k].pos) + ' %';
+    }
+  }
+  var dernier = performance.now();
+  function pas(t){
+    var dt = (t - dernier) / 1000; dernier = t;
+    v.forEach(function(o){ if (o.sens) { o.pos = Math.max(0, Math.min(100, o.pos + o.sens * 100 * dt / o.c)); if (o.pos <= 0 || o.pos >= 100) o.sens = 0; } });
+    rendu(); requestAnimationFrame(pas);
+  }
+  rendu(); requestAnimationFrame(pas);
+})();
+</script>
