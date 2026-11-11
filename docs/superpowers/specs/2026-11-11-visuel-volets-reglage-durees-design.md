@@ -73,6 +73,14 @@ curseur -> ouverture se déduit de la clé persist `inverse` du volet (1 par dé
 vérifie sur carte : volet ouvert, le dessin doit être ouvert, sur une carte `inverse 1` (garage) comme sur une carte
 `inverse 0` (grenier du RDC).
 
+### 4.1 bis Trappe avec inclinomètre MPU6050 actif (décision de l'utilisateur, 2026-11-11)
+
+Quand `capteursPosition.inclinaison.activation` vaut `"ON"` dans le persist, le dessin suit **l'angle mesuré** en direct,
+converti en pourcentage d'ouverture comme `vrFonctions.positionReelle` (entre `angleFerme` et `angleOuvert`, borné à
+0 et 100). L'angle est lu dans la ligne « inclinaison » que la carte envoie déjà à chaque rafraîchissement : aucune
+requête de plus. Sans angle lu (capteur muet), le dessin reprend le curseur. Un blocage ou un sens inverse signalé par
+le MPU6050 passe l'ouverture en rouge, avec « bloqué » ou « sens inverse », en plus de la ligne d'inclinaison actuelle.
+
 ### 4.2 Mouvement fluide
 
 Entre deux valeurs reçues, le dessin avance seul à la vitesse du volet, déduite de `tempsMontee` / `tempsDescente`
@@ -124,6 +132,11 @@ et rien n'est envoyé à la page. Le modèle `outils_docs/schemas/modele_persist
 - Les fins de course du volet (trappe du RDC, trappe du 2e étage) sont **neutralisées** pendant la mesure : leur
   recalage (`changementEtatCapteur` -> `commandeArret` -> `ShutterSetOpen/Close`) remettrait la direction à 0 sans
   couper le moteur en pleine mesure (décision de Claude ; l'utilisateur a écarté les butées pour le réglage).
+- Inclinomètre MPU6050 actif : **garde-fou seul** (décision de l'utilisateur). La mesure reste faite par les appuis.
+  Pendant le mode, l'arrêt automatique en butée et le recalage de la position par l'angle sont coupés ; la détection
+  du blocage et du sens inverse reste active : elle coupe le moteur, le réglage s'arrête sans rien écrire et la page en
+  donne la cause. Si le MPU6050 a mesuré la même course d'une butée à l'autre, la page affiche sa durée à côté de la
+  mesure de l'utilisateur, pour comparer ; c'est la mesure de l'utilisateur qui est écrite.
 - Mauvais sens : la page affiche, à chaque départ, « le volet monte-t-il ? Sinon, Annuler » (« descend » à l'étape
   2) ; le délai de 120 s reste le dernier garde-fou (décision de Claude : seul l'utilisateur voit le sens réel des
   volets sans capteur).

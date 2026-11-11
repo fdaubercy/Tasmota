@@ -13,13 +13,14 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-42 plans : 16 actif, 1 en-pause, 25 clos.
+43 plans : 17 actif, 1 en-pause, 25 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff | actif | ███░░░░░░░ 26 % (12/48) | 36 étapes, 3 améliorations | 2026-11-11 | 2026-11-11 (2e demande : écran, range extender de la cave, porte de cave esclave) |
+| [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff | actif | ███░░░░░░░ 29 % (14/51) | 37 étapes, 3 améliorations | 2026-11-11 | 2026-11-11 (A14 : plan dédié du visuel et du réglage des durées) |
 | [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ░░░░░░░░░░ 0 % (0/20) | 20 étapes, 2 améliorations | 2026-11-11 | 2026-11-11 |
 | [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) | Faire passer les 6 débits de la carte d'acquisition (esclave ModBus id 1) à une carte d'affichage (maître id 0) par une lecture groupée RS485 et un push UDP, sans rien changer au garage | actif | ██████░░░░ 62 % (33/49) | 16 étapes, 3 améliorations | 2026-11-09 | 2026-11-11 |
+| [Visuel des volets sur la page d'accueil et réglage des durées par les boutons](plans/visuel-reglage-volets.md) | Dessiner sous les curseurs des volets une façade dont les tabliers suivent la position réelle en direct, et régler tempsMontee et tempsDescente depuis la page Configuration avec les boutons existants | actif | ░░░░░░░░░░ 0 % (0/38) | 38 étapes, 2 améliorations | 2026-11-11 | 2026-11-11 |
 | [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ███████░░░ 68 % (35/50) | 15 étapes, 4 améliorations | 2026-11-08 | 2026-11-09 |
 | [Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)](plans/energie-differentiel.md) | Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h) | actif | ██████████ 100 % (69/70) | 1 étape | 2026-10-31 | 2026-11-09 |
 | [Page d'équilibrage de la nourrice servie par la carte des débits, débits lus en direct](plans/equilibrage-par-la-carte.md) | Ouvrir le guide d'équilibrage depuis la carte des débits et y lire les 6 débits mesurés, sans les taper à la main | actif | ████████░░ 83 % (20/22) | 2 étapes | 2026-11-09 | 2026-11-09 |
@@ -62,7 +63,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — 26 %
+#### [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — 29 %
 
 - A3 — Brochage et volets : Relais CH1-CH4 par le TCA9554 (`tca9554.dat` du dossier de la carte), interverrouillage montée/descente par volet. Fait en A2 sur le papier (CH1-CH6, `Interlock 1,2 3,4 5,6` corrigé dans `vrFonctions.be`) : à cocher après l'essai à vide sur la carte.
 - A3 — Brochage et volets : Boutons DI1-DI4, DHT22 sur GPIO21 ; classeur `Brochage GPIO - tasmota32s3-rdc-grenier.xlsx` par
@@ -97,9 +98,10 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho : Sonoff : retirer de la Rule1 les deux règles `Power1#State` qui publient `POWER3` (la Rule1 garde le bouton, la
 - A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho : Serveur de la cave : retirer le `publishMQTT` de `relais.relai1` du `_persist.json` du dossier S3 (sinon le Berry
 - A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho : Essai, avec preuve dans le sniffeur MQTT (:7100) : allumage depuis la porte, depuis la cave (bouton, puis écran si
-- A12 — Visuel des volets sur la page d'accueil (toutes les cartes à volets) : Spec écrite (docs/superpowers/specs/) puis plan : code commun dans `data/fs` (accord de l'utilisateur
-- A12 — Visuel des volets sur la page d'accueil (toutes les cartes à volets) : Réalisation, banc, sonde Chrome (arrêter ses Chrome ensuite), essai sur carte.
-- A13 — Réglage des durées de montée et de descente par les boutons : Spec, plan, réalisation dans `vrFonctions.be` (accord de l'utilisateur), bancs, essai sur carte.
+- A12 — Visuel des volets sur la page d'accueil (toutes les cartes à volets) : Réalisation, bancs, sondes, essais sur carte : par A14 (plan dédié)
+- A13 — Réglage des durées de montée et de descente par les boutons : Réalisation, bancs, essais sur carte : par A14 (plan dédié)
+- A14 — Réaliser le visuel et le réglage des durées (plan dédié `visuel-reglage-volets`) : Taper `/suivi suivre visuel-reglage-volets` et exécuter ce plan de A1 à sa dernière action
+- A14 — Réaliser le visuel et le réglage des durées (plan dédié `visuel-reglage-volets`) : Plan `visuel-reglage-volets` clos (100 %, `statut: clos`), puis retour ici : cocher les étapes restantes d'A12 et d'A13
 - Amélioration [projet] : Ethernet W5500 de la carte du grenier du RDC (`ReglageGlobal VoieReseau ethernet`) si un câble arrive au grenier.
 - Amélioration [projet] : Alias Berry lisible par volet (`VoletPorte`, `VoletCuisine`) si l'utilisateur le veut (A4).
 - Amélioration [projet] : Resynchroniser les deux lampes de la cave à la reconnexion MQTT d'une des cartes (`Mqtt#Connected`).
@@ -150,6 +152,49 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - Amélioration [projet] : Rétroéclairage gradué automatiquement par une mesure de lumière (ADC de l'expandeur ou GPIO6)
 - Amélioration [projet] : Fenêtre de mesure transmise par l'acquisition (évite la recopie à la main sur l'affichage)
 - Amélioration [projet] : Défaut de l'ancien chemin `Count` > 1 (`[v, 0, …]`) corrigé pour toutes les cartes, avec la grille du garage
+
+#### [Visuel des volets sur la page d'accueil et réglage des durées par les boutons](plans/visuel-reglage-volets.md) — 0 %
+
+- A1 — Préparer vrFonctions : sens physique, boutons, neutralisation : Demander l'accord de l'utilisateur pour les écritures du plan dans `data/fs/*.be` et les trois `_persist.json`
+- A1 — Préparer vrFonctions : sens physique, boutons, neutralisation : Section 19 du banc, écrite d'abord : `commandeSens` pour `inverse` 0 et 1 (4 sens), `configVRByJson` envoie toujours
+- A1 — Préparer vrFonctions : sens physique, boutons, neutralisation : Écrire les trois fonctions, faire passer `changementEtatCapteur` par `commandeSens`, ajouter les gardes `enReglage`
+- A1 — Préparer vrFonctions : sens physique, boutons, neutralisation : `python outils_docs/scripts_python/berry/banc_inclinaison.py` : `BANC_INCLINAISON: OK`, sections 1 à 18 inchangées
+- A1 — Préparer vrFonctions : sens physique, boutons, neutralisation : Témoin : copie de `data/fs` sans la garde de `changementEtatCapteur` -> section 19 rouge
+- A1 — Préparer vrFonctions : sens physique, boutons, neutralisation : Commit `refactor(volets): sens physique, boutons et garde du reglage dans vrFonctions`
+- A2 — Décrire les façades dans les persists, le modèle et le schéma : Éditer le TEXTE des persists (tabulations et ordre gardés, script dans le scratchpad qui vérifie chaque remplacement
+- A2 — Décrire les façades dans les persists, le modèle et le schéma : `python outils_docs/scripts_python/berry/genere_schema_persist.py` puis contrôle des persists : 0 erreur
+- A2 — Décrire les façades dans les persists, le modèle et le schéma : Commit `feat(volets): facade decrite dans les persists des cartes a volets`
+- A3 — Module du mode réglage `vrReglage.be` et son banc : Banc écrit d'abord, un groupe par cas : déroulé complet 2 boutons (ordres exacts dans l'ordre, durées 14 et 13 s
+- A3 — Module du mode réglage `vrReglage.be` et son banc : Écrire `vrReglage.be` (en-tête de fichier : rôle, états, décisions de la section Contexte, bogue de `ShutterButton<x> 0`)
+- A3 — Module du mode réglage `vrReglage.be` et son banc : `python outils_docs/scripts_python/berry/banc_reglage_volets.py` : `BANC_REGLAGE_VOLETS: OK`
+- A3 — Module du mode réglage `vrReglage.be` et son banc : Témoin : copie de `data/fs` où `appui` suit la fonction du bouton au lieu de l'étape -> groupe « toggle » rouge
+- A3 — Module du mode réglage `vrReglage.be` et son banc : `verifie_berry.py data/fs/vrReglage.be` : syntaxe OK, aucun écart de charte
+- A3 — Module du mode réglage `vrReglage.be` et son banc : Commit `feat(volets): mode reglage des durees (vrReglage) et son banc`
+- A4 — Branchement dans le driver, pages côté carte, livraison par le cenv : Groupe « routes » du banc d'abord : accès refusé sans Referer, `?f=etat` rend `etatPage()`, POST `debut` puis `appui`
+- A4 — Branchement dans le driver, pages côté carte, livraison par le cenv : Écrire `vrPages.be` et les ajouts du driver ; banc vert
+- A4 — Branchement dans le driver, pages côté carte, livraison par le cenv : cenv modifié ; `python outils_docs/scripts_python/berry/banc_demarrage.py` : les 3 envs à volets chargent les deux
+- A4 — Branchement dans le driver, pages côté carte, livraison par le cenv : Commit `feat(volets): pages du reglage et visuel branches dans le driver des volets`
+- A5 — Le dessin de la façade `volets.js` : `test_volets.mjs` d'abord : `ouverture(30, 0) == 30`, `ouverture(30, 1) == 70` ; `avance` à 15 s de course : +10 % en
+- A5 — Le dessin de la façade `volets.js` : Écrire `volets.js` ; `node outils_docs/scripts_python/outils_pc/test_volets.mjs` : code 0
+- A5 — Le dessin de la façade `volets.js` : Sonde Chrome écrite : page statique qui imite l'accueil de Tasmota (table de curseurs `s271`..`s273`, `window.VOLETS` des
+- A5 — Le dessin de la façade `volets.js` : Sonde verte ; témoin : `volets.js` sans l'inversion -> scénario `inverse` 1 rouge ; aucun Chrome `sonde_*` restant
+- A5 — Le dessin de la façade `volets.js` : Commit `feat(volets): dessin de la facade sur la page d'accueil`
+- A6 — La page de réglage : Sonde écrite d'abord, serveur simulé qui joue `etatPage()` : textes de chaque étape pour 1 bouton, 2 boutons, chrono ;
+- A6 — La page de réglage : Écrire les trois fichiers ; sonde verte ; témoin : page sans l'avertissement « Sinon, Annuler » -> rouge
+- A6 — La page de réglage : Commit `feat(volets): page de reglage des durees`
+- A7 — Relectures, documentation, compilation : Agent `relecteur-berry` sur `vrFonctions.be`, `vrReglage.be`, `vrPages.be`, `controleVoletRoulants.be` ; agent
+- A7 — Relectures, documentation, compilation : `outils_docs/README.md` : mode d'emploi (façade dans le persist, réglage pas à pas, recopie des durées) ; ligne dans la
+- A7 — Relectures, documentation, compilation : Compilation des 3 envs par la page Build (:7700), une à la fois, SUCCESS lu en fin de journal
+- A7 — Relectures, documentation, compilation : Commit `docs(volets): mode d'emploi du visuel et du reglage` (avec `platformio_override.ini` et
+- A8 — Essais sur carte : Grenier du 2e étage (`inverse` 1, bouton unique) : envoi par la page Build, dessin ouvert quand la trappe est ouverte,
+- A8 — Essais sur carte : Trappe à MPU6050 actif (si le capteur est posé) : dessin qui suit l'angle, réglage sans arrêt en butée, durée du MPU
+- A8 — Essais sur carte : P4 du garage : dessin de la porte (`inverse` 1), chrono seul (journal : aucun `Shutter*` envoyé par le réglage)
+- A8 — Essais sur carte : Grenier du RDC à sa mise en service (`inverse` 0, 2 boutons et bouton unique) : les 3 ouvertures, réglage de chaque volet
+- A8 — Essais sur carte : Durées mesurées recopiées dans les persists du dépôt, si l'utilisateur le demande
+- A9 — Revenir au plan d'origine `envs-grenier-rdc-sonoff-cave` : Passer ce plan à `statut: clos`, puis cocher A14 et les étapes de réalisation d'A12 et d'A13 du plan d'origine, avec preuve
+- A9 — Revenir au plan d'origine `envs-grenier-rdc-sonoff-cave` : Taper `/suivi suivre envs-grenier-rdc-sonoff-cave` et reprendre à sa prochaine étape
+- Amélioration [projet] : Corriger en amont la boucle sans accolades de `CmndShutterButton` (`ShutterButton<x> 0`) : proposition à
+- Amélioration [projet] : Façade du rideau si l'utilisateur la redemande (aujourd'hui : P4 seulement)
 
 #### [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) — 68 %
 

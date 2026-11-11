@@ -4,7 +4,7 @@ titre: Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la
 objectif: Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff
 statut: actif
 cree: 2026-11-11
-maj: 2026-11-11 (2e demande : écran, range extender de la cave, porte de cave esclave)
+maj: 2026-11-11 (A14 : plan dédié du visuel et du réglage des durées)
 ---
 # Deux envs : serveur du grenier du RDC et Sonoff de la porte de la cave ; cave S3
 
@@ -265,9 +265,10 @@ garage (P4 et rideau, même porte) = toit à un seul pan légèrement incliné v
 grenier du 2e étage = trappe de face sous le plafond, panneau puis échelle qui descend et repose sur un escalier en
 bois fixe (gauche vers droite). Le curseur natif est déjà mis à jour à chaque rafraîchissement
 (`xdrv_01_9_webserver.ino`, `eb('s27<n>').value=`) : le dessin le lit, sans requête de plus.
-- [ ] Spec écrite (docs/superpowers/specs/) puis plan : code commun dans `data/fs` (accord de l'utilisateur
-  nécessaire), description de la façade par carte dans le persist (type et place de chaque ouverture, toit).
-- [ ] Réalisation, banc, sonde Chrome (arrêter ses Chrome ensuite), essai sur carte.
+- [x] Spec écrite puis plan : code commun dans `data/fs` (accord de l'utilisateur nécessaire), description de la façade
+  par carte dans le persist — preuve : spec `docs/superpowers/specs/2026-11-11-visuel-volets-reglage-durees-design.md`
+  (commit ceae81a41, validée par l'utilisateur le 2026-11-11), plan `tasks/plans/visuel-reglage-volets.md`
+- [ ] Réalisation, bancs, sondes, essais sur carte : par A14 (plan dédié)
 
 ## A13 — Réglage des durées de montée et de descente par les boutons
 Demande de l'utilisateur (2026-11-11) : `tempsMontee` / `tempsDescente` se règlent aujourd'hui à la main dans le
@@ -283,7 +284,13 @@ de course, inclinomètre) : idée abandonnée par l'utilisateur. La durée mesur
   sans second appui avant la course maximale, arrêt et rien n'est enregistré ; bouton « Annuler » qui sort sans rien
   changer. Les explications pas à pas destinées à l'utilisateur doivent figurer SUR la page de réglage.
 - [x] Concevoir avec l'utilisateur : entrée et sortie du mode, déroulé d'une mesure, retour visible, garde-fous — preuve : déroulé et garde-fous ci-dessus, validés par l'utilisateur le 2026-11-11
-- [ ] Spec, plan, réalisation dans `vrFonctions.be` (accord de l'utilisateur), bancs, essai sur carte.
+- [x] Spec et plan — preuve : même spec et même plan que A12
+- [ ] Réalisation, bancs, essais sur carte : par A14 (plan dédié)
+
+## A14 — Réaliser le visuel et le réglage des durées (plan dédié `visuel-reglage-volets`)
+Le travail d'A12 et d'A13 se suit dans `tasks/plans/visuel-reglage-volets.md`. Sa dernière action ramène ici.
+- [ ] Taper `/suivi suivre visuel-reglage-volets` et exécuter ce plan de A1 à sa dernière action
+- [ ] Plan `visuel-reglage-volets` clos (100 %, `statut: clos`), puis retour ici : cocher les étapes restantes d'A12 et d'A13
 
 ## Améliorations restantes
 - [ ] [projet] Ethernet W5500 de la carte du grenier du RDC (`ReglageGlobal VoieReseau ethernet`) si un câble arrive au grenier.
