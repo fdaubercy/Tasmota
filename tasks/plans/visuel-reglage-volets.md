@@ -174,7 +174,7 @@ Produit :
 - [x] Écrire `vrPages.be` et les ajouts du driver ; banc vert — preuve : `banc_reglage_volets.py` BANC_REGLAGE_VOLETS: OK, 121 ok, rc=0 ; `banc_inclinaison.py` OK ; `verifie_berry.py` sur `vrPages.be` et `controleVoletRoulants.be` : 0 erreur, 0 avertissement de charte
 - [x] cenv modifié ; `python outils_docs/scripts_python/berry/banc_demarrage.py` : les 3 envs à volets chargent les deux
   modules, les autres n'en voient aucun ; références mises à jour avec `--env <env> --enregistre` pour ces 3 envs seulement — preuve : cenv résolu par `fichiers_berry_ini.resout` : vrReglage et vrPages solidifiés par les 3 envs à volets (exclus 0), `volets_pages` (2 fichiers à A4) exclue de tous les autres envs à `custom_files_upload`, `tasmota32-rdc-vr-porte` compris ; `banc_demarrage.py` VERT sans `--enregistre` (modules solidifiés chargés à la demande : aucune rubrique de l'instantané ne les montre, rien à enregistrer)
-- [ ] Commit `feat(volets): pages du reglage et visuel branches dans le driver des volets`
+- [x] Commit `feat(volets): pages du reglage et visuel branches dans le driver des volets` — preuve : ad355f288, relecture approuvée (cenv résolu sur les 19 envs)
 
 ## A5 — Le dessin de la façade `volets.js`
 Fichiers : `data/sd/js/volets.js` (neuf), `outils_docs/scripts_python/outils_pc/test_volets.mjs` (neuf, Node, chargé par
@@ -185,18 +185,18 @@ le dessin juste après la table qui contient `#s271`, boucle `requestAnimationFr
 `data-id` et `data-ouverture` (entier) ; le pourcentage affiché à côté est le même entier.
 Rendu : celui des maquettes (`maquette_rdc_porte_cuisine.html`, `maquette_garage.html`, `maquette_trappes_rdc_2e.html`), couleurs
 du thème sombre de Tasmota (`var(--c_bg)`, `var(--c_txt)`), largeur 100 % de la colonne.
-- [ ] `test_volets.mjs` d'abord : `ouverture(30, 0) == 30`, `ouverture(30, 1) == 70` ; `avance` à 15 s de course : +10 % en
+- [x] `test_volets.mjs` d'abord : `ouverture(30, 0) == 30`, `ouverture(30, 1) == 70` ; `avance` à 15 s de course : +10 % en
   1,5 s, borné à 100, figé après `1,5 × rafraichissement` sans valeur nouvelle, sens de la dernière variation ; deux volets
   indépendants ; `ouvertureAngle(44, {ouvert: 85, ferme: 3})` = 50 (bornée à 0 et 100, montage inversé `ouvert` < `ferme`) ;
-  rouge sans le fichier
-- [ ] Écrire `volets.js` ; `node outils_docs/scripts_python/outils_pc/test_volets.mjs` : code 0
-- [ ] Sonde Chrome écrite : page statique qui imite l'accueil de Tasmota (table de curseurs `s271`..`s273`, `window.VOLETS` des
+  rouge sans le fichier — preuve : sans `data/sd/js/volets.js`, `KO chargement ... ENOENT`, code 1
+- [x] Écrire `volets.js` ; `node outils_docs/scripts_python/outils_pc/test_volets.mjs` : code 0 — preuve : « 0 echec(s) sur 28 verifications », code 0 ; `volets.js` 203 lignes, ajouté à `volets_pages` du cenv (embarqué par les 3 envs à façade seulement, exclu des 14 autres envs à FS, résolu par `fichiers_berry_ini.resout`) ; `banc_boot.py` BANC_BOOT: OK, `banc_reglage_volets.py` OK, `banc_demarrage.py` VERT
+- [x] Sonde Chrome écrite : page statique qui imite l'accueil de Tasmota (table de curseurs `s271`..`s273`, `window.VOLETS` des
   3 cartes), scénarios : position lue (`inverse` 0 et 1), mouvement entre deux valeurs (`data-ouverture` intermédiaire),
   arrêt de l'extrapolation, curseur tiré (événement `input` puis `change` sur 80 : le dessin reste à la position réelle tant
   qu'aucune autre valeur n'arrive), dessin placé après la table des curseurs, aucun `s271` -> rien ; trappe à MPU : le dessin
   suit `data-angle` et non le curseur, retour au curseur sans balise, ouverture rouge « sens inverse » avec `data-bloque` ;
-  Chrome arrêté à la fin
-- [ ] Sonde verte ; témoin : `volets.js` sans l'inversion -> scénario `inverse` 1 rouge ; aucun Chrome `sonde_*` restant
+  Chrome arrêté à la fin — preuve : `test_volets_chrome.py` (pages rdc, garage, etage2, sans ; `--js`, `--capture`), Chrome tué par `tue_arbre` puis par son profil `sonde_volets_*` dans `Montage.ferme` (finally)
+- [x] Sonde verte ; témoin : `volets.js` sans l'inversion -> scénario `inverse` 1 rouge ; aucun Chrome `sonde_*` restant — preuve : sonde VERT (25 OK), code 0 ; témoin (`return borne(v)`) : ROUGE 5 échecs, tous `inverse 1` (garage, etage2), node : 3 KO `ouverture(.., 1)` ; `Get-CimInstance` : 0 chrome `sonde_*` après chaque passage
 - [ ] Commit `feat(volets): dessin de la facade sur la page d'accueil`
 
 ## A6 — La page de réglage
