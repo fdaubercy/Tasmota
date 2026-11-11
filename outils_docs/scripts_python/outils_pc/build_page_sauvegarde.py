@@ -149,7 +149,7 @@ function sEnvs() {
   if (!envs.length || sel.options.length) return;
   var cartes = envs.filter(function (e) { return e.famille === "cartes"; });
   remplitParLieu(sel, cartes, lieuxTable, "", []);
-  var coche = cartes.filter(function (e) { return choix[e.nom] && choix[e.nom].coche; })[0] || cartes[0];
+  var coche = lieuxPremiere(cartes) || cartes.filter(function (e) { return choix[e.nom] && choix[e.nom].coche; })[0] || cartes[0];
   if (coche) { sel.value = coche.nom; sCharge(coche.nom); }
 }
 $("s-env").onchange = function () { sCharge($("s-env").value); };

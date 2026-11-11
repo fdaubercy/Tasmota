@@ -158,7 +158,8 @@ function mEnvs() {
   var candidats = envs.filter(function (e) { return e.famille === "cartes" || e.famille === "bases"; });
   remplitParLieu(sel, candidats.filter(function (e) { return e.famille === "cartes"; }), lieuxTable, "",
     candidats.filter(function (e) { return e.famille === "bases"; }));       // cartes par lieu, bases en dernier groupe
-  var coche = candidats.filter(function (e) { return choix[e.nom] && choix[e.nom].coche; })[0]
+  var coche = lieuxPremiere(candidats.filter(function (e) { return e.famille === "cartes"; }))
+    || candidats.filter(function (e) { return choix[e.nom] && choix[e.nom].coche; })[0]
     || candidats.filter(function (e) { return e.famille === "cartes"; })[0] || candidats[0];
   if (!coche) return;
   sel.value = coche.nom;

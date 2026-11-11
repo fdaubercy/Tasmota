@@ -145,6 +145,12 @@ function fichiersCartes() {
   zone.textContent = "";
   var cartes = envs.filter(function (e) { return e.famille === "cartes" && e.ota_possible; });
   if (!cartes.length) { zone.appendChild(h("div", {"class": "vide", texte: "Aucune carte envoyable par le réseau."})); return; }
+  // arrivee avec ?lieu= : 1re carte du lieu, une fois, onglet visible, si rien n'est choisi et sans ?env= (celui de l'atelier gagne)
+  if (lieuxFichiers && !$("vue-fichiers").hidden) {
+    var premiere = F.env || new URLSearchParams(location.search).get("env") ? null : lieuxPremiere(cartes);
+    lieuxFichiers = null;
+    if (premiere) return choisitCarte(premiere.nom);
+  }
   // intertitres de lieu (modele F) : ordre de la table (lieuxTable, build_page_lieux.py), puis les codes bruts hors table
   var libelles = {}, ordre = lieuxTable.map(function (l) { libelles[l[0]] = l[1]; return l[0]; });
   cartes.forEach(function (e) { if (ordre.indexOf(e.lieu || "") < 0) ordre.push(e.lieu || ""); });

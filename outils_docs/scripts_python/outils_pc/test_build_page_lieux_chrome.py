@@ -38,7 +38,8 @@ build_flags             = -DFIRMWARE_POMPE_PISCINE
 """
 LIEUX = ["2e étage", "Rez-de-chaussée", "Cave", "Garage", "Bureau", "Extérieur", "jardin"]
 BOUCHON = ("function lieuxGroupes() { return false; }\nfunction lieuxMaj() {}\n"         # temoin : branchements vides
-           "function lieuxOuverts() { return {}; }\nfunction lieuxRestaure() {}\n")
+           "function lieuxOuverts() { return {}; }\nfunction lieuxRestaure() {}\n"
+           "var lieuxTable = [], lieuxInitial = null, lieuxFichiers = null;\nfunction lieuxPremiere() { return null; }\n")
 verifie = t.verifie
 
 JS_GROUPES = """(() => [...document.querySelectorAll('#liste > details')].filter(d => !d.hidden).map(d => {
@@ -229,6 +230,98 @@ def sonde(m, capture):
             (["Mes cartes", "Mes bases", "Tasmota (amont)"], "true"), "localStorage.getItem qui leve : page en Famille")
     verifie(cdp.erreurs(), [], "localStorage.getItem qui leve : aucune exception en console")
     cdp.appel("Page.removeScriptToEvaluateOnNewDocument", identifier=script["identifier"])
+    sonde_arrivee(m)
+
+
+ESPION = "window.__f = []; const o = window.fetch; window.fetch = (u, ...a) => { window.__f.push(String(u)); return o(u, ...a); };"
+
+
+def ouvre_url(m, suffixe):
+    m.cdp.appel("Page.navigate", url=m.url + suffixe)
+    time.sleep(2.5)
+    t.attend(m.cdp, "document.querySelectorAll('#liste .env').length", 15)
+
+
+def etat_page(cdp):
+    """Ce que `?lieu=` ne doit jamais changer : cases cochees, et corps de POST /lancer pour les memes gestes."""
+    cases = cdp.js("[...document.querySelectorAll('#liste input[type=checkbox][id^=env-]')].filter(c => c.checked).map(c => c.id)")
+    for nom in (P4, CUVE):
+        t.coche(cdp, f"#env-{nom}")
+    t.coche(cdp, 'input[name=action][value="compiler"]')
+    cdp.js("""window.__lancer = null; window.__fetch = window.fetch;
+      window.fetch = (u, o) => { if (u === '/lancer') { window.__lancer = JSON.parse(o.body);
+        return Promise.resolve(new Response('sonde : lancement intercepte', {status: 409})); } return window.__fetch(u, o); };""")
+    cdp.js("document.getElementById('lancer').click()")
+    corps = t.attend(cdp, "window.__lancer", 5, 0.1)
+    cdp.js("window.fetch = window.__fetch")
+    return cases, corps
+
+
+def sonde_arrivee(m):
+    """A3 du plan lieu-partage-syslog-mqtt : ?lieu= met un lieu en avant sans rien cacher ni cocher."""
+    cdp = m.cdp
+    memo = lambda: cdp.js("localStorage.getItem('build.classement')")
+    classement_actif = lambda: cdp.js("document.querySelector('.l-barre button[aria-pressed=true]').dataset.classement")
+    ouvre_url(m, "")
+    cdp.js("localStorage.setItem('build.classement', 'famille')")
+    ouvre_url(m, "")
+    sans = etat_page(cdp)
+    verifie(cdp.js("document.querySelectorAll('.bandeau-lieu').length"), 0, "sans ?lieu= : aucun bandeau")
+
+    ouvre_url(m, "?lieu=garage")
+    verifie((classement_actif(), memo()), ("lieu", "famille"), "?lieu=garage : classement Lieu affiche, memorise intact (famille)")
+    verifie([(g["nom"], g["ouvert"]) for g in groupes(cdp) if g["groupe"]][:7],
+            [(n, n == "Garage") for n in LIEUX], "?lieu=garage : groupe Garage ouvert, les autres groupes de lieu fermes")
+    verifie(cdp.js("document.querySelector('.bandeau-lieu')?.firstChild.textContent"), "Lieu : Garage (depuis l’annuaire) · ",
+            "?lieu=garage : bandeau « Lieu : Garage »")
+    verifie(cdp.js("document.querySelectorAll('.env[hidden]').length"), 0, "?lieu=garage : aucune ligne cachee")
+    verifie(etat_page(cdp), sans, "?lieu=garage : cases cochees et corps de POST /lancer identiques a une ouverture sans parametre")
+
+    ouvre_url(m, "?lieu=garage")
+    cdp.js("document.getElementById('onglet-fichiers').click()")
+    t.attend(cdp, "document.querySelector('input[name=f-carte]:checked')?.value", 10)
+    verifie(cdp.js("document.querySelector('input[name=f-carte]:checked')?.value"), P4, "onglet Fichiers : 1re carte du garage choisie")
+    cdp.js("document.getElementById('onglet-memoire').click()")
+    t.attend(cdp, "document.getElementById('m-env').value", 10)
+    verifie(cdp.js("document.getElementById('m-env').value"), P4, "#m-env : 1re carte du garage")
+
+    # la croix : classement memorise, bandeau retire, adresse sans lieu, #m-env inchangee
+    cdp.js("document.getElementById('onglet-build').click()")
+    cdp.js("document.querySelector('.bandeau-lieu button').click()")
+    time.sleep(0.3)
+    verifie((classement_actif(), memo(), cdp.js("document.querySelectorAll('.bandeau-lieu').length"),
+             cdp.js("location.search"), cdp.js("document.getElementById('m-env').value")),
+            ("famille", "famille", 0, "", P4),
+            "croix : classement Famille, bandeau retire, adresse sans lieu, #m-env inchangee")
+    ouvre_url(m, "")
+    verifie((classement_actif(), cdp.js("document.querySelectorAll('.bandeau-lieu').length")), ("famille", 0),
+            "reouverture sans parametre : Famille, pas de bandeau (vigilance 5)")
+
+    ouvre_url(m, "?lieu=inconnu")
+    verifie((classement_actif(), cdp.js("document.querySelectorAll('.bandeau-lieu').length")), ("famille", 0),
+            "?lieu=inconnu : ignore, aucun bandeau")
+    ouvre_url(m, "?lieu=%3Cb%3Ex%3C%2Fb%3E")
+    verifie((cdp.js("document.querySelectorAll('.bandeau-lieu, #liste b').length"), classement_actif()), (0, "famille"),
+            "?lieu=<b>x</b> : ignore, aucune balise creee")
+
+    # le groupe du lieu ne se rouvre pas apres un repli a la main (premier dessin seulement)
+    ouvre_url(m, "?lieu=garage")
+    cdp.js("document.querySelector('details[data-groupe=garage]').open = false")
+    cdp.js("chargeEnvs(true)")
+    time.sleep(0.5)
+    verifie(cdp.js("document.querySelector('details[data-groupe=garage]').open"), False,
+            "?lieu=garage : Garage replie a la main, chargeEnvs(true) ne le rouvre pas")
+
+    # ?env= de l'atelier + ?lieu=cave : la carte de ?env= gagne dans l'onglet Fichiers
+    espion = cdp.appel("Page.addScriptToEvaluateOnNewDocument", source=ESPION)
+    ouvre_url(m, f"?env={RIDEAU}&depuis=atelier&fichiers=&redemarrer=0&lieu=cave")
+    time.sleep(1)
+    verifie([u for u in cdp.js("window.__f") if u.startswith("/fichiers?env=")], [f"/fichiers?env={RIDEAU}"],
+            "?env= + ?lieu=cave : la liste lue est celle de ?env=, aucune carte de la cave interrogee")
+    cdp.appel("Page.removeScriptToEvaluateOnNewDocument", identifier=espion["identifier"])
+    verifie(cdp.js("document.querySelector('input[name=f-carte]:checked')?.value"), RIDEAU,
+            "?env= de l'atelier + ?lieu=cave : la carte de ?env= gagne")
+    verifie(cdp.erreurs(), [], "arrivee par lieu : aucune erreur JS")
 
 
 def sonde_temoin(m):

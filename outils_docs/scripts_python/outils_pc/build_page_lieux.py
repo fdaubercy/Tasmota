@@ -30,10 +30,12 @@ JS = r"""
 var CLASSEMENTS = [["famille", "Famille"], ["lieu", "Lieu"], ["puce", "Puce"]];
 var ORDRE_PUCES = ["ESP32", "ESP32-S3", "ESP32-P4", "ESP8266"];
 var classement = "famille", lieuxTable = [], lieuxCases = [], lieuxMemo = {}, lieuxAvantFiltre = null;
+var lieuxVu = false, lieuxInitial = null, lieuxFichiers = null, lieuxOuvre = false;   // ?lieu= de l'annuaire : lu au premier dessin seulement
 try {
   var classementLu = localStorage.getItem("build.classement");
   if (CLASSEMENTS.some(function (c) { return c[0] === classementLu; })) classement = classementLu;
 } catch (e) {}
+var classementMemo = classement;
 
 // Barre creee une fois, au-dessus de #liste (que construitListe vide a chaque dessin), dans une colonne qui
 // prend la place de #liste dans la grille .disposition.
@@ -60,12 +62,12 @@ var lieuxBarre = (function () {
   colonne.appendChild(h("div", {"class": "l-barre"}, h("span", {"class": "discret", texte: "Classer par"}), boutons, filtre, astuce));
   colonne.appendChild(masques);
   colonne.appendChild(liste);
-  return {boutons: boutons, filtre: filtre, astuce: astuce, masques: masques};
+  return {boutons: boutons, filtre: filtre, astuce: astuce, masques: masques, colonne: colonne};
 })();
 
-function lieuxClasse(c) {
+function lieuxClasse(c, sansMemoire) {
   classement = c;
-  try { localStorage.setItem("build.classement", c); } catch (e) {}
+  if (!sansMemoire) try { localStorage.setItem("build.classement", c); classementMemo = c; } catch (e) {}
   if (!envs.length) return lieuxMaj();
   var ouverts = lieuxOuverts();
   construitListe({envs: envs, lieux: lieuxTable});
@@ -99,10 +101,29 @@ function lieuVisible(e) {
   return !f || e.nom.toLowerCase().indexOf(f) >= 0;
 }
 
+// Lieu venu de l'annuaire (?lieu=), au PREMIER dessin seulement : classement Lieu pour la visite (le classement
+// memorise n'est pas ecrit), groupe du lieu ouvert, bandeau. Ne coche rien. La croix rend le classement memorise.
+function lieuxArrivee() {
+  if (lieuxVu || !lieuxTable.length) return;
+  lieuxVu = true;
+  lieuxInitial = lieuxFichiers = lieuDemande(lieuxTable);
+  if (!lieuxInitial) return;
+  var libelle = lieuxTable.filter(function (l) { return l[0] === lieuxInitial; })[0][1];
+  classement = "lieu";
+  lieuxOuvre = true;                            // le groupe du lieu s'ouvre au premier dessin seulement
+  bandeauLieu(lieuxBarre.colonne, libelle, function () { lieuxClasse(classementMemo, true); });
+}
+// Premiere carte du lieu d'arrivee (cochee de preference), ou null : choix initial des onglets Fichiers, Memoire, Sauvegardes.
+function lieuxPremiere(cartes) {
+  var d = lieuxInitial ? cartes.filter(function (e) { return e.lieu === lieuxInitial; }) : [];
+  return d.filter(function (e) { return choix[e.nom] && choix[e.nom].coche; })[0] || d[0] || null;
+}
+
 // Branchement de construitListe : false en Famille (dessin d'aujourd'hui), sinon les groupes sont poses dans `liste`.
 function lieuxGroupes(liste, membres, donnees) {
   lieuxTable = donnees.lieux || lieuxTable;
   lieuxCases = [];
+  lieuxArrivee();
   if (classement === "famille") return false;
   var parLieu = classement === "lieu";
   var cle = function (e) { return (parLieu ? e.lieu : e.puce) || ""; };
@@ -116,7 +137,7 @@ function lieuxGroupes(liste, membres, donnees) {
                             title: "Coche ou décoche les cartes visibles du groupe (celles que le filtre laisse voir)"});
     var compte = h("span", {"class": "compte"});
     var det = h("details", {"class": "famille", "data-groupe": k}, h("summary", {}, caseG, h("span", {texte: libelles[k] || k || "Autres"}), compte));
-    det.open = groupe.some(function (e) { return choix[e.nom].coche; });
+    det.open = (lieuxOuvre && k === lieuxInitial) || groupe.some(function (e) { return choix[e.nom].coche; });
     caseG.onchange = function () {
       groupe.filter(lieuVisible).forEach(function (e) { choix[e.nom].coche = caseG.checked; ui[e.nom].caseEnv.checked = caseG.checked; });
       majTout();
@@ -126,6 +147,7 @@ function lieuxGroupes(liste, membres, donnees) {
     lieuxCases.push([caseG, groupe]);
     liste.appendChild(det);
   });
+  lieuxOuvre = false;
   return true;
 }
 
