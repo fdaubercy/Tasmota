@@ -112,15 +112,15 @@ Interfaces consommées : `lieux.LIEUX`, `lieux.lieu`, `build_envs.liste_envs`. P
 vrai pour Build, Fichiers Berry, Assistant persist, Atelier, Fabrique, syslog, sniffeur MQTT ; `en_json()` ajoute
 `"lieux": [[code, libellé, nombre d'envs de cartes], ...]` et `"lieu": bool` à chaque outil.
 
-- [ ] Sonde neuve, rouge d'abord (annuaire lancé sur un port libre, `--local --sans-navigateur`, fiche de présence d'un
+- [x] Sonde neuve, rouge d'abord (annuaire lancé sur un port libre, `--local --sans-navigateur`, fiche de présence d'un
   outil simulée en marche si la page l'exige, sinon contrôle de l'adresse construite par la fonction de lien) : rangée
   « Lieu de travail » = `Tous` + 6 puces dans l'ordre de la table, Garage avec son nombre ; clic Garage → lien d'un
   outil marqué = `…/?lieu=garage`, lien avec `?jeton=x` → `…?jeton=x&lieu=garage`, outil non marqué (Pont série)
   inchangé ; rechargement → Garage toujours choisi ; `localStorage.getItem` qui lève → page sur Tous, aucune exception ;
-  témoin : sans le module branché, la 1re vérification échoue.
-- [ ] Écrire le champ, `en_json`, `annuaire_page_lieux.py` et le branchement ; sonde verte ; `test_annuaire.py`,
-  `test_annuaire_lanceur.py`, `test_annuaire_securite.py` verts.
-- [ ] Commit `feat(annuaire): lieu de travail porte par les liens des outils`.
+  témoin : sans le module branché, la 1re vérification échoue. — preuve : test_annuaire_lieux_chrome.py : temoin (page sans le module) KO sur la rangee, page reelle 17 OK ; mutant `&` -> `?` KO
+- [x] Écrire le champ, `en_json`, `annuaire_page_lieux.py` et le branchement ; sonde verte ; `test_annuaire.py`,
+  `test_annuaire_lanceur.py`, `test_annuaire_securite.py` verts. — preuve : sonde VERT ; test_annuaire, test_annuaire_lanceur, test_annuaire_securite, test_lieux, test_lieux_js.mjs VERT
+- [x] Commit `feat(annuaire): lieu de travail porte par les liens des outils`. — preuve : commit feat(annuaire) (voir git log)
 
 ## A3 — Arrivée sur la page Build (7700)
 

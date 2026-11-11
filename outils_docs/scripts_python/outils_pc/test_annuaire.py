@@ -102,7 +102,7 @@ def section_registre():
     section_texte_arret()
 
     j = reg.en_json()
-    verifie(sorted(j), ["debits", "groupes", "outils"], "en_json : cles")
+    verifie(sorted(j), ["debits", "groupes", "lieux", "outils"], "en_json : cles")
     verifie("script" in j["outils"][0], False, "en_json : sans script")
     verifie((j["outils"][3]["a_port_com"], j["outils"][3]["port_defaut"]), (True, 7400), "en_json : derives")
     verifie(isinstance(j["outils"][0]["parametres"][0], dict), True, "en_json : parametres en dicts")

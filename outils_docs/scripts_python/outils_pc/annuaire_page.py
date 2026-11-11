@@ -79,6 +79,7 @@ PAGE = r"""<!doctype html>
   .aide p,.aide ul{margin:2px 0;font-size:13px}
   .intro{background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:10px 14px;font-size:13px}
   @media (max-width:600px){.tuiles{grid-template-columns:1fr}main{padding:8px 16px 30px}}
+/*LIEUX_CSS*/
 </style>
 </head>
 <body>
@@ -96,6 +97,7 @@ PAGE = r"""<!doctype html>
     <button id="onglet-aide" type="button">Aide</button>
   </div>
   <div id="vue-outils">
+    <!--LIEUX_HTML-->
     <div id="message" class="erreur"></div>
     <div id="reseau"></div>
     <div id="grille"></div>
@@ -124,6 +126,7 @@ PAGE = r"""<!doctype html>
 var $ = function (id) { return document.getElementById(id); };
 var registre = null, etats = {}, derniers = {}, liensReseau = [], occupe = {}, erreurs = {}, consoleId = null;
 var modaleId = null, enCours = false;
+/*LIEUX_JS*/
 var DELAI_APPEL = 10000;     // ms : au-dela, l'appel est abandonne (AbortController)
 
 // Cree un element : h("div", {class:"x", onclick:f}, enfants...) ; les textes passent par textContent.
@@ -184,7 +187,7 @@ function tuile(o) {
     actions.appendChild(h("span", {"class": "meta", texte: attente}));
   } else {
     if (e.etat === "marche" && e.lien)
-      actions.appendChild(h("a", {"class": "btn p", href: e.lien, target: "_blank", rel: "noopener", texte: "Ouvrir ↗"}));
+      actions.appendChild(h("a", {"class": "btn p", href: lienLieu(o, e.lien), target: "_blank", rel: "noopener", texte: "Ouvrir ↗"}));
     if (e.etat !== "marche" && !e.peut_arreter)
       actions.appendChild(h("button", {"class": "btn p", type: "button", texte: "Lancer", onclick: function () { ouvreLancement(o); }}));
     if (e.peut_arreter)
@@ -207,6 +210,7 @@ function dessine() {
   var grille = $("grille");
   grille.textContent = "";
   if (!registre) return;
+  dessineLieux();
   registre.groupes.forEach(function (g) {
     var outils = registre.outils.filter(function (o) { return o.groupe === g; });
     if (!outils.length) return;
@@ -466,3 +470,8 @@ charge();
 </body>
 </html>
 """
+
+# Rangee « Lieu de travail » (modele J) : code dans annuaire_page_lieux.py.
+import annuaire_page_lieux as _lieux
+PAGE = (PAGE.replace("/*LIEUX_CSS*/", _lieux.CSS, 1).replace("<!--LIEUX_HTML-->", _lieux.HTML, 1)
+        .replace("/*LIEUX_JS*/", _lieux.JS, 1))

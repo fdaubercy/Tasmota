@@ -40,6 +40,7 @@ class Outil:
     dans_job: bool = True
     route_occupe: str = ""
     arret_refuse: str = ""          # pourquoi l'arret est refuse quand route_occupe repond en_cours (aide de la page)
+    lieu: bool = False              # la page de l'outil sait classer par lieu : son lien « Ouvrir » porte ?lieu=<code>
 
     @property
     def a_port_com(self):
@@ -238,6 +239,11 @@ OUTILS = [
         "Console capturée : " + CONSOLE.format("fabrique_tapp") + ". Sources et archives : data/extensions/."),
 ]
 
+# Pages qui lisent ?lieu= (classement par lieu) : l'annuaire leur passe le lieu de travail choisi.
+for _o in OUTILS:
+    _o.lieu = _o.id in ("build", "fichiers_berry", "assistant_persist", "atelier_graphiques", "fabrique_tapp",
+                        "syslog", "sniffeur_mqtt")
+
 
 def par_id(id):
     for o in OUTILS:
@@ -303,12 +309,20 @@ def valide(outil, valeurs, ports_detectes, ponts):
     return args
 
 
-def en_json():
+def en_json(racine=None):
+    """Registre pour la page ; `lieux` = [code, libelle, nombre d'envs de cartes] d'apres les persist du depot."""
+    from pathlib import Path
+    import lieux                                      # ici : lieux importe fichiers_berry_etat (cycle)
+    racine = Path(racine) if racine else Path(__file__).resolve().parents[3]
+    nombres = {}
+    for c in lieux.identites(racine):
+        nombres[c["lieu"]] = nombres.get(c["lieu"], 0) + 1
     outils = []
     for o in OUTILS:
         outils.append({"id": o.id, "nom_acces": o.nom_acces, "nom": o.nom, "groupe": o.groupe,
                        "interet": o.interet, "aide": o.aide, "parametres": [vars(p).copy() for p in o.parametres],
                        "cle_port_page": o.cle_port_page, "journaux": o.journaux, "dans_job": o.dans_job,
                        "route_occupe": o.route_occupe, "arret_refuse": o.arret_refuse, "a_port_com": o.a_port_com,
-                       "port_defaut": o.port_page({})})
-    return {"groupes": list(GROUPES), "outils": outils, "debits": list(DEBITS)}
+                       "port_defaut": o.port_page({}), "lieu": o.lieu})
+    return {"groupes": list(GROUPES), "outils": outils, "debits": list(DEBITS),
+            "lieux": [[c, l, nombres.get(c, 0)] for c, l in lieux.LIEUX]}

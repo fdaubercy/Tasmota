@@ -173,7 +173,7 @@ def fabrique_gestionnaire(lanceur, acces, git=None):
             if url.path == "/":
                 self._envoie(200, PAGE.encode("utf-8"), "text/html")
             elif url.path == "/registre":
-                self._json(reg.en_json())
+                self._json(reg.en_json(RACINE))
             elif url.path == "/etat":
                 local = acces_web.est_local(self.client_address)
                 self._json({"outils": self._etat(), "liens_reseau": acces.liens_reseau() if local else [],
