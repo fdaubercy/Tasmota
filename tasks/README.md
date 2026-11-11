@@ -13,13 +13,14 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-39 plans : 15 actif, 1 en-pause, 23 clos.
+41 plans : 16 actif, 1 en-pause, 24 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Classement des cartes par lieu dans les pages des outils PC](plans/classement-par-lieu.md) | Retrouver les cartes par emplacement dans la maison sur la page Build (bascule Famille/Lieu/Puce, intertitres de l'onglet Fichiers) et dans les listes de carte des autres pages | actif | ░░░░░░░░░░ 0 % (0/21) | 21 étapes, 2 améliorations | 2026-11-10 | 2026-11-10 |
+| [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ░░░░░░░░░░ 0 % (0/20) | 20 étapes, 2 améliorations | 2026-11-11 | 2026-11-11 |
+| [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) | Faire passer les 6 débits de la carte d'acquisition (esclave ModBus id 1) à une carte d'affichage (maître id 0) par une lecture groupée RS485 et un push UDP, sans rien changer au garage | actif | ██████░░░░ 62 % (33/49) | 16 étapes, 3 améliorations | 2026-11-09 | 2026-11-11 |
+| [Lieu partagé depuis l'annuaire, lieu dans le syslog et le sniffeur MQTT](plans/lieu-partage-syslog-mqtt.md) | Choisir un lieu une fois dans l'annuaire et le retrouver dans les pages ouvertes, et ranger par lieu les lignes du syslog et les messages du sniffeur MQTT | actif | ████████░░ 78 % (22/26) | 4 étapes | 2026-11-11 | 2026-11-11 |
 | [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ███████░░░ 68 % (35/50) | 15 étapes, 4 améliorations | 2026-11-08 | 2026-11-09 |
-| [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) | Faire passer les 6 débits de la carte d'acquisition (esclave ModBus id 1) à une carte d'affichage (maître id 0) par une lecture groupée RS485 et un push UDP, sans rien changer au garage | actif | ████░░░░░░ 43 % (15/30) | 15 étapes, 2 améliorations | 2026-11-09 | 2026-11-09 |
 | [Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)](plans/energie-differentiel.md) | Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h) | actif | ██████████ 100 % (69/70) | 1 étape | 2026-10-31 | 2026-11-09 |
 | [Page d'équilibrage de la nourrice servie par la carte des débits, débits lus en direct](plans/equilibrage-par-la-carte.md) | Ouvrir le guide d'équilibrage depuis la carte des débits et y lire les 6 débits mesurés, sans les taper à la main | actif | ████████░░ 83 % (20/22) | 2 étapes | 2026-11-09 | 2026-11-09 |
 | [Historique et page /graphiques des 6 débits de la nourrice](plans/historique-debits.md) | Garder en flash l'historique des 6 débits et du total, et les voir en courbes sur la page /graphiques de la carte | actif | ████████░░ 75 % (8/10) | 2 étapes, 1 amélioration | 2026-11-08 | 2026-11-09 |
@@ -33,6 +34,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 | [Plan d'action de l'audit Berry (propositions P2.1 à P10.7)](plans/actions-audit-berry.md) | Mettre en œuvre, lot par lot et sur décision de l'utilisateur, les 78 propositions de l'audit Berry | actif | █████████░ 91 % (89/95) | 6 étapes, 1 amélioration | 2026-10-22 | 2026-10-26 |
 | [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) | Ajouter l'Ethernet en option sur le maître ModBus P4, le Wi-Fi restant le défaut | actif | ░░░░░░░░░░ 0 % (0/37) | 37 étapes, 1 amélioration | 2026-10-26 | 2026-10-26 |
 | [Suites de l'audit de l'env S3 du serveur relais de la cave](plans/audit-relais-cave-s3.md) | Rendre l'env tasmota32s3-cave-serveur-rly prêt à remplacer la carte de la cave en ligne, selon les propositions de l'audit | en-pause | ░░░░░░░░░░ 0 % (0/22) | 22 étapes, 2 améliorations | 2026-10-31 | 2026-10-31 |
+| [Classement des cartes par lieu dans les pages des outils PC](plans/classement-par-lieu.md) | Retrouver les cartes par emplacement dans la maison sur la page Build (bascule Famille/Lieu/Puce, intertitres de l'onglet Fichiers) et dans les listes de carte des autres pages | clos | ██████████ 100 % (21/21) | 2 améliorations | 2026-11-10 | 2026-11-11 |
 | [Atelier des graphiques (page 7950) et moteur commun des pages de graphiques](plans/atelier-graphiques.md) | Préparer sur le PC un graphique pour une carte, le voir avec ses vraies valeurs, puis écrire dans le dépôt la description qui le fait apparaître sur la carte, sans Berry écrit à la main | clos | ██████████ 100 % (39/39) | — | 2026-11-03 | 2026-11-09 |
 | [Onglet « autoexec.bat » de l'Assistant persist (modèle C)](plans/autoexec-bat.md) | Modifier ou ajouter des lignes à l'autoexec.bat d'une carte depuis l'Assistant persist, avec banque de commandes, avertissements (boucle de redémarrage, doublon persist, secret, commande inconnue) et envoi proposé à la carte | clos | ██████████ 100 % (21/21) | — | 2026-11-03 | 2026-11-09 |
 | [Envoi MQTT de l'autoexec.bat, commandes par carte, extensions .tapp (document, script, page)](plans/autoexec-mqtt-tapp.md) | Envoyer l'autoexec.bat par MQTT, signaler une commande non compilée pour la carte, et savoir fabriquer un .tapp (document, script, page de l'annuaire) | clos | ██████████ 100 % (21/21) | — | 2026-11-05 | 2026-11-09 |
@@ -59,31 +61,59 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Classement des cartes par lieu dans les pages des outils PC](plans/classement-par-lieu.md) — 0 %
+#### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 0 %
 
-- A1 — Module `lieux.py` et son banc : Écrire `test_lieux.py` (style `test_build_envs.py` : `verifie(obtenu, attendu, libelle)`, code de sortie) :
-- A1 — Module `lieux.py` et son banc : Le lancer avant le module : échec à l'import attendu.
-- A1 — Module `lieux.py` et son banc : Écrire `lieux.py` ; banc vert (`python test_lieux.py`, sortie 0).
-- A1 — Module `lieux.py` et son banc : Commit `feat(lieux): table des lieux et puces tirees du nom d'env, banc test_lieux`.
-- A2 — Les serveurs servent `lieu` et `lieux` : Pour chaque route : ajouter au banc l'assertion « une carte du garage a `lieu == "garage"` et la réponse a
-- A2 — Les serveurs servent `lieu` et `lieux` : Ajouter les champs (une ligne par route, par `lieux.lieu` / `lieux.pour_page`) ; les 5 bancs verts.
-- A2 — Les serveurs servent `lieu` et `lieux` : Commit `feat(lieux): lieu de chaque carte dans les reponses des pages 7700 a 7980`.
-- A3 — Onglet Build : modèle D : Écrire la sonde, rouge d'abord, avec ces vérifications :
-- A3 — Onglet Build : modèle D : Écrire `build_page_lieux.py` et le branchement ; sonde verte ; `test_build_page_chrome.py` toujours vert.
-- A3 — Onglet Build : modèle D : Capture d'écran claire et sombre en Lieu, comparée à `outils_docs/filtre_lieu/modele-D.png`.
-- A3 — Onglet Build : modèle D : Commit `feat(build): bascule Classer par famille, lieu ou puce dans l'onglet Build`.
-- A4 — Onglet Fichiers : modèle F : Ajouter à la sonde, rouge d'abord : intertitres « 2E ÉTAGE · 1 » … dans l'ordre de la table, « Autres » en
-- A4 — Onglet Fichiers : modèle F : Insérer les intertitres (`textContent`, couleur `--doux`) ; sonde verte.
-- A4 — Onglet Fichiers : modèle F : Commit `feat(build): intertitres de lieu dans la liste des cartes de l'onglet Fichiers`.
-- A5 — Listes déroulantes : modèle H : Pour chaque liste, ajouter à sa sonde, rouge d'abord : premier `optgroup` « 2e étage » (ou le premier lieu
-- A5 — Listes déroulantes : modèle H : Remplacer chaque remplissage par `remplitParLieu` ; les 6 sondes vertes.
-- A5 — Listes déroulantes : modèle H : Commit `feat(lieux): listes de cartes groupees par lieu sur les pages 7700 a 7980`.
-- A6 — Documentation, relecture, essai réel : `outils_docs/README.md` : une ligne par page concernée, aux sections existantes ; `outils_docs/filtre_lieu/README.md` :
-- A6 — Documentation, relecture, essai réel : Agent `relecteur-pages-web` sur les commits de A3 à A5 ; corriger ce qu'il confirme.
-- A6 — Documentation, relecture, essai réel : Essai réel : page Build sur :7700 dans Chrome, bascule Lieu, les 11 vraies cartes rangées comme la maquette D,
-- A6 — Documentation, relecture, essai réel : Commit `docs(lieux): mode d'emploi et carte des documents du classement par lieu`.
-- Amélioration [projet] : Lieu transmis d'une page à l'autre depuis l'annuaire (écarté de cette version, spec §2).
-- Amélioration [projet] : Table hôte → lieu pour le syslog et le sniffeur MQTT, si le besoin revient.
+- A0 — Plan précédent : débits sur deux cartes : Rouvrir le plan précédent dans la vue de droite : taper `/suivi suivre debits-deux-cartes` (la conversation suit
+- A1 — Conception avec l'utilisateur : Maquettes de l'atelier : 3 ou 4 dispositions de la page en images (`outils_docs/atelier_ecrans/`, comme
+- A1 — Conception avec l'utilisateur : Questions tranchées : contenu de la description (objets gérés au premier palier), forme des remarques (objet,
+- A1 — Conception avec l'utilisateur : Spec `docs/superpowers/specs/2026-11-11-atelier-ecrans-design.md` validée par l'utilisateur ; actions A2 à A10
+- A2 — Catalogue commun (objets, attributs, polices, écrans) : `outils_docs/schemas/catalogue_ecran.json` et son script d'extraction depuis `lib/libesp32_lvgl/` (classes
+- A2 — Catalogue commun (objets, attributs, polices, écrans) : Skill `lvgl-haspmota` : ses références renvoient au catalogue (source unique) et décrivent l'atelier
+- A3 — Description neutre de l'écran : Format `ecran.json` et validateur Python (refus : objet hors écran, police absente du catalogue, liaison vers
+- A3 — Description neutre de l'écran : Premier cas : description de l'écran des débits, équivalente au `pages.jsonl` actuel (pages A, D, Réglages)
+- A4 — Générateur HASPmota : Description → `pages.jsonl` ; banc : la description des débits redonne le `pages.jsonl` du dépôt (écart nul ou
+- A5 — Générateur LVGL pur : Description → `ecranLvgl.be` (API d'interface de `ecranDebitsFonctions.be`) ; compilé par `verifie_berry.py`,
+- A6 — Page web de l'atelier (port 7960) : Serveur et page : canevas à la taille de l'écran, palette du catalogue, glisser-déposer, redimensionnement,
+- A6 — Page web de l'atelier (port 7960) : Tuile de l'annuaire (groupe Maintenance), tâche VS Code, cible Custom détachée, `acces_web.py` (jeton hors PC)
+- A7 — Remarques épinglées : Remarque sur un objet, une zone ou une page, gardée dans un fichier près de la description, avec état (ouverte,
+- A8 — Écriture dans le dépôt et envoi : Diff puis écriture atomique (description + fichiers générés de l'interface choisie), empreinte périmée refusée,
+- A9 — Ressources sous `/sd` : Liste des ressources utiles (fonds, icônes, polices ajoutées) proposée à l'utilisateur, choix fait ; règle de
+- A9 — Ressources sous `/sd` : Import d'une police nouvelle depuis la page (demande du 2026-11-11) : liens vers les sites de polices et de
+- A10 — Documentation, relecture, essai réel : `outils_docs/README.md` (mode d'emploi), carte des documents du `CLAUDE.md`, `verifie_references_docs.py` 0 défaut
+- A10 — Documentation, relecture, essai réel : `relecteur-pages-web` et `relecteur-berry` sur le chantier ; corrections confirmées faites
+- A10 — Documentation, relecture, essai réel : Essai avec l'utilisateur : un bouton ajouté à l'écran des débits par l'atelier, généré dans les deux interfaces,
+- A10 — Documentation, relecture, essai réel : Retour au plan `debits-deux-cartes` : cocher son action A9 avec la preuve, passer ce plan en `statut: clos`
+- Amélioration [projet] : Écrans des autres cartes (ILI9488 SPI, petits OLED) ajoutés au catalogue
+- Amélioration [projet] : Reprise d'un `pages.jsonl` existant écrit à la main (import vers la description)
+
+#### [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) — 62 %
+
+- A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Compilation des deux envs par la page Build, SUCCESS lu en fin de journal, flash de l'acquisition < 80 % ; acquisition flashée en premier (USB, « Effacer puis téléverser »), puis l'affichage
+- A6 — Mise en service sur les deux cartes (avec l'utilisateur) : RS485 seul (Wi-Fi de l'acquisition coupé) : les 6 débits sur l'écran au rythme du relevé ; push seul (câble débranché) : écran à jour ≤ 2 s après la fin d'une fenêtre ; les deux coupés : « inconnu » après 2 fenêtres
+- A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Affichage redémarré : l'acquisition revient seule sur le point d'accès, aucun redémarrage de sa part, compteurs continus ; tas des deux cartes mesuré avant et après une heure
+- A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Téléphone sur `SERVEUR-DEBITS-PAC-GATEWAY` : Internet par le NAPT ; page d'équilibrage par `http://192.168.0.51:8080/equilibrage` depuis le Wi-Fi maison ; MQTT des deux cartes reçu
+- A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Garage : grille ModBus repassée (`testeur_udp`, onglet « Grille ModBus ») après le prochain flash d'une carte du garage, aucun écart
+- A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Commit par `/commite`
+- A7 — Retour au plan « debitmetres-chauffage » : Cocher l'étape « Réalisation par le plan `tasks/plans/debits-deux-cartes.md` » de l'action A8 de `tasks/plans/debitmetres-chauffage.md` (preuve : commit de A6), passer ce plan en `statut: clos`, puis reprendre `debitmetres-chauffage` où il attend : A2 (niveaux mesurés, K confirmé à réception, PAC), A5 (page web de la carte des débits), A6 (essai de charge, sur l'acquisition sans écran), A7 (pose et étalonnage)
+- A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Modèle `outils_docs/schemas/modele_persist.json` (fait en partie le 2026-11-11 : `extinction`, `luminosite`, `pwmInverse` dans `metier.cles_propres`, tests de l'assistant VERT) : ajouter les nouvelles clés d'écran (luminosité, gradation de la veille) quand le pilote les crée, par « Mettre à jour le modèle » de la page 7900 (demande du 2026-11-11) ; le bloc `ecran` du modèle reste le défaut générique (ILI9488 SPI, OFF)
+- A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Interface LVGL pur en Berry (même maquette, objets LVGL, courbe possible par `lv.chart`) ; banc VERT
+- A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : `banc_demarrage` des deux variantes (haspmota et lvgl), quand `ecranHaspmota.be` et `ecranLvgl.be` existeront
+- A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Essai sur la carte (avec A6) : image, couleurs, tactile, rétroéclairage, stabilité avec le Wi-Fi, relevé RS485
+- A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Solidifier le code d'écran générique et stable (veille, luminosité, chargement de l'interface : module `ecranFonctions` séparé du code des débits) : liste validée par l'utilisateur, module déplacé dans `data/fs`, ajouté au `custom_berry_solidify` des seuls envs à écran, `banc_demarrage` vert, compilation par la page Build (demande du 2026-11-11)
+- A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Polices : Roboto Condensed TTF sous /sd/polices par FreeType (choix du 2026-11-11), a verifier sur la carte AVEC et SANS carte SD : chemin vu par LVGL (`lvbe_fopen` -> `lv_zip_ufsp`), RAM et PSRAM de FreeType (4 tailles), rendu, place en flash pendant le premier rangement sans SD (~290 Ko : original + copie)
+- A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Vérifier sur la carte, avec l'utilisateur : le sens du PWM de luminosité (registre 0x05 de l'expandeur, clé persist de l'inversion à corriger au besoin), l'adresse 0x5D du tactile GT911, les couleurs de la dalle
+- A9 — Atelier des écrans (plan `atelier-ecrans`) : Suivre le plan : taper `/suivi suivre atelier-ecrans` ; revenir ici : `/suivi suivre debits-deux-cartes`
+- A9 — Atelier des écrans (plan `atelier-ecrans`) : Plan `atelier-ecrans` réalisé et clos (`statut: clos`) — preuve attendue : essai réel de son action A10
+- Amélioration [projet] : Rétroéclairage gradué automatiquement par une mesure de lumière (ADC de l'expandeur ou GPIO6)
+- Amélioration [projet] : Fenêtre de mesure transmise par l'acquisition (évite la recopie à la main sur l'affichage)
+- Amélioration [projet] : Défaut de l'ancien chemin `Count` > 1 (`[v, 0, …]`) corrigé pour toutes les cartes, avec la grille du garage
+
+#### [Lieu partagé depuis l'annuaire, lieu dans le syslog et le sniffeur MQTT](plans/lieu-partage-syslog-mqtt.md) — 78 %
+
+- A0 — Plan précédent : classement par lieu : Rouvrir le plan précédent dans la vue de droite : taper `/suivi suivre classement-par-lieu` (la conversation suit
+- A7 — Documentation, relecture, essai réel : Agent `relecteur-pages-web` sur les commits de A1 à A6 ; corriger ce qu'il confirme.
+- A7 — Documentation, relecture, essai réel : Essai réel, sans rien envoyer : annuaire, syslog et sniffeur MQTT sur le vrai dépôt (ports libres), lignes et
+- A7 — Documentation, relecture, essai réel : Commit `docs(lieux): mode d'emploi du lieu partage, du syslog et du sniffeur MQTT`.
 
 #### [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) — 68 %
 
@@ -106,26 +136,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - Amélioration [projet] : Historique et page `/graphiques` des 6 débits : plan `tasks/plans/historique-debits.md` (actif : A1 à A3 faits, historique activé et compilé le 2026-11-08, commit `c8c21131f` ; reste l'essai sur la carte, A4)
 - Amélioration [projet] : Lire la PAC (EKHBRD probable, photo du 2026-11-08) : passerelle RTD-W en Modbus RS485 ou pont P1P2MQTT, lecture seule ; pas de voie X10A prouvee (guide § 2.1 ter)
 - Amélioration [projet] : Températures départ et retour (DS18B20) pour la puissance par radiateur : P (W) ≈ 1,16 × Q (L/h) × ΔT (K)
-
-#### [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) — 43 %
-
-- A4 — Carte d'affichage : env, persist, code d'écran : Env créé par l'assistant persist (:7900, `POST /creation`) sur le modèle de l'acquisition actuelle (écran ILI9488, base `tasmota32s3-base-N16R8`) : `tasmota32s3-bureau-ecran-debits-pac`, dossier `data/bureau/tasmota32s3-ecran-debits-pac`, nom « Écran Débits de PAC », IP 192.168.0.51, topic `chauffage/pac/ecran` ; diff relu ; exclusions `page_cuve`, `page_energie`, `pages_graphiques`, `pages_graphiques_moteur` vérifiées
-- A4 — Carte d'affichage : env, persist, code d'écran : Persist de l'affichage : `serveur.rangeExtender` ON id 0, AP `SERVEUR-DEBITS-PAC-GATEWAY` + NAPT (mot de passe recopié côté serveur) ; `drivers.ModBus` ON id 0, Serial ON, UDP ON, RX 17 / TX 18, `periodeReleve` 10, `TasmotaSlaveModBus1` ON id 1 `lectureGroupee` ON ; 7 analogiques `virtuel` `ModBus_TasmotaSlaveModBus1`, `idModBus` 1-7, `type` 4704, `nom` des 6 départs ; `drivers.ecran` de l'acquisition d'aujourd'hui ; bloc `ecranDebits` : `fenetre` 10, `veille` 5
-- A4 — Carte d'affichage : env, persist, code d'écran : Banc rouge d'abord `outils_docs/scripts_python/berry/banc_ecran_debits.py` (+ `.be`, bouchons de `banc_debits`) : 12 345 → 123,45 L/min ; `etatConstate` ≠ `valide` ou `constateA` plus vieux que 2 × fenêtre → « inconnu » ; bits muets/imprécis rendus comme sur l'acquisition ; total « partiel » si une voie inconnue, « inconnu » si toutes ; message `ECRAN_DEBITS: fenetre ?` en `debug` quand toutes les voies passent inconnues ensemble
-- A4 — Carte d'affichage : env, persist, code d'écran : `ecranDebitsFonctions.be` + `controleEcranDebits.be` dans le dossier de l'affichage : rendu repris de `debitsFonctions_ecran`, `debitsFonctions_demarreEcran`, `debitsFonctions_appliqueVeille` et `pages.jsonl` (modèle B), alimenté par les 7 entrées ; `ReglageEcranDebits fenetre\|veille` et son aide ; section `#elif` du `.h` (pont ModBus et Range Extender comme le P4, `USE_ILI9488`)
-- A4 — Carte d'affichage : env, persist, code d'écran : `banc_ecran_debits.py` VERT ; `banc_demarrage.py` : carte ajoutée à `CARTES`, référence enregistrée ; `verifie_berry.py` 0 erreur 0 écart
-- A5 — Outils et documentation : `outils_pc/decodeur_modbus.py` : persist du maître choisi (P4 par défaut, affichage en option) ; une réponse 0x04 groupée et un push de 14 registres nommés registre par registre (débit 1 … débit 6, états avec ses bits) ; `test_sniffeur_modbus.py` VERT avec un cas groupé
-- A5 — Outils et documentation : `outils_docs/PROTOCOLE_MODBUS.md` : sous-section « Lecture groupée et push multi-valeurs (2026-11-09) » (clés, bit 12, défaut `Count` > 1 de l'ancien chemin) ; `outils_docs/README.md` § des débits (deux cartes, accès `192.168.0.51:8080/equilibrage`) ; carte des documents du `CLAUDE.md` ; `verifie_references_docs.py` 0 défaut
-- A5 — Outils et documentation : Relecture par `relecteur-berry` des `.be` modifiés, remarques traitées
-- A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Compilation des deux envs par la page Build, SUCCESS lu en fin de journal, flash de l'acquisition < 80 % ; acquisition flashée en premier (USB, « Effacer puis téléverser »), puis l'affichage
-- A6 — Mise en service sur les deux cartes (avec l'utilisateur) : RS485 seul (Wi-Fi de l'acquisition coupé) : les 6 débits sur l'écran au rythme du relevé ; push seul (câble débranché) : écran à jour ≤ 2 s après la fin d'une fenêtre ; les deux coupés : « inconnu » après 2 fenêtres
-- A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Affichage redémarré : l'acquisition revient seule sur le point d'accès, aucun redémarrage de sa part, compteurs continus ; tas des deux cartes mesuré avant et après une heure
-- A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Téléphone sur `SERVEUR-DEBITS-PAC-GATEWAY` : Internet par le NAPT ; page d'équilibrage par `http://192.168.0.51:8080/equilibrage` depuis le Wi-Fi maison ; MQTT des deux cartes reçu
-- A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Garage : grille ModBus repassée (`testeur_udp`, onglet « Grille ModBus ») après le prochain flash d'une carte du garage, aucun écart
-- A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Commit par `/commite`
-- A7 — Retour au plan « debitmetres-chauffage » : Cocher l'étape « Réalisation par le plan `tasks/plans/debits-deux-cartes.md` » de l'action A8 de `tasks/plans/debitmetres-chauffage.md` (preuve : commit de A6), passer ce plan en `statut: clos`, puis reprendre `debitmetres-chauffage` où il attend : A2 (niveaux mesurés, K confirmé à réception, PAC), A5 (page web de la carte des débits), A6 (essai de charge, sur l'acquisition sans écran), A7 (pose et étalonnage)
-- Amélioration [projet] : Fenêtre de mesure transmise par l'acquisition (évite la recopie à la main sur l'affichage)
-- Amélioration [projet] : Défaut de l'ancien chemin `Count` > 1 (`[v, 0, …]`) corrigé pour toutes les cartes, avec la grille du garage
 
 #### [Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)](plans/energie-differentiel.md) — 100 %
 
@@ -283,6 +293,11 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A6 — Allègement de l'env (P7, P9, P11) : Persist nettoyé : `TasmotaSlaveModBus2`, `diverses.historique.grafana`, `ledPower`
 - Amélioration [projet] : Vérifier si un 2e « maître » (id 0) perturbe la table discovery du P4
 - Amélioration [projet] : Réduire la partition FS (11,3 Mo) pour la cave si l'écriture de l'image gêne
+
+#### [Classement des cartes par lieu dans les pages des outils PC](plans/classement-par-lieu.md) — 100 %
+
+- Amélioration [projet] : Lieu transmis d'une page à l'autre depuis l'annuaire (écarté de cette version, spec §2).
+- Amélioration [projet] : Table hôte → lieu pour le syslog et le sniffeur MQTT, si le besoin revient.
 
 #### [Atelier des graphiques — destination « Graphiques » et bouton « Téléverser »](plans/atelier-destinations.md) — 96 %
 
