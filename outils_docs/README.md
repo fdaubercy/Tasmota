@@ -377,6 +377,10 @@ analyse `outils_docs/ANALYSE_DEBITMETRES_CHAUFFAGE_2026-11-08.md`. **Pas encore 
   Une voie sans nouvelles depuis 2 fenêtres est affichée « inconnu ». Brochage, expandeur d'E/S, `display.ini` et choix
   HASPmota ou LVGL : fiche `WAVESHARE_ESP32-S3-Touch-LCD-7B.md` du dossier de la carte dans
   `outils_docs/Schémas de branchement - Attribution des PINS des modules/bureau/` (plan `debits-deux-cartes`, A8, en cours).
+  Interface de l'écran choisie à la compilation : `custom_interface_ecran = haspmota` (ou `lvgl`) dans la section de
+  l'env de `platformio_tasmota_cenv.ini`. Les fichiers de chaque interface sont listés sous `custom_interface_ecran_<nom>`,
+  et seuls ceux de l'interface choisie partent sur le LittleFS. Le build l'annonce par une ligne
+  « Interface d'ecran : … ; exclus : … » et s'arrête sur une valeur inconnue.
 - **Réglages de l'affichage** : `ReglageEcranDebits fenetre <s>` (la même que `ReglageDebits fenetre` sur
   l'acquisition, à recopier à la main), `ReglageEcranDebits veille <min>`.
 - **Réglages ModBus** : `ReglageModbus PeriodeReleve <s>` sur l'affichage (5 à 300 s, 10 posé ; exacte si elle divise

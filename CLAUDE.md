@@ -587,7 +587,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   centiemes de L/min, mot d'etats, bit 12 toujours a 1) et push UDP (`modules.debits.modbus`). Affichage
   `tasmota32s3-bureau-ecran-debits-pac` (maitre ModBus et Range Extender id 0, IP 192.168.0.51) sur un Waveshare
   ESP32-S3-Touch-LCD-7B (1024x600 RGB, GT911, RS485 16/15 ; fiche `WAVESHARE_ESP32-S3-Touch-LCD-7B.md` et docs constructeur dans
-  `outils_docs/Schémas de branchement - Attribution des PINS des modules/bureau/tasmota32s3-ecran-debits-pac/`, A8 en cours : expandeur I2C 0x24 par `preinit.be`, HASPmota ou LVGL au choix du cenv) :
+  `outils_docs/Schémas de branchement - Attribution des PINS des modules/bureau/tasmota32s3-ecran-debits-pac/`, A8 en cours : expandeur I2C 0x24 par `preinit.be`, HASPmota ou LVGL au choix du cenv, `custom_interface_ecran` et listes `custom_interface_ecran_<nom>` : fichiers des autres interfaces exclus du FS par `build/interface_ecran.py::applique`, banc `build/test_interface_ecran.py`) :
   `ecranDebitsFonctions.be` + `controleEcranDebits.be` du dossier de la carte, veille, commande `ReglageEcranDebits`. Lecture
   groupee et push multi-valeurs : `modbusFonctions.be::sertGroupe`, `modBus_TasmotaSlaveModBus.be::demandeGroupee` et
   `::eclateGroupe`, cles `drivers.ModBus.lectureGroupee`, `drivers.ModBus.periodeReleve` (`PROTOCOLE_MODBUS.md` § 9). Sniffeur :
@@ -632,6 +632,10 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `ino_stable.py` (banc `test_ino_stable.py`), `test_scons_cache.py` (banc des reglages SCons du pre-script),
     `cfg_holder.py` (decide si le pre-script incremente `CFG_HOLDER`, banc `test_cfg_holder.py` ; plan
     `tasks/plans/temps-compilation.md`),
+    `interface_ecran.py` (`applique` : interface d'ecran `custom_interface_ecran` du cenv, fichiers des autres
+    interfaces ajoutes en memoire a `custom_files_exclude`, valeur inconnue = arret ; `retire_exclus` : post-action de
+    `littlefs.bin`, retire de l'image du buildfs les fichiers exclus a la racine, dossier de la carte compris, comme
+    post_esp32 ; banc `test_interface_ecran.py`),
     `verifie_lib_ignore.py` (garde du pre-script, AVANT le scan des dependances : arrete le build si le `lib_ignore`
     qu'un env personnel ajoute a son parent ignore une bibliotheque incluse sous une garde vraie ou incertaine ;
     ~11 s ; ligne « lib_ignore de <env> : » lue par la page build ; `--propose <env>` = liste ignorable de l'env ;

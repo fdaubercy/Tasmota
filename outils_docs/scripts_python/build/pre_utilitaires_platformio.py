@@ -754,6 +754,11 @@ if not is_safeboot and not hors_build:
 
     adapteParametresPlatformio_override()
 
+    # Interface d'ecran choisie dans le cenv (custom_interface_ecran) : les fichiers des autres interfaces rejoignent
+    # custom_files_exclude, relu par copy_fs_image et post_esp32 ; valeur inconnue -> arret (interface_ecran.py)
+    import interface_ecran
+    interface_ecran.applique(env)
+
     if ("32p4" in Global.environnement) and (any("UPDATE_IDF55_PLATFORM" in f for f in env.get("BUILD_FLAGS", []))):
         print(Fore.CYAN + "⚠ Synchronisation IDF55 en cours... (ESP32-P4 détecté et flag 'UPDATE_IDF55_PLATFORM' présent)")
         update_idf55_platform_packages()
@@ -802,5 +807,7 @@ if not is_safeboot and not hors_build:
 
     env.AddPreAction(os.path.join(".pio", "build", Global.environnement, "firmware.bin"), copy_fs_image)
     env.AddPreAction(os.path.join(".pio", "build", Global.environnement, "littlefs.bin"), copy_fs_image)
+    # DataToBin emballe tout le data_dir : les fichiers exclus du dossier de la carte sont retires ensuite de l'image
+    env.AddPostAction(os.path.join(".pio", "build", Global.environnement, "littlefs.bin"), interface_ecran.retire_exclus)
 
 print(Fore.GREEN + "✔ Script pre-utilitaires_platformio.py chargé")
