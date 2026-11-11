@@ -110,6 +110,45 @@ class CONTROLE_VR : Driver
             tasmota.web_send_decimal(vrFonctions.ligneWebInclinaison(vr))
         end
     end
+
+    # Facade active (bloc drivers.voletRoulants.facade, 2026-11-11) : seule condition pour importer vrPages / vrReglage,
+    # absents du FS des envs sans facade
+    def facade()
+        var volets = drivers.find("voletRoulants")
+        var f = (type(volets) == "instance" ? volets.find("facade") : nil)
+        return type(f) == "instance" && f.find("activation", "OFF") == "ON"
+    end
+
+    # Visuel de la facade, ajoute a la page d'accueil
+    def web_add_main_button()
+        if (!self.facade())    return    end
+        import vrPages
+        vrPages.accueil()
+    end
+
+    def web_add_config_button()
+        if (!self.facade())    return    end
+        import vrPages
+        vrPages.bouton()
+    end
+
+    # Page et ordres du reglage des durees (aussi appele a l'init : le serveur web peut deja tourner)
+    def web_add_handler()
+        if (!self.facade())    return    end
+        import webserver
+        import vrPages
+        webserver.on("/volets", / -> vrPages.route(), webserver.HTTP_GET)
+        webserver.on("/volets", / -> vrPages.ordre(), webserver.HTTP_POST)
+    end
+
+    # Boutons d'un volet en reglage : retires du driver des volets de Tasmota, recus ici (idx : voir vrReglage.bouton)
+    def button_pressed(cmd, idx)
+        import vrFonctions
+        var r = vrFonctions.etat().find("reglage")
+        if (!isinstance(r, map) || !r.find("actif", false))    return false    end
+        import vrReglage
+        return vrReglage.bouton(idx)
+    end
 end
 
 # Active le Driver de controle global des modules
@@ -136,6 +175,7 @@ def controleVoletRoulants_init(m)
                 if (drivers["voletRoulants"]["environnement"]["VRs"][cle].find("activation", "OFF") == "ON")
                     global.controleVRoulant = m.CONTROLE_VR()
                     tasmota.add_driver(global.controleVRoulant)
+                    global.controleVRoulant.web_add_handler()
 
                     logFonctions.log("CONTROLE_VR: Driver activé !", LOG_LEVEL_DEBUG, "volets")
 

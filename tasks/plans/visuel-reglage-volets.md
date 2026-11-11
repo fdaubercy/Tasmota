@@ -148,7 +148,7 @@ de ces ordres, sauf `configVRByJson()` après l'écriture.
 - [x] `python outils_docs/scripts_python/berry/banc_reglage_volets.py` : `BANC_REGLAGE_VOLETS: OK` — preuve : 75 ok, rc=0 ; banc_inclinaison.py reste OK
 - [x] Témoin : copie de `data/fs` où `appui` suit la fonction du bouton au lieu de l'étape -> groupe « toggle » rouge — preuve : intacte OK ; mutée ECHEC (2) : « toggle : sens impose par l'etape » et « montee : ShutterOpen1 » (bouton down en montée)
 - [x] `verifie_berry.py data/fs/vrReglage.be` : syntaxe OK, aucun écart de charte — preuve : 0 erreur, 0 avertissement de charte
-- [ ] Commit `feat(volets): mode reglage des durees (vrReglage) et son banc`
+- [x] Commit `feat(volets): mode reglage des durees (vrReglage) et son banc` — preuve : f5709e19d puis correction 8cbe2030e (direction lue dans read_sensors, faux arrêt au départ, recalage différé retiré), relectures approuvées
 
 ## A4 — Branchement dans le driver, pages côté carte, livraison par le cenv
 Fichiers : `data/fs/vrPages.be` (neuf), `data/fs/controleVoletRoulants.be`, `platformio_tasmota_cenv.ini`,
@@ -169,11 +169,11 @@ Produit :
   data/sd/js/reglageVolets.js data/sd/css/reglageVolets.css` dans `[berry_commun]` ; `vrReglage.be` et `vrPages.be` ajoutés à
   `custom_berry_solidify` de `tasmota32s3-rdc-grenier`, `tasmota32s3-etage2-grenier`, `tasmota32p4-garage-serveur-modbus` ;
   `${berry_commun.volets_pages}` dans `custom_files_exclude` de tous les autres envs.
-- [ ] Groupe « routes » du banc d'abord : accès refusé sans Referer, `?f=etat` rend `etatPage()`, POST `debut` puis `appui`
-  font avancer, action inconnue -> 400, façade inactive -> ni bouton de configuration ni contenu d'accueil ; rouge sans `vrPages`
-- [ ] Écrire `vrPages.be` et les ajouts du driver ; banc vert
-- [ ] cenv modifié ; `python outils_docs/scripts_python/berry/banc_demarrage.py` : les 3 envs à volets chargent les deux
-  modules, les autres n'en voient aucun ; références mises à jour avec `--env <env> --enregistre` pour ces 3 envs seulement
+- [x] Groupe « routes » du banc d'abord : accès refusé sans Referer, `?f=etat` rend `etatPage()`, POST `debut` puis `appui`
+  font avancer, action inconnue -> 400, façade inactive -> ni bouton de configuration ni contenu d'accueil ; rouge sans `vrPages` — preuve : groupe 17 de `banc_reglage_volets.be` ; sur `data/fs` de 8cbe2030e (sans `vrPages.be`) : 87 ok puis `attribute_error: 'CONTROLE_VR' object has no attribute 'web_add_handler'`, rc=1 ; témoins mutés : `route()` sans `check_privileged_access` -> ECHEC (1) « acces refuse », `ouverte` posé avant `etatPage()` -> ECHEC (1) « exception dans etatPage »
+- [x] Écrire `vrPages.be` et les ajouts du driver ; banc vert — preuve : `banc_reglage_volets.py` BANC_REGLAGE_VOLETS: OK, 121 ok, rc=0 ; `banc_inclinaison.py` OK ; `verifie_berry.py` sur `vrPages.be` et `controleVoletRoulants.be` : 0 erreur, 0 avertissement de charte
+- [x] cenv modifié ; `python outils_docs/scripts_python/berry/banc_demarrage.py` : les 3 envs à volets chargent les deux
+  modules, les autres n'en voient aucun ; références mises à jour avec `--env <env> --enregistre` pour ces 3 envs seulement — preuve : cenv résolu par `fichiers_berry_ini.resout` : vrReglage et vrPages solidifiés par les 3 envs à volets (exclus 0), `volets_pages` (2 fichiers à A4) exclue de tous les autres envs à `custom_files_upload`, `tasmota32-rdc-vr-porte` compris ; `banc_demarrage.py` VERT sans `--enregistre` (modules solidifiés chargés à la demande : aucune rubrique de l'instantané ne les montre, rien à enregistrer)
 - [ ] Commit `feat(volets): pages du reglage et visuel branches dans le driver des volets`
 
 ## A5 — Le dessin de la façade `volets.js`

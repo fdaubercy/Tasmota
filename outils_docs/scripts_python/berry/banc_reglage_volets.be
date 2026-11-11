@@ -19,6 +19,7 @@ import string
 var SOURCES = size(global._argv) > 1 ? global._argv[1] : "data/fs"
 sys.path().push(SOURCES)
 sys.path().push("outils_docs/scripts_python/berry/bouchons_berry")
+sys.path().push("outils_docs/scripts_python/berry/bouchons_berry/volets")      # webserver (groupe 17, routes), en dernier
 
 var LOG_LEVEL_ERREUR = 1
 var LOG_LEVEL_INFO = 2
@@ -32,15 +33,18 @@ class LogStub
 end
 var logFonctions = LogStub()
 
+class Driver end
 class TasmotaStub
+    var refresh, pilotes, commandes
     var cmds, timers, regles, directions, horloge, surCmd, doublons, capteurs, lectures, positions
-    def init() self.cmds = [] self.timers = [] self.regles = {} self.directions = {} self.horloge = 0 self.doublons = 0 self.lectures = 0 self.positions = 0 end
+    def init() self.refresh = 1500 self.pilotes = [] self.commandes = [] self.cmds = [] self.timers = [] self.regles = {} self.directions = {} self.horloge = 0 self.doublons = 0 self.lectures = 0 self.positions = 0 end
     def millis(d) return self.horloge + (d == nil ? 0 : d) end
     def time_reached(t) return self.horloge >= t end
     def cmd(c, m)
         self.cmds.push(c)
         if self.surCmd != nil    self.surCmd(c)    end
         if c == "ShutterMotorStop"    return {"ShutterMotorStop": 500}    end
+        if c == "WebRefresh"    return self.refresh == nil ? {} : {"WebRefresh": self.refresh}    end
         if string.find(c, "ShutterPosition") == 0    self.positions += 1    end      # relance le moteur : jamais envoye
         return {}
     end
@@ -67,6 +71,8 @@ class TasmotaStub
     def add_rule(pat, f, id) self.regles[pat + "|" + str(id)] = f end
     def remove_rule(pat, id) self.regles.remove(pat + "|" + str(id)) end
     def yield() end
+    def add_driver(d) self.pilotes.push(d) end
+    def add_cmd(n, f) self.commandes.push(n) end
 end
 var tasmota = TasmotaStub()
 
@@ -472,6 +478,141 @@ r = vrReglage.debut(1)
 tasmota.surCmd = nil
 verifie(!r[0] && !vrFonctions.enReglage(1) && appelsConfig == config + 1 && erreurs() == nbErr + 1, "exception : refus, configVRByJson, une erreur")
 verifie(!aRegle(1) && nbTimers("vrReglage_delai") == 0, "exception : ni regle ni delai")
+
+print("17. Pages : facade, accueil, routes /volets, branchement du driver")
+reinit()
+import webserver
+import json
+import gestionFileFolder        # bouchon partage : la fonction d'envoi est ajoutee ici seulement, le fichier n'est pas touche
+gestionFileFolder.readFileByLineAndContentSend = def (chemin) webserver.content_send("[" + chemin + "]") end
+vr1["facade"] = {"type": "porte", "place": 3}
+vr2["facade"] = {"type": "fenetre", "place": 1}
+vr3["facade"] = {"type": "trappe", "place": 2}
+vr1["nom"] = "Volet </b>porte"
+import controleVoletRoulants            # driver importe SANS facade : il ne doit rien enregistrer
+var pilote = global.controleVRoulant
+verifie(pilote != nil && size(tasmota.pilotes) == 1, "driver instancie par import (init)")
+webserver.raz()
+pilote.web_add_handler()
+pilote.web_add_config_button()
+pilote.web_add_main_button()
+verifie(size(webserver.routes) == 0 && size(webserver.envoye) == 0, "sans bloc facade : ni route, ni bouton, ni accueil")
+import vrPages
+verifie(vrPages.facade() == nil, "facade() nil sans bloc facade")
+voletsMoteur["facade"] = {"activation": "OFF", "toit": "unPan"}
+verifie(vrPages.facade() == nil, "facade() nil si activation OFF")
+webserver.raz()
+vrPages.accueil()
+vrPages.bouton()
+verifie(size(webserver.envoye) == 0, "facade inactive : rien dans l'accueil, pas de bouton")
+voletsMoteur["facade"] = {"activation": "ON", "toit": "deuxPans"}
+vr3["capteursPosition"] = {"activation": "ON", "inclinaison": {"activation": "ON", "angleOuvert": 80, "angleFerme": 5}}
+var f = vrPages.facade()
+verifie(f != nil && f["toit"] == "deuxPans" && f["rafraichissement"] == 1500 && size(f["ouvertures"]) == 3, "facade : toit, WebRefresh 1500, 3 ouvertures")
+var o = f["ouvertures"]
+verifie(o[0]["id"] == 2 && o[1]["id"] == 3 && o[2]["id"] == 1 && o[0]["place"] == 1 && o[2]["type"] == "porte", "ouvertures triees par place")
+verifie(o[0]["nom"] == "Volet cuisine" && o[0]["inverse"] == 0 && o[0]["tempsMontee"] == 15 && o[0]["tempsDescente"] == 16, "ouverture : nom, inverse, durees")
+verifie(o[0].find("inclinaison") == nil && o[1]["inclinaison"]["ouvert"] == 80 && o[1]["inclinaison"]["ferme"] == 5, "inclinaison posee pour le seul volet a MPU")
+tasmota.refresh = nil
+verifie(vrPages.facade()["rafraichissement"] == 2345, "WebRefresh absent : 2345")
+tasmota.refresh = 1500
+vr2["activation"] = "OFF"
+verifie(size(vrPages.facade()["ouvertures"]) == 2, "volet inactif : sans dessin")
+vr2["activation"] = "ON"
+
+webserver.raz()
+vrPages.accueil()
+var t = webserver.texte()
+verifie(string.find(t, "<div id='vf'></div><script>window.VOLETS=") == 0 && string.find(t, "[/sd/js/volets.js]") > 0 && t[-9..] == "</script>", "accueil : div, donnees, volets.js, fermeture")
+verifie(string.find(t, "Volet </b>porte") < 0 && string.find(t, "<\\/b>") > 0, "accueil : « </ » echappe dans le JSON")
+webserver.raz()
+pilote.web_add_main_button()
+verifie(webserver.texte() == t, "driver : web_add_main_button envoie l'accueil")
+webserver.raz()
+pilote.web_add_config_button()
+verifie(string.find(webserver.texte(), "action='/volets'") > 0 && string.find(webserver.texte(), "Réglage des volets") > 0, "driver : bouton « Réglage des volets » vers /volets")
+webserver.raz()
+webserver.routes = []
+pilote.web_add_handler()
+verifie(size(webserver.routes) == 2 && webserver.routes[0][0] == "/volets" && webserver.routes[0][2] == webserver.HTTP_GET && webserver.routes[1][2] == webserver.HTTP_POST, "driver : routes GET et POST /volets")
+
+# Acces : sans Referer (acces non privilegie), ni la page, ni l'etat, ni l'ordre ne repondent
+webserver.privilegie = false
+for g: [vrPages.route, vrPages.ordre]
+    webserver.raz({"f": "etat", "action": "debut", "id": "1"})
+    g()
+    verifie(webserver.code == nil && size(webserver.envoye) == 0 && !webserver.ferme, "acces refuse : rien envoye")
+end
+verifie(!vrFonctions.enReglage(1), "acces refuse : aucun reglage commence")
+webserver.privilegie = true
+
+# GET ?f=etat
+webserver.raz({"f": "etat"})
+vrPages.route()
+verifie(webserver.code == 200 && webserver.mime == "application/json" && webserver.ferme && json.load(webserver.texte())["actif"] == false, "?f=etat : etatPage en JSON, reglage inactif")
+# POST debut, appui
+def poste(action, id)
+    var a = {}
+    if action != nil    a["action"] = action    end
+    if id != nil    a["id"] = id    end
+    webserver.raz(a)
+    vrPages.ordre()
+    return webserver.code == nil ? nil : [webserver.code, json.load(webserver.texte())]
+end
+tasmota.horloge = T + 1000
+var r = poste("debut", "1")
+verifie(r[0] == 200 && r[1]["ok"] == true && r[1]["etat"]["actif"] && r[1]["etat"]["etape"] == "pret" && webserver.ferme, "POST debut : ok, etape pret")
+tasmota.horloge = T + 5000
+r = poste("appui", "1")
+verifie(r[0] == 200 && r[1]["ok"] == true && r[1]["etat"]["etape"] == "montee", "POST appui : montee")
+tasmota.horloge = T + 19000
+r = poste("appui", "1")
+verifie(r[1]["etat"]["etape"] == "haut", "POST appui : haut")
+webserver.raz({"f": "etat"})
+vrPages.route()
+verifie(json.load(webserver.texte())["etape"] == "haut", "?f=etat suit l'etape")
+r = poste("annuler", "1")
+verifie(r[0] == 200 && r[1]["ok"] == true && !r[1]["etat"]["actif"] && !vrFonctions.enReglage(1), "POST annuler : reglage termine")
+r = poste("debut", "99")
+verifie(r[0] == 200 && r[1]["ok"] == false && r[1]["message"] != "" && !r[1]["etat"]["actif"], "POST debut volet inconnu : refus, ok faux")
+r = poste("bidon", "1")
+verifie(r[0] == 400 && r[1]["ok"] == false && !vrFonctions.enReglage(1), "action inconnue : 400, rien commence")
+r = poste(nil, nil)
+verifie(r[0] == 400, "sans action : 400")
+# Exception : 500 JSON, reponse fermee, une erreur au journal
+var debutOrig = vrReglage.debut
+vrReglage.debut = def (id) raise "panne", "simulee" end
+nbErr = erreurs()
+r = poste("debut", "1")
+vrReglage.debut = debutOrig
+verifie(r[0] == 500 && webserver.ferme && erreurs() == nbErr + 1, "exception : 500 JSON, reponse fermee, une erreur")
+# Exception APRES un ordre reussi (etatPage de la reponse) : 500 quand meme, jamais une reponse fermee sans ouverture
+var etatPageOrig = vrReglage.etatPage
+vrReglage.etatPage = def () raise "panne", "simulee" end
+r = poste("debut", "1")
+vrReglage.etatPage = etatPageOrig
+verifie(r != nil && r[0] == 500 && webserver.ferme, "exception dans etatPage : 500 JSON, reponse fermee")
+vrReglage.annule("annule")
+# Page de reglage
+webserver.raz()
+vrPages.route()
+t = webserver.texte()
+verifie(string.find(t, "[start ") == 0 && webserver.termine, "page : demarree et terminee")
+var iCss = string.find(t, "[/sd/css/reglageVolets.css]")
+var iHtml = string.find(t, "[/sd/html/reglageVolets.html]")
+var iDonnees = string.find(t, "window.VOLETS_REGLAGE=")
+var iJs = string.find(t, "[/sd/js/reglageVolets.js]")
+verifie(iCss > 0 && iHtml > iCss && iDonnees > iHtml && iJs > iDonnees, "page : css, html, donnees, js dans l'ordre")
+# button_pressed du driver : un reglage actif consomme les boutons du volet, jamais ceux des autres
+verifie(!pilote.button_pressed("", idx(1, 0, 1)), "button_pressed : false sans reglage")
+tasmota.horloge = T + 40000
+vrReglage.debut(1)
+verifie(pilote.button_pressed("", idx(2, 0, 1)) && !pilote.button_pressed("", idx(4, 0, 1)), "button_pressed : bouton du volet en reglage vrai, autre volet faux")
+vrReglage.annule("annule")
+for v: [vr1, vr2, vr3]    v.remove("facade")    end
+vr3.remove("capteursPosition")
+voletsMoteur.remove("facade")
+
 
 verifie(tasmota.positions == 0, "aucun ShutterPosition envoye par le module, de tout le banc")
 print(echecs == 0 ? "BANC_REGLAGE_VOLETS: OK" : "BANC_REGLAGE_VOLETS: ECHEC (" + str(echecs) + ")")
