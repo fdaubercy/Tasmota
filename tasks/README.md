@@ -18,9 +18,9 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
 | [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff ; ajouter la pompe de la piscine (192.168.0.40) le projecteur du jardin (192.168.0.41) et celui du barbecue : sauvegarde, env, mise en service | actif | ████░░░░░░ 41 % (42/94) | 52 étapes, 3 améliorations | 2026-11-11 | 2026-11-12 (A17 : env du NOUS créé et adapté, mesure vérifiée, compilation lancée) |
-| [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | █████░░░░░ 45 % (19/39) | 20 étapes, 3 améliorations | 2026-11-11 | 2026-11-12 |
-| [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) | Commander les appareils de la cave et voir son état sur l'écran 7B esclave, sans rien changer au comportement des autres cartes | actif | ░░░░░░░░░░ 0 % (0/40) | 40 étapes, 3 améliorations | 2026-11-12 | 2026-11-12 |
-| [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | ██░░░░░░░░ 20 % (5/40) | 35 étapes, 1 amélioration | 2026-11-12 | 2026-11-12 |
+| [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ████████░░ 83 % (34/39) | 5 étapes, 3 améliorations | 2026-11-11 | 2026-11-12 |
+| [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) | Commander les appareils de la cave et voir son état sur l'écran 7B esclave, sans rien changer au comportement des autres cartes | actif | ███░░░░░░░ 33 % (12/40) | 28 étapes, 3 améliorations | 2026-11-12 | 2026-11-12 |
+| [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | ██████░░░░ 60 % (28/50) | 22 étapes | 2026-11-12 | 2026-11-12 |
 | [Visuel des volets sur la page d'accueil et réglage des durées par les boutons](plans/visuel-reglage-volets.md) | Dessiner sous les curseurs des volets une façade dont les tabliers suivent la position réelle en direct, et régler tempsMontee et tempsDescente depuis la page Configuration avec les boutons existants | actif | ████████░░ 79 % (38/46) | 8 étapes, 1 amélioration | 2026-11-11 | 2026-11-12 |
 | [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) | Faire passer les 6 débits de la carte d'acquisition (esclave ModBus id 1) à une carte d'affichage (maître id 0) par une lecture groupée RS485 et un push UDP, sans rien changer au garage | actif | ██████░░░░ 62 % (33/49) | 16 étapes, 3 améliorations | 2026-11-09 | 2026-11-11 |
 | [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ███████░░░ 68 % (35/50) | 15 étapes, 4 améliorations | 2026-11-08 | 2026-11-09 |
@@ -123,46 +123,19 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - Amélioration [projet] : Alias Berry lisible par volet (`VoletPorte`, `VoletCuisine`) si l'utilisateur le veut (A4).
 - Amélioration [projet] : Resynchroniser les deux lampes de la cave à la reconnexion MQTT d'une des cartes (`Mqtt#Connected`).
 
-#### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 45 %
+#### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 83 %
 
 - A0 — Plan précédent : débits sur deux cartes : Rouvrir le plan précédent dans la vue de droite : taper `/suivi suivre debits-deux-cartes` (la conversation suit
-- A6 — Page web de l'atelier (port 7960) : Banc serveur d'abord (rouge), sur copie temporaire : routes ci-dessus ; env inconnu -> 400 ; requête sans en-tête
-- A6 — Page web de l'atelier (port 7960) : Serveur et routes ; banc VERT
-- A6 — Page web de l'atelier (port 7960) : Page (maquette `modele-retenu.png`) : en-tête (liste des cartes par `lieux.pour_page`, liste des écrans
 - A6 — Page web de l'atelier (port 7960) : Capture : `atelier_ecrans_capture.capture(ip, get) -> bytes` (`Br lv.screenshot()`, téléchargement, effacement du
-- A6 — Page web de l'atelier (port 7960) : Sonde Chrome hermétique (thème clair et sombre, glisser un bouton, zoom 100 %, aucune erreur console, Chrome
 - A6 — Page web de l'atelier (port 7960) : Commit
-- A7 — Remarques épinglées et traitement par Claude : Vérifier les options de `claude -p` qui imposent la LECTURE SEULE (liste d'outils permis, mode de permission non
-- A7 — Remarques épinglées et traitement par Claude : Banc d'abord (rouge), `claude` remplacé par un faux exécutable : propositions valides écrites par la PAGE dans
-- A7 — Remarques épinglées et traitement par Claude : Module, routes et onglet « Remarques » (épingler sur un objet, une zone tracée, la page ; Appliquer / Refuser /
-- A7 — Remarques épinglées et traitement par Claude : Essai réel : une remarque traitée par le vrai `claude -p`, proposition appliquée sur le canevas ; commit
-- A8 — Écriture dans le dépôt, changement d'écran, envoi : Banc d'abord (rouge), copie temporaire : écriture de `ecran.json`, `pages.jsonl`, `ecranLvgl.be` en une
-- A8 — Écriture dans le dépôt, changement d'écran, envoi : Modules et routes ; bancs VERT ; dans la page, « Écrire dans le dépôt » (diff puis confirmation), mode
-- A8 — Écriture dans le dépôt, changement d'écran, envoi : Commit
-- A9 — Ressources sous `/sd` : Liste des ressources utiles (fonds, icônes, polices ajoutées) proposée à l'utilisateur, choix fait ; règle de
-- A9 — Ressources sous `/sd` : Import d'une police nouvelle depuis la page (demande du 2026-11-11) : liens vers les sites de polices et de
-- A10 — Documentation, relecture, essai réel : `outils_docs/README.md` (mode d'emploi), carte des documents du `CLAUDE.md`, `verifie_references_docs.py` 0 défaut
-- A10 — Documentation, relecture, essai réel : `relecteur-pages-web` et `relecteur-berry` sur le chantier ; corrections confirmées faites
 - A10 — Documentation, relecture, essai réel : Essai avec l'utilisateur : un bouton ajouté à l'écran des débits par l'atelier, généré dans les deux interfaces,
 - A10 — Documentation, relecture, essai réel : Retour au plan `debits-deux-cartes` : cocher son action A9 avec la preuve, passer ce plan en `statut: clos`
 - Amélioration [projet] : Écrans des autres cartes (ILI9488 SPI, petits OLED) ajoutés au catalogue
 - Amélioration [projet] : Reprise d'un `pages.jsonl` existant écrit à la main (import vers la description)
 - Amélioration [projet] : Objets du palier 2 (image, liste déroulante, interrupteur, roue, QR code…)
 
-#### [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) — 0 %
+#### [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) — 33 %
 
-- A1 — Veille commune : `ecranFonctions.be` dans `data/fs` : `banc_ecran_debits.py` VERT AVANT le déplacement (référence), sortie notée
-- A1 — Veille commune : `ecranFonctions.be` dans `data/fs` : Déplacement (`git mv`) ; le banc trouve encore le module (adapter son chemin s'il est figé) ; `banc_ecran_debits.py` VERT, ses mutants rouges
-- A1 — Veille commune : `ecranFonctions.be` dans `data/fs` : Liste `ecran` exclue des envs sans écran ; `banc_demarrage.py` VERT sans `--enregistre`
-- A1 — Veille commune : `ecranFonctions.be` dans `data/fs` : Commit `refactor(ecran): veille commune ecranFonctions deplacee dans data/fs` ; case l.113 du plan `debits-deux-cartes` mise à jour (déplacement fait, solidification restant à faire là-bas)
-- A2 — Pompe vide-cave : marche manuelle sans flotteurs : Banc rouge d'abord : `appui_bouton_desactive_flotteurs` (bouton1 ON -> capteurs `activation` OFF et `suspendu` ON, relais 1 ON), `flotteur_bas_ignore_en_manuel` (capteur1 OFF pendant la marche -> relais 1 reste ON), `second_appui_reactive` (bouton1 -> relais OFF, capteurs ON, pas de `suspendu`), `minuterie_reactive` (`finTimerRelai` -> capteurs ON), `demarrage_reactive` (persist avec `suspendu` ON -> `init()` les réactive), `sans_cle_inchange` (relaisLie sans `desactiveCapteurs` : capteurs jamais touchés)
-- A2 — Pompe vide-cave : marche manuelle sans flotteurs : Code ; banc VERT ; un mutant par cas (ex. `false` remis dans `commandeRelaisLies`) lu rouge
-- A2 — Pompe vide-cave : marche manuelle sans flotteurs : Persist de la cave et schéma ; `genere_schema_persist.py --valide` 0 erreur ; `banc_demarrage.py` VERT (cave réenregistrée seule, avec l'accord déjà donné pour elle)
-- A2 — Pompe vide-cave : marche manuelle sans flotteurs : Commit `feat(pompe): marche manuelle sans flotteurs, reactives a l'arret et au demarrage`
-- A3 — Pannes des flotteurs et état de la pompe publié : Banc `banc_pompe_cave` étendu, rouge d'abord : `incoherence_apres_anti_rebond`, `incoherence_breve_ignoree`, `flotteur_bas_apres_n_arrets`, `arret_normal_remet_compteur`, `manuel_ne_compte_pas`, `json_append_porte_pompe_vide_cave`
-- A3 — Pannes des flotteurs et état de la pompe publié : Code ; banc VERT ; mutants rouges ; `verifie_berry.py` 0 erreur
-- A3 — Pannes des flotteurs et état de la pompe publié : Persist (clé `pannes`) ; schéma ; `banc_demarrage.py` VERT
-- A3 — Pannes des flotteurs et état de la pompe publié : Commit `feat(pompe): pannes des flotteurs (incoherence, flotteur bas) et etat publie`
 - A4 — Le serveur exécute les touches de l'écran : Vérifier d'abord que des boutons virtuels ModBus sur le maître ne créent ni GPIO, ni règle `Button`, ni entrée parasite dans `json_append` de `controleGeneral` (lire `configDevices.be`, banc) ; noter la conclusion ici
 - A4 — Le serveur exécute les touches de l'écran : Banc rouge d'abord (`banc_test_modbus.be` étendu ou `banc_commandes_ecran.{py,be}` neuf) : `push_allume_relai`, `meme_seq_une_seule_action`, `releve_sans_action`, `seq_zero_ignoree`, `numero_inconnu_log_erreur`, `redemarre_seulement_sur_on`, `pompe_manuelle_desactive_flotteurs`, `sans_crochet_comportement_inchange` (garage : `global.commandesEsclave` nil)
 - A4 — Le serveur exécute les touches de l'écran : Code ; bancs VERTS (`banc_test_modbus.py` entier compris) ; mutants rouges
@@ -195,36 +168,15 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - Amélioration [projet] : Boutons physiques du serveur à garder ou retirer (plan `envs-grenier-rdc-sonoff-cave` A9)
 - Amélioration [projet] : Topic de la cave à changer au retour en production (A7 du plan d'origine) : seul le persist de l'écran à modifier
 
-#### [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — 20 %
+#### [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — 60 %
 
-- A2 — Modèle : gabarit, surcharge, champs, secrets, verdict : Bancs d'abord (rouge) : `test_fusion` (surcharge de `lignes` remplace la liste, de `style.couleur` garde
-- A2 — Modèle : gabarit, surcharge, champs, secrets, verdict : Modules ; bancs VERT, chaque mutant lu rouge
-- A2 — Modèle : gabarit, surcharge, champs, secrets, verdict : Commit
-- A3 — Écriture au dépôt : Bancs d'abord (rouge), copie temporaire : surcharge minimale écrite ; `page_carte` -> 4 fichiers touchés et
-- A3 — Écriture au dépôt : Module ; bancs VERT ; `test_atelier_graphiques_ecriture.py` VERT ; `berry/banc_demarrage.py` VERT (sans
-- A3 — Écriture au dépôt : Commit
-- A4 — Serveur et page 7970 : Banc serveur d'abord (rouge) : routes ci-dessus ; env inconnu -> 400 ; POST sans en-tête anti-CSRF -> 403 ;
-- A4 — Serveur et page 7970 : Serveur et routes ; banc VERT
-- A4 — Serveur et page 7970 : En-tête : liste déroulante des envs (`lieux.remplitParLieu`) qui change de carte sans recharger la page (URL
-- A4 — Serveur et page 7970 : Page selon le modèle A (`outils_docs/etiquettes_qr/modele-A.png`, `modele-A-sombre.png`) : aperçu dessiné par la bibliothèque, texte lu à côté, compteur d'octets,
-- A4 — Serveur et page 7970 : Sonde Chrome hermétique : bascule Sombre / Clair par le bouton, changement d'env par la liste (réglage de
-- A4 — Serveur et page 7970 : Brique de l'annuaire (:7600) : outil `etiquettes_qr` dans `annuaire_registre.py` (titre « Étiquettes QR code »,
-- A4 — Serveur et page 7970 : Tâche VS Code et cible Custom détachée (`test_cible_etiquettes_qr.py`, `test_garde_build.py` VERT)
-- A4 — Serveur et page 7970 : Commit
-- A5 — Impression, planche A4, export : Bouton « Imprimer » : page d'impression au format `@page { size: A4 }`, QR code en `mm`, consigne « échelle
-- A5 — Impression, planche A4, export : Planche : cases des cartes, une taille pour toute la planche, grille automatique (marges 10 mm, espacement 5 mm,
-- A5 — Impression, planche A4, export : Export PNG et SVG (`getRawData`) nommé `qr_<env>.png\|svg`
-- A5 — Impression, planche A4, export : Essai réel avec l'utilisateur : une planche aux tailles 15, 20, 25, 30 mm, texte court et texte long, avec et
-- A5 — Impression, planche A4, export : Commit
-- A6 — Page `/qrcode` de la carte : Banc Berry d'abord (rouge) : route servie avec `qrcode.json` présent ; absent -> pas de bouton, pas de route ;
-- A6 — Page `/qrcode` de la carte : Module et page ; banc VERT ; `verifie_berry.py` VERT
-- A6 — Page `/qrcode` de la carte : Sonde Chrome de la page (serveur de fichiers local imitant la carte) : QR code dessiné avec le style du fichier ;
 - A6 — Page `/qrcode` de la carte : Essai sur une carte choisie par l'utilisateur : réglage écrit par la page 7970, firmware recompilé et FS envoyé
 - A6 — Page `/qrcode` de la carte : Commit
 - A7 — Suivi des changements, téléversement, liens des autres outils : Bancs d'abord (rouge) : hostname changé dans le persist -> `a_reimprimer` et `a_regenerer` ; topic changé et
 - A7 — Suivi des changements, téléversement, liens des autres outils : Module, routes, badges ; bancs VERT
 - A7 — Suivi des changements, téléversement, liens des autres outils : « Téléverser » : URL de la page Build `?env=&depuis=qrcode&fichiers=/json/qrcode.json&redemarrer=0` (sur le modèle
 - A7 — Suivi des changements, téléversement, liens des autres outils : Lien « Étiquette QR à refaire » dans le message de fin d'un renommage (Fichiers Berry) et d'une modification
+- A7 — Suivi des changements, téléversement, liens des autres outils : Régénération au build (demande du 2026-11-12) : le pré-script (`build/pre_utilitaires_platformio.py`), avant
 - A7 — Suivi des changements, téléversement, liens des autres outils : Commit
 - A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Objet `qrcode` du catalogue : bouton qui affiche le QR code en surimpression pendant `delai_s` (défaut 30), texte
 - A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Bancs des deux générateurs VERT avec l'objet ; essai sur l'écran des débits, scan au téléphone
@@ -232,7 +184,14 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A9 — Documentation : `outils_docs/README.md` § « Étiquettes QR code (page web) » : usage, verdict, impression à 100 %, planche, page de
 - A9 — Documentation : `CLAUDE.md` (carte des documents) : modules `etiquettes_qr_*`, `qrcodePage.be`, liste `etiquette_qr`, bancs ;
 - A9 — Documentation : Commit ; plan passé `statut: clos`
-- Amélioration [projet] : Lien cliquable facultatif dans le QR code (écarté de la v1 par l'utilisateur)
+- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Banc du filtre d'abord (rouge), avec mutants : refus d'une valeur portant des identifiants d'URL (`://x:y@`), un
+- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Filtre ; banc VERT ; appliqué en plus du filtre de l'A2 (clé ET valeur), avertissement dans l'aperçu,
+- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Fiche HTML autonome (aucune ressource externe, CSS en ligne, clair/sombre par `prefers-color-scheme`,
+- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Réglage « Contenu du QR code » : en mode lien, QR code = `url_fiche` (verdict sur l'URL), proposé pour toute carte
+- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Publication : diff des fiches avant envoi, bouton « Publier » distinct d'« Écrire », refus pendant un build ;
+- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Mise en service par l'utilisateur, une fois : Settings > Pages > Source « Deploy from a branch », branche
+- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Essai réel : une carte publiée, QR code en mode lien imprimé, scanné au téléphone en 4G
+- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Commit
 
 #### [Visuel des volets sur la page d'accueil et réglage des durées par les boutons](plans/visuel-reglage-volets.md) — 79 %
 
@@ -259,7 +218,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Interface LVGL pur en Berry (même maquette, objets LVGL, courbe possible par `lv.chart`) ; banc VERT
 - A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : `banc_demarrage` des deux variantes (haspmota et lvgl), quand `ecranHaspmota.be` et `ecranLvgl.be` existeront
 - A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Essai sur la carte (avec A6) : image, couleurs, tactile, rétroéclairage, stabilité avec le Wi-Fi, relevé RS485
-- A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Solidifier le code d'écran générique et stable (veille, luminosité, chargement de l'interface : module `ecranFonctions` séparé du code des débits) : liste validée par l'utilisateur, module déplacé dans `data/fs`, ajouté au `custom_berry_solidify` des seuls envs à écran, `banc_demarrage` vert, compilation par la page Build (demande du 2026-11-11)
+- A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Solidifier le code d'écran générique et stable (veille, luminosité, chargement de l'interface : module `ecranFonctions` séparé du code des débits) : liste validée par l'utilisateur, module déplacé dans `data/fs`, ajouté au `custom_berry_solidify` des seuls envs à écran, `banc_demarrage` vert, compilation par la page Build (demande du 2026-11-11) (déplacement dans data/fs fait le 2026-11-12, plan ecran-cave-vues-commandes A1 ; solidification restante)
 - A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Polices : Roboto Condensed TTF sous /sd/polices par FreeType (choix du 2026-11-11), a verifier sur la carte AVEC et SANS carte SD : chemin vu par LVGL (`lvbe_fopen` -> `lv_zip_ufsp`), RAM et PSRAM de FreeType (4 tailles), rendu, place en flash pendant le premier rangement sans SD (~290 Ko : original + copie)
 - A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Vérifier sur la carte, avec l'utilisateur : le sens du PWM de luminosité (registre 0x05 de l'expandeur, clé persist de l'inversion à corriger au besoin), l'adresse 0x5D du tactile GT911, les couleurs de la dalle
 - A9 — Atelier des écrans (plan `atelier-ecrans`) : Suivre le plan : taper `/suivi suivre atelier-ecrans` ; revenir ici : `/suivi suivre debits-deux-cartes`

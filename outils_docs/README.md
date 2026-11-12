@@ -1226,6 +1226,9 @@ compteurs ; voir l'onglet « Aide »). Fichiers `AAAAMMJJ-HHMMSS_<origine>.dmp` 
   Extender est joint par le maître (`IP:port`), redirection posée et identité vérifiée d'abord, comme pour un envoi.
 - **« Sauvegarder maintenant »** : nouvelle sauvegarde « manuelle ». Une sauvegarde « avant flash » est prise seule
   avant un envoi du firmware par câble, une « avant restauration » avant chaque restauration.
+  ESP8266 (Sonoff) : Rules, timers et `Mem` sont dans la sauvegarde (Settings). Juste après la prise, la carte est
+  interrogée sur ce qu'elle garde ailleurs (fichiers d'un système de fichiers, appareils Zigbee) et sur son firmware ;
+  le message de la page (ou le journal, avant flash) dit ce qu'il faudrait récupérer autrement.
 - **Paramètres** de la sauvegarde choisie, repliés par thème, avec un filtre (nom ou valeur). Mots de passe affichés
   `***` : laissés ainsi, ils gardent leur valeur. Une valeur changée est surlignée ; « Enregistrer la copie » écrit
   une **nouvelle** sauvegarde « modifiée », l'originale n'est jamais réécrite. La copie est relue et comparée à

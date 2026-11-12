@@ -134,9 +134,9 @@ c'est **voulu** (decide le 2026-10-04 : « laisse ce test comme il est »). Ne p
 decouper : c'est UN fichier a televerser sur chaque carte, qui se prepare et s'explique
 seul au chargement ; le scinder imposerait deux televersements par carte.
 
-`data/fs/energieFonctions.be` fait **598 lignes**, et c'est **voulu** (decide le 2026-11-09 : exception plutot
+`data/fs/energieFonctions.be` fait **606 lignes**, et c'est **voulu** (decide le 2026-11-09 : exception plutot
 qu'un decoupage ; 531 lignes avant le palier 4 de l'atelier, +57 pour les routes de lecture `f=description`, `f=mois`,
-`f=direct`, +10 pour le relais par morceaux). Module SOLIDIFIE du differentiel (sans PSRAM) : comptage, stockage et
+`f=direct`, +10 pour le relais par morceaux, +8 le 2026-11-12 pour `enregistre` : page sans enregistrement en flash). Module SOLIDIFIE du differentiel (sans PSRAM) : comptage, stockage et
 routes de la page `/energie` restent ensemble (spec `2026-11-08-atelier-energie-differentiel-design.md` §6.3) ; un
 second module solidifie ajouterait une entree de `custom_berry_solidify` et de l'autoexec pour rien.
 
@@ -161,7 +161,7 @@ unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule c
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
 Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plutot qu'un decoupage) :
-`build_serie.py` fait **816 lignes** (+9 le 2026-11-03 : sauvegarde « avant flash » de la configuration ; +18 le 2026-11-02 : sauvegarde et retablissement de `/.drvset003` autour d'un flash serie ; +14 le 2026-11-01 : table de partitions de l'env ; +19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; +11 le 2026-10-27 : data_dir pose avant pio ; +3 le meme jour : identite de l'image du FS ; +7 le meme jour : duree des zones d'envoi memorisee, A13 ; +6 le 2026-10-28 : OTA par le maitre, A11 ; +9 le meme jour : Sleep 0 du maitre pendant l'envoi ; +30 le 2026-10-29 : action « fichiers » de l'onglet Fichiers ; +16 le meme jour : transport MQTT (A16) ; execution en serie des `pio run` : verrous, arret immediat, attente
+`build_serie.py` fait **818 lignes** (+2 le 2026-11-12 : ce qu'un ESP8266 garde hors de sa sauvegarde, dans le journal avant flash ; +9 le 2026-11-03 : sauvegarde « avant flash » de la configuration ; +18 le 2026-11-02 : sauvegarde et retablissement de `/.drvset003` autour d'un flash serie ; +14 le 2026-11-01 : table de partitions de l'env ; +19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; +11 le 2026-10-27 : data_dir pose avant pio ; +3 le meme jour : identite de l'image du FS ; +7 le meme jour : duree des zones d'envoi memorisee, A13 ; +6 le 2026-10-28 : OTA par le maitre, A11 ; +9 le meme jour : Sleep 0 du maitre pendant l'envoi ; +30 le 2026-10-29 : action « fichiers » de l'onglet Fichiers ; +16 le meme jour : transport MQTT (A16) ; execution en serie des `pio run` : verrous, arret immediat, attente
 d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
 verrou), et ses bancs `test_build_serie.py` (**1215**), `test_build_page_chrome.py` (**1103**),
 `test_build_ota_fs.py` (**925**, +78 le 2026-11-09 : place, fichiers identiques, remplacement, A17), `test_build_web.py` (**797**), `test_atelier_graphiques_page_chrome.py` (**773**, sonde de la page de l'atelier, +28 le 2026-11-11 : arrivee par ?lieu= ; +5 le 2026-11-08 : lien « Envoyer par la page Build » et liste vide,
@@ -564,7 +564,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   `genere_brochage_horizontal.py` (ESP32 Relay x8, Waveshare 8DI-8RO), par Excel (pywin32, Python systeme) ; ne
   reecrivent jamais un classeur existant. Banc `outils_pc/test_genere_brochage.py`.
 - Classement des cartes par lieu (2026-11-11, plan `tasks/plans/classement-par-lieu.md`, maquettes `outils_docs/filtre_lieu/`) :
-  `outils_pc/lieux.py` = SEULE table des lieux (2e segment du nom d'env, exception de la piscine), `puce()`, et le JS
+  `outils_pc/lieux.py` = SEULE table des lieux (2e segment du nom d'env ; `EXCEPTIONS` vide depuis le 2026-11-12), `puce()`, et le JS
   `remplitParLieu` (listes `<optgroup>` des pages 7700 a 7980) ; banc `test_lieux.py`. Les routes `/envs`, `/parc`, `/cartes`
   ajoutent `lieu` (et `puce` pour la page Build) et `lieux`. Bascule « Classer par » de l'onglet Build : `build_page_lieux.py`,
   sonde `test_build_page_lieux_chrome.py` ; intertitres de l'onglet Fichiers : `build_page_fichiers.py::fichiersCartes`.
