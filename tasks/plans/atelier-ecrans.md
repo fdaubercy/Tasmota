@@ -140,7 +140,7 @@ nommées, logs par `logFonctions.log` et constantes `LOG_LEVEL_*`).
 - [x] `genere` ; bancs VERT — preuve : `BANC_ECRANS_LVGL: OK` (compile sans avertissement, témoins module cassé et préfixe hors charte, texte spécial restitué, commande et args restitués, refus) ; `banc_ecran_lvgl.py` VERT (82 objets = ecran.json, 4 pages, polices chargées une fois, couleurs selon l'état, courbe, cache : 0 appel au 2e affiche, 1 au changement) et 13 mutants rouges
 - [x] `ecranLvgl.be` des débits généré et écrit ; `build/test_interface_ecran.py` VERT (le fichier présent, interface — preuve : fichier de 484 lignes, `verifie_berry` 0 erreur 0 avertissement ; `BANC_INTERFACE_ECRAN : VERT` ; `banc_demarrage.py` VERT (10 cartes, référence de l'affichage inchangée grâce à `preparation_boot.be::autresInterfaces`) ; variante lvgl `--dossier ... --cenv <copie custom_interface_ecran = lvgl>` VERT (`/ecranLvgl.bec` seul, 0 erreur) ; témoin sans l'option : les deux interfaces compilées
   `haspmota` : exclu du FS) ; `banc_demarrage.py` de la variante `lvgl` VERT
-- [ ] Commit (le fichier généré compris) ; noter dans `debits-deux-cartes` A8 que l'interface LVGL vient du générateur
+- [x] Commit (le fichier généré compris) ; noter dans `debits-deux-cartes` A8 que l'interface LVGL vient du générateur — preuve : d3973eaa0 (12 fichiers, `ecranLvgl.be` compris), note sous l'étape « Interface LVGL pur » de `debits-deux-cartes.md` A8
 
 ## A6 — Page web de l'atelier (port 7960)
 Fichiers : créer `outils_pc/atelier_ecrans_web.py` (serveur, routes), `atelier_ecrans_page.py` (HTML, CSS, thème),
