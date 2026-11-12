@@ -3,8 +3,8 @@
 import fichiers_berry_etat as etat
 
 LIEUX = [("etage2", "2e étage"), ("rdc", "Rez-de-chaussée"), ("cave", "Cave"),
-         ("garage", "Garage"), ("bureau", "Bureau"), ("exterieur", "Extérieur")]
-EXCEPTIONS = {"tasmota-pompe-piscine": "exterieur"}
+         ("garage", "Garage"), ("bureau", "Bureau"), ("jardin", "Jardin")]
+EXCEPTIONS = {}                      # env -> lieu, quand le 2e segment du nom ne le dit pas
 PUCES = {"tasmota32": "ESP32", "tasmota32s3": "ESP32-S3", "tasmota32p4": "ESP32-P4",
          "tasmota32p4r3": "ESP32-P4", "tasmota": "ESP8266"}
 

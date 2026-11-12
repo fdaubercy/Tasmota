@@ -2,7 +2,7 @@
 
 Deux facons de l'enregistrer :
   - ESP32 : importee par pre_utilitaires_platformio.py (extra_scripts des bases ESP32) ;
-  - autre env (ex. ESP8266 tasmota-pompe-piscine) : ce fichier en extra_script direct,
+  - autre env (ex. ESP8266 tasmota-jardin-pompe-piscine) : ce fichier en extra_script direct,
         extra_scripts = ${env.extra_scripts}
                         pre:outils_docs/scripts_python/build/cible_pont_serie.py
     (ne PAS mettre les deux sur un meme env : la cible serait declaree deux fois).

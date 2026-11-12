@@ -8,7 +8,7 @@ build_page_lieux, remplace par des branchements vides) echoue sur la premiere ve
 Montage repris de test_build_page_chrome.py (import du module voisin) : build_web.py dans un processus fils,
 BUILD_WEB_PIO = build_faux_pio.py (le vrai pio n'est JAMAIS lance, garde de t.mode_serveur), depot d'essai
 temporaire, ports COM neutralises. Le depot porte une carte par lieu de la table, 4 au garage, une ESP8266
-(tasmota-pompe-piscine, exception rangee en Exterieur) et une carte hors table (tasmota32s3-jardin-essai).
+(tasmota-jardin-pompe-piscine, rangee en Jardin par son nom) et une carte hors table (tasmota32s3-veranda-essai).
 Spec : docs/superpowers/specs/2026-11-10-classement-par-lieu-design.md §5.
 """
 
@@ -25,7 +25,7 @@ BASE = "tasmota32-sonde-base"
 ETAGE2, RDC, CAVE = "tasmota32s3-etage2-grenier", "tasmota32-rdc-vr-porte", "tasmota32s3-cave-serveur-rly"
 P4, G_S3, CUVE, RIDEAU = ("tasmota32p4-garage-serveur-modbus", "tasmota32s3-garage-serveur-modbus",
                           "tasmota32s3-garage-capteurs-cuve-modbus", "tasmota32s3-garage-rideau-garage-modbus")
-BUREAU, PISCINE, JARDIN = "tasmota32-bureau-interrupteur-energie", "tasmota-pompe-piscine", "tasmota32s3-jardin-essai"
+BUREAU, PISCINE, JARDIN = "tasmota32-bureau-interrupteur-energie", "tasmota-jardin-pompe-piscine", "tasmota32s3-veranda-essai"
 GARAGE = [P4, G_S3, CUVE, RIDEAU]
 CARTES = [ETAGE2, RDC, CAVE] + GARAGE + [BUREAU, PISCINE, JARDIN]
 CENV = f"""\
@@ -36,7 +36,7 @@ custom_files_upload     = no_files
 [env:{PISCINE}]
 build_flags             = -DFIRMWARE_POMPE_PISCINE
 """
-LIEUX = ["2e étage", "Rez-de-chaussée", "Cave", "Garage", "Bureau", "Extérieur", "jardin"]
+LIEUX = ["2e étage", "Rez-de-chaussée", "Cave", "Garage", "Bureau", "Jardin", "veranda"]
 BOUCHON = ("function lieuxGroupes() { return false; }\nfunction lieuxMaj() {}\n"         # temoin : branchements vides
            "function lieuxOuverts() { return {}; }\nfunction lieuxRestaure() {}\n"
            "var lieuxTable = [], lieuxInitial = null, lieuxFichiers = null;\nfunction lieuxPremiere() { return null; }\n")
@@ -105,7 +105,7 @@ def filtre(cdp, texte):
 
 
 def premiere_verification(cdp):
-    """Bascule sur Lieu : groupes de cartes dans l'ordre de la table, « jardin » en dernier, puis bases et amont."""
+    """Bascule sur Lieu : groupes de cartes dans l'ordre de la table, « veranda » en dernier, puis bases et amont."""
     for nom in (ETAGE2, P4, CUVE, RIDEAU):
         t.coche(cdp, f"#env-{nom}")
     bascule(cdp, "lieu")
@@ -116,7 +116,7 @@ def sonde(m, capture):
     cdp = m.cdp
     ouvre(m)
     obtenu, attendu = premiere_verification(cdp)
-    verifie(obtenu, attendu, "Lieu : 7 groupes de cartes (table puis « jardin »), puis Mes bases, puis amont")
+    verifie(obtenu, attendu, "Lieu : 7 groupes de cartes (table puis « veranda »), puis Mes bases, puis amont")
     verifie([g["ouvert"] for g in groupes(cdp)], [True, False, False, True, False, False, False, True, False],
             "Lieu : groupe ouvert s'il contient un coche, ferme sinon ; bases ouvertes, amont sans coche ferme")
     verifie(cdp.js("document.querySelector('.l-barre button[data-classement=lieu]').getAttribute('aria-pressed')"), "true",

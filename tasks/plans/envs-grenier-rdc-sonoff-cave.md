@@ -4,7 +4,7 @@ titre: Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la
 objectif: Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff ; ajouter la pompe de la piscine (192.168.0.40) le projecteur du jardin (192.168.0.41) et celui du barbecue : sauvegarde, env, mise en service
 statut: actif
 cree: 2026-11-11
-maj: 2026-11-12 (A16 : pompe renommée tasmota-jardin-pompe-piscine, lieu Jardin)
+maj: 2026-11-12 (A17 : env du NOUS créé et adapté, mesure vérifiée, compilation lancée)
 ---
 # Deux envs : serveur du grenier du RDC et Sonoff de la porte de la cave ; cave S3
 
@@ -423,11 +423,15 @@ chercherait les réseaux Wi-Fi du `.h`, pas le répéteur : elle serait perdue s
   `#elif defined(FIRMWARE_ESP8266_JARDIN_POMPE_PISCINE)`, `lieux.LIEUX` `("jardin", "Jardin")`, `EXCEPTIONS` vide ;
   `test_lieux.py`, `test_build_envs.py`, `test_lieux_js.mjs`, sonde `test_build_page_lieux_chrome.py` VERTS ;
   `platformio_override.ini` ne citait pas l'env. Dossier `data/jardin/tasmota-pompe-piscine/` créé avec le relevé.
-- [ ] Env aligné sur les deux Sonoff (A15) : `extends = env:tasmota-base-1M` ; section du `.h` récrite d'après le relevé et
+- [x] Env aligné sur les deux Sonoff (A15) : `extends = env:tasmota-base-1M` ; section du `.h` récrite d'après le relevé et
   avec l'accord de l'utilisateur (diff montré) : `USE_MQTT_TLS` retiré, `MODULE` ou `USER_TEMPLATE` du vrai matériel,
   topic, client, groupe, FriendlyName, `USER_BACKLOG` (Hostname, émulation, timers de la pompe, comme ceux de la TV),
   Rules éventuelles en `USER_RULE1/2`. Accès Wi-Fi par le répéteur : à reprendre de la sauvegarde (restauration) ou à poser
   dans le `.h` ; mot de passe jamais affiché ni commité hors des fichiers que l'utilisateur commite lui-même.
+  — preuve : 2026-11-12, accord de l'utilisateur (« allez on poursuit » après le diff) : section
+  `FIRMWARE_ESP8266_JARDIN_POMPE_PISCINE` avec `CFG_HOLDER` 4617 (celui de la carte : config gardée au flash, Wi-Fi du
+  répéteur compris), `MODULE SONOFF_S2X`, `USE_MQTT_TLS` retiré, client, topic, groupe, FriendlyName, `USER_BACKLOG`
+  (émulation, Timer1 et Timer2 désarmés) ; modèles P4 commentés retirés. Wi-Fi du répéteur volontairement hors du `.h`.
 - [ ] Compilation par la page Build (:7700), SUCCESS lu en fin de journal, taille de l'image comparée au 1 Mo (les deux
   Sonoff : 718 Ko) ; mise à jour en OTA par `tasmota-minimal` si l'image ne tient pas à côté de l'ancienne (A15).
 - [ ] Recenser ce qui vise `jardin/pompe_piscine` (Node-RED du Pi, Alexa par l'émulation, Home Assistant, Telegram) avant
@@ -478,7 +482,7 @@ discovery activés ; valeurs du persist reprises de l'interface web de la carte.
 - [x] Page `/energie` et enregistrement de la consommation sur cette carte — preuve : décision de l'utilisateur du
   2026-11-12, « Crée la page '/energie' mais sans activer les enregistrements » (la règle « pas d'enregistrement sur ESP32
   classique » est donc respectée).
-- [ ] Clé `diverses.energie.enregistrement` (`ON` par défaut, absente = `ON` : le différentiel ne change pas) : à `OFF`,
+- [x] Clé `diverses.energie.enregistrement` (`ON` par défaut, absente = `ON` : le différentiel ne change pas) : à `OFF`,
   `controleEnergie.be::cycle` garde la courbe de 24 h en RAM (`notePuissance`, ~600 o, perdue au redémarrage) mais ne lit ni
   n'écrit rien en flash (`lisCourbe`, `releve`, `sauveCourbe` sautés) ; `energieFonctions.be::envoieDonnees` ajoute
   `"enregistrement"` ; `data/sd/js/energie.js` affiche « Enregistrement désactivé » au lieu de « Aucun relevé pour
@@ -486,24 +490,57 @@ discovery activés ; valeurs du persist reprises de l'interface web de la carte.
   différentiel à recompiler aussi (comportement inchangé). Bancs `berry/banc_energie.py` (cas `OFF` : aucun fichier écrit,
   avec témoin) et `outils_pc/test_energie_rendu.mjs` ; `energieFonctions.be` passe au-delà de 598 lignes (exception du
   CLAUDE.md à mettre à jour). Écrit hors build en cours.
-- [ ] Env du NOUS : liste `page_energie` retirée de son `custom_files_exclude`, `energieFonctions` et `controleEnergie` dans
+  — preuve : 2026-11-12, `energieFonctions.be::enregistre` (et champ `enregistrement` de `envoieDonnees`),
+  `controleEnergie.be::cycle` (`enregistre &&` devant `lisCourbe` et `releve`), `energie.js` (message « Enregistrement
+  désactivé »), `modele_persist.json` ; `verifie_berry.py` 0 erreur ; `banc_energie.py` VERT (164 vérifications, mutants
+  « enregistrement jamais coupé » et « non transmis à la page » rouges, rendu « enregistrement coupé ») ;
+  `banc_energie_routes.py` VERT ; `test_energie_rendu.mjs` 0 échec sur 121 ; CLAUDE.md : 606 lignes. Schéma non
+  régénéré (il se calcule sur le parc ; la clé passe par `additionalProperties`). Firmware du différentiel à recompiler.
+- [x] Mesure d'énergie du NOUS à vérifier (l'utilisateur pense que son firmware de l'époque n'avait pas l'énergie) : relevé du
+  2026-11-12 13:10, firmware 13.1.0 OFFICIEL (`OtaUrl` ota.tasmota.com), bloc `ENERGY` présent (capteur détecté) mais
+  `Voltage` 0, `Power` 0, `Total` 0,021 kWh depuis le 2026-07-18 ; `PowerCal`/`VoltageCal`/`CurrentCal` -> `Error`. Soit la
+  BL0942 ne répond pas (GPIO3), soit elle mesure en aval du relais. Essai proposé, avec accord : `Power ON` 10 s, `Status 8`,
+  `Power OFF`. Calibrage : seulement dans `/.drvset003` (sauvegarde du 2026-11-12) ; `diverses.energie.calibrage` laissé
+  absent du persist (`verifieCalibrage` ne touche alors à rien).
+  — preuve : essai du 2026-11-12 13:12 avec accord (`Power ON` 12 s puis `OFF`) : 232 V, 100 à 102 W, 0,44 A, facteur 1,00,
+  Total 0,021 -> 0,022 kWh : la BL0942 mesure EN AVAL du relais (0 V relais ouvert). `/.drvset003` de la sauvegarde (octets
+  36/68/100) : 596 / 15187 / 251213 = défauts BL0942, carte jamais calibrée ; repris dans `diverses.energie.calibrage`.
+- [x] Wi-Fi du NOUS (confirmé par l'utilisateur : répéteur KuWFi seulement) : `serveur.wifi.reseau1/2` = « Relai Wifi 2.4G
+  KuWFi » / « Repeteur Wifi 2.4G KuWFi » ; mots de passe recopiés de la sauvegarde de la carte SANS affichage, si l'utilisateur
+  accepte qu'ils entrent dans le dépôt public comme celui de MAISON. Sans eux, `configGlobal` imposerait MAISON et la carte
+  redémarrerait toutes les 300 s sans Wi-Fi (`timerRebootSansWifi`).
+  — preuve : accord du 2026-11-12 (« Tu peux recopier les mots de passe ») : `reseau1` « Relai Wifi 2.4G KuWFi », `reseau2`
+  « Repeteur Wifi 2.4G KuWFi », mots de passe recopiés de la sauvegarde par decode-config, jamais affichés.
+- [x] Env du NOUS : liste `page_energie` retirée de son `custom_files_exclude`, `energieFonctions` et `controleEnergie` dans
   son `custom_berry_solidify`, `demarrage.charge(["controleEnergie"], "diverses.energie")` dans son autoexec, bloc
   `diverses.energie` (`activation` ON, `enregistrement` OFF, `calibrage` repris de la carte : 12530 / 1950 / 3500 à
   confirmer contre `/.drvset003`) ; `banc_demarrage.py`.
+  — preuve : hérité du modèle : `energieFonctions`/`controleEnergie` dans `custom_berry_solidify`, `page_energie` non exclue,
+  `demarrage.charge(["controleEnergie"], "diverses.energie")` dans l'autoexec. `banc_demarrage.py` : le NOUS n'est pas dans
+  ses `CARTES` (ajout et `--enregistre` à faire hors travail d'une autre session).
 - [ ] Sauvegarde par l'onglet « Sauvegarde configuration » (HTTP), page Build redémarrée avant ; `/_persist.json` de la
   carte téléchargé à côté (`/ufsd?download=/_persist.json`, lecture seule) ; décider s'il faut étendre le contrôle hors
   configuration (`build_sauvegarde_esp8266.py`, A15) aux ESP32 sans dossier dans le dépôt, pour qu'il signale leurs fichiers.
 - [ ] `.dmp` décodé en `config_decodee.json` (mots de passe masqués), comme .42 et .45 ; template « NOUS B2T » vérifié
   contre la base des modèles (bornes : relais, bouton, interrupteur, puce de mesure d'énergie).
-- [ ] Nom, dossier et firmware, décision de l'utilisateur. Proposition de Claude : `tasmota32-jardin-projecteur-led`
+- [x] Nom, dossier et firmware, décision de l'utilisateur. Proposition de Claude : `tasmota32-jardin-projecteur-led`
   (convention `tasmota32-<lieu>-<nom>`), dossier `data/jardin/tasmota32-projecteur-led/`. Firmware à choisir : celui de
   l'amont (`tasmota32`, sans le cadre Berry du dépôt, comme aujourd'hui) ou le cadre du dépôt (persist, autoexec, logs
   par `logFonctions` ; pas d'historique : ESP32 classique). Lieu « Jardin » dans `lieux.LIEUX` (même question que A16).
   Firmware décidé le 2026-11-12 : cadre du dépôt (persist personnalisé, Berry, range extender, discovery). Nom accepté le
   2026-11-12 (« Pour son nom : OK ») : `tasmota32-jardin-projecteur-led`, dossier `data/jardin/tasmota32-projecteur-led/`.
-- [ ] Env créé (cenv et section `#elif` du `.h`) d'après le relevé, avec l'accord de l'utilisateur (diff montré) : IP,
+  — preuve : voir les décisions ci-dessus (nom accepté, cadre du dépôt).
+- [x] Env créé (cenv et section `#elif` du `.h`) d'après le relevé, avec l'accord de l'utilisateur (diff montré) : IP,
   hôte, topic, client, groupe, `USER_TEMPLATE` « NOUS B2T », FriendlyName, `USER_BACKLOG` ; calibrage de la mesure
   d'énergie gardé (`/.drvset003` sauvegardé et rétabli autour d'un flash série par `build_drvset.py`) ; hors build en cours.
+  — preuve : 2026-11-12 13:13, `fichiers_berry_creation.cree` (modèle `tasmota32-bureau-interrupteur-energie`, insertion
+  pure vérifiée : cenv +71 lignes, `.h` +133 ; copie de secours `%LOCALAPPDATA%/outils_tasmota/fichiers_berry/sauvegardes/20261112-131333-299819-creation`),
+  puis : `USER_TEMPLATE` NOUS B2T, `USE_WIFI_RANGE_EXTENDER` décommenté (AP `PROJECTEUR-JARDIN-GATEWAY`, même mot de passe,
+  empreintes identiques) ; persist : bloc `modules.projecteur` (bouton GPIO4, interrupteur GPIO5 SwitchMode 0, relais GPIO12
+  type 224, BL0942 Rx GPIO3 / Tx GPIO1, `ledLink` GPIO0, thermomètre ADC OFF), template, discovery ON, range extender ON
+  sans NAPT, énergie ON sans enregistrement ; `autoexec.be` + `rangeExtenderFonctions`/`controleRangeExtender` ;
+  `autoexec.bat` propre au NOUS (IP .41, `SerialLog 0`, sans mot de passe ni timers du différentiel). `--valide` : 0 erreur ;
+  `verifie_berry.py` 0 erreur ; `test_lieux.py`, `test_build_envs.py` VERTS (OTA possible, FS avec le firmware).
 - [ ] Compilation par la page Build (:7700), SUCCESS lu en fin de journal, taille comparée à la partition de 4 Mo.
 - [ ] Recenser ce qui vise `jardin/projecteur_led` (Node-RED, Alexa, Home Assistant) avant tout changement d'identité.
 - [ ] Mise en service, avec l'accord de l'utilisateur : sauvegarde « avant flash », envoi (OTA possible sur 4 Mo),

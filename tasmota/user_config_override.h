@@ -1242,6 +1242,140 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #endif
             #define USER_BACKLOG      "Backlog Module 0; Hostname DISJONCTEUR-DIFF-BUREAU"
 
+        // -- Options for tasmota32-jardin-projecteur-led ------
+        #elif defined(FIRMWARE_ESP32_JARDIN_PROJECTEUR_LED)
+            #undef CFG_HOLDER
+            #define CFG_HOLDER  1611    // propre a cet env, incremente par le pre-script (cfg_holder.py)
+            // -- CODE_IMAGE_STR is the name shown between brackets on the 
+            //    Information page or in INFO MQTT messages
+            #undef CODE_IMAGE_STR
+                #define CODE_IMAGE_STR "Projecteur de jardin"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
+
+            // -- ESP32 sans PSRAM : animation Berry et serveur FTP retires (audit Berry P9.8, 2026-10-26) --
+            // Memes raisons que la cave ESP32 (section des deux cartes de la cave, plus haut) : l'animation est
+            // definie pour tous les modules dans la partie commune et chargee d'office par l'init amont
+            // (~94k + ~98k de flash, un peu de RAM Berry) alors que la carte n'a pas de ruban ; le FTP
+            // ('new FtpServer', relance a chaque connexion reseau) faisait planter la cave (tas < 25 Ko).
+            // A garder avant tout deploiement du framework Berry sur cette carte. serveurFTP.activation
+            // est a "OFF" dans son _persist.json.
+            #ifdef USE_BERRY_ANIMATION_DSL
+                #undef USE_BERRY_ANIMATION_DSL
+            #endif
+            #ifdef USE_BERRY_ANIMATION
+                #undef USE_BERRY_ANIMATION
+            #endif
+            #ifdef USE_FTP
+                #undef USE_FTP
+            #endif
+        
+            // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------
+            // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino
+            // #define FILE_LOG_SIZE       100
+            // #define FILE_LOG_COUNT      10                        // Enable with command `FileLog 1..4` or `FileLog 11..14`
+            // #define FILE_LOG_NAME       "/logs/fileLog %02d.txt"
+        
+            // -- Project -------------------------------------
+            #undef PROJECT
+                #define PROJECT           "PROJECTEUR-JARDIN"         	 // PROJECT is used as the default topic delimiter
+            #ifdef USER_TEMPLATE
+                #undef USER_TEMPLATE
+            #endif
+            #define USER_TEMPLATE 		"{\"NAME\":\"Projecteur de jardin\",\"GPIO\":[544,3200,1,8160,32,160,1,1,224,0,0,1,1,1,0,1,0,1,1,1,0,1,1,1,0,0,0,0,1,1,1,0,1,0,0,1],\"FLAG\":0,\"BASE\":1}"
+                
+            // -- Wi-Fi ---------------------------------------
+            #undef WIFI_IP_ADDRESS
+                #define WIFI_IP_ADDRESS       "192.168.0.41"         // [IpAddress1] Set to 0.0.0.0 for using DHCP or enter a static IP address
+        
+            // -- Setup your own RANGE EXTENDER settings  -----
+            // Les autres paramètres du RangeExtender sont gérés par la partie 'Post-process compile options' en fin de fichier
+            // Backlog RgxSSID rangeextender ; RgxPassword securepassword ; RgxAddress 192.168.123.1 ; RgxSubnet 255.255.255.0; RgxState 1 ; RgxNAPT 1
+            // RgxPort tcp, 8080, 192.168.4.1, 80
+            // Point d'acces de secours (telephone si le Wi-Fi tombe), SANS routage : routeNAPT OFF dans le persist (2026-11-12)
+            #define USE_WIFI_RANGE_EXTENDER
+            #ifdef USE_WIFI_RANGE_EXTENDER
+                #define WIFI_RGX_SSID           "PROJECTEUR-JARDIN-GATEWAY"
+                #define WIFI_RGX_PASSWORD       "Lune5676"
+            #endif
+        
+            // You might even pass some parameters from the command line ----------------------------
+            // Ie:  export PLATFORMIO_BUILD_FLAGS='-DUSE_CONFIG_OVERRIDE -DMY_IP="192.168.1.99" -DMY_GW="192.168.1.1" -DMY_DNS="192.168.1.1"'
+        
+            // -- Setup your own MQTT settings  ---------------
+            #undef MQTT_CLIENT_ID
+                #define MQTT_CLIENT_ID "PROJECTEUR-JARDIN" // [MqttClient] Also fall back topic using last 6 characters of MAC address or use "DVES_%12X" for complete MAC address
+            #undef MQTT_TOPIC
+                #define MQTT_TOPIC "jardin/projecteur_led" // [Topic] unique MQTT device topic including (part of) device MAC address
+            #undef MQTT_GRPTOPIC
+                #define MQTT_GRPTOPIC "tasmotas/jardin" // [GroupTopic] MQTT Group topic
+            #undef FRIENDLY_NAME
+                #define FRIENDLY_NAME "Projecteur de jardin" // [FriendlyName] Friendlyname up to 32 characters used by webpages and Alexa
+            #undef EMULATION
+                #define EMULATION EMUL_NONE // [Emulation] Select Belkin WeMo (single relay/light) or Hue Bridge emulation (multi relay/light) (EMUL_NONE, EMUL_WEMO or EMUL_HUE)
+            
+            // -- ESP-NOW -------------------------------------
+            // Plus d'info dans le dossier : "Tasmota\info\xdrv_57_tasmesh.md"
+            // #define USE_TASMESH                              // Enable Tasmota Mesh using ESP-NOW (+11k code)
+        
+            // -- Optional modules ----------------------------
+            #undef USE_SHUTTER // Add Shutter support for up to 4 shutter with different motortypes (+11k code)
+        
+            // -- LCD I2C -----------------------
+            //#define USE_I2C             // I2C using library wire (+10k code, 0k2 mem, 124 iram)
+            //#define USE_DISPLAY         // Add I2C/TM1637/MAX7219 Display Support (+2k code)
+            //#define USE_DISPLAY_SSD1306 // [DisplayModel 2] [I2cDriver4] Enable SSD1306 Oled 128x64 display (I2C addresses 0x3C and 0x3D) (+16k code)
+            //#define USE_DISPLAY_SH1106  // [DisplayModel 7] [I2cDriver6] Enable SH1106 Oled 128x64 display (I2C addresses 0x3C and 0x3D)
+            //#define USE_GRAPH           // Enable line charts with displays
+            //#define NUM_GRAPHS 4        // Max 16
+        
+            // -- I2C sensors ---------------------------------
+            #undef USE_I2C                                   // pas de bus I2C sur le D3T (nettoyage du 2026-11-01)
+        
+            // -- Internal Analog input -----------------------
+            //#undef USE_ADC_VCC // Display Vcc in Power status. Disable for use as Analog input on selected devices	
+        
+            // -- Optional light modules ----------------------
+            // USE_LIGHT et USE_WS2812 restent au defaut amont malgre l'absence de ruban : configDevices.be (light.set)
+            // et ledsPanelFonctions.be (Leds()), solidifies sur cet env, citent ces globals (sinon 'undeclared' au chargement).
+        
+            // -- One wire sensors ----------------------------
+            #undef USE_HDMI_CEC                              // Add support for HDMI CEC bus (+7k code, 1456 bytes IRAM)
+            #undef USE_DS18x20                               // pas de sonde DS18B20 sur le D3T (nettoyage du 2026-11-01)
+        
+            // -- Serial sensors ------------------------------
+            // #define USE_MODBUS
+            // #define USE_TASMOTA_CLIENT                       // Add support for Arduino Uno/Pro Mini via serial interface including flashing (+2k6 code, 64 mem)
+                                                            // GPIO4=Slave TX / GPIO5=Slave RX
+        
+            // -- Capteurs & Gestion Bluetooth ------------------------------
+            // #define USE_BLE_ESP32                              // Add support for ESP32 as a BLE-bridge (+9k2? mem, +292k? flash)
+        
+            // -- LoRaWan 868MHz ------------------------------
+            // #define USE_LORAWAN_BRIDGE      // Add support for LoRaWan bridge (+8k code)
+        
+            // -- Utilisation des WebSockets ------------------------------
+            #define USE_WSSERVER
+        
+            // -- Rules or Script  ----------------------------
+            // Select none or only one of the below defines USE_RULES or USE_SCRIPT
+            #define USE_RULES                                                       // Add support for rules (+8k code)
+            #ifdef USE_RULES
+                #define SUPPORT_MQTT_EVENT                                          // Support trigger event with MQTT subscriptions (+1k8 code)
+                #define USE_EXPRESSION                                              // Add support for expression evaluation in rules (+1k7 code)
+                    #define SUPPORT_IF_STATEMENT                                    // Add support for IF statement in rules (+2k7)
+                //#define USER_RULE1 "ON System#Boot DO Sensor12 S0 ENDON"          // Add rule1 data saved at initial firmware load or when command reset is executed
+                //#define USER_RULE2 "<Any rule2 data>"                             // Add rule2 data saved at initial firmware load or when command reset is executed
+                //#define USER_RULE3 "<Any rule3 data>"                             // Add rule3 data saved at initial firmware load or when command reset is executed
+                #define USE_VIEW_RULE_MEMS_AND_VARS                                 // Enable viewing of rule memories and variables in the web UI (+0k7 code)
+            #endif
+            #ifdef USER_BACKLOG
+                #undef USER_BACKLOG
+            #endif
+            #define USER_BACKLOG      "Backlog Module 0; Hostname PROJECTEUR-JARDIN"
+
         // -- Options for firmware tasmota32s3-maitre-garage-modbus ------
         #elif defined(FIRMWARE_ESP32S3_ETAGE2_GRENIER)
             #undef CFG_HOLDER
@@ -1902,7 +2036,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
         // -- Options for tasmota32p4-wifi6 ------
         #elif defined(FIRMWARE_ESP32P4_GARAGE_SERVEUR_MODBUS)
             #undef CFG_HOLDER
-            #define CFG_HOLDER  1609    // propre a cet env, incremente par le pre-script (cfg_holder.py)
+            #define CFG_HOLDER  1610    // propre a cet env, incremente par le pre-script (cfg_holder.py)
             // -- CODE_IMAGE_STR is the name shown between brackets on the 
             //    Information page or in INFO MQTT messages
             #ifdef CODE_IMAGE_STR
@@ -2098,60 +2232,60 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
                 #undef USER_BACKLOG
             #endif
             #define USER_BACKLOG      "Backlog Hostname SERVEUR-GARAGE"
+
+        // -- Options for tasmota-jardin-pompe-piscine (Sonoff S2X, ESP8266EX 1 Mo, SANS Berry ni FS) ------
+        // Identite relevee le 2026-11-12 sur 192.168.0.40 (Tasmota 15.5.0 officiel ; /dl decode :
+        // data/jardin/tasmota-pompe-piscine/config_decodee.json ; sauvegarde de l'onglet du meme jour).
+        // CFG_HOLDER de la carte garde (4617) : le flash ne remet PAS la config a zero, elle garde son Wi-Fi (repeteur KuWFi,
+        // seuls reseaux qu'elle connait), son emulation et ses timers. Les valeurs ci-dessous ne servent qu'apres un Reset 1.
         #elif defined(FIRMWARE_ESP8266_JARDIN_POMPE_PISCINE)
-            //    Information page or in INFO MQTT messages
+            #ifdef CFG_HOLDER
+                #undef CFG_HOLDER
+            #endif
+            #define CFG_HOLDER          4617                    // celui de la carte (Status 1 : CfgHolder) : config gardee au flash
             #ifdef CODE_IMAGE_STR
                 #undef CODE_IMAGE_STR
             #endif
             #define CODE_IMAGE_STR      "Pompe de Piscine"
-            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
             #ifndef DISABLE_REFERER_CHK
                 #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
             #endif
-        
-            // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------
-            // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino
-            // #define FILE_LOG_SIZE       100
-            // #define FILE_LOG_COUNT      10                        // Enable with command `FileLog 1..4` or `FileLog 11..14`
-            // #define FILE_LOG_NAME       "/logs/fileLog %02d.txt"
 
-            // -- Project -------------------------------------
             #ifdef PROJECT
                 #undef PROJECT
             #endif
-            #define PROJECT             "POMPE-PISCINE"         	 // PROJECT is used as the default topic delimiter
-
-            // #ifdef USER_TEMPLATE
-            //     #undef USER_TEMPLATE
-            // #endif
-
-            // #if defined(ESP32P4_BASE_DEVKIT)
-            //     #define USER_TEMPLATE 		"{\"NAME\":\"ESP32P4 Serveur Garage Modbus\",\"GPIO\":[1,1,1,1,9440,9408,1,640,608,7776,7840,7872,7808,9376,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,5568,1,1,1,1,1,1,1,8864,8896,8928,8960,8832,8800,6720,1,1,1,1,1,5536,5600,1,1],\"FLAG\":0,\"BASE\":1,\"CMND\":\"ethtype 1|ethaddress -1\"}"
-            // #elif defined(ESP32P4_BASE_WIFI6)
-            //     #define USER_TEMPLATE 		"{\"NAME\":\"ESP32P4 Serveur Garage Modbus\",\"GPIO\":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
-            // #endif
-            // #define USER_TEMPLATE 		"{\"NAME\":\"ESP32P4 Serveur Garage Modbus\",\"GPIO\":[1,1,1,1,9440,9408,1,1,608,640,1,1,1,1,8864,8896,8928,8960,8832,8800,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,352,1,1,1,1,1,1,1,1,1,1,1,1,1,8736],\"FLAG\":0,\"BASE\":1}"
-
-            // --- Configuration du Module Sonoff S26 ---
-            // Définit le profil matériel par défaut (Sonoff S2x utilise le template de base Sonoff S20 ou un template dédié)            
+            #define PROJECT             "POMPE-PISCINE"
             #ifdef MODULE
                 #undef MODULE
             #endif
-            #define MODULE  1                               // 1 correspond à l'ID du module SONOFF_S20
+            #define MODULE              SONOFF_S2X              // Module 8 de la carte (« Sonoff S2X »)
 
-            // -- Wi-Fi ---------------------------------------
             #ifdef WIFI_IP_ADDRESS
                 #undef WIFI_IP_ADDRESS
             #endif
-            #define WIFI_IP_ADDRESS         "192.168.0.40"               // [IpAddress1] Set to 0.0.0.0 for using DHCP or enter a static IP address
-
-            // --- Options recommandées pour préserver l'espace de stockage (1MB Flash) ---
-            #define USE_MQTT_TLS         // Désactivé par défaut, laissez-le ainsi pour gagner de la place
-
-            #ifdef USE_WEBSERVER
-                #undef USE_WEBSERVER
+            #define WIFI_IP_ADDRESS     "192.168.0.40"
+            #ifdef MQTT_CLIENT_ID
+                #undef MQTT_CLIENT_ID
             #endif
-            #define USE_WEBSERVER        // Optionnel : Conserver le serveur web pour l'interface de gestion
+            #define MQTT_CLIENT_ID      "POMPE-PISCINE"
+            #ifdef MQTT_TOPIC
+                #undef MQTT_TOPIC
+            #endif
+            #define MQTT_TOPIC          "jardin/pompe_piscine"
+            #ifdef MQTT_GRPTOPIC
+                #undef MQTT_GRPTOPIC
+            #endif
+            #define MQTT_GRPTOPIC       "tasmotas/jardin"
+            #ifdef FRIENDLY_NAME
+                #undef FRIENDLY_NAME
+            #endif
+            #define FRIENDLY_NAME       "Pompe de piscine"
+            #ifdef USER_BACKLOG
+                #undef USER_BACKLOG
+            #endif
+            // Emulation 1 (Belkin WeMo, Alexa) et timers de la carte (Timer1 08:00 ON, Timer2 20:00 OFF, desarmes) :
+            // reposes seulement apres une remise a zero ; le Wi-Fi du repeteur, lui, n'est PAS dans le .h (mot de passe).
+            #define USER_BACKLOG        "Backlog Hostname POMPE-PISCINE; DeviceName Pompe de piscine; Emulation 1; Timers 1; Timer1 {\"Enable\":0,\"Time\":\"08:00\",\"Days\":\"1111111\",\"Repeat\":0,\"Output\":1,\"Action\":1}; Timer2 {\"Enable\":0,\"Time\":\"20:00\",\"Days\":\"1111111\",\"Repeat\":0,\"Output\":1,\"Action\":0}"
 
         // -- Options for tasmota-cave-lumiere-porte (Sonoff ESP8285 1 Mo, SANS Berry ni FS) ------
         // Identite relevee le 2026-11-12 sur 192.168.0.45 (/dl decode : data/cave/tasmota-lumiere-porte/config_decodee.json).

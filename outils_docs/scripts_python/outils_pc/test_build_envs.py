@@ -357,7 +357,7 @@ def test_vrais_fichiers():
     """Lecture seule des vrais .ini."""
     envs = {e.nom: e for e in be.liste_envs(RACINE)}
     # Independant du nombre d'envs (l'utilisateur en ajoute) : au moins 15, et ceux cites ici presents.
-    cites = ["tasmota32s3-garage-capteurs-cuve-modbus", "tasmota32s3-garage-serveur-modbus", "tasmota-pompe-piscine",
+    cites = ["tasmota32s3-garage-capteurs-cuve-modbus", "tasmota32s3-garage-serveur-modbus", "tasmota-jardin-pompe-piscine",
              "tasmota32-cave-serveur-rly", "tasmota32p4-garage-serveur-modbus", "tasmota32"]
     verifie((len([e for e in envs.values() if e.ecrivable]) >= 15, [c for c in cites if c not in envs]), (True, []),
             "reel : au moins 15 envs cenv listes, envs cites presents")
@@ -366,12 +366,12 @@ def test_vrais_fichiers():
     verifie(envs["tasmota32s3-garage-capteurs-cuve-modbus"].port, "COM12", "reel : cuve -> COM12")
     e = envs["tasmota32s3-garage-serveur-modbus"]
     verifie((e.port, e.port_herite), ("COM11", True), "reel : serveur-modbus -> COM11 herite")
-    verifie(envs["tasmota-pompe-piscine"].ota_possible, False, "reel : pompe piscine (ESP8266) sans OTA")
+    verifie(envs["tasmota-jardin-pompe-piscine"].ota_possible, False, "reel : pompe piscine (ESP8266) sans OTA")
     verifie(envs["tasmota32-cave-serveur-rly"].port, "COM11", "reel : cave -> COM11 (commentaire de fin)")
     verifie((getattr(envs["tasmota32s3-garage-capteurs-cuve-modbus"], "fs_avec_firmware", None),
              getattr(envs["tasmota32p4-garage-serveur-modbus"], "fs_avec_firmware", None),
              getattr(envs["tasmota32"], "fs_avec_firmware", None),
-             getattr(envs["tasmota-pompe-piscine"], "fs_avec_firmware", None)),
+             getattr(envs["tasmota-jardin-pompe-piscine"], "fs_avec_firmware", None)),
             (True, True, False, False), "reel : FS flashe avec le firmware pour cuve et P4, pas pour tasmota32 ni la pompe")
 
 
