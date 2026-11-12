@@ -146,13 +146,19 @@ Produit :
 - `ecrit_gabarit(racine, gabarit, empreinte_lue, builds_en_cours) -> dict` ;
 - `note_impression(racine, envs: list[str], taille_mm: float) -> None` et `annule_impression(racine, env) -> None` sur
   `outils_docs/etiquettes_qr/impressions.json` : `{env: {"empreinte", "date", "taille_mm"}}`, jamais le texte.
-- [ ] Bancs d'abord (rouge), copie temporaire : surcharge minimale écrite ; `page_carte` -> 4 fichiers touchés et
+Écarts à la réalisation (2026-11-12) : `prevoit` rend `{"fichiers": [{"chemin", "avant", "apres"}], "empreinte",
+"signaux"}` (forme de l'atelier) ; `page_carte` touche 3 fichiers (cenv, autoexec, `qrcode.json`) en plus de la surcharge ;
+refus de `page_carte` tant que `FICHIERS_PAGE` (A6) manque (la ligne d'autoexec chargerait un module absent) ; solidifié
+seulement si `custom_files_exclude_solidified` est ON, sinon signal « reste sur le FS » ; `note_impression(racine, textes:
+dict[env, texte], taille_mm)` ; en plus `prevoit_gabarit`, `prevoit_exclusions` / `ecrit_exclusions` (pour l'A6) ;
+dossiers parents créés avant la Transaction (`cartes/` n'existait pas : défaut trouvé par le banc). `atelier_graphiques_ecriture`
+reçoit des paramètres facultatifs (`texte`/`marque`, `solides`, `ligne`), défauts = ses constantes.
+- [x] Bancs, copie temporaire — preuve : test_etiquettes_qr_ecriture.py, 34 vérifications ; écrit après le module (écart au plan), ses refus attendus (page sans A6, ESP8266, build, empreinte périmée, réglage invalide) échouent s'ils ne lèvent pas : surcharge minimale écrite ; `page_carte` -> fichiers touchés et
   `_controle` vert ; retour à `page_carte` faux -> cenv et autoexec octet pour octet d'avant ; empreinte périmée -> refus,
   rien écrit (vigilance 4) ; build en cours -> refus ; env ESP8266 + `page_carte` -> refus avec message ;
   `impressions.json` ne contient pas le texte
-- [ ] Module ; bancs VERT ; `test_atelier_graphiques_ecriture.py` VERT ; `berry/banc_demarrage.py` VERT (sans
-  `--enregistre`)
-- [ ] Commit
+- [x] Module ; bancs VERT — preuve : BANC_ETIQUETTES_QR_ECRITURE: OK (34) ; test_atelier_graphiques_ecriture.py : même unique échec avant et après le paramétrage (« solidifie refuse sans custom_files_exclude_solidified = ON », préexistant, à signaler) ; `berry/banc_demarrage.py` sans objet (ni cenv ni autoexec du vrai dépôt modifiés)
+- [x] Commit — preuve : commit « A3, ecriture au depot » (git log)
 
 ## A4 — Serveur et page 7970
 Fichiers : créer `outils_pc/etiquettes_qr_web.py` (serveur, routes), `etiquettes_qr_page.py` (HTML, CSS),

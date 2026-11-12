@@ -119,7 +119,7 @@ def _fin_section(ini, lignes, section):
     return max(fins) if fins else _regions(lignes)[section][0]
 
 
-def _ajoute(ini, lignes, env, option, valeurs, marque):
+def _ajoute(ini, lignes, env, option, valeurs, marque, texte=MARQUE):
     """`valeurs` en fin de l'option propre de l'env ; option heritee -> `${env:<ancetre>.option}` puis les valeurs ;
     absente partout -> creee. Une option creee est precedee de MARQUE si `marque`."""
     propre = ini.sections.get("env:" + env, {}).get(option)
@@ -130,7 +130,7 @@ def _ajoute(ini, lignes, env, option, valeurs, marque):
     tete = ["${" + ancetre + "." + option + "}"] if ancetre else []
     nouvelles = _option(option, tete + list(valeurs))
     i = _fin_section(ini, lignes, "env:" + env)
-    return lignes[:i + 1] + ([MARQUE] if marque else []) + nouvelles + lignes[i + 1:]
+    return lignes[:i + 1] + ([texte] if marque else []) + nouvelles + lignes[i + 1:]
 
 
 def _option(option, valeurs):
@@ -184,7 +184,7 @@ def _exclut(racine, lignes, installes, histo=frozenset()):
     return lignes
 
 
-def _leve(racine, lignes, env, refs=(REF, REF_MOTEUR)):
+def _leve(racine, lignes, env, refs=(REF, REF_MOTEUR), marque=MARQUE):
     """Retire `refs` de l'exclusion de l'env (celles qu'elle ne porte pas sont refusees : a lever a la main)."""
     ini = _ini(racine, lignes)
     definie = ini.definie_dans(env, fbe.EXCLUDE)
@@ -200,20 +200,20 @@ def _leve(racine, lignes, env, refs=(REF, REF_MOTEUR)):
         return [l for i, l in enumerate(lignes) if i not in retirees]     # option creee par _exclut : part avec sa seule liste
     reste = [v for v in valeurs if v not in refs]
     i = _fin_section(ini, lignes, "env:" + env)
-    return lignes[:i + 1] + [MARQUE] + _option(fbe.EXCLUDE, reste) + lignes[i + 1:]
+    return lignes[:i + 1] + [marque] + _option(fbe.EXCLUDE, reste) + lignes[i + 1:]
 
 
-def _solidifie(racine, lignes, env):
+def _solidifie(racine, lignes, env, solides=SOLIDES, marque=MARQUE):
     ini = _ini(racine, lignes)
     if not fbe._exclude_solidifies(ini, env):
         raise ValueError(f"{env} : custom_files_exclude_solidified n'est pas ON, le moteur solidifie resterait aussi "
                          "sur le FS : solidification refusee")
     deja = _noms(ini, env, fbe.SOLIDIFY)
-    valeurs = [f for f in SOLIDES if Path(f).name not in deja]
-    return _ajoute(ini, lignes, env, fbe.SOLIDIFY, valeurs, marque=True) if valeurs else lignes
+    valeurs = [f for f in solides if Path(f).name not in deja]
+    return _ajoute(ini, lignes, env, fbe.SOLIDIFY, valeurs, marque=True, texte=marque) if valeurs else lignes
 
 
-def _retire(racine, lignes, env):
+def _retire(racine, lignes, env, solides=SOLIDES, marque=MARQUE):
     """Blocs MARQUE de l'env et lignes du moteur dans son solidify retires."""
     ini = _ini(racine, lignes)
     debut, fin = _regions(lignes)["env:" + env]
@@ -221,12 +221,12 @@ def _retire(racine, lignes, env):
     options = {o.debut: o for o in propres.values()}
     supprimees = set()
     for i in range(debut, fin):
-        if lignes[i] == MARQUE:                  # MARQUE puis l'option qu'elle annonce
+        if lignes[i] == marque:                  # la marque puis l'option qu'elle annonce
             o = options.get(i + 1)
             supprimees |= set(range(i, (o.fin if o else i) + 1))
     solid = propres.get(fbe.SOLIDIFY)
     if solid is not None:
-        supprimees |= {i for i, v, _ in solid.morceaux if v in SOLIDES and i != solid.debut}
+        supprimees |= {i for i, v, _ in solid.morceaux if v in solides and i != solid.debut}
     return [l for i, l in enumerate(lignes) if i not in supprimees]
 
 
@@ -241,11 +241,11 @@ def _controle(racine, lignes, installes, histo=frozenset()):
     return ini
 
 
-def _autoexec(texte, installe):
-    """Texte de l'autoexec avec (ou sans) LIGNE_AUTOEXEC."""
+def _autoexec(texte, installe, ligne=LIGNE_AUTOEXEC):
+    """Texte de l'autoexec avec (ou sans) ligne."""
     eol = "\r\n" if "\r\n" in texte else "\n"
     lignes = fbi.decoupe(texte)
-    presente = [i for i, l in enumerate(lignes) if l.strip() == LIGNE_AUTOEXEC]
+    presente = [i for i, l in enumerate(lignes) if l.strip() == ligne]
     if not installe:
         return eol.join(l for i, l in enumerate(lignes) if i not in presente)
     if presente:
@@ -258,7 +258,7 @@ def _autoexec(texte, installe):
     modele = lignes[histo] if histo is not None else next((l for l in lignes[debut + 1:fin] if l.strip()), "    x")
     indent = modele[:len(modele) - len(modele.lstrip())]
     i = histo + 1 if histo is not None else fin
-    return eol.join(lignes[:i] + [indent + LIGNE_AUTOEXEC] + lignes[i:])
+    return eol.join(lignes[:i] + [indent + ligne] + lignes[i:])
 
 
 def _styles(desc):
