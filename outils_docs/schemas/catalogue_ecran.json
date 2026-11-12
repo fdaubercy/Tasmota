@@ -39,7 +39,7 @@
  {"nom":"RobotoCondensed-Regular","tailles":[12,14,16,20,24,28,32,36,40,48],"source":"sd","fichier":"RobotoCondensed-Regular.ttf","taille_libre":true,"ecriture":"A:sd/polices/RobotoCondensed-Regular.ttf-<taille>"}
 ],
 "ecrans":{
- "ST7262_1024x600":{"pilote":"ST7262","largeur":1024,"hauteur":600,"bus":"RGB","tactile":true,"display_ini":"data/bureau/tasmota32s3-ecran-debits-pac/display.ini","envs":["tasmota32s3-bureau-ecran-debits-pac"]},
+ "ST7262_1024x600":{"pilote":"ST7262","largeur":1024,"hauteur":600,"bus":"RGB","tactile":true,"display_ini":"data/bureau/tasmota32s3-ecran-debits-pac/display.ini","envs":["tasmota32s3-bureau-ecran-debits-pac","tasmota32s3-cave-ecran"]},
  "ILI9488_480x320":{"pilote":"ILI9488","largeur":480,"hauteur":320,"bus":"SPI","tactile":true,"display_ini":"data/bureau/tasmota32s3-serveur-debits-pac/display.ini","envs":["tasmota32s3-bureau-serveur-debits-pac"]}
 }
 }
