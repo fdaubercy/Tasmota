@@ -216,7 +216,10 @@ Consomme : A4 (`POST /impression`).
   « Planche d'essai » ajoutée (carte affichée à 15, 20, 25, 30 mm, texte court et long, avec/sans image ; jamais notée)
 - [x] Export PNG et SVG — preuve : sonde « export PNG et SVG de la cuve » (image/png, image/svg+xml) ; `getRawData`, nommé `qr_<env>.png|svg`, PNG à 300 points par pouce de la taille réglée
 - [ ] Essai réel avec l'utilisateur : une planche aux tailles 15, 20, 25, 30 mm, texte court et texte long, avec et
-  sans image ; scan au téléphone ; seuils de `verdict` recalés d'après le résultat (banc A2 mis à jour)
+  sans image ; scan au téléphone ; seuils de `verdict` recalés d'après le résultat (banc A2 mis à jour).
+  1er retour de l'utilisateur (2026-11-12, iPhone) : « 20 mm court, 25 mod. » (0,61 mm par module) ; texte long à préciser.
+  Corrigé au passage : perte du focus à chaque lettre (l'aperçu redessinait les lignes ; `majValeursLignes`, sonde avec
+  témoin rouge) ; champ standard « Range extender » (SSID du point d'accès, proposé si `rangeExtender.activation` = ON)
 - [ ] Commit
 
 ## A6 — Page `/qrcode` de la carte

@@ -9,7 +9,8 @@ JS = r"""
 const ETAT = {env: null, cartes: [], lieux: [], reglage: null, page: false, esp32: false, charge: '', arbre: [],
               apercu: null, minuterie: null, demande: 0, envDemande: null, images: [], planche: new Set()};
 const $ = id => document.getElementById(id);
-const LIBELLES = {hostname: 'Hostname', ip: 'IP', topic: 'Topic', env: 'Env', puce: 'Puce', lieu: 'Lieu'};
+const LIBELLES = {hostname: 'Hostname', ip: 'IP', topic: 'Topic', env: 'Env', puce: 'Puce', lieu: 'Lieu',
+                  range_extender: 'Range extender'};
 const POINTS = [['rounded', 'arrondis'], ['square', 'carrés'], ['dots', 'ronds'], ['classy', 'classique'],
                 ['classy-rounded', 'classique arrondi'], ['extra-rounded', 'très arrondis']];
 const COINS = [['extra-rounded', 'très arrondis'], ['square', 'carrés'], ['dot', 'ronds']];
@@ -140,6 +141,8 @@ async function ouvre(env) {
     ETAT.esp32 = r.esp32;
     ETAT.page = r.page;
     ETAT.charge = empreinteLocale();
+    const choix = $('ajout-standard').value;
+    options($('ajout-standard'), r.champs.map(c => [c, LIBELLES[c] || c]), r.champs.indexOf(choix) >= 0 ? choix : 'hostname');
     ETAT.arbre = p.arbre;
     const u = new URL(location.href);
     u.searchParams.set('env', env);
@@ -170,10 +173,8 @@ function dessineLignes() {
   const zone = $('lignes');
   zone.replaceChildren();
   const lignes = ETAT.reglage.lignes;
-  const lues = (ETAT.apercu && ETAT.apercu.lignes) || [];
   lignes.forEach((l, i) => {
-    const lu = lues[i] || {};
-    const d = el('div', {class: 'lq' + (lu.etat && lu.etat !== 'ok' ? ' ' + lu.etat : '')});
+    const d = el('div', {class: 'lq'});
     d.appendChild(el('span', {class: 'src'}, {standard: 'standard', persist: 'persist', libre: 'libre'}[l.source] || l.source));
     if (l.source === 'libre') {
       const t = el('input', {type: 'text', maxlength: '120', 'aria-label': 'Texte libre', style: 'grid-column:2 / 4'});
@@ -199,10 +200,23 @@ function dessineLignes() {
     x.onclick = () => { lignes.splice(i, 1); dessineLignes(); change(); };
     act.appendChild(x);
     d.appendChild(act);
-    if (lu.etat) d.appendChild(el('span', {class: 'val'}, lu.etat === 'ok' ? '= ' + lu.valeur : 'omise : ' + (lu.etat === 'refuse' ? 'refusée' : 'introuvable')));
+    d.appendChild(el('span', {class: 'val'}));
     zone.appendChild(d);
   });
+  majValeursLignes();
   $('btn-standard').disabled = $('btn-libre').disabled = lignes.length >= 20;
+}
+
+// Retour de l'apercu : seules la valeur lue et la bordure changent. Les champs ne sont JAMAIS recrees ici, sinon celui
+// ou l'utilisateur tape perd le focus a chaque lettre (signale le 2026-11-12).
+function majValeursLignes() {
+  const lues = (ETAT.apercu && ETAT.apercu.lignes) || [];
+  document.querySelectorAll('#lignes .lq').forEach((d, i) => {
+    const lu = lues[i] || {};
+    d.className = 'lq' + (lu.etat && lu.etat !== 'ok' ? ' ' + lu.etat : '');
+    d.querySelector('.val').textContent = !lu.etat ? '' : lu.etat === 'ok' ? '= ' + lu.valeur
+      : 'omise : ' + (lu.etat === 'refuse' ? 'refusée' : 'introuvable');
+  });
 }
 
 function ajoute(ligne) {
@@ -268,7 +282,7 @@ async function apercu() {
   }
   if (n !== ETAT.demande) return;                    // une saisie plus recente a deja relance l'apercu
   ETAT.apercu = a.erreurs && a.erreurs.length ? null : a;
-  dessineLignes();
+  majValeursLignes();
   const qr = $('qr'), lu = $('lu'), v = $('verdict'), av = $('avertissements');
   qr.replaceChildren(); av.replaceChildren();
   if (!ETAT.apercu) {
@@ -366,7 +380,6 @@ document.querySelectorAll('.onglets button').forEach(b => b.onclick = () => {
   ['contenu', 'style', 'gabarit'].forEach(o => $('onglet-' + o).classList.toggle('cache', o !== b.dataset.onglet));
 });
 $('choix-env').onchange = e => choisit(e.target.value);
-options($('ajout-standard'), Object.entries(LIBELLES), 'hostname');
 $('btn-standard').onclick = () => { const c = $('ajout-standard').value; ajoute({source: 'standard', cle: c, libelle: LIBELLES[c]}); };
 $('btn-libre').onclick = () => ajoute({source: 'libre', texte: ''});
 $('separateur').oninput = e => { ETAT.reglage.separateur = e.target.value; change(); };

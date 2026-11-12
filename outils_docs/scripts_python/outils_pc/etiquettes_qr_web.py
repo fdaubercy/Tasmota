@@ -119,8 +119,11 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
             return {"gabarit": modele.charge_gabarit(racine)}
         if chemin == "/reglage":
             env = env_ok(un("env"))
+            champs = modele.champs_standards(racine, env, envs())
             return {"reglage": modele.charge_reglage(racine, env), "regle": modele.chemin_surcharge(racine, env).is_file(),
-                    "page": esp32(env) and page_installee(env), "esp32": esp32(env)}
+                    "page": esp32(env) and page_installee(env), "esp32": esp32(env),
+                    # champs proposes a l'ajout : le range extender seulement s'il est actif sur la carte
+                    "champs": [c for c in modele.CHAMPS if c != "range_extender" or champs.get(c)]}
         if chemin == "/persist":
             return {"arbre": modele.arbre_persist(modele.persist_de(racine, env_ok(un("env"))))}
         if chemin == "/images":

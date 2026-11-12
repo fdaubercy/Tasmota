@@ -60,6 +60,17 @@ def sonde(cdp, url, banc, capture):
     if capture:
         cdp.capture(Path(capture) / "etiquettes-qr-cuve.png")
 
+    # Saisie au clavier dans un libelle : l'apercu revient entre les lettres, le champ doit garder le focus (2026-11-12)
+    cdp.js("(() => { const i = document.querySelector('#lignes .lq input'); i.value = ''; i.dispatchEvent(new Event('input')); i.focus(); })()")
+    for lettre in "Topic MQTT":
+        cdp.appel("Input.insertText", text=lettre)
+        time.sleep(0.35)                                   # plus que la minuterie de 250 ms : l'apercu a le temps de revenir
+    s.attend(cdp, "document.getElementById('lu').textContent.indexOf('Topic MQTT') >= 0", 10)
+    s.verifie(cdp.js("(() => { const i = document.querySelector('#lignes .lq input'); return [i.value, document.activeElement === i]; })()"),
+              ["Topic MQTT", True], "saisie lettre par lettre : texte complet, focus garde malgre l'apercu")
+    s.verifie("range_extender" in cdp.js("[...document.querySelectorAll('#ajout-standard option')].map(o => o.value)"), True,
+              "cuve : champ « Range extender » propose (range extender actif)")
+    cdp.js("(() => { const i = document.querySelector('#lignes .lq input'); i.value = 'Hostname'; i.dispatchEvent(new Event('input')); })()")
     # XSS : une ligne libre en HTML doit rester du texte, sans rien executer
     piege = '<img src=x onerror="window._xss=1">'
     cdp.js("(() => { ETAT.reglage.lignes.push({source: 'libre', texte: %s}); dessineLignes(); change(); })()" % json.dumps(piege))

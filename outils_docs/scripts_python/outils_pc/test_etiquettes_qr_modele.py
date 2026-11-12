@@ -98,6 +98,16 @@ def test_esclave():
     verifie(r["texte"], "IP : 192.168.0.51:8081", "IP d'esclave dans le texte")
 
 
+def test_range_extender():
+    rex = lambda activation: {"rangeExtender": {"activation": activation, "id": 2, "AP": {"SSID": "CAPTEURS-CUVE-GATEWAY", "mdp": "ne pas lire"}}}
+    verifie(m.champs_de("tasmota32s3-garage-x", rex("ON"), "")["range_extender"], "CAPTEURS-CUVE-GATEWAY", "range extender actif : SSID du point d'acces")
+    verifie(m.champs_de("tasmota32s3-garage-x", rex("OFF"), "")["range_extender"], None, "range extender inactif : champ absent")
+    verifie(m.champs_de("tasmota32s3-garage-x", {}, "")["range_extender"], None, "sans bloc rangeExtender : champ absent")
+    r = m.resout_avec({"lignes": [{"source": "standard", "cle": "range_extender", "libelle": "Wi-Fi"}]}, m.champs_de("tasmota32s3-garage-x", rex("ON"), ""), {})
+    verifie((r["texte"], "ne pas lire" in json.dumps(r)), ("Wi-Fi : CAPTEURS-CUVE-GATEWAY", False), "range extender dans le texte, jamais le mot de passe")
+    verifie(m.valide_reglage({"lignes": [{"source": "standard", "cle": "range_extender"}]}), [], "range_extender : champ standard valide")
+
+
 def test_config_decodee():
     with tempfile.TemporaryDirectory() as d:
         p = Path(d) / "config_decodee.json"
@@ -177,7 +187,7 @@ def test_depot_reel():
     verifie(avec_persist >= 10, True, "au moins 10 cartes avec persist (temoin que la lecture marche)")
 
 
-TESTS = [test_fusion, test_secret_par_cle, test_secret_par_valeur, test_texte, test_esclave, test_config_decodee, test_image,
+TESTS = [test_fusion, test_secret_par_cle, test_secret_par_valeur, test_texte, test_esclave, test_range_extender, test_config_decodee, test_image,
          test_validation, test_depot_reel]
 
 

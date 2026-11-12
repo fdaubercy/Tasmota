@@ -90,7 +90,9 @@ def test_cartes(b):
 def test_reglage_persist(b):
     statut, r = b.requete("GET", "/reglage?env=" + CUVE)
     verifie((statut, r["reglage"] == gabarit(b), r["regle"], r["esp32"]), (200, True, False, True), "GET /reglage : cuve = gabarit commun")
-    verifie(b.requete("GET", "/reglage?env=" + TV)[1]["esp32"], False, "GET /reglage : TV, ESP8266")
+    tv = b.requete("GET", "/reglage?env=" + TV)[1]
+    verifie((tv["esp32"], "range_extender" in tv["champs"]), (False, False), "GET /reglage : TV, ESP8266, sans range extender")
+    verifie("range_extender" in r["champs"], True, "GET /reglage : cuve, range extender actif propose")
     for env in ("inconnu", "../platformio", ""):
         verifie(b.requete("GET", "/reglage?env=" + env)[0], 404, f"GET /reglage?env={env!r} : 404")
     statut, p = b.requete("GET", "/persist?env=" + CUVE)

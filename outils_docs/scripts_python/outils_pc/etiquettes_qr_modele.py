@@ -27,7 +27,7 @@ from assistant_persist_modele import SECRET
 
 DOSSIER = Path("outils_docs/etiquettes_qr")
 GABARIT = DOSSIER / "gabarit.json"
-CHAMPS = ("hostname", "ip", "topic", "env", "puce", "lieu")
+CHAMPS = ("hostname", "ip", "topic", "env", "puce", "lieu", "range_extender")
 POINTS = ("square", "dots", "rounded", "classy", "classy-rounded", "extra-rounded")
 COINS = ("square", "dot", "extra-rounded")
 IMAGE_MAX = 8192                         # octets de l'image en data URI
@@ -160,10 +160,14 @@ def image_data_uri(racine, nom):
 def champs_de(env, serveur, ip):
     """Champs standards d'une carte ; None = introuvable."""
     mqtt = serveur.get("mqtt") if isinstance(serveur.get("mqtt"), dict) else {}
+    rex = serveur.get("rangeExtender") if isinstance(serveur.get("rangeExtender"), dict) else {}
+    ap = rex.get("AP") if isinstance(rex.get("AP"), dict) else {}
     code = lieux.lieu(env)
     return {"hostname": str(serveur.get("hostname") or "") or None, "ip": ip or None,
             "topic": str(mqtt.get("topic") or "") or None, "env": env, "puce": lieux.puce(env),
-            "lieu": dict(lieux.LIEUX).get(code or "", code)}
+            "lieu": dict(lieux.LIEUX).get(code or "", code),
+            # nom du reseau Wi-Fi diffuse par la carte (« ...-GATEWAY »), seulement si son range extender est actif
+            "range_extender": (str(ap.get("SSID") or "") or None) if str(rex.get("activation", "")).upper() == "ON" else None}
 
 
 def persist_de(racine, env):
