@@ -65,7 +65,7 @@ Interface produite (inchangée) : `ecranFonctions.bloc` (nom du bloc `modules.<b
 - [x] `banc_ecran_debits.py` VERT AVANT le déplacement (référence), sortie notée — preuve : `banc_ecran_debits.py` VERT avant le déplacement (dernière ligne `BANC_ECRAN_DEBITS (enveloppe): VERT`, 2026-11-12)
 - [x] Déplacement (`git mv`) ; le banc trouve encore le module (adapter son chemin s'il est figé) ; `banc_ecran_debits.py` VERT, ses mutants rouges — preuve : `git mv` fait ; chemin du banc adapté (`banc_ecran_debits.py::GENERIQUE`, `.be` ligne 21) ; `banc_ecran_debits.py` VERT après (mutants du générique rouges, enveloppe VERT) ; `verifie_berry.py data/fs/ecranFonctions.be` 0 erreur ; `build/test_interface_ecran.py` VERT
 - [x] Liste `ecran` exclue des envs sans écran ; `banc_demarrage.py` VERT sans `--enregistre` — preuve : `${berry_commun.ecran}` ajouté à 16 envs sans écran du cenv ; `banc_demarrage.py` sans `--enregistre` : VERT pour toutes les cartes sauf `tasmota32s3-cave-ecran` (reçoit désormais `/ecranFonctions.be` dans ses sources, attendu : elle garde le module)
-- [ ] Commit `refactor(ecran): veille commune ecranFonctions deplacee dans data/fs` ; case l.113 du plan `debits-deux-cartes` mise à jour (déplacement fait, solidification restant à faire là-bas)
+- [x] Commit `refactor(ecran): veille commune ecranFonctions deplacee dans data/fs` ; case l.113 — preuve : commit `5c3291884` ; référence `banc_demarrage` de l'écran de la cave mise à jour (`sources (3)` avec `/ecranFonctions.be`) du plan `debits-deux-cartes` mise à jour (déplacement fait, solidification restant à faire là-bas)
 
 ## A2 — Pompe vide-cave : marche manuelle sans flotteurs
 Fichiers : `data/fs/globalFonctions.be::globalFonctions_commandeRelaisLies` (5e argument de `modifEtatRelai` =

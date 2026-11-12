@@ -6,6 +6,6 @@ commandes (7) : ReglageDiscovery, ReglageGlobal, ReglageLog, ReglageModbus, Regl
 crons (0) : 
 minuteries (1) : demarrageDiffere
 compiles (0) : 
-sources (2) : /autoexec.be, /preinit.be
+sources (3) : /autoexec.be, /ecranFonctions.be, /preinit.be
 globales (19) : LOG_LEVEL_DEBUG:int, LOG_LEVEL_DEBUG_PLUS:int, LOG_LEVEL_ERREUR:int, LOG_LEVEL_INFO:int, _etatLogFonctions:instance, _etatModbusFonctions:instance, _etatUdpFonctions:instance, boolMute:bool, controleUDP_multicast:instance, controleUDP_unicast:instance, diverses:instance, fsMqttRecepteur:instance, gpio:module, light:module, modules:instance, persist:instance, serveur:instance, wire1:instance, wire2:instance
 erreurs (0) : 
