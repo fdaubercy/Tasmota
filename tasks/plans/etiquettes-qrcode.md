@@ -73,7 +73,7 @@ Produit : bundle UMD autonome exposant `QRCodeStyling` (options `data`, `width`,
   plusieurs codes et à 75 px relu ; modules = table ISO (1 o -> 21 ... 63 o H -> 45)
 - [x] Copie PC, licence et empreintes écrites — preuve : `outils_docs/etiquettes_qr/lib/` (`cmp` identique au tarball,
   sha256 du .js et du futur .gz notés dans `LISEZMOI.md`) ; `.gz` reporté en A6
-- [ ] Essai navigateur (page de test jetable dans le scratchpad) : texte `Hostname : cuve\nIP : 192.168.0.60\nNote :
+- [x] Essai navigateur, scan confirmé par l'utilisateur le 2026-11-12 — preuve : essai2.png (64 octets, version 7, 45 modules, H, image) lu à l'identique au téléphone, barre oblique comprise ; 1er essai à 63 octets faux par ma page (barre oblique perdue, lessons.md) ; texte `Hostname : cuve\nIP : 192.168.0.60\nNote :
   « été » "x" \ 100 %` dessiné en points ronds, coins arrondis, image au centre, niveau H ; scanné par le téléphone de
   l'utilisateur, texte lu identique (vérification par l'utilisateur, notée en preuve)
 
