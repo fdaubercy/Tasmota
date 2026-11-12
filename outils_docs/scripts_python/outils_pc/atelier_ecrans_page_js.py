@@ -99,7 +99,15 @@ function libelleEcran(cle) {
 function remplitEcrans() {
   var s = vide($('ecran'));
   if (!E.ecranEnv) s.appendChild(el('option', { value: '' }, "aucun écran déclaré par l'env"));
-  Object.keys(E.catalogue.ecrans).forEach(function (cle) { s.appendChild(el('option', { value: cle }, libelleEcran(cle))); });
+  var groupes = { carte: 'Écrans des cartes', perso: 'Bibliothèque personnelle', amont: 'Fournis par Tasmota' };
+  Object.keys(groupes).forEach(function (src) {
+    var g = el('optgroup', { label: groupes[src] });
+    Object.keys(E.catalogue.ecrans).forEach(function (cle) {
+      var e = E.catalogue.ecrans[cle];   /* LVGL : ecrans couleur seulement, sauf celui de l'env */
+      if ((e.source || 'carte') === src && (e.couleur !== false || cle === E.ecranEnv)) g.appendChild(el('option', { value: cle }, libelleEcran(cle)));
+    });
+    if (g.children.length) s.appendChild(g);
+  });
   s.value = E.ecran || '';
 }
 function etat(classe, texte) { var p = $('etat'); p.className = 'pastille ' + classe; p.textContent = texte; }

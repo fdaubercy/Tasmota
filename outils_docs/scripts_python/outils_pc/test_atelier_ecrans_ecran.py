@@ -46,7 +46,7 @@ def main():
         b = objet(d, 0, 91)
         verifie((d["ecran"], b["x"], b["y"], b["l"], b["h"]), ("ILI9488_480x320", 11, 288, 52, 25), "bouton 91 : position et taille au rapport")
         verifie(any("objet 91" in a and "25 px" in a for a in av), True, "bouton de 46 px -> 25 px signale (cible tactile)")
-        verifie(objet(d, 1, 11)["attributs"]["text_font"], 12, "police robotocondensed 24 -> 12 (taille compilee la plus proche)")
+        verifie(objet(d, 2, 12)["attributs"]["text_font"], 12, "police robotocondensed 24 -> 12 (taille compilee la plus proche)")
         verifie(objet(d, 1, 13)["attributs"]["text_font"], "A:sd/polices/RobotoCondensed-Regular.ttf-17", "police .ttf de taille libre arrondie (36 -> 17)")
         verifie(aec.police_echelle("montserrat-28", 0.469, catalogue), "montserrat-14", "montserrat 28 -> 14")
         verifie(aed.valide(d, catalogue), [], "description mise a l'echelle valide pour le nouvel ecran")
@@ -57,7 +57,8 @@ def main():
         dini = f"data/bureau/tasmota32s3-ecran-debits-pac/display.ini"
         verifie((c["refus"], dini in rels), ([], True), "debits -> ILI9488 : pas de conflit, display.ini au diff")
         ini = next(f for f in c["fichiers"] if f["rel"] == dini)
-        verifie((ini["avant"].startswith(":H,ST7262"), ini["apres"].startswith(":H,ILI9488")), (True, True), "display.ini repris de l'env qui porte l'ILI9488")
+        verifie((ini["avant"].startswith(":H,ST7262"), ini["apres"].startswith(":H,ILI9488")), (True, True), "display.ini repris de l'ILI9488")
+        verifie(any(cat.AMONT in a for a in c["avertissements"]), True, "ILI9488 pris a l'amont : signale (aucune carte ne le porte)")
         emp_desc = aed.empreinte(aed.chemin(racine, ENV).read_bytes())
         r = aec.change(racine, ENV, "ILI9488_480x320", desc, c["empreinte"], emp_desc, lambda: [])
         verifie((len(r["ecrits"]), cat.ecrans_des_envs(racine).get(ENV), aed.charge(racine, ENV)["ecran"]), (4, "ILI9488_480x320", "ILI9488_480x320"),
@@ -75,6 +76,10 @@ def main():
         except RuntimeError as e:
             verifie("refuse" in str(e), True, "conflit de broches : ecriture refusee")
         verifie((racine / "data/bureau/tasmota32s3-serveur-debits-pac/display.ini").read_bytes(), avant, "conflit : display.ini intact")
+        amont = next(k for k, x in catalogue["ecrans"].items() if x["source"] == "amont" and x["couleur"] and k != "ILI9488_480x320")
+        c = aec.changement(racine, SERVEUR, amont, dict(vide, ecran=None))
+        verifie((c["description"]["ecran"], c["refus"], any(cat.AMONT in a for a in c["avertissements"])),
+                (amont, [], True), "carte sans ecran -> ecran amont : description vierge sur le nouvel ecran")
         verifie(aec.broches_ecran(":H,ST7262,1024,600,16,RGB,5,3,46,7,-1,48,47,21,1,2,42,41,40,14,38,18,17,10,39,0,45,30")[0][-3:],
                 [39, 0, 45], "ligne :H RGB : la frequence (30) n'est pas une broche")
         try:

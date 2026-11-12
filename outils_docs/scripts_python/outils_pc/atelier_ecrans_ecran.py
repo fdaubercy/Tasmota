@@ -136,16 +136,23 @@ def changement(racine, env, cible, desc):
     if not isinstance(desc, dict):
         raise ValueError("description : objet attendu")
     src_desc = dict(desc, ecran=desc.get("ecran") or cat.ecrans_des_envs(racine).get(env))
-    erreurs = aee.erreurs(src_desc, catalogue)
+    sans_ecran = src_desc["ecran"] is None       # carte sans ecran : rien a mettre a l'echelle
+    erreurs = aee.erreurs(dict(src_desc, ecran=cible) if sans_ecran else src_desc, catalogue)
     if erreurs:                                  # met_a_echelle suppose une description bien formee
         raise ValueError("description refusee : " + " ; ".join(erreurs[:5]))
-    nouvelle, av = met_a_echelle(src_desc, cible, catalogue)
+    nouvelle, av = (dict(copy.deepcopy(desc), ecran=cible), []) if sans_ecran else met_a_echelle(src_desc, cible, catalogue)
     refus = []
     # env qui porte l'ecran AUJOURD'HUI (display.ini relus) : le chemin du catalogue a pu changer d'ecran depuis
     porteurs = [e for e, k in cat.ecrans_des_envs(racine).items() if k == cible and e != env]
-    if not porteurs:
+    if porteurs:
+        ini = (racine / fbe.dossier_carte(porteurs[0]) / "display.ini").read_bytes()
+    elif dst.get("source") in ("perso", "amont"):             # ecran de la bibliotheque ou de tasmota/displaydesc
+        ini = (racine / dst["display_ini"]).read_bytes()
+        av.append(f"display.ini pris dans {dst['display_ini']} ("
+                  + ("bibliotheque personnelle" if dst["source"] == "perso" else "description fournie par Tasmota, jamais "
+                     "essayee sur une carte du depot") + ") : base de l'env (LVGL, tactile) a verifier")
+    else:
         raise ValueError(f"aucune autre carte ne porte l'ecran {cible} : display.ini introuvable")
-    ini = (racine / fbe.dossier_carte(porteurs[0]) / "display.ini").read_bytes()
     broches, bus = broches_ecran(ini.decode("utf-8", errors="replace"))
     if bus == "RGB":
         av.insert(0, "ecran RGB : il est integre a sa carte (ex. Waveshare ESP32-S3-Touch-LCD-7B) et ne se branche pas sur "
@@ -162,8 +169,8 @@ def changement(racine, env, cible, desc):
     except (OSError, ValueError) as e:
         av.append(f"persist de la carte illisible, broches non controlees : {type(e).__name__}")
     fini = fbi.lit_sections(racine)
-    b_env, b_autre = _base(fini, env), _base(fini, porteurs[0])
-    if b_env != b_autre:
+    b_env, b_autre = _base(fini, env), _base(fini, porteurs[0]) if porteurs else None
+    if porteurs and b_env != b_autre:
         av.append(f"base de l'env : {b_env} ; celle de {porteurs[0]}, qui porte cet ecran : {b_autre} "
                   "(pilote, LVGL, tactile) ; a verifier, non modifiee")
     extra = {f"{dossier}/display.ini": ini}

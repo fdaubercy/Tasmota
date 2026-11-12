@@ -238,13 +238,20 @@ l'utilisateur (demande du 2026-11-12). Interface de la carte : HASPmota (`custom
 ## A12 — Écrans des autres cartes au catalogue
 Conception : `docs/superpowers/specs/2026-11-12-atelier-ecrans-ameliorations-design.md` § 4. Ordre de réalisation :
 A12, A15, A13, A14 (§ 8).
-- [ ] Banc d'abord (rouge) : trois sources (cartes, `outils_docs/atelier_ecrans/display/`, `tasmota/displaydesc/`) ;
+- [x] Banc d'abord (rouge) : trois sources (cartes, `outils_docs/atelier_ecrans/display/`, `tasmota/displaydesc/`) ;
   clés existantes inchangées (`ST7262_1024x600`) ; collision -> `<pilote>_<l>x<h>@<fichier>` ; tactile par `:UTI`, `:TI`,
   `:TS`, `:TR` ; `display.ini` exclu du FS ou env sans LVGL -> écran non rattaché ; bpp 1 -> `couleur: false`
-- [ ] `atelier_ecrans_catalogue.py` (sources, clés, champs `source`, `fichier`, `bus`, `bpp`, `couleur`) ; catalogue
+  — preuve : `test_atelier_ecrans_catalogue.py::test_ecrans`, `::test_bibliotheque_perso`, `::test_env_sans_ecran` ; 3 mutants
+  (exclusion, tactile, cartes) lus rouges. Env sans LVGL : non traité (`shortcut:` dans `_fichiers`, aucun cas au dépôt)
+- [x] `atelier_ecrans_catalogue.py` (sources, clés, champs `source`, `fichier`, `bus`, `bpp`, `couleur`) ; catalogue
   régénéré ; banc VERT avec mutants ; liste des écrans de la page limitée aux écrans couleur
-- [ ] Changement d'écran (A8) : `display.ini` repris de la source de l'écran (carte, bibliothèque ou amont) ; bancs
+  — preuve : 61 écrans (60 amont, 1 carte, 47 couleur), le fichier garde son nom dans `display_ini` ; liste de la page en
+  trois `optgroup` (cartes, bibliothèque, Tasmota), monochromes masqués (sonde : groupe Tasmota, SSD1306 absent)
+- [x] Changement d'écran (A8) : `display.ini` repris de la source de l'écran (carte, bibliothèque ou amont) ; bancs
   `test_atelier_ecrans_ecran.py` et sonde Chrome VERT
+  — preuve : `atelier_ecrans_ecran.py::changement` (amont/bibliothèque signalés, carte sans écran = description vierge,
+  bouton « Proposer » ouvert à une carte sans écran) ; les 10 bancs de l'atelier, la sonde et `test_cible_atelier_ecrans.py`
+  VERT le 2026-11-13
 - [ ] Commit
 
 ## A15 — Onglet « display.ini » : lire, expliquer, valider, créer

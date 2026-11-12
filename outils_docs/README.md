@@ -1964,6 +1964,13 @@ boutons trop petits pour le doigt et les textes qui débordent sont signalés. L
 carte, repris d'un env qui porte déjà cet écran ; broches de l'écran en conflit avec le persist = refus motivé. Revenir à
 l'écran de la carte annule la proposition. Après écriture : firmware à recompiler et téléverser par la page Build.
 
+La liste des écrans (écrans couleur seulement) a trois groupes, par ordre de priorité : **écrans des cartes** (le
+`display.ini` d'un env, sauf s'il est exclu de son FS), **bibliothèque personnelle** (`outils_docs/atelier_ecrans/display/*.ini`)
+et **fournis par Tasmota** (`tasmota/displaydesc/*.ini`, lus sans jamais être modifiés). Un même écran trouvé plus loin
+prend la clé `<pilote>_<l>x<h>@<fichier>`. Un écran de la bibliothèque ou de Tasmota part sur la carte tel quel, avec un
+avertissement : il n'a jamais tourné sur une carte du dépôt. Une carte sans écran peut aussi en recevoir un (description
+vierge). Le catalogue se régénère par `python outils_docs/scripts_python/outils_pc/atelier_ecrans_catalogue.py --generer`.
+
 ### Remarques et Claude
 
 L'outil « Remarque » épingle un texte sur un objet, une zone tracée ou une page (`remarques.json`). « Traiter les

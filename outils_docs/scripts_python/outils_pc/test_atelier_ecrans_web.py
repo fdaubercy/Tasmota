@@ -54,6 +54,9 @@ def copie(racine):
         (racine / f).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(DEPOT / f, racine / f)
     shutil.copytree(DEPOT / aed.DOSSIER, racine / aed.DOSSIER)
+    for d in (cat.AMONT, cat.PERSO):                 # display.ini cites par le catalogue (amont, bibliotheque)
+        if (DEPOT / d).is_dir():
+            shutil.copytree(DEPOT / d, racine / d, dirs_exist_ok=True)
     for d in (DEPOT / "data").glob("*/*"):
         for f in [d / n for n in DOSSIER_CARTE] + list(d.glob("*.ttf")):
             if f.is_file():
@@ -142,7 +145,8 @@ def test_cartes(b):
             (200, "ST7262_1024x600", "192.168.0.51", "bureau", True, "haspmota"), "GET /cartes : ecran, IP du cenv, lieu, description, interface")
     verifie((noms.get(SANS_ECRAN, {}).get("ecran", "absent"), noms.get(SANS_ECRAN, {}).get("description")), (None, False),
             "GET /cartes : carte sans display.ini -> ecran null, pas d'erreur")
-    verifie(noms.get("tasmota32s3-bureau-serveur-debits-pac", {}).get("ecran"), "ILI9488_480x320", "GET /cartes : ILI9488 du serveur des debits")
+    verifie(noms.get("tasmota32s3-bureau-serveur-debits-pac", {}).get("ecran", "absent"), None,
+            "GET /cartes : serveur des debits sans ecran (display.ini exclu du FS)")
     verifie(any(c["nom"].startswith("tasmota32s3-base") for c in r["cartes"]), False, "GET /cartes : pas de base")
     verifie(len(r.get("lieux", [])) > 0, True, "GET /cartes : table des lieux (lieux.pour_page)")
     (b.racine / "data/bureau/tasmota32s3-ecran-debits-pac/display.ini").write_text("; sans ligne :H\n", encoding="utf-8")

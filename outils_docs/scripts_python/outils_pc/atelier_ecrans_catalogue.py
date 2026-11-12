@@ -4,7 +4,9 @@ Genere `outils_docs/schemas/catalogue_ecran.json` d'apres les SOURCES du depot (
   objets   : classes `lvh_*` de lv_haspmota.be (setters et _attr_map, heritage resolu) + setters natifs LVGL a une
              valeur (lv_funcs.h) + attributs de style (`lv_obj_set_style_*`) ; palier 1 = les 7 types de l'atelier.
   polices  : polices EMBARQUEES activees dans tasmota_lv_conf.h / xdrv_52_3_berry_lvgl.ino, et `.ttf` des dossiers de cartes.
-  ecrans   : ligne `:H` des `display.ini` des cartes ; clef `<pilote>_<largeur>x<hauteur>`.
+  ecrans   : ligne `:H` des `display.ini`, par priorite : cartes du depot (sauf display.ini exclu du FS de l'env),
+             bibliotheque personnelle `PERSO`, descriptions amont `AMONT` (lecture seule) ; clef `<pilote>_<l>x<h>` au
+             premier trouve, `<pilote>_<l>x<h>@<fichier>` pour les suivants (les clefs des cartes ne changent pas).
 
 Usage : python atelier_ecrans_catalogue.py --generer | --verifier   (--verifier : code 1 si le fichier est en retard)."""
 
@@ -13,6 +15,8 @@ import re
 import sys
 from pathlib import Path
 
+import fichiers_berry_ini as fbi
+
 CATALOGUE = "outils_docs/schemas/catalogue_ecran.json"
 HASPMOTA = "lib/libesp32_lvgl/lv_haspmota/src/embedded/lv_haspmota.be"
 LV_FUNCS = "lib/libesp32_lvgl/lv_binding_berry/mapping/lv_funcs.h"
@@ -20,6 +24,9 @@ LV_CONF = "tasmota/lvgl_berry/tasmota_lv_conf.h"
 XDRV_LVGL = "tasmota/tasmota_xdrv_driver/xdrv_52_3_berry_lvgl.ino"
 # Fichiers lus (hors data/*/*/{display.ini,pages.jsonl,*.ttf,_persist.json}) : le banc en copie ce qu'il faut.
 SOURCES = [HASPMOTA, LV_FUNCS, LV_CONF, XDRV_LVGL]
+PERSO = "outils_docs/atelier_ecrans/display"     # display.ini personnels (hors flash), plan atelier-ecrans A12/A15
+AMONT = "tasmota/displaydesc"                    # descriptions fournies par Tasmota : jamais modifiees (synchro du fork)
+TACTILES = (":UTI", ":TI", ":TS", ":TR")         # pilote universel, anciens GT911/FT5206/CST816S, XPT2046, resistif
 PALIER1 = ("label", "btn", "bar", "obj", "chart", "arc", "slider")
 # Grille de tailles proposee pour un .ttf : FreeType rend toute taille (cout RAM croissant), on ajoute celles deja utilisees.
 TAILLES_TTF = (12, 14, 16, 20, 24, 28, 32, 36, 40, 48)
@@ -140,7 +147,7 @@ def lit_ecran(chemin):
         for ligne in Path(chemin).read_text(encoding="utf-8", errors="replace").splitlines():
             if ligne.startswith(":H,"):
                 c = ligne.split(",")
-                return {"pilote": c[1], "largeur": int(c[2]), "hauteur": int(c[3]), "bus": c[5]}
+                return {"pilote": c[1], "largeur": int(c[2]), "hauteur": int(c[3]), "bpp": int(c[4]), "bus": c[5]}
     except (OSError, ValueError, IndexError):
         pass
     return None
@@ -148,30 +155,64 @@ def lit_ecran(chemin):
 
 def _tactile(chemin):
     try:
-        return any(l.startswith(":UT") for l in Path(chemin).read_text(encoding="utf-8", errors="replace").splitlines())
+        return any(l.startswith(TACTILES) for l in Path(chemin).read_text(encoding="utf-8", errors="replace").splitlines())
     except OSError:
         return False
 
 
-def ecrans_des_envs(racine):
-    """{env: cle d'ecran | None} pour chaque carte du depot ; None = aucun ecran lisible (pas d'exception)."""
-    res = {}
+def _exclu(ini, env, rel):
+    """Vrai si `rel` est dans le custom_files_exclude resolu de l'env (cenv absent ou env inconnu : non exclu)."""
+    if ini is None or "env:" + env not in ini.sections:
+        return False
+    try:
+        return any(e.chemin == rel for e in fbi.resout(ini, env, "custom_files_exclude"))
+    except ValueError:
+        return False
+
+
+def _fichiers(racine):
+    """[(source, display.ini, [envs])] par priorite : cartes, bibliotheque personnelle, amont."""
+    racine = Path(racine)
+    try:
+        ini = fbi.lit_sections(racine)
+    except (OSError, ValueError):
+        ini = None
+    res = []
     for env, d in _cartes(racine):
-        e = lit_ecran(d / "display.ini")
-        res[env] = f"{e['pilote']}_{e['largeur']}x{e['hauteur']}" if e else None
+        f = d / "display.ini"
+        # shortcut: un env sans LVGL mais dont le display.ini part sur le FS reste rattache ; a revoir si le cas apparait
+        if f.is_file() and not _exclu(ini, env, f.relative_to(racine).as_posix()):
+            res.append(("carte", f, [env]))
+    for source, dossier in (("perso", PERSO), ("amont", AMONT)):
+        res += [(source, f, []) for f in sorted((racine / dossier).glob("*.ini"))]
     return res
 
 
 def ecrans(racine):
     res = {}
-    for env, d in _cartes(racine):
-        e = lit_ecran(d / "display.ini")
+    for source, f, envs in _fichiers(racine):
+        e = lit_ecran(f)
         if not e:
             continue
         cle = f"{e['pilote']}_{e['largeur']}x{e['hauteur']}"
-        r = res.setdefault(cle, {**e, "tactile": _tactile(d / "display.ini"),
-                                 "display_ini": (d / "display.ini").relative_to(racine).as_posix(), "envs": []})
-        r["envs"].append(env)
+        if source == "carte" and res.get(cle, {}).get("source") == "carte":
+            res[cle]["envs"] += envs                     # meme ecran sur plusieurs cartes : une entree
+            continue
+        if cle in res:
+            cle += "@" + f.stem
+        if cle in res:                                   # meme nom de fichier dans la bibliotheque et a l'amont
+            cle += "-" + source
+        res[cle] = {**e, "tactile": _tactile(f), "couleur": e["bpp"] > 1, "source": source,
+                    "display_ini": f.relative_to(racine).as_posix(), "envs": envs}
+    return res
+
+
+def ecrans_des_envs(racine):
+    """{env: cle d'ecran | None} pour chaque carte du depot ; None = aucun ecran (absent, illisible, exclu du FS)."""
+    res = {env: None for env, _ in _cartes(racine)}
+    for cle, e in ecrans(racine).items():
+        if e["source"] == "carte":
+            res.update({env: cle for env in e["envs"]})
     return res
 
 

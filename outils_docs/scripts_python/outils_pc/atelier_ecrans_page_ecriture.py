@@ -96,7 +96,7 @@ function confirmeChangement() {
 }
 
 function dessineEcriture() {
-  var ro = lecture(), autre = !!(E.ecran && E.ecranEnv && E.ecran !== E.ecranEnv);
+  var ro = lecture(), autre = !!(E.ecran && E.ecran !== E.ecranEnv);   // carte sans ecran comprise : lui en donner un
   $('ecrire').disabled = ro || W.enCours;
   $('build').hidden = !E.build || ro;
   if (E.build) $('build').href = E.build;

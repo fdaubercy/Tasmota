@@ -265,9 +265,12 @@ def sonde_ecriture(cdp, banc):
     js("document.getElementById('proposeChangement').click()")
     refus = attend(cdp, "!document.getElementById('confirmation').hidden && document.getElementById('confirmation').textContent.indexOf('refusé') >= 0", 20)
     verifie((bool(refus), js("!!document.getElementById('confirmer')")), (True, False), "conflit de broches : refus affiche, pas de bouton de confirmation")
-    js("var s=document.getElementById('ecran'); s.value='ILI9488_480x320'; s.dispatchEvent(new Event('change'))")
-    verifie((js("lecture()"), js("document.getElementById('confirmation').hidden"), js("E.desc.ecran")), (False, True, "ILI9488_480x320"),
-            "retour a l'ecran de la carte : proposition oubliee")
+    js("var s=document.getElementById('ecran'); s.value=''; s.dispatchEvent(new Event('change'))")
+    verifie((js("lecture()"), js("document.getElementById('confirmation').hidden"), js("E.desc.ecran")), (False, True, None),
+            "retour a la carte sans ecran : proposition oubliee")
+    verifie(js("Array.prototype.some.call(document.querySelectorAll('#ecran optgroup'), function(g){return g.label==='Fournis par Tasmota'})"
+               " && !document.querySelector('#ecran option[value=\"SSD1306_128x64\"]')"), True,
+            "liste des ecrans : groupe Tasmota, ecran monochrome absent")
     verifie((banc.racine / "data/bureau/tasmota32s3-serveur-debits-pac/display.ini").read_bytes(), avant, "refus : display.ini intact")
     erreurs = [e for e in cdp.erreurs() if "carte-inconnue" not in e and "temoin_sonde" not in e]
     verifie(erreurs, [], "ecriture et changement : aucune erreur console")
