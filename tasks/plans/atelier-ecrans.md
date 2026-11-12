@@ -153,18 +153,18 @@ Consomme : A2 à A5. Produit, routes (JSON) : `GET /cartes` (envs par lieu, écr
 `GET /description?env=` (description + empreinte), `POST /apercu` {env, description} -> fichiers générés et leurs diffs,
 `GET /valeurs?env=` (JSON SENSOR de la carte ou valeurs simulées + drapeau `simule`), `POST /capture` {env} -> image ou
 refus, `GET /police?nom=` (`.ttf` du catalogue, chemin jamais pris dans la requête).
-- [ ] Banc serveur d'abord (rouge), sur copie temporaire : routes ci-dessus ; env inconnu -> 400 ; requête sans en-tête
+- [x] Banc serveur d'abord (rouge), sur copie temporaire — preuve : 8e5664d02, test_atelier_ecrans_web.py rouge puis VERT ; routes ci-dessus ; env inconnu -> 400 ; requête sans en-tête
   anti-CSRF -> 403 ; carte injoignable -> `/valeurs` simulé avec `simule: true` et `/capture` refusé avec message ;
   `nom` de police hors catalogue -> 404 ; adresse de la carte prise au cenv, jamais à la requête
-- [ ] Serveur et routes ; banc VERT
-- [ ] Page (maquette `modele-retenu.png`) : en-tête (liste des cartes par `lieux.pour_page`, liste des écrans
+- [x] Serveur et routes ; banc VERT — preuve : 8e5664d02 + ed4b3f387 (cible, tuile, tâche), test_atelier_ecrans_web.py VERT le 2026-11-12
+- [x] Page (maquette `modele-retenu.png`) — preuve : commit A6b, sonde test_atelier_ecrans_page_chrome.py VERTE (28 vérifications, 2 passes) ; en-tête (liste des cartes par `lieux.pour_page`, liste des écrans
   présélectionnée et marquée « celui de l'env », état en ligne, bascule Sombre / Clair mémorisée par `localStorage`
   sous try/catch), colonne gauche, onglets « Écran » / « Tableau des objets », zoom − / + / 100 %, grille aimantée,
   glisser-déposer, poignées, annuler / rétablir, propriétés limitées au catalogue (taille de police absente refusée avec
   les tailles possibles), fenêtre basse des fichiers générés avec différences colorées
 - [ ] Capture : `atelier_ecrans_capture.capture(ip, get) -> bytes` (`Br lv.screenshot()`, téléchargement, effacement du
   fichier sur la carte) ; banc avec carte simulée ; essai réel sur le 7B (mémoire PSRAM notée)
-- [ ] Sonde Chrome hermétique (thème clair et sombre, glisser un bouton, zoom 100 %, aucune erreur console, Chrome
+- [x] Sonde Chrome hermétique — preuve : test_atelier_ecrans_page_chrome.py VERT, test_cible_atelier_ecrans.py et test_atelier_ecrans_web.py VERTS le 2026-11-12, Chrome arrêté (0 sonde_*) ; (thème clair et sombre, glisser un bouton, zoom 100 %, aucune erreur console, Chrome
   arrêté à la fin) VERT ; tuile de l'annuaire, tâche VS Code, cible détachée (`test_cible_atelier_ecrans.py` VERT,
   `test_garde_build.py` VERT)
 - [ ] Commit
