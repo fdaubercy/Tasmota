@@ -4,7 +4,7 @@ titre: Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, vei
 objectif: Commander les appareils de la cave et voir son état sur l'écran 7B esclave, sans rien changer au comportement des autres cartes
 statut: actif
 cree: 2026-11-12
-maj: 2026-11-12
+maj: 2026-11-13
 ---
 # Écran 7B de la cave : plan de réalisation
 
@@ -123,10 +123,10 @@ sans broche) pour répondre au relevé du maître ; `veille`, `extinction`, `lum
 Interface produite : `ecranCaveFonctions.touche(numero:int) -> string` (« envoye », « refuse » ou « inconnu ») ;
 `voulu` = inverse de l'état affiché (touche 5 : toujours ON) ; refus si la valeur de l'appareil est périmée (A6) ;
 relance du même mot toutes les 2 s, 5 fois au plus, jusqu'à ce que l'état reçu par MQTT égale `voulu`.
-- [ ] Vérifier qu'un bouton sans broche ne fait pas planter `changementEtatCapteur` (`device["pin"]` dans un `format %i`) ni le relevé `0x02` du maître ; corriger en `find("pin", -1)` si besoin (dans `globalFonctions.be`, sans autre changement)
-- [ ] Banc rouge d'abord : `banc_ecran_cave.{py,be}` (modèle `banc_ecran_debits`) : `touche_pousse_mot`, `seq_avance_jamais_zero`, `refus_si_perime`, `relance_jusqu_a_confirmation`, `abandon_apres_5`, `redemarrer_toujours_on`
-- [ ] Code ; banc VERT ; mutants rouges
-- [ ] Commit `feat(ecran-cave): envoi des touches par push ModBus`
+- [x] Vérifier qu'un bouton sans broche ne fait pas planter `changementEtatCapteur` (`device["pin"]` dans un `format %i`) ni le relevé `0x02` du maître ; corriger en `find("pin", -1)` si besoin (dans `globalFonctions.be`, sans autre changement) — preuve : aucun correctif : un bouton virtuel (virtuel != OFF) n'est pas compté réel par configDevices.be, donc ni règle Button ni appel de changementEtatCapteur ; le relevé 0x02 (modbusFonctions.be) ne lit pas `pin` ; banc_test_modbus 386 PASS, banc_demarrage VERT
+- [x] Banc rouge d'abord : `banc_ecran_cave.{py,be}` (modèle `banc_ecran_debits`) : `touche_pousse_mot`, `seq_avance_jamais_zero`, `refus_si_perime`, `relance_jusqu_a_confirmation`, `abandon_apres_5`, `redemarrer_toujours_on` — preuve : banc_ecran_cave.be, sections touche_pousse_mot à touche_redemarre_sans_relance, rouge avant le code (touche absente), commit ab9445ff7
+- [x] Code ; banc VERT ; mutants rouges — preuve : banc_ecran_cave OK (57 contrôles) ; mutants rouges : touche 5 relancée, refus supprimé, seq 0 permis, 6 relances ; banc_demarrage, banc_ecran_debits, banc_commandes_ecran (19) VERTS
+- [x] Commit `feat(ecran-cave): envoi des touches par push ModBus` — preuve : ab9445ff7
 
 ## A6 — L'écran affiche l'état par MQTT
 Fichier : `ecranCaveFonctions.be` (modèle des valeurs) et `controleEcranCave.be` (abonnements). Persist de l'écran :
