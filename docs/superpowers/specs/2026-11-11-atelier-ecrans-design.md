@@ -202,8 +202,9 @@ Bouton « Traiter les remarques (Claude) » :
   la PAGE qui les valide (format, cibles existantes, opérations conformes au catalogue) puis les écrit dans
   `remarques.json`. Exigé dès A7 : si la lecture seule ne peut pas être imposée par les options, la fonction n'est pas
   livrée (repli : bouton qui copie la consigne pour une conversation) ;
-- contrôle en plus, après la fin : aucun fichier du dépôt n'a changé (`git status` et empreintes avant / après) ;
-  sinon le résultat est rejeté et signalé ;
+- contrôle en plus, après la fin : fichiers du dépôt changés pendant le traitement (`git status` et empreintes
+  avant / après), signalés par un avertissement SANS rejet (décision de l'utilisateur du 2026-11-12 : d'autres
+  conversations modifient le dépôt en même temps ; la lecture seule est imposée par les options, hooks coupés) ;
 - un seul traitement à la fois, état « en cours » et durée affichés, délai maximal (10 min), journal dans
   `%LOCALAPPDATA%\outils_tasmota\atelier_ecrans\` ;
 - « Appliquer » rejoue les opérations de la proposition sur la description en mémoire (vue sur le canevas et dans le

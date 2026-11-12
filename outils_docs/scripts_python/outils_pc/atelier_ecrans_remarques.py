@@ -11,8 +11,9 @@ Traitement : `claude -p` lance dans le depot en LECTURE SEULE (options verifiees
 echoue faute d'outil) et SANS hooks de l'utilisateur (--settings avec disableAllHooks : un hook SessionStart temoin
 ecrit son fichier sans ce reglage, plus avec). La consigne passe par l'entree standard (claude.CMD : pas de texte libre dans la ligne de
 commande de cmd.exe). Claude rend ses propositions sur la sortie ; c'est CE module qui les valide et les ecrit dans
-remarques.json. Controle en plus : aucun fichier du depot ne doit changer pendant le traitement (git status et
-empreintes, remarques.json de la carte excepte), sinon le resultat est rejete.
+remarques.json. Controle en plus : fichiers du depot changes pendant le traitement (git status et empreintes,
+remarques.json de la carte excepte) signales par un AVERTISSEMENT, sans rejet (decision de l'utilisateur du 2026-11-12 :
+les autres conversations modifient le depot en meme temps, et la lecture seule est imposee par les options).
 shortcut: les fichiers ignores par git ne sont pas controles ; la lecture seule repose sur les options de claude.
 """
 import copy
@@ -412,18 +413,18 @@ class Traitement:
         self._journal(env, f"claude fini, code {p.returncode}", sortie + b"\n--- erreurs ---\n" + erreur)
         apres = etat_depot(self.racine, ignore)
         changes = sorted(k for k in set(avant) | set(apres) if avant.get(k) != apres.get(k))
-        if changes:
-            return "echec", ("resultat rejete : des fichiers du depot ont change pendant le traitement ("
-                             + ", ".join(changes[:5]) + ") ; si une autre conversation travaillait, relancer")
+        avert = ("" if not changes else " ; attention : fichiers du depot modifies pendant le traitement (" + ", ".join(changes[:5])
+                 + (f" et {len(changes) - 5} autre(s)" if len(changes) > 5 else "") + "), par une autre conversation sans doute")
         if p.returncode != 0:
-            return "echec", f"claude a echoue (code {p.returncode}) : " + erreur.decode("utf-8", "replace")[-300:]
+            return "echec", f"claude a echoue (code {p.returncode}) : " + erreur.decode("utf-8", "replace")[-300:] + avert
         try:
             texte = _resultat(sortie)
         except ValueError as e:
-            return "echec", str(e)
+            return "echec", str(e) + avert
         props, erreurs = valide_propositions(texte, desc, cat.charge(self.racine), remarques)
         with VERROU:
-            return self._ecrit(env, props, erreurs)
+            etat, message = self._ecrit(env, props, erreurs)
+        return etat, message + avert
 
     def _ecrit(self, env, props, erreurs):
         actuelles, n = charge(self.racine, env), 0     # relues : la page a pu epingler pendant le traitement

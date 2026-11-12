@@ -132,12 +132,15 @@ def lance(racine, mode, argv, delai=60, programme=None):
 
 def test_traitement(racine, argv):
     avant = aer.chemin(racine, ENV).read_bytes()
-    for mode, motif in [("ecrit", "ont change"), ("code", "code 3"), ("illisible", "aucun JSON"), ("inconnu", "inconnu"), ("attribut", "hors catalogue")]:
+    _, e = lance(racine, "ecrit", argv)
+    verifie((e["etat"], "modifies pendant le traitement (platformio_override.ini)" in e["message"]), ("fini", True),
+            f"traitement pendant qu'un fichier du depot change -> propositions gardees, avertissement ({e['message'][-90:]})")
+    git(racine, "checkout", "--", "platformio_override.ini")
+    aer.chemin(racine, ENV).write_bytes(avant)
+    for mode, motif in [("code", "code 3"), ("illisible", "aucun JSON"), ("inconnu", "inconnu"), ("attribut", "hors catalogue")]:
         _, e = lance(racine, mode, argv)
         verifie((e["etat"], motif in e["message"]), ("echec", True), f"traitement {mode} -> echec ({e['message'][:90]})")
         verifie(aer.chemin(racine, ENV).read_bytes() == avant, True, f"traitement {mode} : remarques.json intact")
-        if mode == "ecrit":
-            git(racine, "checkout", "--", "platformio_override.ini")
     _, e = lance(racine, "ok", argv, programme=[str(racine / "pas_de_claude.exe")])
     verifie((e["etat"], "impossible" in e["message"]), ("echec", True), "claude absent -> echec")
     os.environ["FAUX_CLAUDE"] = "lent"
