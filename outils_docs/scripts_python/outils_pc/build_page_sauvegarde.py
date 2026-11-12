@@ -157,6 +157,11 @@ $("s-liaison").onchange = function () { sCharge(S.env, true); };
 
 async function sCharge(env, garder) {
   S.env = env;
+  // MQTT : le serveur lit le topic dans le persist, qu'un ESP8266 (pas de Berry, pas de FS) n'a pas -> HTTP seul
+  var mqttPossible = !!(parNom[env] && parNom[env].fichiers_berry), liaison = $("s-liaison");
+  var optMqtt = liaison.querySelector('option[value="mqtt"]');
+  optMqtt.hidden = optMqtt.disabled = !mqttPossible;
+  if (!mqttPossible) liaison.value = "http";
   var adresse = sAdresse();
   $("s-adresse").textContent = adresse ? adresse : "adresse inconnue : la saisir sur la ligne de l'env, onglet Build (méthode OTA)";
   var r = await appel("/sauvegardes?env=" + encodeURIComponent(env));
@@ -309,7 +314,8 @@ $("s-prendre").onclick = async function () {
   bouton.disabled = false;
   if (!r.ok) { sMessages([["r", "Non sauvegardée : " + (r.texte || "HTTP " + r.statut)]]); return; }
   S.fichier = r.donnees.fichier;
-  sMessages([["v", "Sauvegardée : " + r.donnees.fichier + " (" + r.donnees.taille + " o, " + r.donnees.version + ")"]]);
+  sMessages([["v", "Sauvegardée : " + r.donnees.fichier + " (" + r.donnees.taille + " o, " + r.donnees.version + ")"]]
+    .concat((r.donnees.hors_config || {}).remarques || []));
   sCharge(S.env, true);
 };
 

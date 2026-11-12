@@ -549,7 +549,8 @@ class Serie:
                 raise ValueError("adresse inconnue")
             fiche = build_sauvegarde.prend(self.racine, ligne.env, ip, "avant-flash", build_envs.persist_carte(self.racine, ligne.env))
             self._ajoute("etape", ligne.env, action="upload", etape="Calibrage", pourcent=None,
-                         detail=f"configuration sauvegardée : {fiche['fichier']}")
+                         detail=f"configuration sauvegardée : {fiche['fichier']}"
+                         + "".join(f" ; {m[1]}" for m in fiche.get("hors_config", {}).get("remarques", []) if m[0] == "o"))
         except Exception as erreur:                      # noqa: BLE001 - carte injoignable, pas d'IP : le flash continue
             self._ajoute("etape", ligne.env, action="upload", etape="Calibrage", pourcent=None,
                          detail=f"configuration non sauvegardée : {erreur}")

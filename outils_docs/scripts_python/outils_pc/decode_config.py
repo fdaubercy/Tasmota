@@ -167,7 +167,10 @@ def ecrit_copie(source, dest, modifs):
         nombre = (disposition()["textes"].get(k) or [0, None])[1]
         if nombre and isinstance(v, str) and isinstance(avant.get(k), list):
             modifs[k] = [v] + avant[k][1:]
-    textes = {k: v for k, v in modifs.items() if k in disposition()["textes"]}
+    # ESP8266 (config_version 0) : indices de textes decales apres SET_ADC_PARAM1 et SET_MAX plus petit -> la
+    # troncature de decode-config est juste ici, il ecrit tout seul (telegram_fingerprint : 98, pas 125)
+    esp8266 = settings(source.read_bytes())[0xF36] == 0
+    textes = {} if esp8266 else {k: v for k, v in modifs.items() if k in disposition()["textes"]}
     autres = {k: v for k, v in modifs.items() if k not in textes}
     shutil.copyfile(source, dest)
     try:

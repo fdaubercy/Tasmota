@@ -69,6 +69,32 @@ class Serie:
 JOINTS = []
 
 
+def controle_esp8266():
+    """Reponses de carte simulees : 12.0.2 sans FS (.45), FS present, deux FS (JSON invalide), Zigbee, carte partie."""
+    import build_sauvegarde_esp8266 as be
+    fwr = '{"StatusFWR":{"Version":"12.0.2(tasmota)","BuildDateTime":"2022-06-20T12:45:43","Hardware":"ESP8285"}}'
+    def carte(ufs='{"Command":"Unknown"}', pilotes="1,2,3,10"):
+        rep = {"Status 2": fwr, "Ufs": ufs, "Status 4": '{"StatusMEM":{"Drivers":"%s"}}' % pilotes}
+        return lambda _ip, cmnd, _delai: rep[cmnd]
+    niveaux = lambda r: [m[0] for m in r["remarques"]]
+    r = be.controle("192.168.0.45", 1, carte())
+    verifie((niveaux(r), r["firmware"]), (["v", "v"], "12.0.2(tasmota) ESP8285 2022-06-20T12:45:43"),
+            "esp8266 : sans FS ni Zigbee, rien a recuperer, firmware note")
+    verifie(niveaux(be.controle("x", 1, carte(ufs='{"Ufs":{"Type":0,"Size":0,"Free":0}}'))), ["v", "v"],
+            "esp8266 : FS de type 0 = pas de FS")
+    verifie(niveaux(be.controle("x", 1, carte(ufs='{"Ufs":{"Type":2,"Size":1000,"Free":900}}')))[0], "o",
+            "esp8266 : FS present signale")
+    verifie(niveaux(be.controle("x", 1, carte(ufs='{"Ufs":{"Type":0,"Size":0,"Free":0},{"Type":2,"Size":9,"Free":9}}')))[0],
+            "o", "esp8266 : deux FS (reponse qui n'est pas du JSON) : le second est vu")
+    verifie(niveaux(be.controle("x", 1, carte(pilotes="1,2,23,45")))[0], "o", "esp8266 : pilote Zigbee signale")
+    verifie(niveaux(be.controle("x", 1, carte(pilotes="1,2,123")))[0], "v", "esp8266 : 123 n'est pas le pilote 23")
+    def partie(*_):
+        raise OSError("timed out")
+    r = be.controle("x", 1, partie)
+    verifie((niveaux(r), "timed out" in r["remarques"][0][1]), (["o"], True), "esp8266 : carte partie, pas d'exception")
+    verifie(niveaux(be.controle("mqtt://cave/lumiere", 1, partie)), ["o"], "esp8266 : par MQTT, controle non fait (signale)")
+
+
 def banc():
     if not dc.utilisable():
         print("KO   decode-config absent : lancer outils_pc/decode_config.py")
@@ -118,6 +144,27 @@ def banc():
         bruts = dc.textes_bruts(chemin4.read_bytes())
         verifie((bruts[95], bruts[126]), (b"Inter 9", b"11:22:33:44:55:66"), "copie : textes d'interrupteur 9 et APBSSID1 intacts")
         leve(lambda: bs.copie(racine, ENV, f1["fichier"], {"hostname": "X" * 700}), ValueError, "copie : reserve de textes pleine refusee")
+        # ESP8266 (config_version 0) : textes decales de 27 apres SET_ADC_PARAM1 (tasmota.h::SettingsTextIndex) ;
+        # 80 = SET_SWITCH_TXT1, 89 = SET_RGX_SSID, 91 = SET_INFLUXDB_HOST, 95 = SET_INFLUXDB_BUCKET
+        esp8266 = Path(racine) / bs.DOSSIER / "tasmota-essai" / "20261112-000000_manuelle.dmp"
+        esp8266.parent.mkdir(parents=True)
+        esp8266.write_bytes(dmp(version=0x0C000200, plateforme=0,
+                                textes={118: "", 122: "", 126: "", 80: "Inter 1", 91: "influxdb", 95: "db"}))
+        f5 = bs.copie(racine, "tasmota-essai", esp8266.name, {"rgx_ssid": "AP-ESSAI", "hostname": "SONOFF-ESSAI"})
+        chemin5 = esp8266.parent / f5["fichier"]
+        relu = dc.decode(chemin5)
+        verifie((relu["rgx_ssid"], relu["hostname"], relu["influxdb_host"], relu["influxdb_bucket"]),
+                ("AP-ESSAI", "SONOFF-ESSAI", "influxdb", "db"), "copie ESP8266 : textes ecrits a leur indice ESP8266")
+        bruts = dc.textes_bruts(chemin5.read_bytes())
+        verifie((bruts[80], bruts[89]), (b"Inter 1", b"AP-ESSAI"), "copie ESP8266 : interrupteur 1 intact, rgx_ssid en 89")
+        # Meme nom sur les deux puces mais indice different (98 sur ESP8266, 125 sur ESP32), cle connue depuis 15.0 :
+        # _pose_textes le placait en 125 et la relecture refusait la copie
+        recent = esp8266.with_name("20261112-000001_manuelle.dmp")
+        recent.write_bytes(dmp(plateforme=0, textes={118: "", 122: "", 126: "", 80: "Inter 1", 91: "influxdb", 95: "db"}))
+        f6 = bs.copie(racine, "tasmota-essai", recent.name, {"telegram_fingerprint": "AB CD"})
+        relu = dc.decode(esp8266.parent / f6["fichier"])
+        verifie((relu["telegram_fingerprint"], relu["influxdb_host"]), ("AB CD", "influxdb"),
+                "copie ESP8266 : telegram_fingerprint ecrit en 98, le reste intact")
         leve(lambda: bs.copie(racine, ENV, f1["fichier"], {"button_text": [""] * 17}), ValueError, "copie : texte multiple trop long refuse")
         avant = len(bs.liste(racine, ENV))
         ecrit = dc._pose_textes
@@ -218,6 +265,13 @@ def banc():
         build_serie.build_envs.liste_envs = lambda _: [types.SimpleNamespace(nom=ENV, ip="")]
         verifie(serie._sauve_drvset(build_serie.Ligne(ENV, "com", "COM9", "")), None, "avant flash : sans adresse, rien de bloque")
         build_serie.build_envs.liste_envs = reel
+
+        # -- ESP8266 : ce qui reste hors de Settings, lu sur la carte en ligne (build_sauvegarde_esp8266)
+        controle_esp8266()
+        carte.config = dmp(version=0x0C000200, plateforme=0)
+        f8 = bs.prend(racine, ENV, carte.ip, "manuelle")
+        verifie(("hors_config" in f8, "hors_config" in f1), (True, False), "prend : controle hors config pour un ESP8266 seulement")
+        carte.config = dmp()
 
         # -- routes : refus pendant un envoi, verrou
         import threading

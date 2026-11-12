@@ -74,6 +74,17 @@ def sonde(m, capture):
     s.verifie((e["fichiers"], e["secret"]), (True, False), "parametres : fichier .drvset003 cite, aucun mot de passe en clair")
     s.verifie((cdp.js("document.getElementById('s-liaison').value"), cdp.js("document.querySelectorAll('#s-params .s-demarre').length")),
               ("http", 0), "liaison HTTP par defaut ; env d'essai sans autoexec ni persist : aucune marque de demarrage")
+    # Liaison MQTT : seulement pour un env ESP32 du cenv (fichiers_berry) ; un ESP8266 n'a pas de persist ou lire le topic
+    liaison = ("(() => { const o = document.querySelector('#s-liaison option[value=\"mqtt\"]');"
+               " return [document.getElementById('s-liaison').value, o.disabled, o.hidden]; })()")
+    cdp.js(f"(() => {{ parNom['{A}'].fichiers_berry = true; sCharge('{A}'); document.getElementById('s-liaison').value = 'mqtt'; return 1; }})()")
+    s.verifie(cdp.js(liaison), ["mqtt", False, False], "liaison : MQTT proposee pour un env ESP32")
+    cdp.js(f"(() => {{ parNom['{A}'].fichiers_berry = false; sCharge('{A}'); return 1; }})()")
+    s.verifie(cdp.js(liaison), ["http", True, True], "liaison : env ESP8266 -> HTTP impose, MQTT masquee")
+    # zone videe AVANT le rechargement : sinon l'attente passe sur les themes d'avant, que sChoisit efface ensuite
+    cdp.js(f"(() => {{ parNom['{A}'].fichiers_berry = true; document.getElementById('s-params').textContent = '';"
+           f" sCharge('{A}'); return 1; }})()")
+    s.attend(cdp, "document.querySelectorAll('#s-params .s-theme').length > 0", 90)
 
     saisit(cdp, "#s-filtre", "CARTE-AVANT")            # valeur du seul hostname de la plus recente (le filtre cherche aussi les valeurs)
     e = etat(cdp)

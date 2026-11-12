@@ -4,7 +4,7 @@ Une sauvegarde est le /dl d'une carte (settings.ino::SettingsConfigBackup : Sett
 outils_docs/sauvegardes_cartes/<env>/AAAAMMJJ-HHMMSS_<origine>.dmp avec sa fiche .json. Le dossier est ignore par git :
 un .dmp porte les mots de passe Wi-Fi et MQTT en clair, et le depot est public.
 
-  prend        /dl de la carte (esclave `IP:port` : redirection du maitre posee et identite verifiee d'abord ;
+  prend        /dl de la carte (ESP8266 : ce qu'il garde hors de Settings, build_sauvegarde_esp8266) (esclave `IP:port` : redirection du maitre posee et identite verifiee d'abord ;
                `mqtt://<topic>` : par le broker, build_sauvegarde_mqtt) ; une prise automatique lance `purge`
   liste        sauvegardes d'un env, de la plus recente a la plus ancienne
   parametres   parametres d'une sauvegarde par groupe decode-config, mots de passe remplaces par ***
@@ -30,6 +30,7 @@ import time
 from pathlib import Path
 
 import build_envs
+import build_sauvegarde_esp8266
 import build_sauvegarde_mqtt
 import decode_config
 from build_ota_http import _attend_retour, _get, _page_en_echec, _poste
@@ -72,12 +73,14 @@ def _chemin(racine, env, fichier):
     return chemin
 
 
-def _fiche(chemin, donnees, origine, adresse, source=""):
+def _fiche(chemin, donnees, origine, adresse, source="", hors_config=None):
     v = decode_config.version(donnees)
     n = chemin.name                  # AAAAMMJJ-HHMMSS_<origine>.dmp : la date de la prise, pas celle du fichier
     fiche = {"fichier": n, "date": f"{n[6:8]}/{n[4:6]}/{n[:4]} {n[9:11]}:{n[11:13]}",
              "version": decode_config.nom_version(v), "editable": decode_config.editable(v), "origine": ORIGINES[origine],
              "adresse": adresse, "taille": len(donnees), "source": source}
+    if hors_config is not None:
+        fiche["hors_config"] = hors_config
     chemin.with_suffix(".json").write_text(json.dumps(fiche, ensure_ascii=False, indent=1), encoding="utf-8")
     return fiche
 
@@ -117,7 +120,9 @@ def prend(racine, env, adresse, origine, persist_env=None, joint=None):
     donnees = lit_carte(adresse, env, persist_env, joint)
     chemin = _nouveau(racine, env, origine)
     chemin.write_bytes(donnees)
-    fiche = _fiche(chemin, donnees, origine, adresse)
+    esp8266 = decode_config.settings(donnees)[PLATEFORME] == 0      # le /dl d'un ESP8266 ne porte ni FS ni Zigbee
+    fiche = _fiche(chemin, donnees, origine, adresse,
+                   hors_config=build_sauvegarde_esp8266.controle(adresse, DELAI) if esp8266 else None)
     if origine in AUTOMATIQUES and purge_auto(racine):
         try:
             purge(racine, env)
