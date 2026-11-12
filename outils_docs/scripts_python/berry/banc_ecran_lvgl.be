@@ -124,7 +124,7 @@ verifie("bouton : texte dans un label enfant centre", ecranLvgl.textes["p0b91"].
         ecranLvgl.textes["p0b91"].texte == "Débits" && ecranLvgl.textes["p0b91"].aligne == lv.ALIGN_CENTER)
 verifie("label : texte sur l'objet lui-meme", ecranLvgl.textes["p1b11"] == O["p1b11"])
 verifie("police TTF : A: retire, sans / de tete", O["p0b1"].style("text_font") == "ttf:sd/polices/RobotoCondensed-Regular.ttf-32")
-verifie("police entiere : robotocondensed embarquee", O["p1b11"].style("text_font") == "embarquee:robotocondensed-24")
+verifie("police entiere : robotocondensed embarquee", O["p2b12"].style("text_font") == "embarquee:robotocondensed-24")
 var ttf = 0  var emb = 0
 for p: lv.polices    if (p[0] == "load_freetype_font")    ttf += 1    else    emb += 1    end    end
 verifie("chaque police chargee une seule fois (4 TTF, 2 embarquees)", ttf == 4 && emb == 2)

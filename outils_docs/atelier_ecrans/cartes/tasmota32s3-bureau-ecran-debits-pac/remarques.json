@@ -1,0 +1,79 @@
+[
+ {
+  "id": 1,
+  "cible": {
+   "page": 1,
+   "objet": 11
+  },
+  "texte": "Les noms des voies sont trop petits de loin, passer en 28 ?",
+  "date": "2026-11-12 18:14:26",
+  "etat": "appliquee",
+  "reponses": [],
+  "proposition": {
+   "texte": "Les six noms de voies de la page Débits passent de robotocondensed 24 (police embarquée, limitée à 12, 16 et 24) à RobotoCondensed-Regular 28 sur /sd, qui garde les accents. Montserrat 28 est écartée parce qu'elle n'a pas d'accents. La hauteur passe de 32 à 36 px et le label remonte de 2 px pour rester centré sur sa barre. La largeur reste à 180 px, car la barre commence à x=212 : environ 13 caractères tiennent en 28. La page Courbes reste en 24, faute de demande pour elle.",
+   "operations": [
+    {
+     "op": "modifie",
+     "page": 1,
+     "id": 11,
+     "y": 84,
+     "h": 36,
+     "attributs": {
+      "text_font": "A:sd/polices/RobotoCondensed-Regular.ttf-28"
+     }
+    },
+    {
+     "op": "modifie",
+     "page": 1,
+     "id": 21,
+     "y": 154,
+     "h": 36,
+     "attributs": {
+      "text_font": "A:sd/polices/RobotoCondensed-Regular.ttf-28"
+     }
+    },
+    {
+     "op": "modifie",
+     "page": 1,
+     "id": 31,
+     "y": 224,
+     "h": 36,
+     "attributs": {
+      "text_font": "A:sd/polices/RobotoCondensed-Regular.ttf-28"
+     }
+    },
+    {
+     "op": "modifie",
+     "page": 1,
+     "id": 41,
+     "y": 294,
+     "h": 36,
+     "attributs": {
+      "text_font": "A:sd/polices/RobotoCondensed-Regular.ttf-28"
+     }
+    },
+    {
+     "op": "modifie",
+     "page": 1,
+     "id": 51,
+     "y": 364,
+     "h": 36,
+     "attributs": {
+      "text_font": "A:sd/polices/RobotoCondensed-Regular.ttf-28"
+     }
+    },
+    {
+     "op": "modifie",
+     "page": 1,
+     "id": 61,
+     "y": 434,
+     "h": 36,
+     "attributs": {
+      "text_font": "A:sd/polices/RobotoCondensed-Regular.ttf-28"
+     }
+    }
+   ],
+   "date": "2026-11-12 18:57:53"
+  }
+ }
+]

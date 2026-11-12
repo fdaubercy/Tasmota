@@ -8,32 +8,32 @@
 {"page":0,"id":93,"obj":"btn","x":282,"y":540,"w":130,"h":46,"radius":23,"border_width":0,"text":"Réglages","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","bg_color":"#1F2B38","text_color":"#E8EDF2","action":"p3"}
 {"page":1,"comment":"Debits (modele A) : six lignes nom, barre, debit, unite, part du total"}
 {"page":1,"id":0,"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}
-{"page":1,"id":11,"obj":"label","x":24,"y":86,"w":180,"h":32,"text":"Débit 1","text_font":24,"text_color":"#E8EDF2"}
+{"page":1,"id":11,"obj":"label","x":24,"y":84,"w":180,"h":36,"text":"Débit 1","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-28","text_color":"#E8EDF2"}
 {"page":1,"id":12,"obj":"bar","x":212,"y":89,"w":532,"h":26,"min":0,"max":100,"val":0,"radius":13,"bg_color":"#1F2B38","radius10":13,"bg_color10":"#3FA7FF"}
 {"page":1,"id":13,"obj":"label","x":748,"y":80,"w":112,"h":44,"text":"-,--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","text_color":"#5B6B7C","align":2}
 {"page":1,"id":14,"obj":"label","x":866,"y":94,"w":60,"h":26,"text":"L/min","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8"}
 {"page":1,"id":15,"obj":"label","x":926,"y":92,"w":74,"h":26,"text":"","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8","align":2}
-{"page":1,"id":21,"obj":"label","x":24,"y":156,"w":180,"h":32,"text":"Débit 2","text_font":24,"text_color":"#E8EDF2"}
+{"page":1,"id":21,"obj":"label","x":24,"y":154,"w":180,"h":36,"text":"Débit 2","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-28","text_color":"#E8EDF2"}
 {"page":1,"id":22,"obj":"bar","x":212,"y":159,"w":532,"h":26,"min":0,"max":100,"val":0,"radius":13,"bg_color":"#1F2B38","radius10":13,"bg_color10":"#3FA7FF"}
 {"page":1,"id":23,"obj":"label","x":748,"y":150,"w":112,"h":44,"text":"-,--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","text_color":"#5B6B7C","align":2}
 {"page":1,"id":24,"obj":"label","x":866,"y":164,"w":60,"h":26,"text":"L/min","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8"}
 {"page":1,"id":25,"obj":"label","x":926,"y":162,"w":74,"h":26,"text":"","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8","align":2}
-{"page":1,"id":31,"obj":"label","x":24,"y":226,"w":180,"h":32,"text":"Débit 3","text_font":24,"text_color":"#E8EDF2"}
+{"page":1,"id":31,"obj":"label","x":24,"y":224,"w":180,"h":36,"text":"Débit 3","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-28","text_color":"#E8EDF2"}
 {"page":1,"id":32,"obj":"bar","x":212,"y":229,"w":532,"h":26,"min":0,"max":100,"val":0,"radius":13,"bg_color":"#1F2B38","radius10":13,"bg_color10":"#3FA7FF"}
 {"page":1,"id":33,"obj":"label","x":748,"y":220,"w":112,"h":44,"text":"-,--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","text_color":"#5B6B7C","align":2}
 {"page":1,"id":34,"obj":"label","x":866,"y":234,"w":60,"h":26,"text":"L/min","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8"}
 {"page":1,"id":35,"obj":"label","x":926,"y":232,"w":74,"h":26,"text":"","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8","align":2}
-{"page":1,"id":41,"obj":"label","x":24,"y":296,"w":180,"h":32,"text":"Débit 4","text_font":24,"text_color":"#E8EDF2"}
+{"page":1,"id":41,"obj":"label","x":24,"y":294,"w":180,"h":36,"text":"Débit 4","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-28","text_color":"#E8EDF2"}
 {"page":1,"id":42,"obj":"bar","x":212,"y":299,"w":532,"h":26,"min":0,"max":100,"val":0,"radius":13,"bg_color":"#1F2B38","radius10":13,"bg_color10":"#3FA7FF"}
 {"page":1,"id":43,"obj":"label","x":748,"y":290,"w":112,"h":44,"text":"-,--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","text_color":"#5B6B7C","align":2}
 {"page":1,"id":44,"obj":"label","x":866,"y":304,"w":60,"h":26,"text":"L/min","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8"}
 {"page":1,"id":45,"obj":"label","x":926,"y":302,"w":74,"h":26,"text":"","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8","align":2}
-{"page":1,"id":51,"obj":"label","x":24,"y":366,"w":180,"h":32,"text":"Débit 5","text_font":24,"text_color":"#E8EDF2"}
+{"page":1,"id":51,"obj":"label","x":24,"y":364,"w":180,"h":36,"text":"Débit 5","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-28","text_color":"#E8EDF2"}
 {"page":1,"id":52,"obj":"bar","x":212,"y":369,"w":532,"h":26,"min":0,"max":100,"val":0,"radius":13,"bg_color":"#1F2B38","radius10":13,"bg_color10":"#3FA7FF"}
 {"page":1,"id":53,"obj":"label","x":748,"y":360,"w":112,"h":44,"text":"-,--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","text_color":"#5B6B7C","align":2}
 {"page":1,"id":54,"obj":"label","x":866,"y":374,"w":60,"h":26,"text":"L/min","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8"}
 {"page":1,"id":55,"obj":"label","x":926,"y":372,"w":74,"h":26,"text":"","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8","align":2}
-{"page":1,"id":61,"obj":"label","x":24,"y":436,"w":180,"h":32,"text":"Débit 6","text_font":24,"text_color":"#E8EDF2"}
+{"page":1,"id":61,"obj":"label","x":24,"y":434,"w":180,"h":36,"text":"Débit 6","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-28","text_color":"#E8EDF2"}
 {"page":1,"id":62,"obj":"bar","x":212,"y":439,"w":532,"h":26,"min":0,"max":100,"val":0,"radius":13,"bg_color":"#1F2B38","radius10":13,"bg_color10":"#3FA7FF"}
 {"page":1,"id":63,"obj":"label","x":748,"y":430,"w":112,"h":44,"text":"-,--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","text_color":"#5B6B7C","align":2}
 {"page":1,"id":64,"obj":"label","x":866,"y":444,"w":60,"h":26,"text":"L/min","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8"}

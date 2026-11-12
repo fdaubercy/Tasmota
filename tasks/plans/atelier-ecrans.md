@@ -189,7 +189,7 @@ Forme d'une remarque : `{"id", "cible": {"objet": id} | {"zone": [x, y, l, h]} |
   10 min dépassé -> état `echec` avec message, `remarques.json` intact ; second lancement pendant `en_cours` -> refus
 - [x] Module, routes et onglet « Remarques » — preuve : commit A7, test_atelier_ecrans_remarques.py VERT, sonde Chrome VERTE (38, 2 passes), relecture dédiée traitée (hooks coupés par --settings disableAllHooks, prouvé par un hook témoin) (épingler sur un objet, une zone tracée, la page ; Appliquer / Refuser /
   Répondre ; journal dans `%LOCALAPPDATA%\outils_tasmota\atelier_ecrans\`) ; bancs VERT, sonde Chrome étendue VERT
-- [ ] Essai réel : une remarque traitée par le vrai `claude -p`, proposition appliquée sur le canevas ; commit
+- [x] Essai réel : une remarque traitée par le vrai `claude -p`, proposition appliquée sur le canevas ; commit — preuve : remarque 1 (noms des voies trop petits) proposée par le vrai `claude -p`, appliquée puis écrite par l'utilisateur dans la page le 2026-11-12 (« ça fonctionne ») : six `text_font` passés à `RobotoCondensed-Regular.ttf-28` dans `ecran.json`, `pages.jsonl` et `ecranLvgl.be` régénérés, `remarques.json` état `appliquee` ; bancs de description, HASPmota, LVGL, `banc_ecran_debits`, `banc_demarrage` VERT
 
 ## A8 — Écriture dans le dépôt, changement d'écran, envoi
 Fichiers : créer `outils_pc/atelier_ecrans_ecriture.py`, `atelier_ecrans_ecran.py`, `test_atelier_ecrans_ecriture.py`,
