@@ -25,6 +25,7 @@ INTERFACE = CARTE / "ecranHaspmota.be"
 GENERIQUE = CARTE / "ecranFonctions.be"
 VERT = "BANC_ECRAN_DEBITS: OK"
 PAGES = CARTE / "pages.jsonl"
+ECRAN_JSON = RACINE / "outils_docs/atelier_ecrans/cartes/tasmota32s3-bureau-ecran-debits-pac/ecran.json"
 CONF_LV = RACINE / "tasmota/lvgl_berry/tasmota_lv_conf.h"
 
 # Chaque mutant doit rendre le banc rouge : (nom, texte du module, remplacement). Module des debits ecranDebitsFonctions.be :
@@ -213,6 +214,27 @@ def controle_polices(tmp):
     return ok
 
 
+def ecarts_modele(lues, section):
+    """Cles rendues par ecranDebitsFonctions.modele() (ligne MODELE_CLES du .be) contre la section `modele` de ecran.json."""
+    return [f"manque dans ecran.json : {c}" for c in sorted(lues - section)] + [f"en trop dans ecran.json : {c}" for c in sorted(section - lues)]
+
+
+def controle_modele(sortie):
+    m = re.search(r"^MODELE_CLES: (.+)$", sortie, re.M)
+    lues = set(m.group(1).split(",")) if m else set()
+    section = [x["cle"] for x in json.loads(ECRAN_JSON.read_text(encoding="utf-8"))["modele"]]
+    ecarts = ecarts_modele(lues, set(section))
+    print(f"--- section modele de ecran.json : {len(lues)} cles rendues, {len(section)} decrites, ecarts : {ecarts or 'aucun'}")
+    ok = bool(lues) and not ecarts and len(section) == len(set(section))
+    for nom, section_t in [("cle retiree de la section", set(section) - {"voies[].debit"}),
+                           ("cle inventee dans la section", set(section) | {"voies[].couleur"}),
+                           ("modele non rendu (ligne MODELE_CLES absente)", set(section))]:
+        rouge = bool(ecarts_modele(set() if "non rendu" in nom else lues, section_t))
+        print(f"  {'OK   ' if rouge else 'ECHEC'} modele : {nom}")
+        ok = ok and rouge
+    return ok
+
+
 def temoins(tmp, source, mutants, genre, lance):
     texte = source.read_text(encoding="utf-8").replace("\r\n", "\n")
     ok = True
@@ -240,6 +262,7 @@ def main():
         print(f"  ({sum(l.startswith('  OK') for l in sortie.splitlines())} verifications OK)")
         ok = VERT in sortie
         ok = controle_polices(tmp) and ok
+        ok = controle_modele(sortie) and ok
         print("--- Temoins (chaque mutant doit etre rouge)")
         ok = temoins(tmp, MODULE, MUTANTS, "module", lambda d, c: lance_berry(d, c)) and ok
         ok = temoins(tmp, DRIVER, MUTANTS_DRIVER, "driver", lambda d, c: lance_berry(d, "-", c)) and ok

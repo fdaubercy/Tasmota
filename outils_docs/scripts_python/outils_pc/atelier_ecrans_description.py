@@ -1,0 +1,164 @@
+"""Description neutre de l'ecran d'une carte (atelier des ecrans) : `outils_docs/atelier_ecrans/cartes/<env>/ecran.json`.
+
+Forme : {"version": 1, "ecran": <cle du catalogue>, "orientation": 0|90|180|270,
+         "modele": [{"cle", "type", "exemple"}],             valeurs liables (cles de ecranDebitsFonctions.modele)
+         "pages": [{"n", "titre", "attributs"?, "commentaire"?}],     page 0 = commun a toutes les pages
+         "objets": [{"id", "page", "type", "x", "y", "l", "h", "attributs": {}, "liaison"?, "toucher"?, "commentaire"?}]}
+  liaison : {"cle", "attribut", "indice"?}   indice obligatoire pour une cle de liste (`voies[].debit`)
+  toucher : un seul de {"page": n} | {"commande": "<commande Tasmota>"} | {"fonction": "<module.fonction>", "args"?: [..]}
+`valide` ne lit que la description et le catalogue (atelier_ecrans_catalogue) ; la section `modele` est comparee a la map
+rendue par le module metier dans berry/banc_ecran_debits.py."""
+
+import hashlib
+import json
+import re
+from pathlib import Path
+
+import atelier_ecrans_catalogue as cat
+
+DOSSIER = "outils_docs/atelier_ecrans/cartes"
+TYPES_MODELE = ("texte", "entier", "liste", "booleen")
+ATTRIBUTS_LIAISON_SPECIAUX = ("series",)       # liaison sans attribut LVGL : les courbes d'un chart
+TOUCHER = ("page", "commande", "fonction")
+COULEUR = re.compile(r"#[0-9A-Fa-f]{6}")
+POLICE_TTF = re.compile(r"A:sd/polices/(.+\.ttf)-(\d+)")
+POLICE_FIRMWARE = re.compile(r"(montserrat|seg7)-(\d+)")
+
+
+def chemin(racine, env):
+    return Path(racine) / DOSSIER / env / "ecran.json"
+
+
+def charge(racine, env):
+    """Description de l'env, ou None (fichier absent ou illisible : jamais d'exception)."""
+    try:
+        d = json.loads(chemin(racine, env).read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else None
+    except (OSError, ValueError):
+        return None
+
+
+def empreinte(octets):
+    return hashlib.sha256(octets).hexdigest()
+
+
+def _entier(v):
+    return isinstance(v, int) and not isinstance(v, bool)
+
+
+def _type_attribut(catalogue, type_, cle):
+    """Type de l'attribut `cle` de `type_` (None si inconnu) ; `%` final et chiffres de partie/etat (radius10) admis."""
+    attrs = catalogue["objets"].get(type_, {}).get("attributs", {})
+    if cle.endswith("%"):
+        cle = cle[:-1]
+    if cle in attrs:
+        return attrs[cle]["type"]
+    if len(cle) > 2 and cle[-2:].isdigit() and cle[:-2] in attrs:
+        return attrs[cle[:-2]]["type"]
+    return None
+
+
+def _police(catalogue, v):
+    """Message si la police `v` n'existe pas dans le catalogue (ecriture HASPmota), sinon None."""
+    polices = {p["nom"]: p for p in catalogue["polices"]}
+    if _entier(v):
+        t = polices["robotocondensed"]["tailles"]
+        return None if v in t else f"taille {v} de robotocondensed non compilée (disponibles : {', '.join(map(str, t))})"
+    if isinstance(v, str):
+        m = POLICE_TTF.fullmatch(v)
+        if m:
+            p = next((p for p in catalogue["polices"] if p.get("fichier") == m.group(1)), None)
+            if p is None:
+                return f"police {m.group(1)} absente du catalogue"
+            n = int(m.group(2))
+            if p.get("taille_libre"):
+                return None if n > 0 else f"taille {n} invalide pour {m.group(1)}"
+            return None if n in p["tailles"] else f"taille {n} absente de {m.group(1)}"
+        m = POLICE_FIRMWARE.fullmatch(v)
+        if m:
+            n = int(m.group(2))
+            t = polices[m.group(1)]["tailles"]
+            return None if n in t else f"taille {n} absente de {m.group(1)} (disponibles : {', '.join(map(str, t))})"
+    return f"police « {v} » absente du catalogue"
+
+
+def _attributs(catalogue, type_, attrs, qui, msgs):
+    for k, v in attrs.items():
+        t = _type_attribut(catalogue, type_, k)
+        if t is None:
+            msgs.append(f"{qui} : attribut « {k} » inconnu du type {type_}")
+        elif t == "couleur" and not (isinstance(v, str) and COULEUR.fullmatch(v)):
+            msgs.append(f"{qui} : couleur « {v} » de {k} mal formée (attendu #RRGGBB)")
+        elif t == "police":
+            m = _police(catalogue, v)
+            if m:
+                msgs.append(f"{qui} : {k} : {m}")
+        elif t == "entier" and not _entier(v):
+            msgs.append(f"{qui} : {k} doit être un entier")
+        elif t == "texte" and not isinstance(v, str):
+            msgs.append(f"{qui} : {k} doit être un texte")
+
+
+def valide(d, catalogue):
+    """Messages d'erreur en francais ; liste vide = description valide."""
+    msgs = []
+    if d.get("version") != 1:
+        msgs.append(f"version {d.get('version')!r} non prise en charge (attendu 1)")
+    ecran = catalogue["ecrans"].get(d.get("ecran"))
+    if ecran is None:
+        return msgs + [f"écran « {d.get('ecran')} » absent du catalogue"]
+    if d.get("orientation", 0) not in (0, 90, 180, 270):
+        msgs.append("orientation : 0, 90, 180 ou 270")
+    L, H = ecran["largeur"], ecran["hauteur"]
+    if d.get("orientation", 0) in (90, 270):
+        L, H = H, L
+    cles = []
+    for m in d.get("modele", []):
+        if m.get("cle") in cles:
+            msgs.append(f"modèle : clé « {m.get('cle')} » en double")
+        cles.append(m.get("cle"))
+        if m.get("type") not in TYPES_MODELE:
+            msgs.append(f"modèle : type « {m.get('type')} » de {m.get('cle')} inconnu ({', '.join(TYPES_MODELE)})")
+    pages = []
+    for p in d.get("pages", []):
+        if p.get("n") in pages:
+            msgs.append(f"page {p.get('n')} en double")
+        pages.append(p.get("n"))
+        _attributs(catalogue, "obj", p.get("attributs", {}), f"page {p.get('n')}", msgs)
+    vus = set()
+    for o in d.get("objets", []):
+        qui = f"objet {o.get('page')}/{o.get('id')}"
+        if o.get("page") not in pages:
+            msgs.append(f"{qui} : page {o.get('page')} inconnue")
+        if (o.get("page"), o.get("id")) in vus:
+            msgs.append(f"{qui} : identifiant en double sur la page")
+        vus.add((o.get("page"), o.get("id")))
+        t = o.get("type")
+        if t not in catalogue["objets"]:
+            msgs.append(f"{qui} : type « {t} » inconnu du catalogue")
+        elif catalogue["objets"][t]["palier"] != 1:
+            msgs.append(f"{qui} : type {t} de palier 2, hors de l'atelier")
+        else:
+            _attributs(catalogue, t, o.get("attributs", {}), qui, msgs)
+        x, y, l, h = (o.get(k) for k in ("x", "y", "l", "h"))
+        if not all(_entier(v) for v in (x, y, l, h)) or x < 0 or y < 0 or l <= 0 or h <= 0 or x + l > L or y + h > H:
+            msgs.append(f"{qui} : hors de l'écran {L} x {H} (x={x}, y={y}, l={l}, h={h})")
+        li = o.get("liaison")
+        if li:
+            if li.get("cle") not in cles:
+                msgs.append(f"{qui} : liaison vers « {li.get('cle')} » absente de la section modèle")
+            elif "[]" in li["cle"] and not (_entier(li.get("indice")) and li["indice"] >= 0):
+                msgs.append(f"{qui} : liaison de liste « {li['cle']} » sans indice")
+            if li.get("attribut") not in ATTRIBUTS_LIAISON_SPECIAUX and \
+                    (t not in catalogue["objets"] or _type_attribut(catalogue, t, li.get("attribut", "")) is None):
+                msgs.append(f"{qui} : liaison vers l'attribut « {li.get('attribut')} » inconnu du type {t}")
+        to = o.get("toucher")
+        if to:
+            cle = [k for k in TOUCHER if k in to]
+            if len(cle) != 1 or set(to) - {cle[0], "args"} or ("args" in to and cle[0] != "fonction"):
+                msgs.append(f"{qui} : toucher : une seule action parmi {', '.join(TOUCHER)} (args avec fonction seulement)")
+            elif cle[0] == "page" and to["page"] not in pages:
+                msgs.append(f"{qui} : toucher vers la page {to['page']} inconnue")
+            elif cle[0] != "page" and not (isinstance(to[cle[0]], str) and to[cle[0]]):
+                msgs.append(f"{qui} : toucher : {cle[0]} doit être un texte non vide")
+    return msgs

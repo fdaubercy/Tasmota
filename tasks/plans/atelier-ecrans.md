@@ -105,15 +105,15 @@ Forme de `ecran.json` : `{"version": 1, "ecran": <clé du catalogue>, "orientati
 "voies[].debit", "type": "texte", "exemple": "4,20"}, ..], "pages": [{"n": 0, "titre": "Commun"}, ..], "objets": [{"id",
 "page", "type", "x", "y", "l", "h", "attributs": {..}, "liaison"?: {"cle", "attribut"}, "toucher"?: {"page"|"commande"|
 "fonction"}, "commentaire"?}]}`.
-- [ ] Banc à mutants d'abord (rouge) : description de référence valide ; mutants refusés chacun avec son message :
+- [x] Banc à mutants d'abord (rouge) — preuve : test_atelier_ecrans_description.py lancé sans module = ModuleNotFoundError (rouge), puis 25 mutants refusés chacun avec son message (vert) ; description de référence valide ; mutants refusés chacun avec son message :
   objet hors écran (x + l > largeur), police absente, taille absente, attribut inconnu du type, type de palier 2,
   liaison vers une clé absente de `modele`, `id` en double sur une même page, page inconnue
-- [ ] `valide` et `charge` ; banc VERT, chaque mutant rouge lu
-- [ ] `ecran.json` des débits écrit à partir du `pages.jsonl` actuel (pages Commun, Débits, Courbes, Réglages ; lignes
+- [x] `valide` et `charge` ; banc VERT, chaque mutant rouge lu — preuve : atelier_ecrans_description.py, `BANC_ATELIER_ECRANS_DESCRIPTION: OK (25 mutants)`, message attendu vérifié par mutant
+- [x] `ecran.json` des débits écrit — preuve : 82 objets, mêmes ids et coordonnées que pages.jsonl (vérifié par le banc), valide() vide ; écrit à partir du `pages.jsonl` actuel (pages Commun, Débits, Courbes, Réglages ; lignes
   `comment` gardées en `commentaire`) ; `valide` vide
-- [ ] Section `modele` contrôlée : cas ajouté à `berry/banc_ecran_debits.py` qui fait rendre `ecranDebitsFonctions.modele(now)`
+- [x] Section `modele` contrôlée — preuve : banc_ecran_debits.py, 16 clés rendues = 16 décrites, 3 témoins rouges, banc entier VERT ; cas : cas ajouté à `berry/banc_ecran_debits.py` qui fait rendre `ecranDebitsFonctions.modele(now)`
   sous `berry.exe` (bouchons existants) et compare ses clés à la section ; témoin : une clé retirée de la section -> rouge
-- [ ] Commit
+- [x] Commit — preuve : voir git log (commit A3)
 
 ## A4 — Générateur HASPmota
 Fichiers : créer `outils_pc/atelier_ecrans_haspmota.py`, `outils_pc/test_atelier_ecrans_haspmota.py`.
