@@ -93,10 +93,10 @@ Persist de la cave, bloc `pompeVideCave` : `"pannes": {"antiRebond": 5, "maxArre
   `AcquittePompe`.
 - Publication : `json_append` du driver ajoute `"PompeVideCave": {"Pompe", "Manuel", "Niveaux": {"Bas", "Haut"}, "Alerte"}`
   (valeurs ON/OFF/"?", texte), lu par l'écran (A6).
-- [ ] Banc `banc_pompe_cave` étendu, rouge d'abord : `incoherence_apres_anti_rebond`, `incoherence_breve_ignoree`, `flotteur_bas_apres_n_arrets`, `arret_normal_remet_compteur`, `manuel_ne_compte_pas`, `json_append_porte_pompe_vide_cave`
-- [ ] Code ; banc VERT ; mutants rouges ; `verifie_berry.py` 0 erreur
-- [ ] Persist (clé `pannes`) ; schéma ; `banc_demarrage.py` VERT
-- [ ] Commit `feat(pompe): pannes des flotteurs (incoherence, flotteur bas) et etat publie`
+- [x] Banc `banc_pompe_cave` étendu, rouge d'abord : `incoherence_apres_anti_rebond`, `incoherence_breve_ignoree`, `flotteur_bas_apres_n_arrets`, `arret_normal_remet_compteur`, `manuel_ne_compte_pas`, `json_append_porte_pompe_vide_cave` — preuve : banc rouge avant le code (every_second absent), 6 cas + 5 cas de plus, 1e1ecbe21
+- [x] Code ; banc VERT ; mutants rouges ; `verifie_berry.py` 0 erreur — preuve : banc_pompe_cave OK (39 controles), 12 mutants lus rouges, verifie_berry 0 erreur, 1e1ecbe21
+- [x] Persist (clé `pannes`) ; schéma ; `banc_demarrage.py` VERT — preuve : cle ajoutee (diff 1 ligne), genere_schema_persist --valide 0 erreur sur serveur-rly, banc_demarrage VERT sans --enregistre, 1e1ecbe21
+- [x] Commit `feat(pompe): pannes des flotteurs (incoherence, flotteur bas) et etat publie` — preuve : 1e1ecbe21
 
 ## A4 — Le serveur exécute les touches de l'écran
 Fichiers : `data/fs/modBus_TasmotaSlaveModBus.be`, branche `boutons` de la réception : avant la conversion en ON/OFF,
