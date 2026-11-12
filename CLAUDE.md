@@ -140,6 +140,10 @@ qu'un decoupage ; 531 lignes avant le palier 4 de l'atelier, +57 pour les routes
 routes de la page `/energie` restent ensemble (spec `2026-11-08-atelier-energie-differentiel-design.md` §6.3) ; un
 second module solidifie ajouterait une entree de `custom_berry_solidify` et de l'autoexec pour rien.
 
+`data/fs/vrFonctions.be` fait **906 lignes**, et c'est **voulu** (decide le 2026-11-12 : exception plutot qu'un
+decoupage). Fonctions des volets roulants (sens physique, boutons, inclinaison MPU6050, facade, garde du reglage),
+appelees par `controleVoletRoulants.be` et `vrReglage.be` (plan `tasks/plans/visuel-reglage-volets.md`).
+
 `outils_docs/scripts_python/outils_pc/build_page.py` fait **1226 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
 vague de corrections finale du meme jour ; 935 le 2026-10-25 avec le panneau « Sortie » et « Effacer puis

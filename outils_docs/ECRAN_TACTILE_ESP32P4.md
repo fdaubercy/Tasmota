@@ -105,6 +105,8 @@ dalles en portrait (rotation en DSI non vérifiée), tactile GT9271 non prouvé 
 
 ## 6. Conclusion provisoire (2026-11-11)
 
+Décision de l'utilisateur (2026-11-12) : l'écran du garage sera relié par **Wi-Fi**, pas par RS485.
+
 Deux voies DSI à faible risque, toutes deux sur le contrôleur déjà décrit dans Tasmota :
 1. **ESP32-P4-WIFI6-Touch-LCD-7B** (EK79007 + GT911, RS485 intégré) : remplacerait le kit comme maître du garage avec
    écran ; description = `EK79007_P4ev_DSI.ini` adaptée (§3).
