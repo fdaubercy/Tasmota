@@ -22,6 +22,7 @@ if demarrage.prologue()
     demarrage.charge(["controleRangeExtender"], "serveur.rangeExtender")
     demarrage.charge(["controleDiscovery"], "serveur.discovery")
     demarrage.chargeFichier("controlePompeVideCave", "modules.pompeVideCave")   # non solidifie : depuis le LittleFS
+    demarrage.chargeFichier("controleCommandesEcran", "modules.ecranCave")      # touches de l'ecran 7B (A4) : pose global.commandesEsclave
     demarrage.leds()
     demarrage.historique()
 end

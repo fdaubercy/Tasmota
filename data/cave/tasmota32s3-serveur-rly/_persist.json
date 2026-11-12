@@ -699,6 +699,84 @@
 					}
 				}
 			}
+        },
+		"ecranCave": {
+			"name": "Touches de l'ecran de la cave",
+			"activation": "OFF",
+			"reglage": "OFF",
+			"log": "info",
+			"esclave": "TasmotaSlaveModBus1",
+			"actions": {
+				"1": {"module": "autres", "relai": 3},
+				"2": {"module": "autres", "relai": 5},
+				"3": {"module": "autres", "relai": 4},
+				"4": {"module": "pompeVideCave", "relai": 1, "manuel": "ON"},
+				"5": {"redemarre": "ON"}
+			},
+			"environnement": {
+				"boutons": {
+					"bouton1": {
+						"activation": "ON",
+						"nom": "Touche 1 Lumieres",
+						"id": 11,
+						"pin": -1,
+						"type": 32,
+						"virtuel": "ModBus_TasmotaSlaveModBus1",
+						"SwitchMode": 1,
+						"etat": "OFF",
+						"relaisLie": {"modules": [], "ids": [], "type": "ON/OFF"},
+						"idModBus": 1
+					},
+					"bouton2": {
+						"activation": "ON",
+						"nom": "Touche 2 Lave-linge",
+						"id": 12,
+						"pin": -1,
+						"type": 32,
+						"virtuel": "ModBus_TasmotaSlaveModBus1",
+						"SwitchMode": 1,
+						"etat": "OFF",
+						"relaisLie": {"modules": [], "ids": [], "type": "ON/OFF"},
+						"idModBus": 2
+					},
+					"bouton3": {
+						"activation": "ON",
+						"nom": "Touche 3 Pompe cuve",
+						"id": 13,
+						"pin": -1,
+						"type": 32,
+						"virtuel": "ModBus_TasmotaSlaveModBus1",
+						"SwitchMode": 1,
+						"etat": "OFF",
+						"relaisLie": {"modules": [], "ids": [], "type": "ON/OFF"},
+						"idModBus": 3
+					},
+					"bouton4": {
+						"activation": "ON",
+						"nom": "Touche 4 Pompe vide-cave",
+						"id": 14,
+						"pin": -1,
+						"type": 32,
+						"virtuel": "ModBus_TasmotaSlaveModBus1",
+						"SwitchMode": 1,
+						"etat": "OFF",
+						"relaisLie": {"modules": [], "ids": [], "type": "ON/OFF"},
+						"idModBus": 4
+					},
+					"bouton5": {
+						"activation": "ON",
+						"nom": "Touche 5 Redemarrer le serveur",
+						"id": 15,
+						"pin": -1,
+						"type": 32,
+						"virtuel": "ModBus_TasmotaSlaveModBus1",
+						"SwitchMode": 1,
+						"etat": "OFF",
+						"relaisLie": {"modules": [], "ids": [], "type": "ON/OFF"},
+						"idModBus": 5
+					}
+				}
+			}
         }
     },
 	"drivers": {

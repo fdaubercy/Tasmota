@@ -988,6 +988,11 @@ class MODBUS_TASMOTA_SLAVE : Driver
                                                 end
                                             end
 
+                                            # Touche d'un ecran (cave, 2026-11-12) : un PUSH (Automatique) porte le mot (seq<<1)|voulu, execute
+                                            # par global.commandesEsclave (controleCommandesEcran.be) ; sans ce module, rien ne change.
+                                            import global
+                                            if (msg.find("Automatique", false) && global.commandesEsclave != nil)    global.commandesEsclave.recoit(nameTasmotaSlaveModBus, env[cleEnv][cleDevice]["idModBus"], int(msg["Values"][0]))    end
+
                                             # Etat lu sur le BIT 0 (2026-09-29) : la reponse serie a une lecture
                                             # 0x02 porte le bit empaquete (0x01), le push 0x10 le mot 0x00FF ;
                                             # l'ancienne comparaison a 0xFF lisait OFF la reponse standard.

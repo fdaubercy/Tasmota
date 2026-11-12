@@ -922,11 +922,7 @@
                       "type": "integer"
                     },
                     "virtuel": {
-                      "type": "string",
-                      "enum": [
-                        "ON",
-                        "OFF"
-                      ]
+                      "type": "string"
                     },
                     "SwitchMode": {
                       "type": "integer"
