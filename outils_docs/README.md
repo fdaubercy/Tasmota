@@ -623,7 +623,7 @@ Les fichiers de la page ne partent que sur les cartes à volets : liste `volets_
 
 Page « Configuration » -> bouton **Réglage des volets** (`/volets`, `data/fs/vrReglage.be` et `vrPages.be::route`). Les explications sont aussi sur la page.
 
-1. Préparation : amener le volet en butée basse (fermé) par une commande habituelle. Un seul volet à la fois ; refus si un réglage est déjà en cours, si le volet roule, ou s'il vient de s'arrêter (moins de `ShutterMotorStop` + 100 ms).
+1. Préparation : amener le volet en butée basse (fermé) par une commande habituelle. Un seul volet à la fois ; refus si un réglage est déjà en cours, si le volet roule, s'il vient de s'arrêter (moins de `ShutterMotorStop` + 100 ms), ou si un autre volet de la carte roule (le réglage réinitialise tous les volets ; sauf la porte du garage).
 2. Choisir le volet, cliquer « Régler les durées ». La carte suspend les boutons natifs de ce volet (les autres gardent les leurs) et autorise une course de 130 s.
 3. Un appui : le volet monte, le chronomètre part. Un appui à l'arrivée en haut : arrêt, `tempsMontee` retenu. Un appui : il descend. Un appui à l'arrivée en bas : arrêt, `tempsDescente` retenu.
 4. La carte écrit les deux durées (secondes entières) dans son persist, remet les durées et boutons normaux, recale la position (ouvert après la montée, fermé après la descente) et affiche le résultat.
@@ -631,8 +631,8 @@ Page « Configuration » -> bouton **Réglage des volets** (`/volets`, `data/fs/
 Un appui peut venir du bouton unique, de l'un ou l'autre des deux boutons du volet, ou du bouton « Étape suivante » de la page. Le sens est imposé par l'étape, jamais par la fonction du bouton. Un second appui moins de 1 s après le premier est ignoré. La page demande à chaque départ si le volet va dans le bon sens ; sinon, « Annuler ». Le bouton envoie l'étape qu'il affiche : si l'étape a changé entre-temps (appui physique), la carte répond 409 et la page se resynchronise.
 
 - Annuler : le moteur est arrêté s'il tourne, rien n'est écrit, durées et boutons d'avant remis.
-- Délai : 120 s sans appui, même sortie sans rien écrire. Une mesure de moins de 2 s est refusée.
-- Fins de course et MPU6050 : leur recalage et l'arrêt en butée sont coupés pendant la mesure. Le MPU6050 reste garde-fou : un blocage ou un sens inverse coupe le moteur, le réglage s'arrête sans rien écrire et la page donne la cause. S'il a mesuré la course, sa durée s'affiche à côté de la vôtre ; la vôtre est écrite.
+- Délai : 120 s sans appui, même sortie sans rien écrire. Une mesure de moins de 2 s est refusée, de même qu'une arrivée alors que le volet n'a pas bougé (aucun départ rapporté par Tasmota). Si l'écriture du persist échoue, les durées d'avant sont gardées.
+- Fins de course et MPU6050 (sauf la porte du garage, en chronomètre : ses fins de course recalent comme d'habitude) : leur recalage et l'arrêt en butée sont coupés pendant la mesure. Le MPU6050 reste garde-fou : un blocage ou un sens inverse coupe le moteur, le réglage s'arrête sans rien écrire et la page donne la cause. S'il a mesuré la course, sa durée s'affiche à côté de la vôtre ; la vôtre est écrite.
 - Porte du garage (`mode` 3) : chronomètre seul. La carte ne commande rien. Porte fermée, lancer la porte comme d'habitude (télécommande, curseur) et cliquer « Départ », puis « Arrivée » quand elle est en haut ; même chose pour la descente.
 - Un redémarrage pendant le mode le perd sans rien écrire.
 

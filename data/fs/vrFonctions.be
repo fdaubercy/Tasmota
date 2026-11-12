@@ -264,21 +264,24 @@ def vrFonctions_configBoutons(vr)
 end
 vrFonctions.configBoutons = vrFonctions_configBoutons
 
-# Commande de course ou de recalage pour un SENS PHYSIQUE ("ouvre", "ferme", "posOuvert", "posFerme") : Tasmota inverse
-# l'ordre d'une commande Berry quand ShutterInvert vaut 1 (cle 'inverse', 1 par defaut), d'ou le croisement.
+# Commande de course ou de recalage pour un SENS PHYSIQUE ("ouvre", "ferme", "posOuvert", "posFerme").
+# Ordres de course jamais croises : CmndShutterOpen/Close (xdrv_27_esp32_shutter.ino) visent la position interne 100 / 0
+# sans appliquer ShutterInvert. Recalages croises si 'inverse' vaut 1 (defaut) : CmndShutterSetPosition, appele par
+# ShutterSetOpen/Close, applique TOUJOURS 100 - x quand ShutterInvert vaut 1 (meme croisement que changementEtatCapteur).
 def vrFonctions_commandeSens(id, sens)
     import string
     var inv = vrFonctions.inverse(id) == 1
-    var noms = {"ouvre": ["ShutterClose", "ShutterOpen"], "ferme": ["ShutterOpen", "ShutterClose"],
+    var noms = {"ouvre": ["ShutterOpen", "ShutterOpen"], "ferme": ["ShutterClose", "ShutterClose"],
                 "posOuvert": ["ShutterSetClose", "ShutterSetOpen"], "posFerme": ["ShutterSetOpen", "ShutterSetClose"]}
     return string.format("%s%i", noms[sens][inv ? 0 : 1], id)
 end
 vrFonctions.commandeSens = vrFonctions_commandeSens
 
-# Vrai si le mode reglage des durees est actif pour ce volet (etat pose par vrReglage)
+# Vrai si le mode reglage des durees MOTEUR est actif pour ce volet (etat pose par vrReglage). Chrono (porte du garage) :
+# faux, ses fins de course recalent comme d'habitude (Tasmota pilote la porte a l'ancienne duree, spec 5.3)
 def vrFonctions_enReglage(id)
     var r = vrFonctions.etat().find("reglage")
-    return isinstance(r, map) && r.find("actif", false) && r.find("id") == id
+    return isinstance(r, map) && r.find("actif", false) && r.find("id") == id && r.find("type") == "moteur"
 end
 vrFonctions.enReglage = vrFonctions_enReglage
 
@@ -832,15 +835,19 @@ def vrFonctions_changementDirection(value, trigger, msg, numRideau)
     end
     if (vr == nil)    return    end
 
+    # Tout volet : heure d'arret (recalage differe de commandeArret, garde de vrReglage.debut) et course en cours (le
+    # recalage differe ne part pas si une course a repris)
+    var suivi = vrFonctions.suiviInclinaison(numRideau)
+    suivi["enCourse"] = (value != 0)
+    if (value == 0)    suivi["arret"] = tasmota.millis()    end
+
     # Capteur d'inclinaison actif : suivi pendant la course, derniere lecture a l'arret
     if (vrFonctions.inclinaison(vr) != nil)
-        var suivi = vrFonctions.suiviInclinaison(numRideau)
-        suivi["enCourse"] = (value != 0)
         suivi["sens"] = value                       # 1 = ouverture (Direction n'est pas inverse par ShutterInvert)
         suivi["repere"] = nil                       # detection de blocage : repere repris a chaque course
         suivi["depart"] = nil                       # sens inverse : angle de depart note au 1er releve
         suivi["debut"] = value != 0 ? [suivi.find("etat"), tasmota.millis()] : nil     # duree de course
-        if (value == 0)    suivi["arret"] = tasmota.millis()    else    suivi["position"] = nil    end     # position Tasmota : derive en course
+        if (value != 0)    suivi["position"] = nil    end     # position Tasmota : derive en course
         if (value != 0 && suivi.find("bloque", false))
             suivi["bloque"] = false
             vrFonctions.publieBlocage(numRideau, suivi)

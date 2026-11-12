@@ -37,11 +37,31 @@ class Driver end
 class TasmotaStub
     var refresh, pilotes, commandes
     var cmds, timers, regles, directions, horloge, surCmd, doublons, capteurs, lectures, positions
-    def init() self.refresh = 1500 self.pilotes = [] self.commandes = [] self.cmds = [] self.timers = [] self.regles = {} self.directions = {} self.horloge = 0 self.doublons = 0 self.lectures = 0 self.positions = 0 end
+    var modele, inv, interne, bouge
+    def init() self.refresh = 1500 self.pilotes = [] self.commandes = [] self.cmds = [] self.timers = [] self.regles = {} self.directions = {} self.horloge = 0 self.doublons = 0 self.lectures = 0 self.positions = 0
+               self.modele = true self.inv = {} self.interne = {} self.bouge = 0 end
     def millis(d) return self.horloge + (d == nil ? 0 : d) end
     def time_reached(t) return self.horloge >= t end
+    # Regle de xdrv_27_esp32_shutter.ino : ShutterOpen/Close visent la position interne 100 / 0 SANS ShutterInvert ;
+    # ShutterSetOpen/Close passent par CmndShutterSetPosition, qui pose 100 - x si ShutterInvert (inv[id], pose par le test).
+    # Une course qui change la position compte dans 'bouge' et, si 'modele', rapporte Direction +-1 a la regle du reglage.
+    def shutter(c)
+        for p: [["ShutterSetOpen", 100, false], ["ShutterSetClose", 0, false], ["ShutterOpen", 100, true], ["ShutterClose", 0, true]]
+            var reste = c[size(p[0]) ..]
+            if string.find(c, p[0]) != 0 || size(reste) == 0 || str(int(reste)) != reste    continue    end
+            var id = int(reste)
+            if !p[2]    self.interne[id] = self.inv.find(id, false) ? 100 - p[1] : p[1]    return    end
+            if self.interne.find(id, -1) == p[1]    return    end
+            self.bouge += 1
+            self.interne[id] = p[1]
+            var f = self.regles.find(string.format("Shutter%i#Direction|vrReglage_Direction", id))
+            if self.modele && f != nil    f(p[1] == 100 ? 1 : -1, string.format("Shutter%i#Direction", id), {})    end
+            return
+        end
+    end
     def cmd(c, m)
         self.cmds.push(c)
+        self.shutter(c)
         if self.surCmd != nil    self.surCmd(c)    end
         if c == "ShutterMotorStop"    return {"ShutterMotorStop": 500}    end
         if c == "WebRefresh"    return self.refresh == nil ? {} : {"WebRefresh": self.refresh}    end
@@ -117,6 +137,10 @@ def reinit()
     tasmota.capteurs = nil
     tasmota.lectures = 0
     tasmota.doublons = 0
+    tasmota.modele = true
+    tasmota.inv = {}
+    tasmota.interne = {}
+    tasmota.bouge = 0
     tasmota.horloge += 1000000
     T = tasmota.horloge
     for vr: [vr1, vr2, vr3]
@@ -267,17 +291,52 @@ tasmota.surCmd = nil
 verifie(etape() == "fini" && !vrReglage.etatPage()["actif"] && vr1["tempsDescente"] == 13, "exception apres l'ecriture : etape fini, inactif, durees ecrites")
 verifie(erreurs() == nbErr + 1 && nbTimers("vrReglage_delai") == 0 && !aRegle(1), "exception apres l'ecriture : une erreur, delai et regle retires")
 
-print("4. inverse 1 : ordres croises")
+print("4. inverse 1 (ShutterInvert 1) : ordres de course jamais croises, recalages croises ; le volet bouge a chaque appui")
 reinit()
 vr3["inverse"] = 1
+tasmota.inv[3] = true                                # ShutterInvert3 1, pose par configVRByJson sur la carte
 vrReglage.debut(3)
+verifie(tasmota.interne.find(3) == 0, "debut : position interne 0 (ferme) apres le recalage")
 page(3, 1000)
+verifie(tasmota.bouge == 1 && etape() == "montee", "montee : le volet bouge (interne 0 -> 100)")
 page(3, 15000)
 attente()
+verifie(tasmota.interne.find(3) == 100 && etape() == "haut", "haut : position interne 100 (ouvert) apres le recalage")
 page(3, 17000)
+verifie(tasmota.bouge == 2 && etape() == "descente", "descente : le volet bouge (interne 100 -> 0)")
 page(3, 30000)
 attente()
-verifie(courses() == ["ShutterSetOpen3", "ShutterClose3", "ShutterStop3", "ShutterSetClose3", "ShutterOpen3", "ShutterStop3", "ShutterSetOpen3"], "inverse 1 : ouvre = ShutterClose, posFerme = ShutterSetOpen")
+verifie(etape() == "fini" && vr3["tempsMontee"] == 14 && vr3["tempsDescente"] == 13, "inverse 1 : fini, durees 14 et 13 ecrites")
+verifie(courses() == ["ShutterSetOpen3", "ShutterOpen3", "ShutterStop3", "ShutterSetClose3", "ShutterClose3", "ShutterStop3", "ShutterSetOpen3"], "inverse 1 : ouvre = ShutterOpen, posFerme = ShutterSetOpen")
+
+print("4b. Arrivee d'une course sans aucun Direction non nul : refus, rien d'ecrit")
+reinit()
+tasmota.modele = false                               # le moteur ne part pas : aucune regle Direction
+vrReglage.debut(1)
+page(1, 1000)
+tasmota.cmds = []
+sauves = persistBouchon.nb_save
+config = appelsConfig
+r = page(1, 15000)
+verifie(!r[0] && etape() == "refus" && string.find(vrReglage.etatPage()["message"], "n'a pas bougé") >= 0, "arrivee sans depart vu : refus, « n'a pas bougé »")
+verifie(ordres()[0] == "ShutterStop1" && persistBouchon.nb_save == sauves && vr1["tempsMontee"] == 15 && appelsConfig == config + 1, "sans depart vu : stop, rien d'ecrit, configVRByJson")
+
+print("4c. Ecriture du persist en echec : durees d'avant remises, sortie annule, une erreur")
+reinit()
+vrReglage.debut(1)
+page(1, 1000)
+page(1, 15000)
+page(1, 17000)
+var saveOrig = persistBouchon.save
+persistBouchon.save = def (force) raise "io_error", "flash pleine simulee" end
+params.clear()
+nbErr = erreurs()
+config = appelsConfig
+r = page(1, 30000)
+persistBouchon.save = saveOrig
+verifie(!r[0] && etape() == "annule" && !vrReglage.etatPage()["actif"], "save en echec : etape annule, inactif")
+verifie(vr1["tempsMontee"] == 15 && vr1["tempsDescente"] == 16 && erreurs() == nbErr + 1, "save en echec : 15 et 16 remis, une erreur")
+verifie(appelsConfig == config + 1 && param("ShutterOpenDuration1") == 15 && param("ShutterCloseDuration1") == 16, "save en echec : configVRByJson avec les durees d'avant")
 
 print("5. Annulation en montee : stop, rien d'ecrit, configVRByJson rappele")
 reinit()
@@ -370,6 +429,34 @@ verifie(!r[0] && r[1] == "Le volet vient de s'arrêter : réessayez dans une sec
 tasmota.horloge = T + 100
 verifie(vrReglage.debut(1)[0], "arret il y a 600 ms : accepte")
 vrReglage.annule("annule")
+
+print("10b. Volet SANS MPU : changementDirection note l'arret et la course ; recalage differe retenu si la course reprend")
+reinit()
+tasmota.horloge = T + 5000
+vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
+verifie(vrFonctions.suiviInclinaison(1)["enCourse"], "Direction 1 : en course")
+tasmota.horloge = T + 9000
+vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
+verifie(vrFonctions.suiviInclinaison(1).find("arret") == T + 9000 && !vrFonctions.suiviInclinaison(1)["enCourse"], "Direction 0 : arret note, plus en course")
+tasmota.horloge = T + 9200
+r = vrReglage.debut(1)
+verifie(!r[0] && r[1] == "Le volet vient de s'arrêter : réessayez dans une seconde" && vrReglage.etat() == nil, "arret il y a 200 ms (sans MPU) : refus")
+tasmota.cmds = []
+vrFonctions.commandeArret(1, "ShutterSetOpen1")
+verifie(nbTimers("vrShutterSetOpen1") == 1 && size(ordres()) == 0, "recalage juste apres l'arret : differe")
+vrFonctions.changementDirection(-1, "Shutter1#Direction", {}, 1)
+attente()
+verifie(ordres().find("ShutterSetOpen1") == nil, "course reprise avant le delai : recalage differe non envoye")
+
+print("10c. Un AUTRE volet roule : refus, aucun ordre (ShutterOpen/CloseDuration rappellent ShutterInit pour tous)")
+reinit()
+tasmota.directions[1] = 0
+tasmota.directions[2] = -1
+r = vrReglage.debut(1)
+verifie(!r[0] && string.find(r[1], "volet 2 roule") >= 0 && size(tasmota.cmds) == 0 && vrReglage.etat() == nil, "volet 2 en course : refus nommant le volet 2, aucune commande")
+tasmota.directions[2] = 0
+verifie(vrReglage.debut(1)[0], "volet 2 arrete : accepte")
+vrReglage.annule("annule")
 reinit()
 vrReglage.debut(1)
 tasmota.cmds = []
@@ -407,6 +494,17 @@ verifie(size(tasmota.cmds) == 0 && appelsConfig == config && etape() == "annule"
 vrReglage.debut(1)
 declenche("vrReglage_delai")
 verifie(etape() == "delai" && string.find(vrReglage.etatPage()["message"], "arrêté") < 0, "chrono : delai sans « volet arrêté » (aucun ordre envoye)")
+reinit()
+garage["capteursPosition"] = {"activation": "ON", "capteurOuvert": "Interrupteur7"}
+drivers["voletRoulants"] = {"activation": "ON", "mode": 3, "environnement": {"VRs": {"VR1": garage}}}
+vrReglage.debut(1)
+page(1, 1000)
+verifie(!vrFonctions.enReglage(1), "chrono actif : enReglage faux (fins de course laissees telles quelles)")
+vrFonctions.capteurVirtuel(7, "ON")
+attente()
+verifie(tasmota.cmds.find("ShutterSetClose1") != nil, "chrono actif : capteurVirtuel recale la porte (ShutterSetClose1, inverse 1)")
+vrReglage.annule("annule")
+garage.remove("capteursPosition")
 
 print("13. Arret inattendu en montee (sens inverse du MPU) : annule, cause rendue, rien d'ecrit")
 reinit()
@@ -449,7 +547,8 @@ regle(1, 0)
 verifie(etape() == "annule" && vrReglage.etatPage()["cause"] == "arret", "arret subi sans MPU : cause arret")
 
 print("14b. Direction 0 avant le vrai depart : ignore ; valeur passee en map : meme traitement")
-reinit()
+def sansModele() reinit() tasmota.modele = false end        # Direction rapportes a la main seulement
+sansModele()
 vrReglage.debut(1)
 page(1, 1000)
 regle(1, 0)
@@ -457,7 +556,7 @@ verifie(etape() == "montee" && vrReglage.etatPage()["actif"], "Direction 0 avant
 regle(1, 1)
 regle(1, 0)
 verifie(etape() == "annule" && vrReglage.etatPage()["cause"] == "arret", "Direction 1 puis 0 : arret subi")
-reinit()
+sansModele()
 vrReglage.debut(1)
 page(1, 1000)
 regle(1, {"Direction": 0})
@@ -465,7 +564,7 @@ verifie(etape() == "montee", "map Direction 0 avant le depart : ignore")
 regle(1, {"Direction": 1})
 regle(1, {"Direction": 0})
 verifie(etape() == "annule" && vrReglage.etatPage()["cause"] == "arret", "map Direction 1 puis 0 : arret subi")
-reinit()
+sansModele()
 vrReglage.debut(1)
 page(1, 1000)
 regle(1, 1)

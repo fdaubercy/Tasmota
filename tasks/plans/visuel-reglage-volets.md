@@ -43,6 +43,9 @@ interface pour le rendu.
 - Sens physique : une commande envoyée par Berry est inversée par Tasmota quand `ShutterInvert` vaut 1
   (`CmndShutterPosition`, seules série, page web et commande web en sont exemptées). Tout ordre de course ou de recalage
   passe par `vrFonctions.commandeSens(id, sens)`, qui reprend le croisement de `changementEtatCapteur`.
+  Corrigé par la relecture finale (2026-11-12) : faux pour les ordres de course. `CmndShutterOpen`/`CmndShutterClose`
+  posent `SRC_WEBGUI` et visent toujours la position interne 100 / 0 ; seul `CmndShutterSetPosition` (`ShutterSetOpen`/`SetClose`)
+  applique `100 - x`. `commandeSens` ne croise plus que `posOuvert`/`posFerme`.
 - Durées écrites en secondes entières arrondies (`int(ms / 1000.0 + 0.5)`) : `configVRByJson` les pose avec le type `int`.
 - Toute étape du mode a 120 s (`DELAI_MS = 120000`), course allongée à 120 s (`COURSE_MAX = 120`). Mesure de moins de 2 s
   refusée (rien d'écrit). Un appui moins de 1 s après le précédent est ignoré (rebond, double clic page + bouton).
@@ -90,7 +93,8 @@ interface pour le rendu.
 ## A1 — Préparer vrFonctions : sens physique, boutons, neutralisation
 Fichiers : `data/fs/vrFonctions.be`, `outils_docs/scripts_python/berry/banc_inclinaison.be` (section 19).
 Produit : `vrFonctions.commandeSens(id, sens) -> string` (sens `"ouvre"`, `"ferme"`, `"posOuvert"`, `"posFerme"` ; volet
-`inverse` 1 : `ShutterClose`, `ShutterOpen`, `ShutterSetClose`, `ShutterSetOpen` ; `inverse` 0 : l'inverse, suffixe `%i` = id),
+`inverse` 1 : `ShutterClose`, `ShutterOpen`, `ShutterSetClose`, `ShutterSetOpen` ; `inverse` 0 : l'inverse, suffixe `%i` = id ;
+corrigé par la relecture finale : `ouvre`/`ferme` = `ShutterOpen`/`ShutterClose` quel que soit `inverse`, voir Contexte),
 `vrFonctions.configBoutons(vr)` (boucle des `ShutterButton` sortie de `configVRByJson`, qui l'appelle),
 `vrFonctions.enReglage(id) -> bool` (vrai si `vrFonctions.etat().find("reglage")` est actif pour cet id) ;
 `ligneWebInclinaison` complétée de la balise `data-vi` (voir Contexte).

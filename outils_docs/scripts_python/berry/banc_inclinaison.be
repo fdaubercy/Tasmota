@@ -118,6 +118,9 @@ verifie(size(vrFonctions.inclinaisonsActives()) == 0, "inclinaison OFF : aucun v
 vrFonctions.changementDirection(1, "Shutter1#Direction", {}, 1)
 vrFonctions.changementDirection(0, "Shutter1#Direction", {}, 1)
 verifie(size(tasmota.scans) == 0 && size(tasmota.timers) == 0, "course sans inclinaison : ni wire_scan ni minuterie")
+verifie(vrFonctions.suiviInclinaison(1).find("arret") == tasmota.millis() && !vrFonctions.suiviInclinaison(1)["enCourse"],
+        "course sans inclinaison : arret note quand meme (recalage differe, garde du reglage)")
+vrFonctions.suiviInclinaison(1).remove("arret")      # la suite part d'un volet arrete depuis longtemps
 capteurs.remove("inclinaison")
 verifie(size(vrFonctions.inclinaisonsActives()) == 0, "bloc absent (anciens persists) : aucun volet, pas d'erreur")
 capteurs["inclinaison"] = inclinaison
@@ -627,8 +630,9 @@ configGlobal.testeParam = testeParamAvant
 
 print("19. Reglage des durees (2026-11-11) : commandeSens, configBoutons, enReglage et gardes")
 vr1["inverse"] = 1
-verifie(vrFonctions.commandeSens(1, "ouvre") == "ShutterClose1" && vrFonctions.commandeSens(1, "ferme") == "ShutterOpen1"
-        && vrFonctions.commandeSens(1, "posOuvert") == "ShutterSetClose1" && vrFonctions.commandeSens(1, "posFerme") == "ShutterSetOpen1", "commandeSens inverse 1 : croisee")
+verifie(vrFonctions.commandeSens(1, "ouvre") == "ShutterOpen1" && vrFonctions.commandeSens(1, "ferme") == "ShutterClose1"
+        && vrFonctions.commandeSens(1, "posOuvert") == "ShutterSetClose1" && vrFonctions.commandeSens(1, "posFerme") == "ShutterSetOpen1",
+        "commandeSens inverse 1 : courses directes (ShutterOpen/Close jamais inverses), recalages croises")
 vr1["inverse"] = 0
 verifie(vrFonctions.commandeSens(1, "ouvre") == "ShutterOpen1" && vrFonctions.commandeSens(1, "ferme") == "ShutterClose1"
         && vrFonctions.commandeSens(1, "posOuvert") == "ShutterSetOpen1" && vrFonctions.commandeSens(1, "posFerme") == "ShutterSetClose1", "commandeSens inverse 0 : directe")
@@ -656,9 +660,11 @@ drivers["voletRoulants"] = vrsAvant
 verifie(!vrFonctions.enReglage(1), "enReglage : faux sans la cle 'reglage'")
 vrFonctions.etat()["reglage"] = {"actif": false, "id": 1}
 verifie(!vrFonctions.enReglage(1), "enReglage : faux si actif est faux")
-vrFonctions.etat()["reglage"] = {"actif": true, "id": 2}
+vrFonctions.etat()["reglage"] = {"actif": true, "id": 2, "type": "moteur"}
 verifie(!vrFonctions.enReglage(1), "enReglage : faux pour un autre volet")
-vrFonctions.etat()["reglage"] = {"actif": true, "id": 1}
+vrFonctions.etat()["reglage"] = {"actif": true, "id": 1, "type": "chrono"}
+verifie(!vrFonctions.enReglage(1), "enReglage : faux en chrono (porte du garage : fins de course laissees)")
+vrFonctions.etat()["reglage"] = {"actif": true, "id": 1, "type": "moteur"}
 verifie(vrFonctions.enReglage(1) && !vrFonctions.enReglage(2), "enReglage : vrai pour le volet en reglage seulement")
 
 tasmota.cmds = []

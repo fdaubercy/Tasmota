@@ -10,7 +10,8 @@
  * tempsMontee retenu ; un appui -> il descend ; un appui en bas -> arret, tempsDescente retenu, ecriture dans le persist
  * de la carte, durees et boutons normaux remis (vrFonctions.configVRByJson), position recalee, sortie du mode.
  * Etapes : pret -> montee -> haut -> descente -> fini ; sorties sans rien ecrire : annule (bouton Annuler, ou arret que
- * le reglage n'a pas demande), delai (120 s sans appui), refus (mesure de moins de 2 s).
+ * le reglage n'a pas demande, ou ecriture du persist en echec), delai (120 s sans appui), refus (mesure de moins de
+ * 2 s, ou arrivee d'une course moteur sans aucun Direction non nul : le volet n'a pas bouge).
  * Le sens est IMPOSE PAR L'ETAPE, jamais par la fonction du bouton (toggle, up, down) : tout appui sur un bouton du
  * volet vaut « etape suivante ». Un appui moins de 1 s apres le precedent accepte est ignore (rebond, page et bouton
  * presque ensemble).
@@ -24,13 +25,15 @@
  *   vrFonctions.configVRByJson() entier (durees du persist et boutons de tous les volets).
  * - Course allongee a COURSE_MAX s (ShutterOpenDuration / ShutterCloseDuration) pour que Tasmota n'arrete pas le moteur
  *   avant la vraie butee ; chaque etape a DELAI_MS pour recevoir l'appui suivant.
- * - Sens physique : tout ordre de course ou de recalage passe par vrFonctions.commandeSens (Tasmota inverse un ordre
- *   Berry quand ShutterInvert vaut 1).
+ * - Sens physique : tout ordre de course ou de recalage passe par vrFonctions.commandeSens. ShutterOpen/Close ne sont
+ *   jamais inverses par Tasmota ; ShutterSetOpen/Close le sont quand ShutterInvert vaut 1 (croises dans commandeSens).
  * - Durees ecrites en secondes entieres arrondies (configVRByJson les pose avec le type int).
- * - Refus de commencer : reglage deja actif, volet inconnu ou inactif, volet qui roule (Direction lue dans le JSON des
- *   capteurs, tasmota.read_sensors), volet arrete depuis moins de ShutterMotorStop + 100 ms (moteur). JAMAIS par ShutterPosition<id> sans argument : xdrv_27_esp32_shutter.ino::
+ * - Refus de commencer : reglage deja actif, volet inconnu ou inactif, volet qui roule ou, en moteur, un AUTRE volet de
+ *   la carte qui roule (ShutterOpen/CloseDuration rappellent ShutterInit pour tous les volets) (Direction lue dans le
+ *   JSON des capteurs, tasmota.read_sensors), volet arrete depuis moins de ShutterMotorStop + 100 ms (moteur). JAMAIS par ShutterPosition<id> sans argument : xdrv_27_esp32_shutter.ino::
  *   CmndShutterPosition garde target_position et relance le moteur si la cible differe de la position reelle.
- * - Fins de course et MPU6050 : vrFonctions.enReglage(id) neutralise le recalage et l'arret en butee ; le blocage et le
+ * - Fins de course et MPU6050 (moteur seulement : en chrono, enReglage est faux et les fins de course recalent la porte,
+ *   pilotee par Tasmota a l'ancienne duree) : vrFonctions.enReglage(id) neutralise le recalage et l'arret en butee ; le blocage et le
  *   sens inverse coupent toujours le moteur. Un arret que le reglage n'a pas demande (regle Shutter<id>#Direction 0,
  *   posee le temps du mode) l'arrete sans rien ecrire, cause « bloque », « sens inverse » ou « arret ». Un Direction 0
  *   ne compte qu'apres un Direction non nul de la MEME course (un 0 rapporte avant le vrai depart est ignore).
@@ -112,6 +115,15 @@ def vrReglage_debut(id)
         vrFonctions.log(string.format("VR_REGLAGE: Volet %i absent du JSON des capteurs : direction non verifiee !", id), LOG_LEVEL_DEBUG)
     elif (position.find("Direction", 0) != 0)
         return [false, "Le volet roule : attendez qu'il soit arrêté en bas."]
+    end
+    # Moteur : ShutterOpen/CloseDuration rappellent ShutterInit pour TOUS les volets, un autre volet en course serait perturbe
+    if (!chrono && isinstance(capteurs, map))
+        for k: capteurs.keys()
+            var s = capteurs[k]
+            if (k != "Shutter" + str(id) && string.find(k, "Shutter") == 0 && isinstance(s, map) && s.find("Direction", 0) != 0)
+                return [false, string.format("Le volet %s roule : attendez son arrêt, le réglage réinitialise tous les volets.", k[7..])]
+            end
+        end
     end
     # ShutterSetClose juste apres un arret : ShutterWaitForMotorStart reentrerait dans loop() (meme calcul que commandeArret)
     var arret = vrFonctions.suiviInclinaison(id).find("arret")
@@ -195,6 +207,11 @@ def vrReglage_appui(id, source)
             r["monArret"] = true                             # la regle Direction 0 qui suit vient de NOTRE arret
             tasmota.cmd(string.format("ShutterStop%i", id), boolMute)
             vrFonctions.suiviInclinaison(id)["arret"] = tasmota.millis()   # recalage differe (commandeArret)
+            if (!r["parti"])                                 # aucun Direction non nul de cette course
+                vrFonctions.log(string.format("VR_REGLAGE: Volet %i, arrivee en %s sans depart vu : rien d'ecrit !", id, etape), LOG_LEVEL_INFO)
+                vrReglage.sortie("refus", "Le volet n'a pas bougé : rien n'a été écrit.", nil)
+                return [false, r["message"]]
+            end
         end
         if (ms < vrReglage.MESURE_MIN_MS)
             vrFonctions.log(string.format("VR_REGLAGE: Volet %i, mesure de %i ms refusee : rien d'ecrit !", id, ms), LOG_LEVEL_INFO)
@@ -212,9 +229,17 @@ def vrReglage_appui(id, source)
             var vr = vrFonctions.trouveVolet(id)
             vr["tempsMontee"] = r["mesures"]["tempsMontee"]
             vr["tempsDescente"] = duree
-            persist.drivers = drivers
-            persist.save(true)
-            try                                              # persist ecrit : la sortie "fini" doit suivre quoi qu'il arrive
+            try
+                persist.drivers = drivers
+                persist.save(true)
+            except .. as erreur, message                     # durees d'avant remises AVANT sortie (configVRByJson les relit)
+                vr["tempsMontee"] = r["avant"]["tempsMontee"]
+                vr["tempsDescente"] = r["avant"]["tempsDescente"]
+                vrFonctions.log(string.format("VR_REGLAGE_ERREUR: Volet %i, ecriture du persist : %s -> %s", id, erreur, message), LOG_LEVEL_ERREUR)
+                vrReglage.sortie("annule", "Écriture du persist en échec : durées d'avant gardées.", nil)
+                return [false, r["message"]]
+            end
+            try                                             # persist ecrit : la sortie "fini" doit suivre quoi qu'il arrive
                 if (moteur)    vrFonctions.commandeArret(id, vrFonctions.commandeSens(id, "posFerme"))    end
                 vrFonctions.log(string.format("VR_REGLAGE: Volet %i : tempsMontee %i s, tempsDescente %i s ecrits dans le persist !", id, vr["tempsMontee"], duree), LOG_LEVEL_INFO)
             except .. as erreur, message
