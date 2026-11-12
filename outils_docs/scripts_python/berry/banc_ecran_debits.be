@@ -18,7 +18,7 @@ def argument(i, defaut)    return size(global._argv) > i && global._argv[i] != "
 var SOURCE = argument(2, CARTE + "ecranDebitsFonctions.be")
 var CONTROLE = argument(3, CARTE + "controleEcranDebits.be")
 var INTERFACE = argument(4, CARTE + "ecranHaspmota.be")
-var GENERIQUE = argument(5, CARTE + "ecranFonctions.be")
+var GENERIQUE = argument(5, "data/fs/ecranFonctions.be")
 
 def lis(chemin)
     var f = open(chemin, "r")
