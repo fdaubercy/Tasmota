@@ -21,5 +21,9 @@ Utilisée par la page « Étiquettes QR code » (7970) et, compressée, par la p
 - Nombre de modules (`_qr.getModuleCount()`) = table de capacité ISO/IEC 18004 en mode octet : 1 o -> 21, 35 o -> 29,
   50 o et 61 o -> 33 (correction M), 63 o -> 45 (correction H). Le verdict Python de l'A2 peut s'appuyer sur cette table.
 
+Empreintes du fichier en fins de ligne LF, tel qu'enregistré dans git. Avec `core.autocrlf`, la copie extraite peut passer
+en CRLF : fabriquer le `.gz` à partir de l'objet git (`git show HEAD:outils_docs/etiquettes_qr/lib/qr-code-styling.min.js
+| gzip -9 -n`), jamais de la copie de travail.
+
 Mise à jour : nouvelle version vérifiée de la même façon (intégrité, licence, essai à plusieurs codes), puis ces empreintes
 et celles de l'A6 refaites.
