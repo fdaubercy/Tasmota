@@ -237,8 +237,8 @@ l'envoi du FS ; durées du MPU6050 à côté quand `mpu` les porte ; cause d'un 
 - [x] Compilation des 3 envs par la page Build (:7700), une à la fois, SUCCESS lu en fin de journal — preuve : journaux du 2026-11-12,
   `tasmota32s3-rdc-grenier` SUCCESS 01:24:34, `tasmota32s3-etage2-grenier` SUCCESS 01:47:36, `tasmota32p4-garage-serveur-modbus`
   SUCCESS 01:02:00 ; il a fallu déplacer `I2Cdevlib-Core` de `commun` vers `sans_mpu6050` dans le cenv (I2Cdev.h, requis par le MPU6050 des greniers)
-- [ ] Commit `docs(volets): mode d'emploi du visuel et du reglage` (avec `platformio_override.ini` et
-  `user_config_override.h` s'ils ont été réécrits par le build)
+- [x] Commit `docs(volets): mode d'emploi du visuel et du reglage` (avec `platformio_override.ini` et
+  `user_config_override.h` s'ils ont été réécrits par le build) — preuve : 6f6d88006 (documentation), c0b3df662 (cenv et fichiers réécrits par le build)
 
 ## A8 — Essais sur carte
 - [ ] Grenier du 2e étage (`inverse` 1, bouton unique) : envoi par la page Build, dessin ouvert quand la trappe est ouverte,
