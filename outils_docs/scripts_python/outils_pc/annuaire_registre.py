@@ -227,6 +227,18 @@ OUTILS = [
         "Console capturée : " + CONSOLE.format("atelier_graphiques") + ". Sauvegardes horodatées avant écriture : "
         "%LOCALAPPDATA%\\outils_tasmota\\fichiers_berry\\sauvegardes\\."),
     Outil(
+        "etiquettes_qr", "Étiquettes QR code", "Étiquettes QR code", GROUPES[2],
+        "Compose le QR code d'identité de chaque carte (hostname, IP, clés du persist), l'imprime en étiquette ou en planche A4, et prépare la page /qrcode de la carte.",
+        "Page web qui compose, carte par carte, le QR code d'identité (hostname, IP, clés choisies du persist), "
+        "l'aperçu en étiquette ou en planche A4 pour l'impression, et prépare la page /qrcode de la carte "
+        "(cenv, autoexec, qrcode.json) après diff. Écriture refusée pendant un build. Seul paramètre ici : "
+        "le port de la page (7970). Rien n'est écrit sans « Écrire dans le dépôt » : l'arrêter à tout moment.",
+        DOSSIER + "outils_pc/etiquettes_qr_web.py",
+        [_port("http", 7970)],
+        "http",
+        "Console capturée : " + CONSOLE.format("etiquettes_qr") + ". Sauvegardes horodatées avant écriture : "
+        "%LOCALAPPDATA%\\outils_tasmota\\fichiers_berry\\sauvegardes\\."),
+    Outil(
         "atelier_ecrans", "Atelier des écrans", "Atelier des écrans", GROUPES[2],
         "Compose l'écran tactile d'une carte et en génère les interfaces HASPmota et LVGL.",
         "Page web qui montre, carte par carte, la description neutre de son écran (pages, objets, polices du "
@@ -252,7 +264,7 @@ OUTILS = [
 
 # Pages qui lisent ?lieu= (classement par lieu) : l'annuaire leur passe le lieu de travail choisi.
 for _o in OUTILS:
-    _o.lieu = _o.id in ("build", "fichiers_berry", "assistant_persist", "atelier_graphiques", "atelier_ecrans", "fabrique_tapp",
+    _o.lieu = _o.id in ("build", "fichiers_berry", "assistant_persist", "atelier_graphiques", "etiquettes_qr", "atelier_ecrans", "fabrique_tapp",
                         "syslog", "sniffeur_mqtt")
 
 

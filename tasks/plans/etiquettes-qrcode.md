@@ -172,17 +172,23 @@ Consomme : A1 à A3. Produit, routes JSON : `GET /cartes` (envs par `lieux.pour_
 -> `resout` + `verdict` + `fichier_carte`, `POST /ecrire` {env, reglage, page_carte, empreinte}, `POST /gabarit`
 {gabarit, empreinte}, `POST /impression` {envs, taille_mm}, `POST /impression/annule` {env}, `GET /lib.js` (A1).
 `?env=` à l'arrivée sélectionne la carte.
-- [ ] Banc serveur d'abord (rouge) : routes ci-dessus ; env inconnu -> 400 ; POST sans en-tête anti-CSRF -> 403 ;
-  `GET /persist` d'un persist à secrets -> aucune valeur secrète dans le corps de la réponse
-- [ ] Serveur et routes ; banc VERT
-- [ ] En-tête : liste déroulante des envs (`lieux.remplitParLieu`) qui change de carte sans recharger la page (URL
-  `?env=` mise à jour ; modifications non écrites -> confirmation avant de changer) ; bouton Sombre / Clair, choix
-  mémorisé par `localStorage` sous try/catch, thème du système par défaut
-- [ ] Page selon le modèle A (`outils_docs/etiquettes_qr/modele-A.png`, `modele-A-sombre.png`) : aperçu dessiné par la bibliothèque, texte lu à côté, compteur d'octets,
+- [x] Banc serveur — preuve : `test_etiquettes_qr_web.py` VERT ; routes ci-dessus ; env inconnu -> 404 (introuvable,
+  pas 400) ; POST sans en-tête anti-CSRF -> 403 ; `GET /persist` de la cuve -> aucune de ses valeurs secrètes dans la
+  réponse. Écart : banc écrit juste après le serveur, sans passage au rouge ; seul échec du 1er passage = cas « trop
+  dense » mal construit par le banc, corrigé
+- [x] Serveur et routes ; banc VERT — preuve : `test_etiquettes_qr_web.py` VERT (CSRF 403, autre origine 403, corps
+  trop gros ou négatif 400, `/impression` élément nul 400, écriture 409 sur build et sur empreinte périmée)
+- [x] En-tête — preuve : `test_etiquettes_qr_page_chrome.py` VERT (« changement de carte : confirmation demandee »,
+  « interrupteur : sombre -> clair -> sombre ») ; liste déroulante des envs (`lieux.remplitParLieu`) qui change de
+  carte sans recharger la page (URL `?env=` mise à jour ; modifications non écrites -> confirmation avant de changer) ;
+  bouton Sombre / Clair, choix mémorisé par `localStorage` sous try/catch, thème du système par défaut
+- [x] Page selon le modèle A — preuve : `test_etiquettes_qr_page_chrome.py` VERT et ses captures clair/sombre ; relue par l'agent relecteur-pages-web (2 défauts d'état corrigés : diff périmé retiré à toute modification, succès d'écriture jamais affiché comme refus). Écarts : flèches au lieu du glisser, filtre du persist en liste à plat (pas d'arbre), puce affichée après le nom (homonymes P4/S3), Imprimer/PNG/SVG en A5, Téléverser en A7 ;
+  (`outils_docs/etiquettes_qr/modele-A.png`, `modele-A-sombre.png`) : aperçu dessiné par la bibliothèque, texte lu à côté, compteur d'octets,
   verdict coloré, ajout de ligne (standard, arbre du persist, libre), ordre par flèches, « Entre les lignes » (saut de ligne, « · », « | »), style, image (PNG/SVG/JPEG de
   `outils_docs/etiquettes_qr/images/`), case « Page sur la carte » (absente pour un ESP8266), onglet « Gabarit commun »,
   diff avant écriture
-- [ ] Sonde Chrome hermétique : bascule Sombre / Clair par le bouton, changement d'env par la liste (réglage de
+- [x] Sonde Chrome hermétique — preuve : `test_etiquettes_qr_page_chrome.py` VERT, 16 contrôles, 0 Chrome `sonde_qr_` vivant après ; en plus du prévu : XSS d'une ligne libre, diff retiré après modification, écriture complète dans la copie. Écart : ajout d'une clé du persist non cliqué par la sonde (route couverte par le banc) ;
+  bascule Sombre / Clair par le bouton, changement d'env par la liste (réglage de
   l'autre carte affiché, confirmation si modifié), ajout d'une clé du persist, verdict qui change avec la taille,
   nombre de modules de la bibliothèque = `modules` de `verdict` pour trois textes, aucune erreur console, Chrome arrêté
   à la fin
@@ -190,7 +196,8 @@ Consomme : A1 à A3. Produit, routes JSON : `GET /cartes` (envs par `lieux.pour_
   description courte et longue sur le modèle des autres outils, groupe Maintenance, `_port("http", 7970)`, `lieu=True`,
   arrêt libre : rien n'est écrit sans « Écrire dans le dépôt ») ; la tuile lance l'outil, son lien « Ouvrir » porte
   `?lieu=` ; bancs `test_annuaire.py`, `test_annuaire_lanceur.py` VERT ; vérifié dans la page de l'annuaire
-- [ ] Tâche VS Code et cible Custom détachée (`test_cible_etiquettes_qr.py`, `test_garde_build.py` VERT)
+  (bancs VERTS le 2026-11-12, compte du banc passé à 14 outils ; reste : tuile vue dans la vraie page 7600)
+- [x] Tâche VS Code et cible Custom détachée — preuve : `build/test_cible_etiquettes_qr.py` VERT, `build/test_garde_build.py` VERT ; barres obliques simples du sous-agent corrigées (tasks.json, docstring de la cible, `\f` de `annuaire_registre.py`)
 - [ ] Commit
 
 ## A5 — Impression, planche A4, export
@@ -262,8 +269,43 @@ Consomme : `tasks/plans/atelier-ecrans.md` A4 et A5 faits ; `/json/qrcode.json` 
   `verifie_references_docs.py` VERT
 - [ ] Commit ; plan passé `statut: clos`
 
+## A10 — Fiches en ligne (GitHub Pages) et filtre durci
+Décidé le 2026-11-12 : au choix par carte, le QR code contient le texte (défaut, hors réseau) OU un lien fixe vers une
+fiche HTML publique, lisible partout (4G, carte éteinte, ESP8266 compris) et mise à jour sans réimprimer l'étiquette.
+Fiches PUBLIQUES (accepté par l'utilisateur). Hébergement : branche orpheline `etiquettes` du dépôt Tasmota (aucun
+fichier de Tasmota dedans, `development` et la synchro du fork intacts), servie par GitHub Pages :
+`https://<propriétaire>.github.io/<dépôt>/<env>.html`, adresse tirée de `git remote get-url origin`.
+Rien n'est stocké sur `development` en plus des réglages existants (`outils_docs/etiquettes_qr/cartes/*.json`) : les
+fiches sont regénérées à chaque publication. Branche écrite par la plomberie git (`hash-object`, `mktree`,
+`commit-tree`, `push origin <sha>:refs/heads/etiquettes`), sans checkout : l'arbre de travail n'est jamais touché.
+Fichiers : créer `outils_pc/etiquettes_qr_publication.py`, `outils_pc/etiquettes_qr_filtre_public.py`,
+`test_etiquettes_qr_publication.py`, `test_etiquettes_qr_filtre_public.py` ; modifier `etiquettes_qr_modele.py`
+(clé `contenu`: `"texte"|"lien"` validée), `etiquettes_qr_web.py` (`POST /publication/diff`, `POST /publier`),
+`etiquettes_qr_page_js.py` (réglage « Contenu du QR code », bouton « Publier… », adresse de la fiche),
+`test_etiquettes_qr_web.py`, `test_etiquettes_qr_page_chrome.py`.
+Produit : `controle_public(valeur: str) -> str | None` (raison du refus) ; `fiche_html(racine, env, reglage) -> str` ;
+`url_fiche(racine, env) -> str` ; `prevoit_publication(racine, envs) -> {"fichiers", "refus", "empreinte"}` ;
+`publie(racine, envs, empreinte, builds_en_cours) -> sha`.
+- [ ] Banc du filtre d'abord (rouge), avec mutants : refus d'une valeur portant des identifiants d'URL (`://x:y@`), un
+  paramètre `token=`, `key=`, `apikey=`, `password=`, `pass=`, `pwd=`, `secret=`, `auth=`, `sig=` (casse indifférente) ;
+  une IPv4 non privée (hors 10/8, 172.16/12, 192.168/16, 127/8, 169.254/16) ; une IPv6 globale ; un nom de domaine
+  joignable (hors `.local`, `.lan`, `.home.arpa`, nom sans point) ; une chaîne de 20 caractères ou plus sans espace à
+  allure de clé (base64 ou hexadécimal) ; acceptés : hostname, IP privée avec ou sans port, topic, valeurs ordinaires
+- [ ] Filtre ; banc VERT ; appliqué en plus du filtre de l'A2 (clé ET valeur), avertissement dans l'aperçu,
+  refus à la publication avec la raison
+- [ ] Fiche HTML autonome (aucune ressource externe, CSS en ligne, clair/sombre par `prefers-color-scheme`,
+  `<meta name="robots" content="noindex">`, textes échappés, date de publication) ; `.nojekyll` ; banc : `<script>` dans
+  une valeur libre rendu en texte
+- [ ] Réglage « Contenu du QR code » : en mode lien, QR code = `url_fiche` (verdict sur l'URL), proposé pour toute carte
+- [ ] Publication : diff des fiches avant envoi, bouton « Publier » distinct d'« Écrire », refus pendant un build ;
+  banc sur un dépôt temporaire avec un `origin` nu : seule `refs/heads/etiquettes` change, `development` et l'arbre
+  de travail identiques avant/après, carte retirée -> fiche retirée au prochain envoi
+- [ ] Mise en service par l'utilisateur, une fois : Settings > Pages > Source « Deploy from a branch », branche
+  `etiquettes`, dossier `/ (root)`
+- [ ] Essai réel : une carte publiée, QR code en mode lien imprimé, scanné au téléphone en 4G
+- [ ] Commit
+
 ## Améliorations restantes
-- [ ] [projet] Lien cliquable facultatif dans le QR code (écarté de la v1 par l'utilisateur)
 
 ## Vérification
 Fin du chantier : un QR code réglé dans la page 7970, imprimé sur planche et scanné au téléphone ; le même affiché par

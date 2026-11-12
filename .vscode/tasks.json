@@ -239,6 +239,16 @@
             "problemMatcher": []
         },
         {
+            // Etiquettes QR code : QR code d'identite des cartes, etiquettes, planches A4, page /qrcode.
+            // Aussi cible Custom « Étiquettes QR code (page web) ».
+            "label": "Outil : étiquettes QR code (http://127.0.0.1:7970)",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/etiquettes_qr_web.py", "--http", "7970"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
+        },
+        {
             // Atelier des ecrans : ecrans HASPmota / LVGL des cartes (description, apercu, capture).
             // Aussi cible Custom « Atelier des écrans (page web) ».
             "label": "Outil : atelier des écrans (http://127.0.0.1:7960)",
