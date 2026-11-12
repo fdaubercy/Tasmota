@@ -252,7 +252,7 @@ A12, A15, A13, A14 (§ 8).
   — preuve : `atelier_ecrans_ecran.py::changement` (amont/bibliothèque signalés, carte sans écran = description vierge,
   bouton « Proposer » ouvert à une carte sans écran) ; les 10 bancs de l'atelier, la sonde et `test_cible_atelier_ecrans.py`
   VERT le 2026-11-13
-- [ ] Commit
+- [x] Commit — preuve : `413e30a6d`
 
 ## A15 — Onglet « display.ini » : lire, expliquer, valider, créer
 Conception : § 6 de la même spec. Bibliothèque personnelle `outils_docs/atelier_ecrans/display/` (+ `<nom>.notes.md`).
