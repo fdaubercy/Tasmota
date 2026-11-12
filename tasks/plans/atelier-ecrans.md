@@ -120,11 +120,11 @@ Fichiers : créer `outils_pc/atelier_ecrans_haspmota.py`, `outils_pc/test_atelie
 Consomme : `atelier_ecrans_description.charge`. Produit : `genere(desc) -> str` (texte du `pages.jsonl`, une ligne JSON
 par page et par objet, UTF-8, `ensure_ascii=False`), `ecarts(attendu: str, obtenu: str) -> list[str]` (équivalence
 SÉMANTIQUE : mêmes lignes dans le même ordre, mêmes clés et valeurs, ordre des clés libre).
-- [ ] Banc d'abord (rouge) : `test_debits_identique` (`ecarts(pages.jsonl du dépôt, genere(ecran.json des débits)) ==
+- [x] Banc d'abord (rouge) — preuve : ModuleNotFoundError puis 3294ce647, test_atelier_ecrans_haspmota OK : `test_debits_identique` (`ecarts(pages.jsonl du dépôt, genere(ecran.json des débits)) ==
   []`), `test_texte_special` (texte `Débit "5" \ 100 %` -> ligne qui se relit par `json.loads` à l'identique),
   `test_ecart_detecte` (une valeur changée -> un écart nommant la ligne et la clé)
-- [ ] `genere` ; banc VERT
-- [ ] `berry/banc_ecran_debits.py` VERT sur le `pages.jsonl` généré (copie temporaire) ; commit
+- [x] `genere` ; banc VERT — preuve : 3294ce647, BANC_ECRANS_HASPMOTA: OK
+- [x] `berry/banc_ecran_debits.py` VERT sur le `pages.jsonl` généré (copie temporaire) — preuve : banc_ecran_debits VERT sur copie, pages.jsonl genere identique a l'octet, 3294ce647 ; commit
 
 ## A5 — Générateur LVGL pur
 Fichiers : créer `outils_pc/atelier_ecrans_lvgl.py`, `outils_pc/test_atelier_ecrans_lvgl.py`,
