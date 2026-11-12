@@ -219,13 +219,27 @@ def ecarts_modele(lues, section):
     return [f"manque dans ecran.json : {c}" for c in sorted(lues - section)] + [f"en trop dans ecran.json : {c}" for c in sorted(section - lues)]
 
 
+def longueurs_decrites(modele):
+    """{liste: longueur} d'une section modele : `voies[].debit` -> `voies[]`, une liste feuille -> sa cle."""
+    return {(x["cle"].split("[]")[0] + "[]" if "[]" in x["cle"] else x["cle"]): x["longueur"] for x in modele if "longueur" in x}
+
+
 def controle_modele(sortie):
     m = re.search(r"^MODELE_CLES: (.+)$", sortie, re.M)
     lues = set(m.group(1).split(",")) if m else set()
-    section = [x["cle"] for x in json.loads(ECRAN_JSON.read_text(encoding="utf-8"))["modele"]]
+    n = re.search(r"^MODELE_LONGUEURS: (.+)$", sortie, re.M)
+    rendues = {k: int(v) for k, v in (e.split("=") for e in n.group(1).split(","))} if n else None
+    modele = json.loads(ECRAN_JSON.read_text(encoding="utf-8"))["modele"]
+    section = [x["cle"] for x in modele]
     ecarts = ecarts_modele(lues, set(section))
+    if rendues != longueurs_decrites(modele):
+        ecarts.append(f"longueurs : rendues {rendues}, decrites {longueurs_decrites(modele)}")
     print(f"--- section modele de ecran.json : {len(lues)} cles rendues, {len(section)} decrites, ecarts : {ecarts or 'aucun'}")
     ok = bool(lues) and not ecarts and len(section) == len(set(section))
+    faux = longueurs_decrites([{**x, "longueur": 5} if "longueur" in x else x for x in modele])
+    rouge = rendues != faux
+    print(f"  {'OK   ' if rouge else 'ECHEC'} modele : longueur de liste fausse dans la section")
+    ok = ok and rouge
     for nom, section_t in [("cle retiree de la section", set(section) - {"voies[].debit"}),
                            ("cle inventee dans la section", set(section) | {"voies[].couleur"}),
                            ("modele non rendu (ligne MODELE_CLES absente)", set(section))]:
@@ -258,7 +272,7 @@ def main():
         tmp = Path(t)
         (tmp / "banc").mkdir()
         sortie = lance_berry(tmp / "banc")
-        print("\n".join(l for l in sortie.splitlines() if not l.startswith("  OK")))
+        print("\n".join(l for l in sortie.splitlines() if not l.startswith(("  OK", "MODELE_"))))
         print(f"  ({sum(l.startswith('  OK') for l in sortie.splitlines())} verifications OK)")
         ok = VERT in sortie
         ok = controle_polices(tmp) and ok

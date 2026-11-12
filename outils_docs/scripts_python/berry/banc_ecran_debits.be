@@ -335,18 +335,22 @@ verifie("total de 6 voies valides : « Total 324,0 L/min » sans « partiel »",
 verifie("releve recu a l'instant : « relevé il y a 0 s », pastille verte", m["age"] == 0 && m["releve"] == "relevé il y a 0 s" && m["liaison"] == "vert")
 verifie("reglages en texte : 10 s, 5 min, 80 %", m["reglages"]["fenetre"] == "10 s" && m["reglages"]["veille"] == "5 min" && m["reglages"]["luminosite"] == "80 %" && size(m["reglages"]) == 3)
 # Cles du modele rendu (feuilles ; liste de maps : `voies[].k`) : le .py les compare a la section `modele` de ecran.json
-def feuilles(x, p, res)
+def feuilles(x, p, res, lon)
     if isinstance(x, map)
-        for k: x.keys()    feuilles(x[k], p == "" ? k : p + "." + k, res)    end
+        for k: x.keys()    feuilles(x[k], p == "" ? k : p + "." + k, res, lon)    end
     elif isinstance(x, list) && size(x) > 0 && isinstance(x[0], map)
-        feuilles(x[0], p + "[]", res)
+        lon.push(p + "[]=" + str(size(x)))
+        feuilles(x[0], p + "[]", res, lon)
     else
+        if isinstance(x, list)    lon.push(p + "=" + str(size(x)))    end
         res.push(p)
     end
 end
 var cles_modele = []
-feuilles(m, "", cles_modele)
+var longueurs_modele = []
+feuilles(m, "", cles_modele, longueurs_modele)
 print("MODELE_CLES: " + cles_modele.concat(","))
+print("MODELE_LONGUEURS: " + longueurs_modele.concat(","))
 pose(6, 7, 99)
 m = edf.modele(global.T)
 verifie("voie 6 perimee : « -,-- » inconnu, barre vide, pas de part", m["voies"][5]["debit"] == "-,--" && m["voies"][5]["etat"] == "inconnu" && m["voies"][5]["barre"] == 0 && m["voies"][5]["part"] == "")

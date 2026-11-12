@@ -1,10 +1,11 @@
 """Description neutre de l'ecran d'une carte (atelier des ecrans) : `outils_docs/atelier_ecrans/cartes/<env>/ecran.json`.
 
 Forme : {"version": 1, "ecran": <cle du catalogue>, "orientation": 0|90|180|270,
-         "modele": [{"cle", "type", "exemple"}],             valeurs liables (cles de ecranDebitsFonctions.modele)
+         "modele": [{"cle", "type", "exemple", "longueur"?}],   valeurs liables (cles de ecranDebitsFonctions.modele) ;
+                       longueur obligatoire pour une cle de liste (`voies[].debit`) : borne l'indice des liaisons
          "pages": [{"n", "titre", "attributs"?, "commentaire"?}],     page 0 = commun a toutes les pages
          "objets": [{"id", "page", "type", "x", "y", "l", "h", "attributs": {}, "liaison"?, "toucher"?, "commentaire"?}]}
-  liaison : {"cle", "attribut", "indice"?}   indice obligatoire pour une cle de liste (`voies[].debit`)
+  liaison : {"cle", "attribut", "indice"?}   indice (0 a longueur - 1) obligatoire pour une cle de liste (`voies[].debit`)
   liaison.table (facultatif) : la valeur du modele est un NOM, converti en couleur par `couleurs[table]` (pastille : "vert")
   couleur_selon : [regle] sur un objet, couleur d'un attribut recalculee a chaque rafraichissement d'apres une valeur du modele :
       {"attribut", "cle", "indice"?, "table", "sauf"?: {valeur: "#RRGGBB"}}     couleurs[table][valeur], sauf pour les valeurs de `sauf`
@@ -47,6 +48,17 @@ def charge(racine, env):
 
 def empreinte(octets):
     return hashlib.sha256(octets).hexdigest()
+
+
+def _indice(cle, indice, modele, qui, quoi, msgs):
+    """Indice d'une cle de liste : entier dans 0 .. longueur - 1 de la section modele."""
+    if "[]" not in cle:
+        return
+    n = modele.get(cle)
+    if not (_entier(indice) and indice >= 0):
+        msgs.append(f"{qui} : {quoi} de liste « {cle} » sans indice")
+    elif _entier(n) and indice >= n:
+        msgs.append(f"{qui} : {quoi} : indice {indice} hors de la liste « {cle} » ({n} éléments)")
 
 
 def _entier(v):
@@ -111,7 +123,7 @@ def _couleur(v, qui, quoi, msgs):
         msgs.append(f"{qui} : couleur « {v} » de {quoi} mal formée (attendu #RRGGBB)")
 
 
-def _regle(catalogue, t, regle, qui, cles, tables, msgs):
+def _regle(catalogue, t, regle, qui, cles, modele, tables, msgs):
     """Une regle de `couleur_selon` : attribut de type couleur, cle du modele (indice si liste), table, couleurs."""
     a = regle.get("attribut", "")
     if _type_attribut(catalogue, t, a) != "couleur":
@@ -119,8 +131,8 @@ def _regle(catalogue, t, regle, qui, cles, tables, msgs):
     c = regle.get("cle")
     if c not in cles:
         msgs.append(f"{qui} : couleur_selon : clé « {c} » absente de la section modèle")
-    elif "[]" in c and not (_entier(regle.get("indice")) and regle["indice"] >= 0):
-        msgs.append(f"{qui} : couleur_selon : clé de liste « {c} » sans indice")
+    else:
+        _indice(c, regle.get("indice"), modele, qui, "couleur_selon : clé", msgs)
     if "table" in regle:
         if regle["table"] not in tables:
             msgs.append(f"{qui} : couleur_selon : table « {regle['table']} » absente de couleurs")
@@ -148,10 +160,14 @@ def valide(d, catalogue):
     if d.get("orientation", 0) in (90, 270):
         L, H = H, L
     cles = []
+    modele = {m.get("cle"): m.get("longueur") for m in d.get("modele", [])}
     for m in d.get("modele", []):
         if m.get("cle") in cles:
             msgs.append(f"modèle : clé « {m.get('cle')} » en double")
         cles.append(m.get("cle"))
+        n = m.get("longueur")
+        if ("[]" in str(m.get("cle")) or m.get("type") == "liste") and not (_entier(n) and n > 0):
+            msgs.append(f"modèle : {m.get('cle')} est une liste, longueur entière positive obligatoire")
         if m.get("type") not in TYPES_MODELE:
             msgs.append(f"modèle : type « {m.get('type')} » de {m.get('cle')} inconnu ({', '.join(TYPES_MODELE)})")
     tables = d.get("couleurs", {})
@@ -186,8 +202,8 @@ def valide(d, catalogue):
         if li:
             if li.get("cle") not in cles:
                 msgs.append(f"{qui} : liaison vers « {li.get('cle')} » absente de la section modèle")
-            elif "[]" in li["cle"] and not (_entier(li.get("indice")) and li["indice"] >= 0):
-                msgs.append(f"{qui} : liaison de liste « {li['cle']} » sans indice")
+            else:
+                _indice(li["cle"], li.get("indice"), modele, qui, "liaison", msgs)
             if "table" in li:
                 if li["table"] not in tables:
                     msgs.append(f"{qui} : liaison : table « {li['table']} » absente de couleurs")
@@ -197,7 +213,7 @@ def valide(d, catalogue):
                     (t not in catalogue["objets"] or _type_attribut(catalogue, t, li.get("attribut", "")) is None):
                 msgs.append(f"{qui} : liaison vers l'attribut « {li.get('attribut')} » inconnu du type {t}")
         for regle in o.get("couleur_selon", []):
-            _regle(catalogue, t, regle, qui, cles, tables, msgs)
+            _regle(catalogue, t, regle, qui, cles, modele, tables, msgs)
         for k, v in o.get("actif", {}).items():
             if _type_attribut(catalogue, t, k) != "couleur":
                 msgs.append(f"{qui} : actif : « {k} » n'est pas un attribut de couleur du type {t}")

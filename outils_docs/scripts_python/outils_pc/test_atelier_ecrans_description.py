@@ -23,8 +23,8 @@ def verifie(ok, libelle, detail=""):
 
 REFERENCE = {
     "version": 1, "ecran": "ST7262_1024x600", "orientation": 0,
-    "modele": [{"cle": "voies[].debit", "type": "texte", "exemple": "4,20"},
-               {"cle": "voies[].barre", "type": "entier", "exemple": 62},
+    "modele": [{"cle": "voies[].debit", "type": "texte", "exemple": "4,20", "longueur": 6},
+               {"cle": "voies[].barre", "type": "entier", "exemple": 62, "longueur": 6},
                {"cle": "total", "type": "texte", "exemple": "Total 17,9 L/min"}],
     "couleurs": {"etat": {"normal": "#E8EDF2", "imprecis": "#FFA53F", "arret": "#9FB3C8"}},
     "pages": [{"n": 0, "titre": "Commun"}, {"n": 1, "titre": "Debits", "attributs": {"bg_color": "#10161E"}}],
@@ -96,6 +96,11 @@ MUTANTS = [
     ("actif : attribut non couleur", lambda d: objet(d, 1)["actif"].update(radius="#000000"), "pas un attribut de couleur"),
     ("actif : couleur mal formee", lambda d: objet(d, 1)["actif"].update(bg_color="bleu"), "actif[bg_color]"),
     ("actif sur un objet sans changement de page", lambda d: objet(d, 1).pop("toucher"), "actif"),
+    ("indice hors liste (liaison)", lambda d: objet(d, 2)["liaison"].update(indice=6), "hors de la liste"),
+    ("indice hors liste (couleur_selon)", lambda d: objet(d, 2)["couleur_selon"][0].update(indice=6), "hors de la liste"),
+    ("indice negatif", lambda d: objet(d, 2)["liaison"].update(indice=-1), "sans indice"),
+    ("liste sans longueur dans le modele", lambda d: d["modele"][0].pop("longueur"), "longueur"),
+    ("longueur de liste nulle", lambda d: d["modele"][0].update(longueur=0), "longueur"),
     ("page en double", lambda d: d["pages"].append({"n": 1, "titre": "Bis"}), "page 1"),
     ("couleur mal formee", lambda d: objet(d, 0)["attributs"].update(text_color="rouge"), "couleur"),
     ("cle de modele en double", lambda d: d["modele"].append({"cle": "total", "type": "texte", "exemple": "x"}), "total"),
