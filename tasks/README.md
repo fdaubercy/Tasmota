@@ -13,14 +13,15 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-44 plans : 18 actif, 1 en-pause, 25 clos.
+45 plans : 19 actif, 1 en-pause, 25 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff ; ajouter la pompe de la piscine (192.168.0.40) le projecteur du jardin (192.168.0.41) et celui du barbecue : sauvegarde, env, mise en service | actif | ████░░░░░░ 38 % (35/92) | 57 étapes, 3 améliorations | 2026-11-11 | 2026-11-12 (A16 : pompe renommée tasmota-jardin-pompe-piscine, lieu Jardin) |
-| [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ████░░░░░░ 36 % (15/39) | 24 étapes, 3 améliorations | 2026-11-11 | 2026-11-12 |
-| [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | ░░░░░░░░░░ 0 % (0/40) | 40 étapes, 1 amélioration | 2026-11-12 | 2026-11-12 |
-| [Visuel des volets sur la page d'accueil et réglage des durées par les boutons](plans/visuel-reglage-volets.md) | Dessiner sous les curseurs des volets une façade dont les tabliers suivent la position réelle en direct, et régler tempsMontee et tempsDescente depuis la page Configuration avec les boutons existants | actif | ████████░░ 78 % (37/46) | 9 étapes, 1 amélioration | 2026-11-11 | 2026-11-12 |
+| [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff ; ajouter la pompe de la piscine (192.168.0.40) le projecteur du jardin (192.168.0.41) et celui du barbecue : sauvegarde, env, mise en service | actif | ████░░░░░░ 41 % (42/94) | 52 étapes, 3 améliorations | 2026-11-11 | 2026-11-12 (A17 : env du NOUS créé et adapté, mesure vérifiée, compilation lancée) |
+| [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | █████░░░░░ 45 % (19/39) | 20 étapes, 3 améliorations | 2026-11-11 | 2026-11-12 |
+| [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) | Commander les appareils de la cave et voir son état sur l'écran 7B esclave, sans rien changer au comportement des autres cartes | actif | ░░░░░░░░░░ 0 % (0/40) | 40 étapes, 3 améliorations | 2026-11-12 | 2026-11-12 |
+| [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | ██░░░░░░░░ 20 % (5/40) | 35 étapes, 1 amélioration | 2026-11-12 | 2026-11-12 |
+| [Visuel des volets sur la page d'accueil et réglage des durées par les boutons](plans/visuel-reglage-volets.md) | Dessiner sous les curseurs des volets une façade dont les tabliers suivent la position réelle en direct, et régler tempsMontee et tempsDescente depuis la page Configuration avec les boutons existants | actif | ████████░░ 79 % (38/46) | 8 étapes, 1 amélioration | 2026-11-11 | 2026-11-12 |
 | [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) | Faire passer les 6 débits de la carte d'acquisition (esclave ModBus id 1) à une carte d'affichage (maître id 0) par une lecture groupée RS485 et un push UDP, sans rien changer au garage | actif | ██████░░░░ 62 % (33/49) | 16 étapes, 3 améliorations | 2026-11-09 | 2026-11-11 |
 | [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ███████░░░ 68 % (35/50) | 15 étapes, 4 améliorations | 2026-11-08 | 2026-11-09 |
 | [Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)](plans/energie-differentiel.md) | Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h) | actif | ██████████ 100 % (69/70) | 1 étape | 2026-10-31 | 2026-11-09 |
@@ -64,7 +65,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — 38 %
+#### [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — 41 %
 
 - A3 — Brochage et volets : Relais CH1-CH4 par le TCA9554 (`tca9554.dat` du dossier de la carte), interverrouillage montée/descente par volet. Fait en A2 sur le papier (CH1-CH6, `Interlock 1,2 3,4 5,6` corrigé dans `vrFonctions.be`) : à cocher après l'essai à vide sur la carte.
 - A3 — Brochage et volets : Boutons DI1-DI4, DHT22 sur GPIO21 ; classeur `Brochage GPIO - tasmota32s3-rdc-grenier.xlsx` par
@@ -105,17 +106,12 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A16 — Pompe de la piscine (192.168.0.40) : sauvegarde, env, mise en service : Faire dire par l'utilisateur pourquoi la carte est muette (éteinte pour l'hiver, prise coupée, répéteur KuWFi
 - A16 — Pompe de la piscine (192.168.0.40) : sauvegarde, env, mise en service : Sauvegarde par l'onglet « Sauvegarde configuration » (HTTP ; MQTT masqué pour un ESP8266), page Build redémarrée
 - A16 — Pompe de la piscine (192.168.0.40) : sauvegarde, env, mise en service : Relevé de la carte en lecture seule : `Status 0`, `Template`, `Module`, `GPIO`, `Timers`, `Rule1` à `Rule3`, `Emulation`,
-- A16 — Pompe de la piscine (192.168.0.40) : sauvegarde, env, mise en service : Env aligné sur les deux Sonoff (A15) : `extends = env:tasmota-base-1M` ; section du `.h` récrite d'après le relevé et
 - A16 — Pompe de la piscine (192.168.0.40) : sauvegarde, env, mise en service : Compilation par la page Build (:7700), SUCCESS lu en fin de journal, taille de l'image comparée au 1 Mo (les deux
 - A16 — Pompe de la piscine (192.168.0.40) : sauvegarde, env, mise en service : Recenser ce qui vise `jardin/pompe_piscine` (Node-RED du Pi, Alexa par l'émulation, Home Assistant, Telegram) avant
 - A16 — Pompe de la piscine (192.168.0.40) : sauvegarde, env, mise en service : Mise en service, avec l'accord de l'utilisateur : sauvegarde « avant flash », envoi, `Status 0`, timers et Rules relus,
 - A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : Contrôle de faisabilité AVANT l'env : aucun ESP32 classique du dépôt ne compile `USE_WIFI_RANGE_EXTENDER` (S3 de la
-- A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : Clé `diverses.energie.enregistrement` (`ON` par défaut, absente = `ON` : le différentiel ne change pas) : à `OFF`,
-- A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : Env du NOUS : liste `page_energie` retirée de son `custom_files_exclude`, `energieFonctions` et `controleEnergie` dans
 - A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : Sauvegarde par l'onglet « Sauvegarde configuration » (HTTP), page Build redémarrée avant ; `/_persist.json` de la
 - A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : `.dmp` décodé en `config_decodee.json` (mots de passe masqués), comme .42 et .45 ; template « NOUS B2T » vérifié
-- A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : Nom, dossier et firmware, décision de l'utilisateur. Proposition de Claude : `tasmota32-jardin-projecteur-led`
-- A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : Env créé (cenv et section `#elif` du `.h`) d'après le relevé, avec l'accord de l'utilisateur (diff montré) : IP,
 - A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : Compilation par la page Build (:7700), SUCCESS lu en fin de journal, taille comparée à la partition de 4 Mo.
 - A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : Recenser ce qui vise `jardin/projecteur_led` (Node-RED, Alexa, Home Assistant) avant tout changement d'identité.
 - A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : Mise en service, avec l'accord de l'utilisateur : sauvegarde « avant flash », envoi (OTA possible sur 4 Mo),
@@ -127,13 +123,9 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - Amélioration [projet] : Alias Berry lisible par volet (`VoletPorte`, `VoletCuisine`) si l'utilisateur le veut (A4).
 - Amélioration [projet] : Resynchroniser les deux lampes de la cave à la reconnexion MQTT d'une des cartes (`Mqtt#Connected`).
 
-#### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 36 %
+#### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 45 %
 
 - A0 — Plan précédent : débits sur deux cartes : Rouvrir le plan précédent dans la vue de droite : taper `/suivi suivre debits-deux-cartes` (la conversation suit
-- A5 — Générateur LVGL pur : Banc d'abord (rouge) : `test_compile` (le texte généré passe `berry/verifie_berry.py`, charte des logs sans
-- A5 — Générateur LVGL pur : `genere` ; bancs VERT
-- A5 — Générateur LVGL pur : `ecranLvgl.be` des débits généré et écrit ; `build/test_interface_ecran.py` VERT (le fichier présent, interface
-- A5 — Générateur LVGL pur : Commit (le fichier généré compris) ; noter dans `debits-deux-cartes` A8 que l'interface LVGL vient du générateur
 - A6 — Page web de l'atelier (port 7960) : Banc serveur d'abord (rouge), sur copie temporaire : routes ci-dessus ; env inconnu -> 400 ; requête sans en-tête
 - A6 — Page web de l'atelier (port 7960) : Serveur et routes ; banc VERT
 - A6 — Page web de l'atelier (port 7960) : Page (maquette `modele-retenu.png`) : en-tête (liste des cartes par `lieux.pour_page`, liste des écrans
@@ -157,13 +149,54 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - Amélioration [projet] : Reprise d'un `pages.jsonl` existant écrit à la main (import vers la description)
 - Amélioration [projet] : Objets du palier 2 (image, liste déroulante, interrupteur, roue, QR code…)
 
-#### [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — 0 %
+#### [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) — 0 %
 
-- A0 — Maquettes de la page 7970 (choix de l'utilisateur) : Trois dispositions de la page (en-tête avec liste des envs et bouton Sombre / Clair, liste des cartes, panneau
-- A0 — Maquettes de la page 7970 (choix de l'utilisateur) : Choix de l'utilisateur noté dans `README.md` et ici
-- A1 — Bibliothèque de dessin du QR code : Paquet npm `qr-code-styling` : dernière version stable publiée depuis au moins deux semaines, licence MIT lue,
-- A1 — Bibliothèque de dessin du QR code : Copies PC et `.gz` écrites, empreintes notées dans `LISEZMOI.md`
-- A1 — Bibliothèque de dessin du QR code : Essai navigateur (page de test jetable dans le scratchpad) : texte `Hostname : cuve\nIP : 192.168.0.60\nNote :
+- A1 — Veille commune : `ecranFonctions.be` dans `data/fs` : `banc_ecran_debits.py` VERT AVANT le déplacement (référence), sortie notée
+- A1 — Veille commune : `ecranFonctions.be` dans `data/fs` : Déplacement (`git mv`) ; le banc trouve encore le module (adapter son chemin s'il est figé) ; `banc_ecran_debits.py` VERT, ses mutants rouges
+- A1 — Veille commune : `ecranFonctions.be` dans `data/fs` : Liste `ecran` exclue des envs sans écran ; `banc_demarrage.py` VERT sans `--enregistre`
+- A1 — Veille commune : `ecranFonctions.be` dans `data/fs` : Commit `refactor(ecran): veille commune ecranFonctions deplacee dans data/fs` ; case l.113 du plan `debits-deux-cartes` mise à jour (déplacement fait, solidification restant à faire là-bas)
+- A2 — Pompe vide-cave : marche manuelle sans flotteurs : Banc rouge d'abord : `appui_bouton_desactive_flotteurs` (bouton1 ON -> capteurs `activation` OFF et `suspendu` ON, relais 1 ON), `flotteur_bas_ignore_en_manuel` (capteur1 OFF pendant la marche -> relais 1 reste ON), `second_appui_reactive` (bouton1 -> relais OFF, capteurs ON, pas de `suspendu`), `minuterie_reactive` (`finTimerRelai` -> capteurs ON), `demarrage_reactive` (persist avec `suspendu` ON -> `init()` les réactive), `sans_cle_inchange` (relaisLie sans `desactiveCapteurs` : capteurs jamais touchés)
+- A2 — Pompe vide-cave : marche manuelle sans flotteurs : Code ; banc VERT ; un mutant par cas (ex. `false` remis dans `commandeRelaisLies`) lu rouge
+- A2 — Pompe vide-cave : marche manuelle sans flotteurs : Persist de la cave et schéma ; `genere_schema_persist.py --valide` 0 erreur ; `banc_demarrage.py` VERT (cave réenregistrée seule, avec l'accord déjà donné pour elle)
+- A2 — Pompe vide-cave : marche manuelle sans flotteurs : Commit `feat(pompe): marche manuelle sans flotteurs, reactives a l'arret et au demarrage`
+- A3 — Pannes des flotteurs et état de la pompe publié : Banc `banc_pompe_cave` étendu, rouge d'abord : `incoherence_apres_anti_rebond`, `incoherence_breve_ignoree`, `flotteur_bas_apres_n_arrets`, `arret_normal_remet_compteur`, `manuel_ne_compte_pas`, `json_append_porte_pompe_vide_cave`
+- A3 — Pannes des flotteurs et état de la pompe publié : Code ; banc VERT ; mutants rouges ; `verifie_berry.py` 0 erreur
+- A3 — Pannes des flotteurs et état de la pompe publié : Persist (clé `pannes`) ; schéma ; `banc_demarrage.py` VERT
+- A3 — Pannes des flotteurs et état de la pompe publié : Commit `feat(pompe): pannes des flotteurs (incoherence, flotteur bas) et etat publie`
+- A4 — Le serveur exécute les touches de l'écran : Vérifier d'abord que des boutons virtuels ModBus sur le maître ne créent ni GPIO, ni règle `Button`, ni entrée parasite dans `json_append` de `controleGeneral` (lire `configDevices.be`, banc) ; noter la conclusion ici
+- A4 — Le serveur exécute les touches de l'écran : Banc rouge d'abord (`banc_test_modbus.be` étendu ou `banc_commandes_ecran.{py,be}` neuf) : `push_allume_relai`, `meme_seq_une_seule_action`, `releve_sans_action`, `seq_zero_ignoree`, `numero_inconnu_log_erreur`, `redemarre_seulement_sur_on`, `pompe_manuelle_desactive_flotteurs`, `sans_crochet_comportement_inchange` (garage : `global.commandesEsclave` nil)
+- A4 — Le serveur exécute les touches de l'écran : Code ; bancs VERTS (`banc_test_modbus.py` entier compris) ; mutants rouges
+- A4 — Le serveur exécute les touches de l'écran : Persist de la cave (`ecranCave` OFF), autoexec ; schéma ; `banc_demarrage.py` VERT
+- A4 — Le serveur exécute les touches de l'écran : Commit `feat(modbus): le serveur de la cave execute les touches de l'ecran`
+- A5 — L'écran envoie ses touches : Vérifier qu'un bouton sans broche ne fait pas planter `changementEtatCapteur` (`device["pin"]` dans un `format %i`) ni le relevé `0x02` du maître ; corriger en `find("pin", -1)` si besoin (dans `globalFonctions.be`, sans autre changement)
+- A5 — L'écran envoie ses touches : Banc rouge d'abord : `banc_ecran_cave.{py,be}` (modèle `banc_ecran_debits`) : `touche_pousse_mot`, `seq_avance_jamais_zero`, `refus_si_perime`, `relance_jusqu_a_confirmation`, `abandon_apres_5`, `redemarrer_toujours_on`
+- A5 — L'écran envoie ses touches : Code ; banc VERT ; mutants rouges
+- A5 — L'écran envoie ses touches : Commit `feat(ecran-cave): envoi des touches par push ModBus`
+- A6 — L'écran affiche l'état par MQTT : Banc rouge d'abord : `sensor_cave_lu`, `power_lu_par_result`, `cuve_lue`, `perime_apres_delai`, `json_invalide_ignore_sans_planter`, `topics_lus_dans_le_persist`
+- A6 — L'écran affiche l'état par MQTT : Code ; banc VERT ; mutants rouges
+- A6 — L'écran affiche l'état par MQTT : Commit `feat(ecran-cave): affichage par MQTT, valeurs datees et perimees`
+- A7 — Pages HASPmota de l'écran : Maquette du rendu (capture de l'aperçu de l'atelier) validée par l'utilisateur avant l'écriture des pages
+- A7 — Pages HASPmota de l'écran : `ecran.json` validé par `atelier_ecrans_description.valide` ; `pages.jsonl` généré
+- A7 — Pages HASPmota de l'écran : `banc_ecran_cave` étendu : chaque objet référencé par `affiche` existe dans `pages.jsonl` ; `confirmation_avant_redemarrage` ; `menu_ouvre_et_ferme`
+- A7 — Pages HASPmota de l'écran : Commit `feat(ecran-cave): pages HASPmota (accueil, graphiques, cuve, reglages, menu)`
+- A8 — Intégration, non-régression, compilation : Cenv de `tasmota32s3-cave-ecran` : `custom_interface_ecran = haspmota` et ses listes, fichiers du dossier ; autoexec de l'écran (`ecranFonctions`, `ecranCaveFonctions`, `controleEcranCave`, `modules.ecranCave` ON)
+- A8 — Intégration, non-régression, compilation : `banc_demarrage.py` : cave et écran réenregistrés (contenu relu), toutes les autres cartes VERTES SANS réenregistrement
+- A8 — Intégration, non-régression, compilation : `banc_test_modbus.py`, `banc_ecran_debits.py`, `banc_pompe_cave.py`, `banc_ecran_cave.py` VERTS ; `verifie_berry.py` 0 erreur ; `genere_schema_persist.py --valide` 0 erreur
+- A8 — Intégration, non-régression, compilation : Agent `relecteur-berry` sur tous les `.be` touchés ; remarques traitées
+- A8 — Intégration, non-régression, compilation : Compilation par la page Build : cave, écran (et débits, garage si `data/fs` solidifié touché) ; journaux SUCCESS
+- A8 — Intégration, non-régression, compilation : `PROTOCOLE_MODBUS.md` §10 et `outils_docs/README.md` (mode d'emploi de l'écran) ; plan `envs-grenier-rdc-sonoff-cave` A9 coché
+- A8 — Intégration, non-régression, compilation : Commit `feat(ecran-cave): integration et documentation`
+- A9 — Essai sur carte (écran branché) : Flash de l'écran (USB, effacer puis téléverser) ; `TasmotaSlaveModBus1` et `modules.ecranCave` de la cave à ON, persist renvoyé à chaud
+- A9 — Essai sur carte (écran branché) : Chaque touche commute son relais ; redémarrage après confirmation ; aucune commutation au redémarrage de l'écran ni du serveur (journal syslog)
+- A9 — Essai sur carte (écran branché) : Broker coupé : valeurs grisées, touches refusées ; RS485 seul, puis Wi-Fi seul
+- A9 — Essai sur carte (écran branché) : Marche manuelle de la pompe : flotteurs ignorés, réactivés à l'arrêt et après la minuterie
+- A9 — Essai sur carte (écran branché) : Veille, réveil sans action, luminosité
+- Amélioration [projet] : Solidifier `ecranFonctions` dans les envs à écran (plan `debits-deux-cartes` A8)
+- Amélioration [projet] : Boutons physiques du serveur à garder ou retirer (plan `envs-grenier-rdc-sonoff-cave` A9)
+- Amélioration [projet] : Topic de la cave à changer au retour en production (A7 du plan d'origine) : seul le persist de l'écran à modifier
+
+#### [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — 20 %
+
 - A2 — Modèle : gabarit, surcharge, champs, secrets, verdict : Bancs d'abord (rouge) : `test_fusion` (surcharge de `lignes` remplace la liste, de `style.couleur` garde
 - A2 — Modèle : gabarit, surcharge, champs, secrets, verdict : Modules ; bancs VERT, chaque mutant lu rouge
 - A2 — Modèle : gabarit, surcharge, champs, secrets, verdict : Commit
@@ -173,7 +206,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A4 — Serveur et page 7970 : Banc serveur d'abord (rouge) : routes ci-dessus ; env inconnu -> 400 ; POST sans en-tête anti-CSRF -> 403 ;
 - A4 — Serveur et page 7970 : Serveur et routes ; banc VERT
 - A4 — Serveur et page 7970 : En-tête : liste déroulante des envs (`lieux.remplitParLieu`) qui change de carte sans recharger la page (URL
-- A4 — Serveur et page 7970 : Page selon la maquette retenue en A0 : aperçu dessiné par la bibliothèque, texte lu à côté, compteur d'octets,
+- A4 — Serveur et page 7970 : Page selon le modèle A (`outils_docs/etiquettes_qr/modele-A.png`, `modele-A-sombre.png`) : aperçu dessiné par la bibliothèque, texte lu à côté, compteur d'octets,
 - A4 — Serveur et page 7970 : Sonde Chrome hermétique : bascule Sombre / Clair par le bouton, changement d'env par la liste (réglage de
 - A4 — Serveur et page 7970 : Brique de l'annuaire (:7600) : outil `etiquettes_qr` dans `annuaire_registre.py` (titre « Étiquettes QR code »,
 - A4 — Serveur et page 7970 : Tâche VS Code et cible Custom détachée (`test_cible_etiquettes_qr.py`, `test_garde_build.py` VERT)
@@ -201,7 +234,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A9 — Documentation : Commit ; plan passé `statut: clos`
 - Amélioration [projet] : Lien cliquable facultatif dans le QR code (écarté de la v1 par l'utilisateur)
 
-#### [Visuel des volets sur la page d'accueil et réglage des durées par les boutons](plans/visuel-reglage-volets.md) — 78 %
+#### [Visuel des volets sur la page d'accueil et réglage des durées par les boutons](plans/visuel-reglage-volets.md) — 79 %
 
 - A8 — Essais sur carte : Grenier du 2e étage (`inverse` 1, bouton unique) : envoi par la page Build, dessin ouvert quand la trappe est ouverte,
 - A8 — Essais sur carte : Trappe à MPU6050 actif (si le capteur est posé) : dessin qui suit l'angle, réglage sans arrêt en butée, durée du MPU
@@ -210,7 +243,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A8 — Essais sur carte : Durées mesurées recopiées dans les persists du dépôt, si l'utilisateur le demande
 - A9 — Revenir au plan d'origine `envs-grenier-rdc-sonoff-cave` : Passer ce plan à `statut: clos`, puis cocher A14 et les étapes de réalisation d'A12 et d'A13 du plan d'origine, avec preuve
 - A9 — Revenir au plan d'origine `envs-grenier-rdc-sonoff-cave` : Taper `/suivi suivre envs-grenier-rdc-sonoff-cave` et reprendre à sa prochaine étape
-- A10 — Façade du rideau du garage (demande du 2026-11-12) : Compilation du rideau par la page Build (`controleRideau` solidifié), SUCCESS lu en fin de journal
 - A10 — Façade du rideau du garage (demande du 2026-11-12) : Essai sur carte : dessin qui suit la porte pendant une course du P4 ; P4 injoignable -> grisé, position des fins de course
 - Amélioration [projet] : Corriger en amont la boucle sans accolades de `CmndShutterButton` (`ShutterButton<x> 0`) : proposition à
 
