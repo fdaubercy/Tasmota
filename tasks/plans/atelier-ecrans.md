@@ -81,18 +81,18 @@ Forme : `objets[<type>] = {"palier": 1|2, "attributs": {<nom>: {"type": "entier"
 "booleen", "min"?, "max"?}}}` ; `polices = [{"nom", "tailles": [..], "source": "firmware"|"sd", "fichier"?}]` ;
 `ecrans[<cle>] = {"pilote", "largeur", "hauteur", "bus", "tactile", "integre_a"?, "display_ini": <chemin source>,
 "envs": [..]}` (clé = `<pilote>_<largeur>x<hauteur>`).
-- [ ] Banc d'abord (rouge) : `test_objets_palier` (les 7 types `label btn bar obj chart arc slider` en palier 1, les
+- [x] Banc d'abord (rouge) : `test_objets_palier` (les 7 types `label btn bar obj chart arc slider` en palier 1, les — preuve : rouge partiel lu (catalogue absent -> FileNotFoundError ; tactile ILI9488 corrige dans le banc), puis `test_atelier_ecrans_catalogue.py` VERT, commit 58b61ebb1
   autres classes `lvh_*` en palier 2), `test_attributs_pages_debits` (toute clé du `pages.jsonl` des débits sauf `page`,
   `id`, `obj`, `comment` est un attribut connu de son type), `test_polices` (RobotoCondensed `.ttf` de la carte et ses
   tailles 20, 24, 32, 36 présentes), `test_ecrans` (deux écrans : `ST7262_1024x600` RGB tactile, `ILI9488_480x320` SPI),
   `test_env_sans_ecran` (env sans `display.ini` -> `None` ; `display.ini` sans `:H` -> `None`, pas d'exception),
   `test_temoin_police_retiree` (copie temporaire des sources sans une police -> `verifie` non vide)
-- [ ] `genere` : classes et attributs lus dans `lib/libesp32_lvgl/lv_haspmota/src/embedded/lv_haspmota.be` (setters et
+- [x] `genere` : classes et attributs lus dans `lib/libesp32_lvgl/lv_haspmota/src/embedded/lv_haspmota.be` (setters et — preuve : `atelier_ecrans_catalogue.py::genere`, banc VERT dont `test_temoin_police_retiree` (ttf retire et robotocondensed 24 desactivee -> ecart `polices`), 58b61ebb1
   tables de correspondance de `lvh_obj` et de chaque classe, à identifier en lisant le fichier) ; polices compilées lues
   dans les sources du firmware (gardes de l'env de la carte) et `.ttf` des dossiers de cartes ; écrans d'après
   `data/*/*/display.ini` (ligne `:H`) ; banc VERT, témoin rouge lu
-- [ ] `catalogue_ecran.json` généré et commité ; `--verifier` code 0
-- [ ] Skill `lvgl-haspmota` : ses références renvoient au catalogue (source unique) et décrivent l'atelier (page 7960,
+- [x] `catalogue_ecran.json` généré et commité ; `--verifier` code 0 — preuve : `--verifier` -> « catalogue a jour », code 0 ; 58b61ebb1
+- [x] Skill `lvgl-haspmota` : ses références renvoient au catalogue (source unique) et décrivent l'atelier (page 7960, — preuve : SKILL.md (section « Atelier des écrans et catalogue »), references/haspmota.md et polices.md renvoient au catalogue ; skill hors depot git (~/.claude), pas de commit
   description, remarques) ; commit
 
 ## A3 — Description neutre de l'écran
