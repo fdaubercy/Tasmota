@@ -37,6 +37,11 @@ def test_octets_utf8():
 def test_niveaux():
     r = v.verdict("a" * 100, 25, "H")                         # H v10 (98 < 100 <= 119) -> 57 modules ; 25/65 = 0,385
     verifie((r["version"], r["modules"], r["module_mm"], r["niveau"]), (10, 57, 0.385, "limite"), "100 o, 25 mm, H")
+    # essai reel du 2026-11-12 (planche d'essai, iPhone) : lu jusqu'a 15 mm en texte court (25 modules)
+    verifie((v.verdict("a" * 20, 15, "M")["modules"], v.verdict("a" * 20, 15, "M")["niveau"]), (25, "lisible"),
+            "essai reel : 15 mm, 25 modules = 0,45 mm, lu au telephone")
+    verifie(v.verdict("a" * 20, 13, "M")["niveau"], "limite", "13 mm, 25 modules = 0,39 mm : plus petit que l'essai")
+    verifie(v.verdict("a" * 20, 10, "M")["niveau"], "trop_dense", "10 mm, 25 modules = 0,30 mm")
     verifie(v.verdict("a" * 14, 25, "M")["niveau"], "lisible", "14 o, 25 mm, M : 25/29 = 0,86 mm")
     verifie(v.verdict("a" * 100, 15, "H")["niveau"], "trop_dense", "100 o, 15 mm, H : 15/65 = 0,23 mm")
     verifie(v.verdict("a" * 3000, 25, "M")["niveau"], "trop_long", "3000 o -> trop long")

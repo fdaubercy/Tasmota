@@ -16,7 +16,9 @@ CAPACITE = {
           403, 439, 461, 511, 535, 593, 625, 658, 698, 742, 790, 842, 898, 958, 983, 1051, 1093, 1139, 1219, 1273],
 }
 MARGE = 4               # modules blancs de chaque cote
-SEUIL_LISIBLE = 0.5     # mm par module, provisoire (A5)
+# mm par module, cales le 2026-11-12 sur l'essai reel (iPhone, planche d'essai, imprimante de l'utilisateur) :
+# toute la planche lue jusqu'a 15 mm en texte court = 25 modules = 0,45 mm. Plus petit : non essaye, d'ou « limite ».
+SEUIL_LISIBLE = 0.45
 SEUIL_LIMITE = 0.35
 
 

@@ -215,9 +215,12 @@ Consomme : A4 (`POST /impression`).
   homonymes, sur 2 lignes (7 mm réservés) ; carte sans aucune ligne lisible refusée avec la raison, jamais un QR vide ;
   « Planche d'essai » ajoutée (carte affichée à 15, 20, 25, 30 mm, texte court et long, avec/sans image ; jamais notée)
 - [x] Export PNG et SVG — preuve : sonde « export PNG et SVG de la cuve » (image/png, image/svg+xml) ; `getRawData`, nommé `qr_<env>.png|svg`, PNG à 300 points par pouce de la taille réglée
-- [ ] Essai réel avec l'utilisateur : une planche aux tailles 15, 20, 25, 30 mm, texte court et texte long, avec et
+- [x] Essai réel avec l'utilisateur — preuve : « 15mm, c'est ok » (2026-11-12, iPhone, planche d'essai) ; seuils de
+  `etiquettes_qr_verdict.py` recalés à 0,45 mm lisible (15 mm texte court = 25 modules) et 0,35 mm limite ;
+  `test_etiquettes_qr_verdict.py` VERT avec le point d'essai. Planche aux tailles 15, 20, 25, 30 mm, texte court et texte long, avec et
   sans image ; scan au téléphone ; seuils de `verdict` recalés d'après le résultat (banc A2 mis à jour).
-  1er retour de l'utilisateur (2026-11-12, iPhone) : « 20 mm court, 25 mod. » (0,61 mm par module) ; texte long à préciser.
+  Écart : sous 15 mm rien n'est essayé, la zone « limite » (0,35 à 0,45 mm) reste une estimation ; le texte long n'a pas
+  fait l'objet d'un retour séparé.
   Corrigé au passage : perte du focus à chaque lettre (l'aperçu redessinait les lignes ; `majValeursLignes`, sonde avec
   témoin rouge) ; champ standard « Range extender » (SSID du point d'accès, proposé si `rangeExtender.activation` = ON)
 - [ ] Commit
