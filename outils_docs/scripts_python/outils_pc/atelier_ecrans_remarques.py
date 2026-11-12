@@ -249,7 +249,8 @@ def valide_propositions(sortie, desc, catalogue, remarques):
 
 
 def applique_remarque(racine, env, id_, desc):
-    """POST /remarques/appliquer : description modifiee (rien n'est ecrit hors de l'etat de la remarque)."""
+    """POST /remarques/appliquer : description modifiee, rien n'est ecrit (la remarque reste « proposee » : elle passe a
+    « appliquee » a l'ecriture dans le depot, marque_appliquees ; decision de l'utilisateur du 2026-11-12)."""
     if not isinstance(desc, dict):
         raise ValueError("description : objet attendu")
     with VERROU:
@@ -266,9 +267,28 @@ def _applique_remarque(racine, env, id_, desc):
     neuves = [m for m in _erreurs(nouvelle, catalogue) if m not in set(_erreurs(desc, catalogue))]
     if neuves:
         return {"description": None, "erreurs": neuves, "remarques": remarques}
-    r["etat"] = "appliquee"
-    enregistre(racine, env, remarques)
     return {"description": nouvelle, "erreurs": [], "remarques": remarques}
+
+
+def valide_ids(ids):
+    """Identifiants de remarques envoyes avec /ecrire : liste d'entiers (ValueError sinon)."""
+    if ids is None:
+        return []
+    if not isinstance(ids, list) or not all(type(i) is int for i in ids):
+        raise ValueError("remarques : liste d'identifiants entiers attendue")
+    return ids
+
+
+def marque_appliquees(racine, env, ids):
+    """Apres l'ecriture de la description (POST /ecrire) : les remarques `ids` encore « proposee » passent a « appliquee »."""
+    with VERROU:
+        remarques = charge(racine, env)
+        touchees = [r for r in remarques if r.get("id") in ids and r.get("etat") == "proposee"]
+        for r in touchees:
+            r["etat"] = "appliquee"
+        if touchees:
+            enregistre(racine, env, remarques)
+        return remarques
 
 
 # ---------- traitement par claude -p ----------

@@ -208,7 +208,8 @@ Bouton « Traiter les remarques (Claude) » :
 - un seul traitement à la fois, état « en cours » et durée affichés, délai maximal (10 min), journal dans
   `%LOCALAPPDATA%\outils_tasmota\atelier_ecrans\` ;
 - « Appliquer » rejoue les opérations de la proposition sur la description en mémoire (vue sur le canevas et dans le
-  diff) ; l'écriture dans le dépôt reste celle du bouton « Écrire ».
+  diff) ; l'écriture dans le dépôt reste celle du bouton « Écrire », et c'est elle qui fait passer la remarque à
+  « appliquée » (décision de l'utilisateur du 2026-11-12 : un clic sans écriture ne la marque plus).
 
 ### 5.8 Sécurité
 

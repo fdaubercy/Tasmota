@@ -209,11 +209,14 @@ def sonde_remarques(cdp, banc):
     verifie("text_font" in (js("document.getElementById('remarques').textContent") or ""), True, "operations de la proposition listees")
     h = js("E.histo.length")
     js(bouton_texte("Appliquer") + ".click()")
-    attend(cdp, "R.liste[0].etat === 'appliquee'", 10)
-    verifie((js("objet(1, 11).attributs.text_font"), js("E.histo.length"), js("R.liste[0].etat")), (tar.POLICE_28, h + 1, "appliquee"),
-            "Appliquer : description modifiee dans la page, une entree d'historique")
+    attend(cdp, "R.appliquees.hasOwnProperty(1)", 10)
+    verifie((js("objet(1, 11).attributs.text_font"), js("E.histo.length"), js("R.liste[0].etat"),
+             "sur le canevas" in (js("document.getElementById('remarques').textContent") or ""), js("!!" + bouton_texte("Appliquer"))),
+            (tar.POLICE_28, h + 1, "proposee", True, False),
+            "Appliquer : description modifiee, une entree d'historique, remarque encore proposee (appliquee a l'ecriture)")
     js("document.getElementById('annuler').click()")
-    verifie(js("objet(1, 11).attributs.text_font"), 24, "Annuler apres Appliquer : police d'avant")
+    verifie((js("objet(1, 11).attributs.text_font"), js("R.appliquees.hasOwnProperty(1)"), js("!!" + bouton_texte("Appliquer"))), (24, False, True),
+            "Annuler apres Appliquer : police d'avant, bouton Appliquer rendu")
     erreurs = [e for e in cdp.erreurs() if "carte-inconnue" not in e and "temoin_sonde" not in e]
     verifie(erreurs, [], "remarques : aucune erreur console")
 
@@ -222,6 +225,8 @@ def sonde_ecriture(cdp, banc):
     js = cdp.js
     serveur = "tasmota32s3-bureau-serveur-debits-pac"
     js("modifie(function(){ objet(0, 1).attributs.text = 'Debits du chauffage'; })")
+    js(bouton_texte("Appliquer") + ".click()")
+    attend(cdp, "R.appliquees.hasOwnProperty(1)", 10)
     js("document.getElementById('ecrire').click()")
     n = attend(cdp, "!document.getElementById('confirmation').hidden && document.querySelectorAll('#confirmation li').length", 15)
     verifie(n, 3, "Ecrire : confirmation avec les trois fichiers")
@@ -231,6 +236,9 @@ def sonde_ecriture(cdp, banc):
     ej = (banc.racine / "outils_docs/atelier_ecrans/cartes" / ENV / "ecran.json").read_text(encoding="utf-8")
     pj = (banc.racine / "data/bureau/tasmota32s3-ecran-debits-pac/pages.jsonl").read_text(encoding="utf-8")
     verifie(("Debits du chauffage" in ej, "Debits du chauffage" in pj), (True, True), "Ecrire : ecran.json et pages.jsonl de la copie modifies")
+    rq = json.loads((banc.racine / "outils_docs/atelier_ecrans/cartes" / ENV / "remarques.json").read_text(encoding="utf-8"))
+    verifie((js("R.liste[0].etat"), rq[0]["etat"], js("Object.keys(R.appliquees).length")), ("appliquee", "appliquee", 0),
+            "Ecrire apres Appliquer : remarque appliquee dans la page et dans remarques.json")
     verifie("fichiers=pages.jsonl" in (js("document.querySelector('#ecritureMessage a').href") or ""), True, "lien page Build avec le fichier de l'interface")
     js("document.getElementById('ecrire').click()")
     vide = attend(cdp, "!document.getElementById('confirmation').hidden && document.getElementById('confirmation').textContent.indexOf('Rien') >= 0", 15)
@@ -303,8 +311,7 @@ def main():
         aew.aer.Traitement = lambda racine: vrai(racine, programme=[sys.executable, str(faux)])     # jamais le vrai claude
         aew._builds_defaut = lambda: []                                     # aucun build : pas de requete aux processus
         banc = BancPage(t)
-        for f in banc.racine.glob("outils_docs/atelier_ecrans/cartes/*/remarques.json"):
-            f.unlink()                       # hermetique : les remarques du vrai depot ne viennent pas dans la copie
+        tar.etat_depart(banc.racine)         # hermetique : sans les remarques du vrai depot, voie 1 en police 24
         for args in (["init", "-q"], ["add", "-A"], ["commit", "-q", "-m", "copie"]):
             tar.git(banc.racine, *args)
         avant = instantane(banc.racine)

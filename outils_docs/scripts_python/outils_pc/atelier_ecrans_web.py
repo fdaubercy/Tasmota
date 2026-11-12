@@ -24,7 +24,8 @@ Routes (les POST exigent l'en-tete X-Atelier-Ecrans: 1 et la meme origine ; corp
     POST /capture      {env} -> 200 image/bmp (octets de lv.screenshot()) ou 409 texte (refus : carte injoignable, sans
                        LVGL, fichier tronque, capture deja en cours)
     POST /diff         {env, description} -> {fichiers (comme /apercu, seulement ceux qui changent), empreinte}
-    POST /ecrire       {env, description, empreinte, empreinte_description} -> {ecrits, empreinte_description, build}
+    POST /ecrire       {env, description, empreinte, empreinte_description[, remarques]} -> {ecrits, empreinte_description, build
+                       [, remarques]} ; `remarques` = identifiants appliques sur le canevas, marques « appliquee » apres l'ecriture
                        (409 : build en cours, fichiers ou ecran.json changes depuis le diff ou le chargement)
     POST /ecran/diff   {env, ecran, description} -> {description a l'echelle, avertissements, refus, fichiers, empreinte}
     POST /ecran/changer {env, ecran, description, empreinte, empreinte_description} -> {ecrits, avertissements, build}
@@ -33,7 +34,7 @@ Routes (les POST exigent l'en-tete X-Atelier-Ecrans: 1 et la meme origine ; corp
                        licence hors de ce dossier, catalogue regenere) ; corps jusqu'a MAX_POLICE
     GET  /remarques    ?env= : {remarques (remarques.json), traitement (etat)} ; GET /remarques/etat : etat du traitement
     POST /remarques    {env, action: epingle|repond|refuse, ...} -> {remarques} (ecrit remarques.json, atelier_ecrans_remarques)
-    POST /remarques/appliquer {env, id, description} -> {description modifiee | null, erreurs, remarques} (ecran.json non ecrit)
+    POST /remarques/appliquer {env, id, description} -> {description modifiee | null, erreurs, remarques} (rien n'est ecrit)
     POST /remarques/traiter   {env} -> etat ; claude -p en lecture seule, depuis ce PC seulement (403 sinon), 409 si en cours
 Refus : 400 (env inconnu, saisie, Content-Length hors 0..MAX_CORPS ou MAX_POLICE, JSON trop imbrique), 403 (en-tete, origine, jeton),
 404 (route, police), 409 (capture refusee), 500 (inattendu, avec le message).
@@ -325,8 +326,11 @@ def fabrique_gestionnaire(acces, racine, get=None, traitement=None, builds_en_co
                     if ecran and isinstance(d, dict) and d.get("ecran") != ecran:   # changer d'ecran : /ecran/changer
                         raise ValueError(f"description pour l'ecran {d.get('ecran')!r}, la carte a {ecran!r} : "
                                          "passer par le changement d'ecran")
+                    ids = aer.valide_ids(demande.get("remarques"))
                     r = aee.ecrit(racine, env, demande.get("description"), demande.get("empreinte"),
                                   demande.get("empreinte_description"), builds_en_cours)
+                    if ids:
+                        r["remarques"] = aer.marque_appliquees(racine, env, ids)
                     self._json({**r, "build": aee.url_build(racine, env)})
                 elif chemin == "/ecran/diff":
                     env = env_atelier(racine, demande.get("env"))

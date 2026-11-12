@@ -47,13 +47,16 @@ function confirmeEcriture() {
   if (W.enCours) return;
   W.enCours = true; $('confirmer').disabled = true;
   var env = E.env;
-  requete('POST', '/ecrire', { env: env, description: E.desc, empreinte: W.prevu.empreinte, empreinte_description: E.empreinteDesc })
+  requete('POST', '/ecrire', { env: env, description: E.desc, empreinte: W.prevu.empreinte, empreinte_description: E.empreinteDesc,
+                               remarques: Object.keys(R.appliquees).map(Number) })
     .then(function (r) {
       if (env !== E.env) return;
+      if (r.remarques) R.liste = r.remarques;
+      R.appliquees = {};
       E.empreinteDesc = r.empreinte_description; E.build = r.build; fermeConfirmation();
       E.cartes.forEach(function (c) { if (c.nom === env) c.description = true; });
       messageEcriture('Écrit dans le dépôt : ' + r.ecrits.length + ' fichier(s).', r.build, 'Envoyer par la page Build ↗');
-      try { apercu(); dessineEcriture(); } catch (e) {}       // l'ecriture a reussi : pas de « refusee » apres coup
+      try { apercu(); dessineEcriture(); dessineRemarques(); } catch (e) {}       // l'ecriture a reussi : pas de « refusee » apres coup
     }, function (e) { fermeConfirmation(); messageEcriture('Écriture refusée : ' + e.message); })
     .then(function () { W.enCours = false; dessineEcriture(); });
 }

@@ -83,6 +83,8 @@ function modifie(fn) {
 function deplaceHisto(de, vers) {
   if (!de.length || lecture()) return;
   vers.push(JSON.stringify(E.desc)); E.desc = JSON.parse(de.pop());
+  // shortcut: une remarque annulee n'est pas reprise par Retablir (a reappliquer) ; au-dela de 100 etats l'index glisse
+  for (var k in R.appliquees) if (R.appliquees[k] > E.histo.length) delete R.appliquees[k];
   if (E.sel && !choisi()) E.sel = null;
   if (!pageDesc(E.page)) E.page = E.desc.pages.length ? E.desc.pages[0].n : 0;
   dessineTout(); apercu();
@@ -133,7 +135,7 @@ function chargeCarte(env) {          // la carte d'avant reste en place tant que
     else E.msgCarte = r.erreurs.length ? r.erreurs.join('\n') + "\nPage vierge proposée à la place : rien n'est écrit."
                                        : "Pas encore de description d'écran pour cette carte : page vierge, rien n'est écrit.";
     E.msgEcran = ''; afficheBandeau();
-    R.liste = []; R.zone = null; R.outilZone = false; R.brouillon = ''; R.message = '';
+    R.liste = []; R.zone = null; R.outilZone = false; R.brouillon = ''; R.message = ''; R.appliquees = {};
     remplitEcrans(); zoomAjuste(); dessineTout(); apercu(); lisCarte(); chargeRemarques();
   }).catch(function (e) {
     if (env !== E.demande) return;

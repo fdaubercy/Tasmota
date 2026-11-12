@@ -20,7 +20,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import acces_web                         # noqa: E402
+import atelier_ecrans_catalogue as cat    # noqa: E402
 import atelier_ecrans_description as aed  # noqa: E402
+import atelier_ecrans_ecriture as aee     # noqa: E402
 import atelier_ecrans_remarques as aer    # noqa: E402
 import atelier_ecrans_web as aew          # noqa: E402
 import test_atelier_ecrans_web as taw     # noqa: E402
@@ -174,7 +176,8 @@ def test_routes(racine):
                 s.bind(("127.0.0.1", 0))
                 self.port = s.getsockname()[1]
             self.trait = aer.Traitement(racine, programme=[sys.executable, str(racine.parent / "faux_claude.py")])
-            g = aew.fabrique_gestionnaire(acces_web.Acces(self.port, True, "banc"), racine, get=self.get, traitement=self.trait)
+            g = aew.fabrique_gestionnaire(acces_web.Acces(self.port, True, "banc"), racine, get=self.get, traitement=self.trait,
+                                          builds_en_cours=lambda: [])    # jamais les vrais processus : banc hermetique
             self.serveur = ThreadingHTTPServer(("127.0.0.1", self.port), g)
             threading.Thread(target=self.serveur.serve_forever, daemon=True).start()
     b = Banc(None)
@@ -186,10 +189,19 @@ def test_routes(racine):
         verifie((s, r["remarques"][-1]["id"]), (200, 5), "POST /remarques : epingle")
         verifie(b.requete("POST", "/remarques", {"env": ENV, "action": "epingle"}, entetes={})[0], 403, "POST sans en-tete anti-CSRF -> 403")
         s, r = b.requete("POST", "/remarques/appliquer", {"env": ENV, "id": 1, "description": aed.charge(racine, ENV)})
-        verifie((s, aer._objet(r["description"], 1, 11)["attributs"]["text_font"], r["remarques"][0]["etat"]), (200, POLICE_28, "appliquee"),
-                "POST /remarques/appliquer : description modifiee rendue, remarque appliquee")
-        verifie(aed.charge(racine, ENV) == json.loads((aed.chemin(racine, ENV)).read_text(encoding="utf-8")) and
-                aer._objet(aed.charge(racine, ENV), 1, 11)["attributs"]["text_font"], 24, "appliquer : ecran.json du depot non ecrit")
+        verifie((s, aer._objet(r["description"], 1, 11)["attributs"]["text_font"], r["remarques"][0]["etat"]), (200, POLICE_28, "proposee"),
+                "POST /remarques/appliquer : description modifiee rendue, remarque encore proposee (rien d'ecrit)")
+        verifie((aer._objet(aed.charge(racine, ENV), 1, 11)["attributs"]["text_font"], aer.charge(racine, ENV)[0]["etat"]), (24, "proposee"),
+                "appliquer : ni ecran.json ni remarques.json ecrits")
+        appliquee = r["description"]
+        s, d = b.requete("POST", "/diff", {"env": ENV, "description": appliquee})
+        ecrire = {"env": ENV, "description": appliquee, "empreinte": d["empreinte"],
+                  "empreinte_description": aed.empreinte(aed.chemin(racine, ENV).read_bytes())}
+        verifie((b.requete("POST", "/ecrire", {**ecrire, "remarques": ["1"]})[0], aer._objet(aed.charge(racine, ENV), 1, 11)["attributs"]["text_font"]),
+                (400, 24), "POST /ecrire : remarques mal formees -> 400, rien d'ecrit")
+        s, r = b.requete("POST", "/ecrire", {**ecrire, "remarques": [1]})
+        verifie((s, r["remarques"][0]["etat"], aer.charge(racine, ENV)[0]["etat"], aer._objet(aed.charge(racine, ENV), 1, 11)["attributs"]["text_font"]),
+                (200, "appliquee", "appliquee", POLICE_28), "POST /ecrire avec la remarque 1 : ecrit, remarque appliquee")
         verifie(b.requete("POST", "/remarques/appliquer", {"env": ENV, "id": 1, "description": {}})[0], 400, "appliquer deux fois -> 400")
         os.environ["FAUX_CLAUDE"] = "ok"
         s, r = b.requete("POST", "/remarques/traiter", {"env": ENV})
@@ -208,13 +220,24 @@ def test_routes(racine):
         b.ferme()
 
 
+def etat_depart(racine):
+    """Copie hermetique : sans les remarques du vrai depot, nom de la voie 1 (page 1, objet 11) en police 24 quelle que
+    soit la description du depot (la remarque 1 du faux claude le passe en 28)."""
+    for f in racine.glob("outils_docs/atelier_ecrans/cartes/*/remarques.json"):
+        f.unlink()
+    d = aed.charge(racine, ENV)
+    aer._objet(d, 1, 11)["attributs"]["text_font"] = 24
+    noms = aee.chemins(ENV)                  # ecran.json et les deux interfaces generees, coherents entre eux
+    for nom, octets in aee.generes(d, cat.charge(racine)).items():
+        (racine / noms[nom]).write_bytes(octets)
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix="banc_atelier_remarques_") as t:
         racine = Path(t) / "depot"
         racine.mkdir()
         taw.copie(racine)
-        for f in racine.glob("outils_docs/atelier_ecrans/cartes/*/remarques.json"):
-            f.unlink()                       # hermetique : les remarques du vrai depot ne viennent pas dans la copie
+        etat_depart(racine)
         git(racine, "init", "-q")
         git(racine, "add", "-A")
         git(racine, "commit", "-q", "-m", "copie")

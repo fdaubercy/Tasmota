@@ -1968,7 +1968,8 @@ remarques (Claude) » lance `claude -p` **en lecture seule** (outils de lecture 
 `bypassPermissions`), depuis ce PC seulement : Claude rend des propositions, la page les valide puis les range dans
 `remarques.json`. Un fichier du dépôt changé pendant le traitement est signalé, sans rejet (d'autres conversations
 travaillent en même temps). « Appliquer » rejoue une proposition sur la description en mémoire ; l'écriture reste celle
-du bouton « Écrire dans le dépôt ». Un traitement à la fois, 10 min au plus, journal dans
+du bouton « Écrire dans le dépôt », et c'est elle qui fait passer la remarque à « appliquée » (annulée sur le canevas
+avant l'écriture, elle reste « proposée »). Un traitement à la fois, 10 min au plus, journal dans
 `%LOCALAPPDATA%\outils_tasmota\atelier_ecrans\`.
 
 ### Importer une police

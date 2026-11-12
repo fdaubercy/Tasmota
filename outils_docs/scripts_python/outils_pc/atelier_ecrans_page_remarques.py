@@ -8,7 +8,8 @@ annulable ; rien n'est ecrit dans ecran.json), Refuser, Repondre, et « Traiter 
 """
 
 JS = r"""
-var R = { liste: [], traitement: { etat: 'libre' }, zone: null, trace: null, outilZone: false, message: '', suivi: null, brouillon: '' };
+var R = { liste: [], traitement: { etat: 'libre' }, zone: null, trace: null, outilZone: false, message: '', suivi: null, brouillon: '',
+          appliquees: {} };    // id -> longueur de l'historique apres Appliquer ; envoyes avec /ecrire
 var ETATS_RQ = { ouverte: 'ouverte', proposee: 'proposition de Claude', appliquee: 'appliquée', refusee: 'refusée' };
 
 function libelleCible(c) {
@@ -60,7 +61,7 @@ function appliqueRq(id) {
   if (lecture()) { messageRq('Revenir à l’écran de la carte pour appliquer une proposition.'); return; }
   postRemarques('/remarques/appliquer', { id: id, description: E.desc }).then(function (r) {
     if (!r) return;
-    if (r.description) modifie(function () { E.desc = r.description; });
+    if (r.description) { modifie(function () { E.desc = r.description; }); R.appliquees[id] = E.histo.length; dessineRemarques(); }
     else messageRq('Proposition refusée par le validateur :\n' + r.erreurs.join('\n'));
   });
 }
@@ -114,7 +115,9 @@ function dessineRemarques() {
       if ((r.proposition.operations || []).length) d.appendChild(ul);
     }
     var actions = el('div', { class: 'ligne' });
-    if (r.etat === 'proposee') actions.appendChild(bouton('Appliquer', '', function () { appliqueRq(r.id); }));
+    var surCanevas = r.etat === 'proposee' && R.appliquees.hasOwnProperty(r.id);
+    if (surCanevas) d.appendChild(el('div', { class: 'petit' }, 'Appliquée sur le canevas : « appliquée » à l’écriture dans le dépôt.'));
+    else if (r.etat === 'proposee') actions.appendChild(bouton('Appliquer', '', function () { appliqueRq(r.id); }));
     if (r.etat === 'ouverte' || r.etat === 'proposee') actions.appendChild(bouton(r.etat === 'proposee' ? 'Refuser' : 'Clore', '', function () { postRemarques('/remarques', { action: 'refuse', id: r.id }); }));
     var rep = el('input', { type: 'text', 'aria-label': 'Réponse à la remarque ' + r.id, placeholder: 'Répondre…' });
     actions.appendChild(rep);
