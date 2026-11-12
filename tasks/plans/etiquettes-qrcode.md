@@ -1,0 +1,243 @@
+---
+chantier: etiquettes-qrcode
+titre: Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran
+objectif: Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé
+statut: actif
+cree: 2026-11-12
+maj: 2026-11-12
+---
+# Étiquettes QR code des cartes
+
+## Contexte
+Demande de l'utilisateur du 2026-11-12. **Spec validée le même jour :
+`docs/superpowers/specs/2026-11-12-etiquettes-qrcode-design.md`** (à lire avant toute action ; décisions au § 6, choix
+de Claude au § 7.9). En bref : le téléphone affiche du TEXTE (pas de lien) ; étiquette = QR code seul découpé dans une
+feuille A4 ; contenu = champs standards du dépôt et clés choisies dans le persist, avec libellés et ordre ; style
+(points, coins, couleurs, image au centre) ; gabarit commun surchargé par carte ; verdict de lisibilité selon le texte,
+la taille en mm et l'image ; impression par la fenêtre du navigateur ; planche A4 ; export PNG/SVG ; page `/qrcode` de
+la carte identique au QR code de l'outil ; suivi « à réimprimer », « à régénérer », « carte à mettre à jour » ; QR code à
+l'écran sur appui d'un bouton, pendant un délai (dernière action, dépend de `tasks/plans/atelier-ecrans.md`).
+
+Architecture : outil PC `etiquettes_qr_*` sur le modèle de l'atelier des graphiques (serveur `fabrique_gestionnaire`,
+`acces_web`, `fichiers_berry_sauvegarde.Transaction`, `lieux.pour_page`, écriture en deux temps `prevoit`/`ecrit`). Le
+réglage vit hors du dossier de la carte (`outils_docs/etiquettes_qr/`) ; seul le fichier GÉNÉRÉ
+`data/<lieu>/<carte>/qrcode.json` (texte déjà résolu, style, image) part en flash. Une même bibliothèque JS dessine le
+QR code dans l'outil et sur la carte.
+
+### Contraintes globales
+- Fichiers sous 500 lignes ; modules Python préfixés `etiquettes_qr_` dans `outils_docs/scripts_python/outils_pc/`.
+- Aucune dépendance Python nouvelle. Une seule bibliothèque JS nouvelle : celle de l'A1, copiée dans le dépôt, version
+  épinglée, intégrité vérifiée, jamais chargée d'un CDN.
+- Python des bancs : `"$USERPROFILE/.platformio/penv/Scripts/python.exe"` ; bancs sur copies temporaires du dépôt.
+- Compilation et FS par la page Build (:7700) seulement ; toute écriture au dépôt refusée pendant un build.
+- Secrets : motif `assistant_persist_modele.SECRET` (seule définition, ne pas la recopier) sur les clés, plus le filtre
+  par valeur du § 7.9-6 ; aucun secret dans une réponse HTTP, un fichier écrit, un QR code ou une sortie d'outil.
+- `data/fs/qrcodePage.be` : création validée par la spec. Aucun autre `data/fs/*.be`, aucun `_persist.json`, ni
+  `user_config_override.h` modifié par ce chantier.
+- Fichiers de la page de carte exclus des envs qui ne l'ont pas (liste `etiquette_qr` de `[berry_commun]`).
+- Logs Berry : charte du `CLAUDE.md`. Avant commit : agent `relecteur-berry` (Berry), `relecteur-pages-web` (pages).
+- Rien n'est écrit au dépôt sans geste explicite dans la page (diff montré, puis confirmation).
+- Commits en français, sans accents, sans trailer ; `git commit -- <chemins>` puis `git show --stat HEAD`.
+
+### Points de vigilance (non couverts par la spec, un test chacun dans l'action indiquée)
+1. Esclave derrière le range extender (IP inscrite `192.168.0.51:8081`) : la page de la carte ne signale pas de faux
+   écart d'IP, la comparaison ne porte que sur une IP inscrite sans port (A6).
+2. Texte avec accents, guillemets, barre oblique inverse, retour à la ligne : le verdict compte les OCTETS UTF-8, et
+   le texte que dessine la bibliothèque est identique octet pour octet (A1, A2).
+3. Image de centre trop lourde (> 8192 o en data URI) ou qui n'est pas PNG/SVG/JPEG : refusée avec un message, rien
+   écrit (A2).
+4. Persist ou réglage modifié dans le dépôt pendant que la page est ouverte : écriture refusée (empreinte périmée),
+   rien écrasé (A3).
+5. Carte injoignable : état « inconnu » rendu en moins de 3 s, page utilisable (A7).
+
+## A0 — Maquettes de la page 7970 (choix de l'utilisateur)
+Fichiers : créer `outils_docs/etiquettes_qr/maquettes_etiquettes_qr.html`, images `modele-A.png` à `modele-C.png`,
+`README.md` (contraintes), sur le modèle de `outils_docs/atelier_graphiques/`.
+- [ ] Trois dispositions de la page (en-tête avec liste des envs et bouton Sombre / Clair, liste des cartes, panneau
+  des lignes, style, aperçu QR + texte lu + verdict) et
+  une de la planche A4, en clair et en sombre
+- [ ] Choix de l'utilisateur noté dans `README.md` et ici
+
+## A1 — Bibliothèque de dessin du QR code
+Fichiers : créer `outils_docs/etiquettes_qr/lib/qr-code-styling.min.js` (PC), `data/sd/js/qr-code-styling.min.js.gz`
+(carte, `gzip -9 -n`), `outils_docs/etiquettes_qr/lib/LISEZMOI.md` (paquet, version, licence, sha512 du registre, sha256
+du `.gz`, comme l'en-tête de `data/fs/cuvePageFonctions.be`).
+Produit : bundle UMD autonome exposant `QRCodeStyling` (options `data`, `width`, `height`, `type: "svg"`,
+`qrOptions.errorCorrectionLevel`, `dotsOptions`, `cornersSquareOptions`, `cornersDotOptions`, `backgroundOptions`,
+`image`, `imageOptions`), `getRawData("png"|"svg")`.
+- [ ] Paquet npm `qr-code-styling` : dernière version stable publiée depuis au moins deux semaines, licence MIT lue,
+  intégrité sha512 du registre vérifiée sur le tarball ; bundle sans dépendance à charger à part
+- [ ] Copies PC et `.gz` écrites, empreintes notées dans `LISEZMOI.md`
+- [ ] Essai navigateur (page de test jetable dans le scratchpad) : texte `Hostname : cuve\nIP : 192.168.0.60\nNote :
+  « été » "x" \ 100 %` dessiné en points ronds, coins arrondis, image au centre, niveau H ; scanné par le téléphone de
+  l'utilisateur, texte lu identique (vérification par l'utilisateur, notée en preuve)
+
+## A2 — Modèle : gabarit, surcharge, champs, secrets, verdict
+Fichiers : créer `outils_pc/etiquettes_qr_modele.py`, `outils_pc/etiquettes_qr_verdict.py`,
+`outils_pc/test_etiquettes_qr_modele.py`, `outils_pc/test_etiquettes_qr_verdict.py`,
+`outils_docs/etiquettes_qr/gabarit.json` (lignes Hostname, IP ; séparateur `" : "` ; points `rounded`, coins
+`extra-rounded`, noir sur blanc, sans image ; `taille_mm` 25).
+Consomme : `build_envs.persist_carte`, `build_envs.adresse_par_maitre`, `build_envs.lit_ip_ota`, `lieux.lieu`,
+`lieux.puce`, `assistant_persist_modele.SECRET`.
+Produit :
+- `charge_reglage(racine, env) -> dict` : gabarit fusionné à `outils_docs/etiquettes_qr/cartes/<env>.json` s'il existe ;
+- `fusionne(gabarit: dict, surcharge: dict) -> dict` : `lignes` et `separateur` remplacés en entier, `style` clé par clé,
+  autres clés remplacées ;
+- `valide_reglage(reglage: dict) -> list[str]` (messages en français, vide = valide) ;
+- `champs_standards(racine, env) -> dict` : clés `hostname`, `ip`, `topic`, `env`, `puce`, `lieu`, valeur `str` ou
+  `None` (introuvable) ;
+- `arbre_persist(persist: dict) -> list[dict]` : `{"chemin": "a.b.c", "valeur": scalaire, "type": "texte"|"nombre"|
+  "booleen"}`, scalaires seulement, ni clé `SECRET` ni valeur contenant la valeur d'une clé `SECRET` du même persist
+  (valeurs de moins de 4 caractères ignorées par ce second filtre) ;
+- `resout(racine, env, reglage) -> dict` : `{"texte": str, "lignes": [{"libelle", "valeur", "etat": "ok"|
+  "introuvable"}], "avertissements": [str]}` ; ligne introuvable omise du texte ; lignes jointes par `"\n"` ;
+- `fichier_carte(reglage, resolu) -> dict` : `{"version": 1, "texte", "style", "image", "correction", "ip_inscrite"}` ;
+- `empreinte(texte: str) -> str` (SHA-256 hexadécimal) ;
+- `verdict(texte: str, taille_mm: float, correction: str) -> dict` dans `etiquettes_qr_verdict.py` :
+  `{"octets", "version", "modules", "module_mm", "niveau": "lisible"|"limite"|"trop_dense"|"trop_long"}` ; mode octet,
+  table de capacité ISO/IEC 18004 versions 1 à 40 pour M et H ; `modules = 17 + 4 * version` ;
+  `module_mm = taille_mm / (modules + 8)` (marge de 4 modules de chaque côté comprise dans la taille) ; seuils 0,5 et
+  0,35 mm, à recaler en A5. Correction : `H` si image, sinon `M`.
+- [ ] Bancs d'abord (rouge) : `test_fusion` (surcharge de `lignes` remplace la liste, de `style.couleur` garde
+  `style.points`), `test_secret_par_cle` (`serveur.wifi.mdp` absent de l'arbre), `test_secret_par_valeur` (une
+  `url` contenant la valeur de `serveur.mqtt.password` absente), `test_introuvable` (`WIFI_IP_ADDRESS` 0.0.0.0 sans maître
+  -> ligne IP omise, un avertissement), `test_esclave` (IP `<ipMaitre>:<8080+id-1>`), `test_image_refusee` (9000 o, puis
+  un `data:text/html`), `test_verdict` (100 octets à 25 mm H -> attendu calculé à la main dans le test, un cas par
+  niveau, 3000 octets -> `trop_long`), `test_octets_utf8` (« é » compte 2 octets) ; mutants : filtre par clé retiré,
+  filtre par valeur retiré, seuil inversé -> chacun rouge
+- [ ] Modules ; bancs VERT, chaque mutant lu rouge
+- [ ] Commit
+
+## A3 — Écriture au dépôt
+Fichiers : créer `outils_pc/etiquettes_qr_ecriture.py`, `outils_pc/test_etiquettes_qr_ecriture.py`.
+Consomme : A2 ; réutilise la mécanique de `atelier_graphiques_ecriture.py` (`_exclut`, `_leve`, `_solidifie`,
+`_autoexec`, `_controle`) en la paramétrant par la liste et la ligne d'autoexec, sans changer le comportement de
+l'atelier (`test_atelier_graphiques_ecriture.py` VERT avant et après).
+Produit :
+- `prevoit(racine, env, reglage, page_carte: bool) -> dict` : `{"fichiers": {rel: texte|None}, "diffs": {rel: str},
+  "empreinte": str, "avertissements": [str], "firmware_a_recompiler": bool}` ; écrit la surcharge
+  `outils_docs/etiquettes_qr/cartes/<env>.json` (différence avec le gabarit seulement), et si `page_carte` :
+  `data/<lieu>/<carte>/qrcode.json`, la ligne `demarrage.charge(["qrcodePage"])` de l'autoexec, le cenv (liste
+  `etiquette_qr` levée pour l'env, exclue des autres envs ESP32 ; `qrcodePage.be` en fin de `custom_berry_solidify`) ;
+  `page_carte` faux ou env ESP8266 : rien dans `data/` ni dans le cenv, et retrait propre si la page existait ;
+- `ecrit(racine, env, reglage, page_carte, empreinte_lue, builds_en_cours) -> dict` (refus : empreinte périmée, build en
+  cours) ;
+- `ecrit_gabarit(racine, gabarit, empreinte_lue, builds_en_cours) -> dict` ;
+- `note_impression(racine, envs: list[str], taille_mm: float) -> None` et `annule_impression(racine, env) -> None` sur
+  `outils_docs/etiquettes_qr/impressions.json` : `{env: {"empreinte", "date", "taille_mm"}}`, jamais le texte.
+- [ ] Bancs d'abord (rouge), copie temporaire : surcharge minimale écrite ; `page_carte` -> 4 fichiers touchés et
+  `_controle` vert ; retour à `page_carte` faux -> cenv et autoexec octet pour octet d'avant ; empreinte périmée -> refus,
+  rien écrit (vigilance 4) ; build en cours -> refus ; env ESP8266 + `page_carte` -> refus avec message ;
+  `impressions.json` ne contient pas le texte
+- [ ] Module ; bancs VERT ; `test_atelier_graphiques_ecriture.py` VERT ; `berry/banc_demarrage.py` VERT (sans
+  `--enregistre`)
+- [ ] Commit
+
+## A4 — Serveur et page 7970
+Fichiers : créer `outils_pc/etiquettes_qr_web.py` (serveur, routes), `etiquettes_qr_page.py` (HTML, CSS),
+`etiquettes_qr_page_js.py` (liste, lignes, arbre du persist, style, aperçu), `test_etiquettes_qr_web.py`,
+`test_etiquettes_qr_page_chrome.py` ; `build/cible_etiquettes_qr.py` + `build/test_cible_etiquettes_qr.py` ; modifier
+`annuaire_registre.py` (outil `etiquettes_qr`, groupe Maintenance, `_port("http", 7970)`, `lieu=True`),
+`.claude/hooks/garde_build.py` (`CIBLES_OUTILS`), `.vscode/tasks.json` (tâche « Outil : étiquettes QR code »), cible
+déclarée dans le pre-script comme les autres `cible_*.py`.
+Consomme : A1 à A3. Produit, routes JSON : `GET /cartes` (envs par `lieux.pour_page`, badges vides jusqu'à l'A7),
+`GET /gabarit`, `GET /reglage?env=` (+ empreinte), `GET /persist?env=` (`arbre_persist`), `POST /apercu` {env, reglage}
+-> `resout` + `verdict` + `fichier_carte`, `POST /ecrire` {env, reglage, page_carte, empreinte}, `POST /gabarit`
+{gabarit, empreinte}, `POST /impression` {envs, taille_mm}, `POST /impression/annule` {env}, `GET /lib.js` (A1).
+`?env=` à l'arrivée sélectionne la carte.
+- [ ] Banc serveur d'abord (rouge) : routes ci-dessus ; env inconnu -> 400 ; POST sans en-tête anti-CSRF -> 403 ;
+  `GET /persist` d'un persist à secrets -> aucune valeur secrète dans le corps de la réponse
+- [ ] Serveur et routes ; banc VERT
+- [ ] En-tête : liste déroulante des envs (`lieux.remplitParLieu`) qui change de carte sans recharger la page (URL
+  `?env=` mise à jour ; modifications non écrites -> confirmation avant de changer) ; bouton Sombre / Clair, choix
+  mémorisé par `localStorage` sous try/catch, thème du système par défaut
+- [ ] Page selon la maquette retenue en A0 : aperçu dessiné par la bibliothèque, texte lu à côté, compteur d'octets,
+  verdict coloré, ajout de ligne (standard, arbre du persist, libre), ordre par flèches, style, image (PNG/SVG/JPEG de
+  `outils_docs/etiquettes_qr/images/`), case « Page sur la carte » (absente pour un ESP8266), onglet « Gabarit commun »,
+  diff avant écriture
+- [ ] Sonde Chrome hermétique : bascule Sombre / Clair par le bouton, changement d'env par la liste (réglage de
+  l'autre carte affiché, confirmation si modifié), ajout d'une clé du persist, verdict qui change avec la taille,
+  nombre de modules de la bibliothèque = `modules` de `verdict` pour trois textes, aucune erreur console, Chrome arrêté
+  à la fin
+- [ ] Brique de l'annuaire (:7600) : outil `etiquettes_qr` dans `annuaire_registre.py` (titre « Étiquettes QR code »,
+  description courte et longue sur le modèle des autres outils, groupe Maintenance, `_port("http", 7970)`, `lieu=True`,
+  arrêt libre : rien n'est écrit sans « Écrire dans le dépôt ») ; la tuile lance l'outil, son lien « Ouvrir » porte
+  `?lieu=` ; bancs `test_annuaire.py`, `test_annuaire_lanceur.py` VERT ; vérifié dans la page de l'annuaire
+- [ ] Tâche VS Code et cible Custom détachée (`test_cible_etiquettes_qr.py`, `test_garde_build.py` VERT)
+- [ ] Commit
+
+## A5 — Impression, planche A4, export
+Fichiers : créer `outils_pc/etiquettes_qr_page_impression.py` (JS et CSS `@media print`) ; modifier
+`etiquettes_qr_page.py`, `test_etiquettes_qr_page_chrome.py`.
+Consomme : A4 (`POST /impression`).
+- [ ] Bouton « Imprimer » : page d'impression au format `@page { size: A4 }`, QR code en `mm`, consigne « échelle
+  100 % » affichée ; `window.print()` ; impression notée par `POST /impression`, « Annuler la note » disponible
+- [ ] Planche : cases des cartes, une taille pour toute la planche, grille automatique (marges 10 mm, espacement 5 mm,
+  traits de coupe fins), petit nom en option, autant de pages que nécessaire ; sonde : 12 cartes à 25 mm -> nombre de
+  pages et de codes attendu, sans impression réelle
+- [ ] Export PNG et SVG (`getRawData`) nommé `qr_<env>.png|svg`
+- [ ] Essai réel avec l'utilisateur : une planche aux tailles 15, 20, 25, 30 mm, texte court et texte long, avec et
+  sans image ; scan au téléphone ; seuils de `verdict` recalés d'après le résultat (banc A2 mis à jour)
+- [ ] Commit
+
+## A6 — Page `/qrcode` de la carte
+Fichiers : créer `data/fs/qrcodePage.be` (driver posé à l'import, route `/qrcode`, bouton d'accueil « QR code »,
+`?f=lib.js.gz`, `?f=etat` -> `{"ip": <IP réelle>, "hostname"}` ; rien chargé si `/json/qrcode.json` est absent ;
+solidifiable : aucun état dans le module), `data/sd/html/qrcode.html`, `data/sd/css/qrcode.css`, `data/sd/js/qrcode.js` ;
+`outils_docs/scripts_python/berry/banc_qrcode_page.py` + `.be` (+ bouchons) ; `outils_pc/test_qrcode_carte_chrome.py` ;
+modifier `platformio_tasmota_cenv.ini` (liste `etiquette_qr` de `[berry_commun]` : les 4 fichiers de `data/sd` ;
+exclue de tous les envs ESP32 ; entrée de `globs` de `solidify_all_python.be` si une globale est créée).
+Consomme : `fichier_carte` (A2), A3 pour poser l'env d'essai.
+- [ ] Banc Berry d'abord (rouge) : route servie avec `qrcode.json` présent ; absent -> pas de bouton, pas de route ;
+  `?f=etat` rend l'IP du bouchon ; charte des logs sans avertissement
+- [ ] Module et page ; banc VERT ; `verifie_berry.py` VERT
+- [ ] Sonde Chrome de la page (serveur de fichiers local imitant la carte) : QR code dessiné avec le style du fichier ;
+  IP inscrite différente sans port -> avertissement ; IP inscrite `192.168.0.51:8081` -> aucun avertissement
+  (vigilance 1) ; mode sombre lisible
+- [ ] Essai sur une carte choisie par l'utilisateur : réglage écrit par la page 7970, firmware recompilé et FS envoyé
+  par la page Build, QR code de la carte scanné = QR code de l'outil ; RAM libre avant/après notée
+- [ ] Commit
+
+## A7 — Suivi des changements, téléversement, liens des autres outils
+Fichiers : créer `outils_pc/etiquettes_qr_suivi.py`, `test_etiquettes_qr_suivi.py` ; modifier
+`etiquettes_qr_web.py` (`GET /etat?env=`, badges de `/cartes`), `etiquettes_qr_page_js.py` (badges, bouton
+« Téléverser »), `build_page_atelier.py` (accepter `depuis=qrcode`), `fichiers_berry_renommage.py`,
+`assistant_persist_modification.py` (message de fin).
+Produit : `etats(racine, env, *, get=None) -> {"a_reimprimer": bool, "a_regenerer": bool, "carte": "a_jour"|
+"a_mettre_a_jour"|"inconnu"|"sans_page"}` (lecture de `/json/qrcode.json` sur la carte, adresse par
+`adresse_par_maitre` pour un esclave, délai 2 s) ; `lien_si_regle(racine, env) -> str | None`
+(`http://127.0.0.1:7970/?env=<env>` si `cartes/<env>.json` existe).
+- [ ] Bancs d'abord (rouge) : hostname changé dans le persist -> `a_reimprimer` et `a_regenerer` ; topic changé et
+  absent du gabarit -> aucun des deux ; carte simulée qui rend un autre `qrcode.json` -> `a_mettre_a_jour` ; carte muette
+  -> `inconnu` en moins de 3 s (vigilance 5)
+- [ ] Module, routes, badges ; bancs VERT
+- [ ] « Téléverser » : URL de la page Build `?env=&depuis=qrcode&fichiers=/json/qrcode.json&redemarrer=0` (sur le modèle
+  de `atelier_graphiques_televerse.url`) ; sonde `test_build_page_fichiers_chrome.py` VERT
+- [ ] Lien « Étiquette QR à refaire » dans le message de fin d'un renommage (Fichiers Berry) et d'une modification
+  (assistant persist) ; leurs bancs VERT
+- [ ] Commit
+
+## A8 — QR code à l'écran des cartes (après l'atelier des écrans)
+Fichiers : modifier `outils_docs/schemas/catalogue_ecran.json` (objet `qrcode`), les générateurs
+`atelier_ecrans_haspmota.py` et `atelier_ecrans_lvgl.py`, leurs bancs.
+Consomme : `tasks/plans/atelier-ecrans.md` A4 et A5 faits ; `/json/qrcode.json` (A6).
+- [ ] Objet `qrcode` du catalogue : bouton qui affiche le QR code en surimpression pendant `delai_s` (défaut 30), texte
+  lu dans `/json/qrcode.json` à l'appui, noir sur blanc sans style riche ; HASPmota `"obj":"qrcode"` (`qr_text`,
+  `qr_size`), LVGL `lv.qrcode`
+- [ ] Bancs des deux générateurs VERT avec l'objet ; essai sur l'écran des débits, scan au téléphone
+- [ ] Commit
+
+## A9 — Documentation
+- [ ] `outils_docs/README.md` § « Étiquettes QR code (page web) » : usage, verdict, impression à 100 %, planche, page de
+  la carte, suivi
+- [ ] `CLAUDE.md` (carte des documents) : modules `etiquettes_qr_*`, `qrcodePage.be`, liste `etiquette_qr`, bancs ;
+  `verifie_references_docs.py` VERT
+- [ ] Commit ; plan passé `statut: clos`
+
+## Améliorations restantes
+- [ ] [projet] Lien cliquable facultatif dans le QR code (écarté de la v1 par l'utilisateur)
+
+## Vérification
+Fin du chantier : un QR code réglé dans la page 7970, imprimé sur planche et scanné au téléphone ; le même affiché par
+`/qrcode` d'une carte et scanné ; un hostname changé dans le dépôt fait apparaître « à réimprimer » ; aucune valeur
+secrète dans les réponses du serveur (banc A4).
