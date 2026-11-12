@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Étiquettes QR code, maquettes</title>
+<!-- Maquettes du 2026-11-12 (outils_docs/etiquettes_qr/README.md). Ouvrir avec ?m=A, B, C ou P (planche), &theme=sombre.
+     Noms d'env réels, adresses et valeurs fictives. QR codes dessinés par qr-code-styling (jsDelivr, maquette seulement :
+     la version retenue sera copiée dans le dépôt en A1). Verdict calculé ici sur les versions 1 à 10 seulement. -->
+<script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+<style>
+  :root{--fond:#f6f7f9;--carte:#fff;--bord:#ddd;--texte:#222;--doux:#666;--bleu:#2563eb;--vert:#2a9d4a;--orange:#c27400;--rouge:#c0392b;
+    --piste:#e9e9ea;--bleu-fond:#eef3ff;--orange-fond:#fff4e0;--vert-fond:#e3f4e8;--rouge-fond:#fde8e6;--champ:#fff}
+  body[data-theme=sombre]{--fond:#16191d;--carte:#20242a;--bord:#3a3f47;--texte:#e6e6e6;--doux:#a0a7b0;--bleu:#5b93ff;--vert:#4cc46e;
+    --orange:#e0a040;--rouge:#ff7b6b;--piste:#2c3138;--bleu-fond:#1d2a44;--orange-fond:#3a2e18;--vert-fond:#183323;--rouge-fond:#3d1d1a;--champ:#2a2f36}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px system-ui,sans-serif;color:var(--texte);background:var(--fond)}
+  main{padding:10px 16px}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+  h1{font-size:20px;margin:0;white-space:nowrap} h2{font-size:15px;margin:0 0 8px} h3{font-size:12px;margin:10px 0 5px;color:var(--doux);text-transform:uppercase;letter-spacing:.04em}
+  .doux{color:var(--doux)} .petit{font-size:12px}
+  .carte{background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:10px}
+  .btn{display:inline-block;padding:5px 11px;border:1px solid var(--bord);border-radius:6px;background:var(--champ);color:var(--texte);font:inherit;font-size:13px;white-space:nowrap;cursor:pointer}
+  .btn.prim{background:var(--bleu);border-color:var(--bleu);color:#fff}
+  .theme{border-radius:14px}
+  input,select{font:inherit;font-size:13px;padding:3px 6px;border:1px solid var(--bord);border-radius:5px;background:var(--champ);color:var(--texte)}
+  .pastille{display:inline-block;white-space:nowrap;padding:1px 7px;border-radius:10px;font-size:11px;background:var(--piste);color:var(--doux)}
+  .pastille.ok{background:var(--vert-fond);color:var(--vert)} .pastille.or{background:var(--orange-fond);color:var(--orange)}
+  .pastille.ro{background:var(--rouge-fond);color:var(--rouge)} .pastille.bleu{background:var(--bleu-fond);color:var(--bleu)}
+  .ligne{display:flex;gap:6px;align-items:center;margin:4px 0}
+  .lq{display:grid;grid-template-columns:18px 110px 1fr 54px;gap:6px;align-items:center;padding:4px 6px;border:1px solid var(--bord);border-radius:6px;margin:4px 0;background:var(--champ)}
+  .lq .src{font-size:11px;color:var(--doux)} .lq .poignee{color:var(--doux);cursor:grab;text-align:center}
+  .lq.introuvable{border-color:var(--orange)} .lq input{width:100%}
+  .fl{display:flex;gap:2px} .fl span{padding:0 5px;border:1px solid var(--bord);border-radius:4px;font-size:11px;cursor:pointer}
+  .lu{background:var(--piste);border-radius:6px;padding:8px 10px;font:13px/1.45 Consolas,monospace;white-space:pre-wrap;min-height:60px}
+  .verdict{border-radius:6px;padding:6px 9px;font-size:13px;margin-top:6px}
+  .verdict.lisible{background:var(--vert-fond);color:var(--vert)} .verdict.limite{background:var(--orange-fond);color:var(--orange)}
+  .verdict.dense{background:var(--rouge-fond);color:var(--rouge)}
+  .qr{display:inline-block;background:#fff;padding:6px;border-radius:6px;line-height:0}
+  .qr .faux{width:100%;height:100%;background:repeating-conic-gradient(#000 0 25%,#fff 0 50%) 0 0/12px 12px}
+  .arbre div{font:12.5px Consolas,monospace;padding:2px 4px;border-radius:4px;cursor:pointer} .arbre .n2{padding-left:16px} .arbre .n3{padding-left:32px}
+  .arbre .sel{background:var(--bleu-fond);color:var(--bleu)} .arbre .val{color:var(--doux)}
+  .styles{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .styles div{border:1px solid var(--bord);border-radius:6px;padding:5px;text-align:center;font-size:11px;background:var(--champ)}
+  .styles div.sel{border-color:var(--bleu);box-shadow:0 0 0 1px var(--bleu)}
+  .styles i{display:block;height:22px;margin:0 auto 3px;width:22px;background:var(--texte)}
+  .onglets{display:flex;gap:2px;margin-bottom:-1px}
+  .onglets span{padding:5px 12px;border:1px solid var(--bord);border-bottom:none;border-radius:6px 6px 0 0;background:var(--piste);font-size:13px}
+  .onglets span.actif{background:var(--carte);font-weight:600}
+  table{border-collapse:collapse;width:100%;font-size:13px} th,td{border-bottom:1px solid var(--bord);padding:5px 6px;text-align:left;vertical-align:middle}
+  th{font-size:12px;color:var(--doux);font-weight:600} tr.sel td{background:var(--bleu-fond)}
+  .lieu{font-size:11px;color:var(--doux);text-transform:uppercase;letter-spacing:.05em;padding:8px 4px 2px}
+  .env{display:flex;gap:6px;align-items:center;padding:4px 6px;border-radius:5px;font-size:13px}
+  .env.sel{background:var(--bleu-fond)} .env .nom{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .modele{display:none} body[data-m=A] #A,body[data-m=B] #B,body[data-m=C] #C,body[data-m=P] #P{display:block}
+  .fenetre{border:1px solid var(--bord);border-radius:10px;box-shadow:0 8px 30px #0003;background:var(--carte);overflow:hidden}
+  .fenetre .titre{background:var(--piste);padding:6px 10px;font-size:12px;display:flex;justify-content:space-between}
+  /* planche */
+  .feuille{background:#fff;color:#000;width:630px;height:891px;margin:0 auto;box-shadow:0 4px 18px #0004;position:relative;padding:30px}
+  .grille{display:grid;gap:15px;justify-content:start}
+  .case{outline:1px dashed #bbb;outline-offset:7px;text-align:center;font:9px system-ui}
+  .case .qr{padding:0} .qr canvas{width:100%;height:100%} section:not(#P) .qr{box-sizing:content-box}
+  #P>.ligne{flex-wrap:nowrap;white-space:nowrap}
+</style>
+</head>
+<body>
+<script>{const q=new URLSearchParams(location.search);document.body.dataset.m=(q.get('m')||'A').toUpperCase();document.body.dataset.theme=q.get('theme')||'clair';}</script>
+<main>
+<header>
+  <h1>Étiquettes QR code</h1>
+  <span class="doux">http://127.0.0.1:7970 · carte</span>
+  <select style="font-weight:600">
+    <optgroup label="Garage"><option selected>tasmota32p4-garage-serveur-modbus</option><option>tasmota32s3-cuve-garage-modbus</option><option>tasmota32s3-rideau-garage-modbus</option></optgroup>
+    <optgroup label="Cave"><option>tasmota32s3-serveur-rly</option><option>tasmota-lumiere-porte</option></optgroup>
+    <optgroup label="Bureau"><option>tasmota32s3-ecran-debits-pac</option><option>tasmota32s3-serveur-debits-pac</option></optgroup>
+    <optgroup label="RDC"><option>tasmota-tv-salon</option></optgroup>
+  </select>
+  <span class="pastille or">étiquette à réimprimer</span><span class="pastille ok">carte à jour</span>
+  <span style="margin-left:auto" class="doux petit">Modèle <b id="lettre"></b></span>
+  <button class="btn theme" onclick="document.body.dataset.theme=document.body.dataset.theme==='sombre'?'clair':'sombre'">◐ Sombre / Clair</button>
+</header>
+
+<!-- ============ MODÈLE A : trois colonnes ============ -->
+<section id="A" class="modele">
+<div style="display:grid;grid-template-columns:250px 1fr 330px;gap:10px;align-items:start">
+  <div class="carte">
+    <h2>Cartes</h2>
+    <div class="ligne petit doux"><input type="checkbox"> tout cocher pour la planche</div>
+    <div class="lieu">Garage</div>
+    <div class="env sel"><input type="checkbox" checked><span class="nom">garage-serveur-modbus</span><span class="pastille or">réimprimer</span></div>
+    <div class="env"><input type="checkbox" checked><span class="nom">cuve-garage-modbus</span><span class="pastille ok">ok</span></div>
+    <div class="env"><input type="checkbox"><span class="nom">rideau-garage-modbus</span><span class="pastille ro">carte</span></div>
+    <div class="lieu">Cave</div>
+    <div class="env"><input type="checkbox"><span class="nom">serveur-rly</span><span class="pastille">aucun</span></div>
+    <div class="env"><input type="checkbox"><span class="nom">lumiere-porte</span><span class="pastille bleu">papier</span></div>
+    <div class="lieu">Bureau</div>
+    <div class="env"><input type="checkbox"><span class="nom">ecran-debits-pac</span><span class="pastille ok">ok</span></div>
+    <div class="env"><input type="checkbox"><span class="nom">serveur-debits-pac</span><span class="pastille">aucun</span></div>
+    <div style="margin-top:10px"><button class="btn">Planche (2 cartes)</button></div>
+  </div>
+  <div class="carte">
+    <div class="onglets"><span class="actif">Contenu</span><span>Style</span><span>Gabarit commun</span></div>
+    <div style="border-top:1px solid var(--bord);padding-top:8px">
+      <h3>Lignes lues par le téléphone</h3>
+      <div class="lignes"></div>
+      <div class="ligne"><button class="btn">+ Champ standard</button><button class="btn">+ Clé du persist</button><button class="btn">+ Ligne libre</button>
+        <span class="doux petit" style="margin-left:auto">séparateur <input value=" : " style="width:44px"></span></div>
+      <h3>Clé du persist (secrets masqués)</h3>
+      <div class="arbre carte" style="max-height:150px;overflow:hidden">
+        <div>▾ drivers</div><div class="n2">▾ ModBus</div><div class="n3 sel">id <span class="val">= 0</span></div>
+        <div class="n3">vitesse <span class="val">= 19200</span></div><div class="n2">▸ voletRoulants</div><div>▸ modules</div><div>▸ serveur</div>
+      </div>
+      <h3>Style</h3>
+      <div class="styles"><div class="sel"><i style="border-radius:6px"></i>points arrondis</div><div><i></i>carrés</div><div><i style="border-radius:50%"></i>ronds</div><div><i style="border-radius:2px;width:14px"></i>classique</div></div>
+      <div class="ligne petit" style="margin-top:6px">coins <select><option>très arrondis</option><option>carrés</option><option>ronds</option></select>
+        couleur <input type="color" value="#1b2a4a"> image au centre <select><option>maison.png</option><option>aucune</option></select>
+        <label><input type="checkbox" checked> Page sur la carte</label></div>
+    </div>
+  </div>
+  <div class="carte">
+    <h2>Aperçu</h2>
+    <div style="text-align:center"><div class="qr" data-taille="190"></div></div>
+    <div class="ligne petit" style="margin-top:8px">Taille imprimée <input class="taille" type="range" min="10" max="50" value="25" style="flex:1"><b class="mm"></b></div>
+    <h3>Ce que le téléphone affiche</h3><div class="lu"></div>
+    <div class="verdict"></div>
+    <div class="ligne" style="margin-top:10px;flex-wrap:wrap"><button class="btn prim">Écrire dans le dépôt</button><button class="btn">Imprimer</button><button class="btn">PNG</button><button class="btn">SVG</button><button class="btn">Téléverser</button></div>
+  </div>
+</div>
+</section>
+
+<!-- ============ MODÈLE B : grande fenêtre d'aperçu, réglages en onglets dessous ============ -->
+<section id="B" class="modele">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:1100px">
+  <div class="fenetre">
+    <div class="titre"><span>Aperçu · garage-serveur-modbus</span><span class="doux">taille réelle à l'écran ≈ 25 mm</span></div>
+    <div style="display:flex;gap:16px;padding:16px;align-items:center">
+      <div class="qr" data-taille="230"></div>
+      <div style="flex:1"><div class="petit doux">Le téléphone affichera :</div><div class="lu" style="margin-top:4px"></div><div class="verdict"></div></div>
+    </div>
+    <div class="ligne" style="padding:0 16px 14px"><button class="btn prim">Imprimer</button><button class="btn">PNG</button><button class="btn">SVG</button>
+      <span style="margin-left:auto" class="petit">Taille <input class="taille" type="number" min="10" max="60" value="25" style="width:56px"> mm</span></div>
+  </div>
+  <div class="carte">
+    <div class="onglets"><span class="actif">Contenu</span><span>Style</span><span>Impression</span><span>Suivi</span></div>
+    <div style="border-top:1px solid var(--bord);padding-top:8px">
+      <div class="lignes"></div>
+      <div class="ligne"><select style="flex:1"><option>Ajouter : champ standard…</option><option>hostname</option><option>ip</option><option>topic</option><option>env</option><option>puce</option><option>lieu</option></select>
+        <button class="btn">Clé du persist…</button><button class="btn">Ligne libre</button></div>
+      <h3>Suivi</h3>
+      <div class="petit">Dernière impression : 2026-10-02, 25 mm · <span class="pastille or">texte changé depuis (IP)</span></div>
+      <div class="petit">Fichier sur la carte : <span class="pastille ok">identique au dépôt</span></div>
+      <div class="ligne" style="margin-top:10px"><button class="btn prim">Écrire dans le dépôt</button><button class="btn">Téléverser</button></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============ MODÈLE C : tableau du parc + éditeur latéral ============ -->
+<section id="C" class="modele">
+<div style="display:grid;grid-template-columns:1fr 360px;gap:10px;align-items:start">
+  <div class="carte">
+    <div class="ligne"><h2 style="margin:0">Parc</h2><span class="doux petit">7 cartes · 2 cochées</span><span style="margin-left:auto"></span><button class="btn">Planche A4</button><button class="btn">Gabarit commun</button></div>
+    <table>
+      <tr><th></th><th>Carte</th><th>Lieu</th><th>Contenu</th><th>Taille</th><th>Étiquette</th><th>Carte</th></tr>
+      <tr class="sel"><td><input type="checkbox" checked></td><td><b>garage-serveur-modbus</b></td><td>Garage</td><td class="petit">Hostname, IP, ModBus id</td><td>25 mm</td><td><span class="pastille or">à réimprimer</span></td><td><span class="pastille ok">à jour</span></td></tr>
+      <tr><td><input type="checkbox" checked></td><td>cuve-garage-modbus</td><td>Garage</td><td class="petit">gabarit commun</td><td>25 mm</td><td><span class="pastille ok">à jour</span></td><td><span class="pastille ok">à jour</span></td></tr>
+      <tr><td><input type="checkbox"></td><td>rideau-garage-modbus</td><td>Garage</td><td class="petit">gabarit commun</td><td>20 mm</td><td><span class="pastille ok">à jour</span></td><td><span class="pastille ro">à mettre à jour</span></td></tr>
+      <tr><td><input type="checkbox"></td><td>serveur-rly</td><td>Cave</td><td class="petit doux">aucun réglage</td><td></td><td></td><td></td></tr>
+      <tr><td><input type="checkbox"></td><td>lumiere-porte</td><td>Cave</td><td class="petit">gabarit commun</td><td>15 mm</td><td><span class="pastille ok">à jour</span></td><td><span class="pastille">papier seul</span></td></tr>
+      <tr><td><input type="checkbox"></td><td>ecran-debits-pac</td><td>Bureau</td><td class="petit">gabarit commun</td><td>25 mm</td><td><span class="pastille ok">à jour</span></td><td><span class="pastille">inconnu</span></td></tr>
+    </table>
+  </div>
+  <div class="carte">
+    <h2>garage-serveur-modbus</h2>
+    <div style="text-align:center"><div class="qr" data-taille="170"></div></div>
+    <div class="lu" style="margin-top:8px"></div><div class="verdict"></div>
+    <h3>Lignes</h3><div class="lignes"></div>
+    <div class="ligne petit">Taille <input class="taille" type="number" min="10" max="60" value="25" style="width:56px"> mm · style <select><option>gabarit commun</option><option>propre à la carte</option></select></div>
+    <div class="ligne" style="margin-top:8px;flex-wrap:wrap"><button class="btn prim">Écrire</button><button class="btn">Imprimer</button><button class="btn">PNG</button><button class="btn">SVG</button><button class="btn">Téléverser</button></div>
+  </div>
+</div>
+</section>
+
+<!-- ============ PLANCHE A4 ============ -->
+<section id="P" class="modele">
+<div class="ligne" style="max-width:630px;margin:0 auto 10px"><b>Planche A4</b><span class="doux petit">7 cartes · taille
+  <input class="taille" type="number" min="10" max="60" value="25" style="width:56px"> mm · marges 10 mm · espacement 5 mm</span>
+  <label class="petit" style="margin-left:auto"><input type="checkbox" checked id="noms"> petit nom</label><button class="btn prim">Imprimer (échelle 100 %)</button></div>
+<div class="feuille"><div class="grille" id="grille"></div></div>
+</section>
+</main>
+
+<script>
+document.getElementById('lettre').textContent=document.body.dataset.m;
+const lignes=[
+  {src:'standard',lib:'Hostname',val:'garage-serveur-modbus'},
+  {src:'standard',lib:'IP',val:'192.168.0.50'},
+  {src:'persist · drivers.ModBus.id',lib:'ModBus id',val:'0'},
+  {src:'libre',lib:'',val:'Tableau du garage'}];
+const SEP=' : ';
+// capacité en octets, versions 1 à 10 (ISO/IEC 18004, mode octet)
+const CAP={M:[14,26,42,62,84,106,122,152,180,213],H:[7,14,24,34,44,58,64,84,98,119]};
+function texte(){return lignes.map(l=>l.lib?l.lib+SEP+l.val:l.val).join('\n');}
+function verdict(t,mm,corr){
+  const oct=new TextEncoder().encode(t).length, v=CAP[corr].findIndex(c=>c>=oct)+1;
+  if(!v) return {cls:'dense',txt:`${oct} octets : trop long pour une étiquette (version > 10)`};
+  const mod=17+4*v, mmMod=mm/(mod+8);
+  const cls=mmMod>=.5?'lisible':mmMod>=.35?'limite':'dense', mot={lisible:'Lisible',limite:'Limite',dense:'Trop dense'}[cls];
+  return {cls,txt:`${mot} · ${oct} octets · version ${v} (${mod} × ${mod}) · ${mmMod.toFixed(2).replace('.',',')} mm par carré à ${mm} mm · correction ${corr}`};
+}
+function dessine(){
+  const t=texte(), mm=+(document.querySelector('#'+document.body.dataset.m+' .taille')||{value:25}).value;
+  document.querySelectorAll('.lu').forEach(e=>e.textContent=t);
+  document.querySelectorAll('.mm').forEach(e=>e.textContent=mm+' mm');
+  const v=verdict(t,mm,'H');
+  document.querySelectorAll('.verdict').forEach(e=>{e.className='verdict '+v.cls;e.textContent=v.txt;});
+  // seuls les codes de la maquette affichée sont dessinés
+  if(document.body.dataset.m==='P') planche(mm);
+  else document.querySelectorAll('#'+document.body.dataset.m+' .qr').forEach(e=>qr(e,+e.dataset.taille,t,true));
+}
+function qr(e,px,t,image){
+  e.innerHTML='';
+  if(!window.QRCodeStyling){e.innerHTML=`<div class="faux" style="width:${px}px;height:${px}px"></div>`;return;}
+  // canvas : en SVG, qr-code-styling 1.5.0 donne les mêmes id de clipPath à tous les codes d'une page (à vérifier en A1) ;
+  // dessin à 300 px au moins puis réduction : dessinée petite, la bibliothèque fond les points
+  const grand=Math.max(px,300);
+  e.style.width=e.style.height=px+'px';
+  new QRCodeStyling({width:grand,height:grand,type:'canvas',data:t,margin:0,qrOptions:{errorCorrectionLevel:'H'},
+    dotsOptions:{type:'rounded',color:'#1b2a4a'},cornersSquareOptions:{type:'extra-rounded',color:'#1b2a4a'},cornersDotOptions:{type:'dot',color:'#2563eb'},
+    backgroundOptions:{color:'#ffffff'},
+    image:image?'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#2563eb" d="M12 3 2 12h3v8h5v-5h4v5h5v-8h3z"/></svg>'):undefined,
+    imageOptions:{margin:2,imageSize:.3}}).append(e);
+}
+function planche(mm){
+  const g=document.getElementById('grille'); if(!g) return;
+  const px=mm*3, noms=['garage-serveur-modbus','cuve-garage-modbus','rideau-garage-modbus','lumiere-porte','ecran-debits-pac','serveur-debits-pac','tv-salon'];
+  g.style.gridTemplateColumns=`repeat(auto-fill,${px}px)`; g.style.gap='15px';
+  g.innerHTML=noms.map(n=>`<div class="case"><div class="qr" data-n="${n}"></div><div class="nom">${document.getElementById('noms')?.checked?n:''}</div></div>`).join('');
+  g.querySelectorAll('.qr').forEach(e=>qr(e,px,'Hostname : '+e.dataset.n+'\nIP : 192.168.0.'+(40+e.dataset.n.length),true));
+}
+function lignesHtml(){
+  document.querySelectorAll('.lignes').forEach(c=>{
+    c.innerHTML=lignes.map((l,i)=>`<div class="lq"><span class="poignee">⋮⋮</span><input value="${l.lib}" data-i="${i}" placeholder="(sans libellé)"><div><div>${l.val}</div><div class="src">${l.src}</div></div><div class="fl"><span>▲</span><span>▼</span><span>✕</span></div></div>`).join('');
+  });
+  document.querySelectorAll('.lignes input').forEach(e=>e.oninput=()=>{lignes[+e.dataset.i].lib=e.value;dessine();});
+}
+document.querySelectorAll('.taille').forEach(e=>e.oninput=dessine);
+document.getElementById('noms').onchange=dessine;
+lignesHtml(); dessine();
+</script>
+</body>
+</html>

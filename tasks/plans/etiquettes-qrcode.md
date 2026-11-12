@@ -53,10 +53,12 @@ QR code dans l'outil et sur la carte.
 ## A0 — Maquettes de la page 7970 (choix de l'utilisateur)
 Fichiers : créer `outils_docs/etiquettes_qr/maquettes_etiquettes_qr.html`, images `modele-A.png` à `modele-C.png`,
 `README.md` (contraintes), sur le modèle de `outils_docs/atelier_graphiques/`.
-- [ ] Trois dispositions de la page (en-tête avec liste des envs et bouton Sombre / Clair, liste des cartes, panneau
-  des lignes, style, aperçu QR + texte lu + verdict) et
-  une de la planche A4, en clair et en sombre
-- [ ] Choix de l'utilisateur noté dans `README.md` et ici
+- [x] Trois dispositions de la page et une de la planche A4, en clair et en sombre — preuve : maquettes_etiquettes_qr.html ;
+  dispositions : en-tête avec liste des envs et bouton Sombre / Clair, liste des cartes, panneau des lignes, style, aperçu
+  QR + texte lu + verdict ; `outils_docs/etiquettes_qr/maquettes_etiquettes_qr.html` (?m=A|B|C|P), captures `modele-A.png`, `modele-A-sombre.png`,
+  `modele-B.png`, `modele-C.png`, `modele-P.png` relues ; constats pour l'A1 dans `README.md`
+- [x] Choix de l'utilisateur noté dans `README.md` et ici — preuve : modèle A retenu le 2026-11-12 (trois colonnes),
+  noté dans `outils_docs/etiquettes_qr/README.md` ; planche selon `modele-P.png`
 
 ## A1 — Bibliothèque de dessin du QR code
 Fichiers : créer `outils_docs/etiquettes_qr/lib/qr-code-styling.min.js` (PC), `data/sd/js/qr-code-styling.min.js.gz`
@@ -151,7 +153,7 @@ Consomme : A1 à A3. Produit, routes JSON : `GET /cartes` (envs par `lieux.pour_
 - [ ] En-tête : liste déroulante des envs (`lieux.remplitParLieu`) qui change de carte sans recharger la page (URL
   `?env=` mise à jour ; modifications non écrites -> confirmation avant de changer) ; bouton Sombre / Clair, choix
   mémorisé par `localStorage` sous try/catch, thème du système par défaut
-- [ ] Page selon la maquette retenue en A0 : aperçu dessiné par la bibliothèque, texte lu à côté, compteur d'octets,
+- [ ] Page selon le modèle A (`outils_docs/etiquettes_qr/modele-A.png`, `modele-A-sombre.png`) : aperçu dessiné par la bibliothèque, texte lu à côté, compteur d'octets,
   verdict coloré, ajout de ligne (standard, arbre du persist, libre), ordre par flèches, style, image (PNG/SVG/JPEG de
   `outils_docs/etiquettes_qr/images/`), case « Page sur la carte » (absente pour un ESP8266), onglet « Gabarit commun »,
   diff avant écriture
