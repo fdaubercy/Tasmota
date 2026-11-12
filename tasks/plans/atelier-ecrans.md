@@ -133,12 +133,12 @@ enregistrent les appels) ; écrire `data/bureau/tasmota32s3-ecran-debits-pac/ecr
 Consomme : `atelier_ecrans_description.charge`. Produit : `genere(desc) -> str` (module Berry `ecranLvgl` :
 `demarre()` et `affiche(modele)` de l'API en tête de `ecranDebitsFonctions.be`, cache par objet et attribut, fonctions
 nommées, logs par `logFonctions.log` et constantes `LOG_LEVEL_*`).
-- [ ] Banc d'abord (rouge) : `test_compile` (le texte généré passe `berry/verifie_berry.py`, charte des logs sans
+- [x] Banc d'abord (rouge) : `test_compile` (le texte généré passe `berry/verifie_berry.py`, charte des logs sans — preuve : `test_atelier_ecrans_lvgl.py` ROUGE `ModuleNotFoundError: atelier_ecrans_lvgl`, `banc_ecran_lvgl.py` ROUGE `FileNotFoundError ecranLvgl.be` (avant le générateur) ; en cours d'écriture ROUGE encore sur 82 objets/liaisons absentes et 530 lignes
   avertissement), `test_texte_special` (même texte qu'en A4 -> compile, chaîne restituée à l'identique) ; banc Berry :
   `demarre()` crée les objets des 4 pages aux positions de la description, deux `affiche(modele)` identiques -> aucun
   appel au second, une valeur changée -> un seul appel
-- [ ] `genere` ; bancs VERT
-- [ ] `ecranLvgl.be` des débits généré et écrit ; `build/test_interface_ecran.py` VERT (le fichier présent, interface
+- [x] `genere` ; bancs VERT — preuve : `BANC_ECRANS_LVGL: OK` (compile sans avertissement, témoins module cassé et préfixe hors charte, texte spécial restitué, commande et args restitués, refus) ; `banc_ecran_lvgl.py` VERT (82 objets = ecran.json, 4 pages, polices chargées une fois, couleurs selon l'état, courbe, cache : 0 appel au 2e affiche, 1 au changement) et 13 mutants rouges
+- [x] `ecranLvgl.be` des débits généré et écrit ; `build/test_interface_ecran.py` VERT (le fichier présent, interface — preuve : fichier de 484 lignes, `verifie_berry` 0 erreur 0 avertissement ; `BANC_INTERFACE_ECRAN : VERT` ; `banc_demarrage.py` VERT (10 cartes, référence de l'affichage inchangée grâce à `preparation_boot.be::autresInterfaces`) ; variante lvgl `--dossier ... --cenv <copie custom_interface_ecran = lvgl>` VERT (`/ecranLvgl.bec` seul, 0 erreur) ; témoin sans l'option : les deux interfaces compilées
   `haspmota` : exclu du FS) ; `banc_demarrage.py` de la variante `lvgl` VERT
 - [ ] Commit (le fichier généré compris) ; noter dans `debits-deux-cartes` A8 que l'interface LVGL vient du générateur
 

@@ -63,6 +63,7 @@ sys.path().push(CARTE)
 sys.path().push(SOURCES)
 sys.path().push(dossierSolidifies)
 sys.path().push(BOUCHONS)
+sys.path().push("outils_docs/scripts_python/berry/bouchons_berry/ecran_lvgl")    # module lv : interface ecranLvgl d'un env a ecran
 compile("import gpio import light wire1 = OBJET_FACTICE('wire1') wire2 = OBJET_FACTICE('wire2')")()
 
 var exception = nil

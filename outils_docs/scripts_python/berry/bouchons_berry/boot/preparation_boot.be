@@ -68,6 +68,26 @@ class PREPARATION_BOOT_CLASSE
         return r
     end
 
+    # Noms des fichiers des interfaces d'ecran NON choisies (custom_interface_ecran = <nom>, une option
+    # custom_interface_ecran_<nom> par interface dans la section de l'env), comme build/interface_ecran.py::exclusions
+    # puis retire_exclus : le build les retire de l'image du FS, dossier de la carte compris. Sans l'option : [].
+    def autresInterfaces(section)
+        var choix = self.valeur(section, "custom_interface_ecran")
+        if size(choix) == 0    return []    end
+        var gardes = self.fichiers(section, "custom_interface_ecran_" + choix[0])
+        var r = []
+        var dedans = false
+        for l: string.split(self.ini, "\n")
+            if string.startswith(l, "[")    dedans = (string.find(l, "[" + section + "]") == 0)
+            elif dedans && string.startswith(l, "custom_interface_ecran_")
+                for f: self.fichiers(section, self.sansBlancs(string.split(l, "=")[0]))
+                    if gardes.find(f) == nil    r.push(f)    end
+                end
+            end
+        end
+        return r
+    end
+
     def prepare(env, sources, carte, persistTexte, travail)
         var lit = global.BANC_BOOT.litDisque
         # cenv d'un depot d'essai (banc_demarrage --cenv) : la globale CENV_BANC, absente pour banc_boot
@@ -85,8 +105,9 @@ class PREPARATION_BOOT_CLASSE
         for sous: os.listdir("data/sd")
             for nom: os.listdir("data/sd/" + sous)    fs.pose("/sd/" + sous + "/" + nom, "")    end
         end
+        var autres = self.autresInterfaces("env:" + env)
         for nom: os.listdir(carte)
-            if !os.path.isdir(carte + "/" + nom)    fs.pose("/" + nom, lit(carte + "/" + nom))    end
+            if !os.path.isdir(carte + "/" + nom) && autres.find(nom) == nil    fs.pose("/" + nom, lit(carte + "/" + nom))    end
         end
         fs.pose("/_persist.json", persistTexte)
 
