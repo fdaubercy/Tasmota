@@ -441,6 +441,7 @@ def energieFonctions_envoieDonnees(courbe)
     webserver.content_send(string.format("{\"aujourdhui\":\"%04i-%02i-%02i\",\"etat\":", t["year"], t["month"], t["day"]))
     var etat = energieFonctions.lisEtat()
     webserver.content_send(etat == nil ? "null" : json.dump(etat))
+    webserver.content_send(",\"enregistrement\":" + (energieFonctions.enregistre() ? "true" : "false"))
     webserver.content_send(",\"wCourant\":" + energieFonctions.totalWh() + ",\"prix\":" + (prix == nil ? "[]" : json.dump(prix)) + ",\"courbe\":[")
     var debut = energieFonctions.indexCourbe(local) + 1
     var morceau = ""
@@ -457,6 +458,13 @@ def energieFonctions_envoieDonnees(courbe)
     webserver.content_close()
 end
 energieFonctions.envoieDonnees = energieFonctions_envoieDonnees
+
+# Enregistrement en flash (releves horaires, copie de la courbe) : diverses.energie.enregistrement, ON si absent ; OFF =
+# page en direct et courbe de 24 h en RAM seulement (ESP32 classique sans historique, plan envs-grenier-rdc-sonoff-cave A17)
+def energieFonctions_enregistre()
+    return diverses.find("energie", {}).find("enregistrement", "ON") != "OFF"
+end
+energieFonctions.enregistre = energieFonctions_enregistre
 
 # Reponse JSON de f=direct : les valeurs instantanees (p i f hz) puis les champs ENERGY presents sous leur nom Tasmota
 def energieFonctions_envoieDirect()

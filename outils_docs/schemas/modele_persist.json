@@ -4,6 +4,7 @@
 		"diverses": {
 			"energie": {
 				"activation": "OFF",
+				"enregistrement": "ON",
 				"calibrage": {
 					"PowerCal": 596,
 					"VoltageCal": 15187,

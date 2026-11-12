@@ -23,7 +23,8 @@ class CONTROLE_ENERGIE : Driver
         try
             var rtc = tasmota.rtc()
             if (rtc["utc"] < energieFonctions.HEURE_VALIDE)    return    end
-            if (!self.relue)
+            var enregistre = energieFonctions.enregistre()     # OFF : rien n'est lu ni ecrit en flash
+            if (enregistre && !self.relue)
                 self.courbe = energieFonctions.lisCourbe(rtc["local"])
                 self.relue = true
             end
@@ -31,7 +32,7 @@ class CONTROLE_ENERGIE : Driver
             if (mesure == nil)    return    end
             energieFonctions.notePuissance(self.courbe, rtc["local"], mesure.find("Power"))
             var cle = rtc["local"] / 3600
-            if (cle != self.cle && energieFonctions.releve(mesure, rtc))
+            if (enregistre && cle != self.cle && energieFonctions.releve(mesure, rtc))
                 self.cle = cle
                 energieFonctions.sauveCourbe(self.courbe, rtc["local"])
             end

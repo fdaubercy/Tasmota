@@ -415,6 +415,12 @@ verifie("cle absente : rien", false, E.verifieCalibrage())
 verifie("cle absente : non modifiee", 596, global.REGLAGES["PowerCal"])
 global.diverses = {}
 verifie("bloc absent : rien", false, E.verifieCalibrage())
+verifie("enregistrement : bloc absent = ON", true, E.enregistre())
+global.diverses = {"energie": {"activation": "ON"}}
+verifie("enregistrement : cle absente = ON", true, E.enregistre())
+global.diverses = {"energie": {"enregistrement": "OFF"}}
+verifie("enregistrement : OFF", false, E.enregistre())
+global.diverses = {}
 
 print("--- Routes")
 vide()
@@ -442,6 +448,11 @@ verifie("donnees : 288 points", 288, size(donnees["courbe"]))
 verifie("donnees : point le plus recent en dernier", 750, donnees["courbe"][287])
 verifie("donnees : vide = null", nil, donnees["courbe"][0])
 verifie("donnees : compteur illisible", nil, donnees["wCourant"])
+verifie("donnees : enregistrement actif", true, donnees["enregistrement"])
+global.diverses = {"energie": {"enregistrement": "OFF"}}
+E.route(courbe)
+verifie("donnees : enregistrement coupe", false, json.load(global.REPONSE)["enregistrement"])
+global.diverses = {}
 global.CAPTEURS = '{"ENERGY":{"Total":1234.567}}'
 E.route(courbe)
 verifie("donnees : compteur en Wh entiers", 1234567, json.load(global.REPONSE)["wCourant"])

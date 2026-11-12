@@ -46,6 +46,8 @@ MUTANTS = [
     ("points de la coupure gardes", "courbe.set(2 * i, energieFonctions.POINT_VIDE, 2)\n    end\n    return courbe", "end\n    return courbe"),
     ("copie perimee relue", "ecoule >= energieFonctions.NB_POINTS * energieFonctions.PAS_COURBE_S", "false"),
     ("acces non controle", "if (!webserver.check_privileged_access())    return nil    end\n    var f =", "var f ="),
+    ("enregistrement jamais coupe", 'find("enregistrement", "ON") != "OFF"', 'find("enregistrement", "ON") != "ARRET"'),
+    ("enregistrement non transmis a la page", '(energieFonctions.enregistre() ? "true" : "false")', '"true"'),
     ("acces au prix non controle", "if (!webserver.check_privileged_access())    return nil    end\n    var erreur =", "var erreur ="),
 ]
 
@@ -244,6 +246,11 @@ def partie_rendu(nav, tmp, base, garde):
     ok &= juge("message", True, "Aucun relevé" in (texte(dom, "e_msg") or ""))
     ok &= juge("sans prix", "Aucun prix saisi : les coûts ne sont pas calculés.", texte(dom, "e_rappel"))
     ok &= juge("mesure absente", "--", texte(dom, "e_v0"))
+
+    print("--- Rendu : enregistrement coupe (ESP32 classique)")
+    coupe = dict(neuf, enregistrement=False)
+    dom, _ = scenario(nav, tmp, "coupe", page_html(), coupe, {"p": 120, "i": 0.5, "f": 0.9, "hz": 50})
+    ok &= juge("message", True, "Enregistrement désactivé" in (texte(dom, "e_msg") or ""))
 
     print("--- Rendu : heure en cours en heures creuses")
     hc = json.loads(json.dumps(cours))

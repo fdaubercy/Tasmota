@@ -291,7 +291,9 @@
 		return fetch(url + '?f=donnees').then(function (r) { if (!r.ok) throw r.status; return r.json(); }).then(function (o) {
 			prix(o.prix, o.aujourdhui);
 			don = o;
-			$('e_msg').textContent = o.etat ? '' : "Aucun relevé pour l'instant : le premier est noté dans les 5 minutes suivant la mise à l'heure.";
+			$('e_msg').textContent = o.etat ? '' : o.enregistrement === false
+				? "Enregistrement désactivé sur cette carte : seules la puissance en direct et la courbe depuis le démarrage sont affichées."
+				: "Aucun relevé pour l'instant : le premier est noté dans les 5 minutes suivant la mise à l'heure.";
 			if (o.etat) enCours(o.etat, o.wCourant, o.prix);
 		}).catch(function (x) { $('e_msg').textContent = 'Lecture des relevés impossible (' + x + ').'; });
 	}
