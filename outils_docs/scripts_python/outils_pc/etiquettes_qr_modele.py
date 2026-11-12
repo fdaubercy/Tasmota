@@ -21,6 +21,7 @@ import re
 from pathlib import Path
 
 import build_envs
+import fichiers_berry_etat
 import lieux
 from assistant_persist_modele import SECRET
 
@@ -168,16 +169,31 @@ def persist_de(racine, env):
         return {}
 
 
+def serveur_de_config(chemin):
+    """Hostname et topic d'un `config_decodee.json` (decode-config, cartes sans Berry : ESP8266), sous la forme du bloc
+    `serveur` d'un persist ; {} si absent ou illisible. Seules ces deux cles sont lues : les mots de passe de ce fichier
+    (`sta_pwd`, `mqtt_pwd`...) echappent au motif SECRET, son arborescence n'est donc jamais proposee."""
+    try:
+        d = json.loads(Path(chemin).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return {"hostname": d.get("hostname"), "mqtt": {"topic": d.get("mqtt_topic")}} if isinstance(d, dict) else {}
+
+
 def champs_standards(racine, env, envs=None):
-    """Champs lus dans le depot (persist, `user_config_override.h`, maitre du range extender) ; ValueError si l'env
-    n'est pas une carte du cenv. `envs` : liste de `build_envs.liste_envs` deja lue (elle coute plusieurs secondes).
-    shortcut: sans persist (ESP8266...), hostname et topic restent introuvables ; Tasmota y tire le hostname du topic et
-    de la MAC, absente du depot. Lire MQTT_TOPIC du bloc #elif du .h si une etiquette d'ESP8266 doit porter le topic."""
+    """Champs lus dans le depot : persist (ou `config_decodee.json` d'une carte sans persist), `user_config_override.h`,
+    maitre du range extender ; ValueError si l'env n'est pas une carte du cenv. `envs` : liste de `build_envs.liste_envs`
+    deja lue (elle coute plusieurs secondes)."""
     e = next((x for x in (envs or build_envs.liste_envs(racine)) if x.nom == _env_valide(env)), None)
     if e is None or e.famille != "cartes":
         raise ValueError(f"carte inconnue : {env}")
     chemin = build_envs.persist_carte(racine, env)
-    return champs_de(env, lieux._serveur(chemin) if chemin else {}, e.ip)
+    if chemin:
+        serveur = lieux._serveur(chemin)
+    else:
+        dossier = fichiers_berry_etat.dossier_carte(env)
+        serveur = serveur_de_config(Path(racine) / dossier / "config_decodee.json") if dossier else {}
+    return champs_de(env, serveur, e.ip)
 
 
 def _valeurs_secretes(obj, acc, sous_secret=False):

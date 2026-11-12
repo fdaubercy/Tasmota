@@ -107,8 +107,9 @@ Produit :
 `champs_standards(racine, env, envs=None)` (`liste_envs` coûte plusieurs secondes : la passer une fois) ; `resout` délègue à
 `resout_avec(reglage, champs, persist)` (pure) ; états `ok | introuvable | refuse` ; `fichier_carte(racine, reglage,
 resolu)` ; `image_data_uri(racine, nom)` (PNG/JPEG/SVG du dossier `images/`, contenu vérifié, SVG sans script ni `on*=`,
-8192 o au plus). Sans persist (ESP8266, `tasmota32-rdc-vr-porte`), hostname et topic introuvables : Tasmota tire le
-hostname du topic et de la MAC (limite notée en `shortcut:` dans `champs_standards`).
+8192 o au plus). Sans persist (ESP8266), hostname et topic lus dans le `config_decodee.json` du dossier de la carte
+(`serveur_de_config`, ces deux clés seulement : ses mots de passe `sta_pwd`, `mqtt_pwd` échappent au motif SECRET) ; 16 cartes
+sur 17 au 2026-11-12, `tasmota32-rdc-vr-porte` n'a encore ni persist ni config décodée.
 **Encodage (découvert en A2)** : la bibliothèque ne code pas en UTF-8 (`255 & charCode`) ; la page (A4) et la carte (A6)
 lui donnent `String.fromCharCode(...new TextEncoder().encode(texte))` avec `qrOptions.mode = "Byte"` ; la table
 `CAPACITE` est alors exacte (80 cas sur 80, `lib/LISEZMOI.md`).

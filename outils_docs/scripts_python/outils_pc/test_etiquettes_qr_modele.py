@@ -14,6 +14,7 @@ from pathlib import Path
 
 import build_envs
 import etiquettes_qr_modele as m
+import fichiers_berry_etat
 
 ECHECS = []
 RACINE = Path(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")))
@@ -93,6 +94,18 @@ def test_esclave():
     verifie(r["texte"], "IP : 192.168.0.51:8081", "IP d'esclave dans le texte")
 
 
+def test_config_decodee():
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / "config_decodee.json"
+        p.write_text(json.dumps({"hostname": "TV", "mqtt_topic": "salon/tv", "sta_pwd": ["Sup3rSecret", ""],
+                                 "mqtt_pwd": "motdepasse9", "friendlyname": ["TV"]}), encoding="utf-8")
+        s = m.serveur_de_config(p)
+        verifie(m.champs_de("tasmota-rdc-tv-salon", s, "192.168.0.70")["hostname"], "TV", "hostname d'une config decodee")
+        verifie(m.champs_de("tasmota-rdc-tv-salon", s, "")["topic"], "salon/tv", "topic d'une config decodee")
+        verifie("Sup3rSecret" in json.dumps(s) or "motdepasse9" in json.dumps(s), False, "aucun mot de passe lu")
+        verifie(m.serveur_de_config(Path(d) / "absent.json"), {}, "config absente -> {}")
+
+
 def test_image():
     with tempfile.TemporaryDirectory() as d:
         im = Path(d) / m.DOSSIER / "images"
@@ -150,8 +163,8 @@ def test_depot_reel():
         fuites = [f["chemin"] for f in m.arbre_persist(persist) if any(s in str(f["valeur"]) for s in secrets)]
         verifie(fuites, [], f"{env} : aucune valeur secrete proposee (temoin independant)")
         hote = m.champs_standards(RACINE, env, envs)["hostname"]
-        # sans persist (ESP8266...), Tasmota tire le hostname du topic et de la MAC : introuvable dans le depot
-        verifie(hote is not None, bool(persist), f"{env} : hostname lu si et seulement si la carte a un persist")
+        config = (RACINE / fichiers_berry_etat.dossier_carte(env) / "config_decodee.json").is_file()
+        verifie(hote is not None, bool(persist) or config, f"{env} : hostname lu si la carte a un persist ou une config décodée")
         avec_hote += hote is not None
         avec_persist += bool(persist)
         verifie(m.valide_reglage(m.charge_reglage(RACINE, env), RACINE), [], f"{env} : reglage par defaut valide")
@@ -160,8 +173,8 @@ def test_depot_reel():
     verifie(avec_persist >= 10, True, "au moins 10 cartes avec persist (temoin que la lecture marche)")
 
 
-TESTS = [test_fusion, test_secret_par_cle, test_secret_par_valeur, test_texte, test_esclave, test_image, test_validation,
-         test_depot_reel]
+TESTS = [test_fusion, test_secret_par_cle, test_secret_par_valeur, test_texte, test_esclave, test_config_decodee, test_image,
+         test_validation, test_depot_reel]
 
 
 def mutant(nom, applique, retablit, test):
