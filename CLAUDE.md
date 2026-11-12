@@ -143,6 +143,8 @@ second module solidifie ajouterait une entree de `custom_berry_solidify` et de l
 `data/fs/vrFonctions.be` fait **906 lignes**, et c'est **voulu** (decide le 2026-11-12 : exception plutot qu'un
 decoupage). Fonctions des volets roulants (sens physique, boutons, inclinaison MPU6050, facade, garde du reglage),
 appelees par `controleVoletRoulants.be` et `vrReglage.be` (plan `tasks/plans/visuel-reglage-volets.md`).
+Meme decision, meme jour, pour leurs bancs : `outils_docs/scripts_python/berry/banc_reglage_volets.be` (**767 lignes**)
+et `banc_inclinaison.be` (**729 lignes**) ; un banc par module, chaque groupe lisible seul.
 
 `outils_docs/scripts_python/outils_pc/build_page.py` fait **1226 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
