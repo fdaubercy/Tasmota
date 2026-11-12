@@ -135,7 +135,7 @@
 		},
 		"tcp": {
 			"activation": "OFF",
-			"id": 0,
+			"id": 1,
 			"log": "info"
 		},
 		"discovery": {
@@ -194,6 +194,8 @@
 		"ecranCave": {
 			"name": "Ecran cave",
 			"activation": "OFF",
+			"reglage": "OFF",
+			"log": "info",
 			"environnement": {}
 		}
 	},
