@@ -25,7 +25,10 @@ REFERENCE = {
     "version": 1, "ecran": "ST7262_1024x600", "orientation": 0,
     "modele": [{"cle": "voies[].debit", "type": "texte", "exemple": "4,20", "longueur": 6},
                {"cle": "voies[].barre", "type": "entier", "exemple": 62, "longueur": 6},
-               {"cle": "total", "type": "texte", "exemple": "Total 17,9 L/min"}],
+               {"cle": "total", "type": "texte", "exemple": "Total 17,9 L/min"},
+               {"cle": "historique", "type": "liste", "exemple": "2 listes", "longueur": 2},
+               {"cle": "points", "type": "entier", "exemple": 12},
+               {"cle": "courbeMax", "type": "entier", "exemple": 1000}],
     "couleurs": {"etat": {"normal": "#E8EDF2", "imprecis": "#FFA53F", "arret": "#9FB3C8"}},
     "pages": [{"n": 0, "titre": "Commun"}, {"n": 1, "titre": "Debits", "attributs": {"bg_color": "#10161E"}}],
     "objets": [
@@ -45,6 +48,11 @@ REFERENCE = {
         {"id": 13, "page": 1, "type": "label", "x": 400, "y": 14, "l": 400, "h": 40,
          "attributs": {"text": "Total", "text_font": "A:sd/polices/RobotoCondensed-Regular.ttf-36"},
          "liaison": {"cle": "total", "attribut": "bg_color", "table": "etat"}},
+        {"id": 70, "page": 1, "type": "chart", "x": 448, "y": 76, "l": 552, "h": 420, "attributs": {"point_count": 60},
+         "liaison": {"cle": "historique", "attribut": "series", "points": "points", "max": "courbeMax",
+                     "couleurs": ["#3FA7FF", "#3FD08A"]}},
+        {"id": 71, "page": 1, "type": "label", "x": 460, "y": 82, "l": 200, "h": 22, "attributs": {"text": "10 L/min", "text_font": 16},
+         "liaison": {"cle": "courbeMax", "attribut": "text", "format": "%d L/min", "echelle": 100}},
     ],
 }
 
@@ -105,6 +113,22 @@ MUTANTS = [
     ("couleur mal formee", lambda d: objet(d, 0)["attributs"].update(text_color="rouge"), "couleur"),
     ("cle de modele en double", lambda d: d["modele"].append({"cle": "total", "type": "texte", "exemple": "x"}), "total"),
     ("attribut de page inconnu", lambda d: d["pages"][1]["attributs"].update(zorglub=1), "zorglub"),
+    ("courbe sans couleurs", lambda d: objet(d, 5)["liaison"].pop("couleurs"), "couleurs"),
+    ("courbe : couleur de serie mal formee", lambda d: objet(d, 5)["liaison"].update(couleurs=["#3FA7FF", "vert"]), "couleurs[1]"),
+    ("courbe : moins de couleurs que de series", lambda d: objet(d, 5)["liaison"].update(couleurs=["#3FA7FF"]), "2 séries"),
+    ("courbe : plus de couleurs que de series", lambda d: objet(d, 5)["liaison"]["couleurs"].append("#FFFFFF"), "2 séries"),
+    ("courbe sans compteur de points", lambda d: objet(d, 5)["liaison"].pop("points"), "points"),
+    ("courbe : compteur absent du modele", lambda d: objet(d, 5)["liaison"].update(points="nb"), "« nb »"),
+    ("courbe sans haut d'axe", lambda d: objet(d, 5)["liaison"].pop("max"), "max"),
+    ("courbe : haut d'axe absent du modele", lambda d: objet(d, 5)["liaison"].update(max="haut"), "« haut »"),
+    ("points sur une liaison qui n'est pas une courbe", lambda d: objet(d, 2)["liaison"].update(points="points"), "series"),
+    ("format sans directive", lambda d: objet(d, 6)["liaison"].update(format="L/min"), "format"),
+    ("format a deux directives", lambda d: objet(d, 6)["liaison"].update(format="%d %d"), "format"),
+    ("format avec % seul", lambda d: objet(d, 6)["liaison"].update(format="%d %"), "format"),
+    ("format sur un attribut qui n'est pas text", lambda d: objet(d, 4)["liaison"].update(format="%s"), "text"),
+    ("echelle sans format", lambda d: objet(d, 6)["liaison"].pop("format"), "echelle"),
+    ("echelle nulle", lambda d: objet(d, 6)["liaison"].update(echelle=0), "echelle"),
+    ("echelle non numerique", lambda d: objet(d, 6)["liaison"].update(echelle="100"), "echelle"),
 ]
 
 

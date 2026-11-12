@@ -4,6 +4,9 @@ apres les tables tirees de la description (lu dans lv_haspmota.be)."""
 # Moteur fixe, le meme pour toute description (fonctions nommees, aucune fonction anonyme). Lu dans lv_haspmota.be.
 MOTEUR = r'''
 # ---- Moteur (identique pour toute description) ----
+# Classe LVGL d'un type HASPmota dont le nom differe (lv_haspmota.be : lvh_btn._lv_class = lv.button ; lv.btn n'existe pas dans
+# le firmware, seul lv_button est enregistre, be_lv_c_mapping.h) ; les autres types portent le nom de leur classe
+ecranLvgl.CLASSES = {"btn": "button", "img": "image", "btnmatrix": "buttonmatrix", "cpicker": "colorwheel"}
 ecranLvgl.cache = {}      # "p1b13.text" -> valeur brute deja ecrite
 ecranLvgl.objets = {}     # "p1b13" -> objet LVGL ; "p<n>b0" -> ecran de la page n
 ecranLvgl.types = {}      # "p1b13" -> type de la description
@@ -164,7 +167,7 @@ def ecranLvgl_cree(d)
     import lv
     import ecranLvgl
     var nom = "p" + str(d[0]) + "b" + str(d[1])
-    var o = lv.(d[2])(ecranLvgl.ecrans[d[0]])
+    var o = lv.(ecranLvgl.CLASSES.find(d[2], d[2]))(ecranLvgl.ecrans[d[0]])
     o.set_pos(d[3], d[4])
     o.set_size(d[5], d[6])
     ecranLvgl.objets[nom] = o
@@ -203,7 +206,8 @@ def ecranLvgl_trace(m)
     if (s == nil)    return    end
     var o = ecranLvgl.objets[c[0]]
     var h = ecranLvgl.valeur(m, c[1])
-    var n = m.find(c[2], 0) - ecranLvgl.points
+    var p = ecranLvgl.valeur(m, c[2])
+    var n = (p == nil ? 0 : p) - ecranLvgl.points
     if (h == nil || size(h) == 0 || n <= 0)    return    end
     var t = size(h[0])
     if (n > t)    n = t    end
@@ -214,7 +218,7 @@ def ecranLvgl_trace(m)
             o.set_next_value(s[i], v == nil ? lv.CHART_POINT_NONE : v)
         end
     end
-    ecranLvgl.points = m.find(c[2], 0)
+    ecranLvgl.points = p
 end
 ecranLvgl.trace = ecranLvgl_trace
 # Boutons qui menent a une page : couleurs `actif` pour la page courante, les autres sinon (par le cache)

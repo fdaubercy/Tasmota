@@ -10,12 +10,10 @@ set_style_<k>) ; couleurs #RRGGBB converties en entiers ici, lv.color a l'ecritu
 change (cache "p1b13.text" -> valeur brute). toucher page -> ecran charge ; commande -> tasmota.cmd ; fonction ->
 <module>.<fonction>(args) ; tous differes par tasmota.defer (rien de long dans le rappel LVGL).
 
-Lacune de la description (cle `attribut: "series"` d'un chart) : couleurs des series, compteur de points, haut de l'axe et
-texte de ce haut n'y figurent pas. COURBE ci-dessous suit l'API en tete de ecranDebitsFonctions.be (cles `points` et
-`courbeMax`, palette SERIES, texte "%d L/min" de courbeMax / 100) ; une liaison peut porter `format` et `echelle`, qui
-priment. Seule partie propre aux debits du generateur : a porter dans ecran.json (A3) si un second ecran a une courbe.
+Courbe : liaison `attribut: "series"` d'un chart, avec `points`, `max` et `couleurs` (forme dans atelier_ecrans_description) ;
+`format` et `echelle` d'une liaison texte sont appliques par affiche() : texte = format % (valeur / echelle).
 `genere` ne valide pas la description (atelier_ecrans_description.valide avant) ; refuse (ValueError) seulement ce qui
-ne peut s'ecrire en Berry : couleur hors #RRGGBB, fonction de toucher hors `module.fonction`."""
+ne peut s'ecrire en Berry : couleur hors #RRGGBB, fonction de toucher hors `module.fonction`, type de SANS_CLASSE."""
 
 import re
 
@@ -23,8 +21,10 @@ from atelier_ecrans_lvgl_moteur import MOTEUR
 
 COULEUR = re.compile(r"#[0-9A-Fa-f]{6}")
 IDENT = re.compile(r"[A-Za-z_]\w*")
-COURBE = {"points": "points", "max": "courbeMax", "format_max": "%d L/min", "echelle_max": 100,
-          "couleurs": ["#3FA7FF", "#3FD08A", "#FFA53F", "#C084FC", "#FF5A5A", "#F5D04A"]}
+# Types HASPmota sans classe LVGL propre (_lv_class nil : sous-objets d'un parent) ou construits autrement qu'un objet LVGL
+# nu (fixed, flex : lv.obj + styles de post_init ; scale_line : lv.line enfant d'un scale) : refuses. Les noms qui different
+# de la classe LVGL (btn -> button, img -> image...) sont traduits par ecranLvgl.CLASSES du moteur.
+SANS_CLASSE = ("dropdown_list", "scale_section", "span", "tab", "scr", "fixed", "flex", "scale_line")
 
 
 def chaine(s):
@@ -127,12 +127,13 @@ def _toucher(nom, t):
 
 def genere(desc):
     """Texte du module Berry ecranLvgl (UTF-8, fins de ligne \\n)."""
-    longueurs = {m.get("cle"): m.get("longueur") for m in desc.get("modele", [])}
     pages = [[p["n"], attributs(p.get("attributs", {}), f"page {p['n']}")] for p in desc["pages"]]
     contenu = [p["n"] for p in desc["pages"] if p["n"] >= 1]
     objets, groupes, actifs, touchers, courbe = [], [], [], [], None
     for o in desc["objets"]:
         nom = f"p{o['page']}b{o['id']}"
+        if o["type"] in SANS_CLASSE:
+            raise ValueError(f"{nom} : type {o['type']} sans objet LVGL propre, non pris en charge en LVGL pur")
         f, liaisons = None, []
         if o.get("toucher"):
             f, ligne = _toucher(nom, o["toucher"])
@@ -141,15 +142,12 @@ def genere(desc):
                       f"{table(attributs(o.get('attributs', {}), nom))}, {f or 'nil'}]")
         li = o.get("liaison")
         if li and li.get("attribut") == "series":
-            n = longueurs.get(li["cle"]) or len(COURBE["couleurs"])
-            courbe = [nom, chemin(li["cle"], li.get("indice")), COURBE["points"],
-                      [couleur(COURBE["couleurs"][i % len(COURBE["couleurs"])], nom) for i in range(n)]]
-            liaisons.append([nom, [COURBE["max"]], "y_max", None, None, None, None, None])
+            courbe = [nom, chemin(li["cle"], li.get("indice")), chemin(li["points"], None),
+                      [couleur(c, f"{nom}.couleurs") for c in li["couleurs"]]]
+            liaisons.append([nom, chemin(li["max"], None), "y_max", None, None, None, None, None])
         elif li:
-            maxi = li["cle"] == COURBE["max"] and li["attribut"] == "text"
             liaisons.append([nom, chemin(li["cle"], li.get("indice")), li["attribut"], li.get("table"), None, None,
-                             li.get("format", COURBE["format_max"] if maxi else None),
-                             li.get("echelle", COURBE["echelle_max"] if maxi else None)])
+                             li.get("format"), li.get("echelle")])
         for r in o.get("couleur_selon", []):
             exceptions = couleurs_map(r.get("si", r.get("sauf", {})), f"{nom}.couleur_selon") or None
             sinon = couleur(r["sinon"], f"{nom}.sinon") if "sinon" in r else None
@@ -175,7 +173,7 @@ def genere(desc):
               "ecranLvgl.LIAISONS = [\n    " + ",\n    ".join(groupes) + "]",
               "# [bouton, page menee, {attribut: [couleur page courante, couleur sinon]}]",
               f"ecranLvgl.ACTIFS = {table(actifs)}",
-              "# [chart, chemin des series, cle du compteur de points, couleurs des series]",
+              "# [chart, chemin des series, chemin du compteur de points, couleurs des series]",
               f"ecranLvgl.COURBE = {table(courbe) if courbe else 'nil'}"]
     return "\n".join(lignes) + "\n" + MOTEUR
 

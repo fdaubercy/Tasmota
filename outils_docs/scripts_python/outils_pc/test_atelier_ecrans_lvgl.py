@@ -2,6 +2,8 @@
 Python de PlatformIO. Lit le depot (ecran.json et ecranLvgl.be des debits), n'ecrit que dans un dossier temporaire.
 Le comportement du module genere (objets, cache, couleurs, courbe, touchers) est verifie par berry/banc_ecran_lvgl.py."""
 
+import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -97,10 +99,28 @@ def test_generique():
         verifie(mot not in s, f"generique : « {mot} » absent sans description des debits")
 
 
+def test_courbe():
+    d = mini([{"id": 7, "page": 1, "type": "chart", "x": 0, "y": 0, "l": 90, "h": 90, "attributs": {},
+               "liaison": {"cle": "s", "attribut": "series", "points": "nb", "max": "a.haut", "couleurs": ["#010203", "#0A0B0C"]}},
+              {"id": 8, "page": 1, "type": "label", "x": 0, "y": 0, "l": 9, "h": 9, "attributs": {},
+               "liaison": {"cle": "v", "attribut": "text", "format": "%.1f bar", "echelle": 10}}])
+    s = lvgl.genere(d)
+    verifie('ecranLvgl.COURBE = ["p1b7", ["s"], ["nb"], [0x010203, 0x0A0B0C]]' in s, "courbe : series, compteur, couleurs lus dans la description",
+            [l for l in s.splitlines() if "COURBE =" in l])
+    verifie('["p1b7", ["a", "haut"], "y_max"' in s and '["p1b8", ["v"], "text", nil, nil, nil, "%.1f bar", 10]' in s,
+            "courbe : haut d'axe et format lus dans la description")
+    verifie("0x3FA7FF" not in s and "L/min" not in s, "courbe : aucune palette ni unite par defaut")
+    series = re.search(r"SERIES = (\[.*\])", (RACINE / "data/bureau/tasmota32s3-ecran-debits-pac/ecranDebitsFonctions.be")
+                       .read_text(encoding="utf-8")).group(1)
+    li = next(o["liaison"] for o in desc.charge(RACINE, ENV)["objets"] if o.get("liaison", {}).get("attribut") == "series")
+    verifie(li["couleurs"] == json.loads(series), "ecran.json : couleurs de la courbe = ecranDebitsFonctions.SERIES", series)
+
+
 def test_refus():
     for nom, o in (("fonction sans module", {"toucher": {"fonction": "ajuste"}}),
                    ("couleur mal formee", {"attributs": {"bg_color": "rouge"}}),
-                   ("nom de fonction invalide", {"toucher": {"fonction": "a-b.c"}})):
+                   ("nom de fonction invalide", {"toucher": {"fonction": "a-b.c"}}),
+                   ("type sans classe LVGL", {"type": "tab"}), ("conteneur fixed", {"type": "fixed"})):
         base = {"id": 1, "page": 1, "type": "btn", "x": 0, "y": 0, "l": 9, "h": 9, "attributs": {}}
         try:
             lvgl.genere(mini([{**base, **o}]))
@@ -109,7 +129,7 @@ def test_refus():
             pass
 
 
-for t in (test_compile, test_texte_special, test_fichier_a_jour, test_taille, test_generique, test_refus):
+for t in (test_compile, test_texte_special, test_fichier_a_jour, test_taille, test_generique, test_courbe, test_refus):
     try:
         t()
     except Exception as e:  # noqa: BLE001 - un test qui leve compte rouge, les suivants tournent

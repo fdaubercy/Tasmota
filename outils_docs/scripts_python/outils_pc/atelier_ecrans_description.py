@@ -7,6 +7,13 @@ Forme : {"version": 1, "ecran": <cle du catalogue>, "orientation": 0|90|180|270,
          "objets": [{"id", "page", "type", "x", "y", "l", "h", "attributs": {}, "liaison"?, "toucher"?, "commentaire"?}]}
   liaison : {"cle", "attribut", "indice"?}   indice (0 a longueur - 1) obligatoire pour une cle de liste (`voies[].debit`)
   liaison.table (facultatif) : la valeur du modele est un NOM, converti en couleur par `couleurs[table]` (pastille : "vert")
+  liaison.format, liaison.echelle (facultatifs, attribut "text" seulement) : texte = format % (valeur / echelle) ; format a UNE
+      directive de string.format (`"%d L/min"`), echelle nombre non nul, jamais sans format
+  liaison d'un chart, attribut "series" : la valeur est une liste de series (listes de points, nil = inconnu), avec
+      "points" : cle du modele qui compte les points ajoutes depuis le demarrage (seuls les nouveaux sont pousses),
+      "max"    : cle du modele du haut de l'axe Y,
+      "couleurs" : une #RRGGBB par serie, autant que la longueur de la cle liee ;
+      ces trois cles sont obligatoires sur une courbe et interdites sur toute autre liaison
   couleur_selon : [regle] sur un objet, couleur d'un attribut recalculee a chaque rafraichissement d'apres une valeur du modele :
       {"attribut", "cle", "indice"?, "table", "sauf"?: {valeur: "#RRGGBB"}}     couleurs[table][valeur], sauf pour les valeurs de `sauf`
       {"attribut", "cle", "indice"?, "si": {valeur: "#RRGGBB"}, "sinon": "#RRGGBB"}
@@ -31,6 +38,7 @@ TOUCHER = ("page", "commande", "fonction")
 COULEUR = re.compile(r"#[0-9A-Fa-f]{6}")
 POLICE_TTF = re.compile(r"A:sd/polices/(.+\.ttf)-(\d+)")
 POLICE_FIRMWARE = re.compile(r"(montserrat|seg7)-(\d+)")
+DIRECTIVE = re.compile(r"%[-+ #0]*\d*(?:\.\d+)?[diouxXeEfgGsc]")
 
 
 def chemin(racine, env):
@@ -146,6 +154,45 @@ def _regle(catalogue, t, regle, qui, cles, modele, tables, msgs):
         msgs.append(f"{qui} : couleur_selon : une règle porte « table » ou « si » et « sinon »")
 
 
+def _courbe(li, qui, cles, modele, msgs):
+    """Cles points, max, couleurs : obligatoires sur une liaison "series", interdites ailleurs."""
+    if li.get("attribut") != "series":
+        for k in ("points", "max", "couleurs"):
+            if k in li:
+                msgs.append(f"{qui} : liaison : « {k} » réservé à une courbe (attribut series)")
+        return
+    for k in ("points", "max"):
+        if k not in li:
+            msgs.append(f"{qui} : courbe sans « {k} » (clé du modèle)")
+        elif li[k] not in cles:
+            msgs.append(f"{qui} : courbe : {k} « {li[k]} » absent de la section modèle")
+    c = li.get("couleurs")
+    if not isinstance(c, list):
+        msgs.append(f"{qui} : courbe sans couleurs (une #RRGGBB par série)")
+        return
+    for i, v in enumerate(c):
+        _couleur(v, qui, f"couleurs[{i}]", msgs)
+    n = modele.get(li.get("cle"))
+    if _entier(n) and len(c) != n:
+        msgs.append(f"{qui} : courbe : {len(c)} couleurs pour {n} séries")
+
+
+def _format(li, qui, msgs):
+    """format a une seule directive, echelle nombre non nul ; les deux sur l'attribut text seulement."""
+    if "format" in li:
+        f = li["format"]
+        if li.get("attribut") != "text":
+            msgs.append(f"{qui} : liaison : format réservé à l'attribut text")
+        elif not (isinstance(f, str) and len(DIRECTIVE.findall(f)) == 1 and "%" not in DIRECTIVE.sub("", f).replace("%%", "")):
+            msgs.append(f"{qui} : liaison : format « {f} » : une seule directive (%d, %s, %.1f...) attendue")
+    if "echelle" in li:
+        e = li["echelle"]
+        if "format" not in li:
+            msgs.append(f"{qui} : liaison : echelle sans format")
+        elif isinstance(e, bool) or not isinstance(e, (int, float)) or e == 0:
+            msgs.append(f"{qui} : liaison : echelle « {e} » : nombre non nul attendu")
+
+
 def valide(d, catalogue):
     """Messages d'erreur en francais ; liste vide = description valide."""
     msgs = []
@@ -209,6 +256,8 @@ def valide(d, catalogue):
                     msgs.append(f"{qui} : liaison : table « {li['table']} » absente de couleurs")
                 if _type_attribut(catalogue, t, li.get("attribut", "")) != "couleur":
                     msgs.append(f"{qui} : liaison : table de couleurs sur « {li.get('attribut')} », qui n'est pas une couleur")
+            _courbe(li, qui, cles, modele, msgs)
+            _format(li, qui, msgs)
             if li.get("attribut") not in ATTRIBUTS_LIAISON_SPECIAUX and \
                     (t not in catalogue["objets"] or _type_attribut(catalogue, t, li.get("attribut", "")) is None):
                 msgs.append(f"{qui} : liaison vers l'attribut « {li.get('attribut')} » inconnu du type {t}")

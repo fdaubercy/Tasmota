@@ -31,12 +31,13 @@ MUTANTS = [
     ("texte de bouton sans label enfant", "        t = lv.label(ecranLvgl.objets[nom])\n", "        t = ecranLvgl.objets[nom]\n"),
     ("couleur_selon (sauf, si) ignoree", "var c = (v != nil && l[4] != nil) ? l[4].find(v) : nil", "var c = nil"),
     ("page courante jamais suivie", "    ecranLvgl.page = n\n", ""),
-    ("historique entier repousse a chaque seconde", "var n = m.find(c[2], 0) - ecranLvgl.points", "var n = m.find(c[2], 0)"),
+    ("historique entier repousse a chaque seconde", "var n = (p == nil ? 0 : p) - ecranLvgl.points", "var n = (p == nil ? 0 : p)"),
     ("trou de la courbe trace a 0", "v == nil ? lv.CHART_POINT_NONE : v", "v == nil ? 0 : v"),
     ("police rechargee pour chaque objet", "    if (ecranLvgl.polices.contains(f))    return ecranLvgl.polices[f]    end\n", ""),
     ("toucher execute dans le rappel LVGL", "tasmota.defer(ecranLvgl.execute)", "ecranLvgl.execute()"),
     ("suffixe de partie ignore (bg_color10)", "    return parties[n / 10] | etats[n % 10]\n", "    return 0\n"),
     ("ecran non demarre ignore", "if (!display.started())", "if (false)"),
+    ("classe LVGL = nom HASPmota (lv.btn absent du firmware)", "var o = lv.(ecranLvgl.CLASSES.find(d[2], d[2]))(", "var o = lv.(d[2])("),
     ("valeur de barre avant sa plage", '    for a: d[7]    ecranLvgl.ecris(nom, a[0], a[1])    end\n',
      '    for a: d[7]    ecranLvgl.ecris(nom, a[0], a[1])    end\n    if (d[2] == "bar")    o.set_range(0, 0)    end\n'),
 ]
@@ -62,8 +63,12 @@ def objets_lus(sortie):
     return r
 
 
+# Classe LVGL attendue d'un type HASPmota : copie de lv_haspmota.be (lvh_btn._lv_class = lv.button), pas du generateur
+CLASSES_LVGL = {"btn": "button", "img": "image", "btnmatrix": "buttonmatrix", "cpicker": "colorwheel"}
+
+
 def objets_decrits(desc):
-    return {f"p{o['page']}b{o['id']}": (o["type"], str(o["x"]), str(o["y"]), str(o["l"]), str(o["h"]), f"page{o['page']}")
+    return {f"p{o['page']}b{o['id']}": (CLASSES_LVGL.get(o["type"], o["type"]), str(o["x"]), str(o["y"]), str(o["l"]), str(o["h"]), f"page{o['page']}")
             for o in desc["objets"]}
 
 
