@@ -192,7 +192,8 @@
 							"modules": ["pompeVideCave"],
 							"ids": [1],
 							"type": "Switch",
-							"delai": 0
+							"delai": 0,
+							"desactiveCapteurs": "ON"
 						}
 					},
 					"bouton2": {
@@ -208,7 +209,8 @@
 							"modules": ["pompeVideCave"],
 							"ids": [1],
 							"type": "Switch",
-							"delai": 0
+							"delai": 0,
+							"desactiveCapteurs": "ON"
 						}
 					}
 				},

@@ -180,6 +180,11 @@ class CONTROLE_GENERAL : Driver
 			* Détache ou attache les interrupteurs & capteurs si activés >= 1
 		-#
 
+		# Flotteurs coupes par une marche manuelle d'avant le redemarrage : reactives AVANT le branchement des regles
+		for cle: modules.keys()
+			self.reactiveCapteursSuspendus(cle)
+		end
+
 		# Parcours tous les modules paramétrés
 		configDevices.configDevicesByRules(modules, self.nbIOActivesJSON)
 		configDevices.configDevicesByRules(drivers, self.nbIOActivesJSON)
@@ -305,6 +310,21 @@ class CONTROLE_GENERAL : Driver
 
 		logFonctions.log(string.format("GESTION_RELAIS: Relance du relai n°%i", relai["id"]), LOG_LEVEL_INFO)
 		globalFonctions.modifEtatRelai(cle, relai["id"], "ON", "ON", false, false, 0)
+	end
+
+	# Remet 'activation' ON aux capteurs du module 'cle' qu'une marche manuelle a coupes (cle "suspendu" posee par
+	# globalFonctions::modifEtatRelai) et retire la cle. Sans cle 'suspendu', rien n'est touche.
+	def reactiveCapteursSuspendus(cle)
+		if (type(modules.find(cle)) != "instance")	return	end
+		var capteurs = modules[cle].find("environnement", {}).find("capteurs", {})
+		for cleCapteur: capteurs.keys()
+			var capteur = capteurs[cleCapteur]
+			if (type(capteur) == "instance" && capteur.find("suspendu", "OFF") == "ON")
+				capteur["activation"] = "ON"
+				capteur.remove("suspendu")
+				logFonctions.log("GESTION_RELAIS: Capteur '" + cleCapteur + "' de " + cle + " reactive apres la marche manuelle", LOG_LEVEL_DEBUG)
+			end
+		end
 	end
 
 	# Remise a zero du compteur de relances et de l'alerte (cycle termine normalement)
@@ -629,6 +649,9 @@ class CONTROLE_GENERAL : Driver
 												self.acquitteRelance(cle, relais[cleRLY])
 											end
 										end
+
+										# Arret : les flotteurs coupes par une marche manuelle reviennent (fin de minuterie, second appui...)
+										if (etat == "OFF")	self.reactiveCapteursSuspendus(cle)	end
 
 										# Vérifie si il y a un timer paramétrer ou à annuler
 										if (etat == "ON" && relais[cleRLY]["id"] == nb + 1 && relais[cleRLY]["timer"] != 0)

@@ -186,7 +186,8 @@ def globalFonctions_commandeRelaisLies(moduleCapteur, device, value, boolTimer)
     var typeOrdre = relaisLie.find("type", "")
     var delai = relaisLie.find("delai", 0)
     for id: relaisLie.find("ids", [])
-        globalFonctions.modifEtatRelai(moduleCapteur, id, typeOrdre, value, false, boolTimer, delai)
+        # desactiveCapteurs ON (ex. bouton de la pompe vide-cave) : marche manuelle sans les flotteurs du module
+        globalFonctions.modifEtatRelai(moduleCapteur, id, typeOrdre, value, relaisLie.find("desactiveCapteurs", "OFF") == "ON", boolTimer, delai)
     end
 end
 globalFonctions.commandeRelaisLies = globalFonctions_commandeRelaisLies
@@ -520,6 +521,8 @@ def globalFonctions_modifEtatRelai(moduleCapteur, idRelai, typeOrdre, etat, bool
 			logFonctions.log("MODIF_ETAT_RELAI: " + (etat == "ON" ? "Desactivation" : "Reactivation") + " des capteurs !", LOG_LEVEL_DEBUG)
 			for cleCapteurs: capteurs.keys()
 				capteurs[cleCapteurs]["activation"] = (etat == "ON" ? "OFF" : "ON")
+				# 'suspendu' : desactive par cette marche (relu par controleGeneral::reactiveCapteursSuspendus, aussi au demarrage)
+				if (etat == "ON")	capteurs[cleCapteurs]["suspendu"] = "ON"	else	capteurs[cleCapteurs].remove("suspendu")	end
 			end	
 		end
 	end
